@@ -8,6 +8,14 @@ historical unless they say otherwise.
 
 This is the project repo for the Go-to-Lean tool.
 
+The [2026-09-11 whole-project review](docs/2026-09-11_project-review.md)
+assesses executable coverage, semantic fidelity, relational and Iris customer
+readiness, experiments, and validation at `bf721a4c`. It includes fresh
+counterexamples, evidence limits, completion criteria, and a proposed roadmap.
+This is the current dated assessment; its recommendations are proposals, not
+an adopted replacement for the plan of record. [AGENT; publication requested
+by USER, 2026-09-11.]
+
 The parent workspace contains research notes and reference dependencies under
 `../deps`. This subdirectory is intentionally its own git repository so the tool
 can grow independently of those reference checkouts.

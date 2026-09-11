@@ -1,0 +1,74 @@
+[
+  {
+    "probe": "filename_windows",
+    "go_exit": 0,
+    "go": "1",
+    "frontend_exit": 0,
+    "frontend": "",
+    "lean_exit": 0,
+    "lean": "{\"output\":\"\",\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"kind\":\"int\",\"tag\":\"int\",\"value\":2}]}"
+  },
+  {
+    "probe": "filename_ignored",
+    "go_exit": 0,
+    "go": "1",
+    "frontend_exit": 0,
+    "frontend": "",
+    "lean_exit": 0,
+    "lean": "{\"output\":\"\",\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"kind\":\"int\",\"tag\":\"int\",\"value\":2}]}"
+  },
+  {
+    "probe": "filename_hidden",
+    "go_exit": 0,
+    "go": "1",
+    "frontend_exit": 0,
+    "frontend": "",
+    "lean_exit": 0,
+    "lean": "{\"output\":\"\",\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"kind\":\"int\",\"tag\":\"int\",\"value\":2}]}"
+  },
+  {
+    "probe": "new_expression",
+    "go_exit": 0,
+    "go": "42",
+    "frontend_exit": 0,
+    "frontend": "",
+    "lean_exit": 0,
+    "lean": "{\"output\":\"\",\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"kind\":\"int\",\"tag\":\"int\",\"value\":42}]}"
+  },
+  {
+    "probe": "anonymous_struct",
+    "go_exit": 0,
+    "go": "42",
+    "frontend_exit": 0,
+    "frontend": "",
+    "lean_exit": 1,
+    "lean": "{\"message\":\"frontend-quarantined: anonymous non-empty struct type struct{X int}\",\"output\":\"\",\"schema\":\"golean-observation-v1\",\"status\":\"unsupported\"}"
+  },
+  {
+    "probe": "complex",
+    "go_exit": 0,
+    "go": "7",
+    "frontend_exit": 0,
+    "frontend": "",
+    "lean_exit": 1,
+    "lean": "{\"message\":\"frontend-quarantined: basic type complex128\",\"output\":\"\",\"schema\":\"golean-observation-v1\",\"status\":\"unsupported\"}"
+  },
+  {
+    "probe": "range_func",
+    "go_exit": 0,
+    "go": "3",
+    "frontend_exit": 0,
+    "frontend": "",
+    "lean_exit": 1,
+    "lean": "{\"message\":\"frontend-quarantined: range over func(yield func(int) bool)\",\"output\":\"\",\"schema\":\"golean-observation-v1\",\"status\":\"unsupported\"}"
+  },
+  {
+    "probe": "discard_call",
+    "go_exit": 0,
+    "go": "42",
+    "frontend_exit": 0,
+    "frontend": "",
+    "lean_exit": 0,
+    "lean": "{\"output\":\"\",\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"kind\":\"int\",\"tag\":\"int\",\"value\":42}]}"
+  }
+]

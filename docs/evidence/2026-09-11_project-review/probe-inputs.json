@@ -1,0 +1,40 @@
+{
+  "filename_windows": {
+    "extra_windows.go": "package main\nfunc init(){x=2}\n",
+    "main.go": "package main\nvar x=1\nfunc probe() int{return x}\nfunc main(){println(probe())}\n"
+  },
+  "filename_ignored": {
+    "_ignored.go": "package main\nfunc init(){x=2}\n",
+    "main.go": "package main\nvar x=1\nfunc probe() int{return x}\nfunc main(){println(probe())}\n"
+  },
+  "filename_hidden": {
+    ".hidden.go": "package main\nfunc init(){x=2}\n",
+    "main.go": "package main\nvar x=1\nfunc probe() int{return x}\nfunc main(){println(probe())}\n"
+  },
+  "new_expression": {
+    "main.go": "package main\nfunc probe() int{return *new(42)}\nfunc main(){println(probe())}\n"
+  },
+  "anonymous_struct": {
+    "main.go": "package main\nfunc probe() int{s:=struct{ X int }{X:42};return s.X}\nfunc main(){println(probe())}\n"
+  },
+  "complex": {
+    "main.go": "package main\nfunc probe() int{c:=complex(3.0,4.0);return int(real(c)+imag(c))}\nfunc main(){println(probe())}\n"
+  },
+  "range_func": {
+    "main.go": "package main\nfunc seq(yield func(int)bool){for i:=0;i<3;i++{if !yield(i){return}}}\nfunc probe() int{s:=0;for i:=range seq{s+=i};return s}\nfunc main(){println(probe())}\n"
+  },
+  "discard_call": {
+    "main.go": "package main\nfunc val() int{return 7}\nfunc probe() int{_=val();return 42}\nfunc main(){println(probe())}\n"
+  },
+  "module1.21": {
+    "go.mod": "module example.org/audit\n\ngo 1.21\n",
+    "main.go": "package main\nfunc probe()int{var fs []func()int;for i:=0;i<3;i++{fs=append(fs,func()int{return i})};return fs[0]()+fs[1]()+fs[2]()}\nfunc main(){println(probe())}\n"
+  },
+  "module1.26": {
+    "go.mod": "module example.org/audit\n\ngo 1.26\n",
+    "main.go": "package main\nfunc probe()int{var fs []func()int;for i:=0;i<3;i++{fs=append(fs,func()int{return i})};return fs[0]()+fs[1]()+fs[2]()}\nfunc main(){println(probe())}\n"
+  },
+  "append_benchmark": {
+    "main.go": "package main\nfunc probe(n int)int{var xs []byte;for i:=0;i<n;i++{xs=append(xs,byte(i))};return len(xs)}\nfunc main(){}\n"
+  }
+}
