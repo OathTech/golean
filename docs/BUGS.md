@@ -5510,6 +5510,16 @@ no corpus row exercises that path at this tip.
   for the first time); measured
   `docs/evidence/2026-09-03_stdlib-source-2/append-cost-probes.tsv`
 
+**RETIRED DIAGNOSIS — banner ([AGENT] 2026-09-11, lane
+`records/bug090-rediagnosis-0911`).** The heading, the "Mechanism"
+paragraph and the "Plan" paragraph below are the 2026-09-03/04 diagnosis.
+They are STALE: the hygiene A2 slice (2026-09-04, `7cba41cd`) made the
+heap a dense `Array HeapCell`, and the quadratic-in-allocation-count cost
+SURVIVED it. They are kept verbatim as the record; the measured diagnosis
+is the "Re-diagnosis (2026-09-11)" paragraph after the Plan. The
+Measurements paragraph's numbers are historical (assoc-list heap, single
+runs) and are superseded by the re-diagnosis evidence.
+
 **Measurements** (golean `native-json-run`, single runs, shared box):
 `make([]byte, 4)` in a loop — 1,000: 0.15 s, 2,000: 0.63 s, 4,000:
 3.0 s (×4 count → ×20 time, quadratic); `new(int)` 1,000: 0.19 s,
@@ -5544,6 +5554,60 @@ a GoCore REPRESENTATION change, semantics-preserving by the same
 argument shape as B1's map stamps, gated by the full differential. When
 it lands: re-measure the probes above, re-size the fuzz toward the
 asked 100k, and re-expect `repeat-bound-refused`.
+
+**Re-diagnosis (2026-09-11, MEASURED; [AGENT] lane
+`records/bug090-rediagnosis-0911`; note
+`docs/2026-09-11_bug090-rediagnosis.md`; evidence
+`docs/evidence/2026-09-11_bug090-rediagnosis/` — 3 runs per point,
+medians, startup subtracted, plus leaf-IP profiles; tree `a461ed8b`,
+certified binary sha256 `18beb979…`).** A2 landed and did NOT close this
+entry: the list walk is gone (`Heap.lookup` is `h[i]?`, reads are flat in
+aggregate size, the per-step baseline is 252 ns), and the cost has two
+mechanisms the profile separates:
+
+- **(A) Root re-normalization, quadratic per write.** `storeLoc` resolves
+  a field/index path to its ROOT cell and rewrites the whole root value
+  (`GoLean/GoCore/Ops.lean:1367-1392`), `updateCell` normalizes the whole
+  value at the declared type, and `normalizeListWith` rebuilds the array as
+  `#[head] ++ tail` per element (`Ops.lean:1100-1106`): one write into an
+  m-element root costs ≈1.1 ns × m² — 100 writes of `xs[0]` at len
+  1,000/3,000/10,000: 0.125/0.99/10.9 s; a SCALAR field beside a
+  `[10000]byte` pays the same 111 ms per write, beside a `[]byte` of that
+  length 11 µs (separate cell). In-place `append` is one such write per
+  element, so n appends at capacity ≈ n are CUBIC: the review's loop at
+  250/500/1,000/2,000/4,000 appends → 0.026/0.12/0.73/4.66/31.6 s (ratios
+  4.6, 6.1, 6.4, 6.8); the spill path is linear and not the cost. Profile
+  (2,000 appends): `Array.append` 35 %, `lean_array_push` 29 %,
+  `lean_del_core_other` 19 %; `stepFn` 0 %.
+- **(B) Every cell write copies the whole heap.** The pre-step state stays
+  referenced across each step — `execProgLoopOut`/`execProgLoop` pass
+  `m.shared m.threads` to `raceUpdate` after `stepMulti m`
+  (`GoLean/GoCore/Multi.lean:2186,2196,2237,2252`; a no-op for one thread
+  but the arguments keep `m` alive), and `deliverS` returns the PRE-op
+  state on its panic arm (`GoLean/GoCore/StepFn.lean:52-57`), so `stepFn`
+  holds `s` across `applyStmtOp s …` — hence `Array.set`/`push` on
+  `σ.heap` run `lean_copy_expand_array` over all H cells: ≈4.4 ns × H per
+  cell write. `new(int)` loops 1k/4k/16k/32k → 0.034/0.26/3.68/14.05 s
+  (quadratic); the same 20,000-iteration scalar loop after 0/10k/40k live
+  cells → 0.25/1.78/7.35 s. Profile (32k allocations):
+  `lean_copy_expand_array` 48 %, `lean_del_core_other` 44 %. This is why
+  allocation COUNT still drives a quadratic cost: the observation of
+  2026-09-03 stands, its mechanism does not.
+- Maps: linear key scan per write (`mapEntryIndex?`), ≈11 ns per entry —
+  45 µs per write at 4,000 entries; recorded, lower priority.
+
+**Plan (revised, [AGENT] proposal — replaces the A2 plan above; PENDING
+[USER] as C1 scope):** the C1 memory-module design must (1) make leaf
+writes O(path depth) — normalize the incoming leaf at its declared type
+and carry the normal-form invariant per leaf with a congruence lemma;
+(2) make whole-value normalization linear (`push`, not `#[head] ++ tail`);
+(3) give the state unique ownership across a step and across the driver
+(no post-step use of the pre-step state; `deliverS` rollback →
+validate-then-commit or a per-cell undo log); (4) decide cell granularity
+(per-element cells vs the aggregate-per-cell shape) — [USER]. Acceptance
+= the evidence dir's plan rerun: `write_fixed` flat in m, `alloc_new`
+linear, `append_grow` linear amortized; then revisit the corpus
+consequences above. Status stays open; the Cases line is unchanged.
 
 ## BUG-091 — the native frontend's quarantine-reason text for multi-label `goto` shapes is EXPORT-NONDETERMINISTIC: `emit.go` ranges a Go MAP to name the offending label, so the wire bytes of one program differ run to run [frontend export nondeterminism; fail-closed but non-reproducible refusal text]
 

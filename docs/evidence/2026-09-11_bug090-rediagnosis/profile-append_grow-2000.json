@@ -1,0 +1,180 @@
+{
+ "cmd": [
+  ".tmp/golean",
+  "native-json-run",
+  "--input",
+  ".tmp/bug090/append_grow/program.json",
+  "--function",
+  "probe",
+  "--arg-int",
+  "2000"
+ ],
+ "exit": 0,
+ "wall_s_under_tracer": 4.717,
+ "interval_ms": 1.0,
+ "samples": 3742,
+ "idle_ticks": 2,
+ "leader_running_ticks_unsampled": 0,
+ "samples_per_thread": {
+  "577637": 3742
+ },
+ "scope": "leaf instruction pointer only, running non-leader threads, no call stacks",
+ "by_module": {
+  "golean": 3483,
+  "libc.so.6": 259
+ },
+ "top": [
+  {
+   "symbol": "golean:l_Array_append___redArg",
+   "samples": 1316,
+   "pct": 35.17
+  },
+  {
+   "symbol": "golean:lean_array_push",
+   "samples": 1076,
+   "pct": 28.75
+  },
+  {
+   "symbol": "golean:_ZN4leanL19lean_del_core_otherEP11lean_objecthRS1_",
+   "samples": 716,
+   "pct": 19.13
+  },
+  {
+   "symbol": "libc.so.6:__nss_database_lookup@GLIBC_2.2.5",
+   "samples": 209,
+   "pct": 5.59
+  },
+  {
+   "symbol": "golean:_ZL12mi_find_pageP9mi_heap_smm",
+   "samples": 61,
+   "pct": 1.63
+  },
+  {
+   "symbol": "golean:mi_malloc",
+   "samples": 59,
+   "pct": 1.58
+  },
+  {
+   "symbol": "golean:lean_copy_expand_array",
+   "samples": 44,
+   "pct": 1.18
+  },
+  {
+   "symbol": "golean:_Z18_mi_malloc_genericP9mi_heap_smbm",
+   "samples": 29,
+   "pct": 0.77
+  },
+  {
+   "symbol": "golean:lp_GoLean_GoLean_GoCore_normalizeListWith",
+   "samples": 24,
+   "pct": 0.64
+  },
+  {
+   "symbol": "libc.so.6:__default_morecore@GLIBC_2.2.5",
+   "samples": 24,
+   "pct": 0.64
+  },
+  {
+   "symbol": "golean:mi_free_size",
+   "samples": 23,
+   "pct": 0.61
+  },
+  {
+   "symbol": "golean:__gmpz_n_pow_ui",
+   "samples": 14,
+   "pct": 0.37
+  },
+  {
+   "symbol": "golean:mi_malloc_small",
+   "samples": 14,
+   "pct": 0.37
+  },
+  {
+   "symbol": "libc.so.6:realloc@@GLIBC_2.2.5",
+   "samples": 10,
+   "pct": 0.27
+  },
+  {
+   "symbol": "libc.so.6:__libc_free@@GLIBC_2.2.5",
+   "samples": 8,
+   "pct": 0.21
+  },
+  {
+   "symbol": "libc.so.6:malloc@@GLIBC_2.2.5",
+   "samples": 8,
+   "pct": 0.21
+  },
+  {
+   "symbol": "golean:lp_GoLean_GoLean_GoCore_IntKind_normalize",
+   "samples": 7,
+   "pct": 0.19
+  },
+  {
+   "symbol": "golean:lean_inc_heartbeat",
+   "samples": 7,
+   "pct": 0.19
+  },
+  {
+   "symbol": "golean:lean_dec_ref_cold",
+   "samples": 7,
+   "pct": 0.19
+  },
+  {
+   "symbol": "golean:lp_GoLean_GoLean_GoCore_Machine_stepFn",
+   "samples": 6,
+   "pct": 0.16
+  },
+  {
+   "symbol": "golean:_ZnamSt11align_val_t",
+   "samples": 5,
+   "pct": 0.13
+  },
+  {
+   "symbol": "golean:lean_apply_1",
+   "samples": 5,
+   "pct": 0.13
+  },
+  {
+   "symbol": "golean:__gmpz_mul_2exp",
+   "samples": 5,
+   "pct": 0.13
+  },
+  {
+   "symbol": "golean:__gmp_default_reallocate",
+   "samples": 5,
+   "pct": 0.13
+  },
+  {
+   "symbol": "golean:l_Int_pow",
+   "samples": 5,
+   "pct": 0.13
+  },
+  {
+   "symbol": "golean:lp_GoLean_GoLean_GoCore_normalizeValueForTyTy",
+   "samples": 4,
+   "pct": 0.11
+  },
+  {
+   "symbol": "golean:lp_GoLean_GoLean_GoCore_Machine_stepThread",
+   "samples": 4,
+   "pct": 0.11
+  },
+  {
+   "symbol": "golean:mi_free",
+   "samples": 4,
+   "pct": 0.11
+  },
+  {
+   "symbol": "golean:__gmp_default_allocate",
+   "samples": 3,
+   "pct": 0.08
+  },
+  {
+   "symbol": "golean:_ZN4lean3mpzC2Em",
+   "samples": 3,
+   "pct": 0.08
+  }
+ ],
+ "child_stdout_tail": "{\"output\":\"\",\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"kind\":\"int\",\"tag\":\"int\",\"value\":2000}]}",
+ "child_stderr_tail": ""
+}

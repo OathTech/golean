@@ -1,0 +1,145 @@
+{
+ "meta": {
+  "started_utc": "2026-09-11T23:38:33Z",
+  "commit": "a461ed8b1acb7f795a569e694c0c4f56549f933a",
+  "runtime_tree_dirty": false,
+  "golean_sha256": "18beb979fbcc90fe3f13d5f659ed27c515c25840e3ad37db80c717c2bfea7ba4",
+  "frontend_sha256": "26f494a53e676e709d5f1c92b53985ed59cb0100c7238353af4510c17c63c15b",
+  "go_version": "go version go1.26.5 linux/amd64",
+  "kernel": "7.0.0-31-generic",
+  "nproc": 32,
+  "loadavg1_at_start": 2.34,
+  "plan": "steps",
+  "timing_method": "wall = time.monotonic() around /usr/bin/time wrapper (startup included; subtract the empty probe); cpu = user+sys of the golean child; maxrss from /usr/bin/time %M (KB)",
+  "finished_utc": "2026-09-11T23:38:47Z",
+  "loadavg1_at_end": 2.48
+ },
+ "points": [],
+ "steps": [
+  {
+   "probe": "scalar",
+   "args_template": [
+    0
+   ],
+   "n_index": 0,
+   "fuel_at": {
+    "50": 2539,
+    "100": 4989
+   },
+   "steps_per_iteration": 49.0
+  },
+  {
+   "probe": "append_grow",
+   "args_template": [
+    0
+   ],
+   "n_index": 0,
+   "fuel_at": {
+    "64": 5458,
+    "128": 10834
+   },
+   "steps_per_iteration": 84.0
+  },
+  {
+   "probe": "append_cap",
+   "args_template": [
+    1000,
+    0
+   ],
+   "n_index": 1,
+   "fuel_at": {
+    "50": 4303,
+    "100": 8503
+   },
+   "steps_per_iteration": 84.0
+  },
+  {
+   "probe": "write_fixed",
+   "args_template": [
+    10,
+    0
+   ],
+   "n_index": 1,
+   "fuel_at": {
+    "50": 2661,
+    "100": 5211
+   },
+   "steps_per_iteration": 51.0
+  },
+  {
+   "probe": "read_fixed",
+   "args_template": [
+    10,
+    0
+   ],
+   "n_index": 1,
+   "fuel_at": {
+    "50": 2868,
+    "100": 5618
+   },
+   "steps_per_iteration": 55.0
+  },
+  {
+   "probe": "struct_arr_100",
+   "args_template": [
+    0
+   ],
+   "n_index": 0,
+   "fuel_at": {
+    "50": 2436,
+    "100": 4786
+   },
+   "steps_per_iteration": 47.0
+  },
+  {
+   "probe": "alloc_new",
+   "args_template": [
+    0
+   ],
+   "n_index": 0,
+   "fuel_at": {
+    "50": 4339,
+    "100": 8589
+   },
+   "steps_per_iteration": 85.0
+  },
+  {
+   "probe": "heap_then_scalar",
+   "args_template": [
+    0,
+    0
+   ],
+   "n_index": 1,
+   "fuel_at": {
+    "50": 2599,
+    "100": 5049
+   },
+   "steps_per_iteration": 49.0
+  },
+  {
+   "probe": "heap_then_scalar",
+   "args_template": [
+    0,
+    0
+   ],
+   "n_index": 0,
+   "fuel_at": {
+    "50": 3649,
+    "100": 7149
+   },
+   "steps_per_iteration": 70.0
+  },
+  {
+   "probe": "map_write",
+   "args_template": [
+    0
+   ],
+   "n_index": 0,
+   "fuel_at": {
+    "50": 2299,
+    "100": 4499
+   },
+   "steps_per_iteration": 44.0
+  }
+ ]
+}

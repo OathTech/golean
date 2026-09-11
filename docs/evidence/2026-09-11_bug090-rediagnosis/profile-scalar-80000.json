@@ -1,0 +1,180 @@
+{
+ "cmd": [
+  ".tmp/golean",
+  "native-json-run",
+  "--input",
+  ".tmp/bug090/scalar/program.json",
+  "--function",
+  "probe",
+  "--arg-int",
+  "80000"
+ ],
+ "exit": 0,
+ "wall_s_under_tracer": 1.048,
+ "interval_ms": 1.0,
+ "samples": 516,
+ "idle_ticks": 2,
+ "leader_running_ticks_unsampled": 0,
+ "samples_per_thread": {
+  "577851": 516
+ },
+ "scope": "leaf instruction pointer only, running non-leader threads, no call stacks",
+ "by_module": {
+  "golean": 479,
+  "libc.so.6": 37
+ },
+ "top": [
+  {
+   "symbol": "golean:mi_free",
+   "samples": 72,
+   "pct": 13.95
+  },
+  {
+   "symbol": "golean:mi_malloc_small",
+   "samples": 57,
+   "pct": 11.05
+  },
+  {
+   "symbol": "golean:lp_GoLean_GoLean_GoCore_Machine_stepThread",
+   "samples": 32,
+   "pct": 6.2
+  },
+  {
+   "symbol": "golean:lp_GoLean_GoLean_GoCore_Machine_stepFn",
+   "samples": 30,
+   "pct": 5.81
+  },
+  {
+   "symbol": "golean:lean_dec_ref_cold",
+   "samples": 26,
+   "pct": 5.04
+  },
+  {
+   "symbol": "libc.so.6:__default_morecore@GLIBC_2.2.5",
+   "samples": 23,
+   "pct": 4.46
+  },
+  {
+   "symbol": "golean:lp_GoLean_GoLean_GoCore_Machine_execProgLoopOut",
+   "samples": 20,
+   "pct": 3.88
+  },
+  {
+   "symbol": "golean:lean_alloc_ctor",
+   "samples": 12,
+   "pct": 2.33
+  },
+  {
+   "symbol": "golean:lp_GoLean_List_findSome_x3f___at___00GoLean_GoCore_Machine_MultiConfig_panicMsg_x3f_spec__0",
+   "samples": 12,
+   "pct": 2.33
+  },
+  {
+   "symbol": "golean:lp_GoLean_GoLean_GoCore_Machine_arrivalPlan",
+   "samples": 11,
+   "pct": 2.13
+  },
+  {
+   "symbol": "golean:l_List_hasDecEq___redArg",
+   "samples": 10,
+   "pct": 1.94
+  },
+  {
+   "symbol": "golean:mi_malloc",
+   "samples": 9,
+   "pct": 1.74
+  },
+  {
+   "symbol": "golean:__gmpz_n_pow_ui",
+   "samples": 9,
+   "pct": 1.74
+  },
+  {
+   "symbol": "golean:mi_free_size",
+   "samples": 8,
+   "pct": 1.55
+  },
+  {
+   "symbol": "golean:lp_GoLean_GoLean_GoCore_Machine_Config_atBoundary",
+   "samples": 8,
+   "pct": 1.55
+  },
+  {
+   "symbol": "golean:lp_GoLean_GoLean_GoCore_Machine_stepMulti",
+   "samples": 7,
+   "pct": 1.36
+  },
+  {
+   "symbol": "golean:l_List_reverseAux___redArg",
+   "samples": 7,
+   "pct": 1.36
+  },
+  {
+   "symbol": "golean:lp_GoLean_GoLean_GoCore_Machine_stepThreadInto",
+   "samples": 7,
+   "pct": 1.36
+  },
+  {
+   "symbol": "golean:lean_array_fset",
+   "samples": 7,
+   "pct": 1.36
+  },
+  {
+   "symbol": "golean:lp_GoLean_GoLean_GoCore_Machine_arrivalCases",
+   "samples": 6,
+   "pct": 1.16
+  },
+  {
+   "symbol": "golean:lp_GoLean_List_filterTR_loop___at___00GoLean_GoCore_Machine_runnableIdxs_spec__0",
+   "samples": 6,
+   "pct": 1.16
+  },
+  {
+   "symbol": "libc.so.6:realloc@@GLIBC_2.2.5",
+   "samples": 5,
+   "pct": 0.97
+  },
+  {
+   "symbol": "golean:lp_GoLean_GoLean_GoCore_Machine_MultiConfig_mainOutcome_x3f",
+   "samples": 5,
+   "pct": 0.97
+  },
+  {
+   "symbol": "golean:lean_array_to_list_impl",
+   "samples": 5,
+   "pct": 0.97
+  },
+  {
+   "symbol": "golean:lean_apply_2",
+   "samples": 5,
+   "pct": 0.97
+  },
+  {
+   "symbol": "libc.so.6:malloc@@GLIBC_2.2.5",
+   "samples": 5,
+   "pct": 0.97
+  },
+  {
+   "symbol": "golean:l_List_range_loop",
+   "samples": 4,
+   "pct": 0.78
+  },
+  {
+   "symbol": "golean:lp_GoLean_GoLean_GoCore_Machine_Config_afterStepFlag",
+   "samples": 4,
+   "pct": 0.78
+  },
+  {
+   "symbol": "golean:lp_GoLean_GoLean_GoCore_Machine_Config_applyPos",
+   "samples": 4,
+   "pct": 0.78
+  },
+  {
+   "symbol": "golean:lp_GoLean_GoLean_GoCore_Machine_threadRunnable",
+   "samples": 4,
+   "pct": 0.78
+  }
+ ],
+ "child_stdout_tail": "{\"output\":\"\",\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"kind\":\"int\",\"tag\":\"int\",\"value\":3199960000}]}",
+ "child_stderr_tail": ""
+}

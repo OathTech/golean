@@ -1,46 +1,81 @@
-# Consumer-contract integration handoff
+# HANDOFF — lane `records/bug090-rediagnosis-0911` (records only)
 
-[AGENT], 2026-09-05. The user authorized landing the reviewed A2 customer,
-integrating BUG-103, and continuing with the semantic interface and A3 lanes.
-A2 landed on main at `700128f3`. BUG-103 is rebased and re-gated on that
-tip and landed at `8ad8cfc8`. The experimental semantic interface subsequently
-landed at `4919b05a`, after independent review and combined-tree gates.
+[AGENT] 2026-09-11. Branch `records/bug090-rediagnosis-0911` off main
+`a461ed8b`. Authority: [USER] Mike 2026-09-11, «Great, go ahead and land
+this, then launch the lanes» (relayed), on `docs/2026-09-11_review-
+dispositions.md` §4 step 2(i). No fix, no runtime edit, no baseline change,
+no lake build (the primary's certified binary was copied and run read-only;
+sha256 `18beb979fbcc90fe3f13d5f659ed27c515c25840e3ad37db80c717c2bfea7ba4`).
+Not merged, not pushed.
 
-The rebase's sole source conflict was two added lane handoffs. Both original
-texts are preserved byte-for-byte as dated documents:
+## What landed (this branch)
 
-- A2: `docs/2026-09-05_iris-customer-handoff.md`.
-- BUG-103: `docs/2026-09-05_bug103-array-conversion-handoff.md`.
+- `docs/2026-09-11_bug090-rediagnosis.md` — the note: scope, measurement
+  tables, the cost model per operation kind, the refuted hypotheses, code
+  anchors (file:line at `a461ed8b`, verified), C1 requirements.
+- `docs/BUGS.md` BUG-090 — stale association-list diagnosis retired under a
+  banner (kept verbatim), measured re-diagnosis and revised plan appended;
+  Status/Pinned-by/Cases lines untouched.
+- `docs/evidence/2026-09-11_bug090-rediagnosis/` (137,655 tracked bytes):
+  README (provenance, scope, reproduction), 20 probe sources, `run-probes.py`,
+  `ipsample.py` (ptrace leaf-IP sampler; `perf` is refused on this box),
+  `results.json` (68 points × 3 runs), `steps.json`, `summarize.py` +
+  generated `summary.md`, five `profile-*.json`.
 
-Those documents describe their original lane state. Their pending-review and
-pending-authorization statements are historical: both adversarial reviews
-passed, and the user subsequently authorized this integration. Original
-sealed evidence remains unchanged; its HANDOFF.md hash denotes the original
-BUG-103 handoff, now preserved at the dated path above.
+## The headline cost model (three sentences)
 
-Integration disposition and fresh combined-tree gate evidence are recorded in
-`docs/2026-09-05_bug103-integration.md`. Full differential: 3,598 cases,
-3,353 PASS / 245 known FAIL, no result/stage drift; 394 negative oracle
-checks and 202 eval checks pass. One slow-tier certificate remains cached.
-The source-reviewed runtime/proof/customer bytes are unchanged by integration.
-No push is authorized.
+(A) A write through a field/index path rewrites and re-normalizes its whole
+ROOT cell, and `normalizeListWith` rebuilds arrays as `#[head] ++ tail`, so
+one write into an m-element root costs ≈1.1 ns × m² (109 ms at m = 10⁴) and
+n in-place appends at capacity ≈ n are cubic — the review's 4,000-append loop
+completes in 31.6 s, with ≥ 83 % of samples in the array rebuild and `stepFn`
+at 0 %. (B) The pre-step state stays referenced across every step (the
+drivers' post-step `raceUpdate m.shared m.threads`; `deliverS`'s
+whole-state rollback on panic), so every cell write copies the whole heap
+array — ≈4.4 ns per live cell per write, 92 % of the allocation loop's
+samples in `lean_copy_expand_array` + `lean_del_core_other` — which is why
+allocation COUNT still drives a quadratic cost after the dense heap. Reads
+are flat in aggregate size, the per-step baseline is 252 ns, maps cost a
+linear key scan (≈11 ns/entry) per write.
 
-The current next-phase work adds the independently reviewed A3a checker,
-exposed explicitly through `GoLean/Interface.lean`. It proves exactly index
-structure, Boolean entry/argument validity and a whole-program syntax policy.
-It is opt-in, does not restrict the interpreter/frontend, and does not prove
-typing or refusal freedom. An admitted unbound-variable program is proved
-to refuse; the test is a permanent record of that limitation. See
-`docs/2026-09-05_a3-admission-handoff.md` and the master plan §7.4.1.
+## Gates run (static; captured exit codes)
 
-The first admission extension should add scoped variable/result typing and
-a driver setup theorem, then cover A2's calls/captures/initialization/recovery.
-B7/C1 and generic composition retain their separate contracts and gates.
-The full Gate A and a stable consumer pin remain open.
+- `scripts/check-bugs.sh` → exit 0 («ok (110 bug(s); pinned cases behave as
+  claimed)»; backlog 14 unexplained, unchanged by this lane).
+- `scripts/check-evidence-size` → exit 0 («PASS … 0 new» offenders).
+- No `scripts/ci` run: no runtime file changed (`git diff --stat` over
+  `GoLean tools Main.lean lakefile.toml lean-toolchain baselines scripts` is
+  empty); a records-only landing.
 
-Final combined-tree validation is complete: ordinary CI, the full admission
-gate and both customer gates PASS. An independent integration review finds
-no defect, and all four audits reject an isolated unused Admission axiom.
-Exact source bindings, commands, fresh 1/1 + 3/3 differential results and
-the cached full-corpus comparison scope are recorded in
-`docs/evidence/2026-09-05_a3-integration/README.md`.
+## Owed items
+
+- Which of the two retention sites dominates mechanism (B) needs a rebuild
+  (a spike that removes one site and re-measures `alloc_new`); not done here
+  by design (no lake build in this lane). Both must go for in-place updates.
+- The corpus consequences recorded on BUG-090 (Builder rows ≤ 1 KB, fuzz
+  10×300, `repeat-bound-refused`, `issue24419`) stay until C1 lands and the
+  evidence dir's plan is rerun with the acceptance criteria in the note §5.
+- The sampler attributes libc-internal samples to the nearest exported
+  symbol (libc is stripped) and misses the first ~0.4 s of a run; both
+  limitations are stated in the evidence README. Fine for this purpose;
+  a `perf`-capable box would give call stacks.
+
+## PENDING [USER]
+
+- Note §5 item 4: cell granularity for C1 (per-element cells / paths as
+  first-class locations vs the aggregate-per-cell shape) — a design choice
+  with relational consequences; [AGENT] states the trade-off only.
+- BUG-090's revised Plan is an [AGENT] proposal for C1's scope, marked
+  PENDING [USER] in the entry.
+- Merge of this branch: the audit ask is posed in the lane report; merge only
+  on explicit at-that-moment sign-off (charter step 4).
+
+## Exact next command (for the coordinator, after sign-off)
+
+```sh
+cd /home/dev/projects/golean && git checkout main && git merge --ff-only records/bug090-rediagnosis-0911
+```
+
+Records only — no 5a re-certification is triggered (no semantic source,
+frontend, apparatus or toolchain input changed); `scripts/ci` at the merged
+tip is the ordinary post-merge check.

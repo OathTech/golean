@@ -1,0 +1,142 @@
+{
+ "cmd": [
+  ".tmp/golean",
+  "native-json-run",
+  "--input",
+  ".tmp/bug090/write_fixed/program.json",
+  "--function",
+  "probe",
+  "--arg-int",
+  "3000",
+  "--arg-int",
+  "100"
+ ],
+ "exit": 0,
+ "wall_s_under_tracer": 1.038,
+ "interval_ms": 1.0,
+ "samples": 510,
+ "idle_ticks": 2,
+ "leader_running_ticks_unsampled": 0,
+ "samples_per_thread": {
+  "577785": 510
+ },
+ "scope": "leaf instruction pointer only, running non-leader threads, no call stacks",
+ "by_module": {
+  "golean": 479,
+  "libc.so.6": 31
+ },
+ "top": [
+  {
+   "symbol": "golean:l_Array_append___redArg",
+   "samples": 247,
+   "pct": 48.43
+  },
+  {
+   "symbol": "golean:lean_array_push",
+   "samples": 102,
+   "pct": 20.0
+  },
+  {
+   "symbol": "golean:_ZN4leanL19lean_del_core_otherEP11lean_objecthRS1_",
+   "samples": 92,
+   "pct": 18.04
+  },
+  {
+   "symbol": "libc.so.6:__nss_database_lookup@GLIBC_2.2.5",
+   "samples": 30,
+   "pct": 5.88
+  },
+  {
+   "symbol": "golean:lean_copy_expand_array",
+   "samples": 5,
+   "pct": 0.98
+  },
+  {
+   "symbol": "golean:_Z15_mi_page_retireP9mi_page_s",
+   "samples": 5,
+   "pct": 0.98
+  },
+  {
+   "symbol": "golean:mi_free_size",
+   "samples": 5,
+   "pct": 0.98
+  },
+  {
+   "symbol": "golean:mi_malloc",
+   "samples": 4,
+   "pct": 0.78
+  },
+  {
+   "symbol": "golean:_Z18_mi_malloc_genericP9mi_heap_smbm",
+   "samples": 4,
+   "pct": 0.78
+  },
+  {
+   "symbol": "golean:_ZL12mi_find_pageP9mi_heap_smm",
+   "samples": 2,
+   "pct": 0.39
+  },
+  {
+   "symbol": "golean:__gmpz_realloc",
+   "samples": 2,
+   "pct": 0.39
+  },
+  {
+   "symbol": "golean:lp_GoLean_GoLean_GoCore_normalizeListWith",
+   "samples": 2,
+   "pct": 0.39
+  },
+  {
+   "symbol": "golean:mi_malloc_small",
+   "samples": 1,
+   "pct": 0.2
+  },
+  {
+   "symbol": "golean:lp_GoLean_GoLean_GoCore_normalizeValueForTyTy",
+   "samples": 1,
+   "pct": 0.2
+  },
+  {
+   "symbol": "golean:__gmp_default_reallocate",
+   "samples": 1,
+   "pct": 0.2
+  },
+  {
+   "symbol": "libc.so.6:__default_morecore@GLIBC_2.2.5",
+   "samples": 1,
+   "pct": 0.2
+  },
+  {
+   "symbol": "golean:__gmp_default_allocate",
+   "samples": 1,
+   "pct": 0.2
+  },
+  {
+   "symbol": "golean:__gmpz_mul_2exp",
+   "samples": 1,
+   "pct": 0.2
+  },
+  {
+   "symbol": "golean:__gmpn_lshift_x86_64",
+   "samples": 1,
+   "pct": 0.2
+  },
+  {
+   "symbol": "golean:l_Int_pow",
+   "samples": 1,
+   "pct": 0.2
+  },
+  {
+   "symbol": "golean:lp_GoLean_GoLean_GoCore_IntKind_bits_x3f",
+   "samples": 1,
+   "pct": 0.2
+  },
+  {
+   "symbol": "golean:lp_GoLean_GoLean_GoCore_Machine_Config_atBoundary",
+   "samples": 1,
+   "pct": 0.2
+  }
+ ],
+ "child_stdout_tail": "{\"output\":\"\",\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"kind\":\"int\",\"tag\":\"int\",\"value\":3099}]}",
+ "child_stderr_tail": ""
+}
