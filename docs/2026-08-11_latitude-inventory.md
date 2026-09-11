@@ -3088,3 +3088,121 @@ Nothing in this block is a class member by virtue of being named here.
   (b-n)** (body: "declared-unobservable narrowing", already counted in
   the (b-n) list), **R7 → (b-n)** (see above). C10 was already inside
   §5's count of 9; adding its heading tag changes no total.
+
+## 11. The two contracts — what the semantics CLAIMS, and the review's gap list (added 2026-09-11, [AGENT])
+
+Records only, on `docs/2026-09-11_review-dispositions.md` §4 step 2(ii)
+([USER] Mike 2026-09-11 «Great, go ahead and land this, then launch the
+lanes», relayed by the [AGENT] coordinator — cite as relayed). Source:
+review §6/§9 (`docs/2026-09-11_project-review.md`); §0's vocabulary;
+anchors read at `a461ed8b`; adds no site, moves no row.
+
+**Contract A — the portable Go 1.26 language semantics (the upper
+bound).** At every site of §1–§3 the target is modeled = permitted,
+"permitted" being what the PINNED spec / memory model / library docs
+allow (`docs/spec-sources.md`; evidence classes SPEC/MM/DOCS). The half
+modeled ⊆ permitted is argued per row by the clause text at the rule
+site (§0's citation norm). The half permitted ⊆ modeled holds exactly
+where an (a) row says "believed MAXIMAL"; every (b)/(b-n) row and every
+§5 refusal is a recorded modeled ⊊ permitted gap with its re-envelope
+obligation (doctrine §Pins are scaffolding). Contract A is a claim PER
+ROW; §10 is its ledger (honesty-critical list: gc observed outside).
+
+**Contract B — the gc/linux/amd64 target instance (what the lower bound
+is measured against).** `Platform.gcAmd64` (Platform.lean:81–83; the ONE
+instantiation `platform`, :87): `intBits = 64` (R1; `IntKind.bitsAt`/
+`bits?`, Value.lean:38/:53); `wordBytes = 8`, `maxAlign = 8` (gc layout,
+R16's layout half); `maxAllocBytes = 2^48`, `chanHeaderBytes = 112`
+(R16). Outside the record: the four `.sync` sizes as amd64
+`unsafe.Sizeof` constants (Ops.lean:409–412; owed for B7, Platform.lean:
+12–14); the append growth policy `appendGrowthCap` (Ops.lean:2338) as
+R2's default-stream centre; the float realization — per-op rounding, no
+fusion, no extra precision (R4; FloatBits.lean:31–49), canonical NaN
+`nan64`/`nan32` (R7; FloatBits.lean:72/:82) — what the oracle pin
+(`go1.26.5 linux/amd64`, spec-sources.md) observes and the corpus samples.
+
+**The evidence relation** — `observed Go outcomes ⊆ modeled outcomes ⊆
+permitted Go outcomes`. LEFT inclusion: differential sampling — corpus
+baselines, the membership lane, `-race` dual sampling, the negative
+lane; a failure is `observed ∉ modeled`, always red (doctrine §The two
+bounds). RIGHT inclusion, and Contract A's maximality: the per-row spec
+argument with its anchors, the litmus rows drawn from the spec's own
+examples (`spec-examples-*`), and the semantic laws the relation carries
+(coherence, the consumption projection, the width lemmas). Two rules
+(review §6, adopted): matching one gc realization at a latitude site
+witnesses ONE member, not portability; a spec-permitted observation does
+not complete the target model — Contract B is complete only when gc's
+member is IN the set on every observed row.
+
+**The review's gap list, classified.** Each: existing site (number
+verified at `a461ed8b`) or new entry; owning contract; what closes it;
+`PENDING [USER]` where the call is the user's.
+
+1. **Platform fixed to `gcAmd64`** — R1 (b), R16 (b); §8 extension #6
+   (int width). Owner: B. Close: a second `Platform` instance
+   (instantiation, not surgery — Platform.lean:9–10; but `ExecState`
+   carries no platform field and `IntKind.normalize` reads the
+   constant, Platform.lean:15–20, deferred to B7) plus a 32-bit oracle
+   host — a machine-global matter, PENDING [USER] (master plan §4 item
+   6; §7 below-the-line).
+2. **No float fusion or extra precision; NaN canonicalization** — R4
+   (b-n); R7 (b-n) with BUG-094 open (`Expect: FAIL` rows). Owner: B
+   for the realized point (R4 = GOAMD64=v1, tripwire `floats/fma-shape`;
+   R7's default NaN 0x7FF8… where gc/amd64 realizes 0xFFF8… and
+   propagates payloads — refused by name under `*bits`); A for the
+   envelopes. Close R4: per-site fused/unfused choice at fusable shapes
+   (HIGH cost). Close R7: a platform-faithful NaN rule OR an (a) envelope
+   over the payloads gc's ports realize (BUG-094 PLAN; the floats design
+   owns it) — the shape is PENDING [USER].
+3. **Append capacity as an interval around gc's policy** — R2 (a), "a
+   declared pragmatic subset" (Ops.lean:2355–2378: `[newLen, max 32
+   (2·growth)]`, "a pragmatic SUBSET"; consumption Machine.lean:1387;
+   spec#Appending_and_copying_slices — any capacity ≥ newLen conforms).
+   Owner: A (width), B (centre). Close: the permitted set has no upper
+   end, so permitted ⊆ modeled cannot hold here by construction;
+   Contract A holds as "⊇ every realization evidenced", discharged by
+   R2's rule "widen deliberately if a toolchain leaves the window; never
+   narrow". No [USER] call pending.
+4. **Zero-size pointer identity** — R15 (b) never-same; the standing
+   differential red `pointers/zero-size-address/escaped-same`
+   (`baselines/untriaged-ids:205`, disposition `latitude`: observed ∉
+   modeled-singleton). Owner: A (spec#Size_and_alignment_guarantees and
+   spec#Comparison_operators permit both members; the machine holds
+   one). Close: a may-equal choice at zero-size address creation (a new
+   `ChoiceSite`, R15's obligation) or a membership row admitting {0,1};
+   opening that lane is PENDING [USER] (R15: backlog since 2026-09-01).
+   The review's companion clause (init/evaluation order off the oracle:
+   E7, E3/E4, BUG-101/104) belongs to the evaluation-order design note
+   (dispositions §4 step 4).
+5. **Select/scheduler choices explored at machine boundaries only** —
+   C1 (a) (`runnableIdxs` Multi.lean:400; consumed at `stepMulti`,
+   Multi.lean:1511, via `Thread.boundarySite`), C2 (a) back-edges, C3
+   (a) post-op boundary, C4 (a) L5 window, C6 (a) select. Owner: A.
+   Claimed: maximal AT REGISTRY GRANULARITY (C1's words). Not claimed:
+   sub-statement interleavings — doctrine register #5, the reduction
+   line's territory. Close: the reduction statement; `NPDRFReduction`
+   restate-vs-delete is PENDING [USER] (dispositions §3 item 2, «unsure
+   right now, probably restate»).
+6. **A finite `List Nat` tape with a default after exhaustion, not an
+   infinite fair scheduler** — `Choices := List Nat` (State.lean:202);
+   `Choices.consume` yields 0 on exhaustion (State.lean:209–213); the
+   per-site default is `ChoiceSite.canonicalSlot0`. New entry (the
+   carrier's shape, not a site). Owner: A, as a scope statement — the
+   modeled set is the union over finite streams; every finite prefix of
+   every schedule, starving ones included, is a member (doctrine §The
+   two bounds, [USER] 2026-09-02). LIVENESS IS NOT CLAIMED: no fairness
+   is enforced, no termination stated; fairness is a hypothesis on the
+   chosen sequence, stated where used, never a machine-side filter.
+   Nothing owed by the machine; no [USER] call pending.
+7. **gc-pins as scaffolding carrying re-envelope obligations** — every
+   (b)/(b-n) row of §10 (17 + 7), each with obligation and cost, queued
+   in §7. Owner: A (each pin is a Contract-A debt whose current member is
+   Contract B's realization). Close: §7's queue in order; no record
+   presents gc-conformance as correctness (doctrine).
+
+Anchor note. Every `file:line` above was read at `a461ed8b`. Three
+EXISTING cites were found drifted since the 2026-08-31 sweep and are left
+for the next sweep (this section adds, it does not rewrite): C1's
+Multi.lean:220–224 / :1153 (now :400 / :1511, the latter also the §0
+mirror's `l1Sched`/`backEdge` cell); the mirror's Machine.lean:963 and
+Ops.lean:1972 (now :1387 / :2383); R2's Ops.lean:1944–1972 (now :2355–2384).

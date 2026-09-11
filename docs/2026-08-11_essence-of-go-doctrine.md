@@ -67,6 +67,16 @@ is the doctrine's position, not a hedge: C6's envelope is
 support-equal to the spec's on finite traces and deliberately wider
 on infinite ones.
 
+**The two bounds as two contracts ([AGENT] 2026-09-11, records only).**
+The latitude inventory §11 states what the semantics claims in these
+terms: Contract A, the portable Go 1.26 language semantics (modeled =
+permitted at every site — the upper bound, argued per row); Contract B,
+the gc/linux/amd64 target instance `Platform.gcAmd64` (observed ⊆
+modeled — the lower bound, sampled by the differential); the relation
+`observed ⊆ modeled ⊆ permitted` with the apparatus that attacks each
+inclusion; and the 2026-09-11 review's gap list, classified in the
+inventory's vocabulary with its `PENDING [USER]` items.
+
 ## Evidence classes for the upper bound
 
 In rough order of authority: the language spec's text; the memory model
