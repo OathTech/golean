@@ -1,0 +1,14 @@
+# id	subject	args	expected_status	expected_reason	features
+# source-selection/excluded-init — BUG-108 red-first rows ([AGENT], lane
+# fix/review-boundary-0911, 2026-09-11; docs/2026-09-11_review-dispositions.md
+# §4 step 1). Each row reads one variable whose sibling file's `init` would
+# set it to 2 — a file gc EXCLUDES BY FILENAME on linux/amd64 (`_windows`,
+# `_arm64`, `_linux_arm64` suffixes; leading `_`; leading `.`). gc: 1. A
+# frontend that lowers excluded files: 2 — FAIL/differential at the cut
+# (a461ed8b), the review's F1 wrong answer; PASS once the frontend takes its
+# file set from a go/build.Context pinned to the platform's target.
+windows	excludedWindows	-	ok	-	init,globals
+arm64	excludedArm64	-	ok	-	init,globals
+linux-arm64	excludedLinuxArm64	-	ok	-	init,globals
+underscore	excludedUnderscore	-	ok	-	init,globals
+dot	excludedDot	-	ok	-	init,globals

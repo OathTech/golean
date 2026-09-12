@@ -1,0 +1,21 @@
+# red-first at a461ed8b1acb7f795a569e694c0c4f56549f933a 2026-09-11T23:37:55Z; go: go version go1.26.5 linux/amd64
+== filename_windows
+  go: 1
+  fe-exit=
+  golean: {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":2}]}
+== filename_ignored
+  go: 1
+  fe-exit=
+  golean: {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":2}]}
+== filename_hidden
+  go: 1
+  fe-exit=
+  golean: {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":2}]}
+== module1.21
+  go: 9
+  fe-exit=
+  golean: {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":3}]}
+== module1.26
+  go: 3
+  fe-exit=
+  golean: {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":3}]}

@@ -6689,7 +6689,30 @@ path.
 ## BUG-108 — the frontend's source-file selection ignores Go's filename conventions: files gc ignores (`*_GOOS.go`/`*_GOARCH.go` for another target, `_*.go`, `.*.go`) are LOWERED and their `init` effects run — a wrong answer with a clean export and no refusal [frontend; trusted surface #1; whole-project review 2026-09-11 F1]
 
 - Status: open ([AGENT] coordinator 2026-09-11, filed from `docs/2026-09-11_project-review.md` §4 F1; reproduced independently the same day, dispositions `docs/2026-09-11_review-dispositions.md` §1)
-- Pinned-by: none (no corpus row yet — the fix lane (dispositions §4 step 1) adds red-first rows and moves this to `differential`; until then the pin is the review's probe record `docs/evidence/2026-09-11_project-review/probe-results.json`, cases `filename_windows`, `filename_ignored`, `filename_hidden`)
+- Pinned-by: differential
+- Cases: source-selection/excluded-init/windows, source-selection/excluded-init/arm64, source-selection/excluded-init/linux-arm64, source-selection/excluded-init/underscore, source-selection/excluded-init/dot, source-selection/excluded-conflict, source-selection/excluded-import
+
+Red-first record ([AGENT] lane `fix/review-boundary-0911`, stage S1a,
+2026-09-11; evidence `docs/evidence/2026-09-11_review-boundary/`): the
+seven rows above are born red at the cut `a461ed8b` through the real
+runner — the five `excluded-init` rows FAIL/differential (GoLean 2, gc 1:
+an excluded sibling's `init` ran; files `extra_windows.go`,
+`extra_arm64.go`, `extra_linux_arm64.go`, `_ignored.go`, `.hidden.go`),
+`excluded-conflict` FAIL/frontend-export (`conflict redeclared in this
+block` — the excluded `extra_windows.go` redeclares two names gc never
+sees) and `excluded-import` FAIL/frontend-export (the excluded `_extra.go`
+imports `os`). Positive controls `source-selection/included-suffix/{linux,
+amd64,linux-amd64,bare-linux}` (suffixes naming the target; `linux.go`
+with no underscore prefix is not a tag — the Go 1.4 rule) are born PASS
+and must not move. Until the pin moved here the pin was the review's
+probe record `docs/evidence/2026-09-11_project-review/probe-results.json`
+(cases `filename_windows`, `filename_ignored`, `filename_hidden`). NOT a
+runner row (recorded as a finding, not fixed here — trusted surface #2):
+an excluded file with INVALID syntax cannot be differentially tested,
+because the oracle harness generator (`tools/coverageharness`,
+`packageFiles` + `parser.ParseFile` over every `*.go`) parses excluded
+files too and refuses before `go run` sees the package; that shape is
+pinned by a Go unit test in `tools/nativefrontend` instead (S1b).
 
 Repro (the review's, re-run by the coordinator): `main.go` = `package main;
 var x = 1; func probe() int { return x }; func main() { println(probe()) }`

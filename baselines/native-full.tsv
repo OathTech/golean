@@ -1,5 +1,19 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 3665 (3417 PASS / 248 FAIL)
+# cases: 3676 (3421 PASS / 255 FAIL)
+# re-pinned: 2026-09-12 [AGENT], fix/review-boundary-0911, after a fresh full scripts/capped scripts/ci run at a461ed8b: 3676 = 3421 PASS / 255 FAIL.
+#   BUG-108 RED-FIRST rows (stage S1a, lane fix/review-boundary-0911; docs/2026-09-11_review-dispositions.md
+#   §4 step 1; gate: scripts/capped scripts/ci --diff, cap 48G, LEAN_NUM_THREADS=6, 12 differential
+#   workers, tier=slow row CERTIFIED-CACHED): 11 BORN rows under source-selection/ and nothing else moves —
+#   5 FAIL/differential source-selection/excluded-init/{windows,arm64,linux-arm64,underscore,dot} (a
+#   sibling file gc EXCLUDES BY FILENAME on linux/amd64 was lowered and its init ran: GoLean 2, gc 1 —
+#   the review's F1 wrong answer), 2 FAIL/frontend-export source-selection/{excluded-conflict,
+#   excluded-import} (the excluded file's redeclaration / `os` import refused where gc has an answer),
+#   4 PASS controls source-selection/included-suffix/{linux,amd64,linux-amd64,bare-linux}. All 3665
+#   previous result/stage rows reproduce exactly; no PASS -> non-PASS flip; the 7 reds sit on BUG-108's
+#   Cases line (Pinned-by: differential, Status: open). The channels/select-select/beside-loop
+#   alternation row is kept verbatim (its `# reason:` block above it). Red-first record and gate lines:
+#   docs/evidence/2026-09-11_review-boundary/README.md.
+# Previous pin:
 # re-pinned: 2026-09-09 [AGENT], FR-31 independent-audit fixes, after a fresh full
 #   GOLEAN_SLOW=1 scripts/capped scripts/coverage all: 3665 = 3417 PASS / 248 FAIL.
 #   Exactly three new PASS controls: nil promoted pointer dispatch, the private
@@ -4368,6 +4382,17 @@ PASS	slices/sortfunc-cmp/sortfunc-local-type	-
 PASS	slices/sortfunc-cmp/named-slice-bound	-
 PASS	slices/sortfunc-cmp/float-compare-bound	-
 PASS	slices/three-index-slice	-
+FAIL	source-selection/excluded-conflict	frontend-export
+FAIL	source-selection/excluded-import	frontend-export
+FAIL	source-selection/excluded-init/windows	differential
+FAIL	source-selection/excluded-init/arm64	differential
+FAIL	source-selection/excluded-init/linux-arm64	differential
+FAIL	source-selection/excluded-init/underscore	differential
+FAIL	source-selection/excluded-init/dot	differential
+PASS	source-selection/included-suffix/linux	-
+PASS	source-selection/included-suffix/amd64	-
+PASS	source-selection/included-suffix/linux-amd64	-
+PASS	source-selection/included-suffix/bare-linux	-
 PASS	spec-examples-decl/addr-deref-nil-matrix/two-deref-outer-nil	-
 PASS	spec-examples-decl/addr-deref-nil-matrix/two-deref-inner-nil	-
 PASS	spec-examples-decl/addr-deref-nil-matrix/index-slice-ptr-nil	-

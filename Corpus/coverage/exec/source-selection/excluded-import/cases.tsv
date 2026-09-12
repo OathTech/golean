@@ -1,0 +1,7 @@
+# id	subject	args	expected_status	expected_reason	features
+# source-selection/excluded-import — BUG-108 red-first row ([AGENT], lane
+# fix/review-boundary-0911, 2026-09-11). The excluded _extra.go imports `os`
+# (not admitted) and reads os.Args in an init. gc: 1 (the file is not part
+# of the package). A frontend that parses it refuses the import —
+# FAIL/frontend-export at the cut; PASS after the fix.
+-	excludedImport	-	ok	-	init,globals,imports

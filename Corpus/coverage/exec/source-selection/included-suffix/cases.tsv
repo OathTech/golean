@@ -1,0 +1,10 @@
+# id	subject	args	expected_status	expected_reason	features
+# source-selection/included-suffix — BUG-108 POSITIVE CONTROLS ([AGENT], lane
+# fix/review-boundary-0911, 2026-09-11): filename suffixes that NAME the
+# pinned target (linux/amd64) are included, and `linux.go` (no underscore
+# prefix) is not tagged at all. gc: 2 on every row; PASS before and after the
+# fix — a fix that over-excludes would turn these red.
+linux	includedLinux	-	ok	-	init,globals
+amd64	includedAmd64	-	ok	-	init,globals
+linux-amd64	includedLinuxAmd64	-	ok	-	init,globals
+bare-linux	includedBareLinux	-	ok	-	init,globals

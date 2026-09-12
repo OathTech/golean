@@ -1,0 +1,13 @@
+# scripts/coverage run --prefix source-selection/ at a461ed8b (pre-fix; S1 red-first), 2026-09-11T23:40Z, capped 48G
+FAIL	source-selection/excluded-init/underscore	init,globals	stage=differential	detail=Lean={"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":2}]} Go={"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]} left:  {"output":"
+FAIL	source-selection/excluded-init/arm64	init,globals	stage=differential	detail=Lean={"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":2}]} Go={"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]} left:  {"output":"","sc
+FAIL	source-selection/excluded-init/windows	init,globals	stage=differential	detail=Lean={"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":2}]} Go={"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]} left:  {"output":"","
+FAIL	source-selection/excluded-conflict	globals	stage=frontend-export	detail=native frontend: nativefrontend: type-check: Corpus/coverage/exec/source-selection/excluded-conflict/main.go:8:5: conflict redeclared in this block\nexit status 1
+FAIL	source-selection/excluded-init/linux-arm64	init,globals	stage=differential	detail=Lean={"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":2}]} Go={"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]} left:  {"output":
+FAIL	source-selection/excluded-init/dot	init,globals	stage=differential	detail=Lean={"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":2}]} Go={"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]} left:  {"output":"","sche
+FAIL	source-selection/excluded-import	init,globals,imports	stage=frontend-export	detail=native frontend: nativefrontend: native frontend unsupported: stdlib-qualified selector os.Args in value position: only allowlisted DIRECT CALLS of modeled stdlib members lower (E5 shims / fmt desugar); the value shape is outside the modeled 
+PASS	source-selection/included-suffix/linux-amd64	init,globals
+PASS	source-selection/included-suffix/linux	init,globals
+PASS	source-selection/included-suffix/bare-linux	init,globals
+PASS	source-selection/included-suffix/amd64	init,globals
+EXIT=1 (some cases FAIL — the expected red)

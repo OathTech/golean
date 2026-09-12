@@ -1,0 +1,13 @@
+# red-first BUG-110 at a461ed8b1acb7f795a569e694c0c4f56549f933a 2026-09-11T23:38:03Z
+== program
+  golean: {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":42}]}
+  exit=
+== absent_result_types
+  golean: {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":42}]}
+  exit=
+== duplicate_schema
+  golean: {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":42}]}
+  exit=
+== bad_surrogate
+  golean: {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":42}]}
+  exit=

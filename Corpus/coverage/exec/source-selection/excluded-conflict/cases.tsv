@@ -1,0 +1,9 @@
+# id	subject	args	expected_status	expected_reason	features
+# source-selection/excluded-conflict — BUG-108 red-first row ([AGENT], lane
+# fix/review-boundary-0911, 2026-09-11). The excluded extra_windows.go
+# redeclares a package-level var and a func. gc: 1 (the file is not part of
+# the package). A frontend that parses it: "redeclared in this block" —
+# FAIL/frontend-export at the cut; PASS after the fix. (The redeclared names
+# are deliberately NOT the subject: the oracle harness generator refuses a
+# duplicate SUBJECT declaration before go run sees the package.)
+-	excludedConflict	-	ok	-	globals
