@@ -130,6 +130,15 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	// THE MODULE'S LANGUAGE VERSION (modfile.go, BUG-109; RULED [USER]
+	// 2026-09-11 «Yes, refuse non-1.26»): the nearest go.mod's `go`
+	// directive must name the pinned language version, else the export
+	// refuses by name — the directive changes the program's meaning (the
+	// go1.22 per-iteration loop variable: 9 vs 3), and this semantics
+	// implements the Go 1.26 language only. No go.mod: the pin, unchanged.
+	if err := refuseForeignModuleVersion(*dir); err != nil {
+		return err
+	}
 
 	// (Build-constrained files refused inside selectPackageFiles — the
 	// langversion.go policy, one site for main and imported units.)

@@ -85,6 +85,39 @@ Gates (all `GOLEAN_MEM_MAX=48G scripts/capped`, lock held), tree = `6264f152` + 
 - re-pin from run #3's `latest.tsv`: 3676 = 3428 PASS / 248 FAIL; body diff = exactly the 7 BUG-108 rows FAIL → PASS; `coverage-baseline-diff --full` 0, `check-alternation-survival` 0, `check-bugs.sh` 0 (BUG-108 fixed, its 7 cases PASS — the symmetric rule holds).
 - re-judge `scripts/ci` (fast) on the exact committed tree: see the gate table (S1b re-judge).
 
+## Stage S2 — BUG-109 fix (the module's `go` directive; RULED [USER] «Yes, refuse non-1.26»)
+
+Code: `tools/nativefrontend/modfile.go` (new; `findGoMod` walks up like the go command,
+`goDirective` strict scanner, `refuseForeignModuleVersion`), wired in `main.go` run() and
+`load.go` parseLocal; `modfile_test.go` (new; 13 directive shapes, the walk-up, an imported
+package's nested module); `tools/lowerdiag/causes.tsv` +1 row `foreign-module-version`
+(by-design) and `unclassified-formats.txt` regenerated (372/409).
+
+WHY NO CORPUS ROW (said plainly): the runner's oracle is `GO111MODULE=off go run .` inside a
+harness-generated copy that holds `*.go` only (`scripts/diff-coverage` `go_run_oracle`;
+`tools/coverageharness` `packageFiles`), so a `go.mod` in a row directory is never seen by the
+oracle — a `go 1.21` row would have gc answering the 1.26 program (3) against a frontend refusal,
+and a `go 1.26` twin would test nothing about the directive. Either would be a fake row. The pin is
+the unit tests plus the transcripts here:
+
+| file | what |
+|---|---|
+| `s2-bug109-module-directive.txt` | the review's `module1.21` / `module1.26` probes: `GO111MODULE=on go run .` (9 / 3), the frontend built from `60874ada` (BEFORE S2: both accepted, exit 0), the S2 frontend (AFTER: `…/go.mod declares go 1.21; GoLean implements the Go 1.26 language only (…)`, exit 1; `go 1.26` accepted) |
+| `s2-lower-diagnose-module1.21.txt` | `scripts/lower-diagnose` (the real tool) on the `go 1.21` probe after S2 — the dynamic pass shows the refusal by name; DIAGNOSTIC output, trimmed |
+
+Movement: none expected (zero `go.mod` under `Corpus/`; the raft twin wire byte-identical).
+
+Gates (`GOLEAN_MEM_MAX=48G scripts/capped`, lock held), tree = `60874ada` + the S2 edits:
+
+- run #1 `scripts/ci --slow`: EXIT=1, 995 s. Reds: `certificate provenance` (STALE — the expected
+  F8 signal; candidate minted, `Fresh certification: unchanged set`, 168.9 s) and `baseline diff` =
+  the google-search row alone (`STALE certification` on the record while the enumerator re-derived
+  the identical set); 3676 rows, no other movement (3427 PASS / 249 FAIL with that one stale red).
+  Candidate reviewed: set and claim identical to the installed record; inputs differ exactly in
+  `modfile.go` (+), `modfile_test.go` (+), `main.go`, `load.go`, `tools/lowerdiag/{causes.tsv,
+  unclassified-formats.txt}`; installed.
+- run #2 `scripts/ci --diff` (cache mode against the installed record, the tree committed as S2): EXIT=0, 885 s, RESULT: PASS — no drift (3676 rows reproduce; 394 negatives), certificate provenance ok, google-search CERTIFIED-CACHED; no baseline re-pin.
+
 ## Gate table
 
 | stage | command | tree | exit | wall | notes |
@@ -95,4 +128,6 @@ Gates (all `GOLEAN_MEM_MAX=48G scripts/capped`, lock held), tree = `6264f152` + 
 | S1b run #1 | `scripts/ci --slow` | 6264f152 + S1b edits | 1 | 1033 s | reds: bug-index, certificate provenance (STALE → candidate minted, set unchanged, 171 s), lowering-diagnostic tables (six unclassified formats — fixed), baseline drift (7 flips + google-search stale) |
 | S1b run #2 | `scripts/ci --slow` | + lowerdiag cause rows | 1 | 1006 s | reds: bug-index, certificate provenance (STALE by the two lowerdiag files → candidate, set unchanged, 162 s), baseline drift (7 flips + google-search stale) |
 | S1b run #3 | `scripts/ci --diff` | + installed record | 1 | 887 s | reds: bug-index, baseline drift = exactly the 7 flips; certificate provenance ok; google-search CERTIFIED-CACHED |
-| S1b re-judge | `scripts/ci` (fast) | + re-pinned baseline, BUG-108 fixed | 0 | 554 s | RESULT: PASS — the tree committed as S1b |
+| S1b re-judge | `scripts/ci` (fast) | + re-pinned baseline, BUG-108 fixed | 0 | 554 s | RESULT: PASS — the tree committed as S1b (`60874ada`) |
+| S2 run #1 | `scripts/ci --slow` | 60874ada + S2 edits | 1 | 995 s | reds: certificate provenance (STALE → candidate, set unchanged, 169 s), baseline drift = google-search stale only |
+| S2 run #2 | `scripts/ci --diff` | + installed record (the tree committed as S2) | 0 | 885 s | RESULT: PASS |

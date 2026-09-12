@@ -1,0 +1,31 @@
+# scripts/lower-diagnose .tmp/probes/module1.21 (the review's go 1.21 probe) AFTER S2, 2026-09-12T01:31:08Z, tree 60874ada+S2 edits, exit=0 — DIAGNOSTIC output (report-only lane tooling; output root artifacts/lower-diagnose/, gitignored), trimmed to the lines naming the frontend's refusal and the summary
+1:DIAGNOSTIC — NOT A LOWERING. tools/lowerdiag report: no wire is written; nothing in this file is a gate input.
+3:commit: 60874ada58204160bdccf3e0b2db3f0197f275ac+dirty   go: go1.26.5   tables: 11b8e8a8763a (causes.tsv + machine-surface.tsv + library-refusals.tsv)
+4:register: docs/stdlib-admission-register.md (44 rows)   causes table: 69 rows
+6:== first refusal (what the frontend says today)
+7:  nativefrontend: native frontend unsupported: .tmp/probes/module1.21/go.mod declares go 1.21; GoLean implements the Go 1.26 language only (the module's language version changes the program's meaning — e.g. the go1.22 per-iteration loop variable; RULED [USER] 2026-09-11: refuse non-1.26)
+8:  -> cause foreign-module-version [by-design, export-scoped] key foreign-module-version
+9:  note: the static census has no declaration with this key or cause: the refusal is at a site the static pass does not judge (library text, an emitter-table detail such as fmt's verb matrix, a stencil, or a load-time shape)
+11:== distance
+12:  declarations demanding nothing refused: 1 / 1 (100.0%)   funcs+methods: 1 / 1 (100.0%)   may-refuse: 0   refused: 0
+13:  export kills: 0 declaration(s) refuse the WHOLE export of their package today; 0 / 1 package(s) export-killed (own or inherited)
+15:== blockers by cause (sorted by unblock value: sole = declarations this cause alone blocks)
+16:  cause                      fr               scope  decls  sole pkgs export  top keys
+17:  (none — every declaration demands nothing the static pass knows to be refused)
+19:== top blockers — what each is and where its plan lives
+21:== projection — declarations lowering if the top causes were fixed, cumulatively
+24:  package                                  decls lowers  may-ref  refd   +top3    share  export
+27:== not judged statically (every cause id the static pass never emits; count = declarations in THIS program referencing the surface it covers, - = shape-level)
+28:  cause                      fr                decls  what
+29:  labeled-shape              unrowed               -  statement/expression corner shapes the emitter refuses by arm — not modeled statically
+37:  stencil-whole-export       FR-4                  0  declarations that declare type parameters or instantiate a generic — mono.go's stencil-time refusals (C6 local type arguments, mangling caps) are not judged
+39:  local-type-type-argument   c-pin                 0  declarations that declare type parameters or instantiate a generic — mono.go's stencil-time refusals (C6 local type arguments, mangling caps) are not judged
+40:  imported-type-marker       by-design             0  declarations touching an imported named type — the D5 marker itself lowers; only its uncalled-method stubs appear quarantined in a wire
+41:  generic-template           by-design             0  declarations that declare type parameters or instantiate a generic — mono.go's stencil-time refusals (C6 local type arguments, mangling caps) are not judged
+46:  generics-corner            unrowed               0  declarations that declare type parameters or instantiate a generic — mono.go's stencil-time refusals (C6 local type arguments, mangling caps) are not judged
+47:  cmp-compare-shape          FR-14                 0  declarations calling cmp.Compare — the real generic since the kind desugar retired (2026-09-04); a function-local type argument is a stencil-time C6 refusal
+48:  init-schedule              unrowed               -  load-time / initialization-schedule shapes — the dynamic pass (first refusal) is the check
+49:  hidden-dep-init-order      c-pin                 -  load-time / initialization-schedule shapes — the dynamic pass (first refusal) is the check
+52:  gc-refuses-directory       by-design             -  not modeled statically
+54:  result-shadow              unrowed               -  statement/expression corner shapes the emitter refuses by arm — not modeled statically
+55:  statement-shape            unrowed               -  statement/expression corner shapes the emitter refuses by arm — not modeled statically

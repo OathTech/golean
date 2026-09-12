@@ -1,0 +1,10 @@
+# BUG-109 pin transcript — frontend on the review's module probes (dirs from docs/evidence/2026-09-11_project-review/probe-inputs.json), 2026-09-12T01:30:14Z
+# go: go version go1.26.5 linux/amd64; oracle: GO111MODULE=on go run . (the go directive honoured)
+== module1.21  go.mod: go 1.21
+  go run .: exit=0 output=9
+  frontend @60874ada (BEFORE S2): exit=0 
+  frontend @S2 (AFTER):          exit=1 nativefrontend: native frontend unsupported: /home/dev/projects/golean/.claude/worktrees/fix-review-boundary/.tmp/probes/module1.21/go.mod declares go 1.21; GoLean implements the Go 1.26 language only (the module's language version changes the program's meaning — e.g. the go1.22 per-iteration loop variable; RULED [USER] 2026-09-11: refuse non-1.26)
+== module1.26  go.mod: go 1.26
+  go run .: exit=0 output=3
+  frontend @60874ada (BEFORE S2): exit=0 
+  frontend @S2 (AFTER):          exit=0 

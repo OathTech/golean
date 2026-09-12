@@ -238,7 +238,7 @@
       "tools/floatvectors/main.go": "2bef884be10a31f3de25f1218e8fc68a07bc3b2a060857747c6934834a34da38",
       "tools/godocanchors/main.go": "f185b941317b218553231dbd913b28bbd386ba955d7f0d448ff7bbc1ecd8aad9",
       "tools/lowerdiag/causes.go": "cb6b794cb15ad9ae67b0b25fd109a4ef06cb625c376a93e53873e94f12897c01",
-      "tools/lowerdiag/causes.tsv": "ab5797dd51b304a9422dca44670d143249dbbf59d29de5b6d6f8ef56549c2634",
+      "tools/lowerdiag/causes.tsv": "0cd0873b53bea52b71953d5bf7559a714679d6beb10fc9b59309b2743c37fc1d",
       "tools/lowerdiag/library-refusals.tsv": "7b0bcb638b6518d8970b24bb09bd4315bf0f76669dccddd95e5ffedfcb504990",
       "tools/lowerdiag/lowerdiag_test.go": "0fff46acdca7ce3df50a0f9bf36edff0c184b2d67d34c5df657ef80f6c68054c",
       "tools/lowerdiag/machine-surface.tsv": "bdcd26131bc2ebdc41a7724fad74f9b0a56980b7fe345c203acdd556bf2b64fc",
@@ -247,7 +247,7 @@
       "tools/lowerdiag/static.go": "51ab662b7f762a35a5be002f268979d280311d0912590c098a816af648018596",
       "tools/lowerdiag/testdata/calib/main.go": "da7932c2331e6102b76952e2c937d757b56f58675068c5f8de95bde23c833e22",
       "tools/lowerdiag/testdata/fivecauses/main.go": "7181b411e6dc97fcfd60e7372e4366873f73cb6ef0c87a8a3b7f2149bb83c54a",
-      "tools/lowerdiag/unclassified-formats.txt": "756781677ab25183ab4771896e3a00673b7349e8b5f7c6c5b4992f8b8dea082a",
+      "tools/lowerdiag/unclassified-formats.txt": "70abe0abcf99aca0e9286a18761044503743b7ef0a7f7b9120bb9a86e51512fd",
       "tools/lsimports/main.go": "d2a94c7fa6844296978a0ad12eecbaf1eb87cb792e52229cca28259b380c2e23",
       "tools/method-identity-audit.py": "07eee5543ecb4e2200c0ad41f5ecb52456233e15f534c38a373bacc3f9a0d0e6",
       "tools/method-identity-dispatch.py": "63cdf4b8a4b885eaa8a5e31305e3f000de23cc940d9eccebab1077a93dd07a7e",
@@ -279,9 +279,11 @@
       "tools/nativefrontend/inittask.go": "bc59e43d13e78b29f96c2b27868699d92e31004098fb290bc71e37160b1afe58",
       "tools/nativefrontend/langversion.go": "500dae8b8d7ae056dbf05e61cd344b6b8ec2ddf202740fc798c6be6c2458e4bd",
       "tools/nativefrontend/langversion_test.go": "8541245584d5471050a2a49969ba4c6e7e7560db5abb7269f05720c4bc82d4a1",
-      "tools/nativefrontend/load.go": "f874b330a31f4765830a2448306f568f6c51901b9916eed973e7bafab9145fbc",
-      "tools/nativefrontend/main.go": "63719bb4fe9e98c10a9a1897378e81c93dc129edbdc77853e5f8937ff0f22f5f",
+      "tools/nativefrontend/load.go": "5ad9ec2e9a421be4ebd4a4a9f8475a979367403e2fe933cf1eba113ce588dc7e",
+      "tools/nativefrontend/main.go": "c5181e0d675dbec15a1229a54e7ad7d382b7f2c345a9792ced2a0a4e06571f45",
       "tools/nativefrontend/memberidentity_test.go": "39b38e58fdf1eb504dac3441a8c2e960e229fc4589a05439b3a9f86826c6e83f",
+      "tools/nativefrontend/modfile.go": "b7d18edbd743cb29036af58b401531b8e025b60227f326fbf1d28fc0dbc371f4",
+      "tools/nativefrontend/modfile_test.go": "0d0483da357d37e55673a807378090c2763db4990d14074873aa2979ed8e20c2",
       "tools/nativefrontend/mono.go": "08e828964edcb3fb907973366cfc9baa66e8f121142e39cb76c018dcfa093e76",
       "tools/nativefrontend/mono_test.go": "8d0931bdb5c00a5b0cd5b5ed5e05aa0ce50245c7c50982c904f40bb1eb9e624b",
       "tools/nativefrontend/perdecl_kill_test.go": "9c96930615691137b9832669741de42e80d56605015f802d76a3c90ec5d3014e",
@@ -365,12 +367,12 @@
       "--engine",
       "dedup"
     ],
-    "finished_utc": "2026-09-12T01:00:30.980140+00:00",
+    "finished_utc": "2026-09-12T01:45:08.459906+00:00",
     "git_dirty": true,
-    "source_commit": "6264f152b04fbc9a132d8f4b91999d23a4ea18d2",
-    "started_utc": "2026-09-12T00:57:46.258184+00:00",
+    "source_commit": "60874ada58204160bdccf3e0b2db3f0197f275ac",
+    "started_utc": "2026-09-12T01:42:17.226688+00:00",
     "stats_sha256": "68f3d503a2249b48df1e7acd687ce8a694c633f25db743f92f450ca1eddbfc92",
-    "wall_seconds": 162.413
+    "wall_seconds": 168.938
   },
   "schema": "golean-certification-v1"
 }

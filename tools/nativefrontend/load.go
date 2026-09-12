@@ -243,6 +243,11 @@ func (l *loader) parseLocal(path, dir string) (*sourcePkg, error) {
 	if err != nil {
 		return nil, err
 	}
+	// The imported unit's module language version (modfile.go, BUG-109):
+	// its nearest go.mod — the main package's, or a nested module's own.
+	if err := refuseForeignModuleVersion(dir); err != nil {
+		return nil, err
+	}
 	unit := &sourcePkg{path: path, files: files}
 	// (The langversion.go build-constraint policy ran inside
 	// selectPackageFiles — local packages are the same modeled fragment.)

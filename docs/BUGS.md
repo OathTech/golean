@@ -6776,8 +6776,8 @@ alone would NOT catch the wrong answer above.
 
 ## BUG-109 — the module's `go` directive is IGNORED: a `go 1.21` module gets the Go 1.26 per-iteration loop variable where gc gives the per-loop one — 9 vs 3 [frontend; trusted surface #1; review 2026-09-11 F2; RULED [USER] 2026-09-11: refuse non-1.26]
 
-- Status: open ([AGENT] coordinator 2026-09-11, filed from `docs/2026-09-11_project-review.md` §4 F2; reproduced independently the same day)
-- Pinned-by: none (no corpus row yet — the fix lane adds a red-first row (`go.mod` with `go 1.21`, expected refusal by name) and a `go 1.26` twin; the corpus has no `go.mod` files today, so no existing row moves)
+- Status: fixed ([AGENT] lane `fix/review-boundary-0911` stage S2, 2026-09-12 — filed open by the coordinator 2026-09-11 from `docs/2026-09-11_project-review.md` §4 F2, reproduced independently the same day)
+- Pinned-by: none (NOT a corpus row, deliberately: the differential runner's oracle runs the package copy under `GO111MODULE=off` from a harness-generated directory that carries no `go.mod` (`scripts/diff-coverage` `go_run_oracle`; `tools/coverageharness` copies `*.go` only), so a row with a `go.mod` would test nothing on the oracle side — a fake row. The pin is `tools/nativefrontend/modfile_test.go` (13 directive shapes, the walk-up, an imported package's nested module) and the `scripts/lower-diagnose` transcripts at the cut and after the fix in `docs/evidence/2026-09-11_review-boundary/`)
 
 Repro: `func probe() int { var fs []func() int; for i := 0; i < 3; i++ {
 fs = append(fs, func() int { return i }) }; return fs[0]() + fs[1]() +
@@ -6791,6 +6791,31 @@ from the embedded pinned-toolchain table, never from the module context, so
 a directory carrying an older module directive is ACCEPTED and its meaning
 changed. `docs/spec-sources.md` already names the language version as
 semantics, not packaging (the pin's third leg).
+
+FIXED ([AGENT] S2, 2026-09-12; `tools/nativefrontend/modfile.go`): the nearest
+`go.mod` at or above the lowered directory — and, for every case-local
+imported package, at or above ITS directory (a nested `go.mod` is its own
+module) — is located the way the go command finds a module root, and its `go`
+directive's language version (`go/version.Lang`, so `go 1.26.0` and `go
+1.26rc1` are `go1.26`) must equal the pinned one (`langversion.go`
+`pinnedLangVersion`, derived from the embedded toolchain table = the oracle
+pin). Otherwise the export REFUSES by name in the ruled form: `<path>/go.mod
+declares go 1.21; GoLean implements the Go 1.26 language only (…)`. Also
+refused by name: a `go.mod` with no `go` directive (the go command then
+assumes go 1.16 — another language version), a repeated or malformed
+directive, an unparseable version. No `go.mod` anywhere above → the pinned
+1.26, unchanged (the corpus's mode: zero `go.mod` files under `Corpus/`,
+verified; `raftharness/go.mod` declares `go 1.26` and governs no lowered
+directory). The directive is read by a small strict scanner (stdlib only, no
+x/mod; `//` comments stripped, `require ( … )` blocks skipped) that refuses
+what it does not understand rather than guess. Movement: none — no corpus row
+carries a `go.mod`; the raft twin wire is byte-identical. OUT OF SCOPE,
+recorded as owed: `//go:build go1.N` per-file constraints (already refused as
+reserved tags by `langversion.go`), `//go:debug` lines, and the `toolchain`
+directive (inert under the oracle pin guard's `GOTOOLCHAIN=local`). The
+frontend's refusal formats are classified for `scripts/lower-diagnose`
+(`tools/lowerdiag/causes.tsv` row `foreign-module-version`, by-design). The
+original fix sketch follows.
 
 Ruling ([USER] Mike 2026-09-11, verbatim, relayed: «Yes, refuse
 non-1.26»): this semantics implements the Go 1.26 language only. Fix: when
