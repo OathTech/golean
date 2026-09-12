@@ -52,15 +52,9 @@ func withStdlibRoots(t *testing.T) {
 func lowerProgramDir(t *testing.T, dir string) (map[string]any, error) {
 	t.Helper()
 	fset := token.NewFileSet()
-	pkgs, err := parser.ParseDir(fset, dir, nonTestGoFile, parser.ParseComments)
+	files, err := selectPackageFiles(fset, dir)
 	if err != nil {
-		t.Fatalf("parse: %v", err)
-	}
-	var files []*ast.File
-	for _, pkg := range pkgs {
-		for _, f := range pkg.Files {
-			files = append(files, f)
-		}
+		t.Fatalf("select: %v", err)
 	}
 	if shimFile, err := injectStdlibShims(fset, files); err != nil {
 		return nil, err

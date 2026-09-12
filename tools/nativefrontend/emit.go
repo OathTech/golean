@@ -826,6 +826,15 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 		fileOrder = append(fileOrder, map[string]any{"package": unit.path, "files": names})
 	}
 	program["fileOrder"] = fileOrder
+	// buildContext — the TARGET the file set above was selected for
+	// (BUG-108; fileselect.go): GOOS/GOARCH/compiler/cgo/-tags of the
+	// pinned go/build.Context. fileOrder says WHICH files; this says under
+	// which rules they were the package. The decoder REQUIRES the record
+	// and refuses any target other than its own pin (NativeToIR.lean
+	// `pinnedSelectionTarget` ↔ GoCore/Platform.lean `gcAmd64`): a wire
+	// lowered for another target selects a different program from the
+	// same directory.
+	program["buildContext"] = buildContextRecord()
 	// Only when the package has package-level variables — a globals-free
 	// wire stays byte-identical to before the init slice.
 	if len(e.globalDefs) > 0 {

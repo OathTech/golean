@@ -32,7 +32,6 @@ import (
 	"fmt"
 	"go/ast"
 	"go/importer"
-	"go/parser"
 	"go/token"
 	"go/types"
 	"os"
@@ -230,37 +229,23 @@ func (l *loader) discover(importerPath string, files []*ast.File) error {
 	return nil
 }
 
-// parseLocal parses one local package directory (non-test files,
-// lexical filename order — the same presentation order the main
-// package gets). E8 REALIZATION SITE: the sort below is the imported-
-// unit twin of main.go's — the go command's DIRECTORY-mode member of
-// the spec's files-as-presented latitude; file-list-mode orders are
-// not modeled (main.go run() has the full note; the realized order is
-// recorded on the wire as program "fileOrder").
+// parseLocal parses one local package directory: gc's file set under
+// the pinned target (fileselect.go selectPackageFiles, BUG-108 — the
+// same selection the main package gets; an excluded `_extra.go` or
+// `lib_arm64.go` in an imported package is never read either), in
+// lexical filename order. E8 REALIZATION SITE: the imported-unit twin
+// of main.go's — the go command's DIRECTORY-mode member of the spec's
+// files-as-presented latitude; file-list-mode orders are not modeled
+// (main.go run() has the full note; the realized order is recorded on
+// the wire as program "fileOrder").
 func (l *loader) parseLocal(path, dir string) (*sourcePkg, error) {
-	pkgs, err := parser.ParseDir(l.fset, dir, nonTestGoFile, parser.ParseComments)
+	files, err := selectPackageFiles(l.fset, dir)
 	if err != nil {
 		return nil, err
 	}
-	if len(pkgs) != 1 {
-		return nil, fmt.Errorf("expected exactly one package in %s, found %d", dir, len(pkgs))
-	}
-	unit := &sourcePkg{path: path}
-	for _, pkg := range pkgs {
-		paths := make([]string, 0, len(pkg.Files))
-		for p := range pkg.Files {
-			paths = append(paths, p)
-		}
-		sort.Strings(paths)
-		for _, p := range paths {
-			unit.files = append(unit.files, pkg.Files[p])
-		}
-	}
-	// Same build-constraint refusal the main package gets
-	// (langversion.go): local packages are the same modeled fragment.
-	if err := refuseBuildConstrainedFiles(l.fset, unit.files); err != nil {
-		return nil, err
-	}
+	unit := &sourcePkg{path: path, files: files}
+	// (The langversion.go build-constraint policy ran inside
+	// selectPackageFiles — local packages are the same modeled fragment.)
 	// E5 stdlib shims are PER UNIT (raft W4.0): a local package calling
 	// an allowlisted stdlib function gets its own injected shim
 	// declarations, before ITS type-check — exactly like the main

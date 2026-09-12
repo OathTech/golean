@@ -153,6 +153,41 @@ func constraintTags(expr constraint.Expr, into map[string]bool) {
 	}
 }
 
+// judgeBuildConstraintLine applies the header rule (this file's doc
+// comment) to ONE constraint line of the file at name: an unparseable
+// constraint refuses; any reserved tag refuses; a custom-tags-only
+// expression that is FALSE with every tag unset refuses (the oracle
+// would exclude the file); anything else is inert. Shared by the
+// selected-file pass below and by fileselect.go's header scan of files
+// go/build EXCLUDED (BUG-108) — one policy, two call sites. The refusal
+// texts are the pre-BUG-108 ones, unchanged.
+func judgeBuildConstraintLine(name, line string) error {
+	expr, err := constraint.Parse(line)
+	if err != nil {
+		return unsup("file %s carries an unparseable build constraint %q (%v) — build-constrained files are outside the modeled fragment (fail closed)", name, line, err)
+	}
+	tags := map[string]bool{}
+	constraintTags(expr, tags)
+	tagNames := make([]string, 0, len(tags))
+	for tag := range tags {
+		tagNames = append(tagNames, tag)
+	}
+	sort.Strings(tagNames) // deterministic refusal message (BUG-091)
+	for _, tag := range tagNames {
+		if reservedConstraintTag(tag) {
+			return unsup("file %s carries build constraint %q using reserved tag %q (platform/version/toolchain-conditional file selection is outside the modeled fragment) — fail closed", name, line, tag)
+		}
+	}
+	// Custom tags only: the pipeline never sets -tags, so every custom
+	// tag is false — identically for the oracle. Included ⇒ inert;
+	// excluded ⇒ the oracle would drop the file, which is file-set
+	// selection we do not model.
+	if !expr.Eval(func(string) bool { return false }) {
+		return unsup("file %s is EXCLUDED by build constraint %q under the pipeline's default (no -tags) context — the oracle would compile without this file, which is file-set selection outside the modeled fragment; fail closed rather than silently include or drop it", name, line)
+	}
+	return nil
+}
+
 // refuseBuildConstrainedFiles scans each file's pre-package comment
 // lines for build constraints and refuses per the header rule.
 func refuseBuildConstrainedFiles(fset *token.FileSet, files []*ast.File) error {
@@ -169,30 +204,8 @@ func refuseBuildConstrainedFiles(fset *token.FileSet, files []*ast.File) error {
 					if !constraint.IsGoBuild(line) && !constraint.IsPlusBuild(line) {
 						continue
 					}
-					name := fset.Position(c.Pos()).Filename
-					expr, err := constraint.Parse(line)
-					if err != nil {
-						return unsup("file %s carries an unparseable build constraint %q (%v) — build-constrained files are outside the modeled fragment (fail closed)", name, line, err)
-					}
-					tags := map[string]bool{}
-					constraintTags(expr, tags)
-					tagNames := make([]string, 0, len(tags))
-					for tag := range tags {
-						tagNames = append(tagNames, tag)
-					}
-					sort.Strings(tagNames) // deterministic refusal message (BUG-091)
-					for _, tag := range tagNames {
-						if reservedConstraintTag(tag) {
-							return unsup("file %s carries build constraint %q using reserved tag %q (platform/version/toolchain-conditional file selection is outside the modeled fragment) — fail closed", name, line, tag)
-						}
-					}
-					// Custom tags only: the pipeline never sets -tags,
-					// so every custom tag is false — identically for
-					// the oracle. Included ⇒ inert; excluded ⇒ the
-					// oracle would drop the file, which is file-set
-					// selection we do not model.
-					if !expr.Eval(func(string) bool { return false }) {
-						return unsup("file %s is EXCLUDED by build constraint %q under the pipeline's default (no -tags) context — the oracle would compile without this file, which is file-set selection outside the modeled fragment; fail closed rather than silently include or drop it", name, line)
+					if err := judgeBuildConstraintLine(fset.Position(c.Pos()).Filename, line); err != nil {
+						return err
 					}
 				}
 			}

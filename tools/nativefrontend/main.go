@@ -10,12 +10,8 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"go/ast"
-	"go/parser"
 	"go/token"
 	"os"
-	"path/filepath"
-	"sort"
 )
 
 func main() {
@@ -114,43 +110,29 @@ func run() error {
 	refusedDir = *dir
 
 	fset := token.NewFileSet()
-	pkgs, err := parser.ParseDir(fset, *dir, nonTestGoFile, parser.ParseComments)
+	// THE FILE SET is gc's under the pinned target (fileselect.go, BUG-108):
+	// go/build's selection rules — `_`/`.` prefixes and GOOS/GOARCH
+	// suffixes excluded, `_test.go` aside, cgo/invalid/non-Go sources
+	// refused by name — never the old "every *.go in the directory"
+	// (`parser.ParseDir` + nonTestGoFile), which lowered files gc ignores
+	// and ran their init effects (the review's F1: 2 where gc prints 1).
+	// E8 REALIZATION SITE (latitude inventory §E8): within-package
+	// declaration order is spec-delegated to "the order in which the
+	// files are presented to the compiler"; selectPackageFiles realizes
+	// exactly ONE member — the go command's DIRECTORY-mode presentation
+	// (file-name sort). The go command's FILE-LIST mode (`go run zz.go
+	// aa.go`) presents files in ARGUMENT order and realizes OTHER members
+	// at the same pinned oracle; this frontend has no file-list input mode
+	// (--dir is the only entry) and does not model them. The realized
+	// order is recorded on the wire (program "fileOrder", emit.go); the
+	// imported-unit twin is load.go parseLocal.
+	files, err := selectPackageFiles(fset, *dir)
 	if err != nil {
 		return err
 	}
-	if len(pkgs) != 1 {
-		return fmt.Errorf("expected exactly one package in %s, found %d", *dir, len(pkgs))
-	}
 
-	var files []*ast.File
-	for _, pkg := range pkgs {
-		paths := make([]string, 0, len(pkg.Files))
-		for p := range pkg.Files {
-			paths = append(paths, p)
-		}
-		// E8 REALIZATION SITE (latitude inventory §E8): within-package
-		// declaration order is spec-delegated to "the order in which
-		// the files are presented to the compiler". This sort realizes
-		// exactly ONE member — the go command's DIRECTORY-mode
-		// presentation (file-name sort). The go command's FILE-LIST
-		// mode (`go run zz.go aa.go`) presents files in ARGUMENT order
-		// and realizes OTHER members at the same pinned oracle; this
-		// frontend has no file-list input mode (--dir is the only
-		// entry) and does not model them. The realized order is
-		// recorded on the wire (program "fileOrder", emit.go). The
-		// sibling sort for imported units is load.go parseLocal.
-		sort.Strings(paths)
-		for _, p := range paths {
-			files = append(files, pkg.Files[p])
-		}
-	}
-
-	// Build-constrained files refuse before anything else sees them
-	// (langversion.go — file-set selection is outside the modeled
-	// fragment; previously such files were silently included).
-	if err := refuseBuildConstrainedFiles(fset, files); err != nil {
-		return err
-	}
+	// (Build-constrained files refused inside selectPackageFiles — the
+	// langversion.go policy, one site for main and imported units.)
 
 	// E5 stdlib shims (stdlibshim.go): when an allowlisted stdlib
 	// selector call is present, inject the shim declarations as a
@@ -194,13 +176,4 @@ func run() error {
 		return err
 	}
 	return os.WriteFile(*out, encoded, 0o644)
-}
-
-func nonTestGoFile(fi os.FileInfo) bool {
-	name := fi.Name()
-	return filepath.Ext(name) == ".go" && !hasSuffix(name, "_test.go")
-}
-
-func hasSuffix(s, suf string) bool {
-	return len(s) >= len(suf) && s[len(s)-len(suf):] == suf
 }

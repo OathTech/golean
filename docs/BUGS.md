@@ -6688,7 +6688,7 @@ path.
 
 ## BUG-108 — the frontend's source-file selection ignores Go's filename conventions: files gc ignores (`*_GOOS.go`/`*_GOARCH.go` for another target, `_*.go`, `.*.go`) are LOWERED and their `init` effects run — a wrong answer with a clean export and no refusal [frontend; trusted surface #1; whole-project review 2026-09-11 F1]
 
-- Status: open ([AGENT] coordinator 2026-09-11, filed from `docs/2026-09-11_project-review.md` §4 F1; reproduced independently the same day, dispositions `docs/2026-09-11_review-dispositions.md` §1)
+- Status: fixed ([AGENT] lane `fix/review-boundary-0911` stage S1b, 2026-09-12 — filed open by the coordinator 2026-09-11 from `docs/2026-09-11_project-review.md` §4 F1, reproduced independently the same day, dispositions `docs/2026-09-11_review-dispositions.md` §1)
 - Pinned-by: differential
 - Cases: source-selection/excluded-init/windows, source-selection/excluded-init/arm64, source-selection/excluded-init/linux-arm64, source-selection/excluded-init/underscore, source-selection/excluded-init/dot, source-selection/excluded-conflict, source-selection/excluded-import
 
@@ -6729,6 +6729,40 @@ build-constraint pass reads `//go:build` comment directives only
 ignored; `*_GOOS`, `*_GOARCH`, `*_GOOS_GOARCH` suffixes matched against the
 target — is not implemented anywhere. So the lowered program can differ
 from the program gc builds, on the surface the differential trusts.
+
+FIXED ([AGENT] S1b, 2026-09-12; `tools/nativefrontend/fileselect.go`): the
+package's file set is `go/build.Context.ImportDir` under a Context PINNED to
+the platform's target — GOOS=linux, GOARCH=amd64, Compiler=gc, CgoEnabled
+(the oracle's `CGO_ENABLED=1` default; with cgo disabled go/build would drop
+`import "C"` files into IgnoredGoFiles and they would vanish instead of
+refusing), no `-tags`, `UseAllFiles` off — for the main package (`main.go`)
+and every case-local imported package (`load.go` parseLocal). Refused BY NAME:
+InvalidGoFiles (a selected file gc cannot read), CgoFiles, assembly/.syso/
+C-family sources, go/build's own MultiplePackageError/NoGoError, and — the
+standing `langversion.go` constraint policy, unchanged and now shared through
+`judgeBuildConstraintLine` — any EXCLUDED file whose header carries a build
+constraint (an over-refusal of e.g. `x_windows.go` + `//go:build cgo`, which
+gc simply ignores; recorded, fail-closed). `_`/`.`-prefixed files and
+GOOS/GOARCH-suffixed files with no constraint are dropped silently, as gc
+drops them. The selection target is RECORDED on the wire as the program-level
+`buildContext` {goos, goarch, compiler, cgoEnabled, buildTags} beside
+`fileOrder` (which already listed the selected files); the decoder REQUIRES
+it and refuses any value other than `pinnedSelectionTarget` (NativeToIR.lean
+↔ `GoCore.Platform.gcAmd64`) — a wire lowered for another target selects a
+different program from the same directory. Movement: the seven Cases rows
+flip FAIL → PASS (5 differential, 2 frontend-export); the four
+`included-suffix` controls stay PASS; no other corpus row moves; the raft
+twin wire re-pinned 13d8b659… → e1a87725… (the ONLY structural change is the
+added key; `docs/evidence/2026-09-11_review-boundary/twin-repin/`). Unit
+tests `tools/nativefrontend/fileselect_test.go` pin every filename shape
+go/build decides, the refusal texts, and the not-rowable shape (an excluded
+file with invalid syntax / a redeclaration / an unadmitted import / a second
+package clause is never read). Residual, recorded not fixed: the oracle
+harness generator (`tools/coverageharness`) still globs `*.go` and parses
+every file — correct for the oracle (gc re-selects in the copy) but an
+over-refusal on an excluded file with invalid syntax; and `tools/lowerdiag`'s
+static pass still uses `parser.ParseDir` (report-only lane tooling). The
+original fix sketch follows.
 
 Fix (fail closed, dispositions §4 step 1): take the file set from a
 `go/build.Context` pinned to the Platform's target (GOOS=linux GOARCH=amd64,

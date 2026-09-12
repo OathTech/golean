@@ -1924,6 +1924,48 @@ private def decodeMethod (path : String) (json : Json) : LowerM (Func × MethodI
       pure ({ id := funcId, args := #[recv] ++ args, results := res, body,
               variadic, wrapper }, info)
 
+/-- The file-selection target this machine realizes — gc on linux/amd64
+with cgo enabled and no build tags: the identity half of the pin whose
+layout half is `GoCore.Platform.gcAmd64` (Platform.lean) and whose
+frontend spelling is `pinnedBuildContext` (tools/nativefrontend/
+fileselect.go). BUG-108: the frontend selects a package's files by
+go/build's rules under this target and records the target on the wire
+(`program.buildContext`); a wire lowered for any other target selects a
+DIFFERENT PROGRAM from the same directory, so the decoder refuses it
+here by name. Three spellings of one pin: a move of any one is a loud
+red at the others. -/
+structure SelectionTarget where
+  goos : String
+  goarch : String
+  compiler : String
+  cgoEnabled : Bool
+  buildTags : Array String
+  deriving Repr, BEq
+
+def pinnedSelectionTarget : SelectionTarget :=
+  { goos := "linux", goarch := "amd64", compiler := "gc", cgoEnabled := true, buildTags := #[] }
+
+/-- Decode and check the wire's `buildContext` against the pin. Required:
+a wire without it predates BUG-108's fix and its file set is not known
+to be gc's. -/
+def decodeBuildContext (obj : StrictJson.Obj) : Except String Unit := do
+  let bcj ← match obj.get? "buildContext" with
+    | some j => pure j
+    | none => throw "native lowering: program.buildContext is missing — the frontend records the file-selection target it lowered for (BUG-108); a wire without it was emitted by a frontend that lowered files gc excludes, and is refused"
+  let bc ← StrictJson.obj "program.buildContext" bcj
+  for key in bc.keys do
+    if !["goos", "goarch", "compiler", "cgoEnabled", "buildTags"].contains key then
+      throw s!"native lowering: unknown key '{key}' at program.buildContext (exact-key discipline, fail closed)"
+  let goos ← StrictJson.string "program.buildContext.goos" (← StrictJson.field "program.buildContext" bc "goos")
+  let goarch ← StrictJson.string "program.buildContext.goarch" (← StrictJson.field "program.buildContext" bc "goarch")
+  let compiler ← StrictJson.string "program.buildContext.compiler" (← StrictJson.field "program.buildContext" bc "compiler")
+  let cgo ← StrictJson.bool "program.buildContext.cgoEnabled" (← StrictJson.field "program.buildContext" bc "cgoEnabled")
+  let tagsJ ← StrictJson.array "program.buildContext.buildTags" (← StrictJson.field "program.buildContext" bc "buildTags")
+  let tags ← tagsJ.mapIdxM (fun i t => StrictJson.string s!"program.buildContext.buildTags[{i}]" t)
+  let got : SelectionTarget := { goos, goarch, compiler, cgoEnabled := cgo, buildTags := tags }
+  if got != pinnedSelectionTarget then
+    throw s!"native lowering: the wire's file-selection target is {repr got}; this machine realizes {repr pinnedSelectionTarget} (GoCore.Platform.gcAmd64) — a wire lowered for another target selects a different program from the same directory (BUG-108); refused"
+
 /-- Decode the whole wire program. Runs OUTSIDE `LowerM`: the globals
 table decodes FIRST, and its size is the reader context every
 body-decoding call runs under — that is what arms the `globaladdr`
@@ -1944,10 +1986,14 @@ partial def decodeProgram (json : Json) : Except String Program := do
   let noCtx : LowerCtx := { nGlobals := 0, typeIdx := {} }
   let _ ← (checkAllowedKeys "program" obj
     ["schema", "package", "types", "funcs", "methods", "methodSets", "globals",
-     "fileOrder"]).run noCtx
+     "fileOrder", "buildContext"]).run noCtx
   let schema ← StrictJson.string "program.schema" (← StrictJson.field "program" obj "schema")
   if schema != "golean-native-v1" then
     throw s!"native lowering: unexpected schema {schema}"
+  -- `buildContext` (BUG-108): the file-selection target, REQUIRED and
+  -- checked against this machine's pin — unlike `fileOrder` it has a
+  -- consumer (this check), so it is decoded strictly.
+  decodeBuildContext obj
   -- Package-level variables (init slice): declaration order; the driver
   -- seeds cell i at `Loc.base ⟨i⟩`. Optional key — a globals-free wire
   -- decodes exactly as before. Duplicate names are impossible in a

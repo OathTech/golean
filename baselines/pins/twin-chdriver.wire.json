@@ -1,4 +1,11 @@
 {
+ "buildContext": {
+  "buildTags": [],
+  "cgoEnabled": true,
+  "compiler": "gc",
+  "goarch": "amd64",
+  "goos": "linux"
+ },
  "fileOrder": [
   {
    "files": [

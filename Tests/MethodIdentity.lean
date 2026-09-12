@@ -26,6 +26,8 @@ private def method (id : Json) : Json :=
 
 private def program (requirements methods : Array Json) : Json :=
   Json.mkObj [("schema", .str "golean-native-v1"), ("funcs", .arr #[]),
+    ("buildContext", Json.mkObj [("goos", .str "linux"), ("goarch", .str "amd64"),
+      ("compiler", .str "gc"), ("cgoEnabled", .bool true), ("buildTags", .arr #[])]),
     ("methods", .arr methods), ("methodSets", .arr #[]),
     ("types", .arr #[
       Json.mkObj [("name", .str "main.T"), ("display", .str "main.T"), ("pkg", .str "main"),

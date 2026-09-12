@@ -25,7 +25,7 @@
     "params": "width=4,sites=48,work=60000000,members=6,engine=dedup,tier=slow",
     "row_status": "ok",
     "schema": "golean-enumeration-claim-v1",
-    "wire_sha256": "2f1d639f2042466f50b61ab117db5b39629c425f733650b9be992c0b85beefcc"
+    "wire_sha256": "736f1730765d90098f37ff2ccecacd073c8f5e385a0c949ba8af4b05410238b8"
   },
   "inputs": {
     "build": {
@@ -126,7 +126,7 @@
         "GoLean/GoCore/Value.lean": "aeded44416b5f286fc12033922cfab35d43d46c7d45fb7c6e8ea106e9eab6f8e",
         "GoLean/Interface.lean": "ebe4fada3f5a3cca2b931ead099cd25dfaabe497373b78da98dac5c4052f8f84",
         "GoLean/NativeDeclaration.lean": "6d184c492b3613b7572c8c1433daff7c2fb0366e5a64ea075dc73e288e300858",
-        "GoLean/NativeToIR.lean": "ac4f07d1c6ae13862a28885df9b53ba7fab3934990bde961337db906b8f29acb",
+        "GoLean/NativeToIR.lean": "c03aee19d2fa410170da3ed4137c65a710618fe73c579e17027f0f5a81b81e46",
         "GoLean/StrictJson.lean": "6b6531a7a92762066b37c717e7aadd75db55dfe36e7605430cfa7eea0902511f",
         "GoLean/StrictJsonParse.lean": "26e69863298341989b19db49216dd016f4cbf5a898f5ade445693a00b4ec4bae",
         "Main.lean": "56597882b7149e0d9944f4bef2e81a064a85011dfdd2c17584a9d98971d9e0c3",
@@ -162,7 +162,7 @@
       "scripts/check-coverage": "0bfe8772b509c157fd59fc5cc8f5e3be1830b1f72afcf0cd986cf45ef8d653b3",
       "scripts/check-declarations": "83a8e12fec127d15e63561edbdc69aeb5de4cd3cb02b7aa6f0745c9b2c7cebe7",
       "scripts/check-evidence-size": "cf66dab4fd42f362e6610ff07fbf467d68e7ca5c7ce84880823e9f5e158af140",
-      "scripts/check-frontend-pins": "d7c0e341fc5d0cc6b97fd9e4a21ab0d058ab7b076ea39a44bcf2e7b16e0bfb92",
+      "scripts/check-frontend-pins": "7ab75cb4c8d3951b85c11d0383203cfe9c3adb52fcc4ee5171f75567a5f162b6",
       "scripts/check-imported-goose": "5e20ea57f3a2ea0671877ae5f7688397d7a936947a5dbe9217469c8406a6f566",
       "scripts/check-interface": "84cc6c495ebe6975ca8cc6f2cb29f7d0dfa12039418f83c7533eb562c7ca18f3",
       "scripts/check-interface.py": "84c3cccb5c540215b24051ba8c94900bc6123ed24f0918edad208d31c442105d",
@@ -238,7 +238,7 @@
       "tools/floatvectors/main.go": "2bef884be10a31f3de25f1218e8fc68a07bc3b2a060857747c6934834a34da38",
       "tools/godocanchors/main.go": "f185b941317b218553231dbd913b28bbd386ba955d7f0d448ff7bbc1ecd8aad9",
       "tools/lowerdiag/causes.go": "cb6b794cb15ad9ae67b0b25fd109a4ef06cb625c376a93e53873e94f12897c01",
-      "tools/lowerdiag/causes.tsv": "4b7dfa2d0d2278e5dc622bbee4c1f3d00e008e8bbe6f1a179351548104942a2f",
+      "tools/lowerdiag/causes.tsv": "ab5797dd51b304a9422dca44670d143249dbbf59d29de5b6d6f8ef56549c2634",
       "tools/lowerdiag/library-refusals.tsv": "7b0bcb638b6518d8970b24bb09bd4315bf0f76669dccddd95e5ffedfcb504990",
       "tools/lowerdiag/lowerdiag_test.go": "0fff46acdca7ce3df50a0f9bf36edff0c184b2d67d34c5df657ef80f6c68054c",
       "tools/lowerdiag/machine-surface.tsv": "bdcd26131bc2ebdc41a7724fad74f9b0a56980b7fe345c203acdd556bf2b64fc",
@@ -247,7 +247,7 @@
       "tools/lowerdiag/static.go": "51ab662b7f762a35a5be002f268979d280311d0912590c098a816af648018596",
       "tools/lowerdiag/testdata/calib/main.go": "da7932c2331e6102b76952e2c937d757b56f58675068c5f8de95bde23c833e22",
       "tools/lowerdiag/testdata/fivecauses/main.go": "7181b411e6dc97fcfd60e7372e4366873f73cb6ef0c87a8a3b7f2149bb83c54a",
-      "tools/lowerdiag/unclassified-formats.txt": "707346eb068943607745f1411f3f94d631ecc2eaf3ebdeed3f1c2e871e3163af",
+      "tools/lowerdiag/unclassified-formats.txt": "756781677ab25183ab4771896e3a00673b7349e8b5f7c6c5b4992f8b8dea082a",
       "tools/lsimports/main.go": "d2a94c7fa6844296978a0ad12eecbaf1eb87cb792e52229cca28259b380c2e23",
       "tools/method-identity-audit.py": "07eee5543ecb4e2200c0ad41f5ecb52456233e15f534c38a373bacc3f9a0d0e6",
       "tools/method-identity-dispatch.py": "63cdf4b8a4b885eaa8a5e31305e3f000de23cc940d9eccebab1077a93dd07a7e",
@@ -262,8 +262,10 @@
       "tools/nativefrontend/e13guard_test.go": "58b3eb65a198582ec73c3174e7c5585e5c33ffb334a30d1a6c08aab15605e447",
       "tools/nativefrontend/effectisolation_test.go": "5d653d1512c7c165a82474473d08407300dc46b7343bdbbe85d77f5a8b092c47",
       "tools/nativefrontend/embedding_test.go": "0ca5215eb0472fe6376485b4061607a4c84b0b80992555b3b96d80399f990dd7",
-      "tools/nativefrontend/emit.go": "ae3b9b3c1c9331f379e8ccaf2ba74644417b08db1ab82a77d6cd27b3acf427cc",
+      "tools/nativefrontend/emit.go": "09b4ab1461b22a403de60b6f1c9697312cf4008a4273c95d2c0655f3050a6d21",
       "tools/nativefrontend/emit_test.go": "07cd0a3bd9b100102745c9005bc31fa6b72d112b44765aa7ec25f33bdef572a7",
+      "tools/nativefrontend/fileselect.go": "a432391e7c35f6ddae6917214ff1aa80965c62eb36f0d1c84ff2b2efee3947f1",
+      "tools/nativefrontend/fileselect_test.go": "45e1016482be0ece4f834c2fdf0cf4b969348cbae12980e3042f498680d02ea6",
       "tools/nativefrontend/floatbits.go": "5a3c6c51a9fabbc2742ef81ee4ac93484796f53b60eb9642888c8de29262a80b",
       "tools/nativefrontend/fmtcomposite.go": "c4fb6eb4f1027ec1aa7c89faa64ebbbfc227ff62d760cefa29bcbf30969b7edc",
       "tools/nativefrontend/fmtdesugar.go": "4c1193791d8d96fa7dd9f8993daed9de55639fd15ccc2328ae1ee8ad8d247717",
@@ -275,10 +277,10 @@
       "tools/nativefrontend/importedmodel.go": "7e3d1b91875b008fcb4844a02202b5395192e2ec2939557f43241ae2e0d0e5b9",
       "tools/nativefrontend/inittask-std.tsv": "fc888c6f1143f5b158d0a7287b2b1872a30c022df420fd37d24a88f0c642119e",
       "tools/nativefrontend/inittask.go": "bc59e43d13e78b29f96c2b27868699d92e31004098fb290bc71e37160b1afe58",
-      "tools/nativefrontend/langversion.go": "816972a3b0a16949b897f631b7be8f2a37db0a21daafbf5afb11b38dfe58b3f7",
+      "tools/nativefrontend/langversion.go": "500dae8b8d7ae056dbf05e61cd344b6b8ec2ddf202740fc798c6be6c2458e4bd",
       "tools/nativefrontend/langversion_test.go": "8541245584d5471050a2a49969ba4c6e7e7560db5abb7269f05720c4bc82d4a1",
-      "tools/nativefrontend/load.go": "b06404571c6a5282b78cde05dbbdbdffb7e03c219a1d682fbda866190742d6aa",
-      "tools/nativefrontend/main.go": "b3aa58172d3845fae10c636a74fc5a3dc95e222efde0284176564f65d0a1e94e",
+      "tools/nativefrontend/load.go": "f874b330a31f4765830a2448306f568f6c51901b9916eed973e7bafab9145fbc",
+      "tools/nativefrontend/main.go": "63719bb4fe9e98c10a9a1897378e81c93dc129edbdc77853e5f8937ff0f22f5f",
       "tools/nativefrontend/memberidentity_test.go": "39b38e58fdf1eb504dac3441a8c2e960e229fc4589a05439b3a9f86826c6e83f",
       "tools/nativefrontend/mono.go": "08e828964edcb3fb907973366cfc9baa66e8f121142e39cb76c018dcfa093e76",
       "tools/nativefrontend/mono_test.go": "8d0931bdb5c00a5b0cd5b5ed5e05aa0ce50245c7c50982c904f40bb1eb9e624b",
@@ -293,7 +295,7 @@
       "tools/nativefrontend/stdlibshim.go": "cb242d9a8d538158062ef0285e91210d34d844fafb46299a8ea07d756c5a6ce9",
       "tools/nativefrontend/stdlibshim_closure_test.go": "7e9d4099d945f64f58e4eeea28e5050f2099bd856cedbc35425bee1eeaa2bfde",
       "tools/nativefrontend/stdlibsource.go": "5d878209dd4d431a8477a97a7b82c1ecd5fe460054b1c2475bb65d7ed97be9d8",
-      "tools/nativefrontend/stdlibsource_test.go": "f2b33043a387c4fb9435e1d00514dc043e9921c3b0c7f1988dce49ef7e3eed87",
+      "tools/nativefrontend/stdlibsource_test.go": "892d0300c915ee99539a3653f5deafb1bf84db88f07f932233537ea7f8ba8327",
       "tools/nativefrontend/typeorder.go": "420bb1d5dda5e2766195611b67d60cbffc8e60c4364eb47f0d79716871a8436a",
       "tools/nativefrontend/typeorder_test.go": "0781aac60f6431ad13a45b1f5a4a7be794d2c63e84d86dbc2840efdaa0597625",
       "tools/nativefrontend/wire.go": "43abf08c494490b0ef592bbfa0df61f10145eef21ef83c0ac6c9859b861da611",
@@ -340,7 +342,7 @@
   },
   "observations_sha256": "e40ba07d11827b48aa8c9246bd84d6c21849159983d46c47b793b5759cfbbfd8",
   "receipt": {
-    "binary_sha256": "18beb979fbcc90fe3f13d5f659ed27c515c25840e3ad37db80c717c2bfea7ba4",
+    "binary_sha256": "b130c4f44112ff4238bc9980aa74aaecb9bd478b7d5e460ba5ca5738031ca264",
     "captured_exit": 0,
     "certifier": "tools/certification.py",
     "command": [
@@ -363,12 +365,12 @@
       "--engine",
       "dedup"
     ],
-    "finished_utc": "2026-09-10T01:28:00.399439+00:00",
-    "git_dirty": false,
-    "source_commit": "5e73b56162af3ce0692c78605ab09b3043c40acb",
-    "started_utc": "2026-09-10T01:25:17.941341+00:00",
+    "finished_utc": "2026-09-12T01:00:30.980140+00:00",
+    "git_dirty": true,
+    "source_commit": "6264f152b04fbc9a132d8f4b91999d23a4ea18d2",
+    "started_utc": "2026-09-12T00:57:46.258184+00:00",
     "stats_sha256": "68f3d503a2249b48df1e7acd687ce8a694c633f25db743f92f450ca1eddbfc92",
-    "wall_seconds": 160.076
+    "wall_seconds": 162.413
   },
   "schema": "golean-certification-v1"
 }

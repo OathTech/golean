@@ -1,0 +1,16 @@
+old sha256 13d8b659b115a68f62d47ece7654ebb1baf0de4dd8c72b3b26fee09621e9eb04  bytes 11395886  baselines/pins/twin-chdriver.wire.json
+new sha256 e1a877251021b5f2f10b248ff2acdd975c15c7e66f54e4a8bd2332b21dd71ad8  bytes 11396009  .tmp/twin/twin.wire.json
+top-level keys added:   ['buildContext']
+top-level keys removed: []
+  added buildContext = {"buildTags":[],"cgoEnabled":true,"compiler":"gc","goarch":"amd64","goos":"linux"}
+  fileOrder: 20 -> 20 entries, IDENTICAL incl. order
+  funcs: 450 -> 450 entries, IDENTICAL incl. order
+  globals: 50 -> 50 entries, IDENTICAL incl. order
+  methodSets: 82 -> 82 entries, IDENTICAL incl. order
+  methods: 537 -> 537 entries, IDENTICAL incl. order
+  package: IDENTICAL
+  schema: IDENTICAL
+  types: 93 -> 93 entries, IDENTICAL incl. order
+shared keys identical: ['fileOrder', 'funcs', 'globals', 'methodSets', 'methods', 'package', 'schema', 'types']
+shared keys changed:   []
+VERDICT: the ONLY structural change is the added key set ['buildContext']

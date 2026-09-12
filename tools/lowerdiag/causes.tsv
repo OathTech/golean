@@ -8,7 +8,8 @@
 #   id        stable cause id (the histogram key)
 #   fr        FR-n (ledger §4 row) | Q-<name> (ledger §6 design question) |
 #             out-of-language (spec: unsafe/reflect/print — ledger §2 rows) |
-#             by-design (not a coverage gap: a generic TEMPLATE's quarantine) |
+#             by-design (not a coverage gap: a generic TEMPLATE's quarantine; a directory gc ITSELF refuses or a module of another
+#             language version — BUG-108/BUG-109 boundary refusals, fileselect.go/modfile.go) |
 #             cascade (refused because it REFERENCES a refused declaration) |
 #             c-pin (a RATIFIED (c)-pin of ledger §5.1 — an impossibility or a pinned detector, not a gap) |
 #             unrowed (a refusal the ledger has NO row for — direction 3 owes one) |
@@ -78,6 +79,9 @@ local-import-shape	unrowed	rowed	export	dotted local import path|dot import of l
 init-schedule	unrowed	rowed	export	import cycle|initialization (list|schedule)|share the linker symbol prefix|not in the stdlib inittask table|has no buildable archive	-	the program initialization schedule cannot be realized (cycle / inittask table gap / linker-prefix collision) — load.go/inittask.go; no ledger row
 hidden-dep-init-order	c-pin	rowed	export	package-level initializer of .* reaches a method call through an interface	-	the E7 hidden-dependency init-order detector (hiddendep.go): a ratified (c)-pin (ledger §5.1 C1, L:E7), apparatus-allowed only for the recorded deviation case
 build-constraint	unrowed	rowed	export	build constraint|build-constrained	-	a file carrying a //go:build constraint (platform/version/toolchain-conditional file selection is outside the modeled fragment; langversion.go) — no ledger row
+cgo-file	out-of-language	rowed	export	import "C" \(CgoFiles\)	-	`import "C"` in a selected file: cgo is a toolchain feature (cmd/cgo), not the language — no spec section; the BUG-108 go/build-pinned file selection refuses the directory by name (fileselect.go)
+non-go-sources	out-of-language	rowed	export	gc would assemble/compile/link non-Go sources	-	assembly / .syso / C-family sources beside the Go files: gc would assemble or link them — outside the language; refused by name (fileselect.go, BUG-108)
+gc-refuses-directory	by-design	rowed	export	file selection in \S+ under the pinned target|gc cannot read \S+ \(InvalidGoFiles\)|cannot (read|scan) excluded file|no Go files selected under the pinned target	-	not a Go package gc compiles: a selected file gc cannot read, two package clauses among the selected files, no Go file selected, or an unreadable excluded file — gc's own refusal, mirrored by name (fileselect.go, BUG-108); never a coverage gap
 result-shadow	unrowed	rowed	decl	shadows the named result	-	a local shadowing a NAMED RESULT in a construct outside the rename set (type-switch guard, range clause) — resultshadow.go; no ledger row
 quarantine-cascade	cascade	rowed	decl	references quarantined package-level variable (\S+)|quarantined method \S+ has no|calls? .*quarantined	$1	refused because it REFERENCES a declaration that is itself refused (a poisoned var, a quarantined callee) — fix the root cause, this row lifts
 statement-shape	unrowed	rowed	decl	^(select|switch body|type switch|fallthrough|branch statement|declaration statement|assignment operator|compound assignment|map element as assignment target|var declaration pairs|statement \S+ at|range over channel with a second|range over \S+$|labeled)	-	a STATEMENT shape the lowering has no arm for (select clause forms, type-switch guard shapes, fallthrough in the last clause, multi-target map-element assignment, …) — read the text; no ledger row (most are illegal Go or corner spellings)

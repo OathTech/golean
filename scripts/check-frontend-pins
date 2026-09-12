@@ -227,6 +227,17 @@ cd "$ROOT"
 # reproduces the old parsed wire. Full 3654-row differential + slow set
 # unchanged. Reason and source-bound evidence:
 # docs/2026-09-08_method-identity-design.md, stage 1.
+# [AGENT] 2026-09-12, lane fix/review-boundary-0911 stage S1b (BUG-108):
+# 13d8b659… -> e1a87725…. The wire gains ONE program-level key,
+# `buildContext` = {goos linux, goarch amd64, compiler gc, cgoEnabled true,
+# buildTags []} — the go/build target the frontend now selects the package's
+# files under (fileselect.go); the decoder requires it and refuses any other
+# target. Every other top-level key IDENTICAL incl. order (fileOrder 20,
+# funcs 450, globals 50, methodSets 82, methods 537, types 93, package,
+# schema): the twin's file set is unchanged — raftsubject has no filename-
+# excluded file (its one constraint, state_trace_nop.go `!with_tla`, is the
+# standing custom-tag acceptance). Structural diff:
+# docs/evidence/2026-09-11_review-boundary/twin-repin/structural-diff.txt.
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/check-frontend-pins.XXXXXX")"
 trap 'rm -rf "$WORK"' EXIT
 
