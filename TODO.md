@@ -325,12 +325,16 @@ see the R15 entry below.
       widened to `!writer` (R1's value-observable half; an [AGENT]
       widening in the safe direction, RATIFIED [USER] 2026-09-03 («TryRLock decision sounds fine», relayed by the [AGENT] coordinator); sync design §8 R1); `defer m.TryLock()`
       lowered; detector table without absorbing arm; rebased onto
-      221d8964 (twin pin 45cd882a… → f2309df2…, one entry). OWED (F5,
-      decoder): the `sync-op` and `atomic-op` EXPRESSION nodes accept an
-      ABSENT `resultTypes` key (the allowed-keys check permits it, the
-      decoders never read it) — a forged wire without it still lowers;
-      tighten both together (require the key, check its arity) in a
-      decoder-hardening slice.
+      221d8964 (twin pin 45cd882a… → f2309df2…, one entry). F5 (decoder)
+      — DISCHARGED 2026-09-12 [AGENT] with BUG-110 (lane
+      fix/review-boundary-0911, S3): `resultTypes` is REQUIRED on every
+      call-shaped node (`requireResultTypes` at recognition of `call`,
+      `call-value`, `atomic-op`, `sync-op`) and arity-checked where
+      consumed (`decodeResultTypes`; the sync-op result must be `bool`);
+      the item as originally written: the `sync-op` and `atomic-op`
+      EXPRESSION nodes accepted an ABSENT `resultTypes` key (the
+      allowed-keys check permitted it, the decoders never read it) — a
+      forged wire without it still lowered.
       Original item text follows.
       ([USER]-ruled 2026-09-02, `docs/2026-08-31_qrow-rulings.md` row
       2; charter = `docs/2026-09-01_qatomic-owner-proposal.md` §4 +

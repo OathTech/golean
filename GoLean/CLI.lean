@@ -2,6 +2,7 @@ import GoLean.GoCore
 import GoLean.EnumDedup
 import GoLean.NativeToIR
 import GoLean.StrictJson
+import GoLean.StrictJsonParse
 import Lean.Data.Json
 
 namespace GoLean.CLI
@@ -466,8 +467,12 @@ private def runNativeJsonRun (args : List String) : IO UInt32 := do
       match cfg.input, cfg.functionName with
       | some input, some functionName =>
           let input := absoluteFrom cwd input
-          let contents ← IO.FS.readFile input
-          match Lean.Json.parse contents with
+          -- BUG-110: the production wire is parsed from its BYTES by the
+          -- strict parser (GoLean/StrictJsonParse.lean): duplicate object
+          -- keys, unpaired surrogate escapes and invalid UTF-8 refuse HERE,
+          -- before any schema validator sees a (collapsed) object.
+          let bytes ← IO.FS.readBinFile input
+          match GoLean.StrictJson.parseBytes bytes GoLean.StrictJson.wireNestingDepth with
           | .error err =>
               IO.println (cliErrorJson s!"{input}: JSON parse error: {err}").compress
               return 1
@@ -1561,8 +1566,9 @@ private def runCoverageObservations (args : List String) : IO UInt32 := do
             IO.eprintln "coverage-observations: --max-width must be >= 1 (an empty pick alphabet explores nothing)"
             return 2
           let input := absoluteFrom cwd input
-          let contents ← IO.FS.readFile input
-          match Lean.Json.parse contents with
+          -- BUG-110: strict byte parse (see runNativeJsonRun).
+          let bytes ← IO.FS.readBinFile input
+          match GoLean.StrictJson.parseBytes bytes GoLean.StrictJson.wireNestingDepth with
           | .error err =>
               IO.eprintln s!"coverage-observations: {input}: JSON parse error: {err}"
               return 1

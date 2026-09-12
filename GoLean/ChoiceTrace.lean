@@ -1,4 +1,5 @@
 import GoLean.CLI
+import GoLean.StrictJsonParse
 
 /-!
 # `choice-trace` — the labeled-consumption tracer and menu-invariant validator
@@ -883,8 +884,9 @@ structure CaseSpec where
   streams : List String
 
 def loadProgram (wire : String) : IO (Except String Program) := do
-  let contents ← IO.FS.readFile wire
-  match Lean.Json.parse contents with
+  -- BUG-110: the same strict byte parse as the CLI's production entries.
+  let bytes ← IO.FS.readBinFile wire
+  match GoLean.StrictJson.parseBytes bytes GoLean.StrictJson.wireNestingDepth with
   | .error err => return .error s!"{wire}: JSON parse error: {err}"
   | .ok json =>
       match GoLean.NativeToIR.decodeProgram json with

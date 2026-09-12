@@ -6828,8 +6828,34 @@ language only`). [AGENT] detail: no `go.mod` → the pinned 1.26, unchanged
 
 ## BUG-110 — the production wire decoder is fail-open at two points: `Lean.Json.parse` collapses DUPLICATE object keys before the schema validators see them (a forged leading `schema` field vanished behind the genuine one and the wire ran), and a call assigned to `_` with its `resultTypes` vector removed is reconstructed as `int` by `resultTypes[i]?.getD .int` [decoder; trusted surface #1 boundary; review 2026-09-11 F3 = 2026-09-05 gate audit F9, ACCEPTED (master plan §7.2), unfixed]
 
-- Status: open ([AGENT] coordinator 2026-09-11, filed from `docs/2026-09-11_project-review.md` §4 F3; the F9 disposition of 2026-09-05 named the same `.getD .int` sites)
-- Pinned-by: none (not a baseline row — the pin is byte-level wire-mutation tests through the real CLI entry, which the fix lane adds; the review's two mutations are recorded in `docs/evidence/2026-09-11_project-review/README.md`)
+- Status: fixed ([AGENT] lane `fix/review-boundary-0911` stage S3, 2026-09-12 — filed open by the coordinator 2026-09-11 from `docs/2026-09-11_project-review.md` §4 F3; the F9 disposition of 2026-09-05 named the same `.getD .int` sites)
+- Pinned-by: none (not a baseline row — the pin is `scripts/check-wire-boundary`, a `scripts/ci` step ("wire boundary (production byte decoder through the real CLI)"): the fixture `Tests/wire-boundary/main.go` (the review's discard-call probe) is lowered fresh by the frontend, its wire BYTES are mutated, and every mutant is driven through the real `golean native-json-run` — a forged leading duplicate `schema`, a duplicate key inside a call node, an absent `resultTypes` vector, a mis-sized one, a missing `buildContext`, an unpaired high / low surrogate escape in an UNREAD field, a raw invalid UTF-8 byte (all must refuse naming their cause), plus the untouched wire and a valid surrogate pair (must run and answer 42))
+
+FIXED ([AGENT] S3, 2026-09-12). (1) The production wire is parsed from its
+BYTES by `GoLean.StrictJson.parseBytes` (`GoLean/StrictJsonParse.lean`) at
+every production entry — `GoLean/CLI.lean` `native-json-run` and
+`coverage-observations`, `GoLean/ChoiceTrace.lean` `loadProgram` — via
+`IO.FS.readBinFile`: a duplicate object key (at any depth), an unpaired
+surrogate escape and invalid UTF-8 refuse BEFORE any schema validator sees a
+collapsed object (`Lean.Json.parse` kept one value per key and substituted
+U+FFFD). (2) `resultTypes` is REQUIRED on every call-shaped node (`call`,
+`call-value`, `atomic-op`, `sync-op` — presence and array shape at
+recognition, `requireResultTypes`) and arity-checked where it is consumed
+(`decodeResultTypes`: the assignment consumers against the target count, the
+sync-op result against `bool`); the two `resultTypes[i]?.getD .int` sites
+(the `$cr`/`$cv` discard temps) and the expression-statement site's "absent →
+targetless" fallback are gone — an absent or mis-sized vector refuses by
+name, never reconstructed. This also discharges TODO.md's F5 item (the
+`sync-op`/`atomic-op` nodes accepted an absent key). The parser's nesting
+bound is a PARAMETER now: the declaration envelope keeps 64, the production
+wire uses `wireNestingDepth = 1024` — the 64 refused 105 real corpus wires at
+the stage's first gate (program ASTs reach depth 120 today; the finding and
+the histogram are in the evidence README). Movement: none — the
+frontend emits the vector on every call-shaped node (`emitResultTypes`), and
+every corpus wire is valid JSON without duplicate keys; the raft twin wire is
+byte-identical. Decode-time cost of the strict parser, measured on the two
+largest wires (`docs/evidence/2026-09-11_review-boundary/README.md`, "S3
+timing"): A/B interleaved, 7 runs each, medians — the raft twin wire (11.4 MB) 0.124 s → 0.055 s (faster: the byte read replaces `IO.FS.readFile`'s `String` build — a hypothesis, not isolated), the largest corpus wire (3.5 MB, `stdlib-source/frontier/*`) 0.052 s → 0.075 s (+0.023 s, the strict parser's own cost), a 1.5 KB wire 0.021 → 0.020 s; against the runner's 30 s per-case budget the fast path is unaffected in practice. The original fix sketch follows.
 
 Cause: `GoLean/CLI.lean:470` parses production wires with `Lean.Json.parse`,
 whose object representation keeps one value per key, so a duplicate key is

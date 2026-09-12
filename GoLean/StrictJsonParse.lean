@@ -12,16 +12,32 @@ instead of substituting U+FFFD into an identity or signature.
 The parser reuses the pinned Lean JSON numeric/escape primitives. Its
 container grammar follows Lean/Data/Json/Parser.lean (Apache-2.0, Gabriel
 Ebner and Marc Huisinga). Recursive parsing stays outside the total GoCore
-semantic model. This module is not yet wired into production NativeToIR;
-parsed-JSON schema validation and executable admission remain separate.
+semantic model. Since BUG-110 (2026-09-12) `parseBytes` IS the production
+wire's byte boundary — `GoLean/CLI.lean` (`native-json-run`,
+`coverage-observations`) and `GoLean/ChoiceTrace.lean` (`loadProgram`) read
+the wire file as bytes and parse it here, so a duplicate key or a malformed
+escape refuses before `NativeToIR.decodeProgram` sees an object; the schema
+validation there and executable admission remain separate concerns.
 -/
 
 namespace GoLean.StrictJson
 
 open Lean Std.Internal.Parsec Std.Internal.Parsec.String
 
-/-- Adapter resource limits, not restrictions on Go semantic types. -/
+/-- Adapter resource limits, not restrictions on Go semantic types. The
+declaration envelope's nesting bound (the default of `parse`/`parseBytes`). -/
 def maxNestingDepth : Nat := 64
+
+/-- The PRODUCTION WIRE's nesting bound (BUG-110, 2026-09-12): a program's
+AST nests with its syntax — the fmt shim's verb-dispatch `else` chain alone
+is ~20 statement levels, ~3 JSON levels each — and the declaration bound of
+64 refused 105 of the 3634 corpus wires measured at S3 (maximum observed
+120, `init/library-var-type-*`; the raft twin 73). 1024 is 8.5× the
+deepest observed wire and well inside the parser's native recursion budget;
+it is a RESOURCE bound that refuses by name (`JSON nesting deeper than
+1024`), never a semantic one. Measurement: docs/evidence/
+2026-09-11_review-boundary/README.md, S3. -/
+def wireNestingDepth : Nat := 1024
 def maxNumberChars : Nat := 256
 def maxNumberExponent : Nat := 1024
 
@@ -111,7 +127,7 @@ mutual
 private partial def inputValue (remaining : Nat) (path : String) : Parser Json := do
   let c ← peek!
   if (c == '[' || c == '{') && remaining == 0 then
-    fail s!"{path}: JSON nesting deeper than {maxNestingDepth}"
+    fail s!"{path}: JSON nesting deeper than the bound (the parser's nesting budget; declaration envelope {maxNestingDepth}, production wire {wireNestingDepth})"
   if c == '[' then
     skip; ws
     if (← peek!) == ']' then
@@ -185,19 +201,21 @@ private partial def inputObject (remaining : Nat) (path : String) (values : Obj)
 end
 
 /-- Parse textual JSON without collapsing duplicate keys or replacing
-malformed Unicode escapes. This does not check a declaration schema. -/
-def parse (input : String) : Except String Json :=
+malformed Unicode escapes. This does not check a declaration schema.
+`maxDepth` is the nesting bound: the declaration envelope's by default,
+`wireNestingDepth` for a production wire. -/
+def parse (input : String) (maxDepth : Nat := maxNestingDepth) : Except String Json :=
   Parser.run (do
     ws
-    let value ← inputValue maxNestingDepth "$"
+    let value ← inputValue maxDepth "$"
     eof
     return value) input
 
 /-- The file-input boundary must validate UTF-8 before constructing String.
 Raw non-UTF-8 bytes refuse; a replacement character is never substituted. -/
-def parseBytes (input : ByteArray) : Except String Json := do
+def parseBytes (input : ByteArray) (maxDepth : Nat := maxNestingDepth) : Except String Json := do
   let some text := String.fromUTF8? input
     | throw "JSON input is not valid UTF-8"
-  parse text
+  parse text maxDepth
 
 end GoLean.StrictJson

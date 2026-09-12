@@ -1,0 +1,147 @@
+#!/usr/bin/env bash
+# check-wire-boundary — the production wire decoder's BYTE-input controls,
+# driven through the REAL CLI binary (BUG-110; whole-project review
+# 2026-09-11 F3 = 2026-09-05 gate audit F9; lane fix/review-boundary-0911,
+# [AGENT]). A test on an already-parsed `Json` value does not count here:
+# the defect was that `Lean.Json.parse` collapsed duplicate object keys and
+# substituted U+FFFD for malformed surrogate escapes BEFORE any validator
+# ran, and that `resultTypes[i]?.getD .int` reconstructed a discard temp's
+# type when the vector was absent. So every control below is a MUTATION OF
+# THE WIRE'S BYTES, fed to `golean native-json-run --input <file>` exactly
+# as scripts/diff-coverage feeds a corpus wire.
+#
+#   positive control     the fresh wire runs and answers 42
+#   dup-schema           a forged leading `"schema"` duplicate → refused, cause named
+#   dup-deep-key         a duplicate key inside a call node → refused
+#   absent-resultTypes   the discard call's `resultTypes` vector removed → refused, `resultTypes` named
+#   arity-resultTypes    a 2-entry vector on a 1-target discard call → refused, arity named
+#   absent-buildContext  the file-selection target removed → refused (BUG-108's decoder pin)
+#   high-surrogate       an unpaired \uD800 in an UNREAD string field → refused
+#   low-surrogate        an unpaired \uDC00 likewise → refused
+#   invalid-utf8         a raw 0xFF byte inside a string → refused
+#   paired-surrogate     a VALID surrogate pair in an unread field → accepted (the parser is strict, not over-strict)
+#   over-depth           `buildTags` wrapped in 1100 nested arrays → refused by the wire nesting bound (1024)
+#
+# Fixture: Tests/wire-boundary/main.go (the review's discard-call probe).
+# Fail closed: a missing binary, a failed emit, a control that runs where
+# it must refuse, a refusal that does not name its cause, or a positive
+# control that does not answer 42 all exit 1 naming the control.
+set -uo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT"
+[[ $# = 0 ]] || { echo 'check-wire-boundary: expected no arguments' >&2; exit 2; }
+. "$ROOT/scripts/typed-gate-scratch.sh"
+set -e
+GOLEAN=".lake/build/bin/golean"
+scripts/capped lake build golean > /dev/null
+[[ -x "$GOLEAN" ]] || { echo "check-wire-boundary: no $GOLEAN (fail closed)" >&2; exit 1; }
+GOCACHE="$ROOT/artifacts/go-build-cache" GO111MODULE=off \
+  go run ./tools/nativefrontend --dir Tests/wire-boundary --out "$gate_scratch/program.json"
+python3 - "$gate_scratch" <<'PY'
+import json, sys
+from pathlib import Path
+scratch = Path(sys.argv[1])
+raw = (scratch / 'program.json').read_bytes()
+text = raw.decode('utf-8')
+base = json.loads(text)
+compact = json.dumps(base, separators=(',', ':'))
+
+def write(name, data):
+    (scratch / f'{name}.json').write_bytes(data if isinstance(data, bytes) else data.encode('utf-8'))
+
+# The discard call `_ = val()`: the ONE assign statement whose lhs is a blank
+# target and whose rhs is a single call node carrying resultTypes.
+def find_discard_call(v):
+    if isinstance(v, dict):
+        if v.get('stmt') == 'assign' and isinstance(v.get('lhs'), list) and len(v['lhs']) == 1 \
+           and isinstance(v.get('rhs'), list) and len(v['rhs']) == 1 \
+           and isinstance(v['rhs'][0], dict) and v['rhs'][0].get('expr') == 'call' \
+           and 'resultTypes' in v['rhs'][0] and v['lhs'][0].get('target') == 'blank':
+            return v['rhs'][0]
+        for c in v.values():
+            r = find_discard_call(c)
+            if r is not None: return r
+    elif isinstance(v, list):
+        for c in v:
+            r = find_discard_call(c)
+            if r is not None: return r
+    return None
+
+assert compact.count('"schema":"golean-native-v1"') == 1
+assert '"package":"main"' in compact, 'fixture wire has no package field to mutate'
+assert 'buildContext' in base, 'fixture wire has no buildContext (BUG-108 record)'
+
+# dup-schema: a forged leading duplicate of the top-level schema key
+write('dup-schema', '{"schema":"forged-schema",' + compact[1:])
+
+# dup-deep-key: duplicate the `expr` key inside the first call node
+m = json.loads(compact); call = find_discard_call(m)
+assert call is not None, 'fixture wire has no `_ = call()` statement'
+call_text = json.dumps(call, separators=(',', ':'))
+assert compact.count(call_text) == 1, 'discard call node text is not unique in the wire'
+write('dup-deep-key', compact.replace(call_text, '{"expr":"call",' + call_text[1:], 1))
+
+# absent-resultTypes: remove the vector from the discard call only
+m = json.loads(compact); call = find_discard_call(m); del call['resultTypes']
+write('absent-resultTypes', json.dumps(m, separators=(',', ':')))
+
+# arity-resultTypes: two result types on a one-target discard call
+m = json.loads(compact); call = find_discard_call(m); call['resultTypes'] = call['resultTypes'] * 2
+write('arity-resultTypes', json.dumps(m, separators=(',', ':')))
+
+# absent-buildContext
+m = json.loads(compact); del m['buildContext']
+write('absent-buildContext', json.dumps(m, separators=(',', ':')))
+
+# surrogates in the UNREAD `package` field (the decoder deliberately does not read it —
+# so only the byte parser can refuse these)
+write('high-surrogate', compact.replace('"package":"main"', '"package":"ma\\ud800in"', 1))
+write('low-surrogate', compact.replace('"package":"main"', '"package":"ma\\udc00in"', 1))
+write('paired-surrogate', compact.replace('"package":"main"', '"package":"ma\\ud83d\\ude00in"', 1))
+write('invalid-utf8', compact.replace('"package":"main"', '"package":"ma\xff"', 1).encode('utf-8', 'surrogateescape').replace(b'\xc3\xbf', b'\xff'))
+raw_bytes = (scratch / 'invalid-utf8.json').read_bytes()
+# over-depth: 1100 nested arrays inside an otherwise valid wire — beyond the wire bound (1024)
+write('over-depth', compact.replace('"buildTags":[]', '"buildTags":' + '[' * 1100 + ']' * 1100, 1))
+assert b'\xff' in raw_bytes and raw_bytes.count(b'\xff') == 1, 'invalid-utf8 mutant lost its raw byte'
+print('mutants written')
+PY
+
+run_cli() { "$GOLEAN" native-json-run --input "$1" --function probe 2>&1; }
+expect_refusal() {  # name cause-fragment... (every fragment must appear in the CLI's message;
+                    # the message travels JSON-encoded, so quoted keys arrive as \"key\" — match
+                    # the words and the key separately, never a literal quote)
+  local name="$1" out rc=0 cause; shift
+  out="$(run_cli "$gate_scratch/$name.json")" || rc=$?
+  if [[ $rc -eq 0 ]]; then
+    echo "check-wire-boundary: FAIL [$name] — the mutated wire RAN (exit 0): $out" >&2; exit 1
+  fi
+  if [[ $rc -ne 1 ]]; then
+    echo "check-wire-boundary: FAIL [$name] — exit $rc is not the CLI's refusal code 1 (did not decide): $out" >&2; exit 1
+  fi
+  for cause in "$@"; do
+    if [[ "$out" != *"$cause"* ]]; then
+      echo "check-wire-boundary: FAIL [$name] — refused, but the refusal does not name '$cause': $out" >&2; exit 1
+    fi
+  done
+  echo "ok [$name] refused, naming: $*"
+}
+expect_42() {
+  local name="$1" out rc=0
+  out="$(run_cli "$gate_scratch/$name.json")" || rc=$?
+  if [[ $rc -ne 0 || "$out" != *'"status":"ok"'* || "$out" != *'"value":42'* ]]; then
+    echo "check-wire-boundary: FAIL [$name] — expected the positive control to answer 42 (exit $rc): $out" >&2; exit 1
+  fi
+  echo "ok [$name] runs, answers 42"
+}
+expect_42 program
+expect_42 paired-surrogate
+expect_refusal dup-schema         'JSON parse error' 'duplicate JSON object key' 'schema'
+expect_refusal dup-deep-key       'JSON parse error' 'duplicate JSON object key' 'expr'
+expect_refusal absent-resultTypes "missing field 'resultTypes'"
+expect_refusal arity-resultTypes  'resultTypes arity 2 does not match the 1 target(s)' 'BUG-110'
+expect_refusal absent-buildContext 'program.buildContext is missing' 'BUG-108'
+expect_refusal high-surrogate     'JSON parse error' 'unpaired high surrogate'
+expect_refusal low-surrogate      'JSON parse error' 'unpaired low surrogate'
+expect_refusal invalid-utf8       'JSON parse error' 'not valid UTF-8'
+expect_refusal over-depth         'JSON parse error' 'JSON nesting deeper than'
+echo 'Wire boundary gate: PASS (11 byte-level controls through the real CLI)'

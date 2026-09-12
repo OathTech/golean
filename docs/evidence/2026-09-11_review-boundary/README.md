@@ -118,6 +118,56 @@ Gates (`GOLEAN_MEM_MAX=48G scripts/capped`, lock held), tree = `60874ada` + the 
   unclassified-formats.txt}`; installed.
 - run #2 `scripts/ci --diff` (cache mode against the installed record, the tree committed as S2): EXIT=0, 885 s, RESULT: PASS — no drift (3676 rows reproduce; 394 negatives), certificate provenance ok, google-search CERTIFIED-CACHED; no baseline re-pin.
 
+## Stage S3 — BUG-110 fix (strict byte parser at the production wire boundary; `resultTypes` required)
+
+Code: `GoLean/CLI.lean` (`native-json-run`, `coverage-observations`: `IO.FS.readBinFile` +
+`GoLean.StrictJson.parseBytes`), `GoLean/ChoiceTrace.lean` (`loadProgram`, same),
+`GoLean/StrictJsonParse.lean` (header note: it IS the production byte boundary now),
+`GoLean/NativeToIR.lean` (`decodeResultTypes` / `requireResultTypes`: the vector is required on
+every call-shaped node — `call`, `call-value`, `atomic-op`, `sync-op` — and arity-checked where
+consumed; the two `resultTypes[i]?.getD .int` sites and the expression-statement "absent →
+targetless" fallback are gone; TODO.md's F5 item discharged), `scripts/check-wire-boundary` (new
+`scripts/ci` step) + `Tests/wire-boundary/main.go` (the review's discard-call probe).
+
+| file | what |
+|---|---|
+| `s3-check-wire-boundary.txt` | the gate script's transcript: 10 byte-level controls through the real CLI — positive control 42, valid surrogate pair 42; forged leading duplicate `schema`, duplicate key deep in a call node, absent `resultTypes`, mis-sized `resultTypes`, absent `buildContext`, unpaired high/low surrogate in an UNREAD field, raw invalid UTF-8 — each refused naming its cause |
+| `s3-decode-timing.txt` | decode wall time before/after, then an interleaved A/B of the two binaries (pre-S3 rebuilt from `07bc55cb`, sha `b130c4f4…` = the S1b binary; S3 `dae23a5c…`) on the raft twin wire (11.4 MB), the largest corpus wire (3.5 MB, `stdlib-source/frontier/*`) and a 1.5 KB fixture wire; 7 runs each, medians |
+
+Timing verdict (medians, A/B interleaved; `native-json-run --function <nonexistent>` = read +
+parse + `decodeProgram` + subject lookup, verified to reach `GoCore function not found`): twin
+0.124 s → 0.055 s (FASTER — the byte read replaces `IO.FS.readFile`'s `String` build; a
+hypothesis, not isolated); largest corpus wire 0.052 s → 0.075 s (+0.023 s, +44% — the strict
+parser's own cost); 1.5 KB wire 0.021 → 0.020 s (process startup dominates). Against the runner's
+30 s per-case budget the fast path is unaffected in practice; the parser is not weakened.
+
+FINDING at run #1 (fixed before run #2): the strict parser's `maxNestingDepth := 64` is the
+DECLARATION envelope's resource bound; program wires nest with their syntax (the fmt shim's
+verb-dispatch `else` chain alone is ~20 statement levels × ~3 JSON levels), and run #1 refused
+105 real wires (`JSON nesting deeper than 64`; ~100 rows PASS → FAIL/lean-observation). Measured
+over every corpus wire + the twin (3634 files; bracket depth outside strings): maximum 120
+(`init/library-var-type-*`), twin 73, histogram 0–15: 2172, 16–31: 1200, 32–47: 146, 48–63: 11,
+64–111: 100, 112+: 5. Fix: `parse`/`parseBytes` take the bound as a parameter (declaration
+default 64 unchanged; its tests still pin 64/65/10000), the production wire path passes
+`wireNestingDepth = 1024` (8.5× the deepest observed; still a finite, by-name refusal — the gate's
+11th control wraps `buildTags` in 1100 arrays and is refused). Focused re-runs of every regressed
+prefix (`fmt/`, `noodler/strings/`, `init/library-var-type*`, `panic-recover/
+shim-refusal-unrecoverable/`, `spec-examples-decl/timezone-stringer`; 96 PASS / 23 FAIL): every
+remaining FAIL is the baseline's own FAIL/frontend-export row (set difference empty).
+
+Gates (`GOLEAN_MEM_MAX=48G scripts/capped`, lock held), tree = `07bc55cb` + the S3 edits:
+
+- run #1 `scripts/ci --slow` (before the depth fix): EXIT=1, 995 s. `wire boundary` ok;
+  `certificate provenance` STALE (candidate minted, set unchanged, 162.9 s — superseded by run #2's);
+  `baseline diff`: the ~100 depth regressions above + google-search stale. NOT installed.
+- run #2 `scripts/ci --slow` (with the depth fix): EXIT=1, 1149 s. `wire boundary` ok (11
+  controls); `certificate provenance` STALE (the expected F8 signal; candidate minted, `Fresh
+  certification: unchanged set`, 150.8 s); `baseline diff` = the google-search row alone (stale
+  record); 3676 rows, no other movement (3427 PASS / 249 FAIL with that one stale red). Candidate
+  reviewed: set and claim identical; inputs differ exactly in `GoLean/{CLI,ChoiceTrace,NativeToIR,
+  StrictJsonParse}.lean`, `scripts/ci`, `scripts/check-wire-boundary` (+); installed.
+- run #3 `scripts/ci --diff` (cache mode against the installed record, the tree committed as S3): EXIT=0, 888 s, RESULT: PASS — no drift (3676 rows reproduce; 394 negatives), certificate provenance ok, wire boundary ok (11 controls), google-search CERTIFIED-CACHED; no baseline re-pin.
+
 ## Gate table
 
 | stage | command | tree | exit | wall | notes |
@@ -130,4 +180,7 @@ Gates (`GOLEAN_MEM_MAX=48G scripts/capped`, lock held), tree = `60874ada` + the 
 | S1b run #3 | `scripts/ci --diff` | + installed record | 1 | 887 s | reds: bug-index, baseline drift = exactly the 7 flips; certificate provenance ok; google-search CERTIFIED-CACHED |
 | S1b re-judge | `scripts/ci` (fast) | + re-pinned baseline, BUG-108 fixed | 0 | 554 s | RESULT: PASS — the tree committed as S1b (`60874ada`) |
 | S2 run #1 | `scripts/ci --slow` | 60874ada + S2 edits | 1 | 995 s | reds: certificate provenance (STALE → candidate, set unchanged, 169 s), baseline drift = google-search stale only |
-| S2 run #2 | `scripts/ci --diff` | + installed record (the tree committed as S2) | 0 | 885 s | RESULT: PASS |
+| S2 run #2 | `scripts/ci --diff` | + installed record (the tree committed as S2, `07bc55cb`) | 0 | 885 s | RESULT: PASS |
+| S3 run #1 | `scripts/ci --slow` | 07bc55cb + S3 edits (declaration depth bound 64 on the wire path) | 1 | 995 s | reds: certificate provenance (STALE), baseline drift = ~100 rows refused `JSON nesting deeper than 64` + google-search stale — the depth FINDING; not installed |
+| S3 run #2 | `scripts/ci --slow` | + `wireNestingDepth = 1024`, 11th control | 1 | 1149 s | reds: certificate provenance (STALE → candidate, set unchanged, 151 s), baseline drift = google-search stale only |
+| S3 run #3 | `scripts/ci --diff` | + installed record (the tree committed as S3) | 0 | 888 s | RESULT: PASS |

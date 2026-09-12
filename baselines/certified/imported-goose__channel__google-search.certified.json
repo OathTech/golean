@@ -31,8 +31,8 @@
     "build": {
       "files": {
         "GoLean.lean": "ac3abf7741a51eae51d71a68574547fd3b8236b9734b19fce2fccf0df56b4118",
-        "GoLean/CLI.lean": "9d90756e6b4cff83aca589b7c5ecd4c8cd5febd6ae292882a1729378012cb3b5",
-        "GoLean/ChoiceTrace.lean": "15ab5adde7d280ac92010daacb8c74f15364b4d6296d3a12f6b2c3d00e757ac6",
+        "GoLean/CLI.lean": "b89224051bc538682da3ba0ef4186980025bc9191e3c069254c68183d7a388d5",
+        "GoLean/ChoiceTrace.lean": "f636abe122cef99157fb19dd62e81f1dc94dab23d91f06246a02695d9a8e6d4a",
         "GoLean/DeclarationUnicode.lean": "7b567b3fa61a7f94c3bafe302b18f6cf7eaaea47266b12b9429550cce92fddc5",
         "GoLean/EnumDedup.lean": "961b9fe521d19fc42a17c1ec10f079d295dd644a0eae7c3a0c1af43c9b01e80f",
         "GoLean/GoCore.lean": "2cb4c1ab0864e8739675c197545e3bf847d565372474554c6ed93ff904e40f4c",
@@ -126,9 +126,9 @@
         "GoLean/GoCore/Value.lean": "aeded44416b5f286fc12033922cfab35d43d46c7d45fb7c6e8ea106e9eab6f8e",
         "GoLean/Interface.lean": "ebe4fada3f5a3cca2b931ead099cd25dfaabe497373b78da98dac5c4052f8f84",
         "GoLean/NativeDeclaration.lean": "6d184c492b3613b7572c8c1433daff7c2fb0366e5a64ea075dc73e288e300858",
-        "GoLean/NativeToIR.lean": "c03aee19d2fa410170da3ed4137c65a710618fe73c579e17027f0f5a81b81e46",
+        "GoLean/NativeToIR.lean": "4f9dc0732ab806fdd3a34d92640424116455f37aa4f02a09076d84692076b1be",
         "GoLean/StrictJson.lean": "6b6531a7a92762066b37c717e7aadd75db55dfe36e7605430cfa7eea0902511f",
-        "GoLean/StrictJsonParse.lean": "26e69863298341989b19db49216dd016f4cbf5a898f5ade445693a00b4ec4bae",
+        "GoLean/StrictJsonParse.lean": "4be47cd13ffddb2edaa10c1799383c9b94d2ba15a79ed12eb7e491be53f0e85c",
         "Main.lean": "56597882b7149e0d9944f4bef2e81a064a85011dfdd2c17584a9d98971d9e0c3",
         "lake-manifest.json": "0a9a22ded8ef8946c7123f865d00781c87a2bed6a754dc65b5d612a61b226987",
         "lakefile.toml": "f675638349063065dfc4bcceb67143045d72f355daf71330986c8484006c638a",
@@ -174,9 +174,10 @@
       "scripts/check-recovery-typing": "c3ba6f7fe5a0657268ab5aa4ef3b573246009ff1e06bb5b627025e0a8ae6a0f9",
       "scripts/check-spec-anchors": "0ea75982c91cf4434133f7b6811b53fd2f79d5573e8868f1aa79fe7e4e916559",
       "scripts/check-stdlib-register": "5fe5b97546ae8e06b9af19ca66d4093cca376b6aafb76b558dcc86cf51211cbe",
+      "scripts/check-wire-boundary": "fcacbc6876bb186fbc529834a43d013d5a99b061d52486aadf28551a3302dee7",
       "scripts/choice-trace-corpus": "ae4357adda68e7b242d9112a6ecfca43c1c201c07a861f34e455ce57ca5f62c5",
       "scripts/choice-trace-summarize": "177ae4088b6bc30b5c175092fb55f1fadc9c24938bfed65c7e7c86fef774f565",
-      "scripts/ci": "92b7f69bdebc3c5b5dd6d961709a12e95aade96ecb4986d8e87370e63e805040",
+      "scripts/ci": "33cb542f87f774bf656feeaee0ad642aa91e6d59a986e08dfe39a7f421159098",
       "scripts/ci-libraries.json": "076204d2053fdc5f6f126496e3197ed448b17209fc286c64ea93e6ea9192c061",
       "scripts/coverage": "cce5231de7ee527c4398df030b4a721d53c2696585e21fff495ef3d06dca8121",
       "scripts/coverage-baseline-diff": "222df888409ad9439d6de60d0257bad6bab5a30cb0b99916e5299b7f6d60ac6f",
@@ -344,7 +345,7 @@
   },
   "observations_sha256": "e40ba07d11827b48aa8c9246bd84d6c21849159983d46c47b793b5759cfbbfd8",
   "receipt": {
-    "binary_sha256": "b130c4f44112ff4238bc9980aa74aaecb9bd478b7d5e460ba5ca5738031ca264",
+    "binary_sha256": "44c8ed60949ccf867c9490ebaa26a59639871d020883d040516afc1862aaa524",
     "captured_exit": 0,
     "certifier": "tools/certification.py",
     "command": [
@@ -367,12 +368,12 @@
       "--engine",
       "dedup"
     ],
-    "finished_utc": "2026-09-12T01:45:08.459906+00:00",
+    "finished_utc": "2026-09-12T02:48:56.549229+00:00",
     "git_dirty": true,
-    "source_commit": "60874ada58204160bdccf3e0b2db3f0197f275ac",
-    "started_utc": "2026-09-12T01:42:17.226688+00:00",
+    "source_commit": "07bc55cbef6b1d47e7b538b4ca5b84035ae4717c",
+    "started_utc": "2026-09-12T02:46:23.412815+00:00",
     "stats_sha256": "68f3d503a2249b48df1e7acd687ce8a694c633f25db743f92f450ca1eddbfc92",
-    "wall_seconds": 168.938
+    "wall_seconds": 150.831
   },
   "schema": "golean-certification-v1"
 }

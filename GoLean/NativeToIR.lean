@@ -737,6 +737,27 @@ private def asMapGet? (json : Json) : LowerM (Option (Json × Json × Json × Js
         ← StrictJson.field "map-get" obj "keyType", ← StrictJson.field "map-get" obj "valueType"))
   | _ => pure none
 
+/-- The `resultTypes` vector of a call-shaped node (`call`, `call-value`,
+`atomic-op`, `sync-op`): REQUIRED, and checked against the arity the
+consumer expects (BUG-110; whole-project review 2026-09-11 F3 = the
+2026-09-05 gate audit's F9). The frontend emits the vector on EVERY
+call-shaped node (`emitResultTypes`), so an absent or mis-sized vector is
+a forged or mutated wire: it refuses by name here and is never
+reconstructed — the `resultTypes[i]?.getD .int` default that typed a
+discard temp as `int` when the vector was missing is gone. -/
+private def decodeResultTypes (path : String) (obj : StrictJson.Obj) (arity : Nat) :
+    LowerM (Array Ty) := do
+  let rt ← StrictJson.field path obj "resultTypes"
+  let arr ← StrictJson.array s!"{path}.resultTypes" rt
+  if arr.size != arity then
+    fail s!"resultTypes arity {arr.size} does not match the {arity} target(s) at {path} (BUG-110: the vector is validated, never reconstructed)"
+  arr.mapIdxM (fun i t => decodeTy s!"{path}.resultTypes[{i}]" t)
+
+/-- Every call-shaped node must CARRY a `resultTypes` array (presence and
+shape at recognition; the consumer checks the arity it needs). -/
+private def requireResultTypes (kind : String) (obj : StrictJson.Obj) : LowerM Unit := do
+  let _ ← StrictJson.array s!"{kind}.resultTypes" (← StrictJson.field kind obj "resultTypes")
+
 /-- Detect a call whose result feeds an assignment / return / expression
 statement, so it can lower to a GoCore call statement. -/
 private def asCall? (json : Json) : LowerM (Option (String × Array Json)) := do
@@ -744,6 +765,7 @@ private def asCall? (json : Json) : LowerM (Option (String × Array Json)) := do
   | .ok (.str "call") =>
       let obj ← StrictJson.obj "call" json
       checkAllowedKeys "call" obj ["expr", "func", "args", "resultTypes"]
+      requireResultTypes "call" obj
       let name ← StrictJson.string "call.func" (← StrictJson.field "call" obj "func")
       let args ← StrictJson.array "call.args" (← StrictJson.field "call" obj "args")
       pure (some (name, args))
@@ -761,6 +783,7 @@ private def asAtomicOp? (json : Json) : LowerM (Option (AtomicStmtOp × IntKind 
   | .ok (.str "atomic-op") =>
       let obj ← StrictJson.obj "atomic-op" json
       checkAllowedKeys "atomic-op" obj ["expr", "op", "kind", "args", "resultTypes"]
+      requireResultTypes "atomic-op" obj -- (the F5 owed tightening, TODO.md; BUG-110)
       let opName ← StrictJson.string "atomic-op.op" (← StrictJson.field "atomic-op" obj "op")
       let op : AtomicStmtOp ← match opName with
         | "load" => pure .load
@@ -789,14 +812,15 @@ it is admitted ONLY where `atomic-op` is (an expression statement; the
 single RHS of an assignment) and lowers to `Stmt.syncStmt` with the
 result target. Same wire op names as the statement form (one op
 identity — the Q-SYNCVAL identity principle); any other op name here
-is a forged wire. OWED (audit fix round F5, TODO.md): `resultTypes` is
-accepted-but-unchecked here exactly as in `asAtomicOp?` — an absent key
-still lowers; tightening both is one decoder-hardening item. -/
+is a forged wire. `resultTypes` is REQUIRED here and in `asAtomicOp?`
+(the F5 tightening TODO.md owed, discharged with BUG-110: an absent key
+refuses by name; the assignment consumers check the arity). -/
 private def asSyncValueOp? (json : Json) : LowerM (Option (SyncStmtOp × Array Json)) := do
   match json.getObjVal? "expr" with
   | .ok (.str "sync-op") =>
       let obj ← StrictJson.obj "sync-op" json
       checkAllowedKeys "sync-op" obj ["expr", "op", "args", "resultTypes"]
+      requireResultTypes "sync-op" obj
       let opName ← StrictJson.string "sync-op.op" (← StrictJson.field "sync-op" obj "op")
       let op : SyncStmtOp ← match opName with
         | "tryLock" => pure .tryLock
@@ -816,6 +840,7 @@ private def asCallValue? (json : Json) : LowerM (Option (Json × Array Json)) :=
   | .ok (.str "call-value") =>
       let obj ← StrictJson.obj "call-value" json
       checkAllowedKeys "call-value" obj ["expr", "callee", "args", "resultTypes"]
+      requireResultTypes "call-value" obj
       let callee ← StrictJson.field "call-value" obj "callee"
       let args ← StrictJson.array "call-value.args" (← StrictJson.field "call-value" obj "args")
       pure (some (callee, args))
@@ -948,23 +973,21 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
       -- arity mismatch, so a value-returning callee needs typed discard
       -- temps — exactly decodeAssign's blank-target mechanism, driven by
       -- the call node's `resultTypes` (BUG-012 fix, arc-final audit F11,
-      -- 2026-08-06). A wire without `resultTypes` keeps the old
-      -- targetless lowering (fail-closed: stuck at frame exit if the
-      -- callee returns values).
+      -- 2026-08-06). The vector is REQUIRED (BUG-110): its length IS the
+      -- callee's arity, so an absent vector no longer falls back to the
+      -- targetless lowering — a wire without it refuses by name.
       let e ← StrictJson.field path obj "expr"
       let discardTemps (prefixName : String) (callJson : Json) :
           LowerM (Array Stmt × Array Assignee) := do
         let callObj ← StrictJson.obj s!"{path}.expr" callJson
-        match callObj.get? "resultTypes" with
-        | none => pure (#[], #[])
-        | some rt => do
-            let arr ← StrictJson.array s!"{path}.expr.resultTypes" rt
-            let tys ← arr.mapIdxM (fun i t => decodeTy s!"{path}.expr.resultTypes[{i}]" t)
-            let decls := tys.mapIdx (fun i ty =>
-              Stmt.initialization { id := s!"{prefixName}{i}", typ := ty })
-            let assignees := tys.mapIdx (fun i _ =>
-              Assignee.var s!"{prefixName}{i}")
-            pure (decls, assignees)
+        let rt ← StrictJson.field s!"{path}.expr" callObj "resultTypes"
+        let arr ← StrictJson.array s!"{path}.expr.resultTypes" rt
+        let tys ← arr.mapIdxM (fun i t => decodeTy s!"{path}.expr.resultTypes[{i}]" t)
+        let decls := tys.mapIdx (fun i ty =>
+          Stmt.initialization { id := s!"{prefixName}{i}", typ := ty })
+        let assignees := tys.mapIdx (fun i _ =>
+          Assignee.var s!"{prefixName}{i}")
+        pure (decls, assignees)
       match ← asCall? e with
       | some (name, args) =>
           let (decls, assignees) ← discardTemps "$cr" e
@@ -1491,21 +1514,20 @@ partial def decodeAssign (results : Array Param) (path : String) (obj : StrictJs
   if rhs.size == 1 then
     match ← asCall? rhs[0]! with
     | some (name, args) =>
-        -- Result types (when the frontend supplies them) type blank discard
-        -- temps correctly; fall back to int only if absent.
+        -- The call's `resultTypes` vector types the blank discard temps:
+        -- REQUIRED and arity-checked against the targets (BUG-110 —
+        -- replaces the `resultTypes[i]?.getD .int` reconstruction).
         let callObj ← StrictJson.obj s!"{path}.rhs[0]" rhs[0]!
-        let resultTypes ← (match callObj.get? "resultTypes" with
-          | some rt => do
-              let arr ← StrictJson.array s!"{path}.rhs[0].resultTypes" rt
-              arr.mapIdxM (fun i t => decodeTy s!"{path}.rhs[0].resultTypes[{i}]" t)
-          | none => pure #[])
+        let resultTypes ← decodeResultTypes s!"{path}.rhs[0]" callObj lhs.size
         let mut decls : Array Stmt := #[]
         let mut assignees : Array Assignee := #[]
         for i in [:lhs.size] do
           let lj := lhs[i]!
           if targetIsBlank lj then
             let tmp := s!"$cr{i}"
-            let ty := resultTypes[i]?.getD .int
+            let ty ← match resultTypes[i]? with
+              | some ty => pure ty
+              | none => fail s!"resultTypes[{i}] absent at {path}.rhs[0] (fail closed)"
             decls := decls.push (.initialization { id := tmp, typ := ty })
             assignees := assignees.push (.var tmp)
           else
@@ -1526,11 +1548,8 @@ partial def decodeAssign (results : Array Param) (path : String) (obj : StrictJs
         if lhs.size != 1 then
           fail s!"atomic op assigned to {lhs.size} targets at {path} (an atomic op has exactly one result)"
         let opObj ← StrictJson.obj s!"{path}.rhs[0]" rhs[0]!
-        let resultTypes ← (match opObj.get? "resultTypes" with
-          | some rt => do
-              let arr ← StrictJson.array s!"{path}.rhs[0].resultTypes" rt
-              arr.mapIdxM (fun i t => decodeTy s!"{path}.rhs[0].resultTypes[{i}]" t)
-          | none => pure #[])
+        -- one result, REQUIRED (BUG-110 / the F5 tightening)
+        let resultTypes ← decodeResultTypes s!"{path}.rhs[0]" opObj 1
         let lj := lhs[0]!
         let mut decls : Array Stmt := #[]
         let mut assignee : Assignee := .unsupported "atomic-op target"
@@ -1555,6 +1574,11 @@ partial def decodeAssign (results : Array Param) (path : String) (obj : StrictJs
     | some (op, args) =>
         if lhs.size != 1 then
           fail s!"value sync op assigned to {lhs.size} targets at {path} (TryLock/TryRLock have exactly one result)"
+        -- the one result is Bool, REQUIRED on the wire (BUG-110 / the F5 tightening)
+        let opObj ← StrictJson.obj s!"{path}.rhs[0]" rhs[0]!
+        let syncResultTypes ← decodeResultTypes s!"{path}.rhs[0]" opObj 1
+        if syncResultTypes[0]? != some .bool then
+          fail s!"value sync op result type is not bool at {path}.rhs[0].resultTypes[0] (TryLock/TryRLock return a bool; forged wire)"
         let lj := lhs[0]!
         let argsE ← args.mapIdxM (fun i a => decodeExpr s!"{path}.rhs[0].args[{i}]" a)
         if targetIsBlank lj then
@@ -1569,11 +1593,8 @@ partial def decodeAssign (results : Array Param) (path : String) (obj : StrictJs
     match ← asCallValue? rhs[0]! with
     | some (calleeJ, args) =>
         let callObj ← StrictJson.obj s!"{path}.rhs[0]" rhs[0]!
-        let resultTypes ← (match callObj.get? "resultTypes" with
-          | some rt => do
-              let arr ← StrictJson.array s!"{path}.rhs[0].resultTypes" rt
-              arr.mapIdxM (fun i t => decodeTy s!"{path}.rhs[0].resultTypes[{i}]" t)
-          | none => pure #[])
+        -- REQUIRED and arity-checked (BUG-110 — replaces the `.getD .int` reconstruction)
+        let resultTypes ← decodeResultTypes s!"{path}.rhs[0]" callObj lhs.size
         let callee ← decodeExpr s!"{path}.rhs[0].callee" calleeJ
         let argEs ← args.mapIdxM (fun i a => decodeExpr s!"{path}.rhs[0].args[{i}]" a)
         let mut decls : Array Stmt := #[]
@@ -1582,7 +1603,9 @@ partial def decodeAssign (results : Array Param) (path : String) (obj : StrictJs
           let lj := lhs[i]!
           if targetIsBlank lj then
             let tmp := s!"$cv{i}"
-            let ty := resultTypes[i]?.getD .int
+            let ty ← match resultTypes[i]? with
+              | some ty => pure ty
+              | none => fail s!"resultTypes[{i}] absent at {path}.rhs[0] (fail closed)"
             decls := decls.push (.initialization { id := tmp, typ := ty })
             assignees := assignees.push (.var tmp)
           else

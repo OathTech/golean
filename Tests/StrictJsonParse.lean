@@ -104,6 +104,19 @@ def main : IO Unit := do
   positive "nesting-at-limit" (nested depth)
   negative "nesting-above-limit" (nested (depth + 1)) "JSON nesting deeper than"
   negative "adversarial-depth" (nested 10000) "JSON nesting deeper than"
+  -- The production wire's bound (BUG-110): deeper than the declaration
+  -- envelope's, still finite and refused by name.
+  let wireDepth := GoLean.StrictJson.wireNestingDepth
+  require (wireDepth > depth) "wire nesting bound must exceed the declaration bound"
+  require ((GoLean.StrictJson.parse (nested 120) wireDepth).toOption.isSome)
+    "a corpus-depth (120) wire must parse under the wire bound"
+  require ((GoLean.StrictJson.parse (nested wireDepth) wireDepth).toOption.isSome)
+    "wire nesting at the bound must parse"
+  match GoLean.StrictJson.parse (nested (wireDepth + 1)) wireDepth with
+  | .ok _ => throw (IO.userError "wire nesting above the bound accepted")
+  | .error message =>
+    require ((message.splitOn "JSON nesting deeper than").length > 1) s!"wrong refusal: {message}"
+  IO.println "PASS wire-depth bound"
   positive "exponent-at-limit" "1e1024"
   positive "negative-exponent-at-limit" "1e-1024"
   positive "number-length-at-limit" ("".pushn '1' GoLean.StrictJson.maxNumberChars)

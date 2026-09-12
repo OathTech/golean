@@ -1,0 +1,18 @@
+# BEFORE S3 (Lean.Json.parse on a String; golean built at S1b, decoder = S1b)  golean sha256=b130c4f44112  git=60874ada  2026-09-12T01:48:11Z  load1=1.46
+11396009 bytes  baselines/pins/twin-chdriver.wire.json  runs=[0.136 0.139 0.128 0.142 0.138 0.132 0.125 ] median=0.136s
+3522442 bytes  .tmp/largest-corpus-wire.json  runs=[0.059 0.051 0.063 0.049 0.050 0.048 0.051 ] median=0.051s
+
+# AFTER S3 (StrictJson.parseBytes on the file's bytes; golean built at S3)  golean sha256=dae23a5c137d  git=07bc55cb  2026-09-12T02:06:49Z  load1=1.33
+11396009 bytes  baselines/pins/twin-chdriver.wire.json  runs=[0.056 0.056 0.055 0.055 0.054 0.060 0.056 ] median=0.056s
+3522442 bytes  .tmp/largest-corpus-wire.json  runs=[0.077 0.074 0.085 0.075 0.076 0.080 0.075 ] median=0.076s
+
+# A/B decode timing, interleaved (A = pre-S3 golean b130c4f44112 built from 07bc55cb; B = S3 golean dae23a5c137d); native-json-run --function <nonexistent> = read + parse + decodeProgram + subject lookup; 2026-09-12T02:08:55Z load1=0.44
+11396009 bytes baselines/pins/twin-chdriver.wire.json
+  A pre-S3 : runs=[0.113 0.139 0.147 0.124 0.120 0.131 0.121] median=0.124s
+  B S3     : runs=[0.061 0.061 0.058 0.055 0.053 0.053 0.055] median=0.055s
+3522442 bytes .tmp/largest-corpus-wire.json
+  A pre-S3 : runs=[0.059 0.052 0.048 0.056 0.047 0.061 0.048] median=0.052s
+  B S3     : runs=[0.080 0.075 0.074 0.077 0.075 0.076 0.072] median=0.075s
+1555 bytes .tmp/small-wire.json
+  A pre-S3 : runs=[0.021 0.021 0.021 0.021 0.021 0.022 0.020] median=0.021s
+  B S3     : runs=[0.020 0.020 0.021 0.020 0.022 0.020 0.020] median=0.020s

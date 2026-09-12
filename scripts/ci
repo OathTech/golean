@@ -521,6 +521,23 @@ else
   bad "declaration boundary (scripts/check-declarations)"
 fi
 
+# BUG-110 (whole-project review 2026-09-11 F3 = the 2026-09-05 gate audit's
+# F9; lane fix/review-boundary-0911): the production wire decoder's
+# BYTE-input controls through the REAL CLI binary — a forged leading
+# duplicate `schema`, a duplicate key deep in a call node, an absent or
+# mis-sized `resultTypes` vector, a missing `buildContext`, unpaired
+# surrogate escapes and a raw invalid UTF-8 byte must all refuse naming
+# their cause; a valid surrogate pair and the untouched wire must run.
+# Fixture: Tests/wire-boundary/main.go (the review's discard-call probe),
+# lowered fresh by the frontend each run. A test on an already-parsed Json
+# value would not count: the defect was upstream of every validator.
+step "wire boundary (production byte decoder through the real CLI: scripts/check-wire-boundary)"
+if bash scripts/check-wire-boundary; then
+  ok "wire boundary (byte-level controls through the real CLI)"
+else
+  bad "wire boundary (scripts/check-wire-boundary)"
+fi
+
 step "package-correct method identity (fresh wire, strict decoder, audit controls)"
 if library_step method-identity bash scripts/check-method-identity; then
   ok "package-correct method identity"
