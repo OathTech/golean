@@ -6733,9 +6733,9 @@ from the program gc builds, on the surface the differential trusts.
 FIXED ([AGENT] S1b, 2026-09-12; `tools/nativefrontend/fileselect.go`): the
 package's file set is `go/build.Context.ImportDir` under a Context PINNED to
 the platform's target — GOOS=linux, GOARCH=amd64, Compiler=gc, CgoEnabled
-(the oracle's `CGO_ENABLED=1` default; with cgo disabled go/build would drop
-`import "C"` files into IgnoredGoFiles and they would vanish instead of
-refusing), no `-tags`, `UseAllFiles` off — for the main package (`main.go`)
+(the FRONTEND's pin; with cgo disabled go/build would drop `import "C"` files
+into IgnoredGoFiles and they would vanish instead of refusing), no `-tags`,
+`UseAllFiles` off — for the main package (`main.go`)
 and every case-local imported package (`load.go` parseLocal). Refused BY NAME:
 InvalidGoFiles (a selected file gc cannot read), CgoFiles, assembly/.syso/
 C-family sources, go/build's own MultiplePackageError/NoGoError, and — the
@@ -6763,6 +6763,30 @@ every file — correct for the oracle (gc re-selects in the copy) but an
 over-refusal on an excluded file with invalid syntax; and `tools/lowerdiag`'s
 static pass still uses `parser.ParseDir` (report-only lane tooling). The
 original fix sketch follows.
+
+[superseded by audit F3 — `docs/2026-09-15_review-boundary-audit.md`,
+[AGENT] 2026-09-15] The CgoEnabled clause above read, as landed, «the
+oracle's `CGO_ENABLED=1` default». That is an unpinned host assumption and
+is withdrawn: the differential runner does NOT pin `CGO_ENABLED` —
+`scripts/diff-coverage`'s `go_run_oracle` scrubs GOFLAGS and pins
+`GO111MODULE`/`GODEBUG`/`GOTRACEBACK` only, so the oracle INHERITS the host's
+cgo state (Go auto-disables cgo on a host with no C compiler). cgo=true is the
+frontend's pin, nothing more. Under `CGO_ENABLED=0` the oracle SELECTS
+DIFFERENTLY — an `import "C"` sibling is dropped silently (audit case f47:
+gc prints 1, not 2) and a `//go:build !cgo` file is included (f50) — while the
+frontend refuses BOTH shapes BY NAME under either host state (`CgoFiles … cgo
+is outside the modeled fragment`; `reserved tag "cgo"`), so any divergence is
+a RED, never a silent wrong answer; the pin's direction is safe. Owed,
+recorded not fixed: (i) pin `CGO_ENABLED` in the runner's oracle invocation
+(or assert it in the oracle pin guard) — a trusted-surface-#2 change, PENDING
+[USER]; (ii) the frontend already carries a SECOND build context,
+`libraryBuildContext()` in `tools/nativefrontend/stdlibsource.go` (~line 554),
+which pins `CgoEnabled = false` and documents itself as the oracle's context —
+it contradicts `fileselect.go` and makes the wire's single
+`buildContext.cgoEnabled=true` a statement about the USER units only. The
+audit verified there is NO selection effect today: no `stdlibSourceAllowed`
+package's file set differs between the two cgo states. Unifying the two
+contexts into one is a code change, owed to the next lane.
 
 Fix (fail closed, dispositions §4 step 1): take the file set from a
 `go/build.Context` pinned to the Platform's target (GOOS=linux GOARCH=amd64,
@@ -6811,8 +6835,12 @@ x/mod; `//` comments stripped, `require ( … )` blocks skipped) that refuses
 what it does not understand rather than guess. Movement: none — no corpus row
 carries a `go.mod`; the raft twin wire is byte-identical. OUT OF SCOPE,
 recorded as owed: `//go:build go1.N` per-file constraints (already refused as
-reserved tags by `langversion.go`), `//go:debug` lines, and the `toolchain`
-directive (inert under the oracle pin guard's `GOTOOLCHAIN=local`). The
+reserved tags by `langversion.go`), `//go:debug` lines, the `godebug` go.mod
+directive (added [AGENT] 2026-09-15 per audit N1,
+`docs/2026-09-15_review-boundary-audit.md`: e.g. `godebug default=go1.21` is
+accepted silently — case g12 — and is inert under the oracle's
+`GO111MODULE=off`), and the `toolchain` directive (inert under the oracle pin
+guard's `GOTOOLCHAIN=local`). The
 frontend's refusal formats are classified for `scripts/lower-diagnose`
 (`tools/lowerdiag/causes.tsv` row `foreign-module-version`, by-design). The
 original fix sketch follows.
@@ -6846,16 +6874,56 @@ sync-op result against `bool`); the two `resultTypes[i]?.getD .int` sites
 (the `$cr`/`$cv` discard temps) and the expression-statement site's "absent →
 targetless" fallback are gone — an absent or mis-sized vector refuses by
 name, never reconstructed. This also discharges TODO.md's F5 item (the
-`sync-op`/`atomic-op` nodes accepted an absent key). The parser's nesting
+`sync-op`/`atomic-op` nodes accepted an absent key).
+
+[narrowed by audit F1 — `docs/2026-09-15_review-boundary-audit.md`, [AGENT]
+2026-09-15] What (2) validates is the ARITY, not the entry TYPES; the reading
+this paragraph invited as landed — «the vector is validated, never
+reconstructed» — is stronger than the code and is narrowed here. Measured
+(audit matrix (i), through the real CLI): arity mutations refuse BY NAME
+(`resultTypes arity N does not match the M target(s)`; i01, i02, i03, i09), a
+non-array (i11) and a non-type entry (i12) refuse, and a vector on a non-call
+node refuses (`unknown key 'resultTypes' …`, i07) — but the entry TYPES are
+TRUSTED: `_ = one()` with `resultTypes:[string]` (i08), `b, _ = two()` with
+`[string,string]` (i10) and `_, _ = two()` with `[string,string]` (i13) all RUN
+and answer 42 on `int`-returning callees, although the decoder holds the
+callee's declared results (the `funcs`/`methods` tables) and the callee
+expression's `type`. Expression-statement vectors (i04–i06) have no target
+count to check against and are caught only at RUN time by the machine (`extra
+GoCore assignment value` → status `stuck`; `storeK value/target arity
+mismatch` → status `error`) — fail-closed, but NOT a by-name refusal at the
+boundary. No observable is affected today (a discard temp is never read).
+OWED (audit F1 disposition (a)): a callee-signature cross-check of every
+`resultTypes` entry — a post-decode pass, refusing by name, which would also
+make the expression-statement vectors boundary refusals. Side observation,
+OUT OF LANE, for the state-cleanup arc: the machine stores an int into a
+`string`-typed discard cell without objection — a typing/normalization
+contract question, not a BUG-110 residual. The parser's nesting
 bound is a PARAMETER now: the declaration envelope keeps 64, the production
 wire uses `wireNestingDepth = 1024` — the 64 refused 105 real corpus wires at
 the stage's first gate (program ASTs reach depth 120 today; the finding and
 the histogram are in the evidence README). Movement: none — the
 frontend emits the vector on every call-shaped node (`emitResultTypes`), and
 every corpus wire is valid JSON without duplicate keys; the raft twin wire is
-byte-identical. Decode-time cost of the strict parser, measured on the two
-largest wires (`docs/evidence/2026-09-11_review-boundary/README.md`, "S3
-timing"): A/B interleaved, 7 runs each, medians — the raft twin wire (11.4 MB) 0.124 s → 0.055 s (faster: the byte read replaces `IO.FS.readFile`'s `String` build — a hypothesis, not isolated), the largest corpus wire (3.5 MB, `stdlib-source/frontier/*`) 0.052 s → 0.075 s (+0.023 s, the strict parser's own cost), a 1.5 KB wire 0.021 → 0.020 s; against the runner's 30 s per-case budget the fast path is unaffected in practice. The original fix sketch follows.
+byte-identical. Decode-time cost of the strict parser [corrected by audit F2 —
+`docs/2026-09-15_review-boundary-audit.md`, [AGENT] 2026-09-15. The superseded
+sentence, as landed, read: «A/B interleaved, 7 runs each, medians — the raft
+twin wire (11.4 MB) 0.124 s → 0.055 s (faster: the byte read replaces
+`IO.FS.readFile`'s `String` build — a hypothesis, not isolated), the largest
+corpus wire (3.5 MB, `stdlib-source/frontier/*`) 0.052 s → 0.075 s (+0.023 s,
+the strict parser's own cost), a 1.5 KB wire 0.021 → 0.020 s». The claimed
+SPEED-UP does not reproduce and is WITHDRAWN, together with the `readFile`/
+`String`-build hypothesis; the lane's timing binary (`dae23a5c…`) was NOT the
+committed one (`44c8ed60…`, the certified record's receipt), which is why the
+lane's number is not reproducible — the audit did not rebuild it]: re-measured
+A/B interleaved, THREE separate passes, NINE runs each, medians — the raft twin
+wire (11.4 MB) 0.132 s PRE → 0.214 s POST, +62% (passes 2 and 3: 0.129 →
+0.210, 0.123 → 0.212); the largest corpus wire (3.5 MB,
+`stdlib-source/frontier/*`) 0.049 s → 0.081 s, +65%; a 1.5 KB fixture wire
+0.020 s → 0.020 s, unchanged. The strict parser COSTS decode time on the large
+wires; it does not save it. What stands unchanged: against the runner's 30 s
+per-case budget the cost is far inside budget, and the parser is not weakened.
+The original fix sketch follows.
 
 Cause: `GoLean/CLI.lean:470` parses production wires with `Lean.Json.parse`,
 whose object representation keeps one value per key, so a duplicate key is

@@ -4,8 +4,19 @@
 cut from main `a461ed8b`. Authority: [USER] Mike 2026-09-11, verbatim, relayed by the [AGENT]
 coordinator — cite as relayed: «Great, go ahead and land this, then launch the lanes», on the
 sequence of `docs/2026-09-11_review-dispositions.md` §4 step 1; BUG-109's policy: «Yes, refuse
-non-1.26». Consuming docs: `docs/BUGS.md` BUG-108/109/110, `HANDOFF.md` at the worktree root
-(until landed), the baseline header of `baselines/native-full.tsv`.
+non-1.26». Consuming docs: `docs/BUGS.md` BUG-108/109/110, the lane handoff
+`docs/2026-09-12_review-boundary-handoff.md` (moved there by the fix round below), the
+baseline header of `baselines/native-full.tsv`.
+
+**CORRECTIONS ([AGENT] fix round, 2026-09-15).** This lane was adversarially audited:
+`docs/2026-09-15_review-boundary-audit.md` (verdict FIX-FIRST, records-only). Two claims
+in the text below are superseded and are marked in place, with the superseded wording kept
+visible: the S3 **timing verdict** (audit F2 — the twin decode is 62% SLOWER, not 2.3×
+faster) and, in `docs/BUGS.md`, BUG-110's `resultTypes` claim (audit F1 — ARITY is
+validated at the boundary; the entry TYPES are trusted) and BUG-108's cgo claim (audit F3
+— the differential runner does not pin `CGO_ENABLED`; cgo=true is the frontend's pin, and
+`tools/nativefrontend/stdlibsource.go`'s `libraryBuildContext()` pins it the other way).
+The code fixes themselves stand; no code file was touched by the fix round.
 
 Host: linux/amd64, the shared 32-core / 125 GiB development box, other lanes' gates running
 concurrently (load not controlled; wall times are indicative only). Toolchains: `go version
@@ -43,6 +54,11 @@ Re-judgement (fast): `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci` on the re-pi
 see the S1a line in the gate table below.
 
 ## Stage S1b — BUG-108 fix (frontend file selection from go/build under the pinned target; wire `buildContext`; decoder pin)
+
+[audit F3, 2026-09-15: the pinned Context's `CgoEnabled = true` is the FRONTEND's pin — the
+differential runner does not pin `CGO_ENABLED` and inherits the host's state; both host states
+are safe because the frontend refuses every cgo shape by name. Two owed items follow from it;
+see `docs/BUGS.md` BUG-108's F3 note and the lane handoff.]
 
 Code: `tools/nativefrontend/fileselect.go` (new; `selectPackageFiles`, `pinnedBuildContext`,
 `buildContextRecord`), `main.go` + `load.go` (both selection sites), `langversion.go`
@@ -124,22 +140,45 @@ Code: `GoLean/CLI.lean` (`native-json-run`, `coverage-observations`: `IO.FS.read
 `GoLean.StrictJson.parseBytes`), `GoLean/ChoiceTrace.lean` (`loadProgram`, same),
 `GoLean/StrictJsonParse.lean` (header note: it IS the production byte boundary now),
 `GoLean/NativeToIR.lean` (`decodeResultTypes` / `requireResultTypes`: the vector is required on
-every call-shaped node — `call`, `call-value`, `atomic-op`, `sync-op` — and arity-checked where
-consumed; the two `resultTypes[i]?.getD .int` sites and the expression-statement "absent →
+every call-shaped node — `call`, `call-value`, `atomic-op`, `sync-op` — and ARITY-checked where
+consumed (audit F1, 2026-09-15: arity only — the entry TYPES are trusted, and
+expression-statement vectors are caught at run time by the machine, not by name at the
+boundary; the cross-check is owed, see `docs/BUGS.md` BUG-110's F1 note); the two `resultTypes[i]?.getD .int` sites and the expression-statement "absent →
 targetless" fallback are gone; TODO.md's F5 item discharged), `scripts/check-wire-boundary` (new
 `scripts/ci` step) + `Tests/wire-boundary/main.go` (the review's discard-call probe).
 
 | file | what |
 |---|---|
 | `s3-check-wire-boundary.txt` | the gate script's transcript: 10 byte-level controls through the real CLI — positive control 42, valid surrogate pair 42; forged leading duplicate `schema`, duplicate key deep in a call node, absent `resultTypes`, mis-sized `resultTypes`, absent `buildContext`, unpaired high/low surrogate in an UNREAD field, raw invalid UTF-8 — each refused naming its cause |
-| `s3-decode-timing.txt` | decode wall time before/after, then an interleaved A/B of the two binaries (pre-S3 rebuilt from `07bc55cb`, sha `b130c4f4…` = the S1b binary; S3 `dae23a5c…`) on the raft twin wire (11.4 MB), the largest corpus wire (3.5 MB, `stdlib-source/frontier/*`) and a 1.5 KB fixture wire; 7 runs each, medians |
+| `s3-decode-timing.txt` | **SUPERSEDED by audit F2** (see the Timing verdict below; the file carries the same banner at its head — its binary `dae23a5c…` was not the committed one). As recorded: decode wall time before/after, then an interleaved A/B of the two binaries (pre-S3 rebuilt from `07bc55cb`, sha `b130c4f4…` = the S1b binary; S3 `dae23a5c…`) on the raft twin wire (11.4 MB), the largest corpus wire (3.5 MB, `stdlib-source/frontier/*`) and a 1.5 KB fixture wire; 7 runs each, medians |
 
-Timing verdict (medians, A/B interleaved; `native-json-run --function <nonexistent>` = read +
-parse + `decodeProgram` + subject lookup, verified to reach `GoCore function not found`): twin
-0.124 s → 0.055 s (FASTER — the byte read replaces `IO.FS.readFile`'s `String` build; a
-hypothesis, not isolated); largest corpus wire 0.052 s → 0.075 s (+0.023 s, +44% — the strict
-parser's own cost); 1.5 KB wire 0.021 → 0.020 s (process startup dominates). Against the runner's
-30 s per-case budget the fast path is unaffected in practice; the parser is not weakened.
+Timing verdict — **CORRECTED by audit F2** (`docs/2026-09-15_review-boundary-audit.md`,
+[AGENT] 2026-09-15). The superseded lane text, kept visible: «twin 0.124 s → 0.055 s (FASTER —
+the byte read replaces `IO.FS.readFile`'s `String` build; a hypothesis, not isolated); largest
+corpus wire 0.052 s → 0.075 s (+0.023 s, +44% — the strict parser's own cost); 1.5 KB wire
+0.021 → 0.020 s (process startup dominates)». The speed-up does NOT reproduce and is withdrawn,
+with the `readFile`/`String`-build hypothesis: the binary that produced it (`dae23a5c…`,
+`s3-decode-timing.txt`) is NOT the committed one (`44c8ed60…`, the certified record's receipt),
+which is why the lane's number is not reproducible; the audit did not rebuild it.
+
+The measurement of record (audit; same probe — `native-json-run --function <nonexistent>` =
+read + parse + `decodeProgram` + subject lookup, both binaries verified to reach `GoCore
+function not found`; A/B interleaved, THREE separate passes, NINE runs each after a warm-up;
+PRE = main's certified binary `18beb979…` on the wire without `buildContext`, POST = the
+committed `44c8ed60…` on the emitted wire; evidence
+`docs/evidence/2026-09-15_review-boundary-audit/n-decode-timing.txt` on branch
+`review/review-boundary-0911`):
+
+| wire | size | PRE | POST | delta |
+|---|---|---|---|---|
+| raft twin `baselines/pins/twin-chdriver.wire.json` | 11.4 MB | 0.132 s | 0.214 s | **+62%** (passes 2/3: 0.129→0.210, 0.123→0.212) |
+| largest corpus wire (`stdlib-source/frontier/*`) | 3.5 MB | 0.049 s | 0.081 s | **+65%** |
+| fixture wire | 1.5 KB | 0.020 s | 0.020 s | unchanged |
+
+So the strict parser COSTS decode time on the large wires rather than saving it; the lane's
+direction and magnitude for the largest corpus wire do reproduce (+65% vs. the recorded +44%).
+The conclusion that stands, unchanged: 0.08 s on the twin and 0.03 s on the largest corpus wire
+are far inside the runner's 30 s per-case budget, and the parser is not weakened.
 
 FINDING at run #1 (fixed before run #2): the strict parser's `maxNestingDepth := 64` is the
 DECLARATION envelope's resource bound; program wires nest with their syntax (the fmt shim's
@@ -184,3 +223,9 @@ Gates (`GOLEAN_MEM_MAX=48G scripts/capped`, lock held), tree = `07bc55cb` + the 
 | S3 run #1 | `scripts/ci --slow` | 07bc55cb + S3 edits (declaration depth bound 64 on the wire path) | 1 | 995 s | reds: certificate provenance (STALE), baseline drift = ~100 rows refused `JSON nesting deeper than 64` + google-search stale — the depth FINDING; not installed |
 | S3 run #2 | `scripts/ci --slow` | + `wireNestingDepth = 1024`, 11th control | 1 | 1149 s | reds: certificate provenance (STALE → candidate, set unchanged, 151 s), baseline drift = google-search stale only |
 | S3 run #3 | `scripts/ci --diff` | + installed record (the tree committed as S3) | 0 | 888 s | RESULT: PASS |
+
+No `ci` tail is tracked for the twelve runs above: the exit codes, wall times and red sets are
+this README's prose, not transcripts (audit F4). Per the merge protocol's step 5a, the train's
+`scripts/ci --slow` at the MERGED tip produces the tails of record, and its `RESULT:` tail is
+tracked with the round's 5a records commit. [AGENT] fix round, 2026-09-15 — the fix round did
+not fabricate tails for runs it did not make.

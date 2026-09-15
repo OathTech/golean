@@ -1,3 +1,14 @@
+# SUPERSEDED by the adversarial audit's finding F2 (docs/2026-09-15_review-boundary-audit.md),
+# [AGENT] fix round 2026-09-15. The "AFTER S3" / "B S3" numbers below were produced by golean
+# sha256=dae23a5c137d, which is NOT the binary committed on this branch (44c8ed60..., the
+# certified record's receipt) -- that is why the twin's 0.124 s -> 0.055 s SPEED-UP does not
+# reproduce. Measurement of record (audit; 3 interleaved passes, 9 runs each, medians):
+#   twin 11.4 MB   0.132 s -> 0.214 s  (+62%)
+#   corpus 3.5 MB  0.049 s -> 0.081 s  (+65%)
+#   fixture 1.5 KB 0.020 s -> 0.020 s  (unchanged)
+# The conclusion that stands: far inside the runner's 30 s per-case budget; the parser is not
+# weakened. The original transcript is kept verbatim below.
+#
 # BEFORE S3 (Lean.Json.parse on a String; golean built at S1b, decoder = S1b)  golean sha256=b130c4f44112  git=60874ada  2026-09-12T01:48:11Z  load1=1.46
 11396009 bytes  baselines/pins/twin-chdriver.wire.json  runs=[0.136 0.139 0.128 0.142 0.138 0.132 0.125 ] median=0.136s
 3522442 bytes  .tmp/largest-corpus-wire.json  runs=[0.059 0.051 0.063 0.049 0.050 0.048 0.051 ] median=0.051s
