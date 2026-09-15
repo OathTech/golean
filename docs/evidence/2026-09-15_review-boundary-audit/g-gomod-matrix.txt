@@ -1,0 +1,112 @@
+=== g01-go1.26
+--- go.mod: module example.org/m||go 1.26|
+--- go run GO111MODULE=on (exit 0): 3|
+--- go run GO111MODULE=off [harness mode] (exit 0): 3|
+--- frontend (exit 0): |
+--- golean (exit 0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":3}]}
+=== g02-go1.26.5
+--- go.mod: module example.org/m||go 1.26.5|
+--- go run GO111MODULE=on (exit 0): 3|
+--- go run GO111MODULE=off [harness mode] (exit 0): 3|
+--- frontend (exit 0): |
+--- golean (exit 0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":3}]}
+=== g03-go1.26rc1
+--- go.mod: module example.org/m||go 1.26rc1|
+--- go run GO111MODULE=on (exit 0): 3|
+--- go run GO111MODULE=off [harness mode] (exit 0): 3|
+--- frontend (exit 0): |
+--- golean (exit 0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":3}]}
+=== g04-go1.27
+--- go.mod: module example.org/m||go 1.27|
+--- go run GO111MODULE=on (exit 1): go: go.mod requires go >= 1.27 (running go 1.26.5; GOTOOLCHAIN=local)|
+--- go run GO111MODULE=off [harness mode] (exit 0): 3|
+--- frontend (exit 1): nativefrontend: native frontend unsupported: .tmp/probes/g/g04-go1.27/go.mod declares go 1.27; GoLean implements the Go 1.26 language only (the module's language version changes the program's meaning — e.g. the go1.22 per-iteration loop variable; RULED [USER] 20|for the full blocker picture run scripts/lower-diagnose .tmp/probes/g/g04-go1.27|
+=== g05-go1.25
+--- go.mod: module example.org/m||go 1.25|
+--- go run GO111MODULE=on (exit 0): 3|
+--- go run GO111MODULE=off [harness mode] (exit 0): 3|
+--- frontend (exit 1): nativefrontend: native frontend unsupported: .tmp/probes/g/g05-go1.25/go.mod declares go 1.25; GoLean implements the Go 1.26 language only (the module's language version changes the program's meaning — e.g. the go1.22 per-iteration loop variable; RULED [USER] 20|for the full blocker picture run scripts/lower-diagnose .tmp/probes/g/g05-go1.25|
+=== g06-no-go-directive
+--- go.mod: module example.org/m|
+--- go run GO111MODULE=on (exit 0): 9|
+--- go run GO111MODULE=off [harness mode] (exit 0): 3|
+--- frontend (exit 1): nativefrontend: native frontend unsupported: module directive: .tmp/probes/g/g06-no-go-directive/go.mod has no go directive; the go command assumes go 1.16 for such a module — GoLean implements the Go 1.26 language only|for the full blocker picture run scripts/lower-diagnose .tmp/probes/g/g06-no-go-directive|
+=== g07-toolchain-1.26.5
+--- go.mod: module example.org/m||go 1.26||toolchain go1.26.5|
+--- go run GO111MODULE=on (exit 0): 3|
+--- go run GO111MODULE=off [harness mode] (exit 0): 3|
+--- frontend (exit 0): |
+--- golean (exit 0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":3}]}
+=== g08-toolchain-1.27.0
+--- go.mod: module example.org/m||go 1.26||toolchain go1.27.0|
+--- go run GO111MODULE=on (exit 0): 3|
+--- go run GO111MODULE=off [harness mode] (exit 0): 3|
+--- frontend (exit 0): |
+--- golean (exit 0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":3}]}
+=== g09-gowork
+--- go.mod: module example.org/m||go 1.26|
+--- go run GO111MODULE=on (exit 1): go: module . listed in go.work file requires go >= 1.26, but go.work lists go 1.21; to update it:|	go work use|
+--- go run GO111MODULE=off [harness mode] (exit 0): 3|
+--- frontend (exit 0): |
+--- golean (exit 0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":3}]}
+=== g10-nested-lib
+--- go run GO111MODULE=on (exit 1): go: cannot find main module, but found .git/config in /home/dev/projects/golean|	to create a module there, run:|
+--- go run GO111MODULE=off [harness mode] (exit 1): main.go:3:8: cannot find package "lib" in any of:|	/usr/local/go/src/lib (from $GOROOT)|
+--- frontend (exit 1): nativefrontend: native frontend unsupported: .tmp/probes/g/g10-nested-lib/lib/go.mod declares go 1.21; GoLean implements the Go 1.26 language only (the module's language version changes the program's meaning — e.g. the go1.22 per-iteration loop variable; RULED [|for the full blocker picture run scripts/lower-diagnose .tmp/probes/g/g10-nested-lib|
+=== sub
+--- go run GO111MODULE=on (exit 0): 3|
+--- go run GO111MODULE=off [harness mode] (exit 0): 3|
+--- frontend (exit 0): |
+--- golean (exit 0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":3}]}
+=== sub
+--- go run GO111MODULE=on (exit 0): 9|
+--- go run GO111MODULE=off [harness mode] (exit 0): 3|
+--- frontend (exit 1): nativefrontend: native frontend unsupported: .tmp/probes/g/g11-parent-gomod/go.mod declares go 1.21; GoLean implements the Go 1.26 language only (the module's language version changes the program's meaning — e.g. the go1.22 per-iteration loop variable; RULED [US|for the full blocker picture run scripts/lower-diagnose .tmp/probes/g/g11-parent-gomod/sub|
+=== g12-godebug
+--- go.mod: module example.org/m||go 1.26||godebug default=go1.21|
+--- go run GO111MODULE=on (exit 0): 3|
+--- go run GO111MODULE=off [harness mode] (exit 0): 3|
+--- frontend (exit 0): |
+--- golean (exit 0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":3}]}
+=== g13-comment
+--- go.mod: module example.org/m||go 1.26 // pinned|
+--- go run GO111MODULE=on (exit 0): 3|
+--- go run GO111MODULE=off [harness mode] (exit 0): 3|
+--- frontend (exit 0): |
+--- golean (exit 0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":3}]}
+=== g15-crlf
+--- go.mod: module example.org/m||go 1.26|
+--- go run GO111MODULE=on (exit 0): 3|
+--- go run GO111MODULE=off [harness mode] (exit 0): 3|
+--- frontend (exit 0): |
+--- golean (exit 0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":3}]}
+=== g16-empty-gomod
+--- go.mod: 
+--- go run GO111MODULE=on (exit 1): go: error reading go.mod: missing module declaration. To specify the module path:|	go mod edit -module=example.com/mod|
+--- go run GO111MODULE=off [harness mode] (exit 0): 3|
+--- frontend (exit 1): nativefrontend: native frontend unsupported: module directive: .tmp/probes/g/g16-empty-gomod/go.mod has no go directive; the go command assumes go 1.16 for such a module — GoLean implements the Go 1.26 language only|for the full blocker picture run scripts/lower-diagnose .tmp/probes/g/g16-empty-gomod|
+=== g17-go1
+--- go.mod: module example.org/m||go 1|
+--- go run GO111MODULE=on (exit 1): go: errors parsing go.mod:|go.mod:3: invalid go version '1': must match format 1.23.0|
+--- go run GO111MODULE=off [harness mode] (exit 0): 3|
+--- frontend (exit 1): nativefrontend: native frontend unsupported: .tmp/probes/g/g17-go1/go.mod declares go 1; GoLean implements the Go 1.26 language only (the module's language version changes the program's meaning — e.g. the go1.22 per-iteration loop variable; RULED [USER] 2026-09-|for the full blocker picture run scripts/lower-diagnose .tmp/probes/g/g17-go1|
+=== g18-gov1.26
+--- go.mod: module example.org/m||go v1.26|
+--- go run GO111MODULE=on (exit 1): go: errors parsing go.mod:|go.mod:3: invalid go version 'v1.26': must match format 1.23.0|
+--- go run GO111MODULE=off [harness mode] (exit 0): 3|
+--- frontend (exit 1): nativefrontend: native frontend unsupported: module directive: .tmp/probes/g/g18-gov1.26/go.mod declares go v1.26, which go/version cannot parse — fail closed|for the full blocker picture run scripts/lower-diagnose .tmp/probes/g/g18-gov1.26|
+=== g20-GO-upper
+--- go.mod: module example.org/m||GO 1.21|
+--- go run GO111MODULE=on (exit 1): go: errors parsing go.mod:|go.mod:3: unknown directive: GO|
+--- go run GO111MODULE=off [harness mode] (exit 0): 3|
+--- frontend (exit 1): nativefrontend: native frontend unsupported: module directive: .tmp/probes/g/g20-GO-upper/go.mod has no go directive; the go command assumes go 1.16 for such a module — GoLean implements the Go 1.26 language only|for the full blocker picture run scripts/lower-diagnose .tmp/probes/g/g20-GO-upper|
+=== g21-go1.21
+--- go.mod: module example.org/m||go 1.21|
+--- go run GO111MODULE=on (exit 0): 9|
+--- go run GO111MODULE=off [harness mode] (exit 0): 3|
+--- frontend (exit 1): nativefrontend: native frontend unsupported: .tmp/probes/g/g21-go1.21/go.mod declares go 1.21; GoLean implements the Go 1.26 language only (the module's language version changes the program's meaning — e.g. the go1.22 per-iteration loop variable; RULED [USER] 20|for the full blocker picture run scripts/lower-diagnose .tmp/probes/g/g21-go1.21|
+=== g22-no-gomod
+--- go run GO111MODULE=on (exit 1): go: cannot find main module, but found .git/config in /home/dev/projects/golean|	to create a module there, run:|
+--- go run GO111MODULE=off [harness mode] (exit 0): 3|
+--- frontend (exit 0): |
+--- golean (exit 0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":3}]}

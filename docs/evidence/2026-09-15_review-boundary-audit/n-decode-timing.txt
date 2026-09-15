@@ -1,0 +1,29 @@
+# Decode wall time, re-measured by the audit (item n), 2026-09-15, load1 0.12-0.35, shared box.
+# Method: `golean native-json-run --input <wire> --function nonexistent_fn` = read + parse + decodeProgram +
+# subject lookup (both binaries reach `GoCore function not found: nonexistent_fn`, rc=1); one warm-up, then
+# 9 runs INTERLEAVED A/B; python time.perf_counter around subprocess.run; medians.
+# A = PRE-FIX binary = the primary's certified golean at main a461ed8b, sha256 18beb979fbcc90fe…
+#     (its decoder refuses the `buildContext` key, so it is fed the wire WITHOUT that key: the old twin pin
+#     13d8b659… byte-for-byte; for the other two wires the indented `buildContext` block is removed textually,
+#     -123 bytes, everything else identical).
+# B = POST-FIX binary = the candidate tip ef9eb4d9 golean, sha256 44c8ed60949ccf86… (= the installed
+#     certified record's receipt binary_sha256), fed the frontend-emitted wire with `buildContext`.
+#
+# twin 11.4 MB (frontend-emitted pins): pre=11395886 B, post=11396009 B
+#   PRE  18beb979: median=0.132s min=0.121 max=0.141 runs=[0.139 0.121 0.141 0.130 0.123 0.132 0.135 0.125 0.134]
+#   POST 44c8ed60: median=0.214s min=0.202 max=0.224 runs=[0.224 0.202 0.207 0.217 0.207 0.218 0.222 0.214 0.214]
+#   (an earlier identical pass: PRE median 0.129s, POST median 0.210s; and another: 0.123s / 0.212s)
+# largest corpus wire 3.5 MB (stdlib-source/frontier, frontend-emitted; buildContext block removed for PRE): pre=3522319 B, post=3522442 B
+#   PRE  18beb979: median=0.049s min=0.047 max=0.063 runs=[0.062 0.048 0.049 0.047 0.055 0.049 0.053 0.047 0.063]
+#   POST 44c8ed60: median=0.081s min=0.076 max=0.088 runs=[0.081 0.080 0.077 0.079 0.076 0.084 0.088 0.087 0.087]
+# fixture wire Tests/wire-boundary (frontend-emitted): pre=1432 B, post=1555 B
+#   PRE  18beb979: median=0.020s min=0.018 max=0.021
+#   POST 44c8ed60: median=0.020s min=0.018 max=0.022
+#
+# VERDICT vs the candidate's record (docs/evidence/2026-09-11_review-boundary/s3-decode-timing.txt: twin
+# 0.124s -> 0.055s "FASTER", largest 0.052s -> 0.075s): the largest-wire direction and magnitude reproduce
+# (+65% here vs +44% recorded); the twin's claimed 2.3x SPEED-UP does NOT reproduce — on the committed binary
+# the twin decodes 1.6x SLOWER (0.132s -> 0.214s), the same direction as every other wire. The candidate's
+# timing binary (dae23a5c…) is not the committed one (44c8ed60…); the audit could not rebuild it and did not try.
+# Either way the cost is far inside the runner's 30 s per-case budget: the PERFORMANCE impact is negligible;
+# the RECORD's claim of a speed-up is what does not hold.

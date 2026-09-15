@@ -1,0 +1,15 @@
+=== i00-control: exit=0 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":42}]}
+=== i01-two-blanks-too-few: exit=1 {"message":".tmp/probes/i/i01-two-blanks-too-few.json: native lowering: resultTypes arity 1 does not match the 2 target(s) at program.funcs[3].body.body[1].rhs[0] (BUG-110: the vector is validat
+=== i02-two-blanks-too-many: exit=1 {"message":".tmp/probes/i/i02-two-blanks-too-many.json: native lowering: resultTypes arity 3 does not match the 2 target(s) at program.funcs[3].body.body[1].rhs[0] (BUG-110: the vector is valida
+=== i03-one-blank-empty-vector: exit=1 {"message":".tmp/probes/i/i03-one-blank-empty-vector.json: native lowering: resultTypes arity 0 does not match the 1 target(s) at program.funcs[3].body.body[0].rhs[0] (BUG-110: the vector is val
+=== i04-exprstmt-one-empty-vector: exit=1 {"message":"extra GoCore assignment value","output":"","schema":"golean-observation-v1","status":"stuck"}
+=== i05-exprstmt-one-three-entries: exit=1 {"message":"storeK value/target arity mismatch (the shared phase-2 spine: receive delivery, assignment, comma-ok, call write-back)","output":"","schema":"golean-observation-v1","status":"error"}
+=== i06b-exprstmt-none-one-entry: exit=1 {"message":"storeK value/target arity mismatch (the shared phase-2 spine: receive delivery, assignment, comma-ok, call write-back)","output":"","schema":"golean-observation-v1","status":"error"}
+=== i06-exprstmt-two-one-entry: exit=1 {"message":"storeK value/target arity mismatch (the shared phase-2 spine: receive delivery, assignment, comma-ok, call write-back)","output":"","schema":"golean-observation-v1","status":"error"}
+=== i07-vector-on-non-call-node: exit=1 {"message":".tmp/probes/i/i07-vector-on-non-call-node.json: native lowering: unknown key 'resultTypes' at program.funcs[3].body.body[8].results[0].x.y — the emitter never produces it for this 
+=== i08-one-blank-wrong-type-string: exit=0 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":42}]}
+=== i09-define-blank-too-few: exit=1 {"message":".tmp/probes/i/i09-define-blank-too-few.json: native lowering: resultTypes arity 1 does not match the 2 target(s) at program.funcs[3].body.body[2].rhs[0] (BUG-110: the vector is valid
+=== i10-assign-nonblank-wrong-type: exit=0 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":42}]}
+=== i11-resultTypes-not-array: exit=1 {"message":".tmp/probes/i/i11-resultTypes-not-array.json: call.resultTypes: array expected","schema":"golean-observation-v1","status":"error"}
+=== i12-resultTypes-entry-not-type: exit=1 {"message":".tmp/probes/i/i12-resultTypes-entry-not-type.json: program.funcs[3].body.body[0].rhs[0].resultTypes[0]: object expected","schema":"golean-observation-v1","status":"error"}
+=== i13-two-blanks-wrong-types: exit=0 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":42}]}

@@ -1,0 +1,17 @@
+# Focused real-runner run at ef9eb4d9 (post-fix binary 44c8ed60…), 2026-09-15, GOLEAN_MEM_MAX=48G scripts/capped scripts/coverage run --prefix source-selection/ under the box-wide lock
+native frontend: per-case type-check + emit (no batch export)
+PASS	source-selection/included-suffix/bare-linux	init,globals
+PASS	source-selection/excluded-init/dot	init,globals
+PASS	source-selection/excluded-import	init,globals,imports
+PASS	source-selection/excluded-init/linux-arm64	init,globals
+PASS	source-selection/included-suffix/amd64	init,globals
+PASS	source-selection/included-suffix/linux	init,globals
+PASS	source-selection/excluded-init/underscore	init,globals
+PASS	source-selection/excluded-init/windows	init,globals
+PASS	source-selection/included-suffix/linux-amd64	init,globals
+PASS	source-selection/excluded-init/arm64	init,globals
+PASS	source-selection/excluded-conflict	globals
+differential coverage summary: cases=11 pass=11 fail=0 export_status=0
+results: artifacts/coverage/latest.tsv
+metadata: artifacts/coverage/latest.meta.tsv
+EXIT=0

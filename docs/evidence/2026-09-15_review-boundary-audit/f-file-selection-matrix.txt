@@ -1,0 +1,236 @@
+=== f01-x_linux
+--- files: main.go x_linux.go 
+--- go list (exit 0): [main.go x_linux.go] ign=[] inv=[] cgo=[] s=[] c=[]
+--- go run (GO111MODULE=off, exit 0): 2|
+--- frontend (exit 0): |
+--- golean (exit 0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":2}]}|
+=== f02-x_amd64
+--- files: main.go x_amd64.go 
+--- go list (exit 0): [main.go x_amd64.go] ign=[] inv=[] cgo=[] s=[] c=[]
+--- go run (GO111MODULE=off, exit 0): 2|
+--- frontend (exit 0): |
+--- golean (exit 0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":2}]}|
+=== f03-x_linux_amd64
+--- files: main.go x_linux_amd64.go 
+--- go list (exit 0): [main.go x_linux_amd64.go] ign=[] inv=[] cgo=[] s=[] c=[]
+--- go run (GO111MODULE=off, exit 0): 2|
+--- frontend (exit 0): |
+--- golean (exit 0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":2}]}|
+=== f04-x_amd64_linux
+--- files: main.go x_amd64_linux.go 
+--- go list (exit 0): [main.go x_amd64_linux.go] ign=[] inv=[] cgo=[] s=[] c=[]
+--- go run (GO111MODULE=off, exit 0): 2|
+--- frontend (exit 0): |
+--- golean (exit 0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":2}]}|
+=== f05-x_linux_arm64
+--- files: main.go x_linux_arm64.go 
+--- go list (exit 0): [main.go] ign=[x_linux_arm64.go] inv=[] cgo=[] s=[] c=[]
+--- go run (GO111MODULE=off, exit 0): 1|
+--- frontend (exit 0): |
+--- golean (exit 0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}|
+=== f06-linux
+--- files: linux.go main.go 
+--- go list (exit 0): [linux.go main.go] ign=[] inv=[] cgo=[] s=[] c=[]
+--- go run (GO111MODULE=off, exit 0): 2|
+--- frontend (exit 0): |
+--- golean (exit 0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":2}]}|
+=== f07-_x
+--- files: main.go _x.go 
+--- go list (exit 0): [main.go] ign=[] inv=[] cgo=[] s=[] c=[]
+--- go run (GO111MODULE=off, exit 0): 1|
+--- frontend (exit 0): |
+--- golean (exit 0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}|
+=== f08-dot_x
+--- files: main.go .x.go 
+--- go list (exit 0): [main.go] ign=[] inv=[] cgo=[] s=[] c=[]
+--- go run (GO111MODULE=off, exit 0): 1|
+--- frontend (exit 0): |
+--- golean (exit 0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}|
+=== f09-imported-x_test
+--- files: lib main.go 
+--- go list (exit 0): [main.go] ign=[] inv=[] cgo=[] s=[] c=[]
+--- go run (GO111MODULE=off, exit 1): main.go:3:8: cannot find package "lib" in any of:|	/usr/local/go/src/lib (from $GOROOT)|	/home/dev/go/src/lib (from $GOPATH)|
+--- frontend (exit 0): |
+--- golean (exit 0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}|
+=== f10-go-build-ignore
+--- files: ignored.go main.go 
+--- go list (exit 0): [main.go] ign=[ignored.go] inv=[] cgo=[] s=[] c=[]
+--- go run (GO111MODULE=off, exit 0): 1|
+--- frontend (exit 1): nativefrontend: native frontend unsupported: file .tmp/probes/f/f10-go-build-ignore/ignored.go is EXCLUDED by build constraint "//go:build ignore" under the pipeline's default (no -tags) context — the oracle would compile without this file, which is file-set selection outside the modeled fragment; fail closed rather than silently include or drop it|for the full blocker picture run scripts/lower-diagnose .tmp/probes/f/f10-go-build-ignore|
+=== f11-testdata-sibling
+--- files: main.go testdata 
+--- go list (exit 0): [main.go] ign=[] inv=[] cgo=[] s=[] c=[]
+--- go run (GO111MODULE=off, exit 0): 1|
+--- frontend (exit 0): |
+--- golean (exit 0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}|
+=== f12-package-only
+--- files: empty.go main.go 
+--- go list (exit 0): [empty.go main.go] ign=[] inv=[] cgo=[] s=[] c=[]
+--- go run (GO111MODULE=off, exit 0): 1|
+--- frontend (exit 0): |
+--- golean (exit 0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}|
+=== f13-two-packages
+--- files: main.go other.go 
+--- go list (exit 1): found packages main (main.go) and other (other.go) in .tmp/probes/f/f13-two-packages
+--- go run (GO111MODULE=off, exit 1): found packages main (main.go) and other (other.go) in .tmp/probes/f/f13-two-packages|
+--- frontend (exit 1): nativefrontend: native frontend unsupported: file selection in .tmp/probes/f/f13-two-packages under the pinned target linux/amd64 (gc, cgo=true): found packages main (main.go) and other (other.go) in .tmp/probes/f/f13-two-packages — gc would refuse this directory; fail closed|for the full blocker picture run scripts/lower-diagnose .tmp/probes/f/f13-two-packages|
+=== f14-assembly
+--- files: asm_amd64.s main.go 
+--- go list (exit 0): [main.go] ign=[] inv=[] cgo=[] s=[asm_amd64.s] c=[]
+--- go run (GO111MODULE=off, exit 0): 1|
+--- frontend (exit 1): nativefrontend: native frontend unsupported: file selection in .tmp/probes/f/f14-assembly: gc would assemble/compile/link non-Go sources asm_amd64.s — outside the modeled fragment; fail closed|for the full blocker picture run scripts/lower-diagnose .tmp/probes/f/f14-assembly|
+=== f15-_bad-invalid
+--- files: _bad.go main.go 
+--- go list (exit 0): [main.go] ign=[] inv=[] cgo=[] s=[] c=[]
+--- go run (GO111MODULE=off, exit 0): 1|
+--- frontend (exit 0): |
+--- golean (exit 0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}|
+=== f16-bad_windows-invalid
+--- files: bad_windows.go main.go 
+--- go list (exit 0): [main.go] ign=[bad_windows.go] inv=[] cgo=[] s=[] c=[]
+--- go run (GO111MODULE=off, exit 0): 1|
+--- frontend (exit 0): |
+--- golean (exit 0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}|
+=== f17-x_windows-cgo-tag
+--- files: main.go x_windows.go 
+--- go list (exit 0): [main.go] ign=[x_windows.go] inv=[] cgo=[] s=[] c=[]
+--- go run (GO111MODULE=off, exit 0): 1|
+--- frontend (exit 1): nativefrontend: native frontend unsupported: file .tmp/probes/f/f17-x_windows-cgo-tag/x_windows.go carries build constraint "//go:build cgo" using reserved tag "cgo" (platform/version/toolchain-conditional file selection is outside the modeled fragment) — fail closed|for the full blocker picture run scripts/lower-diagnose .tmp/probes/f/f17-x_windows-cgo-tag|
+=== f18-x_windows_amd64
+--- files: main.go x_windows_amd64.go 
+--- go list (exit 0): [main.go] ign=[x_windows_amd64.go] inv=[] cgo=[] s=[] c=[]
+--- go run (GO111MODULE=off, exit 0): 1|
+--- frontend (exit 0): |
+--- golean (exit 0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}|
+=== f20-X_WINDOWS-upper
+--- files: main.go X_WINDOWS.go 
+--- go list (exit 0): [X_WINDOWS.go main.go] ign=[] inv=[] cgo=[] s=[] c=[]
+--- go run (GO111MODULE=off, exit 0): 2|
+--- frontend (exit 0): |
+--- golean (exit 0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":2}]}|
+=== f21-x_Linux-mixed
+--- files: main.go x_Linux.go 
+--- go list (exit 0): [main.go x_Linux.go] ign=[] inv=[] cgo=[] s=[] c=[]
+--- go run (GO111MODULE=off, exit 0): 2|
+--- frontend (exit 0): |
+--- golean (exit 0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":2}]}|
+=== f22-x_windows-plusbuild
+--- files: main.go x_windows.go 
+--- go list (exit 0): [main.go] ign=[x_windows.go] inv=[] cgo=[] s=[] c=[]
+--- go run (GO111MODULE=off, exit 0): 1|
+--- frontend (exit 1): nativefrontend: native frontend unsupported: file .tmp/probes/f/f22-x_windows-plusbuild/x_windows.go carries build constraint "// +build cgo" using reserved tag "cgo" (platform/version/toolchain-conditional file selection is outside the modeled fragment) — fail closed|for the full blocker picture run scripts/lower-diagnose .tmp/probes/f/f22-x_windows-plusbuild|
+=== f23-unix-tag
+--- files: main.go u.go 
+--- go list (exit 0): [main.go u.go] ign=[] inv=[] cgo=[] s=[] c=[]
+--- go run (GO111MODULE=off, exit 0): 2|
+--- frontend (exit 1): nativefrontend: native frontend unsupported: file .tmp/probes/f/f23-unix-tag/u.go carries build constraint "//go:build unix" using reserved tag "unix" (platform/version/toolchain-conditional file selection is outside the modeled fragment) — fail closed|for the full blocker picture run scripts/lower-diagnose .tmp/probes/f/f23-unix-tag|
+=== f24-not-windows-tag
+--- files: main.go nw.go 
+--- go list (exit 0): [main.go nw.go] ign=[] inv=[] cgo=[] s=[] c=[]
+--- go run (GO111MODULE=off, exit 0): 2|
+--- frontend (exit 1): nativefrontend: native frontend unsupported: file .tmp/probes/f/f24-not-windows-tag/nw.go carries build constraint "//go:build !windows" using reserved tag "windows" (platform/version/toolchain-conditional file selection is outside the modeled fragment) — fail closed|for the full blocker picture run scripts/lower-diagnose .tmp/probes/f/f24-not-windows-tag|
+=== f25-gc-tag
+--- files: g.go main.go 
+--- go list (exit 0): [g.go main.go] ign=[] inv=[] cgo=[] s=[] c=[]
+--- go run (GO111MODULE=off, exit 0): 2|
+--- frontend (exit 1): nativefrontend: native frontend unsupported: file .tmp/probes/f/f25-gc-tag/g.go carries build constraint "//go:build gc" using reserved tag "gc" (platform/version/toolchain-conditional file selection is outside the modeled fragment) — fail closed|for the full blocker picture run scripts/lower-diagnose .tmp/probes/f/f25-gc-tag|
+=== f26-x_windows-block-comment-constraint
+--- files: main.go x_windows.go 
+--- go list (exit 0): [main.go] ign=[x_windows.go] inv=[] cgo=[] s=[] c=[]
+--- go run (GO111MODULE=off, exit 0): 1|
+--- frontend (exit 0): |
+--- golean (exit 0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}|
+=== f27-x_windows-constraint-after-package
+--- files: main.go x_windows.go 
+--- go list (exit 0): [main.go] ign=[x_windows.go] inv=[] cgo=[] s=[] c=[]
+--- go run (GO111MODULE=off, exit 0): 1|
+--- frontend (exit 0): |
+--- golean (exit 0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}|
+=== f29-c-file
+--- files: c.c main.go 
+--- go list (exit 1): package .: C source files not allowed when not using cgo or SWIG: c.c
+--- go run (GO111MODULE=off, exit 1): package .: C source files not allowed when not using cgo or SWIG: c.c|
+--- frontend (exit 1): nativefrontend: native frontend unsupported: file selection in .tmp/probes/f/f29-c-file: gc would assemble/compile/link non-Go sources c.c — outside the modeled fragment; fail closed|for the full blocker picture run scripts/lower-diagnose .tmp/probes/f/f29-c-file|
+=== f30-h-file
+--- files: h.h main.go 
+--- go list (exit 0): [main.go] ign=[] inv=[] cgo=[] s=[] c=[]
+--- go run (GO111MODULE=off, exit 0): 1|
+--- frontend (exit 0): |
+--- golean (exit 0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}|
+=== f31-syso
+--- files: main.go x.syso 
+--- go list (exit 0): [main.go] ign=[] inv=[] cgo=[] s=[] c=[]
+--- go run (GO111MODULE=off, exit 1): # _.tmp/probes/f/f31-syso|loadelf: $WORK/b001/_pkg_.a(x.syso): malformed elf file: unexpected EOF|
+--- frontend (exit 1): nativefrontend: native frontend unsupported: file selection in .tmp/probes/f/f31-syso: gc would assemble/compile/link non-Go sources x.syso — outside the modeled fragment; fail closed|for the full blocker picture run scripts/lower-diagnose .tmp/probes/f/f31-syso|
+=== f33-x_linux-linux-tag
+--- files: main.go x_linux.go 
+--- go list (exit 0): [main.go x_linux.go] ign=[] inv=[] cgo=[] s=[] c=[]
+--- go run (GO111MODULE=off, exit 0): 2|
+--- frontend (exit 1): nativefrontend: native frontend unsupported: file .tmp/probes/f/f33-x_linux-linux-tag/x_linux.go carries build constraint "//go:build linux" using reserved tag "linux" (platform/version/toolchain-conditional file selection is outside the modeled fragment) — fail closed|for the full blocker picture run scripts/lower-diagnose .tmp/probes/f/f33-x_linux-linux-tag|
+=== f34-windows-bare
+--- files: main.go windows.go 
+--- go list (exit 0): [main.go windows.go] ign=[] inv=[] cgo=[] s=[] c=[]
+--- go run (GO111MODULE=off, exit 0): 2|
+--- frontend (exit 0): |
+--- golean (exit 0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":2}]}|
+=== f35-x_android
+--- files: main.go x_android.go 
+--- go list (exit 0): [main.go] ign=[x_android.go] inv=[] cgo=[] s=[] c=[]
+--- go run (GO111MODULE=off, exit 0): 1|
+--- frontend (exit 0): |
+--- golean (exit 0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}|
+=== f37-x_386
+--- files: main.go x_386.go 
+--- go list (exit 0): [main.go] ign=[x_386.go] inv=[] cgo=[] s=[] c=[]
+--- go run (GO111MODULE=off, exit 0): 1|
+--- frontend (exit 0): |
+--- golean (exit 0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}|
+=== f43-empty-selected
+--- files: empty.go main.go 
+--- go list (exit 1): empty.go:1:1: expected 'package', found 'EOF'
+--- go run (GO111MODULE=off, exit 1): empty.go:1:1: expected 'package', found 'EOF'|
+--- frontend (exit 1): nativefrontend: native frontend unsupported: file selection in .tmp/probes/f/f43-empty-selected under the pinned target linux/amd64 (gc, cgo=true): .tmp/probes/f/f43-empty-selected/empty.go:1:1: expected 'package', found 'EOF' — gc would refuse this directory; fail closed|for the full blocker picture run scripts/lower-diagnose .tmp/probes/f/f43-empty-selected|
+=== f44-empty-excluded
+--- files: empty_windows.go main.go 
+--- go list (exit 0): [main.go] ign=[empty_windows.go] inv=[] cgo=[] s=[] c=[]
+--- go run (GO111MODULE=off, exit 0): 1|
+--- frontend (exit 0): |
+--- golean (exit 0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}|
+=== f45-x_windows-notwindows
+--- files: main.go x_windows.go 
+--- go list (exit 0): [main.go] ign=[x_windows.go] inv=[] cgo=[] s=[] c=[]
+--- go run (GO111MODULE=off, exit 0): 1|
+--- frontend (exit 1): nativefrontend: native frontend unsupported: file .tmp/probes/f/f45-x_windows-notwindows/x_windows.go carries build constraint "//go:build !windows" using reserved tag "windows" (platform/version/toolchain-conditional file selection is outside the modeled fragment) — fail closed|for the full blocker picture run scripts/lower-diagnose .tmp/probes/f/f45-x_windows-notwindows|
+=== f46-purego-tag
+--- files: main.go p.go 
+--- go list (exit 0): [main.go] ign=[p.go] inv=[] cgo=[] s=[] c=[]
+--- go run (GO111MODULE=off, exit 0): 1|
+--- frontend (exit 1): nativefrontend: native frontend unsupported: file .tmp/probes/f/f46-purego-tag/p.go is EXCLUDED by build constraint "//go:build purego" under the pipeline's default (no -tags) context — the oracle would compile without this file, which is file-set selection outside the modeled fragment; fail closed rather than silently include or drop it|for the full blocker picture run scripts/lower-diagnose .tmp/probes/f/f46-purego-tag|
+=== f47-cgo-import
+--- files: c.go main.go 
+--- go list (exit 0): [main.go] ign=[] inv=[] cgo=[c.go] s=[] c=[]
+--- go run (GO111MODULE=off, exit 0): 2|
+--- frontend (exit 1): nativefrontend: native frontend unsupported: file selection in .tmp/probes/f/f47-cgo-import: c.go import "C" (CgoFiles) — cgo is outside the modeled fragment; fail closed|for the full blocker picture run scripts/lower-diagnose .tmp/probes/f/f47-cgo-import|
+=== f48-x_windows-import-C
+--- files: main.go x_windows.go 
+--- go list (exit 0): [main.go] ign=[x_windows.go] inv=[] cgo=[] s=[] c=[]
+--- go run (GO111MODULE=off, exit 0): 1|
+--- frontend (exit 0): |
+--- golean (exit 0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}|
+=== f49-x_linux_amd64_test
+--- files: main.go x_linux_amd64_test.go 
+--- go list (exit 0): [main.go] ign=[] inv=[] cgo=[] s=[] c=[]
+--- go run (GO111MODULE=off, exit 0): 1|
+--- frontend (exit 0): |
+--- golean (exit 0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}|
+=== f50-nocgo-tag
+--- files: main.go nc.go 
+--- go list (exit 0): [main.go] ign=[nc.go] inv=[] cgo=[] s=[] c=[]
+--- go run (GO111MODULE=off, exit 0): 1|
+--- frontend (exit 1): nativefrontend: native frontend unsupported: file .tmp/probes/f/f50-nocgo-tag/nc.go carries build constraint "//go:build !cgo" using reserved tag "cgo" (platform/version/toolchain-conditional file selection is outside the modeled fragment) — fail closed|for the full blocker picture run scripts/lower-diagnose .tmp/probes/f/f50-nocgo-tag|
+=== f51-x_test-main
+--- files: main.go x_test.go 
+--- go list (exit 0): [main.go] ign=[] inv=[] cgo=[] s=[] c=[]
+--- go run (GO111MODULE=off, exit 0): 1|
+--- frontend (exit 0): |
+--- golean (exit 0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}|

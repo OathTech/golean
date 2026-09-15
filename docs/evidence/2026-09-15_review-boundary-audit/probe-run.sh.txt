@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# probe-run.sh <dir> [subject]: oracle view (go list, go run GO111MODULE=off), frontend, golean
+# Every command's exit code is captured; nothing is grepped for a verdict.
+set -u
+ROOT=/home/dev/projects/golean/.claude/worktrees/audit-review-boundary
+d="$1"; subj="${2:-probe}"
+export GOCACHE="$ROOT/.tmp/gocache" GOFLAGS= GO111MODULE=off
+echo "=== $(basename "$d")"
+echo "--- files: $(cd "$d" && ls -A | tr '\n' ' ')"
+gl=$(cd "$d" && go list -f '{{.GoFiles}} ign={{.IgnoredGoFiles}} inv={{.InvalidGoFiles}} cgo={{.CgoFiles}} s={{.SFiles}} c={{.CFiles}}' . 2>&1); glrc=$?
+echo "--- go list (exit $glrc): $gl"
+gr=$(cd "$d" && timeout 60 go run . 2>&1); grrc=$?
+echo "--- go run (GO111MODULE=off, exit $grrc): $(echo "$gr" | head -3 | tr '\n' '|')"
+fe=$(cd "$ROOT" && timeout 120 .tmp/nativefrontend --dir "$d" --out "$d/.wire.json" 2>&1); ferc=$?
+echo "--- frontend (exit $ferc): $(echo "$fe" | head -3 | cut -c1-400 | tr '\n' '|')"
+if [[ $ferc -eq 0 ]]; then
+  ge=$(cd "$ROOT" && timeout 120 .lake/build/bin/golean native-json-run --input "$d/.wire.json" --function "$subj" 2>&1); gerc=$?
+  echo "--- golean (exit $gerc): $(echo "$ge" | head -2 | cut -c1-300 | tr '\n' '|')"
+fi

@@ -1,0 +1,120 @@
+=== h00-control
+  POST: exit=0 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":42}]}
+  PRE : exit=0 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":42}]}
+=== h01-dup-key-nested-stmt
+  POST: exit=1 {"message":".tmp/probes/h/h01-dup-key-nested-stmt.post.json: JSON parse error: offset 274: $[\"funcs\"][0][\"body\"][\"body\"][0]: dup
+  PRE : exit=0 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":42}]}
+=== h02-dup-key-in-array-object
+  POST: exit=1 {"message":".tmp/probes/h/h02-dup-key-in-array-object.post.json: JSON parse error: offset 308: $[\"funcs\"][0]: duplicate JSON object 
+  PRE : exit=0 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":42}]}
+=== h03-lone-high-surrogate
+  POST: exit=1 {"message":".tmp/probes/h/h03-lone-high-surrogate.post.json: JSON parse error: offset 820: unpaired high surrogate in JSON string","sc
+  PRE : exit=0 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":42}]}
+=== h04-lone-low-surrogate
+  POST: exit=1 {"message":".tmp/probes/h/h04-lone-low-surrogate.post.json: JSON parse error: offset 820: unpaired low surrogate in JSON string","sche
+  PRE : exit=0 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":42}]}
+=== h05-invalid-utf8-in-string
+  POST: exit=1 {"message":".tmp/probes/h/h05-invalid-utf8-in-string.post.json: JSON parse error: JSON input is not valid UTF-8","schema":"golean-obse
+  PRE : exit=1 uncaught exception: Tried to read file '.tmp/probes/h/h05-invalid-utf8-in-string.pre.json' containing non UTF-8 data.
+=== h06-invalid-utf8-outside-string
+  POST: exit=1 {"message":".tmp/probes/h/h06-invalid-utf8-outside-string.post.json: JSON parse error: JSON input is not valid UTF-8","schema":"golean
+  PRE : exit=1 uncaught exception: Tried to read file '.tmp/probes/h/h06-invalid-utf8-outside-string.pre.json' containing non UTF-8 data.
+=== h07-bom-prefix
+  POST: exit=1 {"message":".tmp/probes/h/h07-bom-prefix.post.json: JSON parse error: offset 0: $: expected JSON value","schema":"golean-observation-v
+  PRE : exit=1 {"message":".tmp/probes/h/h07-bom-prefix.pre.json: JSON parse error: offset 0: unexpected input","schema":"golean-observation-v1","sta
+=== h08-trailing-bytes
+  POST: exit=1 {"message":".tmp/probes/h/h08-trailing-bytes.post.json: JSON parse error: offset 858: expected end of input","schema":"golean-observat
+  PRE : exit=1 {"message":".tmp/probes/h/h08-trailing-bytes.pre.json: JSON parse error: offset 760: expected end of input","schema":"golean-observati
+=== h09-trailing-newline-ws
+  POST: exit=0 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":42}]}
+  PRE : exit=0 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":42}]}
+=== h10-nan
+  POST: exit=1 {"message":".tmp/probes/h/h10-nan.post.json: JSON parse error: offset 33: $[\"buildContext\"][\"buildTags\"][0]: invalid JSON number: 
+  PRE : exit=1 {"message":".tmp/probes/h/h10-nan.pre.json: JSON parse error: offset 63: unexpected input","schema":"golean-observation-v1","status":"
+=== h11-infinity
+  POST: exit=1 {"message":".tmp/probes/h/h11-infinity.post.json: JSON parse error: offset 38: $[\"buildContext\"][\"buildTags\"][0]: invalid JSON num
+  PRE : exit=1 {"message":".tmp/probes/h/h11-infinity.pre.json: JSON parse error: offset 63: unexpected input","schema":"golean-observation-v1","stat
+=== h12-leading-zero
+  POST: exit=1 {"message":".tmp/probes/h/h12-leading-zero.post.json: JSON parse error: offset 32: $[\"buildContext\"][\"buildTags\"][0]: leading zero
+  PRE : exit=1 {"message":".tmp/probes/h/h12-leading-zero.pre.json: JSON parse error: offset 65: unexpected character in array","schema":"golean-obse
+=== h13-1e400
+  POST: exit=1 {"message":".tmp/probes/h/h13-1e400.post.json: program.buildContext.buildTags[0]: String expected","schema":"golean-observation-v1","s
+  PRE : exit=1 {"message":".tmp/probes/h/h13-1e400.pre.json: program.funcs[0]: object expected","schema":"golean-observation-v1","status":"error"}
+=== h13b-1e1025
+  POST: exit=1 {"message":".tmp/probes/h/h13b-1e1025.post.json: JSON parse error: offset 36: $[\"buildContext\"][\"buildTags\"][0]: JSON number expon
+  PRE : exit=1 {"message":".tmp/probes/h/h13b-1e1025.pre.json: program.funcs[0]: object expected","schema":"golean-observation-v1","status":"error"}
+=== h14-neg-zero
+  POST: exit=1 {"message":".tmp/probes/h/h14-neg-zero.post.json: program.buildContext.buildTags[0]: String expected","schema":"golean-observation-v1"
+  PRE : exit=1 {"message":".tmp/probes/h/h14-neg-zero.pre.json: program.funcs[0]: object expected","schema":"golean-observation-v1","status":"error"}
+=== h15a-depth-1024-at-bound
+  POST: exit=1 {"message":".tmp/probes/h/h15a-depth-1024-at-bound.post.json: program.buildContext.buildTags[0]: String expected","schema":"golean-obs
+  PRE : exit=1 {"message":".tmp/probes/h/h15a-depth-1024-at-bound.pre.json: program.funcs[0]: object expected","schema":"golean-observation-v1","stat
+=== h15b-depth-1025-over-bound
+  POST: exit=1 {"message":".tmp/probes/h/h15b-depth-1025-over-bound.post.json: JSON parse error: offset 1051: $[\"buildContext\"][\"buildTags\"][0][0
+  PRE : exit=1 {"message":".tmp/probes/h/h15b-depth-1025-over-bound.pre.json: program.funcs[0]: object expected","schema":"golean-observation-v1","st
+=== h15c-depth-100000
+  POST: exit=1 {"message":".tmp/probes/h/h15c-depth-100000.post.json: JSON parse error: offset 1051: $[\"buildContext\"][\"buildTags\"][0][0][0][0][0
+  PRE : exit=1 {"message":".tmp/probes/h/h15c-depth-100000.pre.json: program.funcs[0]: object expected","schema":"golean-observation-v1","status":"er
+=== h16-empty-document
+  POST: exit=1 {"message":".tmp/probes/h/h16-empty-document.post.json: JSON parse error: offset 0: unexpected end of input","schema":"golean-observat
+  PRE : exit=1 {"message":".tmp/probes/h/h16-empty-document.pre.json: JSON parse error: offset 0: unexpected end of input","schema":"golean-observati
+=== h17-raw-control-char-in-string
+  POST: exit=1 {"message":".tmp/probes/h/h17-raw-control-char-in-string.post.json: JSON parse error: offset 816: unescaped control character in JSON 
+  PRE : exit=1 {"message":".tmp/probes/h/h17-raw-control-char-in-string.pre.json: JSON parse error: offset 718: unexpected character in string","sche
+=== h18-escaped-nul
+  POST: exit=0 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":42}]}
+  PRE : exit=0 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":42}]}
+=== h19-number-257-chars
+  POST: exit=1 {"message":".tmp/probes/h/h19-number-257-chars.post.json: JSON parse error: offset 286: $[\"buildContext\"][\"buildTags\"][0]: JSON nu
+  PRE : exit=1 {"message":".tmp/probes/h/h19-number-257-chars.pre.json: program.funcs[0]: object expected","schema":"golean-observation-v1","status":
+=== h21-overlong-utf8-c080
+  POST: exit=1 {"message":".tmp/probes/h/h21-overlong-utf8-c080.post.json: JSON parse error: JSON input is not valid UTF-8","schema":"golean-observat
+  PRE : exit=1 uncaught exception: Tried to read file '.tmp/probes/h/h21-overlong-utf8-c080.pre.json' containing non UTF-8 data.
+=== h22-utf8-encoded-surrogate-eda080
+  POST: exit=1 {"message":".tmp/probes/h/h22-utf8-encoded-surrogate-eda080.post.json: JSON parse error: JSON input is not valid UTF-8","schema":"gole
+  PRE : exit=1 uncaught exception: Tried to read file '.tmp/probes/h/h22-utf8-encoded-surrogate-eda080.pre.json' containing non UTF-8 data.
+=== h24-top-level-array
+  POST: exit=1 {"message":".tmp/probes/h/h24-top-level-array.post.json: program: object expected","schema":"golean-observation-v1","status":"error"}
+  PRE : exit=1 {"message":".tmp/probes/h/h24-top-level-array.pre.json: program: object expected","schema":"golean-observation-v1","status":"error"}
+=== h25-dup-key-identical-values
+  POST: exit=1 {"message":".tmp/probes/h/h25-dup-key-identical-values.post.json: JSON parse error: offset 855: $: duplicate JSON object key \"schema\
+  PRE : exit=0 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":42}]}
+=== h28-unterminated
+  POST: exit=1 {"message":".tmp/probes/h/h28-unterminated.post.json: JSON parse error: offset 857: unexpected end of input","schema":"golean-observat
+  PRE : exit=1 {"message":".tmp/probes/h/h28-unterminated.pre.json: JSON parse error: offset 759: unexpected end of input","schema":"golean-observati
+=== h29-nul-byte-outside-string
+  POST: exit=1 {"message":".tmp/probes/h/h29-nul-byte-outside-string.post.json: JSON parse error: offset 819: expected object key","schema":"golean-o
+  PRE : exit=1 {"message":".tmp/probes/h/h29-nul-byte-outside-string.pre.json: JSON parse error: offset 721: expected \"","schema":"golean-observatio
+=== h31-high-then-nonlow
+  POST: exit=1 {"message":".tmp/probes/h/h31-high-then-nonlow.post.json: JSON parse error: offset 820: unpaired high surrogate in JSON string","schem
+  PRE : exit=0 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":42}]}
+=== h32-two-highs
+  POST: exit=1 {"message":".tmp/probes/h/h32-two-highs.post.json: JSON parse error: offset 820: unpaired high surrogate in JSON string","schema":"gol
+  PRE : exit=0 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":42}]}
+=== h33-valid-pair
+  POST: exit=0 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":42}]}
+  PRE : exit=0 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":42}]}
+=== h34-unknown-escape
+  POST: exit=1 {"message":".tmp/probes/h/h34-unknown-escape.post.json: JSON parse error: offset 816: illegal   escape","schema":"golean-observation-
+  PRE : exit=1 {"message":".tmp/probes/h/h34-unknown-escape.pre.json: JSON parse error: offset 718: illegal   escape","schema":"golean-observation-v
+=== h35-raw-tab-in-string
+  POST: exit=1 {"message":".tmp/probes/h/h35-raw-tab-in-string.post.json: JSON parse error: offset 816: unescaped control character in JSON string","
+  PRE : exit=1 {"message":".tmp/probes/h/h35-raw-tab-in-string.pre.json: JSON parse error: offset 718: unexpected character in string","schema":"gole
+=== h36-utf8-4byte-noncharacter
+  POST: exit=0 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":42}]}
+  PRE : exit=0 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":42}]}
+=== h37-key-not-string
+  POST: exit=1 {"message":".tmp/probes/h/h37-key-not-string.post.json: JSON parse error: offset 31: expected object key","schema":"golean-observation
+  PRE : exit=1 {"message":".tmp/probes/h/h37-key-not-string.pre.json: JSON parse error: offset 64: expected \"","schema":"golean-observation-v1","sta
+=== h38-single-quotes
+  POST: exit=1 {"message":".tmp/probes/h/h38-single-quotes.post.json: JSON parse error: offset 802: expected object key","schema":"golean-observation
+  PRE : exit=1 {"message":".tmp/probes/h/h38-single-quotes.pre.json: JSON parse error: offset 704: expected \"","schema":"golean-observation-v1","sta
+=== h39-trailing-comma
+  POST: exit=1 {"message":".tmp/probes/h/h39-trailing-comma.post.json: JSON parse error: offset 32: $[\"buildContext\"][\"buildTags\"][1]: expected J
+  PRE : exit=1 {"message":".tmp/probes/h/h39-trailing-comma.pre.json: JSON parse error: offset 65: unexpected input","schema":"golean-observation-v1"
+=== h40-big-mantissa-neg-exp
+  POST: exit=1 {"message":".tmp/probes/h/h40-big-mantissa-neg-exp.post.json: program.buildContext.buildTags[0]: String expected","schema":"golean-obs
+  PRE : exit=1 {"message":".tmp/probes/h/h40-big-mantissa-neg-exp.pre.json: program.funcs[0]: object expected","schema":"golean-observation-v1","stat
+=== h41-gate-style-first-occurrence-surrogate
+  POST: exit=1 {"message":".tmp/probes/h/h41-gate-style-first-occurrence-surrogate.post.json: JSON parse error: offset 152: unpaired high surrogate i
+  PRE : exit=0 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":42}]}

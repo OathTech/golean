@@ -1,0 +1,26 @@
+# go test (deps/go present) at ef9eb4d9, 2026-09-15
+ok  	_/home/dev/projects/golean/.claude/worktrees/audit-review-boundary/tools/nativefrontend	1.122s
+ok  	_/home/dev/projects/golean/.claude/worktrees/audit-review-boundary/tools/coverageharness	1.384s
+ok  	_/home/dev/projects/golean/.claude/worktrees/audit-review-boundary/tools/lowerdiag	1.185s
+EXIT=0
+
+# scripts/capped lake build (warm, under the box-wide lock)
+Build completed successfully (202 jobs).
+EXIT=0  binary sha256 44c8ed60949ccf867c9490ebaa26a59639871d020883d040516afc1862aaa524
+
+# scripts/check-bugs.sh
+check-bugs: ok (110 bug(s); pinned cases behave as claimed)
+check-bugs: backlog — 14 unexplained fidelity failure(s): coverage 10/10; latitude 4/4; wrong-answer 0/0 ('scripts/check-bugs.sh --list')
+check-bugs: 'wrong-answer' is the class that ratchets toward 0; 'coverage' retires when the feature lands and 'latitude' only by an envelope.
+EXIT=0
+# scripts/check-evidence-size
+evidence-size gate: PASS — 1621 tracked files / 27350365 bytes in 91 evidence dirs; caps file 262144 B, dir 4194304 B, no archives, no source copies; 17 pre-existing offender(s) allowlisted (frozen 2026-09-07), 0 new
+EXIT=0
+# python3 tools/certification.py check-records
+Certification records: PASS; {"cases":["imported-goose/channel/google-search"],"inputs_sha256":"d9fdd5822f71a10f216b25c85660f3b6f686917cfefcf380e47b4f3e82a7d159","records":1}
+EXIT=0
+# scripts/check-frontend-pins
+check-frontend-pins: ok [hidden-dep-order] — realized deviation order matches the recorded pin
+check-frontend-pins: ok [twin-wire] — fresh emit = pinned wire (e1a877251021…)
+check-frontend-pins: ok [stdlib-pin] — 61 lowered stdlib source files match the pinned sha256 manifest
+EXIT=0

@@ -1,0 +1,19 @@
+package main
+
+func one() int         { return 7 }
+func two() (int, int)  { return 1, 2 }
+func none()            {}
+
+func probe() int {
+	_ = one()
+	_, _ = two()
+	a, _ := two()
+	one()
+	two()
+	none()
+	var b int
+	b, _ = two()
+	return 40 + a + b
+}
+
+func main() { println(probe()) }

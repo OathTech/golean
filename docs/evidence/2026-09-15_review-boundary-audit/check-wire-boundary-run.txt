@@ -1,0 +1,15 @@
+# scripts/check-wire-boundary at ef9eb4d9, 2026-09-15 (GOLEAN_MEM_MAX=48G)
+mutants written
+ok [program] runs, answers 42
+ok [paired-surrogate] runs, answers 42
+ok [dup-schema] refused, naming: JSON parse error duplicate JSON object key schema
+ok [dup-deep-key] refused, naming: JSON parse error duplicate JSON object key expr
+ok [absent-resultTypes] refused, naming: missing field 'resultTypes'
+ok [arity-resultTypes] refused, naming: resultTypes arity 2 does not match the 1 target(s) BUG-110
+ok [absent-buildContext] refused, naming: program.buildContext is missing BUG-108
+ok [high-surrogate] refused, naming: JSON parse error unpaired high surrogate
+ok [low-surrogate] refused, naming: JSON parse error unpaired low surrogate
+ok [invalid-utf8] refused, naming: JSON parse error not valid UTF-8
+ok [over-depth] refused, naming: JSON parse error JSON nesting deeper than
+Wire boundary gate: PASS (11 byte-level controls through the real CLI)
+EXIT=0
