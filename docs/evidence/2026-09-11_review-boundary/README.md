@@ -229,3 +229,21 @@ this README's prose, not transcripts (audit F4). Per the merge protocol's step 5
 `scripts/ci --slow` at the MERGED tip produces the tails of record, and its `RESULT:` tail is
 tracked with the round's 5a records commit. [AGENT] fix round, 2026-09-15 — the fix round did
 not fabricate tails for runs it did not make.
+
+## Merge train r33 — the 5a record (2026-09-15, [AGENT] coordinator)
+
+[USER] Mike 2026-09-15, verbatim (relayed): «Great, merge it». Pre-merge main
+`d3a40317` recorded as `refs/snapshots/r33/main`; lane tip `5a7dfbb0` rebased onto it
+→ `d0e234bd` (clean, `git merge-tree` reported no conflicts) and fast-forwarded.
+
+| step | result |
+|---|---|
+| `scripts/build-certified` at `d0e234bd` | EXIT=0 — compiled inputs match; `golean` sha256 `44c8ed60949ccf86…` (= the audit's post-fix binary) |
+| `release-check --base refs/snapshots/r33/main` | EXIT=1 (EXPECTED) — «Recertification required since pre-merge tip: inputs: changed dependency build/files/GoLean/CLI.lean» |
+| `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --slow` at `d0e234bd` | EXIT=0, 1211 s — `RESULT: PASS`; `baseline diff FULL (3676/3676, no regression)`; `negative baseline diff (no regression)` (394); `certificate provenance` ok; `oracle toolchain (go1.26.5 = pin)` ok; wire-boundary step: 11 controls ok. Step-line tail: `r33-ci-slow.tail.txt` (ANSI stripped; the 918-line full log is scratch) |
+| fresh certification candidate vs the tracked record | claim, inputs and the six-member observation set IDENTICAL; only the receipt differs (`source_commit` `d0e234bd` clean vs the lane's `07bc55cb` with `git_dirty: true`; timestamps; wall 179.8 s vs 150.8 s) — the candidate is INSTALLED as `baselines/certified/imported-goose__channel__google-search.certified.json` in this commit: a clean-tree receipt at the merged tip replaces a dirty-tree one; the set did not change, so this is not a re-pin and not a finding |
+| `tools/reconcile-records` at the merged tip | C4 HIGH: ledger §8 tally stale (3665/3417/248 vs 3676/3428/248) — closed in this commit (ledger §8, dated paragraph); C13 MEDIUM pre-existing (patch-level Go versions in historical dossiers), untouched |
+
+Lane-validation self-test rows that print `FAIL … TIMED OUT after 1s` inside the
+`ci` log are the self-test's own fixtures (a named timeout is what they check); the
+step passed. No runtime file is touched by this commit.

@@ -1,0 +1,132 @@
+── Tests/library ownership, executed-build and audit scratch self-tests
+── build parallelism (LEAN_NUM_THREADS scaled to the memory cap)
+── oracle toolchain pin (baselines/go-oracle-pin)
+── escape-hatch preflight (sorry / admit / native_decide / axiom in the semantic core)
+── meta-layer escape hatches (unsafe / opaque / @[implemented_by] outside the allowlist)
+── escape-hatch addendum (decide +native / config-syntax native spellings — A-TRIP F4)
+── fidelity-bug index cross-check (scripts/check-bugs.sh)
+── feature-coverage cross-check (scripts/check-coverage)
+── spec-anchor citations (scripts/check-spec-anchors)
+── stdlib admission register (scripts/check-stdlib-register)
+── membership-lane gate self-test (scripts/test-lane-validation; incl. G1-G4 no-publish)
+── evidence-on-main size gate (scripts/check-evidence-size; self-test first)
+── AGENTS.md alias of CLAUDE.md (scripts/check-agents-alias; self-test first)
+── imported-goose verbatim staleness (scripts/check-imported-goose)
+── engine-isolation lint (semantic core imports no EnumDedup — CLI-only by design)
+── core build (lake build; must be WARNING-free — GoLean/ module warnings
+Build completed successfully (202 jobs).
+── certificate provenance (compiled inputs, mutation controls, current records)
+── semantic interface (Iris-free correspondence regressions and dependency audit)
+Build completed successfully (102 jobs).
+Build completed successfully (102 jobs).
+── admission checker proofs and post-import audit
+Build completed successfully (18 jobs).
+Build completed successfully (18 jobs).
+── declaration boundary (Go identity, strict JSON, fixture pin, dependency audit)
+Build completed successfully (13 jobs).
+Build completed successfully (13 jobs).
+PASS: 12 positive, 16 named refusals, 6 malformed, 5 invalid UTF-8; 2 decoded scalars and old duplicate regression
+ok  	_/home/dev/projects/golean/tools/nativefrontend	0.007s
+── wire boundary (production byte decoder through the real CLI: scripts/check-wire-boundary)
+ok [program] runs, answers 42
+ok [paired-surrogate] runs, answers 42
+ok [dup-schema] refused, naming: JSON parse error duplicate JSON object key schema
+ok [dup-deep-key] refused, naming: JSON parse error duplicate JSON object key expr
+ok [absent-resultTypes] refused, naming: missing field 'resultTypes'
+ok [arity-resultTypes] refused, naming: resultTypes arity 2 does not match the 1 target(s) BUG-110
+ok [absent-buildContext] refused, naming: program.buildContext is missing BUG-108
+ok [high-surrogate] refused, naming: JSON parse error unpaired high surrogate
+ok [low-surrogate] refused, naming: JSON parse error unpaired low surrogate
+ok [invalid-utf8] refused, naming: JSON parse error not valid UTF-8
+ok [over-depth] refused, naming: JSON parse error JSON nesting deeper than
+── package-correct method identity (fresh wire, strict decoder, audit controls)
+Build completed successfully (40 jobs).
+Build completed successfully (205 jobs).
+ok  	_/home/dev/projects/golean/tools/nativefrontend	0.032s
+── typed contract: boolean-typing (fresh elaboration, post-import audit, compiled negatives)
+Build completed successfully (14 jobs).
+Build completed successfully (14 jobs).
+── typed contract: boolean-runtime (fresh elaboration, post-import audit, compiled negatives)
+Build completed successfully (85 jobs).
+Build completed successfully (85 jobs).
+── typed contract: recovery-typing (fresh elaboration, post-import audit, compiled negatives)
+Build completed successfully (30 jobs).
+Build completed successfully (30 jobs).
+── typed contract: recovery-storage (fresh elaboration, post-import audit, compiled negatives)
+Build completed successfully (26 jobs).
+Build completed successfully (26 jobs).
+── typed contract: recovery-setup (fresh elaboration, post-import audit, compiled negatives)
+Build completed successfully (42 jobs).
+Build completed successfully (42 jobs).
+── typed contract: recovery-control (fresh elaboration, post-import audit, compiled negatives)
+Build completed successfully (67 jobs).
+Build completed successfully (67 jobs).
+── typed contract: abort-observation (fresh elaboration, post-import audit, compiled negatives)
+Build completed successfully (73 jobs).
+Build completed successfully (73 jobs).
+── typed recovery terminal classification (repanicCollapse members, named D5 refusal, post-import audit)
+Build completed successfully (80 jobs).
+Build completed successfully (80 jobs).
+── frontend pins (scripts/check-frontend-pins — deviation observation + raft twin wire)
+── import-goose gate self-test (scripts/test-import-goose)
+── frontend unit tests (go test ./tools/nativefrontend)
+ok  	_/home/dev/projects/golean/tools/nativefrontend	1.004s
+── lowering-diagnostic tables (go test ./tools/lowerdiag — causes.tsv vs ledger, surface tables vs frontend, calibration)
+ok  	_/home/dev/projects/golean/tools/lowerdiag	0.534s
+── coverage-harness unit tests (go test ./tools/coverageharness — crash channel, terminal classifier, byte transport, hook inertness)
+ok  	_/home/dev/projects/golean/tools/coverageharness	1.302s
+── interpreter eval tests (gocore-eval-tests)
+── re-run full native differential corpus (--slow: --diff + GOLEAN_SLOW=1 tier=slow re-certification)
+── membership-lane gate self-test, go-dependent half (--with-go: F4 param re-validation, F6 frontend guard, B3-B5 slice-4 lane gates, G5 fan-out-never-ran no-publish, T1-T4 timeouts name their cause, T5-T8 exit 2/137/143 name did-not-decide, D1-D6 the strict-lane depth guard; G1-G4 run in the fast half since audit F19)
+── re-run negative corpus (--diff)
+── derived oracle artifacts re-derived (Tests/FloatVectors.lean + tools/nativefrontend/inittask-std.tsv)
+── negative baseline diff
+no regression: 394 case(s) run in negative-latest.tsv match baselines/negative-full.tsv
+── differential baseline diff (scripts/coverage-baseline-diff)
+no regression: 3676 case(s) run in latest.tsv match baselines/native-full.tsv
+── cross-ledger reconciliation (tools/reconcile-records — REPORT-ONLY, informs, never fails the gate)
+── executed library coverage (all named build receipts from this CI invocation)
+  ok   Tests/library ownership (no exceptions; executed builds checked at exit)
+  ok   oracle toolchain (go1.26.5 = pin)
+  ok   escape-hatch preflight
+  ok   meta-layer escape hatches (allowlist empty since the repo split)
+  ok   escape-hatch addendum (no decide +native / native-config spellings)
+  ok   bug-index cross-check
+  ok   feature-coverage (no dead tags)
+  ok   spec-anchor citations resolve at the pin
+  ok   stdlib admission register = frontend tables
+  ok   lane-validation fixtures (manifest gates reject bad shapes)
+  ok   evidence-on-main size gate
+  ok   AGENTS.md alias of CLAUDE.md
+  ok   imported-goose verbatim (above-marker bytes = pinned upstream)
+  ok   engine-isolation (core ↛ EnumDedup)
+  ok   core build (warning-free)
+  ok   certificate provenance
+  ok   semantic interface (bridges, counterexamples, compiled audit negatives)
+  ok   admission checker proofs and post-import audit
+  ok   declaration boundary
+  ok   wire boundary (byte-level controls through the real CLI)
+  ok   package-correct method identity
+  ok   typed contract: boolean-typing
+  ok   typed contract: boolean-runtime
+  ok   typed contract: recovery-typing
+  ok   typed contract: recovery-storage
+  ok   typed contract: recovery-setup
+  ok   typed contract: recovery-control
+  ok   typed contract: abort-observation
+  ok   typed recovery terminal classification
+  ok   frontend pins (realized init-order deviation + twin wire = pinned bytes)
+  ok   import-goose fixtures (importer + verbatim guard reject bad shapes)
+  ok   frontend unit tests
+  ok   lowering-diagnostic tables
+  ok   coverage-harness unit tests
+  ok   eval tests (211 ok)
+  ok   differential run completed (exit 1; failing-set judged by baseline diff)
+  ok   lane-validation fixtures incl. harness half (F4/F6/B3-B5/G5/T1-T8/D1-D6)
+  ok   negative run completed (exit 0; set judged by baseline diff)
+  ok   Tests/FloatVectors.lean = fresh hardware-oracle regeneration (byte-exact)
+  ok   inittask-std.tsv = fresh gc-derived regeneration (header at pin; byte-exact modulo date line)
+  ok   negative baseline diff (no regression)
+  ok   baseline diff FULL (3676/3676, no regression)
+  ok   executed library coverage (all declared libraries; all Tests modules)
+RESULT: PASS
