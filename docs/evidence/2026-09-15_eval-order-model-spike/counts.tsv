@@ -1,0 +1,20 @@
+# produced by docs/evidence/2026-09-15_eval-order-model-spike/count.py at a7d553f7 (see README.md)
+scope	metric	count
+twin	alloc_hoists	383
+twin	event_sweeps	1359
+twin	events_in_event_sweeps	1764
+twin	files	1
+twin	panicky_in_event_sweeps	277
+twin	plain_in_event_sweeps	628
+twin	probes	128
+twin	sweeps	7835
+corpus	alloc_hoists	1668
+corpus	bug104_early_once_temps	10
+corpus	e2_call_rhs_addr_target	17
+corpus	event_sweeps	4833
+corpus	events_in_event_sweeps	5634
+corpus	files	1330
+corpus	panicky_in_event_sweeps	383
+corpus	plain_in_event_sweeps	1010
+corpus	probes	118
+corpus	sweeps	40548
