@@ -1,0 +1,8 @@
+spec-anchor citations (see above)
+stdlib admission register (see above)
+imported-goose verbatim DRIFTED (a landed imported body no longer matches goose @ pin)
+certificate provenance
+frontend pins DRIFTED or broken (see above — re-pin deliberately with the reason)
+frontend unit tests
+lowering-diagnostic tables (causes.tsv / machine-surface.tsv / library-refusals.tsv drifted, or the static pass disagrees with a wire)
+baseline diff (DRIFT — see above)

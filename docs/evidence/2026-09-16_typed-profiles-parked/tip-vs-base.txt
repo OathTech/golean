@@ -1,0 +1,5 @@
+# scripts/ci summary FAIL lines: base 62fc8073 (left) vs tip 7ac513e6 (right); comm -3 of the sorted sets
+	certificate provenance
+
+# DRIFT vs baselines/native-full.tsv rows: base (left) vs tip (right); comm -3 of the sorted blocks (330 frontend-export rows identical in both)
+	imported-goose/channel/google-search	baseline[PASS/membership] -> now[FAIL/membership]

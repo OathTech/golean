@@ -50,6 +50,21 @@ and resolve locally.
   part of this archive (its source is branch `typed-uintptr-identity`
   @ `5f185fb3`; plan §2.5, HELD). [AGENT] `landing-plan-0907`,
   2026-09-07.
+- **`park/typed-profiles-2026-09-16`** = tag **`typed-profiles/last-main-2026-09-16`**
+  = main `62fc80731f0045c170634690bda1c26d1880f185` (2026-09-16) — the
+  typed-admission profile family at its LAST main state before parking:
+  `GoLean/GoCore/Boolean*.lean` + `Recovery*.lean` (56 modules, 8,197
+  lines), the facade `GoLean/Interface.lean`, their nine `Tests` libraries
+  (24 modules), fixtures, gate scripts and audit tools; and (D7, PENDING
+  [USER] at the merge ask) the dark spikes `spikes/gate-a1` and
+  `spikes/iris-customer`. Deleted from main by lane
+  `park-lane/typed-profiles-0916`; the note (inventory, what was re-homed,
+  what stayed, how to revive) is `docs/2026-09-16_typed-profiles-parked.md`.
+  Future home per the [USER] ruling of 2026-09-16 (relayed; verbatim in the
+  note): the reasoning repository under gitignored `deps/` (name
+  provisional — «golean-reasoning»; the survey's `deps/reasoning-revival/
+  golean-logic/`), consuming golean PINNED at that SHA. Revive with
+  `git checkout typed-profiles/last-main-2026-09-16 -- <paths>`.
 - **`archive/callspec-era`** — the killed CallSpec judgment track
   (2026-08-27 triage).
 - **`archive/fixed-trajectory-era`** — the killed enumeration-era
