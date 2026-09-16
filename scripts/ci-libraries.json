@@ -12,5 +12,6 @@
   "abort-observation": {"libraries": ["AbortObservationTests"], "executables": []},
   "recovery-terminal": {"libraries": ["RecoveryTerminalTests"], "executables": []},
   "eval": {"libraries": ["TestsData", "EvalTests"], "executables": ["gocore-eval-tests"]},
-  "method-identity": {"libraries": ["MethodIdentityTests"], "executables": []}
+  "method-identity": {"libraries": ["MethodIdentityTests"], "executables": []},
+  "unseq-scheduler": {"libraries": ["UnseqSchedulerTests"], "executables": []}
 }

@@ -76,3 +76,10 @@ globs = ["Tests.RecoveryTerminal", "Tests.RecoveryTerminalAudit"]
 # Shared I1/executable member identity, decoder and post-import audit.
 name = "MethodIdentityTests"
 globs = ["Tests.MethodIdentity", "Tests.MethodIdentityAudit"]
+
+[[lean_lib]]
+# The `unseq` scheduler on hand-built graphs (evaluation-order model v2.1
+# Stage B): the reference sets over all tapes, refusals by name, replay,
+# and the mechanism theorem's post-import audit.
+name = "UnseqSchedulerTests"
+globs = ["Tests.UnseqScheduler", "Tests.UnseqSchedulerAudit"]

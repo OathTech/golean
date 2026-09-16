@@ -103,7 +103,13 @@ exhaustiveness; the list below is a READER'S MIRROR of that datatype
   exactly when the abort's head is a recovered entry with an equal
   successor payload, slot 0 = the collapsed ` [recovered, repanicked]`
   line, slot 1 = the two-line form's ` [recovered]`; gc decides by eface
-  identity the machine does not model).
+  identity the machine does not model);
+- the `unseq` scheduler's pick (`unseqNext`, the evaluation-order model
+  v2.1 Stage B, lane core/unseq-scheduler-b-0916 2026-09-16 — `stepUnseqNext`
+  at a sweep frame's `.next (.unseqK … .pick _)` position, `StepFn.lean`;
+  width = the number of READY occurrences (`UnseqGraph.ready`, `Unseq.lean`)
+  EXACTLY, a consult only at ≥ 2, slot j = the j-th ready occurrence in
+  canonical rank order; a singleton ready set pops nothing).
 
 **Mirror re-synced 2026-09-07** ([AGENT] landing worker, chunk L3): the
 `tryLock` and `unseqPanic` entries were missing from this list — their

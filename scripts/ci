@@ -545,6 +545,19 @@ else
   bad "package-correct method identity"
 fi
 
+# The `unseq` scheduler (evaluation-order model v2.1 Stage B, 2026-09-16):
+# every reference witness as a hand-built graph, enumerated over ALL tapes by
+# the existing enumerator/driver path and compared EXACTLY with the reference
+# sets; malformed graphs refused by name; replay tapes; singleton picks
+# consume nothing; the mechanism theorem's step lemmas under the post-import
+# axiom audit.
+step "unseq scheduler (Stage B): reference sets over all tapes, named refusals, replay, theorem audit"
+if library_step unseq-scheduler bash scripts/check-unseq-scheduler; then
+  ok "unseq scheduler (Stage B)"
+else
+  bad "unseq scheduler (Stage B) (scripts/check-unseq-scheduler)"
+fi
+
 # [AGENT] Seven restored typed-contract gates, selected against landed
 # modules. Each receipt measures its actual library build plus complete check.
 typed_step() {

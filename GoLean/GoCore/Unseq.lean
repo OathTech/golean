@@ -271,6 +271,14 @@ def wellFormed? (g : UnseqGraph) : Option String :=
           s!"sort mismatch: TARGET binder '{t}' used as a value in occurrence '{o.name}'") with
     | some msg => some msg
     | none =>
+    -- A `$`-prefixed name is a SLOT by the frontend's reservation (its temps
+    -- and binders); one that is neither a cell nor a target binder is
+    -- unknown, never an admitted source-local read.
+    match g.occs.findSome? (fun o =>
+        (o.body.mentions.find? (fun n => n.startsWith "$" && !g.isCell n && !g.isTargetBinder n)).map fun n =>
+          s!"unknown slot '{n}' mentioned by occurrence '{o.name}'") with
+    | some msg => some msg
+    | none =>
     match g.occs.findSome? (fun o =>
         (o.body.targetMentions.find? (fun t => !g.isTargetBinder t)).map fun t =>
           s!"sort mismatch: occurrence '{o.name}' loads through '{t}', not a TARGET binder") with
