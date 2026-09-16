@@ -498,13 +498,6 @@ else
 fi
 printf 'Certificate provenance wall seconds: %s\n' "$((SECONDS - cert_started))"
 
-step "semantic interface (Iris-free correspondence regressions and dependency audit)"
-if library_step interface bash scripts/check-interface; then
-  ok "semantic interface (bridges, counterexamples, compiled audit negatives)"
-else
-  bad "semantic interface"
-fi
-
 # The core totality audit (2026-09-16, docs/2026-09-16_typed-profiles-parked.md
 # §3): re-homed from the parked `semantic interface` step when the typed-profile
 # family was parked. The charter's «no sorry, no native_decide, no axioms
@@ -574,36 +567,11 @@ else
   bad "unseq scheduler (Stage B) (scripts/check-unseq-scheduler)"
 fi
 
-# [AGENT] Seven restored typed-contract gates, selected against landed
-# modules. Each receipt measures its actual library build plus complete check.
-typed_step() {
-  local name=$1
-  shift
-  step "typed contract: $name (fresh elaboration, post-import audit, compiled negatives)"
-  if library_step "$name" bash "scripts/check-$name" "$@"; then
-    ok "typed contract: $name"
-  else
-    bad "typed contract: $name"
-  fi
-}
-typed_step boolean-typing --lean-only
-typed_step boolean-runtime
-typed_step recovery-typing --lean-only
-typed_step recovery-storage
-typed_step recovery-setup
-typed_step recovery-control
-typed_step abort-observation
-
-# Landing chunk L3 (docs/2026-09-07_land-panic-text-tape.md): the recovery
-# profile's terminal classification over the repanicCollapse tape and the
-# D5 refusal — fresh elaboration of the two semantic modules and the tests,
-# the post-import axiom audit, and its compiled poison controls.
-step "typed recovery terminal classification (repanicCollapse members, named D5 refusal, post-import audit)"
-if library_step recovery-terminal bash scripts/check-recovery-terminal; then
-  ok "typed recovery terminal classification"
-else
-  bad "typed recovery terminal classification (scripts/check-recovery-terminal)"
-fi
+# The typed-profile family's nine steps (semantic interface; typed contract ×7;
+# typed recovery terminal classification) were REMOVED 2026-09-16 with the family
+# they gated (docs/2026-09-16_typed-profiles-parked.md §1 accounts for every step;
+# the one core-guarding check among them — the post-import axiom audit — is the
+# core totality audit step above). Preserved: tag typed-profiles/last-main-2026-09-16.
 
 # 2b. Frontend pins (restored at the split audit, findings A1/A2 + B1/B8
 # — docs/2026-08-31_repo-split-plan.md fix round): the two SEMANTICS

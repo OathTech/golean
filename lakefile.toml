@@ -25,11 +25,6 @@ name = "EvalTests"
 globs = ["Tests.GoCoreEval"]
 
 [[lean_lib]]
-# Iris-free contract regressions and their post-import dependency audit.
-name = "InterfaceTests"
-globs = ["Tests.InterfaceContract", "Tests.BooleanRuntime", "Tests.BooleanProgram", "Tests.InterfaceAudit", "Tests.PanicRendering", "Tests.StringPanicMembers"]
-
-[[lean_lib]]
 name = "AdmissionTests"
 globs = ["Tests.GoCoreAdmissionFixture", "Tests.GoCoreAdmission", "Tests.GoCoreAdmissionAudit"]
 
@@ -37,40 +32,6 @@ globs = ["Tests.GoCoreAdmissionFixture", "Tests.GoCoreAdmission", "Tests.GoCoreA
 # Separate I1 declaration schema; no production lowering or Iris dependency.
 name = "DeclarationTests"
 globs = ["Tests.DeclarationWire", "Tests.StrictJsonParse", "Tests.DeclarationUnicode", "Tests.DeclarationAudit"]
-
-[[lean_lib]]
-name = "BooleanTypingTests"
-globs = ["Tests.BooleanTyping", "Tests.BooleanTypingFixture", "Tests.BooleanTypingAudit"]
-
-[[lean_lib]]
-name = "BooleanRuntimeTests"
-globs = ["Tests.BooleanInvariant", "Tests.BooleanSafetyAudit"]
-
-[[lean_lib]]
-name = "RecoveryTypingTests"
-globs = ["Tests.RecoveryTyping", "Tests.RecoveryTypingFixture", "Tests.RecoveryA2Artifact", "Tests.RecoveryDiagnosticControls", "Tests.RecoveryTypingAudit"]
-
-[[lean_lib]]
-name = "RecoveryStorageTests"
-globs = ["Tests.RecoveryStorage", "Tests.RecoveryStorageAudit"]
-
-[[lean_lib]]
-name = "RecoverySetupTests"
-globs = ["Tests.RecoverySetup", "Tests.RecoverySetupAudit"]
-
-[[lean_lib]]
-name = "RecoveryControlTests"
-globs = ["Tests.RecoveryInvariant", "Tests.RecoveryControlAudit"]
-
-[[lean_lib]]
-name = "AbortObservationTests"
-globs = ["Tests.AbortObservation", "Tests.AbortObservationAudit"]
-
-[[lean_lib]]
-# The recovery profile's terminal classification over the repanicCollapse
-# tape and the D5 refusal (landing chunk L3), with its post-import audit.
-name = "RecoveryTerminalTests"
-globs = ["Tests.RecoveryTerminal", "Tests.RecoveryTerminalAudit"]
 
 [[lean_lib]]
 # Shared I1/executable member identity, decoder and post-import audit.
@@ -89,6 +50,6 @@ globs = ["Tests.UnseqScheduler", "Tests.UnseqSchedulerAudit"]
 # parked typed-profile family (docs/2026-09-16_typed-profiles-parked.md §3):
 # recover/choice-site/trace bridges, interpreter facts, the config-level abort
 # observer, and the post-import axiom audit over EVERY module under GoLean/
-# (classical trio only; the panic-text renderer/member tests join at stage 3).
+# (classical trio only), with the panic-text renderer/member tests.
 name = "GoCoreAuditTests"
-globs = ["Tests.GoCoreContract", "Tests.GoCoreAudit"]
+globs = ["Tests.GoCoreContract", "Tests.PanicRendering", "Tests.StringPanicMembers", "Tests.GoCoreAudit"]
