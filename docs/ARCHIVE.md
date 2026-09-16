@@ -55,9 +55,9 @@ and resolve locally.
   typed-admission profile family at its LAST main state before parking:
   `GoLean/GoCore/Boolean*.lean` + `Recovery*.lean` (56 modules, 8,197
   lines), the facade `GoLean/Interface.lean`, their nine `Tests` libraries
-  (24 modules), fixtures, gate scripts and audit tools; and (D7, PENDING
-  [USER] at the merge ask) the dark spikes `spikes/gate-a1` and
-  `spikes/iris-customer`. Deleted from main by lane
+  (24 modules), fixtures, gate scripts and audit tools; and the dark spikes `spikes/gate-a1` and
+  `spikes/iris-customer`, deleted by the lane's SEPARATE D7 commit
+  (PENDING [USER] at the merge ask; one revert restores them). Deleted from main by lane
   `park-lane/typed-profiles-0916`; the note (inventory, what was re-homed,
   what stayed, how to revive) is `docs/2026-09-16_typed-profiles-parked.md`.
   Future home per the [USER] ruling of 2026-09-16 (relayed; verbatim in the
