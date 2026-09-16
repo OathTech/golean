@@ -1,0 +1,19 @@
+# gc draws — go version: go version go1.26.5 linux/amd64 — pin: go1.26.5 — one run each, default flags then -gcflags=-N -l
+w1 [default] exit=0 :: w1 2|
+w1 [-gcflags=-N -l] exit=0 :: w1 2|
+w2 [default] exit=0 :: w2 40|
+w2 [-gcflags=-N -l] exit=0 :: w2 40|
+w3 [default] exit=0 :: w3 10 21|
+w3 [-gcflags=-N -l] exit=0 :: w3 10 21|
+w4 [default] exit=0 :: w4 panic: runtime error: index out of range [1] with length 0|
+w4 [-gcflags=-N -l] exit=0 :: w4 panic: runtime error: index out of range [1] with length 0|
+w5 [default] exit=0 :: w5 panic: runtime error: index out of range [0] with length 0|
+w5 [-gcflags=-N -l] exit=0 :: w5 panic: runtime error: index out of range [0] with length 0|
+w6 [default] exit=0 :: w6 2|
+w6 [-gcflags=-N -l] exit=0 :: w6 2|
+x1 [default] exit=0 :: x1 panic: runtime error: index out of range [7] with length 3|
+x1 [-gcflags=-N -l] exit=0 :: x1 panic: runtime error: index out of range [7] with length 3|
+x2 [default] exit=0 :: x2 3 2|
+x2 [-gcflags=-N -l] exit=0 :: x2 3 2|
+x3 [default] exit=0 :: x3 panic: runtime error: index out of range [9] with length 1|x3 len(ch) 0|
+x3 [-gcflags=-N -l] exit=0 :: x3 panic: runtime error: index out of range [9] with length 1|x3 len(ch) 0|
