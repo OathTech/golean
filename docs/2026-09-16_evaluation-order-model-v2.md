@@ -1,300 +1,337 @@
-# The evaluation-order model v2 — the `unseq` construct in the core (2026-09-16)
+# The evaluation-order model v2.1 — the `unseq` construct in the core (2026-09-16)
 
-[AGENT] Design note, lane `design/eval-order-model-v2-0916`, at main `433e7490`; records only. It
-implements as a design the ruling of [USER] Mike, 2026-09-16, verbatim, relayed by the [AGENT]
-coordinator — cite as relayed: «Okay, so this feels like sort of a profound decision, but I think the
-Cerberus model is the correct one (they did a lot of work thinking through such issues). Can you go
-ahead with the next steps?» (record: `docs/2026-08-31_qrow-rulings.md`, «The evaluation-order mechanism
-ruling record (2026-09-16)»; `docs/2026-09-11_review-dispositions.md` §3 item 5). The v1 note
-(`design/eval-order-model-0915` @ `90dc66f0`, unmerged) keeps its §1 relation — re-founded here — and
-its rule R1–R3 (spec-ordered → structural ANF in the frontend; spec-unordered with an observable → a
-machine tape choice; the rest refuses by name); its endpoint probe-and-use mechanism is RETIRED. The
-order below is the Codex review's revision sequence (`docs/2026-09-15_evaluation-order-model-review.md`,
-F1–F9). The mechanism is decided; nothing here re-opens it. Rulings are [USER] verbatim-as-relayed or
-PENDING [USER]; everything else is [AGENT].
+[AGENT] Design note, lane `design/eval-order-model-v2-0916`, at main `433e7490`; records only. REVIEWED VERSION: v2 @
+`9a8ed328` (never merged; amended in place). Second Codex review `docs/2026-09-16_evaluation-order-model-v2-review.md`
+(`review/eval-order-model-v2-0916` @ `b788e582`; evidence `docs/evidence/2026-09-16_eval-order-v2-review/`, `check.py`)
+— «Keep the graph architecture; revise the first implementation slice»: its R1–R6 and §2–§5 are applied below, marked
+where they changed; this note is its Stage A and the implementation handoff (§7, §9). It implements as a design the
+ruling of [USER] Mike, 2026-09-16, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «Okay, so this feels
+like sort of a profound decision, but I think the Cerberus model is the correct one (they did a lot of work thinking
+through such issues). Can you go ahead with the next steps?» (record: `docs/2026-08-31_qrow-rulings.md`, «The
+evaluation-order mechanism ruling record (2026-09-16)»; sequence: `docs/2026-09-11_review-dispositions.md` §4 step 4).
+The v1 note (`design/eval-order-model-0915` @ `90dc66f0`, unmerged) keeps its §1 relation and doctrine rule
+(spec-ordered → structural ANF in the frontend; spec-unordered with an observable → a tape choice; the rest refuses by
+name); its endpoint probe-and-use mechanism is RETIRED. First review: `docs/2026-09-15_evaluation-order-model-review.md`
+(F1–F9). The mechanism is decided; nothing here re-opens it. Rulings are [USER] verbatim-as-relayed or PENDING [USER];
+everything else is [AGENT]. Code anchors verified at `433e7490`.
 
 ## 1. The relation, re-founded: a dependency graph over evaluation occurrences
 
-**Sweep.** One statement's evaluation phase (a block statement, or a sub-accumulator: if/for
-init·cond·post, switch tag, case values, range operand, per-spec var initializer — e13-b §1). Its
-OCCURRENCE GRAPH is (occurrences, must-precede edges, guarded regions).
+**Sweep.** One statement's evaluation phase (a block statement, or a sub-accumulator: if/for init·cond·post, switch tag,
+case values, range operand, per-spec var initializer — e13-b §1). Its OCCURRENCE GRAPH is (occurrences, value
+dependencies, order prerequisites, guarded regions).
 
-**Occurrences** — each produces at most one value into a BINDER, may fail, may change state:
-- EVENT `o`: a call or method call (the invocation, after its callee value and arguments), a receive,
-  a built-in «called like any other function» (`len cap min max append copy make new recover`,
-  spec#Built-in_functions; a constant `len`/`cap` is NOT an occurrence — spec#Length_and_capacity
-  «in this case `s` is not evaluated»; the statement built-ins `panic print println delete close
-  clear` are their statement's event), and a `&&`/`||` GUARD (regions, below). Its own failure (nil
-  call, `make` size) is the event's. Its effects (output, channel ops, callee stores) are what the
-  effect prefix records.
-- READ `r`: one evaluation of a mutable location at that instant — a captured, address-taken or
-  global variable, a heap cell (deref, field through a pointer), an element (`a[i]` = header +
-  bounds check + element, ONE occurrence — §5 N1), a map entry (hash panic), a value-receiver copy,
-  and the reads an operation performs (`string(b)`, `[]byte(s)` read their payload — review F2).
-- OP `p`: a pure operation on produced values — arithmetic, non-constant `/` `%`, signed shift,
-  assertion, interface `==`, slice expression, slice→array conversion; fails on its own account.
-- LVALUE `ℓ`: a target's IDENTITY — (header, index), (map, key), a pointer's cell, a variable —
-  built from its operand occurrences; produces the identity, checks nothing.
-- STORE `s` (phase 2 only): consumes an identity and a value; the store's own check (bounds, nil
-  map, nil pointer) is its failure.
-A private local (neither captured nor address-taken) and a constant are order-transparent: not
-occurrences; their read folds into the node that uses them. (R1's node-set rule: the FRONTEND decides
-what is an occurrence, the MACHINE decides the order.)
+**Occurrences** (kinds, heads and contracts: §3.1, R3) — each produces zero, one or many results into predeclared
+BINDERS, may fail, may change state: INVOCATION/RECEIVE (after callee value and arguments; comma-ok receive = ONE
+occurrence, two outputs; `panic print println delete close clear` are their statement's event); READ (one evaluation of
+a mutable location at that instant; an element `a[i]` is a base/header PRODUCER and an index producer, then ONE checked
+access on those values — R6, the machine's own `strictPlan (.indexGet b i)` / `applyStrictOp .indexGet [b, i]` split,
+`GoLean/GoCore/Machine.lean:183`, `:439`; §5 N1); PURE OP (on produced values; fails on its own account);
+ALLOCATION/CONVERSION (its operands' reads are the occurrences; the allocation itself unobservable, C11, NO E1 edges —
+R3); TARGET PLAN (a target's identity from FROZEN operand values; checks nothing — R4); GUARD ENTRY `g` and COMPLETION
+`c` (R2: `g` consumes `L`'s binder and activates or skips the REGION; `c` produces the logical result — the region's on
+the enabled branch, the short-circuit constant at once on the disabled one); STORE (phase 2; its own check is its
+failure). A private local (neither captured nor address-taken) and a constant are order-transparent: not occurrences.
 
-**Edges** (must-precede), each from a pinned go1.26.5 clause:
+**Edges** — two sorts, kept apart (R2): VALUE dependencies (a body follows every binder it consumes) and ORDER
+prerequisites (`after`; discharged by a DONE or a SKIPPED occurrence; a skip never invents a value). Each from a pinned
+go1.26.5 clause:
 
-| edge | rule | clause |
-|---|---|---|
-| D data | producer → every occurrence that uses its binder: arguments before their call, `a[f()]`'s call before the index, an lvalue before its read and its store | spec#Calls «arguments … are evaluated before the function is called»; spec#Order_of_evaluation «`g` cannot be called before its arguments are evaluated» |
-| E1 lexical, among events | `o₁ → o₂` when neither lies in the other's operand subtree and `o₁`'s expression starts earlier in the source; nested events are ordered by D — `f(g())`: `g → f` (review F9.1) | spec#Order_of_evaluation «all function calls, method calls, receive operations, and binary logical operations are evaluated in lexical left-to-right order»; its own `y[f()], ok = g(z \|\| h(), i()+x[j()], <-c), k()` ⇒ `f h i j <-c g k` |
-| G regions | `L && R` / `L \|\| R`: a guard `g` consumes `L`'s binder; `R` is a REGION enabled iff `g` requires it; every occurrence of `R` has `g →` it; a disabled region has NO occurrences (contributes nothing); regions nest | spec#Logical_operators «The left operand is evaluated, and then the right if the condition requires it» |
-| P phases | every phase-1 occurrence → every store; stores left to right; `x op= y` has ONE lvalue occurrence, shared by its read and its store; `x++` ≡ `x += 1` | spec#Assignment_statements «The assignment proceeds in two phases. First, the operands of index expressions and pointer indirections … on the left and the expressions on the right are all evaluated in the usual order. Second, the assignments are carried out in left-to-right order»; «`x op= y` … evaluates `x` only once»; spec#IncDec_statements |
-| F statement positions | select operands once in source order, RecvStmt targets after the communication; send channel and value before the send; switch tag once, cases in order; the range expression once — «with one exception: if at most one iteration variable is present and `x` or `len(x)` is constant, the range expression is not evaluated»; results set before defers | spec#Select_statements, spec#Send_statements, spec#Expression_switches, spec#For_statements, spec#Return_statements |
+| edge | sort | rule | clause |
+|---|---|---|---|
+| D data | value | producer → every occurrence that uses its binder: arguments before their call, `a[f()]`'s call before the access, a target before its read and its store | spec#Calls «arguments … are evaluated before the function is called»; spec#Order_of_evaluation «`g` cannot be called before its arguments are evaluated» |
+| E1 lexical | order | among events (calls, method calls, receives) and logical operations: `o₁ → o₂` when neither lies in the other's operand subtree and `o₁` starts earlier in the source; nested events by D (`f(g())`: `g → f`, F9.1). A logical operation is anchored at its COMPLETION for later events and its ENTRY for earlier ones; its region's events follow the entry by membership (R2). Allocations carry none (R3) | spec#Order_of_evaluation «all function calls, method calls, receive operations, and binary logical operations are evaluated in lexical left-to-right order»; its `y[f()], ok = g(z \|\| h(), i()+x[j()], <-c), k()` ⇒ `f h i j <-c g k` |
+| G regions | activation | `g` enabled iff its test requires `R`; every occurrence of `R` follows `g`; a disabled region's occurrences are SKIPPED (discharge order edges, produce nothing); `c` is the only join — a value use of a region-confined binder outside its region is REJECTED; regions nest (R2) | spec#Logical_operators «The left operand is evaluated, and then the right if the condition requires it» |
+| P phases | order | every phase-1 occurrence → every store; stores left to right; `x op= y` has ONE target plan, shared by its read and its store; `x++` ≡ `x += 1` | spec#Assignment_statements «The assignment proceeds in two phases. First, the operands of index expressions and pointer indirections … on the left and the expressions on the right are all evaluated in the usual order. Second, the assignments are carried out in left-to-right order»; «`x op= y` … evaluates `x` only once»; spec#IncDec_statements |
+| F statement positions | order | select operands once in source order, RecvStmt targets after the communication; send channel and value before the send; switch tag once, cases in order; the range expression once — «with one exception: if at most one iteration variable is present and `x` or `len(x)` is constant, the range expression is not evaluated»; results set before defers | spec#Select_statements, spec#Send_statements, spec#Expression_switches, spec#For_statements, spec#Return_statements |
 
-Nothing else is an edge. A read or op against a sibling event, two reads or ops, a receiver
-sub-evaluation against argument events (E14), an allocation's payload reads against sibling events —
-all UNORDERED: spec#Order_of_evaluation «the order of those events compared to the evaluation and
-indexing of `x` and the evaluation of `y` and `z` is not specified»; read-vs-read by omission;
-interleavings admitted (I-2 UNSEQ, ledger L-013).
+Nothing else is an edge. A read or op against a sibling event, two reads or ops, a logical operation's LEFT-operand read
+against events, a receiver sub-evaluation against argument events (E14), an allocation's payload reads against sibling
+events — all UNORDERED: spec#Order_of_evaluation «the order of those events compared to the evaluation and indexing of
+`x` and the evaluation of `y` and `z` is not specified»; read-vs-read by omission; interleavings admitted (I-2 UNSEQ,
+ledger L-013). NO READ-ORDER REDUCTION (R1): v2's «non-event occurrences of which at most one can fail may be
+sequentialised among themselves» is FALSE — adding `read(x) → read(y)` to `x + y + mut()` removes `read(y); mut();
+read(x)` (spike R1: {0,1,2,3} vs reduced {0,2,3}). Graphs start unreduced; the only permitted early optimizations are
+folding constants and operations already forced by dependencies; any future ordering optimization carries a preservation
+obligation accounting for every intervening write, effect and failure, PROVED before it is USED.
 
-**Executions and results.** A legal execution of a DYNAMIC sweep: the top-level occurrences are
-pending; repeatedly run any READY occurrence (all producers done, region enabled); a guard adds its
-region's occurrences or drops them; stop at the first failure or when nothing is pending; then
-phase 2. Legal executions = the linear extensions of D ∪ E1 ∪ G ∪ P ∪ F over the EXECUTED occurrence
-set — Cerberus Core's `unseq` reduction exactly: pick any non-value element, reduce it under a
-`Kunseq` frame (`core_run.lem:1372–1396`, `core.lem:328–332`, `deps/cerberus-upstream` @ `b9aeedcb4`
-in the sibling cerberus-lean project; Memarian et al., «Into the depths of C», PLDI 2016 §5.6, cited
-through `docs/2026-08-17_prior-art-ch2o-cerberus.md` §2 — the paper is not in `deps/papers`). SWEEP
-RESULT = the binder values the statement uses + the resulting state + the EFFECT PREFIX (output,
-channel ops, callee stores, in order) + the first failure if any (the prefix stops there).
-OBSERVATION PROJECTION (what rows compare): output bytes, terminal status, panic identity; values
-and state are observed only through later output. Domain: sequential and terminating — a receive
-that would block is `blocked`, not a member; a non-returning call has no result (F9.2). Recovery is
-outside the sweep: the first failure leaves it as a panic and the frame's defers run unchanged.
-THE SEMANTICS of a sweep = the SET of results over its legal executions. Lower bound: gc's draw ∈
-set, measured per row; upper bound: set ⊆ Go-permitted, argued from the clauses (no oracle).
-
-**F1–F3 resolved in the graph** (spike: `docs/evidence/2026-09-16_eval-order-v2-spike/`). (F1)
-`v := mut() + a`: occurrences `E`, `R_a`, `Op`; no edge between `E` and `R_a` → {1, 2}: a position
-before a lexically earlier event is a linear extension; the lower bound on placement is readiness.
-(F2) `a[b[0]] + mut()`: `R_b0 → R_ai`, `E` free → `R_b0 R_ai E` = 10, `R_b0 E R_ai` = 30,
-`E R_b0 R_ai` = 40: a parent consumes its child's PRODUCED value; «re-evaluate the subtree at an
-endpoint» is not a node. (F3) `a[i] += mut()`: `R_a, R_i → L → Rd → Op ← E`, `L →` the store, P.
-THEOREM (identity sharing): in every legal execution the read and the store of an `op=` target consume
-the same identity, because an identity is produced by exactly one occurrence exactly once — so
-{[11 20] (`R_i` before `E`), [10 21] (`E` before `R_i`)} and never [10 11]. The value read `Rd` has its
-own timing after `L` (a call rewriting the cell in place yields the early or the late value — I-2).
+**Executions and results.** A legal execution of a DYNAMIC sweep is a run of the scheduler (R2): (i) no pending active
+work → phase 2 / completion; (ii) ready set nonempty (value deps produced, order prerequisites discharged, region
+active) → pick one and run it — a guard entry activates or skips its region; (iii) pending active work with NO ready
+occurrence → a NAMED malformed-graph refusal, never a stuck run. A failure ends the run: the prefix so far plus the
+failure. Every node, region nodes included, has a STATIC canonical rank (declaration order, a region inline behind its
+guard), independent of dynamic activation order. CERBERUS ADAPTATION STATEMENT (claims tightened): the SHAPE is Cerberus
+Core's `unseq` — reduce any eligible element under a `Kunseq` frame (`core.lem:320–332`, `core_run.lem:1372–1396`,
+`deps/cerberus-upstream` @ `b9aeedcb4` in the sibling cerberus-lean project; Memarian et al., PLDI 2016 §5.6 via
+`docs/2026-08-17_prior-art-ch2o-cerberus.md` §2); those forms and that rule do NOT by themselves prove the Go occurrence
+graph, whole-occurrence granularity, the E1 anchoring or the guard joins correct — this note's Go-specific obligations
+(§7). SWEEP RESULT = the binder values the statement uses + the resulting state + the EFFECT PREFIX (output, channel
+ops, callee stores, in order) + the first failure if any. OBSERVATION PROJECTION (what rows compare): output bytes,
+terminal status, panic identity. Domain: sequential and terminating — a receive that would block is a `blocked` REFUSAL,
+apart from the member set, never a panic (spike X3e); a non-returning call has no result (F9.2); recovery is outside the
+sweep. THE SEMANTICS of a sweep = the SET of results over its legal executions. Lower bound: gc's draw ∈ set, per row;
+upper bound: set ⊆ Go-permitted, from clauses. Identity sharing (F3): §3.4.
 
 ## 2. The reference enumerator (bounded fragment)
 
-`enumerate.py` in the spike directory. WHAT: for a hand-encoded graph (a generated one in §6), every
-legal execution by the readiness rule; per execution the sweep result; the SET, with trajectory
-multiplicities. INPUTS: occurrences (name, deps, body), guards with regions, an initial state, a
-phase-2 function. FRAGMENT: integer locals; slices of ints (nil-able headers over named backing
-arrays — `a = nil` rebinds the header, elements stay); index read/write with bounds panics; closure
-calls that mutate; `+`; compound assignment (identity once); tuple-assignment phases; `||` regions
-with an unexecuted case; a buffered receive. FAILURE KINDS: index out of range; a blocking receive
-refuses (outside the domain). NEGATIVE CONTROLS: `f(g())` and `sink(a)` are singletons (no unordered
-pair remains); `sink(a, mut())` is asserted NOT singleton (F9.5). TWO CHECKS, kept separate: MODEL
-COMPLETENESS — the machine's enumerated set over the lowered wire EQUALS the enumerator's set over the
-source graph (exact, both directions); ORACLE MEMBERSHIP — gc's draw ∈ set (K draws per the
-sampling rule, `docs/coverage-suite-structure.md`); a draw is an observation, never a guarantee.
-Results (`outcomes.txt` PASS; gc in `gc-draws.txt`, every draw a member): W1 {1,2} · W2 {10,30,40} ·
-W3 {[11 20],[10 21]} ∌ [10 11] · W4 both identities · W5 {print 7 then panic in iteration 2; panic in
-iteration 1}, no execution completes iteration 2 · W6 {0,1,2} · X1 (E4's shape) both identities · X2
-z=false {2,3}, z=true {2} · X3 {len(ch)=0, len(ch)=1} · C1/C2 singletons · C3 {1,2} (§4 has gc's draws).
+`enumerate.py` in `docs/evidence/2026-09-16_eval-order-v2-spike/` (R1/R2/R6 encodings adapted from the review's
+`check.py`, re-encoded on the repaired protocol). WHAT: for a hand-encoded graph (a generated one in §6), every legal
+run of the §1 scheduler; per run the sweep result; the MEMBER set with trajectory multiplicities, REFUSALS (`blocked`,
+`Malformed`) apart, the slot-0 (canonical) draw. FRAGMENT and RESULTS: the README (its table lists every set, forbidden
+hybrid, refusal and gc draw for W1–W6, X1–X3, X3e, R1, R2a–c, R4, R6, C1–C4); `outcomes.txt` PASS (exit 0); every draw a
+member. TWO CHECKS, LABELLED (claims tightened): (a) REFERENCE GRAPH CHECKS PASS — this spike; (b) MACHINE EQUALS
+REFERENCE — the lowered machine's enumerated set over the wire EQUALS (a)'s set over the source graph, exact, both
+directions: NOT tested here (no lowered machine exists), an exit criterion of Stage C (§7). ORACLE MEMBERSHIP — gc's
+draw ∈ set (K draws per `docs/coverage-suite-structure.md`) is an observation, never a guarantee.
 
 ## 3. The core construct — Cerberus-shaped `unseq`
 
-**Wire node** (sketch; no schema work): a statement listing a sweep's unordered occurrences with
-binders and edges, and the statement's completion over the binders:
+### 3.1 The occurrence contract (R3)
+
+A graph exposes evaluation order only if no body hides a second mutable read, a failing operation or an argument
+evaluation. INTERNAL NORMAL FORM: every operand of a head is a constant, an explicitly admitted stable read (a private
+local), or a typed slot reference (a binder of sort VALUE or TARGET).
+
+| kind | permitted head (first fragment, Stage C) | declared reads | effects | may fail | results |
+|---|---|---|---|---|---|
+| Read | captured/address-taken/global name; `*p`; `a[i]` / `m[k]` on base+index VALUES; value-receiver copy | exactly the one location | none | bounds, nil, hash | one |
+| Pure op | `+ - * / % << >>`, `== !=` on non-interface values, `!`, numeric conversion, `x.(T)`, `a[lo:hi]` on values | none | none | `/ %` zero, shift, assertion (spec#Type_assertions), slice bounds | one |
+| Allocation/conversion | `[]byte(s)`, `string(b)`, slice→array, `make`, `new`, composite literal on selected payload values | the payload copied: `string(b)`, slice→array READ backing storage (spec#Conversions_to_and_from_a_string_type, spec#Conversions_from_slice_to_array_or_array_pointer) | allocates (unobservable, C11); NO E1 edges | slice→array length; `make` size | one |
+| Invocation/receive | call / method call on callee + argument VALUES; `<-ch`; comma-ok `<-ch`; `f(g())` forwarding (spec#Calls); built-ins «called like any other function» (spec#Built-in_functions) — a constant `len`/`cap` is NOT an occurrence (spec#Length_and_capacity «in this case `s` is not evaluated»); `recover` — an EVENT, never an op: it changes the continuation (spec#Handling_panics) | none of its own | the callee's / one communication, once; zero-result calls and `print` still discharge E1 (spec#Expression_statements) | nil callee, callee panic | zero, one or many (comma-ok = ONE occurrence, two outputs) |
+| Target plan | `x`, `a[i]`, `m[k]`, `*p`, `p.f` on FROZEN operand values | none | none | none (checks deferred to the store) | one, sort TARGET (`TargetRef`, `Machine.lean:1554` — not a `GoValue`) |
+| Guard entry / join | the test binder of `&&` / `\|\|`; region membership | none | activates or skips the region | none | one decision |
+| Completion | the region's result (enabled) / the short-circuit constant (disabled); `then`: stores and control transfer over results | none | stores (phase 2) | the store's check | exactly one logical result; no rerun of any source expression |
+
+Interface `==` MAY FAIL (spec#Comparison_operators «A comparison of two interface values with identical dynamic types
+causes a run-time panic if that type is not comparable») — never «pure because spelled as an expression». DECODER
+CHECKS, each a refusal by name (`GoLean/NativeToIR.lean:199` key set, `:1205` arm): unknown reference; cycle in data ∪
+`after`; duplicate result (a binder produced twice; a guard's `out` not produced exactly once per branch); sort/type
+mismatch (VALUE vs TARGET; declared type vs head); hidden read in a pure node (an operand not a constant, admitted read
+or slot); invalid branch join (a region-confined binder used outside its region other than through the completion); list
+order not a linear extension; nested `unseq`; `recover` outside an invocation head. ADMITTED GRAMMAR of the first
+fragment, BOUNDED: the table's heads over int/bool/string locals and globals, slices of them, closures and top-level
+functions with 0–2 results, buffered channels, `+=` on `a[i]`, `x := e`, `x = e`, `a[i] = e`, tuple assignment,
+`println`; every further head is an explicit adapter with its validation rule — never a GoCore type checker
+(`decodeExpr` returns `Expr`, not a checked typed expression — `NativeToIR.lean:404`).
+
+### 3.2 Wire node (sketch; no schema work) — data edges IMPLIED by binder mentions; `after` = ORDER prerequisites (E1, F); list order = canonical rank
 
     {"stmt":"unseq",
-     "occ":[ {"bind":"$u1","kind":"op","expr":E,"type":T},
-             {"bind":"$u2","kind":"event","stmt":{"stmt":"assign","define":true,"lhs":[{"id":"$u2"}],"rhs":[CALL]},"after":["$u7"]},
-             {"bind":"$l1","kind":"lvalue","target":TGT},                      // identity; operands are binders
-             {"bind":"$u3","kind":"read","of":"$l1","type":T},                  // the checked read through $l1
-             {"bind":"$u4","kind":"guard","test":"$u5","when":false,"out":"$u6","occ":[…region…]} ],
-     "then": STMT }                                                             // phase 2 / completion; stores name $l identities
+     "occ":[ {"bind":"$u1","kind":"op","head":OP,"args":[…binders/consts…],"type":T},
+             {"bind":["$u2","$u2ok"],"kind":"event","head":CALL,"args":[…],"after":["$c1"]},   // results → predeclared binders; never define
+             {"bind":"$l1","kind":"target","head":TGT,"args":[…]},                            // sort TARGET; operands frozen
+             {"bind":"$u3","kind":"read","of":"$l1","type":T},
+             {"bind":"$g1","kind":"guard","test":"$u5","when":false,"out":"$c1","occ":[…region incl. the completion $c1…]} ],
+     "then": STMT }                                                                          // phase 2; stores name $l targets
 
-Data edges are IMPLIED by binder mentions (a body follows every producer it names); `after` carries
-the non-data edges (E1 among events, F positions). The list order IS the canonical order (below).
-**Decoder checks**, each a refusal by name (`GoLean/NativeToIR.lean:199` key set, `:1205` arm):
-acyclic (data ∪ `after`); binder names unique within the function body (static; activation freshness
-is the machine's); every use dominated by its producer (inside an occurrence that transitively follows
-it, in `then`, or in a region whose guard follows it); a guard's `out` produced exactly once per branch;
-type agreement (an occurrence's `type` = its body's decoded type; `then` type-checks under the binders);
-the list order is a linear extension of the edges (declared, not inferred); no nested `unseq`, no
-`recover()` in an `op`/`read` (recover is an event); an `event` body is a hoistable statement head.
-**Machine.** `Stmt.unseq (occs : Array Occ) (then : Stmt)` (Syntax.lean beside `:608`);
-`Cont.unseqK (pending : List Nat) occs env k`; an occurrence runs under `Cont.unseqOccK i …`.
-- ENTER: `.exec (.unseq …) env k` declares EVERY binder of the node (regions included) in a pushed
-  scope, unassigned, in list order — the env is identical whatever order the occurrences later run
-  (the dedup checker merges the diamonds, `EnumDedupCheck.lean`); a read of an unassigned binder is
-  `stuck` by name (unreachable under dominance). → `.next (.unseqK all …)`.
-- PICK at `.next (.unseqK pending …)`: ready = pending with producers assigned and region enabled;
-  `ChoiceSite.unseqNext` at bound |ready| (State.lean `:339`, `canonicalSlot0` row `:360`); slot `j`
-  = the `j`-th ready occurrence in LIST order, so slot 0 = the canonical order's next node; bound 1
-  pops nothing (G-U). Run it: `op`/`read` → `.evalE e env (.unseqOccK i …)`, `retV v` assigns
-  `$u_i`; `event` → `.exec stmt env (.unseqOccK i …)`, `.next (.unseqOccK i …)` marks done;
-  `lvalue` → the existing target resolution producing a `TargetRef`, stored as the identity; `read
-  of $l` → the checked read through it; `guard` → test, then append the region's occurrences or
-  assign `out`.
-- EXIT: pending = [] → `.exec then …`; the scope pops with the statement (binders die).
-- FAILURE: `.panicking chain (.unseqOccK …)` → `.panicking chain k`: the sweep's first failure with
-  the effect prefix so far; frame and binders dropped; defers/recover unchanged. `unseqK`/`unseqOccK`
-  are `exprGlue` for panics (Machine.lean `Cont.class` `:2660`); signals cannot reach them (refused
-  as `probeK`'s are, `:4808–4829`).
-**Binder lifetime (F5):** allocated at ENTER per dynamic sweep; dead at exit or panic; a loop
-iteration re-enters → fresh; recursion → per activation (`LocalEnv` is per frame; `enterFrame`
-Machine.lean `:698`); a region's binders are declared with the node, assigned only if it runs. An
-absent value means «no candidate in THIS sweep», never a previous execution's (W5).
-**Lvalue identity (F3):** produced once by the `lvalue` occurrence, checking nothing; the `read` and
-the store in `then` both consume it; the value read has its own occurrence and timing; phase-1
-failures (index-operand reads) stay distinct from the store's check (in `then`).
-**Candidate multiplicity (F6):** no saved-candidate table; a value is produced once, where picked;
-`k` interleavings are `k` linear extensions, one pick sequence each (W6: tapes `[0]`, `[1,0]`, `[1,1]`).
-**Canonical trajectory (slot 0):** the list order = today's ANF emission order (`tools/nativefrontend/
-wire.go:25–30`; `hoist` emit.go `:2934`, `pushHoist` `:5420`): for each event in lexical order its own
-argument occurrences (post-order, left to right) then the event; after the last event the residual's
-occurrences in post-order («calls first, reads late»). That is gc's realization for index, deref,
-division, shift and conversion reads and NOT for assertions, slices and interface `==` (gc early;
-e13-b §2), nor for BUG-104's targets (gc late, today's temps early — the list order puts them late:
-the intended flip). COST when the canonical differs from an existing row's pinned member: none on
-status (both are members); a strict row whose observation now varies with the tape is refused at
-stage `nondet` unless it declares `depth=N` or moves to confluent/membership (the strict-lane rule,
-`docs/coverage-suite-structure.md`) — a LANE MOVE, listed per row with its set; an observation-invariant
-strict row stays strict when the three fixed streams cover its picks, else needs `depth=N` (§6 measures).
-**Tape contract (F7).** CLAIMED: (i) the set of sweep results over all tapes = the set of legal
-executions' results of the wire's graph (mechanism soundness AND completeness; tested by the §2
-equality in the fragment, the Lean statement owed in §7); (ii) the all-zero tape realizes the
-canonical order, byte-identical to today's trajectory on every sweep whose list order equals today's
-emission order (measured as zero strict-lane drift outside the named flips). NOT CLAIMED:
-preservation of any non-empty tape's consumption trace (a sweep that gains a bound-≥-2 pick re-indexes
-every later pick; membership certificates re-enumerate; the twin re-pins); observational equivalence
-of candidates (there is no consult-on-difference — the pick is at the scheduling point, before
-outcomes exist). PICK REDUCTION, the frontend's only optimization: non-event occurrences of which at
-most one can fail may be sequentialised AMONG THEMSELVES (edges added); obligation before any pin
-retires on it: the reduced graph's outcome set = the full graph's — «reads and pure ops commute: the
-state is unchanged and a single failure has one identity», stated over the fragment. No reduction is
-proposed against an event.
-**Where it lands** (all at `433e7490`): Syntax.lean `Stmt.unseq` + `Occ`; Machine.lean
-`Cont.unseqK`/`unseqOccK` with `tail`/`withTail`/`class` arms (`:2595`, `:2630`, `:2660` — the B3
-one-tail algebra), `Step` rules `unseqEnter`, `unseqPick` (premise `i ∈ ready` — the relation
-quantifies the pick), `unseqOpDone`, `unseqEventDone`, `unseqGuard`, `unseqExit`, `unseqFail` (beside
-`:4830–4840`), the `seqConsumption` arm `.next (.unseqK …) ↦ some (.unseqNext, |ready|)` when ≥ 2
-(`:4084–4088`), `consumesUnseqNext` beside `consumesUnseqPanic` (`:4057`); StepFn.lean arms at `:355`,
-`:631`, `:155`; State.lean `ChoiceSite.unseqNext` (`:339–:382`); StateWf.lean arms (`:221`, `:366`,
-`:573`); MachineSound.lean `stepFn_sound` (`:172`), `step_complete` (`:506`),
-`stepFn_consumption_none/some` (`:4076`, `:4452`), `stepFn_oblivious` + one flag (`:4731`); the
-fragment flags (`EnumDedupCheck.lean:128`, `MultiStreams.lean:114`); the inventory §0 mirror row.
-`Stmt.unseqProbe`, `Cont.probeK`, `ChoiceSite.unseqPanic` (`:608`, `:2567`, `:347`) RETIRE in the same
-slice: the node subsumes the probe (DEFER/RAISE are two of its linear extensions). Sequential only.
+### 3.3 Machine: runtime record, storage, scheduler (R4)
 
-## 4. Review findings dispositioned
+Machine facts (`433e7490`): `LocalEnv := List Scope` maps names to `Loc` (`GoLean/GoCore/State.lean:16`, `:127`);
+`HeapCell.value` has NO unassigned slot (`:30–32`); `TargetRef` is a machine type, not a `GoValue`
+(`Machine.lean:1554`); the decoder's `.initialization` allocates a NEW binding in the enclosing sequence
+(`NativeToIR.lean:1531`, `StepFn.lean:200`) — v2's «event body with `define:true` fills the slot ENTER allocated» was
+wrong. RUNTIME RECORD, carried by `Cont.unseqK rec k`:
 
-| F | v2 | witness (spike; gc's draw) |
+    UnseqRec := { graph : static (occs, deps, after, regions, ranks, then) — shared, never copied per pick
+                ; status : Array (active | done | skipped) — «completed» ≠ «produced»;  cells : Array Loc + assigned : bitmap — VALUE results
+                ; targets : Array (Option TargetRef) — TARGET results, continuation-owned;  env : LocalEnv — the SOURCE scope;  completed : Bool }
+
+REPRESENTATION TO PROTOTYPE [AGENT]: preallocated typed value cells (one `Loc` per VALUE binder, allocated at ENTER at
+its declared type, zero-initialised) + an assignment bitmap in the continuation («produced» is a scheduler fact, not a
+heap fact) + a continuation-owned target table; the source-language value/heap universe is NOT extended for scheduler
+bookkeeping (a control-only slot table only with a demonstrated call-result adapter, Stage B). Event bodies WRITE
+PREDECLARED RESULT DESTINATIONS: `retV v (.unseqOccK i …)` stores into `cells[i]` and sets bit `i`; multi-result
+invocations route each result to its binder; never `.initialization`. SOURCE DECLARATIONS live in their source scope: `x
+:= a + f()` lowers to `then` = `.initialization x; x = $u`, run in `rec.env` (extended in place, as today), so `x`
+survives the sweep; temporary-scope disposal drops ONLY the scheduler cells (C4 may reclaim them). ENTER `.exec (.unseq
+g) env k`: allocate the cells, bits clear, every status `active` (regions included), `targets` empty → `.next (.unseqK
+rec k)`. PICK at `.next (.unseqK rec k)` — ONE `ready` function (R5) shared by execution, the `Step` premise and
+`seqConsumption`: (i) no active occurrence → `.exec then rec.env k`; (ii) `ready ≠ []` → `ChoiceSite.unseqNext` at bound
+`|ready|` (State.lean `:339`, `canonicalSlot0` row `:360`); slot `j` = the `j`-th ready occurrence in RANK order; bound
+1 pops nothing (G-U); run it under `Cont.unseqOccK i rec k`: op/read/allocation → `.evalE head …`; event → the
+invocation; target → the existing target resolution on frozen operand values; guard → decide, activate or mark the
+region `skipped` and set the completion's cell; (iii) active occurrences, `ready = []` → `.stuck "unseq: malformed graph
+— no ready occurrence"`, refused by name. EXIT: `then` runs in the source scope; the cells die with the statement.
+FAILURE: `.panicking chain (.unseqOccK …)` → `.panicking chain k`: the sweep's first failure with the effect prefix so
+far; `unseqK`/`unseqOccK` are `exprGlue` for panics (`Cont.class`, `Machine.lean:2656`, arm `:2660`); signals cannot
+reach them (`:4806–4829`).
+
+### 3.4 Target identity (R4), binder lifetime (F5), multiplicity (F6)
+
+A shared `TargetRef` is NOT yet a shared element identity: `resolveChain` (`Machine.lean:1614`) replays the chain at
+STORE time and `indexTargetLoc` (`:226`) loads the CURRENT header of the cell it is given — a plan that rereads a
+rebound slice variable at the store is not the identity the read used. The adapter FREEZES the slice/map/pointer
+operands whose evaluation the plan claims complete (the header, map and pointer VALUES — never the variable); the store
+replays only the deferred checks on them. Tests (Stage B, hand-built node): slice replacement (spike R4), map
+replacement, pointer redirection, cell mutation at a stable address — old storage retained, BOTH writes observable, no
+hybrid read/store. Plain-assignment checks keep their phase-2 placement (`storeTarget`, `:1627`; BUG-029/033); compound
+targets share the frozen plan. BINDER LIFETIME (F5): cells allocated at ENTER per dynamic sweep, dead at exit or panic;
+a loop iteration re-enters → fresh; recursion → per activation (`enterFrame`, `Machine.lean:698`); an absent value means
+«no candidate in THIS sweep» (W5). MULTIPLICITY (F6): no saved-candidate table; a value is produced once, where picked;
+`k` legal runs are `k` occurrence orders, each realised by ONE OR MORE tapes (an occurrence that itself consumes choices
+— a call, an allocation — adds picks; v2's «one pick sequence each» is withdrawn — claims tightened).
+
+### 3.5 Canonical order, compatibility and the tape contract (F7; R1, R5, claims tightened)
+
+CANONICAL (slot 0): the list order = today's ANF emission order (`tools/nativefrontend/wire.go:25–30`; `hoist` emit.go
+`:2934`, `pushHoist` `:5420`): per event in lexical order its argument occurrences (post-order) then the event; after
+the last event the residual's («calls first, reads late») — gc's per-kind realisation: v2 §3 @ `9a8ed328`; BUG-104's
+targets move late, the intended flip. COMPATIBILITY = OBSERVATION compatibility on specified rows (output bytes,
+status, panic identity), NOT byte-identical trajectories: steps, cells, allocation counts, fuel and stream indices
+change. INTENDED CHANGES, listed: BUG-101 ×2 and BUG-104 ×5 rows (wrong answers → members); BUG-102
+`compound-call-target-vs-len` (refusal → member); strict rows whose observation varies with the tape → lane moves, each
+listed; membership sets ⊇ old, each widening named. LANE-MOVE AUDIT RULES (R5): differing observations across tapes → a
+nondeterministic lane (`lane=membership`, `members=`); identical observations but the three fixed streams do not cover
+the picks → strict `depth=N` or certified confluence (the strict-lane depth guard, `docs/coverage-suite-structure.md`);
+budget exhaustion → REFUSAL by name, never evidence of a singleton or grounds to re-pin; `depth=N` does not make a
+genuinely varying strict row pass. v2's «none on status» assurance is REMOVED: BUG-101 has both normal and panic
+members. TAPE CONTRACT — CLAIMED: (i) the set of sweep results over all tapes = the set of results of the graph's legal
+runs (the wire scheduler theorem, §7); (ii) the all-zero tape realises the canonical order, observation-compatible with
+today's trajectory outside the intended changes. NOT CLAIMED: any non-empty tape's consumption trace (membership
+certificates re-enumerate; the twin re-pins); observational equivalence of candidates; ANY ordering reduction (R1:
+deleted).
+
+### 3.6 The enumeration route (R5)
+
+The certified dedup engine REJECTS `unseqPanic` today — `EnumDedupCheck.innerVecs` returns `none`
+(`GoLean/GoCore/EnumDedupCheck.lean:101–129`), `EnumDedupSound.lean:320` cases on it, `GoLean/EnumDedup.lean:138` names
+the refusal, `MultiStreams.lean:114` marks it non-oblivious — and would reject every `unseqNext` pick the same way: a
+new constructor plus a flag gives NO working enumeration, and new picks occur on every ordinary SUCCESSFUL iteration, so
+the path product is real. ONE MEASURED ROUTE for the vertical slice, chosen at Stage B's exit from numbers and part of
+Stage B/D's exit evidence: (α) certify `unseqNext` in dedup — branch-vector construction for the pick plus its
+checker/soundness arms; or (β) the default enumerator on a bounded PILOT with RECORDED budgets (repeated sweeps, a wide
+argument list, a loop; unique states and paths, runtime, RSS, consumed picks). [AGENT] recommends (β) first for numbers,
+(α) before Stage E. The accountant exposes EXACTLY the scheduler's bound (`seqConsumption` arm `.next (.unseqK …) ↦ some
+(.unseqNext, |ready|)` when ≥ 2, beside `Machine.lean:4084–4088`; `consumesUnseqNext` beside `consumesUnseqPanic`
+`:4057`). The pool/CLI path the corpus uses is NOT exempt («sequential model» exempts no continuation from the pool
+driver or the output/race plumbing); a checked-read adapter preserves the accesses `Race.strictOpAccesses` reports today
+(`GoLean/GoCore/Race.lean:506`, arm `:1545`).
+
+### 3.7 Where it lands (all at `433e7490`)
+
+The file-by-file anchor list of v2 @ `9a8ed328` §3 «Where it lands» (Syntax `:608`; Machine `Cont` arms `:2585`,
+`:2598`, `:2656`, `Step` rules beside `:4830–4840`, `seqConsumption` `:4084–4088`, `:4057`; StepFn `:155`, `:355`,
+`:631`; State `:339–:382`; StateWf `:221`, `:366`, `:573`; MachineSound `:172`, `:506`, `:4076`, `:4452`, `:4731`;
+`EnumDedupCheck.lean:128`, `MultiStreams.lean:114`) is re-verified and stands, with `unseqTargetDone` and
+`unseqMalformed` added to the `Step` rules. `Stmt.unseqProbe`, `Cont.probeK`, `ChoiceSite.unseqPanic` (`:608`, `:2567`,
+`:347`) RETIRE only at Stage E, after every admitted caller, test and consumer has moved; until then a SYNTAX-BASED
+MIGRATION BOUNDARY per WHOLE sweep: old lowering or graph lowering, never a mixture that evaluates an operand twice or
+drops an edge; no fixture-name dispatch. One writer for the core while its types and proofs change.
+
+## 4. Reviews dispositioned
+
+| first review | v2.1 | second review's disposition of the first |
 |---|---|---|
-| F1 | positions = readiness; edges only from clauses; every sensitive occurrence is listed whatever follows it | `mut() + a` ∋ 1 — {1, 2}; gc 2 |
-| F2 | occurrences produce values, parents consume binders, no subtree re-evaluation; sensitivity from the reads an operation performs | `a[b[0]] + mut()` = {10, 30, 40}; gc 40 |
-| F3 | one `lvalue` occurrence; read and store consume it; the identity-sharing theorem | `a[i] += mut()` = {[11 20], [10 21]}, ∌ [10 11]; gc 10 21 |
-| F4 | every failing occurrence is a node; no eligibility rule; the pick reaches the last one | `a[1] + b[2]` both identities; gc `[1]` |
-| F5 | binders per dynamic sweep, declared at ENTER, dead at exit/panic; dominance for regions | loop: iteration 2 panics in every execution; gc panics in iteration 1 |
-| F6 | one multiway pick over ready occurrences replaces the two-slot table | `x + inc() + inc()` = {0, 1, 2}; gc 2 |
-| F7 | tape contract stated (§3): outcome-set equality claimed, trace preservation not; reduction obligation named | — |
-| F8 | census relabelled (§6); the dynamic measurement defined; no bound claimed | — |
-| F9 | 1 events/nesting/regions (§1); 2 result, projection, domain (§1); 3 range and constant-`len` exceptions, built-ins scoped (§1); 4 enumerator from the source graph (§2); 5 controls rule (§2, §6); 6 certificate kept (§7). Owed: the Lean mechanism theorem, the P(ii) census by row, the reduction lemma, the generator (§7) | X1–X3, C1–C3 |
+| F1/F2/F4/F6 placements, dependencies, failures, intermediate values | positions = readiness; occurrences produce values, parents consume binders; every failing occurrence a node; one multiway pick (§1; W1/W2/W4/W6) | addressed; retain as native exact-set regressions; R2/R6 qualify the general claim |
+| F3/F5 target identity, dynamic lifetime | one FROZEN target plan shared by read and store; cells per dynamic sweep (§3.4; W3, R4, W5) | correct design intent; representation and adapters remain to establish under R4 |
+| F7 tapes/observability | tape contract stated; reduction DELETED; canonical = observation compatibility (§3.5) | much clearer; R1 removed, canonical/equality claims qualified |
+| F8 census | relabelled (§6); dynamic cost is Stage D's experiment | correctly relabelled; not a bound |
+| F9 contract and validation | contract (§1), enumerator and labelled checks (§2), controls, certificate (§7) | improved; guard semantics (R2), the machine comparison (Stage C) and the source→wire certificate (§7) are now explicit |
 
-## 5. The v1 decisions re-posed — PENDING [USER], posed not ruled
+| second review | resolution in v2.1 |
+|---|---|
+| R1 read-order reduction FALSE | deleted (§1, §3.5); unreduced graphs; fold constants / forced ops only; preservation obligation proved before use; spike R1 exact-set regression |
+| R2 guards: skip / completion / three cases / rank | guard entry + completion nodes; order prerequisites ≠ value deps; skip discharges, never produces; invalid join rejected; scheduler cases (i)–(iii) with a named refusal; static rank (§1, §3.3); spike R2a/R2b/R2c, X2, C4 |
+| R3 occurrence contract | normal form + kind table + classifications + decoder checks + bounded grammar (§3.1) |
+| R4 storage, scope, freezing | runtime record; cells + bitmap + target table; predeclared destinations; source scope; frozen operands; tests (§3.3, §3.4); spike R4 |
+| R5 enumeration route | dedup rejects `unseqNext` today; one measured route (α/β) in Stage B/D exit evidence; one `ready`; pool/race preserved; lane-move rules; «none on status» removed (§3.5, §3.6) |
+| R6 N1 granularity | producers + one checked access recommended (§1, §5); spike R6 {10,20} vs {20}; a fused choice would be a narrowing recorded everywhere — PENDING [USER] |
 
-1. **E2/E12 value axis** — DISSOLVES as a mechanism question: an occurrence produces its value when
-   picked; both values are members by construction. What remains is item 2. [AGENT]: E2/E12/E14's
-   value axes move to (a) ENVELOPED when the rows realizing them land; ratification at that merge ask.
-2. **Width of P** (which reads are occurrences): (i) today's failing kinds (`probeKind`, emit.go
-   `:5450`) + events; (ii) also the mutable reads (captured/address-taken locals, globals, heap, map,
-   value-receiver copies, conversion payloads) — F1's `mut() + a` needs (ii). [AGENT] recommends (ii)
-   as the model, landed as slice 2 after slice 1 measures cost; (i)-only rows keep E12's narrowing.
-3. **Interleaving positions** — DISSOLVES: linear extensions are the mechanism's members; there is no
-   separate widening to rule.
-4. **E3/E4 retirement + late structural allocations** — E3/E4 fall out of listing every phase-1
-   failing occurrence (X1 is E4's shape); an allocation is an event-like node whose payload reads are
-   occurrences (the allocation itself unobservable, C11) — BUG-102's class becomes slice 3's emitter
-   work, not a decision. For ratification at the merge ask.
-5. NEW **N1 read granularity**: `a[i]` = one occurrence (header, check, element; the machine's index
-   step is one step). Splitting it widens the set with no oracle member. [AGENT] recommends one
-   occurrence, recorded as a (b-n) narrowing of I-2 with an obligation.
-6. NEW **N2 canonical order**: today's emission order (zero drift measurable) vs a gc-shaped per-kind
-   order (assertions early). No semantic content; [AGENT] recommends today's; ratify.
-7. NEW **N3 enumeration budget**: a membership row whose `unseq` width exhausts the enumerator's
-   budget REFUSES by name — no silent sequentialisation. [AGENT] recommends refuse + measure first;
-   posed because it can turn rows red.
-8. NEW **N4 the ladder position** — §7.
+## 5. Decisions PENDING [USER] — posed, not ruled; recommendations only
+
+1. **E2/E12 value axis** — DISSOLVES as a mechanism question (a value is produced where picked). [AGENT]: E2/E12/E14's
+   value axes → (a) ENVELOPED when their rows land; ratify at that merge ask.
+2. **Width of P** (which reads are occurrences): (i) today's failing kinds (`probeKind`, emit.go `:5450`) + events;
+   (ii) also the mutable reads (captured/address-taken locals, globals, heap, map, value-receiver copies, conversion
+   payloads). W1/W6 are P(ii) reads: a P(i)-only pilot CANNOT pass them as graph-envelope regressions (review §2).
+   [AGENT] recommends (ii), the Stage C pilot carrying the minimal P(ii) reads its fixtures need (W1/W6/R1/R6) once
+   ruled; under (i), W1/W6/R1 stay reference-only, not labelled scheduler failures.
+3. **Interleaving positions** — DISSOLVES: legal runs are the members; no separate widening.
+4. **E3/E4 retirement + late structural allocations** — fall out of listing every phase-1 failing occurrence (X1); an
+   allocation is a node without E1 edges (R3); ratify at the merge ask.
+5. **N1 read granularity** (R6): base/header and index PRODUCERS + ONE checked access — the machine's own split;
+   `a[f()]` = {10, 20}, gc 20. [AGENT] recommends the split; a FUSED read, if chosen, is a NARROWING recorded in the
+   model, the reference generator, the inventory and every affected row — never a complete envelope.
+6. **N2 canonical order**: today's emission order vs a gc-shaped per-kind order; no semantic content; [AGENT]
+   recommends today's; ratify.
+7. **N3 enumeration budget**: a row whose width exhausts the budget REFUSES by name — no silent sequentialisation, no
+   re-pin from exhaustion (R5). [AGENT] recommends refuse + measure (Stage D).
+8. **N4 ladder position** — §7.
 
 ## 6. The census, relabelled; the generator plan
 
-v1's numbers (`90dc66f0`, `count.py`) are a RESIDUAL-NODE CENSUS OVER RETAINED INPUTS: 1,330 of
-1,353 case directories lowered (the 23 others were not classified by the script — F8); static counts
-in the CLOSING residual of event-bearing sweeps only: 40,548 sweeps, 4,833 event-bearing; 118
-`unseq-probe`; 383 failing-kind and 1,010 plain-read residual nodes (hoisted argument expressions
-not counted; no-event sweeps not counted; signed shifts, interface `==`, slice→array conversions not
-counted; private locals included); twin 7,835 / 1,359 / 128 / 277 / 628. They locate where `unseq`
-nodes would go; they bound neither nodes, picks nor evaluations (static ≠ dynamic). A REAL COST
-MEASUREMENT (slice 1's exit) reports on the full corpus, the E13 family (94 rows) and the twin:
-`unseq` nodes emitted per row (static); dynamic node entries; picks by bound (histogram) on the
-canonical tape; rows by lane before/after with every strict→membership/confluent/`depth=N` move
-named; enumeration size per membership row (trajectories, dedup nodes, distinct outcomes); fuel,
-wall time, RSS against main; budget refusals by name.
-**Generator** (v1 §4, corrected per F9.5; `tools/evalorder-gen`, grossmith-runner precedent): axes =
-operand kind (index, slice, assertion, deref, `/`, interface `==`, map read, captured read, global,
-field through pointer, value-receiver copy) × role (RHS operand, composite element, return list, send
-value, call argument, `&&`/`||` region, `=` target operand, compound target, IncDec, map key) × event
-(call, method, receive, `len` hoist, `make`, `append`, guard with a call) × effect (none, mutates the
-operand's input, makes it fail, repairs it) × 1–2 sensitive occurrences × 1–2 events; a seeded pairwise
-array (~150–200 shapes) lands as `Corpus/coverage/exec/evalorder/gen-<seed>/`. Each shape's set is
-DERIVED from the source graph by §2's enumerator; checks: machine set = reference set (exact); gc draws
-⊆ set (K=32 gate / K=80 slow); singleton assertions ONLY for controls with no remaining unordered pair
-(argument-before-call chains, private-local operands) — `sink(a, mut())` is a two-member row; gc's
-draw is recorded per shape as an observation, never «gc draws ONE» as a rule.
+v1's numbers (`90dc66f0`, `count.py`) are a RESIDUAL-NODE CENSUS OVER RETAINED INPUTS (F8): they locate where nodes
+would go and bound neither nodes, picks nor evaluations. The REAL COST MEASUREMENT is Stage D's: nodes per row; dynamic
+entries; picks by bound on the canonical tape; lanes before/after with every move named; enumeration size per membership
+row; fuel, wall time, RSS against main; budget refusals by name. GENERATOR (`tools/evalorder-gen`; axes and layout as v1
+§4, corrected per F9.5), begun at Stage C ALONGSIDE each adapter (review §2): a small EXHAUSTIVE fragment first,
+pairwise (~150–200 shapes) after; each shape's set DERIVED by §2's enumerator from the source graph, independent of the
+emitter's edges; machine set = reference set (exact); gc draws ⊆ set (K=32 gate / K=80 slow); singletons ONLY for
+controls with no remaining unordered pair (`sink(a, mut())` is two-member).
 
-## 7. Cost and sequencing
+## 7. Stages, theorems and the ladder (review §2, §4 — replaces v2's S1–S4)
 
-| slice | content | sessions | flips / measurements |
-|---|---|---|---|
-| S1 | the construct end to end on P(i): Syntax/Machine/StepFn/State/StateWf/MachineSound + decoder (the positional-case-tag fragility at MachineSound, e13-b R12, is the known cost); frontend emits `unseq` for every sweep with ≥ 1 event and ≥ 1 sensitive occurrence not forced against it, or ≥ 2 failing occurrences with no event; replaces `unseq-probe`; compound/map targets as `lvalue`+`read` (`emitReadWriteTargetPhase1` `:4708`, `emitMapCompound` `:4749` — its `probeSuppress` and the early once-temps retire); `unseqPanic` retires; red-first rows for W1–W6; full `scripts/ci --diff` | 4–5 | BUG-101 ×2, BUG-104 ×5 FAIL→PASS (membership); BUG-102 `compound-call-target-vs-len` → membership (off `Expect: FAIL`); twin re-pin (probes → nodes, count reported); E13 family 94 rows re-certified, sets ⊇ old with each widening named; `binop-order` ×2 and every membership row with a sibling-event sweep re-enumerated (set equality expected; a change is a finding); strict rows outrunning the fixed streams → `depth=N` or lane moves, each listed; §6 measurement |
-| S2 | P(ii); `receiverAddr` (`:5865`); allocating conversions (`:8376`) as occurrences; E2/E12/E14 → (a); E3/E4 retire; the reduction lemma | 2–3 | BUG-052's 5 rows, `noodler/latitude` ×12 + `noodler/maps` ×3, `binop-order` ×3 → membership; cost re-measured |
-| S3 | structural allocations as occurrences; `structuralAllocGuard` (`:11214`) and `hoistReordersUnprobedPanic` (`:11171`) retire; the A6 residue re-derived (empty expected) | 1–2 | BUG-102's 5 remaining rows lower → membership |
-| S4 | the generator + the certificate fragment (F9.6) | 1 | `evalorder/gen-*` rows born; the Lean mechanism theorem |
+| stage | deliverable | exit evidence |
+|---|---|---|
+| A. Repair the executable design (THIS LANE) | R1/R2 regressions; occurrence grammar, result sorts, region protocol, runtime record; the user gates the fragment needs posed | spike: reference sets and negative cases pass (exit 0); one source example with a complete graph, wire sketch, canonical order and result mapping (§3.2/§3.3 over W3/R4); this note |
+| B. A small scheduler on hand-built graphs | new syntax, continuation state, `ready`/pick/completion, slot lifetime; total rules and `stepFn` cases TOGETHER; the mechanism theorem's statements and first proofs (below) established HERE to constrain the representation | successful and failing runs match the reference; arbitrary legal schedules have replay tapes; malformed / no-ready graphs refuse by name; singleton picks do not consume; §3.4's target tests on a hand-built node; first budget numbers |
+| C. One native fragment end to end | decoder validation + source-to-graph lowering for §3.1's stated grammar; normal / call / return / target adapters; generated tests beside each adapter (§6) | source → actual frontend bytes → strict decoder → machine → EXACT observed sets = reference (check (b)); decoder mutations reject (§8); source declarations survive completion |
+| D. Exploration economics | correct branch accounting + the chosen engine (α/β, §3.6); scope/deallocation representation measured on repeated sweeps | a workload ladder (repeated sweeps, wide argument list, loop, E13 family, twin) closes within RECORDED budgets; exact-set and accountant checks pass; no outcome-losing optimization |
+| E. Family migration | by operand and statement family: BUG-101/104, assignment targets, guards, receivers, allocations; legacy `unseqProbe`/`probeK`/`unseqPanic` removed only after all callers, tests and consumers moved; whole-sweep boundary, no fixture-name dispatch | per-family full gate + `--diff`, named set changes, pins/ledgers updated; full corpus and required certified workloads pass at the final boundary |
 
-**Ladder position (N4, PENDING [USER]).** The construct touches `Cont` (C3 list-of-frames) and the
-frame env / binder allocation (B7 `ProgramCtx`/`Store`, C4 block-scoped allocation, B6). [AGENT]
-recommends **S1 now, before B7 starts**: the arc record already classes the E13 lane as «a SEMANTICS
-lane, not a C-item … independent of the C-arc order» (`docs/2026-09-03_design-hygiene-arc.md`); B7
-rewrites every core signature and one core-refactor lane runs at a time, so S1 and B7 must not
-overlap; BUG-101/104 are wrong answers waiting; S1 declares the binders as scope temps (C4 absorbs
-them) and gives `unseqK` the B3 one-tail shape (C3 is one more mechanical frame). Then B7 → C1; S2–S3
-(frontend-heavy) beside P; then C3 → C4 → B6. Alternative: S1 after C3 (list-of-frames removes the
-positional-tag fragility) at the price of months of red on BUG-101/104.
-**Translation certificate** (master plan §7.2 F6; review F9.6) — KEPT, bounded: fragment = §2's; exit
-criterion (a) for every generated shape, machine set = reference set, executable per shape in the gate;
-(b) ONE Lean theorem: every `stepFn` trajectory of a well-formed `unseq` node (the decoder checks as
-hypotheses) runs its occurrences in a linear extension of the node's edges, and every linear extension
-is some tape's trajectory — soundness and completeness over the WIRE graph. The source→wire step stays
-tested by (a), not proved: stated as the plan, not silently removed.
+Stages B–D overlap only in small increments; one writer alters shared core signatures; no general proof refactor bundled
+in. SLICE PROMISES CORRECTED: a P(i)-only pilot cannot pass W1/W6 (§5 item 2); BUG-101 needs the
+assertion-success-then-mutation-to-failure AND the slice-value witnesses (`assert-ok-early-len-hoist`,
+`slice-value-early-len-hoist`), BUG-104 stable shared targets through calls with observable stores (its five rows) in
+the Stage C pilot before any flip is predicted; generated tests from Stage C; the mechanism theorem during B; ESTIMATES
+conditional on B–D's results — no session counts, no «months» alternative. **THEOREMS.** (b) the WIRE SCHEDULER THEOREM
+(renamed from v2 §7(b)): for a well-formed `unseq` node (the §3.1 decoder checks as hypotheses) — SOUNDNESS over the
+executed occurrence TRACE: a successful trace completes the active graph in an order respecting every edge; an escaping
+panic is a legal prefix ending at that failure with no later effect; COMPLETENESS: every legal finite execution of the
+graph — successful or failing, INCLUDING the occurrences' own nondeterminism and their choice consumption — is some
+tape's `stepFn` trajectory; invariants as proof interfaces: preservation (`StateWf`), no double execution, dominance of
+consumed values, region progress, target consistency (frozen operands), freshness (cells per activation). It proves
+nothing about the frontend. (a) the SOURCE-TO-WIRE TRANSLATION CERTIFICATE (master plan §7.2 F6; F9.6) stays a SEPARATE
+owed obligation: a small source fragment (§2's) with a checked source/graph correspondence certificate or a preservation
+theorem for its lowering. Finite generated-set comparisons (§6) remain TESTS; substituting them for the certificate
+would be an explicit plan-change proposal, PENDING [USER] — not proposed here. **LADDER (N4, PENDING [USER]).** [AGENT]
+recommends Stages A–B BEFORE B7 (B7 rewrites every core signature; one core writer at a time; `unseqK` takes the B3
+one-tail shape, C3 adds one more frame; the cells are scope temps C4 absorbs); then B7 → C1, with Stage C's
+frontend/decoder work beside them ONLY under explicit file ownership and compatible interfaces; D and E after; then P →
+C3 → C4 → B6 (the E13 lane is a SEMANTICS lane, `docs/2026-09-03_design-hygiene-arc.md`). Alternative: all after C3 (no
+positional-tag fragility), BUG-101/104 red meanwhile.
 
-## 8. What v2 does not do
+## 8. Minimum acceptance matrix (review §3) — a row outside the fragment is DEFERRED or REFUSED-AT-BOUNDARY, never validated
 
-No concurrency claim (a concurrent observer of an unordered pair is outside this model; racy programs
-refuse). No init order (E7/E8). No member for gc's early store (E5, L-016). No composite-literal
-internal store order. No claim about gc's `order.go` beyond measured draws. No schema work, Lean
-build, census re-run or baseline change.
+| family | required discriminators | Stage C status |
+|---|---|---|
+| Read placement | W1/W2/W6; both lexical sides; header before an index-producing call (R6); R1's lost member | fragment (P(ii) reads per §5 item 2) |
+| Logical regions | skip / right-run (R2a); nested guards (R2c); later sibling call; pure RHS read before a later call (R2b); no use of disabled data (invalid join refused) | fragment |
+| Target identity | W3 + slice/map replacement (R4), pointer redirection, cell mutation at a stable address; no hybrid read/store | fragment (slice); map/pointer deferred to E |
+| Phase checks | phase-1 operand panic stores nothing (X1); first phase-2 store persists when the second panics; compound read failure vs RHS event (X3) | fragment |
+| Dynamic state | W5, recursion, repeated nested calls, source short declarations, escaped closures; no stale slots | fragment |
+| Invocation results | zero-result call, one, two results, comma-ok receive; effect once; arguments not reread | fragment (0–2 results); comma-ok deferred to E |
+| Failure/control | callee recovers and returns; callee panic escapes and cancels pending work; deferred `recover` inside a migrated sweep; blocked receive distinct from panic (X3e) | fragment; `recover` inside the sweep refused-at-boundary until E |
+| Infrastructure | `unseqNext` beside an existing choice site; exact accounting; canonical replay; unsupported/malformed graphs and budgets refuse by name | fragment |
 
-## Handoff
+RECORD PER ACCEPTED FIXTURE: source shape · graph (independent of the emitter's edges) · expected observation set ·
+forbidden members · oracle draws · actual lowered-machine set · canonical draw · budget. EDGE-MUTATION VALIDATION (a
+requirement): mutate one data, one lexical, one guard and one phase edge of a lowered graph and show the decoder or the
+exact-set check names the error; a handwritten graph alone validates no lowering.
 
-- DECIDED [AGENT] inside the ruling: the §1 graph and its edge table; the §2 enumerator and the two
-  separate checks; the §3 construct (wire, decoder checks, machine, binder lifetime, identity
-  contract, multiway pick, canonical = list order, tape contract, reduction obligation); the §7 slices.
-- PENDING [USER]: §5 item 2 (width of P), N1 (read granularity), N3 (enumeration-budget refusal),
-  N4 (ladder position: S1 before B7); items 1/4/N2 for ratification at the merge ask.
-- FIRST SLICE: S1 exactly (§7) — construct + decoder + frontend emission replacing `unseq-probe`, P(i), compound/map targets by identity; flips BUG-101 ×2, BUG-104 ×5, BUG-102 ×1; twin re-pin.
-- AUDIT ASK for this note: the edge table against the pinned clauses; the identity-sharing theorem
-  and the tape contract's claimed/not-claimed split; the spike's graphs against the review's witnesses.
+## 9. Handoff
+
+- DECIDED [AGENT] inside the ruling: §1's graph, edge table and scheduler; §2's enumerator and labelled checks; §3's
+  occurrence contract, wire sketch, runtime record and representation to prototype, frozen target identity, tape
+  contract without reduction, the enumeration-route choice point; §7's stages and theorems; §8's matrix.
+- PENDING [USER]: §5 item 2 (width of P — recommend (ii)), item 5/N1 (recommend the split), item 7/N3 (recommend refuse
+  + measure), item 8/N4 (recommend Stages A–B before B7); items 1/4/6 for ratification at the merge ask. No gate was
+  ruled by this lane.
+- NOT DONE HERE: no concurrency claim (racy programs refuse); no init order (E7/E8); no member for gc's early store
+  (E5, L-016); no composite-literal internal store order; no claim about gc's `order.go` beyond measured draws; no
+  schema work, Lean build, census re-run or baseline change; no ordering optimization of any kind.
+- NEXT: Stage B — a small scheduler on hand-built graphs, one core writer; its brief carries §3.1's grammar, §3.3's
+  record, §3.4's tests, §3.6's route choice and §7's theorem statements.
+- AUDIT ASK for this note: the edge table and E1 anchoring against the pinned clauses; the R3 kind table's
+  failure/effect columns against the pinned clauses; the runtime record against the cited machine facts; the spike's
+  R1/R2/R4/R6 graphs against the review's `check.py`; the claims split.
