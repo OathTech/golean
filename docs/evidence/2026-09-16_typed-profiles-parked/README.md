@@ -44,3 +44,18 @@ Environment first (it decides the shape of every line below): this sandbox has N
 Corpus rows CANNOT move here: the tracked delta outside the family is empty for `Corpus/`, `baselines/`, `tools/nativefrontend/`, `tools/coverageharness/`, `Main.lean` and every non-family `GoLean/**` file (`git diff --stat 62fc8073 7ac513e6` over those paths = the 56 Boolean*/Recovery* deletions only). The operator's commands to turn the six environmental reds into a judgment: `scripts/setup-deps` (network) or `scripts/setup-deps --from /home/dev/projects/golean` (a sibling's `deps/`), then `scripts/capped scripts/ci --diff`; the expected red is then exactly the 5a pair.
 
 Files here: `red-steps-base.txt`, `red-steps-tip.txt` (the summary blocks' FAIL lines), `drift-rows-tip.txt` (the tip's whole drift block, 331 rows), `tip-vs-base.txt` (the two `comm -3` results: one step, one row).
+
+## Gate of record ([AGENT] coordinator, 2026-09-16)
+
+The lane's own runs above had NO `deps/go`/`deps/goose` (this sandbox has no network and the
+lane did not use `scripts/setup-deps --from`), so they were judged by a tip-vs-base control. The
+coordinator rebased the branch onto main `94da420e` (docs-only moves; tip `bcee0c34`), provisioned
+the deps from the local primary (`scripts/setup-deps --from /home/dev/projects/golean`, EXIT=0,
+go @ `c19862e5f8`), and ran the gate of record under the box-wide lock:
+`GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff` at `bcee0c34` → EXIT=1, red on EXACTLY the
+5a pair — `FAIL certificate provenance` («STALE certification: changed dependency
+build/files/GoLean.lean») and `FAIL baseline diff` whose DRIFT block is the single line
+`imported-goose/channel/google-search baseline[PASS/membership] -> now[FAIL/membership]` (the stale
+record); the new `core-audit` step PASS (14.2 s); negatives 394 no regression; every other step ok.
+Step-line tail: `gate-of-record-ci-diff.tail.txt`. Corpus rows cannot move (no wire/frontend/machine
+semantics change); the train owes 5a (`ci --slow` + candidate install) at the merged tip.

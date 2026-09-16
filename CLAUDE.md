@@ -45,13 +45,43 @@ build and the gate's dependency graph, to validate the interface.
 Top-level goals ([USER], Mike, 2026-09-04, verbatim, relayed by the
 [AGENT] coordinator — cite as relayed): «(1) to be a highly accurate
 go semantics, and (2) to support reasoning about go using an
-iris-lean layer (which we won't build, that's a customer)». The
-iris-lean layer is a CUSTOMER, never built here (the interface-
-validation spike above excepted) — this repo ships the consumer
-interface it needs (`docs/2026-09-04_reasoning-surface-plan.md` §1 →
-`GoLean/Interface.lean` when it exists; §1.6/§1.7 as sketched are
-REJECTED by the 2026-09-05 review, F2/F3 — the corrected statements
-are owed by the Gate A spike, master plan §7.4).
+iris-lean layer (which we won't build, that's a customer)».
+SUPERSEDED 2026-09-11 ([USER], Mike, verbatim, relayed): «We don't
+have as of now a customer. Our job is to make the Go seantics as good
+as we can make it. Nothing else. […] We *can* provide a relational
+definition along with it too. Everything else should be dropped»
+(`docs/2026-09-11_review-dispositions.md`).
+
+**What this repo provides, and does not** ([USER], Mike, 2026-09-16,
+verbatim, relayed; the qualifications are [AGENT], ratified by the
+[USER] the same day — «this is a good thing to roll into the
+statement»): «(1) we provide a Go semantics defined via the core
+GoCore language, (2) we ship a relational, i.e fuel-free semantics
+which is provably equivalent to the operational semantics, (3) we DO
+NOT ship any higher level reasoning. The aim is for the relational
+semantics to be useful for reasoning but this isn't something we
+ourselves supply». Qualifications: (1) includes the native lowering
+Go → GoCore, differentially validated and carrying NO correctness
+theorem — a consumer of a GoCore program inherits that trust
+assumption and the wire's provenance record. (2) is proved per step
+in both directions (`stepFn_sound`, `step_complete`) and for the
+drivers' traces, runs and observations; the single end-to-end
+labelled simulation (initialization, choice consumption, memory
+effects, output, terminal priority, the refusal/domain hypotheses) is
+an OWED proof obligation, kept in step with the interpreter (priority
+(c) of the 2026-09-11 ruling); a refusal or uncaught abort has no
+successful relation successor — a partial-correctness boundary. (3):
+the typed-admission profile family, the `GoLean/Interface.lean`
+facade and the adapter spikes were PARKED 2026-09-16 ([USER] ruling;
+tag `typed-profiles/last-main-2026-09-16`,
+`docs/2026-09-16_typed-profiles-parked.md`); their future home is the
+reasoning repository under gitignored `deps/`, consuming this repo at
+a pin. A consumer also inherits the Platform instance (gc, linux/amd64
+— portability is a separate contract, latitude inventory §11) and the
+machine's concurrency granularity (the reduction to Go's access
+granularity is an explicit open obligation, not a theorem). This
+paragraph replaced the 2026-09-04 consumer-interface pointer with
+[USER] approval 2026-09-16 («approved to change the CLAUDE.md file»).
 
 - The semantics is **the weakest machine Go permits, all latitude
   included**. Differential testing is the lower bound (observed ∈
