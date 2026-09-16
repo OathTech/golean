@@ -177,10 +177,11 @@ fixture family and its 52 sites are not purely mechanical, or if `step_preserves
 - **D2 `ProgramCtx` shape.** (a) `abbrev ProgramCtx := Program` (zero duplication; the wire record IS the context). (b) `structure
   ProgramCtx where program : Program` with projections — the snapshot's shape; later context facts land without touching the wire
   record. **[AGENT] recommends (b)**. PENDING [USER].
-- **D3 The `Boolean*`/`Recovery*`/`Interface.lean` family** (56 modules, 8,197 lines, 52 `SameContext` sites; the 09-11 dispositions
-  set aside their EXPANSION, not the modules). (a) Migrate mechanically inside B7 — the fail-closed default: nothing leaves the build
-  silently; the snapshot's migration is the map. (b) Park the family on an archive branch BEFORE B7 (the [USER]'s scope decision;
-  ~8k lines fewer to migrate). **[AGENT] recommends (a)**; the +1 session rides on this. PENDING [USER].
+- **D3 The `Boolean*`/`Recovery*`/`Interface.lean` family** — **RULED [USER] 2026-09-16: (b) PARK**, via the reasoning-repository path
+  (record: `docs/2026-08-31_qrow-rulings.md`, «The typed-profile family ruling record (2026-09-16)»): deleted from main by a
+  separate parking lane BEFORE B7 starts, preserved at tag `typed-profiles/last-main-2026-09-16` / branch
+  `park/typed-profiles-2026-09-16`, future home the reasoning repo under `deps/`. Consequence here: S5 shrinks to `Tests/**`
+  and the fixtures; the "+1 session" of §7 disappears; `SameContext` (52 sites) leaves with the family.
 - **D4 The pool's per-thread state.** (a) Stays `MultiConfig.threads`/`.cur` beside `shared : Store` (the snapshot's shape too): one
   `Store` type keeps the sequential-conservation transfer literal. (b) Fold threads into the store. **[AGENT] recommends (a)**.
 - **D5 Preservation evidence.** (a) The arc's standard: `ci --diff` at zero drift + the byte-identical choice trace + the live

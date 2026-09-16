@@ -415,3 +415,36 @@ the translation-certificate obligation kept visible; the v1 note's four
 [USER] decisions RE-POSED against the corrected design (they are NOT ruled by
 this record). The implementation slices are sequenced against the C-arc
 ladder in that note — [AGENT] recommendation owed there, PENDING [USER].
+
+### The typed-profile family ruling record (2026-09-16) — B7 charter D3: park via the reasoning repository
+
+[USER] Mike, 2026-09-16, verbatim, relayed by the [AGENT] coordinator — cite as
+relayed: «We're actually working on migrating reasoning to a new repo (see the
+notes on a branch that another agent put together, and the reasoning work in
+deps/ - gitgignored). So I think the correct home for this work is in a new repo
+in deps/ called golean-reasoning or something like that. Then we can pin these
+modules to the version of golean which they depend on and park them for future
+revival. Perhaps the right solution for you is to delete, but leave a note saying
+where this code lives in the git history (or make it an explicit tag / branch)».
+
+**What was decided.** B7 charter D3 = (b) PARK: the `Boolean*`/`Recovery*`/
+`Interface.lean` family (56 modules, 8,197 lines, and its `Tests` libraries) is
+DELETED from main with an explicit note, preserved at tag
+`typed-profiles/last-main-2026-09-16` and branch `park/typed-profiles-2026-09-16`
+(both = main `62fc80731f0045c170634690bda1c26d1880f185`, the family's last main state), and its
+future home is the reasoning repository under gitignored `deps/`
+(`docs/2026-09-16_reasoning-archaeology.md` §9 — branch
+`docs/reasoning-archaeology-0916`; name provisional), pinned to the golean
+revision it depends on. Tests in the family that pin CORE behaviour are re-homed
+into core test libraries BEFORE deletion. [AGENT] note for the record: the
+archaeology survey §6 recommends keeping "admission invariants" in the semantics
+repository; the [USER] ruling above supersedes that [AGENT] recommendation for
+this family — the survey's point stands for `Step`, soundness/completeness and
+trace observations, which are NOT parked.
+
+**What follows.** A parking lane (branch off main, gated, merge on sign-off):
+inventory → re-home core-pinning tests → delete → build + `ci --diff` → note doc
+`docs/2026-09-16_typed-profiles-parked.md` + `docs/ARCHIVE.md` entry. D7 (the
+dark spikes `spikes/gate-a1`, `spikes/iris-customer`) is prepared as a SEPARATE
+commit in that lane under the same treatment, for the [USER] to accept or drop
+at the merge ask — PENDING [USER]. B7's S5 no longer migrates the family.
