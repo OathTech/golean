@@ -1,0 +1,8 @@
+ok: I1 three unordered events, B panics: exact set of 5 member(s) — leaves=7 sites=5 steps=312 maxDepth=3
+ok: I2 y + b2i(z||h()) + k(), z=false: exact set of 3 member(s) — leaves=63 sites=56 steps=5561 maxDepth=8
+ok: I2 y + b2i(z||h()) + k(), z=true: exact set of 2 member(s) — leaves=35 sites=30 steps=2498 maxDepth=6
+ok: I3 a[b[0]] += f(), f rewrites b[0] and a[1]: exact set of 2 member(s) — leaves=10 sites=8 steps=887 maxDepth=4
+ok: I4 sum(3), g printing, E1 g→rec: exact set of 1 member(s) — leaves=1000 sites=926 steps=86812 maxDepth=12
+ok: I4b sum(3), g UNORDERED vs rec: 4 output orders (rec's g's are ordered inside; g n may precede or follow the whole inner): exact set of 4 member(s) — leaves=3375 sites=3108 steps=307914 maxDepth=12
+AuditI: 6 met, 0 unmet
+EXIT=0

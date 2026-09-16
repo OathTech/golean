@@ -1,0 +1,5 @@
+ok: K2 x := a + f() via .initialization in thenB, mid-block; two sweeps: exact set of 1 member(s) — leaves=4 sites=3 steps=383 maxDepth=2
+ok: K3 the same in a loop body: fresh x per iteration: exact set of 1 member(s) — leaves=4 sites=3 steps=587 maxDepth=2
+ok: K4 guard completion cell typed int: the skip's bool store refused by name?: refused by name (type)
+AuditK: 3 met, 0 unmet
+EXIT=0

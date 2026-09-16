@@ -1,0 +1,138 @@
+import Tests.UnseqScheduler
+
+/-! [AGENT] Re-verification scratch R (fix round `29a34663`): the coordinator's
+re-run list with the EXACT recorded refusal needles
+(`docs/evidence/2026-09-16_unseq-stage-b/fix-round-refusals.txt`), plus new
+probes of the F2 dry walk and the F1 consumer check. Imports the candidate's
+own test module (which now carries the worker's a4/a5/a3/c1Graph/c1bGraph/
+r4with/k4/b4 definitions); edits nothing. -/
+
+namespace AuditR
+
+open GoLean GoCore GoCore.Machine Tests.UnseqScheduler
+
+/-! ## New F2 probes: shapes the dry walk must refuse (a header reachable through
+an address is re-read at every replay) and shapes it must accept. -/
+
+-- (P1, a struct-field slice anchor `&s.f[0]`, was dropped: the scratch had no struct type table; P2/P3 cover the `.field`/nested descent's refusal class.)
+
+-- P2: a pointer CELL `$p : *[]int` as the anchor of an index step — `(*p)[0]` frozen only as the pointer.
+def p2mut : Func := {
+  id := ⟨"p2mut"⟩, args := #[⟨"pa", pSlice⟩, ⟨"pb", pSlice⟩], results := #[intP "r"],
+  body := .seqn #[storeP "pa" (derefS "pb"), ret "r" (.intLit 1)] }
+def p2Graph : UnseqGraph := {
+  cells := [⟨"$p", pSlice⟩, intP "$rd", intP "$m", intP "$op"],
+  occs := [occ "R_p" (.eval "$p" (.var "p")),
+           occ "L" (.target "$t" (.addr (.indexAddr (.var "$p") (.intLit 0)))),
+           occ "Rd" (.load "$rd" "$t"),
+           occ "E_mut" (.invoke ["$m"] (.var "mutv") []),
+           occ "Op" (.eval "$op" (.add (.var "$rd") (.var "$m")))],
+  stores := [("$t", "$op")] }
+def p2 : Program := { funcs := #[
+  mainUnit [sliceP "a", sliceP "b", ⟨"p", pSlice⟩, ⟨"mutv", fnTy [pSlice, pSlice] [.int]⟩]
+    (makeSlice "a" [10, 20] ++ makeSlice "b" [100, 200] ++
+     [.assign (.var "p") (.ref "a"), .assign (.var "mutv") (clos "p2mut" ["a", "b"]),
+      .unseq p2Graph (println [str "a", .indexGet (.var "a") (.intLit 0)])]),
+  p2mut] }
+
+-- P3: `[][]int` — a FROZEN outer header, chain [.index, .index]: the inner header
+-- cell is re-read at each replay (`aa[0] = other` could rebind it) → must refuse.
+def p3Graph : UnseqGraph := {
+  cells := [⟨"$hdr", .slice (.slice .int)⟩, intP "$rd", intP "$one", intP "$op"],
+  occs := [occ "R_aa" (.eval "$hdr" (.var "aa")),
+           occ "L" (.target "$t" (.addr (.indexAddr (.indexAddr (.var "$hdr") (.intLit 0)) (.intLit 0)))),
+           occ "Rd" (.load "$rd" "$t"),
+           occ "K" (.eval "$one" (.intLit 1)),
+           occ "Op" (.eval "$op" (.add (.var "$rd") (.var "$one")))],
+  stores := [("$t", "$op")] }
+def p3 : Program := { funcs := #[
+  mainUnit [⟨"aa", .slice (.slice .int)⟩, sliceP "inner"]
+    (makeSlice "inner" [5] ++
+     [.makeSlice (.var "aa") (.slice .int) (.intLit 1) none,
+      .assign (.addr (.indexAddr (.var "aa") (.intLit 0))) (.var "inner"),
+      .unseq p3Graph (println [str "inner0", .indexGet (.var "inner") (.intLit 0)])])] }
+
+-- P4: the variable holds a NIL slice at plan time, `&a[0]` anchor; `mut` rebinds it before the load.
+def p4mut : Func := {
+  id := ⟨"p4mut"⟩, args := #[⟨"pa", pSlice⟩, ⟨"pb", pSlice⟩], results := #[intP "r"],
+  body := .seqn #[storeP "pa" (derefS "pb"), ret "r" (.intLit 1)] }
+def p4Graph : UnseqGraph := {
+  cells := [intP "$rd", intP "$m", intP "$op"],
+  occs := [occ "L" (.target "$t" (.addr (.indexAddr (.ref "a") (.intLit 0)))),
+           occ "Rd" (.load "$rd" "$t"),
+           occ "E_mut" (.invoke ["$m"] (.var "mutv") []),
+           occ "Op" (.eval "$op" (.add (.var "$rd") (.var "$m")))],
+  stores := [("$t", "$op")] }
+def p4 : Program := { funcs := #[
+  mainUnit [sliceP "a", sliceP "b", ⟨"mutv", fnTy [pSlice, pSlice] [.int]⟩]
+    (makeSlice "b" [100, 200] ++
+     [.assign (.var "a") (.nil (some (.slice .int))), .assign (.var "mutv") (clos "p4mut" ["a", "b"]),
+      .unseq p4Graph (println [str "a0", .indexGet (.var "a") (.intLit 0)])]),
+  p4mut] }
+
+-- P5: a plain-variable store target `.target "$t" (.var "a")` for a SLICE variable
+-- (the address IS the identity of the variable itself): must be ACCEPTED.
+def p5Graph : UnseqGraph := {
+  cells := [sliceP "$b"],
+  occs := [occ "R_b" (.eval "$b" (.var "b")), occ "T" (.target "$t" (.var "a"))],
+  stores := [("$t", "$b")] }
+def p5 : Program := { funcs := #[
+  mainUnit [sliceP "a", sliceP "b"]
+    (makeSlice "a" [1] ++ makeSlice "b" [7] ++
+     [.unseq p5Graph (println [str "a0", .indexGet (.var "a") (.intLit 0)])])] }
+
+/-! ## New F1 probes -/
+
+-- Q1: a NESTED `unseq` inside `thenB` whose own cell is named like the outer's
+-- skipped producer's cell: does `unproducedConsumer?` over-refuse (fail-closed) ?
+def q1Inner : UnseqGraph := { cells := [intP "$h"], occs := [occ "K" (.eval "$h" (.intLit 5))] }
+def q1 : Program := { funcs := #[
+  mainUnit [boolP "z", ⟨"hv", fnTy [] [.int]⟩]
+    [.assign (.var "z") (.boolLit true), .assign (.var "hv") (clos "a4h" []),
+     .unseq a5Graph (.seqn #[.unseq q1Inner (println [str "inner h", .var "$h"])])],
+  a4h] }
+
+-- Q2: `thenB` mentions the skipped producer's cell only as an ASSIGNMENT TARGET
+-- (a write, not a read): refused too (the walk counts assignee names) — recorded.
+def q2 : Program := { funcs := #[
+  mainUnit [boolP "z", ⟨"hv", fnTy [] [.int]⟩]
+    [.assign (.var "z") (.boolLit true), .assign (.var "hv") (clos "a4h" []),
+     .unseq a5Graph (.seqn #[.assign (.var "$h") (.intLit 9), println [str "h", .var "$h"]])],
+  a4h] }
+
+def main (_args : List String) : IO Unit := do
+  let f1store := "the phase-2 store into '$t' reads binder '$h', which was not produced — its producer 'E_h' was SKIPPED (confined to a disabled region); the completion binder is the only join"
+  let f1then := "the completion statement reads binder '$h', which was not produced — its producer 'E_h' was SKIPPED (confined to a disabled region); the completion binder is the only join"
+  let f2 := "target plan indexes a SLICE VARIABLE through its address"
+  let f2b := "freeze the header VALUE through a binder"
+  let f3 := "binder 'a' is not a reserved `$` slot name"
+  let n3 := "completion '$cor' is a cell of type"
+  let checks : List (IO Bool) := [
+    -- the coordinator's list, exact needles
+    expectRefusal "A4 z=true: F1 store text" (a4 true) "main" f1store,
+    expectSet "A4 z=false control" (a4 false) "main" [okOut "h ran\nout 42\n"],
+    expectRefusal "A5 z=true: F1 thenB text" (a5 true (println [str "h", .var "$h"])) "main" f1then,
+    expectSet "A5 z=false control" (a5 false (println [str "h", .var "$h"])) "main" [okOut "h ran\nh 42\n"],
+    expectSet "A5 `$cor` join variant (z=true) still prints `c true`" (a5 true (println [str "c", .var "$cor"])) "main" [okOut "c true\n"],
+    expectRefusal "A3: unchanged machine refusal" a3 "main" "value-depends on '$h', confined to a skipped region",
+    expectRefusal "B4: F3 text" b4 "main" f3,
+    expectRefusal "C1: F2 text (head)" (r4with c1Graph) "main" f2,
+    expectRefusal "C1: F2 text (tail)" (r4with c1Graph) "main" f2b,
+    expectSet "C1b: R4's exact set" (r4with c1bGraph) "main" [okOut "old 11 20\na 100 200\n", okOut "old 10 20\na 101 200\n"],
+    expectRefusal "K4: N3 text" (k4 .bool .int) "main" n3,
+    -- new F2 probes
+    expectRefusal "P2 pointer CELL `$p : *[]int` as the anchor of an index step: refused" p2 "main" f2,
+    expectRefusal "P3 [][]int, frozen outer header, chain [.index,.index]: refused (inner header re-read)" p3 "main" f2,
+    expectRefusal "P4 variable holding a NIL slice at plan time, `&a[0]`: refused (nil slice is `.slice {base := none}`)" p4 "main" f2,
+    expectSet "P5 plain slice-variable store target `.var a`: accepted (the variable's own identity)" p5 "main" [okOut "a0 7\n"],
+    -- new F1 probes
+    expectRefusal "Q1 nested unseq in thenB reusing the skipped producer's cell NAME: over-refused (fail-closed)" q1 "main" f1then,
+    expectRefusal "Q2 thenB WRITES the skipped producer's cell (assignee mention): refused" q2 "main" f1then]
+  let mut failuresN := 0
+  for c in checks do
+    if !(← c) then failuresN := failuresN + 1
+  IO.println s!"AuditR: {checks.length - failuresN} met, {failuresN} unmet"
+
+end AuditR
+
+#eval AuditR.main []

@@ -1,0 +1,19 @@
+ok: A4 z=true: F1 store text: refused by name (the phase-2 store into '$t' reads binder '$h', which was not produced — its producer 'E_h' was SKIPPED (confined to a disabled region); the completion binder is the only join)
+ok: A4 z=false control: exact set of 1 member(s) — leaves=10 sites=8 steps=446 maxDepth=4
+ok: A5 z=true: F1 thenB text: refused by name (the completion statement reads binder '$h', which was not produced — its producer 'E_h' was SKIPPED (confined to a disabled region); the completion binder is the only join)
+ok: A5 z=false control: exact set of 1 member(s) — leaves=2 sites=1 steps=109 maxDepth=1
+ok: A5 `$cor` join variant (z=true) still prints `c true`: exact set of 1 member(s) — leaves=1 sites=0 steps=36 maxDepth=0
+ok: A3: unchanged machine refusal: refused by name (value-depends on '$h', confined to a skipped region)
+ok: B4: F3 text: refused by name (binder 'a' is not a reserved `$` slot name)
+ok: C1: F2 text (head): refused by name (target plan indexes a SLICE VARIABLE through its address)
+ok: C1: F2 text (tail): refused by name (freeze the header VALUE through a binder)
+ok: C1b: R4's exact set: exact set of 2 member(s) — leaves=3 sites=2 steps=334 maxDepth=2
+ok: K4: N3 text: refused by name (completion '$cor' is a cell of type)
+ok: P2 pointer CELL `$p : *[]int` as the anchor of an index step: refused: refused by name (target plan indexes a SLICE VARIABLE through its address)
+ok: P3 [][]int, frozen outer header, chain [.index,.index]: refused (inner header re-read): refused by name (target plan indexes a SLICE VARIABLE through its address)
+ok: P4 variable holding a NIL slice at plan time, `&a[0]`: refused (nil slice is `.slice {base := none}`): refused by name (target plan indexes a SLICE VARIABLE through its address)
+ok: P5 plain slice-variable store target `.var a`: accepted (the variable's own identity): exact set of 1 member(s) — leaves=2 sites=1 steps=77 maxDepth=1
+ok: Q1 nested unseq in thenB reusing the skipped producer's cell NAME: over-refused (fail-closed): refused by name (the completion statement reads binder '$h', which was not produced — its producer 'E_h' was SKIPPED (confined to a disabled region); the completion binder is the only join)
+ok: Q2 thenB WRITES the skipped producer's cell (assignee mention): refused: refused by name (the completion statement reads binder '$h', which was not produced — its producer 'E_h' was SKIPPED (confined to a disabled region); the completion binder is the only join)
+AuditR: 17 met, 0 unmet
+EXIT=0

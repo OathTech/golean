@@ -1,0 +1,21 @@
+# fix round 29a34663: check-unseq-scheduler reproduced in the audit worktree (oleans plain-copied from the candidate worktree at 29a34663; lake build EXIT=0, 206 jobs)
+ok lines: 64
+Unseq scheduler audit: 24 required theorems; 14444 declarations across all imported local origins; classical trio only
+Unseq scheduler gate: PASS
+EXIT=0
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 1:12.82
+	Maximum resident set size (kbytes): 1684076
+
+# E13 rows, pre-fix binary (44c8ed60…) vs fix-round binary (0dec9436…), same wire and args as before
+indexMiddle	IDENTICAL	EXIT=0
+assertMiddle	IDENTICAL	EXIT=0
+twoIndexLeftCall	IDENTICAL	EXIT=0
+indexLeftCallArgPanics	IDENTICAL	EXIT=0
+indexLeftCall	IDENTICAL	EXIT=0
+assertVsMutatingCall	IDENTICAL	EXIT=1
+
+# tracked enumerate.py at 29a34663: EXIT=0; outcomes.txt byte-identical to a fresh run; +1 line vs ba8767da
+
+# positional-tag renames in MachineSound/StateWf between ba8767da and 29a34663: 0
+# escape hatches in the fix round's added GoLean/Tests lines: none
+# git diff --stat 920a11c6..29a34663: 9 files, all under docs/ (records-only)

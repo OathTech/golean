@@ -1,5 +1,7 @@
 # Adversarial audit — Stage B `unseq` scheduler (candidate `core/unseq-scheduler-b-0916` @ `ba8767da`)
 
+**VERDICT (first pass, candidate `ba8767da`): FIX-FIRST** — superseded by the re-verification section at the end (fix round `29a34663`: MERGE-CLEAN). Original text follows.
+
 **VERDICT: FIX-FIRST** — no wrong answer for any Go program, no unsound proof, no coherence gap; but three FAIL-OPEN paths in the trusted core (`GoLean/GoCore/`) where a hand-built graph that violates the design's own §1/§3.4 contract is executed silently instead of refused by name (F1 silent zero from a SKIPPED producer at completion; F2 a non-frozen slice-variable anchor reproduces the reference's FORBIDDEN hybrid; F3 a non-`$` cell shadows a source local). Each fix is small and merge-invariant-shaped (a rule premise + the arm + its lemma). Whether F1/F2 may instead be RECORDED as Stage C decoder obligations is the user's call (PENDING [USER], §F1/§F2 dispositions).
 
 [AGENT] Auditor, branch `review/unseq-stage-b-0916`, worktree `.claude/worktrees/audit-unseq-stage-b`, checked out at the candidate tip `ba8767da` (main `32398203` + `306fb3ef` core, `c770c59c` tests/lemmas/wiring, `ba8767da` records). Ordered by [USER] Mike 2026-09-16, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «Great, send off an auditor as proposed». Nothing in the candidate or on `main` was edited; scratch lives under `.tmp/audit/` (untracked) and its small sources/outputs are tracked under `docs/evidence/2026-09-16_unseq-stage-b-audit/` (88 KiB, within caps). Every lake/lean command ran through `scripts/capped`; every result below is judged by its CAPTURED exit code.
@@ -144,3 +146,61 @@ and the row's own reason is `certification: STALE certification: changed depende
 - The race footprint's completeness for the new steps beyond a read of `unseqRunAccesses` (no racy `unseq` program was built; the completion step's reads of the binder cells are unreported, which is harmless because cells are scheduler-private).
 - Any Go-level oracle draw: Stage B has no lowering; nothing here is a differential claim.
 - `lean_verify`/LSP tooling was not used; `#print axioms` on a scratch file and the candidate's own post-import audit were.
+
+
+## Re-verification (fix round `29a34663`) — 2026-09-16
+
+**REVISED VERDICT: MERGE-CLEAN** — F1, F2, F3 and N3 are named machine refusals at the fix-round tip; the coherence of the changed rule and the new refusals holds in both directions with no positional tag moved; every graph of the first audit reproduces (the (i) twelve and the (j) results byte-identical; exactly the four fail-open lines and K4 flipped to refusals); records R1–R6 are addressed; the gate claim is confirmed from the tracked tail. What remains is recorded, not open: N2 (emitter-side, owed), the owed multi-step composition, 5a for the train. Nothing here is the user's to ratify beyond what the handoff §6 already lists as PENDING [USER].
+
+[AGENT] Auditor, same branch. Requested by the [AGENT] coordinator after the fix round landed on `core/unseq-scheduler-b-0916` at `29a34663` (runtime `920a11c6`, records `29a34663`, both over the audited tip `ba8767da`). Bootstrap: `rm -rf` of my OWN previously copied `.lake` only, plain copy of the candidate worktree's `.lake` (candidate HEAD `29a34663`, 0 dirty tracked paths; `CP_EXIT=0`), `git checkout --detach 29a34663` in this worktree (`CHECKOUT_EXIT=0`), `scripts/capped lake build` EXIT=0 (206 jobs); the report was written after re-checking-out the branch. `git diff --stat 920a11c6..29a34663`: 9 files, all under `docs/` — the records commit carries no runtime change. Evidence: `docs/evidence/2026-09-16_unseq-stage-b-audit/fixround/`.
+
+### The coordinator's re-run list (each against the fix-round oleans; needles = the literal texts of `fix-round-refusals.txt`)
+
+| item | expected | observed (`AuditR.out.txt`) | result |
+|---|---|---|---|
+| A4 z=true | F1 named refusal | «the phase-2 store into '$t' reads binder '$h', which was not produced — its producer 'E_h' was SKIPPED (confined to a disabled region); the completion binder is the only join» | pass |
+| A4 z=false (control) | `h ran / out 42` | exact set of 1 | pass |
+| A5 z=true | F1 named refusal | «the completion statement reads binder '$h', which was not produced — its producer 'E_h' was SKIPPED …» | pass |
+| A5 z=false (control) | `h ran / h 42` | exact set of 1 | pass |
+| A5 `$cor` join variant, z=true | `c true` | exact set of 1: `c true` | pass |
+| A3 | unchanged machine refusal | «value-depends on '$h', confined to a skipped region» | pass |
+| B4 | F3 named refusal | «binder 'a' is not a reserved `$` slot name …» | pass |
+| C1 | F2 named refusal | «target plan indexes a SLICE VARIABLE through its address … freeze the header VALUE through a binder» (both halves matched) | pass |
+| C1b | R4's exact set | {`old 11 20 / a 100 200`, `old 10 20 / a 101 200`} | pass |
+| K4 | N3 named refusal at ENTER | «completion '$cor' is a cell of type …, not a bool cell» | pass |
+| K1 | unchanged: accepted (N2 owed) | `AuditJ` re-run byte-identical: 2 members (`reached`, the probe's own panic) | pass |
+| `enum_audit.py` vs the amended `enumerate.py` | A3 refuses; A1/I1–I4b unchanged | A3: «REFUSED by name: X: value dependency on 'E_h', confined to a skipped region (no valid join)»; every other line byte-identical to the first run; `RESULT: PASS`, EXIT=0 | pass |
+| tracked `enumerate.py` | EXIT=0; `outcomes.txt` +1 line | EXIT=0; fresh output byte-identical to the tracked `outcomes.txt`; `git diff --stat` +1 line | pass |
+
+### The verbatim re-run of the first audit's scratch (what flipped, and only that)
+
+`AuditA.lean`, `AuditI.lean`, `AuditJ.lean`, `AuditK.lean` re-run UNCHANGED against the fix round (`*.fixround.out.txt`) and diffed against their `ba8767da` outputs: `AuditI` (the (i) twelve graphs) and `AuditJ` (J1/J2 singleton and one-pick consumption, K1, A6, A8) are BYTE-IDENTICAL; in `AuditA` exactly five lines changed — A4, A5 (F1), B4, B5 (F3: the self-dependency B5 is now caught by the `$` reservation before the readiness check), C1 (F2) — every other line (A1, A3, B1, B3a–d, C1b, C2, C3, C4, J2 ×3) unchanged; in `AuditK` exactly K4 changed (N3). Observation: for the width-2 graphs (A4, C1) the refusal surfaces through `explore`'s alias-guard probe path («the probed member's run errored — stuck: unseq: …»); the machine's text is inside it and the enumeration fails closed, as required.
+
+### Checks (1)–(6)
+
+1. **Coherence of the changed rule and the new refusals.** `Step.unseqComplete` (`Machine.lean`) gains the premise `g.unproducedConsumer? st thenB = none`; `stepUnseqNext`'s case (i) (`StepFn.lean`) matches on the same function BEFORE `unseqStorePlan` and throws `.stuck msg` on `some`. Arm ⇒ rule: `stepUnseqNext_sound` splits on the match and applies `Step.unseqComplete hdep hall hprod hplan`; rule ⇒ arm: `step_complete`/`step_complete_any_wf_aux` rewrite with `hprod`. The F2 refusal lives INSIDE `unseqTargetPlan` (after `completeTargetRef`), which is the rule premise `unseqTargetPlan s env lhs = .ok r` of `unseqRunTarget` and the arm's call — one function, both directions for free; `unseqTargetPlan_locSup` gains one `split` (a refusal yields no step). `stepUnseqNext_consumption_some` needed no change: its `allSettled` branch is refuted by `2 ≤ |ready|` before the inner match. F3/N3 live in `wellFormed?`, the premise of `unseqEnter` — refusals only. Build green at `29a34663`.
+2. **Positional tags.** `git diff ba8767da..29a34663 -- MachineSound.lean StateWf.lean | grep -c '^[-+]\s*case case[0-9]+'` = 0; the new `split`s are inside `stepUnseqNext_sound` and `stepUnseqNext_consumption_none`, as the worker says.
+3. **T4.** `unseq_complete_settled` (`UnseqSound.lean`) states the conjunct `g.unproducedConsumer? st thenB = none` between `allSettled` and the store plan; the docstring is amended. The 24 exported theorem names are unchanged.
+4. **(i) and (j) unchanged** — the byte-identical `AuditI`/`AuditJ` diffs above.
+5. **Axioms.** `#print axioms` on the 22 exported theorems: classical trio or a subset, EXIT=0 (`axioms.fixround.txt`); the candidate's own post-import audit: «24 required theorems; 14 444 declarations across all imported local origins; classical trio only» — reproduced by my `scripts/check-unseq-scheduler` run: 64 `ok` lines, 0 FAIL, EXIT=0, 1:13 wall, 1.68 GB max RSS. No `partial`/`sorry`/`axiom`/`native_decide`/`unsafe`/`implemented_by` in the fix round's added lines. `Stmt.names` is a total mutual walk with no catch-all (the `AdmissionIndices` discipline); `unseqUnfrozenAnchor?` is structural on the step list.
+6. **Gate claim.** `gate3-tail.txt` (tracked): `CI_EXIT=1 SECONDS=1176`, drift block verbatim = the single line `imported-goose/channel/google-search baseline[PASS/membership] -> now[FAIL/membership]`, reason `STALE certification: changed dependency build/files/GoLean/CLI.lean`; the `unseq scheduler (Stage B)` step `ok`; the two `FAIL`s are `certificate provenance` and `baseline diff (DRIFT — see above)`. Confirmed as claimed. Caveat, same as the lane's gates 1/2: the gate ran on `ba8767da` + 15 dirty paths BEFORE the runtime commit, so tracked evidence cannot show that tree = `920a11c6`'s (a records limitation of the dirty-tree gate pattern, not a defect). Not re-run by me: the structural argument (no wire, no decoder; the fix only ADDS refusals on `Stmt.unseq` paths) plus the E13 comparison below stand in.
+
+### New probes of the fix round (all as predicted; `AuditR.out.txt`)
+
+| probe | prediction | observed |
+|---|---|---|
+| P2 pointer cell `$p : *[]int` as the anchor of an index step (`(*p)[0]`) | refused (the pointee header is re-read at replay) | F2 text |
+| P3 `[][]int`, FROZEN outer header, chain `[.index, .index]` | refused (the inner header cell is re-read) | F2 text — the text says «SLICE VARIABLE» though the re-read cell is a slice ELEMENT; a wording nit only |
+| P4 the variable holds a NIL slice at plan time, `&a[0]`, `mut` rebinds it before the load | refused (a nil slice is `.slice {base := none}`, `Ops.lean:1571`) | F2 text |
+| P5 a plain slice-VARIABLE store target `.target "$t" (.var "a")` | accepted (the variable's own identity, no index step) | exact set `a0 7` |
+| Q1 a NESTED `unseq` in `thenB` reusing the skipped producer's cell NAME | over-refused (fail-closed; nested `unseq` is the decoder's refusal anyway) | F1 `thenB` text |
+| Q2 `thenB` only WRITES the skipped producer's cell (assignee mention) | refused (the walk counts assignee names) | F1 `thenB` text |
+| E13 six rows, pre-fix binary vs the fix-round binary (`0dec9436…`) | byte-identical | byte-identical, same exit codes (`fixround-reproductions.txt`) |
+
+### Records (fix round)
+
+Handoff §9: F1–F3/N3 texts match the machine's (verified above); §9.1 records the coordinator's [AGENT] disposition that the charter answers my PENDING [USER] alternative (fix in the machine) — no user ruling is claimed, correctly; R1 reworded as inversion lemmas; R3 «TEN» corrected in the handoff and evidence README; R4 addendum in design §3.7 and the inventory row; R5 K2/K3 tests present (64 checks); R6 the tail includes the drift block; N2 recorded as OWED with the reason (a second total `Stmt` traversal). Two nits: the F2 refusal text says «SLICE VARIABLE» for every slice-valued cell reached through an address (P2/P3 are a pointee and an element); the `blame` branches «is DONE without producing it» / «is still ACTIVE» in `unproducedConsumer?` are unreachable (a DONE producer produces; `allSettled` excludes ACTIVE) — harmless, total.
+
+### What I did NOT check (fix round)
+
+The full `ci --diff` at `29a34663` (relied on the tracked `gate3-tail.txt` + the structural argument + E13 identity); `ci --slow`; a struct-field slice anchor `&s.f[0]` (my scratch had no struct type table; P2/P3 cover the `.field`/nested descent's refusal class by the same code path); the dedup engine's run-time refusal.
