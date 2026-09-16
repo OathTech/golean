@@ -383,3 +383,35 @@ Still OWED after this ruling: the `canonicalSlot0` row string in
 lane note §7 R2). Not ruled here: D4 (ratified by L4's own sign-off,
 `docs/2026-09-07_land-observer-terminal.md` §3), BUG-107's three
 options (open, L4), D1/L5 (held).
+
+### The evaluation-order mechanism ruling record (2026-09-16) — the tracked record behind «the Cerberus model is the correct one»
+
+[USER] Mike, 2026-09-16, verbatim, relayed by the [AGENT] coordinator — cite
+as relayed: «Okay, so this feels like sort of a profound decision, but I think
+the Cerberus model is the correct one (they did a lot of work thinking through
+such issues). Can you go ahead with the next steps?»
+
+**What was decided.** The evaluation-order model's MECHANISM is an explicit
+unsequenced construct in the CORE, in the shape of Cerberus Core's `unseq`:
+a statement's unordered evaluation occurrences are listed with their
+dependency edges in the wire, and the MACHINE chooses which ready occurrence
+runs next by a tape pick; lvalue identity is bound once and shared by the
+read and the store; temporaries live per activation. The endpoint
+probe-and-use scheme of the v1 design note (`design/eval-order-model-0915`
+@ `90dc66f0`, NOT merged; cite by SHA) is retired as the mechanism; its §1
+relation and doctrine rule (spec-ordered → structural ANF in the frontend;
+spec-unordered with an observable → a machine tape choice; the rest refuses
+by name) stand. Ground: the Codex review
+`docs/2026-09-15_evaluation-order-model-review.md` (F1–F9, verdict «revise
+before implementing»), whose findings the coordinator confirmed against the
+note's §2 ([AGENT], 2026-09-15).
+
+**What follows.** A v2 design note (lane `design/eval-order-model-v2-0916`)
+following the review's revision sequence: dependency graph over evaluation
+occurrences with guarded regions; the bounded reference enumerator first; the
+core construct, binder lifetime, shared target identity, candidate
+multiplicity and tape contract; the census re-done as a residual-node count;
+the translation-certificate obligation kept visible; the v1 note's four
+[USER] decisions RE-POSED against the corrected design (they are NOT ruled by
+this record). The implementation slices are sequenced against the C-arc
+ladder in that note — [AGENT] recommendation owed there, PENDING [USER].

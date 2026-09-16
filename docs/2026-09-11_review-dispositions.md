@@ -75,6 +75,11 @@ plan. The roadmap is NOT adopted; the findings are dispositioned below.
    reference». → No pruning.
 4. **The sequence** — «Agree on the sequence: make sure this is captured
    properly». → §4.
+5. **Evaluation-order mechanism** (2026-09-16) — «I think the Cerberus model is the
+   correct one». → an explicit `unseq` construct in the core; the v1 note's
+   endpoint scheme retired; record and consequences in
+   `docs/2026-08-31_qrow-rulings.md`, «The evaluation-order mechanism ruling
+   record (2026-09-16)»; v2 lane `design/eval-order-model-v2-0916`.
 
 ## 4. The agreed sequence ([AGENT] proposed, [USER] agreed 2026-09-11)
 
