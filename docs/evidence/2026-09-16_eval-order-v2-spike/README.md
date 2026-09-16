@@ -86,4 +86,28 @@ Every set is exactly the one the reviews state; every gc draw is a member
 (x3e's draw is the refusal). The enumerator is the reference the v2.1
 note's §2 describes; its fragment is the note's certificate fragment (§7).
 Delete or supersede with the generator of the note's §6 — nothing cites
-these bytes beyond the v2.1 note.
+these bytes beyond the v2.1 note and the Stage B tests/audit below.
+
+## Amendment (2026-09-16, the Stage B audit's R2 — fix round, [AGENT])
+
+The Stage B adversarial audit (`docs/2026-09-16_unseq-stage-b-audit.md`,
+R2) found this enumerator UNDER-REFUSING relative to §1 G: the
+invalid-join check ran over the `pending` set only, so a value use
+confined to a LATER-skipped region of a binder confined to an
+earlier-skipped region (the audit's A3: both `||` regions skipped, `X` in
+region 2 value-depends on `E_h` in region 1) COMPLETED (`sink true true`)
+while the machine (`UnseqGraph.skippedDep?`, which fires on the ACTIVE
+occurrence the moment its producer is skipped) refused it by name. Since
+this file is Stage C's ground truth for check (b), the check now walks
+EVERY unsettled occurrence (`flatten(occs)` minus done/skipped) — §1 G is
+STATIC — and the witness `R2/A3` is added (a `refuse` with the same
+needle as `R2a INVALID`). `python3 enumerate.py` → `RESULT: PASS (0
+mismatch(es))`, EXIT=0; `outcomes.txt` regenerated: ONE line added (the
+`R2/A3 … refused by name` line), every other line byte-identical to the
+previous record (no member set, canonical draw or trajectory count
+moved). `gc-draws.txt` unchanged (A3 is not a Go program here; the
+machine-side regression is `Tests/UnseqScheduler.lean`'s A3 check).
+
+| graph | relation set (members) | forbidden / refused, shown | gc's draw |
+|---|---|---|---|
+| R2/A3 use confined to a LATER-skipped region (X in region 2 ← E_h in region 1; both skipped) | — | refused by name: «X: value dependency on 'E_h', confined to a skipped region (no valid join)» (machine: `skippedDep?`, same text class) | — |

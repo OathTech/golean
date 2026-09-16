@@ -99,7 +99,15 @@ def enumerate_graph(occs, init, phase2):
             except Panic as p:
                 record('panic', str(p), st2, trace, canon)
             return
-        for o in pending:
+        # §1 G is STATIC: the invalid-join check runs over EVERY unsettled occurrence —
+        # pending, or inside a region not yet entered — as soon as the producer is
+        # skipped (the machine's `skippedDep?` fires on the ACTIVE occurrence at that
+        # moment). Before the Stage B audit (R2, `docs/2026-09-16_unseq-stage-b-audit.md`,
+        # 2026-09-16) the loop ran over `pending` only, so a use confined to a LATER-
+        # skipped region completed silently (witness R2/A3 below); the machine refused it.
+        for o in flatten(occs):
+            if o.name in done or o.name in skipped:
+                continue
             for d in o.deps:
                 if d in skipped:
                     raise Malformed(f"{o.name}: value dependency on '{d}', confined to a skipped region (no valid join)")
@@ -339,6 +347,21 @@ def r2a(z, valid):
     else:
         refuse(f'R2a INVALID join: k depends on the skipped h, z={z}', run, 'confined to a skipped region')
 
+# ---------------------------------------------------------------- R2/A3  a use confined to a LATER-skipped region, of a binder confined to an earlier-skipped one
+# (Stage B audit R2, 2026-09-16: before the check above walked every unsettled occurrence, this
+# completed as `sink true true` — X was never pending; the machine refused it. Both refuse now.)
+def r2a3():
+    def h(st, v): println(st, 'guard h'); return True
+    r1 = [Occ('E_h', run=h), Occ('C1', deps=['E_h'], run=lambda st, v: v['E_h'])]
+    r2 = [Occ('X', deps=['E_h'], run=lambda st, v: v['E_h']), Occ('C2', deps=['X'], run=lambda st, v: v['X'])]
+    occs = [Occ('R_z1', run=lambda st, v: st['v']['z1']),
+            Occ('G1', deps=['R_z1'], guard='R_z1', when=False, region=r1, out='C1'),
+            Occ('R_z2', after=['C1'], run=lambda st, v: st['v']['z2']),
+            Occ('G2', deps=['R_z2'], guard='R_z2', when=False, region=r2, out='C2'),
+            Occ('E_sink', deps=['C1', 'C2'], run=lambda st, v: println(st, 'sink', v['C1'], v['C2']))]
+    refuse('R2/A3 INVALID join confined to a LATER-skipped region: X (region G2) depends on the skipped h (region G1)',
+           lambda: enumerate_graph(occs, state(v={'z1': True, 'z2': True}), lambda st, v: None), 'confined to a skipped region')
+
 # ---------------------------------------------------------------- R2b  sink(left || b, change())   (the ordered || is anchored at COMPLETION)
 def r2b(anchor):
     def change(st, v): st['v']['b'] = True; return 0
@@ -420,7 +443,7 @@ if __name__ == '__main__':
               lambda: x3([5], 'buffered', ()),
               lambda: x3([], 'EMPTY channel', ('receive would block: outside the terminating domain',)),
               lambda: r1(False), lambda: r1(True),
-              lambda: r2a(True, True), lambda: r2a(False, True), lambda: r2a(True, False),
+              lambda: r2a(True, True), lambda: r2a(False, True), lambda: r2a(True, False), r2a3,
               lambda: r2b('C_or'), lambda: r2b('G'),
               lambda: r2c(True), lambda: r2c(False),
               r4, lambda: r6(True), lambda: r6(False), controls):

@@ -46,6 +46,7 @@ R2a sink(z||h(), k()), z=False: outcome set = [('guard h', 'guard k', 'guard res
    trajectories per outcome: [(('guard h', 'guard k', 'guard result true 7'), 1)]
    canonical (slot 0): R_z G E_h C_or E_k E_sink -> ('guard h', 'guard k', 'guard result true 7')
 R2a INVALID join: k depends on the skipped h, z=True: refused by name: E_k: value dependency on 'E_h', confined to a skipped region (no valid join)
+R2/A3 INVALID join confined to a LATER-skipped region: X (region G2) depends on the skipped h (region G1): refused by name: X: value dependency on 'E_h', confined to a skipped region (no valid join)
 R2b sink(left||b, change()), E1 anchored at COMPLETION C_or: outcome set = [('logical false 0',)]
    trajectories per outcome: [(('logical false 0',), 1)]
    canonical (slot 0): R_left G R_b C_or E_change E_sink -> ('logical false 0',)

@@ -218,6 +218,20 @@ The file-by-file anchor list of v2 @ `9a8ed328` §3 «Where it lands» (Syntax `
 MIGRATION BOUNDARY per WHOLE sweep: old lowering or graph lowering, never a mixture that evaluates an operand twice or
 drops an edge; no fixture-name dispatch. One writer for the core while its types and proofs change.
 
+**Addendum (2026-09-16, [AGENT] fix-round worker, per the Stage B audit's R4 — `docs/2026-09-16_unseq-stage-b-audit.md`;
+records only): the rule names in this subsection are SUPERSEDED by the landed candidate (`core/unseq-scheduler-b-0916`).**
+The `Step` relation carries TEN `unseq` rules — `unseqEnter`, `unseqPick`, `unseqComplete`, `unseqRunEval`,
+`unseqRunInvoke`, `unseqRunLoad`, `unseqRunTarget`, `unseqRunGuard`, `unseqValue`, `unseqStmtDone` (`GoLean/GoCore/
+Machine.lean`, the block after `probeRaise`). `unseqTargetDone` does not exist: a target plan is ONE step
+(`unseqRunTarget` resolves the frozen atoms and marks the occurrence DONE in the same transition). `unseqMalformed` does
+not exist BY DESIGN: a refusal is not a step — scheduler case (iii) (active work, nothing ready), the invalid join
+(`UnseqGraph.skippedDep?`), the completion's production check (`UnseqGraph.unproducedConsumer?`, fix round F1), the
+frozen-anchor check (`unseqUnfrozenPlan?`, fix round F2) and the static shape check (`UnseqGraph.wellFormed?`, incl. the
+`$` reservation and the bool-cell checks of fix round F3/N3) are `stepFn`'s NAMED refusals with no `Step` rule, so
+`stepFn_sound`/`step_complete`/`step_complete_any_wf` are stated over exactly these ten. (`unseqProbe`, the retiring
+E13 probe's rule, is the eleventh `unseq*`-named constructor and belongs to the legacy lowering, not to this construct.)
+The lane handoff `docs/2026-09-16_unseq-stage-b-handoff.md` §2/§9 mirrors this mapping.
+
 ## 4. Reviews dispositioned
 
 | first review | v2.1 | second review's disposition of the first |

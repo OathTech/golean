@@ -1,0 +1,28 @@
+# Fix round (2026-09-16) — scripts/capped scripts/check-unseq-scheduler (GOLEAN_MEM_MAX=32G), tree = ba8767da + the fix round's edits (before the runtime commit)
+# UNSEQ_GATE_EXIT=0 SECONDS=94; 64 checks ok, 0 FAIL (47 Stage B + 17 fix round)
+
+Build completed successfully (41 jobs).
+ok: R4 old := a; a[0] += mut() (mut rebinds a): exact set of 2 member(s) — leaves=4 sites=3 steps=427 maxDepth=3
+ok: target: pointer redirection (frozen pointee): exact set of 2 member(s) — leaves=4 sites=3 steps=277 maxDepth=3
+ok: target: cell mutation at a stable address: exact set of 2 member(s) — leaves=4 sites=3 steps=289 maxDepth=3
+ok: target: frozen map-element plan (Stage E): refused by name (frozen map-element plan)
+ok: F1/A4 phase-2 store of a SKIPPED producer's binder (z=true): refused by name: refused by name (was not produced)
+ok: F1/A4 control (z=false): h runs, 42 stored: exact set of 1 member(s) — leaves=10 sites=8 steps=446 maxDepth=4
+ok: F1/A5 thenB reads a SKIPPED producer's cell (z=true): refused by name: refused by name (was not produced)
+ok: F1/A5 control (z=false): h runs, thenB reads 42: exact set of 1 member(s) — leaves=2 sites=1 steps=109 maxDepth=1
+ok: F1 the legitimate join: thenB reads the skipped region's COMPLETION binder (z=true): exact set of 1 member(s) — leaves=1 sites=0 steps=36 maxDepth=0
+ok: F1 the legitimate join, region enabled (z=false): exact set of 1 member(s) — leaves=2 sites=1 steps=109 maxDepth=1
+ok: A8 store through a TARGET binder from a skipped region: refused by name (pre-existing): refused by name (has not been produced)
+ok: A3 (R2) a use confined to a LATER-skipped region: refused by name: refused by name (confined to a skipped region)
+ok: F2/C1 R4 plan anchored at &a (a slice VARIABLE's address): refused by name — no hybrid: refused by name (SLICE VARIABLE)
+ok: F2/C1b R4 plan with the header READ at the plan step (.var a): the frozen R4 set: exact set of 2 member(s) — leaves=3 sites=2 steps=334 maxDepth=2
+ok: F2 an ARRAY variable's address is a stable anchor: accepted: exact set of 1 member(s) — leaves=3 sites=2 steps=212 maxDepth=2
+ok: F3/B4 a bare (non-$) cell name would shadow the source local: refused by name: refused by name (not a reserved `$` slot name)
+ok: F3 a bare (non-$) target binder: refused by name: refused by name (not a reserved `$` slot name)
+ok: N3/K4 guard completion cell typed int: refused by name at ENTER: refused by name (not a bool cell)
+ok: N3 guard test cell typed int: refused by name at ENTER: refused by name (not a bool cell)
+ok: R5/K2 x := a + f() via .initialization in thenB, mid-block, two sweeps: exact set of 1 member(s) — leaves=4 sites=3 steps=383 maxDepth=2
+ok: R5/K3 the same in a loop body: a fresh x per iteration: exact set of 1 member(s) — leaves=4 sites=3 steps=587 maxDepth=2
+Unseq scheduler (Stage B): PASS — every reference set exact, every refusal named
+Unseq scheduler audit: 24 required theorems; 14444 declarations across all imported local origins; classical trio only
+Unseq scheduler gate: PASS

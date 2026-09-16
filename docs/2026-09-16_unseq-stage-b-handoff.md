@@ -32,9 +32,10 @@ tests). Evidence: `docs/evidence/2026-09-16_unseq-stage-b/README.md`.
    (`unseqAtom`, `unseqCellLoc`, `unseqLookupTarget`, `unseqReadTarget`,
    `unseqLoad`, `unseqAtoms`, `unseqTargetPlan`, `unseqGuard`,
    `unseqStorePlan`, `unseqInvokeStmt`), `consumesUnseqNext`, the
-   `seqConsumption` arm, eleven `Step` rules (`unseqEnter`, `unseqPick`,
+   `seqConsumption` arm, TEN `Step` rules (`unseqEnter`, `unseqPick`,
    `unseqComplete`, `unseqRunEval/Invoke/Load/Target/Guard`, `unseqValue`,
-   `unseqStmtDone`) and the three `stepFn` arms (`stepUnseqEnter`,
+   `unseqStmtDone` — «eleven» in the first version of this handoff counted
+   the legacy `unseqProbe`; audit R3) and the three `stepFn` arms (`stepUnseqEnter`,
    `stepUnseqNext`, `stepUnseqValue`). `ChoiceSite.unseqNext` + its
    `canonicalSlot0` row + the census entry (`State.lean`). Coherence:
    `stepFn_sound`, `step_complete`, `step_complete_any_wf`,
@@ -49,7 +50,8 @@ tests). Evidence: `docs/evidence/2026-09-16_unseq-stage-b/README.md`.
    `Stmt.unseqProbe`/`Cont.probeK`/`ChoiceSite.unseqPanic` untouched
    (coexistence; removal is Stage E). No wire, no decoder, no baseline.
 2. `c770c59c` — **the tests, the gate step, the mechanism theorem's lemmas,
-   the census records**. `Tests/UnseqScheduler.lean` (47 checks; library
+   the census records**. `Tests/UnseqScheduler.lean` (47 checks; 64 after
+   the audit fix round, §9; library
    `UnseqSchedulerTests`, registry key `unseq-scheduler`, named `scripts/ci`
    step via `scripts/check-unseq-scheduler`, per the typed-test-gates
    landing pattern), `Tests/UnseqSchedulerAudit.lean` (24 required theorems;
@@ -78,6 +80,7 @@ tests). Evidence: `docs/evidence/2026-09-16_unseq-stage-b/README.md`.
 | frozen state readout | X3's `len(ch)` is read by a DEFERRED `println` on the panic path | a state-carrying observation | the observation projection is (output, status, panic text); the defer makes the reference's frozen state observable without a new observable |
 | unknown slot | a `$`-prefixed mention that is neither a cell nor a target binder is refused by name | treat every non-cell as an admitted source local (run-time `.stuck` at the unbound name) | the frontend reserves `$` for temps/binders; fail closed at ENTER, by name |
 | positional proof cases | the three new `stepFn` arms are TAIL CALLS to `stepUnseqEnter/Next/Value`, each proved by its own lemma (`stepFrameExit_sound`'s pattern); the shifted positional tags of `stepFn_sound` and the two consumption theorems were REMAPPED (+1 at ≥ 66, +2 at ≥ 137, +3 at ≥ 152) from a `fun_cases` probe, not guessed | inline arms (many new positional cases) | keeps the fragile tags' churn to a computed renumbering; no proof refactor bundled |
+| `Step` rule inventory (audit R4) | TEN rules (the list in §1 item 1); NO malformed rule — refusals are not steps: case (iii), `skippedDep?`, `unproducedConsumer?` (fix round F1), `unseqUnfrozenPlan?` (fix round F2) and `wellFormed?` are `stepFn`'s named refusals with no `Step` | the design §3.7's `unseqTargetDone` (a separate done rule) and `unseqMalformed` (a refusal as a step) | a target plan is ONE step (`unseqRunTarget` resolves and marks DONE together); a refusal that were a `Step` would make a malformed graph's «execution» a legal trace; the design §3.7 carries a dated addendum withdrawing the two names |
 
 ## 3. The mechanism theorem — statements, what is proved, what is owed
 
@@ -89,19 +92,34 @@ execution, the occurrences' own nondeterminism and choice consumption
 included, is some tape's `stepFn` trajectory.
 
 PROVED in Stage B (`GoLean/GoCore/UnseqSound.lean`, all audited: no sorry,
-no axiom beyond the classical trio, no native decision):
+no axiom beyond the classical trio, no native decision). WHAT THESE ARE
+(audit R1, worded honestly): T1–T6 are INVERSION LEMMAS over the rules'
+own premises — each pins what one scheduler step's shape guarantees. None
+constrains `UnseqGraph.ready` against §1's edge table: a wrong `ready`
+(one ignoring `after`, say) would leave T1–T6 provable unchanged. That
+weight is TEST-BORNE — the exact-set reference tests
+(`Tests/UnseqScheduler.lean`, every witness of `outcomes.txt` plus the
+audit's twelve graphs and this fix round's) — pending a machine-checked
+statement of «trace» (owed below); Stage C's check (b) is the other
+independent leg.
 
 - T1 `unseq_pick_ready` — a pick transition selects an element of
-  `UnseqGraph.ready` (every edge respected at the pick: value dependencies
-  produced, order prerequisites discharged, region enabled).
+  `UnseqGraph.ready` (the inversion of `unseqPick` over its own premise;
+  true BY DEFINITION of `readyAt`). That `readyAt` encodes §1's two edge
+  sorts — value dependencies produced (producer DONE), order prerequisites
+  discharged (DONE or SKIPPED), region enabled (guard DONE) — is not a
+  theorem here; it is what the reference-set tests check.
 - T2 `unseq_pick_active` — a picked occurrence is ACTIVE and in range (no
   double execution: completed occurrences are DONE or SKIPPED, never ready).
 - T3 `unseq_panic_drops_frame` — a panic reaching the sweep frame continues
   below it over the UNCHANGED state (frame, binders, pending work dropped;
   the effect prefix stands) — the failure prefix half.
 - T4 `unseq_complete_settled` — the completion step fires only with every
-  occurrence settled and hands EXACTLY the graph's stores to the phase-2
-  spine — the «completes the active graph» half.
+  occurrence settled, with every binder its stores and its completion
+  statement consume PRODUCED (`UnseqGraph.unproducedConsumer? st thenB =
+  none` — the conjunct added by the fix round, F1), and hands EXACTLY the
+  graph's stores to the phase-2 spine — the «completes the active graph»
+  half.
 - T5 `unseq_record_stable` — graph, completion statement, scope and tail are
   invariant along the scheduler's own steps (freshness: cells allocated
   once at ENTER).
@@ -166,10 +184,22 @@ checker/soundness arms) is the lever, per v2.1 §3.6.
   completion outside its region, unproduced cell, >2 results) PLUS the
   decoder's own: hidden read in a pure node (operands of a head are atoms —
   `unseqAtom`'s grammar for targets; for heads the decoder must check the
-  operand shape), invalid branch join STATICALLY (the machine refuses it
-  dynamically, `skippedDep?`), list order a linear extension, nested `unseq`,
-  `recover` in a head. The emitter (`tools/nativefrontend`): one sweep →
-  one `unseq` node or the legacy probe lowering, never a mixture (§3.7).
+  operand shape), invalid branch join STATICALLY — for occurrence bodies
+  AND for `thenB`/the stores: «`thenB` and the stores mention only cells
+  whose producer is outside every region, or a guard's completion binder
+  visible at that level» (the machine refuses the DYNAMIC form by name:
+  `skippedDep?` for bodies, `unproducedConsumer?` for the completion's
+  consumers — fix round F1; the static check is defence in depth, not a
+  substitute), the frozen-anchor shape («never emit `&a` as the anchor of a
+  slice-element plan; the header comes through a binder or a read at the
+  plan step» — the machine refuses the unfrozen shape dynamically,
+  `unseqUnfrozenPlan?`, fix round F2), the `$` reservation on every binder
+  (machine: `wellFormed?`, fix round F3), list order a linear extension,
+  nested `unseq`, `recover` in a head. The emitter (`tools/nativefrontend`):
+  one sweep → one `unseq` node or the legacy probe lowering, never a mixture
+  (§3.7) — the machine does NOT enforce this boundary (audit N2: a legacy
+  `unseqProbe` inside `thenB` is accepted); the emitter is the enforcing
+  side (§9).
 - The machine-side seams Stage C will touch: `unseqAtom` (if constants
   beyond int/bool are needed), `unseqReadTarget` (map plans, Stage E),
   `Race.unseqRunAccesses` (any new head kind must report its footprint).
@@ -191,7 +221,10 @@ checker/soundness arms) is the lever, per v2.1 §3.6.
 
 ## 7. The merge train's next command
 
-The branch is complete at the records commit that follows `c770c59c` (records). At the merge:
+The branch is complete at the records commit that follows the fix round's
+runtime commit `920a11c6` (Stage B: `306fb3ef` core, `c770c59c` tests +
+wiring, `ba8767da` records; audit fix round, §9: `920a11c6` runtime + the
+records commit that follows it). At the merge:
 
     git checkout main && git merge --ff-only core/unseq-scheduler-b-0916
 
@@ -207,7 +240,7 @@ see the evidence README for whether the certified SET was identical (then
 the 5a step is a header/inventory refresh) or moved (then it is a FINDING,
 not a re-pin). No wire file changed on this branch.
 
-## 8. Audit ask (posed; scope and waiver are the user's)
+## 8. Audit ask (posed 2026-09-16; ANSWERED — FIX-FIRST, `docs/2026-09-16_unseq-stage-b-audit.md`; the fix round is §9; the RE-VERIFICATION ask is §9.6)
 
 - The `ready` definition against v2.1 §1's edge sorts: value deps produced
   (producer DONE), order prerequisites discharged by DONE or SKIPPED, region
@@ -220,3 +253,174 @@ not a re-pin). No wire file changed on this branch.
 - The renumbering of the positional proof cases (the probe's mapping).
 - The consumption arm's EXACT bound (`(g.ready st).length` at ≥ 2) vs the
   scheduler's consult; the dedup-engine refusal path.
+
+## 9. Audit fix round (2026-09-16)
+
+[AGENT] Fix-round worker, same branch, worktree `.claude/worktrees/unseq-
+stage-b`, base = the records commit `ba8767da`. Authority: the adversarial
+audit ordered by [USER] Mike 2026-09-16 («Great, send off an auditor as
+proposed», verbatim, relayed by the [AGENT] coordinator — cite as relayed)
+returned **FIX-FIRST** (`docs/2026-09-16_unseq-stage-b-audit.md`, branch
+`review/unseq-stage-b-0916` @ `2440278d`; its scratch graphs under
+`docs/evidence/2026-09-16_unseq-stage-b-audit/` there). No [USER] gate was
+ruled in this round; the PENDING list (§6) is unchanged.
+
+### 9.1 Disposition of the auditor's «may instead be recorded as Stage C obligations — PENDING [USER]» ([AGENT] coordinator; the charter answers it)
+
+The auditor offered, for F1 and F2, the alternative of RECORDING them as
+Stage C decoder checks and merging as-is. The coordinator's [AGENT]
+disposition, recorded here: F1/F2/F3 are FAIL-OPEN paths in the trusted core
+(`GoLean/GoCore/`), and the charter's doctrine («Fail closed, always … an
+explicit refusal that NAMES ITS CAUSE at the point of failure, never a silent
+default, never an absorbing fallback») requires the refusal IN THE MACHINE:
+hand-built graphs — the tests', the auditor's, any future spike's — bypass
+the decoder entirely, so a decoder check cannot be the enforcement; it is
+defence in depth (recorded in §5 as such). The auditor's PENDING [USER] item
+is therefore answered by the charter, not by a new ruling; nothing is
+adjudicated here that is the user's.
+
+### 9.2 F1–F3 — what changed, where, the refusal texts (each landed with its `Step` premise, its `stepFn` arm and the coherence cases in ONE commit)
+
+- **F1 — a SKIPPED producer's VALUE binder is never consumed as a value.**
+  `UnseqGraph.unproducedConsumer? g st thenB` (`GoLean/GoCore/Unseq.lean`):
+  at completion every VALUE binder a phase-2 store reads and every binder
+  cell `thenB` mentions must be PRODUCED (`produced` = producer DONE). The
+  `thenB` mentions come from a NEW total walk `Stmt.names` (with
+  `stmtListNames`/`selectNames`/`optStmtNames`, `assigneeListNames`,
+  `selectHeadNames`, `unseqGraphNames` — the constructor list mirrors
+  `Admission.stmtIndices`, no catch-all); before it the machine had no `Stmt`
+  name walk, which is why the audit's A5 read the zero silently. NEW premise
+  `g.unproducedConsumer? st thenB = none` on `Step.unseqComplete`
+  (`Machine.lean`); `stepUnseqNext`'s case (i) checks it BEFORE
+  `unseqStorePlan` and throws `.stuck msg` (`StepFn.lean`). Coherence:
+  `stepUnseqNext_sound`, `stepUnseqNext_consumption_none` (an extra `split`
+  each), `step_complete`, `step_complete_any_wf_aux`, `step_preserves_wf`'s
+  `unseqComplete` case (`hprod` named), T4 `unseq_complete_settled` gains the
+  conjunct. Texts (captured on the canonical tape,
+  `docs/evidence/2026-09-16_unseq-stage-b/fix-round-refusals.txt`):
+  «`unseq: the phase-2 store into '$t' reads binder '$h', which was not
+  produced — its producer 'E_h' was SKIPPED (confined to a disabled region);
+  the completion binder is the only join — malformed graph`» (A4) and
+  «`unseq: the completion statement reads binder '$h', which was not produced
+  — …`» (A5). Tests: A4/A5 refuse by name (z=true), their z=false controls
+  give `h ran / out 42` and `h ran / h 42`, and the LEGITIMATE join —
+  `thenB` reading the skipped region's completion binder `$cor` — still
+  works (`c true`); A8 (target binder from a skipped region) still refuses
+  («has not been produced»). The STATIC form of §1 G stays the decoder's
+  (§5): the machine refuses the dynamic instance at the point of failure.
+- **F2 — a target plan anchored at the ADDRESS of a slice variable is
+  refused (the header is not frozen).** `unseqUnfrozenAnchor? s anchor steps
+  idxs` / `unseqUnfrozenPlan? s r` (`Machine.lean`, before
+  `unseqTargetPlan`): a dry walk of the completed chain's SHAPE at plan time
+  — an `.index` step on an `.addr loc` whose cell holds a `.slice` is refused
+  by name (the header would be re-read by `indexTargetLoc` at the checked
+  load AND at the phase-2 store — the reference's forbidden hybrid); the walk
+  continues through `.field` steps and through array elements (`.array` →
+  `.index loc n`) and frozen headers (`.slice` → `sliceIndexLoc`) so nested
+  shapes (`s.f[i]`, `a[i][j]`) are covered; a step it cannot see through
+  ends the walk with NO refusal (a plan checks nothing — bounds/nil stay in
+  phase 2). Wired into `unseqTargetPlan` after `completeTargetRef`; the rule
+  premise `unseqTargetPlan s env lhs = .ok r` carries it for free;
+  `unseqTargetPlan_locSup` (StateWf) gains one `split`. Text: «`unseq: target
+  plan indexes a SLICE VARIABLE through its address (GoLean.Loc.base { id :=
+  0 }) — the header would be re-read at the load and again at the store, not
+  frozen; freeze the header VALUE through a binder`». Tests: the audit's C1
+  (`.ref "a"` anchor) refuses; C1b (the header READ at the plan step, `.var
+  "a"`) gives R4's exact set {`old 11 20 / a 100 200`, `old 10 20 / a 101
+  200`}; the R4 witness itself stays exact; an ARRAY variable's address
+  (`.ref "arr"`, arrays do not rebind) is accepted (`arr 11 20`); the pointer-
+  redirection and cell-mutation tests are unchanged (both writes observable,
+  no hybrid); the map plan stays Stage E's refusal.
+- **F3 — every binder carries the `$` reservation.** `wellFormed?` refuses,
+  right after the distinctness checks, any cell or target binder not
+  starting with `$`: «`unseq: malformed graph — binder 'a' is not a reserved
+  `$` slot name (every binder cell and target binder is `$`-prefixed — the
+  frontend's reservation; a bare name would shadow the source local 'a' for
+  the rest of the block)`». Refusals produce no step: no proof change.
+  Tests: the audit's B4 (cell `a` shadowing the source local `a`) and a bare
+  target binder `t` both refuse by name; every pre-existing test already
+  used `$` names (all 47 stay green).
+
+### 9.3 N2 / N3
+
+- **N3 (done):** `wellFormed?` checks the guard's test AND completion cells
+  are `bool` cells (the skip STORES the short-circuit constant, a bool):
+  «`guard 'G' completion '$cor' is a cell of type GoLean.GoCore.Ty.int
+  (GoLean.GoCore.IntKind.int), not a bool cell (the skip stores the
+  short-circuit constant, a bool)`» and «`guard 'G' tests '$z', a cell of type
+  …, not a bool cell`» — at ENTER, by name, instead of the run-time generic
+  `stuck: expected int value, got …bool true`. Tests: the audit's K4 and the
+  test-cell variant.
+- **N2 (OWED, not done):** the whole-sweep migration boundary (§3.7 — one
+  sweep is either one `unseq` node or the legacy probe lowering, never a
+  mixture) is NOT machine-enforced: a `.unseqProbe` inside `thenB` is
+  accepted (audit K1). A `wellFormed?`-level refusal would need a second
+  total `Stmt` traversal («contains a probe») beside `Stmt.names` — not a
+  few lines; the ENFORCING side is the emitter (`tools/nativefrontend`, one
+  lowering per sweep), with the decoder's nested-`unseq` check as its
+  neighbour (§5). Recorded here and in §5; Stage C's brief inherits it.
+
+### 9.4 R1–R6 (records)
+
+- R1: §3 reworded — T1–T6 are inversion lemmas over the rules' own
+  premises; T1 is true by definition of `readyAt`; `ready`'s fidelity to §1
+  is test-borne (the exact-set tests), not a theorem.
+- R2: the TRACKED reference enumerator
+  (`docs/evidence/2026-09-16_eval-order-v2-spike/enumerate.py`) now walks
+  EVERY unsettled occurrence for the invalid-join check (§1 G is static) and
+  carries the A3 witness as a named refusal; re-run EXIT=0; `outcomes.txt`
+  regenerated — one line added, every other line byte-identical; its README
+  has the dated amendment. The machine-side regression is this file's A3
+  check («confined to a skipped region»).
+- R3: TEN `Step` rules everywhere (§1 item 1, the evidence README); «eleven»
+  had counted the legacy `unseqProbe`.
+- R4: the design §3.7 carries a dated addendum mapping its `unseqTargetDone`/
+  `unseqMalformed` to the candidate's ten rules (no separate done rule; no
+  malformed rule — refusals are not steps); mirrored in §2's inventory row.
+- R5: the headline lowering `x := e ↦ .initialization x; x = $op` in `thenB`
+  is now tested — K2 (mid-block, two sweeps, `x 3 / x y 3 12`) and K3 (loop
+  body, fresh `x` per iteration, `x 3 / x 4`).
+- R6: this round's gate tail of record INCLUDES the drift block
+  (`docs/evidence/2026-09-16_unseq-stage-b/gate3-tail.txt`).
+
+### 9.5 Proved vs owed — what moved
+
+- T4 `unseq_complete_settled`'s statement gained the conjunct
+  `g.unproducedConsumer? st thenB = none` (an inversion of the new premise);
+  no other theorem's statement changed; the 24 required theorems of
+  `Tests/UnseqSchedulerAudit.lean` are unchanged by name and the post-import
+  audit is still the classical trio only (14 444 declarations after the
+  round, from 14 376).
+- Nothing moved from OWED to PROVED: the multi-step composition, the
+  stream-composition lemma, the machine-checked «trace», the translation
+  certificate stay owed (§3). NEW owed (records): N2 above (emitter-side).
+- Positional proof tags: unchanged — the three arms are tail calls, so the
+  new `split`s live inside `stepUnseqNext_sound`/`_consumption_none`; no
+  `fun_cases` probe was needed and no tag was remapped.
+
+### 9.6 Gate and the re-verification ask
+
+Gate lines (captured exits; details and the drift block in the evidence
+README's `gate3-tail.txt`, `fix-round-unseq-gate-tail.txt`,
+`fix-round-refusals.txt`): sequential warm build of the six edited modules,
+every module EXIT=0 (Unseq; Machine 4 s; StepFn 17 s incl. StateWf 16 s;
+MachineSound 57 s; UnseqSound); `scripts/capped scripts/check-unseq-scheduler`
+EXIT=0, 94 s, 64 checks ok / 0 FAIL, audit classical trio only; `scripts/
+capped scripts/ci --diff` under the box-wide lock EXIT=1, 1176 s — 3676 rows
+3427 PASS / 249 expected FAIL, 394 negatives, 211 eval tests, the `unseq
+scheduler (Stage B)` step ok, red = EXACTLY the two 5a-class items
+(`certificate provenance` STALE — «changed dependency
+build/files/GoLean/CLI.lean», compiled inputs changed — and, in consequence,
+the one certified row `imported-goose/channel/google-search`
+PASS→FAIL/membership, the single drift line); no other row moved;
+reconciler C9 (the same stale certification) + C13 (pre-existing doc
+Go-version sites), report-only. Records checks: `check-bugs.sh` 0,
+`check-spec-anchors` 0, `check-evidence-size` 0, `check-agents-alias` 0,
+`git diff --check` 0. 5a stays OWED to the train as §7 says.
+Re-verification ask for the auditor
+(scope and waiver the user's): re-run its A4, A5 (both z), A3, B4, C1, C1b,
+K4 graphs and K1 (unchanged: accepted — N2 owed) against this branch's tip
+— each of A4/A5/B4/C1/K4 must now be a NAMED refusal with the texts in
+§9.2/§9.3, C1b must give R4's exact set, A5's `$cor` variant must print `c
+true`; plus its `enum_audit.py` against the amended `enumerate.py` (A3 now
+refuses on both sides; A1/I1–I4b unchanged).

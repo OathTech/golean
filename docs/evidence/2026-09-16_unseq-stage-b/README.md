@@ -24,6 +24,8 @@ remains Stage C's.
 | gate 1 (core) | `scripts/capped scripts/ci --diff` (lock) | **1** | 1162 | `32398203` + the core tree (17 dirty files → commit `306fb3ef`) | 3676 rows 3427 PASS / 249 expected FAIL; 394 negatives; 211 eval tests; every step green EXCEPT the two EXPECTED 5a-class items: `certificate provenance` STALE («changed dependency build/files/GoLean/CLI.lean» — compiled semantic inputs changed) and, in consequence, the ONE cached certified row `imported-goose/channel/google-search` PASS→FAIL/membership (its cached record judged stale; NOT an observation change). No other row moved. Reconciler: C9 HIGH (the same stale certification) + C12 HIGH ×2 (the census mirrors lacked `unseqNext` — fixed in the next commit). |
 | gate 2 (tests + wiring + records) | `scripts/capped scripts/ci --slow` (lock; `--slow` implies `--diff` and RE-CERTIFIES the tier=slow row) | **1** | 1306 | `306fb3ef` + the tests tree (11 dirty → commit `c770c59c`) | 3676 rows 3427 PASS / 249 expected FAIL; 394 negatives; 211 eval tests; the new `unseq-scheduler` step ok; every step green EXCEPT the same two EXPECTED 5a-class items: `certificate provenance` STALE and the cached certified row `imported-goose/channel/google-search`, whose `--slow` RE-ENUMERATION reports «Fresh certification: unchanged set; seconds=153.901» — the certified SET is IDENTICAL to the tracked record; the row is red only because the record's provenance (compiled inputs) is stale → the train's 5a records refresh (install the reviewed `certification-candidate.json`), NOT a finding, NOT a re-pin. No other row moved; reconciler: C9 (the same stale certification) + C13 (pre-existing, doc Go-version sites). C12 is green (the census mirrors carry `unseqNext`). |
 | unseq gate step | `scripts/check-unseq-scheduler` (also a named `scripts/ci` step, `unseq-scheduler`) | 0 | (in gate 2) | same | 47 checks ok: every reference set exact, every refusal by name; audit: 24 required theorems, 14 376 declarations across all imported local origins, classical trio only |
+| fix round: unseq gate step | `GOLEAN_MEM_MAX=32G scripts/capped scripts/check-unseq-scheduler` (standalone, after the sequential warm build of the six edited modules — every module EXIT=0: Unseq, Machine 4 s, StepFn 17 s incl. StateWf, MachineSound 57 s, UnseqSound) | **0** | 94 | `ba8767da` + the fix round's edits (before its runtime commit) | **64 checks ok** (47 + 17: F1 ×6 incl. the legitimate join, A8, A3, F2 ×3, F3 ×2, N3 ×2, R5 ×2), 0 FAIL; audit: 24 required theorems, 14 444 declarations, classical trio only — `fix-round-unseq-gate-tail.txt`; the literal refusal texts on the canonical tape: `fix-round-refusals.txt` |
+| fix round: gate 3 (core + tests + records) | `scripts/capped scripts/ci --diff` (lock; `GOLEAN_MEM_MAX=32G`) | see `gate3-tail.txt` | see `gate3-tail.txt` | same tree | the tail INCLUDES THE DRIFT BLOCK (audit R6); expected red = exactly the two 5a-class items (`certificate provenance` STALE — compiled inputs changed; the one certified row `imported-goose/channel/google-search` for that reason) |
 
 Gate 1's log tail (`.tmp/ci-1.log`, lines 898–949): the summary block lists
 `FAIL certificate provenance` and `FAIL baseline diff (DRIFT — see above)`
@@ -129,6 +131,22 @@ E; use the default enumerator)»). The recursion witness above (4 nested
 activations, three-way-unordered sweeps) is the same product on a real
 shape: 10 000 leaves for a singleton outcome. Stage D's ladder starts
 here; N3 (budget refusal) stays PENDING [USER].
+
+## Audit fix round (2026-09-16)
+
+The adversarial audit (`docs/2026-09-16_unseq-stage-b-audit.md`, branch
+`review/unseq-stage-b-0916` @ `2440278d`) returned FIX-FIRST; the fix round
+is the lane handoff's §9 (F1–F3 as named machine refusals, N3, R1–R6, N2
+owed). Records corrections that touch THIS file: the rule inventory is TEN
+`Step` rules (audit R3 — «eleven» counted the legacy `unseqProbe`); the gate
+tails of record now include the drift block (audit R6: `gate3-tail.txt` —
+`gate1-tail.txt`/`gate2-tail.txt` carry the summary block only, their drift
+line is quoted in the gate-1 paragraph above and was independently
+reproduced by the audit's own `ci --diff`, `ci-diff-drift.txt` on the review
+branch). Files added: `fix-round-unseq-gate-tail.txt` (the 17 new checks +
+the R4/target-identity lines + the audit line), `fix-round-refusals.txt`
+(the literal F1/F2/F3/N3/A3 texts), `gate3-tail.txt` (summary + drift
+block + exit/seconds of the fix round's `ci --diff`).
 
 ## Regeneration
 

@@ -1,0 +1,27 @@
+# Fix round (2026-09-16) — the literal refusal texts of F1–F3/N3 and the A3 regression on the CANONICAL tape
+# [AGENT] scratch .tmp/RefusalTexts.lean (imports Tests.UnseqScheduler; runTape … []), scripts/capped lake env lean, EXIT=0
+
+F1/A4 (z=true, canonical tape): GoLean.Stop.refusal
+  (GoLean.Refusal.stuck
+    "unseq: the phase-2 store into '$t' reads binder '$h', which was not produced — its producer 'E_h' was SKIPPED (confined to a disabled region); the completion binder is the only join — malformed graph") (output "")
+F1/A5 (z=true, canonical tape): GoLean.Stop.refusal
+  (GoLean.Refusal.stuck
+    "unseq: the completion statement reads binder '$h', which was not produced — its producer 'E_h' was SKIPPED (confined to a disabled region); the completion binder is the only join — malformed graph") (output "")
+F2/C1 (canonical tape): GoLean.Stop.refusal
+  (GoLean.Refusal.stuck
+    "unseq: target plan indexes a SLICE VARIABLE through its address (GoLean.Loc.base { id := 0 }) — the header would be re-read at the load and again at the store, not frozen; freeze the header VALUE through a binder") (output "")
+F3/B4: GoLean.Stop.refusal
+  (GoLean.Refusal.stuck
+    "unseq: malformed graph — binder 'a' is not a reserved `$` slot name (every binder cell and target binder is `$`-prefixed — the frontend's reservation; a bare name would shadow the source local 'a' for the rest of the block)") (output "")
+F3/bare target binder: GoLean.Stop.refusal
+  (GoLean.Refusal.stuck
+    "unseq: malformed graph — binder 't' is not a reserved `$` slot name (every binder cell and target binder is `$`-prefixed — the frontend's reservation; a bare name would shadow the source local 't' for the rest of the block)") (output "")
+N3/K4 completion cell int: GoLean.Stop.refusal
+  (GoLean.Refusal.stuck
+    "unseq: malformed graph — guard 'G' completion '$cor' is a cell of type GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int), not a bool cell (the skip stores the short-circuit constant, a bool)") (output "")
+N3 test cell int: GoLean.Stop.refusal
+  (GoLean.Refusal.stuck
+    "unseq: malformed graph — guard 'G' tests '$z', a cell of type GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int), not a bool cell") (output "")
+A3 (R2): GoLean.Stop.refusal
+  (GoLean.Refusal.stuck
+    "unseq: occurrence 'X' value-depends on '$h', confined to a skipped region (no valid join) — malformed graph") (output "")
