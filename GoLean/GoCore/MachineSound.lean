@@ -223,9 +223,12 @@ theorem stepUnseqNext_sound {s : ExecState} {g : UnseqGraph} {thenB : Stmt}
     · rename_i hdep
       split at h
       · rename_i hall
-        simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-        obtain ⟨⟨refs, vals⟩, hplan, rfl, rfl, rfl⟩ := h
-        exact Step.unseqComplete hdep hall hplan
+        split at h
+        · simp [throw, throwThe, MonadExceptOf.throw] at h
+        · rename_i hprod
+          simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+          obtain ⟨⟨refs, vals⟩, hplan, rfl, rfl, rfl⟩ := h
+          exact Step.unseqComplete hdep hall hprod hplan
       · split at h
         rename_i pick ch'' hpair
         split at h
@@ -393,9 +396,13 @@ theorem stepUnseqNext_consumption_none {σ : ExecState} {g : UnseqGraph} {thenB 
     · rename_i hdep
       split at h'
       · rename_i hall
-        simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h'
-        obtain ⟨⟨refs, vals⟩, hplan, rfl, rfl, rfl⟩ := h'
-        exact ⟨rfl, fun ch => by simp [stepUnseqNext, hdep, hall, hplan, Bind.bind, Except.bind]⟩
+        split at h'
+        · simp [throw, throwThe, MonadExceptOf.throw] at h'
+        · rename_i hprod
+          simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h'
+          obtain ⟨⟨refs, vals⟩, hplan, rfl, rfl, rfl⟩ := h'
+          exact ⟨rfl, fun ch => by
+            simp [stepUnseqNext, hdep, hall, hprod, hplan, Bind.bind, Except.bind]⟩
       · rename_i hall
         split at h'
         · rename_i i hi
@@ -1081,8 +1088,8 @@ theorem step_complete {c : Config} {s : ExecState} {c' : Config} {s' : ExecState
     subst hp
     exact ⟨[p], cs, by simp [stepFn, stepUnseqNext, hdep, hall, hpc, hj]⟩
   case unseqComplete =>
-    rename_i g thenB st tg env k refs vals hdep hall hplan
-    exact ⟨[], [], by simp [stepFn, stepUnseqNext, hdep, hall, hplan, Bind.bind, Except.bind]⟩
+    rename_i g thenB st tg env k refs vals hdep hall hprod hplan
+    exact ⟨[], [], by simp [stepFn, stepUnseqNext, hdep, hall, hprod, hplan, Bind.bind, Except.bind]⟩
   case unseqRunEval =>
     rename_i g thenB st tg env k o bind head i hget hbody
     exact ⟨[], [], by simp [stepFn, stepUnseqNext, hget, hbody]⟩
@@ -3243,8 +3250,8 @@ theorem step_complete_any_wf_aux {c : Config} {σ : ExecState} {c' : Config}
       exact this
     have hsome : (g.ready st)[p]? = some (g.ready st)[p] := List.getElem?_eq_getElem hp
     simp [stepFn, stepUnseqNext, hdep, hall, hpc, hsome]
-  case unseqComplete g thenB st tg env k refs vals hdep hall hplan =>
-    simp [stepFn, stepUnseqNext, hdep, hall, hplan, Bind.bind, Except.bind]
+  case unseqComplete g thenB st tg env k refs vals hdep hall hprod hplan =>
+    simp [stepFn, stepUnseqNext, hdep, hall, hprod, hplan, Bind.bind, Except.bind]
   case unseqRunEval g thenB st tg env k o bind head i hget hbody =>
     simp [stepFn, stepUnseqNext, hget, hbody]
   case unseqRunInvoke g thenB st tg env k o binds callee args i hget hbody =>

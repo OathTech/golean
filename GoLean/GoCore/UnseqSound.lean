@@ -19,8 +19,11 @@ multi-step composition rests on:
   over the UNCHANGED state (no later effect of this sweep), the effect prefix
   so far stands, defers and `recover` are the callee frames' business.
 * T4 `unseq_complete_settled` — a successful trace COMPLETES the active graph:
-  the completion step fires only with every occurrence settled and hands
-  exactly the graph's stores to the phase-2 spine.
+  the completion step fires only with every occurrence settled, with every
+  binder its stores and its completion statement consume PRODUCED
+  (`UnseqGraph.unproducedConsumer?`; audit F1, 2026-09-16 — a skipped
+  producer's cell is never consumed as a value), and hands exactly the
+  graph's stores to the phase-2 spine.
 * T5 `unseq_record_stable` — the frame's static record (graph, completion
   statement, scope, tail) is invariant along the scheduler's own steps
   (freshness: cells are allocated once, at ENTER).
@@ -78,10 +81,11 @@ theorem unseq_complete_settled {g : UnseqGraph} {thenB : Stmt} {st : List UnseqS
     {s' : ExecState}
     (h : Step (.next (.unseqK g thenB st tg env .pick k)) s
       (.next (.storeK refs vals thenB' env' k')) s') :
-    g.allSettled st = true ∧ unseqStorePlan s env tg g.stores = .ok (refs, vals)
+    g.allSettled st = true ∧ g.unproducedConsumer? st thenB = none
+      ∧ unseqStorePlan s env tg g.stores = .ok (refs, vals)
       ∧ thenB' = thenB ∧ env' = env ∧ k' = k ∧ s' = s := by
   cases h with
-  | unseqComplete hdep hall hplan => exact ⟨hall, hplan, rfl, rfl, rfl, rfl⟩
+  | unseqComplete hdep hall hprod hplan => exact ⟨hall, hprod, hplan, rfl, rfl, rfl, rfl⟩
 
 theorem unseq_record_stable {g g' : UnseqGraph} {thenB thenB' : Stmt} {st st' : List UnseqStatus}
     {tg tg' : List (String × TargetRef)} {env env' : LocalEnv} {ph ph' : UnseqPhase} {k k' : Cont}

@@ -19,8 +19,11 @@ completion; (ii) `ready ≠ []` → pick any ready occurrence
 (`ChoiceSite.unseqNext`, bound `|ready|`, slot `j` = the `j`-th ready
 occurrence in canonical rank order); (iii) active work with no ready
 occurrence → a NAMED malformed-graph refusal, never a stuck run. A value
-dependency on a binder confined to a SKIPPED region (no valid join) is the
-other named dynamic refusal (`skippedDep?`).
+dependency on a binder confined to a SKIPPED region (no valid join) is
+another named dynamic refusal (`skippedDep?`), as is — at completion — a
+phase-2 store or a completion-statement mention of a binder that was never
+PRODUCED (`unproducedConsumer?`; audit F1, 2026-09-16: a skipped
+producer's zero-initialised cell is no value of the sweep).
 -/
 
 namespace GoLean.GoCore
@@ -70,6 +73,14 @@ def Assignee.names : Assignee → List String
   | .addr e => Expr.names e
   | .mapElem b k _ _ => Expr.names b ++ Expr.names k
   | .unsupported _ => []
+
+def assigneeListNames : List Assignee → List String
+  | [] => []
+  | a :: as => a.names ++ assigneeListNames as
+
+def selectHeadNames : SelectClauseHead → List String
+  | .send c v _ => c.names ++ v.names
+  | .recv as c _ => assigneeListNames as.toList ++ c.names
 
 /-- An occurrence's scheduler status: «completed» ≠ «produced» (review R4)
 — a DONE occurrence produced every binder it binds; a SKIPPED one
@@ -121,6 +132,63 @@ def targetMentions : UnseqBody → List String
 
 end UnseqBody
 
+/-- The slot names a nested graph's bodies and stores mention (a nested
+`unseq` in a completion statement is the decoder's refusal, Stage C; the
+walk below stays total over it). -/
+def unseqGraphNames (g : UnseqGraph) : List String :=
+  g.occs.flatMap (fun o => o.body.mentions ++ o.body.targetMentions)
+    ++ g.stores.flatMap (fun (t, v) => [t, v])
+
+mutual
+/-- The local NAMES a statement's expressions and assignees mention — the
+reads and stores of a sweep's completion statement `thenB` (declarations
+are not mentions). Total; no constructor catch-all (adding syntax requires
+choosing its traversal — the `AdmissionIndices` discipline; the case list
+mirrors `Admission.stmtIndices`). Consumed by `UnseqGraph.unproducedConsumer?`
+(audit F1, 2026-09-16). -/
+def Stmt.names : Stmt → List String
+  | .seqn ss => stmtListNames ss.toList
+  | .block _ ss => stmtListNames ss.toList
+  | .breakable s | .labeled _ s => Stmt.names s
+  | .initialization _ => []
+  | .assign a e => a.names ++ e.names
+  | .assignMany as es | .call as _ es | .syncStmt _ es as | .atomicStmt _ _ es as =>
+      assigneeListNames as.toList ++ exprListNames es.toList
+  | .allocNew a e _ => a.names ++ e.names
+  | .makeSlice a _ e cap => a.names ++ e.names ++ optExprNames cap
+  | .makeMap a _ _ cap => a.names ++ optExprNames cap
+  | .mapAssign b i e _ _ => b.names ++ i.names ++ e.names
+  | .mapDelete b i _ => b.names ++ i.names
+  | .clearMap b | .closeChan b | .panicStmt b | .unseqProbe b => b.names
+  | .unseq g t => unseqGraphNames g ++ Stmt.names t
+  | .clearSlice b _ | .sortSlice b _ => b.names
+  | .mapLookup a ok b i _ _ => a.names ++ ok.names ++ b.names ++ i.names
+  | .typeAssert a ok e _ => a.names ++ ok.names ++ e.names
+  | .appendSlice a _ s es => a.names ++ s.names ++ es.names
+  | .copySlice a d s => a.names ++ d.names ++ s.names
+  | .callValue as e es => assigneeListNames as.toList ++ e.names ++ exprListNames es.toList
+  | .deferCall e es | .goStmt e es => e.names ++ exprListNames es.toList
+  | .ifThenElse e t f => e.names ++ Stmt.names t ++ Stmt.names f
+  | .while e s => e.names ++ Stmt.names s
+  | .mapRange _ _ e _ _ s => e.names ++ Stmt.names s
+  | .returnStmt | .breakStmt | .continueStmt | .breakTo _ | .continueTo _
+  | .inertLabel _ | .unsupported _ => []
+  | .makeChan a _ cap => a.names ++ optExprNames cap
+  | .chanSend c v _ => c.names ++ v.names
+  | .chanRecv as c _ => assigneeListNames as.toList ++ c.names
+  | .selectStmt cs d => selectNames cs.toList ++ optStmtNames d
+  | .print _ es => exprListNames es.toList
+def stmtListNames : List Stmt → List String
+  | [] => []
+  | s :: ss => Stmt.names s ++ stmtListNames ss
+def selectNames : List (SelectClauseHead × Stmt) → List String
+  | [] => []
+  | (c, s) :: cs => selectHeadNames c ++ Stmt.names s ++ selectNames cs
+def optStmtNames : Option Stmt → List String
+  | none => []
+  | some s => Stmt.names s
+end
+
 /-- Pairwise distinctness of a name list. -/
 def namesDistinct : List String → Bool
   | [] => true
@@ -144,6 +212,10 @@ def targetBinders (g : UnseqGraph) : List String :=
   g.occs.filterMap (·.body.targetBind?)
 
 def isCell (g : UnseqGraph) (n : String) : Bool := g.cellNames.contains n
+
+/-- The declared type of a binder cell. -/
+def cellType? (g : UnseqGraph) (n : String) : Option Ty :=
+  (g.cells.find? (·.id == n)).map (·.typ)
 
 def isTargetBinder (g : UnseqGraph) (n : String) : Bool := g.targetBinders.contains n
 
@@ -225,6 +297,37 @@ def skippedDep? (g : UnseqGraph) (st : List UnseqStatus) : Option String :=
         else none
     | none => none
 
+/-- The completion's CONSUMERS' production check (audit F1, 2026-09-16;
+design §1 G «a value use of a region-confined binder outside its region is
+REJECTED — `c` is the only join»): at completion, every VALUE binder a
+phase-2 store reads and every binder cell the completion statement `thenB`
+mentions must have been PRODUCED (its occurrence DONE). A cell whose
+producer was SKIPPED holds only its zero-initialised allocation — no value
+of this sweep; consuming it would be the absorbing default the charter
+forbids. Refused BY NAME (consumer, binder, producer and its status): the
+mirror, for the completion's consumers, of `skippedDep?` for the occurrence
+bodies. The STATIC form of the rule (any mention of a region-confined binder
+outside its region, skipped or not, other than the completion binder) is the
+decoder's check (Stage C); this is the machine's own refusal at the point of
+failure, which hand-built graphs cannot bypass. -/
+def unproducedConsumer? (g : UnseqGraph) (st : List UnseqStatus) (thenB : Stmt) : Option String :=
+  let blame (consumer v : String) : Option String :=
+    if g.produced st v then none
+    else
+      let why := match (g.producer? v).bind (g.occs[·]?) with
+        | some o =>
+            let status := match g.statusOf st o.name with
+              | some .skipped => "was SKIPPED (confined to a disabled region)"
+              | some .active => "is still ACTIVE"
+              | some .done => "is DONE without producing it"
+              | none => "has no status"
+            s!"its producer '{o.name}' {status}"
+        | none => "it has no producer"
+      some s!"unseq: {consumer} reads binder '{v}', which was not produced — {why}; the completion binder is the only join — malformed graph"
+  match g.stores.findSome? (fun (t, v) => blame s!"the phase-2 store into '{t}'" v) with
+  | some msg => some msg
+  | none => (thenB.names.filter g.isCell).findSome? (blame "the completion statement")
+
 /-- One propagation of skipping: an active member of a skipped guard's
 region becomes skipped. -/
 def skipOnce (g : UnseqGraph) (st : List UnseqStatus) : List UnseqStatus :=
@@ -257,6 +360,14 @@ def wellFormed? (g : UnseqGraph) : Option String :=
   else if !namesDistinct (g.occs.flatMap (·.body.valueBinds)) then some "duplicate result (a value binder produced twice)"
   else if !namesDistinct g.targetBinders then some "duplicate result (a target binder produced twice)"
   else
+    -- Audit F3 (2026-09-16): every binder — cell or target — carries the
+    -- frontend's `$` reservation. The cells are declared into the SOURCE
+    -- scope at ENTER (the `.initialization` idiom), so a bare name would
+    -- SHADOW the source local of that name for the rest of the block,
+    -- silently. Refused by name, before anything else about the shape.
+    match (g.cellNames ++ g.targetBinders).find? (fun n => !n.startsWith "$") with
+    | some n => some s!"binder '{n}' is not a reserved `$` slot name (every binder cell and target binder is `$`-prefixed — the frontend's reservation; a bare name would shadow the source local '{n}' for the rest of the block)"
+    | none =>
     match g.occs.flatMap (·.body.valueBinds) |>.find? (fun b => !g.isCell b) with
     | some b => some s!"result binder '{b}' is not a declared cell"
     | none =>
@@ -302,14 +413,26 @@ def wellFormed? (g : UnseqGraph) : Option String :=
             if !g.isCell test then some s!"guard '{o.name}' tests '{test}', not a VALUE binder"
             else if !g.isCell out then some s!"guard '{o.name}' completion '{out}' is not a VALUE binder"
             else
-              match g.producer? out with
-              | some ci =>
-                  match g.occs[ci]? with
-                  | some c =>
-                      if c.region == some o.name then none
-                      else some s!"guard '{o.name}' completion '{out}' is not produced inside its region"
+              -- Audit N3 (2026-09-16): both cells are bool — the test is read
+              -- as a bool, the skip STORES the short-circuit constant (a
+              -- bool) into the completion cell; a mistyped cell was a
+              -- run-time `.stuck` with a generic text, now a refusal by
+              -- name at ENTER.
+              match g.cellType? test, g.cellType? out with
+              | some .bool, some .bool =>
+                  match g.producer? out with
+                  | some ci =>
+                      match g.occs[ci]? with
+                      | some c =>
+                          if c.region == some o.name then none
+                          else some s!"guard '{o.name}' completion '{out}' is not produced inside its region"
+                      | none => some s!"guard '{o.name}' completion '{out}' has no producer"
                   | none => some s!"guard '{o.name}' completion '{out}' has no producer"
-              | none => some s!"guard '{o.name}' completion '{out}' has no producer"
+              | some .bool, some ty =>
+                  some s!"guard '{o.name}' completion '{out}' is a cell of type {repr ty}, not a bool cell (the skip stores the short-circuit constant, a bool)"
+              | some ty, _ =>
+                  some s!"guard '{o.name}' tests '{test}', a cell of type {repr ty}, not a bool cell"
+              | none, _ => some s!"guard '{o.name}' tests '{test}', a cell without a declared type"
         | .invoke binds _ _ =>
             if binds.length > 2 then
               some s!"invocation '{o.name}' with {binds.length} results is outside the Stage B fragment (0, 1 or 2)"

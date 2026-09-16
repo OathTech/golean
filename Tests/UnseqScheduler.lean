@@ -467,6 +467,7 @@ def r4 : Program := { funcs := #[
         println [str "old", .indexGet (.var "old") (.intLit 0), .indexGet (.var "old") (.intLit 1)],
         println [str "a", .indexGet (.var "a") (.intLit 0), .indexGet (.var "a") (.intLit 1)]])]),
   r4mut] }
+-- (`r4with`, below in the audit fix-round section, is the same program around any target graph.)
 
 /-! ## R6  `v := a[f()]` — SPLIT header producer + checked access {10, 20} vs FUSED {20} -/
 
@@ -598,6 +599,167 @@ def mapProg : Program := { funcs := #[
     [.makeMap (.var "m") .int .int none, .mapAssign (.var "m") (.intLit 1) (.intLit 5) .int .int,
      .unseq mapGraph (.seqn #[])]] }
 
+/-! ## Audit fix round (2026-09-16; `docs/2026-09-16_unseq-stage-b-audit.md`) — the
+FAIL-OPEN paths F1–F3 as named refusals, N3, the R5 lowering, the R2 machine-side
+regression, and the audit's A8 contrast. Graphs are the audit's, re-encoded on this
+harness. -/
+
+/-! ### F1 — a SKIPPED producer's binder is never consumed as a value (store and `thenB`) -/
+
+def a4h : Func := pr "a4h" "h ran" 42
+/-- A4: the phase-2 store's VALUE binder `$h` is produced only inside the region. -/
+def a4Graph : UnseqGraph := {
+  cells := [boolP "$z", intP "$h", boolP "$cor"],
+  occs := [occ "R_z" (.eval "$z" (.var "z")),
+           occ "G" (.guard "$z" false "$cor"),
+           occ "E_h" (.invoke ["$h"] (.var "hv") []) [] (some "G"),
+           occ "C_or" (.eval "$cor" (.boolLit true)) [] (some "G"),
+           occ "T" (.target "$t" (.var "out"))],
+  stores := [("$t", "$h")] }
+def a4 (z : Bool) : Program := { funcs := #[
+  mainUnit [boolP "z", intP "out", ⟨"hv", fnTy [] [.int]⟩]
+    [.assign (.var "z") (.boolLit z), .assign (.var "out") (.intLit 7),
+     .assign (.var "hv") (clos "a4h" []),
+     .unseq a4Graph (println [str "out", .var "out"])],
+  a4h] }
+/-- A5: `thenB` reads `$h` directly (no store). -/
+def a5Graph : UnseqGraph := { a4Graph with stores := [], occs := a4Graph.occs.take 4 }
+def a5 (z : Bool) (thenB : Stmt) : Program := { funcs := #[
+  mainUnit [boolP "z", ⟨"hv", fnTy [] [.int]⟩]
+    [.assign (.var "z") (.boolLit z), .assign (.var "hv") (clos "a4h" []), .unseq a5Graph thenB],
+  a4h] }
+/-- A8 (the audit's contrast): a phase-2 store through a TARGET binder produced
+inside a SKIPPED region — refused by name already before the fix round. -/
+def a8Graph : UnseqGraph := {
+  cells := [boolP "$z", boolP "$cor", intP "$one"],
+  occs := [occ "R_z" (.eval "$z" (.var "z")),
+           occ "G" (.guard "$z" false "$cor"),
+           occ "T" (.target "$t" (.var "out")) [] (some "G"),
+           occ "C_or" (.eval "$cor" (.boolLit true)) [] (some "G"),
+           occ "K" (.eval "$one" (.intLit 1))],
+  stores := [("$t", "$one")] }
+def a8 : Program := { funcs := #[
+  mainUnit [boolP "z", intP "out"]
+    [.assign (.var "z") (.boolLit true), .assign (.var "out") (.intLit 7),
+     .unseq a8Graph (println [str "out", .var "out"])]] }
+/-- A3 (audit R2): a use confined to a LATER-skipped region of a binder confined
+to an earlier-skipped region — the machine refuses per §1 G as soon as the
+producer is skipped; the reference enumerator now refuses it too. -/
+def a3Sink : Func := {
+  id := ⟨"a3Sink"⟩, args := #[boolP "a", boolP "b"], results := #[],
+  body := println [str "sink", .var "a", .var "b"] }
+def a3Graph : UnseqGraph := {
+  cells := [boolP "$z1", boolP "$h", boolP "$c1", boolP "$z2", boolP "$x", boolP "$c2"],
+  occs := [occ "R_z1" (.eval "$z1" (.var "z1")),
+           occ "G1" (.guard "$z1" false "$c1"),
+           occ "E_h" (.invoke ["$h"] (.var "hv") []) [] (some "G1"),
+           occ "C1" (.eval "$c1" (.var "$h")) [] (some "G1"),
+           occ "R_z2" (.eval "$z2" (.var "z2")) ["C1"],
+           occ "G2" (.guard "$z2" false "$c2"),
+           occ "X" (.eval "$x" (.var "$h")) [] (some "G2"),
+           occ "C2" (.eval "$c2" (.var "$x")) [] (some "G2"),
+           occ "E_sink" (.invoke [] (.var "sinkv") [.var "$c1", .var "$c2"])] }
+def a3 : Program := { funcs := #[
+  mainUnit [boolP "z1", boolP "z2", ⟨"hv", fnTy [] [.bool]⟩, ⟨"sinkv", fnTy [.bool, .bool] []⟩]
+    [.assign (.var "z1") (.boolLit true), .assign (.var "z2") (.boolLit true),
+     .assign (.var "hv") (clos "r2ah" []), .assign (.var "sinkv") (clos "a3Sink" []),
+     .unseq a3Graph (.seqn #[])],
+  r2ah, a3Sink] }
+
+/-! ### F2 — a target plan anchored at the ADDRESS of a slice variable is refused (the header is not frozen) -/
+
+/-- The R4 program around any target graph (the two `println`s show old storage and the current header). -/
+def r4with (g : UnseqGraph) : Program := { funcs := #[
+  mainUnit [sliceP "a", sliceP "b", sliceP "old", ⟨"mutv", fnTy [pSlice, pSlice] [.int]⟩]
+    (makeSlice "a" [10, 20] ++ makeSlice "b" [100, 200] ++
+     [.assign (.var "old") (.var "a"), .assign (.var "mutv") (clos "r4mut" ["a", "b"]),
+      .unseq g (.seqn #[
+        println [str "old", .indexGet (.var "old") (.intLit 0), .indexGet (.var "old") (.intLit 1)],
+        println [str "a", .indexGet (.var "a") (.intLit 0), .indexGet (.var "a") (.intLit 1)]])]),
+  r4mut] }
+/-- C1: the plan spelled `&a[0]` with `.ref "a"` — an admitted atom, but the anchor
+is the slice VARIABLE's address: `resolveChain` would re-read its header at the
+load and at the store (the forbidden hybrid `old 10 20 / a 11 200`). -/
+def c1Graph : UnseqGraph := { r4graph with
+  cells := [intP "$rd", intP "$m", intP "$op"],
+  occs := [occ "L" (.target "$t" (.addr (.indexAddr (.ref "a") (.intLit 0)))),
+           occ "Rd" (.load "$rd" "$t"),
+           occ "E_mut" (.invoke ["$m"] (.var "mutv") []),
+           occ "Op" (.eval "$op" (.add (.var "$rd") (.var "$m")))] }
+/-- C1b: the source local's header READ at the plan step (`.var "a"`) — frozen from then on. -/
+def c1bGraph : UnseqGraph := { c1Graph with
+  occs := [occ "L" (.target "$t" (.addr (.indexAddr (.var "a") (.intLit 0)))),
+           occ "Rd" (.load "$rd" "$t"),
+           occ "E_mut" (.invoke ["$m"] (.var "mutv") []),
+           occ "Op" (.eval "$op" (.add (.var "$rd") (.var "$m")))] }
+/-- An ARRAY variable's address is a stable identity (arrays do not rebind): accepted. -/
+def arrGraph : UnseqGraph := {
+  cells := [intP "$rd", intP "$m", intP "$op"],
+  occs := [occ "L" (.target "$t" (.addr (.indexAddr (.ref "arr") (.intLit 0)))),
+           occ "Rd" (.load "$rd" "$t"),
+           occ "E_one" (.invoke ["$m"] (.var "onev") []),
+           occ "Op" (.eval "$op" (.add (.var "$rd") (.var "$m")))],
+  stores := [("$t", "$op")] }
+def arrProg : Program := { funcs := #[
+  mainUnit [⟨"arr", .array 2 .int⟩, ⟨"onev", fnTy [] [.int]⟩]
+    [.assign (.addr (.indexAddr (.ref "arr") (.intLit 0))) (.intLit 10),
+     .assign (.addr (.indexAddr (.ref "arr") (.intLit 1))) (.intLit 20),
+     .assign (.var "onev") (clos "one" []),
+     .unseq arrGraph (println [str "arr", .indexGet (.var "arr") (.intLit 0), .indexGet (.var "arr") (.intLit 1)])],
+  pr "one" "one" 1] }
+
+/-! ### F3 — a binder without the `$` reservation is refused (it would shadow a source local) -/
+
+def b4g : UnseqGraph := { cells := [intP "a"], occs := [occ "K" (.eval "a" (.intLit 42))] }
+def b4 : Program := { funcs := #[
+  mainUnit [intP "a"] [.assign (.var "a") (.intLit 1),
+    .unseq b4g (println [str "then a", .var "a"]),
+    println [str "after a", .var "a"]]] }
+def mBareTarget : UnseqGraph := {
+  cells := [intP "$a"],
+  occs := [occ "A" (.eval "$a" (.intLit 0)), occ "T" (.target "t" (.var "x"))],
+  stores := [("t", "$a")] }
+
+/-! ### N3 — a guard's test/completion cell must be a bool cell (refused at ENTER by name) -/
+
+def k4Graph (testTy outTy : Ty) : UnseqGraph := {
+  cells := [⟨"$z", testTy⟩, intP "$h", ⟨"$cor", outTy⟩],
+  occs := [occ "R_z" (.eval "$z" (.var "z")), occ "G" (.guard "$z" false "$cor"),
+           occ "E_h" (.invoke ["$h"] (.var "hv") []) [] (some "G"),
+           occ "C_or" (.eval "$cor" (.var "$h")) [] (some "G")] }
+def k4 (testTy outTy : Ty) : Program := { funcs := #[
+  mainUnit [boolP "z", ⟨"hv", fnTy [] [.int]⟩]
+    [.assign (.var "z") (.boolLit true), .assign (.var "hv") (clos "a4h" []),
+     .unseq (k4Graph testTy outTy) (println [str "c", .var "$cor"])],
+  a4h] }
+
+/-! ### R5 — the headline lowering `x := a + f()` ↦ `thenB = .initialization x; x = $op` -/
+
+def fv1 : Func := { id := ⟨"fv1"⟩, args := #[], results := #[intP "r"], body := ret "r" (.intLit 2) }
+def kGraph : UnseqGraph := {
+  cells := [intP "$a", intP "$f", intP "$op"],
+  occs := [occ "R_a" (.eval "$a" (.var "a")), occ "E_f" (.invoke ["$f"] (.var "fv") []),
+           occ "Op" (.eval "$op" (.add (.var "$a") (.var "$f")))] }
+def thenDecl (x : String) : Stmt := .seqn #[.initialization (intP x), .assign (.var x) (.var "$op")]
+/-- K2: the sweep in the MIDDLE of a block; `x` declared by `thenB` survives for the rest. -/
+def k2 : Program := { funcs := #[
+  mainUnit [intP "a", ⟨"fv", fnTy [] [.int]⟩]
+    [.assign (.var "a") (.intLit 1), .assign (.var "fv") (clos "fv1" []),
+     .unseq kGraph (thenDecl "x"),
+     println [str "x", .var "x"],
+     .assign (.var "a") (.intLit 10),
+     .unseq kGraph (thenDecl "y"),
+     println [str "x y", .var "x", .var "y"]],
+  fv1] }
+/-- K3: the same inside a 2-iteration loop body (a fresh `x` per iteration). -/
+def k3 : Program := { funcs := #[
+  mainUnit [intP "a", intP "n", ⟨"fv", fnTy [] [.int]⟩]
+    [.assign (.var "a") (.intLit 1), .assign (.var "n") (.intLit 0), .assign (.var "fv") (clos "fv1" []),
+     .while (.lessCmp (.var "n") (.intLit 2))
+       (.seqn #[.unseq kGraph (thenDecl "x"), println [str "x", .var "x"],
+                .assign (.var "a") (.add (.var "a") (.intLit 1)), .assign (.var "n") (.add (.var "n") (.intLit 1))])],
+  fv1] }
+
 /-! ## Binder lifetime across recursion: `sum(n) = g(n) + sum(n-1)` inside a sweep — per-activation cells -/
 
 def sumG : Func := {
@@ -704,6 +866,28 @@ def main (_args : List String) : IO Unit := do
     expectRefusal "target: frozen map-element plan (Stage E)" mapProg "main" "frozen map-element plan",
     -- Recursion
     expectSet "recursion: per-activation binder cells" recursion "main" [okZ 10],
+    -- Audit fix round (2026-09-16): F1
+    expectRefusal "F1/A4 phase-2 store of a SKIPPED producer's binder (z=true): refused by name" (a4 true) "main" "was not produced",
+    expectSet "F1/A4 control (z=false): h runs, 42 stored" (a4 false) "main" [okOut "h ran\nout 42\n"],
+    expectRefusal "F1/A5 thenB reads a SKIPPED producer's cell (z=true): refused by name" (a5 true (println [str "h", .var "$h"])) "main" "was not produced",
+    expectSet "F1/A5 control (z=false): h runs, thenB reads 42" (a5 false (println [str "h", .var "$h"])) "main" [okOut "h ran\nh 42\n"],
+    expectSet "F1 the legitimate join: thenB reads the skipped region's COMPLETION binder (z=true)" (a5 true (println [str "c", .var "$cor"])) "main" [okOut "c true\n"],
+    expectSet "F1 the legitimate join, region enabled (z=false)" (a5 false (println [str "c", .var "$cor"])) "main" [okOut "h ran\nc true\n"],
+    expectRefusal "A8 store through a TARGET binder from a skipped region: refused by name (pre-existing)" a8 "main" "has not been produced",
+    expectRefusal "A3 (R2) a use confined to a LATER-skipped region: refused by name" a3 "main" "confined to a skipped region",
+    -- F2
+    expectRefusal "F2/C1 R4 plan anchored at &a (a slice VARIABLE's address): refused by name — no hybrid" (r4with c1Graph) "main" "SLICE VARIABLE",
+    expectSet "F2/C1b R4 plan with the header READ at the plan step (.var a): the frozen R4 set" (r4with c1bGraph) "main" [okOut "old 11 20\na 100 200\n", okOut "old 10 20\na 101 200\n"],
+    expectSet "F2 an ARRAY variable's address is a stable anchor: accepted" arrProg "main" [okOut "one\narr 11 20\n"],
+    -- F3
+    expectRefusal "F3/B4 a bare (non-$) cell name would shadow the source local: refused by name" b4 "main" "not a reserved `$` slot name",
+    expectRefusal "F3 a bare (non-$) target binder: refused by name" (malformed mBareTarget) "main" "not a reserved `$` slot name",
+    -- N3
+    expectRefusal "N3/K4 guard completion cell typed int: refused by name at ENTER" (k4 .bool .int) "main" "not a bool cell",
+    expectRefusal "N3 guard test cell typed int: refused by name at ENTER" (k4 .int .bool) "main" "not a bool cell",
+    -- R5
+    expectSet "R5/K2 x := a + f() via .initialization in thenB, mid-block, two sweeps" k2 "main" [okOut "x 3\nx y 3 12\n"],
+    expectSet "R5/K3 the same in a loop body: a fresh x per iteration" k3 "main" [okOut "x 3\nx 4\n"],
     -- Replay
     expectSet "replay graph: three unordered events" trace "main"
       (permutations3.map fun p => okOut (String.join (p.map fun i => ["A\n", "B\n", "C\n"][i]!)))]

@@ -5910,9 +5910,13 @@ theorem unseqTargetPlan_locSup {s : ExecState} {env : LocalEnv} {lhs : Assignee}
     obtain ⟨vals, hvals, h⟩ := h
     split at h
     · rename_i hcomp
-      simp only [pure_eq_ok, Except.ok.injEq] at h
-      subst h
-      exact Nat.le_trans (completeTargetRef_locSup hcomp) (unseqAtoms_locSup hvals)
+      -- The frozen-anchor check (audit F2) only refuses; a pass returns
+      -- the completed plan unchanged.
+      split at h
+      · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
+      · simp only [pure_eq_ok, Except.ok.injEq] at h
+        subst h
+        exact Nat.le_trans (completeTargetRef_locSup hcomp) (unseqAtoms_locSup hvals)
     · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
 
 theorem unseqReadTarget_locSup {s : ExecState} {r : TargetRef} {v : GoValue}
@@ -6831,7 +6835,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, unseqTargetsSup,
       Nat.max_le] at hc ⊢
     omega
-  case unseqComplete g thenB st tg env k refs vals hdep hall hplan =>
+  case unseqComplete g thenB st tg env k refs vals hdep hall hprod hplan =>
     have hp := unseqStorePlan_locSup hplan
     have hh := hs.heap_le
     refine ⟨hs, ?_, rfl, Nat.le_refl _⟩

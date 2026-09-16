@@ -148,8 +148,10 @@ def stepUnseqEnter (s : ExecState) (g : UnseqGraph) (thenB : Stmt) (env : LocalE
 `.pick`, review R2's three cases over THE one `ready` computation
 (`UnseqGraph.ready`, shared with `Step.unseqPick` and `seqConsumption`):
 first the invalid-join refusal (`skippedDep?`, by name); (i) no active
-occurrence → phase 2: the stores ride the existing `storeK` spine, then
-`thenB`; (ii) `ready ≠ []` → THE `unseqNext` CONSULT at bound `|ready|` —
+occurrence → phase 2 — after the consumers' production check
+(`unproducedConsumer?`, by name: no store and no `thenB` mention of a
+binder a SKIPPED occurrence never produced) the stores ride the existing
+`storeK` spine, then `thenB`; (ii) `ready ≠ []` → THE `unseqNext` CONSULT at bound `|ready|` —
 slot `j` = the `j`-th ready occurrence in canonical rank order, a singleton
 pops nothing (G-U) — and the picked occurrence starts (`.run i`); (iii)
 active work, `ready = []` → the named malformed-graph refusal, never a
@@ -169,9 +171,16 @@ def stepUnseqNext (s : ExecState) (g : UnseqGraph) (thenB : Stmt) (st : List Uns
       match g.skippedDep? st with
       | some msg => throw (.stuck msg)
       | none =>
-        if g.allSettled st then do
-          let (refs, vals) ← unseqStorePlan s env tg g.stores
-          return (.next (.storeK refs vals thenB env k), s, choices)
+        if g.allSettled st then
+          -- Audit F1 (2026-09-16): the completion's consumers — the phase-2
+          -- stores' value binders and `thenB`'s cell mentions — must have
+          -- been PRODUCED; a skipped producer's zero-initialised cell is
+          -- refused by name here, never consumed as a value.
+          match g.unproducedConsumer? st thenB with
+          | some msg => throw (.stuck msg)
+          | none => do
+            let (refs, vals) ← unseqStorePlan s env tg g.stores
+            return (.next (.storeK refs vals thenB env k), s, choices)
         else
           match Choices.consumeAt .unseqNext (g.ready st).length choices with
           | (pick, ch') =>

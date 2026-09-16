@@ -1718,9 +1718,54 @@ def unseqAtoms (env : LocalEnv) (s : ExecState) : List Expr → Except Stop (Lis
   | [] => return []
   | e :: es => do return (← unseqAtom env s e) :: (← unseqAtoms env s es)
 
+/-- The FROZEN-ANCHOR check on a target plan (audit F2, 2026-09-16; design
+§3.4): `resolveChain` replays a chain from its anchor VALUE at the checked
+load AND at the phase-2 store, and `indexTargetLoc` on an `.addr loc` whose
+cell holds a SLICE loads THE CURRENT HEADER at each replay — so a plan
+anchored at the ADDRESS of a slice variable (`&a` for `a[i]`), or reaching a
+slice-valued cell through `.field`/`.index` steps, reads through one header
+and stores through another whenever an occurrence rebinds the variable in
+between: the reference's FORBIDDEN hybrid (spike R4, `old 10 20 / a 11
+200`). The frozen header must come through a binder (the header VALUE as
+the anchor: `.var "$hdr"`, or the source local read at the plan step). This
+walks the chain's SHAPE at plan time and performs no check of the plan's
+own (a plan checks nothing — its bounds/nil checks stay in phase 2): a step
+it cannot see through ends the walk with no refusal; an `.index` step on an
+`.addr loc` whose cell holds a `.slice` is refused BY NAME. An ARRAY
+variable's address is a stable identity (arrays do not rebind) and passes.
+Structural on the step list. -/
+def unseqUnfrozenAnchor? (s : ExecState) : GoValue → List TargetStep → List GoValue → Option String
+  | .addr loc, .index :: steps, i :: idxs =>
+      match loadLoc s loc with
+      | .ok (.slice _) =>
+          some s!"unseq: target plan indexes a SLICE VARIABLE through its address ({repr loc}) — the header would be re-read at the load and again at the store, not frozen; freeze the header VALUE through a binder"
+      | .ok (.array _) =>
+          match valueAsInt i with
+          | .ok n => unseqUnfrozenAnchor? s (.addr (.index loc n)) steps idxs
+          | .error _ => none
+      | _ => none
+  | .addr loc, .field tid f :: steps, idxs =>
+      unseqUnfrozenAnchor? s (.addr (.field loc tid f)) steps idxs
+  | .slice sl, .index :: steps, i :: idxs =>
+      match valueAsInt i with
+      | .ok n =>
+          match sliceIndexLoc sl n with
+          | .ok loc => unseqUnfrozenAnchor? s (.addr loc) steps idxs
+          | .error _ => none
+      | .error _ => none
+  | _, _, _ => none
+
+/-- The frozen-anchor check over a completed plan (a map-element plan
+carries the map VALUE; its read is Stage E's refusal, `unseqReadTarget`). -/
+def unseqUnfrozenPlan? (s : ExecState) : TargetRef → Option String
+  | .chain anchor idxs steps => unseqUnfrozenAnchor? s anchor steps idxs
+  | .mapElem .. => none
+
 /-- The `target` body: the machine's own target resolution
 (`targetPlan`/`completeTargetRef`) on FROZEN operand atoms — a plan of sort
-TARGET that checks nothing. -/
+TARGET that checks nothing; a plan whose anchor is NOT frozen (a slice
+variable's address under an index step) is refused by name
+(`unseqUnfrozenPlan?`, audit F2). -/
 def unseqTargetPlan (s : ExecState) (env : LocalEnv) (lhs : Assignee) :
     Except Stop TargetRef :=
   match targetPlan lhs with
@@ -1728,7 +1773,10 @@ def unseqTargetPlan (s : ExecState) (env : LocalEnv) (lhs : Assignee) :
   | some (sh, ops) => do
       let vals ← unseqAtoms env s ops
       match completeTargetRef sh vals with
-      | some r => return r
+      | some r =>
+          match unseqUnfrozenPlan? s r with
+          | some msg => stuck msg
+          | none => return r
       | none => stuck "unseq: malformed target plan arity"
 
 /-- The `guard` body (review R2's entry/completion protocol): read the test
@@ -5011,7 +5059,9 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
   -- requirements — the design note's §1 table); (iii) active work with no
   -- ready occurrence has NO rule (a named malformed-graph refusal in
   -- `stepFn`), as has a value dependency on a skipped region's binder
-  -- (`skippedDep?`). RUN dispatches on the body: a value head evaluates
+  -- (`skippedDep?`) and a completion whose stores or `thenB` would consume
+  -- a binder never produced (`unproducedConsumer?`, audit F1) — refusals
+  -- are not steps. RUN dispatches on the body: a value head evaluates
   -- under the frame (`.wait i`; its value is stored into the binder cell by
   -- `unseqValue`), an invocation runs `callValue` with the binder cells as
   -- targets (its completion is `unseqStmtDone`), a checked load / target
@@ -5031,10 +5081,14 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
       (g.ready st)[j]? = some i →
       Step (.next (.unseqK g thenB st tg env .pick k)) s
         (.next (.unseqK g thenB st tg env (.run i) k)) s
-  /-- Case (i): nothing active → phase 2 (the stores, then `thenB`). -/
+  /-- Case (i): nothing active → phase 2 (the stores, then `thenB`). Every
+  binder the stores and `thenB` consume was PRODUCED (`unproducedConsumer?`;
+  audit F1, 2026-09-16 — a skipped producer's cell is never consumed as a
+  value; the refusal is `stepFn`'s, by name). -/
   | unseqComplete {g thenB st tg env k s refs vals} :
       g.skippedDep? st = none →
       g.allSettled st = true →
+      g.unproducedConsumer? st thenB = none →
       unseqStorePlan s env tg g.stores = .ok (refs, vals) →
       Step (.next (.unseqK g thenB st tg env .pick k)) s
         (.next (.storeK refs vals thenB env k)) s
