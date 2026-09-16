@@ -1,0 +1,24 @@
+# The typed-admission profile family — PARKED (2026-09-16)
+
+[AGENT] worker record, lane `park-lane/typed-profiles-0916` (branch off main `62fc8073`). Ruling record: branch `plan/b7-context-store-0916`, `docs/2026-08-31_qrow-rulings.md` «The typed-profile family ruling record (2026-09-16)» (B7 charter D3 = PARK). Coordinator context: `docs/2026-09-11_review-dispositions.md` §0/§2 (the «Interface.lean as a milestone» programme and the profile expansion were SET ASIDE 2026-09-11); the reasoning-migration survey `docs/2026-09-16_reasoning-archaeology.md` (branch `docs/reasoning-archaeology-0916`) §6, §9, §11.
+
+**The ruling** ([USER] Mike, 2026-09-16, verbatim, relayed by the [AGENT] coordinator — cite as relayed): «We're actually working on migrating reasoning to a new repo (see the notes on a branch that another agent put together, and the reasoning work in deps/ - gitgignored). So I think the correct home for this work is in a new repo in deps/ called golean-reasoning or something like that. Then we can pin these modules to the version of golean which they depend on and park them for future revival. Perhaps the right solution for you is to delete, but leave a note saying where this code lives in the git history (or make it an explicit tag / branch)».
+
+## 1. Inventory — by import graph, at main `62fc80731f0045c170634690bda1c26d1880f185` (the family's last main state)
+
+| Set | Count | Members |
+|---|---|---|
+| Semantic modules DELETED | 57 files / 8,382 lines | `GoLean/GoCore/Boolean*.lean` (12) + `GoLean/GoCore/Recovery*.lean` (44) = 56 modules / 8,197 lines (the ruling's figures); `GoLean/Interface.lean` (185 lines; the re-export facade, 18 imports) |
+| Core modules the family imports — STAY, untouched | 10 | `GoLean/GoCore/{Machine,MachineSound,StepFn,Ops,Admission,Trace,PoolTrace,ProgramTrace,AbortObservation,StringPanic}.lean` (its tests also import `Multi`, `PanicText`) |
+| Reverse imports of the family (every `import` line under `GoLean/`, `Tests/`, `spikes/`, `Main.lean`) | root + spikes | `GoLean.lean` (root) only — NO module under `GoLean/GoCore/` (incl. the aggregator `GoLean/GoCore.lean`) imports a family module, so 1(c) raised no STOP; `spikes/gate-a1` (4 files) and `spikes/iris-customer` (9 files) import `GoLean.Interface` (§5, D7) |
+| Core modules reachable ONLY through the facade | 5 | `Trace` (← `AbortObservation`), `PoolTrace` (← `ProgramTrace`), `ProgramTrace`, `AbortObservation`, `StringPanic` — nothing else under `GoLean/` imports them; §3 re-wires them in `GoLean.lean` so they do not leave the default build silently |
+| Test modules DELETED | 24 / 3043 lines | the 26 modules of the nine libraries below minus the two re-homed core tests `Tests/PanicRendering.lean`, `Tests/StringPanicMembers.lean` (224 lines; §3 lists the core theorems moved out of six others) |
+| Fixture dirs DELETED | 2 dirs / 4 files | `Tests/boolean-typing-fixture/`, `Tests/recovery-typing-fixture/` (`main.go` + own `manifest.tsv`; 0 rows in `baselines/native-full.tsv` — corpus rows cannot move) |
+| Lake libraries DELETED (`lakefile.toml`) | 9 | `InterfaceTests`, `BooleanTypingTests`, `BooleanRuntimeTests`, `RecoveryTypingTests`, `RecoveryStorageTests`, `RecoverySetupTests`, `RecoveryControlTests`, `AbortObservationTests`, `RecoveryTerminalTests` |
+| `scripts/ci` steps + `scripts/ci-libraries.json` rows DELETED | 9 + 9 | `semantic interface` (row `interface`); `typed contract: boolean-typing, boolean-runtime, recovery-typing, recovery-storage, recovery-setup, recovery-control, abort-observation`; `typed recovery terminal classification` (row `recovery-terminal`) |
+| Scripts DELETED | 10 | `scripts/check-interface`, `check-interface.py`, `check-boolean-typing`, `check-boolean-runtime`, `check-recovery-typing`, `check-recovery-storage`, `check-recovery-setup`, `check-recovery-control`, `check-recovery-terminal`, `check-abort-observation` |
+| Tools DELETED | 11 | `tools/{boolean-typing,boolean-runtime,recovery-typing,recovery-storage,recovery-setup,recovery-control,recovery-terminal,abort-observation}-audit.py`, `check-boolean-typing-artifact.lean`, `check-recovery-typing-artifact.lean`, `check-recovery-fixture-controls.py` |
+| Shared tooling — STAYS | 2 | `tools/typed_audit.py`, `scripts/typed-gate-scratch.sh` (used by `check-method-identity`, `check-unseq-scheduler`, `check-wire-boundary` and the new `check-core-audit`; the names are historical) |
+| Docs the family cites — STAY as records | 6 | `docs/2026-09-06_{boolean-program-contract,recovery-control-contract,recovery-entry-contract,recovery-static-claims}.md`, `docs/2026-09-07_land-{panic-text-tape,typed-core-proofs}.md`, plus `docs/2026-09-08_typed-test-gates-landing.md` (how the gates were wired; this lane unwired them the same way) |
+
+Nothing the `ci` reads under `docs/` names the family (checked: `docs/BUGS.md`, `docs/evidence/SIZE-ALLOWLIST.tsv`, the two coverage ledgers, `tools/lowerdiag/causes.tsv`).
