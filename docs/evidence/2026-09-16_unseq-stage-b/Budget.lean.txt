@@ -1,0 +1,44 @@
+import GoLean.CLI
+open GoLean GoCore GoCore.Machine
+
+/-! Stage B budgets (route β of v2.1 §3.6): a loop of N sweeps, each with ONE
+wide pick (two unordered printing events), enumerated by the default DFS
+explorer. Paths = 2^N; the DFS shares no states (route α, the dedup engine,
+is not extended in Stage B). -/
+
+def printer (fid : String) (text : String) : Func := {
+  id := ⟨fid⟩, args := #[], results := #[⟨"r", .int⟩],
+  body := .seqn #[.print true #[.stringLit (GoString.fromLeanString text)], .assign (.var "r") (.intLit 0)] }
+def prA : Func := printer "prA" "A"
+def prB : Func := printer "prB" "B"
+/-- The SILENT variant: two unordered events with no observable effect — every
+order yields the same outcome, so the member set is a singleton while the DFS
+path count still doubles per sweep (the outcome-equivalent product review R5
+names; the dedup engine — route α — is what collapses it, and it is not
+extended in Stage B). -/
+def silent (fid : String) : Func := {
+  id := ⟨fid⟩, args := #[], results := #[⟨"r", .int⟩], body := .assign (.var "r") (.intLit 0) }
+def g2 : UnseqGraph := {
+  cells := [⟨"$a", .int⟩, ⟨"$b", .int⟩],
+  occs := [⟨"A", .invoke ["$a"] (.var "av") [], [], none⟩, ⟨"B", .invoke ["$b"] (.var "bv") [], [], none⟩] }
+def loopProg (n : Nat) (quiet : Bool) : Program := { funcs := #[
+  { id := ⟨"main"⟩, args := #[], results := #[],
+    body := .block #[⟨"i", .int⟩, ⟨"av", .funcType [] [.int] false⟩, ⟨"bv", .funcType [] [.int] false⟩] #[
+      .assign (.var "av") (.funcVal ⟨"prA"⟩ #[]), .assign (.var "bv") (.funcVal ⟨"prB"⟩ #[]),
+      .assign (.var "i") (.intLit 0),
+      .while (.lessCmp (.var "i") (.intLit n))
+        (.seqn #[.unseq g2 (.seqn #[]), .assign (.var "i") (.add (.var "i") (.intLit 1))])] },
+  (if quiet then silent "prA" else prA), (if quiet then silent "prB" else prB)] }
+
+def main (args : List String) : IO Unit := do
+  let n := (args.head? >>= String.toNat?).getD 1
+  let quiet := args.getD 1 "" == "quiet"
+  match CLI.enumSetup (loopProg n quiet) "main" #[] with
+  | .error e => IO.println s!"setup: {repr e}"
+  | .ok ep =>
+    let t0 ← IO.monoMsNow
+    match CLI.explore ep 2000000 8 64 4096 50000000 none with
+    | .error m => IO.println s!"N={n} explore error: {m}"
+    | .ok out =>
+      let t1 ← IO.monoMsNow
+      IO.println s!"N={n}\tmembers={out.observations.size}\tleaves={out.leaves}\tsites={out.sitesSeen}\tsteps={out.steps}\tprobes={out.probes}\tmaxDepth={out.maxDepth}\twall_ms={t1 - t0}"

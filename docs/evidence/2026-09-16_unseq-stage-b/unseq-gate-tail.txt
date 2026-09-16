@@ -1,0 +1,49 @@
+ok: W1 mut()+a: exact set of 2 member(s) — leaves=8 sites=6 steps=334 maxDepth=3
+ok: W2 a[b[0]]+mut(): exact set of 3 member(s) — leaves=15 sites=12 steps=990 maxDepth=4
+ok: W3 a[i]+=mut(): exact set of 2 member(s) — leaves=10 sites=8 steps=704 maxDepth=4
+ok: W4 a[1]+b[2] both nil: exact set of 2 member(s) — leaves=2 sites=1 steps=25 maxDepth=1
+ok: W5 loop: stale binders impossible: exact set of 2 member(s) — leaves=3 sites=2 steps=233 maxDepth=2
+ok: W6 x+inc()+inc(): exact set of 3 member(s) — leaves=15 sites=12 steps=977 maxDepth=4
+ok: X1 xs[ys[9]], b = zs[7], 2: exact set of 2 member(s) — leaves=32 sites=16 steps=522 maxDepth=4
+ok: X2 b2i(z||h())+x, z=false: exact set of 2 member(s) — leaves=48 sites=42 steps=2779 maxDepth=7
+ok: X2 b2i(z||h())+x, z=true: exact set of 1 member(s) — leaves=24 sites=20 steps=1024 maxDepth=5
+ok: X3 x[f()] += <-ch, buffered: exact set of 2 member(s) — leaves=7 sites=6 steps=385 maxDepth=4
+ok: X3e x[f()] += <-ch, EMPTY channel: blocked is a refusal apart from the members: refused by name (deadlock)
+ok: X3e canonical tape: the panic member (the receive never ran): tape [] → expected member
+ok: R1 x+y+mut(), unreduced: exact set of 4 member(s) — leaves=30 sites=23 steps=1418 maxDepth=4
+ok: R1 REDUCED (R_x→R_y): loses 1 — the refuted reduction, as a NEGATIVE: exact set of 3 member(s) — leaves=15 sites=12 steps=770 maxDepth=4
+ok: R2a sink(z||h(), k()), z=true: exact set of 1 member(s) — leaves=1 sites=0 steps=105 maxDepth=0
+ok: R2a sink(z||h(), k()), z=false: exact set of 1 member(s) — leaves=1 sites=0 steps=137 maxDepth=0
+ok: R2a INVALID join: k value-depends on the skipped h: refused by name (confined to a skipped region)
+ok: R2b E1 anchored at COMPLETION: exact set of 1 member(s) — leaves=1 sites=0 steps=111 maxDepth=0
+ok: R2b E1 anchored at guard ENTRY (refuted): exact set of 2 member(s) — leaves=3 sites=2 steps=235 maxDepth=2
+ok: R2c nested guards, b=true: exact set of 2 member(s) — leaves=2 sites=1 steps=297 maxDepth=1
+ok: R2c nested guards, b=false: exact set of 2 member(s) — leaves=2 sites=1 steps=265 maxDepth=1
+ok: R4 old := a; a[0] += mut() (mut rebinds a): exact set of 2 member(s) — leaves=4 sites=3 steps=427 maxDepth=3
+ok: R6 a[f()] SPLIT header/index producers: exact set of 2 member(s) — leaves=8 sites=6 steps=371 maxDepth=3
+ok: R6 a[f()] FUSED read (the narrowing): exact set of 1 member(s) — leaves=3 sites=2 steps=168 maxDepth=2
+ok: C1 f(g()): exact set of 1 member(s) — leaves=1 sites=0 steps=109 maxDepth=0
+ok: C2 sink(a): exact set of 1 member(s) — leaves=1 sites=0 steps=61 maxDepth=0
+ok: C3 sink(a, mut()): exact set of 2 member(s) — leaves=8 sites=6 steps=487 maxDepth=3
+ok: C4 cycle A↔B: refused by name (no ready occurrence)
+ok: C1 singleton picks: the tape is untouched: tape [5, 6] → expected member, leftover [5, 6]
+ok: C2 singleton picks: the tape is untouched: tape [7] → expected member, leftover [7]
+ok: malformed: unknown slot: refused by name (unknown slot)
+ok: malformed: duplicate result: refused by name (duplicate result)
+ok: malformed: load through a VALUE binder (sort mismatch): refused by name (sort mismatch)
+ok: malformed: TARGET binder used as a value (sort mismatch): refused by name (sort mismatch)
+ok: malformed: unknown occurrence reference: refused by name (unknown occurrence reference)
+ok: malformed: a cell produced by no occurrence: refused by name (produced by no occurrence)
+ok: target: pointer redirection (frozen pointee): exact set of 2 member(s) — leaves=4 sites=3 steps=277 maxDepth=3
+ok: target: cell mutation at a stable address: exact set of 2 member(s) — leaves=4 sites=3 steps=289 maxDepth=3
+ok: target: frozen map-element plan (Stage E): refused by name (frozen map-element plan)
+ok: recursion: per-activation binder cells: exact set of 1 member(s) — leaves=10000 sites=9414 steps=889276 maxDepth=16
+ok: replay graph: three unordered events: exact set of 6 member(s) — leaves=6 sites=4 steps=480 maxDepth=2
+ok: replay: order [0, 1, 2] via rank tape [0, 0, 0]: tape [0, 0, 0] → expected member
+ok: replay: order [0, 2, 1] via rank tape [0, 1, 0]: tape [0, 1, 0] → expected member
+ok: replay: order [1, 0, 2] via rank tape [1, 0, 0]: tape [1, 0, 0] → expected member
+ok: replay: order [1, 2, 0] via rank tape [1, 1, 0]: tape [1, 1, 0] → expected member
+ok: replay: order [2, 0, 1] via rank tape [2, 0, 0]: tape [2, 0, 0] → expected member
+ok: replay: order [2, 1, 0] via rank tape [2, 1, 0]: tape [2, 1, 0] → expected member
+Unseq scheduler (Stage B): PASS — every reference set exact, every refusal named
+Unseq scheduler gate: PASS
