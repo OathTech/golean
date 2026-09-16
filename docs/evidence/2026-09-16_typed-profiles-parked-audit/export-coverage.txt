@@ -1,0 +1,35 @@
+[AGENT auditor] Required-export coverage: the DELETED Tests/InterfaceAudit.lean (110 required
+exports at 62fc8073) vs the re-homed Tests/GoCoreAudit.lean (51). Each old export was resolved
+to its DECLARING file at 62fc8073 by a namespace-tracking parser (.tmp/exports-exact.txt),
+then classified by whether that file survives at bcee0c34.
+Result: 18 old exports are facts of KEPT core modules -> ALL 18 still required (0 dropped);
+5 more (GoLean.GateA1.*, Tests/InterfaceContract.lean) survive renamed as
+GoLean.GoCore.ContractTests.* and are still required; the other 87 are theorems whose
+DEFINITIONS left with the family. The new list adds 28 further core requirements.
+
+OLD 110 NEW 51
+
+CORE (origin kept) & STILL REQUIRED: 18
+   GoLean.Semantics.iter_iff_trace ['GoLean/GoCore/Trace.lean']
+   GoLean.Semantics.Trace.erase ['GoLean/GoCore/Trace.lean']
+   GoLean.Semantics.run_ok_iff ['GoLean/GoCore/Trace.lean']
+   GoLean.Semantics.exists_run_ok_iff ['GoLean/GoCore/Trace.lean']
+   GoLean.Semantics.Pool.run_iff ['GoLean/GoCore/PoolTrace.lean']
+   GoLean.Semantics.Pool.Run.success_reaches ['GoLean/GoCore/PoolTrace.lean']
+   GoLean.Semantics.Pool.program_run_iff ['GoLean/GoCore/ProgramTrace.lean']
+   GoLean.Semantics.Pool.exists_program_run_iff ['GoLean/GoCore/ProgramTrace.lean']
+   GoLean.Semantics.Pool.observation_iff ['GoLean/GoCore/ProgramTrace.lean']
+   GoLean.Semantics.Pool.fuel_is_not_observation ['GoLean/GoCore/ProgramTrace.lean']
+   GoLean.Semantics.Pool.refusal_is_not_observation ['GoLean/GoCore/ProgramTrace.lean']
+   GoLean.GoCore.Admission.checkBoolean_iff ['GoLean/GoCore/Admission.lean']
+   GoLean.GoCore.Admission.admitted_index_bound ['GoLean/GoCore/Admission.lean']
+   GoLean.GoCore.Admission.admitted_all_bodies ['GoLean/GoCore/Admission.lean']
+   GoLean.GoCore.PanicText.lfPrefix_valid ['GoLean/GoCore/PanicText.lean']
+   GoLean.GoCore.PanicText.firstLine_bytes ['GoLean/GoCore/PanicText.lean']
+   GoLean.GoCore.Machine.utf8String?_bytes ['GoLean/GoCore/Machine.lean']
+   GoLean.GoCore.RecoveryRuntime.runConfigWithAbort_erasure ['GoLean/GoCore/AbortObservation.lean']
+
+*** CORE (origin kept) but DROPPED from required: 0
+
+
+UNRESOLVED: 0

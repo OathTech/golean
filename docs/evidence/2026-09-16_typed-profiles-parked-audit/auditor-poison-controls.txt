@@ -1,0 +1,13 @@
+[baseline clean harness] exit=0
+=== native_decide_in_unlisted_core: compile exit=0
+=== native_decide_in_unlisted_core: audit exit=1
+/home/dev/projects/golean/.claude/worktrees/audit-park-typed-profiles/.tmp/auditor-poison-8ojgovwu/AuditAll.lean:45:0: error: Core totality audit: _private.GoLean.GoCore.StateWf.0.auditorNativeHole depends on forbidden axiom _private.GoLean.GoCore.StateWf.0.auditorNativeHole._native.native_decide.ax_1_1
+native_decide_in_unlisted_core: VERDICT = REFUSED BY NAME
+=== foreign_axiom_in_unlisted_top_module: compile exit=0
+=== foreign_axiom_in_unlisted_top_module: audit exit=1
+/home/dev/projects/golean/.claude/worktrees/audit-park-typed-profiles/.tmp/auditor-poison-8ojgovwu/AuditAll.lean:45:0: error: Core totality audit: _private.GoLean.ChoiceTrace.0.auditorForeignHole depends on forbidden axiom _private.GoLean.ChoiceTrace.0.auditorForeignHole
+foreign_axiom_in_unlisted_top_module: VERDICT = REFUSED BY NAME
+=== implemented_by_unsafe: compile exit=0
+=== implemented_by_unsafe: audit exit=0
+implemented_by_unsafe: VERDICT = NOT REFUSED
+EXIT=0

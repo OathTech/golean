@@ -1,0 +1,48 @@
+[AGENT auditor] Captured exits, worktree .claude/worktrees/audit-park-typed-profiles,
+branch review/typed-profiles-parked-0916 @ bcee0c34. Every lake/lean command via scripts/capped.
+A killed or timed-out command decided nothing; nothing below was killed.
+
+BOOTSTRAP
+  scripts/setup-deps --from /home/dev/projects/golean      EXIT=0  (goose 3be88bb, raft 56e3200, go c19862e5f8)
+  cp -a <park-typed-profiles>/.lake .lake                  EXIT=0  (plain copy, 580M)
+  scripts/capped lake build                                EXIT=0  "Build completed successfully (92 jobs)"
+
+BUILD (f)
+  scripts/capped lake build                                EXIT=0  (92 jobs, default targets)
+  scripts/capped lake build GoCoreAuditTests TestsData EvalTests AdmissionTests \
+      DeclarationTests MethodIdentityTests UnseqSchedulerTests
+                                                           EXIT=0  "Build completed successfully (68 jobs)"
+  (there is no library named GoCoreContractTests; Tests.GoCoreContract is globbed by GoCoreAuditTests)
+
+THE RE-HOMED GATE (a)
+  scripts/capped scripts/check-core-audit                  EXIT=0
+      "Core audit harness: 43 GoLean modules on disk (34 under GoLean/GoCore/)"
+      "43 GoLean modules in the closure (34 under GoLean.GoCore), all on disk; 51 required
+       theorems present; 15272 declarations across all imported local modules; classical trio only"
+      5 compiled controls rejected BY NAME; scratch removed on success.
+
+FAIL-CLOSED PROBES (a)
+  scripts/check-core-audit unexpected-arg                  EXIT=2  "check-core-audit: expected no arguments"
+  on_disk_modules() against an empty GoLean/GoCore/        REFUSED RuntimeError
+      "core audit: GoLean/GoCore/ has no modules - a vacuous audit is refused"
+  untracked probe module GoLean/GoCore/ZZAuditorProbe.lean (on disk, imported by nothing):
+      lake build GoLean GoCoreAuditTests                   EXIT=0 (no olean produced for it)
+      lake env lean <generated harness>                    EXIT=1
+      "object file '.../GoLean/GoCore/ZZAuditorProbe.olean' of module GoLean.GoCore.ZZAuditorProbe does not exist"
+      => a module that reaches the disk but not the library root takes the gate RED by name.
+      Probe file removed; git status clean.
+
+INDEPENDENT POISONS (a) - see auditor-poison-controls.txt / auditor-poison.py
+  native_decide in GoLean/GoCore/StateWf.lean (NOT one of the lane's 5 controls) -> REFUSED BY NAME
+  private axiom in GoLean/ChoiceTrace.lean    (NOT one of the lane's 5 controls) -> REFUSED BY NAME
+  @[implemented_by] + unsafe def in GoLean/GoCore/PanicText.lean -> NOT refused (audit EXIT=0);
+      caught instead by scripts/ci step 1a2, whose scan block is byte-identical to 62fc8073.
+
+THE GATE OF RECORD (coordinator's run at bcee0c34 with deps present; READ-ONLY)
+  .../worktrees/park-typed-profiles/.tmp/ci-record.exit    1
+  red steps: exactly two
+      FAIL certificate provenance   ("STALE certification: changed dependency build/files/GoLean.lean")
+      FAIL baseline diff (DRIFT)    drift block = exactly ONE row:
+          imported-goose/channel/google-search  baseline[PASS/membership] -> now[FAIL/membership]
+  differential coverage summary: cases=3676 pass=3427 fail=249   (baseline 3428/248: one row moved)
+  => exactly the expected 5a pair and nothing else.
