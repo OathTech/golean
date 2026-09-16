@@ -5,6 +5,13 @@ Main is the SEMANTICS product only (the repo split, 2026-08-31 —
 everything else this repo has produced; they are refs in THIS repo
 and resolve locally.
 
+For a source-checked survey of the reasoning branches, newer Iris spikes,
+uncommitted worktree material and stashes, see
+[Reasoning archaeology and revival proposal](2026-09-16_reasoning-archaeology.md)
+([AGENT], 2026-09-16). It distinguishes historical claims from current
+artifacts and proposes a reasoning repository plus a Raft repository with
+independent Verdi and etcd-proof packages.
+
 - **`park/reasoning-2026-08-31`** — the entire reasoning product at
   its last everything-together state (main `7440bf70`, the Iris
   corpus era's phase-A tip, all gates green): the `proofs/` package
