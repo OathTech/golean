@@ -1,0 +1,20 @@
+# Producer commands: README.md; command labels added by [AGENT], 2026-09-16.
+# check.py (exit 0)
+read-order reduction: full=[0, 1, 2, 3]; reduced=[0, 2, 3]; lost=[1]
+skipped-event z=False: values=[7]
+skipped-event z=True: no ready occurrence among ['K'] (cycle)
+logical ordering: guard-only=[False, True]; after-completion=[False]
+header granularity: fused=[20]; split=[10, 20]
+RESULT: expected design gaps reproduced (not a GoLean conformance pass)
+# go run (exit 0)
+reduction 3
+guard k
+guard result true 7
+header 20
+logical false 0
+# go run -gcflags='-N -l' (exit 0)
+reduction 3
+guard k
+guard result true 7
+header 20
+logical false 0
