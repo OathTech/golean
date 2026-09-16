@@ -1,0 +1,152 @@
+import Tests.GoCoreContract
+import Tests.PanicRendering
+import Tests.StringPanicMembers
+import GoLean.GoCore.PanicText
+import GoLean.GoCore.Admission
+import Lean
+
+/-! The core totality audit (2026-09-16, lane `park-lane/typed-profiles-0916`,
+`docs/2026-09-16_typed-profiles-parked.md` §3): the post-import axiom audit re-homed from
+the parked `semantic interface` step (`Tests/InterfaceAudit.lean` at `62fc8073`), restated
+over the CORE alone. Run from an external harness (`tools/core-audit.py`) that imports every
+`GoLean/*.lean` and `GoLean/GoCore/*.lean` found on disk and passes that list in, so that:
+
+* every module on disk is in the audited closure and every `GoLean.*` module in the closure
+  is on disk (two-way; a module that fails to import fails the harness first);
+* no module root outside `Init`/`Std`/`Lean`/`GoLean`/`Tests` is in the closure
+  (`lake-manifest.json` declares no packages — a new dependency is refused by name);
+* the load-bearing core modules and the required core theorems exist (the trace/run
+  bridges, the abort observer, the string-panic members, the contract regressions);
+* the abort-text helpers stay CONSTRUCTIVE (`propext`/`Quot.sound` only, no choice) —
+  landing chunk L3's boundary (`docs/2026-09-07_land-panic-text-tape.md`);
+* every declaration of every `GoLean.*`/`Tests.*` module — private, generated and trailing
+  declarations included — depends on the classical trio only: no `sorry`, no axiom, no
+  native decision. This is the charter's «no sorry, no native_decide, no axioms anywhere in
+  `GoLean/`» as a MACHINE check, beside the text scans of `scripts/ci` steps 1/1a2/1a3. -/
+
+open Lean
+
+namespace Tests.GoCoreAudit
+
+def allowedRoots : List Name := [`Init, `Std, `Lean, `GoLean, `Tests]
+
+def requiredModules : List Name := [
+    `GoLean.GoCore, `GoLean.GoCore.Machine, `GoLean.GoCore.StepFn, `GoLean.GoCore.StateWf,
+    `GoLean.GoCore.MachineSound, `GoLean.GoCore.UnseqSound, `GoLean.GoCore.Multi,
+    `GoLean.GoCore.MultiSound, `GoLean.GoCore.Trace, `GoLean.GoCore.PoolTrace,
+    `GoLean.GoCore.ProgramTrace, `GoLean.GoCore.AbortObservation, `GoLean.GoCore.StringPanic,
+    `GoLean.GoCore.PanicText, `GoLean.GoCore.AdmissionIndices, `GoLean.GoCore.AdmissionPolicy,
+    `GoLean.GoCore.Admission, `GoLean.CLI, `GoLean.NativeToIR, `GoLean.ChoiceTrace,
+    `Tests.GoCoreContract, `Tests.PanicRendering, `Tests.StringPanicMembers,
+    `Tests.GoCoreAudit]
+
+/-- Required core theorems (the `semantic interface` audit's CORE exports, plus the
+re-homed regressions). Each must exist as a theorem. -/
+def exports : List Name := [
+    -- the trace/run correspondence (`Trace`, `PoolTrace`, `ProgramTrace`)
+    ``GoLean.Semantics.iter_iff_trace, ``GoLean.Semantics.Trace.erase,
+    ``GoLean.Semantics.run_ok_iff, ``GoLean.Semantics.exists_run_ok_iff,
+    ``GoLean.Semantics.Pool.run_iff, ``GoLean.Semantics.Pool.Run.success_reaches,
+    ``GoLean.Semantics.Pool.program_run_iff,
+    ``GoLean.Semantics.Pool.exists_program_run_iff,
+    ``GoLean.Semantics.Pool.observation_iff,
+    ``GoLean.Semantics.Pool.fuel_is_not_observation,
+    ``GoLean.Semantics.Pool.refusal_is_not_observation,
+    -- the A3a admission checker (core `Admission`; the admission step audits the rest)
+    ``GoLean.GoCore.Admission.checkBoolean_iff,
+    ``GoLean.GoCore.Admission.admitted_index_bound,
+    ``GoLean.GoCore.Admission.admitted_all_bodies,
+    -- the config-level abort observer (`AbortObservation`)
+    ``GoLean.GoCore.RecoveryRuntime.runConfigWithAbort_erasure,
+    ``GoLean.GoCore.RecoveryRuntime.stringPanicEntry?_some,
+    ``GoLean.GoCore.RecoveryRuntime.stringPanicEntries?_some,
+    ``GoLean.GoCore.RecoveryRuntime.stringPanicEntries?_typed,
+    ``GoLean.GoCore.RecoveryRuntime.abortRecord?_some,
+    ``GoLean.GoCore.RecoveryRuntime.runConfigWithAbort_witness,
+    -- the string-panic members at the machine's abort (`StringPanic`)
+    ``GoLean.GoCore.Machine.renderPanicHead_string,
+    ``GoLean.GoCore.Machine.stringPanicHead_none_iff,
+    ``GoLean.GoCore.Machine.stringFirstLine?_bytes,
+    ``GoLean.GoCore.Machine.stepFn_string_abort,
+    ``GoLean.GoCore.Machine.stepFn_string_abort_refused,
+    ``GoLean.GoCore.Machine.runConfig_string_abort,
+    ``GoLean.GoCore.Machine.runConfig_string_abort_refused,
+    -- the first-line renderer's byte facts (`PanicText`, `Machine`)
+    ``GoLean.GoCore.PanicText.lfPrefix_valid,
+    ``GoLean.GoCore.PanicText.firstLine_bytes,
+    ``GoLean.GoCore.Machine.utf8String?_bytes,
+    -- the contract regressions (`Tests/GoCoreContract.lean` §A/§B/§C)
+    ``GoLean.GoCore.ContractTests.recover_step_does_not_transport,
+    ``GoLean.GoCore.ContractTests.fixed_stream_not_existential_path,
+    ``GoLean.GoCore.ContractTests.address_bound_admits_ill_typed,
+    ``GoLean.GoCore.ContractTests.both_pool_traces,
+    ``GoLean.GoCore.ContractTests.print_before_panic,
+    ``GoLean.GoCore.ContractTests.Interpreter.terminal_at_zero_fuel,
+    ``GoLean.GoCore.ContractTests.Interpreter.actual_scope_restoration,
+    ``GoLean.GoCore.ContractTests.Interpreter.actual_new_local_zero,
+    ``GoLean.GoCore.ContractTests.Interpreter.registration_is_lifo,
+    ``GoLean.GoCore.ContractTests.Interpreter.equal_repanic_keeps_history,
+    ``GoLean.GoCore.ContractTests.Interpreter.scope_and_zero_execution,
+    ``GoLean.GoCore.ContractTests.Interpreter.write_keeps_both_actual_aliases,
+    ``GoLean.GoCore.ContractTests.AbortObserver.complete_chain_bytes_and_flags,
+    ``GoLean.GoCore.ContractTests.AbortObserver.stringPanicEntries?_map_entry,
+    -- the renderer and member regressions (`Tests/PanicRendering.lean`, `Tests/StringPanicMembers.lean`)
+    ``GoLean.PanicRenderingTests.equal_repanic_members,
+    ``GoLean.PanicRenderingTests.invalid_utf8_first_line_refused,
+    ``GoLean.PanicRenderingTests.refusal_names_the_cause,
+    ``GoLean.StringPanicMembersTests.member_is_renderer,
+    ``GoLean.StringPanicMembersTests.generic_actual_abort,
+    ``GoLean.StringPanicMembersTests.actual_abort_pin_collapse,
+    ``GoLean.StringPanicMembersTests.actual_abort_refused]
+
+/-- The abort-text helpers keep the constructive machine-helper boundary (no
+`Classical.choice`), although the correspondence layer admits the classical trio. -/
+def constructiveHelpers : List Name := [
+    ``GoLean.GoCore.PanicText.firstLine, ``GoLean.GoCore.Machine.utf8String?,
+    ``GoLean.GoCore.Machine.stringFirstLine?, ``GoLean.GoCore.Machine.renderPanicHead,
+    ``GoLean.GoCore.Machine.abortMsg]
+
+/-- `onDisk` is the harness's listing of every `GoLean/*.lean` and `GoLean/GoCore/*.lean`
+module (plus the aggregator `GoLean.GoCore`); the audit refuses any mismatch with the
+closure in either direction. -/
+def run (onDisk : List String) : CoreM Unit := do
+  let env ← getEnv
+  let header := env.header.moduleNames
+  for m in header do
+    unless allowedRoots.contains m.getRoot do
+      throwError "Core totality audit: foreign module root in the closure: {m} (lake-manifest.json declares no packages; fail closed)"
+  let ourModules := header.filter fun m => m.getRoot == `GoLean
+  if onDisk.isEmpty then
+    throwError "Core totality audit: the harness passed an empty on-disk module list (vacuous audit refused)"
+  for name in onDisk do
+    unless header.contains name.toName do
+      throwError "Core totality audit: module on disk but not in the audited closure: {name}"
+  for m in ourModules do
+    unless onDisk.contains m.toString do
+      throwError "Core totality audit: module in the closure but absent from the harness's on-disk list: {m}"
+  for m in requiredModules do
+    unless header.contains m do
+      throwError "Core totality audit: missing module {m}"
+  for n in exports do
+    let some (.thmInfo _) := env.find? n
+      | throwError "Core totality audit: missing theorem {n}"
+  for n in constructiveHelpers do
+    for ax in (← collectAxioms n) do
+      unless [``propext, ``Quot.sound].contains ax do
+        throwError "Core totality audit: constructive abort-text helper {n} depends on forbidden axiom {ax}"
+  let ours := header.map fun n => [`GoLean, `Tests].contains n.getRoot
+  let allowed : List Name := [``propext, ``Classical.choice, ``Quot.sound]
+  let mut checked := 0
+  for (n, _) in env.constants.toList do
+    let localModule := match env.getModuleIdxFor? n with
+      | some i => ours[i.toNat]!
+      | none => true
+    unless localModule do continue
+    for ax in (← collectAxioms n) do
+      unless allowed.contains ax do
+        throwError "Core totality audit: {n} depends on forbidden axiom {ax}"
+    checked := checked + 1
+  let goCore := ourModules.filter fun m => m.toString.startsWith "GoLean.GoCore."
+  logInfo s!"Core totality audit: {ourModules.size} GoLean modules in the closure ({goCore.size} under GoLean.GoCore), all on disk; {exports.length} required theorems present; {checked} declarations across all imported local modules; classical trio only"
+
+end Tests.GoCoreAudit

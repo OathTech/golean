@@ -1,6 +1,10 @@
-import GoLean.Interface
+import GoLean.GoCore.Machine
 
-/-! Kernel regressions for the first-panic-line observation boundary over the
+/-! Re-homed 2026-09-16 (`docs/2026-09-16_typed-profiles-parked.md` §3): the import was the
+parked facade `GoLean.Interface`; every name below is the CORE renderer's (`GoLean/GoCore/Machine.lean`,
+`Ops.lean`), so the module now imports it directly. Content unchanged.
+
+Kernel regressions for the first-panic-line observation boundary over the
 `repanicCollapse` tape (landing chunk L3, `docs/2026-09-07_land-panic-text-tape.md`;
 the sprint's `Tests/PanicRendering` of `ff7173dd`/`819182b5`, RESTATED
 choice-indexed). Every claim below is against the gc witness table

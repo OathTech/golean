@@ -505,6 +505,22 @@ else
   bad "semantic interface"
 fi
 
+# The core totality audit (2026-09-16, docs/2026-09-16_typed-profiles-parked.md
+# §3): re-homed from the parked `semantic interface` step when the typed-profile
+# family was parked. The charter's «no sorry, no native_decide, no axioms
+# anywhere in GoLean/» is MACHINE-checked here, not only text-scanned (steps
+# 1/1a2/1a3): the harness imports every module under GoLean/ found on disk and
+# audits every declaration of every local module for the classical trio only;
+# the required core theorems (trace/run bridges, the abort observer, the string
+# panic members, the contract regressions) must exist; the abort-text helpers
+# stay constructive; compiled poisons are rejected by name.
+step "core totality audit (every GoLean/ module post-import: classical trio only, required core theorems, compiled poison controls)"
+if library_step core-audit bash scripts/check-core-audit; then
+  ok "core totality audit (every GoLean/ module; required core theorems; poison controls)"
+else
+  bad "core totality audit (scripts/check-core-audit)"
+fi
+
 step "admission checker proofs and post-import audit"
 if library_step admission bash scripts/check-admission --lean-only; then
   ok "admission checker proofs and post-import audit"

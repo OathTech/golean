@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# The core totality audit gate (lane park-lane/typed-profiles-0916, 2026-09-16;
+# docs/2026-09-16_typed-profiles-parked.md §3): the post-import axiom audit
+# re-homed from the parked `semantic interface` step, restated over the CORE.
+# tools/core-audit.py generates a harness importing EVERY GoLean/*.lean and
+# GoLean/GoCore/*.lean found on disk and runs Tests.GoCoreAudit.run with that
+# list (two-way closure check; no foreign package root; required core theorems;
+# constructive abort-text helpers; every local declaration classical-trio only),
+# then the compiled poison controls — a private axiom in Trace, AbortObservation
+# and StringPanic (the three modules that reached the build only through the
+# facade), a private axiom in the audit itself, a trailing sorry in the contract
+# tests — each rejected BY NAME. No allowlist; a module that does not import
+# fails the harness before anything is counted.
+set -Eeuo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT"
+[[ $# = 0 ]] || { echo 'check-core-audit: expected no arguments' >&2; exit 2; }
+. "$ROOT/scripts/typed-gate-scratch.sh"
+# The GoLean library (every module reachable from the root GoLean.lean) plus the
+# core test library: the harness needs an olean for every module it imports.
+scripts/capped lake build GoLean GoCoreAuditTests
+scripts/capped lake env python3 tools/core-audit.py | tee "$gate_scratch/audit.log"
+grep -q '^Typed audit: core-audit: [0-9]* compiled controls passed$' "$gate_scratch/audit.log"
+grep -q 'Core totality audit: [0-9]* GoLean modules in the closure' "$gate_scratch/audit.log"
+printf '%s\n' 'Core totality audit gate: PASS'

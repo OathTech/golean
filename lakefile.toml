@@ -83,3 +83,12 @@ globs = ["Tests.MethodIdentity", "Tests.MethodIdentityAudit"]
 # and the mechanism theorem's post-import audit.
 name = "UnseqSchedulerTests"
 globs = ["Tests.UnseqScheduler", "Tests.UnseqSchedulerAudit"]
+
+[[lean_lib]]
+# The core totality audit and the core contract regressions, re-homed from the
+# parked typed-profile family (docs/2026-09-16_typed-profiles-parked.md §3):
+# recover/choice-site/trace bridges, interpreter facts, the config-level abort
+# observer, and the post-import axiom audit over EVERY module under GoLean/
+# (classical trio only; the panic-text renderer/member tests join at stage 3).
+name = "GoCoreAuditTests"
+globs = ["Tests.GoCoreContract", "Tests.GoCoreAudit"]
