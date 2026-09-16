@@ -168,3 +168,11 @@ block + exit/seconds of the fix round's `ci --diff`).
 | candidate vs tracked record | `claim` and `observations` (the six members) IDENTICAL; `inputs` differ exactly in the Stage B files (`State/Machine/StepFn/StateWf/MachineSound/Syntax*/Unseq*/EnumDedup*/MultiStreams/Race/AdmissionIndices/MachineEqb/GoCore.lean`, `CLI/ChoiceTrace/EnumDedup.lean`, `lakefile.toml`, `scripts/ci`, `scripts/ci-libraries.json`, `scripts/check-unseq-scheduler`) and the receipt (binary `0dec9436…`, source_commit `6793943c`, clean tree) — INSTALLED as `baselines/certified/imported-goose__channel__google-search.certified.json` in this commit; a provenance refresh, not a re-pin and not a finding |
 
 The lane's own gates (tails `gate1-3`) ran on the dirty tree just before each commit; this train's run at the committed merged tip is the tail of record. No runtime file is touched by this commit.
+
+**Green re-run at the records commit `7741464c`** ([AGENT] coordinator, 2026-09-16): a fast `scripts/ci`
+first went RED on `baseline diff` — it re-reads the `--slow` run's recorded `latest.tsv`, in which the
+certified row was FAIL because its record was stale AT RUN TIME (provenance itself was already green) —
+so the green re-run is the full differential: `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff` at
+`7741464c`, EXIT=0, `RESULT: PASS`, `baseline diff FULL (3676/3676, no regression)`, `certificate
+provenance` ok, negatives 394 no regression. Lesson for every 5a train: after installing the candidate,
+re-run `ci --diff`, not fast `ci`.
