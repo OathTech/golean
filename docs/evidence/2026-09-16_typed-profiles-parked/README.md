@@ -10,10 +10,10 @@
 # bootstrap (worktree .claude/worktrees/park-typed-profiles, branch park-lane/typed-profiles-0916)
 scripts/setup-deps > .tmp/setup-deps.log 2>&1; echo EXIT=$?                # EXIT=1 here: no network
 cp -a /home/dev/projects/golean/.lake .lake && scripts/capped lake build > .tmp/warm.log 2>&1; echo EXIT=$?
-# stage 2 (421ecc37)
+# stage 2 (421ecc37 — pre-rebase; = e38b1152 after the rebase onto 94da420e; audit fix F3)
 scripts/capped lake build GoCoreAuditTests > .tmp/stage2-build.log 2>&1; echo EXIT=$?
 scripts/check-core-audit > .tmp/stage2-gate.log 2>&1; echo EXIT=$?
-# stage 3 (7ac513e6)
+# stage 3 (7ac513e6 — pre-rebase; = db2de6cf after the rebase; audit fix F3)
 scripts/capped lake build > .tmp/build.log 2>&1; echo EXIT=$?
 mkdir artifacts/build-lock.d && echo "$LANE $$ $(date -u +%FT%TZ)" > artifacts/build-lock.d/owner   # released by trap
 scripts/ci --diff > .tmp/ci.log 2>&1; echo EXIT=$?                          # ci self-wraps in scripts/capped

@@ -13,7 +13,8 @@ frames, `stepFn` at the `probeK` choice site, `Step`/`Steps`/`Trace`, `StateWf`,
 `run_ok_iff` / `Pool.run_iff` / `Pool.program_run_iff` bridges, `execProgLoopOut` and
 `runProgramPoolOutM`. §B — interpreter facts moved out of the deleted typed test
 libraries. §C — the config-level abort observer (`GoLean/GoCore/AbortObservation.lean`).
-Every theorem here is a required export of `Tests/GoCoreAudit.lean`. -/
+The 14 theorems named in `tools/core-audit.py`'s required list are required exports of
+`Tests/GoCoreAudit.lean`; the other 22 declarations here are regression facts (audit fix F2). -/
 
 namespace GoLean.GoCore.ContractTests
 open GoCore GoCore.Machine Semantics

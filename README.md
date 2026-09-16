@@ -36,11 +36,13 @@ Direction:
   2026-09-05 addendum: the semantic relation and its coherence proofs stay
   HERE; this repo makes no verification claims about Go programs).
 
-The reviewed [Gate A1 consumer-contract experiment](spikes/gate-a1/README.md)
-contains executable/relation bridges and a thin Iris adapter in a separate
-Lake package, outside the default build. Its [review and proposed next phase](docs/2026-09-05_gate-a1-review-and-next-phase.md)
-record the proved scope and remaining admission, composition, and adequacy
-obligations. Run its dedicated gate with `bash spikes/gate-a1/check`.
+The Gate A1 consumer-contract experiment (`spikes/gate-a1`), the Iris customer spike
+(`spikes/iris-customer`), the `GoLean/Interface.lean` facade and the typed-admission
+profile family were PARKED on 2026-09-16 ([USER] ruling; audit fix F1): preserved at tag
+`typed-profiles/last-main-2026-09-16`, revival recipe and inventory in
+[docs/2026-09-16_typed-profiles-parked.md](docs/2026-09-16_typed-profiles-parked.md); their
+future home is the reasoning repository under gitignored `deps/`. Their historical review is
+[docs/2026-09-05_gate-a1-review-and-next-phase.md](docs/2026-09-05_gate-a1-review-and-next-phase.md).
 
 Design and roadmap docs (HISTORICAL — superseded as current direction by
 the plan of record above; kept for their design rationale):
