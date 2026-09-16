@@ -1,0 +1,8 @@
+ok: J1 forced 4-chain: tape [3,3,3] untouched: tape [3, 3, 3] → expected member, leftover [3, 3, 3]
+ok: J1 forced chain observation: exact set of 1 member(s) — leaves=1 sites=0 steps=140 maxDepth=0
+ok: J1 straight-line control (identical observation): exact set of 1 member(s) — leaves=1 sites=0 steps=124 maxDepth=0
+ok: K1 legacy probe + unseq in one function; probe inside thenB — accepted, the probe's own two members: exact set of 2 member(s) — leaves=2 sites=1 steps=62 maxDepth=1
+ok: A6 invoke with 1 binder for a 2-result callee: refused by name?: refused by name (arity)
+ok: A8 store through a TARGET binder from a skipped region: refused by name: refused by name (has not been produced)
+AuditJ: 6 met, 0 unmet
+EXIT=0

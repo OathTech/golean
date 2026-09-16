@@ -1,0 +1,38 @@
+# E13 rows: pre-fix binary (main 32398203, sha256 44c8ed60…) vs candidate (ba8767da, sha256 62adb8ec…), same wire (.tmp/audit/e13/wire.json, 52 unseq-probe nodes), args: --max-width 2 --max-sites 8 --cap 64 --work-cap 200000 --expect-status panic
+indexMiddle	IDENTICAL	coverage-observations: observations=2 steps=153 probes=3 sites=1 leaves=2 maxdepth=1 width=2	EXIT=0
+assertMiddle	IDENTICAL	coverage-observations: observations=2 steps=115 probes=3 sites=1 leaves=2 maxdepth=1 width=2	EXIT=0
+twoIndexLeftCall	IDENTICAL	coverage-observations: observations=3 steps=182 probes=6 sites=2 leaves=3 maxdepth=2 width=2	EXIT=0
+indexLeftCallArgPanics	IDENTICAL	coverage-observations: observations=2 steps=131 probes=3 sites=1 leaves=2 maxdepth=1 width=2	EXIT=0
+indexLeftCall	IDENTICAL	coverage-observations: observations=2 steps=114 probes=3 sites=1 leaves=2 maxdepth=1 width=2	EXIT=0
+assertVsMutatingCall	IDENTICAL	coverage-observations: machine-side status divergence: member under pick assignment [0] has status ok, outside the case's declared status set [panic] — a member Go may never realize is a machine bug; a genuinely Go-realizable status belongs in the declared set (status-diverse envelopes declare e.g. ok,panic — audit F8). Member: {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":5}]}	EXIT=1
+
+## candidate outputs
+### indexMiddle
+coverage-observations: observations=2 steps=153 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+{"message":"runtime error: index out of range [9] with length 1","output":"wit 1\n","schema":"golean-observation-v1","status":"panic"}
+{"message":"runtime error: index out of range [9] with length 1","output":"wit 1\nwit 2\n","schema":"golean-observation-v1","status":"panic"}
+EXIT=0
+### assertMiddle
+coverage-observations: observations=2 steps=115 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+{"message":"interface conversion: interface {} is string, not int","output":"wit 1\n","schema":"golean-observation-v1","status":"panic"}
+{"message":"interface conversion: interface {} is string, not int","output":"wit 1\nwit 2\n","schema":"golean-observation-v1","status":"panic"}
+EXIT=0
+### twoIndexLeftCall
+coverage-observations: observations=3 steps=182 probes=6 sites=2 leaves=3 maxdepth=2 width=2
+{"message":"runtime error: index out of range [5] with length 2","output":"","schema":"golean-observation-v1","status":"panic"}
+{"message":"runtime error: index out of range [9] with length 1","output":"","schema":"golean-observation-v1","status":"panic"}
+{"message":"runtime error: index out of range [9] with length 1","output":"wit 5\n","schema":"golean-observation-v1","status":"panic"}
+EXIT=0
+### indexLeftCallArgPanics
+coverage-observations: observations=2 steps=131 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+{"message":"runtime error: index out of range [5] with length 2","output":"","schema":"golean-observation-v1","status":"panic"}
+{"message":"runtime error: index out of range [9] with length 1","output":"","schema":"golean-observation-v1","status":"panic"}
+EXIT=0
+### indexLeftCall
+coverage-observations: observations=2 steps=114 probes=3 sites=1 leaves=2 maxdepth=1 width=2
+{"message":"runtime error: index out of range [9] with length 1","output":"","schema":"golean-observation-v1","status":"panic"}
+{"message":"runtime error: index out of range [9] with length 1","output":"wit 5\n","schema":"golean-observation-v1","status":"panic"}
+EXIT=0
+### assertVsMutatingCall
+coverage-observations: machine-side status divergence: member under pick assignment [0] has status ok, outside the case's declared status set [panic] — a member Go may never realize is a machine bug; a genuinely Go-realizable status belongs in the declared set (status-diverse envelopes declare e.g. ok,panic — audit F8). Member: {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":5}]}
+EXIT=1

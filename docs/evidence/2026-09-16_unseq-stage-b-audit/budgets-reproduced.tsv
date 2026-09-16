@@ -1,0 +1,16 @@
+budget-1-print	N=1	members=2	leaves=2	sites=1	steps=205	probes=3	maxDepth=1	wall_ms=6	time-v wall=0:00.33	maxRSS_kB=744776	EXIT=0
+budget-2-print	N=2	members=4	leaves=4	sites=3	steps=539	probes=9	maxDepth=2	wall_ms=15	time-v wall=0:00.30	maxRSS_kB=746684	EXIT=0
+budget-3-print	N=3	members=8	leaves=8	sites=7	steps=1207	probes=21	maxDepth=3	wall_ms=42	time-v wall=0:00.34	maxRSS_kB=748852	EXIT=0
+budget-4-print	N=4	members=16	leaves=16	sites=15	steps=2543	probes=45	maxDepth=4	wall_ms=108	time-v wall=0:00.40	maxRSS_kB=747124	EXIT=0
+budget-5-print	N=5	members=32	leaves=32	sites=31	steps=5215	probes=93	maxDepth=5	wall_ms=252	time-v wall=0:00.54	maxRSS_kB=747900	EXIT=0
+budget-6-print	N=6	members=64	leaves=64	sites=63	steps=10559	probes=189	maxDepth=6	wall_ms=596	time-v wall=0:00.90	maxRSS_kB=749416	EXIT=0
+budget-7-print	N=7	members=128	leaves=128	sites=127	steps=21247	probes=381	maxDepth=7	wall_ms=1334	time-v wall=0:01.63	maxRSS_kB=745548	EXIT=0
+budget-8-print	N=8	members=256	leaves=256	sites=255	steps=42623	probes=765	maxDepth=8	wall_ms=3015	time-v wall=0:03.30	maxRSS_kB=749012	EXIT=0
+budget-1-quiet	N=1	members=1	leaves=2	sites=1	steps=181	probes=3	maxDepth=1	wall_ms=5	time-v wall=0:00.31	maxRSS_kB=742224	EXIT=0
+budget-2-quiet	N=2	members=1	leaves=4	sites=3	steps=467	probes=9	maxDepth=2	wall_ms=14	time-v wall=0:00.30	maxRSS_kB=740988	EXIT=0
+budget-3-quiet	N=3	members=1	leaves=8	sites=7	steps=1039	probes=21	maxDepth=3	wall_ms=39	time-v wall=0:00.33	maxRSS_kB=743844	EXIT=0
+budget-4-quiet	N=4	members=1	leaves=16	sites=15	steps=2183	probes=45	maxDepth=4	wall_ms=98	time-v wall=0:00.39	maxRSS_kB=746580	EXIT=0
+budget-5-quiet	N=5	members=1	leaves=32	sites=31	steps=4471	probes=93	maxDepth=5	wall_ms=218	time-v wall=0:00.50	maxRSS_kB=746656	EXIT=0
+budget-6-quiet	N=6	members=1	leaves=64	sites=63	steps=9047	probes=189	maxDepth=6	wall_ms=517	time-v wall=0:00.83	maxRSS_kB=747608	EXIT=0
+budget-7-quiet	N=7	members=1	leaves=128	sites=127	steps=18199	probes=381	maxDepth=7	wall_ms=1137	time-v wall=0:01.45	maxRSS_kB=746272	EXIT=0
+budget-8-quiet	N=8	members=1	leaves=256	sites=255	steps=36503	probes=765	maxDepth=8	wall_ms=2563	time-v wall=0:02.85	maxRSS_kB=746120	EXIT=0

@@ -1,0 +1,26 @@
+A1 sink(z||h(), k()) with k AFTER the region event h, z=True: outcome set = [('guard k', 'guard result true 7')]
+   trajectories per outcome: [(('guard k', 'guard result true 7'), 1)]
+   canonical (slot 0): R_z G E_k E_sink -> ('guard k', 'guard result true 7')
+A1 sink(z||h(), k()) with k AFTER the region event h, z=False: outcome set = [('guard h', 'guard k', 'guard result true 7')]
+   trajectories per outcome: [(('guard h', 'guard k', 'guard result true 7'), 2)]
+   canonical (slot 0): R_z G E_h C_or E_k E_sink -> ('guard h', 'guard k', 'guard result true 7')
+A3 both regions skipped; X (in region 2) value-depends on E_h (region 1): outcome set = [('sink true true',)]
+   trajectories per outcome: [(('sink true true',), 1)]
+   canonical (slot 0): R_z1 G1 R_z2 G2 E_sink -> ('sink true true',)
+I1 three unordered events, B fails: outcome set = [('panic', ('A', 'B')), ('panic', ('A', 'C', 'B')), ('panic', ('B',)), ('panic', ('C', 'A', 'B')), ('panic', ('C', 'B'))]
+   trajectories per outcome: [(('panic', ('A', 'B')), 1), (('panic', ('A', 'C', 'B')), 1), (('panic', ('B',)), 1), (('panic', ('C', 'A', 'B')), 1), (('panic', ('C', 'B')), 1)]
+   canonical (slot 0): E_a E_b -> ('panic', ('A', 'B'))
+I2 y + b2i(z||h()) + k(), z=False: outcome set = [1, 11, 111]
+   trajectories per outcome: [(1, 3), (11, 3), (111, 1)]
+   canonical (slot 0): R_y R_z G E_h C_or E_b2i E_k Op -> 1
+I2 y + b2i(z||h()) + k(), z=True: outcome set = [1, 101]
+   trajectories per outcome: [(1, 4), (101, 1)]
+   canonical (slot 0): R_y R_z G E_b2i E_k Op -> 1
+I3 a[b[0]] += f(), f rewrites b[0] and a[1]: outcome set = [('a 10 1050',), ('a 1010 50',)]
+   trajectories per outcome: [(('a 10 1050',), 3), (('a 1010 50',), 7)]
+   canonical (slot 0): R_a R_b0 L Rd E_f Op -> ('a 1010 50',)
+I4 sum(3) with printing g, E1 g→rec per activation: outcome set = [(('g 3', 'g 2', 'g 1'), 6)]
+I4b sum(3), g UNORDERED vs the recursive call: 4 outcome(s) = [(('g 1', 'g 2', 'g 3'), 6), (('g 2', 'g 1', 'g 3'), 6), (('g 3', 'g 1', 'g 2'), 6), (('g 3', 'g 2', 'g 1'), 6)]
+   trajectories per outcome: [((('g 1', 'g 2', 'g 3'), 6), 2), ((('g 2', 'g 1', 'g 3'), 6), 2), ((('g 3', 'g 1', 'g 2'), 6), 2), ((('g 3', 'g 2', 'g 1'), 6), 2)]
+RESULT: PASS (0 mismatch(es))
+EXIT=0

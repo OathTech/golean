@@ -1,0 +1,54 @@
+import Tests.UnseqScheduler
+/-! [AGENT] Adversarial audit scratch K: the design's headline lowering
+`x := a + f()` ↦ `thenB = .initialization x; x = $u` (NOT exercised by the
+candidate's tests), in the middle of a block and inside a loop; a guard whose
+completion cell is not bool-typed. -/
+namespace AuditK
+open GoLean GoCore GoCore.Machine Tests.UnseqScheduler
+
+def fv1 : Func := { id := ⟨"fv1"⟩, args := #[], results := #[intP "r"], body := ret "r" (.intLit 2) }
+def kGraph : UnseqGraph := {
+  cells := [intP "$a", intP "$f", intP "$op"],
+  occs := [occ "R_a" (.eval "$a" (.var "a")), occ "E_f" (.invoke ["$f"] (.var "fv") []),
+           occ "Op" (.eval "$op" (.add (.var "$a") (.var "$f")))] }
+def thenDecl : Stmt := .seqn #[.initialization (intP "x"), .assign (.var "x") (.var "$op")]
+-- K2: sweep in the MIDDLE of a block; `x` declared by thenB survives for the rest.
+def k2 : Program := { funcs := #[
+  mainUnit [intP "a", ⟨"fv", fnTy [] [.int]⟩]
+    [.assign (.var "a") (.intLit 1), .assign (.var "fv") (clos "fv1" []),
+     .unseq kGraph thenDecl,
+     println [str "x", .var "x"],
+     .assign (.var "a") (.intLit 10),
+     .unseq kGraph (.seqn #[.initialization (intP "y"), .assign (.var "y") (.var "$op")]),
+     println [str "x y", .var "x", .var "y"]],
+  fv1] }
+-- K3: the same inside a 2-iteration loop body (fresh `x` per iteration).
+def k3 : Program := { funcs := #[
+  mainUnit [intP "a", intP "n", ⟨"fv", fnTy [] [.int]⟩]
+    [.assign (.var "a") (.intLit 1), .assign (.var "n") (.intLit 0), .assign (.var "fv") (clos "fv1" []),
+     .while (.lessCmp (.var "n") (.intLit 2))
+       (.seqn #[.unseq kGraph thenDecl, println [str "x", .var "x"],
+                .assign (.var "a") (.add (.var "a") (.intLit 1)), .assign (.var "n") (.add (.var "n") (.intLit 1))])],
+  fv1] }
+-- K4: a guard whose completion cell is INT-typed (the skip writes a bool).
+def k4Graph : UnseqGraph := {
+  cells := [boolP "$z", intP "$h", intP "$cor"],
+  occs := [occ "R_z" (.eval "$z" (.var "z")), occ "G" (.guard "$z" false "$cor"),
+           occ "E_h" (.invoke ["$h"] (.var "hv") []) [] (some "G"),
+           occ "C_or" (.eval "$cor" (.var "$h")) [] (some "G")] }
+def k4 : Program := { funcs := #[
+  mainUnit [boolP "z", ⟨"hv", fnTy [] [.int]⟩]
+    [.assign (.var "z") (.boolLit true), .assign (.var "hv") (clos "a4h" []), .unseq k4Graph (println [str "c", .var "$cor"])],
+  pr "a4h" "h ran" 42] }
+
+def main (_args : List String) : IO Unit := do
+  let checks : List (IO Bool) := [
+    expectSet "K2 x := a + f() via .initialization in thenB, mid-block; two sweeps" k2 "main" [okOut "x 3\nx y 3 12\n"],
+    expectSet "K3 the same in a loop body: fresh x per iteration" k3 "main" [okOut "x 3\nx 4\n"],
+    expectRefusal "K4 guard completion cell typed int: the skip's bool store refused by name?" k4 "main" "type"]
+  let mut failuresN := 0
+  for c in checks do
+    if !(← c) then failuresN := failuresN + 1
+  IO.println s!"AuditK: {checks.length - failuresN} met, {failuresN} unmet"
+end AuditK
+#eval AuditK.main []

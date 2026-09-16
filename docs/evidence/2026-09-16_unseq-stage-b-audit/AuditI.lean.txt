@@ -1,0 +1,111 @@
+import Tests.UnseqScheduler
+
+/-! [AGENT] Adversarial audit scratch I: item (i) — four new graphs encoded for
+the machine, compared with the scratch Python reference (`enum_audit.py`). -/
+
+namespace AuditI
+
+open GoLean GoCore GoCore.Machine Tests.UnseqScheduler
+
+-- I1: three unordered events, B panics.
+def i1B : Func := {
+  id := ⟨"i1B"⟩, args := #[], results := #[intP "r"],
+  body := .seqn #[println [str "B"], .panicStmt (.toInterface (.interface ⟨"any"⟩) .string (str "boom B"))] }
+def i1Graph : UnseqGraph := {
+  cells := [intP "$a", intP "$b", intP "$c", intP "$op"],
+  occs := [occ "E_a" (.invoke ["$a"] (.var "av") []), occ "E_b" (.invoke ["$b"] (.var "bv") []),
+           occ "E_c" (.invoke ["$c"] (.var "cv") []),
+           occ "Op" (.eval "$op" (.add (.var "$a") (.var "$c")))] }
+def i1 : Program := { funcs := #[
+  mainUnit [⟨"av", fnTy [] [.int]⟩, ⟨"bv", fnTy [] [.int]⟩, ⟨"cv", fnTy [] [.int]⟩]
+    [.assign (.var "av") (clos "prA" []), .assign (.var "bv") (clos "i1B" []),
+     .assign (.var "cv") (clos "prC" []), .unseq i1Graph (.seqn #[])],
+  pr "prA" "A" 1, i1B, pr "prC" "C" 3] }
+
+-- I2: `v := y + b2i(z || h()) + k()`; h: y += 10 (true); k: y += 100 (0).
+def i2h : Func := {
+  id := ⟨"i2h"⟩, args := #[⟨"py", pInt⟩], results := #[boolP "r"],
+  body := .seqn #[storeP "py" (.add (derefI "py") (.intLit 10)), ret "r" (.boolLit true)] }
+def i2k : Func := {
+  id := ⟨"i2k"⟩, args := #[⟨"py", pInt⟩], results := #[intP "r"],
+  body := .seqn #[storeP "py" (.add (derefI "py") (.intLit 100)), ret "r" (.intLit 0)] }
+def i2Graph : UnseqGraph := {
+  cells := [intP "$y", boolP "$z", boolP "$h", boolP "$cor", intP "$b", intP "$k", intP "$op"],
+  occs := [occ "R_y" (.eval "$y" (.var "y")),
+           occ "R_z" (.eval "$z" (.var "zz")),
+           occ "G" (.guard "$z" false "$cor"),
+           occ "E_h" (.invoke ["$h"] (.var "hv") []) [] (some "G"),
+           occ "C_or" (.eval "$cor" (.var "$h")) [] (some "G"),
+           occ "E_b2i" (.invoke ["$b"] (.var "b2iv") [.var "$cor"]),
+           occ "E_k" (.invoke ["$k"] (.var "kv") []) ["E_b2i"],
+           occ "Op" (.eval "$op" (.add (.add (.var "$y") (.var "$b")) (.var "$k"))),
+           occ "T_z" (.target "$t" (.var "z"))],
+  stores := [("$t", "$op")] }
+def i2 (z : Bool) : Program := { funcs := #[
+  mainInt [intP "y", boolP "zz", ⟨"hv", fnTy [pInt] [.bool]⟩, ⟨"kv", fnTy [pInt] [.int]⟩, ⟨"b2iv", fnTy [.bool] [.int]⟩]
+    [.assign (.var "y") (.intLit 0), .assign (.var "zz") (.boolLit z),
+     .assign (.var "hv") (clos "i2h" ["y"]), .assign (.var "kv") (clos "i2k" ["y"]),
+     .assign (.var "b2iv") (clos "b2i" []), .unseq i2Graph (.seqn #[])],
+  i2h, i2k, b2i] }
+
+-- I3: `a[b[0]] += f()`; f: b[0] = 1, a[1] = 50, returns 1000.
+def i3f : Func := {
+  id := ⟨"i3f"⟩, args := #[⟨"pa", pSlice⟩, ⟨"pb", pSlice⟩], results := #[intP "r"],
+  body := .seqn #[storeElem "pb" (.intLit 0) (.intLit 1), storeElem "pa" (.intLit 1) (.intLit 50), ret "r" (.intLit 1000)] }
+def i3Graph : UnseqGraph := {
+  cells := [sliceP "$hdr", intP "$b0", intP "$rd", intP "$f", intP "$op"],
+  occs := [occ "R_a" (.eval "$hdr" (.var "a")),
+           occ "R_b0" (.eval "$b0" (.indexGet (.var "b") (.intLit 0))),
+           occ "L" (.target "$t" (.addr (.indexAddr (.var "$hdr") (.var "$b0")))),
+           occ "Rd" (.load "$rd" "$t"),
+           occ "E_f" (.invoke ["$f"] (.var "fv") []),
+           occ "Op" (.eval "$op" (.add (.var "$rd") (.var "$f")))],
+  stores := [("$t", "$op")] }
+def i3 : Program := { funcs := #[
+  mainUnit [sliceP "a", sliceP "b", ⟨"fv", fnTy [pSlice, pSlice] [.int]⟩]
+    (makeSlice "a" [10, 20] ++ makeSlice "b" [0] ++
+     [.assign (.var "fv") (clos "i3f" ["a", "b"]),
+      .unseq i3Graph (println [str "a", .indexGet (.var "a") (.intLit 0), .indexGet (.var "a") (.intLit 1)])]),
+  i3f] }
+
+-- I4: recursion `sum(n) = g(n) + sum(n-1)` with a PRINTING g and E1 g → rec (ordered) / unordered (I4b).
+def i4G : Func := {
+  id := ⟨"i4G"⟩, args := #[intP "n"], results := #[intP "r"],
+  body := .seqn #[println [str "g", .var "n"], ret "r" (.var "n")] }
+def i4Graph (ordered : Bool) : UnseqGraph := {
+  cells := [intP "$g", intP "$n1", intP "$s", intP "$op"],
+  occs := [occ "E_g" (.invoke ["$g"] (.var "gv") [.var "n"]),
+           occ "K" (.eval "$n1" (.sub (.var "n") (.intLit 1))),
+           occ "E_rec" (.invoke ["$s"] (.funcVal ⟨"sum4"⟩ #[]) [.var "$n1", .var "gv"]) (if ordered then ["E_g"] else []),
+           occ "Op" (.eval "$op" (.add (.var "$g") (.var "$s"))),
+           occ "T_r" (.target "$t" (.var "r"))],
+  stores := [("$t", "$op")] }
+def i4Sum (ordered : Bool) : Func := {
+  id := ⟨"sum4"⟩, args := #[intP "n", ⟨"gv", fnTy [.int] [.int]⟩], results := #[intP "r"],
+  body := .ifThenElse (.eqCmp .int (.var "n") (.intLit 0)) (ret "r" (.intLit 0))
+    (.seqn #[.unseq (i4Graph ordered) (.seqn #[])]) }
+def i4 (ordered : Bool) : Program := { funcs := #[
+  mainInt [⟨"gv", fnTy [.int] [.int]⟩]
+    [.assign (.var "gv") (clos "i4G" []), .call #[.var "z"] ⟨"sum4"⟩ #[.intLit 3, .var "gv"]],
+  i4G, i4Sum ordered] }
+
+def main (_args : List String) : IO Unit := do
+  let pan (out : String) : Member := { status := "panic", output := out, msgHas := "boom B" }
+  let checks : List (IO Bool) := [
+    expectSet "I1 three unordered events, B panics" i1 "main"
+      [pan "B\n", pan "A\nB\n", pan "C\nB\n", pan "A\nC\nB\n", pan "C\nA\nB\n"],
+    expectSet "I2 y + b2i(z||h()) + k(), z=false" (i2 false) "main" [okZ 1, okZ 11, okZ 111],
+    expectSet "I2 y + b2i(z||h()) + k(), z=true" (i2 true) "main" [okZ 1, okZ 101],
+    expectSet "I3 a[b[0]] += f(), f rewrites b[0] and a[1]" i3 "main" [okOut "a 1010 50\n", okOut "a 10 1050\n"],
+    expectSet "I4 sum(3), g printing, E1 g→rec" (i4 true) "main" [{ status := "ok", values := [6], output := "g 3\ng 2\ng 1\n" }],
+    expectSet "I4b sum(3), g UNORDERED vs rec: 4 output orders (rec's g's are ordered inside; g n may precede or follow the whole inner)" (i4 false) "main"
+      ([["g 1","g 2","g 3"],["g 2","g 1","g 3"],["g 3","g 1","g 2"],["g 3","g 2","g 1"]].map fun p =>
+        { status := "ok", values := [6], output := String.join (p.map (· ++ "\n")) })]
+  let mut failuresN := 0
+  for c in checks do
+    if !(← c) then failuresN := failuresN + 1
+  IO.println s!"AuditI: {checks.length - failuresN} met, {failuresN} unmet"
+
+end AuditI
+
+#eval AuditI.main []

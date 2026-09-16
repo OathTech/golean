@@ -1,0 +1,87 @@
+import Tests.UnseqScheduler
+
+/-! [AGENT] Adversarial audit scratch J: corrected J1/K1 expectations plus two
+more fail-closed/fail-open contrasts. -/
+
+namespace AuditJ
+
+open GoLean GoCore GoCore.Machine Tests.UnseqScheduler
+
+-- J1 (corrected: g(x) = x+1, so A=2, B=3, C=4, D=5): a fully forced 4-chain.
+def j1Graph : UnseqGraph := {
+  cells := [intP "$a", intP "$b", intP "$c", intP "$d"],
+  occs := [occ "A" (.invoke ["$a"] (.var "gv") [.intLit 1]),
+           occ "B" (.invoke ["$b"] (.var "gv") [.var "$a"]),
+           occ "C" (.invoke ["$c"] (.var "gv") [.var "$b"]),
+           occ "D" (.eval "$d" (.add (.var "$c") (.intLit 1)))] }
+def j1pr : Func := {
+  id := ⟨"j1pr"⟩, args := #[intP "x"], results := #[intP "r"],
+  body := .seqn #[println [str "g", .var "x"], ret "r" (.add (.var "x") (.intLit 1))] }
+def j1 : Program := { funcs := #[
+  mainInt [⟨"gv", fnTy [.int] [.int]⟩]
+    [.assign (.var "gv") (clos "j1pr" []), .unseq j1Graph (ret "z" (.var "$d"))],
+  j1pr] }
+def j1Straight : Program := { funcs := #[
+  mainInt [⟨"gv", fnTy [.int] [.int]⟩, intP "a", intP "b", intP "c"]
+    [.assign (.var "gv") (clos "j1pr" []),
+     .callValue #[.var "a"] (.var "gv") #[.intLit 1],
+     .callValue #[.var "b"] (.var "gv") #[.var "a"],
+     .callValue #[.var "c"] (.var "gv") #[.var "b"],
+     ret "z" (.add (.var "c") (.intLit 1))],
+  j1pr] }
+def j1m : Member := { status := "ok", values := [5], output := "g 1\ng 2\ng 3\n" }
+
+-- K1 (corrected): legacy probe statement + unseq in one function; a probe
+-- inside `thenB` whose operand panics gives the probe's own two members
+-- (DEFER drops it here — no residual — / RAISE). No refusal of the mixture.
+def b1g (v : Int) : UnseqGraph := { cells := [intP "$op"], occs := [occ "K" (.eval "$op" (.intLit v))] }
+def k1 : Program := { funcs := #[
+  mainUnit [sliceP "s", intP "i"]
+    (makeSlice "s" [1] ++ [.assign (.var "i") (.intLit 0),
+      .unseqProbe (.indexGet (.var "s") (.var "i")),
+      .unseq (b1g 3) (.seqn #[.unseqProbe (.indexGet (.var "s") (.var "$op")), println [str "reached"]])])] }
+
+-- A6: an invocation whose result-binder count disagrees with the callee's results.
+def two : Func := {
+  id := ⟨"two"⟩, args := #[], results := #[intP "r", intP "q"],
+  body := .seqn #[ret "r" (.intLit 1), ret "q" (.intLit 2)] }
+def a6Graph : UnseqGraph := {
+  cells := [intP "$a"],
+  occs := [occ "E" (.invoke ["$a"] (.var "tv") [])] }
+def a6 : Program := { funcs := #[
+  mainUnit [⟨"tv", fnTy [] [.int, .int]⟩]
+    [.assign (.var "tv") (clos "two" []), .unseq a6Graph (println [str "a", .var "$a"])],
+  two] }
+
+-- A8: a phase-2 store through a TARGET binder produced inside a SKIPPED
+-- region (contrast with A4's silent zero for a VALUE binder).
+def a8Graph : UnseqGraph := {
+  cells := [boolP "$z", boolP "$cor", intP "$one"],
+  occs := [occ "R_z" (.eval "$z" (.var "z")),
+           occ "G" (.guard "$z" false "$cor"),
+           occ "T" (.target "$t" (.var "out")) [] (some "G"),
+           occ "C_or" (.eval "$cor" (.boolLit true)) [] (some "G"),
+           occ "K" (.eval "$one" (.intLit 1))],
+  stores := [("$t", "$one")] }
+def a8 : Program := { funcs := #[
+  mainUnit [boolP "z", intP "out"]
+    [.assign (.var "z") (.boolLit true), .assign (.var "out") (.intLit 7),
+     .unseq a8Graph (println [str "out", .var "out"])]] }
+
+def main (_args : List String) : IO Unit := do
+  let checks : List (IO Bool) := [
+    expectTape "J1 forced 4-chain: tape [3,3,3] untouched" j1 "main" [3, 3, 3] j1m (some [3, 3, 3]),
+    expectSet "J1 forced chain observation" j1 "main" [j1m],
+    expectSet "J1 straight-line control (identical observation)" j1Straight "main" [j1m],
+    expectSet "K1 legacy probe + unseq in one function; probe inside thenB — accepted, the probe's own two members" k1 "main"
+      [okOut "reached\n", { status := "panic", msgHas := "index out of range [3] with length 1" }],
+    expectRefusal "A6 invoke with 1 binder for a 2-result callee: refused by name?" a6 "main" "arity",
+    expectRefusal "A8 store through a TARGET binder from a skipped region: refused by name" a8 "main" "has not been produced"]
+  let mut failuresN := 0
+  for c in checks do
+    if !(← c) then failuresN := failuresN + 1
+  IO.println s!"AuditJ: {checks.length - failuresN} met, {failuresN} unmet"
+
+end AuditJ
+
+#eval AuditJ.main []

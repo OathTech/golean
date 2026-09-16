@@ -1,0 +1,15 @@
+check-unseq-scheduler (reproduced in the audit worktree):
+Unseq scheduler (Stage B): PASS — every reference set exact, every refusal named
+Unseq scheduler audit: 24 required theorems; 14376 declarations across all imported local origins; classical trio only
+Unseq scheduler gate: PASS
+EXIT=0
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 1:12.96
+	Maximum resident set size (kbytes): 1684856
+
+warm build:
+Build completed successfully (206 jobs).
+EXIT=0
+
+setup-deps --from primary deps:
+setup-deps: complete
+EXIT=0

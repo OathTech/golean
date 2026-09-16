@@ -1,0 +1,280 @@
+import Tests.UnseqScheduler
+
+/-! [AGENT] Adversarial audit scratch A (review/unseq-stage-b-0916): items
+(a) edge sorts + skip protocol, (b) source-scope cell idiom, (c) atom grammar
+and frozen identity, (j) singleton non-consumption, (k) legacy coexistence.
+Imports the candidate's own test harness; edits nothing. -/
+
+namespace AuditA
+
+open GoLean GoCore GoCore.Machine Tests.UnseqScheduler
+
+/-! ## (a) edge sorts -/
+
+-- A1: ORDER prerequisite on a SKIPPED event (not the completion) is discharged.
+-- `sink(z || h(), k())` with `E_k after=[E_h]`, z=true (skip): k runs.
+def a1Graph : UnseqGraph := {
+  cells := [boolP "$z", boolP "$h", boolP "$cor", intP "$k"],
+  occs := [occ "R_z" (.eval "$z" (.var "z")),
+           occ "G" (.guard "$z" false "$cor"),
+           occ "E_h" (.invoke ["$h"] (.var "hv") []) [] (some "G"),
+           occ "C_or" (.eval "$cor" (.var "$h")) [] (some "G"),
+           occ "E_k" (.invoke ["$k"] (.var "kv") []) ["E_h"],
+           occ "E_sink" (.invoke [] (.var "sinkv") [.var "$cor", .var "$k"])] }
+def a1 (z : Bool) : Program := { funcs := #[
+  mainUnit [boolP "z", ⟨"hv", fnTy [] [.bool]⟩, ⟨"kv", fnTy [] [.int]⟩, ⟨"sinkv", fnTy [.bool, .int] []⟩]
+    [.assign (.var "z") (.boolLit z), .assign (.var "hv") (clos "r2ah" []),
+     .assign (.var "kv") (clos "r2ak" []), .assign (.var "sinkv") (clos "r2aSink" []),
+     .unseq a1Graph (.seqn #[])],
+  r2ah, r2ak, r2aSink] }
+
+-- A3: a value use confined to a LATER-skipped region, of a binder confined to
+-- an earlier-skipped region. The reference (enumerate.py) completes it (the
+-- use is never pending); the machine's `skippedDep?` fires on the ACTIVE
+-- occurrence as soon as the producer is skipped.
+def a3Graph : UnseqGraph := {
+  cells := [boolP "$z1", boolP "$h", boolP "$c1", boolP "$z2", boolP "$x", boolP "$c2"],
+  occs := [occ "R_z1" (.eval "$z1" (.var "z1")),
+           occ "G1" (.guard "$z1" false "$c1"),
+           occ "E_h" (.invoke ["$h"] (.var "hv") []) [] (some "G1"),
+           occ "C1" (.eval "$c1" (.var "$h")) [] (some "G1"),
+           occ "R_z2" (.eval "$z2" (.var "z2")) ["C1"],
+           occ "G2" (.guard "$z2" false "$c2"),
+           occ "X" (.eval "$x" (.var "$h")) [] (some "G2"),
+           occ "C2" (.eval "$c2" (.var "$x")) [] (some "G2"),
+           occ "E_sink" (.invoke [] (.var "sinkv") [.var "$c1", .var "$c2"])] }
+def a3Sink : Func := {
+  id := ⟨"a3Sink"⟩, args := #[boolP "a", boolP "b"], results := #[],
+  body := println [str "sink", .var "a", .var "b"] }
+def a3 : Program := { funcs := #[
+  mainUnit [boolP "z1", boolP "z2", ⟨"hv", fnTy [] [.bool]⟩, ⟨"sinkv", fnTy [.bool, .bool] []⟩]
+    [.assign (.var "z1") (.boolLit true), .assign (.var "z2") (.boolLit true),
+     .assign (.var "hv") (clos "r2ah" []), .assign (.var "sinkv") (clos "a3Sink" []),
+     .unseq a3Graph (.seqn #[])],
+  r2ah, a3Sink] }
+
+-- A4: a phase-2 STORE whose value binder was produced by a SKIPPED occurrence
+-- (no join): does the machine refuse, or silently store the zero value?
+def a4Graph : UnseqGraph := {
+  cells := [boolP "$z", intP "$h", boolP "$cor"],
+  occs := [occ "R_z" (.eval "$z" (.var "z")),
+           occ "G" (.guard "$z" false "$cor"),
+           occ "E_h" (.invoke ["$h"] (.var "hv") []) [] (some "G"),
+           occ "C_or" (.eval "$cor" (.boolLit true)) [] (some "G"),
+           occ "T" (.target "$t" (.var "out"))],
+  stores := [("$t", "$h")] }
+def a4h : Func := pr "a4h" "h ran" 42
+def a4 (z : Bool) : Program := { funcs := #[
+  mainUnit [boolP "z", intP "out", ⟨"hv", fnTy [] [.int]⟩]
+    [.assign (.var "z") (.boolLit z), .assign (.var "out") (.intLit 7),
+     .assign (.var "hv") (clos "a4h" []),
+     .unseq a4Graph (println [str "out", .var "out"])],
+  a4h] }
+
+-- A5: `thenB` reads a binder produced by a SKIPPED occurrence directly.
+def a5 (z : Bool) : Program := { funcs := #[
+  mainUnit [boolP "z", ⟨"hv", fnTy [] [.int]⟩]
+    [.assign (.var "z") (.boolLit z), .assign (.var "hv") (clos "a4h" []),
+     .unseq { a4Graph with stores := [], occs := a4Graph.occs.take 4 } (println [str "h", .var "$h"])],
+  a4h] }
+
+/-! ## (b) source-scope cell idiom -/
+
+-- B1: two sweeps in one block with IDENTICAL cell names; the second's
+-- binder shadows the first for the rest of the block.
+def b1g (v : Int) : UnseqGraph := { cells := [intP "$op"], occs := [occ "K" (.eval "$op" (.intLit v))] }
+def b1 : Program := { funcs := #[
+  mainUnit [] [.unseq (b1g 1) (println [str "first", .var "$op"]),
+               .unseq (b1g 2) (println [str "second", .var "$op"]),
+               println [str "after", .var "$op"]]] }
+
+-- B3a: `unseq` as the BARE body of a `while` (no `.seqn`): refused by name?
+def b3a : Program := { funcs := #[
+  mainUnit [intP "n"] [.assign (.var "n") (.intLit 0),
+    .while (.lessCmp (.var "n") (.intLit 1)) (.unseq (b1g 5) (.assign (.var "n") (.intLit 1)))]] }
+-- B3b: `unseq` as the BARE then-branch of an `if` inside a block: the branch
+-- runs under the enclosing `.seq` frame (same env) — accepted; the cell then
+-- LEAKS to the statements after the `if`.
+def b3b : Program := { funcs := #[
+  mainUnit [] [.ifThenElse (.boolLit true) (.unseq (b1g 5) (.seqn #[])) (.seqn #[]),
+               println [str "leaked", .var "$op"]]] }
+-- B3c: `unseq` as the bare then-branch of an `if` that is the LAST statement
+-- of a `.block` (the `.seq [] env k` frame): accepted?
+def b3c : Program := { funcs := #[
+  mainUnit [] [.ifThenElse (.boolLit true) (.unseq (b1g 5) (println [str "in-if", .var "$op"])) (.seqn #[])]] }
+-- B3d: `unseq` inside a nested `.block` (its own scope): cell dies with the block.
+def b3d : Program := { funcs := #[
+  mainUnit [intP "x"] [.assign (.var "x") (.intLit 1),
+    .block #[] #[.unseq (b1g 5) (println [str "inner", .var "$op"])],
+    println [str "outer x", .var "x"]]] }
+
+-- B4: a cell whose name is NOT `$`-prefixed shadows a source local of the
+-- same name for the rest of the block.
+def b4g : UnseqGraph := { cells := [intP "a"], occs := [occ "K" (.eval "a" (.intLit 42))] }
+def b4 : Program := { funcs := #[
+  mainUnit [intP "a"] [.assign (.var "a") (.intLit 1),
+    .unseq b4g (println [str "then a", .var "a"]),
+    println [str "after a", .var "a"]]] }
+
+-- B5: a self-dependency through shadowing: cell `a` whose head reads `a`.
+def b5g : UnseqGraph := { cells := [intP "a"], occs := [occ "K" (.eval "a" (.add (.var "a") (.intLit 1)))] }
+def b5 : Program := { funcs := #[
+  mainUnit [intP "a"] [.assign (.var "a") (.intLit 1), .unseq b5g (println [str "a", .var "a"])]] }
+
+/-! ## (c) atom grammar / frozen identity -/
+
+-- C1: R4 with the target plan anchored at the ADDRESS of the slice variable
+-- (`.ref "a"`, an admitted atom) instead of the frozen header VALUE.
+def c1Graph : UnseqGraph := {
+  cells := [intP "$rd", intP "$m", intP "$op"],
+  occs := [occ "L" (.target "$t" (.addr (.indexAddr (.ref "a") (.intLit 0)))),
+           occ "Rd" (.load "$rd" "$t"),
+           occ "E_mut" (.invoke ["$m"] (.var "mutv") []),
+           occ "Op" (.eval "$op" (.add (.var "$rd") (.var "$m")))],
+  stores := [("$t", "$op")] }
+def c1 : Program := { funcs := #[
+  mainUnit [sliceP "a", sliceP "b", sliceP "old", ⟨"mutv", fnTy [pSlice, pSlice] [.int]⟩]
+    (makeSlice "a" [10, 20] ++ makeSlice "b" [100, 200] ++
+     [.assign (.var "old") (.var "a"), .assign (.var "mutv") (clos "r4mut" ["a", "b"]),
+      .unseq c1Graph (.seqn #[
+        println [str "old", .indexGet (.var "old") (.intLit 0), .indexGet (.var "old") (.intLit 1)],
+        println [str "a", .indexGet (.var "a") (.intLit 0), .indexGet (.var "a") (.intLit 1)]])]),
+  r4mut] }
+
+-- C1b: the same with the SOURCE local's header read inside the plan's atom
+-- (`.var "a"` — a read at the plan step, frozen from then on).
+def c1bGraph : UnseqGraph := { c1Graph with
+  occs := [occ "L" (.target "$t" (.addr (.indexAddr (.var "a") (.intLit 0)))),
+           occ "Rd" (.load "$rd" "$t"),
+           occ "E_mut" (.invoke ["$m"] (.var "mutv") []),
+           occ "Op" (.eval "$op" (.add (.var "$rd") (.var "$m")))] }
+def c1b : Program := { funcs := #[
+  mainUnit [sliceP "a", sliceP "b", sliceP "old", ⟨"mutv", fnTy [pSlice, pSlice] [.int]⟩]
+    (makeSlice "a" [10, 20] ++ makeSlice "b" [100, 200] ++
+     [.assign (.var "old") (.var "a"), .assign (.var "mutv") (clos "r4mut" ["a", "b"]),
+      .unseq c1bGraph (.seqn #[
+        println [str "old", .indexGet (.var "old") (.intLit 0), .indexGet (.var "old") (.intLit 1)],
+        println [str "a", .indexGet (.var "a") (.intLit 0), .indexGet (.var "a") (.intLit 1)]])]),
+  r4mut] }
+
+-- C2: a NON-atom target operand is refused by name.
+def c2Graph : UnseqGraph := {
+  cells := [sliceP "$hdr", intP "$i", intP "$rd"],
+  occs := [occ "R_a" (.eval "$hdr" (.var "a")), occ "R_i" (.eval "$i" (.var "i")),
+           occ "L" (.target "$t" (.addr (.indexAddr (.var "$hdr") (.add (.var "$i") (.intLit 1))))),
+           occ "Rd" (.load "$rd" "$t")] }
+def c2 : Program := { funcs := #[
+  mainUnit [sliceP "a", intP "i"] (makeSlice "a" [10, 20] ++ [.assign (.var "i") (.intLit 0), .unseq c2Graph (.seqn #[])])] }
+
+-- C3: phase-2 checks happen in phase 2: `a[0], a[9] = 1, 2` — the first store
+-- lands, the second panics at the STORE (not at the plan).
+def c3Graph : UnseqGraph := {
+  cells := [sliceP "$hdr", intP "$one", intP "$two"],
+  occs := [occ "R_a" (.eval "$hdr" (.var "a")),
+           occ "L0" (.target "$t0" (.addr (.indexAddr (.var "$hdr") (.intLit 0)))),
+           occ "L9" (.target "$t9" (.addr (.indexAddr (.var "$hdr") (.intLit 9)))),
+           occ "K1" (.eval "$one" (.intLit 1)), occ "K2" (.eval "$two" (.intLit 2))],
+  stores := [("$t0", "$one"), ("$t9", "$two")] }
+def c3d : Func := {
+  id := ⟨"c3d"⟩, args := #[⟨"pa", pSlice⟩], results := #[],
+  body := println [str "a0", .indexGet (derefS "pa") (.intLit 0)] }
+def c3 : Program := { funcs := #[
+  mainUnit [sliceP "a", ⟨"dv", fnTy [pSlice] []⟩]
+    (makeSlice "a" [10] ++ [.assign (.var "dv") (clos "c3d" ["a"]), .deferCall (.var "dv") #[],
+      .unseq c3Graph (println [str "unreached"])]),
+  c3d] }
+
+-- C4: hidden checked reads and a failing op inside an `eval` head and an
+-- `invoke` argument are ACCEPTED by the machine (the decoder's check, Stage C).
+def c4Graph : UnseqGraph := {
+  cells := [intP "$x", intP "$f"],
+  occs := [occ "R" (.eval "$x" (.div (.indexGet (.var "a") (.indexGet (.var "b") (.intLit 0))) (.var "d"))),
+           occ "E" (.invoke ["$f"] (.var "fv") [.indexGet (.var "a") (.intLit 0)])] }
+def c4 : Program := { funcs := #[
+  mainUnit [sliceP "a", sliceP "b", intP "d", ⟨"fv", fnTy [.int] [.int]⟩]
+    (makeSlice "a" [10] ++ makeSlice "b" [0] ++ [.assign (.var "d") (.intLit 2), .assign (.var "fv") (clos "sinkId" []),
+      .unseq c4Graph (println [str "x f", .var "$x", .var "$f"])]),
+  sinkId] }
+
+/-! ## (j) singleton non-consumption -/
+
+-- J1: a fully forced 4-chain: tape [3,3,3] untouched; observation = straight-line.
+def j1Graph : UnseqGraph := {
+  cells := [intP "$a", intP "$b", intP "$c", intP "$d"],
+  occs := [occ "A" (.invoke ["$a"] (.var "gv") [.intLit 1]),
+           occ "B" (.invoke ["$b"] (.var "gv") [.var "$a"]),
+           occ "C" (.invoke ["$c"] (.var "gv") [.var "$b"]),
+           occ "D" (.eval "$d" (.add (.var "$c") (.intLit 1)))] }
+def j1pr : Func := {
+  id := ⟨"j1pr"⟩, args := #[intP "x"], results := #[intP "r"],
+  body := .seqn #[println [str "g", .var "x"], ret "r" (.add (.var "x") (.intLit 1))] }
+def j1 : Program := { funcs := #[
+  mainInt [⟨"gv", fnTy [.int] [.int]⟩]
+    [.assign (.var "gv") (clos "j1pr" []), .unseq j1Graph (ret "z" (.var "$d"))],
+  j1pr] }
+def j1Straight : Program := { funcs := #[
+  mainInt [⟨"gv", fnTy [.int] [.int]⟩, intP "a", intP "b", intP "c"]
+    [.assign (.var "gv") (clos "j1pr" []),
+     .callValue #[.var "a"] (.var "gv") #[.intLit 1],
+     .callValue #[.var "b"] (.var "gv") #[.var "a"],
+     .callValue #[.var "c"] (.var "gv") #[.var "b"],
+     ret "z" (.add (.var "c") (.intLit 1))],
+  j1pr] }
+
+-- J2: exactly one width-2 pick (A ∥ B, then Op): tape [1,7,8] → leftover [7,8].
+def j2Graph : UnseqGraph := {
+  cells := [intP "$a", intP "$b", intP "$op"],
+  occs := [occ "A" (.invoke ["$a"] (.var "av") []), occ "B" (.invoke ["$b"] (.var "bv") []),
+           occ "Op" (.eval "$op" (.add (.var "$a") (.var "$b")))] }
+def j2 : Program := { funcs := #[
+  mainUnit [⟨"av", fnTy [] [.int]⟩, ⟨"bv", fnTy [] [.int]⟩]
+    [.assign (.var "av") (clos "prA" []), .assign (.var "bv") (clos "prB" []),
+     .unseq j2Graph (.seqn #[])],
+  pr "prA" "A" 0, pr "prB" "B" 0] }
+
+/-! ## (k) legacy coexistence -/
+
+-- K1: a legacy probe statement and an `unseq` statement in one function
+-- (separate sweeps), and a probe INSIDE `thenB` (one sweep's completion).
+def k1 : Program := { funcs := #[
+  mainUnit [sliceP "s", intP "i"]
+    (makeSlice "s" [1] ++ [.assign (.var "i") (.intLit 0),
+      .unseqProbe (.indexGet (.var "s") (.var "i")),
+      .unseq (b1g 3) (.seqn #[.unseqProbe (.indexGet (.var "s") (.var "$op")), println [str "reached"]])])] }
+
+def main (_args : List String) : IO Unit := do
+  let checks : List (IO Bool) := [
+    expectSet "A1 after=[skipped E_h] discharges (z=true)" (a1 true) "main" [okOut "guard k\nguard result true 7\n"],
+    expectSet "A1 after=[E_h], z=false: h then k" (a1 false) "main" [okOut "guard h\nguard k\nguard result true 7\n"],
+    expectRefusal "A3 use confined to a LATER-skipped region (reference completes; machine?)" a3 "main" "confined to a skipped region",
+    expectSet "A4 store from a SKIPPED producer, z=true (skip): zero stored silently?" (a4 true) "main" [okOut "out 0\n"],
+    expectSet "A4 control z=false (h runs): 42 stored" (a4 false) "main" [okOut "h ran\nout 42\n"],
+    expectSet "A5 thenB reads a SKIPPED producer's cell: zero read silently?" (a5 true) "main" [okOut "h 0\n"],
+    expectSet "B1 two sweeps, same cell names: second shadows" b1 "main" [okOut "first 1\nsecond 2\nafter 2\n"],
+    expectRefusal "B3a unseq as bare while body: refused by name" b3a "main" "outside a statement sequence",
+    expectSet "B3b unseq as bare if-branch in a block: accepted, cell leaks past the if" b3b "main" [okOut "leaked 5\n"],
+    expectSet "B3c unseq as bare if-branch, last stmt of block" b3c "main" [okOut "in-if 5\n"],
+    expectSet "B3d unseq in a nested block: cell dies with it" b3d "main" [okOut "inner 5\nouter x 1\n"],
+    expectSet "B4 non-$ cell shadows source local `a` (then + after)" b4 "main" [okOut "then a 42\nafter a 42\n"],
+    expectRefusal "B5 cell `a` whose head reads `a` (self-dep): named refusal?" b5 "main" "no ready occurrence",
+    expectSet "C1 R4 with `.ref a` anchor: HYBRID appears?" c1 "main" [okOut "old 10 20\na 11 200\n", okOut "old 10 20\na 101 200\n"],
+    expectSet "C1b R4 with `.var a` read at the plan step: {frozen members}" c1b "main"
+      [okOut "old 11 20\na 100 200\n", okOut "old 10 20\na 101 200\n"],
+    expectRefusal "C2 non-atom target operand refused by name" c2 "main" "not an atom",
+    expectSet "C3 phase-2: first store lands, second panics at the store" c3 "main" [panicOut (oob 9 1) "a0 1\n"],
+    expectSet "C4 hidden reads / failing op in eval head + invoke arg: accepted" c4 "main" [okOut "x f 5 10\n"],
+    expectTape "J1 forced 4-chain: tape [3,3,3] untouched" j1 "main" [3, 3, 3] (okZ 4) (some [3, 3, 3]),
+    expectSet "J1 forced chain = straight-line observation" j1 "main" [{ status := "ok", values := [4], output := "g 1\ng 2\ng 3\n" }],
+    expectSet "J1 straight-line control" j1Straight "main" [{ status := "ok", values := [4], output := "g 1\ng 2\ng 3\n" }],
+    expectTape "J2 one width-2 pick: tape [1,7,8] → B first, leftover [7,8]" j2 "main" [1, 7, 8] (okOut "B\nA\n") (some [7, 8]),
+    expectTape "J2 one width-2 pick: tape [0,7,8] → A first, leftover [7,8]" j2 "main" [0, 7, 8] (okOut "A\nB\n") (some [7, 8]),
+    expectTape "J2 exhausted tape [] → canonical A first" j2 "main" [] (okOut "A\nB\n") (some []),
+    expectSet "K1 legacy probe + unseq in one function, probe inside thenB: accepted" k1 "main" [okOut "reached\n"]]
+  let mut failuresN := 0
+  for c in checks do
+    if !(← c) then failuresN := failuresN + 1
+  IO.println s!"AuditA: {checks.length - failuresN} expectation(s) met, {failuresN} unmet (an unmet expectation is a FINDING or a wrong prediction — read the line)"
+
+end AuditA
+
+#eval AuditA.main []

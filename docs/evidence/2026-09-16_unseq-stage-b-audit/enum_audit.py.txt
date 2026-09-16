@@ -1,0 +1,132 @@
+#!/usr/bin/env python3
+"""[AGENT] Audit extension of the reference enumerator (scratch; the tracked
+enumerate.py is imported unchanged). Item (i): four new graphs; item (a):
+the A1/A3 edge-sort probes. Prints the member sets the machine must equal."""
+import sys, os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../docs/evidence/2026-09-16_eval-order-v2-spike'))
+import enumerate as E
+from enumerate import Occ, enumerate_graph, check, refuse, state, println, hdr, elem, store, Panic, Malformed
+
+# ---- (a) A1: order prerequisite on a SKIPPED event (not the completion)
+def a1(z):
+    def h(st, v): println(st, 'guard h'); return True
+    def k(st, v): println(st, 'guard k'); return 7
+    def sink(st, v): println(st, 'guard result', v['C_or'], v['E_k']); return None
+    region = [Occ('E_h', run=h), Occ('C_or', deps=['E_h'], run=lambda st, v: v['E_h'])]
+    occs = [Occ('R_z', run=lambda st, v: st['v']['z']),
+            Occ('G', deps=['R_z'], guard='R_z', when=False, region=region, out='C_or'),
+            Occ('E_k', after=['E_h'], run=k),
+            Occ('E_sink', deps=['C_or', 'E_k'], run=sink)]
+    check(f'A1 sink(z||h(), k()) with k AFTER the region event h, z={z}', enumerate_graph(occs, state(v={'z': z}), lambda st, v: None),
+          lambda kk: kk[2], {('guard k', 'guard result true 7')} if z else {('guard h', 'guard k', 'guard result true 7')})
+
+# ---- (a) A3: a use confined to a LATER-skipped region of a binder confined to an earlier-skipped region
+def a3():
+    def h(st, v): println(st, 'guard h'); return True
+    r1 = [Occ('E_h', run=h), Occ('C1', deps=['E_h'], run=lambda st, v: v['E_h'])]
+    r2 = [Occ('X', deps=['E_h'], run=lambda st, v: v['E_h']), Occ('C2', deps=['X'], run=lambda st, v: v['X'])]
+    occs = [Occ('R_z1', run=lambda st, v: st['v']['z1']),
+            Occ('G1', deps=['R_z1'], guard='R_z1', when=False, region=r1, out='C1'),
+            Occ('R_z2', after=['C1'], run=lambda st, v: st['v']['z2']),
+            Occ('G2', deps=['R_z2'], guard='R_z2', when=False, region=r2, out='C2'),
+            Occ('E_sink', deps=['C1', 'C2'], run=lambda st, v: println(st, 'sink', v['C1'], v['C2']))]
+    check('A3 both regions skipped; X (in region 2) value-depends on E_h (region 1)',
+          enumerate_graph(occs, state(v={'z1': True, 'z2': True}), lambda st, v: None), lambda kk: kk[2], {('sink true true',)})
+
+# ---- (i) I1: three-way interleaving with a FAILING occurrence in the middle rank
+def i1():
+    def a(st, v): println(st, 'A'); return 1
+    def b(st, v): println(st, 'B'); raise Panic('boom B')
+    def c(st, v): println(st, 'C'); return 3
+    occs = [Occ('E_a', run=a), Occ('E_b', run=b), Occ('E_c', run=c),
+            Occ('Op', deps=['E_a', 'E_b', 'E_c'], run=lambda st, v: v['E_a'] + v['E_c'])]
+    check('I1 three unordered events, B fails', enumerate_graph(occs, state(), lambda st, v: v['Op']),
+          lambda kk: (kk[0], kk[2]),
+          {('panic', ('B',)), ('panic', ('A', 'B')), ('panic', ('C', 'B')), ('panic', ('A', 'C', 'B')), ('panic', ('C', 'A', 'B'))})
+
+# ---- (i) I2: `v := y + b2i(z || h()) + k()` — h and k both write y; the region event, a later sibling event, an unordered read
+def i2(z):
+    def h(st, v): st['v']['y'] += 10; return True
+    def k(st, v): st['v']['y'] += 100; return 0
+    region = [Occ('E_h', run=h), Occ('C_or', deps=['E_h'], run=lambda st, v: v['E_h'])]
+    occs = [Occ('R_y', run=lambda st, v: st['v']['y']),
+            Occ('R_z', run=lambda st, v: st['v']['z']),
+            Occ('G', deps=['R_z'], guard='R_z', when=False, region=region, out='C_or'),
+            Occ('E_b2i', deps=['C_or'], run=lambda st, v: 1 if v['C_or'] else 0),   # a call consuming the join; E1: before k
+            Occ('E_k', after=['E_b2i'], run=k),
+            Occ('Op', deps=['R_y', 'E_b2i', 'E_k'], run=lambda st, v: v['R_y'] + v['E_b2i'] + v['E_k'])]
+    exp = {1, 101} if z else {1, 11, 111}
+    check(f'I2 y + b2i(z||h()) + k(), z={z}', enumerate_graph(occs, state(v={'y': 0, 'z': z}), lambda st, v: v['Op']), lambda kk: kk[1], exp)
+
+# ---- (i) I3: `a[b[0]] += f()` — the index operand is itself a checked read of a mutable location; f rewrites b[0] and a[1]
+def i3():
+    def f(st, v): st['arr']['B'][0] = 1; st['arr']['A'][1] = 50; return 1000
+    occs = [Occ('R_a', run=lambda st, v: hdr(st, 'a')),
+            Occ('R_b0', run=lambda st, v: elem(st, hdr(st, 'b'), 0)),
+            Occ('L', deps=['R_a', 'R_b0'], run=lambda st, v: (v['R_a'], v['R_b0'])),
+            Occ('Rd', deps=['L'], run=lambda st, v: elem(st, *v['L'])),
+            Occ('E_f', run=f),
+            Occ('Op', deps=['Rd', 'E_f'], run=lambda st, v: v['Rd'] + v['E_f'])]
+    def phase2(st, v):
+        store(st, v['L'][0], v['L'][1], v['Op']); println(st, 'a', *st['arr']['A']); return None
+    check('I3 a[b[0]] += f(), f rewrites b[0] and a[1]', enumerate_graph(occs, state(v={'a': 'A', 'b': 'B'}, arr={'A': [10, 20], 'B': [0]}), phase2),
+          lambda kk: kk[2], {('a 1010 50',), ('a 10 1050',)})
+
+# ---- (i) I4: recursion through an invocation whose callee contains an unseq: sum(n) = g(n) + sum(n-1), g prints
+def i4(n, st):
+    """Compose per-activation graphs by hand: returns {(output tuple, value): count}."""
+    if n == 0:
+        return {(tuple(st['out']), 0): 1}
+    results = {}
+    def g(st2, v): println(st2, 'g', n); return n
+    # the recursive call is an event: it runs the whole inner sweep set; encode it as an occurrence whose value is each inner member
+    occs = [Occ('E_g', run=g), Occ('E_rec', after=['E_g'], run=None), Occ('Op', deps=['E_g', 'E_rec'], run=lambda st2, v: v['E_g'] + v['E_rec'])]
+    # manual scheduler: E_g first (E1 orders rec after g), then rec (inner set), then Op
+    st2 = {'v': dict(st['v']), 'arr': {}, 'out': list(st['out'])}
+    g(st2, {})
+    for (out_inner, val_inner), cnt in i4(n - 1, st2).items():
+        key = (out_inner, n + val_inner)
+        results[key] = results.get(key, 0) + cnt
+    return results
+
+def i4_check():
+    res = i4(3, state())
+    got = set(res)
+    print(f"I4 sum(3) with printing g, E1 g→rec per activation: outcome set = {sorted(got)}")
+    exp = {(('g 3', 'g 2', 'g 1'), 6)}
+    if got != exp:
+        print(f"   MISMATCH: expected {sorted(exp)}"); E.FAILS += 1
+
+# I4b: the UNORDERED variant (no E1 edge: g and the recursive call are unordered events — not Go, a stress shape)
+def i4b(n, st):
+    if n == 0:
+        return {(tuple(st['out']), 0): 1}
+    results = {}
+    orders = [('g', 'rec'), ('rec', 'g')]
+    for order in orders:
+        st2 = {'v': {}, 'arr': {}, 'out': list(st['out'])}
+        if order[0] == 'g':
+            println(st2, 'g', n)
+            for (out_inner, val_inner), cnt in i4b(n - 1, st2).items():
+                key = (out_inner, n + val_inner); results[key] = results.get(key, 0) + cnt
+        else:
+            for (out_inner, val_inner), cnt in i4b(n - 1, st2).items():
+                st3 = {'v': {}, 'arr': {}, 'out': list(out_inner)}
+                println(st3, 'g', n)
+                key = (tuple(st3['out']), n + val_inner); results[key] = results.get(key, 0) + cnt
+    return results
+
+def i4b_check():
+    res = i4b(3, state())
+    got = sorted(res)
+    print(f"I4b sum(3), g UNORDERED vs the recursive call: {len(got)} outcome(s) = {got}")
+    print(f"   trajectories per outcome: {[(k, res[k]) for k in got]}")
+
+if __name__ == '__main__':
+    for f in (lambda: a1(True), lambda: a1(False), a3, i1, lambda: i2(False), lambda: i2(True), i3, i4_check, i4b_check):
+        try:
+            f()
+        except Malformed as m:
+            print(f"REFUSED by name: {m}")
+    print('RESULT:', 'FAIL' if E.FAILS else 'PASS', f'({E.FAILS} mismatch(es))')
+    sys.exit(1 if E.FAILS else 0)
