@@ -120,6 +120,116 @@ def stepFrameExit (s : ExecState) (targets : List (TargetShape × List Expr))
             (.frame targets tenv results ds k' w), s, choices)
       | other => throw (.stuck s!"deferred callee is not a function value: {repr other}")
 
+/-- **The `unseq` sweep's ENTER** (Stage B, 2026-09-16; rule `unseqEnter`;
+design `docs/2026-09-16_evaluation-order-model-v2.md` §3.3): the
+statement-sequence position `.initialization` requires — the enclosing
+`.seq` frame's environment is extended IN PLACE with the binder cells
+(`allocDecls`: one typed cell per VALUE binder, zero-initialised), so
+`thenB`'s source declarations survive the sweep and the cells fall out of
+scope with the enclosing block; every status starts ACTIVE, the target
+table empty. The graph's static shape is refused BY NAME
+(`UnseqGraph.wellFormed?`) before any cell exists. -/
+def stepUnseqEnter (s : ExecState) (g : UnseqGraph) (thenB : Stmt) (env : LocalEnv)
+    (k : Cont) (choices : Choices) : Except Stop (Config × ExecState × Choices) :=
+  match k with
+  | .seq rest kenv k' =>
+      if kenv = env then
+        match g.wellFormed? with
+        | some msg => throw (.stuck s!"unseq: malformed graph — {msg}")
+        | none => do
+            let (env', s') ← allocDecls env s g.cells
+            return (.next (.unseqK g thenB g.initStatus [] env' .pick (.seq rest env' k')),
+              s', choices)
+      else throw (.internal "unseq under foreign-scope sequence")
+  | _ => throw (.stuck "GoCore unseq outside a statement sequence")
+
+/-- **The `unseq` scheduler** (Stage B; rules `unseqPick`/`unseqComplete`/
+`unseqRun*`/`unseqStmtDone`), at the sweep frame's `.next` position. At
+`.pick`, review R2's three cases over THE one `ready` computation
+(`UnseqGraph.ready`, shared with `Step.unseqPick` and `seqConsumption`):
+first the invalid-join refusal (`skippedDep?`, by name); (i) no active
+occurrence → phase 2: the stores ride the existing `storeK` spine, then
+`thenB`; (ii) `ready ≠ []` → THE `unseqNext` CONSULT at bound `|ready|` —
+slot `j` = the `j`-th ready occurrence in canonical rank order, a singleton
+pops nothing (G-U) — and the picked occurrence starts (`.run i`); (iii)
+active work, `ready = []` → the named malformed-graph refusal, never a
+stuck run (`consumeAt` at bound 0 is inert, so the refusal consumes
+nothing). At `.run i` the body dispatches: a value head evaluates under the
+frame (`.wait i`), an invocation runs `callValue` with the binder cells as
+targets, a checked load / target plan / guard is ONE step (the load's
+bounds panic delivers through the frame over the pre-state — the sweep's
+first failure). At `.wait i` an invocation's statement completion marks it
+DONE; a value head's completion arrives at `.retV` instead
+(`stepUnseqValue`). -/
+def stepUnseqNext (s : ExecState) (g : UnseqGraph) (thenB : Stmt) (st : List UnseqStatus)
+    (tg : List (String × TargetRef)) (env : LocalEnv) (ph : UnseqPhase) (k : Cont)
+    (choices : Choices) : Except Stop (Config × ExecState × Choices) :=
+  match ph with
+  | .pick =>
+      match g.skippedDep? st with
+      | some msg => throw (.stuck msg)
+      | none =>
+        if g.allSettled st then do
+          let (refs, vals) ← unseqStorePlan s env tg g.stores
+          return (.next (.storeK refs vals thenB env k), s, choices)
+        else
+          match Choices.consumeAt .unseqNext (g.ready st).length choices with
+          | (pick, ch') =>
+            match (g.ready st)[pick]? with
+            | some i => return (.next (.unseqK g thenB st tg env (.run i) k), s, ch')
+            | none => throw (.stuck "unseq: malformed graph — pending active work with no ready occurrence")
+  | .run i =>
+      match g.occs[i]? with
+      | none => throw (.internal s!"unseq: running occurrence {i} outside the graph")
+      | some o =>
+        match o.body with
+        | .eval _ head =>
+            return (.evalE head env (.unseqK g thenB st tg env (.wait i) k), s, choices)
+        | .invoke binds callee args =>
+            return (.exec (unseqInvokeStmt binds callee args) env
+              (.unseqK g thenB st tg env (.wait i) k), s, choices)
+        | .load bind tgt => do
+            let r ← toResult (unseqLoad s env tg bind tgt)
+            return deliverS s (.unseqK g thenB st tg env .pick k) choices
+              (fun s' => (.next (.unseqK g thenB (st.set i .done) tg env .pick k), s', choices)) r
+        | .target bind lhs => do
+            let r ← unseqTargetPlan s env lhs
+            return (.next (.unseqK g thenB (st.set i .done) (tg ++ [(bind, r)]) env .pick k),
+              s, choices)
+        | .guard test w out => do
+            let (st', s') ← unseqGuard s g env st i test w out
+            return (.next (.unseqK g thenB st' tg env .pick k), s', choices)
+  | .wait i =>
+      match g.occs[i]? with
+      | none => throw (.internal s!"unseq: awaited occurrence {i} outside the graph")
+      | some o =>
+        match o.body with
+        | .invoke _ _ _ =>
+            return (.next (.unseqK g thenB (st.set i .done) tg env .pick k), s, choices)
+        | _ => throw (.internal "unseq: statement completion delivered for a value-producing occurrence")
+
+/-- **A value head's result** (Stage B; rule `unseqValue`): WRITTEN into the
+occurrence's predeclared binder cell (`storeLoc` normalizes at the cell's
+declared type — a root cell, so the store cannot panic) and the occurrence
+is DONE; the frame returns to its pick position. Any other arrival is a
+machine-internal shape breach, refused by name. -/
+def stepUnseqValue (s : ExecState) (v : GoValue) (g : UnseqGraph) (thenB : Stmt)
+    (st : List UnseqStatus) (tg : List (String × TargetRef)) (env : LocalEnv)
+    (ph : UnseqPhase) (k : Cont) (choices : Choices) :
+    Except Stop (Config × ExecState × Choices) :=
+  match ph with
+  | .wait i =>
+      match g.occs[i]? with
+      | none => throw (.internal s!"unseq: awaited occurrence {i} outside the graph")
+      | some o =>
+        match o.body with
+        | .eval bind _ => do
+            let loc ← unseqCellLoc env bind
+            let s' ← storeLoc s loc v
+            return (.next (.unseqK g thenB (st.set i .done) tg env .pick k), s', choices)
+        | _ => throw (.internal "unseq: value delivered for an occurrence whose body is not a value head")
+  | _ => throw (.internal "unseq: value delivered to the sweep frame outside a running occurrence")
+
 /-- One machine step. `.ok` is a step the relation permits; `.error` is
 either a Go TERMINAL the machine reached (the abort's `panic`, a sync
 `fatal`, a sequential `deadlock`) or a refusal that names its cause (the
@@ -357,6 +467,9 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
           -- operand under its own frame; the frame decides what a value
           -- (discard) or a panic (the `unseqPanic` pick) means.
           return (.evalE e env (.probeK k), s, choices)
+      | .unseq g thenB =>
+          -- The `unseq` construct (Stage B): ENTER (`stepUnseqEnter`).
+          stepUnseqEnter s g thenB env k choices
       | wide =>
           -- allocNew / makeSlice / makeMap / mapAssign / mapLookup /
           -- typeAssert / appendSlice / copySlice
@@ -632,6 +745,9 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
           -- The probed operand yielded a VALUE: nothing to choose, nothing
           -- consumed — it is re-evaluated at its residual position.
           return (.next k', s, choices)
+      | .unseqK g thenB st tg env' ph k' =>
+          -- The `unseq` sweep frame (Stage B): a value head's result.
+          stepUnseqValue s v g thenB st tg env' ph k' choices
       | .stop => throw (.internal "value delivered to empty continuation")
       | _ => throw (.internal "value delivered to statement continuation")
   | .next k =>
@@ -696,6 +812,9 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
                 (fun s' => (.next (.storeK rs vrest body env k'), s', choices)) r
           | [], [] => return (.exec body env k', s, choices)
           | _, _ => throw (.internal "storeK value/target arity mismatch (the shared phase-2 spine: receive delivery, assignment, comma-ok, call write-back)")
+      | .unseqK g thenB st tg env ph k' =>
+          -- The `unseq` sweep frame (Stage B): the scheduler (`stepUnseqNext`).
+          stepUnseqNext s g thenB st tg env ph k' choices
       -- covers `.probeK` too (unreachable: no statement runs under a probe — Machine.lean's reachability invariant; e13-b R12/R1'-6)
       | _ => throw (.internal "completion delivered to expression continuation")
   | .signal sg k =>

@@ -635,6 +635,17 @@ The semantic core's consume sites and their accountant arms:
    (the abort's step is the `panic` terminal and returns no leftover —
    the pool's does, and `abortLeftover` exposes it for `enumInitRun`).
    The constructor + `canonicalSlot0` row are State.lean's.
+10. THE `unseq` SCHEDULER's pick (StepFn.lean's `stepUnseqNext`, the
+   `.next (.unseqK … .pick _)` arm — `ChoiceSite.unseqNext`, the
+   evaluation-order model v2.1 Stage B, 2026-09-16; the mechanism RULED
+   [USER] 2026-09-16 relayed): bound = the number of READY occurrences
+   (`UnseqGraph.ready`, the ONE computation `stepFn`, `Step.unseqPick` and
+   the projection share) EXACTLY, a consult only at ≥ 2 → the `.next
+   (.unseqK … .pick _)` arm of `seqConsumption` (Machine.lean), which both
+   accountants project. Every other phase of the frame (ENTER, run, wait,
+   a value head's result) is non-consuming (`stepUnseqEnter_stream`,
+   `stepUnseqValue_stream`, `stepUnseqNext_consumption_none`). The
+   constructor + `canonicalSlot0` row are State.lean's.
 Non-consuming by signature (no arm needed): `resumeThread`,
 `spawnStep`, `commitClause`, `applyPairing`, the boundary clear,
 `raceUpdate` (stage B: it folds the step's emitted `StepEvent` and

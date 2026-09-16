@@ -136,6 +136,7 @@ private def refusalReason (s : ExecState) (ts : Array Thread) (i : Nat) :
     else if isMapIterNext c then s!"goroutine {i}: mapIterK iteration pick"
     else if consumesNilValueMethod s c then s!"goroutine {i}: frame-entry panic-text pick (nilValueMethodText, BUG-087)"
     else if consumesUnseqPanic c then s!"goroutine {i}: unsequenced-operand panic-order pick (unseqPanic, latitude E13 option (b) — outside the dedup checker's certified fragment; use the default enumerator)"
+    else if consumesUnseqNext c then s!"goroutine {i}: unseq scheduler pick (unseqNext, evaluation-order model v2.1 Stage B — outside the dedup checker's certified fragment; route α of the design's §3.6 is owed before Stage E; use the default enumerator)"
     else
       match arrivalCases s ts i c with
       | .ok (.multi _) => s!"goroutine {i}: multi-ready select arrival (L2 .multi)"

@@ -126,6 +126,9 @@ def innerVecs (s : ExecState) (ts : Array Thread) (i : Nat) :
       -- the `unseqPanic` pick — outside the certified fragment (fail
       -- closed; the CLI enumerator carries such rows).
       else if consumesUnseqPanic c then none
+      -- Stage B: the `unseq` scheduler's pick — outside the certified
+      -- fragment (fail closed; route α of v2.1 §3.6 is owed before Stage E).
+      else if consumesUnseqNext c then none
       else
         match arrivalCases s ts i c with
         | .ok (.single _ cs) =>

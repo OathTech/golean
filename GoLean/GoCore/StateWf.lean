@@ -213,12 +213,30 @@ def assigneeListSup : List Assignee → Nat
   | [] => 0
   | a :: as => max (Assignee.locSup a) (assigneeListSup as)
 
+/-- An `unseq` body's loc positions (Stage B): its head/operand expressions
+and target assignee — program text, zero since A4 like `Expr.locSup`, kept
+for the lemma network. -/
+def unseqBodySup : UnseqBody → Nat
+  | .eval _ head => Expr.locSup head
+  | .load _ _ => 0
+  | .invoke _ callee args => max (Expr.locSup callee) (exprListSup args)
+  | .target _ lhs => Assignee.locSup lhs
+  | .guard _ _ _ => 0
+
+def unseqOccsSup : List UnseqOcc → Nat
+  | [] => 0
+  | o :: os => max (unseqBodySup o.body) (unseqOccsSup os)
+
+/-- A sweep graph's loc positions: its occurrences' bodies. -/
+def UnseqGraph.locSup (g : UnseqGraph) : Nat := unseqOccsSup g.occs
+
 mutual
 
 def Stmt.locSup : Stmt → Nat
   | .initialization _ | .returnStmt | .breakStmt | .continueStmt
   | .inertLabel _ | .breakTo _ | .continueTo _ | .unsupported _ => 0
   | .unseqProbe e => Expr.locSup e
+  | .unseq g t => max (UnseqGraph.locSup g) (Stmt.locSup t)
   | .seqn ss => stmtListSup ss.toList
   | .block _ ss => stmtListSup ss.toList
   | .breakable body => Stmt.locSup body
@@ -352,6 +370,12 @@ def targetRefListSup : List TargetRef → Nat
   | [] => 0
   | r :: rs => max (TargetRef.locSup r) (targetRefListSup rs)
 
+/-- The `unseq` sweep frame's TARGET table: every frozen plan's operand
+VALUES (Stage B). -/
+def unseqTargetsSup : List (String × TargetRef) → Nat
+  | [] => 0
+  | (_, r) :: rs => max (TargetRef.locSup r) (unseqTargetsSup rs)
+
 /-- Pending target plans (shape + operand expressions); shapes are
 loc-free. -/
 def targetPlansSup : List (TargetShape × List Expr) → Nat
@@ -364,6 +388,9 @@ map-iteration snapshots, defer chains, suspended panic chains). -/
 def Cont.locSup : Cont → Nat
   | .stop => 0
   | .probeK k => Cont.locSup k
+  | .unseqK g thenB _ targets env _ k =>
+      max (max (UnseqGraph.locSup g) (Stmt.locSup thenB))
+        (max (unseqTargetsSup targets) (max (LocalEnv.locSup env) (Cont.locSup k)))
   | .seq rest env k =>
       max (max (stmtListSup rest) (LocalEnv.locSup env)) (Cont.locSup k)
   | .loop cond body env k =>
@@ -571,6 +598,7 @@ its (unique) continuation tail; only `mapIterK` contributes a check. -/
 def Cont.itersNormalized (types : TypeEnv) : Cont → Bool
   | .stop => true
   | .probeK k => Cont.itersNormalized types k
+  | .unseqK _ _ _ _ _ _ k => Cont.itersNormalized types k
   | .seq _ _ k => Cont.itersNormalized types k
   | .loop _ _ _ k => Cont.itersNormalized types k
   | .frame _ _ _ _ k _ => Cont.itersNormalized types k
@@ -5800,6 +5828,184 @@ theorem applySelect_itersNormalized {σ : ExecState}
       simpa [Config.itersNormalized] using hk
     · simp [throw, throwThe, MonadExceptOf.throw] at h
 
+/-! ## The `unseq` construct's loc lemmas (Stage B, 2026-09-16) -/
+
+theorem unseqCellLoc_locSup {env : LocalEnv} {bind : String} {loc : Loc}
+    (h : unseqCellLoc env bind = .ok loc) : Loc.locSup loc ≤ LocalEnv.locSup env := by
+  unfold unseqCellLoc at h
+  split at h
+  · rename_i hl
+    simp only [pure_eq_ok, Except.ok.injEq] at h
+    subst h
+    exact LocalEnv.lookup_locSup hl
+  · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
+
+theorem unseqLookupTarget_locSup :
+    ∀ {tg : List (String × TargetRef)} {t : String} {r : TargetRef},
+      unseqLookupTarget tg t = .ok r → TargetRef.locSup r ≤ unseqTargetsSup tg
+  | [], _, _, h => by simp [unseqLookupTarget, stuck, throw, throwThe, MonadExceptOf.throw] at h
+  | (n, r') :: rest, t, r, h => by
+      simp only [unseqLookupTarget] at h
+      split at h
+      · simp only [pure_eq_ok, Except.ok.injEq] at h
+        subst h
+        simp only [unseqTargetsSup]
+        omega
+      · have := unseqLookupTarget_locSup h
+        simp only [unseqTargetsSup]
+        omega
+
+theorem unseqAtom_locSup {env : LocalEnv} {s : ExecState} {e : Expr} {v : GoValue}
+    (h : unseqAtom env s e = .ok v) :
+    GoValue.locSup v ≤ max (LocalEnv.locSup env) (Heap.locSup s.heap) := by
+  cases e <;> simp only [unseqAtom] at h
+  all_goals try (simp [stuck, throw, throwThe, MonadExceptOf.throw] at h; done)
+  · -- `.var`
+    split at h
+    · have := loadLoc_locSup h
+      omega
+    · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
+  · -- `.intLit`
+    simp only [pure_eq_ok, Except.ok.injEq] at h
+    subst h
+    simp [GoValue.locSup]
+  · -- `.boolLit`
+    simp only [pure_eq_ok, Except.ok.injEq] at h
+    subst h
+    simp [GoValue.locSup]
+  · -- `.ref`
+    split at h
+    · rename_i hl
+      simp only [pure_eq_ok, Except.ok.injEq] at h
+      subst h
+      have := LocalEnv.lookup_locSup hl
+      simp only [GoValue.locSup]
+      omega
+    · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
+
+theorem unseqAtoms_locSup {env : LocalEnv} {s : ExecState} :
+    ∀ {ops : List Expr} {vals : List GoValue}, unseqAtoms env s ops = .ok vals →
+      goValueListSup vals ≤ max (LocalEnv.locSup env) (Heap.locSup s.heap)
+  | [], vals, h => by
+      simp only [unseqAtoms, pure_eq_ok, Except.ok.injEq] at h
+      subst h
+      simp [goValueListSup]
+  | e :: es, vals, h => by
+      simp only [unseqAtoms, bind_eq_ok, pure_eq_ok] at h
+      obtain ⟨v, hv, vs, hvs, h⟩ := h
+      simp only [Except.ok.injEq] at h
+      subst h
+      have h1 := unseqAtom_locSup hv
+      have h2 := unseqAtoms_locSup hvs
+      simp only [goValueListSup]
+      omega
+
+theorem unseqTargetPlan_locSup {s : ExecState} {env : LocalEnv} {lhs : Assignee} {r : TargetRef}
+    (h : unseqTargetPlan s env lhs = .ok r) :
+    TargetRef.locSup r ≤ max (LocalEnv.locSup env) (Heap.locSup s.heap) := by
+  unfold unseqTargetPlan at h
+  split at h
+  · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
+  · simp only [bind_eq_ok] at h
+    obtain ⟨vals, hvals, h⟩ := h
+    split at h
+    · rename_i hcomp
+      simp only [pure_eq_ok, Except.ok.injEq] at h
+      subst h
+      exact Nat.le_trans (completeTargetRef_locSup hcomp) (unseqAtoms_locSup hvals)
+    · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
+
+theorem unseqReadTarget_locSup {s : ExecState} {r : TargetRef} {v : GoValue}
+    (h : unseqReadTarget s r = .ok v) : GoValue.locSup v ≤ Heap.locSup s.heap := by
+  cases r with
+  | chain anchor idxs steps =>
+      simp only [unseqReadTarget, bind_eq_ok] at h
+      obtain ⟨cur, -, loc, -, hload⟩ := h
+      exact loadLoc_locSup hload
+  | mapElem b k kt vt =>
+      simp [unseqReadTarget, unsupported, throw, throwThe, MonadExceptOf.throw] at h
+
+theorem unseqLoad_pres {σ : ExecState} {env : LocalEnv} {tg : List (String × TargetRef)}
+    {bind tgt : String} {σ' : ExecState}
+    (hw : StateWf σ) (henv : LocalEnv.locSup env ≤ σ.nextAddr)
+    (h : unseqLoad σ env tg bind tgt = .ok σ') :
+    StmtOpPres σ σ' ∧ σ'.nextAddr = σ.nextAddr := by
+  simp only [unseqLoad, bind_eq_ok] at h
+  obtain ⟨r, -, v, hv, loc, hloc, hst⟩ := h
+  have h1 := unseqCellLoc_locSup hloc
+  have h2 := unseqReadTarget_locSup hv
+  have hh := hw.heap_le
+  obtain ⟨-, -, -, hn, -⟩ := storeLoc_shape hst
+  exact ⟨storeLoc_pres hw (by omega) (by omega) hst, hn⟩
+
+theorem unseqGuard_pres {σ : ExecState} {g : UnseqGraph} {env : LocalEnv}
+    {st st' : List UnseqStatus} {i : Nat} {test : String} {w : Bool} {out : String}
+    {σ' : ExecState}
+    (hw : StateWf σ) (henv : LocalEnv.locSup env ≤ σ.nextAddr)
+    (h : unseqGuard σ g env st i test w out = .ok (st', σ')) :
+    StmtOpPres σ σ' ∧ σ'.nextAddr = σ.nextAddr := by
+  simp only [unseqGuard, bind_eq_ok] at h
+  obtain ⟨tloc, -, tv, -, b, -, h⟩ := h
+  split at h
+  · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨-, rfl⟩ := h
+    exact ⟨stmtOpPres_refl hw, rfl⟩
+  · simp only [bind_eq_ok] at h
+    obtain ⟨oloc, holoc, s₁, hst, h⟩ := h
+    split at h
+    · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨-, rfl⟩ := h
+      have h1 := unseqCellLoc_locSup holoc
+      obtain ⟨-, -, -, hn, -⟩ := storeLoc_shape hst
+      exact ⟨storeLoc_pres hw (by omega) (by simp [GoValue.locSup]) hst, hn⟩
+    · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
+
+theorem unseqStorePlan_locSup {s : ExecState} {env : LocalEnv} {tg : List (String × TargetRef)} :
+    ∀ {stores : List (String × String)} {refs : List TargetRef} {vals : List GoValue},
+      unseqStorePlan s env tg stores = .ok (refs, vals) →
+      targetRefListSup refs ≤ unseqTargetsSup tg ∧ goValueListSup vals ≤ Heap.locSup s.heap
+  | [], refs, vals, h => by
+      simp only [unseqStorePlan, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      simp [targetRefListSup, goValueListSup]
+  | (t, v) :: rest, refs, vals, h => by
+      simp only [unseqStorePlan, bind_eq_ok] at h
+      obtain ⟨r, hr, loc, -, val, hval, ⟨rs, vs⟩, hrest, h⟩ := h
+      simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      have h0 := unseqStorePlan_locSup hrest
+      have h1 := unseqLookupTarget_locSup hr
+      have h2 := loadLoc_locSup hval
+      simp only [targetRefListSup, goValueListSup]
+      omega
+
+theorem unseqBodySup_of_get :
+    ∀ {occs : List UnseqOcc} {i : Nat} {o : UnseqOcc}, occs[i]? = some o →
+      unseqBodySup o.body ≤ unseqOccsSup occs
+  | [], _, _, h => by simp at h
+  | o' :: os, 0, o, h => by
+      simp only [List.getElem?_cons_zero, Option.some.injEq] at h
+      subst h
+      simp only [unseqOccsSup]
+      omega
+  | o' :: os, i + 1, o, h => by
+      simp only [List.getElem?_cons_succ] at h
+      have := unseqBodySup_of_get h
+      simp only [unseqOccsSup]
+      omega
+
+theorem assigneeListSup_vars : ∀ (binds : List String),
+    assigneeListSup (binds.map Assignee.var) = 0
+  | [] => rfl
+  | _ :: bs => by simp [assigneeListSup, Assignee.locSup, assigneeListSup_vars bs]
+
+theorem unseqInvokeStmt_locSup {binds : List String} {callee : Expr} {args : List Expr} :
+    Stmt.locSup (unseqInvokeStmt binds callee args)
+      ≤ unseqBodySup (.invoke binds callee args) := by
+  simp only [unseqInvokeStmt, Stmt.locSup, unseqBodySup, List.toList_toArray,
+    assigneeListSup_vars]
+  omega
+
 /-- Close a `step_preserves_wf_loc` goal whose step DELIVERED A PANIC
 (B2): the successor is `.panicking (chain ++ [panicEntry msg]) k` over
 the unchanged state, loc-bounded by the source configuration's bound. -/
@@ -6612,6 +6818,81 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup,
       goValueListSup, exprListSup, targetRefListSup, targetPlansSup,
       stmtListSup, assigneeListSup, Nat.max_le] at hc ⊢
+    omega
+  -- The `unseq` construct (Stage B): the frame's sup is its graph, its
+  -- completion statement, its target table, its scope and its tail; the
+  -- state changes only through `allocDecls` (ENTER), `storeLoc` (a value
+  -- delivered into a cell; a guard's completion constant) and `unseqLoad`.
+  case unseqEnter g thenB rest env env' k hwf hdecls =>
+    have hc' := hc
+    simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Nat.max_le] at hc'
+    obtain ⟨w1, w2, w3, w4, w5, w6⟩ := allocDecls_wf hdecls hs (by omega)
+    refine ⟨w1, ?_, w4, w2⟩
+    simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, unseqTargetsSup,
+      Nat.max_le] at hc ⊢
+    omega
+  case unseqComplete g thenB st tg env k refs vals hdep hall hplan =>
+    have hp := unseqStorePlan_locSup hplan
+    have hh := hs.heap_le
+    refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
+    simp only [ConfigWf, Config.locSup, Cont.locSup, Nat.max_le] at hc ⊢
+    omega
+  case unseqRunEval g thenB st tg env k o bind head i hget hbody =>
+    have hb := unseqBodySup_of_get hget
+    rw [hbody] at hb
+    simp only [unseqBodySup] at hb
+    refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
+    simp only [ConfigWf, Config.locSup, Cont.locSup, UnseqGraph.locSup, Nat.max_le] at hc hb ⊢
+    omega
+  case unseqRunInvoke g thenB st tg env k o binds callee args i hget hbody =>
+    have hb := unseqBodySup_of_get hget
+    rw [hbody] at hb
+    have hst := unseqInvokeStmt_locSup (binds := binds) (callee := callee) (args := args)
+    refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
+    simp only [ConfigWf, Config.locSup, Cont.locSup, UnseqGraph.locSup, Nat.max_le] at hc hb hst ⊢
+    omega
+  case unseqRunLoad g thenB st tg env k o bind tgt r i hget hbody hres hdel =>
+    rcases toResult_cases hres with ⟨s₂, rfl, hload⟩ | ⟨msg, rfl, -⟩
+    · simp only [deliver_ok, Prod.mk.injEq] at hdel
+      obtain ⟨rfl, rfl⟩ := hdel
+      have hc' := hc
+      simp only [ConfigWf, Config.locSup, Cont.locSup, Nat.max_le] at hc'
+      obtain ⟨⟨w1, w2, w3, w4, w5⟩, hn⟩ := unseqLoad_pres hs (by omega) hload
+      refine ⟨w1, ?_, w4, w2⟩
+      simp only [ConfigWf, Config.locSup, Cont.locSup, Nat.max_le] at hc ⊢
+      omega
+    · wf_loc_panic hs hc hdel
+  case unseqRunTarget g thenB st tg env k o bind lhs r i hget hbody hplan =>
+    have hr := unseqTargetPlan_locSup hplan
+    have hh := hs.heap_le
+    refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
+    have hc' := hc
+    simp only [ConfigWf, Config.locSup, Cont.locSup, Nat.max_le] at hc' hc ⊢
+    have htg : unseqTargetsSup (tg ++ [(bind, r)]) ≤ σ.nextAddr := by
+      clear hc' hplan hget hbody
+      induction tg with
+      | nil => simp only [List.nil_append, unseqTargetsSup]; omega
+      | cons p rest ih =>
+          obtain ⟨n, r'⟩ := p
+          simp only [unseqTargetsSup, List.cons_append] at hc ⊢
+          have := ih (by omega)
+          omega
+    omega
+  case unseqRunGuard g thenB st tg env k o test w out st' i hget hbody hguard =>
+    have hc' := hc
+    simp only [ConfigWf, Config.locSup, Cont.locSup, Nat.max_le] at hc'
+    obtain ⟨⟨w1, w2, w3, w4, w5⟩, hn⟩ := unseqGuard_pres hs (by omega) hguard
+    refine ⟨w1, ?_, w4, w2⟩
+    simp only [ConfigWf, Config.locSup, Cont.locSup, Nat.max_le] at hc ⊢
+    omega
+  case unseqValue g thenB st tg env k o bind head v loc i hget hbody hloc hst =>
+    have hc' := hc
+    simp only [ConfigWf, Config.locSup, Cont.locSup, GoValue.locSup, Nat.max_le] at hc'
+    have hl := unseqCellLoc_locSup hloc
+    obtain ⟨w1, w2, w3, w4, w5⟩ := storeLoc_pres hs (by omega) (by omega) hst
+    obtain ⟨-, -, -, hn, -⟩ := storeLoc_shape hst
+    refine ⟨w1, ?_, w4, w2⟩
+    simp only [ConfigWf, Config.locSup, Cont.locSup, Nat.max_le] at hc ⊢
     omega
   case storeStep ref rs val vals r body env k hres hdel =>
     rcases toResult_cases hres with ⟨s₂, rfl, hst⟩ | ⟨msg, rfl, -⟩

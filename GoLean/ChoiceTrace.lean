@@ -96,11 +96,12 @@ def siteName : ChoiceSite → String
   | .tryLock => "tryLock"
   | .unseqPanic => "unseqPanic"
   | .repanicCollapse => "repanicCollapse"
+  | .unseqNext => "unseqNext"
 
 def allSites : List ChoiceSite :=
   [.mapIter, .appendSpill, .l2Entry, .l2Arrival, .l4Waiter, .l1Sched,
    .l5ExitWindow, .postOp, .backEdge, .nilValueMethodText, .tryLock, .unseqPanic,
-   .repanicCollapse]
+   .repanicCollapse, .unseqNext]
 
 /-- `allSites` is COMPLETE: every `ChoiceSite` constructor is listed (a
 new site that forgets this list fails here, not in a trace reader —
@@ -426,6 +427,22 @@ def unseqPanicFacts (c : Config) : MenuFacts :=
            invariants := [("unseqPanic site at a configuration that is not a panic at a probe frame", false)],
            pickCheck := fun _ => [] }
 
+/-- The `unseqNext` site's menu facts (the `unseq` scheduler, evaluation-order
+model v2.1 Stage B): the pick exists ONLY at a sweep frame's pick position,
+where the width is the number of READY occurrences — recomputed here by the
+machine's own `UnseqGraph.ready`; a consult happens only at width ≥ 2. Any
+other configuration reporting the site is a violation. -/
+def unseqNextFacts (c : Config) : MenuFacts :=
+  match c with
+  | .next (.unseqK g _ st _ _ .pick _) =>
+      let n := (g.ready st).length
+      { specWidth := some n
+        invariants := [("width is the number of READY occurrences, ≥ 2 at a consult", decide (2 ≤ n))]
+        pickCheck := fun p => if p ≥ n then [s!"pick {p} outside the ready width {n}"] else [] }
+  | _ => { specWidth := none,
+           invariants := [("unseqNext site at a configuration that is not an unseq sweep frame's pick position", false)],
+           pickCheck := fun _ => [] }
+
 /-- The `repanicCollapse` site's menu facts (BUG-004 item 1, landing chunk
 L3): the pick exists ONLY at an abort — `.panicking (first :: rest) .stop`
 — whose head is recovered and whose successor carries an equal payload,
@@ -508,6 +525,7 @@ def seqFacts (σ : ExecState) (c : Config) : ChoiceSite → MenuFacts
   | .appendSpill => spillFacts σ c
   | .tryLock => tryLockFacts σ c
   | .unseqPanic => unseqPanicFacts c
+  | .unseqNext => unseqNextFacts c
   | .repanicCollapse => repanicCollapseFacts c
   | .nilValueMethodText =>
       match entryCallSite? c with

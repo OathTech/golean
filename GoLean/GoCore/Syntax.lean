@@ -392,6 +392,87 @@ inductive AtomicStmtOp where
   | cas
   deriving Repr, BEq, Inhabited, DecidableEq
 
+/-! ## The `unseq` construct — a dependency graph over evaluation occurrences
+(the evaluation-order model v2.1, `docs/2026-09-16_evaluation-order-model-v2.md`
+§1/§3; Stage B, lane `core/unseq-scheduler-b-0916`, 2026-09-16). The mechanism
+ruling: [USER] Mike 2026-09-16, relayed by the [AGENT] coordinator — cite as
+relayed: «I think the Cerberus model is the correct one»
+(`docs/2026-08-31_qrow-rulings.md`, «The evaluation-order mechanism ruling
+record (2026-09-16)»). One statement's evaluation phase (a SWEEP) is a graph
+of OCCURRENCES — each produces zero, one or many results into predeclared
+BINDERS (typed cells, `UnseqGraph.cells`), may fail, may change state — with
+two edge sorts kept apart (review R2): VALUE dependencies, IMPLIED by the slot
+names a body mentions (a body follows every binder it consumes), and ORDER
+prerequisites (`after`: the pinned E1/F clauses), discharged by a DONE or a
+SKIPPED occurrence. A legal execution is a run of the scheduler
+(`GoLean/GoCore/Unseq.lean` — `ready`; the machine's rules in Machine.lean):
+any READY occurrence may run next (`ChoiceSite.unseqNext`); the SET of
+results over all runs is the sweep's semantics. Coexists with the legacy
+probe (`Stmt.unseqProbe`/`Cont.probeK`/`ChoiceSite.unseqPanic`) until Stage E
+retires it; per whole sweep a lowering is one or the other, never a mixture. -/
+
+/-- An occurrence's BODY — the bounded Stage B fragment of the v2.1 §3.1
+kind table (the internal normal form: every operand of a head is a
+constant, an explicitly admitted stable read of a source local, or a slot
+reference by name). Heads are ordinary `Expr`s/`Assignee`s evaluated in the
+sweep's scope, where the binder cells are declared beside the source
+locals — no new expression form, no extension of the value/heap universe
+(review R4). -/
+inductive UnseqBody where
+  /-- READ (one evaluation of a mutable location at this instant) or PURE
+  OP on slot values: evaluate `head`; ONE result into the VALUE binder
+  `bind`. May fail on its own account (bounds, nil, division …). -/
+  | eval (bind : String) (head : Expr)
+  /-- READ THROUGH A FROZEN TARGET PLAN: ONE checked access through the
+  TARGET binder `tgt` (review R6 — base/header and index are PRODUCERS,
+  this is the one checked access on those values); one result. -/
+  | load (bind : String) (tgt : String)
+  /-- INVOCATION of a function value with already-evaluated operands
+  (callee and arguments are slot references / constants / admitted
+  reads); zero, one or two results routed to the predeclared binders
+  `binds` — the body WRITES predeclared destinations (`Stmt.callValue`'s
+  targets), never declares. The callee's effects happen once. -/
+  | invoke (binds : List String) (callee : Expr) (args : List Expr)
+  /-- TARGET PLAN: a target's identity from FROZEN operand values — the
+  assignee's operands are atoms (slots, `&local`, constants) resolved in
+  one step through the machine's own `targetPlan`/`completeTargetRef`;
+  checks NOTHING (the store's checks stay in phase 2). Result of sort
+  TARGET named `bind`, kept in the continuation's target table. -/
+  | target (bind : String) (lhs : Assignee)
+  /-- GUARD ENTRY of `&&`/`||`: tests the VALUE binder `test` against
+  `when`; equal → the region (the occurrences whose `region` is this
+  guard) ACTIVATES; else the region is SKIPPED (its order edges
+  discharged, no value produced) and the COMPLETION binder `out` is set
+  to the short-circuit constant `!when` at once, DONE (the only join). -/
+  | guard (test : String) (when : Bool) (out : String)
+  deriving Repr, BEq, Inhabited
+
+/-- One evaluation occurrence: its name (for `after`/`region` references
+and refusal texts), body, ORDER prerequisites (occurrence names; E1
+lexical / F positions — discharged by DONE or SKIPPED), and the guard
+whose region it belongs to (`none` = top level; regions nest by
+chaining). Its canonical RANK is its position in `UnseqGraph.occs`
+(declaration order, a region inline behind its guard — review R2). -/
+structure UnseqOcc where
+  name : String
+  body : UnseqBody
+  after : List String := []
+  region : Option String := none
+  deriving Repr, BEq, Inhabited
+
+/-- A sweep's static graph: the VALUE binders with their declared types
+(allocated at ENTER, zero-initialised, in the source scope — the
+`.initialization` idiom), the occurrences in canonical rank order, and
+the PHASE-2 STORES `(target binder, value binder)` carried out left to
+right at completion (spec#Assignment_statements: «the assignments are
+carried out in left-to-right order»; each store's own check fires at the
+store — `storeTarget`). -/
+structure UnseqGraph where
+  cells : List Param
+  occs : List UnseqOcc
+  stores : List (String × String) := []
+  deriving Repr, BEq, Inhabited
+
 inductive Stmt where
   | seqn (stmts : Array Stmt)
   | block (decls : Array Param) (stmts : Array Stmt)
@@ -606,6 +687,24 @@ inductive Stmt where
   choice IS the spec's silence, reified where the doctrine demands
   ("no semantic choice hides in evaluator recursion"). -/
   | unseqProbe (e : Expr)
+  /-- **The `unseq` construct** (evaluation-order model v2.1 §3; Stage B):
+  run the sweep `g` — allocate its binder cells in the source scope,
+  schedule its occurrences (any READY one next: `ChoiceSite.unseqNext`
+  at bound = the number of ready occurrences; a singleton consumes
+  nothing), carry out its phase-2 stores left to right, then run
+  `thenBranch` in the source scope (source declarations there survive:
+  `x := e` lowers to `.initialization x; x = $u` in `thenBranch`). An
+  occurrence's failure is the sweep's first failure with the effect prefix
+  so far — the frame and binders are dropped, defers/recover unchanged.
+  Requires the statement-sequence position `.initialization` requires
+  (the enclosing `.seq` frame's environment is extended in place).
+  ENVELOPE STATEMENT (spec#Order_of_evaluation): «the order of those
+  events compared to the evaluation and indexing of x and the evaluation
+  of y and z is not specified, except as required lexically» — every
+  linear extension of the graph's edges is a legal run (I-2 UNSEQ, ledger
+  L-013); the edges are the pinned clauses (the design note's §1 table).
+  Appended at the END so positional case tags stay stable. -/
+  | unseq (g : UnseqGraph) (thenBranch : Stmt)
   deriving Repr, BEq, Inhabited
 
 structure Func where

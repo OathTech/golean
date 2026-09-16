@@ -59,6 +59,12 @@ theorem andSplit6 {A B C D E F : Bool}
   simp only [Bool.and_eq_true] at h
   exact ⟨h.1.1.1.1.1, h.1.1.1.1.2, h.1.1.1.2, h.1.1.2, h.1.2, h.2⟩
 
+theorem andSplit7 {A B C D E F G : Bool}
+    (h : (A && B && C && D && E && F && G) = true) :
+    A = true ∧ B = true ∧ C = true ∧ D = true ∧ E = true ∧ F = true ∧ G = true := by
+  simp only [Bool.and_eq_true] at h
+  exact ⟨h.1.1.1.1.1.1, h.1.1.1.1.1.2, h.1.1.1.1.2, h.1.1.1.2, h.1.1.2, h.1.2, h.2⟩
+
 /-! ## The field-free enums (derived `BEq`, no `LawfulBEq` instance) -/
 
 theorem SyncStmtOp.beq_sound {a b : SyncStmtOp} (h : (a == b) = true) :
@@ -383,6 +389,66 @@ theorem Param.eqb_sound (a b : Param) (h : Param.eqb a b = true) : a = b := by
   obtain ⟨h1, h2⟩ := andSplit2 h
   cases eq_of_beq h1; cases Ty.eqb_sound h2; rfl
 
+/-! ## The `unseq` graph (Stage B, 2026-09-16): structural equality over its
+bodies (`Expr`/`Assignee` at the same fuel), occurrences and graph. -/
+
+def UnseqBody.eqbF (f : Nat) : UnseqBody → UnseqBody → Bool
+  | .eval b1 h1, .eval b2 h2 => b1 == b2 && Expr.eqbF f h1 h2
+  | .load b1 t1, .load b2 t2 => b1 == b2 && t1 == t2
+  | .invoke bs1 c1 a1, .invoke bs2 c2 a2 =>
+      bs1 == bs2 && Expr.eqbF f c1 c2 && eqbListP (Expr.eqbF f) a1 a2
+  | .target b1 l1, .target b2 l2 => b1 == b2 && Assignee.eqbF f l1 l2
+  | .guard t1 w1 o1, .guard t2 w2 o2 => t1 == t2 && w1 == w2 && o1 == o2
+  | _, _ => false
+
+theorem UnseqBody.eqbF_sound (f : Nat) :
+    ∀ (a b : UnseqBody), UnseqBody.eqbF f a b = true → a = b := by
+  intro a b h
+  cases a <;> cases b <;> (try exact Bool.noConfusion h)
+  case eval.eval b1 h1 b2 h2 =>
+    obtain ⟨h1', h2'⟩ := andSplit2 h
+    cases eq_of_beq h1'; cases Expr.eqbF_sound _ _ _ h2'; rfl
+  case load.load b1 t1 b2 t2 =>
+    obtain ⟨h1, h2⟩ := andSplit2 h
+    cases eq_of_beq h1; cases eq_of_beq h2; rfl
+  case invoke.invoke bs1 c1 a1 bs2 c2 a2 =>
+    obtain ⟨h1, h2, h3⟩ := andSplit3 h
+    cases eq_of_beq h1; cases Expr.eqbF_sound _ _ _ h2
+    cases eqbListP_sound (Expr.eqbF_sound f) h3; rfl
+  case target.target b1 l1 b2 l2 =>
+    obtain ⟨h1, h2⟩ := andSplit2 h
+    cases eq_of_beq h1; cases Assignee.eqbF_sound _ _ _ h2; rfl
+  case guard.guard t1 w1 o1 t2 w2 o2 =>
+    obtain ⟨h1, h2, h3⟩ := andSplit3 h
+    cases eq_of_beq h1; cases eq_of_beq h2; cases eq_of_beq h3; rfl
+
+def UnseqOcc.eqbF (f : Nat) (a b : UnseqOcc) : Bool :=
+  a.name == b.name && UnseqBody.eqbF f a.body b.body && a.after == b.after
+    && eqbOptionP (· == ·) a.region b.region
+
+theorem UnseqOcc.eqbF_sound (f : Nat) (a b : UnseqOcc) (h : UnseqOcc.eqbF f a b = true) :
+    a = b := by
+  obtain ⟨n1, b1, af1, r1⟩ := a
+  obtain ⟨n2, b2, af2, r2⟩ := b
+  obtain ⟨h1, h2, h3, h4⟩ := andSplit4 h
+  cases eq_of_beq h1; cases UnseqBody.eqbF_sound _ _ _ h2; cases eq_of_beq h3
+  cases eqbOptionP_sound (fun _ _ hh => eq_of_beq hh) h4; rfl
+
+def UnseqGraph.eqbF (f : Nat) (a b : UnseqGraph) : Bool :=
+  eqbListP Param.eqb a.cells b.cells && eqbListP (UnseqOcc.eqbF f) a.occs b.occs
+    && eqbListP (eqbProdP (· == ·) (· == ·)) a.stores b.stores
+
+theorem UnseqGraph.eqbF_sound (f : Nat) (a b : UnseqGraph) (h : UnseqGraph.eqbF f a b = true) :
+    a = b := by
+  obtain ⟨c1, o1, s1⟩ := a
+  obtain ⟨c2, o2, s2⟩ := b
+  obtain ⟨h1, h2, h3⟩ := andSplit3 h
+  cases eqbListP_sound Param.eqb_sound h1
+  cases eqbListP_sound (UnseqOcc.eqbF_sound f) h2
+  cases eqbListP_sound
+    (fun _ _ hh => eqbProdP_sound (fun _ _ k => eq_of_beq k) (fun _ _ k => eq_of_beq k) hh) h3
+  rfl
+
 def FieldDef.eqb (a b : FieldDef) : Bool :=
   a.name == b.name && Ty.eqb a.typ b.typ && a.embedded == b.embedded
 
@@ -493,6 +559,7 @@ def Stmt.eqbF : Nat → Stmt → Stmt → Bool
         Expr.eqbF f b1 b2 && Expr.eqbF f i1 i2 && Ty.eqb k1 k2
     | .clearMap b1, .clearMap b2 => Expr.eqbF f b1 b2
     | .unseqProbe e1, .unseqProbe e2 => Expr.eqbF f e1 e2
+    | .unseq g1 t1, .unseq g2 t2 => UnseqGraph.eqbF f g1 g2 && Stmt.eqbF f t1 t2
     | .clearSlice b1 e1, .clearSlice b2 e2 =>
         Expr.eqbF f b1 b2 && Ty.eqb e1 e2
     | .sortSlice b1 e1, .sortSlice b2 e2 =>
@@ -602,6 +669,9 @@ theorem Stmt.eqbF_sound : ∀ f (a b : Stmt), Stmt.eqbF f a b = true → a = b :
       cases Ty.eqb_sound h3; rfl
     case clearMap.clearMap b1 b2 => cases Expr.eqbF_sound _ _ _ h; rfl
     case unseqProbe.unseqProbe e1 e2 => cases Expr.eqbF_sound _ _ _ h; rfl
+    case unseq.unseq g1 t1 g2 t2 =>
+      obtain ⟨h1, h2⟩ := andSplit2 h
+      cases UnseqGraph.eqbF_sound _ _ _ h1; cases ih _ _ h2; rfl
     case clearSlice.clearSlice b1 e1 b2 e2 =>
       obtain ⟨h1, h2⟩ := andSplit2 h
       cases Expr.eqbF_sound _ _ _ h1; cases Ty.eqb_sound h2; rfl

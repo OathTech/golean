@@ -440,6 +440,10 @@ def Cont.eqbF : Nat → Cont → Cont → Bool
           && eqbListP (Expr.eqbF f) p1 p2 && e1 == e2 && Cont.eqbF f k1 k2
     | .breakableK k1, .breakableK k2 => Cont.eqbF f k1 k2
     | .probeK k1, .probeK k2 => Cont.eqbF f k1 k2
+    | .unseqK g1 t1 st1 tg1 e1 p1 k1, .unseqK g2 t2 st2 tg2 e2 p2 k2 =>
+        UnseqGraph.eqbF f g1 g2 && Stmt.eqbF f t1 t2 && st1 == st2
+          && eqbListP (eqbProdP (· == ·) TargetRef.eqb) tg1 tg2 && e1 == e2 && p1 == p2
+          && Cont.eqbF f k1 k2
     | .labelK l1 k1, .labelK l2 k2 => l1 == l2 && Cont.eqbF f k1 k2
     | .callValCalleeK t1 a1 e1 k1, .callValCalleeK t2 a2 e2 k2 =>
         eqbListP (eqbProdP TargetShape.eqb (eqbListP (Expr.eqbF f))) t1 t2
@@ -580,6 +584,12 @@ theorem Cont.eqbF_sound : ∀ f (a b : Cont), Cont.eqbF f a b = true → a = b :
       cases exprs_sound f h3; cases eq_of_beq h4; cases ih _ _ h5; rfl
     case breakableK.breakableK k1 k2 => cases ih _ _ h; rfl
     case probeK.probeK k1 k2 => cases ih _ _ h; rfl
+    case unseqK.unseqK g1 t1 st1 tg1 e1 p1 k1 g2 t2 st2 tg2 e2 p2 k2 =>
+      obtain ⟨h1, h2, h3, h4, h5, h6, h7⟩ := andSplit7 h
+      cases UnseqGraph.eqbF_sound _ _ _ h1; cases Stmt.eqbF_sound _ _ _ h2; cases eq_of_beq h3
+      cases eqbListP_sound
+        (fun _ _ hh => eqbProdP_sound (fun _ _ k => eq_of_beq k) (fun _ _ k => TargetRef.eqb_sound _ _ k) hh) h4
+      cases eq_of_beq h5; cases eq_of_beq h6; cases ih _ _ h7; rfl
     case labelK.labelK l1 k1 l2 k2 =>
       obtain ⟨h1, h2⟩ := andSplit2 h
       cases eq_of_beq h1; cases ih _ _ h2; rfl

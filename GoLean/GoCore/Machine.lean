@@ -1,4 +1,5 @@
 import GoLean.GoCore.Ops
+import GoLean.GoCore.Unseq
 
 /-!
 # The fine-grained machine (reshape R1, `docs/2026-07-23_reshape-r1r2-machine-design.md`)
@@ -1658,6 +1659,115 @@ def applyRhsOp (s : ExecState) : RhsOp → List GoValue → Except Stop (List Go
       return [result.1, .bool result.2]
   | _, _ => stuck "malformed comma-ok source operands"
 
+/-! ## The `unseq` construct's machine helpers (Stage B, 2026-09-16; design
+`docs/2026-09-16_evaluation-order-model-v2.md` §3.3–§3.4). Each is a rule
+premise of the `Step.unseq*` rules AND `stepUnseqNext`/`stepUnseqValue`/
+`stepUnseqEnter`'s (StepFn.lean) body — one definition per fact. -/
+
+/-- A TARGET-PLAN operand ATOM (v2.1 §3.1's internal normal form): a slot or
+admitted source-local read (`.var`), the address of a local (`.ref`), or an
+int/bool constant — resolved in ONE step, no evaluation frame, no panic (a
+target plan checks NOTHING; its checks are the store's, phase 2). Anything
+else refuses by name. -/
+def unseqAtom (env : LocalEnv) (s : ExecState) : Expr → Except Stop GoValue
+  | .var id =>
+      match env.lookup id with
+      | some loc => loadLoc s loc
+      | none => stuck s!"unseq: unbound target operand '{id}'"
+  | .ref id =>
+      match env.lookup id with
+      | some loc => return .addr loc
+      | none => stuck s!"unseq: unbound target operand '{id}'"
+  | .intLit value kind => return .int (kind.normalize value) kind
+  | .boolLit b => return .bool b
+  | other => stuck s!"unseq: target operand is not an atom (a slot, an admitted local, the address of a local, or an int/bool constant): {repr other}"
+
+/-- A binder cell's location: declared in the sweep's scope at ENTER. -/
+def unseqCellLoc (env : LocalEnv) (bind : String) : Except Stop Loc :=
+  match env.lookup bind with
+  | some loc => return loc
+  | none => stuck s!"unseq: binder cell '{bind}' is not declared in the sweep's scope"
+
+/-- The frozen target plan bound to `tgt` in the continuation's table. -/
+def unseqLookupTarget : List (String × TargetRef) → String → Except Stop TargetRef
+  | [], tgt => stuck s!"unseq: target binder '{tgt}' has not been produced"
+  | (n, r) :: rest, tgt => if n == tgt then return r else unseqLookupTarget rest tgt
+
+/-- ONE checked access through a frozen target plan (review R6): replay the
+chain's own checks (`resolveChain` — bounds, nil) on the FROZEN operand
+values — the header and index VALUES the plan froze, never a re-read of
+the variable (review R4) — and load. A frozen map-element plan is outside
+the Stage B fragment (Stage E). -/
+def unseqReadTarget (s : ExecState) : TargetRef → Except Stop GoValue
+  | .chain anchor idxs steps => do
+      loadLoc s (← valueAsLoc (← resolveChain s anchor steps idxs))
+  | .mapElem .. => unsupported "unseq: read through a frozen map-element plan (Stage E)"
+
+/-- The `load` body: read through the target, then write the binder cell.
+The read's panic precedes the store, so a failing load leaves the state as
+it was (the sweep's first failure over the pre-state). -/
+def unseqLoad (s : ExecState) (env : LocalEnv) (targets : List (String × TargetRef))
+    (bind tgt : String) : Except Stop ExecState := do
+  let r ← unseqLookupTarget targets tgt
+  let v ← unseqReadTarget s r
+  let loc ← unseqCellLoc env bind
+  storeLoc s loc v
+
+/-- The atoms of a target plan's operand list, in order (`loadMany`'s shape). -/
+def unseqAtoms (env : LocalEnv) (s : ExecState) : List Expr → Except Stop (List GoValue)
+  | [] => return []
+  | e :: es => do return (← unseqAtom env s e) :: (← unseqAtoms env s es)
+
+/-- The `target` body: the machine's own target resolution
+(`targetPlan`/`completeTargetRef`) on FROZEN operand atoms — a plan of sort
+TARGET that checks nothing. -/
+def unseqTargetPlan (s : ExecState) (env : LocalEnv) (lhs : Assignee) :
+    Except Stop TargetRef :=
+  match targetPlan lhs with
+  | none => stuck "unseq: unsupported target plan assignee"
+  | some (sh, ops) => do
+      let vals ← unseqAtoms env s ops
+      match completeTargetRef sh vals with
+      | some r => return r
+      | none => stuck "unseq: malformed target plan arity"
+
+/-- The `guard` body (review R2's entry/completion protocol): read the test
+binder; equal to `when` → the region ACTIVATES (the guard is DONE); else the
+region is SKIPPED (`UnseqGraph.skipRegion`), the completion binder is set to
+the short-circuit constant `!when` and its occurrence marked DONE (the only
+join), and the guard is DONE. -/
+def unseqGuard (s : ExecState) (g : UnseqGraph) (env : LocalEnv) (st : List UnseqStatus)
+    (i : Nat) (test : String) (w : Bool) (out : String) :
+    Except Stop (List UnseqStatus × ExecState) := do
+  let b ← valueAsBool (← loadLoc s (← unseqCellLoc env test))
+  if b == w then
+    return (st.set i .done, s)
+  else
+    let st₁ := g.skipRegion st i
+    let s' ← storeLoc s (← unseqCellLoc env out) (.bool (!w))
+    match g.producer? out with
+    | some ci => return ((st₁.set ci .done).set i .done, s')
+    | none => stuck s!"unseq: guard completion binder '{out}' has no producer"
+
+/-- Phase 2's store plan: the frozen target refs and the binder VALUES, in
+store order (left to right) — handed to the existing phase-2 spine
+(`Cont.storeK`: one store per step, each store's own check at the store,
+spec#Assignment_statements). -/
+def unseqStorePlan (s : ExecState) (env : LocalEnv) (targets : List (String × TargetRef)) :
+    List (String × String) → Except Stop (List TargetRef × List GoValue)
+  | [] => return ([], [])
+  | (t, v) :: rest => do
+      let r ← unseqLookupTarget targets t
+      let val ← loadLoc s (← unseqCellLoc env v)
+      let (rs, vs) ← unseqStorePlan s env targets rest
+      return (r :: rs, val :: vs)
+
+/-- The `invoke` body's statement: a value call whose targets are the
+predeclared binder cells (the results are WRITTEN there by the call's own
+phase-2 stores — never declared; v2.1 §3.3). -/
+def unseqInvokeStmt (binds : List String) (callee : Expr) (args : List Expr) : Stmt :=
+  .callValue (binds.map Assignee.var).toArray callee args.toArray
+
 /-- Head of a channel statement (send/receive/close). `elem` is the
 element type: sends normalize the value at it (the `mapAssign` key/value
 discipline, so buffered values are self-normalized); receives build the
@@ -2565,6 +2675,29 @@ inductive Cont where
   must not strip it, `break`/`continue`/`return` have no rule at it
   (unreachable: only expression evaluation happens under a probe). -/
   | probeK (k : Cont)
+  /-- **The `unseq` sweep frame** (evaluation-order model v2.1 §3.3; Stage B,
+  lane `core/unseq-scheduler-b-0916`, 2026-09-16): the RUNTIME RECORD of one
+  dynamic sweep — the static graph `g` (shared, never copied per pick) and
+  its completion statement `thenB`; the per-occurrence `status`
+  (active/done/skipped — «completed» ≠ «produced»: a binder is PRODUCED iff
+  its occurrence is DONE, `UnseqGraph.produced`); the continuation-owned
+  TARGET table (frozen plans of sort TARGET, `TargetRef` — never a
+  `GoValue`, review R4); the sweep's SCOPE `env` (the source environment
+  with the binder cells declared in it at ENTER — the `.initialization`
+  idiom, so `thenB`'s source declarations survive the sweep and the cells
+  fall out of scope with the enclosing block); and the `phase`: `.pick` (the
+  scheduler's step — review R2's cases (i)–(iii), `stepUnseqNext`), `.run i`
+  (occurrence `i` starts this step), `.wait i` (its value / statement
+  completion is awaited). `FrameClass.exprGlue`: a panic reaching it is the
+  sweep's FIRST failure — `panicPassthrough` strips the frame, its binders
+  and its pending work; the effect prefix stands; defers and `recover` are
+  the callee frames' business, never this frame's. A control signal cannot
+  reach it (only expression and callee evaluation runs under it — the
+  `probeK` reachability argument; `signalRefusal`'s expression-frame arm
+  names the shape). Appended at the END so positional case tags stay
+  stable. -/
+  | unseqK (g : UnseqGraph) (thenB : Stmt) (status : List UnseqStatus)
+      (targets : List (String × TargetRef)) (env : LocalEnv) (phase : UnseqPhase) (k : Cont)
 
 /-! ## The `Cont` algebra (design-hygiene wave (iii), B3, 2026-09-04)
 
@@ -2592,7 +2725,8 @@ def Cont.tail : Cont → Option Cont
   | .panicArgK k | .panicResumeK _ k | .chanStK _ _ _ _ k | .selectOpsK _ _ _ _ _ k
   | .tgtOpK _ _ _ _ _ _ _ _ _ _ k | .rhsK _ _ _ _ _ _ k | .storeK _ _ _ _ k
   | .goCalleeK _ _ k | .goArgsK _ _ _ _ k | .syncStK _ _ _ _ k | .atomicStK _ _ _ _ k
-  | .probeK k => some k
+  | .probeK k
+  | .unseqK _ _ _ _ _ _ k => some k
 
 /-- Replace the tail, keeping the frame's own payload. `.stop` is unchanged. -/
 def Cont.withTail : Cont → Cont → Cont
@@ -2628,6 +2762,7 @@ def Cont.withTail : Cont → Cont → Cont
   | .syncStK a b c d _, t => .syncStK a b c d t
   | .atomicStK a b c d _, t => .atomicStK a b c d t
   | .probeK _, t => .probeK t
+  | .unseqK a b c d e f _, t => .unseqK a b c d e f t
 
 theorem Cont.sizeOf_tail_lt {k k' : Cont} (h : k.tail = some k') : sizeOf k' < sizeOf k := by
   cases k <;> simp_all [Cont.tail] <;> omega
@@ -2664,7 +2799,10 @@ def Cont.class : Cont → FrameClass
   | .deferCalleeK .. | .deferArgsK .. | .callValCalleeK .. | .callValArgsK .. | .strictK ..
   | .andK .. | .orK .. | .boolK .. | .ifK .. | .whileK .. | .callArgsK .. | .stmtOpK ..
   | .mapRangeK .. | .panicArgK .. | .chanStK .. | .selectOpsK .. | .tgtOpK .. | .rhsK ..
-  | .storeK .. | .goCalleeK .. | .goArgsK .. | .syncStK .. | .atomicStK .. => .exprGlue
+  | .storeK .. | .goCalleeK .. | .goArgsK .. | .syncStK .. | .atomicStK ..
+  -- The `unseq` sweep frame (Stage B): a panic strips it — the sweep's
+  -- first failure; nothing else crosses it.
+  | .unseqK .. => .exprGlue
 
 /-- Is the frame glue of either kind (forwards every walk to its tail)? -/
 def Cont.isGlue (k : Cont) : Bool := k.class = .stmtGlue || k.class = .exprGlue
@@ -4058,6 +4196,18 @@ def consumesUnseqPanic : Config → Bool
   | .panicking _ (.probeK _) => true
   | _ => false
 
+/-- Does this configuration's next step draw the `unseqNext` pick (the
+`unseq` scheduler's step, Stage B)? `true` at EVERY pick position
+`.next (.unseqK … .pick _)` — conservative, like `consumesSelect`: the
+stream-obliviousness checkers (`stepFn_oblivious`' `hnn`,
+`poolThreadOblivious`, `innerVecs`) refuse the shape whether or not the
+ready set is wide; the certified dedup engine is NOT extended in Stage B
+(route α of v2.1 §3.6 is owed before Stage E — the default enumerator
+carries these rows). `seqConsumption` reports the EXACT bound. -/
+def consumesUnseqNext : Config → Bool
+  | .next (.unseqK _ _ _ _ _ .pick _) => true
+  | _ => false
+
 /-- Does this configuration's abort draw the `repanicCollapse` pick
 (BUG-004 item 1, landing chunk L3)? `true` exactly at an abort
 (`Config.abort?`) whose head is recovered with an equal successor payload
@@ -4072,7 +4222,7 @@ def consumesRepanicCollapse (c : Config) : Bool :=
 
 /-- **The sequential consumption projection**: the site and bound the next
 `stepFn` step draws — `some` exactly when the consult POPS (a bound-≤-1
-consult is `none` at every site — the uniform rule, G-U). Seven sites, one
+consult is `none` at every site — the uniform rule, G-U). Eight sites, one
 consult function each: `mapIter` at a live range frame, `appendSpill` at
 a spilling append, `l2Entry` at a multi-ready select, `tryLock` at an
 acquirable TRY head, `nilValueMethodText` at a panicking frame entry in
@@ -4080,12 +4230,19 @@ the wrapper family, `unseqPanic` at a panic that reached an
 unsequenced-operand probe frame (bound 2, constant), `repanicCollapse` at
 an ABORT whose head is recovered with an equal successor payload (bound 2
 there, `repanicCollapseWidth`; the abort's step is the `panic` terminal,
-so this is the one projection arm whose step never returns `.ok`). -/
+so this is the one projection arm whose step never returns `.ok`), and
+`unseqNext` at an `unseq` sweep frame's pick position with ≥ 2 ready
+occurrences (Stage B; bound = the ready count exactly). -/
 def seqConsumption (σ : ExecState) (c : Config) : Option (ChoiceSite × Nat) :=
   match c with
   | .next (.mapIterK _ _ keyTy valTy _ base produced start _ _) =>
       mapIterConsult? σ keyTy valTy base produced start
   | .panicking _ (.probeK _) => some (.unseqPanic, 2)
+  -- The `unseq` scheduler's pick (Stage B): EXACTLY the number of ready
+  -- occurrences when it is ≥ 2 (the one `ready` computation, Unseq.lean);
+  -- a singleton ready set is a bound-1 consult that pops nothing.
+  | .next (.unseqK g _ st _ _ .pick _) =>
+      if 2 ≤ (g.ready st).length then some (.unseqNext, (g.ready st).length) else none
   | .panicking (first :: rest) .stop =>
       if repanicEqualNext first rest then some (.repanicCollapse, 2) else none
   | c =>
@@ -4838,6 +4995,91 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
   /-- RAISE (slot 1): the panic propagates now, ahead of the sibling events. -/
   | probeRaise {chain k s} :
       Step (.panicking chain (.probeK k)) s (.panicking chain k) s
+  -- **The `unseq` construct** (evaluation-order model v2.1 §3.3; Stage B,
+  -- lane `core/unseq-scheduler-b-0916`, 2026-09-16; the mechanism RULED
+  -- [USER] Mike 2026-09-16 relayed — «the Cerberus model is the correct
+  -- one»). ENTER allocates the binder cells in the source scope (the
+  -- `.initialization` idiom: the enclosing `.seq` frame's environment is
+  -- extended in place, so `thenB`'s source declarations survive); the
+  -- graph's static shape is checked BY NAME (`UnseqGraph.wellFormed?`).
+  -- PICK (review R2's three cases): (i) no active occurrence → phase 2 —
+  -- the stores ride the existing `storeK` spine, then `thenB` runs in the
+  -- source scope; (ii) ANY ready occurrence may run next — nondeterminism
+  -- where Go has it (spec#Order_of_evaluation: the order of the events
+  -- against the evaluation of the other operands «is not specified,
+  -- except as required lexically»; the graph's edges ARE the lexical
+  -- requirements — the design note's §1 table); (iii) active work with no
+  -- ready occurrence has NO rule (a named malformed-graph refusal in
+  -- `stepFn`), as has a value dependency on a skipped region's binder
+  -- (`skippedDep?`). RUN dispatches on the body: a value head evaluates
+  -- under the frame (`.wait i`; its value is stored into the binder cell by
+  -- `unseqValue`), an invocation runs `callValue` with the binder cells as
+  -- targets (its completion is `unseqStmtDone`), a checked load / target
+  -- plan / guard is ONE step. A failure anywhere unwinds through the frame
+  -- (`panicUnwind`: `exprGlue`) — the sweep's first failure with the effect
+  -- prefix so far. Appended at the END so positional case tags stay stable.
+  | unseqEnter {g thenB rest env env' k s s'} :
+      g.wellFormed? = none →
+      allocDecls env s g.cells = .ok (env', s') →
+      Step (.exec (.unseq g thenB) env (.seq rest env k)) s
+        (.next (.unseqK g thenB g.initStatus [] env' .pick (.seq rest env' k))) s'
+  /-- Case (ii): the `j`-th READY occurrence (canonical rank order) runs
+  next — the `ChoiceSite.unseqNext` pick; `j` is free (every ready
+  occurrence is a legal choice). -/
+  | unseqPick {g thenB st tg env k s} {j i : Nat} :
+      g.skippedDep? st = none →
+      (g.ready st)[j]? = some i →
+      Step (.next (.unseqK g thenB st tg env .pick k)) s
+        (.next (.unseqK g thenB st tg env (.run i) k)) s
+  /-- Case (i): nothing active → phase 2 (the stores, then `thenB`). -/
+  | unseqComplete {g thenB st tg env k s refs vals} :
+      g.skippedDep? st = none →
+      g.allSettled st = true →
+      unseqStorePlan s env tg g.stores = .ok (refs, vals) →
+      Step (.next (.unseqK g thenB st tg env .pick k)) s
+        (.next (.storeK refs vals thenB env k)) s
+  | unseqRunEval {g thenB st tg env k s o bind head} {i : Nat} :
+      g.occs[i]? = some o → o.body = .eval bind head →
+      Step (.next (.unseqK g thenB st tg env (.run i) k)) s
+        (.evalE head env (.unseqK g thenB st tg env (.wait i) k)) s
+  | unseqRunInvoke {g thenB st tg env k s o binds callee args} {i : Nat} :
+      g.occs[i]? = some o → o.body = .invoke binds callee args →
+      Step (.next (.unseqK g thenB st tg env (.run i) k)) s
+        (.exec (unseqInvokeStmt binds callee args) env
+          (.unseqK g thenB st tg env (.wait i) k)) s
+  /-- The checked access through a frozen plan: apply, then deliver — a
+  bounds panic unwinds through the frame over the pre-state. -/
+  | unseqRunLoad {g thenB st tg env k s o bind tgt r c' s'} {i : Nat} :
+      g.occs[i]? = some o → o.body = .load bind tgt →
+      toResult (unseqLoad s env tg bind tgt) = .ok r →
+      deliver s (.unseqK g thenB st tg env .pick k)
+        (fun s' => (.next (.unseqK g thenB (st.set i .done) tg env .pick k), s')) r
+        = (c', s') →
+      Step (.next (.unseqK g thenB st tg env (.run i) k)) s c' s'
+  | unseqRunTarget {g thenB st tg env k s o bind lhs r} {i : Nat} :
+      g.occs[i]? = some o → o.body = .target bind lhs →
+      unseqTargetPlan s env lhs = .ok r →
+      Step (.next (.unseqK g thenB st tg env (.run i) k)) s
+        (.next (.unseqK g thenB (st.set i .done) (tg ++ [(bind, r)]) env .pick k)) s
+  | unseqRunGuard {g thenB st tg env k s o test w out st' s'} {i : Nat} :
+      g.occs[i]? = some o → o.body = .guard test w out →
+      unseqGuard s g env st i test w out = .ok (st', s') →
+      Step (.next (.unseqK g thenB st tg env (.run i) k)) s
+        (.next (.unseqK g thenB st' tg env .pick k)) s'
+  /-- A value head's result is WRITTEN into its predeclared binder cell
+  (normalized at the cell's declared type) and the occurrence is DONE. -/
+  | unseqValue {g thenB st tg env k s o bind head v loc s'} {i : Nat} :
+      g.occs[i]? = some o → o.body = .eval bind head →
+      unseqCellLoc env bind = .ok loc →
+      storeLoc s loc v = .ok s' →
+      Step (.retV v (.unseqK g thenB st tg env (.wait i) k)) s
+        (.next (.unseqK g thenB (st.set i .done) tg env .pick k)) s'
+  /-- An invocation's statement completed (its results already stored by
+  the call's own phase-2 stores): the occurrence is DONE. -/
+  | unseqStmtDone {g thenB st tg env k s o binds callee args} {i : Nat} :
+      g.occs[i]? = some o → o.body = .invoke binds callee args →
+      Step (.next (.unseqK g thenB st tg env (.wait i) k)) s
+        (.next (.unseqK g thenB (st.set i .done) tg env .pick k)) s
 
 /-- Reflexive-transitive closure of `Step`. -/
 inductive Steps : Config → ExecState → Config → ExecState → Prop where

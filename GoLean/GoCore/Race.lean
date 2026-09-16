@@ -1521,6 +1521,51 @@ def storeTargetAccess (s : ExecState) (r : TargetRef) : List RaceAccess :=
       | .error _ => []
   | .mapElem b _ _ _ => mapAccess .write b
 
+/-- The footprint of an `unseq` occurrence's RUN step (Stage B): a checked
+load through a frozen plan READS the resolved element (the same path the
+store side reports, `storeTargetAccess`) and WRITES its binder cell; a
+target plan reads its `.var` atoms (the sweep's cells and admitted source
+locals — address formation itself touches nothing); a guard reads its test
+cell and, when it skips, writes the completion cell. Value heads and
+invocations run in LATER steps and report there (`.evalE`/the callee's
+steps); ENTER allocates fresh cells (no user-memory access). -/
+def unseqRunAccesses (s : ExecState) (g : UnseqGraph) (tg : List (String × TargetRef))
+    (env : LocalEnv) (i : Nat) : List RaceAccess :=
+  match g.occs[i]? with
+  | none => []
+  | some o =>
+    match o.body with
+    | .load bind tgt =>
+        (match unseqLookupTarget tg tgt with
+         | .ok (.chain anchor idxs steps) =>
+             match resolveChain s anchor steps idxs with
+             | .ok v =>
+                 match valueAsLoc v with
+                 | .ok l => [(.read, l)]
+                 | .error _ => []
+             | .error _ => []
+         | .ok (.mapElem b _ _ _) => mapAccess .read b
+         | .error _ => [])
+        ++ ((env.lookup bind).toList.map ((.write, ·)))
+    | .target _ lhs =>
+        match targetPlan lhs with
+        | some (_, ops) =>
+            ops.filterMap fun e =>
+              match e with
+              | .var id => (env.lookup id).map ((.read, ·))
+              | _ => none
+        | none => []
+    | .guard test w out =>
+        ((env.lookup test).toList.map ((.read, ·)))
+        ++ (match env.lookup test with
+            | some tl =>
+                match loadLoc s tl with
+                | .ok (.bool b) =>
+                    if b == w then [] else (env.lookup out).toList.map ((.write, ·))
+                | _ => []
+            | none => [])
+    | .eval _ _ | .invoke _ _ _ => []
+
 /-- **The footprint of one PRIVATE machine step**, from its pre-step
 configuration: which user-memory paths the step reads/writes. Every
 configuration shape not listed performs no user-memory access (control
@@ -1595,6 +1640,13 @@ def stepAccesses (s : ExecState) (c : Config) : List RaceAccess :=
   | .signal .ret (.frame _ _ _ (d :: _) _ _) => deferEntryAccesses s d
   | .panicking _ (.frame _ _ _ (d :: _) _ _) => deferEntryAccesses s d
   | .next (.storeK (r :: _) (_ :: _) _ _ _) => storeTargetAccess s r
+  -- The `unseq` construct (Stage B): the picked occurrence's run step and
+  -- a value head's write into its binder cell.
+  | .next (.unseqK g _ _ tg env (.run i) _) => unseqRunAccesses s g tg env i
+  | .retV _ (.unseqK g _ _ _ env (.wait i) _) =>
+      (match g.occs[i]? with
+       | some ⟨_, .eval bind _, _, _⟩ => (env.lookup bind).toList.map ((.write, ·))
+       | _ => [])
   -- Frame EXIT (BUG-025 spine migration): the exit step only READS the
   -- pinned result cells; the caller-target WRITES are the subsequent
   -- per-target `storeK` steps (the `storeTargetAccess` arm above),

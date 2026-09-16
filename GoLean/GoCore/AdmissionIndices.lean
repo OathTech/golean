@@ -77,6 +77,17 @@ def selectHeadIndices : SelectClauseHead → List TypeIdx
   | .send c v t => exprIndices c ++ exprIndices v ++ tyIndices t
   | .recv as c t => assigneesIndices as ++ exprIndices c ++ tyIndices t
 
+/-- An `unseq` occurrence body's indices (Stage B): its head/operand
+expressions and target assignee; the graph's cells declare types too. -/
+def unseqBodyIndices : UnseqBody → List TypeIdx
+  | .eval _ head => exprIndices head
+  | .load _ _ => []
+  | .invoke _ callee args => exprIndices callee ++ exprListIndices args
+  | .target _ lhs => assigneeIndices lhs
+  | .guard _ _ _ => []
+def unseqGraphIndices (g : UnseqGraph) : List TypeIdx :=
+  g.cells.flatMap paramIndices ++ g.occs.flatMap (fun o => unseqBodyIndices o.body)
+
 mutual
 def stmtIndices : Stmt → List TypeIdx
   | .seqn ss => stmtListIndices ss.toList
@@ -94,6 +105,7 @@ def stmtIndices : Stmt → List TypeIdx
       exprIndices b ++ exprIndices i ++ exprIndices e ++ tyIndices k ++ tyIndices v
   | .mapDelete b i k => exprIndices b ++ exprIndices i ++ tyIndices k
   | .clearMap b | .closeChan b | .panicStmt b | .unseqProbe b => exprIndices b
+  | .unseq g t => unseqGraphIndices g ++ stmtIndices t
   | .clearSlice b t | .sortSlice b t => exprIndices b ++ tyIndices t
   | .mapLookup a ok b i k v => assigneeIndices a ++ assigneeIndices ok ++
       exprIndices b ++ exprIndices i ++ tyIndices k ++ tyIndices v
