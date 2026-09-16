@@ -169,6 +169,11 @@ fixture family and its 52 sites are not purely mechanical, or if `step_preserves
 
 ## 9. Decisions for the [USER] — posed, not ruled; [AGENT] recommendations marked
 
+**RULED [USER] 2026-09-16** («Yes, let's go ahead with the D1-8 rulings as recommended (aside from D3)», relayed; record:
+`docs/2026-08-31_qrow-rulings.md`, «The B7 charter rulings record (2026-09-16)»): D1 (a), D2 (b), D3 PARK (ruled separately),
+D4 (a), D5 (a), D6 delete, D7 delete-with-the-tag/note-treatment as a separate parking-lane commit ([AGENT] reading of «as
+recommended», disclosed), D8 REPLAY. The bullets below are kept as posed; this paragraph is the ruling.
+
 - **D1 `Platform`.** (a) Stays the A5 global constant in B7; threading it (`IntKind.bits?` `Value.lean:53`, the Ops reads, `FloatBits`,
   the sync-layout literals `Ops.lean:409-412`) is ONE later all-at-once re-envelope lane (latitude R1/R16). (b) `ProgramCtx.platform`
   + full threading inside B7 — the snapshot DID this (`Ops.lean` +220/−216, eight sync fields), so its map lowers (b)'s cost; theorems

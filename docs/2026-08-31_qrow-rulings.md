@@ -448,3 +448,34 @@ inventory → re-home core-pinning tests → delete → build + `ci --diff` → 
 dark spikes `spikes/gate-a1`, `spikes/iris-customer`) is prepared as a SEPARATE
 commit in that lane under the same treatment, for the [USER] to accept or drop
 at the merge ask — PENDING [USER]. B7's S5 no longer migrates the family.
+
+### The B7 charter rulings record (2026-09-16) — D1, D2, D4–D8
+
+[USER] Mike, 2026-09-16, verbatim, relayed by the [AGENT] coordinator — cite as
+relayed: «Yes, let's go ahead with the D1-8 rulings as recommended (aside from
+D3)» (D3 was ruled separately the same day: PARK — the record above).
+
+**What was decided** (the charter's recommendations, `docs/2026-09-16_b7-context-store-charter.md` §9):
+- **D1 (a)** — `Platform` stays the A5 global constant in B7; threading it is
+  ONE later all-at-once re-envelope lane (latitude R1/R16). (c) rejected.
+- **D2 (b)** — `structure ProgramCtx where program : Program` with projections.
+- **D4 (a)** — the pool's per-thread state stays `MultiConfig.threads`/`.cur`
+  beside `shared : Store`.
+- **D5 (a)** — preservation evidence = the arc's standard: `ci --diff` at zero
+  drift + the byte-identical choice trace + the live coherence theorems; no
+  frozen before-model correspondence apparatus.
+- **D6** — delete `MachineWf`'s vacuous `itersNormalized` conjunct in S1 (no
+  objection raised).
+- **D7** — the charter offered «leave dark and record, or delete» with no
+  recommendation; the coordinator had proposed (2026-09-16, to the [USER])
+  deleting `spikes/gate-a1` and `spikes/iris-customer` under the SAME
+  tag/note treatment as the parked family, as a SEPARATE commit of the
+  parking lane. [AGENT] reading of «as recommended»: that proposal is
+  accepted; the commit stays separate so the [USER] can still drop it at the
+  merge ask — disclosed as a reading, not a quote.
+- **D8** — REPLAY the design slice by slice with the snapshot `85f9abd7` open
+  as the reference (not REBASE-AND-REPAIR).
+
+**What follows.** B7 is dispatched from the charter with these rulings written
+in, AFTER the parking lane `park-lane/typed-profiles-0916` lands (one core
+writer; both touch `GoLean.lean`/`lakefile.toml`/`scripts/ci`).
