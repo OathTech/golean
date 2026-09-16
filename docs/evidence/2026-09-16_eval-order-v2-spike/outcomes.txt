@@ -1,29 +1,84 @@
 W1 mut()+a: outcome set = [1, 2]
    trajectories per outcome: [(1, 1), (2, 1)]
+   canonical (slot 0): E_mut R_a Op -> 2
 W2 a[b[0]]+mut(): outcome set = [10, 30, 40]
    trajectories per outcome: [(10, 1), (30, 1), (40, 1)]
+   canonical (slot 0): R_b0 R_ai E_mut Op -> 10
 W3 a[i]+=mut(): outcome set = ['w3 10 21', 'w3 11 20']
    trajectories per outcome: [('w3 10 21', 3), ('w3 11 20', 7)]
+   canonical (slot 0): R_a R_i L Rd E_mut Op -> w3 11 20
    forbidden hybrid absent: w3 10 11
 W4 a[1]+b[2]: outcome set = [('panic', 'index out of range [1] with length 0'), ('panic', 'index out of range [2] with length 0')]
    trajectories per outcome: [(('panic', 'index out of range [1] with length 0'), 1), (('panic', 'index out of range [2] with length 0'), 1)]
+   canonical (slot 0): R_a1 -> ('panic', 'index out of range [1] with length 0')
 W5 loop: program outcome set = [('panic', 'index out of range [0] with length 0', ()), ('panic', 'index out of range [0] with length 0', ('w5 iter 0 7',))]
    trajectories per outcome: [(('panic', 'index out of range [0] with length 0', ()), 1), (('panic', 'index out of range [0] with length 0', ('w5 iter 0 7',)), 2)]
    forbidden hybrid absent: no execution prints 7 twice / completes iteration 2
 W6 x+inc()+inc(): outcome set = [0, 1, 2]
    trajectories per outcome: [(0, 1), (1, 1), (2, 1)]
+   canonical (slot 0): R_x E1 E2 Op -> 0
 X1 xs[ys[9]], b = zs[7], 2: outcome set = [('panic', 'index out of range [7] with length 3'), ('panic', 'index out of range [9] with length 3')]
    trajectories per outcome: [(('panic', 'index out of range [7] with length 3'), 2), (('panic', 'index out of range [9] with length 3'), 2)]
+   canonical (slot 0): R_xs R_ys9 -> ('panic', 'index out of range [9] with length 3')
 X2 b2i(z||h())+x, z=False: outcome set = [2, 3]
    trajectories per outcome: [(2, 3), (3, 3)]
+   canonical (slot 0): R_z G E_h C_or E_b2i R_x Op -> 3
 X2 b2i(z||h())+x, z=True: outcome set = [2]
    trajectories per outcome: [(2, 4)]
-X3 x[f()] += <-ch: outcome set = [('panic', 'index out of range [9] with length 1', 'len(ch)=0'), ('panic', 'index out of range [9] with length 1', 'len(ch)=1')]
+   canonical (slot 0): R_z G E_b2i R_x Op -> 2
+X3 x[f()] += <-ch, buffered: outcome set = [('panic', 'index out of range [9] with length 1', 'len(ch)=0'), ('panic', 'index out of range [9] with length 1', 'len(ch)=1')]
    trajectories per outcome: [(('panic', 'index out of range [9] with length 1', 'len(ch)=0'), 5), (('panic', 'index out of range [9] with length 1', 'len(ch)=1'), 2)]
+   canonical (slot 0): E_f R_x L Rd -> ('panic', 'index out of range [9] with length 1', 'len(ch)=1')
+X3 x[f()] += <-ch, EMPTY channel: outcome set = [('panic', 'index out of range [9] with length 1', 'len(ch)=0')]
+   trajectories per outcome: [(('panic', 'index out of range [9] with length 1', 'len(ch)=0'), 2)]
+   canonical (slot 0): E_f R_x L Rd -> ('panic', 'index out of range [9] with length 1', 'len(ch)=0')
+   refused (outside the domain, not members): [('receive would block: outside the terminating domain', 5)]
+R1 x+y+mut(), unreduced: outcome set = [0, 1, 2, 3]
+   trajectories per outcome: [(0, 2), (1, 1), (2, 1), (3, 2)]
+   canonical (slot 0): R_x R_y E_mut Op -> 0
+R1 x+y+mut(), REDUCED (R_x→R_y added): loses 1: outcome set = [0, 2, 3]
+   trajectories per outcome: [(0, 1), (2, 1), (3, 1)]
+   canonical (slot 0): R_x R_y E_mut Op -> 0
+R2a sink(z||h(), k()), z=True: outcome set = [('guard k', 'guard result true 7')]
+   trajectories per outcome: [(('guard k', 'guard result true 7'), 1)]
+   canonical (slot 0): R_z G E_k E_sink -> ('guard k', 'guard result true 7')
+R2a sink(z||h(), k()), z=False: outcome set = [('guard h', 'guard k', 'guard result true 7')]
+   trajectories per outcome: [(('guard h', 'guard k', 'guard result true 7'), 1)]
+   canonical (slot 0): R_z G E_h C_or E_k E_sink -> ('guard h', 'guard k', 'guard result true 7')
+R2a INVALID join: k depends on the skipped h, z=True: refused by name: E_k: value dependency on 'E_h', confined to a skipped region (no valid join)
+R2b sink(left||b, change()), E1 anchored at COMPLETION C_or: outcome set = [('logical false 0',)]
+   trajectories per outcome: [(('logical false 0',), 1)]
+   canonical (slot 0): R_left G R_b C_or E_change E_sink -> ('logical false 0',)
+R2b sink(left||b, change()), E1 anchored at guard ENTRY G (refuted): outcome set = [('logical false 0',), ('logical true 0',)]
+   trajectories per outcome: [(('logical false 0',), 2), (('logical true 0',), 1)]
+   canonical (slot 0): R_left G R_b C_or E_change E_sink -> ('logical false 0',)
+R2c sink(g(), a||(b&&h()), k()), b=True: outcome set = [('g', 'h', 'k', 'sink 1 true 7'), ('g', 'k', 'sink 1 true 7')]
+   trajectories per outcome: [(('g', 'h', 'k', 'sink 1 true 7'), 1), (('g', 'k', 'sink 1 true 7'), 1)]
+   canonical (slot 0): E_g R_a G1 E_k E_sink -> ('g', 'k', 'sink 1 true 7')
+   forbidden hybrid absent: ('h', 'g', 'k', 'sink 1 true 7')
+R2c sink(g(), a||(b&&h()), k()), b=False: outcome set = [('g', 'k', 'sink 1 false 7'), ('g', 'k', 'sink 1 true 7')]
+   trajectories per outcome: [(('g', 'k', 'sink 1 false 7'), 1), (('g', 'k', 'sink 1 true 7'), 1)]
+   canonical (slot 0): E_g R_a G1 E_k E_sink -> ('g', 'k', 'sink 1 true 7')
+   forbidden hybrid absent: ('h', 'g', 'k', 'sink 1 true 7')
+R4 old := a; a[0] += mut() with mut rebinding a: outcome set = [('old 10 20', 'a 101 200'), ('old 11 20', 'a 100 200')]
+   trajectories per outcome: [(('old 10 20', 'a 101 200'), 1), (('old 11 20', 'a 100 200'), 3)]
+   canonical (slot 0): R_a L Rd E_mut Op -> ('old 11 20', 'a 100 200')
+   forbidden hybrid absent: ('old 10 20', 'a 11 200')
+   forbidden hybrid absent: ('old 101 20', 'a 100 200')
+R6 a[f()], SPLIT header/index producers + one checked access: outcome set = [10, 20]
+   trajectories per outcome: [(10, 1), (20, 1)]
+   canonical (slot 0): R_a E_f Rd -> 10
+R6 a[f()], FUSED read (the narrowing): outcome set = [20]
+   trajectories per outcome: [(20, 1)]
+   canonical (slot 0): E_f Rd -> 20
 C1 f(g()): outcome set = [8]
    trajectories per outcome: [(8, 1)]
+   canonical (slot 0): E_g E_f -> 8
 C2 sink(a): outcome set = [3]
    trajectories per outcome: [(3, 1)]
+   canonical (slot 0): R_a E_sink -> 3
 C3 sink(a, mut()): outcome set = [1, 2]
    trajectories per outcome: [(1, 1), (2, 1)]
+   canonical (slot 0): R_a E_mut E_sink -> 1
+C4 cycle A↔B: refused by name: no ready occurrence among ['A', 'B']: pending active work with no ready occurrence (malformed graph)
 RESULT: PASS (0 mismatch(es))

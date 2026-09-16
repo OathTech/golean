@@ -17,3 +17,18 @@ x2 [default] exit=0 :: x2 3 2|
 x2 [-gcflags=-N -l] exit=0 :: x2 3 2|
 x3 [default] exit=0 :: x3 panic: runtime error: index out of range [9] with length 1|x3 len(ch) 0|
 x3 [-gcflags=-N -l] exit=0 :: x3 panic: runtime error: index out of range [9] with length 1|x3 len(ch) 0|
+# v2.1 witnesses (second review R1/R2/R4/R6 + X3's empty-channel branch) — same toolchain, one run each, default flags then -gcflags=-N -l; x3e: go run's own exit (1) wraps the program's 'exit status 2'; the goroutine dump (paths, addresses) is dropped, the runtime headline kept
+r1 [default] exit=0 :: reduction 3|
+r1 [-gcflags=-N -l] exit=0 :: reduction 3|
+r2a [default] exit=0 :: guard k|guard result true 7|guard h|guard k|guard result true 7|
+r2a [-gcflags=-N -l] exit=0 :: guard k|guard result true 7|guard h|guard k|guard result true 7|
+r2b [default] exit=0 :: logical false 0|
+r2b [-gcflags=-N -l] exit=0 :: logical false 0|
+r2c [default] exit=0 :: g|k|sink 1 true 7|g|k|sink 1 true 7|
+r2c [-gcflags=-N -l] exit=0 :: g|k|sink 1 true 7|g|k|sink 1 true 7|
+r4 [default] exit=0 :: old 10 20|a 101 200|
+r4 [-gcflags=-N -l] exit=0 :: old 10 20|a 101 200|
+r6 [default] exit=0 :: header 20|
+r6 [-gcflags=-N -l] exit=0 :: header 20|
+x3e [default] exit=1 :: fatal error: all goroutines are asleep - deadlock!|exit status 2|
+x3e [-gcflags=-N -l] exit=1 :: fatal error: all goroutines are asleep - deadlock!|exit status 2|
