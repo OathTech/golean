@@ -153,3 +153,18 @@ block + exit/seconds of the fix round's `ci --diff`).
     scripts/capped scripts/ci --diff                 # gate 1's shape (lock)
     scripts/capped scripts/ci --slow                 # gate 2's shape (lock; re-certifies the slow row)
     scripts/capped scripts/check-unseq-scheduler     # the lane's named step
+
+## Merge train r36 — the 5a record (2026-09-16, [AGENT] coordinator)
+
+[USER] Mike 2026-09-16, verbatim (relayed): «Great, let's land it as you propose». Pre-merge main
+`32398203` → `refs/snapshots/r36/main`; Stage B `29a34663` fast-forwarded; the audit branch rebased
+(`6793943c`) and fast-forwarded. Under the box-wide lock at `6793943c`:
+
+| step | result |
+|---|---|
+| `scripts/build-certified` | EXIT=0, 116 s — compiled inputs match; `golean` sha256 `0dec9436e1c8a6b0…` |
+| `release-check --base refs/snapshots/r36/main` | EXIT=2 (EXPECTED) — «STALE certification: changed dependency build/files/GoLean/CLI.lean» (the Stage B core files are certification inputs) |
+| `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --slow` | EXIT=1, 1336 s — red on EXACTLY the two 5a items: `FAIL certificate provenance` (stale) and `FAIL baseline diff` whose DRIFT block is the single line `imported-goose/channel/google-search baseline[PASS/membership] -> now[FAIL/membership]` (the stale record); 3676 rows otherwise unchanged; negatives 394 no regression; `unseq scheduler (Stage B)` step ok; `RESULT: FAIL` for those two reasons only. Step-line tail incl. the drift block: `r36-ci-slow.tail.txt` |
+| candidate vs tracked record | `claim` and `observations` (the six members) IDENTICAL; `inputs` differ exactly in the Stage B files (`State/Machine/StepFn/StateWf/MachineSound/Syntax*/Unseq*/EnumDedup*/MultiStreams/Race/AdmissionIndices/MachineEqb/GoCore.lean`, `CLI/ChoiceTrace/EnumDedup.lean`, `lakefile.toml`, `scripts/ci`, `scripts/ci-libraries.json`, `scripts/check-unseq-scheduler`) and the receipt (binary `0dec9436…`, source_commit `6793943c`, clean tree) — INSTALLED as `baselines/certified/imported-goose__channel__google-search.certified.json` in this commit; a provenance refresh, not a re-pin and not a finding |
+
+The lane's own gates (tails `gate1-3`) ran on the dirty tree just before each commit; this train's run at the committed merged tip is the tail of record. No runtime file is touched by this commit.
