@@ -844,3 +844,48 @@ These checks validate the document and repository hygiene only. No full
 `scripts/ci`, Lean elaboration or historical evidence re-certification was
 performed for this records-only change. Independent adversarial review and
 any eventual merge remain separate from completing the survey.
+
+## 13. Authorized follow-up: Verdi revived locally
+
+The preceding sections are the survey snapshot, before assembly.
+**[USER] 2026-09-16:** waived the survey audit and instructed us to create
+`raft-proofs`, prioritizing the Verdi port while preserving a clear route
+to an eventual etcd-io/raft implementation proof through a model and
+refinement. This supersedes the earlier pause on local assembly for that
+specific package; it does not authorize a GoLean merge or a remote push.
+
+**[AGENT] 2026-09-16:** initialized the local repository at
+`/home/dev/projects/golean/deps/reasoning-revival/raft-proofs`, bootstrap
+commit `c3239437be244303244bd5794bab4e2b8fd5218d`. It has no remote yet.
+
+- `packages/verdi-raft/` contains the original standalone package from
+  park `7440bf705a87b052243ff36280b677f4100b6a66`, with all 37 non-scratch
+  package files byte-preserved. Its proof audit, fixture and extracted
+  oracle remain separate checks. Forty-seven imported files in total,
+  including history, licenses and the resource-cap wrapper, are covered
+  by a per-file source-object/hash manifest.
+- `packages/etcd-raft/README.md` documents the future package boundary and
+  proposed code/model/refinement organization. No old Go-facing proof
+  material or reasoning library has been assembled yet.
+- The root README, theorem index, architecture plan and migration record
+  distinguish the four proved abstract-model safety results, the missing
+  linearizability proof, and the still-unproved implementation connection.
+
+The revived Lean package builds from cold source with Lean 4.32.2 and no
+external Lake dependencies. Its freshly elaborated audit checks 2,615
+declarations against `{propext, Quot.sound}`. Lean fixture regeneration
+matches 320 cases; a fresh Rocq extraction/OCaml replay also matches all
+320, using clean pinned reference sources and their existing prebuilt
+theories (not an independent rebuild of the upstream proof development).
+Isolated negative controls reject a disallowed axiom and an altered
+fixture. A cache-free exported copy passes as well. The additional attempt
+to run an export outside the permitted workspace was blocked by nono's
+write-only `/tmp` policy before compilation; the new repo records the
+scope and failure explicitly.
+
+The new repository's `docs/2026-09-16_verdi-revival.md` is the detailed
+assembly/validation record, and `docs/architecture.md` is the current
+refinement proposal. These are local ignored dependencies from GoLean's
+perspective; this survey update records their existence without vendoring
+them back into the semantics repository. Other agents' worktrees and the
+shared reference sources were not modified.
