@@ -230,3 +230,8 @@ regression. Tail: `r39-ci-slow.tail.txt`. Candidate vs tracked record: `claim` a
 IDENTICAL; 29 input hashes differ (B7's core files) and the receipt (clean `7050bb9c`, binary
 `231df9a9…`) — INSTALLED in this commit; a provenance refresh, not a re-pin. The green re-run is the
 full `ci --diff` at the records commit.
+
+**Green re-run at the records commit `1b23a2e5`** ([AGENT] coordinator, 2026-09-17): full
+`GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff` → EXIT=0, `RESULT: PASS`, `baseline diff FULL
+(3676/3676, no regression)`, `certificate provenance` ok, negatives 394 no regression. Round 39 closed;
+B7 is on main; the box-wide lock released.
