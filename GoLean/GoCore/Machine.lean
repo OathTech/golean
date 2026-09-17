@@ -3731,7 +3731,7 @@ def applySyncOpCore (s : Store) (op : SyncOp) (vs : List GoValue)
   -- The TRY heads never reach the core: `applySyncOp` draws their pick
   -- and applies `applyTryLock`. Named, not absorbed by the catch-all.
   | .tryLock _, _ | .tryRLock _, _ | .tryWLock _, _ =>
-      throw (.internal "try-lock heads apply through applySyncOp ctx (the choice-taking entry), never the core")
+      throw (.internal "try-lock heads apply through applySyncOp (the choice-taking entry), never the core")
   | op, vs => stuck s!"malformed sync-operator application: {repr op} on {vs.length} operand(s)"
 
 /-- The cell a TRY head would leave behind if it ACQUIRED — `.ok (some _)`

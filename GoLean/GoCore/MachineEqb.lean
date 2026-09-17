@@ -32,10 +32,10 @@ DecidableEq` works there and the comparison is `decide (a = b)` with
 
 namespace GoLean.GoCore.Machine
 
--- B7 (2026-09-17): the program context is the first explicit parameter of
--- every definition below that reads it; theorems take it implicitly
--- (`variable {ctx}` toggles).
-variable (ctx : ProgramCtx)
+-- B7 (2026-09-17): this module needs NO program context — `Store.eqb` and the
+-- structural comparisons below are heap-only. (The audit's F7, 2026-09-17: the
+-- unused `variable (ctx : ProgramCtx)` and its 37 toggles, copied from the
+-- modules that DO read the context, were removed; nothing here named `ctx`.)
 
 open GoLean
 
@@ -44,7 +44,6 @@ open GoLean
 `Cont`'s widest frames carry up to ELEVEN fields (`tgtOpK`), so the
 splitter family runs out to 11. Source `&&` is LEFT-associated. -/
 
-variable {ctx}
 theorem andSplit7 {A B C D E F G : Bool}
     (h : (A && B && C && D && E && F && G) = true) :
     A = true ∧ B = true ∧ C = true ∧ D = true ∧ E = true ∧ F = true
@@ -87,7 +86,6 @@ theorem andSplit11 {A B C D E F G H I J K : Bool}
     h.1.1.1.1.1.1.1.1.2, h.1.1.1.1.1.1.1.2, h.1.1.1.1.1.1.2,
     h.1.1.1.1.1.2, h.1.1.1.1.2, h.1.1.1.2, h.1.1.2, h.1.2, h.2⟩
 
-variable (ctx)
 /-- The fuel every STATE-layer comparison instantiates its fuel-structural
 components at. Generous: fuel bounds structural DEPTH, and the deepest
 real `Cont`/`Stmt` spines are orders of magnitude shallower. Exhaustion
@@ -152,7 +150,6 @@ def StrictOp.eqb : StrictOp → StrictOp → Bool
   | .floatBits o1, .floatBits o2 => o1 == o2
   | _, _ => false
 
-variable {ctx}
 set_option maxHeartbeats 1600000 in
 theorem StrictOp.eqb_sound :
     ∀ (a b : StrictOp), StrictOp.eqb a b = true → a = b := by
@@ -209,7 +206,6 @@ theorem StrictOp.eqb_sound :
 
 /-! ## `StmtOp` — the wide-statement op table (11 ctors) -/
 
-variable (ctx)
 def StmtOp.eqb : StmtOp → StmtOp → Bool
   | .allocNew t1, .allocNew t2 => Ty.eqb t1 t2
   | .makeSlice e1 c1, .makeSlice e2 c2 => Ty.eqb e1 e2 && c1 == c2
@@ -225,7 +221,6 @@ def StmtOp.eqb : StmtOp → StmtOp → Bool
   | .print n1, .print n2 => n1 == n2
   | _, _ => false
 
-variable {ctx}
 theorem StmtOp.eqb_sound : ∀ (a b : StmtOp), StmtOp.eqb a b = true → a = b := by
   intro a b h
   cases a <;> cases b <;> (try (first | rfl | exact Bool.noConfusion h))
@@ -264,13 +259,11 @@ theorem TargetStep.beq_sound {a b : TargetStep} (h : (a == b) = true) :
     obtain ⟨h1, h2⟩ := andSplit2 h
     cases eq_of_beq h1; cases eq_of_beq h2; rfl
 
-variable (ctx)
 def TargetShape.eqb : TargetShape → TargetShape → Bool
   | .chain s1, .chain s2 => eqbListP (· == ·) s1 s2
   | .mapElem k1 v1, .mapElem k2 v2 => Ty.eqb k1 k2 && Ty.eqb v1 v2
   | _, _ => false
 
-variable {ctx}
 theorem TargetShape.eqb_sound :
     ∀ (a b : TargetShape), TargetShape.eqb a b = true → a = b := by
   intro a b h
@@ -281,7 +274,6 @@ theorem TargetShape.eqb_sound :
     obtain ⟨h1, h2⟩ := andSplit2 h
     cases Ty.eqb_sound h1; cases Ty.eqb_sound h2; rfl
 
-variable (ctx)
 def TargetRef.eqb : TargetRef → TargetRef → Bool
   | .chain a1 i1 s1, .chain a2 i2 s2 =>
       GoValue.eqb a1 a2 && eqbListP GoValue.eqb i1 i2
@@ -291,7 +283,6 @@ def TargetRef.eqb : TargetRef → TargetRef → Bool
         && Ty.eqb vt1 vt2
   | _, _ => false
 
-variable {ctx}
 theorem TargetRef.eqb_sound :
     ∀ (a b : TargetRef), TargetRef.eqb a b = true → a = b := by
   intro a b h
@@ -308,14 +299,12 @@ theorem TargetRef.eqb_sound :
 
 /-! ## `RhsOp` -/
 
-variable (ctx)
 def RhsOp.eqb : RhsOp → RhsOp → Bool
   | .vals, .vals => true
   | .mapLookup k1 v1, .mapLookup k2 v2 => Ty.eqb k1 k2 && Ty.eqb v1 v2
   | .typeAssert t1, .typeAssert t2 => Ty.eqb t1 t2
   | _, _ => false
 
-variable {ctx}
 theorem RhsOp.eqb_sound : ∀ (a b : RhsOp), RhsOp.eqb a b = true → a = b := by
   intro a b h
   cases a <;> cases b <;> (try (first | rfl | exact Bool.noConfusion h))
@@ -327,7 +316,6 @@ theorem RhsOp.eqb_sound : ∀ (a b : RhsOp), RhsOp.eqb a b = true → a = b := b
 
 /-! ## `ChanStOp` and `SyncOp` (carry `Assignee` payloads ⇒ fuel) -/
 
-variable (ctx)
 def ChanStOp.eqbF (f : Nat) : ChanStOp → ChanStOp → Bool
   | .send e1, .send e2 => Ty.eqb e1 e2
   | .recv t1 e1, .recv t2 e2 =>
@@ -335,7 +323,6 @@ def ChanStOp.eqbF (f : Nat) : ChanStOp → ChanStOp → Bool
   | .close, .close => true
   | _, _ => false
 
-variable {ctx}
 theorem ChanStOp.eqbF_sound :
     ∀ f (a b : ChanStOp), ChanStOp.eqbF f a b = true → a = b := by
   intro f a b h
@@ -347,7 +334,6 @@ theorem ChanStOp.eqbF_sound :
     cases eqbListP_sound (Assignee.eqbF_sound f) h1
     cases Ty.eqb_sound h2; rfl
 
-variable (ctx)
 def SyncOp.eqbF (f : Nat) : SyncOp → SyncOp → Bool
   | .lock, .lock => true
   | .unlock, .unlock => true
@@ -364,7 +350,6 @@ def SyncOp.eqbF (f : Nat) : SyncOp → SyncOp → Bool
   | .tryWLock t1, .tryWLock t2 => eqbListP (Assignee.eqbF f) t1 t2
   | _, _ => false
 
-variable {ctx}
 theorem SyncOp.eqbF_sound :
     ∀ f (a b : SyncOp), SyncOp.eqbF f a b = true → a = b := by
   intro f a b h
@@ -378,14 +363,12 @@ theorem SyncOp.eqbF_sound :
   case tryWLock.tryWLock t1 t2 =>
     cases eqbListP_sound (Assignee.eqbF_sound f) h; rfl
 
-variable (ctx)
 /-- `AtomicOp` (atomics arc wave 1): head and kind are field-free enums
 (`AtomicStmtOp.beq_sound`, `IntKind.beq_sound`); the result target
 list carries `Assignee` payloads ⇒ fuel. -/
 def AtomicOp.eqbF (f : Nat) (a b : AtomicOp) : Bool :=
   a.head == b.head && a.kind == b.kind && eqbListP (Assignee.eqbF f) a.targets b.targets
 
-variable {ctx}
 theorem AtomicOp.eqbF_sound :
     ∀ f (a b : AtomicOp), AtomicOp.eqbF f a b = true → a = b := by
   intro f a b h
@@ -398,7 +381,6 @@ theorem AtomicOp.eqbF_sound :
 
 /-! ## `EvClause` and `PanicEntry` -/
 
-variable (ctx)
 def EvClause.eqbF (f : Nat) : EvClause → EvClause → Bool
   | .sendEv c1 v1 e1 b1, .sendEv c2 v2 e2 b2 =>
       GoValue.eqb c1 c2 && GoValue.eqb v1 v2 && Ty.eqb e1 e2
@@ -408,7 +390,6 @@ def EvClause.eqbF (f : Nat) : EvClause → EvClause → Bool
         && Stmt.eqbF f b1 b2
   | _, _ => false
 
-variable {ctx}
 theorem EvClause.eqbF_sound :
     ∀ f (a b : EvClause), EvClause.eqbF f a b = true → a = b := by
   intro f a b h
@@ -423,11 +404,9 @@ theorem EvClause.eqbF_sound :
     cases eqbListP_sound (Assignee.eqbF_sound f) h2
     cases Ty.eqb_sound h3; cases Stmt.eqbF_sound _ _ _ h4; rfl
 
-variable (ctx)
 def PanicEntry.eqb (a b : PanicEntry) : Bool :=
   GoValue.eqb a.value b.value && a.recovered == b.recovered
 
-variable {ctx}
 theorem PanicEntry.eqb_sound (a b : PanicEntry) (h : PanicEntry.eqb a b = true) :
     a = b := by
   obtain ⟨v1, r1⟩ := a
@@ -437,7 +416,6 @@ theorem PanicEntry.eqb_sound (a b : PanicEntry) (h : PanicEntry.eqb a b = true) 
 
 /-! ## `Cont` — the continuation tower (30 constructors) -/
 
-variable (ctx)
 /-- Fuel-structural `Cont` equality: self-recursive on the fuel, with
 `Stmt`/`Expr`/`Assignee`/`SelectClauseHead` and the `Assignee`-carrying
 op heads compared at the same decremented fuel. `LocalEnv` (=
@@ -555,7 +533,6 @@ def Cont.eqbF : Nat → Cont → Cont → Bool
           && eqbListP (Expr.eqbF f) p1 p2 && e1 == e2 && Cont.eqbF f k1 k2
     | _, _ => false
 
-variable {ctx}
 /-- Soundness of the target-plan list comparator, lifted once (it
 appears in five `Cont` frames). -/
 private theorem targetPlans_sound (f : Nat) :
@@ -738,7 +715,6 @@ fuel argument stays for the tower's uniform shape. The pool-level
 `Thread` (a configuration with its boundary flag, or the abort
 tombstone) has its own `eqb` below. -/
 
-variable (ctx)
 def Config.eqbF : Nat → Config → Config → Bool
   | 0, _, _ => false
   | f + 1, a, b =>
@@ -763,7 +739,6 @@ def Config.eqbF : Nat → Config → Config → Bool
         SyncOp.eqbF f o1 o2 && l1 == l2 && e1 == e2 && Cont.eqbF f k1 k2
     | _, _ => false
 
-variable {ctx}
 set_option maxHeartbeats 1600000 in
 theorem Config.eqbF_sound :
     ∀ f (a b : Config), Config.eqbF f a b = true → a = b := by
@@ -813,7 +788,6 @@ theorem Config.eqbF_sound :
 
 /-! ## The state layer -/
 
-variable (ctx)
 def HeapCell.eqb : HeapCell → HeapCell → Bool
   | .value t₁ v₁, .value t₂ v₂ => GoValue.eqb v₁ v₂ && Ty.eqb t₁ t₂
   | .mapPayload e₁ n₁, .mapPayload e₂ n₂ =>
@@ -822,7 +796,6 @@ def HeapCell.eqb : HeapCell → HeapCell → Bool
       c₁ == c₂ && k₁ == k₂ && eqbArrayP GoValue.eqb b₁ b₂
   | _, _ => false
 
-variable {ctx}
 theorem HeapCell.eqb_sound (a b : HeapCell) (h : HeapCell.eqb a b = true) :
     a = b := by
   cases a <;> cases b <;> (try exact Bool.noConfusion h)
@@ -839,7 +812,6 @@ theorem HeapCell.eqb_sound (a b : HeapCell) (h : HeapCell.eqb a b = true) :
     cases eq_of_beq h1; cases eq_of_beq h2
     cases eqbArrayP_sound (fun _ _ hh => GoValue.eqb_sound hh) h3; rfl
 
-variable (ctx)
 /-- Structural `Store` equality: the heap, cell by cell (B7 — the five
 program tables `ExecState.eqb` used to walk when heaps agreed are the
 `ProgramCtx`, identical across every node of a single program's state
@@ -848,7 +820,6 @@ fingerprints it once). -/
 def Store.eqb (a b : Store) : Bool :=
   eqbArrayP HeapCell.eqb a.heap b.heap
 
-variable {ctx}
 theorem Store.eqb_sound (a b : Store) (h : Store.eqb a b = true) :
     a = b := by
   obtain ⟨hp1⟩ := a
@@ -867,16 +838,13 @@ deriving instance DecidableEq for ChanClocks
 deriving instance DecidableEq for SyncClocks
 deriving instance DecidableEq for RaceState
 
-variable (ctx)
 def RaceState.eqb (a b : RaceState) : Bool := decide (a = b)
 
-variable {ctx}
 theorem RaceState.eqb_sound {a b : RaceState} (h : RaceState.eqb a b = true) :
     a = b := of_decide_eq_true h
 
 /-! ## The pool top and the certificate node -/
 
-variable (ctx)
 /-- Per-goroutine state equality (B4/C5): a live goroutine by its
 configuration and boundary flag (`ChoiceSite` derives `DecidableEq` and
 NO `BEq`, so the flag compares by `decide (· = ·)`), a tombstone by its
@@ -886,7 +854,6 @@ def Thread.eqb (f : Nat) : Thread → Thread → Bool
   | .aborted m1, .aborted m2 => m1 == m2
   | _, _ => false
 
-variable {ctx}
 theorem Thread.eqb_sound (f : Nat) (a b : Thread) (h : Thread.eqb f a b = true) :
     a = b := by
   cases a <;> cases b <;> (try exact Bool.noConfusion h)
@@ -896,7 +863,6 @@ theorem Thread.eqb_sound (f : Nat) (a b : Thread) (h : Thread.eqb f a b = true) 
   case aborted.aborted m1 m2 =>
     cases eq_of_beq (show (m1 == m2) = true from h); rfl
 
-variable (ctx)
 /-- Structural `MultiConfig` equality, cheap-first: the running-goroutine
 index, then the per-goroutine states, then the shared state. -/
 def MultiConfig.eqb (a b : MultiConfig) : Bool :=
@@ -904,7 +870,6 @@ def MultiConfig.eqb (a b : MultiConfig) : Bool :=
     && eqbArrayP (Thread.eqb stateEqbFuel) a.threads b.threads
     && Store.eqb a.shared b.shared
 
-variable {ctx}
 theorem MultiConfig.eqb_sound (a b : MultiConfig)
     (h : MultiConfig.eqb a b = true) : a = b := by
   obtain ⟨t1, s1, c1⟩ := a
@@ -914,12 +879,10 @@ theorem MultiConfig.eqb_sound (a b : MultiConfig)
   cases eqbArrayP_sound (Thread.eqb_sound stateEqbFuel) h2
   cases Store.eqb_sound _ _ h3; rfl
 
-variable (ctx)
 /-- Certificate-node equality: the pool state and the detector state. -/
 def dedupNodeEqb (a b : DedupNode) : Bool :=
   MultiConfig.eqb a.m b.m && RaceState.eqb a.r b.r
 
-variable {ctx}
 theorem dedupNodeEqb_sound (a b : DedupNode) (h : dedupNodeEqb a b = true) :
     a = b := by
   obtain ⟨m1, r1⟩ := a
