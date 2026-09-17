@@ -75,3 +75,8 @@ controls rejected by name); 3676 rows otherwise unchanged; negatives 394 no regr
 differ (the family's files left the certification inputs; `GoLean.lean` changed) and the receipt (clean
 `9e690c2e`, binary `155df5c3…`) — INSTALLED in this commit; a provenance refresh, not a re-pin. The green
 re-run is the full `ci --diff` at the records commit (round-36 lesson).
+
+**Green re-run at the records commit `7f1c1fe7`** ([AGENT] coordinator, 2026-09-17): full
+`GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff` → EXIT=0, `RESULT: PASS`, `baseline diff FULL
+(3676/3676, no regression)`, `certificate provenance` ok, negatives 394 no regression. Round 38 closed;
+the box-wide lock released.
