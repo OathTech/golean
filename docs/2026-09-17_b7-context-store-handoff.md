@@ -13,11 +13,26 @@ lines, census, probe, warm measurement). Slice entries:
 `docs/hygiene-slice-log.md` (the B7 section at its tail); the landing-record row:
 `docs/2026-09-03_design-hygiene-arc.md`.
 
+**Rebase map + fix round (2026-09-17, [AGENT] fix-round worker).** The branch
+was rebased onto main `5955e55f` (one records-only commit of drift; clean):
+the SHAs named below are the PRE-rebase ones and map to `fc1aa228 → 66fe1092`
+(S0 records), `2500b434 → 73ad798d` (the runtime commit), `b1b25945 → a7fd0542`
+(this handoff's first version); the Lean tree is byte-identical across the
+rebase (`git diff 2500b434 73ad798d -- GoLean Tests lakefile.toml
+lake-manifest.json lean-toolchain` empty). The fix round then landed the §8
+rulings ([USER] Mike, 2026-09-17, verbatim, relayed by the [AGENT] coordinator —
+cite as relayed: «We should delete the vacuous conjunct right? that's just a strict improvement. The rewordings sound fine. Agree with the audit, go ahead and launch (after the rulings if relevant)»): runtime commit
+`1fafc9f2` (the pool-side `itersNormalized` conjunct and the predicate family
+deleted — §4 «Fix round», §8), gated at its tree (§2, fix-round row), followed
+by the records commit this text is part of.
+
 **One line.** `ExecState` (five program tables beside the heap) is gone: the
 machine is `ProgramCtx` (the decoded `Program`, whole, read by every transition
 and written by none) × `Store` (the heap). `stepFn ctx s c ch`,
 `Step ctx c s c' s'`, `StepM ctx m m'`; `StateWf` is heap-only; `MachineWf` lost
-its vacuous `itersNormalized` conjunct (D6). The 48 «the program did not
+its vacuous `itersNormalized` conjunct (D6) and, in the fix round, so did the
+pool's `ThreadWf`/`MultiWf` — `MultiWf m` is context-free and the predicate
+family is gone (§4 «Fix round»). The 48 «the program did not
 change» proof sites are gone BY TYPE (§3). NO wire change, NO semantic change,
 NO theorem weakening: every coherence theorem is restated with `ctx` and
 re-proved (§4); the differential gate ran at zero drift (§2).
@@ -47,6 +62,8 @@ Net runtime delta at the gate tip: 32 files, +3,058/−2,862 (`git diff --stat`;
 | run | command | exit | wall s | SHA / tree | result |
 |---|---|---|---|---|---|
 | THE gate | `GOLEAN_MEM_MAX=32G scripts/capped scripts/ci --diff` under the box lock (`LEAN_NUM_THREADS=4` by the cap) | **1** | 1068 | `fc1aa228` + the dirty runtime tree, committed UNCHANGED as `2500b434` (`git diff --stat` at commit time = the gated tree; the docs were not part of the gated tree and are records) | **3676 cases: 3427 PASS / 249 expected FAIL** (Stage B's tally exactly); 394 negatives matched; `eval tests` 211 ok / 0 fail; `core build (warning-free)` ok; `core totality audit` ok (every `GoLean/` module incl. the new `Store`/`ProgramCtx`, classical trio only); `frontend pins (… twin wire = pinned bytes)` ok; `unseq scheduler (Stage B)` ok; `wire boundary` ok; every other step ok. RED: `certificate provenance` (reconciler C9 HIGH: «STALE certification: changed dependency build/files/GoLean/CLI.lean») and `baseline diff (DRIFT)` with the SINGLE drift line `imported-goose/channel/google-search baseline[PASS/membership] -> now[FAIL/membership]` — the one cached certified row, judged stale because its record's compiled inputs changed. ZERO other drift. Tail: `docs/evidence/2026-09-17_b7-context-store/gate-tail.txt`. |
+| THE gate, FIX ROUND | the same command under the box lock | **1** | 934 | `a7fd0542` + the dirty runtime tree (the fix round's four core files), committed UNCHANGED as `1fafc9f2` | **3676 cases: 3427 PASS / 249 expected FAIL** (identical tally); 394 negatives matched; `eval tests` 211 ok / 0 fail; `core build (warning-free)` ok; `core totality audit` ok; every other step ok. RED: exactly the same two 5a-class items — `certificate provenance` (C9 HIGH: «STALE certification: changed dependency build/files/GoLean/CLI.lean») and `baseline diff (DRIFT)` with the SINGLE line `imported-goose/channel/google-search baseline[PASS/membership] -> now[FAIL/membership]`. ZERO other drift. Tail: `docs/evidence/2026-09-17_b7-context-store/gate-tail-fixround.txt`. |
+| choice trace, FIX ROUND | the same tracer command for the SAME main binary the lane used (`.tmp/golean-main`, sha256 `155df5c3…`, re-run) and the fix-round binary (the gate's `golean`, sha256 `1ea8f2ac…`), concurrently; sorted dumps `cmp`'d three ways | **0 (cmp)**: BYTE-IDENTICAL — 23,679 records on all three sides (main now / fix / the lane's `trace-before.tsv`), one sha256 `5f901024…58b5a`; validator summaries identical (0/0/0; the one known ERROR row); each run EXIT=1 for the same pre-existing «FINDINGS present» listing. `choice-trace-summary-fixround.txt` | 661 + 646 | main `7f1c1fe7` vs `1fafc9f2` | byte-identical after the fix round |
 | choice trace | `scripts/choice-trace-corpus --dump --jobs 6 …` with main's binary (a `git archive 7f1c1fe7` cold-built under `.tmp/before/`) and with `2500b434`'s, the two wave-3 exclusions, `cmp` of the sorted dumps | **0 (cmp)**: BYTE-IDENTICAL — 23,679 consumption records from 21,834 (row, stream) lines over 3,639 traced rows (34 frontend refusals, 2 excluded), sha256 `5f901024…58b5a` on both sides; validator summaries identical (0 menu-invariant violations, 0 self-check alarms, 0 driver-agreement mismatches; the one ERROR row is the known frontend refusal `arrays/materialization-budget/over-budget`); each tracer run EXIT=1 (643 s) for the SAME pre-existing «FINDINGS present» depth listing. `choice-trace-summary.txt` | 643 + 643 | main `7f1c1fe7` vs `2500b434` | the whole-corpus choice trace is byte-identical (D5 (a)'s second leg) |
 
 Expected non-drift red, as at Stage B and as the charter §5 item 1 names it:
@@ -107,9 +124,30 @@ theorem because there is only one.
 - `runProgramSetupM fuel program name args ch : Except Stop (ProgramCtx × Config
   × Store × List Loc × Choices)` — returns the context it built (charter §3
   delta (iii)); `Pool.ProgramRun` binds it from that premise.
-- `ThreadWf bound types t` / `MultiWf ctx m` keep the pool's `itersNormalized`
-  conjunct (D6 as ruled names `MachineWf` only) — the pool-side twin of the
-  deleted conjunct is OWED (§8, PENDING [USER]).
+- **Fix round (2026-09-17, §8 items (1)/(2) RULED — statements changed, flagged).**
+  `ThreadWf bound t := match t with | .running c _ => ConfigWf bound c | .aborted _
+  => True` — the `types : TypeEnv` parameter and the conjunct
+  `Config.itersNormalized types c = true` DELETED; `MultiWf m := StateWf m.shared
+  ∧ m.cur < m.threads.size ∧ ∀ i h, ThreadWf m.shared.nextAddr m.threads[i]` —
+  CONTEXT-FREE (the conjunct was its only reader of `ctx.types`); both
+  `Decidable` instances restated. In `MultiWfSound.lean` 18 theorems are
+  RESTATED, none weakened (each lost only hypotheses/conjuncts that were
+  identically `true`): lost a CONTEXT hypothesis or `ctx.types` in the
+  statement — `resumeThread_wf` (`hi`), `arrivalCases_single_wf` (`hi` + the
+  conclusion's second conjunct), `arrivalCases_multi_wf` (`hi` + one conjunct in
+  each branch), `applyPairing_wf` (`hibc`; `hts`/conclusion over `ThreadWf
+  s.nextAddr …`), `stepThread_wf` (`hts`/conclusion likewise), `stepMulti_wf`
+  (`MultiWf ctx m → MultiWf m`); lost a `{types : TypeEnv}` binder and its
+  hypotheses/conjuncts — `ThreadWf.running` (`hi`), `ThreadWf.aborted`,
+  `ThreadWf.mono`, `spawnStep_wf` (`hik` + two conjuncts), `resumeRecvDelivery_wf`
+  (`hik` + one), `selectRecvDelivery_wf` (`hik` + one), `pool_get_wf` (one
+  conjunct), `pool_set2_wf` (`hia`, `hib`), `chanArrivalPlan_wf` (`hik` + one),
+  `pool_set1_wf` (`hia`), `pool_set1_aborted_wf`, `pool_set_push_wf` (`hia`,
+  `hib`). Totals: 15 hypothesis binders, 10 conclusion conjuncts, 13 `{types}`
+  binders, 16 internal `have`s; 195 code lines naming the predicate → 0.
+  `MultiSound.lean` never named `MultiWf`: unchanged. No consumer outside
+  `GoLean/GoCore` named any of it (`git grep itersNormalized -- ':!GoLean/GoCore'`
+  = docs only), so nothing had to stay.
 - Theorems whose only store binder became unused after their function became
   context-only lost that binder (e.g. `defaultValue_locSup`,
   `normalizeValueForTy_noPanic`, `renderPanicHead_string`, `abortMsg_string*`).
@@ -119,8 +157,21 @@ theorem because there is only one.
 updateCell` and the payload readers/writers (→ the `Store` versions, same
 bodies); `ExecState.eqb`/`ExecState.eqb_sound` (→ `Store.eqb`/`Store.eqb_sound`,
 heap-only); `StateWf.funcs_le` (→ `Func.locSup_eq_zero`); `step_preserves_iters`
-(→ `Config.itersNormalized_true`, which it restated); `structTagCompatible_congr`
-(→ nothing: no two contexts in a theorem).
+(→ `Config.itersNormalized_true`, which it restated — itself deleted in the fix
+round, below); `structTagCompatible_congr` (→ nothing: no two contexts in a
+theorem).
+
+**Fix-round tombstones (16 declarations, all → nothing: the predicate was
+constantly `true`, so no fact is lost; the tombstone comments sit where they
+lived in `StateWf.lean`):** `Cont.itersNormalized`, `Config.itersNormalized`
+(the predicates); `Cont.itersNormalized_true`, `Config.itersNormalized_true`
+(their vacuity certificates); the transparency lemmas
+`enterRecvTargets_itersNormalized`, `applyChanOp_itersNormalized`,
+`applySyncOp_itersNormalized`, `applyAtomicOp_itersNormalized`,
+`commitClause_itersNormalized`, `applySelect_itersNormalized`; the walk lemmas
+`seqCont_itersNormalized`, `pushDefer_itersNormalized`,
+`panicPassthrough_itersNormalized`, `recoverThroughWrappers_itersNormalized`,
+`recoverResult_itersNormalized`; and `spawnPlan_iters` (`MultiWfSound.lean`).
 
 ## 5. The S0 warm measurement and how the estimate held
 
@@ -157,30 +208,42 @@ rounds respectively, each a compiler-guided batch of destructuring-arity edits).
 |---|---|---|---|
 | threading idiom | `variable (ctx : ProgramCtx)` per module for DEFINITIONS (ctx = first explicit argument of every def that mentions it); theorems take it IMPLICITLY (`variable {ctx}` toggles, or a module-wide `variable {ctx : ProgramCtx}` in the theorem-only modules) | the snapshot `85f9abd7`'s explicit ctx on theorems (every lemma application becomes `(foo ctx) h`) | lemma applications stay byte-identical (`stepFn_sound hstep`, `enterFramePick_cases hpick`); the proof churn is the conjunct re-indexing only |
 | `MachineWf` arity | ctx-FREE (`MachineWf σ c`): with D6 nothing in it reads the context | the charter §4's spelling `MachineWf ctx s c` (a vacuous parameter) | fewer parameters, smaller proofs; the charter wrote the spelling before D6 was ruled in the same document |
-| `ThreadWf`/`MultiWf` | UNCHANGED shape (`MultiWf ctx m` reads `ctx.types` for the per-thread `itersNormalized` conjunct) | extend D6 to the pool (delete the conjunct + the `types` parameter, ~33 sites) | D6 as ruled names `MachineWf`; the pool twin is a restatement the [USER] has not ruled — posed in §8, not self-adjudicated |
+| `ThreadWf`/`MultiWf` | at the first gate: UNCHANGED shape (`MultiWf ctx m` read `ctx.types` for the per-thread `itersNormalized` conjunct); **fix round: the conjunct + the `types` parameter DELETED, `MultiWf m` context-free** (§4 «Fix round») | (the alternative at the first gate was this deletion; the alternative in the fix round was keeping the conjunct) | D6 as ruled named `MachineWf`, so the twin was posed in §8, not self-adjudicated; the [USER] ruled it 2026-09-17 (§8) |
 | context-only helpers lose the store | 43 Ops readers, 10 Machine helpers, 2 Race, 1 ChoiceTrace (`nilTextFacts`) — the snapshot's cleanup pass, reproduced | keep an unused `(s : Store)` parameter | the core build must be WARNING-free (`linter.unusedVariables`); and an unread parameter is a lie about the dependency |
 | `ProgramCtx.ofTables` | added: bare tables → context with the OLD `ExecState` defaults (`#[]` everywhere) | build hand-built contexts as `⟨{ typeDefs := …, funcs := … }⟩` (Program defaults: `TypeEnv.reserved`, `reservedDisplays`) | byte-identical fail-closed behaviour of every hand-built fixture and of `runFunctionWithContextM` (no record → refuse; no display → marker) |
 | the setup seams | `runProgramSetupM` RETURNS its context; `CLI.enumSetup` stores it in `EnumProgram.ctx`; `Pool.ProgramRun` binds it from the setup premise | a context parameter on the Program-level entries (`runProgramM ctx …`) — the snapshot's shape | one context per run, built at ONE seam from the decoded program; no core operator and no driver selects a context of its own |
 | the setup refusal text | «seeded state ill-formed: a location in a global cell dangles beyond the allocator bound» (was «… global cell or function body …») at BOTH seams | keep the old text byte-for-byte | the check is heap-only now; a message naming a check that is not performed would be a fail-noisy lie. An `.internal` refusal on a path no decoded program reaches (A4: bodies are loc-free) — not a differential-visible text |
 | `Store.updateCell`'s `.internal` text | byte-preserved («allocation goes through ExecState.alloc only») as the snapshot and the charter §6 (i) prescribe | rename to `Store.alloc` | the charter says byte-preserved; C1 owns the seam — the historical spelling is recorded as an OWED wording refresh |
 
-## 8. PENDING [USER] (posed, not ruled)
+## 8. The handoff's [USER] items — RULED 2026-09-17, DONE in the fix round
+
+Ruling: [USER] Mike, 2026-09-17, verbatim, relayed by the [AGENT] coordinator —
+cite as relayed: «We should delete the vacuous conjunct right? that's just a strict improvement. The rewordings sound fine. Agree with the audit, go ahead and launch (after the rulings if relevant)». Record: `docs/2026-08-31_qrow-rulings.md`,
+«The B7 handoff rulings record (2026-09-17)».
 
 1. **The pool-side `itersNormalized` conjunct** (`ThreadWf bound types t`, hence
-   `MultiWf ctx m`): the same constantly-true predicate D6 deleted from
-   `MachineWf`, kept because the ruling named `MachineWf`. Deleting it is a
-   restatement of `ThreadWf`/`MultiWf` + ~33 proof sites in `MultiWfSound.lean`
-   and would make `MultiWf` context-free too. Recommend: delete in a small
-   follow-up slice (or as a fix-round item if the [USER] extends D6 at the
-   merge ask).
-2. **`Cont.itersNormalized`/`Config.itersNormalized` and their `_true` lemmas**:
-   still defined (the pool conjunct uses them). With (1) they become inert and
-   should be deleted with it (tombstoned).
-3. The **`Store.updateCell` refusal text** still names `ExecState.alloc`
-   (byte-preserved per the charter). Owed wording refresh — C1's seam.
-4. The **setup refusal text** changed («… or function body …» dropped) at both
-   seams (§7). Disclosed here; if the [USER] prefers byte-preservation, it is a
-   one-line revert at two sites.
+   `MultiWf ctx m`) — as posed: the same constantly-true predicate D6 deleted
+   from `MachineWf`, kept because the ruling named `MachineWf`; deleting it is a
+   restatement of `ThreadWf`/`MultiWf` + the proof sites in `MultiWfSound.lean`
+   and makes `MultiWf` context-free. **RULED delete** («We should delete the
+   vacuous conjunct right? that's just a strict improvement»). **DONE**, runtime
+   commit `1fafc9f2`: §4 «Fix round» lists every restated statement; 195 code
+   lines naming the predicate → 0; first-round build, 0 warnings; gate at the
+   same expected red set (§2).
+2. **`Cont.itersNormalized`/`Config.itersNormalized` and their `_true` lemmas** —
+   as posed: inert once (1) lands, to be deleted with it. **RULED with (1)** —
+   the [AGENT] reading of «strict improvement» (relayed by the coordinator in
+   the fix-round brief): dead predicates leave with the conjunct, UNLESS
+   something outside the core still names them. Checked: `git grep -n
+   itersNormalized -- ':!GoLean/GoCore'` names only docs (no `Tests/`, no tool,
+   no spike) — so **DONE**: the 16 declarations tombstoned in §4.
+3. The **`Store.updateCell` refusal text** still naming `ExecState.alloc`
+   (byte-preserved per the charter; owed wording refresh — C1's seam) —
+   **RULED as landed** («The rewordings sound fine»): stays byte-preserved here;
+   the refresh remains C1's.
+4. The **setup refusal text** («… or function body …» dropped at both seams,
+   §7) — **RULED as landed** («The rewordings sound fine»): the disclosed
+   wording stands; no revert.
 
 ## 9. What B7 leaves to C1 / C3 / P (the charter §5 item 4; `docs/2026-09-11_bug090-rediagnosis.md` §5)
 
@@ -230,5 +293,7 @@ setup seams — `runProgramSetupM`/`CLI.enumSetup`/`ProgramRun`/`runProgramPoolO
 build ONE context from the decoded program and nothing else selects one; (c)
 the hand-built fixtures — `ProgramCtx.ofTables`'s `#[]` defaults reproduce the
 old `ExecState` defaults at every fixture (fail-closed behaviour byte-identical);
-(d) the two refusal-text decisions in §7; (e) the wire-neutrality claim (§6).
-Not merged, not pushed.
+(d) the two refusal-text decisions in §7; (e) the wire-neutrality claim (§6);
+(f) the fix round's 18 + 2 + 2 restatements (§4 «Fix round») — each lost only a
+conjunct/hypothesis that was identically `true`; the reviewer should confirm no
+other hypothesis moved. Not merged, not pushed.

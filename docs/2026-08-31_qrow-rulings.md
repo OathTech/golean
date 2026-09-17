@@ -479,3 +479,21 @@ D3)» (D3 was ruled separately the same day: PARK — the record above).
 **What follows.** B7 is dispatched from the charter with these rulings written
 in, AFTER the parking lane `park-lane/typed-profiles-0916` lands (one core
 writer; both touch `GoLean.lean`/`lakefile.toml`/`scripts/ci`).
+
+### The B7 handoff rulings record (2026-09-17)
+
+[USER] Mike, 2026-09-17, verbatim, relayed by the [AGENT] coordinator — cite as
+relayed: «We should delete the vacuous conjunct right? that's just a strict improvement. The rewordings sound fine. Agree with the audit, go ahead and launch (after the rulings if relevant)». This rules the four PENDING items of
+`docs/2026-09-17_b7-context-store-handoff.md` §8. **What changed** ([AGENT]
+fix-round worker, lane `core/b7-context-store-0917`, runtime commit `1fafc9f2`):
+(1) the pool-side `itersNormalized` conjunct DELETED from `ThreadWf`/`MultiWf` —
+`ThreadWf bound t` loses its `types` parameter, `MultiWf m` is context-free; 18
+`MultiWfSound.lean` theorems restated without the constantly-true
+hypotheses/conjuncts (none weakened); (2) the then-inert `Cont.itersNormalized`/
+`Config.itersNormalized`, their `_true` certificates, the 11 walk/transparency
+lemmas and `spawnPlan_iters` DELETED (16 declarations tombstoned) — the [AGENT]
+reading of «strict improvement» (dead predicates leave with the conjunct),
+conditional on nothing outside the core naming them (checked: docs only);
+(3) the `Store.updateCell` refusal text and (4) the setup refusal text STAND as
+landed («The rewordings sound fine»). Gate at the fix-round tree: `ci --diff`
+EXIT=1 (934 s), the same two expected 5a-class items, zero other drift.

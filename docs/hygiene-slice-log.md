@@ -620,3 +620,38 @@ The post-seed assertion's `.internal` text at BOTH seams (`runProgramSetupM`,
 `CLI.enumSetup`) drops «or function body» — the check is heap-only now and a
 message naming an unperformed check would be a fail-noisy lie. Unreachable on
 decoded programs (A4). The [USER] may prefer byte-preservation (handoff §8.4).
+
+## Fix round — the pool-side `itersNormalized` conjunct (2026-09-17)
+
+[USER] Mike, 2026-09-17, verbatim, relayed by the [AGENT] coordinator — cite as
+relayed: «We should delete the vacuous conjunct right? that's just a strict improvement. The rewordings sound fine. Agree with the audit, go ahead and launch (after the rulings if relevant)». [AGENT] fix-round worker, runtime commit `1fafc9f2`
+(after a clean rebase onto main `5955e55f`: `2500b434 → 73ad798d`).
+**Theorem STATEMENTS changed (a restatement, flagged, as D6 required for
+`MachineWf`; nothing weakened — every deleted conjunct/hypothesis was
+identically `true`):** `ThreadWf bound t` (the `types` parameter and the
+`Config.itersNormalized types c = true` conjunct deleted), `MultiWf m`
+(CONTEXT-FREE: the conjunct was its only reader of `ctx.types`), both
+`Decidable` instances; in `MultiWfSound.lean` 18 theorems — `ThreadWf.running`,
+`ThreadWf.aborted`, `ThreadWf.mono`, `spawnStep_wf`, `resumeRecvDelivery_wf`,
+`selectRecvDelivery_wf`, `resumeThread_wf`, `pool_get_wf`, `pool_set2_wf`,
+`chanArrivalPlan_wf`, `arrivalCases_single_wf`, `arrivalCases_multi_wf`,
+`applyPairing_wf`, `pool_set1_wf`, `pool_set1_aborted_wf`, `pool_set_push_wf`,
+`stepThread_wf`, `stepMulti_wf` — lose 15 hypothesis binders, 10 conclusion
+conjuncts, 13 `{types : TypeEnv}` binders and 16 internal `have`s (the handoff
+§4 «Fix round» says which per theorem). **Deleted, tombstoned (16
+declarations):** `Cont.itersNormalized`, `Config.itersNormalized`, their `_true`
+certificates, the 11 `*_itersNormalized` walk/transparency lemmas in
+`StateWf.lean`, `spawnPlan_iters`. Nothing outside `GoLean/GoCore` named any of
+it (docs only), so nothing stayed; `MultiSound.lean` never named `MultiWf`.
+`MachineSound.lean`: one history comment gains a closing parenthesis.
+Sequential warm StateWf 19 s / Multi 5 s / MultiWfSound 76 s / `GoLean.GoCore`
+16 s — every EXIT=0 on the FIRST round, 0 warnings. Gate: `scripts/ci --diff`
+EXIT=1 (934 s): 3676 cases 3427 PASS / 249 expected FAIL, 394 negatives, eval
+211/0, every step ok EXCEPT the same two EXPECTED 5a-class items (certificate
+provenance STALE — compiled inputs `GoLean/CLI.lean`; the ONE cached certified
+row `imported-goose/channel/google-search` judged stale for that reason); no
+other row moved. Choice trace (the SAME main binary the lane used, re-run,
+vs the fix-round binary, plus the lane's original main dump): BYTE-IDENTICAL —
+23,679 records, one sha256 `5f901024…58b5a` on all three sides, `cmp` EXIT=0.
+Items (3)/(4) of the handoff §8 (the two refusal-text rewordings) RULED as
+landed («The rewordings sound fine») — no change.

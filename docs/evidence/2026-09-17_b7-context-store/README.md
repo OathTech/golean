@@ -132,7 +132,8 @@ The S0 greps re-run on the assembled tree:
 | the same in `MultiWfSound.lean` | 6 | **0** |
 | `htypes` in `MachineSound.lean` | 4 hypotheses (11 mentions) | **0** hypotheses (1 mention, a tombstone comment) |
 | `ExecState` in code (`GoLean/`, `Tests/`) | 30 modules | **0** (5 docstring mentions of the historical name) |
-| `itersNormalized` in `MachineWf` | 1 conjunct | **0** (D6); the pool's `ThreadWf` twin remains (PENDING [USER], handoff §8) |
+| `itersNormalized` in `MachineWf` | 1 conjunct | **0** (D6); the pool's `ThreadWf`/`MultiWf` twin: 1 conjunct at the first gate → **0** in the fix round (`1fafc9f2`, [USER] 2026-09-17 relayed) |
+| `itersNormalized` anywhere in `GoLean/` CODE (the predicate family) | 199 mentions (StateWf 104, MultiWfSound 93, Multi 1, MachineSound 1 comment) | **0** code mentions after the fix round (prose tombstones only: `git grep -n itersNormalized -- GoLean` = 13 comment/docstring lines) |
 
 `git diff --stat 7f1c1fe7 -- GoLean Tests` at the gate tip: 32 files, +3,058/−2,862; `NativeToIR.lean`,
 `tools/nativefrontend/`, `scripts/check-frontend-pins` untouched (wire-neutral by construction).
@@ -146,12 +147,28 @@ StepFn 1 s; MachineSound+UnseqSound 62 s (after 57–77 s rounds); `lake build G
 the last round (33 jobs; earlier rounds 2–11 s); the trace/observer trio 2 s; default `lake build`
 (lib + exe) 4 s at the last round (96 jobs); `Tests.GoCoreEval` 144 s; all `Tests.*` 30 s.
 
+## Rebase map (2026-09-17, before the fix round)
+
+Rebased onto main `5955e55f` (one records-only commit): `fc1aa228 → 66fe1092`, `2500b434 → 73ad798d`,
+`b1b25945 → a7fd0542`; Lean tree byte-identical across the rebase (`git diff 2500b434 73ad798d -- GoLean
+Tests lakefile.toml lake-manifest.json lean-toolchain` empty); the warm `.lake` was reused (no-op
+`lake build GoLean.GoCore` EXIT=0, 0 s). The pre-rebase SHAs in the rows above name the same trees.
+
+## Fix round (2026-09-17) — explicit-target warms (captured `EXIT=`, wall s; `LEAN_NUM_THREADS=4 GOLEAN_MEM_MAX=32G`)
+
+`.tmp/fix-warm.lines`: `GoLean.GoCore.StateWf` EXIT=0 (19 s) · `GoLean.GoCore.Multi` EXIT=0 (5 s) ·
+`GoLean.GoCore.MultiWfSound` EXIT=0 (76 s) · `GoLean.GoCore` EXIT=0 (16 s, 33 jobs) — first round, 0
+warnings in every log.
+
 ## Gate lines (captured exit codes, never grepped greens)
 
 | run | command | exit | wall s | SHA / tree | result |
 |---|---|---|---|---|---|
 | THE gate | `GOLEAN_MEM_MAX=32G scripts/capped scripts/ci --diff` (box lock; `LEAN_NUM_THREADS=4` by the cap) | **1** | 1068 | `fc1aa228` + the runtime tree, committed unchanged as `2500b434` | 3676 cases 3427 PASS / 249 expected FAIL; 394 negatives; eval 211/0; every step ok EXCEPT the two EXPECTED 5a-class items — `certificate provenance` STALE (C9: compiled inputs `build/files/GoLean/CLI.lean` changed) and the ONE cached certified row `imported-goose/channel/google-search` PASS→FAIL/membership (its cached record judged stale; NOT an observation change). No other row moved. `gate-tail.txt` has the differential summary, the drift block, the reconciler lines and the step list verbatim. |
 | choice trace | `scripts/choice-trace-corpus --dump --jobs 6 --out <dir> --golean <bin> --exclude goroutines/send-then-spin --exclude strings/trimspace-repeat/repeat-bound-refused` for main's binary (cold-built from `git archive 7f1c1fe7` under `.tmp/before/`) and for `2500b434`'s; sorted `dump-*.tsv` compared with `cmp` | **0 (cmp)**: BYTE-IDENTICAL — 23,679 consumption records from 21,834 (row, stream) lines over 3,639 traced rows (34 frontend refusals, 2 excluded), sha256 `5f901024…58b5a` on both sides; validator summaries identical (0 menu-invariant violations, 0 self-check alarms, 0 driver-agreement mismatches; the one ERROR row is the known frontend refusal `arrays/materialization-budget/over-budget`); each tracer run EXIT=1 (643 s) for the SAME pre-existing «FINDINGS present» depth listing. `choice-trace-summary.txt` | 643 + 643 | main `7f1c1fe7` vs `2500b434` | the whole-corpus choice trace is byte-identical (D5 (a)'s second leg) |
+
+| THE gate, FIX ROUND | the same command under the box lock (`artifacts/build-lock.d` taken 03:38:41, released 03:54:15; owner file; trap-protected) | **1** | 934 | `a7fd0542` + the runtime tree (four core files), committed unchanged as `1fafc9f2` | 3676 cases 3427 PASS / 249 expected FAIL; 394 negatives; eval 211/0; `core build (warning-free)` ok; `core totality audit` ok; every step ok EXCEPT the same two EXPECTED 5a-class items — `certificate provenance` STALE (C9: compiled inputs `build/files/GoLean/CLI.lean`) and the ONE cached certified row `imported-goose/channel/google-search` PASS→FAIL/membership. No other row moved. `gate-tail-fixround.txt` has the tail verbatim. |
+| choice trace, FIX ROUND | the same tracer command for the SAME main binary the lane used (`.tmp/golean-main`, sha256 `155df5c3…`, re-run now) and the fix-round binary (`.tmp/golean-fix` = the gate's `golean`, sha256 `1ea8f2ac…`), concurrently; sorted dumps compared three ways (`cmp`) | **0 (cmp)**: BYTE-IDENTICAL — 23,679 records on all three sides (main now / fix / the lane's `trace-before.tsv`), the ONE sha256 `5f901024…58b5a` (the lane's recorded value); tracer logs identical modulo timing/paths; validator summaries identical (0 menu-invariant violations, 0 self-check alarms, 0 driver-agreement mismatches; the one ERROR row is the known frontend refusal); each run EXIT=1 for the same pre-existing «FINDINGS present» listing. `choice-trace-summary-fixround.txt` | 661 + 646 | main `7f1c1fe7` binary vs `1fafc9f2`'s | the whole-corpus choice trace is byte-identical after the fix round |
 
 The expected red, named: the certificate-provenance STALE verdict is the intended one for changed
 compiled inputs (the step's own controls all pass); the certified row goes red as a consequence.

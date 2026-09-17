@@ -1,0 +1,21 @@
+# choice-trace summary, FIX ROUND (2026-09-17) — three-way comparison, sorted per-consumption dumps (cat dump-*.tsv | grep -v '^id<TAB>' | sort)
+# producer: scripts/choice-trace-corpus --dump --jobs 6 --out .tmp/choice-trace-fix-<side> --golean .tmp/<bin> --exclude goroutines/send-then-spin --exclude strings/trimspace-repeat/repeat-bound-refused; both sides run CONCURRENTLY after the gate; EXIT=1 on both = the pre-existing 'FINDINGS present' depth listing (identical on main)
+choice-trace main (golean-main sha256 155df5c3d7a52816…) EXIT=1 (661 s)
+both traces done 2026-09-17T04:07:05+00:00
+choice-trace fix (golean-fix sha256 1ea8f2ac622f3ba5…) EXIT=1 (646 s)
+# binaries: golean-main = the lane's main 7f1c1fe7 binary (unchanged file, sha256 155df5c3d7a52816f48372adbeb34c755d04a87301bf103fcbbe15e53683eb26); golean-fix = the gate's .lake/build/bin/golean at the fix-round tree (sha256 1ea8f2ac622f3ba5b18d0e9ddfbe4884ae6c20cdef706296da975b8e27f3df3f)
+  23679 trace-fix-main.tsv
+  23679 trace-fix-fix.tsv
+  23679 trace-before.tsv
+  71037 total
+5f90102463045528dfcb243e8068a92e56bb86e0e88565f2ab5305778d958b5a  trace-fix-main.tsv
+5f90102463045528dfcb243e8068a92e56bb86e0e88565f2ab5305778d958b5a  trace-fix-fix.tsv
+5f90102463045528dfcb243e8068a92e56bb86e0e88565f2ab5305778d958b5a  trace-before.tsv
+cmp trace-fix-main.tsv trace-fix-fix.tsv → EXIT 0 (BYTE-IDENTICAL: main binary now vs fix-round binary)
+cmp trace-before.tsv trace-fix-fix.tsv → EXIT 0 (BYTE-IDENTICAL: the lane's original main dump vs fix-round binary)
+tracer logs: diff modulo timing/path lines EMPTY; validator summary (fix side):
+rows traced: 3639 ids, 21834 (id,stream) lines; 1 id(s) the tracer could not run (ERROR)
+  menu-invariant violations: 0
+  self-check alarms (mirror/accountant, sentinel, pick-record): 0
+  driver-agreement mismatches: 0
+  ids with a machine refusal under some traced stream (unsupported/stuck/internal/error, or an unexpected fatal): 188; of these 188 are non-PASS in the tracked baseline
