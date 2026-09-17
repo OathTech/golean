@@ -59,3 +59,19 @@ build/files/GoLean.lean») and `FAIL baseline diff` whose DRIFT block is the sin
 record); the new `core-audit` step PASS (14.2 s); negatives 394 no regression; every other step ok.
 Step-line tail: `gate-of-record-ci-diff.tail.txt`. Corpus rows cannot move (no wire/frontend/machine
 semantics change); the train owes 5a (`ci --slow` + candidate install) at the merged tip.
+
+## Merge train r38 — the 5a record ([AGENT] coordinator, 2026-09-17)
+
+[USER] Mike 2026-09-17, verbatim (relayed): «Great, land it, then launch B7». Pre-merge main `94da420e`
+→ `refs/snapshots/r38/main`; parking branch `82f5b242` fast-forwarded (the D7 commit landed with it —
+accepted by landing as-is); the audit branch rebased (`9e690c2e`) and fast-forwarded. Under the lock at
+`9e690c2e`: `scripts/build-certified` EXIT=0 (binary `155df5c3d7a5…`); `release-check --base
+refs/snapshots/r38/main` EXIT=2 (EXPECTED — «STALE certification: changed dependency
+build/files/GoLean.lean»); `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --slow` EXIT=1, 825 s — red on
+EXACTLY the 5a pair (`certificate provenance` STALE; the single drift line
+`imported-goose/channel/google-search PASS→FAIL/membership`); `core-audit` step PASS (14.6 s; 5 compiled
+controls rejected by name); 3676 rows otherwise unchanged; negatives 394 no regression. Tail:
+`r38-ci-slow.tail.txt`. Candidate vs tracked record: `claim` and `observations` IDENTICAL; 84 input hashes
+differ (the family's files left the certification inputs; `GoLean.lean` changed) and the receipt (clean
+`9e690c2e`, binary `155df5c3…`) — INSTALLED in this commit; a provenance refresh, not a re-pin. The green
+re-run is the full `ci --diff` at the records commit (round-36 lesson).
