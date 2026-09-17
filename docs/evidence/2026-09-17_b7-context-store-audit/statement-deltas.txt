@@ -1,0 +1,1696 @@
+##### .tmp/stmts/AbortObservation.txt
+def runConfigWithAbort [47->52]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx ‖ variable { ctx }
+theorem runConfigWithAbort_erasure [65->71]
+   -  ExecState
+   +  Store ‖ ctx ‖ ctx
+theorem runConfigWithAbort_witness [133->139]
+   -  ExecState
+   +  ctx ‖ Store ‖ ctx ‖ ctx
+##### .tmp/stmts/ChoiceTrace.txt
+def partnersFor [209->216]
+   -  ExecState
+   +  Store
+def waiterFacts [255->262]
+   -  ExecState
+   +  Store
+def arrivalFacts [290->297]
+   -  ExecState
+   +  Store
+def entryFacts [309->316]
+   -  ExecState
+   +  Store
+def mapIterFacts [325->332]
+   -  ExecState
+   +  Store
+def spillFacts [345->352]
+   -  ExecState
+   +  Store
+def nilTextFacts [386->393]
+   -  ( s : ExecState )
+   +  
+def tryLockFacts [472->479]
+   -  ExecState
+   +  Store
+def seqFacts [510->517]
+   -  ExecState ‖ σ
+   +  Store ‖ ctx ‖ ctx ‖ ctx ‖ ctx
+def seqSite [541->548]
+   -  ExecState
+   +  Store
+##### .tmp/stmts/CLI.txt
+def parseRunArgs [62->62]
+   -  GoCore.ExecState ‖ GoCore.ExecState ‖ types : = program.typeDefs , functions : = program.funcs methods : = program.methods , methodSets : = program.methodSets typeDisplays : = program.typeDisplays ‖ or function body ‖ m.shared.types.nameOf? ‖ m.shared.types.nameOf? ‖ GoCore.ExecState ‖ GoCore.ExecState ‖ GoCore.ExecState ‖ ctx.ep.σ₀.types.nameOf? ‖ GoCore.ExecState ‖ GoCore.ExecState ‖ ep.σ₀.types.nameOf?
+   +  ctx : GoCore.ProgramCtx ‖ GoCore.Store ‖ ctx : GoCore.ProgramCtx : = ⟨ program ⟩ let ‖ GoCore.Store ‖ ctx ‖ ctx , ‖ ( pctx : GoCore.ProgramCtx ) ‖ pctx ‖ pctx.types.nameOf? ‖ pctx ‖ pctx.types.nameOf? ‖ pctx ‖ pctx ‖ pctx ‖ pctx ‖ pctx ‖ pctx ‖ pctx ‖ pctx ‖ ( pctx : GoCore.ProgramCtx ) ‖ GoCore.Store ‖ GoCore.Store ‖ pctx ‖ pctx ‖ ep.ctx ‖ ep.ctx ‖ ep.ctx ‖ ep.ctx ‖ pctx : GoCore.ProgramCtx ) ( ‖ pctx ‖ pctx : GoCore.ProgramCtx ) ( ‖ GoCore.Store ‖ pctx ‖ ctx.ep.ctx ‖ ctx.ep.ctx.types.nameOf? ‖ ctx.ep.ctx ‖ ctx.ep.ctx ‖ ctx.ep.ctx ‖ ctx.ep.ctx ‖ ctx.ep.ctx ‖ ctx.ep.ctx ‖ GoCore.Store ‖ ctx.ep.ctx ‖ ctx.ep.ctx ‖ GoCore.Store ‖ ctx.ep.ctx ‖ ctx.ep.ctx ‖ ctx.ep.ctx ‖ ep.ctx ‖ ep.ctx ‖ ep.ctx ‖ ep.ctx ‖ ep.ctx.types.nameOf?
+def parseEnumArgs [727->727]
+   -  GoCore.ExecState ‖ GoCore.ExecState ‖ types : = program.typeDefs , functions : = program.funcs methods : = program.methods , methodSets : = program.methodSets typeDisplays : = program.typeDisplays ‖ or function body ‖ m.shared.types.nameOf? ‖ m.shared.types.nameOf? ‖ GoCore.ExecState ‖ GoCore.ExecState ‖ GoCore.ExecState ‖ ctx.ep.σ₀.types.nameOf? ‖ GoCore.ExecState ‖ GoCore.ExecState ‖ ep.σ₀.types.nameOf?
+   +  ctx : GoCore.ProgramCtx ‖ GoCore.Store ‖ ctx : GoCore.ProgramCtx : = ⟨ program ⟩ let ‖ GoCore.Store ‖ ctx ‖ ctx , ‖ ( pctx : GoCore.ProgramCtx ) ‖ pctx ‖ pctx.types.nameOf? ‖ pctx ‖ pctx.types.nameOf? ‖ pctx ‖ pctx ‖ pctx ‖ pctx ‖ pctx ‖ pctx ‖ pctx ‖ pctx ‖ ( pctx : GoCore.ProgramCtx ) ‖ GoCore.Store ‖ GoCore.Store ‖ pctx ‖ pctx ‖ ep.ctx ‖ ep.ctx ‖ ep.ctx ‖ ep.ctx ‖ pctx : GoCore.ProgramCtx ) ( ‖ pctx ‖ pctx : GoCore.ProgramCtx ) ( ‖ GoCore.Store ‖ pctx ‖ ctx.ep.ctx ‖ ctx.ep.ctx.types.nameOf? ‖ ctx.ep.ctx ‖ ctx.ep.ctx ‖ ctx.ep.ctx ‖ ctx.ep.ctx ‖ ctx.ep.ctx ‖ ctx.ep.ctx ‖ GoCore.Store ‖ ctx.ep.ctx ‖ ctx.ep.ctx ‖ GoCore.Store ‖ ctx.ep.ctx ‖ ctx.ep.ctx ‖ ctx.ep.ctx ‖ ep.ctx ‖ ep.ctx ‖ ep.ctx ‖ ep.ctx ‖ ep.ctx.types.nameOf?
+def enumPoolRun [858->863]
+   -  m.shared.types.nameOf? ‖ m.shared.types.nameOf?
+   +  ( pctx : GoCore.ProgramCtx ) ‖ pctx ‖ pctx.types.nameOf? ‖ pctx ‖ pctx.types.nameOf? ‖ pctx ‖ pctx ‖ pctx ‖ pctx ‖ pctx ‖ pctx
+def enumInitRun [924->929]
+   -  GoCore.ExecState ‖ GoCore.ExecState
+   +  ( pctx : GoCore.ProgramCtx ) ‖ GoCore.Store ‖ GoCore.Store
+def stepNeeds [1114->1119]
+   -  
+   +  ( pctx : GoCore.ProgramCtx )
+def stepNeedsSeq [1122->1127]
+   -  GoCore.ExecState
+   +  pctx : GoCore.ProgramCtx ) ( ‖ GoCore.Store
+##### .tmp/stmts/EnumDedupCheck.txt
+def appendApplyNoSpill [83->88]
+   -  ExecState
+   +  Store ‖ ctx
+def innerVecs [99->104]
+   -  ExecState
+   +  Store
+def slotVecsAux [143->148]
+   -  ExecState
+   +  Store ‖ ctx
+##### .tmp/stmts/EnumDedupSound.txt
+theorem stepThread_l4_run [36->40]
+   -  ExecState ‖ ExecState
+   +  Store ‖ ctx ‖ Store ‖ ctx ‖ ctx
+theorem applyStmtOp_append_nospill [105->109]
+   -  ExecState
+   +  Store ‖ ctx ‖ ctx ‖ ctx
+theorem stepFn_append_nospill [155->159]
+   -  ExecState
+   +  Store ‖ ctx ‖ ctx ‖ ctx
+theorem stepThread_append_oblivious [178->182]
+   -  ExecState ‖ ExecState
+   +  Store ‖ ctx ‖ Store ‖ ctx ‖ ctx
+theorem stepThread_total_covered [236->240]
+   -  ExecState
+   +  Store ‖ ctx ‖ ctx ‖ ctx ‖ ctx
+theorem slotVecsAux_mem [362->366]
+   -  ExecState
+   +  Store ‖ ctx ‖ ctx
+theorem stepMulti_total_covered [401->405]
+   -  
+   +  ctx ‖ ctx ‖ ctx ‖ ctx
+theorem checkStep_parts [633->637]
+   -  
+   +  ctx ‖ ctx ‖ ctx
+theorem checkStep_edges [666->670]
+   -  
+   +  ctx ‖ ctx ‖ ctx
+theorem checkCert_complete_aux [699->703]
+   -  
+   +  ctx ‖ ctx ‖ ctx
+theorem checkCert_slowObs [920->924]
+   -  
+   +  ctx ‖ ctx
+theorem checkCertM_slowObs [975->979]
+   -  
+   +  ctx ‖ ctx
+##### .tmp/stmts/EnumDedup.txt
+def refusalReason [119->124]
+   -  ExecState
+   +  Store
+##### .tmp/stmts/EnumSpec.txt
+def obsOf? [54->59]
+   -  ExecState
+   +  Store ‖ ctx
+##### .tmp/stmts/GoCoreContract.txt
+theorem recover_stepFn [57->61]
+   -  ExecState
+   +  Store ‖ ctx
+theorem recover_step_does_not_transport [63->67]
+   -  ExecState
+   +  Store ‖ ctx ‖ ctx
+def illTyped [73->77]
+   -  ExecState
+   +  Store
+theorem choose_defer [80->84]
+   -  ExecState
+   +  Store ‖ ctx
+theorem choose_raise [82->86]
+   -  ExecState
+   +  Store ‖ ctx
+theorem both_relational_successors [85->89]
+   -  ExecState
+   +  Store ‖ ctx ‖ ctx
+theorem fixed_stream_not_existential_path [90->94]
+   -  ExecState
+   +  Store ‖ ctx ‖ ctx
+theorem defer_trace [99->103]
+   -  ExecState
+   +  Store ‖ ctx
+theorem raise_trace [102->106]
+   -  ExecState
+   +  Store ‖ ctx
+def exampleState [111->122]
+   -  ExecState
+   +  Store
+theorem defer_completes [165->176]
+   -  ExecState
+   +  Store ‖ ctx
+theorem raise_needs_abort_fuel [169->180]
+   -  ExecState
+   +  Store ‖ ctx
+theorem raise_aborts [174->185]
+   -  
+   +  exampleCtx
+theorem defer_run_iff [180->191]
+   -  
+   +  exampleCtx ‖ exampleCtx
+theorem pool_defer [185->196]
+   -  
+   +  exampleCtx
+theorem pool_raise [189->200]
+   -  
+   +  exampleCtx
+theorem both_pool_traces [193->204]
+   -  
+   +  exampleCtx ‖ exampleCtx
+theorem two_choice_pool_bridge [198->209]
+   -  
+   +  exampleCtx ‖ exampleCtx
+theorem terminal_at_zero_fuel [223->234]
+   -  
+   +  emptyCtx
+theorem duplicate_readout_preserves_alias [228->239]
+   -  
+   +  emptyCtx
+def fresh [234->247]
+   -  ExecState
+   +  Store
+def scopeState [236->249]
+   -  ExecState
+   +  Store
+theorem actual_scope_restoration [244->257]
+   -  
+   +  emptyCtx ‖ emptyCtx
+theorem actual_new_local_zero [252->265]
+   -  
+   +  emptyCtx ‖ emptyCtx
+def aliasState [298->311]
+   -  ExecState
+   +  Store
+theorem write_keeps_both_actual_aliases [305->318]
+   -  
+   +  emptyCtx ‖ emptyCtx ‖ emptyCtx
+##### .tmp/stmts/GoCoreEval.txt
+##### .tmp/stmts/MachineEqb.txt
+def StrictOp.eqb [94->101]
+   -  
+   +  variable { ctx }
+def StmtOp.eqb [204->213]
+   -  
+   +  variable { ctx }
+def TargetShape.eqb [257->268]
+   -  
+   +  variable { ctx }
+def TargetRef.eqb [272->285]
+   -  
+   +  variable { ctx }
+def RhsOp.eqb [297->312]
+   -  
+   +  variable { ctx }
+def ChanStOp.eqbF [314->331]
+   -  
+   +  variable { ctx }
+def SyncOp.eqbF [332->351]
+   -  
+   +  variable { ctx }
+def EvClause.eqbF [379->402]
+   -  
+   +  variable { ctx }
+def Cont.eqbF [419->446]
+   -  
+   +  variable { ctx }
+def Config.eqbF [713->742]
+   -  
+   +  variable { ctx }
+def HeapCell.eqb [786->817]
+   -  
+   +  variable { ctx }
+def Thread.eqb [863->884]
+   -  
+   +  variable { ctx }
+##### .tmp/stmts/MachineSound.txt
+theorem stepFrameExit_sound [132->136]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx ‖ ctx ‖ ctx
+theorem stepUnseqEnter_sound [178->182]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx ‖ ctx
+theorem stepUnseqValue_sound [195->199]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx ‖ ctx
+theorem stepUnseqNext_sound [213->217]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx ‖ ctx
+theorem stepUnseqEnter_stream [286->290]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx ‖ ctx
+theorem stepUnseqValue_stream [303->307]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx ‖ ctx
+theorem stepUnseqNext_run_wait_stream [323->327]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx ‖ ctx
+theorem stepUnseqNext_consumption_none [377->381]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx ‖ ctx ‖ ctx
+theorem stepUnseqNext_consumption_some [418->422]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx ‖ ctx ‖ ctx
+theorem stepFn_sound [469->473]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx ‖ ctx
+theorem step_complete [815->819]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx ‖ ctx
+theorem runConfig_sound [1128->1132]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx ‖ ctx
+theorem execStmtLoop_sound_normal [1154->1158]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx ‖ ctx
+theorem execStmt_sound_normal [1175->1179]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx ‖ ctx
+theorem stepFnIter_sound [1192->1196]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx ‖ ctx
+theorem execStmtLoop_mono [1244->1248]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx ‖ ctx
+theorem execStmt_mono [1271->1275]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx ‖ ctx
+theorem step_abort_elim [1283->1287]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx
+theorem step_signal_stop_elim [1300->1304]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx
+theorem step_terminal_elim [1311->1315]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx
+theorem step_blockedSend_elim [1325->1329]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx
+theorem step_blockedRecv_elim [1332->1336]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx
+theorem step_blockedSelect_elim [1340->1344]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx
+theorem step_blockedSync_elim [1349->1353]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx
+theorem Step.preserves_wf [1384->1392]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx
+theorem stepFn_preserves_wf [1392->1400]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx
+theorem applyStmtOp_ok_any_ch_core [1402->1410]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx ‖ ctx
+theorem loadLoc_root_congr [1484->1490]
+   -  ExecState ‖ ( htypes : σ₂.types = σ₁.types )
+   +  Store ‖ ctx ‖ ctx
+theorem normalizeValueForTy_congr [1990->1995]
+   -  { σ₁ σ₂ : ExecState } ( htypes : σ₂.types = σ₁.types ) ‖ σ₁ ‖ σ₂
+   +  ctx ‖ ctx
+theorem storeLoc_congr [2149->2152]
+   -  ExecState ‖ ( htypes : σ₂.types = σ₁.types ) ‖ ExecState
+   +  Store ‖ Store ‖ ctx ‖ ctx
+theorem defaultValue_ok_of_normalize_ok [2440->2442]
+   -  { σ : ExecState } ‖ σ ‖ σ
+   +  ctx ‖ ctx
+theorem sliceVisibleValues_size [2458->2460]
+   -  ExecState
+   +  Store ‖ ctx
+theorem buildAppendBackingValue_congr [2503->2505]
+   -  { σ : ExecState } ‖ σ ‖ σ
+   +  ctx ‖ ctx
+theorem applyStmtOp_appendSlice_congr [2555->2557]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx ‖ ctx
+theorem applyStmtOp_congr_any_ch [2647->2648]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx ‖ ctx
+theorem applyStmtOp_ok_any_ch_wf [2663->2664]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx ‖ ctx
+theorem applyStmtOp_panic_any_ch_wf [2675->2676]
+   -  ExecState
+   +  Store ‖ ctx ‖ ctx
+theorem tryDeliver_ok_any [2693->2694]
+   -  ExecState ‖ ExecState ‖ ExecState
+   +  Store ‖ Store ‖ Store
+theorem tryDeliver_error_any [2704->2705]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store
+theorem applyTryLock_ok_any [2717->2718]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx ‖ ctx
+theorem applyTryLock_error_any [2740->2741]
+   -  ExecState
+   +  Store ‖ ctx ‖ ctx
+theorem applySyncOp_core_ok [2784->2785]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx ‖ ctx
+theorem applySyncOp_core_error [2798->2799]
+   -  ExecState
+   +  Store ‖ ctx ‖ ctx
+theorem applySyncOp_ok_any_ch [2813->2814]
+   -  ExecState ‖ ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx ‖ Store ‖ ctx
+theorem applySyncOp_panic_any_ch [2840->2841]
+   -  ExecState
+   +  Store ‖ ctx ‖ ctx
+theorem bindIterVars_ok_of_normal [2878->2879]
+   -  ExecState ‖ σ.types ‖ σ.types
+   +  Store ‖ ctx.types ‖ ctx.types ‖ ctx
+theorem applySelectCore_picks_length [2933->2932]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx
+theorem applySelect_ok_or_panic_any_ch [2974->2973]
+   -  ExecState
+   +  Store ‖ ctx ‖ ctx ‖ ctx ‖ ctx
+theorem applyStmtOp_eq_core [3024->3023]
+   -  ExecState
+   +  Store ‖ ctx ‖ ctx
+theorem mapIterCandidates_normalized [3042->3041]
+   -  ExecState ‖ σ.types
+   +  Store ‖ ctx ‖ ctx.types
+theorem stepFn_mapIter_ok_any [3062->3061]
+   -  ExecState
+   +  Store ‖ ctx ‖ ctx
+theorem step_complete_any_wf_aux [3100->3099]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx ‖ ctx
+theorem step_complete_any_wf [3275->3274]
+   -  ExecState ‖ ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx ‖ Store ‖ ctx
+theorem execStmtLoop_ok_or_fuelOut [3296->3295]
+   -  ExecState ‖ ExecState ‖ ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx ‖ Store ‖ ctx ‖ Store ‖ ctx ‖ ctx
+def consumesSelect [3409->3408]
+   -  
+   +  variable ( ctx ) in
+def allStreamsOk [3419->3419]
+   -  ExecState ‖ σ
+   +  Store ‖ ctx ‖ ctx ‖ ctx ‖ ctx ‖ ctx
+theorem normalizeValueForTy_noPanic [3623->3623]
+   -  ( s : ExecState ) ‖ s
+   +  ctx
+theorem defaultValue_noPanic [3678->3678]
+   -  ( s : ExecState ) ‖ s
+   +  ctx
+theorem buildAppendBackingValue_noPanic [3694->3694]
+   -  ( s : ExecState ) ‖ s
+   +  ctx
+theorem storeLoc_base_noPanic [3725->3725]
+   -  ExecState
+   +  Store ‖ ctx
+theorem storeLoc_noPanic_of_loadLoc_ok [3757->3757]
+   -  ExecState
+   +  Store ‖ ctx ‖ ctx ‖ ctx ‖ ctx
+theorem enterRecvTargets_noPanic [3794->3794]
+   -  ExecState
+   +  Store
+theorem tryDeliver_noPanic [3800->3800]
+   -  ExecState
+   +  Store
+theorem applyTryLock_noPanic [3811->3811]
+   -  ExecState
+   +  Store ‖ ctx ‖ ctx
+theorem bind_pair_stream [3836->3836]
+   -  ExecState ‖ ExecState ‖ ExecState
+   +  Store ‖ Store ‖ Store
+theorem applySelect_done_stream [3853->3853]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx ‖ ctx
+theorem applySelect_picks_stream [3862->3862]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx ‖ ctx
+theorem applySelect_error_stream [3876->3876]
+   -  ExecState
+   +  Store ‖ ctx ‖ ctx
+theorem applySyncOp_try_stream [3883->3883]
+   -  ExecState
+   +  Store ‖ ctx ‖ ctx ‖ ctx
+theorem applySyncOp_try_nopop [3898->3898]
+   -  ExecState
+   +  Store ‖ ctx ‖ ctx ‖ ctx
+theorem bind_pair_map [3909->3909]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store
+theorem applyStmtOp_appendSlice_nospill [3925->3925]
+   -  ExecState ‖ ExecState
+   +  Store ‖ ctx ‖ Store ‖ ctx
+theorem applyStmtOp_appendSlice_spill [3988->3988]
+   -  ExecState ‖ ExecState
+   +  Store ‖ ctx ‖ Store ‖ ctx
+theorem stepFn_mapIter_done [4059->4059]
+   -  ExecState
+   +  Store ‖ ctx ‖ ctx
+theorem stepFn_mapIter_pick [4075->4075]
+   -  ExecState
+   +  Store ‖ ctx ‖ ctx ‖ ctx
+theorem stepFn_mapIter_stop [4116->4116]
+   -  ExecState
+   +  Store ‖ ctx ‖ ctx
+theorem applyStmtOp_of_stmtConsult?_none [4206->4206]
+   -  ExecState ‖ ExecState
+   +  Store ‖ ctx ‖ Store ‖ ctx
+theorem stmtConsult?_some [4222->4222]
+   -  ExecState
+   +  Store ‖ ctx ‖ ctx
+theorem stepFn_stmtOp_oblivious [4249->4249]
+   -  ExecState ‖ ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx ‖ Store ‖ ctx ‖ ctx
+theorem stepFn_stmtOp_spill [4283->4283]
+   -  ExecState ‖ ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx ‖ Store ‖ ctx ‖ ctx
+theorem stepFn_syncApply_oblivious [4322->4322]
+   -  ExecState ‖ ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx ‖ Store ‖ ctx ‖ ctx
+theorem stepFrameExit_consumption_none [4361->4361]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx ‖ ctx ‖ ctx
+theorem stepFrameExit_consumption_some [4428->4428]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx ‖ ctx ‖ ctx
+theorem stepFn_consumption_none [4468->4468]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx ‖ ctx ‖ ctx
+theorem stepFn_consumption_some [4856->4856]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx ‖ ctx ‖ ctx
+theorem seqConsumption_none_of_flags [5131->5131]
+   -  ExecState ‖ σ
+   +  Store ‖ ctx ‖ ctx
+theorem stepFn_oblivious [5190->5190]
+   -  ExecState ‖ ExecState ‖ σ
+   +  Store ‖ Store ‖ ctx ‖ ctx ‖ ctx
+theorem execStmtLoop_unfold [5210->5210]
+   -  ExecState
+   +  Store ‖ ctx ‖ ctx ‖ ctx
+theorem execStmtLoop_step [5231->5231]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx ‖ ctx ‖ ctx
+theorem execStmtLoop_ok_of_allStreamsOk [5252->5252]
+   -  ExecState ‖ ExecState
+   +  Store ‖ ctx ‖ Store ‖ ctx
+##### .tmp/stmts/Machine.txt
+def applySlice [206->213]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store
+def indexTargetLoc [227->234]
+   -  ExecState
+   +  Store
+def mapAssignValue [266->273]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store
+def applyStrictOp [294->301]
+   -  ExecState ‖ ExecState ‖ s ‖ s ‖ s
+   +  Store ‖ Store ‖ ctx ‖ ctx ‖ ctx
+def allocDecls [652->659]
+   -  ExecState ‖ ExecState ‖ s
+   +  Store ‖ Store ‖ ctx
+def bindParams [662->669]
+   -  ExecState ‖ ExecState ‖ s
+   +  Store ‖ Store ‖ ctx
+def loadMany [681->688]
+   -  ExecState
+   +  Store ‖ ctx
+def storeMany [687->694]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx
+def enterFrame [699->706]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store
+def nilValueMethodWidth [723->730]
+   -  ( s : ExecState )
+   +  
+def entryPanicText [732->739]
+   -  ( s : ExecState )
+   +  
+theorem nilValueMethodWidth_of_none [738->746]
+   -  { s : ExecState } ‖ s ‖ s
+   +  ctx ‖ ctx
+theorem entryPanicText_of_none [743->751]
+   -  { s : ExecState } ‖ s ‖ s
+   +  ctx ‖ ctx
+theorem nilValueMethodWidth_of_isSome_false [756->764]
+   -  { s : ExecState } ‖ s ‖ s
+   +  ctx ‖ ctx
+theorem entryPanicText_of_isSome_false [761->769]
+   -  { s : ExecState } ‖ s ‖ s
+   +  ctx ‖ ctx
+def enterFramePick [788->797]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store
+theorem enterFramePick_ok [798->808]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx ‖ ctx
+theorem enterFramePick_panic [805->815]
+   -  ExecState ‖ s ‖ s ‖ s
+   +  Store ‖ ctx ‖ ctx ‖ ctx ‖ ctx ‖ ctx
+theorem enterFramePick_error [815->825]
+   -  ExecState
+   +  Store ‖ ctx ‖ ctx
+theorem enterFramePick_cases [823->833]
+   -  ExecState ‖ ExecState ‖ s ‖ s ‖ s
+   +  Store ‖ Store ‖ ctx ‖ ctx ‖ ctx ‖ ctx ‖ ctx ‖ ctx
+theorem enterFramePick_of_nopanic [849->859]
+   -  ExecState
+   +  Store ‖ ctx ‖ ctx ‖ ctx
+theorem enterFramePick_any_ch [863->873]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx ‖ ctx
+theorem enterFramePick_of_isSome_false [873->883]
+   -  { s : ExecState } ‖ { ch : Choices } ‖ s
+   +  ctx ‖ ∀ ( s : Store ) ( ch : Choices ) , ‖ ctx ‖ ctx
+theorem enterFramePick_oblivious_of_isSome_false [886->900]
+   -  { s : ExecState } ‖ s
+   +  ctx ‖ s : Store ) ( ‖ ctx ‖ ctx
+theorem enterFramePick_of_none [892->907]
+   -  ExecState ‖ s
+   +  Store ‖ ctx ‖ ctx ‖ ctx
+def applyStmtOpCore [1064->1080]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store
+def applyStmtOp [1328->1346]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store
+def mapRangeStartSets [1405->1423]
+   -  ExecState
+   +  Store
+def mapIterLiveEntries [1418->1436]
+   -  ExecState
+   +  Store
+def mapIterCandidates [1470->1488]
+   -  ExecState
+   +  Store
+def bindIterVars [1497->1515]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store
+def resolveChain [1615->1633]
+   -  ExecState
+   +  Store ‖ ctx
+def storeTarget [1628->1646]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store
+def applyRhsOp [1650->1668]
+   -  ExecState ‖ s ‖ s
+   +  Store ‖ ctx ‖ ctx ‖ ctx
+def unseqAtom [1672->1690]
+   -  ExecState
+   +  Store ‖ ctx
+def unseqReadTarget [1701->1719]
+   -  ExecState
+   +  Store ‖ ctx ‖ ctx
+def unseqLoad [1709->1727]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store
+def unseqAtoms [1717->1735]
+   -  ExecState
+   +  Store ‖ ctx
+def unseqUnfrozenAnchor? [1737->1755]
+   -  ExecState
+   +  Store ‖ ctx
+def unseqUnfrozenPlan? [1760->1778]
+   -  ExecState
+   +  Store ‖ ctx
+def unseqTargetPlan [1769->1787]
+   -  ExecState
+   +  Store
+def unseqGuard [1787->1805]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store
+def unseqStorePlan [1804->1822]
+   -  ExecState
+   +  Store ‖ ctx
+def chanPlan [1840->1858]
+   -  
+   +  variable { ctx }
+def chanCell [1859->1879]
+   -  ExecState
+   +  Store
+def syncCell [1982->2004]
+   -  ExecState
+   +  Store
+def atomicPlan [2043->2065]
+   -  
+   +  variable { ctx }
+def clauseReady [2135->2159]
+   -  ExecState
+   +  Store
+def readyClauses [2152->2176]
+   -  ExecState
+   +  Store
+def hasNoArgStringMethod [2288->2314]
+   -  ( state : ExecState )
+   +  
+def panicPayloadIsRewritten [2299->2325]
+   -  ( state : ExecState )
+   +  
+def renderPanicPayload [2318->2344]
+   -  ( state : ExecState ) ‖ state ‖ state ‖ state.types.nameOf? ‖ state
+   +  ctx ‖ ctx ‖ ctx.types.nameOf? ‖ ctx
+def payloadDynamicTypeNote [2367->2393]
+   -  ( state : ExecState ) ‖ state
+   +  ctx
+def renderPanicHead [2437->2463]
+   -  ( state : ExecState )
+   +  
+def Cont.withTail [2780->2806]
+   -  
+   +  variable { ctx }
+def abortRefusal [3099->3129]
+   -  ( s : ExecState )
+   +  
+def abortMsg [3117->3147]
+   -  ( s : ExecState )
+   +  
+def signalStep [3156->3186]
+   -  
+   +  variable { ctx }
+def deliver [3308->3340]
+   -  ExecState ‖ ExecState ‖ ExecState
+   +  Store ‖ Store ‖ Store
+theorem deliver_ok [3314->3347]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store
+theorem deliver_panic [3317->3350]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store
+theorem deliver_panic_eq [3322->3355]
+   -  ExecState ‖ ExecState ‖ ExecState
+   +  Store ‖ Store ‖ Store
+def consumesNilValueMethod [3371->3405]
+   -  ( s : ExecState )
+   +  
+def enterRecvTargets [3383->3417]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store
+def applyChanOp [3412->3446]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store
+def applySyncOpCore [3543->3577]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store
+def tryDeliver [3759->3793]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store
+def applyTryLock [3839->3873]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store
+def applySyncOp [3862->3896]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store
+def atomicStore [3879->3913]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx
+def applyAtomicOp [3931->3965]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store
+def commitClause [3965->3999]
+   -  ExecState ‖ ExecState ‖ s ‖ s
+   +  Store ‖ Store ‖ ctx ‖ ctx
+def applySelectCore [4074->4108]
+   -  ExecState
+   +  Store
+def applySelect [4113->4147]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store
+def appendSpill? [4158->4192]
+   -  ExecState
+   +  Store
+def tryLockConsult? [4182->4216]
+   -  ExecState
+   +  Store
+def mapIterConsult? [4198->4232]
+   -  ExecState
+   +  Store
+def stmtConsult? [4210->4244]
+   -  ExecState
+   +  Store
+def selectConsult? [4217->4251]
+   -  ExecState
+   +  Store
+def syncConsult? [4225->4259]
+   -  ExecState
+   +  Store
+def entryConsult? [4231->4265]
+   -  ExecState
+   +  Store
+def seqConsumption [4284->4318]
+   -  ExecState
+   +  Store
+theorem entryConsult?_none [4310->4345]
+   -  ExecState ‖ σ
+   +  Store ‖ ctx ‖ ctx ‖ ctx
+theorem entryConsult?_some [4328->4363]
+   -  ExecState ‖ σ ‖ σ
+   +  Store ‖ ctx ‖ ctx ‖ ctx ‖ ctx
+inductive Step [4354->4390]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store
+inductive Steps [5139->5175]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store
+theorem Steps.single [5143->5180]
+   -  ExecState
+   +  Store ‖ ctx ‖ ctx
+theorem Steps.trans [5147->5184]
+   -  ExecState
+   +  Store ‖ ctx ‖ ctx ‖ ctx
+##### .tmp/stmts/MethodIdentity.txt
+def implementing [58->58]
+   -  ExecState
+   +  ProgramCtx
+def nilTextState [91->92]
+   -  ExecState
+   +  ProgramCtx
+def main [242->198]
+   -  
+   +  ( args : List String ) : IO Unit
+##### .tmp/stmts/MultiSound.txt
+theorem chanArrivalPlan_singleton [50->56]
+   -  ExecState
+   +  Store ‖ ctx
+theorem selectArrivalCases_singleton [71->77]
+   -  ExecState
+   +  Store
+theorem arrivalCases_singleton [96->102]
+   -  ExecState
+   +  Store ‖ ctx
+theorem arrivalPlan_singleton [107->113]
+   -  ExecState
+   +  Store ‖ ctx
+theorem arrivalPlan_of_cellPath [116->122]
+   -  ExecState
+   +  Store ‖ ctx ‖ ctx
+theorem arrivalPlan_of_single [125->131]
+   -  ExecState
+   +  Store ‖ ctx ‖ ctx
+theorem arrivalPlan_of_error [134->140]
+   -  ExecState
+   +  Store ‖ ctx ‖ ctx
+theorem arrivalCases_multi_length [147->153]
+   -  ExecState
+   +  Store ‖ ctx
+theorem arrivalPlan_of_multi [198->204]
+   -  ExecState
+   +  Store ‖ ctx ‖ ctx
+theorem Thread.boundarySite_backEdge_runnable [244->250]
+   -  ExecState
+   +  Store ‖ ctx
+theorem stepFn_selectApply_inv [282->288]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx ‖ ctx ‖ ctx
+theorem stepThread_single [321->327]
+   -  ExecState
+   +  Store ‖ ctx ‖ ctx
+theorem runnableIdxs_singleton [378->384]
+   -  ExecState
+   +  Store ‖ ctx ‖ ctx
+theorem schedSlots_singleton [385->391]
+   -  ExecState
+   +  Store ‖ ctx ‖ ctx
+theorem stepMulti_single [398->404]
+   -  ExecState
+   +  Store ‖ ctx ‖ ctx
+theorem stepMulti_flagged_single [442->448]
+   -  ExecState
+   +  Store ‖ ctx
+theorem stepFn_abort [466->472]
+   -  ExecState ‖ σ
+   +  Store ‖ ctx ‖ ctx
+theorem stepMulti_abort_single [504->510]
+   -  ExecState ‖ σ
+   +  Store ‖ ctx ‖ ctx
+theorem stepFn_signal_stop [538->544]
+   -  ExecState
+   +  Store ‖ ctx
+theorem stepMulti_signal_stop_single [542->548]
+   -  ExecState
+   +  Store ‖ ctx
+theorem spawnPlan_stepFn_refuses [552->558]
+   -  ExecState
+   +  Store ‖ ctx
+def transferable [587->594]
+   -  ExecState
+   +  Store ‖ variable { ctx }
+theorem raceUpdate_single [597->605]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx
+theorem singleton_pool_facts [604->612]
+   -  ExecState
+   +  Store
+def seqOpCount [631->640]
+   -  ExecState
+   +  Store ‖ ctx ‖ variable { ctx }
+theorem execProgLoop_aborted [642->652]
+   -  ExecState
+   +  Store ‖ ctx
+theorem execProgLoop_single [656->666]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx ‖ ctx ‖ ctx
+theorem execProg_single_eq_execStmt [812->822]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx ‖ ctx ‖ ctx
+theorem spawnStep_shape [825->835]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx
+theorem schedPick_of_boundary [835->845]
+   -  
+   +  ctx ‖ ctx
+theorem mem_runnableIdxs_of [843->853]
+   -  ExecState
+   +  Store ‖ ctx ‖ ctx
+theorem schedSlots_mem [854->864]
+   -  ExecState
+   +  Store ‖ ctx ‖ ctx
+theorem mem_schedSlots_of_runnable [881->891]
+   -  ExecState
+   +  Store ‖ ctx ‖ ctx
+theorem schedPick_cur [896->906]
+   -  
+   +  ctx
+theorem step_spawnPos_elim [905->915]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx
+theorem abort?_none_of_stepE [915->925]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx
+theorem arrivalCases_of_spawnPlan [933->943]
+   -  ExecState
+   +  Store ‖ ctx
+theorem stepThreadInto_sound [948->958]
+   -  
+   +  ctx ‖ ctx ‖ ctx
+theorem stepMulti_sound [1172->1182]
+   -  
+   +  ctx ‖ ctx
+theorem stepMulti_of_inner [1221->1231]
+   -  ExecState
+   +  Store ‖ ctx ‖ ctx ‖ ctx
+theorem stepM_complete [1316->1326]
+   -  
+   +  ctx ‖ ctx
+##### .tmp/stmts/MultiStreams.txt
+def selectApplyDone [74->79]
+   -  ExecState
+   +  Store ‖ ctx
+def poolThreadOblivious [88->93]
+   -  ExecState
+   +  Store
+theorem applySelectCore_done_inv [159->165]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx
+theorem applySelect_of_done [186->192]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx ‖ ctx
+theorem stepFn_select_done [201->207]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx ‖ ctx
+theorem stepThread_oblivious [223->229]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx ‖ ctx ‖ ctx
+def allStreamsOkPool [519->526]
+   -  ExecState
+   +  Store ‖ ctx ‖ ctx ‖ ctx ‖ ctx ‖ variable { ctx }
+theorem execProgLoop_unfold [541->549]
+   -  
+   +  ctx ‖ ctx ‖ ctx ‖ ctx ‖ ctx ‖ ctx ‖ ctx ‖ ctx ‖ ctx
+theorem stepAllBranchesOk_sound [588->596]
+   -  ExecState ‖ ExecState ‖ ExecState ‖ ExecState
+   +  Store ‖ ctx ‖ Store ‖ ctx ‖ ctx ‖ ctx ‖ Store ‖ ctx ‖ ctx ‖ ctx ‖ Store
+theorem execProgLoop_ok_of_allStreamsOkPool [846->854]
+   -  ExecState ‖ ExecState
+   +  Store ‖ ctx ‖ Store ‖ ctx
+theorem execProgLoop_mono [900->908]
+   -  ExecState
+   +  Store ‖ ctx ‖ ctx
+theorem execProgLoop_le [1030->1038]
+   -  ExecState
+   +  Store ‖ ctx ‖ ctx ‖ ctx
+theorem stepAllBranchesOk_mono [1163->1171]
+   -  
+   +  ctx ‖ ctx
+theorem allStreamsOkPool_mono [1238->1246]
+   -  ExecState
+   +  Store ‖ ctx ‖ ctx
+##### .tmp/stmts/Multi.txt
+def Thread.status [209->214]
+   -  
+   +  variable { ctx }
+def threadDone [263->270]
+   -  
+   +  variable { ctx }
+def wakeReady [299->308]
+   -  ExecState
+   +  Store ‖ ctx
+def threadRunnable [363->372]
+   -  ExecState
+   +  Store ‖ ctx ‖ variable { ctx }
+theorem threadRunnable_status [368->378]
+   -  ExecState
+   +  Store ‖ ctx ‖ ctx
+def runnableIdxs [400->411]
+   -  ExecState
+   +  Store
+def selectCommits [502->513]
+   -  ExecState
+   +  Store
+def Config.registryCommits [517->528]
+   -  ExecState
+   +  Store
+def Config.afterStepFlag [542->553]
+   -  ExecState
+   +  Store
+def Thread.afterStep [551->562]
+   -  ExecState
+   +  Store
+def spawnStep [575->586]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store
+theorem spawnStep_oblivious [628->640]
+   -  ExecState ‖ ExecState ‖ s
+   +  Store ‖ Store ‖ ctx ‖ ctx ‖ ctx
+def resumeRecvDelivery [655->668]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store
+def selectRecvDelivery [667->680]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store
+def resumeThread [701->714]
+   -  ExecState ‖ ExecState ‖ s
+   +  Store ‖ Store ‖ ctx ‖ ctx ‖ ctx ‖ ctx ‖ ctx ‖ ctx ‖ ctx
+def chanArrivalPlan [1011->1024]
+   -  ExecState
+   +  Store
+def selectArrivalCases [1085->1098]
+   -  ExecState
+   +  Store
+def arrivalCases [1163->1176]
+   -  ExecState
+   +  Store ‖ ctx
+def arrivalPlan [1179->1192]
+   -  ExecState
+   +  Store
+def applyPairing [1215->1228]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store
+def stepThread [1334->1347]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store
+def schedSlots [1478->1491]
+   -  ExecState
+   +  Store ‖ ctx ‖ ctx ‖ ctx
+def raceCommitClauseEvent [1669->1682]
+   -  ExecState
+   +  Store
+def raceWakeEvent [1709->1722]
+   -  ExecState
+   +  Store
+def racePairEvent [1760->1773]
+   -  ExecState
+   +  Store
+def raceUpdate [1832->1845]
+   -  ExecState
+   +  Store
+def MultiConfig.mainOutcome? [2117->2130]
+   -  ExecState
+   +  Store
+def execProgLoop [2163->2176]
+   -  ExecState
+   +  Store ‖ ctx ‖ ctx ‖ ctx ‖ ctx ‖ ctx ‖ ctx
+def execProgLoopOut [2214->2227]
+   -  ExecState
+   +  Store ‖ ctx ‖ ctx ‖ ctx ‖ ctx ‖ ctx ‖ ctx ‖ variable { ctx }
+theorem execProgLoopOut_snd [2260->2274]
+   -  
+   +  ctx ‖ ctx
+def execProg [2325->2340]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store
+inductive StepE [2371->2388]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store
+def ThreadWf [2481->2503]
+   -  ) ( types : TypeEnv ‖ ∧ Config.itersNormalized types c = true ‖ types : TypeEnv ) ( ‖ types
+   +  
+##### .tmp/stmts/MultiWfSound.txt
+theorem ThreadWf.running [37->45]
+   -  } { types : TypeEnv ‖ ( hi : Config.itersNormalized types c = true ) ‖ types
+   +  
+theorem ThreadWf.aborted [42->49]
+   -  } { types : TypeEnv ‖ types
+   +  
+theorem ThreadWf.mono [45->52]
+   -  } { types : TypeEnv ‖ types ‖ types
+   +  
+theorem spawnStep_wf [92->81]
+   -  ExecState ‖ ExecState ‖ } { types : TypeEnv ‖ hik : Cont.itersNormalized types k = true ) ( ‖ s'.types = s.types ∧ ‖ ∧ Config.itersNormalized types p = true ∧ Config.itersNormalized types child = true
+   +  Store ‖ Store ‖ ctx
+theorem resumeRecvDelivery_wf [137->117]
+   -  ExecState ‖ ExecState } { types : TypeEnv ‖ hik : Cont.itersNormalized types k = true ) ( ‖ s'.types = s.types ∧ ‖ ∧ Config.itersNormalized types c' = true
+   +  Store ‖ Store
+theorem selectRecvDelivery_wf [162->138]
+   -  ExecState ‖ ExecState } { types : TypeEnv ‖ hik : Cont.itersNormalized types k = true ) ( ‖ s'.types = s.types ∧ ‖ ∧ Config.itersNormalized types c' = true
+   +  Store ‖ Store
+theorem resumeThread_wf [191->163]
+   -  ExecState ‖ ExecState ‖ hi : Config.itersNormalized s.types c = true ) ( ‖ s'.types = s.types ∧ ‖ ∧ Config.itersNormalized s.types c' = true
+   +  Store ‖ Store ‖ ctx
+theorem pool_get_wf [332->287]
+   -  { types : TypeEnv } ‖ types ‖ ∧ Config.itersNormalized types c = true
+   +  
+theorem pool_set2_wf [346->300]
+   -  { types : TypeEnv } ‖ types ‖ hia : Config.itersNormalized types a = true ) ( ‖ ) ( hib : Config.itersNormalized types b = true ‖ types
+   +  
+theorem chanArrivalPlan_wf [373->326]
+   -  ExecState ‖ { types : TypeEnv } ‖ hik : Cont.itersNormalized types k = true ) ( ‖ ∧ Config.itersNormalized types bc = true
+   +  Store ‖ ctx
+theorem arrivalCases_single_wf [434->383]
+   -  ExecState ‖ hi : Config.itersNormalized s.types c = true ) ( ‖ ∧ Config.itersNormalized s.types bc = true
+   +  Store ‖ ctx
+theorem arrivalCases_multi_wf [522->465]
+   -  ExecState ‖ hi : Config.itersNormalized s.types c = true ) ( ‖ ∧ Config.itersNormalized s.types bc = true ‖ ∧ Cont.itersNormalized s.types k = true
+   +  Store ‖ ctx
+theorem applyPairing_wf [633->569]
+   -  ExecState ‖ ExecState ‖ s.types ‖ hibc : Config.itersNormalized s.types bc = true ) ( ‖ ∧ s'.types = s.types ‖ s.types
+   +  Store ‖ Store ‖ ctx
+theorem pool_set1_wf [1027->935]
+   -  { types : TypeEnv } ‖ types ‖ ) ( hia : Config.itersNormalized types a = true ‖ types
+   +  
+theorem pool_set1_aborted_wf [1042->950]
+   -  { types : TypeEnv } ‖ types ‖ types
+   +  
+theorem pool_set_push_wf [1056->964]
+   -  { types : TypeEnv } ‖ types ‖ hia : Config.itersNormalized types a = true ) ( ‖ ) ( hib : Config.itersNormalized types b = true ‖ types
+   +  
+theorem runnableIdxs_lt [1073->980]
+   -  ExecState
+   +  Store ‖ ctx
+theorem stepThread_wf [1081->988]
+   -  ExecState ‖ ExecState ‖ s.types ‖ s'.types = s.types ∧ ‖ s.types
+   +  Store ‖ Store ‖ ctx
+theorem stepMulti_wf [1301->1202]
+   -  
+   +  ctx
+##### .tmp/stmts/NPDRF.txt
+theorem schedPick_le_fine [284->290]
+   -  
+   +  ctx ‖ ctx
+theorem stepM_le_stepMFine [327->333]
+   -  
+   +  ctx ‖ ctx
+theorem stepsM_le_stepsMFine [359->367]
+   -  
+   +  ctx ‖ ctx
+theorem reachesM_le_fine [444->454]
+   -  
+   +  ctx ‖ ctx
+theorem storeLoc_root_frame [465->475]
+   -  ExecState
+   +  Store ‖ ctx
+theorem loadLoc_after_disjoint_store [511->521]
+   -  ExecState
+   +  Store ‖ ctx ‖ ctx ‖ ctx
+##### .tmp/stmts/Ops.txt
+def tyUncomparable [721->728]
+   -  ( state : ExecState )
+   +  
+def typeDisplay? [741->748]
+   -  ( state : ExecState )
+   +  
+def displayNameOfId [759->766]
+   -  ( state : ExecState )
+   +  
+def displayNameOf [773->780]
+   -  ( state : ExecState )
+   +  
+def goTypeNameForMessage [789->796]
+   -  ( state : ExecState ) ‖ state ‖ state ‖ state ‖ state ‖ state ‖ state ‖ state ‖ state ‖ state ‖ state
+   +  ctx ‖ ctx
+def goTypeNamesForMessage [825->832]
+   -  ( state : ExecState ) ‖ state ‖ state
+   +  
+def goTypeNamesForMessageVariadic [831->838]
+   -  ( state : ExecState ) ‖ state ‖ state ‖ state ‖ state
+   +  
+def methodInfoByFuncId? [839->846]
+   -  ( state : ExecState )
+   +  
+def methodRecvInterfaceName? [851->858]
+   -  ( _state : ExecState )
+   +  
+def methodRecvDynamicTy? [860->867]
+   -  ( _state : ExecState )
+   +  
+def interfaceDeclaredMethods? [868->875]
+   -  ( state : ExecState )
+   +  
+def concreteMethodForDynamic? [882->889]
+   -  ( state : ExecState )
+   +  
+def hasConcreteMethod [913->920]
+   -  ( state : ExecState )
+   +  
+def concreteMethodSignature? [922->929]
+   -  ( state : ExecState )
+   +  
+def satisfiesMethodSig [938->945]
+   -  ( state : ExecState )
+   +  
+def methodCarrierKey? [974->981]
+   -  ( state : ExecState )
+   +  
+def methodSetCoverage? [990->997]
+   -  ( state : ExecState )
+   +  
+def dynamicMethodSetRecorded [1011->1018]
+   -  ( state : ExecState )
+   +  
+def dynamicMethodSetExportedOnly [1023->1030]
+   -  ( state : ExecState )
+   +  
+def firstUnsatisfiedMethod? [1048->1055]
+   -  ( state : ExecState )
+   +  
+def dynamicImplementsInterface [1088->1095]
+   -  ( state : ExecState )
+   +  
+def normalizeValueForTy [1226->1233]
+   -  ( state : ExecState )
+   +  
+def structTagCompatible [1327->1334]
+   -  ( state : ExecState )
+   +  
+def loadLoc [1335->1342]
+   -  ExecState ‖ state
+   +  Store ‖ ctx
+def storeLoc [1367->1374]
+   -  ExecState ‖ ExecState ‖ state ‖ state
+   +  Store ‖ Store ‖ ctx ‖ ctx ‖ ctx ‖ ctx
+def convertValueToTy [1396->1403]
+   -  ( state : ExecState )
+   +  
+def defaultValue [1613->1620]
+   -  ( state : ExecState )
+   +  
+def buildStructFields [1619->1626]
+   -  ( state : ExecState ) ‖ state ‖ state
+   +  ctx
+def buildStructValue [1632->1639]
+   -  ( state : ExecState )
+   +  
+def buildArrayValue [1647->1654]
+   -  ( state : ExecState )
+   +  
+def buildDefaultArrayValue [1664->1671]
+   -  ( state : ExecState )
+   +  
+def typeAssertValue [1669->1676]
+   -  ( state : ExecState )
+   +  
+def dynamicTypeNameForMessage [1691->1698]
+   -  ( state : ExecState ) ‖ state
+   +  ctx
+def pointerMethodSetNonEmpty [1700->1707]
+   -  ( state : ExecState )
+   +  
+def typePkgForMessage [1734->1741]
+   -  ( state : ExecState )
+   +  
+def typeAssertPanicMessage [1792->1799]
+   -  ( state : ExecState )
+   +  
+def valueEq [1889->1896]
+   -  ( state : ExecState ) ‖ state.types.resolve state.types.size ‖ state ‖ state ‖ state ‖ state ‖ state
+   +  ctx.types.resolve ctx.types.size ‖ ctx ‖ ctx
+def valueEqList [2027->2034]
+   -  ( state : ExecState ) ‖ state ‖ state
+   +  
+def valueEqFields [2037->2044]
+   -  ( state : ExecState ) ‖ state ‖ state ‖ { ‖ }
+   +  ( ProgramCtx.ofTables ( ‖ ) )
+def checkKeyHashable [2129->2136]
+   -  ( state : ExecState )
+   +  
+def mapEntryIndex? [2141->2148]
+   -  ( state : ExecState )
+   +  
+def sliceVisibleValues [2293->2300]
+   -  ExecState
+   +  Store
+def mapEntries [2308->2315]
+   -  ExecState
+   +  Store
+def mapLookupValue [2316->2323]
+   -  ExecState
+   +  Store
+def buildAppendBackingValue [2386->2393]
+   -  ( state : ExecState )
+   +  
+def symbolKeyForMessage [2427->2434]
+   -  ( state : ExecState )
+   +  
+def nilValueMethodText? [2466->2473]
+   -  ( state : ExecState )
+   +  
+def dynamicDispatch? [2492->2499]
+   -  ExecState
+   +  Store
+def sortLe [2573->2580]
+   -  σ : ExecState ) ( ‖ σ
+   +  ctx
+##### .tmp/stmts/PanicRendering.txt
+def state [19->21]
+   -  ExecState
+   +  ProgramCtx
+##### .tmp/stmts/Platform.txt
+##### .tmp/stmts/PoolTrace.txt
+def front [15->20]
+   -  ExecState
+   +  Store
+theorem unfold_driver [29->35]
+   -  
+   +  ctx ‖ ctx ‖ ctx ‖ ctx ‖ ctx
+theorem run_iff [71->79]
+   -  
+   +  ctx ‖ ctx
+theorem exists_run_iff [112->120]
+   -  
+   +  ctx ‖ ctx
+theorem Run.success_reaches [125->135]
+   -  
+   +  ctx ‖ ctx ‖ ctx
+##### .tmp/stmts/ProgramCtx.txt
+##### .tmp/stmts/ProgramTrace.txt
+##### .tmp/stmts/Race.txt
+def projChainTarget [572->577]
+   -  ExecState
+   +  Store ‖ ctx
+def dispatchAccesses [642->647]
+   -  ( s : ExecState )
+   +  
+def deferEntryAccesses [687->692]
+   -  ( s : ExecState ) ‖ s
+   +  ctx
+def storeTargetAccess [1516->1521]
+   -  ExecState
+   +  Store
+def unseqRunAccesses [1532->1537]
+   -  ExecState
+   +  Store
+def stepAccesses [1577->1582]
+   -  ExecState
+   +  Store
+##### .tmp/stmts/State.txt
+##### .tmp/stmts/StateWf.txt
+def StateWf [673->672]
+   -  ExecState
+   +  Store
+def MachineWf [683->690]
+   -  ExecState
+   +  Store
+theorem normalizeValueForTy_locSup [1249->1255]
+   -  { s : ExecState } ‖ s
+   +  ctx
+theorem defaultValue_locSup [1334->1340]
+   -  { s : ExecState } ‖ s
+   +  ctx
+theorem convertValueToTy_locSup [1343->1349]
+   -  { s : ExecState } ‖ s
+   +  ctx
+theorem isNormalForTy_sound [1566->1572]
+   -  { σ : ExecState } ‖ σ.types ‖ σ
+   +  ctx.types ‖ ctx
+theorem StateWf.heap_le [1575->1581]
+   -  ExecState
+   +  Store
+theorem StateWf.mk' [1585->1588]
+   -  ExecState ‖ ( h2 : funcListSup σ.functions.toList ≤ σ.nextAddr )
+   +  Store
+theorem loadLoc_locSup [1667->1667]
+   -  ExecState
+   +  Store ‖ ctx
+theorem indexTargetLoc_locSup [1714->1714]
+   -  ExecState
+   +  Store ‖ ctx
+theorem storeLoc_shape [1887->1886]
+   -  ExecState ‖ ExecState ‖ σ'.types = σ.types ∧ σ'.functions = σ.functions ∧ σ'.methods = σ.methods ∧
+   +  Store ‖ Store ‖ ctx
+theorem storeLoc_wf [1954->1952]
+   -  ExecState ‖ ExecState ‖ ∧ σ'.functions = σ.functions
+   +  Store ‖ Store ‖ ctx
+theorem allocCell_shape [1967->1963]
+   -  ExecState ‖ ExecState ‖ σ'.types = σ.types ∧ σ'.functions = σ.functions ∧ σ'.methods = σ.methods ∧
+   +  Store ‖ Store
+theorem alloc_shape [1983->1978]
+   -  ExecState ‖ ExecState ‖ σ'.types = σ.types ∧ σ'.functions = σ.functions ∧ σ'.methods = σ.methods ∧
+   +  Store ‖ Store
+theorem allocCell_wf [1991->1985]
+   -  ExecState ‖ ExecState ‖ ∧ σ'.functions = σ.functions
+   +  Store ‖ Store
+theorem alloc_wf [2005->1996]
+   -  ExecState ‖ ExecState ‖ ∧ σ'.functions = σ.functions
+   +  Store ‖ Store
+theorem loadMany_locSup [2021->2009]
+   -  ExecState
+   +  Store ‖ ctx
+theorem storeMany_shape [2040->2028]
+   -  ExecState ‖ ExecState ‖ σ'.types = σ.types ∧ σ'.functions = σ.functions ∧ σ'.methods = σ.methods ∧
+   +  Store ‖ Store ‖ ctx
+theorem allocDecls_wf [2094->2081]
+   -  ExecState ‖ ExecState ‖ σ'.functions = σ.functions ∧ σ'.types = σ.types ∧ σ'.methods = σ.methods ∧
+   +  Store ‖ Store ‖ ctx
+theorem bindParams_wf [2128->2114]
+   -  ExecState ‖ ExecState ‖ σ'.functions = σ.functions ∧ σ'.types = σ.types ∧ σ'.methods = σ.methods ∧
+   +  Store ‖ Store ‖ ctx
+theorem mapPayload?_locSup [2175->2160]
+   -  ExecState
+   +  Store
+theorem chanPayload?_locSup [2188->2173]
+   -  ExecState
+   +  Store
+theorem mapEntries_locSup [2200->2185]
+   -  ExecState
+   +  Store
+theorem mapEntryIndex?_ok_entries [2220->2205]
+   -  { σ : ExecState } ‖ σ
+   +  ctx
+theorem mapLookupValue_locSup [2226->2211]
+   -  ExecState
+   +  Store ‖ ctx
+theorem typeAssertValue_locSup [2259->2244]
+   -  { σ : ExecState } ‖ σ
+   +  ctx
+theorem dynamicDispatch?_locSup [2296->2281]
+   -  ExecState ‖ σ.functions.toList
+   +  Store ‖ ctx ‖ ctx.functions.toList
+theorem enterFrame_tail [2356->2341]
+   -  ExecState ‖ ExecState ‖ ExecState ‖ hf₁ : Func.locSup func₁ ≤ funcListSup σ.functions.toList ) ( ‖ s₂.types = σ.types ∧ s₂.functions = σ.functions ∧ s₂.methods = σ.methods ∧
+   +  Store ‖ Store ‖ Store ‖ ctx ‖ ctx
+theorem enterFrame_wf [2380->2362]
+   -  ExecState ‖ ExecState ‖ σ'.types = σ.types ∧ σ'.functions = σ.functions ∧ σ'.methods = σ.methods ∧
+   +  Store ‖ Store ‖ ctx
+theorem bindIterVars_wf [2446->2425]
+   -  ExecState ‖ ExecState ‖ σ'.functions = σ.functions ∧ σ'.types = σ.types ∧ σ'.methods = σ.methods ∧
+   +  Store ‖ Store ‖ ctx
+theorem mapRangeStartSets_locSup [2529->2507]
+   -  ExecState
+   +  Store
+theorem mapIterCandidates_locSup [2561->2539]
+   -  ExecState
+   +  Store ‖ ctx
+theorem buildStructFields_locSup [2590->2568]
+   -  { σ : ExecState } ‖ σ
+   +  ctx
+theorem buildStructValue_locSup [2625->2603]
+   -  { σ : ExecState } ‖ σ
+   +  ctx
+theorem buildArrayValue_locSup [2644->2622]
+   -  { σ : ExecState } ‖ σ
+   +  ctx
+theorem buildDefaultArrayValue_locSup [2694->2672]
+   -  { σ : ExecState } ‖ σ
+   +  ctx
+theorem sliceVisibleValues_locSup [2703->2681]
+   -  ExecState
+   +  Store ‖ ctx
+theorem buildAppendBackingValue_locSup [2724->2702]
+   -  { σ : ExecState } ‖ σ
+   +  ctx
+theorem applySlice_locSup [2775->2753]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx
+theorem strictWfSame [2900->2878]
+   -  ExecState ‖ σ.functions = σ.functions ∧ σ.types = σ.types ∧ σ.methods = σ.methods ∧
+   +  Store
+theorem applyStrictOp_wf [2925->2902]
+   -  ExecState ‖ ExecState ‖ σ'.functions = σ.functions ∧ σ'.types = σ.types ∧ σ'.methods = σ.methods ∧
+   +  Store ‖ Store ‖ ctx
+def StmtOpPres [3563->3539]
+   -  ExecState
+   +  Store
+theorem stmtOpPres_refl [3567->3542]
+   -  ExecState
+   +  Store
+theorem storeLoc_pres [3570->3545]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx
+theorem storeMapPayload_pres [3582->3556]
+   -  ExecState
+   +  Store
+theorem storeChanPayload_pres [3604->3577]
+   -  ExecState
+   +  Store
+theorem StmtOpPres.trans [3625->3597]
+   -  ExecState
+   +  Store
+theorem storeMany_pres [3631->3603]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx
+theorem mapAssignValue_pres [3645->3616]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx
+theorem resolveChain_locSup [3699->3670]
+   -  ExecState
+   +  Store ‖ ctx
+theorem applyRhsOp_locSup [3744->3715]
+   -  ExecState
+   +  Store ‖ ctx
+theorem storeTarget_pres [3771->3742]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx
+theorem applyStmtOpCore_wf [3791->3762]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx
+theorem applyStmtOp_wf [4114->4085]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx
+theorem chanCell_locSup [4654->4625]
+   -  ExecState
+   +  Store
+theorem readyClauses_subset [4753->4724]
+   -  ExecState
+   +  Store
+theorem enterRecvTargets_wf [4775->4746]
+   -  ExecState ‖ ExecState ‖ σ'.types = σ.types ∧
+   +  Store ‖ Store
+theorem commitClause_wf [4802->4773]
+   -  ExecState ‖ ExecState ‖ σ'.types = σ.types ∧
+   +  Store ‖ Store ‖ ctx
+theorem applyChanOp_wf [4924->4895]
+   -  ExecState ‖ ExecState ‖ σ'.types = σ.types ∧
+   +  Store ‖ Store ‖ ctx
+theorem applySyncOpCore_wf [5172->5143]
+   -  ExecState ‖ ExecState ‖ σ'.types = σ.types ∧
+   +  Store ‖ Store ‖ ctx
+theorem tryDeliver_wf [5410->5381]
+   -  ExecState ‖ ExecState ‖ σ'.types = σ.types ∧
+   +  Store ‖ Store
+theorem applyTryLock_wf [5437->5408]
+   -  ExecState ‖ ExecState ‖ σ'.types = σ.types ∧
+   +  Store ‖ Store ‖ ctx
+theorem applySyncOp_wf [5469->5440]
+   -  ExecState ‖ ExecState ‖ σ'.types = σ.types ∧
+   +  Store ‖ Store ‖ ctx
+theorem applySelect_wf [5529->5500]
+   -  ExecState ‖ ExecState ‖ σ'.types = σ.types ∧
+   +  Store ‖ Store ‖ ctx
+theorem applyAtomicOp_wf [5677->5604]
+   -  ExecState ‖ ExecState ‖ σ'.types = σ.types ∧
+   +  Store ‖ Store ‖ ctx
+theorem unseqAtom_locSup [5858->5693]
+   -  ExecState
+   +  Store ‖ ctx
+theorem unseqAtoms_locSup [5886->5721]
+   -  ExecState
+   +  Store ‖ ctx
+theorem unseqTargetPlan_locSup [5903->5738]
+   -  ExecState
+   +  Store ‖ ctx
+theorem unseqReadTarget_locSup [5922->5757]
+   -  ExecState
+   +  Store ‖ ctx
+theorem unseqLoad_pres [5932->5767]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx
+theorem unseqGuard_pres [5945->5780]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx
+theorem unseqStorePlan_locSup [5967->5802]
+   -  ExecState
+   +  Store ‖ ctx
+theorem step_preserves_wf_loc [6038->5873]
+   -  ExecState ‖ ExecState ‖ σ'.types = σ.types ∧
+   +  Store ‖ Store ‖ ctx
+theorem step_preserves_wf [7014->6811]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx
+##### .tmp/stmts/StepFn.txt
+def deliverS [52->58]
+   -  ExecState ‖ ExecState ‖ ExecState
+   +  Store ‖ Store ‖ Store
+theorem deliverS_ok [59->66]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store
+theorem deliverS_panic [63->70]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store
+theorem deliverS_deliver [68->75]
+   -  ExecState ‖ ExecState ‖ ExecState
+   +  Store ‖ Store ‖ Store
+def stepFrameExit [94->102]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store
+def stepUnseqEnter [132->140]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store
+def stepUnseqNext [166->174]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store
+def stepUnseqValue [225->233]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store
+def stepFn [247->255]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store
+def runConfig [871->879]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx
+def execStmtLoop [923->934]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx
+def execStmt [940->951]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store
+def stepFnIter [953->964]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx
+def seedGlobals [993->1004]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store
+def runInitConfig [1035->1046]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx
+def runPkgInitM [1060->1071]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store
+def runProgramSetupM [1086->1103]
+   -  ExecState
+   +  ProgramCtx × ‖ Store
+##### .tmp/stmts/Store.txt
+##### .tmp/stmts/StringPanicMembers.txt
+def state [10->13]
+   -  ExecState
+   +  Store
+theorem invalid_first_line_refused [14->17]
+   -  state ‖ state
+   +  ctx ‖ ctx
+theorem invalid_after_lf_member [21->24]
+   -  state
+   +  ctx
+theorem equal_repanic_members [26->29]
+   -  state ‖ state
+   +  ctx ‖ ctx
+theorem member_is_renderer [36->39]
+   -  state
+   +  ctx
+theorem generic_actual_abort [44->47]
+   -  
+   +  ctx
+theorem generic_actual_abort_refused [54->57]
+   -  state
+   +  ctx ‖ ctx
+theorem abort_zero_fuel [64->67]
+   -  
+   +  ctx
+theorem actual_abort_pin_collapse [70->73]
+   -  
+   +  ctx
+theorem actual_abort_pin_two_line [76->79]
+   -  
+   +  ctx
+theorem actual_abort_unequal_inert [84->87]
+   -  
+   +  ctx
+theorem actual_abort_refused [91->94]
+   -  state ‖ state
+   +  ctx ‖ ctx ‖ ctx ‖ ctx
+##### .tmp/stmts/StringPanic.txt
+theorem renderPanicHead_string [58->66]
+   -  ( s : ExecState ) ‖ s
+   +  ctx
+theorem renderPanicHead_runtimeError [71->79]
+   -  ( s : ExecState ) ‖ s
+   +  ctx
+theorem abortMsg_string [83->91]
+   -  ( s : ExecState ) ‖ s
+   +  ctx
+theorem abortMsg_string_refused [92->100]
+   -  ( s : ExecState ) ‖ s ‖ s
+   +  ctx ‖ ctx
+theorem abortMsg_string_ok [102->110]
+   -  ( s : ExecState ) ‖ s
+   +  ctx
+theorem stepFn_string_abort [115->123]
+   -  ExecState
+   +  Store ‖ ctx
+theorem stepFn_string_abort_refused [130->138]
+   -  ExecState ‖ s
+   +  Store ‖ ctx ‖ ctx
+theorem runConfig_string_abort [146->154]
+   -  ExecState
+   +  Store ‖ ctx
+theorem runConfig_string_abort_refused [162->170]
+   -  ExecState ‖ s
+   +  Store ‖ ctx ‖ ctx
+##### .tmp/stmts/Syntax.txt
+##### .tmp/stmts/Trace.txt
+inductive Trace [10->15]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store
+theorem iter_iff_trace [16->22]
+   -  
+   +  ctx ‖ ctx
+theorem Trace.erase [36->42]
+   -  
+   +  ctx ‖ ctx
+theorem exists_iter_iff [41->47]
+   -  
+   +  ctx ‖ ctx
+theorem Trace.run [46->52]
+   -  
+   +  ctx ‖ ctx
+theorem run_ok_iff [54->60]
+   -  
+   +  ctx ‖ ctx
+theorem exists_run_ok_iff [78->84]
+   -  
+   +  ctx ‖ ctx
+##### .tmp/stmts/UnseqSound.txt
+theorem unseq_pick_ready [51->55]
+   -  ExecState
+   +  Store ‖ ctx
+theorem unseq_pick_active [59->63]
+   -  ExecState
+   +  Store ‖ ctx
+theorem unseq_panic_drops_frame [67->71]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx
+theorem unseq_complete_settled [78->82]
+   -  ExecState ‖ ExecState
+   +  Store ‖ Store ‖ ctx ‖ ctx
+theorem unseq_record_stable [90->94]
+   -  ExecState
+   +  Store ‖ ctx
+theorem unseq_done_permanent [152->156]
+   -  ExecState
+   +  Store ‖ ctx

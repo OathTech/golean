@@ -1,0 +1,7 @@
+# scripts/capped bash scripts/check-core-audit at d0e65182
+Core totality audit: 45 GoLean modules in the closure (36 under GoLean.GoCore), all on disk; 51 required theorems present; 15244 declarations across all imported local modules; classical trio only
+Typed audit: core-audit: 5 compiled controls passed
+core-audit-audit PASS; scratch removed (9831815 owned bytes; dependencies symlinked)
+Core totality audit gate: PASS
+scripts/capped bash scripts/check-core-audit  13.84s user 2.37s system 140% cpu 11.509 total
+EXIT=0

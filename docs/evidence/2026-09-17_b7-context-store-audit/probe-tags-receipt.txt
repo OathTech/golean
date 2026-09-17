@@ -1,0 +1,23 @@
+# fun_cases probe re-run at d0e65182 (probe_s2.lean.txt verbatim; scripts/capped lake env lean; EXIT=0)
+EXIT=0
+my tags == tracked after-s2 file
+my fingerprints == tracked BEFORE file (tags/order/last-hypothesis)
+## sampled stepFn_sound cases (proof line offset: case tag)
+15:   case case66 =>
+43:   case case2 =>
+64:   case case79 =>
+104:   case case90 =>
+159:   case case98 =>
+173:   case case134 =>
+247:   case case43 =>
+290:   case case7 =>
+2 case2 hyps=13 last=List GoLean.GoValue
+7 case7 hyps=6 last=Nat
+43 case43 hyps=10 last=¬targets✝.size > 2
+66 case66 hyps=7 last=Stmt
+79 case79 hyps=7 last=Expr
+90 case90 hyps=5 last=Cont
+98 case98 hyps=8 last=List GoLean.GoValue
+134 case134 hyps=8 last=Cont
+138 case138 hyps=11 last=Cont
+147 case147 hyps=6 last=¬chainNewestRecovered chain✝ = true

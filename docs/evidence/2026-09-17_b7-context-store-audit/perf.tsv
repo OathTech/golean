@@ -1,0 +1,85 @@
+# Timings: main binary 155df5c3… (.tmp/golean-main, the primary's certified build at 5955e55f) vs candidate 1ea8f2ac… (.lake/build/bin/golean at d0e65182); /usr/bin/time -f '%e %U %S %M' (wall user sys maxRSS-KiB); frontend .tmp/nativefrontend built from the UNTOUCHED tools/nativefrontend at d0e65182 (sha256 9b52821a…); shared 32-core box, no cgroup isolation, other audit jobs partly concurrent — read differences under ~8% as noise.
+
+## bug090 probes (docs/evidence/2026-09-11_bug090-rediagnosis/probes/<name>), 3 runs each: label probe args run 'wall user sys rssKB' result
+main	empty	1	1	0.01 0.01 0.00 71668	rc=0 obs={"output":"","schema":"golean-observation-v1","status":"ok",
+main	empty	1	2	0.01 0.01 0.00 72404	rc=0 obs={"output":"","schema":"golean-observation-v1","status":"ok",
+main	empty	1	3	0.01 0.01 0.00 71504	rc=0 obs={"output":"","schema":"golean-observation-v1","status":"ok",
+cand	empty	1	1	0.02 0.01 0.00 72296	rc=0 obs={"output":"","schema":"golean-observation-v1","status":"ok",
+cand	empty	1	2	0.01 0.01 0.00 65072	rc=0 obs={"output":"","schema":"golean-observation-v1","status":"ok",
+cand	empty	1	3	0.01 0.01 0.00 72172	rc=0 obs={"output":"","schema":"golean-observation-v1","status":"ok",
+main	append_grow	2000	1	4.88 4.87 0.00 69704	rc=0 obs={"output":"","schema":"golean-observation-v1","status":"ok",
+main	append_grow	2000	2	4.76 4.76 0.00 75504	rc=0 obs={"output":"","schema":"golean-observation-v1","status":"ok",
+main	append_grow	2000	3	4.58 4.58 0.00 76404	rc=0 obs={"output":"","schema":"golean-observation-v1","status":"ok",
+cand	append_grow	2000	1	4.28 4.28 0.00 75708	rc=0 obs={"output":"","schema":"golean-observation-v1","status":"ok",
+cand	append_grow	2000	2	4.32 4.31 0.00 75568	rc=0 obs={"output":"","schema":"golean-observation-v1","status":"ok",
+cand	append_grow	2000	3	4.38 4.38 0.00 77196	rc=0 obs={"output":"","schema":"golean-observation-v1","status":"ok",
+main	scalar	80000	1	1.03 1.02 0.00 71160	rc=0 obs={"output":"","schema":"golean-observation-v1","status":"ok",
+main	scalar	80000	2	1.04 1.03 0.00 72700	rc=0 obs={"output":"","schema":"golean-observation-v1","status":"ok",
+main	scalar	80000	3	1.03 1.03 0.00 71464	rc=0 obs={"output":"","schema":"golean-observation-v1","status":"ok",
+cand	scalar	80000	1	0.96 0.96 0.00 72044	rc=0 obs={"output":"","schema":"golean-observation-v1","status":"ok",
+cand	scalar	80000	2	0.97 0.96 0.00 72704	rc=0 obs={"output":"","schema":"golean-observation-v1","status":"ok",
+cand	scalar	80000	3	1.02 1.02 0.00 72696	rc=0 obs={"output":"","schema":"golean-observation-v1","status":"ok",
+main	write_fixed	3000 100	1	1.07 1.06 0.00 74164	rc=0 obs={"output":"","schema":"golean-observation-v1","status":"ok",
+main	write_fixed	3000 100	2	1.07 1.06 0.00 72992	rc=0 obs={"output":"","schema":"golean-observation-v1","status":"ok",
+main	write_fixed	3000 100	3	1.09 1.09 0.00 73800	rc=0 obs={"output":"","schema":"golean-observation-v1","status":"ok",
+cand	write_fixed	3000 100	1	0.98 0.97 0.00 73524	rc=0 obs={"output":"","schema":"golean-observation-v1","status":"ok",
+cand	write_fixed	3000 100	2	0.99 0.98 0.00 72816	rc=0 obs={"output":"","schema":"golean-observation-v1","status":"ok",
+cand	write_fixed	3000 100	3	0.98 0.97 0.00 73828	rc=0 obs={"output":"","schema":"golean-observation-v1","status":"ok",
+main	map_write	16000	1	2.63 2.62 0.00 73180	rc=0 obs={"output":"","schema":"golean-observation-v1","status":"ok",
+main	map_write	16000	2	2.67 2.67 0.00 74028	rc=0 obs={"output":"","schema":"golean-observation-v1","status":"ok",
+main	map_write	16000	3	2.61 2.60 0.00 73320	rc=0 obs={"output":"","schema":"golean-observation-v1","status":"ok",
+cand	map_write	16000	1	2.54 2.54 0.00 74228	rc=0 obs={"output":"","schema":"golean-observation-v1","status":"ok",
+cand	map_write	16000	2	2.53 2.52 0.00 73172	rc=0 obs={"output":"","schema":"golean-observation-v1","status":"ok",
+cand	map_write	16000	3	2.58 2.58 0.00 74116	rc=0 obs={"output":"","schema":"golean-observation-v1","status":"ok",
+main	alloc_new	32000	1	13.70 13.69 0.00 85608	rc=0 obs={"output":"","schema":"golean-observation-v1","status":"ok",
+main	alloc_new	32000	2	13.54 13.53 0.00 85456	rc=0 obs={"output":"","schema":"golean-observation-v1","status":"ok",
+main	alloc_new	32000	3	13.99 13.98 0.00 86412	rc=0 obs={"output":"","schema":"golean-observation-v1","status":"ok",
+cand	alloc_new	32000	1	14.13 14.12 0.00 86288	rc=0 obs={"output":"","schema":"golean-observation-v1","status":"ok",
+cand	alloc_new	32000	2	14.38 14.37 0.00 86412	rc=0 obs={"output":"","schema":"golean-observation-v1","status":"ok",
+cand	alloc_new	32000	3	14.34 14.33 0.00 86460	rc=0 obs={"output":"","schema":"golean-observation-v1","status":"ok",
+
+## pinned twin wire baselines/pins/twin-chdriver.wire.json (450 funcs), --function probeTwinSingle, 5 runs each (setup-cost probe: the old StateWf decision walked every function body via funcListSup; the new one is heap-only)
+golean-main	probeTwinSingle	1	0.59 0.58 0.00 128620	rc=0 {"output":"","schema":"golean-observation-v1","status
+golean-main	probeTwinSingle	2	0.59 0.58 0.00 128788	rc=0 {"output":"","schema":"golean-observation-v1","status
+golean-main	probeTwinSingle	3	0.60 0.59 0.00 129196	rc=0 {"output":"","schema":"golean-observation-v1","status
+golean-main	probeTwinSingle	4	0.61 0.60 0.00 128548	rc=0 {"output":"","schema":"golean-observation-v1","status
+golean-main	probeTwinSingle	5	0.60 0.60 0.00 128060	rc=0 {"output":"","schema":"golean-observation-v1","status
+golean	probeTwinSingle	1	0.56 0.56 0.00 129396	rc=0 {"output":"","schema":"golean-observation-v1","status":"ok
+golean	probeTwinSingle	2	0.57 0.56 0.00 129040	rc=0 {"output":"","schema":"golean-observation-v1","status":"ok
+golean	probeTwinSingle	3	0.56 0.56 0.00 127956	rc=0 {"output":"","schema":"golean-observation-v1","status":"ok
+golean	probeTwinSingle	4	0.59 0.58 0.00 132508	rc=0 {"output":"","schema":"golean-observation-v1","status":"ok
+golean	probeTwinSingle	5	0.58 0.57 0.00 129944	rc=0 {"output":"","schema":"golean-observation-v1","status":"ok
+
+## DFS-engine membership rows (coverage-observations, the manifest's params, --cap 4096), 3 runs each
+.tmp/golean-main	binop-order/operand-panic-vs-call/call-before-left	width=2,sites=8,members=2,statuses=ok+panic	1	0.02 0.01 0.00 71192	rc=0 members=2 coverage-observations: observations=2 steps=162 probes=3 sites=1 leaves=2 maxdepth=1 width=2 
+.tmp/golean-main	binop-order/operand-panic-vs-call/call-before-left	width=2,sites=8,members=2,statuses=ok+panic	2	0.01 0.01 0.00 72104	rc=0 members=2 coverage-observations: observations=2 steps=162 probes=3 sites=1 leaves=2 maxdepth=1 width=2 
+.tmp/golean-main	binop-order/operand-panic-vs-call/call-before-left	width=2,sites=8,members=2,statuses=ok+panic	3	0.01 0.01 0.00 72632	rc=0 members=2 coverage-observations: observations=2 steps=162 probes=3 sites=1 leaves=2 maxdepth=1 width=2 
+.lake/build/bin/golean	binop-order/operand-panic-vs-call/call-before-left	width=2,sites=8,members=2,statuses=ok+panic	1	0.01 0.01 0.00 72332	rc=0 members=2 coverage-observations: observations=2 steps=162 probes=3 sites=1 leaves=2 maxdepth=1 width=2 
+.lake/build/bin/golean	binop-order/operand-panic-vs-call/call-before-left	width=2,sites=8,members=2,statuses=ok+panic	2	0.01 0.01 0.00 72172	rc=0 members=2 coverage-observations: observations=2 steps=162 probes=3 sites=1 leaves=2 maxdepth=1 width=2 
+.lake/build/bin/golean	binop-order/operand-panic-vs-call/call-before-left	width=2,sites=8,members=2,statuses=ok+panic	3	0.02 0.01 0.00 65104	rc=0 members=2 coverage-observations: observations=2 steps=162 probes=3 sites=1 leaves=2 maxdepth=1 width=2 
+.tmp/golean-main	noodler/membership/two-senders-buffered	width=4,sites=64,members=2,work=2000000	1	3.40 3.39 0.00 72196	rc=0 members=2 coverage-observations: observations=2 steps=390293 probes=74103 sites=24701 leaves=26065 maxdepth=18 width=4 
+.tmp/golean-main	noodler/membership/two-senders-buffered	width=4,sites=64,members=2,work=2000000	2	3.37 3.37 0.00 71412	rc=0 members=2 coverage-observations: observations=2 steps=390293 probes=74103 sites=24701 leaves=26065 maxdepth=18 width=4 
+.tmp/golean-main	noodler/membership/two-senders-buffered	width=4,sites=64,members=2,work=2000000	3	3.40 3.39 0.00 72988	rc=0 members=2 coverage-observations: observations=2 steps=390293 probes=74103 sites=24701 leaves=26065 maxdepth=18 width=4 
+.lake/build/bin/golean	noodler/membership/two-senders-buffered	width=4,sites=64,members=2,work=2000000	1	3.36 3.35 0.00 70852	rc=0 members=2 coverage-observations: observations=2 steps=390293 probes=74103 sites=24701 leaves=26065 maxdepth=18 width=4 
+.lake/build/bin/golean	noodler/membership/two-senders-buffered	width=4,sites=64,members=2,work=2000000	2	3.44 3.43 0.00 71052	rc=0 members=2 coverage-observations: observations=2 steps=390293 probes=74103 sites=24701 leaves=26065 maxdepth=18 width=4 
+.lake/build/bin/golean	noodler/membership/two-senders-buffered	width=4,sites=64,members=2,work=2000000	3	3.36 3.35 0.00 71872	rc=0 members=2 coverage-observations: observations=2 steps=390293 probes=74103 sites=24701 leaves=26065 maxdepth=18 width=4 
+.tmp/golean-main	builtins/print/goroutine-interleaving	width=4,sites=64,members=2,work=2000000	1	2.77 2.77 0.00 72220	rc=0 members=2 coverage-observations: observations=2 steps=237137 probes=74103 sites=24701 leaves=26065 maxdepth=18 width=4 
+.tmp/golean-main	builtins/print/goroutine-interleaving	width=4,sites=64,members=2,work=2000000	2	2.75 2.75 0.00 71644	rc=0 members=2 coverage-observations: observations=2 steps=237137 probes=74103 sites=24701 leaves=26065 maxdepth=18 width=4 
+.tmp/golean-main	builtins/print/goroutine-interleaving	width=4,sites=64,members=2,work=2000000	3	2.76 2.76 0.00 71512	rc=0 members=2 coverage-observations: observations=2 steps=237137 probes=74103 sites=24701 leaves=26065 maxdepth=18 width=4 
+.lake/build/bin/golean	builtins/print/goroutine-interleaving	width=4,sites=64,members=2,work=2000000	1	2.71 2.71 0.00 70728	rc=0 members=2 coverage-observations: observations=2 steps=237137 probes=74103 sites=24701 leaves=26065 maxdepth=18 width=4 
+.lake/build/bin/golean	builtins/print/goroutine-interleaving	width=4,sites=64,members=2,work=2000000	2	2.71 2.71 0.00 70252	rc=0 members=2 coverage-observations: observations=2 steps=237137 probes=74103 sites=24701 leaves=26065 maxdepth=18 width=4 
+.lake/build/bin/golean	builtins/print/goroutine-interleaving	width=4,sites=64,members=2,work=2000000	3	2.70 2.70 0.00 71036	rc=0 members=2 coverage-observations: observations=2 steps=237137 probes=74103 sites=24701 leaves=26065 maxdepth=18 width=4 
+
+## engine=dedup rows (the Store.eqb seam: node equality at heap-equal enumerator nodes), 3 runs each
+golean-main	atomics/counter/add	width=4,sites=48,work=4000000,engine=dedup	1	0.11 0.10 0.00 73424	rc=0 members=1 ge-observations: observations=1 steps=3378 probes=0 sites=2761 leaves=0 maxdepth=0 width=4 engine=dedup nodes=2761 edges=3378 dedupHits=618 certified=checkCert 
+golean-main	atomics/counter/add	width=4,sites=48,work=4000000,engine=dedup	2	0.11 0.10 0.00 73752	rc=0 members=1 ge-observations: observations=1 steps=3378 probes=0 sites=2761 leaves=0 maxdepth=0 width=4 engine=dedup nodes=2761 edges=3378 dedupHits=618 certified=checkCert 
+golean-main	atomics/counter/add	width=4,sites=48,work=4000000,engine=dedup	3	0.11 0.10 0.00 67496	rc=0 members=1 ge-observations: observations=1 steps=3378 probes=0 sites=2761 leaves=0 maxdepth=0 width=4 engine=dedup nodes=2761 edges=3378 dedupHits=618 certified=checkCert 
+golean	atomics/counter/add	width=4,sites=48,work=4000000,engine=dedup	1	0.03 0.02 0.00 73268	rc=0 members=1 ge-observations: observations=1 steps=3378 probes=0 sites=2761 leaves=0 maxdepth=0 width=4 engine=dedup nodes=2761 edges=3378 dedupHits=618 certified=checkCert 
+golean	atomics/counter/add	width=4,sites=48,work=4000000,engine=dedup	2	0.03 0.02 0.00 73848	rc=0 members=1 ge-observations: observations=1 steps=3378 probes=0 sites=2761 leaves=0 maxdepth=0 width=4 engine=dedup nodes=2761 edges=3378 dedupHits=618 certified=checkCert 
+golean	atomics/counter/add	width=4,sites=48,work=4000000,engine=dedup	3	0.03 0.02 0.00 73652	rc=0 members=1 ge-observations: observations=1 steps=3378 probes=0 sites=2761 leaves=0 maxdepth=0 width=4 engine=dedup nodes=2761 edges=3378 dedupHits=618 certified=checkCert 
+golean-main	atomics/counter/cas-loop	width=4,sites=64,work=4000000,engine=dedup,backedge=full	1	0.60 0.59 0.00 87996	rc=0 members=1 servations: observations=1 steps=20601 probes=0 sites=17535 leaves=0 maxdepth=0 width=4 engine=dedup nodes=17535 edges=20601 dedupHits=3067 certified=checkCert 
+golean-main	atomics/counter/cas-loop	width=4,sites=64,work=4000000,engine=dedup,backedge=full	2	0.60 0.60 0.00 87788	rc=0 members=1 servations: observations=1 steps=20601 probes=0 sites=17535 leaves=0 maxdepth=0 width=4 engine=dedup nodes=17535 edges=20601 dedupHits=3067 certified=checkCert 
+golean-main	atomics/counter/cas-loop	width=4,sites=64,work=4000000,engine=dedup,backedge=full	3	0.60 0.59 0.00 88488	rc=0 members=1 servations: observations=1 steps=20601 probes=0 sites=17535 leaves=0 maxdepth=0 width=4 engine=dedup nodes=17535 edges=20601 dedupHits=3067 certified=checkCert 
+golean	atomics/counter/cas-loop	width=4,sites=64,work=4000000,engine=dedup,backedge=full	1	0.12 0.11 0.00 87756	rc=0 members=1 servations: observations=1 steps=20601 probes=0 sites=17535 leaves=0 maxdepth=0 width=4 engine=dedup nodes=17535 edges=20601 dedupHits=3067 certified=checkCert 
+golean	atomics/counter/cas-loop	width=4,sites=64,work=4000000,engine=dedup,backedge=full	2	0.13 0.12 0.00 88896	rc=0 members=1 servations: observations=1 steps=20601 probes=0 sites=17535 leaves=0 maxdepth=0 width=4 engine=dedup nodes=17535 edges=20601 dedupHits=3067 certified=checkCert 
+golean	atomics/counter/cas-loop	width=4,sites=64,work=4000000,engine=dedup,backedge=full	3	0.13 0.12 0.00 89200	rc=0 members=1 servations: observations=1 steps=20601 probes=0 sites=17535 leaves=0 maxdepth=0 width=4 engine=dedup nodes=17535 edges=20601 dedupHits=3067 certified=checkCert 

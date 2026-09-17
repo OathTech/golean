@@ -1,0 +1,3 @@
+# .tmp/unused_store.py: defs whose ExecState binder was dropped entirely; FLAGGED = old body used the binder for heap access
+defs that dropped their ExecState binder entirely: 55
+FLAGGED (old body used the binder for heap access):

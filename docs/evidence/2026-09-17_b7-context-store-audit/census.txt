@@ -1,0 +1,16 @@
+# Census recomputation at 5955e55f (BEFORE) and d0e65182 (AFTER) — commands as run by the auditor
+
+StateWf field-equality atoms (grep -oE '\.(types|functions|methods|methodSets|typeDisplays) = <ident>\.(...)'): BEFORE 54 / AFTER 0 (README: 54 / 0)
+StateWf '.types = ' lines: BEFORE 25 (README: 25 lines, 38 statement conjuncts)
+MultiWfSound '.types = ' lines: BEFORE 6 / AFTER 0 (README: 6 / 0)
+MachineSound 'htypes' mentions: BEFORE 11 / AFTER 1 (a comment) (README: 11 mentions, 4 hypotheses / 1 comment)
+Files mentioning ExecState (git grep -l, GoLean+Tests): BEFORE 31 (29 with code mentions; Platform.lean and Syntax.lean docstring-only) / AFTER 0 code mentions, 10 prose lines in 7 files (README: '30 modules' → 0; 5 docstring mentions)
+itersNormalized lines in GoLean/: BEFORE 198 lines (196 non-comment; StateWf 104, MultiWfSound 92, Multi 1, MachineSound 1) / AFTER 13 prose lines (README: 199 mentions → 13 prose; commit 1fafc9f2: '195 code lines → 0')
+fun_cases stepFn ctx s c ch: 162 arms; tags/order/fingerprints identical to the tracked before/after files (probe-tags-receipt.txt)
+Runtime diff 5955e55f..d0e65182 -- GoLean Tests: 34 files, +3,349/−3,304; runtime commit 73ad798d alone: 34 files, +3,232/−2,862 (handoff §1: '32 files, +3,058/−2,862'); fix round 1fafc9f2: 4 files, +213/−538; records commits touch no runtime file (0 lines each)
+Rebase map: git diff 2500b434 73ad798d -- GoLean Tests lakefile.toml lake-manifest.json lean-toolchain = 0 lines (as claimed)
+Hand-built ExecState fixtures in Tests/GoCoreEval.lean at base ('GoCore.ExecState :='): 13 (handoff: 13)
+Dropped-store helpers: 55 defs dropped their ExecState binder; 0 read the heap through it (unused-store-check.txt)
+Deleted declarations in StateWf.lean: 19 (16 fix-round tombstones + ExecState.locSup, ExecState.updateCell_shape→Store.updateCell_shape, StateWf.funcs_le, step_preserves_iters); added 17 (Store.locSup, Store.updateCell_shape, 15 locSup_eq_zero lemmas)
+MachineSound: deleted 3 (ExecState.updateCell_congr→Store.updateCell_congr, ExecState.updateCell_lookup_ne→Store.updateCell_lookup_ne, structTagCompatible_congr); MultiWfSound: deleted 1 (spawnPlan_iters); MachineEqb: ExecState.eqb/eqb_sound → Store.eqb/eqb_sound
+Step constructors: 122 before / 122 after; StepM 7 / 7; StepE 2 / 2; no constructor names a context other than the section variable

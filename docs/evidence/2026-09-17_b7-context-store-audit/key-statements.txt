@@ -1,0 +1,239 @@
+# Full statement listings (before/after) for the declarations the handoff §4 names + the coordinator's list; produced by .tmp/extract_stmts.py over 5955e55f vs d0e65182
+### theorem stepFn_sound
+  BEFORE[469]: theorem stepFn_sound {s : ExecState} {c : Config} {ch : Choices} {c' : Config} {s' : ExecState} {ch' : Choices} (h : stepFn s c ch = .ok (c', s', ch')) : Step c s c' s'
+  AFTER [473]: theorem stepFn_sound {s : Store} {c : Config} {ch : Choices} {c' : Config} {s' : Store} {ch' : Choices} (h : stepFn ctx s c ch = .ok (c', s', ch')) : Step ctx c s c' s'
+
+### theorem step_complete
+  BEFORE[815]: theorem step_complete {c : Config} {s : ExecState} {c' : Config} {s' : ExecState} (h : Step c s c' s') : ∃ ch ch' : Choices, stepFn s c ch = .ok (c', s', ch')
+  AFTER [819]: theorem step_complete {c : Config} {s : Store} {c' : Config} {s' : Store} (h : Step ctx c s c' s') : ∃ ch ch' : Choices, stepFn ctx s c ch = .ok (c', s', ch')
+
+### theorem step_complete_any_wf
+  BEFORE[3275]: theorem step_complete_any_wf {c : Config} {σ : ExecState} {c' : Config} {σ' : ExecState} (h : Step c σ c' σ') (hwf : MachineWf σ c) : ∀ ch : Choices, ∃ (c₂ : Config) (σ₂ : ExecState) (ch₂ : Choices), stepFn σ c ch = .ok (c₂, σ₂, ch₂)
+  AFTER [3274]: theorem step_complete_any_wf {c : Config} {σ : Store} {c' : Config} {σ' : Store} (h : Step ctx c σ c' σ') (hwf : MachineWf σ c) : ∀ ch : Choices, ∃ (c₂ : Config) (σ₂ : Store) (ch₂ : Choices), stepFn ctx σ c ch = .ok (c₂, σ₂, ch₂)
+
+### theorem step_preserves_wf
+  BEFORE[7014]: theorem step_preserves_wf {c : Config} {σ : ExecState} {c' : Config} {σ' : ExecState} (h : Step c σ c' σ') (hwf : MachineWf σ c) : MachineWf σ' c'
+  AFTER [6811]: theorem step_preserves_wf {c : Config} {σ : Store} {c' : Config} {σ' : Store} (h : Step ctx c σ c' σ') (hwf : MachineWf σ c) : MachineWf σ' c'
+
+### theorem Step.preserves_wf
+  BEFORE[1384]: theorem Step.preserves_wf {c : Config} {σ : ExecState} {c' : Config} {σ' : ExecState} (h : Step c σ c' σ') (hwf : MachineWf σ c) : MachineWf σ' c'
+  AFTER [1392]: theorem Step.preserves_wf {c : Config} {σ : Store} {c' : Config} {σ' : Store} (h : Step ctx c σ c' σ') (hwf : MachineWf σ c) : MachineWf σ' c'
+
+### theorem stepFn_preserves_wf
+  BEFORE[1392]: theorem stepFn_preserves_wf {s : ExecState} {c : Config} {ch : Choices} {c' : Config} {s' : ExecState} {ch' : Choices} (h : stepFn s c ch = .ok (c', s', ch')) (hwf : MachineWf s c) : MachineWf s' c'
+  AFTER [1400]: theorem stepFn_preserves_wf {s : Store} {c : Config} {ch : Choices} {c' : Config} {s' : Store} {ch' : Choices} (h : stepFn ctx s c ch = .ok (c', s', ch')) (hwf : MachineWf s c) : MachineWf s' c'
+
+### theorem stepMulti_sound
+  BEFORE[1172]: theorem stepMulti_sound {m : MultiConfig} {ch ch' : Choices} {m' : MultiConfig} {ev : StepEvent} (h : stepMulti m ch = .ok (m', ch', ev)) : StepM m m'
+  AFTER [1182]: theorem stepMulti_sound {m : MultiConfig} {ch ch' : Choices} {m' : MultiConfig} {ev : StepEvent} (h : stepMulti ctx m ch = .ok (m', ch', ev)) : StepM ctx m m'
+
+### theorem stepM_complete
+  BEFORE[1316]: theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') : ∃ ch ch' ev, stepMulti m ch = .ok (m', ch', ev)
+  AFTER [1326]: theorem stepM_complete {m m' : MultiConfig} (h : StepM ctx m m') : ∃ ch ch' ev, stepMulti ctx m ch = .ok (m', ch', ev)
+
+### theorem stepMulti_wf
+  BEFORE[1301]: theorem stepMulti_wf {m m' : MultiConfig} {ch ch' : Choices} {ev : StepEvent} (hwf : MultiWf m) (h : stepMulti m ch = .ok (m', ch', ev)) : MultiWf m'
+  AFTER [1202]: theorem stepMulti_wf {m m' : MultiConfig} {ch ch' : Choices} {ev : StepEvent} (hwf : MultiWf m) (h : stepMulti ctx m ch = .ok (m', ch', ev)) : MultiWf m'
+
+### theorem run_iff
+  BEFORE[71]: theorem run_iff {fuel m r ch acc result} : execProgLoopOut fuel m r ch acc = result ↔ Run fuel m r ch acc result
+  AFTER [79]: theorem run_iff {fuel m r ch acc result} : execProgLoopOut ctx fuel m r ch acc = result ↔ Run ctx fuel m r ch acc result
+
+### theorem iter_iff_trace
+  BEFORE[16]: theorem iter_iff_trace {n s c ch sf cf chf} : stepFnIter n s c ch = .ok (cf, sf, chf) ↔ Trace n s c ch sf cf chf
+  AFTER [22]: theorem iter_iff_trace {n s c ch sf cf chf} : stepFnIter ctx n s c ch = .ok (cf, sf, chf) ↔ Trace ctx n s c ch sf cf chf
+
+### theorem run_ok_iff
+  BEFORE[54]: theorem run_ok_iff {fuel s c ch sf chf} : execStmtLoop fuel s c ch = .ok (sf, chf) ↔ ∃ n, n ≤ fuel ∧ Trace n s c ch sf (.next .stop) chf
+  AFTER [60]: theorem run_ok_iff {fuel s c ch sf chf} : execStmtLoop ctx fuel s c ch = .ok (sf, chf) ↔ ∃ n, n ≤ fuel ∧ Trace ctx n s c ch sf (.next .stop) chf
+
+### theorem checkCert_slowObs
+  BEFORE[920]: theorem checkCert_slowObs {nodeEqb : DedupNode → DedupNode → Bool} (hEqb : ∀ a b, nodeEqb a b = true → a = b) {resultLocs : List Loc} {m₀ : MultiConfig} {r₀ : RaceState} {cert : DedupCert} (hc : checkCert nodeEqb resultLocs m₀ r₀ cert = true) : ∀ o : Obs, o ∈ cert.obsSet ↔ SlowObs resultLocs m₀ r₀ o
+  AFTER [924]: theorem checkCert_slowObs {nodeEqb : DedupNode → DedupNode → Bool} (hEqb : ∀ a b, nodeEqb a b = true → a = b) {resultLocs : List Loc} {m₀ : MultiConfig} {r₀ : RaceState} {cert : DedupCert} (hc : checkCert ctx nodeEqb resultLocs m₀ r₀ cert = true) : ∀ o : Obs, o ∈ cert.obsSet ↔ SlowObs ctx resultLocs m₀ r₀ o
+
+### theorem checkCertM_slowObs
+  BEFORE[975]: theorem checkCertM_slowObs {resultLocs : List Loc} {m₀ : MultiConfig} {r₀ : RaceState} {cert : DedupCert} (hc : checkCert dedupNodeEqb resultLocs m₀ r₀ cert = true) : ∀ o : Obs, o ∈ cert.obsSet ↔ SlowObs resultLocs m₀ r₀ o
+  AFTER [979]: theorem checkCertM_slowObs {resultLocs : List Loc} {m₀ : MultiConfig} {r₀ : RaceState} {cert : DedupCert} (hc : checkCert ctx dedupNodeEqb resultLocs m₀ r₀ cert = true) : ∀ o : Obs, o ∈ cert.obsSet ↔ SlowObs ctx resultLocs m₀ r₀ o
+
+### theorem stepFn_consumption_none
+  BEFORE[4468]: theorem stepFn_consumption_none {σ : ExecState} {c : Config} {ch₀ : Choices} {c' : Config} {σ' : ExecState} {ch₀' : Choices} (hsc : seqConsumption σ c = none) (h : stepFn σ c ch₀ = .ok (c', σ', ch₀')) : ch₀' = ch₀ ∧ ∀ ch : Choices, stepFn σ c ch = .ok (c', σ', ch)
+  AFTER [4468]: theorem stepFn_consumption_none {σ : Store} {c : Config} {ch₀ : Choices} {c' : Config} {σ' : Store} {ch₀' : Choices} (hsc : seqConsumption ctx σ c = none) (h : stepFn ctx σ c ch₀ = .ok (c', σ', ch₀')) : ch₀' = ch₀ ∧ ∀ ch : Choices, stepFn ctx σ c ch = .ok (c', σ', ch)
+
+### theorem stepFn_consumption_some
+  BEFORE[4856]: theorem stepFn_consumption_some {σ : ExecState} {c : Config} {ch₀ : Choices} {c' : Config} {σ' : ExecState} {ch₀' : Choices} {site : ChoiceSite} {b : Nat} (hloc : c.appendTargetLocal) (hsc : seqConsumption σ c = some (site, b)) (h : stepFn σ c ch₀ = .ok (c', σ', ch₀')) : ch₀' = (Choices.consumeAt site b ch₀).2 ∧ ∀ ch : Choices, (Choices.consumeAt site b ch).1 = (Choices.consumeAt site b ch₀).1 → stepFn σ c ch = .ok (c', σ', (Choices.consumeAt site b ch).2)
+  AFTER [4856]: theorem stepFn_consumption_some {σ : Store} {c : Config} {ch₀ : Choices} {c' : Config} {σ' : Store} {ch₀' : Choices} {site : ChoiceSite} {b : Nat} (hloc : c.appendTargetLocal) (hsc : seqConsumption ctx σ c = some (site, b)) (h : stepFn ctx σ c ch₀ = .ok (c', σ', ch₀')) : ch₀' = (Choices.consumeAt site b ch₀).2 ∧ ∀ ch : Choices, (Choices.consumeAt site b ch).1 = (Choices.consumeAt site b ch₀).1 → stepFn ctx σ c ch = .ok (c', σ', (Choices.consumeAt site b ch).2)
+
+### theorem enterFramePick_of_isSome_false
+  BEFORE[873]: theorem enterFramePick_of_isSome_false {s : ExecState} {fid : FuncId} {args : List GoValue} {ch : Choices} (hn : (nilValueMethodText? s fid args).isSome = false) : enterFramePick s fid args ch = (toResult (enterFrame s fid args)).map (·, ch)
+  AFTER [883]: theorem enterFramePick_of_isSome_false {fid : FuncId} {args : List GoValue} (hn : (nilValueMethodText? ctx fid args).isSome = false) : ∀ (s : Store) (ch : Choices), enterFramePick ctx s fid args ch = (toResult (enterFrame ctx s fid args)).map (·, ch)
+
+### theorem enterFramePick_oblivious_of_isSome_false
+  BEFORE[886]: theorem enterFramePick_oblivious_of_isSome_false {s : ExecState} {fid : FuncId} {args : List GoValue} (hn : (nilValueMethodText? s fid args).isSome = false) (ch : Choices) : enterFramePick s fid args ch = (toResult (enterFrame s fid args)).map (·, ch)
+  AFTER [900]: theorem enterFramePick_oblivious_of_isSome_false {fid : FuncId} {args : List GoValue} (hn : (nilValueMethodText? ctx fid args).isSome = false) (s : Store) (ch : Choices) : enterFramePick ctx s fid args ch = (toResult (enterFrame ctx s fid args)).map (·, ch)
+
+### theorem dynamicDispatch?_locSup
+  BEFORE[2296]: theorem dynamicDispatch?_locSup {σ : ExecState} {func : Func} {args : Array GoValue} {out : Option (Func × Array GoValue)} (h : dynamicDispatch? σ func args = .ok out) : ∀ {tf : Func} {args' : Array GoValue}, out = some (tf, args') → Func.locSup tf ≤ funcListSup σ.functions.toList ∧ goValueListSup args'.toList ≤ max (goValueListSup args.toList) (Heap.locSup σ.heap)
+  AFTER [2281]: theorem dynamicDispatch?_locSup {σ : Store} {func : Func} {args : Array GoValue} {out : Option (Func × Array GoValue)} (h : dynamicDispatch? ctx σ func args = .ok out) : ∀ {tf : Func} {args' : Array GoValue}, out = some (tf, args') → Func.locSup tf ≤ funcListSup ctx.functions.toList ∧ goValueListSup args'.toList ≤ max (goValueListSup args.toList) (Heap.locSup σ.heap)
+
+### theorem StateWf.mk'
+  BEFORE[1585]: theorem StateWf.mk' {σ : ExecState} (h1 : Heap.locSup σ.heap ≤ σ.nextAddr) (h2 : funcListSup σ.functions.toList ≤ σ.nextAddr) : StateWf σ
+  AFTER [1588]: theorem StateWf.mk' {σ : Store} (h1 : Heap.locSup σ.heap ≤ σ.nextAddr) : StateWf σ
+
+### theorem enterFrame_tail
+  BEFORE[2356]: theorem enterFrame_tail {σ : ExecState} {func₁ : Func} {argVals₁ : List GoValue} {argsEnv : LocalEnv} {s₁ : ExecState} {frameEnv₁ : LocalEnv} {s₂ : ExecState} {locs : List Loc} (hw : StateWf σ) (hf₁ : Func.locSup func₁ ≤ funcListSup σ.functions.toList) (hargs₁ : goValueListSup argVals₁ ≤ σ.nextAddr) (hbp : bindParams [] σ func₁.args.toList argVals₁ = .ok (argsEnv, s₁)) (had : allocDecls argsEnv s₁ func₁.results.toList = .ok (frameEnv₁, s₂)) (hpin : pinResultLocs frameEnv₁ func₁.results.toList = .ok locs) : StateWf s₂ ∧ σ.nextAddr ≤ s₂.nextAddr ∧ s₂.types = σ.types ∧ s₂.functions = σ.functions ∧ s₂.methods = σ.methods ∧ Stmt.locSup func₁.body ≤ s₂.nextAddr ∧ LocalEnv.locSup frameEnv₁ ≤ s₂.nextAddr ∧ locListSup locs ≤ s₂.nextAddr
+  AFTER [2341]: theorem enterFrame_tail {σ : Store} {func₁ : Func} {argVals₁ : List GoValue} {argsEnv : LocalEnv} {s₁ : Store} {frameEnv₁ : LocalEnv} {s₂ : Store} {locs : List Loc} (hw : StateWf σ) (hargs₁ : goValueListSup argVals₁ ≤ σ.nextAddr) (hbp : bindParams ctx [] σ func₁.args.toList argVals₁ = .ok (argsEnv, s₁)) (had : allocDecls ctx argsEnv s₁ func₁.results.toList = .ok (frameEnv₁, s₂)) (hpin : pinResultLocs frameEnv₁ func₁.results.toList = .ok locs) : StateWf s₂ ∧ σ.nextAddr ≤ s₂.nextAddr ∧ Stmt.locSup func₁.body ≤ s₂.nextAddr ∧ LocalEnv.locSup frameEnv₁ ≤ s₂.nextAddr ∧ locListSup locs ≤ s₂.nextAddr
+
+### theorem isNormalForTy_sound
+  BEFORE[1566]: theorem isNormalForTy_sound {σ : ExecState} {ty : Ty} {v : GoValue} (h : isNormalForTy σ.types ty v = true) : normalizeValueForTy σ ty v = .ok v
+  AFTER [1572]: theorem isNormalForTy_sound {ty : Ty} {v : GoValue} (h : isNormalForTy ctx.types ty v = true) : normalizeValueForTy ctx ty v = .ok v
+
+### theorem loadLoc_root_congr
+  BEFORE[1484]: theorem loadLoc_root_congr {σ₁ σ₂ : ExecState} (htypes : σ₂.types = σ₁.types) : ∀ {l : Loc}, Heap.lookup σ₂.heap (Loc.rootLoc l) = Heap.lookup σ₁.heap (Loc.rootLoc l) → loadLoc σ₂ l = loadLoc σ₁ l
+  AFTER [1490]: theorem loadLoc_root_congr {σ₁ σ₂ : Store} : ∀ {l : Loc}, Heap.lookup σ₂.heap (Loc.rootLoc l) = Heap.lookup σ₁.heap (Loc.rootLoc l) → loadLoc ctx σ₂ l = loadLoc ctx σ₁ l
+
+### theorem storeLoc_congr
+  BEFORE[2149]: theorem storeLoc_congr {σ₁ σ₂ : ExecState} (htypes : σ₂.types = σ₁.types) : ∀ {l : Loc} {v w : GoValue}, Heap.lookup σ₂.heap (Loc.rootLoc l) = Heap.lookup σ₁.heap (Loc.rootLoc l) → GoValue.capCong v w → exceptCong (fun _ _ : ExecState => True) (storeLoc σ₁ l v) (storeLoc σ₂ l w)
+  AFTER [2152]: theorem storeLoc_congr {σ₁ σ₂ : Store} : ∀ {l : Loc} {v w : GoValue}, Heap.lookup σ₂.heap (Loc.rootLoc l) = Heap.lookup σ₁.heap (Loc.rootLoc l) → GoValue.capCong v w → exceptCong (fun _ _ : Store => True) (storeLoc ctx σ₁ l v) (storeLoc ctx σ₂ l w)
+
+### theorem normalizeValueForTy_congr
+  BEFORE[1990]: theorem normalizeValueForTy_congr {σ₁ σ₂ : ExecState} (htypes : σ₂.types = σ₁.types) {ty : Ty} {v w : GoValue} (hcc : GoValue.capCong v w) : exceptCong GoValue.capCong (normalizeValueForTy σ₁ ty v) (normalizeValueForTy σ₂ ty w)
+  AFTER [1995]: theorem normalizeValueForTy_congr {ty : Ty} {v w : GoValue} (hcc : GoValue.capCong v w) : exceptCong GoValue.capCong (normalizeValueForTy ctx ty v) (normalizeValueForTy ctx ty w)
+
+### theorem strictWfSame
+  BEFORE[2900]: theorem strictWfSame {σ : ExecState} {v : GoValue} (hw : StateWf σ) (hv : GoValue.locSup v ≤ σ.nextAddr) : StateWf σ ∧ σ.nextAddr ≤ σ.nextAddr ∧ σ.functions = σ.functions ∧ σ.types = σ.types ∧ σ.methods = σ.methods ∧ GoValue.locSup v ≤ σ.nextAddr
+  AFTER [2878]: theorem strictWfSame {σ : Store} {v : GoValue} (hw : StateWf σ) (hv : GoValue.locSup v ≤ σ.nextAddr) : StateWf σ ∧ σ.nextAddr ≤ σ.nextAddr ∧ GoValue.locSup v ≤ σ.nextAddr
+
+### def ThreadWf
+  BEFORE[2481]: def ThreadWf (bound : Nat) (types : TypeEnv) : Thread → Prop | .running c _ => ConfigWf bound c ∧ Config.itersNormalized types c = true | .aborted _ => True instance (bound : Nat) (types : TypeEnv) (t : Thread) : Decidable (ThreadWf bound types t)
+  AFTER [2503]: def ThreadWf (bound : Nat) : Thread → Prop | .running c _ => ConfigWf bound c | .aborted _ => True instance (bound : Nat) (t : Thread) : Decidable (ThreadWf bound t)
+
+### theorem execProgLoopOut_snd
+  BEFORE[2260]: theorem execProgLoopOut_snd (fuel : Nat) (m : MultiConfig) (r : RaceState) (choices : Choices) (acc : GoString) : (execProgLoopOut fuel m r choices acc).2 = execProgLoop fuel m r choices
+  AFTER [2274]: theorem execProgLoopOut_snd (fuel : Nat) (m : MultiConfig) (r : RaceState) (choices : Choices) (acc : GoString) : (execProgLoopOut ctx fuel m r choices acc).2 = execProgLoop ctx fuel m r choices
+
+### theorem runConfigWithAbort_witness
+  BEFORE[133]: theorem runConfigWithAbort_witness {fuel s c ch result head} (h : runConfigWithAbort fuel s c ch = (result, some head)) : ∃ (n : Nat) (t : ExecState) (terminal : Config) (residual : Choices) (message : String), n < fuel ∧ GoLean.Semantics.Trace n s c ch t terminal residual ∧ abortRecord? terminal = some head ∧ stepFn t terminal residual = .error (.panic message) ∧ result = .error (.panic message)
+  AFTER [139]: theorem runConfigWithAbort_witness {fuel s c ch result head} (h : runConfigWithAbort ctx fuel s c ch = (result, some head)) : ∃ (n : Nat) (t : Store) (terminal : Config) (residual : Choices) (message : String), n < fuel ∧ GoLean.Semantics.Trace ctx n s c ch t terminal residual ∧ abortRecord? terminal = some head ∧ stepFn ctx t terminal residual = .error (.panic message) ∧ result = .error (.panic message)
+
+### def StateWf
+  BEFORE[673]: def StateWf (σ : ExecState) : Prop
+  AFTER [672]: def StateWf (σ : Store) : Prop
+
+### def MachineWf
+  BEFORE[683]: def MachineWf (σ : ExecState) (c : Config) : Prop
+  AFTER [690]: def MachineWf (σ : Store) (c : Config) : Prop
+
+### def StmtOpPres
+  BEFORE[3563]: def StmtOpPres (σ σ' : ExecState) : Prop
+  AFTER [3539]: def StmtOpPres (σ σ' : Store) : Prop
+
+### theorem storeLoc_shape
+  BEFORE[1887]: theorem storeLoc_shape {σ : ExecState} : ∀ {l : Loc} {v : GoValue} {σ' : ExecState}, storeLoc σ l v = .ok σ' → σ'.types = σ.types ∧ σ'.functions = σ.functions ∧ σ'.methods = σ.methods ∧ σ'.nextAddr = σ.nextAddr ∧ Heap.locSup σ'.heap ≤ max (Heap.locSup σ.heap) (max (Loc.locSup l) (GoValue.locSup v))
+  AFTER [1886]: theorem storeLoc_shape {σ : Store} : ∀ {l : Loc} {v : GoValue} {σ' : Store}, storeLoc ctx σ l v = .ok σ' → σ'.nextAddr = σ.nextAddr ∧ Heap.locSup σ'.heap ≤ max (Heap.locSup σ.heap) (max (Loc.locSup l) (GoValue.locSup v))
+
+### theorem allocCell_shape
+  BEFORE[1967]: theorem allocCell_shape {σ : ExecState} {c : HeapCell} {l : Loc} {σ' : ExecState} (h : σ.allocCell c = (l, σ')) : l = .base ⟨σ.nextAddr⟩ ∧ σ'.nextAddr = σ.nextAddr + 1 ∧ σ'.types = σ.types ∧ σ'.functions = σ.functions ∧ σ'.methods = σ.methods ∧ Heap.locSup σ'.heap ≤ max (Heap.locSup σ.heap) (max (σ.nextAddr + 1) (HeapCell.locSup c))
+  AFTER [1963]: theorem allocCell_shape {σ : Store} {c : HeapCell} {l : Loc} {σ' : Store} (h : σ.allocCell c = (l, σ')) : l = .base ⟨σ.nextAddr⟩ ∧ σ'.nextAddr = σ.nextAddr + 1 ∧ Heap.locSup σ'.heap ≤ max (Heap.locSup σ.heap) (max (σ.nextAddr + 1) (HeapCell.locSup c))
+
+### theorem enterFrame_wf
+  BEFORE[2380]: theorem enterFrame_wf {σ : ExecState} {fid : FuncId} {argVals : List GoValue} {func : Func} {frameEnv : LocalEnv} {resultLocs : List Loc} {σ' : ExecState} (hw : StateWf σ) (hargs : goValueListSup argVals ≤ σ.nextAddr) (h : enterFrame σ fid argVals = .ok (func, frameEnv, resultLocs, σ')) : StateWf σ' ∧ σ.nextAddr ≤ σ'.nextAddr ∧ σ'.types = σ.types ∧ σ'.functions = σ.functions ∧ σ'.methods = σ.methods ∧ Stmt.locSup func.body ≤ σ'.nextAddr ∧ LocalEnv.locSup frameEnv ≤ σ'.nextAddr ∧ locListSup resultLocs ≤ σ'.nextAddr
+  AFTER [2362]: theorem enterFrame_wf {σ : Store} {fid : FuncId} {argVals : List GoValue} {func : Func} {frameEnv : LocalEnv} {resultLocs : List Loc} {σ' : Store} (hw : StateWf σ) (hargs : goValueListSup argVals ≤ σ.nextAddr) (h : enterFrame ctx σ fid argVals = .ok (func, frameEnv, resultLocs, σ')) : StateWf σ' ∧ σ.nextAddr ≤ σ'.nextAddr ∧ Stmt.locSup func.body ≤ σ'.nextAddr ∧ LocalEnv.locSup frameEnv ≤ σ'.nextAddr ∧ locListSup resultLocs ≤ σ'.nextAddr
+
+### theorem applyStmtOp_wf
+  BEFORE[4114]: theorem applyStmtOp_wf {σ : ExecState} {ch : Choices} {op : StmtOp} {nt : Nat} {vs : List GoValue} {σ' : ExecState} {ch' : Choices} (hw : StateWf σ) (hvs : goValueListSup vs ≤ σ.nextAddr) (h : applyStmtOp σ ch op nt vs = .ok (σ', ch')) : StmtOpPres σ σ'
+  AFTER [4085]: theorem applyStmtOp_wf {σ : Store} {ch : Choices} {op : StmtOp} {nt : Nat} {vs : List GoValue} {σ' : Store} {ch' : Choices} (hw : StateWf σ) (hvs : goValueListSup vs ≤ σ.nextAddr) (h : applyStmtOp ctx σ ch op nt vs = .ok (σ', ch')) : StmtOpPres σ σ'
+
+### theorem step_preserves_wf_loc
+  BEFORE[6038]: theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config} {σ' : ExecState} (h : Step c σ c' σ') (hs : StateWf σ) (hc : ConfigWf σ.nextAddr c) : StateWf σ' ∧ ConfigWf σ'.nextAddr c' ∧ σ'.types = σ.types ∧ σ.nextAddr ≤ σ'.nextAddr
+  AFTER [5873]: theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config} {σ' : Store} (h : Step ctx c σ c' σ') (hs : StateWf σ) (hc : ConfigWf σ.nextAddr c) : StateWf σ' ∧ ConfigWf σ'.nextAddr c' ∧ σ.nextAddr ≤ σ'.nextAddr
+
+### theorem spawnStep_wf
+  BEFORE[92]: theorem spawnStep_wf {s : ExecState} {cv : GoValue} {args : List GoValue} {k : Cont} {ch : Choices} {p child : Config} {s' : ExecState} {ch' : Choices} {types : TypeEnv} (hw : StateWf s) (hcv : GoValue.locSup cv ≤ s.nextAddr) (hargs : goValueListSup args ≤ s.nextAddr) (hk : Cont.locSup k ≤ s.nextAddr) (hik : Cont.itersNormalized types k = true) (h : spawnStep s cv args k ch = .ok (p, child, s', ch')) : StateWf s' ∧ Config.locSup p ≤ s'.nextAddr ∧ Config.locSup child ≤ s'.nextAddr ∧ s'.types = s.types ∧ s.nextAddr ≤ s'.nextAddr ∧ Config.itersNormalized types p = true ∧ Config.itersNormalized types child = true
+  AFTER [81]: theorem spawnStep_wf {s : Store} {cv : GoValue} {args : List GoValue} {k : Cont} {ch : Choices} {p child : Config} {s' : Store} {ch' : Choices} (hw : StateWf s) (hcv : GoValue.locSup cv ≤ s.nextAddr) (hargs : goValueListSup args ≤ s.nextAddr) (hk : Cont.locSup k ≤ s.nextAddr) (h : spawnStep ctx s cv args k ch = .ok (p, child, s', ch')) : StateWf s' ∧ Config.locSup p ≤ s'.nextAddr ∧ Config.locSup child ≤ s'.nextAddr ∧ s.nextAddr ≤ s'.nextAddr
+
+### theorem resumeRecvDelivery_wf
+  BEFORE[137]: theorem resumeRecvDelivery_wf {s : ExecState} {v : GoValue} {ok : Bool} {targets : List Assignee} {env : LocalEnv} {k : Cont} {c' : Config} {s' : ExecState} {types : TypeEnv} (hw : StateWf s) (hv : GoValue.locSup v ≤ s.nextAddr) (ht : assigneeListSup targets ≤ s.nextAddr) (henv : LocalEnv.locSup env ≤ s.nextAddr) (hk : Cont.locSup k ≤ s.nextAddr) (hik : Cont.itersNormalized types k = true) (h : resumeRecvDelivery s v ok targets env k = .ok (c', s')) : StateWf s' ∧ Config.locSup c' ≤ s'.nextAddr ∧ s'.types = s.types ∧ s.nextAddr ≤ s'.nextAddr ∧ Config.itersNormalized types c' = true
+  AFTER [117]: theorem resumeRecvDelivery_wf {s : Store} {v : GoValue} {ok : Bool} {targets : List Assignee} {env : LocalEnv} {k : Cont} {c' : Config} {s' : Store} (hw : StateWf s) (hv : GoValue.locSup v ≤ s.nextAddr) (ht : assigneeListSup targets ≤ s.nextAddr) (henv : LocalEnv.locSup env ≤ s.nextAddr) (hk : Cont.locSup k ≤ s.nextAddr) (h : resumeRecvDelivery s v ok targets env k = .ok (c', s')) : StateWf s' ∧ Config.locSup c' ≤ s'.nextAddr ∧ s.nextAddr ≤ s'.nextAddr
+
+### theorem selectRecvDelivery_wf
+  BEFORE[162]: theorem selectRecvDelivery_wf {s : ExecState} {v : GoValue} {ok : Bool} {targets : List Assignee} {body : Stmt} {env : LocalEnv} {k : Cont} {c' : Config} {s' : ExecState} {types : TypeEnv} (hw : StateWf s) (hv : GoValue.locSup v ≤ s.nextAddr) (ht : assigneeListSup targets ≤ s.nextAddr) (hb : Stmt.locSup body ≤ s.nextAddr) (henv : LocalEnv.locSup env ≤ s.nextAddr) (hk : Cont.locSup k ≤ s.nextAddr) (hik : Cont.itersNormalized types k = true) (h : selectRecvDelivery s v ok targets body env k = .ok (c', s')) : StateWf s' ∧ Config.locSup c' ≤ s'.nextAddr ∧ s'.types = s.types ∧ s.nextAddr ≤ s'.nextAddr ∧ Config.itersNormalized types c' = true
+  AFTER [138]: theorem selectRecvDelivery_wf {s : Store} {v : GoValue} {ok : Bool} {targets : List Assignee} {body : Stmt} {env : LocalEnv} {k : Cont} {c' : Config} {s' : Store} (hw : StateWf s) (hv : GoValue.locSup v ≤ s.nextAddr) (ht : assigneeListSup targets ≤ s.nextAddr) (hb : Stmt.locSup body ≤ s.nextAddr) (henv : LocalEnv.locSup env ≤ s.nextAddr) (hk : Cont.locSup k ≤ s.nextAddr) (h : selectRecvDelivery s v ok targets body env k = .ok (c', s')) : StateWf s' ∧ Config.locSup c' ≤ s'.nextAddr ∧ s.nextAddr ≤ s'.nextAddr
+
+### theorem resumeThread_wf
+  BEFORE[191]: theorem resumeThread_wf {s : ExecState} {c c' : Config} {s' : ExecState} (hw : StateWf s) (hc : ConfigWf s.nextAddr c) (hi : Config.itersNormalized s.types c = true) (h : resumeThread s c = .ok (c', s')) : StateWf s' ∧ Config.locSup c' ≤ s'.nextAddr ∧ s'.types = s.types ∧ s.nextAddr ≤ s'.nextAddr ∧ Config.itersNormalized s.types c' = true
+  AFTER [163]: theorem resumeThread_wf {s : Store} {c c' : Config} {s' : Store} (hw : StateWf s) (hc : ConfigWf s.nextAddr c) (h : resumeThread ctx s c = .ok (c', s')) : StateWf s' ∧ Config.locSup c' ≤ s'.nextAddr ∧ s.nextAddr ≤ s'.nextAddr
+
+### theorem pool_get_wf
+  BEFORE[332]: theorem pool_get_wf {threads : Array Thread} {j : Nat} {c : Config} {b : Option ChoiceSite} {na : Nat} {types : TypeEnv} (hts : ∀ t (ht : t < threads.size), ThreadWf na types threads[t]) (hj : threads[j]? = some (.running c b)) : ConfigWf na c ∧ Config.itersNormalized types c = true
+  AFTER [287]: theorem pool_get_wf {threads : Array Thread} {j : Nat} {c : Config} {b : Option ChoiceSite} {na : Nat} (hts : ∀ t (ht : t < threads.size), ThreadWf na threads[t]) (hj : threads[j]? = some (.running c b)) : ConfigWf na c
+
+### theorem pool_set2_wf
+  BEFORE[346]: theorem pool_set2_wf {threads : Array Thread} {i j : Nat} {a b : Config} {fa fb : Option ChoiceSite} {na na' : Nat} {types : TypeEnv} (hmono : na ≤ na') (hts : ∀ t (ht : t < threads.size), ThreadWf na types threads[t]) (ha : Config.locSup a ≤ na') (hia : Config.itersNormalized types a = true) (hb : Config.locSup b ≤ na') (hib : Config.itersNormalized types b = true) : ∀ t (ht : t < ((threads.setIfInBounds i (.running a fa)).setIfInBounds j (.running b fb)).size), ThreadWf na' types ((threads.setIfInBounds i (.running a fa)).setIfInBounds j (.running b fb))[t]
+  AFTER [300]: theorem pool_set2_wf {threads : Array Thread} {i j : Nat} {a b : Config} {fa fb : Option ChoiceSite} {na na' : Nat} (hmono : na ≤ na') (hts : ∀ t (ht : t < threads.size), ThreadWf na threads[t]) (ha : Config.locSup a ≤ na') (hb : Config.locSup b ≤ na') : ∀ t (ht : t < ((threads.setIfInBounds i (.running a fa)).setIfInBounds j (.running b fb)).size), ThreadWf na' ((threads.setIfInBounds i (.running a fa)).setIfInBounds j (.running b fb))[t]
+
+### theorem chanArrivalPlan_wf
+  BEFORE[373]: theorem chanArrivalPlan_wf {s : ExecState} {threads : Array Thread} {i : Nat} {op : ChanStOp} {vs : List GoValue} {env : LocalEnv} {k : Cont} {bc : Config} {cands : List (Nat × PairTarget)} {types : TypeEnv} (_hw : StateWf s) (hvs : goValueListSup vs ≤ s.nextAddr) (hop : chanStOpSup op ≤ s.nextAddr) (henv : LocalEnv.locSup env ≤ s.nextAddr) (hk : Cont.locSup k ≤ s.nextAddr) (hik : Cont.itersNormalized types k = true) (h : chanArrivalPlan s threads i op vs env k = .ok (some (bc, cands))) : Config.locSup bc ≤ s.nextAddr ∧ Config.itersNormalized types bc = true
+  AFTER [326]: theorem chanArrivalPlan_wf {s : Store} {threads : Array Thread} {i : Nat} {op : ChanStOp} {vs : List GoValue} {env : LocalEnv} {k : Cont} {bc : Config} {cands : List (Nat × PairTarget)} (_hw : StateWf s) (hvs : goValueListSup vs ≤ s.nextAddr) (hop : chanStOpSup op ≤ s.nextAddr) (henv : LocalEnv.locSup env ≤ s.nextAddr) (hk : Cont.locSup k ≤ s.nextAddr) (h : chanArrivalPlan ctx s threads i op vs env k = .ok (some (bc, cands))) : Config.locSup bc ≤ s.nextAddr
+
+### theorem arrivalCases_single_wf
+  BEFORE[434]: theorem arrivalCases_single_wf {s : ExecState} {threads : Array Thread} {i : Nat} {c bc : Config} {cs : List (Nat × PairTarget)} (hw : StateWf s) (hc : ConfigWf s.nextAddr c) (hi : Config.itersNormalized s.types c = true) (h : arrivalCases s threads i c = .ok (.single bc cs)) : Config.locSup bc ≤ s.nextAddr ∧ Config.itersNormalized s.types bc = true
+  AFTER [383]: theorem arrivalCases_single_wf {s : Store} {threads : Array Thread} {i : Nat} {c bc : Config} {cs : List (Nat × PairTarget)} (hw : StateWf s) (hc : ConfigWf s.nextAddr c) (h : arrivalCases ctx s threads i c = .ok (.single bc cs)) : Config.locSup bc ≤ s.nextAddr
+
+### theorem arrivalCases_multi_wf
+  BEFORE[522]: theorem arrivalCases_multi_wf {s : ExecState} {threads : Array Thread} {i : Nat} {c : Config} {os : List ArrivalOutcome} {sel : Nat} {o : ArrivalOutcome} (_hw : StateWf s) (hc : ConfigWf s.nextAddr c) (hi : Config.itersNormalized s.types c = true) (h : arrivalCases s threads i c = .ok (.multi os)) (hget : os[sel]? = some o) : (∀ {bc cs}, o = ArrivalOutcome.pair bc cs → Config.locSup bc ≤ s.nextAddr ∧ Config.itersNormalized s.types bc = true) ∧ (∀ {cl env k}, o = ArrivalOutcome.commit cl env k → evClauseSup cl ≤ s.nextAddr ∧ LocalEnv.locSup env ≤ s.nextAddr ∧ Cont.locSup k ≤ s.nextAddr ∧ Cont.itersNormalized s.types k = true)
+  AFTER [465]: theorem arrivalCases_multi_wf {s : Store} {threads : Array Thread} {i : Nat} {c : Config} {os : List ArrivalOutcome} {sel : Nat} {o : ArrivalOutcome} (_hw : StateWf s) (hc : ConfigWf s.nextAddr c) (h : arrivalCases ctx s threads i c = .ok (.multi os)) (hget : os[sel]? = some o) : (∀ {bc cs}, o = ArrivalOutcome.pair bc cs → Config.locSup bc ≤ s.nextAddr) ∧ (∀ {cl env k}, o = ArrivalOutcome.commit cl env k → evClauseSup cl ≤ s.nextAddr ∧ LocalEnv.locSup env ≤ s.nextAddr ∧ Cont.locSup k ≤ s.nextAddr)
+
+### theorem applyPairing_wf
+  BEFORE[633]: theorem applyPairing_wf {s : ExecState} {threads : Array Thread} {i : Nat} {bc : Config} {cand : Nat × PairTarget} {ts' : Array Thread} {s' : ExecState} (hw : StateWf s) (hts : ∀ t (ht : t < threads.size), ThreadWf s.nextAddr s.types threads[t]) (hbc : ConfigWf s.nextAddr bc) (hibc : Config.itersNormalized s.types bc = true) (h : applyPairing s threads i bc cand = .ok (ts', s')) : StateWf s' ∧ s'.types = s.types ∧ s.nextAddr ≤ s'.nextAddr ∧ ts'.size = threads.size ∧ ∀ t (ht : t < ts'.size), ThreadWf s'.nextAddr s.types ts'[t]
+  AFTER [569]: theorem applyPairing_wf {s : Store} {threads : Array Thread} {i : Nat} {bc : Config} {cand : Nat × PairTarget} {ts' : Array Thread} {s' : Store} (hw : StateWf s) (hts : ∀ t (ht : t < threads.size), ThreadWf s.nextAddr threads[t]) (hbc : ConfigWf s.nextAddr bc) (h : applyPairing ctx s threads i bc cand = .ok (ts', s')) : StateWf s' ∧ s.nextAddr ≤ s'.nextAddr ∧ ts'.size = threads.size ∧ ∀ t (ht : t < ts'.size), ThreadWf s'.nextAddr ts'[t]
+
+### theorem pool_set1_wf
+  BEFORE[1027]: theorem pool_set1_wf {threads : Array Thread} {i : Nat} {a : Config} {fa : Option ChoiceSite} {na na' : Nat} {types : TypeEnv} (hmono : na ≤ na') (hts : ∀ t (ht : t < threads.size), ThreadWf na types threads[t]) (ha : Config.locSup a ≤ na') (hia : Config.itersNormalized types a = true) : ∀ t (ht : t < (threads.setIfInBounds i (.running a fa)).size), ThreadWf na' types (threads.setIfInBounds i (.running a fa))[t]
+  AFTER [935]: theorem pool_set1_wf {threads : Array Thread} {i : Nat} {a : Config} {fa : Option ChoiceSite} {na na' : Nat} (hmono : na ≤ na') (hts : ∀ t (ht : t < threads.size), ThreadWf na threads[t]) (ha : Config.locSup a ≤ na') : ∀ t (ht : t < (threads.setIfInBounds i (.running a fa)).size), ThreadWf na' (threads.setIfInBounds i (.running a fa))[t]
+
+### theorem pool_set1_aborted_wf
+  BEFORE[1042]: theorem pool_set1_aborted_wf {threads : Array Thread} {i : Nat} {msg : String} {na : Nat} {types : TypeEnv} (hts : ∀ t (ht : t < threads.size), ThreadWf na types threads[t]) : ∀ t (ht : t < (threads.setIfInBounds i (.aborted msg)).size), ThreadWf na types (threads.setIfInBounds i (.aborted msg))[t]
+  AFTER [950]: theorem pool_set1_aborted_wf {threads : Array Thread} {i : Nat} {msg : String} {na : Nat} (hts : ∀ t (ht : t < threads.size), ThreadWf na threads[t]) : ∀ t (ht : t < (threads.setIfInBounds i (.aborted msg)).size), ThreadWf na (threads.setIfInBounds i (.aborted msg))[t]
+
+### theorem pool_set_push_wf
+  BEFORE[1056]: theorem pool_set_push_wf {threads : Array Thread} {i : Nat} {a b : Config} {fa fb : Option ChoiceSite} {na na' : Nat} {types : TypeEnv} (hmono : na ≤ na') (hts : ∀ t (ht : t < threads.size), ThreadWf na types threads[t]) (ha : Config.locSup a ≤ na') (hia : Config.itersNormalized types a = true) (hb : Config.locSup b ≤ na') (hib : Config.itersNormalized types b = true) : ∀ t (ht : t < ((threads.setIfInBounds i (.running a fa)).push (.running b fb)).size), ThreadWf na' types ((threads.setIfInBounds i (.running a fa)).push (.running b fb))[t]
+  AFTER [964]: theorem pool_set_push_wf {threads : Array Thread} {i : Nat} {a b : Config} {fa fb : Option ChoiceSite} {na na' : Nat} (hmono : na ≤ na') (hts : ∀ t (ht : t < threads.size), ThreadWf na threads[t]) (ha : Config.locSup a ≤ na') (hb : Config.locSup b ≤ na') : ∀ t (ht : t < ((threads.setIfInBounds i (.running a fa)).push (.running b fb)).size), ThreadWf na' ((threads.setIfInBounds i (.running a fa)).push (.running b fb))[t]
+
+### theorem stepThread_wf
+  BEFORE[1081]: theorem stepThread_wf {s : ExecState} {threads : Array Thread} {i : Nat} {ch ch' : Choices} {ts' : Array Thread} {s' : ExecState} {ev : StepEvent} (hw : StateWf s) (hts : ∀ t (ht : t < threads.size), ThreadWf s.nextAddr s.types threads[t]) (h : stepThread s threads i ch = .ok (ts', s', ch', ev)) : StateWf s' ∧ s'.types = s.types ∧ s.nextAddr ≤ s'.nextAddr ∧ threads.size ≤ ts'.size ∧ ∀ t (ht : t < ts'.size), ThreadWf s'.nextAddr s.types ts'[t]
+  AFTER [988]: theorem stepThread_wf {s : Store} {threads : Array Thread} {i : Nat} {ch ch' : Choices} {ts' : Array Thread} {s' : Store} {ev : StepEvent} (hw : StateWf s) (hts : ∀ t (ht : t < threads.size), ThreadWf s.nextAddr threads[t]) (h : stepThread ctx s threads i ch = .ok (ts', s', ch', ev)) : StateWf s' ∧ s.nextAddr ≤ s'.nextAddr ∧ threads.size ≤ ts'.size ∧ ∀ t (ht : t < ts'.size), ThreadWf s'.nextAddr ts'[t]
+
+### theorem ThreadWf.running
+  BEFORE[37]: theorem ThreadWf.running {na : Nat} {types : TypeEnv} {c : Config} {b : Option ChoiceSite} (hc : Config.locSup c ≤ na) (hi : Config.itersNormalized types c = true) : ThreadWf na types (.running c b)
+  AFTER [45]: theorem ThreadWf.running {na : Nat} {c : Config} {b : Option ChoiceSite} (hc : Config.locSup c ≤ na) : ThreadWf na (.running c b)
+
+### theorem ThreadWf.aborted
+  BEFORE[42]: theorem ThreadWf.aborted {na : Nat} {types : TypeEnv} {msg : String} : ThreadWf na types (.aborted msg)
+  AFTER [49]: theorem ThreadWf.aborted {na : Nat} {msg : String} : ThreadWf na (.aborted msg)
+
+### theorem ThreadWf.mono
+  BEFORE[45]: theorem ThreadWf.mono {na na' : Nat} {types : TypeEnv} {t : Thread} (hmono : na ≤ na') (h : ThreadWf na types t) : ThreadWf na' types t
+  AFTER [52]: theorem ThreadWf.mono {na na' : Nat} {t : Thread} (hmono : na ≤ na') (h : ThreadWf na t) : ThreadWf na' t
+
+### def runProgramSetupM
+  BEFORE[1086]: def runProgramSetupM (fuel : Nat) (program : Program) (name : String) (args : Array GoValue) (choices : Choices := []) : Except Stop (Config × ExecState × List Loc × Choices)
+  AFTER [1103]: def runProgramSetupM (fuel : Nat) (program : Program) (name : String) (args : Array GoValue) (choices : Choices := []) : Except Stop (ProgramCtx × Config × Store × List Loc × Choices)
+
+### inductive Trace
+  BEFORE[10]: inductive Trace : Nat → ExecState → Config → Choices → ExecState → Config → Choices → Prop
+  AFTER [15]: inductive Trace : Nat → Store → Config → Choices → Store → Config → Choices → Prop
+
+### inductive Step
+  BEFORE[4354]: inductive Step : Config → ExecState → Config → ExecState → Prop
+  AFTER [4390]: inductive Step : Config → Store → Config → Store → Prop
+
+### inductive Steps
+  BEFORE[5139]: inductive Steps : Config → ExecState → Config → ExecState → Prop
+  AFTER [5175]: inductive Steps : Config → Store → Config → Store → Prop
+
+### StepM: statement text IDENTICAL before/after (or not a top-level decl)
+
+### inductive StepE
+  BEFORE[2371]: inductive StepE : Config → ExecState → Config → ExecState → List Config → Prop
+  AFTER [2388]: inductive StepE : Config → Store → Config → Store → List Config → Prop
+

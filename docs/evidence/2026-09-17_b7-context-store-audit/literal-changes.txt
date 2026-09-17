@@ -1,0 +1,51 @@
+# String literals (comments stripped) whose multiset changed between 5955e55f and d0e65182 over the changed GoLean/Tests files (.tmp/lits.py)
+REMOVED (before-only or count decreased):
+  -1 ' (dynamic type {goTypeNameForMessage state dynTy})'
+  -1 '*{goTypeNameForMessage state elem}'
+  -1 '...{goTypeNameForMessage state e}'
+  -1 '.intercalate (goTypeNamesForMessage state rs)})'
+  -1 '<-chan {goTypeNameForMessage state elem}'
+  -1 '[]{goTypeNameForMessage state elem}'
+  -1 '[{length}]{goTypeNameForMessage state elem}'
+  -1 'chan {goTypeNameForMessage state elem}'
+  -1 'chan<- {goTypeNameForMessage state elem}'
+  -1 'dynamic type {goTypeNameForMessage state dynTy} has no method {method.name}'
+  -1 'interface dispatch of {method.name} on \\\n{goTypeNameForMessage state dynTy}: its method set has NO record on the \\\nwire (a method-carrying type without a MethodSetRecord) — refusing \\\nrather than dispatching from no information (BUG-009/BUG-053 class)'
+  -1 "interface satisfaction for {goTypeNameForMessage state dynTy}: \\\nits method set has NO record on the wire (a method-carrying type without \\\na MethodSetRecord), so `missing method {name}' would be an answer derived \\\nfrom no information (BUG-009/BUG-053 class)"
+  -1 "interface satisfaction for {goTypeNameForMessage state dynTy}: \\\nrequirement {name} is UNEXPORTED and the dynamic type's record covers \\\nexported methods only — this record cannot decide whether the private \\\nrequirement is satisfied"
+  -1 'map[{goTypeNameForMessage state key}]{goTypeNameForMessage state value}'
+  -1 'panic abort rendering for payload {repr first.value}{payloadDynamicTypeNote s first.value}'
+  -1 'refused consumption shape at node {k} (outside the certified fragment): {nodeRefusal nd.m} — this row cannot use engine=dedup'
+  -1 'runtime error: comparing uncomparable type {goTypeNameForMessage state dynL}'
+  -2 'seeded state ill-formed: a location in a global cell or function body dangles beyond the allocator bound'
+  -1 'try-lock heads apply through applySyncOp (the choice-taking entry), never the core'
+  -1 "type-assertion text: *{displayNameOf state idx} — {id.key} has NO \\\nmethod-set record on the wire, so whether *T's method set is empty (gc's pkgpath() rule) is \\\nunknown; refused rather than guessed (BUG-009/BUG-053 class)"
+  -1 'type-assertion text: type index {idx} is not in the type table \\\n(size {state.types.size}), so its declaring package path cannot be derived (unreachable on a \\\ndecoded program; fail closed)'
+  -1 "type-assertion text: whether *{displayNameOf state idx} has a method set \\\n(gc's pkgpath() of a pointer type is its element's package iff the pointer's method set is \\\nnon-empty) is UNDECIDABLE from an exported-only method-set record with no exported method on \\\nthe wire — refused rather than guessed (BUG-009/BUG-053 class)"
+  -1 '{base} {goTypeNameForMessage state r}'
+  -1 '{displayNameOfId state name}({v})'
+ADDED (after-only or count increased):
+  +1 ' (dynamic type {goTypeNameForMessage ctx dynTy})'
+  +1 '*{goTypeNameForMessage elem}'
+  +1 '...{goTypeNameForMessage e}'
+  +1 '.intercalate (goTypeNamesForMessage rs)})'
+  +1 '<-chan {goTypeNameForMessage elem}'
+  +1 '[]{goTypeNameForMessage elem}'
+  +1 '[{length}]{goTypeNameForMessage elem}'
+  +1 'chan {goTypeNameForMessage elem}'
+  +1 'chan<- {goTypeNameForMessage elem}'
+  +1 'dynamic type {goTypeNameForMessage ctx dynTy} has no method {method.name}'
+  +1 'interface dispatch of {method.name} on \\\n{goTypeNameForMessage ctx dynTy}: its method set has NO record on the \\\nwire (a method-carrying type without a MethodSetRecord) — refusing \\\nrather than dispatching from no information (BUG-009/BUG-053 class)'
+  +1 "interface satisfaction for {goTypeNameForMessage ctx dynTy}: \\\nits method set has NO record on the wire (a method-carrying type without \\\na MethodSetRecord), so `missing method {name}' would be an answer derived \\\nfrom no information (BUG-009/BUG-053 class)"
+  +1 "interface satisfaction for {goTypeNameForMessage ctx dynTy}: \\\nrequirement {name} is UNEXPORTED and the dynamic type's record covers \\\nexported methods only — this record cannot decide whether the private \\\nrequirement is satisfied"
+  +1 'map[{goTypeNameForMessage key}]{goTypeNameForMessage value}'
+  +1 'panic abort rendering for payload {repr first.value}{payloadDynamicTypeNote ctx first.value}'
+  +1 'refused consumption shape at node {k} (outside the certified fragment): {nodeRefusal ctx nd.m} — this row cannot use engine=dedup'
+  +1 'runtime error: comparing uncomparable type {goTypeNameForMessage ctx dynL}'
+  +2 'seeded state ill-formed: a location in a global cell dangles beyond the allocator bound'
+  +1 'try-lock heads apply through applySyncOp ctx (the choice-taking entry), never the core'
+  +1 "type-assertion text: *{displayNameOf ctx idx} — {id.key} has NO \\\nmethod-set record on the wire, so whether *T's method set is empty (gc's pkgpath() rule) is \\\nunknown; refused rather than guessed (BUG-009/BUG-053 class)"
+  +1 'type-assertion text: type index {idx} is not in the type table \\\n(size {ctx.types.size}), so its declaring package path cannot be derived (unreachable on a \\\ndecoded program; fail closed)'
+  +1 "type-assertion text: whether *{displayNameOf ctx idx} has a method set \\\n(gc's pkgpath() of a pointer type is its element's package iff the pointer's method set is \\\nnon-empty) is UNDECIDABLE from an exported-only method-set record with no exported method on \\\nthe wire — refused rather than guessed (BUG-009/BUG-053 class)"
+  +1 '{base} {goTypeNameForMessage r}'
+  +1 '{displayNameOfId ctx name}({v})'
