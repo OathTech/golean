@@ -1,0 +1,162 @@
+TAG 1 case1 hyps=9 last=Bool
+TAG 2 case2 hyps=13 last=List GoLean.GoValue
+TAG 3 case3 hyps=11 last=Bool
+TAG 4 case4 hyps=14 last=other✝ = GoLean.GoValue.nil → False
+TAG 5 case5 hyps=6 last=Cont
+TAG 6 case6 hyps=8 last=Choices.consumeAt ChoiceSite.unseqPanic 2 ch = (pick✝, ch'✝)
+TAG 7 case7 hyps=6 last=Nat
+TAG 8 case8 hyps=3 last=Choices
+TAG 9 case9 hyps=12 last=panicPassthrough k✝ = some k'✝
+TAG 10 case10 hyps=11 last=panicPassthrough k✝ = none
+TAG 11 case11 hyps=6 last=Array Stmt
+TAG 12 case12 hyps=7 last=Array Stmt
+TAG 13 case13 hyps=7 last=Cont
+TAG 14 case14 hyps=9 last=¬kenv✝ = env✝
+TAG 15 case15 hyps=7 last=∀ (rest : List Stmt) (kenv : LocalEnv) (k' : Cont), k✝ = Cont.seq rest kenv k' → False
+TAG 16 case16 hyps=11 last=targetPlan lhs✝ = some (sh✝, e✝ :: ops✝)
+TAG 17 case17 hyps=9 last=targetPlan lhs✝ = some (fst✝, [])
+TAG 18 case18 hyps=8 last=targetPlan (Assignee.unsupported feature✝) = none
+TAG 19 case19 hyps=9 last=∀ (feature : String), lhs✝ = Assignee.unsupported feature → False
+TAG 20 case20 hyps=8 last=Stmt
+TAG 21 case21 hyps=7 last=Stmt
+TAG 22 case22 hyps=5 last=Cont
+TAG 23 case23 hyps=5 last=Cont
+TAG 24 case24 hyps=5 last=Cont
+TAG 25 case25 hyps=6 last=String
+TAG 26 case26 hyps=7 last=Stmt
+TAG 27 case27 hyps=6 last=String
+TAG 28 case28 hyps=6 last=String
+TAG 29 case29 hyps=6 last=Stmt
+TAG 30 case30 hyps=7 last=Array Expr
+TAG 31 case31 hyps=6 last=Expr
+TAG 32 case32 hyps=10 last=targetsPlan targets✝.toList = some plans✝
+TAG 33 case33 hyps=9 last=targetsPlan targets✝.toList = none
+TAG 34 case34 hyps=13 last=args✝.toList = a✝ :: rest✝
+TAG 35 case35 hyps=11 last=args✝.toList = []
+TAG 36 case36 hyps=9 last=targetsPlan targets✝.toList = none
+TAG 37 case37 hyps=11 last=Stmt
+TAG 38 case38 hyps=8 last=Ty
+TAG 39 case39 hyps=6 last=Expr
+TAG 40 case40 hyps=12 last=chanPlan (Stmt.chanRecv targets✝ ch✝ elem✝) = some (op✝, e✝ :: rest✝)
+TAG 41 case41 hyps=10 last=chanPlan (Stmt.chanRecv targets✝ ch✝ elem✝) = some (fst✝, [])
+TAG 42 case42 hyps=10 last=targets✝.size > 2
+TAG 43 case43 hyps=10 last=¬targets✝.size > 2
+TAG 44 case44 hyps=7 last=Array Expr
+TAG 45 case45 hyps=10 last=selectOperands clauses✝.toList = a✝ :: rest✝
+TAG 46 case46 hyps=8 last=Stmt
+TAG 47 case47 hyps=7 last=selectOperands clauses✝.toList = []
+TAG 48 case48 hyps=6 last=String
+TAG 49 case49 hyps=16 last=targetsPlan [t✝, okT✝] = some ((sh✝, e✝ :: ops✝) :: rest✝)
+TAG 50 case50 hyps=14 last=targetsPlan [t✝, okT✝] = some val✝
+TAG 51 case51 hyps=12 last=targetsPlan [t✝, okT✝] = none
+TAG 52 case52 hyps=14 last=targetsPlan [t✝, okT✝] = some ((sh✝, e✝ :: ops✝) :: rest✝)
+TAG 53 case53 hyps=12 last=targetsPlan [t✝, okT✝] = some val✝
+TAG 54 case54 hyps=10 last=targetsPlan [t✝, okT✝] = none
+TAG 55 case55 hyps=13 last=targetsPlan left✝.toList = some ((sh✝, e✝ :: ops✝) :: rest✝)
+TAG 56 case56 hyps=11 last=targetsPlan left✝.toList = some val✝
+TAG 57 case57 hyps=9 last=targetsPlan left✝.toList = none
+TAG 58 case58 hyps=8 last=¬left✝.size = right✝.size
+TAG 59 case59 hyps=12 last=syncPlan (Stmt.syncStmt op✝ args✝ targets✝) = some (sop✝, e✝ :: rest✝)
+TAG 60 case60 hyps=10 last=syncPlan (Stmt.syncStmt op✝ args✝ targets✝) = some (fst✝, [])
+TAG 61 case61 hyps=9 last=syncPlan (Stmt.syncStmt op✝ args✝ targets✝) = none
+TAG 62 case62 hyps=13 last=atomicPlan (Stmt.atomicStmt op✝ kind✝ args✝ targets✝) = some (aop✝, e✝ :: rest✝)
+TAG 63 case63 hyps=11 last=atomicPlan (Stmt.atomicStmt op✝ kind✝ args✝ targets✝) = some (fst✝, [])
+TAG 64 case64 hyps=10 last=atomicPlan (Stmt.atomicStmt op✝ kind✝ args✝ targets✝) = none
+TAG 65 case65 hyps=6 last=Expr
+TAG 66 case66 hyps=7 last=Stmt
+TAG 67 case67 hyps=43 last=stmtPlan wide✝ = some (op✝, nt✝, e✝ :: rest✝)
+TAG 68 case68 hyps=41 last=stmtPlan wide✝ = some (fst✝¹, fst✝, [])
+TAG 69 case69 hyps=39 last=stmtPlan wide✝ = none
+TAG 70 case70 hyps=8 last=env✝.lookup id✝ = some loc✝
+TAG 71 case71 hyps=7 last=env✝.lookup id✝ = none
+TAG 72 case72 hyps=7 last=IntKind
+TAG 73 case73 hyps=6 last=Bool
+TAG 74 case74 hyps=6 last=GoLean.GoString
+TAG 75 case75 hyps=8 last=env✝.lookup id✝ = some loc✝
+TAG 76 case76 hyps=7 last=env✝.lookup id✝ = none
+TAG 77 case77 hyps=7 last=gid✝ < Array.size s.heap
+TAG 78 case78 hyps=7 last=¬gid✝ < Array.size s.heap
+TAG 79 case79 hyps=7 last=Expr
+TAG 80 case80 hyps=7 last=Expr
+TAG 81 case81 hyps=8 last=recoverResult k✝ = (v✝, k'✝)
+TAG 82 case82 hyps=6 last=String
+TAG 83 case83 hyps=20 last=strictPlan e✝ = some (op✝, e₁✝ :: rest✝)
+TAG 84 case84 hyps=18 last=strictPlan e✝ = some (op✝, [])
+TAG 85 case85 hyps=17 last=strictPlan e✝ = none
+TAG 86 case86 hyps=10 last=Cont
+TAG 87 case87 hyps=8 last=Cont
+TAG 88 case88 hyps=7 last=Cont
+TAG 89 case89 hyps=7 last=Cont
+TAG 90 case90 hyps=5 last=Cont
+TAG 91 case91 hyps=8 last=Cont
+TAG 92 case92 hyps=8 last=Cont
+TAG 93 case93 hyps=11 last=List Expr
+TAG 94 case94 hyps=9 last=Cont
+TAG 95 case95 hyps=12 last=done✝.length < nt✝
+TAG 96 case96 hyps=12 last=¬done✝.length < nt✝
+TAG 97 case97 hyps=9 last=Cont
+TAG 98 case98 hyps=8 last=List GoLean.GoValue
+TAG 99 case99 hyps=6 last=Cont
+TAG 100 case100 hyps=10 last=deferrableCallee cv✝ = true
+TAG 101 case101 hyps=10 last=¬deferrableCallee cv✝ = true
+TAG 102 case102 hyps=9 last=other✝ = GoLean.GoValue.nil → False
+TAG 103 case103 hyps=11 last=List Expr
+TAG 104 case104 hyps=10 last=List GoLean.GoValue
+TAG 105 case105 hyps=8 last=Cont
+TAG 106 case106 hyps=11 last=other✝ = GoLean.GoValue.nil → False
+TAG 107 case107 hyps=9 last=List Expr
+TAG 108 case108 hyps=9 last=pushDefer (v✝, []) k'✝¹ = some k'✝
+TAG 109 case109 hyps=8 last=pushDefer (v✝, []) k'✝ = none
+TAG 110 case110 hyps=8 last=¬deferrableCallee v✝ = true
+TAG 111 case111 hyps=10 last=List Expr
+TAG 112 case112 hyps=10 last=pushDefer (cv✝, vals✝ ++ [v✝]) k'✝¹ = some k'✝
+TAG 113 case113 hyps=9 last=pushDefer (cv✝, vals✝ ++ [v✝]) k'✝ = none
+TAG 114 case114 hyps=11 last=Cont
+TAG 115 case115 hyps=5 last=Cont
+TAG 116 case116 hyps=10 last=List Expr
+TAG 117 case117 hyps=8 last=Cont
+TAG 118 case118 hyps=11 last=List Expr
+TAG 119 case119 hyps=9 last=Cont
+TAG 120 case120 hyps=16 last=List Expr
+TAG 121 case121 hyps=15 last=completeTargetRef sh✝ (v✝ :: ops✝).reverse = none
+TAG 122 case122 hyps=19 last=List (TargetShape × List Expr)
+TAG 123 case123 hyps=17 last=List (TargetShape × List Expr)
+TAG 124 case124 hyps=16 last=List Expr
+TAG 125 case125 hyps=14 last=completeTargetRef sh✝ (v✝ :: ops✝).reverse = some r✝
+TAG 126 case126 hyps=12 last=List Expr
+TAG 127 case127 hyps=10 last=Cont
+TAG 128 case128 hyps=9 last=List Expr
+TAG 129 case129 hyps=7 last=deferrableCallee v✝ = true
+TAG 130 case130 hyps=8 last=¬deferrableCallee v✝ = true
+TAG 131 case131 hyps=10 last=List Expr
+TAG 132 case132 hyps=8 last=Cont
+TAG 133 case133 hyps=10 last=List Expr
+TAG 134 case134 hyps=8 last=Cont
+TAG 135 case135 hyps=10 last=List Expr
+TAG 136 case136 hyps=8 last=Cont
+TAG 137 case137 hyps=5 last=Cont
+TAG 138 case138 hyps=11 last=Cont
+TAG 139 case139 hyps=4 last=GoLean.GoValue
+TAG 140 case140 hyps=31 last=k✝ = Cont.stop → False
+TAG 141 case141 hyps=3 last=Choices
+TAG 142 case142 hyps=7 last=Cont
+TAG 143 case143 hyps=5 last=Cont
+TAG 144 case144 hyps=7 last=Cont
+TAG 145 case145 hyps=9 last=Bool
+TAG 146 case146 hyps=6 last=chainNewestRecovered chain✝ = true
+TAG 147 case147 hyps=6 last=¬chainNewestRecovered chain✝ = true
+TAG 148 case148 hyps=4 last=Cont
+TAG 149 case149 hyps=5 last=Cont
+TAG 150 case150 hyps=13 last=Cont
+TAG 151 case151 hyps=10 last=List GoLean.GoValue
+TAG 152 case152 hyps=6 last=Cont
+TAG 153 case153 hyps=10 last=refs✝ = [] → vals✝ = [] → False
+TAG 154 case154 hyps=10 last=Cont
+TAG 155 case155 hyps=15 last=∀ (g : UnseqGraph) (thenB : Stmt) (st : List UnseqStatus) (tg : List (String × TargetRef)) (env : LocalEnv)
+TAG 156 case156 hyps=7 last=signalStep sg✝ k✝ = some c'✝
+TAG 157 case157 hyps=10 last=signalStep Signal.ret (Cont.frame targets✝ tenv✝ results✝ ds✝ k'✝ w✝) = none
+TAG 158 case158 hyps=7 last=∀ (targets : List (TargetShape × List Expr)) (tenv : LocalEnv) (results : List GoLean.Loc)
+TAG 159 case159 hyps=6 last=Cont
+TAG 160 case160 hyps=8 last=Cont
+TAG 161 case161 hyps=6 last=Cont
+TAG 162 case162 hyps=7 last=Cont

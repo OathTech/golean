@@ -1,0 +1,32 @@
+# choice-trace summary, AFTER (B7 binary 2500b434) — producer: scripts/choice-trace-corpus --dump --jobs 6 --out .tmp/choice-trace-after --golean .tmp/golean-b7 --exclude goroutines/send-then-spin --exclude strings/trimspace-repeat/repeat-bound-refused (EXIT=1 = the pre-existing 'FINDINGS present' of the enumerating-lane depth listing, identical on main)
+  membership slices/append-spill-size-class: max consumed=1 max wide=1 distinct observations across 6 streams=6
+  membership slices/append-spill-stack-buffer: max consumed=1 max wide=1 distinct observations across 6 streams=6
+  membership slices/full-slice-cap-zero: max consumed=1 max wide=1 distinct observations across 6 streams=6
+  membership stdlib-source/builder-cap/grow-after-write: max consumed=2 max wide=2 distinct observations across 6 streams=6
+  membership stdlib-source/builder-cap/grow-empty: max consumed=1 max wide=1 distinct observations across 6 streams=6
+  membership stdlib-source/builder-cap/grow-hundred: max consumed=1 max wide=1 distinct observations across 6 streams=6
+  membership stdlib-source/builder-cap/grow-then-write: max consumed=1 max wide=1 distinct observations across 6 streams=6
+  membership sync/atomic-frontier/mp-litmus: max consumed=10 max wide=10 distinct observations across 6 streams=2
+  membership sync/mutex-order/acquisition-order: max consumed=13 max wide=13 distinct observations across 6 streams=2
+  membership sync/out-of-scope-trylock/trylock-uncontended: max consumed=1 max wide=1 distinct observations across 6 streams=2
+  membership sync/promoted-mutex/trylock-expr: max consumed=1 max wide=1 distinct observations across 6 streams=2
+  membership sync/rwmutex-order/acquisition: max consumed=19 max wide=19 distinct observations across 6 streams=1
+  membership sync/trylock/defer-trylock: max consumed=2 max wide=2 distinct observations across 6 streams=2
+  membership sync/trylock/discarded-acquires: max consumed=2 max wide=2 distinct observations across 6 streams=2
+  membership sync/trylock/rw-trylock-unlocked: max consumed=1 max wide=1 distinct observations across 6 streams=2
+  membership sync/trylock/rw-tryrlock-pending-writer: max consumed=14 max wide=14 distinct observations across 6 streams=2
+  membership sync/trylock/rw-tryrlock-reader-held: max consumed=1 max wide=1 distinct observations across 6 streams=2
+  membership sync/trylock/rw-tryrlock-unlocked: max consumed=1 max wide=1 distinct observations across 6 streams=2
+  membership sync/trylock/spin-until-trylock: max consumed=14 max wide=14 distinct observations across 6 streams=1
+  membership sync/trylock/unlock-after-trylock-success: max consumed=1 max wide=1 distinct observations across 6 streams=2
+  membership sync/trylock/unlocked-acquire: max consumed=1 max wide=1 distinct observations across 6 streams=2
+choice-trace-corpus: FINDINGS present (see above)
+
+# BEFORE (main 7f1c1fe7 binary, cold-built from git archive under .tmp/before/): the same command with --out .tmp/choice-trace-before --golean .tmp/golean-main; EXIT=1 (643 s), the same summary lines
+# sorted per-consumption dumps (cat dump-*.tsv | grep -v '^id<TAB>' | sort):
+  23679 trace-before.tsv
+  23679 trace-after.tsv
+  47358 total
+5f90102463045528dfcb243e8068a92e56bb86e0e88565f2ab5305778d958b5a  trace-before.tsv
+5f90102463045528dfcb243e8068a92e56bb86e0e88565f2ab5305778d958b5a  trace-after.tsv
+cmp trace-before.tsv trace-after.tsv → EXIT 0 (BYTE-IDENTICAL); racy-depth listing lines identical; summary lines identical

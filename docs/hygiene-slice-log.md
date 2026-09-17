@@ -520,3 +520,103 @@ slice is still a net deletion of 547 lines of tree, with the 616-line
    §5a — no runtime code is touched anywhere in this slice.
 5. Still **no merge and no push**. Branch-complete at `09f8f598` plus
    this record; both remain the user's calls.
+
+---
+
+# B7 — fixed context / mutable store (2026-09-17)
+
+Lane `core/b7-context-store-0917`, branch of the same name, base main
+`7f1c1fe7`; the brief is `docs/2026-09-16_b7-context-store-charter.md` with
+its §9 decisions RULED ([USER] 2026-09-16, verbatim, relayed: «Yes, let's go
+ahead with the D1-8 rulings as recommended (aside from D3)»; D3 PARK ruled
+separately); dispatch [USER] 2026-09-17, relayed: «Great, land it, then launch
+B7». Handoff: `docs/2026-09-17_b7-context-store-handoff.md`; evidence:
+`docs/evidence/2026-09-17_b7-context-store/`. The entries below are in this
+log's format (the coordinator's brief asked for them here; the arc's landing
+record `docs/2026-09-03_design-hygiene-arc.md` carries the row).
+
+*Quantifier-audit line ([AGENT]): B7 advances NO fidelity quantifier — zero
+corpus rows move (the gate's zero drift is THE regression). It advances the
+STATEMENT of the semantics: the program context is a parameter of the
+relation, not a mutable field, and 48 «the program did not change» proof
+sites vanish by type.*
+
+## S0 — census, probe, measurement (records only; commit `fc1aa228`)
+
+Census BEFORE: 38 field-equality conjuncts in `StateWf.lean` statements + 6
+in `MultiWfSound.lean` + 4 `htypes` in `MachineSound.lean` = 48 statement
+sites (54 atoms in StateWf incl. proof-internal). Reverse-import map of the
+five context fields recorded (Ops 24/4/4/1/1, Machine 6/1, StepFn, Race 2 —
+the charter's numbers). `fun_cases stepFn s c ch`: 162 arms, fingerprinted.
+MEASURED warm after a `State.lean` touch: `lake build GoLean.GoCore` = 104 s
+(20 modules, LEAN_NUM_THREADS=4, 32G, under the train's concurrent gate) —
+the charter's «≤ 15 min» condition met ×8.5.
+
+## S1 — the records (`ProgramCtx.lean`, `Store.lean`, `State.lean`, `StateWf.lean`, `MachineEqb.lean`)
+
+[AGENT] `ProgramCtx` = D2 (b) (`structure … where program : Program`, five
+projections + `globals`), NO platform field (D1 (a)); `ProgramCtx.ofTables`
+NEW — the hand-built entry with the OLD `ExecState` defaults (`#[]`
+everywhere, fail closed). `Store.lean` = the snapshot `85f9abd7`'s file
+(refusal texts byte-preserved; header with provenance). `StateWf` heap-only:
+`Store.locSup σ := Heap.locSup σ.heap`; the A4 debt retired with NEW zero
+lemmas `Expr.locSup_eq_zero`/`Stmt.locSup_eq_zero`/`Func.locSup_eq_zero`/
+`funcListSup_eq_zero` (functional mutual induction). **D6**: `MachineWf σ c :=
+StateWf σ ∧ ConfigWf σ.nextAddr c` — the vacuous `itersNormalized` conjunct
+DELETED (a theorem-statement change, flagged); `step_preserves_iters` retired.
+`Store.eqb` compares the heap only. The 38 StateWf conjuncts deleted from the
+statements; every consumer re-indexed (five compiler-guided rounds).
+Explicit-target builds EXIT=0 throughout.
+
+## S2 — the sequential machine (`Ops`, `Machine`, `StepFn`, `MachineSound`, `UnseqSound`)
+
+[AGENT] `variable (ctx : ProgramCtx)` for definitions; theorems take `ctx`
+IMPLICITLY (`variable {ctx}` toggles) so lemma applications stay as they were
+— the alternative (the snapshot's explicit ctx on theorems) named and not
+taken. 43 Ops context readers + 10 Machine helpers + 2 no-param helpers lose
+the store (the core build must be warning-free). `stepFn ctx s c ch`,
+`Step ctx`, `Steps ctx`; `runProgramSetupM` builds and RETURNS the run's
+context. The 4 `htypes` hypotheses gone (`structTagCompatible_congr` retired
+as `htypes ▸ rfl`). `enterFramePick_of_isSome_false` quantifies the store
+after the family test (binder order). Coherence theorems `stepFn_sound`,
+`step_complete`, `step_complete_any_wf`, `stepFn_consumption_none/some`
+restated with `ctx`, re-proved, 0 positional tags moved (S2 probe: 162 arms,
+identical tags/order/fingerprints, +1 hypothesis each). Builds EXIT=0, 0
+warnings.
+
+## S3 — pool, traces, detector (`Race`, `Multi*`, `NPDRF`, `Trace`, `PoolTrace`, `ProgramTrace`, `AbortObservation`, `StringPanic`, `Enum*`)
+
+[AGENT] D4 (a): `MultiConfig.shared : Store`, threads/cur untouched;
+`StepM ctx`, `StepE ctx`, `MultiWf ctx m` (the pool keeps its `itersNormalized`
+conjunct — D6 named `MachineWf`; the pool twin is PENDING [USER], handoff §8).
+The 6 `MultiWfSound` conjuncts deleted, consumers re-indexed (two rounds).
+`ProgramRun` stays PROGRAM-level (binds the setup's context). Footprints
+byte-identical: `Race.stepAccesses ctx s c` is the former function over
+`Store`; `dispatchAccesses`/`deferEntryAccesses` context-only.
+`lake build GoLean.GoCore` EXIT=0 (33 jobs).
+
+## S4 — enumerator and CLI (`EnumDedup.lean`, `CLI.lean`, `ChoiceTrace.lean`)
+
+[AGENT] `EnumProgram.ctx` built ONCE by `CLI.enumSetup` (`⟨program⟩`); the
+explorer's `ExpCtx` reaches it as `ctx.ep.ctx`; `buildCert ctx`/`checkCert
+ctx`. WIRE-NEUTRAL by construction: `NativeToIR.lean` untouched (the decoder
+yields the same `Program`; the context wraps it). Default `lake build` (lib +
+exe) EXIT=0 under the box lock.
+
+## S5 — tests, then THE gate
+
+[AGENT] 13 hand-built `ExecState` fixtures in `Tests/GoCoreEval.lean` →
+`ProgramCtx.ofTables` (old defaults preserved), `emptyCtx` for the old
+`({} : ExecState)`; `GoCoreContract`'s ∀-state facts take `{ctx}` implicitly,
+its concrete runs use `exampleCtx`/`emptyCtx`; `MethodIdentity`,
+`PanicRendering`, `StringPanicMembers` re-fixtured. Every `Tests.*` module
+EXIT=0. Whole-corpus choice trace (main's binary vs B7's, the two wave-3
+exclusions): BYTE-IDENTICAL — 23,679 consumption records, identical sha256,
+identical validator summaries. Gate: EXIT=1 (1068 s): 3676 cases 3427 PASS / 249 expected FAIL, 394 negatives, eval 211/0, every step ok EXCEPT the two EXPECTED 5a-class items (certificate provenance STALE — compiled inputs `GoLean/CLI.lean`; the ONE cached certified row `imported-goose/channel/google-search` judged stale for that reason); no other row moved
+
+### Refusal-text change, disclosed
+
+The post-seed assertion's `.internal` text at BOTH seams (`runProgramSetupM`,
+`CLI.enumSetup`) drops «or function body» — the check is heap-only now and a
+message naming an unperformed check would be a fail-noisy lie. Unreachable on
+decoded programs (A4). The [USER] may prefer byte-preservation (handoff §8.4).

@@ -106,3 +106,54 @@ The charter's «≤ 15 min» threshold is met by a factor of ~8.5.
 `artifacts/build-lock.d/owner` in the primary: `coordinator train r38 pid 1900555 …` — the recorded
 pid was gone but a live `scripts/ci --diff` (pids 3539893/3539909, 48G) was running under it; S0 ran
 ONLY explicit-target builds at ≤ 32 GiB (the no-op check, the probe, the measurement).
+
+## S2 — the positional-tag probe AFTER (`fun_cases stepFn ctx s c ch`)
+
+`probe_s2.lean.txt` (the S0 probe with the context parameter; run the same way, EXIT=0, 2 s):
+**162 goals**, `case1` … `case162` — `diff` of the tag/order columns against
+`fun_cases-tags-before.txt`: IDENTICAL; `diff` of the last-hypothesis fingerprints: IDENTICAL;
+the hypothesis-count delta is exactly +1 on all 162 arms (the `ctx`). **0 positional tags
+moved**; `stepFn_sound` (66 named tags), `stepFn_consumption_none` (44), `stepFn_consumption_some`
+(15) needed no renumbering. Commands (repo root of the lane worktree):
+
+```
+GOLEAN_MEM_MAX=32G scripts/capped lake env lean .tmp/probe_s2.lean > .tmp/probe_s2.log 2>&1   # EXIT=0
+diff <(awk '{print $2,$3}' fun_cases-tags-before.txt) <(awk '{print $2,$3}' fun_cases-tags-after-s2.txt)          # empty
+diff <(sed 's/hyps=[0-9]* //' fun_cases-tags-before.txt) <(sed 's/hyps=[0-9]* //' fun_cases-tags-after-s2.txt)  # empty
+```
+
+## The hypothesis census AFTER (the payoff, counted at the gate tip)
+
+The S0 greps re-run on the assembled tree:
+
+| site class | BEFORE | AFTER |
+|---|---|---|
+| field-equality atoms `\.(types\|functions\|methods\|methodSets\|typeDisplays) = …` in `StateWf.lean` | 54 (38 in statements) | **0** |
+| the same in `MultiWfSound.lean` | 6 | **0** |
+| `htypes` in `MachineSound.lean` | 4 hypotheses (11 mentions) | **0** hypotheses (1 mention, a tombstone comment) |
+| `ExecState` in code (`GoLean/`, `Tests/`) | 30 modules | **0** (5 docstring mentions of the historical name) |
+| `itersNormalized` in `MachineWf` | 1 conjunct | **0** (D6); the pool's `ThreadWf` twin remains (PENDING [USER], handoff §8) |
+
+`git diff --stat 7f1c1fe7 -- GoLean Tests` at the gate tip: 32 files, +3,058/−2,862; `NativeToIR.lean`,
+`tools/nativefrontend/`, `scripts/check-frontend-pins` untouched (wire-neutral by construction).
+
+## Explicit-target warms during the build (captured `EXIT=`, wall s)
+
+Every build through `scripts/capped` at `LEAN_NUM_THREADS=4 GOLEAN_MEM_MAX=32G` (the box lock held
+only for the full default build and the gate). Representative lines from the lane's `.tmp/`:
+Store+ProgramCtx 0 s (S1); Ops 5 s; Machine 4 s; StateWf 16 s (after five fix rounds of 8–12 s);
+StepFn 1 s; MachineSound+UnseqSound 62 s (after 57–77 s rounds); `lake build GoLean.GoCore` 7 s at
+the last round (33 jobs; earlier rounds 2–11 s); the trace/observer trio 2 s; default `lake build`
+(lib + exe) 4 s at the last round (96 jobs); `Tests.GoCoreEval` 144 s; all `Tests.*` 30 s.
+
+## Gate lines (captured exit codes, never grepped greens)
+
+| run | command | exit | wall s | SHA / tree | result |
+|---|---|---|---|---|---|
+| THE gate | `GOLEAN_MEM_MAX=32G scripts/capped scripts/ci --diff` (box lock; `LEAN_NUM_THREADS=4` by the cap) | **1** | 1068 | `fc1aa228` + the runtime tree, committed unchanged as `2500b434` | 3676 cases 3427 PASS / 249 expected FAIL; 394 negatives; eval 211/0; every step ok EXCEPT the two EXPECTED 5a-class items — `certificate provenance` STALE (C9: compiled inputs `build/files/GoLean/CLI.lean` changed) and the ONE cached certified row `imported-goose/channel/google-search` PASS→FAIL/membership (its cached record judged stale; NOT an observation change). No other row moved. `gate-tail.txt` has the differential summary, the drift block, the reconciler lines and the step list verbatim. |
+| choice trace | `scripts/choice-trace-corpus --dump --jobs 6 --out <dir> --golean <bin> --exclude goroutines/send-then-spin --exclude strings/trimspace-repeat/repeat-bound-refused` for main's binary (cold-built from `git archive 7f1c1fe7` under `.tmp/before/`) and for `2500b434`'s; sorted `dump-*.tsv` compared with `cmp` | **0 (cmp)**: BYTE-IDENTICAL — 23,679 consumption records from 21,834 (row, stream) lines over 3,639 traced rows (34 frontend refusals, 2 excluded), sha256 `5f901024…58b5a` on both sides; validator summaries identical (0 menu-invariant violations, 0 self-check alarms, 0 driver-agreement mismatches; the one ERROR row is the known frontend refusal `arrays/materialization-budget/over-budget`); each tracer run EXIT=1 (643 s) for the SAME pre-existing «FINDINGS present» depth listing. `choice-trace-summary.txt` | 643 + 643 | main `7f1c1fe7` vs `2500b434` | the whole-corpus choice trace is byte-identical (D5 (a)'s second leg) |
+
+The expected red, named: the certificate-provenance STALE verdict is the intended one for changed
+compiled inputs (the step's own controls all pass); the certified row goes red as a consequence.
+The train's step 5a (`ci --slow`, install the reviewed candidate) is the remedy — a records refresh,
+not a re-pin and not a finding (`docs/2026-09-09_certificate-provenance-design.md`).
