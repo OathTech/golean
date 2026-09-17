@@ -497,3 +497,36 @@ conditional on nothing outside the core naming them (checked: docs only);
 (3) the `Store.updateCell` refusal text and (4) the setup refusal text STAND as
 landed («The rewordings sound fine»). Gate at the fix-round tree: `ci --diff`
 EXIT=1 (934 s), the same two expected 5a-class items, zero other drift.
+
+### The B7 audit fix round — two items PENDING [USER] (2026-09-17)
+
+The pre-merge adversarial audit of `core/b7-context-store-0917`
+(`docs/2026-09-17_b7-context-store-audit.md`, branch
+`review/b7-context-store-0917` at `b51bc5c4`) returned FIX-FIRST, narrow and
+records-class. Authority to act on it: [USER] Mike, 2026-09-17, verbatim,
+relayed by the [AGENT] coordinator — cite as relayed: «Agree with the audit, go
+ahead and launch». Eight of the ten findings were dispositioned by the [AGENT]
+coordinator and applied (handoff §13). **TWO remain the [USER]'s:**
+
+- **F1's alternative — the third refusal text.** `GoLean/GoCore/Machine.lean:
+  3734`'s `.internal` literal was rewritten inside the string by a mechanical
+  `applySyncOp ` → `applySyncOp ctx ` pass and shipped undisclosed. [AGENT]
+  disposition APPLIED: **REVERTED to the pre-B7 bytes** (byte preservation is
+  the fail-safe default; the rewritten text was garbled prose naming a Lean
+  application to a human). **The [USER] may instead choose disclose-and-keep**
+  — accept the new wording as a third, now-disclosed rewording; undoing the
+  revert is one line. The arm is a defensive `.internal`, unreachable from
+  `stepFn` (`applySyncOp` intercepts every try head), not observation-bearing:
+  the differential and the choice trace cannot see either wording.
+- **F8 — the congr trio's generality.** `loadLoc_root_congr`, `storeLoc_congr`,
+  `normalizeValueForTy_congr` were stated over two `ExecState`s with `htypes :
+  σ₂.types = σ₁.types`; they are now stated over two `Store`s under ONE `ctx`,
+  i.e. the `ctx₁ = ctx₂` specialisation. The old form's residual content
+  («these three operators read only `ctx.types`») is not recorded as a lemma.
+  Nothing in-repo consumed the generality; with no customer, nothing downstream
+  does. **[AGENT] recommendation: accept the one-context specialisation — with
+  `ctx` a parameter the two-table generality has no meaning.** No change made.
+  **PENDING [USER].**
+
+Neither is a defect, neither blocks the gate, and neither is self-adjudicated:
+both are posed at the merge ask.

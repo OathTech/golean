@@ -1,0 +1,21 @@
+# choice-trace subset re-run at the AUDIT FIX ROUND tip (F1 revert + F7 dead-context removal),
+# the SAME 263-id subset the audit used (1 in 14 manifest rows; docs/evidence/
+# 2026-09-17_b7-context-store-audit/choice-trace-subset.txt lists the ids).
+# Command, per binary, concurrently, from this worktree:
+#   scripts/choice-trace-corpus --dump --jobs 6 --out <dir> --golean <bin> $(cat .tmp/trace-ids.txt)
+# Binaries: main = /home/dev/projects/golean/.lake/build/bin/golean copied read-only
+#           (sha256 155df5c3d7a52816f48372adbeb34c755d04a87301bf103fcbbe15e53683eb26, the
+#            primary's certified build at main 5955e55f — the audit's main binary, same hash);
+#           candidate = this tree's gated build (sha256 231df9a99f459d4a5865f043fa54ab49163a5e29df2284c14ca89f0a77fa1a99).
+ct-main: exported=261 traced_lines=1566 dump_records=1404 sha256(sorted dumps)=8ca0a8088598602519646c3d390c6f6b9e378d18b9061d6b4b8ff58126652b18 EXIT=0
+ct-cand: exported=261 traced_lines=1566 dump_records=1404 sha256(sorted dumps)=8ca0a8088598602519646c3d390c6f6b9e378d18b9061d6b4b8ff58126652b18 EXIT=0
+cmp sorted dumps: IDENTICAL (exit 0)
+# The sha256 is the SAME VALUE the audit recorded for this subset at candidate tip d0e65182
+# (8ca0a808…52b18) — so the audit fix round moved no consumption record: neither the F1 literal
+# revert (an unreachable .internal text) nor the F7 removal (a binder nothing bound) is visible
+# to the tracer, as expected.
+# Both tracer runs EXIT=0 (this subset has no FINDINGS row; the whole-corpus runs exit 1 for the
+# pre-existing frontend-refusal listing, which is not in this subset).
+# 2 frontend refusals per side (export-fail.tsv), 0 --exclude, 0 ERROR ids, 13 refusal ids all
+# non-PASS in the tracked baseline — identical on both sides.
+# results TSVs (sorted, concatenated) also identical: sha256 5d21d89e33dd4c231eb2bdbdbddc05e43e40c3e1abe869dabdf29c97929cfefb both sides.

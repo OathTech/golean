@@ -655,3 +655,54 @@ vs the fix-round binary, plus the lane's original main dump): BYTE-IDENTICAL —
 23,679 records, one sha256 `5f901024…58b5a` on all three sides, `cmp` EXIT=0.
 Items (3)/(4) of the handoff §8 (the two refusal-text rewordings) RULED as
 landed («The rewordings sound fine») — no change.
+
+## Audit fix round — the F1 literal revert and the F7 dead context (2026-09-17)
+
+[AGENT] fix-round-2 worker, lane `core/b7-context-store-0917`. The pre-merge
+adversarial audit (`docs/2026-09-17_b7-context-store-audit.md`, branch
+`review/b7-context-store-0917` at `b51bc5c4`) returned **FIX-FIRST, narrow and
+records-class** — 10 findings, none at WRONG-ANSWER / UNSOUND-PROOF / WEAKENING
+/ COHERENCE-GAP / FAIL-OPEN severity, none gate-weakening. Authority: [USER]
+Mike, 2026-09-17, verbatim, relayed by the [AGENT] coordinator — cite as
+relayed: «Agree with the audit, go ahead and launch». Dispositions in full:
+handoff §13; the two PENDING [USER] items in `docs/2026-08-31_qrow-rulings.md`
+(«The B7 audit fix round»).
+
+**Runtime, two files, +5/−42; NO theorem statement changed, no definition
+changed, no semantic change, no wire change:**
+
+- **F1 (REVERT).** `GoLean/GoCore/Machine.lean:3734`, `applySyncOpCore`'s
+  defensive `.internal`: a mechanical `applySyncOp ` → `applySyncOp ctx ` pass
+  had rewritten the inside of the STRING («… apply through applySyncOp ctx (the
+  choice-taking entry) …»), undisclosed. Restored to the pre-B7 bytes; the line
+  is now byte-identical to `5955e55f:GoLean/GoCore/Machine.lean:3700`. So the
+  branch's refusal-text change set is exactly the TWO disclosed, RULED
+  rewordings (the post-seed assertion at both setup seams) plus the
+  byte-preserved `Store.updateCell` text — as the handoff always claimed.
+  Independent re-verification here (a literal extractor over all 34 changed
+  files, both revisions, interpolation arguments normalised): exactly three
+  content-changed literals, no fourth accidental one. The [USER]'s alternative
+  (disclose-and-keep) is recorded and still open at the merge ask.
+- **F7 (dead code).** `GoLean/GoCore/MachineEqb.lean`: `variable (ctx :
+  ProgramCtx)` and its 37 `variable {ctx}` / `variable (ctx)` toggles DELETED
+  (38 lines). The module named `ctx` in no definition and no theorem — the
+  idiom had been copied from the modules that DO read the context, while
+  `Store.eqb` is heap-only. A pure removal of a binder nothing bound: not one
+  statement re-types. The stale header comment is replaced by an accurate one.
+
+Sequential warms, captured exits, `LEAN_NUM_THREADS=4 GOLEAN_MEM_MAX=32G`
+through `scripts/capped`, complete (not representative): `GoLean.GoCore.MachineEqb`
+EXIT=0 (96 s, 25 jobs — the rebuild of `Machine` and dependents that the F1 edit
+triggers, included) · `GoLean.GoCore` EXIT=0 (1 s, 33 jobs) — 0 warnings in both.
+
+**Records (the same round, second commit):** handoff §1 delta corrected to
+34 files / +3,232 / −2,862 (F2); §3's `ExecState` row to 31 files, 29 with code
+mentions (F3); ONE spelling of the `itersNormalized` count — 198 lines in
+`GoLean/` at `5955e55f`, derivation `git grep -c itersNormalized 5955e55f --
+GoLean`, AFTER 13 all prose (F4); the first gate's 1068 s marked «from the
+lane's log, tail not tracked» (F5); `spikes/i1-declarations` recorded DARK under
+the charter's D7 shape, untouched (F6); the SECOND removed cost recorded — the
+setup `StateWf` decision no longer walks function bodies — beside the measured
+`Store.eqb` win (F9); the warm-line shortfall against the charter's «every»
+acknowledged rather than defended (F10); F8 posed PENDING [USER] with the
+[AGENT] recommendation to accept the one-context specialisation.
