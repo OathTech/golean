@@ -644,93 +644,25 @@ term was identically zero — the A4 debt, retired with the split. -/
 def Store.locSup (σ : Store) : Nat :=
   Heap.locSup σ.heap
 
-/-! ## The map-iteration typing component (sem-adequacy slice 3, 2026-08-04)
+/-! ## The map-iteration typing component — DELETED (B7 fix round, 2026-09-17)
 
-Loc-boundedness alone cannot exclude the second recorded ∀-choices
-obstruction (`.tmp/probe_mapiter.lean`): a `mapIterK` snapshot whose
-entries are not self-normalized at the range key/value types is loc-free
-(trivially bounded) yet makes `mapIterNext`'s success depend on the pick.
-The joint invariant therefore also carries: every in-flight `mapIterK`
-continuation's snapshot passes `snapshotEntriesSelfNormalized` at the
-state's type environment. Established by the (now fail-closed) snapshot
-step, preserved by shrinkage (`eraseIdx`), and invariant along every
-other rule because no rule mutates `ctx.types` and continuations are only
-ever decomposed structurally. Parameterized by the `TypeEnv` directly so
-types-preservation is a rewrite, never a congruence induction. -/
-
-/-- Every `mapIterK` snapshot along the continuation is self-normalized
-at its own key/value types under `types`. Each constructor forwards to
-its (unique) continuation tail; only `mapIterK` contributes a check. -/
-def Cont.itersNormalized (types : TypeEnv) : Cont → Bool
-  | .stop => true
-  | .probeK k => Cont.itersNormalized types k
-  | .unseqK _ _ _ _ _ _ k => Cont.itersNormalized types k
-  | .seq _ _ k => Cont.itersNormalized types k
-  | .loop _ _ _ k => Cont.itersNormalized types k
-  | .frame _ _ _ _ k _ => Cont.itersNormalized types k
-  | .deferCalleeK _ _ k => Cont.itersNormalized types k
-  | .deferArgsK _ _ _ _ k => Cont.itersNormalized types k
-  | .breakableK k => Cont.itersNormalized types k
-  | .labelK _ k => Cont.itersNormalized types k
-  | .callValCalleeK _ _ _ k => Cont.itersNormalized types k
-  | .callValArgsK _ _ _ _ _ k => Cont.itersNormalized types k
-  | .strictK _ _ _ _ k => Cont.itersNormalized types k
-  | .andK _ _ k => Cont.itersNormalized types k
-  | .orK _ _ k => Cont.itersNormalized types k
-  | .boolK k => Cont.itersNormalized types k
-  | .ifK _ _ _ k => Cont.itersNormalized types k
-  | .whileK _ _ _ k => Cont.itersNormalized types k
-  | .callArgsK _ _ _ _ _ k => Cont.itersNormalized types k
-  | .stmtOpK _ _ _ _ _ k => Cont.itersNormalized types k
-  | .mapRangeK _ _ _ _ _ _ k => Cont.itersNormalized types k
-  -- BUG-005 (L) surgery: the frame carries no snapshot to validate —
-  -- pick-time validation lives in `mapIterCandidates` (fail closed at
-  -- the step), which is what keeps pick success choices-independent;
-  -- the component's remaining content is the recursion.
-  | .mapIterK _ _ _ _ _ _ _ _ _ k => Cont.itersNormalized types k
-  | .panicArgK k => Cont.itersNormalized types k
-  | .panicResumeK _ k => Cont.itersNormalized types k
-  | .chanStK _ _ _ _ k => Cont.itersNormalized types k
-  | .selectOpsK _ _ _ _ _ k => Cont.itersNormalized types k
-  | .tgtOpK _ _ _ _ _ _ _ _ _ _ k => Cont.itersNormalized types k
-  | .rhsK _ _ _ _ _ _ k => Cont.itersNormalized types k
-  | .storeK _ _ _ _ k => Cont.itersNormalized types k
-  | .goCalleeK _ _ k => Cont.itersNormalized types k
-  | .goArgsK _ _ _ _ k => Cont.itersNormalized types k
-  | .syncStK _ _ _ _ k => Cont.itersNormalized types k
-  | .atomicStK _ _ _ _ k => Cont.itersNormalized types k
-
-@[inherit_doc Cont.itersNormalized]
-def Config.itersNormalized (types : TypeEnv) : Config → Bool
-  | .exec _ _ k => Cont.itersNormalized types k
-  | .evalE _ _ k => Cont.itersNormalized types k
-  | .retV _ k => Cont.itersNormalized types k
-  | .next k => Cont.itersNormalized types k
-  | .signal _ k => Cont.itersNormalized types k
-  | .panicking _ k => Cont.itersNormalized types k
-  | .blockedSend _ _ k => Cont.itersNormalized types k
-  | .blockedRecv _ _ _ _ k => Cont.itersNormalized types k
-  | .blockedSelect _ _ k => Cont.itersNormalized types k
-  | .blockedSync _ _ _ k => Cont.itersNormalized types k
-
-/-- VACUITY, stated loudly (BUG-005 (L) surgery): with the snapshot
-retired, no constructor contributes a check, so the component is
-constantly `true`. It is RETAINED this arc to bound the surgery's
-diff (`MachineWf`/`MultiWf` and their transports keep their shapes);
-its removal is recorded as a follow-up in the arc log. Every proof
-obligation about it discharges by this lemma. -/
-theorem Cont.itersNormalized_true (types : TypeEnv) :
-    ∀ k : Cont, Cont.itersNormalized types k = true := by
-  intro k
-  induction k <;> simp only [Cont.itersNormalized] <;>
-    first | rfl | assumption
-
-@[inherit_doc Cont.itersNormalized_true]
-theorem Config.itersNormalized_true (types : TypeEnv) :
-    ∀ c : Config, Config.itersNormalized types c = true := by
-  intro c
-  induction c <;> simp only [Config.itersNormalized] <;>
-    first | rfl | assumption | exact Cont.itersNormalized_true types _
+`Cont.itersNormalized`/`Config.itersNormalized` (sem-adequacy slice 3,
+2026-08-04: «every in-flight `mapIterK` snapshot is self-normalized at
+the state's type environment») and their vacuity certificates
+`Cont.itersNormalized_true`/`Config.itersNormalized_true` are GONE. The
+BUG-005 (L) surgery moved the check to `mapIterCandidates`' fail-closed
+pick-time validation and left the predicate constantly `true` (no
+constructor contributed a check; the `_true` lemmas proved it by
+structural induction). D6 deleted its `MachineWf` conjunct; the fix round
+deleted its `ThreadWf`/`MultiWf` twin ([USER] 2026-09-17, relayed: «We
+should delete the vacuous conjunct right? that's just a strict
+improvement») and, the predicates then being inert, the predicates and
+every walk/transparency lemma about them (`seqCont_`, `pushDefer_`,
+`panicPassthrough_`, `recoverThroughWrappers_`, `recoverResult_`,
+`enterRecvTargets_`, `applyChanOp_`, `applySyncOp_`, `applyAtomicOp_`,
+`commitClause_`, `applySelect_itersNormalized`; `spawnPlan_iters` in
+`MultiWfSound.lean`). Tombstone record:
+`docs/2026-09-17_b7-context-store-handoff.md` §4/§8. -/
 
 /-! ## The Prop wrappers -/
 
@@ -748,11 +680,13 @@ def ConfigWf (bound : Nat) (c : Config) : Prop :=
 configuration. B7 / D6 ([USER] 2026-09-16, relayed: «go ahead with the
 D1-8 rulings as recommended»): the former third conjunct
 `Config.itersNormalized σ.types c = true` — constantly `true` since the
-BUG-005 (L) surgery (`Config.itersNormalized_true`), retained until now
-only to bound that surgery's diff — is DELETED; the map-iteration typing
-component's recorded ∀-choices obstruction is closed by `mapIterCandidates`'
-fail-closed pick-time validation, not by an invariant. A restatement, not
-a weakening: the deleted conjunct is a theorem. -/
+BUG-005 (L) surgery (then certified by `Config.itersNormalized_true`;
+predicate and certificate deleted in the B7 fix round, tombstone above),
+retained until then only to bound that surgery's diff — is DELETED; the
+map-iteration typing component's recorded ∀-choices obstruction is closed
+by `mapIterCandidates`' fail-closed pick-time validation, not by an
+invariant. A restatement, not a weakening: the deleted conjunct was a
+theorem. -/
 def MachineWf (σ : Store) (c : Config) : Prop :=
   StateWf σ ∧ ConfigWf σ.nextAddr c
 
@@ -5660,50 +5594,6 @@ theorem applySelect_wf {σ : Store}
       omega
     · simp [throw, throwThe, MonadExceptOf.throw] at h
 
-/-- Iteration-typing transparency of the phase-1 target entry: the new
-`tgtOpK` frame forwards to `k` and carries no snapshot. -/
-theorem enterRecvTargets_itersNormalized {σ : Store}
-    {targets : List Assignee} {vals : List GoValue} {body : Stmt}
-    {env : LocalEnv} {k : Cont} {c' : Config} {σ' : Store}
-    {types : TypeEnv}
-    (h : enterRecvTargets σ targets vals body env k = .ok (c', σ'))
-    (hk : Cont.itersNormalized types k = true) :
-    Config.itersNormalized types c' = true := by
-  unfold enterRecvTargets at h
-  split at h
-  · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
-    simpa [Config.itersNormalized, Cont.itersNormalized] using hk
-  · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
-
-/-- Iteration-typing transparency of `applyChanOp`: every successor
-configuration's continuation is the input `k` (or a `tgtOpK` frame
-over it that carries no snapshot), so the typing component transfers. -/
-theorem applyChanOp_itersNormalized {σ : Store} {op : ChanStOp}
-    {vs : List GoValue} {env : LocalEnv} {k : Cont} {c' : Config}
-    {σ' : Store} {types : TypeEnv}
-    (h : applyChanOp ctx σ op vs env k = .ok (c', σ'))
-    (hk : Cont.itersNormalized types k = true) :
-    Config.itersNormalized types c' = true := by
-  -- Vacuously by the retained-component lemma (BUG-005 (L)
-  -- surgery: the component is constantly true); the old per-arm
-  -- walk broke on stage C's `.opDone` wrap shapes and carried no
-  -- information the vacuity lemma does not.
-  exact Config.itersNormalized_true types c'
-
-@[inherit_doc applySyncOp_wf]
-theorem applySyncOp_itersNormalized {σ : Store} {ch : Choices} {op : SyncOp}
-    {vs : List GoValue} {env : LocalEnv} {k : Cont} {c' : Config}
-    {σ' : Store} {ch' : Choices} {types : TypeEnv}
-    (h : applySyncOp ctx σ ch op vs env k = .ok (c', σ', ch'))
-    (hk : Cont.itersNormalized types k = true) :
-    Config.itersNormalized types c' = true := by
-  -- Vacuously by the retained-component lemma (BUG-005 (L)
-  -- surgery: the component is constantly true); the old per-arm
-  -- walk broke on stage C's `.opDone` wrap shapes and carried no
-  -- information the vacuity lemma does not.
-  exact Config.itersNormalized_true types c'
-
 set_option maxHeartbeats 1600000 in
 /-- `applyAtomicOp` preservation (atomics arc wave 1, the
 `applySyncOp_wf` twin): wf state out, bounded successor configuration,
@@ -5772,98 +5662,6 @@ theorem applyAtomicOp_wf {σ : Store} {op : AtomicOp}
           exact ⟨q1, by simpa using q2, Nat.le_trans w2 q4⟩
     · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
   · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
-
-@[inherit_doc applyAtomicOp_wf]
-theorem applyAtomicOp_itersNormalized {σ : Store} {op : AtomicOp}
-    {vs : List GoValue} {env : LocalEnv} {k : Cont} {c' : Config}
-    {σ' : Store} {types : TypeEnv}
-    (h : applyAtomicOp ctx σ op vs env k = .ok (c', σ'))
-    (hk : Cont.itersNormalized types k = true) :
-    Config.itersNormalized types c' = true := by
-  -- Vacuously by the retained-component lemma (BUG-005 (L) surgery).
-  exact Config.itersNormalized_true types c'
-
-/-- Iteration-typing transparency of `commitClause`. -/
-theorem commitClause_itersNormalized {σ : Store} {env : LocalEnv}
-    {k : Cont} {cl : EvClause} {c' : Config} {σ' : Store} {types : TypeEnv}
-    (h : commitClause ctx σ env k cl = .ok (c', σ'))
-    (hk : Cont.itersNormalized types k = true) :
-    Config.itersNormalized types c' = true := by
-  -- Vacuously by the retained-component lemma (BUG-005 (L)
-  -- surgery: the component is constantly true); the old per-arm
-  -- walk broke on stage C's `.opDone` wrap shapes and carried no
-  -- information the vacuity lemma does not.
-  exact Config.itersNormalized_true types c'
-
-/-- Iteration-typing transparency of `applySelect`. -/
-theorem applySelect_itersNormalized {σ : Store}
-    {clauses : List (SelectClauseHead × Stmt)} {default? : Option Stmt}
-    {vs : List GoValue} {env : LocalEnv} {k : Cont} {c' : Config}
-    {σ' : Store} {ch ch' : Choices} {cl? : Option EvClause}
-    {types : TypeEnv}
-    (h : applySelect ctx σ clauses default? vs env k ch = .ok (c', σ', ch', cl?))
-    (hk : Cont.itersNormalized types k = true) :
-    Config.itersNormalized types c' = true := by
-  rw [applySelect.eq_def] at h
-  simp only [bind_eq_ok] at h
-  obtain ⟨outc, hcore, h⟩ := h
-  rw [applySelectCore.eq_def] at hcore
-  simp only [bind_eq_ok] at hcore
-  obtain ⟨evs, hevs, hcore⟩ := hcore
-  obtain ⟨rc, hrc, hcore⟩ := hcore
-  split at h
-  · -- outc = .done c₂ σ₂ clq
-    rename_i c₂ σ₂ clq
-    simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl, rfl, rfl⟩ := h
-    split at hcore
-    · split at hcore <;>
-        (simp only [pure_eq_ok, Except.ok.injEq, SelectOutcome.done.injEq] at hcore;
-         obtain ⟨rfl, rfl, rfl⟩ := hcore;
-         simpa [Config.itersNormalized] using hk)
-    · simp only [bind_eq_ok] at hcore
-      obtain ⟨⟨c₃, σ₃⟩, hcom, hcore⟩ := hcore
-      simp only [pure_eq_ok, Except.ok.injEq, SelectOutcome.done.injEq] at hcore
-      obtain ⟨rfl, rfl, rfl⟩ := hcore
-      exact commitClause_itersNormalized hcom hk
-    · simp only [bind_eq_ok] at hcore
-      obtain ⟨commits, hcommits, hcore⟩ := hcore
-      simp only [pure_eq_ok, Except.ok.injEq] at hcore
-      cases hcore
-  · -- outc = .picks commits
-    rename_i commits
-    split at h
-    · rename_i clp r₂c r₂σ hget
-      simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl, rfl, rfl⟩ := h
-      split at hcore
-      · split at hcore <;>
-          (simp only [pure_eq_ok, Except.ok.injEq] at hcore; cases hcore)
-      · simp only [bind_eq_ok] at hcore
-        obtain ⟨⟨c₃, σ₃⟩, hcom, hcore⟩ := hcore
-        simp only [pure_eq_ok, Except.ok.injEq] at hcore
-        cases hcore
-      · simp only [bind_eq_ok] at hcore
-        obtain ⟨commits₂, hcommits, hcore⟩ := hcore
-        simp only [pure_eq_ok, Except.ok.injEq, SelectOutcome.picks.injEq] at hcore
-        subst hcore
-        obtain ⟨cl, hmem, hf⟩ := mapM_getElem?_mem hcommits hget
-        have hcom : commitClause ctx σ env k cl = .ok (r₂c, r₂σ) := by
-          cases hcc : commitClause ctx σ env k cl with
-          | ok r => rw [hcc] at hf; simp_all
-          | error e =>
-              rw [hcc] at hf
-              -- A1 stop grammar: the terminal class needs its own split.
-              rcases e with _ | t | _
-              · simp_all
-              · cases t <;> simp_all
-              · simp_all
-        exact commitClause_itersNormalized hcom hk
-    · -- defensive `.inr`: the panicking configuration forwards `k`
-      simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl, rfl, rfl⟩ := h
-      simpa [Config.itersNormalized] using hk
-    · simp [throw, throwThe, MonadExceptOf.throw] at h
 
 /-! ## The `unseq` construct's loc lemmas (Stage B, 2026-09-16) -/
 
@@ -6997,45 +6795,14 @@ theorem snapshotEntriesSelfNormalized_eraseIdx {types : TypeEnv} {kt vt : Ty}
   exact snapshotEntriesSelfNormalizedList_of_mem fun e he =>
     snapshotEntriesSelfNormalizedList_mem hall (List.mem_of_mem_eraseIdx he)
 
-theorem seqCont_itersNormalized {types : TypeEnv} {ss : List Stmt}
-    {env : LocalEnv} {k : Cont} :
-    Cont.itersNormalized types (seqCont ss env k)
-      = Cont.itersNormalized types k := by
-  rw [Cont.itersNormalized_true, Cont.itersNormalized_true]
-
-/-! The walk lemmas for the (vacuous since B1) iteration-typing component:
-each is `Cont.itersNormalized_true` (A8 recorded the component's deletion
-as owed; B3 shrank its walk lemmas to that fact rather than re-deriving
-them through `Cont.rebuild`). -/
-
-theorem pushDefer_itersNormalized {types : TypeEnv} {d : GoValue × List GoValue} :
-    ∀ {k k' : Cont}, pushDefer d k = some k' →
-      Cont.itersNormalized types k' = Cont.itersNormalized types k := by
-  intro k k' _
-  rw [Cont.itersNormalized_true, Cont.itersNormalized_true]
-
-theorem panicPassthrough_itersNormalized {types : TypeEnv} {k k' : Cont}
-    (_h : panicPassthrough k = some k')
-    (_hk : Cont.itersNormalized types k = true) :
-    Cont.itersNormalized types k' = true :=
-  Cont.itersNormalized_true types k'
-
-theorem recoverThroughWrappers_itersNormalized {types : TypeEnv} :
-    ∀ {k : Cont} {v : GoValue} {k' : Cont}, recoverThroughWrappers k = some (v, k') →
-      Cont.itersNormalized types k = true →
-      Cont.itersNormalized types k' = true :=
-  fun {_ _ k'} _ _ => Cont.itersNormalized_true types k'
-
-theorem recoverResult_itersNormalized {types : TypeEnv} :
-    ∀ {k : Cont} {v : GoValue} {k' : Cont}, recoverResult k = (v, k') →
-      Cont.itersNormalized types k = true →
-      Cont.itersNormalized types k' = true :=
-  fun {_ _ k'} _ _ => Cont.itersNormalized_true types k'
-
 -- `step_preserves_iters` (the TYPING half: `Config.itersNormalized` along a
 -- step) is RETIRED with B7 / D6: `MachineWf` no longer carries the
 -- conjunct, and the statement was `Config.itersNormalized_true` restated
--- (constantly `true` since the BUG-005 (L) surgery). Tombstone in
+-- (constantly `true` since the BUG-005 (L) surgery). The predicate, its
+-- certificate and the walk lemmas that once lived here (`seqCont_`,
+-- `pushDefer_`, `panicPassthrough_`, `recoverThroughWrappers_`,
+-- `recoverResult_itersNormalized`) followed in the B7 fix round (the
+-- `ThreadWf` twin deleted, [USER] 2026-09-17 relayed). Tombstones in
 -- `docs/2026-09-17_b7-context-store-handoff.md`.
 
 /-- **The preservation theorem**: one machine step keeps the joint

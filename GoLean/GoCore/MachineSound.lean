@@ -1382,7 +1382,11 @@ is preserved by every rule, and the executable inherits it through
   snapshots — so `step_complete_any_wf`, `execStmtLoop_ok_or_fuelOut`,
   and `progressExec_of_progress` (Surface) hold as stated below; the old
   witness now fails `MachineWf` and its snapshot is rejected identically
-  at every stream (`.tmp/probe_mapiter2.lean`). -/
+  at every stream (`.tmp/probe_mapiter2.lean`). (Later: the BUG-005 (L)
+  surgery moved the check to `mapIterCandidates`' pick-time validation,
+  leaving the component constantly `true`; B7 / D6 deleted it from
+  `MachineWf` and the B7 fix round (2026-09-17) deleted the predicate
+  and its `ThreadWf`/`MultiWf` twin — tombstone in `StateWf.lean`.) -/
 
 @[inherit_doc step_preserves_wf]
 theorem Step.preserves_wf {c : Config} {σ : Store} {c' : Config}

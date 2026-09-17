@@ -2494,19 +2494,26 @@ inductive StepM : MultiConfig → MultiConfig → Prop where
 /-! ## Well-formedness (the thread-indexed carrier) -/
 
 /-- Per-goroutine well-formedness: a live goroutine's configuration is
-loc-bounded and iteration-typed; a tombstone carries no location. -/
-def ThreadWf (bound : Nat) (types : TypeEnv) : Thread → Prop
-  | .running c _ => ConfigWf bound c ∧ Config.itersNormalized types c = true
+loc-bounded; a tombstone carries no location. Context-free since the B7
+fix round (2026-09-17, [USER] «We should delete the vacuous conjunct
+right? that's just a strict improvement», relayed): the former second
+conjunct `Config.itersNormalized types c = true` — the pool-side twin of
+the conjunct D6 deleted from `MachineWf`, constantly `true` — is gone,
+and with it this predicate's `types` parameter. -/
+def ThreadWf (bound : Nat) : Thread → Prop
+  | .running c _ => ConfigWf bound c
   | .aborted _ => True
 
-instance (bound : Nat) (types : TypeEnv) (t : Thread) : Decidable (ThreadWf bound types t) := by
+instance (bound : Nat) (t : Thread) : Decidable (ThreadWf bound t) := by
   cases t <;> unfold ThreadWf <;> infer_instance
 
 /-- Pool well-formedness: the shared state is `StateWf`, the running
 index is in range, and EVERY goroutine's configuration is loc-bounded
-by the shared allocator with normalized in-flight snapshots — the
-sequential `MachineWf`'s components, thread-indexed. Decidable, so
-concrete pool seeds discharge it by `decide` like `MachineWf`.
+by the shared allocator — the sequential `MachineWf`'s components,
+thread-indexed. Decidable, so concrete pool seeds discharge it by
+`decide` like `MachineWf`. CONTEXT-FREE since the B7 fix round: the
+per-thread `itersNormalized` conjunct (the only reader of `ctx.types`
+here) was deleted as vacuous, so `MultiWf m` takes no `ProgramCtx`.
 
 PRESERVATION IS DISCHARGED (slice 5, by the slice-3 build log's
 recorded route): `stepMulti_wf` (`MultiWfSound.lean`) proves one
@@ -2517,16 +2524,15 @@ conclusions (`applyChanOp_wf`, `applySelect_wf`,
 FOREIGN-thread frame argument needed — and the pool helpers gained
 their own preservation lemmas (`spawnStep_wf`, `resumeThread_wf`,
 `applyPairing_wf`, the arrival-analysis bounds); an untouched
-goroutine's `ConfigWf` transports along allocator monotonicity and its
-iteration-typing component along the step's types-invariance. This
+goroutine's `ConfigWf` transports along allocator monotonicity. This
 definition is no longer a scaffold: it is a preserved invariant,
 available as the slice-3-declared carrier for future detector work. -/
 def MultiWf (m : MultiConfig) : Prop :=
   StateWf m.shared ∧ m.cur < m.threads.size ∧
     ∀ i (h : i < m.threads.size),
-      ThreadWf m.shared.nextAddr ctx.types m.threads[i]
+      ThreadWf m.shared.nextAddr m.threads[i]
 
-instance (m : MultiConfig) : Decidable (MultiWf ctx m) := by
+instance (m : MultiConfig) : Decidable (MultiWf m) := by
   unfold MultiWf
   exact inferInstance
 
