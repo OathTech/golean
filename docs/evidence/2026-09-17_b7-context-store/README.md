@@ -214,3 +214,19 @@ The two items the audit left to the [USER] — F1's alternative (disclose-and-ke
 literal instead of the revert) and F8 (the congr trio's one-context specialisation) — are PENDING
 [USER] in `docs/2026-08-31_qrow-rulings.md`, «The B7 audit fix round», with the [AGENT]
 recommendations; the handoff §13 carries the full F1–F10 disposition table.
+
+## Merge train r39 — the 5a record ([AGENT] coordinator, 2026-09-17)
+
+[USER] Mike 2026-09-17, verbatim (relayed): «Great, merge it.» Pre-merge main `5955e55f` →
+`refs/snapshots/r39/main`; B7 `55592e62` fast-forwarded (the F1 revert and the F8 one-context
+specialisation RATIFIED by landing as-is); the audit branch rebased (`7050bb9c`) and fast-forwarded.
+Under the lock at `7050bb9c`: `scripts/build-certified` EXIT=0, 136 s (binary
+`231df9a99f45…` — the fix-round-2 gate's binary); `release-check --base refs/snapshots/r39/main`
+EXIT=2 (EXPECTED — «STALE certification: changed dependency build/files/GoLean/CLI.lean»);
+`GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --slow` EXIT=1, 1031 s — red on EXACTLY the 5a pair
+(`certificate provenance` STALE; the single drift line `imported-goose/channel/google-search
+PASS→FAIL/membership`); `core-audit` PASS (14.9 s); 3676 rows otherwise unchanged; negatives 394 no
+regression. Tail: `r39-ci-slow.tail.txt`. Candidate vs tracked record: `claim` and `observations`
+IDENTICAL; 29 input hashes differ (B7's core files) and the receipt (clean `7050bb9c`, binary
+`231df9a9…`) — INSTALLED in this commit; a provenance refresh, not a re-pin. The green re-run is the
+full `ci --diff` at the records commit.
