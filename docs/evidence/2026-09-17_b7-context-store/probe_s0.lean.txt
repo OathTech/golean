@@ -1,0 +1,24 @@
+import GoLean.GoCore.StepFn
+import Lean
+open Lean Elab Tactic Meta in
+elab "print_tags" : tactic => do
+  let gs ← getUnsolvedGoals
+  logInfo (s!"GOALS {gs.length}")
+  let mut i := 0
+  for g in gs do
+    i := i + 1
+    let t ← g.getTag
+    let decl ← g.getDecl
+    let hyps := decl.lctx.decls.toList.filterMap id |>.filter (fun d => !d.isImplementationDetail)
+    let last := hyps.getLast?
+    let fp ← match last with
+      | some d => do let s := toString (← g.withContext (ppExpr d.type)); pure (s.take 110)
+      | none => pure ""
+    logInfo (s!"TAG {i} {t.toString} hyps={hyps.length} last={fp}")
+open GoLean.GoCore GoLean.GoCore.Machine
+set_option maxHeartbeats 0
+-- S0 probe (records only; scratch, never in GoLean/): the positional tags fun_cases assigns to stepFn's arms at this tip, with a per-arm fingerprint (hypothesis count + the last hypothesis' type prefix).
+example (s : ExecState) (c : Config) (ch : Choices) : True := by
+  fun_cases stepFn s c ch
+  print_tags
+  all_goals exact trivial
