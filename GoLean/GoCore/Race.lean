@@ -250,12 +250,17 @@ SYNCHRONIZATION (the registry's ops — HB updates, never data):
   the ruling's two checks, the probe families): ledger [DL-6].
 
 FRESH ALLOCATION / DRIVER (excluded — the malloc convention):
-- `ExecState.alloc`, `allocDecls`, `bindParams`, `bindIterVars`,
+- `Store.alloc`, `allocDecls`, `bindParams`, `bindIterVars`,
   `enterFrame`'s binding half, `seedGlobals`, driver result readouts
   (`loadMany` after termination), `$pkginit` (sequential phase).
 -/
 
 namespace GoLean.GoCore.Machine
+
+-- B7 (2026-09-17): the program context is the first explicit parameter of
+-- every definition below that reads it; theorems take it implicitly
+-- (`variable {ctx}` toggles).
+variable (ctx : ProgramCtx)
 
 open GoLean
 
@@ -569,11 +574,11 @@ the recorded whole-cell over-approximation: O1's RESIDUAL, red-pinned
 by `race/free/array-dyn-index-read-write`, with its re-open trigger
 recorded in O1 (a real target needing dynamic-index disjointness on a
 value-path ARRAY — memo option (B), deferred-footprint recording). -/
-def projChainTarget (s : ExecState) : Cont → Loc → Loc
+def projChainTarget (s : Store) : Cont → Loc → Loc
   | .strictK (.fieldGet tid f) [] [] _ k', loc =>
       projChainTarget s k' (.field loc tid f)
   | .strictK .indexGet [] [.intLit i _] _ k', loc =>
-      match loadLoc s loc with
+      match loadLoc ctx s loc with
       | .ok (.array _) => projChainTarget s k' (.index loc i)
       | _ => loc
   | _, loc => loc
@@ -639,25 +644,25 @@ value-receiver dispatch really does copy the whole pointee in gc
 (probed `-race`-red on a disjoint-field write:
 `race/negative/iface-dispatch`) and keeps the whole-cell read. Every
 other part of frame entry allocates fresh cells only. -/
-def dispatchAccesses (s : ExecState) (fid : FuncId) (args : List GoValue) :
+def dispatchAccesses (fid : FuncId) (args : List GoValue) :
     List RaceAccess :=
-  match findFunctionIn? s.functions fid with
+  match findFunctionIn? ctx.functions fid with
   | none => []
   | some func =>
-      match methodInfoByFuncId? s func.id with
+      match methodInfoByFuncId? ctx func.id with
       | none => []
       | some method =>
-          match methodRecvInterfaceName? s method with
+          match methodRecvInterfaceName? method with
           | none => []
           | some _ =>
               match args.head? with
               | some (.interface dynTy inner) =>
-                  match concreteMethodForDynamic? s dynTy method.id with
+                  match concreteMethodForDynamic? ctx dynTy method.id with
                   | some (concrete, needsDeref) =>
                       if needsDeref then
                         match inner with
                         | .addr loc =>
-                            (match findFunctionIn? s.functions concrete.funcId with
+                            (match findFunctionIn? ctx.functions concrete.funcId with
                             | some target =>
                                 if target.wrapper then
                                   -- The receiver anchor is the target's OWN
@@ -684,8 +689,8 @@ def dispatchAccesses (s : ExecState) (fid : FuncId) (args : List GoValue) :
 
 /-- The frame-entry footprint of a deferred call about to enter
 (`(cv, args)` at the head of a frame's defer list). -/
-def deferEntryAccesses (s : ExecState) : GoValue × List GoValue → List RaceAccess
-  | (.funcVal fid captured, args) => dispatchAccesses s fid (captured ++ args)
+def deferEntryAccesses : GoValue × List GoValue → List RaceAccess
+  | (.funcVal fid captured, args) => dispatchAccesses ctx fid (captured ++ args)
   | _ => []
 
 /-- Footprint of a wide-statement application. Fresh allocations are
@@ -1513,10 +1518,10 @@ def syncReleaseTailKinds (op : SyncOp) (pre : SyncPrim) (loc : Loc) :
 target path. Chain resolution itself reads no user memory (address
 formation — see the module docstring); a resolution/bounds/nil failure
 means the step panics and no store happens. -/
-def storeTargetAccess (s : ExecState) (r : TargetRef) : List RaceAccess :=
+def storeTargetAccess (s : Store) (r : TargetRef) : List RaceAccess :=
   match r with
   | .chain anchor idxs steps =>
-      match resolveChain s anchor steps idxs with
+      match resolveChain ctx s anchor steps idxs with
       | .ok v => targetWrite v
       | .error _ => []
   | .mapElem b _ _ _ => mapAccess .write b
@@ -1529,7 +1534,7 @@ locals — address formation itself touches nothing); a guard reads its test
 cell and, when it skips, writes the completion cell. Value heads and
 invocations run in LATER steps and report there (`.evalE`/the callee's
 steps); ENTER allocates fresh cells (no user-memory access). -/
-def unseqRunAccesses (s : ExecState) (g : UnseqGraph) (tg : List (String × TargetRef))
+def unseqRunAccesses (s : Store) (g : UnseqGraph) (tg : List (String × TargetRef))
     (env : LocalEnv) (i : Nat) : List RaceAccess :=
   match g.occs[i]? with
   | none => []
@@ -1538,7 +1543,7 @@ def unseqRunAccesses (s : ExecState) (g : UnseqGraph) (tg : List (String × Targ
     | .load bind tgt =>
         (match unseqLookupTarget tg tgt with
          | .ok (.chain anchor idxs steps) =>
-             match resolveChain s anchor steps idxs with
+             match resolveChain ctx s anchor steps idxs with
              | .ok v =>
                  match valueAsLoc v with
                  | .ok l => [(.read, l)]
@@ -1559,7 +1564,7 @@ def unseqRunAccesses (s : ExecState) (g : UnseqGraph) (tg : List (String × Targ
         ((env.lookup test).toList.map ((.read, ·)))
         ++ (match env.lookup test with
             | some tl =>
-                match loadLoc s tl with
+                match loadLoc ctx s tl with
                 | .ok (.bool b) =>
                     if b == w then [] else (env.lookup out).toList.map ((.write, ·))
                 | _ => []
@@ -1574,18 +1579,18 @@ channel/select operations — the latter are the registry's
 synchronization ops, handled by the HB updater in `Multi.lean`, and
 race-free by spec). Completeness over access-bearing shapes is a
 lockstep obligation (module docstring). -/
-def stepAccesses (s : ExecState) (c : Config) : List RaceAccess :=
+def stepAccesses (s : Store) (c : Config) : List RaceAccess :=
   match c with
   | .evalE (.var id) env k =>
       match LocalEnv.lookup env id with
-      | some loc => [(.read, projChainTarget s k loc)]
+      | some loc => [(.read, projChainTarget ctx s k loc)]
       | none => []
   | .retV v (.strictK (.deref _) [] [] _ k') =>
       -- Handled here (not in strictOpAccesses) so the continuation can
       -- narrow the pointee read through an immediate projection chain
       -- (fieldGet / constant-index indexGet).
       (match valueAsLoc v with
-       | .ok l => [(.read, projChainTarget s k' l)]
+       | .ok l => [(.read, projChainTarget ctx s k' l)]
        | .error _ => [])
   | .retV v (.strictK op done [] _ _) =>
       strictOpAccesses op ((v :: done).reverse)
@@ -1629,20 +1634,20 @@ def stepAccesses (s : ExecState) (c : Config) : List RaceAccess :=
   -- (bare `.call`, callTargetsK with no args) cannot dispatch — no
   -- receiver — and stay footprint-free.
   | .retV v (.callArgsK fid _ vals [] _ _) =>
-      dispatchAccesses s fid (vals ++ [v])
+      dispatchAccesses ctx fid (vals ++ [v])
   | .retV (.funcVal fid captured) (.callValCalleeK _ [] _ _) =>
-      dispatchAccesses s fid captured
+      dispatchAccesses ctx fid captured
   | .retV v (.callValArgsK cv _ vals [] _ _) =>
       (match cv with
-       | .funcVal fid captured => dispatchAccesses s fid (captured ++ vals ++ [v])
+       | .funcVal fid captured => dispatchAccesses ctx fid (captured ++ vals ++ [v])
        | _ => [])
-  | .next (.frame _ _ _ (d :: _) _ _) => deferEntryAccesses s d
-  | .signal .ret (.frame _ _ _ (d :: _) _ _) => deferEntryAccesses s d
-  | .panicking _ (.frame _ _ _ (d :: _) _ _) => deferEntryAccesses s d
-  | .next (.storeK (r :: _) (_ :: _) _ _ _) => storeTargetAccess s r
+  | .next (.frame _ _ _ (d :: _) _ _) => deferEntryAccesses ctx d
+  | .signal .ret (.frame _ _ _ (d :: _) _ _) => deferEntryAccesses ctx d
+  | .panicking _ (.frame _ _ _ (d :: _) _ _) => deferEntryAccesses ctx d
+  | .next (.storeK (r :: _) (_ :: _) _ _ _) => storeTargetAccess ctx s r
   -- The `unseq` construct (Stage B): the picked occurrence's run step and
   -- a value head's write into its binder cell.
-  | .next (.unseqK g _ _ tg env (.run i) _) => unseqRunAccesses s g tg env i
+  | .next (.unseqK g _ _ tg env (.run i) _) => unseqRunAccesses ctx s g tg env i
   | .retV _ (.unseqK g _ _ _ env (.wait i) _) =>
       (match g.occs[i]? with
        | some ⟨_, .eval bind _, _, _⟩ => (env.lookup bind).toList.map ((.write, ·))

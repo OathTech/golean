@@ -36,6 +36,11 @@ exhaustion) refuses certificates, never accepts wrong ones.
 
 namespace GoLean.GoCore.Machine
 
+-- B7 (2026-09-17): the program context is the first explicit parameter of
+-- every definition below that reads it; theorems take it implicitly
+-- (`variable {ctx}` toggles).
+variable (ctx : ProgramCtx)
+
 open GoLean
 
 /-- One certificate node: a reachable pool state with its detector
@@ -80,11 +85,11 @@ analysis (`valueAsSlice` → `sliceVisibleValues` → `newLen ≤ cap`);
 every ERROR path of the arm is stream-free, so `true` on them is
 still oblivious, and only the genuine spill branch (the one
 `Choices.consumeAt .appendSpill` consult) refuses. -/
-def appendApplyNoSpill (s : ExecState) : List GoValue → Bool
+def appendApplyNoSpill (s : Store) : List GoValue → Bool
   | [_, sliceV, elemsV] =>
       (match valueAsSlice sliceV, valueAsSlice elemsV with
       | .ok slice, .ok elems =>
-          (match sliceVisibleValues s elems with
+          (match sliceVisibleValues ctx s elems with
           | .ok elemValues => slice.len + elemValues.size ≤ slice.cap
           | .error _ => true)
       | _, _ => true)
@@ -96,9 +101,9 @@ when the target's consumption shape is outside the certified fragment
 (fail closed). `[[]]` for an oblivious target (the step consumes
 nothing — `stepThread_oblivious`); one singleton vector per waiter
 pick at an N-L4 pairing. -/
-def innerVecs (s : ExecState) (ts : Array Thread) (i : Nat) :
+def innerVecs (s : Store) (ts : Array Thread) (i : Nat) :
     Option (List (List Nat)) :=
-  if poolThreadOblivious s ts i then some [[]]
+  if poolThreadOblivious ctx s ts i then some [[]]
   else
     match ts[i]? with
     | none => none
@@ -114,14 +119,14 @@ def innerVecs (s : ExecState) (ts : Array Thread) (i : Nat) :
         -- (`stepFn_append_nospill`); a spilling one refuses.
         (match c with
          | .retV v (.stmtOpK (.appendSlice _) _ done [] _ _) =>
-             if appendApplyNoSpill s ((v :: done).reverse) then some [[]]
+             if appendApplyNoSpill ctx s ((v :: done).reverse) then some [[]]
              else none
          | _ => none)
       -- Q-TRYLOCK: the TRY heads' `tryLock` pick is outside the certified
       -- fragment (fail closed; the CLI enumerator carries such rows).
       else if consumesTryLock c then none
       else if isMapIterNext c then none
-      else if consumesNilValueMethod s c then none
+      else if consumesNilValueMethod ctx c then none
       -- E13 option (b): a panic at an unsequenced-operand probe frame draws
       -- the `unseqPanic` pick — outside the certified fragment (fail
       -- closed; the CLI enumerator carries such rows).
@@ -130,7 +135,7 @@ def innerVecs (s : ExecState) (ts : Array Thread) (i : Nat) :
       -- fragment (fail closed; route α of v2.1 §3.6 is owed before Stage E).
       else if consumesUnseqNext c then none
       else
-        match arrivalCases s ts i c with
+        match arrivalCases ctx s ts i c with
         | .ok (.single _ cs) =>
             if 2 ≤ cs.length then
               some ((List.range cs.length).map fun p => [p])
@@ -140,11 +145,11 @@ def innerVecs (s : ExecState) (ts : Array Thread) (i : Nat) :
 /-- Branch vectors for a ≥2-slot boundary menu, slot-prefixed:
 `slotVecsAux s ts rs p₀` enumerates, for the slot suffix `rs` whose
 first element is menu position `p₀`, every `pick :: innerSuffix`. -/
-def slotVecsAux (s : ExecState) (ts : Array Thread) :
+def slotVecsAux (s : Store) (ts : Array Thread) :
     List Nat → Nat → Option (List (List Nat))
   | [], _ => some []
   | i :: rest, pick => do
-      let ivs ← innerVecs s ts i
+      let ivs ← innerVecs ctx s ts i
       let tail ← slotVecsAux s ts rest (pick + 1)
       pure (ivs.map (pick :: ·) ++ tail)
 
@@ -156,11 +161,11 @@ def nodeVecs (m : MultiConfig) : Option (List (List Nat)) :=
   | none => none
   | some t =>
     if t.atBoundary then
-      match schedSlots m.shared m.threads m.cur t.boundarySite with
+      match schedSlots ctx m.shared m.threads m.cur t.boundarySite with
       | [] => none
-      | [i] => innerVecs m.shared m.threads i
-      | r0 :: r1 :: rest => slotVecsAux m.shared m.threads (r0 :: r1 :: rest) 0
-    else innerVecs m.shared m.threads m.cur
+      | [i] => innerVecs ctx m.shared m.threads i
+      | r0 :: r1 :: rest => slotVecsAux ctx m.shared m.threads (r0 :: r1 :: rest) 0
+    else innerVecs ctx m.shared m.threads m.cur
 
 /-- One edge: the REAL `stepMulti` at the explicit vector must succeed
 consuming it exactly; the detector verdict then either lands on the
@@ -169,10 +174,10 @@ members`. Any other error refuses. -/
 def checkEdge (nodeEqb : DedupNode → DedupNode → Bool)
     (mems : Array (Obs × Choices × Nat)) (nodes : Array DedupNode)
     (nd : DedupNode) (vec : List Nat) (succIdx : Nat) : Bool :=
-  match stepMulti nd.m vec with
+  match stepMulti ctx nd.m vec with
   | .ok (m', chRem, ev) =>
       chRem.isEmpty &&
-      (match raceUpdate nd.m.shared nd.m.threads ev m' nd.r with
+      (match raceUpdate ctx nd.m.shared nd.m.threads ev m' nd.r with
        | .ok r' =>
            (match nodes[succIdx]? with
             | some ndS => nodeEqb ⟨m', r'⟩ ndS
@@ -185,13 +190,13 @@ def checkEdge (nodeEqb : DedupNode → DedupNode → Bool)
 def checkStep (nodeEqb : DedupNode → DedupNode → Bool)
     (mems : Array (Obs × Choices × Nat)) (nodes : Array DedupNode)
     (succs : Array Nat) (nd : DedupNode) : Bool :=
-  match nodeVecs nd.m with
+  match nodeVecs ctx nd.m with
   | none => false
   | some vecs =>
       vecs.length == succs.size &&
       (List.range vecs.length).all fun j =>
         match vecs[j]?, succs[j]? with
-        | some vec, some k => checkEdge nodeEqb mems nodes nd vec k
+        | some vec, some k => checkEdge ctx nodeEqb mems nodes nd vec k
         | _, _ => false
 
 /-- One node: terminal classification mirrors `execProgLoop`'s arms
@@ -208,17 +213,17 @@ def checkNode (nodeEqb : DedupNode → DedupNode → Bool)
     | none =>
       match nd.m.mainOutcome? with
       | some σf =>
-          (match loadMany σf resultLocs with
+          (match loadMany ctx σf resultLocs with
            | .error _ => false
            | .ok vs =>
-              match runnableIdxs nd.m.shared nd.m.threads with
+              match runnableIdxs ctx nd.m.shared nd.m.threads with
               | [] => obsMem mems (.ok vs)
               | _ :: _ =>
                   obsMem mems (.ok vs)
-                    && checkStep nodeEqb mems nodes succs nd)
+                    && checkStep ctx nodeEqb mems nodes succs nd)
       | none =>
-          if (runnableIdxs nd.m.shared nd.m.threads).isEmpty then false
-          else checkStep nodeEqb mems nodes succs nd
+          if (runnableIdxs ctx nd.m.shared nd.m.threads).isEmpty then false
+          else checkStep ctx nodeEqb mems nodes succs nd
 
 /-- Witness-replay comparison (soundness's whole content). -/
 def obsOfEqb : Option Obs → Option Obs → Bool
@@ -239,10 +244,10 @@ def checkCert (nodeEqb : DedupNode → DedupNode → Bool)
   ((List.range cert.nodes.size).all fun k =>
      match cert.nodes[k]?, cert.succ[k]? with
      | some nd, some succs =>
-         checkNode nodeEqb cert.members cert.nodes resultLocs succs nd
+         checkNode ctx nodeEqb cert.members cert.nodes resultLocs succs nd
      | _, _ => false) &&
   (cert.members.toList.all fun t =>
-     obsOfEqb (obsOf? resultLocs (execProgLoop t.2.2 m₀ r₀ t.2.1))
+     obsOfEqb (obsOf? ctx resultLocs (execProgLoop ctx t.2.2 m₀ r₀ t.2.1))
        (some t.1))
 
 end GoLean.GoCore.Machine

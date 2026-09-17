@@ -789,7 +789,7 @@ scope information, deliberately ambiguous: `inner.T` for both
 types — gc's `pkgpath()` of an unnamed type). The machine RENDERS panic
 texts from this and decides nothing by it; identity is the `TypeId.key`
 alone. Carried on the wire per TypeDef (REQUIRED there); defaulted `#[]`
-in `Program`/`ExecState` so hand-built programs render a visible
+in `Program` (`TypeEnv.reservedDisplays`) and `ProgramCtx.ofTables` (`#[]`) so hand-built programs render a visible
 no-record marker rather than a fabricated gc text. -/
 structure TypeDisplay where
   name : String

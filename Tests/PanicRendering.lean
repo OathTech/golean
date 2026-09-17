@@ -16,7 +16,9 @@ first line that is not valid UTF-8 has no member (the D5 refusal) — no
 namespace GoLean.PanicRenderingTests
 open GoCore GoCore.Machine
 
-def state : ExecState := { types := TypeEnv.reserved }
+/-- The renderers' fixture: a CONTEXT since B7 (the old `{ types := TypeEnv.reserved }`
+state; every renderer under test reads the context only). -/
+def state : ProgramCtx := ProgramCtx.ofTables (types := TypeEnv.reserved)
 def entry (text : String) (recovered := false) : PanicEntry :=
   ⟨.interface .string (.string (GoString.fromLeanString text)), recovered⟩
 def rawEntry (bytes : Array UInt8) (recovered := false) : PanicEntry :=

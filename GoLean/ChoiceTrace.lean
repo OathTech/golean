@@ -80,6 +80,11 @@ that field for every case that reaches the projection.
 
 namespace GoLean.ChoiceTrace
 
+-- B7 (2026-09-17): the program context is the first explicit parameter of
+-- every validator function that reads the machine; `traceProgram` takes it
+-- from the CLI's `EnumProgram` (one context per run).
+variable (ctx : ProgramCtx)
+
 open GoLean GoLean.GoCore GoLean.GoCore.Machine
 
 def siteName : ChoiceSite → String
@@ -103,12 +108,14 @@ def allSites : List ChoiceSite :=
    .l5ExitWindow, .postOp, .backEdge, .nilValueMethodText, .tryLock, .unseqPanic,
    .repanicCollapse, .unseqNext]
 
+variable {ctx}
 /-- `allSites` is COMPLETE: every `ChoiceSite` constructor is listed (a
 new site that forgets this list fails here, not in a trace reader —
 e13-b audit fix round R12). -/
 theorem allSites_complete : ∀ s : ChoiceSite, s ∈ allSites := by
   intro s; cases s <;> simp [allSites]
 
+variable (ctx)
 /-- Pool-layer sites: the ones whose consumption the machine records in
 `StepEvent.picks` (`Choices.consumeAtE`); the sequential-machine sites
 (`mapIter`, `appendSpill`, `l2Entry`, `tryLock`) and the driver's
@@ -206,7 +213,7 @@ def parkedPartners (threads : Array Thread) (i : Nat) (loc : Loc)
 
 /-- Partners for an op on channel value `chv` (nil channel: none; closed
 channel: none — a send panics, a receive drains/zeroes, neither pairs). -/
-def partnersFor (s : ExecState) (threads : Array Thread) (i : Nat)
+def partnersFor (s : Store) (threads : Array Thread) (i : Nat)
     (chv : GoValue) (arrivingSend : Bool) : Option Nat :=
   match chanValueLoc chv with
   | none => some 0
@@ -225,10 +232,10 @@ def sortNats (l : List Nat) : List Nat := (l.toArray.qsort (· < ·)).toList
 |runnable|; the slot menu is a permutation of the runnable set; slot 0 =
 lowest runnable (l1Sched) or the current goroutine (postOp/backEdge). -/
 def schedFacts (m : MultiConfig) (site : ChoiceSite) (menu : List Nat) : MenuFacts :=
-  let rs := runnableIdxs m.shared m.threads
+  let rs := runnableIdxs ctx m.shared m.threads
   let indep := (List.range m.threads.size).filter fun j =>
     match m.threads[j]? with
-    | some t => threadRunnable m.shared t
+    | some t => threadRunnable ctx m.shared t
     | none => false
   { specWidth := some indep.length
     invariants :=
@@ -242,7 +249,7 @@ def schedFacts (m : MultiConfig) (site : ChoiceSite) (menu : List Nat) : MenuFac
     pickCheck := fun p => if p < menu.length then [] else [s!"pick {p} outside the {menu.length}-slot menu"] }
 
 def exitWindowFacts (m : MultiConfig) : MenuFacts :=
-  let rs := runnableIdxs m.shared m.threads
+  let rs := runnableIdxs ctx m.shared m.threads
   { specWidth := some 2
     invariants :=
       [ ("window opens only with a runnable other goroutine", !rs.isEmpty),
@@ -252,7 +259,7 @@ def exitWindowFacts (m : MultiConfig) : MenuFacts :=
 /-- Waiter-pick facts (C5): the candidate list against the independent
 partner scan for the arriving op's channel/side. `chvSide` = the
 arriving clause's (isSend, chan value) when it could be determined. -/
-def waiterFacts (s : ExecState) (threads : Array Thread) (i : Nat)
+def waiterFacts (s : Store) (threads : Array Thread) (i : Nat)
     (chvSide : Option (Bool × GoValue)) (cands : List (Nat × PairTarget)) : MenuFacts :=
   let expected := match chvSide with
     | some (isSend, chv) => partnersFor s threads i chv isSend
@@ -287,7 +294,7 @@ def selectEvs (c : Config) : Option (Except Stop (List EvClause) × Nat) :=
 
 /-- Arrival-path select facts (C6, waiter-extended readiness): width =
 #clauses that are cell-ready or have a parked partner. -/
-def arrivalFacts (s : ExecState) (threads : Array Thread) (i : Nat) (c : Config)
+def arrivalFacts (s : Store) (threads : Array Thread) (i : Nat) (c : Config)
     (os : Nat) : MenuFacts :=
   match selectEvs c with
   | some (.ok evs, n) =>
@@ -306,7 +313,7 @@ def arrivalFacts (s : ExecState) (threads : Array Thread) (i : Nat) (c : Config)
   | _ => { specWidth := none, invariants := [("select apply shape recognized", false)], pickCheck := fun _ => [] }
 
 /-- Entry-path select facts (C6, cell readiness): width = #ready clauses. -/
-def entryFacts (s : ExecState) (c : Config) (commits : Nat) : MenuFacts :=
+def entryFacts (s : Store) (c : Config) (commits : Nat) : MenuFacts :=
   match selectEvs c with
   | some (.ok evs, n) =>
       let readyCount := evs.foldl (init := (some 0 : Option Nat)) fun acc ev =>
@@ -322,7 +329,7 @@ def entryFacts (s : ExecState) (c : Config) (commits : Nat) : MenuFacts :=
 yet produced; the stop slot is offered exactly when no never-removed
 start entry (an id in `start`) remains unproduced. Pure `Nat`
 membership since the B1 entry-identity stamps (2026-09-03). -/
-def mapIterFacts (s : ExecState) (base : Option Loc)
+def mapIterFacts (s : Store) (base : Option Loc)
     (produced start : Array Nat) : MenuFacts :=
   match mapIterLiveEntries s base with
   | .error _ => { specWidth := none, invariants := [("live map cell readable", false)], pickCheck := fun _ => [] }
@@ -342,7 +349,7 @@ def mapIterFacts (s : ExecState) (base : Option Loc)
 upper = `appendSpillUpper`; every slot realizes a capacity ≥ newLen (the
 spec floor) and ≤ upper; slot 0 is the growth-formula point; the slot map
 is a bijection onto the envelope. -/
-def spillFacts (s : ExecState) (c : Config) : MenuFacts :=
+def spillFacts (s : Store) (c : Config) : MenuFacts :=
   let bad := fun (why : String) =>
     ({ specWidth := none, invariants := [(why, false)], pickCheck := fun _ => [] } : MenuFacts)
   match c with
@@ -351,7 +358,7 @@ def spillFacts (s : ExecState) (c : Config) : MenuFacts :=
       | [_, sliceV, elemsV] =>
           match valueAsSlice sliceV, valueAsSlice elemsV with
           | .ok slice, .ok elems =>
-              match sliceVisibleValues s elems with
+              match sliceVisibleValues ctx s elems with
               | .error _ => bad "appended elements readable"
               | .ok elemValues =>
                   let newLen := slice.len + elemValues.size
@@ -383,26 +390,26 @@ a second, simpler derivation — the receiver argument is an interface box
 holding a nil POINTER, the anchor is an interface-receiver method, and
 the resolved target is a value-receiver method of exactly the pointee
 that is not a synthesized promotion wrapper. -/
-def nilTextFacts (s : ExecState) (fid : FuncId) (args : List GoValue) : MenuFacts :=
+def nilTextFacts (fid : FuncId) (args : List GoValue) : MenuFacts :=
   let bad := fun (why : String) =>
     ({ specWidth := none, invariants := [(why, false)], pickCheck := fun _ => [] } : MenuFacts)
-  match findFunctionIn? s.functions fid with
+  match findFunctionIn? ctx.functions fid with
   | none => bad "entry function found"
   | some func =>
-    match methodInfoByFuncId? s func.id with
+    match methodInfoByFuncId? ctx func.id with
     | none => bad "entry anchor is a method"
     | some method =>
-      let anchorIsIface := (methodRecvInterfaceName? s method).isSome
+      let anchorIsIface := (methodRecvInterfaceName? method).isSome
       let nilPtrBox := match args.head? with
         | some (.interface (.pointer _) .nil) => true
         | _ => false
       let pointee : Option Ty := match args.head? with
         | some (.interface (.pointer elem) _) => some elem
         | _ => none
-      let target := s.methods.find? fun m =>
-        m.id == method.id && (pointee.map fun e => methodRecvDynamicTy? s m == some e).getD false
+      let target := ctx.methods.find? fun m =>
+        m.id == method.id && (pointee.map fun e => methodRecvDynamicTy? m == some e).getD false
       let valueRecvOfPointee := target.isSome
-      let notWrapper := match target >>= fun m => findFunctionIn? s.functions m.funcId with
+      let notWrapper := match target >>= fun m => findFunctionIn? ctx.functions m.funcId with
         | some f => !f.wrapper
         | none => false
       { specWidth := some 2
@@ -469,7 +476,7 @@ def repanicCollapseFacts (c : Config) : MenuFacts :=
 recomputed through the machine's own `tryLockWidth` over the receiver
 cell (2 iff `tryAcquire` says acquirable, else 1 — and a width-1 consult
 pops nothing, so the mirror only reports a site at width 2). -/
-def tryLockFacts (s : ExecState) (c : Config) : MenuFacts :=
+def tryLockFacts (s : Store) (c : Config) : MenuFacts :=
   let bad := fun (why : String) =>
     ({ specWidth := none, invariants := [(why, false)], pickCheck := fun _ => [] } : MenuFacts)
   match c with
@@ -479,7 +486,7 @@ def tryLockFacts (s : ExecState) (c : Config) : MenuFacts :=
           match valueAsLoc av with
           | .error _ => bad "try-lock receiver is an address"
           | .ok loc =>
-              match syncCell s loc with
+              match syncCell ctx s loc with
               | .error _ => bad "try-lock receiver cell is a sync primitive"
               | .ok pre =>
                   let w := tryLockWidth op pre
@@ -507,7 +514,7 @@ the pre-state (`MenuFacts`), compared against the machine's bound. -/
 
 /-- The menu facts for a SEQUENTIAL consumption the machine reports at
 `(σ, c)`, by site. -/
-def seqFacts (σ : ExecState) (c : Config) : ChoiceSite → MenuFacts
+def seqFacts (σ : Store) (c : Config) : ChoiceSite → MenuFacts
   | .mapIter =>
       match c with
       | .next (.mapIterK _ _ _ _ _ base produced start _ _) => mapIterFacts σ base produced start
@@ -516,20 +523,20 @@ def seqFacts (σ : ExecState) (c : Config) : ChoiceSite → MenuFacts
   | .l2Entry =>
       match c with
       | .retV v (.selectOpsK clauses default? done [] env k) =>
-          match applySelectCore σ clauses default? ((v :: done).reverse) env k with
+          match applySelectCore ctx σ clauses default? ((v :: done).reverse) env k with
           | .ok (.picks commits) => entryFacts σ c commits.length
           | _ => { specWidth := none, invariants := [("l2Entry site without a multi-ready analysis", false)],
                    pickCheck := fun _ => [] }
       | _ => { specWidth := none, invariants := [("l2Entry site at a non-select configuration", false)],
                pickCheck := fun _ => [] }
-  | .appendSpill => spillFacts σ c
-  | .tryLock => tryLockFacts σ c
+  | .appendSpill => spillFacts ctx σ c
+  | .tryLock => tryLockFacts ctx σ c
   | .unseqPanic => unseqPanicFacts c
   | .unseqNext => unseqNextFacts c
   | .repanicCollapse => repanicCollapseFacts c
   | .nilValueMethodText =>
       match entryCallSite? c with
-      | some (fid, args) => nilTextFacts σ fid args
+      | some (fid, args) => nilTextFacts ctx fid args
       | none => { specWidth := none, invariants := [("nilValueMethodText site at a non-entry configuration", false)],
                   pickCheck := fun _ => [] }
   | site => { specWidth := none, invariants := [(s!"{siteName site} reported by the sequential projection", false)],
@@ -538,9 +545,9 @@ def seqFacts (σ : ExecState) (c : Config) : ChoiceSite → MenuFacts
 /-- The sequential-machine consumption at a `stepFn` position, tagged
 with the menu facts: the machine's `seqConsumption`, plus the validator's
 recomputation. -/
-def seqSite (σ : ExecState) (c : Config) :
+def seqSite (σ : Store) (c : Config) :
     Option (ChoiceSite × Nat × MenuFacts) :=
-  (seqConsumption σ c).map fun (site, bound) => (site, bound, seqFacts σ c site)
+  (seqConsumption ctx σ c).map fun (site, bound) => (site, bound, seqFacts ctx σ c site)
 
 /-- The goroutine `stepMulti` will step and the picks it will hand that
 goroutine's own consumption — the boundary consult already resolved
@@ -549,7 +556,7 @@ def poolTarget (m : MultiConfig) (picks : List Nat) : Option (Nat × List Nat) :
   match m.threads[m.cur]? with
   | none => none
   | some t₀ =>
-    let menu := schedSlots m.shared m.threads m.cur t₀.boundarySite
+    let menu := schedSlots ctx m.shared m.threads m.cur t₀.boundarySite
     if t₀.atBoundary then
       match menu with
       | [] => none
@@ -570,12 +577,12 @@ def poolFacts (m : MultiConfig) (picks : List Nat) (site : ChoiceSite) (bound : 
   match site with
   | .l1Sched | .postOp | .backEdge =>
       match m.threads[m.cur]? with
-      | some t₀ => schedFacts m site (schedSlots m.shared m.threads m.cur t₀.boundarySite)
+      | some t₀ => schedFacts ctx m site (schedSlots ctx m.shared m.threads m.cur t₀.boundarySite)
       | none => { specWidth := none, invariants := [("scheduler site without a running goroutine", false)],
                   pickCheck := fun _ => [] }
-  | .l5ExitWindow => exitWindowFacts m
+  | .l5ExitWindow => exitWindowFacts ctx m
   | _ =>
-      match poolTarget m picks with
+      match poolTarget ctx m picks with
       | none => { specWidth := none, invariants := [(s!"{siteName site} without a stepped goroutine", false)],
                   pickCheck := fun _ => [] }
       | some (i, ch) =>
@@ -586,10 +593,10 @@ def poolFacts (m : MultiConfig) (picks : List Nat) (site : ChoiceSite) (bound : 
           match site with
           | .nilValueMethodText =>
               match entryCallSite? c with
-              | some (fid, args) => nilTextFacts m.shared fid args
-              | none => seqFacts m.shared c site
+              | some (fid, args) => nilTextFacts ctx fid args
+              | none => seqFacts ctx m.shared c site
           | .l4Waiter =>
-              match arrivalCases m.shared m.threads i c with
+              match arrivalCases ctx m.shared m.threads i c with
               | .ok (.single _ cs) => waiterFacts m.shared m.threads i (chanOpClause c) cs
               | .ok (.multi os) =>
                   match ch with
@@ -608,13 +615,13 @@ def poolFacts (m : MultiConfig) (picks : List Nat) (site : ChoiceSite) (bound : 
               | _ => { specWidth := none, invariants := [("l4Waiter site without a pairing analysis", false)],
                        pickCheck := fun _ => [] }
           | .l2Arrival => arrivalFacts m.shared m.threads i c bound
-          | site => seqFacts m.shared c site
+          | site => seqFacts ctx m.shared c site
 
 /-- The pool-step consumption at `m` with `picks` supplied, tagged: the
 machine's `poolConsumption`, plus the validator's recomputation. -/
 def poolSite (m : MultiConfig) (picks : List Nat) :
     Option (ChoiceSite × Nat × MenuFacts) :=
-  (poolConsumption m picks).map fun (site, bound) => (site, bound, poolFacts m picks site bound)
+  (poolConsumption ctx m picks).map fun (site, bound) => (site, bound, poolFacts ctx m picks site bound)
 
 /-! ## The lockstep driver -/
 
@@ -629,15 +636,15 @@ def stepRecords (a : Acc) (from_ : Nat) : List PickRecord :=
     if isPoolRecorded c.site then some ⟨c.site, c.bound, c.pick⟩ else none
 
 partial def feedPicks (m : MultiConfig) (picks : List Nat) (a : Acc) : List Nat × Acc :=
-  match poolSite m picks with
+  match poolSite ctx m picks with
   | none =>
       -- Cross-check (a): the tagged mirror vs the accountant.
-      let a := match CLI.stepNeeds m picks with
+      let a := match CLI.stepNeeds ctx m picks with
         | none => a
         | some b => a.alarm s!"mirror/accountant drift: mirror says no further consumption, stepNeeds says bound {b} (after {picks.length} pick(s))"
       (picks, a)
   | some (site, bound, facts) =>
-      let a := match CLI.stepNeeds m picks with
+      let a := match CLI.stepNeeds ctx m picks with
         | some b => if b == bound then a
             else a.alarm s!"mirror/accountant drift at {siteName site}: mirror bound {bound}, stepNeeds {b}"
         | none => a.alarm s!"mirror/accountant drift at {siteName site}: mirror bound {bound}, stepNeeds says none"
@@ -654,18 +661,18 @@ partial def poolLoop (fuel : Nat) (m : MultiConfig) (r : RaceState) (a : Acc) :
   | none =>
     match m.mainOutcome? with
     | some _ =>
-        match runnableIdxs m.shared m.threads with
+        match runnableIdxs ctx m.shared m.threads with
         | [] => return { status := "ok", acc := a }
         | _ :: _ =>
             let a := { a with phase := "exit" }
-            let (raw, a) := a.draw .l5ExitWindow 2 (exitWindowFacts m)
+            let (raw, a) := a.draw .l5ExitWindow 2 (exitWindowFacts ctx m)
             if raw % 2 == 0 then return { status := "ok", acc := a }
             else
               match fuel with
               | 0 => return { status := "fuel-out", acc := a }
               | fuel' + 1 => poolStep fuel' m r { a with phase := "pool" }
     | none =>
-      if (runnableIdxs m.shared m.threads).isEmpty then
+      if (runnableIdxs ctx m.shared m.threads).isEmpty then
         return { status := "deadlock", acc := a }
       else
         match fuel with
@@ -675,9 +682,9 @@ partial def poolLoop (fuel : Nat) (m : MultiConfig) (r : RaceState) (a : Acc) :
 partial def poolStep (fuel : Nat) (m : MultiConfig) (r : RaceState) (a : Acc) :
     Except String RunOutcome := do
   let from_ := a.consumed.size
-  let (picks, a) := feedPicks m [] a
+  let (picks, a) := feedPicks ctx m [] a
   -- Cross-check (b): the sentinel discipline.
-  match stepMulti m (picks ++ [0]) with
+  match stepMulti ctx m (picks ++ [0]) with
   | .error e =>
       -- The machine's own terminal refusal/diagnostic (unsupported, stuck,
       -- internal, fatal, …) is the run's STATUS, traced up to this point
@@ -691,15 +698,15 @@ partial def poolStep (fuel : Nat) (m : MultiConfig) (r : RaceState) (a : Acc) :
       let a := if mine == ev.picks then a
         else a.alarm s!"pick-record mismatch: machine emitted {ev.picks.length} record(s), tracer has {mine.length} for the pool-recorded sites at consumption #{from_}"
       let a := { a with steps := a.steps + 1 }
-      match raceUpdate m.shared m.threads ev m' r with
+      match raceUpdate ctx m.shared m.threads ev m' r with
       | .error .raceDetected => return { status := "race", acc := a }
       | .error e => throw s!"race-detector update failed: {e.status}: {e.message}"
       | .ok r' => poolLoop fuel m' r' a
 
 end
 
-partial def initLoop (fuel : Nat) (σ : ExecState) (c : Config) (a : Acc) :
-    Except String (Sum (ExecState × Acc) RunOutcome) := do
+partial def initLoop (fuel : Nat) (σ : Store) (c : Config) (a : Acc) :
+    Except String (Sum (Store × Acc) RunOutcome) := do
   match c with
   | .next .stop => return .inl (σ, a)
   | .blockedSend _ _ _ | .blockedRecv _ _ _ _ _ | .blockedSelect _ _ _ =>
@@ -712,8 +719,8 @@ partial def initLoop (fuel : Nat) (σ : ExecState) (c : Config) (a : Acc) :
       -- `runInitConfig` — no output fold on the sequential phase.
       if let some e := initPrintRefusal? c then
         return .inr { status := (markInitPhase e).status, acc := a }
-      let tagged := seqSite σ c
-      let acct := CLI.stepNeedsSeq σ c
+      let tagged := seqSite ctx σ c
+      let acct := CLI.stepNeedsSeq ctx σ c
       let a := match tagged, acct with
         | none, none => a
         | some (_, b, _), some b' => if b == b' then a
@@ -725,7 +732,7 @@ partial def initLoop (fuel : Nat) (σ : ExecState) (c : Config) (a : Acc) :
             let (raw, a) := a.draw site b facts
             ([raw], a)
         | none => ([], a)
-      match stepFn σ c (picks ++ [0]) with
+      match stepFn ctx σ c (picks ++ [0]) with
       | .error e => return .inr { status := (markInitPhase e).status, acc := a }
       | .ok (c', σ', leftover) =>
           let a := if leftover == [0] then a
@@ -740,17 +747,17 @@ def traceProgram (ep : CLI.EnumProgram) (fuel : Nat) (stream : List Nat) :
     match ep.initBody? with
     | none => pure (ep.σ₀, a₀)
     | some body =>
-        match ← initLoop fuel ep.σ₀ (.exec body [] (.frame [] [] [] [] .stop)) a₀ with
+        match ← initLoop ep.ctx fuel ep.σ₀ (.exec body [] (.frame [] [] [] [] .stop)) a₀ with
         | .inl r => pure r
         | .inr out => return out
   let a₁ := { a₁ with phase := "pool" }
-  match bindParams [] σ₁ ep.func.args.toList ep.args.toList with
+  match bindParams ep.ctx [] σ₁ ep.func.args.toList ep.args.toList with
   | .error e => return { status := e.status, acc := a₁ }
   | .ok (env, s₂) =>
-    match allocDecls env s₂ ep.func.results.toList with
+    match allocDecls ep.ctx env s₂ ep.func.results.toList with
     | .error e => return { status := e.status, acc := a₁ }
     | .ok (frameEnv, s₃) =>
-      poolLoop fuel ⟨#[.running (.exec ep.func.body frameEnv (.frame [] [] [] [] .stop)) none], s₃, 0⟩ {} a₁
+      poolLoop ep.ctx fuel ⟨#[.running (.exec ep.func.body frameEnv (.frame [] [] [] [] .stop)) none], s₃, 0⟩ {} a₁
 
 /-! ## Streams -/
 

@@ -1,6 +1,10 @@
 import GoLean.GoCore.PoolTrace
 
 namespace GoLean.Semantics.Pool
+
+-- B7 (2026-09-17): `ProgramRun` is PROGRAM-level — the run's context is the
+-- one `runProgramSetupM` builds and returns (`pctx` below, bound by the
+-- setup premise), so nothing here takes a context parameter.
 open GoCore GoCore.Machine
 
 /-- Complete entry/readout contract for the shipped program driver.
@@ -11,16 +15,16 @@ inductive ProgramRun (fuel : Nat) (p : Program) (name : String)
     (args : Array GoValue) (ch : Choices) : RunResult → Prop where
   | setupError : runProgramSetupM fuel p name args ch = .error e →
       ProgramRun fuel p name args ch (.error (e, GoString.empty))
-  | runError : runProgramSetupM fuel p name args ch = .ok (c, s, locs, ch₁) →
-      Run fuel ⟨#[Thread.running c none], s, 0⟩ {} ch₁ GoString.empty (out, .error e) →
+  | runError : runProgramSetupM fuel p name args ch = .ok (pctx, c, s, locs, ch₁) →
+      Run pctx fuel ⟨#[Thread.running c none], s, 0⟩ {} ch₁ GoString.empty (out, .error e) →
       ProgramRun fuel p name args ch (.error (e, out))
-  | readError : runProgramSetupM fuel p name args ch = .ok (c, s, locs, ch₁) →
-      Run fuel ⟨#[Thread.running c none], s, 0⟩ {} ch₁ GoString.empty (out, .ok (sf, chf)) →
-      loadMany sf locs = .error e →
+  | readError : runProgramSetupM fuel p name args ch = .ok (pctx, c, s, locs, ch₁) →
+      Run pctx fuel ⟨#[Thread.running c none], s, 0⟩ {} ch₁ GoString.empty (out, .ok (sf, chf)) →
+      loadMany pctx sf locs = .error e →
       ProgramRun fuel p name args ch (.error (e, out))
-  | done : runProgramSetupM fuel p name args ch = .ok (c, s, locs, ch₁) →
-      Run fuel ⟨#[Thread.running c none], s, 0⟩ {} ch₁ GoString.empty (out, .ok (sf, chf)) →
-      loadMany sf locs = .ok vs →
+  | done : runProgramSetupM fuel p name args ch = .ok (pctx, c, s, locs, ch₁) →
+      Run pctx fuel ⟨#[Thread.running c none], s, 0⟩ {} ch₁ GoString.empty (out, .ok (sf, chf)) →
+      loadMany pctx sf locs = .ok vs →
       ProgramRun fuel p name args ch (.ok { values := vs.toArray, output := out })
 
 theorem program_run_iff {fuel p name args ch result} :
@@ -31,15 +35,15 @@ theorem program_run_iff {fuel p name args ch result} :
     cases hs : runProgramSetupM fuel p name args ch with
     | error e => simp only [hs] at h; subst result; exact .setupError hs
     | ok v =>
-      obtain ⟨c, s, locs, ch₁⟩ := v
+      obtain ⟨pctx, c, s, locs, ch₁⟩ := v
       simp only [hs] at h
-      cases hr : execProgLoopOut fuel ⟨#[Thread.running c none], s, 0⟩ {} ch₁ GoString.empty with
+      cases hr : execProgLoopOut pctx fuel ⟨#[Thread.running c none], s, 0⟩ {} ch₁ GoString.empty with
       | mk out r => cases r with
         | error e => simp only [hr] at h; subst result; exact .runError hs (run_iff.mp hr)
         | ok v =>
           obtain ⟨sf, chf⟩ := v
           simp only [hr] at h
-          cases hl : loadMany sf locs with
+          cases hl : loadMany pctx sf locs with
           | error e => simp only [hl] at h; subst result; exact .readError hs (run_iff.mp hr) hl
           | ok vs => simp only [hl] at h; subst result; exact .done hs (run_iff.mp hr) hl
   · intro h

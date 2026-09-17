@@ -46,7 +46,7 @@ inductive HeapCell where
   membership, so a delete is a heap write and nothing else. Ids are
   runtime-internal identity: never observable, never on any wire (the
   observation JSON projects them away). The counter is PER MAP (not a
-  global `ExecState` field) so the map representation change touches no
+  global `Store` field) so the map representation change touches no
   state field and `StateWf` sees only the entry payloads. -/
   | mapPayload (entries : Array (Nat × GoValue × GoValue)) (nextId : Nat)
   /-- A CHANNEL's payload cell (the `mapPayload` precedent): the buffered
@@ -60,7 +60,7 @@ inductive HeapCell where
 
 /-- The heap: a DENSE array of cells — an address IS an index
 (design-hygiene arc A2, 2026-09-04; review §3 A2). `Loc.base ⟨i⟩` names
-cell `i`; `ExecState.alloc` is `push`, so every address below the size has
+cell `i`; `Store.alloc` is `push`, so every address below the size has
 a cell BY TYPE and the allocator's next address is the size. There is no
 way to write a cell that does not exist: `storeLoc` refuses out of range
 (BUG-085's phantom-materialization arm is unrepresentable — `Array.set`
@@ -68,37 +68,16 @@ carries its bounds proof). -/
 abbrev Heap := Array HeapCell
 -- `TypeEnv` (the dependency-ordered type table) lives in `Syntax.lean`
 -- beside `TypeDef` since C2 (2026-09-05); `Program.typeDefs` IS one.
+-- B7 (2026-09-17): the state splits into the immutable `ProgramCtx`
+-- (ProgramCtx.lean) and the mutable `Store` (Store.lean); see
+-- docs/2026-09-16_b7-context-store-charter.md.
 
-/-- The machine state. Locals are NOT here (reshape S4, 2026-07-23): the
-current frame's environment lives in the control configuration
-(`Machine.Config`, CEK env-in-control), so the state is program context +
-heap only. The old interpreter's `locals` field — the correspondence
-bridge `σ.locals ≈ Config.env` — is gone with the big-step cluster. -/
-structure ExecState where
-  /-- The program's type table (`Program.typeDefs`, verbatim): dependency-
-  ordered, index-keyed (C2). Default `#[]` = no declared types; a
-  hand-built state that needs `struct{}` or the runtime-error payload
-  type prepends `TypeEnv.reserved`. -/
-  types : TypeEnv := #[]
-  functions : Array Func := #[]
-  methods : Array MethodInfo := #[]
-  /-- Method-set records (class closure of BUG-053; contract note
-  `docs/2026-08-10_method-set-record-contract.md`): satisfaction and
-  dispatch answer ONLY from these. Default `#[]` = fail closed — a
-  hand-built state refuses every method-carrier query until its
-  records are stated explicitly. -/
-  methodSets : Array MethodSetRecord := #[]
-  /-- Display records (design note 2026-09-05 §3): gc's type string per
-  `TypeId`, for panic-text RENDERING only. Default `#[]` = a hand-built
-  state renders the visible `<TypeId … has no display record>` marker,
-  never the key (rendering the key was BUG-059). -/
-  typeDisplays : Array (TypeId × TypeDisplay) := #[]
-  heap : Heap := #[]
-  deriving Repr, BEq
-
-/-- The allocator's NEXT address = the heap's size (dense heap, A2). A
-derived quantity, not a field: it cannot drift from the heap. -/
-def ExecState.nextAddr (state : ExecState) : Nat := state.heap.size
+-- The machine state since B7 (2026-09-17) is the pair `ProgramCtx` (the
+-- immutable program facts, `ProgramCtx.lean`) × `Store` (the heap,
+-- `Store.lean`). Locals are in NEITHER (reshape S4, 2026-07-23): the current
+-- frame's environment lives in the control configuration (`Machine.Config`,
+-- CEK env-in-control). The pre-B7 `ExecState` (five context tables beside
+-- the heap) is tombstoned in `docs/2026-09-17_b7-context-store-handoff.md`.
 
 /-- The driver's READOUT: the subject's result values at its terminal
 (renamed from `Result` in wave (iii) — `Result` is now the apply-boundary
@@ -115,7 +94,7 @@ structure Readout where
 
 -- (`ExecOutcome` — the big-step era's `normal/returned/broke/continued`
 -- classification of a bare statement run — was DELETED at B4 (2026-09-05;
--- owed since A8): the drivers return the final `ExecState` at the one
+-- owed since A8): the drivers return the final `Store` at the one
 -- terminal `.next .stop`; a signal reaching `.stop` is a refusal, not a
 -- completion class.)
 
@@ -192,7 +171,7 @@ LIST is the `ChoiceSite` datatype below (W3.2 slice 1 stage A — the
 census as code; the doctrine preamble and latitude-inventory §0
 tables now point here instead of being hand-synced at audits). It is
 threaded by the interpreter **external to
-`ExecState`**, so the relation and the interpreter/relation
+the `Store`**, so the relation and the interpreter/relation
 correspondence compare oracle-free states. GoCore never commits to
 determinism Go lacks; the interpreter only picks a behavior by
 instantiating this oracle, a testing convenience — see
@@ -533,27 +512,8 @@ theorem Choices.consumeAtE_of_lt {site : ChoiceSite} {bound : Nat}
   have hnb : ¬ bound ≤ 1 := Nat.not_le_of_lt hb
   simp [Choices.consumeAtE, Choices.consumeAt, hnb]
 
-/-- Allocate a fresh cell: the new address is the heap's size and the
-cell is pushed (dense heap, A2 — the ONLY way a cell comes to exist). -/
-def ExecState.allocCell (state : ExecState) (cell : HeapCell) : Loc × ExecState :=
-  (.base ⟨state.heap.size⟩, { state with heap := state.heap.push cell })
-
-/-- Allocate a VALUE cell at its declared type. -/
-def ExecState.alloc (state : ExecState) (value : GoValue) (typ : Ty) : Loc × ExecState :=
-  state.allocCell (.value typ value)
-
-/-- Overwrite root cell `a` through `f` (which sees the old cell), FAIL
-CLOSED out of range: `.internal` (BUG-085 — an unallocated address is an
-invariant breach, never Go behaviour). The ONE write path for every root
-cell (`storeLoc`, `storeMapPayload`, `storeChanPayload`); `Array.set` under
-`hi` is what makes a phantom cell unrepresentable (A2/A3). -/
-def ExecState.updateCell (state : ExecState) (a : Addr)
-    (f : HeapCell → Except Stop HeapCell) : Except Stop ExecState :=
-  if hi : a.id < state.heap.size then do
-    let cell ← f state.heap[a.id]
-    return { state with heap := state.heap.set a.id cell hi }
-  else
-    throw (.internal s!"store to unallocated address {repr (Loc.base a)}: no heap cell (allocation goes through ExecState.alloc only)")
+-- The allocator (`allocCell`/`alloc`) and the one root-cell write
+-- (`updateCell`) live on `Store` (Store.lean) since B7.
 
 def unsupported {α : Type} (feature : String) : Except Stop α :=
   throw (.unsupported feature)
@@ -564,52 +524,8 @@ def panic {α : Type} (message : String) : Except Stop α :=
 def stuck {α : Type} (message : String) : Except Stop α :=
   throw (.stuck message)
 
-/-! ## Payload cells (A3): the map/channel readers and writers -/
-
-/-- The map payload at a root cell: `(entries, nextId)`. Anything else
-there (a value cell, a channel, no cell) is an ill-shaped program
-operand — refused. -/
-def mapPayload? (state : ExecState) (loc : Loc) :
-    Except Stop (Array (Nat × GoValue × GoValue) × Nat) :=
-  match Heap.lookup state.heap loc with
-  | some (.mapPayload entries nextId) => return (entries, nextId)
-  | some (.value _ v) => stuck s!"expected map data at {repr loc}, got value {repr v}"
-  | some (.chanPayload ..) => stuck s!"expected map data at {repr loc}, got channel data"
-  | none => stuck s!"unbound GoCore heap location: {repr loc}"
-
-/-- The channel payload at a root cell: `(buf, capacity, closed)`. -/
-def chanPayload? (state : ExecState) (loc : Loc) :
-    Except Stop (Array GoValue × Nat × Bool) :=
-  match Heap.lookup state.heap loc with
-  | some (.chanPayload buf capacity closed) => return (buf, capacity, closed)
-  | some (.value _ v) => stuck s!"expected channel data at {repr loc}, got value {repr v}"
-  | some (.mapPayload ..) => stuck s!"expected channel data at {repr loc}, got map data"
-  | none => stuck s!"unbound GoCore heap location: {repr loc}"
-
-/-- Replace a map payload WHOLE (the only way a map cell is written); the
-cell must already be a map payload. -/
-def storeMapPayload (state : ExecState) (loc : Loc)
-    (entries : Array (Nat × GoValue × GoValue)) (nextId : Nat) :
-    Except Stop ExecState :=
-  match loc with
-  | .base a =>
-      state.updateCell a fun
-        | .mapPayload _ _ => pure (.mapPayload entries nextId)
-        | .value _ v => stuck s!"expected map data at {repr loc}, got value {repr v}"
-        | .chanPayload .. => stuck s!"expected map data at {repr loc}, got channel data"
-  | other => stuck s!"map payload store through a non-root path {repr other}"
-
-/-- Replace a channel payload WHOLE; the cell must already be a channel
-payload. -/
-def storeChanPayload (state : ExecState) (loc : Loc) (buf : Array GoValue)
-    (capacity : Nat) (closed : Bool) : Except Stop ExecState :=
-  match loc with
-  | .base a =>
-      state.updateCell a fun
-        | .chanPayload .. => pure (.chanPayload buf capacity closed)
-        | .value _ v => stuck s!"expected channel data at {repr loc}, got value {repr v}"
-        | .mapPayload .. => stuck s!"expected channel data at {repr loc}, got map data"
-  | other => stuck s!"channel payload store through a non-root path {repr other}"
+-- The payload-cell readers and writers (`mapPayload?`, `chanPayload?`,
+-- `storeMapPayload`, `storeChanPayload`) live on `Store` (Store.lean) since B7.
 
 -- `lookupLoc` deleted (reshape S4): name resolution goes through the
 -- control-side `LocalEnv` (`Machine.Config.env`), never the state.

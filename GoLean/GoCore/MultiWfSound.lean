@@ -11,12 +11,16 @@ frames the foreign threads through it.
 
 namespace GoLean.GoCore.Machine
 
+-- B7 (2026-09-17): the program context is an IMPLICIT parameter of every
+-- theorem here (lemma applications stay as they were).
+variable {ctx : ProgramCtx}
+
 -- The unused-simp-arg linter misfires on the shared multi-branch simp
 -- sets (an argument unused in one branch is load-bearing in another) —
 -- the `MultiSound.lean`/`MachineSound.lean` precedent.
 set_option linter.unusedSimpArgs false
 
-/-! ## MultiWf preservation — the slice-2 scaffold DISCHARGED (slice 5)
+/-! ## MultiWf ctx preservation — the slice-2 scaffold DISCHARGED (slice 5)
 
 The slice-3 build log's recorded route, executed: the sequential `*_wf`
 family's conclusions were extended with the step-level
@@ -89,17 +93,16 @@ theorem spawnPlan_iters {types : TypeEnv} {c : Config} {cv : GoValue}
 /-- `spawnStep` preservation: wf state out, both successor
 configurations bounded and iteration-typed, types unchanged, allocator
 monotone. -/
-theorem spawnStep_wf {s : ExecState} {cv : GoValue} {args : List GoValue}
-    {k : Cont} {ch : Choices} {p child : Config} {s' : ExecState} {ch' : Choices}
+theorem spawnStep_wf {s : Store} {cv : GoValue} {args : List GoValue}
+    {k : Cont} {ch : Choices} {p child : Config} {s' : Store} {ch' : Choices}
     {types : TypeEnv}
     (hw : StateWf s) (hcv : GoValue.locSup cv ≤ s.nextAddr)
     (hargs : goValueListSup args ≤ s.nextAddr)
     (hk : Cont.locSup k ≤ s.nextAddr)
     (hik : Cont.itersNormalized types k = true)
-    (h : spawnStep s cv args k ch = .ok (p, child, s', ch')) :
+    (h : spawnStep ctx s cv args k ch = .ok (p, child, s', ch')) :
     StateWf s' ∧ Config.locSup p ≤ s'.nextAddr
-      ∧ Config.locSup child ≤ s'.nextAddr
-      ∧ s'.types = s.types ∧ s.nextAddr ≤ s'.nextAddr
+      ∧ Config.locSup child ≤ s'.nextAddr ∧ s.nextAddr ≤ s'.nextAddr
       ∧ Config.itersNormalized types p = true
       ∧ Config.itersNormalized types child = true := by
   unfold spawnStep at h
@@ -114,9 +117,9 @@ theorem spawnStep_wf {s : ExecState} {cv : GoValue} {args : List GoValue}
       ⟨func, frameEnv, resultLocs, s₂, rfl, henter, rfl⟩ | ⟨msg, rfl, henter, rfl⟩
     · simp only [deliver_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl, rfl, rfl⟩ := h
-      obtain ⟨w1, w2, w3, w4, w5, w6, w7, w8⟩ := enterFrame_wf hw
+      obtain ⟨w1, w2, w6, w7, w8⟩ := enterFrame_wf hw
         (by rw [goValueListSup_append]; omega) henter
-      refine ⟨w1, ?_, ?_, w3, w2, ?_, ?_⟩
+      refine ⟨w1, ?_, ?_, w2, ?_, ?_⟩
       · simpa [Config.locSup] using Nat.le_trans hk w2
       · simp only [Config.locSup, Cont.locSup, locListSup, deferListSup,
           targetPlansSup, LocalEnv.locSup, Nat.max_le]
@@ -125,7 +128,7 @@ theorem spawnStep_wf {s : ExecState} {cv : GoValue} {args : List GoValue}
       · simp [Config.itersNormalized, Cont.itersNormalized]
     · simp only [deliver_panic, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl, rfl, rfl⟩ := h
-      refine ⟨hw, ?_, ?_, rfl, Nat.le_refl _, ?_, ?_⟩
+      refine ⟨hw, ?_, ?_, Nat.le_refl _, ?_, ?_⟩
       · simpa [Config.locSup] using hk
       · simp [Config.locSup, panicChainSup, panicEntry_locSup, Cont.locSup]
       · simpa [Config.itersNormalized, Cont.itersNormalized] using hik
@@ -134,34 +137,34 @@ theorem spawnStep_wf {s : ExecState} {cv : GoValue} {args : List GoValue}
   · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
 
 /-- `resumeRecvDelivery` preservation (bounds + iteration typing). -/
-theorem resumeRecvDelivery_wf {s : ExecState} {v : GoValue} {ok : Bool}
+theorem resumeRecvDelivery_wf {s : Store} {v : GoValue} {ok : Bool}
     {targets : List Assignee} {env : LocalEnv} {k : Cont}
-    {c' : Config} {s' : ExecState} {types : TypeEnv}
+    {c' : Config} {s' : Store} {types : TypeEnv}
     (hw : StateWf s) (hv : GoValue.locSup v ≤ s.nextAddr)
     (ht : assigneeListSup targets ≤ s.nextAddr)
     (henv : LocalEnv.locSup env ≤ s.nextAddr)
     (hk : Cont.locSup k ≤ s.nextAddr)
     (hik : Cont.itersNormalized types k = true)
     (h : resumeRecvDelivery s v ok targets env k = .ok (c', s')) :
-    StateWf s' ∧ Config.locSup c' ≤ s'.nextAddr ∧ s'.types = s.types
+    StateWf s' ∧ Config.locSup c' ≤ s'.nextAddr
       ∧ s.nextAddr ≤ s'.nextAddr
       ∧ Config.itersNormalized types c' = true := by
   unfold resumeRecvDelivery at h
   split at h
   · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
-    exact ⟨hw, by simpa [Config.locSup] using hk, rfl, Nat.le_refl _,
+    exact ⟨hw, by simpa [Config.locSup] using hk, Nat.le_refl _,
       by simpa [Config.itersNormalized] using hik⟩
   · rename_i t ts
-    obtain ⟨q1, q2, q3, q4⟩ := enterRecvTargets_wf hw ht
+    obtain ⟨q1, q2, q4⟩ := enterRecvTargets_wf hw ht
       (Nat.le_trans (recvStores_locSup ((t :: ts).length)) hv)
       (by simp [Stmt.locSup, stmtListSup]) henv hk h
-    exact ⟨q1, q2, q3, q4, enterRecvTargets_itersNormalized h hik⟩
+    exact ⟨q1, q2, q4, enterRecvTargets_itersNormalized h hik⟩
 
 /-- `selectRecvDelivery` preservation (bounds + iteration typing). -/
-theorem selectRecvDelivery_wf {s : ExecState} {v : GoValue} {ok : Bool}
+theorem selectRecvDelivery_wf {s : Store} {v : GoValue} {ok : Bool}
     {targets : List Assignee} {body : Stmt} {env : LocalEnv} {k : Cont}
-    {c' : Config} {s' : ExecState} {types : TypeEnv}
+    {c' : Config} {s' : Store} {types : TypeEnv}
     (hw : StateWf s) (hv : GoValue.locSup v ≤ s.nextAddr)
     (ht : assigneeListSup targets ≤ s.nextAddr)
     (hb : Stmt.locSup body ≤ s.nextAddr)
@@ -169,32 +172,32 @@ theorem selectRecvDelivery_wf {s : ExecState} {v : GoValue} {ok : Bool}
     (hk : Cont.locSup k ≤ s.nextAddr)
     (hik : Cont.itersNormalized types k = true)
     (h : selectRecvDelivery s v ok targets body env k = .ok (c', s')) :
-    StateWf s' ∧ Config.locSup c' ≤ s'.nextAddr ∧ s'.types = s.types
+    StateWf s' ∧ Config.locSup c' ≤ s'.nextAddr
       ∧ s.nextAddr ≤ s'.nextAddr
       ∧ Config.itersNormalized types c' = true := by
   unfold selectRecvDelivery at h
   split at h
   · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
-    refine ⟨hw, ?_, rfl, Nat.le_refl _, ?_⟩
+    refine ⟨hw, ?_, Nat.le_refl _, ?_⟩
     · simp only [Config.locSup, Nat.max_le]
       omega
     · simpa [Config.itersNormalized] using hik
   · rename_i t ts
-    obtain ⟨q1, q2, q3, q4⟩ := enterRecvTargets_wf hw ht
+    obtain ⟨q1, q2, q4⟩ := enterRecvTargets_wf hw ht
       (Nat.le_trans (recvStores_locSup ((t :: ts).length)) hv) hb henv hk h
-    exact ⟨q1, q2, q3, q4, enterRecvTargets_itersNormalized h hik⟩
+    exact ⟨q1, q2, q4, enterRecvTargets_itersNormalized h hik⟩
 
 /-- `resumeThread` preservation: the wake of a parked goroutine keeps
 the state wf (allocator monotone, types unchanged) and produces a
 bounded, iteration-typed configuration. -/
-theorem resumeThread_wf {s : ExecState} {c c' : Config} {s' : ExecState}
+theorem resumeThread_wf {s : Store} {c c' : Config} {s' : Store}
     (hw : StateWf s) (hc : ConfigWf s.nextAddr c)
-    (hi : Config.itersNormalized s.types c = true)
-    (h : resumeThread s c = .ok (c', s')) :
-    StateWf s' ∧ Config.locSup c' ≤ s'.nextAddr ∧ s'.types = s.types
+    (hi : Config.itersNormalized ctx.types c = true)
+    (h : resumeThread ctx s c = .ok (c', s')) :
+    StateWf s' ∧ Config.locSup c' ≤ s'.nextAddr
       ∧ s.nextAddr ≤ s'.nextAddr
-      ∧ Config.itersNormalized s.types c' = true := by
+      ∧ Config.itersNormalized ctx.types c' = true := by
   have hheap := hw.heap_le
   unfold resumeThread at h
   split at h
@@ -204,7 +207,7 @@ theorem resumeThread_wf {s : ExecState} {c c' : Config} {s' : ExecState}
         ∧ Cont.locSup k ≤ s.nextAddr := by
       simp only [ConfigWf, Config.locSup, optLocSup, Nat.max_le] at hc
       omega
-    have hik : Cont.itersNormalized s.types k = true := by
+    have hik : Cont.itersNormalized ctx.types k = true := by
       simpa [Config.itersNormalized] using hi
     simp only [bind_eq_ok] at h
     obtain ⟨⟨buf, capacity, closed⟩, hcell, h⟩ := h
@@ -212,7 +215,7 @@ theorem resumeThread_wf {s : ExecState} {c c' : Config} {s' : ExecState}
     split at h
     · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
-      refine ⟨hw, ?_, rfl, Nat.le_refl _, ?_⟩
+      refine ⟨hw, ?_, Nat.le_refl _, ?_⟩
       · simp only [Config.locSup, panicChainSup, runtimeErrorValue_locSup, panicEntry_locSup,
           Nat.max_le]
         omega
@@ -220,10 +223,10 @@ theorem resumeThread_wf {s : ExecState} {c c' : Config} {s' : ExecState}
     · split at h
       · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
         obtain ⟨s₂, hst, rfl, rfl⟩ := h
-        obtain ⟨w1, w2, w3, w4, w5⟩ := storeChanPayload_pres hw hb.1
+        obtain ⟨w1, w2⟩ := storeChanPayload_pres hw hb.1
           (by rw [goValueListSup_push]
               omega) hst
-        refine ⟨w1, ?_, w4, w2, ?_⟩
+        refine ⟨w1, ?_, w2, ?_⟩
         · simp only [Config.locSup]
           omega
         · simpa [Config.itersNormalized] using hik
@@ -234,7 +237,7 @@ theorem resumeThread_wf {s : ExecState} {c c' : Config} {s' : ExecState}
         ∧ LocalEnv.locSup env ≤ s.nextAddr ∧ Cont.locSup k ≤ s.nextAddr := by
       simp only [ConfigWf, Config.locSup, optLocSup, Nat.max_le] at hc
       omega
-    have hik : Cont.itersNormalized s.types k = true := by
+    have hik : Cont.itersNormalized ctx.types k = true := by
       simpa [Config.itersNormalized] using hi
     simp only [bind_eq_ok] at h
     obtain ⟨⟨buf, capacity, closed⟩, hcell, h⟩ := h
@@ -248,15 +251,15 @@ theorem resumeThread_wf {s : ExecState} {c c' : Config} {s' : ExecState}
         omega
       simp only [bind_eq_ok] at h
       obtain ⟨s₁, hst, h⟩ := h
-      obtain ⟨w1, w2, w3, w4, w5⟩ := storeChanPayload_pres hw hb.1
+      obtain ⟨w1, w2⟩ := storeChanPayload_pres hw hb.1
         (by
             exact Nat.le_trans goValueListSup_eraseIdx! (by omega)) hst
       obtain ⟨⟨c₀, σ₀⟩, hent, h⟩ := h
       simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
-      obtain ⟨q1, q2, q3, q4, q5⟩ := resumeRecvDelivery_wf w1 (by omega)
+      obtain ⟨q1, q2, q4, q5⟩ := resumeRecvDelivery_wf w1 (by omega)
         (by omega) (by omega) (by omega) hik hent
-      exact ⟨q1, by simpa using q2, q3.trans w4, Nat.le_trans w2 q4,
+      exact ⟨q1, by simpa using q2, Nat.le_trans w2 q4,
         Config.itersNormalized_true _ _⟩
     · split at h
       · -- closed: zero value
@@ -267,9 +270,9 @@ theorem resumeThread_wf {s : ExecState} {c c' : Config} {s' : ExecState}
         obtain ⟨⟨c₀, σ₀⟩, hent, h⟩ := h
         simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl⟩ := h
-        obtain ⟨q1, q2, q3, q4, q5⟩ := resumeRecvDelivery_wf hw hzb hb.2.1
+        obtain ⟨q1, q2, q4, q5⟩ := resumeRecvDelivery_wf hw hzb hb.2.1
           hb.2.2.1 hb.2.2.2 hik hent
-        exact ⟨q1, by simpa using q2, q3, q4,
+        exact ⟨q1, by simpa using q2, q4,
           Config.itersNormalized_true _ _⟩
       · simp [throw, throwThe, MonadExceptOf.throw] at h
   · -- blockedSelect
@@ -278,7 +281,7 @@ theorem resumeThread_wf {s : ExecState} {c c' : Config} {s' : ExecState}
         ∧ Cont.locSup k ≤ s.nextAddr := by
       simp only [ConfigWf, Config.locSup, Nat.max_le] at hc
       omega
-    have hik : Cont.itersNormalized s.types k = true := by
+    have hik : Cont.itersNormalized ctx.types k = true := by
       simpa [Config.itersNormalized] using hi
     simp only [bind_eq_ok] at h
     obtain ⟨rc, hrc, h⟩ := h
@@ -288,8 +291,8 @@ theorem resumeThread_wf {s : ExecState} {c c' : Config} {s' : ExecState}
       have hclb : evClauseSup cl ≤ s.nextAddr := by
         have hmem : cl ∈ evs := readyClauses_subset hrc cl (List.mem_cons_self ..)
         exact Nat.le_trans (evClausesSup_mem hmem) hb.1
-      obtain ⟨w1, w2, w3, w4⟩ := commitClause_wf hw hclb hb.2.1 hb.2.2 h
-      exact ⟨w1, w2, w3, w4, commitClause_itersNormalized h hik⟩
+      obtain ⟨w1, w2, w4⟩ := commitClause_wf hw hclb hb.2.1 hb.2.2 h
+      exact ⟨w1, w2, w4, commitClause_itersNormalized h hik⟩
   · -- blockedSync (spec-parity slice 2): every resume is a loc-free
     -- store then `.next k`, or the onceBegin delivery entry.
     rename_i op loc env k
@@ -297,7 +300,7 @@ theorem resumeThread_wf {s : ExecState} {c c' : Config} {s' : ExecState}
         ∧ LocalEnv.locSup env ≤ s.nextAddr ∧ Cont.locSup k ≤ s.nextAddr := by
       simp only [ConfigWf, Config.locSup, Nat.max_le] at hc
       omega
-    have hik : Cont.itersNormalized s.types k = true := by
+    have hik : Cont.itersNormalized ctx.types k = true := by
       simpa [Config.itersNormalized] using hi
     simp only [bind_eq_ok] at h
     obtain ⟨p, hcell, h⟩ := h
@@ -309,9 +312,9 @@ theorem resumeThread_wf {s : ExecState} {c c' : Config} {s' : ExecState}
       first
       | (simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
          obtain ⟨s₂, hst, rfl, rfl⟩ := h
-         obtain ⟨w1, w2, w3, w4, w5⟩ := storeLoc_pres hw hb.2.1
+         obtain ⟨w1, w2⟩ := storeLoc_pres hw hb.2.1
            (by simp [syncData_locSup]) hst
-         refine ⟨w1, ?_, w4, w2, ?_⟩
+         refine ⟨w1, ?_, w2, ?_⟩
          · simp only [Config.locSup]
            omega
          · simpa [Config.itersNormalized] using hik)
@@ -319,11 +322,11 @@ theorem resumeThread_wf {s : ExecState} {c c' : Config} {s' : ExecState}
          obtain ⟨⟨c₀, σ₀⟩, hent, h⟩ := h
          simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
          obtain ⟨rfl, rfl⟩ := h
-         obtain ⟨q1, q2, q3, q4⟩ := enterRecvTargets_wf hw
+         obtain ⟨q1, q2, q4⟩ := enterRecvTargets_wf hw
            (by simpa [syncOpSup] using hb.1)
            (by simp [goValueListSup, GoValue.locSup])
            (by simp [Stmt.locSup, stmtListSup]) hb.2.2.1 hb.2.2.2 hent
-         exact ⟨q1, by simpa using q2, q3, q4,
+         exact ⟨q1, by simpa using q2, q4,
            Config.itersNormalized_true _ _⟩)
   · simp [throw, throwThe, MonadExceptOf.throw] at h
 
@@ -370,7 +373,7 @@ theorem chanValueLoc_locSup {v : GoValue} {loc : Loc}
 
 /-- The would-block shape a CHAN-OP arrival pairing carries is bounded
 and iteration-typed by the arriving operands. -/
-theorem chanArrivalPlan_wf {s : ExecState} {threads : Array Thread} {i : Nat}
+theorem chanArrivalPlan_wf {s : Store} {threads : Array Thread} {i : Nat}
     {op : ChanStOp} {vs : List GoValue} {env : LocalEnv} {k : Cont}
     {bc : Config} {cands : List (Nat × PairTarget)} {types : TypeEnv}
     (_hw : StateWf s) (hvs : goValueListSup vs ≤ s.nextAddr)
@@ -378,7 +381,7 @@ theorem chanArrivalPlan_wf {s : ExecState} {threads : Array Thread} {i : Nat}
     (henv : LocalEnv.locSup env ≤ s.nextAddr)
     (hk : Cont.locSup k ≤ s.nextAddr)
     (hik : Cont.itersNormalized types k = true)
-    (h : chanArrivalPlan s threads i op vs env k = .ok (some (bc, cands))) :
+    (h : chanArrivalPlan ctx s threads i op vs env k = .ok (some (bc, cands))) :
     Config.locSup bc ≤ s.nextAddr
       ∧ Config.itersNormalized types bc = true := by
   unfold chanArrivalPlan at h
@@ -431,13 +434,13 @@ theorem chanArrivalPlan_wf {s : ExecState} {threads : Array Thread} {i : Nat}
 
 /-- The `.single` analysis' would-block shape is bounded and typed by
 the arriving configuration. -/
-theorem arrivalCases_single_wf {s : ExecState} {threads : Array Thread}
+theorem arrivalCases_single_wf {s : Store} {threads : Array Thread}
     {i : Nat} {c bc : Config} {cs : List (Nat × PairTarget)}
     (hw : StateWf s) (hc : ConfigWf s.nextAddr c)
-    (hi : Config.itersNormalized s.types c = true)
-    (h : arrivalCases s threads i c = .ok (.single bc cs)) :
+    (hi : Config.itersNormalized ctx.types c = true)
+    (h : arrivalCases ctx s threads i c = .ok (.single bc cs)) :
     Config.locSup bc ≤ s.nextAddr
-      ∧ Config.itersNormalized s.types bc = true := by
+      ∧ Config.itersNormalized ctx.types bc = true := by
   unfold arrivalCases at h
   split at h
   · -- chan-op apply position
@@ -477,7 +480,7 @@ theorem arrivalCases_single_wf {s : ExecState} {threads : Array Thread}
       rw [goValueListSup_reverse]
       simp only [goValueListSup, Nat.max_le]
       omega
-    have hik : Cont.itersNormalized s.types k = true := by
+    have hik : Cont.itersNormalized ctx.types k = true := by
       simpa [Config.itersNormalized, Cont.itersNormalized] using hi
     -- walk the select analysis to its `.single` exits: the shape is
     -- always `.blockedSelect evs env k` with `evs` the evaluated
@@ -519,20 +522,20 @@ theorem arrivalCases_single_wf {s : ExecState} {threads : Array Thread}
 /-- The `.multi` analysis' SELECTED outcome is bounded and typed by the
 arriving configuration: a `.pair`'s would-block shape like the single
 case, a `.commit`'s clause a member of the evaluated clause list. -/
-theorem arrivalCases_multi_wf {s : ExecState} {threads : Array Thread}
+theorem arrivalCases_multi_wf {s : Store} {threads : Array Thread}
     {i : Nat} {c : Config} {os : List ArrivalOutcome} {sel : Nat}
     {o : ArrivalOutcome}
     (_hw : StateWf s) (hc : ConfigWf s.nextAddr c)
-    (hi : Config.itersNormalized s.types c = true)
-    (h : arrivalCases s threads i c = .ok (.multi os))
+    (hi : Config.itersNormalized ctx.types c = true)
+    (h : arrivalCases ctx s threads i c = .ok (.multi os))
     (hget : os[sel]? = some o) :
     (∀ {bc cs}, o = ArrivalOutcome.pair bc cs →
       Config.locSup bc ≤ s.nextAddr
-        ∧ Config.itersNormalized s.types bc = true)
+        ∧ Config.itersNormalized ctx.types bc = true)
     ∧ (∀ {cl env k}, o = ArrivalOutcome.commit cl env k →
         evClauseSup cl ≤ s.nextAddr ∧ LocalEnv.locSup env ≤ s.nextAddr
           ∧ Cont.locSup k ≤ s.nextAddr
-          ∧ Cont.itersNormalized s.types k = true) := by
+          ∧ Cont.itersNormalized ctx.types k = true) := by
   unfold arrivalCases at h
   split at h
   · -- chan-op apply: never `.multi`
@@ -556,7 +559,7 @@ theorem arrivalCases_multi_wf {s : ExecState} {threads : Array Thread}
       rw [goValueListSup_reverse]
       simp only [goValueListSup, Nat.max_le]
       omega
-    have hik : Cont.itersNormalized s.types k = true := by
+    have hik : Cont.itersNormalized ctx.types k = true := by
       simpa [Config.itersNormalized, Cont.itersNormalized] using hi
     unfold selectArrivalCases at h
     split at h
@@ -630,17 +633,17 @@ state wf (allocator monotone, types unchanged), preserves the pool
 size, and leaves EVERY slot bounded and iteration-typed — the two
 touched slots by the pairing outcome's own bounds, the foreign threads
 by the monotonicity frame. -/
-theorem applyPairing_wf {s : ExecState} {threads : Array Thread} {i : Nat}
+theorem applyPairing_wf {s : Store} {threads : Array Thread} {i : Nat}
     {bc : Config} {cand : Nat × PairTarget} {ts' : Array Thread}
-    {s' : ExecState}
+    {s' : Store}
     (hw : StateWf s)
-    (hts : ∀ t (ht : t < threads.size), ThreadWf s.nextAddr s.types threads[t])
+    (hts : ∀ t (ht : t < threads.size), ThreadWf s.nextAddr ctx.types threads[t])
     (hbc : ConfigWf s.nextAddr bc)
-    (hibc : Config.itersNormalized s.types bc = true)
-    (h : applyPairing s threads i bc cand = .ok (ts', s')) :
-    StateWf s' ∧ s'.types = s.types ∧ s.nextAddr ≤ s'.nextAddr
+    (hibc : Config.itersNormalized ctx.types bc = true)
+    (h : applyPairing ctx s threads i bc cand = .ok (ts', s')) :
+    StateWf s' ∧ s.nextAddr ≤ s'.nextAddr
       ∧ ts'.size = threads.size
-      ∧ ∀ t (ht : t < ts'.size), ThreadWf s'.nextAddr s.types ts'[t] := by
+      ∧ ∀ t (ht : t < ts'.size), ThreadWf s'.nextAddr ctx.types ts'[t] := by
   have hheap := hw.heap_le
   obtain ⟨cn, ct⟩ := cand
   cases bc
@@ -649,7 +652,7 @@ theorem applyPairing_wf {s : ExecState} {threads : Array Thread} {i : Nat}
         ∧ Cont.locSup k ≤ s.nextAddr := by
       simp only [ConfigWf, Config.locSup, Nat.max_le] at hbc
       omega
-    have hik : Cont.itersNormalized s.types k = true := by
+    have hik : Cont.itersNormalized ctx.types k = true := by
       simpa [Config.itersNormalized] using hibc
     cases ct
     case opWaiter j =>
@@ -672,7 +675,7 @@ theorem applyPairing_wf {s : ExecState} {threads : Array Thread} {i : Nat}
                 ∧ Cont.locSup kr ≤ s.nextAddr := by
               simp only [ConfigWf, Config.locSup, Nat.max_le] at hpc
               omega
-            have hpk : Cont.itersNormalized s.types kr = true := by
+            have hpk : Cont.itersNormalized ctx.types kr = true := by
               simpa [Config.itersNormalized] using hpi
             simp only [bind_eq_ok] at h
             obtain ⟨⟨buf, cap, closed⟩, hcell, h⟩ := h
@@ -681,9 +684,9 @@ theorem applyPairing_wf {s : ExecState} {threads : Array Thread} {i : Nat}
                 Prod.mk.injEq] at h
               obtain ⟨⟨cr, s₂⟩, hdel, hts', hs'⟩ := h
               subst hts' hs'
-              obtain ⟨q1, q2, q3, q4, q5⟩ := resumeRecvDelivery_wf hw hb.2.1
+              obtain ⟨q1, q2, q4, q5⟩ := resumeRecvDelivery_wf hw hb.2.1
                 hpb.1 hpb.2.1 hpb.2.2 hpk hdel
-              refine ⟨q1, q3, q4, by simp, ?_⟩
+              refine ⟨q1, q4, by simp, ?_⟩
               exact pool_set2_wf q4 hts
                 (by simpa [Config.locSup] using Nat.le_trans hb.2.2 q4)
                 (by simpa [Config.itersNormalized] using hik) q2 q5
@@ -708,7 +711,7 @@ theorem applyPairing_wf {s : ExecState} {threads : Array Thread} {i : Nat}
                 ∧ Cont.locSup ks ≤ s.nextAddr := by
               simp only [ConfigWf, Config.locSup, Nat.max_le] at hpc
               omega
-            have hpk : Cont.itersNormalized s.types ks = true := by
+            have hpk : Cont.itersNormalized ctx.types ks = true := by
               simpa [Config.itersNormalized] using hpi
             cases hcl : evs[ci]? with
             | none => simp [hcl, throw, throwThe, MonadExceptOf.throw] at h
@@ -731,9 +734,9 @@ theorem applyPairing_wf {s : ExecState} {threads : Array Thread} {i : Nat}
                     Prod.mk.injEq] at h
                   obtain ⟨⟨cs', s₂⟩, hdel, hts', hs'⟩ := h
                   subst hts' hs'
-                  obtain ⟨q1, q2, q3, q4, q5⟩ := selectRecvDelivery_wf hw hb.2.1
+                  obtain ⟨q1, q2, q4, q5⟩ := selectRecvDelivery_wf hw hb.2.1
                     (by omega) (by omega) hpb.2.1 hpb.2.2 hpk hdel
-                  refine ⟨q1, q3, q4, by simp, ?_⟩
+                  refine ⟨q1, q4, by simp, ?_⟩
                   exact pool_set2_wf q4 hts
                     (by simpa [Config.locSup] using Nat.le_trans hb.2.2 q4)
                     (by simpa [Config.itersNormalized] using hik) q2 q5
@@ -743,7 +746,7 @@ theorem applyPairing_wf {s : ExecState} {threads : Array Thread} {i : Nat}
         ∧ LocalEnv.locSup env ≤ s.nextAddr ∧ Cont.locSup k ≤ s.nextAddr := by
       simp only [ConfigWf, Config.locSup, Nat.max_le] at hbc
       omega
-    have hik : Cont.itersNormalized s.types k = true := by
+    have hik : Cont.itersNormalized ctx.types k = true := by
       simpa [Config.itersNormalized] using hibc
     cases ct
     case opWaiter j =>
@@ -767,7 +770,7 @@ theorem applyPairing_wf {s : ExecState} {threads : Array Thread} {i : Nat}
                 ∧ Cont.locSup ks ≤ s.nextAddr := by
               simp only [ConfigWf, Config.locSup, Nat.max_le] at hpc
               omega
-            have hpk : Cont.itersNormalized s.types ks = true := by
+            have hpk : Cont.itersNormalized ctx.types ks = true := by
               simpa [Config.itersNormalized] using hpi
             simp only [bind_eq_ok] at h
             obtain ⟨⟨buf, cap, closed⟩, hcell, h⟩ := h
@@ -778,9 +781,9 @@ theorem applyPairing_wf {s : ExecState} {threads : Array Thread} {i : Nat}
                 Prod.mk.injEq] at h
               obtain ⟨⟨cr, s₂⟩, hdel, hts', hs'⟩ := h
               subst hts' hs'
-              obtain ⟨q1, q2, q3, q4, q5⟩ := resumeRecvDelivery_wf hw hpb.1
+              obtain ⟨q1, q2, q4, q5⟩ := resumeRecvDelivery_wf hw hpb.1
                 hb.2.1 hb.2.2.1 hb.2.2.2 hik hdel
-              refine ⟨q1, q3, q4, by simp, ?_⟩
+              refine ⟨q1, q4, by simp, ?_⟩
               exact pool_set2_wf q4 hts q2 q5
                 (by simpa [Config.locSup] using Nat.le_trans hpb.2 q4)
                 (by simpa [Config.itersNormalized] using hpk)
@@ -791,7 +794,7 @@ theorem applyPairing_wf {s : ExecState} {threads : Array Thread} {i : Nat}
                 omega
               simp only [hhd, bind_eq_ok] at h
               obtain ⟨s₁, hst, h⟩ := h
-              obtain ⟨w1, w2, w3, w4, w5⟩ := storeChanPayload_pres hw hlocb
+              obtain ⟨w1, w2⟩ := storeChanPayload_pres hw hlocb
                 (by rw [goValueListSup_push]
                     refine Nat.max_le.mpr ⟨Nat.le_trans goValueListSup_eraseIdx!
                       (by omega), hpb.1⟩) hst
@@ -799,10 +802,10 @@ theorem applyPairing_wf {s : ExecState} {threads : Array Thread} {i : Nat}
                 Prod.mk.injEq] at h
               obtain ⟨⟨cr, s₂⟩, hdel, hts', hs'⟩ := h
               subst hts' hs'
-              obtain ⟨q1, q2, q3, q4, q5⟩ := resumeRecvDelivery_wf w1 (by omega)
+              obtain ⟨q1, q2, q4, q5⟩ := resumeRecvDelivery_wf w1 (by omega)
                 (by omega) (by omega) (by omega) hik hdel
               have hmono : s.nextAddr ≤ s₂.nextAddr := Nat.le_trans w2 q4
-              refine ⟨q1, q3.trans w4, hmono, by simp, ?_⟩
+              refine ⟨q1, hmono, by simp, ?_⟩
               exact pool_set2_wf hmono hts q2 q5
                 (by simpa [Config.locSup] using Nat.le_trans hpb.2 hmono)
                 (by simpa [Config.itersNormalized] using hpk)
@@ -828,7 +831,7 @@ theorem applyPairing_wf {s : ExecState} {threads : Array Thread} {i : Nat}
                 ∧ Cont.locSup ks ≤ s.nextAddr := by
               simp only [ConfigWf, Config.locSup, Nat.max_le] at hpc
               omega
-            have hpk : Cont.itersNormalized s.types ks = true := by
+            have hpk : Cont.itersNormalized ctx.types ks = true := by
               simpa [Config.itersNormalized] using hpi
             cases hcl : evs[ci]? with
             | none => simp [hcl, throw, throwThe, MonadExceptOf.throw] at h
@@ -857,9 +860,9 @@ theorem applyPairing_wf {s : ExecState} {threads : Array Thread} {i : Nat}
                     Prod.mk.injEq] at h
                   obtain ⟨⟨cr, s₂⟩, hdel, hts', hs'⟩ := h
                   subst hts' hs'
-                  obtain ⟨q1, q2, q3, q4, q5⟩ := resumeRecvDelivery_wf hw hv'b
+                  obtain ⟨q1, q2, q4, q5⟩ := resumeRecvDelivery_wf hw hv'b
                     hb.2.1 hb.2.2.1 hb.2.2.2 hik hdel
-                  refine ⟨q1, q3, q4, by simp, ?_⟩
+                  refine ⟨q1, q4, by simp, ?_⟩
                   refine pool_set2_wf q4 hts q2 q5 ?_ ?_
                   · simp only [Config.locSup, Nat.max_le]
                     omega
@@ -871,7 +874,7 @@ theorem applyPairing_wf {s : ExecState} {threads : Array Thread} {i : Nat}
                     omega
                   simp only [hhd, bind_eq_ok] at h
                   obtain ⟨s₁, hst, h⟩ := h
-                  obtain ⟨w1, w2, w3, w4, w5⟩ := storeChanPayload_pres hw hlocb
+                  obtain ⟨w1, w2⟩ := storeChanPayload_pres hw hlocb
                     (by rw [goValueListSup_push]
                         refine Nat.max_le.mpr
                           ⟨Nat.le_trans goValueListSup_eraseIdx! (by omega),
@@ -880,10 +883,10 @@ theorem applyPairing_wf {s : ExecState} {threads : Array Thread} {i : Nat}
                     Prod.mk.injEq] at h
                   obtain ⟨⟨cr, s₂⟩, hdel, hts', hs'⟩ := h
                   subst hts' hs'
-                  obtain ⟨q1, q2, q3, q4, q5⟩ := resumeRecvDelivery_wf w1
+                  obtain ⟨q1, q2, q4, q5⟩ := resumeRecvDelivery_wf w1
                     (by omega) (by omega) (by omega) (by omega) hik hdel
                   have hmono : s.nextAddr ≤ s₂.nextAddr := Nat.le_trans w2 q4
-                  refine ⟨q1, q3.trans w4, hmono, by simp, ?_⟩
+                  refine ⟨q1, hmono, by simp, ?_⟩
                   refine pool_set2_wf hmono hts q2 q5 ?_ ?_
                   · simp only [Config.locSup, Nat.max_le]
                     omega
@@ -893,7 +896,7 @@ theorem applyPairing_wf {s : ExecState} {threads : Array Thread} {i : Nat}
         ∧ Cont.locSup k ≤ s.nextAddr := by
       simp only [ConfigWf, Config.locSup, Nat.max_le] at hbc
       omega
-    have hik : Cont.itersNormalized s.types k = true := by
+    have hik : Cont.itersNormalized ctx.types k = true := by
       simpa [Config.itersNormalized] using hibc
     simp only [applyPairing] at h
     cases hcl : evs[cn]? with
@@ -926,7 +929,7 @@ theorem applyPairing_wf {s : ExecState} {threads : Array Thread} {i : Nat}
                   ∧ Cont.locSup ks ≤ s.nextAddr := by
                 simp only [ConfigWf, Config.locSup, Nat.max_le] at hpc
                 omega
-              have hpk : Cont.itersNormalized s.types ks = true := by
+              have hpk : Cont.itersNormalized ctx.types ks = true := by
                 simpa [Config.itersNormalized] using hpi
               cases hloc : chanValueLoc chv with
               | none => simp [hloc, throw, throwThe, MonadExceptOf.throw] at h
@@ -942,9 +945,9 @@ theorem applyPairing_wf {s : ExecState} {threads : Array Thread} {i : Nat}
                     Prod.mk.injEq] at h
                   obtain ⟨⟨ci', s₂⟩, hdel, hts', hs'⟩ := h
                   subst hts' hs'
-                  obtain ⟨q1, q2, q3, q4, q5⟩ := selectRecvDelivery_wf hw hpb.1
+                  obtain ⟨q1, q2, q4, q5⟩ := selectRecvDelivery_wf hw hpb.1
                     (by omega) (by omega) hb.2.1 hb.2.2 hik hdel
-                  refine ⟨q1, q3, q4, by simp, ?_⟩
+                  refine ⟨q1, q4, by simp, ?_⟩
                   exact pool_set2_wf q4 hts q2 q5
                     (by simpa [Config.locSup] using Nat.le_trans hpb.2 q4)
                     (by simpa [Config.itersNormalized] using hpk)
@@ -955,7 +958,7 @@ theorem applyPairing_wf {s : ExecState} {threads : Array Thread} {i : Nat}
                     omega
                   simp only [hhd, bind_eq_ok] at h
                   obtain ⟨s₁, hst, h⟩ := h
-                  obtain ⟨w1, w2, w3, w4, w5⟩ := storeChanPayload_pres hw hlocb
+                  obtain ⟨w1, w2⟩ := storeChanPayload_pres hw hlocb
                     (by rw [goValueListSup_push]
                         refine Nat.max_le.mpr
                           ⟨Nat.le_trans goValueListSup_eraseIdx! (by omega),
@@ -964,11 +967,11 @@ theorem applyPairing_wf {s : ExecState} {threads : Array Thread} {i : Nat}
                     Prod.mk.injEq] at h
                   obtain ⟨⟨ci', s₂⟩, hdel, hts', hs'⟩ := h
                   subst hts' hs'
-                  obtain ⟨q1, q2, q3, q4, q5⟩ := selectRecvDelivery_wf w1
+                  obtain ⟨q1, q2, q4, q5⟩ := selectRecvDelivery_wf w1
                     (by omega) (by omega) (by omega) (by omega) (by omega) hik
                     hdel
                   have hmono : s.nextAddr ≤ s₂.nextAddr := Nat.le_trans w2 q4
-                  refine ⟨q1, q3.trans w4, hmono, by simp, ?_⟩
+                  refine ⟨q1, hmono, by simp, ?_⟩
                   exact pool_set2_wf hmono hts q2 q5
                     (by simpa [Config.locSup] using Nat.le_trans hpb.2 hmono)
                     (by simpa [Config.itersNormalized] using hpk)
@@ -997,7 +1000,7 @@ theorem applyPairing_wf {s : ExecState} {threads : Array Thread} {i : Nat}
                   ∧ Cont.locSup kr ≤ s.nextAddr := by
                 simp only [ConfigWf, Config.locSup, Nat.max_le] at hpc
                 omega
-              have hpk : Cont.itersNormalized s.types kr = true := by
+              have hpk : Cont.itersNormalized ctx.types kr = true := by
                 simpa [Config.itersNormalized] using hpi
               cases hloc : chanValueLoc chv with
               | none => simp [hloc, throw, throwThe, MonadExceptOf.throw] at h
@@ -1012,9 +1015,9 @@ theorem applyPairing_wf {s : ExecState} {threads : Array Thread} {i : Nat}
                   have hv'b : GoValue.locSup v' ≤ s.nextAddr := by
                     have := normalizeValueForTy_locSup hv'
                     omega
-                  obtain ⟨q1, q2, q3, q4, q5⟩ := resumeRecvDelivery_wf hw hv'b
+                  obtain ⟨q1, q2, q4, q5⟩ := resumeRecvDelivery_wf hw hv'b
                     hpb.1 hpb.2.1 hpb.2.2 hpk hdel
-                  refine ⟨q1, q3, q4, by simp, ?_⟩
+                  refine ⟨q1, q4, by simp, ?_⟩
                   refine pool_set2_wf q4 hts ?_ ?_ q2 q5
                   · simp only [Config.locSup, Nat.max_le]
                     omega
@@ -1070,22 +1073,22 @@ theorem pool_set_push_wf {threads : Array Thread} {i : Nat} {a b : Config}
   · exact ThreadWf.running hb hib
 
 /-- Membership in the runnable list bounds the index. -/
-theorem runnableIdxs_lt {s : ExecState} {ts : Array Thread} {i : Nat}
-    (h : i ∈ runnableIdxs s ts) : i < ts.size := by
+theorem runnableIdxs_lt {s : Store} {ts : Array Thread} {i : Nat}
+    (h : i ∈ runnableIdxs ctx s ts) : i < ts.size := by
   unfold runnableIdxs at h
   exact List.mem_range.mp (List.mem_filter.mp h).1
 
 /-- `stepThread` preservation: one goroutine-step of the pool keeps the
 shared state wf (allocator monotone, types unchanged), never shrinks
 the pool, and leaves every slot bounded and iteration-typed. -/
-theorem stepThread_wf {s : ExecState} {threads : Array Thread} {i : Nat}
-    {ch ch' : Choices} {ts' : Array Thread} {s' : ExecState} {ev : StepEvent}
+theorem stepThread_wf {s : Store} {threads : Array Thread} {i : Nat}
+    {ch ch' : Choices} {ts' : Array Thread} {s' : Store} {ev : StepEvent}
     (hw : StateWf s)
-    (hts : ∀ t (ht : t < threads.size), ThreadWf s.nextAddr s.types threads[t])
-    (h : stepThread s threads i ch = .ok (ts', s', ch', ev)) :
-    StateWf s' ∧ s'.types = s.types ∧ s.nextAddr ≤ s'.nextAddr
+    (hts : ∀ t (ht : t < threads.size), ThreadWf s.nextAddr ctx.types threads[t])
+    (h : stepThread ctx s threads i ch = .ok (ts', s', ch', ev)) :
+    StateWf s' ∧ s.nextAddr ≤ s'.nextAddr
       ∧ threads.size ≤ ts'.size
-      ∧ ∀ t (ht : t < ts'.size), ThreadWf s'.nextAddr s.types ts'[t] := by
+      ∧ ∀ t (ht : t < ts'.size), ThreadWf s'.nextAddr ctx.types ts'[t] := by
   unfold stepThread at h
   cases hti : threads[i]? with
   | none => rw [hti] at h; simp [throw, throwThe, MonadExceptOf.throw] at h
@@ -1099,15 +1102,15 @@ theorem stepThread_wf {s : ExecState} {threads : Array Thread} {i : Nat}
       -- the boundary CLEAR (C5): state and configuration untouched
       simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl, rfl, rfl⟩ := h
-      exact ⟨hw, rfl, Nat.le_refl _, by simp, pool_set1_wf (Nat.le_refl _) hts hc hic⟩
+      exact ⟨hw, Nat.le_refl _, by simp, pool_set1_wf (Nat.le_refl _) hts hc hic⟩
     | none =>
     by_cases hblc : isBlockedConfig c = true
     · simp only [hblc, reduceIte, bind_eq_ok] at h
       obtain ⟨⟨c₂, s₂⟩, hres, h⟩ := h
       simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl, rfl, rfl⟩ := h
-      obtain ⟨q1, q2, q3, q4, q5⟩ := resumeThread_wf hw hc hic hres
-      exact ⟨q1, q3, q4, by simp, pool_set1_wf q4 hts q2 q5⟩
+      obtain ⟨q1, q2, q4, q5⟩ := resumeThread_wf hw hc hic hres
+      exact ⟨q1, q4, by simp, pool_set1_wf q4 hts q2 q5⟩
     · simp only [Bool.not_eq_true] at hblc
       simp only [hblc, Bool.false_eq_true, reduceIte] at h
       cases hab : c.abort? with
@@ -1119,7 +1122,7 @@ theorem stepThread_wf {s : ExecState} {threads : Array Thread} {i : Nat}
         obtain ⟨msg, -, h⟩ := h
         simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl, rfl, rfl⟩ := h
-        exact ⟨hw, rfl, Nat.le_refl _, by simp, pool_set1_aborted_wf hts⟩
+        exact ⟨hw, Nat.le_refl _, by simp, pool_set1_aborted_wf hts⟩
       | none =>
         rw [hab] at h
         cases hsp : spawnPlan c with
@@ -1131,16 +1134,16 @@ theorem stepThread_wf {s : ExecState} {threads : Array Thread} {i : Nat}
           simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
           obtain ⟨rfl, rfl, rfl, rfl⟩ := h
           obtain ⟨hcvb, hargsb, hkb⟩ := spawnPlan_locSup hsp
-          obtain ⟨q1, q2, q3, q4, q5, q6, q7⟩ := spawnStep_wf hw
+          obtain ⟨q1, q2, q3, q5, q6, q7⟩ := spawnStep_wf hw
             (Nat.le_trans hcvb hc) (Nat.le_trans hargsb hc)
             (Nat.le_trans hkb hc) (spawnPlan_iters hsp hic) hspawn
-          refine ⟨q1, q4, q5, by simp, ?_⟩
+          refine ⟨q1, q5, by simp, ?_⟩
           exact pool_set_push_wf q5 hts q2 q6 q3 q7
         | none =>
           rw [hsp] at h
           simp only [bind_eq_ok] at h
           obtain ⟨⟨plan, ch₁, ps₁⟩, hplan, h⟩ := h
-          cases harr : arrivalCases s threads i c with
+          cases harr : arrivalCases ctx s threads i c with
           | error e =>
             rw [arrivalPlan_of_error (ch := ch) harr] at hplan
             cases hplan
@@ -1163,9 +1166,9 @@ theorem stepThread_wf {s : ExecState} {threads : Array Thread} {i : Nat}
                 simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
                 obtain ⟨rfl, rfl, rfl, rfl⟩ := h
                 have hstepr := stepFn_sound hstep
-                obtain ⟨q1, q2, q3, q4⟩ := step_preserves_wf_loc hstepr hw hc
-                have q5 := step_preserves_iters hstepr hic
-                exact ⟨q1, q3, q4, by simp, pool_set1_wf q4 hts q2 q5⟩
+                obtain ⟨q1, q2, q4⟩ := step_preserves_wf_loc hstepr hw hc
+                have q5 := Config.itersNormalized_true ctx.types c₂
+                exact ⟨q1, q4, by simp, pool_set1_wf q4 hts q2 q5⟩
               | some p =>
                 obtain ⟨v, clauses, default?, done, env, k'⟩ := p
                 obtain rfl := selectApplyPlan_shape hselp
@@ -1182,7 +1185,7 @@ theorem stepThread_wf {s : ExecState} {threads : Array Thread} {i : Nat}
                   simp only [goValueListSup]
                   omega
                 obtain ⟨hb1, hb2, hb3, hb4, hb5⟩ := hcomp
-                cases happly : applySelect s clauses default?
+                cases happly : applySelect ctx s clauses default?
                     ((v :: done).reverse) env k' ch with
                 | ok r₂ =>
                   obtain ⟨c₂, s₂, ch₂, cl?⟩ := r₂
@@ -1190,12 +1193,12 @@ theorem stepThread_wf {s : ExecState} {threads : Array Thread} {i : Nat}
                   simp only [toResult_ok, Bind.bind, Except.bind, pure_eq_ok,
                     Except.ok.injEq, Prod.mk.injEq] at h
                   obtain ⟨rfl, rfl, rfl, rfl⟩ := h
-                  obtain ⟨q1, q2, q3, q4⟩ :=
+                  obtain ⟨q1, q2, q4⟩ :=
                     applySelect_wf hw hb1 hb2 hb3 hb4 hb5 happly
-                  have hkin : Cont.itersNormalized s.types k' = true := by
+                  have hkin : Cont.itersNormalized ctx.types k' = true := by
                     simpa [Config.itersNormalized, Cont.itersNormalized] using hic
                   have q5 := applySelect_itersNormalized happly hkin
-                  exact ⟨q1, q3, q4, by simp, pool_set1_wf q4 hts q2 q5⟩
+                  exact ⟨q1, q4, by simp, pool_set1_wf q4 hts q2 q5⟩
                 | error e =>
                   rw [happly] at h
                   cases_stop e <;>
@@ -1205,7 +1208,7 @@ theorem stepThread_wf {s : ExecState} {threads : Array Thread} {i : Nat}
                       reduceCtorEq] at h
                   case panic msg =>
                   obtain ⟨rfl, rfl, rfl, rfl⟩ := h
-                  refine ⟨hw, rfl, Nat.le_refl _, by simp, ?_⟩
+                  refine ⟨hw, Nat.le_refl _, by simp, ?_⟩
                   refine pool_set1_wf (Nat.le_refl _) hts ?_ ?_
                   · simp only [ConfigWf, Config.locSup, Cont.locSup,
                       goValueListSup, exprListSup, Nat.max_le] at hc ⊢
@@ -1238,9 +1241,9 @@ theorem stepThread_wf {s : ExecState} {threads : Array Thread} {i : Nat}
                     obtain ⟨⟨ts₂, s₂⟩, hpair, h⟩ := h
                     simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
                     obtain ⟨rfl, rfl, rfl, rfl⟩ := h
-                    obtain ⟨q1, q2, q3, q4, q5⟩ := applyPairing_wf hw hts hbcb
+                    obtain ⟨q1, q3, q4, q5⟩ := applyPairing_wf hw hts hbcb
                       hbci hpair
-                    exact ⟨q1, q2, q3, by omega, q5⟩
+                    exact ⟨q1, q3, by omega, q5⟩
             | multi os =>
               rcases hcons : Choices.consume ch os.length with ⟨sel, chs⟩
               rw [arrivalPlan_of_multi (ch := ch) harr hcons] at hplan
@@ -1279,9 +1282,9 @@ theorem stepThread_wf {s : ExecState} {threads : Array Thread} {i : Nat}
                         simp only [pure_eq_ok, Except.ok.injEq,
                           Prod.mk.injEq] at h
                         obtain ⟨rfl, rfl, rfl, rfl⟩ := h
-                        obtain ⟨q1, q2, q3, q4, q5⟩ := applyPairing_wf hw hts
+                        obtain ⟨q1, q3, q4, q5⟩ := applyPairing_wf hw hts
                           hbcb hbci hpair
-                        exact ⟨q1, q2, q3, by omega, q5⟩
+                        exact ⟨q1, q3, by omega, q5⟩
                 | commit cl env k =>
                   obtain ⟨hclb, henvb, hkb, hki⟩ := hcommitb rfl
                   dsimp only at h
@@ -1289,31 +1292,30 @@ theorem stepThread_wf {s : ExecState} {threads : Array Thread} {i : Nat}
                   obtain ⟨⟨c₂, s₂⟩, hcom, h⟩ := h
                   simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
                   obtain ⟨rfl, rfl, rfl, rfl⟩ := h
-                  obtain ⟨q1, q2, q3, q4⟩ := commitClause_wf hw hclb henvb
+                  obtain ⟨q1, q2, q4⟩ := commitClause_wf hw hclb henvb
                     hkb hcom
                   have q5 := commitClause_itersNormalized hcom hki
-                  exact ⟨q1, q3, q4, by simp, pool_set1_wf q4 hts q2 q5⟩
+                  exact ⟨q1, q4, by simp, pool_set1_wf q4 hts q2 q5⟩
 
 /-- **`MultiWf` preservation** — the executable pool step keeps the
 thread-indexed invariant. This is the slice-2 scaffold's owed theorem
 (`Multi.lean`, `MultiWf`'s docstring): the invariant carrier is now a
 PRESERVED invariant, not a definition awaiting one. -/
 theorem stepMulti_wf {m m' : MultiConfig} {ch ch' : Choices} {ev : StepEvent}
-    (hwf : MultiWf m) (h : stepMulti m ch = .ok (m', ch', ev)) : MultiWf m' := by
+    (hwf : MultiWf ctx m) (h : stepMulti ctx m ch = .ok (m', ch', ev)) : MultiWf ctx m' := by
   obtain ⟨hs, hcur, hth⟩ := hwf
   have hstep : ∀ i, i < m.threads.size →
       ∀ {ch₀ : Choices} {ev₀ : StepEvent},
-        stepThreadInto m i ch₀ = .ok (m', ch', ev₀) → MultiWf m' := by
+        stepThreadInto ctx m i ch₀ = .ok (m', ch', ev₀) → MultiWf ctx m' := by
     intro i hi ch₀ ev₀ hinto
     unfold stepThreadInto at hinto
     simp only [bind_eq_ok] at hinto
     obtain ⟨⟨ts, s₂, ch₂, ev₂⟩, hst, hinto⟩ := hinto
     simp only [pure_eq_ok, Except.ok.injEq] at hinto
     obtain ⟨rfl, rfl, rfl⟩ := hinto
-    obtain ⟨q1, q2, q3, q4, q5⟩ := stepThread_wf hs hth hst
+    obtain ⟨q1, q3, q4, q5⟩ := stepThread_wf hs hth hst
     refine ⟨q1, Nat.lt_of_lt_of_le hi q4, ?_⟩
     intro t ht
-    rw [q2]
     exact q5 t ht
   unfold stepMulti at h
   cases hti : m.threads[m.cur]? with
@@ -1322,7 +1324,7 @@ theorem stepMulti_wf {m m' : MultiConfig} {ch ch' : Choices} {ev : StepEvent}
     rw [hti] at h
     by_cases hb : t.atBoundary = true
     · simp only [hb, reduceIte] at h
-      cases hrs : schedSlots m.shared m.threads m.cur t.boundarySite with
+      cases hrs : schedSlots ctx m.shared m.threads m.cur t.boundarySite with
       | nil => rw [hrs] at h; cases h
       | cons r0 rest =>
         rw [hrs] at h
@@ -1340,7 +1342,7 @@ theorem stepMulti_wf {m m' : MultiConfig} {ch ch' : Choices} {ev : StepEvent}
           simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
           obtain ⟨rfl, rfl, rfl⟩ := h
           refine hstep i
-            (runnableIdxs_lt (s := m.shared) (ts := m.threads) ?_) hinto
+            (runnableIdxs_lt (ctx := ctx) (s := m.shared) (ts := m.threads) ?_) hinto
           refine schedSlots_mem hti ?_
           rw [hrs]
           exact List.mem_of_getElem? hget

@@ -11,6 +11,11 @@ they never infer a dynamic type from text or restrict the bytes, the
 recovered flag or the tail. -/
 namespace GoLean.GoCore.Machine
 
+-- B7 (2026-09-17): the program context is the first explicit parameter of
+-- every definition below that reads it; theorems take it implicitly
+-- (`variable {ctx}` toggles).
+variable (ctx : ProgramCtx)
+
 /-- gc's suffix as a function of the head's `recovered` flag and the
 COLLAPSE bit (`renderPanicHead`'s `recoveredSuffix`, with the pick already
 resolved against the chain shape). -/
@@ -23,9 +28,11 @@ the pick is slot 0. -/
 def collapseBit (first : PanicEntry) (rest : List PanicEntry) (pick : Nat) : Bool :=
   repanicEqualNext first rest && pick == 0
 
+variable {ctx}
 theorem recoveredSuffix_eq (first : PanicEntry) (rest : List PanicEntry) (pick : Nat) :
     recoveredSuffix first rest pick = collapseSuffix first.recovered (collapseBit first rest pick) := rfl
 
+variable (ctx)
 /-- **The member function**: the abort's first line for a string payload,
 given the head's `recovered` flag and the collapse bit — `none` exactly when
 the payload's FIRST LINE is not valid UTF-8 (the D5 refusal). A multi-line
@@ -35,6 +42,7 @@ def stringPanicHead (bytes : GoString) (recovered collapsed : Bool) : Option Str
   (stringFirstLine? bytes.bytes).map fun (line, multiline) =>
     if multiline then line else line ++ collapseSuffix recovered collapsed
 
+variable {ctx}
 theorem stringPanicHead_none_iff (bytes : GoString) (recovered collapsed : Bool) :
     stringPanicHead bytes recovered collapsed = none ↔
       utf8String? (bytes.bytes.takeWhile (· != 0x0A)) = none := by
@@ -55,10 +63,10 @@ theorem stringFirstLine?_bytes {bytes : Array UInt8} {line : String} {multiline 
 
 /-- The renderer on a string payload IS the member function at the pick's
 collapse bit. -/
-theorem renderPanicHead_string (s : ExecState) (first : PanicEntry)
+theorem renderPanicHead_string (first : PanicEntry)
     (rest : List PanicEntry) (bytes : GoString) (pick : Nat)
     (hv : first.value = .interface .string (.string bytes)) :
-    renderPanicHead s first rest pick =
+    renderPanicHead ctx first rest pick =
       stringPanicHead bytes first.recovered (collapseBit first rest pick) := by
   cases first with
   | mk value recovered =>
@@ -68,10 +76,10 @@ theorem renderPanicHead_string (s : ExecState) (first : PanicEntry)
 
 /-- The runtime-error twin: the machine's `runtime.Error` payload renders
 its message through the same member function. -/
-theorem renderPanicHead_runtimeError (s : ExecState) (first : PanicEntry)
+theorem renderPanicHead_runtimeError (first : PanicEntry)
     (rest : List PanicEntry) (msg : String) (pick : Nat)
     (hv : first.value = runtimeErrorValue msg) :
-    renderPanicHead s first rest pick =
+    renderPanicHead ctx first rest pick =
       stringPanicHead (GoString.fromLeanString msg) first.recovered (collapseBit first rest pick) := by
   cases first with
   | mk value recovered =>
@@ -80,77 +88,77 @@ theorem renderPanicHead_runtimeError (s : ExecState) (first : PanicEntry)
     simp [renderPanicHead, renderPanicPayload, runtimeErrorValue, stringPanicHead,
       recoveredSuffix_eq]
 
-theorem abortMsg_string (s : ExecState) (first : PanicEntry)
+theorem abortMsg_string (first : PanicEntry)
     (rest : List PanicEntry) (bytes : GoString) (pick : Nat) (msg : String)
     (hv : first.value = .interface .string (.string bytes))
     (hm : stringPanicHead bytes first.recovered (collapseBit first rest pick) = some msg) :
-    abortMsg s first rest pick = .ok msg := by
-  simp [abortMsg, renderPanicHead_string s first rest bytes pick hv, hm]
+    abortMsg ctx first rest pick = .ok msg := by
+  simp [abortMsg, renderPanicHead_string first rest bytes pick hv, hm]
 
 /-- The refusal, BY NAME: a string payload without a member refuses with
 `abortRefusal`, whichever pick the tape holds. -/
-theorem abortMsg_string_refused (s : ExecState) (first : PanicEntry)
+theorem abortMsg_string_refused (first : PanicEntry)
     (rest : List PanicEntry) (bytes : GoString) (pick : Nat)
     (hv : first.value = .interface .string (.string bytes))
     (hm : stringPanicHead bytes first.recovered (collapseBit first rest pick) = none) :
-    abortMsg s first rest pick = .error (.unsupported (abortRefusal s first)) := by
-  simp [abortMsg, renderPanicHead_string s first rest bytes pick hv, hm, throw, throwThe,
+    abortMsg ctx first rest pick = .error (.unsupported (abortRefusal ctx first)) := by
+  simp [abortMsg, renderPanicHead_string first rest bytes pick hv, hm, throw, throwThe,
     MonadExceptOf.throw]
 
 /-- The converse: a rendered abort of a string payload is the member function's
 `some`. -/
-theorem abortMsg_string_ok (s : ExecState) (first : PanicEntry)
+theorem abortMsg_string_ok (first : PanicEntry)
     (rest : List PanicEntry) (bytes : GoString) (pick : Nat) (msg : String)
     (hv : first.value = .interface .string (.string bytes))
-    (h : abortMsg s first rest pick = .ok msg) :
+    (h : abortMsg ctx first rest pick = .ok msg) :
     stringPanicHead bytes first.recovered (collapseBit first rest pick) = some msg := by
   unfold abortMsg at h
-  rw [renderPanicHead_string s first rest bytes pick hv] at h
+  rw [renderPanicHead_string first rest bytes pick hv] at h
   cases hm : stringPanicHead bytes first.recovered (collapseBit first rest pick) with
   | none => simp [hm] at h
   | some m => simp [hm] at h; exact congrArg some h
 
 /-- The sequential abort step on a string payload: the `panic` terminal
 carrying the member the STREAM's pick selects. -/
-theorem stepFn_string_abort (s : ExecState) (c : Config) (choices : Choices)
+theorem stepFn_string_abort (s : Store) (c : Config) (choices : Choices)
     (first : PanicEntry) (rest : List PanicEntry) (bytes : GoString) (msg : String)
     (hab : c.abort? = some (first, rest))
     (hv : first.value = .interface .string (.string bytes))
     (hm : stringPanicHead bytes first.recovered
       (collapseBit first rest (abortConsult first rest choices).1) = some msg) :
-    stepFn s c choices = .error (.panic msg) := by
+    stepFn ctx s c choices = .error (.panic msg) := by
   match c, hab with
   | .panicking (f :: r) .stop, hab =>
       simp only [Config.abort?, Option.some.injEq, Prod.mk.injEq] at hab
       obtain ⟨rfl, rfl⟩ := hab
-      simp only [stepFn, abortMsg_string s f r bytes _ msg hv hm]
+      simp only [stepFn, abortMsg_string f r bytes _ msg hv hm]
       rfl
 
 /-- …and the refusal twin: no member, the named `.unsupported` refusal. -/
-theorem stepFn_string_abort_refused (s : ExecState) (c : Config) (choices : Choices)
+theorem stepFn_string_abort_refused (s : Store) (c : Config) (choices : Choices)
     (first : PanicEntry) (rest : List PanicEntry) (bytes : GoString)
     (hab : c.abort? = some (first, rest))
     (hv : first.value = .interface .string (.string bytes))
     (hm : stringPanicHead bytes first.recovered
       (collapseBit first rest (abortConsult first rest choices).1) = none) :
-    stepFn s c choices = .error (.unsupported (abortRefusal s first)) := by
+    stepFn ctx s c choices = .error (.unsupported (abortRefusal ctx first)) := by
   match c, hab with
   | .panicking (f :: r) .stop, hab =>
       simp only [Config.abort?, Option.some.injEq, Prod.mk.injEq] at hab
       obtain ⟨rfl, rfl⟩ := hab
-      simp only [stepFn, abortMsg_string_refused s f r bytes _ hv hm]
+      simp only [stepFn, abortMsg_string_refused f r bytes _ hv hm]
       rfl
 
 /-- A positive fuel budget consumes the real abort step. Zero fuel still
 reports exhaustion; the theorem does not silently classify it as panic. -/
-theorem runConfig_string_abort (fuel : Nat) (s : ExecState) (c : Config)
+theorem runConfig_string_abort (fuel : Nat) (s : Store) (c : Config)
     (choices : Choices) (first : PanicEntry) (rest : List PanicEntry) (bytes : GoString)
     (msg : String)
     (hab : c.abort? = some (first, rest))
     (hv : first.value = .interface .string (.string bytes))
     (hm : stringPanicHead bytes first.recovered
       (collapseBit first rest (abortConsult first rest choices).1) = some msg) :
-    runConfig (fuel + 1) s c choices = .error (.panic msg) := by
+    runConfig ctx (fuel + 1) s c choices = .error (.panic msg) := by
   match c, hab with
   | .panicking (f :: r) .stop, hab =>
       simp only [Config.abort?, Option.some.injEq, Prod.mk.injEq] at hab
@@ -159,13 +167,13 @@ theorem runConfig_string_abort (fuel : Nat) (s : ExecState) (c : Config)
         choices f r bytes msg rfl hv hm]
       rfl
 
-theorem runConfig_string_abort_refused (fuel : Nat) (s : ExecState) (c : Config)
+theorem runConfig_string_abort_refused (fuel : Nat) (s : Store) (c : Config)
     (choices : Choices) (first : PanicEntry) (rest : List PanicEntry) (bytes : GoString)
     (hab : c.abort? = some (first, rest))
     (hv : first.value = .interface .string (.string bytes))
     (hm : stringPanicHead bytes first.recovered
       (collapseBit first rest (abortConsult first rest choices).1) = none) :
-    runConfig (fuel + 1) s c choices = .error (.unsupported (abortRefusal s first)) := by
+    runConfig ctx (fuel + 1) s c choices = .error (.unsupported (abortRefusal ctx first)) := by
   match c, hab with
   | .panicking (f :: r) .stop, hab =>
       simp only [Config.abort?, Option.some.injEq, Prod.mk.injEq] at hab

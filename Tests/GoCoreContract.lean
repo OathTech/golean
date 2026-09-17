@@ -19,6 +19,10 @@ The 14 theorems named in `tools/core-audit.py`'s required list are required expo
 namespace GoLean.GoCore.ContractTests
 open GoCore GoCore.Machine Semantics
 
+-- B7 (2026-09-17): the ∀-state facts take the program context implicitly;
+-- the concrete runs use `exampleCtx` (the old `{ types := TypeEnv.reserved }`).
+variable {ctx : ProgramCtx}
+
 def bareFrame : Cont := .frame [] [] [] [] .stop false
 def panicFrame : Cont := .frame [] [] [] [] (.panicResumeK [panicEntry "audit"] .stop) false
 
@@ -54,15 +58,15 @@ theorem recover_changes_handler : (recoverResult panicFrame).2 ≠ panicFrame :=
     | _ => false) h
   cases hb
 
-theorem recover_stepFn (s : ExecState) (env : LocalEnv) (k : Cont) (ch : Choices) :
-    stepFn s (.evalE .recoverCall env k) ch =
+theorem recover_stepFn (s : Store) (env : LocalEnv) (k : Cont) (ch : Choices) :
+    stepFn ctx s (.evalE .recoverCall env k) ch =
       .ok (.retV (recoverResult k).1 (recoverResult k).2, s, ch) := rfl
 
 /-- Transporting the bare-frame recover successor under the added handler
 is not a step. This refutes the concrete instance of the proposed fill law. -/
-theorem recover_step_does_not_transport (s : ExecState) :
-    Step (.evalE .recoverCall [] bareFrame) s (.retV .nil bareFrame) s ∧
-    ¬ Step (.evalE .recoverCall [] panicFrame) s (.retV .nil panicFrame) s := by
+theorem recover_step_does_not_transport (s : Store) :
+    Step ctx (.evalE .recoverCall [] bareFrame) s (.retV .nil bareFrame) s ∧
+    ¬ Step ctx (.evalE .recoverCall [] panicFrame) s (.retV .nil panicFrame) s := by
   refine ⟨.evalRecover recover_bare, ?_⟩
   intro h
   obtain ⟨ch, ch', he⟩ := step_complete h
@@ -70,37 +74,37 @@ theorem recover_step_does_not_transport (s : ExecState) :
   have hc := (Prod.mk.inj (Except.ok.inj he)).1
   cases hc
 
-def illTyped : ExecState := { heap := #[.value .bool (.int 7)] }
+def illTyped : Store := { heap := #[.value .bool (.int 7)] }
 theorem address_bound_admits_ill_typed : StateWf illTyped := by decide
 
 /-- An actual choice site of the current machine, not a toy transition system. -/
 def forkPoint : Config := .panicking [panicEntry "audit"] (.probeK .stop)
 def raised : Config := .panicking [panicEntry "audit"] .stop
 
-theorem choose_defer (s : ExecState) (tail : Choices) :
-    stepFn s forkPoint (0 :: tail) = .ok (.next .stop, s, tail) := rfl
-theorem choose_raise (s : ExecState) (tail : Choices) :
-    stepFn s forkPoint (1 :: tail) = .ok (raised, s, tail) := rfl
+theorem choose_defer (s : Store) (tail : Choices) :
+    stepFn ctx s forkPoint (0 :: tail) = .ok (.next .stop, s, tail) := rfl
+theorem choose_raise (s : Store) (tail : Choices) :
+    stepFn ctx s forkPoint (1 :: tail) = .ok (raised, s, tail) := rfl
 
-theorem both_relational_successors (s : ExecState) :
-    Step forkPoint s (.next .stop) s ∧ Step forkPoint s raised s :=
+theorem both_relational_successors (s : Store) :
+    Step ctx forkPoint s (.next .stop) s ∧ Step ctx forkPoint s raised s :=
   ⟨.probeDefer, .probeRaise⟩
 
 /-- The old fixed-stream ⇐ existential-path claim already fails at one step. -/
-theorem fixed_stream_not_existential_path (s : ExecState) :
-    Steps forkPoint s raised s ∧
-      ¬ ∃ chf, stepFnIter 1 s forkPoint [0] = .ok (raised, s, chf) := by
+theorem fixed_stream_not_existential_path (s : Store) :
+    Steps ctx forkPoint s raised s ∧
+      ¬ ∃ chf, stepFnIter ctx 1 s forkPoint [0] = .ok (raised, s, chf) := by
   refine ⟨Steps.single (both_relational_successors s).2, ?_⟩
   rintro ⟨chf, h⟩
   have hc : Config.next .stop = raised := congrArg (fun x => x.toOption.map Prod.fst) h
     |> Option.some.inj
   cases hc
 
-theorem defer_trace (s : ExecState) (tail : Choices) :
-    Trace 1 s forkPoint (0 :: tail) s (.next .stop) tail :=
+theorem defer_trace (s : Store) (tail : Choices) :
+    Trace ctx 1 s forkPoint (0 :: tail) s (.next .stop) tail :=
   .step (choose_defer s tail) .done
-theorem raise_trace (s : ExecState) (tail : Choices) :
-    Trace 1 s forkPoint (1 :: tail) s raised tail :=
+theorem raise_trace (s : Store) (tail : Choices) :
+    Trace ctx 1 s forkPoint (1 :: tail) s raised tail :=
   .step (choose_raise s tail) .done
 
 end GoLean.GoCore.ContractTests
@@ -108,7 +112,14 @@ end GoLean.GoCore.ContractTests
 namespace GoLean.GoCore.ContractTests
 open GoCore GoCore.Machine Semantics
 
-def exampleState : ExecState := { types := TypeEnv.reserved }
+-- B7 (2026-09-17): the ∀-state facts take the program context implicitly;
+-- the concrete runs use `exampleCtx` (the old `{ types := TypeEnv.reserved }`).
+variable {ctx : ProgramCtx}
+
+/-- B7: the old `{ types := TypeEnv.reserved }` state, as the run's context plus an
+empty store. -/
+def exampleCtx : ProgramCtx := ProgramCtx.ofTables (types := TypeEnv.reserved)
+def exampleState : Store := {}
 def choicePool : MultiConfig := ⟨#[Thread.running forkPoint none], exampleState, 0⟩
 
 /-- Hand-authored GoCore; no claim of a certified Go frontend translation. -/
@@ -162,42 +173,42 @@ theorem print_before_panic_trace :
   Pool.program_run_iff.mp print_before_panic
 
 /-- Terminal checking precedes exhaustion. One step suffices for DEFER. -/
-theorem defer_completes (s : ExecState) (tail : Choices) :
-    execStmtLoop 1 s forkPoint (0 :: tail) = .ok (s, tail) :=
+theorem defer_completes (s : Store) (tail : Choices) :
+    execStmtLoop ctx 1 s forkPoint (0 :: tail) = .ok (s, tail) :=
   run_ok_iff.mpr ⟨1, Nat.le_refl _, defer_trace s tail⟩
 
-theorem raise_needs_abort_fuel (s : ExecState) (tail : Choices) :
-    execStmtLoop 1 s forkPoint (1 :: tail) = .error .fuelOut := by
+theorem raise_needs_abort_fuel (s : Store) (tail : Choices) :
+    execStmtLoop ctx 1 s forkPoint (1 :: tail) = .error .fuelOut := by
   rw [execStmtLoop_step (choose_raise s tail)]
   rfl
 
 theorem raise_aborts :
-    execStmtLoop 2 exampleState forkPoint [1] = .error (.panic "audit") := by
+    execStmtLoop exampleCtx 2 exampleState forkPoint [1] = .error (.panic "audit") := by
   rw [execStmtLoop_step (choose_raise exampleState [])]
   with_unfolding_all rfl
 
 /-- Both directions of the corrected bridge at the actual choice site. -/
 theorem defer_run_iff :
-    execStmtLoop 1 exampleState forkPoint [0] = .ok (exampleState, []) ↔
-      ∃ n, n ≤ 1 ∧ Trace n exampleState forkPoint [0] exampleState (.next .stop) [] :=
+    execStmtLoop exampleCtx 1 exampleState forkPoint [0] = .ok (exampleState, []) ↔
+      ∃ n, n ≤ 1 ∧ Trace exampleCtx n exampleState forkPoint [0] exampleState (.next .stop) [] :=
   run_ok_iff
 
 theorem pool_defer (acc : GoString) :
-    execProgLoopOut 2 choicePool {} [0] acc = (acc, .ok (exampleState, [])) := by
+    execProgLoopOut exampleCtx 2 choicePool {} [0] acc = (acc, .ok (exampleState, [])) := by
   with_unfolding_all rfl
 
 theorem pool_raise (acc : GoString) :
-    execProgLoopOut 2 choicePool {} [1] acc = (acc, .error (.panic "audit")) := by
+    execProgLoopOut exampleCtx 2 choicePool {} [1] acc = (acc, .error (.panic "audit")) := by
   with_unfolding_all rfl
 
 theorem both_pool_traces (acc : GoString) :
-    Pool.Run 2 choicePool {} [0] acc (acc, .ok (exampleState, [])) ∧
-    Pool.Run 2 choicePool {} [1] acc (acc, .error (.panic "audit")) :=
+    Pool.Run exampleCtx 2 choicePool {} [0] acc (acc, .ok (exampleState, [])) ∧
+    Pool.Run exampleCtx 2 choicePool {} [1] acc (acc, .error (.panic "audit")) :=
   ⟨Pool.run_iff.mp (pool_defer acc), Pool.run_iff.mp (pool_raise acc)⟩
 
 theorem two_choice_pool_bridge (acc : GoString) :
-    (∃ ch, execProgLoopOut 2 choicePool {} ch acc = (acc, .error (.panic "audit"))) ∧
-    execProgLoopOut 2 choicePool {} [0] acc ≠ (acc, .error (.panic "audit")) := by
+    (∃ ch, execProgLoopOut exampleCtx 2 choicePool {} ch acc = (acc, .error (.panic "audit"))) ∧
+    execProgLoopOut exampleCtx 2 choicePool {} [0] acc ≠ (acc, .error (.panic "audit")) := by
   refine ⟨⟨[1], pool_raise acc⟩, ?_⟩
   rw [pool_defer]
   intro h
@@ -221,19 +232,21 @@ set_option maxHeartbeats 800000
 existing byte prefix, including NUL and SOH, and the entire choice tape when classifying an
 already normal terminal. -/
 theorem terminal_at_zero_fuel (ch : Choices) :
-    execProgLoopOut 0 ⟨#[.running (.next .stop) none], {}, 0⟩ {} ch
+    execProgLoopOut emptyCtx 0 ⟨#[.running (.next .stop) none], {}, 0⟩ {} ch
       ⟨#[0, 1, 10, 13]⟩ = (⟨#[0, 1, 10, 13]⟩, .ok ({}, ch)) := by rfl
 
 /-- Origin `Tests/BooleanRuntime.lean` (`duplicate_readout_preserves_alias`). -/
 theorem duplicate_readout_preserves_alias (b : Bool) :
-    loadMany { heap := #[.value .bool (.bool b)] } [.base ⟨0⟩, .base ⟨0⟩] =
+    loadMany emptyCtx { heap := #[.value .bool (.bool b)] } [.base ⟨0⟩, .base ⟨0⟩] =
       .ok [.bool b, .bool b] := by rfl
 
 -- Origin `Tests/BooleanInvariant.lean` (`actual_scope_restoration`, `actual_new_local_zero`).
 def barrier : Cont := .frame [] [] [] [] .stop
-def fresh : ExecState := {}
+/-- B7: the old `({} : ExecState)` — an empty context beside the empty store. -/
+def emptyCtx : ProgramCtx := ProgramCtx.ofTables (types := #[])
+def fresh : Store := {}
 def scopeEnv : LocalEnv := [[("result", .base ⟨0⟩), ("x", .base ⟨1⟩)]]
-def scopeState (b : Bool) : ExecState :=
+def scopeState (b : Bool) : Store :=
   {fresh with heap := #[.value .bool (.bool false), .value .bool (.bool b)]}
 def scopeBody : Stmt := .seqn #[
   .block #[⟨"x", .bool⟩] #[.assign (.var "x") (.not (.var "x"))],
@@ -242,16 +255,16 @@ def scopeBody : Stmt := .seqn #[
 /-- The inner zero-initialized shadow is changed to true; after its block,
 the read resolves the outer input. Both inputs distinguish different errors. -/
 theorem actual_scope_restoration (b : Bool) :
-    (do let (s, _) ← runConfig 40 (scopeState b) (.exec scopeBody scopeEnv barrier) []
-        loadMany s [.base ⟨0⟩]) = .ok [.bool b] := by
+    (do let (s, _) ← runConfig emptyCtx 40 (scopeState b) (.exec scopeBody scopeEnv barrier) []
+        loadMany emptyCtx s [.base ⟨0⟩]) = .ok [.bool b] := by
   cases b <;> with_unfolding_all rfl
 
 def zeroBody : Stmt := .seqn #[.initialization ⟨"zero", .bool⟩,
   .assign (.var "result") (.var "zero"), .returnStmt]
 
 theorem actual_new_local_zero (b : Bool) :
-    (do let (s, _) ← runConfig 30 (scopeState b) (.exec zeroBody scopeEnv barrier) []
-        loadMany s [.base ⟨0⟩]) = .ok [.bool false] := by
+    (do let (s, _) ← runConfig emptyCtx 30 (scopeState b) (.exec zeroBody scopeEnv barrier) []
+        loadMany emptyCtx s [.base ⟨0⟩]) = .ok [.bool false] := by
   cases b <;> with_unfolding_all rfl
 
 -- Origin `Tests/RecoveryInvariant.lean` (`registration_is_lifo`,
@@ -295,7 +308,7 @@ theorem scope_and_zero_execution (b : Bool) :
   cases b <;> with_unfolding_all rfl
 
 -- Origin `Tests/RecoveryStorage.lean` (`write_keeps_both_actual_aliases`).
-def aliasState (b : Bool) : ExecState := { heap := #[
+def aliasState (b : Bool) : Store := { heap := #[
   .value .bool (.bool b),
   .value (.pointer .bool) (.addr (.base ⟨0⟩)),
   .value (.pointer .bool) (.addr (.base ⟨0⟩))] }
@@ -303,10 +316,10 @@ def aliasState (b : Bool) : ExecState := { heap := #[
 /-- Both stored captures keep the original shared target while its value
 changes; the machine does not copy the pointee at capture or at store. -/
 theorem write_keeps_both_actual_aliases (before after : Bool) :
-    storeLoc (aliasState before) (.base ⟨0⟩) (.bool after) = .ok (aliasState after) ∧
-    loadMany (aliasState after) [.base ⟨1⟩, .base ⟨2⟩] =
+    storeLoc emptyCtx (aliasState before) (.base ⟨0⟩) (.bool after) = .ok (aliasState after) ∧
+    loadMany emptyCtx (aliasState after) [.base ⟨1⟩, .base ⟨2⟩] =
       .ok [.addr (.base ⟨0⟩), .addr (.base ⟨0⟩)] ∧
-    loadLoc (aliasState after) (.base ⟨0⟩) = .ok (.bool after) := by
+    loadLoc emptyCtx (aliasState after) (.base ⟨0⟩) = .ok (.bool after) := by
   constructor
   · with_unfolding_all rfl
   constructor <;> with_unfolding_all rfl

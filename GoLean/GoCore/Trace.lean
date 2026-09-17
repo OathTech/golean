@@ -5,16 +5,22 @@ This is a proof carrier, not another executable interpreter. Erasing the
 stream yields `Steps`; the reverse erasure needs a composition theorem.
 -/
 namespace GoLean.Semantics
+
+-- B7 (2026-09-17): the program context is the first explicit parameter of
+-- every definition below that reads it; theorems take it implicitly
+-- (`variable {ctx}` toggles).
+variable (ctx : ProgramCtx)
 open GoCore GoCore.Machine
 
-inductive Trace : Nat → ExecState → Config → Choices →
-    ExecState → Config → Choices → Prop where
+inductive Trace : Nat → Store → Config → Choices →
+    Store → Config → Choices → Prop where
   | done : Trace 0 s c ch s c ch
-  | step : stepFn s c ch = .ok (c₁, s₁, ch₁) →
+  | step : stepFn ctx s c ch = .ok (c₁, s₁, ch₁) →
       Trace n s₁ c₁ ch₁ sf cf chf → Trace (n + 1) s c ch sf cf chf
 
+variable {ctx}
 theorem iter_iff_trace {n s c ch sf cf chf} :
-    stepFnIter n s c ch = .ok (cf, sf, chf) ↔ Trace n s c ch sf cf chf := by
+    stepFnIter ctx n s c ch = .ok (cf, sf, chf) ↔ Trace ctx n s c ch sf cf chf := by
   induction n generalizing s c ch with
   | zero =>
     simp only [stepFnIter, Except.ok.injEq, Prod.mk.injEq]
@@ -24,7 +30,7 @@ theorem iter_iff_trace {n s c ch sf cf chf} :
   | succ n ih =>
     constructor
     · intro h
-      cases hs : stepFn s c ch with
+      cases hs : stepFn ctx s c ch with
       | error e => simp [stepFnIter, hs, Bind.bind, Except.bind] at h
       | ok v =>
         obtain ⟨c₁, s₁, ch₁⟩ := v
@@ -33,18 +39,18 @@ theorem iter_iff_trace {n s c ch sf cf chf} :
       cases h with
       | step hs ht => simpa [stepFnIter, hs, Bind.bind, Except.bind] using ih.mpr ht
 
-theorem Trace.erase (h : Trace n s c ch sf cf chf) : Steps c s cf sf := by
+theorem Trace.erase (h : Trace ctx n s c ch sf cf chf) : Steps ctx c s cf sf := by
   induction h with
   | done => exact .refl _ _
   | step hs _ ih => exact (Steps.single (stepFn_sound hs)).trans ih
 
 theorem exists_iter_iff {n s c sf cf} :
-    (∃ ch chf, stepFnIter n s c ch = .ok (cf, sf, chf)) ↔
-    ∃ ch chf, Trace n s c ch sf cf chf := by
+    (∃ ch chf, stepFnIter ctx n s c ch = .ok (cf, sf, chf)) ↔
+    ∃ ch chf, Trace ctx n s c ch sf cf chf := by
   simp only [iter_iff_trace]
 
-theorem Trace.run (ht : Trace n s c ch sf cf chf) (hdone : cf = .next .stop) :
-    execStmtLoop n s c ch = .ok (sf, chf) := by
+theorem Trace.run (ht : Trace ctx n s c ch sf cf chf) (hdone : cf = .next .stop) :
+    execStmtLoop ctx n s c ch = .ok (sf, chf) := by
   induction ht with
   | done => subst hdone; rfl
   | step hs _ ih => rw [execStmtLoop_step hs]; exact ih hdone
@@ -52,11 +58,11 @@ theorem Trace.run (ht : Trace n s c ch sf cf chf) (hdone : cf = .next .stop) :
 /-- Exact successful-run bridge: one FIXED initial stream, its residual,
 and a counted trace whose length is bounded by the supplied fuel. -/
 theorem run_ok_iff {fuel s c ch sf chf} :
-    execStmtLoop fuel s c ch = .ok (sf, chf) ↔
-      ∃ n, n ≤ fuel ∧ Trace n s c ch sf (.next .stop) chf := by
+    execStmtLoop ctx fuel s c ch = .ok (sf, chf) ↔
+      ∃ n, n ≤ fuel ∧ Trace ctx n s c ch sf (.next .stop) chf := by
   constructor
   · intro h
-    fun_induction execStmtLoop fuel s c ch with
+    fun_induction execStmtLoop ctx fuel s c ch with
     | case1 =>
       simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
@@ -76,8 +82,8 @@ theorem run_ok_iff {fuel s c ch sf chf} :
     exact execStmtLoop_mono _ _ _ _ _ _ hn (ht.run rfl)
 
 theorem exists_run_ok_iff {s c sf} :
-    (∃ fuel ch chf, execStmtLoop fuel s c ch = .ok (sf, chf)) ↔
-      ∃ n ch chf, Trace n s c ch sf (.next .stop) chf := by
+    (∃ fuel ch chf, execStmtLoop ctx fuel s c ch = .ok (sf, chf)) ↔
+      ∃ n ch chf, Trace ctx n s c ch sf (.next .stop) chf := by
   constructor
   · rintro ⟨fuel, ch, chf, h⟩
     obtain ⟨n, _, ht⟩ := run_ok_iff.mp h

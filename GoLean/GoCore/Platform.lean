@@ -13,11 +13,14 @@ What is parametric TODAY: `tySizeAlign` (Ops.lean) takes a
 `Platform` — except its four `.sync` arms (Ops.lean), which are the
 amd64 `unsafe.Sizeof` constants and ignore `p` (owed for B7); `maxAllocBytes`/`chanHeaderBytes`/`intExclusiveUpperBound`
 and `IntKind.bits?` read `platform`. What is NOT yet threaded: the
-`ExecState` carries no platform field and `IntKind.normalize` reads the
+`ProgramCtx` carries no platform field and `IntKind.normalize` reads the
 constant, so theorems are stated at `platform` (= `gcAmd64`), not
-`∀ p : Platform` — threading a field through `ExecState` touches every
-state-shape lemma and is deferred to the `ProgramCtx`/`Store` split
-(review B7), where the state gains its context record anyway. [AGENT]
+`∀ p : Platform`. B7 (2026-09-17) split the state into `ProgramCtx`/`Store`
+WITHOUT threading the platform — D1 (a), [USER] 2026-09-16 (relayed: «go
+ahead with the D1-8 rulings as recommended»): `Platform` stays the A5
+global constant; threading it (`IntKind.bits?`, the Ops reads, `FloatBits`,
+the sync-layout literals) is ONE later all-at-once re-envelope lane
+(latitude R1/R16), never a partial field. [AGENT]
 -/
 
 namespace GoLean.GoCore

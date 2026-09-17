@@ -779,8 +779,11 @@ stream-consuming phases live in `enumRunProgram`, run per stream).
 Non-`private` so the driver-agreement eval tests can pin the copy
 against the original (audit F5). -/
 structure EnumProgram where
-  /-- Globals-seeded initial state (pre-`$pkginit`). -/
-  σ₀ : GoCore.ExecState
+  /-- The run's ONE program context (B7): built by `enumSetup` from the
+  decoded program, shared by setup, init, exploration and readout. -/
+  ctx : GoCore.ProgramCtx
+  /-- Globals-seeded initial store (pre-`$pkginit`). -/
+  σ₀ : GoCore.Store
   /-- The `$pkginit` body, when the program has one — run PER STREAM
   (its choice consumption is part of the run; init slice,
   `docs/2026-08-05_init-design.md`). -/
@@ -805,15 +808,17 @@ def enumSetup (program : GoCore.Program) (name : String)
   -- fix R2): the same text, the same position, so the drivers agree.
   if program.typeDefs.hasReservedPrefix then pure () else
     throw (.internal s!"program type table does not lead with the two machine-reserved entries ({GoCore.emptyStructTypeId.key} at index 0, {GoCore.runtimeErrorTypeId.key} at index 1): TypeEnv.hasReservedPrefix fails on a {program.typeDefs.size}-entry table — prepend TypeEnv.reserved (C2 acceptance clause)")
-  let state : GoCore.ExecState :=
-    { types := program.typeDefs, functions := program.funcs
-      methods := program.methods, methodSets := program.methodSets
-      typeDisplays := program.typeDisplays }
-  let σ₀ ← GoCore.Machine.seedGlobals state program.globals
+  -- B7: the decoded program IS the context; the store starts empty (the
+  -- same construction as `runProgramSetupM`'s — wire-neutral: no field of
+  -- the wire record is read differently).
+  let ctx : GoCore.ProgramCtx := ⟨program⟩
+  let state : GoCore.Store := {}
+  let σ₀ ← GoCore.Machine.seedGlobals ctx state program.globals
   -- Defense-in-depth behind the decoder's globaladdr bound check
-  -- (audit response, C1): mirror of `runProgramM`'s post-seed assert.
+  -- (audit response, C1): mirror of `runProgramM`'s post-seed assert
+  -- (heap-only since B7 — the same text as the core seam's).
   if GoCore.Machine.StateWf σ₀ then pure () else
-    throw (.internal "seeded state ill-formed: a location in a global cell or function body dangles beyond the allocator bound")
+    throw (.internal "seeded state ill-formed: a location in a global cell dangles beyond the allocator bound")
   let initBody? ←
     match GoCore.findFunctionIn? program.funcs GoCore.pkgInitFuncId with
     | none => pure none
@@ -821,7 +826,7 @@ def enumSetup (program : GoCore.Program) (name : String)
         if initF.args.size != 0 || initF.results.size != 0 then
           throw (.stuck s!"malformed {GoCore.pkgInitFuncId.key}: expected no parameters and no results")
         else pure (some initF.body)
-  return { σ₀, initBody?, func, args }
+  return { ctx, σ₀, initBody?, func, args }
 
 /-- One machine run to a program terminal: the observation JSON plus
 the LEFTOVER choice stream. `Choices.consume` pops exactly one element
@@ -855,7 +860,7 @@ status + message and could not see an output divergence on any
 refusal path). Returns (status, observation, leftover); non-`private`
 so the driver-agreement eval tests can pin it against the originals it
 mirrors (audit F5). -/
-def enumPoolRun (resultLocs : List Loc) :
+def enumPoolRun (pctx : GoCore.ProgramCtx) (resultLocs : List Loc) :
     Nat → GoCore.Machine.MultiConfig → GoCore.Machine.RaceState →
     GoCore.Choices → GoString →
     Except (Stop × GoString) (String × Json × GoCore.Choices)
@@ -874,18 +879,18 @@ def enumPoolRun (resultLocs : List Loc) :
                 -- THE MAIN-EXIT WINDOW (L5, BUG-044) — `execProgLoop`'s
                 -- bound-2 site, mirrored: with runnable goroutines left,
                 -- pick 0 exits now, pick 1 takes one more pool step.
-                (match GoCore.Machine.runnableIdxs m.shared m.threads with
+                (match GoCore.Machine.runnableIdxs pctx m.shared m.threads with
                 | [] =>
-                    return ("ok", runJson m.shared.types.nameOf?
-                      { values := (← (GoCore.Machine.loadMany σf resultLocs).mapError (·, acc)).toArray,
+                    return ("ok", runJson pctx.types.nameOf?
+                      { values := (← (GoCore.Machine.loadMany pctx σf resultLocs).mapError (·, acc)).toArray,
                         output := acc },
                       choices)
                 | _ :: _ =>
                     let (pick, choices₁) :=
                       GoCore.Choices.consumeAt .l5ExitWindow 2 choices
                     if pick == 0 then
-                      return ("ok", runJson m.shared.types.nameOf?
-                        { values := (← (GoCore.Machine.loadMany σf resultLocs).mapError (·, acc)).toArray,
+                      return ("ok", runJson pctx.types.nameOf?
+                        { values := (← (GoCore.Machine.loadMany pctx σf resultLocs).mapError (·, acc)).toArray,
                           output := acc },
                         choices₁)
                     else
@@ -893,37 +898,37 @@ def enumPoolRun (resultLocs : List Loc) :
                       | 0 => throw (.fuelOut, acc)
                       | fuel + 1 => do
                           let (m', choices', ev) ←
-                            (GoCore.Machine.stepMulti m choices₁).mapError (·, acc)
+                            (GoCore.Machine.stepMulti pctx m choices₁).mapError (·, acc)
                           let acc' := ev.out.foldl GoString.append acc
-                          match GoCore.Machine.raceUpdate m.shared m.threads ev m' r with
+                          match GoCore.Machine.raceUpdate pctx m.shared m.threads ev m' r with
                           | .error .raceDetected =>
                               return ("race", errorJson .raceDetected acc', choices')
                           | .error e => throw (e, acc)
-                          | .ok r' => enumPoolRun resultLocs fuel m' r' choices' acc')
+                          | .ok r' => enumPoolRun pctx resultLocs fuel m' r' choices' acc')
             | none =>
-                if (GoCore.Machine.runnableIdxs m.shared m.threads).isEmpty then
+                if (GoCore.Machine.runnableIdxs pctx m.shared m.threads).isEmpty then
                   throw (.deadlock, acc)
                 else
                   match fuel with
                   | 0 => throw (.fuelOut, acc)
                   | fuel + 1 => do
                       let (m', choices', ev) ←
-                        (GoCore.Machine.stepMulti m choices).mapError (·, acc)
+                        (GoCore.Machine.stepMulti pctx m choices).mapError (·, acc)
                       let acc' := ev.out.foldl GoString.append acc
-                      match GoCore.Machine.raceUpdate m.shared m.threads ev m' r with
+                      match GoCore.Machine.raceUpdate pctx m.shared m.threads ev m' r with
                       | .error .raceDetected =>
                           return ("race", errorJson .raceDetected acc', choices')
                       | .error e => throw (e, acc)
-                      | .ok r' => enumPoolRun resultLocs fuel m' r' choices' acc'
+                      | .ok r' => enumPoolRun pctx resultLocs fuel m' r' choices' acc'
 
 /-- The `$pkginit` phase of an enumeration run (init slice):
 `runConfig`-mirroring terminal handling, but returning the FINAL STATE
 (the subject runs from it) instead of a result observation. A panic terminal is the run's
 observation (a panicking initializer aborts the program before the
 subject), reported with the leftover stream like any panic member. -/
-def enumInitRun :
-    Nat → GoCore.ExecState → GoCore.Machine.Config → GoCore.Choices →
-    Except Stop (Sum (GoCore.ExecState × GoCore.Choices) (String × GoCore.Choices))
+def enumInitRun (pctx : GoCore.ProgramCtx) :
+    Nat → GoCore.Store → GoCore.Machine.Config → GoCore.Choices →
+    Except Stop (Sum (GoCore.Store × GoCore.Choices) (String × GoCore.Choices))
   | _, σ, .next .stop, choices => return .inl (σ, choices)
   | _, _, .blockedSend _ _ _, _ => throw .deadlock
   | _, _, .blockedRecv _ _ _ _ _, _ => throw .deadlock
@@ -938,10 +943,10 @@ def enumInitRun :
       -- panic member, with the stream AFTER the abort's `repanicCollapse`
       -- consult (`abortLeftover` — the sequential step itself returns no
       -- leftover on its error path; landing chunk L3).
-      match GoCore.Machine.stepFn σ c choices with
+      match GoCore.Machine.stepFn pctx σ c choices with
       | .error (.panic msg) => return .inr (msg, GoCore.Machine.abortLeftover c choices)
       | .error e => throw e
-      | .ok (c', σ', choices') => enumInitRun fuel σ' c' choices'
+      | .ok (c', σ', choices') => enumInitRun pctx fuel σ' c' choices'
 
 /-- One whole-PROGRAM enumeration run under one stream: `$pkginit` (when
 present) consumes from the stream first, then the subject entry wiring
@@ -967,18 +972,18 @@ def enumRunProgram (ep : EnumProgram) (runFuel : Nat)
         -- Diagnostic errors carry the `package init:` phase marker,
         -- mirroring `runPkgInitM` (audit response 2026-08-05, C6); the
         -- panic member's message stays unmarked (Go-observable).
-        match enumInitRun runFuel ep.σ₀
+        match enumInitRun ep.ctx runFuel ep.σ₀
             (.exec body [] (.frame [] [] [] [] .stop)) stream with
         | .error e => throw (GoCore.Machine.markInitPhase e, GoString.empty)
         | .ok (.inl r) => pure r
         | .ok (.inr (msg, leftover)) => return ("panic", errorJson (.panic msg), leftover)
-  let (env, s₂) ← noOut (GoCore.Machine.bindParams [] σ₁ ep.func.args.toList ep.args.toList)
-  let (frameEnv, s₃) ← noOut (GoCore.Machine.allocDecls env s₂ ep.func.results.toList)
+  let (env, s₂) ← noOut (GoCore.Machine.bindParams ep.ctx [] σ₁ ep.func.args.toList ep.args.toList)
+  let (frameEnv, s₃) ← noOut (GoCore.Machine.allocDecls ep.ctx env s₂ ep.func.results.toList)
   let resultLocs ← noOut (GoCore.Machine.pinResultLocs frameEnv ep.func.results.toList)
   -- The subject runs on the POOL (slice 4), mirroring `runProgramPoolM`:
   -- a fresh one-thread pool over the initialized state, race detector
   -- armed from empty.
-  enumPoolRun resultLocs runFuel
+  enumPoolRun ep.ctx resultLocs runFuel
     ⟨#[.running (.exec ep.func.body frameEnv (.frame [] [] [] [] .stop)) none], s₃, 0⟩ {}
     choices₁ GoString.empty
 
@@ -1111,17 +1116,17 @@ PROJECTION of the machine's own `poolConsumption` (Multi.lean) — the
 dispatch ladder is no longer mirrored here. `none` = the vector suffices
 (the real `stepMulti` will draw only from it); `some b` = the step's next
 draw would exceed the vector — a site of bound `b` at this position. -/
-def stepNeeds (m : GoCore.Machine.MultiConfig) (picks : GoCore.Choices) :
+def stepNeeds (pctx : GoCore.ProgramCtx) (m : GoCore.Machine.MultiConfig) (picks : GoCore.Choices) :
     Option Nat :=
-  (GoCore.Machine.poolConsumption m picks).map (·.2)
+  (GoCore.Machine.poolConsumption pctx m picks).map (·.2)
 
 /-- The SEQUENTIAL accountant for the `$pkginit` phase (one `stepFn`
 step consumes at most one pick): `some b` iff this configuration's next
 step draws a pick, with bound `b` — the machine's `seqConsumption`
 (theorem `stepFn_consumption`), projected. -/
-def stepNeedsSeq (σ : GoCore.ExecState) (c : GoCore.Machine.Config) :
+def stepNeedsSeq (pctx : GoCore.ProgramCtx) (σ : GoCore.Store) (c : GoCore.Machine.Config) :
     Option Nat :=
-  (GoCore.Machine.seqConsumption σ c).map (·.2)
+  (GoCore.Machine.seqConsumption pctx σ c).map (·.2)
 
 /-- Exploration context (invariant across the tree). -/
 structure ExpCtx where
@@ -1258,14 +1263,14 @@ partial def poolDFS (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
       | some σf =>
           let exitLeaf : EnumOutcome → List Nat → Except String EnumOutcome :=
             fun o p =>
-              match GoCore.Machine.loadMany σf resultLocs with
+              match GoCore.Machine.loadMany ctx.ep.ctx σf resultLocs with
               | .error e =>
                   .error s!"result readout failed at a terminal: {renderStop e}"
               | .ok vals =>
                   recordLeaf ctx o p "ok"
-                    (runJson ctx.ep.σ₀.types.nameOf? { values := vals.toArray, output := acc })
+                    (runJson ctx.ep.ctx.types.nameOf? { values := vals.toArray, output := acc })
                     p.length
-          (match GoCore.Machine.runnableIdxs m.shared m.threads with
+          (match GoCore.Machine.runnableIdxs ctx.ep.ctx m.shared m.threads with
           | [] => exitLeaf out path
           | _ :: _ =>
               -- THE MAIN-EXIT WINDOW (L5, BUG-044): a bound-2 site —
@@ -1281,7 +1286,7 @@ partial def poolDFS (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
                   | fuel' + 1 =>
                       poolStepDFS ctx o (b :: path) resultLocs fuel' m r acc [])
       | none =>
-        if (GoCore.Machine.runnableIdxs m.shared m.threads).isEmpty then
+        if (GoCore.Machine.runnableIdxs ctx.ep.ctx m.shared m.threads).isEmpty then
           .error s!"deadlock member under pick assignment {path.reverse} — deadlocking members have no membership handling (fail loud, per the design)"
         else
           match fuel with
@@ -1311,10 +1316,10 @@ partial def poolStepDFS (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
          -- first consumption is an ordinary data pick (e.g. the
          -- mapIter pick at a single-goroutine `.mapIterK` re-entry),
          -- which branches exhaustively as always.
-         && 2 ≤ (GoCore.Machine.schedSlots m.shared m.threads m.cur
+         && 2 ≤ (GoCore.Machine.schedSlots ctx.ep.ctx m.shared m.threads m.cur
               t.boundarySite).length
      | none => false)
-  match stepNeeds m picks with
+  match stepNeeds ctx.ep.ctx m picks with
   | some bound =>
       if backEdgeSched then
         match ctx.backedgeMode with
@@ -1358,7 +1363,7 @@ partial def poolStepDFS (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
       -- swallows the sentinel. Both fail loud. The sentinel is never
       -- consulted when it survives, so `m'` is exactly the
       -- sentinel-free step's result.
-      match GoCore.Machine.stepMulti m (picks ++ [0]) with
+      match GoCore.Machine.stepMulti ctx.ep.ctx m (picks ++ [0]) with
       | .error e =>
           .error s!"machine step failed under pick assignment {path.reverse} — cannot certify the observation set: {renderStop e}"
       | .ok (m', leftover, ev) =>
@@ -1368,7 +1373,7 @@ partial def poolStepDFS (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
             -- The output fold (stdlib slice 3): this step's `out` events
             -- extend the path's accumulator (`execProgLoopOut`, mirrored).
             let acc' := ev.out.foldl GoString.append acc
-            match GoCore.Machine.raceUpdate m.shared m.threads ev m' r with
+            match GoCore.Machine.raceUpdate ctx.ep.ctx m.shared m.threads ev m' r with
             | .error .raceDetected =>
                 recordLeaf ctx { out with steps := out.steps + 1 } path
                   "race" (errorJson .raceDetected acc') path.length
@@ -1384,12 +1389,12 @@ end
 branch): bind params, allocate results, pin locations, seed the
 one-thread pool with the detector armed. -/
 partial def subjectEntry (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
-    (σ : GoCore.ExecState) : Except String EnumOutcome := do
-  match GoCore.Machine.bindParams [] σ ctx.ep.func.args.toList
+    (σ : GoCore.Store) : Except String EnumOutcome := do
+  match GoCore.Machine.bindParams ctx.ep.ctx [] σ ctx.ep.func.args.toList
       ctx.ep.args.toList with
   | .error e => .error s!"subject entry failed: {renderStop e}"
   | .ok (env, s₂) =>
-    match GoCore.Machine.allocDecls env s₂ ctx.ep.func.results.toList with
+    match GoCore.Machine.allocDecls ctx.ep.ctx env s₂ ctx.ep.func.results.toList with
     | .error e => .error s!"subject entry failed: {renderStop e}"
     | .ok (frameEnv, s₃) =>
       match GoCore.Machine.pinResultLocs frameEnv ctx.ep.func.results.toList with
@@ -1404,7 +1409,7 @@ most); on the init terminal, wire the subject entry (per branch — the
 post-init state differs per path) and hand off to the pool DFS. A
 panicking initializer is the run's (panic) member. -/
 partial def initDFS (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
-    (fuel : Nat) (σ : GoCore.ExecState) (c : GoCore.Machine.Config) :
+    (fuel : Nat) (σ : GoCore.Store) (c : GoCore.Machine.Config) :
     Except String EnumOutcome := do
   if out.steps + out.probes > ctx.workCap then
     .error s!"work cap exceeded after {out.steps} step(s) + {out.probes} probe(s) with subtrees still unexplored — raise --work-cap or narrow the case"
@@ -1422,13 +1427,13 @@ partial def initDFS (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
         -- `runInitConfig` — no output fold on the sequential phase.
         if let some e := GoCore.Machine.initPrintRefusal? c then
           throw s!"package init: {renderStop e}"
-        match stepNeedsSeq σ c with
+        match stepNeedsSeq ctx.ep.ctx σ c with
         | some bound =>
             -- Sentinel-suffixed like the pool path: the branch pick
             -- must be consumed AND nothing more (a sequential step
             -- draws at most one pick — checked, not assumed).
             branchSite ctx out path bound path.length fun o b =>
-              match GoCore.Machine.stepFn σ c [b, 0] with
+              match GoCore.Machine.stepFn ctx.ep.ctx σ c [b, 0] with
               | .error (.panic msg) =>
                   -- THE ABORT (B4): the step's panic terminal is the
                   -- path's panic member (the old `.panicked` leaf, one
@@ -1446,7 +1451,7 @@ partial def initDFS (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
         | none =>
             -- TWO-SIDED here too (S4 audit): the sentinel must survive
             -- a step the accountant called non-consuming.
-            match GoCore.Machine.stepFn σ c [0] with
+            match GoCore.Machine.stepFn ctx.ep.ctx σ c [0] with
             | .error (.panic msg) =>
                 -- THE ABORT (B4): the panic member (see above).
                 recordLeaf ctx { out with steps := out.steps + 1 } path "panic"
@@ -1505,12 +1510,12 @@ def runDedupObservations (ep : EnumProgram) (cfg : EnumArgs) : IO UInt32 := do
   if cfg.allowNonterm.isSome then
     IO.eprintln "coverage-observations: --engine dedup does not support --allow-nonterm (refused fail-closed pending the M-9 ruling; use the DFS engine)"
     return 1
-  match GoCore.Machine.bindParams [] ep.σ₀ ep.func.args.toList ep.args.toList with
+  match GoCore.Machine.bindParams ep.ctx [] ep.σ₀ ep.func.args.toList ep.args.toList with
   | .error e =>
       IO.eprintln s!"coverage-observations: subject entry failed: {renderStop e}"
       return 1
   | .ok (env, s₂) =>
-  match GoCore.Machine.allocDecls env s₂ ep.func.results.toList with
+  match GoCore.Machine.allocDecls ep.ctx env s₂ ep.func.results.toList with
   | .error e =>
       IO.eprintln s!"coverage-observations: subject entry failed: {renderStop e}"
       return 1
@@ -1523,7 +1528,7 @@ def runDedupObservations (ep : EnumProgram) (cfg : EnumArgs) : IO UInt32 := do
     let m₀ : GoCore.Machine.MultiConfig :=
       ⟨#[.running (.exec ep.func.body frameEnv (.frame [] [] [] [] .stop)) none], s₃, 0⟩
     let r₀ : GoCore.Machine.RaceState := {}
-    match EnumDedup.buildCert resultLocs m₀ r₀ cfg.workCap with
+    match EnumDedup.buildCert ep.ctx resultLocs m₀ r₀ cfg.workCap with
     | .error err =>
         IO.eprintln s!"coverage-observations: dedup engine: {err}"
         return 1
@@ -1531,7 +1536,7 @@ def runDedupObservations (ep : EnumProgram) (cfg : EnumArgs) : IO UInt32 := do
       -- THE VERIFIED CHECKER — the certification boundary. A refusal
       -- here is fail-closed: engine bug, eqb fuel exhaustion, or a
       -- fragment mismatch; never a silently-narrower set.
-      if !GoCore.Machine.checkCert GoCore.Machine.dedupNodeEqb
+      if !GoCore.Machine.checkCert ep.ctx GoCore.Machine.dedupNodeEqb
           resultLocs m₀ r₀ cert then
         IO.eprintln "coverage-observations: dedup certificate REFUSED by the verified checker — cannot certify (engine bug or fragment mismatch)"
         return 1
@@ -1545,7 +1550,7 @@ def runDedupObservations (ep : EnumProgram) (cfg : EnumArgs) : IO UInt32 := do
         | .terminal t => t.status
       let obsJson : GoCore.Machine.Obs → Json := fun o =>
         match o with
-        | .ok vs => runJson ep.σ₀.types.nameOf? { values := vs.toArray }
+        | .ok vs => runJson ep.ctx.types.nameOf? { values := vs.toArray }
         | .terminal t => errorJson (.terminal t)
       -- The member vocabulary (audit fix F5): refuse by name before any
       -- status word is compared or printed.

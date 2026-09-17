@@ -26,6 +26,11 @@ checker re-runs — a wrong witness is a refused certificate).
 
 namespace GoLean.EnumDedup
 
+-- B7 (2026-09-17): the program context is the first explicit parameter of
+-- every engine function that steps or reads the machine; `buildCert` takes
+-- it from the CLI's `EnumProgram` (one context per run).
+variable (ctx : ProgramCtx)
+
 open GoLean.GoCore GoLean.GoCore.Machine
 
 /-- Cheap structural summary hash (performance only). -/
@@ -116,7 +121,7 @@ private def nodeBEq (a b : DedupNode) : Bool :=
 
 /-- Engine-side refusal diagnostics (mirrors `innerVecs`' branches;
 performance/reporting only — the checker's refusal stays authoritative). -/
-private def refusalReason (s : ExecState) (ts : Array Thread) (i : Nat) :
+private def refusalReason (s : Store) (ts : Array Thread) (i : Nat) :
     String :=
   match ts[i]? with
   | none => s!"goroutine {i}: index out of range"
@@ -126,7 +131,7 @@ private def refusalReason (s : ExecState) (ts : Array Thread) (i : Nat) :
     if isBlockedConfig c then s!"goroutine {i}: blocked shape not wake-certified (poolThreadOblivious false)"
     else if consumesRepanicCollapse c then s!"goroutine {i}: abort-line collapse pick (repanicCollapse, BUG-004 item 1 — a recovered head with an equal successor payload; outside the dedup checker's certified fragment; use the default enumerator)"
     else if consumesSelect c then
-      match arrivalCases s ts i c with
+      match arrivalCases ctx s ts i c with
       | .ok .cellPath => s!"goroutine {i}: consuming select apply (multi-ready .picks — L2 entry pick)"
       | .ok (.single _ _) => s!"goroutine {i}: partnered select arrival (.single)"
       | .ok (.multi _) => s!"goroutine {i}: multi-ready select arrival (L2 .multi)"
@@ -134,11 +139,11 @@ private def refusalReason (s : ExecState) (ts : Array Thread) (i : Nat) :
     else if consumesAppendSlice c then s!"goroutine {i}: append spill capacity pick"
     else if consumesTryLock c then s!"goroutine {i}: TryLock/TryRLock apply (the tryLock spurious-failure site — outside the dedup checker's certified fragment; use the default enumerator)"
     else if isMapIterNext c then s!"goroutine {i}: mapIterK iteration pick"
-    else if consumesNilValueMethod s c then s!"goroutine {i}: frame-entry panic-text pick (nilValueMethodText, BUG-087)"
+    else if consumesNilValueMethod ctx c then s!"goroutine {i}: frame-entry panic-text pick (nilValueMethodText, BUG-087)"
     else if consumesUnseqPanic c then s!"goroutine {i}: unsequenced-operand panic-order pick (unseqPanic, latitude E13 option (b) — outside the dedup checker's certified fragment; use the default enumerator)"
     else if consumesUnseqNext c then s!"goroutine {i}: unseq scheduler pick (unseqNext, evaluation-order model v2.1 Stage B — outside the dedup checker's certified fragment; route α of the design's §3.6 is owed before Stage E; use the default enumerator)"
     else
-      match arrivalCases s ts i c with
+      match arrivalCases ctx s ts i c with
       | .ok (.multi _) => s!"goroutine {i}: multi-ready select arrival (L2 .multi)"
       | .error e => s!"goroutine {i}: arrival analysis error: {e.message}"
       | _ => s!"goroutine {i}: unclassified refusal (config tag {configTag c})"
@@ -148,13 +153,13 @@ private def nodeRefusal (m : MultiConfig) : String :=
   | none => "running goroutine out of range"
   | some t =>
     if t.atBoundary then
-      match schedSlots m.shared m.threads m.cur t.boundarySite with
+      match schedSlots ctx m.shared m.threads m.cur t.boundarySite with
       | [] => "empty scheduling menu"
       | rs =>
           String.intercalate "; " ((rs.filter
-            (fun i => (innerVecs m.shared m.threads i).isNone)).map
-            (refusalReason m.shared m.threads))
-    else refusalReason m.shared m.threads m.cur
+            (fun i => (innerVecs ctx m.shared m.threads i).isNone)).map
+            (refusalReason ctx m.shared m.threads))
+    else refusalReason ctx m.shared m.threads m.cur
 
 /-- Per-node observation (the terminal classification `checkNode`
 mirrors), or `none` for a stepping node; `.error` = a shape the lane
@@ -169,14 +174,14 @@ private def nodeObs (resultLocs : List Loc) (nd : DedupNode) :
     | none =>
       match nd.m.mainOutcome? with
       | some σf =>
-          match loadMany σf resultLocs with
+          match loadMany ctx σf resultLocs with
           | .error e => throw s!"result readout failed at a terminal: {e.message}"
           | .ok vs =>
-              match runnableIdxs nd.m.shared nd.m.threads with
+              match runnableIdxs ctx nd.m.shared nd.m.threads with
               | [] => return some (.ok vs, false)
               | _ :: _ => return some (.ok vs, true)
       | none =>
-          if (runnableIdxs nd.m.shared nd.m.threads).isEmpty then
+          if (runnableIdxs ctx nd.m.shared nd.m.threads).isEmpty then
             throw "deadlock state reached — deadlocking members have no membership handling (fail loud)"
           else
             return none
@@ -241,7 +246,7 @@ private partial def explore (resultLocs : List Loc) (budget : Nat)
       | some nd, some (path, steps) => do
         -- terminal classification (members + whether the node steps)
         let stepping ← do
-          match ← nodeObs resultLocs nd with
+          match ← nodeObs ctx resultLocs nd with
           | some (o, alsoSteps) =>
               -- witness: reach the node, then (at an open L5 window)
               -- pick exit 0 — the empty tail's default covers it, so
@@ -253,20 +258,20 @@ private partial def explore (resultLocs : List Loc) (budget : Nat)
         | some (st, false) => explore resultLocs budget st stack
         | some (st, true) =>
           -- branch: the CHECKER's own vector enumeration
-          match nodeVecs nd.m with
+          match nodeVecs ctx nd.m with
           | none =>
-              throw s!"refused consumption shape at node {k} (outside the certified fragment): {nodeRefusal nd.m} — this row cannot use engine=dedup"
+              throw s!"refused consumption shape at node {k} (outside the certified fragment): {nodeRefusal ctx nd.m} — this row cannot use engine=dedup"
           | some vecs => do
             -- at an open L5 window, edge streams need the continue pick
             let window ←
-              match ← nodeObs resultLocs nd with
+              match ← nodeObs ctx resultLocs nd with
               | some (_, true) => pure true
               | _ => pure false
             let mut stM := st
             let mut newIdxs : List Nat := []
             let mut succs : Array Nat := #[]
             for vec in vecs do
-              match stepMulti nd.m vec with
+              match stepMulti ctx nd.m vec with
               | .error e =>
                   throw s!"machine step failed at node {k} under vector {vec}: {e.message}"
               | .ok (m', chRem, ev) =>
@@ -281,7 +286,7 @@ private partial def explore (resultLocs : List Loc) (budget : Nat)
                   throw s!"output event at node {k} (a print/println step wrote {ev.out.length} chunk(s)): engine=dedup keys nodes on state and output is a trace — this row cannot use engine=dedup (use the default enumerator)"
                 else
                   let edgeStream := path ++ (if window then 1 :: vec else vec)
-                  match raceUpdate nd.m.shared nd.m.threads ev m' nd.r with
+                  match raceUpdate ctx nd.m.shared nd.m.threads ev m' nd.r with
                   | .ok r' =>
                       let (st', k', isNew) := internNode stM ⟨m', r'⟩
                         (edgeStream, steps + 1)
@@ -307,7 +312,7 @@ def buildCert (resultLocs : List Loc) (m₀ : MultiConfig) (r₀ : RaceState)
     (budget : Nat) : Except String (DedupCert × EngineStats) := do
   let root : DedupNode := ⟨m₀, r₀⟩
   let (st, _, _) := internNode {} root ([], 0)
-  let st ← explore resultLocs budget st [0]
+  let st ← explore ctx resultLocs budget st [0]
   return (⟨st.nodes, st.succ, st.members⟩, st.stats)
 
 end GoLean.EnumDedup

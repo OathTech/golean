@@ -55,17 +55,18 @@ theorem method_identity_is_semantic :
 private def signature (id : Declaration.MemberId) (params : Array Ty := #[]) (variadic := false) : MethodSig :=
   { id, params, results := #[.int .int], variadic }
 
-private def implementing (req : MethodSig) (recv : Ty := .defined 2) : ExecState :=
+private def implementing (req : MethodSig) (recv : Ty := .defined 2) : ProgramCtx :=
   let target : Func :=
     { id := ⟨"body"⟩,
       args := #[{ id := "$recv", typ := recv }] ++ req.params.map (fun t => { id := "arg", typ := t }),
       results := req.results.map (fun t => { id := "result", typ := t }),
       variadic := req.variadic, body := .unsupported "signature-only control" }
-  { types := TypeEnv.reserved ++ #[(⟨"main.T"⟩, .struct #[])],
-    functions := #[target],
-    methods := #[{ id := req.id, funcId := ⟨"body"⟩, recv }],
-    methodSets := #[{ key := "main.T", coverage := .full }],
-    typeDisplays := #[(⟨"main.T"⟩, { name := "main.T", pkg := "main" })] }
+  ProgramCtx.ofTables
+    (types := TypeEnv.reserved ++ #[(⟨"main.T"⟩, .struct #[])])
+    (functions := #[target])
+    (methods := #[{ id := req.id, funcId := ⟨"body"⟩, recv }])
+    (methodSets := #[{ key := "main.T", coverage := .full }])
+    (typeDisplays := #[(⟨"main.T"⟩, { name := "main.T", pkg := "main" })])
 
 private def privateP := signature ⟨"m", "red/inner"⟩
 private def privateQ := signature ⟨"m", "blue/inner"⟩
@@ -88,14 +89,15 @@ theorem variadic_is_part_of_signature :
 
 -- [AGENT] Audit R1: the independent nil-text validator must not borrow
 -- another package's wrapper bit, or invent a target from its bare spelling.
-private def nilTextState (members : Array MethodInfo) : ExecState :=
+private def nilTextState (members : Array MethodInfo) : ProgramCtx :=
   let target := fun (id : String) (recv : Ty) (wrapper : Bool) =>
     ({ id := ⟨id⟩, args := #[{ id := "$recv", typ := recv }], results := #[],
        body := .unsupported "validator-only control", wrapper } : Func)
-  { types := TypeEnv.reserved ++ #[(⟨"main.T"⟩, .struct #[])],
-    functions := #[target "anchor" (.interface ⟨"main.I"⟩) false,
-      target "plain" (.defined 2) false, target "wrapper" (.defined 2) true],
-    methods := #[{ id := privateP.id, funcId := ⟨"anchor"⟩, recv := .interface ⟨"main.I"⟩ }] ++ members }
+  ProgramCtx.ofTables
+    (types := TypeEnv.reserved ++ #[(⟨"main.T"⟩, .struct #[])])
+    (functions := #[target "anchor" (.interface ⟨"main.I"⟩) false,
+      target "plain" (.defined 2) false, target "wrapper" (.defined 2) true])
+    (methods := #[{ id := privateP.id, funcId := ⟨"anchor"⟩, recv := .interface ⟨"main.I"⟩ }] ++ members)
 
 private def nilTextChecks (members : Array MethodInfo) : List Bool :=
   (ChoiceTrace.nilTextFacts (nilTextState members) ⟨"anchor"⟩
@@ -140,15 +142,17 @@ private def satisfactionControls : IO Unit := do
   -- Coverage and rendering both consume the same requirement record.
   for req in [privateQ, signature ⟨"É", ""⟩, signature ⟨"ǅ", "blue/inner"⟩] do
     let base := implementing privateP
-    let withIface := { base with types := base.types ++ #[(⟨"main.I"⟩, .interfaceDef #[req])] }
+    let withIface : ProgramCtx :=
+      ⟨{ base.program with typeDefs := base.types ++ #[(⟨"main.I"⟩, .interfaceDef #[req])] }⟩
     match firstUnsatisfiedMethod? withIface (.defined 2) ⟨"main.I"⟩ with
     | .ok name => check (name == some req.name) "missing-method display contains package identity"
     | .error e => throw (IO.userError s!"full coverage refused: {repr e}")
-    let unknown := { withIface with methodSets := #[] }
+    let unknown : ProgramCtx := ⟨{ withIface.program with methodSets := #[] }⟩
     match firstUnsatisfiedMethod? unknown (.defined 2) ⟨"main.I"⟩ with
     | .error e => check (e.status == "unsupported") "absent coverage did not refuse"
     | .ok _ => throw (IO.userError "absent coverage answered from no record")
-    let exportedOnly := { withIface with methodSets := #[{ key := "main.T", coverage := .exported }] }
+    let exportedOnly : ProgramCtx :=
+      ⟨{ withIface.program with methodSets := #[{ key := "main.T", coverage := .exported }] }⟩
     match firstUnsatisfiedMethod? exportedOnly (.defined 2) ⟨"main.I"⟩ with
     | .ok name => check (req.id.package.isEmpty && name == some req.name) "private exported-only query answered"
     | .error e =>

@@ -24,6 +24,10 @@ import GoLean.GoCore.MachineEqb
 
 namespace GoLean.GoCore.Machine
 
+-- B7 (2026-09-17): the program context is an IMPLICIT parameter of every
+-- theorem here (lemma applications stay as they were).
+variable {ctx : ProgramCtx}
+
 open GoLean
 
 set_option linter.unusedSimpArgs false
@@ -33,19 +37,19 @@ set_option linter.unusedSimpArgs false
 multi-candidate pairing shape, a SUCCESSFUL explicit-pick step `[p]`
 determines the step under every stream whose L4 draw reduces to `p` —
 same successor, same state, same event, the stream's tail returned. -/
-theorem stepThread_l4_run {s : ExecState} {ts : Array Thread} {i : Nat}
+theorem stepThread_l4_run {s : Store} {ts : Array Thread} {i : Nat}
     {c bc : Config} {cs : List (Nat × PairTarget)}
     (hti : ts[i]? = some (.running c none))
     (hblc : isBlockedConfig c = false)
     (hab : c.abort? = none)
     (hsp : spawnPlan c = none)
-    (harr : arrivalCases s ts i c = .ok (.single bc cs))
+    (harr : arrivalCases ctx s ts i c = .ok (.single bc cs))
     (hlen : 2 ≤ cs.length)
     {p : Nat} (hplt : p < cs.length)
-    {ts' : Array Thread} {s' : ExecState} {ev : StepEvent}
-    (hvec : stepThread s ts i [p] = .ok (ts', s', [], ev)) :
+    {ts' : Array Thread} {s' : Store} {ev : StepEvent}
+    (hvec : stepThread ctx s ts i [p] = .ok (ts', s', [], ev)) :
     ∀ {ch rest : Choices}, Choices.consume ch cs.length = (p, rest) →
-      stepThread s ts i ch = .ok (ts', s', rest, ev) := by
+      stepThread ctx s ts i ch = .ok (ts', s', rest, ev) := by
   intro ch rest hcons
   have hlt : 1 < cs.length := by omega
   have hcP : Choices.consume [p] cs.length = (p, []) := by
@@ -102,11 +106,11 @@ theorem stepThread_l4_run {s : ExecState} {ts : Array Thread} {i : Nat}
 /-- **N-APP determinization**: a NON-SPILLING `appendSlice` apply is
 stream-oblivious — `applyStmtOp` returns the stream verbatim and the
 state result is stream-independent. -/
-theorem applyStmtOp_append_nospill {s : ExecState} {vs : List GoValue}
+theorem applyStmtOp_append_nospill {s : Store} {vs : List GoValue}
     {elem : GoCore.Ty} {nt : Nat}
-    (h : appendApplyNoSpill s vs = true) :
-    ∀ ch : Choices, applyStmtOp s ch (.appendSlice elem) nt vs
-      = (match applyStmtOp s [] (.appendSlice elem) nt vs with
+    (h : appendApplyNoSpill ctx s vs = true) :
+    ∀ ch : Choices, applyStmtOp ctx s ch (.appendSlice elem) nt vs
+      = (match applyStmtOp ctx s [] (.appendSlice elem) nt vs with
          | .ok (s', _) => .ok (s', ch)
          | .error e => .error e) := by
   intro ch
@@ -134,7 +138,7 @@ theorem applyStmtOp_append_nospill {s : ExecState} {vs : List GoValue}
           | error e => rfl
           | ok u2 =>
             simp only [except_bind_ok]
-            cases hvis : sliceVisibleValues s elems with
+            cases hvis : sliceVisibleValues ctx s elems with
             | error e => rfl
             | ok elemValues =>
               simp only [except_bind_ok]
@@ -152,13 +156,13 @@ theorem applyStmtOp_append_nospill {s : ExecState} {vs : List GoValue}
 
 /-- `stepFn` at a non-spilling `appendSlice` apply position is
 stream-oblivious (the N-APP class's `stepFn` half). -/
-theorem stepFn_append_nospill {s : ExecState} {v : GoValue}
+theorem stepFn_append_nospill {s : Store} {v : GoValue}
     {elem : GoCore.Ty} {nt : Nat} {done : List GoValue} {env : LocalEnv}
     {k : Cont}
-    (hns : appendApplyNoSpill s ((v :: done).reverse) = true) :
+    (hns : appendApplyNoSpill ctx s ((v :: done).reverse) = true) :
     ∀ ch : Choices,
-      stepFn s (.retV v (.stmtOpK (.appendSlice elem) nt done [] env k)) ch
-        = (match stepFn s
+      stepFn ctx s (.retV v (.stmtOpK (.appendSlice elem) nt done [] env k)) ch
+        = (match stepFn ctx s
               (.retV v (.stmtOpK (.appendSlice elem) nt done [] env k)) [] with
            | .ok (c', s', _) => .ok (c', s', ch)
            | .error e => .error e) := by
@@ -166,7 +170,7 @@ theorem stepFn_append_nospill {s : ExecState} {v : GoValue}
   unfold stepFn
   dsimp only
   rw [applyStmtOp_append_nospill hns ch]
-  cases hap : applyStmtOp s [] (.appendSlice elem) nt ((v :: done).reverse) with
+  cases hap : applyStmtOp ctx s [] (.appendSlice elem) nt ((v :: done).reverse) with
   | error e => cases_stop e <;> rfl
   | ok p =>
     obtain ⟨s₂, ch₂⟩ := p
@@ -175,17 +179,17 @@ theorem stepFn_append_nospill {s : ExecState} {v : GoValue}
 /-- N-APP obliviousness at the `stepThread` level: mirrors
 `stepThread_oblivious`'s conclusion for the non-spilling append apply
 shape. -/
-theorem stepThread_append_oblivious {s : ExecState} {ts : Array Thread}
+theorem stepThread_append_oblivious {s : Store} {ts : Array Thread}
     {i : Nat} {v : GoValue} {elem : GoCore.Ty} {nt : Nat}
     {done : List GoValue} {env : LocalEnv} {k : Cont}
     (hti : ts[i]? = some (.running (.retV v (.stmtOpK (.appendSlice elem) nt done [] env k)) none))
-    (hns : appendApplyNoSpill s ((v :: done).reverse) = true)
-    {ch₀ : Choices} {ts' : Array Thread} {s' : ExecState} {ch₀' : Choices}
+    (hns : appendApplyNoSpill ctx s ((v :: done).reverse) = true)
+    {ch₀ : Choices} {ts' : Array Thread} {s' : Store} {ch₀' : Choices}
     {ev : StepEvent}
-    (h : stepThread s ts i ch₀ = .ok (ts', s', ch₀', ev)) :
+    (h : stepThread ctx s ts i ch₀ = .ok (ts', s', ch₀', ev)) :
     ch₀' = ch₀
-      ∧ ∀ ch : Choices, stepThread s ts i ch = .ok (ts', s', ch, ev) := by
-  have harr : arrivalCases s ts i
+      ∧ ∀ ch : Choices, stepThread ctx s ts i ch = .ok (ts', s', ch, ev) := by
+  have harr : arrivalCases ctx s ts i
       (.retV v (.stmtOpK (.appendSlice elem) nt done [] env k))
       = .ok .cellPath := rfl
   have hsel : selectApplyPlan
@@ -201,7 +205,7 @@ theorem stepThread_append_oblivious {s : ExecState} {ts : Array Thread}
   simp only [selectApplyPlan] at h
   try dsimp only at h
   rw [stepFn_append_nospill hns ch₀] at h
-  cases hbase : stepFn s
+  cases hbase : stepFn ctx s
       (.retV v (.stmtOpK (.appendSlice elem) nt done [] env k)) [] with
   | error e =>
     rw [hbase] at h
@@ -233,17 +237,17 @@ theorem stepThread_append_oblivious {s : ExecState} {ts : Array Thread}
 suffixes ALL step successfully, EVERY stream's goroutine-step succeeds
 and matches one of them (same successor and event; the stream's
 unconsumed tail returned). -/
-theorem stepThread_total_covered {s : ExecState} {ts : Array Thread}
+theorem stepThread_total_covered {s : Store} {ts : Array Thread}
     {i : Nat} {ivs : List (List Nat)}
-    (hiv : innerVecs s ts i = some ivs)
+    (hiv : innerVecs ctx s ts i = some ivs)
     (hedges : ∀ v ∈ ivs, ∃ ts' s' ev,
-      stepThread s ts i v = .ok (ts', s', [], ev)) :
+      stepThread ctx s ts i v = .ok (ts', s', [], ev)) :
     ∀ ch : Choices, ∃ v ∈ ivs, ∃ ts' s' ev tail,
-      stepThread s ts i v = .ok (ts', s', [], ev)
-      ∧ stepThread s ts i ch = .ok (ts', s', tail, ev) := by
+      stepThread ctx s ts i v = .ok (ts', s', [], ev)
+      ∧ stepThread ctx s ts i ch = .ok (ts', s', tail, ev) := by
   intro ch
   unfold innerVecs at hiv
-  by_cases hobl : poolThreadOblivious s ts i = true
+  by_cases hobl : poolThreadOblivious ctx s ts i = true
   · rw [if_pos hobl] at hiv
     simp only [Option.some.injEq] at hiv
     subst hiv
@@ -312,7 +316,7 @@ theorem stepThread_total_covered {s : ExecState} {ts : Array Thread}
                 | false =>
                   rw [hnmi] at hiv
                   simp only [Bool.false_eq_true, reduceIte] at hiv
-                  cases hnnv : consumesNilValueMethod s c with
+                  cases hnnv : consumesNilValueMethod ctx c with
                   | true => rw [hnnv] at hiv; simp at hiv
                   | false =>
                   rw [hnnv] at hiv
@@ -327,7 +331,7 @@ theorem stepThread_total_covered {s : ExecState} {ts : Array Thread}
                   | false =>
                   rw [hnn] at hiv
                   simp only [Bool.false_eq_true, reduceIte] at hiv
-                  cases harr : arrivalCases s ts i c with
+                  cases harr : arrivalCases ctx s ts i c with
                   | error e => rw [harr] at hiv; cases hiv
                   | ok a =>
                     rw [harr] at hiv
@@ -359,11 +363,11 @@ theorem stepThread_total_covered {s : ExecState} {ts : Array Thread}
 
 /-- `slotVecsAux`'s membership property: each menu position's inner
 suffixes are present, slot-prefixed. -/
-theorem slotVecsAux_mem {s : ExecState} {ts : Array Thread} :
+theorem slotVecsAux_mem {s : Store} {ts : Array Thread} :
     ∀ {rs : List Nat} {p₀ : Nat} {out : List (List Nat)},
-      slotVecsAux s ts rs p₀ = some out →
+      slotVecsAux ctx s ts rs p₀ = some out →
       ∀ {j i}, rs[j]? = some i →
-        ∃ ivs, innerVecs s ts i = some ivs
+        ∃ ivs, innerVecs ctx s ts i = some ivs
           ∧ ∀ v ∈ ivs, ((p₀ + j) :: v) ∈ out := by
   intro rs
   induction rs with
@@ -399,12 +403,12 @@ node with certified branch vectors that ALL step successfully (what
 `checkEdge` verified), EVERY stream's `stepMulti` succeeds and matches
 one of them — same successor pool, same event. -/
 theorem stepMulti_total_covered {m : MultiConfig} {vecs : List (List Nat)}
-    (hv : nodeVecs m = some vecs)
+    (hv : nodeVecs ctx m = some vecs)
     (hedges : ∀ vec ∈ vecs, ∃ m' ev,
-      stepMulti m vec = .ok (m', [], ev)) :
+      stepMulti ctx m vec = .ok (m', [], ev)) :
     ∀ ch : Choices, ∃ vec ∈ vecs, ∃ m' ev tail,
-      stepMulti m vec = .ok (m', [], ev)
-      ∧ stepMulti m ch = .ok (m', tail, ev) := by
+      stepMulti ctx m vec = .ok (m', [], ev)
+      ∧ stepMulti ctx m ch = .ok (m', tail, ev) := by
   intro ch
   unfold nodeVecs at hv
   cases hti : m.threads[m.cur]? with
@@ -414,7 +418,7 @@ theorem stepMulti_total_covered {m : MultiConfig} {vecs : List (List Nat)}
     dsimp only at hv
     by_cases hb : t.atBoundary = true
     · rw [if_pos hb] at hv
-      cases hrs : schedSlots m.shared m.threads m.cur t.boundarySite with
+      cases hrs : schedSlots ctx m.shared m.threads m.cur t.boundarySite with
       | nil => rw [hrs] at hv; cases hv
       | cons r0 rest =>
         rw [hrs] at hv
@@ -424,7 +428,7 @@ theorem stepMulti_total_covered {m : MultiConfig} {vecs : List (List Nat)}
           -- singleton menu: no scheduling consumption on either side.
           -- Convert pool-level edge successes to goroutine-step ones.
           have hedges' : ∀ v ∈ vecs, ∃ ts' s' ev,
-              stepThread m.shared m.threads r0 v = .ok (ts', s', [], ev) := by
+              stepThread ctx m.shared m.threads r0 v = .ok (ts', s', [], ev) := by
             intro v hvm
             obtain ⟨m', ev, hsm⟩ := hedges v hvm
             unfold stepMulti at hsm
@@ -507,7 +511,7 @@ theorem stepMulti_total_covered {m : MultiConfig} {vecs : List (List Nat)}
             rw [Choices.consumeAtE_of_lt hlt2, hcP]
           -- pool-edge successes at this slot ⇒ goroutine-step successes
           have hedges' : ∀ v ∈ ivs, ∃ ts' s' ev,
-              stepThread m.shared m.threads ((r0 :: r1 :: rest')[pick]) v
+              stepThread ctx m.shared m.threads ((r0 :: r1 :: rest')[pick]) v
                 = .ok (ts', s', [], ev) := by
             intro v hvm
             have hmem : (pick :: v) ∈ vecs := by
@@ -576,7 +580,7 @@ theorem stepMulti_total_covered {m : MultiConfig} {vecs : List (List Nat)}
             rfl
     · rw [if_neg hb] at hv
       have hedges' : ∀ v ∈ vecs, ∃ ts' s' ev,
-          stepThread m.shared m.threads m.cur v = .ok (ts', s', [], ev) := by
+          stepThread ctx m.shared m.threads m.cur v = .ok (ts', s', [], ev) := by
         intro v hvm
         obtain ⟨m', ev, hsm⟩ := hedges v hvm
         unfold stepMulti at hsm
@@ -633,14 +637,14 @@ align, and every edge checks. -/
 theorem checkStep_parts {nodeEqb : DedupNode → DedupNode → Bool}
     {mems : Array (Obs × Choices × Nat)} {nodes : Array DedupNode}
     {succs : Array Nat} {nd : DedupNode}
-    (h : checkStep nodeEqb mems nodes succs nd = true) :
-    ∃ vecs, nodeVecs nd.m = some vecs
+    (h : checkStep ctx nodeEqb mems nodes succs nd = true) :
+    ∃ vecs, nodeVecs ctx nd.m = some vecs
       ∧ vecs.length = succs.size
       ∧ ∀ (j : Nat) (vec : List Nat), vecs[j]? = some vec →
           ∃ kj, succs[j]? = some kj
-            ∧ checkEdge nodeEqb mems nodes nd vec kj = true := by
+            ∧ checkEdge ctx nodeEqb mems nodes nd vec kj = true := by
   unfold checkStep at h
-  cases hv : nodeVecs nd.m with
+  cases hv : nodeVecs ctx nd.m with
   | none => rw [hv] at h; cases h
   | some vecs =>
     rw [hv] at h
@@ -666,16 +670,16 @@ passed `checkStep`. -/
 theorem checkStep_edges {nodeEqb : DedupNode → DedupNode → Bool}
     {mems : Array (Obs × Choices × Nat)} {nodes : Array DedupNode}
     {succs : Array Nat} {nd : DedupNode} {vecs : List (List Nat)}
-    (_hv : nodeVecs nd.m = some vecs)
+    (_hv : nodeVecs ctx nd.m = some vecs)
     (hparts : ∀ (j : Nat) (vec : List Nat), vecs[j]? = some vec →
       ∃ kj, succs[j]? = some kj
-        ∧ checkEdge nodeEqb mems nodes nd vec kj = true) :
-    ∀ vec ∈ vecs, ∃ m' ev, stepMulti nd.m vec = .ok (m', [], ev) := by
+        ∧ checkEdge ctx nodeEqb mems nodes nd vec kj = true) :
+    ∀ vec ∈ vecs, ∃ m' ev, stepMulti ctx nd.m vec = .ok (m', [], ev) := by
   intro vec hvm
   obtain ⟨j, hj⟩ := List.getElem?_of_mem hvm
   obtain ⟨kj, -, hedge⟩ := hparts j vec hj
   unfold checkEdge at hedge
-  cases hsm : stepMulti nd.m vec with
+  cases hsm : stepMulti ctx nd.m vec with
   | error e => rw [hsm] at hedge; cases hedge
   | ok p =>
     obtain ⟨m', chRem, ev⟩ := p
@@ -703,11 +707,11 @@ theorem checkCert_complete_aux
     (hsz : cert.succ.size = cert.nodes.size)
     (hall : ∀ (k : Nat) (nd : DedupNode) (succs : Array Nat), cert.nodes[k]? = some nd →
       cert.succ[k]? = some succs →
-      checkNode nodeEqb cert.members cert.nodes resultLocs succs nd = true) :
+      checkNode ctx nodeEqb cert.members cert.nodes resultLocs succs nd = true) :
     ∀ (fuel : Nat) (m : MultiConfig) (r : RaceState),
       (∃ k : Nat, cert.nodes[k]? = some ⟨m, r⟩) →
       ∀ (ch : Choices) (o : Obs),
-        obsOf? resultLocs (execProgLoop fuel m r ch) = some o →
+        obsOf? ctx resultLocs (execProgLoop ctx fuel m r ch) = some o →
         o ∈ cert.obsSet := by
   intro fuel
   induction fuel with
@@ -745,13 +749,13 @@ theorem checkCert_complete_aux
           rw [hm] at hnode hobs
           try dsimp only at hnode hobs
           try dsimp only at hnode hobs
-          cases hload : loadMany σf resultLocs with
+          cases hload : loadMany ctx σf resultLocs with
           | error e =>
             rw [hload] at hnode; cases hnode
           | ok vs =>
             rw [hload] at hnode
             try dsimp only at hnode
-            cases hrs : runnableIdxs m.shared m.threads with
+            cases hrs : runnableIdxs ctx m.shared m.threads with
             | nil =>
               rw [hrs] at hnode hobs
               try dsimp only at hnode hobs
@@ -783,7 +787,7 @@ theorem checkCert_complete_aux
         | none =>
           rw [hm] at hnode hobs
           try dsimp only at hnode hobs
-          by_cases hrun : (runnableIdxs m.shared m.threads).isEmpty
+          by_cases hrun : (runnableIdxs ctx m.shared m.threads).isEmpty
           · rw [if_pos hrun] at hnode; cases hnode
           · rw [if_neg hrun] at hnode
             rw [if_neg hrun] at hobs
@@ -804,15 +808,15 @@ theorem checkCert_complete_aux
     dsimp only at hnode
     -- the shared STEP argument, used by both stepping arms below
     have hstepArm : ∀ (chS : Choices),
-        checkStep nodeEqb cert.members cert.nodes succs ⟨m, r⟩ = true →
-        obsOf? resultLocs
+        checkStep ctx nodeEqb cert.members cert.nodes succs ⟨m, r⟩ = true →
+        obsOf? ctx resultLocs
           ((do
-            let x ← stepMulti m chS
+            let x ← stepMulti ctx m chS
             match x with
             | (m', choices', ev) => do
-                let r' ← raceUpdate m.shared m.threads ev m' r
-                execProgLoop n m' r' choices')
-           : Except Stop (ExecState × Choices)) = some o →
+                let r' ← raceUpdate ctx m.shared m.threads ev m' r
+                execProgLoop ctx n m' r' choices')
+           : Except Stop (Store × Choices)) = some o →
         o ∈ cert.obsSet := by
       intro chS hstep hobs'
       obtain ⟨vecs, hv, -, hparts⟩ := checkStep_parts hstep
@@ -828,7 +832,7 @@ theorem checkCert_complete_aux
       obtain ⟨-, hedge⟩ := hedge
       rw [hchstep] at hobs'
       simp only [Bind.bind, Except.bind] at hobs'
-      cases hru : raceUpdate m.shared m.threads ev m' r with
+      cases hru : raceUpdate ctx m.shared m.threads ev m' r with
       | ok r' =>
         rw [hru] at hedge hobs'
         dsimp only at hedge
@@ -867,13 +871,13 @@ theorem checkCert_complete_aux
           rw [hm] at hnode hobs
           try dsimp only at hnode hobs
           try dsimp only at hnode hobs
-          cases hload : loadMany σf resultLocs with
+          cases hload : loadMany ctx σf resultLocs with
           | error e =>
             rw [hload] at hnode; cases hnode
           | ok vs =>
             rw [hload] at hnode
             try dsimp only at hnode
-            cases hrs : runnableIdxs m.shared m.threads with
+            cases hrs : runnableIdxs ctx m.shared m.threads with
             | nil =>
               rw [hrs] at hnode hobs
               try dsimp only at hnode hobs
@@ -905,7 +909,7 @@ theorem checkCert_complete_aux
         | none =>
           rw [hm] at hnode hobs
           try dsimp only at hnode hobs
-          by_cases hrun : (runnableIdxs m.shared m.threads).isEmpty
+          by_cases hrun : (runnableIdxs ctx m.shared m.threads).isEmpty
           · rw [if_pos hrun] at hnode; cases hnode
           · rw [if_neg hrun] at hnode
             rw [if_neg hrun] at hobs
@@ -922,8 +926,8 @@ theorem checkCert_slowObs
     (hEqb : ∀ a b, nodeEqb a b = true → a = b)
     {resultLocs : List Loc} {m₀ : MultiConfig} {r₀ : RaceState}
     {cert : DedupCert}
-    (hc : checkCert nodeEqb resultLocs m₀ r₀ cert = true) :
-    ∀ o : Obs, o ∈ cert.obsSet ↔ SlowObs resultLocs m₀ r₀ o := by
+    (hc : checkCert ctx nodeEqb resultLocs m₀ r₀ cert = true) :
+    ∀ o : Obs, o ∈ cert.obsSet ↔ SlowObs ctx resultLocs m₀ r₀ o := by
   unfold checkCert at hc
   simp only [Bool.and_eq_true] at hc
   obtain ⟨⟨⟨hroot, hsz⟩, hnodes⟩, hwits⟩ := hc
@@ -931,7 +935,7 @@ theorem checkCert_slowObs
   rw [List.all_eq_true] at hnodes
   have hall : ∀ (k : Nat) (nd : DedupNode) (succs : Array Nat), cert.nodes[k]? = some nd →
       cert.succ[k]? = some succs →
-      checkNode nodeEqb cert.members cert.nodes resultLocs succs nd
+      checkNode ctx nodeEqb cert.members cert.nodes resultLocs succs nd
         = true := by
     intro k nd succs hk hsk
     have hklt : k < cert.nodes.size := by
@@ -950,8 +954,8 @@ theorem checkCert_slowObs
     obtain ⟨t, htm, hto⟩ := hmem
     have := hwits t htm
     unfold obsOfEqb at this
-    cases hrep : obsOf? resultLocs
-        (execProgLoop t.2.2 m₀ r₀ t.2.1) with
+    cases hrep : obsOf? ctx resultLocs
+        (execProgLoop ctx t.2.2 m₀ r₀ t.2.1) with
     | none => rw [hrep] at this; cases this
     | some a =>
       rw [hrep] at this
@@ -974,8 +978,8 @@ state-tower node equality plugged in) — what the CLI's
 claim over the slow semantics. -/
 theorem checkCertM_slowObs {resultLocs : List Loc} {m₀ : MultiConfig}
     {r₀ : RaceState} {cert : DedupCert}
-    (hc : checkCert dedupNodeEqb resultLocs m₀ r₀ cert = true) :
-    ∀ o : Obs, o ∈ cert.obsSet ↔ SlowObs resultLocs m₀ r₀ o :=
+    (hc : checkCert ctx dedupNodeEqb resultLocs m₀ r₀ cert = true) :
+    ∀ o : Obs, o ∈ cert.obsSet ↔ SlowObs ctx resultLocs m₀ r₀ o :=
   checkCert_slowObs (nodeEqb := dedupNodeEqb)
     (fun a b h => dedupNodeEqb_sound a b h) hc
 

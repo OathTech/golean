@@ -26,6 +26,11 @@ literal — a divergent branch observes nothing at any fuel):
 
 namespace GoLean.GoCore.Machine
 
+-- B7 (2026-09-17): the program context is the first explicit parameter of
+-- every definition below that reads it; theorems take it implicitly
+-- (`variable {ctx}` toggles).
+variable (ctx : ProgramCtx)
+
 /-- One observation of a pool run — the membership lane's member
 vocabulary (`enumPoolRun`'s statuses, as data): main's normal terminal
 with the readout values, or a Go TERMINAL the run stopped on (`Terminal`,
@@ -52,9 +57,9 @@ result locations); an errored readout is no observation (the checker
 refuses such nodes — fail closed, never a silent member); every Go
 terminal IS one. -/
 def obsOf? (resultLocs : List Loc) :
-    Except Stop (ExecState × Choices) → Option Obs
+    Except Stop (Store × Choices) → Option Obs
   | .ok (σf, _) =>
-      match loadMany σf resultLocs with
+      match loadMany ctx σf resultLocs with
       | .ok vs => some (.ok vs)
       | .error _ => none
   | .error (.terminal t) => some (.terminal t)
@@ -66,6 +71,6 @@ fuel, the unmodified driver. This is the top-level claims' entire
 vocabulary for enumeration results. -/
 def SlowObs (resultLocs : List Loc) (m₀ : MultiConfig) (r₀ : RaceState)
     (o : Obs) : Prop :=
-  ∃ fuel ch, obsOf? resultLocs (execProgLoop fuel m₀ r₀ ch) = some o
+  ∃ fuel ch, obsOf? ctx resultLocs (execProgLoop ctx fuel m₀ r₀ ch) = some o
 
 end GoLean.GoCore.Machine

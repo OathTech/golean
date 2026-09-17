@@ -77,6 +77,13 @@ namespace GoLean.GoCore.Machine
 
 open GoLean
 
+-- B7 (2026-09-17): the immutable program facts are ONE explicit parameter
+-- of every context-reading operation and of the `Step` relation (`variable`
+-- makes it the first explicit argument of each def that mentions it);
+-- theorems take it implicitly (`variable {ctx}` toggles below). Heap
+-- readers/writers take the `Store`.
+variable (ctx : ProgramCtx)
+
 /-! ## Assignee desugaring -/
 
 /-- The expression an assignment target denotes: evaluating it yields the
@@ -203,13 +210,13 @@ def strictPlan : Expr → Option (StrictOp × List Expr)
 /-- Slice-expression application, after all operands are values (base, low,
 high, optional max already as `Int`). Transcribed from the interpreter's
 `.slice` arm. -/
-def applySlice (s : ExecState) (b : GoValue) (lowValue highValue : Int)
-    (maxValue : Option Int) : Except Stop (GoValue × ExecState) := do
+def applySlice (s : Store) (b : GoValue) (lowValue highValue : Int)
+    (maxValue : Option Int) : Except Stop (GoValue × Store) := do
   match b with
   | .string value => return ((← stringSlice value lowValue highValue maxValue), s)
   | .slice slice => return ((← sliceFromSlice slice lowValue highValue maxValue), s)
   | .addr baseLoc =>
-      match ← loadLoc s baseLoc with
+      match ← loadLoc ctx s baseLoc with
       | .array values =>
           return ((← sliceFromArray baseLoc values.size lowValue highValue maxValue), s)
       | .slice slice => return ((← sliceFromSlice slice lowValue highValue maxValue), s)
@@ -224,7 +231,7 @@ against the base. Shared verbatim between the `indexAddr` strict op
 `storeTarget` (an assignment's OWN index target — spec §Assignments
 defers the check to the STORE, phase 2; convergence round BUG-029,
 pinned by `channels/recv-edge/oob-second-target-stores-first`). -/
-def indexTargetLoc (s : ExecState) (b i : GoValue) : Except Stop Loc := do
+def indexTargetLoc (s : Store) (b i : GoValue) : Except Stop Loc := do
   let indexValue ← valueAsInt i
   match b with
   | .slice slice => sliceIndexLoc slice indexValue
@@ -233,7 +240,7 @@ def indexTargetLoc (s : ExecState) (b i : GoValue) : Except Stop Loc := do
   -- `valueAsLoc` convention; previously a wrongly-stuck fall-through).
   | .nil => panic "runtime error: invalid memory address or nil pointer dereference"
   | .addr baseLoc =>
-      match ← loadLoc s baseLoc with
+      match ← loadLoc ctx s baseLoc with
       | .array values => do
           let _ ← arrayIndexNat values indexValue
           return .index baseLoc indexValue
@@ -263,11 +270,11 @@ observationally equal to gc on every key kind. TRANSFER CAVEAT: a
 conforming ORIGINAL-KEY-RETAINING implementation is outside this
 singleton; no claim about the stored key transfers to it. Re-envelope
 (two-point retention choice) is XIMPL-gated — see inventory E10. -/
-def mapAssignValue (s : ExecState) (keyTy valueTy : Ty)
-    (baseV keyV valueV : GoValue) : Except Stop ExecState := do
+def mapAssignValue (s : Store) (keyTy valueTy : Ty)
+    (baseV keyV valueV : GoValue) : Except Stop Store := do
   let map ← valueAsMap baseV
-  let key ← normalizeValueForTy s keyTy keyV
-  let value ← normalizeValueForTy s valueTy valueV
+  let key ← normalizeValueForTy ctx keyTy keyV
+  let value ← normalizeValueForTy ctx valueTy valueV
   match ← mapEntries s map with
   | none => panic "assignment to entry in nil map"
   | some (baseLoc, entries, nextId) =>
@@ -276,7 +283,7 @@ def mapAssignValue (s : ExecState) (keyTy valueTy : Ty)
       -- identity); an ABSENT key creates a NEW entry stamped `nextId`,
       -- and the counter moves on. Ids are never reused.
       let (entries, nextId) ←
-        match ← mapEntryIndex? s keyTy entries key (isInsert := true) with
+        match ← mapEntryIndex? ctx keyTy entries key (isInsert := true) with
         | some i =>
             match entries[i]? with
             | some (id, _, _) => pure (entries.set! i (id, key, value), nextId)
@@ -291,7 +298,7 @@ big-step interpreter's `evalExpr`, minus the recursion. Panics are Go
 behavior (`.panic`); `.stuck`/`.unsupported` mean no relation rule matches
 (fail closed). The catch-all arm covers head/arity mismatches unreachable
 via `strictPlan`. -/
-def applyStrictOp (s : ExecState) : StrictOp → List GoValue → Except Stop (GoValue × ExecState)
+def applyStrictOp (s : Store) : StrictOp → List GoValue → Except Stop (GoValue × Store)
   | .add, [l, r] =>
       match l, r with
       | .int .., .int .. => do return ((← intBinaryResult "+" (· + ·) l r), s)
@@ -345,13 +352,13 @@ def applyStrictOp (s : ExecState) : StrictOp → List GoValue → Except Stop (G
       if den == 0 then stuck "malformed float literal: zero denominator"
       else return (.float (kind.normalizeBits (kind.ratToBits num den)) kind, s)
   | .not, [v] => do return (.bool (!(← valueAsBool v)), s)
-  | .eqCmp ty, [l, r] => do return (.bool (← valueEq s ty l r), s)
-  | .neqCmp ty, [l, r] => do return (.bool (!(← valueEq s ty l r)), s)
+  | .eqCmp ty, [l, r] => do return (.bool (← valueEq ctx ty l r), s)
+  | .neqCmp ty, [l, r] => do return (.bool (!(← valueEq ctx ty l r)), s)
   | .atMostCmp, [l, r] => do return (.bool (← valueAtMost l r), s)
   | .atLeastCmp, [l, r] => do return (.bool (← valueAtLeast l r), s)
   | .lessCmp, [l, r] => do return (.bool (← valueLess l r), s)
   | .greaterCmp, [l, r] => do return (.bool (← valueGreater l r), s)
-  | .convert ty, [v] => do return ((← convertValueToTy s ty v), s)
+  | .convert ty, [v] => do return ((← convertValueToTy ctx ty v), s)
   -- ENVELOPE STATEMENT (recorded narrowing, arc-final audit F8,
   -- 2026-08-06). Spec §Conversions on `[]byte(s)`: "The capacity of the
   -- resulting slice is implementation-specific and may be larger than
@@ -376,7 +383,7 @@ def applyStrictOp (s : ExecState) : StrictOp → List GoValue → Except Stop (G
       | other => stuck s!"expected string operand for []byte conversion, got {repr other}"
   | .stringFromByteSlice, [v] => do
       let slice ← valueAsSlice v
-      let values ← sliceVisibleValues s slice
+      let values ← sliceVisibleValues ctx s slice
       let mut bytes := #[]
       for value in values do
         match value with
@@ -388,7 +395,7 @@ def applyStrictOp (s : ExecState) : StrictOp → List GoValue → Except Stop (G
       return (.string { bytes := bytes }, s)
   | .stringFromRune, [v] => do
       return (.string (GoString.fromCodePoint (← valueAsInt v)), s)
-  | .deref _, [v] => do return ((← loadLoc s (← valueAsLoc v)), s)
+  | .deref _, [v] => do return ((← loadLoc ctx s (← valueAsLoc v)), s)
   -- `&*p` (BUG-056): the nil check consumes the pointer VALUE already
   -- in hand — `.addr` passes through, `.nil` panics via `valueAsLoc`'s
   -- runtime-error arm, anything else is stuck. It reads and writes NO
@@ -401,7 +408,7 @@ def applyStrictOp (s : ExecState) : StrictOp → List GoValue → Except Stop (G
       | .struct actualType fields =>
           -- Tag-convertible mint tags are accepted (triage L7): the
           -- pointer conversion aliases the cell, whose tag stays.
-          if actualType != typeId && !structTagCompatible s actualType typeId then
+          if actualType != typeId && !structTagCompatible ctx actualType typeId then
             stuck s!"expected struct {typeId.key}, got struct {actualType.key}"
           match StructFields.lookup fields fieldName with
           | some value => return (value, s)
@@ -409,11 +416,11 @@ def applyStrictOp (s : ExecState) : StrictOp → List GoValue → Except Stop (G
       | other => stuck s!"expected struct value for field access, got {repr other}"
   | .fieldAddr typeId fieldName, [v] => do
       return (.addr (.field (← valueAsLoc v) typeId fieldName), s)
-  | .structLit ty, vs => do return ((← buildStructValue s ty vs.toArray), s)
+  | .structLit ty, vs => do return ((← buildStructValue ctx ty vs.toArray), s)
   | .arrayLit n elem keys, vs => do
       if keys.length != vs.length then
         stuck s!"array literal expected {keys.length} element value(s), got {vs.length}"
-      return ((← buildArrayValue s n elem (keys.zip vs).toArray), s)
+      return ((← buildArrayValue ctx n elem (keys.zip vs).toArray), s)
   | .toInterface _ dynamic, [v] => do
       -- Box with the CANONICAL dynamic type (S3): aliases resolved,
       -- identity kept, fail closed on unsupported leaves. An
@@ -425,7 +432,7 @@ def applyStrictOp (s : ExecState) : StrictOp → List GoValue → Except Stop (G
       | .interface _ => return (v, s)
       | _ => return (.interface dynTy v, s)
   | .typeAssert targetTy sourceTy, [v] => do
-      let result ← typeAssertValue s v targetTy
+      let result ← typeAssertValue ctx v targetTy
       if result.2 then
         return (result.1, s)
       else
@@ -434,16 +441,16 @@ def applyStrictOp (s : ExecState) : StrictOp → List GoValue → Except Stop (G
         let missing ←
           match targetTy, v with
           | .interface interfaceName, .interface dynTy _ =>
-              firstUnsatisfiedMethod? s dynTy interfaceName
+              firstUnsatisfiedMethod? ctx dynTy interfaceName
           | _, _ => pure none
-        panic (← typeAssertPanicMessage s v targetTy sourceTy missing)
+        panic (← typeAssertPanicMessage ctx v targetTy sourceTy missing)
   | .indexGet, [b, i] => do
       let indexValue ← valueAsInt i
       match b with
       | .array values => return ((← arrayGet values indexValue), s)
       | .string value => return ((← stringByteGet value indexValue), s)
       | .slice slice =>
-          return ((← loadLoc s (← sliceIndexLoc slice indexValue)), s)
+          return ((← loadLoc ctx s (← sliceIndexLoc slice indexValue)), s)
       -- Pointer-to-array base in READ position (triage L5;
       -- spec#Index_expressions: for `a` of pointer to array type,
       -- `a[x]` is shorthand for `(*a)[x]`): the read sibling of
@@ -453,7 +460,7 @@ def applyStrictOp (s : ExecState) : StrictOp → List GoValue → Except Stop (G
       -- exists because assignment TARGETS carry the base cell's
       -- address, a shape read position never produces.
       | .addr baseLoc =>
-          match ← loadLoc s baseLoc with
+          match ← loadLoc ctx s baseLoc with
           | .array values => return ((← arrayGet values indexValue), s)
           | other => stuck s!"expected array pointee for index access, got {repr other}"
       -- A nil pointer-to-array base is gc's recoverable nil-pointer
@@ -462,27 +469,27 @@ def applyStrictOp (s : ExecState) : StrictOp → List GoValue → Except Stop (G
       | .nil => panic "runtime error: invalid memory address or nil pointer dereference"
       | other => stuck s!"expected array, slice, or string value for index access, got {repr other}"
   | .indexAddr, [b, i] => do
-      return (.addr (← indexTargetLoc s b i), s)
+      return (.addr (← indexTargetLoc ctx s b i), s)
   | .mapGet keyTy valueTy, [b, i] => do
       let map ← valueAsMap b
-      let key ← normalizeValueForTy s keyTy i
+      let key ← normalizeValueForTy ctx keyTy i
       match map.base with
       -- A NIL map still hashes the key before returning the zero value.
       | none => do
-          checkKeyHashable s key (isInsert := false) (nonEmpty := false)
-          return ((← defaultValue s valueTy), s)
+          checkKeyHashable ctx key (isInsert := false) (nonEmpty := false)
+          return ((← defaultValue ctx valueTy), s)
       | some baseLoc =>
           let (entries, _) ← mapPayload? s baseLoc
-          match ← mapEntryIndex? s keyTy entries key with
+          match ← mapEntryIndex? ctx keyTy entries key with
           | some idx =>
               match entries[idx]? with
               | some (_, _, value) => return (value, s)
               | none => stuck s!"missing map entry at index {idx}"
-          | none => return ((← defaultValue s valueTy), s)
+          | none => return ((← defaultValue ctx valueTy), s)
   | .sliceExpr false, [b, lo, hi] => do
-      applySlice s b (← valueAsInt lo) (← valueAsInt hi) none
+      applySlice ctx s b (← valueAsInt lo) (← valueAsInt hi) none
   | .sliceExpr true, [b, lo, hi, m] => do
-      applySlice s b (← valueAsInt lo) (← valueAsInt hi) (some (← valueAsInt m))
+      applySlice ctx s b (← valueAsInt lo) (← valueAsInt hi) (some (← valueAsInt m))
   | .lengthOf typ, [v] => do
       match typ with
       | some (.pointer (.array n _)) => return (.int n, s)
@@ -490,7 +497,7 @@ def applyStrictOp (s : ExecState) : StrictOp → List GoValue → Except Stop (G
           match v with
           | .array values => return (.int values.size, s)
           | .addr baseLoc =>
-              match ← loadLoc s baseLoc with
+              match ← loadLoc ctx s baseLoc with
               | .array values => return (.int values.size, s)
               | other => unsupported s!"len for non-array pointer value {repr other}"
           | .string value => return (.int value.length, s)
@@ -518,7 +525,7 @@ def applyStrictOp (s : ExecState) : StrictOp → List GoValue → Except Stop (G
           match v with
           | .array values => return (.int values.size, s)
           | .addr baseLoc =>
-              match ← loadLoc s baseLoc with
+              match ← loadLoc ctx s baseLoc with
               | .array values => return (.int values.size, s)
               | other => unsupported s!"cap for non-array pointer value {repr other}"
           | .slice slice =>
@@ -577,15 +584,15 @@ def applyStrictOp (s : ExecState) : StrictOp → List GoValue → Except Stop (G
             stuck s!"negative rune-decode offset {off}"
           return (.int (Int.ofNat (decodeRuneAt str off.toNat).2) .int, s)
       | other => stuck s!"expected string operand for rune decode, got {repr other}"
-  | .defaultValueOf ty, [] => do return ((← defaultValue s ty), s)
+  | .defaultValueOf ty, [] => do return ((← defaultValue ctx ty), s)
   | .nilLit typ, [] =>
       match typ with
       | none => return (.nil, s)
       | some ty =>
           match ty with
-          | .slice _ => do return ((← defaultValue s ty), s)
-          | .map _ _ => do return ((← defaultValue s ty), s)
-          | .chan _ _ => do return ((← defaultValue s ty), s)
+          | .slice _ => do return ((← defaultValue ctx ty), s)
+          | .map _ _ => do return ((← defaultValue ctx ty), s)
+          | .chan _ _ => do return ((← defaultValue ctx ty), s)
           | .pointer _ => return (.nil, s)
           -- Interface and func are nilable types too (spec
           -- §Assignability; BUG-077 — the CONVERSION form `error(nil)`
@@ -630,7 +637,7 @@ def applyStrictOp (s : ExecState) : StrictOp → List GoValue → Except Stop (G
   -- `fromCodePoint` kernel `string(int)` uses.
   | .stringFromRuneSlice, [v] => do
       let slice ← valueAsSlice v
-      let values ← sliceVisibleValues s slice
+      let values ← sliceVisibleValues ctx s slice
       let mut str := GoString.empty
       for value in values do
         match value with
@@ -649,20 +656,20 @@ def applyStrictOp (s : ExecState) : StrictOp → List GoValue → Except Stop (G
 
 /-- Declare typed locals: allocate each at its default value, extending the
 environment (the functional form of the old `DeclsR`). -/
-def allocDecls : LocalEnv → ExecState → List Param → Except Stop (LocalEnv × ExecState)
+def allocDecls : LocalEnv → Store → List Param → Except Stop (LocalEnv × Store)
   | env, s, [] => return (env, s)
   | env, s, p :: rest => do
-      let v ← defaultValue s p.typ
+      let v ← defaultValue ctx p.typ
       let (loc, s₁) := s.alloc v p.typ
       allocDecls (env.declare p.id loc) s₁ rest
 
 /-- Bind call parameters into a frame environment, normalized at declared
 type (the functional form of the old `BindParamsR`). Arity is checked by
 `enterFrame` before this runs. -/
-def bindParams : LocalEnv → ExecState → List Param → List GoValue → Except Stop (LocalEnv × ExecState)
+def bindParams : LocalEnv → Store → List Param → List GoValue → Except Stop (LocalEnv × Store)
   | env, s, [], [] => return (env, s)
   | env, s, p :: ps, v :: vs => do
-      let v' ← normalizeValueForTy s p.typ v
+      let v' ← normalizeValueForTy ctx p.typ v
       let (loc, s₁) := s.alloc v' p.typ
       bindParams (env.declare p.id loc) s₁ ps vs
   | _, _, [], _ :: _ => stuck "extra argument value"
@@ -678,15 +685,15 @@ def pinResultLocs (env : LocalEnv) : List Param → Except Stop (List Loc)
       | none => stuck s!"unbound GoCore result variable: {p.id}"
 
 /-- Load a list of locations (frame-exit result reads; old `LoadsR`). -/
-def loadMany (s : ExecState) : List Loc → Except Stop (List GoValue)
+def loadMany (s : Store) : List Loc → Except Stop (List GoValue)
   | [] => return []
-  | loc :: locs => do return (← loadLoc s loc) :: (← loadMany s locs)
+  | loc :: locs => do return (← loadLoc ctx s loc) :: (← loadMany s locs)
 
 /-- Store values to locations pairwise (frame-exit target writes; old
 `StoreManyR`). -/
-def storeMany : ExecState → List Loc → List GoValue → Except Stop ExecState
+def storeMany : Store → List Loc → List GoValue → Except Stop Store
   | s, [], [] => return s
-  | s, loc :: locs, v :: vs => do storeMany (← storeLoc s loc v) locs vs
+  | s, loc :: locs, v :: vs => do storeMany (← storeLoc ctx s loc v) locs vs
   | _, [], _ :: _ => stuck "extra GoCore assignment value"
   | _, _ :: _, [] => stuck "missing GoCore assignment value"
 
@@ -696,22 +703,22 @@ between "arguments are values" and "executing the callee body". One step in
 the machine (frame entry). The two arity checks mirror the interpreter's
 (pre-dispatch in `execFunctionCallWithLocs`, post-dispatch in
 `execFunctionWithValues`). -/
-def enterFrame (s : ExecState) (fid : FuncId) (argVals : List GoValue) :
-    Except Stop (Func × LocalEnv × List Loc × ExecState) := do
+def enterFrame (s : Store) (fid : FuncId) (argVals : List GoValue) :
+    Except Stop (Func × LocalEnv × List Loc × Store) := do
   let func ←
-    match findFunctionIn? s.functions fid with
+    match findFunctionIn? ctx.functions fid with
     | some func => pure func
     | none => stuck s!"GoCore function not found: {fid.key}"
   if func.args.size != argVals.length then
     stuck s!"function {fid.key} expected {func.args.size} argument(s), got {argVals.length}"
   let (func, argVals) ←
-    match ← dynamicDispatch? s func argVals.toArray with
+    match ← dynamicDispatch? ctx s func argVals.toArray with
     | some (targetFunc, targetArgs) => pure (targetFunc, targetArgs.toList)
     | none => pure (func, argVals)
   if func.args.size != argVals.length then
     stuck s!"function {func.id.key} expected {func.args.size} argument(s), got {argVals.length}"
-  let (argsEnv, s₁) ← bindParams [] s func.args.toList argVals
-  let (frameEnv, s₂) ← allocDecls argsEnv s₁ func.results.toList
+  let (argsEnv, s₁) ← bindParams ctx [] s func.args.toList argVals
+  let (frameEnv, s₂) ← allocDecls ctx argsEnv s₁ func.results.toList
   let resultLocs ← pinResultLocs frameEnv func.results.toList
   return (func, frameEnv, resultLocs, s₂)
 
@@ -720,8 +727,8 @@ def enterFrame (s : ExecState) (fid : FuncId) (argVals : List GoValue) :
 envelope statement, Ops.lean), 1 everywhere else. A bound-1 consult pops
 nothing (the uniform rule, `Choices.consumeAt`), so every entry outside
 the family consumes exactly what it consumed before the site existed. -/
-def nilValueMethodWidth (s : ExecState) (fid : FuncId) (args : List GoValue) : Nat :=
-  if (nilValueMethodText? s fid args).isSome then 2 else 1
+def nilValueMethodWidth (fid : FuncId) (args : List GoValue) : Nat :=
+  if (nilValueMethodText? ctx fid args).isSome then 2 else 1
 
 /-- The frame-entry panic TEXT under the `nilValueMethodText` pick:
 `msg` (the text `enterFrame` raised — the nil-dereference text on the
@@ -729,20 +736,21 @@ family) at slot 0, gc's `panicwrap` text at any other slot; outside the
 family the pick is inert and `msg` stands. The relation's entry-panic
 rules quantify `pick` freely (a `∃ pick`), which is exactly the
 two-member set — every `pick ≠ 0` names the same member. -/
-def entryPanicText (s : ExecState) (fid : FuncId) (args : List GoValue)
+def entryPanicText (fid : FuncId) (args : List GoValue)
     (msg : String) (pick : Nat) : String :=
-  match nilValueMethodText? s fid args with
+  match nilValueMethodText? ctx fid args with
   | some alt => if pick = 0 then msg else alt
   | none => msg
 
-theorem nilValueMethodWidth_of_none {s : ExecState} {fid : FuncId} {args : List GoValue}
-    (h : nilValueMethodText? s fid args = none) :
-    nilValueMethodWidth s fid args = 1 := by
+variable {ctx}
+theorem nilValueMethodWidth_of_none {fid : FuncId} {args : List GoValue}
+    (h : nilValueMethodText? ctx fid args = none) :
+    nilValueMethodWidth ctx fid args = 1 := by
   simp [nilValueMethodWidth, h]
 
-theorem entryPanicText_of_none {s : ExecState} {fid : FuncId} {args : List GoValue}
-    {msg : String} {pick : Nat} (h : nilValueMethodText? s fid args = none) :
-    entryPanicText s fid args msg pick = msg := by
+theorem entryPanicText_of_none {fid : FuncId} {args : List GoValue}
+    {msg : String} {pick : Nat} (h : nilValueMethodText? ctx fid args = none) :
+    entryPanicText ctx fid args msg pick = msg := by
   simp [entryPanicText, h]
 
 /-- The site's bound-1 consult (outside the family) is inert — the
@@ -753,19 +761,20 @@ uniform rule (`Choices.consumeAt_one`), specialized to the site. -/
 
 /-- The `isSome = false` spellings of the two `_of_none` facts (the shape
 `simp` leaves a `consumesNilValueMethod … = false` hypothesis in). -/
-theorem nilValueMethodWidth_of_isSome_false {s : ExecState} {fid : FuncId}
-    {args : List GoValue} (h : (nilValueMethodText? s fid args).isSome = false) :
-    nilValueMethodWidth s fid args = 1 := by
+theorem nilValueMethodWidth_of_isSome_false {fid : FuncId}
+    {args : List GoValue} (h : (nilValueMethodText? ctx fid args).isSome = false) :
+    nilValueMethodWidth ctx fid args = 1 := by
   simp [nilValueMethodWidth, h]
 
-theorem entryPanicText_of_isSome_false {s : ExecState} {fid : FuncId}
+theorem entryPanicText_of_isSome_false {fid : FuncId}
     {args : List GoValue} {msg : String} {pick : Nat}
-    (h : (nilValueMethodText? s fid args).isSome = false) :
-    entryPanicText s fid args msg pick = msg := by
-  cases hn : nilValueMethodText? s fid args with
+    (h : (nilValueMethodText? ctx fid args).isSome = false) :
+    entryPanicText ctx fid args msg pick = msg := by
+  cases hn : nilValueMethodText? ctx fid args with
   | none => simp [entryPanicText, hn]
   | some alt => rw [hn] at h; simp at h
 
+variable (ctx)
 /-- **Frame entry WITH the choice stream — THE one stream-touching entry
 funnel** (B2, replacing `enterFrameStep`/`enterFrameDeferPanicking` and
 `spawnStep`'s copy). `enterFrame` itself is stream-free; its RECOVERABLE
@@ -785,52 +794,53 @@ returns the stream untouched. Every frame entry of the machine goes
 through here: the seven `stepFn` positions (`entryCallSite?`) and the
 `go`-statement spawn (`spawnStep`, Multi.lean); the relation's entry
 rules quantify the stream (`ch`/`ch'`, the `stmtOpApply` idiom). -/
-def enterFramePick (s : ExecState) (fid : FuncId) (args : List GoValue) (ch : Choices) :
-    Except Stop (Result (Func × LocalEnv × List Loc × ExecState) × Choices) :=
-  match toResult (enterFrame s fid args) with
+def enterFramePick (s : Store) (fid : FuncId) (args : List GoValue) (ch : Choices) :
+    Except Stop (Result (Func × LocalEnv × List Loc × Store) × Choices) :=
+  match toResult (enterFrame ctx s fid args) with
   | .ok (.ok r) => .ok (.ok r, ch)
   | .ok (.panic msg) =>
-      let (pick, ch') := Choices.consumeAt .nilValueMethodText (nilValueMethodWidth s fid args) ch
-      .ok (.panic (entryPanicText s fid args msg pick), ch')
+      let (pick, ch') := Choices.consumeAt .nilValueMethodText (nilValueMethodWidth ctx fid args) ch
+      .ok (.panic (entryPanicText ctx fid args msg pick), ch')
   | .error e => .error e
 
+variable {ctx}
 /-- A successful entry never touches the stream. -/
-theorem enterFramePick_ok {s : ExecState} {fid : FuncId} {args : List GoValue}
-    {ch : Choices} {func : Func} {frameEnv : LocalEnv} {resultLocs : List Loc} {s' : ExecState}
-    (h : enterFrame s fid args = .ok (func, frameEnv, resultLocs, s')) :
-    enterFramePick s fid args ch = .ok (.ok (func, frameEnv, resultLocs, s'), ch) := by
+theorem enterFramePick_ok {s : Store} {fid : FuncId} {args : List GoValue}
+    {ch : Choices} {func : Func} {frameEnv : LocalEnv} {resultLocs : List Loc} {s' : Store}
+    (h : enterFrame ctx s fid args = .ok (func, frameEnv, resultLocs, s')) :
+    enterFramePick ctx s fid args ch = .ok (.ok (func, frameEnv, resultLocs, s'), ch) := by
   simp [enterFramePick, h]
 
 /-- The entry panic's text and the popped stream, on the panic path. -/
-theorem enterFramePick_panic {s : ExecState} {fid : FuncId} {args : List GoValue}
+theorem enterFramePick_panic {s : Store} {fid : FuncId} {args : List GoValue}
     {ch : Choices} {msg : String}
-    (h : enterFrame s fid args = .error (.panic msg)) :
-    enterFramePick s fid args ch =
-      .ok (.panic (entryPanicText s fid args msg
-            (Choices.consumeAt .nilValueMethodText (nilValueMethodWidth s fid args) ch).1),
-          (Choices.consumeAt .nilValueMethodText (nilValueMethodWidth s fid args) ch).2) := by
+    (h : enterFrame ctx s fid args = .error (.panic msg)) :
+    enterFramePick ctx s fid args ch =
+      .ok (.panic (entryPanicText ctx fid args msg
+            (Choices.consumeAt .nilValueMethodText (nilValueMethodWidth ctx fid args) ch).1),
+          (Choices.consumeAt .nilValueMethodText (nilValueMethodWidth ctx fid args) ch).2) := by
   simp [enterFramePick, h]
 
 /-- Any other stop propagates. -/
-theorem enterFramePick_error {s : ExecState} {fid : FuncId} {args : List GoValue}
-    {ch : Choices} {e : Stop} (h : enterFrame s fid args = .error e) (hp : ∀ msg, e ≠ .panic msg) :
-    enterFramePick s fid args ch = .error e := by
+theorem enterFramePick_error {s : Store} {fid : FuncId} {args : List GoValue}
+    {ch : Choices} {e : Stop} (h : enterFrame ctx s fid args = .error e) (hp : ∀ msg, e ≠ .panic msg) :
+    enterFramePick ctx s fid args ch = .error e := by
   simp [enterFramePick, h, toResult_error hp]
 
 /-- The two ways an entry classifies (the proof layer's case split):
 an entered frame with the stream untouched, or the entry panic's text
 under the site's pick with the stream popped. -/
-theorem enterFramePick_cases {s : ExecState} {fid : FuncId} {args : List GoValue}
-    {ch ch' : Choices} {r : Result (Func × LocalEnv × List Loc × ExecState)}
-    (h : enterFramePick s fid args ch = .ok (r, ch')) :
+theorem enterFramePick_cases {s : Store} {fid : FuncId} {args : List GoValue}
+    {ch ch' : Choices} {r : Result (Func × LocalEnv × List Loc × Store)}
+    (h : enterFramePick ctx s fid args ch = .ok (r, ch')) :
     (∃ func frameEnv resultLocs s', r = .ok (func, frameEnv, resultLocs, s')
-        ∧ enterFrame s fid args = .ok (func, frameEnv, resultLocs, s') ∧ ch' = ch)
-    ∨ (∃ msg, r = .panic (entryPanicText s fid args msg
-          (Choices.consumeAt .nilValueMethodText (nilValueMethodWidth s fid args) ch).1)
-        ∧ enterFrame s fid args = .error (.panic msg)
-        ∧ ch' = (Choices.consumeAt .nilValueMethodText (nilValueMethodWidth s fid args) ch).2) := by
+        ∧ enterFrame ctx s fid args = .ok (func, frameEnv, resultLocs, s') ∧ ch' = ch)
+    ∨ (∃ msg, r = .panic (entryPanicText ctx fid args msg
+          (Choices.consumeAt .nilValueMethodText (nilValueMethodWidth ctx fid args) ch).1)
+        ∧ enterFrame ctx s fid args = .error (.panic msg)
+        ∧ ch' = (Choices.consumeAt .nilValueMethodText (nilValueMethodWidth ctx fid args) ch).2) := by
   unfold enterFramePick at h
-  cases hx : toResult (enterFrame s fid args) with
+  cases hx : toResult (enterFrame ctx s fid args) with
   | error e => rw [hx] at h; cases h
   | ok r₀ =>
     rw [hx] at h
@@ -846,11 +856,11 @@ theorem enterFramePick_cases {s : ExecState} {fid : FuncId} {args : List GoValue
       exact .inr ⟨msg, rfl, toResult_eq_ok_panic.mp hx, rfl⟩
 
 /-- An entry that does NOT panic never touches the stream. -/
-theorem enterFramePick_of_nopanic {s : ExecState} {fid : FuncId} {args : List GoValue}
-    (hnp : ∀ msg, enterFrame s fid args ≠ .error (.panic msg)) (ch : Choices) :
-    enterFramePick s fid args ch = (toResult (enterFrame s fid args)).map (·, ch) := by
+theorem enterFramePick_of_nopanic {s : Store} {fid : FuncId} {args : List GoValue}
+    (hnp : ∀ msg, enterFrame ctx s fid args ≠ .error (.panic msg)) (ch : Choices) :
+    enterFramePick ctx s fid args ch = (toResult (enterFrame ctx s fid args)).map (·, ch) := by
   unfold enterFramePick
-  cases hx : toResult (enterFrame s fid args) with
+  cases hx : toResult (enterFrame ctx s fid args) with
   | error e => rfl
   | ok r =>
     cases r with
@@ -860,21 +870,25 @@ theorem enterFramePick_of_nopanic {s : ExecState} {fid : FuncId} {args : List Go
 /-- An entry that classifies under one stream classifies under every
 stream (the classification is `enterFrame`'s, stream-free; only the
 panic TEXT and the popped tail depend on the stream). -/
-theorem enterFramePick_any_ch {s : ExecState} {fid : FuncId} {args : List GoValue}
-    {ch ch' : Choices} {r : Result (Func × LocalEnv × List Loc × ExecState)}
-    (h : enterFramePick s fid args ch = .ok (r, ch')) (ch₂ : Choices) :
-    ∃ r₂ ch₂', enterFramePick s fid args ch₂ = .ok (r₂, ch₂') := by
+theorem enterFramePick_any_ch {s : Store} {fid : FuncId} {args : List GoValue}
+    {ch ch' : Choices} {r : Result (Func × LocalEnv × List Loc × Store)}
+    (h : enterFramePick ctx s fid args ch = .ok (r, ch')) (ch₂ : Choices) :
+    ∃ r₂ ch₂', enterFramePick ctx s fid args ch₂ = .ok (r₂, ch₂') := by
   rcases enterFramePick_cases h with ⟨func, frameEnv, resultLocs, s', -, hX, -⟩ | ⟨msg, -, hX, -⟩
   · exact ⟨_, _, enterFramePick_ok hX⟩
   · exact ⟨_, _, enterFramePick_panic hX⟩
 
 /-- Outside the wrapper family the entry is stream-oblivious: the
 panic-path consult is at bound 1 and pops nothing. -/
-theorem enterFramePick_of_isSome_false {s : ExecState} {fid : FuncId} {args : List GoValue}
-    {ch : Choices} (hn : (nilValueMethodText? s fid args).isSome = false) :
-    enterFramePick s fid args ch = (toResult (enterFrame s fid args)).map (·, ch) := by
+theorem enterFramePick_of_isSome_false {fid : FuncId} {args : List GoValue}
+    (hn : (nilValueMethodText? ctx fid args).isSome = false) :
+    ∀ (s : Store) (ch : Choices),
+      enterFramePick ctx s fid args ch = (toResult (enterFrame ctx s fid args)).map (·, ch) := by
+  -- B7: the store is quantified AFTER the family test — the test reads the
+  -- context only, so `s` can no longer be inferred from `hn`.
+  intro s ch
   unfold enterFramePick
-  cases toResult (enterFrame s fid args) with
+  cases toResult (enterFrame ctx s fid args) with
   | error e => rfl
   | ok r =>
     cases r with
@@ -883,17 +897,18 @@ theorem enterFramePick_of_isSome_false {s : ExecState} {fid : FuncId} {args : Li
       simp [nilValueMethodWidth_of_isSome_false hn, entryPanicText_of_isSome_false hn, Except.map]
 
 /-- The family-free entry, ∀-stream form. -/
-theorem enterFramePick_oblivious_of_isSome_false {s : ExecState} {fid : FuncId}
-    {args : List GoValue} (hn : (nilValueMethodText? s fid args).isSome = false) (ch : Choices) :
-    enterFramePick s fid args ch = (toResult (enterFrame s fid args)).map (·, ch) :=
-  enterFramePick_of_isSome_false hn
+theorem enterFramePick_oblivious_of_isSome_false {fid : FuncId}
+    {args : List GoValue} (hn : (nilValueMethodText? ctx fid args).isSome = false)
+    (s : Store) (ch : Choices) :
+    enterFramePick ctx s fid args ch = (toResult (enterFrame ctx s fid args)).map (·, ch) :=
+  enterFramePick_of_isSome_false hn s ch
 
 @[inherit_doc enterFramePick_of_isSome_false]
-theorem enterFramePick_of_none {s : ExecState} {fid : FuncId} {args : List GoValue}
-    {ch : Choices} (hn : nilValueMethodText? s fid args = none) :
-    enterFramePick s fid args ch = (toResult (enterFrame s fid args)).map (·, ch) := by
+theorem enterFramePick_of_none {s : Store} {fid : FuncId} {args : List GoValue}
+    {ch : Choices} (hn : nilValueMethodText? ctx fid args = none) :
+    enterFramePick ctx s fid args ch = (toResult (enterFrame ctx s fid args)).map (·, ch) := by
   unfold enterFramePick
-  cases toResult (enterFrame s fid args) with
+  cases toResult (enterFrame ctx s fid args) with
   | error e => rfl
   | ok r =>
     cases r with
@@ -903,6 +918,7 @@ theorem enterFramePick_of_none {s : ExecState} {fid : FuncId} {args : List GoVal
 
 /-! ## Wide statements: the statement-op table -/
 
+variable (ctx)
 /-- Head of a wide statement: evaluate the operand plan (targets first, as
 addresses, then the value operands), then perform the state update in one
 `applyStmtOp` step. -/
@@ -1061,15 +1077,15 @@ correspondence kit's `∀ choices` lemmas dispatch through this core rather
 than a per-arm congruence bash. Arms are verbatim from the old
 `applyStmtOp` minus the trailing `choices` threading.
 -/
-def applyStmtOpCore (s : ExecState) (op : StmtOp)
-    (vs : List GoValue) : Except Stop ExecState := do
+def applyStmtOpCore (s : Store) (op : StmtOp)
+    (vs : List GoValue) : Except Stop Store := do
   match op with
   | .allocNew typ =>
       match vs with
       | [tv, value] => do
           let loc ← valueAsLoc tv
           let (nloc, s₁) := s.alloc value typ
-          return ((← storeLoc s₁ loc (.addr nloc)))
+          return ((← storeLoc ctx s₁ loc (.addr nloc)))
       | _ => stuck "malformed allocNew operands"
   | .makeSlice elem hasCap => do
       let (tv, lenV, capV?) ←
@@ -1095,7 +1111,7 @@ def applyStmtOpCore (s : ExecState) (op : StmtOp)
       -- 2026-09-02_t5-maxalloc-probes/). Exactly-at-limit requests
       -- pass (gc then fails to ALLOCATE — the true-OOM class, register
       -- #7 rider / D-001, not modeled).
-      let elemSize ← tySizeBytes s.types elem
+      let elemSize ← tySizeBytes ctx.types elem
       if capValue < 0 || capValue * elemSize > maxAllocBytes
           || lenValue < 0 || lenValue > capValue then
         if lenValue < 0 || lenValue * elemSize > maxAllocBytes then
@@ -1104,10 +1120,10 @@ def applyStmtOpCore (s : ExecState) (op : StmtOp)
           panic "runtime error: makeslice: cap out of range"
       let len := lenValue.toNat
       let cap := capValue.toNat
-      let backing ← buildDefaultArrayValue s cap elem
+      let backing ← buildDefaultArrayValue ctx cap elem
       let (base, s₁) := s.alloc backing (.array cap elem)
       let loc ← valueAsLoc tv
-      return ((← storeLoc s₁ loc (.slice { base := some base, offset := 0, len, cap })))
+      return ((← storeLoc ctx s₁ loc (.slice { base := some base, offset := 0, len, cap })))
   | .makeMap hasSpace => do
       let (tv, spaceV?) ←
         match vs, hasSpace with
@@ -1139,7 +1155,7 @@ def applyStmtOpCore (s : ExecState) (op : StmtOp)
           let _ ← valueAsInt spaceV
       let (base, s₁) := s.allocCell (.mapPayload #[] 0)
       let loc ← valueAsLoc tv
-      return ((← storeLoc s₁ loc (.map { base := some base })))
+      return ((← storeLoc ctx s₁ loc (.map { base := some base })))
   | .makeChan elem hasCap => do
       let (tv, capV?) ←
         match vs, hasCap with
@@ -1163,30 +1179,30 @@ def applyStmtOpCore (s : ExecState) (op : StmtOp)
             -- `make(chan struct{}, 1<<62)` (probe chan-struct0-huge),
             -- and so does this arm (the buffer is a capacity NUMBER
             -- here, never materialized).
-            let elemSize ← tySizeBytes s.types elem
+            let elemSize ← tySizeBytes ctx.types elem
             if size < 0 || size * elemSize > maxAllocBytes - chanHeaderBytes then
               panic "makechan: size out of range"
             pure size.toNat
       let (base, s₁) := s.allocCell (.chanPayload #[] capacity false)
       let loc ← valueAsLoc tv
-      return ((← storeLoc s₁ loc (.chan { base := some base })))
+      return ((← storeLoc ctx s₁ loc (.chan { base := some base })))
   | .mapAssign keyTy valueTy =>
       match vs with
-      | [baseV, keyV, valueV] => mapAssignValue s keyTy valueTy baseV keyV valueV
+      | [baseV, keyV, valueV] => mapAssignValue ctx s keyTy valueTy baseV keyV valueV
       | _ => stuck "malformed mapAssign operands"
   | .mapDelete keyTy =>
       match vs with
       | [baseV, keyV] => do
           let map ← valueAsMap baseV
-          let key ← normalizeValueForTy s keyTy keyV
+          let key ← normalizeValueForTy ctx keyTy keyV
           match ← mapEntries s map with
           -- Nil map: no-op (the key evaluated) — but Go still HASHES the
           -- key, so an unhashable one panics here too (probed 2026-07-31).
           | none => do
-              checkKeyHashable s key (isInsert := false) (nonEmpty := false)
+              checkKeyHashable ctx key (isInsert := false) (nonEmpty := false)
               return (s)
           | some (baseLoc, entries, nextId) =>
-              match ← mapEntryIndex? s keyTy entries key with
+              match ← mapEntryIndex? ctx keyTy entries key with
               | some i =>
                   -- A delete is a heap write and nothing else (B1): the
                   -- entry leaves the cell, its id is never reissued
@@ -1212,10 +1228,10 @@ def applyStmtOpCore (s : ExecState) (op : StmtOp)
       | [baseV] => do
           let slice ← valueAsSlice baseV
           validateSlice slice
-          let zero ← defaultValue s elem
+          let zero ← defaultValue ctx elem
           let mut current := s
           for i in [:slice.len] do
-            current ← storeLoc current (← sliceIndexLoc slice (Int.ofNat i)) zero
+            current ← storeLoc ctx current (← sliceIndexLoc slice (Int.ofNat i)) zero
           return (current)
       | _ => stuck "malformed clearSlice operands"
   | .sortSlice _ =>
@@ -1239,7 +1255,7 @@ def applyStmtOpCore (s : ExecState) (op : StmtOp)
           let mut loaded : Array (Int × IntKind) := #[]
           let mut current := s
           for i in [:slice.len] do
-            match ← loadLoc current (← sliceIndexLoc slice (Int.ofNat i)) with
+            match ← loadLoc ctx current (← sliceIndexLoc slice (Int.ofNat i)) with
             | .int v kind => loaded := loaded.push (v, kind)
             | other => stuck s!"sortSlice expected int element, got {repr other}"
           -- `sortLe`, not `List.mergeSort`: the latter is WF-compiled and
@@ -1248,7 +1264,7 @@ def applyStmtOpCore (s : ExecState) (op : StmtOp)
           for i in [:slice.len] do
             match sorted[i]? with
             | some (v, kind) =>
-                current ← storeLoc current (← sliceIndexLoc slice (Int.ofNat i)) (.int v kind)
+                current ← storeLoc ctx current (← sliceIndexLoc slice (Int.ofNat i)) (.int v kind)
             | none => stuck "sortSlice element count mismatch"
           return (current)
       | _ => stuck "malformed sortSlice operands"
@@ -1262,14 +1278,14 @@ def applyStmtOpCore (s : ExecState) (op : StmtOp)
           let count := Nat.min dstSlice.len srcSlice.len
           let mut values := #[]
           for i in [:count] do
-            values := values.push (← loadLoc s (← sliceIndexLoc srcSlice (Int.ofNat i)))
+            values := values.push (← loadLoc ctx s (← sliceIndexLoc srcSlice (Int.ofNat i)))
           let mut current := s
           let mut i := 0
           for value in values do
-            current ← storeLoc current (← sliceIndexLoc dstSlice (Int.ofNat i)) value
+            current ← storeLoc ctx current (← sliceIndexLoc dstSlice (Int.ofNat i)) value
             i := i + 1
           let tloc ← valueAsLoc tv
-          return ((← storeLoc current tloc (.int (Int.ofNat count))))
+          return ((← storeLoc ctx current tloc (.int (Int.ofNat count))))
       | _ => stuck "malformed copySlice operands"
   | .print newline =>
       -- VALIDATE only: every operand must be of a kind gc's print
@@ -1281,6 +1297,7 @@ def applyStmtOpCore (s : ExecState) (op : StmtOp)
   | .appendSlice _ =>
       throw (.internal "applyStmtOpCore: appendSlice dispatches through applyStmtOp")
 
+variable {ctx}
 /-- The growth policy never shrinks below the requested length. -/
 theorem appendGrowthCap_ge {oldCap newLen : Nat} (h : oldCap < newLen) :
     newLen ≤ appendGrowthCap oldCap newLen := by
@@ -1320,13 +1337,14 @@ theorem one_lt_appendSpillWidth (oldCap newLen : Nat) :
       = ch.consume (appendSpillWidth oldCap newLen) :=
   Choices.consumeAt_of_lt (one_lt_appendSpillWidth oldCap newLen)
 
+variable (ctx)
 /-- Apply a wide statement's head to its evaluated operands (`nt` leading
 target addresses, then values). One state-update step. `appendSlice`'s
 spill path consumes a capacity choice — the second nondeterministic point
 — and is the ONLY arm that touches the stream; everything else dispatches
 to the choices-free `applyStmtOpCore`. -/
-def applyStmtOp (s : ExecState) (choices : Choices) (op : StmtOp) (_nt : Nat)
-    (vs : List GoValue) : Except Stop (ExecState × Choices) := do
+def applyStmtOp (s : Store) (choices : Choices) (op : StmtOp) (_nt : Nat)
+    (vs : List GoValue) : Except Stop (Store × Choices) := do
   match op with
   | .appendSlice elem =>
       match vs with
@@ -1335,7 +1353,7 @@ def applyStmtOp (s : ExecState) (choices : Choices) (op : StmtOp) (_nt : Nat)
           let elems ← valueAsSlice elemsV
           validateSlice slice
           validateSlice elems
-          let elemValues ← sliceVisibleValues s elems
+          let elemValues ← sliceVisibleValues ctx s elems
           let newLen := slice.len + elemValues.size
           let tloc ← valueAsLoc tv
           if newLen <= slice.cap then
@@ -1344,11 +1362,11 @@ def applyStmtOp (s : ExecState) (choices : Choices) (op : StmtOp) (_nt : Nat)
             for value in elemValues do
               match slice.base with
               | some base =>
-                  current ← storeLoc current
+                  current ← storeLoc ctx current
                     (.index base (Int.ofNat (slice.offset + slice.len + i))) value
                   i := i + 1
               | none => stuck s!"cannot append {elemValues.size} element(s) into nil slice in place"
-            return ((← storeLoc current tloc (.slice { slice with len := newLen })), choices)
+            return ((← storeLoc ctx current tloc (.slice { slice with len := newLen })), choices)
           else
             -- gc's `growslice` refusals (runtime/slice.go:191–252; R16
             -- pin, t5-maxalloc 2026-09-02): the new length overflowing
@@ -1372,10 +1390,10 @@ def applyStmtOp (s : ExecState) (choices : Choices) (op : StmtOp) (_nt : Nat)
             -- >2^47-byte slice or `unsafe.Slice`; gc probe append-
             -- growth-over-unsafe is the witness); the in-place path is
             -- never checked (gc calls no growslice there).
-            let elemSize ← tySizeBytes s.types elem
+            let elemSize ← tySizeBytes ctx.types elem
             if newLen ≥ intExclusiveUpperBound || newLen * elemSize > maxAllocBytes then
               panic "runtime error: growslice: len out of range"
-            let oldValues ← sliceVisibleValues s slice
+            let oldValues ← sliceVisibleValues ctx s slice
             -- The capacity ENVELOPE is [newLen, appendSpillUpper] (the
             -- statement and containment argument live on
             -- `appendSpillUpper`, Ops.lean — arc-final audit F2 /
@@ -1388,12 +1406,12 @@ def applyStmtOp (s : ExecState) (choices : Choices) (op : StmtOp) (_nt : Nat)
             let (extra, choices) := Choices.consumeAt .appendSpill width choices
             let newCap := newLen +
               ((appendGrowthCap slice.cap newLen - newLen + extra) % width)
-            let backing ← buildAppendBackingValue s elem oldValues elemValues newCap
+            let backing ← buildAppendBackingValue ctx elem oldValues elemValues newCap
             let (base, current) := s.alloc backing (.array newCap elem)
-            return ((← storeLoc current tloc
+            return ((← storeLoc ctx current tloc
               (.slice { base := some base, offset := 0, len := newLen, cap := newCap })), choices)
       | _ => stuck "malformed appendSlice operands"
-  | op => do return ((← applyStmtOpCore s op vs), choices)
+  | op => do return ((← applyStmtOpCore ctx s op vs), choices)
 
 /-- Range START (BUG-005 (L) surgery, replacing the retired snapshot):
 the ranged map's base cell and its START-ID set — the entry ids live
@@ -1402,7 +1420,7 @@ are read LIVE at production, the spec's forced production-table
 clause; entry-identity stamps, B1). Shared verbatim by rule
 `Step.mapRangeStart` and `stepFn`'s `mapRangeK` arm. The load here is
 a real heap read (the footprint's `mapRangeK` arm). -/
-def mapRangeStartSets (s : ExecState) (v : GoValue) :
+def mapRangeStartSets (s : Store) (v : GoValue) :
     Except Stop (Option Loc × Array Nat) := do
   let map ← valueAsMap v
   match map.base with
@@ -1415,7 +1433,7 @@ def mapRangeStartSets (s : ExecState) (v : GoValue) :
 nil map = no entries), ids included. Every `mapIterNext` pick —
 including the final done-check — performs this read (gc's exhausted
 `mapIterNext` still reads; the U1-closing footprint arm records it). -/
-def mapIterLiveEntries (s : ExecState) (base : Option Loc) :
+def mapIterLiveEntries (s : Store) (base : Option Loc) :
     Except Stop (Array (Nat × GoValue × GoValue)) := do
   match base with
   | none => return #[]
@@ -1467,12 +1485,12 @@ another, so it is rejected BEFORE any choice is consumed, keeping pick
 success choices-independent (`step_complete_any_wf`'s mapIterNext
 case rests on exactly this). Shared VERBATIM by the `Step.mapIter*`
 rules and `stepFn`. -/
-def mapIterCandidates (s : ExecState) (keyTy valTy : Ty)
+def mapIterCandidates (s : Store) (keyTy valTy : Ty)
     (base : Option Loc) (produced : Array Nat) :
     Except Stop (Array (Nat × GoValue × GoValue)) := do
   let entries ← mapIterLiveEntries s base
   let out := (filterCandidateList produced entries.toList).toArray
-  if snapshotEntriesSelfNormalized s.types keyTy valTy out then
+  if snapshotEntriesSelfNormalized ctx.types keyTy valTy out then
     return out
   else
     throw (.stuck s!"map range live entry not self-normalized at range \
@@ -1494,19 +1512,19 @@ def mapIterMandatoryRemains (candidates : Array (Nat × GoValue × GoValue))
 /-- Declare a `mapRange` iteration's key/value variables in a fresh scope
 (normalized at the range types), mirroring the interpreter's per-iteration
 `declareLocal`s. -/
-def bindIterVars (env : LocalEnv) (s : ExecState) (keyVar valVar : Option String)
+def bindIterVars (env : LocalEnv) (s : Store) (keyVar valVar : Option String)
     (keyTy valTy : Ty) (key value : GoValue) :
-    Except Stop (LocalEnv × ExecState) := do
+    Except Stop (LocalEnv × Store) := do
   let (env, s) ←
     match keyVar with
     | some name => do
-        let kv ← normalizeValueForTy s keyTy key
+        let kv ← normalizeValueForTy ctx keyTy key
         let (loc, s') := s.alloc kv keyTy
         pure (env.declare name loc, s')
     | none => pure (env, s)
   match valVar with
   | some name => do
-      let vv ← normalizeValueForTy s valTy value
+      let vv ← normalizeValueForTy ctx valTy value
       let (loc, s') := s.alloc vv valTy
       pure (env.declare name loc, s')
   | none => pure (env, s)
@@ -1612,11 +1630,11 @@ anchor value, apply each index/field step — bounds checks
 (`indexTargetLoc`) and nil-pointer checks (`valueAsLoc`) fire HERE,
 after earlier targets' stores landed (BUG-029/BUG-033). Structural on
 `steps`; arity mismatches are malformed frames (fail closed). -/
-def resolveChain (s : ExecState) : GoValue → List TargetStep → List GoValue →
+def resolveChain (s : Store) : GoValue → List TargetStep → List GoValue →
     Except Stop GoValue
   | cur, [], [] => return cur
   | cur, .index :: steps, i :: idxs => do
-      resolveChain s (.addr (← indexTargetLoc s cur i)) steps idxs
+      resolveChain s (.addr (← indexTargetLoc ctx s cur i)) steps idxs
   | cur, .field tid f :: steps, idxs => do
       resolveChain s (.addr (.field (← valueAsLoc cur) tid f)) steps idxs
   | _, _, _ => stuck "malformed target chain"
@@ -1625,11 +1643,11 @@ def resolveChain (s : ExecState) : GoValue → List TargetStep → List GoValue 
 OWN checks — nil address (`valueAsLoc`), bounds (`indexTargetLoc`),
 nil field bases, nil map — firing HERE (spec §Assignments: "the
 assignments are carried out in left-to-right order"). -/
-def storeTarget (s : ExecState) (r : TargetRef) (v : GoValue) : Except Stop ExecState := do
+def storeTarget (s : Store) (r : TargetRef) (v : GoValue) : Except Stop Store := do
   match r with
   | .chain anchor idxs steps =>
-      storeLoc s (← valueAsLoc (← resolveChain s anchor steps idxs)) v
-  | .mapElem b k kt vt => mapAssignValue s kt vt b k v
+      storeLoc ctx s (← valueAsLoc (← resolveChain ctx s anchor steps idxs)) v
+  | .mapElem b k kt vt => mapAssignValue ctx s kt vt b k v
 
 /-- The VALUE SOURCE for a spine-riding assignment's stores (round 4,
 BUG-034/BUG-037): `.vals` — the evaluated right-hand expressions ARE
@@ -1647,15 +1665,15 @@ inductive RhsOp where
 /-- Apply the value source to the evaluated right-hand operands.
 Shared verbatim by rule `Step.rhsStores` and
 `stepFn`'s `rhsK` finish arm. -/
-def applyRhsOp (s : ExecState) : RhsOp → List GoValue → Except Stop (List GoValue)
+def applyRhsOp (s : Store) : RhsOp → List GoValue → Except Stop (List GoValue)
   | .vals, vs => return vs
   | .mapLookup keyTy valueTy, [baseV, keyV] => do
       let map ← valueAsMap baseV
-      let key ← normalizeValueForTy s keyTy keyV
-      let pair ← mapLookupValue s map key keyTy valueTy
+      let key ← normalizeValueForTy ctx keyTy keyV
+      let pair ← mapLookupValue ctx s map key keyTy valueTy
       return [pair.1, .bool pair.2]
   | .typeAssert targetTy, [value] => do
-      let result ← typeAssertValue s value targetTy
+      let result ← typeAssertValue ctx value targetTy
       return [result.1, .bool result.2]
   | _, _ => stuck "malformed comma-ok source operands"
 
@@ -1669,10 +1687,10 @@ admitted source-local read (`.var`), the address of a local (`.ref`), or an
 int/bool constant — resolved in ONE step, no evaluation frame, no panic (a
 target plan checks NOTHING; its checks are the store's, phase 2). Anything
 else refuses by name. -/
-def unseqAtom (env : LocalEnv) (s : ExecState) : Expr → Except Stop GoValue
+def unseqAtom (env : LocalEnv) (s : Store) : Expr → Except Stop GoValue
   | .var id =>
       match env.lookup id with
-      | some loc => loadLoc s loc
+      | some loc => loadLoc ctx s loc
       | none => stuck s!"unseq: unbound target operand '{id}'"
   | .ref id =>
       match env.lookup id with
@@ -1698,25 +1716,25 @@ chain's own checks (`resolveChain` — bounds, nil) on the FROZEN operand
 values — the header and index VALUES the plan froze, never a re-read of
 the variable (review R4) — and load. A frozen map-element plan is outside
 the Stage B fragment (Stage E). -/
-def unseqReadTarget (s : ExecState) : TargetRef → Except Stop GoValue
+def unseqReadTarget (s : Store) : TargetRef → Except Stop GoValue
   | .chain anchor idxs steps => do
-      loadLoc s (← valueAsLoc (← resolveChain s anchor steps idxs))
+      loadLoc ctx s (← valueAsLoc (← resolveChain ctx s anchor steps idxs))
   | .mapElem .. => unsupported "unseq: read through a frozen map-element plan (Stage E)"
 
 /-- The `load` body: read through the target, then write the binder cell.
 The read's panic precedes the store, so a failing load leaves the state as
 it was (the sweep's first failure over the pre-state). -/
-def unseqLoad (s : ExecState) (env : LocalEnv) (targets : List (String × TargetRef))
-    (bind tgt : String) : Except Stop ExecState := do
+def unseqLoad (s : Store) (env : LocalEnv) (targets : List (String × TargetRef))
+    (bind tgt : String) : Except Stop Store := do
   let r ← unseqLookupTarget targets tgt
-  let v ← unseqReadTarget s r
+  let v ← unseqReadTarget ctx s r
   let loc ← unseqCellLoc env bind
-  storeLoc s loc v
+  storeLoc ctx s loc v
 
 /-- The atoms of a target plan's operand list, in order (`loadMany`'s shape). -/
-def unseqAtoms (env : LocalEnv) (s : ExecState) : List Expr → Except Stop (List GoValue)
+def unseqAtoms (env : LocalEnv) (s : Store) : List Expr → Except Stop (List GoValue)
   | [] => return []
-  | e :: es => do return (← unseqAtom env s e) :: (← unseqAtoms env s es)
+  | e :: es => do return (← unseqAtom ctx env s e) :: (← unseqAtoms env s es)
 
 /-- The FROZEN-ANCHOR check on a target plan (audit F2, 2026-09-16; design
 §3.4): `resolveChain` replays a chain from its anchor VALUE at the checked
@@ -1734,9 +1752,9 @@ it cannot see through ends the walk with no refusal; an `.index` step on an
 `.addr loc` whose cell holds a `.slice` is refused BY NAME. An ARRAY
 variable's address is a stable identity (arrays do not rebind) and passes.
 Structural on the step list. -/
-def unseqUnfrozenAnchor? (s : ExecState) : GoValue → List TargetStep → List GoValue → Option String
+def unseqUnfrozenAnchor? (s : Store) : GoValue → List TargetStep → List GoValue → Option String
   | .addr loc, .index :: steps, i :: idxs =>
-      match loadLoc s loc with
+      match loadLoc ctx s loc with
       | .ok (.slice _) =>
           some s!"unseq: target plan indexes a SLICE VARIABLE through its address ({repr loc}) — the header would be re-read at the load and again at the store, not frozen; freeze the header VALUE through a binder"
       | .ok (.array _) =>
@@ -1757,8 +1775,8 @@ def unseqUnfrozenAnchor? (s : ExecState) : GoValue → List TargetStep → List 
 
 /-- The frozen-anchor check over a completed plan (a map-element plan
 carries the map VALUE; its read is Stage E's refusal, `unseqReadTarget`). -/
-def unseqUnfrozenPlan? (s : ExecState) : TargetRef → Option String
-  | .chain anchor idxs steps => unseqUnfrozenAnchor? s anchor steps idxs
+def unseqUnfrozenPlan? (s : Store) : TargetRef → Option String
+  | .chain anchor idxs steps => unseqUnfrozenAnchor? ctx s anchor steps idxs
   | .mapElem .. => none
 
 /-- The `target` body: the machine's own target resolution
@@ -1766,15 +1784,15 @@ def unseqUnfrozenPlan? (s : ExecState) : TargetRef → Option String
 TARGET that checks nothing; a plan whose anchor is NOT frozen (a slice
 variable's address under an index step) is refused by name
 (`unseqUnfrozenPlan?`, audit F2). -/
-def unseqTargetPlan (s : ExecState) (env : LocalEnv) (lhs : Assignee) :
+def unseqTargetPlan (s : Store) (env : LocalEnv) (lhs : Assignee) :
     Except Stop TargetRef :=
   match targetPlan lhs with
   | none => stuck "unseq: unsupported target plan assignee"
   | some (sh, ops) => do
-      let vals ← unseqAtoms env s ops
+      let vals ← unseqAtoms ctx env s ops
       match completeTargetRef sh vals with
       | some r =>
-          match unseqUnfrozenPlan? s r with
+          match unseqUnfrozenPlan? ctx s r with
           | some msg => stuck msg
           | none => return r
       | none => stuck "unseq: malformed target plan arity"
@@ -1784,15 +1802,15 @@ binder; equal to `when` → the region ACTIVATES (the guard is DONE); else the
 region is SKIPPED (`UnseqGraph.skipRegion`), the completion binder is set to
 the short-circuit constant `!when` and its occurrence marked DONE (the only
 join), and the guard is DONE. -/
-def unseqGuard (s : ExecState) (g : UnseqGraph) (env : LocalEnv) (st : List UnseqStatus)
+def unseqGuard (s : Store) (g : UnseqGraph) (env : LocalEnv) (st : List UnseqStatus)
     (i : Nat) (test : String) (w : Bool) (out : String) :
-    Except Stop (List UnseqStatus × ExecState) := do
-  let b ← valueAsBool (← loadLoc s (← unseqCellLoc env test))
+    Except Stop (List UnseqStatus × Store) := do
+  let b ← valueAsBool (← loadLoc ctx s (← unseqCellLoc env test))
   if b == w then
     return (st.set i .done, s)
   else
     let st₁ := g.skipRegion st i
-    let s' ← storeLoc s (← unseqCellLoc env out) (.bool (!w))
+    let s' ← storeLoc ctx s (← unseqCellLoc env out) (.bool (!w))
     match g.producer? out with
     | some ci => return ((st₁.set ci .done).set i .done, s')
     | none => stuck s!"unseq: guard completion binder '{out}' has no producer"
@@ -1801,12 +1819,12 @@ def unseqGuard (s : ExecState) (g : UnseqGraph) (env : LocalEnv) (st : List Unse
 store order (left to right) — handed to the existing phase-2 spine
 (`Cont.storeK`: one store per step, each store's own check at the store,
 spec#Assignment_statements). -/
-def unseqStorePlan (s : ExecState) (env : LocalEnv) (targets : List (String × TargetRef)) :
+def unseqStorePlan (s : Store) (env : LocalEnv) (targets : List (String × TargetRef)) :
     List (String × String) → Except Stop (List TargetRef × List GoValue)
   | [] => return ([], [])
   | (t, v) :: rest => do
       let r ← unseqLookupTarget targets t
-      let val ← loadLoc s (← unseqCellLoc env v)
+      let val ← loadLoc ctx s (← unseqCellLoc env v)
       let (rs, vs) ← unseqStorePlan s env targets rest
       return (r :: rs, val :: vs)
 
@@ -1846,6 +1864,7 @@ def chanPlan : Stmt → Option (ChanStOp × List Expr)
   | .closeChan ch => some (.close, [ch])
   | _ => none
 
+variable {ctx}
 /-- The channel-statement plan and the wide-statement plan classify
 DISJOINT statements: a statement `chanPlan` recognizes is never one
 `stmtPlan` recognizes. `step_det`'s rule-disjointness sweep cites this
@@ -1855,8 +1874,9 @@ theorem stmtPlan_of_chanPlan {stmt : Stmt} {p : ChanStOp × List Expr}
     (h : chanPlan stmt = some p) : stmtPlan stmt = none := by
   cases stmt <;> simp_all [chanPlan, stmtPlan]
 
+variable (ctx)
 /-- Load a channel's data cell: (buffer, capacity, closed). -/
-def chanCell (s : ExecState) (loc : Loc) :
+def chanCell (s : Store) (loc : Loc) :
     Except Stop (Array GoValue × Nat × Bool) :=
   chanPayload? s loc
 
@@ -1964,6 +1984,7 @@ where
       | _ :: _ :: _ => none
     else none
 
+variable {ctx}
 /-- Sync statements and wide statements classify DISJOINT statements
 (the `stmtPlan_of_chanPlan` twin, for `step_det`'s rule-disjointness
 sweep). -/
@@ -1977,10 +1998,11 @@ theorem chanPlan_of_syncPlan {stmt : Stmt} {p : SyncOp × List Expr}
     (h : syncPlan stmt = some p) : chanPlan stmt = none := by
   cases stmt <;> simp_all [syncPlan, chanPlan]
 
+variable (ctx)
 /-- Load a sync primitive's cell. A non-sync cell is `stuck` (fail
 closed — the frontend types every receiver). -/
-def syncCell (s : ExecState) (loc : Loc) : Except Stop SyncPrim := do
-  match ← loadLoc s loc with
+def syncCell (s : Store) (loc : Loc) : Except Stop SyncPrim := do
+  match ← loadLoc ctx s loc with
   | .syncData p => return p
   | other => stuck s!"expected sync primitive data, got {repr other}"
 
@@ -2048,6 +2070,7 @@ def atomicPlan : Stmt → Option (AtomicOp × List Expr)
       else none
   | _ => none
 
+variable {ctx}
 /-- Atomic statements and wide statements classify DISJOINT statements
 (the `stmtPlan_of_syncPlan` twin). -/
 theorem stmtPlan_of_atomicPlan {stmt : Stmt} {p : AtomicOp × List Expr}
@@ -2066,6 +2089,7 @@ theorem syncPlan_of_atomicPlan {stmt : Stmt} {p : AtomicOp × List Expr}
     (h : atomicPlan stmt = some p) : syncPlan stmt = none := by
   cases stmt <;> simp_all [atomicPlan, syncPlan]
 
+variable (ctx)
 /-- The VALUE semantics of one atomic op on the cell's current value
 `cur` (already at `kind`) and the evaluated value operands:
 `(new?, result)` — the value to store (`none` = the cell is untouched)
@@ -2132,7 +2156,7 @@ def evalClauses : List (SelectClauseHead × Stmt) → List GoValue →
 channel counts as READY and panics when selected — probe p23;
 `select.go`'s pass-1 send check tests closed first). A nil channel is
 never ready. -/
-def clauseReady (s : ExecState) : EvClause → Except Stop Bool
+def clauseReady (s : Store) : EvClause → Except Stop Bool
   | .sendEv chv _ _ _ => do
       let ch ← valueAsChan chv
       match ch.base with
@@ -2149,7 +2173,7 @@ def clauseReady (s : ExecState) : EvClause → Except Stop Bool
           return buf.size > 0 || closed
 
 /-- The ready sublist, in clause order. -/
-def readyClauses (s : ExecState) : List EvClause → Except Stop (List EvClause)
+def readyClauses (s : Store) : List EvClause → Except Stop (List EvClause)
   | [] => return []
   | c :: rest => do
       let tail ← readyClauses s rest
@@ -2252,6 +2276,7 @@ def utf8String? (bytes : Array UInt8) : Option String :=
   | some text => if text.toUTF8.data == bytes then some text else none
   | none => none
 
+variable {ctx}
 theorem utf8String?_bytes {bytes : Array UInt8} {text : String}
     (h : utf8String? bytes = some text) : text.toUTF8.data = bytes := by
   unfold utf8String? at h
@@ -2263,6 +2288,7 @@ theorem utf8String?_bytes {bytes : Array UInt8} {text : String}
     · contradiction
   · contradiction
 
+variable (ctx)
 /-- gc's FIRST abort line for a string payload's bytes, with whether the
 payload continues past it. `printindented` (runtime/error.go:306–318 at
 the pin) writes the payload's raw bytes, a `\t` after every `\n`, and the
@@ -2285,10 +2311,10 @@ def stringFirstLine? (bytes : Array UInt8) : Option (String × Bool) :=
 through a wire interface declaration: those two interfaces are built into
 the runtime, so the rewrite applies whether or not the program ever
 mentions `error`/`fmt.Stringer`. -/
-def hasNoArgStringMethod (state : ExecState) (dynTy : Ty) (member : Declaration.MemberId) : Bool :=
-  match concreteMethodForDynamic? state dynTy member with
+def hasNoArgStringMethod (dynTy : Ty) (member : Declaration.MemberId) : Bool :=
+  match concreteMethodForDynamic? ctx dynTy member with
   | some (info, _) =>
-      match concreteMethodSignature? state info with
+      match concreteMethodSignature? ctx info with
       | some (params, results, variadic) =>
           params.isEmpty && results == #[Ty.string] && !variadic
       | none => false
@@ -2296,8 +2322,8 @@ def hasNoArgStringMethod (state : ExecState) (dynTy : Ty) (member : Declaration.
 
 /-- The payload rewrite Go performs before printing: `v.Error()` for an
 `error`, `v.String()` for a `fmt.Stringer`. -/
-def panicPayloadIsRewritten (state : ExecState) (dynTy : Ty) : Bool :=
-  hasNoArgStringMethod state dynTy ⟨"Error", ""⟩ || hasNoArgStringMethod state dynTy ⟨"String", ""⟩
+def panicPayloadIsRewritten (dynTy : Ty) : Bool :=
+  hasNoArgStringMethod ctx dynTy ⟨"Error", ""⟩ || hasNoArgStringMethod ctx dynTy ⟨"String", ""⟩
 
 /-- Render a panic payload as Go's first abort line renders it (after
 `panic: `): the payload's TEXT and whether the payload continues onto a
@@ -2315,7 +2341,7 @@ fails CLOSED here (pre-merge audit 2026-07-31, finding 3; the unconditional
 A string whose FIRST LINE is not valid UTF-8 is `none` (D5: no byte
 channel — `utf8String?`). Everything else not pinned is `none` for the
 same reason. -/
-def renderPanicPayload (state : ExecState) : GoValue → Option (String × Bool)
+def renderPanicPayload : GoValue → Option (String × Bool)
   -- A RAW nil payload never reaches a chain: `panicPayload` maps
   -- `panic(nil)` to the `*runtime.PanicNilError` runtime error under the
   -- pinned `GODEBUG=panicnil=0` (the only raise site, `.panicArgK`), and
@@ -2339,7 +2365,7 @@ def renderPanicPayload (state : ExecState) : GoValue → Option (String × Bool)
   | .interface (.defined idx) (.int v _) =>
       if idx == runtimeErrorTypeIdx then
         none
-      else if !dynamicMethodSetRecorded state (.defined idx) then
+      else if !dynamicMethodSetRecorded ctx (.defined idx) then
         -- BUG-053 class, renderer consumer (contract note §4,
         -- 2026-08-10): with no method-set record,
         -- `panicPayloadIsRewritten`'s "no Error()/String()" below would
@@ -2349,14 +2375,14 @@ def renderPanicPayload (state : ExecState) : GoValue → Option (String × Bool)
         -- exported names, so an `exported`-coverage record suffices to
         -- decide honestly.)
         none
-      else if panicPayloadIsRewritten state (.defined idx) then
+      else if panicPayloadIsRewritten ctx (.defined idx) then
         none -- Error()/String() would have to be CALLED: fail closed
       else
         -- The entry is read back from the type table; an index the table
         -- does not have is unrenderable (fail closed), never a guess. A
         -- present entry renders its DISPLAY record (no record: the visible
         -- marker, never the key — design note 2026-09-05 §3.2).
-        (state.types.nameOf? idx).map fun name => (s!"{displayNameOfId state name}({v})", false)
+        (ctx.types.nameOf? idx).map fun name => (s!"{displayNameOfId ctx name}({v})", false)
   | _ => none
 
 /-- The diagnostic suffix of the unrenderable-abort refusal: a boxed
@@ -2364,8 +2390,8 @@ payload's dynamic type by the KEY read back from the table
 (`goTypeNameForMessage`), beside the `repr` that now prints a bare
 `Ty.defined i` (C2; audit fix R16). Diagnostic only — no baseline or
 observation carries the text. -/
-def payloadDynamicTypeNote (state : ExecState) : GoValue → String
-  | .interface dynTy _ => s!" (dynamic type {goTypeNameForMessage state dynTy})"
+def payloadDynamicTypeNote : GoValue → String
+  | .interface dynTy _ => s!" (dynamic type {goTypeNameForMessage ctx dynTy})"
   | _ => ""
 
 /-- **The `repanicCollapse` envelope statement** (`ChoiceSite.repanicCollapse`,
@@ -2434,9 +2460,9 @@ appended ONLY when the payload is single-line, because gc writes the
 suffix after the WHOLE payload, i.e. on its last line (`stringFirstLine?`;
 witnesses w14/w15/w34). `none` exactly where the payload refuses
 (`renderPanicPayload`'s fail-closed arms). -/
-def renderPanicHead (state : ExecState) (first : PanicEntry) (rest : List PanicEntry)
+def renderPanicHead (first : PanicEntry) (rest : List PanicEntry)
     (pick : Nat) : Option String :=
-  (renderPanicPayload state first.value).map fun (base, multiline) =>
+  (renderPanicPayload ctx first.value).map fun (base, multiline) =>
     if multiline then base else base ++ recoveredSuffix first rest pick
 
 /-- Mark the newest (last) chain entry recovered, returning its payload —
@@ -2812,6 +2838,7 @@ def Cont.withTail : Cont → Cont → Cont
   | .probeK _, t => .probeK t
   | .unseqK a b c d e f _, t => .unseqK a b c d e f t
 
+variable {ctx}
 theorem Cont.sizeOf_tail_lt {k k' : Cont} (h : k.tail = some k') : sizeOf k' < sizeOf k := by
   cases k <;> simp_all [Cont.tail] <;> omega
 
@@ -2822,6 +2849,7 @@ theorem Cont.withTail_tail : ∀ k : Cont, (k.tail.map k.withTail).getD k = k :=
 theorem Cont.tail_withTail {k t : Cont} (h : k ≠ .stop) : (k.withTail t).tail = some t := by
   cases k <;> first | exact absurd rfl h | rfl
 
+variable (ctx)
 /-- What a frame IS to the walks: statement glue (`seq`/`loop`/scopes/
 the range frame — what `break`/`continue`/`return` and `defer` cross),
 expression glue (an operand or delivery frame — crossed only by a
@@ -2869,6 +2897,7 @@ def Cont.rebuild {β : Type} (descend : Cont → Bool) (act : Cont → Option (�
 termination_by sizeOf k
 decreasing_by exact Cont.sizeOf_tail_lt _h
 
+variable {ctx}
 theorem Cont.rebuild_descend {β : Type} {descend : Cont → Bool} {act : Cont → Option (β × Cont)}
     {k : Cont} (hd : descend k = true) :
     Cont.rebuild descend act k =
@@ -2885,6 +2914,7 @@ theorem Cont.rebuild_stop {β : Type} {descend : Cont → Bool} {act : Cont → 
     Cont.rebuild descend act .stop = act .stop := by
   rw [Cont.rebuild]; split <;> simp [Cont.tail]
 
+variable (ctx)
 /-- The continuation for entering a `.seqn`: under a same-env governing
 sequence, SPLICE the statements into it (D1) — Go statement lists splice
 and only blocks scope. Any other continuation wraps in a fresh seq node. -/
@@ -3008,7 +3038,7 @@ def _root_.GoLean.GoCore.Stmt.signal? : Stmt → Option Signal
   | .continueTo label => some (.contTo label)
   | _ => none
 
-/-- Control configurations (the Iris `Expr` projection; the `ExecState` is
+/-- Control configurations (the Iris `Expr` projection; the `Store` is
 the paired `Step` component, as before). New over the old relation:
 `evalE` (expression under evaluation) and `retV` (value delivery). The
 terminal remains `.next .stop`; `retV` never reaches `.stop` because an
@@ -3096,7 +3126,7 @@ text-tape.md` §2.3); everything else is the standing payload refusal
 carrier without a method-set record), named by the payload's dynamic type
 key beside the `repr`, which prints a bare `Ty.defined i` since C2
 (`payloadDynamicTypeNote`, audit fix R16). -/
-def abortRefusal (s : ExecState) (first : PanicEntry) : String :=
+def abortRefusal (first : PanicEntry) : String :=
   let invalidFirstLine : Option (Array UInt8) := match first.value with
     | .interface .string (.string gs) =>
         if (stringFirstLine? gs.bytes).isNone then some gs.bytes else none
@@ -3108,17 +3138,17 @@ def abortRefusal (s : ExecState) (first : PanicEntry) : String :=
   | some bytes =>
       s!"panic abort rendering: the string payload's first line is not valid UTF-8 ({bytes.size} payload byte(s), first line {(bytes.takeWhile (· != 0x0A)).toList.map (·.toNat)}) — gc prints the raw bytes and the String-valued observation cannot carry them (BUG-004 item 3 / landing decision D5: no byte channel)"
   | none =>
-      s!"panic abort rendering for payload {repr first.value}{payloadDynamicTypeNote s first.value}"
+      s!"panic abort rendering for payload {repr first.value}{payloadDynamicTypeNote ctx first.value}"
 
 /-- Go's first `panic: ` line for an abort under the `repanicCollapse`
 pick, or the refusal that names why it cannot be rendered. Shared by the
 sequential machine's abort (`stepFn`) and the pool's (`stepThread`); both
 draw the pick through `abortConsult` first. -/
-def abortMsg (s : ExecState) (first : PanicEntry) (rest : List PanicEntry) (pick : Nat) :
+def abortMsg (first : PanicEntry) (rest : List PanicEntry) (pick : Nat) :
     Except Stop String :=
-  match renderPanicHead s first rest pick with
+  match renderPanicHead ctx first rest pick with
   | some msg => return msg
-  | none => throw (.unsupported (abortRefusal s first))
+  | none => throw (.unsupported (abortRefusal ctx first))
 
 /-- The stream after an abort's consult, from the configuration: what the
 pool returns and the sequential driver DROPS (the machine stops at its
@@ -3183,6 +3213,7 @@ def signalStep (sg : Signal) : Cont → Option Config
       | _ => some (.signal sg k')
   | _ => none
 
+variable {ctx}
 /-- The table has no `.frame` row (a call frame is exited by `ret` — the
 frame-exit rules — and refuses every other signal) and no `.stop` row (a
 signal at the empty continuation is relation-terminal). -/
@@ -3193,6 +3224,7 @@ signal at the empty continuation is relation-terminal). -/
 
 @[simp] theorem signalStep_stop {sg : Signal} : signalStep sg .stop = none := rfl
 
+variable (ctx)
 /-- The REFUSAL a signal meets where the table has no successor and the
 frame is not `ret`-at-a-call-frame — every one names its cause (fail
 closed): a signal escaping its function body or its label, `continue`
@@ -3305,27 +3337,29 @@ panic is the deferred invocation's panic and joins newest-last); every
 other site delivers under the empty chain. Shared verbatim by the
 relation's apply/entry rules, `stepFn` (through `deliverS`, which adds
 the executable's stream) and `spawnStep`. -/
-def deliver {α : Type} (s : ExecState) (k : Cont) (next : α → Config × ExecState)
-    (r : Result α) (chain : List PanicEntry := []) : Config × ExecState :=
+def deliver {α : Type} (s : Store) (k : Cont) (next : α → Config × Store)
+    (r : Result α) (chain : List PanicEntry := []) : Config × Store :=
   match r with
   | .ok a => next a
   | .panic msg => (.panicking (chain ++ [panicEntry msg]) k, s)
 
-@[simp] theorem deliver_ok {α : Type} {s : ExecState} {k : Cont} {next : α → Config × ExecState}
+variable {ctx}
+@[simp] theorem deliver_ok {α : Type} {s : Store} {k : Cont} {next : α → Config × Store}
     {a : α} {chain : List PanicEntry} : deliver s k next (.ok a) chain = next a := rfl
 
-@[simp] theorem deliver_panic {α : Type} {s : ExecState} {k : Cont} {next : α → Config × ExecState}
+@[simp] theorem deliver_panic {α : Type} {s : Store} {k : Cont} {next : α → Config × Store}
     {msg : String} {chain : List PanicEntry} :
     deliver s k next (.panic msg) chain = (.panicking (chain ++ [panicEntry msg]) k, s) := rfl
 
 /-- A delivered panic is the unwinding configuration over the pre-state. -/
-theorem deliver_panic_eq {α : Type} {s : ExecState} {k : Cont} {next : α → Config × ExecState}
-    {msg : String} {chain : List PanicEntry} {c' : Config} {s' : ExecState}
+theorem deliver_panic_eq {α : Type} {s : Store} {k : Cont} {next : α → Config × Store}
+    {msg : String} {chain : List PanicEntry} {c' : Config} {s' : Store}
     (h : deliver s k next (.panic msg) chain = (c', s')) :
     c' = .panicking (chain ++ [panicEntry msg]) k ∧ s = s' := by
   simp only [deliver_panic, Prod.mk.injEq] at h
   exact ⟨h.1.symm, h.2⟩
 
+variable (ctx)
 /-- The frame-ENTRY shapes and the `(fid, args)` their next step hands
 to `enterFrame` — the seven `stepFn` positions that route through
 `enterFramePick` (the ordinary call with
@@ -3368,9 +3402,9 @@ pick (BUG-087)? `true` exactly at a frame entry in the wrapper family
 nothing at the site. The stream-obliviousness checkers exclude exactly
 this (`stepFn_oblivious`' `hnv`, `poolThreadOblivious`, `innerVecs`,
 `allStreamsOk`) — a fail-closed flag like `consumesAppendSlice`. -/
-def consumesNilValueMethod (s : ExecState) (c : Config) : Bool :=
+def consumesNilValueMethod (c : Config) : Bool :=
   match entryCallSite? c with
-  | some (fid, args) => (nilValueMethodText? s fid args).isSome
+  | some (fid, args) => (nilValueMethodText? ctx fid args).isSome
   | none => false
 
 /-- Enter a receive's TARGET phase (nonempty targets; convergence
@@ -3380,9 +3414,9 @@ dequeue arms) and `commitClause` — and by `stepFn` through them. The
 malformed arms (an empty plan for nonempty targets, a zero-operand
 shape) cannot arise from `targetsPlan` — fail closed, never a silent
 default. -/
-def enterRecvTargets (s : ExecState) (targets : List Assignee)
+def enterRecvTargets (s : Store) (targets : List Assignee)
     (vals : List GoValue) (body : Stmt) (env : LocalEnv) (k : Cont) :
-    Except Stop (Config × ExecState) := do
+    Except Stop (Config × Store) := do
   match targetsPlan targets with
   | some ((sh, e :: ops) :: rest) =>
       return (.evalE e env (.tgtOpK sh [] ops [] rest .vals [] vals body env k), s)
@@ -3409,14 +3443,14 @@ per-goroutine boundary FLAG (`Thread.afterStep`, Multi.lean, the envelope
 statement of `ChoiceSite.postOp`), not as a wrapping configuration. A
 park IS a boundary shape already; a panicking outcome opens none (the
 abort window is B3, deferred — boundary-set note §2). -/
-def applyChanOp (s : ExecState) (op : ChanStOp) (vs : List GoValue)
-    (env : LocalEnv) (k : Cont) : Except Stop (Config × ExecState) := do
+def applyChanOp (s : Store) (op : ChanStOp) (vs : List GoValue)
+    (env : LocalEnv) (k : Cont) : Except Stop (Config × Store) := do
   match op, vs with
   | .send elem, [chv, vv] => do
       let ch ← valueAsChan chv
       -- Normalize at the element type up front (the mapAssign discipline;
       -- for the blocked shapes the pinned value travels normalized).
-      let v' ← normalizeValueForTy s elem vv
+      let v' ← normalizeValueForTy ctx elem vv
       match ch.base with
       | none => return (.blockedSend none v' k, s)
       | some loc => do
@@ -3447,7 +3481,7 @@ def applyChanOp (s : ExecState) (op : ChanStOp) (vs : List GoValue)
                   return (c', s₂)
           | none =>
               if closed then do
-                let zero ← defaultValue s elem
+                let zero ← defaultValue ctx elem
                 match targets with
                 | [] => return (.next k, s)
                 | _ :: _ => do
@@ -3540,74 +3574,74 @@ that draws a pick — apply through `applySyncOp` below, which threads
 the stream and dispatches everything else here unchanged. Shared
 verbatim (through `applySyncOp`) by rule `Step.syncStApply` and
 `stepFn`'s `syncStK` apply arm. -/
-def applySyncOpCore (s : ExecState) (op : SyncOp) (vs : List GoValue)
-    (env : LocalEnv) (k : Cont) : Except Stop (Config × ExecState) := do
+def applySyncOpCore (s : Store) (op : SyncOp) (vs : List GoValue)
+    (env : LocalEnv) (k : Cont) : Except Stop (Config × Store) := do
   match op, vs with
   | .lock, [av] => do
       let loc ← valueAsLoc av
-      match ← syncCell s loc with
+      match ← syncCell ctx s loc with
       | .mutex locked =>
           if locked then return (.blockedSync .lock loc env k, s)
           else do
-            let s' ← storeLoc s loc (.syncData (.mutex true))
+            let s' ← storeLoc ctx s loc (.syncData (.mutex true))
             return (.next k, s')
       | other => stuck s!"Lock on a non-mutex sync cell: {repr other}"
   | .unlock, [av] => do
       let loc ← valueAsLoc av
-      match ← syncCell s loc with
+      match ← syncCell ctx s loc with
       | .mutex locked =>
           if locked then do
-            let s' ← storeLoc s loc (.syncData (.mutex false))
+            let s' ← storeLoc ctx s loc (.syncData (.mutex false))
             return (.next k, s')
           else throw (.fatal "sync: unlock of unlocked mutex")
       | other => stuck s!"Unlock on a non-mutex sync cell: {repr other}"
   | .rlock, [av] => do
       let loc ← valueAsLoc av
-      match ← syncCell s loc with
+      match ← syncCell ctx s loc with
       | .rwmutex writer readers pendingW =>
           if writer || pendingW > 0 then
             return (.blockedSync .rlock loc env k, s)
           else do
-            let s' ← storeLoc s loc (.syncData (.rwmutex writer (readers + 1) pendingW))
+            let s' ← storeLoc ctx s loc (.syncData (.rwmutex writer (readers + 1) pendingW))
             return (.next k, s')
       | other => stuck s!"RLock on a non-RWMutex sync cell: {repr other}"
   | .runlock, [av] => do
       let loc ← valueAsLoc av
-      match ← syncCell s loc with
+      match ← syncCell ctx s loc with
       | .rwmutex writer readers pendingW =>
           match readers with
           | r + 1 => do
-              let s' ← storeLoc s loc (.syncData (.rwmutex writer r pendingW))
+              let s' ← storeLoc ctx s loc (.syncData (.rwmutex writer r pendingW))
               return (.next k, s')
           | 0 => throw (.fatal "sync: RUnlock of unlocked RWMutex")
       | other => stuck s!"RUnlock on a non-RWMutex sync cell: {repr other}"
   | .wlock, [av] => do
       let loc ← valueAsLoc av
-      match ← syncCell s loc with
+      match ← syncCell ctx s loc with
       | .rwmutex writer readers pendingW =>
           if !writer && readers == 0 then do
-            let s' ← storeLoc s loc (.syncData (.rwmutex true 0 pendingW))
+            let s' ← storeLoc ctx s loc (.syncData (.rwmutex true 0 pendingW))
             return (.next k, s')
           else do
             -- Park AND register as a pending writer: the documented
             -- exclusion of new readers starts at the BLOCKED Lock call
             -- (rwmutex.go), so the count updates at the park.
-            let s' ← storeLoc s loc (.syncData (.rwmutex writer readers (pendingW + 1)))
+            let s' ← storeLoc ctx s loc (.syncData (.rwmutex writer readers (pendingW + 1)))
             return (.blockedSync .wlock loc env k, s')
       | other => stuck s!"write-Lock on a non-RWMutex sync cell: {repr other}"
   | .wunlock, [av] => do
       let loc ← valueAsLoc av
-      match ← syncCell s loc with
+      match ← syncCell ctx s loc with
       | .rwmutex writer readers pendingW =>
           if writer then do
-            let s' ← storeLoc s loc (.syncData (.rwmutex false readers pendingW))
+            let s' ← storeLoc ctx s loc (.syncData (.rwmutex false readers pendingW))
             return (.next k, s')
           else throw (.fatal "sync: Unlock of unlocked RWMutex")
       | other => stuck s!"write-Unlock on a non-RWMutex sync cell: {repr other}"
   | .wgAdd, [av, dv] => do
       let loc ← valueAsLoc av
       let delta ← valueAsInt dv
-      match ← syncCell s loc with
+      match ← syncCell ctx s loc with
       | .waitGroup counter waiters => do
           -- gc's counter is an int32 — the high 32 bits of the uint64
           -- state word (waitgroup.go:104 `state.Add(uint64(delta) << 32)`,
@@ -3640,7 +3674,7 @@ def applySyncOpCore (s : ExecState) (op : SyncOp) (vs : List GoValue)
           -- across reuse rounds.
           let waiters' := if counter' == 0 && waiters > 0 then 0 else waiters
           -- The update lands BEFORE any panic (probe p13).
-          let s' ← storeLoc s loc (.syncData (.waitGroup counter' waiters'))
+          let s' ← storeLoc ctx s loc (.syncData (.waitGroup counter' waiters'))
           if counter' < 0 then
             -- Payload CLASS is gc-exact (arc-end fix round 2026-08-10):
             -- gc's sync package raises this with `panic("...")` — a plain
@@ -3664,19 +3698,19 @@ def applySyncOpCore (s : ExecState) (op : SyncOp) (vs : List GoValue)
       | other => stuck s!"Add on a non-WaitGroup sync cell: {repr other}"
   | .wgWait, [av] => do
       let loc ← valueAsLoc av
-      match ← syncCell s loc with
+      match ← syncCell ctx s loc with
       | .waitGroup counter waiters =>
           if counter == 0 then return (.next k, s)
           else do
-            let s' ← storeLoc s loc (.syncData (.waitGroup counter (waiters + 1)))
+            let s' ← storeLoc ctx s loc (.syncData (.waitGroup counter (waiters + 1)))
             return (.blockedSync .wgWait loc env k, s')
       | other => stuck s!"Wait on a non-WaitGroup sync cell: {repr other}"
   | .onceBegin targets, [av] => do
       let loc ← valueAsLoc av
-      match ← syncCell s loc with
+      match ← syncCell ctx s loc with
       | .once started done =>
           if !started then do
-            let s' ← storeLoc s loc (.syncData (.once true false))
+            let s' ← storeLoc ctx s loc (.syncData (.once true false))
             let (c', s'') ← enterRecvTargets s' targets [.bool true] (.seqn #[]) env k
             return (c', s'')
           else if done then do
@@ -3687,17 +3721,17 @@ def applySyncOpCore (s : ExecState) (op : SyncOp) (vs : List GoValue)
       | other => stuck s!"Once.Do begin on a non-Once sync cell: {repr other}"
   | .onceComplete, [av] => do
       let loc ← valueAsLoc av
-      match ← syncCell s loc with
+      match ← syncCell ctx s loc with
       | .once started _ =>
           if started then do
-            let s' ← storeLoc s loc (.syncData (.once true true))
+            let s' ← storeLoc ctx s loc (.syncData (.once true true))
             return (.next k, s')
           else throw (.internal "onceComplete without a matching onceBegin")
       | other => stuck s!"Once.Do complete on a non-Once sync cell: {repr other}"
   -- The TRY heads never reach the core: `applySyncOp` draws their pick
   -- and applies `applyTryLock`. Named, not absorbed by the catch-all.
   | .tryLock _, _ | .tryRLock _, _ | .tryWLock _, _ =>
-      throw (.internal "try-lock heads apply through applySyncOp (the choice-taking entry), never the core")
+      throw (.internal "try-lock heads apply through applySyncOp ctx (the choice-taking entry), never the core")
   | op, vs => stuck s!"malformed sync-operator application: {repr op} on {vs.length} operand(s)"
 
 /-- The cell a TRY head would leave behind if it ACQUIRED — `.ok (some _)`
@@ -3756,8 +3790,8 @@ exists (the `onceBegin` shape), else the plain continuation — success
 depends on the TARGET LIST alone (`tryDeliver_ok_any`), never on the
 state or the value. Every outcome is a registry-op completion (B1/C5:
 the pool flags it `postOp`). -/
-def tryDeliver (b : Bool) (s : ExecState) (targets : List Assignee)
-    (env : LocalEnv) (k : Cont) : Except Stop (Config × ExecState) :=
+def tryDeliver (b : Bool) (s : Store) (targets : List Assignee)
+    (env : LocalEnv) (k : Cont) : Except Stop (Config × Store) :=
   match targets with
   | [] => return (.next k, s)
   | _ :: _ => do
@@ -3836,9 +3870,9 @@ forever under the spurious member (and under unfair schedules) —
 lane under `nonterm=` accounting with NO termination claim (row 2's
 precedent, `atomics/spin`); the `Fair`-quantified claim class is
 reasoning-side future work TO BE BUILT (proposal §2). -/
-def applyTryLock (s : ExecState) (op : SyncOp) (loc : Loc) (pre : SyncPrim)
+def applyTryLock (s : Store) (op : SyncOp) (loc : Loc) (pre : SyncPrim)
     (spurious : Bool) (targets : List Assignee) (env : LocalEnv) (k : Cont) :
-    Except Stop (Config × ExecState) := do
+    Except Stop (Config × Store) := do
   match ← tryAcquire op pre with
   | none => tryDeliver false s targets env k
   | some post => do
@@ -3848,7 +3882,7 @@ def applyTryLock (s : ExecState) (op : SyncOp) (loc : Loc) (pre : SyncPrim)
       -- pick-independent (`applyTryLock_ok_any`); the spurious member
       -- then returns the PRE-store state — no state change, as the text
       -- demands.
-      let sAcq ← storeLoc s loc (.syncData post)
+      let sAcq ← storeLoc ctx s loc (.syncData post)
       if spurious then tryDeliver false s targets env k
       else tryDeliver true sAcq targets env k
 
@@ -3859,26 +3893,26 @@ draw the `tryLock` site at `tryLockWidth` (bound 1 = no pop), and apply
 `applyTryLock`; every other head is `applySyncOpCore` with the stream
 passed through untouched (`applySyncOp_eq_core`). Shared verbatim by
 rule `Step.syncStApply` and `stepFn`'s `syncStK` apply arm. -/
-def applySyncOp (s : ExecState) (ch : Choices) (op : SyncOp) (vs : List GoValue)
-    (env : LocalEnv) (k : Cont) : Except Stop (Config × ExecState × Choices) := do
+def applySyncOp (s : Store) (ch : Choices) (op : SyncOp) (vs : List GoValue)
+    (env : LocalEnv) (k : Cont) : Except Stop (Config × Store × Choices) := do
   match op.tryTargets?, vs with
   | some targets, [av] => do
       let loc ← valueAsLoc av
-      let pre ← syncCell s loc
+      let pre ← syncCell ctx s loc
       let (pick, ch') := Choices.consumeAt .tryLock (tryLockWidth op pre) ch
-      let (c', s') ← applyTryLock s op loc pre (pick == 1) targets env k
+      let (c', s') ← applyTryLock ctx s op loc pre (pick == 1) targets env k
       return (c', s', ch')
   | some _, vs => stuck s!"malformed try-lock application: {repr op} on {vs.length} operand(s)"
   | none, _ => do
-      let (c', s') ← applySyncOpCore s op vs env k
+      let (c', s') ← applySyncOpCore ctx s op vs env k
       return (c', s', ch)
 
 /-- The optional store of an atomic op (`atomicCompute`'s `new?`): the
 normalized integer at the op's kind, or no store at all (`load`, a
 failed `cas`). -/
-def atomicStore (s : ExecState) (loc : Loc) (kind : IntKind) :
-    Option Int → Except Stop ExecState
-  | some nv => storeLoc s loc (.int nv kind)
+def atomicStore (s : Store) (loc : Loc) (kind : IntKind) :
+    Option Int → Except Stop Store
+  | some nv => storeLoc ctx s loc (.int nv kind)
   | none => pure s
 
 /-- **Apply an atomic statement's head to its evaluated operands — the
@@ -3928,18 +3962,18 @@ alignment panic: the pinned oracle is linux/amd64, where 64-bit atomics
 need no alignment; the 32-bit `unaligned 64-bit atomic operation` fatal
 is outside this pin (R1's transfer caveat applies). Shared verbatim by
 rule `Step.atomicStApply` and `stepFn`'s `atomicStK` apply arm. -/
-def applyAtomicOp (s : ExecState) (op : AtomicOp) (vs : List GoValue)
-    (env : LocalEnv) (k : Cont) : Except Stop (Config × ExecState) := do
+def applyAtomicOp (s : Store) (op : AtomicOp) (vs : List GoValue)
+    (env : LocalEnv) (k : Cont) : Except Stop (Config × Store) := do
   match vs with
   | av :: operands => do
       let loc ← valueAsLoc av
-      match ← loadLoc s loc with
+      match ← loadLoc ctx s loc with
       | .int cur ck =>
           if ck != op.kind then
             stuck s!"atomic {repr op.head} at a {ck.name} cell (the op is typed {op.kind.name})"
           else do
             let (new?, result) ← atomicCompute op.head op.kind cur operands
-            let s' ← atomicStore s loc op.kind new?
+            let s' ← atomicStore ctx s loc op.kind new?
             match op.targets with
             | [] => return (.next k, s')
             | _ :: _ => do
@@ -3962,8 +3996,8 @@ the envelope statement of `ChoiceSite.postOp`) on all three commit paths
 at once (the entry-path `applySelect`, the arrival-path `.commit` in
 `stepThread`, and the wake path `resumeThread`); a panicking commit
 opens no boundary (B3 deferred). -/
-def commitClause (s : ExecState) (env : LocalEnv) (k : Cont) :
-    EvClause → Except Stop (Config × ExecState)
+def commitClause (s : Store) (env : LocalEnv) (k : Cont) :
+    EvClause → Except Stop (Config × Store)
   | .sendEv chv vv elem body => do
       let ch ← valueAsChan chv
       match ch.base with
@@ -3973,7 +4007,7 @@ def commitClause (s : ExecState) (env : LocalEnv) (k : Cont) :
           if closed then
             return (.panicking [panicEntry "send on closed channel"] k, s)
           else if buf.size < capacity then do
-            let v' ← normalizeValueForTy s elem vv
+            let v' ← normalizeValueForTy ctx elem vv
             let s' ← storeChanPayload s loc (buf.push v') capacity closed
             return (.exec body env k, s')
           else stuck "select committed an unready send clause"
@@ -3990,7 +4024,7 @@ def commitClause (s : ExecState) (env : LocalEnv) (k : Cont) :
                 pure (v, true, s₁)
             | none =>
                 if closed then do
-                  let zero ← defaultValue s elem
+                  let zero ← defaultValue ctx elem
                   pure (zero, false, s)
                 else stuck "select committed an unready receive clause"
           match targets with
@@ -4046,12 +4080,12 @@ inductive SelectOutcome where
   a singleton-ready commit (`committed? = some` the clause — Q2: the
   commit identity is EMITTED by the apply, so the step event and the
   detector never re-derive it from the readiness analysis). -/
-  | done (c : Config) (σ : ExecState) (committed? : Option EvClause)
+  | done (c : Config) (σ : Store) (committed? : Option EvClause)
   /-- Multi-ready (≥ 2): the PRE-COMMITTED result of every ready
   clause, clause order, for the L2 pick — each paired with ITS clause
   (Q2's emitted commit identity) — `.inl` a committed configuration,
   `.inr` a panic message. -/
-  | picks (commits : List (EvClause × Sum (Config × ExecState) String))
+  | picks (commits : List (EvClause × Sum (Config × Store) String))
 
 /-- The stream-FREE core of `applySelect` (the `applyStmtOpCore`
 precedent: choices-obliviousness of apply-SUCCESS is true by
@@ -4071,7 +4105,7 @@ pick consumed (never a re-thrown `.error`, whose `stepFn` handler
 would return the pre-consumption stream and desynchronize every later
 site — the latent drop the audit found); an unpicked clause's panic is
 discarded with its commit either way. -/
-def applySelectCore (s : ExecState)
+def applySelectCore (s : Store)
     (clauses : List (SelectClauseHead × Stmt)) (default? : Option Stmt)
     (vs : List GoValue) (env : LocalEnv) (k : Cont) :
     Except Stop SelectOutcome := do
@@ -4098,28 +4132,28 @@ def applySelectCore (s : ExecState)
       | some d => return .done (.exec d env k) s none
       | none => return .done (.blockedSelect evs env k) s none
   | [c] => do
-      let (c', s') ← commitClause s env k c
+      let (c', s') ← commitClause ctx s env k c
       return .done c' s' (some c)
   | ready => do
       let commits ← ready.mapM fun cl =>
-        (match commitClause s env k cl with
+        (match commitClause ctx s env k cl with
         | .ok r => .ok (cl, .inl r)
         | .error (.panic msg) => .ok (cl, .inr msg)
         | .error e => .error e :
-          Except Stop (EvClause × Sum (Config × ExecState) String))
+          Except Stop (EvClause × Sum (Config × Store) String))
       return .picks commits
 
 @[inherit_doc applySelectCore]
-def applySelect (s : ExecState) (clauses : List (SelectClauseHead × Stmt))
+def applySelect (s : Store) (clauses : List (SelectClauseHead × Stmt))
     (default? : Option Stmt) (vs : List GoValue) (env : LocalEnv) (k : Cont)
     (ch : Choices) :
-    Except Stop (Config × ExecState × Choices × Option EvClause) := do
+    Except Stop (Config × Store × Choices × Option EvClause) := do
   -- The 4th component is Q2's emitted commit identity (`none` =
   -- default taken or parked): the sequential `stepFn` arm PROJECTS it
   -- away; the pool's select interception (`stepThread`) carries it
   -- into the step event so the race detector folds it instead of
   -- replaying the readiness analysis and the stream.
-  match ← applySelectCore s clauses default? vs env k with
+  match ← applySelectCore ctx s clauses default? vs env k with
   | .done c' s' cl? => return (c', s', ch, cl?)
   | .picks commits =>
       -- THE L2 CONSUMPTION (envelope statement in the docstring
@@ -4155,21 +4189,21 @@ test, the R16 `growslice` refusal — a recoverable panic raised BEFORE the
 consult — and the old-element read); `some (appendSpillWidth …)` exactly
 when the arm reaches the consult, `none` whenever it refuses, panics or
 stores in place before it (audit fix F1: `some` ⇔ the consult happens). -/
-def appendSpill? (s : ExecState) (elem : Ty) (vs : List GoValue) : Option Nat :=
+def appendSpill? (s : Store) (elem : Ty) (vs : List GoValue) : Option Nat :=
   match vs with
   | [tv, sliceV, elemsV] =>
       match valueAsSlice sliceV, valueAsSlice elemsV with
       | .ok slice, .ok elems =>
-          match validateSlice slice, validateSlice elems, sliceVisibleValues s elems, valueAsLoc tv with
+          match validateSlice slice, validateSlice elems, sliceVisibleValues ctx s elems, valueAsLoc tv with
           | .ok _, .ok _, .ok elemValues, .ok _ =>
               let newLen := slice.len + elemValues.size
               if newLen ≤ slice.cap then none
               else
-                match tySizeBytes s.types elem with
+                match tySizeBytes ctx.types elem with
                 | .ok elemSize =>
                     if newLen ≥ intExclusiveUpperBound || newLen * elemSize > maxAllocBytes then none
                     else
-                      match sliceVisibleValues s slice with
+                      match sliceVisibleValues ctx s slice with
                       | .ok _ => some (appendSpillWidth slice.cap newLen)
                       | .error _ => none
                 | .error _ => none
@@ -4179,12 +4213,12 @@ def appendSpill? (s : ExecState) (elem : Ty) (vs : List GoValue) : Option Nat :=
 
 /-- The TRY heads' consult width at a sync apply (`applySyncOp`): the
 receiver cell's `tryLockWidth`, `none` unless it pops (width 2). -/
-def tryLockConsult? (s : ExecState) (op : SyncOp) (vs : List GoValue) : Option Nat :=
+def tryLockConsult? (s : Store) (op : SyncOp) (vs : List GoValue) : Option Nat :=
   match op.tryTargets?, vs with
   | some _, [av] =>
       match valueAsLoc av with
       | .ok loc =>
-          match syncCell s loc with
+          match syncCell ctx s loc with
           | .ok pre => if tryLockWidth op pre ≤ 1 then none else some (tryLockWidth op pre)
           | .error _ => none
       | .error _ => none
@@ -4195,9 +4229,9 @@ def tryLockConsult? (s : ExecState) (op : SyncOp) (vs : List GoValue) : Option N
 that width is ≥ 2; nothing at an empty candidate set, and nothing at
 width 1 — the last MANDATORY candidate, a forced pick that pops nothing
 under the uniform rule (G-U; before it this site popped at width 1). -/
-def mapIterConsult? (σ : ExecState) (keyTy valTy : Ty) (base : Option Loc)
+def mapIterConsult? (σ : Store) (keyTy valTy : Ty) (base : Option Loc)
     (produced start : Array Nat) : Option (ChoiceSite × Nat) :=
-  match mapIterCandidates σ keyTy valTy base produced with
+  match mapIterCandidates ctx σ keyTy valTy base produced with
   | .ok cands =>
       if cands.isEmpty then none
       else
@@ -4207,31 +4241,31 @@ def mapIterConsult? (σ : ExecState) (keyTy valTy : Ty) (base : Option Loc)
 
 /-- The wide-statement apply's consult: only a SPILLING `appendSlice`
 draws (`appendSpill?`). -/
-def stmtConsult? (σ : ExecState) (op : StmtOp) (vs : List GoValue) : Option (ChoiceSite × Nat) :=
+def stmtConsult? (σ : Store) (op : StmtOp) (vs : List GoValue) : Option (ChoiceSite × Nat) :=
   match op with
-  | .appendSlice elem => (appendSpill? σ elem vs).map (.appendSpill, ·)
+  | .appendSlice elem => (appendSpill? ctx σ elem vs).map (.appendSpill, ·)
   | _ => none
 
 /-- The select apply's consult: the L2 pick at a multi-ready analysis
 (`applySelectCore`'s `.picks`), nothing at `.done` or a refusal. -/
-def selectConsult? (σ : ExecState) (clauses : List (SelectClauseHead × Stmt))
+def selectConsult? (σ : Store) (clauses : List (SelectClauseHead × Stmt))
     (default? : Option Stmt) (vs : List GoValue) (env : LocalEnv) (k : Cont) :
     Option (ChoiceSite × Nat) :=
-  match applySelectCore σ clauses default? vs env k with
+  match applySelectCore ctx σ clauses default? vs env k with
   | .ok (.picks commits) => some (.l2Entry, commits.length)
   | _ => none
 
 /-- The sync apply's consult: a TRY head at an acquirable cell (`tryLockConsult?`). -/
-def syncConsult? (σ : ExecState) (op : SyncOp) (vs : List GoValue) : Option (ChoiceSite × Nat) :=
-  (tryLockConsult? σ op vs).map (.tryLock, ·)
+def syncConsult? (σ : Store) (op : SyncOp) (vs : List GoValue) : Option (ChoiceSite × Nat) :=
+  (tryLockConsult? ctx σ op vs).map (.tryLock, ·)
 
 /-- The frame entry's consult: `nilValueMethodText` at width 2 (the wrapper
 family) when `enterFrame` PANICS — the pick is drawn on the panic path only
 (`enterFramePick`); nothing at width 1 or at a successful entry. -/
-def entryConsult? (σ : ExecState) (fid : FuncId) (args : List GoValue) : Option (ChoiceSite × Nat) :=
-  if nilValueMethodWidth σ fid args ≤ 1 then none
-  else match enterFrame σ fid args with
-    | .error (.panic _) => some (.nilValueMethodText, nilValueMethodWidth σ fid args)
+def entryConsult? (σ : Store) (fid : FuncId) (args : List GoValue) : Option (ChoiceSite × Nat) :=
+  if nilValueMethodWidth ctx fid args ≤ 1 then none
+  else match enterFrame ctx σ fid args with
+    | .error (.panic _) => some (.nilValueMethodText, nilValueMethodWidth ctx fid args)
     | _ => none
 
 /-- Does this configuration's next step draw the `unseqPanic` pick (E13
@@ -4281,10 +4315,10 @@ there, `repanicCollapseWidth`; the abort's step is the `panic` terminal,
 so this is the one projection arm whose step never returns `.ok`), and
 `unseqNext` at an `unseq` sweep frame's pick position with ≥ 2 ready
 occurrences (Stage B; bound = the ready count exactly). -/
-def seqConsumption (σ : ExecState) (c : Config) : Option (ChoiceSite × Nat) :=
+def seqConsumption (σ : Store) (c : Config) : Option (ChoiceSite × Nat) :=
   match c with
   | .next (.mapIterK _ _ keyTy valTy _ base produced start _ _) =>
-      mapIterConsult? σ keyTy valTy base produced start
+      mapIterConsult? ctx σ keyTy valTy base produced start
   | .panicking _ (.probeK _) => some (.unseqPanic, 2)
   -- The `unseq` scheduler's pick (Stage B): EXACTLY the number of ready
   -- occurrences when it is ≥ 2 (the one `ready` computation, Unseq.lean);
@@ -4295,22 +4329,23 @@ def seqConsumption (σ : ExecState) (c : Config) : Option (ChoiceSite × Nat) :=
       if repanicEqualNext first rest then some (.repanicCollapse, 2) else none
   | c =>
     match c.applyPos with
-    | some (.stmt op _, vs, _, _) => stmtConsult? σ op vs
-    | some (.select clauses default?, vs, env, k) => selectConsult? σ clauses default? vs env k
-    | some (.sync op, vs, _, _) => syncConsult? σ op vs
+    | some (.stmt op _, vs, _, _) => stmtConsult? ctx σ op vs
+    | some (.select clauses default?, vs, env, k) => selectConsult? ctx σ clauses default? vs env k
+    | some (.sync op, vs, _, _) => syncConsult? ctx σ op vs
     | some (.strict _, _, _, _) | some (.chan _, _, _, _) | some (.atomic _, _, _, _)
     | some (.rhs _ _ _, _, _, _) => none
     | none =>
       match entryCallSite? c with
-      | some (fid, args) => entryConsult? σ fid args
+      | some (fid, args) => entryConsult? ctx σ fid args
       | none => none
 
+variable {ctx}
 /-- What a `none` entry consult says: outside the wrapper family, or an
 entry that does not panic. -/
-theorem entryConsult?_none {σ : ExecState} {fid : FuncId} {args : List GoValue}
-    (h : entryConsult? σ fid args = none) :
-    (nilValueMethodText? σ fid args).isSome = false
-      ∨ ∀ msg, enterFrame σ fid args ≠ .error (.panic msg) := by
+theorem entryConsult?_none {σ : Store} {fid : FuncId} {args : List GoValue}
+    (h : entryConsult? ctx σ fid args = none) :
+    (nilValueMethodText? ctx fid args).isSome = false
+      ∨ ∀ msg, enterFrame ctx σ fid args ≠ .error (.panic msg) := by
   unfold entryConsult? at h
   split at h
   · left
@@ -4325,11 +4360,11 @@ theorem entryConsult?_none {σ : ExecState} {fid : FuncId} {args : List GoValue}
     simp at h
 
 /-- What a `some` entry consult says: the family's width 2 and a panicking entry. -/
-theorem entryConsult?_some {σ : ExecState} {fid : FuncId} {args : List GoValue}
-    {site : ChoiceSite} {b : Nat} (h : entryConsult? σ fid args = some (site, b)) :
-    site = .nilValueMethodText ∧ b = nilValueMethodWidth σ fid args
-      ∧ 1 < nilValueMethodWidth σ fid args
-      ∧ ∃ msg, enterFrame σ fid args = .error (.panic msg) := by
+theorem entryConsult?_some {σ : Store} {fid : FuncId} {args : List GoValue}
+    {site : ChoiceSite} {b : Nat} (h : entryConsult? ctx σ fid args = some (site, b)) :
+    site = .nilValueMethodText ∧ b = nilValueMethodWidth ctx fid args
+      ∧ 1 < nilValueMethodWidth ctx fid args
+      ∧ ∃ msg, enterFrame ctx σ fid args = .error (.panic msg) := by
   unfold entryConsult? at h
   split at h
   · cases h
@@ -4343,6 +4378,7 @@ theorem entryConsult?_some {σ : ExecState} {fid : FuncId} {args : List GoValue}
 
 /-! ## The step relation -/
 
+variable (ctx)
 /-- One machine step over `(control, state)` pairs. No rule applies to
 malformed or unmodeled configurations: they are stuck (fail closed). A
 panic step starts UNWINDING (`.panicking` carries the chain and the
@@ -4351,7 +4387,7 @@ deferred call cancels the unwind, and an unrecovered chain reaching
 `.stop` is the abort — a configuration with NO rule (B4: `Config.abort?`;
 the drivers raise the `panic` terminal there). Nondeterministic steps (map
 iteration order, append capacity) arrive at S2 with their statements. -/
-inductive Step : Config → ExecState → Config → ExecState → Prop where
+inductive Step : Config → Store → Config → Store → Prop where
   -- Every APPLY/ENTRY rule below is "apply, then deliver" (B2): the
   -- helper's outcome is classified once (`toResult` — a value or a
   -- recoverable panic; refusals and the unrecoverable terminals have no
@@ -4361,7 +4397,7 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
   -- Expression entry
   | evalVar {id loc v env k s} :
       LocalEnv.lookup env id = some loc →
-      loadLoc s loc = .ok v →
+      loadLoc ctx s loc = .ok v →
       Step (.evalE (.var id) env k) s (.retV v k) s
   | evalIntLit {value kind env k s} :
       Step (.evalE (.intLit value kind) env k) s
@@ -4386,7 +4422,7 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
   value is returned to `k`; a recoverable panic unwinds under `k`). -/
   | evalStrictNullary {e op r env k s c' s'} :
       strictPlan e = some (op, []) →
-      toResult (applyStrictOp s op []) = .ok r →
+      toResult (applyStrictOp ctx s op []) = .ok r →
       deliver s k (fun (v, s') => (.retV v k, s')) r = (c', s') →
       Step (.evalE e env k) s c' s'
   /-- `recover()`: the walk-and-mark is one deterministic function of the
@@ -4403,7 +4439,7 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
       Step (.retV v (.strictK op done (e :: rest) env k)) s
         (.evalE e env (.strictK op (v :: done) rest env k)) s
   | strictApply {op done v r env k s c' s'} :
-      toResult (applyStrictOp s op (v :: done).reverse) = .ok r →
+      toResult (applyStrictOp ctx s op (v :: done).reverse) = .ok r →
       deliver s k (fun (out, s') => (.retV out k, s')) r = (c', s') →
       Step (.retV v (.strictK op done [] env k)) s c' s'
   -- Short-circuit frames
@@ -4437,10 +4473,10 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
       Step (.signal sg k) s c' s
   -- Blocks and declarations
   | block {decls ss env env' k s s'} :
-      allocDecls env.pushScope s decls.toList = .ok (env', s') →
+      allocDecls ctx env.pushScope s decls.toList = .ok (env', s') →
       Step (.exec (.block decls ss) env k) s (.next (.seq ss.toList env' k)) s'
   | initialization {p v loc rest env k s s'} :
-      defaultValue s p.typ = .ok v →
+      defaultValue ctx p.typ = .ok v →
       s.alloc v p.typ = (loc, s') →
       Step (.exec (.initialization p) env (.seq rest env k)) s
         (.next (.seq rest (env.declare p.id loc) k)) s'
@@ -4545,7 +4581,7 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
   | callImmediate {targets fid args plans r env k s ch ch' c' s'} :
       targetsPlan targets.toList = some plans →
       args.toList = [] →
-      enterFramePick s fid [] ch = .ok (r, ch') →
+      enterFramePick ctx s fid [] ch = .ok (r, ch') →
       deliver s k (fun (func, frameEnv, resultLocs, s') =>
         (.exec func.body frameEnv (.frame plans env resultLocs [] k func.wrapper), s')) r
         = (c', s') →
@@ -4554,7 +4590,7 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
       Step (.retV v (.callArgsK fid plans vals (a :: rest) env k)) s
         (.evalE a env (.callArgsK fid plans (vals ++ [v]) rest env k)) s
   | callArgsDoneEnter {v fid plans vals r env k s ch ch' c' s'} :
-      enterFramePick s fid (vals ++ [v]) ch = .ok (r, ch') →
+      enterFramePick ctx s fid (vals ++ [v]) ch = .ok (r, ch') →
       deliver s k (fun (func, frameEnv, resultLocs, s') =>
         (.exec func.body frameEnv (.frame plans env resultLocs [] k func.wrapper), s')) r
         = (c', s') →
@@ -4584,7 +4620,7 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
   -- `stmtOpApply` — keeping the rules in one-to-one correspondence with
   -- `stepFn`'s arms.)
   | stmtOpApply {op nt done v r env k s ch c' s'} :
-      toResult (applyStmtOp s ch op nt (v :: done).reverse) = .ok r →
+      toResult (applyStmtOp ctx s ch op nt (v :: done).reverse) = .ok r →
       deliver s k (fun (s', _) => (.next k, s')) r = (c', s') →
       Step (.retV v (.stmtOpK op nt done [] env k)) s c' s'
   -- Map iteration — LIVE (BUG-005 (L) surgery, ruled 2026-08-19; the
@@ -4606,21 +4642,21 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
       Step (.retV v (.mapRangeK keyVar valVar keyTy valTy body env k)) s
         (.next (.mapIterK keyVar valVar keyTy valTy body base #[] start env k)) s
   | mapIterDone {keyVar valVar keyTy valTy body base produced start env k s} :
-      mapIterCandidates s keyTy valTy base produced = .ok #[] →
+      mapIterCandidates ctx s keyTy valTy base produced = .ok #[] →
       Step (.next (.mapIterK keyVar valVar keyTy valTy body base produced start env k)) s
         (.next k) s
   | mapIterNext {keyVar valVar keyTy valTy body base produced start cands idx env env' k s s'}
       (hidx : idx < cands.size) :
-      mapIterCandidates s keyTy valTy base produced = .ok cands →
+      mapIterCandidates ctx s keyTy valTy base produced = .ok cands →
       -- (The mandatory test is pure since B1, so it needs no success
       -- premise here: the pick width is a total function of `cands`.)
-      bindIterVars env.pushScope s keyVar valVar keyTy valTy
+      bindIterVars ctx env.pushScope s keyVar valVar keyTy valTy
         cands[idx].2.1 cands[idx].2.2 = .ok (env', s') →
       Step (.next (.mapIterK keyVar valVar keyTy valTy body base produced start env k)) s
         (.exec body env' (.mapIterK keyVar valVar keyTy valTy body
           base (produced.push cands[idx].1) start env k)) s'
   | mapIterStop {keyVar valVar keyTy valTy body base produced start cands env k s} :
-      mapIterCandidates s keyTy valTy base produced = .ok cands →
+      mapIterCandidates ctx s keyTy valTy base produced = .ok cands →
       cands.size ≠ 0 →
       mapIterMandatoryRemains cands start = false →
       Step (.next (.mapIterK keyVar valVar keyTy valTy body base produced start env k)) s
@@ -4645,7 +4681,7 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
         (.evalE a env (.callValArgsK cv plans [] rest env k)) s
   /-- Nullary call through a value: enter directly with the captures. -/
   | callValCalleeEnter {fid captured plans r env k s ch ch' c' s'} :
-      enterFramePick s fid captured ch = .ok (r, ch') →
+      enterFramePick ctx s fid captured ch = .ok (r, ch') →
       deliver s k (fun (func, frameEnv, resultLocs, s') =>
         (.exec func.body frameEnv (.frame plans env resultLocs [] k func.wrapper), s')) r
         = (c', s') →
@@ -4658,7 +4694,7 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
       Step (.retV v (.callValArgsK cv plans vals (a :: rest) env k)) s
         (.evalE a env (.callValArgsK cv plans (vals ++ [v]) rest env k)) s
   | callValArgsEnter {v fid captured plans vals r env k s ch ch' c' s'} :
-      enterFramePick s fid (captured ++ vals ++ [v]) ch = .ok (r, ch') →
+      enterFramePick ctx s fid (captured ++ vals ++ [v]) ch = .ok (r, ch') →
       deliver s k (fun (func, frameEnv, resultLocs, s') =>
         (.exec func.body frameEnv (.frame plans env resultLocs [] k func.wrapper), s')) r
         = (c', s') →
@@ -4696,11 +4732,11 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
   | frameFall {tenv k w s} :
       Step (.next (.frame [] tenv [] [] k w)) s (.next k) s
   | frameReturnTargets {sh e ops rest tenv results k w s vs} :
-      loadMany s results = .ok vs →
+      loadMany ctx s results = .ok vs →
       Step (.signal .ret (.frame ((sh, e :: ops) :: rest) tenv results [] k w)) s
         (.evalE e tenv (.tgtOpK sh [] ops [] rest .vals [] vs (.seqn #[]) tenv k)) s
   | frameFallTargets {sh e ops rest tenv results k w s vs} :
-      loadMany s results = .ok vs →
+      loadMany ctx s results = .ok vs →
       Step (.next (.frame ((sh, e :: ops) :: rest) tenv results [] k w)) s
         (.evalE e tenv (.tgtOpK sh [] ops [] rest .vals [] vs (.seqn #[]) tenv k)) s
   -- Draining the defer chain: one deferred call per step, each in its own
@@ -4714,14 +4750,14 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
   -- starts unwinding AT THIS FRAME with its remaining defers (the
   -- delivery continuation is the draining frame).
   | frameDeferFall {targets tenv results fid captured args ds k w s r ch ch' c' s'} :
-      enterFramePick s fid (captured ++ args) ch = .ok (r, ch') →
+      enterFramePick ctx s fid (captured ++ args) ch = .ok (r, ch') →
       deliver s (.frame targets tenv results ds k w) (fun (func, frameEnv, _, s') =>
         (.exec func.body frameEnv
           (.frame [] [] [] [] (.frame targets tenv results ds k w) func.wrapper), s')) r
         = (c', s') →
       Step (.next (.frame targets tenv results ((.funcVal fid captured, args) :: ds) k w)) s c' s'
   | frameDeferReturn {targets tenv results fid captured args ds k w s r ch ch' c' s'} :
-      enterFramePick s fid (captured ++ args) ch = .ok (r, ch') →
+      enterFramePick ctx s fid (captured ++ args) ch = .ok (r, ch') →
       deliver s (.frame targets tenv results ds k w) (fun (func, frameEnv, _, s') =>
         (.exec func.body frameEnv
           (.frame [] [] [] [] (.frame targets tenv results ds k w) func.wrapper), s')) r
@@ -4781,7 +4817,7 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
   discriminates newest-vs-original by asserting the recovered value) and
   draining continues — the `.nil`-callee mirror below. -/
   | panicFrameDefer {chain targets tenv results fid captured args ds k w s r ch ch' c' s'} :
-      enterFramePick s fid (captured ++ args) ch = .ok (r, ch') →
+      enterFramePick ctx s fid (captured ++ args) ch = .ok (r, ch') →
       deliver s (.frame targets tenv results ds k w) (fun (func, frameEnv, _, s') =>
         (.exec func.body frameEnv
           (.frame [] [] [] [] (.panicResumeK chain (.frame targets tenv results ds k w))
@@ -4843,7 +4879,7 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
       Step (.retV v (.chanStK op done (e :: rest) env k)) s
         (.evalE e env (.chanStK op (v :: done) rest env k)) s
   | chanStApply {op done v r env k s c' s'} :
-      toResult (applyChanOp s op (v :: done).reverse env k) = .ok r →
+      toResult (applyChanOp ctx s op (v :: done).reverse env k) = .ok r →
       deliver s k id r = (c', s') →
       Step (.retV v (.chanStK op done [] env k)) s c' s'
   -- `select` (spec's five steps): entry evaluates the clause operands in
@@ -4881,7 +4917,7 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
       -- identity (Q2's 4th component — instrumentation, not semantics)
       -- and its stream are projected away by the delivery: the
       -- successor configuration is what the rule relates.
-      toResult (applySelect s clauses default? (v :: done).reverse env k ch) = .ok r →
+      toResult (applySelect ctx s clauses default? (v :: done).reverse env k ch) = .ok r →
       deliver s k (fun (c', s', _, _) => (c', s')) r = (c', s') →
       Step (.retV v (.selectOpsK clauses default? done [] env k)) s c' s'
   -- Receive delivery, phases SPLIT (convergence round, BUG-029): phase
@@ -4915,7 +4951,7 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
       Step (.retV v (.rhsK rop refs done (e :: rest) body env k)) s
         (.evalE e env (.rhsK rop refs (v :: done) rest body env k)) s
   | rhsStores {rop refs done v r body env k s c' s'} :
-      toResult (applyRhsOp s rop (v :: done).reverse) = .ok r →
+      toResult (applyRhsOp ctx s rop (v :: done).reverse) = .ok r →
       deliver s k (fun vals => (.next (.storeK refs vals body env k), s)) r = (c', s') →
       Step (.retV v (.rhsK rop refs done [] body env k)) s c' s'
   | assignManyFirst {left right sh e ops rest env k s} :
@@ -4938,7 +4974,7 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
         (.evalE e env (.tgtOpK sh [] ops [] rest (.typeAssert targetTy)
           [expr] [] (.seqn #[]) env k)) s
   | storeStep {ref rs val vals r body env k s c' s'} :
-      toResult (storeTarget s ref val) = .ok r →
+      toResult (storeTarget ctx s ref val) = .ok r →
       deliver s k (fun s' => (.next (.storeK rs vals body env k), s')) r = (c', s') →
       Step (.next (.storeK (ref :: rs) (val :: vals) body env k)) s c' s'
   | storeDone {body env k s} :
@@ -4980,7 +5016,7 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
       Step (.retV v (.syncStK op done (e :: rest) env k)) s
         (.evalE e env (.syncStK op (v :: done) rest env k)) s
   | syncStApply {op done v r env k s ch c' s'} :
-      toResult (applySyncOp s ch op (v :: done).reverse env k) = .ok r →
+      toResult (applySyncOp ctx s ch op (v :: done).reverse env k) = .ok r →
       deliver s k (fun (c', s', _) => (c', s')) r = (c', s') →
       Step (.retV v (.syncStK op done [] env k)) s c' s'
   -- (The completion marker's strip `opDoneStrip` LEFT this relation at
@@ -5000,7 +5036,7 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
       Step (.retV v (.atomicStK op done (e :: rest) env k)) s
         (.evalE e env (.atomicStK op (v :: done) rest env k)) s
   | atomicStApply {op done v r env k s c' s'} :
-      toResult (applyAtomicOp s op (v :: done).reverse env k) = .ok r →
+      toResult (applyAtomicOp ctx s op (v :: done).reverse env k) = .ok r →
       deliver s k id r = (c', s') →
       Step (.retV v (.atomicStK op done [] env k)) s c' s'
   -- The unsequenced-operand probe (latitude E13 option (b), lane `e13-b`
@@ -5070,7 +5106,7 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
   -- prefix so far. Appended at the END so positional case tags stay stable.
   | unseqEnter {g thenB rest env env' k s s'} :
       g.wellFormed? = none →
-      allocDecls env s g.cells = .ok (env', s') →
+      allocDecls ctx env s g.cells = .ok (env', s') →
       Step (.exec (.unseq g thenB) env (.seq rest env k)) s
         (.next (.unseqK g thenB g.initStatus [] env' .pick (.seq rest env' k))) s'
   /-- Case (ii): the `j`-th READY occurrence (canonical rank order) runs
@@ -5089,7 +5125,7 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
       g.skippedDep? st = none →
       g.allSettled st = true →
       g.unproducedConsumer? st thenB = none →
-      unseqStorePlan s env tg g.stores = .ok (refs, vals) →
+      unseqStorePlan ctx s env tg g.stores = .ok (refs, vals) →
       Step (.next (.unseqK g thenB st tg env .pick k)) s
         (.next (.storeK refs vals thenB env k)) s
   | unseqRunEval {g thenB st tg env k s o bind head} {i : Nat} :
@@ -5105,19 +5141,19 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
   bounds panic unwinds through the frame over the pre-state. -/
   | unseqRunLoad {g thenB st tg env k s o bind tgt r c' s'} {i : Nat} :
       g.occs[i]? = some o → o.body = .load bind tgt →
-      toResult (unseqLoad s env tg bind tgt) = .ok r →
+      toResult (unseqLoad ctx s env tg bind tgt) = .ok r →
       deliver s (.unseqK g thenB st tg env .pick k)
         (fun s' => (.next (.unseqK g thenB (st.set i .done) tg env .pick k), s')) r
         = (c', s') →
       Step (.next (.unseqK g thenB st tg env (.run i) k)) s c' s'
   | unseqRunTarget {g thenB st tg env k s o bind lhs r} {i : Nat} :
       g.occs[i]? = some o → o.body = .target bind lhs →
-      unseqTargetPlan s env lhs = .ok r →
+      unseqTargetPlan ctx s env lhs = .ok r →
       Step (.next (.unseqK g thenB st tg env (.run i) k)) s
         (.next (.unseqK g thenB (st.set i .done) (tg ++ [(bind, r)]) env .pick k)) s
   | unseqRunGuard {g thenB st tg env k s o test w out st' s'} {i : Nat} :
       g.occs[i]? = some o → o.body = .guard test w out →
-      unseqGuard s g env st i test w out = .ok (st', s') →
+      unseqGuard ctx s g env st i test w out = .ok (st', s') →
       Step (.next (.unseqK g thenB st tg env (.run i) k)) s
         (.next (.unseqK g thenB st' tg env .pick k)) s'
   /-- A value head's result is WRITTEN into its predeclared binder cell
@@ -5125,7 +5161,7 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
   | unseqValue {g thenB st tg env k s o bind head v loc s'} {i : Nat} :
       g.occs[i]? = some o → o.body = .eval bind head →
       unseqCellLoc env bind = .ok loc →
-      storeLoc s loc v = .ok s' →
+      storeLoc ctx s loc v = .ok s' →
       Step (.retV v (.unseqK g thenB st tg env (.wait i) k)) s
         (.next (.unseqK g thenB (st.set i .done) tg env .pick k)) s'
   /-- An invocation's statement completed (its results already stored by
@@ -5136,21 +5172,23 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
         (.next (.unseqK g thenB (st.set i .done) tg env .pick k)) s
 
 /-- Reflexive-transitive closure of `Step`. -/
-inductive Steps : Config → ExecState → Config → ExecState → Prop where
-  | refl (c : Config) (s : ExecState) : Steps c s c s
-  | tail {a sa b sb c sc} : Steps a sa b sb → Step b sb c sc → Steps a sa c sc
+inductive Steps : Config → Store → Config → Store → Prop where
+  | refl (c : Config) (s : Store) : Steps c s c s
+  | tail {a sa b sb c sc} : Steps a sa b sb → Step ctx b sb c sc → Steps a sa c sc
 
-theorem Steps.single {a b : Config} {sa sb : ExecState} (h : Step a sa b sb) :
-    Steps a sa b sb :=
+variable {ctx}
+theorem Steps.single {a b : Config} {sa sb : Store} (h : Step ctx a sa b sb) :
+    Steps ctx a sa b sb :=
   .tail (.refl a sa) h
 
-theorem Steps.trans {a b c : Config} {sa sb sc : ExecState} :
-    Steps a sa b sb → Steps b sb c sc → Steps a sa c sc := by
+theorem Steps.trans {a b c : Config} {sa sb sc : Store} :
+    Steps ctx a sa b sb → Steps ctx b sb c sc → Steps ctx a sa c sc := by
   intro hab hbc
   induction hbc with
   | refl => exact hab
   | tail _ hstep ih => exact .tail ih hstep
 
+variable (ctx)
 /-- A configuration the sequential machine considers FINISHED. The
 blocked configurations (channels arc slice 1) are deliberately NOT here
 (audit S12): they are relation-terminal in the per-goroutine relation

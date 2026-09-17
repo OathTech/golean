@@ -46,19 +46,23 @@ obligation (design §7(a)).
 
 namespace GoLean.GoCore.Machine
 
+-- B7 (2026-09-17): the program context is an IMPLICIT parameter of every
+-- theorem here (lemma applications stay as they were).
+variable {ctx : ProgramCtx}
+
 open GoLean
 
 theorem unseq_pick_ready {g : UnseqGraph} {thenB : Stmt} {st : List UnseqStatus}
-    {tg : List (String × TargetRef)} {env : LocalEnv} {k : Cont} {s : ExecState} {i : Nat}
-    (h : Step (.next (.unseqK g thenB st tg env .pick k)) s
+    {tg : List (String × TargetRef)} {env : LocalEnv} {k : Cont} {s : Store} {i : Nat}
+    (h : Step ctx (.next (.unseqK g thenB st tg env .pick k)) s
       (.next (.unseqK g thenB st tg env (.run i) k)) s) :
     i ∈ g.ready st := by
   cases h with
   | unseqPick hdep hj => exact List.mem_of_getElem? hj
 
 theorem unseq_pick_active {g : UnseqGraph} {thenB : Stmt} {st : List UnseqStatus}
-    {tg : List (String × TargetRef)} {env : LocalEnv} {k : Cont} {s : ExecState} {i : Nat}
-    (h : Step (.next (.unseqK g thenB st tg env .pick k)) s
+    {tg : List (String × TargetRef)} {env : LocalEnv} {k : Cont} {s : Store} {i : Nat}
+    (h : Step ctx (.next (.unseqK g thenB st tg env .pick k)) s
       (.next (.unseqK g thenB st tg env (.run i) k)) s) :
     i < g.occs.length ∧ st[i]? = some .active := by
   cases h with
@@ -66,8 +70,8 @@ theorem unseq_pick_active {g : UnseqGraph} {thenB : Stmt} {st : List UnseqStatus
 
 theorem unseq_panic_drops_frame {chain : List PanicEntry} {g : UnseqGraph} {thenB : Stmt}
     {st : List UnseqStatus} {tg : List (String × TargetRef)} {env : LocalEnv} {ph : UnseqPhase}
-    {k : Cont} {s : ExecState} {c' : Config} {s' : ExecState}
-    (h : Step (.panicking chain (.unseqK g thenB st tg env ph k)) s c' s') :
+    {k : Cont} {s : Store} {c' : Config} {s' : Store}
+    (h : Step ctx (.panicking chain (.unseqK g thenB st tg env ph k)) s c' s') :
     c' = .panicking chain k ∧ s' = s := by
   cases h with
   | panicUnwind hpass =>
@@ -76,21 +80,21 @@ theorem unseq_panic_drops_frame {chain : List PanicEntry} {g : UnseqGraph} {then
       exact ⟨rfl, rfl⟩
 
 theorem unseq_complete_settled {g : UnseqGraph} {thenB : Stmt} {st : List UnseqStatus}
-    {tg : List (String × TargetRef)} {env : LocalEnv} {k : Cont} {s : ExecState}
+    {tg : List (String × TargetRef)} {env : LocalEnv} {k : Cont} {s : Store}
     {refs : List TargetRef} {vals : List GoValue} {thenB' : Stmt} {env' : LocalEnv} {k' : Cont}
-    {s' : ExecState}
-    (h : Step (.next (.unseqK g thenB st tg env .pick k)) s
+    {s' : Store}
+    (h : Step ctx (.next (.unseqK g thenB st tg env .pick k)) s
       (.next (.storeK refs vals thenB' env' k')) s') :
     g.allSettled st = true ∧ g.unproducedConsumer? st thenB = none
-      ∧ unseqStorePlan s env tg g.stores = .ok (refs, vals)
+      ∧ unseqStorePlan ctx s env tg g.stores = .ok (refs, vals)
       ∧ thenB' = thenB ∧ env' = env ∧ k' = k ∧ s' = s := by
   cases h with
   | unseqComplete hdep hall hprod hplan => exact ⟨hall, hprod, hplan, rfl, rfl, rfl, rfl⟩
 
 theorem unseq_record_stable {g g' : UnseqGraph} {thenB thenB' : Stmt} {st st' : List UnseqStatus}
     {tg tg' : List (String × TargetRef)} {env env' : LocalEnv} {ph ph' : UnseqPhase} {k k' : Cont}
-    {s s' : ExecState}
-    (h : Step (.next (.unseqK g thenB st tg env ph k)) s
+    {s s' : Store}
+    (h : Step ctx (.next (.unseqK g thenB st tg env ph k)) s
       (.next (.unseqK g' thenB' st' tg' env' ph' k')) s') :
     g' = g ∧ thenB' = thenB ∧ env' = env ∧ k' = k := by
   cases h with
@@ -151,9 +155,9 @@ theorem UnseqGraph.skipRegion_length {g : UnseqGraph} {st : List UnseqStatus} {g
 
 theorem unseq_done_permanent {g : UnseqGraph} {thenB : Stmt} {st st' : List UnseqStatus}
     {tg tg' : List (String × TargetRef)} {env : LocalEnv} {ph ph' : UnseqPhase} {k : Cont}
-    {s s' : ExecState} {i : Nat}
+    {s s' : Store} {i : Nat}
     (hlen : st.length = g.occs.length)
-    (h : Step (.next (.unseqK g thenB st tg env ph k)) s
+    (h : Step ctx (.next (.unseqK g thenB st tg env ph k)) s
       (.next (.unseqK g thenB st' tg' env ph' k)) s')
     (hi : st[i]? = some .done) : st'[i]? = some .done := by
   have hlt : i < st.length := (List.getElem?_eq_some_iff.mp hi).1

@@ -1,9 +1,16 @@
 import GoLean.GoCore.FloatBits
-import GoLean.GoCore.State
+import GoLean.GoCore.Store
+import GoLean.GoCore.ProgramCtx
 
 namespace GoLean.GoCore
 
 open GoLean
+
+-- B7 (2026-09-17): the immutable program facts are ONE explicit parameter of
+-- every context reader below (`variable` makes it each def's first explicit
+-- argument); heap readers/writers take the `Store`. Threading idiom as in the
+-- charter §3 (vi).
+variable (ctx : ProgramCtx)
 
 /-! ## Type-directed operations: the index descent (C-arc C2, 2026-09-05)
 
@@ -718,8 +725,8 @@ def tyUncomparableAt (types : TypeEnv) : Nat → TypeIdx → Option Bool
       | some (_, .opaqueDecl _) => none
       | none => none
 
-def tyUncomparable (state : ExecState) (typ : Ty) : Option Bool :=
-  tyUncomparableTy (tyUncomparableAt state.types state.types.size) typ
+def tyUncomparable (typ : Ty) : Option Bool :=
+  tyUncomparableTy (tyUncomparableAt ctx.types ctx.types.size) typ
 
 /-- The canonical EMPTY interface: satisfied by every type BY DESIGN (Go's
 `any`), so it needs no wire declaration and renders as `interface {}`.
@@ -738,8 +745,8 @@ record per table entry IN TABLE ORDER and refuses duplicate TypeIds, so
 the record a key finds is the record of the entry the index resolves to.
 Interface leaves (`Ty.interface (id : TypeId)`) are name-keyed by design
 and look their record up directly. -/
-def typeDisplay? (state : ExecState) (id : TypeId) : Option TypeDisplay :=
-  state.typeDisplays.foldl
+def typeDisplay? (id : TypeId) : Option TypeDisplay :=
+  ctx.typeDisplays.foldl
     (fun found entry =>
       match found with
       | some _ => found
@@ -756,8 +763,8 @@ the same text — a program that `recover()`s and asserts the payload
 reaches it inside the BUG-009/BUG-053 refusal text); otherwise the
 no-record arm is reachable only from hand-built programs, which must
 state their displays (the decoder requires a record per TypeDef). -/
-def displayNameOfId (state : ExecState) (id : TypeId) : String :=
-  match typeDisplay? state id with
+def displayNameOfId (id : TypeId) : String :=
+  match typeDisplay? ctx id with
   | some d => d.name
   | none =>
       if id == runtimeErrorTypeId then runtimeErrorDisplayMarker
@@ -770,11 +777,11 @@ first check `renderPanicPayload` makes), every other index reads its
 entry's key back (`TypeEnv.nameOf?`) and renders that key's display
 record; an index the table does not have renders a visible marker, never
 a guessed name (unreachable on a decoded program). -/
-def displayNameOf (state : ExecState) (idx : TypeIdx) : String :=
+def displayNameOf (idx : TypeIdx) : String :=
   if idx == runtimeErrorTypeIdx then runtimeErrorDisplayMarker
   else
-    match state.types.nameOf? idx with
-    | some id => displayNameOfId state id
+    match ctx.types.nameOf? idx with
+    | some id => displayNameOfId ctx id
     | none => s!"<unknown type index {idx}>"
 
 mutual
@@ -786,20 +793,20 @@ anonymous-interface leaves render their DISPLAY record (design note
 for `red/inner.T`), never their key; a `.defined` reaches its record
 through the table index (`displayNameOf`); an index the table does not
 have renders as a visible marker (unreachable on a decoded program). -/
-def goTypeNameForMessage (state : ExecState) : Ty → String
+def goTypeNameForMessage : Ty → String
   | .bool => "bool"
   | .int kind => kind.name
   | .float kind => kind.name
   | .string => "string"
-  | .pointer elem => s!"*{goTypeNameForMessage state elem}"
-  | .slice elem => s!"[]{goTypeNameForMessage state elem}"
-  | .map key value => s!"map[{goTypeNameForMessage state key}]{goTypeNameForMessage state value}"
-  | .chan .both elem => s!"chan {goTypeNameForMessage state elem}"
-  | .chan .send elem => s!"chan<- {goTypeNameForMessage state elem}"
-  | .chan .recv elem => s!"<-chan {goTypeNameForMessage state elem}"
-  | .interface name => if isEmptyInterfaceName name then "interface {}" else displayNameOfId state name
-  | .defined i => displayNameOf state i
-  | .array length elem => s!"[{length}]{goTypeNameForMessage state elem}"
+  | .pointer elem => s!"*{goTypeNameForMessage elem}"
+  | .slice elem => s!"[]{goTypeNameForMessage elem}"
+  | .map key value => s!"map[{goTypeNameForMessage key}]{goTypeNameForMessage value}"
+  | .chan .both elem => s!"chan {goTypeNameForMessage elem}"
+  | .chan .send elem => s!"chan<- {goTypeNameForMessage elem}"
+  | .chan .recv elem => s!"<-chan {goTypeNameForMessage elem}"
+  | .interface name => if isEmptyInterfaceName name then "interface {}" else displayNameOfId ctx name
+  | .defined i => displayNameOf ctx i
+  | .array length elem => s!"[{length}]{goTypeNameForMessage elem}"
   | .funcType params results variadic =>
       -- Go renders the signature: `func()`, `func(int) bool`,
       -- `func() (int, error)` (message-fidelity, 2026-07-30). A
@@ -810,34 +817,34 @@ def goTypeNameForMessage (state : ExecState) : Ty → String
       -- (go/types types it []E); if it ever does, the plain render
       -- is a message blemish, never a semantic answer.
       let names :=
-        if variadic then goTypeNamesForMessageVariadic state params
-        else goTypeNamesForMessage state params
+        if variadic then goTypeNamesForMessageVariadic params
+        else goTypeNamesForMessage params
       let ps := ", ".intercalate names
       let base := s!"func({ps})"
       match results with
       | [] => base
-      | [r] => s!"{base} {goTypeNameForMessage state r}"
-      | rs => s!"{base} ({", ".intercalate (goTypeNamesForMessage state rs)})"
+      | [r] => s!"{base} {goTypeNameForMessage r}"
+      | rs => s!"{base} ({", ".intercalate (goTypeNamesForMessage rs)})"
   | .unsupported feature => feature
   | .sync kind => s!"sync.{kind.name}"
 
 /-- The rendered parameter/result list. -/
-def goTypeNamesForMessage (state : ExecState) : List Ty → List String
+def goTypeNamesForMessage : List Ty → List String
   | [] => []
-  | t :: ts => goTypeNameForMessage state t :: goTypeNamesForMessage state ts
+  | t :: ts => goTypeNameForMessage t :: goTypeNamesForMessage ts
 
 /-- The rendered parameter list of a VARIADIC signature: the last
 parameter, a slice `[]E` by go/types' typing, renders `...E`. -/
-def goTypeNamesForMessageVariadic (state : ExecState) : List Ty → List String
+def goTypeNamesForMessageVariadic : List Ty → List String
   | [] => []
-  | [.slice e] => [s!"...{goTypeNameForMessage state e}"]
-  | [t] => [goTypeNameForMessage state t]
-  | t :: ts => goTypeNameForMessage state t :: goTypeNamesForMessageVariadic state ts
+  | [.slice e] => [s!"...{goTypeNameForMessage e}"]
+  | [t] => [goTypeNameForMessage t]
+  | t :: ts => goTypeNameForMessage t :: goTypeNamesForMessageVariadic ts
 
 end
 
-def methodInfoByFuncId? (state : ExecState) (id : FuncId) : Option MethodInfo :=
-  state.methods.foldl
+def methodInfoByFuncId? (id : FuncId) : Option MethodInfo :=
+  ctx.methods.foldl
     (fun found method =>
       match found with
       | some method => some method
@@ -848,7 +855,7 @@ def methodInfoByFuncId? (state : ExecState) (id : FuncId) : Option MethodInfo :=
 `MethodInfo` is a dispatch anchor (a requirement) rather than a concrete
 implementation. Used by `dynamicDispatch?`; satisfaction requirements come
 from the interface DECLARATION, not from this table. -/
-def methodRecvInterfaceName? (_state : ExecState) (method : MethodInfo) : Option String :=
+def methodRecvInterfaceName? (method : MethodInfo) : Option String :=
   match method.recv with
   | .interface id => some id.key
   | _ => none
@@ -857,7 +864,7 @@ def methodRecvInterfaceName? (_state : ExecState) (method : MethodInfo) : Option
 identity, interfaces campaign S3 — was a rendered name string; alias-free
 by construction since C2, so no canonicalization). `none` for interface
 receivers (those are requirements, not implementations). -/
-def methodRecvDynamicTy? (_state : ExecState) (method : MethodInfo) : Option Ty :=
+def methodRecvDynamicTy? (method : MethodInfo) : Option Ty :=
   match method.recv with
   | .interface _ => none
   | recv => some recv
@@ -865,8 +872,8 @@ def methodRecvDynamicTy? (_state : ExecState) (method : MethodInfo) : Option Ty 
 /-- The DECLARED method set of an interface name, or `none` when the program
 records no declaration for it — the distinction a `Bool`-shaped requirement
 list structurally could not make (pre-merge audit 2026-07-31, finding 0). -/
-def interfaceDeclaredMethods? (state : ExecState) (id : TypeId) : Option (Array MethodSig) :=
-  match state.types.lookupName? id with
+def interfaceDeclaredMethods? (id : TypeId) : Option (Array MethodSig) :=
+  match ctx.types.lookupName? id with
   | some (_, .interfaceDef methods) => some methods
   | _ => none
 
@@ -879,15 +886,15 @@ of `*T` exists only when `T` is a defined non-pointer, non-interface type —
 including the original declaring package of a private method. The lookup result records whether
 the receiver must be auto-dereferenced (a pointer box dispatching to a
 value-receiver method). -/
-def concreteMethodForDynamic? (state : ExecState) (dynTy : Ty) (member : Declaration.MemberId) :
+def concreteMethodForDynamic? (dynTy : Ty) (member : Declaration.MemberId) :
     Option (MethodInfo × Bool) :=
-  let direct := state.methods.foldl
+  let direct := ctx.methods.foldl
     (fun found method =>
       match found with
       | some _ => found
       | none =>
           if method.id == member &&
-              methodRecvDynamicTy? state method == some dynTy then
+              methodRecvDynamicTy? method == some dynTy then
             some (method, false)
           else none)
     none
@@ -898,20 +905,20 @@ def concreteMethodForDynamic? (state : ExecState) (dynTy : Ty) (member : Declara
   | none, .pointer (.pointer _) => none
   | none, .pointer (.interface _) => none
   | none, .pointer elem =>
-      state.methods.foldl
+      ctx.methods.foldl
         (fun found method =>
           match found with
           | some _ => found
           | none =>
               if method.id == member &&
-                  methodRecvDynamicTy? state method == some elem then
+                  methodRecvDynamicTy? method == some elem then
                 some (method, true)
               else none)
         none
   | none, _ => none
 
-def hasConcreteMethod (state : ExecState) (dynTy : Ty) (member : Declaration.MemberId) : Bool :=
-  (concreteMethodForDynamic? state dynTy member).isSome
+def hasConcreteMethod (dynTy : Ty) (member : Declaration.MemberId) : Bool :=
+  (concreteMethodForDynamic? ctx dynTy member).isSome
 
 /-- A concrete method's declared signature: its executable `Func`'s
 parameters MINUS the receiver, its results (both canonicalized), and its
@@ -919,9 +926,9 @@ VARIADIC marker. A quarantined `Func` still records its real signature and
 can establish satisfaction; calls refuse at its body. `none` means the
 target Func is missing — a failure to match, never a silent pass. Interface
 anchors are excluded by the concrete receiver lookup. -/
-def concreteMethodSignature? (state : ExecState) (info : MethodInfo) :
+def concreteMethodSignature? (info : MethodInfo) :
     Option (Array Ty × Array Ty × Bool) :=
-  match findFunctionIn? state.functions info.funcId with
+  match findFunctionIn? ctx.functions info.funcId with
   | some f =>
       some ((f.args.extract 1 f.args.size).map (fun p => p.typ),
             f.results.map (fun p => p.typ),
@@ -935,10 +942,10 @@ TYPES accepted `M(xs []int)` for a required `M(xs ...int)` and vice versa,
 since both render the param as `[]int` — Go treats them as different
 methods, so the machine ran a dispatch on a program Go aborts (pre-merge
 audit 2026-07-31, finding 0). -/
-def satisfiesMethodSig (state : ExecState) (dynTy : Ty) (req : MethodSig) : Bool :=
-  match concreteMethodForDynamic? state dynTy req.id with
+def satisfiesMethodSig (dynTy : Ty) (req : MethodSig) : Bool :=
+  match concreteMethodForDynamic? ctx dynTy req.id with
   | some (info, _) =>
-      match concreteMethodSignature? state info with
+      match concreteMethodSignature? ctx info with
       | some (params, results, variadic) =>
           params == req.params && results == req.results && variadic == req.variadic
       | none => false
@@ -971,13 +978,13 @@ to `none` would have read "unresolvable ⇒ empty method set by the
 language" — the BUG-053 mechanism again (audit fix R1, 2026-09-05).
 Unreachable on a decoded program (every `named` reference is minted an
 index < `types.size`); the reasoning consumer constructs `Program`s. -/
-def methodCarrierKey? (state : ExecState) (dynTy : Ty) : Option String :=
+def methodCarrierKey? (dynTy : Ty) : Option String :=
   let base := match dynTy with
     | .pointer elem => elem
     | other => other
   match base with
   | .defined i =>
-      match state.types.nameOf? i with
+      match ctx.types.nameOf? i with
       | some name => some name.key
       | none => some s!"$unresolved-type-index.{i}"
   | .sync kind => some s!"sync.{kind.name}"
@@ -987,9 +994,9 @@ def methodCarrierKey? (state : ExecState) (dynTy : Ty) : Option String :=
 carries NO record — in which case satisfaction/dispatch must REFUSE,
 never answer (the record table is the ONLY source; TypeDef presence,
 stub presence, and type-kind taxonomy no longer decide). -/
-def methodSetCoverage? (state : ExecState) (key : String) :
+def methodSetCoverage? (key : String) :
     Option MethodSetCoverage :=
-  state.methodSets.foldl
+  ctx.methodSets.foldl
     (fun found record =>
       match found with
       | some _ => found
@@ -1008,9 +1015,9 @@ names; BUG-053 for `.sync`, which the retired taxonomy arm waved
 through). A `.defined` index the table does not have is a carrier
 with the unrecordable marker key (`methodCarrierKey?`), so it answers
 `false` here — refuse, never "empty" (audit fix R1). -/
-def dynamicMethodSetRecorded (state : ExecState) (dynTy : Ty) : Bool :=
-  match methodCarrierKey? state dynTy with
-  | some key => (methodSetCoverage? state key).isSome
+def dynamicMethodSetRecorded (dynTy : Ty) : Bool :=
+  match methodCarrierKey? ctx dynTy with
+  | some key => (methodSetCoverage? ctx key).isSome
   | none => true
 
 /-- Is `dynTy` recorded at EXPORTED-only coverage (D5 imported markers,
@@ -1020,9 +1027,9 @@ unexported requirement refuses instead of answering. Keyed on the
 RECORD's coverage — the old check sniffed the TypeDef kind
 (`.unsupported` marker), which could not see carriers without TypeDefs
 at all. -/
-def dynamicMethodSetExportedOnly (state : ExecState) (dynTy : Ty) : Bool :=
-  match methodCarrierKey? state dynTy with
-  | some key => methodSetCoverage? state key == some .exported
+def dynamicMethodSetExportedOnly (dynTy : Ty) : Bool :=
+  match methodCarrierKey? ctx dynTy with
+  | some key => methodSetCoverage? ctx key == some .exported
   | none => false
 
 /-- The FIRST requirement of `interfaceName` that `dynTy` does not meet, in
@@ -1045,11 +1052,11 @@ now requires the emitted method table to carry the FULL method set of
 every declared named type, promoted methods included (the frontend
 synthesizes forwarding wrappers), so a missing method on an
 embedded-field type is real information. -/
-def firstUnsatisfiedMethod? (state : ExecState) (dynTy : Ty) (interfaceName : TypeId) :
+def firstUnsatisfiedMethod? (dynTy : Ty) (interfaceName : TypeId) :
     Except Stop (Option String) := do
   if isEmptyInterfaceName interfaceName then
     return none
-  match interfaceDeclaredMethods? state interfaceName with
+  match interfaceDeclaredMethods? ctx interfaceName with
   | none =>
       unsupported s!"interface {interfaceName.key} has no recorded declaration"
   | some reqs =>
@@ -1057,37 +1064,37 @@ def firstUnsatisfiedMethod? (state : ExecState) (dynTy : Ty) (interfaceName : Ty
         (fun found req =>
           match found with
           | some _ => found
-          | none => if satisfiesMethodSig state dynTy req then none else some req)
+          | none => if satisfiesMethodSig ctx dynTy req then none else some req)
         none
       match missing with
       | none => return none
       | some req =>
           let name := req.name
-          if !dynamicMethodSetRecorded state dynTy then
+          if !dynamicMethodSetRecorded ctx dynTy then
             -- The CLASS refusal (BUG-053 closure, contract note §3): a
             -- method-CARRYING type with no method-set record on the
             -- wire. `missing method` would be an answer derived from no
             -- information — refuse visibly instead (BUG-008/BUG-009's
             -- polarity, now keyed on record presence for EVERY carrier
             -- kind, not on the `.defined` taxonomy arm).
-            unsupported s!"interface satisfaction for {goTypeNameForMessage state dynTy}: \
+            unsupported s!"interface satisfaction for {goTypeNameForMessage ctx dynTy}: \
 its method set has NO record on the wire (a method-carrying type without \
 a MethodSetRecord), so `missing method {name}' would be an answer derived \
 from no information (BUG-009/BUG-053 class)"
-          else if dynamicMethodSetExportedOnly state dynTy && !req.id.package.isEmpty then
+          else if dynamicMethodSetExportedOnly ctx dynTy && !req.id.package.isEmpty then
             -- EXPORTED-only coverage (D5 markers, sync primitives): an
             -- unexported requirement could still be met inside the
             -- type's own package — refuse rather than answer (D5).
-            unsupported s!"interface satisfaction for {goTypeNameForMessage state dynTy}: \
+            unsupported s!"interface satisfaction for {goTypeNameForMessage ctx dynTy}: \
 requirement {name} is UNEXPORTED and the dynamic type's record covers \
 exported methods only — this record cannot decide whether the private \
 requirement is satisfied"
           else
             return (some name)
 
-def dynamicImplementsInterface (state : ExecState) (dynTy : Ty) (interfaceName : TypeId) :
+def dynamicImplementsInterface (dynTy : Ty) (interfaceName : TypeId) :
     Except Stop Bool := do
-  return (← firstUnsatisfiedMethod? state dynTy interfaceName).isNone
+  return (← firstUnsatisfiedMethod? ctx dynTy interfaceName).isNone
 
 /-- Apply the element normalizer to each list element in order;
 fail-closed on the first error. Structural on the LIST and parameterized
@@ -1223,9 +1230,9 @@ example :
 
 /-- Normalize a value at a type over the state's type table (the descent
 seeded at `types.size`). -/
-def normalizeValueForTy (state : ExecState) (ty : Ty) (value : GoValue) :
+def normalizeValueForTy (ty : Ty) (value : GoValue) :
     Except Stop GoValue :=
-  normalizeValueForTyTy (normalizeValueForTyAt state.types state.types.size) ty value
+  normalizeValueForTyTy (normalizeValueForTyAt ctx.types ctx.types.size) ty value
 
 /-! ### Self-normalization check (sem-adequacy arc slice 3, 2026-08-04)
 
@@ -1324,15 +1331,15 @@ strips tags, so identity is wire `FieldDef`-list equality (the same
 rule the struct VALUE-conversion arm uses; embeddedness compared,
 spec-exact per arc-final audit F20). Anything else — unknown TypeIds
 included — answers false and the access stays stuck. -/
-def structTagCompatible (state : ExecState) (actual expected : TypeId) : Bool :=
-  match state.types.lookupName? actual, state.types.lookupName? expected with
+def structTagCompatible (actual expected : TypeId) : Bool :=
+  match ctx.types.lookupName? actual, ctx.types.lookupName? expected with
   | some (_, .struct fa), some (_, .struct fb) => fa == fb
   | _, _ => false
 
 -- Total: structural recursion on the `Loc` argument (field/index bases are
 -- strict subterms). loadLoc depends only on itself and total helpers, so it is
 -- a genuine `def` — the premise of the eventual `wp_load` proof rule.
-def loadLoc (state : ExecState) : Loc → Except Stop GoValue
+def loadLoc (state : Store) : Loc → Except Stop GoValue
   | loc@(.base _) =>
       match Heap.lookup state.heap loc with
       | some (.value _ v) => return v
@@ -1342,7 +1349,7 @@ def loadLoc (state : ExecState) : Loc → Except Stop GoValue
   | .field base typeId fieldName => do
       match ← loadLoc state base with
       | .struct actualType fields =>
-          if actualType != typeId && !structTagCompatible state actualType typeId then
+          if actualType != typeId && !structTagCompatible ctx actualType typeId then
             stuck s!"expected struct {typeId.key}, got struct {actualType.key}"
           match StructFields.lookup fields fieldName with
           | some value => return value
@@ -1361,21 +1368,21 @@ ONE store discipline (A3): the root cell is a VALUE cell at a declared
 type and the incoming value is normalized at that type — there are no
 untyped cells and no value-shape coercion any more. A payload cell (map/
 channel) at the root is an ill-shaped operand (`.stuck`); a missing cell
-is BUG-085's `.internal` (through `ExecState.updateCell`, the one root
+is BUG-085's `.internal` (through `Store.updateCell`, the one root
 write path: `Array.set` under its bound — the phantom-cell arm is
 unrepresentable by type). -/
-def storeLoc (state : ExecState) : Loc → GoValue → Except Stop ExecState
+def storeLoc (state : Store) : Loc → GoValue → Except Stop Store
     | .base a, value =>
         state.updateCell a fun
           | .value ty _ => do
-              let value ← normalizeValueForTy state ty value
+              let value ← normalizeValueForTy ctx ty value
               pure (.value ty value)
           | .mapPayload .. => stuck s!"value store into a map payload cell {repr (Loc.base a)}"
           | .chanPayload .. => stuck s!"value store into a channel payload cell {repr (Loc.base a)}"
     | .field base typeId fieldName, value => do
-        match ← loadLoc state base with
+        match ← loadLoc ctx state base with
         | .struct actualType fields =>
-            if actualType != typeId && !structTagCompatible state actualType typeId then
+            if actualType != typeId && !structTagCompatible ctx actualType typeId then
               stuck s!"expected struct {typeId.key}, got struct {actualType.key}"
             let updated ← StructFields.set fields fieldName value
             -- The cell KEEPS its mint tag (`actualType`) — the
@@ -1383,7 +1390,7 @@ def storeLoc (state : ExecState) : Loc → GoValue → Except Stop ExecState
             storeLoc state base (.struct actualType updated)
         | other => stuck s!"expected struct base for field store, got {repr other}"
     | .index base index, value => do
-        match ← loadLoc state base with
+        match ← loadLoc ctx state base with
         | .array values => storeLoc state base (.array (← arraySet values index value))
         | other => stuck s!"expected array base for index store, got {repr other}"
 
@@ -1393,9 +1400,9 @@ def storeLoc (state : ExecState) : Loc → GoValue → Except Stop ExecState
 /-- Go's conversion `T(v)` at runtime. The target's `.defined` indirections
 are followed once by `TypeEnv.resolve`. This function does not recurse;
 array values use `normalizeValueForTy`'s structural descent. -/
-def convertValueToTy (state : ExecState) (typ : Ty) (value : GoValue) :
+def convertValueToTy (typ : Ty) (value : GoValue) :
     Except Stop GoValue :=
-  match state.types.resolve state.types.size typ, value with
+  match ctx.types.resolve ctx.types.size typ, value with
   | .error e, _ => .error e
   | .ok (.plain (.int kind)), .int value _ => return .int (kind.normalize value) kind
   -- Float → int (design note §3.3, decision 4): the spec pins truncation
@@ -1450,7 +1457,7 @@ def convertValueToTy (state : ExecState) (typ : Ty) (value : GoValue) :
           if actual == name then
             return value
           else
-            match state.types.lookupName? actual with
+            match ctx.types.lookupName? actual with
             | some (_, .struct sourceFields) =>
                 if sourceFields == targetFields then
                   return .struct name actualFields
@@ -1494,7 +1501,7 @@ from {actual.key} (non-identical underlying)"
   -- contained references. This checks length and the normalizer's element
   -- invariants; it is not a substitute for a source/target typing judgment.
   | .ok (.plain (.array n elem)), .array values =>
-      normalizeValueForTy state (.array n elem) (.array values)
+      normalizeValueForTy ctx (.array n elem) (.array values)
   | .ok (.plain (.array n _)), .slice slice =>
       if slice.len < n then
         panic s!"runtime error: cannot convert slice with length {slice.len} \
@@ -1610,17 +1617,17 @@ example :
 
 /-- The zero value of a type over the state's type table (the descent
 seeded at `types.size`). -/
-def defaultValue (state : ExecState) (ty : Ty) : Except Stop GoValue :=
-  defaultValueTy (defaultValueAt state.types state.types.size) ty
+def defaultValue (ty : Ty) : Except Stop GoValue :=
+  defaultValueTy (defaultValueAt ctx.types ctx.types.size) ty
 
 /-- Build a struct value field-by-field from positional literal args, normalizing
 each against its field type. Not recursive with `buildStructValue` (it only calls
 the total `normalizeValueForTy`); callers guarantee the checked length. -/
-def buildStructFields (state : ExecState) :
+def buildStructFields :
     List FieldDef → List GoValue → Except Stop (Array (String × GoValue))
   | field :: fieldRest, value :: valueRest => do
-      let head ← normalizeValueForTy state field.typ value
-      let tail ← buildStructFields state fieldRest valueRest
+      let head ← normalizeValueForTy ctx field.typ value
+      let tail ← buildStructFields fieldRest valueRest
       return #[(field.name, head)] ++ tail
   | _, _ => return #[]
 
@@ -1629,14 +1636,14 @@ NOT recursive (C2): the type's `.defined` indirection is followed by
 `TypeEnv.resolve`; a struct literal at a NON-struct named type fails
 closed (identity tagging for defined-over-defined-struct is unresolved;
 see the `TypeDef.defined` docstring). -/
-def buildStructValue (state : ExecState) (typ : Ty) (args : Array GoValue) :
+def buildStructValue (typ : Ty) (args : Array GoValue) :
     Except Stop GoValue :=
-  match state.types.resolve state.types.size typ with
+  match ctx.types.resolve ctx.types.size typ with
   | .error e => .error e
   | .ok (.struct name fields) => do
       if fields.size != args.size then
         stuck s!"struct {name.key} literal expected {fields.size} field value(s), got {args.size}"
-      .struct name <$> buildStructFields state fields.toList args.toList
+      .struct name <$> buildStructFields ctx fields.toList args.toList
   | .ok (.interfaceDecl name) => unsupported s!"struct literal for interface type {name.key}"
   | .ok (.opaque _ feature) => unsupported s!"struct literal for {feature}"
   | .ok (.plain (.unsupported feature)) => unsupported s!"struct literal for {feature}"
@@ -1644,11 +1651,11 @@ def buildStructValue (state : ExecState) (typ : Ty) (args : Array GoValue) :
 
 -- Not recursive: it calls only the now-total defaultValue / normalizeValueForTy,
 -- so the for-loops are fine in a plain def.
-def buildArrayValue (state : ExecState) (length : Nat) (elem : Ty)
+def buildArrayValue (length : Nat) (elem : Ty)
     (args : Array (Int × GoValue)) : Except Stop GoValue := do
   let mut values := #[]
   for _ in [:length] do
-    values := values.push (← defaultValue state elem)
+    values := values.push (← defaultValue ctx elem)
   let mut seen : Array Int := #[]
   for (key, value) in args do
     if seen.contains key then
@@ -1657,24 +1664,24 @@ def buildArrayValue (state : ExecState) (length : Nat) (elem : Ty)
     if key < 0 then
       stuck s!"negative GoCore array literal index: {key}"
     match values[key.toNat]? with
-    | some _ => values := values.set! key.toNat (← normalizeValueForTy state elem value)
+    | some _ => values := values.set! key.toNat (← normalizeValueForTy ctx elem value)
     | none => stuck s!"GoCore array literal index out of range: {key}"
   return .array values
 
-def buildDefaultArrayValue (state : ExecState) (length : Nat) (elem : Ty) :
+def buildDefaultArrayValue (length : Nat) (elem : Ty) :
     Except Stop GoValue :=
-  buildArrayValue state length elem #[]
+  buildArrayValue ctx length elem #[]
 
 -- Not recursive; total now that defaultValue / resolveDefinedAliases are.
-def typeAssertValue (state : ExecState) (value : GoValue) (targetTy : Ty) :
+def typeAssertValue (value : GoValue) (targetTy : Ty) :
     Except Stop (GoValue × Bool) := do
-  let failed ← defaultValue state targetTy
+  let failed ← defaultValue ctx targetTy
   match value with
   | .nil => return (failed, false)
   | .interface dynTy inner =>
       match targetTy with
       | .interface interfaceName =>
-          if ← dynamicImplementsInterface state dynTy interfaceName then
+          if ← dynamicImplementsInterface ctx dynTy interfaceName then
             return (.interface dynTy inner, true)
           else
             return (failed, false)
@@ -1688,8 +1695,8 @@ def typeAssertValue (state : ExecState) (value : GoValue) (targetTy : Ty) :
             return (failed, false)
   | other => unsupported s!"type assertion from non-interface value {repr other}"
 
-def dynamicTypeNameForMessage (state : ExecState) : GoValue → String
-  | .interface dynTy _ => goTypeNameForMessage state dynTy
+def dynamicTypeNameForMessage : GoValue → String
+  | .interface dynTy _ => goTypeNameForMessage ctx dynTy
   | .nil => "nil"
   | other => s!"{repr other}"
 
@@ -1697,9 +1704,9 @@ def dynamicTypeNameForMessage (state : ExecState) : GoValue → String
 wire — some `MethodInfo` with receiver `T` (value receivers, which `*T`
 inherits) or `*T` (pointer receivers)? Promoted methods are flattened
 onto the embedding type at emission, so they are entries too. -/
-def pointerMethodSetNonEmpty (state : ExecState) (elem : Ty) : Bool :=
-  state.methods.any (fun m =>
-    match methodRecvDynamicTy? state m with
+def pointerMethodSetNonEmpty (elem : Ty) : Bool :=
+  ctx.methods.any (fun m =>
+    match methodRecvDynamicTy? m with
     | some recv => recv == elem || recv == .pointer elem
     | none => false)
 
@@ -1731,9 +1738,9 @@ method). Arms:
   `struct{}`, is a `.defined` TypeDef whose record says `""`, and an
   anonymous interface's record says `""` — gc: `t.Sym() == nil ⇒ tpkg
   = nil`, reflect.go's TINTER arm). -/
-def typePkgForMessage (state : ExecState) (typ : Ty) : Except Stop String :=
+def typePkgForMessage (typ : Ty) : Except Stop String :=
   let recordPkg (id : TypeId) : Except Stop String :=
-    match typeDisplay? state id with
+    match typeDisplay? ctx id with
     | some d => pure d.pkg
     | none => unsupported s!"type-assertion text: TypeId {id.key} has no display record, so its \
 declaring package path (gc's pkgpath(), the `(types from different packages|scopes)' \
@@ -1741,10 +1748,10 @@ suffix) cannot be derived (design note 2026-09-05 §3.2: no record is a defect, 
   -- A `.defined` index reaches its record through the entry's key (C2);
   -- an index the table does not have REFUSES by name (never `""`).
   let entryKey (idx : TypeIdx) : Except Stop TypeId :=
-    match state.types.nameOf? idx with
+    match ctx.types.nameOf? idx with
     | some id => pure id
     | none => unsupported s!"type-assertion text: type index {idx} is not in the type table \
-(size {state.types.size}), so its declaring package path cannot be derived (unreachable on a \
+(size {ctx.types.size}), so its declaring package path cannot be derived (unreachable on a \
 decoded program; fail closed)"
   -- (No alias resolution: every `Ty` on the machine is its canonical form, C2.)
   match typ with
@@ -1754,17 +1761,17 @@ decoded program; fail closed)"
       match elem with
       | .defined idx => do
           let id ← entryKey idx
-          if pointerMethodSetNonEmpty state (.defined idx) then recordPkg id
+          if pointerMethodSetNonEmpty ctx (.defined idx) then recordPkg id
           else
-            match methodSetCoverage? state id.key with
+            match methodSetCoverage? ctx id.key with
             | some .full => pure ""
             | some .exported =>
-                unsupported s!"type-assertion text: whether *{displayNameOf state idx} has a method set \
+                unsupported s!"type-assertion text: whether *{displayNameOf ctx idx} has a method set \
 (gc's pkgpath() of a pointer type is its element's package iff the pointer's method set is \
 non-empty) is UNDECIDABLE from an exported-only method-set record with no exported method on \
 the wire — refused rather than guessed (BUG-009/BUG-053 class)"
             | none =>
-                unsupported s!"type-assertion text: *{displayNameOf state idx} — {id.key} has NO \
+                unsupported s!"type-assertion text: *{displayNameOf ctx idx} — {id.key} has NO \
 method-set record on the wire, so whether *T's method set is empty (gc's pkgpath() rule) is \
 unknown; refused rather than guessed (BUG-009/BUG-053 class)"
       | .sync _ => pure "sync"
@@ -1789,7 +1796,7 @@ pre-merge audit 2026-07-31, findings 7 and 8):
 `sourceTy` is `none` when the lowering did not carry the operand's static
 type; the message then falls back to the empty-interface spelling, which is
 what every pre-existing GoCore term meant. -/
-def typeAssertPanicMessage (state : ExecState) (value : GoValue) (targetTy : Ty)
+def typeAssertPanicMessage (value : GoValue) (targetTy : Ty)
     (sourceTy : Option Ty) (missingMethod : Option String) : Except Stop String := do
   -- The machine-minted runtime-error payload has ONE synthetic dynamic
   -- type where gc has several concrete ones (`runtimeErrorDisplayMarker`):
@@ -1806,22 +1813,22 @@ concrete runtime type per fault (runtime.errorString / runtime.boundsError / \
 *runtime.TypeAssertionError / …) — no byte-exact text exists (BUG-009/BUG-053 class)"
   let sourceName :=
     match sourceTy with
-    | some t => goTypeNameForMessage state t
+    | some t => goTypeNameForMessage ctx t
     | none => "interface {}"
   match targetTy, value with
   | .interface _, .nil =>
-      pure ("interface conversion: interface is nil, not " ++ goTypeNameForMessage state targetTy)
+      pure ("interface conversion: interface is nil, not " ++ goTypeNameForMessage ctx targetTy)
   | .interface _, _ =>
       let missing :=
         match missingMethod with
         | some m => s!": missing method {m}"
         | none => ""
-      pure ("interface conversion: " ++ dynamicTypeNameForMessage state value ++
-        " is not " ++ goTypeNameForMessage state targetTy ++ missing)
+      pure ("interface conversion: " ++ dynamicTypeNameForMessage ctx value ++
+        " is not " ++ goTypeNameForMessage ctx targetTy ++ missing)
   | _, _ =>
       let base := "interface conversion: " ++ sourceName ++ " is " ++
-        dynamicTypeNameForMessage state value ++ ", not " ++
-        goTypeNameForMessage state targetTy
+        dynamicTypeNameForMessage ctx value ++ ", not " ++
+        goTypeNameForMessage ctx targetTy
       -- gc's disambiguating suffix (`runtime/error.go`
       -- `TypeAssertionError.Error`, probed go1.26.5 — design note
       -- 2026-09-05 §1/§3.2): this arm is reached only when the dynamic
@@ -1834,8 +1841,8 @@ concrete runtime type per fault (runtime.errorString / runtime.boundsError / \
       -- wire cannot decide them — the refusal propagates, never a guess.
       match value with
       | .interface dynTy _ =>
-          if goTypeNameForMessage state dynTy == goTypeNameForMessage state targetTy then
-            if (← typePkgForMessage state dynTy) != (← typePkgForMessage state targetTy) then
+          if goTypeNameForMessage ctx dynTy == goTypeNameForMessage ctx targetTy then
+            if (← typePkgForMessage ctx dynTy) != (← typePkgForMessage ctx targetTy) then
               pure (base ++ " (types from different packages)")
             else
               pure (base ++ " (types from different scopes)")
@@ -1886,9 +1893,9 @@ dynamic type (a type DISCOVERED from the value, which is why this walk is
 value-directed where `normalizeValueForTy` is type-directed).
 `TypeEnv.resolve` reads the declared body behind a `.defined` at each
 step. -/
-def valueEq (state : ExecState) : Ty → GoValue → GoValue → Except Stop Bool
+def valueEq : Ty → GoValue → GoValue → Except Stop Bool
   | ty, left, right =>
-    match state.types.resolve state.types.size ty, left, right with
+    match ctx.types.resolve ctx.types.size ty, left, right with
     | .error e, _, _ => .error e
     | .ok (.plain .bool), .bool l, .bool r => return l == r
     | .ok (.plain .bool), l, r => stuck s!"bool equality expected bool operands, got {repr l} and {repr r}"
@@ -1923,7 +1930,7 @@ def valueEq (state : ExecState) : Ty → GoValue → GoValue → Except Stop Boo
           stuck s!"left array equality length mismatch: expected {length}, got {l.length}"
         if r.length != length then
           stuck s!"right array equality length mismatch: expected {length}, got {r.length}"
-        valueEqList state elem l r
+        valueEqList elem l r
     | .ok (.plain (.array length _)), l, r =>
         stuck s!"array equality expected array({length}) operands, got {repr l} and {repr r}"
     | .ok (.plain (.slice _)), .slice l, .slice r => do
@@ -1972,13 +1979,13 @@ def valueEq (state : ExecState) : Ty → GoValue → GoValue → Except Stop Boo
         if dynL != dynR then
           return false
         else
-          match tyUncomparable state dynL with
+          match tyUncomparable ctx dynL with
           | some true =>
-              throw (.panic s!"runtime error: comparing uncomparable type {goTypeNameForMessage state dynL}")
+              throw (.panic s!"runtime error: comparing uncomparable type {goTypeNameForMessage ctx dynL}")
           -- UNKNOWN comparability (an opaque declaration) falls through
           -- to the walk at the dynamic type, whose `.defined` handling
           -- fails closed with the precise reason.
-          | _ => valueEq state dynL innerL innerR
+          | _ => valueEq dynL innerL innerR
     | .ok (.plain (.interface _)), l, r => unsupported s!"interface equality for {repr l} and {repr r}"
     -- Go's == is DEFINED on the sync structs (plain comparable fields),
     -- but comparing sync primitives is copy-class misuse (they "must
@@ -2013,7 +2020,7 @@ def valueEq (state : ExecState) : Ty → GoValue → GoValue → Except Stop Boo
           stuck s!"left struct equality field count mismatch: expected {fields.size}, got {leftFields.length}"
         if rightFields.length != fields.size then
           stuck s!"right struct equality field count mismatch: expected {fields.size}, got {rightFields.length}"
-        valueEqFields state fields.toList leftFields rightFields
+        valueEqFields fields.toList leftFields rightFields
     | .ok (.struct name _), l, r => stuck s!"struct equality expected struct {name.key} operands, got {repr l} and {repr r}"
     | .ok (.opaque _ feature), _, _ => unsupported s!"equality for {feature}"
     | .ok (.interfaceDecl name), _, _ => unsupported s!"equality at interface type {name.key}"
@@ -2024,25 +2031,25 @@ def valueEq (state : ExecState) : Ty → GoValue → GoValue → Except Stop Boo
 
 /-- Compare array elements pairwise at the element type; callers
 guarantee equal, checked lengths. -/
-def valueEqList (state : ExecState) (elem : Ty) : List GoValue → List GoValue → Except Stop Bool
+def valueEqList (elem : Ty) : List GoValue → List GoValue → Except Stop Bool
   | leftValue :: leftRest, rightValue :: rightRest => do
-      if ← valueEq state elem leftValue rightValue then
-        valueEqList state elem leftRest rightRest
+      if ← valueEq elem leftValue rightValue then
+        valueEqList elem leftRest rightRest
       else
         return false
   | _, _ => return true
 
 /-- Compare struct fields pairwise at their declared types, checking
 field-name alignment on both sides. -/
-def valueEqFields (state : ExecState) :
+def valueEqFields :
     List FieldDef → List (String × GoValue) → List (String × GoValue) → Except Stop Bool
   | field :: fieldRest, (leftName, leftValue) :: leftRest, (rightName, rightValue) :: rightRest => do
       if leftName != field.name then
         stuck s!"left struct equality field mismatch: expected {field.name}, got {leftName}"
       if rightName != field.name then
         stuck s!"right struct equality field mismatch: expected {field.name}, got {rightName}"
-      if ← valueEq state field.typ leftValue rightValue then
-        valueEqFields state fieldRest leftRest rightRest
+      if ← valueEq field.typ leftValue rightValue then
+        valueEqFields fieldRest leftRest rightRest
       else
         return false
   | _, _, _ => return true
@@ -2052,8 +2059,8 @@ end
 -- Downstream-unfolding pin: a closed comparison — struct over a defined
 -- int, through an interface box — evaluates by `decide`.
 example :
-    valueEq { types := #[(⟨"main.T"⟩, .defined (.int .int)),
-                        (⟨"main.S"⟩, .struct #[{ name := "x", typ := .defined 0 }, { name := "i", typ := .interface ⟨"any"⟩ }])] }
+    valueEq (ProgramCtx.ofTables (types := #[(⟨"main.T"⟩, .defined (.int .int)),
+                        (⟨"main.S"⟩, .struct #[{ name := "x", typ := .defined 0 }, { name := "i", typ := .interface ⟨"any"⟩ }])]))
       (.defined 1)
       (.struct ⟨"main.S"⟩ #[("x", .int 3 .int), ("i", .interface (.defined 0) (.int 4 .int))])
       (.struct ⟨"main.S"⟩ #[("x", .int 3 .int), ("i", .interface (.defined 0) (.int 4 .int))])
@@ -2081,30 +2088,30 @@ inductive KeyHashability where
   deriving Repr, BEq
 
 mutual
-  def valueHashability (state : ExecState) : GoValue → KeyHashability
+  def valueHashability : GoValue → KeyHashability
     | .interface dynTy inner =>
-        match tyUncomparable state dynTy with
-        | some true => .unhashable (goTypeNameForMessage state dynTy)
-        | some false => valueHashability state inner
-        | none => .unknown (goTypeNameForMessage state dynTy)
-    | .struct _ fields => valueHashabilityFields state fields.toList
-    | .array values => valueHashabilityList state values.toList
+        match tyUncomparable ctx dynTy with
+        | some true => .unhashable (goTypeNameForMessage ctx dynTy)
+        | some false => valueHashability inner
+        | none => .unknown (goTypeNameForMessage ctx dynTy)
+    | .struct _ fields => valueHashabilityFields fields.toList
+    | .array values => valueHashabilityList values.toList
     | _ => .hashable
 
   /-- Struct fields in declaration order — Go hashes them in that order. -/
-  def valueHashabilityFields (state : ExecState) :
+  def valueHashabilityFields :
       List (String × GoValue) → KeyHashability
     | [] => .hashable
     | (_, v) :: rest =>
-        match valueHashability state v with
-        | .hashable => valueHashabilityFields state rest
+        match valueHashability v with
+        | .hashable => valueHashabilityFields rest
         | other => other
 
-  def valueHashabilityList (state : ExecState) : List GoValue → KeyHashability
+  def valueHashabilityList : List GoValue → KeyHashability
     | [] => .hashable
     | v :: rest =>
-        match valueHashability state v with
-        | .hashable => valueHashabilityList state rest
+        match valueHashability v with
+        | .hashable => valueHashabilityList rest
         | other => other
 end
 
@@ -2126,9 +2133,9 @@ is the map's live entry count being nonzero; `isInsert` marks `mapassign`,
 which never short-circuits. Split out of `mapEntryIndex?` so the NIL-map
 paths (which never reach the entry scan) can run it too — Go panics there
 as well. -/
-def checkKeyHashable (state : ExecState) (key : GoValue)
+def checkKeyHashable (key : GoValue)
     (isInsert : Bool) (nonEmpty : Bool) : Except Stop Unit :=
-  match valueHashability state key with
+  match valueHashability ctx key with
   | .unhashable name => throw (.panic (hashPanicMessage name (isInsert || nonEmpty)))
   | .unknown name => unsupported s!"map key hashability for unknown defined type {name}"
   | .hashable => pure ()
@@ -2138,13 +2145,13 @@ def checkKeyHashable (state : ExecState) (key : GoValue)
 -- `mapAssignValue`'s always-replace `entries.set!` — the E10 pinned
 -- latitude; the site caveat (envelope, observable key kinds, transfer
 -- limit) lives at `mapAssignValue` (Machine.lean).
-def mapEntryIndex? (state : ExecState) (keyTy : Ty)
+def mapEntryIndex? (keyTy : Ty)
     (entries : Array (Nat × GoValue × GoValue))
     (key : GoValue) (isInsert : Bool := false) : Except Stop (Option Nat) := do
-  checkKeyHashable state key isInsert (!entries.isEmpty)
+  checkKeyHashable ctx key isInsert (!entries.isEmpty)
   let mut i := 0
   for (_, entryKey, _) in entries do
-    if ← valueEq state keyTy entryKey key then
+    if ← valueEq ctx keyTy entryKey key then
       return some i
     i := i + 1
   return none
@@ -2290,12 +2297,12 @@ def intShiftRightResult (left right : GoValue) : Except Stop GoValue := do
 /-- Read the visible elements of a slice, in order. Moved here from `Eval.lean`'s
 mutual cluster (it was never recursive — it only loads through the slice's
 backing locations), same motion commit as the helpers above. -/
-def sliceVisibleValues (state : ExecState) (slice : SliceValue) :
+def sliceVisibleValues (state : Store) (slice : SliceValue) :
     Except Stop (Array GoValue) := do
   validateSlice slice
   let mut values := #[]
   for i in [:slice.len] do
-    values := values.push (← loadLoc state (← sliceIndexLoc slice (Int.ofNat i)))
+    values := values.push (← loadLoc ctx state (← sliceIndexLoc slice (Int.ofNat i)))
   return values
 
 /-! The following were also never recursive; moved out of `Eval.lean`'s mutual
@@ -2305,7 +2312,7 @@ Pure motion — no behavior change. -/
 /-- The ranged/indexed map's cell contents: base cell, stamped entries
 `(id, key, value)` in cell order, and the map's `nextId` counter
 (entry-identity stamps, B1); `none` for a nil map. -/
-def mapEntries (state : ExecState) (map : MapValue) :
+def mapEntries (state : Store) (map : MapValue) :
     Except Stop (Option (Loc × Array (Nat × GoValue × GoValue) × Nat)) := do
   match map.base with
   | none => return none
@@ -2313,22 +2320,22 @@ def mapEntries (state : ExecState) (map : MapValue) :
       let p ← mapPayload? state baseLoc
       return some (baseLoc, p.1, p.2)
 
-def mapLookupValue (state : ExecState) (map : MapValue) (key : GoValue)
+def mapLookupValue (state : Store) (map : MapValue) (key : GoValue)
     (keyTy valueTy : Ty) : Except Stop (GoValue × Bool) := do
   match ← mapEntries state map with
   -- A NIL map still hashes the key: Go panics `hash of unhashable type: X`
   -- (the `h == nil` arm of mapKeyError; probed 2026-07-31) before returning
   -- the zero value.
   | none => do
-      checkKeyHashable state key (isInsert := false) (nonEmpty := false)
-      return (← defaultValue state valueTy, false)
+      checkKeyHashable ctx key (isInsert := false) (nonEmpty := false)
+      return (← defaultValue ctx valueTy, false)
   | some (_, entries, _) =>
-      match ← mapEntryIndex? state keyTy entries key with
+      match ← mapEntryIndex? ctx keyTy entries key with
       | some i =>
           match entries[i]? with
           | some (_, _, value) => return (value, true)
           | none => stuck s!"missing map entry at index {i}"
-      | none => return (← defaultValue state valueTy, false)
+      | none => return (← defaultValue ctx valueTy, false)
 
 /-- gc's amortized growth POLICY (runtime/slice.go `nextslicecap`,
 element-size-independent part): the CENTER of the spill envelope and the
@@ -2383,15 +2390,15 @@ def appendSpillUpper (oldCap newLen : Nat) : Nat :=
 def appendSpillWidth (oldCap newLen : Nat) : Nat :=
   appendSpillUpper oldCap newLen - newLen + 1
 
-def buildAppendBackingValue (state : ExecState) (elem : Ty)
+def buildAppendBackingValue (elem : Ty)
     (oldValues elemValues : Array GoValue) (newCap : Nat) : Except Stop GoValue := do
   let mut values := #[]
   for value in oldValues ++ elemValues do
-    values := values.push (← normalizeValueForTy state elem value)
+    values := values.push (← normalizeValueForTy ctx elem value)
   if values.size > newCap then
     stuck s!"append backing capacity {newCap} smaller than length {values.size}"
   for _ in [:newCap - values.size] do
-    values := values.push (← defaultValue state elem)
+    values := values.push (← defaultValue ctx elem)
   return .array values
 
 /-- gc's `panicwrap` text (runtime/error.go `panicwrap`, go1.26.5),
@@ -2424,18 +2431,18 @@ def panicwrapText (recvKey methodName : String) : String :=
 /-- The receiver spelling `panicwrapText` consumes: the TypeId KEY (gc's
 wrapper SYMBOL is path-qualified, `<pkgpath>.(*T).M`), pointers as `*`,
 structural leaves as the message renderer spells them. -/
-def symbolKeyForMessage (state : ExecState) (typ : Ty) : String :=
+def symbolKeyForMessage (typ : Ty) : String :=
   match typ with
   | .defined idx =>
-      match state.types.nameOf? idx with
+      match ctx.types.nameOf? idx with
       | some id => id.key
-      | none => goTypeNameForMessage state typ   -- the visible unknown-index marker
+      | none => goTypeNameForMessage ctx typ   -- the visible unknown-index marker
   | .interface id => id.key
   | .pointer (.defined idx) =>
-      match state.types.nameOf? idx with
+      match ctx.types.nameOf? idx with
       | some id => s!"*{id.key}"
-      | none => goTypeNameForMessage state typ
-  | other => goTypeNameForMessage state other
+      | none => goTypeNameForMessage ctx typ
+  | other => goTypeNameForMessage ctx other
 
 /-- **The BUG-087 envelope statement** (latitude inventory R9a; [USER]
 ruling 2026-09-03 «demonic choice so both are admitted», relayed —
@@ -2463,46 +2470,46 @@ is not in the family — a `none` shape consumes nothing at the site.
 The `go`-statement twin of the entry (`spawnStep`, Multi.lean) draws the
 same pick (audit fix F1, 2026-09-03: `go v.M()` on a nil `*T` box gives
 gc's panicwrap text under default/`-l`/`-N -l`). -/
-def nilValueMethodText? (state : ExecState) (fid : FuncId) (args : List GoValue) :
+def nilValueMethodText? (fid : FuncId) (args : List GoValue) :
     Option String :=
-  match findFunctionIn? state.functions fid with
+  match findFunctionIn? ctx.functions fid with
   | none => none
   | some func =>
     if func.args.size != args.length then none
     else
-      match methodInfoByFuncId? state func.id with
+      match methodInfoByFuncId? ctx func.id with
       | none => none
       | some method =>
-          match methodRecvInterfaceName? state method with
+          match methodRecvInterfaceName? method with
           | none => none
           | some _ =>
               match args.head? with
               | some (GoValue.interface dynTy .nil) =>
-                  match concreteMethodForDynamic? state dynTy method.id with
+                  match concreteMethodForDynamic? ctx dynTy method.id with
                   | some (concrete, true) =>
-                      match findFunctionIn? state.functions concrete.funcId with
+                      match findFunctionIn? ctx.functions concrete.funcId with
                       | some target =>
                           if target.wrapper then none
                           else some (panicwrapText
-                            (symbolKeyForMessage state concrete.recv) concrete.name)
+                            (symbolKeyForMessage ctx concrete.recv) concrete.name)
                       | none => none
                   | _ => none
               | _ => none
 
-def dynamicDispatch? (state : ExecState) (func : Func) (argValues : Array GoValue) :
+def dynamicDispatch? (state : Store) (func : Func) (argValues : Array GoValue) :
     Except Stop (Option (Func × Array GoValue)) := do
-  match methodInfoByFuncId? state func.id with
+  match methodInfoByFuncId? ctx func.id with
   | none => return none
   | some method =>
-      match methodRecvInterfaceName? state method with
+      match methodRecvInterfaceName? method with
       | none => return none
       | some _ =>
           match argValues[0]? with
           | some (GoValue.interface dynTy inner) =>
-              match concreteMethodForDynamic? state dynTy method.id with
+              match concreteMethodForDynamic? ctx dynTy method.id with
               | some (concrete, needsDeref) =>
                   let targetFunc ←
-                    match findFunctionIn? state.functions concrete.funcId with
+                    match findFunctionIn? ctx.functions concrete.funcId with
                     | some func => pure func
                     | none => stuck s!"GoCore dynamic method target not found: {concrete.funcId.key}"
                   -- A pointer box dispatching to a value-receiver method
@@ -2518,7 +2525,7 @@ def dynamicDispatch? (state : ExecState) (func : Func) (argValues : Array GoValu
                   let recvValue ←
                     if needsDeref then
                       match inner with
-                      | .addr loc => loadLoc state loc
+                      | .addr loc => loadLoc ctx state loc
                       | .nil => throw (.panic nilDerefPanicText)
                       | other => stuck s!"pointer-box receiver expected address, got {repr other}"
                     else
@@ -2534,11 +2541,11 @@ def dynamicDispatch? (state : ExecState) (func : Func) (argValues : Array GoValu
                   -- One `throw` over a conditional payload — both arms
                   -- are errors, keeping the proof layer's error-arm
                   -- discharge shape (`dynamicDispatch?_locSup`).
-                  throw (if dynamicMethodSetRecorded state dynTy then
-                    Stop.stuck s!"dynamic type {goTypeNameForMessage state dynTy} has no method {method.name}"
+                  throw (if dynamicMethodSetRecorded ctx dynTy then
+                    Stop.stuck s!"dynamic type {goTypeNameForMessage ctx dynTy} has no method {method.name}"
                   else
                     Stop.unsupported s!"interface dispatch of {method.name} on \
-{goTypeNameForMessage state dynTy}: its method set has NO record on the \
+{goTypeNameForMessage ctx dynTy}: its method set has NO record on the \
 wire (a method-carrying type without a MethodSetRecord) — refusing \
 rather than dispatching from no information (BUG-009/BUG-053 class)")
           -- Calling a method on a NIL interface: Go's runtime nil
@@ -2584,17 +2591,17 @@ state — so there is nothing for defeq to dive into and nothing to seal.
 The pins below hold the unfolding pattern downstream proofs use: the
 wrapper unfolds to its two layers by `simp`, and a closed instance
 evaluates by `rfl`/`decide`. -/
-example (σ : ExecState) (kind : IntKind) (v : Int) :
-    normalizeValueForTy σ (.int kind) (.int v kind)
+example (kind : IntKind) (v : Int) :
+    normalizeValueForTy ctx (.int kind) (.int v kind)
       = .ok (.int (kind.normalize v) kind) := by
   simp [normalizeValueForTy, normalizeValueForTyTy]
   rfl
-example (σ : ExecState) (kind : IntKind) :
-    defaultValue σ (.int kind) = .ok (.int 0 kind) := by
+example (kind : IntKind) :
+    defaultValue ctx (.int kind) = .ok (.int 0 kind) := by
   simp [defaultValue, defaultValueTy]
   rfl
-example (σ : ExecState) (a b : Bool) :
-    valueEq σ .bool (.bool a) (.bool b) = .ok (a == b) := by
+example (a b : Bool) :
+    valueEq ctx .bool (.bool a) (.bool b) = .ok (a == b) := by
   unfold valueEq
   simp [TypeEnv.resolve, pure, Except.pure]
 example : Ty.mentionsUnsupported (.pointer .bool) = false := rfl

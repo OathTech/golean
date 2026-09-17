@@ -51,7 +51,7 @@ building this slice and sharpened by the S3 pre-merge audit (each
 recorded so the proof effort
 starts honest):
 
-1. **Allocator interleaving.** Steps that ALLOCATE (`ExecState.alloc`)
+1. **Allocator interleaving.** Steps that ALLOCATE (`Store.alloc`)
    do not commute up to literal state equality: swapping two threads'
    allocation order permutes the addresses handed out (`nextAddr` is a
    shared counter). The reduction must be stated up to an address
@@ -66,7 +66,7 @@ starts honest):
    only up to assoc-list extensional equality. On the dense heap
    (`Heap := Array HeapCell`) a store can only OVERWRITE an existing
    index (`Array.set` under the lookup's bounds proof) and only
-   `ExecState.alloc` creates cells (`push`, obstruction 1's class), so
+   `Store.alloc` creates cells (`push`, obstruction 1's class), so
    two non-allocating stores to distinct roots commute up to structural
    heap equality (`Array.set` commutes at distinct indices). The mover
    statements below still carry their existing-cell/frame premises (they
@@ -94,7 +94,7 @@ starts honest):
    terminal ends the program and discards other goroutines mid-flight,
    so the joined final state can differ across schedules even
    race-free (a leaked goroutine's private effects), and
-   `PoolResult.done` carries the WHOLE `ExecState`. Concretely: a main
+   `PoolResult.done` carries the WHOLE `Store`. Concretely: a main
    that spawns two sync-free goroutines and returns reaches, under
    fine interleaving, `.done` states with both children mid-segment —
    while the coarse relation keeps at most ONE thread mid-segment in a
@@ -174,6 +174,11 @@ makes the executable refusal the statement's gatekeeper.
 
 namespace GoLean.GoCore.Machine
 
+-- B7 (2026-09-17): the program context is the first explicit parameter of
+-- every definition below that reads it; theorems take it implicitly
+-- (`variable {ctx}` toggles).
+variable (ctx : ProgramCtx)
+
 open GoLean
 
 /-! ## The fine-grained pool relation -/
@@ -182,7 +187,7 @@ open GoLean
 machine step — no registry-boundary condition. The full-interleaving
 envelope the reduction compares against. -/
 def schedPickFine (m : MultiConfig) (i : Nat) : Prop :=
-  i ∈ runnableIdxs m.shared m.threads
+  i ∈ runnableIdxs ctx m.shared m.threads
 
 /-- The FULL-interleaving pool relation: `StepM`'s seven rule classes
 verbatim with `schedPickFine` in place of `schedPick`. Proof
@@ -190,67 +195,68 @@ infrastructure for the reduction statement only — the executable
 machine and every statement carrier stay on registry-point
 `StepM`/`stepMulti`. -/
 inductive StepMFine : MultiConfig → MultiConfig → Prop where
-  | thread {m : MultiConfig} {i : Nat} {c : Config} {c' : Config} {σ' : ExecState}
+  | thread {m : MultiConfig} {i : Nat} {c : Config} {c' : Config} {σ' : Store}
       {efs : List Config} :
-      schedPickFine m i →
+      schedPickFine ctx m i →
       m.threads[i]? = some (.running c none) →
       isBlockedConfig c = false →
-      arrivalCases m.shared m.threads i c = .ok .cellPath →
-      StepE c m.shared c' σ' efs →
+      arrivalCases ctx m.shared m.threads i c = .ok .cellPath →
+      StepE ctx c m.shared c' σ' efs →
       StepMFine m ⟨(m.threads.setIfInBounds i (Thread.afterStep m.shared c c'))
         ++ (efs.map (Thread.running · none)).toArray, σ', i⟩
   | strip {m : MultiConfig} {i : Nat} {c : Config} {site : ChoiceSite} :
-      schedPickFine m i →
+      schedPickFine ctx m i →
       m.threads[i]? = some (.running c (some site)) →
       StepMFine m ⟨m.threads.setIfInBounds i (.running c none), m.shared, i⟩
   | abort {m : MultiConfig} {i : Nat} {c : Config} {first : PanicEntry}
       {rest : List PanicEntry} {pick : Nat} {msg : String} :
-      schedPickFine m i →
+      schedPickFine ctx m i →
       m.threads[i]? = some (.running c none) →
       c.abort? = some (first, rest) →
       pick < repanicCollapseWidth first rest →
-      abortMsg m.shared first rest pick = .ok msg →
+      abortMsg ctx first rest pick = .ok msg →
       StepMFine m ⟨m.threads.setIfInBounds i (.aborted msg), m.shared, i⟩
-  | pair {m : MultiConfig} {i : Nat} {c bc : Config} {σ'' : ExecState}
+  | pair {m : MultiConfig} {i : Nat} {c bc : Config} {σ'' : Store}
       {cs : List (Nat × PairTarget)} {idx : Nat} {ts' : Array Thread} :
-      schedPickFine m i →
+      schedPickFine ctx m i →
       m.threads[i]? = some (.running c none) →
       isBlockedConfig c = false →
       spawnPlan c = none →
-      arrivalCases m.shared m.threads i c = .ok (.single bc cs) →
+      arrivalCases ctx m.shared m.threads i c = .ok (.single bc cs) →
       (hidx : idx < cs.length) →
-      applyPairing m.shared m.threads i bc cs[idx] = .ok (ts', σ'') →
+      applyPairing ctx m.shared m.threads i bc cs[idx] = .ok (ts', σ'') →
       StepMFine m ⟨ts', σ'', i⟩
-  | pickPair {m : MultiConfig} {i : Nat} {c bc : Config} {σ'' : ExecState}
+  | pickPair {m : MultiConfig} {i : Nat} {c bc : Config} {σ'' : Store}
       {os : List ArrivalOutcome} {sel : Nat}
       {cs : List (Nat × PairTarget)} {idx : Nat} {ts' : Array Thread} :
-      schedPickFine m i →
+      schedPickFine ctx m i →
       m.threads[i]? = some (.running c none) →
       isBlockedConfig c = false →
       spawnPlan c = none →
-      arrivalCases m.shared m.threads i c = .ok (.multi os) →
+      arrivalCases ctx m.shared m.threads i c = .ok (.multi os) →
       os[sel]? = some (.pair bc cs) →
       (hidx : idx < cs.length) →
-      applyPairing m.shared m.threads i bc cs[idx] = .ok (ts', σ'') →
+      applyPairing ctx m.shared m.threads i bc cs[idx] = .ok (ts', σ'') →
       StepMFine m ⟨ts', σ'', i⟩
   | pickCommit {m : MultiConfig} {i : Nat} {c : Config} {cl : EvClause}
       {env : LocalEnv} {k : Cont} {os : List ArrivalOutcome} {sel : Nat}
-      {c' : Config} {σ' : ExecState} :
-      schedPickFine m i →
+      {c' : Config} {σ' : Store} :
+      schedPickFine ctx m i →
       m.threads[i]? = some (.running c none) →
       isBlockedConfig c = false →
       spawnPlan c = none →
-      arrivalCases m.shared m.threads i c = .ok (.multi os) →
+      arrivalCases ctx m.shared m.threads i c = .ok (.multi os) →
       os[sel]? = some (.commit cl env k) →
-      commitClause m.shared env k cl = .ok (c', σ') →
+      commitClause ctx m.shared env k cl = .ok (c', σ') →
       StepMFine m ⟨m.threads.setIfInBounds i (Thread.afterStep m.shared c c'), σ', i⟩
-  | wake {m : MultiConfig} {i : Nat} {c c' : Config} {σ' : ExecState} :
-      schedPickFine m i →
+  | wake {m : MultiConfig} {i : Nat} {c c' : Config} {σ' : Store} :
+      schedPickFine ctx m i →
       m.threads[i]? = some (.running c none) →
       isBlockedConfig c = true →
-      resumeThread m.shared c = .ok (c', σ') →
+      resumeThread ctx m.shared c = .ok (c', σ') →
       StepMFine m ⟨m.threads.setIfInBounds i (Thread.completed c'), σ', i⟩
 
+variable {ctx}
 /-- A finished goroutine is at a registry boundary (goroutine exit is a
 registry op; the abort tombstone likewise). -/
 theorem threadDone_atBoundary {t : Thread} (h : threadDone t = true) :
@@ -282,7 +288,7 @@ is already a runnable-set member; between boundaries the running
 goroutine is running — not done, not blocked (both would be at a
 boundary) — hence runnable. -/
 theorem schedPick_le_fine {m : MultiConfig} {i : Nat}
-    (h : schedPick m i) : schedPickFine m i := by
+    (h : schedPick ctx m i) : schedPickFine ctx m i := by
   unfold schedPick at h
   cases hcur : m.threads[m.cur]? with
   | none => rw [hcur] at h; exact absurd h (by simp)
@@ -324,8 +330,8 @@ theorem schedPick_le_fine {m : MultiConfig} {i : Nat}
 
 /-- **The easy inclusion of the reduction, proved**: every
 registry-point pool step is a fine pool step. -/
-theorem stepM_le_stepMFine {m m' : MultiConfig} (h : StepM m m') :
-    StepMFine m m' := by
+theorem stepM_le_stepMFine {m m' : MultiConfig} (h : StepM ctx m m') :
+    StepMFine ctx m m' := by
   cases h with
   | thread hs hti hbl hplan hstep =>
       exact StepMFine.thread (schedPick_le_fine hs) hti hbl hplan hstep
@@ -346,22 +352,25 @@ theorem stepM_le_stepMFine {m m' : MultiConfig} (h : StepM m m') :
 
 /-! ## Reachability and program results -/
 
+variable (ctx)
 /-- Reflexive-transitive closure of the registry-point pool relation. -/
 inductive StepsM : MultiConfig → MultiConfig → Prop where
   | refl (m : MultiConfig) : StepsM m m
-  | tail {a b c} : StepsM a b → StepM b c → StepsM a c
+  | tail {a b c} : StepsM a b → StepM ctx b c → StepsM a c
 
 /-- Reflexive-transitive closure of the fine pool relation. -/
 inductive StepsMFine : MultiConfig → MultiConfig → Prop where
   | refl (m : MultiConfig) : StepsMFine m m
-  | tail {a b c} : StepsMFine a b → StepMFine b c → StepsMFine a c
+  | tail {a b c} : StepsMFine a b → StepMFine ctx b c → StepsMFine a c
 
-theorem stepsM_le_stepsMFine {m m' : MultiConfig} (h : StepsM m m') :
-    StepsMFine m m' := by
+variable {ctx}
+theorem stepsM_le_stepsMFine {m m' : MultiConfig} (h : StepsM ctx m m') :
+    StepsMFine ctx m m' := by
   induction h with
   | refl => exact .refl _
   | tail _ hstep ih => exact .tail ih (stepM_le_stepMFine hstep)
 
+variable (ctx)
 /-- A pool's terminal program result, mirroring `execProgLoop`'s
 classification order (panic abort, main's terminal, the all-asleep
 deadlock). Since BUG-044's main-exit window the mirror is of the
@@ -374,7 +383,7 @@ the driver into line). See scaffold obstruction 4 on the `.done` state
 comparison. -/
 inductive PoolResult where
   | panicked (msg : String)
-  | done (σ : ExecState)
+  | done (σ : Store)
   | deadlocked
   deriving Repr, BEq
 
@@ -386,17 +395,17 @@ def poolResult? (m : MultiConfig) : Option PoolResult :=
       match m.mainOutcome? with
       | some out => some (.done out)
       | none =>
-          if (runnableIdxs m.shared m.threads).isEmpty then
+          if (runnableIdxs ctx m.shared m.threads).isEmpty then
             some .deadlocked
           else none
 
 /-- `res` is reachable from `m₀` under registry-point scheduling. -/
 def ReachesM (m₀ : MultiConfig) (res : PoolResult) : Prop :=
-  ∃ m, StepsM m₀ m ∧ poolResult? m = some res
+  ∃ m, StepsM ctx m₀ m ∧ poolResult? ctx m = some res
 
 /-- `res` is reachable from `m₀` under full interleaving. -/
 def ReachesMFine (m₀ : MultiConfig) (res : PoolResult) : Prop :=
-  ∃ m, StepsMFine m₀ m ∧ poolResult? m = some res
+  ∃ m, StepsMFine ctx m₀ m ∧ poolResult? ctx m = some res
 
 /-! ## The fine-semantics race -/
 
@@ -416,14 +425,14 @@ Registry ops themselves have empty footprints (they are
 synchronization, race-free by spec), so a conflict here is always a
 data access. -/
 def RacyFine (m₀ : MultiConfig) : Prop :=
-  ∃ m, StepsMFine m₀ m ∧
+  ∃ m, StepsMFine ctx m₀ m ∧
     ∃ (i j : Nat) (ci cj : Config), i ≠ j ∧
       -- (C5: an unflagged live goroutine — a flagged one's next step is
       -- its boundary clear, footprint-free.)
       m.threads[i]? = some (.running ci none) ∧ m.threads[j]? = some (.running cj none) ∧
-      threadRunnable m.shared (.running ci none) = true
-        ∧ threadRunnable m.shared (.running cj none) = true ∧
-      footprintsConflict (stepAccesses m.shared ci) (stepAccesses m.shared cj)
+      threadRunnable ctx m.shared (.running ci none) = true
+        ∧ threadRunnable ctx m.shared (.running cj none) = true ∧
+      footprintsConflict (stepAccesses ctx m.shared ci) (stepAccesses ctx m.shared cj)
 
 /-- **THE NPDRF REDUCTION STATEMENT — DRAFT FORM, REFUTABLE AS
 WRITTEN** (scaffold; see the module docstring's marking and
@@ -436,13 +445,14 @@ WEAKENED form, not this one). Nothing may cite this — not even as a
 proof target. The ⊇ direction is unconditional
 (`stepsM_le_stepsMFine`); the detector coupling is plan step iv. -/
 def NPDRFReduction : Prop :=
-  ∀ m₀ : MultiConfig, ¬ RacyFine m₀ →
-    ∀ res, ReachesMFine m₀ res ↔ ReachesM m₀ res
+  ∀ m₀ : MultiConfig, ¬ RacyFine ctx m₀ →
+    ∀ res, ReachesMFine ctx m₀ res ↔ ReachesM ctx m₀ res
 
+variable {ctx}
 /-- The unconditional half of the reduction, proved: every
 registry-point-reachable result is fine-reachable. -/
 theorem reachesM_le_fine {m₀ : MultiConfig} {res : PoolResult}
-    (h : ReachesM m₀ res) : ReachesMFine m₀ res := by
+    (h : ReachesM ctx m₀ res) : ReachesMFine ctx m₀ res := by
   obtain ⟨m, hsteps, hres⟩ := h
   exact ⟨m, stepsM_le_stepsMFine hsteps, hres⟩
 
@@ -463,8 +473,8 @@ a different cell looks up the same cell before and after the store.
 (The allocator/type/function context is untouched by `storeLoc_shape`,
 StateWf.lean.) -/
 theorem storeLoc_root_frame :
-    ∀ {l : Loc} {s s' : ExecState} {v : GoValue},
-      storeLoc s l v = .ok s' →
+    ∀ {l : Loc} {s s' : Store} {v : GoValue},
+      storeLoc ctx s l v = .ok s' →
       ∀ {m : Loc}, Loc.rootBase m ≠ Loc.rootBase l →
         Heap.lookup s'.heap (Loc.rootLoc m) = Heap.lookup s.heap (Loc.rootLoc m) := by
   intro l
@@ -477,7 +487,7 @@ theorem storeLoc_root_frame :
           have := congrArg Loc.rootBase heq.symm
           simpa [Loc.rootLoc, Loc.rootBase] using this)
       unfold storeLoc at h
-      exact ExecState.updateCell_lookup_ne h hkey
+      exact Store.updateCell_lookup_ne h hkey
   | field b tid fname ih =>
       intro s s' v h m hne
       unfold storeLoc at h
@@ -508,10 +518,10 @@ theorem storeLoc_root_frame :
 /-- **The read mover**: a load rooted at a different cell than a store
 reads the same value before and after it — a store is a both-mover
 against every disjoint-rooted read. -/
-theorem loadLoc_after_disjoint_store {l m : Loc} {s s' : ExecState}
-    {v : GoValue} (h : storeLoc s l v = .ok s')
+theorem loadLoc_after_disjoint_store {l m : Loc} {s s' : Store}
+    {v : GoValue} (h : storeLoc ctx s l v = .ok s')
     (hne : Loc.rootBase m ≠ Loc.rootBase l) :
-    loadLoc s' m = loadLoc s m :=
-  loadLoc_root_congr (storeLoc_shape h).1 (storeLoc_root_frame h hne)
+    loadLoc ctx s' m = loadLoc ctx s m :=
+  loadLoc_root_congr (storeLoc_root_frame h hne)
 
 end GoLean.GoCore.Machine

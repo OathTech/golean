@@ -5,6 +5,11 @@ sequential driver. The replay uses `stepFn` unchanged, mirrors the driver's
 terminal/fuel guards, and records only an actual panic error at an abort
 configuration. The generic erasure theorem includes malformed inputs. -/
 namespace GoLean.GoCore.RecoveryRuntime
+
+-- B7 (2026-09-17): the program context is the first explicit parameter of
+-- every definition below that reads it; theorems take it implicitly
+-- (`variable {ctx}` toggles).
+variable (ctx : ProgramCtx)
 open Machine
 
 structure AbortHead where
@@ -44,8 +49,8 @@ def abortRecord? (c : Config) : Option AbortRecord :=
     return ⟨head.bytes, head.recovered, tail⟩
   | none => none
 
-def runConfigWithAbort : Nat → ExecState → Config → Choices →
-    Except Stop (ExecState × Choices) × Option AbortRecord
+def runConfigWithAbort : Nat → Store → Config → Choices →
+    Except Stop (Store × Choices) × Option AbortRecord
   | fuel, s, c, ch =>
     match c with
     | .next .stop => (.ok (s, ch), none)
@@ -55,16 +60,17 @@ def runConfigWithAbort : Nat → ExecState → Config → Choices →
       match fuel with
       | 0 => (.error .fuelOut, none)
       | fuel + 1 =>
-        match stepFn s c ch with
+        match stepFn ctx s c ch with
         | .ok (next, t, ch') => runConfigWithAbort fuel t next ch'
         | .error (.panic message) => (.error (.panic message), abortRecord? c)
         | .error e => (.error e, none)
 
+variable {ctx}
 /-- Exact erasure for every input: no typing premise, weakened outcome
 classification, changed fuel or reselected choice stream. -/
-theorem runConfigWithAbort_erasure (fuel : Nat) (s : ExecState) (c : Config) (ch : Choices) :
-    (runConfigWithAbort fuel s c ch).1 = runConfig fuel s c ch := by
-  fun_induction runConfigWithAbort fuel s c ch <;>
+theorem runConfigWithAbort_erasure (fuel : Nat) (s : Store) (c : Config) (ch : Choices) :
+    (runConfigWithAbort ctx fuel s c ch).1 = runConfig ctx fuel s c ch := by
+  fun_induction runConfigWithAbort ctx fuel s c ch <;>
     simp_all [runConfig, Bind.bind, Except.bind, throw, throwThe, MonadExceptOf.throw]
 
 theorem stringPanicEntry?_some {entry : PanicEntry} {head : AbortHead}
@@ -131,12 +137,12 @@ theorem abortRecord?_some {c : Config} {head : AbortRecord} (h : abortRecord? c 
 strictly positive-fuel abort frontier reached on the original choice stream.
 Even malformed inputs cannot fabricate metadata from a transient panic. -/
 theorem runConfigWithAbort_witness {fuel s c ch result head}
-    (h : runConfigWithAbort fuel s c ch = (result, some head)) :
-    ∃ (n : Nat) (t : ExecState) (terminal : Config) (residual : Choices) (message : String),
-      n < fuel ∧ GoLean.Semantics.Trace n s c ch t terminal residual ∧
+    (h : runConfigWithAbort ctx fuel s c ch = (result, some head)) :
+    ∃ (n : Nat) (t : Store) (terminal : Config) (residual : Choices) (message : String),
+      n < fuel ∧ GoLean.Semantics.Trace ctx n s c ch t terminal residual ∧
       abortRecord? terminal = some head ∧
-      stepFn t terminal residual = .error (.panic message) ∧ result = .error (.panic message) := by
-  fun_induction runConfigWithAbort fuel s c ch with
+      stepFn ctx t terminal residual = .error (.panic message) ∧ result = .error (.panic message) := by
+  fun_induction runConfigWithAbort ctx fuel s c ch with
   | case1 => simp at h
   | case2 => simp at h
   | case3 => simp at h

@@ -16,6 +16,10 @@ namespace GoLean.GoCore.Machine
 
 open GoLean
 
+-- B7 (2026-09-17): the program context is an IMPLICIT parameter of every
+-- theorem here (lemma applications stay as they were).
+variable {ctx : ProgramCtx}
+
 /-! The Except-monad reduction helpers (`pure_eq_ok`, `stuck_def`,
 `panic_def`, `unsupported_def`, `bind_eq_ok`) moved upstream to
 `StateWf.lean` (sem-adequacy slice 3) — same names, same namespace. -/
@@ -100,7 +104,7 @@ macro "oblivious_entry " h:ident hnv:ident : tactic =>
   `(tactic| (
     simp_all only [stepFn, consumesNilValueMethod, entryCallSite?]
     rw [enterFramePick_of_isSome_false $hnv] at $h:ident
-    cases hx : toResult (enterFrame _ _ _) with
+    cases hx : toResult (enterFrame ctx _ _ _) with
     | error e =>
       rw [hx] at $h:ident
       simp [Except.map, Bind.bind, Except.bind] at $h:ident
@@ -129,13 +133,13 @@ macro "oblivious_entry " h:ident hnv:ident : tactic =>
 at the frame — `frameFall`/`frameFallTargets`/`frameDeferFall`/
 `frameDeferNilFall`) AND from the return configuration (`.signal .ret` at
 the frame — the `frameReturn*` twins), with the same successor. -/
-theorem stepFrameExit_sound {s : ExecState} {targets : List (TargetShape × List Expr)}
+theorem stepFrameExit_sound {s : Store} {targets : List (TargetShape × List Expr)}
     {tenv : LocalEnv} {results : List Loc} {ds : List (GoValue × List GoValue)}
-    {k' : Cont} {w : Bool} {ch : Choices} {c' : Config} {s' : ExecState} {ch' : Choices}
-    (h : stepFrameExit s targets tenv results ds k' w ch = .ok (c', s', ch')) :
-    Step (.next (.frame targets tenv results ds k' w)) s c' s'
-      ∧ Step (.signal .ret (.frame targets tenv results ds k' w)) s c' s' := by
-  fun_cases stepFrameExit s targets tenv results ds k' w ch
+    {k' : Cont} {w : Bool} {ch : Choices} {c' : Config} {s' : Store} {ch' : Choices}
+    (h : stepFrameExit ctx s targets tenv results ds k' w ch = .ok (c', s', ch')) :
+    Step ctx (.next (.frame targets tenv results ds k' w)) s c' s'
+      ∧ Step ctx (.signal .ret (.frame targets tenv results ds k' w)) s c' s' := by
+  fun_cases stepFrameExit ctx s targets tenv results ds k' w ch
   · simp only [stepFrameExit, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl, rfl⟩ := h
     exact ⟨Step.frameFall, Step.frameReturn⟩
@@ -175,10 +179,10 @@ rules and their stream contract, then consumed by the positional cases of
 pattern, which keeps the arms' internal splits out of `stepFn`'s
 positional case tags. -/
 
-theorem stepUnseqEnter_sound {s : ExecState} {g : UnseqGraph} {thenB : Stmt} {env : LocalEnv}
-    {k : Cont} {ch : Choices} {c' : Config} {s' : ExecState} {ch' : Choices}
-    (h : stepUnseqEnter s g thenB env k ch = .ok (c', s', ch')) :
-    Step (.exec (.unseq g thenB) env k) s c' s' ∧ ch' = ch := by
+theorem stepUnseqEnter_sound {s : Store} {g : UnseqGraph} {thenB : Stmt} {env : LocalEnv}
+    {k : Cont} {ch : Choices} {c' : Config} {s' : Store} {ch' : Choices}
+    (h : stepUnseqEnter ctx s g thenB env k ch = .ok (c', s', ch')) :
+    Step ctx (.exec (.unseq g thenB) env k) s c' s' ∧ ch' = ch := by
   unfold stepUnseqEnter at h
   split at h
   · split at h
@@ -192,11 +196,11 @@ theorem stepUnseqEnter_sound {s : ExecState} {g : UnseqGraph} {thenB : Stmt} {en
     · simp [throw, throwThe, MonadExceptOf.throw] at h
   · simp [throw, throwThe, MonadExceptOf.throw] at h
 
-theorem stepUnseqValue_sound {s : ExecState} {v : GoValue} {g : UnseqGraph} {thenB : Stmt}
+theorem stepUnseqValue_sound {s : Store} {v : GoValue} {g : UnseqGraph} {thenB : Stmt}
     {st : List UnseqStatus} {tg : List (String × TargetRef)} {env : LocalEnv} {ph : UnseqPhase}
-    {k : Cont} {ch : Choices} {c' : Config} {s' : ExecState} {ch' : Choices}
-    (h : stepUnseqValue s v g thenB st tg env ph k ch = .ok (c', s', ch')) :
-    Step (.retV v (.unseqK g thenB st tg env ph k)) s c' s' ∧ ch' = ch := by
+    {k : Cont} {ch : Choices} {c' : Config} {s' : Store} {ch' : Choices}
+    (h : stepUnseqValue ctx s v g thenB st tg env ph k ch = .ok (c', s', ch')) :
+    Step ctx (.retV v (.unseqK g thenB st tg env ph k)) s c' s' ∧ ch' = ch := by
   unfold stepUnseqValue at h
   split at h
   · split at h
@@ -210,11 +214,11 @@ theorem stepUnseqValue_sound {s : ExecState} {v : GoValue} {g : UnseqGraph} {the
       · simp [throw, throwThe, MonadExceptOf.throw] at h
   · simp [throw, throwThe, MonadExceptOf.throw] at h
 
-theorem stepUnseqNext_sound {s : ExecState} {g : UnseqGraph} {thenB : Stmt}
+theorem stepUnseqNext_sound {s : Store} {g : UnseqGraph} {thenB : Stmt}
     {st : List UnseqStatus} {tg : List (String × TargetRef)} {env : LocalEnv} {ph : UnseqPhase}
-    {k : Cont} {ch : Choices} {c' : Config} {s' : ExecState} {ch' : Choices}
-    (h : stepUnseqNext s g thenB st tg env ph k ch = .ok (c', s', ch')) :
-    Step (.next (.unseqK g thenB st tg env ph k)) s c' s' := by
+    {k : Cont} {ch : Choices} {c' : Config} {s' : Store} {ch' : Choices}
+    (h : stepUnseqNext ctx s g thenB st tg env ph k ch = .ok (c', s', ch')) :
+    Step ctx (.next (.unseqK g thenB st tg env ph k)) s c' s' := by
   unfold stepUnseqNext at h
   split at h
   · -- pick
@@ -283,10 +287,10 @@ theorem stepUnseqNext_sound {s : ExecState} {g : UnseqGraph} {thenB : Stmt}
 
 
 
-theorem stepUnseqEnter_stream {s : ExecState} {g : UnseqGraph} {thenB : Stmt} {env : LocalEnv}
-    {k : Cont} {ch : Choices} {c' : Config} {s' : ExecState} {ch' : Choices}
-    (h : stepUnseqEnter s g thenB env k ch = .ok (c', s', ch')) :
-    ch' = ch ∧ ∀ ch₂ : Choices, stepUnseqEnter s g thenB env k ch₂ = .ok (c', s', ch₂) := by
+theorem stepUnseqEnter_stream {s : Store} {g : UnseqGraph} {thenB : Stmt} {env : LocalEnv}
+    {k : Cont} {ch : Choices} {c' : Config} {s' : Store} {ch' : Choices}
+    (h : stepUnseqEnter ctx s g thenB env k ch = .ok (c', s', ch')) :
+    ch' = ch ∧ ∀ ch₂ : Choices, stepUnseqEnter ctx s g thenB env k ch₂ = .ok (c', s', ch₂) := by
   unfold stepUnseqEnter at h
   split at h
   · split at h
@@ -300,11 +304,11 @@ theorem stepUnseqEnter_stream {s : ExecState} {g : UnseqGraph} {thenB : Stmt} {e
     · simp [throw, throwThe, MonadExceptOf.throw] at h
   · simp [throw, throwThe, MonadExceptOf.throw] at h
 
-theorem stepUnseqValue_stream {s : ExecState} {v : GoValue} {g : UnseqGraph} {thenB : Stmt}
+theorem stepUnseqValue_stream {s : Store} {v : GoValue} {g : UnseqGraph} {thenB : Stmt}
     {st : List UnseqStatus} {tg : List (String × TargetRef)} {env : LocalEnv} {ph : UnseqPhase}
-    {k : Cont} {ch : Choices} {c' : Config} {s' : ExecState} {ch' : Choices}
-    (h : stepUnseqValue s v g thenB st tg env ph k ch = .ok (c', s', ch')) :
-    ch' = ch ∧ ∀ ch₂ : Choices, stepUnseqValue s v g thenB st tg env ph k ch₂ = .ok (c', s', ch₂) := by
+    {k : Cont} {ch : Choices} {c' : Config} {s' : Store} {ch' : Choices}
+    (h : stepUnseqValue ctx s v g thenB st tg env ph k ch = .ok (c', s', ch')) :
+    ch' = ch ∧ ∀ ch₂ : Choices, stepUnseqValue ctx s v g thenB st tg env ph k ch₂ = .ok (c', s', ch₂) := by
   unfold stepUnseqValue at h
   split at h
   · split at h
@@ -320,12 +324,12 @@ theorem stepUnseqValue_stream {s : ExecState} {v : GoValue} {g : UnseqGraph} {th
 
 /-- The run/wait phases of the sweep frame never touch the stream (the
 common tail of the two consumption lemmas). -/
-theorem stepUnseqNext_run_wait_stream {s : ExecState} {g : UnseqGraph} {thenB : Stmt}
+theorem stepUnseqNext_run_wait_stream {s : Store} {g : UnseqGraph} {thenB : Stmt}
     {st : List UnseqStatus} {tg : List (String × TargetRef)} {env : LocalEnv} {ph : UnseqPhase}
-    {k : Cont} {ch : Choices} {c' : Config} {s' : ExecState} {ch' : Choices}
+    {k : Cont} {ch : Choices} {c' : Config} {s' : Store} {ch' : Choices}
     (hph : ph ≠ .pick)
-    (h : stepUnseqNext s g thenB st tg env ph k ch = .ok (c', s', ch')) :
-    ch' = ch ∧ ∀ ch₂ : Choices, stepUnseqNext s g thenB st tg env ph k ch₂ = .ok (c', s', ch₂) := by
+    (h : stepUnseqNext ctx s g thenB st tg env ph k ch = .ok (c', s', ch')) :
+    ch' = ch ∧ ∀ ch₂ : Choices, stepUnseqNext ctx s g thenB st tg env ph k ch₂ = .ok (c', s', ch₂) := by
   unfold stepUnseqNext at h
   split at h
   · exact absurd rfl hph
@@ -374,12 +378,12 @@ theorem stepUnseqNext_run_wait_stream {s : ExecState} {g : UnseqGraph} {thenB : 
 /-- The scheduler's step is stream-oblivious when its projection is `none`:
 a run/wait phase, a completion, or a pick over a ready set of size ≤ 1 (a
 bound-≤-1 consult is inert, G-U). -/
-theorem stepUnseqNext_consumption_none {σ : ExecState} {g : UnseqGraph} {thenB : Stmt}
+theorem stepUnseqNext_consumption_none {σ : Store} {g : UnseqGraph} {thenB : Stmt}
     {st : List UnseqStatus} {tg : List (String × TargetRef)} {env : LocalEnv} {ph : UnseqPhase}
-    {k : Cont} {ch₀ : Choices} {c' : Config} {σ' : ExecState} {ch₀' : Choices}
-    (hsc : seqConsumption σ (.next (.unseqK g thenB st tg env ph k)) = none)
-    (h : stepUnseqNext σ g thenB st tg env ph k ch₀ = .ok (c', σ', ch₀')) :
-    ch₀' = ch₀ ∧ ∀ ch : Choices, stepUnseqNext σ g thenB st tg env ph k ch = .ok (c', σ', ch) := by
+    {k : Cont} {ch₀ : Choices} {c' : Config} {σ' : Store} {ch₀' : Choices}
+    (hsc : seqConsumption ctx σ (.next (.unseqK g thenB st tg env ph k)) = none)
+    (h : stepUnseqNext ctx σ g thenB st tg env ph k ch₀ = .ok (c', σ', ch₀')) :
+    ch₀' = ch₀ ∧ ∀ ch : Choices, stepUnseqNext ctx σ g thenB st tg env ph k ch = .ok (c', σ', ch) := by
   cases ph with
   | run i => exact stepUnseqNext_run_wait_stream (by simp) h
   | wait i => exact stepUnseqNext_run_wait_stream (by simp) h
@@ -415,15 +419,15 @@ theorem stepUnseqNext_consumption_none {σ : ExecState} {g : UnseqGraph} {thenB 
 
 /-- The scheduler's pick DRAWS the `unseqNext` site at bound `|ready|` and
 depends on the stream only through that pick. -/
-theorem stepUnseqNext_consumption_some {σ : ExecState} {g : UnseqGraph} {thenB : Stmt}
+theorem stepUnseqNext_consumption_some {σ : Store} {g : UnseqGraph} {thenB : Stmt}
     {st : List UnseqStatus} {tg : List (String × TargetRef)} {env : LocalEnv} {ph : UnseqPhase}
-    {k : Cont} {ch₀ : Choices} {c' : Config} {σ' : ExecState} {ch₀' : Choices}
+    {k : Cont} {ch₀ : Choices} {c' : Config} {σ' : Store} {ch₀' : Choices}
     {site : ChoiceSite} {b : Nat}
-    (hsc : seqConsumption σ (.next (.unseqK g thenB st tg env ph k)) = some (site, b))
-    (h : stepUnseqNext σ g thenB st tg env ph k ch₀ = .ok (c', σ', ch₀')) :
+    (hsc : seqConsumption ctx σ (.next (.unseqK g thenB st tg env ph k)) = some (site, b))
+    (h : stepUnseqNext ctx σ g thenB st tg env ph k ch₀ = .ok (c', σ', ch₀')) :
     ch₀' = (Choices.consumeAt site b ch₀).2 ∧ ∀ ch : Choices,
       (Choices.consumeAt site b ch).1 = (Choices.consumeAt site b ch₀).1 →
-      stepUnseqNext σ g thenB st tg env ph k ch = .ok (c', σ', (Choices.consumeAt site b ch).2) := by
+      stepUnseqNext ctx σ g thenB st tg env ph k ch = .ok (c', σ', (Choices.consumeAt site b ch).2) := by
   cases ph with
   | run i => simp [seqConsumption, Config.applyPos, entryCallSite?] at hsc
   | wait i => simp [seqConsumption, Config.applyPos, entryCallSite?] at hsc
@@ -466,10 +470,10 @@ theorem stepUnseqNext_consumption_some {σ : ExecState} {g : UnseqGraph} {thenB 
 -- The unused-simp-arg linter misfires on the shared multi-goal combinator
 -- (an argument unused in one goal is load-bearing in another).
 set_option linter.unusedSimpArgs false in
-theorem stepFn_sound {s : ExecState} {c : Config} {ch : Choices}
-    {c' : Config} {s' : ExecState} {ch' : Choices}
-    (h : stepFn s c ch = .ok (c', s', ch')) : Step c s c' s' := by
-  fun_cases stepFn s c ch
+theorem stepFn_sound {s : Store} {c : Config} {ch : Choices}
+    {c' : Config} {s' : Store} {ch' : Choices}
+    (h : stepFn ctx s c ch = .ok (c', s', ch')) : Step ctx c s c' s' := by
+  fun_cases stepFn ctx s c ch
   all_goals
     (first
       | (simp_all [stepFn]; done)
@@ -812,9 +816,9 @@ set_option linter.unusedSimpArgs false in
 stream (deterministic rules under any stream; the two nondeterministic
 step classes — `mapIterNext`'s pick and `stmtOpApply`'s capacity choice —
 under the stream that encodes the rule's choice). -/
-theorem step_complete {c : Config} {s : ExecState} {c' : Config} {s' : ExecState}
-    (h : Step c s c' s') :
-    ∃ ch ch' : Choices, stepFn s c ch = .ok (c', s', ch') := by
+theorem step_complete {c : Config} {s : Store} {c' : Config} {s' : Store}
+    (h : Step ctx c s c' s') :
+    ∃ ch ch' : Choices, stepFn ctx s c ch = .ok (c', s', ch') := by
   cases h
   -- The strict-form and wide-statement entry rules hold the expression /
   -- statement abstract with only its plan known; stepFn's match needs the
@@ -1125,11 +1129,11 @@ theorem step_complete {c : Config} {s : ExecState} {c' : Config} {s' : ExecState
 ending at the sequential terminal — the machine analogue of the old
 `interpreterSound_frag`, but total over the full fragment and by simple
 iteration over `stepFn_sound` instead of a simulation induction. -/
-theorem runConfig_sound {fuel : Nat} {s : ExecState} {c : Config}
-    {ch : Choices} {sF : ExecState} {chF : Choices}
-    (h : runConfig fuel s c ch = .ok (sF, chF)) :
-    Steps c s (.next .stop) sF := by
-  fun_induction runConfig fuel s c ch with
+theorem runConfig_sound {fuel : Nat} {s : Store} {c : Config}
+    {ch : Choices} {sF : Store} {chF : Choices}
+    (h : runConfig ctx fuel s c ch = .ok (sF, chF)) :
+    Steps ctx c s (.next .stop) sF := by
+  fun_induction runConfig ctx fuel s c ch with
   | case1 =>
       simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
@@ -1151,11 +1155,11 @@ set_option linter.unusedSimpArgs false in
 `execStmt` run (the F4 §2 Surface wrapper) is a reachable relation trace
 to the sequential terminal. Total — the old fragment-scoped
 side-conditions (`HeapFrag`, `StInv`) are retired. -/
-theorem execStmtLoop_sound_normal {fuel : Nat} {σ : ExecState} {c : Config}
-    {ch : Choices} {σf : ExecState} {chf : Choices}
-    (h : execStmtLoop fuel σ c ch = .ok (σf, chf)) :
-    Steps c σ (.next .stop) σf := by
-  fun_induction execStmtLoop fuel σ c ch with
+theorem execStmtLoop_sound_normal {fuel : Nat} {σ : Store} {c : Config}
+    {ch : Choices} {σf : Store} {chf : Choices}
+    (h : execStmtLoop ctx fuel σ c ch = .ok (σf, chf)) :
+    Steps ctx c σ (.next .stop) σf := by
+  fun_induction execStmtLoop ctx fuel σ c ch with
   | case1 =>
       simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
@@ -1172,10 +1176,10 @@ theorem execStmtLoop_sound_normal {fuel : Nat} {σ : ExecState} {c : Config}
       obtain ⟨⟨c', s', ch'⟩, hstep, hrun⟩ := h
       exact (Steps.single (stepFn_sound hstep)).trans (ih _ _ _ hrun)
 
-theorem execStmt_sound_normal {fuel : Nat} {env : LocalEnv} {σ : ExecState}
-    {ch : Choices} {prog : Stmt} {σf : ExecState} {chf : Choices}
-    (h : execStmt fuel env σ ch prog = .ok (σf, chf)) :
-    Steps (.exec prog env .stop) σ (.next .stop) σf :=
+theorem execStmt_sound_normal {fuel : Nat} {env : LocalEnv} {σ : Store}
+    {ch : Choices} {prog : Stmt} {σf : Store} {chf : Choices}
+    (h : execStmt ctx fuel env σ ch prog = .ok (σf, chf)) :
+    Steps ctx (.exec prog env .stop) σ (.next .stop) σf :=
   execStmtLoop_sound_normal h
 
 /-- **Executable reachability is relation reachability** (sem-adequacy
@@ -1190,9 +1194,9 @@ its per-step witness streams into ONE `stepFnIter` stream needs a
 stream-stitching lemma that is not built; it is not needed for any
 current discharge and is recorded in the arc doc, not claimed. -/
 theorem stepFnIter_sound :
-    ∀ {n : Nat} {σ₀ : ExecState} {c₀ : Config} {ch : Choices}
-      {c : Config} {σ : ExecState} {ch' : Choices},
-    stepFnIter n σ₀ c₀ ch = .ok (c, σ, ch') → Steps c₀ σ₀ c σ := by
+    ∀ {n : Nat} {σ₀ : Store} {c₀ : Config} {ch : Choices}
+      {c : Config} {σ : Store} {ch' : Choices},
+    stepFnIter ctx n σ₀ c₀ ch = .ok (c, σ, ch') → Steps ctx c₀ σ₀ c σ := by
   intro n
   induction n with
   | zero =>
@@ -1242,10 +1246,10 @@ well-formedness side condition (locs below `nextAddr`, preserved by
 /-- A completed bounded run is stable under more fuel: the loop stops at
 the terminal before consulting the surplus. -/
 theorem execStmtLoop_mono :
-    ∀ (fuel fuel' : Nat) (σ : ExecState) (c : Config) (ch : Choices)
-      (r : ExecState × Choices),
-    fuel ≤ fuel' → execStmtLoop fuel σ c ch = .ok r →
-    execStmtLoop fuel' σ c ch = .ok r := by
+    ∀ (fuel fuel' : Nat) (σ : Store) (c : Config) (ch : Choices)
+      (r : Store × Choices),
+    fuel ≤ fuel' → execStmtLoop ctx fuel σ c ch = .ok r →
+    execStmtLoop ctx fuel' σ c ch = .ok r := by
   intro fuel
   induction fuel with
   | zero =>
@@ -1259,7 +1263,7 @@ theorem execStmtLoop_mono :
     split at h <;> try simp_all
     -- the non-terminal arm: one step then recurse at smaller fuel
     simp only [Bind.bind] at h ⊢
-    cases hstep : stepFn σ c ch with
+    cases hstep : stepFn ctx σ c ch with
     | error e => rw [hstep] at h; simp [Except.bind] at h
     | ok trip =>
       obtain ⟨c', σ', ch'⟩ := trip
@@ -1268,11 +1272,11 @@ theorem execStmtLoop_mono :
       exact ih _ _ _ _ _ _ (by omega) h
 
 @[inherit_doc execStmtLoop_mono]
-theorem execStmt_mono {fuel fuel' : Nat} {env : LocalEnv} {σ : ExecState}
-    {ch : Choices} {prog : Stmt} {r : ExecState × Choices}
+theorem execStmt_mono {fuel fuel' : Nat} {env : LocalEnv} {σ : Store}
+    {ch : Choices} {prog : Stmt} {r : Store × Choices}
     (hle : fuel ≤ fuel')
-    (h : execStmt fuel env σ ch prog = .ok r) :
-    execStmt fuel' env σ ch prog = .ok r :=
+    (h : execStmt ctx fuel env σ ch prog = .ok r) :
+    execStmt ctx fuel' env σ ch prog = .ok r :=
   execStmtLoop_mono fuel fuel' _ _ _ _ hle h
 
 /-- The ABORT is genuinely terminal for the relation, not just for the
@@ -1280,8 +1284,8 @@ driver (B4): no rule's source configuration is an unrecovered chain at
 `.stop` — the unwinding rules match a frame, the resume marker, or glue
 (`panicPassthrough` refuses `.stop`) — so a reachable abort can never be
 discharged by "it still steps" in a progress hypothesis. -/
-theorem step_abort_elim {chain : List PanicEntry} {σ : ExecState} {c' : Config}
-    {σ' : ExecState} : ¬ Step (.panicking chain .stop) σ c' σ' := by
+theorem step_abort_elim {chain : List PanicEntry} {σ : Store} {c' : Config}
+    {σ' : Store} : ¬ Step ctx (.panicking chain .stop) σ c' σ' := by
   intro h
   cases h
   simp [panicPassthrough, Cont.isGlue, Cont.class] at *
@@ -1297,8 +1301,8 @@ unwound-`.stop` configuration is a CONTRADICTION — and since B4 the
 driver does not even classify it (a signal at `.stop` is a refusal). -/
 
 @[inherit_doc step_abort_elim]
-theorem step_signal_stop_elim {sg : Signal} {σ : ExecState} {c' : Config}
-    {σ' : ExecState} : ¬ Step (.signal sg .stop) σ c' σ' := by
+theorem step_signal_stop_elim {sg : Signal} {σ : Store} {c' : Config}
+    {σ' : Store} : ¬ Step ctx (.signal sg .stop) σ c' σ' := by
   intro h
   cases h
   simp_all
@@ -1308,8 +1312,8 @@ steps `.next .stop` — every `.next` rule matches a frame. This is the
 `val_stuck` obligation of the consumer interface for the one value
 `to_val ⟨.next, .stop⟩ = some ()` (`docs/2026-09-05_c-arc-b4-design.md`
 §6; `Config.isTerminal`/`Config.terminal` name the shape). -/
-theorem step_terminal_elim {σ : ExecState} {c' : Config} {σ' : ExecState} :
-    ¬ Step (.next .stop) σ c' σ' := by
+theorem step_terminal_elim {σ : Store} {c' : Config} {σ' : Store} :
+    ¬ Step ctx (.next .stop) σ c' σ' := by
   intro h
   cases h
 
@@ -1323,23 +1327,23 @@ Progress still implies the run never deadlocks. -/
 
 @[inherit_doc step_abort_elim]
 theorem step_blockedSend_elim {chl : Option Loc} {v : GoValue} {k : Cont}
-    {σ : ExecState} {c' : Config} {σ' : ExecState} :
-    ¬ Step (.blockedSend chl v k) σ c' σ' := by
+    {σ : Store} {c' : Config} {σ' : Store} :
+    ¬ Step ctx (.blockedSend chl v k) σ c' σ' := by
   intro h
   cases h
 
 @[inherit_doc step_abort_elim]
 theorem step_blockedRecv_elim {chl : Option Loc} {targets : List Assignee}
-    {elem : Ty} {env : LocalEnv} {k : Cont} {σ : ExecState} {c' : Config}
-    {σ' : ExecState} :
-    ¬ Step (.blockedRecv chl targets elem env k) σ c' σ' := by
+    {elem : Ty} {env : LocalEnv} {k : Cont} {σ : Store} {c' : Config}
+    {σ' : Store} :
+    ¬ Step ctx (.blockedRecv chl targets elem env k) σ c' σ' := by
   intro h
   cases h
 
 @[inherit_doc step_abort_elim]
 theorem step_blockedSelect_elim {clauses : List EvClause} {env : LocalEnv}
-    {k : Cont} {σ : ExecState} {c' : Config} {σ' : ExecState} :
-    ¬ Step (.blockedSelect clauses env k) σ c' σ' := by
+    {k : Cont} {σ : Store} {c' : Config} {σ' : Store} :
+    ¬ Step ctx (.blockedSelect clauses env k) σ c' σ' := by
   intro h
   cases h
 
@@ -1347,8 +1351,8 @@ theorem step_blockedSelect_elim {clauses : List EvClause} {env : LocalEnv}
 pool wakes it; the sequential driver classifies it as the deadlocked
 run. -/
 theorem step_blockedSync_elim {op : SyncOp} {loc : Loc} {env : LocalEnv}
-    {k : Cont} {σ : ExecState} {c' : Config} {σ' : ExecState} :
-    ¬ Step (.blockedSync op loc env k) σ c' σ' := by
+    {k : Cont} {σ : Store} {c' : Config} {σ' : Store} :
+    ¬ Step ctx (.blockedSync op loc env k) σ c' σ' := by
   intro h
   cases h
 
@@ -1381,17 +1385,17 @@ is preserved by every rule, and the executable inherits it through
   at every stream (`.tmp/probe_mapiter2.lean`). -/
 
 @[inherit_doc step_preserves_wf]
-theorem Step.preserves_wf {c : Config} {σ : ExecState} {c' : Config}
-    {σ' : ExecState} (h : Step c σ c' σ') (hwf : MachineWf σ c) :
+theorem Step.preserves_wf {c : Config} {σ : Store} {c' : Config}
+    {σ' : Store} (h : Step ctx c σ c' σ') (hwf : MachineWf σ c) :
     MachineWf σ' c' :=
   step_preserves_wf h hwf
 
 /-- Executable-side preservation: an `.ok` step of `stepFn` keeps the
 machine well-formed (`stepFn_sound` + `step_preserves_wf`). This is the
 fact `execStmtLoop`-level inductions thread along a run. -/
-theorem stepFn_preserves_wf {s : ExecState} {c : Config} {ch : Choices}
-    {c' : Config} {s' : ExecState} {ch' : Choices}
-    (h : stepFn s c ch = .ok (c', s', ch')) (hwf : MachineWf s c) :
+theorem stepFn_preserves_wf {s : Store} {c : Config} {ch : Choices}
+    {c' : Config} {s' : Store} {ch' : Choices}
+    (h : stepFn ctx s c ch = .ok (c', s', ch')) (hwf : MachineWf s c) :
     MachineWf s' c' :=
   step_preserves_wf (stepFn_sound h) hwf
 
@@ -1399,11 +1403,11 @@ theorem stepFn_preserves_wf {s : ExecState} {c : Config} {ch : Choices}
 identically under EVERY stream (the stream passes through untouched):
 the non-`appendSlice` half of the ∀-choices kit, true by construction
 since the `applyStmtOpCore` refactor. -/
-theorem applyStmtOp_ok_any_ch_core {σ : ExecState} {ch : Choices}
-    {op : StmtOp} {nt : Nat} {vs : List GoValue} {σ' : ExecState}
+theorem applyStmtOp_ok_any_ch_core {σ : Store} {ch : Choices}
+    {op : StmtOp} {nt : Nat} {vs : List GoValue} {σ' : Store}
     {ch' : Choices} (hop : ∀ elem, op ≠ .appendSlice elem)
-    (h : applyStmtOp σ ch op nt vs = .ok (σ', ch')) :
-    ∀ ch₂ : Choices, applyStmtOp σ ch₂ op nt vs = .ok (σ', ch₂) := by
+    (h : applyStmtOp ctx σ ch op nt vs = .ok (σ', ch')) :
+    ∀ ch₂ : Choices, applyStmtOp ctx σ ch₂ op nt vs = .ok (σ', ch₂) := by
   intro ch₂
   cases op <;>
     first
@@ -1456,12 +1460,12 @@ theorem Heap.lookup_set_ne {h : Heap} {i : Nat} {l : Loc} {c : HeapCell}
   | index _ _ => rfl
 
 /-- A root-cell update touches no other root cell (A3: the one write path). -/
-theorem ExecState.updateCell_lookup_ne {σ σ' : ExecState} {a : Addr}
+theorem Store.updateCell_lookup_ne {σ σ' : Store} {a : Addr}
     {f : HeapCell → Except Stop HeapCell} {l : Loc}
     (h : σ.updateCell a f = .ok σ') (hne : (Loc.base a : Loc) ≠ l) :
     Heap.lookup σ'.heap l = Heap.lookup σ.heap l := by
   obtain ⟨i⟩ := a
-  unfold ExecState.updateCell at h
+  unfold Store.updateCell at h
   split at h
   · rename_i hi
     simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
@@ -1470,22 +1474,19 @@ theorem ExecState.updateCell_lookup_ne {σ σ' : ExecState} {a : Addr}
     exact Heap.lookup_set_ne (hi := hi) hne
   · simp [throw, throwThe, MonadExceptOf.throw] at h
 
-/-- The tag-compatibility check reads only the types map (triage L7). -/
-theorem structTagCompatible_congr {σ₁ σ₂ : ExecState}
-    (htypes : σ₂.types = σ₁.types) :
-    structTagCompatible σ₂ = structTagCompatible σ₁ := by
-  funext a b
-  simp [structTagCompatible, htypes]
+-- `structTagCompatible_congr` («the tag-compatibility check reads only the
+-- types map», triage L7) is RETIRED with B7: the check takes the fixed
+-- `ProgramCtx`, so two stores cannot disagree on it — the lemma was
+-- `htypes ▸ rfl`. Tombstone in `docs/2026-09-17_b7-context-store-handoff.md`.
 
 /-- `loadLoc` is determined by the ROOT cell and the types map (the
 latter entering only through the field arm's tag-compatibility check,
 triage L7): two states agreeing on both load identically along the
 whole path. -/
-theorem loadLoc_root_congr {σ₁ σ₂ : ExecState}
-    (htypes : σ₂.types = σ₁.types) :
+theorem loadLoc_root_congr {σ₁ σ₂ : Store} :
     ∀ {l : Loc},
       Heap.lookup σ₂.heap (Loc.rootLoc l) = Heap.lookup σ₁.heap (Loc.rootLoc l) →
-      loadLoc σ₂ l = loadLoc σ₁ l := by
+      loadLoc ctx σ₂ l = loadLoc ctx σ₁ l := by
   intro l
   induction l with
   | base a =>
@@ -1496,7 +1497,7 @@ theorem loadLoc_root_congr {σ₁ σ₂ : ExecState}
   | field b t f ih =>
     intro hl
     simp only [loadLoc]
-    rw [ih hl, structTagCompatible_congr htypes]
+    rw [ih hl]
   | index b i ih =>
     intro hl
     simp only [loadLoc]
@@ -1987,13 +1988,11 @@ theorem normalizeValueForTyAt_congr (types : TypeEnv) :
             fun as bs habs => ?_
           exact ⟨rfl, habs⟩
 
-theorem normalizeValueForTy_congr {σ₁ σ₂ : ExecState}
-    (htypes : σ₂.types = σ₁.types) {ty : Ty} {v w : GoValue}
+theorem normalizeValueForTy_congr {ty : Ty} {v w : GoValue}
     (hcc : GoValue.capCong v w) :
-    exceptCong GoValue.capCong (normalizeValueForTy σ₁ ty v)
-      (normalizeValueForTy σ₂ ty w) := by
+    exceptCong GoValue.capCong (normalizeValueForTy ctx ty v)
+      (normalizeValueForTy ctx ty w) := by
   unfold normalizeValueForTy
-  rw [htypes]
   exact normalizeValueForTyTy_congr (normalizeValueForTyAt_congr _ _) ty v w hcc
 
 /-! #### Store congruence: the final spill store cannot depend on the cap -/
@@ -2110,15 +2109,15 @@ theorem arraySet_congr {values : Array GoValue} {i : Int} {v w : GoValue}
 /-- Root-cell updates agree in outcome CLASS when the two heaps agree at the
 root and the two update functions agree in class on every cell (A3; the
 congruence behind `storeLoc_congr`). -/
-theorem ExecState.updateCell_congr {σ₁ σ₂ : ExecState} {a : Addr}
+theorem Store.updateCell_congr {σ₁ σ₂ : Store} {a : Addr}
     {f₁ f₂ : HeapCell → Except Stop HeapCell}
     (hl : Heap.lookup σ₂.heap (.base a) = Heap.lookup σ₁.heap (.base a))
     (hf : ∀ c, exceptCong (fun _ _ : HeapCell => True) (f₁ c) (f₂ c)) :
-    exceptCong (fun _ _ : ExecState => True)
+    exceptCong (fun _ _ : Store => True)
       (σ₁.updateCell a f₁) (σ₂.updateCell a f₂) := by
   obtain ⟨i⟩ := a
   simp only [Heap.lookup] at hl
-  unfold ExecState.updateCell
+  unfold Store.updateCell
   by_cases h1 : i < σ₁.heap.size
   · have h2 : i < σ₂.heap.size := by
       have := hl
@@ -2146,12 +2145,12 @@ together, panic together, or fail (non-panic) together. This is the fact
 that makes the spill store's outcome class independent of the fresh
 backing (which lives at `nextAddr`, above every well-formed target) and
 of the result slice's capacity. -/
-theorem storeLoc_congr {σ₁ σ₂ : ExecState} (htypes : σ₂.types = σ₁.types) :
+theorem storeLoc_congr {σ₁ σ₂ : Store} :
     ∀ {l : Loc} {v w : GoValue},
       Heap.lookup σ₂.heap (Loc.rootLoc l) = Heap.lookup σ₁.heap (Loc.rootLoc l) →
       GoValue.capCong v w →
-      exceptCong (fun _ _ : ExecState => True) (storeLoc σ₁ l v)
-        (storeLoc σ₂ l w) := by
+      exceptCong (fun _ _ : Store => True) (storeLoc ctx σ₁ l v)
+        (storeLoc ctx σ₂ l w) := by
   intro l
   induction l with
   | base a =>
@@ -2160,10 +2159,10 @@ theorem storeLoc_congr {σ₁ σ₂ : ExecState} (htypes : σ₂.types = σ₁.t
     simp only [storeLoc]
     -- ONE root write (A3): the class congruence of `updateCell`, then the
     -- per-cell update functions agree in class arm by arm.
-    refine ExecState.updateCell_congr hl' fun c => ?_
+    refine Store.updateCell_congr hl' fun c => ?_
     cases c with
     | value ty v₀ =>
-      refine exceptCong.bind_congr (normalizeValueForTy_congr htypes hcc)
+      refine exceptCong.bind_congr (normalizeValueForTy_congr hcc)
         fun _ _ _ => ?_
       exact trivial
     | mapPayload _ _ => exact rfl
@@ -2171,9 +2170,8 @@ theorem storeLoc_congr {σ₁ σ₂ : ExecState} (htypes : σ₂.types = σ₁.t
   | field b tid fname ih =>
     intro v w hl hcc
     simp only [storeLoc]
-    rw [loadLoc_root_congr htypes (l := b) hl,
-      structTagCompatible_congr htypes]
-    cases hload : loadLoc σ₁ b with
+    rw [loadLoc_root_congr (l := b) hl]
+    cases hload : loadLoc ctx σ₁ b with
     | error e => exact rfl
     | ok bv =>
       cases bv <;> try exact rfl
@@ -2186,8 +2184,8 @@ theorem storeLoc_congr {σ₁ σ₂ : ExecState} (htypes : σ₂.types = σ₁.t
   | index b i ih =>
     intro v w hl hcc
     simp only [storeLoc]
-    rw [loadLoc_root_congr htypes (l := b) hl]
-    cases hload : loadLoc σ₁ b with
+    rw [loadLoc_root_congr (l := b) hl]
+    cases hload : loadLoc ctx σ₁ b with
     | error e => exact rfl
     | ok bv =>
       cases bv <;> try exact rfl
@@ -2437,8 +2435,8 @@ theorem defaultValueAt_ok_of_normalizeAt_ok (types : TypeEnv) :
         all_goals exact absurd h' (by simp [normalizeStructValueWith])
 
 /-- The wrapper form: a normalization success at `ty` yields a default. -/
-theorem defaultValue_ok_of_normalize_ok {σ : ExecState} {ty : Ty} {v r : GoValue}
-    (h : normalizeValueForTy σ ty v = .ok r) : ∃ d, defaultValue σ ty = .ok d := by
+theorem defaultValue_ok_of_normalize_ok {ty : Ty} {v r : GoValue}
+    (h : normalizeValueForTy ctx ty v = .ok r) : ∃ d, defaultValue ctx ty = .ok d := by
   unfold normalizeValueForTy at h
   unfold defaultValue
   exact defaultValueTy_ok_of_normalizeTy_ok
@@ -2455,8 +2453,8 @@ theorem validateSlice_le {sl : SliceValue} {u : Unit}
       split at h <;> simp_all
 
 /-- The visible-values read returns exactly `len` values. -/
-theorem sliceVisibleValues_size {σ : ExecState} {sl : SliceValue}
-    {vs : Array GoValue} (h : sliceVisibleValues σ sl = .ok vs) :
+theorem sliceVisibleValues_size {σ : Store} {sl : SliceValue}
+    {vs : Array GoValue} (h : sliceVisibleValues ctx σ sl = .ok vs) :
     vs.size = sl.len := by
   unfold sliceVisibleValues at h
   rw [bind_eq_ok] at h
@@ -2500,17 +2498,17 @@ capacity: the normalize loop is capacity-independent, the capacity check
 passes at both (both ≥ the element count), and the padding default is
 derivable from any element's normalize success (`e` is nonempty on the
 spill path). -/
-theorem buildAppendBackingValue_congr {σ : ExecState} {elem : Ty}
+theorem buildAppendBackingValue_congr {elem : Ty}
     {o e : Array GoValue} {cap₁ cap₂ : Nat}
     (h₁ : o.size + e.size ≤ cap₁) (h₂ : o.size + e.size ≤ cap₂)
     (hne : e.size ≠ 0) :
     exceptCong (fun _ _ : GoValue => True)
-      (buildAppendBackingValue σ elem o e cap₁)
-      (buildAppendBackingValue σ elem o e cap₂) := by
+      (buildAppendBackingValue ctx elem o e cap₁)
+      (buildAppendBackingValue ctx elem o e cap₂) := by
   unfold buildAppendBackingValue
   refine exceptCong.bind_congr
     (exceptCong.self_post (P := fun out : Array GoValue =>
-      out.size = o.size + e.size ∧ ∃ d, defaultValue σ elem = .ok d) ?_)
+      out.size = o.size + e.size ∧ ∃ d, defaultValue ctx elem = .ok d) ?_)
     fun values values' hv => ?_
   · intro out hout
     rw [← Array.forIn_toList] at hout
@@ -2552,12 +2550,12 @@ credited it, but the proof never uses it; the fresh backing is allocated
 above every OPERAND-reachable location, which is what the store transport
 needs). The choice only sizes the fresh backing and the result slice's
 `cap` — `storeLoc_congr` transports the final store across both. -/
-theorem applyStmtOp_appendSlice_congr {σ : ExecState} {elem : Ty} {nt : Nat}
+theorem applyStmtOp_appendSlice_congr {σ : Store} {elem : Ty} {nt : Nat}
     {vs : List GoValue} (hb : goValueListSup vs ≤ σ.nextAddr)
     (ch₁ ch₂ : Choices) :
-    exceptCong (fun _ _ : ExecState × Choices => True)
-      (applyStmtOp σ ch₁ (.appendSlice elem) nt vs)
-      (applyStmtOp σ ch₂ (.appendSlice elem) nt vs) := by
+    exceptCong (fun _ _ : Store × Choices => True)
+      (applyStmtOp ctx σ ch₁ (.appendSlice elem) nt vs)
+      (applyStmtOp ctx σ ch₂ (.appendSlice elem) nt vs) := by
   match vs, hb with
   | [], _ => exact rfl
   | [_], _ => exact rfl
@@ -2630,9 +2628,8 @@ theorem applyStmtOp_appendSlice_congr {σ : ExecState} {elem : Ty} {nt : Nat}
           simp only [Loc.locSup] at htloc
           omega
         refine exceptCong.bind_congr
-          (storeLoc_congr ?_ (l := tloc) ?_ ?_)
+          (storeLoc_congr (l := tloc) ?_ ?_)
           fun _ _ _ => ?_
-        · exact rfl
         · show Heap.lookup (σ.heap.push _) (Loc.rootLoc tloc)
             = Heap.lookup (σ.heap.push _) (Loc.rootLoc tloc)
           rw [Heap.lookup_push_ne hkey, Heap.lookup_push_ne hkey]
@@ -2644,11 +2641,11 @@ bounded operands: everything but appendSlice is choices-free by
 construction, and appendSlice is the lemma above (which needs only the
 operand bound — audit correction 2026-08-04, `StateWf` dropped here
 too). -/
-theorem applyStmtOp_congr_any_ch {σ : ExecState} {op : StmtOp} {nt : Nat}
+theorem applyStmtOp_congr_any_ch {σ : Store} {op : StmtOp} {nt : Nat}
     {vs : List GoValue} (hb : goValueListSup vs ≤ σ.nextAddr)
     (ch₁ ch₂ : Choices) :
-    exceptCong (fun _ _ : ExecState × Choices => True)
-      (applyStmtOp σ ch₁ op nt vs) (applyStmtOp σ ch₂ op nt vs) := by
+    exceptCong (fun _ _ : Store × Choices => True)
+      (applyStmtOp ctx σ ch₁ op nt vs) (applyStmtOp ctx σ ch₂ op nt vs) := by
   cases op
   case appendSlice elem => exact applyStmtOp_appendSlice_congr hb ch₁ ch₂
   all_goals
@@ -2660,11 +2657,11 @@ theorem applyStmtOp_congr_any_ch {σ : ExecState} {op : StmtOp} {nt : Nat}
 stream succeeds under EVERY stream, given bounded operands (audit
 correction 2026-08-04: `StateWf` dropped — the operand bound is the whole
 requirement). -/
-theorem applyStmtOp_ok_any_ch_wf {σ : ExecState} {ch₀ : Choices}
-    {op : StmtOp} {nt : Nat} {vs : List GoValue} {r : ExecState × Choices}
+theorem applyStmtOp_ok_any_ch_wf {σ : Store} {ch₀ : Choices}
+    {op : StmtOp} {nt : Nat} {vs : List GoValue} {r : Store × Choices}
     (hb : goValueListSup vs ≤ σ.nextAddr)
-    (h : applyStmtOp σ ch₀ op nt vs = .ok r) :
-    ∀ ch : Choices, ∃ r', applyStmtOp σ ch op nt vs = .ok r' := by
+    (h : applyStmtOp ctx σ ch₀ op nt vs = .ok r) :
+    ∀ ch : Choices, ∃ r', applyStmtOp ctx σ ch op nt vs = .ok r' := by
   intro ch
   obtain ⟨r', hr', _⟩ :=
     exceptCong.ok_left (applyStmtOp_congr_any_ch hb ch₀ ch) h
@@ -2672,11 +2669,11 @@ theorem applyStmtOp_ok_any_ch_wf {σ : ExecState} {ch₀ : Choices}
 
 /-- Panic twin: a wide op that panics under one stream panics under every
 stream. -/
-theorem applyStmtOp_panic_any_ch_wf {σ : ExecState} {ch₀ : Choices}
+theorem applyStmtOp_panic_any_ch_wf {σ : Store} {ch₀ : Choices}
     {op : StmtOp} {nt : Nat} {vs : List GoValue} {m : String}
     (hb : goValueListSup vs ≤ σ.nextAddr)
-    (h : applyStmtOp σ ch₀ op nt vs = .error (.panic m)) :
-    ∀ ch : Choices, ∃ m', applyStmtOp σ ch op nt vs = .error (.panic m') :=
+    (h : applyStmtOp ctx σ ch₀ op nt vs = .error (.panic m)) :
+    ∀ ch : Choices, ∃ m', applyStmtOp ctx σ ch op nt vs = .error (.panic m') :=
   fun ch => exceptCong.panic_left (applyStmtOp_congr_any_ch hb ch₀ ch) h
 
 /-! ### Completeness at EVERY stream, under `MachineWf` -/
@@ -2690,9 +2687,9 @@ pick-independent in outcome CLASS by the pre-commit discipline
 
 /-- `tryDeliver`'s outcome is the same `Except` shape for every value and
 state: success and the stuck error both depend on `targets` alone. -/
-theorem tryDeliver_ok_any {b : Bool} {σ : ExecState} {targets : List Assignee}
-    {env : LocalEnv} {k : Cont} {r : Config × ExecState}
-    (h : tryDeliver b σ targets env k = .ok r) (b₂ : Bool) (σ₂ : ExecState) :
+theorem tryDeliver_ok_any {b : Bool} {σ : Store} {targets : List Assignee}
+    {env : LocalEnv} {k : Cont} {r : Config × Store}
+    (h : tryDeliver b σ targets env k = .ok r) (b₂ : Bool) (σ₂ : Store) :
     ∃ r₂, tryDeliver b₂ σ₂ targets env k = .ok r₂ := by
   cases targets with
   | nil => exact ⟨_, rfl⟩
@@ -2701,9 +2698,9 @@ theorem tryDeliver_ok_any {b : Bool} {σ : ExecState} {targets : List Assignee}
     rcases htp : targetsPlan (t :: ts) with _ | ⟨_ | ⟨⟨sh, _ | ⟨e, ops⟩⟩, rest⟩⟩ <;>
       simp_all [Bind.bind, Except.bind, stuck, throw, throwThe, MonadExceptOf.throw]
 
-theorem tryDeliver_error_any {b : Bool} {σ : ExecState} {targets : List Assignee}
+theorem tryDeliver_error_any {b : Bool} {σ : Store} {targets : List Assignee}
     {env : LocalEnv} {k : Cont} {e : Stop}
-    (h : tryDeliver b σ targets env k = .error e) (b₂ : Bool) (σ₂ : ExecState) :
+    (h : tryDeliver b σ targets env k = .error e) (b₂ : Bool) (σ₂ : Store) :
     tryDeliver b₂ σ₂ targets env k = .error e := by
   cases targets with
   | nil => simp [tryDeliver] at h
@@ -2714,11 +2711,11 @@ theorem tryDeliver_error_any {b : Bool} {σ : ExecState} {targets : List Assigne
 
 /-- `applyTryLock`'s apply-SUCCESS is pick-independent (the pre-commit
 discipline): `.ok` under one `spurious` flag ⇒ `.ok` under the other. -/
-theorem applyTryLock_ok_any {σ : ExecState} {op : SyncOp} {loc : Loc}
+theorem applyTryLock_ok_any {σ : Store} {op : SyncOp} {loc : Loc}
     {pre : SyncPrim} {b₀ : Bool} {targets : List Assignee} {env : LocalEnv}
-    {k : Cont} {r : Config × ExecState}
-    (h : applyTryLock σ op loc pre b₀ targets env k = .ok r) (b : Bool) :
-    ∃ r₂, applyTryLock σ op loc pre b targets env k = .ok r₂ := by
+    {k : Cont} {r : Config × Store}
+    (h : applyTryLock ctx σ op loc pre b₀ targets env k = .ok r) (b : Bool) :
+    ∃ r₂, applyTryLock ctx σ op loc pre b targets env k = .ok r₂ := by
   rw [applyTryLock.eq_def] at h ⊢
   simp only [bind_eq_ok] at h
   obtain ⟨acq, hacq, h⟩ := h
@@ -2737,11 +2734,11 @@ theorem applyTryLock_ok_any {σ : ExecState} {op : SyncOp} {loc : Loc}
 /-- `applyTryLock`'s ERROR is pick-independent too: every error fires
 before the pick applies (`tryAcquire`, the pre-committed `storeLoc`) or
 in `tryDeliver`, whose error is the same for both flags. -/
-theorem applyTryLock_error_any {σ : ExecState} {op : SyncOp} {loc : Loc}
+theorem applyTryLock_error_any {σ : Store} {op : SyncOp} {loc : Loc}
     {pre : SyncPrim} {b₀ : Bool} {targets : List Assignee} {env : LocalEnv}
     {k : Cont} {e : Stop}
-    (h : applyTryLock σ op loc pre b₀ targets env k = .error e) (b : Bool) :
-    applyTryLock σ op loc pre b targets env k = .error e := by
+    (h : applyTryLock ctx σ op loc pre b₀ targets env k = .error e) (b : Bool) :
+    applyTryLock ctx σ op loc pre b targets env k = .error e := by
   rw [applyTryLock.eq_def] at h ⊢
   simp only [Bind.bind, Except.bind] at h ⊢
   cases hacq : tryAcquire op pre with
@@ -2752,7 +2749,7 @@ theorem applyTryLock_error_any {σ : ExecState} {op : SyncOp} {loc : Loc}
     | none => exact h
     | some post =>
       simp only [] at h ⊢
-      cases hst : storeLoc σ loc (.syncData post) with
+      cases hst : storeLoc ctx σ loc (.syncData post) with
       | error e' => rw [hst] at h; simpa using h
       | ok σA =>
         rw [hst] at h
@@ -2781,11 +2778,11 @@ theorem consumesTryLock_none {v : GoValue} {op : SyncOp} {done : List GoValue}
 
 /-- A non-TRY head's apply passes the stream through untouched, on
 success — the `applyStmtOp_eq_core` twin. -/
-theorem applySyncOp_core_ok {σ : ExecState} {ch₀ : Choices} {op : SyncOp}
+theorem applySyncOp_core_ok {σ : Store} {ch₀ : Choices} {op : SyncOp}
     {vs : List GoValue} {env : LocalEnv} {k : Cont} {c' : Config}
-    {σ' : ExecState} {ch' : Choices} (hop : op.tryTargets? = none)
-    (h : applySyncOp σ ch₀ op vs env k = .ok (c', σ', ch')) :
-    ch' = ch₀ ∧ ∀ ch : Choices, applySyncOp σ ch op vs env k = .ok (c', σ', ch) := by
+    {σ' : Store} {ch' : Choices} (hop : op.tryTargets? = none)
+    (h : applySyncOp ctx σ ch₀ op vs env k = .ok (c', σ', ch')) :
+    ch' = ch₀ ∧ ∀ ch : Choices, applySyncOp ctx σ ch op vs env k = .ok (c', σ', ch) := by
   rw [applySyncOp.eq_def] at h
   rw [hop] at h
   simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
@@ -2795,27 +2792,27 @@ theorem applySyncOp_core_ok {σ : ExecState} {ch₀ : Choices} {op : SyncOp}
   simp [hcore, Bind.bind, Except.bind]
 
 /-- … and on error. -/
-theorem applySyncOp_core_error {σ : ExecState} {ch₀ : Choices} {op : SyncOp}
+theorem applySyncOp_core_error {σ : Store} {ch₀ : Choices} {op : SyncOp}
     {vs : List GoValue} {env : LocalEnv} {k : Cont} {e : Stop}
     (hop : op.tryTargets? = none)
-    (h : applySyncOp σ ch₀ op vs env k = .error e) :
-    ∀ ch : Choices, applySyncOp σ ch op vs env k = .error e := by
+    (h : applySyncOp ctx σ ch₀ op vs env k = .error e) :
+    ∀ ch : Choices, applySyncOp ctx σ ch op vs env k = .error e := by
   intro ch
   rw [applySyncOp.eq_def] at h ⊢
   rw [hop] at h ⊢
   simp only [Bind.bind, Except.bind] at h ⊢
-  cases hcore : applySyncOpCore σ op vs env k with
+  cases hcore : applySyncOpCore ctx σ op vs env k with
   | error e' => rw [hcore] at h; simpa using h
   | ok r => rw [hcore] at h; cases h
 
 /-- `applySyncOp`'s apply-SUCCESS is stream-independent: the non-TRY heads
 never see the stream, the TRY heads by `applyTryLock_ok_any`. -/
-theorem applySyncOp_ok_any_ch {σ : ExecState} {ch₀ : Choices} {op : SyncOp}
+theorem applySyncOp_ok_any_ch {σ : Store} {ch₀ : Choices} {op : SyncOp}
     {vs : List GoValue} {env : LocalEnv} {k : Cont} {c' : Config}
-    {σ' : ExecState} {ch₁ : Choices}
-    (h : applySyncOp σ ch₀ op vs env k = .ok (c', σ', ch₁)) (ch : Choices) :
-    ∃ (c₂ : Config) (σ₂ : ExecState) (ch₂ : Choices),
-      applySyncOp σ ch op vs env k = .ok (c₂, σ₂, ch₂) := by
+    {σ' : Store} {ch₁ : Choices}
+    (h : applySyncOp ctx σ ch₀ op vs env k = .ok (c', σ', ch₁)) (ch : Choices) :
+    ∃ (c₂ : Config) (σ₂ : Store) (ch₂ : Choices),
+      applySyncOp ctx σ ch op vs env k = .ok (c₂, σ₂, ch₂) := by
   cases hop : op.tryTargets? with
   | none =>
     obtain ⟨-, hall⟩ := applySyncOp_core_ok hop h
@@ -2837,10 +2834,10 @@ theorem applySyncOp_ok_any_ch {σ : ExecState} {ch₀ : Choices} {op : SyncOp}
 
 /-- `applySyncOp`'s PANIC is stream-independent: every panic fires before
 the pick (`valueAsLoc`; `applyTryLock_error_any` covers the rest). -/
-theorem applySyncOp_panic_any_ch {σ : ExecState} {ch₀ : Choices} {op : SyncOp}
+theorem applySyncOp_panic_any_ch {σ : Store} {ch₀ : Choices} {op : SyncOp}
     {vs : List GoValue} {env : LocalEnv} {k : Cont} {msg : String}
-    (h : applySyncOp σ ch₀ op vs env k = .error (.panic msg)) (ch : Choices) :
-    applySyncOp σ ch op vs env k = .error (.panic msg) := by
+    (h : applySyncOp ctx σ ch₀ op vs env k = .error (.panic msg)) (ch : Choices) :
+    applySyncOp ctx σ ch op vs env k = .error (.panic msg) := by
   cases hop : op.tryTargets? with
   | none => exact applySyncOp_core_error hop h ch
   | some targets =>
@@ -2855,12 +2852,12 @@ theorem applySyncOp_panic_any_ch {σ : ExecState} {ch₀ : Choices} {op : SyncOp
       | ok loc =>
         rw [hloc] at h
         dsimp only at h ⊢
-        cases hcell : syncCell σ loc with
+        cases hcell : syncCell ctx σ loc with
         | error e' => rw [hcell] at h; simpa using h
         | ok pre =>
           rw [hcell] at h
           dsimp only at h ⊢
-          cases happ : applyTryLock σ op loc pre
+          cases happ : applyTryLock ctx σ op loc pre
               ((Choices.consumeAt .tryLock (tryLockWidth op pre) ch₀).1 == 1) targets env k with
           | error e' =>
             rw [happ] at h
@@ -2875,11 +2872,11 @@ theorem applySyncOp_panic_any_ch {σ : ExecState} {ch₀ : Choices} {op : SyncOp
 /-- Under the wf typing component, a snapshot entry's variables always
 bind: the keys/values are self-normalized, so `bindIterVars`' per-pick
 normalization succeeds (returning them unchanged) at every pick. -/
-theorem bindIterVars_ok_of_normal {env : LocalEnv} {σ : ExecState}
+theorem bindIterVars_ok_of_normal {env : LocalEnv} {σ : Store}
     {kv vv : Option String} {kt vt : Ty} {key value : GoValue}
-    (hk : isNormalForTy σ.types kt key = true)
-    (hv : isNormalForTy σ.types vt value = true) :
-    ∃ env' σ', bindIterVars env σ kv vv kt vt key value = .ok (env', σ') := by
+    (hk : isNormalForTy ctx.types kt key = true)
+    (hv : isNormalForTy ctx.types vt value = true) :
+    ∃ env' σ', bindIterVars ctx env σ kv vv kt vt key value = .ok (env', σ') := by
   unfold bindIterVars
   cases kv with
   | none =>
@@ -2888,19 +2885,17 @@ theorem bindIterVars_ok_of_normal {env : LocalEnv} {σ : ExecState}
     | some nv =>
       refine ⟨env.declare nv (.base ⟨σ.heap.size⟩),
         { σ with heap := σ.heap.push (.value vt value) }, ?_⟩
-      simp [isNormalForTy_sound hv, Bind.bind, Except.bind, ExecState.alloc, ExecState.allocCell,
+      simp [isNormalForTy_sound hv, Bind.bind, Except.bind, Store.alloc, Store.allocCell,
         pure, Except.pure]
   | some nk =>
     cases vv with
     | none =>
       refine ⟨env.declare nk (.base ⟨σ.heap.size⟩),
         { σ with heap := σ.heap.push (.value kt key) }, ?_⟩
-      simp [isNormalForTy_sound hk, Bind.bind, Except.bind, ExecState.alloc, ExecState.allocCell,
+      simp [isNormalForTy_sound hk, Bind.bind, Except.bind, Store.alloc, Store.allocCell,
         pure, Except.pure]
     | some nv =>
-      have hv' : normalizeValueForTy
-          { σ with heap := σ.heap.push (.value kt key) }
-          vt value = .ok value :=
+      have hv' : normalizeValueForTy ctx vt value = .ok value :=
         isNormalForTy_sound hv
       refine ⟨(env.declare nk (.base ⟨σ.heap.size⟩)).declare nv
           (.base ⟨(σ.heap.push (.value kt key)).size⟩),
@@ -2908,7 +2903,7 @@ theorem bindIterVars_ok_of_normal {env : LocalEnv} {σ : ExecState}
           heap := (σ.heap.push (.value kt key)).push
             (.value vt value) }, ?_⟩
       simp [isNormalForTy_sound hk, hv', Bind.bind, Except.bind,
-        ExecState.alloc, ExecState.allocCell, pure, Except.pure]
+        Store.alloc, Store.allocCell, pure, Except.pure]
 
 /-- `mapM` over `Except` preserves length on success. -/
 theorem mapM_ok_length {α β : Type} {f : α → Except Stop β}
@@ -2930,11 +2925,11 @@ the `[]`/`[c]` readiness lists take `applySelectCore`'s other arms — so
 `selectConsult?`'s `some` is exactly a POPPING consult under the uniform
 rule (G-U audit fix L6; the twin of `one_lt_appendSpillWidth` and
 `arrivalCases_multi_length`). -/
-theorem applySelectCore_picks_length {σ : ExecState}
+theorem applySelectCore_picks_length {σ : Store}
     {clauses : List (SelectClauseHead × Stmt)} {default? : Option Stmt}
     {vs : List GoValue} {env : LocalEnv} {k : Cont}
-    {commits : List (EvClause × Sum (Config × ExecState) String)}
-    (h : applySelectCore σ clauses default? vs env k = .ok (.picks commits)) :
+    {commits : List (EvClause × Sum (Config × Store) String)}
+    (h : applySelectCore ctx σ clauses default? vs env k = .ok (.picks commits)) :
     1 < commits.length := by
   unfold applySelectCore at h
   simp only [Bind.bind, Except.bind] at h
@@ -2971,20 +2966,20 @@ returns `.ok` or a panic under one stream, it does under EVERY stream
 so a fail-closed commit error fires identically on every stream, and
 per-pick variation is confined to WHICH `.ok` configuration or panic
 surfaces. -/
-theorem applySelect_ok_or_panic_any_ch {σ : ExecState}
+theorem applySelect_ok_or_panic_any_ch {σ : Store}
     {clauses : List (SelectClauseHead × Stmt)} {default? : Option Stmt}
     {vs : List GoValue} {env : LocalEnv} {k : Cont} {ch₀ : Choices}
-    (h : (∃ out, applySelect σ clauses default? vs env k ch₀ = .ok out)
-      ∨ (∃ msg, applySelect σ clauses default? vs env k ch₀
+    (h : (∃ out, applySelect ctx σ clauses default? vs env k ch₀ = .ok out)
+      ∨ (∃ msg, applySelect ctx σ clauses default? vs env k ch₀
           = .error (.panic msg))) :
     ∀ ch : Choices,
-      (∃ out, applySelect σ clauses default? vs env k ch = .ok out)
-      ∨ (∃ msg, applySelect σ clauses default? vs env k ch
+      (∃ out, applySelect ctx σ clauses default? vs env k ch = .ok out)
+      ∨ (∃ msg, applySelect ctx σ clauses default? vs env k ch
           = .error (.panic msg)) := by
   intro ch
   rw [applySelect.eq_def] at h ⊢
   simp only [Bind.bind, Except.bind] at h ⊢
-  cases hcore : applySelectCore σ clauses default? vs env k with
+  cases hcore : applySelectCore ctx σ clauses default? vs env k with
   | error e =>
       rw [hcore] at h
       rcases h with ⟨out, h⟩ | ⟨msg, h⟩
@@ -3021,16 +3016,16 @@ theorem applySelect_ok_or_panic_any_ch {σ : ExecState}
 /-- Non-`appendSlice` wide ops dispatch through the choices-free core:
 the result is the core's, with the stream threaded through untouched —
 on success AND on error. -/
-theorem applyStmtOp_eq_core {σ : ExecState} {ch : Choices} {op : StmtOp}
+theorem applyStmtOp_eq_core {σ : Store} {ch : Choices} {op : StmtOp}
     {nt : Nat} {vs : List GoValue} (hop : ∀ e, op ≠ .appendSlice e) :
-    applyStmtOp σ ch op nt vs
-      = (fun σ₂ => (σ₂, ch)) <$> applyStmtOpCore σ op vs := by
+    applyStmtOp ctx σ ch op nt vs
+      = (fun σ₂ => (σ₂, ch)) <$> applyStmtOpCore ctx σ op vs := by
   cases op <;>
     first
     | exact absurd rfl (hop _)
     | (simp only [applyStmtOp, Bind.bind, Except.bind, Functor.map, Except.map,
          pure, Except.pure]
-       all_goals (cases applyStmtOpCore σ _ vs <;> rfl))
+       all_goals (cases applyStmtOpCore ctx σ _ vs <;> rfl))
 
 /-- Mapping cannot manufacture or change an error. -/
 theorem map_eq_error {ε α β : Type} {g : α → β} {x : Except ε α} {e : ε} :
@@ -3039,11 +3034,11 @@ theorem map_eq_error {ε α β : Type} {g : α → β} {x : Except ε α} {e : �
 
 /-- Successful pick-time candidates are self-normalized (the check is
 inside `mapIterCandidates` — the sem-adequacy guard at its new home). -/
-theorem mapIterCandidates_normalized {σ : ExecState} {keyTy valTy : Ty}
+theorem mapIterCandidates_normalized {σ : Store} {keyTy valTy : Ty}
     {base : Option Loc} {produced : Array Nat}
     {cands : Array (Nat × GoValue × GoValue)}
-    (h : mapIterCandidates σ keyTy valTy base produced = .ok cands) :
-    snapshotEntriesSelfNormalized σ.types keyTy valTy cands = true := by
+    (h : mapIterCandidates ctx σ keyTy valTy base produced = .ok cands) :
+    snapshotEntriesSelfNormalized ctx.types keyTy valTy cands = true := by
   unfold mapIterCandidates at h
   simp only [bind_eq_ok] at h
   obtain ⟨es, hes, h⟩ := h
@@ -3059,15 +3054,15 @@ slot is a pure return, and every candidate pick binds — the
 candidates' self-normalization (validated inside `mapIterCandidates`)
 makes `bindIterVars` succeed at every index. The (L) surgery's
 choices-independence core (the COUPLING note's re-run demand). -/
-theorem stepFn_mapIter_ok_any {σ : ExecState} {kv vv : Option String}
+theorem stepFn_mapIter_ok_any {σ : Store} {kv vv : Option String}
     {kt vt : Ty} {body : Stmt} {base : Option Loc}
     {produced start : Array Nat} {env : LocalEnv} {k : Cont}
     {cands : Array (Nat × GoValue × GoValue)} {mand : Bool}
-    (hcands : mapIterCandidates σ kt vt base produced = .ok cands)
+    (hcands : mapIterCandidates ctx σ kt vt base produced = .ok cands)
     (hmand : mapIterMandatoryRemains cands start = mand)
     (hne : ¬cands.isEmpty = true) :
     ∀ ch : Choices, ∃ out,
-      stepFn σ (.next (.mapIterK kv vv kt vt body base produced start env k)) ch
+      stepFn ctx σ (.next (.mapIterK kv vv kt vt body base produced start env k)) ch
         = .ok out := by
   intro ch
   have hsnap := mapIterCandidates_normalized hcands
@@ -3081,7 +3076,7 @@ theorem stepFn_mapIter_ok_any {σ : ExecState} {kv vv : Option String}
   next id' key' value' heq =>
     obtain ⟨hlt, hkv⟩ := Array.getElem?_eq_some_iff.mp heq
     have hmem := snapshotEntriesSelfNormalizedList_mem
-      (types := σ.types) (kt := kt) (vt := vt)
+      (types := ctx.types) (kt := kt) (vt := vt)
       (l := cands.toList) hsnap
       (e := cands[idx'])
       (List.mem_of_getElem? (by
@@ -3089,7 +3084,7 @@ theorem stepFn_mapIter_ok_any {σ : ExecState} {kv vv : Option String}
         exact Array.getElem?_eq_getElem hlt))
     rw [hkv] at hmem
     obtain ⟨env₂, σ₂, hbind₂⟩ := bindIterVars_ok_of_normal
-      (env := env.pushScope) (kv := kv) (vv := vv)
+      (env := env.pushScope) (σ := σ) (kv := kv) (vv := vv)
       hmem.1 hmem.2
     simp [hbind₂]
 
@@ -3097,10 +3092,10 @@ set_option maxHeartbeats 1600000 in
 set_option linter.unusedSimpArgs false in
 /-- `step_complete_any_wf`, ∃-packaged (the per-case scripts close a
 single existential over the whole result). -/
-theorem step_complete_any_wf_aux {c : Config} {σ : ExecState} {c' : Config}
-    {σ' : ExecState} (h : Step c σ c' σ') (hwf : MachineWf σ c) :
-    ∀ ch : Choices, ∃ out, stepFn σ c ch = .ok out := by
-  obtain ⟨hs, hc, hi⟩ := hwf
+theorem step_complete_any_wf_aux {c : Config} {σ : Store} {c' : Config}
+    {σ' : Store} (h : Step ctx c σ c' σ') (hwf : MachineWf σ c) :
+    ∀ ch : Choices, ∃ out, stepFn ctx σ c ch = .ok out := by
+  obtain ⟨hs, hc⟩ := hwf
   intro ch
   cases h
   case evalStrict e op e₁ rest env k hplan =>
@@ -3188,8 +3183,8 @@ theorem step_complete_any_wf_aux {c : Config} {σ : ExecState} {c' : Config}
   -- `applySelect_ok_or_panic_any_ch`): under any stream it lands `.ok`
   -- or a panic, and `stepFn` maps both to `.ok` configurations.
   case selectApply clauses default? done v r env k ch₀ hres hdel =>
-    have hor : (∃ x, applySelect σ clauses default? (v :: done).reverse env k ch₀ = .ok x)
-        ∨ (∃ msg, applySelect σ clauses default? (v :: done).reverse env k ch₀ = .error (.panic msg)) := by
+    have hor : (∃ x, applySelect ctx σ clauses default? (v :: done).reverse env k ch₀ = .ok x)
+        ∨ (∃ msg, applySelect ctx σ clauses default? (v :: done).reverse env k ch₀ = .error (.panic msg)) := by
       rcases toResult_cases hres with ⟨x, -, hX⟩ | ⟨msg, -, hX⟩
       · exact .inl ⟨x, hX⟩
       · exact .inr ⟨msg, hX⟩
@@ -3272,10 +3267,10 @@ theorem step_complete_any_wf_aux {c : Config} {σ : ExecState} {c' : Config}
 /-- **Completeness at every stream** (the recorded kit obligation): a
 configuration the relation can step from is one the executable steps
 from under EVERY choice stream, provided the machine is well-formed. -/
-theorem step_complete_any_wf {c : Config} {σ : ExecState} {c' : Config}
-    {σ' : ExecState} (h : Step c σ c' σ') (hwf : MachineWf σ c) :
-    ∀ ch : Choices, ∃ (c₂ : Config) (σ₂ : ExecState) (ch₂ : Choices),
-      stepFn σ c ch = .ok (c₂, σ₂, ch₂) := by
+theorem step_complete_any_wf {c : Config} {σ : Store} {c' : Config}
+    {σ' : Store} (h : Step ctx c σ c' σ') (hwf : MachineWf σ c) :
+    ∀ ch : Choices, ∃ (c₂ : Config) (σ₂ : Store) (ch₂ : Choices),
+      stepFn ctx σ c ch = .ok (c₂, σ₂, ch₂) := by
   intro ch
   obtain ⟨⟨c₂, σ₂, ch₂⟩, hout⟩ := step_complete_any_wf_aux h hwf ch
   exact ⟨c₂, σ₂, ch₂, hout⟩
@@ -3293,19 +3288,19 @@ since B4 the driver classifies NEITHER as a completion (a signal at
 `.stop` is a refusal `stepFn` raises), so the former audit-response
 concern (2026-08-04: unconstrained `.returned`/`.broke`/`.continued`
 completions silently accepted) has no shape left to arise in. -/
-theorem execStmtLoop_ok_or_fuelOut {σ₀ : ExecState} {c₀ : Config}
-    (hprog : ∀ (c' : Config) (σ' : ExecState), Steps c₀ σ₀ c' σ' →
-      c' = .next .stop ∨ ∃ (c'' : Config) (σ'' : ExecState), Step c' σ' c'' σ'')
+theorem execStmtLoop_ok_or_fuelOut {σ₀ : Store} {c₀ : Config}
+    (hprog : ∀ (c' : Config) (σ' : Store), Steps ctx c₀ σ₀ c' σ' →
+      c' = .next .stop ∨ ∃ (c'' : Config) (σ'' : Store), Step ctx c' σ' c'' σ'')
     (hwf : MachineWf σ₀ c₀) :
     ∀ (fuel : Nat) (ch : Choices),
-      (∃ (σf : ExecState) (ch' : Choices),
-        execStmtLoop fuel σ₀ c₀ ch = .ok (σf, ch'))
-      ∨ execStmtLoop fuel σ₀ c₀ ch = .error .fuelOut := by
-  suffices haux : ∀ (fuel : Nat) (c : Config) (σ : ExecState),
-      Steps c₀ σ₀ c σ → MachineWf σ c → ∀ ch : Choices,
-      (∃ (σf : ExecState) (ch' : Choices),
-        execStmtLoop fuel σ c ch = .ok (σf, ch'))
-        ∨ execStmtLoop fuel σ c ch = .error .fuelOut by
+      (∃ (σf : Store) (ch' : Choices),
+        execStmtLoop ctx fuel σ₀ c₀ ch = .ok (σf, ch'))
+      ∨ execStmtLoop ctx fuel σ₀ c₀ ch = .error .fuelOut := by
+  suffices haux : ∀ (fuel : Nat) (c : Config) (σ : Store),
+      Steps ctx c₀ σ₀ c σ → MachineWf σ c → ∀ ch : Choices,
+      (∃ (σf : Store) (ch' : Choices),
+        execStmtLoop ctx fuel σ c ch = .ok (σf, ch'))
+        ∨ execStmtLoop ctx fuel σ c ch = .error .fuelOut by
     intro fuel ch
     exact haux fuel c₀ σ₀ (Steps.refl _ _) hwf ch
   intro fuel
@@ -3411,12 +3406,13 @@ def consumesSelect : Config → Bool
   | _ => false
 
 
+variable (ctx) in
 /-- The kernel-evaluable ∀-streams run explorer (docstring above). At a
 nonempty `mapIterK` it checks EVERY pick; elsewhere it probes one step
 at the canonical stream `[0]` and relies on `stepFn_oblivious`. `false`
 is always safe (fail closed): at fuel 0, at any error, at any
 `appendSlice` apply position. -/
-def allStreamsOk : Nat → ExecState → Config → Bool
+def allStreamsOk : Nat → Store → Config → Bool
   | 0, _, _ => false
   | fuel + 1, σ, c =>
       match c with
@@ -3430,11 +3426,11 @@ def allStreamsOk : Nat → ExecState → Config → Bool
           -- fuel on them and returns false, BY DESIGN (memo §5 ruling:
           -- ∀-streams certification fails closed there; the membership
           -- lane carries such programs).
-          match mapIterCandidates σ keyTy valTy base produced with
+          match mapIterCandidates ctx σ keyTy valTy base produced with
           | .error _ => false
           | .ok cands =>
               if cands.isEmpty then
-                match stepFn σ (.next (.mapIterK keyVar valVar keyTy valTy body
+                match stepFn ctx σ (.next (.mapIterK keyVar valVar keyTy valTy body
                     base produced start env k)) [0] with
                 | .ok (c', σ', _) => allStreamsOk fuel σ' c'
                 | .error _ => false
@@ -3442,15 +3438,15 @@ def allStreamsOk : Nat → ExecState → Config → Bool
                 -- (the mandatory test is pure since the B1 stamps)
                 (List.range (cands.size
                     + (if mapIterMandatoryRemains cands start then 0 else 1))).all fun i =>
-                  match stepFn σ (.next (.mapIterK keyVar valVar keyTy valTy body
+                  match stepFn ctx σ (.next (.mapIterK keyVar valVar keyTy valTy body
                       base produced start env k)) [i] with
                   | .ok (c', σ', _) => allStreamsOk fuel σ' c'
                   | .error _ => false
       | c =>
-          if consumesAppendSlice c || consumesSelect c || consumesNilValueMethod σ c || consumesTryLock c
+          if consumesAppendSlice c || consumesSelect c || consumesNilValueMethod ctx c || consumesTryLock c
               || consumesUnseqPanic c || consumesUnseqNext c || consumesRepanicCollapse c then false
           else
-            match stepFn σ c [0] with
+            match stepFn ctx σ c [0] with
             | .ok (c', σ', _) => allStreamsOk fuel σ' c'
             | .error _ => false
 
@@ -3620,8 +3616,8 @@ theorem normalizeValueForTyAt_noPanic (types : TypeEnv) :
     · exact NoPanic.unsupported _
     · exact NoPanic.unsupported _
 
-theorem normalizeValueForTy_noPanic (s : ExecState) (ty : Ty) (v : GoValue) :
-    NoPanic (normalizeValueForTy s ty v) := by
+theorem normalizeValueForTy_noPanic (ty : Ty) (v : GoValue) :
+    NoPanic (normalizeValueForTy ctx ty v) := by
   unfold normalizeValueForTy
   exact normalizeValueForTyTy_noPanic (fun i v => normalizeValueForTyAt_noPanic _ _ i v) ty v
 
@@ -3675,7 +3671,7 @@ theorem defaultValueAt_noPanic (types : TypeEnv) :
     · exact NoPanic.unsupported _
     · exact NoPanic.unsupported _
 
-theorem defaultValue_noPanic (s : ExecState) (ty : Ty) : NoPanic (defaultValue s ty) := by
+theorem defaultValue_noPanic (ty : Ty) : NoPanic (defaultValue ctx ty) := by
   unfold defaultValue
   exact defaultValueTy_noPanic (fun i => defaultValueAt_noPanic _ _ i) ty
 
@@ -3691,22 +3687,22 @@ theorem forIn_noPanic {α β : Type} {body : α → β → Except Stop (ForInSte
       | done b => exact NoPanic.pure _
       | yield b => exact forIn_noPanic hb as b
 
-theorem buildAppendBackingValue_noPanic (s : ExecState) (elem : Ty)
+theorem buildAppendBackingValue_noPanic (elem : Ty)
     (oldValues elemValues : Array GoValue) (newCap : Nat) :
-    NoPanic (buildAppendBackingValue s elem oldValues elemValues newCap) := by
+    NoPanic (buildAppendBackingValue ctx elem oldValues elemValues newCap) := by
   unfold buildAppendBackingValue
   dsimp only
   rw [← Array.forIn_toList]
   refine NoPanic.bind (forIn_noPanic (fun a b => ?_) _ _) fun values => ?_
-  · exact NoPanic.bind (normalizeValueForTy_noPanic _ _ _) fun _ => NoPanic.pure _
+  · exact NoPanic.bind (normalizeValueForTy_noPanic _ _) fun _ => NoPanic.pure _
   · refine NoPanic.ite ?_ ?_
     · refine NoPanic.bind (NoPanic.stuck _) fun _ => ?_
       rw [Std.Legacy.Range.forIn_eq_forIn_range']
       refine NoPanic.bind (forIn_noPanic (fun a b => ?_) _ _) fun _ => NoPanic.pure _
-      exact NoPanic.bind (defaultValue_noPanic _ _) fun _ => NoPanic.pure _
+      exact NoPanic.bind (defaultValue_noPanic _) fun _ => NoPanic.pure _
     · rw [Std.Legacy.Range.forIn_eq_forIn_range']
       refine NoPanic.bind (forIn_noPanic (fun a b => ?_) _ _) fun _ => NoPanic.pure _
-      exact NoPanic.bind (defaultValue_noPanic _ _) fun _ => NoPanic.pure _
+      exact NoPanic.bind (defaultValue_noPanic _) fun _ => NoPanic.pure _
 
 theorem StructFields.set_noPanic (fields : Array (String × GoValue)) (needle : String)
     (value : GoValue) : NoPanic (StructFields.set fields needle value) := by
@@ -3722,14 +3718,14 @@ theorem StructFields.set_noPanic (fields : Array (String × GoValue)) (needle : 
 
 /-- A root-cell store never panics: the cell exists or the store is
 `.internal`, and normalization at the cell's type refuses but never panics. -/
-theorem storeLoc_base_noPanic (s : ExecState) (a : Addr) (v : GoValue) :
-    NoPanic (storeLoc s (.base a) v) := by
-  unfold storeLoc ExecState.updateCell
+theorem storeLoc_base_noPanic (s : Store) (a : Addr) (v : GoValue) :
+    NoPanic (storeLoc ctx s (.base a) v) := by
+  unfold storeLoc Store.updateCell
   split
   · refine NoPanic.bind ?_ fun _ => NoPanic.pure _
     dsimp only
     split
-    · exact NoPanic.bind (normalizeValueForTy_noPanic _ _ _) fun _ => NoPanic.pure _
+    · exact NoPanic.bind (normalizeValueForTy_noPanic _ _) fun _ => NoPanic.pure _
     · exact NoPanic.stuck _
     · exact NoPanic.stuck _
   · exact NoPanic.internal _
@@ -3754,13 +3750,13 @@ theorem arraySet_ok_of_arrayGet_ok {vs : Array GoValue} {i : Int} {x : GoValue}
 /-- A store through a PATH the machine can load never panics: the only
 panic on the store path is `arraySet`'s bounds check, and the load's
 success puts the index in range. -/
-theorem storeLoc_noPanic_of_loadLoc_ok (s : ExecState) :
-    ∀ (loc : Loc) {v₀ : GoValue}, loadLoc s loc = .ok v₀ → ∀ v, NoPanic (storeLoc s loc v)
+theorem storeLoc_noPanic_of_loadLoc_ok (s : Store) :
+    ∀ (loc : Loc) {v₀ : GoValue}, loadLoc ctx s loc = .ok v₀ → ∀ v, NoPanic (storeLoc ctx s loc v)
   | .base a, _, _, v => storeLoc_base_noPanic s a v
   | .field base typeId fieldName, v₀, h, v => by
       unfold loadLoc at h
       unfold storeLoc
-      cases hb : loadLoc s base with
+      cases hb : loadLoc ctx s base with
       | error e => (try rw [hb] at h); simp [Bind.bind, Except.bind] at h
       | ok w =>
         (try rw [hb] at h)
@@ -3776,7 +3772,7 @@ theorem storeLoc_noPanic_of_loadLoc_ok (s : ExecState) :
   | .index base index, v₀, h, v => by
       unfold loadLoc at h
       unfold storeLoc
-      cases hb : loadLoc s base with
+      cases hb : loadLoc ctx s base with
       | error e => (try rw [hb] at h); simp [Bind.bind, Except.bind] at h
       | ok w =>
         (try rw [hb] at h)
@@ -3791,13 +3787,13 @@ theorem tryAcquire_noPanic (op : SyncOp) (pre : SyncPrim) : NoPanic (tryAcquire 
   unfold tryAcquire
   split <;> first | exact NoPanic.pure _ | exact NoPanic.stuck _ | exact NoPanic.internal _
 
-theorem enterRecvTargets_noPanic (s : ExecState) (targets : List Assignee) (vals : List GoValue)
+theorem enterRecvTargets_noPanic (s : Store) (targets : List Assignee) (vals : List GoValue)
     (body : Stmt) (env : LocalEnv) (k : Cont) :
     NoPanic (enterRecvTargets s targets vals body env k) := by
   unfold enterRecvTargets
   split <;> first | exact NoPanic.pure _ | exact NoPanic.stuck _
 
-theorem tryDeliver_noPanic (b : Bool) (s : ExecState) (targets : List Assignee)
+theorem tryDeliver_noPanic (b : Bool) (s : Store) (targets : List Assignee)
     (env : LocalEnv) (k : Cont) : NoPanic (tryDeliver b s targets env k) := by
   unfold tryDeliver
   split
@@ -3808,13 +3804,13 @@ theorem tryDeliver_noPanic (b : Bool) (s : ExecState) (targets : List Assignee)
 recoverable panic — `tryAcquire` refuses at most, the acquired cell is
 stored through the location the apply just READ (`syncCell`), and the
 result delivery is an `.evalE` entry or a refusal. -/
-theorem applyTryLock_noPanic {s : ExecState} {loc : Loc} {pre : SyncPrim}
-    (hcell : syncCell s loc = .ok pre) (op : SyncOp) (spurious : Bool)
+theorem applyTryLock_noPanic {s : Store} {loc : Loc} {pre : SyncPrim}
+    (hcell : syncCell ctx s loc = .ok pre) (op : SyncOp) (spurious : Bool)
     (targets : List Assignee) (env : LocalEnv) (k : Cont) :
-    NoPanic (applyTryLock s op loc pre spurious targets env k) := by
-  have hload : ∃ w, loadLoc s loc = .ok w := by
+    NoPanic (applyTryLock ctx s op loc pre spurious targets env k) := by
+  have hload : ∃ w, loadLoc ctx s loc = .ok w := by
     unfold syncCell at hcell
-    cases hl : loadLoc s loc with
+    cases hl : loadLoc ctx s loc with
     | error e => rw [hl] at hcell; simp [Bind.bind, Except.bind] at hcell
     | ok w => exact ⟨w, rfl⟩
   obtain ⟨w, hw⟩ := hload
@@ -3834,11 +3830,11 @@ theorem except_bind_ok {ε α β : Type} (a : α)
 /-- Stream pass-through of a two-stage `Except` pipeline ending in a
 `(·, choices)` pair — the shape of `applyStmtOp`'s append branches. -/
 theorem bind_pair_stream {α : Type} (T : Except Stop α)
-    (g : α → Except Stop ExecState) (ch : Choices) :
+    (g : α → Except Stop Store) (ch : Choices) :
     (do let a ← T; let x ← g a;
-        pure ((x, ch) : ExecState × Choices))
+        pure ((x, ch) : Store × Choices))
       = (match (do let a ← T; let x ← g a;
-                   pure ((x, ([] : Choices)) : ExecState × Choices)) with
+                   pure ((x, ([] : Choices)) : Store × Choices)) with
          | .ok (s', _) => .ok (s', ch)
          | .error e => .error e) := by
   cases T with
@@ -3850,20 +3846,20 @@ theorem bind_pair_stream {α : Type} (T : Except Stop α)
     | ok x => rfl
 
 /-- A `.done` readiness analysis: `applySelect` passes the stream through. -/
-theorem applySelect_done_stream {σ : ExecState} {clauses : List (SelectClauseHead × Stmt)}
+theorem applySelect_done_stream {σ : Store} {clauses : List (SelectClauseHead × Stmt)}
     {default? : Option Stmt} {vs : List GoValue} {env : LocalEnv} {k : Cont}
-    {c₁ : Config} {s₁ : ExecState} {cl? : Option EvClause}
-    (h : applySelectCore σ clauses default? vs env k = .ok (.done c₁ s₁ cl?)) (ch : Choices) :
-    applySelect σ clauses default? vs env k ch = .ok (c₁, s₁, ch, cl?) := by
+    {c₁ : Config} {s₁ : Store} {cl? : Option EvClause}
+    (h : applySelectCore ctx σ clauses default? vs env k = .ok (.done c₁ s₁ cl?)) (ch : Choices) :
+    applySelect ctx σ clauses default? vs env k ch = .ok (c₁, s₁, ch, cl?) := by
   simp [applySelect, h, Bind.bind, Except.bind]
 
 /-- A multi-ready analysis: `applySelect`'s stream is the L2 pop, and the
 outcome depends on the stream only through the pick. -/
-theorem applySelect_picks_stream {σ : ExecState} {clauses : List (SelectClauseHead × Stmt)}
+theorem applySelect_picks_stream {σ : Store} {clauses : List (SelectClauseHead × Stmt)}
     {default? : Option Stmt} {vs : List GoValue} {env : LocalEnv} {k : Cont}
-    {commits : List (EvClause × Sum (Config × ExecState) String)}
-    (h : applySelectCore σ clauses default? vs env k = .ok (.picks commits)) (ch : Choices) :
-    applySelect σ clauses default? vs env k ch =
+    {commits : List (EvClause × Sum (Config × Store) String)}
+    (h : applySelectCore ctx σ clauses default? vs env k = .ok (.picks commits)) (ch : Choices) :
+    applySelect ctx σ clauses default? vs env k ch =
       (match commits[(Choices.consumeAt .l2Entry commits.length ch).1]? with
        | some (cl, .inl (c', s')) => .ok (c', s', (Choices.consumeAt .l2Entry commits.length ch).2, some cl)
        | some (cl, .inr msg) =>
@@ -3873,43 +3869,43 @@ theorem applySelect_picks_stream {σ : ExecState} {clauses : List (SelectClauseH
   rfl
 
 /-- An error of the analysis is an error of the apply. -/
-theorem applySelect_error_stream {σ : ExecState} {clauses : List (SelectClauseHead × Stmt)}
+theorem applySelect_error_stream {σ : Store} {clauses : List (SelectClauseHead × Stmt)}
     {default? : Option Stmt} {vs : List GoValue} {env : LocalEnv} {k : Cont} {e : Stop}
-    (h : applySelectCore σ clauses default? vs env k = .error e) (ch : Choices) :
-    applySelect σ clauses default? vs env k ch = .error e := by
+    (h : applySelectCore ctx σ clauses default? vs env k = .error e) (ch : Choices) :
+    applySelect ctx σ clauses default? vs env k ch = .error e := by
   simp [applySelect, h, Bind.bind, Except.bind]
 
 /-- A TRY head's apply, in terms of the site's pop. -/
-theorem applySyncOp_try_stream {σ : ExecState} {op : SyncOp} {targets : List Assignee}
+theorem applySyncOp_try_stream {σ : Store} {op : SyncOp} {targets : List Assignee}
     {av : GoValue} {loc : Loc} {pre : SyncPrim} {env : LocalEnv} {k : Cont}
     (ht : op.tryTargets? = some targets) (hl : valueAsLoc av = .ok loc)
-    (hc : syncCell σ loc = .ok pre) (ch : Choices) :
-    applySyncOp σ ch op [av] env k =
-      (applyTryLock σ op loc pre
+    (hc : syncCell ctx σ loc = .ok pre) (ch : Choices) :
+    applySyncOp ctx σ ch op [av] env k =
+      (applyTryLock ctx σ op loc pre
         ((Choices.consumeAt .tryLock (tryLockWidth op pre) ch).1 == 1) targets env k).map
         fun p => (p.1, p.2, (Choices.consumeAt .tryLock (tryLockWidth op pre) ch).2) := by
   simp only [applySyncOp, ht, hl, hc, Bind.bind, Except.bind, Except.map]
-  cases applyTryLock σ op loc pre
+  cases applyTryLock ctx σ op loc pre
       ((Choices.consumeAt .tryLock (tryLockWidth op pre) ch).1 == 1) targets env k <;> rfl
 
 /-- A TRY head whose consult does not pop (`tryLockConsult? = none` at a
 resolvable receiver) is stream-oblivious: width 1 pops nothing and forces
 pick 0. -/
-theorem applySyncOp_try_nopop {σ : ExecState} {op : SyncOp} {targets : List Assignee}
+theorem applySyncOp_try_nopop {σ : Store} {op : SyncOp} {targets : List Assignee}
     {av : GoValue} {loc : Loc} {pre : SyncPrim} {env : LocalEnv} {k : Cont}
     (ht : op.tryTargets? = some targets) (hl : valueAsLoc av = .ok loc)
-    (hc : syncCell σ loc = .ok pre) (hw : tryLockWidth op pre ≤ 1) (ch : Choices) :
-    applySyncOp σ ch op [av] env k =
-      (applyTryLock σ op loc pre false targets env k).map fun p => (p.1, p.2, ch) := by
+    (hc : syncCell ctx σ loc = .ok pre) (hw : tryLockWidth op pre ≤ 1) (ch : Choices) :
+    applySyncOp ctx σ ch op [av] env k =
+      (applyTryLock ctx σ op loc pre false targets env k).map fun p => (p.1, p.2, ch) := by
   rw [applySyncOp_try_stream ht hl hc ch, Choices.consumeAt_le_one hw]
   rfl
 
 /-- A two-stage `Except` pipeline ending in a `(·, ch)` pair is the
 pipeline's value paired with `ch`. -/
 theorem bind_pair_map {α : Type} (T : Except Stop α)
-    (g : α → Except Stop ExecState) (ch : Choices) :
+    (g : α → Except Stop Store) (ch : Choices) :
     (do let a ← T; let x ← g a;
-        pure ((x, ch) : ExecState × Choices))
+        pure ((x, ch) : Store × Choices))
       = (do let a ← T; g a).map fun s' => (s', ch) := by
   cases T with
   | error e => rfl
@@ -3922,10 +3918,10 @@ theorem bind_pair_map {α : Type} (T : Except Stop α)
 /-- The spill decision agrees with the arm: at `appendSpill? = none` the
 apply is stream-oblivious — a state result `r` (in place, a refusal or
 the R16 panic before the consult) paired with the untouched stream. -/
-theorem applyStmtOp_appendSlice_nospill {σ : ExecState} {elem : Ty} {nt : Nat}
-    {vs : List GoValue} (hw : appendSpill? σ elem vs = none) :
-    ∃ r : Except Stop ExecState, ∀ ch : Choices,
-      applyStmtOp σ ch (.appendSlice elem) nt vs = r.map fun s' => (s', ch) := by
+theorem applyStmtOp_appendSlice_nospill {σ : Store} {elem : Ty} {nt : Nat}
+    {vs : List GoValue} (hw : appendSpill? ctx σ elem vs = none) :
+    ∃ r : Except Stop Store, ∀ ch : Choices,
+      applyStmtOp ctx σ ch (.appendSlice elem) nt vs = r.map fun s' => (s', ch) := by
   match vs, hw with
   | [], _ => exact ⟨.error (.stuck "malformed appendSlice operands"), fun _ => rfl⟩
   | [_], _ => exact ⟨.error (.stuck "malformed appendSlice operands"), fun _ => rfl⟩
@@ -3951,7 +3947,7 @@ theorem applyStmtOp_appendSlice_nospill {σ : ExecState} {elem : Ty} {nt : Nat}
     | error e => exact ⟨.error e, fun _ => rfl⟩
     | ok u2 =>
     simp only [except_bind_ok]
-    cases hvis : sliceVisibleValues σ elems with
+    cases hvis : sliceVisibleValues ctx σ elems with
     | error e => exact ⟨.error e, fun _ => rfl⟩
     | ok elemValues =>
     simp only [except_bind_ok]
@@ -3964,7 +3960,7 @@ theorem applyStmtOp_appendSlice_nospill {σ : ExecState} {elem : Ty} {nt : Nat}
     · simp only [if_pos hcap]
       exact ⟨_, fun ch => bind_pair_map _ _ ch⟩
     · simp only [if_neg hcap]
-      cases hts : tySizeBytes σ.types elem with
+      cases hts : tySizeBytes ctx.types elem with
       | error e => exact ⟨.error e, fun _ => rfl⟩
       | ok elemSize =>
       simp only [except_bind_ok]
@@ -3973,7 +3969,7 @@ theorem applyStmtOp_appendSlice_nospill {σ : ExecState} {elem : Ty} {nt : Nat}
       · exact ⟨.error (.panic "runtime error: growslice: len out of range"), fun _ => rfl⟩
       · rename_i hr16
         simp only [if_neg hr16] at hw
-        cases hold : sliceVisibleValues σ slice with
+        cases hold : sliceVisibleValues ctx σ slice with
         | error e => exact ⟨.error e, fun _ => rfl⟩
         | ok oldValues => rw [hold] at hw; cases hw
 
@@ -3985,11 +3981,11 @@ panic when the target operand addresses a ROOT cell (the frontend's
 hoisted temp, `Config.appendTargetLocal`): the grown backing is built by
 panic-free normalization and stored into an existing or `.internal`-
 refused cell (audit fix F1 — the refutation of the retired disjunct). -/
-theorem applyStmtOp_appendSlice_spill {σ : ExecState} {elem : Ty} {nt : Nat}
-    {vs : List GoValue} {w : Nat} (hw : appendSpill? σ elem vs = some w) :
-    ∃ g : Nat → Except Stop ExecState,
+theorem applyStmtOp_appendSlice_spill {σ : Store} {elem : Ty} {nt : Nat}
+    {vs : List GoValue} {w : Nat} (hw : appendSpill? ctx σ elem vs = some w) :
+    ∃ g : Nat → Except Stop Store,
       (∀ ch : Choices,
-        applyStmtOp σ ch (.appendSlice elem) nt vs
+        applyStmtOp ctx σ ch (.appendSlice elem) nt vs
           = (g (Choices.consumeAt .appendSpill w ch).1).map
               fun s' => (s', (Choices.consumeAt .appendSpill w ch).2))
       ∧ (∀ a rest, vs = .addr (.base a) :: rest → ∀ pick, NoPanic (g pick)) := by
@@ -4008,7 +4004,7 @@ theorem applyStmtOp_appendSlice_spill {σ : ExecState} {elem : Ty} {nt : Nat}
     cases hv2 : validateSlice elems with
     | error e => simp [hsl, hel, hv1, hv2] at hw
     | ok u2 =>
-    cases hvis : sliceVisibleValues σ elems with
+    cases hvis : sliceVisibleValues ctx σ elems with
     | error e => simp [hsl, hel, hv1, hv2, hvis] at hw
     | ok elemValues =>
     cases htl : valueAsLoc tv with
@@ -4018,14 +4014,14 @@ theorem applyStmtOp_appendSlice_spill {σ : ExecState} {elem : Ty} {nt : Nat}
     split at hw
     · cases hw
     rename_i hcap
-    cases hts : tySizeBytes σ.types elem with
+    cases hts : tySizeBytes ctx.types elem with
     | error e => rw [hts] at hw; cases hw
     | ok elemSize =>
     simp only [hts] at hw
     split at hw
     · cases hw
     rename_i hr16
-    cases hold : sliceVisibleValues σ slice with
+    cases hold : sliceVisibleValues ctx σ slice with
     | error e => rw [hold] at hw; cases hw
     | ok oldValues =>
     rw [hold] at hw
@@ -4039,9 +4035,9 @@ theorem applyStmtOp_appendSlice_spill {σ : ExecState} {elem : Ty} {nt : Nat}
         let newCap := slice.len + elemValues.size +
           ((appendGrowthCap slice.cap (slice.len + elemValues.size) - (slice.len + elemValues.size) + extra)
             % appendSpillWidth slice.cap (slice.len + elemValues.size))
-        let backing ← buildAppendBackingValue σ elem oldValues elemValues newCap
+        let backing ← buildAppendBackingValue ctx elem oldValues elemValues newCap
         let p := σ.alloc backing (.array newCap elem)
-        storeLoc p.2 tloc (.slice { base := some p.1, offset := 0, len := slice.len + elemValues.size, cap := newCap })
+        storeLoc ctx p.2 tloc (.slice { base := some p.1, offset := 0, len := slice.len + elemValues.size, cap := newCap })
     · rcases hc : Choices.consumeAt .appendSpill (appendSpillWidth slice.cap (slice.len + elemValues.size)) ch
         with ⟨extra, rest⟩
       exact bind_pair_map _ _ rest
@@ -4050,18 +4046,18 @@ theorem applyStmtOp_appendSlice_spill {σ : ExecState} {elem : Ty} {nt : Nat}
       obtain ⟨rfl, -⟩ := hvs
       simp only [valueAsLoc, pure_eq_ok, Except.ok.injEq] at htl
       subst htl
-      exact NoPanic.bind (buildAppendBackingValue_noPanic _ _ _ _ _) fun _ =>
+      exact NoPanic.bind (buildAppendBackingValue_noPanic _ _ _ _) fun _ =>
         storeLoc_base_noPanic _ _ _
 
 /-- The done-check `mapIterK` step is oblivious: with no candidate
 left it pops the continuation at every stream (BUG-005 (L): "no
 candidate" is a STATE fact — the live cell minus the produced set). -/
-theorem stepFn_mapIter_done {σ : ExecState} {kv vv : Option String}
+theorem stepFn_mapIter_done {σ : Store} {kv vv : Option String}
     {kt vt : Ty} {body : Stmt} {base : Option Loc}
     {produced start : Array Nat} {env : LocalEnv} {k : Cont}
-    (hcands : mapIterCandidates σ kt vt base produced = .ok #[]) :
+    (hcands : mapIterCandidates ctx σ kt vt base produced = .ok #[]) :
     ∀ ch : Choices,
-      stepFn σ (.next (.mapIterK kv vv kt vt body base produced start env k)) ch
+      stepFn ctx σ (.next (.mapIterK kv vv kt vt body base produced start env k)) ch
         = .ok (.next k, σ, ch) := by
   intro ch
   simp [stepFn, hcands, Bind.bind, Except.bind]
@@ -4072,19 +4068,19 @@ consumed choice: the successor is a function of the pick index alone
 (`bindIterVars` never sees the stream), and the stream moves to the
 consume's tail. One probe per index covers every stream whose choice
 reduces to that index. -/
-theorem stepFn_mapIter_pick {σ : ExecState} {kv vv : Option String}
+theorem stepFn_mapIter_pick {σ : Store} {kv vv : Option String}
     {kt vt : Ty} {body : Stmt} {base : Option Loc}
     {produced start : Array Nat} {env : LocalEnv} {k : Cont}
     {cands : Array (Nat × GoValue × GoValue)} {mand : Bool}
     {ch : Choices} {idx : Nat} {tail : Choices}
-    (hcands : mapIterCandidates σ kt vt base produced = .ok cands)
+    (hcands : mapIterCandidates ctx σ kt vt base produced = .ok cands)
     (hmand : mapIterMandatoryRemains cands start = mand)
     (hne : ¬ cands.isEmpty = true)
     (hcons : Choices.consumeAt .mapIter (cands.size + (if mand = true then 0 else 1)) ch
       = (idx, tail))
     (hlt : idx < cands.size) :
-    stepFn σ (.next (.mapIterK kv vv kt vt body base produced start env k)) ch
-      = ((bindIterVars env.pushScope σ kv vv kt vt
+    stepFn ctx σ (.next (.mapIterK kv vv kt vt body base produced start env k)) ch
+      = ((bindIterVars ctx env.pushScope σ kv vv kt vt
             cands[idx].2.1 cands[idx].2.2).map
           fun p => (.exec body p.1
             (.mapIterK kv vv kt vt body base (produced.push cands[idx].1)
@@ -4106,23 +4102,23 @@ theorem stepFn_mapIter_pick {σ : ExecState} {kv vv : Option String}
     subst h1
     subst h2
     subst h3
-    cases hbind : bindIterVars env.pushScope σ kv vv kt vt
+    cases hbind : bindIterVars ctx env.pushScope σ kv vv kt vt
         cands[idx].2.1 cands[idx].2.2 <;>
       simp [hbind, Except.map, Bind.bind, Except.bind]
 
 /-- The nonempty `mapIterK` step at the STOP slot (index = candidate
 count; the slot exists only when no mandatory start key remains): the
 iteration ends at every stream whose choice lands there. -/
-theorem stepFn_mapIter_stop {σ : ExecState} {kv vv : Option String}
+theorem stepFn_mapIter_stop {σ : Store} {kv vv : Option String}
     {kt vt : Ty} {body : Stmt} {base : Option Loc}
     {produced start : Array Nat} {env : LocalEnv} {k : Cont}
     {cands : Array (Nat × GoValue × GoValue)}
     {ch : Choices} {tail : Choices}
-    (hcands : mapIterCandidates σ kt vt base produced = .ok cands)
+    (hcands : mapIterCandidates ctx σ kt vt base produced = .ok cands)
     (hmand : mapIterMandatoryRemains cands start = false)
     (hne : ¬ cands.isEmpty = true)
     (hcons : Choices.consumeAt .mapIter (cands.size + 1) ch = (cands.size, tail)) :
-    stepFn σ (.next (.mapIterK kv vv kt vt body base produced start env k)) ch
+    stepFn ctx σ (.next (.mapIterK kv vv kt vt body base produced start env k)) ch
       = .ok (.next k, σ, tail) := by
   simp only [stepFn, hcands, Bind.bind, Except.bind]
   rw [hmand, if_neg hne]
@@ -4153,7 +4149,7 @@ macro "oblivious_entry_with " h:ident hpk:term : tactic =>
   `(tactic| (
     have hpk' := $hpk
     rw [hpk' _] at $h:ident
-    cases hx : toResult (enterFrame _ _ _) with
+    cases hx : toResult (enterFrame ctx _ _ _) with
     | error e =>
       rw [hx] at $h:ident
       simp [Except.map, Bind.bind, Except.bind] at $h:ident
@@ -4203,12 +4199,12 @@ macro "consumption_entry_some " h:ident hsc:ident : tactic =>
 /-- A wide-statement apply whose consult is `none` is a stream-oblivious
 apply: `applyStmtOpCore` for every non-append head, the non-spilling /
 refusing append otherwise. -/
-theorem applyStmtOp_of_stmtConsult?_none {σ : ExecState} {op : StmtOp} {nt : Nat}
-    {vs : List GoValue} (h : stmtConsult? σ op vs = none) :
-    ∃ r : Except Stop ExecState, ∀ ch : Choices,
-      applyStmtOp σ ch op nt vs = r.map fun s' => (s', ch) := by
+theorem applyStmtOp_of_stmtConsult?_none {σ : Store} {op : StmtOp} {nt : Nat}
+    {vs : List GoValue} (h : stmtConsult? ctx σ op vs = none) :
+    ∃ r : Except Stop Store, ∀ ch : Choices,
+      applyStmtOp ctx σ ch op nt vs = r.map fun s' => (s', ch) := by
   by_cases hap : ∀ e, op ≠ .appendSlice e
-  · refine ⟨applyStmtOpCore σ op vs, fun ch => ?_⟩
+  · refine ⟨applyStmtOpCore ctx σ op vs, fun ch => ?_⟩
     rw [applyStmtOp_eq_core hap]
     rfl
   · obtain ⟨e, rfl⟩ : ∃ e, op = .appendSlice e := by
@@ -4219,9 +4215,9 @@ theorem applyStmtOp_of_stmtConsult?_none {σ : ExecState} {op : StmtOp} {nt : Na
     simp only [stmtConsult?, Option.map_eq_none_iff] at h
     exact applyStmtOp_appendSlice_nospill h
 
-theorem stmtConsult?_some {σ : ExecState} {op : StmtOp} {vs : List GoValue}
-    {site : ChoiceSite} {b : Nat} (h : stmtConsult? σ op vs = some (site, b)) :
-    ∃ elem, op = .appendSlice elem ∧ site = .appendSpill ∧ appendSpill? σ elem vs = some b := by
+theorem stmtConsult?_some {σ : Store} {op : StmtOp} {vs : List GoValue}
+    {site : ChoiceSite} {b : Nat} (h : stmtConsult? ctx σ op vs = some (site, b)) :
+    ∃ elem, op = .appendSlice elem ∧ site = .appendSpill ∧ appendSpill? ctx σ elem vs = some b := by
   cases op with
   | appendSlice elem =>
     simp only [stmtConsult?, Option.map_eq_some_iff, Prod.mk.injEq] at h
@@ -4246,13 +4242,13 @@ theorem entryCallSite?_panicking {chain : List PanicEntry} {k : Cont} {p : FuncI
     exact ⟨t, te, r, _, _, args, ds, k', w, rfl⟩
 
 /-- The wide-statement apply arm at a stream-oblivious apply. -/
-theorem stepFn_stmtOp_oblivious {σ : ExecState} {op : StmtOp} {nt : Nat} {done : List GoValue}
-    {v : GoValue} {env : LocalEnv} {k : Cont} {r : Except Stop ExecState}
-    (hr : ∀ ch : Choices, applyStmtOp σ ch op nt (v :: done).reverse = r.map fun s' => (s', ch))
-    {ch₀ : Choices} {c' : Config} {σ' : ExecState} {ch₀' : Choices}
-    (h : stepFn σ (.retV v (.stmtOpK op nt done [] env k)) ch₀ = .ok (c', σ', ch₀')) :
+theorem stepFn_stmtOp_oblivious {σ : Store} {op : StmtOp} {nt : Nat} {done : List GoValue}
+    {v : GoValue} {env : LocalEnv} {k : Cont} {r : Except Stop Store}
+    (hr : ∀ ch : Choices, applyStmtOp ctx σ ch op nt (v :: done).reverse = r.map fun s' => (s', ch))
+    {ch₀ : Choices} {c' : Config} {σ' : Store} {ch₀' : Choices}
+    (h : stepFn ctx σ (.retV v (.stmtOpK op nt done [] env k)) ch₀ = .ok (c', σ', ch₀')) :
     ch₀' = ch₀ ∧ ∀ ch : Choices,
-      stepFn σ (.retV v (.stmtOpK op nt done [] env k)) ch = .ok (c', σ', ch) := by
+      stepFn ctx σ (.retV v (.stmtOpK op nt done [] env k)) ch = .ok (c', σ', ch) := by
   unfold stepFn at h
   dsimp only at h
   rw [hr ch₀] at h
@@ -4280,19 +4276,19 @@ theorem stepFn_stmtOp_oblivious {σ : ExecState} {op : StmtOp} {nt : Nat} {done 
 
 /-- The wide-statement apply arm at a SPILLING append: the `appendSpill`
 pop, and pick-dependence only. -/
-theorem stepFn_stmtOp_spill {σ : ExecState} {elem : Ty} {nt : Nat} {done : List GoValue}
+theorem stepFn_stmtOp_spill {σ : Store} {elem : Ty} {nt : Nat} {done : List GoValue}
     {v : GoValue} {env : LocalEnv} {k : Cont} {w : Nat}
-    {g : Nat → Except Stop ExecState}
-    (hg : ∀ ch : Choices, applyStmtOp σ ch (.appendSlice elem) nt (v :: done).reverse
+    {g : Nat → Except Stop Store}
+    (hg : ∀ ch : Choices, applyStmtOp ctx σ ch (.appendSlice elem) nt (v :: done).reverse
       = (g (Choices.consumeAt .appendSpill w ch).1).map
           fun s' => (s', (Choices.consumeAt .appendSpill w ch).2))
     (hnp : ∀ pick, NoPanic (g pick))
-    {ch₀ : Choices} {c' : Config} {σ' : ExecState} {ch₀' : Choices}
-    (h : stepFn σ (.retV v (.stmtOpK (.appendSlice elem) nt done [] env k)) ch₀
+    {ch₀ : Choices} {c' : Config} {σ' : Store} {ch₀' : Choices}
+    (h : stepFn ctx σ (.retV v (.stmtOpK (.appendSlice elem) nt done [] env k)) ch₀
       = .ok (c', σ', ch₀')) :
     ch₀' = (Choices.consumeAt .appendSpill w ch₀).2 ∧ ∀ ch : Choices,
       (Choices.consumeAt .appendSpill w ch).1 = (Choices.consumeAt .appendSpill w ch₀).1 →
-      stepFn σ (.retV v (.stmtOpK (.appendSlice elem) nt done [] env k)) ch
+      stepFn ctx σ (.retV v (.stmtOpK (.appendSlice elem) nt done [] env k)) ch
         = .ok (c', σ', (Choices.consumeAt .appendSpill w ch).2) := by
   unfold stepFn at h
   dsimp only at h
@@ -4319,14 +4315,14 @@ theorem stepFn_stmtOp_spill {σ : ExecState} {elem : Ty} {nt : Nat} {done : List
 
 /-- The sync apply arm at a stream-oblivious apply (`r.map` with the
 stream passed through). -/
-theorem stepFn_syncApply_oblivious {σ : ExecState} {op : SyncOp} {done : List GoValue}
-    {v : GoValue} {env : LocalEnv} {k : Cont} {r : Except Stop (Config × ExecState)}
-    (hr : ∀ ch : Choices, applySyncOp σ ch op (v :: done).reverse env k
+theorem stepFn_syncApply_oblivious {σ : Store} {op : SyncOp} {done : List GoValue}
+    {v : GoValue} {env : LocalEnv} {k : Cont} {r : Except Stop (Config × Store)}
+    (hr : ∀ ch : Choices, applySyncOp ctx σ ch op (v :: done).reverse env k
       = r.map fun p => (p.1, p.2, ch))
-    {ch₀ : Choices} {c' : Config} {σ' : ExecState} {ch₀' : Choices}
-    (h : stepFn σ (.retV v (.syncStK op done [] env k)) ch₀ = .ok (c', σ', ch₀')) :
+    {ch₀ : Choices} {c' : Config} {σ' : Store} {ch₀' : Choices}
+    (h : stepFn ctx σ (.retV v (.syncStK op done [] env k)) ch₀ = .ok (c', σ', ch₀')) :
     ch₀' = ch₀ ∧ ∀ ch : Choices,
-      stepFn σ (.retV v (.syncStK op done [] env k)) ch = .ok (c', σ', ch) := by
+      stepFn ctx σ (.retV v (.syncStK op done [] env k)) ch = .ok (c', σ', ch) := by
   unfold stepFn at h
   dsimp only at h
   rw [hr ch₀] at h
@@ -4358,17 +4354,17 @@ set_option maxHeartbeats 1600000 in
 /-- Frame exit consumes the stream only at a deferred call's ENTRY, and
 there exactly as every entry does (`entryConsult?`): with the consult
 `none` the exit is stream-oblivious — on BOTH its entries (B4). -/
-theorem stepFrameExit_consumption_none {σ : ExecState}
+theorem stepFrameExit_consumption_none {σ : Store}
     {targets : List (TargetShape × List Expr)} {tenv : LocalEnv} {results : List Loc}
     {ds : List (GoValue × List GoValue)} {k' : Cont} {w : Bool} {c : Config}
-    {ch₀ : Choices} {c' : Config} {σ' : ExecState} {ch₀' : Choices}
+    {ch₀ : Choices} {c' : Config} {σ' : Store} {ch₀' : Choices}
     (hc : c = .next (.frame targets tenv results ds k' w)
       ∨ c = .signal .ret (.frame targets tenv results ds k' w))
-    (hsc : seqConsumption σ c = none)
-    (h : stepFrameExit σ targets tenv results ds k' w ch₀ = .ok (c', σ', ch₀')) :
+    (hsc : seqConsumption ctx σ c = none)
+    (h : stepFrameExit ctx σ targets tenv results ds k' w ch₀ = .ok (c', σ', ch₀')) :
     ch₀' = ch₀ ∧ ∀ ch : Choices,
-      stepFrameExit σ targets tenv results ds k' w ch = .ok (c', σ', ch) := by
-  fun_cases stepFrameExit σ targets tenv results ds k' w ch₀
+      stepFrameExit ctx σ targets tenv results ds k' w ch = .ok (c', σ', ch) := by
+  fun_cases stepFrameExit ctx σ targets tenv results ds k' w ch₀
   · simp only [stepFrameExit, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl, rfl⟩ := h
     exact ⟨rfl, fun ch => by simp [stepFrameExit]⟩
@@ -4388,7 +4384,7 @@ theorem stepFrameExit_consumption_none {σ : ExecState}
         | have hpk' := enterFramePick_oblivious_of_isSome_false hnv
         | have hpk' := enterFramePick_of_nopanic hnp) <;>
       (rw [hpk' _] at h
-       cases hx : toResult (enterFrame _ _ _) with
+       cases hx : toResult (enterFrame ctx _ _ _) with
        | error e =>
          rw [hx] at h
          simp [Except.map, Bind.bind, Except.bind] at h
@@ -4425,20 +4421,20 @@ theorem entryCallSite?_of_signalStep {sg : Signal} {k : Cont} {c' : Config}
 /-- The `some` half for frame exit: the deferred entry's width-2 pop on
 the panic path (`entryConsult?_some`, `enterFramePick_panic`), on both
 entries (B4). -/
-theorem stepFrameExit_consumption_some {σ : ExecState}
+theorem stepFrameExit_consumption_some {σ : Store}
     {targets : List (TargetShape × List Expr)} {tenv : LocalEnv} {results : List Loc}
     {ds : List (GoValue × List GoValue)} {k' : Cont} {w : Bool} {c : Config}
-    {ch₀ : Choices} {c' : Config} {σ' : ExecState} {ch₀' : Choices}
+    {ch₀ : Choices} {c' : Config} {σ' : Store} {ch₀' : Choices}
     {site : ChoiceSite} {b : Nat}
     (hc : c = .next (.frame targets tenv results ds k' w)
       ∨ c = .signal .ret (.frame targets tenv results ds k' w))
-    (hsc : seqConsumption σ c = some (site, b))
-    (h : stepFrameExit σ targets tenv results ds k' w ch₀ = .ok (c', σ', ch₀')) :
+    (hsc : seqConsumption ctx σ c = some (site, b))
+    (h : stepFrameExit ctx σ targets tenv results ds k' w ch₀ = .ok (c', σ', ch₀')) :
     ch₀' = (Choices.consumeAt site b ch₀).2 ∧ ∀ ch : Choices,
       (Choices.consumeAt site b ch).1 = (Choices.consumeAt site b ch₀).1 →
-      stepFrameExit σ targets tenv results ds k' w ch
+      stepFrameExit ctx σ targets tenv results ds k' w ch
         = .ok (c', σ', (Choices.consumeAt site b ch).2) := by
-  fun_cases stepFrameExit σ targets tenv results ds k' w ch₀
+  fun_cases stepFrameExit ctx σ targets tenv results ds k' w ch₀
   all_goals try (rcases hc with rfl | rfl <;>
     simp [seqConsumption, Config.applyPos, entryCallSite?] at hsc; done)
   all_goals try (simp [stepFrameExit, throw, throwThe, MonadExceptOf.throw] at h; done)
@@ -4465,12 +4461,12 @@ five consults at a non-popping instance (`applyStmtOp_of_stmtConsult?_none`,
 `applySelect_done_stream`, `applySyncOp_try_nopop`/`_core_ok`,
 `stepFn_mapIter_done`, `entryConsult?_none`). A newly added
 stream-consuming arm breaks this proof loudly. -/
-theorem stepFn_consumption_none {σ : ExecState} {c : Config} {ch₀ : Choices}
-    {c' : Config} {σ' : ExecState} {ch₀' : Choices}
-    (hsc : seqConsumption σ c = none)
-    (h : stepFn σ c ch₀ = .ok (c', σ', ch₀')) :
-    ch₀' = ch₀ ∧ ∀ ch : Choices, stepFn σ c ch = .ok (c', σ', ch) := by
-  fun_cases stepFn σ c ch₀
+theorem stepFn_consumption_none {σ : Store} {c : Config} {ch₀ : Choices}
+    {c' : Config} {σ' : Store} {ch₀' : Choices}
+    (hsc : seqConsumption ctx σ c = none)
+    (h : stepFn ctx σ c ch₀ = .ok (c', σ', ch₀')) :
+    ch₀' = ch₀ ∧ ∀ ch : Choices, stepFn ctx σ c ch = .ok (c', σ', ch) := by
+  fun_cases stepFn ctx σ c ch₀
   all_goals first
     | (refine ⟨?_, fun ch => ?_⟩ <;> (simp_all [stepFn]; done))
     | skip
@@ -4516,7 +4512,7 @@ theorem stepFn_consumption_none {σ : ExecState} {c : Config} {ch₀ : Choices}
   case case119 =>
     rename_i v clauses default? done env k'
     simp only [seqConsumption, Config.applyPos, selectConsult?] at hsc
-    cases hcore : applySelectCore σ clauses default? ((v :: done).reverse) env k' with
+    cases hcore : applySelectCore ctx σ clauses default? ((v :: done).reverse) env k' with
     | error e =>
       unfold stepFn at h
       dsimp only at h
@@ -4554,7 +4550,7 @@ theorem stepFn_consumption_none {σ : ExecState} {c : Config} {ch₀ : Choices}
     cases hop : op.tryTargets? with
     | none =>
       -- a non-TRY head: the stream-free core (`applySyncOp_core_ok/_error`)
-      cases hap : applySyncOp σ ch₀ op ((v :: done).reverse) env k' with
+      cases hap : applySyncOp ctx σ ch₀ op ((v :: done).reverse) env k' with
       | error e =>
         exact stepFn_syncApply_oblivious (r := .error e)
           (fun ch => by rw [applySyncOp_core_error hop hap ch]; rfl) h
@@ -4589,7 +4585,7 @@ theorem stepFn_consumption_none {σ : ExecState} {c : Config} {ch₀ : Choices}
         | ok loc =>
           rw [hl] at hsc
           (try dsimp only at hsc)
-          cases hcell : syncCell σ loc with
+          cases hcell : syncCell ctx σ loc with
           | error e =>
             refine stepFn_syncApply_oblivious (r := .error e) (fun ch => ?_) h
             simp [applySyncOp, hop, hl, hcell, Bind.bind, Except.bind, Except.map]
@@ -4601,12 +4597,12 @@ theorem stepFn_consumption_none {σ : ExecState} {c : Config} {ch₀ : Choices}
               · exact hle
               · simp [hle] at hsc
             exact stepFn_syncApply_oblivious
-              (r := applyTryLock σ op loc pre false targets env k')
+              (r := applyTryLock ctx σ op loc pre false targets env k')
               (fun ch => by simpa using applySyncOp_try_nopop hop hl hcell hw ch) h
   case case150 =>
     rename_i kv vv kt vt body base produced start env k'
     simp only [seqConsumption, mapIterConsult?] at hsc
-    cases hcands : mapIterCandidates σ kt vt base produced with
+    cases hcands : mapIterCandidates ctx σ kt vt base produced with
     | error e =>
       exfalso
       simp [stepFn, hcands, Bind.bind, Except.bind] at h
@@ -4638,7 +4634,7 @@ theorem stepFn_consumption_none {σ : ExecState} {c : Config} {ch₀ : Choices}
               = (0, ch) :=
           fun ch => Choices.consumeAt_le_one hw
         rw [stepFn_mapIter_pick hcands hmand hemp (hcons ch₀) hpos] at h
-        cases hbind : bindIterVars env.pushScope σ kv vv kt vt cands[0].2.1 cands[0].2.2 with
+        cases hbind : bindIterVars ctx env.pushScope σ kv vv kt vt cands[0].2.1 cands[0].2.2 with
         | error e => rw [hbind] at h; simp [Except.map] at h
         | ok p =>
           rw [hbind] at h
@@ -4853,15 +4849,15 @@ can (`applyTryLock_noPanic`) — the "post-pop panic restores the pre-apply
 stream" disjunct the first statement carried was a PROOF ARTIFACT of
 stating the theorem over arbitrary configurations, refuted here (wave-(iii)
 audit fix F1; design note §B8). -/
-theorem stepFn_consumption_some {σ : ExecState} {c : Config} {ch₀ : Choices}
-    {c' : Config} {σ' : ExecState} {ch₀' : Choices} {site : ChoiceSite} {b : Nat}
+theorem stepFn_consumption_some {σ : Store} {c : Config} {ch₀ : Choices}
+    {c' : Config} {σ' : Store} {ch₀' : Choices} {site : ChoiceSite} {b : Nat}
     (hloc : c.appendTargetLocal)
-    (hsc : seqConsumption σ c = some (site, b))
-    (h : stepFn σ c ch₀ = .ok (c', σ', ch₀')) :
+    (hsc : seqConsumption ctx σ c = some (site, b))
+    (h : stepFn ctx σ c ch₀ = .ok (c', σ', ch₀')) :
     ch₀' = (Choices.consumeAt site b ch₀).2 ∧ ∀ ch : Choices,
       (Choices.consumeAt site b ch).1 = (Choices.consumeAt site b ch₀).1 →
-      stepFn σ c ch = .ok (c', σ', (Choices.consumeAt site b ch).2) := by
-  fun_cases stepFn σ c ch₀
+      stepFn ctx σ c ch = .ok (c', σ', (Choices.consumeAt site b ch).2) := by
+  fun_cases stepFn ctx σ c ch₀
   all_goals first
     | (simp [seqConsumption, Config.applyPos, entryCallSite?] at hsc; done)
     | (simp [stepFn] at h; done)
@@ -4926,7 +4922,7 @@ theorem stepFn_consumption_some {σ : ExecState} {c : Config} {ch₀ : Choices}
   case case119 =>
     rename_i v clauses default? done env k'
     simp only [seqConsumption, Config.applyPos, selectConsult?] at hsc
-    cases hcore : applySelectCore σ clauses default? ((v :: done).reverse) env k' with
+    cases hcore : applySelectCore ctx σ clauses default? ((v :: done).reverse) env k' with
     | error e => rw [hcore] at hsc; cases hsc
     | ok o =>
       cases o with
@@ -4990,7 +4986,7 @@ theorem stepFn_consumption_some {σ : ExecState} {c : Config} {ch₀ : Choices}
         | ok loc =>
           rw [hl] at hw
           (try dsimp only at hw)
-          cases hcell : syncCell σ loc with
+          cases hcell : syncCell ctx σ loc with
           | error e => rw [hcell] at hw; cases hw
           | ok pre =>
             rw [hcell] at hw
@@ -5004,7 +5000,7 @@ theorem stepFn_consumption_some {σ : ExecState} {c : Config} {ch₀ : Choices}
               dsimp only at h
               simp only [List.reverse_cons, List.reverse_nil, List.nil_append] at h
               rw [hap ch₀] at h
-              cases hat : applyTryLock σ op loc pre
+              cases hat : applyTryLock ctx σ op loc pre
                   ((Choices.consumeAt .tryLock (tryLockWidth op pre) ch₀).1 == 1) targets env k' with
               | error e =>
                 rw [hat] at h
@@ -5030,7 +5026,7 @@ theorem stepFn_consumption_some {σ : ExecState} {c : Config} {ch₀ : Choices}
   case case150 =>
     rename_i kv vv kt vt body base produced start env k'
     simp only [seqConsumption, mapIterConsult?] at hsc
-    cases hcands : mapIterCandidates σ kt vt base produced with
+    cases hcands : mapIterCandidates ctx σ kt vt base produced with
     | error e => rw [hcands] at hsc; cases hsc
     | ok cands =>
       rw [hcands] at hsc
@@ -5059,7 +5055,7 @@ theorem stepFn_consumption_some {σ : ExecState} {c : Config} {ch₀ : Choices}
           exact hb
         by_cases hlt : idx < cands.size
         · rw [stepFn_mapIter_pick hcands hmand hemp hcons hlt] at h
-          cases hbind : bindIterVars env.pushScope σ kv vv kt vt cands[idx].2.1 cands[idx].2.2 with
+          cases hbind : bindIterVars ctx env.pushScope σ kv vv kt vt cands[idx].2.1 cands[idx].2.2 with
           | error e => rw [hbind] at h; simp [Except.map] at h
           | ok p =>
             rw [hbind] at h
@@ -5128,19 +5124,19 @@ theorem applyPos_sync {c : Config} {op : SyncOp} {vs : List GoValue}
 (the sixth, `hnu`, is E13 option (b)'s `unseqPanic` probe consult; the
 seventh, `hnr`, is the abort's `repanicCollapse` consult — landing chunk
 L3). -/
-theorem seqConsumption_none_of_flags {σ : ExecState} {c : Config}
+theorem seqConsumption_none_of_flags {σ : Store} {c : Config}
     (hmi : ∀ (kv vv : Option String) (kt vt : Ty) (body : Stmt)
       (base : Option Loc) (produced start : Array Nat)
       (env : LocalEnv) (k : Cont),
       c ≠ .next (.mapIterK kv vv kt vt body base produced start env k))
     (hnc : consumesAppendSlice c = false)
     (hns : consumesSelect c = false)
-    (hnv : consumesNilValueMethod σ c = false)
+    (hnv : consumesNilValueMethod ctx c = false)
     (hnt : consumesTryLock c = false)
     (hnu : consumesUnseqPanic c = false)
     (hnn : consumesUnseqNext c = false)
     (hnr : consumesRepanicCollapse c = false) :
-    seqConsumption σ c = none := by
+    seqConsumption ctx σ c = none := by
   revert hmi hnc hns hnv hnt hnu hnn hnr
   unfold seqConsumption
   split <;> intro hmi hnc hns hnv hnt hnu hnn hnr
@@ -5187,29 +5183,29 @@ succeeds under one stream succeeds under EVERY stream, with the SAME
 successor and the stream returned untouched. Its consumers
 (`allStreamsOk`'s soundness, the pool-level `stepThread_oblivious`) are
 unchanged. -/
-theorem stepFn_oblivious {σ : ExecState} {c : Config} {ch₀ : Choices}
-    {c' : Config} {σ' : ExecState} {ch₀' : Choices}
+theorem stepFn_oblivious {σ : Store} {c : Config} {ch₀ : Choices}
+    {c' : Config} {σ' : Store} {ch₀' : Choices}
     (hmi : ∀ (kv vv : Option String) (kt vt : Ty) (body : Stmt)
       (base : Option Loc) (produced start : Array Nat)
       (env : LocalEnv) (k : Cont),
       c ≠ .next (.mapIterK kv vv kt vt body base produced start env k))
     (hnc : consumesAppendSlice c = false)
     (hns : consumesSelect c = false)
-    (hnv : consumesNilValueMethod σ c = false)
+    (hnv : consumesNilValueMethod ctx c = false)
     (hnt : consumesTryLock c = false)
     (hnu : consumesUnseqPanic c = false)
     (hnn : consumesUnseqNext c = false)
     (hnr : consumesRepanicCollapse c = false)
-    (h : stepFn σ c ch₀ = .ok (c', σ', ch₀')) :
-    ch₀' = ch₀ ∧ ∀ ch : Choices, stepFn σ c ch = .ok (c', σ', ch) :=
+    (h : stepFn ctx σ c ch₀ = .ok (c', σ', ch₀')) :
+    ch₀' = ch₀ ∧ ∀ ch : Choices, stepFn ctx σ c ch = .ok (c', σ', ch) :=
   stepFn_consumption_none (seqConsumption_none_of_flags hmi hnc hns hnv hnt hnu hnn hnr) h
 
 /-- The one-layer unfolding of `execStmtLoop`, as an EQUATION (the loop
 is fuel-structural, so the definitional unfolding needs the fuel
 constructor exposed — `cases fuel` then `rfl`). -/
-theorem execStmtLoop_unfold (fuel : Nat) (σ : ExecState) (c : Config)
+theorem execStmtLoop_unfold (fuel : Nat) (σ : Store) (c : Config)
     (ch : Choices) :
-    execStmtLoop fuel σ c ch
+    execStmtLoop ctx fuel σ c ch
       = (match c with
          | .next .stop => .ok (σ, ch)
          | .blockedSend _ _ _ => throw .deadlock
@@ -5220,18 +5216,18 @@ theorem execStmtLoop_unfold (fuel : Nat) (σ : ExecState) (c : Config)
              match fuel with
              | 0 => throw .fuelOut
              | fuel + 1 => do
-                 let (c', σ', choices') ← stepFn σ c ch
-                 execStmtLoop fuel σ' c' choices') := by
+                 let (c', σ', choices') ← stepFn ctx σ c ch
+                 execStmtLoop ctx fuel σ' c' choices') := by
   rw [execStmtLoop.eq_def]
   rfl
 
 /-- One non-terminal step folds into the loop: `stepFn` throws on every
 terminal shape, so a successful step means the loop at `fuel + 1` is
 exactly the step followed by the loop at `fuel`. -/
-theorem execStmtLoop_step {fuel : Nat} {σ : ExecState} {c : Config}
-    {ch : Choices} {c₁ : Config} {σ₁ : ExecState} {ch₁ : Choices}
-    (h : stepFn σ c ch = .ok (c₁, σ₁, ch₁)) :
-    execStmtLoop (fuel + 1) σ c ch = execStmtLoop fuel σ₁ c₁ ch₁ := by
+theorem execStmtLoop_step {fuel : Nat} {σ : Store} {c : Config}
+    {ch : Choices} {c₁ : Config} {σ₁ : Store} {ch₁ : Choices}
+    (h : stepFn ctx σ c ch = .ok (c₁, σ₁, ch₁)) :
+    execStmtLoop ctx (fuel + 1) σ c ch = execStmtLoop ctx fuel σ₁ c₁ ch₁ := by
   rw [execStmtLoop_unfold (fuel + 1) σ c ch]
   split
   · simp [stepFn, throw, throwThe, MonadExceptOf.throw] at h
@@ -5250,10 +5246,10 @@ One kernel evaluation of the checker plus `execStmt_mono` therefore
 discharges `Surface.Terminates` — ∀-streams quantifier included — at a
 concrete seeded program. -/
 theorem execStmtLoop_ok_of_allStreamsOk :
-    ∀ {fuel : Nat} {σ : ExecState} {c : Config},
-      allStreamsOk fuel σ c = true →
-      ∀ ch : Choices, ∃ (σf : ExecState) (ch' : Choices),
-        execStmtLoop fuel σ c ch = .ok (σf, ch') := by
+    ∀ {fuel : Nat} {σ : Store} {c : Config},
+      allStreamsOk ctx fuel σ c = true →
+      ∀ ch : Choices, ∃ (σf : Store) (ch' : Choices),
+        execStmtLoop ctx fuel σ c ch = .ok (σf, ch') := by
   intro fuel
   induction fuel with
   | zero =>
@@ -5322,7 +5318,7 @@ theorem execStmtLoop_ok_of_allStreamsOk :
         by_cases hlt : idx < cands.size
         · -- a pick
           rw [stepFn_mapIter_pick hcands hmand hne hconsi hlt] at hidx
-          cases hbind : bindIterVars env.pushScope σ keyVar valVar keyTy valTy
+          cases hbind : bindIterVars ctx env.pushScope σ keyVar valVar keyTy valTy
               cands[idx].2.1 cands[idx].2.2 with
           | error e =>
             rw [hbind] at hidx
@@ -5360,7 +5356,7 @@ theorem execStmtLoop_ok_of_allStreamsOk :
           exact hrun
     · -- the oblivious catch-all
       rename_i hx1 hx2
-      cases hnc : (consumesAppendSlice c || consumesSelect c || consumesNilValueMethod σ c || consumesTryLock c
+      cases hnc : (consumesAppendSlice c || consumesSelect c || consumesNilValueMethod ctx c || consumesTryLock c
           || consumesUnseqPanic c || consumesUnseqNext c || consumesRepanicCollapse c) with
       | true =>
         rw [hnc] at hall
@@ -5369,7 +5365,7 @@ theorem execStmtLoop_ok_of_allStreamsOk :
         rw [hnc] at hall
         simp only [Bool.false_eq_true, if_false] at hall
         obtain ⟨⟨⟨⟨⟨⟨hnc1, hnc2⟩, hnc3⟩, hnc4⟩, hnc5⟩, hnc7⟩, hnc6⟩ : (((((consumesAppendSlice c = false
-            ∧ consumesSelect c = false) ∧ consumesNilValueMethod σ c = false)
+            ∧ consumesSelect c = false) ∧ consumesNilValueMethod ctx c = false)
             ∧ consumesTryLock c = false) ∧ consumesUnseqPanic c = false)
             ∧ consumesUnseqNext c = false)
             ∧ consumesRepanicCollapse c = false := by
