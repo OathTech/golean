@@ -434,8 +434,25 @@ def RacyFine (m₀ : MultiConfig) : Prop :=
         ∧ threadRunnable ctx m.shared (.running cj none) = true ∧
       footprintsConflict (stepAccesses ctx m.shared ci) (stepAccesses ctx m.shared cj)
 
-/-- **THE NPDRF REDUCTION STATEMENT — DRAFT FORM, REFUTABLE AS
-WRITTEN** (scaffold; see the module docstring's marking and
+/-- **DEPRECATED — UNSOUND AS STATED (RULED [USER] Mike 2026-09-18,
+verbatim, relayed by the [AGENT] coordinator — cite as relayed: «We
+shouldn't delete, hard to revive that way. Can we just deprecate/ mark
+unsound for now?»; record `docs/2026-08-31_qrow-rulings.md`, «The
+on-deck decisions ruling record (2026-09-18)», ruling (4); C1 charter
+§7 D8).** The statement below is FALSE: `main` can exit with other
+goroutines mid-computation and `.done` compares the WHOLE joined store,
+so `ReachesMFine → ReachesM` fails on race-free programs (obstruction
+4). It is kept as a `def` — not deleted, so its wording and history stay
+revivable — carrying the `deprecated` attribute so that ANY use warns at
+the use site; it is not to be used as a hypothesis, a proof target, or a
+citation. It is RESTATED after C1's access trace exists (the fine-race
+proposition `RacyFine` and `footprintsConflict` move onto the trace at
+C1 S2; the weakening per obstruction 4 is its own reviewed decision).
+Zero use sites at the marking (`git grep NPDRFReduction` at main
+`68b261e6` = this definition and its docstrings only).
+
+THE NPDRF REDUCTION STATEMENT — DRAFT FORM, REFUTABLE AS
+WRITTEN (scaffold; see the module docstring's marking and
 OBSTRUCTION 4, which exhibits the counterexample class: `.done`
 compares whole joined states, and sync-free leaked goroutines make
 those schedule-sensitive even race-free — so the `↔`'s ⊆ direction is
@@ -444,6 +461,7 @@ proof attempt; the mover plan (steps i–iii) is the route for the
 WEAKENED form, not this one). Nothing may cite this — not even as a
 proof target. The ⊇ direction is unconditional
 (`stepsM_le_stepsMFine`); the detector coupling is plan step iv. -/
+@[deprecated "NPDRFReduction is FALSE as stated (main can exit with other goroutines mid-computation; the whole-state comparison fails) — not to be used as a hypothesis; restated after C1's access trace" (since := "2026-09-18")]
 def NPDRFReduction : Prop :=
   ∀ m₀ : MultiConfig, ¬ RacyFine ctx m₀ →
     ∀ res, ReachesMFine ctx m₀ res ↔ ReachesM ctx m₀ res

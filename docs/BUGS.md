@@ -6945,3 +6945,47 @@ refuse by name (or derive it from the validated callee signature); add
 production-byte-input mutation tests (duplicate keys, absent vectors,
 malformed surrogates) driven through the CLI, not through an already-parsed
 `Json` value.
+
+## BUG-111 — the race detector's conflict relation compares `.field` path steps STRUCTURALLY, static `typeId` included, so a struct-tag-compatible pointer alias (`p.f` vs `(*B)(p).f`, triage L7) yields two «disjoint» shadow keys for ONE memory word: an HB-unordered write through one alias and a read through the other is NOT a conflict — a MISSED RACE, fail-OPEN vs `go run -race` [fidelity; race detector conflict relation (`locPrefix`/`ShadowKey.overlap`, Race.lean); found by the C1 S0 frame-law spike]
+
+- Status: open — found 2026-09-18 by the C1 S0 spike (`spikes/c1-frame/Frame.lean`,
+  evidence `docs/evidence/2026-09-18_c1-memory-module/README.md`, finding 1); NOT
+  fixed by this lane (a detector-semantics change is a `Cases:` flip and a [USER]
+  decision, charter §7 D7). PENDING [USER].
+- Pinned-by: none yet — a red-first row is PROPOSED, not added (the C1 lane is the
+  core writer and does not edit `Corpus/**`): `race/negative/struct-tag-alias-field`
+  under `Corpus/coverage/exec/race/negative/` (lane `racy`, expected_status `race`):
+  `type A struct{ f int }; type B struct{ f int }` with identical field lists; `var a A;
+  q := (*B)(&a)`; goroutine 1 `a.f = 1`, goroutine 2 `_ = q.f`, joined by a WaitGroup
+  after both — `-race` reports the race (same address); the machine ACCEPTS it today
+  (the keys `.field (.base a) A "f"` and `.field (.base a) B "f"` do not overlap), so
+  the row is born-FAIL (the wrong side) until the relation is fixed; a must-stay-green
+  guard `race/free/struct-tag-alias-disjoint-fields` (aliases touching DIFFERENT fields)
+  pins that the fix does not over-refuse.
+- Discovered: 2026-09-18, lane `core/c1-memory-module-0918`, S0 (the charter §5 spike
+  set out to prove the disjoint-path frame law F1 with the hypothesis `ShadowKey.overlap
+  (.data l) (.data m) = false`; F1 is FALSE under it — witnessed by `#eval` on a two-type
+  table: `overlap = false`, yet the store through `locA` changes the load through `locB`
+  from `int 0` to `int 5`; F1 holds for the CANONICAL relation with typeIds erased).
+- What: `locPrefix l m` (Race.lean:308-312) decides `l == m || locPrefix l b` with the
+  derived structural `BEq Loc`, so a `.field` step's `typeId` is part of the key. The
+  `typeId` is the STATIC type the frontend recorded for the base expression, not an
+  address component: after a pointer conversion between tag-compatible struct types
+  (`structTagCompatible`, Ops.lean — identical `FieldDef` lists; the cell keeps its MINT
+  tag and `loadLoc`/`storeLoc` accept either tag on the path) two goroutines can name
+  the same field of the same cell with different typeIds. `ShadowKey.overlap (.data l)
+  (.data m)` is then `false`, the shadow keeps two cells, and `RaceState.access` never
+  sees the pair. gc's `-race` instruments the ADDRESS, so it reports. Direction:
+  fail-OPEN (a racy program accepted) — the direction the racy-negative lane's claim is
+  scoped by (Race.lean U1–U5 list none of this class). Reachability: the frontend
+  supports the pointer conversion (triage L7, pinned) and the detector runs on every
+  multi-goroutine row; no corpus row constructs the alias across goroutines today.
+- Fix shape (for the [USER] to rule; both are detector-semantics changes): (i) key
+  `.data` accesses by the CANONICAL path — the field step reduced to its NAME (the C1
+  spike's `PathStep.canon`; `pathsDisjoint` is the relation F1 is proved for) — at the
+  point the module EMITS the access (C1 S2), so `ShadowKey.overlap` stays one table and
+  `locPrefix` becomes canonical-prefix; or (ii) normalize the `typeId` to the cell's mint
+  tag at emission. Either flips the proposed row FAIL→PASS and must not flip any `race/
+  free/*` row (the disjoint-fields guard). Effort S once the trace exists; the C1 lane
+  recommends (i) and will NOT implement it without the ruling (charter §7 D7: «Any OTHER
+  difference = STOP, BUG, red-first row, referral»).

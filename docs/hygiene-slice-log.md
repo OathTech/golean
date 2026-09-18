@@ -706,3 +706,42 @@ setup `StateWf` decision no longer walks function bodies — beside the measured
 `Store.eqb` win (F9); the warm-line shortfall against the charter's «every»
 acknowledged rather than defended (F10); F8 posed PENDING [USER] with the
 [AGENT] recommendation to accept the one-context specialisation.
+
+# C1 — the memory module and the access trace (lane `core/c1-memory-module-0918`, base main `68b261e6`)
+
+Charter: `docs/2026-09-17_c1-memory-module-charter.md` (§7 D1–D7, D9, D10 RULED by default
+acceptance 2026-09-18; D8 RULED [USER] 2026-09-18 «deprecate/mark unsound, not delete»).
+Evidence: `docs/evidence/2026-09-18_c1-memory-module/README.md`. Handoff:
+`docs/2026-09-18_c1-memory-module-handoff.md`.
+
+## S0 — records, the §5 spike, the D8 marker, the D10 wording (2026-09-18)
+
+[AGENT] Census at the fork by recorded grep (matches the charter: `loadLoc ctx`/`storeLoc
+ctx` call lines Machine 18/29, StepFn 1/1, Multi 2/4, Race 2/0, Ops 4/0; the table family
+54/6/5; 13 non-proof alloc sites; 17 `deliverS` apply/entry sites + the pool's
+`Thread.afterStep s` + the drivers' `raceUpdate ctx m.shared m.threads` = cost B's
+retention set). Write-then-panic audit of every apply arm (delegated read, verified
+against the noPanic theorem family): **N 118 / V 46 / W 8**; the W arms are `storeMany`
+(dead), `.allocNew`/`.makeSlice`/`.makeMap`/`.makeChan` (alloc before the target's
+`valueAsLoc`/path store — `.makeMap`/`.makeChan` in their hint-/cap-less forms are
+REACHABLE through `stepFn`: a nil target panics after the payload alloc, the arrival
+nil-check is skipped at one operand), `.clearSlice`/`.copySlice`/`.appendSlice` element
+loops (a later element's bound; needs a header/backing inconsistency `validateSlice`
+does not exclude). Benchmark BEFORE reproduced (write_fixed 21 µs → 107 ms across m;
+append_grow 4,000 = 30.4 s; alloc_new 32k = 13.8 s; (h) scalar phase 0.237 → 6.37 s;
+246 ns/step). **Spike PASS**: `spikes/c1-frame/Frame.lean` EXIT=0 — (a) `arraySet_comm`,
+`fieldModify_comm`; (b) `isNormalForTyTy_array_set`, `isNormalForTyAt_struct_set`; (c)
+F1/F2 stated; `f1_canon` PROVED at every depth for the CANONICAL (typeId-erased)
+relation. Three findings, none about the representation: F1 as chartered (structural
+`ShadowKey.overlap`) is FALSE on tag-compatible field aliases — **BUG-111** filed,
+PENDING [USER] (a missed race, fail-open); F1 is agreement on SUCCESSFUL loads, not
+`Except` equality (wrong-base refusal texts embed the value); `Array.findIdx?` does not
+kernel-reduce — the module's field search must be structural. D8: `NPDRFReduction`
+carries `@[deprecated … (since := "2026-09-18")]` + a banner quoting the ruling; zero
+use sites (confirmed by grep; 0 build warnings). D10: `Store.updateCell`'s `.internal`
+names `Store.alloc` (pinned nowhere else). Warm after the `Store.lean` touch:
+`GoLean.GoCore` EXIT=0 in 105 s (33 jobs, 0 warnings). Gate: `scripts/capped scripts/ci
+--diff` EXIT=1 (938 s): 3676 cases 3427 PASS / 249 expected FAIL, eval 211/0, every step ok
+EXCEPT the two EXPECTED 5a-class items (certificate provenance STALE — compiled input
+`GoLean/GoCore/NPDRF.lean`; the ONE cached certified row `imported-goose/channel/google-search`
+judged stale for that reason); no other row moved.

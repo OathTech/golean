@@ -45,14 +45,18 @@ def Store.alloc (s : Store) (value : GoValue) (typ : Ty) : Loc × Store :=
 CLOSED out of range: `.internal` (BUG-085 — an unallocated address is an
 invariant breach, never Go behaviour). The ONE write path for every root
 cell (`storeLoc`, `storeMapPayload`, `storeChanPayload`); `Array.set` under
-`hi` is what makes a phantom cell unrepresentable (A2/A3). -/
+`hi` is what makes a phantom cell unrepresentable (A2/A3). The
+refusal text names `Store.alloc` since C1 S0 (D10, RULED by default
+acceptance 2026-09-18; B7 had byte-preserved the historical
+`ExecState.alloc` spelling — an `.internal` on a path no well-formed run
+reaches, not differential-visible). -/
 def Store.updateCell (s : Store) (a : Addr)
     (f : HeapCell → Except Stop HeapCell) : Except Stop Store :=
   if hi : a.id < s.heap.size then do
     let cell ← f s.heap[a.id]
     return { heap := s.heap.set a.id cell hi }
   else
-    throw (.internal s!"store to unallocated address {repr (Loc.base a)}: no heap cell (allocation goes through ExecState.alloc only)")
+    throw (.internal s!"store to unallocated address {repr (Loc.base a)}: no heap cell (allocation goes through Store.alloc only)")
 
 /-! ## Payload cells (A3): the map/channel readers and writers -/
 
