@@ -170,6 +170,10 @@ reclaims). **Left to P**: the wrapper-hop narrowing (§3).
 
 ## 7. Decisions for the [USER] — posed, not ruled; [AGENT] recommendations marked
 
+**RATIFIED [USER] 2026-09-18** («(1) agree, (2) agree. Go ahead», relayed; record: `docs/2026-08-31_qrow-rulings.md`, «The C1
+charter ratification and BUG-111 ruling record (2026-09-18)»): D1–D7, D9, D10 are the lane's instructions by explicit ruling; D8 ruled
+separately (deprecate, not delete). BUG-111 → fix option (i), canonical-path keys, carried by the successor lane.
+
 **Provenance, corrected at the C1 audit fix round (2026-09-18, [AGENT]; audit F1 — the earlier header here read «RULED
 [USER] 2026-09-18 … by default acceptance», which the cited record does not support: `docs/2026-08-31_qrow-rulings.md`'s
 «The on-deck decisions ruling record (2026-09-18)» contains rulings (1)–(4) and no [USER] text on D1–D7, D9, D10).**

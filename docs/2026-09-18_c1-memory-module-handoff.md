@@ -129,6 +129,11 @@ warnings. D10: `Store.updateCell`'s `.internal` names `Store.alloc`.
 
 ## 6. PENDING [USER]
 
+**RULED 2026-09-18** ([USER] Mike, verbatim, relayed: «(1) agree, (2) agree. Go ahead»; record `docs/2026-08-31_qrow-rulings.md`): item 1
+BUG-111 → fix option (i) canonical-path keys at emission (successor lane, disclosed `Cases:` flip on the proposed red-first row); the
+D1–D7/D9/D10 ratification (audit F1) is now an explicit ruling. The original items follow as written.
+
+
 1. **BUG-111** — the conflict relation misses races on struct-tag-compatible field
    aliases (`p.f` vs `(*B)(p).f`): fail-open vs `-race`, pre-existing, found by the
    spike. Proposed fix (i): key `.data` accesses by the canonical path at S2's

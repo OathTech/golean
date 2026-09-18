@@ -588,3 +588,31 @@ answer is to be recorded here verbatim (relayed) and the charter §7 header
 re-tagged to cite it. Until then every C1 record says «[AGENT] reading of the
 non-objection, ratification PENDING». D8 (ruling (4) above) is the one C1
 decision with [USER] text.
+
+### The C1 charter ratification and BUG-111 ruling record (2026-09-18)
+
+[USER] Mike, 2026-09-18, verbatim, relayed by the [AGENT] coordinator — cite as
+relayed: «(1) agree, (2) agree. Go ahead», answering the coordinator's merge ask
+of the same day, which posed (1) «the C1 charter's recommendations D1 to D7, D9
+and D10 as the lane's instructions» and (2) «BUG-111's fix: canonical-path keys at
+emission, recommended, or type-tag normalization».
+
+**What was decided.**
+- **(1) RATIFIED [USER]:** the C1 charter (`docs/2026-09-17_c1-memory-module-charter.md`
+  §7) recommendations D1 (root cells with path-addressed leaf operations), D2 (the
+  dense `Array HeapCell`), D3 (`HeapNormal` + `alloc` normalizes), D4 (no
+  heap-isomorphism latitude — zero drift on the machine), D5 (the access trace as a
+  `Step`/`StepM` label), D6 (per-arm theorems AND the whole-corpus trace-equality
+  audit), D7 (BUG-041's rows EQUAL; any narrowing a disclosed flip), D9 (sync-word and
+  channel-object emissions inside the module), D10 (the `Store.updateCell` wording)
+  are the lane's instructions. This supersedes the coordinator's earlier
+  «default acceptance» wording (audit F1) with an explicit ruling. D8 was ruled
+  separately (deprecate `NPDRFReduction`, do not delete).
+- **(2) RULED [USER] — BUG-111 fix option (i):** `.data` accesses are keyed by the
+  CANONICAL PATH at emission (root + positional path: where the write lands in the
+  store), not by the structural spelling with its static `typeId`; lands as a disclosed
+  `Cases:` flip on the proposed red-first row `race/negative/struct-tag-alias-field`
+  (born-FAIL on the wrong side) plus a must-stay-green disjoint-fields guard; the
+  successor C1 lane (S2c/S3) carries it.
+- **«Go ahead»:** merge of C1 S0–S2b (`core/c1-memory-module-0918`) with its audit
+  branch; train r41; the successor lane follows.
