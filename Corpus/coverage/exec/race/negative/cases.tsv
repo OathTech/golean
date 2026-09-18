@@ -41,3 +41,8 @@ map-range-iter	raceMapRangeIter	-	race	-	goroutines,channels,maps,range,race	rac
 # (prefix overlap). A value member here means the narrowing over-reached.
 array-const-index-same-elem	raceArrayConstIndexSameElem	-	race	-	goroutines,channels,arrays,race	racy	-	width=4,sites=8
 array-const-index-whole-write	raceArrayConstIndexWholeWrite	-	race	-	goroutines,channels,arrays,race	racy	-	width=4,sites=8
+# BUG-111 RED-FIRST PIN (C1 S2c lane, 2026-09-18; fix (i) canonical-path keys
+# RULED [USER] 2026-09-18, relayed): a race between two SPELLINGS of one word
+# through a struct-tag-compatible pointer conversion. Born FAIL (the
+# structural keys miss it; BUG-111's Cases: line), flips to PASS with the fix.
+struct-tag-alias-field	raceStructTagAliasField	-	race	-	goroutines,channels,structs,pointers,conversions,race	racy	-	width=4,sites=8

@@ -271,4 +271,27 @@ func main() {
 	println(freeMethodValueOrder())
 	println(freeSpawnDispatch())
 	println(freeAddrDerefNoRead())
+	println(freeStructTagAliasDisjointFields())
+}
+
+// BUG-111's must-stay-green GUARD (C1 S2c, 2026-09-18): the same
+// struct-tag-compatible alias, but the two goroutines touch DIFFERENT
+// fields (`c.f` in main, `q.g` in the child) — distinct memory words, no
+// race, `go run -race` green. Canonical-path keys must keep the field
+// NAME as the position: over-refusing this row would be the fix
+// over-reaching. Join-ordered readout (confluent lane).
+type aliasC struct{ f, g int }
+type aliasD struct{ f, g int }
+
+func freeStructTagAliasDisjointFields() int {
+	var c aliasC
+	q := (*aliasD)(&c)
+	done := make(chan int)
+	go func() {
+		q.g = 2
+		done <- 0
+	}()
+	c.f = 1
+	<-done
+	return c.f*10 + q.g
 }

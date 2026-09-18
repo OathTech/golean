@@ -6969,19 +6969,26 @@ malformed surrogates) driven through the CLI, not through an already-parsed
 ## BUG-111 — the race detector's conflict relation compares `.field` path steps STRUCTURALLY, static `typeId` included, so a struct-tag-compatible pointer alias (`p.f` vs `(*B)(p).f`, triage L7) yields two «disjoint» shadow keys for ONE memory word: an HB-unordered write through one alias and a read through the other is NOT a conflict — a MISSED RACE, fail-OPEN vs `go run -race` [fidelity; race detector conflict relation (`locPrefix`/`ShadowKey.overlap`, Race.lean); found by the C1 S0 frame-law spike]
 
 - Status: open — found 2026-09-18 by the C1 S0 spike (`spikes/c1-frame/Frame.lean`,
-  evidence `docs/evidence/2026-09-18_c1-memory-module/README.md`, finding 1); NOT
-  fixed by this lane (a detector-semantics change is a `Cases:` flip and a [USER]
-  decision, charter §7 D7). PENDING [USER].
-- Pinned-by: none yet — a red-first row is PROPOSED, not added (the C1 lane is the
-  core writer and does not edit `Corpus/**`): `race/negative/struct-tag-alias-field`
-  under `Corpus/coverage/exec/race/negative/` (lane `racy`, expected_status `race`):
-  `type A struct{ f int }; type B struct{ f int }` with identical field lists; `var a A;
-  q := (*B)(&a)`; goroutine 1 `a.f = 1`, goroutine 2 `_ = q.f`, joined by a WaitGroup
-  after both — `-race` reports the race (same address); the machine ACCEPTS it today
-  (the keys `.field (.base a) A "f"` and `.field (.base a) B "f"` do not overlap), so
-  the row is born-FAIL (the wrong side) until the relation is fixed; a must-stay-green
-  guard `race/free/struct-tag-alias-disjoint-fields` (aliases touching DIFFERENT fields)
-  pins that the fix does not over-refuse.
+  evidence `docs/evidence/2026-09-18_c1-memory-module/README.md`, finding 1). Fix (i)
+  — canonical-path keys at emission — RULED [USER] Mike 2026-09-18 (verbatim, relayed
+  by the [AGENT] coordinator: «(1) agree, (2) agree. Go ahead»; record
+  `docs/2026-08-31_qrow-rulings.md`), carried by lane `core/c1-memory-module-s2c-0918`
+  (handoff `docs/2026-09-18_c1-memory-module-s2c-handoff.md`). RED-FIRST ROW ADDED
+  2026-09-18, born FAIL as predicted (the machine accepts the racy program: the
+  enumerator finds no refusing member); the fix commit flips it.
+- Pinned-by: differential
+- Cases: race/negative/struct-tag-alias-field
+- Rows (2026-09-18, lane `core/c1-memory-module-s2c-0918`): `race/negative/struct-tag-alias-field`
+  (`raceStructTagAliasField`, lane `racy`, expected_status `race`): `type aliasA struct{ f int };
+  type aliasB struct{ f int }`; `var a aliasA; q := (*aliasB)(&a)`; goroutine 1 `a.f = 1`, goroutine 2
+  `_ = q.f`, main joined after both by two receives on a buffered channel (the lane's idiom in place of
+  the entry's WaitGroup — the same HB shape) — `-race` reports the race (same address); the machine
+  ACCEPTS it with structural keys (`.field (.base a) aliasA "f"` vs `.field (.base a) aliasB "f"` do not
+  overlap), so the row is born FAIL. The must-stay-green guard `race/free/struct-tag-alias-disjoint-fields`
+  (`freeStructTagAliasDisjointFields`, lane `confluent`: the same alias, main writes `c.f`, the child
+  writes `q.g`, join-ordered readout 12) pins that the fix does not over-refuse — PASS at birth, and it is
+  not on the `Cases:` line while this entry is open (an open differential bug's cases must be FAIL;
+  `scripts/check-bugs.sh` rule 1); the fix commit lists both.
 - Discovered: 2026-09-18, lane `core/c1-memory-module-0918`, S0 (the charter §5 spike
   set out to prove the disjoint-path frame law F1 with the hypothesis `ShadowKey.overlap
   (.data l) (.data m) = false`; F1 is FALSE under it — witnessed by `#eval` on a two-type

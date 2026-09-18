@@ -42,3 +42,6 @@ promoted-ptr-box	freePromotedPtrBox	-	ok	-	goroutines,channels,interfaces,method
 addr-deref-no-read	freeAddrDerefNoRead	-	ok	-	goroutines,channels,pointers,race	confluent	join-ordered readout; the &*p window is race-free only because addrOfDeref touches no pointee memory	width=4,sites=8
 method-value-order	freeMethodValueOrder	-	ok	-	goroutines,channels,interfaces,methods,race	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4,sites=8
 spawn-dispatch-free	freeSpawnDispatch	-	ok	-	goroutines,channels,interfaces,methods,race	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4,sites=8
+# BUG-111's must-stay-green guard (C1 S2c lane, 2026-09-18): the same alias,
+# DISJOINT fields — canonical keys keep the field name as the position.
+struct-tag-alias-disjoint-fields	freeStructTagAliasDisjointFields	-	ok	-	goroutines,channels,structs,pointers,conversions,race	confluent	join-ordered readout; BUG-111's guard — canonical-path keys must not over-refuse disjoint fields reached through a struct-tag-compatible alias	width=4,sites=8

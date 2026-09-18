@@ -290,4 +290,37 @@ func main() {
 	println(racePromotedDispatch())
 	println(raceArrayConstIndexSameElem())
 	println(raceArrayConstIndexWholeWrite())
+	println(raceStructTagAliasField())
+}
+
+// BUG-111 (found by the C1 S0 frame-law spike, 2026-09-18; fix (i) RULED
+// [USER] 2026-09-18): ONE memory word, two SPELLINGS. `aliasA` and `aliasB`
+// are struct-tag-compatible (identical field lists), so `(*aliasB)(&a)` is a
+// legal pointer conversion and `q.f` names the very word `a.f` names. The
+// child's write and the other child's read are HB-unordered on every
+// schedule; `go run -race` keys by ADDRESS and reports. A detector keyed by
+// the structural path with its static typeId (`.field a aliasA "f"` vs
+// `.field a aliasB "f"`) sees two disjoint keys and MISSES the race — so
+// this row is BORN on the wrong side (the machine accepts a racy program:
+// baseline FAIL, on BUG-111's Cases: line) and flips to PASS with the
+// canonical-path keys. Main's readout is ordered after both children by
+// the two receives.
+type aliasA struct{ f int }
+type aliasB struct{ f int }
+
+func raceStructTagAliasField() int {
+	var a aliasA
+	q := (*aliasB)(&a)
+	done := make(chan int, 2)
+	go func() {
+		a.f = 1
+		done <- 0
+	}()
+	go func() {
+		_ = q.f
+		done <- 0
+	}()
+	<-done
+	<-done
+	return a.f
 }
