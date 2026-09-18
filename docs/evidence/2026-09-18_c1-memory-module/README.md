@@ -661,3 +661,9 @@ Tail: `r41-ci-slow.tail.txt`. Candidate vs tracked record: `claim` and `observat
 hashes differ (C1's core files) and the receipt (clean `f901c46c`, binary `42b7bf1a…`) — INSTALLED in
 this commit; a provenance refresh, not a re-pin. The green re-run is the full `ci --diff` at the records
 commit.
+
+**Green re-run at the records commit `30521bc3`** ([AGENT] coordinator, 2026-09-18): full
+`GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff` → EXIT=0, `RESULT: PASS`, `baseline diff FULL
+(3676/3676, no regression)`, `certificate provenance` ok, negatives 394 no regression; the reconciler back to
+its single pre-existing finding after FR-34's proposed ids were written without backticks. Round 41 closed;
+C1 S0–S2b are on main; the box-wide lock released.
