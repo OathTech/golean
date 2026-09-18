@@ -644,3 +644,20 @@ sha256 `bd48dac56d3e1fb1…`, `cmp` EXIT=0 — BYTE-IDENTICAL** (`choice-trace-s
 
 `GOLEAN_MEM_MAX=32G scripts/capped scripts/ci --diff` under the box-wide lock (20:18:14–20:32:18 UTC; lock acquired after 0 s), the committed runtime tree `16029fa8` (clean for `GoLean`/`Tests`/`scripts`; `docs/` dirty with the records edits — the negative-diff step notes `git_dirty=true` for that reason): **EXIT=1, 844 s**; **3676 cases: 3427 PASS / 249 expected FAIL** (`differential coverage summary: cases=3676 pass=3427 fail=249`); `eval tests` 211 ok; `core build (warning-free)` ok; `core totality audit` ok; **`memory-module raw call-site inventory (emit/peek discipline)` ok — the NEW step, GREEN at this tip (78 rows)**; `unseq scheduler` ok; `frontend pins` ok; `wire boundary` ok; every other step ok. RED: exactly the two 5a-class items — `certificate provenance` (C9 HIGH: «STALE certification: changed dependency build/files/GoLean/CLI.lean») and `baseline diff (DRIFT)` with the SINGLE line `imported-goose/channel/google-search baseline[PASS/membership] -> now[FAIL/membership]` (the one cached certified row). ZERO other drift; the negative baseline matched (394). The binary after the gate's rebuild is byte-identical to the one the detector-soundness matrix and the choice-trace subset ran (`42b7bf1a…`). Tail: `gate-tail-fixround.txt`. Records checks at the records tree: `check-bugs.sh` EXIT=0, `check-evidence-size` EXIT=0 (PASS, 0 new offenders), `check-agents-alias` EXIT=0, `check-spec-anchors` EXIT=0 (FR-34's anchors resolve at pin `c19862e5f`).
 
+
+## Merge train r41 — the 5a record ([AGENT] coordinator, 2026-09-18)
+
+[USER] Mike 2026-09-18, verbatim (relayed): «(1) agree, (2) agree. Go ahead». Pre-merge main `68b261e6` →
+`refs/snapshots/r41/main`; C1 S0–S2b + the ratification record (`2bedbc68`) fast-forwarded; the audit
+branch rebased (`f901c46c`) and fast-forwarded. Under the lock at `f901c46c`: `scripts/build-certified`
+EXIT=0, 117 s (binary `42b7bf1ab5f2…` — the fix round's official detector-soundness binary);
+`release-check --base refs/snapshots/r41/main` EXIT=2 (EXPECTED — «STALE certification: changed
+dependency build/files/GoLean/CLI.lean»); `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --slow` EXIT=1,
+989 s — red on EXACTLY the 5a pair (`certificate provenance` STALE; the single drift line
+`imported-goose/channel/google-search PASS→FAIL/membership`); `core-audit` PASS (14.8 s; the «error:
+Core totality audit» line in the log is a compiled POISON CONTROL being rejected, as designed);
+`memory-module raw call-site inventory` ok; 3676 rows otherwise unchanged; negatives 394 no regression.
+Tail: `r41-ci-slow.tail.txt`. Candidate vs tracked record: `claim` and `observations` IDENTICAL; 26 input
+hashes differ (C1's core files) and the receipt (clean `f901c46c`, binary `42b7bf1a…`) — INSTALLED in
+this commit; a provenance refresh, not a re-pin. The green re-run is the full `ci --diff` at the records
+commit.
