@@ -126,7 +126,7 @@ variable (ctx)
 /-- The current core exports `StepM`, but not a named `StepsM` closure. -/
 inductive PoolSteps : MultiConfig → MultiConfig → Prop where
   | refl : PoolSteps m m
-  | head : StepM ctx m m' → PoolSteps m' mf → PoolSteps m mf
+  | head : StepM ctx m m' tr → PoolSteps m' mf → PoolSteps m mf
 
 variable {ctx}
 /-- Erase a successful detector-checked trace to current pool reachability.

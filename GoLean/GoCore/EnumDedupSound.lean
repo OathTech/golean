@@ -103,6 +103,24 @@ theorem stepThread_l4_run {s : Store} {ts : Array Thread} {i : Nat}
 -- (`except_bind_ok` and `bind_pair_stream` moved to MachineSound with the B8
 -- consumption lemmas; used here as before.)
 
+/-- Stream pass-through of a two-stage pipeline over pairs ending in a
+`(store, ch, trace)` triple — the in-place append branch's shape (C1 S2a;
+the match form of MachineSound's `bind2_pair_stream`). -/
+theorem bind2_pair_stream_match {α β : Type} (T : Except Stop α) (g : α → Except Stop β)
+    (f : α → β → Store × AccessTrace) (ch : Choices) :
+    (do let a ← T; let x ← g a;
+        pure (((f a x).1, ch, (f a x).2) : Store × Choices × AccessTrace))
+      = (match (do let a ← T; let x ← g a;
+                   pure (((f a x).1, ([] : Choices), (f a x).2) : Store × Choices × AccessTrace)) with
+         | .ok (s', _, tr) => .ok (s', ch, tr)
+         | .error e => .error e) := by
+  cases T with
+  | error e => rfl
+  | ok a =>
+    cases hg : g a with
+    | error e => simp [Bind.bind, Except.bind, hg]
+    | ok x => simp [Bind.bind, Except.bind, hg]
+
 /-- **N-APP determinization**: a NON-SPILLING `appendSlice` apply is
 stream-oblivious — `applyStmtOp` returns the stream verbatim and the
 state result is stream-independent. -/
@@ -111,7 +129,7 @@ theorem applyStmtOp_append_nospill {s : Store} {vs : List GoValue}
     (h : appendApplyNoSpill ctx s vs = true) :
     ∀ ch : Choices, applyStmtOp ctx s ch (.appendSlice elem) nt vs
       = (match applyStmtOp ctx s [] (.appendSlice elem) nt vs with
-         | .ok (s', _) => .ok (s', ch)
+         | .ok (s', _, tr) => .ok (s', ch, tr)
          | .error e => .error e) := by
   intro ch
   match vs, h with
@@ -138,9 +156,10 @@ theorem applyStmtOp_append_nospill {s : Store} {vs : List GoValue}
           | error e => rfl
           | ok u2 =>
             simp only [except_bind_ok]
-            cases hvis : sliceVisibleValues ctx s elems with
+            cases hvis : Mem.loadSlice ctx s elems with
             | error e => rfl
-            | ok elemValues =>
+            | ok pE =>
+              obtain ⟨elemValues, trE⟩ := pE
               simp only [except_bind_ok]
               cases htl : valueAsLoc tv with
               | error e => rfl
@@ -148,7 +167,8 @@ theorem applyStmtOp_append_nospill {s : Store} {vs : List GoValue}
                 simp only [except_bind_ok]
                 by_cases hcap : slice.len + elemValues.size ≤ slice.cap
                 · simp only [if_pos hcap]
-                  exact bind_pair_stream _ _ ch
+                  exact bind2_pair_stream_match _ _
+                    (fun (a : Store × AccessTrace) (x : Store × AccessTrace) => (x.1, trE ++ a.2 ++ x.2)) ch
                 · exfalso
                   unfold appendApplyNoSpill at h
                   simp only [hsl, hel, hvis, decide_eq_true_eq] at h
@@ -164,7 +184,7 @@ theorem stepFn_append_nospill {s : Store} {v : GoValue}
       stepFn ctx s (.retV v (.stmtOpK (.appendSlice elem) nt done [] env k)) ch
         = (match stepFn ctx s
               (.retV v (.stmtOpK (.appendSlice elem) nt done [] env k)) [] with
-           | .ok (c', s', _) => .ok (c', s', ch)
+           | .ok (c', s', _, tr) => .ok (c', s', ch, tr)
            | .error e => .error e) := by
   intro ch
   unfold stepFn
@@ -173,7 +193,7 @@ theorem stepFn_append_nospill {s : Store} {v : GoValue}
   cases hap : applyStmtOp ctx s [] (.appendSlice elem) nt ((v :: done).reverse) with
   | error e => cases_stop e <;> rfl
   | ok p =>
-    obtain ⟨s₂, ch₂⟩ := p
+    obtain ⟨s₂, ch₂, tr₂⟩ := p
     rfl
 
 /-- N-APP obliviousness at the `stepThread` level: mirrors
@@ -212,7 +232,7 @@ theorem stepThread_append_oblivious {s : Store} {ts : Array Thread}
     dsimp only at h
     cases h
   | ok p =>
-    obtain ⟨cB, sB, chB⟩ := p
+    obtain ⟨cB, sB, chB, trB⟩ := p
     rw [hbase] at h
     simp only [except_bind_ok] at h
     try dsimp only at h

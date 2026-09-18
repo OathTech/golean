@@ -54,24 +54,26 @@ open GoLean
 
 theorem unseq_pick_ready {g : UnseqGraph} {thenB : Stmt} {st : List UnseqStatus}
     {tg : List (String × TargetRef)} {env : LocalEnv} {k : Cont} {s : Store} {i : Nat}
+    {tr : AccessTrace}
     (h : Step ctx (.next (.unseqK g thenB st tg env .pick k)) s
-      (.next (.unseqK g thenB st tg env (.run i) k)) s) :
+      (.next (.unseqK g thenB st tg env (.run i) k)) s tr) :
     i ∈ g.ready st := by
   cases h with
   | unseqPick hdep hj => exact List.mem_of_getElem? hj
 
 theorem unseq_pick_active {g : UnseqGraph} {thenB : Stmt} {st : List UnseqStatus}
     {tg : List (String × TargetRef)} {env : LocalEnv} {k : Cont} {s : Store} {i : Nat}
+    {tr : AccessTrace}
     (h : Step ctx (.next (.unseqK g thenB st tg env .pick k)) s
-      (.next (.unseqK g thenB st tg env (.run i) k)) s) :
+      (.next (.unseqK g thenB st tg env (.run i) k)) s tr) :
     i < g.occs.length ∧ st[i]? = some .active := by
   cases h with
   | unseqPick hdep hj => exact UnseqGraph.ready_active hj
 
 theorem unseq_panic_drops_frame {chain : List PanicEntry} {g : UnseqGraph} {thenB : Stmt}
     {st : List UnseqStatus} {tg : List (String × TargetRef)} {env : LocalEnv} {ph : UnseqPhase}
-    {k : Cont} {s : Store} {c' : Config} {s' : Store}
-    (h : Step ctx (.panicking chain (.unseqK g thenB st tg env ph k)) s c' s') :
+    {k : Cont} {s : Store} {c' : Config} {s' : Store} {tr : AccessTrace}
+    (h : Step ctx (.panicking chain (.unseqK g thenB st tg env ph k)) s c' s' tr) :
     c' = .panicking chain k ∧ s' = s := by
   cases h with
   | panicUnwind hpass =>
@@ -82,9 +84,9 @@ theorem unseq_panic_drops_frame {chain : List PanicEntry} {g : UnseqGraph} {then
 theorem unseq_complete_settled {g : UnseqGraph} {thenB : Stmt} {st : List UnseqStatus}
     {tg : List (String × TargetRef)} {env : LocalEnv} {k : Cont} {s : Store}
     {refs : List TargetRef} {vals : List GoValue} {thenB' : Stmt} {env' : LocalEnv} {k' : Cont}
-    {s' : Store}
+    {s' : Store} {tr : AccessTrace}
     (h : Step ctx (.next (.unseqK g thenB st tg env .pick k)) s
-      (.next (.storeK refs vals thenB' env' k')) s') :
+      (.next (.storeK refs vals thenB' env' k')) s' tr) :
     g.allSettled st = true ∧ g.unproducedConsumer? st thenB = none
       ∧ unseqStorePlan ctx s env tg g.stores = .ok (refs, vals)
       ∧ thenB' = thenB ∧ env' = env ∧ k' = k ∧ s' = s := by
@@ -93,9 +95,9 @@ theorem unseq_complete_settled {g : UnseqGraph} {thenB : Stmt} {st : List UnseqS
 
 theorem unseq_record_stable {g g' : UnseqGraph} {thenB thenB' : Stmt} {st st' : List UnseqStatus}
     {tg tg' : List (String × TargetRef)} {env env' : LocalEnv} {ph ph' : UnseqPhase} {k k' : Cont}
-    {s s' : Store}
+    {s s' : Store} {tr : AccessTrace}
     (h : Step ctx (.next (.unseqK g thenB st tg env ph k)) s
-      (.next (.unseqK g' thenB' st' tg' env' ph' k')) s') :
+      (.next (.unseqK g' thenB' st' tg' env' ph' k')) s' tr) :
     g' = g ∧ thenB' = thenB ∧ env' = env ∧ k' = k := by
   cases h with
   | unseqPick hdep hj => exact ⟨rfl, rfl, rfl, rfl⟩
@@ -103,7 +105,7 @@ theorem unseq_record_stable {g g' : UnseqGraph} {thenB thenB' : Stmt} {st st' : 
   | unseqRunGuard hget hbody hg => exact ⟨rfl, rfl, rfl, rfl⟩
   | unseqStmtDone hget hbody => exact ⟨rfl, rfl, rfl, rfl⟩
   | unseqRunLoad hget hbody hres hdel =>
-      rcases toResult_cases hres with ⟨s₂, rfl, hX⟩ | ⟨msg, rfl, hX⟩
+      rcases toResult_cases hres with ⟨⟨s₂, tr₂⟩, rfl, hX⟩ | ⟨msg, rfl, hX⟩
       · simp only [deliver_ok, Prod.mk.injEq] at hdel
         obtain ⟨heq, -⟩ := hdel
         cases heq
@@ -155,10 +157,10 @@ theorem UnseqGraph.skipRegion_length {g : UnseqGraph} {st : List UnseqStatus} {g
 
 theorem unseq_done_permanent {g : UnseqGraph} {thenB : Stmt} {st st' : List UnseqStatus}
     {tg tg' : List (String × TargetRef)} {env : LocalEnv} {ph ph' : UnseqPhase} {k : Cont}
-    {s s' : Store} {i : Nat}
+    {s s' : Store} {i : Nat} {tr : AccessTrace}
     (hlen : st.length = g.occs.length)
     (h : Step ctx (.next (.unseqK g thenB st tg env ph k)) s
-      (.next (.unseqK g thenB st' tg' env ph' k)) s')
+      (.next (.unseqK g thenB st' tg' env ph' k)) s' tr)
     (hi : st[i]? = some .done) : st'[i]? = some .done := by
   have hlt : i < st.length := (List.getElem?_eq_some_iff.mp hi).1
   cases h with
@@ -175,7 +177,7 @@ theorem unseq_done_permanent {g : UnseqGraph} {thenB : Stmt} {st st' : List Unse
       · rw [List.getElem?_set_ne hij]; exact hi
   | unseqRunLoad hget hbody hres hdel =>
       rename_i j
-      rcases toResult_cases hres with ⟨s₂, rfl, hX⟩ | ⟨msg, rfl, hX⟩
+      rcases toResult_cases hres with ⟨⟨s₂, tr₂⟩, rfl, hX⟩ | ⟨msg, rfl, hX⟩
       · simp only [deliver_ok, Prod.mk.injEq] at hdel
         obtain ⟨heq, -⟩ := hdel
         cases heq
@@ -187,7 +189,7 @@ theorem unseq_done_permanent {g : UnseqGraph} {thenB : Stmt} {st st' : List Unse
   | unseqRunGuard hget hbody hg =>
       rename_i j
       simp only [unseqGuard, bind_eq_ok] at hg
-      obtain ⟨tl, -, tv, -, b, -, hg⟩ := hg
+      obtain ⟨tl, -, ⟨tv, t₁⟩, -, b, -, hg⟩ := hg
       split at hg
       · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hg
         obtain ⟨rfl, -⟩ := hg
@@ -195,7 +197,7 @@ theorem unseq_done_permanent {g : UnseqGraph} {thenB : Stmt} {st st' : List Unse
         · subst hij; rw [List.getElem?_set_self hlt]
         · rw [List.getElem?_set_ne hij]; exact hi
       · simp only [bind_eq_ok] at hg
-        obtain ⟨ol, -, s₂, -, hg⟩ := hg
+        obtain ⟨ol, -, ⟨s₂, t₂⟩, -, hg⟩ := hg
         split at hg
         · rename_i ci hci
           simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hg

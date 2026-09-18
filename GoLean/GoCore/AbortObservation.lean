@@ -61,7 +61,7 @@ def runConfigWithAbort : Nat → Store → Config → Choices →
       | 0 => (.error .fuelOut, none)
       | fuel + 1 =>
         match stepFn ctx s c ch with
-        | .ok (next, t, ch') => runConfigWithAbort fuel t next ch'
+        | .ok (next, t, ch', _) => runConfigWithAbort fuel t next ch'
         | .error (.panic message) => (.error (.panic message), abortRecord? c)
         | .error e => (.error e, none)
 

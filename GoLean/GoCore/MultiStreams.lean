@@ -212,7 +212,7 @@ theorem stepFn_select_done {s : Store} {v : GoValue}
       = .ok (.done c' s' cl?)) :
     ∀ ch : Choices,
       stepFn ctx s (.retV v (.selectOpsK clauses default? done [] env k)) ch
-        = .ok (c', s', ch) := by
+        = .ok (c', s', ch, []) := by
   intro ch
   unfold stepFn
   simp only [applySelect_of_done h ch]
@@ -303,7 +303,7 @@ theorem stepThread_oblivious {s : Store} {ts : Array Thread} {i : Nat}
             | some alt =>
               simp [consumesNilValueMethod, hsite, hx] at hobl
           simp only [bind_eq_ok] at h
-          obtain ⟨⟨parent', child, s₂, ch₂⟩, hspawn, h⟩ := h
+          obtain ⟨⟨parent', child, s₂, ch₂, tr₂⟩, hspawn, h⟩ := h
           simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
           obtain ⟨rfl, rfl, rfl, rfl⟩ := h
           obtain ⟨rfl, hall⟩ := spawnStep_oblivious hn hspawn
@@ -418,7 +418,7 @@ theorem stepThread_oblivious {s : Store} {ts : Array Thread} {i : Nat}
               rw [hselp] at h
               dsimp only at h
               simp only [bind_eq_ok] at h
-              obtain ⟨⟨c₂, s₂, ch₂⟩, hstep, h⟩ := h
+              obtain ⟨⟨c₂, s₂, ch₂, tr₂⟩, hstep, h⟩ := h
               simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
               obtain ⟨rfl, rfl, rfl, rfl⟩ := h
               obtain ⟨rfl, hall⟩ := stepFn_oblivious

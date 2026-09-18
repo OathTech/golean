@@ -803,6 +803,43 @@ alone (before the conjunct): `ci --diff` EXIT=1 (720 s): 3676 = 3427/249, red ON
 the expected 5a pair — `alloc`-normalizes moved NO row (D3's referral clause not
 triggered). S1 GATE: `GOLEAN_MEM_MAX=32G scripts/capped scripts/ci --diff` under the box-wide lock (09:06:02–09:17:37 UTC): **EXIT=1, 695 s**; **3676 cases: 3427 PASS / 249 expected FAIL**; `eval tests` 211 ok; `core build (warning-free)` ok; `core totality audit` ok; `frontend pins` ok; `wire boundary` ok; every other step ok. RED: exactly the two 5a-class items — `certificate provenance` (C9 HIGH: «STALE certification: changed dependency build/files/GoLean/CLI.lean») and `baseline diff (DRIFT)` with the SINGLE line `imported-goose/channel/google-search baseline[PASS/membership] -> now[FAIL/membership]` — the one cached certified row, judged stale because compiled semantic inputs changed. ZERO other drift. Tail: `gate-tail-s1.txt`. Whole-corpus choice trace (`scripts/choice-trace-corpus --dump --jobs 6 --exclude goroutines/send-then-spin --exclude strings/trimspace-repeat/repeat-bound-refused`, main `68b261e6`'s certified binary `231df9a9…` vs the S1 binary `f462cf50…`, run 09:23–09:41 UTC): sorted dumps `cmp` **EXIT=0 — BYTE-IDENTICAL**, 23,685 consumption records both sides, one sha256 `70e12e023f3ee30b9d71317454e11dedcb6c6ec039d63aeddfbb3d4906aceb57`; 34 frontend-refusal exports and the 2 exclusions identical; each tracer run EXIT=1 for the SAME pre-existing «FINDINGS present» depth listing (main 609 s, S1 436 s). Tails: `trace-summary-main-s1.txt`. Benchmarks: `.tmp/golean-s1` = the gated binary (sha256 `f462cf50…48f3`), same frontend and probes as BEFORE; `--plan full`, 3 runs per point, medians, net of the empty probe (0.0213 s); run 09:18–09:23 UTC (the whole plan in 337 s — BEFORE needed 28 min), load1 ≈ 1.3, no sibling build. Artifacts: `bench-after-s1.json`, `bench-after-s1-summary.md`.
 
+**S2a (2026-09-18, gated) — the DATA trace, both accounts live, the trace-equality
+audit.** The access vocabulary (`AccessKind`, `ShadowKey`+`overlap`, `locPrefix`/`locOverlap`,
+`SyncWordName`) moved from `Race.lean` into the module (`Ops.lean`); `Access`/`AccessTrace`;
+the EMITTING operations `Mem.load`/`loadFor`/`store`/`mapRead`/`mapWrite`/`loadElems`/
+`storeElems`/`loadRun`/`storeRun`/`loadSlice` as wrappers over the S1 primitives (which keep
+their types as the module's peek/raw writers); `loadResults` beside the drivers' `loadMany`;
+`dynamicDispatch?` emits the receiver read at `dispatchLeaf`; `projChainTarget` moved to
+`Machine.lean`. Every emitting helper returns its trace as the last ok-component;
+`deliver`/`deliverS` carry it (panic → `[]`); `applyStrictOp` takes `leafOf` (`.deref`'s
+narrowing, the caller's `projChainTarget`); `stepFn`'s FOURTH component; `Step` LABELLED (122
+constructors: 94 × `[]`, 28 by their operations); `StepE`/`StepM`/`StepMFine` labelled, the
+closures erase; `StepEvent.trace` (a goroutine step: `stepFn`'s; a spawn: the child's entry
+read; pool-own steps `[]`). Coherence RE-PROVED with the label: `stepFn_sound`,
+`step_complete`, `step_complete_any_wf`, `stepFn_consumption_none/_some`, `stepFn_oblivious`,
+`stepMulti_sound : … → StepM ctx m m' ev.trace`, `stepM_complete … ∧ ev.trace = tr`,
+`step_preserves_wf`; StateWf/MachineSound/MultiSound/MultiWfSound/MultiStreams/
+EnumDedupSound/UnseqSound/Trace/AbortObservation/PoolTrace/NPDRF restated. Mirrors
+(`appendSpill?`, `EnumDedupCheck.appendApplyNoSpill`) read through `Mem.loadSlice`.
+`raceUpdate` UNCHANGED (zero detector drift by construction). Disclosures: `mapDelete` of an
+absent key rewrites the unchanged payload so the write is emitted (gc instruments it
+unconditionally); two UNREACHABLE refusal texts moved to `Mem.storeRun`/`loadRun`'s
+(`sliceIndexLoc`'s text); `sliceVisibleValues` over the structural `Mem.loadElems`. THE AUDIT
+(the tracer, per step, both accounts as multisets under `raceUpdate`'s recording rule; new
+TSV columns `traceMismatches`/`firstTraceMismatch`, every mismatch also an alarm): whole
+corpus, **21,835 (row, stream) results, 0 mismatches**; the raft twin's five probe entry
+points 30/30 (row, stream) results ok, 0 mismatches, choice trace byte-identical vs main (14,360 records, `cmp` EXIT=0); choice trace byte-identical vs main (23,685 records, sha
+`70e12e02…eb57`, `cmp` EXIT=0; the one pre-existing ERROR finding identical modulo path).
+Positive control in `trace-probe-s2a.txt`. Gate: `GOLEAN_MEM_MAX=32G scripts/capped scripts/ci --diff` under the box-wide lock
+(11:17:29–11:29:48 UTC): **EXIT=1 in 739 s**, 3676 cases 3427 PASS / 249 expected FAIL, `eval
+tests` 211 ok, core build warning-free, red ONLY on the expected 5a pair (`certificate
+provenance` STALE on `CLI.lean`; the one cached certified row `imported-goose/channel/
+google-search`), ZERO other drift (`gate-tail-s2a.txt`). Owed to S2b: the dead
+`arraySet`/`StructFields.set` + six lemmas (tombstones), the module-docstring peek list
+(kept in the evidence README this slice), `accesses_eq_stepAccesses`, the table deletion.
+Evidence: `docs/evidence/2026-09-18_c1-memory-module/` (`trace-audit-s2a.txt`,
+`trace-probe-s2a.txt`, `gate-tail-s2a.txt`).
+
 | probe / point | BEFORE net | AFTER (S1) net | S1 target | verdict |
 |---|---:|---:|---|---|
 | `write_fixed(m, 100)` per write, m = 10 / 100 / 1,000 / 3,000 / 10,000 | 21 / 44 / 1,248 / 9,560 / 106,972 µs | −2 / 1 / 3 / −2 / **16 µs** (100 writes sit at the 21 ms startup noise floor; the count-varying rows put one write at 13.1 µs (m = 10, w = 1,000) / 12.6 µs (w = 10,000)) | flat: within 2× across m | **MET** (12.6 → 16 µs, ≈1.3×, at noise level; the BEFORE 5,000× slope is gone) |

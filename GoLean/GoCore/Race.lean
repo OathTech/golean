@@ -297,118 +297,12 @@ view of `t` is still 0), everything else 0. -/
 def VClock.birth (t : Nat) : VClock :=
   (Array.replicate (t + 1) 0).setIfInBounds t 1
 
-/-! ## Loc-path overlap
+-- MOVED to `GoLean/GoCore/Ops.lean` (C1 S2a, 2026-09-18): the access
+-- vocabulary — `locPrefix`/`locOverlap`, `SyncWordName`, `ShadowKey` and its
+-- `overlap` table, `AccessKind` and its `isWrite`/`isAtomic`/`conflicts` — is
+-- the memory module's, emitted by its operations (charter §3, D9). The
+-- detector below CONSUMES it; nothing here changed meaning.
 
-Go's memory locations at our heap's granularity: a `Loc` PATH names a
-memory region; two paths conflict iff one is a prefix of the other
-(equal included) — a whole-struct write overlaps every field, distinct
-fields / distinct indices are disjoint. -/
-
-/-- Is `l` a prefix of `m` (equality included)? -/
-def locPrefix (l : Loc) : Loc → Bool
-  | m@(.base _) => l == m
-  | m@(.field b _ _) => l == m || locPrefix l b
-  | m@(.index b _) => l == m || locPrefix l b
-
-/-- Path overlap: the conflict relation on recorded DATA accesses. -/
-def locOverlap (a b : Loc) : Bool := locPrefix a b || locPrefix b a
-
-/-! ## Shadow keys (design-hygiene A6, 2026-09-04)
-
-The shadow is keyed by a `ShadowKey`, not a `Loc`: a `Loc` is a memory
-PATH and means only that. The two non-path things the detector shadows —
-a sync primitive's gc WORD (formerly a phantom `Loc.field` under a
-made-up `TypeId`) and a channel OBJECT (formerly a second shadow with its
-own exact-match cell logic) — are their own constructors, and the one
-`overlap` table says how every pair of keys conflicts. -/
-
-/-- The gc state words of the sync primitives (the field names of the
-pinned struct definitions: `state`/`sema` for Mutex and WaitGroup,
-`w`/`readerCount` for RWMutex, `done`/`m` for Once). -/
-inductive SyncWordName where
-  | state | sema | w | readerCount | done | m
-  deriving Repr, BEq, DecidableEq, Ord
-
--- The shadow is kept in CANONICAL (sorted) key order, so the dedup
--- engine's structural state equality is insensitive to the interleaving in
--- which keys were first touched (`shadowSet`); the total order is the
--- derived one on the key's components.
-deriving instance Ord for Addr
-deriving instance Ord for TypeId
-deriving instance Ord for Loc
-deriving instance Ord for SyncKind
-
-/-- What one shadow cell is keyed by. -/
-inductive ShadowKey where
-  /-- A memory path (the data footprint; overlap = path prefix). -/
-  | data (l : Loc)
-  /-- A sync primitive's gc word: the primitive's cell path, its kind, the
-  word. Overlaps itself exactly, and any DATA path that is a prefix of
-  the primitive's path (a whole-struct copy/overwrite covers the words); a
-  sibling field's access overlaps none. -/
-  | syncWord (l : Loc) (kind : SyncKind) (word : SyncWordName)
-  /-- A channel object (gc's `c.raceaddr()` instrumentation point): channel
-  identity — exact match only, never path overlap (BUG-045/BUG-046). -/
-  | chanObj (l : Loc)
-  deriving Repr, BEq, DecidableEq, Ord
-
-/-- THE conflict-keying table: when do two shadow keys name overlapping
-memory? Data/data by path overlap; word/word by identity; data/word iff
-the data path is a prefix of the primitive's path (either direction of
-the pair); channel objects only with themselves, exactly. Symmetric by
-construction (each mixed arm is stated both ways). -/
-def ShadowKey.overlap : ShadowKey → ShadowKey → Bool
-  | .data a, .data b => locOverlap a b
-  | .syncWord l k wd, .syncWord l' k' wd' => l == l' && k == k' && wd == wd'
-  | .data d, .syncWord m _ _ => locPrefix d m
-  | .syncWord m _ _, .data d => locPrefix d m
-  | .chanObj a, .chanObj b => a == b
-  | .data _, .chanObj _ | .chanObj _, .data _ => false
-  | .syncWord .., .chanObj _ | .chanObj _, .syncWord .. => false
-
-/-! ## Access kinds and the per-location shadow (TSan/FastTrack skeleton) -/
-
-/-- The KIND of one recorded access — the two axes of mem#model's data-
-race definitions, quoted verbatim: "A read-write data race on memory
-location x consists of a read-like memory operation r on x and a
-write-like memory operation w on x, at least one of which is
-non-synchronizing, which are unordered by happens before"; "A
-write-write data race on memory location x consists of two write-like
-memory operations w and w' on x, at least one of which is
-non-synchronizing, which are unordered by happens before". (The
-informal one-liner — "a write to a memory location happening
-concurrently with another read or write to that same location, unless
-all the accesses involved are atomic data accesses" — is mem#overview,
-the same relation in words.) It is also TSan's shadow rule (two
-accesses race unless both are reads or both are atomic). The plain pair is the data footprint's (`stepAccesses`);
-the atomic pair is the sync primitives' own state-word traffic — as
-`-race` realizes it AND as mem#model kinds the op (BUG-080 +
-Q-U4RESIDUAL (A) — `syncEntryKinds` below, recorded by `raceUpdate`'s
-sync arm); and the `sync/atomic` ops' own accesses at the addressed
-cell (the atomics arc wave 1 — `atomicOpKind`, recorded by
-`raceUpdate`'s atomic arm; section "sync/atomic — the per-address
-clocks" below). -/
-inductive AccessKind where
-  | read
-  | write
-  | atomicRead
-  | atomicWrite
-  deriving Repr, BEq, DecidableEq
-
-def AccessKind.isWrite : AccessKind → Bool
-  | .write | .atomicWrite => true
-  | .read | .atomicRead => false
-
-def AccessKind.isAtomic : AccessKind → Bool
-  | .atomicRead | .atomicWrite => true
-  | .read | .write => false
-
-/-- Do two HB-unordered accesses of these kinds (different goroutines,
-overlapping paths) constitute a data race? At least one write, and not
-both atomic — the memory-model sentence verbatim, and TSan's
-`both_read_or_atomic` exclusion. Symmetric. -/
-def AccessKind.conflicts (a b : AccessKind) : Bool :=
-  (a.isWrite || b.isWrite) && !(a.isAtomic && b.isAtomic)
 
 
 /-- Last-access epochs at one `Loc` path: at most one entry `(t, e)`
@@ -539,93 +433,11 @@ def strictOpAccesses (op : StrictOp) (vs : List GoValue) : List RaceAccess :=
       | .error _ => []
   | _, _ => []
 
-/-- Narrow a whole-cell read through the chain of PROJECTIONS its
-continuation will immediately apply: when the value a read produces is
-delivered straight into single-operand `fieldGet` frames, only the
-projected FIELD PATH is semantically read (Go compiles `p.a` to a
-single field load; the rest of the struct is discarded unobserved).
-This is what keeps disjoint-field READ/WRITE pairs race-free at the
-detector (S3 audit: the free lane's read/write direction) for both the
-local (`evalVar` under a `fieldGet` frame) and pointer (`deref` under a
-`fieldGet` frame) forms.
-
-**Q-RACEPATH — CONSTANT-index narrowing (RULED [USER] 2026-08-31,
-`docs/2026-08-31_qrow-rulings.md` row 4; implemented 2026-09-02, the
-Tier-4 detector-soundness lane).** The chain also passes through an
-`indexGet` frame whose pending index operand is a CONSTANT literal
-(`Expr.intLit` — go/types constant-folds every constant index
-expression to one, and a constant index is compile-time bounds-checked,
-so the element path is fully determined before the projection applies)
-PROVIDED the cell the read produces is an ARRAY: element paths live
-under the array's own `Loc`, exactly where element STORES land
-(`storeTargetAccess` resolves `a[1] = v` to `.index base 1`), so a
-constant-index read and a disjoint-element write are disjoint paths.
-gc compiles `a[1]` to a single element load, and mem#restrictions
-licenses the per-sub-value decomposition of composite reads verbatim
-(quoted at inventory C10) — the narrowed footprint is the faithful
-one. A SLICE or STRING variable's cell is a HEADER whose elements live
-elsewhere: its read stays whole-cell (the element read is the
-`strictOpAccesses` indexGet arm's job), which is why the narrowing is
-gated on the loaded cell being `.array` — never on the frame shape
-alone. The chain composes in either order (`a[1].x` and `s.arr[1]`).
-DYNAMIC indices (any non-literal index expression — a variable, a call,
-an arithmetic form go/types could not fold) are NOT narrowed and remain
-the recorded whole-cell over-approximation: O1's RESIDUAL, red-pinned
-by `race/free/array-dyn-index-read-write`, with its re-open trigger
-recorded in O1 (a real target needing dynamic-index disjointness on a
-value-path ARRAY — memo option (B), deferred-footprint recording). -/
-def projChainTarget (s : Store) : Cont → Loc → Loc
-  | .strictK (.fieldGet tid f) [] [] _ k', loc =>
-      projChainTarget s k' (.field loc tid f)
-  | .strictK .indexGet [] [.intLit i _] _ k', loc =>
-      match loadLoc ctx s loc with
-      | .ok (.array _) => projChainTarget s k' (.index loc i)
-      | _ => loc
-  | _, loc => loc
-
-/-- Peel a pure `fieldGet` chain over a synthesized wrapper's RECEIVER
-parameter: `some hops`, outermost projection LAST. `none` on any other
-shape (mid-chain derefs from embedded-pointer hops, address-formers,
-non-receiver anchors) — the caller then falls back to the whole-pointee
-read (over-refusal, the fail-closed direction; recorded in O1).
-
-The receiver is identified by its PARAMETER NAME taken from the target
-`Func`'s own first parameter (`recvId` — `dispatchAccesses` passes
-`target.args[0]`), never by a frontend string literal (arc-final audit
-F7, 2026-08-08: this arm previously matched the frontend-chosen name
-`"$recv"` verbatim — GoCore's only raw frontend string outside its own
-reserved ids, violating "semantic identity is TypeId/FuncId, never raw
-frontend strings"; the verifier showed a semantics-preserving frontend
-rename flipping race/free/promoted-ptr-box from ok to a spurious
-raceDetected). RESIDUAL COUPLING, recorded honestly: the BODY-shape
-half remains — `wrapperForwardArg` recognizes exactly the decoder's
-synthesized two-level wrapper block, and any other emission shape
-falls back to the whole-pointee read (fail-closed over-refusal, pinned
-by the `race/free/promoted-ptr-box` strict row going red on drift,
-per O1). -/
-def recvFieldChain (recvId : String) : Expr → Option (List (TypeId × String))
-  | .var v => if v == recvId then some [] else none
-  | .fieldGet recv tid f => (recvFieldChain recvId recv).map (· ++ [(tid, f)])
-  | _ => none
-
-/-- The forwarding call's RECEIVER argument in a synthesized promotion
-wrapper's body (`synthesizePromotionWrappers`: one block of
-[forwarding call, return]). Deliberately shallow — one statement-list
-level — so it recognizes EXACTLY the synthesized shape and fails
-closed (whole-pointee fallback) on anything else. -/
-def wrapperForwardArg (body : Stmt) : Option Expr :=
-  -- Two flattening levels, deliberately bounded: the decoder emits the
-  -- wrapper as `.block #[] #[.seqn [init, call], .seqn [assign, ret]]`.
-  let flat : Stmt → List Stmt := fun s =>
-    match s with
-    | .seqn ss => ss.toList
-    | .block _ ss => ss.toList
-    | s => [s]
-  ((flat body).flatMap flat).findSome? fun s =>
-    match s with
-    | .call _ _ args => args[0]?
-    | .callValue _ _ args => args[0]?
-    | _ => none
+-- MOVED (C1 S2a, 2026-09-18): `projChainTarget` now lives in `Machine.lean`
+-- (after `Cont`; the caller of the module's `Mem.loadFor` names the leaf);
+-- `recvFieldChain`/`wrapperForwardArg` live in `Ops.lean` beside
+-- `dispatchLeaf`, the dispatch operation's own narrowing. The table below
+-- CONSUMES them unchanged until S2b deletes it.
 
 /-- The user-memory read a frame ENTRY performs: interface dynamic
 dispatch of a *T box to a VALUE-receiver method copies the receiver

@@ -584,7 +584,7 @@ upstream (recorded hazard, S2 audit response). A nil callee is gc's
 refuting the older child-panic analysis): modeled as `Stop.fatal`
 (triage L10). -/
 def spawnStep (s : Store) (cv : GoValue) (args : List GoValue) (k : Cont)
-    (ch : Choices) : Except Stop (Config × Config × Store × Choices) := do
+    (ch : Choices) : Except Stop (Config × Config × Store × Choices × AccessTrace) := do
   match cv with
   | .funcVal fid captured =>
       -- The ONE entry funnel (B2): the child's entry panic draws the
@@ -603,9 +603,9 @@ def spawnStep (s : Store) (cv : GoValue) (args : List GoValue) (k : Cont)
       -- preserves the spawn boundary's exact shipped default (slot 0 =
       -- lowest-index runnable), NOT the postOp issuer-continues
       -- convention.
-      let (child, s') := deliver s .stop (fun (func, frameEnv, _, s') =>
-        (.exec func.body frameEnv (.frame [] [] [] [] .stop func.wrapper), s')) r
-      return (.next k, child, s', ch')
+      let (child, s', tr) := deliver s .stop (fun (func, frameEnv, _, s', tr) =>
+        (.exec func.body frameEnv (.frame [] [] [] [] .stop func.wrapper), s', tr)) r
+      return (.next k, child, s', ch', tr)
   -- A nil callee is gc's "go of nil func value" runtime FATAL, raised
   -- AT THE SPAWN in the spawning goroutine (probed 2026-08-07;
   -- unrecoverable, exit 2). Routed through the machine's own fatal
@@ -638,11 +638,11 @@ theorem entryCallSite?_of_spawnPlan {c : Config} {cv : GoValue} {args : List GoV
 /-- Outside the wrapper family a spawn is stream-oblivious: the entry
 panic's `nilValueMethodText` consult is at bound 1 and pops nothing. -/
 theorem spawnStep_oblivious {s : Store} {cv : GoValue} {args : List GoValue}
-    {k : Cont} {ch₀ : Choices} {p c : Config} {s' : Store} {ch₀' : Choices}
+    {k : Cont} {ch₀ : Choices} {p c : Config} {s' : Store} {ch₀' : Choices} {tr : AccessTrace}
     (hn : ∀ fid captured, cv = .funcVal fid captured →
       nilValueMethodText? ctx fid (captured ++ args) = none)
-    (h : spawnStep ctx s cv args k ch₀ = .ok (p, c, s', ch₀')) :
-    ch₀' = ch₀ ∧ ∀ ch : Choices, spawnStep ctx s cv args k ch = .ok (p, c, s', ch) := by
+    (h : spawnStep ctx s cv args k ch₀ = .ok (p, c, s', ch₀', tr)) :
+    ch₀' = ch₀ ∧ ∀ ch : Choices, spawnStep ctx s cv args k ch = .ok (p, c, s', ch, tr) := by
   unfold spawnStep at h ⊢
   cases cv with
   | funcVal fid captured =>
@@ -654,7 +654,7 @@ theorem spawnStep_oblivious {s : Store} {cv : GoValue} {args : List GoValue}
     | ok r =>
       simp only [hx, Except.map, Bind.bind, Except.bind, pure_eq_ok,
         Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl, rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl, rfl, rfl, rfl⟩ := h
       exact ⟨rfl, fun ch => by simp [Except.map, Bind.bind, Except.bind]⟩
   | nil => simp [throw, throwThe, MonadExceptOf.throw] at h
   | _ => simp [throw, throwThe, MonadExceptOf.throw] at h
@@ -946,6 +946,14 @@ structure StepEvent where
   printed bytes is a statement about the event trace, exactly parallel
   to a spec about the access trace. -/
   out : List GoString := []
+  /-- The step's ACCESS TRACE (C1 S2a; charter §3, D5): what the memory
+  module's operations emitted during this step — the `Step` label lifted
+  into the event. A goroutine step carries `stepFn`'s trace; a spawn
+  carries the CHILD's frame-entry read (the receiver dispatch — attributed
+  to the child by the detector's fold); the pool's own steps (boundary
+  clear, abort, wake, pairing, select commit/pass) carry `[]` in S2a —
+  their channel-object and sync-word emissions are S2c's. -/
+  trace : AccessTrace := []
 
 /-- The per-clause channel of a select's evaluated entry operands,
 extracted TOTALLY (no exceptions): `(isSend, loc)` per clause, `none`
@@ -1358,11 +1366,11 @@ def stepThread (s : Store) (threads : Array Thread) (i : Nat)
       -- POOL step, never a `Config` step — the sequential machine has
       -- no flag to clear (`execProg_single_eq_execStmt` counts these).
       return (threads.setIfInBounds i (.running c none), s, ch,
-        ⟨i, .opDoneStrip, [], []⟩)
+        ⟨i, .opDoneStrip, [], [], []⟩)
   | some (.running c none) =>
     if isBlockedConfig c then do
       let (c', s') ← resumeThread ctx s c
-      return (threads.setIfInBounds i (Thread.completed c'), s', ch, ⟨i, .woke, [], []⟩)
+      return (threads.setIfInBounds i (Thread.completed c'), s', ch, ⟨i, .woke, [], [], []⟩)
     else
       match c.abort? with
       | some (first, rest) => do
@@ -1380,13 +1388,15 @@ def stepThread (s : Store) (threads : Array Thread) (i : Nat)
           let (pick, ch', ps) :=
             Choices.consumeAtE .repanicCollapse (repanicCollapseWidth first rest) ch
           let msg ← abortMsg ctx first rest pick
-          return (threads.setIfInBounds i (.aborted msg), s, ch', ⟨i, .aborted, ps, []⟩)
+          return (threads.setIfInBounds i (.aborted msg), s, ch', ⟨i, .aborted, ps, [], []⟩)
       | none =>
       match spawnPlan c with
       | some (cv, args, k) => do
-          let (parent', child, s', ch') ← spawnStep ctx s cv args k ch
+          let (parent', child, s', ch', tr) ← spawnStep ctx s cv args k ch
+          -- The spawn's trace is the CHILD's entry read (S2a); the fold
+          -- attributes it to `threads.size`, the child's index.
           return ((threads.setIfInBounds i (Thread.afterStep s c parent')).push (.running child none),
-            s', ch', ⟨i, .spawned threads.size, [], []⟩)
+            s', ch', ⟨i, .spawned threads.size, [], [], tr⟩)
       | none => do
           match ← arrivalPlan ctx s threads i c ch with
           | (some (.pair bc cs), ch₁, ps₁) =>
@@ -1402,7 +1412,7 @@ def stepThread (s : Store) (threads : Array Thread) (i : Nat)
                   | some cand => do
                       let (ts', s'') ← applyPairing ctx s threads i bc cand
                       return (ts', s'', ch₂,
-                        ⟨i, .paired cand.2.partnerIdx, ps₁ ++ ps₂, []⟩)
+                        ⟨i, .paired cand.2.partnerIdx, ps₁ ++ ps₂, [], []⟩)
                   | none => throw (.internal "waiter pick out of range")
           | (some (.commit cl env k), ch₁, ps₁) => do
               -- The L2-picked clause is cell-only ready: commit it
@@ -1411,7 +1421,7 @@ def stepThread (s : Store) (threads : Array Thread) (i : Nat)
               -- pick was drawn over).
               let (c', s') ← commitClause ctx s env k cl
               return (threads.setIfInBounds i (Thread.afterStep s c c'), s', ch₁,
-                ⟨i, .selectCommit cl, ps₁, []⟩)
+                ⟨i, .selectCommit cl, ps₁, [], []⟩)
           | (none, ch₁, ps₁) =>
               match selectApplyPlan c with
               | some (v, clauses, default?, done, env, k') =>
@@ -1429,13 +1439,13 @@ def stepThread (s : Store) (threads : Array Thread) (i : Nat)
                       return (threads.setIfInBounds i (Thread.afterStep s c c'), s', ch₂,
                         ⟨i, match cl? with
                             | some cl => .selectCommit cl
-                            | none => .selectPass, ps₁, []⟩)
+                            | none => .selectPass, ps₁, [], []⟩)
                   | .panic msg =>
-                      let (c', s') := deliver s k' id (.panic msg)
+                      let (c', s', _) := deliver s k' (fun (p : Config × Store) => (p.1, p.2, ([] : AccessTrace))) (.panic msg)
                       return (threads.setIfInBounds i (Thread.afterStep s c c'), s', ch₁,
-                        ⟨i, .selectPass, ps₁, []⟩)
+                        ⟨i, .selectPass, ps₁, [], []⟩)
               | none => do
-                  let (c', s', ch₂) ← stepFn ctx s c ch₁
+                  let (c', s', ch₂, tr) ← stepFn ctx s c ch₁
                   -- The OUTPUT EVENT (stdlib slice 3): a `print`/`println`
                   -- apply position's bytes, derived from the PRE-configuration
                   -- by the same `renderPrint` the step just validated through
@@ -1443,7 +1453,7 @@ def stepThread (s : Store) (threads : Array Thread) (i : Nat)
                   -- successor's boundary flag: the post-op boundary rule
                   -- (`Thread.afterStep`, C5).
                   return (threads.setIfInBounds i (Thread.afterStep s c c'), s', ch₂,
-                    ⟨i, .privateStep, ps₁, (printOut? c).toList⟩)
+                    ⟨i, .privateStep, ps₁, (printOut? c).toList, tr⟩)
 
 /-- `stepThread` lifted back into a `MultiConfig` (the stepped goroutine
 becomes the running one). -/
@@ -2385,12 +2395,14 @@ lifts with no forked goroutines; the completed spawn positions (where
 `Step` is deliberately silent) fork exactly one. Proof infrastructure
 (statement-TCB: forbidden from designated statement closures, like
 `Step`/`Steps`). -/
-inductive StepE : Config → Store → Config → Store → List Config → Prop where
-  | lift {c σ c' σ'} : Step ctx c σ c' σ' → StepE c σ c' σ' []
-  | spawn {c σ cv args k parent' child σ' ch ch'} :
+inductive StepE : Config → Store → Config → Store → List Config → AccessTrace → Prop where
+  | lift {c σ c' σ' tr} : Step ctx c σ c' σ' tr → StepE c σ c' σ' [] tr
+  /-- The spawn's label is the CHILD's frame-entry read (its receiver
+  dispatch), which the detector's fold attributes to the child. -/
+  | spawn {c σ cv args k parent' child σ' ch ch' tr} :
       spawnPlan c = some (cv, args, k) →
-      spawnStep ctx σ cv args k ch = .ok (parent', child, σ', ch') →
-      StepE c σ parent' σ' [child]
+      spawnStep ctx σ cv args k ch = .ok (parent', child, σ', ch', tr) →
+      StepE c σ parent' σ' [child] tr
 
 /-- Legal scheduler picks (D2a): between boundaries only the running
 goroutine steps; at a boundary any RUNNABLE goroutine may be picked —
@@ -2420,22 +2432,22 @@ over the pure `.multi` analysis, slice 4), and the wake of a parked
 goroutine (`wake` — head-commit, no re-randomization). Deadlock is
 relation-SILENT (no rule from an all-asleep pool), mirroring the
 sequential machine's silent blocked configs. -/
-inductive StepM : MultiConfig → MultiConfig → Prop where
+inductive StepM : MultiConfig → MultiConfig → AccessTrace → Prop where
   | thread {m : MultiConfig} {i : Nat} {c : Config} {c' : Config} {σ' : Store}
-      {efs : List Config} :
+      {efs : List Config} {tr : AccessTrace} :
       schedPick ctx m i →
       m.threads[i]? = some (.running c none) →
       isBlockedConfig c = false →
       arrivalCases ctx m.shared m.threads i c = .ok .cellPath →
-      StepE ctx c m.shared c' σ' efs →
+      StepE ctx c m.shared c' σ' efs tr →
       StepM m ⟨(m.threads.setIfInBounds i (Thread.afterStep m.shared c c'))
-        ++ (efs.map (Thread.running · none)).toArray, σ', i⟩
+        ++ (efs.map (Thread.running · none)).toArray, σ', i⟩ tr
   /-- The boundary CLEAR (C5): a goroutine whose last op opened a boundary
   clears it — a pool step, the sequential relation has no counterpart. -/
   | strip {m : MultiConfig} {i : Nat} {c : Config} {site : ChoiceSite} :
       schedPick ctx m i →
       m.threads[i]? = some (.running c (some site)) →
-      StepM m ⟨m.threads.setIfInBounds i (.running c none), m.shared, i⟩
+      StepM m ⟨m.threads.setIfInBounds i (.running c none), m.shared, i⟩ []
   /-- The ABORT (B4): an unrecovered chain at `.stop` renders into the
   goroutine's tombstone (`abortMsg`; a chain with no pinned rendering has
   no rule — fail closed). The `repanicCollapse` pick is QUANTIFIED below
@@ -2450,7 +2462,7 @@ inductive StepM : MultiConfig → MultiConfig → Prop where
       c.abort? = some (first, rest) →
       pick < repanicCollapseWidth first rest →
       abortMsg ctx first rest pick = .ok msg →
-      StepM m ⟨m.threads.setIfInBounds i (.aborted msg), m.shared, i⟩
+      StepM m ⟨m.threads.setIfInBounds i (.aborted msg), m.shared, i⟩ []
   | pair {m : MultiConfig} {i : Nat} {c bc : Config} {σ'' : Store}
       {cs : List (Nat × PairTarget)} {idx : Nat} {ts' : Array Thread} :
       schedPick ctx m i →
@@ -2460,7 +2472,7 @@ inductive StepM : MultiConfig → MultiConfig → Prop where
       arrivalCases ctx m.shared m.threads i c = .ok (.single bc cs) →
       (hidx : idx < cs.length) →
       applyPairing ctx m.shared m.threads i bc cs[idx] = .ok (ts', σ'') →
-      StepM m ⟨ts', σ'', i⟩
+      StepM m ⟨ts', σ'', i⟩ []
   | pickPair {m : MultiConfig} {i : Nat} {c bc : Config} {σ'' : Store}
       {os : List ArrivalOutcome} {sel : Nat}
       {cs : List (Nat × PairTarget)} {idx : Nat} {ts' : Array Thread} :
@@ -2472,7 +2484,7 @@ inductive StepM : MultiConfig → MultiConfig → Prop where
       os[sel]? = some (.pair bc cs) →
       (hidx : idx < cs.length) →
       applyPairing ctx m.shared m.threads i bc cs[idx] = .ok (ts', σ'') →
-      StepM m ⟨ts', σ'', i⟩
+      StepM m ⟨ts', σ'', i⟩ []
   | pickCommit {m : MultiConfig} {i : Nat} {c : Config} {cl : EvClause}
       {env : LocalEnv} {k : Cont} {os : List ArrivalOutcome} {sel : Nat}
       {c' : Config} {σ' : Store} :
@@ -2483,13 +2495,13 @@ inductive StepM : MultiConfig → MultiConfig → Prop where
       arrivalCases ctx m.shared m.threads i c = .ok (.multi os) →
       os[sel]? = some (.commit cl env k) →
       commitClause ctx m.shared env k cl = .ok (c', σ') →
-      StepM m ⟨m.threads.setIfInBounds i (Thread.afterStep m.shared c c'), σ', i⟩
+      StepM m ⟨m.threads.setIfInBounds i (Thread.afterStep m.shared c c'), σ', i⟩ []
   | wake {m : MultiConfig} {i : Nat} {c c' : Config} {σ' : Store} :
       schedPick ctx m i →
       m.threads[i]? = some (.running c none) →
       isBlockedConfig c = true →
       resumeThread ctx m.shared c = .ok (c', σ') →
-      StepM m ⟨m.threads.setIfInBounds i (Thread.completed c'), σ', i⟩
+      StepM m ⟨m.threads.setIfInBounds i (Thread.completed c'), σ', i⟩ []
 
 /-! ## Well-formedness (the thread-indexed carrier) -/
 

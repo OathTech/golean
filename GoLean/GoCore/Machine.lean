@@ -271,7 +271,7 @@ conforming ORIGINAL-KEY-RETAINING implementation is outside this
 singleton; no claim about the stored key transfers to it. Re-envelope
 (two-point retention choice) is XIMPL-gated — see inventory E10. -/
 def mapAssignValue (s : Store) (keyTy valueTy : Ty)
-    (baseV keyV valueV : GoValue) : Except Stop Store := do
+    (baseV keyV valueV : GoValue) : Except Stop (Store × AccessTrace) := do
   let map ← valueAsMap baseV
   let key ← normalizeValueForTy ctx keyTy keyV
   let value ← normalizeValueForTy ctx valueTy valueV
@@ -289,7 +289,9 @@ def mapAssignValue (s : Store) (keyTy valueTy : Ty)
             | some (id, _, _) => pure (entries.set! i (id, key, value), nextId)
             | none => stuck s!"missing map entry at index {i}"
         | none => pure (entries.push (nextId, key, value), nextId + 1)
-      storeMapPayload s baseLoc entries nextId
+      -- The entries fetch above is the RMW's peek; the ONE access is the
+      -- map write (gc's mapassign instrumentation point).
+      Mem.mapWrite s baseLoc entries nextId
 
 /-- Apply a strict operator to its (already evaluated, in evaluation order)
 operand values. The single op table shared by the relation (as a rule
@@ -298,24 +300,25 @@ big-step interpreter's `evalExpr`, minus the recursion. Panics are Go
 behavior (`.panic`); `.stuck`/`.unsupported` mean no relation rule matches
 (fail closed). The catch-all arm covers head/arity mismatches unreachable
 via `strictPlan`. -/
-def applyStrictOp (s : Store) : StrictOp → List GoValue → Except Stop (GoValue × Store)
+def applyStrictOp (s : Store) (leafOf : Loc → Loc) :
+    StrictOp → List GoValue → Except Stop (GoValue × Store × AccessTrace)
   | .add, [l, r] =>
       match l, r with
-      | .int .., .int .. => do return ((← intBinaryResult "+" (· + ·) l r), s)
+      | .int .., .int .. => do return ((← intBinaryResult "+" (· + ·) l r), s, [])
       | .float .., .float .. => do
-          return ((← floatBinaryResult "+" FloatBits.fadd64 FloatBits.fadd32 l r), s)
-      | .string lv, .string rv => return (.string (GoString.append lv rv), s)
+          return ((← floatBinaryResult "+" FloatBits.fadd64 FloatBits.fadd32 l r), s, [])
+      | .string lv, .string rv => return (.string (GoString.append lv rv), s, [])
       | _, _ => stuck s!"mismatched + operands: {repr l} and {repr r}"
   | .sub, [l, r] =>
       match l, r with
       | .float .., .float .. => do
-          return ((← floatBinaryResult "-" FloatBits.fsub64 FloatBits.fsub32 l r), s)
-      | _, _ => do return ((← intBinaryResult "-" (· - ·) l r), s)
+          return ((← floatBinaryResult "-" FloatBits.fsub64 FloatBits.fsub32 l r), s, [])
+      | _, _ => do return ((← intBinaryResult "-" (· - ·) l r), s, [])
   | .mul, [l, r] =>
       match l, r with
       | .float .., .float .. => do
-          return ((← floatBinaryResult "*" FloatBits.fmul64 FloatBits.fmul32 l r), s)
-      | _, _ => do return ((← intBinaryResult "*" (· * ·) l r), s)
+          return ((← floatBinaryResult "*" FloatBits.fmul64 FloatBits.fmul32 l r), s, [])
+      | _, _ => do return ((← intBinaryResult "*" (· * ·) l r), s, [])
   | .div, [l, r] =>
       match l, r with
       -- Float division dispatches BEFORE the integer divide-by-zero
@@ -323,42 +326,42 @@ def applyStrictOp (s : Store) : StrictOp → List GoValue → Except Stop (GoVal
       -- §3.2, an envelope narrowing matching gc everywhere; pinned by
       -- floats/division-specials).
       | .float .., .float .. => do
-          return ((← floatBinaryResult "/" FloatBits.fdiv64 FloatBits.fdiv32 l r), s)
+          return ((← floatBinaryResult "/" FloatBits.fdiv64 FloatBits.fdiv32 l r), s, [])
       | _, _ => do
           let divisor ← valueAsInt r
           if divisor == 0 then
             panic "runtime error: integer divide by zero"
-          return ((← intBinaryResult "/" Int.tdiv l r), s)
+          return ((← intBinaryResult "/" Int.tdiv l r), s, [])
   | .mod, [l, r] => do
       let divisor ← valueAsInt r
       if divisor == 0 then
         panic "runtime error: integer divide by zero"
-      return ((← intBinaryResult "%" Int.tmod l r), s)
-  | .shiftLeft, [l, r] => do return ((← intShiftLeftResult l r), s)
-  | .shiftRight, [l, r] => do return ((← intShiftRightResult l r), s)
-  | .bitAnd, [l, r] => do return ((← intBitwiseBinaryResult "&" Nat.land l r), s)
-  | .bitOr, [l, r] => do return ((← intBitwiseBinaryResult "|" Nat.lor l r), s)
-  | .bitXor, [l, r] => do return ((← intBitwiseBinaryResult "^" Nat.xor l r), s)
-  | .bitClear, [l, r] => do return ((← intBitClearResult l r), s)
-  | .bitNeg, [v] => do return ((← intBitNegResult v), s)
+      return ((← intBinaryResult "%" Int.tmod l r), s, [])
+  | .shiftLeft, [l, r] => do return ((← intShiftLeftResult l r), s, [])
+  | .shiftRight, [l, r] => do return ((← intShiftRightResult l r), s, [])
+  | .bitAnd, [l, r] => do return ((← intBitwiseBinaryResult "&" Nat.land l r), s, [])
+  | .bitOr, [l, r] => do return ((← intBitwiseBinaryResult "|" Nat.lor l r), s, [])
+  | .bitXor, [l, r] => do return ((← intBitwiseBinaryResult "^" Nat.xor l r), s, [])
+  | .bitClear, [l, r] => do return ((← intBitClearResult l r), s, [])
+  | .bitNeg, [v] => do return ((← intBitNegResult v), s, [])
   | .neg, [v] =>
       match v with
-      | .int value kind => return (.int (kind.normalize (0 - value)) kind, s)
+      | .int value kind => return (.int (kind.normalize (0 - value)) kind, s, [])
       -- IEEE negation is the sign-bit flip, never 0 - x (wrong at +0).
-      | .float bits kind => return (.float (kind.normalizeBits (kind.negBits bits)) kind, s)
+      | .float bits kind => return (.float (kind.normalizeBits (kind.negBits bits)) kind, s, [])
       | other => stuck s!"mismatched unary - operand: {repr other}"
   | .floatLit num den kind, [] =>
       -- Malformed rationals fail closed at the decoder; defensive here.
       if den == 0 then stuck "malformed float literal: zero denominator"
-      else return (.float (kind.normalizeBits (kind.ratToBits num den)) kind, s)
-  | .not, [v] => do return (.bool (!(← valueAsBool v)), s)
-  | .eqCmp ty, [l, r] => do return (.bool (← valueEq ctx ty l r), s)
-  | .neqCmp ty, [l, r] => do return (.bool (!(← valueEq ctx ty l r)), s)
-  | .atMostCmp, [l, r] => do return (.bool (← valueAtMost l r), s)
-  | .atLeastCmp, [l, r] => do return (.bool (← valueAtLeast l r), s)
-  | .lessCmp, [l, r] => do return (.bool (← valueLess l r), s)
-  | .greaterCmp, [l, r] => do return (.bool (← valueGreater l r), s)
-  | .convert ty, [v] => do return ((← convertValueToTy ctx ty v), s)
+      else return (.float (kind.normalizeBits (kind.ratToBits num den)) kind, s, [])
+  | .not, [v] => do return (.bool (!(← valueAsBool v)), s, [])
+  | .eqCmp ty, [l, r] => do return (.bool (← valueEq ctx ty l r), s, [])
+  | .neqCmp ty, [l, r] => do return (.bool (!(← valueEq ctx ty l r)), s, [])
+  | .atMostCmp, [l, r] => do return (.bool (← valueAtMost l r), s, [])
+  | .atLeastCmp, [l, r] => do return (.bool (← valueAtLeast l r), s, [])
+  | .lessCmp, [l, r] => do return (.bool (← valueLess l r), s, [])
+  | .greaterCmp, [l, r] => do return (.bool (← valueGreater l r), s, [])
+  | .convert ty, [v] => do return ((← convertValueToTy ctx ty v), s, [])
   -- ENVELOPE STATEMENT (recorded narrowing, arc-final audit F8,
   -- 2026-08-06). Spec §Conversions on `[]byte(s)`: "The capacity of the
   -- resulting slice is implementation-specific and may be larger than
@@ -379,11 +382,11 @@ def applyStrictOp (s : Store) : StrictOp → List GoValue → Except Stop (GoVal
       | .string value => do
           let bytes := value.bytes.map (fun b => GoValue.int (Int.ofNat b.toNat) .uint8)
           let (base, s') ← Store.alloc ctx s (.array bytes) (.array bytes.size (.int .uint8))
-          return (.slice { base := some base, offset := 0, len := bytes.size, cap := bytes.size }, s')
+          return (.slice { base := some base, offset := 0, len := bytes.size, cap := bytes.size }, s', [])
       | other => stuck s!"expected string operand for []byte conversion, got {repr other}"
   | .stringFromByteSlice, [v] => do
       let slice ← valueAsSlice v
-      let values ← sliceVisibleValues ctx s slice
+      let (values, tr) ← Mem.loadSlice ctx s slice
       let mut bytes := #[]
       for value in values do
         match value with
@@ -392,17 +395,23 @@ def applyStrictOp (s : Store) : StrictOp → List GoValue → Except Stop (GoVal
               stuck s!"malformed uint8 byte value in string conversion: {byte}"
             bytes := bytes.push (UInt8.ofNat byte.toNat)
         | other => stuck s!"expected uint8 element in string conversion, got {repr other}"
-      return (.string { bytes := bytes }, s)
+      return (.string { bytes := bytes }, s, tr)
   | .stringFromRune, [v] => do
-      return (.string (GoString.fromCodePoint (← valueAsInt v)), s)
-  | .deref _, [v] => do return ((← loadLoc ctx s (← valueAsLoc v)), s)
+      return (.string (GoString.fromCodePoint (← valueAsInt v)), s, [])
+  | .deref _, [v] => do
+      -- THE POINTEE READ, narrowed by the caller's `leafOf` (the
+      -- continuation's immediate projection chain — `projChainTarget`;
+      -- O1's value-path whole-cell read otherwise).
+      let l ← valueAsLoc v
+      let (x, tr) ← Mem.loadFor ctx s l (leafOf l)
+      return (x, s, tr)
   -- `&*p` (BUG-056): the nil check consumes the pointer VALUE already
   -- in hand — `.addr` passes through, `.nil` panics via `valueAsLoc`'s
   -- runtime-error arm, anything else is stuck. It reads and writes NO
   -- memory cell (gc: a bare TESTB nil-probe, no pointee load — memo
   -- §2), so it has no race-footprint arm on purpose (Race.lean's
   -- call-site inventory records the decision).
-  | .addrOfDeref, [v] => do return (.addr (← valueAsLoc v), s)
+  | .addrOfDeref, [v] => do return (.addr (← valueAsLoc v), s, [])
   | .fieldGet typeId fieldName, [v] => do
       match v with
       | .struct actualType fields =>
@@ -411,16 +420,16 @@ def applyStrictOp (s : Store) : StrictOp → List GoValue → Except Stop (GoVal
           if actualType != typeId && !structTagCompatible ctx actualType typeId then
             stuck s!"expected struct {typeId.key}, got struct {actualType.key}"
           match StructFields.lookup fields fieldName with
-          | some value => return (value, s)
+          | some value => return (value, s, [])
           | none => stuck s!"unknown GoCore struct field: {fieldName}"
       | other => stuck s!"expected struct value for field access, got {repr other}"
   | .fieldAddr typeId fieldName, [v] => do
-      return (.addr (.field (← valueAsLoc v) typeId fieldName), s)
-  | .structLit ty, vs => do return ((← buildStructValue ctx ty vs.toArray), s)
+      return (.addr (.field (← valueAsLoc v) typeId fieldName), s, [])
+  | .structLit ty, vs => do return ((← buildStructValue ctx ty vs.toArray), s, [])
   | .arrayLit n elem keys, vs => do
       if keys.length != vs.length then
         stuck s!"array literal expected {keys.length} element value(s), got {vs.length}"
-      return ((← buildArrayValue ctx n elem (keys.zip vs).toArray), s)
+      return ((← buildArrayValue ctx n elem (keys.zip vs).toArray), s, [])
   | .toInterface _ dynamic, [v] => do
       -- Box with the CANONICAL dynamic type (S3): aliases resolved,
       -- identity kept, fail closed on unsupported leaves. An
@@ -429,12 +438,12 @@ def applyStrictOp (s : Store) : StrictOp → List GoValue → Except Stop (GoVal
       -- double-boxes.
       let dynTy ← checkedDynamicTy dynamic
       match dynTy with
-      | .interface _ => return (v, s)
-      | _ => return (.interface dynTy v, s)
+      | .interface _ => return (v, s, [])
+      | _ => return (.interface dynTy v, s, [])
   | .typeAssert targetTy sourceTy, [v] => do
       let result ← typeAssertValue ctx v targetTy
       if result.2 then
-        return (result.1, s)
+        return (result.1, s, [])
       else
         -- Go names the first UNMET requirement when the target is an
         -- interface; a nil operand has none to report.
@@ -447,10 +456,11 @@ def applyStrictOp (s : Store) : StrictOp → List GoValue → Except Stop (GoVal
   | .indexGet, [b, i] => do
       let indexValue ← valueAsInt i
       match b with
-      | .array values => return ((← arrayGet values indexValue), s)
-      | .string value => return ((← stringByteGet value indexValue), s)
-      | .slice slice =>
-          return ((← loadLoc ctx s (← sliceIndexLoc slice indexValue)), s)
+      | .array values => return ((← arrayGet values indexValue), s, [])
+      | .string value => return ((← stringByteGet value indexValue), s, [])
+      | .slice slice => do
+          let (x, tr) ← Mem.load ctx s (← sliceIndexLoc slice indexValue)
+          return (x, s, tr)
       -- Pointer-to-array base in READ position (triage L5;
       -- spec#Index_expressions: for `a` of pointer to array type,
       -- `a[x]` is shorthand for `(*a)[x]`): the read sibling of
@@ -459,9 +469,12 @@ def applyStrictOp (s : Store) : StrictOp → List GoValue → Except Stop (GoVal
       -- pointer-to-array alone; the write path's slice-pointee arm
       -- exists because assignment TARGETS carry the base cell's
       -- address, a shape read position never produces.
-      | .addr baseLoc =>
-          match ← loadLoc ctx s baseLoc with
-          | .array values => return ((← arrayGet values indexValue), s)
+      | .addr baseLoc => do
+          -- gc compiles a single ELEMENT load: the footprint is the
+          -- element path (triage L5), the value the whole array's.
+          let (cell, tr) ← Mem.loadFor ctx s baseLoc (.index baseLoc indexValue)
+          match cell with
+          | .array values => return ((← arrayGet values indexValue), s, tr)
           | other => stuck s!"expected array pointee for index access, got {repr other}"
       -- A nil pointer-to-array base is gc's recoverable nil-pointer
       -- dereference (triage L6; BUG-038's entry names this case as the
@@ -469,7 +482,7 @@ def applyStrictOp (s : Store) : StrictOp → List GoValue → Except Stop (GoVal
       | .nil => panic "runtime error: invalid memory address or nil pointer dereference"
       | other => stuck s!"expected array, slice, or string value for index access, got {repr other}"
   | .indexAddr, [b, i] => do
-      return (.addr (← indexTargetLoc ctx s b i), s)
+      return (.addr (← indexTargetLoc ctx s b i), s, [])
   | .mapGet keyTy valueTy, [b, i] => do
       let map ← valueAsMap b
       let key ← normalizeValueForTy ctx keyTy i
@@ -477,68 +490,71 @@ def applyStrictOp (s : Store) : StrictOp → List GoValue → Except Stop (GoVal
       -- A NIL map still hashes the key before returning the zero value.
       | none => do
           checkKeyHashable ctx key (isInsert := false) (nonEmpty := false)
-          return ((← defaultValue ctx valueTy), s)
+          return ((← defaultValue ctx valueTy), s, [])
       | some baseLoc =>
-          let (entries, _) ← mapPayload? s baseLoc
+          let ((entries, _), tr) ← Mem.mapRead s baseLoc
           match ← mapEntryIndex? ctx keyTy entries key with
           | some idx =>
               match entries[idx]? with
-              | some (_, _, value) => return (value, s)
+              | some (_, _, value) => return (value, s, tr)
               | none => stuck s!"missing map entry at index {idx}"
-          | none => return ((← defaultValue ctx valueTy), s)
+          | none => return ((← defaultValue ctx valueTy), s, tr)
   | .sliceExpr false, [b, lo, hi] => do
-      applySlice ctx s b (← valueAsInt lo) (← valueAsInt hi) none
+      let (v, s') ← applySlice ctx s b (← valueAsInt lo) (← valueAsInt hi) none
+      return (v, s', [])
   | .sliceExpr true, [b, lo, hi, m] => do
-      applySlice ctx s b (← valueAsInt lo) (← valueAsInt hi) (some (← valueAsInt m))
+      let (v, s') ← applySlice ctx s b (← valueAsInt lo) (← valueAsInt hi) (some (← valueAsInt m))
+      return (v, s', [])
   | .lengthOf typ, [v] => do
       match typ with
-      | some (.pointer (.array n _)) => return (.int n, s)
+      | some (.pointer (.array n _)) => return (.int n, s, [])
       | _ =>
           match v with
-          | .array values => return (.int values.size, s)
+          | .array values => return (.int values.size, s, [])
           | .addr baseLoc =>
               match ← loadLoc ctx s baseLoc with
-              | .array values => return (.int values.size, s)
+              | .array values => return (.int values.size, s, [])
               | other => unsupported s!"len for non-array pointer value {repr other}"
-          | .string value => return (.int value.length, s)
+          | .string value => return (.int value.length, s, [])
           | .slice slice =>
-              validateSlice slice *> return (.int slice.len, s)
+              validateSlice slice *> return (.int slice.len, s, [])
           | .map map =>
               match map.base with
-              | none => return (.int 0, s)
+              | none => return (.int 0, s, [])
               | some baseLoc =>
-                  let p ← mapPayload? s baseLoc
-                  return (.int p.1.size, s)
+                  -- `len(m)` is a real instrumented map read on gc (S3 audit).
+                  let (p, tr) ← Mem.mapRead s baseLoc
+                  return (.int p.1.size, s, tr)
           -- len(ch) = elements queued in the buffer; nil channel = 0
           -- (spec §Length and capacity). Never panics, never blocks.
           | .chan ch =>
               match ch.base with
-              | none => return (.int 0, s)
+              | none => return (.int 0, s, [])
               | some baseLoc =>
                   let p ← chanPayload? s baseLoc
-                  return (.int p.1.size, s)
+                  return (.int p.1.size, s, [])
           | other => unsupported s!"len for non-array/slice/map value {repr other}"
   | .capacityOf typ, [v] => do
       match typ with
-      | some (.pointer (.array n _)) => return (.int n, s)
+      | some (.pointer (.array n _)) => return (.int n, s, [])
       | _ =>
           match v with
-          | .array values => return (.int values.size, s)
+          | .array values => return (.int values.size, s, [])
           | .addr baseLoc =>
               match ← loadLoc ctx s baseLoc with
-              | .array values => return (.int values.size, s)
+              | .array values => return (.int values.size, s, [])
               | other => unsupported s!"cap for non-array pointer value {repr other}"
           | .slice slice =>
-              validateSlice slice *> return (.int slice.cap, s)
+              validateSlice slice *> return (.int slice.cap, s, [])
           -- cap(ch) = buffer capacity; nil channel = 0.
           | .chan ch =>
               match ch.base with
-              | none => return (.int 0, s)
+              | none => return (.int 0, s, [])
               | some baseLoc =>
                   let p ← chanPayload? s baseLoc
-                  return (.int p.2.1, s)
+                  return (.int p.2.1, s, [])
           | other => unsupported s!"cap for non-array/slice value {repr other}"
-  | .funcValOf fid, vs => return (.funcVal fid vs, s)
+  | .funcValOf fid, vs => return (.funcVal fid vs, s, [])
   | .minOf, v :: vs =>
       -- Float operands take the IEEE fold (triage L3, spec#Min_and_max:
       -- NaN propagates, min(-0,+0) = -0) over the softfloat comparison
@@ -549,32 +565,32 @@ def applyStrictOp (s : Store) : StrictOp → List GoValue → Except Stop (GoVal
         let mut best := v
         for w in vs do
           best ← floatMinMax true best w
-        return (best, s)
+        return (best, s, [])
       else do
         let mut best := v
         for w in vs do
           if ← valueLess w best then
             best := w
-        return (best, s)
+        return (best, s, [])
   | .maxOf, v :: vs =>
       if anyFloatOperand (v :: vs) then do
         let mut best := v
         for w in vs do
           best ← floatMinMax false best w
-        return (best, s)
+        return (best, s, [])
       else do
         let mut best := v
         for w in vs do
           if ← valueLess best w then
             best := w
-        return (best, s)
+        return (best, s, [])
   | .runeAt, [sv, ov] => do
       match sv with
       | .string str => do
           let off ← valueAsInt ov
           if off < 0 then
             stuck s!"negative rune-decode offset {off}"
-          return (.int (decodeRuneAt str off.toNat).1 .int32, s)
+          return (.int (decodeRuneAt str off.toNat).1 .int32, s, [])
       | other => stuck s!"expected string operand for rune decode, got {repr other}"
   | .runeSizeAt, [sv, ov] => do
       match sv with
@@ -582,26 +598,26 @@ def applyStrictOp (s : Store) : StrictOp → List GoValue → Except Stop (GoVal
           let off ← valueAsInt ov
           if off < 0 then
             stuck s!"negative rune-decode offset {off}"
-          return (.int (Int.ofNat (decodeRuneAt str off.toNat).2) .int, s)
+          return (.int (Int.ofNat (decodeRuneAt str off.toNat).2) .int, s, [])
       | other => stuck s!"expected string operand for rune decode, got {repr other}"
-  | .defaultValueOf ty, [] => do return ((← defaultValue ctx ty), s)
+  | .defaultValueOf ty, [] => do return ((← defaultValue ctx ty), s, [])
   | .nilLit typ, [] =>
       match typ with
-      | none => return (.nil, s)
+      | none => return (.nil, s, [])
       | some ty =>
           match ty with
-          | .slice _ => do return ((← defaultValue ctx ty), s)
-          | .map _ _ => do return ((← defaultValue ctx ty), s)
-          | .chan _ _ => do return ((← defaultValue ctx ty), s)
-          | .pointer _ => return (.nil, s)
+          | .slice _ => do return ((← defaultValue ctx ty), s, [])
+          | .map _ _ => do return ((← defaultValue ctx ty), s, [])
+          | .chan _ _ => do return ((← defaultValue ctx ty), s, [])
+          | .pointer _ => return (.nil, s, [])
           -- Interface and func are nilable types too (spec
           -- §Assignability; BUG-077 — the CONVERSION form `error(nil)`
           -- / `any(nil)` / `(func())(nil)` carries the target type on
           -- the nil wire node where the assignment form's bare nil
           -- landed in the arm above): their zero value is `.nil`,
           -- exactly what `defaultValue` yields for both.
-          | .interface _ => return (.nil, s)
-          | .funcType _ _ _ => return (.nil, s)
+          | .interface _ => return (.nil, s, [])
+          | .funcType _ _ _ => return (.nil, s, [])
           | .unsupported feature => unsupported s!"nil literal for {feature}"
           | other => stuck s!"nil literal for non-nilable type {repr other}"
   -- `[]rune(s)` (triage L1, 2026-08-19): decode every code point
@@ -628,7 +644,7 @@ def applyStrictOp (s : Store) : StrictOp → List GoValue → Except Stop (GoVal
           let (base, s') ← Store.alloc ctx s (.array runes)
             (.array runes.size (.int .int32))
           return (.slice { base := some base, offset := 0,
-                           len := runes.size, cap := runes.size }, s')
+                           len := runes.size, cap := runes.size }, s', [])
       | other => stuck s!"expected string operand for []rune conversion, got {repr other}"
   -- `string(rs)` over a rune slice (triage L1): concatenate the UTF-8
   -- encodings of the individual rune values (spec §Conversions to and
@@ -637,18 +653,18 @@ def applyStrictOp (s : Store) : StrictOp → List GoValue → Except Stop (GoVal
   -- `fromCodePoint` kernel `string(int)` uses.
   | .stringFromRuneSlice, [v] => do
       let slice ← valueAsSlice v
-      let values ← sliceVisibleValues ctx s slice
+      let (values, tr) ← Mem.loadSlice ctx s slice
       let mut str := GoString.empty
       for value in values do
         match value with
         | .int r .int32 => str := str.append (GoString.fromCodePoint r)
         | other => stuck s!"expected rune element in string conversion, got {repr other}"
-      return (.string str, s)
+      return (.string str, s, tr)
   -- The `float-bits` primitive: a bit reinterpretation over the machine's
   -- own representation (Ops.lean `floatBitsApply` — bit-exact both ways;
   -- the canonical-NaN refusal is documented there). No state, no
   -- footprint (Race.lean's inventory), no consumption.
-  | .floatBits op, [v] => do return ((← floatBitsApply op v), s)
+  | .floatBits op, [v] => do return ((← floatBitsApply op v), s, [])
   | op, vs => stuck s!"malformed strict-operator application: {repr op} on {vs.length} operand(s)"
 
 /-! ## Shared list operations (env-threading; used as rule premises and by
@@ -689,6 +705,17 @@ def loadMany (s : Store) : List Loc → Except Stop (List GoValue)
   | [] => return []
   | loc :: locs => do return (← loadLoc ctx s loc) :: (← loadMany s locs)
 
+/-- The frame-EXIT result reads (the pinned result cells) — `loadMany`'s
+emitting twin: one data read per result cell (named results are
+addressable variables; a deferred closure may write them). `loadMany`
+itself stays the drivers' PEEK readout after termination. -/
+def loadResults (s : Store) : List Loc → Except Stop (List GoValue × AccessTrace)
+  | [] => return ([], [])
+  | loc :: locs => do
+      let (v, t) ← Mem.load ctx s loc
+      let (vs, ts) ← loadResults s locs
+      return (v :: vs, t ++ ts)
+
 /-- Store values to locations pairwise (frame-exit target writes; old
 `StoreManyR`). -/
 def storeMany : Store → List Loc → List GoValue → Except Stop Store
@@ -704,23 +731,26 @@ the machine (frame entry). The two arity checks mirror the interpreter's
 (pre-dispatch in `execFunctionCallWithLocs`, post-dispatch in
 `execFunctionWithValues`). -/
 def enterFrame (s : Store) (fid : FuncId) (argVals : List GoValue) :
-    Except Stop (Func × LocalEnv × List Loc × Store) := do
+    Except Stop (Func × LocalEnv × List Loc × Store × AccessTrace) := do
   let func ←
     match findFunctionIn? ctx.functions fid with
     | some func => pure func
     | none => stuck s!"GoCore function not found: {fid.key}"
   if func.args.size != argVals.length then
     stuck s!"function {fid.key} expected {func.args.size} argument(s), got {argVals.length}"
-  let (func, argVals) ←
+  -- The entry's ONE possible user-memory access: the value-receiver
+  -- dispatch's pointee read (`dynamicDispatch?` emits it at the target's
+  -- leaf). Binding and result declaration allocate fresh cells only.
+  let (func, argVals, tr) ←
     match ← dynamicDispatch? ctx s func argVals.toArray with
-    | some (targetFunc, targetArgs) => pure (targetFunc, targetArgs.toList)
-    | none => pure (func, argVals)
+    | (some (targetFunc, targetArgs), tr) => pure (targetFunc, targetArgs.toList, tr)
+    | (none, tr) => pure (func, argVals, tr)
   if func.args.size != argVals.length then
     stuck s!"function {func.id.key} expected {func.args.size} argument(s), got {argVals.length}"
   let (argsEnv, s₁) ← bindParams ctx [] s func.args.toList argVals
   let (frameEnv, s₂) ← allocDecls ctx argsEnv s₁ func.results.toList
   let resultLocs ← pinResultLocs frameEnv func.results.toList
-  return (func, frameEnv, resultLocs, s₂)
+  return (func, frameEnv, resultLocs, s₂, tr)
 
 /-- The `nilValueMethodText` site's stream bound at a frame entry
 (BUG-087): 2 on the wrapper family (`nilValueMethodText?` — the
@@ -795,7 +825,7 @@ through here: the seven `stepFn` positions (`entryCallSite?`) and the
 `go`-statement spawn (`spawnStep`, Multi.lean); the relation's entry
 rules quantify the stream (`ch`/`ch'`, the `stmtOpApply` idiom). -/
 def enterFramePick (s : Store) (fid : FuncId) (args : List GoValue) (ch : Choices) :
-    Except Stop (Result (Func × LocalEnv × List Loc × Store) × Choices) :=
+    Except Stop (Result (Func × LocalEnv × List Loc × Store × AccessTrace) × Choices) :=
   match toResult (enterFrame ctx s fid args) with
   | .ok (.ok r) => .ok (.ok r, ch)
   | .ok (.panic msg) =>
@@ -807,8 +837,9 @@ variable {ctx}
 /-- A successful entry never touches the stream. -/
 theorem enterFramePick_ok {s : Store} {fid : FuncId} {args : List GoValue}
     {ch : Choices} {func : Func} {frameEnv : LocalEnv} {resultLocs : List Loc} {s' : Store}
-    (h : enterFrame ctx s fid args = .ok (func, frameEnv, resultLocs, s')) :
-    enterFramePick ctx s fid args ch = .ok (.ok (func, frameEnv, resultLocs, s'), ch) := by
+    {tr : AccessTrace}
+    (h : enterFrame ctx s fid args = .ok (func, frameEnv, resultLocs, s', tr)) :
+    enterFramePick ctx s fid args ch = .ok (.ok (func, frameEnv, resultLocs, s', tr), ch) := by
   simp [enterFramePick, h]
 
 /-- The entry panic's text and the popped stream, on the panic path. -/
@@ -831,10 +862,10 @@ theorem enterFramePick_error {s : Store} {fid : FuncId} {args : List GoValue}
 an entered frame with the stream untouched, or the entry panic's text
 under the site's pick with the stream popped. -/
 theorem enterFramePick_cases {s : Store} {fid : FuncId} {args : List GoValue}
-    {ch ch' : Choices} {r : Result (Func × LocalEnv × List Loc × Store)}
+    {ch ch' : Choices} {r : Result (Func × LocalEnv × List Loc × Store × AccessTrace)}
     (h : enterFramePick ctx s fid args ch = .ok (r, ch')) :
-    (∃ func frameEnv resultLocs s', r = .ok (func, frameEnv, resultLocs, s')
-        ∧ enterFrame ctx s fid args = .ok (func, frameEnv, resultLocs, s') ∧ ch' = ch)
+    (∃ func frameEnv resultLocs s' tr, r = .ok (func, frameEnv, resultLocs, s', tr)
+        ∧ enterFrame ctx s fid args = .ok (func, frameEnv, resultLocs, s', tr) ∧ ch' = ch)
     ∨ (∃ msg, r = .panic (entryPanicText ctx fid args msg
           (Choices.consumeAt .nilValueMethodText (nilValueMethodWidth ctx fid args) ch).1)
         ∧ enterFrame ctx s fid args = .error (.panic msg)
@@ -846,10 +877,10 @@ theorem enterFramePick_cases {s : Store} {fid : FuncId} {args : List GoValue}
     rw [hx] at h
     cases r₀ with
     | ok a =>
-      obtain ⟨func, frameEnv, resultLocs, s'⟩ := a
+      obtain ⟨func, frameEnv, resultLocs, s', tr⟩ := a
       simp only [Except.ok.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
-      exact .inl ⟨func, frameEnv, resultLocs, s', rfl, toResult_eq_ok_ok.mp hx, rfl⟩
+      exact .inl ⟨func, frameEnv, resultLocs, s', tr, rfl, toResult_eq_ok_ok.mp hx, rfl⟩
     | panic msg =>
       simp only [Except.ok.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
@@ -871,10 +902,10 @@ theorem enterFramePick_of_nopanic {s : Store} {fid : FuncId} {args : List GoValu
 stream (the classification is `enterFrame`'s, stream-free; only the
 panic TEXT and the popped tail depend on the stream). -/
 theorem enterFramePick_any_ch {s : Store} {fid : FuncId} {args : List GoValue}
-    {ch ch' : Choices} {r : Result (Func × LocalEnv × List Loc × Store)}
+    {ch ch' : Choices} {r : Result (Func × LocalEnv × List Loc × Store × AccessTrace)}
     (h : enterFramePick ctx s fid args ch = .ok (r, ch')) (ch₂ : Choices) :
     ∃ r₂ ch₂', enterFramePick ctx s fid args ch₂ = .ok (r₂, ch₂') := by
-  rcases enterFramePick_cases h with ⟨func, frameEnv, resultLocs, s', -, hX, -⟩ | ⟨msg, -, hX, -⟩
+  rcases enterFramePick_cases h with ⟨func, frameEnv, resultLocs, s', tr, -, hX, -⟩ | ⟨msg, -, hX, -⟩
   · exact ⟨_, _, enterFramePick_ok hX⟩
   · exact ⟨_, _, enterFramePick_panic hX⟩
 
@@ -1078,14 +1109,14 @@ than a per-arm congruence bash. Arms are verbatim from the old
 `applyStmtOp` minus the trailing `choices` threading.
 -/
 def applyStmtOpCore (s : Store) (op : StmtOp)
-    (vs : List GoValue) : Except Stop Store := do
+    (vs : List GoValue) : Except Stop (Store × AccessTrace) := do
   match op with
   | .allocNew typ =>
       match vs with
       | [tv, value] => do
           let loc ← valueAsLoc tv
           let (nloc, s₁) ← Store.alloc ctx s value typ
-          return ((← storeLoc ctx s₁ loc (.addr nloc)))
+          Mem.store ctx s₁ loc (.addr nloc)
       | _ => stuck "malformed allocNew operands"
   | .makeSlice elem hasCap => do
       let (tv, lenV, capV?) ←
@@ -1123,7 +1154,7 @@ def applyStmtOpCore (s : Store) (op : StmtOp)
       let backing ← buildDefaultArrayValue ctx cap elem
       let (base, s₁) ← Store.alloc ctx s backing (.array cap elem)
       let loc ← valueAsLoc tv
-      return ((← storeLoc ctx s₁ loc (.slice { base := some base, offset := 0, len, cap })))
+      Mem.store ctx s₁ loc (.slice { base := some base, offset := 0, len, cap })
   | .makeMap hasSpace => do
       let (tv, spaceV?) ←
         match vs, hasSpace with
@@ -1155,7 +1186,7 @@ def applyStmtOpCore (s : Store) (op : StmtOp)
           let _ ← valueAsInt spaceV
       let (base, s₁) := s.allocCell (.mapPayload #[] 0)
       let loc ← valueAsLoc tv
-      return ((← storeLoc ctx s₁ loc (.map { base := some base })))
+      Mem.store ctx s₁ loc (.map { base := some base })
   | .makeChan elem hasCap => do
       let (tv, capV?) ←
         match vs, hasCap with
@@ -1185,7 +1216,7 @@ def applyStmtOpCore (s : Store) (op : StmtOp)
             pure size.toNat
       let (base, s₁) := s.allocCell (.chanPayload #[] capacity false)
       let loc ← valueAsLoc tv
-      return ((← storeLoc ctx s₁ loc (.chan { base := some base })))
+      Mem.store ctx s₁ loc (.chan { base := some base })
   | .mapAssign keyTy valueTy =>
       match vs with
       | [baseV, keyV, valueV] => mapAssignValue ctx s keyTy valueTy baseV keyV valueV
@@ -1200,7 +1231,7 @@ def applyStmtOpCore (s : Store) (op : StmtOp)
           -- key, so an unhashable one panics here too (probed 2026-07-31).
           | none => do
               checkKeyHashable ctx key (isInsert := false) (nonEmpty := false)
-              return (s)
+              return (s, [])
           | some (baseLoc, entries, nextId) =>
               match ← mapEntryIndex? ctx keyTy entries key with
               | some i =>
@@ -1208,18 +1239,24 @@ def applyStmtOpCore (s : Store) (op : StmtOp)
                   -- entry leaves the cell, its id is never reissued
                   -- (`nextId` unchanged), and every in-flight range
                   -- sees the absence at its next pick.
-                  return ((← storeMapPayload s baseLoc (entries.eraseIdx! i) nextId))
-              | none => return (s)
+                  Mem.mapWrite s baseLoc (entries.eraseIdx! i) nextId
+              | none =>
+                  -- ABSENT key: the payload is unchanged, but the delete
+                  -- IS a map write (gc instruments `mapdelete` as a write
+                  -- unconditionally — the footprint table always said so):
+                  -- the unchanged payload is rewritten so the write is
+                  -- emitted (C1 S2a).
+                  Mem.mapWrite s baseLoc entries nextId
       | _ => stuck "malformed mapDelete operands"
   | .clearMap =>
       match vs with
       | [baseV] => do
           let map ← valueAsMap baseV
           match ← mapEntries s map with
-          | none => return (s) -- nil map: no-op
+          | none => return (s, []) -- nil map: no-op
           | some (baseLoc, _, nextId) =>
               -- `clear` empties the cell; the id counter stays (B1).
-              return ((← storeMapPayload s baseLoc #[] nextId))
+              Mem.mapWrite s baseLoc #[] nextId
       | _ => stuck "malformed clearMap operands"
   | .clearSlice elem =>
       -- Multi-cell in one apply step, like copySlice: a granularity-ledger
@@ -1229,10 +1266,9 @@ def applyStmtOpCore (s : Store) (op : StmtOp)
           let slice ← valueAsSlice baseV
           validateSlice slice
           let zero ← defaultValue ctx elem
-          let mut current := s
-          for i in [:slice.len] do
-            current ← storeLoc ctx current (← sliceIndexLoc slice (Int.ofNat i)) zero
-          return (current)
+          -- One emitting write per visible element (`Mem.storeRun`; a nil
+          -- base passes `validateSlice` only at length 0).
+          Mem.storeRun ctx s slice 0 (List.replicate slice.len zero)
       | _ => stuck "malformed clearSlice operands"
   | .sortSlice _ =>
       -- SINGLE-cell read+write loop in one apply step (granularity-ledger
@@ -1251,22 +1287,18 @@ def applyStmtOpCore (s : Store) (op : StmtOp)
       match vs with
       | [baseV] => do
           let slice ← valueAsSlice baseV
-          validateSlice slice
+          let (values, trR) ← Mem.loadSlice ctx s slice
           let mut loaded : Array (Int × IntKind) := #[]
-          let mut current := s
-          for i in [:slice.len] do
-            match ← loadLoc ctx current (← sliceIndexLoc slice (Int.ofNat i)) with
+          for value in values do
+            match value with
             | .int v kind => loaded := loaded.push (v, kind)
             | other => stuck s!"sortSlice expected int element, got {repr other}"
           -- `sortLe`, not `List.mergeSort`: the latter is WF-compiled and
           -- kernel-irreducible (de-WF, 2026-08-03; output provably agrees).
-          let sorted := (sortLe (fun a b => a.1 ≤ b.1) loaded.toList).toArray
-          for i in [:slice.len] do
-            match sorted[i]? with
-            | some (v, kind) =>
-                current ← storeLoc ctx current (← sliceIndexLoc slice (Int.ofNat i)) (.int v kind)
-            | none => stuck "sortSlice element count mismatch"
-          return (current)
+          let sorted := (sortLe (fun a b => a.1 ≤ b.1) loaded.toList).map
+            fun (v, kind) => GoValue.int v kind
+          let (s', trW) ← Mem.storeRun ctx s slice 0 sorted
+          return (s', trR ++ trW)
       | _ => stuck "malformed sortSlice operands"
   | .copySlice =>
       match vs with
@@ -1276,16 +1308,15 @@ def applyStmtOpCore (s : Store) (op : StmtOp)
           validateSlice dstSlice
           validateSlice srcSlice
           let count := Nat.min dstSlice.len srcSlice.len
-          let mut values := #[]
-          for i in [:count] do
-            values := values.push (← loadLoc ctx s (← sliceIndexLoc srcSlice (Int.ofNat i)))
-          let mut current := s
-          let mut i := 0
-          for value in values do
-            current ← storeLoc ctx current (← sliceIndexLoc dstSlice (Int.ofNat i)) value
-            i := i + 1
+          -- `count` element reads from the source run, `count` element
+          -- writes into the destination run, then the count into the
+          -- target — each an emitting operation (a nil base is admitted
+          -- only at length 0, where `count = 0`).
+          let (values, trR) ← Mem.loadRun ctx s srcSlice count
+          let (current, trW) ← Mem.storeRun ctx s dstSlice 0 values
           let tloc ← valueAsLoc tv
-          return ((← storeLoc ctx current tloc (.int (Int.ofNat count))))
+          let (s', trT) ← Mem.store ctx current tloc (.int (Int.ofNat count))
+          return (s', trR ++ trW ++ trT)
       | _ => stuck "malformed copySlice operands"
   | .print newline =>
       -- VALIDATE only: every operand must be of a kind gc's print
@@ -1293,7 +1324,7 @@ def applyStmtOpCore (s : Store) (op : StmtOp)
       -- are the pool layer's event (`printOut?`); the state is untouched
       -- (gc: the statement writes fd 2 and nothing else).
       let _ ← renderPrint newline vs
-      return s
+      return (s, [])
   | .appendSlice _ =>
       throw (.internal "applyStmtOpCore: appendSlice dispatches through applyStmtOp")
 
@@ -1344,7 +1375,7 @@ spill path consumes a capacity choice — the second nondeterministic point
 — and is the ONLY arm that touches the stream; everything else dispatches
 to the choices-free `applyStmtOpCore`. -/
 def applyStmtOp (s : Store) (choices : Choices) (op : StmtOp) (_nt : Nat)
-    (vs : List GoValue) : Except Stop (Store × Choices) := do
+    (vs : List GoValue) : Except Stop (Store × Choices × AccessTrace) := do
   match op with
   | .appendSlice elem =>
       match vs with
@@ -1353,20 +1384,18 @@ def applyStmtOp (s : Store) (choices : Choices) (op : StmtOp) (_nt : Nat)
           let elems ← valueAsSlice elemsV
           validateSlice slice
           validateSlice elems
-          let elemValues ← sliceVisibleValues ctx s elems
+          let (elemValues, trE) ← Mem.loadSlice ctx s elems
           let newLen := slice.len + elemValues.size
           let tloc ← valueAsLoc tv
           if newLen <= slice.cap then
-            let mut current := s
-            let mut i := 0
-            for value in elemValues do
-              match slice.base with
-              | some base =>
-                  current ← storeLoc ctx current
-                    (.index base (Int.ofNat (slice.offset + slice.len + i))) value
-                  i := i + 1
-              | none => stuck s!"cannot append {elemValues.size} element(s) into nil slice in place"
-            return ((← storeLoc ctx current tloc (.slice { slice with len := newLen })), choices)
+            -- In place: the appended elements are written into the backing's
+            -- cells [len, newLen) (one emitting write each), then the header.
+            -- (`Mem.storeRun`: a nil base admits only the empty run — the
+            -- former «cannot append … into nil slice in place» refusal was
+            -- unreachable under `validateSlice`, C1 S2a record.)
+            let (current, trW) ← Mem.storeRun ctx s slice slice.len elemValues.toList
+            let (s', trT) ← Mem.store ctx current tloc (.slice { slice with len := newLen })
+            return (s', choices, trE ++ trW ++ trT)
           else
             -- gc's `growslice` refusals (runtime/slice.go:191–252; R16
             -- pin, t5-maxalloc 2026-09-02): the new length overflowing
@@ -1393,7 +1422,7 @@ def applyStmtOp (s : Store) (choices : Choices) (op : StmtOp) (_nt : Nat)
             let elemSize ← tySizeBytes ctx.types elem
             if newLen ≥ intExclusiveUpperBound || newLen * elemSize > maxAllocBytes then
               panic "runtime error: growslice: len out of range"
-            let oldValues ← sliceVisibleValues ctx s slice
+            let (oldValues, trO) ← Mem.loadSlice ctx s slice
             -- The capacity ENVELOPE is [newLen, appendSpillUpper] (the
             -- statement and containment argument live on
             -- `appendSpillUpper`, Ops.lean — arc-final audit F2 /
@@ -1408,10 +1437,15 @@ def applyStmtOp (s : Store) (choices : Choices) (op : StmtOp) (_nt : Nat)
               ((appendGrowthCap slice.cap newLen - newLen + extra) % width)
             let backing ← buildAppendBackingValue ctx elem oldValues elemValues newCap
             let (base, current) ← Store.alloc ctx s backing (.array newCap elem)
-            return ((← storeLoc ctx current tloc
-              (.slice { base := some base, offset := 0, len := newLen, cap := newCap })), choices)
+            -- Spill: the old elements were read out above; the new backing
+            -- is FRESH (no access — the malloc convention); the header write.
+            let (s', trT) ← Mem.store ctx current tloc
+              (.slice { base := some base, offset := 0, len := newLen, cap := newCap })
+            return (s', choices, trE ++ trO ++ trT)
       | _ => stuck "malformed appendSlice operands"
-  | op => do return ((← applyStmtOpCore ctx s op vs), choices)
+  | op => do
+      let (s', tr) ← applyStmtOpCore ctx s op vs
+      return (s', choices, tr)
 
 /-- Range START (BUG-005 (L) surgery, replacing the retired snapshot):
 the ranged map's base cell and its START-ID set — the entry ids live
@@ -1421,25 +1455,25 @@ clause; entry-identity stamps, B1). Shared verbatim by rule
 `Step.mapRangeStart` and `stepFn`'s `mapRangeK` arm. The load here is
 a real heap read (the footprint's `mapRangeK` arm). -/
 def mapRangeStartSets (s : Store) (v : GoValue) :
-    Except Stop (Option Loc × Array Nat) := do
+    Except Stop (Option Loc × Array Nat × AccessTrace) := do
   let map ← valueAsMap v
   match map.base with
-  | none => return (none, #[])
+  | none => return (none, #[], [])
   | some base =>
-      let p ← mapPayload? s base
-      return (some base, p.1.map (·.1))
+      let (p, tr) ← Mem.mapRead s base
+      return (some base, p.1.map (·.1), tr)
 
 /-- The LIVE entries of an in-flight range's map cell (`none` base =
 nil map = no entries), ids included. Every `mapIterNext` pick —
 including the final done-check — performs this read (gc's exhausted
 `mapIterNext` still reads; the U1-closing footprint arm records it). -/
 def mapIterLiveEntries (s : Store) (base : Option Loc) :
-    Except Stop (Array (Nat × GoValue × GoValue)) := do
+    Except Stop (Array (Nat × GoValue × GoValue) × AccessTrace) := do
   match base with
-  | none => return #[]
+  | none => return (#[], [])
   | some l =>
-      let p ← mapPayload? s l
-      return p.1
+      let (p, tr) ← Mem.mapRead s l
+      return (p.1, tr)
 
 /-- Are all entries of a `mapRange` snapshot self-normalized at the range
 key/value types — keys at `keyTy`, values at `valTy`? The pick-free
@@ -1487,11 +1521,11 @@ case rests on exactly this). Shared VERBATIM by the `Step.mapIter*`
 rules and `stepFn`. -/
 def mapIterCandidates (s : Store) (keyTy valTy : Ty)
     (base : Option Loc) (produced : Array Nat) :
-    Except Stop (Array (Nat × GoValue × GoValue)) := do
-  let entries ← mapIterLiveEntries s base
+    Except Stop (Array (Nat × GoValue × GoValue) × AccessTrace) := do
+  let (entries, tr) ← mapIterLiveEntries s base
   let out := (filterCandidateList produced entries.toList).toArray
   if snapshotEntriesSelfNormalized ctx.types keyTy valTy out then
-    return out
+    return (out, tr)
   else
     throw (.stuck s!"map range live entry not self-normalized at range \
 key/value types ({repr keyTy}, {repr valTy})")
@@ -1643,10 +1677,12 @@ def resolveChain (s : Store) : GoValue → List TargetStep → List GoValue →
 OWN checks — nil address (`valueAsLoc`), bounds (`indexTargetLoc`),
 nil field bases, nil map — firing HERE (spec §Assignments: "the
 assignments are carried out in left-to-right order"). -/
-def storeTarget (s : Store) (r : TargetRef) (v : GoValue) : Except Stop Store := do
+def storeTarget (s : Store) (r : TargetRef) (v : GoValue) : Except Stop (Store × AccessTrace) := do
   match r with
   | .chain anchor idxs steps =>
-      storeLoc ctx s (← valueAsLoc (← resolveChain ctx s anchor steps idxs)) v
+      -- Chain resolution is address formation (peeks); the ONE access is
+      -- the write at the resolved path.
+      Mem.store ctx s (← valueAsLoc (← resolveChain ctx s anchor steps idxs)) v
   | .mapElem b k kt vt => mapAssignValue ctx s kt vt b k v
 
 /-- The VALUE SOURCE for a spine-riding assignment's stores (round 4,
@@ -1665,16 +1701,16 @@ inductive RhsOp where
 /-- Apply the value source to the evaluated right-hand operands.
 Shared verbatim by rule `Step.rhsStores` and
 `stepFn`'s `rhsK` finish arm. -/
-def applyRhsOp (s : Store) : RhsOp → List GoValue → Except Stop (List GoValue)
-  | .vals, vs => return vs
+def applyRhsOp (s : Store) : RhsOp → List GoValue → Except Stop (List GoValue × AccessTrace)
+  | .vals, vs => return (vs, [])
   | .mapLookup keyTy valueTy, [baseV, keyV] => do
       let map ← valueAsMap baseV
       let key ← normalizeValueForTy ctx keyTy keyV
-      let pair ← mapLookupValue ctx s map key keyTy valueTy
-      return [pair.1, .bool pair.2]
+      let (pair, tr) ← mapLookupValue ctx s map key keyTy valueTy
+      return ([pair.1, .bool pair.2], tr)
   | .typeAssert targetTy, [value] => do
       let result ← typeAssertValue ctx value targetTy
-      return [result.1, .bool result.2]
+      return ([result.1, .bool result.2], [])
   | _, _ => stuck "malformed comma-ok source operands"
 
 /-! ## The `unseq` construct's machine helpers (Stage B, 2026-09-16; design
@@ -1687,17 +1723,17 @@ admitted source-local read (`.var`), the address of a local (`.ref`), or an
 int/bool constant — resolved in ONE step, no evaluation frame, no panic (a
 target plan checks NOTHING; its checks are the store's, phase 2). Anything
 else refuses by name. -/
-def unseqAtom (env : LocalEnv) (s : Store) : Expr → Except Stop GoValue
+def unseqAtom (env : LocalEnv) (s : Store) : Expr → Except Stop (GoValue × AccessTrace)
   | .var id =>
       match env.lookup id with
-      | some loc => loadLoc ctx s loc
+      | some loc => Mem.load ctx s loc
       | none => stuck s!"unseq: unbound target operand '{id}'"
   | .ref id =>
       match env.lookup id with
-      | some loc => return .addr loc
+      | some loc => return (.addr loc, [])
       | none => stuck s!"unseq: unbound target operand '{id}'"
-  | .intLit value kind => return .int (kind.normalize value) kind
-  | .boolLit b => return .bool b
+  | .intLit value kind => return (.int (kind.normalize value) kind, [])
+  | .boolLit b => return (.bool b, [])
   | other => stuck s!"unseq: target operand is not an atom (a slot, an admitted local, the address of a local, or an int/bool constant): {repr other}"
 
 /-- A binder cell's location: declared in the sweep's scope at ENTER. -/
@@ -1716,25 +1752,29 @@ chain's own checks (`resolveChain` — bounds, nil) on the FROZEN operand
 values — the header and index VALUES the plan froze, never a re-read of
 the variable (review R4) — and load. A frozen map-element plan is outside
 the Stage B fragment (Stage E). -/
-def unseqReadTarget (s : Store) : TargetRef → Except Stop GoValue
+def unseqReadTarget (s : Store) : TargetRef → Except Stop (GoValue × AccessTrace)
   | .chain anchor idxs steps => do
-      loadLoc ctx s (← valueAsLoc (← resolveChain ctx s anchor steps idxs))
+      Mem.load ctx s (← valueAsLoc (← resolveChain ctx s anchor steps idxs))
   | .mapElem .. => unsupported "unseq: read through a frozen map-element plan (Stage E)"
 
 /-- The `load` body: read through the target, then write the binder cell.
 The read's panic precedes the store, so a failing load leaves the state as
 it was (the sweep's first failure over the pre-state). -/
 def unseqLoad (s : Store) (env : LocalEnv) (targets : List (String × TargetRef))
-    (bind tgt : String) : Except Stop Store := do
+    (bind tgt : String) : Except Stop (Store × AccessTrace) := do
   let r ← unseqLookupTarget targets tgt
-  let v ← unseqReadTarget ctx s r
+  let (v, t₁) ← unseqReadTarget ctx s r
   let loc ← unseqCellLoc env bind
-  storeLoc ctx s loc v
+  let (s', t₂) ← Mem.store ctx s loc v
+  return (s', t₁ ++ t₂)
 
 /-- The atoms of a target plan's operand list, in order (`loadMany`'s shape). -/
-def unseqAtoms (env : LocalEnv) (s : Store) : List Expr → Except Stop (List GoValue)
-  | [] => return []
-  | e :: es => do return (← unseqAtom ctx env s e) :: (← unseqAtoms env s es)
+def unseqAtoms (env : LocalEnv) (s : Store) : List Expr → Except Stop (List GoValue × AccessTrace)
+  | [] => return ([], [])
+  | e :: es => do
+      let (v, t) ← unseqAtom ctx env s e
+      let (vs, ts) ← unseqAtoms env s es
+      return (v :: vs, t ++ ts)
 
 /-- The FROZEN-ANCHOR check on a target plan (audit F2, 2026-09-16; design
 §3.4): `resolveChain` replays a chain from its anchor VALUE at the checked
@@ -1785,16 +1825,16 @@ TARGET that checks nothing; a plan whose anchor is NOT frozen (a slice
 variable's address under an index step) is refused by name
 (`unseqUnfrozenPlan?`, audit F2). -/
 def unseqTargetPlan (s : Store) (env : LocalEnv) (lhs : Assignee) :
-    Except Stop TargetRef :=
+    Except Stop (TargetRef × AccessTrace) :=
   match targetPlan lhs with
   | none => stuck "unseq: unsupported target plan assignee"
   | some (sh, ops) => do
-      let vals ← unseqAtoms ctx env s ops
+      let (vals, tr) ← unseqAtoms ctx env s ops
       match completeTargetRef sh vals with
       | some r =>
           match unseqUnfrozenPlan? ctx s r with
           | some msg => stuck msg
-          | none => return r
+          | none => return (r, tr)
       | none => stuck "unseq: malformed target plan arity"
 
 /-- The `guard` body (review R2's entry/completion protocol): read the test
@@ -1804,15 +1844,16 @@ the short-circuit constant `!when` and its occurrence marked DONE (the only
 join), and the guard is DONE. -/
 def unseqGuard (s : Store) (g : UnseqGraph) (env : LocalEnv) (st : List UnseqStatus)
     (i : Nat) (test : String) (w : Bool) (out : String) :
-    Except Stop (List UnseqStatus × Store) := do
-  let b ← valueAsBool (← loadLoc ctx s (← unseqCellLoc env test))
+    Except Stop (List UnseqStatus × Store × AccessTrace) := do
+  let (tv, t₁) ← Mem.load ctx s (← unseqCellLoc env test)
+  let b ← valueAsBool tv
   if b == w then
-    return (st.set i .done, s)
+    return (st.set i .done, s, t₁)
   else
     let st₁ := g.skipRegion st i
-    let s' ← storeLoc ctx s (← unseqCellLoc env out) (.bool (!w))
+    let (s', t₂) ← Mem.store ctx s (← unseqCellLoc env out) (.bool (!w))
     match g.producer? out with
-    | some ci => return ((st₁.set ci .done).set i .done, s')
+    | some ci => return ((st₁.set ci .done).set i .done, s', t₁ ++ t₂)
     | none => stuck s!"unseq: guard completion binder '{out}' has no producer"
 
 /-- Phase 2's store plan: the frozen target refs and the binder VALUES, in
@@ -3337,27 +3378,34 @@ panic is the deferred invocation's panic and joins newest-last); every
 other site delivers under the empty chain. Shared verbatim by the
 relation's apply/entry rules, `stepFn` (through `deliverS`, which adds
 the executable's stream) and `spawnStep`. -/
-def deliver {α : Type} (s : Store) (k : Cont) (next : α → Config × Store)
-    (r : Result α) (chain : List PanicEntry := []) : Config × Store :=
+def deliver {α : Type} (s : Store) (k : Cont) (next : α → Config × Store × AccessTrace)
+    (r : Result α) (chain : List PanicEntry := []) : Config × Store × AccessTrace :=
   match r with
   | .ok a => next a
-  | .panic msg => (.panicking (chain ++ [panicEntry msg]) k, s)
+  -- The delivered panic carries the EMPTY trace (C1 S2a): the apply's
+  -- effects are discarded, its accesses never happened — the detector's
+  -- standing convention («the step panicked: the access never happened»).
+  | .panic msg => (.panicking (chain ++ [panicEntry msg]) k, s, [])
 
 variable {ctx}
-@[simp] theorem deliver_ok {α : Type} {s : Store} {k : Cont} {next : α → Config × Store}
+@[simp] theorem deliver_ok {α : Type} {s : Store} {k : Cont}
+    {next : α → Config × Store × AccessTrace}
     {a : α} {chain : List PanicEntry} : deliver s k next (.ok a) chain = next a := rfl
 
-@[simp] theorem deliver_panic {α : Type} {s : Store} {k : Cont} {next : α → Config × Store}
+@[simp] theorem deliver_panic {α : Type} {s : Store} {k : Cont}
+    {next : α → Config × Store × AccessTrace}
     {msg : String} {chain : List PanicEntry} :
-    deliver s k next (.panic msg) chain = (.panicking (chain ++ [panicEntry msg]) k, s) := rfl
+    deliver s k next (.panic msg) chain = (.panicking (chain ++ [panicEntry msg]) k, s, []) := rfl
 
-/-- A delivered panic is the unwinding configuration over the pre-state. -/
-theorem deliver_panic_eq {α : Type} {s : Store} {k : Cont} {next : α → Config × Store}
-    {msg : String} {chain : List PanicEntry} {c' : Config} {s' : Store}
-    (h : deliver s k next (.panic msg) chain = (c', s')) :
-    c' = .panicking (chain ++ [panicEntry msg]) k ∧ s = s' := by
+/-- A delivered panic is the unwinding configuration over the pre-state,
+with the empty trace. -/
+theorem deliver_panic_eq {α : Type} {s : Store} {k : Cont}
+    {next : α → Config × Store × AccessTrace}
+    {msg : String} {chain : List PanicEntry} {c' : Config} {s' : Store} {tr : AccessTrace}
+    (h : deliver s k next (.panic msg) chain = (c', s', tr)) :
+    c' = .panicking (chain ++ [panicEntry msg]) k ∧ s = s' ∧ tr = [] := by
   simp only [deliver_panic, Prod.mk.injEq] at h
-  exact ⟨h.1.symm, h.2⟩
+  exact ⟨h.1.symm, h.2.1, h.2.2.symm⟩
 
 variable (ctx)
 /-- The frame-ENTRY shapes and the `(fid, args)` their next step hands
@@ -4194,8 +4242,8 @@ def appendSpill? (s : Store) (elem : Ty) (vs : List GoValue) : Option Nat :=
   | [tv, sliceV, elemsV] =>
       match valueAsSlice sliceV, valueAsSlice elemsV with
       | .ok slice, .ok elems =>
-          match validateSlice slice, validateSlice elems, sliceVisibleValues ctx s elems, valueAsLoc tv with
-          | .ok _, .ok _, .ok elemValues, .ok _ =>
+          match validateSlice slice, validateSlice elems, Mem.loadSlice ctx s elems, valueAsLoc tv with
+          | .ok _, .ok _, .ok (elemValues, _), .ok _ =>
               let newLen := slice.len + elemValues.size
               if newLen ≤ slice.cap then none
               else
@@ -4203,7 +4251,7 @@ def appendSpill? (s : Store) (elem : Ty) (vs : List GoValue) : Option Nat :=
                 | .ok elemSize =>
                     if newLen ≥ intExclusiveUpperBound || newLen * elemSize > maxAllocBytes then none
                     else
-                      match sliceVisibleValues ctx s slice with
+                      match Mem.loadSlice ctx s slice with
                       | .ok _ => some (appendSpillWidth slice.cap newLen)
                       | .error _ => none
                 | .error _ => none
@@ -4232,7 +4280,7 @@ under the uniform rule (G-U; before it this site popped at width 1). -/
 def mapIterConsult? (σ : Store) (keyTy valTy : Ty) (base : Option Loc)
     (produced start : Array Nat) : Option (ChoiceSite × Nat) :=
   match mapIterCandidates ctx σ keyTy valTy base produced with
-  | .ok cands =>
+  | .ok (cands, _) =>
       if cands.isEmpty then none
       else
         let w := cands.size + (if mapIterMandatoryRemains cands start then 0 else 1)
@@ -4376,10 +4424,63 @@ theorem entryConsult?_some {σ : Store} {fid : FuncId} {args : List GoValue}
       exact ⟨rfl, rfl, Nat.lt_of_not_le hgt, msg, hp⟩
     · cases h
 
-/-! ## The step relation -/
+/-! ## The read's narrowing by its continuation (moved from `Race.lean`, C1 S2a) -/
 
 variable (ctx)
-/-- One machine step over `(control, state)` pairs. No rule applies to
+/-- Narrow a whole-cell read through the chain of PROJECTIONS its
+continuation will immediately apply: when the value a read produces is
+delivered straight into single-operand `fieldGet` frames, only the
+projected FIELD PATH is semantically read (Go compiles `p.a` to a
+single field load; the rest of the struct is discarded unobserved).
+This is what keeps disjoint-field READ/WRITE pairs race-free at the
+detector (S3 audit: the free lane's read/write direction) for both the
+local (`evalVar` under a `fieldGet` frame) and pointer (`deref` under a
+`fieldGet` frame) forms. Since C1 S2a the CALLER of the module's
+`Mem.loadFor` names this leaf — `Step.evalVar`/`stepFn`'s `.var` arm and
+the strict apply's `leafOf` for `.deref` — a semantic statement about
+what Go reads here, never an emission of its own.
+
+**Q-RACEPATH — CONSTANT-index narrowing (RULED [USER] 2026-08-31,
+`docs/2026-08-31_qrow-rulings.md` row 4; implemented 2026-09-02, the
+Tier-4 detector-soundness lane).** The chain also passes through an
+`indexGet` frame whose pending index operand is a CONSTANT literal
+(`Expr.intLit` — go/types constant-folds every constant index
+expression to one, and a constant index is compile-time bounds-checked,
+so the element path is fully determined before the projection applies)
+PROVIDED the cell the read produces is an ARRAY: element paths live
+under the array's own `Loc`, exactly where element STORES land
+(`storeTarget` resolves `a[1] = v` to `.index base 1`), so a
+constant-index read and a disjoint-element write are disjoint paths.
+gc compiles `a[1]` to a single element load, and mem#restrictions
+licenses the per-sub-value decomposition of composite reads verbatim
+(quoted at inventory C10) — the narrowed footprint is the faithful
+one. A SLICE or STRING variable's cell is a HEADER whose elements live
+elsewhere: its read stays whole-cell (the element read is the
+`indexGet` apply's own `Mem.load`), which is why the narrowing is
+gated on the loaded cell being `.array` — never on the frame shape
+alone (the root check is a PEEK). The chain composes in either order
+(`a[1].x` and `s.arr[1]`). DYNAMIC indices (any non-literal index
+expression — a variable, a call, an arithmetic form go/types could not
+fold) are NOT narrowed and remain the recorded whole-cell
+over-approximation: O1's RESIDUAL, red-pinned by
+`race/free/array-dyn-index-read-write` (BUG-041), with its re-open
+trigger recorded in O1. -/
+def projChainTarget (s : Store) : Cont → Loc → Loc
+  | .strictK (.fieldGet tid f) [] [] _ k', loc =>
+      projChainTarget s k' (.field loc tid f)
+  | .strictK .indexGet [] [.intLit i _] _ k', loc =>
+      match loadLoc ctx s loc with
+      | .ok (.array _) => projChainTarget s k' (.index loc i)
+      | _ => loc
+  | _, loc => loc
+
+/-! ## The step relation -/
+
+/-- One machine step over `(control, state)` pairs, LABELLED by its access
+trace (C1 S2a, D5: the fifth index is the step's `AccessTrace` — the
+memory-effects component of the labelled simulation; pure control steps
+carry `[]`, every helper-bearing rule carries what its operations
+emitted, a delivered panic `[]`). No rule applies to
 malformed or unmodeled configurations: they are stuck (fail closed). A
 panic step starts UNWINDING (`.panicking` carries the chain and the
 continuation): defers run on the panic path, `recover` in a panic-run
@@ -4387,7 +4488,7 @@ deferred call cancels the unwind, and an unrecovered chain reaching
 `.stop` is the abort — a configuration with NO rule (B4: `Config.abort?`;
 the drivers raise the `panic` terminal there). Nondeterministic steps (map
 iteration order, append capacity) arrive at S2 with their statements. -/
-inductive Step : Config → Store → Config → Store → Prop where
+inductive Step : Config → Store → Config → Store → AccessTrace → Prop where
   -- Every APPLY/ENTRY rule below is "apply, then deliver" (B2): the
   -- helper's outcome is classified once (`toResult` — a value or a
   -- recoverable panic; refusals and the unrecoverable terminals have no
@@ -4395,71 +4496,73 @@ inductive Step : Config → Store → Config → Store → Prop where
   -- successor configuration: the value's continuation, or the unwinding
   -- `.panicking [panicEntry msg] k` over the pre-apply state.
   -- Expression entry
-  | evalVar {id loc v env k s} :
+  | evalVar {id loc v tr env k s} :
       LocalEnv.lookup env id = some loc →
-      loadLoc ctx s loc = .ok v →
-      Step (.evalE (.var id) env k) s (.retV v k) s
+      -- The variable read, recorded at the leaf its continuation projects
+      -- (`projChainTarget`): the caller names the leaf, the module emits.
+      Mem.loadFor ctx s loc (projChainTarget ctx s k loc) = .ok (v, tr) →
+      Step (.evalE (.var id) env k) s (.retV v k) s tr
   | evalIntLit {value kind env k s} :
       Step (.evalE (.intLit value kind) env k) s
-        (.retV (.int (kind.normalize value) kind) k) s
+        (.retV (.int (kind.normalize value) kind) k) s []
   | evalBoolLit {value env k s} :
-      Step (.evalE (.boolLit value) env k) s (.retV (.bool value) k) s
+      Step (.evalE (.boolLit value) env k) s (.retV (.bool value) k) s []
   | evalStringLit {value env k s} :
-      Step (.evalE (.stringLit value) env k) s (.retV (.string value) k) s
+      Step (.evalE (.stringLit value) env k) s (.retV (.string value) k) s []
   | evalRef {id loc env k s} :
       LocalEnv.lookup env id = some loc →
-      Step (.evalE (.ref id) env k) s (.retV (.addr loc) k) s
+      Step (.evalE (.ref id) env k) s (.retV (.addr loc) k) s []
   /-- A global's address is its index, provided the cell exists (A4). -/
   | evalGlobal {gid env k s} :
       gid < s.heap.size →
-      Step (.evalE (.global gid) env k) s (.retV (.addr (.base ⟨gid⟩)) k) s
+      Step (.evalE (.global gid) env k) s (.retV (.addr (.base ⟨gid⟩)) k) s []
   /-- Enter a strict form with at least one operand: evaluate the first
   under the generic frame. -/
   | evalStrict {e op e₁ rest env k s} :
       strictPlan e = some (op, e₁ :: rest) →
-      Step (.evalE e env k) s (.evalE e₁ env (.strictK op [] rest env k)) s
+      Step (.evalE e env k) s (.evalE e₁ env (.strictK op [] rest env k)) s []
   /-- A nullary strict form applies immediately: apply, then deliver (a
   value is returned to `k`; a recoverable panic unwinds under `k`). -/
-  | evalStrictNullary {e op r env k s c' s'} :
+  | evalStrictNullary {e op r env k s c' s' tr} :
       strictPlan e = some (op, []) →
-      toResult (applyStrictOp ctx s op []) = .ok r →
-      deliver s k (fun (v, s') => (.retV v k, s')) r = (c', s') →
-      Step (.evalE e env k) s c' s'
+      toResult (applyStrictOp ctx s (projChainTarget ctx s k) op []) = .ok r →
+      deliver s k (fun (v, s', tr) => (.retV v k, s', tr)) r = (c', s', tr) →
+      Step (.evalE e env k) s c' s' tr
   /-- `recover()`: the walk-and-mark is one deterministic function of the
   continuation (arc doc §A1); never stuck. -/
   | evalRecover {env k v k' s} :
       recoverResult k = (v, k') →
-      Step (.evalE .recoverCall env k) s (.retV v k') s
+      Step (.evalE .recoverCall env k) s (.retV v k') s []
   | evalAnd {l r env k s} :
-      Step (.evalE (.and l r) env k) s (.evalE l env (.andK r env k)) s
+      Step (.evalE (.and l r) env k) s (.evalE l env (.andK r env k)) s []
   | evalOr {l r env k s} :
-      Step (.evalE (.or l r) env k) s (.evalE l env (.orK r env k)) s
+      Step (.evalE (.or l r) env k) s (.evalE l env (.orK r env k)) s []
   -- Strict-operator frame
   | strictShift {op done e rest v env k s} :
       Step (.retV v (.strictK op done (e :: rest) env k)) s
-        (.evalE e env (.strictK op (v :: done) rest env k)) s
-  | strictApply {op done v r env k s c' s'} :
-      toResult (applyStrictOp ctx s op (v :: done).reverse) = .ok r →
-      deliver s k (fun (out, s') => (.retV out k, s')) r = (c', s') →
-      Step (.retV v (.strictK op done [] env k)) s c' s'
+        (.evalE e env (.strictK op (v :: done) rest env k)) s []
+  | strictApply {op done v r env k s c' s' tr} :
+      toResult (applyStrictOp ctx s (projChainTarget ctx s k) op (v :: done).reverse) = .ok r →
+      deliver s k (fun (out, s', tr) => (.retV out k, s', tr)) r = (c', s', tr) →
+      Step (.retV v (.strictK op done [] env k)) s c' s' tr
   -- Short-circuit frames
   | andTrue {r env k s} :
-      Step (.retV (.bool true) (.andK r env k)) s (.evalE r env (.boolK k)) s
+      Step (.retV (.bool true) (.andK r env k)) s (.evalE r env (.boolK k)) s []
   | andFalse {r env k s} :
-      Step (.retV (.bool false) (.andK r env k)) s (.retV (.bool false) k) s
+      Step (.retV (.bool false) (.andK r env k)) s (.retV (.bool false) k) s []
   | orTrue {r env k s} :
-      Step (.retV (.bool true) (.orK r env k)) s (.retV (.bool true) k) s
+      Step (.retV (.bool true) (.orK r env k)) s (.retV (.bool true) k) s []
   | orFalse {r env k s} :
-      Step (.retV (.bool false) (.orK r env k)) s (.evalE r env (.boolK k)) s
+      Step (.retV (.bool false) (.orK r env k)) s (.evalE r env (.boolK k)) s []
   | boolCoerce {b k s} :
-      Step (.retV (.bool b) (.boolK k)) s (.retV (.bool b) k) s
+      Step (.retV (.bool b) (.boolK k)) s (.retV (.bool b) k) s []
   -- Sequencing (unchanged from the old relation)
   | seqn {ss env k s} :
-      Step (.exec (.seqn ss) env k) s (.next (seqCont ss.toList env k)) s
+      Step (.exec (.seqn ss) env k) s (.next (seqCont ss.toList env k)) s []
   | seqNext {t rest env k s} :
-      Step (.next (.seq (t :: rest) env k)) s (.exec t env (.seq rest env k)) s
+      Step (.next (.seq (t :: rest) env k)) s (.exec t env (.seq rest env k)) s []
   | seqDone {env k s} :
-      Step (.next (.seq [] env k)) s (.next k) s
+      Step (.next (.seq [] env k)) s (.next k) s []
   /-- **The signal rules** (B4): a control-transfer statement RAISES its
   signal (`Stmt.signal?`), and a signal in flight steps by the
   frame×signal table (`signalStep`) — pass, catch, or no rule. The one
@@ -4467,19 +4570,19 @@ inductive Step : Config → Store → Config → Store → Prop where
   family below (`frameReturn*`, the `.next` exit rules' twins). -/
   | signalStmt {stmt sg env k s} :
       stmt.signal? = some sg →
-      Step (.exec stmt env k) s (.signal sg k) s
+      Step (.exec stmt env k) s (.signal sg k) s []
   | signal {sg k c' s} :
       signalStep sg k = some c' →
-      Step (.signal sg k) s c' s
+      Step (.signal sg k) s c' s []
   -- Blocks and declarations
   | block {decls ss env env' k s s'} :
       allocDecls ctx env.pushScope s decls.toList = .ok (env', s') →
-      Step (.exec (.block decls ss) env k) s (.next (.seq ss.toList env' k)) s'
+      Step (.exec (.block decls ss) env k) s (.next (.seq ss.toList env' k)) s' []
   | initialization {p v loc rest env k s s'} :
       defaultValue ctx p.typ = .ok v →
       Store.alloc ctx s v p.typ = .ok (loc, s') →
       Step (.exec (.initialization p) env (.seq rest env k)) s
-        (.next (.seq rest (env.declare p.id loc) k)) s'
+        (.next (.seq rest (env.declare p.id loc) k)) s' []
   -- Assignment (round 4, BUG-037): the SINGLE assignment rides the
   -- phase-split spine as a one-target multi-assign — the RHS is
   -- phase 1, the target chain's checks fire at the store (phase 2).
@@ -4487,31 +4590,31 @@ inductive Step : Config → Store → Config → Store → Prop where
   -- siblings.
   -- Conditionals
   | ifStmt {c t e env k s} :
-      Step (.exec (.ifThenElse c t e) env k) s (.evalE c env (.ifK t e env k)) s
+      Step (.exec (.ifThenElse c t e) env k) s (.evalE c env (.ifK t e env k)) s []
   | ifTrue {t e env k s} :
-      Step (.retV (.bool true) (.ifK t e env k)) s (.exec t env k) s
+      Step (.retV (.bool true) (.ifK t e env k)) s (.exec t env k) s []
   | ifFalse {t e env k s} :
-      Step (.retV (.bool false) (.ifK t e env k)) s (.exec e env k) s
+      Step (.retV (.bool false) (.ifK t e env k)) s (.exec e env k) s []
   -- Loops
   | whileStmt {c b env k s} :
-      Step (.exec (.while c b) env k) s (.evalE c env (.whileK c b env k)) s
+      Step (.exec (.while c b) env k) s (.evalE c env (.whileK c b env k)) s []
   | whileTrue {c b env k s} :
       Step (.retV (.bool true) (.whileK c b env k)) s
-        (.exec b env (.loop c b env k)) s
+        (.exec b env (.loop c b env k)) s []
   | whileFalse {c b env k s} :
-      Step (.retV (.bool false) (.whileK c b env k)) s (.next k) s
+      Step (.retV (.bool false) (.whileK c b env k)) s (.next k) s []
   | loopNext {c b env k s} :
-      Step (.next (.loop c b env k)) s (.exec (.while c b) env k) s
+      Step (.next (.loop c b env k)) s (.exec (.while c b) env k) s []
   -- Breakable scopes (switch/select bodies): `break` exits the scope
   -- (the table's `breakableK` row), everything else unwinds past it.
   | breakableEnter {b env k s} :
-      Step (.exec (.breakable b) env k) s (.exec b env (.breakableK k)) s
+      Step (.exec (.breakable b) env k) s (.exec b env (.breakableK k)) s []
   | breakableDone {k s} :
-      Step (.next (.breakableK k)) s (.next k) s
+      Step (.next (.breakableK k)) s (.next k) s []
   -- (Control transfer — `return`/`break`/`continue`/`break L`/`continue L`
   -- — is the `signalStmt` rule; the per-frame handling is `signal`.)
   | inertLabel {name env k s} :
-      Step (.exec (.inertLabel name) env k) s (.next k) s
+      Step (.exec (.inertLabel name) env k) s (.next k) s []
   -- Labeled statements (control-flow slice,
   -- docs/2026-08-04_control-flow-design.md). The label scope's handling
   -- of every signal — catching `brkTo` at a match, passing the bare
@@ -4522,9 +4625,9 @@ inductive Step : Config → Store → Config → Store → Prop where
   -- — the frontend's placement invariant), the table's `loop`/`mapIterK`
   -- rows.
   | labeledEnter {name b env k s} :
-      Step (.exec (.labeled name b) env k) s (.exec b env (.labelK name k)) s
+      Step (.exec (.labeled name b) env k) s (.exec b env (.labelK name k)) s []
   | labelDone {name k s} :
-      Step (.next (.labelK name k)) s (.next k) s
+      Step (.next (.labelK name k)) s (.next k) s []
   -- Calls (BUG-025 spine migration; ORDER pinned at the S1 audit,
   -- BUG-052): the CALL evaluates first — arguments left-to-right, then
   -- frame entry — and the caller-target PLANS ride the frame untouched.
@@ -4569,7 +4672,7 @@ inductive Step : Config → Store → Config → Store → Prop where
       targetsPlan targets.toList = some plans →
       args.toList = a :: rest →
       Step (.exec (.call targets fid args) env k) s
-        (.evalE a env (.callArgsK fid plans [] rest env k)) s
+        (.evalE a env (.callArgsK fid plans [] rest env k)) s []
   -- Frame ENTRY rules (B2): `enterFramePick` classifies the entry
   -- (`enterFrame`'s recoverable panic — dynamic dispatch on a nil
   -- interface, the auto-deref of a nil pointer box — is an ordinary
@@ -4578,23 +4681,23 @@ inductive Step : Config → Store → Config → Store → Prop where
   -- quantifies the stream (`ch`/`ch'`, the `stmtOpApply` idiom) and
   -- delivers: an entered frame runs the body, a panic unwinds under the
   -- caller's continuation.
-  | callImmediate {targets fid args plans r env k s ch ch' c' s'} :
+  | callImmediate {targets fid args plans r env k s ch ch' c' s' tr} :
       targetsPlan targets.toList = some plans →
       args.toList = [] →
       enterFramePick ctx s fid [] ch = .ok (r, ch') →
-      deliver s k (fun (func, frameEnv, resultLocs, s') =>
-        (.exec func.body frameEnv (.frame plans env resultLocs [] k func.wrapper), s')) r
-        = (c', s') →
-      Step (.exec (.call targets fid args) env k) s c' s'
+      deliver s k (fun (func, frameEnv, resultLocs, s', tr) =>
+        (.exec func.body frameEnv (.frame plans env resultLocs [] k func.wrapper), s', tr)) r
+        = (c', s', tr) →
+      Step (.exec (.call targets fid args) env k) s c' s' tr
   | callArgNext {v fid plans vals a rest env k s} :
       Step (.retV v (.callArgsK fid plans vals (a :: rest) env k)) s
-        (.evalE a env (.callArgsK fid plans (vals ++ [v]) rest env k)) s
-  | callArgsDoneEnter {v fid plans vals r env k s ch ch' c' s'} :
+        (.evalE a env (.callArgsK fid plans (vals ++ [v]) rest env k)) s []
+  | callArgsDoneEnter {v fid plans vals r env k s ch ch' c' s' tr} :
       enterFramePick ctx s fid (vals ++ [v]) ch = .ok (r, ch') →
-      deliver s k (fun (func, frameEnv, resultLocs, s') =>
-        (.exec func.body frameEnv (.frame plans env resultLocs [] k func.wrapper), s')) r
-        = (c', s') →
-      Step (.retV v (.callArgsK fid plans vals [] env k)) s c' s'
+      deliver s k (fun (func, frameEnv, resultLocs, s', tr) =>
+        (.exec func.body frameEnv (.frame plans env resultLocs [] k func.wrapper), s', tr)) r
+        = (c', s', tr) →
+      Step (.retV v (.callArgsK fid plans vals [] env k)) s c' s' tr
   -- Wide statements (S2): one generic operand-plan frame; targets are
   -- checked as their addresses arrive (interpreter order), and the final
   -- state update is one `applyStmtOp` step. The `ch`/`ch'` choice streams
@@ -4603,26 +4706,26 @@ inductive Step : Config → Store → Config → Store → Prop where
   -- resolves via `Choices`).
   | stmtOpFirst {stmt op nt e rest env k s} :
       stmtPlan stmt = some (op, nt, e :: rest) →
-      Step (.exec stmt env k) s (.evalE e env (.stmtOpK op nt [] rest env k)) s
-  | stmtOpShiftTarget {op nt done v r e rest env k s c' s'} :
+      Step (.exec stmt env k) s (.evalE e env (.stmtOpK op nt [] rest env k)) s []
+  | stmtOpShiftTarget {op nt done v r e rest env k s c' s' tr} :
       done.length < nt →
       toResult (valueAsLoc v) = .ok r →
-      deliver s k (fun _ => (.evalE e env (.stmtOpK op nt (v :: done) rest env k), s)) r
-        = (c', s') →
-      Step (.retV v (.stmtOpK op nt done (e :: rest) env k)) s c' s'
+      deliver s k (fun _ => (.evalE e env (.stmtOpK op nt (v :: done) rest env k), s, [])) r
+        = (c', s', tr) →
+      Step (.retV v (.stmtOpK op nt done (e :: rest) env k)) s c' s' tr
   | stmtOpShiftPlain {op nt done v e rest env k s} :
       nt ≤ done.length →
       Step (.retV v (.stmtOpK op nt done (e :: rest) env k)) s
-        (.evalE e env (.stmtOpK op nt (v :: done) rest env k)) s
+        (.evalE e env (.stmtOpK op nt (v :: done) rest env k)) s []
   -- (The target check is restricted to a nonempty pending list: at the
   -- apply position the same nil-target panic surfaces through
   -- `applyStmtOp`'s per-arm `valueAsLoc` checks, delivered by
   -- `stmtOpApply` — keeping the rules in one-to-one correspondence with
   -- `stepFn`'s arms.)
-  | stmtOpApply {op nt done v r env k s ch c' s'} :
+  | stmtOpApply {op nt done v r env k s ch c' s' tr} :
       toResult (applyStmtOp ctx s ch op nt (v :: done).reverse) = .ok r →
-      deliver s k (fun (s', _) => (.next k, s')) r = (c', s') →
-      Step (.retV v (.stmtOpK op nt done [] env k)) s c' s'
+      deliver s k (fun (s', _, tr) => (.next k, s', tr)) r = (c', s', tr) →
+      Step (.retV v (.stmtOpK op nt done [] env k)) s c' s' tr
   -- Map iteration — LIVE (BUG-005 (L) surgery, ruled 2026-08-19; the
   -- snapshot rules are retired) over entry-identity stamps (B1): start
   -- records the base cell and the START-ID set; each pick LOADS the
@@ -4636,31 +4739,31 @@ inductive Step : Config → Store → Config → Store → Prop where
   -- zero stream IS the canonical member, by definition.
   | mapRange {keyVar valVar mapExpr keyTy valTy body env k s} :
       Step (.exec (.mapRange keyVar valVar mapExpr keyTy valTy body) env k) s
-        (.evalE mapExpr env (.mapRangeK keyVar valVar keyTy valTy body env k)) s
-  | mapRangeStart {v base start keyVar valVar keyTy valTy body env k s} :
-      mapRangeStartSets s v = .ok (base, start) →
+        (.evalE mapExpr env (.mapRangeK keyVar valVar keyTy valTy body env k)) s []
+  | mapRangeStart {v base start tr keyVar valVar keyTy valTy body env k s} :
+      mapRangeStartSets s v = .ok (base, start, tr) →
       Step (.retV v (.mapRangeK keyVar valVar keyTy valTy body env k)) s
-        (.next (.mapIterK keyVar valVar keyTy valTy body base #[] start env k)) s
-  | mapIterDone {keyVar valVar keyTy valTy body base produced start env k s} :
-      mapIterCandidates ctx s keyTy valTy base produced = .ok #[] →
+        (.next (.mapIterK keyVar valVar keyTy valTy body base #[] start env k)) s tr
+  | mapIterDone {keyVar valVar keyTy valTy body base produced start env k s tr} :
+      mapIterCandidates ctx s keyTy valTy base produced = .ok (#[], tr) →
       Step (.next (.mapIterK keyVar valVar keyTy valTy body base produced start env k)) s
-        (.next k) s
-  | mapIterNext {keyVar valVar keyTy valTy body base produced start cands idx env env' k s s'}
+        (.next k) s tr
+  | mapIterNext {keyVar valVar keyTy valTy body base produced start cands idx env env' k s s' tr}
       (hidx : idx < cands.size) :
-      mapIterCandidates ctx s keyTy valTy base produced = .ok cands →
+      mapIterCandidates ctx s keyTy valTy base produced = .ok (cands, tr) →
       -- (The mandatory test is pure since B1, so it needs no success
       -- premise here: the pick width is a total function of `cands`.)
       bindIterVars ctx env.pushScope s keyVar valVar keyTy valTy
         cands[idx].2.1 cands[idx].2.2 = .ok (env', s') →
       Step (.next (.mapIterK keyVar valVar keyTy valTy body base produced start env k)) s
         (.exec body env' (.mapIterK keyVar valVar keyTy valTy body
-          base (produced.push cands[idx].1) start env k)) s'
-  | mapIterStop {keyVar valVar keyTy valTy body base produced start cands env k s} :
-      mapIterCandidates ctx s keyTy valTy base produced = .ok cands →
+          base (produced.push cands[idx].1) start env k)) s' tr
+  | mapIterStop {keyVar valVar keyTy valTy body base produced start cands env k s tr} :
+      mapIterCandidates ctx s keyTy valTy base produced = .ok (cands, tr) →
       cands.size ≠ 0 →
       mapIterMandatoryRemains cands start = false →
       Step (.next (.mapIterK keyVar valVar keyTy valTy body base produced start env k)) s
-        (.next k) s
+        (.next k) s tr
   -- (`break`/`continue`/`return` at the range frame: the table's
   -- `mapIterK` row, rule `signal`.)
   -- Call through a function VALUE (§8): targets, then the callee, then the
@@ -4672,37 +4775,37 @@ inductive Step : Config → Store → Config → Store → Prop where
   | callValueStart {targets callee args plans env k s} :
       targetsPlan targets.toList = some plans →
       Step (.exec (.callValue targets callee args) env k) s
-        (.evalE callee env (.callValCalleeK plans args.toList env k)) s
+        (.evalE callee env (.callValCalleeK plans args.toList env k)) s []
   /-- The callee value arrives (funcVal or nil); start the arguments. Go
   evaluates the callee and ALL arguments before the nil check fires. -/
   | callValCalleeArg {cv plans a rest env k s} :
       deferrableCallee cv = true →
       Step (.retV cv (.callValCalleeK plans (a :: rest) env k)) s
-        (.evalE a env (.callValArgsK cv plans [] rest env k)) s
+        (.evalE a env (.callValArgsK cv plans [] rest env k)) s []
   /-- Nullary call through a value: enter directly with the captures. -/
-  | callValCalleeEnter {fid captured plans r env k s ch ch' c' s'} :
+  | callValCalleeEnter {fid captured plans r env k s ch ch' c' s' tr} :
       enterFramePick ctx s fid captured ch = .ok (r, ch') →
-      deliver s k (fun (func, frameEnv, resultLocs, s') =>
-        (.exec func.body frameEnv (.frame plans env resultLocs [] k func.wrapper), s')) r
-        = (c', s') →
-      Step (.retV (.funcVal fid captured) (.callValCalleeK plans [] env k)) s c' s'
+      deliver s k (fun (func, frameEnv, resultLocs, s', tr) =>
+        (.exec func.body frameEnv (.frame plans env resultLocs [] k func.wrapper), s', tr)) r
+        = (c', s', tr) →
+      Step (.retV (.funcVal fid captured) (.callValCalleeK plans [] env k)) s c' s' tr
   /-- Nullary call of a nil function value: nothing to evaluate, panic. -/
   | callValCalleeNil {plans env k s} :
       Step (.retV .nil (.callValCalleeK plans [] env k)) s
-        (.panicking [panicEntry nilDerefPanicText] k) s
+        (.panicking [panicEntry nilDerefPanicText] k) s []
   | callValArgNext {v cv plans vals a rest env k s} :
       Step (.retV v (.callValArgsK cv plans vals (a :: rest) env k)) s
-        (.evalE a env (.callValArgsK cv plans (vals ++ [v]) rest env k)) s
-  | callValArgsEnter {v fid captured plans vals r env k s ch ch' c' s'} :
+        (.evalE a env (.callValArgsK cv plans (vals ++ [v]) rest env k)) s []
+  | callValArgsEnter {v fid captured plans vals r env k s ch ch' c' s' tr} :
       enterFramePick ctx s fid (captured ++ vals ++ [v]) ch = .ok (r, ch') →
-      deliver s k (fun (func, frameEnv, resultLocs, s') =>
-        (.exec func.body frameEnv (.frame plans env resultLocs [] k func.wrapper), s')) r
-        = (c', s') →
-      Step (.retV v (.callValArgsK (.funcVal fid captured) plans vals [] env k)) s c' s'
+      deliver s k (fun (func, frameEnv, resultLocs, s', tr) =>
+        (.exec func.body frameEnv (.frame plans env resultLocs [] k func.wrapper), s', tr)) r
+        = (c', s', tr) →
+      Step (.retV v (.callValArgsK (.funcVal fid captured) plans vals [] env k)) s c' s' tr
   /-- All arguments evaluated, callee is nil: NOW the invocation panics. -/
   | callValArgsNil {v plans vals env k s} :
       Step (.retV v (.callValArgsK .nil plans vals [] env k)) s
-        (.panicking [panicEntry nilDerefPanicText] k) s
+        (.panicking [panicEntry nilDerefPanicText] k) s []
   -- Frame exit (BUG-025 spine migration; ORDER pinned per BUG-052):
   -- explicit return and fall-through perform the same pinned-location
   -- result read. A TARGETLESS frame resumes the caller in one step
@@ -4728,17 +4831,17 @@ inductive Step : Config → Store → Config → Store → Prop where
   -- result-bearing calls, and the machine stays stuck-closed on the
   -- malformed shape as it always was.)
   | frameReturn {tenv k w s} :
-      Step (.signal .ret (.frame [] tenv [] [] k w)) s (.next k) s
+      Step (.signal .ret (.frame [] tenv [] [] k w)) s (.next k) s []
   | frameFall {tenv k w s} :
-      Step (.next (.frame [] tenv [] [] k w)) s (.next k) s
-  | frameReturnTargets {sh e ops rest tenv results k w s vs} :
-      loadMany ctx s results = .ok vs →
+      Step (.next (.frame [] tenv [] [] k w)) s (.next k) s []
+  | frameReturnTargets {sh e ops rest tenv results k w s vs tr} :
+      loadResults ctx s results = .ok (vs, tr) →
       Step (.signal .ret (.frame ((sh, e :: ops) :: rest) tenv results [] k w)) s
-        (.evalE e tenv (.tgtOpK sh [] ops [] rest .vals [] vs (.seqn #[]) tenv k)) s
-  | frameFallTargets {sh e ops rest tenv results k w s vs} :
-      loadMany ctx s results = .ok vs →
+        (.evalE e tenv (.tgtOpK sh [] ops [] rest .vals [] vs (.seqn #[]) tenv k)) s tr
+  | frameFallTargets {sh e ops rest tenv results k w s vs tr} :
+      loadResults ctx s results = .ok (vs, tr) →
       Step (.next (.frame ((sh, e :: ops) :: rest) tenv results [] k w)) s
-        (.evalE e tenv (.tgtOpK sh [] ops [] rest .vals [] vs (.seqn #[]) tenv k)) s
+        (.evalE e tenv (.tgtOpK sh [] ops [] rest .vals [] vs (.seqn #[]) tenv k)) s tr
   -- Draining the defer chain: one deferred call per step, each in its own
   -- frame whose continuation is this frame with the rest of the chain, so
   -- both exit paths converge on the rules above once the chain is empty.
@@ -4749,65 +4852,65 @@ inductive Step : Config → Store → Config → Store → Prop where
   -- `defer/deferred-dispatch-entry-panic/*`): on the normal drains it
   -- starts unwinding AT THIS FRAME with its remaining defers (the
   -- delivery continuation is the draining frame).
-  | frameDeferFall {targets tenv results fid captured args ds k w s r ch ch' c' s'} :
+  | frameDeferFall {targets tenv results fid captured args ds k w s r ch ch' c' s' tr} :
       enterFramePick ctx s fid (captured ++ args) ch = .ok (r, ch') →
-      deliver s (.frame targets tenv results ds k w) (fun (func, frameEnv, _, s') =>
+      deliver s (.frame targets tenv results ds k w) (fun (func, frameEnv, _, s', tr) =>
         (.exec func.body frameEnv
-          (.frame [] [] [] [] (.frame targets tenv results ds k w) func.wrapper), s')) r
-        = (c', s') →
-      Step (.next (.frame targets tenv results ((.funcVal fid captured, args) :: ds) k w)) s c' s'
-  | frameDeferReturn {targets tenv results fid captured args ds k w s r ch ch' c' s'} :
+          (.frame [] [] [] [] (.frame targets tenv results ds k w) func.wrapper), s', tr)) r
+        = (c', s', tr) →
+      Step (.next (.frame targets tenv results ((.funcVal fid captured, args) :: ds) k w)) s c' s' tr
+  | frameDeferReturn {targets tenv results fid captured args ds k w s r ch ch' c' s' tr} :
       enterFramePick ctx s fid (captured ++ args) ch = .ok (r, ch') →
-      deliver s (.frame targets tenv results ds k w) (fun (func, frameEnv, _, s') =>
+      deliver s (.frame targets tenv results ds k w) (fun (func, frameEnv, _, s', tr) =>
         (.exec func.body frameEnv
-          (.frame [] [] [] [] (.frame targets tenv results ds k w) func.wrapper), s')) r
-        = (c', s') →
-      Step (.signal .ret (.frame targets tenv results ((.funcVal fid captured, args) :: ds) k w)) s c' s'
+          (.frame [] [] [] [] (.frame targets tenv results ds k w) func.wrapper), s', tr)) r
+        = (c', s', tr) →
+      Step (.signal .ret (.frame targets tenv results ((.funcVal fid captured, args) :: ds) k w)) s c' s' tr
   /-- Invoking a nil deferred call panics at DRAIN time (Go: registration
   succeeded; the panic belongs to the invocation). The panic starts
   unwinding AT THIS FRAME with its remaining defers — which run, and may
   recover (`defer/defer-nil-function-recover-order` pins the order). -/
   | frameDeferNilFall {targets tenv results args ds k w s} :
       Step (.next (.frame targets tenv results ((.nil, args) :: ds) k w)) s
-        (.panicking [panicEntry nilDerefPanicText] (.frame targets tenv results ds k w)) s
+        (.panicking [panicEntry nilDerefPanicText] (.frame targets tenv results ds k w)) s []
   | frameDeferNilReturn {targets tenv results args ds k w s} :
       Step (.signal .ret (.frame targets tenv results ((.nil, args) :: ds) k w)) s
-        (.panicking [panicEntry nilDerefPanicText] (.frame targets tenv results ds k w)) s
+        (.panicking [panicEntry nilDerefPanicText] (.frame targets tenv results ds k w)) s []
   -- Registering a deferred call: callee, then arguments, evaluated NOW.
   | deferStmt {callee args env k s} :
       Step (.exec (.deferCall callee args) env k) s
-        (.evalE callee env (.deferCalleeK args.toList env k)) s
+        (.evalE callee env (.deferCalleeK args.toList env k)) s []
   | deferCalleeArg {cv a rest env k s} :
       deferrableCallee cv = true →
       Step (.retV cv (.deferCalleeK (a :: rest) env k)) s
-        (.evalE a env (.deferArgsK cv [] rest env k)) s
+        (.evalE a env (.deferArgsK cv [] rest env k)) s []
   | deferCalleeNoArgs {cv env k k' s} :
       deferrableCallee cv = true →
       pushDefer (cv, []) k = some k' →
-      Step (.retV cv (.deferCalleeK [] env k)) s (.next k') s
+      Step (.retV cv (.deferCalleeK [] env k)) s (.next k') s []
   | deferArgNext {v cv vals a rest env k s} :
       Step (.retV v (.deferArgsK cv vals (a :: rest) env k)) s
-        (.evalE a env (.deferArgsK cv (vals ++ [v]) rest env k)) s
+        (.evalE a env (.deferArgsK cv (vals ++ [v]) rest env k)) s []
   | deferArgsDone {v cv vals env k k' s} :
       pushDefer (cv, vals ++ [v]) k = some k' →
-      Step (.retV v (.deferArgsK cv vals [] env k)) s (.next k') s
+      Step (.retV v (.deferArgsK cv vals [] env k)) s (.next k') s []
   -- The unwinding arc (`docs/2026-07-25_unwinding-arc.md` §A1): panic as
   -- a travelling configuration.
   /-- `panic(v)`: evaluate the payload (already `any`-converted by the
   lowering), then start unwinding. -/
   | panicStmt {e env k s} :
-      Step (.exec (.panicStmt e) env k) s (.evalE e env (.panicArgK k)) s
+      Step (.exec (.panicStmt e) env k) s (.evalE e env (.panicArgK k)) s []
   | panicArgValue {v k s} :
-      Step (.retV v (.panicArgK k)) s (.panicking [⟨panicPayload v, false⟩] k) s
+      Step (.retV v (.panicArgK k)) s (.panicking [⟨panicPayload v, false⟩] k) s []
   /-- Unwinding strips every non-frame, non-marker continuation. -/
   | panicUnwind {chain k k' s} :
       panicPassthrough k = some k' →
-      Step (.panicking chain k) s (.panicking chain k') s
+      Step (.panicking chain k) s (.panicking chain k') s []
   /-- Unwinding past a frame with no (remaining) defers: results are NOT
   read — the call did not return. -/
   | panicFrameEmpty {chain targets tenv results k w s} :
       Step (.panicking chain (.frame targets tenv results [] k w)) s
-        (.panicking chain k) s
+        (.panicking chain k) s []
   /-- Defers RUN on the panic path: the deferred call executes above a
   `panicResumeK` carrying the suspended chain — the shape `recover`'s
   walk detects. Results discarded, as on the normal drain. An ENTRY panic
@@ -4816,28 +4919,28 @@ inductive Step : Config → Store → Config → Store → Prop where
   entry, which `chainNewestRecovered` implements; the `during-panic` pin
   discriminates newest-vs-original by asserting the recovered value) and
   draining continues — the `.nil`-callee mirror below. -/
-  | panicFrameDefer {chain targets tenv results fid captured args ds k w s r ch ch' c' s'} :
+  | panicFrameDefer {chain targets tenv results fid captured args ds k w s r ch ch' c' s' tr} :
       enterFramePick ctx s fid (captured ++ args) ch = .ok (r, ch') →
-      deliver s (.frame targets tenv results ds k w) (fun (func, frameEnv, _, s') =>
+      deliver s (.frame targets tenv results ds k w) (fun (func, frameEnv, _, s', tr) =>
         (.exec func.body frameEnv
           (.frame [] [] [] [] (.panicResumeK chain (.frame targets tenv results ds k w))
-            func.wrapper), s')) r chain
-        = (c', s') →
+            func.wrapper), s', tr)) r chain
+        = (c', s', tr) →
       Step (.panicking chain (.frame targets tenv results ((.funcVal fid captured, args) :: ds) k w))
-        s c' s'
+        s c' s' tr
   /-- A nil deferred callee invoked DURING unwinding: the invocation's
   nil-dereference panic joins the chain (newest last) and this frame's
   remaining defers keep draining. -/
   | panicFrameDeferNil {chain targets tenv results args ds k w s} :
       Step (.panicking chain (.frame targets tenv results ((.nil, args) :: ds) k w)) s
         (.panicking (chain ++ [panicEntry nilDerefPanicText])
-          (.frame targets tenv results ds k w)) s
+          (.frame targets tenv results ds k w)) s []
   /-- A NEW panic unwinding through a suspended chain's marker merges
   behind it — this single rule produces Go's chained abort output
   (`panic: first ⏎ panic: second`, `… [recovered] ⏎ …`). -/
   | panicResumeMerge {chain suspended k s} :
       Step (.panicking chain (.panicResumeK suspended k)) s
-        (.panicking (suspended ++ chain) k) s
+        (.panicking (suspended ++ chain) k) s []
   /-- A panic-path deferred call completed and the newest chain entry was
   recovered: the unwind is cancelled, the whole chain discarded, and the
   frame below resumes its NORMAL exit path (drain remaining defers, then
@@ -4845,11 +4948,11 @@ inductive Step : Config → Store → Config → Store → Prop where
   normally"). -/
   | panicResumeRecovered {chain k s} :
       chainNewestRecovered chain = true →
-      Step (.next (.panicResumeK chain k)) s (.next k) s
+      Step (.next (.panicResumeK chain k)) s (.next k) s []
   /-- …not recovered: unwinding resumes below. -/
   | panicResumeContinue {chain k s} :
       chainNewestRecovered chain = false →
-      Step (.next (.panicResumeK chain k)) s (.panicking chain k) s
+      Step (.next (.panicResumeK chain k)) s (.panicking chain k) s []
   -- (An unrecovered chain at `.stop` — the abort — has NO rule since B4:
   -- `Config.abort?`; the sequential driver raises the `panic` terminal
   -- there and the pool records the goroutine's `aborted` tombstone, both
@@ -4874,14 +4977,16 @@ inductive Step : Config → Store → Config → Store → Prop where
   and the sequential driver classifies them as the deadlocked run. -/
   | chanStFirst {stmt op e rest env k s} :
       chanPlan stmt = some (op, e :: rest) →
-      Step (.exec stmt env k) s (.evalE e env (.chanStK op [] rest env k)) s
+      Step (.exec stmt env k) s (.evalE e env (.chanStK op [] rest env k)) s []
   | chanStShift {op done v e rest env k s} :
       Step (.retV v (.chanStK op done (e :: rest) env k)) s
-        (.evalE e env (.chanStK op (v :: done) rest env k)) s
-  | chanStApply {op done v r env k s c' s'} :
+        (.evalE e env (.chanStK op (v :: done) rest env k)) s []
+  | chanStApply {op done v r env k s c' s' tr} :
       toResult (applyChanOp ctx s op (v :: done).reverse env k) = .ok r →
-      deliver s k id r = (c', s') →
-      Step (.retV v (.chanStK op done [] env k)) s c' s'
+      -- Channel traffic is SYNCHRONIZATION (no `.data` access); its
+      -- chan-object emissions are C1 S2c's.
+      deliver s k (fun (c', s') => (c', s', [])) r = (c', s', tr) →
+      Step (.retV v (.chanStK op done [] env k)) s c' s' tr
   -- `select` (spec's five steps): entry evaluates the clause operands in
   -- source order under `selectOpsK` (step 1); the apply step computes
   -- readiness and commits (steps 2-3, `applySelect` — one ready clause
@@ -4895,31 +5000,31 @@ inductive Step : Config → Store → Config → Store → Prop where
   | selectFirst {clauses default? e rest env k s} :
       selectOperands clauses.toList = e :: rest →
       Step (.exec (.selectStmt clauses default?) env k) s
-        (.evalE e env (.selectOpsK clauses.toList default? [] rest env k)) s
+        (.evalE e env (.selectOpsK clauses.toList default? [] rest env k)) s []
   | selectNoClausesDefault {clauses d env k s} :
       selectOperands clauses.toList = [] →
-      Step (.exec (.selectStmt clauses (some d)) env k) s (.exec d env k) s
+      Step (.exec (.selectStmt clauses (some d)) env k) s (.exec d env k) s []
   /-- `select {}` (and the degenerate no-clause, no-default form): blocks
   forever (spec: "a select with ... no default case blocks forever"). -/
   | selectNoClausesBlock {clauses env k s} :
       selectOperands clauses.toList = [] →
       Step (.exec (.selectStmt clauses none) env k) s
-        (.blockedSelect [] env k) s
+        (.blockedSelect [] env k) s []
   | selectOpsShift {clauses default? done v e rest env k s} :
       Step (.retV v (.selectOpsK clauses default? done (e :: rest) env k)) s
-        (.evalE e env (.selectOpsK clauses default? (v :: done) rest env k)) s
+        (.evalE e env (.selectOpsK clauses default? (v :: done) rest env k)) s []
   -- The apply rules quantify the CHOICE STREAM (`stmtOpApply`'s idiom):
   -- multi-ready readiness draws the L2 clause pick from it (slice 4 —
   -- the envelope statement is `applySelect`'s docstring), so any
   -- ready clause's commit is a legal step.
-  | selectApply {clauses default? done v r env k s ch c' s'} :
+  | selectApply {clauses default? done v r env k s ch c' s' tr} :
       -- The rule quantifies the stream; the apply's emitted commit
       -- identity (Q2's 4th component — instrumentation, not semantics)
       -- and its stream are projected away by the delivery: the
       -- successor configuration is what the rule relates.
       toResult (applySelect ctx s clauses default? (v :: done).reverse env k ch) = .ok r →
-      deliver s k (fun (c', s', _, _) => (c', s')) r = (c', s') →
-      Step (.retV v (.selectOpsK clauses default? done [] env k)) s c' s'
+      deliver s k (fun (c', s', _, _) => (c', s', [])) r = (c', s', tr) →
+      Step (.retV v (.selectOpsK clauses default? done [] env k)) s c' s' tr
   -- Receive delivery, phases SPLIT (convergence round, BUG-029): phase
   -- 1 (`tgtOpK`) evaluates every target's OPERANDS left-to-right,
   -- resolving each target to a store-ready `TargetRef` with its outer
@@ -4928,15 +5033,15 @@ inductive Step : Config → Store → Config → Store → Prop where
   -- firing after earlier stores landed.
   | tgtOpShift {sh ops v e pending refs targets rop rhs vals body env k s} :
       Step (.retV v (.tgtOpK sh ops (e :: pending) refs targets rop rhs vals body env k)) s
-        (.evalE e env (.tgtOpK sh (v :: ops) pending refs targets rop rhs vals body env k)) s
+        (.evalE e env (.tgtOpK sh (v :: ops) pending refs targets rop rhs vals body env k)) s []
   | tgtOpNext {sh ops v r sh' e ops' targets refs rop rhs vals body env k s} :
       completeTargetRef sh (v :: ops).reverse = some r →
       Step (.retV v (.tgtOpK sh ops [] refs ((sh', e :: ops') :: targets) rop rhs vals body env k)) s
-        (.evalE e env (.tgtOpK sh' [] ops' (refs ++ [r]) targets rop rhs vals body env k)) s
+        (.evalE e env (.tgtOpK sh' [] ops' (refs ++ [r]) targets rop rhs vals body env k)) s []
   | tgtOpStores {sh ops v r refs rop vals body env k s} :
       completeTargetRef sh (v :: ops).reverse = some r →
       Step (.retV v (.tgtOpK sh ops [] refs [] rop [] vals body env k)) s
-        (.next (.storeK (refs ++ [r]) vals body env k)) s
+        (.next (.storeK (refs ++ [r]) vals body env k)) s []
   -- Spine-riding assignments (BUG-025; single form and comma-ok
   -- sources round 4, BUG-034/BUG-037): phase 1 resolves the targets,
   -- the RHS evaluates left-to-right (`rhsK`), the value source
@@ -4946,39 +5051,41 @@ inductive Step : Config → Store → Config → Store → Prop where
   | tgtOpRhs {sh ops v r refs rop e rest vals body env k s} :
       completeTargetRef sh (v :: ops).reverse = some r →
       Step (.retV v (.tgtOpK sh ops [] refs [] rop (e :: rest) vals body env k)) s
-        (.evalE e env (.rhsK rop (refs ++ [r]) [] rest body env k)) s
+        (.evalE e env (.rhsK rop (refs ++ [r]) [] rest body env k)) s []
   | rhsShift {rop refs done v e rest body env k s} :
       Step (.retV v (.rhsK rop refs done (e :: rest) body env k)) s
-        (.evalE e env (.rhsK rop refs (v :: done) rest body env k)) s
-  | rhsStores {rop refs done v r body env k s c' s'} :
+        (.evalE e env (.rhsK rop refs (v :: done) rest body env k)) s []
+  | rhsStores {rop refs done v r body env k s c' s' tr} :
       toResult (applyRhsOp ctx s rop (v :: done).reverse) = .ok r →
-      deliver s k (fun vals => (.next (.storeK refs vals body env k), s)) r = (c', s') →
-      Step (.retV v (.rhsK rop refs done [] body env k)) s c' s'
+      deliver s k (fun (vals, tr) => (.next (.storeK refs vals body env k), s, tr)) r
+        = (c', s', tr) →
+      Step (.retV v (.rhsK rop refs done [] body env k)) s c' s' tr
   | assignManyFirst {left right sh e ops rest env k s} :
       left.size = right.size →
       targetsPlan left.toList = some ((sh, e :: ops) :: rest) →
       Step (.exec (.assignMany left right) env k) s
-        (.evalE e env (.tgtOpK sh [] ops [] rest .vals right.toList [] (.seqn #[]) env k)) s
+        (.evalE e env (.tgtOpK sh [] ops [] rest .vals right.toList [] (.seqn #[]) env k)) s []
   | assignFirst {lhs rhs sh e ops env k s} :
       targetPlan lhs = some (sh, e :: ops) →
       Step (.exec (.assign lhs rhs) env k) s
-        (.evalE e env (.tgtOpK sh [] ops [] [] .vals [rhs] [] (.seqn #[]) env k)) s
+        (.evalE e env (.tgtOpK sh [] ops [] [] .vals [rhs] [] (.seqn #[]) env k)) s []
   | mapLookupFirst {t okT base index keyTy valueTy sh e ops rest env k s} :
       targetsPlan [t, okT] = some ((sh, e :: ops) :: rest) →
       Step (.exec (.mapLookup t okT base index keyTy valueTy) env k) s
         (.evalE e env (.tgtOpK sh [] ops [] rest (.mapLookup keyTy valueTy)
-          [base, index] [] (.seqn #[]) env k)) s
+          [base, index] [] (.seqn #[]) env k)) s []
   | typeAssertFirst {t okT expr targetTy sh e ops rest env k s} :
       targetsPlan [t, okT] = some ((sh, e :: ops) :: rest) →
       Step (.exec (.typeAssert t okT expr targetTy) env k) s
         (.evalE e env (.tgtOpK sh [] ops [] rest (.typeAssert targetTy)
-          [expr] [] (.seqn #[]) env k)) s
-  | storeStep {ref rs val vals r body env k s c' s'} :
+          [expr] [] (.seqn #[]) env k)) s []
+  | storeStep {ref rs val vals r body env k s c' s' tr} :
       toResult (storeTarget ctx s ref val) = .ok r →
-      deliver s k (fun s' => (.next (.storeK rs vals body env k), s')) r = (c', s') →
-      Step (.next (.storeK (ref :: rs) (val :: vals) body env k)) s c' s'
+      deliver s k (fun (s', tr) => (.next (.storeK rs vals body env k), s', tr)) r
+        = (c', s', tr) →
+      Step (.next (.storeK (ref :: rs) (val :: vals) body env k)) s c' s' tr
   | storeDone {body env k s} :
-      Step (.next (.storeK [] [] body env k)) s (.exec body env k) s
+      Step (.next (.storeK [] [] body env k)) s (.exec body env k) s []
   -- `go` statements (channels arc slice 2): callee then arguments,
   -- evaluated NOW in the spawning goroutine (spec §Go statements) — the
   -- defer registration's eval-now shape. The completed SPAWN position
@@ -4989,14 +5096,14 @@ inductive Step : Config → Store → Config → Store → Prop where
   -- the spawn position, which keeps `go` in `$pkginit` refused.
   | goStmtEntry {callee args env k s} :
       Step (.exec (.goStmt callee args) env k) s
-        (.evalE callee env (.goCalleeK args.toList env k)) s
+        (.evalE callee env (.goCalleeK args.toList env k)) s []
   | goCalleeArg {cv a rest env k s} :
       deferrableCallee cv = true →
       Step (.retV cv (.goCalleeK (a :: rest) env k)) s
-        (.evalE a env (.goArgsK cv [] rest env k)) s
+        (.evalE a env (.goArgsK cv [] rest env k)) s []
   | goArgNext {v cv vals a rest env k s} :
       Step (.retV v (.goArgsK cv vals (a :: rest) env k)) s
-        (.evalE a env (.goArgsK cv (vals ++ [v]) rest env k)) s
+        (.evalE a env (.goArgsK cv (vals ++ [v]) rest env k)) s []
   -- Sync statements (spec-parity slice 2, design note §§4,6): the
   -- `chanStK` shape verbatim — operand entry/shift, then ONE apply
   -- step (`applySyncOp`: next / panicking / blocked / an onceBegin
@@ -5011,14 +5118,16 @@ inductive Step : Config → Store → Config → Store → Prop where
   -- through untouched (`applySyncOpCore`'s envelope statement).
   | syncStFirst {stmt op e rest env k s} :
       syncPlan stmt = some (op, e :: rest) →
-      Step (.exec stmt env k) s (.evalE e env (.syncStK op [] rest env k)) s
+      Step (.exec stmt env k) s (.evalE e env (.syncStK op [] rest env k)) s []
   | syncStShift {op done v e rest env k s} :
       Step (.retV v (.syncStK op done (e :: rest) env k)) s
-        (.evalE e env (.syncStK op (v :: done) rest env k)) s
-  | syncStApply {op done v r env k s ch c' s'} :
+        (.evalE e env (.syncStK op (v :: done) rest env k)) s []
+  | syncStApply {op done v r env k s ch c' s' tr} :
       toResult (applySyncOp ctx s ch op (v :: done).reverse env k) = .ok r →
-      deliver s k (fun (c', s', _) => (c', s')) r = (c', s') →
-      Step (.retV v (.syncStK op done [] env k)) s c' s'
+      -- Sync traffic is the primitive's state transition (no `.data`
+      -- access); its sync-word emissions are C1 S2c's.
+      deliver s k (fun (c', s', _) => (c', s', [])) r = (c', s', tr) →
+      Step (.retV v (.syncStK op done [] env k)) s c' s' tr
   -- (The completion marker's strip `opDoneStrip` LEFT this relation at
   -- C5: the boundary is a per-goroutine flag of the pool (`Thread`), and
   -- its clear is a POOL step (`StepM.strip`), never a `Config` step.)
@@ -5031,14 +5140,16 @@ inductive Step : Config → Store → Config → Store → Prop where
   -- stable.
   | atomicStFirst {stmt op e rest env k s} :
       atomicPlan stmt = some (op, e :: rest) →
-      Step (.exec stmt env k) s (.evalE e env (.atomicStK op [] rest env k)) s
+      Step (.exec stmt env k) s (.evalE e env (.atomicStK op [] rest env k)) s []
   | atomicStShift {op done v e rest env k s} :
       Step (.retV v (.atomicStK op done (e :: rest) env k)) s
-        (.evalE e env (.atomicStK op (v :: done) rest env k)) s
-  | atomicStApply {op done v r env k s c' s'} :
+        (.evalE e env (.atomicStK op (v :: done) rest env k)) s []
+  | atomicStApply {op done v r env k s c' s' tr} :
       toResult (applyAtomicOp ctx s op (v :: done).reverse env k) = .ok r →
-      deliver s k id r = (c', s') →
-      Step (.retV v (.atomicStK op done [] env k)) s c' s'
+      -- The atomic op's own access at the cell (its ATOMIC kind) is C1
+      -- S2c's emission; no plain `.data` access here.
+      deliver s k (fun (c', s') => (c', s', [])) r = (c', s', tr) →
+      Step (.retV v (.atomicStK op done [] env k)) s c' s' tr
   -- The unsequenced-operand probe (latitude E13 option (b), lane `e13-b`
   -- 2026-09-05, RULED [USER] relayed; envelope statement at
   -- `Stmt.unseqProbe`): evaluate the operand under the probe frame; a
@@ -5069,16 +5180,16 @@ inductive Step : Config → Store → Config → Store → Prop where
   -- `stuck` naming `probeK` that does not exist) and restated over B4's
   -- `Signal` at the round-17 rebase ([AGENT]).
   | unseqProbe {e env k s} :
-      Step (.exec (.unseqProbe e) env k) s (.evalE e env (.probeK k)) s
+      Step (.exec (.unseqProbe e) env k) s (.evalE e env (.probeK k)) s []
   | probeValue {v k s} :
-      Step (.retV v (.probeK k)) s (.next k) s
+      Step (.retV v (.probeK k)) s (.next k) s []
   /-- DEFER (slot 0): the early panic is not raised here; the operand is
   re-evaluated at its residual position after the sibling events. -/
   | probeDefer {chain k s} :
-      Step (.panicking chain (.probeK k)) s (.next k) s
+      Step (.panicking chain (.probeK k)) s (.next k) s []
   /-- RAISE (slot 1): the panic propagates now, ahead of the sibling events. -/
   | probeRaise {chain k s} :
-      Step (.panicking chain (.probeK k)) s (.panicking chain k) s
+      Step (.panicking chain (.probeK k)) s (.panicking chain k) s []
   -- **The `unseq` construct** (evaluation-order model v2.1 §3.3; Stage B,
   -- lane `core/unseq-scheduler-b-0916`, 2026-09-16; the mechanism RULED
   -- [USER] Mike 2026-09-16 relayed — «the Cerberus model is the correct
@@ -5108,7 +5219,7 @@ inductive Step : Config → Store → Config → Store → Prop where
       g.wellFormed? = none →
       allocDecls ctx env s g.cells = .ok (env', s') →
       Step (.exec (.unseq g thenB) env (.seq rest env k)) s
-        (.next (.unseqK g thenB g.initStatus [] env' .pick (.seq rest env' k))) s'
+        (.next (.unseqK g thenB g.initStatus [] env' .pick (.seq rest env' k))) s' []
   /-- Case (ii): the `j`-th READY occurrence (canonical rank order) runs
   next — the `ChoiceSite.unseqNext` pick; `j` is free (every ready
   occurrence is a legal choice). -/
@@ -5116,7 +5227,7 @@ inductive Step : Config → Store → Config → Store → Prop where
       g.skippedDep? st = none →
       (g.ready st)[j]? = some i →
       Step (.next (.unseqK g thenB st tg env .pick k)) s
-        (.next (.unseqK g thenB st tg env (.run i) k)) s
+        (.next (.unseqK g thenB st tg env (.run i) k)) s []
   /-- Case (i): nothing active → phase 2 (the stores, then `thenB`). Every
   binder the stores and `thenB` consume was PRODUCED (`unproducedConsumer?`;
   audit F1, 2026-09-16 — a skipped producer's cell is never consumed as a
@@ -5127,57 +5238,58 @@ inductive Step : Config → Store → Config → Store → Prop where
       g.unproducedConsumer? st thenB = none →
       unseqStorePlan ctx s env tg g.stores = .ok (refs, vals) →
       Step (.next (.unseqK g thenB st tg env .pick k)) s
-        (.next (.storeK refs vals thenB env k)) s
+        (.next (.storeK refs vals thenB env k)) s []
   | unseqRunEval {g thenB st tg env k s o bind head} {i : Nat} :
       g.occs[i]? = some o → o.body = .eval bind head →
       Step (.next (.unseqK g thenB st tg env (.run i) k)) s
-        (.evalE head env (.unseqK g thenB st tg env (.wait i) k)) s
+        (.evalE head env (.unseqK g thenB st tg env (.wait i) k)) s []
   | unseqRunInvoke {g thenB st tg env k s o binds callee args} {i : Nat} :
       g.occs[i]? = some o → o.body = .invoke binds callee args →
       Step (.next (.unseqK g thenB st tg env (.run i) k)) s
         (.exec (unseqInvokeStmt binds callee args) env
-          (.unseqK g thenB st tg env (.wait i) k)) s
+          (.unseqK g thenB st tg env (.wait i) k)) s []
   /-- The checked access through a frozen plan: apply, then deliver — a
   bounds panic unwinds through the frame over the pre-state. -/
-  | unseqRunLoad {g thenB st tg env k s o bind tgt r c' s'} {i : Nat} :
+  | unseqRunLoad {g thenB st tg env k s o bind tgt r c' s' tr} {i : Nat} :
       g.occs[i]? = some o → o.body = .load bind tgt →
       toResult (unseqLoad ctx s env tg bind tgt) = .ok r →
       deliver s (.unseqK g thenB st tg env .pick k)
-        (fun s' => (.next (.unseqK g thenB (st.set i .done) tg env .pick k), s')) r
-        = (c', s') →
-      Step (.next (.unseqK g thenB st tg env (.run i) k)) s c' s'
-  | unseqRunTarget {g thenB st tg env k s o bind lhs r} {i : Nat} :
+        (fun (s', tr) => (.next (.unseqK g thenB (st.set i .done) tg env .pick k), s', tr)) r
+        = (c', s', tr) →
+      Step (.next (.unseqK g thenB st tg env (.run i) k)) s c' s' tr
+  | unseqRunTarget {g thenB st tg env k s o bind lhs r tr} {i : Nat} :
       g.occs[i]? = some o → o.body = .target bind lhs →
-      unseqTargetPlan ctx s env lhs = .ok r →
+      unseqTargetPlan ctx s env lhs = .ok (r, tr) →
       Step (.next (.unseqK g thenB st tg env (.run i) k)) s
-        (.next (.unseqK g thenB (st.set i .done) (tg ++ [(bind, r)]) env .pick k)) s
-  | unseqRunGuard {g thenB st tg env k s o test w out st' s'} {i : Nat} :
+        (.next (.unseqK g thenB (st.set i .done) (tg ++ [(bind, r)]) env .pick k)) s tr
+  | unseqRunGuard {g thenB st tg env k s o test w out st' s' tr} {i : Nat} :
       g.occs[i]? = some o → o.body = .guard test w out →
-      unseqGuard ctx s g env st i test w out = .ok (st', s') →
+      unseqGuard ctx s g env st i test w out = .ok (st', s', tr) →
       Step (.next (.unseqK g thenB st tg env (.run i) k)) s
-        (.next (.unseqK g thenB st' tg env .pick k)) s'
+        (.next (.unseqK g thenB st' tg env .pick k)) s' tr
   /-- A value head's result is WRITTEN into its predeclared binder cell
   (normalized at the cell's declared type) and the occurrence is DONE. -/
-  | unseqValue {g thenB st tg env k s o bind head v loc s'} {i : Nat} :
+  | unseqValue {g thenB st tg env k s o bind head v loc s' tr} {i : Nat} :
       g.occs[i]? = some o → o.body = .eval bind head →
       unseqCellLoc env bind = .ok loc →
-      storeLoc ctx s loc v = .ok s' →
+      Mem.store ctx s loc v = .ok (s', tr) →
       Step (.retV v (.unseqK g thenB st tg env (.wait i) k)) s
-        (.next (.unseqK g thenB (st.set i .done) tg env .pick k)) s'
+        (.next (.unseqK g thenB (st.set i .done) tg env .pick k)) s' tr
   /-- An invocation's statement completed (its results already stored by
   the call's own phase-2 stores): the occurrence is DONE. -/
   | unseqStmtDone {g thenB st tg env k s o binds callee args} {i : Nat} :
       g.occs[i]? = some o → o.body = .invoke binds callee args →
       Step (.next (.unseqK g thenB st tg env (.wait i) k)) s
-        (.next (.unseqK g thenB (st.set i .done) tg env .pick k)) s
+        (.next (.unseqK g thenB (st.set i .done) tg env .pick k)) s []
 
 /-- Reflexive-transitive closure of `Step`. -/
 inductive Steps : Config → Store → Config → Store → Prop where
   | refl (c : Config) (s : Store) : Steps c s c s
-  | tail {a sa b sb c sc} : Steps a sa b sb → Step ctx b sb c sc → Steps a sa c sc
+  -- The closure ERASES the labels (the run's trace is the drivers' fold).
+  | tail {a sa b sb c sc tr} : Steps a sa b sb → Step ctx b sb c sc tr → Steps a sa c sc
 
 variable {ctx}
-theorem Steps.single {a b : Config} {sa sb : Store} (h : Step ctx a sa b sb) :
+theorem Steps.single {a b : Config} {sa sb : Store} {tr : AccessTrace} (h : Step ctx a sa b sb tr) :
     Steps ctx a sa b sb :=
   .tail (.refl a sa) h
 

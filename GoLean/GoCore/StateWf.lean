@@ -1031,7 +1031,7 @@ theorem arrayGet_locSup {values : Array GoValue} {i : Int} {v : GoValue}
     (h : arrayGet values i = .ok v) :
     GoValue.locSup v ≤ goValueListSup values.toList := by
   unfold arrayGet arrayIndexNat at h
-  simp only [bind_eq_ok] at h
+  try simp only [bind_eq_ok] at h
   obtain ⟨n, hn, h⟩ := h
   split at h
   · rename_i hv
@@ -1061,7 +1061,7 @@ theorem arraySet_locSup {values : Array GoValue} {i : Int} {v : GoValue}
     goValueListSup out.toList
       ≤ max (goValueListSup values.toList) (GoValue.locSup v) := by
   unfold arraySet arrayIndexNat at h
-  simp only [bind_eq_ok] at h
+  try simp only [bind_eq_ok] at h
   obtain ⟨n, hn, h⟩ := h
   split at h
   · rename_i old hold
@@ -1156,7 +1156,7 @@ theorem normalizeFieldsWithAux_locSup {f : Ty → GoValue → Except Stop GoValu
       simp only [normalizeFieldsWithAux] at h
       split at h
       · simp [Bind.bind, Except.bind] at h
-      · simp only [bind_eq_ok] at h
+      · try simp only [bind_eq_ok] at h
         obtain ⟨head, hhead, h⟩ := h
         have h1 := hf _ _ _ hhead
         have h2 := ih h
@@ -2057,7 +2057,7 @@ theorem normalizeValueForTyAt_isNormal (types : TypeEnv) :
             · simp [stuck, throw, throwThe, MonadExceptOf.throw, Bind.bind, Except.bind] at h
         all_goals exact absurd h (by simp [stuck, throw, throwThe, MonadExceptOf.throw])
       | defined target =>
-        dsimp only at h
+        try dsimp only at h
         simp only [isNormalForTyAt, hlook]
         exact normalizeValueForTyTy_isNormal (f := normalizeValueForTyAt types n)
           (g := isNormalForTyAt types n) (fun _ _ _ hh => ih hh) h
@@ -2155,7 +2155,7 @@ theorem valueAsMap_locSup {v : GoValue} {m : MapValue}
 theorem sliceIndexLoc_locSup {sl : SliceValue} {i : Int} {l : Loc}
     (h : sliceIndexLoc sl i = .ok l) : Loc.locSup l ≤ optLocSup sl.base := by
   unfold sliceIndexLoc at h
-  simp only [bind_eq_ok] at h
+  try simp only [bind_eq_ok] at h
   obtain ⟨_, _, h⟩ := h
   obtain ⟨n, hn, h⟩ := h
   split at h
@@ -2189,12 +2189,12 @@ theorem sliceFromArray_locSup {base : Loc} {length : Nat} {lo hi : Int}
     GoValue.locSup v ≤ Loc.locSup base := by
   unfold sliceFromArray at h
   split at h
-  · simp only [bind_eq_ok] at h
+  · try simp only [bind_eq_ok] at h
     obtain ⟨⟨lo', hi'⟩, -, hv⟩ := h
     simp only [pure_eq_ok, Except.ok.injEq] at hv
     subst hv
     simp [GoValue.locSup, optLocSup]
-  · simp only [bind_eq_ok] at h
+  · try simp only [bind_eq_ok] at h
     obtain ⟨mx, -, ⟨lo', hi'⟩, -, hv⟩ := h
     simp only [pure_eq_ok, Except.ok.injEq] at hv
     subst hv
@@ -2230,7 +2230,7 @@ theorem loadLoc_locSup {s : Store} :
   | field b tid fname ih =>
     intro v h
     unfold loadLoc at h
-    simp only [bind_eq_ok] at h
+    try simp only [bind_eq_ok] at h
     obtain ⟨bv, hbv, h⟩ := h
     split at h
     · rename_i actual fields
@@ -2247,7 +2247,7 @@ theorem loadLoc_locSup {s : Store} :
   | index b i ih =>
     intro v h
     unfold loadLoc at h
-    simp only [bind_eq_ok] at h
+    try simp only [bind_eq_ok] at h
     obtain ⟨bv, hbv, h⟩ := h
     split at h
     · rename_i values
@@ -2264,7 +2264,7 @@ theorem indexTargetLoc_locSup {s : Store} {b i : GoValue} {l : Loc}
     (h : indexTargetLoc ctx s b i = .ok l) :
     Loc.locSup l ≤ max (GoValue.locSup b) (Heap.locSup s.heap) := by
   unfold indexTargetLoc at h
-  simp only [bind_eq_ok] at h
+  try simp only [bind_eq_ok] at h
   obtain ⟨iv, hiv, h⟩ := h
   split at h
   · -- slice base
@@ -2276,7 +2276,7 @@ theorem indexTargetLoc_locSup {s : Store} {b i : GoValue} {l : Loc}
     simp [GoCore.panic, throw, throwThe, MonadExceptOf.throw] at h
   · -- addr base
     rename_i baseLoc
-    simp only [bind_eq_ok] at h
+    try simp only [bind_eq_ok] at h
     obtain ⟨bv, hbv, h⟩ := h
     split at h
     · -- array element
@@ -2375,7 +2375,7 @@ theorem StructFields.set_locSup {fields : Array (String × GoValue)}
     goValueFieldsSup out.toList
       ≤ max (goValueFieldsSup fields.toList) (GoValue.locSup v) := by
   unfold StructFields.set at h
-  simp only [bind_eq_ok] at h
+  try simp only [bind_eq_ok] at h
   obtain ⟨st, hloop, hpost⟩ := h
   rw [← Array.forIn_toList] at hloop
   -- 4.32.2: the do-desugar's loop state is now `(array, flag) : _ × Bool`
@@ -2527,7 +2527,7 @@ theorem writeAt_locSup :
           split at h
           · rename_i k hk
             have hklt := fieldIdx?_lt hk
-            simp only [bind_eq_ok] at h
+            try simp only [bind_eq_ok] at h
             obtain ⟨⟨fty, b'⟩, _, h⟩ := h
             simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
             obtain ⟨fields', hmod, rfl⟩ := h
@@ -2942,7 +2942,7 @@ theorem writeAt_isNormal :
           split at h
           · rename_i k hidx
             have hklt := fieldIdx?_lt hidx
-            simp only [bind_eq_ok] at h
+            try simp only [bind_eq_ok] at h
             obtain ⟨⟨fty, b'⟩, hstep, h⟩ := h
             simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
             obtain ⟨fields', hmod, rfl⟩ := h
@@ -3172,7 +3172,7 @@ theorem allocDecls_wf :
     obtain ⟨v, hv, h⟩ := h
     have hv0 := defaultValue_locSup hv
     obtain ⟨⟨loc, σ₁⟩, halloc, h⟩ := h
-    dsimp only at h
+    try dsimp only at h
     obtain ⟨hw₁, hloc, hna⟩ := alloc_wf hw (by omega) halloc
     obtain ⟨d1, d2, _⟩ := alloc_shape halloc
     try dsimp only at hw₁ hloc hna d1 d2
@@ -3212,7 +3212,7 @@ theorem bindParams_wf :
         simp only [goValueListSup] at hvals
         omega
       obtain ⟨⟨loc, σ₁⟩, halloc, h⟩ := h
-      dsimp only at h
+      try dsimp only at h
       obtain ⟨hw₁, hloc, hna⟩ := alloc_wf hw hvb halloc
       obtain ⟨d1, d2, _⟩ := alloc_shape halloc
       try dsimp only at hw₁ hloc hna d1 d2
@@ -3264,7 +3264,7 @@ theorem mapEntries_locSup {σ : Store} {m : MapValue}
   split at h
   · simp at h
   · rename_i base heq
-    simp only [bind_eq_ok] at h
+    try simp only [bind_eq_ok] at h
     obtain ⟨⟨es, n⟩, hp, h⟩ := h
     simp only [pure_eq_ok, Except.ok.injEq, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl, rfl⟩ := h
@@ -3278,36 +3278,129 @@ theorem mapEntryIndex?_ok_entries {kt : Ty}
     (h : mapEntryIndex? ctx kt entries key isInsert = .ok (some i)) :
     True := trivial
 
-theorem mapLookupValue_locSup {σ : Store} {m : MapValue} {key : GoValue}
-    {kt vt : Ty} {rv : GoValue} {b : Bool}
-    (h : mapLookupValue ctx σ m key kt vt = .ok (rv, b)) :
-    GoValue.locSup rv ≤ Heap.locSup σ.heap := by
-  unfold mapLookupValue at h
-  simp only [bind_eq_ok] at h
-  obtain ⟨es, hes, h⟩ := h
+/-! ## The emitting operations (C1 S2a): each is its primitive plus a fixed emission -/
+
+theorem Mem.load_eq {σ : Store} {l : Loc} {v : GoValue} {tr : AccessTrace}
+    (h : Mem.load ctx σ l = .ok (v, tr)) :
+    loadLoc ctx σ l = .ok v ∧ tr = [(.read, .data l)] := by
+  simp only [Mem.load, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+  obtain ⟨v', hv, rfl, rfl⟩ := h
+  exact ⟨hv, rfl⟩
+
+theorem Mem.loadFor_eq {σ : Store} {root leaf : Loc} {v : GoValue} {tr : AccessTrace}
+    (h : Mem.loadFor ctx σ root leaf = .ok (v, tr)) :
+    loadLoc ctx σ root = .ok v ∧ tr = [(.read, .data leaf)] := by
+  simp only [Mem.loadFor, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+  obtain ⟨v', hv, rfl, rfl⟩ := h
+  exact ⟨hv, rfl⟩
+
+theorem Mem.store_eq {σ σ' : Store} {l : Loc} {v : GoValue} {tr : AccessTrace}
+    (h : Mem.store ctx σ l v = .ok (σ', tr)) :
+    storeLoc ctx σ l v = .ok σ' ∧ tr = [(.write, .data l)] := by
+  simp only [Mem.store, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+  obtain ⟨s', hs, rfl, rfl⟩ := h
+  exact ⟨hs, rfl⟩
+
+theorem Mem.mapRead_eq {σ : Store} {l : Loc} {p : Array (Nat × GoValue × GoValue) × Nat}
+    {tr : AccessTrace} (h : Mem.mapRead σ l = .ok (p, tr)) :
+    mapPayload? σ l = .ok p ∧ tr = [(.read, .data l)] := by
+  simp only [Mem.mapRead, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+  obtain ⟨p', hp, rfl, rfl⟩ := h
+  exact ⟨hp, rfl⟩
+
+theorem Mem.mapWrite_eq {σ σ' : Store} {l : Loc} {es : Array (Nat × GoValue × GoValue)}
+    {n : Nat} {tr : AccessTrace} (h : Mem.mapWrite σ l es n = .ok (σ', tr)) :
+    storeMapPayload σ l es n = .ok σ' ∧ tr = [(.write, .data l)] := by
+  simp only [Mem.mapWrite, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+  obtain ⟨s', hs, rfl, rfl⟩ := h
+  exact ⟨hs, rfl⟩
+
+theorem Mem.loadElems_locSup {σ : Store} {base : Loc} :
+    ∀ {n start : Nat} {vs : List GoValue} {tr : AccessTrace},
+      Mem.loadElems ctx σ base start n = .ok (vs, tr) →
+      goValueListSup vs ≤ Heap.locSup σ.heap ∧ vs.length = n := by
+  intro n
+  induction n with
+  | zero =>
+    intro start vs tr h
+    simp only [Mem.loadElems, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    simp [goValueListSup]
+  | succ n ih =>
+    intro start vs tr h
+    simp only [Mem.loadElems, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨⟨v, t⟩, hv, ⟨rest, ts⟩, hrest, rfl, rfl⟩ := h
+    have h1 := loadLoc_locSup (Mem.load_eq hv).1
+    obtain ⟨h2, h3⟩ := ih hrest
+    simp only [goValueListSup, List.length_cons]
+    omega
+
+theorem Mem.loadSlice_locSup {σ : Store} {slice : SliceValue} {vs : Array GoValue}
+    {tr : AccessTrace} (h : Mem.loadSlice ctx σ slice = .ok (vs, tr)) :
+    goValueListSup vs.toList ≤ Heap.locSup σ.heap := by
+  simp only [Mem.loadSlice, bind_eq_ok] at h
+  obtain ⟨_, _, h⟩ := h
   split at h
   · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨_, _, d, hd, rfl, rfl⟩ := h
+    obtain ⟨⟨l, t⟩, hl, rfl, rfl⟩ := h
+    simp only [List.toList_toArray]
+    exact (Mem.loadElems_locSup hl).1
+  · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    simp [goValueListSup]
+
+theorem loadResults_locSup {σ : Store} :
+    ∀ {locs : List Loc} {vs : List GoValue} {tr : AccessTrace},
+      loadResults ctx σ locs = .ok (vs, tr) →
+      goValueListSup vs ≤ Heap.locSup σ.heap := by
+  intro locs
+  induction locs with
+  | nil =>
+    intro vs tr h
+    simp only [loadResults, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    simp [goValueListSup]
+  | cons l rest ih =>
+    intro vs tr h
+    simp only [loadResults, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨⟨v, t⟩, hv, ⟨tail, ts⟩, htail, rfl, rfl⟩ := h
+    have h1 := loadLoc_locSup (Mem.load_eq hv).1
+    have h2 := ih htail
+    simp only [goValueListSup]
+    omega
+
+theorem mapLookupValue_locSup {σ : Store} {m : MapValue} {key : GoValue}
+    {kt vt : Ty} {rv : GoValue} {b : Bool} {tr : AccessTrace}
+    (h : mapLookupValue ctx σ m key kt vt = .ok ((rv, b), tr)) :
+    GoValue.locSup rv ≤ Heap.locSup σ.heap := by
+  unfold mapLookupValue at h
+  split at h
+  · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨_, _, d, hd, ⟨rfl, rfl⟩, rfl⟩ := h
     rw [defaultValue_locSup hd]
     exact Nat.zero_le _
-  · rename_i baseLoc entries nextId
-    simp only [bind_eq_ok] at h
+  · rename_i baseLoc hbase
+    try simp only [bind_eq_ok] at h
+    obtain ⟨⟨⟨entries, n⟩, tr'⟩, hread, h⟩ := h
+    obtain ⟨hp, rfl⟩ := Mem.mapRead_eq hread
+    try dsimp only at h
+    try simp only [bind_eq_ok] at h
     obtain ⟨idx, hidx, h⟩ := h
     split at h
     · rename_i i
       split at h
-      · rename_i id' k' v' hp
+      · rename_i id' k' v' hp'
         simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
+        obtain ⟨⟨rfl, rfl⟩, rfl⟩ := h
         have hmem : (id', k', v') ∈ entries.toList :=
-          List.mem_of_getElem? (by rw [Array.getElem?_toList]; exact hp)
-        have h2 := (mapEntries_locSup hes rfl).2
+          List.mem_of_getElem? (by rw [Array.getElem?_toList]; exact hp')
+        have h2 := mapPayload?_locSup hp
         have h3 := goValueEntriesSup_mem hmem
         simp only at h3
         omega
       · simp at h
     · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨d, hd, rfl, rfl⟩ := h
+      obtain ⟨d, hd, ⟨rfl, rfl⟩, rfl⟩ := h
       rw [defaultValue_locSup hd]
       exact Nat.zero_le _
 
@@ -3315,7 +3408,7 @@ theorem typeAssertValue_locSup {v : GoValue} {ty : Ty}
     {r : GoValue} {b : Bool} (h : typeAssertValue ctx v ty = .ok (r, b)) :
     GoValue.locSup r ≤ GoValue.locSup v := by
   unfold typeAssertValue at h
-  simp only [bind_eq_ok] at h
+  try simp only [bind_eq_ok] at h
   obtain ⟨failed, hfailed, h⟩ := h
   have h0 := defaultValue_locSup hfailed
   split at h
@@ -3349,8 +3442,8 @@ theorem goValueListSup_getElem? {arr : Array GoValue} {i : Nat} {x : GoValue}
   exact supBy_mem (List.mem_of_getElem? (by rw [Array.getElem?_toList]; exact h))
 
 theorem dynamicDispatch?_locSup {σ : Store} {func : Func}
-    {args : Array GoValue} {out : Option (Func × Array GoValue)}
-    (h : dynamicDispatch? ctx σ func args = .ok out) :
+    {args : Array GoValue} {out : Option (Func × Array GoValue)} {tr : AccessTrace}
+    (h : dynamicDispatch? ctx σ func args = .ok (out, tr)) :
     ∀ {tf : Func} {args' : Array GoValue}, out = some (tf, args') →
       Func.locSup tf ≤ funcListSup ctx.functions.toList
         ∧ goValueListSup args'.toList
@@ -3378,24 +3471,25 @@ theorem dynamicDispatch?_locSup {σ : Store} {func : Func}
             split at h
             · -- needsDeref
               split at h
-              · -- .addr loc: load
+              · -- .addr loc: the narrowed receiver read
                 rename_i loc
                 split at h
                 · simp at h
-                · rename_i rv hrv
+                · rename_i p hp
+                  obtain ⟨rv, tr'⟩ := p
                   simp only [Except.ok.injEq, Option.some.injEq,
                     Prod.mk.injEq] at h
-                  obtain ⟨rfl, rfl⟩ := h
+                  obtain ⟨⟨rfl, rfl⟩, rfl⟩ := h
                   refine ⟨htfb, ?_⟩
                   try rw [Array.set!]
                   refine Nat.le_trans goValueListSup_setIfInBounds ?_
-                  have := loadLoc_locSup hrv
+                  have := loadLoc_locSup (Mem.loadFor_eq hp).1
                   omega
               · simp at h
               · simp at h
             · -- no deref: receiver is the boxed value
               simp only [Except.ok.injEq, Option.some.injEq, Prod.mk.injEq] at h
-              obtain ⟨rfl, rfl⟩ := h
+              obtain ⟨⟨rfl, rfl⟩, rfl⟩ := h
               refine ⟨htfb, ?_⟩
               try rw [Array.set!]
               refine Nat.le_trans goValueListSup_setIfInBounds ?_
@@ -3431,8 +3525,9 @@ theorem enterFrame_tail {σ : Store} {func₁ : Func} {argVals₁ : List GoValue
 
 theorem enterFrame_wf {σ : Store} {fid : FuncId} {argVals : List GoValue}
     {func : Func} {frameEnv : LocalEnv} {resultLocs : List Loc} {σ' : Store}
+    {tr : AccessTrace}
     (hw : StateWf ctx σ) (hargs : goValueListSup argVals ≤ σ.nextAddr)
-    (h : enterFrame ctx σ fid argVals = .ok (func, frameEnv, resultLocs, σ')) :
+    (h : enterFrame ctx σ fid argVals = .ok (func, frameEnv, resultLocs, σ', tr)) :
     StateWf ctx σ' ∧ σ.nextAddr ≤ σ'.nextAddr
       ∧ Stmt.locSup func.body ≤ σ'.nextAddr
       ∧ LocalEnv.locSup frameEnv ≤ σ'.nextAddr
@@ -3458,17 +3553,17 @@ theorem enterFrame_wf {σ : Store} {fid : FuncId} {argVals : List GoValue}
     all_goals try (simp at h; done)
     rename_i p₁ hbp
     obtain ⟨argsEnv, s₁⟩ := p₁
-    dsimp only at h
+    try dsimp only at h
     split at h
     all_goals try (simp at h; done)
     rename_i p₂ had
     obtain ⟨frameEnv₁, s₂⟩ := p₂
-    dsimp only at h
+    try dsimp only at h
     split at h
     all_goals try (simp at h; done)
     rename_i locs hpin
     simp only [Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl, rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl, rfl, rfl, rfl⟩ := h
     refine enterFrame_tail hw ?_ hbp had hpin
     have harr : goValueListSup argVals.toArray.toList
         = goValueListSup argVals := by simp
@@ -3479,17 +3574,17 @@ theorem enterFrame_wf {σ : Store} {fid : FuncId} {argVals : List GoValue}
     all_goals try (simp at h; done)
     rename_i p₁ hbp
     obtain ⟨argsEnv, s₁⟩ := p₁
-    dsimp only at h
+    try dsimp only at h
     split at h
     all_goals try (simp at h; done)
     rename_i p₂ had
     obtain ⟨frameEnv₁, s₂⟩ := p₂
-    dsimp only at h
+    try dsimp only at h
     split at h
     all_goals try (simp at h; done)
     rename_i locs hpin
     simp only [Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl, rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl, rfl, rfl, rfl⟩ := h
     exact enterFrame_tail hw hargs hbp had hpin
 
 theorem bindIterVars_wf {env : LocalEnv} {σ : Store}
@@ -3517,7 +3612,7 @@ theorem bindIterVars_wf {env : LocalEnv} {σ : Store}
     | ok pr =>
     obtain ⟨loc, σa⟩ := pr
     rw [halloc] at h
-    dsimp only at h
+    try dsimp only at h
     obtain ⟨w1, w2, w3⟩ := alloc_wf hw hkb halloc
     obtain ⟨d1, d2, _⟩ := alloc_shape halloc
     have henva : LocalEnv.locSup (env.declare name loc) ≤ σa.nextAddr := by
@@ -3537,7 +3632,7 @@ theorem bindIterVars_wf {env : LocalEnv} {σ : Store}
       | ok pr₂ =>
         obtain ⟨loc₂, σb⟩ := pr₂
         rw [halloc₂] at h
-        dsimp only at h
+        try dsimp only at h
         simp only [Except.ok.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl⟩ := h
         obtain ⟨y1, y2, y3⟩ := alloc_wf w1 hvb halloc₂
@@ -3564,7 +3659,7 @@ theorem bindIterVars_wf {env : LocalEnv} {σ : Store}
       | ok pr =>
       obtain ⟨loc, σa⟩ := pr
       rw [halloc] at h
-      dsimp only at h
+      try dsimp only at h
       simp only [Except.ok.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       obtain ⟨w1, w2, w3⟩ := alloc_wf hw hvb halloc
@@ -3581,11 +3676,11 @@ theorem bindIterVars_wf {env : LocalEnv} {σ : Store}
 base loc is bounded by the ranged map VALUE's sup (the start set is a
 set of entry IDS — loc-free, nothing to bound). -/
 theorem mapRangeStartSets_locSup {σ : Store} {v : GoValue}
-    {base : Option Loc} {start : Array Nat}
-    (h : mapRangeStartSets σ v = .ok (base, start)) :
+    {base : Option Loc} {start : Array Nat} {tr : AccessTrace}
+    (h : mapRangeStartSets σ v = .ok (base, start, tr)) :
     optLocSup base ≤ GoValue.locSup v := by
   unfold mapRangeStartSets at h
-  simp only [bind_eq_ok] at h
+  try simp only [bind_eq_ok] at h
   obtain ⟨m, hm, h⟩ := h
   have hmv : optLocSup m.base ≤ GoValue.locSup v := by
     unfold valueAsMap at hm
@@ -3593,13 +3688,13 @@ theorem mapRangeStartSets_locSup {σ : Store} {v : GoValue}
   split at h
   · rename_i hbase
     simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl, rfl⟩ := h
     simp [optLocSup]
   · rename_i base' hbase
-    simp only [bind_eq_ok] at h
-    obtain ⟨⟨es, n⟩, hp, h⟩ := h
+    try simp only [bind_eq_ok] at h
+    obtain ⟨⟨⟨es, n⟩, tr'⟩, hp, h⟩ := h
     simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl, rfl⟩ := h
     simpa [hbase] using hmv
 
 /-- The pick-time filter only drops entries (it is a `List.filter`). -/
@@ -3614,27 +3709,28 @@ candidates are heap-bounded (BUG-005 (L) surgery — the mapIterNext wf
 case's bound, replacing the retired snapshot bound). -/
 theorem mapIterCandidates_locSup {σ : Store} {keyTy valTy : Ty}
     {base : Option Loc} {produced : Array Nat}
-    {cands : Array (Nat × GoValue × GoValue)}
-    (h : mapIterCandidates ctx σ keyTy valTy base produced = .ok cands) :
+    {cands : Array (Nat × GoValue × GoValue)} {tr : AccessTrace}
+    (h : mapIterCandidates ctx σ keyTy valTy base produced = .ok (cands, tr)) :
     goValueEntriesSup cands.toList ≤ Heap.locSup σ.heap := by
   unfold mapIterCandidates at h
-  simp only [bind_eq_ok] at h
-  obtain ⟨es, hes, h⟩ := h
+  try simp only [bind_eq_ok] at h
+  obtain ⟨⟨es, tr₀⟩, hes, h⟩ := h
   have hlive : goValueEntriesSup es.toList ≤ Heap.locSup σ.heap := by
     cases base with
     | none =>
-        simp only [mapIterLiveEntries, pure_eq_ok, Except.ok.injEq] at hes
-        subst hes
+        simp only [mapIterLiveEntries, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hes
+        obtain ⟨rfl, rfl⟩ := hes
         simp [goValueEntriesSup]
     | some l =>
         simp only [mapIterLiveEntries, bind_eq_ok] at hes
-        obtain ⟨⟨es', n⟩, hp, hes⟩ := hes
-        simp only [pure_eq_ok, Except.ok.injEq] at hes
-        subst hes
-        exact mapPayload?_locSup hp
+        obtain ⟨⟨⟨es', n⟩, tr₁⟩, hp, hes⟩ := hes
+        simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hes
+        obtain ⟨rfl, rfl⟩ := hes
+        exact mapPayload?_locSup (Mem.mapRead_eq hp).1
+  try dsimp only at h
   split at h
-  · simp only [pure_eq_ok, Except.ok.injEq] at h
-    subst h
+  · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
     simp only [List.toList_toArray]
     exact Nat.le_trans filterCandidateList_sup hlive
   · simp [throw, throwThe, MonadExceptOf.throw] at h
@@ -3700,7 +3796,7 @@ theorem buildArrayValue_locSup {len : Nat} {elem : Ty}
     (h : buildArrayValue ctx len elem args = .ok r) :
     GoValue.locSup r ≤ supBy (fun p => GoValue.locSup p.2) args.toList := by
   unfold buildArrayValue at h
-  simp only [bind_eq_ok] at h
+  try simp only [bind_eq_ok] at h
   obtain ⟨vs₁, hvs₁, h⟩ := h
   have hb₁ : goValueListSup vs₁.toList ≤ 0 := by
     rw [Std.Legacy.Range.forIn_eq_forIn_range'] at hvs₁
@@ -3758,22 +3854,11 @@ theorem sliceVisibleValues_locSup {σ : Store} {slice : SliceValue}
     {values : Array GoValue} (h : sliceVisibleValues ctx σ slice = .ok values) :
     goValueListSup values.toList ≤ Heap.locSup σ.heap := by
   unfold sliceVisibleValues at h
-  simp only [bind_eq_ok] at h
-  obtain ⟨_, _, vs, hloop, h⟩ := h
-  rw [Std.Legacy.Range.forIn_eq_forIn_range'] at hloop
-  have hP := forIn_list_inv (P := fun vs : Array GoValue =>
-      goValueListSup vs.toList ≤ Heap.locSup σ.heap)
-    ?_ (Nat.zero_le _) hloop
-  · simp only [pure_eq_ok, Except.ok.injEq] at h
-    subst h
-    exact hP
-  · intro a _ b rr hbb hr
-    simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at hr
-    obtain ⟨l, hl, v, hv, hrr⟩ := hr
-    subst hrr
-    have h1 := loadLoc_locSup hv
-    simp only [forInStepVal, goValueListSup_push]
-    omega
+  rw [map_eq_ok] at h
+  obtain ⟨⟨vs, tr⟩, hl, hv⟩ := h
+  simp only at hv
+  subst hv
+  exact Mem.loadSlice_locSup hl
 
 theorem buildAppendBackingValue_locSup {elem : Ty}
     {oldValues elemValues : Array GoValue} {newCap : Nat} {r : GoValue}
@@ -3781,7 +3866,7 @@ theorem buildAppendBackingValue_locSup {elem : Ty}
     GoValue.locSup r
       ≤ max (goValueListSup oldValues.toList) (goValueListSup elemValues.toList) := by
   unfold buildAppendBackingValue at h
-  simp only [bind_eq_ok] at h
+  try simp only [bind_eq_ok] at h
   obtain ⟨vs₁, hloop, h⟩ := h
   rw [← Array.forIn_toList] at hloop
   have hb₁ : goValueListSup vs₁.toList
@@ -3847,7 +3932,7 @@ theorem applySlice_locSup {σ : Store} {b : GoValue} {lo hi : Int}
     omega
   · -- addr base
     rename_i baseLoc
-    simp only [bind_eq_ok] at h
+    try simp only [bind_eq_ok] at h
     obtain ⟨bv, hbv, h⟩ := h
     split at h
     · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
@@ -3873,7 +3958,7 @@ theorem intBinaryResult_locSup {nm : String} {op : Int → Int → Int}
     {l r v : GoValue} (h : intBinaryResult nm op l r = .ok v) :
     GoValue.locSup v = 0 := by
   unfold intBinaryResult at h
-  simp only [bind_eq_ok] at h
+  try simp only [bind_eq_ok] at h
   obtain ⟨⟨lv, lk⟩, _, h⟩ := h
   obtain ⟨⟨rv, rk⟩, _, h⟩ := h
   split at h
@@ -3897,7 +3982,7 @@ theorem intBitwiseBinaryResult_locSup {nm : String} {op : Nat → Nat → Nat}
     {l r v : GoValue} (h : intBitwiseBinaryResult nm op l r = .ok v) :
     GoValue.locSup v = 0 := by
   unfold intBitwiseBinaryResult at h
-  simp only [bind_eq_ok] at h
+  try simp only [bind_eq_ok] at h
   obtain ⟨⟨lv, lk⟩, _, h⟩ := h
   obtain ⟨⟨rv, rk⟩, _, h⟩ := h
   split at h
@@ -3909,7 +3994,7 @@ theorem intBitwiseBinaryResult_locSup {nm : String} {op : Nat → Nat → Nat}
 theorem intBitClearResult_locSup {l r v : GoValue}
     (h : intBitClearResult l r = .ok v) : GoValue.locSup v = 0 := by
   unfold intBitClearResult at h
-  simp only [bind_eq_ok] at h
+  try simp only [bind_eq_ok] at h
   obtain ⟨⟨lv, lk⟩, _, h⟩ := h
   obtain ⟨⟨rv, rk⟩, _, h⟩ := h
   split at h
@@ -3921,7 +4006,7 @@ theorem intBitClearResult_locSup {l r v : GoValue}
 theorem intBitNegResult_locSup {x v : GoValue}
     (h : intBitNegResult x = .ok v) : GoValue.locSup v = 0 := by
   unfold intBitNegResult at h
-  simp only [bind_eq_ok] at h
+  try simp only [bind_eq_ok] at h
   obtain ⟨⟨xv, xk⟩, _, h⟩ := h
   simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
   obtain ⟨bits, hbits, vb, hvb, rfl⟩ := h
@@ -3930,7 +4015,7 @@ theorem intBitNegResult_locSup {x v : GoValue}
 theorem intShiftLeftResult_locSup {l r v : GoValue}
     (h : intShiftLeftResult l r = .ok v) : GoValue.locSup v = 0 := by
   unfold intShiftLeftResult at h
-  simp only [bind_eq_ok] at h
+  try simp only [bind_eq_ok] at h
   obtain ⟨⟨lv, lk⟩, _, h⟩ := h
   simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
   obtain ⟨c, hc, bits, hbits, h⟩ := h
@@ -3941,7 +4026,7 @@ theorem intShiftLeftResult_locSup {l r v : GoValue}
 theorem intShiftRightResult_locSup {l r v : GoValue}
     (h : intShiftRightResult l r = .ok v) : GoValue.locSup v = 0 := by
   unfold intShiftRightResult at h
-  simp only [bind_eq_ok] at h
+  try simp only [bind_eq_ok] at h
   obtain ⟨⟨lv, lk⟩, _, h⟩ := h
   simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
   obtain ⟨c, hc, bits, hbits, h⟩ := h
@@ -3975,10 +4060,10 @@ theorem floatBitsApply_locSup {op : FloatBitsOp} {v r : GoValue}
     | (simp only [pure_eq_ok, Except.ok.injEq] at h; subst h; simp [GoValue.locSup]; done)
 
 set_option maxHeartbeats 1600000 in
-theorem applyStrictOp_wf {σ : Store} {op : StrictOp} {vs : List GoValue}
-    {v : GoValue} {σ' : Store}
+theorem applyStrictOp_wf {σ : Store} {leafOf : Loc → Loc} {op : StrictOp} {vs : List GoValue}
+    {v : GoValue} {σ' : Store} {tr : AccessTrace}
     (hw : StateWf ctx σ) (hvs : goValueListSup vs ≤ σ.nextAddr)
-    (h : applyStrictOp ctx σ op vs = .ok (v, σ')) :
+    (h : applyStrictOp ctx σ leafOf op vs = .ok (v, σ', tr)) :
     StateWf ctx σ' ∧ σ.nextAddr ≤ σ'.nextAddr
       ∧ GoValue.locSup v ≤ σ'.nextAddr := by
   have hheap := hw.heap_le
@@ -3988,47 +4073,47 @@ theorem applyStrictOp_wf {σ : Store} {op : StrictOp} {vs : List GoValue}
     split at h
     · -- int + int
       simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨iv, hiv, rfl, rfl⟩ := h
+      obtain ⟨iv, hiv, rfl, rfl, rfl⟩ := h
       exact strictWfSame hw (by rw [intBinaryResult_locSup hiv]; omega)
     · -- float + float
       simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨fv, hfv, rfl, rfl⟩ := h
+      obtain ⟨fv, hfv, rfl, rfl, rfl⟩ := h
       exact strictWfSame hw (by rw [floatBinaryResult_locSup hfv]; omega)
     · -- string + string
       simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl, rfl⟩ := h
       exact strictWfSame hw (by simp [GoValue.locSup])
     · simp at h
   · -- sub
     split at h
     · -- float - float
       simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨fv, hfv, rfl, rfl⟩ := h
+      obtain ⟨fv, hfv, rfl, rfl, rfl⟩ := h
       exact strictWfSame hw (by rw [floatBinaryResult_locSup hfv]; omega)
     · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨iv, hiv, rfl, rfl⟩ := h
+      obtain ⟨iv, hiv, rfl, rfl, rfl⟩ := h
       exact strictWfSame hw (by rw [intBinaryResult_locSup hiv]; omega)
   · -- mul
     split at h
     · -- float * float
       simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨fv, hfv, rfl, rfl⟩ := h
+      obtain ⟨fv, hfv, rfl, rfl, rfl⟩ := h
       exact strictWfSame hw (by rw [floatBinaryResult_locSup hfv]; omega)
     · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨iv, hiv, rfl, rfl⟩ := h
+      obtain ⟨iv, hiv, rfl, rfl, rfl⟩ := h
       exact strictWfSame hw (by rw [intBinaryResult_locSup hiv]; omega)
   · -- div
     split at h
     · -- float / float (dispatches BEFORE the int zero check; never panics)
       simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨fv, hfv, rfl, rfl⟩ := h
+      obtain ⟨fv, hfv, rfl, rfl, rfl⟩ := h
       exact strictWfSame hw (by rw [floatBinaryResult_locSup hfv]; omega)
     · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
       obtain ⟨d, hd, h⟩ := h
       split at h
       · simp [Bind.bind, Except.bind] at h
       · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-        obtain ⟨iv, hiv, rfl, rfl⟩ := h
+        obtain ⟨iv, hiv, rfl, rfl, rfl⟩ := h
         exact strictWfSame hw (by rw [intBinaryResult_locSup hiv]; omega)
   · -- mod
     simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
@@ -4036,80 +4121,80 @@ theorem applyStrictOp_wf {σ : Store} {op : StrictOp} {vs : List GoValue}
     split at h
     · simp [Bind.bind, Except.bind] at h
     · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨iv, hiv, rfl, rfl⟩ := h
+      obtain ⟨iv, hiv, rfl, rfl, rfl⟩ := h
       exact strictWfSame hw (by rw [intBinaryResult_locSup hiv]; omega)
   · -- shiftLeft
     simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨iv, hiv, rfl, rfl⟩ := h
+    obtain ⟨iv, hiv, rfl, rfl, rfl⟩ := h
     exact strictWfSame hw (by rw [intShiftLeftResult_locSup hiv]; omega)
   · -- shiftRight
     simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨iv, hiv, rfl, rfl⟩ := h
+    obtain ⟨iv, hiv, rfl, rfl, rfl⟩ := h
     exact strictWfSame hw (by rw [intShiftRightResult_locSup hiv]; omega)
   · -- bitAnd
     simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨iv, hiv, rfl, rfl⟩ := h
+    obtain ⟨iv, hiv, rfl, rfl, rfl⟩ := h
     exact strictWfSame hw (by rw [intBitwiseBinaryResult_locSup hiv]; omega)
   · -- bitOr
     simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨iv, hiv, rfl, rfl⟩ := h
+    obtain ⟨iv, hiv, rfl, rfl, rfl⟩ := h
     exact strictWfSame hw (by rw [intBitwiseBinaryResult_locSup hiv]; omega)
   · -- bitXor
     simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨iv, hiv, rfl, rfl⟩ := h
+    obtain ⟨iv, hiv, rfl, rfl, rfl⟩ := h
     exact strictWfSame hw (by rw [intBitwiseBinaryResult_locSup hiv]; omega)
   · -- bitClear
     simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨iv, hiv, rfl, rfl⟩ := h
+    obtain ⟨iv, hiv, rfl, rfl, rfl⟩ := h
     exact strictWfSame hw (by rw [intBitClearResult_locSup hiv]; omega)
   · -- bitNeg
     simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨iv, hiv, rfl, rfl⟩ := h
+    obtain ⟨iv, hiv, rfl, rfl, rfl⟩ := h
     exact strictWfSame hw (by rw [intBitNegResult_locSup hiv]; omega)
   · -- neg (value-directed unary minus): int/float scalars out
     split at h <;>
       first
       | (simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h;
-         obtain ⟨rfl, rfl⟩ := h;
+         obtain ⟨rfl, rfl, rfl⟩ := h;
          exact strictWfSame hw (by simp [GoValue.locSup]))
       | simp [Bind.bind, Except.bind] at h
   · -- floatLit (nullary; the rational kernel's scalar out)
     split at h
     · simp [Bind.bind, Except.bind] at h
     · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl, rfl⟩ := h
       exact strictWfSame hw (by simp [GoValue.locSup])
   · -- not
     simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨b, hb, rfl, rfl⟩ := h
+    obtain ⟨b, hb, rfl, rfl, rfl⟩ := h
     exact strictWfSame hw (by simp [GoValue.locSup])
   · -- eqCmp
     simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨b, hb, rfl, rfl⟩ := h
+    obtain ⟨b, hb, rfl, rfl, rfl⟩ := h
     exact strictWfSame hw (by simp [GoValue.locSup])
   · -- neqCmp
     simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨b, hb, rfl, rfl⟩ := h
+    obtain ⟨b, hb, rfl, rfl, rfl⟩ := h
     exact strictWfSame hw (by simp [GoValue.locSup])
   · -- atMostCmp
     simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨b, hb, rfl, rfl⟩ := h
+    obtain ⟨b, hb, rfl, rfl, rfl⟩ := h
     exact strictWfSame hw (by simp [GoValue.locSup])
   · -- atLeastCmp
     simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨b, hb, rfl, rfl⟩ := h
+    obtain ⟨b, hb, rfl, rfl, rfl⟩ := h
     exact strictWfSame hw (by simp [GoValue.locSup])
   · -- lessCmp
     simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨b, hb, rfl, rfl⟩ := h
+    obtain ⟨b, hb, rfl, rfl, rfl⟩ := h
     exact strictWfSame hw (by simp [GoValue.locSup])
   · -- greaterCmp
     simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨b, hb, rfl, rfl⟩ := h
+    obtain ⟨b, hb, rfl, rfl, rfl⟩ := h
     exact strictWfSame hw (by simp [GoValue.locSup])
   · -- convert
     simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨cv, hcv, rfl, rfl⟩ := h
+    obtain ⟨cv, hcv, rfl, rfl, rfl⟩ := h
     have := convertValueToTy_locSup hcv
     simp only [goValueListSup] at hvs
     exact strictWfSame hw (by omega)
@@ -4117,11 +4202,11 @@ theorem applyStrictOp_wf {σ : Store} {op : StrictOp} {vs : List GoValue}
     split at h
     · rename_i bytes
       try dsimp only at h
-      simp only [bind_eq_ok] at h
+      try simp only [bind_eq_ok] at h
       obtain ⟨⟨base, σa⟩, halloc, h⟩ := h
-      · dsimp only at h
+      · try dsimp only at h
         simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
+        obtain ⟨rfl, rfl, rfl⟩ := h
         have hvb : GoValue.locSup (.array (bytes.bytes.map fun b =>
             GoValue.int (Int.ofNat b.toNat) IntKind.uint8)) ≤ σ.nextAddr := by
           simp only [GoValue.locSup, goValueListSup_eq]
@@ -4138,20 +4223,24 @@ theorem applyStrictOp_wf {σ : Store} {op : StrictOp} {vs : List GoValue}
   · -- stringFromByteSlice
     try dsimp only at h
     simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨sl, hsl, vals, hvals, r, hr, rfl, rfl⟩ := h
+    obtain ⟨sl, hsl, ⟨vals, trS⟩, hvals, h⟩ := h
+    simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨r, hr, rfl, rfl, rfl, rfl⟩ := h
     exact strictWfSame hw (by simp [GoValue.locSup])
   · -- stringFromRune
     simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨iv, hiv, rfl, rfl⟩ := h
+    obtain ⟨iv, hiv, rfl, rfl, rfl⟩ := h
     exact strictWfSame hw (by simp [GoValue.locSup])
-  · -- deref
+  · -- deref: the narrowed pointee read
     simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨l, hl, lv, hlv, rfl, rfl⟩ := h
-    have := loadLoc_locSup hlv
+    obtain ⟨l, hl, ⟨lv, trL⟩, hlv, h⟩ := h
+    simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl, rfl, rfl⟩ := h
+    have := loadLoc_locSup (Mem.loadFor_eq hlv).1
     exact strictWfSame hw (by omega)
   · -- addrOfDeref (BUG-056): nil-assert on the pointer VALUE, no load
     simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨l, hl, rfl, rfl⟩ := h
+    obtain ⟨l, hl, rfl, rfl, rfl⟩ := h
     have := valueAsLoc_locSup hl
     simp only [goValueListSup] at hvs
     refine strictWfSame hw ?_
@@ -4163,22 +4252,22 @@ theorem applyStrictOp_wf {σ : Store} {op : StrictOp} {vs : List GoValue}
       split at h
       · -- field found
         rename_i fv hfv
-        dsimp only at h
+        try dsimp only at h
         split at h
         · simp [Bind.bind, Except.bind] at h
         · simp only [Bind.bind, Except.bind, pure_eq_ok, Except.ok.injEq,
             Prod.mk.injEq] at h
-          obtain ⟨rfl, rfl⟩ := h
+          obtain ⟨rfl, rfl, rfl⟩ := h
           have := StructFields.lookup_locSup hfv
           simp only [goValueListSup, GoValue.locSup] at hvs
           exact strictWfSame hw (by omega)
       · -- unknown field: stuck on both ite branches
-        dsimp only at h
+        try dsimp only at h
         split at h <;> simp [Bind.bind, Except.bind] at h
     · simp at h
   · -- fieldAddr
     simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨l, hl, rfl, rfl⟩ := h
+    obtain ⟨l, hl, rfl, rfl, rfl⟩ := h
     have := valueAsLoc_locSup hl
     simp only [goValueListSup] at hvs
     refine strictWfSame hw ?_
@@ -4186,7 +4275,7 @@ theorem applyStrictOp_wf {σ : Store} {op : StrictOp} {vs : List GoValue}
     omega
   · -- structLit
     simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨sv, hsv, rfl, rfl⟩ := h
+    obtain ⟨sv, hsv, rfl, rfl, rfl⟩ := h
     have := buildStructValue_locSup hsv
     refine strictWfSame hw ?_
     have h2 : goValueListSup vs.toArray.toList = goValueListSup vs := by simp
@@ -4195,7 +4284,7 @@ theorem applyStrictOp_wf {σ : Store} {op : StrictOp} {vs : List GoValue}
     split at h
     · simp [Bind.bind, Except.bind] at h
     · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨av, hav, rfl, rfl⟩ := h
+      obtain ⟨av, hav, rfl, rfl, rfl⟩ := h
       have := buildArrayValue_locSup hav
       exact strictWfSame hw (Nat.le_trans this (Nat.le_trans zip_snd_sup_le hvs))
   · -- toInterface
@@ -4205,10 +4294,10 @@ theorem applyStrictOp_wf {σ : Store} {op : StrictOp} {vs : List GoValue}
     simp only [goValueListSup] at hvs
     split at h
     · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl, rfl⟩ := h
       exact strictWfSame hw (by omega)
     · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl, rfl⟩ := h
       refine strictWfSame hw ?_
       show GoValue.locSup v0 ≤ σ.nextAddr
       omega
@@ -4219,13 +4308,13 @@ theorem applyStrictOp_wf {σ : Store} {op : StrictOp} {vs : List GoValue}
     have hb := typeAssertValue_locSup hres
     split at h
     · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl, rfl⟩ := h
       simp only [goValueListSup] at hvs
       exact strictWfSame hw (by omega)
     · exfalso
       revert h
       split <;> intro h
-      · simp only [bind_eq_ok] at h
+      · try simp only [bind_eq_ok] at h
         obtain ⟨m, hm, hc⟩ := h
         -- `typeAssertPanicMessage` is `Except Stop String` (audit fix
         -- round R1/R3, 2026-09-05): whichever way it goes, the result is
@@ -4240,13 +4329,13 @@ theorem applyStrictOp_wf {σ : Store} {op : StrictOp} {vs : List GoValue}
     split at h
     · rename_i values
       simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨gv, hgv, rfl, rfl⟩ := h
+      obtain ⟨gv, hgv, rfl, rfl, rfl⟩ := h
       have hb := arrayGet_locSup hgv
       have h3 : GoValue.locSup (GoValue.array values)
           = goValueListSup values.toList := rfl
       exact strictWfSame hw (by omega)
     · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨gv, hgv, rfl, rfl⟩ := h
+      obtain ⟨gv, hgv, rfl, rfl, rfl⟩ := h
       unfold stringByteGet at hgv
       simp only [letFun, Bind.bind, Except.bind, indexOutOfRangePanic] at hgv
       repeat' split at hgv
@@ -4257,19 +4346,22 @@ theorem applyStrictOp_wf {σ : Store} {op : StrictOp} {vs : List GoValue}
              subst hgv
              exact strictWfSame hw (by simp [GoValue.locSup]))
     · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨l, hl, lv, hlv, rfl, rfl⟩ := h
-      have := loadLoc_locSup hlv
+      obtain ⟨l, hl, ⟨lv, trL⟩, hlv, h⟩ := h
+      simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl, rfl, rfl⟩ := h
+      have := loadLoc_locSup (Mem.load_eq hlv).1
       have h2 := sliceIndexLoc_locSup hl
       exact strictWfSame hw (by omega)
-    · -- pointer-to-array read (triage L5): load, then the projection
+    · -- pointer-to-array read (triage L5): the element-narrowed load, then the projection
       simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨bv, hbv, h⟩ := h
+      obtain ⟨⟨bv, trB⟩, hbv, h⟩ := h
+      try dsimp only at h
       split at h
       · rename_i values
         simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-        obtain ⟨gv, hgv, rfl, rfl⟩ := h
+        obtain ⟨gv, hgv, rfl, rfl, rfl, rfl⟩ := h
         have hb := arrayGet_locSup hgv
-        have hload := loadLoc_locSup hbv
+        have hload := loadLoc_locSup (Mem.loadFor_eq hbv).1
         have h3 : GoValue.locSup (GoValue.array values)
             = goValueListSup values.toList := rfl
         exact strictWfSame hw (by omega)
@@ -4279,39 +4371,40 @@ theorem applyStrictOp_wf {σ : Store} {op : StrictOp} {vs : List GoValue}
     · simp at h
   · -- indexAddr
     simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨l, hl, rfl, rfl⟩ := h
+    obtain ⟨l, hl, rfl, rfl, rfl⟩ := h
     simp only [goValueListSup] at hvs
     have h2 := indexTargetLoc_locSup hl
     refine strictWfSame hw ?_
     show Loc.locSup l ≤ σ.nextAddr
     omega
   · -- mapGet
-    simp only [bind_eq_ok] at h
+    try simp only [bind_eq_ok] at h
     obtain ⟨m, hm, key, hkey, h⟩ := h
     split at h
     · -- nil map
       simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨_, _, d, hd, rfl, rfl⟩ := h
+      obtain ⟨_, _, d, hd, rfl, rfl, rfl⟩ := h
       exact strictWfSame hw (by rw [defaultValue_locSup hd]; omega)
     · rename_i baseLoc
-      simp only [bind_eq_ok] at h
-      obtain ⟨⟨entries, nextId⟩, hp, h⟩ := h
-      simp only [bind_eq_ok] at h
+      try simp only [bind_eq_ok] at h
+      obtain ⟨⟨⟨entries, nextId⟩, trM⟩, hp, h⟩ := h
+      try dsimp only at h
+      try simp only [bind_eq_ok] at h
       obtain ⟨idx, hidx, h⟩ := h
       split at h
       · split at h
         · rename_i id' k' v' hp'
           simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-          obtain ⟨rfl, rfl⟩ := h
+          obtain ⟨rfl, rfl, rfl, rfl⟩ := h
           have hmem : (id', k', v') ∈ entries.toList :=
             List.mem_of_getElem? (by rw [Array.getElem?_toList]; exact hp')
-          have h2 := mapPayload?_locSup hp
+          have h2 := mapPayload?_locSup (Mem.mapRead_eq hp).1
           have h3 := goValueEntriesSup_mem hmem
           simp only at h3
           exact strictWfSame hw (by omega)
         · simp at h
       · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-        obtain ⟨d, hd, rfl, rfl⟩ := h
+        obtain ⟨d, hd, rfl, rfl, rfl⟩ := h
         exact strictWfSame hw (by rw [defaultValue_locSup hd]; omega)
   · -- sliceExpr false
     simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
@@ -4323,10 +4416,11 @@ theorem applyStrictOp_wf {σ : Store} {op : StrictOp} {vs : List GoValue}
       rw [hsl] at h
       simp only [Bind.bind, Except.bind, pure_eq_ok, Except.ok.injEq,
         Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨w, hw', rfl, rfl, rfl⟩ := h
+      subst hw'
       obtain ⟨rfl, hb⟩ := applySlice_locSup hsl
       simp only [goValueListSup] at hvs
-      exact strictWfSame hw (by omega)
+      exact strictWfSame hw (by dsimp only; omega)
   · -- sliceExpr true
     simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
     obtain ⟨lo, hlo, hi, hhi, mx, hmx, h⟩ := h
@@ -4337,68 +4431,70 @@ theorem applyStrictOp_wf {σ : Store} {op : StrictOp} {vs : List GoValue}
       rw [hsl] at h
       simp only [Bind.bind, Except.bind, pure_eq_ok, Except.ok.injEq,
         Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨w, hw', rfl, rfl, rfl⟩ := h
+      subst hw'
       obtain ⟨rfl, hb⟩ := applySlice_locSup hsl
       simp only [goValueListSup] at hvs
-      exact strictWfSame hw (by omega)
+      exact strictWfSame hw (by dsimp only; omega)
   · -- lengthOf
     split at h
     · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl, rfl⟩ := h
       exact strictWfSame hw (by simp [GoValue.locSup])
     · split at h
       · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
+        obtain ⟨rfl, rfl, rfl⟩ := h
         exact strictWfSame hw (by simp [GoValue.locSup])
       · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
         obtain ⟨bv, hbv, h⟩ := h
         split at h
         · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-          obtain ⟨rfl, rfl⟩ := h
+          obtain ⟨rfl, rfl, rfl⟩ := h
           exact strictWfSame hw (by simp [GoValue.locSup])
         · simp at h
       · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
+        obtain ⟨rfl, rfl, rfl⟩ := h
         exact strictWfSame hw (by simp [GoValue.locSup])
       · simp only [SeqRight.seqRight, Seq.seq, Function.const, Bind.bind,
           Except.bind, Functor.map, Except.map] at h
         split at h
         · simp at h
         · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-          obtain ⟨rfl, rfl⟩ := h
+          obtain ⟨rfl, rfl, rfl⟩ := h
           exact strictWfSame hw (by simp [GoValue.locSup])
       · split at h
         · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-          obtain ⟨rfl, rfl⟩ := h
+          obtain ⟨rfl, rfl, rfl⟩ := h
           exact strictWfSame hw (by simp [GoValue.locSup])
         · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-          obtain ⟨bv, hbv, h⟩ := h
-          obtain ⟨rfl, rfl⟩ := h
+          obtain ⟨⟨bv, trM⟩, hbv, h⟩ := h
+          simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+          obtain ⟨rfl, rfl, rfl, rfl⟩ := h
           exact strictWfSame hw (by simp [GoValue.locSup])
       · -- chan: len(ch) — nil → 0; else the cell's buffer size
         split at h
         · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-          obtain ⟨rfl, rfl⟩ := h
+          obtain ⟨rfl, rfl, rfl⟩ := h
           exact strictWfSame hw (by simp [GoValue.locSup])
         · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
           obtain ⟨bv, hbv, h⟩ := h
-          obtain ⟨rfl, rfl⟩ := h
+          obtain ⟨rfl, rfl, rfl⟩ := h
           exact strictWfSame hw (by simp [GoValue.locSup])
       · simp at h
   · -- capacityOf
     split at h
     · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl, rfl⟩ := h
       exact strictWfSame hw (by simp [GoValue.locSup])
     · split at h
       · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
+        obtain ⟨rfl, rfl, rfl⟩ := h
         exact strictWfSame hw (by simp [GoValue.locSup])
       · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
         obtain ⟨bv, hbv, h⟩ := h
         split at h
         · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-          obtain ⟨rfl, rfl⟩ := h
+          obtain ⟨rfl, rfl, rfl⟩ := h
           exact strictWfSame hw (by simp [GoValue.locSup])
         · simp at h
       · simp only [SeqRight.seqRight, Seq.seq, Function.const, Bind.bind,
@@ -4406,21 +4502,21 @@ theorem applyStrictOp_wf {σ : Store} {op : StrictOp} {vs : List GoValue}
         split at h
         · simp at h
         · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-          obtain ⟨rfl, rfl⟩ := h
+          obtain ⟨rfl, rfl, rfl⟩ := h
           exact strictWfSame hw (by simp [GoValue.locSup])
       · -- chan: cap(ch) — nil → 0; else the cell's capacity
         split at h
         · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-          obtain ⟨rfl, rfl⟩ := h
+          obtain ⟨rfl, rfl, rfl⟩ := h
           exact strictWfSame hw (by simp [GoValue.locSup])
         · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
           obtain ⟨bv, hbv, h⟩ := h
-          obtain ⟨rfl, rfl⟩ := h
+          obtain ⟨rfl, rfl, rfl⟩ := h
           exact strictWfSame hw (by simp [GoValue.locSup])
       · simp at h
   · -- funcValOf
     simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl, rfl⟩ := h
     refine strictWfSame hw ?_
     show goValueListSup vs ≤ σ.nextAddr
     omega
@@ -4433,7 +4529,7 @@ theorem applyStrictOp_wf {σ : Store} {op : StrictOp} {vs : List GoValue}
     split at h
     · -- IEEE float fold
       simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨best, hbest, rfl, rfl⟩ := h
+      obtain ⟨best, hbest, rfl, rfl, rfl⟩ := h
       have hP := forIn_list_inv
         (P := fun b : GoValue => GoValue.locSup b ≤ σ.nextAddr)
         ?_ (by omega) hbest
@@ -4446,7 +4542,7 @@ theorem applyStrictOp_wf {σ : Store} {op : StrictOp} {vs : List GoValue}
         simp [forInStepVal, floatMinMax_locSup hc]
     · -- ordered fold
       simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨best, hbest, rfl, rfl⟩ := h
+      obtain ⟨best, hbest, rfl, rfl, rfl⟩ := h
       have hP := forIn_list_inv
         (P := fun b : GoValue => GoValue.locSup b ≤ σ.nextAddr)
         ?_ (by omega) hbest
@@ -4470,7 +4566,7 @@ theorem applyStrictOp_wf {σ : Store} {op : StrictOp} {vs : List GoValue}
     split at h
     · -- IEEE float fold (as in minOf)
       simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨best, hbest, rfl, rfl⟩ := h
+      obtain ⟨best, hbest, rfl, rfl, rfl⟩ := h
       have hP := forIn_list_inv
         (P := fun b : GoValue => GoValue.locSup b ≤ σ.nextAddr)
         ?_ (by omega) hbest
@@ -4483,7 +4579,7 @@ theorem applyStrictOp_wf {σ : Store} {op : StrictOp} {vs : List GoValue}
         simp [forInStepVal, floatMinMax_locSup hc]
     · -- ordered fold
       simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨best, hbest, rfl, rfl⟩ := h
+      obtain ⟨best, hbest, rfl, rfl, rfl⟩ := h
       have hP := forIn_list_inv
         (P := fun b : GoValue => GoValue.locSup b ≤ σ.nextAddr)
         ?_ (by omega) hbest
@@ -4507,7 +4603,7 @@ theorem applyStrictOp_wf {σ : Store} {op : StrictOp} {vs : List GoValue}
       obtain ⟨off, hoff, h⟩ := h
       split at h
       · simp [Bind.bind, Except.bind] at h
-      · obtain ⟨_, _, rfl, rfl⟩ := h
+      · obtain ⟨_, _, rfl, rfl, rfl⟩ := h
         exact strictWfSame hw (by simp [GoValue.locSup])
     · simp at h
   · -- runeSizeAt
@@ -4516,39 +4612,39 @@ theorem applyStrictOp_wf {σ : Store} {op : StrictOp} {vs : List GoValue}
       obtain ⟨off, hoff, h⟩ := h
       split at h
       · simp [Bind.bind, Except.bind] at h
-      · obtain ⟨_, _, rfl, rfl⟩ := h
+      · obtain ⟨_, _, rfl, rfl, rfl⟩ := h
         exact strictWfSame hw (by simp [GoValue.locSup])
     · simp at h
   · -- defaultValueOf
     simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨d, hd, rfl, rfl⟩ := h
+    obtain ⟨d, hd, rfl, rfl, rfl⟩ := h
     exact strictWfSame hw (by rw [defaultValue_locSup hd]; omega)
   · -- nilLit
     split at h
     · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl, rfl⟩ := h
       exact strictWfSame hw (by simp [GoValue.locSup])
     · split at h
       · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-        obtain ⟨d, hd, rfl, rfl⟩ := h
+        obtain ⟨d, hd, rfl, rfl, rfl⟩ := h
         exact strictWfSame hw (by rw [defaultValue_locSup hd]; omega)
       · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-        obtain ⟨d, hd, rfl, rfl⟩ := h
+        obtain ⟨d, hd, rfl, rfl, rfl⟩ := h
         exact strictWfSame hw (by rw [defaultValue_locSup hd]; omega)
       · -- chan: typed nil literal → the nil-channel default value
         simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-        obtain ⟨d, hd, rfl, rfl⟩ := h
+        obtain ⟨d, hd, rfl, rfl, rfl⟩ := h
         exact strictWfSame hw (by rw [defaultValue_locSup hd]; omega)
       · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
+        obtain ⟨rfl, rfl, rfl⟩ := h
         exact strictWfSame hw (by simp [GoValue.locSup])
       · -- interface: typed nil literal → the nil interface (BUG-077)
         simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
+        obtain ⟨rfl, rfl, rfl⟩ := h
         exact strictWfSame hw (by simp [GoValue.locSup])
       · -- funcType: typed nil literal → the nil func value (BUG-077)
         simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
+        obtain ⟨rfl, rfl, rfl⟩ := h
         exact strictWfSame hw (by simp [GoValue.locSup])
       · simp at h
       · simp at h
@@ -4557,11 +4653,11 @@ theorem applyStrictOp_wf {σ : Store} {op : StrictOp} {vs : List GoValue}
     split at h
     · rename_i str
       try dsimp only at h
-      simp only [bind_eq_ok] at h
+      try simp only [bind_eq_ok] at h
       obtain ⟨⟨base, σa⟩, halloc, h⟩ := h
-      · dsimp only at h
+      · try dsimp only at h
         simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
+        obtain ⟨rfl, rfl, rfl⟩ := h
         have hvb : GoValue.locSup (.array ((runesOfString str).map fun r =>
             GoValue.int r IntKind.int32)) ≤ σ.nextAddr := by
           simp only [GoValue.locSup, goValueListSup_eq]
@@ -4578,11 +4674,13 @@ theorem applyStrictOp_wf {σ : Store} {op : StrictOp} {vs : List GoValue}
   · -- stringFromRuneSlice
     try dsimp only at h
     simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨sl, hsl, vals, hvals, r, hr, rfl, rfl⟩ := h
+    obtain ⟨sl, hsl, ⟨vals, trS⟩, hvals, h⟩ := h
+    simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨r, hr, rfl, rfl, rfl, rfl⟩ := h
     exact strictWfSame hw (by simp [GoValue.locSup])
   · -- floatBits (stdlib slice 3): a pure bit reinterpretation, loc-free result
     simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨r, hr, rfl, rfl⟩ := h
+    obtain ⟨r, hr, rfl, rfl, rfl⟩ := h
     exact strictWfSame hw (by rw [floatBitsApply_locSup hr]; exact Nat.zero_le _)
   · -- catch-all
     simp at h
@@ -4667,6 +4765,82 @@ theorem StmtOpPres.trans {σ₁ σ₂ σ₃ : Store} (a : StmtOpPres ctx σ₁ �
   obtain ⟨b1, b2⟩ := b
   exact ⟨b1, by omega⟩
 
+theorem Mem.store_pres {σ σ' : Store} {l : Loc} {v : GoValue} {tr : AccessTrace}
+    (hw : StateWf ctx σ) (hl : Loc.locSup l ≤ σ.nextAddr)
+    (hv : GoValue.locSup v ≤ σ.nextAddr) (h : Mem.store ctx σ l v = .ok (σ', tr)) :
+    StmtOpPres ctx σ σ' :=
+  storeLoc_pres hw hl hv (Mem.store_eq h).1
+
+theorem Mem.store_shape {σ σ' : Store} {l : Loc} {v : GoValue} {tr : AccessTrace}
+    (h : Mem.store ctx σ l v = .ok (σ', tr)) : σ'.nextAddr = σ.nextAddr :=
+  (storeLoc_shape (Mem.store_eq h).1).1
+
+/-- A run of element writes preserves the invariant (the structural twin of
+the former `forIn` loops of append/copy/clear). -/
+theorem Mem.storeElems_pres {σ : Store} {base : Loc} :
+    ∀ {vs : List GoValue} {start : Nat} {σ' : Store} {tr : AccessTrace},
+      StateWf ctx σ → Loc.locSup base ≤ σ.nextAddr → goValueListSup vs ≤ σ.nextAddr →
+      Mem.storeElems ctx σ base start vs = .ok (σ', tr) → StmtOpPres ctx σ σ' := by
+  intro vs
+  induction vs generalizing σ with
+  | nil =>
+    intro start σ' tr hw _ _ h
+    simp only [Mem.storeElems, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    exact stmtOpPres_refl hw
+  | cons v rest ih =>
+    intro start σ' tr hw hb hvs h
+    simp only [Mem.storeElems, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨⟨s₁, t⟩, h1, ⟨s₂, ts⟩, h2, rfl, rfl⟩ := h
+    simp only [goValueListSup] at hvs
+    have p1 := Mem.store_pres hw (by rw [Loc.locSup_index]; exact hb) (by omega) h1
+    have hn := Mem.store_shape h1
+    obtain ⟨w1, w2⟩ := p1
+    exact StmtOpPres.trans ⟨w1, w2⟩ (ih w1 (by omega) (by omega) h2)
+
+theorem Mem.loadRun_locSup {σ : Store} {sl : SliceValue} {n : Nat} {vs : List GoValue}
+    {tr : AccessTrace} (h : Mem.loadRun ctx σ sl n = .ok (vs, tr)) :
+    goValueListSup vs ≤ Heap.locSup σ.heap := by
+  unfold Mem.loadRun at h
+  split at h
+  · exact (Mem.loadElems_locSup h).1
+  · split at h
+    · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      simp [goValueListSup]
+    · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
+
+theorem Mem.storeRun_pres {σ σ' : Store} {sl : SliceValue} {start : Nat} {vs : List GoValue}
+    {tr : AccessTrace} (hw : StateWf ctx σ) (hb : optLocSup sl.base ≤ σ.nextAddr)
+    (hvs : goValueListSup vs ≤ σ.nextAddr) (h : Mem.storeRun ctx σ sl start vs = .ok (σ', tr)) :
+    StmtOpPres ctx σ σ' := by
+  unfold Mem.storeRun at h
+  split at h
+  · rename_i b hbase
+    refine Mem.storeElems_pres hw ?_ hvs h
+    simpa [hbase, optLocSup] using hb
+  · split at h
+    · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      exact stmtOpPres_refl hw
+    · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
+
+theorem goValueListSup_replicate {v : GoValue} : ∀ {n : Nat},
+    goValueListSup (List.replicate n v) ≤ GoValue.locSup v
+  | 0 => by simp [goValueListSup]
+  | n + 1 => by
+      simp only [List.replicate, goValueListSup]
+      have := goValueListSup_replicate (v := v) (n := n)
+      omega
+
+theorem goValueListSup_eq_zero_of_ints : ∀ {l : List GoValue},
+    (∀ v ∈ l, ∃ i k, v = .int i k) → goValueListSup l = 0
+  | [], _ => rfl
+  | v :: rest, h => by
+      obtain ⟨i, k, rfl⟩ := h v List.mem_cons_self
+      simp only [goValueListSup, GoValue.locSup]
+      exact goValueListSup_eq_zero_of_ints fun w hw => h w (List.mem_cons_of_mem _ hw)
+
 theorem storeMany_pres {σ : Store} {locs : List Loc} {vs : List GoValue}
     {σ' : Store} (hw : StateWf ctx σ) (hl : locListSup locs ≤ σ.nextAddr)
     (hv : goValueListSup vs ≤ σ.nextAddr) (h : storeMany ctx σ locs vs = .ok σ') :
@@ -4685,8 +4859,8 @@ theorem mapAssignValue_pres {σ : Store} {keyTy valueTy : Ty}
     (hw : StateWf ctx σ)
     (hb : GoValue.locSup baseV ≤ σ.nextAddr)
     (hk : GoValue.locSup keyV ≤ σ.nextAddr)
-    (hv : GoValue.locSup valueV ≤ σ.nextAddr)
-    (h : mapAssignValue ctx σ keyTy valueTy baseV keyV valueV = .ok σ') :
+    (hv : GoValue.locSup valueV ≤ σ.nextAddr) {tr : AccessTrace}
+    (h : mapAssignValue ctx σ keyTy valueTy baseV keyV valueV = .ok (σ', tr)) :
     StmtOpPres ctx σ σ' := by
   have hheap := hw.heap_le
   unfold mapAssignValue at h
@@ -4718,14 +4892,14 @@ theorem mapAssignValue_pres {σ : Store} {keyTy valueTy : Ty}
         simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
         obtain ⟨y, hy, h⟩ := h
         subst hy
-        refine storeMapPayload_pres hw hblb ?_ h
+        refine storeMapPayload_pres hw hblb ?_ (Mem.mapWrite_eq h).1
         show goValueEntriesSup (entries.set! i (id, key, value)).toList ≤ σ.nextAddr
         refine Nat.le_trans goValueEntriesSup_set! ?_
         simp only at *
         omega
       · simp [Bind.bind, Except.bind, stuck, throw, throwThe, MonadExceptOf.throw] at h
     · -- absent key: a fresh stamped entry
-      refine storeMapPayload_pres hw hblb ?_ h
+      refine storeMapPayload_pres hw hblb ?_ (Mem.mapWrite_eq h).1
       show goValueEntriesSup (entries.push (nextId, key, value)).toList ≤ σ.nextAddr
       rw [goValueEntriesSup_push]
       simp only at *
@@ -4760,7 +4934,7 @@ theorem resolveChain_locSup {σ : Store} :
       cases idxs with
       | nil => simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
       | cons i irest =>
-        simp only [bind_eq_ok] at h
+        try simp only [bind_eq_ok] at h
         obtain ⟨l, hl, h⟩ := h
         have h2 := indexTargetLoc_locSup hl
         have h3 := ih h
@@ -4768,7 +4942,7 @@ theorem resolveChain_locSup {σ : Store} :
         simp only [goValueListSup] at *
         omega
     | field tid f =>
-      simp only [bind_eq_ok] at h
+      try simp only [bind_eq_ok] at h
       obtain ⟨l, hl, h⟩ := h
       have h2 := valueAsLoc_locSup hl
       have h3 := ih h
@@ -4780,25 +4954,27 @@ theorem resolveChain_locSup {σ : Store} :
 results are bounded by its operands and the heap (a lookup reads the
 map cell); the state is untouched. -/
 theorem applyRhsOp_locSup {σ : Store} {rop : RhsOp}
-    {vs vals : List GoValue} (h : applyRhsOp ctx σ rop vs = .ok vals) :
+    {vs vals : List GoValue} {tr : AccessTrace} (h : applyRhsOp ctx σ rop vs = .ok (vals, tr)) :
     goValueListSup vals ≤ max (goValueListSup vs) (Heap.locSup σ.heap) := by
   unfold applyRhsOp at h
   split at h
-  · simp only [pure_eq_ok, Except.ok.injEq] at h
-    subst h
+  · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
     omega
   · -- mapLookup
-    simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
-    obtain ⟨m, hm, key, hkey, ⟨rv, rb⟩, hpair, h⟩ := h
-    subst h
+    simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨m, hm, key, hkey, ⟨⟨rv, rb⟩, trM⟩, hpair, h⟩ := h
+    simp only [Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
     have h1 := mapLookupValue_locSup hpair
     simp only [goValueListSup, GoValue.locSup]
     omega
   · -- typeAssert
     rename_i targetTy value
-    simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
+    simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
     obtain ⟨⟨rv, rb⟩, hres, h⟩ := h
-    subst h
+    simp only [Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
     have h1 := typeAssertValue_locSup hres
     simp only [goValueListSup, GoValue.locSup]
     omega
@@ -4809,27 +4985,27 @@ round 4, BUG-033): one phase-2 store keeps the loc invariant. -/
 theorem storeTarget_pres {σ : Store} {r : TargetRef} {v : GoValue}
     {σ' : Store}
     (hw : StateWf ctx σ) (hr : TargetRef.locSup r ≤ σ.nextAddr)
-    (hv : GoValue.locSup v ≤ σ.nextAddr)
-    (h : storeTarget ctx σ r v = .ok σ') :
+    (hv : GoValue.locSup v ≤ σ.nextAddr) {tr : AccessTrace}
+    (h : storeTarget ctx σ r v = .ok (σ', tr)) :
     StmtOpPres ctx σ σ' := by
   have hheap := hw.heap_le
   unfold storeTarget at h
   cases r with
   | chain anchor idxs steps =>
-    simp only [bind_eq_ok] at h
+    try simp only [bind_eq_ok] at h
     obtain ⟨cur, hres, l, hl, h⟩ := h
     have h2 := resolveChain_locSup hres
     have h3 := valueAsLoc_locSup hl
     simp only [TargetRef.locSup, Nat.max_le] at hr
-    exact storeLoc_pres hw (by omega) hv h
+    exact Mem.store_pres hw (by omega) hv h
   | mapElem b k kt vt =>
     simp only [TargetRef.locSup, Nat.max_le] at hr
     exact mapAssignValue_pres hw hr.1 hr.2 hv h
 
 theorem applyStmtOpCore_wf {σ : Store} {op : StmtOp}
-    {vs : List GoValue} {σ' : Store}
+    {vs : List GoValue} {σ' : Store} {tr : AccessTrace}
     (hw : StateWf ctx σ) (hvs : goValueListSup vs ≤ σ.nextAddr)
-    (h : applyStmtOpCore ctx σ op vs = .ok σ') :
+    (h : applyStmtOpCore ctx σ op vs = .ok (σ', tr)) :
     StmtOpPres ctx σ σ' := by
   have hheap := hw.heap_le
   rw [applyStmtOpCore.eq_def] at h
@@ -4843,11 +5019,11 @@ theorem applyStmtOpCore_wf {σ : Store} {op : StmtOp}
       obtain ⟨loc, hloc, h⟩ := h
       have hlocb := valueAsLoc_locSup hloc
       obtain ⟨⟨nloc, σa⟩, halloc, h⟩ := h
-      dsimp only at h
+      try dsimp only at h
       obtain ⟨w1, w2, w3⟩ := alloc_wf hw (by omega) halloc
       obtain ⟨d1, d2, _⟩ := alloc_shape halloc
       refine StmtOpPres.trans ⟨w1, by omega⟩ ?_
-      refine storeLoc_pres w1 (by omega) ?_ h
+      refine Mem.store_pres w1 (by omega) ?_ h
       show Loc.locSup nloc ≤ σa.nextAddr
       exact w2
     · simp at h
@@ -4868,12 +5044,12 @@ theorem applyStmtOpCore_wf {σ : Store} {op : StmtOp}
       · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
         obtain ⟨backing, hbacking, ⟨base, σa⟩, halloc, loc, hloc, h⟩ := h
         have hb0 := buildDefaultArrayValue_locSup hbacking
-        dsimp only at h
+        try dsimp only at h
         have hlocb := valueAsLoc_locSup hloc
         obtain ⟨w1, w2, w3⟩ := alloc_wf hw (by omega) halloc
         obtain ⟨d1, d2, _⟩ := alloc_shape halloc
         refine StmtOpPres.trans ⟨w1, by omega⟩ ?_
-        refine storeLoc_pres w1 (by omega) ?_ h
+        refine Mem.store_pres w1 (by omega) ?_ h
         show optLocSup (some base) ≤ σa.nextAddr
         exact w2
     · -- explicit cap
@@ -4887,12 +5063,12 @@ theorem applyStmtOpCore_wf {σ : Store} {op : StmtOp}
       · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
         obtain ⟨backing, hbacking, ⟨base, σa⟩, halloc, loc, hloc, h⟩ := h
         have hb0 := buildDefaultArrayValue_locSup hbacking
-        dsimp only at h
+        try dsimp only at h
         have hlocb := valueAsLoc_locSup hloc
         obtain ⟨w1, w2, w3⟩ := alloc_wf hw (by omega) halloc
         obtain ⟨d1, d2, _⟩ := alloc_shape halloc
         refine StmtOpPres.trans ⟨w1, by omega⟩ ?_
-        refine storeLoc_pres w1 (by omega) ?_ h
+        refine Mem.store_pres w1 (by omega) ?_ h
         show optLocSup (some base) ≤ σa.nextAddr
         exact w2
   · -- makeMap
@@ -4912,7 +5088,7 @@ theorem applyStmtOpCore_wf {σ : Store} {op : StmtOp}
         (by simp [HeapCell.locSup, goValueEntriesSup]) halloc rfl
       obtain ⟨d1, d2, _⟩ := allocCell_shape halloc
       refine StmtOpPres.trans ⟨w1, by omega⟩ ?_
-      refine storeLoc_pres w1 (by omega) ?_ h
+      refine Mem.store_pres w1 (by omega) ?_ h
       show optLocSup (some base) ≤ s₁.nextAddr
       exact w2
     · -- with space hint
@@ -4926,7 +5102,7 @@ theorem applyStmtOpCore_wf {σ : Store} {op : StmtOp}
         (by simp [HeapCell.locSup, goValueEntriesSup]) halloc rfl
       obtain ⟨d1, d2, _⟩ := allocCell_shape halloc
       refine StmtOpPres.trans ⟨w1, by omega⟩ ?_
-      refine storeLoc_pres w1 (by omega) ?_ h
+      refine Mem.store_pres w1 (by omega) ?_ h
       show optLocSup (some base) ≤ s₁.nextAddr
       exact w2
   · -- makeChan
@@ -4942,12 +5118,12 @@ theorem applyStmtOpCore_wf {σ : Store} {op : StmtOp}
       cases halloc : σ.allocCell (.chanPayload #[] 0 false) with
       | mk base σa =>
         rw [halloc] at h
-        dsimp only at h
+        try dsimp only at h
         obtain ⟨w1, w2, w3⟩ := allocCell_wf hw
           (by simp [HeapCell.locSup, goValueListSup]) halloc rfl
         obtain ⟨d1, d2, _⟩ := allocCell_shape halloc
         refine StmtOpPres.trans ⟨w1, by omega⟩ ?_
-        refine storeLoc_pres w1 (by omega) ?_ h
+        refine Mem.store_pres w1 (by omega) ?_ h
         show optLocSup (some base) ≤ σa.nextAddr
         exact w2
     · -- explicit cap
@@ -4966,12 +5142,12 @@ theorem applyStmtOpCore_wf {σ : Store} {op : StmtOp}
         cases halloc : σ.allocCell (.chanPayload #[] size.toNat false) with
         | mk base σa =>
           rw [halloc] at h
-          dsimp only at h
+          try dsimp only at h
           obtain ⟨w1, w2, w3⟩ := allocCell_wf hw
             (by simp [HeapCell.locSup, goValueListSup]) halloc rfl
           obtain ⟨d1, d2, _⟩ := allocCell_shape halloc
           refine StmtOpPres.trans ⟨w1, by omega⟩ ?_
-          refine storeLoc_pres w1 (by omega) ?_ h
+          refine Mem.store_pres w1 (by omega) ?_ h
           show optLocSup (some base) ≤ σa.nextAddr
           exact w2
     · simp [Bind.bind, Except.bind] at h
@@ -4990,9 +5166,8 @@ theorem applyStmtOpCore_wf {σ : Store} {op : StmtOp}
       simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
       obtain ⟨m, hm, key, hkey, es, hes, h⟩ := h
       split at h
-      · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
-        obtain ⟨_, _, h⟩ := h
-        subst h
+      · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+        obtain ⟨_, _, rfl, rfl⟩ := h
         exact stmtOpPres_refl hw
       · rename_i baseLoc entries nextId
         obtain ⟨hbl, hent⟩ := mapEntries_locSup hes rfl
@@ -5002,13 +5177,14 @@ theorem applyStmtOpCore_wf {σ : Store} {op : StmtOp}
         simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
         obtain ⟨idx, hidx, h⟩ := h
         split at h
-        · refine storeMapPayload_pres hw hblb ?_ h
+        · refine storeMapPayload_pres hw hblb ?_ (Mem.mapWrite_eq h).1
           show goValueEntriesSup _ ≤ σ.nextAddr
           refine Nat.le_trans goValueEntriesSup_eraseIdx! ?_
           omega
-        · simp only [pure_eq_ok, Except.ok.injEq] at h
-          subst h
-          exact stmtOpPres_refl hw
+        · -- absent key: the unchanged payload is rewritten (the emitted write)
+          refine storeMapPayload_pres hw hblb ?_ (Mem.mapWrite_eq h).1
+          show goValueEntriesSup entries.toList ≤ σ.nextAddr
+          omega
     · simp at h
   · -- clearMap
     split at h
@@ -5017,124 +5193,78 @@ theorem applyStmtOpCore_wf {σ : Store} {op : StmtOp}
       simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
       obtain ⟨m, hm, es, hes, h⟩ := h
       split at h
-      · simp only [pure_eq_ok, Except.ok.injEq] at h
-        subst h
+      · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
         exact stmtOpPres_refl hw
       · rename_i baseLoc entries nextId
         obtain ⟨hbl, hent⟩ := mapEntries_locSup hes rfl
         have hblb : Loc.locSup baseLoc ≤ σ.nextAddr := by
           have := valueAsMap_locSup hm
           omega
-        refine storeMapPayload_pres hw hblb ?_ h
+        refine storeMapPayload_pres hw hblb ?_ (Mem.mapWrite_eq h).1
         show goValueEntriesSup (#[] : Array (Nat × GoValue × GoValue)).toList ≤ σ.nextAddr
         simp [goValueEntriesSup]
     · simp at h
-  · -- clearSlice
+  · -- clearSlice: one emitting write per visible element (`Mem.storeRun`)
     rename_i elem
     split at h
     · rename_i baseV
       simp only [goValueListSup] at hvs
       simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
-      obtain ⟨sl, hsl, _, _, zero, hzero, cur, hloop, h⟩ := h
-      subst h
+      obtain ⟨sl, hsl, _, _, zero, hzero, h⟩ := h
       have hz := defaultValue_locSup hzero
       have hslb : optLocSup sl.base ≤ σ.nextAddr := by
         have := valueAsSlice_locSup hsl
         omega
-      rw [Std.Legacy.Range.forIn_eq_forIn_range'] at hloop
-      refine forIn_list_inv (P := fun cur => StmtOpPres ctx σ cur)
-        ?_ (stmtOpPres_refl hw) hloop
-      intro a _ b rr hbb hr
-      simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at hr
-      obtain ⟨l, hl, c, hc, hrr⟩ := hr
-      subst hrr
-      simp only [forInStepVal]
-      refine StmtOpPres.trans hbb ?_
-      obtain ⟨b1, b2⟩ := hbb
-      refine storeLoc_pres b1 ?_ (by omega) hc
-      have := sliceIndexLoc_locSup hl
+      refine Mem.storeRun_pres hw hslb ?_ h
+      have := goValueListSup_replicate (v := zero) (n := sl.len)
       omega
     · simp at h
-  · -- sortSlice
+  · -- sortSlice (dead op): the visible elements read (`Mem.loadSlice`), the
+    -- sorted ints written back (`Mem.storeRun`; ints are loc-free)
     rename_i elem
     split at h
     · rename_i baseV
       simp only [goValueListSup] at hvs
-      simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
-      obtain ⟨sl, hsl, _, _, loaded, hloop1, h⟩ := h
+      simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨sl, hsl, ⟨values, trR⟩, hvals, loaded, hloop, ⟨s₁, trW⟩, hst, h⟩ := h
       have hslb : optLocSup sl.base ≤ σ.nextAddr := by
         have := valueAsSlice_locSup hsl
         omega
-      obtain ⟨cur, hloop2, h⟩ := h
-      subst h
-      rw [Std.Legacy.Range.forIn_eq_forIn_range'] at hloop2
-      refine forIn_list_inv (P := fun cur => StmtOpPres ctx σ cur)
-        ?_ (stmtOpPres_refl hw) hloop2
-      intro a _ b rr hbb hr
-      split at hr
-      all_goals try (simp [Bind.bind, Except.bind] at hr; done)
-      all_goals
-        simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at hr
-        obtain ⟨l, hl, c, hc, hrr⟩ := hr
-        subst hrr
-        simp only [forInStepVal]
-        refine StmtOpPres.trans hbb ?_
-        obtain ⟨b1, b2⟩ := hbb
-        refine storeLoc_pres b1 ?_ (by simp [GoValue.locSup]) hc
-        have := sliceIndexLoc_locSup hl
-        omega
+      simp only [Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      refine Mem.storeRun_pres hw hslb ?_ hst
+      rw [goValueListSup_eq_zero_of_ints]
+      · exact Nat.zero_le _
+      · intro w hw'
+        simp only [List.mem_map] at hw'
+        obtain ⟨⟨i, k⟩, -, rfl⟩ := hw'
+        exact ⟨i, k, rfl⟩
     · simp at h
-  · -- copySlice
+  · -- copySlice: the source run read, the destination run written, the count stored
     split at h
     · rename_i tv dstV srcV
       simp only [goValueListSup] at hvs
-      simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
-      obtain ⟨dst, hdst, src, hsrc, _, _, _, _, values, hload, h⟩ := h
+      simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨dst, hdst, src, hsrc, _, _, _, _, ⟨values, trR⟩, hread, ⟨current, trW⟩, hwrite,
+        tloc, htloc, ⟨s', trT⟩, hst, h⟩ := h
+      simp only [Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
       have hdstb : optLocSup dst.base ≤ σ.nextAddr := by
         have := valueAsSlice_locSup hdst
         omega
-      rw [Std.Legacy.Range.forIn_eq_forIn_range'] at hload
-      have hvalsb : goValueListSup values.toList ≤ σ.nextAddr := by
-        refine forIn_list_inv (P := fun vals : Array GoValue =>
-          goValueListSup vals.toList ≤ σ.nextAddr) ?_ (Nat.zero_le _) hload
-        intro a _ b rr hbb hr
-        simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at hr
-        obtain ⟨l, hl, lv, hlv, hrr⟩ := hr
-        subst hrr
-        simp only [forInStepVal, goValueListSup_push]
-        have := loadLoc_locSup hlv
-        omega
-      obtain ⟨st, hloop, h⟩ := h
-      have hpres : StmtOpPres ctx σ st.1 := by
-        rw [← Array.forIn_toList] at hloop
-        refine forIn_list_inv
-          (P := fun st : Store × Nat => StmtOpPres ctx σ st.1)
-          ?_ (stmtOpPres_refl hw) hloop
-        intro a ha b rr hbb hr
-        have hab : GoValue.locSup a ≤ σ.nextAddr := by
-          have : GoValue.locSup a ≤ goValueListSup values.toList := by
-            rw [goValueListSup_eq]
-            exact supBy_mem ha
-          omega
-        simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at hr
-        obtain ⟨l, hl, c, hc, hrr⟩ := hr
-        subst hrr
-        simp only [forInStepVal]
-        refine StmtOpPres.trans hbb ?_
-        obtain ⟨b1, b2⟩ := hbb
-        refine storeLoc_pres b1 ?_ (by omega) hc
-        have := sliceIndexLoc_locSup hl
-        omega
-      obtain ⟨tloc, htloc, h⟩ := h
+      have hvalsb : goValueListSup values ≤ σ.nextAddr :=
+        Nat.le_trans (Mem.loadRun_locSup hread) hheap
+      have hpres := Mem.storeRun_pres hw hdstb hvalsb hwrite
       refine StmtOpPres.trans hpres ?_
       obtain ⟨b1, b2⟩ := hpres
-      refine storeLoc_pres b1 ?_ (by simp [GoValue.locSup]) h
+      refine Mem.store_pres b1 ?_ (by simp [GoValue.locSup]) hst
       have := valueAsLoc_locSup htloc
       omega
     · simp at h
   · -- print (stdlib slice 3): validates the operands, state unchanged
-    simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
-    obtain ⟨_, _, rfl⟩ := h
+    simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨_, _, rfl, rfl⟩ := h
     exact stmtOpPres_refl hw
   · -- appendSlice: dispatches through applyStmtOp
     simp only [throw, throwThe, MonadExceptOf.throw] at h
@@ -5142,9 +5272,9 @@ theorem applyStmtOpCore_wf {σ : Store} {op : StmtOp}
 
 set_option maxHeartbeats 1600000 in
 theorem applyStmtOp_wf {σ : Store} {ch : Choices} {op : StmtOp} {nt : Nat}
-    {vs : List GoValue} {σ' : Store} {ch' : Choices}
+    {vs : List GoValue} {σ' : Store} {ch' : Choices} {tr : AccessTrace}
     (hw : StateWf ctx σ) (hvs : goValueListSup vs ≤ σ.nextAddr)
-    (h : applyStmtOp ctx σ ch op nt vs = .ok (σ', ch')) :
+    (h : applyStmtOp ctx σ ch op nt vs = .ok (σ', ch', tr)) :
     StmtOpPres ctx σ σ' := by
   have hheap := hw.heap_le
   rw [applyStmtOp.eq_def] at h
@@ -5155,52 +5285,29 @@ theorem applyStmtOp_wf {σ : Store} {ch : Choices} {op : StmtOp} {nt : Nat}
     · rename_i tv sliceV elemsV
       simp only [goValueListSup] at hvs
       simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
-      obtain ⟨slice, hslice, elems, helems, _, _, _, _, elemValues, helemValues,
-        tloc, htloc, h⟩ := h
+      obtain ⟨slice, hslice, elems, helems, _, _, _, _, ⟨elemValues, trE⟩, helemValues, h⟩ := h
       have hsliceb : optLocSup slice.base ≤ σ.nextAddr := by
         have := valueAsSlice_locSup hslice
         omega
       have hvalsb : goValueListSup elemValues.toList ≤ σ.nextAddr := by
-        have := sliceVisibleValues_locSup helemValues
+        have := Mem.loadSlice_locSup helemValues
         omega
+      try dsimp only at h
+      try simp only [bind_eq_ok] at h
+      obtain ⟨tloc, htloc, h⟩ := h
       have htlocb : Loc.locSup tloc ≤ σ.nextAddr := by
         have := valueAsLoc_locSup htloc
         omega
       split at h
-      · -- in-place path
+      · -- in-place path: the element writes (`Mem.storeRun`), then the header write
         simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-        obtain ⟨st, hloop, σ₂, h, hσ, hch⟩ := h
-        subst hσ
-        have hpres : StmtOpPres ctx σ st.1 := by
-          rw [← Array.forIn_toList] at hloop
-          refine forIn_list_inv
-            (P := fun st : Store × Nat => StmtOpPres ctx σ st.1)
-            ?_ (stmtOpPres_refl hw) hloop
-          intro a ha b rr hbb hr
-          have hab : GoValue.locSup a ≤ σ.nextAddr := by
-            have : GoValue.locSup a ≤ goValueListSup elemValues.toList := by
-              rw [goValueListSup_eq]
-              exact supBy_mem ha
-            omega
-          split at hr
-          · rename_i base hbase
-            simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at hr
-            obtain ⟨c, hc, hrr⟩ := hr
-            subst hrr
-            simp only [forInStepVal]
-            refine StmtOpPres.trans hbb ?_
-            obtain ⟨b1, b2⟩ := hbb
-            refine storeLoc_pres b1 ?_ (by omega) hc
-            have hob : optLocSup slice.base = Loc.locSup base := by rw [hbase]; rfl
-            show Loc.locSup (Loc.index base _) ≤ b.1.nextAddr
-            simp only [Loc.locSup, Loc.rootBase] at *
-            omega
-          · simp [Bind.bind, Except.bind] at hr
+        obtain ⟨⟨current, trW⟩, hwrite, ⟨s₂, trT⟩, hst, rfl, rfl, rfl⟩ := h
+        have hpres : StmtOpPres ctx σ current := Mem.storeRun_pres hw hsliceb hvalsb hwrite
         refine StmtOpPres.trans hpres ?_
         obtain ⟨b1, b2⟩ := hpres
-        refine storeLoc_pres b1 ?_ ?_ h
+        refine Mem.store_pres b1 ?_ ?_ hst
         · omega
-        · show optLocSup slice.base ≤ st.1.nextAddr
+        · show optLocSup slice.base ≤ current.nextAddr
           omega
       · -- spill path
         simp only [Choices.consumeAt_appendSpill, bind_eq_ok, pure_eq_ok,
@@ -5212,24 +5319,25 @@ theorem applyStmtOp_wf {σ : Store} {ch : Choices} {op : StmtOp} {nt : Nat}
         · simp [Bind.bind, Except.bind] at h
         simp only [Choices.consumeAt_appendSpill, bind_eq_ok, pure_eq_ok,
           Except.ok.injEq, Prod.mk.injEq] at h
-        obtain ⟨oldValues, holdValues, backing, hbacking, ⟨base, σa⟩, halloc, σ₂, h, hσ, hch⟩ := h
+        obtain ⟨⟨oldValues, trO⟩, holdValues, backing, hbacking, ⟨base, σa⟩, halloc,
+          ⟨σ₂, trT⟩, h, hσ, hch, htr⟩ := h
+        try dsimp only at hbacking halloc h
         subst hσ
         have holdb : goValueListSup oldValues.toList ≤ σ.nextAddr := by
-          have := sliceVisibleValues_locSup holdValues
+          have := Mem.loadSlice_locSup holdValues
           omega
         have hbb := buildAppendBackingValue_locSup hbacking
-        · dsimp only at h
-          obtain ⟨w1, w2, w3⟩ := alloc_wf hw (by omega) halloc
-          obtain ⟨d1, d2, _⟩ := alloc_shape halloc
-          refine StmtOpPres.trans ⟨w1, by omega⟩ ?_
-          refine storeLoc_pres w1 (by omega) ?_ h
-          show optLocSup (some base) ≤ σa.nextAddr
-          exact w2
+        obtain ⟨w1, w2, w3⟩ := alloc_wf hw (by omega) halloc
+        obtain ⟨d1, d2, _⟩ := alloc_shape halloc
+        refine StmtOpPres.trans ⟨w1, by omega⟩ ?_
+        refine Mem.store_pres w1 (by omega) ?_ h
+        show optLocSup (some base) ≤ σa.nextAddr
+        exact w2
     · simp at h
   · -- every other arm dispatches to applyStmtOpCore
     rename_i op' hne
     simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨σ₂, hcore, hσ, hch⟩ := h
+    obtain ⟨⟨σ₂, tr₂⟩, hcore, hσ, hch, htr⟩ := h
     subst hσ
     exact applyStmtOpCore_wf hw hvs hcore
 
@@ -5833,13 +5941,13 @@ theorem commitClause_wf {σ : Store} {env : LocalEnv} {k : Cont}
   · -- sendEv
     rename_i chv vv elem body
     simp only [evClauseSup, Nat.max_le] at hcl
-    simp only [bind_eq_ok] at h
+    try simp only [bind_eq_ok] at h
     obtain ⟨ch, hch, h⟩ := h
     have hchb := valueAsChan_locSup hch
     split at h
     · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
     · rename_i loc hbase
-      simp only [bind_eq_ok] at h
+      try simp only [bind_eq_ok] at h
       obtain ⟨⟨buf, capacity, closed⟩, hcell, h⟩ := h
       have hbufb := chanCell_locSup hcell
       have hlocb : Loc.locSup loc ≤ σ.nextAddr := by
@@ -5868,13 +5976,13 @@ theorem commitClause_wf {σ : Store} {env : LocalEnv} {k : Cont}
   · -- recvEv
     rename_i chv targets elem body
     simp only [evClauseSup, Nat.max_le] at hcl
-    simp only [bind_eq_ok] at h
+    try simp only [bind_eq_ok] at h
     obtain ⟨ch, hch, h⟩ := h
     have hchb := valueAsChan_locSup hch
     split at h
     · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
     · rename_i loc hbase
-      simp only [bind_eq_ok] at h
+      try simp only [bind_eq_ok] at h
       obtain ⟨⟨buf, capacity, closed⟩, hcell, h⟩ := h
       have hbufb := chanCell_locSup hcell
       have hlocb : Loc.locSup loc ≤ σ.nextAddr := by
@@ -5900,7 +6008,7 @@ theorem commitClause_wf {σ : Store} {env : LocalEnv} {k : Cont}
           simp only [Config.locSup, Nat.max_le]
           omega
         · rename_i t ts
-          simp only [bind_eq_ok] at h
+          try simp only [bind_eq_ok] at h
           obtain ⟨⟨c₀, σ₀⟩, hent, h⟩ := h
           simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
           obtain ⟨rfl, rfl⟩ := h
@@ -5922,7 +6030,7 @@ theorem commitClause_wf {σ : Store} {env : LocalEnv} {k : Cont}
             simp only [Config.locSup, Nat.max_le]
             omega
           · rename_i t ts
-            simp only [bind_eq_ok] at h
+            try simp only [bind_eq_ok] at h
             obtain ⟨⟨c₀, σ₀⟩, hent, h⟩ := h
             simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
             obtain ⟨rfl, rfl⟩ := h
@@ -5957,7 +6065,7 @@ theorem applyChanOp_wf {σ : Store} {op : ChanStOp}
   · -- send
     rename_i elem chv vv
     simp only [goValueListSup, Nat.max_le] at hvs
-    simp only [bind_eq_ok] at h
+    try simp only [bind_eq_ok] at h
     obtain ⟨ch, hch, h⟩ := h
     obtain ⟨v', hv', h⟩ := h
     have hchb := valueAsChan_locSup hch
@@ -5971,7 +6079,7 @@ theorem applyChanOp_wf {σ : Store} {op : ChanStOp}
       simp only [Config.locSup, optLocSup, Nat.max_le]
       omega
     · rename_i loc hbase
-      simp only [bind_eq_ok] at h
+      try simp only [bind_eq_ok] at h
       obtain ⟨⟨buf, capacity, closed⟩, hcell, h⟩ := h
       have hbufb := chanCell_locSup hcell
       have hlocb : Loc.locSup loc ≤ σ.nextAddr := by
@@ -6001,7 +6109,7 @@ theorem applyChanOp_wf {σ : Store} {op : ChanStOp}
     rename_i targets elem chv
     simp only [goValueListSup, Nat.max_le] at hvs
     simp only [chanStOpSup] at hop
-    simp only [bind_eq_ok] at h
+    try simp only [bind_eq_ok] at h
     obtain ⟨ch, hch, h⟩ := h
     have hchb := valueAsChan_locSup hch
     split at h
@@ -6011,7 +6119,7 @@ theorem applyChanOp_wf {σ : Store} {op : ChanStOp}
       simp only [Config.locSup, optLocSup, Nat.max_le]
       omega
     · rename_i loc hbase
-      simp only [bind_eq_ok] at h
+      try simp only [bind_eq_ok] at h
       obtain ⟨⟨buf, capacity, closed⟩, hcell, h⟩ := h
       have hbufb := chanCell_locSup hcell
       have hlocb : Loc.locSup loc ≤ σ.nextAddr := by
@@ -6023,7 +6131,7 @@ theorem applyChanOp_wf {σ : Store} {op : ChanStOp}
           have := goValueListSup_mem (l := buf.toList) (v := v)
             (List.mem_of_getElem? (by simpa using hv))
           omega
-        simp only [bind_eq_ok] at h
+        try simp only [bind_eq_ok] at h
         obtain ⟨σ₁, hst, h⟩ := h
         obtain ⟨w1, w2⟩ := storeChanPayload_pres hw hlocb
           (by
@@ -6035,7 +6143,7 @@ theorem applyChanOp_wf {σ : Store} {op : ChanStOp}
           simp only [Config.locSup, Nat.max_le]
           omega
         · rename_i t ts
-          simp only [bind_eq_ok] at h
+          try simp only [bind_eq_ok] at h
           obtain ⟨⟨c₀, σ₀⟩, hent, h⟩ := h
           simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
           obtain ⟨rfl, rfl⟩ := h
@@ -6046,7 +6154,7 @@ theorem applyChanOp_wf {σ : Store} {op : ChanStOp}
           exact ⟨q1, by simpa using q2, Nat.le_trans w2 q4⟩
       · split at h
         · -- closed-and-drained: zero value, then deliver
-          simp only [bind_eq_ok] at h
+          try simp only [bind_eq_ok] at h
           obtain ⟨z, hz, h⟩ := h
           have hzb : GoValue.locSup z ≤ σ.nextAddr := by
             rw [defaultValue_locSup hz]; omega
@@ -6055,7 +6163,7 @@ theorem applyChanOp_wf {σ : Store} {op : ChanStOp}
             obtain ⟨rfl, rfl⟩ := h
             exact ⟨hw, by simp only [Config.locSup, Nat.max_le]; omega, Nat.le_refl _⟩
           · rename_i t ts
-            simp only [bind_eq_ok] at h
+            try simp only [bind_eq_ok] at h
             obtain ⟨⟨c₀, σ₀⟩, hent, h⟩ := h
             simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
             obtain ⟨rfl, rfl⟩ := h
@@ -6073,7 +6181,7 @@ theorem applyChanOp_wf {σ : Store} {op : ChanStOp}
   · -- close
     rename_i chv
     simp only [goValueListSup, Nat.max_le] at hvs
-    simp only [bind_eq_ok] at h
+    try simp only [bind_eq_ok] at h
     obtain ⟨ch, hch, h⟩ := h
     have hchb := valueAsChan_locSup hch
     split at h
@@ -6084,7 +6192,7 @@ theorem applyChanOp_wf {σ : Store} {op : ChanStOp}
         Nat.max_le]
       omega
     · rename_i loc hbase
-      simp only [bind_eq_ok] at h
+      try simp only [bind_eq_ok] at h
       obtain ⟨⟨buf, capacity, closed⟩, hcell, h⟩ := h
       have hbufb := chanCell_locSup hcell
       have hlocb : Loc.locSup loc ≤ σ.nextAddr := by
@@ -6204,7 +6312,7 @@ theorem applySyncOpCore_wf {σ : Store} {op : SyncOp}
   split at h
   case _ av =>  -- lock
     simp only [goValueListSup, Nat.max_le] at hvs
-    simp only [bind_eq_ok] at h
+    try simp only [bind_eq_ok] at h
     obtain ⟨loc, hloc, h⟩ := h
     have hlocb : Loc.locSup loc ≤ σ.nextAddr :=
       Nat.le_trans (valueAsLoc_locSup hloc) (by omega)
@@ -6226,7 +6334,7 @@ theorem applySyncOpCore_wf {σ : Store} {op : SyncOp}
     · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
   case _ av =>  -- unlock
     simp only [goValueListSup, Nat.max_le] at hvs
-    simp only [bind_eq_ok] at h
+    try simp only [bind_eq_ok] at h
     obtain ⟨loc, hloc, h⟩ := h
     have hlocb : Loc.locSup loc ≤ σ.nextAddr :=
       Nat.le_trans (valueAsLoc_locSup hloc) (by omega)
@@ -6244,7 +6352,7 @@ theorem applySyncOpCore_wf {σ : Store} {op : SyncOp}
     · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
   case _ av =>  -- rlock
     simp only [goValueListSup, Nat.max_le] at hvs
-    simp only [bind_eq_ok] at h
+    try simp only [bind_eq_ok] at h
     obtain ⟨loc, hloc, h⟩ := h
     have hlocb : Loc.locSup loc ≤ σ.nextAddr :=
       Nat.le_trans (valueAsLoc_locSup hloc) (by omega)
@@ -6266,7 +6374,7 @@ theorem applySyncOpCore_wf {σ : Store} {op : SyncOp}
     · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
   case _ av =>  -- runlock
     simp only [goValueListSup, Nat.max_le] at hvs
-    simp only [bind_eq_ok] at h
+    try simp only [bind_eq_ok] at h
     obtain ⟨loc, hloc, h⟩ := h
     have hlocb : Loc.locSup loc ≤ σ.nextAddr :=
       Nat.le_trans (valueAsLoc_locSup hloc) (by omega)
@@ -6284,7 +6392,7 @@ theorem applySyncOpCore_wf {σ : Store} {op : SyncOp}
     · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
   case _ av =>  -- wlock
     simp only [goValueListSup, Nat.max_le] at hvs
-    simp only [bind_eq_ok] at h
+    try simp only [bind_eq_ok] at h
     obtain ⟨loc, hloc, h⟩ := h
     have hlocb : Loc.locSup loc ≤ σ.nextAddr :=
       Nat.le_trans (valueAsLoc_locSup hloc) (by omega)
@@ -6308,7 +6416,7 @@ theorem applySyncOpCore_wf {σ : Store} {op : SyncOp}
     · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
   case _ av =>  -- wunlock
     simp only [goValueListSup, Nat.max_le] at hvs
-    simp only [bind_eq_ok] at h
+    try simp only [bind_eq_ok] at h
     obtain ⟨loc, hloc, h⟩ := h
     have hlocb : Loc.locSup loc ≤ σ.nextAddr :=
       Nat.le_trans (valueAsLoc_locSup hloc) (by omega)
@@ -6326,14 +6434,14 @@ theorem applySyncOpCore_wf {σ : Store} {op : SyncOp}
     · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
   case _ av dv =>  -- wgAdd
     simp only [goValueListSup, Nat.max_le] at hvs
-    simp only [bind_eq_ok] at h
+    try simp only [bind_eq_ok] at h
     obtain ⟨loc, hloc, h⟩ := h
     have hlocb : Loc.locSup loc ≤ σ.nextAddr :=
       Nat.le_trans (valueAsLoc_locSup hloc) (by omega)
     obtain ⟨delta, hdelta, h⟩ := h
     obtain ⟨p, hcell, h⟩ := h
     split at h
-    · simp only [bind_eq_ok] at h
+    · try simp only [bind_eq_ok] at h
       obtain ⟨σ₂, hst, h⟩ := h
       obtain ⟨w1, w2⟩ := storeLoc_pres hw hlocb
         (by simp [syncData_locSup]) hst
@@ -6347,7 +6455,7 @@ theorem applySyncOpCore_wf {σ : Store} {op : SyncOp}
     · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
   case _ av =>  -- wgWait
     simp only [goValueListSup, Nat.max_le] at hvs
-    simp only [bind_eq_ok] at h
+    try simp only [bind_eq_ok] at h
     obtain ⟨loc, hloc, h⟩ := h
     have hlocb : Loc.locSup loc ≤ σ.nextAddr :=
       Nat.le_trans (valueAsLoc_locSup hloc) (by omega)
@@ -6370,14 +6478,14 @@ theorem applySyncOpCore_wf {σ : Store} {op : SyncOp}
   case _ targets av =>  -- onceBegin
     simp only [goValueListSup, Nat.max_le] at hvs
     simp only [syncOpSup] at hop
-    simp only [bind_eq_ok] at h
+    try simp only [bind_eq_ok] at h
     obtain ⟨loc, hloc, h⟩ := h
     have hlocb : Loc.locSup loc ≤ σ.nextAddr :=
       Nat.le_trans (valueAsLoc_locSup hloc) (by omega)
     obtain ⟨p, hcell, h⟩ := h
     split at h
     · split at h
-      · simp only [bind_eq_ok] at h
+      · try simp only [bind_eq_ok] at h
         obtain ⟨σ₂, hst, h⟩ := h
         obtain ⟨w1, w2⟩ := storeLoc_pres hw hlocb
           (by simp [syncData_locSup]) hst
@@ -6389,7 +6497,7 @@ theorem applySyncOpCore_wf {σ : Store} {op : SyncOp}
           (by simp [Stmt.locSup, stmtListSup]) (by omega) (by omega) hent
         exact ⟨q1, by simpa using q2, Nat.le_trans w2 q4⟩
       · split at h
-        · simp only [bind_eq_ok] at h
+        · try simp only [bind_eq_ok] at h
           obtain ⟨⟨c₀, σ₀⟩, hent, h⟩ := h
           simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
           obtain ⟨rfl, rfl⟩ := h
@@ -6405,7 +6513,7 @@ theorem applySyncOpCore_wf {σ : Store} {op : SyncOp}
     · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
   case _ av =>  -- onceComplete
     simp only [goValueListSup, Nat.max_le] at hvs
-    simp only [bind_eq_ok] at h
+    try simp only [bind_eq_ok] at h
     obtain ⟨loc, hloc, h⟩ := h
     have hlocb : Loc.locSup loc ≤ σ.nextAddr :=
       Nat.le_trans (valueAsLoc_locSup hloc) (by omega)
@@ -6442,7 +6550,7 @@ theorem tryDeliver_wf {σ : Store} {b : Bool} {targets : List Assignee}
     refine ⟨hw, ?_, Nat.le_refl _⟩
     simp only [Config.locSup]
     omega
-  · simp only [bind_eq_ok] at h
+  · try simp only [bind_eq_ok] at h
     obtain ⟨⟨c₀, σ₀⟩, hent, h⟩ := h
     simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
@@ -6465,11 +6573,11 @@ theorem applyTryLock_wf {σ : Store} {op : SyncOp} {loc : Loc}
     StateWf ctx σ' ∧ Config.locSup c' ≤ σ'.nextAddr
       ∧ σ.nextAddr ≤ σ'.nextAddr := by
   rw [applyTryLock.eq_def] at h
-  simp only [bind_eq_ok] at h
+  try simp only [bind_eq_ok] at h
   obtain ⟨acq, hacq, h⟩ := h
   split at h
   · exact tryDeliver_wf hw ht henv hk h
-  · simp only [bind_eq_ok] at h
+  · try simp only [bind_eq_ok] at h
     obtain ⟨σ₂, hst, h⟩ := h
     obtain ⟨w1, w2⟩ := storeLoc_pres hw hloc
       (by simp [syncData_locSup]) hst
@@ -6500,7 +6608,7 @@ theorem applySyncOp_wf {σ : Store} {ch : Choices} {op : SyncOp}
   split at h
   · rename_i targets av htry
     simp only [goValueListSup, Nat.max_le] at hvs
-    simp only [bind_eq_ok] at h
+    try simp only [bind_eq_ok] at h
     obtain ⟨loc, hloc, h⟩ := h
     have hlocb : Loc.locSup loc ≤ σ.nextAddr :=
       Nat.le_trans (valueAsLoc_locSup hloc) (by omega)
@@ -6511,7 +6619,7 @@ theorem applySyncOp_wf {σ : Store} {ch : Choices} {op : SyncOp}
     rw [syncOpSup_of_tryTargets htry] at hop
     exact applyTryLock_wf hw hlocb hop henv hk happ
   · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
-  · simp only [bind_eq_ok] at h
+  · try simp only [bind_eq_ok] at h
     obtain ⟨⟨c₀, σ₀⟩, hcore, h⟩ := h
     simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl, rfl⟩ := h
@@ -6559,7 +6667,7 @@ theorem applySelect_wf {σ : Store}
     StateWf ctx σ' ∧ Config.locSup c' ≤ σ'.nextAddr
       ∧ σ.nextAddr ≤ σ'.nextAddr := by
   rw [applySelect.eq_def] at h
-  simp only [bind_eq_ok] at h
+  try simp only [bind_eq_ok] at h
   obtain ⟨outc, hcore, h⟩ := h
   rw [applySelectCore.eq_def] at hcore
   simp only [bind_eq_ok] at hcore
@@ -6666,7 +6774,7 @@ theorem applyAtomicOp_wf {σ : Store} {op : AtomicOp}
   split at h
   · rename_i av operands
     simp only [goValueListSup, Nat.max_le] at hvs
-    simp only [bind_eq_ok] at h
+    try simp only [bind_eq_ok] at h
     obtain ⟨loc, hloc, h⟩ := h
     have hlocb : Loc.locSup loc ≤ σ.nextAddr :=
       Nat.le_trans (valueAsLoc_locSup hloc) (by omega)
@@ -6675,10 +6783,10 @@ theorem applyAtomicOp_wf {σ : Store} {op : AtomicOp}
     · rename_i curv ck
       split at h
       · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
-      · simp only [bind_eq_ok] at h
+      · try simp only [bind_eq_ok] at h
         obtain ⟨p, hcomp, h⟩ := h
         obtain ⟨new?, result⟩ := p
-        dsimp only at h
+        try dsimp only at h
         obtain ⟨σ₂, hst, h⟩ := h
         have hres : GoValue.locSup result = 0 := atomicCompute_locSup hcomp
         -- The optional store: a loc-free value, or no store at all.
@@ -6700,7 +6808,7 @@ theorem applyAtomicOp_wf {σ : Store} {op : AtomicOp}
           refine ⟨w1, ?_, w2⟩
           simp only [Config.locSup, Nat.max_le]
           omega
-        · simp only [bind_eq_ok] at h
+        · try simp only [bind_eq_ok] at h
           obtain ⟨⟨c₀, σ₀⟩, hent, h⟩ := h
           simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
           obtain ⟨rfl, rfl⟩ := h
@@ -6739,113 +6847,120 @@ theorem unseqLookupTarget_locSup :
         simp only [unseqTargetsSup]
         omega
 
-theorem unseqAtom_locSup {env : LocalEnv} {s : Store} {e : Expr} {v : GoValue}
-    (h : unseqAtom ctx env s e = .ok v) :
+theorem unseqAtom_locSup {env : LocalEnv} {s : Store} {e : Expr} {v : GoValue} {tr : AccessTrace}
+    (h : unseqAtom ctx env s e = .ok (v, tr)) :
     GoValue.locSup v ≤ max (LocalEnv.locSup env) (Heap.locSup s.heap) := by
   cases e <;> simp only [unseqAtom] at h
   all_goals try (simp [stuck, throw, throwThe, MonadExceptOf.throw] at h; done)
   · -- `.var`
     split at h
-    · have := loadLoc_locSup h
+    · have := loadLoc_locSup (Mem.load_eq h).1
       omega
     · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
   · -- `.intLit`
-    simp only [pure_eq_ok, Except.ok.injEq] at h
-    subst h
+    simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
     simp [GoValue.locSup]
   · -- `.boolLit`
-    simp only [pure_eq_ok, Except.ok.injEq] at h
-    subst h
+    simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
     simp [GoValue.locSup]
   · -- `.ref`
     split at h
     · rename_i hl
-      simp only [pure_eq_ok, Except.ok.injEq] at h
-      subst h
+      simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
       have := LocalEnv.lookup_locSup hl
       simp only [GoValue.locSup]
       omega
     · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
 
 theorem unseqAtoms_locSup {env : LocalEnv} {s : Store} :
-    ∀ {ops : List Expr} {vals : List GoValue}, unseqAtoms ctx env s ops = .ok vals →
+    ∀ {ops : List Expr} {vals : List GoValue} {tr : AccessTrace},
+      unseqAtoms ctx env s ops = .ok (vals, tr) →
       goValueListSup vals ≤ max (LocalEnv.locSup env) (Heap.locSup s.heap)
-  | [], vals, h => by
-      simp only [unseqAtoms, pure_eq_ok, Except.ok.injEq] at h
-      subst h
+  | [], vals, tr, h => by
+      simp only [unseqAtoms, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
       simp [goValueListSup]
-  | e :: es, vals, h => by
-      simp only [unseqAtoms, bind_eq_ok, pure_eq_ok] at h
-      obtain ⟨v, hv, vs, hvs, h⟩ := h
-      simp only [Except.ok.injEq] at h
-      subst h
+  | e :: es, vals, tr, h => by
+      simp only [unseqAtoms, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨⟨v, t⟩, hv, ⟨vs, ts⟩, hvs, rfl, rfl⟩ := h
       have h1 := unseqAtom_locSup hv
       have h2 := unseqAtoms_locSup hvs
       simp only [goValueListSup]
       omega
 
 theorem unseqTargetPlan_locSup {s : Store} {env : LocalEnv} {lhs : Assignee} {r : TargetRef}
-    (h : unseqTargetPlan ctx s env lhs = .ok r) :
+    {tr : AccessTrace} (h : unseqTargetPlan ctx s env lhs = .ok (r, tr)) :
     TargetRef.locSup r ≤ max (LocalEnv.locSup env) (Heap.locSup s.heap) := by
   unfold unseqTargetPlan at h
   split at h
   · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
-  · simp only [bind_eq_ok] at h
-    obtain ⟨vals, hvals, h⟩ := h
+  · try simp only [bind_eq_ok] at h
+    obtain ⟨⟨vals, trA⟩, hvals, h⟩ := h
+    try dsimp only at h
     split at h
     · rename_i hcomp
       -- The frozen-anchor check (audit F2) only refuses; a pass returns
       -- the completed plan unchanged.
       split at h
       · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
-      · simp only [pure_eq_ok, Except.ok.injEq] at h
-        subst h
+      · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
         exact Nat.le_trans (completeTargetRef_locSup hcomp) (unseqAtoms_locSup hvals)
     · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
 
-theorem unseqReadTarget_locSup {s : Store} {r : TargetRef} {v : GoValue}
-    (h : unseqReadTarget ctx s r = .ok v) : GoValue.locSup v ≤ Heap.locSup s.heap := by
+theorem unseqReadTarget_locSup {s : Store} {r : TargetRef} {v : GoValue} {tr : AccessTrace}
+    (h : unseqReadTarget ctx s r = .ok (v, tr)) : GoValue.locSup v ≤ Heap.locSup s.heap := by
   cases r with
   | chain anchor idxs steps =>
       simp only [unseqReadTarget, bind_eq_ok] at h
       obtain ⟨cur, -, loc, -, hload⟩ := h
-      exact loadLoc_locSup hload
+      exact loadLoc_locSup (Mem.load_eq hload).1
   | mapElem b k kt vt =>
       simp [unseqReadTarget, unsupported, throw, throwThe, MonadExceptOf.throw] at h
 
 theorem unseqLoad_pres {σ : Store} {env : LocalEnv} {tg : List (String × TargetRef)}
-    {bind tgt : String} {σ' : Store}
+    {bind tgt : String} {σ' : Store} {tr : AccessTrace}
     (hw : StateWf ctx σ) (henv : LocalEnv.locSup env ≤ σ.nextAddr)
-    (h : unseqLoad ctx σ env tg bind tgt = .ok σ') :
+    (h : unseqLoad ctx σ env tg bind tgt = .ok (σ', tr)) :
     StmtOpPres ctx σ σ' ∧ σ'.nextAddr = σ.nextAddr := by
   simp only [unseqLoad, bind_eq_ok] at h
-  obtain ⟨r, -, v, hv, loc, hloc, hst⟩ := h
+  obtain ⟨r, -, ⟨v, t₁⟩, hv, h⟩ := h
+  try dsimp only at h
+  try simp only [bind_eq_ok] at h
+  obtain ⟨loc, hloc, ⟨s', t₂⟩, hst, h⟩ := h
+  simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
   have h1 := unseqCellLoc_locSup hloc
   have h2 := unseqReadTarget_locSup hv
   have hh := hw.heap_le
-  obtain ⟨hn, -⟩ := storeLoc_shape hst
-  exact ⟨storeLoc_pres hw (by omega) (by omega) hst, hn⟩
+  exact ⟨Mem.store_pres hw (by omega) (by omega) hst, Mem.store_shape hst⟩
 
 theorem unseqGuard_pres {σ : Store} {g : UnseqGraph} {env : LocalEnv}
     {st st' : List UnseqStatus} {i : Nat} {test : String} {w : Bool} {out : String}
-    {σ' : Store}
+    {σ' : Store} {tr : AccessTrace}
     (hw : StateWf ctx σ) (henv : LocalEnv.locSup env ≤ σ.nextAddr)
-    (h : unseqGuard ctx σ g env st i test w out = .ok (st', σ')) :
+    (h : unseqGuard ctx σ g env st i test w out = .ok (st', σ', tr)) :
     StmtOpPres ctx σ σ' ∧ σ'.nextAddr = σ.nextAddr := by
   simp only [unseqGuard, bind_eq_ok] at h
-  obtain ⟨tloc, -, tv, -, b, -, h⟩ := h
+  obtain ⟨tloc, -, ⟨tv, t₁⟩, -, h⟩ := h
+  try dsimp only at h
+  try simp only [bind_eq_ok] at h
+  obtain ⟨b, -, h⟩ := h
   split at h
   · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨-, rfl⟩ := h
+    obtain ⟨-, rfl, -⟩ := h
     exact ⟨stmtOpPres_refl hw, rfl⟩
-  · simp only [bind_eq_ok] at h
-    obtain ⟨oloc, holoc, s₁, hst, h⟩ := h
+  · try simp only [bind_eq_ok] at h
+    obtain ⟨oloc, holoc, ⟨s₁, t₂⟩, hst, h⟩ := h
+    try dsimp only at h
     split at h
     · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨-, rfl⟩ := h
+      obtain ⟨-, rfl, -⟩ := h
       have h1 := unseqCellLoc_locSup holoc
-      obtain ⟨hn, -⟩ := storeLoc_shape hst
-      exact ⟨storeLoc_pres hw (by omega) (by simp [GoValue.locSup]) hst, hn⟩
+      exact ⟨Mem.store_pres hw (by omega) (by simp [GoValue.locSup]) hst, Mem.store_shape hst⟩
     · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
 
 theorem unseqStorePlan_locSup {s : Store} {env : LocalEnv} {tg : List (String × TargetRef)} :
@@ -6899,7 +7014,7 @@ theorem unseqInvokeStmt_locSup {binds : List String} {callee : Expr} {args : Lis
 the unchanged state, loc-bounded by the source configuration's bound. -/
 macro "wf_loc_panic " hs:term:max hc:term:max hdel:term:max : tactic =>
   `(tactic| (
-    obtain ⟨hc', hs'⟩ := deliver_panic_eq $hdel
+    obtain ⟨hc', hs', -⟩ := deliver_panic_eq $hdel
     subst hc'
     subst hs'
     refine ⟨$hs, ?_, Nat.le_refl _⟩
@@ -6920,7 +7035,7 @@ state and the configuration loc-bounded (every location root strictly
 below `nextAddr`), and never mutates the type environment. The combined
 `step_preserves_wf` below adds the map-iteration typing component. -/
 theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
-    {σ' : Store} (h : Step ctx c σ c' σ')
+    {σ' : Store} {tr : AccessTrace} (h : Step ctx c σ c' σ' tr)
     (hs : StateWf ctx σ) (hc : ConfigWf σ.nextAddr c) :
     StateWf ctx σ' ∧ ConfigWf σ'.nextAddr c'
       ∧ σ.nextAddr ≤ σ'.nextAddr := by
@@ -6968,7 +7083,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
     omega
   case evalVar id loc v env k hlook hload =>
     refine ⟨hs, ?_, Nat.le_refl _⟩
-    have h1 := loadLoc_locSup hload
+    have h1 := loadLoc_locSup (Mem.loadFor_eq hload).1
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
       stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
@@ -6994,9 +7109,9 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
       Nat.max_le] at hc h1 ⊢
     omega
   case evalStrictNullary e op r env k hplan hres hdel =>
-    rcases toResult_cases hres with ⟨⟨v, s₂⟩, rfl, happly⟩ | ⟨msg, rfl, -⟩
+    rcases toResult_cases hres with ⟨⟨v, s₂, tr₂⟩, rfl, happly⟩ | ⟨msg, rfl, -⟩
     · simp only [deliver_ok, Prod.mk.injEq] at hdel
-      obtain ⟨rfl, rfl⟩ := hdel
+      obtain ⟨rfl, rfl, rfl⟩ := hdel
 
       obtain ⟨w1, w2, w6⟩ := applyStrictOp_wf hs
         (by simp [goValueListSup]) happly
@@ -7026,9 +7141,9 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
       Nat.max_le] at hc ⊢
     omega
   case strictApply op done v r env k hres hdel =>
-    rcases toResult_cases hres with ⟨⟨out, s₂⟩, rfl, happly⟩ | ⟨msg, rfl, -⟩
+    rcases toResult_cases hres with ⟨⟨out, s₂, tr₂⟩, rfl, happly⟩ | ⟨msg, rfl, -⟩
     · simp only [deliver_ok, Prod.mk.injEq] at hdel
-      obtain ⟨rfl, rfl⟩ := hdel
+      obtain ⟨rfl, rfl, rfl⟩ := hdel
 
       have hop : goValueListSup (v :: done).reverse ≤ σ.nextAddr := by
         rw [goValueListSup_reverse]
@@ -7125,9 +7240,9 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
       Nat.max_le] at hc h1 h2 ⊢
     omega
   case callImmediate targets fid args plans r env k ch ch' hplan hargs hres hdel =>
-    rcases enterFramePick_cases hres with ⟨func, frameEnv, resultLocs, s₂, rfl, henter, rfl⟩ | ⟨msg, rfl, -, rfl⟩
+    rcases enterFramePick_cases hres with ⟨func, frameEnv, resultLocs, s₂, tr₂, rfl, henter, rfl⟩ | ⟨msg, rfl, -, rfl⟩
     · simp only [deliver_ok, Prod.mk.injEq] at hdel
-      obtain ⟨rfl, rfl⟩ := hdel
+      obtain ⟨rfl, rfl, rfl⟩ := hdel
 
       have h1 := targetsPlan_locSup hplan
       obtain ⟨w1, w2, w6, w7, w8⟩ := enterFrame_wf hs
@@ -7145,9 +7260,9 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
       omega
     · wf_loc_panic hs hc hdel
   case callArgsDoneEnter v fid plans vals r env k ch ch' hres hdel =>
-    rcases enterFramePick_cases hres with ⟨func, frameEnv, resultLocs, s₂, rfl, henter, rfl⟩ | ⟨msg, rfl, -, rfl⟩
+    rcases enterFramePick_cases hres with ⟨func, frameEnv, resultLocs, s₂, tr₂, rfl, henter, rfl⟩ | ⟨msg, rfl, -, rfl⟩
     · simp only [deliver_ok, Prod.mk.injEq] at hdel
-      obtain ⟨rfl, rfl⟩ := hdel
+      obtain ⟨rfl, rfl, rfl⟩ := hdel
 
       have hargb : goValueListSup (vals ++ [v]) ≤ σ.nextAddr := by
         rw [goValueListSup_append]
@@ -7192,7 +7307,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
   case stmtOpShiftTarget op nt done v r e rest env k hlt hres hdel =>
     rcases toResult_cases hres with ⟨loc, rfl, -⟩ | ⟨msg, rfl, -⟩
     · simp only [deliver_ok, Prod.mk.injEq] at hdel
-      obtain ⟨rfl, rfl⟩ := hdel
+      obtain ⟨rfl, rfl, rfl⟩ := hdel
       refine ⟨hs, ?_, Nat.le_refl _⟩
       simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
         GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
@@ -7206,9 +7321,9 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
       omega
     · wf_loc_panic hs hc hdel
   case stmtOpApply op nt done v r env k ch hres hdel =>
-    rcases toResult_cases hres with ⟨⟨s₂, ch'⟩, rfl, happly⟩ | ⟨msg, rfl, -⟩
+    rcases toResult_cases hres with ⟨⟨s₂, ch', tr₂⟩, rfl, happly⟩ | ⟨msg, rfl, -⟩
     · simp only [deliver_ok, Prod.mk.injEq] at hdel
-      obtain ⟨rfl, rfl⟩ := hdel
+      obtain ⟨rfl, rfl, rfl⟩ := hdel
 
       have hop : goValueListSup (v :: done).reverse ≤ σ.nextAddr := by
         rw [goValueListSup_reverse]
@@ -7250,8 +7365,10 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
       List.toList_toArray,
       Nat.max_le] at hc hb ⊢
     omega
+  -- (The label-bearing premise is moved after the others by `cases`'
+  -- substitution of the label index, hence the name order `hbind hcands`.)
   case mapIterNext keyVar valVar keyTy valTy body base produced start cands idx env env' k
- hidx hcands hbind =>
+ hidx hbind hcands =>
     have hentb : goValueEntriesSup cands.toList ≤ σ.nextAddr :=
       Nat.le_trans (mapIterCandidates_locSup hcands) hheap
     have hkb : max (GoValue.locSup cands[idx].2.1)
@@ -7296,9 +7413,9 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
       Nat.max_le] at hc h1 ⊢
     omega
   case callValCalleeEnter fid captured plans r env k ch ch' hres hdel =>
-    rcases enterFramePick_cases hres with ⟨func, frameEnv, resultLocs, s₂, rfl, henter, rfl⟩ | ⟨msg, rfl, -, rfl⟩
+    rcases enterFramePick_cases hres with ⟨func, frameEnv, resultLocs, s₂, tr₂, rfl, henter, rfl⟩ | ⟨msg, rfl, -, rfl⟩
     · simp only [deliver_ok, Prod.mk.injEq] at hdel
-      obtain ⟨rfl, rfl⟩ := hdel
+      obtain ⟨rfl, rfl, rfl⟩ := hdel
 
       have hargb : goValueListSup captured ≤ σ.nextAddr := by
         simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
@@ -7325,9 +7442,9 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
       omega
     · wf_loc_panic hs hc hdel
   case callValArgsEnter v fid captured plans vals r env k ch ch' hres hdel =>
-    rcases enterFramePick_cases hres with ⟨func, frameEnv, resultLocs, s₂, rfl, henter, rfl⟩ | ⟨msg, rfl, -, rfl⟩
+    rcases enterFramePick_cases hres with ⟨func, frameEnv, resultLocs, s₂, tr₂, rfl, henter, rfl⟩ | ⟨msg, rfl, -, rfl⟩
     · simp only [deliver_ok, Prod.mk.injEq] at hdel
-      obtain ⟨rfl, rfl⟩ := hdel
+      obtain ⟨rfl, rfl, rfl⟩ := hdel
 
       have hargb : goValueListSup (captured ++ vals ++ [v]) ≤ σ.nextAddr := by
         rw [goValueListSup_append, goValueListSup_append]
@@ -7356,7 +7473,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
       omega
     · wf_loc_panic hs hc hdel
   case frameReturnTargets sh e ops rest tenv results k w vs hload =>
-    have h1 := loadMany_locSup hload
+    have h1 := loadResults_locSup hload
     refine ⟨hs, ?_, Nat.le_refl _⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
@@ -7369,7 +7486,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
       Nat.max_le, LocalEnv.locSup] at hc h1 ⊢
     omega
   case frameFallTargets sh e ops rest tenv results k w vs hload =>
-    have h1 := loadMany_locSup hload
+    have h1 := loadResults_locSup hload
     refine ⟨hs, ?_, Nat.le_refl _⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
@@ -7382,9 +7499,9 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
       Nat.max_le, LocalEnv.locSup] at hc h1 ⊢
     omega
   case frameDeferFall targets tenv results fid captured args ds k w r ch ch' hres hdel =>
-    rcases enterFramePick_cases hres with ⟨func, frameEnv, resultLocs, s₂, rfl, henter, rfl⟩ | ⟨msg, rfl, -, rfl⟩
+    rcases enterFramePick_cases hres with ⟨func, frameEnv, resultLocs, s₂, tr₂, rfl, henter, rfl⟩ | ⟨msg, rfl, -, rfl⟩
     · simp only [deliver_ok, Prod.mk.injEq] at hdel
-      obtain ⟨rfl, rfl⟩ := hdel
+      obtain ⟨rfl, rfl, rfl⟩ := hdel
 
       have hargb : goValueListSup (captured ++ args) ≤ σ.nextAddr := by
         rw [goValueListSup_append]
@@ -7412,9 +7529,9 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
       omega
     · wf_loc_panic hs hc hdel
   case frameDeferReturn targets tenv results fid captured args ds k w r ch ch' hres hdel =>
-    rcases enterFramePick_cases hres with ⟨func, frameEnv, resultLocs, s₂, rfl, henter, rfl⟩ | ⟨msg, rfl, -, rfl⟩
+    rcases enterFramePick_cases hres with ⟨func, frameEnv, resultLocs, s₂, tr₂, rfl, henter, rfl⟩ | ⟨msg, rfl, -, rfl⟩
     · simp only [deliver_ok, Prod.mk.injEq] at hdel
-      obtain ⟨rfl, rfl⟩ := hdel
+      obtain ⟨rfl, rfl, rfl⟩ := hdel
 
       have hargb : goValueListSup (captured ++ args) ≤ σ.nextAddr := by
         rw [goValueListSup_append]
@@ -7484,9 +7601,9 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
       Nat.max_le] at hc ⊢
     omega
   case panicFrameDefer chain targets tenv results fid captured args ds k w r ch ch' hres hdel =>
-    rcases enterFramePick_cases hres with ⟨func, frameEnv, resultLocs, s₂, rfl, henter, rfl⟩ | ⟨msg, rfl, -, rfl⟩
+    rcases enterFramePick_cases hres with ⟨func, frameEnv, resultLocs, s₂, tr₂, rfl, henter, rfl⟩ | ⟨msg, rfl, -, rfl⟩
     · simp only [deliver_ok, Prod.mk.injEq] at hdel
-      obtain ⟨rfl, rfl⟩ := hdel
+      obtain ⟨rfl, rfl, rfl⟩ := hdel
 
       have hargb : goValueListSup (captured ++ args) ≤ σ.nextAddr := by
         rw [goValueListSup_append]
@@ -7531,7 +7648,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
   case chanStApply op done v r env k hres hdel =>
     rcases toResult_cases hres with ⟨⟨c₂, s₂⟩, rfl, happly⟩ | ⟨msg, rfl, -⟩
     · simp only [deliver_ok, Prod.mk.injEq] at hdel
-      obtain ⟨rfl, rfl⟩ := hdel
+      obtain ⟨rfl, rfl, rfl⟩ := hdel
 
       have hop : goValueListSup (v :: done).reverse ≤ σ.nextAddr
           ∧ chanStOpSup op ≤ σ.nextAddr
@@ -7558,7 +7675,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
   case syncStApply op done v r env k ch hres hdel =>
     rcases toResult_cases hres with ⟨⟨c₂, s₂, ch'⟩, rfl, happly⟩ | ⟨msg, rfl, -⟩
     · simp only [deliver_ok, Prod.mk.injEq] at hdel
-      obtain ⟨rfl, rfl⟩ := hdel
+      obtain ⟨rfl, rfl, rfl⟩ := hdel
 
       have hop : goValueListSup (v :: done).reverse ≤ σ.nextAddr
           ∧ syncOpSup op ≤ σ.nextAddr
@@ -7584,7 +7701,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
   case atomicStApply op done v r env k hres hdel =>
     rcases toResult_cases hres with ⟨⟨c₂, s₂⟩, rfl, happly⟩ | ⟨msg, rfl, -⟩
     · simp only [deliver_ok, Prod.mk.injEq] at hdel
-      obtain ⟨rfl, rfl⟩ := hdel
+      obtain ⟨rfl, rfl, rfl⟩ := hdel
 
       have hop : goValueListSup (v :: done).reverse ≤ σ.nextAddr
           ∧ atomicOpSup op ≤ σ.nextAddr
@@ -7621,7 +7738,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
   case selectApply clauses default? done v r env k ch hres hdel =>
     rcases toResult_cases hres with ⟨⟨c₂, s₂, ch', cl?⟩, rfl, happly⟩ | ⟨msg, rfl, -⟩
     · simp only [deliver_ok, Prod.mk.injEq] at hdel
-      obtain ⟨rfl, rfl⟩ := hdel
+      obtain ⟨rfl, rfl, rfl⟩ := hdel
 
       have hcomp : selectClausesSup clauses ≤ σ.nextAddr
           ∧ optStmtSup default? ≤ σ.nextAddr
@@ -7670,9 +7787,9 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
       stmtListSup, Nat.max_le] at hc ⊢
     omega
   case rhsStores rop refs done v r body env k hres hdel =>
-    rcases toResult_cases hres with ⟨vals, rfl, happly⟩ | ⟨msg, rfl, -⟩
+    rcases toResult_cases hres with ⟨⟨vals, tr₂⟩, rfl, happly⟩ | ⟨msg, rfl, -⟩
     · simp only [deliver_ok, Prod.mk.injEq] at hdel
-      obtain ⟨rfl, rfl⟩ := hdel
+      obtain ⟨rfl, rfl, rfl⟩ := hdel
 
       have hv := applyRhsOp_locSup happly
       rw [goValueListSup_reverse] at hv
@@ -7739,9 +7856,9 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
     simp only [ConfigWf, Config.locSup, Cont.locSup, UnseqGraph.locSup, Nat.max_le] at hc hb hst ⊢
     omega
   case unseqRunLoad g thenB st tg env k o bind tgt r i hget hbody hres hdel =>
-    rcases toResult_cases hres with ⟨s₂, rfl, hload⟩ | ⟨msg, rfl, -⟩
+    rcases toResult_cases hres with ⟨⟨s₂, tr₂⟩, rfl, hload⟩ | ⟨msg, rfl, -⟩
     · simp only [deliver_ok, Prod.mk.injEq] at hdel
-      obtain ⟨rfl, rfl⟩ := hdel
+      obtain ⟨rfl, rfl, rfl⟩ := hdel
       have hc' := hc
       simp only [ConfigWf, Config.locSup, Cont.locSup, Nat.max_le] at hc'
       obtain ⟨⟨w1, w2⟩, hn⟩ := unseqLoad_pres hs (by omega) hload
@@ -7776,15 +7893,15 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
     have hc' := hc
     simp only [ConfigWf, Config.locSup, Cont.locSup, GoValue.locSup, Nat.max_le] at hc'
     have hl := unseqCellLoc_locSup hloc
-    obtain ⟨w1, w2⟩ := storeLoc_pres hs (by omega) (by omega) hst
-    obtain ⟨hn, -⟩ := storeLoc_shape hst
+    obtain ⟨w1, w2⟩ := Mem.store_pres hs (by omega) (by omega) hst
+    have hn := Mem.store_shape hst
     refine ⟨w1, ?_, w2⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, Nat.max_le] at hc ⊢
     omega
   case storeStep ref rs val vals r body env k hres hdel =>
-    rcases toResult_cases hres with ⟨s₂, rfl, hst⟩ | ⟨msg, rfl, -⟩
+    rcases toResult_cases hres with ⟨⟨s₂, tr₂⟩, rfl, hst⟩ | ⟨msg, rfl, -⟩
     · simp only [deliver_ok, Prod.mk.injEq] at hdel
-      obtain ⟨rfl, rfl⟩ := hdel
+      obtain ⟨rfl, rfl, rfl⟩ := hdel
 
       have hbounds : TargetRef.locSup ref ≤ σ.nextAddr
           ∧ GoValue.locSup val ≤ σ.nextAddr := by
@@ -7858,7 +7975,7 @@ theorem snapshotEntriesSelfNormalized_eraseIdx {types : TypeEnv} {kt vt : Ty}
 invariant — loc-boundedness of state and configuration (B7 / D6: the
 former map-iteration typing conjunct is gone from `MachineWf`). -/
 theorem step_preserves_wf {c : Config} {σ : Store} {c' : Config}
-    {σ' : Store} (h : Step ctx c σ c' σ') (hwf : MachineWf ctx σ c) :
+    {σ' : Store} {tr : AccessTrace} (h : Step ctx c σ c' σ' tr) (hwf : MachineWf ctx σ c) :
     MachineWf ctx σ' c' := by
   obtain ⟨hs, hc⟩ := hwf
   obtain ⟨hs', hc', _⟩ := step_preserves_wf_loc h hs hc

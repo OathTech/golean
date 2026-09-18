@@ -1,0 +1,48 @@
+# C1 S2a — the raft twin trace-equality audit (2026-09-18)
+# .tmp/twin-audit.sh: S2a binary (d4c0c14d…) then main 68b261e6's certified binary (231df9a9…), raft-twin/probeTwin{Choice,Single,Elect,Perturb,Ticks} x 6 streams, --fuel 10000000; sorted --dump records compared
+
+== twin s2a start 2026-09-18T11:15:42+00:00
+twin s2a EXIT=0 wall=1136s
+== twin main start 2026-09-18T11:34:38+00:00
+twin main EXIT=0 wall=1004s
+twin cmp EXIT=0
+  14361 .tmp/twin-dump-main.sorted.tsv
+  14361 .tmp/twin-dump-s2a.sorted.tsv
+  28722 total
+== twin done 2026-09-18T11:51:22+00:00
+
+37e1c15626bd59de76c7f7908bbbd338a59ee46f3bf29d7b946325fd0b083601  twin-dump-main.sorted.tsv
+37e1c15626bd59de76c7f7908bbbd338a59ee46f3bf29d7b946325fd0b083601  twin-dump-s2a.sorted.tsv
+
+# S2a results (id stream status consumed traceMismatches alarms)
+rows=30 statuses={'ok': 30} traceMismatches=['0'] alarms=['0'] consumed_total=14360
+probeTwinChoice	default	ok	251	0	0
+probeTwinChoice	9,8,7,6,5,4,3,2,1,0	ok	251	0	0
+probeTwinChoice	1,3,5,7,9,2,4,6,8,0	ok	251	0	0
+probeTwinChoice	5,5,5,5,5,5,5,5	ok	251	0	0
+probeTwinChoice	rand:1:4096	ok	245	0	0
+probeTwinChoice	rand:2:4096	ok	243	0	0
+probeTwinSingle	default	ok	20	0	0
+probeTwinSingle	9,8,7,6,5,4,3,2,1,0	ok	20	0	0
+probeTwinSingle	1,3,5,7,9,2,4,6,8,0	ok	20	0	0
+probeTwinSingle	5,5,5,5,5,5,5,5	ok	20	0	0
+probeTwinSingle	rand:1:4096	ok	19	0	0
+probeTwinSingle	rand:2:4096	ok	19	0	0
+probeTwinElect	default	ok	1118	0	0
+probeTwinElect	9,8,7,6,5,4,3,2,1,0	ok	1118	0	0
+probeTwinElect	1,3,5,7,9,2,4,6,8,0	ok	1118	0	0
+probeTwinElect	5,5,5,5,5,5,5,5	ok	1118	0	0
+probeTwinElect	rand:1:4096	ok	1089	0	0
+probeTwinElect	rand:2:4096	ok	1089	0	0
+probeTwinPerturb	default	ok	814	0	0
+probeTwinPerturb	9,8,7,6,5,4,3,2,1,0	ok	814	0	0
+probeTwinPerturb	1,3,5,7,9,2,4,6,8,0	ok	814	0	0
+probeTwinPerturb	5,5,5,5,5,5,5,5	ok	814	0	0
+probeTwinPerturb	rand:1:4096	ok	792	0	0
+probeTwinPerturb	rand:2:4096	ok	790	0	0
+probeTwinTicks	default	ok	212	0	0
+probeTwinTicks	9,8,7,6,5,4,3,2,1,0	ok	212	0	0
+probeTwinTicks	1,3,5,7,9,2,4,6,8,0	ok	212	0	0
+probeTwinTicks	5,5,5,5,5,5,5,5	ok	212	0	0
+probeTwinTicks	rand:1:4096	ok	209	0	0
+probeTwinTicks	rand:2:4096	ok	205	0	0

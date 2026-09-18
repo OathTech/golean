@@ -169,6 +169,10 @@ structure Acc where
   consumed : Array Consumption := #[]
   alarms : Array String := #[]
   steps : Nat := 0
+  /-- THE TRACE-EQUALITY AUDIT's findings (C1 S2a): every step whose emitted
+  `.data` trace differs, as a multiset, from the footprint table's account
+  (also counted among `alarms`, so the corpus run's FINDINGS exit sees them). -/
+  mismatches : Array String := #[]
 
 /-- Draw one consumption from the stream (0 on exhaustion, as the
 machine does), recording it with its menu-invariant verdict. Returns the
@@ -188,6 +192,80 @@ def Acc.draw (a : Acc) (site : ChoiceSite) (bound : Nat) (facts : MenuFacts) :
 
 def Acc.alarm (a : Acc) (msg : String) : Acc :=
   { a with alarms := a.alarms.push msg }
+
+/-! ## The trace-equality audit (C1 S2a, 2026-09-18; charter §3, D6/D7)
+
+While the footprint table (`stepAccesses`, Race.lean) still exists beside the
+module's emitted trace (`StepEvent.trace`, `stepFn`'s fourth component), BOTH
+accounts run in this one binary and are compared PER STEP as multisets of
+`.data` accesses, under `raceUpdate`'s own recording rule: a private step
+whose goroutine became panicking from a non-panicking configuration records
+NOTHING (the access never happened); every other private step records
+`stepAccesses ctx σPre cPre`; a spawn records the CHILD's dispatch read
+(`dispatchAccesses`); the pool's own steps record nothing. The init phase is
+audited against `stepFn`'s trace the same way. EVERY difference is a
+finding — an `alarm` (the corpus run exits 1 and lists it) and a
+`trace-mismatch` record (the dedicated TSV columns) — never absorbed, never
+filtered to match (D7; BUG-041's rows are expected EQUAL). The sync-word /
+channel-object / atomic recordings of `raceUpdate`'s registry arms are
+OUTSIDE this audit (they are S2c's emissions). -/
+
+/-- A canonical string for one access (the multiset comparison's key). -/
+def accessKey (a : Access) : String := s!"{repr a.1}@{repr a.2}"
+
+/-- The multiset of a trace, as a sorted key list. -/
+def traceMultiset (l : List Access) : List String :=
+  ((l.map accessKey).toArray.qsort (· < ·)).toList
+
+/-- The constructor name of a configuration (the audit line's pre-shape). -/
+def configKind : Config → String
+  | .exec .. => "exec" | .evalE .. => "evalE" | .retV .. => "retV" | .next .. => "next"
+  | .signal .. => "signal" | .panicking .. => "panicking" | .blockedSend .. => "blockedSend"
+  | .blockedRecv .. => "blockedRecv" | .blockedSelect .. => "blockedSelect"
+  | .blockedSync .. => "blockedSync"
+
+def stepActionName : StepAction → String
+  | .spawned child => s!"spawned {child}" | .woke => "woke" | .paired j => s!"paired {j}"
+  | .selectCommit _ => "selectCommit" | .selectPass => "selectPass"
+  | .opDoneStrip => "opDoneStrip" | .aborted => "aborted" | .privateStep => "privateStep"
+
+/-- The footprint TABLE's account of one goroutine step, under `raceUpdate`'s
+recording rule (the `.privateStep` arm's default: nothing when the step
+panicked from a non-panicking pre-configuration). -/
+def tableAccount (cPre : Config) (σPre : Store) (post : Option Config) : List Access :=
+  let recorded : Bool :=
+    match post, cPre with
+    | some (.panicking _ _), .panicking _ _ => true
+    | some (.panicking _ _), _ => false
+    | _, _ => true
+  if recorded then (stepAccesses ctx σPre cPre).map (fun x => (x.1, .data x.2)) else []
+
+/-- Compare the two accounts of one step; a difference is a finding. -/
+def Acc.checkTrace (a : Acc) (where_ : String) (table trace : List Access) : Acc :=
+  let tm := traceMultiset table
+  let nm := traceMultiset trace
+  if tm == nm then a
+  else
+    let msg := s!"trace-mismatch: {where_}: table={tm} trace={nm}"
+    { a with alarms := a.alarms.push msg, mismatches := a.mismatches.push msg }
+
+/-- The pool step's audit: the table's account for the event's action. -/
+def Acc.auditPoolStep (a : Acc) (m m' : MultiConfig) (ev : StepEvent) : Acc :=
+  match m.threads[ev.who]?.bind Thread.config? with
+  | none => a
+  | some cPre =>
+    let where_ := s!"pool step {a.steps} who={ev.who} {stepActionName ev.action} pre={configKind cPre}"
+    match ev.action with
+    | .privateStep =>
+        a.checkTrace where_ (tableAccount ctx cPre m.shared (m'.threads[ev.who]?.bind Thread.config?)) ev.trace
+    | .spawned _ =>
+        let table : List Access :=
+          match spawnPlan cPre with
+          | some (.funcVal fid captured, args, _) =>
+              (dispatchAccesses ctx fid (captured ++ args)).map (fun x => (x.1, .data x.2))
+          | _ => []
+        a.checkTrace where_ table ev.trace
+    | _ => a.checkTrace where_ [] ev.trace
 
 /-! ## Independent re-derivations used by the menu facts -/
 
@@ -333,7 +411,7 @@ def mapIterFacts (s : Store) (base : Option Loc)
     (produced start : Array Nat) : MenuFacts :=
   match mapIterLiveEntries s base with
   | .error _ => { specWidth := none, invariants := [("live map cell readable", false)], pickCheck := fun _ => [] }
-  | .ok live =>
+  | .ok (live, _) =>
       let (cands, mand) := live.toList.foldl (init := ((0 : Nat), false)) fun (cands, mand) e =>
         if produced.contains e.1 then (cands, mand)
         else (cands + 1, mand || start.contains e.1)
@@ -697,6 +775,8 @@ partial def poolStep (fuel : Nat) (m : MultiConfig) (r : RaceState) (a : Acc) :
       let mine := stepRecords a from_
       let a := if mine == ev.picks then a
         else a.alarm s!"pick-record mismatch: machine emitted {ev.picks.length} record(s), tracer has {mine.length} for the pool-recorded sites at consumption #{from_}"
+      -- THE TRACE-EQUALITY AUDIT (C1 S2a): both accounts of this step.
+      let a := a.auditPoolStep ctx m m' ev
       let a := { a with steps := a.steps + 1 }
       match raceUpdate ctx m.shared m.threads ev m' r with
       | .error .raceDetected => return { status := "race", acc := a }
@@ -734,9 +814,12 @@ partial def initLoop (fuel : Nat) (σ : Store) (c : Config) (a : Acc) :
         | none => ([], a)
       match stepFn ctx σ c (picks ++ [0]) with
       | .error e => return .inr { status := (markInitPhase e).status, acc := a }
-      | .ok (c', σ', leftover) =>
+      | .ok (c', σ', leftover, tr) =>
           let a := if leftover == [0] then a
             else a.alarm s!"init sentinel drift: step left {leftover}"
+          -- THE TRACE-EQUALITY AUDIT (C1 S2a), init phase.
+          let a := a.checkTrace s!"init step {a.steps} pre={configKind c}"
+            (tableAccount ctx c σ (some c')) tr
           initLoop fuel' σ' c' { a with steps := a.steps + 1 }
 
 /-- One traced run of the whole program under `stream`. -/
@@ -811,6 +894,8 @@ structure StreamReport where
   variance comparison across streams. -/
   observation : String
   driverAgreement : String
+  /-- The trace-equality audit's findings (C1 S2a). -/
+  mismatches : List String
 
 def summarize (spec : String) (out : RunOutcome) (obs : String) (agree : String) : StreamReport :=
   let cs := out.acc.consumed.toList
@@ -826,7 +911,8 @@ def summarize (spec : String) (out : RunOutcome) (obs : String) (agree : String)
     violations := cs.flatMap (·.violations)
     alarms := out.acc.alarms.toList
     observation := obs
-    driverAgreement := agree }
+    driverAgreement := agree
+    mismatches := out.acc.mismatches.toList }
 
 def perSiteString (ps : List (ChoiceSite × Nat)) : String :=
   if ps.isEmpty then "-" else ";".intercalate (ps.map fun (s, n) => s!"{siteName s}={n}")
@@ -843,14 +929,15 @@ def firstOrDash (l : List String) : String :=
 def tsvHeader : String :=
   "\t".intercalate ["id", "stream", "status", "consumed", "wide", "exhaustedAt",
     "wideAfterExhaustion", "perSite", "maxBound", "violations", "firstViolation",
-    "alarms", "firstAlarm", "obsHash", "driverAgreement"]
+    "alarms", "firstAlarm", "obsHash", "driverAgreement", "traceMismatches", "firstTraceMismatch"]
 
 def StreamReport.tsvLine (id : String) (r : StreamReport) : String :=
   "\t".intercalate [id, (if r.streamSpec == "" then "default" else r.streamSpec), r.status,
     toString r.consumed, toString r.wide, optNat r.exhaustedAt, toString r.wideAfterExhaustion,
     perSiteString r.perSite, toString r.maxBound, toString r.violations.length,
     firstOrDash r.violations, toString r.alarms.length, firstOrDash r.alarms,
-    toString r.observation.hash, r.driverAgreement]
+    toString r.observation.hash, r.driverAgreement,
+    toString r.mismatches.length, firstOrDash r.mismatches]
 
 /-- Trace one stream and run the driver-agreement cross-checks:
 `CLI.enumRunProgram`'s status/leftover meter and the real engine's
@@ -923,7 +1010,7 @@ single `status=ERROR` line naming the cause — never a silent skip), plus
 the per-consumption dump lines (`Consumption.dumpLine`). -/
 def runCase (spec : CaseSpec) (fuel : Nat) : IO (List String × List String) := do
   let errLine := fun (what : String) =>
-    "\t".intercalate [spec.id, "-", "ERROR", "-", "-", "-", "-", "-", "-", "0", (what.replace "\t" " ").replace "\n" " ", "0", "-", "-", "-"]
+    "\t".intercalate [spec.id, "-", "ERROR", "-", "-", "-", "-", "-", "-", "0", (what.replace "\t" " ").replace "\n" " ", "0", "-", "-", "-", "0", "-"]
   match ← loadProgram spec.wire with
   | .error e => return ([errLine e], [])
   | .ok program =>
@@ -985,7 +1072,7 @@ def runBatch (manifestPath outPath : String) (dumpPath : Option String) (fuel : 
     | .ok spec => if done.contains spec.id then continue
     | .error _ => pure ()
     match parseCaseLine line with
-    | .error e => IO.FS.withFile outPath .append fun h => h.putStrLn ("\t".intercalate ["?", "-", "ERROR", "-", "-", "-", "-", "-", "-", "0", e, "0", "-", "-", "-"])
+    | .error e => IO.FS.withFile outPath .append fun h => h.putStrLn ("\t".intercalate ["?", "-", "ERROR", "-", "-", "-", "-", "-", "-", "0", e, "0", "-", "-", "-", "0", "-"])
     | .ok spec =>
         let (out, dump) ← runCase spec fuel
         IO.FS.withFile outPath .append fun h => for l in out do h.putStrLn l

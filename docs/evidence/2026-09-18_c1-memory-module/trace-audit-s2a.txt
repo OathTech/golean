@@ -1,0 +1,23 @@
+# C1 S2a — the trace-equality audit (whole corpus), 2026-09-18
+# scripts/choice-trace-corpus --dump --jobs 6 --out .tmp/trace-s2a --golean .tmp/golean-s2a (sha256 d4c0c14d799604b1…) --exclude goroutines/send-then-spin --exclude strings/trimspace-repeat/repeat-bound-refused
+# both accounts live in ONE binary: StepEvent.trace (the module's emitted .data trace) vs stepAccesses (Race.lean) under raceUpdate's recording rule, per step, as multisets
+
+== trace s2a start 2026-09-18T11:09:28+00:00
+trace s2a EXIT=1 wall=481s
+cmp EXIT=0
+  23685 .tmp/trace-main.sorted.tsv
+  23685 .tmp/trace-s2a.sorted.tsv
+  47370 total
+70e12e023f3ee30b9d71317454e11dedcb6c6ec039d63aeddfbb3d4906aceb57  .tmp/trace-main.sorted.tsv
+70e12e023f3ee30b9d71317454e11dedcb6c6ec039d63aeddfbb3d4906aceb57  .tmp/trace-s2a.sorted.tsv
+== trace-mismatch census
+rows=21835 rows_with_mismatch=0
+
+# tracer FINDINGS listing, main vs S2a (each exactly ONE pre-existing ERROR line; the diff is the artifact directory in the wire path):
+1c1
+<     ERROR arrays/materialization-budget/over-budget (baseline: FAIL/lean-observation): /home/dev/projects/golean/.claude/worktrees/c1-memory-module/.tmp/trace-main/wire/arrays__materialization-budget__over-budget.json: native lowering: array type 
+---
+>     ERROR arrays/materialization-budget/over-budget (baseline: FAIL/lean-observation): /home/dev/projects/golean/.claude/worktrees/c1-memory-module/.tmp/trace-s2a/wire/arrays__materialization-budget__over-budget.json: native lowering: array type o
+
+# per-(row, stream) results: 21,835 lines over 6 chunks; traceMismatches column:
+rows=21835 total_trace_mismatches=0 statuses={'panic': 2284, 'ok': 17957, 'ERROR': 1, 'unsupported': 1095, 'race': 252, 'deadlock': 162, 'fatal': 54, 'stuck': 30}

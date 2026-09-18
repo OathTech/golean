@@ -81,7 +81,7 @@ def obsMem (mems : Array (Obs × Choices × Nat)) (o : Obs) : Bool :=
 
 /-- Does this `appendSlice` apply avoid the spill's capacity pick —
 i.e. is the step stream-oblivious? Mirrors `applyStmtOp`'s own spill
-analysis (`valueAsSlice` → `sliceVisibleValues` → `newLen ≤ cap`);
+analysis (`valueAsSlice` → `Mem.loadSlice` → `newLen ≤ cap`);
 every ERROR path of the arm is stream-free, so `true` on them is
 still oblivious, and only the genuine spill branch (the one
 `Choices.consumeAt .appendSpill` consult) refuses. -/
@@ -89,8 +89,8 @@ def appendApplyNoSpill (s : Store) : List GoValue → Bool
   | [_, sliceV, elemsV] =>
       (match valueAsSlice sliceV, valueAsSlice elemsV with
       | .ok slice, .ok elems =>
-          (match sliceVisibleValues ctx s elems with
-          | .ok elemValues => slice.len + elemValues.size ≤ slice.cap
+          (match Mem.loadSlice ctx s elems with
+          | .ok (elemValues, _) => slice.len + elemValues.size ≤ slice.cap
           | .error _ => true)
       | _, _ => true)
   | _ => true

@@ -1534,6 +1534,179 @@ def HeapNormal (s : Store) : Prop :=
 
 instance (s : Store) : Decidable (HeapNormal ctx s) := by unfold HeapNormal; infer_instance
 
+/-! ## The access vocabulary and the EMITTING operations (C1 S2a, 2026-09-18;
+`docs/2026-09-17_c1-memory-module-charter.md` §3, D5/D9)
+
+The module owns what an access IS (`Access := AccessKind × ShadowKey`) and
+which operations emit one. `loadLoc`/`storeLoc` above are the module's
+PEEK and RAW WRITE — address formation, metadata inspection, the payload
+readers' cell fetch, driver readouts and pool bookkeeping go through them
+and emit nothing (the peek-class list is the module docstring's, mirrored
+from the former `Race.lean` inventory). Every USER-MEMORY access goes
+through an operation below, which emits its `Access` BY DEFINITION: a
+caller chooses an operation, never constructs an `Access`. The trace of a
+step is the concatenation of its operations' emissions, in order; it
+rides as the last component of every emitting helper's result, and a
+delivered PANIC carries `[]` (the access never happened — the detector's
+standing convention). `loadFor root leaf` is the narrowed read (gc
+compiles `p.a` / `a[1]` to ONE leaf load — mem#restrictions' per-sub-value
+license, latitude C10): the machine loads the ROOT value, the access is
+at the LEAF the caller names from the continuation (`projChainTarget`,
+Machine.lean) or the dispatch target's shape (`dispatchLeaf` below). -/
+
+/-! ## Loc-path overlap
+
+Go's memory locations at our heap's granularity: a `Loc` PATH names a
+memory region; two paths conflict iff one is a prefix of the other
+(equal included) — a whole-struct write overlaps every field, distinct
+fields / distinct indices are disjoint. -/
+
+/-- Is `l` a prefix of `m` (equality included)? -/
+def locPrefix (l : Loc) : Loc → Bool
+  | m@(.base _) => l == m
+  | m@(.field b _ _) => l == m || locPrefix l b
+  | m@(.index b _) => l == m || locPrefix l b
+
+/-- Path overlap: the conflict relation on recorded DATA accesses. -/
+def locOverlap (a b : Loc) : Bool := locPrefix a b || locPrefix b a
+
+/-! ## Shadow keys (design-hygiene A6, 2026-09-04)
+
+The shadow is keyed by a `ShadowKey`, not a `Loc`: a `Loc` is a memory
+PATH and means only that. The two non-path things the detector shadows —
+a sync primitive's gc WORD (formerly a phantom `Loc.field` under a
+made-up `TypeId`) and a channel OBJECT (formerly a second shadow with its
+own exact-match cell logic) — are their own constructors, and the one
+`overlap` table says how every pair of keys conflicts. -/
+
+/-- The gc state words of the sync primitives (the field names of the
+pinned struct definitions: `state`/`sema` for Mutex and WaitGroup,
+`w`/`readerCount` for RWMutex, `done`/`m` for Once). -/
+inductive SyncWordName where
+  | state | sema | w | readerCount | done | m
+  deriving Repr, BEq, DecidableEq, Ord
+
+-- The shadow is kept in CANONICAL (sorted) key order, so the dedup
+-- engine's structural state equality is insensitive to the interleaving in
+-- which keys were first touched (`shadowSet`); the total order is the
+-- derived one on the key's components.
+deriving instance Ord for Addr
+deriving instance Ord for TypeId
+deriving instance Ord for Loc
+deriving instance Ord for SyncKind
+
+/-- What one shadow cell is keyed by. -/
+inductive ShadowKey where
+  /-- A memory path (the data footprint; overlap = path prefix). -/
+  | data (l : Loc)
+  /-- A sync primitive's gc word: the primitive's cell path, its kind, the
+  word. Overlaps itself exactly, and any DATA path that is a prefix of
+  the primitive's path (a whole-struct copy/overwrite covers the words); a
+  sibling field's access overlaps none. -/
+  | syncWord (l : Loc) (kind : SyncKind) (word : SyncWordName)
+  /-- A channel object (gc's `c.raceaddr()` instrumentation point): channel
+  identity — exact match only, never path overlap (BUG-045/BUG-046). -/
+  | chanObj (l : Loc)
+  deriving Repr, BEq, DecidableEq, Ord
+
+/-- THE conflict-keying table: when do two shadow keys name overlapping
+memory? Data/data by path overlap; word/word by identity; data/word iff
+the data path is a prefix of the primitive's path (either direction of
+the pair); channel objects only with themselves, exactly. Symmetric by
+construction (each mixed arm is stated both ways). -/
+def ShadowKey.overlap : ShadowKey → ShadowKey → Bool
+  | .data a, .data b => locOverlap a b
+  | .syncWord l k wd, .syncWord l' k' wd' => l == l' && k == k' && wd == wd'
+  | .data d, .syncWord m _ _ => locPrefix d m
+  | .syncWord m _ _, .data d => locPrefix d m
+  | .chanObj a, .chanObj b => a == b
+  | .data _, .chanObj _ | .chanObj _, .data _ => false
+  | .syncWord .., .chanObj _ | .chanObj _, .syncWord .. => false
+
+/-! ## Access kinds and the per-location shadow (TSan/FastTrack skeleton) -/
+
+/-- The KIND of one recorded access — the two axes of mem#model's data-
+race definitions, quoted verbatim: "A read-write data race on memory
+location x consists of a read-like memory operation r on x and a
+write-like memory operation w on x, at least one of which is
+non-synchronizing, which are unordered by happens before"; "A
+write-write data race on memory location x consists of two write-like
+memory operations w and w' on x, at least one of which is
+non-synchronizing, which are unordered by happens before". (The
+informal one-liner — "a write to a memory location happening
+concurrently with another read or write to that same location, unless
+all the accesses involved are atomic data accesses" — is mem#overview,
+the same relation in words.) It is also TSan's shadow rule (two
+accesses race unless both are reads or both are atomic). The plain pair is the data footprint's (`stepAccesses`);
+the atomic pair is the sync primitives' own state-word traffic — as
+`-race` realizes it AND as mem#model kinds the op (BUG-080 +
+Q-U4RESIDUAL (A) — `syncEntryKinds` below, recorded by `raceUpdate`'s
+sync arm); and the `sync/atomic` ops' own accesses at the addressed
+cell (the atomics arc wave 1 — `atomicOpKind`, recorded by
+`raceUpdate`'s atomic arm; section "sync/atomic — the per-address
+clocks" below). -/
+inductive AccessKind where
+  | read
+  | write
+  | atomicRead
+  | atomicWrite
+  deriving Repr, BEq, DecidableEq
+
+def AccessKind.isWrite : AccessKind → Bool
+  | .write | .atomicWrite => true
+  | .read | .atomicRead => false
+
+def AccessKind.isAtomic : AccessKind → Bool
+  | .atomicRead | .atomicWrite => true
+  | .read | .write => false
+
+/-- Do two HB-unordered accesses of these kinds (different goroutines,
+overlapping paths) constitute a data race? At least one write, and not
+both atomic — the memory-model sentence verbatim, and TSan's
+`both_read_or_atomic` exclusion. Symmetric. -/
+def AccessKind.conflicts (a b : AccessKind) : Bool :=
+  (a.isWrite || b.isWrite) && !(a.isAtomic && b.isAtomic)
+
+/-- One access: its kind and the shadow key it names. -/
+abbrev Access := AccessKind × ShadowKey
+
+/-- The access trace of one machine step — the memory-effects LABEL of
+`Step`/`StepM` (charter §3; `GoLean/GoCore/Trace.lean`'s `Trace` is the
+n-step run relation, a different thing). -/
+abbrev AccessTrace := List Access
+
+/-- The emitting READ of a whole cell path. -/
+def Mem.load (state : Store) (l : Loc) : Except Stop (GoValue × AccessTrace) := do
+  let v ← loadLoc ctx state l
+  return (v, [(.read, .data l)])
+
+/-- The NARROWED read: the ROOT value is loaded, the access is recorded
+at `leaf` (a path under `root`, chosen by the caller from what Go reads
+here). -/
+def Mem.loadFor (state : Store) (root leaf : Loc) : Except Stop (GoValue × AccessTrace) := do
+  let v ← loadLoc ctx state root
+  return (v, [(.read, .data leaf)])
+
+/-- The emitting WRITE of a cell path (leaf-normalized by `storeLoc`). -/
+def Mem.store (state : Store) (l : Loc) (value : GoValue) : Except Stop (Store × AccessTrace) := do
+  let s' ← storeLoc ctx state l value
+  return (s', [(.write, .data l)])
+
+/-- A map object is ONE location for race purposes (gc/TSan's «concurrent
+map read and map write»): the emitting read of a map payload cell. -/
+def Mem.mapRead (state : Store) (loc : Loc) :
+    Except Stop ((Array (Nat × GoValue × GoValue) × Nat) × AccessTrace) := do
+  let p ← mapPayload? state loc
+  return (p, [(.read, .data loc)])
+
+/-- The emitting write of a map payload cell (assignment, delete, clear —
+each a map WRITE whether or not the entry set changes: gc instruments
+`mapdelete` as a write unconditionally). -/
+def Mem.mapWrite (state : Store) (loc : Loc) (entries : Array (Nat × GoValue × GoValue))
+    (nextId : Nat) : Except Stop (Store × AccessTrace) := do
+  let s' ← storeMapPayload state loc entries nextId
+  return (s', [(.write, .data loc)])
+
 -- `lookup` deleted (reshape S4): variable reads are `Machine.Step.evalVar`
 -- (control-side env lookup + `loadLoc`), never a state-side name lookup.
 
@@ -2434,16 +2607,77 @@ def intShiftRightResult (left right : GoValue) : Except Stop GoValue := do
       Int.tdiv leftValue ((2 : Int) ^ count)
   return .int (leftKind.normalize shifted) leftKind
 
-/-- Read the visible elements of a slice, in order. Moved here from `Eval.lean`'s
-mutual cluster (it was never recursive — it only loads through the slice's
-backing locations), same motion commit as the helpers above. -/
-def sliceVisibleValues (state : Store) (slice : SliceValue) :
-    Except Stop (Array GoValue) := do
+/-- The emitting reads of `count` consecutive elements from `.index base
+start` upward — one data read per element, in order (structural on the
+count; the shape every multi-element read of the machine takes: a slice's
+visible range, `copy`'s source run). -/
+def Mem.loadElems (state : Store) (base : Loc) (start : Nat) :
+    Nat → Except Stop (List GoValue × AccessTrace)
+  | 0 => return ([], [])
+  | n + 1 => do
+      let (v, t) ← Mem.load ctx state (.index base (Int.ofNat start))
+      let (vs, ts) ← Mem.loadElems state base (start + 1) n
+      return (v :: vs, t ++ ts)
+
+/-- The emitting writes of `vs` at consecutive element paths from `.index
+base start` upward — one data write per element, in order (append's
+in-place tail, `copy`'s destination run, `clear`'s zeroing). -/
+def Mem.storeElems (state : Store) (base : Loc) (start : Nat) :
+    List GoValue → Except Stop (Store × AccessTrace)
+  | [] => return (state, [])
+  | v :: vs => do
+      let (s₁, t) ← Mem.store ctx state (.index base (Int.ofNat start)) v
+      let (s₂, ts) ← Mem.storeElems s₁ base (start + 1) vs
+      return (s₂, t ++ ts)
+
+/-- The first `count` elements of a slice's visible range (`copy`'s source
+run): `Mem.loadElems` from the slice's start. A nil base names nothing and
+is admitted at `count = 0` only (the former per-element `sliceIndexLoc`
+refusal text otherwise — unreachable under `validateSlice`). -/
+def Mem.loadRun (state : Store) (slice : SliceValue) (count : Nat) :
+    Except Stop (List GoValue × AccessTrace) :=
+  match slice.base with
+  | some b => Mem.loadElems ctx state b slice.offset count
+  | none =>
+      if count = 0 then pure ([], [])
+      else stuck s!"malformed GoCore nil slice with length {slice.len}"
+
+/-- `vs` written into a slice's backing from visible index `start` (append's
+in-place tail at `start = len`, `copy`'s destination and `clear`'s zeroing at
+`start = 0`): `Mem.storeElems` at the backing's `offset + start`. A nil base
+admits only the empty run (the same unreachable refusal). -/
+def Mem.storeRun (state : Store) (slice : SliceValue) (start : Nat) (vs : List GoValue) :
+    Except Stop (Store × AccessTrace) :=
+  match slice.base with
+  | some b => Mem.storeElems ctx state b (slice.offset + start) vs
+  | none =>
+      match vs with
+      | [] => pure (state, [])
+      | _ :: _ => stuck s!"malformed GoCore nil slice with length {slice.len}"
+
+/-- The emitting read of a slice's visible elements — ONE data read per
+element at the backing's `.index base (offset + i)`, `i < len` (the
+charter's multi-element rule: one `.data` atom per element, so
+`ShadowKey.overlap` stays the one conflict table). A nil base is admitted
+by `validateSlice` only at length 0 and reads nothing. -/
+def Mem.loadSlice (state : Store) (slice : SliceValue) :
+    Except Stop (Array GoValue × AccessTrace) := do
   validateSlice slice
-  let mut values := #[]
-  for i in [:slice.len] do
-    values := values.push (← loadLoc ctx state (← sliceIndexLoc slice (Int.ofNat i)))
-  return values
+  match slice.base with
+  | some b =>
+      let (vs, tr) ← Mem.loadElems ctx state b slice.offset slice.len
+      return (vs.toArray, tr)
+  | none => return (#[], [])
+
+/-- Read the visible elements of a slice, in order — the PEEK form (the
+enumerator's spill analysis reads through it; the machine's own reads are
+`Mem.loadSlice`, whose value component this is). Formerly a `forIn` over
+`sliceIndexLoc`; since C1 S2a the one structural loop `Mem.loadElems`
+(same loads at the same paths: `sliceIndexLoc slice i = .index base
+(offset + i)` under `validateSlice` for every `i < len`). -/
+def sliceVisibleValues (state : Store) (slice : SliceValue) :
+    Except Stop (Array GoValue) :=
+  (·.1) <$> Mem.loadSlice ctx state slice
 
 /-! The following were also never recursive; moved out of `Eval.lean`'s mutual
 cluster (reshape S2 motion, 2026-07-23) for sharing with `Machine`/`stepFn`.
@@ -2461,21 +2695,23 @@ def mapEntries (state : Store) (map : MapValue) :
       return some (baseLoc, p.1, p.2)
 
 def mapLookupValue (state : Store) (map : MapValue) (key : GoValue)
-    (keyTy valueTy : Ty) : Except Stop (GoValue × Bool) := do
-  match ← mapEntries state map with
+    (keyTy valueTy : Ty) : Except Stop ((GoValue × Bool) × AccessTrace) := do
+  match map.base with
   -- A NIL map still hashes the key: Go panics `hash of unhashable type: X`
   -- (the `h == nil` arm of mapKeyError; probed 2026-07-31) before returning
-  -- the zero value.
+  -- the zero value. No cell is named — no access (S2a: the former
+  -- `mapEntries` peek became the emitting `Mem.mapRead` on the live arm).
   | none => do
       checkKeyHashable ctx key (isInsert := false) (nonEmpty := false)
-      return (← defaultValue ctx valueTy, false)
-  | some (_, entries, _) =>
+      return ((← defaultValue ctx valueTy, false), [])
+  | some baseLoc =>
+      let ((entries, _), tr) ← Mem.mapRead state baseLoc
       match ← mapEntryIndex? ctx keyTy entries key with
       | some i =>
           match entries[i]? with
-          | some (_, _, value) => return (value, true)
+          | some (_, _, value) => return ((value, true), tr)
           | none => stuck s!"missing map entry at index {i}"
-      | none => return (← defaultValue ctx valueTy, false)
+      | none => return ((← defaultValue ctx valueTy, false), tr)
 
 /-- gc's amortized growth POLICY (runtime/slice.go `nextslicecap`,
 element-size-independent part): the CENTER of the spill envelope and the
@@ -2636,13 +2872,79 @@ def nilValueMethodText? (fid : FuncId) (args : List GoValue) :
                   | _ => none
               | _ => none
 
+/-- Peel a pure `fieldGet` chain over a synthesized wrapper's RECEIVER
+parameter: `some hops`, outermost projection LAST. `none` on any other
+shape (mid-chain derefs from embedded-pointer hops, address-formers,
+non-receiver anchors) — the caller then falls back to the whole-pointee
+read (over-refusal, the fail-closed direction; recorded in O1).
+
+The receiver is identified by its PARAMETER NAME taken from the target
+`Func`'s own first parameter (`recvId` — `dispatchLeaf` passes
+`target.args[0]`), never by a frontend string literal (arc-final audit
+F7, 2026-08-08: this arm previously matched the frontend-chosen name
+`"$recv"` verbatim — GoCore's only raw frontend string outside its own
+reserved ids, violating "semantic identity is TypeId/FuncId, never raw
+frontend strings"; the verifier showed a semantics-preserving frontend
+rename flipping race/free/promoted-ptr-box from ok to a spurious
+raceDetected). RESIDUAL COUPLING, recorded honestly: the BODY-shape
+half remains — `wrapperForwardArg` recognizes exactly the decoder's
+synthesized two-level wrapper block, and any other emission shape
+falls back to the whole-pointee read (fail-closed over-refusal, pinned
+by the `race/free/promoted-ptr-box` strict row going red on drift,
+per O1). Moved from `Race.lean` (C1 S2a): the narrowing is the dispatch
+OPERATION's, emitted where the receiver is read. -/
+def recvFieldChain (recvId : String) : Expr → Option (List (TypeId × String))
+  | .var v => if v == recvId then some [] else none
+  | .fieldGet recv tid f => (recvFieldChain recvId recv).map (· ++ [(tid, f)])
+  | _ => none
+
+/-- The forwarding call's RECEIVER argument in a synthesized promotion
+wrapper's body (`synthesizePromotionWrappers`: one block of
+[forwarding call, return]). Deliberately shallow — one statement-list
+level — so it recognizes EXACTLY the synthesized shape and fails
+closed (whole-pointee fallback) on anything else. -/
+def wrapperForwardArg (body : Stmt) : Option Expr :=
+  -- Two flattening levels, deliberately bounded: the decoder emits the
+  -- wrapper as `.block #[] #[.seqn [init, call], .seqn [assign, ret]]`.
+  let flat : Stmt → List Stmt := fun s =>
+    match s with
+    | .seqn ss => ss.toList
+    | .block _ ss => ss.toList
+    | s => [s]
+  ((flat body).flatMap flat).findSome? fun s =>
+    match s with
+    | .call _ _ args => args[0]?
+    | .callValue _ _ args => args[0]?
+    | _ => none
+
+/-- The LEAF a value-receiver dispatch's receiver read is recorded at
+(S3 convergence, major; formerly `dispatchAccesses`, Race.lean): when the
+dispatch target is a SYNTHESIZED PROMOTION WRAPPER (`Func.wrapper`), gc's
+autogenerated `(*T).M` loads only the promotion hop path (the embedded
+field), not the whole outer struct — the hop path recovered from the
+wrapper's own body (`wrapperForwardArg`/`recvFieldChain`; unrecognized
+wrapper shapes — e.g. embedded-POINTER hops, whose mid-chain deref reads
+another cell — fall back to the whole pointee, over-refusal per O1).
+Non-wrapper value-receiver dispatch really does copy the whole pointee
+in gc (probed `-race`-red on a disjoint-field write:
+`race/negative/iface-dispatch`) and keeps the whole cell. -/
+def dispatchLeaf (target : Func) (loc : Loc) : Loc :=
+  if target.wrapper then
+    match target.args[0]? with
+    | some recvParam =>
+        match wrapperForwardArg target.body >>= recvFieldChain recvParam.id with
+        | some hops => hops.foldl (fun l (h : TypeId × String) => Loc.field l h.1 h.2) loc
+        | none => loc
+    | none => loc
+  else loc
+
 def dynamicDispatch? (state : Store) (func : Func) (argValues : Array GoValue) :
-    Except Stop (Option (Func × Array GoValue)) := do
+    Except Stop (Option (Func × Array GoValue) × AccessTrace) := do
   match methodInfoByFuncId? ctx func.id with
-  | none => return none
+  | none => return (none, [])
   | some method =>
       match methodRecvInterfaceName? method with
-      | none => return none
+      | none => return (none, [])
       | some _ =>
           match argValues[0]? with
           | some (GoValue.interface dynTy inner) =>
@@ -2662,15 +2964,21 @@ def dynamicDispatch? (state : Store) (func : Func) (argValues : Array GoValue) :
                   -- `nilValueMethodText` pick and may substitute member
                   -- 1, gc's `panicwrap` text. This arm itself stays
                   -- stream-free (no `Choices` reach `Except`-land).
-                  let recvValue ←
+                  -- THE FRAME-ENTRY READ (S3 audit major; the former
+                  -- `dispatchAccesses` arm): the receiver copied out of the
+                  -- pointee, recorded at the dispatch target's leaf
+                  -- (`dispatchLeaf` — the promotion hop for a synthesized
+                  -- wrapper, the whole pointee otherwise). A nil box panics
+                  -- before any read.
+                  let (recvValue, tr) ←
                     if needsDeref then
                       match inner with
-                      | .addr loc => loadLoc ctx state loc
+                      | .addr loc => Mem.loadFor ctx state loc (dispatchLeaf targetFunc loc)
                       | .nil => throw (.panic nilDerefPanicText)
                       | other => stuck s!"pointer-box receiver expected address, got {repr other}"
                     else
-                      pure inner
-                  return some (targetFunc, argValues.set! 0 recvValue)
+                      pure (inner, [])
+                  return (some (targetFunc, argValues.set! 0 recvValue), tr)
               | none =>
                   -- No concrete method found. With a RECORD, that is a
                   -- machine invariant break (satisfaction should have
@@ -2693,7 +3001,7 @@ rather than dispatching from no information (BUG-009/BUG-053 class)")
           -- is unreachable and fails stuck if a bug ever reaches it).
           | some GoValue.nil =>
               throw (.panic nilDerefPanicText)
-          | _ => return none
+          | _ => return (none, [])
 
 /-- Structurally-recursive insertion into a `le`-sorted list (de-WF,
 2026-08-03): `List.mergeSort` is well-founded-compiled in core Lean, hence

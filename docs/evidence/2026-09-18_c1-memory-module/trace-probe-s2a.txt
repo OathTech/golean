@@ -1,0 +1,8 @@
+# C1 S2a positive control for the trace plumbing (scratch .tmp/s2/Probe.lean via scripts/capped lake env lean): stepFn's 4th component vs stepAccesses
+# cases: a variable read; a constant-index projection of an ARRAY cell (the narrowed leaf); one phase-2 store
+"ok tr=[(GoLean.GoCore.AccessKind.read, GoLean.GoCore.ShadowKey.data (GoLean.Loc.base { id := 0 }))]"
+[(GoLean.GoCore.AccessKind.read, GoLean.Loc.base { id := 0 })]
+"ok tr=[(GoLean.GoCore.AccessKind.read, GoLean.GoCore.ShadowKey.data (GoLean.Loc.index (GoLean.Loc.base { id := 0 }) 1))]"
+[(GoLean.GoCore.AccessKind.read, GoLean.Loc.index (GoLean.Loc.base { id := 0 }) 1)]
+"ok tr=[(GoLean.GoCore.AccessKind.write, GoLean.GoCore.ShadowKey.data (GoLean.Loc.base { id := 0 }))]"
+[(GoLean.GoCore.AccessKind.write, GoLean.Loc.base { id := 0 })]

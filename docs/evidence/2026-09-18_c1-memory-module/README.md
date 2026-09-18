@@ -274,3 +274,126 @@ Whole-corpus choice trace (`scripts/choice-trace-corpus --dump --jobs 6 --exclud
 | `map_write(4000)` per write | 45 µs | 45 µs | not a C1 target | unchanged |
 
 Reading: cost A (the whole-root re-normalization with the quadratic `#[head] ++ tail`) is gone — every per-root-size slope is flat to the noise floor. The two misses named above are the SAME mechanism, cost B (the pre-step store retained across the step makes the root array shared, so `Array.modifyM` copies it once per write — O(m), the linear term the BUG-090 note predicted); S3 removes the retention.
+
+
+## S2a — the DATA trace, both accounts live, the trace-equality audit (2026-09-18)
+
+### What landed (one gated runtime commit; `raceUpdate` untouched)
+
+- The access VOCABULARY moved from `Race.lean` into `Ops.lean`'s module section
+  (`AccessKind`, `SyncWordName`, `ShadowKey` + `overlap`, `locPrefix`/`locOverlap`, the
+  `Ord` derivings); `Access := AccessKind × ShadowKey`, `AccessTrace := List Access`.
+- The EMITTING operations, each a primitive plus a fixed emission: `Mem.load l`,
+  `Mem.loadFor root leaf` (the root value, the read at the leaf), `Mem.store l v`,
+  `Mem.mapRead l`/`Mem.mapWrite l entries nextId` (the map cell as ONE location),
+  `Mem.loadElems`/`Mem.storeElems` (structural element runs), `Mem.loadRun`/`Mem.storeRun`
+  (a slice's run from a visible index), `Mem.loadSlice` (the visible range);
+  `sliceVisibleValues` is now the PEEK form `(·.1) <$> Mem.loadSlice`; `loadResults` (frame
+  exit, emitting) beside the drivers' `loadMany` (peek); `dynamicDispatch?` emits the
+  receiver read at `dispatchLeaf` (the promotion-hop narrowing — `recvFieldChain`/
+  `wrapperForwardArg` moved in from `Race.lean`); `projChainTarget` moved to `Machine.lean`
+  after `Cont`. `loadLoc`/`storeLoc`/`mapPayload?`/`storeMapPayload` keep their types as
+  the module's peek and raw writers.
+- Every emitting helper returns its trace as the LAST ok-component (`applyStrictOp`
+  (+ `leafOf`), `applyStmtOpCore`/`applyStmtOp`, `mapAssignValue`, `storeTarget`,
+  `mapRangeStartSets`, `mapIterLiveEntries`/`mapIterCandidates`, `mapLookupValue`/
+  `applyRhsOp`, `enterFrame`/`enterFramePick` (the `Result` payload), `unseqAtom(s)`/
+  `unseqReadTarget`/`unseqLoad`/`unseqTargetPlan`/`unseqGuard`, `stepFrameExit`,
+  `stepUnseqEnter/Next/Value`); `deliver`/`deliverS` carry it (a delivered PANIC carries
+  `[]`); `stepFn : … → Except Stop (Config × Store × Choices × AccessTrace)`;
+  `Step : Config → Store → Config → Store → AccessTrace → Prop` — 122 constructors, 94 pure
+  rules labelled `[]`, 28 helper-bearing rules labelled by their operations' emissions;
+  `StepE`/`StepM`/`StepMFine` labelled; `Steps`/`StepsM`/`StepsMFine`/`PoolSteps` erase;
+  `StepEvent.trace`, filled by `stepThread` (a goroutine step: `stepFn`'s trace; a spawn:
+  the CHILD's entry read; the pool's own steps `[]`); `spawnStep` returns the trace.
+- Coherence restated and RE-PROVED: `stepFn_sound : stepFn … = .ok (c', s', ch', tr) →
+  Step ctx c s c' s' tr`; `step_complete : Step … tr → ∃ ch ch', stepFn … = .ok (c', s',
+  ch', tr)`; `step_complete_any_wf`; `stepFn_consumption_none/_some` and `stepFn_oblivious`
+  (the trace is stream-independent, carried through); `stepMulti_sound : … → StepM ctx m
+  m' ev.trace`; `stepM_complete : StepM … tr → ∃ ch ch' ev, stepMulti … = .ok (m', ch',
+  ev) ∧ ev.trace = tr`; `stepFn_selectApply_inv` adds `tr = []`; `step_preserves_wf(_loc)`
+  over the labelled relation; every StateWf/MachineSound/MultiSound/MultiWfSound/
+  MultiStreams/EnumDedupSound/UnseqSound helper lemma restated (`Mem.*_eq`,
+  `Mem.store_pres/_shape/_congr`, `Mem.storeElems_pres`, `Mem.loadRun_locSup`,
+  `Mem.storeRun_pres`, `Mem.loadSlice_size`, `loadResults_locSup`, `validateSlice_none`,
+  `bind2_pair_stream`/`bind3_pair_stream`, …). No `sorry`/`axiom`/`native_decide`, no
+  `partial` in the core, warning-free.
+- The consult MIRRORS read through the machine's own op: `appendSpill?` (Machine.lean) and
+  `EnumDedupCheck.appendApplyNoSpill` use `Mem.loadSlice`.
+- THE AUDIT INSTRUMENT: the tracer (`GoLean/ChoiceTrace.lean`) compares, per pool step and
+  per init step, the step's emitted `.data` trace with the footprint TABLE's account
+  (`stepAccesses ctx σPre cPre` under `raceUpdate`'s rule — nothing when the goroutine
+  became panicking from a non-panicking configuration; a spawn: the child's
+  `dispatchAccesses`; the pool's own steps: nothing), as MULTISETS (sorted canonical keys);
+  a difference is an `alarm` (`trace-mismatch: …`, so the corpus run exits 1 and lists it)
+  and a `trace-mismatch` record — two new TSV columns `traceMismatches`,
+  `firstTraceMismatch` (the summarizer reads columns by name; the existing columns are
+  untouched). The sync-word / channel-object / atomic recordings of `raceUpdate`'s
+  registry arms are outside this audit (S2c's emissions).
+
+### Semantic disclosures (charter §4; none differential-visible, all recorded)
+
+1. `mapDelete` of an ABSENT key now rewrites the unchanged payload through `Mem.mapWrite`,
+   so the write is EMITTED (gc instruments `mapdelete` as a write unconditionally — the
+   footprint table always said so; the heap content is unchanged).
+2. The in-place append's nil-base refusal «cannot append … element(s) into nil slice in
+   place» is now `Mem.storeRun`'s «malformed GoCore nil slice with length …» — UNREACHABLE
+   (a nil base passes `validateSlice` only at cap 0, so nothing is ever appended in place).
+3. `Mem.loadRun`/`Mem.storeRun` at a nil base with a non-empty run refuse with
+   `sliceIndexLoc`'s text — unreachable likewise (`copy`/`clear`/append validate first).
+4. `sliceVisibleValues` is redefined over the structural `Mem.loadElems` — the same loads
+   at the same paths (`sliceIndexLoc slice i = .index base (offset + i)` under
+   `validateSlice`), the same errors; the `forIn` shape and its proofs are gone.
+5. `unseqStorePlan`'s binder-value loads are PEEKS (machine-internal binder cells; the
+   table recorded nothing there), while the binder WRITES emit (the table recorded them):
+   the trace keeps the table's account, EQUAL by construction; the principled alternative
+   (no emission at all on binder cells — verdict-neutral, no goroutine can name them) is
+   named for S2b/S2c.
+
+### Peek-class call sites (the inventory the module docstring will carry at S2b)
+
+Address formation: `indexTargetLoc`'s base load, `resolveChain` (through it), `applySlice`'s
+array-size load, `projChainTarget`'s root check, `unseqUnfrozenAnchor?`. Metadata:
+`lengthOf`/`capacityOf` on pointer-to-array (type-static in gc) and on channels (U2:
+`c.qcount` uninstrumented). RMW peeks before an emitted payload write: `mapAssignValue`
+(`mapEntries`), `mapDelete`, `clearMap`. Machine bookkeeping: `unseqStorePlan`'s binder
+loads, `stepFrameExit`'s targetless-with-results `loadMany` (a refusal, no step). Drivers:
+`loadMany` at termination (`runFunctionWithContextM`, `runProgramM`, the pool/enumerator
+readouts). Synchronization (not `.data`; S2c's keys): `chanCell`/`chanPayload?`/
+`storeChanPayload`, `syncCell`/the `.syncData` stores, `applyAtomicOp`'s cell traffic.
+Fresh allocation (no event): `Store.alloc`, `allocDecls`, `bindParams`, `bindIterVars`,
+`seedGlobals`, `makeMap`/`makeChan`'s payload cells.
+
+### The trace-equality audit — RESULT
+
+`trace-audit-s2a.txt`: whole corpus (the standing 2 exclusions), 6 streams per row,
+**21,835 (row, stream) results, 0 trace mismatches** — the module's emitted `.data`
+trace EQUALS the footprint table's account on every step of every traced run (BUG-041's
+class included: `race/free/array-dyn-index-read-write` traced, equal). Choice-trace
+byte-identity vs main `68b261e6` (D4): sorted dumps `cmp` EXIT=0, 23,685 records, sha256
+`70e12e02…eb57` both sides (the S1 record's very hash); the tracer's FINDINGS listing is
+the ONE pre-existing ERROR line (`arrays/materialization-budget/over-budget`, a lowering
+refusal), identical modulo the artifact directory in its wire path. Positive control
+(`trace-probe-s2a.txt`): a variable read, a constant-index ARRAY projection (the narrowed
+leaf) and one phase-2 store each emit exactly the table's access.
+
+The RAFT TWIN (`twin-audit-s2a.txt`; the pinned `baselines/pins/twin-chdriver.wire`,
+`raft-twin/probeTwin{Choice,Single,Elect,Perturb,Ticks}` × 6 streams, fuel 10,000,000): the S2a
+binary **30/30 (row, stream) results ok, 0 trace mismatches, 0 alarms** (1136 s wall,
+14,360 consumption records); main's certified binary on the same batch 1004 s; sorted dumps
+`cmp` EXIT=0 — BYTE-IDENTICAL (14,361 lines each side).
+
+### Gate lines
+
+`GOLEAN_MEM_MAX=32G scripts/capped scripts/ci --diff` under the box-wide lock (11:17:29–11:29:48
+UTC) on the staged S2a runtime tree (byte-identical for `GoLean/` and `Tests/` to the committed
+tree; snapshot `refs/snapshots/c1/s2a-gated`): **EXIT=1, 739 s**; **3676 cases: 3427 PASS /
+249 expected FAIL**; `eval tests` 211 ok; `core build (warning-free)` ok; `core totality audit`
+ok; `unseq scheduler (Stage B)` ok; `frontend pins` ok; `wire boundary` ok; `engine-isolation`
+ok; every other step ok. RED: exactly the two 5a-class items — `certificate provenance` (C9
+HIGH: «STALE certification: changed dependency build/files/GoLean/CLI.lean») and `baseline diff
+(DRIFT)` with the SINGLE line `imported-goose/channel/google-search baseline[PASS/membership] ->
+now[FAIL/membership]` — the one cached certified row, judged stale because compiled semantic
+inputs changed (the S1 gate's very shape). ZERO other drift; the negative baseline matched (394
+cases). Static checks at the commit tree: `check-bugs.sh` ok (111 bugs), `check-evidence-size`
+PASS (0 new offenders), `check-agents-alias` PASS. Tail: `gate-tail-s2a.txt`.

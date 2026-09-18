@@ -946,7 +946,7 @@ def enumInitRun (pctx : GoCore.ProgramCtx) :
       match GoCore.Machine.stepFn pctx σ c choices with
       | .error (.panic msg) => return .inr (msg, GoCore.Machine.abortLeftover c choices)
       | .error e => throw e
-      | .ok (c', σ', choices') => enumInitRun pctx fuel σ' c' choices'
+      | .ok (c', σ', choices', _) => enumInitRun pctx fuel σ' c' choices'
 
 /-- One whole-PROGRAM enumeration run under one stream: `$pkginit` (when
 present) consumes from the stream first, then the subject entry wiring
@@ -1442,7 +1442,7 @@ partial def initDFS (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
                     (errorJson (.panic msg)) (b :: path).length
               | .error e =>
                   .error s!"package init step failed under {(b :: path).reverse}: {renderStop e}"
-              | .ok (c', σ', leftover) =>
+              | .ok (c', σ', leftover, _) =>
                   if leftover != [0] then
                     .error s!"consumption accountant drift in package init under {(b :: path).reverse}: sentinel-suffixed step left {leftover} (expected the sentinel alone) — driver-copy drift"
                   else
@@ -1458,7 +1458,7 @@ partial def initDFS (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
                   (errorJson (.panic msg)) path.length
             | .error e =>
                 .error s!"package init failed under {path.reverse}: {renderStop (GoCore.Machine.markInitPhase e)}"
-            | .ok (c', σ', leftover) =>
+            | .ok (c', σ', leftover, _) =>
                 if leftover != [0] then
                   .error s!"consumption accountant drift in package init under {path.reverse}: a step the accountant called non-consuming drew the sentinel — driver-copy drift"
                 else

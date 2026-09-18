@@ -194,20 +194,20 @@ verbatim with `schedPickFine` in place of `schedPick`. Proof
 infrastructure for the reduction statement only — the executable
 machine and every statement carrier stay on registry-point
 `StepM`/`stepMulti`. -/
-inductive StepMFine : MultiConfig → MultiConfig → Prop where
+inductive StepMFine : MultiConfig → MultiConfig → AccessTrace → Prop where
   | thread {m : MultiConfig} {i : Nat} {c : Config} {c' : Config} {σ' : Store}
-      {efs : List Config} :
+      {efs : List Config} {tr : AccessTrace} :
       schedPickFine ctx m i →
       m.threads[i]? = some (.running c none) →
       isBlockedConfig c = false →
       arrivalCases ctx m.shared m.threads i c = .ok .cellPath →
-      StepE ctx c m.shared c' σ' efs →
+      StepE ctx c m.shared c' σ' efs tr →
       StepMFine m ⟨(m.threads.setIfInBounds i (Thread.afterStep m.shared c c'))
-        ++ (efs.map (Thread.running · none)).toArray, σ', i⟩
+        ++ (efs.map (Thread.running · none)).toArray, σ', i⟩ tr
   | strip {m : MultiConfig} {i : Nat} {c : Config} {site : ChoiceSite} :
       schedPickFine ctx m i →
       m.threads[i]? = some (.running c (some site)) →
-      StepMFine m ⟨m.threads.setIfInBounds i (.running c none), m.shared, i⟩
+      StepMFine m ⟨m.threads.setIfInBounds i (.running c none), m.shared, i⟩ []
   | abort {m : MultiConfig} {i : Nat} {c : Config} {first : PanicEntry}
       {rest : List PanicEntry} {pick : Nat} {msg : String} :
       schedPickFine ctx m i →
@@ -215,7 +215,7 @@ inductive StepMFine : MultiConfig → MultiConfig → Prop where
       c.abort? = some (first, rest) →
       pick < repanicCollapseWidth first rest →
       abortMsg ctx first rest pick = .ok msg →
-      StepMFine m ⟨m.threads.setIfInBounds i (.aborted msg), m.shared, i⟩
+      StepMFine m ⟨m.threads.setIfInBounds i (.aborted msg), m.shared, i⟩ []
   | pair {m : MultiConfig} {i : Nat} {c bc : Config} {σ'' : Store}
       {cs : List (Nat × PairTarget)} {idx : Nat} {ts' : Array Thread} :
       schedPickFine ctx m i →
@@ -225,7 +225,7 @@ inductive StepMFine : MultiConfig → MultiConfig → Prop where
       arrivalCases ctx m.shared m.threads i c = .ok (.single bc cs) →
       (hidx : idx < cs.length) →
       applyPairing ctx m.shared m.threads i bc cs[idx] = .ok (ts', σ'') →
-      StepMFine m ⟨ts', σ'', i⟩
+      StepMFine m ⟨ts', σ'', i⟩ []
   | pickPair {m : MultiConfig} {i : Nat} {c bc : Config} {σ'' : Store}
       {os : List ArrivalOutcome} {sel : Nat}
       {cs : List (Nat × PairTarget)} {idx : Nat} {ts' : Array Thread} :
@@ -237,7 +237,7 @@ inductive StepMFine : MultiConfig → MultiConfig → Prop where
       os[sel]? = some (.pair bc cs) →
       (hidx : idx < cs.length) →
       applyPairing ctx m.shared m.threads i bc cs[idx] = .ok (ts', σ'') →
-      StepMFine m ⟨ts', σ'', i⟩
+      StepMFine m ⟨ts', σ'', i⟩ []
   | pickCommit {m : MultiConfig} {i : Nat} {c : Config} {cl : EvClause}
       {env : LocalEnv} {k : Cont} {os : List ArrivalOutcome} {sel : Nat}
       {c' : Config} {σ' : Store} :
@@ -248,13 +248,13 @@ inductive StepMFine : MultiConfig → MultiConfig → Prop where
       arrivalCases ctx m.shared m.threads i c = .ok (.multi os) →
       os[sel]? = some (.commit cl env k) →
       commitClause ctx m.shared env k cl = .ok (c', σ') →
-      StepMFine m ⟨m.threads.setIfInBounds i (Thread.afterStep m.shared c c'), σ', i⟩
+      StepMFine m ⟨m.threads.setIfInBounds i (Thread.afterStep m.shared c c'), σ', i⟩ []
   | wake {m : MultiConfig} {i : Nat} {c c' : Config} {σ' : Store} :
       schedPickFine ctx m i →
       m.threads[i]? = some (.running c none) →
       isBlockedConfig c = true →
       resumeThread ctx m.shared c = .ok (c', σ') →
-      StepMFine m ⟨m.threads.setIfInBounds i (Thread.completed c'), σ', i⟩
+      StepMFine m ⟨m.threads.setIfInBounds i (Thread.completed c'), σ', i⟩ []
 
 variable {ctx}
 /-- A finished goroutine is at a registry boundary (goroutine exit is a
@@ -330,8 +330,8 @@ theorem schedPick_le_fine {m : MultiConfig} {i : Nat}
 
 /-- **The easy inclusion of the reduction, proved**: every
 registry-point pool step is a fine pool step. -/
-theorem stepM_le_stepMFine {m m' : MultiConfig} (h : StepM ctx m m') :
-    StepMFine ctx m m' := by
+theorem stepM_le_stepMFine {m m' : MultiConfig} {tr : AccessTrace} (h : StepM ctx m m' tr) :
+    StepMFine ctx m m' tr := by
   cases h with
   | thread hs hti hbl hplan hstep =>
       exact StepMFine.thread (schedPick_le_fine hs) hti hbl hplan hstep
@@ -356,12 +356,12 @@ variable (ctx)
 /-- Reflexive-transitive closure of the registry-point pool relation. -/
 inductive StepsM : MultiConfig → MultiConfig → Prop where
   | refl (m : MultiConfig) : StepsM m m
-  | tail {a b c} : StepsM a b → StepM ctx b c → StepsM a c
+  | tail {a b c tr} : StepsM a b → StepM ctx b c tr → StepsM a c
 
 /-- Reflexive-transitive closure of the fine pool relation. -/
 inductive StepsMFine : MultiConfig → MultiConfig → Prop where
   | refl (m : MultiConfig) : StepsMFine m m
-  | tail {a b c} : StepsMFine a b → StepMFine ctx b c → StepsMFine a c
+  | tail {a b c tr} : StepsMFine a b → StepMFine ctx b c tr → StepsMFine a c
 
 variable {ctx}
 theorem stepsM_le_stepsMFine {m m' : MultiConfig} (h : StepsM ctx m m') :

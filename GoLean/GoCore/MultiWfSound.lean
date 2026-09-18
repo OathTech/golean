@@ -79,11 +79,11 @@ theorem spawnPlan_locSup {c : Config} {cv : GoValue} {args : List GoValue}
 /-- `spawnStep` preservation: wf state out, both successor
 configurations bounded, allocator monotone. -/
 theorem spawnStep_wf {s : Store} {cv : GoValue} {args : List GoValue}
-    {k : Cont} {ch : Choices} {p child : Config} {s' : Store} {ch' : Choices}
+    {k : Cont} {ch : Choices} {p child : Config} {s' : Store} {ch' : Choices} {tr : AccessTrace}
     (hw : StateWf ctx s) (hcv : GoValue.locSup cv ≤ s.nextAddr)
     (hargs : goValueListSup args ≤ s.nextAddr)
     (hk : Cont.locSup k ≤ s.nextAddr)
-    (h : spawnStep ctx s cv args k ch = .ok (p, child, s', ch')) :
+    (h : spawnStep ctx s cv args k ch = .ok (p, child, s', ch', tr)) :
     StateWf ctx s' ∧ Config.locSup p ≤ s'.nextAddr
       ∧ Config.locSup child ≤ s'.nextAddr ∧ s.nextAddr ≤ s'.nextAddr := by
   unfold spawnStep at h
@@ -95,9 +95,9 @@ theorem spawnStep_wf {s : Store} {cv : GoValue} {args : List GoValue}
     have hcap : goValueListSup captured ≤ s.nextAddr := by
       simpa [GoValue.locSup] using hcv
     rcases enterFramePick_cases hpick with
-      ⟨func, frameEnv, resultLocs, s₂, rfl, henter, rfl⟩ | ⟨msg, rfl, henter, rfl⟩
+      ⟨func, frameEnv, resultLocs, s₂, tr₂, rfl, henter, rfl⟩ | ⟨msg, rfl, henter, rfl⟩
     · simp only [deliver_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl, rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl, rfl, rfl, rfl⟩ := h
       obtain ⟨w1, w2, w6, w7, w8⟩ := enterFrame_wf hw
         (by rw [goValueListSup_append]; omega) henter
       refine ⟨w1, ?_, ?_, w2⟩
@@ -106,7 +106,7 @@ theorem spawnStep_wf {s : Store} {cv : GoValue} {args : List GoValue}
           targetPlansSup, LocalEnv.locSup, Nat.max_le]
         omega
     · simp only [deliver_panic, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl, rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl, rfl, rfl, rfl⟩ := h
       refine ⟨hw, ?_, ?_, Nat.le_refl _⟩
       · simpa [Config.locSup] using hk
       · simp [Config.locSup, panicChainSup, panicEntry_locSup, Cont.locSup]
@@ -1034,7 +1034,7 @@ theorem stepThread_wf {s : Store} {threads : Array Thread} {i : Nat}
           obtain ⟨cv, args, k⟩ := p
           rw [hsp] at h
           simp only [bind_eq_ok] at h
-          obtain ⟨⟨parent', child, s₂, ch₂⟩, hspawn, h⟩ := h
+          obtain ⟨⟨parent', child, s₂, ch₂, tr₂⟩, hspawn, h⟩ := h
           simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
           obtain ⟨rfl, rfl, rfl, rfl⟩ := h
           obtain ⟨hcvb, hargsb, hkb⟩ := spawnPlan_locSup hsp
@@ -1066,7 +1066,7 @@ theorem stepThread_wf {s : Store} {threads : Array Thread} {i : Nat}
                 rw [hselp] at h
                 dsimp only at h
                 simp only [bind_eq_ok] at h
-                obtain ⟨⟨c₂, s₂, ch₂⟩, hstep, h⟩ := h
+                obtain ⟨⟨c₂, s₂, ch₂, tr₂⟩, hstep, h⟩ := h
                 simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
                 obtain ⟨rfl, rfl, rfl, rfl⟩ := h
                 have hstepr := stepFn_sound hstep

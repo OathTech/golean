@@ -15,7 +15,7 @@ open GoCore GoCore.Machine
 inductive Trace : Nat → Store → Config → Choices →
     Store → Config → Choices → Prop where
   | done : Trace 0 s c ch s c ch
-  | step : stepFn ctx s c ch = .ok (c₁, s₁, ch₁) →
+  | step : stepFn ctx s c ch = .ok (c₁, s₁, ch₁, tr) →
       Trace n s₁ c₁ ch₁ sf cf chf → Trace (n + 1) s c ch sf cf chf
 
 variable {ctx}
@@ -33,7 +33,7 @@ theorem iter_iff_trace {n s c ch sf cf chf} :
       cases hs : stepFn ctx s c ch with
       | error e => simp [stepFnIter, hs, Bind.bind, Except.bind] at h
       | ok v =>
-        obtain ⟨c₁, s₁, ch₁⟩ := v
+        obtain ⟨c₁, s₁, ch₁, tr₁⟩ := v
         exact .step hs (ih.mp (by simpa [stepFnIter, hs, Bind.bind, Except.bind] using h))
     · intro h
       cases h with
@@ -75,7 +75,7 @@ theorem run_ok_iff {fuel s c ch sf chf} :
     | case7 =>
       rename_i ih
       rw [bind_eq_ok] at h
-      obtain ⟨⟨c₁, s₁, ch₁⟩, hs, hr⟩ := h
+      obtain ⟨⟨c₁, s₁, ch₁, tr₁⟩, hs, hr⟩ := h
       obtain ⟨n, hn, ht⟩ := ih _ _ _ hr
       exact ⟨n + 1, Nat.succ_le_succ hn, .step hs ht⟩
   · rintro ⟨n, hn, ht⟩
