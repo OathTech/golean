@@ -667,7 +667,7 @@ def stepFn (s : Store) (c : Config) (choices : Choices) :
               return (.evalE e env (.chanStK op (v :: done) rest env k'), s, choices, [])
           | [] => do
               let r ← toResult (applyChanOp ctx s op (v :: done).reverse env k')
-              return deliverS s k' choices (fun (c', s') => (c', s', choices, [])) r
+              return deliverS s k' choices (fun (c', s', tr) => (c', s', choices, tr)) r
       | .selectOpsK clauses default? done pending env k' =>
           match pending with
           | e :: rest =>
@@ -680,7 +680,7 @@ def stepFn (s : Store) (c : Config) (choices : Choices) :
               -- identity (Q2) — the pool's select interception in
               -- `stepThread` is its consumer.
               let r ← toResult (applySelect ctx s clauses default? (v :: done).reverse env k' choices)
-              return deliverS s k' choices (fun (c', s', choices', _) => (c', s', choices', [])) r
+              return deliverS s k' choices (fun (c', s', choices', _, tr) => (c', s', choices', tr)) r
       | .tgtOpK sh ops pending refs targets rop rhs vals body env k' =>
           -- Delivery PHASE 1 (convergence round, BUG-029): operand
           -- values accumulate; each target completes into a
@@ -756,7 +756,7 @@ def stepFn (s : Store) (c : Config) (choices : Choices) :
               -- unrecoverable terminal it is; recoverable panics become
               -- `.panicking`.
               let r ← toResult (applySyncOp ctx s choices op (v :: done).reverse env k')
-              return deliverS s k' choices (fun (c', s', choices') => (c', s', choices', [])) r
+              return deliverS s k' choices (fun (c', s', choices', tr) => (c', s', choices', tr)) r
       | .atomicStK op done pending env k' =>
           match pending with
           | e :: rest =>
@@ -769,7 +769,7 @@ def stepFn (s : Store) (c : Config) (choices : Choices) :
               -- recoverable runtime error gc realizes (SIGSEGV →
               -- `runtime.Error`); everything else propagates.
               let r ← toResult (applyAtomicOp ctx s op (v :: done).reverse env k')
-              return deliverS s k' choices (fun (c', s') => (c', s', choices, [])) r
+              return deliverS s k' choices (fun (c', s', tr) => (c', s', choices, tr)) r
       | .probeK k' =>
           -- The probed operand yielded a VALUE: nothing to choose, nothing
           -- consumed — it is re-evaluated at its residual position.

@@ -2239,6 +2239,387 @@ def readyClauses (s : Store) : List EvClause → Except Stop (List EvClause)
       let tail ← readyClauses s rest
       if ← clauseReady s c then return c :: tail else return tail
 
+/-! ## The registry ops' EMISSIONS (C1 S2c, charter §7 D9) — what a channel, select,
+sync or atomic apply puts in its label, in gc's instrumentation order
+
+The module's discipline (Ops.lean, «The memory module's access discipline»)
+extends to synchronization: the apply that performs a registry op EMITS the
+memory-model events gc's `-race` runtime realizes there — the channel-object
+reads/writes (BUG-045/BUG-046), the sync primitives' own word accesses
+(BUG-080), the `sync/atomic` op's access at its cell, and the happens-before
+ACTIONS (`HbAction`) the runtime performs — and the detector's fold
+(`raceUpdate`, Multi.lean) consumes them. Until S2c these were the fold's
+REGISTRY ARMS, re-derived from the pre-configuration and the pre/post cells
+(`raceWakeEvent`, `racePairEvent`, `raceCommitClauseEvent`, `raceChanEntryReads`,
+`tryLockAcquired`): two accounts of one step, kept in lockstep by review. Now
+there is one. The tables below are the derivations; the applies call them. -/
+
+/-- The channel a chan-value points at (`none` for nil channels and
+non-channel values). -/
+def chanValueLoc : GoValue → Option Loc
+  | .chan cv => cv.base
+  | _ => none
+
+/-- gc's `chansend` reads the channel object at ENTRY (`racereadpc(c.raceaddr())`,
+chan.go; BUG-045): recorded whether the send then commits, parks or panics — the
+`.chanObj` key, exact identity (`ShadowKey.overlap`). A nil channel has no object
+(the caller emits nothing). -/
+def chanSendEntry (loc : Loc) : AccessTrace := [.access .read (.chanObj loc)]
+
+/-- `closechan`'s `racewritepc(c.raceaddr())` on its SUCCESS path (BUG-045; the
+closed/nil panics fire before it) — checked under the closer's pre-release clock,
+so it PRECEDES the `.closeOp` action in the label. -/
+def chanCloseWrite (loc : Loc) : AccessTrace := [.access .write (.chanObj loc)]
+
+/-- `selectgo` pass 1 (select.go; BUG-046): one channel-object READ per polled
+SEND clause in clause order — receive clauses are acquire-only, nil channels are
+not in `pollorder`. Emitted at the select's apply position on every path from it
+(the cell path `applySelectCore`, the arrival pairing and the arrival commit —
+`arrivalPoll`, Multi.lean), never at a WAKE (the sudog was dequeued by the partner;
+`resumeThread` re-polls nothing). Recording in clause order is
+detection-equivalent (same pre-op clock; same-goroutine re-records upsert). -/
+def selectPoll : List EvClause → AccessTrace
+  | [] => []
+  | .sendEv chv _ _ _ :: rest =>
+      (match chanValueLoc chv with
+      | some loc => chanSendEntry loc
+      | none => []) ++ selectPoll rest
+  | .recvEv _ _ _ _ :: rest => selectPoll rest
+
+/-- The access KIND a `sync/atomic` op records at the addressed cell —
+both registers agree (Race.lean, section "sync/atomic — the per-address
+clocks"): a Load is an atomic read; Store, Add, Swap and CompareAndSwap
+(succeed or fail) atomic writes. -/
+def atomicOpKind : AtomicStmtOp → AccessKind
+  | .load => .atomicRead
+  | .store | .add | .swap | .cas => .atomicWrite
+
+/-! ## The sync primitives' OWN state words (BUG-080 — U4 CLOSED; Q-U4RESIDUAL RULED (A))
+
+Two registers say what a sync op does to its primitive's own words,
+and since the [USER] ruling of 2026-09-02 (Q-U4RESIDUAL, option (A) —
+`docs/2026-08-31_qrow-rulings.md` row 9) the detector records the UNION
+of both — the union itself an [AGENT] READING of the ruling,
+COUNTERSIGNED [USER] 2026-09-03 (provenance chain: ledger [DL-10]):
+
+1. **go_mem's operation kind** (mem#model, verbatim: "Some memory
+   operations are read-like, including read, atomic read, mutex lock,
+   and channel receive. Other memory operations are write-like,
+   including write, atomic write, mutex unlock, channel send, and
+   channel close. Some, such as atomic compare-and-swap, are both
+   read-like and write-like."). Every sync op is a SYNCHRONIZING
+   operation on its primitive, so its kind is recorded as an ATOMIC
+   kind — `.atomicRead` for a read-like op, `.atomicWrite` for a
+   write-like one: by mem#model's read-write/write-write definitions
+   ("at least one of which is non-synchronizing") two sync ops never
+   race each other, while a plain access beside a write-like op — or a
+   plain write beside a read-like one — IS a data race, TSan or no
+   TSan. mem#locks names the ops for BOTH `sync.Mutex` and
+   `sync.RWMutex` ("The sync package implements two lock data types"):
+   `RLock`/`Lock` are mutex lock = read-like, `RUnlock`/`Unlock` are
+   mutex unlock = write-like. mem#more defers WaitGroup and Once to
+   their package docs: `Done` "synchronizes before" the return of the
+   `Wait` it unblocks (waitgroup.go), the release/acquire shape of
+   unlock/lock and send/receive — so `Add`/`Done` (the counter RMW) are
+   write-like and `Wait` read-like; `Once.Do`'s completion
+   "synchronizes before" every return (mem#once), so the first `Do` is
+   write-like and a `Do` observing completion read-like.
+2. **What gc's `-race` build realizes** on the words, read PRIMITIVE BY
+   PRIMITIVE from the pinned sources (go1.26.5) — the oracle's register
+   (#13). `sync`, `internal/sync` and `sync/atomic` are
+   `noRaceFuncPkgs` (cmd/internal/objabi/pkgspecial.go), and under
+   `-race` the SSA builder skips memory instrumentation for every
+   function of such a package (cmd/compile/internal/ssagen/
+   ssa.go:340-342) — so their own plain loads/stores (e.g. `lockSlow`'s
+   `old := m.state`) are invisible and the packages annotate by hand.
+   Exactly three things reach TSan: `race.Read/Write` annotations,
+   `race.Acquire/Release*` hooks, and `sync/atomic` calls — which the
+   -race build routes to TSan's atomic hooks (runtime/race_amd64.s
+   `racecallatomic`) UNLESS `race.Disable()` is active, in which case
+   Go's TSan glue performs them un-instrumented (measured:
+   `probes/u4kind/{wg-copy-vs-done,rw-copy-vs-rlock}` gc-green).
+
+Why the union ([AGENT] reading), and why it is sound: mem#restrictions
+licenses ANY implementation to "report the race and halt execution" on
+detecting a data race, so a refusal the oracle would not issue costs
+completeness (a go_mem-racy program the `-race` build happens to run)
+never soundness; and every access TSan realizes is kept, so nothing
+the oracle refuses is run here (no HOLE cell opens). WHERE THIS
+DEPARTS FROM LITERAL go_mem: mem#model's operation-level list makes
+EVERY mutex lock read-like, `sync.Mutex.Lock` included, so "follow
+go_mem exactly" read literally would RUN a lone copy beside
+`Mutex.Lock`. gc's `-race` build REFUSES it — the Lock is a CAS on
+`m.state`, reported by TSan as a Write (measured: `probes/u4gomem/
+mu-copy-vs-lock-only`, the copy unordered with the Lock op ALONE, gc
+RACE 20/20 at GOMAXPROCS 1 and 8, machine RACE — agree-race; and the
+BUG-080 pin `race/negative-sync/mutex-copy`). Dropping the realized
+`.atomicWrite` would open a HOLE cell against the oracle, so the
+[AGENT] kept it, grounded in mem#model's own sentence that a
+compare-and-swap "is both read-like and write-like" (the read-like
+half adds no conflict an atomic write lacks). THE CONSEQUENCE, plainly:
+a lone copy beside `sync.Mutex.Lock` REFUSES, a lone copy beside
+`sync.RWMutex.Lock`/`RLock` RUNS (`race/free-sync/rw-copy-beside-
+{rlock,lock}`) — because TSan realizes Mutex's CAS but runs RWMutex's
+counter RMW under `race.Disable`, leaving only go_mem's read-like lock
+kind to apply. The asymmetry is the oracle's, inherited on purpose,
+and [USER]-countersigned 2026-09-03 (above).
+Where TSan realizes NOTHING (`race.Disable`) the go_mem kind alone is
+recorded — the former residual (a), now closed BY DESIGN.
+
+WHERE each access lands — the gc WORD, the `ShadowKey.syncWord` of the
+sync cell's path, kind and word (`SyncWordName`: the field names of the
+pinned struct definitions). A whole-struct copy/overwrite at the
+primitive's or an enclosing path overlaps every word
+(`ShadowKey.overlap`'s data/word arm is `locPrefix`); a SIBLING field's
+plain access overlaps none (check
+(i) of the BUG-080 ruling — `probes/u4kind/mu-siblings-under-lock`,
+`mu-disjoint-prims`, `mu-sibling-beside-lock` and the corpus rows
+`race/free-sync/{mutex-siblings,disjoint-prims}` are the green guards).
+The words being DISTINCT is load-bearing: the `wg.sema` misuse pair
+and RWMutex's `race.Read(&rw.w)` are PLAIN accesses in TSan's
+realization, and had they shared one path with the go_mem atomic
+kinds, a legal `Done` (atomic write) would conflict with a legal first
+`Wait` (plain sema write), and a contending `RLock` (plain `rw.w`
+read) with an `Unlock` (atomic write). On gc's own layout they are
+different words and never meet — exactly as they never meet under
+TSan.
+
+THE TABLE (entry = before the op's acquire/release action, under the
+pre-op clock, commit or park alike — `syncEntryKinds`; tail = after a
+committed op's release action, at the bumped epoch —
+`syncReleaseTailKinds`; both EMITTED by the sync apply in that order,
+C1 S2c):
+
+* **Mutex** (`internal/sync/mutex.go`): `Lock` → `.atomicWrite @state`
+  (the CAS, :63, whether it wins or falls into `lockSlow`'s CAS loop —
+  TSan "Write … CompareAndSwapInt32"; go_mem's read-like lock is
+  subsumed); `Unlock` → entry nothing, tail `.atomicWrite @state` (the
+  Add at :194 follows `race.Release` :190). go_mem's write-like unlock
+  is covered by the tail alone: an access unordered with the op is
+  unordered with the tail (the release joins nothing INTO the
+  unlocker's clock), and the tail additionally catches the acquirer's
+  own later plain read — TSan's verdict. The `_ = m.state` at :189 is
+  an uninstrumented load in a `noRaceFuncPkgs` package — nothing
+  (guards: ledger [DL-15]).
+* **RWMutex** (`sync/rwmutex.go`): every op opens with
+  `race.Read(unsafe.Pointer(&rw.w))` (:69/:116/:146/:203) → `.read @w`
+  (realized, kept), then under `race.Disable()` performs its counter
+  RMW → the go_mem kind `@readerCount`: `RLock`/`Lock` → `.atomicRead`
+  (lock is read-like: a copy beside the LOCK OP ALONE is read-like
+  beside read-like, NO race — the ruling's own statement of what is
+  NOT in the class), `RUnlock`/`Unlock` → `.atomicWrite` (unlock is
+  write-like: a copy beside them REFUSES where TSan is green — by
+  design). Probe isolations and the BUG-080 probe-shape note: ledger
+  [DL-16].
+* **WaitGroup** (`sync/waitgroup.go`): the state RMW runs under
+  `race.Disable()` (:83, :162) → go_mem kind `@state`: `Add`/`Done` →
+  `.atomicWrite` (a copy or overwrite beside them refuses — TSan sees
+  neither), `Wait` → `.atomicRead` (an overwrite beside a `Wait` at
+  counter 0 refuses; a copy beside any `Wait` that is not the first
+  blocking waiter does not). Realized and kept, `@sema`: the misuse
+  pair — a plain READ when an Add takes the counter off 0 upward
+  (:111-115), a plain WRITE when the FIRST waiter registers before
+  parking (:184-190); Add↔Wait misuse detection is unchanged (same
+  pair, same check, at its own word), and the first waiter's plain
+  write is why a copy beside a first blocking `Wait` stays red (probe:
+  ledger [DL-17]).
+* **Once** (`sync/once.go`, no `race.Disable`): `Do` opens with the
+  atomic LOAD of `o.done` (:67) — a Do observing completion is that
+  `.atomicRead @done` alone (read-like: a copy beside it is green, an
+  overwrite red); every other Do takes `doSlow`, whose `o.m.Lock()` CAS
+  is `.atomicWrite @m` (the winner's and the parked contender's
+  alike). The winner's completion (`onceComplete`) is the deferred
+  `o.done.Store(true)` → `.atomicWrite @done` BEFORE the deferred
+  `o.m.Unlock()` (LIFO) — then the Unlock's release and its trailing
+  Add → tail `.atomicWrite @m`. go_mem and TSan agree on every Once
+  row.
+
+* **TryLock / TryRLock** (Q-TRYLOCK, RULED [USER] 2026-08-31 row 5):
+  `Mutex.TryLock` (`internal/sync/mutex.go:76-93`) on an UNLOCKED cell →
+  `.atomicWrite @state` on BOTH envelope members (the CAS at :85 is
+  realized whether it wins or loses); on a HELD cell → NOTHING (the early
+  return is an uninstrumented plain load); go_mem adds nothing to a
+  failed call ("An unsuccessful call has no synchronizing effect at
+  all"). `RWMutex.TryRLock`/`TryLock` (`sync/rwmutex.go:87-112,169-198`):
+  the realized `race.Read(&rw.w)` precedes `race.Disable` on EVERY
+  outcome → `.read @w` always; the counter CAS runs under `race.Disable`,
+  so only go_mem's kind applies and only to a SUCCESSFUL call →
+  `.atomicRead @readerCount` when acquired (the `rlock`/`wlock` row).
+  HB: the acquire edge on success only. Probe runs (20 each at
+  GOMAXPROCS 1 and 8) and the one schedule-dependent, unpinnable gc
+  shape: ledger [DL-11].
+
+Atomic↔atomic never conflicts, so contending ops on one primitive stay
+green (guards: ledger [DL-18]).
+
+Wakes record nothing: a parked goroutine released nothing after its
+entry, so no other goroutine can be HB-after the entry without being
+HB-after the wake — every conflict a wake-time access would find, the
+entry access already found (gc's woken `lockSlow` CAS is thus
+detection-redundant here).
+
+THE DESIGNED DIVERGENCE FROM THE `-race` ORACLE (was residual (a);
+[USER]-ruled 2026-09-02 — recorded at BUGS.md BUG-084 and the ruling
+sheet's row 9, provenance chain there): a plain access beside a
+write-like op gc runs under `race.Disable` — `RUnlock`, RWMutex
+`Unlock`, WaitGroup `Add`/`Done` — or a plain OVERWRITE beside `Wait`
+at counter 0, is REFUSED here and RUN by gc's `-race` build. The racy
+lane's three-way rule (our refusal + `-race` green on every sample)
+files such a row as an investigation, never a pass; these rows are
+classified BY DESIGN as go_mem-racy (one write-like operand, one
+non-synchronizing — mem#model). The corpus pins them as born-FAIL rows
+against gc's `ok` observation (`race/gomem-only/*`, BUG-084's Cases
+line) so the divergence stays visible and never counts as a pass. NOT
+in the class, and unchanged: a copy beside `RLock`/`Lock` ALONE (two
+read-likes) and every race-free program (vet's `copylocks` flags every
+shape in the class). Probe families and guards: ledger [DL-19].
+
+RESIDUAL (b), an outcome-CLASS deviation — both sides ABORT, but the
+machine's abort is an asserted program outcome (`Stop.fatal`,
+Value.lean:207-217) where gc's is the race report then the same abort:
+the
+detector folds SUCCESSFUL pool steps only (`execProgLoop` runs
+`raceUpdate` after `stepMulti` returns), so a sync op whose apply is
+FATAL — an `Unlock`/`RUnlock` after a concurrent plain overwrite reset
+the primitive to unlocked — ends the run `fatal` before its entry
+access is ever checked, where gc's `race.Read`/state Add precede the
+misuse check and TSan reports the race first, then the fatal fires.
+Reachable only by an overwrite-then-cross-goroutine-unlock shape
+(`probes/u4kind/rw-overwrite-vs-{runlock,unlock}`, possible-HOLE by the
+runner's definition, diagnosed at BUG-080). The owed fix's scope and
+its call-site list are AUTHORITATIVE at TODO.md's BUG-080 follow-up
+item (S–M, trust-surface) — cited, not restated here. -/
+
+/-- The gc WORD of a sync primitive an access lands on: the
+`ShadowKey.syncWord` of the primitive's own cell path, its kind and the
+word (`state`/`sema` for Mutex and WaitGroup, `w`/`readerCount` for
+RWMutex, `done`/`m` for Once — the section docstring's table). A shadow
+KEY (A6; formerly a phantom `Loc.field` path under a made-up `TypeId`):
+`ShadowKey.overlap` is what makes a copy/overwrite of the primitive (or
+its enclosing struct) overlap the word while sibling fields and sibling
+words stay disjoint. -/
+def syncWord (loc : Loc) (kind : SyncKind) (word : SyncWordName) : ShadowKey :=
+  .syncWord loc kind word
+
+/-- The accesses recorded on the primitive's own words at a sync op's
+ENTRY — before the op's release/acquire hook — from the op and the
+PRE-step cell (`delta` is `wgAdd`'s operand, 0 for every other op):
+TSan's realized set ∪ go_mem's operation kind, each at its gc word
+(the section docstring's table is the derivation; Q-U4RESIDUAL (A)).
+EMITTED by the sync apply (`applySyncOpCore`/`applyTryLock`, C1 S2c) at
+the head of its label — so the fold records them under the goroutine's
+current clock, before the op's acquire/release action — commit or park
+alike. `acquired` is the TRY heads' outcome (`applyTryLock` knows it: a
+pre-committed acquire not taken by the spurious member) — it selects the success-only go_mem lock kind of RWMutex `TryLock`/
+`TryRLock`; every other head's row ignores it (their kinds are
+outcome-independent — commit or park alike). -/
+def syncEntryKinds (op : SyncOp) (pre : SyncPrim) (delta : Int) (acquired : Bool)
+    (loc : Loc) : AccessTrace :=
+  let at_ := syncWord loc pre.kind
+  match op, pre with
+  -- Mutex: the state CAS (TSan: atomic write; go_mem's read-like lock
+  -- is subsumed by it).
+  | .lock, _ => [.access .atomicWrite (at_ .state)]
+  -- Mutex Unlock: the state Add FOLLOWS the release (`syncReleaseTailKinds`).
+  | .unlock, _ => []
+  -- RWMutex: the realized `race.Read(&rw.w)` + the counter RMW's go_mem
+  -- kind (lock read-like, unlock write-like).
+  | .rlock, _ | .wlock, _ => [.access .read (at_ .w), .access .atomicRead (at_ .readerCount)]
+  | .runlock, _ | .wunlock, _ => [.access .read (at_ .w), .access .atomicWrite (at_ .readerCount)]
+  -- WaitGroup Add/Done: the state RMW is write-like (go_mem); the
+  -- realized sema READ when the counter leaves 0 upward.
+  | .wgAdd, .waitGroup counter _ =>
+      (if delta > 0 && counter == 0 then [.access .read (at_ .sema)] else [])
+        ++ [.access .atomicWrite (at_ .state)]
+  | .wgAdd, _ => [.access .atomicWrite (at_ .state)]
+  -- WaitGroup Wait: the counter read is read-like (go_mem); the
+  -- realized sema WRITE for the FIRST blocking waiter.
+  | .wgWait, .waitGroup counter waiters =>
+      (if counter != 0 && waiters == 0 then [.access .write (at_ .sema)] else [])
+        ++ [.access .atomicRead (at_ .state)]
+  | .wgWait, _ => [.access .atomicRead (at_ .state)]
+  -- Once: a Do observing completion is the atomic load of `o.done`;
+  -- every other Do is `doSlow`'s `o.m.Lock()` CAS; completion is the
+  -- `o.done.Store(true)` (its Unlock's Add is the tail).
+  | .onceBegin _, .once true true => [.access .atomicRead (at_ .done)]
+  | .onceBegin _, _ => [.access .atomicWrite (at_ .m)]
+  | .onceComplete, _ => [.access .atomicWrite (at_ .done)]
+  -- Q-TRYLOCK (the section docstring's TryLock rows). Mutex TryLock on
+  -- an UNLOCKED cell: the state CAS (:85), realized by TSan whether it
+  -- wins (the acquire) or loses (gc's realization of the spurious
+  -- member) — `.atomicWrite @state` on BOTH members; on a HELD cell:
+  -- the plain early return (:77-79) in a noRaceFuncPkgs package —
+  -- nothing realized, and go_mem gives an unsuccessful call no kind
+  -- ("no synchronizing effect at all").
+  | .tryLock _, .mutex locked => if locked then [] else [.access .atomicWrite (at_ .state)]
+  -- RWMutex TryRLock/TryLock: the realized `race.Read(&rw.w)` opens
+  -- every outcome (:89/:171, BEFORE `race.Disable`); the counter CAS is
+  -- under `race.Disable` (nothing realized), so only go_mem's kind
+  -- applies, and only to a SUCCESSFUL call ("equivalent to a call to
+  -- l.RLock/l.Lock" — lock is read-like → `.atomicRead @readerCount`,
+  -- the `rlock`/`wlock` row); a failed call has no go_mem kind.
+  | .tryRLock _, .rwmutex .. | .tryWLock _, .rwmutex .. =>
+      .access .read (at_ .w) :: (if acquired then [.access .atomicRead (at_ .readerCount)] else [])
+  -- KIND MISMATCH — UNREACHABLE BY NAME (audit fix round F4; the
+  -- `wakeReady` discipline): `tryAcquire` is `stuck` on a TRY head over
+  -- the wrong primitive before any state change, and the fold reads the
+  -- labels of SUCCESSFUL pool steps only, so no such (op, cell) pair
+  -- reaches this table. Enumerated per kind, never `_`-absorbed, so a new primitive or
+  -- a new head is a compile error here; the empty list is the honest
+  -- value for a step that cannot have happened (an access on a
+  -- fabricated word would be the fail-OPEN mistake — `at_` keys words by
+  -- `pre.kind`, so a Mutex-word access under a TryRLock would be a
+  -- fiction).
+  | .tryLock _, .rwmutex .. | .tryLock _, .waitGroup .. | .tryLock _, .once .. => []
+  | .tryRLock _, .mutex .. | .tryRLock _, .waitGroup .. | .tryRLock _, .once .. => []
+  | .tryWLock _, .mutex .. | .tryWLock _, .waitGroup .. | .tryWLock _, .once .. => []
+
+/-- The accesses `-race` realizes AFTER a sync op's release hook:
+`Mutex.Unlock`'s state Add follows `race.Release` (mutex.go:188-194),
+and so does the Add inside Once's deferred `o.m.Unlock()`. EMITTED after
+the `.hb (.syncRelease …)` action in the apply's label (C1 S2c), hence
+recorded at the bumped epoch, so a goroutine that ACQUIRES
+this very release and then plainly reads the primitive still conflicts
+— TSan's verdict exactly; it also covers go_mem's write-like unlock
+(section docstring, Mutex row). -/
+def syncReleaseTailKinds (op : SyncOp) (pre : SyncPrim) (loc : Loc) :
+    AccessTrace :=
+  let at_ := syncWord loc pre.kind
+  match op with
+  | .unlock => [.access .atomicWrite (at_ .state)]
+  | .onceComplete => [.access .atomicWrite (at_ .m)]
+  -- Every other head's recorded set lies entirely at ENTRY
+  -- (`syncEntryKinds`). Enumerated, never `_`-absorbed, so a new
+  -- constructor is a compile error here as in every other sync arm.
+  | .lock => []
+  | .rlock => []
+  | .runlock => []
+  | .wlock => []
+  | .wunlock => []
+  | .wgAdd => []
+  | .wgWait => []
+  | .onceBegin _ => []
+  | .tryLock _ => []
+  | .tryRLock _ => []
+  | .tryWLock _ => []
+
+
+/-- The `sync/atomic` op's label (the atomics arc wave 1; Race.lean's section
+"sync/atomic — the per-address clocks" is the derivation): its ATOMIC-kind access at
+the addressed cell's own path and its clock action, in TSan's instruction order —
+Load = acquire THEN record `.atomicRead`; Store = record `.atomicWrite` THEN
+release-store; Add/Swap = record THEN release-acquire; CompareAndSwap = record, then
+release-acquire on success (`stored`) / acquire on failure. Emitted by `applyAtomicOp`
+on a COMMITTED op only (a nil-address panic is delivered with the empty label — gc's
+`racecallatomic` faults on the address before any TSan call). -/
+def atomicEvents (head : AtomicStmtOp) (loc : Loc) (stored : Bool) : AccessTrace :=
+  let acc : MemEvent := .access (atomicOpKind head) (.data loc)
+  match head with
+  | .load => [.hb (.atomicAcquire loc), acc]
+  | .store => [acc, .hb (.atomicReleaseStore loc)]
+  | .add | .swap => [acc, .hb (.atomicReleaseAcquire loc)]
+  | .cas => [acc, .hb (if stored then .atomicReleaseAcquire loc else .atomicAcquire loc)]
+
 /-! ## The panic chain (the unwinding arc, `docs/2026-07-25_unwinding-arc.md` §A1–A3) -/
 
 /-- One entry of a goroutine's panic chain: the payload (the interface
@@ -3511,7 +3892,7 @@ statement of `ChoiceSite.postOp`), not as a wrapping configuration. A
 park IS a boundary shape already; a panicking outcome opens none (the
 abort window is B3, deferred — boundary-set note §2). -/
 def applyChanOp (s : Store) (op : ChanStOp) (vs : List GoValue)
-    (env : LocalEnv) (k : Cont) : Except Stop (Config × Store) := do
+    (env : LocalEnv) (k : Cont) : Except Stop (Config × Store × AccessTrace) := do
   match op, vs with
   | .send elem, [chv, vv] => do
       let ch ← valueAsChan chv
@@ -3519,55 +3900,68 @@ def applyChanOp (s : Store) (op : ChanStOp) (vs : List GoValue)
       -- for the blocked shapes the pinned value travels normalized).
       let v' ← normalizeValueForTy ctx elem vv
       match ch.base with
-      | none => return (.blockedSend none v' k, s)
+      | none => return (.blockedSend none v' k, s, [])
       | some loc => do
+          -- THE LABEL (C1 S2c): `chansend`'s entry read of the channel object
+          -- (BUG-045) opens every outcome — commit, park, panic alike; a
+          -- committed buffered send then transits the next send slot
+          -- (`racenotify`). A parked send's slot action is the WAKE's
+          -- (`resumeThread`) or the pairing's (`applyPairing`).
+          let entry := chanSendEntry loc
           let (buf, capacity, closed) ← chanCell s loc
           if closed then
-            return (.panicking [panicEntry "send on closed channel"] k, s)
+            return (.panicking [panicEntry "send on closed channel"] k, s, entry)
           else if buf.size < capacity then do
             let s' ← storeChanPayload s loc (buf.push v') capacity closed
-            return (.next k, s')
+            return (.next k, s', entry ++ [.hb (.slotOp loc capacity true)])
           else
-            return (.blockedSend (some loc) v' k, s)
+            return (.blockedSend (some loc) v' k, s, entry)
   | .recv targets elem, [chv] => do
       let ch ← valueAsChan chv
       match ch.base with
-      | none => return (.blockedRecv none targets elem env k, s)
+      | none => return (.blockedRecv none targets elem env k, s, [])
       | some loc => do
           let (buf, capacity, closed) ← chanCell s loc
           match buf[0]? with
           | some v => do
               -- FIFO dequeue; a closed channel drains its buffer
               -- with ok = true before yielding zeros (probe p06).
+              -- THE LABEL: `chanrecv` is acquire-only — no channel-object
+              -- access (BUG-045); the dequeue transits the next receive slot.
               let s₁ ← storeChanPayload s loc (buf.eraseIdx! 0) capacity closed
+              let tr : AccessTrace := [.hb (.slotOp loc capacity false)]
               match targets with
-              | [] => return (.next k, s₁)
+              | [] => return (.next k, s₁, tr)
               | _ :: _ => do
                   let (c', s₂) ← enterRecvTargets s₁ targets
                     (recvStores v true targets.length) (.seqn #[]) env k
-                  return (c', s₂)
+                  return (c', s₂, tr)
           | none =>
               if closed then do
+                -- The closed-and-empty receive acquires the closer's clock.
                 let zero ← defaultValue ctx elem
+                let tr : AccessTrace := [.hb (.closeAcquire loc)]
                 match targets with
-                | [] => return (.next k, s)
+                | [] => return (.next k, s, tr)
                 | _ :: _ => do
                     let (c', s₂) ← enterRecvTargets s targets
                       (recvStores zero false targets.length) (.seqn #[]) env k
-                    return (c', s₂)
+                    return (c', s₂, tr)
               else
-                return (.blockedRecv (some loc) targets elem env k, s)
+                return (.blockedRecv (some loc) targets elem env k, s, [])
   | .close, [chv] => do
       let ch ← valueAsChan chv
       match ch.base with
-      | none => return (.panicking [panicEntry "close of nil channel"] k, s)
+      | none => return (.panicking [panicEntry "close of nil channel"] k, s, [])
       | some loc => do
           let (buf, capacity, closed) ← chanCell s loc
           if closed then
-            return (.panicking [panicEntry "close of closed channel"] k, s)
+            return (.panicking [panicEntry "close of closed channel"] k, s, [])
           else do
             let s' ← storeChanPayload s loc buf capacity true
-            return (.next k, s')
+            -- THE LABEL: `closechan`'s channel-object WRITE on the success
+            -- path (BUG-045), under the pre-release clock, THEN the release.
+            return (.next k, s', chanCloseWrite loc ++ [.hb (.closeOp loc capacity)])
   | op, vs => stuck s!"malformed channel-operator application: {repr op} on {vs.length} operand(s)"
 
 /-- **Apply a sync statement's head to its evaluated operands — the
@@ -3642,73 +4036,97 @@ the stream and dispatches everything else here unchanged. Shared
 verbatim (through `applySyncOp`) by rule `Step.syncStApply` and
 `stepFn`'s `syncStK` apply arm. -/
 def applySyncOpCore (s : Store) (op : SyncOp) (vs : List GoValue)
-    (env : LocalEnv) (k : Cont) : Except Stop (Config × Store) := do
+    (env : LocalEnv) (k : Cont) : Except Stop (Config × Store × AccessTrace) := do
+  -- THE LABEL (C1 S2c, D9): every arm emits, in gc's instruction order, the
+  -- op's ENTRY word accesses (`syncEntryKinds` — the state CAS / the
+  -- `race.Read(&rw.w)` / the `wg.sema` pair, with go_mem's operation kind,
+  -- under the pre-op clock, commit or park alike), then on a committed op
+  -- its acquire/release ACTION (the package-doc HB sentences, quoted at
+  -- `SyncClocks`), then the accesses that FOLLOW the release
+  -- (`syncReleaseTailKinds` — Unlock's state Add). Fatal outcomes throw
+  -- (no label); a park carries its entry accesses and no action (the wake
+  -- acquires, `resumeThread`); `wgAdd`'s release-merge on a negative delta
+  -- precedes its panic check (waitgroup.go:81), so the panicking outcome
+  -- carries it too.
   match op, vs with
   | .lock, [av] => do
       let loc ← valueAsLoc av
-      match ← syncCell ctx s loc with
+      let pre ← syncCell ctx s loc
+      let entry := syncEntryKinds .lock pre 0 false loc
+      match pre with
       | .mutex locked =>
-          if locked then return (.blockedSync .lock loc env k, s)
+          if locked then return (.blockedSync .lock loc env k, s, entry)
           else do
             let s' ← storeLoc ctx s loc (.syncData (.mutex true))
-            return (.next k, s')
+            return (.next k, s', entry ++ [.hb (.syncAcquire loc false)])
       | other => stuck s!"Lock on a non-mutex sync cell: {repr other}"
   | .unlock, [av] => do
       let loc ← valueAsLoc av
-      match ← syncCell ctx s loc with
+      let pre ← syncCell ctx s loc
+      match pre with
       | .mutex locked =>
           if locked then do
             let s' ← storeLoc ctx s loc (.syncData (.mutex false))
-            return (.next k, s')
+            return (.next k, s', syncEntryKinds .unlock pre 0 false loc
+              ++ [.hb (.syncRelease loc false)] ++ syncReleaseTailKinds .unlock pre loc)
           else throw (.fatal "sync: unlock of unlocked mutex")
       | other => stuck s!"Unlock on a non-mutex sync cell: {repr other}"
   | .rlock, [av] => do
       let loc ← valueAsLoc av
-      match ← syncCell ctx s loc with
+      let pre ← syncCell ctx s loc
+      let entry := syncEntryKinds .rlock pre 0 false loc
+      match pre with
       | .rwmutex writer readers pendingW =>
           if writer || pendingW > 0 then
-            return (.blockedSync .rlock loc env k, s)
+            return (.blockedSync .rlock loc env k, s, entry)
           else do
             let s' ← storeLoc ctx s loc (.syncData (.rwmutex writer (readers + 1) pendingW))
-            return (.next k, s')
+            return (.next k, s', entry ++ [.hb (.syncAcquire loc false)])
       | other => stuck s!"RLock on a non-RWMutex sync cell: {repr other}"
   | .runlock, [av] => do
       let loc ← valueAsLoc av
-      match ← syncCell ctx s loc with
+      let pre ← syncCell ctx s loc
+      match pre with
       | .rwmutex writer readers pendingW =>
           match readers with
           | r + 1 => do
               let s' ← storeLoc ctx s loc (.syncData (.rwmutex writer r pendingW))
-              return (.next k, s')
+              return (.next k, s', syncEntryKinds .runlock pre 0 false loc
+                ++ [.hb (.syncRelease loc true)] ++ syncReleaseTailKinds .runlock pre loc)
           | 0 => throw (.fatal "sync: RUnlock of unlocked RWMutex")
       | other => stuck s!"RUnlock on a non-RWMutex sync cell: {repr other}"
   | .wlock, [av] => do
       let loc ← valueAsLoc av
-      match ← syncCell ctx s loc with
+      let pre ← syncCell ctx s loc
+      let entry := syncEntryKinds .wlock pre 0 false loc
+      match pre with
       | .rwmutex writer readers pendingW =>
           if !writer && readers == 0 then do
             let s' ← storeLoc ctx s loc (.syncData (.rwmutex true 0 pendingW))
-            return (.next k, s')
+            return (.next k, s', entry ++ [.hb (.syncAcquire loc true)])
           else do
             -- Park AND register as a pending writer: the documented
             -- exclusion of new readers starts at the BLOCKED Lock call
             -- (rwmutex.go), so the count updates at the park.
             let s' ← storeLoc ctx s loc (.syncData (.rwmutex writer readers (pendingW + 1)))
-            return (.blockedSync .wlock loc env k, s')
+            return (.blockedSync .wlock loc env k, s', entry)
       | other => stuck s!"write-Lock on a non-RWMutex sync cell: {repr other}"
   | .wunlock, [av] => do
       let loc ← valueAsLoc av
-      match ← syncCell ctx s loc with
+      let pre ← syncCell ctx s loc
+      match pre with
       | .rwmutex writer readers pendingW =>
           if writer then do
             let s' ← storeLoc ctx s loc (.syncData (.rwmutex false readers pendingW))
-            return (.next k, s')
+            return (.next k, s', syncEntryKinds .wunlock pre 0 false loc
+              ++ [.hb (.syncRelease loc false)] ++ syncReleaseTailKinds .wunlock pre loc)
           else throw (.fatal "sync: Unlock of unlocked RWMutex")
       | other => stuck s!"write-Unlock on a non-RWMutex sync cell: {repr other}"
   | .wgAdd, [av, dv] => do
       let loc ← valueAsLoc av
       let delta ← valueAsInt dv
-      match ← syncCell ctx s loc with
+      let pre ← syncCell ctx s loc
+      match pre with
       | .waitGroup counter waiters => do
           -- gc's counter is an int32 — the high 32 bits of the uint64
           -- state word (waitgroup.go:104 `state.Add(uint64(delta) << 32)`,
@@ -3737,18 +4155,26 @@ def applySyncOpCore (s : Store) (op : SyncOp) (vs : List GoValue)
           -- shapes; their resume's `waiters - 1` saturates at the
           -- already-reset 0. A NEW Wait parking after the reset counts
           -- from 0 again — which is also what keeps the first-waiter
-          -- sema WRITE condition (raceUpdate's `.wgWait` arm) gc-exact
+          -- sema WRITE condition (the `.wgWait` entry row) gc-exact
           -- across reuse rounds.
           let waiters' := if counter' == 0 && waiters > 0 then 0 else waiters
           -- The update lands BEFORE any panic (probe p13).
           let s' ← storeLoc ctx s loc (.syncData (.waitGroup counter' waiters'))
+          -- THE LABEL: the entry pair (the sema READ when the counter
+          -- leaves 0 upward, the state RMW's write-like kind), then gc's
+          -- ReleaseMerge when delta < 0 (waitgroup.go:81 — BEFORE the
+          -- panic checks, so a Done whose negative-counter panic is
+          -- later recovered still released; probed ordering, design
+          -- note §4). No tail.
+          let tr := syncEntryKinds .wgAdd pre delta false loc
+            ++ (if delta < 0 then [.hb (.syncRelease loc false)] else [])
           if counter' < 0 then
             -- Payload CLASS is gc-exact (arc-end fix round 2026-08-10):
             -- gc's sync package raises this with `panic("...")` — a plain
             -- string, package code — where the channel panics are runtime
             -- `plainError`s. `recover().(string)` answers true here.
             return (.panicking [⟨stringPanicValue
-              "sync: negative WaitGroup counter", false⟩] k, s')
+              "sync: negative WaitGroup counter", false⟩] k, s', tr)
           else
             -- gc's Add-side misuse panic (waitgroup.go:120, `w != 0 &&
             -- delta > 0 && v == int32(delta)`) is UNREACHABLE at
@@ -3761,38 +4187,55 @@ def applySyncOpCore (s : Store) (op : SyncOp) (vs : List GoValue)
             -- machine's atomic ops realize as the wg-sema race or as
             -- clean runs. No arm is kept (no inert dead code); the
             -- audit fix round removed it with this record.
-            return (.next k, s')
+            return (.next k, s', tr)
       | other => stuck s!"Add on a non-WaitGroup sync cell: {repr other}"
   | .wgWait, [av] => do
       let loc ← valueAsLoc av
-      match ← syncCell ctx s loc with
+      let pre ← syncCell ctx s loc
+      -- The entry pair: the first-waiter sema WRITE (waitgroup.go:184-190,
+      -- pre-park waiter count 0 — concurrent Waits must not race each
+      -- other) and the counter read's read-like kind; a park carries no
+      -- action, the wake acquires ("a call to Done 'synchronizes before'
+      -- the return of any Wait call that it unblocks").
+      let entry := syncEntryKinds .wgWait pre 0 false loc
+      match pre with
       | .waitGroup counter waiters =>
-          if counter == 0 then return (.next k, s)
+          if counter == 0 then return (.next k, s, entry ++ [.hb (.syncAcquire loc false)])
           else do
             let s' ← storeLoc ctx s loc (.syncData (.waitGroup counter (waiters + 1)))
-            return (.blockedSync .wgWait loc env k, s')
+            return (.blockedSync .wgWait loc env k, s', entry)
       | other => stuck s!"Wait on a non-WaitGroup sync cell: {repr other}"
   | .onceBegin targets, [av] => do
       let loc ← valueAsLoc av
-      match ← syncCell ctx s loc with
+      let pre ← syncCell ctx s loc
+      -- A Do observing completion is the atomic load of `o.done` and
+      -- ACQUIRES (the completion release is `onceComplete`'s); every other
+      -- Do is `doSlow`'s `o.m.Lock()` CAS — a fresh begin or a park carries
+      -- no action.
+      let entry := syncEntryKinds (.onceBegin targets) pre 0 false loc
+      match pre with
       | .once started done =>
           if !started then do
             let s' ← storeLoc ctx s loc (.syncData (.once true false))
             let (c', s'') ← enterRecvTargets s' targets [.bool true] (.seqn #[]) env k
-            return (c', s'')
+            return (c', s'', entry)
           else if done then do
             let (c', s'') ← enterRecvTargets s targets [.bool false] (.seqn #[]) env k
-            return (c', s'')
+            return (c', s'', entry ++ [.hb (.syncAcquire loc false)])
           else
-            return (.blockedSync (.onceBegin targets) loc env k, s)
+            return (.blockedSync (.onceBegin targets) loc env k, s, entry)
       | other => stuck s!"Once.Do begin on a non-Once sync cell: {repr other}"
   | .onceComplete, [av] => do
       let loc ← valueAsLoc av
-      match ← syncCell ctx s loc with
+      let pre ← syncCell ctx s loc
+      match pre with
       | .once started _ =>
           if started then do
             let s' ← storeLoc ctx s loc (.syncData (.once true true))
-            return (.next k, s')
+            -- `o.done.Store(true)`, the release, then the deferred
+            -- `o.m.Unlock()`'s Add (the tail).
+            return (.next k, s', syncEntryKinds .onceComplete pre 0 false loc
+              ++ [.hb (.syncRelease loc false)] ++ syncReleaseTailKinds .onceComplete pre loc)
           else throw (.internal "onceComplete without a matching onceBegin")
       | other => stuck s!"Once.Do complete on a non-Once sync cell: {repr other}"
   -- The TRY heads never reach the core: `applySyncOp` draws their pick
@@ -3923,8 +4366,9 @@ THE ENVELOPE, per head, from the pre-step cell:
   envelope: the sync docs say nothing about a pending writer's priority
   over a TryLock, and the window closes at the writer's wake).
 
-THE DETECTOR HALF is Race.lean's (`syncEntryKinds` with the `acquired`
-flag; `raceUpdate`'s sync arm derives it through `tryLockAcquired`).
+THE DETECTOR HALF is the apply's own LABEL (C1 S2c: `syncEntryKinds`
+with the `acquired` outcome and the success-only acquire action, emitted
+here; the fold moves the clocks it names).
 The result is delivered through `enterRecvTargets` when a target exists
 (the `onceBegin` shape — a plain write of the target AFTER the op);
 with no target the value is dropped and the op still took effect (a
@@ -3939,9 +4383,22 @@ precedent, `atomics/spin`); the `Fair`-quantified claim class is
 reasoning-side future work TO BE BUILT (proposal §2). -/
 def applyTryLock (s : Store) (op : SyncOp) (loc : Loc) (pre : SyncPrim)
     (spurious : Bool) (targets : List Assignee) (env : LocalEnv) (k : Cont) :
-    Except Stop (Config × Store) := do
+    Except Stop (Config × Store × AccessTrace) := do
+  -- THE LABEL (C1 S2c): `syncEntryKinds` with the TRY outcome — a failed
+  -- call (forced or spurious) has «no synchronizing effect at all»
+  -- (mem#locks): its realized entry accesses only; a SUCCESSFUL call is
+  -- «equivalent to a call to l.Lock (or l.RLock)»: the success-only go_mem
+  -- kind and the acquire action (RWMutex's write-`TryLock` acquires both
+  -- clocks, the `wlock` shape).
+  let alsoB : Bool := match op with
+    | .tryWLock _ => true
+    | .tryLock _ | .tryRLock _ => false
+    | .lock | .unlock | .rlock | .runlock | .wlock | .wunlock
+    | .wgAdd | .wgWait | .onceBegin _ | .onceComplete => false
   match ← tryAcquire op pre with
-  | none => tryDeliver false s targets env k
+  | none => do
+      let (c', s') ← tryDeliver false s targets env k
+      return (c', s', syncEntryKinds op pre 0 false loc)
   | some post => do
       -- THE PRE-COMMIT DISCIPLINE (`applySelectCore`'s, for the ∀-streams
       -- kit): the acquired cell is stored BEFORE the pick is applied, so
@@ -3950,8 +4407,12 @@ def applyTryLock (s : Store) (op : SyncOp) (loc : Loc) (pre : SyncPrim)
       -- then returns the PRE-store state — no state change, as the text
       -- demands.
       let sAcq ← storeLoc ctx s loc (.syncData post)
-      if spurious then tryDeliver false s targets env k
-      else tryDeliver true sAcq targets env k
+      if spurious then do
+        let (c', s') ← tryDeliver false s targets env k
+        return (c', s', syncEntryKinds op pre 0 false loc)
+      else do
+        let (c', s') ← tryDeliver true sAcq targets env k
+        return (c', s', syncEntryKinds op pre 0 true loc ++ [.hb (.syncAcquire loc alsoB)])
 
 /-- **Apply a sync statement's head to its evaluated operands, with the
 choice stream** — the sync registry entry (the `applyStmtOp` mold over
@@ -3961,18 +4422,18 @@ draw the `tryLock` site at `tryLockWidth` (bound 1 = no pop), and apply
 passed through untouched (`applySyncOp_eq_core`). Shared verbatim by
 rule `Step.syncStApply` and `stepFn`'s `syncStK` apply arm. -/
 def applySyncOp (s : Store) (ch : Choices) (op : SyncOp) (vs : List GoValue)
-    (env : LocalEnv) (k : Cont) : Except Stop (Config × Store × Choices) := do
+    (env : LocalEnv) (k : Cont) : Except Stop (Config × Store × Choices × AccessTrace) := do
   match op.tryTargets?, vs with
   | some targets, [av] => do
       let loc ← valueAsLoc av
       let pre ← syncCell ctx s loc
       let (pick, ch') := Choices.consumeAt .tryLock (tryLockWidth op pre) ch
-      let (c', s') ← applyTryLock ctx s op loc pre (pick == 1) targets env k
-      return (c', s', ch')
+      let (c', s', tr) ← applyTryLock ctx s op loc pre (pick == 1) targets env k
+      return (c', s', ch', tr)
   | some _, vs => stuck s!"malformed try-lock application: {repr op} on {vs.length} operand(s)"
   | none, _ => do
-      let (c', s') ← applySyncOpCore ctx s op vs env k
-      return (c', s', ch)
+      let (c', s', tr) ← applySyncOpCore ctx s op vs env k
+      return (c', s', ch, tr)
 
 /-- The optional store of an atomic op (`atomicCompute`'s `new?`): the
 normalized integer at the op's kind, or no store at all (`load`, a
@@ -4030,7 +4491,7 @@ need no alignment; the 32-bit `unaligned 64-bit atomic operation` fatal
 is outside this pin (R1's transfer caveat applies). Shared verbatim by
 rule `Step.atomicStApply` and `stepFn`'s `atomicStK` apply arm. -/
 def applyAtomicOp (s : Store) (op : AtomicOp) (vs : List GoValue)
-    (env : LocalEnv) (k : Cont) : Except Stop (Config × Store) := do
+    (env : LocalEnv) (k : Cont) : Except Stop (Config × Store × AccessTrace) := do
   match vs with
   | av :: operands => do
       let loc ← valueAsLoc av
@@ -4041,11 +4502,15 @@ def applyAtomicOp (s : Store) (op : AtomicOp) (vs : List GoValue)
           else do
             let (new?, result) ← atomicCompute op.head op.kind cur operands
             let s' ← atomicStore ctx s loc op.kind new?
+            -- THE LABEL (C1 S2c): the op's ATOMIC-kind access at the cell and
+            -- its clock action, in TSan's order (`atomicEvents`; a CAS's
+            -- success is `new?`'s presence — the very outcome just applied).
+            let tr := atomicEvents op.head loc new?.isSome
             match op.targets with
-            | [] => return (.next k, s')
+            | [] => return (.next k, s', tr)
             | _ :: _ => do
                 let (c', s'') ← enterRecvTargets s' op.targets [result] (.seqn #[]) env k
-                return (c', s'')
+                return (c', s'', tr)
       | other => stuck s!"atomic {repr op.head} on a non-integer cell: {repr other}"
   | [] => stuck "malformed atomic-operator application: no address operand"
 
@@ -4064,7 +4529,7 @@ at once (the entry-path `applySelect`, the arrival-path `.commit` in
 `stepThread`, and the wake path `resumeThread`); a panicking commit
 opens no boundary (B3 deferred). -/
 def commitClause (s : Store) (env : LocalEnv) (k : Cont) :
-    EvClause → Except Stop (Config × Store)
+    EvClause → Except Stop (Config × Store × AccessTrace)
   | .sendEv chv vv elem body => do
       let ch ← valueAsChan chv
       match ch.base with
@@ -4072,11 +4537,15 @@ def commitClause (s : Store) (env : LocalEnv) (k : Cont) :
       | some loc => do
           let (buf, capacity, closed) ← chanCell s loc
           if closed then
-            return (.panicking [panicEntry "send on closed channel"] k, s)
+            return (.panicking [panicEntry "send on closed channel"] k, s, [])
           else if buf.size < capacity then do
             let v' ← normalizeValueForTy ctx elem vv
             let s' ← storeChanPayload s loc (buf.push v') capacity closed
-            return (.exec body env k, s')
+            -- THE LABEL (C1 S2c): the committed buffered send transits the
+            -- next send slot; the select's poll reads are its CALLER's
+            -- (`applySelectCore`/`arrivalPoll`), never the commit's — a woken
+            -- select (`resumeThread`) commits through here and re-polls nothing.
+            return (.exec body env k, s', [.hb (.slotOp loc capacity true)])
           else stuck "select committed an unready send clause"
   | .recvEv chv targets elem body => do
       let ch ← valueAsChan chv
@@ -4084,22 +4553,22 @@ def commitClause (s : Store) (env : LocalEnv) (k : Cont) :
       | none => stuck "select committed an unready receive clause"
       | some loc => do
           let (buf, capacity, closed) ← chanCell s loc
-          let (v, ok, s₁) ←
+          let (v, ok, s₁, tr) ←
             match buf[0]? with
             | some v => do
                 let s₁ ← storeChanPayload s loc (buf.eraseIdx! 0) capacity closed
-                pure (v, true, s₁)
+                pure (v, true, s₁, ([.hb (.slotOp loc capacity false)] : AccessTrace))
             | none =>
                 if closed then do
                   let zero ← defaultValue ctx elem
-                  pure (zero, false, s)
+                  pure (zero, false, s, ([.hb (.closeAcquire loc)] : AccessTrace))
                 else stuck "select committed an unready receive clause"
           match targets with
-          | [] => return (.exec body env k, s₁)
+          | [] => return (.exec body env k, s₁, tr)
           | _ :: _ => do
               let (c', s₂) ← enterRecvTargets s₁ targets
                 (recvStores v ok targets.length) body env k
-              return (c', s₂)
+              return (c', s₂, tr)
 
 /-- **The `select` READINESS step and THE L2 ENVELOPE** (spec steps
 2-3; this docstring is the envelope statement, shipped with its site —
@@ -4146,13 +4615,15 @@ inductive SelectOutcome where
   /-- No pick consumed: default taken, park (`committed? = none`), or
   a singleton-ready commit (`committed? = some` the clause — Q2: the
   commit identity is EMITTED by the apply, so the step event and the
-  detector never re-derive it from the readiness analysis). -/
-  | done (c : Config) (σ : Store) (committed? : Option EvClause)
+  detector never re-derive it from the readiness analysis). `tr` is the
+  apply's LABEL (C1 S2c): the poll reads, then the commit's actions. -/
+  | done (c : Config) (σ : Store) (committed? : Option EvClause) (tr : AccessTrace)
   /-- Multi-ready (≥ 2): the PRE-COMMITTED result of every ready
   clause, clause order, for the L2 pick — each paired with ITS clause
-  (Q2's emitted commit identity) — `.inl` a committed configuration,
-  `.inr` a panic message. -/
-  | picks (commits : List (EvClause × Sum (Config × Store) String))
+  (Q2's emitted commit identity) — `.inl` a committed configuration
+  with its commit's label, `.inr` a panic message; `poll` is the
+  select's entry emission, common to every pick. -/
+  | picks (poll : AccessTrace) (commits : List (EvClause × Sum (Config × Store × AccessTrace) String))
 
 /-- The stream-FREE core of `applySelect` (the `applyStmtOpCore`
 precedent: choices-obliviousness of apply-SUCCESS is true by
@@ -4177,6 +4648,9 @@ def applySelectCore (s : Store)
     (vs : List GoValue) (env : LocalEnv) (k : Cont) :
     Except Stop SelectOutcome := do
   let evs ← evalClauses clauses vs
+  -- THE LABEL's head (C1 S2c): `selectgo` pass 1's channel-object read per
+  -- polled send clause (BUG-046), before any commit — on EVERY outcome.
+  let poll := selectPoll evs
   match ← readyClauses s evs with
   | [] =>
       -- NO ready clause: neither arm is a registry-op COMPLETION, so
@@ -4196,44 +4670,45 @@ def applySelectCore (s : Store)
       -- successor set. The park arm needs none either — a park IS a
       -- boundary shape already (§B1's "NOT wrapped" note).
       match default? with
-      | some d => return .done (.exec d env k) s none
-      | none => return .done (.blockedSelect evs env k) s none
+      | some d => return .done (.exec d env k) s none poll
+      | none => return .done (.blockedSelect evs env k) s none poll
   | [c] => do
-      let (c', s') ← commitClause ctx s env k c
-      return .done c' s' (some c)
+      let (c', s', tr) ← commitClause ctx s env k c
+      return .done c' s' (some c) (poll ++ tr)
   | ready => do
       let commits ← ready.mapM fun cl =>
         (match commitClause ctx s env k cl with
         | .ok r => .ok (cl, .inl r)
         | .error (.panic msg) => .ok (cl, .inr msg)
         | .error e => .error e :
-          Except Stop (EvClause × Sum (Config × Store) String))
-      return .picks commits
+          Except Stop (EvClause × Sum (Config × Store × AccessTrace) String))
+      return .picks poll commits
 
 @[inherit_doc applySelectCore]
 def applySelect (s : Store) (clauses : List (SelectClauseHead × Stmt))
     (default? : Option Stmt) (vs : List GoValue) (env : LocalEnv) (k : Cont)
     (ch : Choices) :
-    Except Stop (Config × Store × Choices × Option EvClause) := do
+    Except Stop (Config × Store × Choices × Option EvClause × AccessTrace) := do
   -- The 4th component is Q2's emitted commit identity (`none` =
   -- default taken or parked): the sequential `stepFn` arm PROJECTS it
   -- away; the pool's select interception (`stepThread`) carries it
-  -- into the step event so the race detector folds it instead of
-  -- replaying the readiness analysis and the stream.
+  -- into the step event. The 5th is the apply's LABEL (C1 S2c): the
+  -- poll reads and the picked commit's actions.
   match ← applySelectCore ctx s clauses default? vs env k with
-  | .done c' s' cl? => return (c', s', ch, cl?)
-  | .picks commits =>
+  | .done c' s' cl? tr => return (c', s', ch, cl?, tr)
+  | .picks poll commits =>
       -- THE L2 CONSUMPTION (envelope statement in the docstring
       -- above): bound = the ready-clause count, ≥ 2 by construction
       -- (`.picks` arises only from a multi-ready analysis).
       let (idx, ch') := Choices.consumeAt .l2Entry commits.length ch
       match commits[idx]? with
-      | some (cl, .inl (c', s')) => return (c', s', ch', some cl)
+      | some (cl, .inl (c', s', tr)) => return (c', s', ch', some cl, poll ++ tr)
       | some (cl, .inr msg) =>
           -- Defensive arm (unreachable today — docstring above): the
           -- picked clause's panic becomes a `.panicking` configuration
-          -- with the pick CONSUMED, exactly like the `.inl` route.
-          return (.panicking [panicEntry msg] k, s, ch', some cl)
+          -- with the pick CONSUMED, exactly like the `.inl` route; the
+          -- label is the poll alone (a panicking commit performs no action).
+          return (.panicking [panicEntry msg] k, s, ch', some cl, poll)
       | none => throw (.internal "select ready-clause pick out of range")
 
 /-! ## The consumption projection (design-hygiene wave (iii), B8, 2026-09-04)
@@ -4319,7 +4794,7 @@ def selectConsult? (σ : Store) (clauses : List (SelectClauseHead × Stmt))
     (default? : Option Stmt) (vs : List GoValue) (env : LocalEnv) (k : Cont) :
     Option (ChoiceSite × Nat) :=
   match applySelectCore ctx σ clauses default? vs env k with
-  | .ok (.picks commits) => some (.l2Entry, commits.length)
+  | .ok (.picks _ commits) => some (.l2Entry, commits.length)
   | _ => none
 
 /-- The sync apply's consult: a TRY head at an acquirable cell (`tryLockConsult?`). -/
@@ -5002,9 +5477,10 @@ inductive Step : Config → Store → Config → Store → AccessTrace → Prop 
         (.evalE e env (.chanStK op (v :: done) rest env k)) s []
   | chanStApply {op done v r env k s c' s' tr} :
       toResult (applyChanOp ctx s op (v :: done).reverse env k) = .ok r →
-      -- Channel traffic is SYNCHRONIZATION (no `.data` access); its
-      -- chan-object emissions are C1 S2c's.
-      deliver s k (fun (c', s') => (c', s', [])) r = (c', s', tr) →
+      -- Channel traffic is SYNCHRONIZATION (no `.data` access); the label
+      -- is the apply's own emission (C1 S2c): the channel-object read/write
+      -- gc instruments and the slot / close actions.
+      deliver s k (fun (c', s', tr) => (c', s', tr)) r = (c', s', tr) →
       Step (.retV v (.chanStK op done [] env k)) s c' s' tr
   -- `select` (spec's five steps): entry evaluates the clause operands in
   -- source order under `selectOpsK` (step 1); the apply step computes
@@ -5042,7 +5518,7 @@ inductive Step : Config → Store → Config → Store → AccessTrace → Prop 
       -- and its stream are projected away by the delivery: the
       -- successor configuration is what the rule relates.
       toResult (applySelect ctx s clauses default? (v :: done).reverse env k ch) = .ok r →
-      deliver s k (fun (c', s', _, _) => (c', s', [])) r = (c', s', tr) →
+      deliver s k (fun (c', s', _, _, tr) => (c', s', tr)) r = (c', s', tr) →
       Step (.retV v (.selectOpsK clauses default? done [] env k)) s c' s' tr
   -- Receive delivery, phases SPLIT (convergence round, BUG-029): phase
   -- 1 (`tgtOpK`) evaluates every target's OPERANDS left-to-right,
@@ -5144,8 +5620,9 @@ inductive Step : Config → Store → Config → Store → AccessTrace → Prop 
   | syncStApply {op done v r env k s ch c' s' tr} :
       toResult (applySyncOp ctx s ch op (v :: done).reverse env k) = .ok r →
       -- Sync traffic is the primitive's state transition (no `.data`
-      -- access); its sync-word emissions are C1 S2c's.
-      deliver s k (fun (c', s', _) => (c', s', [])) r = (c', s', tr) →
+      -- access); the label is the apply's own emission (C1 S2c): the
+      -- sync-word accesses and the acquire/release action.
+      deliver s k (fun (c', s', _, tr) => (c', s', tr)) r = (c', s', tr) →
       Step (.retV v (.syncStK op done [] env k)) s c' s' tr
   -- (The completion marker's strip `opDoneStrip` LEFT this relation at
   -- C5: the boundary is a per-goroutine flag of the pool (`Thread`), and
@@ -5165,9 +5642,10 @@ inductive Step : Config → Store → Config → Store → AccessTrace → Prop 
         (.evalE e env (.atomicStK op (v :: done) rest env k)) s []
   | atomicStApply {op done v r env k s c' s' tr} :
       toResult (applyAtomicOp ctx s op (v :: done).reverse env k) = .ok r →
-      -- The atomic op's own access at the cell (its ATOMIC kind) is C1
-      -- S2c's emission; no plain `.data` access here.
-      deliver s k (fun (c', s') => (c', s', [])) r = (c', s', tr) →
+      -- The atomic op's own access at the cell (its ATOMIC kind) and its
+      -- clock action are the apply's emission (C1 S2c); no plain `.data`
+      -- access here.
+      deliver s k (fun (c', s', tr) => (c', s', tr)) r = (c', s', tr) →
       Step (.retV v (.atomicStK op done [] env k)) s c' s' tr
   -- The unsequenced-operand probe (latitude E13 option (b), lane `e13-b`
   -- 2026-09-05, RULED [USER] relayed; envelope statement at

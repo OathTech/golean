@@ -169,6 +169,13 @@ structure Acc where
   consumed : Array Consumption := #[]
   alarms : Array String := #[]
   steps : Nat := 0
+  /-- THE FOLD-EQUALITY AUDIT's findings (C1 S2c-i): every pool step on which
+  the detector fold of record (`raceUpdate` — the registry arms over the
+  pre-step pool) and the one-fold `raceFold` (the step's LABEL alone) disagree
+  — in the detector state (structurally) or in the outcome class. Also counted
+  among `alarms`, so the corpus run's FINDINGS exit sees them. Retired with the
+  old fold at S2c-ii (the S2a instrument's precedent). -/
+  mismatches : Array String := #[]
 
 /-- Draw one consumption from the stream (0 on exhaustion, as the
 machine does), recording it with its menu-invariant verdict. Returns the
@@ -188,6 +195,39 @@ def Acc.draw (a : Acc) (site : ChoiceSite) (bound : Nat) (facts : MenuFacts) :
 
 def Acc.alarm (a : Acc) (msg : String) : Acc :=
   { a with alarms := a.alarms.push msg }
+
+def Acc.mismatch (a : Acc) (msg : String) : Acc :=
+  { a with alarms := a.alarms.push msg, mismatches := a.mismatches.push msg }
+
+def stepActionName : StepAction → String
+  | .spawned child => s!"spawned {child}" | .woke => "woke" | .paired j => s!"paired {j}"
+  | .selectCommit _ => "selectCommit" | .selectPass => "selectPass"
+  | .opDoneStrip => "opDoneStrip" | .aborted => "aborted" | .privateStep => "privateStep"
+
+/-- Render a label for a finding (bounded: the first 600 characters). -/
+def labelText (tr : AccessTrace) : String :=
+  let t := toString (repr tr)
+  if t.length > 600 then String.ofList (t.toList.take 600) ++ "…" else t
+
+/-- **THE FOLD-EQUALITY AUDIT** (C1 S2c-i; the S2a trace-equality audit's
+pattern — both accounts live in ONE binary, compared per step, a difference
+is a FINDING, never absorbed): the fold of record and the one-fold are both
+run from the same pre-state on the same step; their results must agree
+STRUCTURALLY (`RaceState`'s derived `BEq`: clocks, the sorted shadow, the
+channel/sync/atomic clock tables — insertion order included, so a different
+ORDER of clock operations is a finding too) or fail with the same terminal /
+diagnostic. The tracer continues with the fold of record's result. -/
+def Acc.auditFold (a : Acc) (ev : StepEvent) (old new : Except Stop RaceState) : Acc :=
+  let where_ := s!"pool step {a.steps} who={ev.who} {stepActionName ev.action} label={labelText ev.trace}"
+  match old, new with
+  | .ok r₁, .ok r₂ =>
+      if r₁ == r₂ then a
+      else a.mismatch s!"fold-mismatch: {where_}: states differ (clocks {r₁.clocks == r₂.clocks}, shadow {r₁.shadow == r₂.shadow}, chans {r₁.chans == r₂.chans}, syncs {r₁.syncs == r₂.syncs}, atomics {r₁.atomics == r₂.atomics})"
+  | .error e₁, .error e₂ =>
+      if e₁.status == e₂.status && e₁.message == e₂.message then a
+      else a.mismatch s!"fold-mismatch: {where_}: raceUpdate {e₁.status}: {e₁.message} vs raceFold {e₂.status}: {e₂.message}"
+  | .ok _, .error e => a.mismatch s!"fold-mismatch: {where_}: raceUpdate ok vs raceFold {e.status}: {e.message}"
+  | .error e, .ok _ => a.mismatch s!"fold-mismatch: {where_}: raceUpdate {e.status}: {e.message} vs raceFold ok"
 
 -- RETIRED (C1 S2b-ii, 2026-09-18): the TRACE-EQUALITY AUDIT of C1 S2a — the per-step
 -- comparison of the emitted `.data` trace with the footprint table's account
@@ -532,7 +572,7 @@ def seqFacts (σ : Store) (c : Config) : ChoiceSite → MenuFacts
       match c with
       | .retV v (.selectOpsK clauses default? done [] env k) =>
           match applySelectCore ctx σ clauses default? ((v :: done).reverse) env k with
-          | .ok (.picks commits) => entryFacts σ c commits.length
+          | .ok (.picks _ commits) => entryFacts σ c commits.length
           | _ => { specWidth := none, invariants := [("l2Entry site without a multi-ready analysis", false)],
                    pickCheck := fun _ => [] }
       | _ => { specWidth := none, invariants := [("l2Entry site at a non-select configuration", false)],
@@ -705,8 +745,11 @@ partial def poolStep (fuel : Nat) (m : MultiConfig) (r : RaceState) (a : Acc) :
       let mine := stepRecords a from_
       let a := if mine == ev.picks then a
         else a.alarm s!"pick-record mismatch: machine emitted {ev.picks.length} record(s), tracer has {mine.length} for the pool-recorded sites at consumption #{from_}"
+      -- THE FOLD-EQUALITY AUDIT (C1 S2c-i): both folds from the same pre-state.
+      let old := raceUpdate ctx m.shared m.threads ev m' r
+      let a := a.auditFold ev old (raceFold ev m' r)
       let a := { a with steps := a.steps + 1 }
-      match raceUpdate ctx m.shared m.threads ev m' r with
+      match old with
       | .error .raceDetected => return { status := "race", acc := a }
       | .error e => throw s!"race-detector update failed: {e.status}: {e.message}"
       | .ok r' => poolLoop fuel m' r' a
@@ -819,6 +862,8 @@ structure StreamReport where
   variance comparison across streams. -/
   observation : String
   driverAgreement : String
+  /-- The fold-equality audit's findings (C1 S2c-i). -/
+  mismatches : List String
 
 def summarize (spec : String) (out : RunOutcome) (obs : String) (agree : String) : StreamReport :=
   let cs := out.acc.consumed.toList
@@ -834,7 +879,8 @@ def summarize (spec : String) (out : RunOutcome) (obs : String) (agree : String)
     violations := cs.flatMap (·.violations)
     alarms := out.acc.alarms.toList
     observation := obs
-    driverAgreement := agree }
+    driverAgreement := agree
+    mismatches := out.acc.mismatches.toList }
 
 def perSiteString (ps : List (ChoiceSite × Nat)) : String :=
   if ps.isEmpty then "-" else ";".intercalate (ps.map fun (s, n) => s!"{siteName s}={n}")
@@ -851,14 +897,15 @@ def firstOrDash (l : List String) : String :=
 def tsvHeader : String :=
   "\t".intercalate ["id", "stream", "status", "consumed", "wide", "exhaustedAt",
     "wideAfterExhaustion", "perSite", "maxBound", "violations", "firstViolation",
-    "alarms", "firstAlarm", "obsHash", "driverAgreement"]
+    "alarms", "firstAlarm", "obsHash", "driverAgreement", "foldMismatches", "firstFoldMismatch"]
 
 def StreamReport.tsvLine (id : String) (r : StreamReport) : String :=
   "\t".intercalate [id, (if r.streamSpec == "" then "default" else r.streamSpec), r.status,
     toString r.consumed, toString r.wide, optNat r.exhaustedAt, toString r.wideAfterExhaustion,
     perSiteString r.perSite, toString r.maxBound, toString r.violations.length,
     firstOrDash r.violations, toString r.alarms.length, firstOrDash r.alarms,
-    toString r.observation.hash, r.driverAgreement]
+    toString r.observation.hash, r.driverAgreement,
+    toString r.mismatches.length, firstOrDash r.mismatches]
 
 /-- Trace one stream and run the driver-agreement cross-checks:
 `CLI.enumRunProgram`'s status/leftover meter and the real engine's

@@ -291,23 +291,22 @@ theorem stepFn_selectApply_inv {σ : Store} {v : GoValue}
     {ch : Choices} {c' : Config} {σ' : Store} {ch' : Choices} {tr : AccessTrace}
     (h : stepFn ctx σ (.retV v (.selectOpsK clauses default? done [] env k')) ch
       = .ok (c', σ', ch', tr)) :
-    tr = [] ∧
-    ((∃ cl?, applySelect ctx σ clauses default? ((v :: done).reverse) env k' ch
-        = .ok (c', σ', ch', cl?))
+    (∃ cl?, applySelect ctx σ clauses default? ((v :: done).reverse) env k' ch
+        = .ok (c', σ', ch', cl?, tr))
       ∨ (∃ msg, applySelect ctx σ clauses default? ((v :: done).reverse) env k' ch
           = .error (.panic msg)
           ∧ c' = .panicking [panicEntry msg] k'
-          ∧ σ' = σ ∧ ch' = ch)) := by
+          ∧ σ' = σ ∧ ch' = ch ∧ tr = []) := by
   unfold stepFn at h
   dsimp only at h
   cases happ : applySelect ctx σ clauses default? ((v :: done).reverse) env k' ch with
   | ok r =>
-      obtain ⟨c₂, s₂, ch₂, cl₂⟩ := r
+      obtain ⟨c₂, s₂, ch₂, cl₂, tr₂⟩ := r
       rw [happ] at h
       simp only [toResult_ok, Bind.bind, Except.bind, pure_eq_ok, deliverS_ok,
         Except.ok.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl, rfl, rfl⟩ := h
-      exact ⟨rfl, .inl ⟨cl₂, rfl⟩⟩
+      exact .inl ⟨cl₂, rfl⟩
   | error e =>
       rw [happ] at h
       cases_stop e <;>
@@ -316,7 +315,7 @@ theorem stepFn_selectApply_inv {σ : Store} {v : GoValue}
           deliverS_panic, List.nil_append, Except.ok.injEq, Prod.mk.injEq, reduceCtorEq] at h
       case panic msg =>
         obtain ⟨rfl, rfl, rfl, rfl⟩ := h
-        exact ⟨rfl, .inr ⟨msg, rfl, rfl, rfl, rfl⟩⟩
+        exact .inr ⟨msg, rfl, rfl, rfl, rfl, rfl⟩
 
 /-- The one-thread `stepThread` is `stepFn`, results re-wrapped with a
 step event attached and the successor flagged by the post-op boundary
@@ -353,17 +352,17 @@ theorem stepThread_single {σ : Store} {c : Config} {ch : Choices}
       cases happly : applySelect ctx σ clauses default?
           ((v :: done).reverse) env k' ch with
       | ok r =>
-          obtain ⟨c', s', ch₂, cl?⟩ := r
+          obtain ⟨c', s', ch₂, cl?, tr⟩ := r
           have hfn : stepFn ctx σ
               (.retV v (.selectOpsK clauses default? done [] env k')) ch
-              = .ok (c', s', ch₂, []) := by
+              = .ok (c', s', ch₂, tr) := by
             unfold stepFn
             dsimp only
             rw [happly]
             rfl
           refine ⟨⟨0, match cl? with
             | some cl => .selectCommit cl
-            | none => .selectPass, [], [], []⟩, ?_⟩
+            | none => .selectPass, [], [], tr⟩, ?_⟩
           rw [hfn]
           simp only [Functor.map, Except.map]
           cases cl? <;> rfl
@@ -923,8 +922,8 @@ theorem step_spawnPos_elim {c : Config} {σ : Store} {c' : Config}
 
 /-- A per-goroutine step never starts at an abort (B4: the abort has no
 `Step`, and a spawn position is never one). -/
-theorem abort?_none_of_stepE {c : Config} {σ : Store} {c' : Config}
-    {σ' : Store} {efs : List Config} {tr : AccessTrace} (h : StepE ctx c σ c' σ' efs tr) :
+theorem abort?_none_of_stepE {n : Nat} {c : Config} {σ : Store} {c' : Config}
+    {σ' : Store} {efs : List Config} {tr : AccessTrace} (h : StepE ctx n c σ c' σ' efs tr) :
     c.abort? = none := by
   cases hab : c.abort? with
   | none => rfl
@@ -989,7 +988,7 @@ theorem stepThreadInto_sound {m : MultiConfig} {i : Nat} {ch ch' : Choices}
         cases hres : resumeThread ctx m.shared c with
         | error e => rw [hres] at hst; cases hst
         | ok r₂ =>
-          obtain ⟨c', s₂⟩ := r₂
+          obtain ⟨c', s₂, tr₂⟩ := r₂
           rw [hres] at hst
           simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hst
           obtain ⟨rfl, rfl, rfl, rfl⟩ := hst
@@ -1128,7 +1127,7 @@ theorem stepThreadInto_sound {m : MultiConfig} {i : Nat} {ch ch' : Choices}
                     cases hap : applyPairing ctx m.shared m.threads i bc cand' with
                     | error e => rw [hap] at hst; cases hst
                     | ok r₃ =>
-                      obtain ⟨ts', s₃⟩ := r₃
+                      obtain ⟨ts', s₃, tr₃⟩ := r₃
                       rw [hap] at hst
                       simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hst
                       obtain ⟨rfl, rfl, rfl, rfl⟩ := hst
@@ -1160,19 +1159,19 @@ theorem stepThreadInto_sound {m : MultiConfig} {i : Nat} {ch ch' : Choices}
                         cases hap : applyPairing ctx m.shared m.threads i bc cand' with
                         | error e => rw [hap] at hst; cases hst
                         | ok r₃ =>
-                          obtain ⟨ts', s₃⟩ := r₃
+                          obtain ⟨ts', s₃, tr₃⟩ := r₃
                           rw [hap] at hst
                           simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hst
                           obtain ⟨rfl, rfl, rfl, rfl⟩ := hst
                           obtain ⟨hlt, hidxeq⟩ := List.getElem?_eq_some_iff.mp hgetL
                           exact StepM.pickPair hsched hti hbl hsp hac hget
                             (idx := idx) hlt (by rw [hidxeq]; exact hap)
-                | commit cl envc kc =>
+                | commit evs cl envc kc =>
                   simp only [Bind.bind, Except.bind] at hst
                   cases hcom : commitClause ctx m.shared envc kc cl with
                   | error e => rw [hcom] at hst; cases hst
                   | ok r₃ =>
-                    obtain ⟨c₃, s₃⟩ := r₃
+                    obtain ⟨c₃, s₃, tr₃⟩ := r₃
                     rw [hcom] at hst
                     simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hst
                     obtain ⟨rfl, rfl, rfl, rfl⟩ := hst
@@ -1370,11 +1369,11 @@ theorem stepM_complete {m m' : MultiConfig} {tr : AccessTrace} (h : StepM ctx m 
         obtain ⟨v, clauses, default?, done, env, k'⟩ := p
         have hshape := selectApplyPlan_shape hselp
         subst hshape
-        obtain ⟨rfl, hinv⟩ := stepFn_selectApply_inv hfn
-        rcases hinv with ⟨cl?, happly⟩ | ⟨msg, happly, rfl, rfl, -⟩
+        have hinv := stepFn_selectApply_inv hfn
+        rcases hinv with ⟨cl?, happly⟩ | ⟨msg, happly, rfl, rfl, -, rfl⟩
         · have hinner : ∃ evI, stepThread ctx m.shared m.threads i ch₀
               = .ok (m.threads.setIfInBounds i (Thread.afterStep m.shared (.retV v (.selectOpsK clauses default? done [] env k')) c'), σ', ch₀', evI)
-              ∧ evI.trace = [] :=
+              ∧ evI.trace = tr :=
             ⟨_, by
               unfold stepThread
               rw [hti]
@@ -1413,12 +1412,13 @@ theorem stepM_complete {m m' : MultiConfig} {tr : AccessTrace} (h : StepM ctx m 
     | spawn hplan' hspawn =>
       -- The relation's own stream is the witness (BUG-087 audit fix F1:
       -- the spawn's entry panic draws the nilValueMethodText pick); the
-      -- label is the child's entry read (S2a).
-      rename_i cv args k child chs chs'
+      -- label is the spawn edge and the child's entry read attributed to
+      -- it (S2c).
+      rename_i cv args k child chs chs' trS
       have hinner : ∃ evI, stepThread ctx m.shared m.threads i chs
           = .ok ((m.threads.setIfInBounds i (Thread.afterStep m.shared c c')).push
               (.running child none), σ', chs', evI)
-          ∧ evI.trace = tr :=
+          ∧ evI.trace = .hb (.spawn m.threads.size) :: trS.map (.attributed m.threads.size) :=
         ⟨_, by
           unfold stepThread
           rw [hti]
@@ -1497,14 +1497,14 @@ theorem stepM_complete {m m' : MultiConfig} {tr : AccessTrace} (h : StepM ctx m 
     | cons cand rest =>
       cases rest with
       | nil =>
-        have hap' : applyPairing ctx m.shared m.threads i bc cand = .ok (ts', σ'') := by
+        have hap' : applyPairing ctx m.shared m.threads i bc cand = .ok (ts', σ'', tr) := by
           have h0 : idx = 0 := by
             simp at hidx
             omega
           subst h0
           exact hap
         have hinner : ∃ evI, stepThread ctx m.shared m.threads i []
-            = .ok (ts', σ'', [], evI) ∧ evI.trace = [] :=
+            = .ok (ts', σ'', [], evI) ∧ evI.trace = tr :=
           ⟨_, by
             unfold stepThread
             rw [hti]
@@ -1538,7 +1538,7 @@ theorem stepM_complete {m m' : MultiConfig} {tr : AccessTrace} (h : StepM ctx m 
             exact Nat.mod_eq_of_lt hidx
           rw [hcc]
         have hinner : ∃ evI, stepThread ctx m.shared m.threads i [idx]
-            = .ok (ts', σ'', [], evI) ∧ evI.trace = [] :=
+            = .ok (ts', σ'', [], evI) ∧ evI.trace = tr :=
           ⟨_, by
             unfold stepThread
             rw [hti]
@@ -1576,14 +1576,14 @@ theorem stepM_complete {m m' : MultiConfig} {tr : AccessTrace} (h : StepM ctx m 
     | cons cand rest =>
       cases rest with
       | nil =>
-        have hap' : applyPairing ctx m.shared m.threads i bc cand = .ok (ts', σ'') := by
+        have hap' : applyPairing ctx m.shared m.threads i bc cand = .ok (ts', σ'', tr) := by
           have h0 : idx = 0 := by
             simp at hidx
             omega
           subst h0
           exact hap
         have hinner : ∃ evI, stepThread ctx m.shared m.threads i [sel]
-            = .ok (ts', σ'', [], evI) ∧ evI.trace = [] :=
+            = .ok (ts', σ'', [], evI) ∧ evI.trace = tr :=
           ⟨_, by
             unfold stepThread
             rw [hti]
@@ -1622,7 +1622,7 @@ theorem stepM_complete {m m' : MultiConfig} {tr : AccessTrace} (h : StepM ctx m 
             exact Nat.mod_eq_of_lt hidx
           rw [hcc]
         have hinner : ∃ evI, stepThread ctx m.shared m.threads i (sel :: [idx])
-            = .ok (ts', σ'', [], evI) ∧ evI.trace = [] :=
+            = .ok (ts', σ'', [], evI) ∧ evI.trace = tr :=
           ⟨_, by
             unfold stepThread
             rw [hti]
@@ -1640,7 +1640,7 @@ theorem stepM_complete {m m' : MultiConfig} {tr : AccessTrace} (h : StepM ctx m 
         obtain ⟨ch, ch', ev, hsm, hev⟩ := stepMulti_of_inner hsched hinner
         exact ⟨ch, ch', ev, hsm, hev.trans hevI⟩
   | pickCommit hsched hti hblc hsp hplan hget hcom =>
-    rename_i i c cl envc kc os sel c' σ'
+    rename_i i c evs cl envc kc os sel c' σ' trc
     have hab : c.abort? = none := by
       cases hab : c.abort? with
       | none => rfl
@@ -1657,7 +1657,7 @@ theorem stepM_complete {m m' : MultiConfig} {tr : AccessTrace} (h : StepM ctx m 
       exact Nat.mod_eq_of_lt hsel
     have hinner : ∃ evI, stepThread ctx m.shared m.threads i [sel]
         = .ok (m.threads.setIfInBounds i (Thread.afterStep m.shared c c'), σ', [], evI)
-        ∧ evI.trace = [] :=
+        ∧ evI.trace = selectPoll evs ++ trc :=
       ⟨_, by
         unfold stepThread
         rw [hti]
@@ -1674,7 +1674,7 @@ theorem stepM_complete {m m' : MultiConfig} {tr : AccessTrace} (h : StepM ctx m 
     rename_i i c c' σ'
     have hinner : ∃ evI, stepThread ctx m.shared m.threads i []
         = .ok (m.threads.setIfInBounds i (Thread.completed c'), σ', [], evI)
-        ∧ evI.trace = [] :=
+        ∧ evI.trace = tr :=
       ⟨_, by
         unfold stepThread
         rw [hti]

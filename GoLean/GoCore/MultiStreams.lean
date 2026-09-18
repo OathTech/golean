@@ -79,7 +79,7 @@ checker. -/
 def selectApplyDone (s : Store) : Config → Bool
   | .retV v (.selectOpsK clauses default? done [] env k) =>
       match applySelectCore ctx s clauses default? ((v :: done).reverse) env k with
-      | .ok (.done _ _ _) => true
+      | .ok (.done _ _ _ _) => true
       | _ => false
   | _ => false
 
@@ -165,8 +165,8 @@ commit — never from the `.picks` (≥ 2 ready) arm. -/
 theorem applySelectCore_done_inv {s : Store}
     {clauses : List (SelectClauseHead × Stmt)} {default? : Option Stmt}
     {vs : List GoValue} {env : LocalEnv} {k : Cont}
-    {c' : Config} {s' : Store} {cl? : Option EvClause}
-    (h : applySelectCore ctx s clauses default? vs env k = .ok (.done c' s' cl?)) :
+    {c' : Config} {s' : Store} {cl? : Option EvClause} {tr : AccessTrace}
+    (h : applySelectCore ctx s clauses default? vs env k = .ok (.done c' s' cl? tr)) :
     ∃ evs, evalClauses clauses vs = .ok evs
       ∧ (readyClauses s evs = .ok []
         ∨ ∃ cl, readyClauses s evs = .ok [cl]) := by
@@ -192,10 +192,10 @@ stream — with its emitted commit identity (Q2's 4th component). -/
 theorem applySelect_of_done {s : Store}
     {clauses : List (SelectClauseHead × Stmt)} {default? : Option Stmt}
     {vs : List GoValue} {env : LocalEnv} {k : Cont}
-    {c' : Config} {s' : Store} {cl? : Option EvClause}
-    (h : applySelectCore ctx s clauses default? vs env k = .ok (.done c' s' cl?)) :
+    {c' : Config} {s' : Store} {cl? : Option EvClause} {tr : AccessTrace}
+    (h : applySelectCore ctx s clauses default? vs env k = .ok (.done c' s' cl? tr)) :
     ∀ ch : Choices,
-      applySelect ctx s clauses default? vs env k ch = .ok (c', s', ch, cl?) := by
+      applySelect ctx s clauses default? vs env k ch = .ok (c', s', ch, cl?, tr) := by
   intro ch
   unfold applySelect
   simp only [h, Bind.bind, Except.bind]
@@ -207,12 +207,12 @@ the apply commits/parks/defaults with the stream returned verbatim
 theorem stepFn_select_done {s : Store} {v : GoValue}
     {clauses : List (SelectClauseHead × Stmt)} {default? : Option Stmt}
     {done : List GoValue} {env : LocalEnv} {k : Cont}
-    {c' : Config} {s' : Store} {cl? : Option EvClause}
+    {c' : Config} {s' : Store} {cl? : Option EvClause} {tr : AccessTrace}
     (h : applySelectCore ctx s clauses default? ((v :: done).reverse) env k
-      = .ok (.done c' s' cl?)) :
+      = .ok (.done c' s' cl? tr)) :
     ∀ ch : Choices,
       stepFn ctx s (.retV v (.selectOpsK clauses default? done [] env k)) ch
-        = .ok (c', s', ch, []) := by
+        = .ok (c', s', ch, tr) := by
   intro ch
   unfold stepFn
   simp only [applySelect_of_done h ch]
@@ -343,8 +343,8 @@ theorem stepThread_oblivious {s : Store} {ts : Array Thread} {i : Nat}
                 | error e => rw [happly] at hobl; cases hobl
                 | ok o =>
                   cases o with
-                  | picks commits => rw [happly] at hobl; cases hobl
-                  | done c₂ s₂ cl? =>
+                  | picks poll commits => rw [happly] at hobl; cases hobl
+                  | done c₂ s₂ cl? tr₂ =>
                     simp only [bind_eq_ok] at h
                     obtain ⟨⟨plan, ch₁, ps₁⟩, hplan, h⟩ := h
                     rw [arrivalPlan_of_cellPath (ch := ch₀) harr] at hplan

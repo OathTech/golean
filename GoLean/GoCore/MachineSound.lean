@@ -1026,7 +1026,7 @@ theorem step_complete {c : Config} {s : Store} {c' : Config} {s' : Store} {tr : 
   -- 4): realize under exactly it.
   case selectApply =>
     rename_i clauses default? done v r env k ch₀ hres hdel
-    rcases toResult_cases hres with ⟨⟨c₂, s₂, ch₁, cl⟩, rfl, hX⟩ | ⟨msg, rfl, hX⟩ <;>
+    rcases toResult_cases hres with ⟨⟨c₂, s₂, ch₁, cl, tr₂⟩, rfl, hX⟩ | ⟨msg, rfl, hX⟩ <;>
       simp only [List.reverse_cons] at hX
     · simp only [deliver_ok, Prod.mk.injEq] at hdel
       obtain ⟨rfl, rfl, rfl⟩ := hdel
@@ -1037,7 +1037,7 @@ theorem step_complete {c : Config} {s : Store} {c' : Config} {s' : Store} {tr : 
   -- Q-TRYLOCK): realize under exactly it — the select recipe.
   case syncStApply =>
     rename_i op done v r env k ch₀ hres hdel
-    rcases toResult_cases hres with ⟨⟨c₂, s₂, ch₁⟩, rfl, hX⟩ | ⟨msg, rfl, hX⟩ <;>
+    rcases toResult_cases hres with ⟨⟨c₂, s₂, ch₁, tr₂⟩, rfl, hX⟩ | ⟨msg, rfl, hX⟩ <;>
       simp only [List.reverse_cons] at hX
     · simp only [deliver_ok, Prod.mk.injEq] at hdel
       obtain ⟨rfl, rfl, rfl⟩ := hdel
@@ -2977,7 +2977,7 @@ theorem tryDeliver_error_any {b : Bool} {σ : Store} {targets : List Assignee}
 discipline): `.ok` under one `spurious` flag ⇒ `.ok` under the other. -/
 theorem applyTryLock_ok_any {σ : Store} {op : SyncOp} {loc : Loc}
     {pre : SyncPrim} {b₀ : Bool} {targets : List Assignee} {env : LocalEnv}
-    {k : Cont} {r : Config × Store}
+    {k : Cont} {r : Config × Store × AccessTrace}
     (h : applyTryLock ctx σ op loc pre b₀ targets env k = .ok r) (b : Bool) :
     ∃ r₂, applyTryLock ctx σ op loc pre b targets env k = .ok r₂ := by
   rw [applyTryLock.eq_def] at h ⊢
@@ -2991,9 +2991,42 @@ theorem applyTryLock_ok_any {σ : Store} {op : SyncOp} {loc : Loc}
     obtain ⟨σA, hst, h⟩ := h
     simp only [hst]
     cases b₀ <;> cases b <;> simp only [Bool.false_eq_true, ↓reduceIte] at h ⊢
-    all_goals first
-      | exact ⟨_, h⟩
-      | exact tryDeliver_ok_any h _ _
+    · exact ⟨_, h⟩
+    · -- acquired under b₀, spurious under b: the delivery at the PRE state
+      simp only [bind_eq_ok] at h
+      obtain ⟨⟨c₀, σ₀⟩, hp, -⟩ := h
+      obtain ⟨⟨c₂, σ₂⟩, hp₂⟩ := tryDeliver_ok_any hp false σ
+      rw [hp₂]
+      exact ⟨_, rfl⟩
+    · -- spurious under b₀, acquired under b: the delivery at the acquired state
+      simp only [bind_eq_ok] at h
+      obtain ⟨⟨c₀, σ₀⟩, hp, -⟩ := h
+      obtain ⟨⟨c₂, σ₂⟩, hp₂⟩ := tryDeliver_ok_any hp true σA
+      rw [hp₂]
+      exact ⟨_, rfl⟩
+    · exact ⟨_, h⟩
+
+/-- The LABELLED try delivery (`applyTryLock`'s arms: `tryDeliver`, then the
+label appended) errors exactly when `tryDeliver` does — for every flag,
+state and label (C1 S2c). -/
+theorem tryDeliverL_error_any {b : Bool} {σ : Store} {targets : List Assignee}
+    {env : LocalEnv} {k : Cont} {tr : AccessTrace} {e : Stop}
+    (h : (do let (c', s') ← tryDeliver b σ targets env k
+             pure ((c', s', tr) : Config × Store × AccessTrace)) = .error e)
+    (b₂ : Bool) (σ₂ : Store) (tr₂ : AccessTrace) :
+    (do let (c', s') ← tryDeliver b₂ σ₂ targets env k
+        pure ((c', s', tr₂) : Config × Store × AccessTrace)) = .error e := by
+  cases hd : tryDeliver b σ targets env k with
+  | error e' =>
+      rw [hd] at h
+      simp only [Bind.bind, Except.bind, Except.error.injEq] at h
+      subst h
+      rw [tryDeliver_error_any hd b₂ σ₂]
+      rfl
+  | ok p =>
+      rw [hd] at h
+      obtain ⟨c, s⟩ := p
+      simp [Bind.bind, Except.bind] at h
 
 /-- `applyTryLock`'s ERROR is pick-independent too: every error fires
 before the pick applies (`tryAcquire`, the pre-committed `storeLoc`) or
@@ -3018,9 +3051,10 @@ theorem applyTryLock_error_any {σ : Store} {op : SyncOp} {loc : Loc}
       | ok σA =>
         rw [hst] at h
         cases b₀ <;> cases b <;> simp only [Bool.false_eq_true, ↓reduceIte] at h ⊢
-        all_goals first
-          | exact h
-          | exact tryDeliver_error_any h _ _
+        · exact h
+        · exact tryDeliverL_error_any h _ _ _
+        · exact tryDeliverL_error_any h _ _ _
+        · exact h
 
 /-- Is this configuration a TRY head's sync-apply position (the one sync
 apply that draws the `tryLock` site — Q-TRYLOCK)? Conservative, like
@@ -3044,13 +3078,13 @@ theorem consumesTryLock_none {v : GoValue} {op : SyncOp} {done : List GoValue}
 success — the `applyStmtOp_eq_core` twin. -/
 theorem applySyncOp_core_ok {σ : Store} {ch₀ : Choices} {op : SyncOp}
     {vs : List GoValue} {env : LocalEnv} {k : Cont} {c' : Config}
-    {σ' : Store} {ch' : Choices} (hop : op.tryTargets? = none)
-    (h : applySyncOp ctx σ ch₀ op vs env k = .ok (c', σ', ch')) :
-    ch' = ch₀ ∧ ∀ ch : Choices, applySyncOp ctx σ ch op vs env k = .ok (c', σ', ch) := by
+    {σ' : Store} {ch' : Choices} {tr : AccessTrace} (hop : op.tryTargets? = none)
+    (h : applySyncOp ctx σ ch₀ op vs env k = .ok (c', σ', ch', tr)) :
+    ch' = ch₀ ∧ ∀ ch : Choices, applySyncOp ctx σ ch op vs env k = .ok (c', σ', ch, tr) := by
   rw [applySyncOp.eq_def] at h
   rw [hop] at h
   simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-  obtain ⟨⟨c₀, σ₀⟩, hcore, rfl, rfl, rfl⟩ := h
+  obtain ⟨⟨c₀, σ₀, tr₀⟩, hcore, rfl, rfl, rfl, rfl⟩ := h
   refine ⟨rfl, fun ch => ?_⟩
   rw [applySyncOp.eq_def, hop]
   simp [hcore, Bind.bind, Except.bind]
@@ -3073,24 +3107,24 @@ theorem applySyncOp_core_error {σ : Store} {ch₀ : Choices} {op : SyncOp}
 never see the stream, the TRY heads by `applyTryLock_ok_any`. -/
 theorem applySyncOp_ok_any_ch {σ : Store} {ch₀ : Choices} {op : SyncOp}
     {vs : List GoValue} {env : LocalEnv} {k : Cont} {c' : Config}
-    {σ' : Store} {ch₁ : Choices}
-    (h : applySyncOp ctx σ ch₀ op vs env k = .ok (c', σ', ch₁)) (ch : Choices) :
-    ∃ (c₂ : Config) (σ₂ : Store) (ch₂ : Choices),
-      applySyncOp ctx σ ch op vs env k = .ok (c₂, σ₂, ch₂) := by
+    {σ' : Store} {ch₁ : Choices} {tr₁ : AccessTrace}
+    (h : applySyncOp ctx σ ch₀ op vs env k = .ok (c', σ', ch₁, tr₁)) (ch : Choices) :
+    ∃ (c₂ : Config) (σ₂ : Store) (ch₂ : Choices) (tr₂ : AccessTrace),
+      applySyncOp ctx σ ch op vs env k = .ok (c₂, σ₂, ch₂, tr₂) := by
   cases hop : op.tryTargets? with
   | none =>
     obtain ⟨-, hall⟩ := applySyncOp_core_ok hop h
-    exact ⟨c', σ', ch, hall ch⟩
+    exact ⟨c', σ', ch, tr₁, hall ch⟩
   | some targets =>
     rw [applySyncOp.eq_def] at h ⊢
     rw [hop] at h ⊢
     split at h
     · rename_i av
       simp only [bind_eq_ok] at h
-      obtain ⟨loc, hloc, pre, hcell, ⟨c₀, σ₀⟩, happ, -⟩ := h
-      obtain ⟨⟨c₂, σ₂⟩, happ₂⟩ := applyTryLock_ok_any happ
+      obtain ⟨loc, hloc, pre, hcell, ⟨c₀, σ₀, tr₀⟩, happ, -⟩ := h
+      obtain ⟨⟨c₂, σ₂, tr₂⟩, happ₂⟩ := applyTryLock_ok_any happ
         ((Choices.consumeAt .tryLock (tryLockWidth op pre) ch).1 == 1)
-      refine ⟨c₂, σ₂, (Choices.consumeAt .tryLock (tryLockWidth op pre) ch).2, ?_⟩
+      refine ⟨c₂, σ₂, (Choices.consumeAt .tryLock (tryLockWidth op pre) ch).2, tr₂, ?_⟩
       simp [hloc, hcell, happ₂, Bind.bind, Except.bind]
     · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
     · rename_i heq
@@ -3191,9 +3225,9 @@ rule (G-U audit fix L6; the twin of `one_lt_appendSpillWidth` and
 `arrivalCases_multi_length`). -/
 theorem applySelectCore_picks_length {σ : Store}
     {clauses : List (SelectClauseHead × Stmt)} {default? : Option Stmt}
-    {vs : List GoValue} {env : LocalEnv} {k : Cont}
-    {commits : List (EvClause × Sum (Config × Store) String)}
-    (h : applySelectCore ctx σ clauses default? vs env k = .ok (.picks commits)) :
+    {vs : List GoValue} {env : LocalEnv} {k : Cont} {poll : AccessTrace}
+    {commits : List (EvClause × Sum (Config × Store × AccessTrace) String)}
+    (h : applySelectCore ctx σ clauses default? vs env k = .ok (.picks poll commits)) :
     1 < commits.length := by
   unfold applySelectCore at h
   simp only [Bind.bind, Except.bind] at h
@@ -3209,7 +3243,7 @@ theorem applySelectCore_picks_length {σ : Store}
         · cases h
         · rename_i cs hmap
           simp only [pure, Except.pure, Except.ok.injEq, SelectOutcome.picks.injEq] at h
-          subst h
+          obtain ⟨-, rfl⟩ := h
           rw [mapM_ok_length hmap]
           -- the ready list fell through `[]` and `[c]`: length ≥ 2
           have key : ∀ l : List EvClause, (l = [] → False) → (∀ c, l = [c] → False)
@@ -3253,9 +3287,9 @@ theorem applySelect_ok_or_panic_any_ch {σ : Store}
   | ok outc =>
       rw [hcore] at h
       cases outc with
-      | done c' s' => exact .inl ⟨_, rfl⟩
-      | picks commits =>
-          dsimp only at h ⊢
+      | done c' s' cl? tr => exact .inl ⟨_, rfl⟩
+      | picks poll commits =>
+          try dsimp only at h ⊢
           cases commits with
           | nil =>
               rcases h with ⟨out, h⟩ | ⟨msg, h⟩ <;>
@@ -3439,8 +3473,8 @@ theorem step_complete_any_wf_aux {c : Config} {σ : Store} {c' : Config}
   -- The sync apply is pick-independent in apply-SUCCESS and in its panic
   -- (Q-TRYLOCK; `applySyncOp_ok_any_ch`/`applySyncOp_panic_any_ch`).
   case syncStApply op done v r env k ch₀ hres hdel =>
-    rcases toResult_cases hres with ⟨⟨c₂, σ₂, ch₂⟩, rfl, happly⟩ | ⟨msg, rfl, happly⟩
-    · obtain ⟨c₃, σ₃, ch₃, hap⟩ := applySyncOp_ok_any_ch happly ch
+    rcases toResult_cases hres with ⟨⟨c₂, σ₂, ch₂, tr₂⟩, rfl, happly⟩ | ⟨msg, rfl, happly⟩
+    · obtain ⟨c₃, σ₃, ch₃, tr₃, hap⟩ := applySyncOp_ok_any_ch happly ch
       simp only [List.reverse_cons] at hap
       simp [stepFn, hap, List.reverse_cons, Bind.bind, Except.bind]
     · have hap := applySyncOp_panic_any_ch happly ch
@@ -3456,7 +3490,7 @@ theorem step_complete_any_wf_aux {c : Config} {σ : Store} {c' : Config}
       · exact .inl ⟨x, hX⟩
       · exact .inr ⟨msg, hX⟩
     rcases applySelect_ok_or_panic_any_ch hor ch with
-      ⟨⟨c₂, σ₂, ch₂, cl₂⟩, hap⟩ | ⟨msg, hap⟩ <;>
+      ⟨⟨c₂, σ₂, ch₂, cl₂, tr₂⟩, hap⟩ | ⟨msg, hap⟩ <;>
       simp only [List.reverse_cons] at hap
     · simp [stepFn, hap, List.reverse_cons, Bind.bind, Except.bind]
     · simp [stepFn, hap, List.reverse_cons, Bind.bind, Except.bind]
@@ -4357,12 +4391,20 @@ theorem applyTryLock_noPanic {s : Store} {loc : Loc} {pre : SyncPrim}
     | ok w => exact ⟨w, rfl⟩
   obtain ⟨w, hw⟩ := hload
   unfold applyTryLock
+  try dsimp only
+  -- The labelled delivery: `tryDeliver`, then a `pure` of the label (C1 S2c).
+  have hdel : ∀ (b : Bool) (σ : Store) (tr : AccessTrace),
+      NoPanic (do let (c', s') ← tryDeliver b σ targets env k
+                  pure ((c', s', tr) : Config × Store × AccessTrace)) := fun b σ tr =>
+    NoPanic.bind (tryDeliver_noPanic _ _ _ _ _) fun p => by
+      obtain ⟨c, s⟩ := p
+      exact NoPanic.pure _
   refine NoPanic.bind (tryAcquire_noPanic _ _) fun r => ?_
   cases r with
-  | none => exact tryDeliver_noPanic _ _ _ _ _
+  | none => exact hdel _ _ _
   | some post =>
     refine NoPanic.bind (storeLoc_noPanic_of_loadLoc_ok s loc hw _) fun _ => ?_
-    exact NoPanic.ite (tryDeliver_noPanic _ _ _ _ _) (tryDeliver_noPanic _ _ _ _ _)
+    exact NoPanic.ite (hdel _ _ _) (hdel _ _ _)
 
 /-! ### The per-site stream lemmas behind `stepFn_consumption` (B8) -/
 
@@ -4390,22 +4432,23 @@ theorem bind_pair_stream {α : Type} (T : Except Stop α)
 /-- A `.done` readiness analysis: `applySelect` passes the stream through. -/
 theorem applySelect_done_stream {σ : Store} {clauses : List (SelectClauseHead × Stmt)}
     {default? : Option Stmt} {vs : List GoValue} {env : LocalEnv} {k : Cont}
-    {c₁ : Config} {s₁ : Store} {cl? : Option EvClause}
-    (h : applySelectCore ctx σ clauses default? vs env k = .ok (.done c₁ s₁ cl?)) (ch : Choices) :
-    applySelect ctx σ clauses default? vs env k ch = .ok (c₁, s₁, ch, cl?) := by
+    {c₁ : Config} {s₁ : Store} {cl? : Option EvClause} {tr : AccessTrace}
+    (h : applySelectCore ctx σ clauses default? vs env k = .ok (.done c₁ s₁ cl? tr)) (ch : Choices) :
+    applySelect ctx σ clauses default? vs env k ch = .ok (c₁, s₁, ch, cl?, tr) := by
   simp [applySelect, h, Bind.bind, Except.bind]
 
 /-- A multi-ready analysis: `applySelect`'s stream is the L2 pop, and the
 outcome depends on the stream only through the pick. -/
 theorem applySelect_picks_stream {σ : Store} {clauses : List (SelectClauseHead × Stmt)}
     {default? : Option Stmt} {vs : List GoValue} {env : LocalEnv} {k : Cont}
-    {commits : List (EvClause × Sum (Config × Store) String)}
-    (h : applySelectCore ctx σ clauses default? vs env k = .ok (.picks commits)) (ch : Choices) :
+    {poll : AccessTrace} {commits : List (EvClause × Sum (Config × Store × AccessTrace) String)}
+    (h : applySelectCore ctx σ clauses default? vs env k = .ok (.picks poll commits)) (ch : Choices) :
     applySelect ctx σ clauses default? vs env k ch =
       (match commits[(Choices.consumeAt .l2Entry commits.length ch).1]? with
-       | some (cl, .inl (c', s')) => .ok (c', s', (Choices.consumeAt .l2Entry commits.length ch).2, some cl)
+       | some (cl, .inl (c', s', tr)) =>
+           .ok (c', s', (Choices.consumeAt .l2Entry commits.length ch).2, some cl, poll ++ tr)
        | some (cl, .inr msg) =>
-           .ok (.panicking [panicEntry msg] k, σ, (Choices.consumeAt .l2Entry commits.length ch).2, some cl)
+           .ok (.panicking [panicEntry msg] k, σ, (Choices.consumeAt .l2Entry commits.length ch).2, some cl, poll)
        | none => .error (.internal "select ready-clause pick out of range")) := by
   simp only [applySelect, h, Bind.bind, Except.bind]
   rfl
@@ -4425,7 +4468,7 @@ theorem applySyncOp_try_stream {σ : Store} {op : SyncOp} {targets : List Assign
     applySyncOp ctx σ ch op [av] env k =
       (applyTryLock ctx σ op loc pre
         ((Choices.consumeAt .tryLock (tryLockWidth op pre) ch).1 == 1) targets env k).map
-        fun p => (p.1, p.2, (Choices.consumeAt .tryLock (tryLockWidth op pre) ch).2) := by
+        fun p => (p.1, p.2.1, (Choices.consumeAt .tryLock (tryLockWidth op pre) ch).2, p.2.2) := by
   simp only [applySyncOp, ht, hl, hc, Bind.bind, Except.bind, Except.map]
   cases applyTryLock ctx σ op loc pre
       ((Choices.consumeAt .tryLock (tryLockWidth op pre) ch).1 == 1) targets env k <;> rfl
@@ -4438,7 +4481,7 @@ theorem applySyncOp_try_nopop {σ : Store} {op : SyncOp} {targets : List Assigne
     (ht : op.tryTargets? = some targets) (hl : valueAsLoc av = .ok loc)
     (hc : syncCell ctx σ loc = .ok pre) (hw : tryLockWidth op pre ≤ 1) (ch : Choices) :
     applySyncOp ctx σ ch op [av] env k =
-      (applyTryLock ctx σ op loc pre false targets env k).map fun p => (p.1, p.2, ch) := by
+      (applyTryLock ctx σ op loc pre false targets env k).map fun p => (p.1, p.2.1, ch, p.2.2) := by
   rw [applySyncOp_try_stream ht hl hc ch, Choices.consumeAt_le_one hw]
   rfl
 
@@ -4920,9 +4963,9 @@ theorem stepFn_stmtOp_spill {σ : Store} {elem : Ty} {nt : Nat} {done : List GoV
 /-- The sync apply arm at a stream-oblivious apply (`r.map` with the
 stream passed through). -/
 theorem stepFn_syncApply_oblivious {σ : Store} {op : SyncOp} {done : List GoValue}
-    {v : GoValue} {env : LocalEnv} {k : Cont} {r : Except Stop (Config × Store)}
+    {v : GoValue} {env : LocalEnv} {k : Cont} {r : Except Stop (Config × Store × AccessTrace)}
     (hr : ∀ ch : Choices, applySyncOp ctx σ ch op (v :: done).reverse env k
-      = r.map fun p => (p.1, p.2, ch))
+      = r.map fun p => (p.1, p.2.1, ch, p.2.2))
     {ch₀ : Choices} {c' : Config} {σ' : Store} {ch₀' : Choices} {tr : AccessTrace}
     (h : stepFn ctx σ (.retV v (.syncStK op done [] env k)) ch₀ = .ok (c', σ', ch₀', tr)) :
     ch₀' = ch₀ ∧ ∀ ch : Choices,
@@ -4943,7 +4986,7 @@ theorem stepFn_syncApply_oblivious {σ : Store} {op : SyncOp} {done : List GoVal
     rw [hr ch]
     rfl
   | ok p =>
-    obtain ⟨c₂, σ₂⟩ := p
+    obtain ⟨c₂, σ₂, tr₂⟩ := p
     simp only [Except.map, toResult_ok, Bind.bind, Except.bind, pure_eq_ok, deliverS_ok,
       Except.ok.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl, rfl, rfl⟩ := h
@@ -5159,9 +5202,9 @@ theorem stepFn_consumption_none {σ : Store} {c : Config} {ch₀ : Choices}
         exact stepFn_syncApply_oblivious (r := .error e)
           (fun ch => by rw [applySyncOp_core_error hop hap ch]; rfl) h
       | ok p =>
-        obtain ⟨c₂, σ₂, ch₂⟩ := p
+        obtain ⟨c₂, σ₂, ch₂, tr₂⟩ := p
         obtain ⟨rfl, hall⟩ := applySyncOp_core_ok hop hap
-        exact stepFn_syncApply_oblivious (r := .ok (c₂, σ₂))
+        exact stepFn_syncApply_oblivious (r := .ok (c₂, σ₂, tr₂))
           (fun ch => by rw [hall ch]; rfl) h
     | some targets =>
       -- a TRY head: the receiver must resolve to a cell whose consult is width ≤ 1
@@ -5532,8 +5575,8 @@ theorem stepFn_consumption_some {σ : Store} {c : Config} {ch₀ : Choices}
     | error e => rw [hcore] at hsc; cases hsc
     | ok o =>
       cases o with
-      | done c₁ s₁ cl? => rw [hcore] at hsc; cases hsc
-      | picks commits =>
+      | done c₁ s₁ cl? tr₁ => rw [hcore] at hsc; cases hsc
+      | picks poll commits =>
         rw [hcore] at hsc
         simp only [Option.some.injEq, Prod.mk.injEq] at hsc
         obtain ⟨rfl, rfl⟩ := hsc
@@ -5549,7 +5592,7 @@ theorem stepFn_consumption_some {σ : Store} {c : Config} {ch₀ : Choices}
           obtain ⟨cl, r⟩ := p
           cases r with
           | inl q =>
-            obtain ⟨c₂, s₂⟩ := q
+            obtain ⟨c₂, s₂, tr₂⟩ := q
             simp only [toResult_ok, Bind.bind, Except.bind, pure_eq_ok, deliverS_ok,
               Except.ok.injEq, Prod.mk.injEq] at h
             obtain ⟨rfl, rfl, rfl, rfl⟩ := h

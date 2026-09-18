@@ -164,9 +164,9 @@ theorem selectRecvDelivery_wf {s : Store} {v : GoValue} {ok : Bool}
 /-- `resumeThread` preservation: the wake of a parked goroutine keeps
 the state wf (allocator monotone) and produces a bounded
 configuration. -/
-theorem resumeThread_wf {s : Store} {c c' : Config} {s' : Store}
+theorem resumeThread_wf {s : Store} {c c' : Config} {s' : Store} {tr : AccessTrace}
     (hw : StateWf ctx s) (hc : ConfigWf s.nextAddr c)
-    (h : resumeThread ctx s c = .ok (c', s')) :
+    (h : resumeThread ctx s c = .ok (c', s', tr)) :
     StateWf ctx s' ∧ Config.locSup c' ≤ s'.nextAddr
       ∧ s.nextAddr ≤ s'.nextAddr := by
   have hheap := hw.heap_le
@@ -183,14 +183,14 @@ theorem resumeThread_wf {s : Store} {c c' : Config} {s' : Store}
     have hbufb := chanCell_locSup hcell
     split at h
     · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl, rfl⟩ := h
       refine ⟨hw, ?_, Nat.le_refl _⟩
       simp only [Config.locSup, panicChainSup, runtimeErrorValue_locSup, panicEntry_locSup,
         Nat.max_le]
       omega
     · split at h
       · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-        obtain ⟨s₂, hst, rfl, rfl⟩ := h
+        obtain ⟨s₂, hst, rfl, rfl, rfl⟩ := h
         obtain ⟨w1, w2⟩ := storeChanPayload_pres hw hb.1
           (by rw [goValueListSup_push]
               omega) hst
@@ -221,7 +221,7 @@ theorem resumeThread_wf {s : Store} {c c' : Config} {s' : Store}
             exact Nat.le_trans goValueListSup_eraseIdx! (by omega)) hst
       obtain ⟨⟨c₀, σ₀⟩, hent, h⟩ := h
       simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl, rfl⟩ := h
       obtain ⟨q1, q2, q4⟩ := resumeRecvDelivery_wf w1 (by omega)
         (by omega) (by omega) (by omega) hent
       exact ⟨q1, by simpa using q2, Nat.le_trans w2 q4⟩
@@ -233,7 +233,7 @@ theorem resumeThread_wf {s : Store} {c c' : Config} {s' : Store}
           rw [defaultValue_locSup hz]; omega
         obtain ⟨⟨c₀, σ₀⟩, hent, h⟩ := h
         simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
+        obtain ⟨rfl, rfl, rfl⟩ := h
         obtain ⟨q1, q2, q4⟩ := resumeRecvDelivery_wf hw hzb hb.2.1
           hb.2.2.1 hb.2.2.2 hent
         exact ⟨q1, by simpa using q2, q4⟩
@@ -269,7 +269,7 @@ theorem resumeThread_wf {s : Store} {c c' : Config} {s' : Store}
     all_goals
       first
       | (simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-         obtain ⟨s₂, hst, rfl, rfl⟩ := h
+         obtain ⟨s₂, hst, rfl, rfl, rfl⟩ := h
          obtain ⟨w1, w2⟩ := storeLoc_pres hw hb.2.1
            (by simp [syncData_locSup]) hst
          refine ⟨w1, ?_, w2⟩
@@ -278,7 +278,7 @@ theorem resumeThread_wf {s : Store} {c c' : Config} {s' : Store}
       | (simp only [bind_eq_ok] at h
          obtain ⟨⟨c₀, σ₀⟩, hent, h⟩ := h
          simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-         obtain ⟨rfl, rfl⟩ := h
+         obtain ⟨rfl, rfl, rfl⟩ := h
          obtain ⟨q1, q2, q4⟩ := enterRecvTargets_wf hw
            (by simpa [syncOpSup] using hb.1)
            (by simp [goValueListSup, GoValue.locSup])
@@ -474,7 +474,7 @@ theorem arrivalCases_multi_wf {s : Store} {threads : Array Thread}
     (hget : os[sel]? = some o) :
     (∀ {bc cs}, o = ArrivalOutcome.pair bc cs →
       Config.locSup bc ≤ s.nextAddr)
-    ∧ (∀ {cl env k}, o = ArrivalOutcome.commit cl env k →
+    ∧ (∀ {evs cl env k}, o = ArrivalOutcome.commit evs cl env k →
         evClauseSup cl ≤ s.nextAddr ∧ LocalEnv.locSup env ≤ s.nextAddr
           ∧ Cont.locSup k ≤ s.nextAddr) := by
   unfold arrivalCases at h
@@ -540,7 +540,7 @@ theorem arrivalCases_multi_wf {s : Store} {threads : Array Thread}
                 refine ⟨?_, ?_⟩
                 · intro bc cs heq
                   cases heq
-                · intro cl' env' k' heq
+                · intro evs' cl' env' k' heq
                   cases heq
                   have hclb : evClauseSup cl ≤ s.nextAddr := by
                     have hmem' : cl ∈ evs :=
@@ -557,7 +557,7 @@ theorem arrivalCases_multi_wf {s : Store} {threads : Array Thread}
                   cases heq
                   simp only [Config.locSup, Nat.max_le]
                   omega
-                · intro cl' env' k' heq
+                · intro evs' cl' env' k' heq
                   cases heq
   · simp only [pure_eq_ok, Except.ok.injEq] at h
     cases h
@@ -572,11 +572,11 @@ EVERY slot bounded — the two touched slots by the pairing outcome's own
 bounds, the foreign threads by the monotonicity frame. -/
 theorem applyPairing_wf {s : Store} {threads : Array Thread} {i : Nat}
     {bc : Config} {cand : Nat × PairTarget} {ts' : Array Thread}
-    {s' : Store}
+    {s' : Store} {tr : AccessTrace}
     (hw : StateWf ctx s)
     (hts : ∀ t (ht : t < threads.size), ThreadWf s.nextAddr threads[t])
     (hbc : ConfigWf s.nextAddr bc)
-    (h : applyPairing ctx s threads i bc cand = .ok (ts', s')) :
+    (h : applyPairing ctx s threads i bc cand = .ok (ts', s', tr)) :
     StateWf ctx s' ∧ s.nextAddr ≤ s'.nextAddr
       ∧ ts'.size = threads.size
       ∧ ∀ t (ht : t < ts'.size), ThreadWf s'.nextAddr ts'[t] := by
@@ -614,7 +614,7 @@ theorem applyPairing_wf {s : Store} {threads : Array Thread} {i : Nat}
             split at h
             · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq,
                 Prod.mk.injEq] at h
-              obtain ⟨⟨cr, s₂⟩, hdel, hts', hs'⟩ := h
+              obtain ⟨⟨cr, s₂⟩, hdel, hts', hs', -⟩ := h
               subst hts' hs'
               obtain ⟨q1, q2, q4⟩ := resumeRecvDelivery_wf hw hb.2.1
                 hpb.1 hpb.2.1 hpb.2.2 hdel
@@ -661,7 +661,7 @@ theorem applyPairing_wf {s : Store} {threads : Array Thread} {i : Nat}
                 split at h
                 · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq,
                     Prod.mk.injEq] at h
-                  obtain ⟨⟨cs', s₂⟩, hdel, hts', hs'⟩ := h
+                  obtain ⟨⟨cs', s₂⟩, hdel, hts', hs', -⟩ := h
                   subst hts' hs'
                   obtain ⟨q1, q2, q4⟩ := selectRecvDelivery_wf hw hb.2.1
                     (by omega) (by omega) hpb.2.1 hpb.2.2 hdel
@@ -703,7 +703,7 @@ theorem applyPairing_wf {s : Store} {threads : Array Thread} {i : Nat}
             | none =>
               simp only [hhd, bind_eq_ok, pure_eq_ok, Except.ok.injEq,
                 Prod.mk.injEq] at h
-              obtain ⟨⟨cr, s₂⟩, hdel, hts', hs'⟩ := h
+              obtain ⟨⟨cr, s₂⟩, hdel, hts', hs', -⟩ := h
               subst hts' hs'
               obtain ⟨q1, q2, q4⟩ := resumeRecvDelivery_wf hw hpb.1
                 hb.2.1 hb.2.2.1 hb.2.2.2 hdel
@@ -723,7 +723,7 @@ theorem applyPairing_wf {s : Store} {threads : Array Thread} {i : Nat}
                       (by omega), hpb.1⟩) hst
               simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq,
                 Prod.mk.injEq] at h
-              obtain ⟨⟨cr, s₂⟩, hdel, hts', hs'⟩ := h
+              obtain ⟨⟨cr, s₂⟩, hdel, hts', hs', -⟩ := h
               subst hts' hs'
               obtain ⟨q1, q2, q4⟩ := resumeRecvDelivery_wf w1 (by omega)
                 (by omega) (by omega) (by omega) hdel
@@ -778,7 +778,7 @@ theorem applyPairing_wf {s : Store} {threads : Array Thread} {i : Nat}
                 | none =>
                   simp only [hhd, bind_eq_ok, pure_eq_ok, Except.ok.injEq,
                     Prod.mk.injEq] at h
-                  obtain ⟨⟨cr, s₂⟩, hdel, hts', hs'⟩ := h
+                  obtain ⟨⟨cr, s₂⟩, hdel, hts', hs', -⟩ := h
                   subst hts' hs'
                   obtain ⟨q1, q2, q4⟩ := resumeRecvDelivery_wf hw hv'b
                     hb.2.1 hb.2.2.1 hb.2.2.2 hdel
@@ -800,7 +800,7 @@ theorem applyPairing_wf {s : Store} {threads : Array Thread} {i : Nat}
                             hv'b⟩) hst
                   simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq,
                     Prod.mk.injEq] at h
-                  obtain ⟨⟨cr, s₂⟩, hdel, hts', hs'⟩ := h
+                  obtain ⟨⟨cr, s₂⟩, hdel, hts', hs', -⟩ := h
                   subst hts' hs'
                   obtain ⟨q1, q2, q4⟩ := resumeRecvDelivery_wf w1
                     (by omega) (by omega) (by omega) (by omega) hdel
@@ -857,7 +857,7 @@ theorem applyPairing_wf {s : Store} {threads : Array Thread} {i : Nat}
                 | none =>
                   simp only [hhd, bind_eq_ok, pure_eq_ok, Except.ok.injEq,
                     Prod.mk.injEq] at h
-                  obtain ⟨⟨ci', s₂⟩, hdel, hts', hs'⟩ := h
+                  obtain ⟨⟨ci', s₂⟩, hdel, hts', hs', -⟩ := h
                   subst hts' hs'
                   obtain ⟨q1, q2, q4⟩ := selectRecvDelivery_wf hw hpb.1
                     (by omega) (by omega) hb.2.1 hb.2.2 hdel
@@ -878,7 +878,7 @@ theorem applyPairing_wf {s : Store} {threads : Array Thread} {i : Nat}
                             hpb.1⟩) hst
                   simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq,
                     Prod.mk.injEq] at h
-                  obtain ⟨⟨ci', s₂⟩, hdel, hts', hs'⟩ := h
+                  obtain ⟨⟨ci', s₂⟩, hdel, hts', hs', -⟩ := h
                   subst hts' hs'
                   obtain ⟨q1, q2, q4⟩ := selectRecvDelivery_wf w1
                     (by omega) (by omega) (by omega) (by omega) (by omega)
@@ -920,7 +920,7 @@ theorem applyPairing_wf {s : Store} {threads : Array Thread} {i : Nat}
                 split at h
                 · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq,
                     Prod.mk.injEq] at h
-                  obtain ⟨v', hv', ⟨cr, s₂⟩, hdel, hts', hs'⟩ := h
+                  obtain ⟨v', hv', ⟨cr, s₂⟩, hdel, hts', hs', -⟩ := h
                   subst hts' hs'
                   have hv'b : GoValue.locSup v' ≤ s.nextAddr := by
                     have := normalizeValueForTy_locSup hv'
@@ -1014,7 +1014,7 @@ theorem stepThread_wf {s : Store} {threads : Array Thread} {i : Nat}
     | none =>
     by_cases hblc : isBlockedConfig c = true
     · simp only [hblc, reduceIte, bind_eq_ok] at h
-      obtain ⟨⟨c₂, s₂⟩, hres, h⟩ := h
+      obtain ⟨⟨c₂, s₂, tr₂⟩, hres, h⟩ := h
       simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl, rfl, rfl⟩ := h
       obtain ⟨q1, q2, q4⟩ := resumeThread_wf hw hc hres
@@ -1141,7 +1141,7 @@ theorem stepThread_wf {s : Store} {threads : Array Thread} {i : Nat}
                   | some cand3 =>
                     rw [hget] at h
                     simp only [bind_eq_ok] at h
-                    obtain ⟨⟨ts₂, s₂⟩, hpair, h⟩ := h
+                    obtain ⟨⟨ts₂, s₂, tr₂⟩, hpair, h⟩ := h
                     simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
                     obtain ⟨rfl, rfl, rfl, rfl⟩ := h
                     obtain ⟨q1, q3, q4, q5⟩ := applyPairing_wf hw hts hbcb
@@ -1181,18 +1181,18 @@ theorem stepThread_wf {s : Store} {threads : Array Thread} {i : Nat}
                       | some cand3 =>
                         rw [hget2] at h
                         simp only [bind_eq_ok] at h
-                        obtain ⟨⟨ts₂, s₂⟩, hpair, h⟩ := h
+                        obtain ⟨⟨ts₂, s₂, tr₂⟩, hpair, h⟩ := h
                         simp only [pure_eq_ok, Except.ok.injEq,
                           Prod.mk.injEq] at h
                         obtain ⟨rfl, rfl, rfl, rfl⟩ := h
                         obtain ⟨q1, q3, q4, q5⟩ := applyPairing_wf hw hts
                           hbcb hpair
                         exact ⟨q1, q3, by omega, q5⟩
-                | commit cl env k =>
+                | commit evs cl env k =>
                   obtain ⟨hclb, henvb, hkb⟩ := hcommitb rfl
                   dsimp only at h
                   simp only [bind_eq_ok] at h
-                  obtain ⟨⟨c₂, s₂⟩, hcom, h⟩ := h
+                  obtain ⟨⟨c₂, s₂, tr₂⟩, hcom, h⟩ := h
                   simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
                   obtain ⟨rfl, rfl, rfl, rfl⟩ := h
                   obtain ⟨q1, q2, q4⟩ := commitClause_wf hw hclb henvb

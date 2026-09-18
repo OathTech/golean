@@ -204,7 +204,7 @@ inductive StepMFine : MultiConfig → MultiConfig → AccessTrace → Prop where
       m.threads[i]? = some (.running c none) →
       isBlockedConfig c = false →
       arrivalCases ctx m.shared m.threads i c = .ok .cellPath →
-      StepE ctx c m.shared c' σ' efs tr →
+      StepE ctx m.threads.size c m.shared c' σ' efs tr →
       StepMFine m ⟨(m.threads.setIfInBounds i (Thread.afterStep m.shared c c'))
         ++ (efs.map (Thread.running · none)).toArray, σ', i⟩ tr
   | strip {m : MultiConfig} {i : Nat} {c : Config} {site : ChoiceSite} :
@@ -220,18 +220,18 @@ inductive StepMFine : MultiConfig → MultiConfig → AccessTrace → Prop where
       abortMsg ctx first rest pick = .ok msg →
       StepMFine m ⟨m.threads.setIfInBounds i (.aborted msg), m.shared, i⟩ []
   | pair {m : MultiConfig} {i : Nat} {c bc : Config} {σ'' : Store}
-      {cs : List (Nat × PairTarget)} {idx : Nat} {ts' : Array Thread} :
+      {cs : List (Nat × PairTarget)} {idx : Nat} {ts' : Array Thread} {tr : AccessTrace} :
       schedPickFine ctx m i →
       m.threads[i]? = some (.running c none) →
       isBlockedConfig c = false →
       spawnPlan c = none →
       arrivalCases ctx m.shared m.threads i c = .ok (.single bc cs) →
       (hidx : idx < cs.length) →
-      applyPairing ctx m.shared m.threads i bc cs[idx] = .ok (ts', σ'') →
-      StepMFine m ⟨ts', σ'', i⟩ []
+      applyPairing ctx m.shared m.threads i bc cs[idx] = .ok (ts', σ'', tr) →
+      StepMFine m ⟨ts', σ'', i⟩ tr
   | pickPair {m : MultiConfig} {i : Nat} {c bc : Config} {σ'' : Store}
       {os : List ArrivalOutcome} {sel : Nat}
-      {cs : List (Nat × PairTarget)} {idx : Nat} {ts' : Array Thread} :
+      {cs : List (Nat × PairTarget)} {idx : Nat} {ts' : Array Thread} {tr : AccessTrace} :
       schedPickFine ctx m i →
       m.threads[i]? = some (.running c none) →
       isBlockedConfig c = false →
@@ -239,25 +239,26 @@ inductive StepMFine : MultiConfig → MultiConfig → AccessTrace → Prop where
       arrivalCases ctx m.shared m.threads i c = .ok (.multi os) →
       os[sel]? = some (.pair bc cs) →
       (hidx : idx < cs.length) →
-      applyPairing ctx m.shared m.threads i bc cs[idx] = .ok (ts', σ'') →
-      StepMFine m ⟨ts', σ'', i⟩ []
-  | pickCommit {m : MultiConfig} {i : Nat} {c : Config} {cl : EvClause}
+      applyPairing ctx m.shared m.threads i bc cs[idx] = .ok (ts', σ'', tr) →
+      StepMFine m ⟨ts', σ'', i⟩ tr
+  | pickCommit {m : MultiConfig} {i : Nat} {c : Config} {evs : List EvClause} {cl : EvClause}
       {env : LocalEnv} {k : Cont} {os : List ArrivalOutcome} {sel : Nat}
-      {c' : Config} {σ' : Store} :
+      {c' : Config} {σ' : Store} {trc : AccessTrace} :
       schedPickFine ctx m i →
       m.threads[i]? = some (.running c none) →
       isBlockedConfig c = false →
       spawnPlan c = none →
       arrivalCases ctx m.shared m.threads i c = .ok (.multi os) →
-      os[sel]? = some (.commit cl env k) →
-      commitClause ctx m.shared env k cl = .ok (c', σ') →
-      StepMFine m ⟨m.threads.setIfInBounds i (Thread.afterStep m.shared c c'), σ', i⟩ []
-  | wake {m : MultiConfig} {i : Nat} {c c' : Config} {σ' : Store} :
+      os[sel]? = some (.commit evs cl env k) →
+      commitClause ctx m.shared env k cl = .ok (c', σ', trc) →
+      StepMFine m ⟨m.threads.setIfInBounds i (Thread.afterStep m.shared c c'), σ', i⟩
+        (selectPoll evs ++ trc)
+  | wake {m : MultiConfig} {i : Nat} {c c' : Config} {σ' : Store} {tr : AccessTrace} :
       schedPickFine ctx m i →
       m.threads[i]? = some (.running c none) →
       isBlockedConfig c = true →
-      resumeThread ctx m.shared c = .ok (c', σ') →
-      StepMFine m ⟨m.threads.setIfInBounds i (Thread.completed c'), σ', i⟩ []
+      resumeThread ctx m.shared c = .ok (c', σ', tr) →
+      StepMFine m ⟨m.threads.setIfInBounds i (Thread.completed c'), σ', i⟩ tr
 
 variable {ctx}
 /-- A finished goroutine is at a registry boundary (goroutine exit is a
@@ -412,14 +413,17 @@ def ReachesMFine (m₀ : MultiConfig) (res : PoolResult) : Prop :=
 
 /-! ## The fine-semantics race -/
 
-/-- Two access TRACES conflict: some pair of accesses at overlapping keys
-(`ShadowKey.overlap` — path overlap under the `.data` key, identity for
-the synchronization keys) whose kinds conflict (`AccessKind.conflicts` —
-at least one write, not both atomic). C1 S2b: stated over the steps'
-LABELS (the module's emitted `AccessTrace`), formerly over the footprint
-table's `List RaceAccess`. -/
+/-- Two LABELS conflict: some pair of ACCESSES (`traceAccesses` — the
+happens-before actions are not accesses; attribution is looked through) at
+overlapping keys (`ShadowKey.overlap` — path overlap under the `.data` key,
+identity for the synchronization keys) whose kinds conflict
+(`AccessKind.conflicts` — at least one write, not both atomic). C1 S2b:
+stated over the steps' LABELS (the module's emitted `AccessTrace`), formerly
+over the footprint table's `List RaceAccess`; C1 S2c: the labels carry
+memory-model events, of which the accesses are compared. -/
 def footprintsConflict (as bs : AccessTrace) : Prop :=
-  ∃ a ∈ as, ∃ b ∈ bs, a.2.overlap b.2 = true ∧ a.1.conflicts b.1 = true
+  ∃ a ∈ traceAccesses as, ∃ b ∈ traceAccesses bs,
+    a.2.overlap b.2 = true ∧ a.1.conflicts b.1 = true
 
 /-- The fine-semantics data race: some fine-reachable pool holds two
 DISTINCT runnable goroutines whose next steps carry conflicting LABELS
@@ -429,9 +433,10 @@ over the SAME emitted trace the executable detector folds
 statement and the tool). The next step is the goroutine's own `StepE`
 from the pool's shared state: an ordinary `Step` (its label) or a spawn
 (the child's frame-entry read — the label the fold attributes to the
-child). Registry-op steps carry `[]` in the data trace (their sync-word
-/ channel-object recordings are the detector's registry arms, S2c), so a
-conflict here is always a data access. C1 S2b restatement; formerly over
+child). Since C1 S2c a registry-op step's label carries its channel-object
+/ sync-word accesses and its happens-before actions too, so a conflict here
+may be a synchronization-word conflict exactly as the detector would record
+it (the actions themselves never conflict). C1 S2b restatement; formerly over
 the footprint table `stepAccesses`, which recorded a panicking step's
 would-be accesses and ignored the spawn's read — the labels record what
 the machine performed. -/
@@ -444,7 +449,8 @@ def RacyFine (m₀ : MultiConfig) : Prop :=
       threadRunnable ctx m.shared (.running ci none) = true
         ∧ threadRunnable ctx m.shared (.running cj none) = true ∧
       ∃ (ci' cj' : Config) (σi σj : Store) (efsi efsj : List Config) (tri trj : AccessTrace),
-        StepE ctx ci m.shared ci' σi efsi tri ∧ StepE ctx cj m.shared cj' σj efsj trj ∧
+        StepE ctx m.threads.size ci m.shared ci' σi efsi tri
+          ∧ StepE ctx m.threads.size cj m.shared cj' σj efsj trj ∧
         footprintsConflict tri trj
 
 /-- **DEPRECATED — UNSOUND AS STATED (RULED [USER] Mike 2026-09-18,

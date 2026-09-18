@@ -114,6 +114,11 @@ def main():
             print(f"    ALARM {r['id']} [{r['stream']}]: {r['firstAlarm']}")
     for r in mism:
         print(f"    MISMATCH {r['id']} [{r['stream']}]: {r['driverAgreement']}")
+    # C1 S2c-i: the fold-equality audit's column (absent on older TSVs).
+    fold = [r for r in rows if r["status"] != "ERROR" and int(r.get("foldMismatches", "0") or 0) > 0]
+    print(f"  fold-equality mismatches (raceUpdate vs raceFold, C1 S2c-i): {len(fold)}")
+    for r in fold:
+        print(f"    MISMATCH {r['id']} [{r['stream']}]: fold-equality: {r.get('firstFoldMismatch', '-')[:300]}")
     for r in errors:
         print(f"    ERROR {r['id']} (baseline: {baseline.get(r['id'], ('?','?'))[0]}/{baseline.get(r['id'], ('?','?'))[1]}): {r['firstViolation'][:160]}")
     # machine refusals traced to their refusal point (status = the

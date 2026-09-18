@@ -1652,11 +1652,11 @@ the same relation in words.) It is also TSan's shadow rule (two
 accesses race unless both are reads or both are atomic). The plain pair is the data TRACE's (the module's emitting operations, C1 S2);
 the atomic pair is the sync primitives' own state-word traffic — as
 `-race` realizes it AND as mem#model kinds the op (BUG-080 +
-Q-U4RESIDUAL (A) — `syncEntryKinds` below, recorded by `raceUpdate`'s
-sync arm); and the `sync/atomic` ops' own accesses at the addressed
-cell (the atomics arc wave 1 — `atomicOpKind`, recorded by
-`raceUpdate`'s atomic arm; section "sync/atomic — the per-address
-clocks" below). -/
+Q-U4RESIDUAL (A) — `syncEntryKinds`/`syncReleaseTailKinds`, Machine.lean,
+EMITTED by the sync apply since C1 S2c); and the `sync/atomic` ops' own
+accesses at the addressed cell (the atomics arc wave 1 — `atomicEvents`,
+Machine.lean, emitted by the atomic apply; Race.lean's section
+"sync/atomic — the per-address clocks" has the clock rules). -/
 inductive AccessKind where
   | read
   | write
@@ -1679,13 +1679,84 @@ both atomic — the memory-model sentence verbatim, and TSan's
 def AccessKind.conflicts (a b : AccessKind) : Bool :=
   (a.isWrite || b.isWrite) && !(a.isAtomic && b.isAtomic)
 
-/-- One access: its kind and the shadow key it names. -/
+/-- One access: its kind and the shadow key it names (the payload of
+`MemEvent.access`; what `footprintsConflict` compares). -/
 abbrev Access := AccessKind × ShadowKey
 
-/-- The access trace of one machine step — the memory-effects LABEL of
-`Step`/`StepM` (charter §3; `GoLean/GoCore/Trace.lean`'s `Trace` is the
-n-step run relation, a different thing). -/
-abbrev AccessTrace := List Access
+/-- **A happens-before action of the stepping goroutine** (C1 S2c, charter §7
+D9): the clock movement gc's runtime performs at a synchronization point — the
+release-acquire on a channel's buffer slot (`racenotify`), the rendezvous of an
+unbuffered pair (`racesync`), the close's release and the closed-and-empty
+receive's acquire, a sync primitive's acquire/release (mem#locks, mem#more),
+and the `sync/atomic` ops' acquire / release-store / release-acquire (TSan's
+atomic hooks). Every action is performed BY the goroutine the event is
+attributed to (the fold's `who`, or a `MemEvent.attributed` override);
+`spawn` names the CHILD and `rendezvous` the PARTNER — the two pool-level
+actions whose second goroutine only the emitting pool step knows. The
+detector's clock rules (`RaceState.hbAction`, Race.lean) are the ONE
+interpretation of these constructors; nothing else moves a clock. -/
+inductive HbAction where
+  /-- Release-acquire on the channel's next send (`isSend`) / receive buffer slot. -/
+  | slotOp (loc : Loc) (cap : Nat) (isSend : Bool)
+  /-- `close(ch)`: the closer's release into the channel's close clock. -/
+  | closeOp (loc : Loc) (cap : Nat)
+  /-- A closed-and-empty receive acquires the close clock. -/
+  | closeAcquire (loc : Loc)
+  /-- Acquire from a sync cell's clock (`alsoB`: RWMutex's write-Lock acquires both). -/
+  | syncAcquire (loc : Loc) (alsoB : Bool)
+  /-- Release into a sync cell's clock (`toB`: the read-release clock). -/
+  | syncRelease (loc : Loc) (toB : Bool)
+  /-- `sync/atomic` Load, and a FAILED CompareAndSwap: acquire from the address clock. -/
+  | atomicAcquire (loc : Loc)
+  /-- `sync/atomic` Store: release-store into the address clock (an overwrite). -/
+  | atomicReleaseStore (loc : Loc)
+  /-- `sync/atomic` Add / Swap / a SUCCESSFUL CompareAndSwap: release-acquire. -/
+  | atomicReleaseAcquire (loc : Loc)
+  /-- The `go` statement's edge, the stepping goroutine → `child` (a pool step's event). -/
+  | spawn (child : Nat)
+  /-- The unbuffered rendezvous with `partner` (a pairing step's event). -/
+  | rendezvous (partner : Nat)
+  deriving Repr, BEq, DecidableEq
+
+/-- **One memory-model event of a machine step** (C1 S2c — the label's atom).
+Either an ACCESS (checked against the shadow, then recorded there) or a
+HAPPENS-BEFORE action (a clock movement), in gc's INSTRUMENTATION ORDER: the
+order is load-bearing — `Mutex.Unlock`'s state Add is recorded AFTER its
+release (at the bumped epoch: `syncReleaseTailKinds`), an atomic Load's read
+AFTER its acquire (`atomicEvents`), a close's channel-object write BEFORE its
+release (`applyChanOp`). `attributed who e` is the POOL's override of the
+performing goroutine — the spawned child's frame-entry read and the woken
+partner's slot transit happen on behalf of a goroutine other than the one
+stepping — and never occurs in a sequential `Step` label. Events are EMITTED
+by the module's operations (`Mem.*`; the chan/sync/atomic applies through
+`chanSendEntry`/`chanCloseWrite`/`selectPoll`/`syncEntryKinds`/
+`syncReleaseTailKinds`/`atomicEvents` and the `.hb` constructors) and
+CONSUMED by ONE fold (`raceUpdate`, Multi.lean); since C1 S2c nothing
+re-derives a step's synchronization effects from its pre-configuration. -/
+inductive MemEvent where
+  | access (kind : AccessKind) (key : ShadowKey)
+  | hb (act : HbAction)
+  | attributed (who : Nat) (e : MemEvent)
+  deriving Repr, BEq, DecidableEq
+
+/-- The access a data event carries (`none` for a happens-before action);
+attribution is looked through — the conflict question (`footprintsConflict`,
+NPDRF.lean) asks WHICH locations two steps touch, not who is credited. -/
+def MemEvent.access? : MemEvent → Option Access
+  | .access k key => some (k, key)
+  | .hb _ => none
+  | .attributed _ e => e.access?
+
+/-- The LABEL of one machine step — the memory-effects component of
+`Step`/`StepM` (charter §3, D5/D9): the step's memory-model events in gc's
+instrumentation order (`GoLean/GoCore/Trace.lean`'s `Trace` is the n-step run
+relation, a different thing). Since C1 S2c the synchronization events ride in
+it beside the data accesses; the name is kept (every consumer spells it, and
+the data accesses remain its bulk). -/
+abbrev AccessTrace := List MemEvent
+
+/-- The accesses of a label, in order (attribution looked through). -/
+def traceAccesses (tr : AccessTrace) : List Access := tr.filterMap MemEvent.access?
 
 /-! ## The memory module's access discipline — what emits, what peeks (C1 S2b, 2026-09-18)
 
@@ -1744,14 +1815,23 @@ MACHINE-INTERNAL CELLS no goroutine can name:
 DRIVERS, after termination: `loadMany` (result readouts of `runFunctionWithContextM`,
 `runProgramM`, the pool/enumerator drivers) — the program is over.
 
-SYNCHRONIZATION — the registry ops' own cell traffic (never a data access; the
-happens-before edges and gc's sync-word / channel-object recordings are
-`raceUpdate`'s registry arms until C1 S2c moves the emissions into the module's
-operations): `chanCell`/`chanPayload?`/`storeChanPayload` in `applyChanOp`,
-`commitClause`, `resumeThread`, `applyPairing`, `wakeReady`, `clauseReady`;
-`syncCell`/the `.syncData` stores in `applySyncOp`, `wakeReady`, `resumeThread`;
-`loadLoc`/`storeLoc` inside `applyAtomicOp` (the atomic op's indivisible RMW —
-recorded by the atomic arm at the cell's own path with the ATOMIC kind).
+SYNCHRONIZATION — the registry ops' own cell traffic is never a DATA access;
+since C1 S2c the registry applies EMIT their memory-model events themselves, in
+gc's instrumentation order (`MemEvent`; charter §7 D9): `applyChanOp` the
+channel-object read at a send's entry (`chanSendEntry`), the channel-object write
+at a close's success (`chanCloseWrite`) and the slot / close clock actions;
+`applySelectCore` the per-send-clause poll reads (`selectPoll`) and the committed
+clause's actions (`commitClause`); `applySyncOpCore`/`applyTryLock` the sync
+words (`syncEntryKinds` under the pre-op clock, `syncReleaseTailKinds` after the
+release) and the acquire/release actions; `applyAtomicOp` the op's ATOMIC-kind
+access at the cell's own path and its clock action (`atomicEvents`);
+`resumeThread`/`applyPairing`/`stepThread` (Multi.lean) the wake's, the
+pairing's and the spawn's actions. The peeks and raw writers they use —
+`chanCell`/`chanPayload?`/`storeChanPayload` in `applyChanOp`, `commitClause`,
+`resumeThread`, `applyPairing`, `wakeReady`, `clauseReady`; `syncCell`/the
+`.syncData` stores in `applySyncOp`, `wakeReady`, `resumeThread`; `loadLoc`/
+`storeLoc` inside `applyAtomicOp` (the indivisible RMW whose access the apply
+emits with the ATOMIC kind) — perform no data access gc instruments.
 
 FRESH ALLOCATION (the malloc convention — a fresh cell's creating write precedes
 every path by which its address can race-freely escape): `Store.alloc`,
@@ -1773,26 +1853,26 @@ chain (`Mem.loadFor` at `projChainTarget`'s leaf; the dispatch read at
 /-- The emitting READ of a whole cell path. -/
 def Mem.load (state : Store) (l : Loc) : Except Stop (GoValue × AccessTrace) := do
   let v ← loadLoc ctx state l
-  return (v, [(.read, .data l)])
+  return (v, [.access .read (.data l)])
 
 /-- The NARROWED read: the ROOT value is loaded, the access is recorded
 at `leaf` (a path under `root`, chosen by the caller from what Go reads
 here). -/
 def Mem.loadFor (state : Store) (root leaf : Loc) : Except Stop (GoValue × AccessTrace) := do
   let v ← loadLoc ctx state root
-  return (v, [(.read, .data leaf)])
+  return (v, [.access .read (.data leaf)])
 
 /-- The emitting WRITE of a cell path (leaf-normalized by `storeLoc`). -/
 def Mem.store (state : Store) (l : Loc) (value : GoValue) : Except Stop (Store × AccessTrace) := do
   let s' ← storeLoc ctx state l value
-  return (s', [(.write, .data l)])
+  return (s', [.access .write (.data l)])
 
 /-- A map object is ONE location for race purposes (gc/TSan's «concurrent
 map read and map write»): the emitting read of a map payload cell. -/
 def Mem.mapRead (state : Store) (loc : Loc) :
     Except Stop ((Array (Nat × GoValue × GoValue) × Nat) × AccessTrace) := do
   let p ← mapPayload? state loc
-  return (p, [(.read, .data loc)])
+  return (p, [.access .read (.data loc)])
 
 /-- The emitting write of a map payload cell (assignment, delete, clear —
 each a map WRITE whether or not the entry set changes: gc instruments
@@ -1800,7 +1880,7 @@ each a map WRITE whether or not the entry set changes: gc instruments
 def Mem.mapWrite (state : Store) (loc : Loc) (entries : Array (Nat × GoValue × GoValue))
     (nextId : Nat) : Except Stop (Store × AccessTrace) := do
   let s' ← storeMapPayload state loc entries nextId
-  return (s', [(.write, .data loc)])
+  return (s', [.access .write (.data loc)])
 
 -- `lookup` deleted (reshape S4): variable reads are `Machine.Step.evalVar`
 -- (control-side env lookup + `loadLoc`), never a state-side name lookup.

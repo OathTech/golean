@@ -3243,35 +3243,35 @@ theorem mapEntryIndex?_ok_entries {kt : Ty}
 
 theorem Mem.load_eq {σ : Store} {l : Loc} {v : GoValue} {tr : AccessTrace}
     (h : Mem.load ctx σ l = .ok (v, tr)) :
-    loadLoc ctx σ l = .ok v ∧ tr = [(.read, .data l)] := by
+    loadLoc ctx σ l = .ok v ∧ tr = [.access .read (.data l)] := by
   simp only [Mem.load, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
   obtain ⟨v', hv, rfl, rfl⟩ := h
   exact ⟨hv, rfl⟩
 
 theorem Mem.loadFor_eq {σ : Store} {root leaf : Loc} {v : GoValue} {tr : AccessTrace}
     (h : Mem.loadFor ctx σ root leaf = .ok (v, tr)) :
-    loadLoc ctx σ root = .ok v ∧ tr = [(.read, .data leaf)] := by
+    loadLoc ctx σ root = .ok v ∧ tr = [.access .read (.data leaf)] := by
   simp only [Mem.loadFor, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
   obtain ⟨v', hv, rfl, rfl⟩ := h
   exact ⟨hv, rfl⟩
 
 theorem Mem.store_eq {σ σ' : Store} {l : Loc} {v : GoValue} {tr : AccessTrace}
     (h : Mem.store ctx σ l v = .ok (σ', tr)) :
-    storeLoc ctx σ l v = .ok σ' ∧ tr = [(.write, .data l)] := by
+    storeLoc ctx σ l v = .ok σ' ∧ tr = [.access .write (.data l)] := by
   simp only [Mem.store, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
   obtain ⟨s', hs, rfl, rfl⟩ := h
   exact ⟨hs, rfl⟩
 
 theorem Mem.mapRead_eq {σ : Store} {l : Loc} {p : Array (Nat × GoValue × GoValue) × Nat}
     {tr : AccessTrace} (h : Mem.mapRead σ l = .ok (p, tr)) :
-    mapPayload? σ l = .ok p ∧ tr = [(.read, .data l)] := by
+    mapPayload? σ l = .ok p ∧ tr = [.access .read (.data l)] := by
   simp only [Mem.mapRead, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
   obtain ⟨p', hp, rfl, rfl⟩ := h
   exact ⟨hp, rfl⟩
 
 theorem Mem.mapWrite_eq {σ σ' : Store} {l : Loc} {es : Array (Nat × GoValue × GoValue)}
     {n : Nat} {tr : AccessTrace} (h : Mem.mapWrite σ l es n = .ok (σ', tr)) :
-    storeMapPayload σ l es n = .ok σ' ∧ tr = [(.write, .data l)] := by
+    storeMapPayload σ l es n = .ok σ' ∧ tr = [.access .write (.data l)] := by
   simp only [Mem.mapWrite, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
   obtain ⟨s', hs, rfl, rfl⟩ := h
   exact ⟨hs, rfl⟩
@@ -5901,11 +5901,11 @@ theorem enterRecvTargets_wf {σ : Store} {targets : List Assignee}
 /-- `commitClause` preservation: state stays wf (allocator monotone,
 types unchanged) and the successor configuration is bounded. -/
 theorem commitClause_wf {σ : Store} {env : LocalEnv} {k : Cont}
-    {cl : EvClause} {c' : Config} {σ' : Store}
+    {cl : EvClause} {c' : Config} {σ' : Store} {tr : AccessTrace}
     (hw : StateWf ctx σ) (hcl : evClauseSup cl ≤ σ.nextAddr)
     (henv : LocalEnv.locSup env ≤ σ.nextAddr)
     (hk : Cont.locSup k ≤ σ.nextAddr)
-    (h : commitClause ctx σ env k cl = .ok (c', σ')) :
+    (h : commitClause ctx σ env k cl = .ok (c', σ', tr)) :
     StateWf ctx σ' ∧ Config.locSup c' ≤ σ'.nextAddr
       ∧ σ.nextAddr ≤ σ'.nextAddr := by
   have hheap := hw.heap_le
@@ -5927,7 +5927,7 @@ theorem commitClause_wf {σ : Store} {env : LocalEnv} {k : Cont}
         rw [hbase] at hchb; simp only [optLocSup] at hchb; omega
       split at h
       · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
+        obtain ⟨rfl, rfl, rfl⟩ := h
         refine ⟨hw, ?_, Nat.le_refl _⟩
         simp only [Config.locSup, panicChainSup, runtimeErrorValue_locSup, panicEntry_locSup,
           Nat.max_le]
@@ -5935,7 +5935,7 @@ theorem commitClause_wf {σ : Store} {env : LocalEnv} {k : Cont}
       · split at h
         · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
           obtain ⟨v', hv', σ₂, hst, h⟩ := h
-          obtain ⟨rfl, rfl⟩ := h
+          obtain ⟨rfl, rfl, rfl⟩ := h
           have hv'b : GoValue.locSup v' ≤ σ.nextAddr := by
             have := normalizeValueForTy_locSup hv'
             omega
@@ -5976,7 +5976,7 @@ theorem commitClause_wf {σ : Store} {env : LocalEnv} {k : Cont}
               exact Nat.le_trans goValueListSup_eraseIdx! (by omega)) hst
         split at h
         · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-          obtain ⟨rfl, rfl⟩ := h
+          obtain ⟨rfl, rfl, rfl⟩ := h
           refine ⟨w1, ?_, w2⟩
           simp only [Config.locSup, Nat.max_le]
           omega
@@ -5984,7 +5984,7 @@ theorem commitClause_wf {σ : Store} {env : LocalEnv} {k : Cont}
           try simp only [bind_eq_ok] at h
           obtain ⟨⟨c₀, σ₀⟩, hent, h⟩ := h
           simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-          obtain ⟨rfl, rfl⟩ := h
+          obtain ⟨rfl, rfl, rfl⟩ := h
           obtain ⟨q1, q2, q4⟩ := enterRecvTargets_wf w1
             (by omega)
             (Nat.le_trans (recvStores_locSup ((t :: ts).length)) (by omega))
@@ -5998,7 +5998,7 @@ theorem commitClause_wf {σ : Store} {env : LocalEnv} {k : Cont}
             rw [defaultValue_locSup hz]; omega
           split at h
           · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-            obtain ⟨rfl, rfl⟩ := h
+            obtain ⟨rfl, rfl, rfl⟩ := h
             refine ⟨hw, ?_, Nat.le_refl _⟩
             simp only [Config.locSup, Nat.max_le]
             omega
@@ -6006,7 +6006,7 @@ theorem commitClause_wf {σ : Store} {env : LocalEnv} {k : Cont}
             try simp only [bind_eq_ok] at h
             obtain ⟨⟨c₀, σ₀⟩, hent, h⟩ := h
             simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-            obtain ⟨rfl, rfl⟩ := h
+            obtain ⟨rfl, rfl, rfl⟩ := h
             obtain ⟨q1, q2, q4⟩ := enterRecvTargets_wf hw
               (by omega)
               (Nat.le_trans (recvStores_locSup ((t :: ts).length)) (by omega))
@@ -6024,12 +6024,12 @@ the existing `*_wf` conclusions rather than build a parallel
 premise-free family.) -/
 theorem applyChanOp_wf {σ : Store} {op : ChanStOp}
     {vs : List GoValue} {env : LocalEnv} {k : Cont} {c' : Config}
-    {σ' : Store}
+    {σ' : Store} {tr : AccessTrace}
     (hw : StateWf ctx σ) (hvs : goValueListSup vs ≤ σ.nextAddr)
     (hop : chanStOpSup op ≤ σ.nextAddr)
     (henv : LocalEnv.locSup env ≤ σ.nextAddr)
     (hk : Cont.locSup k ≤ σ.nextAddr)
-    (h : applyChanOp ctx σ op vs env k = .ok (c', σ')) :
+    (h : applyChanOp ctx σ op vs env k = .ok (c', σ', tr)) :
     StateWf ctx σ' ∧ Config.locSup c' ≤ σ'.nextAddr
       ∧ σ.nextAddr ≤ σ'.nextAddr := by
   have hheap := hw.heap_le
@@ -6047,7 +6047,7 @@ theorem applyChanOp_wf {σ : Store} {op : ChanStOp}
       omega
     split at h
     · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl, rfl⟩ := h
       refine ⟨hw, ?_, Nat.le_refl _⟩
       simp only [Config.locSup, optLocSup, Nat.max_le]
       omega
@@ -6059,14 +6059,14 @@ theorem applyChanOp_wf {σ : Store} {op : ChanStOp}
         rw [hbase] at hchb; simp only [optLocSup] at hchb; omega
       split at h
       · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
+        obtain ⟨rfl, rfl, rfl⟩ := h
         refine ⟨hw, ?_, Nat.le_refl _⟩
         simp only [Config.locSup, panicChainSup, runtimeErrorValue_locSup, panicEntry_locSup,
           Nat.max_le]
         omega
       · split at h
         · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-          obtain ⟨σ₂, hst, rfl, rfl⟩ := h
+          obtain ⟨σ₂, hst, rfl, rfl, rfl⟩ := h
           obtain ⟨w1, w2⟩ := storeChanPayload_pres hw hlocb
             (by rw [goValueListSup_push]
                 omega) hst
@@ -6074,7 +6074,7 @@ theorem applyChanOp_wf {σ : Store} {op : ChanStOp}
           simp only [Config.locSup, Nat.max_le]
           omega
         · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-          obtain ⟨rfl, rfl⟩ := h
+          obtain ⟨rfl, rfl, rfl⟩ := h
           refine ⟨hw, ?_, Nat.le_refl _⟩
           simp only [Config.locSup, optLocSup, Nat.max_le]
           omega
@@ -6087,7 +6087,7 @@ theorem applyChanOp_wf {σ : Store} {op : ChanStOp}
     have hchb := valueAsChan_locSup hch
     split at h
     · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl, rfl⟩ := h
       refine ⟨hw, ?_, Nat.le_refl _⟩
       simp only [Config.locSup, optLocSup, Nat.max_le]
       omega
@@ -6111,7 +6111,7 @@ theorem applyChanOp_wf {σ : Store} {op : ChanStOp}
               exact Nat.le_trans goValueListSup_eraseIdx! (by omega)) hst
         split at h
         · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-          obtain ⟨rfl, rfl⟩ := h
+          obtain ⟨rfl, rfl, rfl⟩ := h
           refine ⟨w1, ?_, w2⟩
           simp only [Config.locSup, Nat.max_le]
           omega
@@ -6119,7 +6119,7 @@ theorem applyChanOp_wf {σ : Store} {op : ChanStOp}
           try simp only [bind_eq_ok] at h
           obtain ⟨⟨c₀, σ₀⟩, hent, h⟩ := h
           simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-          obtain ⟨rfl, rfl⟩ := h
+          obtain ⟨rfl, rfl, rfl⟩ := h
           obtain ⟨q1, q2, q4⟩ := enterRecvTargets_wf w1
             (by omega)
             (Nat.le_trans (recvStores_locSup ((t :: ts).length)) (by omega))
@@ -6133,13 +6133,13 @@ theorem applyChanOp_wf {σ : Store} {op : ChanStOp}
             rw [defaultValue_locSup hz]; omega
           split at h
           · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-            obtain ⟨rfl, rfl⟩ := h
+            obtain ⟨rfl, rfl, rfl⟩ := h
             exact ⟨hw, by simp only [Config.locSup, Nat.max_le]; omega, Nat.le_refl _⟩
           · rename_i t ts
             try simp only [bind_eq_ok] at h
             obtain ⟨⟨c₀, σ₀⟩, hent, h⟩ := h
             simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-            obtain ⟨rfl, rfl⟩ := h
+            obtain ⟨rfl, rfl, rfl⟩ := h
             obtain ⟨q1, q2, q4⟩ := enterRecvTargets_wf hw
               (by omega)
               (Nat.le_trans (recvStores_locSup ((t :: ts).length)) (by omega))
@@ -6147,7 +6147,7 @@ theorem applyChanOp_wf {σ : Store} {op : ChanStOp}
             exact ⟨q1, by simpa using q2, q4⟩
         · -- open-and-empty: block
           simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-          obtain ⟨rfl, rfl⟩ := h
+          obtain ⟨rfl, rfl, rfl⟩ := h
           refine ⟨hw, ?_, Nat.le_refl _⟩
           simp only [Config.locSup, optLocSup, Nat.max_le]
           omega
@@ -6159,7 +6159,7 @@ theorem applyChanOp_wf {σ : Store} {op : ChanStOp}
     have hchb := valueAsChan_locSup hch
     split at h
     · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl, rfl⟩ := h
       refine ⟨hw, ?_, Nat.le_refl _⟩
       simp only [Config.locSup, panicChainSup, runtimeErrorValue_locSup, panicEntry_locSup,
         Nat.max_le]
@@ -6172,13 +6172,13 @@ theorem applyChanOp_wf {σ : Store} {op : ChanStOp}
         rw [hbase] at hchb; simp only [optLocSup] at hchb; omega
       split at h
       · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
+        obtain ⟨rfl, rfl, rfl⟩ := h
         refine ⟨hw, ?_, Nat.le_refl _⟩
         simp only [Config.locSup, panicChainSup, runtimeErrorValue_locSup, panicEntry_locSup,
           Nat.max_le]
         omega
       · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-        obtain ⟨σ₂, hst, rfl, rfl⟩ := h
+        obtain ⟨σ₂, hst, rfl, rfl, rfl⟩ := h
         obtain ⟨w1, w2⟩ := storeChanPayload_pres hw hlocb
           (by
               omega) hst
@@ -6272,12 +6272,12 @@ types unchanged, allocator monotone. Sync stores are loc-free
 `storeLoc_pres` of a loc-free value. -/
 theorem applySyncOpCore_wf {σ : Store} {op : SyncOp}
     {vs : List GoValue} {env : LocalEnv} {k : Cont} {c' : Config}
-    {σ' : Store}
+    {σ' : Store} {tr : AccessTrace}
     (hw : StateWf ctx σ) (hvs : goValueListSup vs ≤ σ.nextAddr)
     (hop : syncOpSup op ≤ σ.nextAddr)
     (henv : LocalEnv.locSup env ≤ σ.nextAddr)
     (hk : Cont.locSup k ≤ σ.nextAddr)
-    (h : applySyncOpCore ctx σ op vs env k = .ok (c', σ')) :
+    (h : applySyncOpCore ctx σ op vs env k = .ok (c', σ', tr)) :
     StateWf ctx σ' ∧ Config.locSup c' ≤ σ'.nextAddr
       ∧ σ.nextAddr ≤ σ'.nextAddr := by
   -- Closers shared by every arm's outcomes.
@@ -6293,12 +6293,12 @@ theorem applySyncOpCore_wf {σ : Store} {op : SyncOp}
     split at h
     · split at h
       · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
+        obtain ⟨rfl, rfl, rfl⟩ := h
         refine ⟨hw, ?_, Nat.le_refl _⟩
         simp only [Config.locSup, syncOpSup, Nat.max_le]
         omega
       · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-        obtain ⟨σ₂, hst, rfl, rfl⟩ := h
+        obtain ⟨σ₂, hst, rfl, rfl, rfl⟩ := h
         obtain ⟨w1, w2⟩ := storeLoc_pres hw hlocb
           (by simp [syncData_locSup]) hst
         refine ⟨w1, ?_, w2⟩
@@ -6315,7 +6315,7 @@ theorem applySyncOpCore_wf {σ : Store} {op : SyncOp}
     split at h
     · split at h
       · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-        obtain ⟨σ₂, hst, rfl, rfl⟩ := h
+        obtain ⟨σ₂, hst, rfl, rfl, rfl⟩ := h
         obtain ⟨w1, w2⟩ := storeLoc_pres hw hlocb
           (by simp [syncData_locSup]) hst
         refine ⟨w1, ?_, w2⟩
@@ -6333,12 +6333,12 @@ theorem applySyncOpCore_wf {σ : Store} {op : SyncOp}
     split at h
     · split at h
       · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
+        obtain ⟨rfl, rfl, rfl⟩ := h
         refine ⟨hw, ?_, Nat.le_refl _⟩
         simp only [Config.locSup, syncOpSup, Nat.max_le]
         omega
       · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-        obtain ⟨σ₂, hst, rfl, rfl⟩ := h
+        obtain ⟨σ₂, hst, rfl, rfl, rfl⟩ := h
         obtain ⟨w1, w2⟩ := storeLoc_pres hw hlocb
           (by simp [syncData_locSup]) hst
         refine ⟨w1, ?_, w2⟩
@@ -6355,7 +6355,7 @@ theorem applySyncOpCore_wf {σ : Store} {op : SyncOp}
     split at h
     · split at h
       · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-        obtain ⟨σ₂, hst, rfl, rfl⟩ := h
+        obtain ⟨σ₂, hst, rfl, rfl, rfl⟩ := h
         obtain ⟨w1, w2⟩ := storeLoc_pres hw hlocb
           (by simp [syncData_locSup]) hst
         refine ⟨w1, ?_, w2⟩
@@ -6373,14 +6373,14 @@ theorem applySyncOpCore_wf {σ : Store} {op : SyncOp}
     split at h
     · split at h
       · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-        obtain ⟨σ₂, hst, rfl, rfl⟩ := h
+        obtain ⟨σ₂, hst, rfl, rfl, rfl⟩ := h
         obtain ⟨w1, w2⟩ := storeLoc_pres hw hlocb
           (by simp [syncData_locSup]) hst
         refine ⟨w1, ?_, w2⟩
         simp only [Config.locSup]
         omega
       · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-        obtain ⟨σ₂, hst, rfl, rfl⟩ := h
+        obtain ⟨σ₂, hst, rfl, rfl, rfl⟩ := h
         obtain ⟨w1, w2⟩ := storeLoc_pres hw hlocb
           (by simp [syncData_locSup]) hst
         refine ⟨w1, ?_, w2⟩
@@ -6397,7 +6397,7 @@ theorem applySyncOpCore_wf {σ : Store} {op : SyncOp}
     split at h
     · split at h
       · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-        obtain ⟨σ₂, hst, rfl, rfl⟩ := h
+        obtain ⟨σ₂, hst, rfl, rfl, rfl⟩ := h
         obtain ⟨w1, w2⟩ := storeLoc_pres hw hlocb
           (by simp [syncData_locSup]) hst
         refine ⟨w1, ?_, w2⟩
@@ -6420,7 +6420,7 @@ theorem applySyncOpCore_wf {σ : Store} {op : SyncOp}
         (by simp [syncData_locSup]) hst
       split at h <;>
         (simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h;
-         obtain ⟨rfl, rfl⟩ := h;
+         obtain ⟨rfl, rfl, rfl⟩ := h;
          refine ⟨w1, ?_, w2⟩;
          simp only [Config.locSup, panicChainSup, stringPanicValue_locSup,
            goValueListSup, Nat.max_le];
@@ -6436,12 +6436,12 @@ theorem applySyncOpCore_wf {σ : Store} {op : SyncOp}
     split at h
     · split at h
       · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
+        obtain ⟨rfl, rfl, rfl⟩ := h
         refine ⟨hw, ?_, Nat.le_refl _⟩
         simp only [Config.locSup]
         omega
       · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-        obtain ⟨σ₂, hst, rfl, rfl⟩ := h
+        obtain ⟨σ₂, hst, rfl, rfl, rfl⟩ := h
         obtain ⟨w1, w2⟩ := storeLoc_pres hw hlocb
           (by simp [syncData_locSup]) hst
         refine ⟨w1, ?_, w2⟩
@@ -6464,7 +6464,7 @@ theorem applySyncOpCore_wf {σ : Store} {op : SyncOp}
           (by simp [syncData_locSup]) hst
         obtain ⟨⟨c₀, σ₀⟩, hent, h⟩ := h
         simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
+        obtain ⟨rfl, rfl, rfl⟩ := h
         obtain ⟨q1, q2, q4⟩ := enterRecvTargets_wf w1
           (by omega) (by simp [goValueListSup, GoValue.locSup])
           (by simp [Stmt.locSup, stmtListSup]) (by omega) (by omega) hent
@@ -6473,13 +6473,13 @@ theorem applySyncOpCore_wf {σ : Store} {op : SyncOp}
         · try simp only [bind_eq_ok] at h
           obtain ⟨⟨c₀, σ₀⟩, hent, h⟩ := h
           simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-          obtain ⟨rfl, rfl⟩ := h
+          obtain ⟨rfl, rfl, rfl⟩ := h
           obtain ⟨q1, q2, q4⟩ := enterRecvTargets_wf hw
             (by omega) (by simp [goValueListSup, GoValue.locSup])
             (by simp [Stmt.locSup, stmtListSup]) (by omega) (by omega) hent
           exact ⟨q1, by simpa using q2, q4⟩
         · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-          obtain ⟨rfl, rfl⟩ := h
+          obtain ⟨rfl, rfl, rfl⟩ := h
           refine ⟨hw, ?_, Nat.le_refl _⟩
           simp only [Config.locSup, syncOpSup, Nat.max_le]
           omega
@@ -6494,7 +6494,7 @@ theorem applySyncOpCore_wf {σ : Store} {op : SyncOp}
     split at h
     · split at h
       · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-        obtain ⟨σ₂, hst, rfl, rfl⟩ := h
+        obtain ⟨σ₂, hst, rfl, rfl, rfl⟩ := h
         obtain ⟨w1, w2⟩ := storeLoc_pres hw hlocb
           (by simp [syncData_locSup]) hst
         refine ⟨w1, ?_, w2⟩
@@ -6537,26 +6537,38 @@ is a `storeLoc_pres` of a loc-free sync value; the delivery is
 `tryDeliver_wf` at either state. -/
 theorem applyTryLock_wf {σ : Store} {op : SyncOp} {loc : Loc}
     {pre : SyncPrim} {spurious : Bool} {targets : List Assignee}
-    {env : LocalEnv} {k : Cont} {c' : Config} {σ' : Store}
+    {env : LocalEnv} {k : Cont} {c' : Config} {σ' : Store} {tr : AccessTrace}
     (hw : StateWf ctx σ) (hloc : Loc.locSup loc ≤ σ.nextAddr)
     (ht : assigneeListSup targets ≤ σ.nextAddr)
     (henv : LocalEnv.locSup env ≤ σ.nextAddr)
     (hk : Cont.locSup k ≤ σ.nextAddr)
-    (h : applyTryLock ctx σ op loc pre spurious targets env k = .ok (c', σ')) :
+    (h : applyTryLock ctx σ op loc pre spurious targets env k = .ok (c', σ', tr)) :
     StateWf ctx σ' ∧ Config.locSup c' ≤ σ'.nextAddr
       ∧ σ.nextAddr ≤ σ'.nextAddr := by
   rw [applyTryLock.eq_def] at h
   try simp only [bind_eq_ok] at h
   obtain ⟨acq, hacq, h⟩ := h
   split at h
-  · exact tryDeliver_wf hw ht henv hk h
+  · try simp only [bind_eq_ok] at h
+    obtain ⟨⟨c₀, σ₀⟩, hdel, h⟩ := h
+    simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl, rfl⟩ := h
+    exact tryDeliver_wf hw ht henv hk hdel
   · try simp only [bind_eq_ok] at h
     obtain ⟨σ₂, hst, h⟩ := h
     obtain ⟨w1, w2⟩ := storeLoc_pres hw hloc
       (by simp [syncData_locSup]) hst
     split at h
-    · exact tryDeliver_wf hw ht henv hk h
-    · obtain ⟨q1, q2, q4⟩ := tryDeliver_wf w1 (by omega) (by omega) (by omega) h
+    · try simp only [bind_eq_ok] at h
+      obtain ⟨⟨c₀, σ₀⟩, hdel, h⟩ := h
+      simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl, rfl⟩ := h
+      exact tryDeliver_wf hw ht henv hk hdel
+    · try simp only [bind_eq_ok] at h
+      obtain ⟨⟨c₀, σ₀⟩, hdel, h⟩ := h
+      simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl, rfl⟩ := h
+      obtain ⟨q1, q2, q4⟩ := tryDeliver_wf w1 (by omega) (by omega) (by omega) hdel
       exact ⟨q1, q2, Nat.le_trans w2 q4⟩
 
 /-- A TRY head's result-target sup is its `syncOpSup`. -/
@@ -6569,12 +6581,12 @@ through `applyTryLock_wf`, everything else through
 `applySyncOpCore_wf`. The stream plays no part in the state claims. -/
 theorem applySyncOp_wf {σ : Store} {ch : Choices} {op : SyncOp}
     {vs : List GoValue} {env : LocalEnv} {k : Cont} {c' : Config}
-    {σ' : Store} {ch' : Choices}
+    {σ' : Store} {ch' : Choices} {tr : AccessTrace}
     (hw : StateWf ctx σ) (hvs : goValueListSup vs ≤ σ.nextAddr)
     (hop : syncOpSup op ≤ σ.nextAddr)
     (henv : LocalEnv.locSup env ≤ σ.nextAddr)
     (hk : Cont.locSup k ≤ σ.nextAddr)
-    (h : applySyncOp ctx σ ch op vs env k = .ok (c', σ', ch')) :
+    (h : applySyncOp ctx σ ch op vs env k = .ok (c', σ', ch', tr)) :
     StateWf ctx σ' ∧ Config.locSup c' ≤ σ'.nextAddr
       ∧ σ.nextAddr ≤ σ'.nextAddr := by
   rw [applySyncOp.eq_def] at h
@@ -6586,16 +6598,16 @@ theorem applySyncOp_wf {σ : Store} {ch : Choices} {op : SyncOp}
     have hlocb : Loc.locSup loc ≤ σ.nextAddr :=
       Nat.le_trans (valueAsLoc_locSup hloc) (by omega)
     obtain ⟨pre, hcell, h⟩ := h
-    obtain ⟨⟨c₀, σ₀⟩, happ, h⟩ := h
+    obtain ⟨⟨c₀, σ₀, tr₀⟩, happ, h⟩ := h
     simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl, rfl, rfl⟩ := h
     rw [syncOpSup_of_tryTargets htry] at hop
     exact applyTryLock_wf hw hlocb hop henv hk happ
   · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
   · try simp only [bind_eq_ok] at h
-    obtain ⟨⟨c₀, σ₀⟩, hcore, h⟩ := h
+    obtain ⟨⟨c₀, σ₀, tr₀⟩, hcore, h⟩ := h
     simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl, rfl, rfl⟩ := h
     exact applySyncOpCore_wf hw hvs hop henv hk hcore
 
 set_option maxHeartbeats 1600000 in
@@ -6630,13 +6642,13 @@ bounds argument is per committed clause, membership-generalized). -/
 theorem applySelect_wf {σ : Store}
     {clauses : List (SelectClauseHead × Stmt)} {default? : Option Stmt}
     {vs : List GoValue} {env : LocalEnv} {k : Cont} {c' : Config}
-    {σ' : Store} {ch ch' : Choices} {cl? : Option EvClause}
+    {σ' : Store} {ch ch' : Choices} {cl? : Option EvClause} {tr : AccessTrace}
     (hw : StateWf ctx σ) (hcl : selectClausesSup clauses ≤ σ.nextAddr)
     (hd : optStmtSup default? ≤ σ.nextAddr)
     (hvs : goValueListSup vs ≤ σ.nextAddr)
     (henv : LocalEnv.locSup env ≤ σ.nextAddr)
     (hk : Cont.locSup k ≤ σ.nextAddr)
-    (h : applySelect ctx σ clauses default? vs env k ch = .ok (c', σ', ch', cl?)) :
+    (h : applySelect ctx σ clauses default? vs env k ch = .ok (c', σ', ch', cl?, tr)) :
     StateWf ctx σ' ∧ Config.locSup c' ≤ σ'.nextAddr
       ∧ σ.nextAddr ≤ σ'.nextAddr := by
   rw [applySelect.eq_def] at h
@@ -6649,24 +6661,24 @@ theorem applySelect_wf {σ : Store}
   have hevsb : evClausesSup evs ≤ σ.nextAddr := by
     have := evalClauses_sup hevs
     omega
-  have hcommit : ∀ c ∈ rc, ∀ {c₂ : Config} {σ₂ : Store},
-      commitClause ctx σ env k c = .ok (c₂, σ₂) →
+  have hcommit : ∀ c ∈ rc, ∀ {c₂ : Config} {σ₂ : Store} {tr₂ : AccessTrace},
+      commitClause ctx σ env k c = .ok (c₂, σ₂, tr₂) →
       StateWf ctx σ₂ ∧ Config.locSup c₂ ≤ σ₂.nextAddr
         ∧ σ.nextAddr ≤ σ₂.nextAddr := by
-    intro c hmem c₂ σ₂ hcom
+    intro c hmem c₂ σ₂ tr₂ hcom
     have hcb : evClauseSup c ≤ σ.nextAddr := by
       have hmem' := readyClauses_subset hrc c hmem
       exact Nat.le_trans (evClausesSup_mem hmem') hevsb
     exact commitClause_wf hw hcb henv hk hcom
   split at h
-  · -- outc = .done c₂ σ₂ clq: no pick was consumed
-    rename_i c₂ σ₂ clq
+  · -- outc = .done c₂ σ₂ clq tr₂: no pick was consumed
+    rename_i c₂ σ₂ clq tr₂
     simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl, rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl, rfl, rfl, rfl⟩ := h
     split at hcore
     · split at hcore <;>
         (simp only [pure_eq_ok, Except.ok.injEq, SelectOutcome.done.injEq] at hcore;
-         obtain ⟨rfl, rfl, rfl⟩ := hcore)
+         obtain ⟨rfl, rfl, rfl, rfl⟩ := hcore)
       · rename_i d
         refine ⟨hw, ?_, Nat.le_refl _⟩
         simp only [optStmtSup] at hd
@@ -6677,33 +6689,33 @@ theorem applySelect_wf {σ : Store}
         omega
     · rename_i c
       simp only [bind_eq_ok] at hcore
-      obtain ⟨⟨c₃, σ₃⟩, hcom, hcore⟩ := hcore
+      obtain ⟨⟨c₃, σ₃, tr₃⟩, hcom, hcore⟩ := hcore
       simp only [pure_eq_ok, Except.ok.injEq, SelectOutcome.done.injEq] at hcore
-      obtain ⟨rfl, rfl, rfl⟩ := hcore
+      obtain ⟨rfl, rfl, rfl, rfl⟩ := hcore
       exact hcommit c (List.mem_cons_self ..) hcom
     · simp only [bind_eq_ok] at hcore
       obtain ⟨commits, hcommits, hcore⟩ := hcore
       simp only [pure_eq_ok, Except.ok.injEq] at hcore
       cases hcore
-  · -- outc = .picks commits: the L2 pick indexes the pre-committed list
-    rename_i commits
+  · -- outc = .picks poll commits: the L2 pick indexes the pre-committed list
+    rename_i poll commits
     split at h
-    · rename_i clp r₂c r₂σ hget
+    · rename_i clp r₂c r₂σ r₂tr hget
       simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl, rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl, rfl, rfl, rfl⟩ := h
       split at hcore
       · split at hcore <;>
           (simp only [pure_eq_ok, Except.ok.injEq] at hcore; cases hcore)
       · simp only [bind_eq_ok] at hcore
-        obtain ⟨⟨c₃, σ₃⟩, hcom, hcore⟩ := hcore
+        obtain ⟨⟨c₃, σ₃, tr₃⟩, hcom, hcore⟩ := hcore
         simp only [pure_eq_ok, Except.ok.injEq] at hcore
         cases hcore
       · simp only [bind_eq_ok] at hcore
         obtain ⟨commits₂, hcommits, hcore⟩ := hcore
         simp only [pure_eq_ok, Except.ok.injEq, SelectOutcome.picks.injEq] at hcore
-        subst hcore
+        obtain ⟨rfl, rfl⟩ := hcore
         obtain ⟨cl, hmem, hf⟩ := mapM_getElem?_mem hcommits hget
-        have hcom : commitClause ctx σ env k cl = .ok (r₂c, r₂σ) := by
+        have hcom : commitClause ctx σ env k cl = .ok (r₂c, r₂σ, r₂tr) := by
           cases hcc : commitClause ctx σ env k cl with
           | ok r => rw [hcc] at hf; simp_all
           | error e =>
@@ -6717,7 +6729,7 @@ theorem applySelect_wf {σ : Store}
     · -- defensive `.inr` (unreachable today): the picked panic as a
       -- `.panicking` configuration over the input state
       simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl, rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl, rfl, rfl, rfl⟩ := h
       refine ⟨hw, ?_, Nat.le_refl _⟩
       simp only [Config.locSup, panicChainSup, runtimeErrorValue_locSup, panicEntry_locSup,
         Nat.max_le]
@@ -6733,12 +6745,12 @@ types unchanged, allocator monotone. The op stores a LOC-FREE integer
 `storeLoc_pres`, and/or an `enterRecvTargets_wf`. -/
 theorem applyAtomicOp_wf {σ : Store} {op : AtomicOp}
     {vs : List GoValue} {env : LocalEnv} {k : Cont} {c' : Config}
-    {σ' : Store}
+    {σ' : Store} {tr : AccessTrace}
     (hw : StateWf ctx σ) (hvs : goValueListSup vs ≤ σ.nextAddr)
     (hop : atomicOpSup op ≤ σ.nextAddr)
     (henv : LocalEnv.locSup env ≤ σ.nextAddr)
     (hk : Cont.locSup k ≤ σ.nextAddr)
-    (h : applyAtomicOp ctx σ op vs env k = .ok (c', σ')) :
+    (h : applyAtomicOp ctx σ op vs env k = .ok (c', σ', tr)) :
     StateWf ctx σ' ∧ Config.locSup c' ≤ σ'.nextAddr
       ∧ σ.nextAddr ≤ σ'.nextAddr := by
   obtain ⟨head, kind, targets⟩ := op
@@ -6777,14 +6789,14 @@ theorem applyAtomicOp_wf {σ : Store} {op : AtomicOp}
         obtain ⟨w1, w2⟩ := hσ₂
         split at h
         · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-          obtain ⟨rfl, rfl⟩ := h
+          obtain ⟨rfl, rfl, rfl⟩ := h
           refine ⟨w1, ?_, w2⟩
           simp only [Config.locSup, Nat.max_le]
           omega
         · try simp only [bind_eq_ok] at h
           obtain ⟨⟨c₀, σ₀⟩, hent, h⟩ := h
           simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-          obtain ⟨rfl, rfl⟩ := h
+          obtain ⟨rfl, rfl, rfl⟩ := h
           obtain ⟨q1, q2, q4⟩ := enterRecvTargets_wf w1
             (by omega)
             (by simp [goValueListSup, hres])
@@ -7619,7 +7631,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
       Nat.max_le] at hc h1 h2 ⊢
     omega
   case chanStApply op done v r env k hres hdel =>
-    rcases toResult_cases hres with ⟨⟨c₂, s₂⟩, rfl, happly⟩ | ⟨msg, rfl, -⟩
+    rcases toResult_cases hres with ⟨⟨c₂, s₂, tr₂⟩, rfl, happly⟩ | ⟨msg, rfl, -⟩
     · simp only [deliver_ok, Prod.mk.injEq] at hdel
       obtain ⟨rfl, rfl, rfl⟩ := hdel
 
@@ -7646,7 +7658,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
       Nat.max_le] at hc h1 h2 ⊢
     omega
   case syncStApply op done v r env k ch hres hdel =>
-    rcases toResult_cases hres with ⟨⟨c₂, s₂, ch'⟩, rfl, happly⟩ | ⟨msg, rfl, -⟩
+    rcases toResult_cases hres with ⟨⟨c₂, s₂, ch', tr₂⟩, rfl, happly⟩ | ⟨msg, rfl, -⟩
     · simp only [deliver_ok, Prod.mk.injEq] at hdel
       obtain ⟨rfl, rfl, rfl⟩ := hdel
 
@@ -7672,7 +7684,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
       Nat.max_le] at hc h1 h2 ⊢
     omega
   case atomicStApply op done v r env k hres hdel =>
-    rcases toResult_cases hres with ⟨⟨c₂, s₂⟩, rfl, happly⟩ | ⟨msg, rfl, -⟩
+    rcases toResult_cases hres with ⟨⟨c₂, s₂, tr₂⟩, rfl, happly⟩ | ⟨msg, rfl, -⟩
     · simp only [deliver_ok, Prod.mk.injEq] at hdel
       obtain ⟨rfl, rfl, rfl⟩ := hdel
 
@@ -7709,7 +7721,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
       Nat.max_le] at hc ⊢
     omega
   case selectApply clauses default? done v r env k ch hres hdel =>
-    rcases toResult_cases hres with ⟨⟨c₂, s₂, ch', cl?⟩, rfl, happly⟩ | ⟨msg, rfl, -⟩
+    rcases toResult_cases hres with ⟨⟨c₂, s₂, ch', cl?, tr₂⟩, rfl, happly⟩ | ⟨msg, rfl, -⟩
     · simp only [deliver_ok, Prod.mk.injEq] at hdel
       obtain ⟨rfl, rfl, rfl⟩ := hdel
 

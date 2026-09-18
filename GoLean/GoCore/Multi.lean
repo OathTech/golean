@@ -289,11 +289,8 @@ theorem threadDone_status (t : Thread) :
         by_cases hb : isBlockedConfig c = true <;> simp [hb]
 
 variable (ctx)
-/-- The channel a chan-value points at (`none` for nil channels and
-non-channel values). -/
-def chanValueLoc : GoValue → Option Loc
-  | .chan cv => cv.base
-  | _ => none
+-- `chanValueLoc` MOVED to Machine.lean (C1 S2c): the select's poll emission
+-- (`selectPoll`) needs it beside `applySelectCore`.
 
 /-- Cell-based wake-readiness of a parked goroutine: can its blocked
 operation now proceed against the CHANNEL CELL alone? Parked partners
@@ -711,14 +708,24 @@ B1 (stage C) / C5: a parked op's completion is a completion — every
 proceeding resume opens the goroutine's `postOp` boundary (the pool's
 flag, `Thread.completed`; the select arm through `commitClause`); the
 close-woken sender's panic opens none (B3 deferred). -/
-def resumeThread (s : Store) : Config → Except Stop (Config × Store)
+def resumeThread (s : Store) : Config → Except Stop (Config × Store × AccessTrace)
+  -- THE LABEL (C1 S2c): a wake performs the parked op's synchronization
+  -- ACTION and no access — the entry accesses were emitted when the op
+  -- parked (a parked sender's `chanSendEntry`, a parked select's
+  -- `selectPoll`, a parked sync op's `syncEntryKinds`), and a woken op
+  -- re-polls nothing (BUG-080: no state-word access at a wake — the
+  -- parked goroutine released nothing after its entry, so every conflict
+  -- a wake-time access could find, the entry access already found). A
+  -- close-woken sender panics with NO edge (the closer installed the
+  -- channel-object write; BUG-045's account at `raceWakeEvent`'s former
+  -- docstring, now the S2c handoff).
   | .blockedSend (some loc) v k => do
       let (buf, capacity, closed) ← chanCell s loc
       if closed then
-        return (.panicking [panicEntry "send on closed channel"] k, s)
+        return (.panicking [panicEntry "send on closed channel"] k, s, [])
       else if buf.size < capacity then do
         let s' ← storeChanPayload s loc (buf.push v) capacity closed
-        return (.next k, s')
+        return (.next k, s', [.hb (.slotOp loc capacity true)])
       else throw (.internal "resume on an unready blocked send")
   | .blockedRecv (some loc) targets elem env k => do
       let (buf, capacity, closed) ← chanCell s loc
@@ -726,12 +733,12 @@ def resumeThread (s : Store) : Config → Except Stop (Config × Store)
       | some v => do
           let s₁ ← storeChanPayload s loc (buf.eraseIdx! 0) capacity closed
           let (c', s₂) ← resumeRecvDelivery s₁ v true targets env k
-          return (c', s₂)
+          return (c', s₂, [.hb (.slotOp loc capacity false)])
       | none =>
           if closed then do
             let zero ← defaultValue ctx elem
             let (c', s₂) ← resumeRecvDelivery s zero false targets env k
-            return (c', s₂)
+            return (c', s₂, [.hb (.closeAcquire loc)])
           else throw (.internal "resume on an unready blocked receive")
   | .blockedSelect evs env k => do
       match ← readyClauses s evs with
@@ -743,7 +750,12 @@ def resumeThread (s : Store) : Config → Except Stop (Config × Store)
   -- resumes are `.internal`, the channel arms' discipline. A woken
   -- `wlock` retires its `pendingW` registration; a woken `wgWait` its
   -- `waiters` one; a woken `onceBegin` delivers `false` (f already ran
-  -- — the design note §4 Once rules).
+  -- — the design note §4 Once rules). Every successful resume is the
+  -- op's ACQUIRE — Lock/RLock/write-Lock at their acquisition (`wlock`
+  -- acquires BOTH clocks, rwmutex.go:159-160), Wait at its unblocked
+  -- return ("a call to Done 'synchronizes before' the return of any Wait
+  -- call that it unblocks"), a woken Do at its completion-observing
+  -- return.
   | .blockedSync op loc env k => do
       let p ← syncCell ctx s loc
       match op, p with
@@ -751,26 +763,26 @@ def resumeThread (s : Store) : Config → Except Stop (Config × Store)
           if locked then throw (.internal "resume on an unready blocked Lock")
           else do
             let s' ← storeLoc ctx s loc (.syncData (.mutex true))
-            return (.next k, s')
+            return (.next k, s', [.hb (.syncAcquire loc false)])
       | .wlock, .rwmutex writer readers pendingW =>
           if !writer && readers == 0 then do
             let s' ← storeLoc ctx s loc (.syncData (.rwmutex true 0 (pendingW - 1)))
-            return (.next k, s')
+            return (.next k, s', [.hb (.syncAcquire loc true)])
           else throw (.internal "resume on an unready blocked write-Lock")
       | .rlock, .rwmutex writer readers pendingW =>
           if !writer && pendingW == 0 then do
             let s' ← storeLoc ctx s loc (.syncData (.rwmutex writer (readers + 1) pendingW))
-            return (.next k, s')
+            return (.next k, s', [.hb (.syncAcquire loc false)])
           else throw (.internal "resume on an unready blocked RLock")
       | .wgWait, .waitGroup counter waiters =>
           if counter == 0 then do
             let s' ← storeLoc ctx s loc (.syncData (.waitGroup counter (waiters - 1)))
-            return (.next k, s')
+            return (.next k, s', [.hb (.syncAcquire loc false)])
           else throw (.internal "resume on an unready blocked Wait")
       | .onceBegin targets, .once started done =>
           if started && done then do
             let (c', s₂) ← enterRecvTargets s targets [.bool false] (.seqn #[]) env k
-            return (c', s₂)
+            return (c', s₂, [.hb (.syncAcquire loc false)])
           else throw (.internal "resume on an unready blocked Once.Do")
       | _, _ => throw (.internal "blocked sync op / cell shape mismatch")
   | _ => throw (.internal "resume on a non-blocked configuration")
@@ -946,13 +958,16 @@ structure StepEvent where
   printed bytes is a statement about the event trace, exactly parallel
   to a spec about the access trace. -/
   out : List GoString := []
-  /-- The step's ACCESS TRACE (C1 S2a; charter §3, D5): what the memory
-  module's operations emitted during this step — the `Step` label lifted
-  into the event. A goroutine step carries `stepFn`'s trace; a spawn
-  carries the CHILD's frame-entry read (the receiver dispatch — attributed
-  to the child by the detector's fold); the pool's own steps (boundary
-  clear, abort, wake, pairing, select commit/pass) carry `[]` in S2a —
-  their channel-object and sync-word emissions are S2c's. -/
+  /-- The step's LABEL (C1 S2a/S2c; charter §3, D5/D9): the memory-model
+  events the step's operations emitted, in gc's instrumentation order —
+  the `Step` label lifted into the event. A goroutine step carries
+  `stepFn`'s label (data accesses; a registry apply's channel-object /
+  sync-word accesses and its happens-before actions); a spawn carries the
+  `go` edge and the CHILD's frame-entry read `attributed` to it; a wake
+  the resumed op's action; a pairing the arriving op's entry emission and
+  both goroutines' actions; an arrival commit the select's poll and the
+  commit's action; the boundary clear and the abort `[]`. The detector's
+  fold (`raceUpdate`) consumes exactly this. -/
   trace : AccessTrace := []
 
 /-- The per-clause channel of a select's evaluated entry operands,
@@ -1079,7 +1094,10 @@ cell-readiness bound differs from the waiter-extended ready set the
 L2 pick was drawn over). -/
 inductive ArrivalOutcome where
   | pair (bc : Config) (cands : List (Nat × PairTarget))
-  | commit (cl : EvClause) (env : LocalEnv) (k : Cont)
+  /-- `evs` are the select's EVALUATED clauses (C1 S2c): the commit's label
+  is the select's poll over all of them (`selectPoll`), then the committed
+  clause's actions. -/
+  | commit (evs : List EvClause) (cl : EvClause) (env : LocalEnv) (k : Cont)
 
 /-- The PURE arrival analysis (stream-free — the relation's carrier;
 `arrivalPlan` is its consuming wrapper):
@@ -1153,7 +1171,7 @@ def selectArrivalCases (s : Store) (threads : Array Thread) (i : Nat)
             Except Stop ArrivalOutcome := fun (ci, _, ws) =>
           if ws.isEmpty then
             match evs[ci]? with
-            | some cl => return .commit cl env k
+            | some cl => return .commit evs cl env k
             | none => throw (.internal "select ready-clause index out of range")
           else if ws.any (fun w => w.2.isSelect) then
             throw (.unsupported
@@ -1211,6 +1229,37 @@ def arrivalPlan (s : Store) (threads : Array Thread) (i : Nat)
       | some o => return (some o, ch', ps)
       | none => throw (.internal "select L2 ready pick out of range")
 
+/-- The arriving op's ENTRY emission on the pairing path (C1 S2c): the channel-object
+reads its cell-path apply would have emitted at this position (`chanSendEntry` for a
+send, `selectPoll` for a select — gc's `chansend` entry read and `selectgo`'s pass-1
+poll happen before any waiter is dequeued; a receive records nothing). Read off the
+would-block shape `chanArrivalPlan`/`selectArrivalCases` built for THIS arrival — the
+op's own identity, never another goroutine's configuration. Any other shape is not
+an arrival (`applyPairing` refuses it by name) and emits nothing. -/
+def arrivalPoll : Config → AccessTrace
+  | .blockedSend (some loc) _ _ => chanSendEntry loc
+  | .blockedSelect evs _ _ => selectPoll evs
+  | _ => []
+
+/-- The pairing's actions when the ARRIVING goroutine SENDS to a parked receiver `j`
+(gc: `send()` — the buffer is empty by the hchan invariant): capacity 0 is the
+bidirectional RENDEZVOUS (`racesync`; both unbuffered go_mem rules); otherwise the
+direct handoff transits the (empty) slot — the sender's slot-op, then the
+receiver's, same slot (gc pretends the value crossed the buffer). The partner's
+action is attributed to it. -/
+def pairSendEvents (loc : Loc) (capacity : Nat) (j : Nat) : AccessTrace :=
+  if capacity == 0 then [.hb (.rendezvous j)]
+  else [.hb (.slotOp loc capacity true), .attributed j (.hb (.slotOp loc capacity false))]
+
+/-- The pairing's actions when the ARRIVING goroutine RECEIVES from a parked sender
+`j`: at an EMPTY buffer the rendezvous (a sender parks at an empty buffer only at
+capacity 0); at a NONEMPTY (necessarily full) buffer the head-and-refill (gc:
+`recv()`) — the receiver takes the HEAD slot (the k-th send's clock) first, the
+parked sender then releases into the tail slot. -/
+def pairRecvEvents (loc : Loc) (capacity : Nat) (bufEmpty : Bool) (j : Nat) : AccessTrace :=
+  if bufEmpty then [.hb (.rendezvous j)]
+  else [.hb (.slotOp loc capacity false), .attributed j (.hb (.slotOp loc capacity true))]
+
 /-- Perform ONE pairing: the arriving goroutine `i` (whose op takes
 its would-block shape `bc`) pairs with the chosen candidate. Two
 shapes, both gc's:
@@ -1235,15 +1284,22 @@ very next boundary — the one this rule just opened — so flagging it
 would add a no-op step and no latitude (boundary-set note §2 B1). -/
 def applyPairing (s : Store) (threads : Array Thread) (i : Nat)
     (bc : Config) (cand : Nat × PairTarget) :
-    Except Stop (Array Thread × Store) := do
+    Except Stop (Array Thread × Store × AccessTrace) := do
+  -- THE LABEL (C1 S2c): the arriving op's entry emission, then the pairing's
+  -- happens-before actions (`pairSendEvents`/`pairRecvEvents`; the partner's
+  -- action `attributed` to it — the fold moves ITS clock). The former
+  -- `racePairEvent`'s classification from the pre-pool is gone: the apply
+  -- knows which shape it performed.
+  let poll := arrivalPoll bc
   match bc, cand.2 with
   | .blockedSend (some loc) v k, .opWaiter j =>
       match threads[j]? with
       | some (.running (.blockedRecv _ targets _ envr kr) _) => do
-          let (buf, _, _) ← chanCell s loc
+          let (buf, capacity, _) ← chanCell s loc
           if buf.isEmpty then do
             let (cr, s') ← resumeRecvDelivery s v true targets envr kr
-            return ((threads.setIfInBounds i (Thread.completed (.next k))).setIfInBounds j (.running cr none), s')
+            return ((threads.setIfInBounds i (Thread.completed (.next k))).setIfInBounds j (.running cr none), s',
+              poll ++ pairSendEvents loc capacity j)
           else throw (.internal
             "parked receiver beside a nonempty buffer (hchan invariant breach)")
       | _ => throw (.internal "pairing partner shape mismatch")
@@ -1252,10 +1308,11 @@ def applyPairing (s : Store) (threads : Array Thread) (i : Nat)
       | some (.running (.blockedSelect evs envs ks) _) =>
           match evs[ci]? with
           | some (.recvEv _ targets _ body) => do
-              let (buf, _, _) ← chanCell s loc
+              let (buf, capacity, _) ← chanCell s loc
               if buf.isEmpty then do
                 let (cs', s') ← selectRecvDelivery s v true targets body envs ks
-                return ((threads.setIfInBounds i (Thread.completed (.next k))).setIfInBounds j (.running cs' none), s')
+                return ((threads.setIfInBounds i (Thread.completed (.next k))).setIfInBounds j (.running cs' none), s',
+                  poll ++ pairSendEvents loc capacity j)
               else throw (.internal
                 "parked select receiver beside a nonempty buffer (hchan invariant breach)")
           | _ => throw (.internal "pairing partner clause mismatch")
@@ -1268,12 +1325,14 @@ def applyPairing (s : Store) (threads : Array Thread) (i : Nat)
           | none => do
               -- empty (capacity 0): direct handoff
               let (cr, s') ← resumeRecvDelivery s vs true targets env k
-              return ((threads.setIfInBounds i (Thread.completed cr)).setIfInBounds j (.running (.next ks) none), s')
+              return ((threads.setIfInBounds i (Thread.completed cr)).setIfInBounds j (.running (.next ks) none), s',
+                poll ++ pairRecvEvents loc capacity true j)
           | some hd => do
               -- gc recv(): head out, parked sender's value in at the tail
               let s₁ ← storeChanPayload s loc ((buf.eraseIdx! 0).push vs) capacity closed
               let (cr, s') ← resumeRecvDelivery s₁ hd true targets env k
-              return ((threads.setIfInBounds i (Thread.completed cr)).setIfInBounds j (.running (.next ks) none), s')
+              return ((threads.setIfInBounds i (Thread.completed cr)).setIfInBounds j (.running (.next ks) none), s',
+                poll ++ pairRecvEvents loc capacity false j)
       | _ => throw (.internal "pairing partner shape mismatch")
   | .blockedRecv (some loc) targets _ env k, .selectWaiter j ci =>
       match threads[j]? with
@@ -1288,12 +1347,12 @@ def applyPairing (s : Store) (threads : Array Thread) (i : Nat)
               | none => do
                   let (cr, s') ← resumeRecvDelivery s v' true targets env k
                   return ((threads.setIfInBounds i (Thread.completed cr)).setIfInBounds j
-                    (.running (.exec body envs ks) none), s')
+                    (.running (.exec body envs ks) none), s', poll ++ pairRecvEvents loc capacity true j)
               | some hd => do
                   let s₁ ← storeChanPayload s loc ((buf.eraseIdx! 0).push v') capacity closed
                   let (cr, s') ← resumeRecvDelivery s₁ hd true targets env k
                   return ((threads.setIfInBounds i (Thread.completed cr)).setIfInBounds j
-                    (.running (.exec body envs ks) none), s')
+                    (.running (.exec body envs ks) none), s', poll ++ pairRecvEvents loc capacity false j)
           | _ => throw (.internal "pairing partner clause mismatch")
       | _ => throw (.internal "pairing partner shape mismatch")
   | .blockedSelect evs env k, tgt =>
@@ -1311,12 +1370,12 @@ def applyPairing (s : Store) (threads : Array Thread) (i : Nat)
                       | none => do
                           let (ci', s') ← selectRecvDelivery s vs true targets body env k
                           return ((threads.setIfInBounds i (Thread.completed ci')).setIfInBounds j
-                            (.running (.next ks) none), s')
+                            (.running (.next ks) none), s', poll ++ pairRecvEvents loc capacity true j)
                       | some hd => do
                           let s₁ ← storeChanPayload s loc ((buf.eraseIdx! 0).push vs) capacity closed
                           let (ci', s') ← selectRecvDelivery s₁ hd true targets body env k
                           return ((threads.setIfInBounds i (Thread.completed ci')).setIfInBounds j
-                            (.running (.next ks) none), s')
+                            (.running (.next ks) none), s', poll ++ pairRecvEvents loc capacity false j)
               | _ => throw (.internal "pairing partner shape mismatch")
           | .selectWaiter _ _ => throw (.internal
               "select-with-select pairing reached applyPairing (refused upstream)")
@@ -1328,11 +1387,12 @@ def applyPairing (s : Store) (threads : Array Thread) (i : Nat)
                   match chanValueLoc chv with
                   | none => throw (.internal "pairing clause channel mismatch")
                   | some loc => do
-                      let (buf, _, _) ← chanCell s loc
+                      let (buf, capacity, _) ← chanCell s loc
                       if buf.isEmpty then do
                         let v' ← normalizeValueForTy ctx selem vv
                         let (cr, s') ← resumeRecvDelivery s v' true targetsr envr kr
-                        return ((threads.setIfInBounds i (Thread.completed (.exec body env k))).setIfInBounds j (.running cr none), s')
+                        return ((threads.setIfInBounds i (Thread.completed (.exec body env k))).setIfInBounds j (.running cr none), s',
+                          poll ++ pairSendEvents loc capacity j)
                       else throw (.internal
                         "parked receiver beside a nonempty buffer (hchan invariant breach)")
               | _ => throw (.internal "pairing partner shape mismatch")
@@ -1369,8 +1429,9 @@ def stepThread (s : Store) (threads : Array Thread) (i : Nat)
         ⟨i, .opDoneStrip, [], [], []⟩)
   | some (.running c none) =>
     if isBlockedConfig c then do
-      let (c', s') ← resumeThread ctx s c
-      return (threads.setIfInBounds i (Thread.completed c'), s', ch, ⟨i, .woke, [], [], []⟩)
+      -- The wake's label is the resumed op's ACTION (C1 S2c).
+      let (c', s', tr) ← resumeThread ctx s c
+      return (threads.setIfInBounds i (Thread.completed c'), s', ch, ⟨i, .woke, [], [], tr⟩)
     else
       match c.abort? with
       | some (first, rest) => do
@@ -1393,10 +1454,13 @@ def stepThread (s : Store) (threads : Array Thread) (i : Nat)
       match spawnPlan c with
       | some (cv, args, k) => do
           let (parent', child, s', ch', tr) ← spawnStep ctx s cv args k ch
-          -- The spawn's trace is the CHILD's entry read (S2a); the fold
-          -- attributes it to `threads.size`, the child's index.
+          -- The spawn's label (C1 S2c): the `go` statement's edge to the
+          -- child (`threads.size`, its index), then the CHILD's entry read
+          -- (S2a's trace) attributed to it — gc attributes the receiver
+          -- dispatch's read to the spawned goroutine, after the edge.
           return ((threads.setIfInBounds i (Thread.afterStep s c parent')).push (.running child none),
-            s', ch', ⟨i, .spawned threads.size, [], [], tr⟩)
+            s', ch', ⟨i, .spawned threads.size, [], [],
+              .hb (.spawn threads.size) :: tr.map (.attributed threads.size)⟩)
       | none => do
           match ← arrivalPlan ctx s threads i c ch with
           | (some (.pair bc cs), ch₁, ps₁) =>
@@ -1410,18 +1474,21 @@ def stepThread (s : Store) (threads : Array Thread) (i : Nat)
                   let (idx, ch₂, ps₂) := Choices.consumeAtE .l4Waiter cs.length ch₁
                   match cs[idx]? with
                   | some cand => do
-                      let (ts', s'') ← applyPairing ctx s threads i bc cand
+                      -- The pairing's label: the arriving op's entry emission
+                      -- and both goroutines' actions (C1 S2c, `applyPairing`).
+                      let (ts', s'', tr) ← applyPairing ctx s threads i bc cand
                       return (ts', s'', ch₂,
-                        ⟨i, .paired cand.2.partnerIdx, ps₁ ++ ps₂, [], []⟩)
+                        ⟨i, .paired cand.2.partnerIdx, ps₁ ++ ps₂, [], tr⟩)
                   | none => throw (.internal "waiter pick out of range")
-          | (some (.commit cl env k), ch₁, ps₁) => do
+          | (some (.commit evs cl env k), ch₁, ps₁) => do
               -- The L2-picked clause is cell-only ready: commit it
               -- against the cell at the pool level (`applySelect`'s
               -- cell bound differs from the waiter-extended one the
-              -- pick was drawn over).
-              let (c', s') ← commitClause ctx s env k cl
+              -- pick was drawn over). The label (C1 S2c): the select's
+              -- poll over ALL its clauses, then the commit's action.
+              let (c', s', trc) ← commitClause ctx s env k cl
               return (threads.setIfInBounds i (Thread.afterStep s c c'), s', ch₁,
-                ⟨i, .selectCommit cl, ps₁, [], []⟩)
+                ⟨i, .selectCommit cl, ps₁, [], selectPoll evs ++ trc⟩)
           | (none, ch₁, ps₁) =>
               match selectApplyPlan c with
               | some (v, clauses, default?, done, env, k') =>
@@ -1435,11 +1502,11 @@ def stepThread (s : Store) (threads : Array Thread) (i : Nat)
                   -- with the pre-consumption stream.
                   match ← toResult (applySelect ctx s clauses default?
                       ((v :: done).reverse) env k' ch₁) with
-                  | .ok (c', s', ch₂, cl?) =>
+                  | .ok (c', s', ch₂, cl?, tr) =>
                       return (threads.setIfInBounds i (Thread.afterStep s c c'), s', ch₂,
                         ⟨i, match cl? with
                             | some cl => .selectCommit cl
-                            | none => .selectPass, ps₁, [], []⟩)
+                            | none => .selectPass, ps₁, [], tr⟩)
                   | .panic msg =>
                       let (c', s', _) := deliver s k' (fun (p : Config × Store) => (p.1, p.2, ([] : AccessTrace))) (.panic msg)
                       return (threads.setIfInBounds i (Thread.afterStep s c c'), s', ch₁,
@@ -1845,10 +1912,37 @@ def raceChanEntryReads (i : Nat) (cPre : Config)
       | none => pure r)
   | _ => return r
 
+/-- TRANSITIONAL (C1 S2c-i; leaves at S2c-ii with the fold below): the DATA
+accesses of a label as the pre-S2c fold recorded them — every `.access`
+(attribution looked through), no happens-before action. `raceUpdate` (the
+detector of record during the transition) reads THIS on the two arms that
+read the label at all; `raceFold` reads the whole label. -/
+def dataEvents (tr : AccessTrace) : AccessTrace :=
+  (traceAccesses tr).map fun (k, key) => .access k key
+
+/-- **THE ONE FOLD** (C1 S2c, charter §7 D9): the detector consumes a pool
+step's LABEL and nothing else — no pre-step store, no pre-step pool, no
+re-derivation of what the step did from its configuration. Each event is
+checked-and-recorded (an access: `RaceState.accessKey`; a conflict is the
+terminal `raceDetected`) or a clock movement (`RaceState.hbAction`), in the
+label's order, under `ev.who` unless the event says otherwise
+(`MemEvent.attributed`: the spawned child's entry read, the pairing
+partner's slot transit). Inert while the pool holds ≤ 1 goroutine — a
+single goroutine cannot race with itself (the conservation theorem's
+hinge). S2c-i: computed BESIDE `raceUpdate` per pool step by the tracer's
+audit (`GoLean/ChoiceTrace.lean`, the S2a pattern: both accounts live, a
+difference is a finding); S2c-ii makes it `raceUpdate` and deletes the
+registry arms. -/
+def raceFold (ev : StepEvent) (m' : MultiConfig) (r : RaceState) : Except Stop RaceState :=
+  if m'.threads.size ≤ 1 then return r else r.events ev.who ev.trace
+
 /-- **The detector's event FOLD** (stage B — module docstring above):
 run by the detecting loop after every successful pool step, over the
 PRE-step pool (`sPre`/`tsPre`), the step's emitted `StepEvent`, and
-the post-step pool `m'`. Inert while the pool holds ≤ 1 goroutine.
+the post-step pool `m'`. TRANSITIONAL since C1 S2c-i (the fold of record
+until the audit says the two accounts agree): its registry arms re-derive
+the synchronization effects the label now carries; `raceFold` above is
+its successor. Inert while the pool holds ≤ 1 goroutine.
 Dispatch is ON THE EVENT; per-shape footprints and entry reads are
 derived from the pre-configuration (the footprint table's job); no
 stream is consulted — `raceUpdate` no longer takes one. -/
@@ -1870,8 +1964,10 @@ def raceUpdate (sPre : Store) (tsPre : Array Thread) (ev : StepEvent)
           let r₁ := r.spawn i child
           -- The spawn event's LABEL is the child's frame-entry read (C1 S2b:
           -- the fold reads the trace the module emitted, `StepEvent.trace`;
-          -- formerly the footprint table's `dispatchAccesses`).
-          r₁.accessKeys child ev.trace
+          -- formerly the footprint table's `dispatchAccesses`). S2c-i: the
+          -- label now also carries the spawn edge and the attribution — this
+          -- fold keeps its own account of both and reads the DATA events only.
+          r₁.events child (dataEvents ev.trace)
       | .woke => raceWakeEvent sPre i r cPre
       | .paired j => do
           let r ← raceChanEntryReads i cPre r
@@ -1986,7 +2082,7 @@ def raceUpdate (sPre : Store) (tsPre : Array Thread) (ev : StepEvent)
                         match syncCell ctx m'.shared loc with
                         | .error e => throw e  -- the apply just wrote this cell; propagate, never absorb
                         | .ok post => pure (tryLockAcquired op pre post)
-                  let r ← r.accessKeys i (syncEntryKinds op pre delta acquired loc)
+                  let r ← r.events i (syncEntryKinds op pre delta acquired loc)
                   let r ← (match op with
                   | .lock | .rlock =>
                       (match m'.threads[i]? with
@@ -2058,7 +2154,7 @@ def raceUpdate (sPre : Store) (tsPre : Array Thread) (ev : StepEvent)
                   -- write-like unlock (Race.lean, the Mutex row).
                   match m'.threads[i]? with
                   | some (.running _ (some _)) =>
-                      r.accessKeys i (syncReleaseTailKinds op pre loc)
+                      r.events i (syncReleaseTailKinds op pre loc)
                   | _ => return r
               | _ => return r  -- nil/garbage receiver: the apply panicked
           | .retV v (.atomicStK op done [] _ _) => do
@@ -2081,15 +2177,15 @@ def raceUpdate (sPre : Store) (tsPre : Array Thread) (ev : StepEvent)
                   (match op.head with
                   | .load => do
                       let r := r.atomicAcquire i loc
-                      r.accessKeys i [(.atomicRead, .data loc)]
+                      r.events i [.access .atomicRead (.data loc)]
                   | .store => do
-                      let r ← r.accessKeys i [(.atomicWrite, .data loc)]
+                      let r ← r.events i [.access .atomicWrite (.data loc)]
                       return (r.atomicReleaseStore i loc)
                   | .add | .swap => do
-                      let r ← r.accessKeys i [(.atomicWrite, .data loc)]
+                      let r ← r.events i [.access .atomicWrite (.data loc)]
                       return (r.atomicReleaseAcquire i loc)
                   | .cas => do
-                      let r ← r.accessKeys i [(.atomicWrite, .data loc)]
+                      let r ← r.events i [.access .atomicWrite (.data loc)]
                       -- Re-derive the outcome from the pre-state cell;
                       -- a shape the apply accepted cannot fail here
                       -- (it committed), so an error PROPAGATES rather
@@ -2122,8 +2218,9 @@ def raceUpdate (sPre : Store) (tsPre : Array Thread) (ev : StepEvent)
               -- (GoLean/GoCore/AccessTableEq.lean at the proving commit,
               -- docs/2026-09-18_c1-memory-module-handoff.md §1) proved the
               -- label equal to the table's account; table and theorem left
-              -- together at C1 S2b-ii.
-              r.accessKeys i ev.trace
+              -- together at C1 S2b-ii. S2c-i: the DATA events of the label
+              -- (a private step's label carries no other kind).
+              r.events i (dataEvents ev.trace)
 
 
 /-- The first unrecovered-panic abort among the goroutines (the
@@ -2399,14 +2496,17 @@ lifts with no forked goroutines; the completed spawn positions (where
 `Step` is deliberately silent) fork exactly one. Proof infrastructure
 (statement-TCB: forbidden from designated statement closures, like
 `Step`/`Steps`). -/
-inductive StepE : Config → Store → Config → Store → List Config → AccessTrace → Prop where
-  | lift {c σ c' σ' tr} : Step ctx c σ c' σ' tr → StepE c σ c' σ' [] tr
-  /-- The spawn's label is the CHILD's frame-entry read (its receiver
-  dispatch), which the detector's fold attributes to the child. -/
-  | spawn {c σ cv args k parent' child σ' ch ch' tr} :
+inductive StepE : Nat → Config → Store → Config → Store → List Config → AccessTrace → Prop where
+  /-- `n` is the index the spawned child WOULD take (the pool's size); a lift
+  spawns nothing and is indifferent to it. -/
+  | lift {n c σ c' σ' tr} : Step ctx c σ c' σ' tr → StepE n c σ c' σ' [] tr
+  /-- The spawn's label (C1 S2c): the `go` statement's edge to the child at
+  index `n`, then the CHILD's frame-entry read (its receiver dispatch)
+  attributed to it — gc's attribution, after the edge. -/
+  | spawn {n c σ cv args k parent' child σ' ch ch' tr} :
       spawnPlan c = some (cv, args, k) →
       spawnStep ctx σ cv args k ch = .ok (parent', child, σ', ch', tr) →
-      StepE c σ parent' σ' [child] tr
+      StepE n c σ parent' σ' [child] (.hb (.spawn n) :: tr.map (.attributed n))
 
 /-- Legal scheduler picks (D2a): between boundaries only the running
 goroutine steps; at a boundary any RUNNABLE goroutine may be picked —
@@ -2443,7 +2543,7 @@ inductive StepM : MultiConfig → MultiConfig → AccessTrace → Prop where
       m.threads[i]? = some (.running c none) →
       isBlockedConfig c = false →
       arrivalCases ctx m.shared m.threads i c = .ok .cellPath →
-      StepE ctx c m.shared c' σ' efs tr →
+      StepE ctx m.threads.size c m.shared c' σ' efs tr →
       StepM m ⟨(m.threads.setIfInBounds i (Thread.afterStep m.shared c c'))
         ++ (efs.map (Thread.running · none)).toArray, σ', i⟩ tr
   /-- The boundary CLEAR (C5): a goroutine whose last op opened a boundary
@@ -2468,18 +2568,18 @@ inductive StepM : MultiConfig → MultiConfig → AccessTrace → Prop where
       abortMsg ctx first rest pick = .ok msg →
       StepM m ⟨m.threads.setIfInBounds i (.aborted msg), m.shared, i⟩ []
   | pair {m : MultiConfig} {i : Nat} {c bc : Config} {σ'' : Store}
-      {cs : List (Nat × PairTarget)} {idx : Nat} {ts' : Array Thread} :
+      {cs : List (Nat × PairTarget)} {idx : Nat} {ts' : Array Thread} {tr : AccessTrace} :
       schedPick ctx m i →
       m.threads[i]? = some (.running c none) →
       isBlockedConfig c = false →
       spawnPlan c = none →
       arrivalCases ctx m.shared m.threads i c = .ok (.single bc cs) →
       (hidx : idx < cs.length) →
-      applyPairing ctx m.shared m.threads i bc cs[idx] = .ok (ts', σ'') →
-      StepM m ⟨ts', σ'', i⟩ []
+      applyPairing ctx m.shared m.threads i bc cs[idx] = .ok (ts', σ'', tr) →
+      StepM m ⟨ts', σ'', i⟩ tr
   | pickPair {m : MultiConfig} {i : Nat} {c bc : Config} {σ'' : Store}
       {os : List ArrivalOutcome} {sel : Nat}
-      {cs : List (Nat × PairTarget)} {idx : Nat} {ts' : Array Thread} :
+      {cs : List (Nat × PairTarget)} {idx : Nat} {ts' : Array Thread} {tr : AccessTrace} :
       schedPick ctx m i →
       m.threads[i]? = some (.running c none) →
       isBlockedConfig c = false →
@@ -2487,25 +2587,28 @@ inductive StepM : MultiConfig → MultiConfig → AccessTrace → Prop where
       arrivalCases ctx m.shared m.threads i c = .ok (.multi os) →
       os[sel]? = some (.pair bc cs) →
       (hidx : idx < cs.length) →
-      applyPairing ctx m.shared m.threads i bc cs[idx] = .ok (ts', σ'') →
-      StepM m ⟨ts', σ'', i⟩ []
-  | pickCommit {m : MultiConfig} {i : Nat} {c : Config} {cl : EvClause}
+      applyPairing ctx m.shared m.threads i bc cs[idx] = .ok (ts', σ'', tr) →
+      StepM m ⟨ts', σ'', i⟩ tr
+  /-- The arrival commit's label (C1 S2c): the select's poll over its evaluated
+  clauses, then the committed clause's action. -/
+  | pickCommit {m : MultiConfig} {i : Nat} {c : Config} {evs : List EvClause} {cl : EvClause}
       {env : LocalEnv} {k : Cont} {os : List ArrivalOutcome} {sel : Nat}
-      {c' : Config} {σ' : Store} :
+      {c' : Config} {σ' : Store} {trc : AccessTrace} :
       schedPick ctx m i →
       m.threads[i]? = some (.running c none) →
       isBlockedConfig c = false →
       spawnPlan c = none →
       arrivalCases ctx m.shared m.threads i c = .ok (.multi os) →
-      os[sel]? = some (.commit cl env k) →
-      commitClause ctx m.shared env k cl = .ok (c', σ') →
-      StepM m ⟨m.threads.setIfInBounds i (Thread.afterStep m.shared c c'), σ', i⟩ []
-  | wake {m : MultiConfig} {i : Nat} {c c' : Config} {σ' : Store} :
+      os[sel]? = some (.commit evs cl env k) →
+      commitClause ctx m.shared env k cl = .ok (c', σ', trc) →
+      StepM m ⟨m.threads.setIfInBounds i (Thread.afterStep m.shared c c'), σ', i⟩
+        (selectPoll evs ++ trc)
+  | wake {m : MultiConfig} {i : Nat} {c c' : Config} {σ' : Store} {tr : AccessTrace} :
       schedPick ctx m i →
       m.threads[i]? = some (.running c none) →
       isBlockedConfig c = true →
-      resumeThread ctx m.shared c = .ok (c', σ') →
-      StepM m ⟨m.threads.setIfInBounds i (Thread.completed c'), σ', i⟩ []
+      resumeThread ctx m.shared c = .ok (c', σ', tr) →
+      StepM m ⟨m.threads.setIfInBounds i (Thread.completed c'), σ', i⟩ tr
 
 /-! ## Well-formedness (the thread-indexed carrier) -/
 
