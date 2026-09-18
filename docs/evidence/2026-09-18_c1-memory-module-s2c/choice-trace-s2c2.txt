@@ -1,0 +1,26 @@
+# C1 S2c-ii — whole-corpus choice trace, S2c-ii binary b3354990… vs main 42023bd9's certified binary 42b7bf1a… (2026-09-18)
+# scripts/choice-trace-corpus --dump --jobs 6 --exclude goroutines/send-then-spin --exclude strings/trimspace-repeat/repeat-bound-refused (the audit instrument is RETIRED in this binary: 15 TSV columns)
+== corpus s2c2 start 2026-09-18T23:02:30Z bin=b3354990efe86510
+corpus s2c2 EXIT=1 wall=491s
+
+rows traced: 3639 ids, 21834 (id,stream) lines; 1 id(s) the tracer could not run (ERROR)
+  menu-invariant violations: 0
+  self-check alarms (mirror/accountant, sentinel, pick-record): 0
+  driver-agreement mismatches: 0
+    ERROR arrays/materialization-budget/over-budget (baseline: FAIL/lean-observation): /home/dev/projects/golean/.claude/worktrees/c1-successor/artifacts/choice-trace-s2c2/wire/arrays__materialization
+lines=21835
+  status unsupported=1095
+  status panic=2284
+  status deadlock=162
+  status race=252
+  status stuck=30
+  status ERROR=1
+  status ok=17957
+  status fatal=54
+
+# sorted consumption dumps
+  23679 .tmp/dump-s2c2.sorted.tsv
+  23679 .tmp/dump-main.sorted.tsv
+cmp EXIT=0
+0df092ee22f7609da6e3802d8f73a7cc6a00ce6cf5d04094cfa637b79ea3fb7e  .tmp/dump-s2c2.sorted.tsv
+0df092ee22f7609da6e3802d8f73a7cc6a00ce6cf5d04094cfa637b79ea3fb7e  .tmp/dump-main.sorted.tsv

@@ -948,3 +948,15 @@ swap IS detected). Choice trace vs main `42b7bf1a…`: corpus dumps 23,679 recor
 the expected 5a pair (`certificate provenance` STALE on `ChoiceTrace.lean`; the one cached certified row),
 zero other drift; `check-mem-callsites` PASS 78 rows unchanged. Records: `docs/2026-09-18_c1-memory-module-s2c-handoff.md`,
 `docs/evidence/2026-09-18_c1-memory-module-s2c/`. Next: S2c-ii (the switch and the deletions).
+
+**S2c-ii (2026-09-18, gated) — THE SWITCH.** `raceUpdate (ev) (m') (r)` IS the one fold (no `ctx`/`sPre`/`tsPre`);
+the registry arms and their helpers (`raceChanEntryReads`, `racePairEvent`, `raceWakeEvent`, `raceCommitClauseEvent`,
+`raceWgAddEvent`, `chanApplyChan`, `dataEvents`, `tryLockAcquired`, `RaceState.chanObjAccess`) DELETED with tombstones;
+call sites updated (`EnumDedup*`, `PoolTrace`, `MultiStreams`, `CLI`, the tracer; `raceUpdate_single` restated); the
+tracer's fold-equality audit RETIRED (a column that can no longer be non-zero is a false witness; the ERROR rows' two
+stale trailing fields since S2b-ii fixed); `scripts/mem-callsites.tsv` 78 → 72 (the six DETECTOR REGISTRY ARM rows —
+14 raw sites — gone), the SYNCHRONIZATION reasons name the applies' own emissions. Gate at `fc4e5d6b`: **EXIT=1, 768 s,
+3676 = 3427/249**, red ONLY on the 5a pair, zero other drift, inventory GREEN at 72. Choice trace vs main's binary:
+corpus 23,679 records `cmp` EXIT=0 (sha `0df092ee…`), twin 14,360 `cmp` EXIT=0 (sha `3b0b4c0a…`). Official
+detector-soundness: HOLE 0 / possible-HOLE 0 / over-refusal 6 / agree-DRF 502 / agree-race 36 / refused 9 / uncertified
+86 — cell for cell the fix round's. D9 DONE. Next: BUG-111 fix (i) (red-first rows first), then S3.

@@ -14,16 +14,17 @@ ratification and BUG-111 ruling record (2026-09-18)»). Every decision below is 
   ORDERED list of memory-model events, the registry applies EMIT their synchronization, BOTH folds live,
   the whole-corpus + raft-twin audit says EQUAL (0 mismatches). Records commit: this file's first
   version + `docs/evidence/2026-09-18_c1-memory-module-s2c/`.
-- **S2c-ii** — the switch (`raceFold` becomes `raceUpdate`; the registry arms, `raceChanEntryReads`,
-  `racePairEvent`, `raceWakeEvent`, `raceCommitClauseEvent`, `raceWgAddEvent`, `tryLockAcquired`'s
-  fold use, `dataEvents` deleted; the tracer's audit columns retired; the six DETECTOR REGISTRY ARM
-  inventory rows retired): NEXT (§7).
+- **S2c-ii** — LANDED on the branch as the gated runtime commit `fc4e5d6b` (§1, §2): the one fold IS
+  `raceUpdate` (no `ctx`/`sPre`/`tsPre`); the registry arms and their helpers deleted; the tracer's
+  audit retired; the inventory at 72 rows. Choice trace byte-identical to main's (corpus and twin);
+  the official detector-soundness run: §3.
 - **BUG-111 fix (i)** and **S3** (the rollback, cost B): after S2c-ii (§7).
 
 ## 1. What landed, per slice (gate lines in §2)
 
 | slice | commit | content |
 |---|---|---|
+| S2c-ii | `fc4e5d6b` (runtime) | `raceUpdate (ev) (m') (r) := if m'.threads.size ≤ 1 then r else r.events ev.who ev.trace`; DELETED with tombstones: the old fold and its chan/sync/atomic arms, `raceChanEntryReads`, `racePairEvent`, `raceWakeEvent`, `raceCommitClauseEvent`, `raceWgAddEvent`, `chanApplyChan`, `dataEvents` (Multi.lean), `tryLockAcquired` (Machine.lean), `RaceState.chanObjAccess` (Race.lean); the section docstring rewritten («ONE FOLD over the step's LABEL»), `StepAction`'s docstring corrected; call sites in `EnumDedup`, `EnumDedupCheck`, `EnumDedupSound`, `PoolTrace`, `MultiStreams`, `CLI`, the tracer; `raceUpdate_single` restated; the tracer's fold-equality audit RETIRED (the TSV back to 15 columns; the ERROR rows' two stale trailing fields since S2b-ii fixed); the summarizer line removed; `scripts/mem-callsites.tsv` 78 → 72 (the six DETECTOR REGISTRY ARM rows retired — 14 raw sites gone), the SYNCHRONIZATION reasons reworded to the applies' own emissions |
 | S2c-i | `f1ad88c3` (runtime) | `HbAction`/`MemEvent`/`AccessTrace := List MemEvent`/`traceAccesses` (Ops.lean); `chanValueLoc` moved up, `chanSendEntry`/`chanCloseWrite`/`selectPoll`/`atomicEvents`, `syncWord`/`syncEntryKinds`/`syncReleaseTailKinds`/`atomicOpKind` moved in from Race.lean (Machine.lean); `applyChanOp`/`commitClause`/`applySelectCore`+`SelectOutcome`/`applySelect`/`applySyncOpCore`/`applyTryLock`/`applySyncOp`/`applyAtomicOp` return their label; the four registry `Step` rules and `stepFn` arms carry it; `resumeThread`/`applyPairing` (+`arrivalPoll`, `pairSendEvents`, `pairRecvEvents`) return theirs; `ArrivalOutcome.commit evs cl env k`; `stepThread` labels the spawn (`.hb (.spawn n) :: tr.map (.attributed n)`), wake, pairing, arrival commit, select interception; `StepE ctx n …`; `StepM`/`StepMFine` `pair`/`pickPair`/`pickCommit`/`wake` labelled; `RaceState.hbAction`/`event`/`events`, `accessKeys` deleted (Race.lean); `raceFold` (the one fold) beside `raceUpdate` (adapted through `dataEvents` only where it read the label); `footprintsConflict` over `traceAccesses`, `RacyFine` with the index (NPDRF.lean); the tracer's fold-equality audit (`Acc.auditFold`, `foldMismatches`/`firstFoldMismatch`; summarizer line). Proofs restated arm-for-arm (the commit message lists them). |
 
 ## 2. Gate lines (captured `EXIT=`; tails in the evidence README)
@@ -31,6 +32,9 @@ ratification and BUG-111 ruling record (2026-09-18)»). Every decision below is 
 - **S2c-i, `f1ad88c3`**: `GOLEAN_MEM_MAX=32G scripts/capped scripts/ci --diff` under the box-wide lock
   (`.tmp/with-lock.sh`: `mkdir artifacts/build-lock.d`, owner file, trap-protected release, wait-retry
   120 s) — (acquired after 0 s, 22:37:12–22:50:02 UTC) the committed runtime tree `f1ad88c3` (clean for `GoLean`/`Tests`/`scripts`; the evidence dir untracked — the negative-diff step notes `git_dirty=true` for that reason): **EXIT=1, 770 s**; **3676 cases: 3427 PASS / 249 expected FAIL** (`differential coverage summary: cases=3676 pass=3427 fail=249`); `eval tests` 211 ok; `core build (warning-free)` ok; `core totality audit` ok; `memory-module raw call-site inventory` ok (78 rows); `unseq scheduler` ok; `method-identity` ok; `frontend pins` ok; `wire boundary` ok; every other step ok. RED: exactly the two 5a-class items — `certificate provenance` (C9 HIGH: «STALE certification: changed dependency build/files/GoLean/ChoiceTrace.lean») and `baseline diff (DRIFT)` with the SINGLE line `imported-goose/channel/google-search baseline[PASS/membership] -> now[FAIL/membership]` (the one cached certified row, judged stale because compiled semantic inputs changed). ZERO other drift; the negative baseline matched (394). Tail: `gate-tail-s2c1.txt`.
+- **S2c-ii, `fc4e5d6b`**: `GOLEAN_MEM_MAX=32G scripts/capped scripts/ci --diff` under the box-wide lock
+  (`.tmp/with-lock.sh`; acquired after 0 s, 23:02:27–23:15:15 UTC) the committed runtime tree `fc4e5d6b` (clean for `GoLean`/`Tests`/`scripts`; `docs/` dirty with the records edits — the negative-diff step notes `git_dirty=true` for that reason): **EXIT=1, 768 s**; **3676 cases: 3427 PASS / 249 expected FAIL**; `eval tests` 211 ok; `core build (warning-free)` ok; `core totality audit` ok; `memory-module raw call-site inventory` ok (**72 rows**); every other step ok. RED: exactly the two 5a-class items — `certificate provenance` (C9 HIGH: «STALE certification: changed dependency build/files/GoLean/CLI.lean») and `baseline diff (DRIFT)` with the SINGLE line `imported-goose/channel/google-search baseline[PASS/membership] -> now[FAIL/membership]` (the one cached certified row). ZERO other drift; the negative baseline matched (394). Tail: `gate-tail-s2c2.txt`.
+- Static checks at S2c-ii: `scripts/check-mem-callsites` EXIT=0 (PASS, 72 rows); `gocore-eval-tests` 211 ok.
 - Static checks at S2c-i: `scripts/check-mem-callsites` EXIT=0 (PASS, 78 rows — unchanged: the registry
   arms still exist in this commit; `chanValueLoc`'s move and the new emission tables add no raw site;
   `applyPairing`'s `chanCell` mentions are the same six, now binding the capacity). Eval tests
@@ -60,6 +64,14 @@ ratification and BUG-111 ruling record (2026-09-18)»). Every decision below is 
   `Acc.auditFold` reports `fold-mismatch: … states differ (clocks true, shadow false, …)`; equal folds
   report nothing; a one-goroutine pool is inert for both. So the instrument sees an ORDER difference,
   which is the design point §6b of the predecessor handoff put on the table.
+
+**S2c-ii (the switch) — the regression evidence.** Choice trace vs main `42023bd9`'s certified binary
+`42b7bf1a…` with the S2c-ii binary `b3354990…`: whole corpus sorted dumps **23,679 records, sha256
+`0df092ee…` = main's, `cmp` EXIT=0**; statuses census identical (ok 17,957 / panic 2,284 / unsupported
+1,095 / race 252 / deadlock 162 / fatal 54 / stuck 30 / ERROR 1); the raft twin **30/30 ok, 14,360
+consumptions, sorted dumps `cmp` EXIT=0, sha256 `3b0b4c0a…` = main's** (`choice-trace-s2c2.txt`,
+`twin-audit-s2c2.txt`). The official detector-soundness matrix (`scripts/detector-soundness --select
+in-scope --jobs 6`, the fixed runner) on the S2c-ii binary: EXIT=2 (INCOMPLETE for the 9 `params-omit-sites=` membership refusals, exactly as at the fix round), 1,729 s, worker-pool exit 0, 639 rows: **HOLE 0, possible-HOLE 0**, agree-DRF 502, agree-race 36, over-refusal 6 (`race/free/array-dyn-index-read-write` = BUG-041's O1 residual and the five `race/gomem-only/*` rows of the RULED go_mem-RACY / TSan-GREEN lane), refused 9, uncertified 86 — cell for cell the fix round's official record (`detector-soundness-s2c2.txt`). The one fold reads the label and reproduces the deleted arms' verdicts on every in-scope row.
 
 What the audit does NOT cover: configurations the corpus never reaches (the S2b-i theorem's role for
 the data trace); for the synchronization events there is no universal companion theorem in this slice

@@ -44,3 +44,24 @@ the twin (D4: no semantic change on the machine).
 
 `scripts/check-mem-callsites` EXIT=0, PASS, 78 rows — unchanged at S2c-i (the registry arms exist
 until S2c-ii; the emission tables and the moved `chanValueLoc` add no raw site).
+
+## S2c-ii — the switch (2026-09-18)
+
+Runtime commit `fc4e5d6b` (its message is the content inventory). Binary `b3354990efe8…`.
+
+| file | what |
+|---|---|
+| `choice-trace-s2c2.txt` | the whole-corpus tracer run with the S2c-ii binary (the audit instrument retired: 15 TSV columns): 21,835 (row, stream) results, same census, 0 alarms/violations/driver mismatches; sorted dumps 23,679 records, sha256 `0df092ee…` = main's, `cmp` EXIT=0 |
+| `twin-audit-s2c2.txt` | the raft twin with the S2c-ii binary: 30/30 ok, 14,360 consumptions, sorted dumps `cmp` EXIT=0 vs main's (sha256 `3b0b4c0a…`) |
+| `gate-tail-s2c2.txt` | the `ci --diff` tail at `fc4e5d6b`: EXIT=1, 768 s, 3676 = 3427/249, red only on the two 5a-class items; the inventory step GREEN at 72 rows |
+| `detector-soundness-s2c2.txt` | the official matrix on the S2c-ii binary: EXIT=2 (INCOMPLETE for the 9 `params-omit-sites=` membership refusals, exactly as at the fix round), 1,729 s, worker-pool exit 0, 639 rows: **HOLE 0, possible-HOLE 0**, agree-DRF 502, agree-race 36, over-refusal 6 (`race/free/array-dyn-index-read-write` = BUG-041's O1 residual and the five `race/gomem-only/*` rows of the RULED go_mem-RACY / TSan-GREEN lane), refused 9, uncertified 86 — cell for cell the fix round's official record (`detector-soundness-s2c2.txt`). The one fold reads the label and reproduces the deleted arms' verdicts on every in-scope row. |
+
+### Gate
+
+`GOLEAN_MEM_MAX=32G scripts/capped scripts/ci --diff` under the box-wide lock (`.tmp/with-lock.sh`; acquired after 0 s, 23:02:27–23:15:15 UTC) the committed runtime tree `fc4e5d6b` (clean for `GoLean`/`Tests`/`scripts`; `docs/` dirty with the records edits — the negative-diff step notes `git_dirty=true` for that reason): **EXIT=1, 768 s**; **3676 cases: 3427 PASS / 249 expected FAIL**; `eval tests` 211 ok; `core build (warning-free)` ok; `core totality audit` ok; `memory-module raw call-site inventory` ok (**72 rows**); every other step ok. RED: exactly the two 5a-class items — `certificate provenance` (C9 HIGH: «STALE certification: changed dependency build/files/GoLean/CLI.lean») and `baseline diff (DRIFT)` with the SINGLE line `imported-goose/channel/google-search baseline[PASS/membership] -> now[FAIL/membership]` (the one cached certified row). ZERO other drift; the negative baseline matched (394). Tail: `gate-tail-s2c2.txt`.
+
+### Inventory
+
+`scripts/check-mem-callsites` EXIT=0, PASS, **72 rows** (78 − the six DETECTOR REGISTRY ARM rows: `raceCommitClauseEvent` chanCell 2,
+`racePairEvent` chanCell 3, `raceUpdate` chanCell 3 / loadLoc 1 / syncCell 3, `raceWakeEvent` chanCell 2 — 14 raw memory-operation sites
+gone with the arms). The SYNCHRONIZATION rows now name the apply's own emission as the reason the peek/raw write is not a data access.

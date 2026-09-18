@@ -1,0 +1,61 @@
+# C1 S2c-ii — the official detector-soundness matrix on the S2c-ii binary b3354990… (2026-09-18)
+# scripts/detector-soundness --select in-scope --jobs 6 (the fixed runner, tracked); out dir artifacts/detector-soundness/20260918T231718Z
+== detector-soundness s2c2 start 2026-09-18T23:17:18Z bin=b3354990efe86510
+detector-soundness EXIT=2 wall=1729s
+tool	scripts/detector-soundness
+commit	fc4e5d6bb632a600cab5c0010059514b3e3580ae
+go	go1.26.5
+golean	/home/dev/projects/golean/.claude/worktrees/c1-successor/.lake/build/bin/golean
+runs	5
+procs	1,8
+strict_enum	width=4,sites=32,cap=512,work=4000000,backedge=1
+rows	639
+host	Linux 7.0.0-31-generic x86_64
+started	2026-09-18T23:17:26+00:00
+finished	2026-09-18T23:46:07+00:00
+
+detector-soundness summary — 2026-09-18T23:46:07+00:00
+rows: 639   runs/proc: 5   procs: 1,8   worker-pool exit: 0
+
+cells:
+  agree-DRF      502
+  agree-race     36
+  over-refusal   6
+  refused        9
+  uncertified    86
+
+by lane × cell:
+  confluent	agree-DRF	89
+  confluent	uncertified	1
+  membership	agree-DRF	128
+  membership	refused	9
+  membership	uncertified	4
+  racy	agree-race	36
+  strict	agree-DRF	285
+  strict	over-refusal	6
+  strict	uncertified	81
+
+HOLE rows (gc RACE, machine DRF — exit-bearing; a HOLE not on a BUGS.md Cases: line is a STOP):
+
+possible-HOLE rows (gc RACE, machine ENUM-FAIL — exit-bearing; certify or diagnose each):
+
+over-refusal rows (machine RACE-*, gc DRF-in-N — three-way investigation):
+  race/free/array-dyn-index-read-write	p1:race=0,clean=5,exit=0,abnormal=0,timeout=0;p8:race=0,clean=5,exit=0,abnormal=0,timeout=0;	RACE-ALL (1/1 members)
+  race/gomem-only/rw-copy-vs-runlock	p1:race=0,clean=5,exit=0,abnormal=0,timeout=0;p8:race=0,clean=5,exit=0,abnormal=0,timeout=0;	RACE-ALL (1/1 members)
+  race/gomem-only/rw-copy-vs-unlock	p1:race=0,clean=5,exit=0,abnormal=0,timeout=0;p8:race=0,clean=5,exit=0,abnormal=0,timeout=0;	RACE-ALL (1/1 members)
+  race/gomem-only/wg-copy-vs-add-from-0	p1:race=0,clean=5,exit=0,abnormal=0,timeout=0;p8:race=0,clean=5,exit=0,abnormal=0,timeout=0;	RACE-ALL (1/1 members)
+  … (uncertified rows: the machine side's ENUM-FAIL classes — deadlock members, frontend-quarantined subjects, sites bounds, one fuel truncation; gc green or no verdict there — the full list in artifacts/detector-soundness/20260918T231718Z/summary.txt)
+
+# refused rows (params omit sites=; the runner's EXIT=2 cause)
+refused rows (params omit width=/sites= — declare them in cases.tsv):
+  sync/out-of-scope-trylock/trylock-uncontended	params 'width=2,members=2' omit sites= — the runner will not invent an enumeration bound; declare it in cases.tsv (lane membership)
+  sync/promoted-mutex/trylock-expr	params 'width=2,members=2' omit sites= — the runner will not invent an enumeration bound; declare it in cases.tsv (lane membership)
+  sync/trylock/unlocked-acquire	params 'width=2,members=2' omit sites= — the runner will not invent an enumeration bound; declare it in cases.tsv (lane membership)
+  sync/trylock/unlock-after-trylock-success	params 'width=2,members=2' omit sites= — the runner will not invent an enumeration bound; declare it in cases.tsv (lane membership)
+  sync/trylock/discarded-acquires	params 'width=2,members=2' omit sites= — the runner will not invent an enumeration bound; declare it in cases.tsv (lane membership)
+  sync/trylock/rw-trylock-unlocked	params 'width=2,members=2' omit sites= — the runner will not invent an enumeration bound; declare it in cases.tsv (lane membership)
+  sync/trylock/rw-tryrlock-unlocked	params 'width=2,members=2' omit sites= — the runner will not invent an enumeration bound; declare it in cases.tsv (lane membership)
+  sync/trylock/rw-tryrlock-reader-held	params 'width=2,members=2' omit sites= — the runner will not invent an enumeration bound; declare it in cases.tsv (lane membership)
+  sync/trylock/defer-trylock	params 'width=2,members=2' omit sites= — the runner will not invent an enumeration bound; declare it in cases.tsv (lane membership)
+
+gc-infra / unclassified rows (the matrix is INCOMPLETE):

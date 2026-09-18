@@ -1,0 +1,12 @@
+# C1 S2c-ii — the raft twin with the S2c-ii binary b3354990… (2026-09-18): byte-identity vs main 42023bd9's certified binary 42b7bf1a… (the S2c-i run's main dump)
+== twin s2c2 start 2026-09-18T23:02:30Z bin=b3354990efe86510
+twin s2c2 EXIT=0 wall=1124s
+15 columns
+rows=30 statuses:
+  ok=30
+alarms_sum=0 consumed_total=14360
+  14360 .tmp/twin-dump-s2c2.sorted.tsv
+  14360 .tmp/twin-dump-main.sorted.tsv
+twin cmp EXIT=0
+3b0b4c0ae91856a08d3ed33e44b40623f647e088f4bca108bb530d7daebd85e9  .tmp/twin-dump-s2c2.sorted.tsv
+3b0b4c0ae91856a08d3ed33e44b40623f647e088f4bca108bb530d7daebd85e9  .tmp/twin-dump-main.sorted.tsv
