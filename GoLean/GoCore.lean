@@ -4,8 +4,6 @@ import GoLean.GoCore.StateWf
 import GoLean.GoCore.StepFn
 import GoLean.GoCore.Race
 import GoLean.GoCore.Multi
--- C1 S2b (2026-09-18): the trace-equals-table theorem; leaves with the table at S2b-ii.
-import GoLean.GoCore.AccessTableEq
 import GoLean.GoCore.MachineSound
 import GoLean.GoCore.UnseqSound
 import GoLean.GoCore.NPDRF

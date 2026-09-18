@@ -320,15 +320,6 @@ def arrayGet (values : Array GoValue) (index : Int) : Except Stop GoValue := do
   | some value => return value
   | none => indexOutOfRangePanic index values.size
 
-def arraySet (values : Array GoValue) (index : Int) (value : GoValue) :
-    Except Stop (Array GoValue) := do
-  let i ← arrayIndexNat values index
-  -- No per-element coercion (A3): the ROOT store normalizes the whole
-  -- array at the cell's declared type, which is where element typing lives.
-  match values[i]? with
-  | some _ => return values.set! i value
-  | none => indexOutOfRangePanic index values.size
-
 def natFromNonnegativeInt (context : String) (value : Int) : Except Stop Nat := do
   if value < 0 then
     panic context
@@ -1637,7 +1628,7 @@ informal one-liner — "a write to a memory location happening
 concurrently with another read or write to that same location, unless
 all the accesses involved are atomic data accesses" — is mem#overview,
 the same relation in words.) It is also TSan's shadow rule (two
-accesses race unless both are reads or both are atomic). The plain pair is the data footprint's (`stepAccesses`);
+accesses race unless both are reads or both are atomic). The plain pair is the data TRACE's (the module's emitting operations, C1 S2);
 the atomic pair is the sync primitives' own state-word traffic — as
 `-race` realizes it AND as mem#model kinds the op (BUG-080 +
 Q-U4RESIDUAL (A) — `syncEntryKinds` below, recorded by `raceUpdate`'s
@@ -1674,6 +1665,89 @@ abbrev Access := AccessKind × ShadowKey
 `Step`/`StepM` (charter §3; `GoLean/GoCore/Trace.lean`'s `Trace` is the
 n-step run relation, a different thing). -/
 abbrev AccessTrace := List Access
+
+/-! ## The memory module's access discipline — what emits, what peeks (C1 S2b, 2026-09-18)
+
+EVERY user-memory access the machine performs goes through an EMITTING operation of
+this module (`Mem.load`, `Mem.loadFor`, `Mem.store`, `Mem.mapRead`, `Mem.mapWrite`,
+`Mem.loadElems`/`Mem.storeElems`, `Mem.loadRun`/`Mem.storeRun`, `Mem.loadSlice`,
+`loadResults`, `dynamicDispatch?`'s receiver read), which returns the access it
+performed as the last component of its result (`AccessTrace`); the step relation
+`Step` carries the concatenation as its label, `stepFn` as its fourth component,
+the pool event as `StepEvent.trace`, and the detector's fold (`raceUpdate`,
+Multi.lean) records the label. A caller chooses an operation; it never builds an
+`Access`. Since C1 S2b-ii the FOOTPRINT TABLE that formerly computed a step's
+accesses from its pre-configuration (`stepAccesses`, Race.lean) is gone: the
+theorem `accesses_eq_stepAccesses` (GoLean/GoCore/AccessTableEq.lean at the
+proving commit named in `docs/2026-09-18_c1-memory-module-handoff.md` §1) showed
+every rule's label EQUAL to the table's account on a non-panicking successor, and
+the whole-corpus + raft-twin audit (`docs/evidence/2026-09-18_c1-memory-module/`)
+found 0 differences; the table and the theorem left together.
+
+The PEEK operations — `loadLoc`, `mapPayload?`, `chanPayload?`, `syncCell`,
+`chanCell` — read a cell WITHOUT emitting; the raw writers — `storeLoc`,
+`storeMapPayload`, `storeChanPayload`, the `.syncData` stores — write without
+emitting. Their call sites are the inventory below, each a DECISION that gc's
+`-race` build performs no data access there (argued against the compiled code;
+the ledger `docs/2026-09-04_core-docstring-ledger.md` [DL-n] keeps the history):
+
+ADDRESS FORMATION (gc computes addresses from headers and types; no memory read):
+- `indexTargetLoc`'s base-cell load and `resolveChain` through it (bounds, nil);
+- `applySlice`'s array-size load;
+- `projChainTarget`'s root check (the constant-index narrowing needs the cell to
+  be an ARRAY, read from the root already being loaded);
+- `unseqUnfrozenAnchor?` (the frozen-anchor shape walk, plan time).
+
+METADATA THAT IS TYPE-STATIC OR UNINSTRUMENTED IN gc:
+- `lengthOf`/`capacityOf` on a pointer-to-array (`len` is a constant of the type;
+  the operand must still be a pointer VALUE — fail closed otherwise);
+- `lengthOf`/`capacityOf` on a channel (`c.qcount`/`c.dataqsiz` are read
+  uninstrumented — probe p26; spec: channels need no further synchronization).
+  `len(m)` on a MAP IS a real instrumented read (S3 audit) and emits (`Mem.mapRead`).
+
+THE MAP READ-MODIFY-WRITE's ENTRY PEEK: `mapAssignValue`, `mapDelete`, `clearMap`
+fetch the entries (`mapEntries`) and then EMIT the one write (`Mem.mapWrite`) —
+gc's `mapassign`/`mapdelete` instrument ONE write per operation, `mapdelete`
+unconditionally (so a delete of an ABSENT key rewrites the unchanged payload and
+emits). `mapGet`/`mapLookupValue`/the range start/every `mapIterNext` pick EMIT
+their read (`Mem.mapRead`) — the map object is ONE location (gc's «concurrent map
+read and map write»).
+
+MACHINE-INTERNAL CELLS no goroutine can name:
+- `unseqStorePlan`'s binder-value loads (phase 2 of the `unseq` sweep) are peeks,
+  while the binder WRITES emit (`Mem.store`) — the account the footprint table kept;
+  the principled alternative (no emission at all on binder cells — verdict-neutral)
+  is recorded in the handoff §5, not taken;
+- `stepFrameExit`'s targetless-with-results readout is a REFUSAL, not a step.
+
+DRIVERS, after termination: `loadMany` (result readouts of `runFunctionWithContextM`,
+`runProgramM`, the pool/enumerator drivers) — the program is over.
+
+SYNCHRONIZATION — the registry ops' own cell traffic (never a data access; the
+happens-before edges and gc's sync-word / channel-object recordings are
+`raceUpdate`'s registry arms until C1 S2c moves the emissions into the module's
+operations): `chanCell`/`chanPayload?`/`storeChanPayload` in `applyChanOp`,
+`commitClause`, `resumeThread`, `applyPairing`, `wakeReady`, `clauseReady`;
+`syncCell`/the `.syncData` stores in `applySyncOp`, `wakeReady`, `resumeThread`;
+`loadLoc`/`storeLoc` inside `applyAtomicOp` (the atomic op's indivisible RMW —
+recorded by the atomic arm at the cell's own path with the ATOMIC kind).
+
+FRESH ALLOCATION (the malloc convention — a fresh cell's creating write precedes
+every path by which its address can race-freely escape): `Store.alloc`,
+`allocDecls`, `bindParams`, `bindIterVars`, `enterFrame`'s binding half,
+`seedGlobals`, `makeMap`/`makeChan`'s payload cells, append's spilled backing,
+`bytesFromString`/`runesFromString`'s backing.
+
+NO ACCESS AT ALL (neither a peek nor a write): `applyStrictOp .addrOfDeref` — `&*p`'s
+nil check consumes the pointer VALUE (gc: a `TESTB` nil-probe `-race` does not
+instrument; BUG-056).
+
+The one recorded OVER-approximation that survives in the emitted trace: O1 — a
+value-path composite read is whole-cell unless narrowed by an immediate projection
+chain (`Mem.loadFor` at `projChainTarget`'s leaf; the dispatch read at
+`dispatchLeaf`); the DYNAMIC-index element read stays whole-cell (BUG-041, ledger
+[DL-1]). -/
+
 
 /-- The emitting READ of a whole cell path. -/
 def Mem.load (state : Store) (l : Loc) : Except Stop (GoValue × AccessTrace) := do

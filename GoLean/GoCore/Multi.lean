@@ -1629,7 +1629,7 @@ detection (slice 3, D2+D3(b))
 
 Execution between registry ops is a SEGMENT: a goroutine's vector
 clock changes only at registry-op HB edges, so every private step in
-between records its accesses (`stepAccesses`, Race.lean) under one
+between records its accesses (the step's LABEL, `StepEvent.trace`) under one
 clock — the segment's. `raceUpdate` below is the event FOLD the
 detecting loop (`execProgLoop`) runs after every pool step (stage B,
 audit Q2/O-2): the step's classification — spawn / wake / pairing
@@ -1887,13 +1887,12 @@ def raceUpdate (sPre : Store) (tsPre : Array Thread) (ev : StepEvent)
       | .selectPass => raceChanEntryReads i cPre r
       | .opDoneStrip =>
           -- The boundary clear is a pure pool step: no accesses, no
-          -- edges (`stepAccesses`'s catch-all recorded the old marker
-          -- strip as `[]`; Race.lean's model-internal-loads inventory).
+          -- edges (its label is `[]`; the module's access-discipline
+          -- docstring, Ops.lean).
           return r
       | .aborted =>
           -- The abort is a pure pool step (the render reads no user
-          -- memory — `stepAccesses` recorded the old `.panicked` step
-          -- as `[]`): no accesses, no edges.
+          -- memory — its label is `[]`): no accesses, no edges.
           return r
       | .privateStep =>
           -- Outcome-shape discrimination (stage C / C5): a PROCEEDING
@@ -2082,15 +2081,15 @@ def raceUpdate (sPre : Store) (tsPre : Array Thread) (ev : StepEvent)
                   (match op.head with
                   | .load => do
                       let r := r.atomicAcquire i loc
-                      r.accesses i [(.atomicRead, loc)]
+                      r.accessKeys i [(.atomicRead, .data loc)]
                   | .store => do
-                      let r ← r.accesses i [(.atomicWrite, loc)]
+                      let r ← r.accessKeys i [(.atomicWrite, .data loc)]
                       return (r.atomicReleaseStore i loc)
                   | .add | .swap => do
-                      let r ← r.accesses i [(.atomicWrite, loc)]
+                      let r ← r.accessKeys i [(.atomicWrite, .data loc)]
                       return (r.atomicReleaseAcquire i loc)
                   | .cas => do
-                      let r ← r.accesses i [(.atomicWrite, loc)]
+                      let r ← r.accessKeys i [(.atomicWrite, .data loc)]
                       -- Re-derive the outcome from the pre-state cell;
                       -- a shape the apply accepted cannot fail here
                       -- (it committed), so an error PROPAGATES rather
@@ -2118,10 +2117,12 @@ def raceUpdate (sPre : Store) (tsPre : Array Thread) (ev : StepEvent)
               -- module's operations emitted (`stepFn`'s trace, `StepEvent.trace`).
               -- A delivered panic carries `[]` (the apply's effects are
               -- discarded, its accesses never happened), so the former
-              -- pre/post panicking discrimination over the footprint table
-              -- (`stepAccesses ctx sPre cPre`) is the label's own content;
-              -- `accesses_eq_stepAccesses` (AccessTableEq.lean) is the
-              -- per-arm equality with the table at the commit that proves it.
+              -- pre/post panicking discrimination over the footprint table is
+              -- the label's own content. `accesses_eq_stepAccesses`
+              -- (GoLean/GoCore/AccessTableEq.lean at the proving commit,
+              -- docs/2026-09-18_c1-memory-module-handoff.md §1) proved the
+              -- label equal to the table's account; table and theorem left
+              -- together at C1 S2b-ii.
               r.accessKeys i ev.trace
 
 

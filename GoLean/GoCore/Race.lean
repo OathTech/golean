@@ -16,243 +16,56 @@ the observed steps; it consumes NO choices).
 
 This file is the pool-independent half: vector clocks, the per-location
 shadow (TSan/FastTrack's skeleton — per-loc last-access epochs, one per
-goroutine, subsumption by program order), the `Loc`-path overlap
-relation, and THE ACCESS FOOTPRINT `stepAccesses` — the read/write set
-of one private machine step, computed from the pre-step configuration.
-The pool half (channel-clock events, the `raceUpdate` dispatcher, the
-detecting loop) lives in `Multi.lean`, which imports this.
+goroutine, subsumption by program order), the sync primitives' own
+state-word tables (`syncEntryKinds`/`syncReleaseTailKinds`) and the
+per-address atomic clocks. The pool half (channel-clock events, the
+`raceUpdate` dispatcher, the detecting loop) lives in `Multi.lean`,
+which imports this.
 
-## Why a curated per-shape footprint, NOT autologging at the
-`loadLoc`/`storeLoc` chokepoint (recorded deviation from the design
-note's phrasing "through the existing loadLoc/storeLoc chokepoint")
+WHERE THE DATA ACCESSES COME FROM (C1 S2b, 2026-09-18). The recorded
+accesses of a goroutine step are the step's LABEL — what the memory
+module's EMITTING operations performed (`Ops.lean`, «The memory module's
+access discipline»: `Mem.load`/`loadFor`/`store`/`mapRead`/`mapWrite`/
+the element runs/`loadResults`/the dispatch read), carried by `Step` as
+its fifth index, by `stepFn` as its fourth component and by the pool
+event as `StepEvent.trace`; `raceUpdate` folds it (`RaceState.accessKeys`).
+The former FOOTPRINT TABLE of this file — a curated per-shape function
+`stepAccesses` from a step's pre-configuration to its accesses
+(`strictOpAccesses`, `stmtOpAccesses`, `dispatchAccesses`,
+`deferEntryAccesses`, `storeTargetAccess`, `unseqRunAccesses`,
+`sliceElemLocs`, `mapAccess`, `targetWrite`, `RaceAccess`,
+`RaceState.access/accesses`) and its 250-line call-site inventory — was
+DELETED at C1 S2b-ii after (a) the whole-corpus + raft-twin trace-equality
+audit found the two accounts equal on every traced step
+(`docs/evidence/2026-09-18_c1-memory-module/`, 21,835 + 30 (row, stream)
+results, 0 mismatches) and (b) the theorem `accesses_eq_stepAccesses`
+(GoLean/GoCore/AccessTableEq.lean at the proving commit named in
+`docs/2026-09-18_c1-memory-module-handoff.md` §1) proved every rule's
+label EQUAL to the table's account on a non-panicking successor; the
+theorem left with the table it audited. The inventory of PEEK sites
+(what reads a cell without emitting, and why gc's `-race` build reads
+nothing there) now lives in the module's docstring. The recorded
+approximations O1 (value-path composite reads whole-cell unless narrowed
+by an immediate projection chain — BUG-041, ledger [DL-1]), U2 (`len`/
+`cap` on channels record nothing; `len` on a map is a real read), U3
+(CLOSED — the channel OBJECT as a shadow location, `chanObjAccess`), U4
+(CLOSED — the sync primitives' own state words, BUG-080) and U5
+(cross-goroutine unlock without handoff HB: TSan-red / ours-green, ledger
+[DL-5]) keep their pins; their statements were relocated to the ledger
+entries and the module docstring with the table's deletion.
 
-Every heap access does flow through `loadLoc`/`storeLoc` — the
-chokepoint is what makes the footprint below AUDITABLE against the
-call-site inventory recorded at the end of this docstring (S3 audit
-response: the inventory is now enumerated exhaustively, not asserted).
-But logging raw chokepoint calls would record accesses gc never
-performs and misgrade granularity in BOTH directions:
-
-* `indexTargetLoc`/`resolveChain` LOAD base cells to bounds-check —
-  gc's address formation reads no user memory (bounds come from
-  headers/types); logging those loads would flag races on address
-  formation (false positives vs `-race`).
-* channel-cell loads/stores are SYNCHRONIZATION, race-free by spec
-  ("A single channel may be used … by any number of goroutines without
-  further synchronization") — never data accesses.
-* `loadLoc` is a pure reader (no state to carry a log), so chokepoint
-  logging would mean re-plumbing the sequential machine — growth by
-  REVISION, against the arc's deciding principle.
-
-So the footprint is a per-shape table argued against Go's ACCESS
-semantics (what memory does gc's compiled code read/write here), in
-the plan-extraction mold (`stmtPlan`/`spawnPlan` precedent). Its
-completeness over access-bearing shapes is a LOCKSTEP obligation like
-the relation's: a new `stepFn` arm (or frame-entry helper) that
-touches user memory must add its footprint arm AND its inventory row
-below, and the racy-negative corpus lane is the executable check.
-
-## Recorded approximations (each pinned)
-
-OVER-approximations (fail-closed direction — may REFUSE a
-`-race`-green program; every one bounded and pinned):
-
-* **O1 — value-path composite reads are whole-cell, except through an
-  immediate PROJECTION chain (`fieldGet` / CONSTANT-index `indexGet`).**
-  `evalVar` on a composite local and `.deref` of a composite pointee
-  read the WHOLE cell; when the value is delivered straight into
-  single-operand `fieldGet` frames, or into `indexGet` frames whose
-  index is a constant literal over an ARRAY cell, the read is NARROWED
-  to the projected path (`projChainTarget` — covers `p.a` on struct
-  locals AND on `*struct`, the dominant raft-like idiom; S3 audit
-  widened the original evalVar-only record to the `.deref` arm;
-  Q-RACEPATH (RULED [USER] 2026-08-31, implemented 2026-09-02) added
-  the constant-index member: `a[1]`, `a[1].x`, `s.arr[1]`). What
-  remains whole-cell — the RESIDUAL: value-path array-element reads
-  with a DYNAMIC index (`a[i]` — go/types did not fold the index to a
-  literal; the element path is not determined until the index
-  evaluates, after the base read), and composite reads whose
-  continuation is not a projection chain (a whole-struct copy, a
-  boxing, a send operand — all of which gc also reads whole).
-  The FRAME-ENTRY member of the same class: a needsDeref dispatch to a
-  synthesized PROMOTION WRAPPER is narrowed to the wrapper's hop path
-  (`dispatchAccesses`); UNRECOGNIZED wrapper shapes fall back to the
-  whole-pointee read — over-refusal, this envelope. BUG-041 (residual
-  OPEN); pins, guards and the re-open trigger: ledger [DL-1]
-  (`docs/2026-09-04_core-docstring-ledger.md` — every `[DL-n]` below).
-
-UNDER-approximations (fail-OPEN vs the `-race` oracle — each recorded
-loudly; the racy-negative lane's claim is scoped by these):
-
-* **U1 — CLOSED (BUG-005 (L)): map-range performs a real per-iteration
-  read**, at EVERY `mapIterNext` step including the final done-check
-  (gc's exhausted `mapIterNext` still reads), recorded by the
-  `stepAccesses` mapIterK arm. History: ledger [DL-2].
-* **U2 — `len`/`cap` on CHANNELS record nothing** — correct per spec
-  ("without further synchronization") and per probe p26 (gc does not
-  instrument chanlen). `len` on MAPS IS recorded (S3 audit refuted the
-  earlier claim that it is invisible to `-race` — probed red on
-  go1.26.5); slices/strings/pointer-to-array read headers/types only.
-* **U3 — CLOSED (BUG-045 + BUG-046): the channel OBJECT is now a
-  shadow location**, modeling exactly gc's instrumentation (go1.26.5
-  runtime/chan.go + select.go): `chansend` performs `racereadpc` on
-  `c.raceaddr()` at ENTRY (before the closed check, before parking —
-  so the read is recorded whether the send commits, parks, or
-  panics), `closechan` performs `racewritepc` on success (it panics
-  on closed/nil BEFORE instrumenting — no record on the panic path),
-  `chanrecv` performs only `raceacquire` — NO read — and `selectgo`
-  pass 1 performs the SAME `racereadpc` for every polled SEND case
-  (select.go:288, above its closed check; recv cases acquire-only,
-  nil-channel cases excluded from pollorder; the BUG-046 correction of
-  this entry's first version: ledger [DL-3]). Realized as
-  `RaceState.chanObjAccess` (a `ShadowCell` under the channel's
-  `ShadowKey.chanObj` key, EXACT match — channel identity, no path
-  overlap), checked-and-recorded by `raceUpdate`'s chan-op arm
-  (plain ops) and select-apply arm (the per-send-clause poll read).
-  Consequence recorded honestly: `resumeThread`'s
-  close-woke-parked-sender panic arm is reachable only through a
-  chan-object-racy shape (no HB edge can order a close after a send
-  entry that then parks), so under the DRF-SC discipline the detector
-  refuses at the close before any such wake — the arm stays (racy
-  members traverse it only when the refusal is later on their path;
-  the refused programs' pre-refusal semantics still needs it). The
-  BUG-045 correction record: ledger [DL-4].
-
-## THE loadLoc/storeLoc CALL-SITE INVENTORY (the lockstep obligation's
-evidence — S3 audit response; audit this table when touching either
-side)
-
-Semantic-core call sites of `loadLoc`/`storeLoc` (incl. via helpers),
-each mapped to its footprint treatment:
-
-FOOTPRINT ARMS (recorded accesses):
-- StepFn `evalVar` load → `stepAccesses` evalVar arm (O1 narrowing).
-- `applyStrictOp .deref` load → `stepAccesses` deref arm (O1).
-- `.indexGet` slice-element load → `strictOpAccesses`.
-- `.mapGet` via map base load → `strictOpAccesses` (`mapAccess`).
-- `.lengthOf` MAP load → `strictOpAccesses` (U2's map half).
-- `.stringFromByteSlice` via `sliceVisibleValues` → `strictOpAccesses`.
-- `.stringFromRuneSlice` via `sliceVisibleValues` → `strictOpAccesses`
-  (triage L1, same treatment; `.runesFromString`'s operand is a string
-  VALUE in hand and its allocation is fresh — no footprint, like
-  `.bytesFromString`).
-- `applyStmtOpCore` allocNew/makeSlice/makeMap/makeChan target stores,
-  mapAssign/mapDelete/clearMap (via `mapEntries`/`mapAssignValue`),
-  clearSlice/sortSlice/copySlice element loops, appendSlice (in-place
-  writes, spill reads via `sliceVisibleValues`, header store) →
-  `stmtOpAccesses`.
-- `applyRhsOp .mapLookup` map read (the `rhsK` apply step — gc's
-  mapaccess2 instrumentation point) → `stepAccesses` rhsK arm.
-  `.vals`/`.typeAssert` sources touch no user memory; single assigns
-  ride the same spine (store = the `storeK` row below). Retired rows'
-  history (BUG-034/BUG-037 spine migrations): ledger [DL-7].
-- `storeTarget` (phase-2 stores; `mapAssignValue` map half) →
-  `storeTargetAccess`.
-- frame EXIT `loadMany` (result reads) → `stepAccesses` frame-[] arms;
-  the caller-target WRITES are per-target `storeK` steps
-  (`storeTargetAccess`, phase 2; history [DL-8]).
-- `mapRangeStartSets` range-start load (base + start entry ids) →
-  `stepAccesses` mapRangeK arm.
-- `mapIterLiveEntries` per-pick live load (BUG-005 (L): every pick
-  incl. the done-check) → `stepAccesses` mapIterK arm (closed U1).
-- `dynamicDispatch?` needsDeref load (frame ENTRY) →
-  `dispatchAccesses`, at the call/defer/spawn entry arms — narrowed to
-  the promotion hop path when the target is a synthesized wrapper
-  (O1's frame-entry member; whole-pointee for non-wrapper targets and
-  unrecognized wrapper shapes).
-
-READ-BUT-UNINSTRUMENTED (real loads whose gc counterpart reads memory
-`-race` does not instrument — recorded, deliberately not footprinted;
-history [DL-9]):
-- `.lengthOf` CHANNEL load (Machine.lean's chan len arm) → U2: gc's
-  chanlen reads `c.qcount` uninstrumented (probe p26 green).
-- `.capacityOf` CHANNEL load → U2, same basis.
-
-NO ACCESS AT ALL (neither `loadLoc` nor `storeLoc` — listed so the
-absence is legible as a decision, not an omission):
-- `applyStrictOp .addrOfDeref` (BUG-056, fix 2026-08-19): `&*p`'s nil
-  check consumes the pointer VALUE already in hand and touches no
-  cell. gc's counterpart is a 1-byte hardware `TESTB` nil-probe that
-  `-race` does not instrument (memo §2: TSan-green beside a
-  concurrent pointee write where a real `*p` read is TSan-red), and
-  our model performs NO load at all — so this is deliberately not
-  even a READ-BUT-UNINSTRUMENTED row.
-
-MODEL-INTERNAL loads gc never performs (excluded on purpose):
-- the post-op boundary CLEAR (stage C's `.opDone` marker strip, C5's
-  flag clear — generalizing BUG-040's `.spawned` strip) and the abort
-  tombstone step (B4): pure pool steps — they touch no
-  memory (`stepAccesses` catch-all; the wrapped op's own accesses and
-  HB edges were recorded at the APPLY step, and the spawn's edge plus
-  the child's dispatch read at the FORK step, by `raceUpdate` —
-  unchanged).
-- `loadLoc`/`storeLoc` own path recursion (walking to the root cell).
-- `indexTargetLoc`/`resolveChain` bounds-check loads (address
-  formation; bounds come from headers/types in gc).
-- `applySlice` array-size load; `lengthOf`/`capacityOf` on
-  pointer-to-array (length is type-static in gc).
-
-SYNCHRONIZATION (the registry's ops — HB updates, never data):
-- `chanCell`/`chanPayload?` loads and `storeChanPayload` stores in `applyChanOp`,
-  `commitClause`, `resumeThread`, `applyPairing`, `wakeReady`,
-  `clauseReady` (spec: channels race-free without synchronization;
-  the CHANNEL-OBJECT access pair gc layers on top of this is modeled
-  since BUG-045 — U3 above, `chanObjAccess`, dispatched by
-  `raceUpdate`'s chan-op arm, not by the footprint table: it is
-  keyed to the OP, not to a machine-step memory access).
-- `syncCell` loads and `syncData` stores in `applySyncOp`,
-  `wakeReady`, `resumeThread` (spec-parity slice 2): the machine's
-  cell traffic is the primitive's STATE TRANSITION, never a
-  footprint-table access; the HB edges are the sync-clock updates in
-  `raceUpdate`'s sync arm. What gc's `-race` build DOES realize on the
-  primitive's own words — the state CAS/Add atomics, RWMutex's
-  `race.Read(&rw.w)` plain read, WaitGroup's `wg.sema` misuse pair —
-  is recorded by that same arm from the per-op table
-  `syncEntryKinds`/`syncReleaseTailKinds` (BUG-080, U4 CLOSED —
-  the section "The sync primitives' OWN state words" below), keyed to
-  the OP like the chan-object pair, at the primitive's gc words under
-  the sync cell's path — together with the op's go_mem kind
-  (Q-U4RESIDUAL (A), 2026-09-02).
-- `loadLoc`/`storeLoc` in `applyAtomicOp` (the atomics arc, wave 1):
-  the `sync/atomic` op's own read-modify-write of an ORDINARY integer
-  cell — never a footprint-table access (the step is one indivisible
-  registry op); `raceUpdate`'s atomic arm records it at the cell's own
-  `Loc` with the op's ATOMIC kind (`atomicOpKind`: Load `.atomicRead`,
-  the rest `.atomicWrite` — TSan's `kAccessAtomic` access AND
-  mem#model's operation kind, which coincide here) and moves the
-  per-address atomic clock (the section "sync/atomic — the per-address
-  clocks" below). Because the cell is user memory, a plain access to
-  the same variable anywhere else conflicts through path overlap —
-  mem#restrictions' mixed atomic/plain rule, and exactly what `-race`
-  reports.
-
-* **U5 — cross-goroutine unlock without handoff HB: TSan-red /
-  ours-green.** `syncRelease` is a merge-join; gc's TSan hook is
-  overwrite `race.Release`. The two agree at a release exactly when
-  semA ⊑ the unlocker's clock (entailed by strict lock-handoff
-  discipline); on a legal owner-free unlock whose unlocker has no HB from
-  the prior critical section, TSan drops that section's clock and
-  reports a race our merge keeps ordered. The merge is the memory-model
-  text verbatim (the n<m Unlock/Lock sentence is unconditional), so the
-  deviation is from the TSan-alignment oracle in the missed-race
-  direction; scope-limited to cross-goroutine unlocks without a handoff
-  edge. Provenance, probe and pin: ledger [DL-5].
-* **U4 — CLOSED (BUG-080): the sync primitives' OWN state-word accesses
-  are modeled as `-race` realizes them, UNION go_mem's operation kind
-  (Q-U4RESIDUAL, RULED [USER] 2026-09-02, option (A)).** Not a
-  footprint-table entry but two more access KINDS (`AccessKind ∈ {read,
-  write, atomicRead, atomicWrite}`; atomic↔atomic never conflicts,
-  atomic↔plain conflicts unless both are reads — mem#model verbatim);
-  `raceUpdate`'s sync arm records the per-op set at the primitive's gc
-  words (`ShadowKey.syncWord`; the section "The sync primitives' OWN
-  state words" has the table and the designed divergence, pinned
-  born-FAIL at `race/gomem-only/*`, BUG-084). History (the before-state,
-  the ruling's two checks, the probe families): ledger [DL-6].
-
-FRESH ALLOCATION / DRIVER (excluded — the malloc convention):
-- `Store.alloc`, `allocDecls`, `bindParams`, `bindIterVars`,
-  `enterFrame`'s binding half, `seedGlobals`, driver result readouts
-  (`loadMany` after termination), `$pkginit` (sequential phase).
+The recorded UNDER-approximation U5 keeps its statement here, verbatim
+from the deleted inventory: **cross-goroutine unlock without handoff HB:
+TSan-red / ours-green.** `syncRelease` is a merge-join; gc's TSan hook is
+overwrite `race.Release`. The two agree at a release exactly when semA ⊑
+the unlocker's clock (entailed by strict lock-handoff discipline); on a
+legal owner-free unlock whose unlocker has no HB from the prior critical
+section, TSan drops that section's clock and reports a race our merge
+keeps ordered. The merge is the memory-model text verbatim (the n<m
+Unlock/Lock sentence is unconditional), so the deviation is from the
+TSan-alignment oracle in the missed-race direction; scope-limited to
+cross-goroutine unlocks without a handoff edge. Provenance, probe and pin:
+ledger [DL-5].
 -/
 
 namespace GoLean.GoCore.Machine
@@ -360,199 +173,13 @@ def ShadowCell.conflicts (cell : ShadowCell) (k : AccessKind) (t : Nat)
 
 /-! ## The access footprint of one private step -/
 
-/-- `(kind, loc)` — one recorded access. -/
-abbrev RaceAccess := AccessKind × Loc
-
-/-- The element paths a slice's visible range names. -/
-def sliceElemLocs (slice : SliceValue) (count : Nat) : List Loc :=
-  match slice.base with
-  | none => []
-  | some b =>
-      (List.range count).map fun i => .index b (Int.ofNat (slice.offset + i))
-
-/-- Read of a map's data cell (map objects are ONE location for race
-purposes — gc/TSan's classification of "concurrent map read and map
-write"). A nil map contributes nothing (the op returns zeros or
-panics; no memory named). -/
-def mapAccess (kind : AccessKind) : GoValue → List RaceAccess
-  | .map m =>
-      match m.base with
-      | some l => [(kind, l)]
-      | none => []
-  | _ => []
-
-/-- A write through an evaluated target-address value; nothing if the
-address is malformed/nil (the step itself panics — no store happens). -/
-def targetWrite (tv : GoValue) : List RaceAccess :=
-  match valueAsLoc tv with
-  | .ok l => [(.write, l)]
-  | .error _ => []
-
-/-- Footprint of a strict-operator application (the operands are
-already values — their own reads were recorded at their own steps).
-Arms argued against gc's compiled accesses; anything not listed
-touches no user memory (bounds/type metadata, header math, values in
-hand). `.deref` is handled at the `stepAccesses` level instead — its
-read is narrowed by the CONTINUATION (`projChainTarget`). `len(m)` on
-a MAP is a real instrumented read on the oracle toolchain (S3 audit:
-probed `-race`-red beside a concurrent map write, refuting the earlier
-"len is uninstrumented" claim for maps); `len`/`cap` on channels stay
-exempt (spec: race-free without synchronization; ground-truth probe
-p26: not flagged), and on slices/strings/pointer-to-array they read
-headers/types only. -/
-def strictOpAccesses (op : StrictOp) (vs : List GoValue) : List RaceAccess :=
-  match op, vs with
-  | .indexGet, [b, i] =>
-      match b with
-      | .slice slice =>
-          match valueAsInt i with
-          | .ok idx =>
-              match sliceIndexLoc slice idx with
-              | .ok l => [(.read, l)]
-              | .error _ => []
-          | .error _ => []
-      -- Pointer-to-array read `p[i]` (triage L5): gc compiles a single
-      -- ELEMENT load, so the footprint is the element loc — the same
-      -- `.index base idx` shape element STORES use, keeping read/write
-      -- pairs aligned and disjoint elements race-free. A nil base
-      -- panics before any access.
-      | .addr baseLoc =>
-          match valueAsInt i with
-          | .ok idx => [(.read, .index baseLoc idx)]
-          | .error _ => []
-      | _ => []  -- array/string VALUES are in hand (read recorded at their producer)
-  | .mapGet _ _, [b, _] => mapAccess .read b
-  | .lengthOf _, [v] => mapAccess .read v
-  | .stringFromByteSlice, [v] =>
-      match valueAsSlice v with
-      | .ok slice => (sliceElemLocs slice slice.len).map ((.read, ·))
-      | .error _ => []
-  | .stringFromRuneSlice, [v] =>
-      match valueAsSlice v with
-      | .ok slice => (sliceElemLocs slice slice.len).map ((.read, ·))
-      | .error _ => []
-  | _, _ => []
-
--- MOVED (C1 S2a, 2026-09-18): `projChainTarget` now lives in `Machine.lean`
--- (after `Cont`; the caller of the module's `Mem.loadFor` names the leaf);
--- `recvFieldChain`/`wrapperForwardArg` live in `Ops.lean` beside
--- `dispatchLeaf`, the dispatch operation's own narrowing. The table below
--- CONSUMES them unchanged until S2b deletes it.
-
-/-- The user-memory read a frame ENTRY performs: interface dynamic
-dispatch of a *T box to a VALUE-receiver method copies the receiver
-out of the pointee (`dynamicDispatch?`'s `needsDeref` read,
-Ops.lean — found fail-OPEN by the S3 audit). The FOOTPRINT is argued
-against gc's compiled access, which is NARROWER than the model's load
-for one class (S3 convergence, major): when the dispatch target is a
-SYNTHESIZED PROMOTION WRAPPER (`Func.wrapper`), gc's autogenerated
-`(*T).M` loads only the promotion hop path (the embedded field), not
-the whole outer struct — so the read is recorded at the hop path,
-recovered from the wrapper's own synthesized body
-(`wrapperForwardArg`/`recvFieldChain`; unrecognized wrapper shapes —
-e.g. embedded-POINTER hops, whose mid-chain deref reads another cell —
-fall back to the whole-pointee read, over-refusal per O1). Non-wrapper
-value-receiver dispatch really does copy the whole pointee in gc
-(probed `-race`-red on a disjoint-field write:
-`race/negative/iface-dispatch`) and keeps the whole-cell read. Every
-other part of frame entry allocates fresh cells only. -/
-def dispatchAccesses (fid : FuncId) (args : List GoValue) :
-    List RaceAccess :=
-  match findFunctionIn? ctx.functions fid with
-  | none => []
-  | some func =>
-      match methodInfoByFuncId? ctx func.id with
-      | none => []
-      | some method =>
-          match methodRecvInterfaceName? method with
-          | none => []
-          | some _ =>
-              match args.head? with
-              | some (.interface dynTy inner) =>
-                  match concreteMethodForDynamic? ctx dynTy method.id with
-                  | some (concrete, needsDeref) =>
-                      if needsDeref then
-                        match inner with
-                        | .addr loc =>
-                            (match findFunctionIn? ctx.functions concrete.funcId with
-                            | some target =>
-                                if target.wrapper then
-                                  -- The receiver anchor is the target's OWN
-                                  -- first parameter name (audit F7): the
-                                  -- decoder builds a method's args as
-                                  -- #[recv] ++ args, so args[0] is the
-                                  -- receiver whatever the frontend calls it.
-                                  match target.args[0]? with
-                                  | some recvParam =>
-                                      match wrapperForwardArg target.body
-                                          >>= recvFieldChain recvParam.id with
-                                      | some hops =>
-                                          [(.read, hops.foldl
-                                            (fun l (h : TypeId × String) =>
-                                              Loc.field l h.1 h.2) loc)]
-                                      | none => [(.read, loc)]
-                                  | none => [(.read, loc)]
-                                else [(.read, loc)]
-                            | none => [(.read, loc)])
-                        | _ => []  -- nil box: the entry panics, no read
-                      else []
-                  | none => []
-              | _ => []
-
-/-- The frame-entry footprint of a deferred call about to enter
-(`(cv, args)` at the head of a frame's defer list). -/
-def deferEntryAccesses : GoValue × List GoValue → List RaceAccess
-  | (.funcVal fid captured, args) => dispatchAccesses ctx fid (captured ++ args)
-  | _ => []
-
-/-- Footprint of a wide-statement application. Fresh allocations are
-never recorded (the malloc convention: a fresh location's creating
-write precedes every path by which its address can race-freely
-escape); target-cell writes, map-object accesses, and slice-element
-reads/writes are. -/
-def stmtOpAccesses (op : StmtOp) (vs : List GoValue) : List RaceAccess :=
-  match op, vs with
-  | .allocNew _, [tv, _] => targetWrite tv
-  | .makeSlice _ _, tv :: _ => targetWrite tv
-  | .makeMap _, tv :: _ => targetWrite tv
-  | .makeChan _ _, tv :: _ => targetWrite tv
-  | .mapAssign _ _, [bv, _, _] => mapAccess .write bv
-  | .appendSlice _, [tv, sliceV, elemsV] =>
-      (match valueAsSlice sliceV, valueAsSlice elemsV with
-       | .ok slice, .ok elems =>
-           let newLen := slice.len + elems.len
-           let srcReads := (sliceElemLocs elems elems.len).map ((.read, ·))
-           if newLen ≤ slice.cap then
-             -- in place: writes the cells [len, newLen) of the backing
-             (match slice.base with
-              | some b =>
-                  srcReads ++ ((List.range elems.len).map fun i =>
-                    (.write, Loc.index b (Int.ofNat (slice.offset + slice.len + i))))
-              | none => srcReads)
-           else
-             -- spill: reads the old elements out; the new backing is fresh
-             srcReads ++ (sliceElemLocs slice slice.len).map ((.read, ·))
-       | _, _ => []) ++ targetWrite tv
-  | .copySlice, [tv, dstV, srcV] =>
-      (match valueAsSlice dstV, valueAsSlice srcV with
-       | .ok dst, .ok src =>
-           let count := Nat.min dst.len src.len
-           (sliceElemLocs src count).map ((.read, ·))
-             ++ (sliceElemLocs dst count).map ((.write, ·))
-       | _, _ => []) ++ targetWrite tv
-  | .mapDelete _, [bv, _] => mapAccess .write bv
-  | .clearMap, [bv] => mapAccess .write bv
-  | .clearSlice _, [bv] =>
-      match valueAsSlice bv with
-      | .ok slice => (sliceElemLocs slice slice.len).map ((.write, ·))
-      | .error _ => []
-  | .sortSlice _, [bv] =>
-      match valueAsSlice bv with
-      | .ok slice =>
-          (sliceElemLocs slice slice.len).map ((.read, ·))
-            ++ (sliceElemLocs slice slice.len).map ((.write, ·))
-      | .error _ => []
-  | _, _ => []
+-- DELETED (C1 S2b-ii, 2026-09-18): the FOOTPRINT TABLE — `RaceAccess`, `sliceElemLocs`,
+-- `mapAccess`, `targetWrite`, `strictOpAccesses`, `dispatchAccesses`, `deferEntryAccesses`,
+-- `stmtOpAccesses` — computed a step's data accesses from its pre-configuration; the memory
+-- module's operations EMIT them now (Ops.lean, «The memory module's access discipline»), and
+-- `accesses_eq_stepAccesses` (GoLean/GoCore/AccessTableEq.lean at the proving commit,
+-- `docs/2026-09-18_c1-memory-module-handoff.md` §1) proved the two accounts equal before both
+-- left. The module docstring above records where the data accesses come from.
 
 /-! ## The detector state
 
@@ -795,17 +422,12 @@ def RaceState.accessKey (r : RaceState) (t : Nat) (kind : AccessKind)
     let cell := ((r.shadow.find? (·.1 == key)).map (·.2)).getD {}
     return { r with shadow := shadowSet r.shadow key (cell.record kind t (vt.get t)) }
 
-/-- A DATA access: the footprint's `(kind, path)` under the `.data` key. -/
-def RaceState.access (r : RaceState) (t : Nat) (a : RaceAccess) :
-    Except Stop RaceState :=
-  r.accessKey t a.1 (.data a.2)
+-- DELETED (C1 S2b-ii): `RaceState.access`/`RaceState.accesses` — the footprint table's `.data`
+-- recorders; the fold records a step's LABEL through `RaceState.accessKeys` below.
 
-def RaceState.accesses (r : RaceState) (t : Nat) :
-    List RaceAccess → Except Stop RaceState
-  | [] => return r
-  | a :: rest => do RaceState.accesses (← r.access t a) t rest
-
-/-- Keyed accesses (the sync ops' word accesses). -/
+/-- The recorded accesses of one goroutine step, checked-then-recorded in order: the step's
+LABEL (the module's emitted `.data` accesses, `StepEvent.trace` — C1 S2b) and the registry
+arms' sync-word / channel-object accesses. -/
 def RaceState.accessKeys (r : RaceState) (t : Nat) :
     List (AccessKind × ShadowKey) → Except Stop RaceState
   | [] => return r
@@ -1326,152 +948,9 @@ def syncReleaseTailKinds (op : SyncOp) (pre : SyncPrim) (loc : Loc) :
   | .tryRLock _ => []
   | .tryWLock _ => []
 
-/-- The write of one phase-2 store step (`storeK`): the resolved
-target path. Chain resolution itself reads no user memory (address
-formation — see the module docstring); a resolution/bounds/nil failure
-means the step panics and no store happens. -/
-def storeTargetAccess (s : Store) (r : TargetRef) : List RaceAccess :=
-  match r with
-  | .chain anchor idxs steps =>
-      match resolveChain ctx s anchor steps idxs with
-      | .ok v => targetWrite v
-      | .error _ => []
-  | .mapElem b _ _ _ => mapAccess .write b
-
-/-- The footprint of an `unseq` occurrence's RUN step (Stage B): a checked
-load through a frozen plan READS the resolved element (the same path the
-store side reports, `storeTargetAccess`) and WRITES its binder cell; a
-target plan reads its `.var` atoms (the sweep's cells and admitted source
-locals — address formation itself touches nothing); a guard reads its test
-cell and, when it skips, writes the completion cell. Value heads and
-invocations run in LATER steps and report there (`.evalE`/the callee's
-steps); ENTER allocates fresh cells (no user-memory access). -/
-def unseqRunAccesses (s : Store) (g : UnseqGraph) (tg : List (String × TargetRef))
-    (env : LocalEnv) (i : Nat) : List RaceAccess :=
-  match g.occs[i]? with
-  | none => []
-  | some o =>
-    match o.body with
-    | .load bind tgt =>
-        (match unseqLookupTarget tg tgt with
-         | .ok (.chain anchor idxs steps) =>
-             match resolveChain ctx s anchor steps idxs with
-             | .ok v =>
-                 match valueAsLoc v with
-                 | .ok l => [(.read, l)]
-                 | .error _ => []
-             | .error _ => []
-         | .ok (.mapElem b _ _ _) => mapAccess .read b
-         | .error _ => [])
-        ++ ((env.lookup bind).toList.map ((.write, ·)))
-    | .target _ lhs =>
-        match targetPlan lhs with
-        | some (_, ops) =>
-            ops.filterMap fun e =>
-              match e with
-              | .var id => (env.lookup id).map ((.read, ·))
-              | _ => none
-        | none => []
-    | .guard test w out =>
-        ((env.lookup test).toList.map ((.read, ·)))
-        ++ (match env.lookup test with
-            | some tl =>
-                match loadLoc ctx s tl with
-                | .ok (.bool b) =>
-                    if b == w then [] else (env.lookup out).toList.map ((.write, ·))
-                | _ => []
-            | none => [])
-    | .eval _ _ | .invoke _ _ _ => []
-
-/-- **The footprint of one PRIVATE machine step**, from its pre-step
-configuration: which user-memory paths the step reads/writes. Every
-configuration shape not listed performs no user-memory access (control
-gluing, operand accumulation, address formation, fresh allocation,
-channel/select operations — the latter are the registry's
-synchronization ops, handled by the HB updater in `Multi.lean`, and
-race-free by spec). Completeness over access-bearing shapes is a
-lockstep obligation (module docstring). -/
-def stepAccesses (s : Store) (c : Config) : List RaceAccess :=
-  match c with
-  | .evalE (.var id) env k =>
-      match LocalEnv.lookup env id with
-      | some loc => [(.read, projChainTarget ctx s k loc)]
-      | none => []
-  | .retV v (.strictK (.deref _) [] [] _ k') =>
-      -- Handled here (not in strictOpAccesses) so the continuation can
-      -- narrow the pointee read through an immediate projection chain
-      -- (fieldGet / constant-index indexGet).
-      (match valueAsLoc v with
-       | .ok l => [(.read, projChainTarget ctx s k' l)]
-       | .error _ => [])
-  | .retV v (.strictK op done [] _ _) =>
-      strictOpAccesses op ((v :: done).reverse)
-  | .retV v (.stmtOpK op _ done [] _ _) =>
-      stmtOpAccesses op ((v :: done).reverse)
-  -- The rhsK APPLY step (spine migration, BUG-034/BUG-037): the value
-  -- source applies to the completed RHS operands. `.mapLookup` READS
-  -- the map object (gc's mapaccess2 instrumentation point);
-  -- `.vals`/`.typeAssert` touch no user memory. The subsequent stores
-  -- are per-target `storeK` steps (`storeTargetAccess` below), exactly
-  -- like every other spine-riding assignment.
-  | .retV v (.rhsK rop _ done [] _ _ _) =>
-      (match rop, (v :: done).reverse with
-       | .mapLookup _ _, [bv, _] => mapAccess .read bv
-       | _, _ => [])
-  | .retV v (.mapRangeK _ _ _ _ _ _ _) => mapAccess .read v
-  -- BUG-005 (L) surgery: EVERY mapIterK pick step — including the
-  -- final done-check — loads the live map cell (gc's exhausted
-  -- mapIterNext still reads; this is the arm that closed U1). Nil-map
-  -- ranges (base none) read nothing. SOUNDNESS OF THIS FOOTPRINT under
-  -- the B1 entry-identity stamps (2026-09-03): the pick's only inputs
-  -- besides the frame are the cell's live entries (ids, keys, values),
-  -- read here; the frame's `produced`/`start` ID sets are thread-private
-  -- data written only by this goroutine's own picks and range start,
-  -- and every id in them was read off THIS cell by such a load. A
-  -- foreign `mapDelete`/`clearMap`/`mapAssign` changes what the pick
-  -- computes only by writing this cell — an access `stmtOpAccesses`
-  -- records — so a pick whose candidate set another goroutine could
-  -- have changed conflicts with that write at this location (HB-ordered
-  -- or refused). No goroutine step rewrites another's frame (the
-  -- pool-level prune is gone), so nothing the pick depends on lies
-  -- outside this one read.
-  | .next (.mapIterK _ _ _ _ _ base _ _ _ _) =>
-      (match base with
-       | some l => [(.read, l)]
-       | none => [])
-  -- Frame ENTRIES with a possible interface-dispatch receiver deref
-  -- (S3 audit major: dynamicDispatch?'s needsDeref read): the ordinary
-  -- call shapes with their last operand arriving, and the deferred-call
-  -- drains (normal, return, and panic paths). Zero-argument entries
-  -- (bare `.call`, callTargetsK with no args) cannot dispatch — no
-  -- receiver — and stay footprint-free.
-  | .retV v (.callArgsK fid _ vals [] _ _) =>
-      dispatchAccesses ctx fid (vals ++ [v])
-  | .retV (.funcVal fid captured) (.callValCalleeK _ [] _ _) =>
-      dispatchAccesses ctx fid captured
-  | .retV v (.callValArgsK cv _ vals [] _ _) =>
-      (match cv with
-       | .funcVal fid captured => dispatchAccesses ctx fid (captured ++ vals ++ [v])
-       | _ => [])
-  | .next (.frame _ _ _ (d :: _) _ _) => deferEntryAccesses ctx d
-  | .signal .ret (.frame _ _ _ (d :: _) _ _) => deferEntryAccesses ctx d
-  | .panicking _ (.frame _ _ _ (d :: _) _ _) => deferEntryAccesses ctx d
-  | .next (.storeK (r :: _) (_ :: _) _ _ _) => storeTargetAccess ctx s r
-  -- The `unseq` construct (Stage B): the picked occurrence's run step and
-  -- a value head's write into its binder cell.
-  | .next (.unseqK g _ _ tg env (.run i) _) => unseqRunAccesses ctx s g tg env i
-  | .retV _ (.unseqK g _ _ _ env (.wait i) _) =>
-      (match g.occs[i]? with
-       | some ⟨_, .eval bind _, _, _⟩ => (env.lookup bind).toList.map ((.write, ·))
-       | _ => [])
-  -- Frame EXIT (BUG-025 spine migration): the exit step only READS the
-  -- pinned result cells; the caller-target WRITES are the subsequent
-  -- per-target `storeK` steps (the `storeTargetAccess` arm above),
-  -- exactly like every other phase-2 store.
-  | .next (.frame _ _ results [] _ _) =>
-      results.map ((.read, ·))
-  | .signal .ret (.frame _ _ results [] _ _) =>
-      results.map ((.read, ·))
-  | _ => []
+-- DELETED (C1 S2b-ii): `storeTargetAccess`, `unseqRunAccesses` and **`stepAccesses`** — the
+-- footprint of one PRIVATE machine step from its pre-configuration (the table's root). The
+-- step's LABEL (`Step`'s fifth index, `stepFn`'s fourth component, `StepEvent.trace`) is the
+-- account; `raceUpdate` (Multi.lean) folds it. Provenance: the module docstring above.
 
 end GoLean.GoCore.Machine

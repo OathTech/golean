@@ -1056,26 +1056,6 @@ theorem map_eq_ok {ε α β : Type} {g : α → β} {x : Except ε α} {b : β} 
     g <$> x = .ok b ↔ ∃ a, x = .ok a ∧ g a = b := by
   cases x <;> simp [Functor.map, Except.map, eq_comm]
 
-theorem arraySet_locSup {values : Array GoValue} {i : Int} {v : GoValue}
-    {out : Array GoValue} (h : arraySet values i v = .ok out) :
-    goValueListSup out.toList
-      ≤ max (goValueListSup values.toList) (GoValue.locSup v) := by
-  unfold arraySet arrayIndexNat at h
-  try simp only [bind_eq_ok] at h
-  obtain ⟨n, hn, h⟩ := h
-  split at h
-  · rename_i old hold
-    simp only [pure_eq_ok, Except.ok.injEq] at h
-    subst h
-    simp only [goValueListSup_eq]
-    rw [Array.set!, Array.toList_setIfInBounds]
-    refine supBy_le_iff.mpr fun a ha => ?_
-    rcases List.mem_or_eq_of_mem_set ha with hmem | rfl
-    · exact Nat.le_trans (supBy_mem hmem) (Nat.le_max_left _ _)
-    · exact Nat.le_max_right _ _
-  · unfold indexOutOfRangePanic at h
-    split at h <;> simp at h
-
 /-! ## Loc-path simp lemmas -/
 
 @[simp] theorem Loc.rootBase_index {b : Loc} {i : Int} :
@@ -2353,7 +2333,7 @@ theorem goValueListSup_setIfInBounds {arr : Array GoValue} {i : Nat} {x : GoValu
   · exact Nat.le_trans (supBy_mem hmem) (Nat.le_max_left _ _)
   · exact Nat.le_max_right _ _
 
-/-! ## `StructFields.set` (the store path through a struct) -/
+/-! ## `set!` bounds for entry and value arrays (the map payload's RMW) -/
 
 theorem goValueEntriesSup_set! {arr : Array (Nat × GoValue × GoValue)} {i : Nat}
     {p : Nat × GoValue × GoValue} :
@@ -2368,38 +2348,6 @@ theorem goValueListSup_set! {arr : Array GoValue} {i : Nat} {x : GoValue} :
       ≤ max (goValueListSup arr.toList) (GoValue.locSup x) := by
   rw [Array.set!]
   exact goValueListSup_setIfInBounds
-
-theorem StructFields.set_locSup {fields : Array (String × GoValue)}
-    {needle : String} {v : GoValue} {out : Array (String × GoValue)}
-    (h : StructFields.set fields needle v = .ok out) :
-    goValueFieldsSup out.toList
-      ≤ max (goValueFieldsSup fields.toList) (GoValue.locSup v) := by
-  unfold StructFields.set at h
-  try simp only [bind_eq_ok] at h
-  obtain ⟨st, hloop, hpost⟩ := h
-  rw [← Array.forIn_toList] at hloop
-  -- 4.32.2: the do-desugar's loop state is now `(array, flag) : _ × Bool`
-  -- (was `MProd Bool (Array _)`); the invariant follows the array in `.1`.
-  have hP := forIn_list_inv
-    (P := fun st : Array (String × GoValue) × Bool =>
-      goValueFieldsSup st.1.toList
-        ≤ max (goValueFieldsSup fields.toList) (GoValue.locSup v))
-    (l := fields.toList) ?step (Nat.zero_le _) hloop
-  · split at hpost
-    · simp only [pure_eq_ok, Except.ok.injEq] at hpost
-      subst hpost
-      exact hP
-    · simp [throw, throwThe, MonadExceptOf.throw] at hpost
-  · intro a ha b r hb hr
-    obtain ⟨name, old⟩ := a
-    have hmem : GoValue.locSup old ≤ goValueFieldsSup fields.toList := by
-      rw [goValueFieldsSup_eq]
-      exact supBy_mem (f := fun p => GoValue.locSup p.2) ha
-    split at hr <;>
-    · simp only [Bind.bind, Except.bind, pure_eq_ok, Except.ok.injEq] at hr
-      subst hr
-      simp only [forInStepVal, goValueFieldsSup_push]
-      omega
 
 /-! ## `Store.updateCell`: the one root-cell write (A3) -/
 

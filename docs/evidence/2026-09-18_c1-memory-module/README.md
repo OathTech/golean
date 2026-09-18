@@ -459,3 +459,78 @@ build/files/GoLean/CLI.lean») and `baseline diff (DRIFT)` with the SINGLE line
 cached certified row). ZERO other drift — the fold moved no race verdict; the negative baseline
 matched (394). Static checks at the commit tree: `check-bugs.sh` ok, `check-evidence-size` PASS,
 `check-agents-alias` PASS. Tail: `gate-tail-s2b1.txt`.
+
+
+## S2b-ii — the deletion (2026-09-18)
+
+### What landed (one gated runtime commit)
+
+- `Race.lean`: the FOOTPRINT TABLE family — `RaceAccess`, `sliceElemLocs`, `mapAccess`,
+  `targetWrite`, `strictOpAccesses`, `dispatchAccesses`, `deferEntryAccesses`,
+  `stmtOpAccesses`, `storeTargetAccess`, `unseqRunAccesses`, **`stepAccesses`**,
+  `RaceState.access`/`accesses` — DELETED with tombstones naming where the accesses come
+  from now; the 256-line header (the curated-table rationale, O1/U1–U5, the 250-line
+  call-site inventory) replaced by a header that records the deletion, its two grounds (the
+  audit, the theorem), and U5's statement verbatim; `RaceState.accessKeys` is the one recorder.
+  The atomic arm of `raceUpdate` records through `accessKeys … (.data loc)` (formerly
+  `accesses`).
+- `Ops.lean`: the module docstring «The memory module's access discipline — what emits,
+  what peeks» right after `AccessTrace` — the peek inventory (address formation, type-static
+  and uninstrumented metadata, the map RMW's entry peek, machine-internal binder cells,
+  drivers, synchronization, fresh allocation, `&*p`) and O1's residual, in the module's own
+  terms.
+- `GoLean/GoCore/AccessTableEq.lean` DELETED with the table it audited (its proving SHA is the
+  S2b-i row of the handoff §1); the `GoCore.lean` import removed.
+- `ChoiceTrace.lean`: the table-side audit retired (`tableAccount`, `Acc.checkTrace`,
+  `Acc.auditPoolStep`, `accessKey`/`traceMultiset`/`configKind`/`stepActionName`, the
+  `mismatches` fields, the two TSV columns `traceMismatches`/`firstTraceMismatch`; the pool
+  and init call sites); a tombstone records the two runs it made (0 mismatches).
+- The dead write-path primitives `arraySet` (Ops.lean) and `StructFields.set` (State.lean)
+  and their six lemmas (`arraySet_locSup`, `StructFields.set_locSup`, `StructFields.set_congr`,
+  `arraySet_congr`, `StructFields.set_noPanic`, `arraySet_ok_of_arrayGet_ok`) DELETED (owed
+  since S1); docstring mentions in NPDRF/MachineSound/Multi/Unseq/Ops reworded to the label.
+- Diffstat: 11 files, +177 / −2369 lines.
+
+### The detector-soundness re-run — what this sandbox could and could not establish
+
+`detector-soundness-s2b.txt`. `scripts/detector-soundness --select in-scope --jobs 6` ran
+twice from this worktree: with the S2b-i (fold) binary and with the S2a (pre-fold) binary as
+the control. **The gc `-race` side cannot run here**: every `-race` binary the runner builds
+starts TSan, maps its shadow, and dies at the sync-allocator growth with EXIT 78 and no
+report (rlimits unlimited, overcommit 0 — the reservation is refused by the sandbox); every
+row is `gc-no-verdict`, both runs EXIT=2 (incomplete). **The machine side is identical
+pre-fold and post-fold on all 639 in-scope rows** (verdict, single-run status, members, race
+members). Against the recorded 2026-09-02 tip matrix (364 rows), 12 machine verdicts differ,
+each by a change main took between 2026-09-02 and `68b261e6` (BUG-080's fix makes the two
+former HOLEs RACE-ALL; atomic-frontier and sites-bound rows now DRF; two rows refused for
+`params-omit-sites=`), and the pre-fold control reproduces every one — none is the fold's.
+The HOLE cell itself is PENDING [USER] (handoff §6 item 2): the same command in an
+environment where `-race` binaries run.
+
+### Audits
+
+THE WHOLE-CORPUS CHOICE-TRACE RUN with the S2b-ii binary (`trace-audit-s2b2.txt`; the tracer's
+table-side audit is gone, so this is the byte-identity check alone): **21,835 (row, stream)
+results**, statuses identical to S2a's census (ok 17,957 / panic 2,284 / unsupported 1,095 /
+race 252 / deadlock 162 / fatal 54 / stuck 30 / ERROR 1); the choice trace vs main `68b261e6`
+BYTE-IDENTICAL (sorted dumps `cmp` EXIT=0, 23,685 records, sha256 `70e12e02…eb57` both sides —
+the fourth time this hash); the one pre-existing ERROR finding identical modulo path; 443 s.
+
+THE RAFT TWIN (`twin-audit-s2b2.txt`): **30/30 (row, stream) results ok, 0 alarms** (1116 s
+wall, 14,360 consumption records); sorted dumps `cmp` EXIT=0 vs main's — BYTE-IDENTICAL (sha256
+`37e1c156…` both sides).
+
+### Gate lines
+
+`GOLEAN_MEM_MAX=32G scripts/capped scripts/ci --diff` under the box-wide lock (13:36:01–13:48:17
+UTC) on the S2b-ii runtime tree (byte-identical for `GoLean/` and `Tests/` to the committed tree;
+snapshot `refs/snapshots/c1/s2b2-gated`): **EXIT=1, 736 s**; **3676 cases: 3427 PASS / 249
+expected FAIL**; `eval tests` 211 ok; `core build (warning-free)` ok; `core totality audit` ok (45
+modules, 36 under GoCore — one fewer with `AccessTableEq` gone; 51 required theorems present);
+`unseq scheduler` ok; `frontend pins` ok; `wire boundary` ok; every other step ok. RED: exactly
+the two 5a-class items — `certificate provenance` (C9 HIGH: «STALE certification: changed
+dependency build/files/GoLean/CLI.lean») and `baseline diff (DRIFT)` with the SINGLE line
+`imported-goose/channel/google-search baseline[PASS/membership] -> now[FAIL/membership]` (the one
+cached certified row). ZERO other drift; the negative baseline matched (394). Static checks at
+the commit tree: `check-bugs.sh` ok, `check-evidence-size` PASS, `check-agents-alias` PASS. Tail:
+`gate-tail-s2b2.txt`.

@@ -93,8 +93,8 @@ inductive UnseqStatus where
   deriving Repr, DecidableEq, Inhabited
 
 /-- Where the sweep frame is: at a PICK (case (i)/(ii)/(iii)), RUNNING
-occurrence `i` (the picked occurrence starts this step — its footprint is
-known from the configuration, `Race.stepAccesses`), or WAITING for
+occurrence `i` (the picked occurrence starts this step — its accesses are
+the run step's label), or WAITING for
 occurrence `i`'s value/statement completion. -/
 inductive UnseqPhase where
   | pick

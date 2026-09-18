@@ -150,21 +150,6 @@ def StructFields.lookup : Array (String × GoValue) → String → Option GoValu
           | none => if name == needle then some value else none)
         none
 
-def StructFields.set (fields : Array (String × GoValue)) (needle : String)
-    (value : GoValue) : Except Stop (Array (String × GoValue)) := do
-  let mut out := #[]
-  let mut found := false
-  for (name, old) in fields do
-    if name == needle then
-      out := out.push (name, value)
-      found := true
-    else
-      out := out.push (name, old)
-  if found then
-    return out
-  else
-    throw (.stuck s!"unknown GoCore struct field: {needle}")
-
 /-- The nondeterminism choice stream ("parser of randomness"): each
 nondeterministic point consumes the next choice. The CANONICAL SITE
 LIST is the `ChoiceSite` datatype below (W3.2 slice 1 stage A — the

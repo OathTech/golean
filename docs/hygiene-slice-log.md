@@ -865,6 +865,27 @@ expected 5a pair (`certificate provenance` STALE on `CLI.lean`; the one cached c
 (`trace-audit-s2b1.txt`, `twin-audit-s2b1.txt`, `gate-tail-s2b1.txt`). The theorem file
 leaves with the table at S2b-ii; the handoff §1 row names this commit as its proving SHA.
 
+**S2b-ii (2026-09-18, gated) — the DELETION.** The footprint table family (`RaceAccess`,
+`sliceElemLocs`, `mapAccess`, `targetWrite`, `strictOpAccesses`, `dispatchAccesses`,
+`deferEntryAccesses`, `stmtOpAccesses`, `storeTargetAccess`, `unseqRunAccesses`,
+**`stepAccesses`**, `RaceState.access/accesses`) and `Race.lean`'s 256-line header gone with
+tombstones (U5's statement kept verbatim); `AccessTableEq.lean` gone with the table it audited
+(proving SHA = the S2b-i row); the tracer's table-side audit retired (the two TSV columns);
+the module's access-discipline docstring — the peek inventory in the module's terms — in
+`Ops.lean` after `AccessTrace`; the atomic arm records through `accessKeys`; the dead
+`arraySet`/`StructFields.set` + six lemmas deleted (owed since S1); mentions reworded. −2369
+lines. Detector-soundness (`detector-soundness-s2b.txt`): machine side pre-fold = post-fold on
+639/639 in-scope rows; the gc `-race` side cannot run in this sandbox (TSan dies at its
+sync-allocator growth, EXIT 78 — recorded verbatim), so the HOLE cell is PENDING [USER].
+Audits with this binary: whole corpus 21,835 (row, stream) results, statuses = S2a's census,
+choice trace byte-identical vs main (23,685 records, `cmp` EXIT=0); the raft twin 30/30 ok, byte-identical (14,360 records). Gate: `GOLEAN_MEM_MAX=32G scripts/capped scripts/ci --diff` under the box-wide lock
+(13:36:01–13:48:17 UTC): **EXIT=1 in 736 s**, 3676 cases 3427 PASS / 249 expected FAIL, `eval
+tests` 211 ok, core build warning-free, totality audit ok (45 modules), red ONLY on the expected
+5a pair (`certificate provenance` STALE on `CLI.lean`; the one cached certified row
+`imported-goose/channel/google-search`), ZERO other drift (`gate-tail-s2b2.txt`). Evidence:
+`docs/evidence/2026-09-18_c1-memory-module/` (`gate-tail-s2b2.txt`, `trace-audit-s2b2.txt`,
+`twin-audit-s2b2.txt`, `detector-soundness-s2b.txt`).
+
 | probe / point | BEFORE net | AFTER (S1) net | S1 target | verdict |
 |---|---:|---:|---|---|
 | `write_fixed(m, 100)` per write, m = 10 / 100 / 1,000 / 3,000 / 10,000 | 21 / 44 / 1,248 / 9,560 / 106,972 µs | −2 / 1 / 3 / −2 / **16 µs** (100 writes sit at the 21 ms startup noise floor; the count-varying rows put one write at 13.1 µs (m = 10, w = 1,000) / 12.6 µs (w = 10,000)) | flat: within 2× across m | **MET** (12.6 → 16 µs, ≈1.3×, at noise level; the BEFORE 5,000× slope is gone) |

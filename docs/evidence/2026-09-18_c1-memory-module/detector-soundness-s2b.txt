@@ -1,0 +1,60 @@
+# C1 S2b — scripts/detector-soundness --select in-scope --jobs 6, re-run after the fold (2026-09-18)
+# Two runs from this worktree (rows: 639 in-scope; the standing runner; go1.26.5 at the pin):
+#   artifacts/detector-soundness/s2b1     with the S2b-i binary 4bda4748… (the fold)      — 13:12:20–13:15:55 UTC, EXIT=2, 215 s
+#   artifacts/detector-soundness/s2a-ctrl with the S2a  binary d4c0c14d… (pre-fold control) — 13:18:59–13:22:35 UTC, EXIT=2, 216 s
+
+## The gc -race side CANNOT RUN in this sandbox (a denial, recorded verbatim; the matrix is gc-no-verdict on every row → EXIT=2 = INCOMPLETE)
+# runner's command (scripts/detector-soundness:243-244):
+          run_with_timeout "$GO_RUN_TIMEOUT" env GOMAXPROCS="$p" GODEBUG=panicnil=0 GORACE="exitcode=66" \
+            bash -c 'cd "$1" && exec ./golean-race-bin' go-race-run "$d/go" > "$d/run.p$p.$i.txt" 2>&1
+# every run.p*.N.txt is EMPTY; row.tsv: gc_runs = p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:…abnormal=5 → NO-VERDICT
+# direct reproduction (the -race binary built by the runner, atomics/counter/add):
+#   cd artifacts/detector-soundness/s2b1/rows/atomics__counter__add/go && env GORACE="verbosity=2 log_path=stderr" GOMAXPROCS=1 ./golean-race-bin
+#   → TSan starts, maps its shadow, then dies at the sync-allocator growth with EXIT=78 and no report:
+#   ***** Running under ThreadSanitizer v3 (pid 276424) *****
+#   MapShadow for (0x64c000-0x15d0000), begin/end: (0x200000c90000-0x200002ba0000)
+#   mapped meta shadow for (0x64c000-0x15d0000) at (0x300000320000-0x300000af0000)
+#   MapShadow for (0xc000000000-0xc004000000), begin/end: (0x218000000000-0x218008000000)
+#   ctx->mapped_shadow_{begin,end} = (0x0-0x0)
+#   MapShadow begin/end = (0x218000000000-0x218008000000)
+#   mapped meta shadow for (0xc000000000-0xc004000000) at (0x306000000000-0x306002000000)
+#   ThreadSanitizer: growing sync allocator: 0 out of 1048576*1024
+#   EXIT=78
+#   ulimit -v = unlimited; /proc/sys/vm/overcommit_memory = 0 — the reservation TSan needs is refused by the sandbox, not by rlimits.
+# CONSEQUENCE: the HOLE cell (gc RACE ∧ machine DRF) is unjudgeable here; PENDING [USER]: run the same command in an environment where -race binaries run.
+
+## The MACHINE side (the enumerator, this repo's own verdicts) — what the fold could have moved
+# machine_verdict / machine_single / machine_members / machine_race_members, pre-fold (s2a-ctrl) vs post-fold (s2b1):
+rows: pre-fold=639 post-fold=639 common=639 machine-side differences=0
+post-fold machine verdicts: DRF=502, ENUM-FAIL=86, RACE-ALL=42, REFUSED=9
+# vs the recorded 2026-09-02 tip matrix (docs/evidence/2026-09-02_detector-soundness/corpus-tip.matrix.tsv, 364 rows, all present here): 12 rows' machine verdicts differ, every one by a change main took between 2026-09-02 and 68b261e6 (BUG-080's fix turns race/negative-sync/{mutex-copy,wg-overwrite} — the two former HOLEs — into RACE-ALL; the atomic-frontier rows and the sites-bound rows now DRF; two rows REFUSED for params-omit-sites=); the pre-fold control reproduces the post-fold matrix row for row, so none is the fold's.
+
+## summary.txt heads
+s2b1: detector-soundness summary — 2026-09-18T13:15:55+00:00
+s2b1: rows: 639   runs/proc: 5   procs: 1,8   worker-pool exit: 0
+s2b1: 
+s2b1: cells:
+s2b1:   gc-no-verdict  544
+s2b1:   refused        9
+s2b1:   uncertified    86
+s2b1: 
+s2b1: by lane × cell:
+s2b1:   confluent	gc-no-verdict	89
+s2b1:   confluent	uncertified	1
+s2b1:   membership	gc-no-verdict	128
+s2b1:   membership	refused	9
+s2b1:   membership	uncertified	4
+ctrl: detector-soundness summary — 2026-09-18T13:22:35+00:00
+ctrl: rows: 639   runs/proc: 5   procs: 1,8   worker-pool exit: 0
+ctrl: 
+ctrl: cells:
+ctrl:   gc-no-verdict  544
+ctrl:   refused        9
+ctrl:   uncertified    86
+ctrl: 
+ctrl: by lane × cell:
+ctrl:   confluent	gc-no-verdict	89
+ctrl:   confluent	uncertified	1
+ctrl:   membership	gc-no-verdict	128
+ctrl:   membership	refused	9
+ctrl:   membership	uncertified	4

@@ -24,10 +24,10 @@ proof debt's STATEMENT layer and its first mover lemmas:
   step, so coarse reachability ⊆ fine reachability unconditionally
   (the easy inclusion of the reduction).
 * `RacyFine` — the fine-semantics race: some fine-reachable pool holds
-  two distinct goroutines whose next private steps carry conflicting
-  footprints (`stepAccesses`, Race.lean — the same footprint the
-  executable detector records; what that sharing does and does not buy
-  is obstruction 5).
+  two distinct goroutines whose next steps carry conflicting LABELS
+  (`StepE`'s `AccessTrace` — the same emitted trace the executable
+  detector folds; what that sharing does and does not buy is
+  obstruction 5).
 * `NPDRFReduction` — the reduction statement in DRAFT form (a
   `Prop`-valued definition, deliberately not a theorem — and REFUTABLE
   as written: obstruction 4 exhibits the counterexample class; the
@@ -106,16 +106,18 @@ starts honest):
    decision rather than a silent edit; nothing may cite the current
    form even as a target.
 5. **Footprint completeness bears on `RacyFine`'s EXTERNAL adequacy
-   (S3 audit).** Sharing `stepAccesses` between the detector and
+   (S3 audit).** Sharing the emitted trace between the detector and
    `RacyFine` makes plan step (iv)'s coupling cancel any shared
    under-approximation — that axis is real. What sharing does NOT buy:
    `¬ RacyFine` does not imply go_mem/`-race` data-race-freedom while
-   the table under-approximates Go's access set (the recorded U1–U2
-   in Race.lean's inventory), and an access a step performs but the
-   table omits is invisible to the mover route too (a step reading a
+   the emitted trace under-approximates Go's access set (the recorded
+   U2 in the module's access-discipline docstring, Ops.lean), and an
+   access a step performs but the module does not emit is invisible to
+   the mover route too (a step reading a
    shared cell with an empty recorded footprint would be treated as a
    both-mover it is not). The reduction's honesty therefore rides on
-   the inventory's completeness discipline, not on sharing alone.
+   the module's emission discipline (every access through an emitting
+   operation), not on sharing alone.
 6. **The proved movers are CROSS-ROOT only; same-root disjoint PATHS
    are unproved (S3 audit).** Both lemmas below are gated on
    `Loc.rootBase m ≠ Loc.rootBase l` — whole-cell disjointness — while
@@ -125,7 +127,7 @@ starts honest):
    clearSlice, sortSlice: element writes sharing the backing root),
    the peer pairs the race semantics calls independent need a
    DIFFERENT lemma class — path-level frame lemmas through
-   `StructFields.set`/array update — and store/store commutation is
+   the leaf writes (`writeAt`) — and store/store commutation is
    unproved in any form. The proved pair covers the cross-root half
    (different variables/cells) only.
 7. **The `thread` rule IS thread-local — DISCHARGED BY CONSTRUCTION
@@ -135,7 +137,8 @@ starts honest):
    rewrote EVERY other goroutine's continuation (`pruneForeign`,
    Multi.lean — the `produced`/`start` KEY sets of its in-flight
    `mapIterK` frames over the deleted map), a modification that
-   appeared in NO `stepAccesses` footprint, so plan step (i)'s
+   appeared in NO `stepAccesses` footprint (the footprint table of the
+   time; since C1 S2b the emitted trace), so plan step (i)'s
    "disjoint footprints commute" would have swapped a pruning step past
    a foreign ranger's pick and changed that pick's candidate set; the
    saving argument (the observing pick loads the cell the delete
@@ -160,7 +163,7 @@ footprints commute as state transformers.
 formal successor): each multi-cell apply step (`appendSlice`,
 `copySlice`, `clearSlice`, `sortSlice`) is a
 fold of the frame lemmas — its whole footprint is what commutes, which
-is exactly why `stepAccesses` records apply steps whole.
+is exactly why an apply step's label is one step's trace, whole.
 (iii) **Normalization induction**: any fine execution of a race-free
 program reorders — swapping adjacent independent steps, finitely often
 — into a registry-point execution with the same result (Mazurkiewicz

@@ -2050,69 +2050,6 @@ theorem forIn_congr_except_array {α β₁ β₂ : Type} {R : β₁ → β₂ �
   rw [← Array.forIn_toList, ← Array.forIn_toList]
   exact forIn_congr_except hbody l.toList hb
 
-set_option maxHeartbeats 800000 in
-/-- `StructFields.set` congruence: the fields are fixed (loaded from the
-shared cell), only the inserted value varies up to `capCong`. -/
-theorem StructFields.set_congr {fields : Array (String × GoValue)}
-    {needle : String} {v w : GoValue} (hcc : GoValue.capCong v w) :
-    exceptCong (fun a b : Array (String × GoValue) =>
-        capCongFields a.toList b.toList)
-      (StructFields.set fields needle v) (StructFields.set fields needle w) := by
-  unfold StructFields.set
-  -- 4.32.2: the loop state is now `(array, flag) : _ × Bool` (was
-  -- `MProd Bool (Array _)`); the R conjunct order is preserved (flag eq
-  -- first) — only the projections move.
-  refine exceptCong.bind_congr
-    (R := fun (r₁ r₂ : Array (String × GoValue) × Bool) =>
-      r₁.2 = r₂.2 ∧ capCongFields r₁.1.toList r₂.1.toList)
-    (forIn_congr_except_array ?_ fields ⟨rfl, trivial⟩) fun r₁ r₂ hr => ?_
-  · intro p r₁ r₂ hr
-    obtain ⟨hfnd, hout⟩ := hr
-    obtain ⟨name, old⟩ := p
-    dsimp only
-    by_cases hn : (name == needle) = true
-    · rw [if_pos hn, if_pos hn]
-      have hpush : capCongFields (r₁.1.push (name, v)).toList
-          (r₂.1.push (name, w)).toList := by
-        rw [Array.toList_push, Array.toList_push]
-        exact capCongFields_append hout ⟨rfl, hcc, trivial⟩
-      exact ⟨rfl, hpush⟩
-    · rw [if_neg hn, if_neg hn]
-      have hpush : capCongFields (r₁.1.push (name, old)).toList
-          (r₂.1.push (name, old)).toList := by
-        rw [Array.toList_push, Array.toList_push]
-        exact capCongFields_append hout ⟨rfl, GoValue.capCong_refl old, trivial⟩
-      exact ⟨hfnd, hpush⟩
-  · obtain ⟨o₁, f₁⟩ := r₁
-    obtain ⟨o₂, f₂⟩ := r₂
-    obtain ⟨hfnd, hout⟩ := hr
-    dsimp only at hfnd hout ⊢
-    subst hfnd
-    by_cases hf : f₁ = true
-    · rw [if_pos hf, if_pos hf]
-      exact hout
-    · rw [if_neg hf, if_neg hf]
-      exact rfl
-
-theorem arraySet_congr {values : Array GoValue} {i : Int} {v w : GoValue}
-    (hcc : GoValue.capCong v w) :
-    exceptCong (fun a b : Array GoValue => capCongList a.toList b.toList)
-      (arraySet values i v) (arraySet values i w) := by
-  unfold arraySet
-  refine exceptCong.bind_congr (R := Eq) (exceptCong.self fun _ => rfl)
-    fun n n' hn => ?_
-  subst hn
-  cases hidx : values[n]? with
-  | none =>
-    show exceptCong _ (indexOutOfRangePanic i values.size)
-      (indexOutOfRangePanic i values.size)
-    exact exceptCong.self fun a => capCongList_refl a.toList
-  | some old =>
-    show capCongList (values.set! n v).toList (values.set! n w).toList
-    rw [Array.set!, Array.set!, Array.toList_setIfInBounds,
-      Array.toList_setIfInBounds]
-    exact capCongList_set hcc
-
 /-- Root-cell updates agree in outcome CLASS when the two heaps agree at the
 root and the two update functions agree in class on every cell (A3; the
 congruence behind `storeLoc_congr`). -/
@@ -3797,8 +3734,8 @@ sites. Both are REFUTED here: a TRY head's apply never raises a recoverable
 panic (`applyTryLock_noPanic`), and a spilling append whose target is a
 root cell (the frontend's hoisted temp — `Config.appendTargetLocal`) never
 does either (`storeLoc_base_noPanic`, `buildAppendBackingValue_noPanic`).
-The only panic sources on the store path are `arrayGet`/`arraySet`'s
-index-out-of-range (unreachable through a PATH the machine just loaded, and
+The only panic sources on the store path are `arrayGet`'s / the leaf write's
+(`writeAt`) index-out-of-range (unreachable through a PATH the machine just loaded, and
 absent at a root cell); normalization and default values refuse but never
 panic. -/
 
@@ -4033,18 +3970,6 @@ theorem buildAppendBackingValue_noPanic (elem : Ty)
     · rw [Std.Legacy.Range.forIn_eq_forIn_range']
       refine NoPanic.bind (forIn_noPanic (fun a b => ?_) _ _) fun _ => NoPanic.pure _
       exact NoPanic.bind (defaultValue_noPanic _) fun _ => NoPanic.pure _
-
-theorem StructFields.set_noPanic (fields : Array (String × GoValue)) (needle : String)
-    (value : GoValue) : NoPanic (StructFields.set fields needle value) := by
-  unfold StructFields.set
-  dsimp only
-  rw [← Array.forIn_toList]
-  refine NoPanic.bind (forIn_noPanic (fun a b => ?_) _ _) fun _ => ?_
-  · obtain ⟨name, old⟩ := a
-    (try dsimp only)
-    split <;> exact NoPanic.pure _
-  · (try dsimp only)
-    exact NoPanic.ite (NoPanic.pure _) (NoPanic.stuck _)
 
 /-- `Store.alloc` never panics: the normalizer does not, and the push is pure. -/
 theorem Store.alloc_noPanic (s : Store) (v : GoValue) (ty : Ty) :
@@ -4364,23 +4289,6 @@ theorem storeLoc_base_noPanic (s : Store) (a : Addr) (v : GoValue) :
     · exact NoPanic.stuck _
     · exact NoPanic.stuck _
   · exact NoPanic.internal _
-
-/-- An in-range read makes the same index writable. -/
-theorem arraySet_ok_of_arrayGet_ok {vs : Array GoValue} {i : Int} {x : GoValue}
-    (h : arrayGet vs i = .ok x) (v : GoValue) : ∃ vs', arraySet vs i v = .ok vs' := by
-  unfold arrayGet at h
-  unfold arraySet
-  cases hj : arrayIndexNat vs i with
-  | error e => (try rw [hj] at h); simp [Bind.bind, Except.bind] at h
-  | ok j =>
-    (try rw [hj] at h)
-    simp only [Bind.bind, Except.bind] at h ⊢
-    cases hg : vs[j]? with
-    | none =>
-      (try rw [hg] at h)
-      simp only [indexOutOfRangePanic, GoLean.GoCore.panic, throw, throwThe, MonadExceptOf.throw] at h
-      split at h <;> cases h
-    | some w => (try rw [hg]); exact ⟨_, rfl⟩
 
 /-- A store through a PATH the machine can load never panics: the only
 panic on the store path is the index bounds check, and the load's success

@@ -983,7 +983,7 @@ verbatim, gc realization version-tracked).
 - Status: open — NARROWED 2026-09-02 (Q-RACEPATH, RULED [USER]
   2026-08-31 `docs/2026-08-31_qrow-rulings.md` row 4; implemented on
   the Tier-4 detector-soundness lane): the CONSTANT-index half is
-  FIXED — `projChainTarget` (Race.lean, the generalization of the
+  FIXED — `projChainTarget` (Machine.lean since C1 S2a; formerly Race.lean; the generalization of the
   shipped `fieldChainTarget`) narrows a whole-cell read through
   `indexGet` frames whose pending index is an `intLit` over an ARRAY
   cell, composing with the `fieldGet` chain in either order (`a[1]`,
@@ -1016,7 +1016,9 @@ verbatim, gc realization version-tracked).
   narrowing exists) and composite reads whose continuation is not a
   fieldGet chain. Over-refusal is the FAIL-CLOSED direction (a
   refusal, never a wrong value), recorded as O1 in
-  `GoLean/GoCore/Race.lean`'s inventory.
+  `GoLean/GoCore/Race.lean`'s inventory (since C1 S2b-ii, 2026-09-18: the memory module's
+  access-discipline docstring, `GoLean/GoCore/Ops.lean` after `AccessTrace`; the emitted read
+  is `Mem.loadFor … (projChainTarget …)`).
 - RESIDUAL (the open half, born-FAIL pin 2026-09-02
   `race/free/array-dyn-index-read-write`: `a[i]` with i = 1 beside an
   `a[0]` write — race-free Go refused): when go/types cannot fold the
@@ -2685,7 +2687,8 @@ run to a silent value (`race/negative/map-range-iter`, the fourth
 Cases pin — red until this entry's live-iteration surgery landed). The
 detector's footprint-table lockstep obligation is structurally blind
 here because the gc accesses have no `stepFn` arm at all; recorded as
-under-approximation U1 in `GoLean/GoCore/Race.lean`'s inventory. The
+under-approximation U1 in `GoLean/GoCore/Race.lean`'s inventory (the inventory was deleted at
+C1 S2b-ii; U1's closure history is ledger [DL-2]). The
 live-iteration fix must add the per-iteration footprint arm as part of
 the same movement.
 
@@ -3176,7 +3179,8 @@ FIRST per the standing rule.
   evaluate the pointer operand, nil-assert on the VALUE via
   `valueAsLoc`'s existing runtime-panic arm, yield the same pointer,
   touch NO memory (gc's TESTB shape; no race-footprint arm ON PURPOSE
-  — Race.lean's call-site inventory records the decision). The
+  — Race.lean's call-site inventory recorded the decision; since C1 S2b-ii the module's
+  access-discipline docstring, Ops.lean, «NO ACCESS AT ALL»). The
   emitter arm lives in `emitUnaryExpr`'s `token.AND` path — the `&`
   OPERATOR's immediate-`*` operand only; `emitAddressOf`'s StarExpr
   arm DELIBERATELY kept the collapse, because that is the general
@@ -4397,7 +4401,8 @@ kill, never a wrong answer, lifted by (1).
 - Status: fixed (2026-09-02, the `bug080-atomic-kind` slice — [USER]-ruled
   the same day as its own S–M slice ahead of the Q-ATOMIC arc,
   `docs/2026-08-31_qrow-rulings.md` row 2; [AGENT]-executed. THE FIX:
-  `GoLean/GoCore/Race.lean` `RaceAccess := AccessKind × Loc`, `AccessKind ∈
+  `GoLean/GoCore/Race.lean` `RaceAccess := AccessKind × Loc` (since C1 S2b-ii:
+  `Access := AccessKind × ShadowKey`, Ops.lean), `AccessKind ∈
   {read, write, atomicRead, atomicWrite}`, conflict ⇔ at least one write ∧
   not both atomic (mem#model's read-write/write-write data-race
   definitions — read-like/write-like operations "at least one of which is
@@ -4470,7 +4475,8 @@ kill, never a wrong answer, lifted by (1).
   `scripts/detector-soundness`, probe family U4 —
   `docs/evidence/2026-09-02_detector-soundness/probes/u4/`; report
   `docs/2026-09-02_detector-soundness.md` §3). The class was RECORDED
-  as under-approximation U4 in `GoLean/GoCore/Race.lean`'s inventory
+  as under-approximation U4 in `GoLean/GoCore/Race.lean`'s inventory (deleted at C1 S2b-ii;
+  U4's closure is Race.lean's «The sync primitives' OWN state words» section and ledger [DL-6])
   since spec-parity slice 2 ("misuse-only") but never pinned; this
   entry pins it and classifies it honestly as the third cell of the
   soundness matrix (gc `-race` RED, machine DRF): a program that is
@@ -6981,7 +6987,7 @@ malformed surrogates) driven through the CLI, not through an already-parsed
   (.data l) (.data m) = false`; F1 is FALSE under it — witnessed by `#eval` on a two-type
   table: `overlap = false`, yet the store through `locA` changes the load through `locB`
   from `int 0` to `int 5`; F1 holds for the CANONICAL relation with typeIds erased).
-- What: `locPrefix l m` (Race.lean:308-312) decides `l == m || locPrefix l b` with the
+- What: `locPrefix l m` (Ops.lean since C1 S2a, «Loc-path overlap»; formerly Race.lean:308-312) decides `l == m || locPrefix l b` with the
   derived structural `BEq Loc`, so a `.field` step's `typeId` is part of the key. The
   `typeId` is the STATIC type the frontend recorded for the base expression, not an
   address component: after a pointer conversion between tag-compatible struct types
@@ -6991,7 +6997,8 @@ malformed surrogates) driven through the CLI, not through an already-parsed
   (.data m)` is then `false`, the shadow keeps two cells, and `RaceState.access` never
   sees the pair. gc's `-race` instruments the ADDRESS, so it reports. Direction:
   fail-OPEN (a racy program accepted) — the direction the racy-negative lane's claim is
-  scoped by (Race.lean U1–U5 list none of this class). Reachability: the frontend
+  scoped by (the recorded approximations O1/U2–U5 — Race.lean's header and the module docstring
+  in Ops.lean since C1 S2b-ii — list none of this class). Reachability: the frontend
   supports the pointer conversion (triage L7, pinned) and the detector runs on every
   multi-goroutine row; no corpus row constructs the alias across goroutines today.
 - Fix shape (for the [USER] to rule; both are detector-semantics changes): (i) key
