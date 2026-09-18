@@ -113,32 +113,103 @@ dead write-path primitives `arraySet`/`StructFields.set` and their six lemmas
 on the stub of the same shape — `spikes/c1-frame/Frame.lean` `f1_canon`; porting is
 S2/S3 work when the trace makes the same-root law a detector statement).
 
-## 6b. S2 as this lane now sees it (plan of record for the next session)
+## 6b. S2 — the plan of record after the S1 landing (2026-09-18, [AGENT])
 
-- `AccessTrace := List (AccessKind × ShadowKey)` (Race.lean's atoms unchanged);
-  `stepFn ctx s c ch : Except Stop (Config × Store × Choices × AccessTrace)`; `Step`
-  carries the trace as a LABEL (D5 (a)); every apply/entry helper that reads or writes
-  user memory returns its trace (`applyStrictOp`, `applyStmtOp`, `storeTarget`,
-  `mapAssignValue`, `loadMany`, `mapRangeStartSets`, `mapIterLiveEntries`,
-  `sliceVisibleValues`, `dynamicDispatch?`'s deref, `unseqLoad`, `applyChanOp`
-  (chanObj), `applySyncOp` (syncWord: today's `syncEntryKinds`/`syncReleaseTailKinds`
-  computed INSIDE from `pre`/`post`), `applyAtomicOp` (the atomic kinds at the cell)).
-  The load's narrowing (`projChainTarget`) is the CALLER's choice at `evalVar`/`deref`
-  (`loadFor`), never an emission.
-- `StepEvent.trace` + the pre-state facts `raceUpdate`'s HB arms read today (the
-  channel payload's `(buf.size, cap, closed)` at the op's channel, the partner's
-  blocked shape, the sync primitive pre/post) carried in the event; `raceUpdate`
-  becomes: fold `ev.trace` through `RaceState.accessKeys`, then the clock moves driven
-  by `ev.action` + the carried facts — `sPre`/`tsPre` gone (cost B(a)).
-- THE TRACE-EQUALITY AUDIT before any deletion: a `golean` mode beside
-  `scripts/choice-trace-corpus` running BOTH accounts per step (the new trace vs
-  `stepAccesses ctx s c` as a multiset, and the sync/chan emissions vs the arms'
-  records) over the whole corpus + the raft twin; every difference a finding (D7;
-  BUG-111's class is expected EQUAL — no corpus row aliases across goroutines).
-  Then `accesses_eq_stepAccesses` per arm (D6), the table family deleted (54/6/5 → 0),
-  `Race.lean:1-256` → the module's `peek` list.
-- Emission keys stay STRUCTURAL (`.data l` as today) unless BUG-111 is ruled; the
-  canonical-key alternative is one function at the emission point.
+S2 lands as THREE gated runtime commits, each at zero baseline drift and a
+byte-identical choice trace — a deviation from charter §6's «one gated
+commit per slice» taken for parkability (each sub-commit is a legitimate
+stop; the alternative — one 3-session commit with no parkable point — is
+named and rejected; [AGENT]):
+
+- **S2a — the DATA trace, both accounts live, the audit.** Vocabulary
+  (`AccessKind`, `SyncWordName`, `ShadowKey`, `ShadowKey.overlap`,
+  `locPrefix`/`locOverlap`, the `Ord` derivings) MOVES from `Race.lean` into
+  the module section of `Ops.lean` (namespace `GoLean.GoCore`; the
+  alternative — a new `Access.lean` — named); `Access := AccessKind ×
+  ShadowKey`, `AccessTrace := List Access`. The EMITTING operations are
+  wrappers over the S1 primitives — `Mem.load l` ([(read, data l)]),
+  `Mem.loadFor root leaf` (loads the root, emits at the leaf), `Mem.store l
+  v` ([(write, data l)]), `Mem.mapRead l` / `Mem.mapWrite l entries nextId`
+  (the map cell as ONE location, gc's classification) — while `loadLoc` /
+  `storeLoc` / `mapPayload?` / `storeMapPayload` KEEP their types as the
+  module's `peek` and raw writers (the alternative — retyping them — costs
+  the 62 `storeLoc`/`loadLoc` lemma mentions of StateWf/MachineSound for no
+  semantic gain; [AGENT]). A caller chooses an operation; it never builds an
+  `Access`. The trace rides as the LAST component of every emitting helper's
+  ok-tuple (`applyStrictOp`, `applyStmtOpCore`/`applyStmtOp`, `storeTarget`,
+  `mapAssignValue`, `loadResults` (frame exit; the drivers' `loadMany` stays
+  a peek), `mapRangeStartSets`, `mapIterLiveEntries`/`mapIterCandidates`,
+  `sliceVisibleValues`, `mapLookupValue`/`applyRhsOp`, `dynamicDispatch?` →
+  `enterFrame` → `enterFramePick`, `unseqLoad`/`unseqAtom(s)`/
+  `unseqTargetPlan`/`unseqGuard`, `stepUnseqValue`); `deliver`/`deliverS`
+  carry it (a delivered PANIC carries `[]` — the access never happened,
+  today's `raceUpdate` convention); `stepFn` returns it as the fourth
+  component; `Step` gains the label as its fifth index (pure control rules
+  `[]`); `StepE`/`StepM` likewise; `StepEvent.trace`. The `.deref`
+  narrowing: `applyStrictOp` takes `(leafOf : Loc → Loc)` used by `.deref`
+  only, and `Step`/`stepFn` pass `projChainTarget ctx s k` (moved from
+  `Race.lean` to `Machine.lean` after `Cont`); the alternative — a separate
+  deref rule and arm — named. Peek-class call sites (documented in the
+  module docstring): address formation (`indexTargetLoc`, `resolveChain`,
+  `applySlice`, `projChainTarget`'s root check, `unseqUnfrozenAnchor?`),
+  metadata (`lengthOf`/`capacityOf` on pointer-to-array and channels — U2),
+  the map RMW's entry peek before its payload write (`mapAssignValue`,
+  `mapDelete`, `clearMap`), `unseqStorePlan`'s binder-value loads (machine-
+  internal binder cells — today's table records nothing there and records
+  the binder WRITES; the trace keeps that account, EQUAL by construction;
+  the principled alternative — no emission at all on binder cells, verdict-
+  neutral since no goroutine can name them — is named), driver readouts
+  (`loadMany`), pool bookkeeping. One semantic tightening the trace forces
+  and the table already asserted: `mapDelete` of an ABSENT key rewrites the
+  unchanged payload through `Mem.mapWrite` so the write is emitted (gc's
+  `mapdelete` is instrumented as a write unconditionally). The pool steps
+  (wake/pair/commit/pass/strip/abort) carry `[]`; the spawn step carries the
+  child's dispatch read (attributed to the child by S2b's fold).
+  `raceUpdate` is UNCHANGED in S2a (it still folds `stepAccesses`) — zero
+  detector drift by construction. THE AUDIT: the tracer (`ChoiceTrace.lean`
+  `poolStep`/`initLoop`) compares, per step, the step's `.data` trace as a
+  multiset with the table's account under `raceUpdate`'s own rule
+  (`privateStep`: `[]` if the goroutine became panicking from a non-panicking
+  pre-configuration, else `stepAccesses ctx sPre cPre`; `spawned`: the
+  child's `dispatchAccesses`; every other action `[]`; the init phase: the
+  same rule on `stepFn`), and alarms `trace-mismatch: …` with (step, who,
+  action, both lists); `scripts/choice-trace-corpus` over the whole corpus
+  (the standing 2 exclusions) + the raft twin = the audit run; the sync/
+  chan/atomic arms' recordings are S2c's audit. Gate: `ci --diff` zero drift,
+  choice trace byte-identical, the audit at 0 unrowed differences (BUG-041's
+  rows EQUAL; any other difference: BUG + red-first row + [USER], D7).
+- **S2b — the fold, the deletion, the theorem.** `raceUpdate`'s data
+  recording reads `ev.trace` (data keys; `.spawned child` under the child);
+  `accesses_eq_stepAccesses` per arm (D6, up to permutation) proved at the
+  deleting commit and recorded with its SHA; the table family
+  (`strictOpAccesses`, `stmtOpAccesses`, `dispatchAccesses`,
+  `deferEntryAccesses`, `storeTargetAccess`, `unseqRunAccesses`,
+  `stepAccesses`, `sliceElemLocs`, `mapAccess`, `targetWrite`,
+  `RaceAccess`) deleted with tombstones; `Race.lean:1-256` replaced by the
+  module's peek-list docstring; `footprintsConflict`/`RacyFine` (NPDRF)
+  restated over the two goroutines' next-step LABELS with
+  `ShadowKey.overlap`/`AccessKind.conflicts`; `scripts/detector-soundness
+  --select in-scope` re-run — HOLE = 0, other cells unchanged.
+- **S2c — D9 and cost B(a).** The sync-word / chan-object / atomic
+  emissions move INSIDE the module's operations (`syncStep`, the payload
+  ops, `atomic op l`) and `raceUpdate` drops `sPre`/`tsPre` (the HB arms
+  read facts carried in the event). OPEN DESIGN POINT found at the S2
+  read (2026-09-18, [AGENT]; not decidable by the charter's letter): the
+  step's label must preserve ORDER between accesses and the HB hook —
+  `syncReleaseTailKinds` is recorded AFTER the release (at the bumped
+  epoch; `Race.lean` docstring: the acquirer of that very release still
+  conflicts with the plain read, TSan's verdict) and the atomic Load's
+  record follows its acquire — so a flat «fold the accesses, then move the
+  clocks» changes verdicts on `race/gomem-only/*`. Recommendation: the
+  label as an ORDERED list of memory-model events (accesses and the step's
+  synchronization actions interleaved in gc's instrumentation order),
+  `raceUpdate` = one fold; alternative: two access lists per event (before
+  / after the hook). Posed for the [USER] only if the lane cannot take it
+  as the smallest-proof option at S2c.
+
+Owed alongside (S2b): the dead `arraySet`/`StructFields.set` + six lemmas
+(tombstones); the disjoint-path frame law on the REAL `storeLoc` when the
+trace makes the same-root law a detector statement (S2b/S3).
 
 ## 7. Where the lane stopped; the next command
 
