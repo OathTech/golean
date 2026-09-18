@@ -21,6 +21,7 @@ exactly where the lane stopped and the next command.
 | slice | content | commit | gate |
 |---|---|---|---|
 | S0 | records (census, write-then-panic audit, benchmark BEFORE, the §5 spike, warm) + two records-class core edits (D8 marker, D10 wording) | the S0 commit (first commit on the branch after `68b261e6`) | `ci --diff` EXIT=1 (938 s): 3676 = 3427/249, red ONLY on the expected 5a pair (§2) |
+| S2b-i | the FOLD and the THEOREM (table retained one more commit): `raceUpdate` records the event's LABEL (`RaceState.accessKeys i ev.trace`; the spawn arm the child's label), `RacyFine`/`footprintsConflict` restated over the two goroutines' next-step `StepE` labels, `accesses_eq_stepAccesses` + `spawnStep_trace` PROVED (`GoLean/GoCore/AccessTableEq.lean`, 1496 lines, 60 theorems, kernel-checked, warning-free — the D6 companion; leaves with the table at S2b-ii), `sortSlice`'s operand check made structural (`intElems`), `len`/`cap` of a pointer-to-array fail closed on a non-pointer operand | (this commit; the SHA is filled in the next records-only commit) | S2b-i gate: `GOLEAN_MEM_MAX=32G scripts/capped scripts/ci --diff` under the box-wide lock (12:59:21–13:11:41 UTC): **EXIT=1, 740 s**; **3676 cases: 3427 PASS / 249 expected FAIL**; `eval tests` 211 ok; `core build (warning-free)` ok; `core totality audit` ok (new module included); every other step ok. RED: exactly the two 5a-class items (`certificate provenance` C9 STALE on `CLI.lean`; the SINGLE drift line `imported-goose/channel/google-search`). ZERO other drift — the fold moved no verdict. Tail: `gate-tail-s2b1.txt`. Trace audit 21,835 results / 0 mismatches / byte-identical; raft twin 30/30 / 0 / byte-identical |
 | S2a | the DATA trace, both accounts live: the module's emitting operations, the trace as `stepFn`'s 4th component and `Step`/`StepE`/`StepM`/`StepMFine`'s label, `StepEvent.trace`, coherence re-proved (`stepFn_sound`/`step_complete`/`stepMulti_sound`/`stepM_complete` with the label), the tracer's trace-equality audit (0 mismatches over 21,835 (row, stream) results + the raft twin) | `7f7c721c` (snapshot `refs/snapshots/c1/s2a`) | S2a gate: `GOLEAN_MEM_MAX=32G scripts/capped scripts/ci --diff` under the box-wide lock (11:17:29–11:29:48 UTC): **EXIT=1, 739 s**; **3676 cases: 3427 PASS / 249 expected FAIL**; `eval tests` 211 ok; `core build (warning-free)` ok; `core totality audit` ok; `frontend pins` ok; `wire boundary` ok; every other step ok. RED: exactly the two 5a-class items — `certificate provenance` (C9 HIGH: «STALE certification: changed dependency build/files/GoLean/CLI.lean») and `baseline diff (DRIFT)` with the SINGLE line `imported-goose/channel/google-search baseline[PASS/membership] -> now[FAIL/membership]`. ZERO other drift. Tail: `gate-tail-s2a.txt`. Trace audit: 21,835 (row, stream) results, 0 mismatches; choice trace vs main BYTE-IDENTICAL (23,685 records, `cmp` EXIT=0) |
 | S1 | the memory module + cost A (root-first in-place `storeLoc`, linear normalizers, `Store.alloc` normalizes, `HeapNormal` as a `StateWf` conjunct, `step_preserves_wf` re-proved) | `d7b32f59` (snapshot `refs/snapshots/c1/s1`) | checkpoint `ci --diff` EXIT=1 (720 s) at zero drift; S1 gate: `GOLEAN_MEM_MAX=32G scripts/capped scripts/ci --diff` under the box-wide lock (09:06:02–09:17:37 UTC): **EXIT=1, 695 s**; **3676 cases: 3427 PASS / 249 expected FAIL**; `eval tests` 211 ok; `core build (warning-free)` ok; `core totality audit` ok; `frontend pins` ok; `wire boundary` ok; every other step ok. RED: exactly the two 5a-class items — `certificate provenance` (C9 HIGH: «STALE certification: changed dependency build/files/GoLean/CLI.lean») and `baseline diff (DRIFT)` with the SINGLE line `imported-goose/channel/google-search baseline[PASS/membership] -> now[FAIL/membership]` — the one cached certified row, judged stale because compiled semantic inputs changed. ZERO other drift. Tail: `gate-tail-s1.txt`. Choice trace vs main: BYTE-IDENTICAL (23,685 records, `cmp` EXIT=0; §2). |
 
@@ -32,6 +33,9 @@ exactly where the lane stopped and the next command.
 | S0 full build | `LEAN_NUM_THREADS=4 GOLEAN_MEM_MAX=32G scripts/capped lake build` | 0 | 6 | same | lib + exe up to date |
 | S1 checkpoint gate | `GOLEAN_MEM_MAX=32G scripts/capped scripts/ci --diff` under the box-wide lock (08:42:01–08:54:01 UTC), representation change WITHOUT the `HeapNormal` conjunct | **1** | **720** | S0 tip + the S1 runtime edits (stage 1) | 3676 cases: 3427 PASS / 249 expected FAIL; red ONLY on the expected 5a pair (`certificate provenance` STALE on `Machine.lean`; the one cached certified row); ZERO other drift — `alloc`-normalizes moved no row. Tail: evidence `gate-tail-s1-checkpoint.txt` |
 | S1 gate | `GOLEAN_MEM_MAX=32G scripts/capped scripts/ci --diff` under the box-wide lock (09:06:02–09:17:37 UTC), the committed S1 tree | **1** | **695** | S0 tip + the S1 runtime edits | 3676 cases: 3427 PASS / 249 expected FAIL; red ONLY on the expected 5a pair (`certificate provenance` STALE on `CLI.lean`; the one cached certified row); ZERO other drift. Tail: evidence `gate-tail-s1.txt` |
+| S2b-i gate | `GOLEAN_MEM_MAX=32G scripts/capped scripts/ci --diff` under the box-wide lock (12:59:21–13:11:41 UTC), the S2b-i runtime tree = the committed tree for `GoLean`/`Tests` (snapshot `refs/snapshots/c1/s2b1-gated`) | **1** | **740** | S2a tip + the S2b-i runtime edits | 3676 cases: 3427 PASS / 249 expected FAIL; red ONLY on the expected 5a pair; ZERO other drift. Tail: evidence `gate-tail-s2b1.txt` |
+| S2b-i trace audit | `scripts/choice-trace-corpus --dump --jobs 6` with the S2b-i binary (`.tmp/golean-s2b1`, `4bda4748…`) — both accounts still live in the tracer; sorted dumps `cmp` vs main | **0 mismatches**; `cmp` **0**; tracer 1 (the same pre-existing ERROR finding) | 484 | S2a tip + the S2b-i runtime edits | 21,835 (row, stream) results, `traceMismatches` = 0 everywhere; 23,685 consumption records byte-identical (sha `70e12e02…eb57`). Evidence `trace-audit-s2b1.txt` |
+| S2b-i raft twin | `.tmp/twin-audit-s2b1.sh` on the five probe entry points × 6 streams, sorted dumps `cmp` vs main's | **0 mismatches**; `cmp` **0** | 1158 | S2a tip + the S2b-i runtime edits | 30/30 results ok, 0 alarms; 14,360 consumption records byte-identical. Evidence `twin-audit-s2b1.txt` |
 | S2a gate | `GOLEAN_MEM_MAX=32G scripts/capped scripts/ci --diff` under the box-wide lock (11:17:29–11:29:48 UTC), the staged S2a runtime tree = the committed tree for `GoLean`/`Tests` (snapshot `refs/snapshots/c1/s2a-gated`) | **1** | **739** | S1 tip + the S2a runtime edits | 3676 cases: 3427 PASS / 249 expected FAIL; red ONLY on the expected 5a pair (`certificate provenance` STALE on `CLI.lean`; the one cached certified row); ZERO other drift. Tail: evidence `gate-tail-s2a.txt` |
 | S2a trace audit | `scripts/choice-trace-corpus --dump --jobs 6` with BOTH accounts in the S2a binary (`.tmp/golean-s2a`); sorted-dump `cmp` vs main | **0 mismatches**; `cmp` **0**; tracer 1 (the same pre-existing ERROR finding) | 481 | S1 tip + the S2a runtime edits | 21,835 (row, stream) results, `traceMismatches` = 0 everywhere; 23,685 consumption records byte-identical (sha `70e12e02…eb57`). Evidence `trace-audit-s2a.txt` |
 | S2a raft twin | `.tmp/twin-audit.sh`: `choice-trace --batch` over `raft-twin/probeTwin{Choice,Single,Elect,Perturb,Ticks}` × 6 streams, S2a binary then main's, sorted dumps `cmp` | **0 mismatches**; `cmp` **0** | 1136 + 1004 | S1 tip + the S2a runtime edits | 30/30 results ok, `traceMismatches` = 0, 0 alarms; 14,360 consumption records byte-identical. Evidence `twin-audit-s2a.txt` |
@@ -90,6 +94,12 @@ warnings. D10: `Store.updateCell`'s `.internal` names `Store.alloc`.
 | the payload/unbound arms | payload cells: store text at the root, load text under a path; an unbound root under a path: `Store.updateCell`'s `.internal` (was `loadLoc`'s `.stuck`) | a second lookup to reproduce the `.stuck` | one lookup; the path is unreachable by heap density (BUG-085's argument), disclosed as a refusal-CLASS change |
 | `MultiWf` | `MultiWf ctx m` again (B7 had made it context-free) | keep `MultiWf m` with `HeapNormal` outside `StateWf` | the charter puts the conjunct in `StateWf`; the type table decides normality, so the context is genuinely read — a restatement, flagged, nothing weakened |
 | dead write-path primitives | `arraySet`, `StructFields.set` and their six lemmas left in place, dead | delete now | deletion is a runtime edit that would re-gate S1; S2b re-gates these files and tombstones them — recorded as owed (S2a's gate was already running when the item came up) |
+| the theorem's commit (S2b) | the D6 theorem is PROVED at S2b-i with the table present and DELETED with the table at S2b-ii; the handoff §1 row names the proving SHA | one commit proving and deleting | a theorem about `stepAccesses` cannot outlive `stepAccesses`; the charter's «proved at the commit that deletes the table … the theorem leaves with the table, its proving SHA recorded» is read as prove-then-delete across two gated commits — the alternative cannot be stated |
+| the theorem's statement (S2b-i) | `tr = tableTrace (stepAccesses ctx s c) ∨ (tr = [] ∧ c'.isPanicking = true)`, EXACT equality (no permutation) on the non-panicking successor; `spawnStep_trace` likewise | `tr ~ table` unconditionally | FALSE: a panicking apply's table account may be non-empty (the map read before an unhashable key's panic) while the label is `[]` — the disjunct is the standing «the access never happened» convention made visible; no permutation needed since every arm agreed in ORDER |
+| the fold's one corner (S2b-i) | `raceUpdate` records the label unconditionally; the former pre/post-panicking discrimination is gone | keep the discrimination beside the label | the label already carries it (a delivered panic is `[]`); the ONE step where the accounts differ — `panicFrameDefer` whose receiver load panics on an out-of-range element ADDRESS (`loadLoc` → `arrayGet`) — recorded the read the machine never performed; unreachable from a well-formed program (element addresses are bounds-checked at formation); the label's account is the honest one |
+| `RacyFine` over labels (S2b-i) | the two goroutines' next steps are `StepE` from the pool's shared state (an ordinary step's label or a spawn's child-entry read) | `Step` only | `Step` has no spawn rule, so the spawn's dispatch read (which the fold DOES record) would be invisible to the proposition; `StepE` is the fine relation's own step (`StepMFine.thread`) |
+| `sortSlice`'s operand loop (S2b-i) | the `for` accumulator → structural `intElems` (same refusal text at the first non-int, same output) | prove the `forIn` length invariant | `intElems_length` is a two-line induction; the op is DEAD (frontend never emits it, decoder refuses by name; deletion owed to the hygiene arc A11) — the smallest edit that makes the theorem true |
+| `len`/`cap` on a pointer-to-array (S2b-i) | the type-static arm now REFUSES a non-pointer operand by name (`.addr _`/`.nil` answer `n`) | leave the arm answering from the type alone | fail-closed doctrine: an ill-typed operand answered `n` while the table classified the arm by the VALUE's shape (a map value would have recorded a read) — the theorem exposed the divergence; no well-typed program reaches it, the differential is unmoved |
 | the vocabulary's home (S2a) | `AccessKind`/`ShadowKey`/`overlap`/`locPrefix` moved into `Ops.lean`'s module section (namespace `GoLean.GoCore`) | a new `Access.lean` | one module owns representation, operations and events (charter §1); `Race.lean` consumes unqualified names through the namespace chain, nothing renamed |
 | the emitting operations (S2a) | wrappers `Mem.load/loadFor/store/mapRead/mapWrite/...` over the S1 primitives, which keep their types as the module's peek and raw writers | retype `loadLoc`/`storeLoc` themselves | 62 lemma mentions in StateWf/MachineSound would move for no semantic gain; the standing check that no data-write site calls the raw writer is the S2a audit while the table exists, review after (the same lockstep obligation the table had) |
 | `.deref`'s narrowing (S2a) | `applyStrictOp ctx s leafOf op vs`, `leafOf := projChainTarget ctx s k` passed by `Step.strictApply`/`evalStrictNullary` and `stepFn`; only `.deref` reads it | a separate deref rule and `stepFn` arm | one parameter, no new constructor, no positional case-tag shift in `MachineSound` |
@@ -112,7 +122,23 @@ warnings. D10: `Store.updateCell`'s `.internal` names `Store.alloc`.
    trace-equality audit (S2) then expects EQUALITY with `stepAccesses` on every row,
    BUG-111's class included (no corpus row exercises it).
 
-## 6a. What S1/S2a proved, what they owe
+## 6a. What S1/S2a/S2b-i proved, what they owe
+
+S2b-i proved (kernel-checked, warning-free, `GoLean/GoCore/AccessTableEq.lean`):
+`accesses_eq_stepAccesses` — every `Step ctx c s c' s' tr` has `tr = tableTrace
+(stepAccesses ctx s c)` or delivered a panic (`tr = [] ∧ c'.isPanicking`); the corollary
+`accesses_eq_stepAccesses_of_not_panicking`; `spawnStep_trace` for the spawn's child-entry
+read; per helper `Mem.load/loadFor/store/mapRead/mapWrite/loadElems/storeElems/loadRun/
+storeRun/loadSlice_trace`, `loadResults_trace`, `mapLookupValue_trace`,
+`mapAssignValue_trace`, `mapRangeStartSets_trace`, `mapIterCandidates_trace`,
+`storeTarget_trace`, `applyRhsOp_trace`, `applyStrictOp_trace` (all 60 strict arms),
+`applyStmtOpCore_trace`/`applyStmtOp_trace` (every wide statement incl. append's two paths),
+`dynamicDispatch?_trace`/`enterFrame_trace` (the promotion-hop leaf IS `dispatchLeaf`), the
+`unseq*` lemmas. S2b-i owes (S2b-ii): the deletion of the table family and of this file (its
+SHA recorded), `Race.lean:1-256` → the module docstring's peek list, the tracer's audit
+instrument retired with the table, the dead `arraySet`/`StructFields.set` family, the
+detector-soundness re-run.
+
 
 S2a proved (kernel-checked, warning-free): the labelled coherence — `stepFn_sound` and
 `step_complete` with the trace as the fifth `Step` index; `stepMulti_sound` into
@@ -204,7 +230,8 @@ named and rejected; [AGENT]):
   chan/atomic arms' recordings are S2c's audit. Gate: `ci --diff` zero drift,
   choice trace byte-identical, the audit at 0 unrowed differences (BUG-041's
   rows EQUAL; any other difference: BUG + red-first row + [USER], D7).
-- **S2b — the fold, the deletion, the theorem.** `raceUpdate`'s data
+- **S2b — the fold, the deletion, the theorem — landed as S2b-i (fold + theorem +
+  `RacyFine`, table retained) and S2b-ii (the deletion), see §5 «the theorem's commit».** `raceUpdate`'s data
   recording reads `ev.trace` (data keys; `.spawned child` under the child);
   `accesses_eq_stepAccesses` per arm (D6, up to permutation) proved at the
   deleting commit and recorded with its SHA; the table family
@@ -239,7 +266,15 @@ trace makes the same-root law a detector statement (S2b/S3).
 
 ## 7. Where the lane stopped; the next command
 
-S2a COMMITTED at `7f7c721c` (snapshot `refs/snapshots/c1/s2a`) (gated; the runtime tree byte-identical to the gated snapshot
+S2b-i COMMITTED at (this commit; the SHA is filled in the next records-only commit) (gated; snapshot `refs/snapshots/c1/s2b1`). Next: S2b-ii — delete
+the table family (`RaceAccess`, `sliceElemLocs`, `mapAccess`, `targetWrite`,
+`strictOpAccesses`, `dispatchAccesses`, `deferEntryAccesses`, `stmtOpAccesses`,
+`storeTargetAccess`, `unseqRunAccesses`, `stepAccesses`, `RaceState.access/accesses`) with
+tombstones, delete `AccessTableEq.lean` (SHA recorded here), retire the tracer's table-side
+audit (`tableAccount`/`auditPoolStep`/the two TSV columns), replace `Race.lean:1-256` by the
+module docstring's peek list in `Ops.lean`, delete the dead `arraySet`/`StructFields.set` +
+six lemmas, re-run `scripts/detector-soundness --select in-scope` (HOLE = 0 expected, cells
+unchanged), gate. Previously: S2a COMMITTED at `7f7c721c` (snapshot `refs/snapshots/c1/s2a`) (gated; the runtime tree byte-identical to the gated snapshot
 `refs/snapshots/c1/s2a-gated`; the trace audit at 0 mismatches; the choice trace
 byte-identical vs main). Next: S2b per §6b — `raceUpdate` folds `ev.trace`,
 `accesses_eq_stepAccesses` per arm, the table family deleted with tombstones, the module

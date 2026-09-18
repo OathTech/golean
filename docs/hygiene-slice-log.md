@@ -840,6 +840,31 @@ google-search`), ZERO other drift (`gate-tail-s2a.txt`). Owed to S2b: the dead
 Evidence: `docs/evidence/2026-09-18_c1-memory-module/` (`trace-audit-s2a.txt`,
 `trace-probe-s2a.txt`, `gate-tail-s2a.txt`).
 
+**S2b-i (2026-09-18, gated) — the FOLD and the THEOREM (the table retained one more
+commit).** `raceUpdate` records the event's LABEL (`RaceState.accessKeys i ev.trace`; the
+spawn arm the child's label) — the former pre/post-panicking discrimination over
+`stepAccesses` gone (a delivered panic's label is `[]`); `footprintsConflict`/`RacyFine`
+(NPDRF.lean) over the two goroutines' next-step `StepE` labels; **`accesses_eq_stepAccesses`
+PROVED** (`GoLean/GoCore/AccessTableEq.lean`, 1496 lines, 60 theorems, warning-free, no
+hatch): every `Step` label equals the footprint table's account EXACTLY unless the step
+delivered a panic (then `[]`, the successor unwinding); `spawnStep_trace` likewise; one lemma
+per emitting helper (`Mem.*_trace`, `applyStrictOp_trace` over all 60 strict arms,
+`applyStmtOp(Core)_trace`, `enterFrame_trace` via `dynamicDispatch?_trace` — the promotion-hop
+leaf IS `dispatchLeaf` —, `storeTarget_trace`, `applyRhsOp_trace`, `mapIterCandidates_trace`,
+the `unseq*` lemmas). Forced tightenings, differential-invisible: `sortSlice`'s `for`
+accumulator → structural `intElems` (dead op; same refusal); `len`/`cap` of a pointer-to-array
+refuse a non-pointer operand by name. The fold's ONE corner (recorded): a panic-path deferred
+entry whose receiver load panics on an out-of-range element address — the table recorded a
+read the machine never performed; unreachable from a well-formed program. Audits with this binary: whole corpus 21,835 (row, stream) results, 0 mismatches, choice trace
+byte-identical vs main (23,685 records, `cmp` EXIT=0);
+the raft twin 30/30 ok, 0 mismatches, byte-identical (14,360 records). Gate: `GOLEAN_MEM_MAX=32G scripts/capped scripts/ci --diff` under the box-wide lock
+(12:59:21–13:11:41 UTC): **EXIT=1 in 740 s**, 3676 cases 3427 PASS / 249 expected FAIL, `eval
+tests` 211 ok, core build warning-free, totality audit ok with the new module, red ONLY on the
+expected 5a pair (`certificate provenance` STALE on `CLI.lean`; the one cached certified row
+`imported-goose/channel/google-search`), ZERO other drift (`gate-tail-s2b1.txt`). Evidence: `docs/evidence/2026-09-18_c1-memory-module/`
+(`trace-audit-s2b1.txt`, `twin-audit-s2b1.txt`, `gate-tail-s2b1.txt`). The theorem file
+leaves with the table at S2b-ii; the handoff §1 row names this commit as its proving SHA.
+
 | probe / point | BEFORE net | AFTER (S1) net | S1 target | verdict |
 |---|---:|---:|---|---|
 | `write_fixed(m, 100)` per write, m = 10 / 100 / 1,000 / 3,000 / 10,000 | 21 / 44 / 1,248 / 9,560 / 106,972 µs | −2 / 1 / 3 / −2 / **16 µs** (100 writes sit at the 21 ms startup noise floor; the count-varying rows put one write at 13.1 µs (m = 10, w = 1,000) / 12.6 µs (w = 10,000)) | flat: within 2× across m | **MET** (12.6 → 16 µs, ≈1.3×, at noise level; the BEFORE 5,000× slope is gone) |

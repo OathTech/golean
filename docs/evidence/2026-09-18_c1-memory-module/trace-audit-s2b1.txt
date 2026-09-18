@@ -1,0 +1,19 @@
+# C1 S2b-i — the whole-corpus trace-equality audit + choice-trace byte-identity (2026-09-18)
+# .tmp/s2b1-chain.sh: scripts/choice-trace-corpus --dump --jobs 6 with the S2b-i binary (4bda4748…; both accounts still live in the tracer) vs main 68b261e6's certified binary (231df9a9…); the standing 2 exclusions
+
+== trace s2b1 start 2026-09-18T12:51:17+00:00
+trace s2b1 EXIT=1 wall=484s
+cmp EXIT=0
+  23685 .tmp/trace-main.sorted.tsv
+  23685 .tmp/trace-s2b1.sorted.tsv
+  47370 total
+70e12e023f3ee30b9d71317454e11dedcb6c6ec039d63aeddfbb3d4906aceb57  .tmp/trace-main.sorted.tsv
+70e12e023f3ee30b9d71317454e11dedcb6c6ec039d63aeddfbb3d4906aceb57  .tmp/trace-s2b1.sorted.tsv
+== trace-mismatch census
+rows=21835 rows_with_mismatch=0
+== lock wait start 2026-09-18T12:59:21+00:00
+== lock taken 2026-09-18T12:59:21+00:00
+
+# findings (the tracer's ERROR listing), path-normalized, vs main:
+identical
+    ERROR arrays/materialization-budget/over-budget (baseline: FAIL/lean-observation): /home/dev/projects/golean/.claude/worktrees/c1-memory-module/wire/arrays__materialization-budget__over-budget.jso

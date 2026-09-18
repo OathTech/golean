@@ -507,7 +507,15 @@ def applyStrictOp (s : Store) (leafOf : Loc → Loc) :
       return (v, s', [])
   | .lengthOf typ, [v] => do
       match typ with
-      | some (.pointer (.array n _)) => return (.int n, s, [])
+      | some (.pointer (.array n _)) =>
+          -- The length of a pointer-to-array is type-static (no deref, a nil
+          -- pointer included: spec §Length and capacity); the operand must
+          -- still BE a pointer value — an ill-typed operand refuses by name
+          -- rather than answering from the type alone (C1 S2b, fail closed;
+          -- the footprint table classified this arm by the VALUE's shape).
+          match v with
+          | .addr _ | .nil => return (.int n, s, [])
+          | other => stuck s!"len of a pointer-to-array expected a pointer operand, got {repr other}"
       | _ =>
           match v with
           | .array values => return (.int values.size, s, [])
@@ -536,7 +544,11 @@ def applyStrictOp (s : Store) (leafOf : Loc → Loc) :
           | other => unsupported s!"len for non-array/slice/map value {repr other}"
   | .capacityOf typ, [v] => do
       match typ with
-      | some (.pointer (.array n _)) => return (.int n, s, [])
+      | some (.pointer (.array n _)) =>
+          -- Type-static like `len` (same fail-closed operand check, C1 S2b).
+          match v with
+          | .addr _ | .nil => return (.int n, s, [])
+          | other => stuck s!"cap of a pointer-to-array expected a pointer operand, got {repr other}"
       | _ =>
           match v with
           | .array values => return (.int values.size, s, [])
@@ -1098,6 +1110,14 @@ def renderPrint (newline : Bool) : List GoValue → Except Stop GoString
       else
         return head.append tail
 
+/-- The integer elements of a value run, in order — `sortSlice`'s operand check
+(C1 S2b): one refusal text, at the first non-integer element; structural, so
+`intElems_length` (the run keeps its length) is by induction. -/
+def intElems : List GoValue → Except Stop (List (Int × IntKind))
+  | [] => return []
+  | .int v kind :: rest => do return (v, kind) :: (← intElems rest)
+  | other :: _ => stuck s!"sortSlice expected int element, got {repr other}"
+
 /-- The choices-FREE core of `applyStmtOp`: every wide-op arm except
 `appendSlice` (whose spill path consumes a capacity choice; its arm HERE
 is an unreachable fail-closed `.internal` — real dispatch happens in the
@@ -1288,14 +1308,13 @@ def applyStmtOpCore (s : Store) (op : StmtOp)
       | [baseV] => do
           let slice ← valueAsSlice baseV
           let (values, trR) ← Mem.loadSlice ctx s slice
-          let mut loaded : Array (Int × IntKind) := #[]
-          for value in values do
-            match value with
-            | .int v kind => loaded := loaded.push (v, kind)
-            | other => stuck s!"sortSlice expected int element, got {repr other}"
+          -- The integer operand check is the structural `intElems` (C1 S2b:
+          -- the former `for` accumulator, same refusal at the first non-int
+          -- element; `intElems_length` is what the trace theorem needs).
+          let loaded ← intElems values.toList
           -- `sortLe`, not `List.mergeSort`: the latter is WF-compiled and
           -- kernel-irreducible (de-WF, 2026-08-03; output provably agrees).
-          let sorted := (sortLe (fun a b => a.1 ≤ b.1) loaded.toList).map
+          let sorted := (sortLe (fun a b => a.1 ≤ b.1) loaded).map
             fun (v, kind) => GoValue.int v kind
           let (s', trW) ← Mem.storeRun ctx s slice 0 sorted
           return (s', trR ++ trW)

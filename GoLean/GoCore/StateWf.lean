@@ -4438,9 +4438,15 @@ theorem applyStrictOp_wf {σ : Store} {leafOf : Loc → Loc} {op : StrictOp} {vs
       exact strictWfSame hw (by dsimp only; omega)
   · -- lengthOf
     split at h
-    · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl, rfl⟩ := h
-      exact strictWfSame hw (by simp [GoValue.locSup])
+    · -- the type-static pointer-to-array arm: a pointer operand (C1 S2b fail-closed check)
+      split at h
+      · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl, rfl⟩ := h
+        exact strictWfSame hw (by simp [GoValue.locSup])
+      · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl, rfl⟩ := h
+        exact strictWfSame hw (by simp [GoValue.locSup])
+      · simp at h
     · split at h
       · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl, rfl⟩ := h
@@ -4483,9 +4489,15 @@ theorem applyStrictOp_wf {σ : Store} {leafOf : Loc → Loc} {op : StrictOp} {vs
       · simp at h
   · -- capacityOf
     split at h
-    · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl, rfl⟩ := h
-      exact strictWfSame hw (by simp [GoValue.locSup])
+    · -- the type-static pointer-to-array arm: a pointer operand (C1 S2b fail-closed check)
+      split at h
+      · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl, rfl⟩ := h
+        exact strictWfSame hw (by simp [GoValue.locSup])
+      · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl, rfl⟩ := h
+        exact strictWfSame hw (by simp [GoValue.locSup])
+      · simp at h
     · split at h
       · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl, rfl⟩ := h

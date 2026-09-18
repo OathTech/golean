@@ -1868,10 +1868,10 @@ def raceUpdate (sPre : Store) (tsPre : Array Thread) (ev : StepEvent)
           -- the CHILD's id, after the edge — gc attributes the read to
           -- the spawned goroutine; S3 audit).
           let r₁ := r.spawn i child
-          match spawnPlan cPre with
-          | some (.funcVal fid captured, args, _) =>
-              r₁.accesses child (dispatchAccesses ctx fid (captured ++ args))
-          | _ => return r₁
+          -- The spawn event's LABEL is the child's frame-entry read (C1 S2b:
+          -- the fold reads the trace the module emitted, `StepEvent.trace`;
+          -- formerly the footprint table's `dispatchAccesses`).
+          r₁.accessKeys child ev.trace
       | .woke => raceWakeEvent sPre i r cPre
       | .paired j => do
           let r ← raceChanEntryReads i cPre r
@@ -2114,12 +2114,15 @@ def raceUpdate (sPre : Store) (tsPre : Array Thread) (ev : StepEvent)
                   throw (.internal "atomic arm: committed op with a non-address head operand")
               | _, _ => return r  -- panicked (nil address): the op never happened, nothing to record
           | _ =>
-              match m'.threads[i]? with
-              | some (.running (.panicking _ _) _) =>
-                  match cPre with
-                  | .panicking _ _ => r.accesses i (stepAccesses ctx sPre cPre)
-                  | _ => return r  -- the step panicked: the access never happened
-              | _ => r.accesses i (stepAccesses ctx sPre cPre)
+              -- THE DATA FOLD (C1 S2b, D5/D6): the step's own LABEL — what the
+              -- module's operations emitted (`stepFn`'s trace, `StepEvent.trace`).
+              -- A delivered panic carries `[]` (the apply's effects are
+              -- discarded, its accesses never happened), so the former
+              -- pre/post panicking discrimination over the footprint table
+              -- (`stepAccesses ctx sPre cPre`) is the label's own content;
+              -- `accesses_eq_stepAccesses` (AccessTableEq.lean) is the
+              -- per-arm equality with the table at the commit that proves it.
+              r.accessKeys i ev.trace
 
 
 /-- The first unrecovered-panic abort among the goroutines (the

@@ -397,3 +397,65 @@ now[FAIL/membership]` — the one cached certified row, judged stale because com
 inputs changed (the S1 gate's very shape). ZERO other drift; the negative baseline matched (394
 cases). Static checks at the commit tree: `check-bugs.sh` ok (111 bugs), `check-evidence-size`
 PASS (0 new offenders), `check-agents-alias` PASS. Tail: `gate-tail-s2a.txt`.
+
+
+## S2b-i — the fold and the theorem (2026-09-18)
+
+### What landed (one gated runtime commit; the table retained for ONE more commit)
+
+- `raceUpdate` (Multi.lean) FOLDS THE LABEL: the private-step arm records
+  `RaceState.accessKeys i ev.trace`, the spawn arm `r₁.accessKeys child ev.trace` (the child's
+  frame-entry read). The former pre/post-panicking discrimination over
+  `stepAccesses ctx sPre cPre` is gone — a delivered panic's label is `[]`.
+- `footprintsConflict`/`RacyFine` (NPDRF.lean) restated over the two goroutines' next-step
+  `StepE` labels (`ShadowKey.overlap` + `AccessKind.conflicts`); the deprecated
+  `NPDRFReduction` untouched (D8).
+- **`accesses_eq_stepAccesses`** (`GoLean/GoCore/AccessTableEq.lean`, 1496 lines, 60
+  theorems, 5 tactic macros, warning-free, no hatch): for every rule of the labelled `Step`,
+  `tr = tableTrace (stepAccesses ctx s c) ∨ (tr = [] ∧ c'.isPanicking = true)` — EXACT
+  equality (order included) on a non-panicking successor; `spawnStep_trace` for the spawn's
+  child-entry read (`dispatchAccesses`); one lemma per emitting helper. The D6 (c) companion
+  to the executable audit: it covers the configurations the corpus never reaches. It leaves
+  with the table at S2b-ii; the handoff §1 row names this commit as its proving SHA.
+- Two runtime tightenings the proof forced, both differential-invisible: `sortSlice`'s
+  `for` accumulator → structural `intElems` (same refusal at the first non-int element; the op
+  is dead); `len`/`cap` of a pointer-to-array REFUSE a non-pointer operand by name instead of
+  answering from the static type alone (the table classified the arm by the VALUE's shape).
+- `StateWf.applyStrictOp_wf` follows the nested match (two arms).
+
+### The fold's one corner (recorded, [AGENT])
+
+The old fold and the new agree on every step by the theorem except one: a deferred-call
+entry DURING UNWINDING (`panicFrameDefer`, pre-configuration already panicking) whose
+receiver load panics — an out-of-range element ADDRESS dereferenced by the dispatch
+(`loadLoc` → `arrayGet`). The table recorded the read at the leaf; the label records nothing
+(the read never happened). Unreachable from a well-formed program (element addresses are
+bounds-checked at formation); the label's account is the standing convention applied
+uniformly.
+
+### Audits
+
+THE WHOLE-CORPUS TRACE AUDIT with the S2b-i binary (`trace-audit-s2b1.txt`; both accounts still
+live in the tracer): **21,835 (row, stream) results, 0 trace mismatches**; the choice trace vs
+main `68b261e6` BYTE-IDENTICAL (sorted dumps `cmp` EXIT=0, 23,685 records, sha256 `70e12e02…eb57`
+both sides — S1's and S2a's very hash); the tracer's one pre-existing ERROR finding
+(`arrays/materialization-budget/over-budget`) identical modulo the artifact path; 484 s wall.
+
+THE RAFT TWIN (`twin-audit-s2b1.txt`): **30/30 (row, stream) results ok, 0 trace mismatches, 0
+alarms** (1158 s wall, 14,360 consumption records); sorted dumps `cmp` EXIT=0 vs main's twin dump
+— BYTE-IDENTICAL (sha256 `37e1c156…` both sides).
+
+### Gate lines
+
+`GOLEAN_MEM_MAX=32G scripts/capped scripts/ci --diff` under the box-wide lock (12:59:21–13:11:41
+UTC) on the S2b-i runtime tree (byte-identical for `GoLean/` and `Tests/` to the committed tree;
+snapshot `refs/snapshots/c1/s2b1-gated`): **EXIT=1, 740 s**; **3676 cases: 3427 PASS / 249
+expected FAIL**; `eval tests` 211 ok; `core build (warning-free)` ok (the new module included);
+`core totality audit` ok (every `GoLean/` module incl. `AccessTableEq`); `unseq scheduler` ok;
+`frontend pins` ok; `wire boundary` ok; every other step ok. RED: exactly the two 5a-class items —
+`certificate provenance` (C9 HIGH: «STALE certification: changed dependency
+build/files/GoLean/CLI.lean») and `baseline diff (DRIFT)` with the SINGLE line
+`imported-goose/channel/google-search baseline[PASS/membership] -> now[FAIL/membership]` (the one
+cached certified row). ZERO other drift — the fold moved no race verdict; the negative baseline
+matched (394). Static checks at the commit tree: `check-bugs.sh` ok, `check-evidence-size` PASS,
+`check-agents-alias` PASS. Tail: `gate-tail-s2b1.txt`.

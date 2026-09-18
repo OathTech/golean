@@ -409,21 +409,29 @@ def ReachesMFine (m₀ : MultiConfig) (res : PoolResult) : Prop :=
 
 /-! ## The fine-semantics race -/
 
-/-- Two footprints conflict: some overlapping access pair whose kinds
-conflict (`AccessKind.conflicts` — at least one write, not both
-atomic; private-step footprints carry only the plain kinds, so here it
-is "at least one write"). -/
-def footprintsConflict (as bs : List RaceAccess) : Prop :=
-  ∃ a ∈ as, ∃ b ∈ bs, locOverlap a.2 b.2 = true ∧ a.1.conflicts b.1 = true
+/-- Two access TRACES conflict: some pair of accesses at overlapping keys
+(`ShadowKey.overlap` — path overlap under the `.data` key, identity for
+the synchronization keys) whose kinds conflict (`AccessKind.conflicts` —
+at least one write, not both atomic). C1 S2b: stated over the steps'
+LABELS (the module's emitted `AccessTrace`), formerly over the footprint
+table's `List RaceAccess`. -/
+def footprintsConflict (as bs : AccessTrace) : Prop :=
+  ∃ a ∈ as, ∃ b ∈ bs, a.2.overlap b.2 = true ∧ a.1.conflicts b.1 = true
 
 /-- The fine-semantics data race: some fine-reachable pool holds two
-DISTINCT runnable goroutines whose next steps carry conflicting
-footprints (the classic co-enabled-conflict formulation, at our step
-granularity, over the SAME footprint table the executable detector
-records — one access semantics for the statement and the tool).
-Registry ops themselves have empty footprints (they are
-synchronization, race-free by spec), so a conflict here is always a
-data access. -/
+DISTINCT runnable goroutines whose next steps carry conflicting LABELS
+(the classic co-enabled-conflict formulation, at our step granularity,
+over the SAME emitted trace the executable detector folds
+(`raceUpdate` reads `StepEvent.trace`) — one access semantics for the
+statement and the tool). The next step is the goroutine's own `StepE`
+from the pool's shared state: an ordinary `Step` (its label) or a spawn
+(the child's frame-entry read — the label the fold attributes to the
+child). Registry-op steps carry `[]` in the data trace (their sync-word
+/ channel-object recordings are the detector's registry arms, S2c), so a
+conflict here is always a data access. C1 S2b restatement; formerly over
+the footprint table `stepAccesses`, which recorded a panicking step's
+would-be accesses and ignored the spawn's read — the labels record what
+the machine performed. -/
 def RacyFine (m₀ : MultiConfig) : Prop :=
   ∃ m, StepsMFine ctx m₀ m ∧
     ∃ (i j : Nat) (ci cj : Config), i ≠ j ∧
@@ -432,7 +440,9 @@ def RacyFine (m₀ : MultiConfig) : Prop :=
       m.threads[i]? = some (.running ci none) ∧ m.threads[j]? = some (.running cj none) ∧
       threadRunnable ctx m.shared (.running ci none) = true
         ∧ threadRunnable ctx m.shared (.running cj none) = true ∧
-      footprintsConflict (stepAccesses ctx m.shared ci) (stepAccesses ctx m.shared cj)
+      ∃ (ci' cj' : Config) (σi σj : Store) (efsi efsj : List Config) (tri trj : AccessTrace),
+        StepE ctx ci m.shared ci' σi efsi tri ∧ StepE ctx cj m.shared cj' σj efsj trj ∧
+        footprintsConflict tri trj
 
 /-- **DEPRECATED — UNSOUND AS STATED (RULED [USER] Mike 2026-09-18,
 verbatim, relayed by the [AGENT] coordinator — cite as relayed: «We
