@@ -1,0 +1,75 @@
+# producer: GO111MODULE=off go run docs/evidence/2026-09-18_nan-latitude-memo/main.go  (go1.26.5 linux/amd64, default GOAMD64=v1, default optimization)
+== generation (invalid operations) ==
+math.NaN()         0x7FF8000000000001
+z/z                0xFFF8000000000000
+div(z,z)           0xFFF8000000000000
+-(z/z)             0x7FF8000000000000
+inf-inf            0xFFF8000000000000
+inf*0              0xFFF8000000000000
+0*inf              0xFFF8000000000000
+inf/inf            0xFFF8000000000000
+math.Sqrt(-1)      0xFFF8000000000000
+== propagation: one NaN operand ==
+p+1  inline        0x7FF8000000000001
+1+p  inline        0x7FF8000000000001
+add(p,1)           0x7FF8000000000001
+add(1,p)           0x7FF8000000000001
+mul(p,2)           0x7FF8000000000001
+mul(2,p)           0x7FF8000000000001
+div(p,2)           0x7FF8000000000001
+div(2,p)           0x7FF8000000000001
+sub(1,p)           0x7FF8000000000001
+nq+1               0xFFF8000000000001
+== propagation: two NaN operands (which payload?) ==
+p+q  inline        0x7FF8000000000002
+q+p  inline        0x7FF8000000000002
+add(p,q)           0x7FF8000000000001
+add(q,p)           0x7FF8000000000002
+mul(p,q)           0x7FF8000000000001
+mul(q,p)           0x7FF8000000000002
+sub(p,q)           0x7FF8000000000001
+sub(q,p)           0x7FF8000000000002
+div(p,q)           0x7FF8000000000001
+div(q,p)           0x7FF8000000000002
+== signalling NaN operand (quieting) ==
+s                  0x7FF0000000000001
+add(s,1)           0x7FF8000000000001
+add(1,s)           0x7FF8000000000001
+add(s,p)           0x7FF8000000000001
+add(p,s)           0x7FF8000000000001
+== negation ==
+-p                 0xFFF8000000000001
+-nq                0x7FF8000000000001
+math.Abs(z/z)      0x7FF8000000000000
+== min / max ==
+min(z/z,2.5)       0xFFFC000000000000
+max(z/z,2.5)       0x7FFC000000000000
+min(p,2.5)         0x7FFC000000000001
+min(2.5,p)         0x7FFC000000000001
+min(p,q)           0x7FF8000000000003
+min(q,p)           0x7FF8000000000003
+max(p,2.5)         0x7FFC000000000001
+== float32 ==
+z32/z32            0xFFC00000
+-(z32/z32)         0x7FC00000
+add32(p32,1)       0x7FC00001
+add32(1,p32)       0x7FC00001
+float32(p)         0x7FC00000
+float32(q<<)       0x7FC00001
+float32(z/z)       0xFFC00000
+float64(p32)       0x7FF8000020000000
+float64(z32/z32)   0xFFF8000000000000
+== observability through other channels ==
+fmt %v             NaN NaN
+fmt %g %e %f       NaN NaN NaN
+fmt %b %x %X       NaN NaN NaN
+fmt %v of p        NaN NaN
+strconv 'g' n,-n   NaN NaN
+strconv 'b' n      NaN
+println(n) -> NaN
+println(-n) -> NaN
+Signbit(n) Signbit(-n) true false
+n==n, n!=n         false true
+any(n)==any(n)     false
+len(map after 3 NaN inserts) 3
+IsNaN(n) IsNaN(p) IsNaN(nq) true true true
