@@ -495,43 +495,17 @@ theorem storeLoc_root_frame :
       storeLoc ctx s l v = .ok s' →
       ∀ {m : Loc}, Loc.rootBase m ≠ Loc.rootBase l →
         Heap.lookup s'.heap (Loc.rootLoc m) = Heap.lookup s.heap (Loc.rootLoc m) := by
-  intro l
-  induction l with
-  | base a =>
-      intro s s' v h m hne
-      have hkey : Loc.base a ≠ Loc.rootLoc m := by
-        intro heq
-        exact hne (by
-          have := congrArg Loc.rootBase heq.symm
-          simpa [Loc.rootLoc, Loc.rootBase] using this)
-      unfold storeLoc at h
-      exact Store.updateCell_lookup_ne h hkey
-  | field b tid fname ih =>
-      intro s s' v h m hne
-      unfold storeLoc at h
-      simp only [bind_eq_ok] at h
-      obtain ⟨bv, hbv, h⟩ := h
-      split at h
-      · rename_i actual fields
-        split at h
-        · simp [Bind.bind, Except.bind] at h
-        · simp only [Bind.bind, Except.bind] at h
-          cases hset : StructFields.set fields fname v with
-          | error e => rw [hset] at h; simp at h
-          | ok updated =>
-              rw [hset] at h
-              exact ih h hne
-      · simp at h
-  | index b i ih =>
-      intro s s' v h m hne
-      unfold storeLoc at h
-      simp only [bind_eq_ok] at h
-      obtain ⟨bv, hbv, h⟩ := h
-      split at h
-      · simp only [bind_eq_ok] at h
-        obtain ⟨arr, _, h⟩ := h
-        exact ih h hne
-      · simp at h
+  intro l s s' v h m hne
+  -- C1 S1: the store is ONE root-cell update at `l`'s root (the root-first
+  -- write); every other root cell is untouched.
+  have hkey : (Loc.base (Loc.rootPath l).1 : Loc) ≠ Loc.rootLoc m := by
+    intro heq
+    apply hne
+    have h1 := congrArg Loc.rootBase heq
+    simp only [Loc.rootBase, Loc.rootLoc, Loc.rootPath_fst] at h1
+    exact h1.symm
+  unfold storeLoc at h
+  exact Store.updateCell_lookup_ne h hkey
 
 /-- **The read mover**: a load rooted at a different cell than a store
 reads the same value before and after it — a store is a both-mover

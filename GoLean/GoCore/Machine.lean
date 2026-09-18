@@ -376,9 +376,9 @@ def applyStrictOp (s : Store) : StrictOp → List GoValue → Except Stop (GoVal
   -- do not silently match one compiler mode.
   | .bytesFromString, [v] =>
       match v with
-      | .string value =>
+      | .string value => do
           let bytes := value.bytes.map (fun b => GoValue.int (Int.ofNat b.toNat) .uint8)
-          let (base, s') := s.alloc (.array bytes) (.array bytes.size (.int .uint8))
+          let (base, s') ← Store.alloc ctx s (.array bytes) (.array bytes.size (.int .uint8))
           return (.slice { base := some base, offset := 0, len := bytes.size, cap := bytes.size }, s')
       | other => stuck s!"expected string operand for []byte conversion, got {repr other}"
   | .stringFromByteSlice, [v] => do
@@ -622,10 +622,10 @@ def applyStrictOp (s : Store) : StrictOp → List GoValue → Except Stop (GoVal
   -- inventory R3).
   | .runesFromString, [v] =>
       match v with
-      | .string value =>
+      | .string value => do
           let runes := (runesOfString value).map
             (fun r => GoValue.int r .int32)
-          let (base, s') := s.alloc (.array runes)
+          let (base, s') ← Store.alloc ctx s (.array runes)
             (.array runes.size (.int .int32))
           return (.slice { base := some base, offset := 0,
                            len := runes.size, cap := runes.size }, s')
@@ -660,7 +660,7 @@ def allocDecls : LocalEnv → Store → List Param → Except Stop (LocalEnv × 
   | env, s, [] => return (env, s)
   | env, s, p :: rest => do
       let v ← defaultValue ctx p.typ
-      let (loc, s₁) := s.alloc v p.typ
+      let (loc, s₁) ← Store.alloc ctx s v p.typ
       allocDecls (env.declare p.id loc) s₁ rest
 
 /-- Bind call parameters into a frame environment, normalized at declared
@@ -670,7 +670,7 @@ def bindParams : LocalEnv → Store → List Param → List GoValue → Except S
   | env, s, [], [] => return (env, s)
   | env, s, p :: ps, v :: vs => do
       let v' ← normalizeValueForTy ctx p.typ v
-      let (loc, s₁) := s.alloc v' p.typ
+      let (loc, s₁) ← Store.alloc ctx s v' p.typ
       bindParams (env.declare p.id loc) s₁ ps vs
   | _, _, [], _ :: _ => stuck "extra argument value"
   | _, _, _ :: _, [] => stuck "missing argument"
@@ -1084,7 +1084,7 @@ def applyStmtOpCore (s : Store) (op : StmtOp)
       match vs with
       | [tv, value] => do
           let loc ← valueAsLoc tv
-          let (nloc, s₁) := s.alloc value typ
+          let (nloc, s₁) ← Store.alloc ctx s value typ
           return ((← storeLoc ctx s₁ loc (.addr nloc)))
       | _ => stuck "malformed allocNew operands"
   | .makeSlice elem hasCap => do
@@ -1121,7 +1121,7 @@ def applyStmtOpCore (s : Store) (op : StmtOp)
       let len := lenValue.toNat
       let cap := capValue.toNat
       let backing ← buildDefaultArrayValue ctx cap elem
-      let (base, s₁) := s.alloc backing (.array cap elem)
+      let (base, s₁) ← Store.alloc ctx s backing (.array cap elem)
       let loc ← valueAsLoc tv
       return ((← storeLoc ctx s₁ loc (.slice { base := some base, offset := 0, len, cap })))
   | .makeMap hasSpace => do
@@ -1407,7 +1407,7 @@ def applyStmtOp (s : Store) (choices : Choices) (op : StmtOp) (_nt : Nat)
             let newCap := newLen +
               ((appendGrowthCap slice.cap newLen - newLen + extra) % width)
             let backing ← buildAppendBackingValue ctx elem oldValues elemValues newCap
-            let (base, current) := s.alloc backing (.array newCap elem)
+            let (base, current) ← Store.alloc ctx s backing (.array newCap elem)
             return ((← storeLoc ctx current tloc
               (.slice { base := some base, offset := 0, len := newLen, cap := newCap })), choices)
       | _ => stuck "malformed appendSlice operands"
@@ -1519,13 +1519,13 @@ def bindIterVars (env : LocalEnv) (s : Store) (keyVar valVar : Option String)
     match keyVar with
     | some name => do
         let kv ← normalizeValueForTy ctx keyTy key
-        let (loc, s') := s.alloc kv keyTy
+        let (loc, s') ← Store.alloc ctx s kv keyTy
         pure (env.declare name loc, s')
     | none => pure (env, s)
   match valVar with
   | some name => do
       let vv ← normalizeValueForTy ctx valTy value
-      let (loc, s') := s.alloc vv valTy
+      let (loc, s') ← Store.alloc ctx s vv valTy
       pure (env.declare name loc, s')
   | none => pure (env, s)
 
@@ -4477,7 +4477,7 @@ inductive Step : Config → Store → Config → Store → Prop where
       Step (.exec (.block decls ss) env k) s (.next (.seq ss.toList env' k)) s'
   | initialization {p v loc rest env k s s'} :
       defaultValue ctx p.typ = .ok v →
-      s.alloc v p.typ = (loc, s') →
+      Store.alloc ctx s v p.typ = .ok (loc, s') →
       Step (.exec (.initialization p) env (.seq rest env k)) s
         (.next (.seq rest (env.declare p.id loc) k)) s'
   -- Assignment (round 4, BUG-037): the SINGLE assignment rides the

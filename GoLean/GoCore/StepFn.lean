@@ -329,7 +329,7 @@ def stepFn (s : Store) (c : Config) (choices : Choices) :
           | .seq rest kenv k' =>
               if kenv = env then do
                 let v ← defaultValue ctx p.typ
-                let (loc, s') := s.alloc v p.typ
+                let (loc, s') ← Store.alloc ctx s v p.typ
                 return (.next (.seq rest (env.declare p.id loc) k'), s', choices)
               else throw (.internal "initialization under foreign-scope sequence")
           | _ => throw (.stuck "GoCore initialization outside a statement sequence")
@@ -1008,7 +1008,7 @@ def seedGlobals (state : Store) (globals : Array GlobalDef) :
   let mut s := state
   for g in globals, i in [0:globals.size] do
     let v ← defaultValue ctx g.typ
-    let (loc, s') := s.alloc v g.typ
+    let (loc, s') ← Store.alloc ctx s v g.typ
     if loc != .base ⟨i⟩ then
       throw (.internal s!"global {g.name} seeded at {repr loc}, expected base {i}")
     s := s'
@@ -1120,7 +1120,7 @@ def runProgramSetupM (fuel : Nat) (program : Program) (name : String)
   let pctx : ProgramCtx := ⟨program⟩
   let state : Store := {}
   let s₀ ← seedGlobals pctx state program.globals
-  if StateWf s₀ then pure () else
+  if StateWf pctx s₀ then pure () else
     throw (.internal "seeded state ill-formed: a location in a global cell dangles beyond the allocator bound")
   let (s₁, choices₁) ← runPkgInitM pctx fuel s₀ choices
   let (env, s₂) ← bindParams pctx [] s₁ func.args.toList args.toList

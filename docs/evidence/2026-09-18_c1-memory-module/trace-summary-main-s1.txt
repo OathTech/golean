@@ -1,0 +1,24 @@
+== main (231df9a99f459d4a) ==
+  racy race/negative/promoted-dispatch: max consumed=2 max wide=2 distinct observations across 6 streams=1
+  racy race/negative/read-write: max consumed=2 max wide=2 distinct observations across 6 streams=1
+  racy race/negative/slice-elem: max consumed=2 max wide=2 distinct observations across 6 streams=1
+  racy race/negative/spawn-dispatch: max consumed=2 max wide=2 distinct observations across 6 streams=1
+  racy race/negative/write-write: max consumed=2 max wide=2 distinct observations across 6 streams=1
+choice-trace-corpus: FINDINGS present (see above)
+
+== s1 (f462cf50f2015462) ==
+  racy race/negative/promoted-dispatch: max consumed=2 max wide=2 distinct observations across 6 streams=1
+  racy race/negative/read-write: max consumed=2 max wide=2 distinct observations across 6 streams=1
+  racy race/negative/slice-elem: max consumed=2 max wide=2 distinct observations across 6 streams=1
+  racy race/negative/spawn-dispatch: max consumed=2 max wide=2 distinct observations across 6 streams=1
+  racy race/negative/write-write: max consumed=2 max wide=2 distinct observations across 6 streams=1
+choice-trace-corpus: FINDINGS present (see above)
+
+== cmp ==
+cmp EXIT=0
+  23685 .tmp/trace-main.sorted.tsv
+  23685 .tmp/trace-s1.sorted.tsv
+  47370 total
+70e12e023f3ee30b9d71317454e11dedcb6c6ec039d63aeddfbb3d4906aceb57  .tmp/trace-main.sorted.tsv
+70e12e023f3ee30b9d71317454e11dedcb6c6ec039d63aeddfbb3d4906aceb57  .tmp/trace-s1.sorted.tsv
+== done 2026-09-18T09:41:13+00:00

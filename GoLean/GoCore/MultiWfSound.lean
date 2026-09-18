@@ -33,7 +33,7 @@ monotonicity. `stepMulti_wf` is the preservation theorem the slice-2
 scaffold owed. B7 fix round (2026-09-17, [USER] «We should delete the
 vacuous conjunct right? that's just a strict improvement», relayed):
 `ThreadWf`/`MultiWf` lost their constantly-true `itersNormalized`
-conjunct, so `MultiWf m` is context-free and every `*_wf` lemma below
+conjunct, so `MultiWf ctx m` is context-free and every `*_wf` lemma below
 lost its `Config.itersNormalized … = true` hypotheses/conjuncts
 (restatements, none weakened; `spawnPlan_iters` retired as inert). -/
 
@@ -80,11 +80,11 @@ theorem spawnPlan_locSup {c : Config} {cv : GoValue} {args : List GoValue}
 configurations bounded, allocator monotone. -/
 theorem spawnStep_wf {s : Store} {cv : GoValue} {args : List GoValue}
     {k : Cont} {ch : Choices} {p child : Config} {s' : Store} {ch' : Choices}
-    (hw : StateWf s) (hcv : GoValue.locSup cv ≤ s.nextAddr)
+    (hw : StateWf ctx s) (hcv : GoValue.locSup cv ≤ s.nextAddr)
     (hargs : goValueListSup args ≤ s.nextAddr)
     (hk : Cont.locSup k ≤ s.nextAddr)
     (h : spawnStep ctx s cv args k ch = .ok (p, child, s', ch')) :
-    StateWf s' ∧ Config.locSup p ≤ s'.nextAddr
+    StateWf ctx s' ∧ Config.locSup p ≤ s'.nextAddr
       ∧ Config.locSup child ≤ s'.nextAddr ∧ s.nextAddr ≤ s'.nextAddr := by
   unfold spawnStep at h
   split at h
@@ -117,12 +117,12 @@ theorem spawnStep_wf {s : Store} {cv : GoValue} {args : List GoValue}
 theorem resumeRecvDelivery_wf {s : Store} {v : GoValue} {ok : Bool}
     {targets : List Assignee} {env : LocalEnv} {k : Cont}
     {c' : Config} {s' : Store}
-    (hw : StateWf s) (hv : GoValue.locSup v ≤ s.nextAddr)
+    (hw : StateWf ctx s) (hv : GoValue.locSup v ≤ s.nextAddr)
     (ht : assigneeListSup targets ≤ s.nextAddr)
     (henv : LocalEnv.locSup env ≤ s.nextAddr)
     (hk : Cont.locSup k ≤ s.nextAddr)
     (h : resumeRecvDelivery s v ok targets env k = .ok (c', s')) :
-    StateWf s' ∧ Config.locSup c' ≤ s'.nextAddr
+    StateWf ctx s' ∧ Config.locSup c' ≤ s'.nextAddr
       ∧ s.nextAddr ≤ s'.nextAddr := by
   unfold resumeRecvDelivery at h
   split at h
@@ -138,13 +138,13 @@ theorem resumeRecvDelivery_wf {s : Store} {v : GoValue} {ok : Bool}
 theorem selectRecvDelivery_wf {s : Store} {v : GoValue} {ok : Bool}
     {targets : List Assignee} {body : Stmt} {env : LocalEnv} {k : Cont}
     {c' : Config} {s' : Store}
-    (hw : StateWf s) (hv : GoValue.locSup v ≤ s.nextAddr)
+    (hw : StateWf ctx s) (hv : GoValue.locSup v ≤ s.nextAddr)
     (ht : assigneeListSup targets ≤ s.nextAddr)
     (hb : Stmt.locSup body ≤ s.nextAddr)
     (henv : LocalEnv.locSup env ≤ s.nextAddr)
     (hk : Cont.locSup k ≤ s.nextAddr)
     (h : selectRecvDelivery s v ok targets body env k = .ok (c', s')) :
-    StateWf s' ∧ Config.locSup c' ≤ s'.nextAddr
+    StateWf ctx s' ∧ Config.locSup c' ≤ s'.nextAddr
       ∧ s.nextAddr ≤ s'.nextAddr := by
   unfold selectRecvDelivery at h
   split at h
@@ -161,9 +161,9 @@ theorem selectRecvDelivery_wf {s : Store} {v : GoValue} {ok : Bool}
 the state wf (allocator monotone) and produces a bounded
 configuration. -/
 theorem resumeThread_wf {s : Store} {c c' : Config} {s' : Store}
-    (hw : StateWf s) (hc : ConfigWf s.nextAddr c)
+    (hw : StateWf ctx s) (hc : ConfigWf s.nextAddr c)
     (h : resumeThread ctx s c = .ok (c', s')) :
-    StateWf s' ∧ Config.locSup c' ≤ s'.nextAddr
+    StateWf ctx s' ∧ Config.locSup c' ≤ s'.nextAddr
       ∧ s.nextAddr ≤ s'.nextAddr := by
   have hheap := hw.heap_le
   unfold resumeThread at h
@@ -326,7 +326,7 @@ by the arriving operands. -/
 theorem chanArrivalPlan_wf {s : Store} {threads : Array Thread} {i : Nat}
     {op : ChanStOp} {vs : List GoValue} {env : LocalEnv} {k : Cont}
     {bc : Config} {cands : List (Nat × PairTarget)}
-    (_hw : StateWf s) (hvs : goValueListSup vs ≤ s.nextAddr)
+    (_hw : StateWf ctx s) (hvs : goValueListSup vs ≤ s.nextAddr)
     (hop : chanStOpSup op ≤ s.nextAddr)
     (henv : LocalEnv.locSup env ≤ s.nextAddr)
     (hk : Cont.locSup k ≤ s.nextAddr)
@@ -382,7 +382,7 @@ theorem chanArrivalPlan_wf {s : Store} {threads : Array Thread} {i : Nat}
 configuration. -/
 theorem arrivalCases_single_wf {s : Store} {threads : Array Thread}
     {i : Nat} {c bc : Config} {cs : List (Nat × PairTarget)}
-    (hw : StateWf s) (hc : ConfigWf s.nextAddr c)
+    (hw : StateWf ctx s) (hc : ConfigWf s.nextAddr c)
     (h : arrivalCases ctx s threads i c = .ok (.single bc cs)) :
     Config.locSup bc ≤ s.nextAddr := by
   unfold arrivalCases at h
@@ -465,7 +465,7 @@ configuration: a `.pair`'s would-block shape like the single case, a
 theorem arrivalCases_multi_wf {s : Store} {threads : Array Thread}
     {i : Nat} {c : Config} {os : List ArrivalOutcome} {sel : Nat}
     {o : ArrivalOutcome}
-    (_hw : StateWf s) (hc : ConfigWf s.nextAddr c)
+    (_hw : StateWf ctx s) (hc : ConfigWf s.nextAddr c)
     (h : arrivalCases ctx s threads i c = .ok (.multi os))
     (hget : os[sel]? = some o) :
     (∀ {bc cs}, o = ArrivalOutcome.pair bc cs →
@@ -569,11 +569,11 @@ bounds, the foreign threads by the monotonicity frame. -/
 theorem applyPairing_wf {s : Store} {threads : Array Thread} {i : Nat}
     {bc : Config} {cand : Nat × PairTarget} {ts' : Array Thread}
     {s' : Store}
-    (hw : StateWf s)
+    (hw : StateWf ctx s)
     (hts : ∀ t (ht : t < threads.size), ThreadWf s.nextAddr threads[t])
     (hbc : ConfigWf s.nextAddr bc)
     (h : applyPairing ctx s threads i bc cand = .ok (ts', s')) :
-    StateWf s' ∧ s.nextAddr ≤ s'.nextAddr
+    StateWf ctx s' ∧ s.nextAddr ≤ s'.nextAddr
       ∧ ts'.size = threads.size
       ∧ ∀ t (ht : t < ts'.size), ThreadWf s'.nextAddr ts'[t] := by
   have hheap := hw.heap_le
@@ -987,10 +987,10 @@ shared state wf (allocator monotone), never shrinks the pool, and
 leaves every slot bounded. -/
 theorem stepThread_wf {s : Store} {threads : Array Thread} {i : Nat}
     {ch ch' : Choices} {ts' : Array Thread} {s' : Store} {ev : StepEvent}
-    (hw : StateWf s)
+    (hw : StateWf ctx s)
     (hts : ∀ t (ht : t < threads.size), ThreadWf s.nextAddr threads[t])
     (h : stepThread ctx s threads i ch = .ok (ts', s', ch', ev)) :
-    StateWf s' ∧ s.nextAddr ≤ s'.nextAddr
+    StateWf ctx s' ∧ s.nextAddr ≤ s'.nextAddr
       ∧ threads.size ≤ ts'.size
       ∧ ∀ t (ht : t < ts'.size), ThreadWf s'.nextAddr ts'[t] := by
   unfold stepThread at h
@@ -1200,11 +1200,11 @@ thread-indexed invariant. This is the slice-2 scaffold's owed theorem
 (`Multi.lean`, `MultiWf`'s docstring): the invariant carrier is now a
 PRESERVED invariant, not a definition awaiting one. -/
 theorem stepMulti_wf {m m' : MultiConfig} {ch ch' : Choices} {ev : StepEvent}
-    (hwf : MultiWf m) (h : stepMulti ctx m ch = .ok (m', ch', ev)) : MultiWf m' := by
+    (hwf : MultiWf ctx m) (h : stepMulti ctx m ch = .ok (m', ch', ev)) : MultiWf ctx m' := by
   obtain ⟨hs, hcur, hth⟩ := hwf
   have hstep : ∀ i, i < m.threads.size →
       ∀ {ch₀ : Choices} {ev₀ : StepEvent},
-        stepThreadInto ctx m i ch₀ = .ok (m', ch', ev₀) → MultiWf m' := by
+        stepThreadInto ctx m i ch₀ = .ok (m', ch', ev₀) → MultiWf ctx m' := by
     intro i hi ch₀ ev₀ hinto
     unfold stepThreadInto at hinto
     simp only [bind_eq_ok] at hinto

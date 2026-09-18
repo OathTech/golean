@@ -525,8 +525,8 @@ theorem stepFn_sound {s : Store} {c : Config} {ch : Choices}
     exact Step.block hd
   case case13 =>
     simp_all [stepFn, bind_eq_ok]
-    obtain ⟨v, hd, rfl, rfl, rfl⟩ := h
-    exact Step.initialization hd rfl
+    obtain ⟨v, hd, loc, s₁, halloc, rfl, rfl, rfl⟩ := h
+    exact Step.initialization hd halloc
   case case35 =>
     entry_arm h (Step.callImmediate ‹_› ‹_›)
   case case70 =>
@@ -1390,8 +1390,8 @@ is preserved by every rule, and the executable inherits it through
 
 @[inherit_doc step_preserves_wf]
 theorem Step.preserves_wf {c : Config} {σ : Store} {c' : Config}
-    {σ' : Store} (h : Step ctx c σ c' σ') (hwf : MachineWf σ c) :
-    MachineWf σ' c' :=
+    {σ' : Store} (h : Step ctx c σ c' σ') (hwf : MachineWf ctx σ c) :
+    MachineWf ctx σ' c' :=
   step_preserves_wf h hwf
 
 /-- Executable-side preservation: an `.ok` step of `stepFn` keeps the
@@ -1399,8 +1399,8 @@ machine well-formed (`stepFn_sound` + `step_preserves_wf`). This is the
 fact `execStmtLoop`-level inductions thread along a run. -/
 theorem stepFn_preserves_wf {s : Store} {c : Config} {ch : Choices}
     {c' : Config} {s' : Store} {ch' : Choices}
-    (h : stepFn ctx s c ch = .ok (c', s', ch')) (hwf : MachineWf s c) :
-    MachineWf s' c' :=
+    (h : stepFn ctx s c ch = .ok (c', s', ch')) (hwf : MachineWf ctx s c) :
+    MachineWf ctx s' c' :=
   step_preserves_wf (stepFn_sound h) hwf
 
 /-- Every wide op that dispatches through the choices-free core succeeds
@@ -1776,7 +1776,7 @@ theorem normalizeListWith_congr {f g : GoValue → Except Stop GoValue}
     | nil => exact h.elim
     | cons w ws =>
       obtain ⟨hvw, hrest⟩ := h
-      simp only [normalizeListWith]
+      rw [normalizeListWith_cons, normalizeListWith_cons]
       refine exceptCong.bind_congr (hfg v w hvw) fun a b hab => ?_
       refine exceptCong.bind_congr (ih hrest) fun as bs habs => ?_
       show capCongList (#[a] ++ as).toList (#[b] ++ bs).toList
@@ -1822,7 +1822,7 @@ theorem normalizeFieldsWith_congr {f g : Ty → GoValue → Except Stop GoValue}
       | cons q ws =>
         obtain ⟨m, w⟩ := q
         obtain ⟨rfl, hvw, hrest⟩ := h
-        simp only [normalizeFieldsWith]
+        rw [normalizeFieldsWith_cons, normalizeFieldsWith_cons]
         refine exceptCong.ite_congr (fun _ => rfl) fun _ => ?_
         refine exceptCong.bind_congr (hfg _ v w hvw) fun a b hab => ?_
         refine exceptCong.bind_congr (ih hrest) fun as bs habs => ?_
@@ -2142,61 +2142,112 @@ theorem Store.updateCell_congr {σ₁ σ₂ : Store} {a : Addr}
     simp only [dif_neg h1, dif_neg h2]
     exact rfl
 
+theorem Loc.rootPath_fst (l : Loc) : (Loc.rootPath l).1.id = Loc.rootBase l := by
+  induction l with
+  | base a => rfl
+  | field b _ _ ih => simpa [Loc.rootPath, Loc.rootBase] using ih
+  | index b _ ih => simpa [Loc.rootPath, Loc.rootBase] using ih
+
+theorem Loc.rootLoc_eq (l : Loc) : Loc.rootLoc l = .base (Loc.rootPath l).1 := by
+  have h := Loc.rootPath_fst l
+  unfold Loc.rootLoc
+  rcases hx : (Loc.rootPath l).1 with ⟨i⟩
+  rw [hx] at h
+  simp only at h
+  rw [h]
+
+/-- Weakening the success relation. -/
+theorem exceptCong.mono {α β : Type} {R S : α → β → Prop} {x : Except Stop α}
+    {y : Except Stop β} (h : exceptCong R x y) (hrs : ∀ a b, R a b → S a b) :
+    exceptCong S x y := by
+  cases x <;> cases y <;> first | exact h | exact hrs _ _ h
+
+/-- `Array.modifyM` in `Except` with outcome-congruent callbacks is
+outcome-congruent. -/
+theorem Array.modifyM_congr {α : Type} {xs : Array α} {i : Nat}
+    {f g : α → Except Stop α}
+    (h : ∀ x, exceptCong (fun _ _ : α => True) (f x) (g x)) :
+    exceptCong (fun _ _ : Array α => True) (xs.modifyM i f) (xs.modifyM i g) := by
+  unfold Array.modifyM
+  split
+  · exact exceptCong.bind_congr (h _) fun _ _ _ => trivial
+  · exact trivial
+
+/-- The root-first write is outcome-congruent along `capCong` leaves: the
+path descent is identical on both sides, and the leaf normalizations agree
+in class (`normalizeValueForTyTy_congr`). -/
+theorem writeAt_congr :
+    ∀ {path : List PathStep} {b : Nat} {ty : Ty} {root v w : GoValue},
+      GoValue.capCong v w →
+      exceptCong (fun _ _ : GoValue => True)
+        (writeAt ctx b ty root path v) (writeAt ctx b ty root path w) := by
+  intro path
+  induction path with
+  | nil =>
+    intro b ty root v w hcc
+    simp only [writeAt]
+    exact exceptCong.mono
+      (normalizeValueForTyTy_congr (normalizeValueForTyAt_congr _ _) ty v w hcc)
+      (fun _ _ _ => trivial)
+  | cons step rest ih =>
+    intro b ty root v w hcc
+    cases step with
+    | field tid f =>
+      cases root with
+      | struct actual fields =>
+        simp only [writeAt]
+        refine exceptCong.ite_congr (fun _ => rfl) fun _ => ?_
+        cases fieldIdx? fields f with
+        | none => exact rfl
+        | some k =>
+          refine exceptCong.bind_congr (R := Eq) (exceptCong.self fun _ => rfl)
+            fun p q hpq => ?_
+          subst hpq
+          obtain ⟨fty, b'⟩ := p
+          refine exceptCong.bind_congr (Array.modifyM_congr fun x => ?_) fun _ _ _ => trivial
+          exact exceptCong.bind_congr (ih hcc) fun _ _ _ => trivial
+      | _ => simp only [writeAt]; split <;> exact rfl
+    | index i =>
+      cases root with
+      | array values =>
+        simp only [writeAt]
+        refine exceptCong.bind_congr (R := Eq) (exceptCong.self fun _ => rfl)
+          fun k k' hk => ?_
+        subst hk
+        refine exceptCong.bind_congr (R := Eq) (exceptCong.self fun _ => rfl)
+          fun p q hpq => ?_
+        subst hpq
+        obtain ⟨ety, b'⟩ := p
+        refine exceptCong.bind_congr (Array.modifyM_congr fun x => ih hcc) fun _ _ _ => trivial
+      | _ => simp only [writeAt]; split <;> exact rfl
+
 set_option maxHeartbeats 1600000 in
 /-- **Store class-congruence**: two states agreeing on `types` and on the
 target path's root cell, storing `capCong`-related values, succeed
 together, panic together, or fail (non-panic) together. This is the fact
 that makes the spill store's outcome class independent of the fresh
 backing (which lives at `nextAddr`, above every well-formed target) and
-of the result slice's capacity. -/
+of the result slice's capacity. (C1 S1: through the root-first write —
+`writeAt_congr` — and `Store.updateCell_congr`.) -/
 theorem storeLoc_congr {σ₁ σ₂ : Store} :
     ∀ {l : Loc} {v w : GoValue},
       Heap.lookup σ₂.heap (Loc.rootLoc l) = Heap.lookup σ₁.heap (Loc.rootLoc l) →
       GoValue.capCong v w →
       exceptCong (fun _ _ : Store => True) (storeLoc ctx σ₁ l v)
         (storeLoc ctx σ₂ l w) := by
-  intro l
-  induction l with
-  | base a =>
-    intro v w hl hcc
-    have hl' : Heap.lookup σ₂.heap (.base a) = Heap.lookup σ₁.heap (.base a) := hl
-    simp only [storeLoc]
-    -- ONE root write (A3): the class congruence of `updateCell`, then the
-    -- per-cell update functions agree in class arm by arm.
-    refine Store.updateCell_congr hl' fun c => ?_
-    cases c with
-    | value ty v₀ =>
-      refine exceptCong.bind_congr (normalizeValueForTy_congr hcc)
-        fun _ _ _ => ?_
-      exact trivial
-    | mapPayload _ _ => exact rfl
-    | chanPayload _ _ _ => exact rfl
-  | field b tid fname ih =>
-    intro v w hl hcc
-    simp only [storeLoc]
-    rw [loadLoc_root_congr (l := b) hl]
-    cases hload : loadLoc ctx σ₁ b with
-    | error e => exact rfl
-    | ok bv =>
-      cases bv <;> try exact rfl
-      case struct actual fields =>
-        refine exceptCong.of_ok_bind ?_
-        refine exceptCong.ite_congr (fun _ => rfl) fun _ => ?_
-        refine exceptCong.bind_congr (StructFields.set_congr hcc)
-          fun u₁ u₂ hu => ?_
-        exact ih hl ⟨rfl, hu⟩
-  | index b i ih =>
-    intro v w hl hcc
-    simp only [storeLoc]
-    rw [loadLoc_root_congr (l := b) hl]
-    cases hload : loadLoc ctx σ₁ b with
-    | error e => exact rfl
-    | ok bv =>
-      cases bv <;> try exact rfl
-      case array values =>
-        refine exceptCong.of_ok_bind ?_
-        refine exceptCong.bind_congr (arraySet_congr hcc) fun a₁ a₂ ha => ?_
-        exact ih hl ha
+  intro l v w hl hcc
+  have hl' : Heap.lookup σ₂.heap (.base (Loc.rootPath l).1)
+      = Heap.lookup σ₁.heap (.base (Loc.rootPath l).1) := by
+    rw [← Loc.rootLoc_eq]; exact hl
+  simp only [storeLoc]
+  -- ONE root write (A3): the class congruence of `updateCell`, then the
+  -- per-cell update functions agree in class arm by arm.
+  refine Store.updateCell_congr hl' fun c => ?_
+  cases c with
+  | value ty root =>
+    exact exceptCong.map_congr (writeAt_congr hcc) fun _ _ _ => trivial
+  | mapPayload _ _ => cases (Loc.rootPath l).2 <;> exact rfl
+  | chanPayload _ _ _ => cases (Loc.rootPath l).2 <;> exact rfl
 
 /-! #### Loop-shape facts for the spill path -/
 
@@ -2289,7 +2340,8 @@ theorem defaultValueTy_ok_of_normalizeTy_ok
             rw [hvl] at h'
             rw [map_eq_ok] at h'
             obtain ⟨arr, harr, _⟩ := h'
-            simp only [normalizeListWith, bind_eq_ok] at harr
+            rw [normalizeListWith_cons] at harr
+            simp only [bind_eq_ok] at harr
             obtain ⟨head, hhead, _⟩ := harr
             obtain ⟨d, hd⟩ := ih v₀ head hhead
             exact ⟨.array (Array.replicate length d), by
@@ -2414,7 +2466,7 @@ theorem defaultValueAt_ok_of_normalizeAt_ok (types : TypeEnv) :
                 | nil => simp at hlen
                 | cons p valRest =>
                   obtain ⟨pn, pv⟩ := p
-                  simp only [normalizeFieldsWith] at hnorm
+                  rw [normalizeFieldsWith_cons] at hnorm
                   by_cases hname : (pn != fd.name) = true
                   · rw [if_pos hname] at hnorm
                     simp [Bind.bind, Except.bind, stuck_def] at hnorm
@@ -2545,11 +2597,227 @@ theorem buildAppendBackingValue_congr {elem : Ty}
           (fun a b => ⟨b.push d, by
             simp [hd, Bind.bind, Except.bind, pure, Except.pure]⟩) _ _
 
+/-! #### Default values are normal (C1 S1: `Store.alloc` normalizes, so the
+zero values `allocDecls`/`seedGlobals`/`makeSlice` allocate must re-normalize
+to themselves — they do). -/
+
+theorem IntKind.normalize_zero (kind : IntKind) : kind.normalize 0 = 0 := by
+  unfold IntKind.normalize
+  cases kind.bits? with
+  | none => rfl
+  | some bits =>
+    simp only [Int.zero_emod]
+    cases kind.signed with
+    | false => rfl
+    | true =>
+      simp only [ite_true]
+      have : (0 : Int) < 2 ^ (bits - 1) := Int.pow_pos (by decide)
+      rw [if_neg (by omega)]
+
+theorem defaultFieldsWith_isNormal {f : Ty → Except Stop GoValue} {g : Ty → GoValue → Bool}
+    (hfg : ∀ ty d, f ty = .ok d → g ty d = true) :
+    ∀ {defs : List FieldDef} {r : Array (String × GoValue)},
+      defaultFieldsWith f defs = .ok r →
+      isNormalFieldsWith g defs r.toList = true ∧ r.size = defs.length := by
+  intro defs
+  induction defs with
+  | nil =>
+    intro r h
+    simp only [defaultFieldsWith, pure_eq_ok, Except.ok.injEq] at h
+    subst h
+    exact ⟨rfl, rfl⟩
+  | cons fd rest ih =>
+    intro r h
+    simp only [defaultFieldsWith, bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
+    obtain ⟨d, hd, tail, htail, rfl⟩ := h
+    obtain ⟨hnorm, hsize⟩ := ih htail
+    refine ⟨?_, by simp [hsize, Nat.add_comm]⟩
+    simp only [Array.toList_append, List.singleton_append,
+      isNormalFieldsWith, Bool.and_eq_true, decide_eq_true_eq]
+    exact ⟨⟨trivial, hfg _ _ hd⟩, hnorm⟩
+
+theorem defaultValueTy_isNormal {f : TypeIdx → Except Stop GoValue} {g : TypeIdx → GoValue → Bool}
+    (hfg : ∀ i d, f i = .ok d → g i d = true) :
+    ∀ {ty : Ty} {d : GoValue}, defaultValueTy f ty = .ok d → isNormalForTyTy g ty d = true := by
+  intro ty
+  induction ty using Ty.arrayInduction with
+  | array length elem ih =>
+    intro d h
+    simp only [defaultValueTy] at h
+    split at h
+    · rename_i hz
+      simp only [pure_eq_ok, Except.ok.injEq] at h
+      subst h
+      simp only [isNormalForTyTy, Bool.and_eq_true, decide_eq_true_eq]
+      exact ⟨by simpa using (beq_iff_eq.mp hz).symm, rfl⟩
+    · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
+      obtain ⟨e, he, rfl⟩ := h
+      have hen := ih he
+      simp only [isNormalForTyTy, Bool.and_eq_true, decide_eq_true_eq]
+      refine ⟨by simp, ?_⟩
+      rw [isNormalListWith_iff]
+      intro x hx
+      rw [Array.toList_replicate] at hx
+      rw [List.eq_of_mem_replicate hx]
+      exact hen
+  | leaf ty hne =>
+    intro d h
+    cases ty with
+    | array => exact absurd rfl (hne _ _)
+    | bool => simp only [defaultValueTy, pure_eq_ok, Except.ok.injEq] at h; subst h; rfl
+    | int kind =>
+      simp only [defaultValueTy, pure_eq_ok, Except.ok.injEq] at h; subst h
+      simp [isNormalForTyTy, IntKind.normalize_zero]
+    | float kind =>
+      simp only [defaultValueTy, pure_eq_ok, Except.ok.injEq] at h; subst h
+      simp [isNormalForTyTy, FloatKind.normalizeBits]
+    | string => simp only [defaultValueTy, pure_eq_ok, Except.ok.injEq] at h; subst h; rfl
+    | slice _ => simp only [defaultValueTy, pure_eq_ok, Except.ok.injEq] at h; subst h; rfl
+    | map _ _ => simp only [defaultValueTy, pure_eq_ok, Except.ok.injEq] at h; subst h; rfl
+    | chan _ _ => simp only [defaultValueTy, pure_eq_ok, Except.ok.injEq] at h; subst h; rfl
+    | sync kind =>
+      simp only [defaultValueTy, pure_eq_ok, Except.ok.injEq] at h; subst h
+      cases kind <;> rfl
+    | pointer _ => simp only [defaultValueTy, pure_eq_ok, Except.ok.injEq] at h; subst h; rfl
+    | funcType _ _ _ => simp only [defaultValueTy, pure_eq_ok, Except.ok.injEq] at h; subst h; rfl
+    | interface _ => simp only [defaultValueTy, pure_eq_ok, Except.ok.injEq] at h; subst h; rfl
+    | defined i => exact hfg _ _ h
+    | unsupported _ =>
+      exact absurd h (by simp [defaultValueTy, unsupported, throw, throwThe, MonadExceptOf.throw])
+
+theorem defaultValueAt_isNormal (types : TypeEnv) :
+    ∀ (bound : Nat) {i : TypeIdx} {d : GoValue},
+      defaultValueAt types bound i = .ok d → isNormalForTyAt types bound i d = true := by
+  intro bound
+  induction bound with
+  | zero =>
+    intro i d h
+    exact absurd h (by simp [defaultValueAt, typeIndexExhausted, unsupported, throw, throwThe,
+      MonadExceptOf.throw])
+  | succ n ih =>
+    intro i d h
+    simp only [defaultValueAt] at h
+    cases hlook : types[i]? with
+    | none =>
+      rw [hlook] at h
+      exact absurd h (by simp [unsupported, throw, throwThe, MonadExceptOf.throw])
+    | some e =>
+      rw [hlook] at h
+      obtain ⟨name, td⟩ := e
+      cases td with
+      | struct fields =>
+        dsimp only at h
+        simp only [map_eq_ok] at h
+        obtain ⟨arr, harr, rfl⟩ := h
+        obtain ⟨hnorm, hsize⟩ := defaultFieldsWith_isNormal
+          (f := defaultValueTy (defaultValueAt types n)) (g := isNormalForTyTy (isNormalForTyAt types n))
+          (fun ty d hd => defaultValueTy_isNormal (f := defaultValueAt types n)
+            (g := isNormalForTyAt types n) (fun _ _ hh => ih hh) hd) harr
+        simp only [isNormalForTyAt, hlook, Bool.and_eq_true, decide_eq_true_eq]
+        exact ⟨⟨trivial, by simpa using hsize⟩, hnorm⟩
+      | defined target =>
+        dsimp only at h
+        simp only [isNormalForTyAt, hlook]
+        exact defaultValueTy_isNormal (f := defaultValueAt types n) (g := isNormalForTyAt types n)
+          (fun _ _ hh => ih hh) h
+      | opaqueDecl _ =>
+        exact absurd h (by simp [unsupported, throw, throwThe, MonadExceptOf.throw])
+      | interfaceDef _ =>
+        exact absurd h (by simp [unsupported, throw, throwThe, MonadExceptOf.throw])
+
+theorem defaultValue_isNormal {ty : Ty} {d : GoValue} (h : defaultValue ctx ty = .ok d) :
+    isNormalForTy ctx.types ty d = true := by
+  unfold defaultValue at h
+  unfold isNormalForTy
+  exact defaultValueTy_isNormal (f := defaultValueAt ctx.types ctx.types.size)
+    (g := isNormalForTyAt ctx.types ctx.types.size)
+    (fun _ _ hh => defaultValueAt_isNormal _ _ hh) h
+
+/-- Normalizing a default value returns it. -/
+theorem defaultValue_normalize {ty : Ty} {d : GoValue} (h : defaultValue ctx ty = .ok d) :
+    normalizeValueForTy ctx ty d = .ok d :=
+  isNormalForTy_sound (defaultValue_isNormal h)
+
+/-- The appended backing re-normalizes to itself at its declared array type:
+every element was normalized by the build (idempotence) or is a default
+(normal), and the padding brings the size to the capacity exactly. -/
+theorem buildAppendBackingValue_normalize {elem : Ty} {o e : Array GoValue} {cap : Nat}
+    {v : GoValue} (h : buildAppendBackingValue ctx elem o e cap = .ok v) :
+    normalizeValueForTy ctx (.array cap elem) v = .ok v := by
+  unfold buildAppendBackingValue at h
+  simp only [bind_eq_ok] at h
+  obtain ⟨values, hvalues, h⟩ := h
+  rw [← Array.forIn_toList] at hvalues
+  have hP : ∀ x ∈ values.toList, isNormalForTy ctx.types elem x = true := by
+    refine forIn_list_inv (P := fun (acc : Array GoValue) =>
+        ∀ x ∈ acc.toList, isNormalForTy ctx.types elem x = true)
+      (fun a _ b r hb hbody => ?_) (by simp) hvalues
+    simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at hbody
+    obtain ⟨w, hw, rfl⟩ := hbody
+    intro x hx
+    have hx' : x ∈ b.toList ++ [w] := by simpa [forInStepVal] using hx
+    rcases List.mem_append.mp hx' with hx' | hx'
+    · exact hb x hx'
+    · rw [List.mem_singleton.mp hx']
+      exact normalizeValueForTy_isNormal ctx hw
+  split at h
+  · simp [stuck, throw, throwThe, MonadExceptOf.throw, Bind.bind, Except.bind] at h
+  · rename_i hle
+    simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
+    obtain ⟨padded, hpad, rfl⟩ := h
+    rw [Std.Legacy.Range.forIn_eq_forIn_range'] at hpad
+    have hP2 : ∀ x ∈ padded.toList, isNormalForTy ctx.types elem x = true := by
+      refine forIn_list_inv (P := fun (acc : Array GoValue) =>
+          ∀ x ∈ acc.toList, isNormalForTy ctx.types elem x = true)
+        (fun a _ b r hb hbody => ?_) hP hpad
+      simp only [bind_eq_ok, Except.ok.injEq] at hbody
+      obtain ⟨d, hd, rfl⟩ := hbody
+      intro x hx
+      have hx' : x ∈ b.toList ++ [d] := by simpa [forInStepVal] using hx
+      rcases List.mem_append.mp hx' with hx' | hx'
+      · exact hb x hx'
+      · rw [List.mem_singleton.mp hx']
+        exact defaultValue_isNormal hd
+    have hsize := forIn_yield_push_size
+        (body := fun (_ : Nat) (acc : Array GoValue) => do
+          let d ← defaultValue ctx elem
+          Except.ok (ForInStep.yield (acc.push d)))
+        (fun a r out hbody => by
+          simp only [bind_eq_ok, Except.ok.injEq] at hbody
+          obtain ⟨d, _, hout⟩ := hbody
+          exact ⟨d, hout.symm⟩) _ hpad
+    simp at hsize
+    have hcap : padded.size = cap := by omega
+    apply isNormalForTy_sound
+    unfold isNormalForTy
+    simp only [isNormalForTyTy, Bool.and_eq_true, decide_eq_true_eq]
+    refine ⟨hcap, ?_⟩
+    rw [isNormalListWith_iff]
+    intro x hx
+    exact hP2 x hx
+
+/-- Two outcome-congruent computations whose successes each satisfy a
+post-condition are congruent for the conjunction. -/
+theorem exceptCong.post_both {α β : Type} {P : α → Prop} {Q : β → Prop}
+    {x : Except Stop α} {y : Except Stop β}
+    (h : exceptCong (fun _ _ => True) x y)
+    (hx : ∀ a, x = .ok a → P a) (hy : ∀ b, y = .ok b → Q b) :
+    exceptCong (fun a b => P a ∧ Q b) x y := by
+  cases x with
+  | error e₁ =>
+    cases y with
+    | error e₂ => exact h
+    | ok b => exact h.elim
+  | ok a =>
+    cases y with
+    | error e₂ => exact h.elim
+    | ok b => exact ⟨hx a rfl, hy b rfl⟩
+
 set_option maxHeartbeats 3200000 in
 /-- **The appendSlice ∀-choices lemma** (spill obstruction resolved):
 under bounded OPERANDS the outcome CLASS of the appendSlice apply step is
 the same under every choice stream — operand boundedness alone suffices
-(audit correction 2026-08-04: an earlier draft also took `StateWf σ` and
+(audit correction 2026-08-04: an earlier draft also took `StateWf ctx σ` and
 credited it, but the proof never uses it; the fresh backing is allocated
 above every OPERAND-reachable location, which is what the store transport
 needs). The choice only sizes the fresh backing and the result slice's
@@ -2623,14 +2891,20 @@ theorem applyStmtOp_appendSlice_congr {σ : Store} {elem : Ty} {nt : Nat}
           appendGrowthCap_ge (by omega)
         have hne : elemValues.size ≠ 0 := by omega
         refine exceptCong.bind_congr
-          (buildAppendBackingValue_congr (by omega) (by omega) hne)
-          fun b₁ b₂ _ => ?_
+          (exceptCong.post_both (buildAppendBackingValue_congr (by omega) (by omega) hne)
+            (fun b hb => buildAppendBackingValue_normalize hb)
+            (fun b hb => buildAppendBackingValue_normalize hb))
+          fun b₁ b₂ ⟨hn₁, hn₂⟩ => ?_
         have hkey : (Loc.base ⟨σ.nextAddr⟩ : Loc) ≠ Loc.rootLoc tloc := by
           intro hkeq
           have hroot := congrArg Loc.rootBase hkeq
           simp only [Loc.rootBase, Loc.rootLoc] at hroot
           simp only [Loc.locSup] at htloc
           omega
+        -- Both allocations succeed (the backings re-normalize to themselves)
+        -- at the same fresh address; the pushed heaps agree at `tloc`'s root.
+        simp only [Store.alloc, hn₁, hn₂, Bind.bind, Except.bind, pure, Except.pure,
+          Store.allocCell]
         refine exceptCong.bind_congr
           (storeLoc_congr (l := tloc) ?_ ?_)
           fun _ _ _ => ?_
@@ -3097,7 +3371,7 @@ set_option linter.unusedSimpArgs false in
 /-- `step_complete_any_wf`, ∃-packaged (the per-case scripts close a
 single existential over the whole result). -/
 theorem step_complete_any_wf_aux {c : Config} {σ : Store} {c' : Config}
-    {σ' : Store} (h : Step ctx c σ c' σ') (hwf : MachineWf σ c) :
+    {σ' : Store} (h : Step ctx c σ c' σ') (hwf : MachineWf ctx σ c) :
     ∀ ch : Choices, ∃ out, stepFn ctx σ c ch = .ok out := by
   obtain ⟨hs, hc⟩ := hwf
   intro ch
@@ -3272,7 +3546,7 @@ theorem step_complete_any_wf_aux {c : Config} {σ : Store} {c' : Config}
 configuration the relation can step from is one the executable steps
 from under EVERY choice stream, provided the machine is well-formed. -/
 theorem step_complete_any_wf {c : Config} {σ : Store} {c' : Config}
-    {σ' : Store} (h : Step ctx c σ c' σ') (hwf : MachineWf σ c) :
+    {σ' : Store} (h : Step ctx c σ c' σ') (hwf : MachineWf ctx σ c) :
     ∀ ch : Choices, ∃ (c₂ : Config) (σ₂ : Store) (ch₂ : Choices),
       stepFn ctx σ c ch = .ok (c₂, σ₂, ch₂) := by
   intro ch
@@ -3295,13 +3569,13 @@ completions silently accepted) has no shape left to arise in. -/
 theorem execStmtLoop_ok_or_fuelOut {σ₀ : Store} {c₀ : Config}
     (hprog : ∀ (c' : Config) (σ' : Store), Steps ctx c₀ σ₀ c' σ' →
       c' = .next .stop ∨ ∃ (c'' : Config) (σ'' : Store), Step ctx c' σ' c'' σ'')
-    (hwf : MachineWf σ₀ c₀) :
+    (hwf : MachineWf ctx σ₀ c₀) :
     ∀ (fuel : Nat) (ch : Choices),
       (∃ (σf : Store) (ch' : Choices),
         execStmtLoop ctx fuel σ₀ c₀ ch = .ok (σf, ch'))
       ∨ execStmtLoop ctx fuel σ₀ c₀ ch = .error .fuelOut := by
   suffices haux : ∀ (fuel : Nat) (c : Config) (σ : Store),
-      Steps ctx c₀ σ₀ c σ → MachineWf σ c → ∀ ch : Choices,
+      Steps ctx c₀ σ₀ c σ → MachineWf ctx σ c → ∀ ch : Choices,
       (∃ (σf : Store) (ch' : Choices),
         execStmtLoop ctx fuel σ c ch = .ok (σf, ch'))
         ∨ execStmtLoop ctx fuel σ c ch = .error .fuelOut by
@@ -3528,19 +3802,19 @@ macro "no_panic" : tactic =>
 
 theorem normalizeListWith_noPanic {f : GoValue → Except Stop GoValue}
     (hf : ∀ v, NoPanic (f v)) : ∀ l, NoPanic (normalizeListWith f l)
-  | [] => by unfold normalizeListWith; exact NoPanic.pure _
+  | [] => by rw [normalizeListWith_nil]; exact NoPanic.pure _
   | v :: rest => by
-      unfold normalizeListWith
+      rw [normalizeListWith_cons]
       exact NoPanic.bind (hf v) fun _ =>
         NoPanic.bind (normalizeListWith_noPanic hf rest) fun _ => NoPanic.pure _
 
 theorem normalizeFieldsWith_noPanic {f : Ty → GoValue → Except Stop GoValue}
     (hf : ∀ t v, NoPanic (f t v)) :
     ∀ fs vs, NoPanic (normalizeFieldsWith f fs vs)
-  | [], vs => by intro msg h; simp [normalizeFieldsWith] at h
-  | _ :: _, [] => by intro msg h; simp [normalizeFieldsWith] at h
+  | [], vs => by rw [normalizeFieldsWith_nil_left]; exact NoPanic.pure _
+  | _ :: _, [] => by rw [normalizeFieldsWith_nil_right]; exact NoPanic.pure _
   | field :: fr, (af, v) :: vr => by
-      unfold normalizeFieldsWith
+      rw [normalizeFieldsWith_cons]
       (try dsimp only)
       refine NoPanic.ite ?_ ?_
       · exact NoPanic.bind (NoPanic.stuck _) fun _ => NoPanic.bind (hf _ _) fun _ =>
@@ -3720,16 +3994,321 @@ theorem StructFields.set_noPanic (fields : Array (String × GoValue)) (needle : 
   · (try dsimp only)
     exact NoPanic.ite (NoPanic.pure _) (NoPanic.stuck _)
 
+/-- `Store.alloc` never panics: the normalizer does not, and the push is pure. -/
+theorem Store.alloc_noPanic (s : Store) (v : GoValue) (ty : Ty) :
+    NoPanic (Store.alloc ctx s v ty) := by
+  unfold Store.alloc
+  exact NoPanic.bind (normalizeValueForTy_noPanic _ _) fun _ => NoPanic.pure _
+
+/-! #### The root-first read (C1 S1): `loadLoc` as a root lookup + path read
+
+`loadLoc` is leaf-first on the `Loc`; the module's write is root-first on
+`Loc.rootPath`. The bridge below reads root-first and proves it IS
+`loadLoc`, which is what the store-side NoPanic argument descends along. -/
+
+variable (ctx) in
+/-- One projection step (the `loadLoc` field/index arms, root-first). -/
+def projectStep : GoValue → PathStep → Except Stop GoValue
+  | .struct actualType fields, .field typeId fieldName =>
+      if actualType != typeId && !structTagCompatible ctx actualType typeId then
+        stuck s!"expected struct {typeId.key}, got struct {actualType.key}"
+      else
+        match StructFields.lookup fields fieldName with
+        | some value => return value
+        | none => stuck s!"unknown GoCore struct field: {fieldName}"
+  | other, .field _ _ => stuck s!"expected struct base for field load, got {repr other}"
+  | .array values, .index index => arrayGet values index
+  | other, .index _ => stuck s!"expected array base for index load, got {repr other}"
+
+variable (ctx) in
+/-- Root-first read along a path. -/
+def readAt : GoValue → List PathStep → Except Stop GoValue
+  | v, [] => pure v
+  | v, step :: rest => do readAt (← projectStep ctx v step) rest
+
+theorem readAt_append (v : GoValue) (p : List PathStep) (step : PathStep) :
+    readAt ctx v (p ++ [step]) = (readAt ctx v p >>= fun x => readAt ctx x [step]) := by
+  induction p generalizing v with
+  | nil => simp [readAt, Bind.bind, Except.bind]
+  | cons s rest ih =>
+    simp only [List.cons_append, readAt]
+    cases projectStep ctx v s with
+    | error e => simp [Bind.bind, Except.bind]
+    | ok w => simp only [Bind.bind, Except.bind]; exact ih w
+
+/-- `loadLoc` IS the root lookup followed by the root-first read. -/
+theorem loadLoc_eq_readAt (s : Store) : ∀ l : Loc,
+    loadLoc ctx s l =
+      match Heap.lookup s.heap (.base (Loc.rootPath l).1) with
+      | some (.value _ root) => readAt ctx root (Loc.rootPath l).2
+      | some (.mapPayload ..) => stuck s!"value load from a map payload cell {repr (Loc.rootLoc l)}"
+      | some (.chanPayload ..) => stuck s!"value load from a channel payload cell {repr (Loc.rootLoc l)}"
+      | none => stuck s!"unbound GoCore heap location: {repr (Loc.rootLoc l)}" := by
+  intro l
+  induction l with
+  | base a =>
+    obtain ⟨i⟩ := a
+    simp only [loadLoc, Loc.rootPath, Loc.rootLoc, Loc.rootBase]
+    split <;> simp_all [readAt]
+  | field b tid f ih =>
+    have hroot : (Loc.rootPath (.field b tid f)).1 = (Loc.rootPath b).1 := rfl
+    have hpath : (Loc.rootPath (.field b tid f)).2 = (Loc.rootPath b).2 ++ [.field tid f] := rfl
+    simp only [loadLoc]
+    rw [ih]
+    simp only [hroot, hpath, Loc.rootLoc_eq, readAt_append]
+    split
+    · rename_i ty root _
+      cases hread : readAt ctx root (Loc.rootPath b).2 with
+      | error e => simp [Bind.bind, Except.bind]
+      | ok w =>
+        simp only [Bind.bind, Except.bind]
+        cases w with
+        | struct actualType fields =>
+          simp only [readAt, projectStep, Bind.bind, Except.bind]
+          by_cases hc : (actualType != tid && !structTagCompatible ctx actualType tid) = true
+          · simp [hc, stuck, throw, throwThe, MonadExceptOf.throw]
+          · have hc' : (actualType != tid && !structTagCompatible ctx actualType tid) = false := by
+              simpa using hc
+            simp only [hc', Bool.false_eq_true, ↓reduceIte, pure, Except.pure]
+            cases StructFields.lookup fields f <;>
+              simp [stuck, throw, throwThe, MonadExceptOf.throw]
+        | _ => simp [readAt, projectStep, Bind.bind, Except.bind, stuck, throw, throwThe,
+                MonadExceptOf.throw]
+    · simp [Bind.bind, Except.bind, stuck, throw, throwThe, MonadExceptOf.throw]
+    · simp [Bind.bind, Except.bind, stuck, throw, throwThe, MonadExceptOf.throw]
+    · simp [Bind.bind, Except.bind, stuck, throw, throwThe, MonadExceptOf.throw]
+  | index b i ih =>
+    have hroot : (Loc.rootPath (.index b i)).1 = (Loc.rootPath b).1 := rfl
+    have hpath : (Loc.rootPath (.index b i)).2 = (Loc.rootPath b).2 ++ [.index i] := rfl
+    simp only [loadLoc]
+    rw [ih]
+    simp only [hroot, hpath, Loc.rootLoc_eq, readAt_append]
+    split
+    · rename_i ty root _
+      cases hread : readAt ctx root (Loc.rootPath b).2 with
+      | error e => simp [Bind.bind, Except.bind]
+      | ok w =>
+        simp only [Bind.bind, Except.bind]
+        cases w with
+        | array values =>
+          simp only [readAt, projectStep, Bind.bind, Except.bind]
+          cases arrayGet values i <;> rfl
+        | _ => simp [readAt, projectStep, Bind.bind, Except.bind, stuck, throw, throwThe,
+                MonadExceptOf.throw]
+    · simp [Bind.bind, Except.bind, stuck, throw, throwThe, MonadExceptOf.throw]
+    · simp [Bind.bind, Except.bind, stuck, throw, throwThe, MonadExceptOf.throw]
+    · simp [Bind.bind, Except.bind, stuck, throw, throwThe, MonadExceptOf.throw]
+
+/-! #### The field-position search agrees with `StructFields.lookup` -/
+
+/-- The `foldl` step of `StructFields.lookup`, named for the lemmas. -/
+def lookupStep (needle : String) (found : Option GoValue) (nv : String × GoValue) :
+    Option GoValue :=
+  match found with
+  | some value => some value
+  | none => if nv.1 == needle then some nv.2 else none
+
+theorem foldl_lookupStep_some (needle : String) (v : GoValue) :
+    ∀ l : List (String × GoValue), l.foldl (lookupStep needle) (some v) = some v := by
+  intro l
+  induction l with
+  | nil => rfl
+  | cons x rest ih => simpa [List.foldl, lookupStep] using ih
+
+theorem foldl_lookupStep_none (needle : String) :
+    ∀ l : List (String × GoValue),
+      l.foldl (lookupStep needle) none = (l.find? (·.1 == needle)).map (·.2) := by
+  intro l
+  induction l with
+  | nil => rfl
+  | cons x rest ih =>
+    by_cases hx : x.1 == needle
+    · simp [List.foldl, lookupStep, hx, foldl_lookupStep_some]
+    · simp [List.foldl, lookupStep, hx, ih]
+
+theorem StructFields.lookup_eq_find? (fields : Array (String × GoValue)) (needle : String) :
+    StructFields.lookup fields needle = (fields.toList.find? (·.1 == needle)).map (·.2) := by
+  simp only [StructFields.lookup]
+  rw [← Array.foldl_toList]
+  exact foldl_lookupStep_none needle fields.toList
+
+/-- The first match, characterized by position. -/
+theorem List.find?_eq_of_first {α : Type} (p : α → Bool) :
+    ∀ (l : List α) (k : Nat) (hk : k < l.length),
+      p l[k] = true → (∀ j (hj : j < k), p (l[j]'(Nat.lt_trans hj hk)) = false) →
+      l.find? p = some l[k] := by
+  intro l
+  induction l with
+  | nil => intro k hk; simp at hk
+  | cons x rest ih =>
+    intro k hk hpk hbefore
+    cases k with
+    | zero => simp_all
+    | succ k =>
+      have hx : p x = false := hbefore 0 (Nat.zero_lt_succ _)
+      simp only [List.getElem_cons_succ] at hpk
+      have hstep : List.find? p (x :: rest) = List.find? p rest :=
+        List.find?_cons_of_neg (by simp [hx])
+      rw [hstep, List.getElem_cons_succ]
+      exact ih k (by simpa using hk) hpk
+        (fun j hj => hbefore (j + 1) (Nat.succ_lt_succ hj))
+
+/-- `StructFields.lookup` returns the value at the structural search's position. -/
+theorem StructFields.lookup_of_fieldIdx? (fields : Array (String × GoValue)) (f : String)
+    (k : Nat) (h : fieldIdx? fields f = some k) :
+    ∃ hk : k < fields.size, StructFields.lookup fields f = some fields[k].2 := by
+  obtain ⟨hk, hname, hbefore⟩ := fieldIdx?_spec fields f k h
+  refine ⟨hk, ?_⟩
+  rw [StructFields.lookup_eq_find?]
+  have hk' : k < fields.toList.length := by simpa using hk
+  rw [List.find?_eq_of_first _ fields.toList k hk' (by simpa using hname)
+    (fun j hj => by
+      have := hbefore j hj
+      simpa [Array.getElem_toList] using this)]
+  simp
+
+theorem Ty.stepDown_noPanic (types : TypeEnv) :
+    ∀ (b : Nat) (ty : Ty) (step : PathStep), NoPanic (Ty.stepDown types b ty step) := by
+  intro b
+  induction b with
+  | zero =>
+    intro ty step
+    unfold Ty.stepDown
+    split
+    all_goals
+      first
+        | exact NoPanic.pure _
+        | exact NoPanic.unsupported _
+        | exact NoPanic.stuck _
+        | (dsimp only; exact NoPanic.unsupported _)
+  | succ n ih =>
+    intro ty step
+    unfold Ty.stepDown
+    split
+    · exact NoPanic.pure _
+    · try dsimp only
+      split
+      · try dsimp only
+        split
+        · split <;> first | exact NoPanic.pure _ | exact NoPanic.stuck _
+        · exact NoPanic.stuck _
+      · exact ih _ _
+      · exact NoPanic.unsupported _
+      · exact NoPanic.unsupported _
+      · exact NoPanic.unsupported _
+    · exact NoPanic.stuck _
+    · exact NoPanic.stuck _
+
+theorem Array.modifyM_noPanic {α : Type} {xs : Array α} {i : Nat} {f : α → Except Stop α}
+    (h : (hi : i < xs.size) → NoPanic (f xs[i])) : NoPanic (xs.modifyM i f) := by
+  unfold Array.modifyM
+  split
+  · rename_i hi
+    exact NoPanic.bind (h hi) fun _ => NoPanic.pure _
+  · exact NoPanic.pure _
+
+/-- A root-first write along a path the root-first read walks successfully
+never panics: the only panic on the write path is the index bounds check,
+which the read already passed at the same index. -/
+theorem writeAt_noPanic_of_readAt_ok :
+    ∀ {path : List PathStep} {b : Nat} {ty : Ty} {root v₀ : GoValue},
+      readAt ctx root path = .ok v₀ → ∀ v, NoPanic (writeAt ctx b ty root path v) := by
+  intro path
+  induction path with
+  | nil =>
+    intro b ty root v₀ _ v
+    simp only [writeAt]
+    exact normalizeValueForTyTy_noPanic (fun _ _ => normalizeValueForTyAt_noPanic _ _ _ _) _ _
+  | cons step rest ih =>
+    intro b ty root v₀ h v
+    cases step with
+    | field tid f =>
+      cases root with
+      | struct actual fields =>
+        simp only [readAt, projectStep] at h
+        by_cases hc : (actual != tid && !structTagCompatible ctx actual tid) = true
+        · simp [hc, stuck, throw, throwThe, MonadExceptOf.throw, Bind.bind, Except.bind] at h
+        · have hc' : (actual != tid && !structTagCompatible ctx actual tid) = false := by
+            simpa using hc
+          simp only [hc', Bool.false_eq_true, ↓reduceIte, Bind.bind, Except.bind] at h
+          cases hlook : StructFields.lookup fields f with
+          | none => rw [hlook] at h; simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
+          | some x =>
+            rw [hlook] at h
+            simp only [pure, Except.pure] at h
+            unfold writeAt
+            dsimp only
+            -- do-notation duplicates the continuation into both `if` branches
+            refine NoPanic.ite (c := (actual != tid && !structTagCompatible ctx actual tid) = true)
+              (NoPanic.bind (NoPanic.stuck _) fun _ => ?tail) ?tail
+            cases hidx : fieldIdx? fields f with
+            | none => exact NoPanic.stuck _
+            | some k =>
+              obtain ⟨hk, hlook'⟩ := StructFields.lookup_of_fieldIdx? fields f k hidx
+              rw [hlook] at hlook'
+              have hx : fields[k].2 = x := (Option.some.inj hlook').symm
+              refine NoPanic.bind (Ty.stepDown_noPanic _ _ _ _) fun p => ?_
+              obtain ⟨fty, b'⟩ := p
+              refine NoPanic.bind (Array.modifyM_noPanic fun _ => ?_) fun _ => NoPanic.pure _
+              refine NoPanic.bind ?_ fun _ => NoPanic.pure _
+              rw [hx]
+              exact ih h v
+      | _ =>
+        simp [readAt, projectStep, Bind.bind, Except.bind, stuck, throw, throwThe,
+          MonadExceptOf.throw] at h
+    | index i =>
+      cases root with
+      | array values =>
+        simp only [readAt, projectStep, Bind.bind, Except.bind] at h
+        cases hag : arrayGet values i with
+        | error e => rw [hag] at h; simp at h
+        | ok x =>
+          rw [hag] at h
+          simp only at h
+          -- `arrayGet` succeeded: the index is in range and names `x`.
+          obtain ⟨k, hk, hget⟩ : ∃ k, arrayIndexNat values i = .ok k ∧ values[k]? = some x := by
+            unfold arrayGet at hag
+            cases hk : arrayIndexNat values i with
+            | error e => rw [hk] at hag; simp [Bind.bind, Except.bind] at hag
+            | ok k =>
+              rw [hk] at hag
+              simp only [Bind.bind, Except.bind] at hag
+              cases hget : values[k]? with
+              | none =>
+                rw [hget] at hag
+                simp only [indexOutOfRangePanic, GoLean.GoCore.panic, throw, throwThe,
+                  MonadExceptOf.throw] at hag
+                split at hag <;> cases hag
+              | some w =>
+                rw [hget] at hag
+                simp only [pure, Except.pure, Except.ok.injEq] at hag
+                subst hag
+                exact ⟨k, rfl, hget⟩
+          simp only [writeAt]
+          rw [hk]
+          simp only [Bind.bind, Except.bind]
+          refine NoPanic.bind (Ty.stepDown_noPanic _ _ _ _) fun p => ?_
+          obtain ⟨ety, b'⟩ := p
+          refine NoPanic.bind (Array.modifyM_noPanic fun hk' => ?_) fun _ => NoPanic.pure _
+          have hx : values[k] = x := (Array.getElem?_eq_some_iff.mp hget).2
+          rw [hx]
+          exact ih h v
+      | _ =>
+        simp [readAt, projectStep, Bind.bind, Except.bind, stuck, throw, throwThe,
+          MonadExceptOf.throw] at h
+
 /-- A root-cell store never panics: the cell exists or the store is
 `.internal`, and normalization at the cell's type refuses but never panics. -/
 theorem storeLoc_base_noPanic (s : Store) (a : Addr) (v : GoValue) :
     NoPanic (storeLoc ctx s (.base a) v) := by
   unfold storeLoc Store.updateCell
+  simp only [Loc.rootPath]
   split
   · refine NoPanic.bind ?_ fun _ => NoPanic.pure _
-    dsimp only
+    try dsimp only
     split
-    · exact NoPanic.bind (normalizeValueForTy_noPanic _ _) fun _ => NoPanic.pure _
+    · exact NoPanic.map _
+        (normalizeValueForTyTy_noPanic (fun _ _ => normalizeValueForTyAt_noPanic _ _ _ _) _ _)
     · exact NoPanic.stuck _
     · exact NoPanic.stuck _
   · exact NoPanic.internal _
@@ -3752,40 +4331,29 @@ theorem arraySet_ok_of_arrayGet_ok {vs : Array GoValue} {i : Int} {x : GoValue}
     | some w => (try rw [hg]); exact ⟨_, rfl⟩
 
 /-- A store through a PATH the machine can load never panics: the only
-panic on the store path is `arraySet`'s bounds check, and the load's
-success puts the index in range. -/
+panic on the store path is the index bounds check, and the load's success
+puts the index in range (root-first, through `loadLoc_eq_readAt`). -/
 theorem storeLoc_noPanic_of_loadLoc_ok (s : Store) :
-    ∀ (loc : Loc) {v₀ : GoValue}, loadLoc ctx s loc = .ok v₀ → ∀ v, NoPanic (storeLoc ctx s loc v)
-  | .base a, _, _, v => storeLoc_base_noPanic s a v
-  | .field base typeId fieldName, v₀, h, v => by
-      unfold loadLoc at h
-      unfold storeLoc
-      cases hb : loadLoc ctx s base with
-      | error e => (try rw [hb] at h); simp [Bind.bind, Except.bind] at h
-      | ok w =>
-        (try rw [hb] at h)
-        simp only [Bind.bind, Except.bind] at h ⊢
-        cases w <;> (try (simp [stuck, throw, throwThe, MonadExceptOf.throw] at h; done))
-        dsimp only
-        refine NoPanic.ite ?_ ?_
-        · -- the tag-mismatch refusal heads the branch: a `stuck`, never a panic
-          intro msg hm
-          simp only [stuck, throw, throwThe, MonadExceptOf.throw] at hm <;> cases hm
-        · exact NoPanic.bind (StructFields.set_noPanic _ _ _) fun updated =>
-            storeLoc_noPanic_of_loadLoc_ok s base hb _
-  | .index base index, v₀, h, v => by
-      unfold loadLoc at h
-      unfold storeLoc
-      cases hb : loadLoc ctx s base with
-      | error e => (try rw [hb] at h); simp [Bind.bind, Except.bind] at h
-      | ok w =>
-        (try rw [hb] at h)
-        simp only [Bind.bind, Except.bind] at h ⊢
-        cases w <;> (try (simp [stuck, throw, throwThe, MonadExceptOf.throw] at h; done))
-        dsimp only at h ⊢
-        obtain ⟨vs', hset⟩ := arraySet_ok_of_arrayGet_ok h v
-        rw [hset]
-        exact storeLoc_noPanic_of_loadLoc_ok s base hb _
+    ∀ (loc : Loc) {v₀ : GoValue}, loadLoc ctx s loc = .ok v₀ → ∀ v, NoPanic (storeLoc ctx s loc v) := by
+  intro loc v₀ h v
+  rw [loadLoc_eq_readAt] at h
+  unfold storeLoc Store.updateCell
+  dsimp only
+  split
+  · rename_i hi
+    refine NoPanic.bind ?_ fun _ => NoPanic.pure _
+    try dsimp only
+    have hcell : Heap.lookup s.heap (.base (Loc.rootPath loc).1)
+        = some s.heap[(Loc.rootPath loc).1.id] := by
+      simp [Heap.lookup, Array.getElem?_eq_getElem hi]
+    rw [hcell] at h
+    split
+    · rename_i ty root hroot
+      rw [hroot] at h
+      exact NoPanic.map _ (writeAt_noPanic_of_readAt_ok h v)
+    · split <;> exact NoPanic.stuck _
+    · split <;> exact NoPanic.stuck _
+  · exact NoPanic.internal _
 
 theorem tryAcquire_noPanic (op : SyncOp) (pre : SyncPrim) : NoPanic (tryAcquire op pre) := by
   unfold tryAcquire
@@ -3903,6 +4471,24 @@ theorem applySyncOp_try_nopop {σ : Store} {op : SyncOp} {targets : List Assigne
       (applyTryLock ctx σ op loc pre false targets env k).map fun p => (p.1, p.2, ch) := by
   rw [applySyncOp_try_stream ht hl hc ch, Choices.consumeAt_le_one hw]
   rfl
+
+/-- Three-bind form of `bind_pair_map` (C1 S1: the spill path allocates
+between the build and the store). -/
+theorem bind_pair_map₃ {α β : Type} (T : Except Stop α) (g : α → Except Stop β)
+    (k : β → Except Stop Store) (ch : Choices) :
+    (do let a ← T; let b ← g a; let x ← k b;
+        pure ((x, ch) : Store × Choices))
+      = (do let a ← T; let b ← g a; k b).map fun s' => (s', ch) := by
+  cases T with
+  | error e => rfl
+  | ok a =>
+    simp only [Bind.bind, Except.bind]
+    cases g a with
+    | error e => rfl
+    | ok b =>
+      cases k b with
+      | error e => rfl
+      | ok x => rfl
 
 /-- A two-stage `Except` pipeline ending in a `(·, ch)` pair is the
 pipeline's value paired with `ch`. -/
@@ -4040,18 +4626,18 @@ theorem applyStmtOp_appendSlice_spill {σ : Store} {elem : Ty} {nt : Nat}
           ((appendGrowthCap slice.cap (slice.len + elemValues.size) - (slice.len + elemValues.size) + extra)
             % appendSpillWidth slice.cap (slice.len + elemValues.size))
         let backing ← buildAppendBackingValue ctx elem oldValues elemValues newCap
-        let p := σ.alloc backing (.array newCap elem)
-        storeLoc ctx p.2 tloc (.slice { base := some p.1, offset := 0, len := slice.len + elemValues.size, cap := newCap })
+        let (base, current) ← Store.alloc ctx σ backing (.array newCap elem)
+        storeLoc ctx current tloc (.slice { base := some base, offset := 0, len := slice.len + elemValues.size, cap := newCap })
     · rcases hc : Choices.consumeAt .appendSpill (appendSpillWidth slice.cap (slice.len + elemValues.size)) ch
         with ⟨extra, rest⟩
-      exact bind_pair_map _ _ rest
+      exact bind_pair_map₃ _ _ _ rest
     · -- the target is a root cell: the post-consult tail cannot panic
       simp only [List.cons.injEq] at hvs
       obtain ⟨rfl, -⟩ := hvs
       simp only [valueAsLoc, pure_eq_ok, Except.ok.injEq] at htl
       subst htl
       exact NoPanic.bind (buildAppendBackingValue_noPanic _ _ _ _) fun _ =>
-        storeLoc_base_noPanic _ _ _
+        NoPanic.bind (Store.alloc_noPanic _ _ _) fun _ => storeLoc_base_noPanic _ _ _
 
 /-- The done-check `mapIterK` step is oblivious: with no candidate
 left it pops the continuation at every stream (BUG-005 (L): "no
@@ -4740,8 +5326,9 @@ theorem stepFn_consumption_none {σ : Store} {c : Config} {ch₀ : Choices}
     simp [throw, throwThe, MonadExceptOf.throw] at h
   case case13 =>
     simp_all [stepFn, bind_eq_ok]
-    obtain ⟨v, hd, h1, h2, h3⟩ := h
-    exact ⟨h3.symm, v, hd, h1, h2⟩
+    obtain ⟨v, hd, loc, s₁, halloc, hc, hs, hch⟩ := h
+    subst hs
+    exact ⟨hch.symm, v, hd, loc, halloc, hc⟩
   case case70 =>
     simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
     obtain ⟨v, hd, rfl, rfl, rfl⟩ := h

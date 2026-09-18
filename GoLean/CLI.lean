@@ -817,7 +817,7 @@ def enumSetup (program : GoCore.Program) (name : String)
   -- Defense-in-depth behind the decoder's globaladdr bound check
   -- (audit response, C1): mirror of `runProgramM`'s post-seed assert
   -- (heap-only since B7 — the same text as the core seam's).
-  if GoCore.Machine.StateWf σ₀ then pure () else
+  if GoCore.Machine.StateWf ctx σ₀ then pure () else
     throw (.internal "seeded state ill-formed: a location in a global cell dangles beyond the allocator bound")
   let initBody? ←
     match GoCore.findFunctionIn? program.funcs GoCore.pkgInitFuncId with

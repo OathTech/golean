@@ -237,3 +237,40 @@ touch; the charter's ≤ 5 min condition holds).
 ### The S0 gate
 
 `GOLEAN_MEM_MAX=32G scripts/capped scripts/ci --diff` under the box-wide lock (taken 07:10:22, released 07:26:00 UTC; owner file; trap-protected release; wait-retry 120 s), at `68b261e6` + the S0 edits: **EXIT=1, 938 s** (`CI total wall seconds: 938`); **3676 cases: 3427 PASS / 249 expected FAIL** (B7's tally exactly); `eval tests` 211 ok; `core build (warning-free)` ok; `core totality audit` ok; `frontend pins` ok; `wire boundary` ok; `unseq scheduler` ok; `bug-index cross-check` ok; `evidence-on-main size gate` ok; every other step ok. RED: exactly the two 5a-class items — `certificate provenance` (reconciler C9 HIGH: «STALE certification: changed dependency build/files/GoLean/GoCore/NPDRF.lean») and `baseline diff (DRIFT)` with the SINGLE line `imported-goose/channel/google-search baseline[PASS/membership] -> now[FAIL/membership]` — the one cached certified row, judged stale because a compiled semantic input changed. ZERO other drift. Tail: `gate-tail-s0.txt`.
+
+## S1 — the module and cost A
+
+### Gate lines
+
+- Checkpoint (representation + linear normalizers + `alloc` normalizes, BEFORE the
+  `HeapNormal` conjunct): `GOLEAN_MEM_MAX=32G scripts/capped scripts/ci --diff` under the
+  box-wide lock (08:42:01–08:54:01 UTC): **EXIT=1, 720 s**; 3676 cases: 3427 PASS / 249
+  expected FAIL; every step ok EXCEPT `certificate provenance` (STALE: changed dependency
+  `build/files/GoLean/GoCore/Machine.lean`) and `baseline diff` with the SINGLE line
+  `imported-goose/channel/google-search baseline[PASS/membership] -> now[FAIL/membership]`;
+  ZERO other drift. Tail: `gate-tail-s1-checkpoint.txt`.
+- S1 gate (the committed tree): `GOLEAN_MEM_MAX=32G scripts/capped scripts/ci --diff` under the box-wide lock (09:06:02–09:17:37 UTC): **EXIT=1, 695 s**; **3676 cases: 3427 PASS / 249 expected FAIL**; `eval tests` 211 ok; `core build (warning-free)` ok; `core totality audit` ok; `frontend pins` ok; `wire boundary` ok; every other step ok. RED: exactly the two 5a-class items — `certificate provenance` (C9 HIGH: «STALE certification: changed dependency build/files/GoLean/CLI.lean») and `baseline diff (DRIFT)` with the SINGLE line `imported-goose/channel/google-search baseline[PASS/membership] -> now[FAIL/membership]` — the one cached certified row, judged stale because compiled semantic inputs changed. ZERO other drift. Tail: `gate-tail-s1.txt`.
+
+### The choice trace (D4: zero drift on the machine, byte-identical tape consumption)
+
+Whole-corpus choice trace (`scripts/choice-trace-corpus --dump --jobs 6 --exclude goroutines/send-then-spin --exclude strings/trimspace-repeat/repeat-bound-refused`, main `68b261e6`'s certified binary `231df9a9…` vs the S1 binary `f462cf50…`, run 09:23–09:41 UTC): sorted dumps `cmp` **EXIT=0 — BYTE-IDENTICAL**, 23,685 consumption records both sides, one sha256 `70e12e023f3ee30b9d71317454e11dedcb6c6ec039d63aeddfbb3d4906aceb57`; 34 frontend-refusal exports and the 2 exclusions identical; each tracer run EXIT=1 for the SAME pre-existing «FINDINGS present» depth listing (main 609 s, S1 436 s). Tails: `trace-summary-main-s1.txt`.
+
+### Benchmark AFTER (same probes, runner, box class; 3 runs; net of the empty probe)
+
+`.tmp/golean-s1` = the gated binary (sha256 `f462cf50…48f3`), same frontend and probes as BEFORE; `--plan full`, 3 runs per point, medians, net of the empty probe (0.0213 s); run 09:18–09:23 UTC (the whole plan in 337 s — BEFORE needed 28 min), load1 ≈ 1.3, no sibling build. Artifacts: `bench-after-s1.json`, `bench-after-s1-summary.md`.
+
+| probe / point | BEFORE net | AFTER (S1) net | S1 target | verdict |
+|---|---:|---:|---|---|
+| `write_fixed(m, 100)` per write, m = 10 / 100 / 1,000 / 3,000 / 10,000 | 21 / 44 / 1,248 / 9,560 / 106,972 µs | −2 / 1 / 3 / −2 / **16 µs** (100 writes sit at the 21 ms startup noise floor; the count-varying rows put one write at 13.1 µs (m = 10, w = 1,000) / 12.6 µs (w = 10,000)) | flat: within 2× across m | **MET** (12.6 → 16 µs, ≈1.3×, at noise level; the BEFORE 5,000× slope is gone) |
+| `append_grow(n)` net, n = 250 / 500 / 1,000 / 2,000 / 4,000 | 0.023 / 0.113 / 0.700 / 4.56 / 30.42 s | 0.0056 / 0.0141 / 0.0352 / 0.1001 / **0.2748 s** | n = 4,000 < 2 s | **MET** (111×) |
+| `append_grow` successive ×2 ratios | ×5.0, ×6.2, ×6.5, ×6.7 | ×2.5, ×2.5, ×2.8, ×2.7 | ≤ 2.2 | **MISSED** — a residual super-linear term: each in-place append still copies the backing once (the heap is shared across the step — cost B, S3's), ≈ Σ cap; plus the spill path's linear rebuilds |
+| `scalar(80000)` per step | 246 ns (0.964 s net) | 250 ns (1.001 s net) | within 10 % | **MET** (+3.9 %) |
+| `struct{a [10000]byte; x int}: s.x = i` per write | 109,130 µs | 5 µs | (cost A witness) | quadratic gone |
+| `[10000]byte: b[0] = v` per write | 107,972 µs | 23 µs | (cost A witness) | quadratic gone |
+| `append_cap(6400, 100)` per in-place append | 44,437 µs | 29 µs | (cost A witness) | quadratic gone |
+| `alloc_new(32000)` net | 13.77 s | 13.51 s | (S3) | unchanged, as expected |
+| (h) scalar phase at h = 0 / 40k live cells | 0.237 / 6.37 s | 0.259 / 6.05 s | (S3) | unchanged, as expected |
+| `read_fixed(10000, 1000)` per read | 17.8 µs | 16.7 µs | (control) | flat |
+| `map_write(4000)` per write | 45 µs | 45 µs | not a C1 target | unchanged |
+
+Reading: cost A (the whole-root re-normalization with the quadratic `#[head] ++ tail`) is gone — every per-root-size slope is flat to the noise floor. The two misses named above are the SAME mechanism, cost B (the pre-step store retained across the step makes the root array shared, so `Array.modifyM` copies it once per write — O(m), the linear term the BUG-090 note predicted); S3 removes the retention.

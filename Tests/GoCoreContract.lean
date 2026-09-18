@@ -75,7 +75,11 @@ theorem recover_step_does_not_transport (s : Store) :
   cases hc
 
 def illTyped : Store := { heap := #[.value .bool (.int 7)] }
-theorem address_bound_admits_ill_typed : StateWf illTyped := by decide
+/-- Still admitted under `HeapNormal` (C1 S1): the normalizer does not coerce at a
+`.bool` slot (`isNormalForTyTy`'s catch-all), so the address bound remains the only
+thing `StateWf` says about this cell. -/
+theorem address_bound_admits_ill_typed :
+    StateWf (ProgramCtx.ofTables (types := #[])) illTyped := by decide
 
 /-- An actual choice site of the current machine, not a toy transition system. -/
 def forkPoint : Config := .panicking [panicEntry "audit"] (.probeK .stop)

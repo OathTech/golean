@@ -1104,26 +1104,39 @@ it well-founded, and `Acc.rec` reduces nowhere — which blocked kernel
 evaluation of the interpreter (`docs/2026-08-03_sem-adequacy-arc.md`,
 slice-1 spike). Since C2 the parameter is the type layer of the index
 descent at the enclosing bound; element COUNT never touches the descent. -/
-def normalizeListWith (f : GoValue → Except Stop GoValue) :
-    List GoValue → Except Stop (Array GoValue)
-  | value :: rest => do
+def normalizeListWithAux (f : GoValue → Except Stop GoValue) :
+    Array GoValue → List GoValue → Except Stop (Array GoValue)
+  | acc, value :: rest => do
       let head ← f value
-      let tail ← normalizeListWith f rest
-      return #[head] ++ tail
-  | [] => return #[]
+      normalizeListWithAux f (acc.push head) rest
+  | acc, [] => return acc
 
-/-- Normalize struct field values pairwise with the given normalizer,
-checking field-name alignment. -/
-def normalizeFieldsWith (f : Ty → GoValue → Except Stop GoValue) :
-    List FieldDef → List (String × GoValue) →
+/-- The element-wise normalizer: LINEAR (C1 S1, 2026-09-18 — the
+accumulator form; the former `#[head] ++ tail` rebuilt the array per
+element, cost A's quadratic term, `docs/2026-09-11_bug090-rediagnosis.md`
+§3). Still structural on the list (the de-WF recipe above), so kernel
+evaluation is untouched. -/
+def normalizeListWith (f : GoValue → Except Stop GoValue) (values : List GoValue) :
+    Except Stop (Array GoValue) :=
+  normalizeListWithAux f #[] values
+
+def normalizeFieldsWithAux (f : Ty → GoValue → Except Stop GoValue) :
+    Array (String × GoValue) → List FieldDef → List (String × GoValue) →
     Except Stop (Array (String × GoValue))
-  | field :: fieldRest, (actualField, value) :: valueRest => do
+  | acc, field :: fieldRest, (actualField, value) :: valueRest => do
       if actualField != field.name then
         stuck s!"struct value field mismatch: expected {field.name}, got {actualField}"
       let head ← f field.typ value
-      let tail ← normalizeFieldsWith f fieldRest valueRest
-      return #[(field.name, head)] ++ tail
-  | _, _ => return #[]
+      normalizeFieldsWithAux f (acc.push (field.name, head)) fieldRest valueRest
+  | acc, _, _ => return acc
+
+/-- Normalize struct field values pairwise with the given normalizer,
+checking field-name alignment. LINEAR since C1 S1 (accumulator form, as
+`normalizeListWith`). -/
+def normalizeFieldsWith (f : Ty → GoValue → Except Stop GoValue)
+    (defs : List FieldDef) (vals : List (String × GoValue)) :
+    Except Stop (Array (String × GoValue)) :=
+  normalizeFieldsWithAux f #[] defs vals
 
 /-- Go ASSIGNABILITY at the one UNNAMED struct type the wire can carry
 (BUG-011, fixed 2026-08-05 — design note D4): the canonical anonymous
@@ -1233,6 +1246,18 @@ seeded at `types.size`). -/
 def normalizeValueForTy (ty : Ty) (value : GoValue) :
     Except Stop GoValue :=
   normalizeValueForTyTy (normalizeValueForTyAt ctx.types ctx.types.size) ty value
+
+/-- Allocate a VALUE cell at its declared type — the value NORMALIZED at
+that type (C1 S1, charter §7 D3, RULED by default acceptance 2026-09-18):
+the pre-C1 `Store.alloc` created the cell with the evaluated value as is
+(the «alloc hole» `State.lean`'s `HeapCell` docstring named; 13 call
+sites, `.allocNew`'s the one that could carry a non-normal value). With
+this, `HeapNormal` holds from the cell's birth and the leaf-typed
+`storeLoc` below is sound. A value the normalizer refuses is refused HERE
+(fail closed, by name) rather than at its first store. -/
+def Store.alloc (s : Store) (value : GoValue) (typ : Ty) : Except Stop (Loc × Store) := do
+  let v ← normalizeValueForTy ctx typ value
+  return s.allocCell (.value typ v)
 
 /-! ### Self-normalization check (sem-adequacy arc slice 3, 2026-08-04)
 
@@ -1360,39 +1385,154 @@ def loadLoc (state : Store) : Loc → Except Stop GoValue
       | .array values => arrayGet values index
       | other => stuck s!"expected array base for index load, got {repr other}"
 
-/-- Store through a location. Total: structural recursion on the `Loc`
-argument (field/index bases are strict subterms); its non-structural
-callee (`normalizeValueForTy`) is itself total. The premise of `wp_store`.
+/-! ## The memory module's write path (C1 S1, 2026-09-18 —
+`docs/2026-09-17_c1-memory-module-charter.md` §2 (i), D1/D2/D3)
 
-ONE store discipline (A3): the root cell is a VALUE cell at a declared
-type and the incoming value is normalized at that type — there are no
-untyped cells and no value-shape coercion any more. A payload cell (map/
-channel) at the root is an ill-shaped operand (`.stuck`); a missing cell
-is BUG-085's `.internal` (through `Store.updateCell`, the one root
-write path: `Array.set` under its bound — the phantom-cell arm is
-unrepresentable by type). -/
-def storeLoc (state : Store) : Loc → GoValue → Except Stop Store
-    | .base a, value =>
-        state.updateCell a fun
-          | .value ty _ => do
-              let value ← normalizeValueForTy ctx ty value
-              pure (.value ty value)
-          | .mapPayload .. => stuck s!"value store into a map payload cell {repr (Loc.base a)}"
-          | .chanPayload .. => stuck s!"value store into a channel payload cell {repr (Loc.base a)}"
-    | .field base typeId fieldName, value => do
-        match ← loadLoc ctx state base with
-        | .struct actualType fields =>
-            if actualType != typeId && !structTagCompatible ctx actualType typeId then
-              stuck s!"expected struct {typeId.key}, got struct {actualType.key}"
-            let updated ← StructFields.set fields fieldName value
-            -- The cell KEEPS its mint tag (`actualType`) — the
-            -- conversion aliases, never retags (triage L7).
-            storeLoc state base (.struct actualType updated)
-        | other => stuck s!"expected struct base for field store, got {repr other}"
-    | .index base index, value => do
-        match ← loadLoc ctx state base with
-        | .array values => storeLoc state base (.array (← arraySet values index value))
-        | other => stuck s!"expected array base for index store, got {repr other}"
+A `Loc` nests LEAF-FIRST (`.index (.field (.base a) T f) 3`); the write
+descends ROOT-FIRST: the root cell is taken out of the heap, the value and
+its DECLARED type are walked down the path together, the incoming leaf is
+normalized at the leaf's declared type — at the bound the whole-root
+normalizer `normalizeValueForTyAt` would reach at that depth, so the
+result is byte-identical to the former «rewrite the root, normalize the
+whole root» on every normal cell — and every array along the path is
+updated IN PLACE (`Array.modifyM`: the element is swapped out while
+rebuilt, so a uniquely owned root costs O(depth), never O(root size); the
+S0 spike `spikes/c1-frame/Frame.lean` proved the disjoint-path frame law
+for this shape). Refusal texts are byte-preserved: a prefix step refuses
+with `loadLoc`'s texts (the former recursion loaded the prefix), the last
+step with the store texts; the one NEW refusal is the leaf-type descent's
+(`Ty.stepDown`), reachable only on a cell whose declared type has no
+component where its value has one — impossible under `HeapNormal`. -/
+
+/-- One root-first path step (a `Loc` read from its root outwards). -/
+inductive PathStep where
+  | field (typeId : TypeId) (fieldName : String)
+  | index (i : Int)
+  deriving Repr, BEq, DecidableEq
+
+/-- The root address and the ROOT-FIRST path of a location. -/
+def Loc.rootPath : Loc → Addr × List PathStep
+  | .base a => (a, [])
+  | .field b tid f => ((Loc.rootPath b).1, (Loc.rootPath b).2 ++ [.field tid f])
+  | .index b i => ((Loc.rootPath b).1, (Loc.rootPath b).2 ++ [.index i])
+
+/-- The position of the first field named `f` — a STRUCTURAL search (fuel =
+the remaining count) so it kernel-reduces; `Array.findIdx?`'s loop is
+well-founded and does not (S0 finding 3). -/
+def fieldIdxFrom (fields : Array (String × GoValue)) (f : String) : Nat → Nat → Option Nat
+  | 0, _ => none
+  | fuel + 1, i =>
+      match fields[i]? with
+      | some (n, _) => if n == f then some i else fieldIdxFrom fields f fuel (i + 1)
+      | none => none
+
+def fieldIdx? (fields : Array (String × GoValue)) (f : String) : Option Nat :=
+  fieldIdxFrom fields f fields.size 0
+
+/-- The first field definition named `f` (structural on the list). -/
+def FieldDef.find? (f : String) : List FieldDef → Option FieldDef
+  | [] => none
+  | fd :: rest => if fd.name == f then some fd else FieldDef.find? f rest
+
+/-- The DECLARED type one path step down, with the residual bound: `.array`
+→ its element type (no hop); `.defined i` → through the table, ONE bound
+per hop exactly as `normalizeValueForTyAt` descends, to the struct's field
+type. `bound`-structural (the index descent, seeded at `types.size`). -/
+def Ty.stepDown (types : TypeEnv) : Nat → Ty → PathStep → Except Stop (Ty × Nat)
+  | b, .array _ elem, .index _ => pure (elem, b)
+  | b, .defined i, step =>
+      match b with
+      | 0 => typeIndexExhausted "leaf descent" i
+      | b' + 1 =>
+          match types[i]? with
+          | some (_, .struct fields) =>
+              match step with
+              | .field _ f =>
+                  match FieldDef.find? f fields.toList with
+                  | some fd => pure (fd.typ, b')
+                  | none => stuck s!"leaf descent: the declared struct has no field {f}"
+              | .index _ => stuck "leaf descent: index step into a declared struct type"
+          | some (_, .defined target) => Ty.stepDown types b' target step
+          | some (_, .opaqueDecl feature) => GoCore.unsupported s!"normalizing {feature}"
+          | some (name, .interfaceDef _) => GoCore.unsupported s!"normalizing at interface type {name.key}"
+          | none => GoCore.unsupported s!"normalizing unknown type index {i}"
+  | _, _, .field _ f => stuck s!"leaf descent: the declared type has no field {f}"
+  | _, _, .index _ => stuck "leaf descent: the declared type has no element type"
+
+/-- Root-first IN-PLACE write of a leaf (module docstring above). -/
+def writeAt : Nat → Ty → GoValue → List PathStep → GoValue → Except Stop GoValue
+  | b, ty, _, [], v => normalizeValueForTyTy (normalizeValueForTyAt ctx.types b) ty v
+  | b, ty, .struct actualType fields, .field typeId fieldName :: rest, v => do
+      if actualType != typeId && !structTagCompatible ctx actualType typeId then
+        stuck s!"expected struct {typeId.key}, got struct {actualType.key}"
+      match fieldIdx? fields fieldName with
+      | some k => do
+          let (fty, b') ← Ty.stepDown ctx.types b ty (.field typeId fieldName)
+          let fields' ← fields.modifyM k (fun p => do return (p.1, ← writeAt b' fty p.2 rest v))
+          return .struct actualType fields'
+      | none => stuck s!"unknown GoCore struct field: {fieldName}"
+  | _, _, other, .field _ _ :: rest, _ =>
+      match rest with
+      | [] => stuck s!"expected struct base for field store, got {repr other}"
+      | _ :: _ => stuck s!"expected struct base for field load, got {repr other}"
+  | b, ty, .array values, .index index :: rest, v => do
+      let k ← arrayIndexNat values index
+      let (ety, b') ← Ty.stepDown ctx.types b ty (.index index)
+      let values' ← values.modifyM k (fun old => writeAt b' ety old rest v)
+      return .array values'
+  | _, _, other, .index _ :: rest, _ =>
+      match rest with
+      | [] => stuck s!"expected array base for index store, got {repr other}"
+      | _ :: _ => stuck s!"expected array base for index load, got {repr other}"
+
+/-- Store through a location: ONE root-cell update (`Store.updateCell`,
+A3) whose new cell is the root-first in-place write `writeAt` — for the
+root path itself, the whole value normalized at the declared type (the
+former `.base` arm, unchanged); for a field/index path, the leaf
+normalized at ITS declared type and written in place (C1 S1; formerly a
+leaf-first recursion that rewrote and re-normalized the whole root, cost
+A). A payload cell (map/channel) at the root is an ill-shaped operand
+(`.stuck`, the store text at the root, the load text under a path — the
+former recursion loaded the prefix); a missing cell is BUG-085's
+`.internal` (through `Store.updateCell`; under a path the former recursion
+reported `loadLoc`'s `unbound GoCore heap location` — an unreachable
+refusal by heap density, class disclosed in the S1 record). -/
+def storeLoc (state : Store) (l : Loc) (value : GoValue) : Except Stop Store :=
+  let rp := Loc.rootPath l
+  state.updateCell rp.1 fun
+    | .value ty root => (.value ty ·) <$> writeAt ctx ctx.types.size ty root rp.2 value
+    | .mapPayload .. =>
+        match rp.2 with
+        | [] => stuck s!"value store into a map payload cell {repr (Loc.base rp.1)}"
+        | _ :: _ => stuck s!"value load from a map payload cell {repr (Loc.base rp.1)}"
+    | .chanPayload .. =>
+        match rp.2 with
+        | [] => stuck s!"value store into a channel payload cell {repr (Loc.base rp.1)}"
+        | _ :: _ => stuck s!"value load from a channel payload cell {repr (Loc.base rp.1)}"
+
+/-! ## `HeapNormal` — every value cell normal at its declared type (C1 S1, D3) -/
+
+/-- A cell is normal when a VALUE cell's value is self-normalized at the
+cell's declared type; payload cells carry no declared value type. -/
+def HeapCell.normal (types : TypeEnv) : HeapCell → Bool
+  | .value ty v => isNormalForTy types ty v
+  | .mapPayload .. => true
+  | .chanPayload .. => true
+
+/-- The heap-wide check, structural on the cell list (kernel-reducible). -/
+def Heap.normalB (types : TypeEnv) (h : Heap) : Bool :=
+  h.toList.all (HeapCell.normal types)
+
+/-- THE NORMAL-FORM INVARIANT: every value cell of the store is normal at
+its declared type over the program's type table. Established by
+`Store.alloc` (which normalizes) and preserved by `storeLoc` (leaf
+normalization + the congruence «a normal root updated at one leaf by a
+value normal at the leaf's type is normal») and by the payload writers
+(they touch no value cell). A `StateWf` conjunct since C1 S1. -/
+def HeapNormal (s : Store) : Prop :=
+  Heap.normalB ctx.types s.heap = true
+
+instance (s : Store) : Decidable (HeapNormal ctx s) := by unfold HeapNormal; infer_instance
 
 -- `lookup` deleted (reshape S4): variable reads are `Machine.Step.evalVar`
 -- (control-side env lookup + `loadLoc`), never a state-side name lookup.

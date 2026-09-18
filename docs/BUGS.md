@@ -5609,6 +5609,20 @@ validate-then-commit or a per-cell undo log); (4) decide cell granularity
 linear, `append_grow` linear amortized; then revisit the corpus
 consequences above. Status stays open; the Cases line is unchanged.
 
+**Re-measurement after C1 S1 (2026-09-18, [AGENT] lane `core/c1-memory-module-0918`;
+evidence `docs/evidence/2026-09-18_c1-memory-module/README.md` «S1», same probes/runner
+/box class as the 2026-09-11 note, 3 runs, net of the empty probe).** Mechanism A is
+CLOSED by the memory module (root-first in-place `storeLoc`, linear normalizers,
+`docs/hygiene-slice-log.md` C1 S1): `write_fixed` 21 µs → 107 ms across m = 10…10,000
+BEFORE, now 12.6–16 µs flat at the noise floor; `append_grow` n = 4,000: 30.4 s → 0.275 s;
+`struct{a [10000]byte; x int}: s.x = i` 109 ms → 5 µs; `[10000]byte: b[0] = v` 108 ms →
+23 µs; 100 in-place appends at cap 6,400: 4.44 s → 2.9 ms. Mechanism B is UNCHANGED, as
+the charter sequences it (S3): `alloc_new` 32k 13.8 → 13.5 s; the (h) scalar phase 6.37 →
+6.05 s at 40k live cells; `append_grow`'s successive ×2 ratios 2.5–2.8 (target ≤ 2.2)
+are B's residual — the shared root array copied once per in-place append. Corpus
+consequences (Builder rows ≤ 1 KB, fuzz 10 × 300, `repeat-bound-refused`, `issue24419`)
+are revisited at S3, when both mechanisms are closed.
+
 ## BUG-091 — the native frontend's quarantine-reason text for multi-label `goto` shapes is EXPORT-NONDETERMINISTIC: `emit.go` ranges a Go MAP to name the offending label, so the wire bytes of one program differ run to run [frontend export nondeterminism; fail-closed but non-reproducible refusal text]
 
 - Status: fixed (2026-09-04, lane `fr22-fr23`, commit 977b92e5 (pre-rebase 1aa49562; snapshot refs/snapshots/round11-fr22-fr23-2026-09-04) — the goto-label set

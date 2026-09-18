@@ -35,11 +35,11 @@ cell is pushed (dense heap, A2 — the ONLY way a cell comes to exist). -/
 def Store.allocCell (s : Store) (cell : HeapCell) : Loc × Store :=
   (.base ⟨s.heap.size⟩, { heap := s.heap.push cell })
 
-/-- Allocate a VALUE cell at its declared type. Allocation does NOT
-normalize (the pre-existing hole `State.lean`'s `HeapCell` docstring
-names; C1 §5 item 1's) — byte-identical to the pre-B7 machine. -/
-def Store.alloc (s : Store) (value : GoValue) (typ : Ty) : Loc × Store :=
-  s.allocCell (.value typ value)
+-- `Store.alloc` (the VALUE-cell allocator) lives in `Ops.lean` since C1 S1
+-- (2026-09-18): it NORMALIZES the value at the declared type (charter §7 D3,
+-- RULED by default acceptance 2026-09-18), which needs the normalizer; the
+-- pre-C1 non-normalizing `Store.alloc` here — «the alloc hole» — is
+-- tombstoned by that definition. `allocCell` (payload cells) stays.
 
 /-- Overwrite root cell `a` through `f` (which sees the old cell), FAIL
 CLOSED out of range: `.internal` (BUG-085 — an unallocated address is an

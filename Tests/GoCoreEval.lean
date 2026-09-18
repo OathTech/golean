@@ -2187,7 +2187,9 @@ def main : IO UInt32 := do
   -- here at the Lean level. Positive control first: the same store to an
   -- ALLOCATED cell succeeds, so the refusal below is not "refuses everything".
   passed := passed && (← expectTrue "GoCore storeLoc to an ALLOCATED .base cell succeeds (positive control for the BUG-085 guard)"
-    (let (loc, s) := (({} : GoCore.Store).alloc (.int 0) .int)
+    (match GoCore.Store.alloc (GoCore.ProgramCtx.ofTables (types := #[])) ({} : GoCore.Store) (.int 0) .int with
+     | .error _ => false
+     | .ok (loc, s) =>
      match GoCore.storeLoc (GoCore.ProgramCtx.ofTables (types := #[])) s loc (.int 7) with
      | .ok s' =>
          match GoCore.loadLoc (GoCore.ProgramCtx.ofTables (types := #[])) s' loc with

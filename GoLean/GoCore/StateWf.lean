@@ -666,16 +666,18 @@ every walk/transparency lemma about them (`seqCont_`, `pushDefer_`,
 
 /-! ## The Prop wrappers -/
 
+variable (ctx) in
 /-- State well-formedness: no location in the heap (values or payloads)
 dangles at or beyond `nextAddr`. Heap-only since B7 (the context half of
 the domain invariant is `Stmt.locSup_eq_zero`, a theorem, not a check). -/
 def StateWf (σ : Store) : Prop :=
-  Store.locSup σ ≤ σ.nextAddr
+  Store.locSup σ ≤ σ.nextAddr ∧ HeapNormal ctx σ
 
 /-- Configuration well-formedness at an allocator bound. -/
 def ConfigWf (bound : Nat) (c : Config) : Prop :=
   Config.locSup c ≤ bound
 
+variable (ctx) in
 /-- The bundled invariant `Step` preserves: loc-boundedness of state and
 configuration. B7 / D6 ([USER] 2026-09-16, relayed: «go ahead with the
 D1-8 rulings as recommended»): the former third conjunct
@@ -688,12 +690,13 @@ by `mapIterCandidates`' fail-closed pick-time validation, not by an
 invariant. A restatement, not a weakening: the deleted conjunct was a
 theorem. -/
 def MachineWf (σ : Store) (c : Config) : Prop :=
-  StateWf σ ∧ ConfigWf σ.nextAddr c
+  StateWf ctx σ ∧ ConfigWf σ.nextAddr c
 
-instance (σ : Store) : Decidable (StateWf σ) := by unfold StateWf; infer_instance
+instance (ctx : ProgramCtx) (σ : Store) : Decidable (StateWf ctx σ) := by
+  unfold StateWf; infer_instance
 instance (bound : Nat) (c : Config) : Decidable (ConfigWf bound c) := by
   unfold ConfigWf; infer_instance
-instance (σ : Store) (c : Config) : Decidable (MachineWf σ c) := by
+instance (ctx : ProgramCtx) (σ : Store) (c : Config) : Decidable (MachineWf ctx σ c) := by
   unfold MachineWf; infer_instance
 
 /-- Monotonicity: every checker in the family lifts along a larger bound —
@@ -1086,28 +1089,80 @@ theorem Loc.locSup_field {b : Loc} {t : TypeId} {f : String} :
 
 /-! ## Type-directed value operations: outputs never invent locations -/
 
+theorem goValueListSup_push {arr : Array GoValue} {x : GoValue} :
+    goValueListSup (arr.push x).toList
+      = max (goValueListSup arr.toList) (GoValue.locSup x) := by
+  simp [goValueListSup_eq, Array.toList_push, supBy_append, supBy]
+
+theorem goValueFieldsSup_push {arr : Array (String × GoValue)}
+    {p : String × GoValue} :
+    goValueFieldsSup (arr.push p).toList
+      = max (goValueFieldsSup arr.toList) (GoValue.locSup p.2) := by
+  simp [goValueFieldsSup_eq, Array.toList_push, supBy_append, supBy]
+
+theorem normalizeListWithAux_locSup {f : GoValue → Except Stop GoValue}
+    (hf : ∀ v r, f v = .ok r → GoValue.locSup r ≤ GoValue.locSup v) :
+    ∀ {l : List GoValue} {acc arr : Array GoValue},
+      normalizeListWithAux f acc l = .ok arr →
+      goValueListSup arr.toList ≤ max (goValueListSup acc.toList) (goValueListSup l) := by
+  intro l
+  induction l with
+  | nil =>
+    intro acc arr h
+    simp only [normalizeListWithAux, pure_eq_ok, Except.ok.injEq] at h
+    subst h
+    simp [goValueListSup]
+  | cons v vs ih =>
+    intro acc arr h
+    simp only [normalizeListWithAux, bind_eq_ok] at h
+    obtain ⟨head, hhead, h⟩ := h
+    have h1 := hf v head hhead
+    have h2 := ih h
+    rw [goValueListSup_push] at h2
+    simp only [goValueListSup]
+    omega
+
 theorem normalizeListWith_locSup {f : GoValue → Except Stop GoValue}
     (hf : ∀ v r, f v = .ok r → GoValue.locSup r ≤ GoValue.locSup v) :
     ∀ {l : List GoValue} {arr : Array GoValue},
       normalizeListWith f l = .ok arr →
       goValueListSup arr.toList ≤ goValueListSup l := by
-  intro l
-  induction l with
+  intro l arr h
+  have := normalizeListWithAux_locSup hf h
+  simpa [goValueListSup] using this
+
+theorem normalizeFieldsWithAux_locSup {f : Ty → GoValue → Except Stop GoValue}
+    (hf : ∀ ty v r, f ty v = .ok r → GoValue.locSup r ≤ GoValue.locSup v) :
+    ∀ {fields : List FieldDef} {vals : List (String × GoValue)}
+      {acc arr : Array (String × GoValue)},
+      normalizeFieldsWithAux f acc fields vals = .ok arr →
+      goValueFieldsSup arr.toList ≤ max (goValueFieldsSup acc.toList) (goValueFieldsSup vals) := by
+  intro fields
+  induction fields with
   | nil =>
-    intro arr h
-    simp only [normalizeListWith, pure_eq_ok, Except.ok.injEq] at h
+    intro vals acc arr h
+    simp only [normalizeFieldsWithAux, pure_eq_ok, Except.ok.injEq] at h
     subst h
-    simp [goValueListSup]
-  | cons v vs ih =>
-    intro arr h
-    simp only [normalizeListWith, bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
-    obtain ⟨head, hhead, tail, htail, rfl⟩ := h
-    have h1 := hf v head hhead
-    have h2 := ih htail
-    have hl : (#[head] ++ tail).toList = head :: tail.toList := by simp
-    rw [hl]
-    simp only [goValueListSup]
-    omega
+    exact Nat.le_max_left _ _
+  | cons fd frest ih =>
+    intro vals acc arr h
+    cases vals with
+    | nil =>
+      simp only [normalizeFieldsWithAux, pure_eq_ok, Except.ok.injEq] at h
+      subst h
+      simp [goValueFieldsSup]
+    | cons p vrest =>
+      obtain ⟨pn, pv⟩ := p
+      simp only [normalizeFieldsWithAux] at h
+      split at h
+      · simp [Bind.bind, Except.bind] at h
+      · simp only [bind_eq_ok] at h
+        obtain ⟨head, hhead, h⟩ := h
+        have h1 := hf _ _ _ hhead
+        have h2 := ih h
+        rw [goValueFieldsSup_push] at h2
+        simp only [goValueFieldsSup] at *
+        omega
 
 theorem normalizeFieldsWith_locSup {f : Ty → GoValue → Except Stop GoValue}
     (hf : ∀ ty v r, f ty v = .ok r → GoValue.locSup r ≤ GoValue.locSup v) :
@@ -1115,35 +1170,9 @@ theorem normalizeFieldsWith_locSup {f : Ty → GoValue → Except Stop GoValue}
       {arr : Array (String × GoValue)},
       normalizeFieldsWith f fields vals = .ok arr →
       goValueFieldsSup arr.toList ≤ goValueFieldsSup vals := by
-  intro fields
-  induction fields with
-  | nil =>
-    intro vals arr h
-    simp only [normalizeFieldsWith, pure_eq_ok, Except.ok.injEq] at h
-    subst h
-    simp [goValueFieldsSup]
-  | cons fd frest ih =>
-    intro vals arr h
-    cases vals with
-    | nil =>
-      simp only [normalizeFieldsWith, pure_eq_ok, Except.ok.injEq] at h
-      subst h
-      simp [goValueFieldsSup]
-    | cons p vrest =>
-      obtain ⟨pn, pv⟩ := p
-      simp only [normalizeFieldsWith] at h
-      split at h
-      · simp [Bind.bind, Except.bind] at h
-      · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
-        obtain ⟨head, hhead, tail, htail, hr⟩ := h
-        subst hr
-        have h1 := hf _ _ _ hhead
-        have h2 := ih htail
-        have hl : (#[(fd.name, head)] ++ tail).toList
-            = (fd.name, head) :: tail.toList := by simp
-        rw [hl]
-        simp only [goValueFieldsSup] at *
-        omega
+  intro fields vals arr h
+  have := normalizeFieldsWithAux_locSup hf h
+  simpa [goValueFieldsSup] using this
 
 theorem normalizeStructValueWith_locSup {f : Ty → GoValue → Except Stop GoValue}
     (hf : ∀ ty v r, f ty v = .ok r → GoValue.locSup r ≤ GoValue.locSup v)
@@ -1426,35 +1455,47 @@ is the direction every theorem consumes: check true ⇒ the normalizer
 returns the value UNCHANGED. Stated against an arbitrary state whose
 `types` is the checker's environment. -/
 
+theorem isNormalListWith_sound_aux {f : GoValue → Bool}
+    {g : GoValue → Except Stop GoValue}
+    (hfg : ∀ v, f v = true → g v = .ok v) :
+    ∀ {l : List GoValue} (acc : Array GoValue), isNormalListWith f l = true →
+      normalizeListWithAux g acc l = .ok (acc ++ l.toArray) := by
+  intro l
+  induction l with
+  | nil => intro acc _; simp [normalizeListWithAux, pure, Except.pure]
+  | cons v rest ih =>
+    intro acc h
+    simp only [isNormalListWith, Bool.and_eq_true] at h
+    simp only [normalizeListWithAux, hfg v h.1, Bind.bind, Except.bind]
+    rw [ih (acc.push v) h.2]
+    congr 1
+    apply Array.ext'
+    simp
+
 theorem isNormalListWith_sound {f : GoValue → Bool}
     {g : GoValue → Except Stop GoValue}
     (hfg : ∀ v, f v = true → g v = .ok v) :
     ∀ {l : List GoValue}, isNormalListWith f l = true →
       normalizeListWith g l = .ok l.toArray := by
-  intro l
-  induction l with
-  | nil => intro _; simp [normalizeListWith, pure, Except.pure]
-  | cons v rest ih =>
-    intro h
-    simp only [isNormalListWith, Bool.and_eq_true] at h
-    simp [normalizeListWith, hfg v h.1, ih h.2, Bind.bind, Except.bind,
-      pure, Except.pure]
+  intro l h
+  have := isNormalListWith_sound_aux hfg #[] h
+  simpa [normalizeListWith] using this
 
-theorem isNormalFieldsWith_sound {f : Ty → GoValue → Bool}
+theorem isNormalFieldsWith_sound_aux {f : Ty → GoValue → Bool}
     {g : Ty → GoValue → Except Stop GoValue}
     (hfg : ∀ ty v, f ty v = true → g ty v = .ok v) :
-    ∀ {fds : List FieldDef} {vals : List (String × GoValue)},
+    ∀ {fds : List FieldDef} {vals : List (String × GoValue)} (acc : Array (String × GoValue)),
       isNormalFieldsWith f fds vals = true →
-      normalizeFieldsWith g fds vals = .ok vals.toArray := by
+      normalizeFieldsWithAux g acc fds vals = .ok (acc ++ vals.toArray) := by
   intro fds
   induction fds with
   | nil =>
-    intro vals h
+    intro vals acc h
     cases vals with
-    | nil => simp [normalizeFieldsWith, pure, Except.pure]
+    | nil => simp [normalizeFieldsWithAux, pure, Except.pure]
     | cons _ _ => simp [isNormalFieldsWith] at h
   | cons fd fdRest ih =>
-    intro vals h
+    intro vals acc h
     cases vals with
     | nil => simp [isNormalFieldsWith] at h
     | cons p valRest =>
@@ -1462,8 +1503,22 @@ theorem isNormalFieldsWith_sound {f : Ty → GoValue → Bool}
       simp only [isNormalFieldsWith, Bool.and_eq_true, decide_eq_true_eq] at h
       obtain ⟨⟨hname, hv⟩, hrest⟩ := h
       subst hname
-      simp [normalizeFieldsWith, hfg _ _ hv, ih hrest, Bind.bind, Except.bind,
-        pure, Except.pure]
+      simp only [normalizeFieldsWithAux, bne_self_eq_false, Bool.false_eq_true, ↓reduceIte,
+        hfg _ _ hv, Bind.bind, Except.bind, pure, Except.pure]
+      rw [ih (acc.push (fd.name, v)) hrest]
+      congr 1
+      apply Array.ext'
+      simp
+
+theorem isNormalFieldsWith_sound {f : Ty → GoValue → Bool}
+    {g : Ty → GoValue → Except Stop GoValue}
+    (hfg : ∀ ty v, f ty v = true → g ty v = .ok v) :
+    ∀ {fds : List FieldDef} {vals : List (String × GoValue)},
+      isNormalFieldsWith f fds vals = true →
+      normalizeFieldsWith g fds vals = .ok vals.toArray := by
+  intro fds vals h
+  have := isNormalFieldsWith_sound_aux hfg #[] h
+  simpa [normalizeFieldsWith] using this
 
 /-- The TYPE layer: check true ⇒ the normalizer's type layer returns the
 value unchanged, given the same for the two `.defined` callbacks. -/
@@ -1576,16 +1631,510 @@ theorem isNormalForTy_sound {ty : Ty} {v : GoValue}
   unfold isNormalForTy at h
   exact isNormalForTyTy_sound (fun _ _ hh => isNormalForTyAt_sound _ _ hh) h
 
+/-! #### The list/field normalizers' old equations (C1 S1)
+
+`normalizeListWith`/`normalizeFieldsWith` are LINEAR since C1 S1 (accumulator
+form, `Ops.lean`); the lemmas below recover the former recursive equations, so
+every proof that unfolded them arm by arm keeps its shape. -/
+
+theorem normalizeListWithAux_acc {f : GoValue → Except Stop GoValue} :
+    ∀ (l : List GoValue) (acc : Array GoValue),
+      normalizeListWithAux f acc l = (normalizeListWithAux f #[] l).map (acc ++ ·) := by
+  intro l
+  induction l with
+  | nil => intro acc; simp [normalizeListWithAux, pure, Except.pure, Except.map]
+  | cons v rest ih =>
+    intro acc
+    simp only [normalizeListWithAux]
+    cases f v with
+    | error e => simp [Bind.bind, Except.bind, Except.map]
+    | ok h =>
+      simp only [Bind.bind, Except.bind]
+      rw [ih (acc.push h), ih (#[].push h)]
+      cases normalizeListWithAux f #[] rest with
+      | error e => simp [Except.map]
+      | ok tail =>
+        simp only [Except.map, Except.ok.injEq]
+        apply Array.ext'
+        simp
+
+theorem normalizeListWith_nil {f : GoValue → Except Stop GoValue} :
+    normalizeListWith f [] = pure #[] := rfl
+
+theorem normalizeListWith_cons {f : GoValue → Except Stop GoValue} {v : GoValue}
+    {rest : List GoValue} :
+    normalizeListWith f (v :: rest) = do
+      let head ← f v
+      let tail ← normalizeListWith f rest
+      return #[head] ++ tail := by
+  simp only [normalizeListWith, normalizeListWithAux]
+  cases f v with
+  | error e => simp [Bind.bind, Except.bind]
+  | ok h =>
+    simp only [Bind.bind, Except.bind]
+    rw [normalizeListWithAux_acc rest (#[].push h)]
+    cases normalizeListWithAux f #[] rest with
+    | error e => simp [Except.map]
+    | ok tail =>
+      simp only [Except.map, pure, Except.pure, Except.ok.injEq]
+      apply Array.ext'
+      simp
+
+theorem normalizeFieldsWithAux_acc {f : Ty → GoValue → Except Stop GoValue} :
+    ∀ (defs : List FieldDef) (vals : List (String × GoValue)) (acc : Array (String × GoValue)),
+      normalizeFieldsWithAux f acc defs vals
+        = (normalizeFieldsWithAux f #[] defs vals).map (acc ++ ·) := by
+  intro defs
+  induction defs with
+  | nil =>
+    intro vals acc
+    simp [normalizeFieldsWithAux, pure, Except.pure, Except.map]
+  | cons fd rest ih =>
+    intro vals acc
+    cases vals with
+    | nil => simp [normalizeFieldsWithAux, pure, Except.pure, Except.map]
+    | cons p valRest =>
+      obtain ⟨actual, v⟩ := p
+      simp only [normalizeFieldsWithAux]
+      split
+      · simp [Bind.bind, Except.bind, stuck, throw, throwThe, MonadExceptOf.throw,
+          Except.map]
+      · simp only [Bind.bind, Except.bind]
+        cases f fd.typ v with
+        | error e => simp [Except.map]
+        | ok h =>
+          simp only
+          rw [ih valRest (acc.push (fd.name, h)), ih valRest (#[].push (fd.name, h))]
+          cases normalizeFieldsWithAux f #[] rest valRest with
+          | error e => simp [Except.map]
+          | ok tail =>
+            simp only [Except.map, Except.ok.injEq]
+            apply Array.ext'
+            simp
+
+theorem normalizeFieldsWith_nil_left {f : Ty → GoValue → Except Stop GoValue}
+    {vals : List (String × GoValue)} : normalizeFieldsWith f [] vals = pure #[] := by
+  cases vals <;> rfl
+
+theorem normalizeFieldsWith_nil_right {f : Ty → GoValue → Except Stop GoValue}
+    {defs : List FieldDef} : normalizeFieldsWith f defs [] = pure #[] := by
+  cases defs <;> rfl
+
+theorem normalizeFieldsWith_cons {f : Ty → GoValue → Except Stop GoValue} {fd : FieldDef}
+    {defs : List FieldDef} {actual : String} {v : GoValue} {vals : List (String × GoValue)} :
+    normalizeFieldsWith f (fd :: defs) ((actual, v) :: vals) = do
+      if actual != fd.name then
+        stuck s!"struct value field mismatch: expected {fd.name}, got {actual}"
+      let head ← f fd.typ v
+      let tail ← normalizeFieldsWith f defs vals
+      return #[(fd.name, head)] ++ tail := by
+  simp only [normalizeFieldsWith, normalizeFieldsWithAux]
+  split
+  · simp [Bind.bind, Except.bind, stuck, throw, throwThe, MonadExceptOf.throw]
+  · simp only [Bind.bind, Except.bind, pure, Except.pure]
+    cases f fd.typ v with
+    | error e => rfl
+    | ok h =>
+      simp only
+      rw [normalizeFieldsWithAux_acc defs vals (#[].push (fd.name, h))]
+      cases normalizeFieldsWithAux f #[] defs vals with
+      | error e => simp [Except.map]
+      | ok tail =>
+        simp only [Except.map, Except.ok.injEq]
+        apply Array.ext'
+        simp
+
+
+/-! #### Idempotence: the normalizer's output is self-normal (C1 S1) -/
+
+theorem isNormalListWith_iff {f : GoValue → Bool} :
+    ∀ l : List GoValue, isNormalListWith f l = true ↔ ∀ x ∈ l, f x = true := by
+  intro l
+  induction l with
+  | nil => simp [isNormalListWith]
+  | cons x rest ih => simp [isNormalListWith, ih]
+
+theorem IntKind.normalize_idem (kind : IntKind) (v : Int) :
+    kind.normalize (kind.normalize v) = kind.normalize v := by
+  unfold IntKind.normalize
+  cases hb : kind.bits? with
+  | none => rfl
+  | some bits =>
+    simp only
+    have hm : (0 : Int) < 2 ^ bits := Int.pow_pos (by decide)
+    have hw0 : 0 ≤ v % 2 ^ bits := Int.emod_nonneg v (Int.ne_of_gt hm)
+    have hwlt : v % 2 ^ bits < 2 ^ bits := Int.emod_lt_of_pos v hm
+    have hself : v % 2 ^ bits % 2 ^ bits = v % 2 ^ bits := Int.emod_eq_of_lt hw0 hwlt
+    cases kind.signed with
+    | false => simp [hself]
+    | true =>
+      simp only [ite_true]
+      split
+      · rename_i hge
+        rw [Int.sub_emod_right, hself]
+        simp [hge]
+      · rename_i hlt
+        rw [hself]
+        simp [hlt]
+
+theorem FloatKind.normalizeBits_idem (kind : FloatKind) (b : Nat) :
+    kind.normalizeBits (kind.normalizeBits b) = kind.normalizeBits b := by
+  unfold FloatKind.normalizeBits
+  exact Nat.mod_mod _ _
+
+/-- Pointwise relation on two lists of equal length (core has no `Forall₂`). -/
+inductive Pointwise {α β : Type} (R : α → β → Prop) : List α → List β → Prop
+  | nil : Pointwise R [] []
+  | cons {a : α} {b : β} {l : List α} {l' : List β} :
+      R a b → Pointwise R l l' → Pointwise R (a :: l) (b :: l')
+
+theorem Pointwise.length_eq {α β : Type} {R : α → β → Prop} :
+    ∀ {l : List α} {l' : List β}, Pointwise R l l' → l.length = l'.length := by
+  intro l l' h
+  induction h with
+  | nil => rfl
+  | cons _ _ ih => simp [ih]
+
+/-- `normalizeListWith`'s output, characterized pointwise. -/
+theorem normalizeListWith_ok {f : GoValue → Except Stop GoValue} :
+    ∀ {l : List GoValue} {r : Array GoValue},
+      normalizeListWith f l = .ok r →
+      ∃ ws : List GoValue, r = ws.toArray ∧ Pointwise (fun v w => f v = .ok w) l ws := by
+  intro l
+  induction l with
+  | nil =>
+    intro r h
+    rw [normalizeListWith_nil] at h
+    simp only [pure_eq_ok, Except.ok.injEq] at h
+    subst h
+    exact ⟨[], rfl, Pointwise.nil⟩
+  | cons v rest ih =>
+    intro r h
+    rw [normalizeListWith_cons] at h
+    simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
+    obtain ⟨w, hw, tail, htail, hr⟩ := h
+    obtain ⟨ws, rfl, hall⟩ := ih htail
+    exact ⟨w :: ws, by simp [← hr], Pointwise.cons hw hall⟩
+
+theorem isNormalListWith_of_pointwise {g : GoValue → Bool} {f : GoValue → Except Stop GoValue}
+    (hfg : ∀ v w, f v = .ok w → g w = true) :
+    ∀ {l ws : List GoValue}, Pointwise (fun v w => f v = .ok w) l ws →
+      isNormalListWith g ws = true := by
+  intro l ws h
+  induction h with
+  | nil => rfl
+  | cons hvw _ ih =>
+    simp only [isNormalListWith, Bool.and_eq_true]
+    exact ⟨hfg _ _ hvw, ih⟩
+
+/-- The field normalizer's output: same names in order, each value the
+normalizer's output at the declared field type; length = the shorter list. -/
+theorem normalizeFieldsWith_isNormal {f : Ty → GoValue → Except Stop GoValue}
+    {g : Ty → GoValue → Bool} (hfg : ∀ ty v w, f ty v = .ok w → g ty w = true) :
+    ∀ {defs : List FieldDef} {vals : List (String × GoValue)} {r : Array (String × GoValue)},
+      normalizeFieldsWith f defs vals = .ok r → defs.length = vals.length →
+      isNormalFieldsWith g defs r.toList = true ∧ r.size = defs.length := by
+  intro defs
+  induction defs with
+  | nil =>
+    intro vals r h hlen
+    cases vals with
+    | nil =>
+      rw [normalizeFieldsWith_nil_left] at h
+      simp only [pure_eq_ok, Except.ok.injEq] at h
+      subst h
+      exact ⟨rfl, rfl⟩
+    | cons _ _ => simp at hlen
+  | cons fd rest ih =>
+    intro vals r h hlen
+    cases vals with
+    | nil => simp at hlen
+    | cons p valRest =>
+      obtain ⟨actual, v⟩ := p
+      rw [normalizeFieldsWith_cons] at h
+      split at h
+      · simp [stuck, throw, throwThe, MonadExceptOf.throw, Bind.bind, Except.bind] at h
+      · rename_i hname
+        simp only [Bind.bind, Except.bind] at h
+        cases hv : f fd.typ v with
+        | error e => rw [hv] at h; simp at h
+        | ok w =>
+          rw [hv] at h
+          simp only at h
+          cases htail : normalizeFieldsWith f rest valRest with
+          | error e => rw [htail] at h; simp at h
+          | ok tail =>
+            rw [htail] at h
+            simp only [pure, Except.pure, Except.ok.injEq] at h
+            subst h
+            obtain ⟨hnorm, hsize⟩ := ih htail (by simpa using hlen)
+            refine ⟨?_, by simp [hsize, Nat.add_comm]⟩
+            simp only [Array.toList_append, List.singleton_append,
+              isNormalFieldsWith, Bool.and_eq_true, decide_eq_true_eq]
+            exact ⟨⟨trivial, hfg _ _ _ hv⟩, hnorm⟩
+
+/-- THE TYPE LAYER: the normalizer's output is self-normal, given the same
+for the two `.defined` callbacks. -/
+theorem normalizeValueForTyTy_isNormal {f : TypeIdx → GoValue → Except Stop GoValue}
+    {g : TypeIdx → GoValue → Bool}
+    (hfg : ∀ i v w, f i v = .ok w → g i w = true) :
+    ∀ {ty : Ty} {v w : GoValue},
+      normalizeValueForTyTy f ty v = .ok w → isNormalForTyTy g ty w = true := by
+  intro ty
+  induction ty using Ty.arrayInduction with
+  | array length elem ih =>
+    intro v w h
+    cases v
+    case array values =>
+      simp only [normalizeValueForTyTy] at h
+      by_cases hsz : values.size = length
+      · simp only [hsz, bne_self_eq_false, Bool.false_eq_true, ↓reduceIte] at h
+        cases hl : normalizeListWith (normalizeValueForTyTy f elem) values.toList with
+        | error e => rw [hl] at h; simp [Functor.map, Except.map] at h
+        | ok arr =>
+          rw [hl] at h
+          simp only [Functor.map, Except.map, Except.ok.injEq] at h
+          subst h
+          obtain ⟨ws, rfl, hall⟩ := normalizeListWith_ok hl
+          simp only [isNormalForTyTy, Bool.and_eq_true, decide_eq_true_eq]
+          refine ⟨?_, ?_⟩
+          · have := hall.length_eq
+            simp only [Array.length_toList] at this
+            simp [← this, hsz]
+          · simpa using isNormalListWith_of_pointwise (fun v w hvw => ih hvw) hall
+      · have hne : (values.size != length) = true := by simpa using hsz
+        simp [hne, stuck, throw, throwThe, MonadExceptOf.throw, Bind.bind, Except.bind] at h
+    all_goals exact absurd h (by simp [normalizeValueForTyTy, stuck, throw, throwThe,
+      MonadExceptOf.throw])
+  | leaf ty hne =>
+    intro v w h
+    cases ty with
+    | array => exact absurd rfl (hne _ _)
+    | int kind =>
+      cases v
+      case int value k =>
+        simp only [normalizeValueForTyTy, pure, Except.pure, Except.ok.injEq] at h
+        subst h
+        simp [isNormalForTyTy, IntKind.normalize_idem]
+      all_goals exact absurd h (by simp [normalizeValueForTyTy, stuck, throw, throwThe,
+        MonadExceptOf.throw])
+    | float kind =>
+      cases v
+      case float bits k =>
+        simp only [normalizeValueForTyTy] at h
+        split at h
+        · rename_i hk
+          simp only [pure, Except.pure, Except.ok.injEq] at h
+          subst h
+          have hkk : kind = k := by
+            cases kind <;> cases k <;> first | rfl | exact absurd hk (by decide)
+          subst hkk
+          simp [isNormalForTyTy, FloatKind.normalizeBits_idem]
+        · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
+      all_goals exact absurd h (by simp [normalizeValueForTyTy, stuck, throw, throwThe,
+        MonadExceptOf.throw])
+    | interface _ =>
+      simp only [normalizeValueForTyTy, pure, Except.pure, Except.ok.injEq] at h
+      simp [isNormalForTyTy]
+    | funcType params results _ =>
+      cases v
+      case funcVal fid captured =>
+        simp only [normalizeValueForTyTy, pure, Except.pure, Except.ok.injEq] at h
+        subst h; simp [isNormalForTyTy]
+      case nil =>
+        simp only [normalizeValueForTyTy, pure, Except.pure, Except.ok.injEq] at h
+        subst h; simp [isNormalForTyTy]
+      all_goals exact absurd h (by simp [normalizeValueForTyTy, stuck, throw, throwThe,
+        MonadExceptOf.throw])
+    | defined i => exact hfg _ _ _ h
+    | unsupported _ =>
+      exact absurd h (by simp [normalizeValueForTyTy, unsupported, throw, throwThe,
+        MonadExceptOf.throw])
+    | bool =>
+      simp only [normalizeValueForTyTy, pure, Except.pure, Except.ok.injEq] at h
+      simp [isNormalForTyTy]
+    | string =>
+      simp only [normalizeValueForTyTy, pure, Except.pure, Except.ok.injEq] at h
+      simp [isNormalForTyTy]
+    | slice _ =>
+      simp only [normalizeValueForTyTy, pure, Except.pure, Except.ok.injEq] at h
+      simp [isNormalForTyTy]
+    | map _ _ =>
+      simp only [normalizeValueForTyTy, pure, Except.pure, Except.ok.injEq] at h
+      simp [isNormalForTyTy]
+    | chan _ _ =>
+      cases v
+      case chan cv =>
+        simp only [normalizeValueForTyTy, pure, Except.pure, Except.ok.injEq] at h
+        subst h; simp [isNormalForTyTy]
+      case nil =>
+        simp only [normalizeValueForTyTy, pure, Except.pure, Except.ok.injEq] at h
+        subst h; simp [isNormalForTyTy]
+      all_goals exact absurd h (by simp [normalizeValueForTyTy, stuck, throw, throwThe,
+        MonadExceptOf.throw])
+    | sync kind =>
+      cases v
+      case syncData p =>
+        simp only [normalizeValueForTyTy] at h
+        split at h
+        · rename_i hk
+          simp only [pure, Except.pure, Except.ok.injEq] at h
+          subst h
+          simpa [isNormalForTyTy] using hk
+        · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
+      all_goals exact absurd h (by simp [normalizeValueForTyTy, stuck, throw, throwThe,
+        MonadExceptOf.throw])
+    | pointer _ =>
+      simp only [normalizeValueForTyTy, pure, Except.pure, Except.ok.injEq] at h
+      simp [isNormalForTyTy]
+
+/-- THE INDEX LAYER, in lockstep: the output of the index descent at
+`bound` is normal at the same `bound`. -/
+theorem normalizeValueForTyAt_isNormal (types : TypeEnv) :
+    ∀ (bound : Nat) {i : TypeIdx} {v w : GoValue},
+      normalizeValueForTyAt types bound i v = .ok w →
+      isNormalForTyAt types bound i w = true := by
+  intro bound
+  induction bound with
+  | zero =>
+    intro i v w h
+    exact absurd h (by simp [normalizeValueForTyAt, typeIndexExhausted, unsupported, throw,
+      throwThe, MonadExceptOf.throw])
+  | succ n ih =>
+    intro i v w h
+    simp only [normalizeValueForTyAt] at h
+    cases hlook : types[i]? with
+    | none =>
+      rw [hlook] at h
+      exact absurd h (by simp [unsupported, throw, throwThe, MonadExceptOf.throw])
+    | some e =>
+      rw [hlook] at h
+      obtain ⟨name, td⟩ := e
+      cases td with
+      | struct fields =>
+        simp only [normalizeStructValueWith] at h
+        cases v
+        case struct actual fieldsValue =>
+          simp only [isNormalForTyAt, hlook]
+          by_cases hact : actual = name
+          · subst hact
+            simp only [bne_self_eq_false, Bool.false_eq_true, ↓reduceIte, Bind.bind,
+              Except.bind] at h
+            by_cases hsz : fieldsValue.size = fields.size
+            · simp only [hsz, bne_self_eq_false, Bool.false_eq_true, ↓reduceIte] at h
+              cases hf : normalizeFieldsWith (normalizeValueForTyTy (normalizeValueForTyAt types n))
+                  fields.toList fieldsValue.toList with
+              | error e => rw [hf] at h; simp [Functor.map, Except.map] at h
+              | ok arr =>
+                rw [hf] at h
+                simp only [Functor.map, Except.map, Except.ok.injEq] at h
+                subst h
+                obtain ⟨hnorm, hsize⟩ := normalizeFieldsWith_isNormal
+                  (f := normalizeValueForTyTy (normalizeValueForTyAt types n))
+                  (g := isNormalForTyTy (isNormalForTyAt types n))
+                  (fun ty v w hvw => normalizeValueForTyTy_isNormal
+                    (f := normalizeValueForTyAt types n) (g := isNormalForTyAt types n)
+                    (fun _ _ _ hh => ih hh) hvw)
+                  hf (by simp [hsz])
+                simp only [Bool.and_eq_true, decide_eq_true_eq]
+                exact ⟨⟨trivial, by simpa using hsize⟩, hnorm⟩
+            · have hne : (fieldsValue.size != fields.size) = true := by simpa using hsz
+              simp [hne, stuck, throw, throwThe, MonadExceptOf.throw] at h
+          · -- tag mismatch: the empty-struct escape yields `.struct name #[]`, else stuck
+            have hne : (actual != name) = true := by simpa using hact
+            simp only [hne, ↓reduceIte] at h
+            split at h
+            · rename_i hesc
+              simp only [pure, Except.pure, Except.ok.injEq] at h
+              subst h
+              have hfe : fields.isEmpty = true := by
+                simp only [emptyStructAssignable, Bool.and_eq_true] at hesc
+                exact hesc.1.2
+              have hsz0 : fields.size = 0 := by simpa [Array.isEmpty] using hfe
+              have hnil : fields.toList = [] :=
+                List.eq_nil_of_length_eq_zero (by simpa using hsz0)
+              simp [hsz0, hnil, isNormalFieldsWith]
+            · simp [stuck, throw, throwThe, MonadExceptOf.throw, Bind.bind, Except.bind] at h
+        all_goals exact absurd h (by simp [stuck, throw, throwThe, MonadExceptOf.throw])
+      | defined target =>
+        dsimp only at h
+        simp only [isNormalForTyAt, hlook]
+        exact normalizeValueForTyTy_isNormal (f := normalizeValueForTyAt types n)
+          (g := isNormalForTyAt types n) (fun _ _ _ hh => ih hh) h
+      | opaqueDecl _ =>
+        exact absurd h (by simp [unsupported, throw, throwThe, MonadExceptOf.throw])
+      | interfaceDef _ =>
+        exact absurd h (by simp [unsupported, throw, throwThe, MonadExceptOf.throw])
+
+/-- The wrapper: `normalizeValueForTy` is self-normal at `ctx.types`. -/
+theorem normalizeValueForTy_isNormal (ctx : ProgramCtx) {ty : Ty} {v w : GoValue}
+    (h : normalizeValueForTy ctx ty v = .ok w) : isNormalForTy ctx.types ty w = true := by
+  unfold normalizeValueForTy at h
+  unfold isNormalForTy
+  exact normalizeValueForTyTy_isNormal (f := normalizeValueForTyAt ctx.types ctx.types.size)
+    (g := isNormalForTyAt ctx.types ctx.types.size)
+    (fun _ _ _ hh => normalizeValueForTyAt_isNormal _ _ hh) h
+
+
+
+/-- What the structural search finds: in range, the name matches, no
+earlier position (from the start index) does. -/
+theorem fieldIdxFrom_spec (fields : Array (String × GoValue)) (f : String) :
+    ∀ (fuel i k : Nat), fieldIdxFrom fields f fuel i = some k →
+      i ≤ k ∧ ∃ hk : k < fields.size, fields[k].1 = f ∧
+        ∀ j (hj : j < k), i ≤ j → (fields[j]'(Nat.lt_trans hj hk)).1 ≠ f := by
+  intro fuel
+  induction fuel with
+  | zero => intro i k h; simp [fieldIdxFrom] at h
+  | succ n ih =>
+    intro i k h
+    simp only [fieldIdxFrom] at h
+    cases hget : fields[i]? with
+    | none => simp [hget] at h
+    | some p =>
+      obtain ⟨name, x⟩ := p
+      simp only [hget] at h
+      split at h
+      · rename_i heq
+        simp only [Option.some.injEq] at h
+        subst h
+        have hlt := (Array.getElem?_eq_some_iff.mp hget).1
+        refine ⟨Nat.le_refl _, hlt, ?_, fun j hj hij => absurd hj (Nat.not_lt.mpr hij)⟩
+        have : fields[i] = (name, x) := (Array.getElem?_eq_some_iff.mp hget).2
+        rw [this]
+        simpa using heq
+      · rename_i hne
+        obtain ⟨hle, hk, hname, hbefore⟩ := ih (i + 1) k h
+        refine ⟨by omega, hk, hname, fun j hj hij => ?_⟩
+        by_cases hji : j = i
+        · subst hji
+          have : fields[j] = (name, x) := (Array.getElem?_eq_some_iff.mp hget).2
+          rw [this]
+          simpa using hne
+        · exact hbefore j hj (by omega)
+
+theorem fieldIdx?_spec (fields : Array (String × GoValue)) (f : String) (k : Nat)
+    (h : fieldIdx? fields f = some k) :
+    ∃ hk : k < fields.size, fields[k].1 = f ∧
+      ∀ j (hj : j < k), (fields[j]'(Nat.lt_trans hj hk)).1 ≠ f := by
+  obtain ⟨_, hk, hname, hbefore⟩ := fieldIdxFrom_spec fields f _ _ _ h
+  exact ⟨hk, hname, fun j hj => hbefore j hj (Nat.zero_le _)⟩
+
+
 /-! ## StateWf projections -/
 
-theorem StateWf.heap_le {σ : Store} (h : StateWf σ) :
-    Heap.locSup σ.heap ≤ σ.nextAddr := h
+theorem StateWf.heap_le {σ : Store} (h : StateWf ctx σ) :
+    Heap.locSup σ.heap ≤ σ.nextAddr := h.1
+
+/-- The normal-form half (C1 S1, D3). -/
+theorem StateWf.normal {σ : Store} (h : StateWf ctx σ) : HeapNormal ctx σ := h.2
 
 -- `StateWf.funcs_le` (the stored-function-body half of the old bound) is
 -- RETIRED with B7: the store carries no functions; `Func.locSup_eq_zero`
 -- is what every former consumer needs.
 
-theorem StateWf.mk' {σ : Store} (h1 : Heap.locSup σ.heap ≤ σ.nextAddr) : StateWf σ := h1
+theorem StateWf.mk' {σ : Store} (h1 : Heap.locSup σ.heap ≤ σ.nextAddr)
+    (h2 : HeapNormal ctx σ) : StateWf ctx σ := ⟨h1, h2⟩
 
 /-! ## Value coercion inversions -/
 
@@ -1745,16 +2294,6 @@ theorem indexTargetLoc_locSup {s : Store} {b i : GoValue} {l : Loc}
     · simp [Bind.bind, Except.bind] at h
   · simp at h
 
-theorem goValueListSup_push {arr : Array GoValue} {x : GoValue} :
-    goValueListSup (arr.push x).toList
-      = max (goValueListSup arr.toList) (GoValue.locSup x) := by
-  simp [goValueListSup_eq, Array.toList_push, supBy_append, supBy]
-
-theorem goValueFieldsSup_push {arr : Array (String × GoValue)}
-    {p : String × GoValue} :
-    goValueFieldsSup (arr.push p).toList
-      = max (goValueFieldsSup arr.toList) (GoValue.locSup p.2) := by
-  simp [goValueFieldsSup_eq, Array.toList_push, supBy_append, supBy]
 
 theorem goValueEntriesSup_push {arr : Array (Nat × GoValue × GoValue)}
     {p : Nat × GoValue × GoValue} :
@@ -1881,81 +2420,607 @@ theorem Store.updateCell_shape {σ σ' : Store} {a : Addr}
     simp [Heap.lookup, Array.getElem?_eq_getElem hi]
   · simp [throw, throwThe, MonadExceptOf.throw] at h
 
-/-! ## `storeLoc`: shape and preservation -/
+/-! ## `storeLoc`: shape and preservation (C1 S1: the root-first in-place write) -/
+
+/-- `Array.modifyM` in `Except`, unfolded once (the reference body of the
+`implemented_by` primitive): a success at an in-range index is `set` of the
+callback's output. -/
+theorem Array.modifyM_ok_iff {α : Type} (xs : Array α) (i : Nat) (hi : i < xs.size)
+    (f : α → Except Stop α) (ys : Array α) :
+    xs.modifyM i f = .ok ys ↔ ∃ v, f xs[i] = .ok v ∧ ys = xs.set i v hi := by
+  unfold Array.modifyM
+  rw [dif_pos hi]
+  constructor
+  · intro h
+    simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
+    obtain ⟨v, hv, h⟩ := h
+    exact ⟨v, hv, h.symm⟩
+  · rintro ⟨v, hv, rfl⟩
+    dsimp only
+    rw [hv]
+    rfl
+
+theorem fieldIdxFrom_lt (fields : Array (String × GoValue)) (f : String) :
+    ∀ (fuel i k : Nat), fieldIdxFrom fields f fuel i = some k → k < fields.size := by
+  intro fuel
+  induction fuel with
+  | zero => intro i k h; simp [fieldIdxFrom] at h
+  | succ n ih =>
+    intro i k h
+    simp only [fieldIdxFrom] at h
+    cases hget : fields[i]? with
+    | none => simp [hget] at h
+    | some p =>
+      obtain ⟨n, x⟩ := p
+      simp only [hget] at h
+      split at h
+      · simp only [Option.some.injEq] at h
+        subst h
+        exact (Array.getElem?_eq_some_iff.mp hget).1
+      · exact ih (i + 1) k h
+
+theorem fieldIdx?_lt {fields : Array (String × GoValue)} {f : String} {k : Nat}
+    (h : fieldIdx? fields f = some k) : k < fields.size :=
+  fieldIdxFrom_lt fields f _ _ _ h
+
+theorem goValueListSup_set {arr : Array GoValue} {k : Nat} (hk : k < arr.size) {x : GoValue} :
+    goValueListSup (arr.set k x hk).toList ≤ max (goValueListSup arr.toList) (GoValue.locSup x) := by
+  rw [goValueListSup_eq, goValueListSup_eq, supBy_le_iff]
+  intro a ha
+  rw [Array.toList_set] at ha
+  rcases List.mem_or_eq_of_mem_set ha with hmem | rfl
+  · exact Nat.le_trans (supBy_mem hmem) (Nat.le_max_left _ _)
+  · exact Nat.le_max_right _ _
+
+theorem goValueFieldsSup_set {arr : Array (String × GoValue)} {k : Nat} (hk : k < arr.size)
+    {p : String × GoValue} :
+    goValueFieldsSup (arr.set k p hk).toList
+      ≤ max (goValueFieldsSup arr.toList) (GoValue.locSup p.2) := by
+  rw [goValueFieldsSup_eq, goValueFieldsSup_eq, supBy_le_iff]
+  intro a ha
+  rw [Array.toList_set] at ha
+  rcases List.mem_or_eq_of_mem_set ha with hmem | rfl
+  · exact Nat.le_trans (supBy_mem (f := fun q : String × GoValue => GoValue.locSup q.2) hmem)
+      (Nat.le_max_left _ _)
+  · exact Nat.le_max_right _ _
+
+theorem goValueListSup_getElem {arr : Array GoValue} {k : Nat} (hk : k < arr.size) :
+    GoValue.locSup arr[k] ≤ goValueListSup arr.toList := by
+  rw [goValueListSup_eq]
+  have hmem : arr[k] ∈ arr.toList := by
+    rw [← Array.getElem_toList hk]; exact List.getElem_mem _
+  exact supBy_mem hmem
+
+theorem goValueFieldsSup_getElem {arr : Array (String × GoValue)} {k : Nat} (hk : k < arr.size) :
+    GoValue.locSup arr[k].2 ≤ goValueFieldsSup arr.toList := by
+  rw [goValueFieldsSup_eq]
+  have hmem : arr[k] ∈ arr.toList := by
+    rw [← Array.getElem_toList hk]; exact List.getElem_mem _
+  exact supBy_mem (f := fun q : String × GoValue => GoValue.locSup q.2) hmem
+
+/-- The root-first write never invents locations: the new root is bounded
+by the old root and the incoming leaf. -/
+theorem writeAt_locSup :
+    ∀ {path : List PathStep} {b : Nat} {ty : Ty} {root v root' : GoValue},
+      writeAt ctx b ty root path v = .ok root' →
+      GoValue.locSup root' ≤ max (GoValue.locSup root) (GoValue.locSup v) := by
+  intro path
+  induction path with
+  | nil =>
+    intro b ty root v root' h
+    simp only [writeAt] at h
+    exact Nat.le_trans
+      (normalizeValueForTyTy_locSup (fun _ _ _ hh => normalizeValueForTyAt_locSup _ _ hh) h)
+      (Nat.le_max_right _ _)
+  | cons step rest ih =>
+    intro b ty root v root' h
+    cases step with
+    | field tid f =>
+      cases root with
+      | struct actual fields =>
+        simp only [writeAt] at h
+        by_cases hc : (actual != tid && !structTagCompatible ctx actual tid) = true
+        · simp [hc, stuck, throw, throwThe, MonadExceptOf.throw, Bind.bind, Except.bind] at h
+        · have hc' : (actual != tid && !structTagCompatible ctx actual tid) = false := by
+            simpa using hc
+          simp only [hc', Bool.false_eq_true, ↓reduceIte, pure_bind] at h
+          split at h
+          · rename_i k hk
+            have hklt := fieldIdx?_lt hk
+            simp only [bind_eq_ok] at h
+            obtain ⟨⟨fty, b'⟩, _, h⟩ := h
+            simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
+            obtain ⟨fields', hmod, rfl⟩ := h
+            obtain ⟨q, hq, rfl⟩ := (Array.modifyM_ok_iff fields k hklt _ fields').mp hmod
+            simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at hq
+            obtain ⟨old', hold', rfl⟩ := hq
+            have h1 := ih hold'
+            have h2 := goValueFieldsSup_set (arr := fields) hklt (p := (fields[k].1, old'))
+            have h3 := goValueFieldsSup_getElem (arr := fields) hklt
+            simp only [GoValue.locSup] at h2 ⊢
+            omega
+          · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
+      | _ =>
+        simp only [writeAt] at h
+        split at h <;> simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
+    | index i =>
+      cases root with
+      | array values =>
+        simp only [writeAt, bind_eq_ok] at h
+        obtain ⟨k, hk, ⟨ety, b'⟩, _, values', hmod, h⟩ := h
+        simp only [pure_eq_ok, Except.ok.injEq] at h
+        subst h
+        have hklt : k < values.size := by
+          unfold arrayIndexNat at hk
+          by_cases hneg : i < 0
+          · simp [hneg, indexOutOfRangePanic, panic, throw, throwThe, MonadExceptOf.throw,
+              Bind.bind, Except.bind] at hk
+          · by_cases hlt : i.toNat < values.size
+            · simp [hneg, hlt, Bind.bind, Except.bind, pure, Except.pure] at hk
+              subst hk; exact hlt
+            · simp [hneg, hlt, indexOutOfRangePanic, panic, throw, throwThe,
+                MonadExceptOf.throw, Bind.bind, Except.bind, pure, Except.pure] at hk
+        obtain ⟨old', hold', rfl⟩ := (Array.modifyM_ok_iff values k hklt _ values').mp hmod
+        have h1 := ih hold'
+        have h2 := goValueListSup_set (arr := values) hklt (x := old')
+        have h3 := goValueListSup_getElem (arr := values) hklt
+        simp only [GoValue.locSup] at h2 ⊢
+        omega
+      | _ =>
+        simp only [writeAt] at h
+        split at h <;> simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
 
 theorem storeLoc_shape {σ : Store} :
     ∀ {l : Loc} {v : GoValue} {σ' : Store}, storeLoc ctx σ l v = .ok σ' →
       σ'.nextAddr = σ.nextAddr
         ∧ Heap.locSup σ'.heap
             ≤ max (Heap.locSup σ.heap) (max (Loc.locSup l) (GoValue.locSup v)) := by
-  intro l
-  induction l with
-  | base a =>
-    intro v σ' h
-    unfold storeLoc at h
-    -- ONE root write (A3): the value cell is overwritten in place at its
-    -- declared type; payload cells refuse; out of range refuses (BUG-085).
-    obtain ⟨h4, cell, cell', hcell, hf, hsup⟩ :=
-      Store.updateCell_shape h
-    refine ⟨h4, ?_⟩
-    cases cell with
-    | value ty v₀ =>
-      simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at hf
-      obtain ⟨v', hv', rfl⟩ := hf
-      have hb : GoValue.locSup v' ≤ GoValue.locSup v :=
-        normalizeValueForTy_locSup hv'
-      have hc : HeapCell.locSup (.value ty v') = GoValue.locSup v' := rfl
-      omega
-    | mapPayload _ _ => simp [stuck, throw, throwThe, MonadExceptOf.throw] at hf
-    | chanPayload _ _ _ => simp [stuck, throw, throwThe, MonadExceptOf.throw] at hf
-  | field b tid fname ih =>
-    intro v σ' h
-    unfold storeLoc at h
-    simp only [bind_eq_ok] at h
-    obtain ⟨bv, hbv, h⟩ := h
-    split at h
-    · rename_i actual fields
-      split at h
-      · simp [Bind.bind, Except.bind] at h
-      · simp only [Bind.bind, Except.bind] at h
-        cases hset : StructFields.set fields fname v with
-        | error e => rw [hset] at h; simp [Except.bind] at h
-        | ok updated =>
-          rw [hset] at h
-          simp only [Except.bind] at h
-          have hup := StructFields.set_locSup hset
-          have hload := loadLoc_locSup hbv
-          obtain ⟨h4, h5⟩ := ih h
-          refine ⟨h4, ?_⟩
-          simp only [GoValue.locSup] at h5 hload
-          simp only [Loc.locSup_field]
-          omega
-    · simp at h
-  | index b i ih =>
-    intro v σ' h
-    unfold storeLoc at h
-    simp only [bind_eq_ok] at h
-    obtain ⟨bv, hbv, h⟩ := h
-    split at h
-    · rename_i values
-      simp only [bind_eq_ok] at h
-      obtain ⟨updated, hupd, h⟩ := h
-      have hup := arraySet_locSup hupd
-      have hload := loadLoc_locSup hbv
-      obtain ⟨h4, h5⟩ := ih h
-      refine ⟨h4, ?_⟩
-      simp only [GoValue.locSup] at h5 hload
-      simp only [Loc.locSup_index]
-      omega
-    · simp at h
+  intro l v σ' h
+  unfold storeLoc at h
+  -- ONE root write (A3): the root cell is rewritten in place at its
+  -- declared type; payload cells refuse; out of range refuses (BUG-085).
+  obtain ⟨h4, cell, cell', hcell, hf, hsup⟩ := Store.updateCell_shape h
+  refine ⟨h4, ?_⟩
+  have hcb := Heap.lookup_locSup hcell
+  cases cell with
+  | value ty root =>
+    simp only [map_eq_ok] at hf
+    obtain ⟨root', hw, rfl⟩ := hf
+    have hb := writeAt_locSup hw
+    have hc : HeapCell.locSup (.value ty root') = GoValue.locSup root' := rfl
+    have hc0 : HeapCell.locSup (.value ty root) = GoValue.locSup root := rfl
+    omega
+  | mapPayload _ _ =>
+    revert hf
+    cases (Loc.rootPath l).2 <;> simp [stuck, throw, throwThe, MonadExceptOf.throw]
+  | chanPayload _ _ _ =>
+    revert hf
+    cases (Loc.rootPath l).2 <;> simp [stuck, throw, throwThe, MonadExceptOf.throw]
+
+/-! ## `HeapNormal` preservation (C1 S1, D3) -/
+
+theorem HeapNormal.cell_of {σ : Store} (h : HeapNormal ctx σ) {i : Nat} (hi : i < σ.heap.size) :
+    HeapCell.normal ctx.types σ.heap[i] = true := by
+  unfold HeapNormal Heap.normalB at h
+  rw [List.all_eq_true] at h
+  exact h _ (by rw [← Array.getElem_toList hi]; exact List.getElem_mem _)
+
+theorem HeapNormal.lookup_of {σ : Store} (h : HeapNormal ctx σ) {a : Addr} {c : HeapCell}
+    (hl : Heap.lookup σ.heap (.base a) = some c) : HeapCell.normal ctx.types c = true := by
+  obtain ⟨i⟩ := a
+  simp only [Heap.lookup] at hl
+  obtain ⟨hi, rfl⟩ := Array.getElem?_eq_some_iff.mp hl
+  exact HeapNormal.cell_of h hi
+
+/-- A root-cell update by a normal-preserving cell function keeps the heap normal. -/
+theorem HeapNormal.of_updateCell {σ σ' : Store} {a : Addr} {f : HeapCell → Except Stop HeapCell}
+    (h : HeapNormal ctx σ) (hst : σ.updateCell a f = .ok σ')
+    (hf : ∀ cell cell', Heap.lookup σ.heap (.base a) = some cell → f cell = .ok cell' →
+      HeapCell.normal ctx.types cell' = true) :
+    HeapNormal ctx σ' := by
+  obtain ⟨i⟩ := a
+  unfold Store.updateCell at hst
+  split at hst
+  · rename_i hi
+    simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at hst
+    obtain ⟨cell', hcell', rfl⟩ := hst
+    have hnew : HeapCell.normal ctx.types cell' = true :=
+      hf σ.heap[i] cell' (by simp [Heap.lookup, Array.getElem?_eq_getElem hi]) hcell'
+    unfold HeapNormal Heap.normalB
+    rw [List.all_eq_true]
+    intro c hc
+    simp only [Array.toList_set] at hc
+    rcases List.mem_or_eq_of_mem_set hc with hmem | rfl
+    · unfold HeapNormal Heap.normalB at h
+      rw [List.all_eq_true] at h
+      exact h c hmem
+    · exact hnew
+  · simp [throw, throwThe, MonadExceptOf.throw] at hst
+
+theorem HeapNormal.of_allocCell {σ σ' : Store} {c : HeapCell} {l : Loc}
+    (h : HeapNormal ctx σ) (hc : HeapCell.normal ctx.types c = true)
+    (hal : σ.allocCell c = (l, σ')) : HeapNormal ctx σ' := by
+  have h2 : ({ heap := σ.heap.push c } : Store) = σ' := congrArg Prod.snd hal
+  subst h2
+  unfold HeapNormal Heap.normalB
+  rw [List.all_eq_true]
+  intro x hx
+  simp only [Array.toList_push] at hx
+  rcases List.mem_append.mp hx with hx | hx
+  · unfold HeapNormal Heap.normalB at h
+    rw [List.all_eq_true] at h
+    exact h x hx
+  · rw [List.mem_singleton.mp hx]; exact hc
+
+theorem HeapNormal.of_alloc {σ σ' : Store} {v : GoValue} {ty : Ty} {l : Loc}
+    (h : HeapNormal ctx σ) (hal : Store.alloc ctx σ v ty = .ok (l, σ')) : HeapNormal ctx σ' := by
+  unfold Store.alloc at hal
+  simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at hal
+  obtain ⟨v', hv', hal⟩ := hal
+  exact HeapNormal.of_allocCell h (c := .value ty v') (by
+    simpa [HeapCell.normal] using normalizeValueForTy_isNormal ctx hv') hal
+
+theorem HeapNormal.of_storeMapPayload {σ σ' : Store} {l : Loc}
+    {entries : Array (Nat × GoValue × GoValue)} {nextId : Nat}
+    (h : HeapNormal ctx σ) (hst : storeMapPayload σ l entries nextId = .ok σ') :
+    HeapNormal ctx σ' := by
+  unfold storeMapPayload at hst
+  split at hst
+  · exact HeapNormal.of_updateCell h hst fun cell cell' _ hf => by
+      cases cell <;> simp [stuck, throw, throwThe, MonadExceptOf.throw, pure, Except.pure] at hf
+      subst hf; rfl
+  · simp [stuck, throw, throwThe, MonadExceptOf.throw] at hst
+
+theorem HeapNormal.of_storeChanPayload {σ σ' : Store} {l : Loc} {buf : Array GoValue}
+    {capacity : Nat} {closed : Bool}
+    (h : HeapNormal ctx σ) (hst : storeChanPayload σ l buf capacity closed = .ok σ') :
+    HeapNormal ctx σ' := by
+  unfold storeChanPayload at hst
+  split at hst
+  · exact HeapNormal.of_updateCell h hst fun cell cell' _ hf => by
+      cases cell <;> simp [stuck, throw, throwThe, MonadExceptOf.throw, pure, Except.pure] at hf
+      subst hf; rfl
+  · simp [stuck, throw, throwThe, MonadExceptOf.throw] at hst
+
+/-! ## The leaf congruence for the real write -/
+
+theorem arrayIndexNat_spec {values : Array GoValue} {i : Int} {k : Nat}
+    (h : arrayIndexNat values i = .ok k) : 0 ≤ i ∧ k = i.toNat ∧ k < values.size := by
+  unfold arrayIndexNat at h
+  by_cases hneg : i < 0
+  · simp [hneg, indexOutOfRangePanic, GoLean.GoCore.panic, throw, throwThe, MonadExceptOf.throw,
+      Bind.bind, Except.bind] at h
+  · by_cases hlt : i.toNat < values.size
+    · simp [hneg, hlt, Bind.bind, Except.bind, pure, Except.pure] at h
+      subst h
+      exact ⟨Int.not_lt.mp hneg, rfl, hlt⟩
+    · simp [hneg, hlt, indexOutOfRangePanic, GoLean.GoCore.panic, throw, throwThe,
+        MonadExceptOf.throw, Bind.bind, Except.bind, pure, Except.pure] at h
+
+/-- Field names of a normal struct value align with its declaration. -/
+theorem isNormalFieldsWith_names {g : Ty → GoValue → Bool} :
+    ∀ {defs : List FieldDef} {vals : List (String × GoValue)},
+      isNormalFieldsWith g defs vals = true →
+      defs.length = vals.length ∧
+        ∀ k (hk : k < defs.length) (hk' : k < vals.length), vals[k].1 = defs[k].name ∧
+          g defs[k].typ vals[k].2 = true := by
+  intro defs
+  induction defs with
+  | nil =>
+    intro vals h
+    cases vals with
+    | nil => exact ⟨rfl, fun k hk _ => absurd hk (Nat.not_lt_zero _)⟩
+    | cons _ _ => simp [isNormalFieldsWith] at h
+  | cons fd rest ih =>
+    intro vals h
+    cases vals with
+    | nil => simp [isNormalFieldsWith] at h
+    | cons p prest =>
+      obtain ⟨n, v⟩ := p
+      simp only [isNormalFieldsWith, Bool.and_eq_true, decide_eq_true_eq] at h
+      obtain ⟨⟨hn, hv⟩, hrest⟩ := h
+      obtain ⟨hlen, hk⟩ := ih hrest
+      refine ⟨by simp [hlen], fun k hk' hk'' => ?_⟩
+      cases k with
+      | zero => exact ⟨hn, hv⟩
+      | succ k => exact hk k (by simpa using hk') (by simpa using hk'')
+
+/-- The first field named `f` in an aligned struct sits at the same position
+in the declaration: `FieldDef.find?` answers `defs[k]`. -/
+theorem FieldDef.find?_of_first (f : String) :
+    ∀ (defs : List FieldDef) (k : Nat) (hk : k < defs.length),
+      defs[k].name = f → (∀ j (hj : j < k), (defs[j]'(Nat.lt_trans hj hk)).name ≠ f) →
+      FieldDef.find? f defs = some defs[k] := by
+  intro defs
+  induction defs with
+  | nil => intro k hk; simp at hk
+  | cons fd rest ih =>
+    intro k hk hname hbefore
+    cases k with
+    | zero =>
+      simp only [List.getElem_cons_zero] at hname
+      simp [FieldDef.find?, hname]
+    | succ k =>
+      have h0 : fd.name ≠ f := hbefore 0 (Nat.zero_lt_succ _)
+      simp only [List.getElem_cons_succ] at hname
+      simp only [FieldDef.find?, beq_iff_eq, h0, ↓reduceIte, List.getElem_cons_succ]
+      exact ih k (by simpa using hk) hname (fun j hj => hbefore (j + 1) (Nat.succ_lt_succ hj))
+
+theorem isNormalFieldsWith_set {f : Ty → GoValue → Bool} :
+    ∀ (defs : List FieldDef) (fields : List (String × GoValue)) (k : Nat)
+      (name : String) (old v : GoValue),
+      fields[k]? = some (name, old) →
+      isNormalFieldsWith f defs fields = true →
+      (∀ fd, defs[k]? = some fd → f fd.typ v = true) →
+        isNormalFieldsWith f defs (fields.set k (name, v)) = true := by
+  intro defs
+  induction defs with
+  | nil =>
+    intro fields k name old v _ h _
+    cases fields with
+    | nil => simp [isNormalFieldsWith]
+    | cons _ _ => simp [isNormalFieldsWith] at h
+  | cons fd rest ih =>
+    intro fields k name old v hk h hv
+    cases fields with
+    | nil => simp [isNormalFieldsWith] at h
+    | cons fv fvs =>
+      obtain ⟨fname, fval⟩ := fv
+      simp only [isNormalFieldsWith, Bool.and_eq_true, decide_eq_true_eq] at h
+      obtain ⟨⟨hname, hval⟩, hrest⟩ := h
+      cases k with
+      | zero =>
+        simp only [List.getElem?_cons_zero, Option.some.injEq, Prod.mk.injEq] at hk
+        obtain ⟨rfl, rfl⟩ := hk
+        simp only [List.set, isNormalFieldsWith, Bool.and_eq_true, decide_eq_true_eq]
+        exact ⟨⟨hname, hv fd rfl⟩, hrest⟩
+      | succ k =>
+        simp only [List.getElem?_cons_succ] at hk
+        simp only [List.set, isNormalFieldsWith, Bool.and_eq_true, decide_eq_true_eq]
+        exact ⟨⟨hname, hval⟩, ih fvs k name old v hk hrest (fun fd' h' => hv fd' h')⟩
+
+/-- The array component: `stepDown` through `.defined` hops reaches the
+`.array` head at the bound the normality check reached it. -/
+theorem writeAt_isNormal_array {rest : List PathStep} {v : GoValue} :
+    ∀ {b : Nat} {ty : Ty} {values : Array GoValue} {ety : Ty} {b' : Nat} {i : Int}
+      {old' : GoValue} (hklt : i.toNat < values.size),
+      isNormalForTyTy (isNormalForTyAt ctx.types b) ty (.array values) = true →
+      Ty.stepDown ctx.types b ty (.index i) = .ok (ety, b') →
+      writeAt ctx b' ety values[i.toNat] rest v = .ok old' →
+      (∀ {b : Nat} {ty : Ty} {root v root' : GoValue},
+        isNormalForTyTy (isNormalForTyAt ctx.types b) ty root = true →
+        writeAt ctx b ty root rest v = .ok root' →
+        isNormalForTyTy (isNormalForTyAt ctx.types b) ty root' = true) →
+      isNormalForTyTy (isNormalForTyAt ctx.types b) ty (.array (values.set i.toNat old' hklt)) = true := by
+  intro b
+  induction b with
+  | zero =>
+    intro ty values ety b' i old' hklt hn hstep hold' ih
+    cases ty <;> simp [Ty.stepDown, typeIndexExhausted, unsupported, throw, throwThe,
+      MonadExceptOf.throw, stuck, pure, Except.pure] at hstep
+    · -- `.array n elem` at bound 0: no hop
+      obtain ⟨rfl, rfl⟩ := hstep
+      simp only [isNormalForTyTy, Bool.and_eq_true, decide_eq_true_eq] at hn ⊢
+      obtain ⟨hsz, hlist⟩ := hn
+      refine ⟨by simpa using hsz, ?_⟩
+      rw [isNormalListWith_iff] at hlist ⊢
+      intro x hx
+      rw [Array.toList_set] at hx
+      rcases List.mem_or_eq_of_mem_set hx with hx | rfl
+      · exact hlist x hx
+      · exact ih (hlist _ (by rw [← Array.getElem_toList hklt]; exact List.getElem_mem _)) hold'
+  | succ n ihb =>
+    intro ty values ety b' i old' hklt hn hstep hold' ih
+    cases ty with
+    | array length elem =>
+      simp only [Ty.stepDown, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hstep
+      obtain ⟨rfl, rfl⟩ := hstep
+      simp only [isNormalForTyTy, Bool.and_eq_true, decide_eq_true_eq] at hn ⊢
+      obtain ⟨hsz, hlist⟩ := hn
+      refine ⟨by simpa using hsz, ?_⟩
+      rw [isNormalListWith_iff] at hlist ⊢
+      intro x hx
+      rw [Array.toList_set] at hx
+      rcases List.mem_or_eq_of_mem_set hx with hx | rfl
+      · exact hlist x hx
+      · exact ih (hlist _ (by rw [← Array.getElem_toList hklt]; exact List.getElem_mem _)) hold'
+    | defined j =>
+      simp only [Ty.stepDown] at hstep
+      simp only [isNormalForTyTy, isNormalForTyAt] at hn ⊢
+      cases hlook : ctx.types[j]? with
+      | none => rw [hlook] at hstep; simp [unsupported, throw, throwThe, MonadExceptOf.throw] at hstep
+      | some e =>
+        (try rw [hlook] at hstep); (try rw [hlook] at hn); (try rw [hlook])
+        obtain ⟨name, td⟩ := e
+        cases td with
+        | struct fields => simp [stuck, throw, throwThe, MonadExceptOf.throw] at hstep
+        | defined target =>
+          dsimp only at hstep hn ⊢
+          exact ihb (ty := target) hklt hn hstep hold' ih
+        | opaqueDecl _ => simp [unsupported, throw, throwThe, MonadExceptOf.throw] at hstep
+        | interfaceDef _ => simp [unsupported, throw, throwThe, MonadExceptOf.throw] at hstep
+    | _ =>
+      simp [Ty.stepDown, stuck, throw, throwThe, MonadExceptOf.throw] at hstep
+/-- The struct component, at the index layer where the struct arm lives. -/
+theorem writeAt_isNormal_struct {rest : List PathStep} {v : GoValue} :
+    ∀ {b : Nat} {ty : Ty} {actual : TypeId} {fields : Array (String × GoValue)} {tid : TypeId}
+      {f : String} {fty : Ty} {b' : Nat} {k : Nat} {old' : GoValue},
+      isNormalForTyTy (isNormalForTyAt ctx.types b) ty (.struct actual fields) = true →
+      Ty.stepDown ctx.types b ty (.field tid f) = .ok (fty, b') →
+      (hklt : k < fields.size) → writeAt ctx b' fty fields[k].2 rest v = .ok old' →
+      fields[k].1 = f →
+      (∀ j (hj : j < k), (fields[j]'(Nat.lt_trans hj hklt)).1 ≠ f) →
+      (∀ {b : Nat} {ty : Ty} {root v root' : GoValue},
+        isNormalForTyTy (isNormalForTyAt ctx.types b) ty root = true →
+        writeAt ctx b ty root rest v = .ok root' →
+        isNormalForTyTy (isNormalForTyAt ctx.types b) ty root' = true) →
+      isNormalForTyTy (isNormalForTyAt ctx.types b) ty
+        (.struct actual (fields.set k (fields[k].1, old') hklt)) = true := by
+  intro b
+  induction b with
+  | zero =>
+    intro ty actual fields tid f fty b' k old' hn hstep hklt hold' hname hbefore ih
+    cases ty <;> simp [Ty.stepDown, typeIndexExhausted, unsupported, throw, throwThe,
+      MonadExceptOf.throw, stuck, pure, Except.pure] at hstep
+  | succ n ihb =>
+    intro ty actual fields tid f fty b' k old' hn hstep hklt hold' hname hbefore ih
+    cases ty with
+    | defined j =>
+      simp only [Ty.stepDown] at hstep
+      simp only [isNormalForTyTy, isNormalForTyAt] at hn ⊢
+      cases hlook : ctx.types[j]? with
+      | none => rw [hlook] at hstep; simp [unsupported, throw, throwThe, MonadExceptOf.throw] at hstep
+      | some e =>
+        (try rw [hlook] at hstep); (try rw [hlook] at hn); (try rw [hlook])
+        obtain ⟨name, td⟩ := e
+        cases td with
+        | struct defs =>
+          dsimp only at hstep hn ⊢
+          simp only [Bool.and_eq_true, decide_eq_true_eq] at hn ⊢
+          obtain ⟨⟨hact, hsz⟩, hflds⟩ := hn
+          obtain ⟨hlen, halign⟩ := isNormalFieldsWith_names hflds
+          have hkf : k < fields.toList.length := by simpa using hklt
+          have hkd : k < defs.toList.length := by simpa [hlen] using hkf
+          have hdname : defs.toList[k].name = f := by
+            have := (halign k hkd hkf).1
+            simpa [Array.getElem_toList, hname] using this.symm
+          have hdbefore : ∀ j (hj : j < k), (defs.toList[j]'(Nat.lt_trans hj hkd)).name ≠ f := by
+            intro j hj heq
+            have := (halign j (Nat.lt_trans hj hkd) (Nat.lt_trans hj hkf)).1
+            exact hbefore j hj (by simpa [Array.getElem_toList] using this.trans heq)
+          rw [FieldDef.find?_of_first f defs.toList k hkd hdname hdbefore] at hstep
+          simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hstep
+          obtain ⟨rfl, rfl⟩ := hstep
+          have hval := (halign k hkd hkf).2
+          have hold : isNormalForTyTy (isNormalForTyAt ctx.types n) defs.toList[k].typ old' = true :=
+            ih (by simpa [Array.getElem_toList] using hval) hold'
+          refine ⟨⟨hact, by simpa using hsz⟩, ?_⟩
+          have hk' : fields.toList[k]? = some (fields[k].1, fields[k].2) := by
+            simp [List.getElem?_eq_getElem (show k < fields.toList.length by simpa using hklt)]
+          have := isNormalFieldsWith_set (f := isNormalForTyTy (isNormalForTyAt ctx.types n))
+            defs.toList fields.toList k fields[k].1 fields[k].2 old' hk' hflds
+            (fun fd hfd => by
+              have : fd = defs.toList[k] := by
+                rw [List.getElem?_eq_getElem hkd] at hfd; exact (Option.some.inj hfd).symm
+              rw [this]; exact hold)
+          simpa [Array.toList_set] using this
+        | defined target =>
+          dsimp only at hstep hn ⊢
+          exact ihb (ty := target) hn hstep hklt hold' hname hbefore ih
+        | opaqueDecl _ => simp [unsupported, throw, throwThe, MonadExceptOf.throw] at hstep
+        | interfaceDef _ => simp [unsupported, throw, throwThe, MonadExceptOf.throw] at hstep
+    | _ =>
+      simp [Ty.stepDown, stuck, throw, throwThe, MonadExceptOf.throw] at hstep
+
+
+/-- THE CONGRUENCE: a root normal at `(ty, b)` written along `path` with a
+leaf that `writeAt` normalizes at the descended type stays normal. -/
+theorem writeAt_isNormal :
+    ∀ {path : List PathStep} {b : Nat} {ty : Ty} {root v root' : GoValue},
+      isNormalForTyTy (isNormalForTyAt ctx.types b) ty root = true →
+      writeAt ctx b ty root path v = .ok root' →
+      isNormalForTyTy (isNormalForTyAt ctx.types b) ty root' = true := by
+  intro path
+  induction path with
+  | nil =>
+    intro b ty root v root' _ h
+    simp only [writeAt] at h
+    exact normalizeValueForTyTy_isNormal (f := normalizeValueForTyAt ctx.types b)
+      (g := isNormalForTyAt ctx.types b) (fun _ _ _ hh => normalizeValueForTyAt_isNormal _ _ hh) h
+  | cons step rest ih =>
+    intro b ty root v root' hn h
+    cases step with
+    | field tid f =>
+      cases root with
+      | struct actual fields =>
+        simp only [writeAt] at h
+        by_cases hc : (actual != tid && !structTagCompatible ctx actual tid) = true
+        · simp [hc, stuck, throw, throwThe, MonadExceptOf.throw, Bind.bind, Except.bind] at h
+        · have hc' : (actual != tid && !structTagCompatible ctx actual tid) = false := by
+            simpa using hc
+          simp only [hc', Bool.false_eq_true, ↓reduceIte, pure_bind] at h
+          split at h
+          · rename_i k hidx
+            have hklt := fieldIdx?_lt hidx
+            simp only [bind_eq_ok] at h
+            obtain ⟨⟨fty, b'⟩, hstep, h⟩ := h
+            simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
+            obtain ⟨fields', hmod, rfl⟩ := h
+            obtain ⟨q, hq, rfl⟩ := (Array.modifyM_ok_iff fields k hklt _ fields').mp hmod
+            simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at hq
+            obtain ⟨old', hold', rfl⟩ := hq
+            -- The declared type: a struct value is normal only at a `.defined`
+            -- struct declaration (or an interface / untyped slot, where the
+            -- descent refuses — vacuous).
+            obtain ⟨hk, hname, hbefore⟩ := fieldIdx?_spec fields f k hidx
+            exact writeAt_isNormal_struct hn hstep hk hold' hname hbefore ih
+          · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
+      | _ =>
+        simp only [writeAt] at h
+        split at h <;> simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
+    | index i =>
+      cases root with
+      | array values =>
+        simp only [writeAt, bind_eq_ok] at h
+        obtain ⟨k, hk, ⟨ety, b'⟩, hstep, values', hmod, h⟩ := h
+        simp only [pure_eq_ok, Except.ok.injEq] at h
+        subst h
+        obtain ⟨_, rfl, hklt⟩ := arrayIndexNat_spec hk
+        obtain ⟨old', hold', rfl⟩ := (Array.modifyM_ok_iff values i.toNat hklt _ values').mp hmod
+        exact writeAt_isNormal_array hklt hn hstep hold' ih
+      | _ =>
+        simp only [writeAt] at h
+        split at h <;> simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
+/-- `storeLoc` preserves `HeapNormal`: the one root-cell update writes a
+root normal at its declared type. -/
+theorem HeapNormal.of_storeLoc {σ σ' : Store} {l : Loc} {v : GoValue}
+    (h : HeapNormal ctx σ) (hst : storeLoc ctx σ l v = .ok σ') : HeapNormal ctx σ' := by
+  unfold storeLoc at hst
+  dsimp only at hst
+  refine HeapNormal.of_updateCell h hst fun cell cell' hcell hf => ?_
+  have hcn := HeapNormal.lookup_of h hcell
+  cases cell with
+  | value ty root =>
+    simp only [map_eq_ok] at hf
+    obtain ⟨root', hw, rfl⟩ := hf
+    simp only [HeapCell.normal, isNormalForTy] at hcn ⊢
+    exact writeAt_isNormal hcn hw
+  | mapPayload _ _ =>
+    dsimp only at hf
+    revert hf
+    cases (Loc.rootPath l).2 <;> simp [stuck, throw, throwThe, MonadExceptOf.throw]
+  | chanPayload _ _ _ =>
+    dsimp only at hf
+    revert hf
+    cases (Loc.rootPath l).2 <;> simp [stuck, throw, throwThe, MonadExceptOf.throw]
+
+/-- `storeMany` (a fold of `storeLoc`) preserves `HeapNormal`. -/
+theorem HeapNormal.of_storeMany {σ σ' : Store} :
+    ∀ {locs : List Loc} {vs : List GoValue}, HeapNormal ctx σ →
+      storeMany ctx σ locs vs = .ok σ' → HeapNormal ctx σ' := by
+  intro locs
+  induction locs generalizing σ with
+  | nil =>
+    intro vs h hst
+    cases vs with
+    | nil => simp only [storeMany, pure_eq_ok, Except.ok.injEq] at hst; subst hst; exact h
+    | cons _ _ => simp [storeMany, stuck, throw, throwThe, MonadExceptOf.throw] at hst
+  | cons l rest ih =>
+    intro vs h hst
+    cases vs with
+    | nil => simp [storeMany, stuck, throw, throwThe, MonadExceptOf.throw] at hst
+    | cons v vrest =>
+      simp only [storeMany, bind_eq_ok] at hst
+      obtain ⟨σ₁, h1, hst⟩ := hst
+      exact ih (HeapNormal.of_storeLoc h h1) hst
 
 theorem storeLoc_wf {σ : Store} {l : Loc} {v : GoValue} {σ' : Store}
-    (hw : StateWf σ) (hl : Loc.locSup l ≤ σ.nextAddr)
+    (hw : StateWf ctx σ) (hl : Loc.locSup l ≤ σ.nextAddr)
     (hv : GoValue.locSup v ≤ σ.nextAddr) (h : storeLoc ctx σ l v = .ok σ') :
-    StateWf σ' ∧ σ'.nextAddr = σ.nextAddr := by
+    StateWf ctx σ' ∧ σ'.nextAddr = σ.nextAddr := by
   obtain ⟨h4, h5⟩ := storeLoc_shape h
   have hh := hw.heap_le
-  refine ⟨StateWf.mk' ?_, h4⟩
+  refine ⟨StateWf.mk' ?_ (HeapNormal.of_storeLoc hw.normal h), h4⟩
   rw [h4]; omega
 
 /-! ## Allocation -/
@@ -1975,31 +3040,40 @@ theorem allocCell_shape {σ : Store} {c : HeapCell} {l : Loc}
   simp only [Store.nextAddr]
   omega
 
+/-- `Store.alloc` normalizes (C1 S1, D3) — the shape is `allocCell`'s at
+the normalized value, which never invents locations. -/
 theorem alloc_shape {σ : Store} {v : GoValue} {ty : Ty} {l : Loc}
-    {σ' : Store} (h : σ.alloc v ty = (l, σ')) :
+    {σ' : Store} (h : Store.alloc ctx σ v ty = .ok (l, σ')) :
     l = .base ⟨σ.nextAddr⟩ ∧ σ'.nextAddr = σ.nextAddr + 1
       ∧ Heap.locSup σ'.heap
-          ≤ max (Heap.locSup σ.heap) (max (σ.nextAddr + 1) (GoValue.locSup v)) :=
-  allocCell_shape (c := .value ty v) h
+          ≤ max (Heap.locSup σ.heap) (max (σ.nextAddr + 1) (GoValue.locSup v)) := by
+  unfold Store.alloc at h
+  simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
+  obtain ⟨v', hv', h⟩ := h
+  have hb := normalizeValueForTy_locSup hv'
+  obtain ⟨h1, h2, h3⟩ := allocCell_shape (c := .value ty v') h
+  refine ⟨h1, h2, ?_⟩
+  have hc : HeapCell.locSup (.value ty v') = GoValue.locSup v' := rfl
+  omega
 
 theorem allocCell_wf {σ : Store} {c : HeapCell} {l : Loc}
-    {σ' : Store} (hw : StateWf σ) (hc : HeapCell.locSup c ≤ σ.nextAddr)
-    (h : σ.allocCell c = (l, σ')) :
-    StateWf σ' ∧ Loc.locSup l ≤ σ'.nextAddr ∧ σ'.nextAddr = σ.nextAddr + 1 := by
+    {σ' : Store} (hw : StateWf ctx σ) (hc : HeapCell.locSup c ≤ σ.nextAddr)
+    (h : σ.allocCell c = (l, σ')) (hn : HeapCell.normal ctx.types c = true) :
+    StateWf ctx σ' ∧ Loc.locSup l ≤ σ'.nextAddr ∧ σ'.nextAddr = σ.nextAddr + 1 := by
   obtain ⟨hl, h2, h6⟩ := allocCell_shape h
   have hh := hw.heap_le
-  refine ⟨StateWf.mk' ?_, ?_, h2⟩
+  refine ⟨StateWf.mk' ?_ (HeapNormal.of_allocCell hw.normal hn h), ?_, h2⟩
   · rw [h2]; omega
   · rw [h2, hl]
     simp [Loc.locSup, Loc.rootBase]
 
 theorem alloc_wf {σ : Store} {v : GoValue} {ty : Ty} {l : Loc}
-    {σ' : Store} (hw : StateWf σ) (hv : GoValue.locSup v ≤ σ.nextAddr)
-    (h : σ.alloc v ty = (l, σ')) :
-    StateWf σ' ∧ Loc.locSup l ≤ σ'.nextAddr ∧ σ'.nextAddr = σ.nextAddr + 1 := by
+    {σ' : Store} (hw : StateWf ctx σ) (hv : GoValue.locSup v ≤ σ.nextAddr)
+    (h : Store.alloc ctx σ v ty = .ok (l, σ')) :
+    StateWf ctx σ' ∧ Loc.locSup l ≤ σ'.nextAddr ∧ σ'.nextAddr = σ.nextAddr + 1 := by
   obtain ⟨hl, h2, h6⟩ := alloc_shape h
   have hh := hw.heap_le
-  refine ⟨StateWf.mk' ?_, ?_, h2⟩
+  refine ⟨StateWf.mk' ?_ (HeapNormal.of_alloc hw.normal h), ?_, h2⟩
   · rw [h2]; omega
   · rw [h2, hl]
     simp [Loc.locSup, Loc.rootBase]
@@ -2081,9 +3155,9 @@ theorem pinResultLocs_locSup {env : LocalEnv} :
 theorem allocDecls_wf :
     ∀ {ps : List Param} {env : LocalEnv} {σ : Store} {env' : LocalEnv}
       {σ' : Store},
-      allocDecls ctx env σ ps = .ok (env', σ') → StateWf σ →
+      allocDecls ctx env σ ps = .ok (env', σ') → StateWf ctx σ →
       LocalEnv.locSup env ≤ σ.nextAddr →
-      StateWf σ' ∧ σ.nextAddr ≤ σ'.nextAddr
+      StateWf ctx σ' ∧ σ.nextAddr ≤ σ'.nextAddr
         ∧ LocalEnv.locSup env' ≤ σ'.nextAddr := by
   intro ps
   induction ps with
@@ -2097,26 +3171,24 @@ theorem allocDecls_wf :
     simp only [allocDecls, bind_eq_ok] at h
     obtain ⟨v, hv, h⟩ := h
     have hv0 := defaultValue_locSup hv
-    cases halloc : σ.alloc v p.typ with
-    | mk loc σ₁ =>
-      rw [halloc] at h
-      dsimp only at h
-      obtain ⟨hw₁, hloc, hna⟩ := alloc_wf hw (by omega) halloc
-      obtain ⟨d1, d2, _⟩ := alloc_shape halloc
-      try dsimp only at hw₁ hloc hna d1 d2
-      obtain ⟨c1, c2, c6⟩ := ih h hw₁ (by
-        refine Nat.le_trans LocalEnv.declare_locSup ?_
-        rw [hna]
-        refine Nat.max_le.mpr ⟨by omega, ?_⟩
-        rw [← hna]; exact hloc)
-      refine ⟨c1, by omega, c6⟩
+    obtain ⟨⟨loc, σ₁⟩, halloc, h⟩ := h
+    dsimp only at h
+    obtain ⟨hw₁, hloc, hna⟩ := alloc_wf hw (by omega) halloc
+    obtain ⟨d1, d2, _⟩ := alloc_shape halloc
+    try dsimp only at hw₁ hloc hna d1 d2
+    obtain ⟨c1, c2, c6⟩ := ih h hw₁ (by
+      refine Nat.le_trans LocalEnv.declare_locSup ?_
+      rw [hna]
+      refine Nat.max_le.mpr ⟨by omega, ?_⟩
+      rw [← hna]; exact hloc)
+    refine ⟨c1, by omega, c6⟩
 
 theorem bindParams_wf :
     ∀ {ps : List Param} {vals : List GoValue} {env : LocalEnv} {σ : Store}
       {env' : LocalEnv} {σ' : Store},
-      bindParams ctx env σ ps vals = .ok (env', σ') → StateWf σ →
+      bindParams ctx env σ ps vals = .ok (env', σ') → StateWf ctx σ →
       LocalEnv.locSup env ≤ σ.nextAddr → goValueListSup vals ≤ σ.nextAddr →
-      StateWf σ' ∧ σ.nextAddr ≤ σ'.nextAddr
+      StateWf ctx σ' ∧ σ.nextAddr ≤ σ'.nextAddr
         ∧ LocalEnv.locSup env' ≤ σ'.nextAddr := by
   intro ps
   induction ps with
@@ -2139,20 +3211,18 @@ theorem bindParams_wf :
         have := normalizeValueForTy_locSup hv'
         simp only [goValueListSup] at hvals
         omega
-      cases halloc : σ.alloc v' p.typ with
-      | mk loc σ₁ =>
-        rw [halloc] at h
-        dsimp only at h
-        obtain ⟨hw₁, hloc, hna⟩ := alloc_wf hw hvb halloc
-        obtain ⟨d1, d2, _⟩ := alloc_shape halloc
-        try dsimp only at hw₁ hloc hna d1 d2
-        obtain ⟨c1, c2, c6⟩ := ih h hw₁ (by
-          refine Nat.le_trans LocalEnv.declare_locSup ?_
-          rw [hna]
-          exact Nat.max_le.mpr ⟨by omega, by rw [← hna]; exact hloc⟩) (by
-          simp only [goValueListSup] at hvals
-          omega)
-        exact ⟨c1, by omega, c6⟩
+      obtain ⟨⟨loc, σ₁⟩, halloc, h⟩ := h
+      dsimp only at h
+      obtain ⟨hw₁, hloc, hna⟩ := alloc_wf hw hvb halloc
+      obtain ⟨d1, d2, _⟩ := alloc_shape halloc
+      try dsimp only at hw₁ hloc hna d1 d2
+      obtain ⟨c1, c2, c6⟩ := ih h hw₁ (by
+        refine Nat.le_trans LocalEnv.declare_locSup ?_
+        rw [hna]
+        exact Nat.max_le.mpr ⟨by omega, by rw [← hna]; exact hloc⟩) (by
+        simp only [goValueListSup] at hvals
+        omega)
+      exact ⟨c1, by omega, c6⟩
 
 /-! ## Map/assert helpers -/
 
@@ -2341,12 +3411,12 @@ theorem dynamicDispatch?_locSup {σ : Store} {func : Func}
 theorem enterFrame_tail {σ : Store} {func₁ : Func} {argVals₁ : List GoValue}
     {argsEnv : LocalEnv} {s₁ : Store} {frameEnv₁ : LocalEnv} {s₂ : Store}
     {locs : List Loc}
-    (hw : StateWf σ)
+    (hw : StateWf ctx σ)
     (hargs₁ : goValueListSup argVals₁ ≤ σ.nextAddr)
     (hbp : bindParams ctx [] σ func₁.args.toList argVals₁ = .ok (argsEnv, s₁))
     (had : allocDecls ctx argsEnv s₁ func₁.results.toList = .ok (frameEnv₁, s₂))
     (hpin : pinResultLocs frameEnv₁ func₁.results.toList = .ok locs) :
-    StateWf s₂ ∧ σ.nextAddr ≤ s₂.nextAddr
+    StateWf ctx s₂ ∧ σ.nextAddr ≤ s₂.nextAddr
       ∧ Stmt.locSup func₁.body ≤ s₂.nextAddr
       ∧ LocalEnv.locSup frameEnv₁ ≤ s₂.nextAddr
       ∧ locListSup locs ≤ s₂.nextAddr := by
@@ -2361,9 +3431,9 @@ theorem enterFrame_tail {σ : Store} {func₁ : Func} {argVals₁ : List GoValue
 
 theorem enterFrame_wf {σ : Store} {fid : FuncId} {argVals : List GoValue}
     {func : Func} {frameEnv : LocalEnv} {resultLocs : List Loc} {σ' : Store}
-    (hw : StateWf σ) (hargs : goValueListSup argVals ≤ σ.nextAddr)
+    (hw : StateWf ctx σ) (hargs : goValueListSup argVals ≤ σ.nextAddr)
     (h : enterFrame ctx σ fid argVals = .ok (func, frameEnv, resultLocs, σ')) :
-    StateWf σ' ∧ σ.nextAddr ≤ σ'.nextAddr
+    StateWf ctx σ' ∧ σ.nextAddr ≤ σ'.nextAddr
       ∧ Stmt.locSup func.body ≤ σ'.nextAddr
       ∧ LocalEnv.locSup frameEnv ≤ σ'.nextAddr
       ∧ locListSup resultLocs ≤ σ'.nextAddr := by
@@ -2425,11 +3495,11 @@ theorem enterFrame_wf {σ : Store} {fid : FuncId} {argVals : List GoValue}
 theorem bindIterVars_wf {env : LocalEnv} {σ : Store}
     {kv vv : Option String} {kt vt : Ty} {key value : GoValue}
     {env' : LocalEnv} {σ' : Store}
-    (hw : StateWf σ) (henv : LocalEnv.locSup env ≤ σ.nextAddr)
+    (hw : StateWf ctx σ) (henv : LocalEnv.locSup env ≤ σ.nextAddr)
     (hk : GoValue.locSup key ≤ σ.nextAddr)
     (hv : GoValue.locSup value ≤ σ.nextAddr)
     (h : bindIterVars ctx env σ kv vv kt vt key value = .ok (env', σ')) :
-    StateWf σ' ∧ σ.nextAddr ≤ σ'.nextAddr
+    StateWf ctx σ' ∧ σ.nextAddr ≤ σ'.nextAddr
       ∧ LocalEnv.locSup env' ≤ σ'.nextAddr := by
   unfold bindIterVars at h
   simp only [Bind.bind, Except.bind, pure, Except.pure] at h
@@ -2442,39 +3512,43 @@ theorem bindIterVars_wf {env : LocalEnv} {σ : Store}
     have hkb : GoValue.locSup kv' ≤ σ.nextAddr := by
       have := normalizeValueForTy_locSup hkv'
       omega
-    cases halloc : σ.alloc kv' kt with
-    | mk loc σa =>
-      rw [halloc] at h
-      dsimp only at h
-      obtain ⟨w1, w2, w3⟩ := alloc_wf hw hkb halloc
-      obtain ⟨d1, d2, _⟩ := alloc_shape halloc
-      have henva : LocalEnv.locSup (env.declare name loc) ≤ σa.nextAddr := by
-        refine Nat.le_trans LocalEnv.declare_locSup ?_
-        exact Nat.max_le.mpr ⟨by omega, w2⟩
+    cases halloc : Store.alloc ctx σ kv' kt with
+    | error e => rw [halloc] at h; simp at h
+    | ok pr =>
+    obtain ⟨loc, σa⟩ := pr
+    rw [halloc] at h
+    dsimp only at h
+    obtain ⟨w1, w2, w3⟩ := alloc_wf hw hkb halloc
+    obtain ⟨d1, d2, _⟩ := alloc_shape halloc
+    have henva : LocalEnv.locSup (env.declare name loc) ≤ σa.nextAddr := by
+      refine Nat.le_trans LocalEnv.declare_locSup ?_
+      exact Nat.max_le.mpr ⟨by omega, w2⟩
+    split at h
+    · -- value bound too
+      rename_i name₂
       split at h
-      · -- value bound too
-        rename_i name₂
-        split at h
-        all_goals try (simp at h; done)
-        rename_i vv' hvv'
-        have hvb : GoValue.locSup vv' ≤ σa.nextAddr := by
-          have := normalizeValueForTy_locSup hvv'
-          omega
-        cases halloc₂ : σa.alloc vv' vt with
-        | mk loc₂ σb =>
-          rw [halloc₂] at h
-          dsimp only at h
-          simp only [Except.ok.injEq, Prod.mk.injEq] at h
-          obtain ⟨rfl, rfl⟩ := h
-          obtain ⟨y1, y2, y3⟩ := alloc_wf w1 hvb halloc₂
-          obtain ⟨e1, e2, _⟩ := alloc_shape halloc₂
-          refine ⟨y1, by omega, ?_⟩
-          refine Nat.le_trans LocalEnv.declare_locSup ?_
-          exact Nat.max_le.mpr ⟨by omega, y2⟩
-      · -- value unbound
+      all_goals try (simp at h; done)
+      rename_i vv' hvv'
+      have hvb : GoValue.locSup vv' ≤ σa.nextAddr := by
+        have := normalizeValueForTy_locSup hvv'
+        omega
+      cases halloc₂ : Store.alloc ctx σa vv' vt with
+      | error e => rw [halloc₂] at h; simp at h
+      | ok pr₂ =>
+        obtain ⟨loc₂, σb⟩ := pr₂
+        rw [halloc₂] at h
+        dsimp only at h
         simp only [Except.ok.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl⟩ := h
-        exact ⟨w1, by omega, henva⟩
+        obtain ⟨y1, y2, y3⟩ := alloc_wf w1 hvb halloc₂
+        obtain ⟨e1, e2, _⟩ := alloc_shape halloc₂
+        refine ⟨y1, by omega, ?_⟩
+        refine Nat.le_trans LocalEnv.declare_locSup ?_
+        exact Nat.max_le.mpr ⟨by omega, y2⟩
+    · -- value unbound
+      simp only [Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      exact ⟨w1, by omega, henva⟩
   · -- key unbound
     split at h
     · -- value bound
@@ -2485,17 +3559,19 @@ theorem bindIterVars_wf {env : LocalEnv} {σ : Store}
       have hvb : GoValue.locSup vv' ≤ σ.nextAddr := by
         have := normalizeValueForTy_locSup hvv'
         omega
-      cases halloc : σ.alloc vv' vt with
-      | mk loc σa =>
-        rw [halloc] at h
-        dsimp only at h
-        simp only [Except.ok.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
-        obtain ⟨w1, w2, w3⟩ := alloc_wf hw hvb halloc
-        obtain ⟨d1, d2, _⟩ := alloc_shape halloc
-        refine ⟨w1, by omega, ?_⟩
-        refine Nat.le_trans LocalEnv.declare_locSup ?_
-        exact Nat.max_le.mpr ⟨by omega, w2⟩
+      cases halloc : Store.alloc ctx σ vv' vt with
+      | error e => rw [halloc] at h; simp at h
+      | ok pr =>
+      obtain ⟨loc, σa⟩ := pr
+      rw [halloc] at h
+      dsimp only at h
+      simp only [Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨w1, w2, w3⟩ := alloc_wf hw hvb halloc
+      obtain ⟨d1, d2, _⟩ := alloc_shape halloc
+      refine ⟨w1, by omega, ?_⟩
+      refine Nat.le_trans LocalEnv.declare_locSup ?_
+      exact Nat.max_le.mpr ⟨by omega, w2⟩
     · -- neither bound
       simp only [Except.ok.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
@@ -2875,9 +3951,9 @@ theorem intShiftRightResult_locSup {l r v : GoValue}
 
 /-- The state-unchanged conclusion shape shared by every non-allocating
 strict-op arm. -/
-theorem strictWfSame {σ : Store} {v : GoValue} (hw : StateWf σ)
+theorem strictWfSame {σ : Store} {v : GoValue} (hw : StateWf ctx σ)
     (hv : GoValue.locSup v ≤ σ.nextAddr) :
-    StateWf σ ∧ σ.nextAddr ≤ σ.nextAddr
+    StateWf ctx σ ∧ σ.nextAddr ≤ σ.nextAddr
       ∧ GoValue.locSup v ≤ σ.nextAddr :=
   ⟨hw, Nat.le_refl _, hv⟩
 
@@ -2901,9 +3977,9 @@ theorem floatBitsApply_locSup {op : FloatBitsOp} {v r : GoValue}
 set_option maxHeartbeats 1600000 in
 theorem applyStrictOp_wf {σ : Store} {op : StrictOp} {vs : List GoValue}
     {v : GoValue} {σ' : Store}
-    (hw : StateWf σ) (hvs : goValueListSup vs ≤ σ.nextAddr)
+    (hw : StateWf ctx σ) (hvs : goValueListSup vs ≤ σ.nextAddr)
     (h : applyStrictOp ctx σ op vs = .ok (v, σ')) :
-    StateWf σ' ∧ σ.nextAddr ≤ σ'.nextAddr
+    StateWf ctx σ' ∧ σ.nextAddr ≤ σ'.nextAddr
       ∧ GoValue.locSup v ≤ σ'.nextAddr := by
   have hheap := hw.heap_le
   rw [applyStrictOp.eq_def] at h
@@ -3041,15 +4117,9 @@ theorem applyStrictOp_wf {σ : Store} {op : StrictOp} {vs : List GoValue}
     split at h
     · rename_i bytes
       try dsimp only at h
-      cases halloc : σ.alloc
-          (GoValue.array (bytes.bytes.map fun b =>
-            GoValue.int (Int.ofNat b.toNat) IntKind.uint8))
-          (Ty.array (bytes.bytes.map fun b =>
-            GoValue.int (Int.ofNat b.toNat) IntKind.uint8).size
-            (Ty.int IntKind.uint8)) with
-      | mk base σa =>
-        rw [halloc] at h
-        dsimp only at h
+      simp only [bind_eq_ok] at h
+      obtain ⟨⟨base, σa⟩, halloc, h⟩ := h
+      · dsimp only at h
         simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl⟩ := h
         have hvb : GoValue.locSup (.array (bytes.bytes.map fun b =>
@@ -3487,15 +4557,9 @@ theorem applyStrictOp_wf {σ : Store} {op : StrictOp} {vs : List GoValue}
     split at h
     · rename_i str
       try dsimp only at h
-      cases halloc : σ.alloc
-          (GoValue.array ((runesOfString str).map fun r =>
-            GoValue.int r IntKind.int32))
-          (Ty.array ((runesOfString str).map fun r =>
-            GoValue.int r IntKind.int32).size
-            (Ty.int IntKind.int32)) with
-      | mk base σa =>
-        rw [halloc] at h
-        dsimp only at h
+      simp only [bind_eq_ok] at h
+      obtain ⟨⟨base, σa⟩, halloc, h⟩ := h
+      · dsimp only at h
         simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl⟩ := h
         have hvb : GoValue.locSup (.array ((runesOfString str).map fun r =>
@@ -3535,29 +4599,31 @@ theorem goValueListSup_drop {vs : List GoValue} {n : Nat} :
   simp only [goValueListSup_eq]
   exact supBy_le_of_subset fun a ha => List.drop_subset _ _ ha
 
+variable (ctx) in
 /-- The conclusion shape of the wide-op preservation lemmas. -/
 def StmtOpPres (σ σ' : Store) : Prop :=
-  StateWf σ' ∧ σ.nextAddr ≤ σ'.nextAddr
+  StateWf ctx σ' ∧ σ.nextAddr ≤ σ'.nextAddr
 
-theorem stmtOpPres_refl {σ : Store} (hw : StateWf σ) : StmtOpPres σ σ :=
+theorem stmtOpPres_refl {σ : Store} (hw : StateWf ctx σ) : StmtOpPres ctx σ σ :=
   ⟨hw, Nat.le_refl _⟩
 
 theorem storeLoc_pres {σ : Store} {l : Loc} {v : GoValue} {σ' : Store}
-    (hw : StateWf σ) (hl : Loc.locSup l ≤ σ.nextAddr)
+    (hw : StateWf ctx σ) (hl : Loc.locSup l ≤ σ.nextAddr)
     (hv : GoValue.locSup v ≤ σ.nextAddr) (h : storeLoc ctx σ l v = .ok σ') :
-    StmtOpPres σ σ' := by
+    StmtOpPres ctx σ σ' := by
   obtain ⟨h4, h5⟩ := storeLoc_shape h
   have hh := hw.heap_le
-  exact ⟨StateWf.mk' (by omega), by omega⟩
+  exact ⟨StateWf.mk' (by omega) (HeapNormal.of_storeLoc hw.normal h), by omega⟩
 
 /-- A whole-payload map store preserves the invariant (A3; the map-op
 cases' `storeLoc_pres` replacement). `hl` is unused on the dense heap (a
 root address is bounded by construction) and kept for call-site parity. -/
 theorem storeMapPayload_pres {σ σ' : Store} {l : Loc}
     {entries : Array (Nat × GoValue × GoValue)} {nextId : Nat}
-    (hw : StateWf σ) (hl : Loc.locSup l ≤ σ.nextAddr)
+    (hw : StateWf ctx σ) (hl : Loc.locSup l ≤ σ.nextAddr)
     (he : goValueEntriesSup entries.toList ≤ σ.nextAddr)
-    (h : storeMapPayload σ l entries nextId = .ok σ') : StmtOpPres σ σ' := by
+    (h : storeMapPayload σ l entries nextId = .ok σ') : StmtOpPres ctx σ σ' := by
+  have hn := HeapNormal.of_storeMapPayload hw.normal h
   unfold storeMapPayload at h
   split at h
   · obtain ⟨h4, cell, cell', hcell, hf, hsup⟩ :=
@@ -3570,15 +4636,16 @@ theorem storeMapPayload_pres {σ σ' : Store} {l : Loc}
       | value _ _ => simp [stuck, throw, throwThe, MonadExceptOf.throw] at hf
       | chanPayload _ _ _ => simp [stuck, throw, throwThe, MonadExceptOf.throw] at hf
     have hh := hw.heap_le
-    exact ⟨StateWf.mk' (by omega), by omega⟩
+    exact ⟨StateWf.mk' (by omega) hn, by omega⟩
   · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
 
 /-- A whole-payload channel store preserves the invariant (A3). -/
 theorem storeChanPayload_pres {σ σ' : Store} {l : Loc} {buf : Array GoValue}
     {capacity : Nat} {closed : Bool}
-    (hw : StateWf σ) (hl : Loc.locSup l ≤ σ.nextAddr)
+    (hw : StateWf ctx σ) (hl : Loc.locSup l ≤ σ.nextAddr)
     (hb : goValueListSup buf.toList ≤ σ.nextAddr)
-    (h : storeChanPayload σ l buf capacity closed = .ok σ') : StmtOpPres σ σ' := by
+    (h : storeChanPayload σ l buf capacity closed = .ok σ') : StmtOpPres ctx σ σ' := by
+  have hn := HeapNormal.of_storeChanPayload hw.normal h
   unfold storeChanPayload at h
   split at h
   · obtain ⟨h4, cell, cell', hcell, hf, hsup⟩ :=
@@ -3591,22 +4658,22 @@ theorem storeChanPayload_pres {σ σ' : Store} {l : Loc} {buf : Array GoValue}
       | value _ _ => simp [stuck, throw, throwThe, MonadExceptOf.throw] at hf
       | mapPayload _ _ => simp [stuck, throw, throwThe, MonadExceptOf.throw] at hf
     have hh := hw.heap_le
-    exact ⟨StateWf.mk' (by omega), by omega⟩
+    exact ⟨StateWf.mk' (by omega) hn, by omega⟩
   · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
 
-theorem StmtOpPres.trans {σ₁ σ₂ σ₃ : Store} (a : StmtOpPres σ₁ σ₂)
-    (b : StmtOpPres σ₂ σ₃) : StmtOpPres σ₁ σ₃ := by
+theorem StmtOpPres.trans {σ₁ σ₂ σ₃ : Store} (a : StmtOpPres ctx σ₁ σ₂)
+    (b : StmtOpPres ctx σ₂ σ₃) : StmtOpPres ctx σ₁ σ₃ := by
   obtain ⟨a1, a2⟩ := a
   obtain ⟨b1, b2⟩ := b
   exact ⟨b1, by omega⟩
 
 theorem storeMany_pres {σ : Store} {locs : List Loc} {vs : List GoValue}
-    {σ' : Store} (hw : StateWf σ) (hl : locListSup locs ≤ σ.nextAddr)
+    {σ' : Store} (hw : StateWf ctx σ) (hl : locListSup locs ≤ σ.nextAddr)
     (hv : goValueListSup vs ≤ σ.nextAddr) (h : storeMany ctx σ locs vs = .ok σ') :
-    StmtOpPres σ σ' := by
+    StmtOpPres ctx σ σ' := by
   obtain ⟨h4, h5⟩ := storeMany_shape h
   have hh := hw.heap_le
-  exact ⟨StateWf.mk' (by omega), by omega⟩
+  exact ⟨StateWf.mk' (by omega) (HeapNormal.of_storeMany hw.normal h), by omega⟩
 
 
 set_option maxHeartbeats 1600000 in
@@ -3615,12 +4682,12 @@ set_option maxHeartbeats 1600000 in
 convergence round BUG-030). -/
 theorem mapAssignValue_pres {σ : Store} {keyTy valueTy : Ty}
     {baseV keyV valueV : GoValue} {σ' : Store}
-    (hw : StateWf σ)
+    (hw : StateWf ctx σ)
     (hb : GoValue.locSup baseV ≤ σ.nextAddr)
     (hk : GoValue.locSup keyV ≤ σ.nextAddr)
     (hv : GoValue.locSup valueV ≤ σ.nextAddr)
     (h : mapAssignValue ctx σ keyTy valueTy baseV keyV valueV = .ok σ') :
-    StmtOpPres σ σ' := by
+    StmtOpPres ctx σ σ' := by
   have hheap := hw.heap_le
   unfold mapAssignValue at h
   simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
@@ -3741,10 +4808,10 @@ theorem applyRhsOp_locSup {σ : Store} {rop : RhsOp}
 round 4, BUG-033): one phase-2 store keeps the loc invariant. -/
 theorem storeTarget_pres {σ : Store} {r : TargetRef} {v : GoValue}
     {σ' : Store}
-    (hw : StateWf σ) (hr : TargetRef.locSup r ≤ σ.nextAddr)
+    (hw : StateWf ctx σ) (hr : TargetRef.locSup r ≤ σ.nextAddr)
     (hv : GoValue.locSup v ≤ σ.nextAddr)
     (h : storeTarget ctx σ r v = .ok σ') :
-    StmtOpPres σ σ' := by
+    StmtOpPres ctx σ σ' := by
   have hheap := hw.heap_le
   unfold storeTarget at h
   cases r with
@@ -3761,9 +4828,9 @@ theorem storeTarget_pres {σ : Store} {r : TargetRef} {v : GoValue}
 
 theorem applyStmtOpCore_wf {σ : Store} {op : StmtOp}
     {vs : List GoValue} {σ' : Store}
-    (hw : StateWf σ) (hvs : goValueListSup vs ≤ σ.nextAddr)
+    (hw : StateWf ctx σ) (hvs : goValueListSup vs ≤ σ.nextAddr)
     (h : applyStmtOpCore ctx σ op vs = .ok σ') :
-    StmtOpPres σ σ' := by
+    StmtOpPres ctx σ σ' := by
   have hheap := hw.heap_le
   rw [applyStmtOpCore.eq_def] at h
   split at h
@@ -3775,16 +4842,14 @@ theorem applyStmtOpCore_wf {σ : Store} {op : StmtOp}
       simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
       obtain ⟨loc, hloc, h⟩ := h
       have hlocb := valueAsLoc_locSup hloc
-      cases halloc : σ.alloc value typ with
-      | mk nloc σa =>
-        rw [halloc] at h
-        dsimp only at h
-        obtain ⟨w1, w2, w3⟩ := alloc_wf hw (by omega) halloc
-        obtain ⟨d1, d2, _⟩ := alloc_shape halloc
-        refine StmtOpPres.trans ⟨w1, by omega⟩ ?_
-        refine storeLoc_pres w1 (by omega) ?_ h
-        show Loc.locSup nloc ≤ σa.nextAddr
-        exact w2
+      obtain ⟨⟨nloc, σa⟩, halloc, h⟩ := h
+      dsimp only at h
+      obtain ⟨w1, w2, w3⟩ := alloc_wf hw (by omega) halloc
+      obtain ⟨d1, d2, _⟩ := alloc_shape halloc
+      refine StmtOpPres.trans ⟨w1, by omega⟩ ?_
+      refine storeLoc_pres w1 (by omega) ?_ h
+      show Loc.locSup nloc ≤ σa.nextAddr
+      exact w2
     · simp at h
   · -- makeSlice
     rename_i elem hasCap
@@ -3801,19 +4866,16 @@ theorem applyStmtOpCore_wf {σ : Store} {op : StmtOp}
       split at h
       · split at h <;> simp [Bind.bind, Except.bind] at h
       · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
-        obtain ⟨backing, hbacking, loc, hloc, h⟩ := h
+        obtain ⟨backing, hbacking, ⟨base, σa⟩, halloc, loc, hloc, h⟩ := h
         have hb0 := buildDefaultArrayValue_locSup hbacking
+        dsimp only at h
         have hlocb := valueAsLoc_locSup hloc
-        cases halloc : σ.alloc backing (Ty.array lenValue.toNat elem) with
-        | mk base σa =>
-          rw [halloc] at h
-          dsimp only at h
-          obtain ⟨w1, w2, w3⟩ := alloc_wf hw (by omega) halloc
-          obtain ⟨d1, d2, _⟩ := alloc_shape halloc
-          refine StmtOpPres.trans ⟨w1, by omega⟩ ?_
-          refine storeLoc_pres w1 (by omega) ?_ h
-          show optLocSup (some base) ≤ σa.nextAddr
-          exact w2
+        obtain ⟨w1, w2, w3⟩ := alloc_wf hw (by omega) halloc
+        obtain ⟨d1, d2, _⟩ := alloc_shape halloc
+        refine StmtOpPres.trans ⟨w1, by omega⟩ ?_
+        refine storeLoc_pres w1 (by omega) ?_ h
+        show optLocSup (some base) ≤ σa.nextAddr
+        exact w2
     · -- explicit cap
       rename_i tv lenV capV
       simp only [goValueListSup] at hvs
@@ -3823,19 +4885,16 @@ theorem applyStmtOpCore_wf {σ : Store} {op : StmtOp}
       split at h
       · split at h <;> simp [Bind.bind, Except.bind] at h
       · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
-        obtain ⟨backing, hbacking, loc, hloc, h⟩ := h
+        obtain ⟨backing, hbacking, ⟨base, σa⟩, halloc, loc, hloc, h⟩ := h
         have hb0 := buildDefaultArrayValue_locSup hbacking
+        dsimp only at h
         have hlocb := valueAsLoc_locSup hloc
-        cases halloc : σ.alloc backing (Ty.array capValue.toNat elem) with
-        | mk base σa =>
-          rw [halloc] at h
-          dsimp only at h
-          obtain ⟨w1, w2, w3⟩ := alloc_wf hw (by omega) halloc
-          obtain ⟨d1, d2, _⟩ := alloc_shape halloc
-          refine StmtOpPres.trans ⟨w1, by omega⟩ ?_
-          refine storeLoc_pres w1 (by omega) ?_ h
-          show optLocSup (some base) ≤ σa.nextAddr
-          exact w2
+        obtain ⟨w1, w2, w3⟩ := alloc_wf hw (by omega) halloc
+        obtain ⟨d1, d2, _⟩ := alloc_shape halloc
+        refine StmtOpPres.trans ⟨w1, by omega⟩ ?_
+        refine storeLoc_pres w1 (by omega) ?_ h
+        show optLocSup (some base) ≤ σa.nextAddr
+        exact w2
   · -- makeMap
     rename_i hasSpace
     split at h
@@ -3850,7 +4909,7 @@ theorem applyStmtOpCore_wf {σ : Store} {op : StmtOp}
       obtain ⟨loc, hloc, h⟩ := h
       have hlocb := valueAsLoc_locSup hloc
       obtain ⟨w1, w2, w3⟩ := allocCell_wf hw
-        (by simp [HeapCell.locSup, goValueEntriesSup]) halloc
+        (by simp [HeapCell.locSup, goValueEntriesSup]) halloc rfl
       obtain ⟨d1, d2, _⟩ := allocCell_shape halloc
       refine StmtOpPres.trans ⟨w1, by omega⟩ ?_
       refine storeLoc_pres w1 (by omega) ?_ h
@@ -3864,7 +4923,7 @@ theorem applyStmtOpCore_wf {σ : Store} {op : StmtOp}
       obtain ⟨sz, hsz, loc, hloc, h⟩ := h
       have hlocb := valueAsLoc_locSup hloc
       obtain ⟨w1, w2, w3⟩ := allocCell_wf hw
-        (by simp [HeapCell.locSup, goValueEntriesSup]) halloc
+        (by simp [HeapCell.locSup, goValueEntriesSup]) halloc rfl
       obtain ⟨d1, d2, _⟩ := allocCell_shape halloc
       refine StmtOpPres.trans ⟨w1, by omega⟩ ?_
       refine storeLoc_pres w1 (by omega) ?_ h
@@ -3885,7 +4944,7 @@ theorem applyStmtOpCore_wf {σ : Store} {op : StmtOp}
         rw [halloc] at h
         dsimp only at h
         obtain ⟨w1, w2, w3⟩ := allocCell_wf hw
-          (by simp [HeapCell.locSup, goValueListSup]) halloc
+          (by simp [HeapCell.locSup, goValueListSup]) halloc rfl
         obtain ⟨d1, d2, _⟩ := allocCell_shape halloc
         refine StmtOpPres.trans ⟨w1, by omega⟩ ?_
         refine storeLoc_pres w1 (by omega) ?_ h
@@ -3909,7 +4968,7 @@ theorem applyStmtOpCore_wf {σ : Store} {op : StmtOp}
           rw [halloc] at h
           dsimp only at h
           obtain ⟨w1, w2, w3⟩ := allocCell_wf hw
-            (by simp [HeapCell.locSup, goValueListSup]) halloc
+            (by simp [HeapCell.locSup, goValueListSup]) halloc rfl
           obtain ⟨d1, d2, _⟩ := allocCell_shape halloc
           refine StmtOpPres.trans ⟨w1, by omega⟩ ?_
           refine storeLoc_pres w1 (by omega) ?_ h
@@ -3983,7 +5042,7 @@ theorem applyStmtOpCore_wf {σ : Store} {op : StmtOp}
         have := valueAsSlice_locSup hsl
         omega
       rw [Std.Legacy.Range.forIn_eq_forIn_range'] at hloop
-      refine forIn_list_inv (P := fun cur => StmtOpPres σ cur)
+      refine forIn_list_inv (P := fun cur => StmtOpPres ctx σ cur)
         ?_ (stmtOpPres_refl hw) hloop
       intro a _ b rr hbb hr
       simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at hr
@@ -4009,7 +5068,7 @@ theorem applyStmtOpCore_wf {σ : Store} {op : StmtOp}
       obtain ⟨cur, hloop2, h⟩ := h
       subst h
       rw [Std.Legacy.Range.forIn_eq_forIn_range'] at hloop2
-      refine forIn_list_inv (P := fun cur => StmtOpPres σ cur)
+      refine forIn_list_inv (P := fun cur => StmtOpPres ctx σ cur)
         ?_ (stmtOpPres_refl hw) hloop2
       intro a _ b rr hbb hr
       split at hr
@@ -4046,10 +5105,10 @@ theorem applyStmtOpCore_wf {σ : Store} {op : StmtOp}
         have := loadLoc_locSup hlv
         omega
       obtain ⟨st, hloop, h⟩ := h
-      have hpres : StmtOpPres σ st.1 := by
+      have hpres : StmtOpPres ctx σ st.1 := by
         rw [← Array.forIn_toList] at hloop
         refine forIn_list_inv
-          (P := fun st : Store × Nat => StmtOpPres σ st.1)
+          (P := fun st : Store × Nat => StmtOpPres ctx σ st.1)
           ?_ (stmtOpPres_refl hw) hloop
         intro a ha b rr hbb hr
         have hab : GoValue.locSup a ≤ σ.nextAddr := by
@@ -4084,9 +5143,9 @@ theorem applyStmtOpCore_wf {σ : Store} {op : StmtOp}
 set_option maxHeartbeats 1600000 in
 theorem applyStmtOp_wf {σ : Store} {ch : Choices} {op : StmtOp} {nt : Nat}
     {vs : List GoValue} {σ' : Store} {ch' : Choices}
-    (hw : StateWf σ) (hvs : goValueListSup vs ≤ σ.nextAddr)
+    (hw : StateWf ctx σ) (hvs : goValueListSup vs ≤ σ.nextAddr)
     (h : applyStmtOp ctx σ ch op nt vs = .ok (σ', ch')) :
-    StmtOpPres σ σ' := by
+    StmtOpPres ctx σ σ' := by
   have hheap := hw.heap_le
   rw [applyStmtOp.eq_def] at h
   split at h
@@ -4112,10 +5171,10 @@ theorem applyStmtOp_wf {σ : Store} {ch : Choices} {op : StmtOp} {nt : Nat}
         simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
         obtain ⟨st, hloop, σ₂, h, hσ, hch⟩ := h
         subst hσ
-        have hpres : StmtOpPres σ st.1 := by
+        have hpres : StmtOpPres ctx σ st.1 := by
           rw [← Array.forIn_toList] at hloop
           refine forIn_list_inv
-            (P := fun st : Store × Nat => StmtOpPres σ st.1)
+            (P := fun st : Store × Nat => StmtOpPres ctx σ st.1)
             ?_ (stmtOpPres_refl hw) hloop
           intro a ha b rr hbb hr
           have hab : GoValue.locSup a ≤ σ.nextAddr := by
@@ -4153,23 +5212,13 @@ theorem applyStmtOp_wf {σ : Store} {ch : Choices} {op : StmtOp} {nt : Nat}
         · simp [Bind.bind, Except.bind] at h
         simp only [Choices.consumeAt_appendSpill, bind_eq_ok, pure_eq_ok,
           Except.ok.injEq, Prod.mk.injEq] at h
-        obtain ⟨oldValues, holdValues, backing, hbacking, σ₂, h, hσ, hch⟩ := h
+        obtain ⟨oldValues, holdValues, backing, hbacking, ⟨base, σa⟩, halloc, σ₂, h, hσ, hch⟩ := h
         subst hσ
         have holdb : goValueListSup oldValues.toList ≤ σ.nextAddr := by
           have := sliceVisibleValues_locSup holdValues
           omega
         have hbb := buildAppendBackingValue_locSup hbacking
-        cases halloc : σ.alloc backing
-            (Ty.array (slice.len + elemValues.size +
-              ((appendGrowthCap slice.cap (slice.len + elemValues.size)
-                  - (slice.len + elemValues.size)
-                  + (ch.consume (appendSpillWidth slice.cap
-                      (slice.len + elemValues.size))).fst)
-                % appendSpillWidth slice.cap (slice.len + elemValues.size)))
-              elem) with
-        | mk base σa =>
-          rw [halloc] at h
-          dsimp only at h
+        · dsimp only at h
           obtain ⟨w1, w2, w3⟩ := alloc_wf hw (by omega) halloc
           obtain ⟨d1, d2, _⟩ := alloc_shape halloc
           refine StmtOpPres.trans ⟨w1, by omega⟩ ?_
@@ -4746,14 +5795,14 @@ phase-1 entry configuration is bounded; the state is untouched. -/
 theorem enterRecvTargets_wf {σ : Store} {targets : List Assignee}
     {vals : List GoValue} {body : Stmt} {env : LocalEnv} {k : Cont}
     {c' : Config} {σ' : Store}
-    (hw : StateWf σ)
+    (hw : StateWf ctx σ)
     (ht : assigneeListSup targets ≤ σ.nextAddr)
     (hvals : goValueListSup vals ≤ σ.nextAddr)
     (hbody : Stmt.locSup body ≤ σ.nextAddr)
     (henv : LocalEnv.locSup env ≤ σ.nextAddr)
     (hk : Cont.locSup k ≤ σ.nextAddr)
     (h : enterRecvTargets σ targets vals body env k = .ok (c', σ')) :
-    StateWf σ' ∧ Config.locSup c' ≤ σ'.nextAddr
+    StateWf ctx σ' ∧ Config.locSup c' ≤ σ'.nextAddr
       ∧ σ.nextAddr ≤ σ'.nextAddr := by
   unfold enterRecvTargets at h
   split at h
@@ -4772,11 +5821,11 @@ theorem enterRecvTargets_wf {σ : Store} {targets : List Assignee}
 types unchanged) and the successor configuration is bounded. -/
 theorem commitClause_wf {σ : Store} {env : LocalEnv} {k : Cont}
     {cl : EvClause} {c' : Config} {σ' : Store}
-    (hw : StateWf σ) (hcl : evClauseSup cl ≤ σ.nextAddr)
+    (hw : StateWf ctx σ) (hcl : evClauseSup cl ≤ σ.nextAddr)
     (henv : LocalEnv.locSup env ≤ σ.nextAddr)
     (hk : Cont.locSup k ≤ σ.nextAddr)
     (h : commitClause ctx σ env k cl = .ok (c', σ')) :
-    StateWf σ' ∧ Config.locSup c' ≤ σ'.nextAddr
+    StateWf ctx σ' ∧ Config.locSup c' ≤ σ'.nextAddr
       ∧ σ.nextAddr ≤ σ'.nextAddr := by
   have hheap := hw.heap_le
   rw [commitClause.eq_def] at h
@@ -4895,12 +5944,12 @@ premise-free family.) -/
 theorem applyChanOp_wf {σ : Store} {op : ChanStOp}
     {vs : List GoValue} {env : LocalEnv} {k : Cont} {c' : Config}
     {σ' : Store}
-    (hw : StateWf σ) (hvs : goValueListSup vs ≤ σ.nextAddr)
+    (hw : StateWf ctx σ) (hvs : goValueListSup vs ≤ σ.nextAddr)
     (hop : chanStOpSup op ≤ σ.nextAddr)
     (henv : LocalEnv.locSup env ≤ σ.nextAddr)
     (hk : Cont.locSup k ≤ σ.nextAddr)
     (h : applyChanOp ctx σ op vs env k = .ok (c', σ')) :
-    StateWf σ' ∧ Config.locSup c' ≤ σ'.nextAddr
+    StateWf ctx σ' ∧ Config.locSup c' ≤ σ'.nextAddr
       ∧ σ.nextAddr ≤ σ'.nextAddr := by
   have hheap := hw.heap_le
   rw [applyChanOp.eq_def] at h
@@ -5143,12 +6192,12 @@ types unchanged, allocator monotone. Sync stores are loc-free
 theorem applySyncOpCore_wf {σ : Store} {op : SyncOp}
     {vs : List GoValue} {env : LocalEnv} {k : Cont} {c' : Config}
     {σ' : Store}
-    (hw : StateWf σ) (hvs : goValueListSup vs ≤ σ.nextAddr)
+    (hw : StateWf ctx σ) (hvs : goValueListSup vs ≤ σ.nextAddr)
     (hop : syncOpSup op ≤ σ.nextAddr)
     (henv : LocalEnv.locSup env ≤ σ.nextAddr)
     (hk : Cont.locSup k ≤ σ.nextAddr)
     (h : applySyncOpCore ctx σ op vs env k = .ok (c', σ')) :
-    StateWf σ' ∧ Config.locSup c' ≤ σ'.nextAddr
+    StateWf ctx σ' ∧ Config.locSup c' ≤ σ'.nextAddr
       ∧ σ.nextAddr ≤ σ'.nextAddr := by
   -- Closers shared by every arm's outcomes.
   rw [applySyncOpCore.eq_def] at h
@@ -5380,11 +6429,11 @@ theorem applySyncOpCore_wf {σ : Store} {op : SyncOp}
 the target entry is `enterRecvTargets_wf` over a loc-free Bool. -/
 theorem tryDeliver_wf {σ : Store} {b : Bool} {targets : List Assignee}
     {env : LocalEnv} {k : Cont} {c' : Config} {σ' : Store}
-    (hw : StateWf σ) (ht : assigneeListSup targets ≤ σ.nextAddr)
+    (hw : StateWf ctx σ) (ht : assigneeListSup targets ≤ σ.nextAddr)
     (henv : LocalEnv.locSup env ≤ σ.nextAddr)
     (hk : Cont.locSup k ≤ σ.nextAddr)
     (h : tryDeliver b σ targets env k = .ok (c', σ')) :
-    StateWf σ' ∧ Config.locSup c' ≤ σ'.nextAddr
+    StateWf ctx σ' ∧ Config.locSup c' ≤ σ'.nextAddr
       ∧ σ.nextAddr ≤ σ'.nextAddr := by
   unfold tryDeliver at h
   split at h
@@ -5408,12 +6457,12 @@ is a `storeLoc_pres` of a loc-free sync value; the delivery is
 theorem applyTryLock_wf {σ : Store} {op : SyncOp} {loc : Loc}
     {pre : SyncPrim} {spurious : Bool} {targets : List Assignee}
     {env : LocalEnv} {k : Cont} {c' : Config} {σ' : Store}
-    (hw : StateWf σ) (hloc : Loc.locSup loc ≤ σ.nextAddr)
+    (hw : StateWf ctx σ) (hloc : Loc.locSup loc ≤ σ.nextAddr)
     (ht : assigneeListSup targets ≤ σ.nextAddr)
     (henv : LocalEnv.locSup env ≤ σ.nextAddr)
     (hk : Cont.locSup k ≤ σ.nextAddr)
     (h : applyTryLock ctx σ op loc pre spurious targets env k = .ok (c', σ')) :
-    StateWf σ' ∧ Config.locSup c' ≤ σ'.nextAddr
+    StateWf ctx σ' ∧ Config.locSup c' ≤ σ'.nextAddr
       ∧ σ.nextAddr ≤ σ'.nextAddr := by
   rw [applyTryLock.eq_def] at h
   simp only [bind_eq_ok] at h
@@ -5440,12 +6489,12 @@ through `applyTryLock_wf`, everything else through
 theorem applySyncOp_wf {σ : Store} {ch : Choices} {op : SyncOp}
     {vs : List GoValue} {env : LocalEnv} {k : Cont} {c' : Config}
     {σ' : Store} {ch' : Choices}
-    (hw : StateWf σ) (hvs : goValueListSup vs ≤ σ.nextAddr)
+    (hw : StateWf ctx σ) (hvs : goValueListSup vs ≤ σ.nextAddr)
     (hop : syncOpSup op ≤ σ.nextAddr)
     (henv : LocalEnv.locSup env ≤ σ.nextAddr)
     (hk : Cont.locSup k ≤ σ.nextAddr)
     (h : applySyncOp ctx σ ch op vs env k = .ok (c', σ', ch')) :
-    StateWf σ' ∧ Config.locSup c' ≤ σ'.nextAddr
+    StateWf ctx σ' ∧ Config.locSup c' ≤ σ'.nextAddr
       ∧ σ.nextAddr ≤ σ'.nextAddr := by
   rw [applySyncOp.eq_def] at h
   split at h
@@ -5501,13 +6550,13 @@ theorem applySelect_wf {σ : Store}
     {clauses : List (SelectClauseHead × Stmt)} {default? : Option Stmt}
     {vs : List GoValue} {env : LocalEnv} {k : Cont} {c' : Config}
     {σ' : Store} {ch ch' : Choices} {cl? : Option EvClause}
-    (hw : StateWf σ) (hcl : selectClausesSup clauses ≤ σ.nextAddr)
+    (hw : StateWf ctx σ) (hcl : selectClausesSup clauses ≤ σ.nextAddr)
     (hd : optStmtSup default? ≤ σ.nextAddr)
     (hvs : goValueListSup vs ≤ σ.nextAddr)
     (henv : LocalEnv.locSup env ≤ σ.nextAddr)
     (hk : Cont.locSup k ≤ σ.nextAddr)
     (h : applySelect ctx σ clauses default? vs env k ch = .ok (c', σ', ch', cl?)) :
-    StateWf σ' ∧ Config.locSup c' ≤ σ'.nextAddr
+    StateWf ctx σ' ∧ Config.locSup c' ≤ σ'.nextAddr
       ∧ σ.nextAddr ≤ σ'.nextAddr := by
   rw [applySelect.eq_def] at h
   simp only [bind_eq_ok] at h
@@ -5521,7 +6570,7 @@ theorem applySelect_wf {σ : Store}
     omega
   have hcommit : ∀ c ∈ rc, ∀ {c₂ : Config} {σ₂ : Store},
       commitClause ctx σ env k c = .ok (c₂, σ₂) →
-      StateWf σ₂ ∧ Config.locSup c₂ ≤ σ₂.nextAddr
+      StateWf ctx σ₂ ∧ Config.locSup c₂ ≤ σ₂.nextAddr
         ∧ σ.nextAddr ≤ σ₂.nextAddr := by
     intro c hmem c₂ σ₂ hcom
     have hcb : evClauseSup c ≤ σ.nextAddr := by
@@ -5604,12 +6653,12 @@ types unchanged, allocator monotone. The op stores a LOC-FREE integer
 theorem applyAtomicOp_wf {σ : Store} {op : AtomicOp}
     {vs : List GoValue} {env : LocalEnv} {k : Cont} {c' : Config}
     {σ' : Store}
-    (hw : StateWf σ) (hvs : goValueListSup vs ≤ σ.nextAddr)
+    (hw : StateWf ctx σ) (hvs : goValueListSup vs ≤ σ.nextAddr)
     (hop : atomicOpSup op ≤ σ.nextAddr)
     (henv : LocalEnv.locSup env ≤ σ.nextAddr)
     (hk : Cont.locSup k ≤ σ.nextAddr)
     (h : applyAtomicOp ctx σ op vs env k = .ok (c', σ')) :
-    StateWf σ' ∧ Config.locSup c' ≤ σ'.nextAddr
+    StateWf ctx σ' ∧ Config.locSup c' ≤ σ'.nextAddr
       ∧ σ.nextAddr ≤ σ'.nextAddr := by
   obtain ⟨head, kind, targets⟩ := op
   simp only [atomicOpSup] at hop
@@ -5633,7 +6682,7 @@ theorem applyAtomicOp_wf {σ : Store} {op : AtomicOp}
         obtain ⟨σ₂, hst, h⟩ := h
         have hres : GoValue.locSup result = 0 := atomicCompute_locSup hcomp
         -- The optional store: a loc-free value, or no store at all.
-        have hσ₂ : StateWf σ₂ ∧ σ.nextAddr ≤ σ₂.nextAddr := by
+        have hσ₂ : StateWf ctx σ₂ ∧ σ.nextAddr ≤ σ₂.nextAddr := by
           cases new? with
           | some nv =>
               simp only [atomicStore] at hst
@@ -5766,9 +6815,9 @@ theorem unseqReadTarget_locSup {s : Store} {r : TargetRef} {v : GoValue}
 
 theorem unseqLoad_pres {σ : Store} {env : LocalEnv} {tg : List (String × TargetRef)}
     {bind tgt : String} {σ' : Store}
-    (hw : StateWf σ) (henv : LocalEnv.locSup env ≤ σ.nextAddr)
+    (hw : StateWf ctx σ) (henv : LocalEnv.locSup env ≤ σ.nextAddr)
     (h : unseqLoad ctx σ env tg bind tgt = .ok σ') :
-    StmtOpPres σ σ' ∧ σ'.nextAddr = σ.nextAddr := by
+    StmtOpPres ctx σ σ' ∧ σ'.nextAddr = σ.nextAddr := by
   simp only [unseqLoad, bind_eq_ok] at h
   obtain ⟨r, -, v, hv, loc, hloc, hst⟩ := h
   have h1 := unseqCellLoc_locSup hloc
@@ -5780,9 +6829,9 @@ theorem unseqLoad_pres {σ : Store} {env : LocalEnv} {tg : List (String × Targe
 theorem unseqGuard_pres {σ : Store} {g : UnseqGraph} {env : LocalEnv}
     {st st' : List UnseqStatus} {i : Nat} {test : String} {w : Bool} {out : String}
     {σ' : Store}
-    (hw : StateWf σ) (henv : LocalEnv.locSup env ≤ σ.nextAddr)
+    (hw : StateWf ctx σ) (henv : LocalEnv.locSup env ≤ σ.nextAddr)
     (h : unseqGuard ctx σ g env st i test w out = .ok (st', σ')) :
-    StmtOpPres σ σ' ∧ σ'.nextAddr = σ.nextAddr := by
+    StmtOpPres ctx σ σ' ∧ σ'.nextAddr = σ.nextAddr := by
   simp only [unseqGuard, bind_eq_ok] at h
   obtain ⟨tloc, -, tv, -, b, -, h⟩ := h
   split at h
@@ -5872,8 +6921,8 @@ below `nextAddr`), and never mutates the type environment. The combined
 `step_preserves_wf` below adds the map-iteration typing component. -/
 theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
     {σ' : Store} (h : Step ctx c σ c' σ')
-    (hs : StateWf σ) (hc : ConfigWf σ.nextAddr c) :
-    StateWf σ' ∧ ConfigWf σ'.nextAddr c'
+    (hs : StateWf ctx σ) (hc : ConfigWf σ.nextAddr c) :
+    StateWf ctx σ' ∧ ConfigWf σ'.nextAddr c'
       ∧ σ.nextAddr ≤ σ'.nextAddr := by
 
   have hheap := hs.heap_le
@@ -6809,8 +7858,8 @@ theorem snapshotEntriesSelfNormalized_eraseIdx {types : TypeEnv} {kt vt : Ty}
 invariant — loc-boundedness of state and configuration (B7 / D6: the
 former map-iteration typing conjunct is gone from `MachineWf`). -/
 theorem step_preserves_wf {c : Config} {σ : Store} {c' : Config}
-    {σ' : Store} (h : Step ctx c σ c' σ') (hwf : MachineWf σ c) :
-    MachineWf σ' c' := by
+    {σ' : Store} (h : Step ctx c σ c' σ') (hwf : MachineWf ctx σ c) :
+    MachineWf ctx σ' c' := by
   obtain ⟨hs, hc⟩ := hwf
   obtain ⟨hs', hc', _⟩ := step_preserves_wf_loc h hs hc
   exact ⟨hs', hc'⟩

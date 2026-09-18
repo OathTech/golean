@@ -2528,11 +2528,11 @@ goroutine's `ConfigWf` transports along allocator monotonicity. This
 definition is no longer a scaffold: it is a preserved invariant,
 available as the slice-3-declared carrier for future detector work. -/
 def MultiWf (m : MultiConfig) : Prop :=
-  StateWf m.shared ∧ m.cur < m.threads.size ∧
+  StateWf ctx m.shared ∧ m.cur < m.threads.size ∧
     ∀ i (h : i < m.threads.size),
       ThreadWf m.shared.nextAddr m.threads[i]
 
-instance (m : MultiConfig) : Decidable (MultiWf m) := by
+instance (m : MultiConfig) : Decidable (MultiWf ctx m) := by
   unfold MultiWf
   exact inferInstance
 

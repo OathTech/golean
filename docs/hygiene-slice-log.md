@@ -745,3 +745,76 @@ names `Store.alloc` (pinned nowhere else). Warm after the `Store.lean` touch:
 EXCEPT the two EXPECTED 5a-class items (certificate provenance STALE — compiled input
 `GoLean/GoCore/NPDRF.lean`; the ONE cached certified row `imported-goose/channel/google-search`
 judged stale for that reason); no other row moved.
+
+## S1 — the module and cost A (2026-09-18)
+
+[AGENT] ONE gated runtime commit (SHA in the handoff). **The module** lives in
+`GoLean/GoCore/Ops.lean` beside the normalizer it needs (the charter's «`Mem.lean` or
+`Store.lean` grown»: `Store.lean` keeps the representation, `allocCell`, `updateCell`
+and the payload readers/writers; the value-cell operations — `Store.alloc`, `loadLoc`,
+`storeLoc`, the write path, `HeapNormal` — are the Ops section «The memory module's
+write path»). **Cost A fixed in place**: `storeLoc` is ONE root-cell update whose new
+cell is the ROOT-FIRST in-place write `writeAt` — `Loc.rootPath` (leaf-first `Loc` →
+root + path), `Ty.stepDown` (the DECLARED type one step down, `.defined` hops
+decrementing the bound exactly as `normalizeValueForTyAt` does), the incoming leaf
+normalized at the descended `(type, bound)` (so the result is byte-identical to the
+former whole-root re-normalization on every normal cell), `Array.modifyM` at every
+level (the element taken out while rebuilt), a STRUCTURAL field search `fieldIdx?`
+(S0 finding 3: `Array.findIdx?` does not kernel-reduce). `normalizeListWith` /
+`normalizeFieldsWith` are LINEAR (accumulator form, same names and signatures; the
+old recursive equations are lemmas `normalizeListWith_nil/_cons`,
+`normalizeFieldsWith_nil_left/_nil_right/_cons`, so every proof that unfolded them
+keeps its shape). **D3**: `Store.alloc ctx s v ty : Except Stop (Loc × Store)`
+NORMALIZES (13 call sites, the `Step.initialization` premise restated to `= .ok (loc,
+s')`); `HeapNormal ctx s` (every value cell `isNormalForTy` at its declared type;
+payload cells vacuous; `Heap.normalB` structural, decidable) is a `StateWf`
+conjunct — `StateWf ctx σ := Store.locSup σ ≤ σ.nextAddr ∧ HeapNormal ctx σ`; hence
+`MachineWf ctx σ c`, `MultiWf ctx m` (context-free since the B7 fix round; the type
+table decides normality, so the context returns — a RESTATEMENT, flagged, nothing
+weakened: every theorem concluding `StateWf` now proves MORE), `StmtOpPres ctx σ σ'`.
+`step_preserves_wf` re-proved through the helper family: `HeapNormal.of_updateCell /
+of_allocCell / of_alloc / of_storeMapPayload / of_storeChanPayload / of_storeLoc /
+of_storeMany`, the leaf congruence `writeAt_isNormal` (+ `_array`, `_struct` at the
+index layer), idempotence `normalizeValueForTy_isNormal` (type + index layers; leaf
+kinds `IntKind.normalize_idem`, `FloatKind.normalizeBits_idem`), `defaultValue_isNormal`
+/ `defaultValue_normalize` (the zero values `allocDecls`/`seedGlobals`/`makeSlice`
+allocate re-normalize to themselves), `buildAppendBackingValue_normalize` (the spill
+backing re-normalizes to itself — what `applyStmtOp_appendSlice_congr` now needs to
+push the ∀-choices class through the normalizing alloc). `storeLoc_shape` (via
+`writeAt_locSup`), `storeLoc_congr` (via `writeAt_congr`), `storeLoc_root_frame`
+(one `updateCell_lookup_ne` step), `storeLoc_base_noPanic`,
+`storeLoc_noPanic_of_loadLoc_ok` (via the root-first read bridge `readAt` /
+`loadLoc_eq_readAt` and the `fieldIdx?` ↔ `StructFields.lookup` bridge) — STATEMENTS
+UNCHANGED, proofs re-derived. `allocCell_wf` gains the payload-normality hypothesis
+(callers pass `rfl`). Refusal texts byte-preserved (load texts on prefix steps, store
+texts on the last, as the former recursion produced them); TWO disclosed class changes
+on unreachable paths: a PATH store into an unbound root is now `Store.updateCell`'s
+`.internal` (was `loadLoc`'s `.stuck "unbound…"`; unreachable by heap density), and the
+leaf-type descent's NEW named `.stuck`/`unsupported` refusals (a cell whose declared type
+has no component where its value has one — impossible under `HeapNormal`; e.g. a field
+store through an interface-typed cell, which typed Go cannot express). `arraySet` and
+`StructFields.set` left the write path and have NO code caller; their lemma families
+(`arraySet_locSup/_congr/_ok_of_arrayGet_ok`, `StructFields.set_locSup/_congr/_noPanic`)
+are dead — DELETION DEFERRED to S2 (which re-gates these files), recorded as an owed
+tombstone. `Tests/GoCoreContract.lean`'s `address_bound_admits_ill_typed` decides
+`StateWf` at a concrete context (the `.bool` slot's ill-typed `int` is still admitted:
+the normalizer does not coerce there). Checkpoint gate at the representation change
+alone (before the conjunct): `ci --diff` EXIT=1 (720 s): 3676 = 3427/249, red ONLY on
+the expected 5a pair — `alloc`-normalizes moved NO row (D3's referral clause not
+triggered). S1 GATE: `GOLEAN_MEM_MAX=32G scripts/capped scripts/ci --diff` under the box-wide lock (09:06:02–09:17:37 UTC): **EXIT=1, 695 s**; **3676 cases: 3427 PASS / 249 expected FAIL**; `eval tests` 211 ok; `core build (warning-free)` ok; `core totality audit` ok; `frontend pins` ok; `wire boundary` ok; every other step ok. RED: exactly the two 5a-class items — `certificate provenance` (C9 HIGH: «STALE certification: changed dependency build/files/GoLean/CLI.lean») and `baseline diff (DRIFT)` with the SINGLE line `imported-goose/channel/google-search baseline[PASS/membership] -> now[FAIL/membership]` — the one cached certified row, judged stale because compiled semantic inputs changed. ZERO other drift. Tail: `gate-tail-s1.txt`. Whole-corpus choice trace (`scripts/choice-trace-corpus --dump --jobs 6 --exclude goroutines/send-then-spin --exclude strings/trimspace-repeat/repeat-bound-refused`, main `68b261e6`'s certified binary `231df9a9…` vs the S1 binary `f462cf50…`, run 09:23–09:41 UTC): sorted dumps `cmp` **EXIT=0 — BYTE-IDENTICAL**, 23,685 consumption records both sides, one sha256 `70e12e023f3ee30b9d71317454e11dedcb6c6ec039d63aeddfbb3d4906aceb57`; 34 frontend-refusal exports and the 2 exclusions identical; each tracer run EXIT=1 for the SAME pre-existing «FINDINGS present» depth listing (main 609 s, S1 436 s). Tails: `trace-summary-main-s1.txt`. Benchmarks: `.tmp/golean-s1` = the gated binary (sha256 `f462cf50…48f3`), same frontend and probes as BEFORE; `--plan full`, 3 runs per point, medians, net of the empty probe (0.0213 s); run 09:18–09:23 UTC (the whole plan in 337 s — BEFORE needed 28 min), load1 ≈ 1.3, no sibling build. Artifacts: `bench-after-s1.json`, `bench-after-s1-summary.md`.
+
+| probe / point | BEFORE net | AFTER (S1) net | S1 target | verdict |
+|---|---:|---:|---|---|
+| `write_fixed(m, 100)` per write, m = 10 / 100 / 1,000 / 3,000 / 10,000 | 21 / 44 / 1,248 / 9,560 / 106,972 µs | −2 / 1 / 3 / −2 / **16 µs** (100 writes sit at the 21 ms startup noise floor; the count-varying rows put one write at 13.1 µs (m = 10, w = 1,000) / 12.6 µs (w = 10,000)) | flat: within 2× across m | **MET** (12.6 → 16 µs, ≈1.3×, at noise level; the BEFORE 5,000× slope is gone) |
+| `append_grow(n)` net, n = 250 / 500 / 1,000 / 2,000 / 4,000 | 0.023 / 0.113 / 0.700 / 4.56 / 30.42 s | 0.0056 / 0.0141 / 0.0352 / 0.1001 / **0.2748 s** | n = 4,000 < 2 s | **MET** (111×) |
+| `append_grow` successive ×2 ratios | ×5.0, ×6.2, ×6.5, ×6.7 | ×2.5, ×2.5, ×2.8, ×2.7 | ≤ 2.2 | **MISSED** — a residual super-linear term: each in-place append still copies the backing once (the heap is shared across the step — cost B, S3's), ≈ Σ cap; plus the spill path's linear rebuilds |
+| `scalar(80000)` per step | 246 ns (0.964 s net) | 250 ns (1.001 s net) | within 10 % | **MET** (+3.9 %) |
+| `struct{a [10000]byte; x int}: s.x = i` per write | 109,130 µs | 5 µs | (cost A witness) | quadratic gone |
+| `[10000]byte: b[0] = v` per write | 107,972 µs | 23 µs | (cost A witness) | quadratic gone |
+| `append_cap(6400, 100)` per in-place append | 44,437 µs | 29 µs | (cost A witness) | quadratic gone |
+| `alloc_new(32000)` net | 13.77 s | 13.51 s | (S3) | unchanged, as expected |
+| (h) scalar phase at h = 0 / 40k live cells | 0.237 / 6.37 s | 0.259 / 6.05 s | (S3) | unchanged, as expected |
+| `read_fixed(10000, 1000)` per read | 17.8 µs | 16.7 µs | (control) | flat |
+| `map_write(4000)` per write | 45 µs | 45 µs | not a C1 target | unchanged |
+
+Reading: cost A (the whole-root re-normalization with the quadratic `#[head] ++ tail`) is gone — every per-root-size slope is flat to the noise floor. The two misses named above are the SAME mechanism, cost B (the pre-step store retained across the step makes the root array shared, so `Array.modifyM` copies it once per write — O(m), the linear term the BUG-090 note predicted); S3 removes the retention..
