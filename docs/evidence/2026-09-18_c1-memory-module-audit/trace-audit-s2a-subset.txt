@@ -1,0 +1,18 @@
+# S2a binary (git archive 7f7c721c, built in .tmp/s2a, sha256 d4c0c14d…) — scripts/choice-trace-corpus --dump --jobs 6 over the 307-id subset (choice-trace-subset-ids.tsv), 6 streams
+# per chunk: rows, sum(traceMismatches), rows with nonzero
+results-0.tsv rows=306 sum=0 nonzero=0
+results-1.tsv rows=306 sum=0 nonzero=0
+results-2.tsv rows=306 sum=0 nonzero=0
+results-3.tsv rows=306 sum=0 nonzero=0
+results-4.tsv rows=306 sum=0 nonzero=0
+results-5.tsv rows=288 sum=0 nonzero=0
+# status census over all (row,stream) results
+     24 deadlock
+      6 fatal
+   1488 ok
+    198 panic
+     18 race
+      6 stuck
+     78 unsupported
+# dump cmp vs main's dump (same subset):
+cmp EXIT=0

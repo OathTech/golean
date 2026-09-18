@@ -1,0 +1,6 @@
+== aliasRace [SAME]
+  main(EXIT=0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}
+== aliasDisjointFields [SAME]
+  main(EXIT=0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":3}]}
+== plainRace [SAME]
+  main(EXIT=1): {"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"}

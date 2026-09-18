@@ -1,0 +1,47 @@
+==================
+WARNING: DATA RACE
+Read at 0x00c0000181a0 by goroutine 7:
+  main.aliasRace.func2()
+      /home/dev/projects/golean/.claude/worktrees/audit-c1-memory-module/.tmp/scratch/bug111/main.go:16 +0x3e
+
+Previous write at 0x00c0000181a0 by goroutine 6:
+  main.aliasRace.func1()
+      /home/dev/projects/golean/.claude/worktrees/audit-c1-memory-module/.tmp/scratch/bug111/main.go:14 +0x33
+
+Goroutine 7 (running) created at:
+  main.aliasRace()
+      /home/dev/projects/golean/.claude/worktrees/audit-c1-memory-module/.tmp/scratch/bug111/main.go:16 +0x21c
+  main.main()
+      /home/dev/projects/golean/.claude/worktrees/audit-c1-memory-module/.tmp/scratch/bug111/main.go:48 +0x1c
+
+Goroutine 6 (finished) created at:
+  main.aliasRace()
+      /home/dev/projects/golean/.claude/worktrees/audit-c1-memory-module/.tmp/scratch/bug111/main.go:14 +0x11c
+  main.main()
+      /home/dev/projects/golean/.claude/worktrees/audit-c1-memory-module/.tmp/scratch/bug111/main.go:48 +0x1c
+==================
+==================
+WARNING: DATA RACE
+Read at 0x00c0000181e0 by goroutine 11:
+  main.plainRace.func2()
+      /home/dev/projects/golean/.claude/worktrees/audit-c1-memory-module/.tmp/scratch/bug111/main.go:43 +0x3c
+
+Previous write at 0x00c0000181e0 by goroutine 10:
+  main.plainRace.func1()
+      /home/dev/projects/golean/.claude/worktrees/audit-c1-memory-module/.tmp/scratch/bug111/main.go:41 +0x33
+
+Goroutine 11 (running) created at:
+  main.plainRace()
+      /home/dev/projects/golean/.claude/worktrees/audit-c1-memory-module/.tmp/scratch/bug111/main.go:43 +0x21c
+  main.main()
+      /home/dev/projects/golean/.claude/worktrees/audit-c1-memory-module/.tmp/scratch/bug111/main.go:48 +0x30
+
+Goroutine 10 (finished) created at:
+  main.plainRace()
+      /home/dev/projects/golean/.claude/worktrees/audit-c1-memory-module/.tmp/scratch/bug111/main.go:41 +0x11c
+  main.main()
+      /home/dev/projects/golean/.claude/worktrees/audit-c1-memory-module/.tmp/scratch/bug111/main.go:48 +0x30
+==================
+1 3 1
+Found 2 data race(s)
+exit status 66

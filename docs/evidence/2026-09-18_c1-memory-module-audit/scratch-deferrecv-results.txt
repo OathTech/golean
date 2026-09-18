@@ -1,0 +1,8 @@
+== deferOutOfRangeValueRecv [SAME]
+  main(EXIT=0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}
+== deferOutOfRangePtrRecv [SAME]
+  main(EXIT=0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":2}]}
+== deferThenShrinkThenPanic [SAME]
+  main(EXIT=0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":100}]}
+== deferPtrRecvAfterAppend [SAME]
+  main(EXIT=0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":103}]}

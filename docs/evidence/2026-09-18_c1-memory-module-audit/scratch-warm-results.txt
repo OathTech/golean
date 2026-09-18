@@ -1,0 +1,6 @@
+== makeMapNilTarget [SAME]
+  main(EXIT=0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}
+== makeChanNilTarget [SAME]
+  main(EXIT=0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":2}]}
+== makeMapNilTargetThenAlloc [SAME]
+  main(EXIT=0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":6}]}

@@ -1,0 +1,12 @@
+== retagCopyEq [SAME]
+  main(EXIT=1): {"message":"struct value type mismatch: expected main.B, got main.A","output":"","schema":"golean-observation-v1","status":"stuck"}
+== retagCopyAssert [SAME]
+  main(EXIT=1): {"message":"struct value type mismatch: expected main.B, got main.A","output":"","schema":"golean-observation-v1","status":"stuck"}
+== retagParam [SAME]
+  main(EXIT=1): {"message":"struct value type mismatch: expected main.B, got main.A","output":"","schema":"golean-observation-v1","status":"stuck"}
+== retagIter [SAME]
+  main(EXIT=1): {"message":"struct value type mismatch: expected main.B, got main.A","output":"","schema":"golean-observation-v1","status":"stuck"}
+== retagNew [SAME]
+  main(EXIT=1): {"message":"struct value type mismatch: expected main.B, got main.A","output":"","schema":"golean-observation-v1","status":"stuck"}
+== aliasWriteVisible [SAME]
+  main(EXIT=0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":5}]}

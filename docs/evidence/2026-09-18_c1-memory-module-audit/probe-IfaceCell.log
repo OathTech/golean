@@ -1,0 +1,5 @@
+true
+Except.ok (GoLean.GoValue.int 0 (GoLean.GoCore.IntKind.int))
+Except.error (GoLean.Stop.refusal (GoLean.Refusal.stuck "leaf descent: the declared type has no element type"))
+true
+Except.error (GoLean.Stop.refusal (GoLean.Refusal.stuck "leaf descent: the declared type has no field f"))

@@ -1,0 +1,14 @@
+== allocNewNilChanField [SAME]
+  main(EXIT=0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":7}]}
+== allocNewNilChanArray [SAME]
+  main(EXIT=0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":6}]}
+== paramNilChan [SAME]
+  main(EXIT=0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}
+== iterNilChan [SAME]
+  main(EXIT=0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":3}]}
+== selectNilChanField [SAME]
+  main(EXIT=0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":9}]}
+== allocNewNilFunc [SAME]
+  main(EXIT=0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":6}]}
+== captureNilChan [SAME]
+  main(EXIT=0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}

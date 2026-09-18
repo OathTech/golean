@@ -1,0 +1,670 @@
+detector-soundness summary — 2026-09-18T18:52:57+00:00
+rows: 639   runs/proc: 5   procs: 1,8   worker-pool exit: 0
+
+cells:
+  gc-no-verdict  544
+  refused        9
+  uncertified    86
+
+by lane × cell:
+  confluent	gc-no-verdict	89
+  confluent	uncertified	1
+  membership	gc-no-verdict	128
+  membership	refused	9
+  membership	uncertified	4
+  racy	gc-no-verdict	36
+  strict	gc-no-verdict	291
+  strict	uncertified	81
+
+HOLE rows (gc RACE, machine DRF — exit-bearing; a HOLE not on a BUGS.md Cases: line is a STOP):
+
+possible-HOLE rows (gc RACE, machine ENUM-FAIL — exit-bearing; certify or diagnose each):
+
+over-refusal rows (machine RACE-*, gc DRF-in-N — three-way investigation):
+
+uncertified rows (machine ENUM-FAIL, gc not red):
+  atomics/spin/flag-wait	gc=NO-VERDICT	single=ok	ENUM-FAIL:truncated(nonterm=200,backedgeCapped=0)
+  builtins/e13-sibling-panic-order/slice-lit-payload-vs-recv	gc=NO-VERDICT	single=unsupported	ENUM-FAIL:machine step failed under pick assignment [] — cannot certify the observation set: unsupported: frontend-quarantined: 
+  builtins/print/refused/chan	gc=NO-VERDICT	single=unsupported	ENUM-FAIL:machine step failed under pick assignment [] — cannot certify the observation set: unsupported: frontend-quarantined: 
+  channels/deadlock/send-nil	gc=NO-VERDICT	single=deadlock	ENUM-FAIL:deadlock member under pick assignment [] — deadlocking members have no membership handling (fail loud, per the design)
+  channels/deadlock/recv-nil	gc=NO-VERDICT	single=deadlock	ENUM-FAIL:deadlock member under pick assignment [] — deadlocking members have no membership handling (fail loud, per the design)
+  channels/deadlock/select-empty	gc=NO-VERDICT	single=deadlock	ENUM-FAIL:deadlock member under pick assignment [] — deadlocking members have no membership handling (fail loud, per the design)
+  channels/deadlock/select-all-nil	gc=NO-VERDICT	single=deadlock	ENUM-FAIL:deadlock member under pick assignment [] — deadlocking members have no membership handling (fail loud, per the design)
+  channels/deadlock/send-unbuffered	gc=NO-VERDICT	single=deadlock	ENUM-FAIL:deadlock member under pick assignment [] — deadlocking members have no membership handling (fail loud, per the design)
+  channels/deadlock/recv-empty-open	gc=NO-VERDICT	single=deadlock	ENUM-FAIL:deadlock member under pick assignment [] — deadlocking members have no membership handling (fail loud, per the design)
+  channels/deadlock/send-full	gc=NO-VERDICT	single=deadlock	ENUM-FAIL:deadlock member under pick assignment [] — deadlocking members have no membership handling (fail loud, per the design)
+  channels/deadlock/range-open-drained	gc=NO-VERDICT	single=deadlock	ENUM-FAIL:deadlock member under pick assignment [] — deadlocking members have no membership handling (fail loud, per the design)
+  channels/recv-edge/bad-target-blocks	gc=NO-VERDICT	single=deadlock	ENUM-FAIL:deadlock member under pick assignment [] — deadlocking members have no membership handling (fail loud, per the design)
+  channels/recv-short-circuit/and-rhs	gc=NO-VERDICT	single=unsupported	ENUM-FAIL:machine step failed under pick assignment [] — cannot certify the observation set: unsupported: frontend-quarantined: 
+  channels/recv-short-circuit/or-rhs	gc=NO-VERDICT	single=unsupported	ENUM-FAIL:machine step failed under pick assignment [] — cannot certify the observation set: unsupported: frontend-quarantined: 
+  channels/recv-short-circuit/and-rhs-skipped	gc=NO-VERDICT	single=unsupported	ENUM-FAIL:machine step failed under pick assignment [] — cannot certify the observation set: unsupported: frontend-quarantined: 
+  channels/select-select/core	gc=NO-VERDICT	single=unsupported	ENUM-FAIL:alias-guard probe [2] failed: the probed member's run errored — unsupported: select-with-select rendezvous (unmodeled 
+  channels/select-select/beside-loop	gc=NO-VERDICT	single=ok	ENUM-FAIL:run consumes more than --max-sites 32 choice site(s) — raise the case's sites bound (never truncated silently)
+  generics/chan-type-arg/first	gc=NO-VERDICT	single=unsupported	ENUM-FAIL:machine step failed under pick assignment [] — cannot certify the observation set: unsupported: frontend-quarantined: 
+  goroutines/deadlock/mutual	gc=NO-VERDICT	single=deadlock	ENUM-FAIL:alias-guard probe [2] failed: the probed member's run errored — deadlock: all goroutines are asleep - deadlock!. Under
+  goroutines/deadlock/chain	gc=NO-VERDICT	single=deadlock	ENUM-FAIL:alias-guard probe [2] failed: the probed member's run errored — deadlock: all goroutines are asleep - deadlock!. Under
+  goroutines/deadlock/after-progress	gc=NO-VERDICT	single=deadlock	ENUM-FAIL:alias-guard probe [2] failed: the probed member's run errored — deadlock: all goroutines are asleep - deadlock!. Under
+  goroutines/deadlock/with-select	gc=NO-VERDICT	single=deadlock	ENUM-FAIL:alias-guard probe [2] failed: the probed member's run errored — deadlock: all goroutines are asleep - deadlock!. Under
+  goroutines/go-builtin/close	gc=NO-VERDICT	single=unsupported	ENUM-FAIL:machine step failed under pick assignment [] — cannot certify the observation set: unsupported: frontend-quarantined: 
+  goroutines/go-builtin/delete	gc=NO-VERDICT	single=unsupported	ENUM-FAIL:machine step failed under pick assignment [] — cannot certify the observation set: unsupported: frontend-quarantined: 
+  goroutines/go-builtin/copy	gc=NO-VERDICT	single=unsupported	ENUM-FAIL:machine step failed under pick assignment [] — cannot certify the observation set: unsupported: frontend-quarantined: 
+  goroutines/go-builtin/recover	gc=NO-VERDICT	single=unsupported	ENUM-FAIL:machine step failed under pick assignment [] — cannot certify the observation set: unsupported: frontend-quarantined: 
+  goroutines/go-builtin/panic	gc=NO-VERDICT	single=unsupported	ENUM-FAIL:machine step failed under pick assignment [] — cannot certify the observation set: unsupported: frontend-quarantined: 
+  goroutines/goexit-marker/child	gc=NO-VERDICT	single=unsupported	ENUM-FAIL:machine step failed under pick assignment [] — cannot certify the observation set: unsupported: frontend-quarantined: 
+  goroutines/send-then-spin	gc=NO-VERDICT	single=fuel-out	ENUM-FAIL:truncated(nonterm=200,backedgeCapped=0)
+  goroutines/spawn-edge/nil-func-fatal	gc=NO-VERDICT	single=fatal	ENUM-FAIL:machine step failed under pick assignment [] — cannot certify the observation set: fatal: go of nil func value
+  goroutines/spawn-in-init/in-init	gc=NO-VERDICT	single=unsupported	ENUM-FAIL:package init failed under []: unsupported: package init: go spawn outside the thread pool (goroutine spawn is a pool ste
+  goroutines/worker-pool/sum	gc=NO-VERDICT	single=ok	ENUM-FAIL:backEdge scheduling site of bound 2 under pick assignment [0] — the row must DECLARE its back-edge tree: backedge=<k> 
+  goroutines/worker-pool/shared-feed	gc=NO-VERDICT	single=ok	ENUM-FAIL:run consumes more than --max-sites 32 choice site(s) — raise the case's sites bound (never truncated silently)
+  imported-goose/channel/parallel-search-replace/search-replace	gc=NO-VERDICT	single=ok	ENUM-FAIL:site bound 5 exceeds the case's width 4 — the width assertion is REFUTED (mechanically, at pick position 9); raise the
+  imported-goose/unittest/spawn/simple-spawn	gc=NO-VERDICT	single=ok	ENUM-FAIL:run consumes more than --max-sites 32 choice site(s) — raise the case's sites bound (never truncated silently)
+  init/user-var-struct-field-unlowerable	gc=NO-VERDICT	single=frontend-refused	ENUM-FAIL:frontend-refused
+  init/user-var-type-unlowerable/unused	gc=NO-VERDICT	single=ok	ENUM-FAIL:site bound 32 exceeds the case's width 4 — the width assertion is REFUTED (mechanically, at pick position 0); raise th
+  init/user-var-type-unlowerable/order-kept	gc=NO-VERDICT	single=ok	ENUM-FAIL:site bound 32 exceeds the case's width 4 — the width assertion is REFUTED (mechanically, at pick position 0); raise th
+  init/user-var-type-unlowerable/used	gc=NO-VERDICT	single=unsupported	ENUM-FAIL:site bound 32 exceeds the case's width 4 — the width assertion is REFUTED (mechanically, at pick position 0); raise th
+  init/user-var-type-unlowerable/addr-of	gc=NO-VERDICT	single=unsupported	ENUM-FAIL:site bound 32 exceeds the case's width 4 — the width assertion is REFUTED (mechanically, at pick position 0); raise th
+  noodler/closures/goroutines-loopvar	gc=NO-VERDICT	single=ok	ENUM-FAIL:site bound 5 exceeds the case's width 4 — the width assertion is REFUTED (mechanically, at pick position 15); raise th
+  noodler/evalorder/receive-before-call	gc=NO-VERDICT	single=ok	ENUM-FAIL:site bound 32 exceeds the case's width 4 — the width assertion is REFUTED (mechanically, at pick position 0); raise th
+  noodler/evalorder/send-operand-order	gc=NO-VERDICT	single=ok	ENUM-FAIL:site bound 32 exceeds the case's width 4 — the width assertion is REFUTED (mechanically, at pick position 0); raise th
+  noodler/goroutines/close-broadcast	gc=NO-VERDICT	single=ok	ENUM-FAIL:run consumes more than --max-sites 32 choice site(s) — raise the case's sites bound (never truncated silently)
+  noodler/goroutines/worker-pool-sum	gc=NO-VERDICT	single=ok	ENUM-FAIL:run consumes more than --max-sites 32 choice site(s) — raise the case's sites bound (never truncated silently)
+  noodler/goroutines/once-across-goroutines	gc=NO-VERDICT	single=ok	ENUM-FAIL:site bound 5 exceeds the case's width 4 — the width assertion is REFUTED (mechanically, at pick position 15); raise th
+  noodler/goroutines/mutex-counter	gc=NO-VERDICT	single=ok	ENUM-FAIL:run consumes more than --max-sites 32 choice site(s) — raise the case's sites bound (never truncated silently)
+  noodler/goroutines/rwmutex-readers	gc=NO-VERDICT	single=ok	ENUM-FAIL:run consumes more than --max-sites 32 choice site(s) — raise the case's sites bound (never truncated silently)
+  noodler/goroutines/waitgroup-deadlock	gc=NO-VERDICT	single=deadlock	ENUM-FAIL:deadlock member under pick assignment [] — deadlocking members have no membership handling (fail loud, per the design)
+  noodler/goroutines/mutex-double-lock-deadlock	gc=NO-VERDICT	single=deadlock	ENUM-FAIL:deadlock member under pick assignment [] — deadlocking members have no membership handling (fail loud, per the design)
+  noodler/goroutines/pipeline-three-stages	gc=NO-VERDICT	single=ok	ENUM-FAIL:run consumes more than --max-sites 32 choice site(s) — raise the case's sites bound (never truncated silently)
+  noodler/goroutines/semaphore-total	gc=NO-VERDICT	single=ok	ENUM-FAIL:site bound 5 exceeds the case's width 4 — the width assertion is REFUTED (mechanically, at pick position 15); raise th
+  noodler/gostmt/pointer-method	gc=NO-VERDICT	single=ok	ENUM-FAIL:run consumes more than --max-sites 32 choice site(s) — raise the case's sites bound (never truncated silently)
+  noodler/initpanic/deadlock	gc=NO-VERDICT	single=deadlock	ENUM-FAIL:package init deadlocked (fail loud)
+  noodler/select/all-nil-deadlock	gc=NO-VERDICT	single=deadlock	ENUM-FAIL:deadlock member under pick assignment [] — deadlocking members have no membership handling (fail loud, per the design)
+  noodler/syncmisuse/runlock-of-unlocked	gc=NO-VERDICT	single=fatal	ENUM-FAIL:machine step failed under pick assignment [] — cannot certify the observation set: fatal: sync: RUnlock of unlocked RW
+  noodler/syncmisuse/unlock-of-unlocked-rw	gc=NO-VERDICT	single=fatal	ENUM-FAIL:machine step failed under pick assignment [] — cannot certify the observation set: fatal: sync: Unlock of unlocked RWM
+  noodler/syncmisuse/once-nested-deadlock	gc=NO-VERDICT	single=deadlock	ENUM-FAIL:deadlock member under pick assignment [] — deadlocking members have no membership handling (fail loud, per the design)
+  noodler/syncmisuse/mutex-copy-carries-state	gc=NO-VERDICT	single=deadlock	ENUM-FAIL:deadlock member under pick assignment [] — deadlocking members have no membership handling (fail loud, per the design)
+  noodler/syncmisuse/waitgroup-reuse	gc=NO-VERDICT	single=ok	ENUM-FAIL:run consumes more than --max-sites 32 choice site(s) — raise the case's sites bound (never truncated silently)
+  noodler/syncmisuse/rlock-while-write-locked	gc=NO-VERDICT	single=deadlock	ENUM-FAIL:deadlock member under pick assignment [] — deadlocking members have no membership handling (fail loud, per the design)
+  race/atomics-free/cas-failure-acquires	gc=NO-VERDICT	single=ok	ENUM-FAIL:truncated(nonterm=200,backedgeCapped=0)
+  spec-examples-decl/select-forms/block-forever	gc=NO-VERDICT	single=deadlock	ENUM-FAIL:deadlock member under pick assignment [] — deadlocking members have no membership handling (fail loud, per the design)
+  spec-examples-decl/var-comma-ok-matrix/recv-typed-iface	gc=NO-VERDICT	single=unsupported	ENUM-FAIL:machine step failed under pick assignment [] — cannot certify the observation set: unsupported: frontend-quarantined: 
+  spec-examples-stmt/operator-precedence/mixed-chan	gc=NO-VERDICT	single=unsupported	ENUM-FAIL:machine step failed under pick assignment [] — cannot certify the observation set: unsupported: frontend-quarantined: 
+  spec-examples-stmt/prime-sieve/five	gc=NO-VERDICT	single=ok	ENUM-FAIL:run consumes more than --max-sites 32 choice site(s) — raise the case's sites bound (never truncated silently)
+  spec-examples-stmt/prime-sieve/eight	gc=NO-VERDICT	single=ok	ENUM-FAIL:run consumes more than --max-sites 32 choice site(s) — raise the case's sites bound (never truncated silently)
+  stdlib-source/sort-op-shapes/go-sort	gc=NO-VERDICT	single=ok	ENUM-FAIL:run consumes more than --max-sites 32 choice site(s) — raise the case's sites bound (never truncated silently)
+  sync/atomic-frontier/value	gc=NO-VERDICT	single=unsupported	ENUM-FAIL:machine step failed under pick assignment [] — cannot certify the observation set: unsupported: frontend-quarantined: 
+  sync/iface-dispatch/locker-double-lock	gc=NO-VERDICT	single=deadlock	ENUM-FAIL:deadlock member under pick assignment [] — deadlocking members have no membership handling (fail loud, per the design)
+  sync/mutex-double-lock/double-lock	gc=NO-VERDICT	single=deadlock	ENUM-FAIL:deadlock member under pick assignment [] — deadlocking members have no membership handling (fail loud, per the design)
+  sync/mutex-unlock-fatal/unlock-of-unlocked	gc=NO-VERDICT	single=fatal	ENUM-FAIL:machine step failed under pick assignment [] — cannot certify the observation set: fatal: sync: unlock of unlocked mut
+  sync/mutex-unlock-fatal/unlock-recover-attempt	gc=NO-VERDICT	single=fatal	ENUM-FAIL:machine step failed under pick assignment [] — cannot certify the observation set: fatal: sync: unlock of unlocked mut
+  sync/mutex-unlock-fatal/during-panic-unwind	gc=NO-VERDICT	single=fatal	ENUM-FAIL:machine step failed under pick assignment [] — cannot certify the observation set: fatal: sync: unlock of unlocked mut
+  sync/once-nested-do/nested-do	gc=NO-VERDICT	single=deadlock	ENUM-FAIL:deadlock member under pick assignment [] — deadlocking members have no membership handling (fail loud, per the design)
+  sync/out-of-scope-cond/cond-signal-no-waiter	gc=NO-VERDICT	single=unsupported	ENUM-FAIL:machine step failed under pick assignment [] — cannot certify the observation set: unsupported: frontend-quarantined: 
+  sync/out-of-scope-cond/cond-wait-signal	gc=NO-VERDICT	single=unsupported	ENUM-FAIL:machine step failed under pick assignment [] — cannot certify the observation set: unsupported: frontend-quarantined: 
+  sync/out-of-scope-cond/cond-broadcast	gc=NO-VERDICT	single=unsupported	ENUM-FAIL:machine step failed under pick assignment [] — cannot certify the observation set: unsupported: frontend-quarantined: 
+  sync/rwmutex-misuse-fatal/wunlock-of-unlocked	gc=NO-VERDICT	single=fatal	ENUM-FAIL:machine step failed under pick assignment [] — cannot certify the observation set: fatal: sync: Unlock of unlocked RWM
+  sync/rwmutex-misuse-fatal/runlock-of-unlocked	gc=NO-VERDICT	single=fatal	ENUM-FAIL:machine step failed under pick assignment [] — cannot certify the observation set: fatal: sync: RUnlock of unlocked RW
+  sync/rwmutex-misuse-fatal/runlock-while-write-locked	gc=NO-VERDICT	single=fatal	ENUM-FAIL:machine step failed under pick assignment [] — cannot certify the observation set: fatal: sync: RUnlock of unlocked RW
+  sync/rwmutex-rlock-then-lock/rlock-then-lock	gc=NO-VERDICT	single=deadlock	ENUM-FAIL:deadlock member under pick assignment [] — deadlocking members have no membership handling (fail loud, per the design)
+  sync/trylock/spin-until-trylock	gc=NO-VERDICT	single=ok	ENUM-FAIL:truncated(nonterm=200,backedgeCapped=0)
+  sync/waitgroup-negative-after-recover/negative-after-recover	gc=NO-VERDICT	single=deadlock	ENUM-FAIL:alias-guard probe [2] failed: the probed member's run errored — deadlock: all goroutines are asleep - deadlock!. Under
+  sync/waitgroup-wait-deadlock/wait-deadlock	gc=NO-VERDICT	single=deadlock	ENUM-FAIL:deadlock member under pick assignment [] — deadlocking members have no membership handling (fail loud, per the design)
+  sync/waitgroup-workers-join/workers-join	gc=NO-VERDICT	single=ok	ENUM-FAIL:run consumes more than --max-sites 32 choice site(s) — raise the case's sites bound (never truncated silently)
+
+gc-no-verdict rows (gc produced no completed run; machine certified):
+  atomics/counter/add	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  atomics/counter/typed	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  atomics/counter/cas-loop	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  atomics/counter/swap-claim	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  atomics/counter/plain-read-after-join	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  atomics/ops/load-store-int32	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  atomics/ops/load-store-int64	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  atomics/ops/load-store-uint32	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  atomics/ops/load-store-uint64	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  atomics/ops/load-store-uintptr	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  atomics/ops/add-int32-wrap	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  atomics/ops/add-int64	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  atomics/ops/add-uint32-decrement	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  atomics/ops/add-uint64	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  atomics/ops/swap-int32	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  atomics/ops/swap-uint64	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  atomics/ops/cas-int64	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  atomics/ops/cas-uint32-fail	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  atomics/ops/add-uintptr	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  atomics/ops/swap-uintptr	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  atomics/ops/swap-int64	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  atomics/ops/swap-uint32	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  atomics/ops/cas-uint64	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  atomics/ops/cas-uintptr	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  atomics/ops/discarded-result	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  atomics/ops/in-expression	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  atomics/ops/operand-order	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  atomics/ops/defined-underlying	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  atomics/ops/nil-address	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  atomics/ops/nil-address-recovered	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  atomics/typed/int64	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  atomics/typed/int32-wrap	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  atomics/typed/uint32	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  atomics/typed/uint64	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  atomics/typed/uintptr	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  atomics/typed/zero-and-copy	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  atomics/typed/empty-literal	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  atomics/typed/struct-field	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  atomics/typed/nil-receiver	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  binop-order/operand-panic-vs-call/call-before-left	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  binop-order/operand-panic-vs-call/call-before-left-div	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  bools/short-circuit-funclit/e6-recv-len-in-sc	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  bools/short-circuit-funclit/e6-recv-len-outside	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/e13-sibling-panic-order/assert-left-call	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/e13-sibling-panic-order/assert-middle	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/e13-sibling-panic-order/assert-arg-sibling	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/e13-sibling-panic-order/assert-composite-lit	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/e13-sibling-panic-order/assert-return-list	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/e13-sibling-panic-order/assert-left-method	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/e13-sibling-panic-order/assert-left-make-slice	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/e13-sibling-panic-order/assert-left-len-slice-call	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/e13-sibling-panic-order/assert-left-new-call	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/e13-sibling-panic-order/assert-left-append	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/e13-sibling-panic-order/assert-left-copy	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/e13-sibling-panic-order/assert-vs-mutating-call	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/e13-sibling-panic-order/iface-cmp-left-call	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/e13-sibling-panic-order/index-left-call	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/e13-sibling-panic-order/index-middle	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/e13-sibling-panic-order/index-arg-sibling	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/e13-sibling-panic-order/index-composite-lit	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/e13-sibling-panic-order/send-chan-index	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/e13-sibling-panic-order/deref-left-call	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/e13-sibling-panic-order/div-left-call	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/e13-sibling-panic-order/shift-left-call	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/e13-sibling-panic-order/conv-left-call	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/e13-sibling-panic-order/two-index-left-call	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/e13-sibling-panic-order/index-assert-left-call	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/e13-sibling-panic-order/index-left-call-arg-panics	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/e13-sibling-panic-order/deref-left-index-arg-call	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/e13-sibling-panic-order/assert-left-recv-w	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/e13-sibling-panic-order/tgt-assert-vs-len-hoist	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/e13-sibling-panic-order/tgt-assert-vs-make	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/e13-sibling-panic-order/compound-assert-vs-len	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/e13-sibling-panic-order/map-key-assert-vs-len	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/e13-sibling-panic-order/bytes-conv-left-len-hoist	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/e13-sibling-panic-order/addr-index-left-len-hoist	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/e13-sibling-panic-order/tgt-assert-vs-call	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/e13-sibling-panic-order/map-tgt-assert-vs-call	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/e13-sibling-panic-order/tgt-assert-vs-min-call	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/e13-sibling-panic-order/tgt-assert-vs-copy-call	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/e13-sibling-panic-order/tgt-assert-vs-append	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/e13-sibling-panic-order/tgt-assert-vs-recv-w	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/e13-sibling-panic-order/addr-assert-left-call	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/e13-sibling-panic-order/compound-index-vs-len	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/e13-sibling-panic-order/array-base-target-vs-len	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/e13-sibling-panic-order/recover-assert-vs-call-w	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/e13-sibling-panic-order/bytes-conv-payload-vs-call	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/e13-sibling-panic-order/compound-call-target-vs-recv	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/e13-sibling-panic-order/map-compound-index-key-vs-recv	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/len-vs-call-order/chan	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/len-vs-call-order/recv-bearing	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/len-vs-call-order/short-circuit	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/len-vs-call-order/short-circuit-skipped	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/len-vs-call-order/hint-panicky-between	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/len-vs-call-order/make-slice-panicky-between	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/len-vs-call-order/make-chan-cap-panicky-between	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/len-vs-call-order/make-index-left	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/len-vs-call-order/make-inner-len	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/len-vs-call-order/make-hint-call	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/len-vs-call-order/make-hint-struct-any-key	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/len-vs-call-order/make-hint-array-any-key	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/len-vs-call-order/len-struct-any-key-left-assert	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/len-vs-call-order/make-hint-generic-any-key	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/make-channel-len-cap	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/make-maxalloc/chan-size-over-byte	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/make-maxalloc/chan-size-header-boundary	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/make-maxalloc/chan-size-over-int64	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/make-maxalloc/chan-zero-size-elem-huge	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/make-maxalloc/recover-chan-size-over	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/print/goroutine-interleaving	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/print/goroutine-ordered	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  builtins/print/refused/race-with-output	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	RACE-ALL
+  channels/buffered-basic	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/close-closed-panic	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/closed-receive	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/close-edge/drain-zero-after-close	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/close-edge/recover-negative-make	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/close-edge/recover-send-closed	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/close-edge/recover-close-closed	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/close-edge/recover-close-nil	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/close-edge/defer-close	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/close-nil-panic	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/close-send-only	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/comparison/identity	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/comparison/directional-equal	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/comparison/chan-of-chan	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/comparison/map-key-alias	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/defer-close-two/first	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/defer-close-two/second	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/defer-close-two/unrelated	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/directional-types	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/make-directional	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/make-edge/zero-buffer	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/make-edge/len-expression	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/make-edge/negative-buffer-panic	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/make-edge/len-cap-directional	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/make-edge/close-does-not-drain	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/make-edge/buffered-fifo	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/make-edge/receive-comma-ok-open	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/make-edge/ordinary-send-eval-order	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/make-edge/ordinary-receive-eval-order	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/make-edge/close-eval-order	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/nil-values	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/range-closed	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/range-edge/break	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/range-edge/no-var	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/recv-edge/nil-deref-target-recovered	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/recv-edge/nil-deref-target-drains	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/recv-edge/oob-target-drains	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/recv-edge/second-target-panic-stores-first	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/recv-edge/dep-index-target	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/recv-edge/nil-index-base-second	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/recv-edge/field-second-target-stores-first	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/recv-edge/oob-second-target-stores-first	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/recv-edge/chain-field-over-index	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/recv-map-elem	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/recv-map-elem/key-panic-drains	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/recv-map-elem/first-store-lands	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/recv-order/call-arg	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/recv-order/return-list	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/recv-order/composite-lit	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/recv-order/multi-assign	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/recv-order/binary	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/recv-order/for-init	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/recv-order/for-cond	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/recv-order/else-if	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/recv-order/switch-case	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/recv-order/dead-recv-len-operand	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/recv-order/dead-recv-len-embedded	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/recv-short-circuit/and-lhs	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/recv-short-circuit/funclit-rhs	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/recv-stmt	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/select-deterministic/default-only	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/select-deterministic/closed-buffered-receive	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/select-deterministic/closed-drained-receive	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/select-deterministic/closed-receive-declare	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/select-deterministic/nil-and-ready-receive	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/select-deterministic/nil-and-ready-send	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/select-deterministic/send-closed-panic	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/select-deterministic/send-rhs-eval-unselected	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/select-deterministic/channel-operands-eval-order	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/select-deterministic/unselected-receive-lhs-not-eval	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/select-deterministic/selected-receive-lhs-eval	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/select-deterministic/send-rhs-panic-before-default	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/select-deterministic/recv-chan-panic-before-default	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/select-empty-receive-default	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/select-entry-snapshot/send-value-snapshot	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/select-entry-snapshot/chan-operand-snapshot	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/select-full-send-default	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/select-multi-ready	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/select-multi-ready/observable	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/select-nil-default	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/select-ready-receive	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/select-ready-send	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/select-recv-edge/dep-index-target	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/select-recv-edge/nil-index-base-second	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/select-recv-edge/field-second-target-stores-first	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/select-recv-edge/chain-field-over-index	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/select-recv-edge/fallback-call-index	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  channels/send-closed-panic	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  control-flow/break-label-select	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  control-flow/goto-out-of-select	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  generics/quarantined-instantiation	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  generics/quarantined-instantiation-interface	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  generics/type-parameter-channel-ops	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  goroutines/buffered-wake/fifo	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  goroutines/buffered-wake/cap-one	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  goroutines/buffered-wake/len-after-join	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  goroutines/close-wake/receiver	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  goroutines/close-wake/receiver-drain-first	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  goroutines/close-wake/sender-panics	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	RACE-ALL
+  goroutines/close-wake/sender-full-buffer	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	RACE-ALL
+  goroutines/close-wake/close-after-send-drains	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  goroutines/close-wake/send-closed-recovered	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  goroutines/fork-join/unbuffered	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  goroutines/fork-join/buffered	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  goroutines/fork-join/compute	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  goroutines/fork-join/two-workers-own-chans	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  goroutines/fork-join/args-eval-now	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  goroutines/fork-join/closure-capture	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  goroutines/fork-join/method-callee	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  goroutines/fork-join/result-discarded	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  goroutines/main-exit/blocked-goroutine	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  goroutines/main-exit/two-leaked	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  goroutines/ping-pong/alternate	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  goroutines/ping-pong/cap-zero	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  goroutines/pipeline/two-stage	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  goroutines/pipeline/buffered-stage	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  goroutines/pipeline/request-reply	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  goroutines/rendezvous-hb/send-hb	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  goroutines/rendezvous-hb/recv-hb	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  goroutines/sched-dependent/first-come	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  goroutines/sched-dependent/select-default-handshake	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  goroutines/sched-dependent/len-handoff	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  goroutines/sched-dependent/waiter-pick	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  goroutines/select-arrival-multi	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  goroutines/select-closed-arrival/send	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  goroutines/select-closed-arrival/recv-parked-sender	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	RACE-ALL
+  goroutines/select-closed-arrival/recv-closed-drains-hb	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  goroutines/select-closed-arrival/send-close-race	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	RACE-ALL
+  goroutines/select-closed-arrival/send-paired-then-close	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  goroutines/select-wake/recv	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  goroutines/select-wake/send	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  goroutines/select-wake/closed	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  goroutines/select-wake/buffered-data	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  goroutines/select-wake-close-selsel	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  goroutines/select-wake-multi	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  goroutines/spawn-edge/child-panic-aborts	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  goroutines/spawn-edge/child-recovers	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  goroutines/spawn-edge/nil-interface-recovered	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  goroutines/spawn-edge/ptr-box-child-aborts	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  goroutines/wake-then-abort	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  goroutines/wake-window/buffered-send	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  goroutines/wake-window/close-recv	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  imported-goose/channel/actris-example	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  imported-goose/channel/google-search	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  imported-goose/channel/muxer/async	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  imported-goose/channel/muxer/client	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  imported-goose/channel/muxer-unverified/drained	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  imported-goose/channel/muxer-unverified/done	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  imported-goose/channel/select-tricky-examples/nb-not-ready	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  imported-goose/channel/select-tricky-examples/nb-guaranteed-ready	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  imported-goose/channel/select-tricky-examples/nb-full-buffer-not-ready	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  imported-goose/semantics/lock/s-use-locks	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  imported-goose/unittest/synchronization/make-lock	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  init/quarantined-init-dep	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  init/quarantined-init-iface	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  interfaces/quarantined-anonymous-interface	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  interfaces/typed-nil-channel	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  maps/added-entry-count	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  maps/channel-key	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  maps/cross-goroutine-delete-noreadd/delete	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  maps/cross-goroutine-delete-noreadd/clear	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  maps/cross-goroutine-delete-noreadd/other-map	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  maps/cross-goroutine-delete-readd/drf	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  maps/cross-goroutine-delete-readd/insert	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  maps/cross-goroutine-delete-readd/racy	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	RACE-ALL
+  maps/delete-insert-readd-during-range	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  maps/delete-nil-key-types	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  maps/delete-readd-during-range	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  maps/jitter-draw	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  maps/nil-channel-key	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  maps/nil-read-key-types	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  maps/range-first-key	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  methods/recv-implicit-addr-deref/sync-recv-nil	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  multipkg/mini-raft-twin/choice-order	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  multipkg/nil-value-method-text	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  multipkg/private-method-dispatch/nil-private-value	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/defers/deferred-close	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/defers/goroutine-panic-aborts	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/defers/goroutine-recovers-own	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/defers/panic-not-cross-goroutine	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/frontier/defer-go-splat	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/goroutines/handoff-write-before-send	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/goroutines/fifo-one-sender	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/goroutines/leaked-goroutine	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/goroutines/directional-params	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/goroutines/lockstep-transcript	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/goroutines/goroutine-panic-under-wait	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/goroutines/goroutine-panic-under-wait-no-done	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/goroutines/child-blocked-nil-channel	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/gostmt/args-evaluated-at-spawn	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/gostmt/method-receiver-at-spawn	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/gostmt/func-value-at-spawn	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/gostmt/closure-reads-after-sync	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/gostmt/splat-args	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/gostmt/from-map	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/gostmt/arg-panics-in-parent	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/gotchas/once-panicking-counts-as-done	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/gotchas/array-through-channel-copies	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/gotchas/nil-checks-after-make	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/ifaces/mv-iface-nil-call	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/ifaces/iface-dispatch-value-nil	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/ifaces/iface-param-value-nil	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/ifaces/global-iface-value-nil	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/ifaces/spawn-iface-value-nil	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/ifaces/spawn-iface-value-nil-devirt	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/ifaces/spawn-helper-value-nil	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/ifaces/mk-helper-value-nil	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/ifaces/chan-in-iface-compare	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/latitude/send-value-vs-channel-call	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/membership/two-senders-buffered	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/membership/three-key-map-order	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/membership/select-two-ready	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/membership/delete-other-key-during-range	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/membership/insert-then-delete-during-range	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/methods/method-on-channel-type	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/misc/range-chan-no-var	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/misc/array-of-channels	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/misc/labeled-break-switch-select	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/ranges/labeled-continue-range-chan	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/select/all-nil-default	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/select/nil-beside-ready	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/select/closed-receive	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/select/send-closed	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/select/drain-closed-buffered	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/select/range-closed-buffered	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/select/break-in-select-in-for	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/select/labeled-break-select-loop	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/select/channel-of-channels	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/select/channel-of-funcs	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/select/nil-directional-len-cap	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/select/close-wakes-receiver	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/select/default-only	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/select/self-send-recv-default	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/select/closed-struct-zero	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/select/ping-pong	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/structs/channel-equality	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/syncmisuse/mutex-copy-independent	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/syncmisuse/unlock-from-other-goroutine	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/syncmisuse/wait-on-zero-counter	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/syncmisuse/recursive-read-lock	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/syncmisuse/once-different-funcs	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  noodler/syncmisuse/defer-unlock-during-panic	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  panic-recover/panic-controls/child-confluent	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  panic-recover/repanic-collapse/passthrough-var	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  panic-recover/repanic-collapse/two-literals	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  panic-recover/repanic-collapse/empty-literals	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  panic-recover/repanic-collapse/multiple	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  panic-recover/repanic-collapse/bool-reboxed	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  panic-recover/repanic-collapse/int-literals	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  panic-recover/repanic-collapse/defined-passthrough	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  panic-recover/repanic-collapse/runtime-error-passthrough	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  panic-recover/repanic-collapse/nil-passthrough	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  panic-recover/repanic-collapse/unicode-literals	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  panic-recover/repanic-collapse/runtime-error-two-faults	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  panic-recover/repanic-collapse/reboxed-string	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  panic-recover/repanic-collapse/runtime-computed	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  panic-recover/repanic-collapse/global-var	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  panic-recover/repanic-collapse/empty-reboxed	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  panic-recover/repanic-collapse/int-reboxed	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  panic-recover/repanic-collapse/defined-reboxed	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  panic-recover/repanic-collapse/index-two-faults	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  panic-recover/repanic-same-value-abort	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  race/atomics-free/atomic-vs-atomic	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  race/atomics-free/plain-read-vs-load	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  race/atomics-free/publish-acquire	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  race/atomics-free/rmw-acquire	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  race/atomics-free/sibling-words	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  race/atomics-free/typed-sibling-field	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  race/atomics-misuse/plain-write-vs-add	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	RACE-ALL
+  race/atomics-misuse/plain-read-vs-store	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	RACE-ALL
+  race/atomics-misuse/plain-read-vs-failed-cas	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	RACE-ALL
+  race/atomics-misuse/struct-copy-vs-typed-add	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	RACE-ALL
+  race/atomics-misuse/plain-read-vs-swap	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	RACE-ALL
+  race/free/slice-disjoint	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  race/free/field-disjoint	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  race/free/field-read-write	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  race/free/ptr-field-read-write	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  race/free/array-read-write	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  race/free/array-const-index-field	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  race/free/field-array-const-index	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  race/free/array-dyn-index-read-write	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	RACE-ALL
+  race/free/promoted-ptr-box	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  race/free/addr-deref-no-read	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  race/free/method-value-order	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  race/free/spawn-dispatch-free	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  race/free-sync/mutex	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  race/free-sync/wg-edge	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  race/free-sync/once-edge	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  race/free-sync/rw-writers	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  race/free-sync/mutex-siblings	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  race/free-sync/disjoint-prims	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  race/free-sync/rw-copy-beside-rlock	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  race/free-sync/rw-copy-beside-lock	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  race/free-sync/trylock-publish	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  race/free-sync/rw-trylock-publish	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  race/free-sync/rw-tryrlock-acquire	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  race/gomem-only/rw-copy-vs-runlock	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	RACE-ALL
+  race/gomem-only/rw-copy-vs-unlock	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	RACE-ALL
+  race/gomem-only/wg-copy-vs-add-from-0	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	RACE-ALL
+  race/gomem-only/wg-copy-vs-done	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	RACE-ALL
+  race/gomem-only/wg-overwrite-vs-wait-at-0	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	RACE-ALL
+  race/litmus/mp-sync	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  race/litmus/mp-racy	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	RACE-ALL
+  race/litmus/lb-racy	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	RACE-ALL
+  race/litmus/close-hb	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  race/litmus/chan-mutex	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  race/litmus/sb-chan	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  race/negative/write-write	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	RACE-ALL
+  race/negative/read-write	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	RACE-ALL
+  race/negative/increment	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	RACE-ALL
+  race/negative/map-rw	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	RACE-ALL
+  race/negative/slice-elem	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	RACE-ALL
+  race/negative/iface-dispatch	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	RACE-ALL
+  race/negative/len-map	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	RACE-ALL
+  race/negative/method-value	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	RACE-ALL
+  race/negative/defer-dispatch	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	RACE-ALL
+  race/negative/spawn-dispatch	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	RACE-ALL
+  race/negative/promoted-dispatch	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	RACE-ALL
+  race/negative/map-range-iter	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	RACE-ALL
+  race/negative/array-const-index-same-elem	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	RACE-ALL
+  race/negative/array-const-index-whole-write	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	RACE-ALL
+  race/negative-sync/one-side	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	RACE-ALL
+  race/negative-sync/rlock-serialized	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	RACE-ALL
+  race/negative-sync/wg-no-edge	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	RACE-ALL
+  race/negative-sync/wg-overwrite	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	RACE-ALL
+  race/negative-sync/mutex-copy	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	RACE-ALL
+  race/negative-sync/rw-overwrite	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	RACE-ALL
+  race/negative-sync/once-copy	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	RACE-ALL
+  race/negative-sync/overwrite-vs-trylock	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	RACE-ALL
+  race/negative-sync/failed-trylock-no-edge	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	RACE-ALL
+  scoping/named-result-shadow/commaok-recv	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  scoping/select-clause-scope	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  slices/append-spill-below-formula	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  slices/append-spill-size-class	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  slices/append-spill-stack-buffer	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  slices/full-slice-cap-zero	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  spec-examples-decl/conversion-parse-forms	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  spec-examples-decl/function-literals	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  spec-examples-decl/receive-comma-ok/forms	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  spec-examples-decl/receive-comma-ok/typed-form	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  spec-examples-decl/receive-comma-ok/untyped-form-live	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  spec-examples-decl/select-forms/ready	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  spec-examples-decl/select-forms/default	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  spec-examples-decl/var-comma-ok-matrix/recv-untyped	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  spec-examples-decl/var-comma-ok-matrix/recv-untyped-blank-value	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  spec-examples-decl/var-comma-ok-matrix/recv-untyped-blank-ok	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  spec-examples-decl/var-comma-ok-matrix/recv-typed	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  spec-examples-decl/var-comma-ok-matrix/recv-typed-blank-value	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  spec-examples-decl/var-comma-ok-matrix/recv-typed-blank-ok	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  spec-examples-decl/var-comma-ok-matrix/pkg-recv-untyped	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  spec-examples-decl/var-comma-ok-matrix/pkg-recv-untyped-blank-value	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  spec-examples-decl/var-comma-ok-matrix/pkg-recv-untyped-blank-ok	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  spec-examples-decl/var-comma-ok-matrix/pkg-recv-typed	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  spec-examples-decl/var-comma-ok-matrix/pkg-recv-typed-blank-value	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  spec-examples-decl/var-comma-ok-matrix/pkg-recv-typed-blank-ok	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  spec-examples-decl/var-comma-ok-matrix/after-goto-recv	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  spec-examples-lexical/channel-direction-forms	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  spec-examples-stmt/assign-forms	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  spec-examples-stmt/eval-order-calls/verbatim	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  spec-examples-stmt/eval-order-calls/traced-recv	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  spec-examples-stmt/go-statements/named-call	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  spec-examples-stmt/go-statements/func-literal	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  spec-examples-stmt/go-statements/params-at-go	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  spec-examples-stmt/receive-forms	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  spec-examples-stmt/short-var-decl	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  stdlib-source/builder-cap/grow-empty	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  stdlib-source/builder-cap/grow-hundred	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  stdlib-source/builder-cap/grow-after-write	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  stdlib-source/builder-cap/grow-then-write	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/atomic-frontier/add-load-store	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/atomic-frontier/cas	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/atomic-frontier/swap	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/atomic-frontier/mp-litmus	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/composite-literal/mutex-addr-lit	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/composite-literal/waitgroup-value-lit	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/composite-literal/rwmutex-addr-lit	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/composite-literal/once-value-lit	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/composite-literal/lit-in-composite	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/escapes/promoted	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/escapes/method-value	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/escapes/go-stmt	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/escapes/defer-embedded	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/escapes/method-value-add-arg	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/escapes/method-value-negative-panic	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/escapes/once-do-method-value	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/escapes/promoted-method-value	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/escapes/passed-callback	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/escapes/paren-forms	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/iface-dispatch/mutex-user-iface	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/iface-dispatch/wg-user-iface	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/iface-dispatch/locker-box-dispatch	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/iface-dispatch/rw-locker-dispatch	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/iface-dispatch/once-iface-dispatch	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/mutex-basic/lock-unlock	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/mutex-basic/defer-unlock	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/mutex-basic/copy-carries-state	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/mutex-basic/cross-goroutine-unlock	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/mutex-order/acquisition-order	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/mutex-protected/counter	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/mutex-protected/visible	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/once-basic/runs-once	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/once-basic/panicking-f	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/once-basic/across-goroutines	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/promoted-mutex/stmt	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/promoted-mutex/defer-unlock	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/promoted-mutex/value-var	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/promoted-mutex/counter	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/rwmutex-basic/rlock-twice	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/rwmutex-basic/write-then-read-ordered	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/rwmutex-order/acquisition	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/satisfaction/assert-ok-mutex	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/satisfaction/type-switch-mutex	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/satisfaction/bare-assert-mutex	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/satisfaction/assert-negative-missing	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/satisfaction/bare-assert-missing-panics	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/satisfaction/assert-ok-waitgroup	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/satisfaction/assert-ok-once	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/satisfaction/trylock-sig-satisfies	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/satisfaction-locker-sig/assert-ok-rwmutex	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/stub-satisfaction/satisfies	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/trylock/locked-false	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/trylock/trylock-false-then-lock	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/trylock/rw-trylock-reader-held	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/trylock/rw-try-writer-held	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/trylock/rw-tryrlock-pending-writer	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/waitgroup-basic/add-done-wait	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/waitgroup-basic/batch-done	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/waitgroup-basic/recovered-negative-continue	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/waitgroup-int32/add-overflow-panics	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/waitgroup-int32/add-wrap-noop	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/waitgroup-negative-panic/negative-counter	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+  sync/waitgroup-panic-payload/payload-is-string	p1:race=0,clean=0,exit=0,abnormal=5,timeout=0;p8:race=0,clean=0,exit=0,abnormal=5,timeout=0;	DRF
+
+refused rows (params omit width=/sites= — declare them in cases.tsv):
+  sync/out-of-scope-trylock/trylock-uncontended	gc: no completed run (all timed out or died before an outcome); params 'width=2,members=2' omit sites= — the runner will not invent an enumeration bound; declare it in cases.tsv (lane membership)
+  sync/promoted-mutex/trylock-expr	gc: no completed run (all timed out or died before an outcome); params 'width=2,members=2' omit sites= — the runner will not invent an enumeration bound; declare it in cases.tsv (lane membership)
+  sync/trylock/unlocked-acquire	gc: no completed run (all timed out or died before an outcome); params 'width=2,members=2' omit sites= — the runner will not invent an enumeration bound; declare it in cases.tsv (lane membership)
+  sync/trylock/unlock-after-trylock-success	gc: no completed run (all timed out or died before an outcome); params 'width=2,members=2' omit sites= — the runner will not invent an enumeration bound; declare it in cases.tsv (lane membership)
+  sync/trylock/discarded-acquires	gc: no completed run (all timed out or died before an outcome); params 'width=2,members=2' omit sites= — the runner will not invent an enumeration bound; declare it in cases.tsv (lane membership)
+  sync/trylock/rw-trylock-unlocked	gc: no completed run (all timed out or died before an outcome); params 'width=2,members=2' omit sites= — the runner will not invent an enumeration bound; declare it in cases.tsv (lane membership)
+  sync/trylock/rw-tryrlock-unlocked	gc: no completed run (all timed out or died before an outcome); params 'width=2,members=2' omit sites= — the runner will not invent an enumeration bound; declare it in cases.tsv (lane membership)
+  sync/trylock/rw-tryrlock-reader-held	gc: no completed run (all timed out or died before an outcome); params 'width=2,members=2' omit sites= — the runner will not invent an enumeration bound; declare it in cases.tsv (lane membership)
+  sync/trylock/defer-trylock	gc: no completed run (all timed out or died before an outcome); params 'width=2,members=2' omit sites= — the runner will not invent an enumeration bound; declare it in cases.tsv (lane membership)
+
+gc-infra / unclassified rows (the matrix is INCOMPLETE):

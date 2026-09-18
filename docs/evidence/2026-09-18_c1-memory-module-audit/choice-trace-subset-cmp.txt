@@ -1,0 +1,6 @@
+cmp EXIT=0
+  2690 .tmp/ct-cand-sorted.tsv
+  2690 .tmp/ct-main-sorted.tsv
+  5380 total
+abb41cb778b9eb7680008b4be4486d146061e77107cbc6d1c0db3eaf0f5b7ab4  .tmp/ct-cand-sorted.tsv
+abb41cb778b9eb7680008b4be4486d146061e77107cbc6d1c0db3eaf0f5b7ab4  .tmp/ct-main-sorted.tsv
