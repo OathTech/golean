@@ -530,3 +530,41 @@ coordinator and applied (handoff §13). **TWO remain the [USER]'s:**
 
 Neither is a defect, neither blocks the gate, and neither is self-adjudicated:
 both are posed at the merge ask.
+
+### The on-deck decisions ruling record (2026-09-18) — sequencing, NaN, portability, NPDRF
+
+[USER] Mike, 2026-09-18, verbatim, relayed by the [AGENT] coordinator — cite as
+relayed: «(1) agreed, (2) the choices I suppose are either [a] pass a parameter
+saying what the platform says, or [b] try to provide one uniform nondetermnism
+right? I think this depends on what hte Go standard says, (3) We'll do this
+eventually but not now, (4) We shouldn't delete, hard to revive that way. Can we
+just deprecate/ mark unsound for now?» — answering the coordinator's triage of
+the same day.
+
+**What was decided.**
+- **(1) Sequencing after C1 — RULED:** Stage C of the evaluation-order plan
+  (the first native `unseq` fragment: frontend + decoder + adapters; closes
+  BUG-101/BUG-104) runs directly after C1 lands, then the ladder resumes
+  P → C3 → C4 → B6. One core writer throughout.
+- **(2) NaN payload latitude (latitude R7, BUG-094) — DEFERRED to a memo:** the
+  choice is [a] a platform parameter carrying what the target does vs [b] one
+  uniform nondeterminism over what IEEE 754 / the Go spec permit; «depends on
+  what the Go standard says». A short records memo establishes what the pinned
+  spec and IEEE 754 fix, what gc/amd64 realizes, what `FloatBits` does today,
+  and how the two-contracts framing (latitude inventory §11: Contract A =
+  language, Contract B = target instance) maps onto [a]/[b]; the ruling follows
+  the memo.
+- **(3) A 32-bit oracle host / second `Platform` instance — DEFERRED:**
+  «eventually but not now». Recorded; no lane.
+- **(4) `NPDRFReduction` — RULED: DEPRECATE / MARK UNSOUND, do not delete.**
+  The proposition (`GoLean/GoCore/NPDRF.lean`, false as stated per its own
+  docstring) stays in the tree with an explicit machine-visible marker
+  (`@[deprecated]` with a reason naming the refutation) and a docstring banner
+  that it is NOT to be used as a hypothesis; the restatement waits for C1's
+  access trace (its input). Folded into C1's S0 as a records-class core edit
+  (C1 owns the core writer).
+
+**Not ruled here (still PENDING [USER]):** the two trusted-surface #2 fixes
+(pin `CGO_ENABLED` in the differential runner's oracle invocation; select the
+oracle copy's file set through `go/build` in the harness) — posed 2026-09-18,
+no answer yet.
