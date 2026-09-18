@@ -4162,19 +4162,29 @@ theorem Ty.stepDown_noPanic (types : TypeEnv) :
     intro ty step
     unfold Ty.stepDown
     split
-    · exact NoPanic.pure _
-    · try dsimp only
-      split
-      · try dsimp only
-        split
-        · split <;> first | exact NoPanic.pure _ | exact NoPanic.stuck _
-        · exact NoPanic.stuck _
-      · exact ih _ _
-      · exact NoPanic.unsupported _
-      · exact NoPanic.unsupported _
-      · exact NoPanic.unsupported _
-    · exact NoPanic.stuck _
-    · exact NoPanic.stuck _
+    -- Order-independent (audit fix round F3, 2026-09-18: the identity-type
+    -- arms joined the match): every leaf arm — `pure` (the `.array` hop and
+    -- the identity types), `stuck`, `unsupported` — closes here; the ONE arm
+    -- left standing is the `.defined` table walk, taken below. A new arm
+    -- that is none of these fails loudly at the second block.
+    all_goals
+      first
+        | exact NoPanic.pure _
+        | exact NoPanic.stuck _
+        | exact NoPanic.unsupported _
+        | (dsimp only; exact NoPanic.unsupported _)
+        | skip
+    all_goals
+      (try dsimp only
+       split
+       · try dsimp only
+         split
+         · split <;> first | exact NoPanic.pure _ | exact NoPanic.stuck _
+         · exact NoPanic.stuck _
+       · exact ih _ _
+       · exact NoPanic.unsupported _
+       · exact NoPanic.unsupported _
+       · exact NoPanic.unsupported _)
 
 theorem Array.modifyM_noPanic {α : Type} {xs : Array α} {i : Nat} {f : α → Except Stop α}
     (h : (hi : i < xs.size) → NoPanic (f xs[i])) : NoPanic (xs.modifyM i f) := by

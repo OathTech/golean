@@ -33,9 +33,13 @@ monotonicity. `stepMulti_wf` is the preservation theorem the slice-2
 scaffold owed. B7 fix round (2026-09-17, [USER] «We should delete the
 vacuous conjunct right? that's just a strict improvement», relayed):
 `ThreadWf`/`MultiWf` lost their constantly-true `itersNormalized`
-conjunct, so `MultiWf ctx m` is context-free and every `*_wf` lemma below
+conjunct (B7 had made `MultiWf m` context-free) and every `*_wf` lemma below
 lost its `Config.itersNormalized … = true` hypotheses/conjuncts
-(restatements, none weakened; `spawnPlan_iters` retired as inert). -/
+(restatements, none weakened; `spawnPlan_iters` retired as inert). C1 S1
+(2026-09-18) made `MultiWf ctx m` read the context AGAIN: `StateWf ctx
+m.shared` now carries the `HeapNormal ctx` conjunct, which the type table
+decides (a restatement, flagged in the C1 handoff §5; nothing weakened;
+the stale «context-free» wording corrected at the C1 audit fix round, F6). -/
 
 -- `spawnedCont_shape` retired with the marker unification (stage C);
 -- `opDoneInner_shape` retired with the marker itself (C5).

@@ -14,7 +14,12 @@
 #
 #   gc side      `go build -race` of the SAME generated harness the
 #                differential gate runs (tools/coverageharness), executed
-#                --runs N times at EACH --procs GOMAXPROCS value. A run is
+#                --runs N times at EACH --procs GOMAXPROCS value, with the
+#                harness's two oracle crash-hook files (`oracle.crash`,
+#                `oracle.registered`) reset in the run directory before
+#                EVERY run exactly as scripts/diff-coverage does (the hook
+#                exits 78 without them — C1 audit fix round F2, 2026-09-18).
+#                A run is
 #                RACE iff TSan printed "WARNING: DATA RACE" (TSan has no
 #                false positives w.r.t. ITS OWN happens-before model, so
 #                one red run is a real TSan race). A run is COMPLETED iff
@@ -236,10 +241,23 @@ run_row() {
           bash -c 'cd "$1" && exec go build -race -o ./golean-race-bin .' go-build "$d/go" 2>&1)"; then
       detail="go build -race: $(echo "$b_out" | oneline)"
     else
-      local any_race=0 completed=0 p i rc
+      local any_race=0 completed=0 p i rc setup_failed=0
       for p in ${PROCS//,/ }; do
         local nr=0 nc=0 nt=0 nx=0 na=0
         for i in $(seq 1 "$RUNS"); do
+          # The harness's oracle crash hook (tools/coverageharness/crashhook.go:
+          # `_goleanSetupCrash`) opens `oracle.crash` WITHOUT O_CREATE and
+          # `os.Exit(78)`s when the file is absent — «a setup failure, never an
+          # observation». scripts/diff-coverage (`run_oracle`) resets BOTH hook
+          # files before every plain/race draw; this runner (2026-09-02) predates
+          # the hook (L4, 2026-09-07, 60bbf466) and never did, so from L4 on every
+          # `-race` harness here exited 78 by design and the gc side was
+          # `gc-no-verdict` on every row (C1 S2b, 2026-09-18, misdiagnosed as a
+          # TSan sandbox limit; found by the C1 audit, F2). Mirrored verbatim; a
+          # failed reset is INFRA (the matrix is INCOMPLETE), never a verdict.
+          if ! { : > "$d/go/oracle.crash" && : > "$d/go/oracle.registered"; }; then
+            setup_failed=1; break 2
+          fi
           run_with_timeout "$GO_RUN_TIMEOUT" env GOMAXPROCS="$p" GODEBUG=panicnil=0 GORACE="exitcode=66" \
             bash -c 'cd "$1" && exec ./golean-race-bin' go-race-run "$d/go" > "$d/run.p$p.$i.txt" 2>&1
           rc=$?
@@ -251,7 +269,8 @@ run_row() {
         done
         gc_summary="${gc_summary}p$p:race=$nr,clean=$nc,exit=$nx,abnormal=$na,timeout=$nt;"
       done
-      if [[ "$any_race" -eq 1 ]]; then gc_verdict="RACE"
+      if [[ "$setup_failed" -eq 1 ]]; then gc_verdict="INFRA"; detail="${detail:+$detail; }oracle setup: could not reset crash evidence files ($d/go/oracle.crash, oracle.registered)"
+      elif [[ "$any_race" -eq 1 ]]; then gc_verdict="RACE"
       elif [[ "$completed" -gt 0 ]]; then gc_verdict="DRF-in-N"
       else gc_verdict="NO-VERDICT"; detail="${detail:+$detail; }gc: no completed run (all timed out or died before an outcome)"; fi
     fi

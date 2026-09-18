@@ -1,0 +1,189 @@
+#!/usr/bin/env bash
+# scripts/check-mem-callsites — the memory module's emit/peek discipline,
+# checked MECHANICALLY (C1 audit fix round F7, 2026-09-18; the audit of
+# `core/c1-memory-module-0918`, finding F7: after the footprint table's
+# deletion nothing mechanical guarded which call sites read or write user
+# memory WITHOUT emitting an access).
+#
+# THE DISCIPLINE (GoLean/GoCore/Ops.lean, «The memory module's access
+# discipline — what emits, what peeks»): every user-memory access goes through
+# an EMITTING operation (`Mem.load`/`loadFor`/`store`/`mapRead`/`mapWrite`/
+# the element runs/`loadResults`/the dispatch read); the RAW operations —
+# the peeks `loadLoc`, `mapPayload?`, `chanPayload?`, `syncCell`, `chanCell`,
+# `loadMany`, `Heap.lookup`, and the raw writers `storeLoc`, `storeMany`,
+# `storeMapPayload`, `storeChanPayload`, `Store.updateCell`, the allocators
+# `Store.alloc`/`Store.allocCell` — read or write a cell without emitting.
+# Every call site of a raw operation is therefore a DECISION («gc's `-race`
+# build performs no data access here», or «this IS the emitting operation's
+# own body»), and the docstring lists the classes (address formation,
+# metadata, the map RMW's entry peek, machine-internal cells, drivers,
+# synchronization, fresh allocation).
+#
+# WHAT THIS CHECKS. It scans every `GoLean/**/*.lean` module with comments
+# stripped (scripts/lean-scan.sh's canonical stripper), attributes each raw-
+# operation mention to its enclosing top-level EXECUTABLE declaration (`def`,
+# `abbrev`, `instance`, … — `theorem`/`lemma`/`example` bodies are proofs, not
+# executions, and are skipped), and compares the resulting
+#   file <TAB> declaration <TAB> raw-op <TAB> count
+# rows EXACTLY against the tracked inventory scripts/mem-callsites.tsv, whose
+# fifth column is the REASON the site is not a data access (or that it is the
+# emitting operation itself). Line numbers are not part of the key, so
+# ordinary edits do not churn it; a changed COUNT is a change.
+#
+# FAIL CLOSED: a raw-op mention in a declaration/op pair that is NOT in the
+# inventory, or with a different count, FAILS naming the site and the two ways
+# to resolve it — (1) route the access through an emitting `Mem.*` operation,
+# or (2) add the row to the inventory WITH a reason (and, if it is a peek
+# class the module docstring does not yet list, list it there). A STALE
+# inventory row (its site is gone) also FAILS: an inventory that names sites
+# that do not exist is a false witness. A malformed inventory, an empty scan,
+# or a scanner error FAILS. This is an ADDED check; it weakens nothing.
+#
+# Token rule (fail-closed towards over-flagging): identifiers are split on
+# everything outside [A-Za-z0-9_.?!']; a token is a raw-op mention when it IS
+# the op's name or ENDS in `.<name>` (method-call spelling: `state.updateCell`,
+# `s.alloc`, `Store.alloc`); `lookup` is matched only as `Heap.lookup`/
+# `…heap.lookup` (the other `lookup`s — StructFields/LocalEnv/Scope — are not
+# heap reads). String literals are scanned like code (an op named in a
+# refusal text counts once; it is inventoried with that reason).
+#
+# Usage: scripts/check-mem-callsites            (the gate check)
+#        scripts/check-mem-callsites --census   (print the scan, no compare —
+#                                                for building/refreshing the
+#                                                inventory; NEVER the gate)
+set -Eeuo pipefail
+# One collation for sort/comm/awk (comm in a UTF-8 locale rejects C-sorted input).
+export LC_ALL=C
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT"
+. "$ROOT/scripts/lean-scan.sh"
+
+MODE=check
+case "${1:-}" in
+  "") ;;
+  --census) MODE=census ;;
+  *) echo "check-mem-callsites: unknown argument '$1' (expected nothing or --census)" >&2; exit 2 ;;
+esac
+[[ $# -le 1 ]] || { echo 'check-mem-callsites: at most one argument' >&2; exit 2; }
+
+INVENTORY="$ROOT/scripts/mem-callsites.tsv"
+
+# The raw operations, by LAST dotted component (see the token rule).
+RAW_OPS='loadLoc storeLoc loadMany storeMany mapPayload? chanPayload? storeMapPayload storeChanPayload syncCell chanCell updateCell allocCell alloc'
+
+scan_file() {
+  local f="$1"
+  strip_lean_comments < "$f" | awk -v file="$f" -v ops="$RAW_OPS" '
+    BEGIN {
+      n = split(ops, arr, " "); for (i = 1; i <= n; i++) isop[arr[i]] = 1
+      decl = "(preamble)"; kind = "none"
+    }
+    {
+      line = $0
+      # A top-level declaration header (optional inline attribute, modifiers, keyword, name).
+      hdr = line
+      sub(/^[ \t]*/, "", hdr)
+      while (match(hdr, /^@\[[^]]*\][ \t]*/)) hdr = substr(hdr, RLENGTH + 1)
+      while (match(hdr, /^(private|protected|noncomputable|partial|unsafe|scoped|local|public|meta)[ \t]+/)) hdr = substr(hdr, RLENGTH + 1)
+      if (match(hdr, /^(def|theorem|lemma|instance|abbrev|example|structure|inductive|class|opaque|axiom|macro|macro_rules|syntax|elab|notation|initialize|builtin_initialize)([ \t]|$)/)) {
+        kw = hdr; sub(/[ \t].*$/, "", kw)
+        rest = substr(hdr, length(kw) + 1); sub(/^[ \t]+/, "", rest)
+        name = rest; sub(/[ \t:({\[].*$/, "", name)
+        if (name == "" || name ~ /^[:({\[]/) {
+          # anonymous (`instance : …`, `example : …`): key on the header text, squeezed
+          key = rest; gsub(/[ \t]+/, " ", key); key = substr(key, 1, 60)
+          name = kw "(" key ")"
+        }
+        kind = kw; decl = name
+        next   # the header line itself (a type mentioning an op is not a call)
+      }
+      if (kind == "theorem" || kind == "lemma" || kind == "example") next
+      # Tokens: identifier characters incl. dots, `?`, `!`, primes.
+      t = line
+      gsub(/[^A-Za-z0-9_.?!\047]+/, " ", t)
+      m = split(t, toks, " ")
+      for (i = 1; i <= m; i++) {
+        tok = toks[i]
+        if (tok == "") continue
+        if (tok ~ /(^|\.)[Hh]eap\.lookup$/) { count[decl "\t" "Heap.lookup"]++; continue }
+        last = tok; sub(/^.*\./, "", last)
+        if (last in isop) {
+          # `alloc` bare/dotted: `Store.alloc`, `s.alloc`; but not `allocCell` (its own op)
+          count[decl "\t" last]++
+        }
+      }
+    }
+    END {
+      for (k in count) printf "%s\t%s\t%d\n", file, k, count[k]
+    }'
+}
+
+scan_all() {
+  local f
+  while IFS= read -r f; do scan_file "$f"; done < <(find GoLean -name '*.lean' -not -path '*/.lake/*' | LC_ALL=C sort) \
+    | LC_ALL=C sort
+}
+
+current="$(scan_all)"
+n_rows="$(printf '%s\n' "$current" | awk 'NF > 0' | wc -l)"
+if [[ "$n_rows" -eq 0 ]]; then
+  echo "check-mem-callsites: the scan found NO raw-operation site under GoLean/ — the scanner is broken (fail closed)" >&2
+  exit 1
+fi
+
+if [[ "$MODE" = census ]]; then
+  printf '# file\tdeclaration\traw-op\tcount\n%s\n' "$current"
+  exit 0
+fi
+
+# ---- the inventory: 5 tab-separated columns, non-empty reason, no duplicates ----
+if [[ ! -f "$INVENTORY" ]]; then
+  echo "check-mem-callsites: inventory $INVENTORY missing (fail closed)" >&2; exit 1
+fi
+if ! awk -F'\t' '
+    /^#/ || NF == 0 { next }
+    NF != 5 { printf "  malformed inventory row (need 5 tab-separated columns): %s\n", $0 > "/dev/stderr"; bad = 1; next }
+    $4 !~ /^[1-9][0-9]*$/ { printf "  malformed count in inventory row: %s\n", $0 > "/dev/stderr"; bad = 1; next }
+    $5 == "" { printf "  inventory row without a reason: %s\n", $0 > "/dev/stderr"; bad = 1; next }
+    { k = $1 "\t" $2 "\t" $3; if (k in seen) { printf "  duplicate inventory key: %s\n", k > "/dev/stderr"; bad = 1 } seen[k] = 1 }
+    END { exit bad }' "$INVENTORY"; then
+  echo "check-mem-callsites: malformed inventory $INVENTORY (fail closed)" >&2; exit 1
+fi
+inventory="$(awk -F'\t' '!/^#/ && NF == 5 { printf "%s\t%s\t%s\t%s\n", $1, $2, $3, $4 }' "$INVENTORY" | LC_ALL=C sort)"
+
+new_sites="$(comm --check-order -23 <(printf '%s\n' "$current") <(printf '%s\n' "$inventory") | awk 'NF > 0')"
+stale_rows="$(comm --check-order -13 <(printf '%s\n' "$current") <(printf '%s\n' "$inventory") | awk 'NF > 0')"
+
+status=0
+if [[ -n "$new_sites" ]]; then
+  status=1
+  echo "check-mem-callsites: RAW memory-operation site(s) NOT in the inventory (file, declaration, raw-op, count):" >&2
+  printf '%s\n' "$new_sites" | sed 's/^/  NEW    /' >&2
+  cat >&2 <<'MSG'
+  A raw operation reads or writes user memory WITHOUT emitting an access; the
+  detector would not see it. Resolve each site in ONE of two ways:
+    (1) route the access through an emitting operation of the memory module
+        (`Mem.load`/`Mem.loadFor`/`Mem.store`/`Mem.mapRead`/`Mem.mapWrite`/
+        `Mem.loadElems`/`Mem.storeElems`/`Mem.loadRun`/`Mem.storeRun`/
+        `Mem.loadSlice`/`loadResults`), so the access is on the step's label; or
+    (2) add the row to scripts/mem-callsites.tsv with a REASON in the fifth
+        column stating why gc's `-race` build performs no data access there
+        (address formation / type-static metadata / the map RMW's entry peek /
+        machine-internal cell / driver readout / synchronization traffic /
+        fresh allocation / the emitting operation's own body), and list the
+        class in Ops.lean's access-discipline docstring if it is new.
+  A row whose COUNT changed appears once as NEW (the new count) and once as
+  STALE (the old count): re-derive the reason for every added mention.
+MSG
+fi
+if [[ -n "$stale_rows" ]]; then
+  status=1
+  echo "check-mem-callsites: STALE inventory row(s) — no such site exists any more (file, declaration, raw-op, count):" >&2
+  printf '%s\n' "$stale_rows" | sed 's/^/  STALE  /' >&2
+  echo "  Remove the row from scripts/mem-callsites.tsv (an inventory naming sites that do not exist is a false witness)." >&2
+fi
+if [[ "$status" -ne 0 ]]; then
+  echo "check-mem-callsites: FAIL (scan $n_rows rows; $(printf '%s\n' "$new_sites" | awk 'NF>0' | wc -l) new, $(printf '%s\n' "$stale_rows" | awk 'NF>0' | wc -l) stale)" >&2
+  exit 1
+fi
+printf 'Memory-module raw call-site inventory: PASS (%s (file, declaration, raw-op) rows, all inventoried with reasons)\n' "$n_rows"

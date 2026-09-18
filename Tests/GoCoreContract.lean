@@ -81,6 +81,52 @@ thing `StateWf` says about this cell. -/
 theorem address_bound_admits_ill_typed :
     StateWf (ProgramCtx.ofTables (types := #[])) illTyped := by decide
 
+/-! A path write THROUGH an identity-normalized root (C1 audit fix round F3,
+2026-09-18). `isNormalForTyTy (.interface _) _ = true`, so an `.interface`-declared
+cell holding an ARRAY or a STRUCT is `HeapNormal`; main `68b261e6`'s leaf-first
+`storeLoc` (load base → set → store root → normalize at `.interface` = identity)
+ACCEPTED a path write into it, and the C1 S1 root-first write REFUSED it
+(`Ty.stepDown` had no arm for the identity types) — an undisclosed refusal-class
+change on a state the invariant admits, unreachable from Go as far as the audit
+could construct (interface contents are not addressable). Pinned to main's
+behaviour: the descent returns the identity type itself and the leaf is
+normalized there (no masking — exactly what the whole-root identity did). The
+`#eval`s ran first (`docs/evidence/2026-09-18_c1-memory-module/probe-IfaceCell.log`). -/
+def ifaceArrayStore : Store :=
+  { heap := #[.value (.interface ⟨"any"⟩) (.array #[.int 0 .int, .int 1 .int])] }
+def ifaceStructStore : Store :=
+  { heap := #[.value (.interface ⟨"any"⟩) (.struct ⟨"main.A"⟩ #[("f", .int 0 .int)])] }
+def sliceArrayStore : Store :=
+  { heap := #[.value (.slice .int) (.array #[.int 0 .int, .int 1 .int])] }
+def leaf0 : Loc := .index (.base ⟨0⟩) 0
+def leafF : Loc := .field (.base ⟨0⟩) ⟨"main.A"⟩ "f"
+
+theorem iface_cell_path_write_normal :
+    HeapNormal (ProgramCtx.ofTables (types := #[])) ifaceArrayStore ∧
+    HeapNormal (ProgramCtx.ofTables (types := #[])) ifaceStructStore ∧
+    HeapNormal (ProgramCtx.ofTables (types := #[])) sliceArrayStore := by decide
+
+theorem iface_cell_path_write_array :
+    (storeLoc (ProgramCtx.ofTables (types := #[])) ifaceArrayStore leaf0 (.int 5 .int)).map
+        (fun s => loadLoc (ProgramCtx.ofTables (types := #[])) s leaf0)
+      = .ok (.ok (.int 5 .int)) := rfl
+
+theorem iface_cell_path_write_struct :
+    (storeLoc (ProgramCtx.ofTables (types := #[])) ifaceStructStore leafF (.int 5 .int)).map
+        (fun s => loadLoc (ProgramCtx.ofTables (types := #[])) s leafF)
+      = .ok (.ok (.int 5 .int)) := rfl
+
+theorem slice_cell_path_write_array :
+    (storeLoc (ProgramCtx.ofTables (types := #[])) sliceArrayStore leaf0 (.int 5 .int)).map
+        (fun s => loadLoc (ProgramCtx.ofTables (types := #[])) s leaf0)
+      = .ok (.ok (.int 5 .int)) := rfl
+
+/-- The written store is still `HeapNormal` (the identity arm of the check). -/
+theorem iface_cell_path_write_preserves_normal :
+    (storeLoc (ProgramCtx.ofTables (types := #[])) ifaceArrayStore leaf0 (.int 5 .int)).map
+        (fun s => decide (HeapNormal (ProgramCtx.ofTables (types := #[])) s))
+      = .ok true := rfl
+
 /-- An actual choice site of the current machine, not a toy transition system. -/
 def forkPoint : Config := .panicking [panicEntry "audit"] (.probeK .stop)
 def raised : Config := .panicking [panicEntry "audit"] .stop

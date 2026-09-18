@@ -1239,7 +1239,9 @@ def normalizeValueForTy (ty : Ty) (value : GoValue) :
   normalizeValueForTyTy (normalizeValueForTyAt ctx.types ctx.types.size) ty value
 
 /-- Allocate a VALUE cell at its declared type — the value NORMALIZED at
-that type (C1 S1, charter §7 D3, RULED by default acceptance 2026-09-18):
+that type (C1 S1, charter §7 D3 — the [AGENT] coordinator's reading of the
+[USER]'s 2026-09-18 non-objection to the triage; explicit [USER] ratification
+REQUESTED at the merge ask, PENDING):
 the pre-C1 `Store.alloc` created the cell with the evaluated value as is
 (the «alloc hole» `State.lean`'s `HeapCell` docstring named; 13 call
 sites, `.allocNew`'s the one that could carry a non-normal value). With
@@ -1389,11 +1391,21 @@ whole root» on every normal cell — and every array along the path is
 updated IN PLACE (`Array.modifyM`: the element is swapped out while
 rebuilt, so a uniquely owned root costs O(depth), never O(root size); the
 S0 spike `spikes/c1-frame/Frame.lean` proved the disjoint-path frame law
-for this shape). Refusal texts are byte-preserved: a prefix step refuses
-with `loadLoc`'s texts (the former recursion loaded the prefix), the last
-step with the store texts; the one NEW refusal is the leaf-type descent's
-(`Ty.stepDown`), reachable only on a cell whose declared type has no
-component where its value has one — impossible under `HeapNormal`. -/
+for this shape). A declared type at which the normalizer is the IDENTITY
+(`.interface`, and the catch-all `.bool`/`.string`/`.slice`/`.map`/
+`.pointer` — `normalizeValueForTyTy`'s two `return value` arms, in
+lockstep with `isNormalForTyTy`'s `true` arms) descends to ITSELF, so a
+path write under such a root normalizes the leaf at that same identity —
+exactly what the whole-root normalization did (audit fix round F3,
+2026-09-18: the first cut REFUSED there on a cell `HeapNormal` admits; the
+pin `Tests/GoCoreContract.lean` `iface_cell_path_write_*`). Refusal texts
+are byte-preserved: a prefix step refuses with `loadLoc`'s texts (the
+former recursion loaded the prefix), the last step with the store texts;
+the one NEW refusal is the leaf-type descent's (`Ty.stepDown`), reachable
+only on a cell whose declared type has no component where its value has
+one — impossible under `HeapNormal` (its `stuck`/`unsupported` texts
+differ from the whole-root normalizer's on such a NON-normal cell; both
+refuse). -/
 
 /-- One root-first path step (a `Loc` read from its root outwards). -/
 inductive PathStep where
@@ -1428,9 +1440,18 @@ def FieldDef.find? (f : String) : List FieldDef → Option FieldDef
 /-- The DECLARED type one path step down, with the residual bound: `.array`
 → its element type (no hop); `.defined i` → through the table, ONE bound
 per hop exactly as `normalizeValueForTyAt` descends, to the struct's field
-type. `bound`-structural (the index descent, seeded at `types.size`). -/
+type; a type at which the normalizer is the identity (`.interface`,
+`.bool`, `.string`, `.slice`, `.map`, `.pointer` — module docstring) →
+ITSELF at the same bound, on either step (audit fix round F3, 2026-09-18).
+`bound`-structural (the index descent, seeded at `types.size`). -/
 def Ty.stepDown (types : TypeEnv) : Nat → Ty → PathStep → Except Stop (Ty × Nat)
   | b, .array _ elem, .index _ => pure (elem, b)
+  | b, .interface id, _ => pure (.interface id, b)
+  | b, .bool, _ => pure (.bool, b)
+  | b, .string, _ => pure (.string, b)
+  | b, .slice elem, _ => pure (.slice elem, b)
+  | b, .map key value, _ => pure (.map key value, b)
+  | b, .pointer elem, _ => pure (.pointer elem, b)
   | b, .defined i, step =>
       match b with
       | 0 => typeIndexExhausted "leaf descent" i

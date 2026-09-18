@@ -2744,9 +2744,10 @@ theorem writeAt_isNormal_array {rest : List PathStep} {v : GoValue} :
   induction b with
   | zero =>
     intro ty values ety b' i old' hklt hn hstep hold' ih
-    cases ty <;> simp [Ty.stepDown, typeIndexExhausted, unsupported, throw, throwThe,
-      MonadExceptOf.throw, stuck, pure, Except.pure] at hstep
-    · -- `.array n elem` at bound 0: no hop
+    cases ty with
+    | array length elem =>
+      -- `.array n elem` at bound 0: no hop
+      simp only [Ty.stepDown, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hstep
       obtain ⟨rfl, rfl⟩ := hstep
       simp only [isNormalForTyTy, Bool.and_eq_true, decide_eq_true_eq] at hn ⊢
       obtain ⟨hsz, hlist⟩ := hn
@@ -2757,6 +2758,12 @@ theorem writeAt_isNormal_array {rest : List PathStep} {v : GoValue} :
       rcases List.mem_or_eq_of_mem_set hx with hx | rfl
       · exact hlist x hx
       · exact ih (hlist _ (by rw [← Array.getElem_toList hklt]; exact List.getElem_mem _)) hold'
+    -- The identity-normalized types (audit fix round F3): the descent returns
+    -- the type itself and every value is normal there — the catch-all arm.
+    | interface _ | bool | string | slice _ | map _ _ | pointer _ => simp [isNormalForTyTy]
+    | _ =>
+      simp [Ty.stepDown, typeIndexExhausted, unsupported, throw, throwThe,
+        MonadExceptOf.throw, stuck, pure, Except.pure] at hstep
   | succ n ihb =>
     intro ty values ety b' i old' hklt hn hstep hold' ih
     cases ty with
@@ -2787,6 +2794,7 @@ theorem writeAt_isNormal_array {rest : List PathStep} {v : GoValue} :
           exact ihb (ty := target) hklt hn hstep hold' ih
         | opaqueDecl _ => simp [unsupported, throw, throwThe, MonadExceptOf.throw] at hstep
         | interfaceDef _ => simp [unsupported, throw, throwThe, MonadExceptOf.throw] at hstep
+    | interface _ | bool | string | slice _ | map _ _ | pointer _ => simp [isNormalForTyTy]
     | _ =>
       simp [Ty.stepDown, stuck, throw, throwThe, MonadExceptOf.throw] at hstep
 /-- The struct component, at the index layer where the struct arm lives. -/
@@ -2808,8 +2816,11 @@ theorem writeAt_isNormal_struct {rest : List PathStep} {v : GoValue} :
   induction b with
   | zero =>
     intro ty actual fields tid f fty b' k old' hn hstep hklt hold' hname hbefore ih
-    cases ty <;> simp [Ty.stepDown, typeIndexExhausted, unsupported, throw, throwThe,
-      MonadExceptOf.throw, stuck, pure, Except.pure] at hstep
+    cases ty with
+    | interface _ | bool | string | slice _ | map _ _ | pointer _ => simp [isNormalForTyTy]
+    | _ =>
+      simp [Ty.stepDown, typeIndexExhausted, unsupported, throw, throwThe,
+        MonadExceptOf.throw, stuck, pure, Except.pure] at hstep
   | succ n ihb =>
     intro ty actual fields tid f fty b' k old' hn hstep hklt hold' hname hbefore ih
     cases ty with
@@ -2857,6 +2868,7 @@ theorem writeAt_isNormal_struct {rest : List PathStep} {v : GoValue} :
           exact ihb (ty := target) hn hstep hklt hold' hname hbefore ih
         | opaqueDecl _ => simp [unsupported, throw, throwThe, MonadExceptOf.throw] at hstep
         | interfaceDef _ => simp [unsupported, throw, throwThe, MonadExceptOf.throw] at hstep
+    | interface _ | bool | string | slice _ | map _ _ | pointer _ => simp [isNormalForTyTy]
     | _ =>
       simp [Ty.stepDown, stuck, throw, throwThe, MonadExceptOf.throw] at hstep
 
@@ -2897,9 +2909,10 @@ theorem writeAt_isNormal :
             obtain ⟨q, hq, rfl⟩ := (Array.modifyM_ok_iff fields k hklt _ fields').mp hmod
             simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at hq
             obtain ⟨old', hold', rfl⟩ := hq
-            -- The declared type: a struct value is normal only at a `.defined`
-            -- struct declaration (or an interface / untyped slot, where the
-            -- descent refuses — vacuous).
+            -- The declared type: a struct value is normal at a `.defined`
+            -- struct declaration, or at an identity-normalized slot
+            -- (`.interface` and the catch-all kinds), where the descent
+            -- returns the slot's own type and normality is the `true` arm.
             obtain ⟨hk, hname, hbefore⟩ := fieldIdx?_spec fields f k hidx
             exact writeAt_isNormal_struct hn hstep hk hold' hname hbefore ih
           · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h

@@ -468,6 +468,24 @@ else
   bad "engine-isolation violated (the semantic core must not import the dedup engine)"
 fi
 
+# The memory module's emit/peek discipline, mechanically (C1 audit fix round F7,
+# 2026-09-18): after the footprint table's deletion the ONLY thing that said
+# «every user-memory access goes through an emitting `Mem.*` operation» was a
+# docstring. scripts/check-mem-callsites scans GoLean/**/*.lean (comments
+# stripped) for every mention of a RAW memory operation (`loadLoc`, `storeLoc`,
+# the payload readers/writers, `syncCell`/`chanCell`, `loadMany`/`storeMany`,
+# `Store.updateCell`/`alloc`/`allocCell`, `Heap.lookup`) inside an executable
+# declaration and compares (file, declaration, op, count) EXACTLY with the
+# tracked inventory scripts/mem-callsites.tsv, whose fifth column is the reason
+# the site is not a data access. A new raw site, a changed count, a stale row
+# or a malformed inventory FAILS by name. Static, no build; an ADDED check.
+step "memory-module raw call sites (scripts/check-mem-callsites vs scripts/mem-callsites.tsv)"
+if bash scripts/check-mem-callsites; then
+  ok "memory-module raw call-site inventory (emit/peek discipline)"
+else
+  bad "memory-module raw call-site inventory (scripts/check-mem-callsites)"
+fi
+
 
 
 # 2. Core build (the frontend / interpreter / relation).

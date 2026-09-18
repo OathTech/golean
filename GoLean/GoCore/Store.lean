@@ -36,8 +36,10 @@ def Store.allocCell (s : Store) (cell : HeapCell) : Loc × Store :=
   (.base ⟨s.heap.size⟩, { heap := s.heap.push cell })
 
 -- `Store.alloc` (the VALUE-cell allocator) lives in `Ops.lean` since C1 S1
--- (2026-09-18): it NORMALIZES the value at the declared type (charter §7 D3,
--- RULED by default acceptance 2026-09-18), which needs the normalizer; the
+-- (2026-09-18): it NORMALIZES the value at the declared type (charter §7 D3 —
+-- the [AGENT] coordinator's reading of the [USER]'s 2026-09-18 non-objection to
+-- the triage; explicit [USER] ratification REQUESTED at the merge ask,
+-- PENDING), which needs the normalizer; the
 -- pre-C1 non-normalizing `Store.alloc` here — «the alloc hole» — is
 -- tombstoned by that definition. `allocCell` (payload cells) stays.
 

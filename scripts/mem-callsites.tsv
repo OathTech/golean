@@ -1,0 +1,92 @@
+# scripts/mem-callsites.tsv — the inventory of RAW memory-operation call sites
+# (C1 audit fix round F7, 2026-09-18; checked by scripts/check-mem-callsites in scripts/ci).
+# Columns: file <TAB> enclosing declaration <TAB> raw-op <TAB> count <TAB> reason.
+# The raw ops read or write a cell WITHOUT emitting an access (module docstring,
+# GoLean/GoCore/Ops.lean «The memory module's access discipline»); every row is a
+# recorded DECISION that gc's `-race` build performs no data access at that site,
+# or that the site IS the module's own operation. A new row needs a new reason; a
+# site that vanished must have its row removed (the check fails on either).
+# Classes (the docstring's): EMITTING OPERATION BODY · THE PEEK/RAW WRITER ITSELF ·
+# ADDRESS FORMATION · METADATA · THE MAP RMW's ENTRY PEEK · MACHINE-INTERNAL CELLS ·
+# DRIVER READOUT · SYNCHRONIZATION · DETECTOR REGISTRY ARM (S2c retires) · FRESH
+# ALLOCATION · NO EXECUTION (relation premises / refusal texts) · DEAD (owed deletion) ·
+# TRACER OBSERVATION (tooling). Provenance: [AGENT] fix-round worker, from the
+# S2b docstring's peek list; the counts are the scanner's at the inventoried tree.
+GoLean/CLI.lean	enumPoolRun	loadMany	2	DRIVER READOUT — the enumerator driver's result readout after termination
+GoLean/CLI.lean	poolDFS	loadMany	1	DRIVER READOUT — the pool DFS driver's result readout after termination
+GoLean/ChoiceTrace.lean	partnersFor	chanCell	1	TRACER OBSERVATION — the choice tracer reads the channel object to name select partners in its dump (tooling; not a machine step)
+GoLean/ChoiceTrace.lean	tryLockFacts	syncCell	1	TRACER OBSERVATION — the choice tracer reads the sync word to report TryLock facts in its dump (tooling; not a machine step)
+GoLean/EnumDedup.lean	nodeObs	loadMany	1	DRIVER READOUT — the untrusted dedup engine's observation of a terminated node (CLI-side)
+GoLean/GoCore/EnumDedupCheck.lean	checkNode	loadMany	1	DRIVER READOUT — the verified checker's observation of a terminated node
+GoLean/GoCore/EnumSpec.lean	obsOf?	loadMany	1	DRIVER READOUT — the enumeration spec's observation of a terminated configuration
+GoLean/GoCore/Machine.lean	Step	alloc	1	NO EXECUTION — the relation's `initialization` premise mirrors stepFn's Store.alloc (Step is the Prop-level twin; the label is fixed by the premise)
+GoLean/GoCore/Machine.lean	allocDecls	alloc	1	FRESH ALLOCATION — block-scoped declaration cells (the malloc convention: the creating write precedes every escape)
+GoLean/GoCore/Machine.lean	applyAtomicOp	loadLoc	1	SYNCHRONIZATION — the atomic op's indivisible RMW read (recorded by the atomic arm at the cell's own path with the ATOMIC kind)
+GoLean/GoCore/Machine.lean	applyChanOp	chanCell	3	SYNCHRONIZATION — channel-object traffic of the registry op (gc records channel objects as sync, not data; raceUpdate's registry arm until S2c)
+GoLean/GoCore/Machine.lean	applyChanOp	storeChanPayload	3	SYNCHRONIZATION — the channel payload write of send/recv/close (channel-object traffic; the payload VALUE's data accesses are the sender's/receiver's own emitted stores)
+GoLean/GoCore/Machine.lean	applySlice	loadLoc	1	ADDRESS FORMATION — the array-size load for the slice header's bounds (gc computes from headers and types)
+GoLean/GoCore/Machine.lean	applyStmtOp	alloc	1	FRESH ALLOCATION — append's spilled backing array (the copied elements were read through Mem.loadElems)
+GoLean/GoCore/Machine.lean	applyStmtOpCore	alloc	2	FRESH ALLOCATION — .allocNew / .makeSlice payload cells (the target store that follows is an emitting Mem.store)
+GoLean/GoCore/Machine.lean	applyStmtOpCore	allocCell	2	FRESH ALLOCATION — makeMap / makeChan payload cells (payload cells, no declared value type)
+GoLean/GoCore/Machine.lean	applyStrictOp	alloc	2	FRESH ALLOCATION — bytesFromString / runesFromString backing arrays
+GoLean/GoCore/Machine.lean	applyStrictOp	chanPayload?	2	METADATA — lengthOf/capacityOf on a channel: c.qcount/c.dataqsiz are read uninstrumented in gc (probe p26, U2)
+GoLean/GoCore/Machine.lean	applyStrictOp	loadLoc	2	METADATA — lengthOf/capacityOf on a pointer-to-array: `len` is a constant of the type, the cell is loaded only to check the operand IS a pointer value (fail closed otherwise)
+GoLean/GoCore/Machine.lean	applySyncOp	syncCell	1	SYNCHRONIZATION — the sync op reads the primitive's state word (the HB edge is raceUpdate's registry arm until S2c)
+GoLean/GoCore/Machine.lean	applySyncOpCore	storeLoc	11	SYNCHRONIZATION — the .syncData state-word stores (never a data access; U4 records the sync words through the registry arm)
+GoLean/GoCore/Machine.lean	applySyncOpCore	syncCell	10	SYNCHRONIZATION — per-kind sync-word reads (Mutex/RWMutex/WaitGroup/Once)
+GoLean/GoCore/Machine.lean	applyTryLock	storeLoc	1	SYNCHRONIZATION — TryLock's state-word store
+GoLean/GoCore/Machine.lean	atomicStore	storeLoc	1	SYNCHRONIZATION — the atomic op's indivisible RMW write (recorded by the atomic arm with the ATOMIC kind)
+GoLean/GoCore/Machine.lean	bindIterVars	alloc	2	FRESH ALLOCATION — per-iteration loop variable cells
+GoLean/GoCore/Machine.lean	bindParams	alloc	1	FRESH ALLOCATION — parameter cells at frame entry
+GoLean/GoCore/Machine.lean	chanCell	chanPayload?	1	SYNCHRONIZATION PEEK ITSELF — the channel-object reader's body
+GoLean/GoCore/Machine.lean	clauseReady	chanCell	2	SYNCHRONIZATION — select clause readiness reads the channel object
+GoLean/GoCore/Machine.lean	commitClause	chanCell	2	SYNCHRONIZATION — select commit reads the channel object
+GoLean/GoCore/Machine.lean	commitClause	storeChanPayload	2	SYNCHRONIZATION — select commit's channel payload write
+GoLean/GoCore/Machine.lean	indexTargetLoc	loadLoc	1	ADDRESS FORMATION — the base-cell load for bounds/nil while forming the element address (resolveChain goes through it)
+GoLean/GoCore/Machine.lean	loadMany	loadLoc	1	THE DRIVERS' PEEK ITSELF — loadMany's body (result readouts after termination)
+GoLean/GoCore/Machine.lean	loadMany	loadMany	1	THE DRIVERS' PEEK ITSELF — loadMany's own recursion
+GoLean/GoCore/Machine.lean	projChainTarget	loadLoc	1	ADDRESS FORMATION — the root check of the constant-index narrowing (the cell must be an ARRAY; the root is being loaded by the emitting Mem.loadFor anyway)
+GoLean/GoCore/Machine.lean	storeMany	storeLoc	1	DEAD RAW WRITER — storeMany has no caller (kept alive only as HeapNormal.of_storeMany's subject; deletion owed to S3)
+GoLean/GoCore/Machine.lean	storeMany	storeMany	1	DEAD RAW WRITER — storeMany's own recursion (no caller; deletion owed to S3)
+GoLean/GoCore/Machine.lean	syncCell	loadLoc	1	SYNCHRONIZATION PEEK ITSELF — the sync-primitive state-word reader's body
+GoLean/GoCore/Machine.lean	tryLockConsult?	syncCell	1	SYNCHRONIZATION — TryLock's state-word read at the consult
+GoLean/GoCore/Machine.lean	unseqStorePlan	loadLoc	1	MACHINE-INTERNAL CELLS — binder-value loads of the unseq sweep (no goroutine can name a binder cell; the binder WRITES emit via Mem.store)
+GoLean/GoCore/Machine.lean	unseqUnfrozenAnchor?	loadLoc	1	ADDRESS FORMATION — the frozen-anchor shape walk at plan time (unseq sweep)
+GoLean/GoCore/Multi.lean	applyPairing	chanCell	6	SYNCHRONIZATION — unbuffered pairing reads the channel object
+GoLean/GoCore/Multi.lean	applyPairing	storeChanPayload	3	SYNCHRONIZATION — unbuffered pairing's channel payload write
+GoLean/GoCore/Multi.lean	chanArrivalPlan	chanCell	2	SYNCHRONIZATION — arrival planning reads the channel object
+GoLean/GoCore/Multi.lean	raceCommitClauseEvent	chanCell	2	DETECTOR REGISTRY ARM — the select-commit event's channel-object reads (sPre; S2c)
+GoLean/GoCore/Multi.lean	racePairEvent	chanCell	3	DETECTOR REGISTRY ARM — the pairing event's channel-object reads (sPre/tsPre; S2c)
+GoLean/GoCore/Multi.lean	raceUpdate	chanCell	3	DETECTOR REGISTRY ARM — the fold's pre/post channel-object reads (sPre/tsPre facts; S2c moves them into the emitting operation's event)
+GoLean/GoCore/Multi.lean	raceUpdate	loadLoc	1	DETECTOR REGISTRY ARM — the atomic arm's pre-state read of the cell it records with the ATOMIC kind (sPre; S2c)
+GoLean/GoCore/Multi.lean	raceUpdate	syncCell	3	DETECTOR REGISTRY ARM — the fold's pre/post sync-word reads (sPre/tsPre facts; S2c)
+GoLean/GoCore/Multi.lean	raceWakeEvent	chanCell	2	DETECTOR REGISTRY ARM — the wake event's channel-object read (sPre; S2c)
+GoLean/GoCore/Multi.lean	resumeThread	chanCell	2	SYNCHRONIZATION — resuming a parked goroutine reads the channel object
+GoLean/GoCore/Multi.lean	resumeThread	storeChanPayload	2	SYNCHRONIZATION — the resumed op's channel payload write
+GoLean/GoCore/Multi.lean	resumeThread	storeLoc	4	SYNCHRONIZATION — the resumed sync op's .syncData state-word stores
+GoLean/GoCore/Multi.lean	resumeThread	syncCell	1	SYNCHRONIZATION — the resumed sync op reads the state word
+GoLean/GoCore/Multi.lean	runProgramPoolOutM	loadMany	1	DRIVER READOUT — result cells after termination (the program is over)
+GoLean/GoCore/Multi.lean	selectArrivalCases	chanCell	2	SYNCHRONIZATION — select arrival reads the channel objects
+GoLean/GoCore/Multi.lean	wakeReady	chanPayload?	2	SYNCHRONIZATION — channel-park readiness reads the channel payload (buffer/closed state)
+GoLean/GoCore/Multi.lean	wakeReady	loadLoc	1	SYNCHRONIZATION — sync-park readiness reads the primitive's .syncData state word (.blockedSync)
+GoLean/GoCore/Ops.lean	Mem.load	loadLoc	1	EMITTING OPERATION BODY — the whole-cell read emits [(read, data l)]
+GoLean/GoCore/Ops.lean	Mem.loadFor	loadLoc	1	EMITTING OPERATION BODY — the root is loaded, the access recorded at the narrowed leaf
+GoLean/GoCore/Ops.lean	Mem.mapRead	mapPayload?	1	EMITTING OPERATION BODY — the map object as ONE location, its read emitted
+GoLean/GoCore/Ops.lean	Mem.mapWrite	storeMapPayload	1	EMITTING OPERATION BODY — the one map write emitted
+GoLean/GoCore/Ops.lean	Mem.store	storeLoc	1	EMITTING OPERATION BODY — the write emits [(write, data l)]
+GoLean/GoCore/Ops.lean	Store.alloc	allocCell	1	FRESH ALLOCATION — the value-cell allocator's own cell push (normalizes, then allocCell)
+GoLean/GoCore/Ops.lean	loadLoc	Heap.lookup	1	THE PEEK ITSELF — loadLoc's root-cell lookup (module primitive)
+GoLean/GoCore/Ops.lean	loadLoc	loadLoc	2	THE PEEK ITSELF — loadLoc's own leaf-first recursion on .field/.index
+GoLean/GoCore/Ops.lean	mapEntries	mapPayload?	1	THE MAP RMW's ENTRY PEEK — mapAssignValue/mapDelete/clearMap fetch the entries here and then EMIT the one write (Mem.mapWrite); gc instruments one write per mapassign/mapdelete
+GoLean/GoCore/Ops.lean	storeLoc	updateCell	1	THE RAW WRITER ITSELF — storeLoc's one root-cell update (module primitive)
+GoLean/GoCore/ProgramTrace.lean	ProgramRun	loadMany	2	NO EXECUTION — the program-level run relation's readout premise (Prop-level twin of the drivers' loadMany)
+GoLean/GoCore/StepFn.lean	runFunctionWithContextM	loadMany	1	DRIVER READOUT — result cells after termination
+GoLean/GoCore/StepFn.lean	runProgramM	loadMany	1	DRIVER READOUT — result cells after termination
+GoLean/GoCore/StepFn.lean	seedGlobals	alloc	1	FRESH ALLOCATION — the globals' cells at program setup
+GoLean/GoCore/StepFn.lean	stepFn	alloc	1	FRESH ALLOCATION — the `initialization` arm allocates the declared variable's cell (the Step premise mirrors it)
+GoLean/GoCore/StepFn.lean	stepFrameExit	loadMany	1	A REFUSAL, NOT A STEP — the targetless-with-results readout is refused by name (the emitting loadResults carries the frame-exit reads)
+GoLean/GoCore/Store.lean	Store.updateCell	alloc	1	NOT A CALL — the .internal refusal text names `Store.alloc` («allocation goes through Store.alloc only», D10)
+GoLean/GoCore/Store.lean	chanPayload?	Heap.lookup	1	THE PEEK ITSELF — the channel-payload reader's cell lookup (module primitive)
+GoLean/GoCore/Store.lean	mapPayload?	Heap.lookup	1	THE PEEK ITSELF — the map-payload reader's cell lookup (module primitive)
+GoLean/GoCore/Store.lean	storeChanPayload	updateCell	1	THE RAW WRITER ITSELF — the channel-payload writer's cell update (module primitive)
+GoLean/GoCore/Store.lean	storeMapPayload	updateCell	1	THE RAW WRITER ITSELF — the map-payload writer's cell update (module primitive)
