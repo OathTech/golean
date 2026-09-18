@@ -1,0 +1,11 @@
+true
+Except.ok (GoLean.GoValue.int 0 (GoLean.GoCore.IntKind.int))
+Except.ok (Except.ok (GoLean.GoValue.int 5 (GoLean.GoCore.IntKind.int)))
+Except.ok true
+true
+Except.ok (Except.ok (GoLean.GoValue.int 5 (GoLean.GoCore.IntKind.int)))
+true
+Except.ok (Except.ok (GoLean.GoValue.int 5 (GoLean.GoCore.IntKind.int)))
+false
+Except.error (GoLean.Stop.refusal (GoLean.Refusal.stuck "leaf descent: the declared type has no element type"))
+Except.ok (Except.ok (GoLean.GoValue.int 300 (GoLean.GoCore.IntKind.int8)))

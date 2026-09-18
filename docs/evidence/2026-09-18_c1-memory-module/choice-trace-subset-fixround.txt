@@ -1,0 +1,15 @@
+# choice-trace subset, C1 audit fix round (2026-09-18): the auditor's 307 ids (review/c1-memory-module-0918: choice-trace-subset-ids.tsv), 6 streams, --dump --jobs 6
+# fix-round binary .tmp/golean-fix = .lake/build/bin/golean at 16029fa8 sha256 42b7bf1ab5f2b17e…; main binary .tmp/golean-main sha256 231df9a99f459d4a… (68b261e6's certified)
+tracer(fix) EXIT=0 wall=43s
+records(fix)=2690 sha256=bd48dac56d3e1fb1
+tracer(main) EXIT=0 wall=51s
+records(main)=2690 sha256=bd48dac56d3e1fb1
+cmp EXIT=0
+# tracer summary head (fix side):
+rows traced: 303 ids, 1818 (id,stream) lines; 0 id(s) the tracer could not run (ERROR)
+  by lane: confluent=7, membership=9, racy=2, strict=285
+
+# tracer summary head (main side):
+rows traced: 303 ids, 1818 (id,stream) lines; 0 id(s) the tracer could not run (ERROR)
+  by lane: confluent=7, membership=9, racy=2, strict=285
+

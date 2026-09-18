@@ -709,8 +709,11 @@ acknowledged rather than defended (F10); F8 posed PENDING [USER] with the
 
 # C1 — the memory module and the access trace (lane `core/c1-memory-module-0918`, base main `68b261e6`)
 
-Charter: `docs/2026-09-17_c1-memory-module-charter.md` (§7 D1–D7, D9, D10 RULED by default
-acceptance 2026-09-18; D8 RULED [USER] 2026-09-18 «deprecate/mark unsound, not delete»).
+Charter: `docs/2026-09-17_c1-memory-module-charter.md` (§7 D1–D7, D9, D10 taken as the brief on the
+[AGENT] coordinator's reading of the [USER]'s 2026-09-18 non-objection to the triage — NOT a ruling;
+explicit [USER] ratification REQUESTED at the merge ask, PENDING (corrected at the audit fix round, F1;
+the earlier text here said «RULED by default acceptance»); D8 RULED [USER] 2026-09-18 «deprecate/mark
+unsound, not delete»).
 Evidence: `docs/evidence/2026-09-18_c1-memory-module/README.md`. Handoff:
 `docs/2026-09-18_c1-memory-module-handoff.md`.
 
@@ -901,3 +904,27 @@ tests` 211 ok, core build warning-free, totality audit ok (45 modules), red ONLY
 | `map_write(4000)` per write | 45 µs | 45 µs | not a C1 target | unchanged |
 
 Reading: cost A (the whole-root re-normalization with the quadratic `#[head] ++ tail`) is gone — every per-root-size slope is flat to the noise floor. The two misses named above are the SAME mechanism, cost B (the pre-step store retained across the step makes the root array shared, so `Array.modifyM` copies it once per write — O(m), the linear term the BUG-090 note predicted); S3 removes the retention..
+
+**Audit fix round (2026-09-18, one gated runtime commit `16029fa8` + one records commit) — the
+pre-merge adversarial audit (`docs/2026-09-18_c1-memory-module-audit.md`, branch
+`review/c1-memory-module-0918`) returned FIX-FIRST, records-class; dispositions [AGENT], disclosed at
+the merge ask (handoff §8).** F3 RESTORED: `Ty.stepDown` descends an identity-normalized declared type
+(`.interface`, `.bool`, `.string`, `.slice`, `.map`, `.pointer` — the normalizer's two identity arms)
+to ITSELF, so a path write through such a root is byte-identical to main's whole-root identity
+normalization; the S1 cut had REFUSED it by name on a cell `HeapNormal` admits (the auditor's Lean
+witness — unreachable from Go); `writeAt_isNormal_array/_struct` gain the identity alternatives (the
+`true` arm), `Ty.stepDown_noPanic` is order-independent, nothing weakened; five `Tests/GoCoreContract.lean`
+pins (`#eval`'d first). F7 ADDED: `scripts/check-mem-callsites` + the reasoned inventory
+`scripts/mem-callsites.tsv` (78 (file, declaration, raw-op) rows) as a static `scripts/ci` step — a new
+raw memory-operation site, a changed count, a stale row or a malformed inventory FAILS by name with the
+two resolutions. F2: the detector-soundness «TSan sandbox» diagnosis WITHDRAWN — the runner never created
+the harness's crash-hook files (`oracle.crash`/`oracle.registered`; the hook exits 78 without them);
+fixed (mirrored from `scripts/diff-coverage`), official re-run at this tip: HOLE 0, possible-HOLE 0, over-refusal 6 (BUG-041 + the five ruled gomem-only rows), agree-DRF 502, agree-race 36, refused 9, uncertified 86, EXIT=2 for the 9 refusals (the first run's pool exit 127 was the worker's own mid-run edit of the script — no cell affected; re-run clean with the committed runner: re-run 21:03 UTC, `artifacts/detector-soundness/fixround-official-2`, 28 min 49 s, **worker-pool exit 0, no message**, EXIT=2 for the same 9 refusals; **cells IDENTICAL on all 639 rows** — HOLE 0, possible-HOLE 0, agree-DRF 502, agree-race 36, over-refusal 6 (the same six rows), refused 9, uncertified 86; this clean run is the evidence file's primary record (`detector-soundness-fixround-summary.txt`), the first run kept beside it) — the S2 exit check HOLDS. F1: the «RULED
+[USER] by default acceptance» provenance of D1–D7, D9, D10 reworded everywhere to the coordinator's
+reading of the [USER]'s non-objection, ratification REQUESTED at the merge ask (PENDING; the qrow record
+says so). F4/F5/F6/F8 records fixes (the theorem-header inference → by inspection of the rules;
+BUG-091 → BUG-111; §1 reordered; `MultiWfSound` comment; `append_grow` ratios MISSED, owed to S3/C4).
+F9 rowed as FR-34 + queue 34 (pre-existing, not C1's). Choice-trace subset (307 ids × 6 streams, 1,818
+(id, stream) lines) vs main's certified binary: BYTE-IDENTICAL (2,690 records, sha `bd48dac5…`, `cmp`
+EXIT=0). Gate: `GOLEAN_MEM_MAX=32G scripts/capped scripts/ci --diff` under the box-wide lock (20:18:14–20:32:18 UTC) at the committed runtime tree `16029fa8`: **EXIT=1 in 844 s**, 3676 cases 3427 PASS / 249 expected FAIL, `eval tests` 211 ok, core build warning-free, totality audit ok, the NEW `memory-module raw call-site inventory` step GREEN, red ONLY on the expected 5a pair (`certificate provenance` STALE on `CLI.lean`; the one cached certified row `imported-goose/channel/google-search`), ZERO other drift (`gate-tail-fixround.txt`). Records checks: `check-bugs.sh` EXIT=0, `check-evidence-size` EXIT=0 (PASS, 0 new offenders), `check-agents-alias` EXIT=0, `check-spec-anchors` EXIT=0 (FR-34's anchors resolve at pin `c19862e5f`). Evidence: `docs/evidence/2026-09-18_c1-memory-module/`
+(README «Audit fix round»).

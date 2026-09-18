@@ -568,3 +568,23 @@ the same day.
 (pin `CGO_ENABLED` in the differential runner's oracle invocation; select the
 oracle copy's file set through `go/build` in the harness) — posed 2026-09-18,
 no answer yet.
+
+**Also NOT ruled here — the C1 charter's D1–D7, D9, D10 (recorded at the C1
+audit fix round, 2026-09-18, [AGENT]; audit F1).** The C1 charter
+(`docs/2026-09-17_c1-memory-module-charter.md` §7), the C1 handoff and the
+hygiene slice log had described these ten decisions as «RULED [USER] 2026-09-18
+by default acceptance», citing this section; this section contains no such
+text. What happened: the coordinator's triage classed D1 (root cells + path-
+addressed leaf operations), D2 (dense array), D3 (`HeapNormal` as a `StateWf`
+conjunct + `alloc` normalizes — a behaviour change at never-stored cells, gated
+at zero drift), D4 (no heap-iso claim), D5 (label on `Step`/`StepM`), D6
+(theorem + executable audit), D7 (BUG-041 stays FAIL; any other difference =
+STOP), D9 (sync/chan/atomic emissions in the module), D10 (`Store.updateCell`'s
+wording) as doctrine-determined or gate-arbitrated defaults, the [USER] did not
+object, and the lane proceeded on the **[AGENT] coordinator's reading of that
+non-objection**. That reading is not a ruling. **Explicit [USER] ratification
+of D1–D7, D9, D10 is REQUESTED at the C1 merge ask — PENDING [USER]**; the
+answer is to be recorded here verbatim (relayed) and the charter §7 header
+re-tagged to cite it. Until then every C1 record says «[AGENT] reading of the
+non-objection, ratification PENDING». D8 (ruling (4) above) is the one C1
+decision with [USER] text.

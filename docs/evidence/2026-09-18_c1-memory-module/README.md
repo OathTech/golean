@@ -198,7 +198,7 @@ THREE FINDINGS, none about the representation:
    holds for the CANONICAL relation (typeIds erased; `pathsDisjoint`). Detector
    consequence: a plain write through one alias and a read through the other,
    HB-unordered, is NOT a conflict for `ShadowKey.overlap` — a missed race,
-   fail-OPEN vs `-race`. Pre-existing, independent of C1; filed as BUG-091
+   fail-OPEN vs `-race`. Pre-existing, independent of C1; filed as BUG-111
    (`docs/BUGS.md`), PENDING [USER]; the S2 emission should key `.data` by the
    canonical path. The kernel-checked refutation was NOT built: see finding 3.
 2. **F1 cannot be exact `Except` equality**: the «wrong base kind» refusals embed
@@ -254,6 +254,30 @@ touch; the charter's ≤ 5 min condition holds).
 ### The choice trace (D4: zero drift on the machine, byte-identical tape consumption)
 
 Whole-corpus choice trace (`scripts/choice-trace-corpus --dump --jobs 6 --exclude goroutines/send-then-spin --exclude strings/trimspace-repeat/repeat-bound-refused`, main `68b261e6`'s certified binary `231df9a9…` vs the S1 binary `f462cf50…`, run 09:23–09:41 UTC): sorted dumps `cmp` **EXIT=0 — BYTE-IDENTICAL**, 23,685 consumption records both sides, one sha256 `70e12e023f3ee30b9d71317454e11dedcb6c6ec039d63aeddfbb3d4906aceb57`; 34 frontend-refusal exports and the 2 exclusions identical; each tracer run EXIT=1 for the SAME pre-existing «FINDINGS present» depth listing (main 609 s, S1 436 s). Tails: `trace-summary-main-s1.txt`.
+
+### Semantic disclosures (S1; the second added at the audit fix round, 2026-09-18)
+
+1. An UNBOUND root under a path: `Store.updateCell`'s `.internal` where the former leaf-first
+   recursion reported `loadLoc`'s `unbound GoCore heap location` `.stuck` — a refusal-CLASS change
+   on a path unreachable by heap density (BUG-085's argument); disclosed at S1 (handoff §5).
+2. **A path write THROUGH an identity-normalized root — REFUSED at S1, RESTORED at the audit fix
+   round (F3).** `isNormalForTyTy` answers `true` for ANY value at `.interface` and at the catch-all
+   kinds (`.bool`/`.string`/`.slice`/`.map`/`.pointer`), so an `.interface`-declared cell holding an
+   array or a struct is `HeapNormal`; main `68b261e6`'s leaf-first `storeLoc` accepted a path write
+   into it (load base → set → store root → normalize at `.interface` = identity) and the S1
+   `Ty.stepDown` had no arm for those types — it refused «leaf descent: the declared type has no
+   element type / no field f» — while the module docstring claimed byte-identity «on every normal
+   cell». Undisclosed until the audit (its Lean witness `probe-IfaceCell.lean`/`.log`, re-run here
+   after the fix: `HeapNormal` true, store `.ok`, the leaf reads 5, the written store still
+   `HeapNormal`; the non-normal `.int`-declared control still refuses); unreachable from Go as far
+   as the audit could construct (interface contents are not addressable; 13 leaf probes + 34
+   subjects SAME on both binaries). Fix: `Ty.stepDown` returns the identity type ITSELF at the same
+   bound on either step, so the leaf normalizes at the identity exactly as the whole root did;
+   `writeAt_isNormal_array/_struct` close the new alternatives by the `true` arm; five pins in
+   `Tests/GoCoreContract.lean` (`iface_cell_path_write_normal/_array/_struct/_preserves_normal`,
+   `slice_cell_path_write_array`). The residual `Ty.stepDown` refusals are reachable only on a
+   NON-normal cell, where main also refused (with the whole-root normalizer's text) — a refusal-TEXT
+   difference on an unreachable state, disclosed.
 
 ### Benchmark AFTER (same probes, runner, box class; 3 runs; net of the empty probe)
 
@@ -425,7 +449,18 @@ PASS (0 new offenders), `check-agents-alias` PASS. Tail: `gate-tail-s2a.txt`.
 
 ### The fold's one corner (recorded, [AGENT])
 
-The old fold and the new agree on every step by the theorem except one: a deferred-call
+The old fold and the new agree on every step whose successor is NON-panicking by the theorem
+(EXACT equality of the label and the table's account there). On a step whose successor IS
+panicking the theorem says only «label = table OR (label = [] ∧ panicking)» — it does NOT by
+itself say the two folds agree; they do, BY INSPECTION OF THE RULES (audit fix round F4,
+2026-09-18): every `Step` rule and every `stepFn` arm whose successor is `.panicking` from a
+non-panicking pre-configuration carries the label `[]` — the `deliver`/`deliverS` panic
+branch (StepFn.lean's `deliverS` returns the PRE-apply store with `[]`), the direct
+constructions `callValCalleeNil`/`callValArgsNil`/`frameDeferNilFall`/`frameDeferNilReturn`/
+`panicArgValue`/`panicResumeContinue` and `stepFn`'s own `.panicking` constructions, all `… []`
+(the sync arm's `.wgAdd` negative-counter panic is a sync-word write, not `.data`) — and the
+old fold recorded nothing on exactly those steps. The exception is one step from an ALREADY
+panicking pre-configuration: a deferred-call
 entry DURING UNWINDING (`panicFrameDefer`, pre-configuration already panicking) whose
 receiver load panics — an out-of-range element ADDRESS dereferenced by the dispatch
 (`loadLoc` → `arrayGet`). The table recorded the read at the leaf; the label records nothing
@@ -491,21 +526,29 @@ matched (394). Static checks at the commit tree: `check-bugs.sh` ok, `check-evid
   since S1); docstring mentions in NPDRF/MachineSound/Multi/Unseq/Ops reworded to the label.
 - Diffstat: 11 files, +177 / −2369 lines.
 
-### The detector-soundness re-run — what this sandbox could and could not establish
+### The detector-soundness re-run — the S2b diagnosis, WITHDRAWN at the audit fix round (F2)
 
-`detector-soundness-s2b.txt`. `scripts/detector-soundness --select in-scope --jobs 6` ran
-twice from this worktree: with the S2b-i (fold) binary and with the S2a (pre-fold) binary as
-the control. **The gc `-race` side cannot run here**: every `-race` binary the runner builds
-starts TSan, maps its shadow, and dies at the sync-allocator growth with EXIT 78 and no
-report (rlimits unlimited, overcommit 0 — the reservation is refused by the sandbox); every
-row is `gc-no-verdict`, both runs EXIT=2 (incomplete). **The machine side is identical
-pre-fold and post-fold on all 639 in-scope rows** (verdict, single-run status, members, race
-members). Against the recorded 2026-09-02 tip matrix (364 rows), 12 machine verdicts differ,
-each by a change main took between 2026-09-02 and `68b261e6` (BUG-080's fix makes the two
-former HOLEs RACE-ALL; atomic-frontier and sites-bound rows now DRF; two rows refused for
-`params-omit-sites=`), and the pre-fold control reproduces every one — none is the fold's.
-The HOLE cell itself is PENDING [USER] (handoff §6 item 2): the same command in an
-environment where `-race` binaries run.
+`detector-soundness-s2b.txt` (the S2b transcript, kept as the record of what was seen).
+`scripts/detector-soundness --select in-scope --jobs 6` ran twice from this worktree at S2b: with
+the S2b-i (fold) binary and with the S2a (pre-fold) binary as the control; **the machine side was
+identical pre-fold and post-fold on all 639 in-scope rows** (verdict, single-run status, members,
+race members); against the recorded 2026-09-02 tip matrix (364 rows), 12 machine verdicts differ,
+each by a change main took between 2026-09-02 and `68b261e6` (BUG-080's fix makes the two former
+HOLEs RACE-ALL; atomic-frontier and sites-bound rows now DRF; two rows refused for
+`params-omit-sites=`), and the pre-fold control reproduces every one — none is the fold's. The gc
+side was `gc-no-verdict` on every row, both runs EXIT=2, and S2b wrote: «the gc `-race` side cannot
+run here — TSan … dies at the sync-allocator growth with EXIT 78 … the reservation is refused by the
+sandbox». **That sentence is WITHDRAWN (audit F2, 2026-09-18).** The true cause: the harness's
+oracle crash hook (`tools/coverageharness/crashhook.go` `_goleanSetupCrash`) opens `oracle.crash`
+WITHOUT `O_CREATE` and `os.Exit(78)`s when it is absent — «a setup failure, never an observation»;
+`scripts/diff-coverage` resets `oracle.crash`/`oracle.registered` before every draw and
+`scripts/detector-soundness` NEVER created them, so EVERY `-race` harness here exited 78 by design
+(the runner, 2026-09-02 `05d0ec54`, predates the hook, which landed with L4 on 2026-09-07
+`60bbf466` — the 2026-09-02 matrix had gc verdicts; every run since L4 would have shown this).
+TSan itself runs in this sandbox (the auditor's `go run -race` of a racy program reports two races).
+The runner is FIXED at the fix round (the reset mirrored verbatim before every `-race` run; a failed
+reset is INFRA, the matrix INCOMPLETE) and the S2 exit check «HOLE = 0, other cells unchanged» was
+run OFFICIALLY with the fixed tracked runner at the fix-round tip — see «Audit fix round» below.
 
 ### Audits
 
@@ -534,3 +577,70 @@ dependency build/files/GoLean/CLI.lean») and `baseline diff (DRIFT)` with the S
 cached certified row). ZERO other drift; the negative baseline matched (394). Static checks at
 the commit tree: `check-bugs.sh` ok, `check-evidence-size` PASS, `check-agents-alias` PASS. Tail:
 `gate-tail-s2b2.txt`.
+
+## Audit fix round — the audit's F1–F10 fixed (2026-09-18)
+
+The pre-merge adversarial audit `docs/2026-09-18_c1-memory-module-audit.md` (branch
+`review/c1-memory-module-0918`, commit `ba6b249c`; its evidence
+`docs/evidence/2026-09-18_c1-memory-module-audit/` there) returned FIX-FIRST, records-class.
+Dispositions and where each fix lives: handoff §8. Two commits on the lane: the RUNTIME commit
+`16029fa8` (F3 restore + proofs + pins, F7 check + inventory + `scripts/ci` step, F2 runner fix, F1/F6
+comment fixes) and the records commit over it. Binary at the runtime tip: `.lake/build/bin/golean`
+sha256 `42b7bf1ab5f2b17e…` (= `.tmp/golean-fix`, the binary the detector-soundness matrix and the
+choice-trace subset below ran).
+
+### Warms (sequential, captured exits, `LEAN_NUM_THREADS=4 GOLEAN_MEM_MAX=32G scripts/capped lake build …`)
+
+| target | exit | wall | note |
+|---|---|---|---|
+| `GoLean.GoCore.StateWf` (after the `Ops.lean`/`StateWf.lean` edits) | 0 | 27 s | 13 jobs, 0 warnings — `writeAt_isNormal_*` accept the identity alternatives: `HeapNormal` preservation holds with the restoration |
+| `GoLean golean` (first try) | 1 | 59 s | `MachineSound.lean` `Ty.stepDown_noPanic`: the hand-bulleted `succ` case assumed four match arms (now ten) — restated order-independently |
+| `GoLean.GoCore.MachineSound` | 0 | 58 s | 15 jobs, 0 warnings |
+| `GoLean golean` | 0 | 20 s | 97 jobs, 0 warnings; binary `42b7bf1a…` |
+| `GoCoreAuditTests` (the five pins) | 0 | 3 s | first try EXIT=1: no `DecidableEq (Except Stop Bool)` for the `preserves_normal` pin's `by decide` → `rfl` (the three sibling `rfl` pins passed at once) |
+
+### The F3 witness, re-run after the fix (`probe-IfaceCell.lean` / `.log`; `scripts/capped lake env lean`, EXIT=0)
+
+`HeapNormal` true / `loadLoc` leaf `ok (int 0)` / store then load → `ok (ok (int 5))` / the written
+store `HeapNormal` → `ok true` (interface cell holding an array); the interface-cell-holding-a-struct
+twin → `ok (ok (int 5))`; a `.slice`-declared cell holding an array (the catch-all class) → `true`,
+`ok (ok (int 5))`; the NON-normal control (`.int`-declared cell holding an array) → `HeapNormal`
+false, `stuck "leaf descent: the declared type has no element type"` (main refused it too, with the
+whole-root normalizer's text); a width-wide `.int 300 .int8` written under the interface root stays
+`300` (identity — exactly main's whole-root identity normalization). The `#eval`s preceded every
+`decide`/`rfl` pin (`Tests/GoCoreContract.lean`).
+
+### The official detector-soundness run (F2) — `scripts/capped scripts/detector-soundness --select in-scope --jobs 6 --out artifacts/detector-soundness/fixround-official`
+
+Binary `42b7bf1a…` (this tree's), the FIXED tracked runner, go1.26.5, 639 in-scope rows, 5 runs × GOMAXPROCS {1, 8}.
+EXIT=2 (INCOMPLETE for the 9 `params-omit-sites=` membership refusals, as at S2b and in the audit), 28 min 48 s; 639 rows: **HOLE 0, possible-HOLE 0**, agree-DRF 502, agree-race 36, over-refusal 6 (`race/free/array-dyn-index-read-write` = BUG-041's O1 residual, and the five `race/gomem-only/*` rows of the RULED go_mem-RACY / TSan-GREEN lane, BUG-084's `Cases:` line), refused 9, uncertified 86 (the machine side's ENUM-FAIL classes: deadlock members, frontend-quarantined subjects, sites bounds, one fuel truncation; gc green or no verdict there) — cell for cell the audit's patched-copy run. One blemish on this first official run, CAUSED BY THE FIX-ROUND WORKER and recorded: its worker-pool exit was 127 with one bash message `scripts/detector-soundness: line 387: -d: command not found` after the last row. Cause established: the worker edited `scripts/detector-soundness` (the amend's one comment line inside `run_row`) WHILE the runner was executing; bash reads a script by byte offset, so when `xargs` returned the parent resumed mid-line in the shifted file, ran `-d '\n' -I{} … | tee …` as a command and took that pipeline's `PIPESTATUS[0]` = 127. The 639 row workers had already completed (their function bodies were exported at start; `progress.txt` 639/639 before the message), the assemble step reads every `row.tsv` from disk, gc-infra 0, unclassified 0 — no cell is affected, and the runner's exit is the 9 refusals' either way. A one-row re-run of the last manifest row with the committed runner: pool exit 0, no message. The matrix was then RE-RUN in full with the committed runner, untouched: re-run 21:03 UTC, `artifacts/detector-soundness/fixround-official-2`, 28 min 49 s, **worker-pool exit 0, no message**, EXIT=2 for the same 9 refusals; **cells IDENTICAL on all 639 rows** — HOLE 0, possible-HOLE 0, agree-DRF 502, agree-race 36, over-refusal 6 (the same six rows), refused 9, uncertified 86; this clean run is the evidence file's primary record (`detector-soundness-fixround-summary.txt`), the first run kept beside it. Lesson (handoff §6c): never edit a script that is running. Summary + meta: `detector-soundness-fixround-summary.txt`.
+
+### The raw call-site inventory (F7) — `scripts/check-mem-callsites`
+
+`scripts/mem-callsites.tsv` at the runtime tip: **78 (file, declaration, raw-op) rows**, every one with
+a reason (`mem-callsites-fixround.txt` is the check's PASS line + the census). By class, counted
+from the file's reason prefixes: module bodies 16 (the 5 emitting operations' own peeks/writes, the
+4 peek primitives `loadLoc`/`mapPayload?`/`chanPayload?`'s lookups and `loadLoc`'s recursion, the 3
+raw-writer primitives, the drivers' `loadMany` 2, the sync peeks `chanCell`/`syncCell` 2); address
+formation 4 + type-static metadata 2; the map RMW's entry peek 1; machine-internal binder cells 1;
+driver readouts 8 + Prop-level relation premises (`Step`'s `initialization`, `ProgramRun`) 2 + the
+refusal text naming `Store.alloc` 1 + `stepFrameExit`'s readout-that-is-a-refusal 1; synchronization
+(chan-object / sync-word / atomic traffic) 22; the detector's registry arms reading `sPre`/`tsPre`
+cells (S2c retires them) 6; fresh allocation 10; the DEAD `storeMany` 2 (deletion owed to S3); the
+choice tracer's read-only observations 2 — total 78. Self-tests (the tracked inventory mutated and restored byte-identically): a
+removed row → `NEW … applyAtomicOp loadLoc 1` + the two resolutions, an invented row → `STALE`,
+both EXIT=1; a two-column row → «malformed inventory … (fail closed)» EXIT=1; restored → PASS EXIT=0.
+Wired into `scripts/ci` as a static step after the engine-isolation lint.
+
+### The choice-trace subset (the auditor's 307 ids; `scripts/choice-trace-corpus --dump --jobs 6`)
+
+Fix-round binary `42b7bf1a…` vs main `68b261e6`'s certified `231df9a9…` over the ids in the audit's
+`choice-trace-subset-ids.tsv` (every 12th executable row, the 2 standing exclusions removed): **303 ids
+traced, 1,818 (id, stream) lines** each side (by lane: strict 285, membership 9, confluent 7, racy 2;
+0 ERROR), tracer EXIT=0 both (43 s / 51 s); sorted consumption dumps **2,690 records each, one
+sha256 `bd48dac56d3e1fb1…`, `cmp` EXIT=0 — BYTE-IDENTICAL** (`choice-trace-subset-fixround.txt`).
+
+### Gate at the runtime tip `16029fa8`
+
+`GOLEAN_MEM_MAX=32G scripts/capped scripts/ci --diff` under the box-wide lock (20:18:14–20:32:18 UTC; lock acquired after 0 s), the committed runtime tree `16029fa8` (clean for `GoLean`/`Tests`/`scripts`; `docs/` dirty with the records edits — the negative-diff step notes `git_dirty=true` for that reason): **EXIT=1, 844 s**; **3676 cases: 3427 PASS / 249 expected FAIL** (`differential coverage summary: cases=3676 pass=3427 fail=249`); `eval tests` 211 ok; `core build (warning-free)` ok; `core totality audit` ok; **`memory-module raw call-site inventory (emit/peek discipline)` ok — the NEW step, GREEN at this tip (78 rows)**; `unseq scheduler` ok; `frontend pins` ok; `wire boundary` ok; every other step ok. RED: exactly the two 5a-class items — `certificate provenance` (C9 HIGH: «STALE certification: changed dependency build/files/GoLean/CLI.lean») and `baseline diff (DRIFT)` with the SINGLE line `imported-goose/channel/google-search baseline[PASS/membership] -> now[FAIL/membership]` (the one cached certified row). ZERO other drift; the negative baseline matched (394). The binary after the gate's rebuild is byte-identical to the one the detector-soundness matrix and the choice-trace subset ran (`42b7bf1a…`). Tail: `gate-tail-fixround.txt`. Records checks at the records tree: `check-bugs.sh` EXIT=0, `check-evidence-size` EXIT=0 (PASS, 0 new offenders), `check-agents-alias` EXIT=0, `check-spec-anchors` EXIT=0 (FR-34's anchors resolve at pin `c19862e5f`).
+

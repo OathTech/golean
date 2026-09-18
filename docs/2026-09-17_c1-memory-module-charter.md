@@ -170,11 +170,16 @@ reclaims). **Left to P**: the wrapper-hop narrowing (§3).
 
 ## 7. Decisions for the [USER] — posed, not ruled; [AGENT] recommendations marked
 
-**RULED [USER] 2026-09-18** (record: `docs/2026-08-31_qrow-rulings.md`, «The on-deck decisions ruling record (2026-09-18)»):
-the coordinator's triage classed D1–D7, D9, D10 as doctrine-determined or gate-arbitrated defaults and the [USER] raised no
-objection — the recommendations stand as the lane's brief; **D8** is answered by ruling (4): `NPDRFReduction` is DEPRECATED /
-marked unsound, NOT deleted, and restated after C1's trace exists — C1's S0 carries the marker as a records-class core edit.
-**Sequencing after C1** (ruling (1)): Stage C of the evaluation-order plan, then P → C3 → C4 → B6.
+**Provenance, corrected at the C1 audit fix round (2026-09-18, [AGENT]; audit F1 — the earlier header here read «RULED
+[USER] 2026-09-18 … by default acceptance», which the cited record does not support: `docs/2026-08-31_qrow-rulings.md`'s
+«The on-deck decisions ruling record (2026-09-18)» contains rulings (1)–(4) and no [USER] text on D1–D7, D9, D10).**
+D1–D7, D9, D10: the [AGENT] recommendations below were taken as the lane's brief on the **[AGENT] coordinator's reading of
+the [USER]'s 2026-09-18 non-objection to the triage** that classed them as doctrine-determined or gate-arbitrated defaults —
+NOT a [USER] ruling; **explicit [USER] ratification is REQUESTED at the merge ask (PENDING [USER])**, one line each or one for
+all, to be recorded verbatim in the qrow record and cited here. **D8** IS ruled — ruling (4), [USER] Mike 2026-09-18, verbatim,
+relayed: `NPDRFReduction` is DEPRECATED / marked unsound, NOT deleted, and restated after C1's trace exists — C1's S0 carries
+the marker as a records-class core edit. **Sequencing after C1** (ruling (1), [USER]): Stage C of the evaluation-order plan,
+then P → C3 → C4 → B6.
 
 - **D1 Cell granularity.** (a) root cells + path-addressed leaf operations (§2 (iii)); (b) leaf cells. **[AGENT] recommends (a)**: the conflict
   relation is already leaf-granular; (b) changes the relation's footprint shape and every root-cell theorem for no fidelity gain.
