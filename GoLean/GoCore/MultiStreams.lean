@@ -493,7 +493,7 @@ def stepAllBranchesOk (next : MultiConfig → RaceState → Bool)
     match stepMulti ctx m probeCh with
     | .ok (m', chRem, ev) =>
         chRem.isEmpty &&
-        (match raceUpdate ctx m.shared m.threads ev m' r with
+        (match raceUpdate ev m' r with
          | .ok r' => next m' r'
          | .error _ => false)
     | .error _ => false
@@ -567,7 +567,7 @@ theorem execProgLoop_unfold (fuel : Nat) (m : MultiConfig) (r : RaceState)
                     | 0 => throw .fuelOut
                     | fuel + 1 => do
                         let (m', choices', ev) ← stepMulti ctx m ch₁
-                        let r' ← raceUpdate ctx m.shared m.threads ev m' r
+                        let r' ← raceUpdate ev m' r
                         execProgLoop ctx fuel m' r' choices')
             | none =>
               if (runnableIdxs ctx m.shared m.threads).isEmpty then
@@ -577,7 +577,7 @@ theorem execProgLoop_unfold (fuel : Nat) (m : MultiConfig) (r : RaceState)
                 | 0 => throw .fuelOut
                 | fuel + 1 => do
                     let (m', choices', ev) ← stepMulti ctx m ch
-                    let r' ← raceUpdate ctx m.shared m.threads ev m' r
+                    let r' ← raceUpdate ev m' r
                     execProgLoop ctx fuel m' r' choices') := by
   rw [execProgLoop.eq_def]
   rfl
@@ -605,7 +605,7 @@ theorem stepAllBranchesOk_sound {post : Store → Bool} {n : Nat}
         let x ← stepMulti ctx m ch
         match x with
         | (m', choices', ev) => do
-            let r' ← raceUpdate ctx m.shared m.threads ev m' r
+            let r' ← raceUpdate ev m' r
             execProgLoop ctx n m' r' choices')
         : Except Stop (Store × Choices))
         = .ok (σf, ch') ∧ post σf = true := by
@@ -618,14 +618,14 @@ theorem stepAllBranchesOk_sound {post : Store → Bool} {n : Nat}
         match stepMulti ctx m probeCh with
         | .ok (m', chRem, ev) =>
             chRem.isEmpty &&
-            (match raceUpdate ctx m.shared m.threads ev m' r with
+            (match raceUpdate ev m' r with
              | .ok r' => allStreamsOkPool ctx post n m' r'
              | .error _ => false)
         | .error _ => false) = true →
       ∃ (m' : MultiConfig) (r' : RaceState) (ev : StepEvent),
         poolThreadOblivious ctx m.shared m.threads i = true
         ∧ stepMulti ctx m probeCh = .ok (m', [], ev)
-        ∧ raceUpdate ctx m.shared m.threads ev m' r = .ok r'
+        ∧ raceUpdate ev m' r = .ok r'
         ∧ allStreamsOkPool ctx post n m' r' = true := by
     intro i probeCh hpr
     rw [Bool.and_eq_true] at hpr
@@ -643,7 +643,7 @@ theorem stepAllBranchesOk_sound {post : Store → Bool} {n : Nat}
         | nil => rfl
         | cons a l => simp [List.isEmpty] at hemp'
       subst hchRem
-      cases hru : raceUpdate ctx m.shared m.threads ev m' r with
+      cases hru : raceUpdate ev m' r with
       | error e => rw [hru] at hpr; cases hpr
       | ok r' =>
         rw [hru] at hpr
@@ -658,7 +658,7 @@ theorem stepAllBranchesOk_sound {post : Store → Bool} {n : Nat}
     -- detector verdict and the induction hypothesis.
     have hfinish : ∀ {chTail : Choices} {ev : StepEvent}
         {m' : MultiConfig} {r' : RaceState},
-        raceUpdate ctx m.shared m.threads ev m' r = .ok r' →
+        raceUpdate ev m' r = .ok r' →
         allStreamsOkPool ctx post n m' r' = true →
         stepMulti ctx m ch = .ok (m', chTail, ev) →
         ∃ (σf : Store) (ch' : Choices),
@@ -666,7 +666,7 @@ theorem stepAllBranchesOk_sound {post : Store → Bool} {n : Nat}
             let x ← stepMulti ctx m ch
             match x with
             | (m', choices', ev) => do
-                let r' ← raceUpdate ctx m.shared m.threads ev m' r
+                let r' ← raceUpdate ev m' r
                 execProgLoop ctx n m' r' choices')
             : Except Stop (Store × Choices))
             = .ok (σf, ch') ∧ post σf = true := by
@@ -995,7 +995,7 @@ theorem execProgLoop_mono :
                   obtain ⟨m', ch₂, ev⟩ := p
                   rw [hsm] at h
                   simp only [Bind.bind, Except.bind] at h ⊢
-                  cases hru : raceUpdate ctx m.shared m.threads ev m' r with
+                  cases hru : raceUpdate ev m' r with
                   | error e =>
                     rw [hru] at h
                     simp at h
@@ -1017,7 +1017,7 @@ theorem execProgLoop_mono :
                 obtain ⟨m', ch₁, ev⟩ := p
                 rw [hsm] at h
                 simp only [Bind.bind, Except.bind] at h ⊢
-                cases hru : raceUpdate ctx m.shared m.threads ev m' r with
+                cases hru : raceUpdate ev m' r with
                 | error e =>
                   rw [hru] at h
                   simp at h
@@ -1134,7 +1134,7 @@ theorem execProgLoop_le :
                   obtain ⟨m', ch₂, ev⟩ := p
                   rw [hsm] at h
                   simp only [Bind.bind, Except.bind] at h ⊢
-                  cases hru : raceUpdate ctx m.shared m.threads ev m' r with
+                  cases hru : raceUpdate ev m' r with
                   | error e =>
                     rw [hru] at h
                     simp at h
@@ -1156,7 +1156,7 @@ theorem execProgLoop_le :
                 obtain ⟨m', ch₁, ev⟩ := p
                 rw [hsm] at h
                 simp only [Bind.bind, Except.bind] at h ⊢
-                cases hru : raceUpdate ctx m.shared m.threads ev m' r with
+                cases hru : raceUpdate ev m' r with
                 | error e =>
                   rw [hru] at h
                   simp at h
@@ -1180,7 +1180,7 @@ theorem stepAllBranchesOk_mono {next next' : MultiConfig → RaceState → Bool}
         match stepMulti ctx m probeCh with
         | .ok (m', chRem, ev) =>
             chRem.isEmpty &&
-            (match raceUpdate ctx m.shared m.threads ev m' r with
+            (match raceUpdate ev m' r with
              | .ok r' => next m' r'
              | .error _ => false)
         | .error _ => false) = true →
@@ -1188,7 +1188,7 @@ theorem stepAllBranchesOk_mono {next next' : MultiConfig → RaceState → Bool}
         match stepMulti ctx m probeCh with
         | .ok (m', chRem, ev) =>
             chRem.isEmpty &&
-            (match raceUpdate ctx m.shared m.threads ev m' r with
+            (match raceUpdate ev m' r with
              | .ok r' => next' m' r'
              | .error _ => false)
         | .error _ => false) = true := by
@@ -1205,7 +1205,7 @@ theorem stepAllBranchesOk_mono {next next' : MultiConfig → RaceState → Bool}
       rw [Bool.and_eq_true] at hpr ⊢
       obtain ⟨hemp', hpr⟩ := hpr
       refine ⟨hemp', ?_⟩
-      cases hru : raceUpdate ctx m.shared m.threads ev m' r with
+      cases hru : raceUpdate ev m' r with
       | error e => rw [hru] at hpr; cases hpr
       | ok r' =>
         rw [hru] at hpr

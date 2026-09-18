@@ -834,7 +834,7 @@ theorem checkCert_complete_aux
             let x ← stepMulti ctx m chS
             match x with
             | (m', choices', ev) => do
-                let r' ← raceUpdate ctx m.shared m.threads ev m' r
+                let r' ← raceUpdate ev m' r
                 execProgLoop ctx n m' r' choices')
            : Except Stop (Store × Choices)) = some o →
         o ∈ cert.obsSet := by
@@ -852,7 +852,7 @@ theorem checkCert_complete_aux
       obtain ⟨-, hedge⟩ := hedge
       rw [hchstep] at hobs'
       simp only [Bind.bind, Except.bind] at hobs'
-      cases hru : raceUpdate ctx m.shared m.threads ev m' r with
+      cases hru : raceUpdate ev m' r with
       | ok r' =>
         rw [hru] at hedge hobs'
         dsimp only at hedge

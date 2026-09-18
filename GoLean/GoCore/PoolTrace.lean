@@ -42,7 +42,7 @@ theorem unfold_driver (fuel : Nat) (m : MultiConfig) (r : RaceState)
         | 0 => (acc, .error .fuelOut)
         | n + 1 => match stepMulti ctx m next with
           | .error e => (acc, .error e)
-          | .ok (m', ch', ev) => match raceUpdate ctx m.shared m.threads ev m' r with
+          | .ok (m', ch', ev) => match raceUpdate ev m' r with
             | .error e => (acc, .error e)
             | .ok r' => execProgLoopOut ctx n m' r' ch' (ev.out.foldl GoString.append acc) := by
   rw [execProgLoopOut.eq_def]
@@ -68,10 +68,10 @@ inductive Run : Nat → MultiConfig → RaceState → Choices → GoString → R
   | stepError : front ctx m ch = .ok (.inr next) → stepMulti ctx m next = .error e →
       Run (n + 1) m r ch acc (acc, .error e)
   | raceError : front ctx m ch = .ok (.inr next) → stepMulti ctx m next = .ok (m', ch', ev) →
-      raceUpdate ctx m.shared m.threads ev m' r = .error e →
+      raceUpdate ev m' r = .error e →
       Run (n + 1) m r ch acc (acc, .error e)
   | step : front ctx m ch = .ok (.inr next) → stepMulti ctx m next = .ok (m', ch', ev) →
-      raceUpdate ctx m.shared m.threads ev m' r = .ok r' →
+      raceUpdate ev m' r = .ok r' →
       Run n m' r' ch' (ev.out.foldl GoString.append acc) result →
       Run (n + 1) m r ch acc result
 
@@ -101,7 +101,7 @@ theorem run_iff {fuel m r ch acc result} :
           | ok v =>
             obtain ⟨m', ch', ev⟩ := v
             simp only [hs] at h
-            cases hr : raceUpdate ctx m.shared m.threads ev m' r with
+            cases hr : raceUpdate ev m' r with
             | error e => simp only [hr] at h; subst result; exact .raceError hf hs hr
             | ok r' =>
               simp only [hr] at h

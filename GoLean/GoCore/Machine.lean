@@ -4282,18 +4282,9 @@ def tryLockWidth (op : SyncOp) (pre : SyncPrim) : Nat :=
   | .ok (some _) => 2
   | _ => 1
 
-/-- Did a TRY head's apply ACQUIRE, read off the pre/post cells (the
-pick is not in the pool's `StepEvent`, so `raceUpdate` re-derives the
-outcome the way the atomic arm re-derives a CAS's): `TryLock` — the
-Mutex went unlocked → locked; `TryRLock` — the reader count rose;
-RWMutex `TryLock` — the writer bit rose. A forced or spurious failure
-leaves the cell unchanged, so every other pre/post pair is `false`. -/
-def tryLockAcquired (op : SyncOp) (pre post : SyncPrim) : Bool :=
-  match op, pre, post with
-  | .tryLock _, .mutex false, .mutex true => true
-  | .tryRLock _, .rwmutex _ r _, .rwmutex _ r' _ => r' == r + 1
-  | .tryWLock _, .rwmutex false _ _, .rwmutex true _ _ => true
-  | _, _, _ => false
+-- DELETED (C1 S2c-ii): `tryLockAcquired` — the fold's re-derivation of a TRY head's outcome from
+-- the pre/post cells. `applyTryLock` KNOWS its outcome and emits it (`syncEntryKinds … acquired` and
+-- the acquire action); the S2c-i audit compared the two accounts on every traced step (0 differences).
 
 /-- A TRY head's result delivery: through `enterRecvTargets` when a target
 exists (the `onceBegin` shape), else the plain continuation — success

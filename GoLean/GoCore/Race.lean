@@ -28,7 +28,7 @@ module's EMITTING operations performed (`Ops.lean`, «The memory module's
 access discipline»: `Mem.load`/`loadFor`/`store`/`mapRead`/`mapWrite`/
 the element runs/`loadResults`/the dispatch read), carried by `Step` as
 its fifth index, by `stepFn` as its fourth component and by the pool
-event as `StepEvent.trace`; `raceUpdate` folds it (`RaceState.accessKeys`).
+event as `StepEvent.trace`; `raceUpdate` folds it (`RaceState.events`, C1 S2c).
 The former FOOTPRINT TABLE of this file — a curated per-shape function
 `stepAccesses` from a step's pre-configuration to its accesses
 (`strictOpAccesses`, `stmtOpAccesses`, `dispatchAccesses`,
@@ -48,7 +48,8 @@ nothing there) now lives in the module's docstring. The recorded
 approximations O1 (value-path composite reads whole-cell unless narrowed
 by an immediate projection chain — BUG-041, ledger [DL-1]), U2 (`len`/
 `cap` on channels record nothing; `len` on a map is a real read), U3
-(CLOSED — the channel OBJECT as a shadow location, `chanObjAccess`), U4
+(CLOSED — the channel OBJECT as a shadow location, emitted by `chanSendEntry`/
+`chanCloseWrite`/`selectPoll`, Machine.lean, since C1 S2c), U4
 (CLOSED — the sync primitives' own state words, BUG-080) and U5
 (cross-goroutine unlock without handoff HB: TSan-red / ours-green, ledger
 [DL-5]) keep their pins; their statements were relocated to the ledger
@@ -210,7 +211,7 @@ classification structurally aligned with the `go run -race` oracle:
   NO edge — deliberately STRONGER than gc's realized HB: gc's
   `closechan` DOES `raceacquireg` the parked sender at the
   "release all writers" loop, exactly as for receivers (the S3 audit
-  correction at `raceWakeEvent`, Multi.lean — the closer installs the
+  correction at `resumeThread`'s wake arm, Multi.lean — the closer installs the
   edge; the old justification "gc's woken `chansend` performs no
   `raceacquire`" was true but irrelevant). Moot on refused programs:
   the modeled chan-object pair refuses at the CLOSE first. Docstring
@@ -427,27 +428,12 @@ def RaceState.accessKey (r : RaceState) (t : Nat) (kind : AccessKind)
 -- label is a list of memory-model EVENTS now, folded by `RaceState.events` (below, after the
 -- clock operations it interprets).
 
-/-- **The CHANNEL-OBJECT access pair (BUG-045 + BUG-046; U3 in the
-module docstring)** — gc's `c.raceaddr()` instrumentation, modeled
-exactly: a plain send is a chan-object READ (`chansend`'s entry
-`racereadpc` — recorded at the apply position whether the send
-commits, parks, or panics), a successful close is a chan-object WRITE
-(`closechan`'s `racewritepc`; the closed/nil panics fire before it), a
-receive records NOTHING (`chanrecv` is acquire-only), and a SELECT
-records one READ per SEND clause at its poll — `selectgo` pass 1's
-`racereadpc` per polled send case (select.go:288; recv clauses
-acquire-only, nil channels excluded from pollorder; BUG-046 corrected
-the first version's false "selectgo bypasses chansend/closechan"
-premise — that is true of the commit path, not the poll).
-Check-then-record under the `.chanObj` key and the goroutine's CURRENT
-clock (before the op's own release/acquire, matching gc's instruction
-order): an HB-unordered read↔write or write↔write on the same channel is
-the terminal `raceDetected` — send↔send never conflicts. Exact keying
-(channel identity — `ShadowKey.overlap`'s `chanObj` arm), unlike the data
-keys' path overlap. -/
-def RaceState.chanObjAccess (r : RaceState) (t : Nat) (loc : Loc)
-    (isWrite : Bool) : Except Stop RaceState :=
-  r.accessKey t (if isWrite then .write else .read) (.chanObj loc)
+-- DELETED (C1 S2c-ii): `RaceState.chanObjAccess` — the registry arms' channel-object recorder
+-- (BUG-045 + BUG-046, U3). The channel-object accesses are EMITTED now (`chanSendEntry`,
+-- `chanCloseWrite`, `selectPoll` — Machine.lean, «The registry ops' EMISSIONS», whose docstrings
+-- carry the gc account: `chansend`'s entry read on every outcome, `closechan`'s success-path write,
+-- `selectgo` pass 1's read per polled SEND clause, receives acquire-only) and recorded by the one fold
+-- through `RaceState.accessKey` under the `.chanObj` key (exact identity, `ShadowKey.overlap`).
 
 def RaceState.syncOf (r : RaceState) (loc : Loc) : SyncClocks :=
   match r.syncs.find? (·.1 == loc) with
@@ -536,7 +522,7 @@ the derivation, the measurement the check. In those templates:
   sync object, THEN `MemoryAccess(… kAccessRead | kAccessAtomic)`.
   Machine: `atomicAcquire` then record `.atomicRead` — acquire FIRST, so
   a plain write the releasing store published is ordered before the
-  read's record (`raceUpdate`'s atomic arm keeps this order).
+  read's record (the label's order — `atomicEvents`, Machine.lean).
 * **Store** (release): `MemoryAccess(… kAccessWrite | kAccessAtomic)`,
   then `thr->clock.ReleaseStore(&s->clock)` — an OVERWRITE of the
   address's clock by the storer's (not a merge: a store observes

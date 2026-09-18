@@ -900,7 +900,7 @@ def enumPoolRun (pctx : GoCore.ProgramCtx) (resultLocs : List Loc) :
                           let (m', choices', ev) ←
                             (GoCore.Machine.stepMulti pctx m choices₁).mapError (·, acc)
                           let acc' := ev.out.foldl GoString.append acc
-                          match GoCore.Machine.raceUpdate pctx m.shared m.threads ev m' r with
+                          match GoCore.Machine.raceUpdate ev m' r with
                           | .error .raceDetected =>
                               return ("race", errorJson .raceDetected acc', choices')
                           | .error e => throw (e, acc)
@@ -915,7 +915,7 @@ def enumPoolRun (pctx : GoCore.ProgramCtx) (resultLocs : List Loc) :
                       let (m', choices', ev) ←
                         (GoCore.Machine.stepMulti pctx m choices).mapError (·, acc)
                       let acc' := ev.out.foldl GoString.append acc
-                      match GoCore.Machine.raceUpdate pctx m.shared m.threads ev m' r with
+                      match GoCore.Machine.raceUpdate ev m' r with
                       | .error .raceDetected =>
                           return ("race", errorJson .raceDetected acc', choices')
                       | .error e => throw (e, acc)
@@ -1373,7 +1373,7 @@ partial def poolStepDFS (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
             -- The output fold (stdlib slice 3): this step's `out` events
             -- extend the path's accumulator (`execProgLoopOut`, mirrored).
             let acc' := ev.out.foldl GoString.append acc
-            match GoCore.Machine.raceUpdate ctx.ep.ctx m.shared m.threads ev m' r with
+            match GoCore.Machine.raceUpdate ev m' r with
             | .error .raceDetected =>
                 recordLeaf ctx { out with steps := out.steps + 1 } path
                   "race" (errorJson .raceDetected acc') path.length

@@ -286,7 +286,7 @@ private partial def explore (resultLocs : List Loc) (budget : Nat)
                   throw s!"output event at node {k} (a print/println step wrote {ev.out.length} chunk(s)): engine=dedup keys nodes on state and output is a trace — this row cannot use engine=dedup (use the default enumerator)"
                 else
                   let edgeStream := path ++ (if window then 1 :: vec else vec)
-                  match raceUpdate ctx nd.m.shared nd.m.threads ev m' nd.r with
+                  match raceUpdate ev m' nd.r with
                   | .ok r' =>
                       let (st', k', isNew) := internNode stM ⟨m', r'⟩
                         (edgeStream, steps + 1)

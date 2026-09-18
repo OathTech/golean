@@ -8,7 +8,7 @@
 # site that vanished must have its row removed (the check fails on either).
 # Classes (the docstring's): EMITTING OPERATION BODY · THE PEEK/RAW WRITER ITSELF ·
 # ADDRESS FORMATION · METADATA · THE MAP RMW's ENTRY PEEK · MACHINE-INTERNAL CELLS ·
-# DRIVER READOUT · SYNCHRONIZATION · DETECTOR REGISTRY ARM (S2c retires) · FRESH
+# DRIVER READOUT · SYNCHRONIZATION (the registry apply EMITS its events — C1 S2c) · FRESH
 # ALLOCATION · NO EXECUTION (relation premises / refusal texts) · DEAD (owed deletion) ·
 # TRACER OBSERVATION (tooling). Provenance: [AGENT] fix-round worker, from the
 # S2b docstring's peek list; the counts are the scanner's at the inventoried tree.
@@ -21,8 +21,8 @@ GoLean/GoCore/EnumDedupCheck.lean	checkNode	loadMany	1	DRIVER READOUT — the ve
 GoLean/GoCore/EnumSpec.lean	obsOf?	loadMany	1	DRIVER READOUT — the enumeration spec's observation of a terminated configuration
 GoLean/GoCore/Machine.lean	Step	alloc	1	NO EXECUTION — the relation's `initialization` premise mirrors stepFn's Store.alloc (Step is the Prop-level twin; the label is fixed by the premise)
 GoLean/GoCore/Machine.lean	allocDecls	alloc	1	FRESH ALLOCATION — block-scoped declaration cells (the malloc convention: the creating write precedes every escape)
-GoLean/GoCore/Machine.lean	applyAtomicOp	loadLoc	1	SYNCHRONIZATION — the atomic op's indivisible RMW read (recorded by the atomic arm at the cell's own path with the ATOMIC kind)
-GoLean/GoCore/Machine.lean	applyChanOp	chanCell	3	SYNCHRONIZATION — channel-object traffic of the registry op (gc records channel objects as sync, not data; raceUpdate's registry arm until S2c)
+GoLean/GoCore/Machine.lean	applyAtomicOp	loadLoc	1	SYNCHRONIZATION — the atomic op's indivisible RMW read; the apply EMITS the op's access at the cell's own path with the ATOMIC kind and its clock action (`atomicEvents`, C1 S2c)
+GoLean/GoCore/Machine.lean	applyChanOp	chanCell	3	SYNCHRONIZATION — the channel object's state read; the apply EMITS gc's channel-object accesses (`chanSendEntry`/`chanCloseWrite`) and the slot / close actions (C1 S2c)
 GoLean/GoCore/Machine.lean	applyChanOp	storeChanPayload	3	SYNCHRONIZATION — the channel payload write of send/recv/close (channel-object traffic; the payload VALUE's data accesses are the sender's/receiver's own emitted stores)
 GoLean/GoCore/Machine.lean	applySlice	loadLoc	1	ADDRESS FORMATION — the array-size load for the slice header's bounds (gc computes from headers and types)
 GoLean/GoCore/Machine.lean	applyStmtOp	alloc	1	FRESH ALLOCATION — append's spilled backing array (the copied elements were read through Mem.loadElems)
@@ -31,16 +31,16 @@ GoLean/GoCore/Machine.lean	applyStmtOpCore	allocCell	2	FRESH ALLOCATION — make
 GoLean/GoCore/Machine.lean	applyStrictOp	alloc	2	FRESH ALLOCATION — bytesFromString / runesFromString backing arrays
 GoLean/GoCore/Machine.lean	applyStrictOp	chanPayload?	2	METADATA — lengthOf/capacityOf on a channel: c.qcount/c.dataqsiz are read uninstrumented in gc (probe p26, U2)
 GoLean/GoCore/Machine.lean	applyStrictOp	loadLoc	2	METADATA — lengthOf/capacityOf on a pointer-to-array: `len` is a constant of the type, the cell is loaded only to check the operand IS a pointer value (fail closed otherwise)
-GoLean/GoCore/Machine.lean	applySyncOp	syncCell	1	SYNCHRONIZATION — the sync op reads the primitive's state word (the HB edge is raceUpdate's registry arm until S2c)
-GoLean/GoCore/Machine.lean	applySyncOpCore	storeLoc	11	SYNCHRONIZATION — the .syncData state-word stores (never a data access; U4 records the sync words through the registry arm)
+GoLean/GoCore/Machine.lean	applySyncOp	syncCell	1	SYNCHRONIZATION — the TRY heads read the primitive's state word; `applyTryLock` EMITS the word accesses and the success-only acquire action (C1 S2c)
+GoLean/GoCore/Machine.lean	applySyncOpCore	storeLoc	11	SYNCHRONIZATION — the .syncData state-word stores (never a data access); the apply EMITS the sync-word accesses (`syncEntryKinds`/`syncReleaseTailKinds`, U4) and the acquire/release actions (C1 S2c)
 GoLean/GoCore/Machine.lean	applySyncOpCore	syncCell	10	SYNCHRONIZATION — per-kind sync-word reads (Mutex/RWMutex/WaitGroup/Once)
-GoLean/GoCore/Machine.lean	applyTryLock	storeLoc	1	SYNCHRONIZATION — TryLock's state-word store
-GoLean/GoCore/Machine.lean	atomicStore	storeLoc	1	SYNCHRONIZATION — the atomic op's indivisible RMW write (recorded by the atomic arm with the ATOMIC kind)
+GoLean/GoCore/Machine.lean	applyTryLock	storeLoc	1	SYNCHRONIZATION — TryLock's pre-committed state-word store; the apply EMITS the word accesses and, on success, the acquire action (C1 S2c)
+GoLean/GoCore/Machine.lean	atomicStore	storeLoc	1	SYNCHRONIZATION — the atomic op's indivisible RMW write (its access is `applyAtomicOp`'s emission with the ATOMIC kind, C1 S2c)
 GoLean/GoCore/Machine.lean	bindIterVars	alloc	2	FRESH ALLOCATION — per-iteration loop variable cells
 GoLean/GoCore/Machine.lean	bindParams	alloc	1	FRESH ALLOCATION — parameter cells at frame entry
 GoLean/GoCore/Machine.lean	chanCell	chanPayload?	1	SYNCHRONIZATION PEEK ITSELF — the channel-object reader's body
 GoLean/GoCore/Machine.lean	clauseReady	chanCell	2	SYNCHRONIZATION — select clause readiness reads the channel object
-GoLean/GoCore/Machine.lean	commitClause	chanCell	2	SYNCHRONIZATION — select commit reads the channel object
+GoLean/GoCore/Machine.lean	commitClause	chanCell	2	SYNCHRONIZATION — the select commit reads the channel object's state and EMITS the committed clause's slot / close action (the poll reads are the caller's, C1 S2c)
 GoLean/GoCore/Machine.lean	commitClause	storeChanPayload	2	SYNCHRONIZATION — select commit's channel payload write
 GoLean/GoCore/Machine.lean	indexTargetLoc	loadLoc	1	ADDRESS FORMATION — the base-cell load for bounds/nil while forming the element address (resolveChain goes through it)
 GoLean/GoCore/Machine.lean	loadMany	loadLoc	1	THE DRIVERS' PEEK ITSELF — loadMany's body (result readouts after termination)
@@ -52,19 +52,13 @@ GoLean/GoCore/Machine.lean	syncCell	loadLoc	1	SYNCHRONIZATION PEEK ITSELF — th
 GoLean/GoCore/Machine.lean	tryLockConsult?	syncCell	1	SYNCHRONIZATION — TryLock's state-word read at the consult
 GoLean/GoCore/Machine.lean	unseqStorePlan	loadLoc	1	MACHINE-INTERNAL CELLS — binder-value loads of the unseq sweep (no goroutine can name a binder cell; the binder WRITES emit via Mem.store)
 GoLean/GoCore/Machine.lean	unseqUnfrozenAnchor?	loadLoc	1	ADDRESS FORMATION — the frozen-anchor shape walk at plan time (unseq sweep)
-GoLean/GoCore/Multi.lean	applyPairing	chanCell	6	SYNCHRONIZATION — unbuffered pairing reads the channel object
+GoLean/GoCore/Multi.lean	applyPairing	chanCell	6	SYNCHRONIZATION — the pairing reads the channel object's state; it EMITS the arriving op's entry accesses (`arrivalPoll`) and both goroutines' actions (`pairSendEvents`/`pairRecvEvents`, C1 S2c)
 GoLean/GoCore/Multi.lean	applyPairing	storeChanPayload	3	SYNCHRONIZATION — unbuffered pairing's channel payload write
 GoLean/GoCore/Multi.lean	chanArrivalPlan	chanCell	2	SYNCHRONIZATION — arrival planning reads the channel object
-GoLean/GoCore/Multi.lean	raceCommitClauseEvent	chanCell	2	DETECTOR REGISTRY ARM — the select-commit event's channel-object reads (sPre; S2c)
-GoLean/GoCore/Multi.lean	racePairEvent	chanCell	3	DETECTOR REGISTRY ARM — the pairing event's channel-object reads (sPre/tsPre; S2c)
-GoLean/GoCore/Multi.lean	raceUpdate	chanCell	3	DETECTOR REGISTRY ARM — the fold's pre/post channel-object reads (sPre/tsPre facts; S2c moves them into the emitting operation's event)
-GoLean/GoCore/Multi.lean	raceUpdate	loadLoc	1	DETECTOR REGISTRY ARM — the atomic arm's pre-state read of the cell it records with the ATOMIC kind (sPre; S2c)
-GoLean/GoCore/Multi.lean	raceUpdate	syncCell	3	DETECTOR REGISTRY ARM — the fold's pre/post sync-word reads (sPre/tsPre facts; S2c)
-GoLean/GoCore/Multi.lean	raceWakeEvent	chanCell	2	DETECTOR REGISTRY ARM — the wake event's channel-object read (sPre; S2c)
-GoLean/GoCore/Multi.lean	resumeThread	chanCell	2	SYNCHRONIZATION — resuming a parked goroutine reads the channel object
+GoLean/GoCore/Multi.lean	resumeThread	chanCell	2	SYNCHRONIZATION — resuming a parked goroutine reads the channel object; the wake EMITS the resumed op's action (C1 S2c)
 GoLean/GoCore/Multi.lean	resumeThread	storeChanPayload	2	SYNCHRONIZATION — the resumed op's channel payload write
 GoLean/GoCore/Multi.lean	resumeThread	storeLoc	4	SYNCHRONIZATION — the resumed sync op's .syncData state-word stores
-GoLean/GoCore/Multi.lean	resumeThread	syncCell	1	SYNCHRONIZATION — the resumed sync op reads the state word
+GoLean/GoCore/Multi.lean	resumeThread	syncCell	1	SYNCHRONIZATION — the resumed sync op reads the state word; the wake EMITS its acquire action (no word access at a wake — BUG-080, C1 S2c)
 GoLean/GoCore/Multi.lean	runProgramPoolOutM	loadMany	1	DRIVER READOUT — result cells after termination (the program is over)
 GoLean/GoCore/Multi.lean	selectArrivalCases	chanCell	2	SYNCHRONIZATION — select arrival reads the channel objects
 GoLean/GoCore/Multi.lean	wakeReady	chanPayload?	2	SYNCHRONIZATION — channel-park readiness reads the channel payload (buffer/closed state)

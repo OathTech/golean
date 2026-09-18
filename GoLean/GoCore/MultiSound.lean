@@ -602,9 +602,9 @@ variable {ctx}
 (`raceUpdate`'s first branch): a single goroutine cannot race with
 itself. The conservation proof's detector hinge — sequential runs
 thread the `RaceState` through untouched. -/
-theorem raceUpdate_single {σ : Store} {ts : Array Thread} {t : Thread}
+theorem raceUpdate_single {t : Thread}
     {σ' : Store} {i : Nat} {ev : StepEvent} {rs : RaceState} :
-    raceUpdate ctx σ ts ev ⟨#[t], σ', i⟩ rs = .ok rs := by
+    raceUpdate ev ⟨#[t], σ', i⟩ rs = .ok rs := by
   simp [raceUpdate]
 
 /-- The singleton-pool projections of a mid-run (non-terminal,

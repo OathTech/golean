@@ -177,7 +177,7 @@ def checkEdge (nodeEqb : DedupNode → DedupNode → Bool)
   match stepMulti ctx nd.m vec with
   | .ok (m', chRem, ev) =>
       chRem.isEmpty &&
-      (match raceUpdate ctx nd.m.shared nd.m.threads ev m' nd.r with
+      (match raceUpdate ev m' nd.r with
        | .ok r' =>
            (match nodes[succIdx]? with
             | some ndS => nodeEqb ⟨m', r'⟩ ndS
