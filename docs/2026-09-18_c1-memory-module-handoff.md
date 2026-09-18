@@ -296,23 +296,60 @@ Owed alongside (S2b): the dead `arraySet`/`StructFields.set` + six lemmas
 (tombstones); the disjoint-path frame law on the REAL `storeLoc` when the
 trace makes the same-root law a detector statement (S2b/S3).
 
-## 7. Where the lane stopped; the next command
+## 6c. Lessons for the successor (S2c/S3), [AGENT]
 
-S2b-ii COMMITTED at `6a35dd92` (snapshot `refs/snapshots/c1/s2b2`) (gated; snapshot `refs/snapshots/c1/s2b2`). S2 is complete
-except S2c (D9 + cost B(a) — §6b). Previously: S2b-i COMMITTED at `6bb1930d` (snapshot `refs/snapshots/c1/s2b1`) (gated; snapshot `refs/snapshots/c1/s2b1`). Next: S2b-ii — delete
-the table family (`RaceAccess`, `sliceElemLocs`, `mapAccess`, `targetWrite`,
-`strictOpAccesses`, `dispatchAccesses`, `deferEntryAccesses`, `stmtOpAccesses`,
-`storeTargetAccess`, `unseqRunAccesses`, `stepAccesses`, `RaceState.access/accesses`) with
-tombstones, delete `AccessTableEq.lean` (SHA recorded here), retire the tracer's table-side
-audit (`tableAccount`/`auditPoolStep`/the two TSV columns), replace `Race.lean:1-256` by the
-module docstring's peek list in `Ops.lean`, delete the dead `arraySet`/`StructFields.set` +
-six lemmas, re-run `scripts/detector-soundness --select in-scope` (HOLE = 0 expected, cells
-unchanged), gate. Previously: S2a COMMITTED at `7f7c721c` (snapshot `refs/snapshots/c1/s2a`) (gated; the runtime tree byte-identical to the gated snapshot
-`refs/snapshots/c1/s2a-gated`; the trace audit at 0 mismatches; the choice trace
-byte-identical vs main). Next: S2b per §6b — `raceUpdate` folds `ev.trace`,
-`accesses_eq_stepAccesses` per arm, the table family deleted with tombstones, the module
-docstring's peek list, `RacyFine`/`footprintsConflict` on the labels, the detector-soundness
-HOLE = 0 re-run; then S2c. Previously: S1 COMMITTED at `d7b32f59` (gated; the runtime tree byte-identical to the gated snapshot `refs/snapshots/c1/s1-gated`; choice trace byte-identical vs main). Next: S2 (the trace) per §6b — first the read of `Race.lean`'s table family and `StepFn.lean`'s apply helpers, then `AccessTrace` as the `stepFn` result's fourth component and the `Step` label, then the trace-equality audit mode BEFORE any table deletion. Previously: S1 (`GoLean/GoCore/Store.lean` grown into the module: the
-root-first leaf write with the `Array.modifyM` discipline and a STRUCTURAL field
-search, linear `normalizeListWith`/`normalizeFieldsWith`, `alloc` normalizes,
-`HeapNormal` as a `StateWf` conjunct, `step_preserves_wf` re-proved).
+- **Restating a labelled relation** (S2a): a `match`/`if` in bind position DUPLICATES the
+  continuation into the arms — hoist it into a helper (`Mem.loadRun`/`storeRun` were born that
+  way); `cases h` on `Step` re-introduces index-mentioning premises LAST, so `case ctor x y z`
+  names the trailing hypotheses (variables first, premises after, the label-bearing one last).
+- **Decomposing an op-table arm's `do`-block hypothesis** (S2b-i, `AccessTableEq.lean` at
+  `6bb1930d`): one bind at a time — `dsimp only at h` (zeta/beta/iota first, or `split` will
+  generalize constructor discriminants into `heq` hypotheses), `simp only [pure_bind] at h`,
+  `split at h`, `rw [bind_eq_ok] at h; obtain ⟨_, _, h⟩ := h`, `rw [seqRight_eq_ok]` for
+  `*>` — with `repeat'` so every goal is reached; a whole-hypothesis `simp only [bind_eq_ok]`
+  flattens several binds at once and the `obtain` pattern no longer matches.
+- **Tactic macros and `rfl` patterns**: an `rcases`/`obtain` pattern `rfl` inside a `macro`
+  body does NOT substitute (hygiene) — use a named equation and `subst`; `first | tac | …`
+  does not protect against term-elaboration errors that recover to `sorry` (a mistyped `rw
+  [lemma hyp]` inside an alternative is LOGGED, not backtracked) — guard alternatives with
+  `guard_target =~ …` so only the intended arm runs a body.
+- **Matcher identity**: two syntactically identical `match` expressions compiled in different
+  definitions are defeq (`rfl` closes them) — helper defs (`iterRead`, `rhsAccesses`,
+  `atomAcc`, `strictTrace`) avoid `match` in theorem STATEMENTS, whose dependent `h` would
+  otherwise be generalized into the match.
+- **`git stash create` fails on an intent-to-add (`git add -N`) entry** — snapshot the gated
+  tree with everything fully `git add`ed, or verify the identity by the pre-chain snapshot +
+  mtimes (S2b-i, §2).
+- **The detector-soundness gc side does not run here** (§6 item 2): budget the HOLE check for
+  an environment where `go build -race` binaries run.
+- **S2c's shape** (§6b): the label becomes an ORDERED list of memory-model events (accesses
+  and the step's synchronization actions in gc's instrumentation order); `raceUpdate` becomes
+  one fold; the registry arms' pre/post-cell reads (`raceWakeEvent sPre`, `racePairEvent sPre
+  tsPre`, `raceCommitClauseEvent sPre`, `tryLockAcquired`'s re-derivation, the atomic arm's
+  `atomicCompute`) become facts the EMITTING operation puts in the event. Land it as S2a was
+  landed: BOTH folds live in one commit with a per-step comparison in the tracer (the
+  `Acc.checkTrace` pattern, retired at `6a35dd92`, is the template), then the switch.
+
+## 7. Where the lane stopped; the next command — PARKED 2026-09-18
+
+PARKED at `3487d7ea` (records) over the gated runtime commit **S2b-ii `6a35dd92`**
+(snapshot `refs/snapshots/c1/s2b2`; branch `core/c1-memory-module-0918`, base main
+`68b261e6`; worktree `.claude/worktrees/c1-memory-module`, clean; nothing merged, nothing
+pushed; main untouched). Landed on the branch, each a gated runtime commit at zero baseline
+drift beyond the expected 5a pair and a byte-identical whole-corpus choice trace: S0
+`50f293d9` (records + spike), S1 `d7b32f59` (the module + cost A), S2a `7f7c721c` (the data
+trace, both accounts live, the audit), S2b-i `6bb1930d` (the fold + `accesses_eq_stepAccesses`
++ `RacyFine` over labels), S2b-ii `6a35dd92` (the table deleted). OPEN: **S2c** (D9: the
+sync-word / chan-object / atomic emissions inside the module's operations, `raceUpdate`
+without `sPre`/`tsPre`, the ORDER design point — §6b, §6c) and **S3** (the rollback, cost
+B(b)/(c) — charter §6). PENDING [USER]: §6 (BUG-111; the detector-soundness gc side).
+
+THE NEXT COMMAND (S2c, first cut): read §6b's S2c paragraph and §6c's last bullet; define the
+event type (`MemEvent := access Access | …hb actions…`, or extend `Access`) in `Ops.lean`'s
+module section; make `applyChanOp`/`commitClause`/`resumeThread`/`applyPairing`/`wakeReady`/
+`applySyncOp`/`applyAtomicOp`/`spawnStep` emit their synchronization facts in gc's
+instrumentation order; write `raceUpdate'` as the one fold over `ev.trace` beside the
+existing `raceUpdate`; compare the two per pool step in the tracer over the whole corpus + the
+twin (differences are findings, D7); gate; then switch and delete `sPre`/`tsPre`; gate. Then
+S3. The pre-merge adversarial audit ask is posed at every park and at the landing (charter §8);
+scope and waiver are the [USER]'s.
