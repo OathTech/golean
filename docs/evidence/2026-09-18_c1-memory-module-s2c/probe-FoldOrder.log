@@ -1,0 +1,7 @@
+some #[#[2]]
+some #[#[2]]
+some [[]]
+some [[]]
+#["fold-mismatch: pool step 0 who=0 privateStep label=[GoLean.GoCore.MemEvent.access\n   (GoLean.GoCore.AccessKind.atomicWrite)\n   (GoLean.GoCore.ShadowKey.syncWord\n     (GoLean.Loc.base { id := 0 })\n     (GoLean.GoCore.SyncKind.mutex)\n     (GoLean.GoCore.SyncWordName.state)),\n GoLean.GoCore.MemEvent.hb (GoLean.GoCore.HbAction.syncRelease (GoLean.Loc.base { id := 0 }) false)]: states differ (clocks true, shadow false, chans true, syncs true, atomics true)"]
+#[]
+some #[]

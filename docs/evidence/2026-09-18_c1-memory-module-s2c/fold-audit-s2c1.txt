@@ -1,0 +1,43 @@
+# C1 S2c-i — whole-corpus fold-equality audit, S2c-i binary 7eb5de44… (2026-09-18)
+# scripts/choice-trace-corpus --dump --jobs 6 --exclude goroutines/send-then-spin --exclude strings/trimspace-repeat/repeat-bound-refused
+== corpus s2c1 start 2026-09-18T22:19:11Z bin=7eb5de44bd999a82
+corpus s2c1 EXIT=1 wall=525s
+
+EXCLUDED rows (not traced in this run — trace separately, e.g. with a lower --fuel):
+  goroutines/send-then-spin	excluded by --exclude (trace separately)
+  strings/trimspace-repeat/repeat-bound-refused	excluded by --exclude (trace separately)
+
+rows traced: 3639 ids, 21834 (id,stream) lines; 1 id(s) the tracer could not run (ERROR)
+  by lane: confluent=90, membership=140, racy=36, strict=3373
+
+VALIDATOR
+  consumptions checked: 23679
+  menu-invariant violations: 0
+  self-check alarms (mirror/accountant, sentinel, pick-record): 0
+  driver-agreement mismatches: 0
+  fuel-out (id,stream) lines: 0
+  fold-equality mismatches (raceUpdate vs raceFold, C1 S2c-i): 0
+    ERROR arrays/materialization-budget/over-budget (baseline: FAIL/lean-observation): /home/dev/projects/golean/.claude/worktrees/c1-successor/artifacts/choice-trace-s2c1/wire/arrays__materialization-budget__over-budget.json: native lowering: arr
+  ids with a machine refusal under some traced stream (unsupported/stuck/internal/error, or an unexpected fatal): 188; of these 188 are non-PASS in the tracked baseline
+  consumptions per site (all streams): l1Sched=9452, appendSpill=4874, postOp=4534, backEdge=2404, mapIter=1307, unseqPanic=417, l5ExitWindow=325, repanicCollapse=126, tryLock=101, nilValueMethodText=90, l2Entry=24, l4Waiter=22, l2Arrival=3
+
+STRICT-LANE DEPTH EXPOSURE (lane=strict rows; confluent rows shown separately)
+  strict: 3373 rows; consumptions under the default stream:
+
+# column sum over results-*.tsv
+lines=21835 foldMismatches_sum=0 rows_with_mismatch=0
+  status unsupported=1095
+  status panic=2284
+  status deadlock=162
+  status race=252
+  status stuck=30
+  status ERROR=1
+  status ok=17957
+  status fatal=54
+
+# choice-trace byte-identity vs main 42023bd9's certified binary 42b7bf1a… (main's run: corpus main EXIT=1 wall=481s)
+  23679 .tmp/dump-s2c1.sorted.tsv
+  23679 .tmp/dump-main.sorted.tsv
+cmp EXIT=0 (see the README)
+0df092ee22f7609da6e3802d8f73a7cc6a00ce6cf5d04094cfa637b79ea3fb7e  .tmp/dump-s2c1.sorted.tsv
+0df092ee22f7609da6e3802d8f73a7cc6a00ce6cf5d04094cfa637b79ea3fb7e  .tmp/dump-main.sorted.tsv

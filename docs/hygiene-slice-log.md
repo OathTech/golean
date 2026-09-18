@@ -928,3 +928,23 @@ F9 rowed as FR-34 + queue 34 (pre-existing, not C1's). Choice-trace subset (307 
 (id, stream) lines) vs main's certified binary: BYTE-IDENTICAL (2,690 records, sha `bd48dac5…`, `cmp`
 EXIT=0). Gate: `GOLEAN_MEM_MAX=32G scripts/capped scripts/ci --diff` under the box-wide lock (20:18:14–20:32:18 UTC) at the committed runtime tree `16029fa8`: **EXIT=1 in 844 s**, 3676 cases 3427 PASS / 249 expected FAIL, `eval tests` 211 ok, core build warning-free, totality audit ok, the NEW `memory-module raw call-site inventory` step GREEN, red ONLY on the expected 5a pair (`certificate provenance` STALE on `CLI.lean`; the one cached certified row `imported-goose/channel/google-search`), ZERO other drift (`gate-tail-fixround.txt`). Records checks: `check-bugs.sh` EXIT=0, `check-evidence-size` EXIT=0 (PASS, 0 new offenders), `check-agents-alias` EXIT=0, `check-spec-anchors` EXIT=0 (FR-34's anchors resolve at pin `c19862e5f`). Evidence: `docs/evidence/2026-09-18_c1-memory-module/`
 (README «Audit fix round»).
+
+**S2c-i (2026-09-18, gated, successor lane `core/c1-memory-module-s2c-0918`, base main `42023bd9`) — the
+label becomes an ORDERED list of memory-model events and the registry applies EMIT their synchronization
+(D9, RATIFIED [USER] 2026-09-18 relayed); both folds live; the audit says EQUAL.** `MemEvent := access ∣ hb
+HbAction ∣ attributed who e`, `AccessTrace := List MemEvent` (Ops.lean); `chanSendEntry`/`chanCloseWrite`/
+`selectPoll`/`atomicEvents` and the moved `syncEntryKinds`/`syncReleaseTailKinds` (Machine.lean); every
+registry apply (`applyChanOp`, `commitClause`, `applySelectCore`/`applySelect`, `applySyncOpCore`,
+`applyTryLock`/`applySyncOp`, `applyAtomicOp`), `resumeThread`, `applyPairing` (+`arrivalPoll`,
+`pairSendEvents`/`pairRecvEvents`), the spawn (`.hb (.spawn n) :: tr.map (.attributed n)`) and the arrival
+commit (`ArrivalOutcome.commit evs …`, `selectPoll evs ++ commit`) return their label; `StepE ctx n …` (the
+child's index); `StepM`/`StepMFine`'s pool rules labelled; `RaceState.hbAction`/`event`/`events`; `raceFold`
+(THE ONE FOLD) beside the untouched-in-effect `raceUpdate`; `footprintsConflict` over `traceAccesses`. Proofs
+restated arm-for-arm, nothing weakened. THE AUDIT (tracer `Acc.auditFold`, per pool step, structural
+`RaceState` equality): whole corpus 21,835 (row, stream) results, **0 fold mismatches** (252 race verdicts
+agreed step for step); raft twin 30/30 ok, 0 mismatches; positive control `probe-FoldOrder.lean` (an order
+swap IS detected). Choice trace vs main `42b7bf1a…`: corpus dumps 23,679 records `cmp` EXIT=0 (sha
+`0df092ee…`), twin 14,360 `cmp` EXIT=0. Gate at `f1ad88c3`: **EXIT=1, 770 s, 3676 = 3427/249**, red ONLY on
+the expected 5a pair (`certificate provenance` STALE on `ChoiceTrace.lean`; the one cached certified row),
+zero other drift; `check-mem-callsites` PASS 78 rows unchanged. Records: `docs/2026-09-18_c1-memory-module-s2c-handoff.md`,
+`docs/evidence/2026-09-18_c1-memory-module-s2c/`. Next: S2c-ii (the switch and the deletions).
