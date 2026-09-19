@@ -6,6 +6,20 @@
 S3 `docs/2026-09-19_c1-memory-module-s3-handoff.md`. Numbers below are derivation-anchored in
 `docs/evidence/2026-09-19_c1-memory-module-s3/` (S3) and the two predecessor evidence dirs.
 
+**The claim, stated exactly** (revised at the S3 audit fix round, 2026-09-19 [AGENT] — audit F6,
+`docs/2026-09-19_c1-s3-audit.md`): **C1 is complete MODULO the «Owed onward» list below.** The earlier
+heading «C1 COMPLETE against its charter» claimed more than the charter's letter supports: charter §8's
+exit-evidence line «`deliverS`'s saved-store arm gone» is NOT met — `deliverS` remains at 8 sites with its
+saved-store arm (`StepFn.lean:587, 597, 638, 711, 724, 762, 800, 813`) plus the pool's select interception
+(`Multi.lean:1571`). What the audit established (its §5, by reading every arm, with probes) is that all of
+them are COST-only: no arm of the four synchronization applies or the two allocating conversions writes and
+then THROWS, so no rollback depends on the saved store; the residue is one heap copy per registry op / per
+conversion, on no charter §6 target. Owed onward: those 8 sites + the select interception (→ C4 or the next
+slice of this module) and the header/backing invariant (`offset + cap ≤ |backing|`, audit F1 → a later slice,
+it is a semantic-invariant addition). The reading that this owed list IS the charter's closing shape for C1
+is **PENDING [USER] ratification at the merge ask**; the lane does not self-adjudicate a ratified charter's
+exit line.
+
 ## What C1 delivered against §1/§8
 
 | charter item | state | where |
@@ -40,9 +54,19 @@ slower than 1.06× BEFORE — the map probes, not a C1 target, ±6 % noise; `all
 - **To C4 (or the next hygiene slice of this module)**: the four synchronization applies
   (`applyChanOp`, `applySyncOp`, `applyAtomicOp`, `applySelect` + the pool's select interception)
   still deliver with the pre-apply store in hand — one heap copy per registry op that writes a
-  channel/sync-word cell; and `applyStrictOp`'s three allocating conversions (`[]byte(s)`,
-  `[]rune(s)`, slicing an array value) — one copy each. Not on any S3 target; measured cost owed
-  at the next slice (S3 handoff §6 has the split recipe — it is the same seam).
+  channel/sync-word cell; and `applyStrictOp`'s TWO allocating conversions (`[]byte(s)`,
+  `[]rune(s)`) — one copy each. (Audit F3, 2026-09-19 [AGENT]: slicing an array value is NOT a
+  third — `applySlice` returns its store unchanged in every arm and refuses the non-addressable
+  array-value form by name; `scripts/mem-callsites.tsv` records `applyStrictOp alloc 2`.) Not on
+  any S3 target; measured cost owed at the next slice (S3 handoff §6 has the split recipe — it
+  is the same seam).
+- **To a later slice of this module (audit F1)**: the header/backing invariant `∀ reachable slice
+  header, offset + cap ≤ |backing array|` as a STATED invariant — a `StateWf` conjunct with
+  `writeAt_noPanic`/`writeAt_noPanic_of_readAt_ok` as its consumer, and `sliceIndexLoc`/
+  `Mem.storeElems` landing inside the backing derived from it. It is written down where the
+  refusal is (`arrayIndexNatFormed`'s docstring, with its 11 formation sites), marked by
+  construction and UNPROVED; adding the conjunct is a semantic-invariant change and so its own
+  gated slice.
 - **To C4**: block-scoped reclamation (`free`), as the charter said; the map index (bug090 §5 item 5).
 - **To P**: the wrapper-hop narrowing (charter §3), unchanged.
 - **PENDING [USER]** (unchanged from S2c): the ratification of BUG-111 fix (i)'s WIDER scope

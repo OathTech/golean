@@ -1015,12 +1015,29 @@ with the same labels. The pool driver reads the boundary rule's facts BEFORE the
 step's writes; `spawnStep`'s entry commit runs on the owned store. The eight S0 W arms are V or gone (`storeMany`
 DELETED with its 3 lemmas; makeMap/makeChan/makeSlice/copySlice hoist a pure nil check). KEPT with the reason in
 `deliverS`'s docstring: the 4 read-only sites and the synchronization applies (`applyChanOp`/`applySyncOp`/
-`applyAtomicOp`/`applySelect`) + `applyStrictOp`'s 3 allocating conversions — one heap copy per such op, OWED.
+`applyAtomicOp`/`applySelect`) + `applyStrictOp`'s 2 allocating conversions `[]byte(s)`/`[]rune(s)` — one heap copy per such op, OWED. (The «3» this entry first carried was corrected at the audit fix round, F3: `applySlice` allocates nothing and refuses the non-addressable array-value form by name; the inventory says `applyStrictOp alloc 2`.)
 Inventory 72 → 70 (the two dead `storeMany` rows; the alloc rows moved to the `.plan` declarations). Benchmarks
 (BEFORE main `0f114df6` / AFTER; `docs/evidence/2026-09-19_c1-memory-module-s3/`): `alloc_new` 32k **14.12 →
 0.844 s** (×4 ratios 3.9/4.3 ≤ 4.4); the (h) scalar phase at 40k **6.83 → 0.289 s** (1.12× of h = 0 ≤ 1.2);
 `append_grow` ×2 ratios 2.0–2.9 → **1.84–2.02** (≤ 2.2, the S1 owed target MET); scalar 80k −3.5 % (≤ 10 %) —
 the four charter §6 targets MET on the AFTER run; the AFTER-2 confirmation run (the committed binary `ab355547…`, quiet box) repeats them within run-to-run jitter except two single ratio steps over the line by the letter — `alloc_new` 4k→16k ×4.49 (line 4.4; ×4.34 on AFTER) and the noise-floor `append_grow` 250→500 ×2.29 (line 2.2; ×1.93 on AFTER) — reported as misses on those steps, not re-fitted. Gate at `fd99b021`: EXIT=1 (711 s, 07:01–07:13Z; `gate-tail-s3.txt`): 3686 cases, DRIFT = exactly the one 5a-class row (`imported-goose/channel/google-search` PASS→FAIL/membership), red ONLY on the 5a pair (`certificate provenance` STALE + that row); the six linter warnings gone (core build warning-free); eval 267 ok; inventory PASS 70; core audit PASS; escape-hatch scans ok; negative 394 = baseline; reconciler 2 findings, 1 HIGH = the 5a item. Eval tests 267 ok (the 56 label-shape facts
 unchanged). Choice trace vs main's binary: BYTE-IDENTICAL — 24,037 records per side, sha256 `838d93e4…` both, `cmp` EXIT=0 (3650 rows exported per side, 34 frontend refusals per side, 2 excluded; both runs EXIT=1 = the runner's standing racy findings, 41 lines identical); `choice-trace-s3.txt`. Detector-soundness: 649 rows, EXIT=2 (the 9 standing refusals), 1,749 s (07:22:42–07:51:51Z; `--out artifacts/detector-soundness-s3`): HOLE 0 / possible-HOLE 0 / agree-race 41 / agree-DRF 507 / over-refusal 6 / refused 9 / uncertified 86 — CELL-FOR-CELL IDENTICAL to the prior official matrix (the S2c audit fix round's 649 rows: 0 rows added or removed, 0 cells changed, 0 machine verdicts changed, 0 gc verdicts changed); `detector-soundness-s3.txt`. BUG-090: both mechanisms CLOSED (A at S1, B at S3), `Status:` stays `open` — the pinned row `strings/trimspace-repeat/repeat-bound-refused` is red by design (the Repeat shim's modeled `1<<24` bound), so `scripts/check-bugs.sh`'s symmetric rule forbids `fixed`; the entry's stale «runner-budget red (BUG-073)» wording corrected in place; a corpus-lane follow-up owed (a performance witness row, the Builder fuzz re-size, `issue24419`). C1 is
-COMPLETE against its charter (`docs/2026-09-19_c1-memory-module-completion.md`); handoff
+complete MODULO the handoff §6 owed list (`docs/2026-09-19_c1-memory-module-completion.md`); handoff
 `docs/2026-09-19_c1-memory-module-s3-handoff.md`; the audit ask posed there (§8).
+**AUDIT FIX ROUND (2026-09-19, [AGENT]; the pre-merge adversarial audit `docs/2026-09-19_c1-s3-audit.md`,
+`review/c1-memory-module-s3-0919` at `c44a089b`, returned FIX-FIRST records-class and narrow — MERGE-CLEAN on the
+semantics, the proofs and the gates: no WRONG-ANSWER/UNSOUND-PROOF/WEAKENING/COHERENCE-GAP/FAIL-OPEN/SCOPE
+finding; the refusal-class change probed unreachable on 15 programs, the eight reordered W arms silent on 28, the
+boundary `rfl` and 183 enumerated concurrency rows byte-identical, the four §6 targets reproduced MET with the two
+AFTER-2 misses shown to be jitter).** Two commits, no semantic change: a GATED docstring commit (F1 — the
+header/backing invariant `offset + cap ≤ |backing|` and its 11 formation sites written into
+`arrayIndexNatFormed`'s docstring as by-construction and UNPROVED, the `StateWf` conjunct + theorem OWED to a
+later slice; F2 — `deliverV`/`enterFramePickV`/`spawnStep` docstrings named three theorems that do not exist
+(`deliverV_deliver`, `enterFramePickV_ok`/`_panic`/`_error`, `spawnStep_sound`), replaced by the real bridges;
+F3 — «three allocating conversions» → TWO) and a records commit (F3's four records sites; F4 — «Statements
+unchanged throughout» replaced by the merge-invariant list + the three plan-level kit restatements; F5 —
+BUG-090's S3 paragraph now cites S3's own BEFORE 14.12 s / 6.83 s, not S1's 13.8 / 6.37, anchored in
+`bench-compare.md`; F6 — this claim reworded to «modulo the §6 owed list», PENDING [USER] ratification; F7/F8
+recorded in the handoff's owed list). The compiled code is unchanged: the gate-built binary `ab355547…` →
+`a014183b…` at the same size, the 244 differing bytes ALL in the binary's embedded source-hash manifest (the four
+edited files). Gate at the fix-round tip: §9 of the handoff.
