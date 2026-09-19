@@ -1,0 +1,25 @@
+# C1 S3 — whole-corpus choice trace, the S3 runtime commit fd99b021's binary (sha256 ab355547ff2377e24604caabf69236b02e24b8875e50ae0f82069de42d87b051, the gate-built .lake/build/bin/golean, copied read-only to .tmp/golean-s3-final) vs main 0f114df6's binary (sha256 da7bb8376164e23fdfb4933b81e406cd21efe6b63b6e9e5e5c08caad20bbc1d2, .tmp/golean-main).
+# Command (each side): scripts/choice-trace-corpus --dump --jobs 6 --golean BIN --out artifacts/choice-trace-{s3,main} --exclude goroutines/send-then-spin --exclude strings/trimspace-repeat/repeat-bound-refused   (the two standing exclusions: the non-terminating spin row and the red-by-design Repeat bound row)
+# Both runs EXIT=1 = 'FINDINGS present' (the runner's standing racy-lane findings, 41 lines, identical on both sides) — not a failure of the trace; 3650 rows exported per side, 34 frontend refusals (export-fail.tsv) per side, 2 excluded per side.
+
+== main trace start 2026-09-19T06:53:24Z bin=da7bb8376164e23f
+main trace EXIT=1 2026-09-19T07:00:55Z
+== s3 trace start 2026-09-19T07:13:55Z bin=ab355547ff2377e2 tree=fd99b021
+s3 trace EXIT=1 2026-09-19T07:21:09Z
+
+sorted dumps (cat artifacts/choice-trace-D/dump-*.tsv | LC_ALL=C sort):
+  24037 dump-s3.sorted.tsv
+  24037 dump-main.sorted.tsv
+  48074 total
+838d93e460b29e38f4341d51d01e0f3383ba05c86b1d9aed13cb2be697538250  dump-s3.sorted.tsv
+838d93e460b29e38f4341d51d01e0f3383ba05c86b1d9aed13cb2be697538250  dump-main.sorted.tsv
+cmp EXIT=0
+
+findings lines (grep -E '^  racy |FINDINGS|exported'), s3 vs main: identical except the out-dir name in the 'exported' line:
+1c1
+< choice-trace-corpus: 3650 row(s) exported (34 frontend refusals listed in artifacts/choice-trace-s3/export-fail.tsv; 2 row(s) EXCLUDED by --exclude, listed in artifacts/choice-trace-s3/excluded.tsv)
+---
+> choice-trace-corpus: 3650 row(s) exported (34 frontend refusals listed in artifacts/choice-trace-main/export-fail.tsv; 2 row(s) EXCLUDED by --exclude, listed in artifacts/choice-trace-main/excluded.tsv)
+diff EXIT=1
+
+verdict: BYTE-IDENTICAL — 24,037 records per side, one sha256 838d93e4…, cmp EXIT=0 (a per-row dump of every consulted choice site, its alphabet and the chosen slot, over every exported corpus row).

@@ -1,0 +1,26 @@
+check-mem-callsites: RAW memory-operation site(s) NOT in the inventory (file, declaration, raw-op, count):
+  NEW    GoLean/GoCore/Machine.lean	applyStmtOp.plan	alloc	1
+  NEW    GoLean/GoCore/Machine.lean	applyStmtOpCore.plan	alloc	2
+  NEW    GoLean/GoCore/Machine.lean	applyStmtOpCore.plan	allocCell	2
+  A raw operation reads or writes user memory WITHOUT emitting an access; the
+  detector would not see it. Resolve each site in ONE of two ways:
+    (1) route the access through an emitting operation of the memory module
+        (`Mem.load`/`Mem.loadFor`/`Mem.store`/`Mem.mapRead`/`Mem.mapWrite`/
+        `Mem.loadElems`/`Mem.storeElems`/`Mem.loadRun`/`Mem.storeRun`/
+        `Mem.loadSlice`/`loadResults`), so the access is on the step's label; or
+    (2) add the row to scripts/mem-callsites.tsv with a REASON in the fifth
+        column stating why gc's `-race` build performs no data access there
+        (address formation / type-static metadata / the map RMW's entry peek /
+        machine-internal cell / driver readout / synchronization traffic /
+        fresh allocation / the emitting operation's own body), and list the
+        class in Ops.lean's access-discipline docstring if it is new.
+  A row whose COUNT changed appears once as NEW (the new count) and once as
+  STALE (the old count): re-derive the reason for every added mention.
+check-mem-callsites: STALE inventory row(s) — no such site exists any more (file, declaration, raw-op, count):
+  STALE  GoLean/GoCore/Machine.lean	applyStmtOp	alloc	1
+  STALE  GoLean/GoCore/Machine.lean	applyStmtOpCore	alloc	2
+  STALE  GoLean/GoCore/Machine.lean	applyStmtOpCore	allocCell	2
+  STALE  GoLean/GoCore/Machine.lean	storeMany	storeLoc	1
+  STALE  GoLean/GoCore/Machine.lean	storeMany	storeMany	1
+  Remove the row from scripts/mem-callsites.tsv (an inventory naming sites that do not exist is a false witness).
+check-mem-callsites: FAIL (scan 70 rows; 3 new, 5 stale)

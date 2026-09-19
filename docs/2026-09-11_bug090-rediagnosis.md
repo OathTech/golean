@@ -147,3 +147,30 @@ Re-measurement after any of these lands: rerun the evidence dir's `run-probes.py
 full` (same points, 3 runs); require `write_fixed` flat in m, `alloc_new` linear,
 `append_grow` linear amortized; then revisit BUG-090's corpus consequences (Builder rows
 ≤ 1 KB, fuzz 10×300, `repeat-bound-refused`, `issue24419`).
+
+## 6. Closing paragraph (C1 S3, 2026-09-19; [AGENT] lane `core/c1-memory-module-s3-0919`)
+
+**Both mechanisms are CLOSED, measured.** Mechanism A closed at S1 (the re-measurement paragraph in
+`docs/BUGS.md`'s BUG-090 entry). Mechanism B closed at S3 by removing the retention this note named in §3 B:
+(i) `deliverS`'s pre-apply store — every user-memory-writing apply `stepFn` delivers is now a VALIDATE phase
+(reads, checks, panics; borrows the store) whose result is a COMMIT (writes only; owns the store), run by
+`deliverV` (`GoLean/GoCore/StepFn.lean`; the seam `Commit`/`runCommit`, `Machine.lean`), so the panic arm needs
+no saved copy — «panic ⇒ store unchanged» is the per-family `PlanNoPanic` theorem (`MachineSound.lean`),
+made possible by the write path's index re-check becoming a machine-invariant `.internal`
+(`arrayIndexNatFormed`, `Ops.lean`; a refusal-class change on an unreachable path, disclosed in the S3 handoff);
+(ii) the pool driver's `Thread.afterStep σ c c'`, which read the PRE-step store AFTER the step, now reads its
+two facts BEFORE it (`Config.boundaryFacts`, `Multi.lean`) — this one held `σ` across EVERY pool step's writes,
+including `stepFn`'s direct allocation arms; (iii) `spawnStep`'s entry commit runs on the owned store. The
+drivers (`execProgLoop`, `runConfig`, `stepMulti`, `stepThreadInto`) pass the state as its last use; the
+enumerator's retained states are exploration's by design (the charter's B(c) boundary).
+
+Re-measured with the evidence dir's plan (`docs/evidence/2026-09-19_c1-memory-module-s3/`, 3 runs, medians,
+net of the empty probe; BEFORE main `0f114df6`, AFTER the S3 tree): `alloc_new` 1k/4k/16k/32k 0.039/0.263/
+3.66/14.12 s → 0.025/0.099/0.429/0.844 s (linear: ×3.9, ×4.3, ×2.0); the 20,000-iteration scalar loop after
+0/1k/10k/40k live cells 0.258/0.385/1.78/6.83 s → 0.257/0.266/0.287/0.289 s (flat: 1.12× at 40k);
+`append_grow` ×2 ratios ×2.0/2.1/2.5/2.9 → ×1.93/2.02/1.84/1.97 (the S1 residual gone); `alloc_make4` 16k
+3.41 → 0.38 s; `heap_then_append` 40k + 300 appends 18.9 → 0.82 s; the per-step baseline unchanged (−3.5 %). A confirmation re-run of the same plan on the committed tree's gate-built binary `ab355547…` (quiet box, load 0.97 → 0.99; `bench-after2.json`, the third column of `bench-compare.md`) repeats these within run-to-run jitter — `alloc_new` 32k 0.865 s, the (h) phase 0.93×, `scalar(80000)` −5.4 % — except two single ratio steps that fall over the charter's lines by the letter: `alloc_new` 4k→16k ×4.49 (≤ 4.4 asked; ×4.34 on the first run) and `append_grow` 250→500 ×2.29 (≤ 2.2 asked; a 5.9 ms base at the ±1 ms noise floor; ×1.93 on the first run) — reported as misses on those steps, not re-fitted.
+§5's acceptance — `write_fixed` flat in m (S1), `alloc_new` linear (S3), `append_grow` linear amortized (S3) —
+is met. Item 5 (maps: a key index) stays open, lower priority, not a C1 target. The corpus consequences
+(Builder rows ≤ 1 KB, the 10 × 300 fuzz, `repeat-bound-refused`, `issue24419`) are revisited in the BUG-090
+entry's S3 paragraph: the pinned row `strings/trimspace-repeat/repeat-bound-refused` did NOT flip and cannot: its own `cases.tsv` comment says it is RED BY DESIGN — outputs past the Repeat shim's modeled `1<<24` bound refuse by name (`goleanShimStringsRepeatBound`), independent of the machine's speed — so this entry's «runner-budget red (BUG-073)» description of it is STALE (corrected here, the row untouched: `Corpus/**` is a corpus lane's). Under `scripts/check-bugs.sh`'s symmetric rule a `Status: fixed` needs its `Cases:` row to PASS, so the status STAYS `open` although both mechanisms are closed; closing it is a corpus-lane follow-up: replace the pin by a performance witness that main's binary fails at budget and S3's passes (e.g. the 32k-allocation loop of `alloc_new`, 14 s → 0.8 s), re-size `stdlib-source/builder-fuzz` toward the asked 100k, and re-run the gotest lane's `fixedbugs/issue24419.go` (MACHINE-REFUSED at 30 s before) — owed, listed in the S3 handoff §6.

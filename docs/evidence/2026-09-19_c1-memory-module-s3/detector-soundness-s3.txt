@@ -1,0 +1,60 @@
+# C1 S3 — the official detector-soundness matrix on the committed binary ab355547… (gate-built at the runtime commit fd99b021): scripts/detector-soundness --select in-scope --jobs 6 --out artifacts/detector-soundness-s3; go run -race live at the pin (go1.26.5); runs/proc 5, procs 1,8; 07:22:42–07:51:51Z = 1,749 s; run concurrently with nothing else of mine (the choice trace and the benchmark had finished).
+# EXIT=2 = the 9 standing 'refused' rows (the membership lane's by-name refusals), exactly as the prior official run (S2c audit fix round, docs/evidence/2026-09-18_c1-memory-module-s2c/detector-soundness-fixround.txt, 649 rows, EXIT=2).
+# Verdict: CELL-FOR-CELL IDENTICAL to the prior official matrix — HOLE 0 / possible-HOLE 0 / agree-race 41 / agree-DRF 507 / over-refusal 6 / refused 9 / uncertified 86; 0 rows added or removed, 0 cells changed, 0 machine verdicts changed, 0 gc verdicts changed (the comparison below, .tmp/ds_compare.py over the two matrix.tsv files; the prior matrix.tsv read from the c1-successor worktree's artifacts/detector-soundness-fixround/, read-only).
+
+== detector-soundness S3 start 2026-09-19T07:22:42Z bin=ab355547ff2377e2… tree=fd99b021 load1=0.77
+detector-soundness EXIT=2 2026-09-19T07:51:51Z
+
+== artifacts/detector-soundness-s3/summary.txt (the cells, the lane × cell table, the two exit-bearing headings — both empty)
+detector-soundness summary — 2026-09-19T07:51:51+00:00
+rows: 649   runs/proc: 5   procs: 1,8   worker-pool exit: 0
+
+cells:
+  agree-DRF      507
+  agree-race     41
+  over-refusal   6
+  refused        9
+  uncertified    86
+
+by lane × cell:
+  confluent	agree-DRF	92
+  confluent	uncertified	1
+  membership	agree-DRF	130
+  membership	refused	9
+  membership	uncertified	4
+  racy	agree-race	41
+  strict	agree-DRF	285
+  strict	over-refusal	6
+  strict	uncertified	81
+
+HOLE rows (gc RACE, machine DRF — exit-bearing; a HOLE not on a BUGS.md Cases: line is a STOP):
+
+possible-HOLE rows (gc RACE, machine ENUM-FAIL — exit-bearing; certify or diagnose each):
+
+over-refusal rows (machine RACE-*, gc DRF-in-N — three-way investigation):
+  (over-refusal 6 = the same six as before: race/free/array-dyn-index-read-write + the five race/gomem-only rows; uncertified 86 = the same ENUM-FAIL set — the full lists are in the artifacts dir's summary.txt and matrix.tsv)
+
+== cell-for-cell comparison, prior official matrix (S2c audit fix round, binary da7bb837… at 967712a3) vs this run
+prior rows: 649   new rows: 649
+rows only in prior: 0 []
+rows only in new:   0 []
+
+cells prior: {'agree-DRF': 507, 'agree-race': 41, 'over-refusal': 6, 'refused': 9, 'uncertified': 86}
+cells new:   {'agree-DRF': 507, 'agree-race': 41, 'over-refusal': 6, 'refused': 9, 'uncertified': 86}
+
+common rows: 649   cell unchanged: 649   cell CHANGED: 0
+machine_verdict changed on 0 row(s):
+gc_verdict changed on 0 row(s) (the gc side is a per-run sampler):
+
+HOLE / possible-HOLE rows in new: 0 []
+
+by lane x cell (new):
+  confluent	agree-DRF	92
+  confluent	uncertified	1
+  membership	agree-DRF	130
+  membership	refused	9
+  membership	uncertified	4
+  racy	agree-race	41
+  strict	agree-DRF	285
+  strict	over-refusal	6
+  strict	uncertified	81
