@@ -1,6 +1,7 @@
 import GoLean.NativeDeclaration
 import GoLean.StrictJson
 import GoLean.GoCore.Syntax
+import GoLean.GoCore.Unseq
 
 /-!
 # Native frontend lowering
@@ -197,6 +198,7 @@ private def stmtAllowedKeys : String → Option (List String)
   | "append" => some ["stmt", "target", "elem", "slice", "elems"]
   | "copy" => some ["stmt", "target", "dst", "src"]
   | "unseq-probe" => some ["stmt", "expr"]
+  | "unseq" => some ["stmt", "cells", "occs", "stores", "then"]
   | "map-compound-assign" =>
       some ["stmt", "op", "base", "index", "read", "rhs", "keyType", "valueType"]
   | "map-assign" => some ["stmt", "base", "index", "value", "keyType", "valueType"]
@@ -846,6 +848,173 @@ private def asCallValue? (json : Json) : LowerM (Option (Json × Array Json)) :=
       pure (some (callee, args))
   | _ => pure none
 
+/-! ## The `unseq` construct — the wire arm (evaluation-order model v2.1 Stage C,
+lane `core/unseq-stage-c-0919`, 2026-09-19; design
+`docs/2026-09-19_unseq-stage-c-design.md` §4 the schema, §5 the decoder spec).
+
+`{"stmt":"unseq","cells":[…],"occs":[…],"stores":[…],"then":STMT}` maps 1:1
+onto `Stmt.unseq (g : UnseqGraph) thenB` (Syntax.lean): `cells` are the typed
+VALUE binders, `occs` the occurrences in canonical rank order (`eval` /
+`invoke` / `target` / `load` / `guard`, each with its ORDER prerequisites
+`after` and its `region` guard), `stores` the phase-2 `(target, value)`
+pairs, `then` the completion statement. The machine's own checks
+(`UnseqGraph.wellFormed?` at ENTER; `skippedDep?`, `unproducedConsumer?`,
+`unseqUnfrozenPlan?` dynamically — Stage B §9.1: the enforcement lives in
+the trusted core, hand-built graphs cannot bypass it) stay the enforcement;
+this arm is the STATIC net at the wire boundary, refusing BY NAME before a
+graph exists: exact keys (D1), the `$` reservation and distinctness of
+binders (D2, D5), a non-empty graph and distinct occurrence names (D3), the
+kind (D4), sorts (D6), LIST ORDER = a linear extension of every edge —
+cycles and forward references refused in one check (D7), the internal
+NORMAL FORM of every head / callee / argument — no hidden read, no logical
+operator, no `recover`, no allocation (D8), head type = cell type (D9),
+`resultTypes` = the bound cells' types (D10), guard cells bool with the
+completion inside the region (D11 — `wellFormed?`), the STATIC G rule: a
+region-confined binder is consumed only inside its region, the completion
+binder being the only join (D12), the target plan's shape (D13), and a
+completion free of nested `unseq` / legacy `unseq-probe` (the whole-sweep
+boundary, audit N2) and of `recover` (D14). -/
+
+/-- Allowed key sets for `unseq` occurrence nodes, by `kind`. -/
+private def unseqOccAllowedKeys : String → Option (List String)
+  | "eval" => some ["name", "kind", "bind", "head", "after", "region"]
+  | "invoke" => some ["name", "kind", "binds", "callee", "args", "resultTypes", "after", "region"]
+  | "target" => some ["name", "kind", "bind", "lhs", "after", "region"]
+  | "load" => some ["name", "kind", "bind", "target", "after", "region"]
+  | "guard" => some ["name", "kind", "test", "when", "out", "after", "region"]
+  | _ => none
+
+/-- An ATOM on the wire (v2.1 §3.1's internal normal form): an identifier —
+a slot or an admitted source local — or an int/bool/string constant. -/
+private def unseqIsAtom (j : Json) : Bool :=
+  match j.getObjVal? "expr" with
+  | .ok (.str "ident") | .ok (.str "int") | .ok (.str "bool") | .ok (.str "string") => true
+  | _ => false
+
+/-- Does a wire JSON subtree contain a statement node whose `stmt` tag is one
+of `tags`? (D14: no nested `unseq`, no legacy `unseq-probe` in a completion.) -/
+private partial def jsonMentionsStmt (tags : List String) : Json → Bool
+  | .obj kvs =>
+      (match kvs.get? "stmt" with
+        | some (Json.str t) => tags.contains t
+        | _ => false)
+      || kvs.toList.any (fun (_, v) => jsonMentionsStmt tags v)
+  | .arr xs => xs.any (jsonMentionsStmt tags)
+  | _ => false
+
+/-- D8 for an `eval` head: one of the admitted heads over ATOM operands. The
+one structural exception is a `slice` whose `high` is `builtin-len` of the
+SAME base atom — spec#Slice_expressions' default high («the length of the
+sliced operand»), which the emitter spells as a length of the one evaluated
+base. -/
+private def unseqCheckHead (path : String) (head : Json) : LowerM Unit := do
+  if jsonMentionsRecover head then
+    fail s!"unseq: recover() inside an occurrence head at {path} — recover is an EVENT (it changes the continuation), never a pure op (v2.1 §3.1); refused by name"
+  let obj ← StrictJson.obj path head
+  let tag ← StrictJson.string s!"{path}.expr" (← StrictJson.field path obj "expr")
+  let atom (key : String) : LowerM Unit := do
+    let j ← StrictJson.field path obj key
+    if !unseqIsAtom j then
+      fail s!"unseq: hidden read in a pure node — {path}.{key} is not an atom (an identifier or an int/bool/string constant; v2.1 §3.1 internal normal form); refused by name"
+  match tag with
+  | "ident" => pure ()
+  | "index-get" => do atom "base"; atom "index"
+  | "slice" => do
+      atom "base"
+      atom "low"
+      let hi ← StrictJson.field path obj "high"
+      if !unseqIsAtom hi then
+        match hi.getObjVal? "expr", hi.getObjVal? "operand", obj.get? "base" with
+        | .ok (.str "builtin-len"), .ok operand, some base =>
+            if operand != base then
+              fail s!"unseq: hidden read in a pure node — {path}.high is the length of an operand other than the slice's own base; refused by name"
+        | _, _, _ =>
+            fail s!"unseq: hidden read in a pure node — {path}.high is neither an atom nor the base's own length (the default high); refused by name"
+      if obj.contains "max" then atom "max"
+  | "builtin-len" | "builtin-cap" => atom "operand"
+  | "binary" => do
+      let op ← StrictJson.string s!"{path}.op" (← StrictJson.field path obj "op")
+      if op == "&&" || op == "||" then
+        fail s!"unseq: logical operator '{op}' in a head at {path} — a logical operation is a GUARD entry + completion (v2.1 §1 G), never a pure op; refused by name"
+      atom "x"
+      atom "y"
+  | "unary" => atom "x"
+  | "type-assert" => atom "operand"
+  | other =>
+      fail s!"unseq: head '{other}' at {path} is outside the Stage C fragment (admitted heads: ident, index-get, slice, builtin-len, builtin-cap, binary, unary, type-assert); refused by name"
+
+/-- D8 for an `invoke` callee: an identifier (a func-typed local or slot) or
+a `func-value` whose captures are addresses (`ref`/`ident`/`globaladdr`). -/
+private def unseqCheckCallee (path : String) (callee : Json) : LowerM Unit := do
+  if jsonMentionsRecover callee then
+    fail s!"unseq: recover() in a callee at {path}; refused by name"
+  match callee.getObjVal? "expr" with
+  | .ok (.str "ident") => pure ()
+  | .ok (.str "func-value") =>
+      let obj ← StrictJson.obj path callee
+      let caps ← StrictJson.array s!"{path}.captured" (← StrictJson.field path obj "captured")
+      for c in caps do
+        match c.getObjVal? "expr" with
+        | .ok (.str "ref") | .ok (.str "ident") | .ok (.str "globaladdr") => pure ()
+        | _ => fail s!"unseq: a func-value capture at {path}.captured is not an address (ref / ident / globaladdr); refused by name"
+  | _ => fail s!"unseq: callee at {path} is neither an identifier nor a func-value — an invocation's callee is already evaluated (v2.1 §3.1); refused by name"
+
+/-- D8 for an `invoke` argument: an atom, or a boxing `to-interface` of an atom. -/
+private def unseqCheckArg (path : String) (arg : Json) : LowerM Unit := do
+  if jsonMentionsRecover arg then
+    fail s!"unseq: recover() in an argument at {path}; refused by name"
+  if unseqIsAtom arg then pure ()
+  else
+    match arg.getObjVal? "expr", arg.getObjVal? "operand" with
+    | .ok (.str "to-interface"), .ok operand =>
+        if !unseqIsAtom operand then
+          fail s!"unseq: hidden read in an argument — {path} boxes a non-atom; refused by name"
+    | _, _ =>
+        fail s!"unseq: hidden read in an argument — {path} is not an atom (or a boxed atom); an invocation's arguments are already evaluated (v2.1 §3.1); refused by name"
+
+/-- The guards whose regions enclose occurrence `o`, outermost last (regions
+nest by chaining; bounded by the graph's size). -/
+private def unseqRegionChain (g : UnseqGraph) (o : UnseqOcc) : List String :=
+  let rec go (r : Option String) (fuel : Nat) : List String :=
+    match fuel, r with
+    | 0, _ => []
+    | _, none => []
+    | fuel + 1, some gn =>
+        gn :: (match g.occs.find? (·.name == gn) with
+          | some go' => go go'.region fuel
+          | none => [])
+  go o.region g.occs.length
+
+/-- The region a binder is CONFINED to: its producer's region, unless the
+producer is that guard's completion (the one join). -/
+private def unseqConfinedTo? (g : UnseqGraph) (slot : String) : Option String :=
+  match (g.producer? slot).bind (g.occs[·]?) with
+  | some p =>
+      match p.region with
+      | some gn =>
+          match g.occs.find? (·.name == gn) with
+          | some ⟨_, .guard _ _ out, _, _⟩ => if out == slot then none else some gn
+          | _ => some gn
+      | none => none
+  | none => none
+
+/-- D13: a target plan's shape — a plain source local or a slice element
+whose base and index are atoms (the header FROZEN through the atom: a slot,
+or the local read at the plan step — never `&a`, Stage B F2). -/
+private def unseqCheckTargetShape (path : String) (a : Assignee) : LowerM Unit :=
+  match a with
+  | .var id =>
+      if id.startsWith "$" then
+        fail s!"unseq: a binder ('{id}') cannot be a store target at {path}; refused by name"
+      else pure ()
+  | .addr (.indexAddr base idx) =>
+      let atomE : Expr → Bool
+        | .var _ | .intLit _ _ => true
+        | _ => false
+      if atomE base && atomE idx then pure ()
+      else fail s!"unseq: target plan at {path} indexes with a non-atom base or index (the header and index are frozen VALUES, v2.1 §3.4); refused by name"
+  | _ => fail s!"unseq: target plan at {path} is outside the Stage C fragment (a local, or a slice element on atoms; maps / fields / pointers are Stage E); refused by name"
+
 mutual
 
 /-- Lower a statement. `results` are the enclosing function's result params. -/
@@ -1221,6 +1390,7 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
       if jsonMentionsAllocatingConversion exprJ then
         throw s!"{path}.expr: an unseq-probe operand contains an allocating conversion ([]byte(s) / []rune(s): `bytes-from-string` / `runes-from-string`) — a probed operand is evaluated twice, which would allocate twice (E13 option (b), design §3 purity / §6 item 7); refused by name"
       pure (.unseqProbe (← decodeExpr s!"{path}.expr" exprJ))
+  | "unseq" => decodeUnseq results path obj
   | "map-compound-assign" =>
       -- m[k] op= v with base/key pre-hoisted by the frontend: read via
       -- mapGet, combine, store via mapAssign.
@@ -1676,6 +1846,154 @@ partial def decodeAssign (results : Array Param) (path : String) (obj : StrictJs
       pure (.seqn (decls.push (.assign assignees[0]! exprs[0]!)))
     else
       pure (.seqn (decls.push (.assignMany assignees exprs)))
+
+/-- Lower an `unseq` statement (the Stage C wire arm; docstring at the section head). -/
+partial def decodeUnseq (results : Array Param) (path : String) (obj : StrictJson.Obj) : LowerM Stmt := do
+  -- cells (D2)
+  let cellsJ ← StrictJson.array s!"{path}.cells" (← StrictJson.field path obj "cells")
+  let cells ← cellsJ.mapIdxM (fun i c => decodeParam s!"{path}.cells[{i}]" c)
+  -- occurrences (D3, D4, D8–D10, D13)
+  let occsJ ← StrictJson.array s!"{path}.occs" (← StrictJson.field path obj "occs")
+  if occsJ.isEmpty then
+    fail s!"unseq: empty graph at {path} — a sweep with no occurrence is not a sweep; refused by name"
+  let mut occs : Array UnseqOcc := #[]
+  for i in [:occsJ.size] do
+    let opath := s!"{path}.occs[{i}]"
+    let o ← StrictJson.obj opath occsJ[i]!
+    let kind ← StrictJson.string s!"{opath}.kind" (← StrictJson.field opath o "kind")
+    match unseqOccAllowedKeys kind with
+    | some allowed => checkAllowedKeys opath o allowed
+    | none => fail s!"unseq: unknown occurrence kind '{kind}' at {opath} (eval | invoke | target | load | guard); refused by name"
+    let name ← StrictJson.string s!"{opath}.name" (← StrictJson.field opath o "name")
+    if name.isEmpty then
+      fail s!"unseq: empty occurrence name at {opath}; refused by name"
+    let after ← match o.get? "after" with
+      | some a =>
+          let arr ← StrictJson.array s!"{opath}.after" a
+          arr.toList.mapIdxM (fun j x => StrictJson.string s!"{opath}.after[{j}]" x)
+      | none => pure []
+    let region ← match o.get? "region" with
+      | some r => some <$> StrictJson.string s!"{opath}.region" r
+      | none => pure none
+    let cellTy (bind : String) : LowerM Ty := do
+      match cells.find? (·.id == bind) with
+      | some c => pure c.typ
+      | none => fail s!"unseq: result binder '{bind}' at {opath} is not a declared cell; refused by name"
+    let body ← match kind with
+      | "eval" => do
+          let bind ← StrictJson.string s!"{opath}.bind" (← StrictJson.field opath o "bind")
+          let headJ ← StrictJson.field opath o "head"
+          unseqCheckHead s!"{opath}.head" headJ
+          let hobj ← StrictJson.obj s!"{opath}.head" headJ
+          let cty ← cellTy bind
+          match hobj.get? "type" with
+          | none => fail s!"unseq: the eval head at {opath}.head carries no type — the head's type must agree with cell '{bind}' ({repr cty}); refused by name"
+          | some t =>
+              let hty ← decodeTy s!"{opath}.head.type" t
+              if hty != cty then
+                fail s!"unseq: head type {repr hty} at {opath} disagrees with cell '{bind}' declared {repr cty}; refused by name"
+          pure (UnseqBody.eval bind (← decodeExpr s!"{opath}.head" headJ))
+      | "invoke" => do
+          let bindsJ ← StrictJson.array s!"{opath}.binds" (← StrictJson.field opath o "binds")
+          let binds ← bindsJ.toList.mapIdxM (fun j b => StrictJson.string s!"{opath}.binds[{j}]" b)
+          if binds.length > 2 then
+            fail s!"unseq: invocation '{name}' with {binds.length} results is outside the Stage C fragment (0, 1 or 2); refused by name"
+          let calleeJ ← StrictJson.field opath o "callee"
+          unseqCheckCallee s!"{opath}.callee" calleeJ
+          let argsJ ← StrictJson.array s!"{opath}.args" (← StrictJson.field opath o "args")
+          for j in [:argsJ.size] do
+            unseqCheckArg s!"{opath}.args[{j}]" argsJ[j]!
+          let rts ← decodeResultTypes opath o binds.length
+          for (b, t) in binds.zip rts.toList do
+            let cty ← cellTy b
+            if t != cty then
+              fail s!"unseq: result type {repr t} at {opath}.resultTypes disagrees with cell '{b}' declared {repr cty}; refused by name"
+          let callee ← decodeExpr s!"{opath}.callee" calleeJ
+          let args ← argsJ.mapIdxM (fun j a => decodeExpr s!"{opath}.args[{j}]" a)
+          pure (UnseqBody.invoke binds callee args.toList)
+      | "target" => do
+          let bind ← StrictJson.string s!"{opath}.bind" (← StrictJson.field opath o "bind")
+          let t ← decodeTarget s!"{opath}.lhs" (← StrictJson.field opath o "lhs")
+          if t.declare.isSome then
+            fail s!"unseq: a target plan at {opath} cannot declare its target; refused by name"
+          unseqCheckTargetShape s!"{opath}.lhs" t.assignee
+          pure (UnseqBody.target bind t.assignee)
+      | "load" => do
+          let bind ← StrictJson.string s!"{opath}.bind" (← StrictJson.field opath o "bind")
+          let tgt ← StrictJson.string s!"{opath}.target" (← StrictJson.field opath o "target")
+          pure (UnseqBody.load bind tgt)
+      | "guard" => do
+          let test ← StrictJson.string s!"{opath}.test" (← StrictJson.field opath o "test")
+          let w ← StrictJson.bool s!"{opath}.when" (← StrictJson.field opath o "when")
+          let out ← StrictJson.string s!"{opath}.out" (← StrictJson.field opath o "out")
+          pure (UnseqBody.guard test w out)
+      | other => fail s!"unseq: unknown occurrence kind '{other}' at {opath}; refused by name"
+    occs := occs.push { name, body, after, region }
+  -- stores
+  let storesJ ← StrictJson.array s!"{path}.stores" (← StrictJson.field path obj "stores")
+  let stores ← storesJ.toList.mapIdxM (fun i s => do
+    let spath := s!"{path}.stores[{i}]"
+    let so ← StrictJson.obj spath s
+    checkAllowedKeys spath so ["target", "value"]
+    let t ← StrictJson.string s!"{spath}.target" (← StrictJson.field spath so "target")
+    let v ← StrictJson.string s!"{spath}.value" (← StrictJson.field spath so "value")
+    pure (t, v))
+  -- the completion (D14)
+  let thenJ ← StrictJson.field path obj "then"
+  if jsonMentionsStmt ["unseq"] thenJ then
+    fail s!"unseq: nested unseq inside the completion at {path}.then; refused by name"
+  if jsonMentionsStmt ["unseq-probe"] thenJ then
+    fail s!"unseq: legacy unseq-probe inside an unseq completion at {path}.then — a sweep is lowered EITHER as one unseq graph OR by the legacy probe path, never a mixture (v2.1 §3.7); refused by name"
+  if jsonMentionsRecover thenJ then
+    fail s!"unseq: recover() inside the completion at {path}.then; refused by name"
+  let thenB ← decodeStmt results s!"{path}.then" thenJ
+  let g : UnseqGraph := { cells := cells.toList, occs := occs.toList, stores }
+  -- the machine's static shape check, at the boundary (D2, D5, D6, D11)
+  match g.wellFormed? with
+  | some msg => fail s!"unseq: malformed graph at {path} — {msg}; refused by name"
+  | none => pure ()
+  -- D7: list order is a linear extension of every edge (cycles, forward references)
+  for i in [:g.occs.length] do
+    let o := g.occs[i]!
+    for d in g.deps o do
+      match g.producer? d with
+      | some p =>
+          if p ≥ i then
+            fail s!"unseq: list order is not a linear extension at {path} — '{o.name}' (rank {i}) consumes '{d}', produced by '{(g.occs[p]!).name}' (rank {p} ≥ {i}): a cycle or a forward reference; refused by name"
+      | none => pure ()
+    for a in o.after do
+      match g.index? a with
+      | some p =>
+          if p ≥ i then
+            fail s!"unseq: list order is not a linear extension at {path} — '{o.name}' (rank {i}) follows '{a}' (rank {p} ≥ {i}): a cycle or a forward reference; refused by name"
+      | none => pure ()
+    match o.region with
+    | some gn =>
+        match g.index? gn with
+        | some p =>
+            if p ≥ i then
+              fail s!"unseq: list order is not a linear extension at {path} — '{o.name}' (rank {i}) lies in the region of '{gn}' (rank {p} ≥ {i}); refused by name"
+        | none => pure ()
+    | none => pure ()
+  -- D12: the STATIC G rule — a region-confined binder is consumed only inside its region
+  for o in g.occs do
+    let chain := unseqRegionChain g o
+    for d in g.deps o do
+      match unseqConfinedTo? g d with
+      | some gn =>
+          if !chain.contains gn then
+            fail s!"unseq: invalid branch join at {path} — '{o.name}' uses '{d}', confined to the region of '{gn}' (the completion binder is the only join; v2.1 §1 G); refused by name"
+      | none => pure ()
+  for (t, v) in g.stores do
+    for x in [t, v] do
+      match unseqConfinedTo? g x with
+      | some gn => fail s!"unseq: invalid branch join at {path} — the phase-2 store ({t} ← {v}) uses '{x}', confined to the region of '{gn}'; refused by name"
+      | none => pure ()
+  for c in thenB.names.filter g.isCell do
+    match unseqConfinedTo? g c with
+    | some gn => fail s!"unseq: invalid branch join at {path} — the completion statement uses '{c}', confined to the region of '{gn}'; refused by name"
+    | none => pure ()
+  pure (.unseq g thenB)
 
 partial def decodeVar (path : String) (obj : StrictJson.Obj) : LowerM Stmt := do
   let decls ← StrictJson.array s!"{path}.decls" (← StrictJson.field path obj "decls")

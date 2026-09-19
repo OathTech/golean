@@ -5,5 +5,6 @@
   "eval": {"libraries": ["TestsData", "EvalTests"], "executables": ["gocore-eval-tests"]},
   "method-identity": {"libraries": ["MethodIdentityTests"], "executables": []},
   "unseq-scheduler": {"libraries": ["UnseqSchedulerTests"], "executables": []},
+  "unseq-wire": {"libraries": ["UnseqWireTests"], "executables": []},
   "core-audit": {"libraries": ["GoCoreAuditTests"], "executables": []}
 }

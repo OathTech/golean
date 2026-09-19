@@ -1,4 +1,5 @@
 import GoLean.CLI
+import Tests.UnseqHarness
 
 /-! # The `unseq` scheduler on hand-built graphs — the reference sets (Stage B)
 
@@ -8,111 +9,13 @@ as a hand-built `Stmt.unseq` graph, enumerated over ALL tapes by the EXISTING
 enumerator/driver path (`CLI.enumSetup` → `CLI.explore`, the stepwise pool
 explorer with the machine's own consumption accountant; single tapes through
 `CLI.enumRunProgram`) — never a bespoke driver — and compared EXACTLY with the
-reference's member sets. Refusals are asserted BY NAME. -/
+reference's member sets. Refusals are asserted BY NAME. The harness (`Member`,
+`expectSet`, `expectRefusal`, the tape runners) lives in `Tests/UnseqHarness.lean`
+since Stage C, shared with the wire tests (`Tests/UnseqWire.lean`). -/
 
 namespace Tests.UnseqScheduler
 
 open GoLean GoCore GoCore.Machine
-
-/-! ## Harness -/
-
-structure Member where
-  status : String
-  values : List Int := []
-  output : String := ""
-  /-- A substring the panic/refusal message must contain (`""` = no constraint). -/
-  msgHas : String := ""
-  deriving Repr, BEq
-
-def fail (msg : String) : IO Bool := do
-  IO.eprintln s!"FAIL: {msg}"
-  return false
-
-def ok (msg : String) : IO Bool := do
-  IO.println s!"ok: {msg}"
-  return true
-
-/-- Project an observation JSON to (status, int values, output, message). -/
-def project (j : Lean.Json) : Except String Member := do
-  let status ← j.getObjValAs? String "status"
-  let output ← (j.getObjValAs? String "output") <|> pure ""
-  let message ← (j.getObjValAs? String "message") <|> pure ""
-  let values ←
-    match j.getObjVal? "values" with
-    | .ok (.arr vs) => vs.toList.mapM fun v => do
-        let n ← v.getObjValAs? Int "value"
-        pure n
-    | _ => pure []
-  return { status, values, output, msgHas := message }
-
-def memberMatches (expected actual : Member) : Bool :=
-  expected.status == actual.status && expected.values == actual.values
-    && expected.output == actual.output
-    && (expected.msgHas == "" || (actual.msgHas.splitOn expected.msgHas).length > 1)
-
-def enumerate (program : Program) (name : String) (width : Nat := 8) (sites : Nat := 24) :
-    Except String CLI.EnumOutcome :=
-  match CLI.enumSetup program name #[] with
-  | .error err => .error s!"setup failed: {repr err}"
-  | .ok ep => CLI.explore ep 200000 width sites 128 5000000 none
-
-/-- The EXACT-SET assertion: the enumerated observations, projected, equal
-the expected members (each expected matched by exactly one actual, and no
-actual unmatched). -/
-def expectSet (name : String) (program : Program) (fn : String) (expected : List Member)
-    (width : Nat := 8) : IO Bool := do
-  match enumerate program fn width with
-  | .error msg => fail s!"{name}: enumeration failed: {msg}"
-  | .ok out =>
-    match out.observations.toList.mapM project with
-    | .error e => fail s!"{name}: observation decode: {e}"
-    | .ok actual =>
-      let unmatchedExpected := expected.filter fun e => !(actual.any (memberMatches e ·))
-      let unmatchedActual := actual.filter fun a => !(expected.any (memberMatches · a))
-      if unmatchedExpected.isEmpty && unmatchedActual.isEmpty && actual.length == expected.length then
-        ok s!"{name}: exact set of {expected.length} member(s) — leaves={out.leaves} sites={out.sitesSeen} steps={out.steps} maxDepth={out.maxDepth}"
-      else
-        fail s!"{name}: set mismatch — expected {repr expected}; actual {repr actual}; unmatched expected {repr unmatchedExpected}; unmatched actual {repr unmatchedActual}"
-
-/-- A NAMED refusal of the whole enumeration (a malformed graph, an invalid
-join, a blocked receive — never a member, never a stuck run). -/
-def expectRefusal (name : String) (program : Program) (fn : String) (needle : String) : IO Bool := do
-  match enumerate program fn with
-  | .error msg =>
-      if (msg.splitOn needle).length > 1 then ok s!"{name}: refused by name ({needle})"
-      else fail s!"{name}: refused, but not naming {repr needle}: {msg}"
-  | .ok out => fail s!"{name}: expected a named refusal ({repr needle}), got {out.observations.size} member(s)"
-
-/-- One tape's run through the enumerator's single-run driver (the pool
-mirror): (status, projected member, leftover stream). -/
-def runTape (program : Program) (fn : String) (tape : List Nat) :
-    Except String (Member × List Nat) :=
-  match CLI.enumSetup program fn #[] with
-  | .error err => .error s!"setup failed: {repr err}"
-  | .ok ep =>
-    match CLI.enumRunProgram ep 200000 tape with
-    | .error (e, out) => .error s!"{repr e} (output {repr (String.fromUTF8! (ByteArray.mk out.bytes))})"
-    | .ok (_, j, leftover) => (project j).map (·, leftover)
-
-def expectTape (name : String) (program : Program) (fn : String) (tape : List Nat)
-    (expected : Member) (leftover : Option (List Nat) := none) : IO Bool := do
-  match runTape program fn tape with
-  | .error e => fail s!"{name}: tape {tape} failed: {e}"
-  | .ok (m, left) =>
-    if !memberMatches expected m then
-      fail s!"{name}: tape {tape} gave {repr m}, expected {repr expected}"
-    else match leftover with
-      | some l => if left == l then ok s!"{name}: tape {tape} → expected member, leftover {left}"
-                  else fail s!"{name}: tape {tape} leftover {left}, expected {l}"
-      | none => ok s!"{name}: tape {tape} → expected member"
-
-def expectTapeStop (name : String) (program : Program) (fn : String) (tape : List Nat)
-    (needle : String) : IO Bool := do
-  match runTape program fn tape with
-  | .error e =>
-      if (e.splitOn needle).length > 1 then ok s!"{name}: tape {tape} stopped by name ({needle})"
-      else fail s!"{name}: tape {tape} stopped without naming {repr needle}: {e}"
-  | .ok (m, _) => fail s!"{name}: tape {tape} expected the stop {repr needle}, got {repr m}"
 
 /-! ## Builders -/
 
@@ -153,12 +56,6 @@ def mainInt (decls : List Param) (body : List Stmt) : Func :=
   { id := ⟨"main"⟩, args := #[], results := #[intP "z"], body := .block decls.toArray body.toArray }
 def mainUnit (decls : List Param) (body : List Stmt) : Func :=
   { id := ⟨"main"⟩, args := #[], results := #[], body := .block decls.toArray body.toArray }
-
-def okZ (z : Int) : Member := { status := "ok", values := [z] }
-def okOut (out : String) : Member := { status := "ok", output := out }
-def panicOut (needle : String) (out : String := "") : Member :=
-  { status := "panic", output := out, msgHas := needle }
-def oob (i n : Nat) : String := s!"index out of range [{i}] with length {n}"
 
 /-! ## W1  `v := mut() + a`  → {1, 2} -/
 

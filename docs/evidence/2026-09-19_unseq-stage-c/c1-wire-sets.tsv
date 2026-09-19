@@ -1,0 +1,38 @@
+# The reference sets over the WIRE (Tests/UnseqWire.lean, C1; leaves = complete enumeration paths, sites = pick positions branched, steps = machine steps over the tree, maxDepth)
+# check	leaves	sites	steps	maxDepth
+W1 wire: v := mut() + a: exact set of 2 member(s)	2	1	191	1
+W2 wire: v := a[b[0]] + mut(): exact set of 3 member(s)	15	12	1800	4
+W3 wire: a[i] += mut(): exact set of 2 member(s)	4	3	382	3
+W4 wire: _ = a[1] + b[2] both nil: exact set of 2 member(s)	2	1	31	1
+W5 wire: loop, stale binders impossible: exact set of 2 member(s)	7	6	634	4
+W6 wire: v := x + inc() + inc(): exact set of 3 member(s)	5	4	569	3
+R1 wire: x + y + mut(), unreduced: exact set of 4 member(s)	8	6	790	3
+R1 wire REDUCED (read y after read x): loses 1 — the refuted reduction as a NEGATIVE: exact set of 3 member(s)	4	3	440	3
+R2a wire z=true: exact set of 1 member(s)	1	0	81	0
+R2a wire z=false: exact set of 1 member(s)	1	0	117	0
+R2a INVALID join (sinkB reads the region-confined $u1): refused by the decoder, statically: refused by name (invalid branch join)
+R2b wire, E1 anchored at the COMPLETION: exact set of 1 member(s)	1	0	124	0
+R2b wire anchored at the guard ENTRY (refuted): a lexical-edge mutation the exact-set check names: exact set of 2 member(s)	3	2	268	2
+R2c wire b=true: exact set of 2 member(s)	2	1	340	1
+R2c wire b=false: exact set of 2 member(s)	2	1	304	1
+R4 wire: old := a; a[0] += mut() (mut rebinds a): exact set of 2 member(s)	4	3	505	3
+R6 wire SPLIT: exact set of 2 member(s)	2	1	256	1
+R6 wire FUSED (the narrowing): a data-edge mutation the exact-set check names: exact set of 1 member(s)	1	0	170	0
+mutant mut-dup-binder: refused by name (duplicate result)
+mutant mut-cycle: refused by name (not a linear extension)
+mutant mut-skipped-join: refused by name (invalid branch join)
+mutant mut-sort: refused by name (sort mismatch)
+mutant mut-nondollar: refused by name (not a reserved `$` slot name)
+mutant mut-unknown-slot: refused by name (unknown slot)
+mutant mut-hidden-read: refused by name (hidden read in a pure node)
+mutant mut-logical-head: refused by name (logical operator)
+mutant mut-type: refused by name (disagrees with cell)
+mutant mut-probe-in-then: refused by name (legacy unseq-probe inside an unseq completion)
+mutant mut-nested: refused by name (nested unseq)
+mutant mut-recover: refused by name (recover())
+mutant mut-unknown-kind: refused by name (unknown occurrence kind)
+mutant mut-target-shape: refused by name (non-atom base or index)
+mutant mut-empty: refused by name (empty graph)
+mutant mut-result-arity: refused by name (resultTypes arity)
+mutant mut-guard-type: refused by name (not a bool cell)
+mutant mut-unknown-key: refused by name (unknown key)

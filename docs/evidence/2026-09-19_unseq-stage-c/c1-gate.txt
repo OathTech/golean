@@ -1,0 +1,68 @@
+# C1 gate tail — scripts/capped scripts/ci --slow under the box-wide lock, tree = C0 ccd3bdab + the C1 edits (before the C1 commit); the wire schema gained the `unseq` node, so the tier=slow row was RE-CERTIFIED fresh
+
+1:2026-09-19T23:11:03Z lock acquired; running: scripts/capped scripts/ci --slow
+714:CMD_EXIT=1 SECONDS=1001
+715:2026-09-19T23:27:44Z lock released
+
+differential coverage summary: cases=3686 pass=3437 fail=249 export_status=0
+results: artifacts/coverage/latest.tsv
+
+[1m── differential baseline diff (scripts/coverage-baseline-diff)[0m
+DRIFT vs baselines/native-full.tsv (3686 case(s) run):
+imported-goose/channel/google-search	baseline[PASS/membership] -> now[FAIL/membership]
+
+
+the drifted row (artifacts/coverage/latest.tsv): FAIL	imported-goose/channel/google-search	membership	certification: STALE certification: changed dependency build/files/GoLean/NativeToIR.lean\nFresh certification: unchanged set; seconds=135.578; candidate=artifacts/coverage/membership/imported-goose/channel/google-search/certification-candidate.json
+
+[1m══ scripts/ci summary ══[0m
+  ok   Tests/library ownership (no exceptions; executed builds checked at exit)
+  note build parallelism: cap 32G -> LEAN_NUM_THREADS=4 (cap/8G, floor 2; 32 cores on this box)
+  ok   oracle toolchain (go1.26.5 = pin)
+  ok   escape-hatch preflight
+  ok   meta-layer escape hatches (allowlist empty since the repo split)
+  ok   escape-hatch addendum (no decide +native / native-config spellings)
+  ok   bug-index cross-check
+  ok   feature-coverage (no dead tags)
+  ok   spec-anchor citations resolve at the pin
+  ok   stdlib admission register = frontend tables
+  ok   lane-validation fixtures (manifest gates reject bad shapes)
+  ok   evidence-on-main size gate
+  ok   AGENTS.md alias of CLAUDE.md
+  ok   imported-goose verbatim (above-marker bytes = pinned upstream)
+  ok   engine-isolation (core ↛ EnumDedup)
+  ok   memory-module raw call-site inventory (emit/peek discipline)
+  ok   core build (warning-free)
+  FAIL certificate provenance
+  ok   core totality audit (every GoLean/ module; required core theorems; poison controls)
+  ok   admission checker proofs and post-import audit
+  ok   declaration boundary
+  ok   wire boundary (byte-level controls through the real CLI)
+  ok   package-correct method identity
+  ok   unseq scheduler (Stage B)
+  ok   unseq wire (Stage C)
+  ok   frontend pins (realized init-order deviation + twin wire = pinned bytes)
+  ok   import-goose fixtures (importer + verbatim guard reject bad shapes)
+  ok   frontend unit tests
+  ok   lowering-diagnostic tables
+  ok   coverage-harness unit tests
+  ok   eval tests (267 ok)
+  ok   differential run completed (exit 1; failing-set judged by baseline diff)
+  ok   lane-validation fixtures incl. harness half (F4/F6/B3-B5/G5/T1-T8/D1-D6)
+  ok   negative run completed (exit 0; set judged by baseline diff)
+  ok   Tests/FloatVectors.lean = fresh hardware-oracle regeneration (byte-exact)
+  ok   inittask-std.tsv = fresh gc-derived regeneration (header at pin; byte-exact modulo date line)
+  note negative baseline diff matched (394 case(s)) but the record was made on a DIRTY tree (git_dirty=true) — certifies that worktree state, not a commit
+  FAIL baseline diff (DRIFT — see above)
+  note reconciler: 2 finding(s), 1 HIGH — report-only (details: tools/reconcile-records)
+  ok   executed library coverage (all declared libraries; all Tests modules)
+[1mRESULT: FAIL[0m
+Failed CI receipts retained: /home/dev/projects/golean/.claude/worktrees/unseq-stage-c/.tmp/ci-libraries-qxauk9uh
+CI coverage timing: close: seconds=0.007
+
+reconciler: [01] C9  HIGH    certificate provenance: STALE certification: changed dependency build/files/GoLean/NativeToIR.lean
+
+# standalone (same tree, before the gate)
+scripts/capped scripts/check-unseq-wire: EXIT=0 (build.py --check: 35 fixtures byte-identical; Lean: every reference set exact over the wire, 18 mutants refused by name; 18 mutants refused through the CLI; w1 answers 2 on the canonical tape)
+scripts/capped scripts/check-wire-boundary: EXIT=0 (11 byte-level + 7 unseq-node controls)
+scripts/capped lake env lean --run Tests/UnseqScheduler.lean: EXIT=0 (64 ok — the Stage B suite after the harness split)
+scripts/check-mem-callsites: PASS (70 rows; the decoder adds no raw memory site)

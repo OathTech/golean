@@ -144,4 +144,34 @@ expect_refusal high-surrogate     'JSON parse error' 'unpaired high surrogate'
 expect_refusal low-surrogate      'JSON parse error' 'unpaired low surrogate'
 expect_refusal invalid-utf8       'JSON parse error' 'not valid UTF-8'
 expect_refusal over-depth         'JSON parse error' 'JSON nesting deeper than'
-echo 'Wire boundary gate: PASS (11 byte-level controls through the real CLI)'
+
+# THE `unseq` NODE (evaluation-order model v2.1 Stage C, 2026-09-19; design
+# docs/2026-09-19_unseq-stage-c-design.md §5): the hand-built W1 wire
+# (Tests/unseq-wire/w1.json, build.py) is the positive control — on the canonical
+# tape the sweep runs mut first and answers 2 — and six one-edit mutants of the
+# `unseq` node must refuse through the same CLI path naming the decoder's cause:
+# a duplicate binder, a cycle (a forward reference in the rank order), a use of a
+# skipped-branch value without a join, a sort mismatch (a load through a VALUE
+# cell), a binder without the `$` reservation, an unknown slot. The full mutant
+# list (18) and the exact-set checks are scripts/check-unseq-wire's.
+run_cli_fn() { "$GOLEAN" native-json-run --input "$1" --function "$2" 2>&1; }
+out="$(run_cli_fn Tests/unseq-wire/w1.json w1)" || { echo "check-wire-boundary: FAIL [unseq w1] — the hand-built wire did not run: $out" >&2; exit 1; }
+[[ "$out" == *'"status":"ok"'* && "$out" == *'"value":2'* ]] || { echo "check-wire-boundary: FAIL [unseq w1] — expected ok/2 on the canonical tape: $out" >&2; exit 1; }
+echo "ok [unseq w1] runs, answers 2 (canonical tape: mut first)"
+expect_unseq_refusal() {  # name file-stem fn cause...
+  local name="$1" stem="$2" fn="$3" out rc=0 cause; shift 3
+  out="$(run_cli_fn "Tests/unseq-wire/$stem.json" "$fn")" || rc=$?
+  if [[ $rc -eq 0 ]]; then echo "check-wire-boundary: FAIL [$name] — the mutated unseq wire RAN (exit 0): $out" >&2; exit 1; fi
+  if [[ $rc -ne 1 ]]; then echo "check-wire-boundary: FAIL [$name] — exit $rc is not the CLI's refusal code 1 (did not decide): $out" >&2; exit 1; fi
+  for cause in "$@"; do
+    if [[ "$out" != *"$cause"* ]]; then echo "check-wire-boundary: FAIL [$name] — refused, but the refusal does not name '$cause': $out" >&2; exit 1; fi
+  done
+  echo "ok [$name] refused, naming: $*"
+}
+expect_unseq_refusal unseq-dup-binder    mut-dup-binder    w1      'duplicate result'
+expect_unseq_refusal unseq-cycle         mut-cycle         w1      'not a linear extension'
+expect_unseq_refusal unseq-skipped-join  mut-skipped-join  r2aTrue 'invalid branch join'
+expect_unseq_refusal unseq-sort-mismatch mut-sort          w3      'sort mismatch'
+expect_unseq_refusal unseq-nondollar     mut-nondollar     w1      'not a reserved'
+expect_unseq_refusal unseq-unknown-slot  mut-unknown-slot  w1      'unknown slot'
+echo 'Wire boundary gate: PASS (11 byte-level controls + 7 unseq-node controls through the real CLI)'

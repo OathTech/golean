@@ -43,7 +43,15 @@ globs = ["Tests.MethodIdentity", "Tests.MethodIdentityAudit"]
 # Stage B): the reference sets over all tapes, refusals by name, replay,
 # and the mechanism theorem's post-import audit.
 name = "UnseqSchedulerTests"
-globs = ["Tests.UnseqScheduler", "Tests.UnseqSchedulerAudit"]
+globs = ["Tests.UnseqHarness", "Tests.UnseqScheduler", "Tests.UnseqSchedulerAudit"]
+
+[[lean_lib]]
+# Stage C of the evaluation-order model v2.1: hand-built `unseq` WIRES through the
+# strict byte parser, the decoder (GoLean/NativeToIR.lean's `unseq` arm) and the
+# same enumerator — check (b) «machine equals reference over the wire»; the
+# decoder's named refusals on one-edit mutants.
+name = "UnseqWireTests"
+globs = ["Tests.UnseqWire"]
 
 [[lean_lib]]
 # The core totality audit and the core contract regressions, re-homed from the

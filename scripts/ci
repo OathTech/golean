@@ -585,6 +585,20 @@ else
   bad "unseq scheduler (Stage B) (scripts/check-unseq-scheduler)"
 fi
 
+# The `unseq` WIRE (evaluation-order model v2.1 Stage C, 2026-09-19): hand-built
+# wires — the real frontend's envelope around a hand-written `unseq` node — read
+# from their BYTES, decoded by NativeToIR's `unseq` arm and enumerated over ALL
+# tapes by the corpus's enumerator path, compared EXACTLY with the v2.1 spike's
+# reference sets (check (b) «machine equals reference over the wire»); every
+# one-edit mutant refused BY NAME, both in-process and through the real CLI; the
+# fixtures byte-identical to their generator's output.
+step "unseq wire (Stage C): exact reference sets over hand-built wires, decoder mutants by name, fixture re-derivation"
+if library_step unseq-wire bash scripts/check-unseq-wire; then
+  ok "unseq wire (Stage C)"
+else
+  bad "unseq wire (Stage C) (scripts/check-unseq-wire)"
+fi
+
 # The typed-profile family's nine steps (semantic interface; typed contract ×7;
 # typed recovery terminal classification) were REMOVED 2026-09-16 with the family
 # they gated (docs/2026-09-16_typed-profiles-parked.md §1 accounts for every step;

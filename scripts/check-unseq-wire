@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# The `unseq` WIRE gate (evaluation-order model v2.1 Stage C, lane
+# core/unseq-stage-c-0919, 2026-09-19): the hand-built wires under Tests/unseq-wire/
+# (build.py — the real frontend's envelope around a hand-written `unseq` node) are
+# (1) regenerated and compared byte-for-byte with the tracked files (the
+# re-derivation guard); (2) read from their BYTES by the strict parser, decoded by
+# GoLean/NativeToIR.lean's `unseq` arm and enumerated over ALL tapes by the corpus's
+# enumerator path, the set compared EXACTLY with the v2.1 spike's reference sets
+# (Tests/UnseqWire.lean); (3) every one-edit MUTANT is driven through the REAL CLI
+# binary (`golean native-json-run`) and must refuse (exit 1) naming its cause
+# (Tests/unseq-wire/mutants.tsv), while the untouched W1 wire runs (the canonical
+# tape gives 2: mut first). Fail closed on a missing binary, a failed
+# regeneration, a decoded mutant or a refusal that does not name its cause.
+set -Eeuo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT"
+[[ $# = 0 ]] || { echo 'check-unseq-wire: expected no arguments' >&2; exit 2; }
+. "$ROOT/scripts/typed-gate-scratch.sh"
+
+# (1) the fixtures are the generator's output, byte for byte
+GOCACHE="$ROOT/artifacts/go-build-cache" GO111MODULE=off \
+  go build -o "$gate_scratch/nativefrontend" ./tools/nativefrontend
+python3 Tests/unseq-wire/build.py --check --frontend "$gate_scratch/nativefrontend"
+
+# (2) exact sets over the wire + decoder refusals, in-process
+scripts/capped lake build UnseqWireTests golean
+scripts/capped lake env lean --run Tests/UnseqWire.lean | tee "$gate_scratch/tests.log"
+grep -q '^Unseq wire (Stage C): PASS' "$gate_scratch/tests.log"
+
+# (3) the mutants through the real CLI
+GOLEAN=".lake/build/bin/golean"
+[[ -x "$GOLEAN" ]] || { echo "check-unseq-wire: no $GOLEAN (fail closed)" >&2; exit 1; }
+out="$("$GOLEAN" native-json-run --input Tests/unseq-wire/w1.json --function w1 2>&1)" || {
+  echo "check-unseq-wire: FAIL — the untouched W1 wire did not run: $out" >&2; exit 1; }
+[[ "$out" == *'"status":"ok"'* && "$out" == *'"value":2'* ]] || {
+  echo "check-unseq-wire: FAIL — W1 on the canonical tape should answer 2 (mut first): $out" >&2; exit 1; }
+echo "ok [w1] runs on the canonical tape, answers 2"
+n=0
+while IFS=$'\t' read -r mutant needle; do
+  [[ -z "$mutant" || "$mutant" == \#* ]] && continue
+  rc=0
+  out="$("$GOLEAN" native-json-run --input "Tests/unseq-wire/$mutant.json" --function w1 2>&1)" || rc=$?
+  if [[ $rc -eq 0 ]]; then
+    echo "check-unseq-wire: FAIL [$mutant] — the mutated wire RAN (exit 0): $out" >&2; exit 1
+  fi
+  if [[ $rc -ne 1 ]]; then
+    echo "check-unseq-wire: FAIL [$mutant] — exit $rc is not the CLI's refusal code 1 (did not decide): $out" >&2; exit 1
+  fi
+  # the message travels JSON-encoded: match the needle with backquotes and quotes
+  # escaped the way the encoder writes them
+  enc="${needle//\\/\\\\}"; enc="${enc//\"/\\\"}"
+  if [[ "$out" != *"$enc"* ]]; then
+    echo "check-unseq-wire: FAIL [$mutant] — refused, but the refusal does not name '$needle': $out" >&2; exit 1
+  fi
+  echo "ok [$mutant] refused through the CLI, naming: $needle"
+  n=$((n+1))
+done < Tests/unseq-wire/mutants.tsv
+[[ $n -ge 15 ]] || { echo "check-unseq-wire: FAIL — only $n mutant(s) driven (expected ≥ 15)" >&2; exit 1; }
+printf '%s\n' "Unseq wire gate: PASS ($n mutants refused through the CLI; exact sets in tests.log)"
