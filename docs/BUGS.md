@@ -6968,16 +6968,21 @@ malformed surrogates) driven through the CLI, not through an already-parsed
 
 ## BUG-111 — the race detector's conflict relation compares `.field` path steps STRUCTURALLY, static `typeId` included, so a struct-tag-compatible pointer alias (`p.f` vs `(*B)(p).f`, triage L7) yields two «disjoint» shadow keys for ONE memory word: an HB-unordered write through one alias and a read through the other is NOT a conflict — a MISSED RACE, fail-OPEN vs `go run -race` [fidelity; race detector conflict relation (`locPrefix`/`ShadowKey.overlap`, Race.lean); found by the C1 S0 frame-law spike]
 
-- Status: open — found 2026-09-18 by the C1 S0 spike (`spikes/c1-frame/Frame.lean`,
-  evidence `docs/evidence/2026-09-18_c1-memory-module/README.md`, finding 1). Fix (i)
-  — canonical-path keys at emission — RULED [USER] Mike 2026-09-18 (verbatim, relayed
-  by the [AGENT] coordinator: «(1) agree, (2) agree. Go ahead»; record
-  `docs/2026-08-31_qrow-rulings.md`), carried by lane `core/c1-memory-module-s2c-0918`
-  (handoff `docs/2026-09-18_c1-memory-module-s2c-handoff.md`). RED-FIRST ROW ADDED
-  2026-09-18, born FAIL as predicted (the machine accepts the racy program: the
-  enumerator finds no refusing member); the fix commit flips it.
+- Status: fixed (2026-09-18, lane `core/c1-memory-module-s2c-0918` — fix (i), canonical-path
+  keys at emission, RULED [USER] Mike 2026-09-18 (verbatim, relayed by the [AGENT]
+  coordinator: «(1) agree, (2) agree. Go ahead»; record `docs/2026-08-31_qrow-rulings.md`);
+  found 2026-09-18 by the C1 S0 spike (`spikes/c1-frame/Frame.lean`, evidence
+  `docs/evidence/2026-09-18_c1-memory-module/README.md`, finding 1). `Loc.canon` (Ops.lean):
+  every key the module EMITS — the `.data` paths (`Mem.*`), the `.syncWord` paths
+  (`syncWord`), the `.chanObj` identities (`chanSendEntry`/`chanCloseWrite`/`selectPoll`) and
+  the `HbAction` locations that key the clock tables — has its `.field` steps' static
+  `typeId` erased to `TypeId.canon` with the field NAME kept as the position; machine paths
+  are untouched. The red-first row (born FAIL at the rows' commit) flips to PASS — the
+  DISCLOSED `Cases:` flip, re-pinned with its reason in `baselines/native-full.tsv`; the
+  guard stays PASS; no other row changed (handoff
+  `docs/2026-09-18_c1-memory-module-s2c-handoff.md` §2/§3).
 - Pinned-by: differential
-- Cases: race/negative/struct-tag-alias-field
+- Cases: race/negative/struct-tag-alias-field, race/free/struct-tag-alias-disjoint-fields
 - Rows (2026-09-18, lane `core/c1-memory-module-s2c-0918`): `race/negative/struct-tag-alias-field`
   (`raceStructTagAliasField`, lane `racy`, expected_status `race`): `type aliasA struct{ f int };
   type aliasB struct{ f int }`; `var a aliasA; q := (*aliasB)(&a)`; goroutine 1 `a.f = 1`, goroutine 2

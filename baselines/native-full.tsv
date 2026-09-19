@@ -1,5 +1,9 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 3678 (3429 PASS / 249 FAIL)
+# cases: 3678 (3430 PASS / 248 FAIL)
+# re-pinned: 2026-09-18 [AGENT], core/c1-memory-module-s2c-0918, BUG-111 FIXED (fix (i), canonical-path keys at emission — RULED [USER]
+#   2026-09-18 relayed): the DISCLOSED FAIL->PASS flip of race/negative/struct-tag-alias-field (the alias race is now refused on every
+#   enumerated path); the guard race/free/struct-tag-alias-disjoint-fields stays PASS; no other row changed. Recorded from a full
+#   scripts/capped scripts/ci --diff at the fix commit (docs/2026-09-18_c1-memory-module-s2c-handoff.md §2). 3678 = 3430 PASS / 248 FAIL.
 # re-pinned: 2026-09-18 [AGENT], core/c1-memory-module-s2c-0918, BUG-111 RED-FIRST: two rows ADDED (no existing row changed) —
 #   race/negative/struct-tag-alias-field born FAIL at stage lean-observation (the machine observes `ok` where `go run -race` reports; the
 #   structural keys miss the alias race; on BUG-111's Cases: line — the stage word corrected from the first pin's `racy` to what the gate at
@@ -4226,7 +4230,7 @@ PASS	race/negative/promoted-dispatch	racy
 PASS	race/negative/map-range-iter	racy
 PASS	race/negative/array-const-index-same-elem	racy
 PASS	race/negative/array-const-index-whole-write	racy
-FAIL	race/negative/struct-tag-alias-field	lean-observation
+PASS	race/negative/struct-tag-alias-field	racy
 PASS	race/negative-sync/one-side	racy
 PASS	race/negative-sync/rlock-serialized	racy
 PASS	race/negative-sync/wg-no-edge	racy

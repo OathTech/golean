@@ -3243,35 +3243,35 @@ theorem mapEntryIndex?_ok_entries {kt : Ty}
 
 theorem Mem.load_eq {σ : Store} {l : Loc} {v : GoValue} {tr : AccessTrace}
     (h : Mem.load ctx σ l = .ok (v, tr)) :
-    loadLoc ctx σ l = .ok v ∧ tr = [.access .read (.data l)] := by
+    loadLoc ctx σ l = .ok v ∧ tr = [.access .read (.data l.canon)] := by
   simp only [Mem.load, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
   obtain ⟨v', hv, rfl, rfl⟩ := h
   exact ⟨hv, rfl⟩
 
 theorem Mem.loadFor_eq {σ : Store} {root leaf : Loc} {v : GoValue} {tr : AccessTrace}
     (h : Mem.loadFor ctx σ root leaf = .ok (v, tr)) :
-    loadLoc ctx σ root = .ok v ∧ tr = [.access .read (.data leaf)] := by
+    loadLoc ctx σ root = .ok v ∧ tr = [.access .read (.data leaf.canon)] := by
   simp only [Mem.loadFor, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
   obtain ⟨v', hv, rfl, rfl⟩ := h
   exact ⟨hv, rfl⟩
 
 theorem Mem.store_eq {σ σ' : Store} {l : Loc} {v : GoValue} {tr : AccessTrace}
     (h : Mem.store ctx σ l v = .ok (σ', tr)) :
-    storeLoc ctx σ l v = .ok σ' ∧ tr = [.access .write (.data l)] := by
+    storeLoc ctx σ l v = .ok σ' ∧ tr = [.access .write (.data l.canon)] := by
   simp only [Mem.store, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
   obtain ⟨s', hs, rfl, rfl⟩ := h
   exact ⟨hs, rfl⟩
 
 theorem Mem.mapRead_eq {σ : Store} {l : Loc} {p : Array (Nat × GoValue × GoValue) × Nat}
     {tr : AccessTrace} (h : Mem.mapRead σ l = .ok (p, tr)) :
-    mapPayload? σ l = .ok p ∧ tr = [.access .read (.data l)] := by
+    mapPayload? σ l = .ok p ∧ tr = [.access .read (.data l.canon)] := by
   simp only [Mem.mapRead, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
   obtain ⟨p', hp, rfl, rfl⟩ := h
   exact ⟨hp, rfl⟩
 
 theorem Mem.mapWrite_eq {σ σ' : Store} {l : Loc} {es : Array (Nat × GoValue × GoValue)}
     {n : Nat} {tr : AccessTrace} (h : Mem.mapWrite σ l es n = .ok (σ', tr)) :
-    storeMapPayload σ l es n = .ok σ' ∧ tr = [.access .write (.data l)] := by
+    storeMapPayload σ l es n = .ok σ' ∧ tr = [.access .write (.data l.canon)] := by
   simp only [Mem.mapWrite, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
   obtain ⟨s', hs, rfl, rfl⟩ := h
   exact ⟨hs, rfl⟩

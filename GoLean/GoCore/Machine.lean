@@ -2264,12 +2264,12 @@ def chanValueLoc : GoValue → Option Loc
 chan.go; BUG-045): recorded whether the send then commits, parks or panics — the
 `.chanObj` key, exact identity (`ShadowKey.overlap`). A nil channel has no object
 (the caller emits nothing). -/
-def chanSendEntry (loc : Loc) : AccessTrace := [.access .read (.chanObj loc)]
+def chanSendEntry (loc : Loc) : AccessTrace := [.access .read (.chanObj loc.canon)]
 
 /-- `closechan`'s `racewritepc(c.raceaddr())` on its SUCCESS path (BUG-045; the
 closed/nil panics fire before it) — checked under the closer's pre-release clock,
 so it PRECEDES the `.closeOp` action in the label. -/
-def chanCloseWrite (loc : Loc) : AccessTrace := [.access .write (.chanObj loc)]
+def chanCloseWrite (loc : Loc) : AccessTrace := [.access .write (.chanObj loc.canon)]
 
 /-- `selectgo` pass 1 (select.go; BUG-046): one channel-object READ per polled
 SEND clause in clause order — receive clauses are acquire-only, nil channels are
@@ -2499,7 +2499,7 @@ KEY (A6; formerly a phantom `Loc.field` path under a made-up `TypeId`):
 its enclosing struct) overlap the word while sibling fields and sibling
 words stay disjoint. -/
 def syncWord (loc : Loc) (kind : SyncKind) (word : SyncWordName) : ShadowKey :=
-  .syncWord loc kind word
+  .syncWord loc.canon kind word
 
 /-- The accesses recorded on the primitive's own words at a sync op's
 ENTRY — before the op's release/acquire hook — from the op and the
@@ -2613,12 +2613,13 @@ release-acquire on success (`stored`) / acquire on failure. Emitted by `applyAto
 on a COMMITTED op only (a nil-address panic is delivered with the empty label — gc's
 `racecallatomic` faults on the address before any TSan call). -/
 def atomicEvents (head : AtomicStmtOp) (loc : Loc) (stored : Bool) : AccessTrace :=
-  let acc : MemEvent := .access (atomicOpKind head) (.data loc)
+  let l := loc.canon
+  let acc : MemEvent := .access (atomicOpKind head) (.data l)
   match head with
-  | .load => [.hb (.atomicAcquire loc), acc]
-  | .store => [acc, .hb (.atomicReleaseStore loc)]
-  | .add | .swap => [acc, .hb (.atomicReleaseAcquire loc)]
-  | .cas => [acc, .hb (if stored then .atomicReleaseAcquire loc else .atomicAcquire loc)]
+  | .load => [.hb (.atomicAcquire l), acc]
+  | .store => [acc, .hb (.atomicReleaseStore l)]
+  | .add | .swap => [acc, .hb (.atomicReleaseAcquire l)]
+  | .cas => [acc, .hb (if stored then .atomicReleaseAcquire l else .atomicAcquire l)]
 
 /-! ## The panic chain (the unwinding arc, `docs/2026-07-25_unwinding-arc.md` §A1–A3) -/
 
@@ -3913,7 +3914,7 @@ def applyChanOp (s : Store) (op : ChanStOp) (vs : List GoValue)
             return (.panicking [panicEntry "send on closed channel"] k, s, entry)
           else if buf.size < capacity then do
             let s' ← storeChanPayload s loc (buf.push v') capacity closed
-            return (.next k, s', entry ++ [.hb (.slotOp loc capacity true)])
+            return (.next k, s', entry ++ [.hb (.slotOp loc.canon capacity true)])
           else
             return (.blockedSend (some loc) v' k, s, entry)
   | .recv targets elem, [chv] => do
@@ -3929,7 +3930,7 @@ def applyChanOp (s : Store) (op : ChanStOp) (vs : List GoValue)
               -- THE LABEL: `chanrecv` is acquire-only — no channel-object
               -- access (BUG-045); the dequeue transits the next receive slot.
               let s₁ ← storeChanPayload s loc (buf.eraseIdx! 0) capacity closed
-              let tr : AccessTrace := [.hb (.slotOp loc capacity false)]
+              let tr : AccessTrace := [.hb (.slotOp loc.canon capacity false)]
               match targets with
               | [] => return (.next k, s₁, tr)
               | _ :: _ => do
@@ -3940,7 +3941,7 @@ def applyChanOp (s : Store) (op : ChanStOp) (vs : List GoValue)
               if closed then do
                 -- The closed-and-empty receive acquires the closer's clock.
                 let zero ← defaultValue ctx elem
-                let tr : AccessTrace := [.hb (.closeAcquire loc)]
+                let tr : AccessTrace := [.hb (.closeAcquire loc.canon)]
                 match targets with
                 | [] => return (.next k, s, tr)
                 | _ :: _ => do
@@ -3961,7 +3962,7 @@ def applyChanOp (s : Store) (op : ChanStOp) (vs : List GoValue)
             let s' ← storeChanPayload s loc buf capacity true
             -- THE LABEL: `closechan`'s channel-object WRITE on the success
             -- path (BUG-045), under the pre-release clock, THEN the release.
-            return (.next k, s', chanCloseWrite loc ++ [.hb (.closeOp loc capacity)])
+            return (.next k, s', chanCloseWrite loc ++ [.hb (.closeOp loc.canon capacity)])
   | op, vs => stuck s!"malformed channel-operator application: {repr op} on {vs.length} operand(s)"
 
 /-- **Apply a sync statement's head to its evaluated operands — the
@@ -4058,7 +4059,7 @@ def applySyncOpCore (s : Store) (op : SyncOp) (vs : List GoValue)
           if locked then return (.blockedSync .lock loc env k, s, entry)
           else do
             let s' ← storeLoc ctx s loc (.syncData (.mutex true))
-            return (.next k, s', entry ++ [.hb (.syncAcquire loc false)])
+            return (.next k, s', entry ++ [.hb (.syncAcquire loc.canon false)])
       | other => stuck s!"Lock on a non-mutex sync cell: {repr other}"
   | .unlock, [av] => do
       let loc ← valueAsLoc av
@@ -4068,7 +4069,7 @@ def applySyncOpCore (s : Store) (op : SyncOp) (vs : List GoValue)
           if locked then do
             let s' ← storeLoc ctx s loc (.syncData (.mutex false))
             return (.next k, s', syncEntryKinds .unlock pre 0 false loc
-              ++ [.hb (.syncRelease loc false)] ++ syncReleaseTailKinds .unlock pre loc)
+              ++ [.hb (.syncRelease loc.canon false)] ++ syncReleaseTailKinds .unlock pre loc)
           else throw (.fatal "sync: unlock of unlocked mutex")
       | other => stuck s!"Unlock on a non-mutex sync cell: {repr other}"
   | .rlock, [av] => do
@@ -4081,7 +4082,7 @@ def applySyncOpCore (s : Store) (op : SyncOp) (vs : List GoValue)
             return (.blockedSync .rlock loc env k, s, entry)
           else do
             let s' ← storeLoc ctx s loc (.syncData (.rwmutex writer (readers + 1) pendingW))
-            return (.next k, s', entry ++ [.hb (.syncAcquire loc false)])
+            return (.next k, s', entry ++ [.hb (.syncAcquire loc.canon false)])
       | other => stuck s!"RLock on a non-RWMutex sync cell: {repr other}"
   | .runlock, [av] => do
       let loc ← valueAsLoc av
@@ -4092,7 +4093,7 @@ def applySyncOpCore (s : Store) (op : SyncOp) (vs : List GoValue)
           | r + 1 => do
               let s' ← storeLoc ctx s loc (.syncData (.rwmutex writer r pendingW))
               return (.next k, s', syncEntryKinds .runlock pre 0 false loc
-                ++ [.hb (.syncRelease loc true)] ++ syncReleaseTailKinds .runlock pre loc)
+                ++ [.hb (.syncRelease loc.canon true)] ++ syncReleaseTailKinds .runlock pre loc)
           | 0 => throw (.fatal "sync: RUnlock of unlocked RWMutex")
       | other => stuck s!"RUnlock on a non-RWMutex sync cell: {repr other}"
   | .wlock, [av] => do
@@ -4103,7 +4104,7 @@ def applySyncOpCore (s : Store) (op : SyncOp) (vs : List GoValue)
       | .rwmutex writer readers pendingW =>
           if !writer && readers == 0 then do
             let s' ← storeLoc ctx s loc (.syncData (.rwmutex true 0 pendingW))
-            return (.next k, s', entry ++ [.hb (.syncAcquire loc true)])
+            return (.next k, s', entry ++ [.hb (.syncAcquire loc.canon true)])
           else do
             -- Park AND register as a pending writer: the documented
             -- exclusion of new readers starts at the BLOCKED Lock call
@@ -4119,7 +4120,7 @@ def applySyncOpCore (s : Store) (op : SyncOp) (vs : List GoValue)
           if writer then do
             let s' ← storeLoc ctx s loc (.syncData (.rwmutex false readers pendingW))
             return (.next k, s', syncEntryKinds .wunlock pre 0 false loc
-              ++ [.hb (.syncRelease loc false)] ++ syncReleaseTailKinds .wunlock pre loc)
+              ++ [.hb (.syncRelease loc.canon false)] ++ syncReleaseTailKinds .wunlock pre loc)
           else throw (.fatal "sync: Unlock of unlocked RWMutex")
       | other => stuck s!"write-Unlock on a non-RWMutex sync cell: {repr other}"
   | .wgAdd, [av, dv] => do
@@ -4167,7 +4168,7 @@ def applySyncOpCore (s : Store) (op : SyncOp) (vs : List GoValue)
           -- later recovered still released; probed ordering, design
           -- note §4). No tail.
           let tr := syncEntryKinds .wgAdd pre delta false loc
-            ++ (if delta < 0 then [.hb (.syncRelease loc false)] else [])
+            ++ (if delta < 0 then [.hb (.syncRelease loc.canon false)] else [])
           if counter' < 0 then
             -- Payload CLASS is gc-exact (arc-end fix round 2026-08-10):
             -- gc's sync package raises this with `panic("...")` — a plain
@@ -4200,7 +4201,7 @@ def applySyncOpCore (s : Store) (op : SyncOp) (vs : List GoValue)
       let entry := syncEntryKinds .wgWait pre 0 false loc
       match pre with
       | .waitGroup counter waiters =>
-          if counter == 0 then return (.next k, s, entry ++ [.hb (.syncAcquire loc false)])
+          if counter == 0 then return (.next k, s, entry ++ [.hb (.syncAcquire loc.canon false)])
           else do
             let s' ← storeLoc ctx s loc (.syncData (.waitGroup counter (waiters + 1)))
             return (.blockedSync .wgWait loc env k, s', entry)
@@ -4221,7 +4222,7 @@ def applySyncOpCore (s : Store) (op : SyncOp) (vs : List GoValue)
             return (c', s'', entry)
           else if done then do
             let (c', s'') ← enterRecvTargets s targets [.bool false] (.seqn #[]) env k
-            return (c', s'', entry ++ [.hb (.syncAcquire loc false)])
+            return (c', s'', entry ++ [.hb (.syncAcquire loc.canon false)])
           else
             return (.blockedSync (.onceBegin targets) loc env k, s, entry)
       | other => stuck s!"Once.Do begin on a non-Once sync cell: {repr other}"
@@ -4235,7 +4236,7 @@ def applySyncOpCore (s : Store) (op : SyncOp) (vs : List GoValue)
             -- `o.done.Store(true)`, the release, then the deferred
             -- `o.m.Unlock()`'s Add (the tail).
             return (.next k, s', syncEntryKinds .onceComplete pre 0 false loc
-              ++ [.hb (.syncRelease loc false)] ++ syncReleaseTailKinds .onceComplete pre loc)
+              ++ [.hb (.syncRelease loc.canon false)] ++ syncReleaseTailKinds .onceComplete pre loc)
           else throw (.internal "onceComplete without a matching onceBegin")
       | other => stuck s!"Once.Do complete on a non-Once sync cell: {repr other}"
   -- The TRY heads never reach the core: `applySyncOp` draws their pick
@@ -4403,7 +4404,7 @@ def applyTryLock (s : Store) (op : SyncOp) (loc : Loc) (pre : SyncPrim)
         return (c', s', syncEntryKinds op pre 0 false loc)
       else do
         let (c', s') ← tryDeliver true sAcq targets env k
-        return (c', s', syncEntryKinds op pre 0 true loc ++ [.hb (.syncAcquire loc alsoB)])
+        return (c', s', syncEntryKinds op pre 0 true loc ++ [.hb (.syncAcquire loc.canon alsoB)])
 
 /-- **Apply a sync statement's head to its evaluated operands, with the
 choice stream** — the sync registry entry (the `applyStmtOp` mold over
@@ -4536,7 +4537,7 @@ def commitClause (s : Store) (env : LocalEnv) (k : Cont) :
             -- next send slot; the select's poll reads are its CALLER's
             -- (`applySelectCore`/`arrivalPoll`), never the commit's — a woken
             -- select (`resumeThread`) commits through here and re-polls nothing.
-            return (.exec body env k, s', [.hb (.slotOp loc capacity true)])
+            return (.exec body env k, s', [.hb (.slotOp loc.canon capacity true)])
           else stuck "select committed an unready send clause"
   | .recvEv chv targets elem body => do
       let ch ← valueAsChan chv
@@ -4548,11 +4549,11 @@ def commitClause (s : Store) (env : LocalEnv) (k : Cont) :
             match buf[0]? with
             | some v => do
                 let s₁ ← storeChanPayload s loc (buf.eraseIdx! 0) capacity closed
-                pure (v, true, s₁, ([.hb (.slotOp loc capacity false)] : AccessTrace))
+                pure (v, true, s₁, ([.hb (.slotOp loc.canon capacity false)] : AccessTrace))
             | none =>
                 if closed then do
                   let zero ← defaultValue ctx elem
-                  pure (zero, false, s, ([.hb (.closeAcquire loc)] : AccessTrace))
+                  pure (zero, false, s, ([.hb (.closeAcquire loc.canon)] : AccessTrace))
                 else stuck "select committed an unready receive clause"
           match targets with
           | [] => return (.exec body env k, s₁, tr)

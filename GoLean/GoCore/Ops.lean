@@ -1579,8 +1579,37 @@ def locPrefix (l : Loc) : Loc → Bool
   | m@(.field b _ _) => l == m || locPrefix l b
   | m@(.index b _) => l == m || locPrefix l b
 
-/-- Path overlap: the conflict relation on recorded DATA accesses. -/
+/-- Path overlap: the conflict relation on recorded DATA accesses. On CANONICAL
+keys (`Loc.canon`, every emitter since BUG-111's fix) prefix means «the same word
+or a word inside it» whatever the static spelling of the field steps. -/
 def locOverlap (a b : Loc) : Bool := locPrefix a b || locPrefix b a
+
+/-- The one canonical `TypeId` of a KEY path's field steps (BUG-111): not a type the
+frontend can name (`$` is not a Go identifier character), so a canonical key never
+collides with a machine path's spelling. -/
+def TypeId.canon : TypeId := ⟨"$canon"⟩
+
+/-- **The CANONICAL key path of a memory path** (BUG-111, fix (i) — RULED [USER] Mike
+2026-09-18, relayed: «(2) agree»): a `.field` step's `typeId` is the STATIC type the
+frontend recorded for the base expression — a spelling, not a component of the
+address — and after a pointer conversion between struct-tag-compatible types
+(`structTagCompatible`: identical `FieldDef` lists; `loadLoc`/`storeLoc` accept either
+tag on the path) two goroutines can name ONE word with two typeIds (`p.f` vs
+`(*B)(p).f`). Keying the shadow structurally then MISSES the race (fail-open vs
+`go run -race`, which keys by address). So every key the module EMITS — the
+`.data` paths, the sync primitives' `.syncWord` paths, the `.chanObj` identities,
+and the `HbAction` locations that key the clock tables — is this canonical form:
+the typeId erased to `TypeId.canon`, the field NAME kept as the position (on every
+path the machine accepts, the name determines the field: the tag is the cell's mint
+tag or tag-compatible with it), indices kept. The machine's own paths (`Loc` in
+configurations, `loadLoc`/`storeLoc`) are untouched — this is a KEY, derived at
+emission from where the access lands. `ShadowKey.overlap` stays one table and
+`locPrefix` on canonical keys is the canonical-prefix relation (the C1 S0 spike's
+`pathsDisjoint`, for which the disjoint-path frame law `f1_canon` holds). -/
+def _root_.GoLean.Loc.canon : Loc → Loc
+  | .base a => .base a
+  | .field b _ f => .field b.canon TypeId.canon f
+  | .index b i => .index b.canon i
 
 /-! ## Shadow keys (design-hygiene A6, 2026-09-04)
 
@@ -1609,7 +1638,8 @@ deriving instance Ord for SyncKind
 
 /-- What one shadow cell is keyed by. -/
 inductive ShadowKey where
-  /-- A memory path (the data footprint; overlap = path prefix). -/
+  /-- A memory path (the data footprint; overlap = path prefix) — CANONICAL
+  (`Loc.canon`) at every emitter since BUG-111's fix. -/
   | data (l : Loc)
   /-- A sync primitive's gc word: the primitive's cell path, its kind, the
   word. Overlaps itself exactly, and any DATA path that is a prefix of
@@ -1853,26 +1883,26 @@ chain (`Mem.loadFor` at `projChainTarget`'s leaf; the dispatch read at
 /-- The emitting READ of a whole cell path. -/
 def Mem.load (state : Store) (l : Loc) : Except Stop (GoValue × AccessTrace) := do
   let v ← loadLoc ctx state l
-  return (v, [.access .read (.data l)])
+  return (v, [.access .read (.data l.canon)])
 
 /-- The NARROWED read: the ROOT value is loaded, the access is recorded
 at `leaf` (a path under `root`, chosen by the caller from what Go reads
 here). -/
 def Mem.loadFor (state : Store) (root leaf : Loc) : Except Stop (GoValue × AccessTrace) := do
   let v ← loadLoc ctx state root
-  return (v, [.access .read (.data leaf)])
+  return (v, [.access .read (.data leaf.canon)])
 
 /-- The emitting WRITE of a cell path (leaf-normalized by `storeLoc`). -/
 def Mem.store (state : Store) (l : Loc) (value : GoValue) : Except Stop (Store × AccessTrace) := do
   let s' ← storeLoc ctx state l value
-  return (s', [.access .write (.data l)])
+  return (s', [.access .write (.data l.canon)])
 
 /-- A map object is ONE location for race purposes (gc/TSan's «concurrent
 map read and map write»): the emitting read of a map payload cell. -/
 def Mem.mapRead (state : Store) (loc : Loc) :
     Except Stop ((Array (Nat × GoValue × GoValue) × Nat) × AccessTrace) := do
   let p ← mapPayload? state loc
-  return (p, [.access .read (.data loc)])
+  return (p, [.access .read (.data loc.canon)])
 
 /-- The emitting write of a map payload cell (assignment, delete, clear —
 each a map WRITE whether or not the entry set changes: gc instruments
@@ -1880,7 +1910,7 @@ each a map WRITE whether or not the entry set changes: gc instruments
 def Mem.mapWrite (state : Store) (loc : Loc) (entries : Array (Nat × GoValue × GoValue))
     (nextId : Nat) : Except Stop (Store × AccessTrace) := do
   let s' ← storeMapPayload state loc entries nextId
-  return (s', [.access .write (.data loc)])
+  return (s', [.access .write (.data loc.canon)])
 
 -- `lookup` deleted (reshape S4): variable reads are `Machine.Step.evalVar`
 -- (control-side env lookup + `loadLoc`), never a state-side name lookup.

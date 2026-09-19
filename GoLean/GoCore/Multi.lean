@@ -729,7 +729,7 @@ def resumeThread (s : Store) : Config → Except Stop (Config × Store × Access
         return (.panicking [panicEntry "send on closed channel"] k, s, [])
       else if buf.size < capacity then do
         let s' ← storeChanPayload s loc (buf.push v) capacity closed
-        return (.next k, s', [.hb (.slotOp loc capacity true)])
+        return (.next k, s', [.hb (.slotOp loc.canon capacity true)])
       else throw (.internal "resume on an unready blocked send")
   | .blockedRecv (some loc) targets elem env k => do
       let (buf, capacity, closed) ← chanCell s loc
@@ -737,12 +737,12 @@ def resumeThread (s : Store) : Config → Except Stop (Config × Store × Access
       | some v => do
           let s₁ ← storeChanPayload s loc (buf.eraseIdx! 0) capacity closed
           let (c', s₂) ← resumeRecvDelivery s₁ v true targets env k
-          return (c', s₂, [.hb (.slotOp loc capacity false)])
+          return (c', s₂, [.hb (.slotOp loc.canon capacity false)])
       | none =>
           if closed then do
             let zero ← defaultValue ctx elem
             let (c', s₂) ← resumeRecvDelivery s zero false targets env k
-            return (c', s₂, [.hb (.closeAcquire loc)])
+            return (c', s₂, [.hb (.closeAcquire loc.canon)])
           else throw (.internal "resume on an unready blocked receive")
   | .blockedSelect evs env k => do
       match ← readyClauses s evs with
@@ -767,26 +767,26 @@ def resumeThread (s : Store) : Config → Except Stop (Config × Store × Access
           if locked then throw (.internal "resume on an unready blocked Lock")
           else do
             let s' ← storeLoc ctx s loc (.syncData (.mutex true))
-            return (.next k, s', [.hb (.syncAcquire loc false)])
+            return (.next k, s', [.hb (.syncAcquire loc.canon false)])
       | .wlock, .rwmutex writer readers pendingW =>
           if !writer && readers == 0 then do
             let s' ← storeLoc ctx s loc (.syncData (.rwmutex true 0 (pendingW - 1)))
-            return (.next k, s', [.hb (.syncAcquire loc true)])
+            return (.next k, s', [.hb (.syncAcquire loc.canon true)])
           else throw (.internal "resume on an unready blocked write-Lock")
       | .rlock, .rwmutex writer readers pendingW =>
           if !writer && pendingW == 0 then do
             let s' ← storeLoc ctx s loc (.syncData (.rwmutex writer (readers + 1) pendingW))
-            return (.next k, s', [.hb (.syncAcquire loc false)])
+            return (.next k, s', [.hb (.syncAcquire loc.canon false)])
           else throw (.internal "resume on an unready blocked RLock")
       | .wgWait, .waitGroup counter waiters =>
           if counter == 0 then do
             let s' ← storeLoc ctx s loc (.syncData (.waitGroup counter (waiters - 1)))
-            return (.next k, s', [.hb (.syncAcquire loc false)])
+            return (.next k, s', [.hb (.syncAcquire loc.canon false)])
           else throw (.internal "resume on an unready blocked Wait")
       | .onceBegin targets, .once started done =>
           if started && done then do
             let (c', s₂) ← enterRecvTargets s targets [.bool false] (.seqn #[]) env k
-            return (c', s₂, [.hb (.syncAcquire loc false)])
+            return (c', s₂, [.hb (.syncAcquire loc.canon false)])
           else throw (.internal "resume on an unready blocked Once.Do")
       | _, _ => throw (.internal "blocked sync op / cell shape mismatch")
   | _ => throw (.internal "resume on a non-blocked configuration")
@@ -1252,7 +1252,7 @@ receiver's, same slot (gc pretends the value crossed the buffer). The partner's
 action is attributed to it. -/
 def pairSendEvents (loc : Loc) (capacity : Nat) (j : Nat) : AccessTrace :=
   if capacity == 0 then [.hb (.rendezvous j)]
-  else [.hb (.slotOp loc capacity true), .attributed j (.hb (.slotOp loc capacity false))]
+  else [.hb (.slotOp loc.canon capacity true), .attributed j (.hb (.slotOp loc.canon capacity false))]
 
 /-- The pairing's actions when the ARRIVING goroutine RECEIVES from a parked sender
 `j`: at an EMPTY buffer the rendezvous (a sender parks at an empty buffer only at
@@ -1261,7 +1261,7 @@ capacity 0); at a NONEMPTY (necessarily full) buffer the head-and-refill (gc:
 parked sender then releases into the tail slot. -/
 def pairRecvEvents (loc : Loc) (capacity : Nat) (bufEmpty : Bool) (j : Nat) : AccessTrace :=
   if bufEmpty then [.hb (.rendezvous j)]
-  else [.hb (.slotOp loc capacity false), .attributed j (.hb (.slotOp loc capacity true))]
+  else [.hb (.slotOp loc.canon capacity false), .attributed j (.hb (.slotOp loc.canon capacity true))]
 
 /-- Perform ONE pairing: the arriving goroutine `i` (whose op takes
 its would-block shape `bc`) pairs with the chosen candidate. Two
