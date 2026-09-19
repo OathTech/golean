@@ -638,3 +638,25 @@ The NaN question: the investigatory memo already exists
 (`docs/2026-09-18_nan-latitude-memo.md`, branch `records/nan-envelope-memo-0918`,
 reported 2026-09-18); «If so do that» is read by the coordinator as: land the memo
 (records). The memo's RULING — option [a]+[b] recommended — remains PENDING [USER].
+
+### The NaN latitude ruling record (2026-09-19) — R7 / BUG-094: adopt [a]+[b]
+
+[USER] Mike, 2026-09-19, verbatim, relayed by the [AGENT] coordinator — cite as
+relayed: «NaN: sounds good to me» — answering the coordinator's question of the same
+day, «adopt [a]+[b] as the memo recommends?», the memo being
+`docs/2026-09-18_nan-latitude-memo.md` (§5–§6), which itself answered the 2026-09-18
+ruling-record item (2) («[a] pass a parameter saying what the platform says, or [b] try
+to provide one uniform nondetermnism … depends on what the Go standard says»).
+
+**What was decided.** [a]+[b]: the relation ENVELOPES the produced NaN over every quiet
+NaN of the width at a named choice site (`ChoiceSite.nanBits`) — Contract A, the weakest
+machine, since the pinned spec fixes nothing about NaN bits and IEEE 754 makes only
+«quiet» mandatory; the executable's canonical slot 0 instantiates gc/amd64's realization
+read from `Platform.gcAmd64` NaN fields — Contract B; the two-NaN-operand order (gc's own
+instance is optimizer-dependent) becomes a width-2 membership alphabet. Latitude R7 moves
+from (b-n) NARROWED to (a) ENVELOPED on implementation; BUG-094's seven rows flip
+FAIL→PASS then. Implementation lane QUEUED after Stage C of the evaluation-order plan
+(sequencing ruling (1) of 2026-09-18); cost per memo §7 (eleven `FloatBits` NaN arms take a
+rule argument; guard + min/max pre-check deleted; no wire/observer change; 1–2 sessions).
+The R7 heading is corrected NOW (records, this train) to the memo's pre-implementation text;
+the adopted text replaces it when the lane lands.

@@ -5775,6 +5775,14 @@ PLAN: ledger FR-29 (queue 29, M).
 - Pinned-by: none (all three rows are RED by design at lean-observation: `floatBitsApply` refuses `unsupported "math.Float64bits of the machine's canonical NaN (0x7FF8000000000000): the payload of a machine-PRODUCED NaN is latitude the machine narrows (inventory R7) and gc/amd64 realizes differently — refused rather than reported"`; a reported 0x7FF8000000000000 would be a wrong answer against gc's 0xFFF8000000000000 (0/0) or 0x7FF8000000000001 (payload propagation))
 - Expect: FAIL
 - Cases: builtins/float-bits/canonical-nan-refused, builtins/float-bits/nan-arith-payload-refused, builtins/float-bits/nan-arith-payload-refused/canonical-roundtrip, builtins/float-bits/neg-canonical-refused, builtins/float-bits/neg-canonical-refused/float32, builtins/float-bits/min-max-canonical-refused, builtins/float-bits/roundtrip-payloads
+
+PLAN (RULED [USER] 2026-09-19, «NaN: sounds good to me» = adopt [a]+[b]; record
+`docs/2026-08-31_qrow-rulings.md`, «The NaN latitude ruling record (2026-09-19)»): R7
+re-envelope per `docs/2026-09-18_nan-latitude-memo.md` §6 — a `ChoiceSite.nanBits` site over
+the quiet NaNs of the width, `Platform.gcAmd64` NaN fields as slot 0, the eleven `FloatBits`
+NaN arms take a rule argument, the `floatBitsApply` guard and the min/max pre-check deleted;
+the Cases rows flip FAIL→PASS; born rows per memo §7. Implementation lane QUEUED after
+Stage C of the evaluation-order plan (one core writer).
 - Discovered: 2026-09-04 (stdlib slice 3; the primitive's admission condition — «preserve NaN payloads exactly … ±0 / quiet/signaling round-trip probes» — is MET for every pattern that enters through `Float64frombits` (rows `builtins/float-bits/roundtrip-payloads`, `nan-semantics`, `float32`: bit-exact, green); what the condition did not anticipate is the machine's OWN NaNs)
 
 WHAT: R7 narrows every NaN the machine produces (arithmetic, conversion) to

@@ -1907,7 +1907,7 @@ instance of R2.
   a value envelope {amd64 point, saturation, ...} — only worth it if a
   target program does this deliberately.
 
-### R7. NaN bit patterns produced by the machine — (b-n) NARROWED to the canonical quiet NaN; unobservable in-language
+### R7. NaN bit patterns produced by the machine — (b-n) NARROWED to the default NaN {0x7FF8…, −0x7FF8…}; OBSERVABLE in-language via `math.Float64bits` since 2026-09-04, refused under `*bits` (BUG-094); re-envelope to (a) RULED [USER] 2026-09-19 ([a]+[b], `docs/2026-09-18_nan-latitude-memo.md` §6; implementation queued after Stage C)
 
 - FloatBits.lean:68–72. Go the language cannot observe NaN payloads
   (math.Float64bits is out of scope); becomes latitude-relevant only if

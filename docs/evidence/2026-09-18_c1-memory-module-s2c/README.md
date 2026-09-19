@@ -98,3 +98,20 @@ main's certified binary `42b7bf1a…` (`.tmp/golean-main`, read-only copy).
 | `gate-tail-fixround.txt` | the `ci --diff` tail at `967712a3`: EXIT=1, 741 s, 3686 = 3437/249 (gate count; baseline 3438/248 — the stale-certificate row), red ONLY on the 5a pair (`certificate provenance` STALE on `CLI.lean`; the single `google-search` drift line), eval tests 267 ok, inventory 72 ok, core audit ok, re-pin guard 0 flips, reconciler no C4/C5; the eight rows PASS at their lanes (`mutex-handoff`'s `1` member gc-unexhibited in 32 draws — the machine's, DRF) |
 | `choice-trace-fixround.txt` | 542 ids (the audit's subset), 3,252 results per side, sorted dumps 17,052 records each, sha256 `890c2e7a…` both, `cmp` EXIT=0 |
 | `detector-soundness-fixround.txt` | 649 rows, EXIT=2 (the 9 standing refusals), HOLE 0 / possible-HOLE 0 / agree-race 41 (37 + 4) / agree-DRF 507 (503 + 4) / over-refusal 6 / refused 9 / uncertified 86 — every pre-existing cell unchanged, 1,748 s |
+
+## Merge train r42 — the 5a record ([AGENT] coordinator, 2026-09-19)
+
+[USER] Mike 2026-09-19, verbatim (relayed): «Great, merge it. Then is the next piece on NaN to just do an
+investigatory memo? If so do that». Pre-merge main `42023bd9` → `refs/snapshots/r42/main`; S2c + BUG-111
++ the ratification record (`ad594e0b`) fast-forwarded; the audit branch rebased (`8ca55b17`) and
+fast-forwarded; the NaN memo rebased (`3b99f42f`) and fast-forwarded (records). Under the lock at
+`3b99f42f`: `scripts/build-certified` EXIT=0, 118 s (binary `da7bb8376164…` — the fix
+round's gate binary); `release-check --base refs/snapshots/r42/main` EXIT=2 (EXPECTED — «STALE
+certification: changed dependency build/files/GoLean/CLI.lean»); `GOLEAN_MEM_MAX=48G scripts/capped
+scripts/ci --slow` EXIT=1, 1003 s — red on EXACTLY the 5a pair (`certificate provenance` STALE; the single
+drift line `imported-goose/channel/google-search PASS→FAIL/membership`); 3686 rows otherwise unchanged;
+negatives 394 no regression. Tail: `r42-ci-slow.tail.txt`. Candidate vs tracked record: `claim` and
+`observations` IDENTICAL; 18 input hashes differ (S2c's core files) and the receipt (clean `3b99f42f`,
+binary `da7bb837…`) — INSTALLED in this commit; a provenance refresh, not a re-pin. This commit also
+records the NaN ruling ([USER] «NaN: sounds good to me» = [a]+[b]): the rulings-ledger entry, R7's heading
+corrected to the memo's pre-implementation text, BUG-094's PLAN.
