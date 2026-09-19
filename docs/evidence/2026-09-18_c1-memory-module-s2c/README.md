@@ -115,3 +115,9 @@ negatives 394 no regression. Tail: `r42-ci-slow.tail.txt`. Candidate vs tracked 
 binary `da7bb837…`) — INSTALLED in this commit; a provenance refresh, not a re-pin. This commit also
 records the NaN ruling ([USER] «NaN: sounds good to me» = [a]+[b]): the rulings-ledger entry, R7's heading
 corrected to the memo's pre-implementation text, BUG-094's PLAN.
+
+**Green re-run at the records commit `ede220cb`** ([AGENT] coordinator, 2026-09-19): full
+`GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff` → EXIT=0, `RESULT: PASS`, `baseline diff FULL
+(3686/3686, no regression)`, `certificate provenance` ok, negatives 394 no regression; the reconciler at
+its single pre-existing finding. Round 42 closed; C1 S2c + BUG-111 + the NaN memo and ruling are on
+main; the box-wide lock released.
