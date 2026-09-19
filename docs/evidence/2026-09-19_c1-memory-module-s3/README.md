@@ -59,3 +59,19 @@ scripts/choice-trace-corpus --dump --jobs 6 --golean .tmp/golean-main --out arti
 for d in s3 main; do cat artifacts/choice-trace-$d/dump-*.tsv | LC_ALL=C sort > .tmp/dump-$d.sorted.tsv; done; cmp .tmp/dump-s3.sorted.tsv .tmp/dump-main.sorted.tsv; echo cmp EXIT=$?; sha256sum .tmp/dump-*.sorted.tsv; wc -l .tmp/dump-*.sorted.tsv
 scripts/detector-soundness --select in-scope --jobs 6 --out artifacts/detector-soundness-s3   # then compare matrix.tsv cell-for-cell with the prior official run's (detector-soundness-s3.txt)
 ```
+
+## Merge train r43 — the 5a record ([AGENT] coordinator, 2026-09-19)
+
+[USER] Mike 2026-09-19, verbatim (relayed): «Agree, merge» (ratifying C1-complete-modulo-owed-list, the B(c)
+row supersession and the three Stage C rulings). Pre-merge main `0f114df6` → `refs/snapshots/r43/main`; S3 +
+the ratification record (`9b05d12c`) fast-forwarded; the audit branch rebased (`cb823535`) and fast-forwarded.
+Under the lock at `cb823535`: `scripts/build-certified` EXIT=0, 123 s (binary `a014183b0dfa…` —
+the fix round's gate binary); `release-check --base refs/snapshots/r43/main` EXIT=2 (EXPECTED — «STALE
+certification: changed dependency build/files/GoLean/GoCore/EnumDedumSound.lean»); `GOLEAN_MEM_MAX=48G
+scripts/capped scripts/ci --slow` EXIT=1, 1019 s — red on EXACTLY the 5a pair (`certificate provenance` STALE;
+the single drift line `imported-goose/channel/google-search PASS→FAIL/membership`); 3686 rows otherwise
+unchanged; negatives 394 no regression. Tail: `r43-ci-slow.tail.txt`. Candidate vs tracked record: `claim` and
+`observations` IDENTICAL; 10 input hashes differ (S3's core files) and the receipt (clean `cb823535`, binary
+`a014183b…`) — INSTALLED in this commit; a provenance refresh, not a re-pin. This commit also adds the
+evaluation-order note's §5 «RULED» pointer to the 2026-09-19 Stage C rulings (a heading mismatch had kept it
+out of the ratification commit `9b05d12c`; the rulings ledger was the record throughout).

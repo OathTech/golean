@@ -253,6 +253,12 @@ The lane handoff `docs/2026-09-16_unseq-stage-b-handoff.md` §2/§9 mirrors this
 
 ## 5. Decisions PENDING [USER] — posed, not ruled; recommendations only
 
+**RULED [USER] 2026-09-19** («Agree, merge», relayed; record: `docs/2026-08-31_qrow-rulings.md`, «The C1 completion and Stage C
+rulings record (2026-09-19)»): width of P = (ii) ALL mutable reads, STAGED (the Stage C pilot carries the minimal P(ii) reads its
+fixtures need, then widens); N1 = SPLIT (base/header and index producers + one checked access); N3 = REFUSE by name on budget
+exhaustion, rows may go red. N4 (ladder position) was ruled 2026-09-18 (Stage C after C1). The items below are kept as posed;
+this paragraph is the ruling.
+
 1. **E2/E12 value axis** — DISSOLVES as a mechanism question (a value is produced where picked). [AGENT]: E2/E12/E14's
    value axes → (a) ENVELOPED when their rows land; ratify at that merge ask.
 2. **Width of P** (which reads are occurrences): (i) today's failing kinds (`probeKind`, emit.go `:5450`) + events;
