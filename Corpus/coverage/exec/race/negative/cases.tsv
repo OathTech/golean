@@ -45,4 +45,6 @@ array-const-index-whole-write	raceArrayConstIndexWholeWrite	-	race	-	goroutines,
 # RULED [USER] 2026-09-18, relayed): a race between two SPELLINGS of one word
 # through a struct-tag-compatible pointer conversion. Born FAIL (the
 # structural keys miss it; BUG-111's Cases: line), flips to PASS with the fix.
-struct-tag-alias-field	raceStructTagAliasField	-	race	-	goroutines,channels,structs,pointers,conversions,race	racy	-	width=4,sites=8
+# sites=16: THREE goroutines (two children + main) — the enumeration reaches
+# depth 9, beyond the lane's default 8 (the `map-range-iter` precedent).
+struct-tag-alias-field	raceStructTagAliasField	-	race	-	goroutines,channels,structs,pointers,conversions,race	racy	-	width=4,sites=16
