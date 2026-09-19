@@ -1,0 +1,53 @@
+# C0 gate tail — scripts/capped scripts/ci (fast gate) under the box-wide lock, tree = main 6a7beb3d + the C0 frontend edits (before the C0 commit); go test / check-frontend-pins / check-evidence-size standalone first
+
+go vet ./tools/nativefrontend: EXIT=0
+go test ./tools/nativefrontend: EXIT=0 (ok, 1.058s; the 3 new classifier tests + the standing suite)
+scripts/capped scripts/check-frontend-pins: EXIT=0 — hidden-dep-order pin ok; twin wire ok (e1a877251021…, byte-identical); stdlib pin ok (61 files)
+scripts/check-evidence-size: EXIT=0 (0 new offenders)
+
+1:2026-09-19T22:54:13Z lock acquired; running: scripts/capped scripts/ci
+592:CMD_EXIT=1 SECONDS=381
+593:2026-09-19T23:00:34Z lock released
+
+  ok   Tests/library ownership (no exceptions; executed builds checked at exit)
+  note build parallelism: cap 32G -> LEAN_NUM_THREADS=4 (cap/8G, floor 2; 32 cores on this box)
+  ok   oracle toolchain (go1.26.5 = pin)
+  ok   escape-hatch preflight
+  ok   meta-layer escape hatches (allowlist empty since the repo split)
+  ok   escape-hatch addendum (no decide +native / native-config spellings)
+  ok   bug-index cross-check
+  ok   feature-coverage (no dead tags)
+  ok   spec-anchor citations resolve at the pin
+  ok   stdlib admission register = frontend tables
+  ok   lane-validation fixtures (manifest gates reject bad shapes)
+  ok   evidence-on-main size gate
+  ok   AGENTS.md alias of CLAUDE.md
+  ok   imported-goose verbatim (above-marker bytes = pinned upstream)
+  ok   engine-isolation (core ↛ EnumDedup)
+  ok   memory-module raw call-site inventory (emit/peek discipline)
+  ok   core build (warning-free)
+  FAIL certificate provenance
+  ok   core totality audit (every GoLean/ module; required core theorems; poison controls)
+  ok   admission checker proofs and post-import audit
+  ok   declaration boundary
+  ok   wire boundary (byte-level controls through the real CLI)
+  ok   package-correct method identity
+  ok   unseq scheduler (Stage B)
+  ok   frontend pins (realized init-order deviation + twin wire = pinned bytes)
+  ok   import-goose fixtures (importer + verbatim guard reject bad shapes)
+  ok   frontend unit tests
+  ok   lowering-diagnostic tables
+  ok   coverage-harness unit tests
+  ok   eval tests (267 ok)
+  FAIL negative baseline diff (NO recorded negative run — run scripts/coverage-negative, or set GOLEAN_ALLOW_NO_DIFF=1 for an environment that never records one)
+  FAIL baseline diff (NO recorded differential run — nothing has checked the corpus; run scripts/ci --diff, or set GOLEAN_ALLOW_NO_DIFF=1 for an environment that never records one)
+  note reconciler: 2 finding(s), 1 HIGH — report-only (details: tools/reconcile-records)
+  ok   executed library coverage (all declared libraries; all Tests modules)
+[1mRESULT: FAIL[0m
+Failed CI receipts retained: /home/dev/projects/golean/.claude/worktrees/unseq-stage-c/.tmp/ci-libraries-2havtsx2
+CI coverage timing: close: seconds=0.003
+CI total wall seconds: 381
+CMD_EXIT=1 SECONDS=381
+2026-09-19T23:00:34Z lock released
+
+reconciler HIGH: [01] C9  HIGH    certificate provenance: STALE certification: changed dependency files/tools/nativefrontend/main.go

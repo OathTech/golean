@@ -109,6 +109,11 @@ type emitter struct {
 	// node identity; never reset (nodes are unique; stencils re-emit the
 	// same nodes with the same structural answer).
 	probedNodes map[ast.Expr]bool
+	// unseqAddr (evaluation-order model v2.1 Stage C, unseq.go): the
+	// per-function-body cache of the ADDRESS-TAKEN local set the whole-sweep
+	// decision procedure `unseqClassify` reads (a private local is
+	// order-transparent; an address-taken one is a READ occurrence).
+	unseqAddr map[*ast.BlockStmt]map[types.Object]bool
 	// eventBeforeResidual is set by a statement emitter whose statement
 	// performs an ordered event BEFORE it evaluates its inline operands
 	// (the receive-statement form `x[k] = <-ch`: communication first, then

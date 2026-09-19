@@ -1,0 +1,14 @@
+# gc draws for the four predicted flip rows (go1.26.5 = baselines/go-oracle-pin; harness: the row package copied, main() renamed, a recovering runner per subject; 2026-09-19)
+=== assertOkEarlyLenHoist ===
+mut
+assertOkEarlyLenHoist: OK 6
+=== sliceValueEarlyLenHoist ===
+mut
+sliceValueEarlyLenHoist: OK 12
+=== compoundCallTargetVsCall ===
+f
+wit 5
+compoundCallTargetVsCall: PANIC runtime error: index out of range [9] with length 1
+=== compoundCallTargetVsLen ===
+f
+compoundCallTargetVsLen: PANIC runtime error: index out of range [5] with length 1

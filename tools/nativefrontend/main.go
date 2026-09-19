@@ -78,6 +78,13 @@ func run() error {
 	flag.StringVar(&stdlibPinPath, "stdlib-pin", stdlibPinPath, "tracked library pin (path<TAB>sha256 per lowered stdlib source file)")
 	pinManifest := flag.Bool("stdlib-pin-manifest", false, "print the library pin manifest for the current source root and exit")
 	registerDump := flag.Bool("stdlib-register", false, "print the code's stdlib admission tables (register machine block) and exit")
+	// Stage C of the evaluation-order model v2.1 (unseq.go): run the
+	// whole-sweep decision procedure over every statement list of the
+	// main unit and print one TSV row per sweep (file:line, function,
+	// form, admitted, events, non-events, reason) INSTEAD of a wire. Lane
+	// tooling for the pilot's census (docs/2026-09-19_unseq-stage-c-*);
+	// no gate, baseline or corpus path reads it.
+	unseqCensus := flag.Bool("unseq-census", false, "print the unseq whole-sweep decision per statement of the main unit (TSV) and exit; emits no wire")
 	overlayCheck := flag.Bool("stdlib-overlay-check", false, "verify every stdlib-overlay.tsv row against the pinned GOROOT source (bytes at the recorded site, file selected and pinned), print the site report and exit")
 	flag.Parse()
 	if *overlayCheck {
@@ -171,6 +178,9 @@ func run() error {
 
 	em := &emitter{fset: fset, info: mainUnit.info, pkg: mainUnit.pkg}
 	em.setUnits(units)
+	if *unseqCensus {
+		return em.printUnseqCensus(files, *dir)
+	}
 	program, err := em.emitProgram(files)
 	if err != nil {
 		return err

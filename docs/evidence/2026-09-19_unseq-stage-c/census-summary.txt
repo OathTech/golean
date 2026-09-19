@@ -1,0 +1,90 @@
+# unseq Stage C census summary (2026-09-19, C0 frontend at main 6a7beb3d + the C0 frontend edits; go1.26.5)
+
+corpus packages: 1353   sweeps (all units): 107773   admitted: 120   packages with >=1 admitted: 28   admitted in imported units: 0
+
+admitted by form:
+       50 compound
+       32 return
+       26 assign
+        7 define
+        5 elem-assign
+
+admitted per package:
+       25 imported-goose/semantics/operations
+       24 builtins/e13-sibling-panic-order
+        4 spec-examples-decl/timezone-stringer
+        4 slices/slice-elided-high-eval-once
+        4 panic-recover/shim-refusal-unrecoverable
+        4 noodler/strings
+        4 noodler/latitude
+        4 noodler/evalorder
+        4 fmt/v-composites
+        4 fmt/sprintf-verbs
+        4 fmt/sprintf-dyn
+        4 fmt/formatter-precedence
+        4 fmt/formatter-dyn-hole
+        4 fmt/formatter-box-range
+        4 fmt/formatter-box-generic
+        4 fmt/formatter-box-crosspkg
+        2 spec-examples-stmt/continue-label
+        2 builtins/len-vs-call-order
+        2 binop-order/operand-panic-vs-call
+        1 spec-examples-stmt/operator-precedence
+        1 slices/slice-expr-eval-order
+        1 scoping/closure-shadow-binding
+        1 noodler/maps
+        1 noodler/closures
+        1 noodler/arith
+        1 multi-assign/index-target-rhs-call-order
+        1 functions/closure-recursion
+        1 bools/short-circuit-effects
+
+legacy reasons (top 30, first construct named):
+    33373 statement form outside the pilot grammar
+    28067 no call occurrence
+     5514 conversion
+     4536 callee expression outside the pilot grammar
+     4333 target type outside the pilot grammar
+     4215 multi-target or tuple assignment
+     3697 result type outside the pilot grammar
+     3681 callee outside the main package
+     1768 bare return
+     1761 index of a non-slice base
+     1645 assignment target outside the pilot grammar
+     1622 no non-event occurrence beside the call(s)
+     1388 slice expression on a non-slice base
+     1289 len of a non-slice operand
+     1282 selector
+     1256 builtin append
+     1137 builtin panic statement
+     1046 generic function callee
+      651 element target on a non-slice base
+      565 captured target written through its pointer parameter
+      561 read-write target outside the pilot grammar
+      463 composite literal
+      399 blank target
+      380 builtin make
+      327 builtin copy statement
+      272 builtin copy
+      216 non-local target
+      180 nil
+      180 binary operand type outside the pilot grammar
+      179 parameter type outside the pilot grammar
+
+rows in the affected packages: 345
+       37 package-only	membership	PASS/membership
+        4 package-only	strict	FAIL/differential
+       27 package-only	strict	FAIL/frontend-export
+      227 package-only	strict	PASS/-
+       19 subject-has-unseq	membership	PASS/membership
+        2 subject-has-unseq	strict	FAIL/differential
+        1 subject-has-unseq	strict	FAIL/frontend-export
+        1 subject-has-unseq	strict	FAIL/lean-observation
+       27 subject-has-unseq	strict	PASS/-
+
+raft twin (raftsubject/{quorum,raftpb,tracker,proto,confchange,raft} + tools/raftsubject twin files): sweeps across units: 10203   admitted: 0
+  units: bytes cmp confchange encoding/binary errors internal/bytealg internal/strconv internal/stringslite main math/bits proto quorum raft raftpb slices strconv strings tracker unicode unicode/utf8
+  twin wire re-emitted by the C0 frontend: cmp baselines/pins/twin-chdriver.wire.json = IDENTICAL
+
+wire neutrality of C0 (main-tip frontend built from `git archive main` vs the C0 frontend, every corpus package):
+  packages=1353 identical(wire-or-refusal)=1353 differing-wires=0 differing-refusals=0
