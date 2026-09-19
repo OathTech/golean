@@ -1,0 +1,45 @@
+# detector-soundness on the candidate binary ab355547… (rebuilt here), this audit: scripts/detector-soundness --select in-scope --jobs 6 --out artifacts/detector-soundness-audit; go run -race at the pin go1.26.5; 16:12:00–16:41:19Z (1,759 s; the choice-trace subset and the pool comparison ran concurrently for the first ~4 min)
+# EXIT=2 = the 9 standing 'refused' rows (as the tracked docs/evidence/2026-09-19_c1-memory-module-s3/detector-soundness-s3.txt)
+== detector-soundness start 2026-09-19T16:12:00Z bin=ab355547ff2377e2 load1=1.20
+detector-soundness EXIT=2 2026-09-19T16:41:19Z
+detector-soundness summary — 2026-09-19T16:41:19+00:00
+
+## summary.txt (cells, lane x cell, HOLE / possible-HOLE headings — both empty, the six over-refusal rows)
+detector-soundness summary — 2026-09-19T16:41:19+00:00
+rows: 649   runs/proc: 5   procs: 1,8   worker-pool exit: 0
+
+cells:
+  agree-DRF      507
+  agree-race     41
+  over-refusal   6
+  refused        9
+  uncertified    86
+
+by lane × cell:
+  confluent	agree-DRF	92
+  confluent	uncertified	1
+  membership	agree-DRF	130
+  membership	refused	9
+  membership	uncertified	4
+  racy	agree-race	41
+  strict	agree-DRF	285
+  strict	over-refusal	6
+  strict	uncertified	81
+
+HOLE rows (gc RACE, machine DRF — exit-bearing; a HOLE not on a BUGS.md Cases: line is a STOP):
+
+possible-HOLE rows (gc RACE, machine ENUM-FAIL — exit-bearing; certify or diagnose each):
+
+over-refusal rows (machine RACE-*, gc DRF-in-N — three-way investigation):
+  race/free/array-dyn-index-read-write	p1:race=0,clean=5,exit=0,abnormal=0,timeout=0;p8:race=0,clean=5,exit=0,abnormal=0,timeout=0;	RACE-ALL (1/1 members)
+  race/gomem-only/rw-copy-vs-runlock	p1:race=0,clean=5,exit=0,abnormal=0,timeout=0;p8:race=0,clean=5,exit=0,abnormal=0,timeout=0;	RACE-ALL (1/1 members)
+  race/gomem-only/rw-copy-vs-unlock	p1:race=0,clean=5,exit=0,abnormal=0,timeout=0;p8:race=0,clean=5,exit=0,abnormal=0,timeout=0;	RACE-ALL (1/1 members)
+  race/gomem-only/wg-copy-vs-add-from-0	p1:race=0,clean=5,exit=0,abnormal=0,timeout=0;p8:race=0,clean=5,exit=0,abnormal=0,timeout=0;	RACE-ALL (1/1 members)
+  (uncertified 86: the same ENUM-FAIL classes as the tracked record — nonterm-truncated, frontend-quarantined, deadlock members, alias-guard probes, sites bound; full list in artifacts/detector-soundness-audit/summary.txt, gitignored)
+
+## comparison with the tracked record (detector-soundness-s3.txt), by cell count and lane x cell
+tracked: agree-DRF 507 / agree-race 41 / over-refusal 6 / refused 9 / uncertified 86; HOLE 0; possible-HOLE 0; lane x cell: confluent 92+1, membership 130+9+4, racy 41, strict 285+6+81
+this run:  agree-DRF 507; agree-race 41; over-refusal 6; refused 9; uncertified 86;
+lane x cell this run:  confluent agree-DRF 92; confluent uncertified 1; membership agree-DRF 130; membership refused 9; membership uncertified 4; racy agree-race 41; strict agree-DRF 285; strict over-refusal 6; strict uncertified 81;
+over-refusal rows this run:  race/free/array-dyn-index-read-write  race/gomem-only/rw-copy-vs-runlock  race/gomem-only/rw-copy-vs-unlock  race/gomem-only/wg-copy-vs-add-from-0  race/gomem-only/wg-copy-vs-done  race/gomem-only/wg-overwrite-vs-wait-at-0 
+verdict: cell counts, lane x cell table, HOLE/possible-HOLE (both empty) and the six over-refusal rows IDENTICAL to the tracked record. (The prior matrix.tsv is untracked and lives in another worktree — not read; per-row cells compared only through these tables.)

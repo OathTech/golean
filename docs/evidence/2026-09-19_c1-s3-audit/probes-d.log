@@ -1,0 +1,28 @@
+# (d) synchronization / conversion applies
+[d_wg_negative_recover/probe] lower EXIT=1
+nativefrontend: /home/dev/projects/golean/.claude/worktrees/audit-c1-s3/.tmp/probes/d_wg_negative_recover/main.go:5:1: imports must appear before other declarations
+  gc EXIT=1: # command-line-arguments ./main.go:5:1: syntax error: imports must appear before other declarations 
+[d_wg_negative_wait/probe] lower EXIT=1
+nativefrontend: /home/dev/projects/golean/.claude/worktrees/audit-c1-s3/.tmp/probes/d_wg_negative_wait/main.go:5:1: imports must appear before other declarations
+  gc EXIT=1: # command-line-arguments ./main.go:5:1: syntax error: imports must appear before other declarations 
+[d_once_panic_then_do/probe] lower EXIT=1
+nativefrontend: /home/dev/projects/golean/.claude/worktrees/audit-c1-s3/.tmp/probes/d_once_panic_then_do/main.go:5:1: imports must appear before other declarations
+  gc EXIT=1: # command-line-arguments ./main.go:5:1: syntax error: imports must appear before other declarations 
+[d_send_closed_buf/probe] lower EXIT=0
+  main EXIT=0: {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]} 
+  cand EXIT=0: {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]} 
+  gc EXIT=0: 1 
+[d_unlock_unlocked/probe] lower EXIT=1
+nativefrontend: /home/dev/projects/golean/.claude/worktrees/audit-c1-s3/.tmp/probes/d_unlock_unlocked/main.go:5:1: imports must appear before other declarations
+  gc EXIT=1: # command-line-arguments ./main.go:5:1: syntax error: imports must appear before other declarations 
+[d_atomic_nil/probe] lower EXIT=1
+nativefrontend: /home/dev/projects/golean/.claude/worktrees/audit-c1-s3/.tmp/probes/d_atomic_nil/main.go:5:1: imports must appear before other declarations
+  gc EXIT=1: # command-line-arguments ./main.go:5:1: syntax error: imports must appear before other declarations 
+[d_bytes_runes/probe] lower EXIT=0
+  main EXIT=0: {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":666}]} 
+  cand EXIT=0: {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":666}]} 
+  gc EXIT=0: 666 
+[d_select_send_closed/probe] lower EXIT=0
+  main EXIT=0: {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":0}]} 
+  cand EXIT=0: {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":0}]} 
+  gc EXIT=0: 0 

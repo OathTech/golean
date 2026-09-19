@@ -1,0 +1,106 @@
+# run-probes.py --plan full, BEFORE (main's binary) then AFTER (candidate), this audit
+BEFORE start 2026-09-19T16:03:39Z load 7.06
+  append_grow(250,)                        wall med 0.0280s [0.0275..0.0289] cpu med 0.02 status=['ok'] value=['250'] rss=72228KB
+  append_grow(500,)                        wall med 0.0375s [0.0369..0.0378] cpu med 0.03 status=['ok'] value=['500'] rss=74232KB
+  append_grow(1000,)                       wall med 0.0588s [0.0581..0.0715] cpu med 0.05 status=['ok'] value=['1000'] rss=73652KB
+  append_grow(2000,)                       wall med 0.1298s [0.1277..0.1326] cpu med 0.12 status=['ok'] value=['2000'] rss=76240KB
+  append_grow(4000,)                       wall med 0.3257s [0.3243..0.3333] cpu med 0.32 status=['ok'] value=['4000'] rss=78944KB
+  append_cap(250, 250)                     wall med 0.0282s [0.0282..0.0289] cpu med 0.02 status=['ok'] value=['250'] rss=72440KB
+  append_cap(500, 500)                     wall med 0.0370s [0.0365..0.0376] cpu med 0.03 status=['ok'] value=['500'] rss=73896KB
+  append_cap(1000, 1000)                   wall med 0.0614s [0.0614..0.0660] cpu med 0.05 status=['ok'] value=['1000'] rss=74544KB
+  append_cap(2000, 2000)                   wall med 0.1236s [0.1181..0.1248] cpu med 0.11 status=['ok'] value=['2000'] rss=73476KB
+  append_cap(100, 100)                     wall med 0.0231s [0.0227..0.0235] cpu med 0.01 status=['ok'] value=['100'] rss=72636KB
+  append_cap(200, 100)                     wall med 0.0218s [0.0217..0.0218] cpu med 0.01 status=['ok'] value=['100'] rss=71840KB
+  append_cap(400, 100)                     wall med 0.0226s [0.0219..0.0232] cpu med 0.01 status=['ok'] value=['100'] rss=72228KB
+  append_cap(800, 100)                     wall med 0.0265s [0.0214..0.0294] cpu med 0.01 status=['ok'] value=['100'] rss=71724KB
+  append_cap(1600, 100)                    wall med 0.0226s [0.0219..0.0243] cpu med 0.01 status=['ok'] value=['100'] rss=74208KB
+  append_cap(3200, 100)                    wall med 0.0247s [0.0243..0.0251] cpu med 0.01 status=['ok'] value=['100'] rss=73672KB
+  append_cap(6400, 100)                    wall med 0.0240s [0.0238..0.0261] cpu med 0.02 status=['ok'] value=['100'] rss=74100KB
+  heap_then_append(0, 0)                   wall med 0.0207s [0.0190..0.0213] cpu med 0.01 status=['ok'] value=['0'] rss=72300KB
+  heap_then_append(10000, 0)               wall med 1.3290s [1.3084..1.3641] cpu med 1.32 status=['ok'] value=['0'] rss=74096KB
+  heap_then_append(40000, 0)               wall med 19.9894s [19.9092..21.0882] cpu med 19.96 status=['ok'] value=['0'] rss=82576KB
+  heap_then_append(0, 300)                 wall med 0.0301s [0.0296..0.0306] cpu med 0.02 status=['ok'] value=['300'] rss=74712KB
+  heap_then_append(10000, 300)             wall med 1.4025s [1.3984..1.4256] cpu med 1.39 status=['ok'] value=['300'] rss=76112KB
+  heap_then_append(40000, 300)             wall med 18.6462s [18.6356..18.7995] cpu med 18.63 status=['ok'] value=['300'] rss=85140KB
+BEFORE EXIT=0 end 2026-09-19T16:09:29Z load 5.10
+AFTER start 2026-09-19T16:09:29Z load 5.10
+  append_grow(250,)                        wall med 0.0271s [0.0251..0.0275] cpu med 0.02 status=['ok'] value=['250'] rss=72240KB
+  append_grow(500,)                        wall med 0.0341s [0.0328..0.0346] cpu med 0.02 status=['ok'] value=['500'] rss=74124KB
+  append_grow(1000,)                       wall med 0.0493s [0.0485..0.0509] cpu med 0.04 status=['ok'] value=['1000'] rss=74756KB
+  append_grow(2000,)                       wall med 0.0819s [0.0763..0.0823] cpu med 0.07 status=['ok'] value=['2000'] rss=75808KB
+  append_grow(4000,)                       wall med 0.1410s [0.1409..0.1417] cpu med 0.13 status=['ok'] value=['4000'] rss=77016KB
+  append_cap(250, 250)                     wall med 0.0263s [0.0252..0.0280] cpu med 0.02 status=['ok'] value=['250'] rss=72776KB
+  append_cap(500, 500)                     wall med 0.0343s [0.0338..0.0344] cpu med 0.02 status=['ok'] value=['500'] rss=72384KB
+  append_cap(1000, 1000)                   wall med 0.0491s [0.0486..0.0499] cpu med 0.04 status=['ok'] value=['1000'] rss=74704KB
+  append_cap(2000, 2000)                   wall med 0.0806s [0.0794..0.0841] cpu med 0.07 status=['ok'] value=['2000'] rss=73752KB
+  append_cap(100, 100)                     wall med 0.0222s [0.0213..0.0223] cpu med 0.01 status=['ok'] value=['100'] rss=72596KB
+  append_cap(200, 100)                     wall med 0.0219s [0.0213..0.0227] cpu med 0.01 status=['ok'] value=['100'] rss=72036KB
+  append_cap(400, 100)                     wall med 0.0225s [0.0215..0.0230] cpu med 0.01 status=['ok'] value=['100'] rss=71964KB
+  append_cap(800, 100)                     wall med 0.0221s [0.0219..0.0225] cpu med 0.01 status=['ok'] value=['100'] rss=72944KB
+  append_cap(1600, 100)                    wall med 0.0220s [0.0218..0.0229] cpu med 0.01 status=['ok'] value=['100'] rss=74288KB
+  append_cap(3200, 100)                    wall med 0.0230s [0.0227..0.0239] cpu med 0.02 status=['ok'] value=['100'] rss=74796KB
+  append_cap(6400, 100)                    wall med 0.0248s [0.0245..0.0249] cpu med 0.01 status=['ok'] value=['100'] rss=73864KB
+  heap_then_append(0, 0)                   wall med 0.0204s [0.0191..0.0216] cpu med 0.01 status=['ok'] value=['0'] rss=71844KB
+  heap_then_append(10000, 0)               wall med 0.2311s [0.2305..0.2315] cpu med 0.22 status=['ok'] value=['0'] rss=73384KB
+  heap_then_append(40000, 0)               wall med 0.8838s [0.8619..0.9141] cpu med 0.88 status=['ok'] value=['0'] rss=79188KB
+  heap_then_append(0, 300)                 wall med 0.0278s [0.0272..0.0286] cpu med 0.02 status=['ok'] value=['300'] rss=71768KB
+  heap_then_append(10000, 300)             wall med 0.2427s [0.2396..0.2494] cpu med 0.23 status=['ok'] value=['300'] rss=75028KB
+  heap_then_append(40000, 300)             wall med 0.9198s [0.8661..0.9419] cpu med 0.91 status=['ok'] value=['300'] rss=79388KB
+AFTER EXIT=0 end 2026-09-19T16:10:05Z load 4.36
+
+# 5x repeats of alloc_new/append_grow on the candidate (raw runner lines)
+== repeat 1 load 2.78 16:10:40
+  empty(0,)                                wall med 0.0209s [0.0202..0.0220] cpu med 0.01 status=['ok'] value=['0'] rss=72420KB
+  append_grow(250,)                        wall med 0.0279s [0.0276..0.0287] cpu med 0.02 status=['ok'] value=['250'] rss=72376KB
+  append_grow(500,)                        wall med 0.0359s [0.0359..0.0360] cpu med 0.03 status=['ok'] value=['500'] rss=74168KB
+  append_grow(1000,)                       wall med 0.0513s [0.0510..0.0521] cpu med 0.04 status=['ok'] value=['1000'] rss=74204KB
+  append_grow(2000,)                       wall med 0.0775s [0.0763..0.0782] cpu med 0.07 status=['ok'] value=['2000'] rss=76140KB
+  append_grow(4000,)                       wall med 0.1434s [0.1398..0.1477] cpu med 0.13 status=['ok'] value=['4000'] rss=76832KB
+  alloc_new(1000,)                         wall med 0.0453s [0.0441..0.0455] cpu med 0.04 status=['ok'] value=['499500'] rss=72220KB
+  alloc_new(4000,)                         wall med 0.1262s [0.1191..0.1265] cpu med 0.11 status=['ok'] value=['7998000'] rss=72616KB
+  alloc_new(16000,)                        wall med 0.4417s [0.4263..0.4503] cpu med 0.43 status=['ok'] value=['127992000'] rss=73612KB
+  alloc_new(32000,)                        wall med 0.8797s [0.8212..0.9015] cpu med 0.87 status=['ok'] value=['511984000'] rss=78084KB
+== repeat 2 load 2.64 16:10:46
+  empty(0,)                                wall med 0.0189s [0.0185..0.0201] cpu med 0.01 status=['ok'] value=['0'] rss=72964KB
+  append_grow(250,)                        wall med 0.0264s [0.0261..0.0264] cpu med 0.02 status=['ok'] value=['250'] rss=72016KB
+  append_grow(500,)                        wall med 0.0333s [0.0323..0.0338] cpu med 0.02 status=['ok'] value=['500'] rss=73988KB
+  append_grow(1000,)                       wall med 0.0487s [0.0485..0.0497] cpu med 0.04 status=['ok'] value=['1000'] rss=74852KB
+  append_grow(2000,)                       wall med 0.0762s [0.0748..0.0764] cpu med 0.07 status=['ok'] value=['2000'] rss=77412KB
+  append_grow(4000,)                       wall med 0.1387s [0.1376..0.1390] cpu med 0.13 status=['ok'] value=['4000'] rss=76304KB
+  alloc_new(1000,)                         wall med 0.0470s [0.0463..0.0484] cpu med 0.04 status=['ok'] value=['499500'] rss=71864KB
+  alloc_new(4000,)                         wall med 0.1240s [0.1177..0.1245] cpu med 0.12 status=['ok'] value=['7998000'] rss=72384KB
+  alloc_new(16000,)                        wall med 0.4458s [0.4114..0.4473] cpu med 0.44 status=['ok'] value=['127992000'] rss=73892KB
+  alloc_new(32000,)                        wall med 0.8575s [0.8226..0.8631] cpu med 0.84 status=['ok'] value=['511984000'] rss=78920KB
+== repeat 3 load 2.50 16:10:51
+  empty(0,)                                wall med 0.0195s [0.0190..0.0198] cpu med 0.01 status=['ok'] value=['0'] rss=72180KB
+  append_grow(250,)                        wall med 0.0266s [0.0259..0.0268] cpu med 0.02 status=['ok'] value=['250'] rss=71940KB
+  append_grow(500,)                        wall med 0.0339s [0.0336..0.0347] cpu med 0.02 status=['ok'] value=['500'] rss=74452KB
+  append_grow(1000,)                       wall med 0.0483s [0.0478..0.0486] cpu med 0.04 status=['ok'] value=['1000'] rss=74116KB
+  append_grow(2000,)                       wall med 0.0771s [0.0758..0.0783] cpu med 0.07 status=['ok'] value=['2000'] rss=77288KB
+  append_grow(4000,)                       wall med 0.1350s [0.1344..0.1381] cpu med 0.13 status=['ok'] value=['4000'] rss=76892KB
+  alloc_new(1000,)                         wall med 0.0467s [0.0452..0.0471] cpu med 0.04 status=['ok'] value=['499500'] rss=72268KB
+  alloc_new(4000,)                         wall med 0.1276s [0.1257..0.1316] cpu med 0.12 status=['ok'] value=['7998000'] rss=72320KB
+  alloc_new(16000,)                        wall med 0.4429s [0.4181..0.4492] cpu med 0.44 status=['ok'] value=['127992000'] rss=74960KB
+  alloc_new(32000,)                        wall med 0.8519s [0.8158..0.9027] cpu med 0.84 status=['ok'] value=['511984000'] rss=78484KB
+== repeat 4 load 2.38 16:10:57
+  empty(0,)                                wall med 0.0190s [0.0186..0.0195] cpu med 0.01 status=['ok'] value=['0'] rss=72472KB
+  append_grow(250,)                        wall med 0.0264s [0.0262..0.0272] cpu med 0.02 status=['ok'] value=['250'] rss=71920KB
+  append_grow(500,)                        wall med 0.0333s [0.0330..0.0339] cpu med 0.02 status=['ok'] value=['500'] rss=73816KB
+  append_grow(1000,)                       wall med 0.0461s [0.0454..0.0473] cpu med 0.04 status=['ok'] value=['1000'] rss=74264KB
+  append_grow(2000,)                       wall med 0.0758s [0.0745..0.0765] cpu med 0.07 status=['ok'] value=['2000'] rss=76640KB
+  append_grow(4000,)                       wall med 0.1382s [0.1332..0.1469] cpu med 0.12 status=['ok'] value=['4000'] rss=76072KB
+  alloc_new(1000,)                         wall med 0.0470s [0.0453..0.0476] cpu med 0.04 status=['ok'] value=['499500'] rss=72624KB
+  alloc_new(4000,)                         wall med 0.1243s [0.1213..0.1256] cpu med 0.11 status=['ok'] value=['7998000'] rss=72200KB
+  alloc_new(16000,)                        wall med 0.4164s [0.4138..0.4184] cpu med 0.41 status=['ok'] value=['127992000'] rss=73828KB
+  alloc_new(32000,)                        wall med 0.8172s [0.8164..0.8927] cpu med 0.81 status=['ok'] value=['511984000'] rss=78916KB
+== repeat 5 load 2.27 16:11:03
+  empty(0,)                                wall med 0.0189s [0.0186..0.0196] cpu med 0.01 status=['ok'] value=['0'] rss=73076KB
+  append_grow(250,)                        wall med 0.0262s [0.0256..0.0265] cpu med 0.02 status=['ok'] value=['250'] rss=72248KB
+  append_grow(500,)                        wall med 0.0337s [0.0324..0.0343] cpu med 0.02 status=['ok'] value=['500'] rss=74132KB
+  append_grow(1000,)                       wall med 0.0474s [0.0458..0.0492] cpu med 0.04 status=['ok'] value=['1000'] rss=74184KB
+  append_grow(2000,)                       wall med 0.0757s [0.0751..0.0839] cpu med 0.07 status=['ok'] value=['2000'] rss=76248KB
+  append_grow(4000,)                       wall med 0.1402s [0.1395..0.1419] cpu med 0.13 status=['ok'] value=['4000'] rss=77360KB
+  alloc_new(1000,)                         wall med 0.0472s [0.0469..0.0487] cpu med 0.04 status=['ok'] value=['499500'] rss=71356KB
+  alloc_new(4000,)                         wall med 0.1268s [0.1182..0.1312] cpu med 0.12 status=['ok'] value=['7998000'] rss=72708KB
+  alloc_new(16000,)                        wall med 0.4382s [0.4188..0.4477] cpu med 0.43 status=['ok'] value=['127992000'] rss=74452KB
+  alloc_new(32000,)                        wall med 0.8330s [0.8172..0.8428] cpu med 0.82 status=['ok'] value=['511984000'] rss=78516KB

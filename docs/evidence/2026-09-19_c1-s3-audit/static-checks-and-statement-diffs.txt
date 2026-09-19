@@ -1,0 +1,194 @@
+# Static checks and builds at ee8d0ef0 (audit worktree), captured EXIT codes
+warm build (scripts/capped lake build after a plain cp -a of the candidate worktree's .lake): EXIT=0; binary sha256 ab355547ff2377e24604caabf69236b02e24b8875e50ae0f82069de42d87b051
+main binary copy sha256 da7bb8376164e23fdfb4933b81e406cd21efe6b63b6e9e5e5c08caad20bbc1d2
+scripts/capped bash scripts/check-core-audit: check-core-audit EXIT=0 — Core totality audit gate: PASS
+scripts/check-mem-callsites: EXIT=0 — Memory-module raw call-site inventory: PASS (70 (file, declaration, raw-op) rows, all inventoried with reasons)
+.lake/build/bin/gocore-eval-tests: EXIT=0 — 267 ok lines, 0 non-ok
+scripts/check-bugs.sh: EXIT=0 — check-bugs: ok (111 bug(s); pinned cases behave as claimed)
+scripts/check-evidence-size: EXIT=0 — evidence-size gate: PASS — 1876 tracked files / 29009274 bytes in 107 evidence dirs; caps file 262144 B, dir 4194304 B, no archives, no source copies; 17 pre-existing offender(s) allowlisted (frozen 2026-09-07), 0 new
+scripts/check-agents-alias: EXIT=0
+
+# Escape-hatch scan of the runtime diff's added lines (sorry|axiom|native_decide|partial|unsafe|implemented_by|extern|admit|opaque): only 'opaqueDecl' constructor matches and one 'by decide' on a closed Int literal inequality (2^(bits-1) > 0) — none are escape hatches
+
+# Declaration-name set diff, 0f114df6 vs fd99b021, the nine modules
+== EnumDedupSound: main 15 cand 16
+-- deleted:
+-- added:
+   theorem appendSpill?_of_noSpill
+== Machine: main 203 cand 218
+-- deleted:
+   def storeMany
+-- added:
+   abbrev Commit
+   def applyStmtOpCore.plan
+   def applyStmtOp.plan
+   def Commit.withStream
+   def enterFramePickV
+   def enterFrame.plan
+   def mapAssignValue.plan
+   def runCommit
+   def storeTarget.plan
+   def unseqLoad.plan
+   theorem enterFramePick_of_V_ok
+   theorem enterFramePick_of_V_panic
+   theorem enterFramePickV_cases
+   theorem enterFramePickV_of_isSome_false
+   theorem enterFramePickV_of_none
+   theorem plan_run_error
+== MachineSound: main 204 cand 252
+-- deleted:
+   theorem applyStmtOp_appendSlice_nospill
+   theorem applyStmtOp_appendSlice_spill
+   theorem applyStmtOp_of_stmtConsult?_none
+-- added:
+   def PlanNoPanic
+   theorem allocDecls_noPanic
+   theorem applyStmtOp_commit_noPanic
+   theorem applyStmtOpCore_commit_noPanic
+   theorem applyStmtOp_inv_ok
+   theorem applyStmtOp_inv_panic
+   theorem applyStmtOp_plan_appendSlice_nospill
+   theorem applyStmtOp_plan_appendSlice_spill
+   theorem applyStmtOp_plan_eq_core
+   theorem applyStmtOp_plan_of_stmtConsult?_none
+   theorem arrayIndexNatFormed_noPanic
+   theorem bindParams_noPanic
+   theorem deliverV_ok_inv
+   theorem enterFrame_commit_noPanic
+   theorem enterFrame_inv_ok
+   theorem enterFrame_inv_panic
+   theorem enterFramePickV_of_nopanic
+   theorem enterFramePickV_of_ok
+   theorem enterFramePickV_of_panic
+   theorem enterFramePickV_of_plan_ok
+   theorem enterFramePickV_of_plan_panic
+   theorem mapAssignValue_commit_noPanic
+   theorem Mem.mapWrite_noPanic
+   theorem Mem.storeElems_noPanic
+   theorem Mem.store_noPanic
+   theorem Mem.storeRun_noPanic
+   theorem pinResultLocs_noPanic
+   theorem PlanNoPanic.bind
+   theorem PlanNoPanic.error
+   theorem PlanNoPanic.internal
+   theorem PlanNoPanic.ite
+   theorem PlanNoPanic.panic
+   theorem PlanNoPanic.pure
+   theorem PlanNoPanic.stuck
+   theorem PlanNoPanic.unsupported
+   theorem runCommit_eq_ok
+   theorem runCommit_of_noPanic
+   theorem runCommit_withStream
+   theorem storeLoc_noPanic
+   theorem storeMapPayload_noPanic
+   theorem storeTarget_commit_noPanic
+   theorem storeTarget_inv_ok
+   theorem storeTarget_inv_panic
+   theorem toResult_plan_inv_ok
+   theorem toResult_plan_inv_panic
+   theorem toResult_plan_ok
+   theorem toResult_plan_panic
+   theorem unseqLoad_commit_noPanic
+   theorem unseqLoad_inv_ok
+   theorem unseqLoad_inv_panic
+   theorem writeAt_noPanic
+== Multi: main 77 cand 82
+-- deleted:
+-- added:
+   def Config.afterStepFlagWith
+   def Config.boundaryFacts
+   def Thread.afterStepWith
+   theorem Config.afterStepFlag_eq_ite
+   theorem Thread.afterStepWith_boundaryFacts
+== MultiSound: main 52 cand 52
+-- deleted:
+-- added:
+== MultiWfSound: main 21 cand 21
+-- deleted:
+-- added:
+== Ops: main 180 cand 181
+-- deleted:
+-- added:
+   def arrayIndexNatFormed
+== StateWf: main 347 cand 345
+-- deleted:
+   theorem HeapNormal.of_storeMany
+   theorem storeMany_pres
+   theorem storeMany_shape
+-- added:
+   theorem arrayIndexNatFormed_spec
+== StepFn: main 24 cand 27
+-- deleted:
+-- added:
+   def deliverV
+   theorem deliverV_ok
+   theorem deliverV_panic
+
+# Statement diffs of theorems present at both revisions (extractor: header to ':='); genuine changes = 3 kit lemmas; the other hits were extractor artifacts (term-mode proofs / adjacent deletions), verified by hand
+######## CHANGED: stepFn_consumption_some (MachineSound)
+--- MAIN:
+theorem stepFn_consumption_some {σ : Store} {c : Config} {ch₀ : Choices}
+    {c' : Config} {σ' : Store} {ch₀' : Choices} {site : ChoiceSite} {b : Nat}
+    (hloc : c.appendTargetLocal)
+    (hsc : seqConsumption ctx σ c = some (site, b))
+    (h : stepFn ctx σ c ch₀ = .ok (c', σ', ch₀', tr)) :
+    ch₀' = (Choices.consumeAt site b ch₀).2 ∧ ∀ ch : Choices,
+      (Choices.consumeAt site b ch).1 = (Choices.consumeAt site b ch₀).1 →
+      stepFn ctx σ c ch = .ok (c', σ', (Choices.consumeAt site b ch).2, tr) := by
+--- CAND:
+theorem stepFn_consumption_some {σ : Store} {c : Config} {ch₀ : Choices}
+    {c' : Config} {σ' : Store} {ch₀' : Choices} {site : ChoiceSite} {b : Nat}
+    (_hloc : c.appendTargetLocal)
+    (hsc : seqConsumption ctx σ c = some (site, b))
+    (h : stepFn ctx σ c ch₀ = .ok (c', σ', ch₀', tr)) :
+    ch₀' = (Choices.consumeAt site b ch₀).2 ∧ ∀ ch : Choices,
+      (Choices.consumeAt site b ch).1 = (Choices.consumeAt site b ch₀).1 →
+      stepFn ctx σ c ch = .ok (c', σ', (Choices.consumeAt site b ch).2, tr) := by
+######## CHANGED: stepFn_stmtOp_oblivious (MachineSound)
+--- MAIN:
+theorem stepFn_stmtOp_oblivious {σ : Store} {op : StmtOp} {nt : Nat} {done : List GoValue}
+    {v : GoValue} {env : LocalEnv} {k : Cont} {r : Except Stop (Store × AccessTrace)}
+    (hr : ∀ ch : Choices, applyStmtOp ctx σ ch op nt (v :: done).reverse = r.map fun p => (p.1, ch, p.2))
+    {ch₀ : Choices} {c' : Config} {σ' : Store} {ch₀' : Choices} {tr : AccessTrace}
+    (h : stepFn ctx σ (.retV v (.stmtOpK op nt done [] env k)) ch₀ = .ok (c', σ', ch₀', tr)) :
+    ch₀' = ch₀ ∧ ∀ ch : Choices,
+      stepFn ctx σ (.retV v (.stmtOpK op nt done [] env k)) ch = .ok (c', σ', ch, tr) := by
+--- CAND:
+theorem stepFn_stmtOp_oblivious {σ : Store} {op : StmtOp} {nt : Nat} {done : List GoValue}
+    {v : GoValue} {env : LocalEnv} {k : Cont} {r : Except Stop (Commit (Store × AccessTrace))}
+    (hr : ∀ ch : Choices, applyStmtOp.plan ctx σ ch op nt (v :: done).reverse = r.map (Commit.withStream ch))
+    {ch₀ : Choices} {c' : Config} {σ' : Store} {ch₀' : Choices} {tr : AccessTrace}
+    (h : stepFn ctx σ (.retV v (.stmtOpK op nt done [] env k)) ch₀ = .ok (c', σ', ch₀', tr)) :
+    ch₀' = ch₀ ∧ ∀ ch : Choices,
+      stepFn ctx σ (.retV v (.stmtOpK op nt done [] env k)) ch = .ok (c', σ', ch, tr) := by
+######## CHANGED: stepFn_stmtOp_spill (MachineSound)
+--- MAIN:
+theorem stepFn_stmtOp_spill {σ : Store} {elem : Ty} {nt : Nat} {done : List GoValue}
+    {v : GoValue} {env : LocalEnv} {k : Cont} {w : Nat}
+    {g : Nat → Except Stop (Store × AccessTrace)}
+    (hg : ∀ ch : Choices, applyStmtOp ctx σ ch (.appendSlice elem) nt (v :: done).reverse
+      = (g (Choices.consumeAt .appendSpill w ch).1).map
+          fun p => (p.1, (Choices.consumeAt .appendSpill w ch).2, p.2))
+    (hnp : ∀ pick, NoPanic (g pick))
+    {ch₀ : Choices} {c' : Config} {σ' : Store} {ch₀' : Choices} {tr : AccessTrace}
+    (h : stepFn ctx σ (.retV v (.stmtOpK (.appendSlice elem) nt done [] env k)) ch₀
+      = .ok (c', σ', ch₀', tr)) :
+    ch₀' = (Choices.consumeAt .appendSpill w ch₀).2 ∧ ∀ ch : Choices,
+      (Choices.consumeAt .appendSpill w ch).1 = (Choices.consumeAt .appendSpill w ch₀).1 →
+      stepFn ctx σ (.retV v (.stmtOpK (.appendSlice elem) nt done [] env k)) ch
+        = .ok (c', σ', (Choices.consumeAt .appendSpill w ch).2, tr) := by
+--- CAND:
+theorem stepFn_stmtOp_spill {σ : Store} {elem : Ty} {nt : Nat} {done : List GoValue}
+    {v : GoValue} {env : LocalEnv} {k : Cont} {w : Nat}
+    {g : Nat → Except Stop (Commit (Store × AccessTrace))}
+    (hg : ∀ ch : Choices, applyStmtOp.plan ctx σ ch (.appendSlice elem) nt (v :: done).reverse
+      = (g (Choices.consumeAt .appendSpill w ch).1).map
+          (Commit.withStream (Choices.consumeAt .appendSpill w ch).2))
+    (hnp : ∀ pick, NoPanic (g pick))
+    {ch₀ : Choices} {c' : Config} {σ' : Store} {ch₀' : Choices} {tr : AccessTrace}
+    (h : stepFn ctx σ (.retV v (.stmtOpK (.appendSlice elem) nt done [] env k)) ch₀
+      = .ok (c', σ', ch₀', tr)) :
+    ch₀' = (Choices.consumeAt .appendSpill w ch₀).2 ∧ ∀ ch : Choices,
+      (Choices.consumeAt .appendSpill w ch).1 = (Choices.consumeAt .appendSpill w ch₀).1 →
+      stepFn ctx σ (.retV v (.stmtOpK (.appendSlice elem) nt done [] env k)) ch
+        = .ok (c', σ', (Choices.consumeAt .appendSpill w ch).2, tr) := by
