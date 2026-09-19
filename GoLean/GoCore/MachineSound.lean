@@ -35,6 +35,1053 @@ theorem consume_fst_lt {ch : Choices} {bound : Nat} (hb : 0 < bound) :
     (Choices.consume ch bound).1 < bound :=
   Choices.consume_fst_lt hb
 
+/-! ### The write path never panics — the NoPanic section, moved above the coherence proofs
+at C1 S3 (its facts feed the completeness proofs below); `Loc.rootLoc` with it -/
+
+/-- The root `.base` location of an access path — the only heap KEY
+`loadLoc`/`storeLoc` ever look up along the path. -/
+def Loc.rootLoc (l : Loc) : Loc := .base ⟨Loc.rootBase l⟩
+
+
+theorem Loc.rootPath_fst (l : Loc) : (Loc.rootPath l).1.id = Loc.rootBase l := by
+  induction l with
+  | base a => rfl
+  | field b _ _ ih => simpa [Loc.rootPath, Loc.rootBase] using ih
+  | index b _ ih => simpa [Loc.rootPath, Loc.rootBase] using ih
+
+theorem Loc.rootLoc_eq (l : Loc) : Loc.rootLoc l = .base (Loc.rootPath l).1 := by
+  have h := Loc.rootPath_fst l
+  unfold Loc.rootLoc
+  rcases hx : (Loc.rootPath l).1 with ⟨i⟩
+  rw [hx] at h
+  simp only at h
+  rw [h]
+
+
+/-! ### Panic-freeness of the store path (wave-(iii) audit fix F1, 2026-09-04)
+
+The consumption theorem's `some` half first carried a second disjunct — "a
+delivered panic AFTER the pop restores the pre-apply stream" — for two
+sites. Both are REFUTED here: a TRY head's apply never raises a recoverable
+panic (`applyTryLock_noPanic`), and a spilling append whose target is a
+root cell (the frontend's hoisted temp — `Config.appendTargetLocal`) never
+does either (`storeLoc_base_noPanic`, `buildAppendBackingValue_noPanic`).
+The only panic sources on the store path are `arrayGet`'s / the leaf write's
+(`writeAt`) index-out-of-range (unreachable through a PATH the machine just loaded, and
+absent at a root cell); normalization and default values refuse but never
+panic. -/
+
+/-- `x` is not a recoverable panic. -/
+def NoPanic {α : Type} (x : Except Stop α) : Prop := ∀ msg, x ≠ .error (Stop.panic msg)
+
+theorem NoPanic.ok {α : Type} (a : α) : NoPanic (Except.ok a : Except Stop α) :=
+  fun _ h => by cases h
+theorem NoPanic.pure {α : Type} (a : α) : NoPanic (pure a : Except Stop α) :=
+  fun _ h => by cases h
+theorem NoPanic.stuck {α : Type} (m : String) : NoPanic (stuck m : Except Stop α) :=
+  fun _ h => by cases h
+theorem NoPanic.unsupported {α : Type} (m : String) : NoPanic (unsupported m : Except Stop α) :=
+  fun _ h => by cases h
+theorem NoPanic.internal {α : Type} (m : String) :
+    NoPanic (throw (Stop.internal m) : Except Stop α) :=
+  fun _ h => by simp [throw, throwThe, MonadExceptOf.throw] at h
+theorem NoPanic.bind {α β : Type} {x : Except Stop α} {f : α → Except Stop β}
+    (hx : NoPanic x) (hf : ∀ a, NoPanic (f a)) : NoPanic (x >>= f) := by
+  intro msg h
+  cases x with
+  | error e =>
+    simp only [Bind.bind, Except.bind] at h
+    exact hx msg (congrArg (fun e => (Except.error e : Except Stop α)) (Except.error.inj h))
+  | ok a => simp only [Bind.bind, Except.bind] at h; exact hf a msg h
+theorem NoPanic.map {α β : Type} {x : Except Stop α} (g : α → β) (hx : NoPanic x) :
+    NoPanic (g <$> x) := by
+  intro msg h
+  cases x with
+  | error e =>
+    simp only [Functor.map, Except.map] at h
+    exact hx msg (congrArg (fun e => (Except.error e : Except Stop α)) (Except.error.inj h))
+  | ok a => simp [Functor.map, Except.map] at h
+theorem NoPanic.ite {α : Type} {c : Prop} [Decidable c] {a b : Except Stop α}
+    (ha : NoPanic a) (hb : NoPanic b) : NoPanic (if c then a else b) := by
+  split <;> assumption
+theorem NoPanic.of_ok {α : Type} {x : Except Stop α} {a : α} (h : x = .ok a) : NoPanic x := by
+  subst h; exact NoPanic.ok a
+
+/-- Discharge a `NoPanic` goal over a do-pipeline of the combinators above. -/
+macro "no_panic" : tactic =>
+  `(tactic| repeat first
+    | exact NoPanic.ok _
+    | exact NoPanic.pure _
+    | exact NoPanic.stuck _
+    | exact NoPanic.unsupported _
+    | exact NoPanic.internal _
+    | assumption
+    | apply NoPanic.ite
+    | apply NoPanic.map
+    | (apply NoPanic.bind; rotate_left)
+    | intro _)
+
+theorem normalizeListWith_noPanic {f : GoValue → Except Stop GoValue}
+    (hf : ∀ v, NoPanic (f v)) : ∀ l, NoPanic (normalizeListWith f l)
+  | [] => by rw [normalizeListWith_nil]; exact NoPanic.pure _
+  | v :: rest => by
+      rw [normalizeListWith_cons]
+      exact NoPanic.bind (hf v) fun _ =>
+        NoPanic.bind (normalizeListWith_noPanic hf rest) fun _ => NoPanic.pure _
+
+theorem normalizeFieldsWith_noPanic {f : Ty → GoValue → Except Stop GoValue}
+    (hf : ∀ t v, NoPanic (f t v)) :
+    ∀ fs vs, NoPanic (normalizeFieldsWith f fs vs)
+  | [], vs => by rw [normalizeFieldsWith_nil_left]; exact NoPanic.pure _
+  | _ :: _, [] => by rw [normalizeFieldsWith_nil_right]; exact NoPanic.pure _
+  | field :: fr, (af, v) :: vr => by
+      rw [normalizeFieldsWith_cons]
+      (try dsimp only)
+      refine NoPanic.ite ?_ ?_
+      · exact NoPanic.bind (NoPanic.stuck _) fun _ => NoPanic.bind (hf _ _) fun _ =>
+          NoPanic.bind (normalizeFieldsWith_noPanic hf fr vr) fun _ => NoPanic.pure _
+      · exact NoPanic.bind (hf _ _) fun _ =>
+          NoPanic.bind (normalizeFieldsWith_noPanic hf fr vr) fun _ => NoPanic.pure _
+
+theorem normalizeStructValueWith_noPanic {f : Ty → GoValue → Except Stop GoValue}
+    (hf : ∀ t v, NoPanic (f t v)) (name : TypeId) (fields : Array FieldDef) :
+    ∀ v, NoPanic (normalizeStructValueWith f name fields v) := by
+  intro v
+  cases v <;> simp only [normalizeStructValueWith] <;> (try exact NoPanic.stuck _)
+  (try dsimp only)
+  split
+  · split
+    · exact NoPanic.pure _
+    · exact NoPanic.stuck _
+  · (try dsimp only)
+    split
+    · exact NoPanic.stuck _
+    · (try dsimp only)
+      exact NoPanic.map _ (normalizeFieldsWith_noPanic hf _ _)
+
+/-- The normalizer's TYPE layer never panics, given the same for the
+`.defined` callback. -/
+theorem normalizeValueForTyTy_noPanic {f : TypeIdx → GoValue → Except Stop GoValue}
+    (hf : ∀ i v, NoPanic (f i v)) :
+    ∀ (ty : Ty) (v : GoValue), NoPanic (normalizeValueForTyTy f ty v) := by
+  intro ty
+  induction ty using Ty.arrayInduction with
+  | array length elem ih =>
+    intro v
+    cases v <;> simp only [normalizeValueForTyTy]
+    all_goals (try exact NoPanic.stuck _)
+    all_goals (try dsimp only)
+    all_goals (try split)
+    all_goals (try dsimp only)
+    all_goals first
+      | exact NoPanic.map _ (normalizeListWith_noPanic (fun v => ih v) _)
+      | exact NoPanic.bind (NoPanic.stuck _) fun _ =>
+          NoPanic.map _ (normalizeListWith_noPanic (fun v => ih v) _)
+  | leaf ty hne =>
+    -- `ty` stays a variable: the match splits on every arm, and the
+    -- array arms are dismissed by `hne`.
+    intro v
+    unfold normalizeValueForTyTy
+    split
+    all_goals (try dsimp only)
+    all_goals (try split)
+    all_goals (try dsimp only)
+    all_goals first
+      | exact NoPanic.pure _
+      | exact NoPanic.ok _
+      | exact NoPanic.stuck _
+      | exact NoPanic.unsupported _
+      | exact hf _ _
+      | exact absurd rfl (hne _ _)
+
+/-- The normalizer's INDEX layer never panics (induction on the bound). -/
+theorem normalizeValueForTyAt_noPanic (types : TypeEnv) :
+    ∀ (bound : Nat) (i : TypeIdx) (v : GoValue),
+      NoPanic (normalizeValueForTyAt types bound i v) := by
+  intro bound
+  induction bound with
+  | zero =>
+    intro i v
+    simp only [normalizeValueForTyAt, typeIndexExhausted]
+    exact NoPanic.unsupported _
+  | succ n ih =>
+    intro i v
+    unfold normalizeValueForTyAt
+    split
+    · exact normalizeStructValueWith_noPanic
+        (fun t v => normalizeValueForTyTy_noPanic (fun i v => ih i v) t v) _ _ _
+    · exact normalizeValueForTyTy_noPanic (fun i v => ih i v) _ _
+    · exact NoPanic.unsupported _
+    · exact NoPanic.unsupported _
+    · exact NoPanic.unsupported _
+
+theorem normalizeValueForTy_noPanic (ty : Ty) (v : GoValue) :
+    NoPanic (normalizeValueForTy ctx ty v) := by
+  unfold normalizeValueForTy
+  exact normalizeValueForTyTy_noPanic (fun i v => normalizeValueForTyAt_noPanic _ _ i v) ty v
+
+theorem defaultFieldsWith_noPanic {f : Ty → Except Stop GoValue}
+    (hf : ∀ t, NoPanic (f t)) : ∀ fs, NoPanic (defaultFieldsWith f fs)
+  | [] => by unfold defaultFieldsWith; exact NoPanic.pure _
+  | field :: rest => by
+      unfold defaultFieldsWith
+      exact NoPanic.bind (hf _) fun _ =>
+        NoPanic.bind (defaultFieldsWith_noPanic hf rest) fun _ => NoPanic.pure _
+
+/-- The zero value's TYPE layer never panics, given the same for the
+`.defined` callback. -/
+theorem defaultValueTy_noPanic {f : TypeIdx → Except Stop GoValue}
+    (hf : ∀ i, NoPanic (f i)) :
+    ∀ (ty : Ty), NoPanic (defaultValueTy f ty) := by
+  intro ty
+  induction ty using Ty.arrayInduction with
+  | array length elem ih =>
+    simp only [defaultValueTy]
+    split
+    · exact NoPanic.pure _
+    · exact NoPanic.bind ih fun _ => NoPanic.pure _
+  | leaf ty hne =>
+    unfold defaultValueTy
+    split
+    all_goals (try dsimp only)
+    all_goals first
+      | exact NoPanic.pure _
+      | exact NoPanic.ok _
+      | exact NoPanic.unsupported _
+      | exact hf _
+      | exact absurd rfl (hne _ _)
+
+/-- The zero value's INDEX layer never panics (induction on the bound). -/
+theorem defaultValueAt_noPanic (types : TypeEnv) :
+    ∀ (bound : Nat) (i : TypeIdx), NoPanic (defaultValueAt types bound i) := by
+  intro bound
+  induction bound with
+  | zero =>
+    intro i
+    simp only [defaultValueAt, typeIndexExhausted]
+    exact NoPanic.unsupported _
+  | succ n ih =>
+    intro i
+    unfold defaultValueAt
+    split
+    · exact NoPanic.map _ (defaultFieldsWith_noPanic (fun t => defaultValueTy_noPanic ih t) _)
+    · exact defaultValueTy_noPanic ih _
+    · exact NoPanic.unsupported _
+    · exact NoPanic.unsupported _
+    · exact NoPanic.unsupported _
+
+theorem defaultValue_noPanic (ty : Ty) : NoPanic (defaultValue ctx ty) := by
+  unfold defaultValue
+  exact defaultValueTy_noPanic (fun i => defaultValueAt_noPanic _ _ i) ty
+
+/-- A loop whose every body step is panic-free is panic-free. -/
+theorem forIn_noPanic {α β : Type} {body : α → β → Except Stop (ForInStep β)}
+    (hb : ∀ a b, NoPanic (body a b)) :
+    ∀ (l : List α) (acc : β), NoPanic (forIn l acc body)
+  | [], acc => by rw [List.forIn_nil]; exact NoPanic.pure _
+  | a :: as, acc => by
+      rw [List.forIn_cons]
+      refine NoPanic.bind (hb a acc) fun r => ?_
+      cases r with
+      | done b => exact NoPanic.pure _
+      | yield b => exact forIn_noPanic hb as b
+
+theorem buildAppendBackingValue_noPanic (elem : Ty)
+    (oldValues elemValues : Array GoValue) (newCap : Nat) :
+    NoPanic (buildAppendBackingValue ctx elem oldValues elemValues newCap) := by
+  unfold buildAppendBackingValue
+  dsimp only
+  rw [← Array.forIn_toList]
+  refine NoPanic.bind (forIn_noPanic (fun a b => ?_) _ _) fun values => ?_
+  · exact NoPanic.bind (normalizeValueForTy_noPanic _ _) fun _ => NoPanic.pure _
+  · refine NoPanic.ite ?_ ?_
+    · refine NoPanic.bind (NoPanic.stuck _) fun _ => ?_
+      rw [Std.Legacy.Range.forIn_eq_forIn_range']
+      refine NoPanic.bind (forIn_noPanic (fun a b => ?_) _ _) fun _ => NoPanic.pure _
+      exact NoPanic.bind (defaultValue_noPanic _) fun _ => NoPanic.pure _
+    · rw [Std.Legacy.Range.forIn_eq_forIn_range']
+      refine NoPanic.bind (forIn_noPanic (fun a b => ?_) _ _) fun _ => NoPanic.pure _
+      exact NoPanic.bind (defaultValue_noPanic _) fun _ => NoPanic.pure _
+
+/-- `Store.alloc` never panics: the normalizer does not, and the push is pure. -/
+theorem Store.alloc_noPanic (s : Store) (v : GoValue) (ty : Ty) :
+    NoPanic (Store.alloc ctx s v ty) := by
+  unfold Store.alloc
+  exact NoPanic.bind (normalizeValueForTy_noPanic _ _) fun _ => NoPanic.pure _
+
+/-! #### The root-first read (C1 S1): `loadLoc` as a root lookup + path read
+
+`loadLoc` is leaf-first on the `Loc`; the module's write is root-first on
+`Loc.rootPath`. The bridge below reads root-first and proves it IS
+`loadLoc`, which is what the store-side NoPanic argument descends along. -/
+
+variable (ctx) in
+/-- One projection step (the `loadLoc` field/index arms, root-first). -/
+def projectStep : GoValue → PathStep → Except Stop GoValue
+  | .struct actualType fields, .field typeId fieldName =>
+      if actualType != typeId && !structTagCompatible ctx actualType typeId then
+        stuck s!"expected struct {typeId.key}, got struct {actualType.key}"
+      else
+        match StructFields.lookup fields fieldName with
+        | some value => return value
+        | none => stuck s!"unknown GoCore struct field: {fieldName}"
+  | other, .field _ _ => stuck s!"expected struct base for field load, got {repr other}"
+  | .array values, .index index => arrayGet values index
+  | other, .index _ => stuck s!"expected array base for index load, got {repr other}"
+
+variable (ctx) in
+/-- Root-first read along a path. -/
+def readAt : GoValue → List PathStep → Except Stop GoValue
+  | v, [] => pure v
+  | v, step :: rest => do readAt (← projectStep ctx v step) rest
+
+theorem readAt_append (v : GoValue) (p : List PathStep) (step : PathStep) :
+    readAt ctx v (p ++ [step]) = (readAt ctx v p >>= fun x => readAt ctx x [step]) := by
+  induction p generalizing v with
+  | nil => simp [readAt, Bind.bind, Except.bind]
+  | cons s rest ih =>
+    simp only [List.cons_append, readAt]
+    cases projectStep ctx v s with
+    | error e => simp [Bind.bind, Except.bind]
+    | ok w => simp only [Bind.bind, Except.bind]; exact ih w
+
+/-- `loadLoc` IS the root lookup followed by the root-first read. -/
+theorem loadLoc_eq_readAt (s : Store) : ∀ l : Loc,
+    loadLoc ctx s l =
+      match Heap.lookup s.heap (.base (Loc.rootPath l).1) with
+      | some (.value _ root) => readAt ctx root (Loc.rootPath l).2
+      | some (.mapPayload ..) => stuck s!"value load from a map payload cell {repr (Loc.rootLoc l)}"
+      | some (.chanPayload ..) => stuck s!"value load from a channel payload cell {repr (Loc.rootLoc l)}"
+      | none => stuck s!"unbound GoCore heap location: {repr (Loc.rootLoc l)}" := by
+  intro l
+  induction l with
+  | base a =>
+    obtain ⟨i⟩ := a
+    simp only [loadLoc, Loc.rootPath, Loc.rootLoc, Loc.rootBase]
+    split <;> simp_all [readAt]
+  | field b tid f ih =>
+    have hroot : (Loc.rootPath (.field b tid f)).1 = (Loc.rootPath b).1 := rfl
+    have hpath : (Loc.rootPath (.field b tid f)).2 = (Loc.rootPath b).2 ++ [.field tid f] := rfl
+    simp only [loadLoc]
+    rw [ih]
+    simp only [hroot, hpath, Loc.rootLoc_eq, readAt_append]
+    split
+    · rename_i ty root _
+      cases hread : readAt ctx root (Loc.rootPath b).2 with
+      | error e => simp [Bind.bind, Except.bind]
+      | ok w =>
+        simp only [Bind.bind, Except.bind]
+        cases w with
+        | struct actualType fields =>
+          simp only [readAt, projectStep, Bind.bind, Except.bind]
+          by_cases hc : (actualType != tid && !structTagCompatible ctx actualType tid) = true
+          · simp [hc, stuck, throw, throwThe, MonadExceptOf.throw]
+          · have hc' : (actualType != tid && !structTagCompatible ctx actualType tid) = false := by
+              simpa using hc
+            simp only [hc', Bool.false_eq_true, ↓reduceIte, pure, Except.pure]
+            cases StructFields.lookup fields f <;>
+              simp [stuck, throw, throwThe, MonadExceptOf.throw]
+        | _ => simp [readAt, projectStep, Bind.bind, Except.bind, stuck, throw, throwThe,
+                MonadExceptOf.throw]
+    · simp [Bind.bind, Except.bind, stuck, throw, throwThe, MonadExceptOf.throw]
+    · simp [Bind.bind, Except.bind, stuck, throw, throwThe, MonadExceptOf.throw]
+    · simp [Bind.bind, Except.bind, stuck, throw, throwThe, MonadExceptOf.throw]
+  | index b i ih =>
+    have hroot : (Loc.rootPath (.index b i)).1 = (Loc.rootPath b).1 := rfl
+    have hpath : (Loc.rootPath (.index b i)).2 = (Loc.rootPath b).2 ++ [.index i] := rfl
+    simp only [loadLoc]
+    rw [ih]
+    simp only [hroot, hpath, Loc.rootLoc_eq, readAt_append]
+    split
+    · rename_i ty root _
+      cases hread : readAt ctx root (Loc.rootPath b).2 with
+      | error e => simp [Bind.bind, Except.bind]
+      | ok w =>
+        simp only [Bind.bind, Except.bind]
+        cases w with
+        | array values =>
+          simp only [readAt, projectStep, Bind.bind, Except.bind]
+          cases arrayGet values i <;> rfl
+        | _ => simp [readAt, projectStep, Bind.bind, Except.bind, stuck, throw, throwThe,
+                MonadExceptOf.throw]
+    · simp [Bind.bind, Except.bind, stuck, throw, throwThe, MonadExceptOf.throw]
+    · simp [Bind.bind, Except.bind, stuck, throw, throwThe, MonadExceptOf.throw]
+    · simp [Bind.bind, Except.bind, stuck, throw, throwThe, MonadExceptOf.throw]
+
+/-! #### The field-position search agrees with `StructFields.lookup` -/
+
+/-- The `foldl` step of `StructFields.lookup`, named for the lemmas. -/
+def lookupStep (needle : String) (found : Option GoValue) (nv : String × GoValue) :
+    Option GoValue :=
+  match found with
+  | some value => some value
+  | none => if nv.1 == needle then some nv.2 else none
+
+theorem foldl_lookupStep_some (needle : String) (v : GoValue) :
+    ∀ l : List (String × GoValue), l.foldl (lookupStep needle) (some v) = some v := by
+  intro l
+  induction l with
+  | nil => rfl
+  | cons x rest ih => simpa [List.foldl, lookupStep] using ih
+
+theorem foldl_lookupStep_none (needle : String) :
+    ∀ l : List (String × GoValue),
+      l.foldl (lookupStep needle) none = (l.find? (·.1 == needle)).map (·.2) := by
+  intro l
+  induction l with
+  | nil => rfl
+  | cons x rest ih =>
+    by_cases hx : x.1 == needle
+    · simp [List.foldl, lookupStep, hx, foldl_lookupStep_some]
+    · simp [List.foldl, lookupStep, hx, ih]
+
+theorem StructFields.lookup_eq_find? (fields : Array (String × GoValue)) (needle : String) :
+    StructFields.lookup fields needle = (fields.toList.find? (·.1 == needle)).map (·.2) := by
+  simp only [StructFields.lookup]
+  rw [← Array.foldl_toList]
+  exact foldl_lookupStep_none needle fields.toList
+
+/-- The first match, characterized by position. -/
+theorem List.find?_eq_of_first {α : Type} (p : α → Bool) :
+    ∀ (l : List α) (k : Nat) (hk : k < l.length),
+      p l[k] = true → (∀ j (hj : j < k), p (l[j]'(Nat.lt_trans hj hk)) = false) →
+      l.find? p = some l[k] := by
+  intro l
+  induction l with
+  | nil => intro k hk; simp at hk
+  | cons x rest ih =>
+    intro k hk hpk hbefore
+    cases k with
+    | zero => simp_all
+    | succ k =>
+      have hx : p x = false := hbefore 0 (Nat.zero_lt_succ _)
+      simp only [List.getElem_cons_succ] at hpk
+      have hstep : List.find? p (x :: rest) = List.find? p rest :=
+        List.find?_cons_of_neg (by simp [hx])
+      rw [hstep, List.getElem_cons_succ]
+      exact ih k (by simpa using hk) hpk
+        (fun j hj => hbefore (j + 1) (Nat.succ_lt_succ hj))
+
+/-- `StructFields.lookup` returns the value at the structural search's position. -/
+theorem StructFields.lookup_of_fieldIdx? (fields : Array (String × GoValue)) (f : String)
+    (k : Nat) (h : fieldIdx? fields f = some k) :
+    ∃ hk : k < fields.size, StructFields.lookup fields f = some fields[k].2 := by
+  obtain ⟨hk, hname, hbefore⟩ := fieldIdx?_spec fields f k h
+  refine ⟨hk, ?_⟩
+  rw [StructFields.lookup_eq_find?]
+  have hk' : k < fields.toList.length := by simpa using hk
+  rw [List.find?_eq_of_first _ fields.toList k hk' (by simpa using hname)
+    (fun j hj => by
+      have := hbefore j hj
+      simpa [Array.getElem_toList] using this)]
+  simp
+
+theorem Ty.stepDown_noPanic (types : TypeEnv) :
+    ∀ (b : Nat) (ty : Ty) (step : PathStep), NoPanic (Ty.stepDown types b ty step) := by
+  intro b
+  induction b with
+  | zero =>
+    intro ty step
+    unfold Ty.stepDown
+    split
+    all_goals
+      first
+        | exact NoPanic.pure _
+        | exact NoPanic.unsupported _
+        | exact NoPanic.stuck _
+        | (dsimp only; exact NoPanic.unsupported _)
+  | succ n ih =>
+    intro ty step
+    unfold Ty.stepDown
+    split
+    -- Order-independent (audit fix round F3, 2026-09-18: the identity-type
+    -- arms joined the match): every leaf arm — `pure` (the `.array` hop and
+    -- the identity types), `stuck`, `unsupported` — closes here; the ONE arm
+    -- left standing is the `.defined` table walk, taken below. A new arm
+    -- that is none of these fails loudly at the second block.
+    all_goals
+      first
+        | exact NoPanic.pure _
+        | exact NoPanic.stuck _
+        | exact NoPanic.unsupported _
+        | (dsimp only; exact NoPanic.unsupported _)
+        | skip
+    all_goals
+      (try dsimp only
+       split
+       · try dsimp only
+         split
+         · split <;> first | exact NoPanic.pure _ | exact NoPanic.stuck _
+         · exact NoPanic.stuck _
+       · exact ih _ _
+       · exact NoPanic.unsupported _
+       · exact NoPanic.unsupported _
+       · exact NoPanic.unsupported _)
+
+theorem Array.modifyM_noPanic {α : Type} {xs : Array α} {i : Nat} {f : α → Except Stop α}
+    (h : (hi : i < xs.size) → NoPanic (f xs[i])) : NoPanic (xs.modifyM i f) := by
+  unfold Array.modifyM
+  split
+  · rename_i hi
+    exact NoPanic.bind (h hi) fun _ => NoPanic.pure _
+  · exact NoPanic.pure _
+
+theorem arrayIndexNatFormed_noPanic (values : Array GoValue) (i : Int) :
+    NoPanic (arrayIndexNatFormed values i) := by
+  unfold arrayIndexNatFormed
+  split
+  · exact NoPanic.pure _
+  · exact NoPanic.internal _
+
+/-- The root-first write never raises a recoverable panic (C1 S3): the leaf
+normalization and the type descent refuse but never panic, and the index
+re-check is a machine-invariant `.internal`. -/
+theorem writeAt_noPanic :
+    ∀ (path : List PathStep) (b : Nat) (ty : Ty) (root v : GoValue),
+      NoPanic (writeAt ctx b ty root path v) := by
+  intro path
+  induction path with
+  | nil =>
+    intro b ty root v
+    simp only [writeAt]
+    exact normalizeValueForTyTy_noPanic (fun _ _ => normalizeValueForTyAt_noPanic _ _ _ _) _ _
+  | cons step rest ih =>
+    intro b ty root v
+    cases step with
+    | field tid f =>
+      cases root with
+      | struct actual fields =>
+        unfold writeAt
+        dsimp only
+        -- do-notation duplicates the continuation into both `if` branches
+        refine NoPanic.ite (c := (actual != tid && !structTagCompatible ctx actual tid) = true)
+          (NoPanic.bind (NoPanic.stuck _) fun _ => ?tail) ?tail
+        cases fieldIdx? fields f with
+        | none => exact NoPanic.stuck _
+        | some k =>
+          refine NoPanic.bind (Ty.stepDown_noPanic _ _ _ _) fun p => ?_
+          obtain ⟨fty, b'⟩ := p
+          refine NoPanic.bind (Array.modifyM_noPanic fun _ => ?_) fun _ => NoPanic.pure _
+          refine NoPanic.bind ?_ fun _ => NoPanic.pure _
+          exact ih _ _ _ _
+      | _ =>
+        simp only [writeAt]
+        split <;> exact NoPanic.stuck _
+    | index i =>
+      cases root with
+      | array values =>
+        simp only [writeAt]
+        refine NoPanic.bind (arrayIndexNatFormed_noPanic _ _) fun k => ?_
+        refine NoPanic.bind (Ty.stepDown_noPanic _ _ _ _) fun p => ?_
+        obtain ⟨ety, b'⟩ := p
+        exact NoPanic.bind (Array.modifyM_noPanic fun _ => ih _ _ _ _) fun _ => NoPanic.pure _
+      | _ =>
+        simp only [writeAt]
+        split <;> exact NoPanic.stuck _
+
+/-- The ancestor statement (wave-(iii) audit fix F1): a write along a path the read
+walks never panics — since C1 S3 a corollary of `writeAt_noPanic` (no path condition). -/
+theorem writeAt_noPanic_of_readAt_ok :
+    ∀ {path : List PathStep} {b : Nat} {ty : Ty} {root v₀ : GoValue},
+      readAt ctx root path = .ok v₀ → ∀ v, NoPanic (writeAt ctx b ty root path v) :=
+  fun _ v => writeAt_noPanic _ _ _ _ v
+
+/-- A root-cell store never panics: the cell exists or the store is
+`.internal`, and normalization at the cell's type refuses but never panics. -/
+theorem storeLoc_base_noPanic (s : Store) (a : Addr) (v : GoValue) :
+    NoPanic (storeLoc ctx s (.base a) v) := by
+  unfold storeLoc Store.updateCell
+  simp only [Loc.rootPath]
+  split
+  · refine NoPanic.bind ?_ fun _ => NoPanic.pure _
+    try dsimp only
+    split
+    · exact NoPanic.map _
+        (normalizeValueForTyTy_noPanic (fun _ _ => normalizeValueForTyAt_noPanic _ _ _ _) _ _)
+    · exact NoPanic.stuck _
+    · exact NoPanic.stuck _
+  · exact NoPanic.internal _
+
+/-- A store through a PATH the machine can load never panics: the only
+panic on the store path is the index bounds check, and the load's success
+puts the index in range (root-first, through `loadLoc_eq_readAt`). -/
+theorem storeLoc_noPanic_of_loadLoc_ok (s : Store) :
+    ∀ (loc : Loc) {v₀ : GoValue}, loadLoc ctx s loc = .ok v₀ → ∀ v, NoPanic (storeLoc ctx s loc v) := by
+  intro loc v₀ h v
+  rw [loadLoc_eq_readAt] at h
+  unfold storeLoc Store.updateCell
+  dsimp only
+  split
+  · rename_i hi
+    refine NoPanic.bind ?_ fun _ => NoPanic.pure _
+    try dsimp only
+    have hcell : Heap.lookup s.heap (.base (Loc.rootPath loc).1)
+        = some s.heap[(Loc.rootPath loc).1.id] := by
+      simp [Heap.lookup, Array.getElem?_eq_getElem hi]
+    rw [hcell] at h
+    split
+    · rename_i ty root hroot
+      rw [hroot] at h
+      exact NoPanic.map _ (writeAt_noPanic_of_readAt_ok h v)
+    · split <;> exact NoPanic.stuck _
+    · split <;> exact NoPanic.stuck _
+  · exact NoPanic.internal _
+
+theorem tryAcquire_noPanic (op : SyncOp) (pre : SyncPrim) : NoPanic (tryAcquire op pre) := by
+  unfold tryAcquire
+  split <;> first | exact NoPanic.pure _ | exact NoPanic.stuck _ | exact NoPanic.internal _
+
+theorem enterRecvTargets_noPanic (s : Store) (targets : List Assignee) (vals : List GoValue)
+    (body : Stmt) (env : LocalEnv) (k : Cont) :
+    NoPanic (enterRecvTargets s targets vals body env k) := by
+  unfold enterRecvTargets
+  split <;> first | exact NoPanic.pure _ | exact NoPanic.stuck _
+
+theorem tryDeliver_noPanic (b : Bool) (s : Store) (targets : List Assignee)
+    (env : LocalEnv) (k : Cont) : NoPanic (tryDeliver b s targets env k) := by
+  unfold tryDeliver
+  split
+  · exact NoPanic.pure _
+  · exact NoPanic.bind (enterRecvTargets_noPanic _ _ _ _ _ _) fun _ => NoPanic.pure _
+
+/-- **Site 2 of the retired disjunct**: a TRY head's apply never raises a
+recoverable panic — `tryAcquire` refuses at most, the acquired cell is
+stored through the location the apply just READ (`syncCell`), and the
+result delivery is an `.evalE` entry or a refusal. -/
+theorem applyTryLock_noPanic {s : Store} {loc : Loc} {pre : SyncPrim}
+    (hcell : syncCell ctx s loc = .ok pre) (op : SyncOp) (spurious : Bool)
+    (targets : List Assignee) (env : LocalEnv) (k : Cont) :
+    NoPanic (applyTryLock ctx s op loc pre spurious targets env k) := by
+  have hload : ∃ w, loadLoc ctx s loc = .ok w := by
+    unfold syncCell at hcell
+    cases hl : loadLoc ctx s loc with
+    | error e => rw [hl] at hcell; simp [Bind.bind, Except.bind] at hcell
+    | ok w => exact ⟨w, rfl⟩
+  obtain ⟨w, hw⟩ := hload
+  unfold applyTryLock
+  try dsimp only
+  -- The labelled delivery: `tryDeliver`, then a `pure` of the label (C1 S2c).
+  have hdel : ∀ (b : Bool) (σ : Store) (tr : AccessTrace),
+      NoPanic (do let (c', s') ← tryDeliver b σ targets env k
+                  pure ((c', s', tr) : Config × Store × AccessTrace)) := fun b σ tr =>
+    NoPanic.bind (tryDeliver_noPanic _ _ _ _ _) fun p => by
+      obtain ⟨c, s⟩ := p
+      exact NoPanic.pure _
+  refine NoPanic.bind (tryAcquire_noPanic _ _) fun r => ?_
+  cases r with
+  | none => exact hdel _ _ _
+  | some post =>
+    refine NoPanic.bind (storeLoc_noPanic_of_loadLoc_ok s loc hw _) fun _ => ?_
+    exact NoPanic.ite (hdel _ _ _) (hdel _ _ _)
+
+
+/-! ### The validate/commit seam (C1 S3, cost B — `docs/2026-09-17_c1-memory-module-charter.md`
+§2 B(b), §6 S3): the write path never panics, so every commit runs on the store it owns
+
+`Commit`/`runCommit` (Machine.lean) and `deliverV` (StepFn.lean) split each store-bearing
+apply into a VALIDATE phase that only reads and a COMMIT that only writes. The facts here:
+the write primitives never raise a recoverable panic (`writeAt_noPanic` …
+`Mem.storeRun_noPanic` — the index re-check is `arrayIndexNatFormed`'s `.internal`), hence
+every commit a validate phase can return is panic-free (`PlanNoPanic`, the per-family
+`…_commit_noPanic`), hence a delivered panic is the validate phase's and the store the step
+returns is the pre-apply store — the panic convention as a theorem, not a saved copy. The
+bridges (`toResult_plan_ok/_panic`, the `_inv_` inversions, `enterFramePickV_of_*`) connect
+`stepFn`'s split arms to the relation's composed premises in both directions. -/
+
+/-- A store through ANY path never raises a recoverable panic (C1 S3). -/
+theorem storeLoc_noPanic (s : Store) (l : Loc) (v : GoValue) : NoPanic (storeLoc ctx s l v) := by
+  unfold storeLoc Store.updateCell
+  dsimp only
+  split
+  · refine NoPanic.bind ?_ fun _ => NoPanic.pure _
+    try dsimp only
+    split
+    · exact NoPanic.map _ (writeAt_noPanic _ _ _ _ _)
+    · split <;> exact NoPanic.stuck _
+    · split <;> exact NoPanic.stuck _
+  · exact NoPanic.internal _
+
+theorem Mem.store_noPanic (s : Store) (l : Loc) (v : GoValue) : NoPanic (Mem.store ctx s l v) :=
+  NoPanic.bind (storeLoc_noPanic _ _ _) fun _ => NoPanic.pure _
+
+theorem storeMapPayload_noPanic (s : Store) (l : Loc) (es : Array (Nat × GoValue × GoValue))
+    (n : Nat) : NoPanic (storeMapPayload s l es n) := by
+  unfold storeMapPayload
+  split
+  · unfold Store.updateCell
+    split
+    · refine NoPanic.bind ?_ fun _ => NoPanic.pure _
+      try dsimp only
+      split <;> first | exact NoPanic.pure _ | exact NoPanic.stuck _
+    · exact NoPanic.internal _
+  · exact NoPanic.stuck _
+
+theorem Mem.mapWrite_noPanic (s : Store) (l : Loc) (es : Array (Nat × GoValue × GoValue))
+    (n : Nat) : NoPanic (Mem.mapWrite s l es n) :=
+  NoPanic.bind (storeMapPayload_noPanic _ _ _ _) fun _ => NoPanic.pure _
+
+theorem Mem.storeElems_noPanic : ∀ (vs : List GoValue) (s : Store) (base : Loc) (start : Nat),
+    NoPanic (Mem.storeElems ctx s base start vs)
+  | [], s, base, start => by
+      simp only [Mem.storeElems]
+      exact NoPanic.pure _
+  | v :: vs, s, base, start => by
+      simp only [Mem.storeElems]
+      refine NoPanic.bind (Mem.store_noPanic _ _ _) fun p => ?_
+      obtain ⟨s₁, t⟩ := p
+      refine NoPanic.bind (Mem.storeElems_noPanic vs s₁ base (start + 1)) fun q => ?_
+      obtain ⟨s₂, ts⟩ := q
+      exact NoPanic.pure _
+
+theorem Mem.storeRun_noPanic (s : Store) (sl : SliceValue) (start : Nat) (vs : List GoValue) :
+    NoPanic (Mem.storeRun ctx s sl start vs) := by
+  unfold Mem.storeRun
+  split
+  · exact Mem.storeElems_noPanic _ _ _ _
+  · split
+    · exact NoPanic.pure _
+    · exact NoPanic.stuck _
+
+theorem bindParams_noPanic : ∀ (env : LocalEnv) (s : Store) (ps : List Param) (vs : List GoValue),
+    NoPanic (bindParams ctx env s ps vs)
+  | env, s, [], [] => by simp only [bindParams]; exact NoPanic.pure _
+  | env, s, p :: ps, v :: vs => by
+      simp only [bindParams]
+      refine NoPanic.bind (normalizeValueForTy_noPanic _ _) fun v' => ?_
+      refine NoPanic.bind (Store.alloc_noPanic _ _ _) fun q => ?_
+      obtain ⟨loc, s₁⟩ := q
+      exact bindParams_noPanic _ s₁ ps vs
+  | _, _, [], _ :: _ => by simp only [bindParams]; exact NoPanic.stuck _
+  | _, _, _ :: _, [] => by simp only [bindParams]; exact NoPanic.stuck _
+
+theorem allocDecls_noPanic : ∀ (env : LocalEnv) (s : Store) (ps : List Param),
+    NoPanic (allocDecls ctx env s ps)
+  | env, s, [] => by simp only [allocDecls]; exact NoPanic.pure _
+  | env, s, p :: ps => by
+      simp only [allocDecls]
+      refine NoPanic.bind (defaultValue_noPanic _) fun v => ?_
+      refine NoPanic.bind (Store.alloc_noPanic _ _ _) fun q => ?_
+      obtain ⟨loc, s₁⟩ := q
+      exact allocDecls_noPanic _ s₁ ps
+
+theorem pinResultLocs_noPanic (env : LocalEnv) : ∀ (ps : List Param),
+    NoPanic (pinResultLocs env ps)
+  | [] => by simp only [pinResultLocs]; exact NoPanic.pure _
+  | p :: ps => by
+      simp only [pinResultLocs]
+      split
+      · exact NoPanic.bind (pinResultLocs_noPanic env ps) fun _ => NoPanic.pure _
+      · exact NoPanic.stuck _
+
+/-- «Every commit the validate phase can return is panic-free» — the per-family
+statement, over the phase's `Except`. -/
+def PlanNoPanic {α : Type} (p : Except Stop (Commit α)) : Prop :=
+  ∀ c, p = .ok c → ∀ s, NoPanic (c s)
+
+theorem PlanNoPanic.error {α : Type} (e : Stop) : PlanNoPanic (.error e : Except Stop (Commit α)) :=
+  fun _ h => by cases h
+theorem PlanNoPanic.stuck {α : Type} (m : String) :
+    PlanNoPanic (GoCore.stuck m : Except Stop (Commit α)) := fun _ h => by cases h
+theorem PlanNoPanic.unsupported {α : Type} (m : String) :
+    PlanNoPanic (GoCore.unsupported m : Except Stop (Commit α)) := fun _ h => by cases h
+theorem PlanNoPanic.internal {α : Type} (m : String) :
+    PlanNoPanic (throw (Stop.internal m) : Except Stop (Commit α)) :=
+  fun _ h => by simp [throw, throwThe, MonadExceptOf.throw] at h
+theorem PlanNoPanic.panic {α : Type} (m : String) :
+    PlanNoPanic (GoCore.panic m : Except Stop (Commit α)) := fun _ h => by cases h
+theorem PlanNoPanic.pure {α : Type} {c : Commit α} (h : ∀ s, NoPanic (c s)) :
+    PlanNoPanic (pure c : Except Stop (Commit α)) := fun c' hc => by
+  obtain rfl := Except.ok.inj hc
+  exact h
+theorem PlanNoPanic.bind {α β : Type} {x : Except Stop β} {f : β → Except Stop (Commit α)}
+    (hf : ∀ b, x = .ok b → PlanNoPanic (f b)) : PlanNoPanic (x >>= f) := fun c h => by
+  cases hx : x with
+  | error e => rw [hx] at h; simp [Bind.bind, Except.bind] at h
+  | ok b => rw [hx] at h; simp only [Bind.bind, Except.bind] at h; exact hf b hx c h
+theorem PlanNoPanic.ite {α : Type} {P : Prop} [Decidable P] {a b : Except Stop (Commit α)}
+    (ha : PlanNoPanic a) (hb : PlanNoPanic b) : PlanNoPanic (if P then a else b) := by
+  split <;> assumption
+
+/-- Discharge `NoPanic` over a COMMIT body: the write primitives, the allocators,
+the entry's binders, pure returns, and pair destructuring at every bind. -/
+macro "commit_no_panic" : tactic =>
+  `(tactic| (repeat first
+    | exact NoPanic.ok _
+    | exact NoPanic.pure _
+    | exact NoPanic.stuck _
+    | exact NoPanic.unsupported _
+    | exact NoPanic.internal _
+    | exact Store.alloc_noPanic _ _ _
+    | exact Mem.store_noPanic _ _ _
+    | exact Mem.mapWrite_noPanic _ _ _ _
+    | exact Mem.storeRun_noPanic _ _ _ _
+    | exact Mem.storeElems_noPanic _ _ _ _
+    | exact bindParams_noPanic _ _ _ _
+    | exact allocDecls_noPanic _ _ _
+    | exact pinResultLocs_noPanic _ _
+    | assumption
+    | apply NoPanic.ite
+    | apply NoPanic.map
+    | (apply NoPanic.bind; rotate_left)
+    | unfold Commit.withStream
+    | (intro p; obtain ⟨_, _⟩ := p)
+    | intro _
+    | dsimp only))
+
+/-- Discharge `PlanNoPanic` over a VALIDATE phase: every arm's returned commit through
+`commit_no_panic`, every bind, `if` and `match` opened. -/
+macro "plan_no_panic" : tactic =>
+  `(tactic| (repeat' first
+    | exact PlanNoPanic.error _
+    | exact PlanNoPanic.stuck _
+    | exact PlanNoPanic.internal _
+    | exact PlanNoPanic.panic _
+    | exact PlanNoPanic.unsupported _
+    | (apply PlanNoPanic.pure; intro s; commit_no_panic; done)
+    | (apply PlanNoPanic.bind; intro b hb
+       try (simp only [pure_eq_ok, Except.ok.injEq] at hb; subst hb))
+    | apply PlanNoPanic.ite
+    | dsimp only
+    | split))
+
+theorem mapAssignValue_commit_noPanic (s : Store) (keyTy valueTy : Ty)
+    (baseV keyV valueV : GoValue) :
+    PlanNoPanic (mapAssignValue.plan ctx s keyTy valueTy baseV keyV valueV) := by
+  unfold mapAssignValue.plan
+  plan_no_panic
+
+theorem applyStmtOpCore_commit_noPanic (s : Store) (op : StmtOp) (vs : List GoValue) :
+    PlanNoPanic (applyStmtOpCore.plan ctx s op vs) := by
+  rw [applyStmtOpCore.plan.eq_def]
+  split
+  all_goals first
+    | exact mapAssignValue_commit_noPanic _ _ _ _ _ _
+    | plan_no_panic
+  all_goals first
+    | exact mapAssignValue_commit_noPanic _ _ _ _ _ _
+    | plan_no_panic
+
+theorem applyStmtOp_commit_noPanic (s : Store) (ch : Choices) (op : StmtOp) (nt : Nat)
+    (vs : List GoValue) : PlanNoPanic (applyStmtOp.plan ctx s ch op nt vs) := by
+  rw [applyStmtOp.plan.eq_def]
+  split
+  · plan_no_panic
+  · -- every other head: the core's commit, lifted beside the stream
+    refine PlanNoPanic.bind fun c hc => PlanNoPanic.pure fun s' => ?_
+    unfold Commit.withStream
+    refine NoPanic.bind (applyStmtOpCore_commit_noPanic _ _ _ c hc s') fun p => ?_
+    obtain ⟨_, _⟩ := p
+    exact NoPanic.pure _
+
+theorem storeTarget_commit_noPanic (s : Store) (r : TargetRef) (v : GoValue) :
+    PlanNoPanic (storeTarget.plan ctx s r v) := by
+  unfold storeTarget.plan
+  cases r with
+  | chain anchor idxs steps => plan_no_panic
+  | mapElem b k kt vt => exact mapAssignValue_commit_noPanic _ _ _ _ _ _
+
+theorem enterFrame_commit_noPanic (s : Store) (fid : FuncId) (argVals : List GoValue) :
+    PlanNoPanic (enterFrame.plan ctx s fid argVals) := by
+  unfold enterFrame.plan
+  plan_no_panic
+
+theorem unseqLoad_commit_noPanic (s : Store) (env : LocalEnv) (tg : List (String × TargetRef))
+    (bind tgt : String) : PlanNoPanic (unseqLoad.plan ctx s env tg bind tgt) := by
+  unfold unseqLoad.plan
+  plan_no_panic
+
+/-! #### `runCommit`, `deliverV` and the composed apply -/
+
+theorem runCommit_eq_ok {α : Type} {c : Commit α} {s : Store} {a : α} :
+    runCommit c s = .ok a ↔ c s = .ok a := by
+  unfold runCommit
+  split
+  · rename_i msg heq
+    rw [heq]
+    simp [throw, throwThe, MonadExceptOf.throw]
+  · exact Iff.rfl
+
+/-- A panic-free commit runs as itself (the coherence proofs' equation). -/
+theorem runCommit_of_noPanic {α : Type} {c : Commit α} {s : Store} (h : NoPanic (c s)) :
+    runCommit c s = c s := by
+  unfold runCommit
+  split
+  · rename_i msg heq
+    exact absurd heq (h msg)
+  · rfl
+
+theorem runCommit_withStream {ch : Choices} {c : Commit (Store × AccessTrace)} {s : Store} :
+    runCommit (Commit.withStream ch c) s = (runCommit c s).map fun p => (p.1, ch, p.2) := by
+  unfold runCommit Commit.withStream
+  cases hcs : c s with
+  | error e =>
+    simp only [Bind.bind, Except.bind]
+    split <;> split <;> simp_all [Except.map, throw, throwThe, MonadExceptOf.throw]
+  | ok p =>
+    obtain ⟨s', tr⟩ := p
+    simp [Bind.bind, Except.bind, Except.map, pure, Except.pure]
+
+theorem deliverV_ok_inv {α : Type} {s : Store} {k : Cont} {ch : Choices}
+    {next : α → Config × Store × Choices × AccessTrace} {c : Commit α} {chain : List PanicEntry}
+    {out : Config × Store × Choices × AccessTrace}
+    (h : deliverV s k ch next (.ok c) chain = .ok out) : ∃ a, c s = .ok a ∧ next a = out := by
+  simp only [deliverV_ok] at h
+  cases hr : runCommit c s with
+  | error e => rw [hr] at h; simp [Functor.map, Except.map] at h
+  | ok a =>
+    rw [hr] at h
+    simp only [Functor.map, Except.map, Except.ok.injEq] at h
+    exact ⟨a, runCommit_eq_ok.mp hr, h⟩
+
+theorem toResult_plan_ok {α : Type} {plan : Except Stop (Commit α)} {c : Commit α} {s : Store}
+    {a : α} (hp : toResult plan = .ok (.ok c)) (hc : c s = .ok a) :
+    toResult (do let c ← plan; c s : Except Stop α) = .ok (.ok a) := by
+  rw [toResult_eq_ok_ok.mp hp]
+  simp [Bind.bind, Except.bind, hc]
+
+theorem toResult_plan_panic {α : Type} {plan : Except Stop (Commit α)} {s : Store} {msg : String}
+    (hp : toResult plan = .ok (.panic msg)) :
+    toResult (do let c ← plan; c s : Except Stop α) = .ok (.panic msg) := by
+  rw [toResult_eq_ok_panic.mp hp]
+  simp [Bind.bind, Except.bind]
+
+theorem toResult_plan_inv_ok {α : Type} {plan : Except Stop (Commit α)} {s : Store} {a : α}
+    (h : toResult (do let c ← plan; c s : Except Stop α) = .ok (.ok a)) :
+    ∃ c, toResult plan = .ok (.ok c) ∧ c s = .ok a := by
+  obtain ⟨c, hc, hcs⟩ := bind_eq_ok.mp (toResult_eq_ok_ok.mp h)
+  exact ⟨c, toResult_eq_ok_ok.mpr hc, hcs⟩
+
+theorem toResult_plan_inv_panic {α : Type} {plan : Except Stop (Commit α)} {s : Store}
+    {msg : String} (hnp : PlanNoPanic plan)
+    (h : toResult (do let c ← plan; c s : Except Stop α) = .ok (.panic msg)) :
+    toResult plan = .ok (.panic msg) := by
+  rcases plan_run_error (toResult_eq_ok_panic.mp h) with hp | ⟨c, hc, hcs⟩
+  · exact toResult_eq_ok_panic.mpr hp
+  · exact absurd hcs (hnp c hc s msg)
+
+/-! #### The per-family inversions (the composed apply's `.ok`/`.panic` read back to its phases) -/
+
+theorem applyStmtOp_inv_ok {s : Store} {ch : Choices} {op : StmtOp} {nt : Nat} {vs : List GoValue}
+    {a : Store × Choices × AccessTrace} (h : applyStmtOp ctx s ch op nt vs = .ok a) :
+    ∃ c, applyStmtOp.plan ctx s ch op nt vs = .ok c ∧ c s = .ok a := by
+  unfold applyStmtOp at h
+  exact bind_eq_ok.mp h
+
+theorem applyStmtOp_inv_panic {s : Store} {ch : Choices} {op : StmtOp} {nt : Nat}
+    {vs : List GoValue} {msg : String} (h : applyStmtOp ctx s ch op nt vs = .error (.panic msg)) :
+    applyStmtOp.plan ctx s ch op nt vs = .error (.panic msg) := by
+  unfold applyStmtOp at h
+  rcases plan_run_error h with hp | ⟨c, hc, hcs⟩
+  · exact hp
+  · exact absurd hcs (applyStmtOp_commit_noPanic _ _ _ _ _ c hc s msg)
+
+theorem storeTarget_inv_ok {s : Store} {r : TargetRef} {v : GoValue} {a : Store × AccessTrace}
+    (h : storeTarget ctx s r v = .ok a) :
+    ∃ c, storeTarget.plan ctx s r v = .ok c ∧ c s = .ok a := by
+  unfold storeTarget at h
+  exact bind_eq_ok.mp h
+
+theorem storeTarget_inv_panic {s : Store} {r : TargetRef} {v : GoValue} {msg : String}
+    (h : storeTarget ctx s r v = .error (.panic msg)) :
+    storeTarget.plan ctx s r v = .error (.panic msg) := by
+  unfold storeTarget at h
+  rcases plan_run_error h with hp | ⟨c, hc, hcs⟩
+  · exact hp
+  · exact absurd hcs (storeTarget_commit_noPanic _ _ _ c hc s msg)
+
+theorem unseqLoad_inv_ok {s : Store} {env : LocalEnv} {tg : List (String × TargetRef)}
+    {bind tgt : String} {a : Store × AccessTrace} (h : unseqLoad ctx s env tg bind tgt = .ok a) :
+    ∃ c, unseqLoad.plan ctx s env tg bind tgt = .ok c ∧ c s = .ok a := by
+  unfold unseqLoad at h
+  exact bind_eq_ok.mp h
+
+theorem unseqLoad_inv_panic {s : Store} {env : LocalEnv} {tg : List (String × TargetRef)}
+    {bind tgt : String} {msg : String} (h : unseqLoad ctx s env tg bind tgt = .error (.panic msg)) :
+    unseqLoad.plan ctx s env tg bind tgt = .error (.panic msg) := by
+  unfold unseqLoad at h
+  rcases plan_run_error h with hp | ⟨c, hc, hcs⟩
+  · exact hp
+  · exact absurd hcs (unseqLoad_commit_noPanic _ _ _ _ _ c hc s msg)
+
+theorem enterFrame_inv_ok {s : Store} {fid : FuncId} {args : List GoValue}
+    {a : Func × LocalEnv × List Loc × Store × AccessTrace} (h : enterFrame ctx s fid args = .ok a) :
+    ∃ c, enterFrame.plan ctx s fid args = .ok c ∧ c s = .ok a := by
+  unfold enterFrame at h
+  exact bind_eq_ok.mp h
+
+theorem enterFrame_inv_panic {s : Store} {fid : FuncId} {args : List GoValue} {msg : String}
+    (h : enterFrame ctx s fid args = .error (.panic msg)) :
+    enterFrame.plan ctx s fid args = .error (.panic msg) := by
+  unfold enterFrame at h
+  rcases plan_run_error h with hp | ⟨c, hc, hcs⟩
+  · exact hp
+  · exact absurd hcs (enterFrame_commit_noPanic _ _ _ c hc s msg)
+
+/-! #### The V entry funnel against the composed one -/
+
+theorem enterFramePickV_of_plan_ok {s : Store} {fid : FuncId} {args : List GoValue}
+    {c : Commit (Func × LocalEnv × List Loc × Store × AccessTrace)}
+    (h : enterFrame.plan ctx s fid args = .ok c) (ch : Choices) :
+    enterFramePickV ctx s fid args ch = .ok (.ok c, ch) := by
+  simp [enterFramePickV, h]
+
+theorem enterFramePickV_of_plan_panic {s : Store} {fid : FuncId} {args : List GoValue}
+    {msg : String} (h : enterFrame.plan ctx s fid args = .error (.panic msg)) (ch : Choices) :
+    enterFramePickV ctx s fid args ch
+      = .ok (.panic (entryPanicText ctx fid args msg
+            (Choices.consumeAt .nilValueMethodText (nilValueMethodWidth ctx fid args) ch).1),
+          (Choices.consumeAt .nilValueMethodText (nilValueMethodWidth ctx fid args) ch).2) := by
+  simp [enterFramePickV, h]
+
+theorem enterFramePickV_of_ok {s : Store} {fid : FuncId} {args : List GoValue} {ch ch' : Choices}
+    {a : Func × LocalEnv × List Loc × Store × AccessTrace}
+    (h : enterFramePick ctx s fid args ch = .ok (.ok a, ch')) :
+    ∃ c, enterFramePickV ctx s fid args ch = .ok (.ok c, ch') ∧ c s = .ok a := by
+  rcases enterFramePick_cases h with ⟨func, frameEnv, resultLocs, s', tr, hr, henter, rfl⟩ | ⟨msg, hr, -, -⟩
+  · simp only [Result.ok.injEq] at hr
+    subst hr
+    obtain ⟨c, hpl, hcs⟩ := enterFrame_inv_ok henter
+    exact ⟨c, enterFramePickV_of_plan_ok hpl _, hcs⟩
+  · cases hr
+
+theorem enterFramePickV_of_panic {s : Store} {fid : FuncId} {args : List GoValue} {ch ch' : Choices}
+    {msg : String} (h : enterFramePick ctx s fid args ch = .ok (.panic msg, ch')) :
+    enterFramePickV ctx s fid args ch = .ok (.panic msg, ch') := by
+  rcases enterFramePick_cases h with ⟨func, frameEnv, resultLocs, s', tr, hr, -, -⟩ | ⟨msg₀, hr, henter, rfl⟩
+  · cases hr
+  · simp only [Result.panic.injEq] at hr
+    subst hr
+    exact enterFramePickV_of_plan_panic (enterFrame_inv_panic henter) _
+
+/-- An entry that does NOT panic never touches the stream — the V twin of
+`enterFramePick_of_nopanic`. -/
+theorem enterFramePickV_of_nopanic {s : Store} {fid : FuncId} {args : List GoValue}
+    (hnp : ∀ msg, enterFrame ctx s fid args ≠ .error (.panic msg)) (ch : Choices) :
+    enterFramePickV ctx s fid args ch = (toResult (enterFrame.plan ctx s fid args)).map (·, ch) := by
+  unfold enterFramePickV
+  cases hx : toResult (enterFrame.plan ctx s fid args) with
+  | error e => rfl
+  | ok r =>
+    cases r with
+    | ok c => rfl
+    | panic msg =>
+      exfalso
+      apply hnp msg
+      simp [enterFrame, toResult_eq_ok_panic.mp hx, Bind.bind, Except.bind]
+
+/-! #### The wide-statement plan's stream shape -/
+
+/-- Every non-append head's plan is the core's plan lifted beside the stream. -/
+theorem applyStmtOp_plan_eq_core {σ : Store} {ch : Choices} {op : StmtOp} {nt : Nat}
+    {vs : List GoValue} (hop : ∀ e, op ≠ .appendSlice e) :
+    applyStmtOp.plan ctx σ ch op nt vs = (applyStmtOpCore.plan ctx σ op vs).map (Commit.withStream ch) := by
+  cases op <;>
+    first
+    | exact absurd rfl (hop _)
+    | (simp only [applyStmtOp.plan, Bind.bind, Except.bind, Except.map, pure, Except.pure]
+       try (cases applyStmtOpCore.plan ctx σ _ vs <;> rfl))
+
+
 /-! ### Soundness -/
 
 
@@ -77,6 +1124,49 @@ macro "entry_arm " h:ident rule:term : tactic =>
       subst h1; subst h2; subst h3; subst h4
       exact $rule hpick rfl))
 
+/-- B2 + C1 S3 VALIDATE/COMMIT apply arm of `stepFn_sound`: the arm is `do let r ←
+toResult (F.plan …); deliverV s k ch next r`. Split the bind, case the classified
+validate phase — on `.ok c` the commit ran (`deliverV_ok_inv`), so the COMPOSED apply
+is `.ok` (`toResult_plan_ok`); on `.panic` the composed apply panics
+(`toResult_plan_panic`) — and hand the rule its two premises. -/
+macro "deliverV_arm " h:ident rule:term : tactic =>
+  `(tactic| (
+    simp_all only [stepFn, bind_eq_ok]
+    obtain ⟨r, hres, $h:ident⟩ := $h:ident
+    cases r with
+    | ok c =>
+      obtain ⟨a, hc, $h:ident⟩ := deliverV_ok_inv $h:ident
+      simp only [Prod.mk.injEq] at $h:ident
+      obtain ⟨h1, h2, h3, h4⟩ := $h:ident
+      subst h1; subst h2; subst h3; subst h4
+      exact $rule (toResult_plan_ok hres hc) (by first | rfl | simp only [deliver_ok])
+    | panic msg =>
+      simp only [deliverV_panic, Except.ok.injEq, Prod.mk.injEq] at $h:ident
+      obtain ⟨h1, h2, h3, h4⟩ := $h:ident
+      subst h1; subst h2; subst h3; subst h4
+      exact $rule (toResult_plan_panic hres) rfl))
+
+/-- B2 + C1 S3 frame-ENTRY arm of `stepFn_sound`: the arm is `do let (r, ch') ←
+enterFramePickV …; deliverV …`; the V funnel's outcomes bridge to the composed
+`enterFramePick` (`enterFramePick_of_V_ok`/`_panic`). -/
+macro "entryV_arm " h:ident rule:term : tactic =>
+  `(tactic| (
+    simp_all only [stepFn, bind_eq_ok]
+    obtain ⟨⟨r, ch₁⟩, hpick, $h:ident⟩ := $h:ident
+    (try simp only at $h:ident)
+    cases r with
+    | ok c =>
+      obtain ⟨a, hc, $h:ident⟩ := deliverV_ok_inv $h:ident
+      simp only [Prod.mk.injEq] at $h:ident
+      obtain ⟨h1, h2, h3, h4⟩ := $h:ident
+      subst h1; subst h2; subst h3; subst h4
+      exact $rule (enterFramePick_of_V_ok hpick hc).1 (by first | rfl | simp only [deliver_ok])
+    | panic msg =>
+      simp only [deliverV_panic, Except.ok.injEq, Prod.mk.injEq] at $h:ident
+      obtain ⟨h1, h2, h3, h4⟩ := $h:ident
+      subst h1; subst h2; subst h3; subst h4
+      exact $rule (enterFramePick_of_V_panic hpick) rfl))
+
 /-- B2 stream-free APPLY arm of `stepFn_oblivious`: the apply never sees
 the stream, so the classified result — value or panic — is the same at
 every stream and `deliverS` returns the arm's own stream untouched. -/
@@ -93,6 +1183,27 @@ macro "oblivious_apply " h:ident : tactic =>
       exact ⟨rfl, fun ch => by simp [stepFn, hres, Bind.bind, Except.bind]⟩
     | panic msg =>
       simp only [deliverS_panic, Except.ok.injEq, Prod.mk.injEq] at $h:ident
+      obtain ⟨h1, h2, h3, h4⟩ := $h:ident
+      subst h1; subst h2; subst h3; subst h4
+      exact ⟨rfl, fun ch => by simp [stepFn, hres, Bind.bind, Except.bind]⟩))
+
+/-- B2 + C1 S3 VALIDATE/COMMIT apply arm of the `none` sweep: the plan reads no
+stream, the commit reads no stream. -/
+macro "oblivious_applyV " h:ident : tactic =>
+  `(tactic| (
+    simp_all only [stepFn, bind_eq_ok]
+    obtain ⟨r, hres, $h:ident⟩ := $h:ident
+    (try simp only [List.reverse_cons] at hres)
+    cases r with
+    | ok c =>
+      obtain ⟨a, hc, $h:ident⟩ := deliverV_ok_inv $h:ident
+      simp only [Prod.mk.injEq] at $h:ident
+      obtain ⟨h1, h2, h3, h4⟩ := $h:ident
+      subst h1; subst h2; subst h3; subst h4
+      exact ⟨rfl, fun ch => by
+        simp [stepFn, hres, runCommit_eq_ok.mpr hc, Functor.map, Except.map, Bind.bind, Except.bind]⟩
+    | panic msg =>
+      simp only [deliverV_panic, Except.ok.injEq, Prod.mk.injEq] at $h:ident
       obtain ⟨h1, h2, h3, h4⟩ := $h:ident
       subst h1; subst h2; subst h3; subst h4
       exact ⟨rfl, fun ch => by simp [stepFn, hres, Bind.bind, Except.bind]⟩))
@@ -150,21 +1261,24 @@ theorem stepFrameExit_sound {s : Store} {targets : List (TargetShape × List Exp
     obtain ⟨⟨vs, trv⟩, hload, rfl, rfl, rfl, rfl⟩ := h
     exact ⟨Step.frameFallTargets hload, Step.frameReturnTargets hload⟩
   · simp [stepFrameExit, throw, throwThe, MonadExceptOf.throw] at h
-  · simp only [stepFrameExit, bind_eq_ok, pure_eq_ok] at h
+  · simp only [stepFrameExit, bind_eq_ok] at h
     obtain ⟨⟨r, ch₁⟩, hpick, h⟩ := h
     (try simp only at h)
     cases r with
-    | ok a =>
-      simp only [deliverS_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    | ok c =>
+      obtain ⟨a, hc, h⟩ := deliverV_ok_inv h
+      simp only [Prod.mk.injEq] at h
       obtain ⟨h1, h2, h3, h4⟩ := h
       subst h1; subst h2; subst h3; subst h4
-      exact ⟨Step.frameDeferFall hpick (by first | rfl | simp only [deliver_ok]),
-        Step.frameDeferReturn hpick (by first | rfl | simp only [deliver_ok])⟩
+      have hpick' := (enterFramePick_of_V_ok hpick hc).1
+      exact ⟨Step.frameDeferFall hpick' (by first | rfl | simp only [deliver_ok]),
+        Step.frameDeferReturn hpick' (by first | rfl | simp only [deliver_ok])⟩
     | panic msg =>
-      simp only [deliverS_panic, Except.ok.injEq, Prod.mk.injEq] at h
+      simp only [deliverV_panic, Except.ok.injEq, Prod.mk.injEq] at h
       obtain ⟨h1, h2, h3, h4⟩ := h
       subst h1; subst h2; subst h3; subst h4
-      exact ⟨Step.frameDeferFall hpick rfl, Step.frameDeferReturn hpick rfl⟩
+      have hpick' := enterFramePick_of_V_panic hpick
+      exact ⟨Step.frameDeferFall hpick' rfl, Step.frameDeferReturn hpick' rfl⟩
   · simp only [stepFrameExit, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl, rfl, rfl⟩ := h
     exact ⟨Step.frameDeferNilFall, Step.frameDeferNilReturn⟩
@@ -255,17 +1369,18 @@ theorem stepUnseqNext_sound {s : Store} {g : UnseqGraph} {thenB : Stmt}
         obtain ⟨rfl, rfl, rfl, rfl⟩ := h
         exact Step.unseqRunInvoke hget hbody
       · rename_i bind tgt hbody
-        simp only [bind_eq_ok, pure_eq_ok] at h
+        simp only [bind_eq_ok] at h
         obtain ⟨r, hres, h⟩ := h
         cases r with
-        | ok a =>
-          simp only [deliverS_ok, Except.ok.injEq, Prod.mk.injEq] at h
+        | ok c =>
+          obtain ⟨a, hc, h⟩ := deliverV_ok_inv h
+          simp only [Prod.mk.injEq] at h
           obtain ⟨rfl, rfl, rfl, rfl⟩ := h
-          exact Step.unseqRunLoad hget hbody hres rfl
+          exact Step.unseqRunLoad hget hbody (toResult_plan_ok hres hc) rfl
         | panic msg =>
-          simp only [deliverS_panic, Except.ok.injEq, Prod.mk.injEq] at h
+          simp only [deliverV_panic, Except.ok.injEq, Prod.mk.injEq] at h
           obtain ⟨rfl, rfl, rfl, rfl⟩ := h
-          exact Step.unseqRunLoad hget hbody hres rfl
+          exact Step.unseqRunLoad hget hbody (toResult_plan_panic hres) rfl
       · rename_i bind lhs hbody
         simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
         obtain ⟨⟨r, trr⟩, hplan, rfl, rfl, rfl, rfl⟩ := h
@@ -346,15 +1461,17 @@ theorem stepUnseqNext_run_wait_stream {s : Store} {g : UnseqGraph} {thenB : Stmt
         obtain ⟨rfl, rfl, rfl, rfl⟩ := h
         exact ⟨rfl, fun ch₂ => by simp [stepUnseqNext, hget, hbody]⟩
       · rename_i bind tgt hbody
-        simp only [bind_eq_ok, pure_eq_ok] at h
+        simp only [bind_eq_ok] at h
         obtain ⟨r, hres, h⟩ := h
         cases r with
-        | ok a =>
-          simp only [deliverS_ok, Except.ok.injEq, Prod.mk.injEq] at h
+        | ok c =>
+          obtain ⟨a, hc, h⟩ := deliverV_ok_inv h
+          simp only [Prod.mk.injEq] at h
           obtain ⟨rfl, rfl, rfl, rfl⟩ := h
-          exact ⟨rfl, fun ch₂ => by simp [stepUnseqNext, hget, hbody, hres, Bind.bind, Except.bind]⟩
+          exact ⟨rfl, fun ch₂ => by
+            simp [stepUnseqNext, hget, hbody, hres, runCommit_eq_ok.mpr hc, Functor.map, Except.map, Bind.bind, Except.bind]⟩
         | panic msg =>
-          simp only [deliverS_panic, Except.ok.injEq, Prod.mk.injEq] at h
+          simp only [deliverV_panic, Except.ok.injEq, Prod.mk.injEq] at h
           obtain ⟨rfl, rfl, rfl, rfl⟩ := h
           exact ⟨rfl, fun ch₂ => by simp [stepUnseqNext, hget, hbody, hres, Bind.bind, Except.bind]⟩
       · rename_i bind lhs hbody
@@ -513,7 +1630,7 @@ theorem stepFn_sound {s : Store} {c : Config} {ch : Choices}
     obtain ⟨rfl, rfl, rfl, rfl⟩ := h
     exact Step.panicFrameEmpty
   case case2 =>
-    entry_arm h Step.panicFrameDefer
+    entryV_arm h Step.panicFrameDefer
   case case147 =>
     rename_i hrec
     simp_all only [stepFn, Except.ok.injEq, Prod.mk.injEq]
@@ -528,7 +1645,7 @@ theorem stepFn_sound {s : Store} {c : Config} {ch : Choices}
     obtain ⟨v, hd, loc, s₁, halloc, rfl, rfl, rfl, rfl⟩ := h
     exact Step.initialization hd halloc
   case case35 =>
-    entry_arm h (Step.callImmediate ‹_› ‹_›)
+    entryV_arm h (Step.callImmediate ‹_› ‹_›)
   case case70 =>
     simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
     obtain ⟨⟨v, trv⟩, hd, rfl, rfl, rfl, rfl⟩ := h
@@ -603,7 +1720,7 @@ theorem stepFn_sound {s : Store} {c : Config} {ch : Choices}
       obtain ⟨rfl, rfl, rfl, rfl⟩ := h
       exact Step.whileTrue
   case case94 =>
-    entry_arm h Step.callArgsDoneEnter
+    entryV_arm h Step.callArgsDoneEnter
   case case95 =>
     -- The target-check arm sits under `if done.length < nt`: split the
     -- classified `valueAsLoc` result by hand.
@@ -627,11 +1744,11 @@ theorem stepFn_sound {s : Store} {c : Config} {ch : Choices}
     obtain ⟨rfl, rfl, rfl, rfl⟩ := h
     exact Step.stmtOpShiftPlain (Nat.le_of_not_lt ‹_›)
   case case97 =>
-    deliver_arm h Step.stmtOpApply
+    deliverV_arm h Step.stmtOpApply
   case case98 =>
-    entry_arm h Step.callValCalleeEnter
+    entryV_arm h Step.callValCalleeEnter
   case case104 =>
-    entry_arm h Step.callValArgsEnter
+    entryV_arm h Step.callValArgsEnter
   case case114 =>
     simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
     obtain ⟨⟨base, start, trm⟩, hd, rfl, rfl, rfl, rfl⟩ := h
@@ -699,7 +1816,7 @@ theorem stepFn_sound {s : Store} {c : Config} {ch : Choices}
         subst hv
         exact Step.mapIterNext hlt hcands hd
   case case151 =>
-    deliver_arm h Step.storeStep
+    deliverV_arm h Step.storeStep
   case case40 =>
     rename_i hplan
     simp only [stepFn] at h
@@ -812,6 +1929,57 @@ macro "complete_entry " hpick:ident hdel:ident ch:term:max ch':term:max : tactic
       subst h1; subst h2; subst h3
       exact ⟨$ch, $ch', by simp [stepFn, stepFrameExit, $hpick:ident, Bind.bind, Except.bind]⟩))
 
+/-- B2 + C1 S3 VALIDATE/COMMIT apply rule of `step_complete`: the rule's classified
+COMPOSED result reads back to its phases (`inv_ok`/`inv_panic`, the latter through the
+family's commit-NoPanic), and the split arm realizes it under the witness stream. -/
+macro "completeV_apply " hres:ident hdel:ident ws:term:max inv_ok:term:max inv_panic:term:max : tactic =>
+  `(tactic| (
+    rcases toResult_cases $hres:ident with ⟨a, ha, hX⟩ | ⟨msg, ha, hX⟩
+    · subst ha
+      (try simp only [List.reverse_cons] at hX)
+      simp only [deliver_ok, Prod.mk.injEq] at $hdel:ident
+      obtain ⟨h1, h2, h3⟩ := $hdel:ident
+      subst h1; subst h2; subst h3
+      obtain ⟨c, hpl, hc⟩ := $inv_ok hX
+      exact ⟨$ws, $ws, by simp [stepFn, hpl, runCommit_eq_ok.mpr hc, Functor.map, Except.map, Bind.bind, Except.bind]⟩
+    · subst ha
+      (try simp only [List.reverse_cons] at hX)
+      obtain ⟨h1, h2, h3⟩ := deliver_panic_eq $hdel:ident
+      subst h1; subst h2; subst h3
+      have hpl := $inv_panic hX
+      exact ⟨$ws, $ws, by simp [stepFn, hpl, Bind.bind, Except.bind]⟩))
+
+/-- B2 + C1 S3 frame-ENTRY rule of `step_complete`: the rule carries its own stream;
+the composed funnel's outcome reads back to the V funnel's (`enterFramePickV_of_ok/_panic`). -/
+macro "completeV_entry " hpick:ident hdel:ident ch:term:max ch':term:max : tactic =>
+  `(tactic| (
+    (try simp only [List.append_assoc] at $hpick:ident)
+    rcases enterFramePick_cases $hpick:ident with ⟨func, frameEnv, resultLocs, s₂, tr₂, ha, hX, -⟩ | ⟨msg, ha, hX, -⟩
+    · subst ha
+      simp only [deliver_ok, Prod.mk.injEq] at $hdel:ident
+      obtain ⟨h1, h2, h3⟩ := $hdel:ident
+      subst h1; subst h2; subst h3
+      obtain ⟨c, hV, hc⟩ := enterFramePickV_of_ok $hpick:ident
+      exact ⟨$ch, $ch', by simp [stepFn, stepFrameExit, hV, runCommit_eq_ok.mpr hc, Functor.map, Except.map, Bind.bind, Except.bind]⟩
+    · subst ha
+      obtain ⟨h1, h2, h3⟩ := deliver_panic_eq $hdel:ident
+      subst h1; subst h2; subst h3
+      have hV := enterFramePickV_of_panic $hpick:ident
+      exact ⟨$ch, $ch', by simp [stepFn, stepFrameExit, hV, Bind.bind, Except.bind]⟩))
+
+/-- The frame-ENTRY rules of `step_complete_any_wf_aux`: the entry classifies stream-free
+(the plan is), so under EVERY stream the V funnel yields the same commit or the same
+panic text family. -/
+macro "anyV_entry " hpick:ident ch:term:max : tactic =>
+  `(tactic| (
+    (try simp only [List.append_assoc] at $hpick:ident)
+    rcases enterFramePick_cases $hpick:ident with ⟨func, frameEnv, resultLocs, s₂, tr₂, -, hX, -⟩ | ⟨msg, -, hX, -⟩
+    · obtain ⟨c, hpl, hc⟩ := enterFrame_inv_ok hX
+      simp [stepFn, stepFrameExit, enterFramePickV_of_plan_ok hpl $ch, runCommit_eq_ok.mpr hc,
+        Functor.map, Except.map, Bind.bind, Except.bind]
+    · have hpl := enterFrame_inv_panic hX
+      simp [stepFn, stepFrameExit, enterFramePickV_of_plan_panic hpl $ch, Bind.bind, Except.bind]))
+
 set_option linter.unusedSimpArgs false in
 /-- Every relation step is realized by the executable under some choice
 stream (deterministic rules under any stream; the two nondeterministic
@@ -873,9 +2041,11 @@ theorem step_complete {c : Config} {s : Store} {c' : Config} {s' : Store} {tr : 
       simp only [List.reverse_cons] at hX
     · simp only [deliver_ok, Prod.mk.injEq] at hdel
       obtain ⟨rfl, rfl, rfl⟩ := hdel
-      exact ⟨ch₀, ch₁, by simp [stepFn, hX, Bind.bind, Except.bind]⟩
+      obtain ⟨c, hpl, hc⟩ := applyStmtOp_inv_ok hX
+      exact ⟨ch₀, ch₁, by simp [stepFn, hpl, runCommit_eq_ok.mpr hc, Functor.map, Except.map, Bind.bind, Except.bind]⟩
     · obtain ⟨rfl, rfl, rfl⟩ := deliver_panic_eq hdel
-      exact ⟨ch₀, ch₀, by simp [stepFn, hX, Bind.bind, Except.bind]⟩
+      have hpl := applyStmtOp_inv_panic hX
+      exact ⟨ch₀, ch₀, by simp [stepFn, hpl, Bind.bind, Except.bind]⟩
   case stmtOpShiftTarget =>
     rename_i op nt done v r e rest env k hlt hres hdel
     rcases toResult_cases hres with ⟨loc, rfl, hX⟩ | ⟨msg, rfl, hX⟩
@@ -910,7 +2080,7 @@ theorem step_complete {c : Config} {s : Store} {c' : Config} {s' : Store} {tr : 
     complete_apply hres hdel []
   case storeStep =>
     rename_i ref rs val vals r body env k hres hdel
-    complete_apply hres hdel []
+    completeV_apply hres hdel [] storeTarget_inv_ok storeTarget_inv_panic
   -- The frame-entry rules carry their own stream (BUG-087's text pick
   -- is drawn from it on the panic path): realize under exactly it.
   case callImmediate =>
@@ -918,27 +2088,29 @@ theorem step_complete {c : Config} {s : Store} {c' : Config} {s' : Store} {tr : 
     rcases enterFramePick_cases hpick with ⟨func, frameEnv, resultLocs, s₂, tr₂, rfl, hX, -⟩ | ⟨msg, rfl, hX, -⟩
     · simp only [deliver_ok, Prod.mk.injEq] at hdel
       obtain ⟨rfl, rfl, rfl⟩ := hdel
-      exact ⟨ch₀, ch₁, by simp [stepFn, hplan, hargs, hpick, Bind.bind, Except.bind]⟩
+      obtain ⟨c, hV, hc⟩ := enterFramePickV_of_ok hpick
+      exact ⟨ch₀, ch₁, by simp [stepFn, hplan, hargs, hV, runCommit_eq_ok.mpr hc, Functor.map, Except.map, Bind.bind, Except.bind]⟩
     · obtain ⟨rfl, rfl, rfl⟩ := deliver_panic_eq hdel
-      exact ⟨ch₀, ch₁, by simp [stepFn, hplan, hargs, hpick, Bind.bind, Except.bind]⟩
+      have hV := enterFramePickV_of_panic hpick
+      exact ⟨ch₀, ch₁, by simp [stepFn, hplan, hargs, hV, Bind.bind, Except.bind]⟩
   case callArgsDoneEnter =>
     rename_i v fid plans vals r env k ch₀ ch₁ hpick hdel
-    complete_entry hpick hdel ch₀ ch₁
+    completeV_entry hpick hdel ch₀ ch₁
   case callValCalleeEnter =>
     rename_i fid captured plans r env k ch₀ ch₁ hpick hdel
-    complete_entry hpick hdel ch₀ ch₁
+    completeV_entry hpick hdel ch₀ ch₁
   case callValArgsEnter =>
     rename_i v fid captured plans vals r env k ch₀ ch₁ hpick hdel
-    complete_entry hpick hdel ch₀ ch₁
+    completeV_entry hpick hdel ch₀ ch₁
   case frameDeferFall =>
     rename_i targets tenv results fid captured args ds k w r ch₀ ch₁ hpick hdel
-    complete_entry hpick hdel ch₀ ch₁
+    completeV_entry hpick hdel ch₀ ch₁
   case frameDeferReturn =>
     rename_i targets tenv results fid captured args ds k w r ch₀ ch₁ hpick hdel
-    complete_entry hpick hdel ch₀ ch₁
+    completeV_entry hpick hdel ch₀ ch₁
   case panicFrameDefer =>
     rename_i chain targets tenv results fid captured args ds k w r ch₀ ch₁ hpick hdel
-    complete_entry hpick hdel ch₀ ch₁
+    completeV_entry hpick hdel ch₀ ch₁
   case stmtOpShiftPlain =>
     rename_i op nt done v e rest env k hle
     refine ⟨[], [], ?_⟩
@@ -1108,9 +2280,12 @@ theorem step_complete {c : Config} {s : Store} {c' : Config} {s' : Store} {tr : 
     rcases toResult_cases hres with ⟨⟨s₂, tr₂⟩, rfl, hX⟩ | ⟨msg, rfl, hX⟩
     · simp only [deliver_ok, Prod.mk.injEq] at hdel
       obtain ⟨rfl, rfl, rfl⟩ := hdel
-      exact ⟨[], [], by simp [stepFn, stepUnseqNext, hget, hbody, hX, Bind.bind, Except.bind]⟩
+      obtain ⟨c, hpl, hc⟩ := unseqLoad_inv_ok hX
+      exact ⟨[], [], by simp [stepFn, stepUnseqNext, hget, hbody, hpl, runCommit_eq_ok.mpr hc,
+        Functor.map, Except.map, Bind.bind, Except.bind]⟩
     · obtain ⟨rfl, rfl, rfl⟩ := deliver_panic_eq hdel
-      exact ⟨[], [], by simp [stepFn, stepUnseqNext, hget, hbody, hX, Bind.bind, Except.bind]⟩
+      have hpl := unseqLoad_inv_panic hX
+      exact ⟨[], [], by simp [stepFn, stepUnseqNext, hget, hbody, hpl, Bind.bind, Except.bind]⟩
   case unseqRunTarget =>
     rename_i g thenB st tg env k o bind lhs r i hget hbody hplan
     exact ⟨[], [], by simp [stepFn, stepUnseqNext, hget, hbody, hplan, Bind.bind, Except.bind]⟩
@@ -1406,6 +2581,9 @@ theorem stepFn_preserves_wf {s : Store} {c : Config} {ch : Choices}
     MachineWf ctx s' c' :=
   step_preserves_wf (stepFn_sound h) hwf
 
+-- The unused-simp-arg linter misfires on the two-location `simp … at h ⊢` in the
+-- proof below (an argument unused at one location is load-bearing at the other).
+set_option linter.unusedSimpArgs false in
 /-- Every wide op that dispatches through the choices-free core succeeds
 identically under EVERY stream (the stream passes through untouched):
 the non-`appendSlice` half of the ∀-choices kit, true by construction
@@ -1416,13 +2594,20 @@ theorem applyStmtOp_ok_any_ch_core {σ : Store} {ch : Choices}
     (h : applyStmtOp ctx σ ch op nt vs = .ok (σ', ch', tr)) :
     ∀ ch₂ : Choices, applyStmtOp ctx σ ch₂ op nt vs = .ok (σ', ch₂, tr) := by
   intro ch₂
-  cases op <;>
-    first
-    | exact absurd rfl (hop _)
-    | (simp only [applyStmtOp, bind_eq_ok, pure_eq_ok, Except.ok.injEq,
-        Prod.mk.injEq] at h ⊢
-       obtain ⟨⟨σ₂, tr₂⟩, hcore, rfl, rfl, rfl⟩ := h
-       exact ⟨(σ₂, tr₂), hcore, rfl, trivial, rfl⟩)
+  -- C1 S3: the non-append plan is the core's plan beside the stream; the
+  -- commit runs on `σ` under either stream.
+  unfold applyStmtOp at h ⊢
+  rw [applyStmtOp_plan_eq_core hop] at h ⊢
+  cases hcp : applyStmtOpCore.plan ctx σ op vs with
+  | error e => rw [hcp] at h; simp [Except.map, Bind.bind, Except.bind] at h
+  | ok c =>
+    rw [hcp] at h
+    simp only [Except.map, Bind.bind, Except.bind, Commit.withStream] at h ⊢
+    cases hcs : c σ with
+    | error e => rw [hcs] at h; simp at h
+    | ok p =>
+      rw [hcs] at h
+      simp_all [Bind.bind, Except.bind, pure, Except.pure]
 
 /-! ### The appendSlice half of the ∀-choices kit (sem-adequacy slice 3,
 2026-08-04)
@@ -1436,10 +2621,6 @@ any element's normalize success), `Heap.lookup_set_ne` +
 fresh-backing alloc), and the `capCong` congruence family (normalize-ok
 uniformity: store success cannot depend on the stored slice's CAP, the
 only value component the choice reaches). -/
-
-/-- The root `.base` location of an access path — the only heap KEY
-`loadLoc`/`storeLoc` ever look up along the path. -/
-def Loc.rootLoc (l : Loc) : Loc := .base ⟨Loc.rootBase l⟩
 
 /-- Allocation does not touch any other root cell (dense heap: `push` is
 invisible below the old size). -/
@@ -2081,20 +3262,6 @@ theorem Store.updateCell_congr {σ₁ σ₂ : Store} {a : Addr}
       exact h1 (Array.getElem?_eq_some_iff.mp this.symm).1
     simp only [dif_neg h1, dif_neg h2]
     exact rfl
-
-theorem Loc.rootPath_fst (l : Loc) : (Loc.rootPath l).1.id = Loc.rootBase l := by
-  induction l with
-  | base a => rfl
-  | field b _ _ ih => simpa [Loc.rootPath, Loc.rootBase] using ih
-  | index b _ ih => simpa [Loc.rootPath, Loc.rootBase] using ih
-
-theorem Loc.rootLoc_eq (l : Loc) : Loc.rootLoc l = .base (Loc.rootPath l).1 := by
-  have h := Loc.rootPath_fst l
-  unfold Loc.rootLoc
-  rcases hx : (Loc.rootPath l).1 with ⟨i⟩
-  rw [hx] at h
-  simp only at h
-  rw [h]
 
 /-- Weakening the success relation. -/
 theorem exceptCong.mono {α β : Type} {R S : α → β → Prop} {x : Except Stop α}
@@ -2823,7 +3990,14 @@ theorem applyStmtOp_appendSlice_congr {σ : Store} {elem : Ty} {nt : Nat}
     have htv : GoValue.locSup tv ≤ σ.nextAddr := by
       simp only [goValueListSup] at hb
       omega
-    simp only [applyStmtOp]
+    -- C1 S3: the composed apply is the validate phase's commit run on `σ`;
+    -- congruence of the phases, then of the two commits AT `σ`.
+    unfold applyStmtOp
+    refine exceptCong.bind_congr
+      (R := fun c₁ c₂ : Commit (Store × Choices × AccessTrace) =>
+        exceptCong (fun _ _ : Store × Choices × AccessTrace => True) (c₁ σ) (c₂ σ))
+      ?_ (fun c₁ c₂ hc => hc)
+    simp only [applyStmtOp.plan]
     refine exceptCong.bind_congr (R := Eq) (exceptCong.self fun _ => rfl)
       fun slice slice' hs => ?_
     subst hs
@@ -2846,13 +4020,12 @@ theorem applyStmtOp_appendSlice_congr {σ : Store} {elem : Ty} {nt : Nat}
     obtain ⟨heq, htloc⟩ := htl
     subst heq
     refine exceptCong.ite_congr (fun _ => ?_) (fun hspill => ?_)
-    · -- in-place: choice-free, streams pass through untouched
+    · -- in-place: the same choice-free commit under either stream
+      show exceptCong _ ((Commit.withStream ch₁ _) σ) ((Commit.withStream ch₂ _) σ)
+      simp only [Commit.withStream]
       refine exceptCong.bind_congr (R := Eq) (exceptCong.self fun _ => rfl)
-        fun st st' hs => ?_
-      subst hs
-      refine exceptCong.bind_congr (R := Eq) (exceptCong.self fun _ => rfl)
-        fun σ' σ'' hs => ?_
-      subst hs
+        fun p p' hp => ?_
+      subst hp
       exact trivial
     · -- spill
       -- The R16 growslice refusal (t5-maxalloc, 2026-09-02) is decided
@@ -2870,8 +4043,6 @@ theorem applyStmtOp_appendSlice_congr {σ : Store} {elem : Ty} {nt : Nat}
           fun oldValues oldValues' ho => ?_
         obtain ⟨heq, holdsz⟩ := ho
         subst heq
-        rcases hc1 : Choices.consume ch₁ 8 with ⟨e₁, r₁⟩
-        rcases hc2 : Choices.consume ch₂ 8 with ⟨e₂, r₂⟩
         have hgrow : slice.len + elemValues.1.size
             ≤ appendGrowthCap slice.cap (slice.len + elemValues.1.size) :=
           appendGrowthCap_ge (by omega)
@@ -2887,18 +4058,20 @@ theorem applyStmtOp_appendSlice_congr {σ : Store} {elem : Ty} {nt : Nat}
           simp only [Loc.rootBase, Loc.rootLoc] at hroot
           simp only [Loc.locSup] at htloc
           omega
-        -- Both allocations succeed (the backings re-normalize to themselves)
-        -- at the same fresh address; the pushed heaps agree at `tloc`'s root.
-        simp only [Store.alloc, hn₁, hn₂, Bind.bind, Except.bind, pure, Except.pure,
-          Store.allocCell]
-        refine exceptCong.bind_congr
-          (Mem.store_congr (l := tloc) ?_ ?_)
-          fun _ _ _ => ?_
+        -- The commits AT `σ`: both allocations succeed (the backings
+        -- re-normalize to themselves) at the same fresh address; the pushed
+        -- heaps agree at `tloc`'s root.
+        show exceptCong _ ((Commit.withStream _ _) σ) ((Commit.withStream _ _) σ)
+        simp only [Commit.withStream, Store.alloc, hn₁, hn₂, Bind.bind, Except.bind, pure,
+          Except.pure, Store.allocCell]
+        refine exceptCong.bind_congr (R := fun _ _ => True) (S := fun _ _ => True)
+          (exceptCong.bind_congr (S := fun _ _ => True) (Mem.store_congr (l := tloc) ?_ ?_)
+            fun _ _ _ => trivial)
+          fun _ _ _ => trivial
         · show Heap.lookup (σ.heap.push _) (Loc.rootLoc tloc)
             = Heap.lookup (σ.heap.push _) (Loc.rootLoc tloc)
           rw [Heap.lookup_push_ne hkey, Heap.lookup_push_ne hkey]
         · exact ⟨rfl, rfl, rfl⟩
-        · exact trivial
 
 /-- The full wide-op table's outcome class is choice-independent given
 bounded operands: everything but appendSlice is choices-free by
@@ -2912,10 +4085,19 @@ theorem applyStmtOp_congr_any_ch {σ : Store} {op : StmtOp} {nt : Nat}
       (applyStmtOp ctx σ ch₁ op nt vs) (applyStmtOp ctx σ ch₂ op nt vs) := by
   cases op
   case appendSlice elem => exact applyStmtOp_appendSlice_congr hb ch₁ ch₂
+  -- C1 S3: every other head is the core's plan beside either stream; the
+  -- commit runs on `σ` under both.
   all_goals
-    refine exceptCong.bind_congr (R := Eq) (exceptCong.self fun _ => rfl)
-      fun a a' ha => ?_
-  all_goals exact trivial
+    (unfold applyStmtOp
+     rw [applyStmtOp_plan_eq_core (by intro e h; cases h),
+       applyStmtOp_plan_eq_core (by intro e h; cases h)]
+     cases applyStmtOpCore.plan ctx σ _ vs with
+     | error e => exact rfl
+     | ok c =>
+       simp only [Except.map, Bind.bind, Except.bind, Commit.withStream]
+       cases c σ with
+       | error e => exact rfl
+       | ok p => exact trivial)
 
 /-- The recorded missing lemma, closed: a wide op that succeeds under one
 stream succeeds under EVERY stream, given bounded operands (audit
@@ -3318,14 +4500,15 @@ theorem applyStmtOp_eq_core {σ : Store} {ch : Choices} {op : StmtOp}
     {nt : Nat} {vs : List GoValue} (hop : ∀ e, op ≠ .appendSlice e) :
     applyStmtOp ctx σ ch op nt vs
       = (fun p => (p.1, ch, p.2)) <$> applyStmtOpCore ctx σ op vs := by
-  cases op <;>
-    first
-    | exact absurd rfl (hop _)
-    | (simp only [applyStmtOp, Bind.bind, Except.bind, Functor.map, Except.map,
-         pure, Except.pure]
-       all_goals (cases applyStmtOpCore ctx σ _ vs with
-         | error e => rfl
-         | ok p => rfl))
+  unfold applyStmtOp applyStmtOpCore
+  rw [applyStmtOp_plan_eq_core hop]
+  cases applyStmtOpCore.plan ctx σ op vs with
+  | error e => rfl
+  | ok c =>
+    simp only [Except.map, Bind.bind, Except.bind, Commit.withStream, Functor.map]
+    cases c σ with
+    | error e => rfl
+    | ok p => rfl
 
 /-- Mapping cannot manufacture or change an error. -/
 theorem map_eq_error {ε α β : Type} {g : α → β} {x : Except ε α} {e : ε} :
@@ -3434,10 +4617,12 @@ theorem step_complete_any_wf_aux {c : Config} {σ : Store} {c' : Config}
       -- (`applyStmtOp_ok_any_ch_wf`); the successor shape is the same.
       obtain ⟨⟨σ₃, ch₃, tr₃⟩, hr⟩ := applyStmtOp_ok_any_ch_wf hop happly ch
       simp only [List.reverse_cons] at hr
-      simp [stepFn, hr, List.reverse_cons, Bind.bind, Except.bind]
+      obtain ⟨c, hpl, hc⟩ := applyStmtOp_inv_ok hr
+      simp [stepFn, hpl, runCommit_eq_ok.mpr hc, List.reverse_cons, Functor.map, Except.map, Bind.bind, Except.bind]
     · obtain ⟨m', hm'⟩ := applyStmtOp_panic_any_ch_wf hop happly ch
       simp only [List.reverse_cons] at hm'
-      simp [stepFn, hm', List.reverse_cons, Bind.bind, Except.bind]
+      have hpl := applyStmtOp_inv_panic hm'
+      simp [stepFn, hpl, List.reverse_cons, Bind.bind, Except.bind]
   case stmtOpShiftPlain op nt done v e rest env k hle =>
     simp only [stepFn]
     rw [if_neg (Nat.not_lt.mpr hle)]
@@ -3497,37 +4682,29 @@ theorem step_complete_any_wf_aux {c : Config} {σ : Store} {c' : Config}
   -- The frame-entry rules: the entry classifies under EVERY stream
   -- (`enterFramePick_any_ch`), and `deliverS` then delivers.
   case callImmediate targets fid args plans r env k ch₀ ch₁ hplan hargs hpick hdel =>
-    obtain ⟨r₂, ch₂, hp⟩ := enterFramePick_any_ch hpick ch
-    simp [stepFn, hplan, hargs, hp, Bind.bind, Except.bind]
+    rcases enterFramePick_cases hpick with ⟨func, frameEnv, resultLocs, s₂, tr₂, -, hX, -⟩ | ⟨msg, -, hX, -⟩
+    · obtain ⟨c, hpl, hc⟩ := enterFrame_inv_ok hX
+      simp [stepFn, hplan, hargs, enterFramePickV_of_plan_ok hpl ch, runCommit_eq_ok.mpr hc,
+        Functor.map, Except.map, Bind.bind, Except.bind]
+    · have hpl := enterFrame_inv_panic hX
+      simp [stepFn, hplan, hargs, enterFramePickV_of_plan_panic hpl ch, Bind.bind, Except.bind]
   case callArgsDoneEnter v fid plans vals r env k ch₀ ch₁ hpick hdel =>
-    obtain ⟨r₂, ch₂, hp⟩ := enterFramePick_any_ch hpick ch
-    (try simp only [List.append_assoc] at hp)
-    simp [stepFn, hp, Bind.bind, Except.bind]
+    anyV_entry hpick ch
   case callValCalleeEnter fid captured plans r env k ch₀ ch₁ hpick hdel =>
-    obtain ⟨r₂, ch₂, hp⟩ := enterFramePick_any_ch hpick ch
-    (try simp only [List.append_assoc] at hp)
-    simp [stepFn, hp, Bind.bind, Except.bind]
+    anyV_entry hpick ch
   case callValArgsEnter v fid captured plans vals r env k ch₀ ch₁ hpick hdel =>
-    obtain ⟨r₂, ch₂, hp⟩ := enterFramePick_any_ch hpick ch
-    (try simp only [List.append_assoc] at hp)
-    simp [stepFn, hp, Bind.bind, Except.bind]
+    anyV_entry hpick ch
   case frameDeferFall targets tenv results fid captured args ds k w r ch₀ ch₁ hpick hdel =>
-    obtain ⟨r₂, ch₂, hp⟩ := enterFramePick_any_ch hpick ch
-    (try simp only [List.append_assoc] at hp)
-    simp [stepFn, stepFrameExit, hp, Bind.bind, Except.bind]
+    anyV_entry hpick ch
   case frameDeferReturn targets tenv results fid captured args ds k w r ch₀ ch₁ hpick hdel =>
-    obtain ⟨r₂, ch₂, hp⟩ := enterFramePick_any_ch hpick ch
-    (try simp only [List.append_assoc] at hp)
-    simp [stepFn, stepFrameExit, hp, Bind.bind, Except.bind]
+    anyV_entry hpick ch
   -- B4: the signal statements and the table.
   case signalStmt stmt sg env k hsig =>
     cases stmt <;> simp_all [stepFn, Stmt.signal?]
   case signal sg k hstep =>
     simp [stepFn, hstep]
   case panicFrameDefer chain targets tenv results fid captured args ds k w r ch₀ ch₁ hpick hdel =>
-    obtain ⟨r₂, ch₂, hp⟩ := enterFramePick_any_ch hpick ch
-    (try simp only [List.append_assoc] at hp)
-    simp [stepFn, hp, Bind.bind, Except.bind]
+    anyV_entry hpick ch
   -- The `unseq` construct (Stage B): the deterministic rules under any
   -- stream; the pick's consult lands inside the ready list at every stream
   -- (`consumeAt_fst_lt`), so some occurrence is picked.
@@ -3553,8 +4730,18 @@ theorem step_complete_any_wf_aux {c : Config} {σ : Store} {c' : Config}
   case unseqRunInvoke g thenB st tg env k o binds callee args i hget hbody =>
     simp [stepFn, stepUnseqNext, hget, hbody]
   case unseqRunLoad g thenB st tg env k o bind tgt r i hget hbody hres hdel =>
-    rcases toResult_cases hres with ⟨⟨s₂, tr₂⟩, rfl, hX⟩ | ⟨msg, rfl, hX⟩ <;>
-      simp [stepFn, stepUnseqNext, hget, hbody, hX, Bind.bind, Except.bind]
+    rcases toResult_cases hres with ⟨⟨s₂, tr₂⟩, rfl, hX⟩ | ⟨msg, rfl, hX⟩
+    · obtain ⟨c, hpl, hc⟩ := unseqLoad_inv_ok hX
+      simp [stepFn, stepUnseqNext, hget, hbody, hpl, runCommit_eq_ok.mpr hc, Functor.map, Except.map, Bind.bind, Except.bind]
+    · have hpl := unseqLoad_inv_panic hX
+      simp [stepFn, stepUnseqNext, hget, hbody, hpl, Bind.bind, Except.bind]
+  -- The phase-2 store (C1 S3): the composed classification reads back to its phases.
+  case storeStep ref rs val vals r body env k hres hdel =>
+    rcases toResult_cases hres with ⟨⟨s₂, tr₂⟩, rfl, hX⟩ | ⟨msg, rfl, hX⟩
+    · obtain ⟨c, hpl, hc⟩ := storeTarget_inv_ok hX
+      simp [stepFn, hpl, runCommit_eq_ok.mpr hc, Functor.map, Except.map, Bind.bind, Except.bind]
+    · have hpl := storeTarget_inv_panic hX
+      simp [stepFn, hpl, Bind.bind, Except.bind]
   case unseqRunTarget g thenB st tg env k o bind lhs r i hget hbody hplan =>
     simp [stepFn, stepUnseqNext, hget, hbody, hplan, Bind.bind, Except.bind]
   case unseqRunGuard g thenB st tg env k o test w out st' i hget hbody hg =>
@@ -3760,652 +4947,6 @@ theorem consumesAppendSlice_stmtOpK {v : GoValue} {op : StmtOp} {nt : Nat}
   subst he
   simp [consumesAppendSlice] at h
 
-/-! ### Panic-freeness of the store path (wave-(iii) audit fix F1, 2026-09-04)
-
-The consumption theorem's `some` half first carried a second disjunct — "a
-delivered panic AFTER the pop restores the pre-apply stream" — for two
-sites. Both are REFUTED here: a TRY head's apply never raises a recoverable
-panic (`applyTryLock_noPanic`), and a spilling append whose target is a
-root cell (the frontend's hoisted temp — `Config.appendTargetLocal`) never
-does either (`storeLoc_base_noPanic`, `buildAppendBackingValue_noPanic`).
-The only panic sources on the store path are `arrayGet`'s / the leaf write's
-(`writeAt`) index-out-of-range (unreachable through a PATH the machine just loaded, and
-absent at a root cell); normalization and default values refuse but never
-panic. -/
-
-/-- `x` is not a recoverable panic. -/
-def NoPanic {α : Type} (x : Except Stop α) : Prop := ∀ msg, x ≠ .error (Stop.panic msg)
-
-theorem NoPanic.ok {α : Type} (a : α) : NoPanic (Except.ok a : Except Stop α) :=
-  fun _ h => by cases h
-theorem NoPanic.pure {α : Type} (a : α) : NoPanic (pure a : Except Stop α) :=
-  fun _ h => by cases h
-theorem NoPanic.stuck {α : Type} (m : String) : NoPanic (stuck m : Except Stop α) :=
-  fun _ h => by cases h
-theorem NoPanic.unsupported {α : Type} (m : String) : NoPanic (unsupported m : Except Stop α) :=
-  fun _ h => by cases h
-theorem NoPanic.internal {α : Type} (m : String) :
-    NoPanic (throw (Stop.internal m) : Except Stop α) :=
-  fun _ h => by simp [throw, throwThe, MonadExceptOf.throw] at h
-theorem NoPanic.bind {α β : Type} {x : Except Stop α} {f : α → Except Stop β}
-    (hx : NoPanic x) (hf : ∀ a, NoPanic (f a)) : NoPanic (x >>= f) := by
-  intro msg h
-  cases x with
-  | error e =>
-    simp only [Bind.bind, Except.bind] at h
-    exact hx msg (congrArg (fun e => (Except.error e : Except Stop α)) (Except.error.inj h))
-  | ok a => simp only [Bind.bind, Except.bind] at h; exact hf a msg h
-theorem NoPanic.map {α β : Type} {x : Except Stop α} (g : α → β) (hx : NoPanic x) :
-    NoPanic (g <$> x) := by
-  intro msg h
-  cases x with
-  | error e =>
-    simp only [Functor.map, Except.map] at h
-    exact hx msg (congrArg (fun e => (Except.error e : Except Stop α)) (Except.error.inj h))
-  | ok a => simp [Functor.map, Except.map] at h
-theorem NoPanic.ite {α : Type} {c : Prop} [Decidable c] {a b : Except Stop α}
-    (ha : NoPanic a) (hb : NoPanic b) : NoPanic (if c then a else b) := by
-  split <;> assumption
-theorem NoPanic.of_ok {α : Type} {x : Except Stop α} {a : α} (h : x = .ok a) : NoPanic x := by
-  subst h; exact NoPanic.ok a
-
-/-- Discharge a `NoPanic` goal over a do-pipeline of the combinators above. -/
-macro "no_panic" : tactic =>
-  `(tactic| repeat first
-    | exact NoPanic.ok _
-    | exact NoPanic.pure _
-    | exact NoPanic.stuck _
-    | exact NoPanic.unsupported _
-    | exact NoPanic.internal _
-    | assumption
-    | apply NoPanic.ite
-    | apply NoPanic.map
-    | (apply NoPanic.bind; rotate_left)
-    | intro _)
-
-theorem normalizeListWith_noPanic {f : GoValue → Except Stop GoValue}
-    (hf : ∀ v, NoPanic (f v)) : ∀ l, NoPanic (normalizeListWith f l)
-  | [] => by rw [normalizeListWith_nil]; exact NoPanic.pure _
-  | v :: rest => by
-      rw [normalizeListWith_cons]
-      exact NoPanic.bind (hf v) fun _ =>
-        NoPanic.bind (normalizeListWith_noPanic hf rest) fun _ => NoPanic.pure _
-
-theorem normalizeFieldsWith_noPanic {f : Ty → GoValue → Except Stop GoValue}
-    (hf : ∀ t v, NoPanic (f t v)) :
-    ∀ fs vs, NoPanic (normalizeFieldsWith f fs vs)
-  | [], vs => by rw [normalizeFieldsWith_nil_left]; exact NoPanic.pure _
-  | _ :: _, [] => by rw [normalizeFieldsWith_nil_right]; exact NoPanic.pure _
-  | field :: fr, (af, v) :: vr => by
-      rw [normalizeFieldsWith_cons]
-      (try dsimp only)
-      refine NoPanic.ite ?_ ?_
-      · exact NoPanic.bind (NoPanic.stuck _) fun _ => NoPanic.bind (hf _ _) fun _ =>
-          NoPanic.bind (normalizeFieldsWith_noPanic hf fr vr) fun _ => NoPanic.pure _
-      · exact NoPanic.bind (hf _ _) fun _ =>
-          NoPanic.bind (normalizeFieldsWith_noPanic hf fr vr) fun _ => NoPanic.pure _
-
-theorem normalizeStructValueWith_noPanic {f : Ty → GoValue → Except Stop GoValue}
-    (hf : ∀ t v, NoPanic (f t v)) (name : TypeId) (fields : Array FieldDef) :
-    ∀ v, NoPanic (normalizeStructValueWith f name fields v) := by
-  intro v
-  cases v <;> simp only [normalizeStructValueWith] <;> (try exact NoPanic.stuck _)
-  (try dsimp only)
-  split
-  · split
-    · exact NoPanic.pure _
-    · exact NoPanic.stuck _
-  · (try dsimp only)
-    split
-    · exact NoPanic.stuck _
-    · (try dsimp only)
-      exact NoPanic.map _ (normalizeFieldsWith_noPanic hf _ _)
-
-/-- The normalizer's TYPE layer never panics, given the same for the
-`.defined` callback. -/
-theorem normalizeValueForTyTy_noPanic {f : TypeIdx → GoValue → Except Stop GoValue}
-    (hf : ∀ i v, NoPanic (f i v)) :
-    ∀ (ty : Ty) (v : GoValue), NoPanic (normalizeValueForTyTy f ty v) := by
-  intro ty
-  induction ty using Ty.arrayInduction with
-  | array length elem ih =>
-    intro v
-    cases v <;> simp only [normalizeValueForTyTy]
-    all_goals (try exact NoPanic.stuck _)
-    all_goals (try dsimp only)
-    all_goals (try split)
-    all_goals (try dsimp only)
-    all_goals first
-      | exact NoPanic.map _ (normalizeListWith_noPanic (fun v => ih v) _)
-      | exact NoPanic.bind (NoPanic.stuck _) fun _ =>
-          NoPanic.map _ (normalizeListWith_noPanic (fun v => ih v) _)
-  | leaf ty hne =>
-    -- `ty` stays a variable: the match splits on every arm, and the
-    -- array arms are dismissed by `hne`.
-    intro v
-    unfold normalizeValueForTyTy
-    split
-    all_goals (try dsimp only)
-    all_goals (try split)
-    all_goals (try dsimp only)
-    all_goals first
-      | exact NoPanic.pure _
-      | exact NoPanic.ok _
-      | exact NoPanic.stuck _
-      | exact NoPanic.unsupported _
-      | exact hf _ _
-      | exact absurd rfl (hne _ _)
-
-/-- The normalizer's INDEX layer never panics (induction on the bound). -/
-theorem normalizeValueForTyAt_noPanic (types : TypeEnv) :
-    ∀ (bound : Nat) (i : TypeIdx) (v : GoValue),
-      NoPanic (normalizeValueForTyAt types bound i v) := by
-  intro bound
-  induction bound with
-  | zero =>
-    intro i v
-    simp only [normalizeValueForTyAt, typeIndexExhausted]
-    exact NoPanic.unsupported _
-  | succ n ih =>
-    intro i v
-    unfold normalizeValueForTyAt
-    split
-    · exact normalizeStructValueWith_noPanic
-        (fun t v => normalizeValueForTyTy_noPanic (fun i v => ih i v) t v) _ _ _
-    · exact normalizeValueForTyTy_noPanic (fun i v => ih i v) _ _
-    · exact NoPanic.unsupported _
-    · exact NoPanic.unsupported _
-    · exact NoPanic.unsupported _
-
-theorem normalizeValueForTy_noPanic (ty : Ty) (v : GoValue) :
-    NoPanic (normalizeValueForTy ctx ty v) := by
-  unfold normalizeValueForTy
-  exact normalizeValueForTyTy_noPanic (fun i v => normalizeValueForTyAt_noPanic _ _ i v) ty v
-
-theorem defaultFieldsWith_noPanic {f : Ty → Except Stop GoValue}
-    (hf : ∀ t, NoPanic (f t)) : ∀ fs, NoPanic (defaultFieldsWith f fs)
-  | [] => by unfold defaultFieldsWith; exact NoPanic.pure _
-  | field :: rest => by
-      unfold defaultFieldsWith
-      exact NoPanic.bind (hf _) fun _ =>
-        NoPanic.bind (defaultFieldsWith_noPanic hf rest) fun _ => NoPanic.pure _
-
-/-- The zero value's TYPE layer never panics, given the same for the
-`.defined` callback. -/
-theorem defaultValueTy_noPanic {f : TypeIdx → Except Stop GoValue}
-    (hf : ∀ i, NoPanic (f i)) :
-    ∀ (ty : Ty), NoPanic (defaultValueTy f ty) := by
-  intro ty
-  induction ty using Ty.arrayInduction with
-  | array length elem ih =>
-    simp only [defaultValueTy]
-    split
-    · exact NoPanic.pure _
-    · exact NoPanic.bind ih fun _ => NoPanic.pure _
-  | leaf ty hne =>
-    unfold defaultValueTy
-    split
-    all_goals (try dsimp only)
-    all_goals first
-      | exact NoPanic.pure _
-      | exact NoPanic.ok _
-      | exact NoPanic.unsupported _
-      | exact hf _
-      | exact absurd rfl (hne _ _)
-
-/-- The zero value's INDEX layer never panics (induction on the bound). -/
-theorem defaultValueAt_noPanic (types : TypeEnv) :
-    ∀ (bound : Nat) (i : TypeIdx), NoPanic (defaultValueAt types bound i) := by
-  intro bound
-  induction bound with
-  | zero =>
-    intro i
-    simp only [defaultValueAt, typeIndexExhausted]
-    exact NoPanic.unsupported _
-  | succ n ih =>
-    intro i
-    unfold defaultValueAt
-    split
-    · exact NoPanic.map _ (defaultFieldsWith_noPanic (fun t => defaultValueTy_noPanic ih t) _)
-    · exact defaultValueTy_noPanic ih _
-    · exact NoPanic.unsupported _
-    · exact NoPanic.unsupported _
-    · exact NoPanic.unsupported _
-
-theorem defaultValue_noPanic (ty : Ty) : NoPanic (defaultValue ctx ty) := by
-  unfold defaultValue
-  exact defaultValueTy_noPanic (fun i => defaultValueAt_noPanic _ _ i) ty
-
-/-- A loop whose every body step is panic-free is panic-free. -/
-theorem forIn_noPanic {α β : Type} {body : α → β → Except Stop (ForInStep β)}
-    (hb : ∀ a b, NoPanic (body a b)) :
-    ∀ (l : List α) (acc : β), NoPanic (forIn l acc body)
-  | [], acc => by rw [List.forIn_nil]; exact NoPanic.pure _
-  | a :: as, acc => by
-      rw [List.forIn_cons]
-      refine NoPanic.bind (hb a acc) fun r => ?_
-      cases r with
-      | done b => exact NoPanic.pure _
-      | yield b => exact forIn_noPanic hb as b
-
-theorem buildAppendBackingValue_noPanic (elem : Ty)
-    (oldValues elemValues : Array GoValue) (newCap : Nat) :
-    NoPanic (buildAppendBackingValue ctx elem oldValues elemValues newCap) := by
-  unfold buildAppendBackingValue
-  dsimp only
-  rw [← Array.forIn_toList]
-  refine NoPanic.bind (forIn_noPanic (fun a b => ?_) _ _) fun values => ?_
-  · exact NoPanic.bind (normalizeValueForTy_noPanic _ _) fun _ => NoPanic.pure _
-  · refine NoPanic.ite ?_ ?_
-    · refine NoPanic.bind (NoPanic.stuck _) fun _ => ?_
-      rw [Std.Legacy.Range.forIn_eq_forIn_range']
-      refine NoPanic.bind (forIn_noPanic (fun a b => ?_) _ _) fun _ => NoPanic.pure _
-      exact NoPanic.bind (defaultValue_noPanic _) fun _ => NoPanic.pure _
-    · rw [Std.Legacy.Range.forIn_eq_forIn_range']
-      refine NoPanic.bind (forIn_noPanic (fun a b => ?_) _ _) fun _ => NoPanic.pure _
-      exact NoPanic.bind (defaultValue_noPanic _) fun _ => NoPanic.pure _
-
-/-- `Store.alloc` never panics: the normalizer does not, and the push is pure. -/
-theorem Store.alloc_noPanic (s : Store) (v : GoValue) (ty : Ty) :
-    NoPanic (Store.alloc ctx s v ty) := by
-  unfold Store.alloc
-  exact NoPanic.bind (normalizeValueForTy_noPanic _ _) fun _ => NoPanic.pure _
-
-/-! #### The root-first read (C1 S1): `loadLoc` as a root lookup + path read
-
-`loadLoc` is leaf-first on the `Loc`; the module's write is root-first on
-`Loc.rootPath`. The bridge below reads root-first and proves it IS
-`loadLoc`, which is what the store-side NoPanic argument descends along. -/
-
-variable (ctx) in
-/-- One projection step (the `loadLoc` field/index arms, root-first). -/
-def projectStep : GoValue → PathStep → Except Stop GoValue
-  | .struct actualType fields, .field typeId fieldName =>
-      if actualType != typeId && !structTagCompatible ctx actualType typeId then
-        stuck s!"expected struct {typeId.key}, got struct {actualType.key}"
-      else
-        match StructFields.lookup fields fieldName with
-        | some value => return value
-        | none => stuck s!"unknown GoCore struct field: {fieldName}"
-  | other, .field _ _ => stuck s!"expected struct base for field load, got {repr other}"
-  | .array values, .index index => arrayGet values index
-  | other, .index _ => stuck s!"expected array base for index load, got {repr other}"
-
-variable (ctx) in
-/-- Root-first read along a path. -/
-def readAt : GoValue → List PathStep → Except Stop GoValue
-  | v, [] => pure v
-  | v, step :: rest => do readAt (← projectStep ctx v step) rest
-
-theorem readAt_append (v : GoValue) (p : List PathStep) (step : PathStep) :
-    readAt ctx v (p ++ [step]) = (readAt ctx v p >>= fun x => readAt ctx x [step]) := by
-  induction p generalizing v with
-  | nil => simp [readAt, Bind.bind, Except.bind]
-  | cons s rest ih =>
-    simp only [List.cons_append, readAt]
-    cases projectStep ctx v s with
-    | error e => simp [Bind.bind, Except.bind]
-    | ok w => simp only [Bind.bind, Except.bind]; exact ih w
-
-/-- `loadLoc` IS the root lookup followed by the root-first read. -/
-theorem loadLoc_eq_readAt (s : Store) : ∀ l : Loc,
-    loadLoc ctx s l =
-      match Heap.lookup s.heap (.base (Loc.rootPath l).1) with
-      | some (.value _ root) => readAt ctx root (Loc.rootPath l).2
-      | some (.mapPayload ..) => stuck s!"value load from a map payload cell {repr (Loc.rootLoc l)}"
-      | some (.chanPayload ..) => stuck s!"value load from a channel payload cell {repr (Loc.rootLoc l)}"
-      | none => stuck s!"unbound GoCore heap location: {repr (Loc.rootLoc l)}" := by
-  intro l
-  induction l with
-  | base a =>
-    obtain ⟨i⟩ := a
-    simp only [loadLoc, Loc.rootPath, Loc.rootLoc, Loc.rootBase]
-    split <;> simp_all [readAt]
-  | field b tid f ih =>
-    have hroot : (Loc.rootPath (.field b tid f)).1 = (Loc.rootPath b).1 := rfl
-    have hpath : (Loc.rootPath (.field b tid f)).2 = (Loc.rootPath b).2 ++ [.field tid f] := rfl
-    simp only [loadLoc]
-    rw [ih]
-    simp only [hroot, hpath, Loc.rootLoc_eq, readAt_append]
-    split
-    · rename_i ty root _
-      cases hread : readAt ctx root (Loc.rootPath b).2 with
-      | error e => simp [Bind.bind, Except.bind]
-      | ok w =>
-        simp only [Bind.bind, Except.bind]
-        cases w with
-        | struct actualType fields =>
-          simp only [readAt, projectStep, Bind.bind, Except.bind]
-          by_cases hc : (actualType != tid && !structTagCompatible ctx actualType tid) = true
-          · simp [hc, stuck, throw, throwThe, MonadExceptOf.throw]
-          · have hc' : (actualType != tid && !structTagCompatible ctx actualType tid) = false := by
-              simpa using hc
-            simp only [hc', Bool.false_eq_true, ↓reduceIte, pure, Except.pure]
-            cases StructFields.lookup fields f <;>
-              simp [stuck, throw, throwThe, MonadExceptOf.throw]
-        | _ => simp [readAt, projectStep, Bind.bind, Except.bind, stuck, throw, throwThe,
-                MonadExceptOf.throw]
-    · simp [Bind.bind, Except.bind, stuck, throw, throwThe, MonadExceptOf.throw]
-    · simp [Bind.bind, Except.bind, stuck, throw, throwThe, MonadExceptOf.throw]
-    · simp [Bind.bind, Except.bind, stuck, throw, throwThe, MonadExceptOf.throw]
-  | index b i ih =>
-    have hroot : (Loc.rootPath (.index b i)).1 = (Loc.rootPath b).1 := rfl
-    have hpath : (Loc.rootPath (.index b i)).2 = (Loc.rootPath b).2 ++ [.index i] := rfl
-    simp only [loadLoc]
-    rw [ih]
-    simp only [hroot, hpath, Loc.rootLoc_eq, readAt_append]
-    split
-    · rename_i ty root _
-      cases hread : readAt ctx root (Loc.rootPath b).2 with
-      | error e => simp [Bind.bind, Except.bind]
-      | ok w =>
-        simp only [Bind.bind, Except.bind]
-        cases w with
-        | array values =>
-          simp only [readAt, projectStep, Bind.bind, Except.bind]
-          cases arrayGet values i <;> rfl
-        | _ => simp [readAt, projectStep, Bind.bind, Except.bind, stuck, throw, throwThe,
-                MonadExceptOf.throw]
-    · simp [Bind.bind, Except.bind, stuck, throw, throwThe, MonadExceptOf.throw]
-    · simp [Bind.bind, Except.bind, stuck, throw, throwThe, MonadExceptOf.throw]
-    · simp [Bind.bind, Except.bind, stuck, throw, throwThe, MonadExceptOf.throw]
-
-/-! #### The field-position search agrees with `StructFields.lookup` -/
-
-/-- The `foldl` step of `StructFields.lookup`, named for the lemmas. -/
-def lookupStep (needle : String) (found : Option GoValue) (nv : String × GoValue) :
-    Option GoValue :=
-  match found with
-  | some value => some value
-  | none => if nv.1 == needle then some nv.2 else none
-
-theorem foldl_lookupStep_some (needle : String) (v : GoValue) :
-    ∀ l : List (String × GoValue), l.foldl (lookupStep needle) (some v) = some v := by
-  intro l
-  induction l with
-  | nil => rfl
-  | cons x rest ih => simpa [List.foldl, lookupStep] using ih
-
-theorem foldl_lookupStep_none (needle : String) :
-    ∀ l : List (String × GoValue),
-      l.foldl (lookupStep needle) none = (l.find? (·.1 == needle)).map (·.2) := by
-  intro l
-  induction l with
-  | nil => rfl
-  | cons x rest ih =>
-    by_cases hx : x.1 == needle
-    · simp [List.foldl, lookupStep, hx, foldl_lookupStep_some]
-    · simp [List.foldl, lookupStep, hx, ih]
-
-theorem StructFields.lookup_eq_find? (fields : Array (String × GoValue)) (needle : String) :
-    StructFields.lookup fields needle = (fields.toList.find? (·.1 == needle)).map (·.2) := by
-  simp only [StructFields.lookup]
-  rw [← Array.foldl_toList]
-  exact foldl_lookupStep_none needle fields.toList
-
-/-- The first match, characterized by position. -/
-theorem List.find?_eq_of_first {α : Type} (p : α → Bool) :
-    ∀ (l : List α) (k : Nat) (hk : k < l.length),
-      p l[k] = true → (∀ j (hj : j < k), p (l[j]'(Nat.lt_trans hj hk)) = false) →
-      l.find? p = some l[k] := by
-  intro l
-  induction l with
-  | nil => intro k hk; simp at hk
-  | cons x rest ih =>
-    intro k hk hpk hbefore
-    cases k with
-    | zero => simp_all
-    | succ k =>
-      have hx : p x = false := hbefore 0 (Nat.zero_lt_succ _)
-      simp only [List.getElem_cons_succ] at hpk
-      have hstep : List.find? p (x :: rest) = List.find? p rest :=
-        List.find?_cons_of_neg (by simp [hx])
-      rw [hstep, List.getElem_cons_succ]
-      exact ih k (by simpa using hk) hpk
-        (fun j hj => hbefore (j + 1) (Nat.succ_lt_succ hj))
-
-/-- `StructFields.lookup` returns the value at the structural search's position. -/
-theorem StructFields.lookup_of_fieldIdx? (fields : Array (String × GoValue)) (f : String)
-    (k : Nat) (h : fieldIdx? fields f = some k) :
-    ∃ hk : k < fields.size, StructFields.lookup fields f = some fields[k].2 := by
-  obtain ⟨hk, hname, hbefore⟩ := fieldIdx?_spec fields f k h
-  refine ⟨hk, ?_⟩
-  rw [StructFields.lookup_eq_find?]
-  have hk' : k < fields.toList.length := by simpa using hk
-  rw [List.find?_eq_of_first _ fields.toList k hk' (by simpa using hname)
-    (fun j hj => by
-      have := hbefore j hj
-      simpa [Array.getElem_toList] using this)]
-  simp
-
-theorem Ty.stepDown_noPanic (types : TypeEnv) :
-    ∀ (b : Nat) (ty : Ty) (step : PathStep), NoPanic (Ty.stepDown types b ty step) := by
-  intro b
-  induction b with
-  | zero =>
-    intro ty step
-    unfold Ty.stepDown
-    split
-    all_goals
-      first
-        | exact NoPanic.pure _
-        | exact NoPanic.unsupported _
-        | exact NoPanic.stuck _
-        | (dsimp only; exact NoPanic.unsupported _)
-  | succ n ih =>
-    intro ty step
-    unfold Ty.stepDown
-    split
-    -- Order-independent (audit fix round F3, 2026-09-18: the identity-type
-    -- arms joined the match): every leaf arm — `pure` (the `.array` hop and
-    -- the identity types), `stuck`, `unsupported` — closes here; the ONE arm
-    -- left standing is the `.defined` table walk, taken below. A new arm
-    -- that is none of these fails loudly at the second block.
-    all_goals
-      first
-        | exact NoPanic.pure _
-        | exact NoPanic.stuck _
-        | exact NoPanic.unsupported _
-        | (dsimp only; exact NoPanic.unsupported _)
-        | skip
-    all_goals
-      (try dsimp only
-       split
-       · try dsimp only
-         split
-         · split <;> first | exact NoPanic.pure _ | exact NoPanic.stuck _
-         · exact NoPanic.stuck _
-       · exact ih _ _
-       · exact NoPanic.unsupported _
-       · exact NoPanic.unsupported _
-       · exact NoPanic.unsupported _)
-
-theorem Array.modifyM_noPanic {α : Type} {xs : Array α} {i : Nat} {f : α → Except Stop α}
-    (h : (hi : i < xs.size) → NoPanic (f xs[i])) : NoPanic (xs.modifyM i f) := by
-  unfold Array.modifyM
-  split
-  · rename_i hi
-    exact NoPanic.bind (h hi) fun _ => NoPanic.pure _
-  · exact NoPanic.pure _
-
-/-- A root-first write along a path the root-first read walks successfully
-never panics: the only panic on the write path is the index bounds check,
-which the read already passed at the same index. -/
-theorem writeAt_noPanic_of_readAt_ok :
-    ∀ {path : List PathStep} {b : Nat} {ty : Ty} {root v₀ : GoValue},
-      readAt ctx root path = .ok v₀ → ∀ v, NoPanic (writeAt ctx b ty root path v) := by
-  intro path
-  induction path with
-  | nil =>
-    intro b ty root v₀ _ v
-    simp only [writeAt]
-    exact normalizeValueForTyTy_noPanic (fun _ _ => normalizeValueForTyAt_noPanic _ _ _ _) _ _
-  | cons step rest ih =>
-    intro b ty root v₀ h v
-    cases step with
-    | field tid f =>
-      cases root with
-      | struct actual fields =>
-        simp only [readAt, projectStep] at h
-        by_cases hc : (actual != tid && !structTagCompatible ctx actual tid) = true
-        · simp [hc, stuck, throw, throwThe, MonadExceptOf.throw, Bind.bind, Except.bind] at h
-        · have hc' : (actual != tid && !structTagCompatible ctx actual tid) = false := by
-            simpa using hc
-          simp only [hc', Bool.false_eq_true, ↓reduceIte, Bind.bind, Except.bind] at h
-          cases hlook : StructFields.lookup fields f with
-          | none => rw [hlook] at h; simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
-          | some x =>
-            rw [hlook] at h
-            simp only [pure, Except.pure] at h
-            unfold writeAt
-            dsimp only
-            -- do-notation duplicates the continuation into both `if` branches
-            refine NoPanic.ite (c := (actual != tid && !structTagCompatible ctx actual tid) = true)
-              (NoPanic.bind (NoPanic.stuck _) fun _ => ?tail) ?tail
-            cases hidx : fieldIdx? fields f with
-            | none => exact NoPanic.stuck _
-            | some k =>
-              obtain ⟨hk, hlook'⟩ := StructFields.lookup_of_fieldIdx? fields f k hidx
-              rw [hlook] at hlook'
-              have hx : fields[k].2 = x := (Option.some.inj hlook').symm
-              refine NoPanic.bind (Ty.stepDown_noPanic _ _ _ _) fun p => ?_
-              obtain ⟨fty, b'⟩ := p
-              refine NoPanic.bind (Array.modifyM_noPanic fun _ => ?_) fun _ => NoPanic.pure _
-              refine NoPanic.bind ?_ fun _ => NoPanic.pure _
-              rw [hx]
-              exact ih h v
-      | _ =>
-        simp [readAt, projectStep, Bind.bind, Except.bind, stuck, throw, throwThe,
-          MonadExceptOf.throw] at h
-    | index i =>
-      cases root with
-      | array values =>
-        simp only [readAt, projectStep, Bind.bind, Except.bind] at h
-        cases hag : arrayGet values i with
-        | error e => rw [hag] at h; simp at h
-        | ok x =>
-          rw [hag] at h
-          simp only at h
-          -- `arrayGet` succeeded: the index is in range and names `x`.
-          obtain ⟨k, hk, hget⟩ : ∃ k, arrayIndexNat values i = .ok k ∧ values[k]? = some x := by
-            unfold arrayGet at hag
-            cases hk : arrayIndexNat values i with
-            | error e => rw [hk] at hag; simp [Bind.bind, Except.bind] at hag
-            | ok k =>
-              rw [hk] at hag
-              simp only [Bind.bind, Except.bind] at hag
-              cases hget : values[k]? with
-              | none =>
-                rw [hget] at hag
-                simp only [indexOutOfRangePanic, GoLean.GoCore.panic, throw, throwThe,
-                  MonadExceptOf.throw] at hag
-                split at hag <;> cases hag
-              | some w =>
-                rw [hget] at hag
-                simp only [pure, Except.pure, Except.ok.injEq] at hag
-                subst hag
-                exact ⟨k, rfl, hget⟩
-          simp only [writeAt]
-          rw [hk]
-          simp only [Bind.bind, Except.bind]
-          refine NoPanic.bind (Ty.stepDown_noPanic _ _ _ _) fun p => ?_
-          obtain ⟨ety, b'⟩ := p
-          refine NoPanic.bind (Array.modifyM_noPanic fun hk' => ?_) fun _ => NoPanic.pure _
-          have hx : values[k] = x := (Array.getElem?_eq_some_iff.mp hget).2
-          rw [hx]
-          exact ih h v
-      | _ =>
-        simp [readAt, projectStep, Bind.bind, Except.bind, stuck, throw, throwThe,
-          MonadExceptOf.throw] at h
-
-/-- A root-cell store never panics: the cell exists or the store is
-`.internal`, and normalization at the cell's type refuses but never panics. -/
-theorem storeLoc_base_noPanic (s : Store) (a : Addr) (v : GoValue) :
-    NoPanic (storeLoc ctx s (.base a) v) := by
-  unfold storeLoc Store.updateCell
-  simp only [Loc.rootPath]
-  split
-  · refine NoPanic.bind ?_ fun _ => NoPanic.pure _
-    try dsimp only
-    split
-    · exact NoPanic.map _
-        (normalizeValueForTyTy_noPanic (fun _ _ => normalizeValueForTyAt_noPanic _ _ _ _) _ _)
-    · exact NoPanic.stuck _
-    · exact NoPanic.stuck _
-  · exact NoPanic.internal _
-
-/-- A store through a PATH the machine can load never panics: the only
-panic on the store path is the index bounds check, and the load's success
-puts the index in range (root-first, through `loadLoc_eq_readAt`). -/
-theorem storeLoc_noPanic_of_loadLoc_ok (s : Store) :
-    ∀ (loc : Loc) {v₀ : GoValue}, loadLoc ctx s loc = .ok v₀ → ∀ v, NoPanic (storeLoc ctx s loc v) := by
-  intro loc v₀ h v
-  rw [loadLoc_eq_readAt] at h
-  unfold storeLoc Store.updateCell
-  dsimp only
-  split
-  · rename_i hi
-    refine NoPanic.bind ?_ fun _ => NoPanic.pure _
-    try dsimp only
-    have hcell : Heap.lookup s.heap (.base (Loc.rootPath loc).1)
-        = some s.heap[(Loc.rootPath loc).1.id] := by
-      simp [Heap.lookup, Array.getElem?_eq_getElem hi]
-    rw [hcell] at h
-    split
-    · rename_i ty root hroot
-      rw [hroot] at h
-      exact NoPanic.map _ (writeAt_noPanic_of_readAt_ok h v)
-    · split <;> exact NoPanic.stuck _
-    · split <;> exact NoPanic.stuck _
-  · exact NoPanic.internal _
-
-theorem tryAcquire_noPanic (op : SyncOp) (pre : SyncPrim) : NoPanic (tryAcquire op pre) := by
-  unfold tryAcquire
-  split <;> first | exact NoPanic.pure _ | exact NoPanic.stuck _ | exact NoPanic.internal _
-
-theorem enterRecvTargets_noPanic (s : Store) (targets : List Assignee) (vals : List GoValue)
-    (body : Stmt) (env : LocalEnv) (k : Cont) :
-    NoPanic (enterRecvTargets s targets vals body env k) := by
-  unfold enterRecvTargets
-  split <;> first | exact NoPanic.pure _ | exact NoPanic.stuck _
-
-theorem tryDeliver_noPanic (b : Bool) (s : Store) (targets : List Assignee)
-    (env : LocalEnv) (k : Cont) : NoPanic (tryDeliver b s targets env k) := by
-  unfold tryDeliver
-  split
-  · exact NoPanic.pure _
-  · exact NoPanic.bind (enterRecvTargets_noPanic _ _ _ _ _ _) fun _ => NoPanic.pure _
-
-/-- **Site 2 of the retired disjunct**: a TRY head's apply never raises a
-recoverable panic — `tryAcquire` refuses at most, the acquired cell is
-stored through the location the apply just READ (`syncCell`), and the
-result delivery is an `.evalE` entry or a refusal. -/
-theorem applyTryLock_noPanic {s : Store} {loc : Loc} {pre : SyncPrim}
-    (hcell : syncCell ctx s loc = .ok pre) (op : SyncOp) (spurious : Bool)
-    (targets : List Assignee) (env : LocalEnv) (k : Cont) :
-    NoPanic (applyTryLock ctx s op loc pre spurious targets env k) := by
-  have hload : ∃ w, loadLoc ctx s loc = .ok w := by
-    unfold syncCell at hcell
-    cases hl : loadLoc ctx s loc with
-    | error e => rw [hl] at hcell; simp [Bind.bind, Except.bind] at hcell
-    | ok w => exact ⟨w, rfl⟩
-  obtain ⟨w, hw⟩ := hload
-  unfold applyTryLock
-  try dsimp only
-  -- The labelled delivery: `tryDeliver`, then a `pure` of the label (C1 S2c).
-  have hdel : ∀ (b : Bool) (σ : Store) (tr : AccessTrace),
-      NoPanic (do let (c', s') ← tryDeliver b σ targets env k
-                  pure ((c', s', tr) : Config × Store × AccessTrace)) := fun b σ tr =>
-    NoPanic.bind (tryDeliver_noPanic _ _ _ _ _) fun p => by
-      obtain ⟨c, s⟩ := p
-      exact NoPanic.pure _
-  refine NoPanic.bind (tryAcquire_noPanic _ _) fun r => ?_
-  cases r with
-  | none => exact hdel _ _ _
-  | some post =>
-    refine NoPanic.bind (storeLoc_noPanic_of_loadLoc_ok s loc hw _) fun _ => ?_
-    exact NoPanic.ite (hdel _ _ _) (hdel _ _ _)
-
 /-! ### The per-site stream lemmas behind `stepFn_consumption` (B8) -/
 
 theorem except_bind_ok {ε α β : Type} (a : α)
@@ -4551,13 +5092,12 @@ theorem bind_pair_map {α : Type} (T : Except Stop α)
     | error e => rfl
     | ok x => rfl
 
-/-- The spill decision agrees with the arm: at `appendSpill? = none` the
-apply is stream-oblivious — a state result `r` (in place, a refusal or
-the R16 panic before the consult) paired with the untouched stream. -/
-theorem applyStmtOp_appendSlice_nospill {σ : Store} {elem : Ty} {nt : Nat}
+/-- A non-spilling append: the plan is one stream-free commit lifted beside the stream
+(C1 S3: the plan-level restatement of the retired `applyStmtOp_appendSlice_nospill`). -/
+theorem applyStmtOp_plan_appendSlice_nospill {σ : Store} {elem : Ty} {nt : Nat}
     {vs : List GoValue} (hw : appendSpill? ctx σ elem vs = none) :
-    ∃ r : Except Stop (Store × AccessTrace), ∀ ch : Choices,
-      applyStmtOp ctx σ ch (.appendSlice elem) nt vs = r.map fun p => (p.1, ch, p.2) := by
+    ∃ r : Except Stop (Commit (Store × AccessTrace)), ∀ ch : Choices,
+      applyStmtOp.plan ctx σ ch (.appendSlice elem) nt vs = r.map (Commit.withStream ch) := by
   match vs, hw with
   | [], _ => exact ⟨.error (.stuck "malformed appendSlice operands"), fun _ => rfl⟩
   | [_], _ => exact ⟨.error (.stuck "malformed appendSlice operands"), fun _ => rfl⟩
@@ -4565,7 +5105,7 @@ theorem applyStmtOp_appendSlice_nospill {σ : Store} {elem : Ty} {nt : Nat}
   | _ :: _ :: _ :: _ :: _, _ => exact ⟨.error (.stuck "malformed appendSlice operands"), fun _ => rfl⟩
   | [tv, sliceV, elemsV], hw =>
     unfold appendSpill? at hw
-    unfold applyStmtOp
+    unfold applyStmtOp.plan
     dsimp only
     cases hsl : valueAsSlice sliceV with
     | error e => exact ⟨.error e, fun _ => rfl⟩
@@ -4595,8 +5135,11 @@ theorem applyStmtOp_appendSlice_nospill {σ : Store} {elem : Ty} {nt : Nat}
     simp only [hsl, hel, hv1, hv2, hvis, htl] at hw
     by_cases hcap : slice.len + elemValues.size ≤ slice.cap
     · simp only [if_pos hcap]
-      exact ⟨_, fun ch => bind2_pair_stream _ _
-        (fun (a : Store × AccessTrace) (x : Store × AccessTrace) => (x.1, trE ++ a.2 ++ x.2)) ch⟩
+      exact ⟨.ok fun s => do
+          let (current, trW) ← Mem.storeRun ctx s slice slice.len elemValues.toList
+          let (s', trT) ← Mem.store ctx current tloc
+            (.slice { slice with len := slice.len + elemValues.size })
+          pure (s', trE ++ trW ++ trT), fun ch => rfl⟩
     · simp only [if_neg hcap]
       cases hts : tySizeBytes ctx.types elem with
       | error e => exact ⟨.error e, fun _ => rfl⟩
@@ -4611,22 +5154,20 @@ theorem applyStmtOp_appendSlice_nospill {σ : Store} {elem : Ty} {nt : Nat}
         | error e => exact ⟨.error e, fun _ => rfl⟩
         | ok oldValues => rw [hold] at hw; cases hw
 
-/-- **The spill's pop**: at `appendSpill? = some w` the arm reaches the
-consult and the apply is a function `g` of the `appendSpill` pick alone,
-its stream the site's pop at bound `w` — a spilling append depends on the
-stream only through that pick. Moreover `g` never raises a recoverable
-panic when the target operand addresses a ROOT cell (the frontend's
-hoisted temp, `Config.appendTargetLocal`): the grown backing is built by
-panic-free normalization and stored into an existing or `.internal`-
-refused cell (audit fix F1 — the refutation of the retired disjunct). -/
-theorem applyStmtOp_appendSlice_spill {σ : Store} {elem : Ty} {nt : Nat}
+/-- **The spill's pop** (C1 S3, the plan-level restatement of the retired
+`applyStmtOp_appendSlice_spill`): at `appendSpill? = some w` the plan reaches the
+consult and is a function `g` of the `appendSpill` pick alone, lifted beside the site's
+pop at bound `w` — and `g` never raises a recoverable panic (the post-consult tail is the
+fresh backing's panic-free construction; the COMMIT's panic-freeness is
+`applyStmtOp_commit_noPanic`, for EVERY target — the former root-target proviso is gone). -/
+theorem applyStmtOp_plan_appendSlice_spill {σ : Store} {elem : Ty} {nt : Nat}
     {vs : List GoValue} {w : Nat} (hw : appendSpill? ctx σ elem vs = some w) :
-    ∃ g : Nat → Except Stop (Store × AccessTrace),
+    ∃ g : Nat → Except Stop (Commit (Store × AccessTrace)),
       (∀ ch : Choices,
-        applyStmtOp ctx σ ch (.appendSlice elem) nt vs
+        applyStmtOp.plan ctx σ ch (.appendSlice elem) nt vs
           = (g (Choices.consumeAt .appendSpill w ch).1).map
-              fun p => (p.1, (Choices.consumeAt .appendSpill w ch).2, p.2))
-      ∧ (∀ a rest, vs = .addr (.base a) :: rest → ∀ pick, NoPanic (g pick)) := by
+              (Commit.withStream (Choices.consumeAt .appendSpill w ch).2))
+      ∧ (∀ pick, NoPanic (g pick)) := by
   match vs, hw with
   | [tv, sliceV, elemsV], hw =>
     unfold appendSpill? at hw
@@ -4667,32 +5208,41 @@ theorem applyStmtOp_appendSlice_spill {σ : Store} {elem : Ty} {nt : Nat}
     rw [hold] at hw
     simp only [Option.some.injEq] at hw
     subst hw
-    unfold applyStmtOp
+    unfold applyStmtOp.plan
     dsimp only
     simp only [hsl, hel, hv1, hv2, hvis, htl, except_bind_ok, if_neg hcap, hts, if_neg hr16, hold]
-    refine ⟨fun extra => ?_, fun ch => ?_, fun a rest hvs pick => ?_⟩
+    refine ⟨fun extra => ?_, fun ch => ?_, fun pick => ?_⟩
     · exact do
         let newCap := slice.len + elemValues.size +
           ((appendGrowthCap slice.cap (slice.len + elemValues.size) - (slice.len + elemValues.size) + extra)
             % appendSpillWidth slice.cap (slice.len + elemValues.size))
         let backing ← buildAppendBackingValue ctx elem oldValues elemValues newCap
-        let (base, current) ← Store.alloc ctx σ backing (.array newCap elem)
-        let (s', trT) ← Mem.store ctx current tloc
-          (.slice { base := some base, offset := 0, len := slice.len + elemValues.size, cap := newCap })
-        pure (s', trE ++ trO ++ trT)
+        pure fun s => do
+          let (base, current) ← Store.alloc ctx s backing (.array newCap elem)
+          let (s', trT) ← Mem.store ctx current tloc
+            (.slice { base := some base, offset := 0, len := slice.len + elemValues.size, cap := newCap })
+          pure (s', trE ++ trO ++ trT)
     · rcases hc : Choices.consumeAt .appendSpill (appendSpillWidth slice.cap (slice.len + elemValues.size)) ch
         with ⟨extra, rest⟩
-      exact bind3_pair_stream _ _ _
-        (fun (_ : GoValue) (_ : Loc × Store) (x : Store × AccessTrace) => (x.1, trE ++ trO ++ x.2)) rest
-    · -- the target is a root cell: the post-consult tail cannot panic
-      simp only [List.cons.injEq] at hvs
-      obtain ⟨rfl, -⟩ := hvs
-      simp only [valueAsLoc, pure_eq_ok, Except.ok.injEq] at htl
-      subst htl
-      exact NoPanic.bind (buildAppendBackingValue_noPanic _ _ _ _) fun _ =>
-        NoPanic.bind (Store.alloc_noPanic _ _ _) fun _ =>
-          NoPanic.bind (NoPanic.bind (storeLoc_base_noPanic _ _ _) fun _ => NoPanic.pure _)
-            fun _ => NoPanic.pure _
+      try dsimp only
+      cases buildAppendBackingValue ctx elem oldValues elemValues _ <;> rfl
+    · exact NoPanic.bind (buildAppendBackingValue_noPanic _ _ _ _) fun _ => NoPanic.pure _
+
+/-- A wide-statement apply whose consult is `none` is a stream-oblivious plan: the core's
+plan for every non-append head, the non-spilling / refusing append otherwise. -/
+theorem applyStmtOp_plan_of_stmtConsult?_none {σ : Store} {op : StmtOp} {nt : Nat}
+    {vs : List GoValue} (h : stmtConsult? ctx σ op vs = none) :
+    ∃ r : Except Stop (Commit (Store × AccessTrace)), ∀ ch : Choices,
+      applyStmtOp.plan ctx σ ch op nt vs = r.map (Commit.withStream ch) := by
+  by_cases hap : ∀ e, op ≠ .appendSlice e
+  · exact ⟨applyStmtOpCore.plan ctx σ op vs, fun ch => applyStmtOp_plan_eq_core hap⟩
+  · obtain ⟨e, rfl⟩ : ∃ e, op = .appendSlice e := by
+      cases op <;>
+        first
+        | exact ⟨_, rfl⟩
+        | exact absurd (fun e h => by cases h) hap
+    simp only [stmtConsult?, Option.map_eq_none_iff] at h
+    exact applyStmtOp_plan_appendSlice_nospill h
 
 /-- The done-check `mapIterK` step is oblivious: with no candidate
 left it pops the continuation at every stream (BUG-005 (L): "no
@@ -4794,24 +5344,30 @@ macro "oblivious_entry_with " h:ident hpk:term : tactic =>
   `(tactic| (
     have hpk' := $hpk
     rw [hpk' _] at $h:ident
-    cases hx : toResult (enterFrame ctx _ _ _) with
+    cases hx : toResult (enterFrame.plan ctx _ _ _) with
     | error e =>
       rw [hx] at $h:ident
       simp [Except.map, Bind.bind, Except.bind] at $h:ident
     | ok r =>
       rw [hx] at $h:ident
       cases r with
-      | ok a =>
-        simp only [Except.map, Bind.bind, Except.bind, pure_eq_ok, Pure.pure, Except.pure,
-          deliverS_ok, Except.ok.injEq, Prod.mk.injEq] at $h:ident
-        obtain ⟨h1, h2, h3, h4⟩ := $h:ident
-        subst h1; subst h2; subst h3; subst h4
-        exact ⟨rfl, fun ch => by
-          (try simp only [List.append_assoc] at hpk' hx)
-          simp [stepFn, hpk', hx, Except.map, Bind.bind, Except.bind]⟩
+      | ok c =>
+        simp only [Except.map, Bind.bind, Except.bind, deliverV_ok] at $h:ident
+        cases hrc : runCommit c _ with
+        | error e =>
+          rw [hrc] at $h:ident
+          simp [Functor.map, Except.map] at $h:ident
+        | ok a =>
+          rw [hrc] at $h:ident
+          simp only [Functor.map, Except.map, Except.ok.injEq, Prod.mk.injEq] at $h:ident
+          obtain ⟨h1, h2, h3, h4⟩ := $h:ident
+          subst h1; subst h2; subst h3; subst h4
+          exact ⟨rfl, fun ch => by
+            (try simp only [List.append_assoc] at hpk' hx hrc)
+            simp [stepFn, hpk', hx, hrc, Except.map, Bind.bind, Except.bind, Functor.map]⟩
       | panic msg =>
-        simp only [Except.map, Bind.bind, Except.bind, pure_eq_ok, Pure.pure, Except.pure,
-          deliverS_panic, Except.ok.injEq, Prod.mk.injEq] at $h:ident
+        simp only [Except.map, Bind.bind, Except.bind, deliverV_panic,
+          Except.ok.injEq, Prod.mk.injEq] at $h:ident
         obtain ⟨h1, h2, h3, h4⟩ := $h:ident
         subst h1; subst h2; subst h3; subst h4
         exact ⟨rfl, fun ch => by
@@ -4822,8 +5378,8 @@ macro "consumption_entry_none " h:ident hsc:ident : tactic =>
   `(tactic| (
     simp_all only [stepFn, seqConsumption, Config.applyPos, entryCallSite?]
     rcases entryConsult?_none $hsc:ident with hnv | hnp
-    · oblivious_entry_with $h:ident (enterFramePick_oblivious_of_isSome_false hnv)
-    · oblivious_entry_with $h:ident (enterFramePick_of_nopanic hnp)))
+    · oblivious_entry_with $h:ident (enterFramePickV_of_isSome_false hnv)
+    · oblivious_entry_with $h:ident (enterFramePickV_of_nopanic hnp)))
 
 /-- The entry arms of the `some` sweep: the family's width-2 pop on the
 panic path (`entryConsult?_some`, `enterFramePick_panic`). -/
@@ -4832,33 +5388,14 @@ macro "consumption_entry_some " h:ident hsc:ident : tactic =>
     simp_all only [stepFn, seqConsumption, Config.applyPos, entryCallSite?]
     obtain ⟨hsite, hb, hw, msg, hpanic⟩ := entryConsult?_some $hsc:ident
     subst hsite; subst hb
-    rw [enterFramePick_panic hpanic] at $h:ident
-    simp only [Bind.bind, Except.bind, pure_eq_ok, Pure.pure, Except.pure, deliverS_panic,
-      Except.ok.injEq, Prod.mk.injEq] at $h:ident
+    have hpanic' := enterFrame_inv_panic hpanic
+    rw [enterFramePickV_of_plan_panic hpanic' _] at $h:ident
+    simp only [Bind.bind, Except.bind, deliverV_panic, Except.ok.injEq, Prod.mk.injEq] at $h:ident
     obtain ⟨h1, h2, h3, h4⟩ := $h:ident
     subst h1; subst h2; subst h3; subst h4
     refine ⟨rfl, fun ch₁ hpk => ?_⟩
-    (try simp only [List.append_assoc] at hpanic hpk)
-    simp [stepFn, enterFramePick_panic hpanic, hpk, Bind.bind, Except.bind]))
-
-/-- A wide-statement apply whose consult is `none` is a stream-oblivious
-apply: `applyStmtOpCore` for every non-append head, the non-spilling /
-refusing append otherwise. -/
-theorem applyStmtOp_of_stmtConsult?_none {σ : Store} {op : StmtOp} {nt : Nat}
-    {vs : List GoValue} (h : stmtConsult? ctx σ op vs = none) :
-    ∃ r : Except Stop (Store × AccessTrace), ∀ ch : Choices,
-      applyStmtOp ctx σ ch op nt vs = r.map fun p => (p.1, ch, p.2) := by
-  by_cases hap : ∀ e, op ≠ .appendSlice e
-  · refine ⟨applyStmtOpCore ctx σ op vs, fun ch => ?_⟩
-    rw [applyStmtOp_eq_core hap]
-    rfl
-  · obtain ⟨e, rfl⟩ : ∃ e, op = .appendSlice e := by
-      cases op <;>
-        first
-        | exact ⟨_, rfl⟩
-        | exact absurd (fun e h => by cases h) hap
-    simp only [stmtConsult?, Option.map_eq_none_iff] at h
-    exact applyStmtOp_appendSlice_nospill h
+    (try simp only [List.append_assoc] at hpanic' hpk)
+    simp [stepFn, enterFramePickV_of_plan_panic hpanic', hpk, Bind.bind, Except.bind]))
 
 theorem stmtConsult?_some {σ : Store} {op : StmtOp} {vs : List GoValue}
     {site : ChoiceSite} {b : Nat} (h : stmtConsult? ctx σ op vs = some (site, b)) :
@@ -4886,10 +5423,11 @@ theorem entryCallSite?_panicking {chain : List PanicEntry} {k : Cont} {p : FuncI
     cases cv <;> simp [entryCallSite?] at h
     exact ⟨t, te, r, _, _, args, ds, k', w, rfl⟩
 
-/-- The wide-statement apply arm at a stream-oblivious apply. -/
+/-- The wide-statement apply arm at a stream-oblivious plan (C1 S3: the plan is one
+commit lifted beside the stream; the commit reads no stream). -/
 theorem stepFn_stmtOp_oblivious {σ : Store} {op : StmtOp} {nt : Nat} {done : List GoValue}
-    {v : GoValue} {env : LocalEnv} {k : Cont} {r : Except Stop (Store × AccessTrace)}
-    (hr : ∀ ch : Choices, applyStmtOp ctx σ ch op nt (v :: done).reverse = r.map fun p => (p.1, ch, p.2))
+    {v : GoValue} {env : LocalEnv} {k : Cont} {r : Except Stop (Commit (Store × AccessTrace))}
+    (hr : ∀ ch : Choices, applyStmtOp.plan ctx σ ch op nt (v :: done).reverse = r.map (Commit.withStream ch))
     {ch₀ : Choices} {c' : Config} {σ' : Store} {ch₀' : Choices} {tr : AccessTrace}
     (h : stepFn ctx σ (.retV v (.stmtOpK op nt done [] env k)) ch₀ = .ok (c', σ', ch₀', tr)) :
     ch₀' = ch₀ ∧ ∀ ch : Choices,
@@ -4901,7 +5439,7 @@ theorem stepFn_stmtOp_oblivious {σ : Store} {op : StmtOp} {nt : Nat} {done : Li
   | error e =>
     cases_stop e <;> simp only [Except.map, toResult_panic, toResult_refusal, toResult_fatal,
       toResult_deadlock, toResult_raceDetected, toResult_fuelOut, Bind.bind, Except.bind,
-      pure_eq_ok, deliverS_panic, Except.ok.injEq, Prod.mk.injEq, reduceCtorEq] at h
+      deliverV_panic, Except.ok.injEq, Prod.mk.injEq, reduceCtorEq] at h
     case panic msg =>
     obtain ⟨rfl, rfl, rfl, rfl⟩ := h
     refine ⟨rfl, fun ch => ?_⟩
@@ -4909,25 +5447,30 @@ theorem stepFn_stmtOp_oblivious {σ : Store} {op : StmtOp} {nt : Nat} {done : Li
     dsimp only
     rw [hr ch]
     rfl
-  | ok p =>
-    obtain ⟨s₂, tr₂⟩ := p
-    simp only [Except.map, toResult_ok, Bind.bind, Except.bind, pure_eq_ok, deliverS_ok,
-      Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl, rfl, rfl⟩ := h
-    refine ⟨rfl, fun ch => ?_⟩
-    unfold stepFn
-    dsimp only
-    rw [hr ch]
-    rfl
+  | ok c =>
+    simp only [Except.map, toResult_ok, Bind.bind, Except.bind, deliverV_ok, runCommit_withStream] at h
+    cases hrc : runCommit c σ with
+    | error e => rw [hrc] at h; simp [Functor.map, Except.map] at h
+    | ok p =>
+      obtain ⟨s₂, tr₂⟩ := p
+      rw [hrc] at h
+      simp only [Functor.map, Except.map, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl, rfl, rfl⟩ := h
+      refine ⟨rfl, fun ch => ?_⟩
+      unfold stepFn
+      dsimp only
+      rw [hr ch]
+      simp [Except.map, Bind.bind, Except.bind, deliverV_ok, runCommit_withStream, hrc, Functor.map]
 
-/-- The wide-statement apply arm at a SPILLING append: the `appendSpill`
-pop, and pick-dependence only. -/
+/-- The wide-statement apply arm at a SPILLING append: the `appendSpill` pop, and
+pick-dependence only (C1 S3: `g` is the post-consult VALIDATE tail, panic-free; the
+commit's panic is unreachable and refused, never an `.ok` with the wrong stream). -/
 theorem stepFn_stmtOp_spill {σ : Store} {elem : Ty} {nt : Nat} {done : List GoValue}
     {v : GoValue} {env : LocalEnv} {k : Cont} {w : Nat}
-    {g : Nat → Except Stop (Store × AccessTrace)}
-    (hg : ∀ ch : Choices, applyStmtOp ctx σ ch (.appendSlice elem) nt (v :: done).reverse
+    {g : Nat → Except Stop (Commit (Store × AccessTrace))}
+    (hg : ∀ ch : Choices, applyStmtOp.plan ctx σ ch (.appendSlice elem) nt (v :: done).reverse
       = (g (Choices.consumeAt .appendSpill w ch).1).map
-          fun p => (p.1, (Choices.consumeAt .appendSpill w ch).2, p.2))
+          (Commit.withStream (Choices.consumeAt .appendSpill w ch).2))
     (hnp : ∀ pick, NoPanic (g pick))
     {ch₀ : Choices} {c' : Config} {σ' : Store} {ch₀' : Choices} {tr : AccessTrace}
     (h : stepFn ctx σ (.retV v (.stmtOpK (.appendSlice elem) nt done [] env k)) ch₀
@@ -4944,21 +5487,25 @@ theorem stepFn_stmtOp_spill {σ : Store} {elem : Ty} {nt : Nat} {done : List GoV
     rw [hgv] at h
     cases_stop e <;> simp only [Except.map, toResult_panic, toResult_refusal, toResult_fatal,
       toResult_deadlock, toResult_raceDetected, toResult_fuelOut, Bind.bind, Except.bind,
-      pure_eq_ok, deliverS_panic, Except.ok.injEq, Prod.mk.injEq, reduceCtorEq] at h
+      deliverV_panic, Except.ok.injEq, Prod.mk.injEq, reduceCtorEq] at h
     case panic msg =>
-    -- refuted: the post-consult tail never panics (`hnp`)
+    -- refuted: the post-consult validate tail never panics (`hnp`)
     exact absurd hgv (hnp _ msg)
-  | ok p =>
-    obtain ⟨s₂, tr₂⟩ := p
+  | ok c =>
     rw [hgv] at h
-    simp only [Except.map, toResult_ok, Bind.bind, Except.bind, pure_eq_ok, deliverS_ok,
-      Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl, rfl, rfl⟩ := h
-    refine ⟨rfl, fun ch hpk => ?_⟩
-    unfold stepFn
-    dsimp only
-    rw [hg ch, hpk, hgv]
-    rfl
+    simp only [Except.map, toResult_ok, Bind.bind, Except.bind, deliverV_ok, runCommit_withStream] at h
+    cases hrc : runCommit c σ with
+    | error e => rw [hrc] at h; simp [Functor.map, Except.map] at h
+    | ok p =>
+      obtain ⟨s₂, tr₂⟩ := p
+      rw [hrc] at h
+      simp only [Functor.map, Except.map, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl, rfl, rfl⟩ := h
+      refine ⟨rfl, fun ch hpk => ?_⟩
+      unfold stepFn
+      dsimp only
+      rw [hg ch, hpk, hgv]
+      simp [Except.map, Bind.bind, Except.bind, deliverV_ok, runCommit_withStream, hrc, Functor.map]
 
 /-- The sync apply arm at a stream-oblivious apply (`r.map` with the
 stream passed through). -/
@@ -5028,27 +5575,33 @@ theorem stepFrameExit_consumption_none {σ : Store}
       simp only [stepFrameExit] at h <;>
       rcases entryConsult?_none hsc with hnv | hnp <;>
       (first
-        | have hpk' := enterFramePick_oblivious_of_isSome_false hnv
-        | have hpk' := enterFramePick_of_nopanic hnp) <;>
+        | have hpk' := enterFramePickV_of_isSome_false hnv
+        | have hpk' := enterFramePickV_of_nopanic hnp) <;>
       (rw [hpk' _] at h
-       cases hx : toResult (enterFrame ctx _ _ _) with
+       cases hx : toResult (enterFrame.plan ctx _ _ _) with
        | error e =>
          rw [hx] at h
          simp [Except.map, Bind.bind, Except.bind] at h
        | ok r =>
          rw [hx] at h
          cases r with
-         | ok a =>
-           simp only [Except.map, Bind.bind, Except.bind, Pure.pure, Except.pure,
-             deliverS_ok, Except.ok.injEq, Prod.mk.injEq] at h
-           obtain ⟨h1, h2, h3, h4⟩ := h
-           subst h1; subst h2; subst h3; subst h4
-           exact ⟨rfl, fun ch => by
-             (try simp only [List.append_assoc] at hpk' hx)
-             simp [stepFrameExit, hpk', hx, Except.map, Bind.bind, Except.bind]⟩
+         | ok c =>
+           simp only [Except.map, Bind.bind, Except.bind, deliverV_ok] at h
+           cases hrc : runCommit c _ with
+           | error e =>
+             rw [hrc] at h
+             simp [Functor.map, Except.map] at h
+           | ok a =>
+             rw [hrc] at h
+             simp only [Functor.map, Except.map, Except.ok.injEq, Prod.mk.injEq] at h
+             obtain ⟨h1, h2, h3, h4⟩ := h
+             subst h1; subst h2; subst h3; subst h4
+             exact ⟨rfl, fun ch => by
+               (try simp only [List.append_assoc] at hpk' hx hrc)
+               simp [stepFrameExit, hpk', hx, hrc, Except.map, Bind.bind, Except.bind, Functor.map]⟩
          | panic msg =>
-           simp only [Except.map, Bind.bind, Except.bind, Pure.pure, Except.pure,
-             deliverS_panic, Except.ok.injEq, Prod.mk.injEq] at h
+           simp only [Except.map, Bind.bind, Except.bind, deliverV_panic,
+             Except.ok.injEq, Prod.mk.injEq] at h
            obtain ⟨h1, h2, h3, h4⟩ := h
            subst h1; subst h2; subst h3; subst h4
            exact ⟨rfl, fun ch => by
@@ -5089,15 +5642,15 @@ theorem stepFrameExit_consumption_some {σ : Store}
     simp only [seqConsumption, Config.applyPos, entryCallSite?] at hsc <;>
     (obtain ⟨hsite, hb, hw, msg, hpanic⟩ := entryConsult?_some hsc
      subst hsite; subst hb
+     have hpanic' := enterFrame_inv_panic hpanic
      simp only [stepFrameExit] at h
-     rw [enterFramePick_panic hpanic] at h
-     simp only [Bind.bind, Except.bind, Pure.pure, Except.pure, deliverS_panic,
-       Except.ok.injEq, Prod.mk.injEq] at h
+     rw [enterFramePickV_of_plan_panic hpanic' _] at h
+     simp only [Bind.bind, Except.bind, deliverV_panic, Except.ok.injEq, Prod.mk.injEq] at h
      obtain ⟨h1, h2, h3, h4⟩ := h
      subst h1; subst h2; subst h3; subst h4
      refine ⟨rfl, fun ch₁ hpk => ?_⟩
-     (try simp only [List.append_assoc] at hpanic hpk)
-     simp [stepFrameExit, enterFramePick_panic hpanic, hpk, Bind.bind, Except.bind])
+     (try simp only [List.append_assoc] at hpanic' hpk)
+     simp [stepFrameExit, enterFramePickV_of_plan_panic hpanic', hpk, Bind.bind, Except.bind])
 
 set_option linter.unusedSimpArgs false in
 /-- **The consumption theorem, `none` half**: a step whose projection is
@@ -5154,7 +5707,7 @@ theorem stepFn_consumption_none {σ : Store} {c : Config} {ch₀ : Choices}
     exact stepFrameExit_consumption_none (.inr rfl) hsc h
   case case97 =>
     simp only [seqConsumption, Config.applyPos] at hsc
-    obtain ⟨r, hr⟩ := applyStmtOp_of_stmtConsult?_none hsc
+    obtain ⟨r, hr⟩ := applyStmtOp_plan_of_stmtConsult?_none hsc
     exact stepFn_stmtOp_oblivious hr h
   case case119 =>
     rename_i v clauses default? done env k'
@@ -5482,7 +6035,7 @@ theorem stepFn_consumption_none {σ : Store} {c : Config} {ch₀ : Choices}
   case case136 =>
     oblivious_apply h
   case case151 =>
-    oblivious_apply h
+    oblivious_applyV h
 
 set_option maxHeartbeats 1600000 in
 set_option linter.unusedSimpArgs false in
@@ -5500,7 +6053,7 @@ stating the theorem over arbitrary configurations, refuted here (wave-(iii)
 audit fix F1; design note §B8). -/
 theorem stepFn_consumption_some {σ : Store} {c : Config} {ch₀ : Choices}
     {c' : Config} {σ' : Store} {ch₀' : Choices} {site : ChoiceSite} {b : Nat}
-    (hloc : c.appendTargetLocal)
+    (_hloc : c.appendTargetLocal)
     (hsc : seqConsumption ctx σ c = some (site, b))
     (h : stepFn ctx σ c ch₀ = .ok (c', σ', ch₀', tr)) :
     ch₀' = (Choices.consumeAt site b ch₀).2 ∧ ∀ ch : Choices,
@@ -5564,10 +6117,11 @@ theorem stepFn_consumption_some {σ : Store} {c : Config} {ch₀ : Choices}
   case case97 =>
     simp only [seqConsumption, Config.applyPos] at hsc
     obtain ⟨elem, rfl, rfl, hw⟩ := stmtConsult?_some hsc
-    obtain ⟨g, hg, hnp⟩ := applyStmtOp_appendSlice_spill hw
-    simp only [Config.appendTargetLocal] at hloc
-    obtain ⟨a, rest, hvs⟩ := hloc
-    exact stepFn_stmtOp_spill hg (hnp a rest hvs) h
+    -- C1 S3: the post-consult tail is the validate phase's, panic-free for EVERY
+    -- target (`applyStmtOp_plan_appendSlice_spill`) — the root-target proviso
+    -- `hloc` is no longer needed here (kept in the statement for its callers).
+    obtain ⟨g, hg, hnp⟩ := applyStmtOp_plan_appendSlice_spill hw
+    exact stepFn_stmtOp_spill hg hnp h
   case case119 =>
     rename_i v clauses default? done env k'
     simp only [seqConsumption, Config.applyPos, selectConsult?] at hsc

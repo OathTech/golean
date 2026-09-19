@@ -1471,6 +1471,28 @@ def Ty.stepDown (types : TypeEnv) : Nat → Ty → PathStep → Except Stop (Ty 
   | _, _, .field _ f => stuck s!"leaf descent: the declared type has no field {f}"
   | _, _, .index _ => stuck "leaf descent: the declared type has no element type"
 
+/-- **The WRITE path's index re-check is a machine-invariant check, not Go's
+bounds check** (C1 S3, cost B). A store reaches an `.index` step only through
+an address the machine already FORMED under Go's bounds check —
+`indexTargetLoc`/`resolveChain` for a target chain, `sliceIndexLoc`/
+`applySlice` for a formed element address, the header bounds `validateSlice`
+admits for an element run (`Mem.storeElems`) — and arrays never shrink, so an
+index outside the array HERE is a dangling formed address: an invariant
+breach of the machine (BUG-085's class), refused by name as `.internal`,
+never a recoverable Go panic (Go's panic, if any, fired at formation).
+Consequence: the write path never raises a recoverable panic
+(`writeAt_noPanic`/`storeLoc_noPanic`, MachineSound), so every store-bearing
+apply's COMMIT phase is panic-free — which is what lets the executable run a
+commit on the store it OWNS instead of holding the pre-apply store for a
+rollback (`Commit`/`runCommit`, Machine.lean; `deliverV`, StepFn.lean).
+Before S3 this check was `arrayIndexNat`'s Go-panic text, delivered as a
+rolled-back `.panicking` step — a refusal-class change on a path no
+well-formed run reaches (disclosed in the S3 record; the differential is the
+regression). -/
+def arrayIndexNatFormed (values : Array GoValue) (index : Int) : Except Stop Nat :=
+  if 0 ≤ index ∧ index.toNat < values.size then pure index.toNat
+  else throw (.internal s!"store through a formed address: index {index} outside an array of length {values.size} (an address-formation invariant breach — arrays never shrink; C1 S3)")
+
 /-- Root-first IN-PLACE write of a leaf (module docstring above). -/
 def writeAt : Nat → Ty → GoValue → List PathStep → GoValue → Except Stop GoValue
   | b, ty, _, [], v => normalizeValueForTyTy (normalizeValueForTyAt ctx.types b) ty v
@@ -1488,7 +1510,7 @@ def writeAt : Nat → Ty → GoValue → List PathStep → GoValue → Except St
       | [] => stuck s!"expected struct base for field store, got {repr other}"
       | _ :: _ => stuck s!"expected struct base for field load, got {repr other}"
   | b, ty, .array values, .index index :: rest, v => do
-      let k ← arrayIndexNat values index
+      let k ← arrayIndexNatFormed values index
       let (ety, b') ← Ty.stepDown ctx.types b ty (.index index)
       let values' ← values.modifyM k (fun old => writeAt b' ety old rest v)
       return .array values'

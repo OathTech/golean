@@ -93,15 +93,22 @@ theorem spawnStep_wf {s : Store} {cv : GoValue} {args : List GoValue}
   unfold spawnStep at h
   split at h
   · rename_i fid captured
-    -- B2: the ONE entry funnel classifies; the child is delivered.
+    -- B2 + C1 S3: the V entry funnel classifies; the commit runs on the owned
+    -- store (`runCommit`), the composed entry is what `enterFrame_wf` reads.
     simp only [bind_eq_ok] at h
     obtain ⟨⟨r, ch₁⟩, hpick, h⟩ := h
     have hcap : goValueListSup captured ≤ s.nextAddr := by
       simpa [GoValue.locSup] using hcv
-    rcases enterFramePick_cases hpick with
-      ⟨func, frameEnv, resultLocs, s₂, tr₂, rfl, henter, rfl⟩ | ⟨msg, rfl, henter, rfl⟩
-    · simp only [deliver_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    rcases enterFramePickV_cases hpick with ⟨c, rfl, hplan, rfl⟩ | ⟨msg, rfl, hplan, rfl⟩
+    · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨w, hrun, h⟩ := h
+      obtain ⟨func, frameEnv, resultLocs, s₂, tr₂⟩ := w
+      try dsimp only at h
+      try simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl, rfl, rfl, rfl⟩ := h
+      have henter : enterFrame ctx s fid (captured ++ args)
+          = .ok (func, frameEnv, resultLocs, s₂, tr₂) := by
+        simp [enterFrame, hplan, Bind.bind, Except.bind, runCommit_eq_ok.mp hrun]
       obtain ⟨w1, w2, w6, w7, w8⟩ := enterFrame_wf hw
         (by rw [goValueListSup_append]; omega) henter
       refine ⟨w1, ?_, ?_, w2⟩
@@ -109,7 +116,7 @@ theorem spawnStep_wf {s : Store} {cv : GoValue} {args : List GoValue}
       · simp only [Config.locSup, Cont.locSup, locListSup, deferListSup,
           targetPlansSup, LocalEnv.locSup, Nat.max_le]
         omega
-    · simp only [deliver_panic, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl, rfl, rfl, rfl⟩ := h
       refine ⟨hw, ?_, ?_, Nat.le_refl _⟩
       · simpa [Config.locSup] using hk

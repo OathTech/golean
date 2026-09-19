@@ -248,6 +248,55 @@ def indexTargetLoc (s : Store) (b i : GoValue) : Except Stop Loc := do
       | other => stuck s!"expected array or slice base for index address, got {repr other}"
   | other => stuck s!"expected array or slice base for index address, got {repr other}"
 
+/-! ## The validate/commit seam of a store-bearing apply (C1 S3, cost B —
+`docs/2026-09-17_c1-memory-module-charter.md` §2 B(b), §6 S3;
+`docs/2026-09-11_bug090-rediagnosis.md` §3 mechanism B)
+
+Every apply that WRITES memory is two phases. The VALIDATE phase only READS
+the store: every check that can fail, in the arm's original order, every
+recoverable panic among them. The COMMIT phase only WRITES (the allocations,
+the emitting stores, the payload writes) and — by the per-arm
+`…_commit_noPanic` theorems (MachineSound) — never raises a recoverable
+panic: since S3 the write path's index re-check is a machine-invariant
+check (`arrayIndexNatFormed`, Ops.lean), so nothing on the write path panics.
+The validate phase BORROWS the store and returns the commit as a function of
+the store it will OWN (`Commit`); the executable (`deliverV`, StepFn.lean)
+runs the validate phase, then on `.ok` hands its ONE reference to the commit
+and on `.panic` unwinds over the store the apply never touched. No reference
+to the pre-apply store survives into a write, so the dense heap's
+`push`/`set` run in place — BUG-090's cost B: before S3 the delivery kept the
+pre-apply store for its rollback arm (`deliverS s …`) and every write of
+every apply copied the whole heap. The relation names the COMPOSED apply
+(validate, then commit on the same store — `applyStmtOp`, `applyStmtOpCore`,
+`storeTarget`, `mapAssignValue`, `enterFrame`, `unseqLoad`: one-liners over
+their `.plan`), so `Step` and every theorem about the composed functions keep
+their statements; the split is definitional — ONE account. The applies still
+delivered with the pre-apply store in hand are listed at `deliverS`. -/
+
+/-- THE COMMIT PHASE of a store-bearing apply: the writes left to do once
+every check has passed, as a function of the store it will own. -/
+abbrev Commit (α : Type) := Store → Except Stop α
+
+/-- Run a commit on the store it owns. A recoverable panic out of a commit is
+UNREACHABLE (the per-arm `…_commit_noPanic` theorems, MachineSound): were one
+to arrive, the pre-apply store is gone, so it is refused BY NAME as
+`.internal` rather than rendered as a Go panic over the wrong store (fail
+closed); `runCommit_of_noPanic` is the equation the coherence proofs use. -/
+def runCommit {α : Type} (c : Commit α) (s : Store) : Except Stop α :=
+  match c s with
+  | .error (Stop.panic msg) =>
+      throw (.internal s!"a commit phase raised a recoverable panic after its validate phase passed ({msg}): unreachable by the per-arm rollback theorems (C1 S3)")
+  | r => r
+
+/-- A stream-free commit in the stream-threading apply's shape: the stream
+`ch` — consumed, if at all, by the validate phase — rides beside the result.
+Names the fact the consumption theorems rest on: a commit never touches the
+stream (`applyStmtOp.plan`'s every arm returns one of these). -/
+def Commit.withStream (ch : Choices) (c : Commit (Store × AccessTrace)) :
+    Commit (Store × Choices × AccessTrace) := fun s => do
+  let (s', tr) ← c s
+  return (s', ch, tr)
+
 /-- Store into a map element: normalize key and value at the map's
 types, insert-or-overwrite; a NIL map is the run-time panic. Shared
 verbatim between the `mapAssign` wide op and `storeTarget`'s
@@ -270,8 +319,8 @@ observationally equal to gc on every key kind. TRANSFER CAVEAT: a
 conforming ORIGINAL-KEY-RETAINING implementation is outside this
 singleton; no claim about the stored key transfers to it. Re-envelope
 (two-point retention choice) is XIMPL-gated — see inventory E10. -/
-def mapAssignValue (s : Store) (keyTy valueTy : Ty)
-    (baseV keyV valueV : GoValue) : Except Stop (Store × AccessTrace) := do
+def mapAssignValue.plan (s : Store) (keyTy valueTy : Ty)
+    (baseV keyV valueV : GoValue) : Except Stop (Commit (Store × AccessTrace)) := do
   let map ← valueAsMap baseV
   let key ← normalizeValueForTy ctx keyTy keyV
   let value ← normalizeValueForTy ctx valueTy valueV
@@ -290,8 +339,14 @@ def mapAssignValue (s : Store) (keyTy valueTy : Ty)
             | none => stuck s!"missing map entry at index {i}"
         | none => pure (entries.push (nextId, key, value), nextId + 1)
       -- The entries fetch above is the RMW's peek; the ONE access is the
-      -- map write (gc's mapassign instrumentation point).
-      Mem.mapWrite s baseLoc entries nextId
+      -- map write (gc's mapassign instrumentation point) — THE COMMIT (S3).
+      return fun s => Mem.mapWrite s baseLoc entries nextId
+
+@[inherit_doc mapAssignValue.plan]
+def mapAssignValue (s : Store) (keyTy valueTy : Ty)
+    (baseV keyV valueV : GoValue) : Except Stop (Store × AccessTrace) := do
+  let c ← mapAssignValue.plan ctx s keyTy valueTy baseV keyV valueV
+  c s
 
 /-- Apply a strict operator to its (already evaluated, in evaluation order)
 operand values. The single op table shared by the relation (as a rule
@@ -728,13 +783,12 @@ def loadResults (s : Store) : List Loc → Except Stop (List GoValue × AccessTr
       let (vs, ts) ← loadResults s locs
       return (v :: vs, t ++ ts)
 
-/-- Store values to locations pairwise (frame-exit target writes; old
-`StoreManyR`). -/
-def storeMany : Store → List Loc → List GoValue → Except Stop Store
-  | s, [], [] => return s
-  | s, loc :: locs, v :: vs => do storeMany (← storeLoc ctx s loc v) locs vs
-  | _, [], _ :: _ => stuck "extra GoCore assignment value"
-  | _, _ :: _, [] => stuck "missing GoCore assignment value"
+-- DELETED (C1 S3, 2026-09-19): `storeMany` — the pairwise frame-exit target
+-- writer (old `StoreManyR`). Dead since the tgtOpK spine took the caller-target
+-- stores (BUG-025), kept alive only as `HeapNormal.of_storeMany`'s subject
+-- (inventory rows «DEAD RAW WRITER — deletion owed to S3»); its lemmas
+-- `HeapNormal.of_storeMany`, `storeMany_shape`, `storeMany_pres` (StateWf)
+-- left with it. Tombstone: `docs/2026-09-19_c1-memory-module-s3-handoff.md`.
 
 /-- Function lookup, arity check, dynamic method dispatch, parameter
 binding, result declaration, and result-location pinning — everything
@@ -742,8 +796,8 @@ between "arguments are values" and "executing the callee body". One step in
 the machine (frame entry). The two arity checks mirror the interpreter's
 (pre-dispatch in `execFunctionCallWithLocs`, post-dispatch in
 `execFunctionWithValues`). -/
-def enterFrame (s : Store) (fid : FuncId) (argVals : List GoValue) :
-    Except Stop (Func × LocalEnv × List Loc × Store × AccessTrace) := do
+def enterFrame.plan (s : Store) (fid : FuncId) (argVals : List GoValue) :
+    Except Stop (Commit (Func × LocalEnv × List Loc × Store × AccessTrace)) := do
   let func ←
     match findFunctionIn? ctx.functions fid with
     | some func => pure func
@@ -759,10 +813,18 @@ def enterFrame (s : Store) (fid : FuncId) (argVals : List GoValue) :
     | (none, tr) => pure (func, argVals, tr)
   if func.args.size != argVals.length then
     stuck s!"function {func.id.key} expected {func.args.size} argument(s), got {argVals.length}"
-  let (argsEnv, s₁) ← bindParams ctx [] s func.args.toList argVals
-  let (frameEnv, s₂) ← allocDecls ctx argsEnv s₁ func.results.toList
-  let resultLocs ← pinResultLocs frameEnv func.results.toList
-  return (func, frameEnv, resultLocs, s₂, tr)
+  -- THE COMMIT (S3): binding and result declaration allocate fresh cells only.
+  return fun s => do
+    let (argsEnv, s₁) ← bindParams ctx [] s func.args.toList argVals
+    let (frameEnv, s₂) ← allocDecls ctx argsEnv s₁ func.results.toList
+    let resultLocs ← pinResultLocs frameEnv func.results.toList
+    return (func, frameEnv, resultLocs, s₂, tr)
+
+@[inherit_doc enterFrame.plan]
+def enterFrame (s : Store) (fid : FuncId) (argVals : List GoValue) :
+    Except Stop (Func × LocalEnv × List Loc × Store × AccessTrace) := do
+  let c ← enterFrame.plan ctx s fid argVals
+  c s
 
 /-- The `nilValueMethodText` site's stream bound at a frame entry
 (BUG-087): 2 on the wrapper family (`nilValueMethodText?` — the
@@ -840,6 +902,22 @@ def enterFramePick (s : Store) (fid : FuncId) (args : List GoValue) (ch : Choice
     Except Stop (Result (Func × LocalEnv × List Loc × Store × AccessTrace) × Choices) :=
   match toResult (enterFrame ctx s fid args) with
   | .ok (.ok r) => .ok (.ok r, ch)
+  | .ok (.panic msg) =>
+      let (pick, ch') := Choices.consumeAt .nilValueMethodText (nilValueMethodWidth ctx fid args) ch
+      .ok (.panic (entryPanicText ctx fid args msg pick), ch')
+  | .error e => .error e
+
+/-- `enterFramePick`'s VALIDATE half (C1 S3, cost B): the same classification
+and the same `nilValueMethodText` consult on the panic path, over
+`enterFrame.plan` — so the entry's COMMIT (the parameter and result cells)
+runs on a store the caller no longer holds. THE executable's entry funnel
+(`stepFn`'s seven positions, `stepFrameExit`, `spawnStep`); `enterFramePick`
+itself stays the relation's premise. `enterFramePickV_ok`/`_panic`/`_error`
+(MachineSound) are the bridge. -/
+def enterFramePickV (s : Store) (fid : FuncId) (args : List GoValue) (ch : Choices) :
+    Except Stop (Result (Commit (Func × LocalEnv × List Loc × Store × AccessTrace)) × Choices) :=
+  match toResult (enterFrame.plan ctx s fid args) with
+  | .ok (.ok c) => .ok (.ok c, ch)
   | .ok (.panic msg) =>
       let (pick, ch') := Choices.consumeAt .nilValueMethodText (nilValueMethodWidth ctx fid args) ch
       .ok (.panic (entryPanicText ctx fid args msg pick), ch')
@@ -958,6 +1036,106 @@ theorem enterFramePick_of_none {s : Store} {fid : FuncId} {args : List GoValue}
     | ok a => rfl
     | panic msg =>
       simp [nilValueMethodWidth_of_none hn, entryPanicText_of_none hn, Except.map]
+
+/-! ### The V funnel's bridge (C1 S3): `enterFramePickV` against `enterFramePick` -/
+
+/-- The composed apply (`do let c ← plan; c s`) on the error side: either the
+validate phase failed, or it passed and the commit failed. -/
+theorem plan_run_error {α : Type} {plan : Except Stop (Commit α)} {s : Store} {e : Stop}
+    (h : (do let c ← plan; c s : Except Stop α) = .error e) :
+    plan = .error e ∨ ∃ c, plan = .ok c ∧ c s = .error e := by
+  cases hp : plan with
+  | error e' =>
+    rw [hp] at h
+    simp only [Bind.bind, Except.bind, Except.error.injEq] at h
+    exact .inl (by rw [h])
+  | ok c =>
+    rw [hp] at h
+    simp only [Bind.bind, Except.bind] at h
+    exact .inr ⟨c, rfl, h⟩
+
+/-- The V funnel's two classifications (`enterFramePick_cases`' twin): a
+commit with the stream untouched, or the entry panic's text under the site's
+pick with the stream popped. -/
+theorem enterFramePickV_cases {s : Store} {fid : FuncId} {args : List GoValue}
+    {ch ch' : Choices} {r : Result (Commit (Func × LocalEnv × List Loc × Store × AccessTrace))}
+    (h : enterFramePickV ctx s fid args ch = .ok (r, ch')) :
+    (∃ c, r = .ok c ∧ enterFrame.plan ctx s fid args = .ok c ∧ ch' = ch)
+    ∨ (∃ msg, r = .panic (entryPanicText ctx fid args msg
+          (Choices.consumeAt .nilValueMethodText (nilValueMethodWidth ctx fid args) ch).1)
+        ∧ enterFrame.plan ctx s fid args = .error (.panic msg)
+        ∧ ch' = (Choices.consumeAt .nilValueMethodText (nilValueMethodWidth ctx fid args) ch).2) := by
+  unfold enterFramePickV at h
+  cases hx : toResult (enterFrame.plan ctx s fid args) with
+  | error e => rw [hx] at h; cases h
+  | ok r₀ =>
+    rw [hx] at h
+    cases r₀ with
+    | ok c =>
+      simp only [Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      exact .inl ⟨c, rfl, toResult_eq_ok_ok.mp hx, rfl⟩
+    | panic msg =>
+      simp only [Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      exact .inr ⟨msg, rfl, toResult_eq_ok_panic.mp hx, rfl⟩
+
+/-- Outside the wrapper family the V entry is stream-oblivious
+(`enterFramePick_of_isSome_false`'s twin). -/
+theorem enterFramePickV_of_isSome_false {fid : FuncId} {args : List GoValue}
+    (hn : (nilValueMethodText? ctx fid args).isSome = false) :
+    ∀ (s : Store) (ch : Choices),
+      enterFramePickV ctx s fid args ch = (toResult (enterFrame.plan ctx s fid args)).map (·, ch) := by
+  intro s ch
+  unfold enterFramePickV
+  cases toResult (enterFrame.plan ctx s fid args) with
+  | error e => rfl
+  | ok r =>
+    cases r with
+    | ok c => rfl
+    | panic msg =>
+      simp [nilValueMethodWidth_of_isSome_false hn, entryPanicText_of_isSome_false hn, Except.map]
+
+@[inherit_doc enterFramePickV_of_isSome_false]
+theorem enterFramePickV_of_none {s : Store} {fid : FuncId} {args : List GoValue}
+    {ch : Choices} (hn : nilValueMethodText? ctx fid args = none) :
+    enterFramePickV ctx s fid args ch = (toResult (enterFrame.plan ctx s fid args)).map (·, ch) := by
+  unfold enterFramePickV
+  cases toResult (enterFrame.plan ctx s fid args) with
+  | error e => rfl
+  | ok r =>
+    cases r with
+    | ok c => rfl
+    | panic msg =>
+      simp [nilValueMethodWidth_of_none hn, entryPanicText_of_none hn, Except.map]
+
+/-- A V `.ok` whose commit runs IS the composed funnel's `.ok` entry (the stream
+untouched on this path). -/
+theorem enterFramePick_of_V_ok {s : Store} {fid : FuncId} {args : List GoValue}
+    {ch ch' : Choices} {c : Commit (Func × LocalEnv × List Loc × Store × AccessTrace)}
+    {a : Func × LocalEnv × List Loc × Store × AccessTrace}
+    (hv : enterFramePickV ctx s fid args ch = .ok (.ok c, ch')) (hc : c s = .ok a) :
+    enterFramePick ctx s fid args ch = .ok (.ok a, ch') ∧ ch' = ch := by
+  rcases enterFramePickV_cases hv with ⟨c', hce, hplan, rfl⟩ | ⟨msg, hr, -, -⟩
+  · simp only [Result.ok.injEq] at hce
+    subst hce
+    have henter : enterFrame ctx s fid args = .ok a := by
+      simp [enterFrame, hplan, Bind.bind, Except.bind, hc]
+    exact ⟨by simp [enterFramePick, henter], rfl⟩
+  · cases hr
+
+/-- A V `.panic` IS the composed funnel's `.panic` (same text, same popped stream). -/
+theorem enterFramePick_of_V_panic {s : Store} {fid : FuncId} {args : List GoValue}
+    {ch ch' : Choices} {msg : String}
+    (hv : enterFramePickV ctx s fid args ch = .ok (.panic msg, ch')) :
+    enterFramePick ctx s fid args ch = .ok (.panic msg, ch') := by
+  rcases enterFramePickV_cases hv with ⟨c, hce, -, -⟩ | ⟨msg₀, hr, hplan, rfl⟩
+  · cases hce
+  · simp only [Result.panic.injEq] at hr
+    subst hr
+    have henter : enterFrame ctx s fid args = .error (.panic msg₀) := by
+      simp [enterFrame, hplan, Bind.bind, Except.bind]
+    exact enterFramePick_panic henter
 
 /-! ## Wide statements: the statement-op table -/
 
@@ -1127,16 +1305,26 @@ choices-obliviousness of wide-op success is TRUE BY CONSTRUCTION — the
 correspondence kit's `∀ choices` lemmas dispatch through this core rather
 than a per-arm congruence bash. Arms are verbatim from the old
 `applyStmtOp` minus the trailing `choices` threading.
+
+C1 S3 (cost B): THE VALIDATE PHASE. Every arm reads, checks and panics in
+its original order, then returns its COMMIT (`Commit`, the seam docstring
+above) — the allocations and the emitting writes, none of which can panic
+(`applyStmtOpCore_commit_noPanic`). Three arms reorder a PURE nil-target
+check ahead of an allocation or an element run it used to follow
+(`makeSlice`, `makeMap`, `makeChan`, `copySlice` — the S0 audit's W arms):
+the observable is unchanged, because the delivery rolled those writes back
+on that panic. The composed `applyStmtOpCore` (below) is the relation's.
 -/
-def applyStmtOpCore (s : Store) (op : StmtOp)
-    (vs : List GoValue) : Except Stop (Store × AccessTrace) := do
+def applyStmtOpCore.plan (s : Store) (op : StmtOp)
+    (vs : List GoValue) : Except Stop (Commit (Store × AccessTrace)) := do
   match op with
   | .allocNew typ =>
       match vs with
       | [tv, value] => do
           let loc ← valueAsLoc tv
-          let (nloc, s₁) ← Store.alloc ctx s value typ
-          Mem.store ctx s₁ loc (.addr nloc)
+          return fun s => do
+            let (nloc, s₁) ← Store.alloc ctx s value typ
+            Mem.store ctx s₁ loc (.addr nloc)
       | _ => stuck "malformed allocNew operands"
   | .makeSlice elem hasCap => do
       let (tv, lenV, capV?) ←
@@ -1172,9 +1360,12 @@ def applyStmtOpCore (s : Store) (op : StmtOp)
       let len := lenValue.toNat
       let cap := capValue.toNat
       let backing ← buildDefaultArrayValue ctx cap elem
-      let (base, s₁) ← Store.alloc ctx s backing (.array cap elem)
+      -- S3: the target's nil check precedes the allocation (a pure reorder —
+      -- before S3 the allocation came first and the panic rolled it back).
       let loc ← valueAsLoc tv
-      Mem.store ctx s₁ loc (.slice { base := some base, offset := 0, len, cap })
+      return fun s => do
+        let (base, s₁) ← Store.alloc ctx s backing (.array cap elem)
+        Mem.store ctx s₁ loc (.slice { base := some base, offset := 0, len, cap })
   | .makeMap hasSpace => do
       let (tv, spaceV?) ←
         match vs, hasSpace with
@@ -1204,9 +1395,13 @@ def applyStmtOpCore (s : Store) (op : StmtOp)
           -- builtins/make-map-hint-eval/*). This arm's realized
           -- behavior is gc's.
           let _ ← valueAsInt spaceV
-      let (base, s₁) := s.allocCell (.mapPayload #[] 0)
+      -- S3 (the S0 audit's reachable W arm): the hint-less form arrives
+      -- without the target nil check, so the check moved BEFORE the payload
+      -- allocation — a pure reorder (the allocation was rolled back on it).
       let loc ← valueAsLoc tv
-      Mem.store ctx s₁ loc (.map { base := some base })
+      return fun s => do
+        let (base, s₁) := s.allocCell (.mapPayload #[] 0)
+        Mem.store ctx s₁ loc (.map { base := some base })
   | .makeChan elem hasCap => do
       let (tv, capV?) ←
         match vs, hasCap with
@@ -1234,12 +1429,15 @@ def applyStmtOpCore (s : Store) (op : StmtOp)
             if size < 0 || size * elemSize > maxAllocBytes - chanHeaderBytes then
               panic "makechan: size out of range"
             pure size.toNat
-      let (base, s₁) := s.allocCell (.chanPayload #[] capacity false)
+      -- S3 (the S0 audit's reachable W arm): as `makeMap` — the cap-less
+      -- form's nil check moved before the payload allocation.
       let loc ← valueAsLoc tv
-      Mem.store ctx s₁ loc (.chan { base := some base })
+      return fun s => do
+        let (base, s₁) := s.allocCell (.chanPayload #[] capacity false)
+        Mem.store ctx s₁ loc (.chan { base := some base })
   | .mapAssign keyTy valueTy =>
       match vs with
-      | [baseV, keyV, valueV] => mapAssignValue ctx s keyTy valueTy baseV keyV valueV
+      | [baseV, keyV, valueV] => mapAssignValue.plan ctx s keyTy valueTy baseV keyV valueV
       | _ => stuck "malformed mapAssign operands"
   | .mapDelete keyTy =>
       match vs with
@@ -1251,7 +1449,7 @@ def applyStmtOpCore (s : Store) (op : StmtOp)
           -- key, so an unhashable one panics here too (probed 2026-07-31).
           | none => do
               checkKeyHashable ctx key (isInsert := false) (nonEmpty := false)
-              return (s, [])
+              return fun s => return (s, [])
           | some (baseLoc, entries, nextId) =>
               match ← mapEntryIndex? ctx keyTy entries key with
               | some i =>
@@ -1259,24 +1457,24 @@ def applyStmtOpCore (s : Store) (op : StmtOp)
                   -- entry leaves the cell, its id is never reissued
                   -- (`nextId` unchanged), and every in-flight range
                   -- sees the absence at its next pick.
-                  Mem.mapWrite s baseLoc (entries.eraseIdx! i) nextId
+                  return fun s => Mem.mapWrite s baseLoc (entries.eraseIdx! i) nextId
               | none =>
                   -- ABSENT key: the payload is unchanged, but the delete
                   -- IS a map write (gc instruments `mapdelete` as a write
                   -- unconditionally — the footprint table always said so):
                   -- the unchanged payload is rewritten so the write is
                   -- emitted (C1 S2a).
-                  Mem.mapWrite s baseLoc entries nextId
+                  return fun s => Mem.mapWrite s baseLoc entries nextId
       | _ => stuck "malformed mapDelete operands"
   | .clearMap =>
       match vs with
       | [baseV] => do
           let map ← valueAsMap baseV
           match ← mapEntries s map with
-          | none => return (s, []) -- nil map: no-op
+          | none => return fun s => return (s, []) -- nil map: no-op
           | some (baseLoc, _, nextId) =>
               -- `clear` empties the cell; the id counter stays (B1).
-              Mem.mapWrite s baseLoc #[] nextId
+              return fun s => Mem.mapWrite s baseLoc #[] nextId
       | _ => stuck "malformed clearMap operands"
   | .clearSlice elem =>
       -- Multi-cell in one apply step, like copySlice: a granularity-ledger
@@ -1288,7 +1486,7 @@ def applyStmtOpCore (s : Store) (op : StmtOp)
           let zero ← defaultValue ctx elem
           -- One emitting write per visible element (`Mem.storeRun`; a nil
           -- base passes `validateSlice` only at length 0).
-          Mem.storeRun ctx s slice 0 (List.replicate slice.len zero)
+          return fun s => Mem.storeRun ctx s slice 0 (List.replicate slice.len zero)
       | _ => stuck "malformed clearSlice operands"
   | .sortSlice _ =>
       -- SINGLE-cell read+write loop in one apply step (granularity-ledger
@@ -1316,8 +1514,9 @@ def applyStmtOpCore (s : Store) (op : StmtOp)
           -- kernel-irreducible (de-WF, 2026-08-03; output provably agrees).
           let sorted := (sortLe (fun a b => a.1 ≤ b.1) loaded).map
             fun (v, kind) => GoValue.int v kind
-          let (s', trW) ← Mem.storeRun ctx s slice 0 sorted
-          return (s', trR ++ trW)
+          return fun s => do
+            let (s', trW) ← Mem.storeRun ctx s slice 0 sorted
+            return (s', trR ++ trW)
       | _ => stuck "malformed sortSlice operands"
   | .copySlice =>
       match vs with
@@ -1332,10 +1531,13 @@ def applyStmtOpCore (s : Store) (op : StmtOp)
           -- target — each an emitting operation (a nil base is admitted
           -- only at length 0, where `count = 0`).
           let (values, trR) ← Mem.loadRun ctx s srcSlice count
-          let (current, trW) ← Mem.storeRun ctx s dstSlice 0 values
+          -- S3: the count target's nil check precedes the element writes (a
+          -- pure reorder — before S3 it followed them and rolled them back).
           let tloc ← valueAsLoc tv
-          let (s', trT) ← Mem.store ctx current tloc (.int (Int.ofNat count))
-          return (s', trR ++ trW ++ trT)
+          return fun s => do
+            let (current, trW) ← Mem.storeRun ctx s dstSlice 0 values
+            let (s', trT) ← Mem.store ctx current tloc (.int (Int.ofNat count))
+            return (s', trR ++ trW ++ trT)
       | _ => stuck "malformed copySlice operands"
   | .print newline =>
       -- VALIDATE only: every operand must be of a kind gc's print
@@ -1343,9 +1545,15 @@ def applyStmtOpCore (s : Store) (op : StmtOp)
       -- are the pool layer's event (`printOut?`); the state is untouched
       -- (gc: the statement writes fd 2 and nothing else).
       let _ ← renderPrint newline vs
-      return (s, [])
+      return fun s => return (s, [])
   | .appendSlice _ =>
       throw (.internal "applyStmtOpCore: appendSlice dispatches through applyStmtOp")
+
+@[inherit_doc applyStmtOpCore.plan]
+def applyStmtOpCore (s : Store) (op : StmtOp)
+    (vs : List GoValue) : Except Stop (Store × AccessTrace) := do
+  let c ← applyStmtOpCore.plan ctx s op vs
+  c s
 
 variable {ctx}
 /-- The growth policy never shrinks below the requested length. -/
@@ -1392,9 +1600,14 @@ variable (ctx)
 target addresses, then values). One state-update step. `appendSlice`'s
 spill path consumes a capacity choice — the second nondeterministic point
 — and is the ONLY arm that touches the stream; everything else dispatches
-to the choices-free `applyStmtOpCore`. -/
-def applyStmtOp (s : Store) (choices : Choices) (op : StmtOp) (_nt : Nat)
-    (vs : List GoValue) : Except Stop (Store × Choices × AccessTrace) := do
+to the choices-free `applyStmtOpCore`.
+
+C1 S3 (cost B): THE VALIDATE PHASE (the seam docstring at `Commit`); the
+spill's capacity consult happens here, before the seam, so the commit is
+the fresh backing's allocation and the header write and consumes nothing.
+The composed `applyStmtOp` (below) is the relation's. -/
+def applyStmtOp.plan (s : Store) (choices : Choices) (op : StmtOp) (_nt : Nat)
+    (vs : List GoValue) : Except Stop (Commit (Store × Choices × AccessTrace)) := do
   match op with
   | .appendSlice elem =>
       match vs with
@@ -1412,9 +1625,10 @@ def applyStmtOp (s : Store) (choices : Choices) (op : StmtOp) (_nt : Nat)
             -- (`Mem.storeRun`: a nil base admits only the empty run — the
             -- former «cannot append … into nil slice in place» refusal was
             -- unreachable under `validateSlice`, C1 S2a record.)
-            let (current, trW) ← Mem.storeRun ctx s slice slice.len elemValues.toList
-            let (s', trT) ← Mem.store ctx current tloc (.slice { slice with len := newLen })
-            return (s', choices, trE ++ trW ++ trT)
+            return Commit.withStream choices fun s => do
+              let (current, trW) ← Mem.storeRun ctx s slice slice.len elemValues.toList
+              let (s', trT) ← Mem.store ctx current tloc (.slice { slice with len := newLen })
+              return (s', trE ++ trW ++ trT)
           else
             -- gc's `growslice` refusals (runtime/slice.go:191–252; R16
             -- pin, t5-maxalloc 2026-09-02): the new length overflowing
@@ -1455,16 +1669,23 @@ def applyStmtOp (s : Store) (choices : Choices) (op : StmtOp) (_nt : Nat)
             let newCap := newLen +
               ((appendGrowthCap slice.cap newLen - newLen + extra) % width)
             let backing ← buildAppendBackingValue ctx elem oldValues elemValues newCap
-            let (base, current) ← Store.alloc ctx s backing (.array newCap elem)
-            -- Spill: the old elements were read out above; the new backing
-            -- is FRESH (no access — the malloc convention); the header write.
-            let (s', trT) ← Mem.store ctx current tloc
-              (.slice { base := some base, offset := 0, len := newLen, cap := newCap })
-            return (s', choices, trE ++ trO ++ trT)
+            return Commit.withStream choices fun s => do
+              let (base, current) ← Store.alloc ctx s backing (.array newCap elem)
+              -- Spill: the old elements were read out above; the new backing
+              -- is FRESH (no access — the malloc convention); the header write.
+              let (s', trT) ← Mem.store ctx current tloc
+                (.slice { base := some base, offset := 0, len := newLen, cap := newCap })
+              return (s', trE ++ trO ++ trT)
       | _ => stuck "malformed appendSlice operands"
   | op => do
-      let (s', tr) ← applyStmtOpCore ctx s op vs
-      return (s', choices, tr)
+      let c ← applyStmtOpCore.plan ctx s op vs
+      return Commit.withStream choices c
+
+@[inherit_doc applyStmtOp.plan]
+def applyStmtOp (s : Store) (choices : Choices) (op : StmtOp) (nt : Nat)
+    (vs : List GoValue) : Except Stop (Store × Choices × AccessTrace) := do
+  let c ← applyStmtOp.plan ctx s choices op nt vs
+  c s
 
 /-- Range START (BUG-005 (L) surgery, replacing the retired snapshot):
 the ranged map's base cell and its START-ID set — the entry ids live
@@ -1696,13 +1917,20 @@ def resolveChain (s : Store) : GoValue → List TargetStep → List GoValue →
 OWN checks — nil address (`valueAsLoc`), bounds (`indexTargetLoc`),
 nil field bases, nil map — firing HERE (spec §Assignments: "the
 assignments are carried out in left-to-right order"). -/
-def storeTarget (s : Store) (r : TargetRef) (v : GoValue) : Except Stop (Store × AccessTrace) := do
+def storeTarget.plan (s : Store) (r : TargetRef) (v : GoValue) :
+    Except Stop (Commit (Store × AccessTrace)) := do
   match r with
   | .chain anchor idxs steps =>
-      -- Chain resolution is address formation (peeks); the ONE access is
-      -- the write at the resolved path.
-      Mem.store ctx s (← valueAsLoc (← resolveChain ctx s anchor steps idxs)) v
-  | .mapElem b k kt vt => mapAssignValue ctx s kt vt b k v
+      -- Chain resolution is address formation (peeks) — the VALIDATE phase;
+      -- the ONE access is the write at the resolved path — the COMMIT (S3).
+      let loc ← valueAsLoc (← resolveChain ctx s anchor steps idxs)
+      return fun s => Mem.store ctx s loc v
+  | .mapElem b k kt vt => mapAssignValue.plan ctx s kt vt b k v
+
+@[inherit_doc storeTarget.plan]
+def storeTarget (s : Store) (r : TargetRef) (v : GoValue) : Except Stop (Store × AccessTrace) := do
+  let c ← storeTarget.plan ctx s r v
+  c s
 
 /-- The VALUE SOURCE for a spine-riding assignment's stores (round 4,
 BUG-034/BUG-037): `.vals` — the evaluated right-hand expressions ARE
@@ -1779,13 +2007,21 @@ def unseqReadTarget (s : Store) : TargetRef → Except Stop (GoValue × AccessTr
 /-- The `load` body: read through the target, then write the binder cell.
 The read's panic precedes the store, so a failing load leaves the state as
 it was (the sweep's first failure over the pre-state). -/
-def unseqLoad (s : Store) (env : LocalEnv) (targets : List (String × TargetRef))
-    (bind tgt : String) : Except Stop (Store × AccessTrace) := do
+def unseqLoad.plan (s : Store) (env : LocalEnv) (targets : List (String × TargetRef))
+    (bind tgt : String) : Except Stop (Commit (Store × AccessTrace)) := do
   let r ← unseqLookupTarget targets tgt
   let (v, t₁) ← unseqReadTarget ctx s r
   let loc ← unseqCellLoc env bind
-  let (s', t₂) ← Mem.store ctx s loc v
-  return (s', t₁ ++ t₂)
+  -- THE COMMIT (S3): the binder cell's write.
+  return fun s => do
+    let (s', t₂) ← Mem.store ctx s loc v
+    return (s', t₁ ++ t₂)
+
+@[inherit_doc unseqLoad.plan]
+def unseqLoad (s : Store) (env : LocalEnv) (targets : List (String × TargetRef))
+    (bind tgt : String) : Except Stop (Store × AccessTrace) := do
+  let c ← unseqLoad.plan ctx s env targets bind tgt
+  c s
 
 /-- The atoms of a target plan's operand list, in order (`loadMany`'s shape). -/
 def unseqAtoms (env : LocalEnv) (s : Store) : List Expr → Except Stop (List GoValue × AccessTrace)

@@ -49,12 +49,25 @@ open GoLean
 -- BUILD the one context of a run and hand it on.
 variable (ctx : ProgramCtx)
 
-/-- The executable's delivery (B2): `deliver` with the choice stream —
-a value continues as `next a` (carrying the apply's OWN post-stream);
-a recoverable panic unwinds under `k` over the pre-apply state with the
-PRE-apply stream `ch` (the abandoned apply consumed nothing that the
-unwind keeps — today's every-site convention, now one definition). The
-relation's `deliver` is this without the stream (`deliverS_deliver`). -/
+/-- The executable's delivery WITH THE PRE-APPLY STORE IN HAND (B2):
+`deliver` with the choice stream — a value continues as `next a`
+(carrying the apply's OWN post-stream); a recoverable panic unwinds under
+`k` over the pre-apply state with the PRE-apply stream `ch` (the abandoned
+apply consumed nothing that the unwind keeps). The relation's `deliver` is
+this without the stream (`deliverS_deliver`).
+
+C1 S3 (cost B, BUG-090 mechanism B): holding `s` across the apply keeps a
+second reference to the heap alive, so every write the apply makes copies
+the whole heap. Every apply that writes user memory now delivers through
+`deliverV` (below) on its validate/commit split. `deliverS` REMAINS at the
+sites whose apply is read-only — the strict nullary/apply arms (except the
+three allocating conversions `[]byte(s)`/`[]rune(s)`/slicing an array
+value, which still pay one heap copy each), the target-shift nil check, the
+comma-ok source — and at the SYNCHRONIZATION applies whose split is OWED:
+`applyChanOp`, `applySyncOp`, `applyAtomicOp`, `applySelect` (their writes
+are the channel/sync-word cells of the program's own synchronization
+traffic: one heap copy per registry op). The owed list, with the measured
+cost, is in `docs/2026-09-19_c1-memory-module-s3-handoff.md`. -/
 def deliverS {α : Type} (s : Store) (k : Cont) (ch : Choices)
     (next : α → Config × Store × Choices × AccessTrace) (r : Result α)
     (chain : List PanicEntry := []) : Config × Store × Choices × AccessTrace :=
@@ -81,6 +94,34 @@ theorem deliverS_deliver {α : Type} {s : Store} {k : Cont} {ch : Choices}
     (h : deliverS s k ch next r chain = (c', s', ch', tr)) :
     deliver s k (fun a => ((next a).1, (next a).2.1, (next a).2.2.2)) r chain = (c', s', tr) := by
   cases r <;> simp_all [deliverS, deliver]
+
+/-- **The VALIDATE-then-COMMIT delivery** (B2 + C1 S3, cost B; the seam
+docstring at `Commit`, Machine.lean). `r` classifies a store-bearing apply's
+VALIDATE phase (`toResult (F.plan ctx s …)`, which only READ `s`). On `.ok c`
+the COMMIT `c` runs on the store — the ONE reference to `s` on this path, so
+the dense heap's `push`/`set` run in place — and the step continues as
+`next`; a commit's own recoverable panic is unreachable
+(`…_commit_noPanic`) and refused by name (`runCommit`). On `.panic msg` the
+panic unwinds under `k` over the store the apply never touched, with the
+PRE-apply stream `ch` and the empty trace — the panic convention («a
+delivered panic returns the pre-apply store with `[]`») is now a fact about
+the two phases, not a saved copy. Projects onto the relation's `deliver` of
+the COMPOSED apply (`deliverV_deliver`, MachineSound). -/
+def deliverV {α : Type} (s : Store) (k : Cont) (ch : Choices)
+    (next : α → Config × Store × Choices × AccessTrace) (r : Result (Commit α))
+    (chain : List PanicEntry := []) : Except Stop (Config × Store × Choices × AccessTrace) :=
+  match r with
+  | .ok c => next <$> runCommit c s
+  | .panic msg => .ok (.panicking (chain ++ [panicEntry msg]) k, s, ch, [])
+
+@[simp] theorem deliverV_ok {α : Type} {s : Store} {k : Cont} {ch : Choices}
+    {next : α → Config × Store × Choices × AccessTrace} {c : Commit α} {chain : List PanicEntry} :
+    deliverV s k ch next (.ok c) chain = next <$> runCommit c s := rfl
+
+@[simp] theorem deliverV_panic {α : Type} {s : Store} {k : Cont} {ch : Choices}
+    {next : α → Config × Store × Choices × AccessTrace} {msg : String} {chain : List PanicEntry} :
+    deliverV s k ch next (.panic msg) chain
+      = .ok (.panicking (chain ++ [panicEntry msg]) k, s, ch, []) := rfl
 
 variable (ctx)
 /-- **Frame EXIT** (B4): what a body's completion does at its call frame
@@ -121,8 +162,8 @@ def stepFrameExit (s : Store) (targets : List (TargetShape × List Expr))
   | targets, results, (cv, args) :: ds =>
       match cv with
       | .funcVal fid captured => do
-          let (r, ch') ← enterFramePick ctx s fid (captured ++ args) choices
-          return deliverS s (.frame targets tenv results ds k' w) ch'
+          let (r, ch') ← enterFramePickV ctx s fid (captured ++ args) choices
+          deliverV s (.frame targets tenv results ds k' w) ch'
             (fun (func, frameEnv, _, s', tr) =>
               (.exec func.body frameEnv
                 (.frame [] [] [] [] (.frame targets tenv results ds k' w) func.wrapper),
@@ -210,8 +251,8 @@ def stepUnseqNext (s : Store) (g : UnseqGraph) (thenB : Stmt) (st : List UnseqSt
             return (.exec (unseqInvokeStmt binds callee args) env
               (.unseqK g thenB st tg env (.wait i) k), s, choices, [])
         | .load bind tgt => do
-            let r ← toResult (unseqLoad ctx s env tg bind tgt)
-            return deliverS s (.unseqK g thenB st tg env .pick k) choices
+            let r ← toResult (unseqLoad.plan ctx s env tg bind tgt)
+            deliverV s (.unseqK g thenB st tg env .pick k) choices
               (fun (s', tr) =>
                 (.next (.unseqK g thenB (st.set i .done) tg env .pick k), s', choices, tr)) r
         | .target bind lhs => do
@@ -270,8 +311,8 @@ def stepFn (s : Store) (c : Config) (choices : Choices) :
               -- marker (the shape `recover`'s walk detects). An ENTRY
               -- panic joins the chain (audit F1+F5; `deliverS`'s `chain`).
               -- The deferred callee's frame carries ITS wrapper flag (BUG-015).
-              let (r, ch') ← enterFramePick ctx s fid (captured ++ args) choices
-              return deliverS s (.frame targets tenv results ds k' w) ch'
+              let (r, ch') ← enterFramePickV ctx s fid (captured ++ args) choices
+              deliverV s (.frame targets tenv results ds k' w) ch'
                 (fun (func, frameEnv, _, s', tr) =>
                   (.exec func.body frameEnv
                     (.frame [] [] [] [] (.panicResumeK chain
@@ -385,8 +426,8 @@ def stepFn (s : Store) (c : Config) (choices : Choices) :
               | a :: rest =>
                   return (.evalE a env (.callArgsK fid plans [] rest env k), s, choices, [])
               | [] => do
-                  let (r, ch') ← enterFramePick ctx s fid [] choices
-                  return deliverS s k ch' (fun (func, frameEnv, resultLocs, s', tr) =>
+                  let (r, ch') ← enterFramePickV ctx s fid [] choices
+                  deliverV s k ch' (fun (func, frameEnv, resultLocs, s', tr) =>
                     (.exec func.body frameEnv (.frame plans env resultLocs [] k func.wrapper),
                       s', ch', tr)) r
           | none => throw (.unsupported "unsupported call target assignee")
@@ -581,8 +622,8 @@ def stepFn (s : Store) (c : Config) (choices : Choices) :
               return (.evalE a env
                 (.callArgsK fid plans (vals ++ [v]) rest env k'), s, choices, [])
           | [] => do
-              let (r, ch') ← enterFramePick ctx s fid (vals ++ [v]) choices
-              return deliverS s k' ch' (fun (func, frameEnv, resultLocs, s', tr) =>
+              let (r, ch') ← enterFramePickV ctx s fid (vals ++ [v]) choices
+              deliverV s k' ch' (fun (func, frameEnv, resultLocs, s', tr) =>
                 (.exec func.body frameEnv (.frame plans env resultLocs [] k' func.wrapper),
                   s', ch', tr)) r
       | .stmtOpK op nt done pending env k' =>
@@ -599,13 +640,13 @@ def stepFn (s : Store) (c : Config) (choices : Choices) :
               else
                 return (.evalE e env (.stmtOpK op nt (v :: done) rest env k'), s, choices, [])
           | [] => do
-              let r ← toResult (applyStmtOp ctx s choices op nt (v :: done).reverse)
-              return deliverS s k' choices (fun (s', choices', tr) => (.next k', s', choices', tr)) r
+              let r ← toResult (applyStmtOp.plan ctx s choices op nt (v :: done).reverse)
+              deliverV s k' choices (fun (s', choices', tr) => (.next k', s', choices', tr)) r
       | .callValCalleeK plans args env k' =>
           match v, args with
           | .funcVal fid captured, [] => do
-              let (r, ch') ← enterFramePick ctx s fid captured choices
-              return deliverS s k' ch' (fun (func, frameEnv, resultLocs, s', tr) =>
+              let (r, ch') ← enterFramePickV ctx s fid captured choices
+              deliverV s k' ch' (fun (func, frameEnv, resultLocs, s', tr) =>
                 (.exec func.body frameEnv (.frame plans env resultLocs [] k' func.wrapper),
                   s', ch', tr)) r
           | .nil, [] =>
@@ -625,8 +666,8 @@ def stepFn (s : Store) (c : Config) (choices : Choices) :
           | [] =>
               match cv with
               | .funcVal fid captured => do
-                  let (r, ch') ← enterFramePick ctx s fid (captured ++ vals ++ [v]) choices
-                  return deliverS s k' ch' (fun (func, frameEnv, resultLocs, s', tr) =>
+                  let (r, ch') ← enterFramePickV ctx s fid (captured ++ vals ++ [v]) choices
+                  deliverV s k' ch' (fun (func, frameEnv, resultLocs, s', tr) =>
                     (.exec func.body frameEnv (.frame plans env resultLocs [] k' func.wrapper),
                       s', ch', tr)) r
               | .nil =>
@@ -836,8 +877,8 @@ def stepFn (s : Store) (c : Config) (choices : Choices) :
           -- bounds, nil map) fires AFTER earlier stores landed.
           match refs, vals with
           | ref :: rs, val :: vrest => do
-              let r ← toResult (storeTarget ctx s ref val)
-              return deliverS s k' choices
+              let r ← toResult (storeTarget.plan ctx s ref val)
+              deliverV s k' choices
                 (fun (s', tr) => (.next (.storeK rs vrest body env k'), s', choices, tr)) r
           | [], [] => return (.exec body env k', s, choices, [])
           | _, _ => throw (.internal "storeK value/target arity mismatch (the shared phase-2 spine: receive delivery, assignment, comma-ok, call write-back)")

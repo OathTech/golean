@@ -9,7 +9,7 @@
 # Classes (the docstring's): EMITTING OPERATION BODY · THE PEEK/RAW WRITER ITSELF ·
 # ADDRESS FORMATION · METADATA · THE MAP RMW's ENTRY PEEK · MACHINE-INTERNAL CELLS ·
 # DRIVER READOUT · SYNCHRONIZATION (the registry apply EMITS its events — C1 S2c) · FRESH
-# ALLOCATION · NO EXECUTION (relation premises / refusal texts) · DEAD (owed deletion) ·
+# ALLOCATION · NO EXECUTION (relation premises / refusal texts) ·
 # TRACER OBSERVATION (tooling). Provenance: [AGENT] fix-round worker, from the
 # S2b docstring's peek list; the counts are the scanner's at the inventoried tree.
 GoLean/CLI.lean	enumPoolRun	loadMany	2	DRIVER READOUT — the enumerator driver's result readout after termination
@@ -25,9 +25,9 @@ GoLean/GoCore/Machine.lean	applyAtomicOp	loadLoc	1	SYNCHRONIZATION — the atomi
 GoLean/GoCore/Machine.lean	applyChanOp	chanCell	3	SYNCHRONIZATION — the channel object's state read; the apply EMITS gc's channel-object accesses (`chanSendEntry`/`chanCloseWrite`) and the slot / close actions (C1 S2c)
 GoLean/GoCore/Machine.lean	applyChanOp	storeChanPayload	3	SYNCHRONIZATION — the channel payload write of send/recv/close (channel-object traffic; the payload VALUE's data accesses are the sender's/receiver's own emitted stores)
 GoLean/GoCore/Machine.lean	applySlice	loadLoc	1	ADDRESS FORMATION — the array-size load for the slice header's bounds (gc computes from headers and types)
-GoLean/GoCore/Machine.lean	applyStmtOp	alloc	1	FRESH ALLOCATION — append's spilled backing array (the copied elements were read through Mem.loadElems)
-GoLean/GoCore/Machine.lean	applyStmtOpCore	alloc	2	FRESH ALLOCATION — .allocNew / .makeSlice payload cells (the target store that follows is an emitting Mem.store)
-GoLean/GoCore/Machine.lean	applyStmtOpCore	allocCell	2	FRESH ALLOCATION — makeMap / makeChan payload cells (payload cells, no declared value type)
+GoLean/GoCore/Machine.lean	applyStmtOp.plan	alloc	1	FRESH ALLOCATION — append's spilled backing array, allocated in the arm's COMMIT closure (C1 S3: the validate phase read the old elements through Mem.loadSlice; the commit allocates and writes the header through Mem.store)
+GoLean/GoCore/Machine.lean	applyStmtOpCore.plan	alloc	2	FRESH ALLOCATION — .allocNew / .makeSlice payload cells, allocated in the arms' COMMIT closures (C1 S3; the target store that follows is an emitting Mem.store)
+GoLean/GoCore/Machine.lean	applyStmtOpCore.plan	allocCell	2	FRESH ALLOCATION — makeMap / makeChan payload cells (no declared value type), allocated in the arms' COMMIT closures (C1 S3)
 GoLean/GoCore/Machine.lean	applyStrictOp	alloc	2	FRESH ALLOCATION — bytesFromString / runesFromString backing arrays
 GoLean/GoCore/Machine.lean	applyStrictOp	chanPayload?	2	METADATA — lengthOf/capacityOf on a channel: c.qcount/c.dataqsiz are read uninstrumented in gc (probe p26, U2)
 GoLean/GoCore/Machine.lean	applyStrictOp	loadLoc	2	METADATA — lengthOf/capacityOf on a pointer-to-array: `len` is a constant of the type, the cell is loaded only to check the operand IS a pointer value (fail closed otherwise)
@@ -46,8 +46,6 @@ GoLean/GoCore/Machine.lean	indexTargetLoc	loadLoc	1	ADDRESS FORMATION — the ba
 GoLean/GoCore/Machine.lean	loadMany	loadLoc	1	THE DRIVERS' PEEK ITSELF — loadMany's body (result readouts after termination)
 GoLean/GoCore/Machine.lean	loadMany	loadMany	1	THE DRIVERS' PEEK ITSELF — loadMany's own recursion
 GoLean/GoCore/Machine.lean	projChainTarget	loadLoc	1	ADDRESS FORMATION — the root check of the constant-index narrowing (the cell must be an ARRAY; the root is being loaded by the emitting Mem.loadFor anyway)
-GoLean/GoCore/Machine.lean	storeMany	storeLoc	1	DEAD RAW WRITER — storeMany has no caller (kept alive only as HeapNormal.of_storeMany's subject; deletion owed to S3)
-GoLean/GoCore/Machine.lean	storeMany	storeMany	1	DEAD RAW WRITER — storeMany's own recursion (no caller; deletion owed to S3)
 GoLean/GoCore/Machine.lean	syncCell	loadLoc	1	SYNCHRONIZATION PEEK ITSELF — the sync-primitive state-word reader's body
 GoLean/GoCore/Machine.lean	tryLockConsult?	syncCell	1	SYNCHRONIZATION — TryLock's state-word read at the consult
 GoLean/GoCore/Machine.lean	unseqStorePlan	loadLoc	1	MACHINE-INTERNAL CELLS — binder-value loads of the unseq sweep (no goroutine can name a binder cell; the binder WRITES emit via Mem.store)

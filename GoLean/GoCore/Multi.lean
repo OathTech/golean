@@ -541,6 +541,21 @@ def Config.completedFlag (c' : Config) : Option ChoiceSite :=
 def Thread.completed (c' : Config) : Thread :=
   .running c' c'.completedFlag
 
+/-- The boundary rule's PRE-step half (C1 S3, cost B — BUG-090 mechanism B):
+whether `c` is a spawn position and, when it is not, whether its registry
+op commits (`Config.registryCommits`), both read from the PRE-step store
+`σ`. `stepThread` computes this BEFORE the step, so no reference to the
+pre-step store survives into the step's writes — before S3
+`Thread.afterStep σ c c'` read `σ` AFTER `stepFn` had run, and every write
+of every pool step copied the whole heap. The second fact is evaluated only
+off the spawn branch, as the rule itself did. -/
+def Config.boundaryFacts (σ : Store) (c : Config) : Bool × Bool :=
+  if (spawnPlan c).isSome then (true, false) else (false, c.registryCommits σ)
+
+/-- The boundary rule over its pre-step facts and the successor. -/
+def Config.afterStepFlagWith (facts : Bool × Bool) (c' : Config) : Option ChoiceSite :=
+  if facts.1 then some .l1Sched else if facts.2 then c'.completedFlag else none
+
 /-- **THE POST-OP BOUNDARY RULE** (C5 — `Thread`'s envelope statement, made
 executable): the boundary a per-goroutine step `c → c'` opens. A spawn
 position's successor opens the `l1Sched` boundary (BUG-040's shipped
@@ -548,16 +563,35 @@ default, bit-for-bit); a registry-op apply that commits
 (`Config.registryCommits`) opens `postOp` unless it parked or panicked
 (`Config.completedFlag`); every other step opens nothing. -/
 def Config.afterStepFlag (σ : Store) (c c' : Config) : Option ChoiceSite :=
-  if (spawnPlan c).isSome then some .l1Sched
-  else if c.registryCommits σ then c'.completedFlag
-  else none
+  Config.afterStepFlagWith (c.boundaryFacts σ) c'
+
+/-- The boundary rule as an `if`-chain over its two pre-step facts (the shape
+before C1 S3, for proofs that case on it). -/
+theorem Config.afterStepFlag_eq_ite (σ : Store) (c c' : Config) :
+    c.afterStepFlag σ c' =
+      (if (spawnPlan c).isSome then some .l1Sched
+       else if c.registryCommits σ then c'.completedFlag
+       else none) := by
+  unfold Config.afterStepFlag Config.afterStepFlagWith Config.boundaryFacts
+  split <;> rfl
 
 /-- The goroutine after a per-goroutine step `c → c'`: the successor with
-the boundary the step opened (`Config.afterStepFlag`). Shared by
-`stepThread` (every path but the wake and the pairing, which know their
-completion directly) and the pool relation `StepM.thread`/`pickCommit`. -/
+the boundary the step opened (`Config.afterStepFlag`). The pool relation
+`StepM.thread`/`pickCommit` names this; the executable `stepThread` names
+`Thread.afterStepWith` over facts it read BEFORE the step (C1 S3), which is
+this by `rfl` (`Thread.afterStepWith_boundaryFacts`). -/
 def Thread.afterStep (σ : Store) (c c' : Config) : Thread :=
   .running c' (c.afterStepFlag σ c')
+
+/-- The goroutine after a step, from the boundary rule's PRE-step facts
+(C1 S3, cost B): what `stepThread` builds — the facts were read before the
+step ran, so the driver holds no reference to the pre-step store across the
+step's writes. -/
+def Thread.afterStepWith (facts : Bool × Bool) (c' : Config) : Thread :=
+  .running c' (Config.afterStepFlagWith facts c')
+
+@[simp] theorem Thread.afterStepWith_boundaryFacts (σ : Store) (c c' : Config) :
+    Thread.afterStepWith (c.boundaryFacts σ) c' = Thread.afterStep σ c c' := rfl
 
 /-- The SPAWN (the registry's `go` entry): enter the callee's frame in
 the shared state and fork the body as a fresh goroutine under a
@@ -590,7 +624,7 @@ def spawnStep (s : Store) (cv : GoValue) (args : List GoValue) (k : Cont)
       -- with gc's panicwrap text) and is DELIVERED in the child, under
       -- the child's empty continuation — its first observable act is
       -- aborting on that panic.
-      let (r, ch') ← enterFramePick ctx s fid (captured ++ args) ch
+      let (r, ch') ← enterFramePickV ctx s fid (captured ++ args) ch
       -- The parent's successor is `.next k`; the pool flags it
       -- `l1Sched` (`Thread.afterStep` — BUG-040, slice 4; stage C's
       -- `.spawned k`/`.opDone .l1Sched` marker, a flag since C5): a
@@ -600,9 +634,17 @@ def spawnStep (s : Store) (cv : GoValue) (args : List GoValue) (k : Cont)
       -- preserves the spawn boundary's exact shipped default (slot 0 =
       -- lowest-index runnable), NOT the postOp issuer-continues
       -- convention.
-      let (child, s', tr) := deliver s .stop (fun (func, frameEnv, _, s', tr) =>
-        (.exec func.body frameEnv (.frame [] [] [] [] .stop func.wrapper), s', tr)) r
-      return (.next k, child, s', ch', tr)
+      -- C1 S3: the entry's COMMIT (the child's parameter and result cells)
+      -- runs on the store this step OWNS (`runCommit`); an entry panic is
+      -- delivered in the child over the store the entry never touched — the
+      -- relation's `deliver` on the composed `enterFramePick` (`spawnStep_sound`).
+      match r with
+      | .ok c => do
+          let (func, frameEnv, _, s', tr) ← runCommit c s
+          return (.next k, .exec func.body frameEnv (.frame [] [] [] [] .stop func.wrapper),
+            s', ch', tr)
+      | .panic msg =>
+          return (.next k, .panicking [panicEntry msg] .stop, s, ch', [])
   -- A nil callee is gc's "go of nil func value" runtime FATAL, raised
   -- AT THE SPAWN in the spawning goroutine (probed 2026-08-07;
   -- unrecoverable, exit 2). Routed through the machine's own fatal
@@ -644,15 +686,27 @@ theorem spawnStep_oblivious {s : Store} {cv : GoValue} {args : List GoValue}
   cases cv with
   | funcVal fid captured =>
     have hn' := hn fid captured rfl
-    -- B2: the entry funnel is stream-oblivious outside the family.
-    simp only [enterFramePick_of_none hn'] at h ⊢
-    cases hx : toResult (enterFrame ctx s fid (captured ++ args)) with
+    -- B2 + C1 S3: the V entry funnel is stream-oblivious outside the family;
+    -- the commit and the child's panic delivery read no stream.
+    simp only [enterFramePickV_of_none hn'] at h ⊢
+    cases hx : toResult (enterFrame.plan ctx s fid (captured ++ args)) with
     | error e => simp [hx, Except.map, Bind.bind, Except.bind] at h
     | ok r =>
-      simp only [hx, Except.map, Bind.bind, Except.bind, pure_eq_ok,
-        Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl, rfl, rfl, rfl⟩ := h
-      exact ⟨rfl, fun ch => by simp [Except.map, Bind.bind, Except.bind]⟩
+      cases r with
+      | ok c =>
+        simp only [hx, Except.map, Bind.bind, Except.bind] at h ⊢
+        cases hrc : runCommit c s with
+        | error e => simp [hrc] at h
+        | ok v =>
+          obtain ⟨func, frameEnv, locs, s₂, tr₂⟩ := v
+          simp only [hrc, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+          obtain ⟨rfl, rfl, rfl, rfl, rfl⟩ := h
+          exact ⟨rfl, fun ch => by simp⟩
+      | panic msg =>
+        simp only [hx, Except.map, Bind.bind, Except.bind, pure_eq_ok,
+          Except.ok.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl, rfl, rfl, rfl⟩ := h
+        exact ⟨rfl, fun ch => by simp [Except.map, Bind.bind, Except.bind]⟩
   | nil => simp [throw, throwThe, MonadExceptOf.throw] at h
   | _ => simp [throw, throwThe, MonadExceptOf.throw] at h
 
@@ -1454,6 +1508,9 @@ def stepThread (s : Store) (threads : Array Thread) (i : Nat)
           let msg ← abortMsg ctx first rest pick
           return (threads.setIfInBounds i (.aborted msg), s, ch', ⟨i, .aborted, ps, [], []⟩)
       | none =>
+      -- THE BOUNDARY RULE'S PRE-STEP FACTS (C1 S3): read before the step, so
+      -- the step's writes see the heap's ONE reference (`Config.boundaryFacts`).
+      let facts := c.boundaryFacts s
       match spawnPlan c with
       | some (cv, args, k) => do
           let (parent', child, s', ch', tr) ← spawnStep ctx s cv args k ch
@@ -1461,7 +1518,7 @@ def stepThread (s : Store) (threads : Array Thread) (i : Nat)
           -- child (`threads.size`, its index), then the CHILD's entry read
           -- (S2a's trace) attributed to it — gc attributes the receiver
           -- dispatch's read to the spawned goroutine, after the edge.
-          return ((threads.setIfInBounds i (Thread.afterStep s c parent')).push (.running child none),
+          return ((threads.setIfInBounds i (Thread.afterStepWith facts parent')).push (.running child none),
             s', ch', ⟨i, .spawned threads.size, [], [],
               .hb (.spawn threads.size) :: tr.map (.attributed threads.size)⟩)
       | none => do
@@ -1490,7 +1547,7 @@ def stepThread (s : Store) (threads : Array Thread) (i : Nat)
               -- pick was drawn over). The label (C1 S2c): the select's
               -- poll over ALL its clauses, then the commit's action.
               let (c', s', trc) ← commitClause ctx s env k cl
-              return (threads.setIfInBounds i (Thread.afterStep s c c'), s', ch₁,
+              return (threads.setIfInBounds i (Thread.afterStepWith facts c'), s', ch₁,
                 ⟨i, .selectCommit cl, ps₁, [], selectPoll evs ++ trc⟩)
           | (none, ch₁, ps₁) =>
               match selectApplyPlan c with
@@ -1506,13 +1563,13 @@ def stepThread (s : Store) (threads : Array Thread) (i : Nat)
                   match ← toResult (applySelect ctx s clauses default?
                       ((v :: done).reverse) env k' ch₁) with
                   | .ok (c', s', ch₂, cl?, tr) =>
-                      return (threads.setIfInBounds i (Thread.afterStep s c c'), s', ch₂,
+                      return (threads.setIfInBounds i (Thread.afterStepWith facts c'), s', ch₂,
                         ⟨i, match cl? with
                             | some cl => .selectCommit cl
                             | none => .selectPass, ps₁, [], tr⟩)
                   | .panic msg =>
                       let (c', s', _) := deliver s k' (fun (p : Config × Store) => (p.1, p.2, ([] : AccessTrace))) (.panic msg)
-                      return (threads.setIfInBounds i (Thread.afterStep s c c'), s', ch₁,
+                      return (threads.setIfInBounds i (Thread.afterStepWith facts c'), s', ch₁,
                         ⟨i, .selectPass, ps₁, [], []⟩)
               | none => do
                   let (c', s', ch₂, tr) ← stepFn ctx s c ch₁
@@ -1522,7 +1579,7 @@ def stepThread (s : Store) (threads : Array Thread) (i : Nat)
                   -- (`printOut?`); `[]` at every other configuration. The
                   -- successor's boundary flag: the post-op boundary rule
                   -- (`Thread.afterStep`, C5).
-                  return (threads.setIfInBounds i (Thread.afterStep s c c'), s', ch₂,
+                  return (threads.setIfInBounds i (Thread.afterStepWith facts c'), s', ch₂,
                     ⟨i, .privateStep, ps₁, (printOut? c).toList, tr⟩)
 
 /-- `stepThread` lifted back into a `MultiConfig` (the stepped goroutine

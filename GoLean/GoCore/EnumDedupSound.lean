@@ -121,9 +121,46 @@ theorem bind2_pair_stream_match {α β : Type} (T : Except Stop α) (g : α → 
     | error e => simp [Bind.bind, Except.bind, hg]
     | ok x => simp [Bind.bind, Except.bind, hg]
 
+/-- The enumerator's no-spill test implies the machine's consult is silent
+(C1 S3 bridge: the N-APP kit rides `applyStmtOp_plan_appendSlice_nospill`). -/
+theorem appendSpill?_of_noSpill {s : Store} {vs : List GoValue} {elem : GoCore.Ty}
+    (h : appendApplyNoSpill ctx s vs = true) : appendSpill? ctx s elem vs = none := by
+  match vs, h with
+  | [], _ => rfl
+  | [_], _ => rfl
+  | [_, _], _ => rfl
+  | _ :: _ :: _ :: _ :: _, _ => rfl
+  | [tv, sliceV, elemsV], h =>
+    unfold appendApplyNoSpill at h
+    unfold appendSpill?
+    cases hsl : valueAsSlice sliceV with
+    | error e => simp [hsl]
+    | ok slice =>
+    cases hel : valueAsSlice elemsV with
+    | error e => simp [hsl, hel]
+    | ok elems =>
+    simp only [hsl, hel] at h
+    cases hv1 : validateSlice slice with
+    | error e => simp [hsl, hel, hv1]
+    | ok u1 =>
+    cases hv2 : validateSlice elems with
+    | error e => simp [hsl, hel, hv1, hv2]
+    | ok u2 =>
+    cases hvis : Mem.loadSlice ctx s elems with
+    | error e => simp [hsl, hel, hv1, hv2, hvis]
+    | ok pE =>
+    obtain ⟨elemValues, trE⟩ := pE
+    simp only [hvis, decide_eq_true_eq] at h
+    cases htl : valueAsLoc tv with
+    | error e => simp [hsl, hel, hv1, hv2, hvis, htl]
+    | ok tloc =>
+    simp only [hsl, hel, hv1, hv2, hvis, htl]
+    rw [if_pos h]
+
 /-- **N-APP determinization**: a NON-SPILLING `appendSlice` apply is
 stream-oblivious — `applyStmtOp` returns the stream verbatim and the
-state result is stream-independent. -/
+state result is stream-independent (C1 S3: through the plan, one commit
+beside the stream). -/
 theorem applyStmtOp_append_nospill {s : Store} {vs : List GoValue}
     {elem : GoCore.Ty} {nt : Nat}
     (h : appendApplyNoSpill ctx s vs = true) :
@@ -132,47 +169,17 @@ theorem applyStmtOp_append_nospill {s : Store} {vs : List GoValue}
          | .ok (s', _, tr) => .ok (s', ch, tr)
          | .error e => .error e) := by
   intro ch
-  match vs, h with
-  | [], _ => rfl
-  | [_], _ => rfl
-  | [_, _], _ => rfl
-  | _ :: _ :: _ :: _ :: _, _ => rfl
-  | [tv, sliceV, elemsV], h =>
-    unfold applyStmtOp
-    dsimp only
-    cases hsl : valueAsSlice sliceV with
+  obtain ⟨r, hr⟩ := applyStmtOp_plan_appendSlice_nospill (elem := elem) (nt := nt)
+    (appendSpill?_of_noSpill h)
+  unfold applyStmtOp
+  rw [hr ch, hr []]
+  cases r with
+  | error e => rfl
+  | ok c =>
+    simp only [Except.map, Bind.bind, Except.bind, Commit.withStream]
+    cases c s with
     | error e => rfl
-    | ok slice =>
-      simp only [except_bind_ok]
-      cases hel : valueAsSlice elemsV with
-      | error e => rfl
-      | ok elems =>
-        simp only [except_bind_ok]
-        cases hv1 : validateSlice slice with
-        | error e => rfl
-        | ok u1 =>
-          simp only [except_bind_ok]
-          cases hv2 : validateSlice elems with
-          | error e => rfl
-          | ok u2 =>
-            simp only [except_bind_ok]
-            cases hvis : Mem.loadSlice ctx s elems with
-            | error e => rfl
-            | ok pE =>
-              obtain ⟨elemValues, trE⟩ := pE
-              simp only [except_bind_ok]
-              cases htl : valueAsLoc tv with
-              | error e => rfl
-              | ok tloc =>
-                simp only [except_bind_ok]
-                by_cases hcap : slice.len + elemValues.size ≤ slice.cap
-                · simp only [if_pos hcap]
-                  exact bind2_pair_stream_match _ _
-                    (fun (a : Store × AccessTrace) (x : Store × AccessTrace) => (x.1, trE ++ a.2 ++ x.2)) ch
-                · exfalso
-                  unfold appendApplyNoSpill at h
-                  simp only [hsl, hel, hvis, decide_eq_true_eq] at h
-                  exact hcap h
+    | ok p => rfl
 
 /-- `stepFn` at a non-spilling `appendSlice` apply position is
 stream-oblivious (the N-APP class's `stepFn` half). -/
@@ -187,14 +194,18 @@ theorem stepFn_append_nospill {s : Store} {v : GoValue}
            | .ok (c', s', _, tr) => .ok (c', s', ch, tr)
            | .error e => .error e) := by
   intro ch
+  obtain ⟨r, hr⟩ := applyStmtOp_plan_appendSlice_nospill (elem := elem) (nt := nt)
+    (appendSpill?_of_noSpill hns)
   unfold stepFn
   dsimp only
-  rw [applyStmtOp_append_nospill hns ch]
-  cases hap : applyStmtOp ctx s [] (.appendSlice elem) nt ((v :: done).reverse) with
+  rw [hr ch, hr []]
+  cases r with
   | error e => cases_stop e <;> rfl
-  | ok p =>
-    obtain ⟨s₂, ch₂, tr₂⟩ := p
-    rfl
+  | ok c =>
+    simp only [Except.map, toResult_ok, Bind.bind, Except.bind, deliverV_ok, runCommit_withStream]
+    cases runCommit c s with
+    | error e => rfl
+    | ok p => rfl
 
 /-- N-APP obliviousness at the `stepThread` level: mirrors
 `stepThread_oblivious`'s conclusion for the non-spilling append apply

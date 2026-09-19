@@ -836,11 +836,16 @@ theorem spawnStep_shape {s : Store} {cv : GoValue} {args : List GoValue}
     {k : Cont} {ch : Choices} {p c : Config} {s' : Store} {ch' : Choices} {tr : AccessTrace}
     (h : spawnStep ctx s cv args k ch = .ok (p, c, s', ch', tr)) :
     p = .next k := by
+  -- C1 S3: the V entry funnel, then the commit (or the child's panic); every
+  -- `.ok` leaf carries `.next k` as the parent's successor.
   unfold spawnStep at h
-  cases cv <;>
-    simp_all [Bind.bind, Except.bind, throw, throwThe, MonadExceptOf.throw]
-  rename_i fid captured
-  split at h <;> simp_all
+  cases cv with
+  | funcVal fid captured =>
+    simp only [Bind.bind, Except.bind] at h
+    repeat' split at h
+    all_goals (cases h <;> rfl)
+  | nil => simp [throw, throwThe, MonadExceptOf.throw] at h
+  | _ => simp [throw, throwThe, MonadExceptOf.throw] at h
 
 theorem schedPick_of_boundary {m : MultiConfig} {t : Thread} {i : Nat}
     (hcur : m.threads[m.cur]? = some t) (hb : t.atBoundary = true)
@@ -1057,7 +1062,8 @@ theorem stepThreadInto_sound {m : MultiConfig} {i : Nat} {ch ch' : Choices}
                   obtain ⟨c', s₂, ch₂, tr₂⟩ := r₂
                   rw [hstep] at hst
                   dsimp only at hst
-                  simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hst
+                  simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq,
+                    Thread.afterStepWith_boundaryFacts] at hst
                   obtain ⟨rfl, rfl, rfl, rfl⟩ := hst
                   have hts : m.threads.setIfInBounds i (Thread.afterStep m.shared c c')
                       = (m.threads.setIfInBounds i (Thread.afterStep m.shared c c'))
@@ -1079,7 +1085,7 @@ theorem stepThreadInto_sound {m : MultiConfig} {i : Nat} {ch ch' : Choices}
                   obtain ⟨c', s₂, ch₂, cl?⟩ := r₂
                   rw [happly] at hst
                   simp only [toResult_ok, Bind.bind, Except.bind, pure_eq_ok,
-                    Except.ok.injEq, Prod.mk.injEq] at hst
+                    Except.ok.injEq, Prod.mk.injEq, Thread.afterStepWith_boundaryFacts] at hst
                   obtain ⟨rfl, rfl, rfl, rfl⟩ := hst
                   have hts : m.threads.setIfInBounds i (Thread.afterStep m.shared (.retV v (.selectOpsK clauses default? done [] env k')) c')
                       = (m.threads.setIfInBounds i (Thread.afterStep m.shared (.retV v (.selectOpsK clauses default? done [] env k')) c'))
@@ -1094,7 +1100,7 @@ theorem stepThreadInto_sound {m : MultiConfig} {i : Nat} {ch ch' : Choices}
                     simp only [toResult_panic, toResult_refusal, toResult_fatal, toResult_deadlock,
                       toResult_raceDetected, toResult_fuelOut, Bind.bind, Except.bind, pure_eq_ok,
                       deliver_panic, List.nil_append, Except.ok.injEq, Prod.mk.injEq,
-                      reduceCtorEq] at hst
+                      reduceCtorEq, Thread.afterStepWith_boundaryFacts] at hst
                   case panic msg =>
                   obtain ⟨rfl, rfl, rfl, rfl⟩ := hst
                   have hts : m.threads.setIfInBounds i
