@@ -75,3 +75,9 @@ unchanged; negatives 394 no regression. Tail: `r43-ci-slow.tail.txt`. Candidate 
 `a014183b…`) — INSTALLED in this commit; a provenance refresh, not a re-pin. This commit also adds the
 evaluation-order note's §5 «RULED» pointer to the 2026-09-19 Stage C rulings (a heading mismatch had kept it
 out of the ratification commit `9b05d12c`; the rulings ledger was the record throughout).
+
+**Green re-run at the records commit `6fcd4d88`** ([AGENT] coordinator, 2026-09-19): full
+`GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff` → EXIT=0, `RESULT: PASS`, `baseline diff FULL
+(3686/3686, no regression)`, `certificate provenance` ok, negatives 394 no regression; the reconciler at
+its single pre-existing finding. Round 43 closed; C1 is complete modulo its owed list and on main; the
+box-wide lock released.
