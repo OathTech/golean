@@ -912,8 +912,12 @@ and the same `nilValueMethodText` consult on the panic path, over
 `enterFrame.plan` — so the entry's COMMIT (the parameter and result cells)
 runs on a store the caller no longer holds. THE executable's entry funnel
 (`stepFn`'s seven positions, `stepFrameExit`, `spawnStep`); `enterFramePick`
-itself stays the relation's premise. `enterFramePickV_ok`/`_panic`/`_error`
-(MachineSound) are the bridge. -/
+itself stays the relation's premise. The bridge is `enterFramePickV_cases`
+with `enterFramePick_of_V_ok`/`enterFramePick_of_V_panic` (below) and
+`enterFramePickV_of_ok`/`_of_panic`/`_of_plan_ok`/`_of_plan_panic`/
+`_of_nopanic` (MachineSound) — S3 audit F2, 2026-09-19 [AGENT]: the
+`enterFramePickV_ok`/`_panic`/`_error` this docstring used to name were
+never declared. -/
 def enterFramePickV (s : Store) (fid : FuncId) (args : List GoValue) (ch : Choices) :
     Except Stop (Result (Commit (Func × LocalEnv × List Loc × Store × AccessTrace)) × Choices) :=
   match toResult (enterFrame.plan ctx s fid args) with

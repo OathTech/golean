@@ -61,9 +61,12 @@ second reference to the heap alive, so every write the apply makes copies
 the whole heap. Every apply that writes user memory now delivers through
 `deliverV` (below) on its validate/commit split. `deliverS` REMAINS at the
 sites whose apply is read-only — the strict nullary/apply arms (except the
-three allocating conversions `[]byte(s)`/`[]rune(s)`/slicing an array
-value, which still pay one heap copy each), the target-shift nil check, the
-comma-ok source — and at the SYNCHRONIZATION applies whose split is OWED:
+TWO allocating conversions `[]byte(s)`/`[]rune(s)`, which still pay one heap
+copy each; S3 audit F3, 2026-09-19 [AGENT]: a slice expression is NOT a
+third — `applySlice` (Machine.lean) returns its store UNCHANGED in every arm
+and refuses the non-addressable array-value form by name), the target-shift
+nil check, the comma-ok source — and at the SYNCHRONIZATION applies whose
+split is OWED:
 `applyChanOp`, `applySyncOp`, `applyAtomicOp`, `applySelect` (their writes
 are the channel/sync-word cells of the program's own synchronization
 traffic: one heap copy per registry op). The owed list, with the measured
@@ -106,7 +109,11 @@ panic unwinds under `k` over the store the apply never touched, with the
 PRE-apply stream `ch` and the empty trace — the panic convention («a
 delivered panic returns the pre-apply store with `[]`») is now a fact about
 the two phases, not a saved copy. Projects onto the relation's `deliver` of
-the COMPOSED apply (`deliverV_deliver`, MachineSound). -/
+the COMPOSED apply through `deliverV_ok`/`deliverV_panic` (below) and
+`deliverV_ok_inv`, `toResult_plan_ok`/`toResult_plan_panic`,
+`toResult_plan_inv_ok`/`toResult_plan_inv_panic` (MachineSound) — there is
+no single `deliverV_deliver` lemma (S3 audit F2, 2026-09-19 [AGENT]: the
+name this docstring used was never declared). -/
 def deliverV {α : Type} (s : Store) (k : Cont) (ch : Choices)
     (next : α → Config × Store × Choices × AccessTrace) (r : Result (Commit α))
     (chain : List PanicEntry := []) : Except Stop (Config × Store × Choices × AccessTrace) :=

@@ -1488,7 +1488,40 @@ rollback (`Commit`/`runCommit`, Machine.lean; `deliverV`, StepFn.lean).
 Before S3 this check was `arrayIndexNat`'s Go-panic text, delivered as a
 rolled-back `.panicking` step — a refusal-class change on a path no
 well-formed run reaches (disclosed in the S3 record; the differential is the
-regression). -/
+regression).
+
+**The invariant the unreachability argument rests on, stated here** (S3
+audit F1, 2026-09-19 [AGENT]): for a `storeTarget` chain the plan and the
+commit run on the SAME store, so the re-check sees the very array
+`indexTargetLoc`/`resolveChain` bounds-checked; but for an ELEMENT RUN
+(`Mem.storeElems` at `.index base (offset + start + i)`) and for a store
+through a slice-derived pointer (`sliceIndexLoc`, which checks `i` against
+the HEADER's `len`, never the backing) the argument needs one more fact —
+**every reachable slice header satisfies `offset + cap ≤ |backing array|`**.
+That fact holds BY CONSTRUCTION at the 11 header-formation sites:
+`sliceFromSlice`'s two arms (`offset + cap` = the source's `offset + cap`,
+resp. `offset + max`), `sliceFromArray`'s two arms (`= length`, resp.
+`offset + max ≤ length`), `convertValueToTy`'s nil-at-slice-target arm and
+`defaultValueTy`'s `.slice` arm (both the `0/0/0` nil header),
+`applyStrictOp`'s `.bytesFromString` and `.runesFromString` (`offset = 0`,
+`cap = |array|`), `applyStmtOpCore.plan`'s `.makeSlice` (`offset = 0`,
+`cap` = the size of the `buildDefaultArrayValue cap` it allocates), and
+`applyStmtOp.plan`'s in-place append (`{slice with len := newLen}` —
+`offset`/`cap` untouched) and spill (`offset = 0`, `cap = newCap` = the
+length `buildAppendBackingValue` pads to, which refuses a longer one). It is
+PRESERVED because an array cell never resizes: a whole-value store
+normalizes at the cell's DECLARED `.array n` type and the normalizer REFUSES
+a length mismatch (`normalizeValueForTyTy`'s `.array` arm, ~line 1181),
+`Store.alloc` normalizes at birth, the only header-rebasing conversions are
+refused by name (`(*[N]T)(s)`, ~line 2056), and the wire carries slice
+EXPRESSIONS, not raw headers (`NativeToIR.lean`).
+It is NOT a `StateWf` conjunct and NOT a theorem today — stating it (and
+deriving `sliceIndexLoc`/`Mem.storeElems` landing inside the backing from
+it, with `writeAt_noPanic` as the consumer) is OWED to a later slice of this
+module (the S3 handoff's owed list). Until then the unreachability above is
+a by-construction argument, not a machine-checked one, and a NEW
+header-forming site (a `reflect`/`unsafe` frontier, a slice-to-array-pointer
+implementation, a wire change) must re-establish it by hand. -/
 def arrayIndexNatFormed (values : Array GoValue) (index : Int) : Except Stop Nat :=
   if 0 ≤ index ∧ index.toNat < values.size then pure index.toNat
   else throw (.internal s!"store through a formed address: index {index} outside an array of length {values.size} (an address-formation invariant breach — arrays never shrink; C1 S3)")

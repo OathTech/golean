@@ -637,7 +637,11 @@ def spawnStep (s : Store) (cv : GoValue) (args : List GoValue) (k : Cont)
       -- C1 S3: the entry's COMMIT (the child's parameter and result cells)
       -- runs on the store this step OWNS (`runCommit`); an entry panic is
       -- delivered in the child over the store the entry never touched — the
-      -- relation's `deliver` on the composed `enterFramePick` (`spawnStep_sound`).
+      -- relation's `deliver` on the composed `enterFramePick`. The facts are
+      -- `spawnStep_shape` (MultiSound), `spawnStep_wf` (MultiWfSound) and the
+      -- spawn arm of `stepThreadInto_sound` (MultiSound) — S3 audit F2,
+      -- 2026-09-19 [AGENT]: there is no `spawnStep_sound`, which this comment
+      -- used to name.
       match r with
       | .ok c => do
           let (func, frameEnv, _, s', tr) ← runCommit c s
