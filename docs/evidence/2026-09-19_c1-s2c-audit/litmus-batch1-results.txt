@@ -1,0 +1,111 @@
+# litmus batch 1 — gc -race (5 runs at GOMAXPROCS 1 and 8; race=N/5; per-run 'printed value/rcN'), candidate 06e78653… (default stream), main 42b7bf1a… (default stream), candidate enumerator (width 4, sites 16, cap 64, work 200000, NO --expect-status)
+=== onceFastPathOverwrite
+  gc:   procs=1:race=1/5 [ 1/rc0 1/rc0 1/rc0 1/rc0 2/rc1 ] procs=8:race=1/5 [ 1/rc0 1/rc0 1/rc1 1/rc0 1/rc0 ]
+  cand(rc=1): {"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"}
+  main(rc=1): {"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"}
+  cand-enum: coverage-observations: run consumes more than --max-sites 16 choice site(s) — raise the case's sites bound (never truncated silently) 
+=== aliasMutexCopyRoot
+  gc:   procs=1:race=5/5 [ 1/rc1 1/rc1 1/rc1 1/rc1 1/rc1 ] procs=8:race=5/5 [ 1/rc1 1/rc1 1/rc1 1/rc1 1/rc1 ]
+  cand(rc=1): {"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"}
+  main(rc=1): {"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"}
+  cand-enum: coverage-observations: observations=1 steps=216 probes=30 sites=10 leaves=11 maxdepth=7 width=4 {"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"} 
+=== aliasNestedMutexCopy
+  gc:   procs=1:race=5/5 [ 1/rc1 1/rc1 1/rc1 1/rc1 1/rc1 ] procs=8:race=5/5 [ 1/rc1 1/rc1 1/rc1 1/rc1 1/rc1 ]
+  cand(rc=1): {"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"}
+  main(rc=0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}
+  cand-enum: coverage-observations: observations=1 steps=234 probes=30 sites=10 leaves=11 maxdepth=7 width=4 {"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"} 
+=== aliasNestedMutexCopyOrdered
+  gc:   procs=1:race=0/5 [ 2/rc0 2/rc0 2/rc0 2/rc0 2/rc0 ] procs=8:race=0/5 [ 2/rc0 2/rc0 2/rc0 2/rc0 2/rc0 ]
+  cand(rc=0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":2}]}
+  main(rc=0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":2}]}
+  cand-enum: coverage-observations: observations=1 steps=3386 probes=441 sites=147 leaves=148 maxdepth=12 width=4 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":2}]} 
+=== aliasMutexHandoff
+  gc:   procs=1:race=0/5 [ 2/rc0 2/rc0 2/rc0 2/rc0 2/rc0 ] procs=8:race=0/5 [ 2/rc0 2/rc0 2/rc0 2/rc0 2/rc0 ]
+  cand(rc=0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":2}]}
+  main(rc=1): {"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"}
+  cand-enum: coverage-observations: observations=2 steps=43654 probes=9345 sites=3115 leaves=3116 maxdepth=16 width=4 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]} {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":2}]} 
+=== promotedSameWord
+  gc:   procs=1:race=5/5 [ 1/rc1 1/rc1 1/rc1 1/rc1 1/rc1 ] procs=8:race=5/5 [ 1/rc1 1/rc1 1/rc1 1/rc1 1/rc1 ]
+  cand(rc=1): {"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"}
+  main(rc=1): {"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"}
+  cand-enum: coverage-observations: observations=1 steps=5537 probes=777 sites=259 leaves=334 maxdepth=9 width=4 {"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"} 
+=== shadowedDisjoint
+  gc:   procs=1:race=0/5 [ 21/rc0 21/rc0 21/rc0 21/rc0 21/rc0 ] procs=8:race=0/5 [ 21/rc0 21/rc0 21/rc0 21/rc0 21/rc0 ]
+  cand(rc=0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":21}]}
+  main(rc=0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":21}]}
+  cand-enum: coverage-observations: observations=1 steps=699 probes=99 sites=33 leaves=34 maxdepth=8 width=4 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":21}]} 
+=== aliasArrayFieldSameElem
+  gc:   procs=1:race=5/5 [ 1/rc1 1/rc1 1/rc1 1/rc1 1/rc1 ] procs=8:race=5/5 [ 1/rc1 1/rc1 1/rc1 1/rc1 1/rc1 ]
+  cand(rc=1): {"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"}
+  main(rc=0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}
+  cand-enum: coverage-observations: observations=1 steps=6242 probes=777 sites=259 leaves=334 maxdepth=9 width=4 {"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"} 
+=== aliasArrayFieldDisjoint
+  gc:   procs=1:race=0/5 [ 21/rc0 21/rc0 21/rc0 21/rc0 21/rc0 ] procs=8:race=0/5 [ 21/rc0 21/rc0 21/rc0 21/rc0 21/rc0 ]
+  cand(rc=0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":21}]}
+  main(rc=0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":21}]}
+  cand-enum: coverage-observations: observations=1 steps=830 probes=99 sites=33 leaves=34 maxdepth=8 width=4 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":21}]} 
+=== headRefillUnordered
+  gc:   procs=1:race=5/5 [ 1/rc1 1/rc1 1/rc1 1/rc1 1/rc1 ] procs=8:race=5/5 [ 1/rc1 1/rc1 1/rc1 1/rc1 1/rc1 ]
+  cand(rc=1): {"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"}
+  main(rc=1): {"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"}
+  cand-enum: coverage-observations: observations=1 steps=421 probes=48 sites=16 leaves=17 maxdepth=5 width=4 {"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"} 
+=== headRefillOrdered
+  gc:   procs=1:race=0/5 [ 1/rc0 1/rc0 1/rc0 1/rc0 1/rc0 ] procs=8:race=0/5 [ 1/rc0 1/rc0 1/rc0 1/rc0 1/rc0 ]
+  cand(rc=0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}
+  main(rc=0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}
+  cand-enum: coverage-observations: observations=1 steps=1840 probes=261 sites=87 leaves=88 maxdepth=10 width=4 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]} 
+=== closeWakesMany
+  gc:   procs=1:race=0/5 [ 1/rc0 1/rc0 1/rc0 1/rc0 1/rc0 ] procs=8:race=0/5 [ 1/rc0 1/rc0 1/rc0 1/rc0 1/rc0 ]
+  cand(rc=0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}
+  main(rc=0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}
+  cand-enum: coverage-observations: run consumes more than --max-sites 16 choice site(s) — raise the case's sites bound (never truncated silently) 
+=== wgWakesMany
+  gc:   procs=1:race=0/5 [ 1/rc0 1/rc0 1/rc0 1/rc0 1/rc0 ] procs=8:race=0/5 [ 1/rc0 1/rc0 1/rc0 1/rc0 1/rc0 ]
+  cand(rc=0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}
+  main(rc=0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}
+  cand-enum: coverage-observations: run consumes more than --max-sites 16 choice site(s) — raise the case's sites bound (never truncated silently) 
+=== nestedSpawnClean
+  gc:   procs=1:race=0/5 [ 1/rc0 1/rc0 1/rc0 1/rc0 1/rc0 ] procs=8:race=0/5 [ 1/rc0 1/rc0 1/rc0 1/rc0 1/rc0 ]
+  cand(rc=0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}
+  main(rc=0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}
+  cand-enum: coverage-observations: observations=1 steps=5010 probes=1836 sites=612 leaves=643 maxdepth=14 width=4 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]} 
+=== nestedSpawnRacy
+  gc:   procs=1:race=5/5 [ 1/rc1 1/rc1 1/rc1 1/rc1 1/rc1 ] procs=8:race=5/5 [ 1/rc1 1/rc1 1/rc1 1/rc1 1/rc1 ]
+  cand(rc=1): {"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"}
+  main(rc=1): {"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"}
+  cand-enum: coverage-observations: observations=1 steps=586 probes=84 sites=28 leaves=35 maxdepth=6 width=4 {"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"} 
+=== selectSelectRendezvous
+  gc:   procs=1:race=0/5 [ 8/rc0 8/rc0 8/rc0 8/rc0 8/rc0 ] procs=8:race=0/5 [ 8/rc0 8/rc0 8/rc0 8/rc0 8/rc0 ]
+  cand(rc=1): {"message":"select-with-select rendezvous (unmodeled this slice)","output":"","schema":"golean-observation-v1","status":"unsupported"}
+  main(rc=1): {"message":"select-with-select rendezvous (unmodeled this slice)","output":"","schema":"golean-observation-v1","status":"unsupported"}
+  cand-enum: coverage-observations: alias-guard probe [2] failed: the probed member's run errored — unsupported: select-with-select rendezvous (unmodeled this slice). Under a correct bound this rung aliases onto an in-bound member, so this is a member-class failure (e.g. a deadlocking or fuel-out member, which has no membership handling), NOT evidence against the computed bound 2 (audit F15; a bound refutati
+=== recvWakesSenderClean
+  gc:   procs=1:race=5/5 [ 1/rc1 1/rc1 1/rc1 1/rc1 1/rc1 ] procs=8:race=5/5 [ 1/rc1 1/rc1 1/rc1 1/rc1 1/rc1 ]
+  cand(rc=1): {"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"}
+  main(rc=1): {"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"}
+  cand-enum: coverage-observations: observations=1 steps=1035 probes=87 sites=29 leaves=30 maxdepth=6 width=4 {"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"} 
+=== bufferedSendThenWriteRacy
+  gc:   procs=1:race=5/5 [ 1/rc1 1/rc1 1/rc1 1/rc1 1/rc1 ] procs=8:race=5/5 [ 1/rc1 1/rc1 1/rc1 1/rc1 1/rc1 ]
+  cand(rc=1): {"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"}
+  main(rc=1): {"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"}
+  cand-enum: coverage-observations: observations=1 steps=1104 probes=171 sites=57 leaves=58 maxdepth=7 width=4 {"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"} 
+=== selectRecvTargetOrder
+  gc:   procs=1:race=0/5 [ 5/rc0 5/rc0 5/rc0 5/rc0 5/rc0 ] procs=8:race=0/5 [ 5/rc0 5/rc0 5/rc0 5/rc0 5/rc0 ]
+  cand(rc=0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":5}]}
+  main(rc=0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":5}]}
+  cand-enum: coverage-observations: observations=1 steps=615 probes=99 sites=33 leaves=34 maxdepth=8 width=4 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":5}]} 
+=== recvTargetOrder
+  gc:   procs=1:race=0/5 [ 5/rc0 5/rc0 5/rc0 5/rc0 5/rc0 ] procs=8:race=0/5 [ 5/rc0 5/rc0 5/rc0 5/rc0 5/rc0 ]
+  cand(rc=0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":5}]}
+  main(rc=0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":5}]}
+  cand-enum: coverage-observations: observations=1 steps=511 probes=99 sites=33 leaves=34 maxdepth=8 width=4 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":5}]} 
+=== aliasUnlockTailCopy
+  gc:   procs=1:race=5/5 [ 0/rc1 0/rc1 0/rc1 0/rc1 0/rc1 ] procs=8:race=5/5 [ 0/rc1 0/rc1 0/rc1 0/rc1 0/rc1 ]
+  cand(rc=1): {"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"}
+  main(rc=1): {"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"}
+  cand-enum: coverage-observations: observations=1 steps=2170 probes=462 sites=154 leaves=155 maxdepth=9 width=4 {"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"} 
+=== aliasChanObjClose
+  gc:   procs=1:race=5/5 [ 1/rc1 1/rc1 1/rc1 1/rc1 1/rc1 ] procs=8:race=5/5 [ 1/rc1 1/rc1 1/rc1 1/rc1 1/rc1 ]
+  cand(rc=1): {"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"}
+  main(rc=1): {"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"}
+  cand-enum: coverage-observations: observations=1 steps=228 probes=42 sites=14 leaves=15 maxdepth=5 width=4 {"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"} 

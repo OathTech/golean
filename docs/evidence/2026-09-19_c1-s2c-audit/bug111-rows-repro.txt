@@ -1,0 +1,11 @@
+# BUG-111 rows reproduced from source on the candidate 06e78653… and main 42b7bf1a… (frontend: GO111MODULE=off go run ./tools/nativefrontend --dir Corpus/coverage/exec/race/{negative,free})
+== alias row, default stream
+candidate: {"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"}
+main:      {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}
+== alias row, racy enumerator (width 4, cap 64, work 200000, --expect-status race)
+candidate sites=8:  coverage-observations: run consumes more than --max-sites 8 choice site(s) — raise the case's sites bound (never truncated silently) 
+candidate sites=16: coverage-observations: observations=1 steps=5805 probes=777 sites=259 leaves=334 maxdepth=9 width=4 {"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"} 
+main sites=16:      coverage-observations: run consumes more than --max-sites 16 choice site(s) — raise the case's sites bound (never truncated silently) 
+== guard, confluent enumerator sites=8
+candidate: coverage-observations: observations=1 steps=559 probes=78 sites=26 leaves=27 maxdepth=7 width=4 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":12}]} 
+main:      coverage-observations: observations=1 steps=559 probes=78 sites=26 leaves=27 maxdepth=7 width=4 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":12}]} 

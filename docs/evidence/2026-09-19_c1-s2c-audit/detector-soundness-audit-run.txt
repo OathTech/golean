@@ -1,0 +1,31 @@
+# detector-soundness — MY run on the candidate binary 06e78653… at 2ce323ff: scripts/detector-soundness --select in-scope --jobs 6 --out artifacts/detector-soundness-audit (go run -race live, go1.26.5 = pin); EXIT=2 = the standing 9 params-omit-sites= refusals; worker-pool exit 0
+# cell counts:
+    503 [agree-DRF]
+     86 [uncertified]
+     37 [agree-race]
+      9 [refused]
+      6 [over-refusal]
+refused (params omit sites=): 9
+
+# the over-refusal cells (all six = the lane's six):
+[over-refusal] race/free/array-dyn-index-read-write gc=DRF-in-N machine=RACE-ALL single=race
+[over-refusal] race/gomem-only/rw-copy-vs-runlock gc=DRF-in-N machine=RACE-ALL single=race
+[over-refusal] race/gomem-only/rw-copy-vs-unlock gc=DRF-in-N machine=RACE-ALL single=race
+[over-refusal] race/gomem-only/wg-copy-vs-add-from-0 gc=DRF-in-N machine=RACE-ALL single=race
+[over-refusal] race/gomem-only/wg-copy-vs-done gc=DRF-in-N machine=RACE-ALL single=race
+[over-refusal] race/gomem-only/wg-overwrite-vs-wait-at-0 gc=DRF-in-N machine=RACE-ALL single=race
+
+# HOLE / possible-HOLE cells:
+(none)
+
+# the BUG-111 rows:
+[agree-DRF] race/free/struct-tag-alias-disjoint-fields gc=DRF-in-N machine=DRF single=ok
+[agree-race] race/negative/struct-tag-alias-field gc=RACE machine=RACE-ALL single=race
+
+# tail of the runner's summary:
+  sync/trylock/defer-trylock	params 'width=2,members=2' omit sites= — the runner will not invent an enumeration bound; declare it in cases.tsv (lane membership)
+
+gc-infra / unclassified rows (the matrix is INCOMPLETE):
+artifacts: /home/dev/projects/golean/.claude/worktrees/audit-c1-s2c/artifacts/detector-soundness-audit
+detector-soundness: INCOMPLETE matrix — worker-pool exit 0, gc-infra 0, unclassified 0, refused 9 (exit 2)
+detector-soundness EXIT=2

@@ -1,0 +1,40 @@
+# fold-equality audit reproduced with the S2c-i binary REBUILT from git archive f1ad88c3 (sha256 7eb5de44bd99…; build EXIT=0, 96 jobs, 2 min on a copied .lake) on a 543-id multi-goroutine subset (manifest features ~ goroutines|race|sync|channels|atomic|select|waitgroup|mutex; the 2 standing exclusions and the 2 BUG-111 rows excluded; 2 frontend export refusals: sync.Map row, stdlib-source row on first try — second run 542 ids): the S2c-i tree's own scripts/choice-trace-corpus --jobs 8 --dump; then the candidate and main binaries on the same ids from the audit worktree; sorted dumps compared.
+== S2c-i fold audit (tree .tmp/s2c1, its own tracer + summarizer) start 2026-09-19T01:56:24Z
+s2c1 tracer EXIT=0 2026-09-19T01:57:19Z
+== candidate dump start 2026-09-19T01:57:19Z
+cand tracer EXIT=0 2026-09-19T01:58:14Z
+== main dump start 2026-09-19T01:58:14Z
+main tracer EXIT=0 2026-09-19T01:59:09Z
+17060 /home/dev/projects/golean/.claude/worktrees/audit-c1-s2c/.tmp/ct-s2c1.sorted.tsv
+6af9961acda5ac0a4f3ec5564af46387f57caec704f6f305e3e9068d70ec99e9  /home/dev/projects/golean/.claude/worktrees/audit-c1-s2c/.tmp/ct-s2c1.sorted.tsv
+17060 /home/dev/projects/golean/.claude/worktrees/audit-c1-s2c/.tmp/ct-cand.sorted.tsv
+6af9961acda5ac0a4f3ec5564af46387f57caec704f6f305e3e9068d70ec99e9  /home/dev/projects/golean/.claude/worktrees/audit-c1-s2c/.tmp/ct-cand.sorted.tsv
+17060 /home/dev/projects/golean/.claude/worktrees/audit-c1-s2c/.tmp/ct-main.sorted.tsv
+6af9961acda5ac0a4f3ec5564af46387f57caec704f6f305e3e9068d70ec99e9  /home/dev/projects/golean/.claude/worktrees/audit-c1-s2c/.tmp/ct-main.sorted.tsv
+cmp cand/main EXIT=0
+cmp s2c1/main EXIT=0
+== done 2026-09-19T01:59:09Z
+
+# S2c-i tracer summary (.tmp/ct-s2c1.log):
+2:rows traced: 542 ids, 3252 (id,stream) lines; 0 id(s) the tracer could not run (ERROR)
+6:  consumptions checked: 17052
+7:  menu-invariant violations: 0
+8:  self-check alarms (mirror/accountant, sentinel, pick-record): 0
+9:  driver-agreement mismatches: 0
+11:  fold-equality mismatches (raceUpdate vs raceFold, C1 S2c-i): 0
+# results TSV foldMismatches column sum per chunk:
+.tmp/s2c1/artifacts/ct-audit/results-0.tsv: lines=408 foldMismatches_sum=0
+.tmp/s2c1/artifacts/ct-audit/results-1.tsv: lines=408 foldMismatches_sum=0
+.tmp/s2c1/artifacts/ct-audit/results-2.tsv: lines=408 foldMismatches_sum=0
+.tmp/s2c1/artifacts/ct-audit/results-3.tsv: lines=408 foldMismatches_sum=0
+.tmp/s2c1/artifacts/ct-audit/results-4.tsv: lines=408 foldMismatches_sum=0
+.tmp/s2c1/artifacts/ct-audit/results-5.tsv: lines=408 foldMismatches_sum=0
+.tmp/s2c1/artifacts/ct-audit/results-6.tsv: lines=408 foldMismatches_sum=0
+.tmp/s2c1/artifacts/ct-audit/results-7.tsv: lines=396 foldMismatches_sum=0
+# status census over the subset (S2c-i results):
+   2432 ok
+    252 race
+    217 panic
+    162 deadlock
+    135 unsupported
+     54 fatal

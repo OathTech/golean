@@ -1,0 +1,21 @@
+=== aliasNestedMutexCopy (MAIN binary enumerator, sites 32)
+coverage-observations: observations=2 steps=2546 probes=441 sites=147 leaves=148 maxdepth=12 width=4 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]} {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":2}]} 
+
+=== aliasArrayFieldSameElem (MAIN binary enumerator, sites 32)
+coverage-observations: observations=1 steps=305378 probes=74103 sites=24701 leaves=26065 maxdepth=18 width=4 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]} 
+
+=== aliasMutexHandoff (MAIN binary enumerator, sites 32)
+coverage-observations: observations=1 steps=3196 probes=615 sites=205 leaves=206 maxdepth=9 width=4 {"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"} 
+
+=== onceAliasObserve (MAIN binary enumerator, sites 32)
+coverage-observations: observations=2 steps=14247 probes=2445 sites=815 leaves=816 maxdepth=14 width=4 {"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"} {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]} 
+
+=== atomicAliasHandoff (MAIN binary enumerator, sites 32)
+coverage-observations: observations=2 steps=3534 probes=690 sites=230 leaves=231 maxdepth=12 width=4 {"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"} {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":0}]} 
+
+=== rwAliasHandoff (MAIN binary enumerator, sites 32)
+coverage-observations: observations=1 steps=3354 probes=615 sites=205 leaves=206 maxdepth=9 width=4 {"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"} 
+
+=== wgAliasNestedCopyBesideWait (MAIN binary enumerator, sites 32)
+coverage-observations: observations=1 steps=4185 probes=1065 sites=355 leaves=356 maxdepth=12 width=4 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":0}]} 
+

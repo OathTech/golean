@@ -1,0 +1,17 @@
+# litmus batch 3 — same protocol, enumerator at sites 32; then MAIN's enumerator
+=== nestedMutexCopyNoAlias
+  gc:   procs=1:race=5/5 [ 1/rc1 1/rc1 1/rc1 1/rc1 1/rc1 ] procs=8:race=5/5 [ 1/rc1 1/rc1 1/rc1 1/rc1 1/rc1 ]
+  cand(rc=1): {"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"}
+  main(rc=1): {"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"}
+  cand-enum: coverage-observations: observations=1 steps=209 probes=30 sites=10 leaves=11 maxdepth=7 width=4 {"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"} 
+=== nestedWgCopyNoAlias
+  gc:   procs=1:race=0/5 [ 0/rc0 0/rc0 0/rc0 0/rc0 0/rc0 ] procs=8:race=0/5 [ 0/rc0 0/rc0 0/rc0 0/rc0 0/rc0 ]
+  cand(rc=0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":0}]}
+  main(rc=0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":0}]}
+  cand-enum: coverage-observations: observations=2 steps=2286 probes=579 sites=193 leaves=194 maxdepth=12 width=4 {"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"} {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":0}]} 
+=== nestedMutexCopyNoAlias (MAIN binary enumerator, sites 32)
+coverage-observations: observations=1 steps=209 probes=30 sites=10 leaves=11 maxdepth=7 width=4 {"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"} 
+
+=== nestedWgCopyNoAlias (MAIN binary enumerator, sites 32)
+coverage-observations: observations=2 steps=2286 probes=579 sites=193 leaves=194 maxdepth=12 width=4 {"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"} {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":0}]} 
+

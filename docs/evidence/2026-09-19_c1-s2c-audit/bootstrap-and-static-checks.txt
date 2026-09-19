@@ -1,0 +1,30 @@
+# bootstrap + static checks at candidate tip 2ce323ff (audit worktree review/c1-memory-module-s2c-0918)
+== setup-deps 2026-09-19T01:27:29Z
+setup-deps EXIT=0
+== cp .lake 2026-09-19T01:27:31Z
+cp EXIT=0
+== warm build 2026-09-19T01:27:31Z
+warm EXIT=0
+== main binary copy
+42b7bf1ab5f2b17ea0421110d247bf66170a7cd6fac24a9ae8c7af3c71b1d22a  .tmp/golean-main
+06e786532b91c05e92581e23461be345a149b5cf44d95acaa382486a7ba3e221  .lake/build/bin/golean
+== done 2026-09-19T01:27:31Z
+
+check-core-audit tail:
+Typed audit: core-audit: 5 compiled controls passed
+core-audit-audit PASS; scratch removed (9932283 owned bytes; dependencies symlinked)
+Core totality audit gate: PASS
+check-mem-callsites tail:
+Memory-module raw call-site inventory: PASS (72 (file, declaration, raw-op) rows, all inventoried with reasons)
+check-bugs tail:
+check-bugs: 'wrong-answer' is the class that ratchets toward 0; 'coverage' retires when the feature lands and 'latitude' only by an envelope.
+check-evidence-size tail:
+evidence-size gate: PASS — 1834 tracked files / 28604696 bytes in 104 evidence dirs; caps file 262144 B, dir 4194304 B, no archives, no source copies; 17 pre-existing offender(s) allowlisted (frozen
+check-agents-alias tail:
+agents-alias: PASS — shape SYMLINK: AGENTS.md -> CLAUDE.md, tracked at mode 120000 (edit CLAUDE.md only; architecture rules: docs/architecture-rules.md)
+
+S2c-i archive build (.tmp/s2c1):
+== start 2026-09-19T01:46:49Z
+build EXIT=0
+7eb5de44bd999a82e51375f416c5724a51a666829883b75a65a700f80497ad80  .lake/build/bin/golean
+== done 2026-09-19T01:48:48Z
