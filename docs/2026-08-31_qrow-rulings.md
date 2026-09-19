@@ -660,3 +660,28 @@ FAIL→PASS then. Implementation lane QUEUED after Stage C of the evaluation-ord
 rule argument; guard + min/max pre-check deleted; no wire/observer change; 1–2 sessions).
 The R7 heading is corrected NOW (records, this train) to the memo's pre-implementation text;
 the adopted text replaces it when the lane lands.
+
+### The C1 completion and Stage C rulings record (2026-09-19)
+
+[USER] Mike, 2026-09-19, verbatim, relayed by the [AGENT] coordinator — cite as
+relayed: «Agree, merge» — answering the coordinator's merge ask of the same day,
+which posed five numbered items.
+
+**What was decided.**
+1. **C1 is COMPLETE modulo its owed list** (S3 audit F6): the eight cost-only `deliverS`
+   saved-store sites and the select interception → C4; the slice-header/backing invariant
+   (`offset + cap ≤ |backing|`, stated at `arrayIndexNatFormed` as a docstring) → a later
+   slice as a `StateWf` conjunct/theorem. The charter §8 letter («`deliverS`'s saved-store
+   arm gone») is unmet and disclosed; the reading is RATIFIED.
+2. The C1 charter's B(c) row is SUPERSEDED by S3's boundary statement (audit F8).
+3. **Stage C, width of the sensitive-operand set** (eval-order v2.1 §5 item 1): ALL mutable
+   reads — staged: the Stage C pilot carries the minimal P(ii) reads its fixtures need, then
+   widens. (The spec leaves the order unspecified; the weakest machine models it.)
+4. **Stage C, read granularity** (N1): SPLIT — base/header and index producers plus ONE
+   checked access (a fused read loses a legal placement; audit R6).
+5. **Stage C, budget exhaustion on a membership row** (N3): REFUSE by name; never silently
+   sequentialise; rows may go red — recorded as such.
+
+C1 S3 (`core/c1-memory-module-s3-0919`) and its audit land at train r43; the Stage C lane
+follows (v2.1 §7 Stage C: one native `unseq` fragment end to end), then Stage D/E, then the
+NaN [a]+[b] lane, then P → C3 → C4 → B6.
