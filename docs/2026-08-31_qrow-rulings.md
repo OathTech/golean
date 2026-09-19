@@ -616,3 +616,25 @@ emission, recommended, or type-tag normalization».
   successor C1 lane (S2c/S3) carries it.
 - **«Go ahead»:** merge of C1 S0–S2b (`core/c1-memory-module-0918`) with its audit
   branch; train r41; the successor lane follows.
+
+### The BUG-111 canonicalization-scope ratification record (2026-09-19)
+
+[USER] Mike, 2026-09-19, verbatim, relayed by the [AGENT] coordinator — cite as
+relayed: «Great, merge it. Then is the next piece on NaN to just do an investigatory
+memo? If so do that» — answering the coordinator's merge ask of the same day, which
+posed for ratification: the BUG-111 fix canonicalizes EVERY emitted location
+(`.data`, `.syncWord`, `.chanObj` keys and the `HbAction` clock-table locations), wider
+than the 2026-09-18 ruling's letter («canonical-path keys» for the `.data` accesses),
+with the audit's evidence that the wider scope is NECESSARY (six alias programs wrong on
+main's binary — three missed races, three to four false races — right on the candidate,
+gc `-race` agreeing; `docs/2026-09-19_c1-s2c-audit.md` F1; pinned by the eight rows of
+the fix round); and two lane calls — the WaitGroup alias row reshaped to a
+RACE-ALL program (no lane pins a some-schedules race honestly) and the nested-mutex
+copy row placed on BUG-080's `Cases:` line (the class it pins).
+
+**What was decided.** RATIFIED by the merge («Great, merge it.»): the wider
+canonicalization scope and both lane calls. C1 S2c + BUG-111 land (train r42).
+The NaN question: the investigatory memo already exists
+(`docs/2026-09-18_nan-latitude-memo.md`, branch `records/nan-envelope-memo-0918`,
+reported 2026-09-18); «If so do that» is read by the coordinator as: land the memo
+(records). The memo's RULING — option [a]+[b] recommended — remains PENDING [USER].
