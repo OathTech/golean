@@ -291,6 +291,7 @@ func main() {
 	println(raceArrayConstIndexSameElem())
 	println(raceArrayConstIndexWholeWrite())
 	println(raceStructTagAliasField())
+	println(raceStructTagAliasArrayField())
 }
 
 // BUG-111 (found by the C1 S0 frame-law spike, 2026-09-18; fix (i) RULED
@@ -323,4 +324,35 @@ func raceStructTagAliasField() int {
 	<-done
 	<-done
 	return a.f
+}
+
+// BUG-111 audit F1 (C1 S2c fix round, 2026-09-19): the alias race on an
+// ARRAY-ELEMENT field — the `.data` key with an `.index` step under a
+// struct-tag-compatible alias. One child writes `s.arr[1]`, the other reads
+// `q.arr[1]` — the same word by ADDRESS, HB-unordered on every schedule;
+// `go run -race` reports it (RACE 5/5 at GOMAXPROCS 1 and 8). Structural
+// keys (`.index (.field s aliasArrA "arr") 1` vs `.index (.field s aliasArrB
+// "arr") 1`) miss it: main's binary at the fix round ACCEPTED the program
+// on every enumerated path (a HOLE); the canonical keys refuse on every
+// path. Born PASS under the fix; pins that `Loc.canon` keeps the `.index`
+// step while erasing the field step's typeId. Main's readout is ordered
+// after both children by the two receives.
+type aliasArrA struct{ arr [2]int }
+type aliasArrB struct{ arr [2]int }
+
+func raceStructTagAliasArrayField() int {
+	var s aliasArrA
+	q := (*aliasArrB)(&s)
+	done := make(chan int, 2)
+	go func() {
+		s.arr[1] = 1
+		done <- 0
+	}()
+	go func() {
+		_ = q.arr[1]
+		done <- 0
+	}()
+	<-done
+	<-done
+	return s.arr[1]
 }

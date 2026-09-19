@@ -48,3 +48,11 @@ array-const-index-whole-write	raceArrayConstIndexWholeWrite	-	race	-	goroutines,
 # sites=16: THREE goroutines (two children + main) — the enumeration reaches
 # depth 9, beyond the lane's default 8 (the `map-range-iter` precedent).
 struct-tag-alias-field	raceStructTagAliasField	-	race	-	goroutines,channels,structs,pointers,conversions,race	racy	-	width=4,sites=16
+# BUG-111 audit F1 (C1 S2c fix round, 2026-09-19): the alias race at an
+# ARRAY-ELEMENT field — the `.data` key with an `.index` step under the
+# struct-tag-compatible alias. gc -race RACE 5/5 at GOMAXPROCS 1 and 8;
+# main's binary at the fix round ACCEPTED it on every enumerated path (a
+# HOLE — the fix's wider scope pinned); the canonical keys refuse on every
+# path. Born PASS under the fix (BUG-111's Cases: line). sites=16: THREE
+# goroutines (the alias row's precedent).
+struct-tag-alias-array-field	raceStructTagAliasArrayField	-	race	-	goroutines,channels,structs,arrays,pointers,conversions,race	racy	-	width=4,sites=16

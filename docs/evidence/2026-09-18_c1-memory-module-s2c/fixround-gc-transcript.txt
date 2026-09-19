@@ -1,0 +1,10 @@
+# gc go run -race x5 at GOMAXPROCS 1 and 8 — go version go1.26.5 linux/amd64 — 2026-09-19T02:50:32Z — GO111MODULE=off GOCACHE=.tmp/fixround/gocache
+atomicStructTagAliasFlagHandoff: procs=1:race=0/5 [ 0/rc0 0/rc0 0/rc0 0/rc0 0/rc0 ] procs=8:race=0/5 [ 0/rc0 0/rc0 0/rc0 0/rc0 0/rc0 ]
+freeSyncStructTagAliasMutexHandoff: procs=1:race=0/5 [ 2/rc0 2/rc0 2/rc0 2/rc0 2/rc0 ] procs=8:race=0/5 [ 2/rc0 2/rc0 2/rc0 2/rc0 2/rc0 ]
+freeSyncStructTagAliasOnceObserve: procs=1:race=0/5 [ 1/rc0 1/rc0 1/rc0 1/rc0 1/rc0 ] procs=8:race=0/5 [ 1/rc0 1/rc0 1/rc0 1/rc0 1/rc0 ]
+freeSyncStructTagAliasRwHandoff: procs=1:race=0/5 [ 2/rc0 2/rc0 2/rc0 2/rc0 2/rc0 ] procs=8:race=0/5 [ 2/rc0 2/rc0 2/rc0 2/rc0 2/rc0 ]
+raceStructTagAliasArrayField: procs=1:race=5/5 [ 1/rc1 1/rc1 1/rc1 1/rc1 1/rc1 ] procs=8:race=5/5 [ 1/rc1 1/rc1 1/rc1 1/rc1 1/rc1 ]
+raceSyncNestedMutexCopy: procs=1:race=5/5 [ 1/rc1 1/rc1 1/rc1 1/rc1 1/rc1 ] procs=8:race=5/5 [ 1/rc1 1/rc1 1/rc1 1/rc1 1/rc1 ]
+raceSyncStructTagAliasNestedMutexCopy: procs=1:race=5/5 [ 1/rc1 1/rc1 1/rc1 1/rc1 1/rc1 ] procs=8:race=5/5 [ 1/rc1 1/rc1 1/rc1 1/rc1 1/rc1 ]
+raceSyncStructTagAliasNestedWgOverwrite: procs=1:race=5/5 [ 0/rc1 0/rc1 0/rc1 0/rc1 0/rc1 ] procs=8:race=5/5 [ 0/rc1 0/rc1 0/rc1 0/rc1 0/rc1 ]
+# end 2026-09-19T02:51:56Z

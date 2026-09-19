@@ -1,5 +1,13 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 3678 (3430 PASS / 248 FAIL)
+# cases: 3686 (3438 PASS / 248 FAIL)
+# re-pinned: 2026-09-19 [AGENT], core/c1-memory-module-s2c-0918, C1 S2c AUDIT FIX ROUND (audit F1/F3, docs/2026-09-19_c1-s2c-audit.md): EIGHT rows
+#   ADDED, no existing row changed — one pin per KEY KIND of BUG-111 fix (i)'s wider-than-the-letter scope (every emitter canonical), each born on
+#   the RIGHT side under the fix binary and gc -race agreeing (5/5 at GOMAXPROCS 1 and 8): race/negative/struct-tag-alias-array-field (.data with an
+#   .index step), race/negative-sync/struct-tag-alias-nested-{mutex-copy,wg-overwrite} (.syncWord at a nested alias path), race/free-sync/
+#   struct-tag-alias-{mutex-handoff (membership {1,2}), rwmutex-handoff, once-observe} and race/atomics-free/struct-tag-alias-flag-handoff (membership
+#   {0,1}) (the HbAction clock-table locations — main's binary FALSE-races them), plus race/negative-sync/nested-mutex-copy (audit F3: BUG-080's
+#   copy-beside-Lock class at a FIELD path, no alias; both binaries refuse). Recorded from a full scripts/capped scripts/ci --diff at the fix-round
+#   commit (docs/2026-09-18_c1-memory-module-s2c-handoff.md, «Audit fix round (2026-09-19)»). 3686 = 3438 PASS / 248 FAIL.
 # re-pinned: 2026-09-18 [AGENT], core/c1-memory-module-s2c-0918, BUG-111 FIXED (fix (i), canonical-path keys at emission — RULED [USER]
 #   2026-09-18 relayed): the DISCLOSED FAIL->PASS flip of race/negative/struct-tag-alias-field (the alias race is now refused on every
 #   enumerated path); the guard race/free/struct-tag-alias-disjoint-fields stays PASS; no other row changed. Recorded from a full
@@ -4176,6 +4184,7 @@ PASS	race/atomics-free/rmw-acquire	membership
 PASS	race/atomics-free/cas-failure-acquires	membership
 PASS	race/atomics-free/sibling-words	confluent
 PASS	race/atomics-free/typed-sibling-field	confluent
+PASS	race/atomics-free/struct-tag-alias-flag-handoff	membership
 PASS	race/atomics-misuse/plain-write-vs-add	racy
 PASS	race/atomics-misuse/plain-read-vs-store	racy
 PASS	race/atomics-misuse/plain-read-vs-failed-cas	racy
@@ -4205,6 +4214,9 @@ PASS	race/free-sync/rw-copy-beside-lock	confluent
 PASS	race/free-sync/trylock-publish	confluent
 PASS	race/free-sync/rw-trylock-publish	confluent
 PASS	race/free-sync/rw-tryrlock-acquire	membership
+PASS	race/free-sync/struct-tag-alias-mutex-handoff	membership
+PASS	race/free-sync/struct-tag-alias-rwmutex-handoff	confluent
+PASS	race/free-sync/struct-tag-alias-once-observe	confluent
 FAIL	race/gomem-only/rw-copy-vs-runlock	lean-observation
 FAIL	race/gomem-only/rw-copy-vs-unlock	lean-observation
 FAIL	race/gomem-only/wg-copy-vs-add-from-0	lean-observation
@@ -4231,6 +4243,7 @@ PASS	race/negative/map-range-iter	racy
 PASS	race/negative/array-const-index-same-elem	racy
 PASS	race/negative/array-const-index-whole-write	racy
 PASS	race/negative/struct-tag-alias-field	racy
+PASS	race/negative/struct-tag-alias-array-field	racy
 PASS	race/negative-sync/one-side	racy
 PASS	race/negative-sync/rlock-serialized	racy
 PASS	race/negative-sync/wg-no-edge	racy
@@ -4240,6 +4253,9 @@ PASS	race/negative-sync/rw-overwrite	racy
 PASS	race/negative-sync/once-copy	racy
 PASS	race/negative-sync/overwrite-vs-trylock	racy
 PASS	race/negative-sync/failed-trylock-no-edge	racy
+PASS	race/negative-sync/struct-tag-alias-nested-mutex-copy	racy
+PASS	race/negative-sync/struct-tag-alias-nested-wg-overwrite	racy
+PASS	race/negative-sync/nested-mutex-copy	racy
 PASS	range/assign-form-interface-target/slice-value	-
 PASS	range/assign-form-interface-target/map-key	-
 PASS	range/assign-form-interface-target/index	-

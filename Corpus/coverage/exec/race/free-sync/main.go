@@ -281,4 +281,103 @@ func main() {
 	freeSyncDisjointPrims()
 	freeSyncRwCopyBesideRLock()
 	freeSyncRwCopyBesideLock()
+	freeSyncStructTagAliasMutexHandoff()
+	freeSyncStructTagAliasRwHandoff()
+	freeSyncStructTagAliasOnceObserve()
+}
+
+// BUG-111 audit F1 (C1 S2c fix round, 2026-09-19) — the FALSE-RACE
+// direction: ONE Mutex, two spellings. The child locks `q.mu`, main locks
+// `s.mu` — the same word through a struct-tag-compatible alias — and both
+// write `s.x` under it. The HB edge (mem#locks: unlock n synchronizes
+// before lock m, n < m) runs through the ONE clock, so the program is
+// race-free (`go run -race` green 5/5 at GOMAXPROCS 1 and 8); a clock table
+// keyed by the STRUCTURAL spelling splits the mutex into two clocks and
+// reports a false race (main's binary at the fix round: RACE-ALL on every
+// enumerated path). Pins the `HbAction` clock-table canonicalization. Which
+// critical section runs first is L1 latitude: members {1, 2}.
+type aliasMuHA struct {
+	mu sync.Mutex
+	x  int
+}
+type aliasMuHB struct {
+	mu sync.Mutex
+	x  int
+}
+
+func freeSyncStructTagAliasMutexHandoff() int {
+	var s aliasMuHA
+	q := (*aliasMuHB)(&s)
+	done := make(chan int, 1)
+	go func() {
+		q.mu.Lock()
+		s.x = 2
+		q.mu.Unlock()
+		done <- 0
+	}()
+	s.mu.Lock()
+	s.x = 1
+	s.mu.Unlock()
+	<-done
+	return s.x
+}
+
+// BUG-111 audit F1 — the RWMutex clock PAIR through two spellings: the
+// writer under `q.mu.Lock`, the reader under `s.mu.RLock`. Race-free (gc
+// green); main's binary reported a false race on every path (the two
+// spellings split the writer/reader clocks). The readout after the join is
+// the child's write: singleton {2}.
+type aliasRwHA struct {
+	mu sync.RWMutex
+	x  int
+}
+type aliasRwHB struct {
+	mu sync.RWMutex
+	x  int
+}
+
+func freeSyncStructTagAliasRwHandoff() int {
+	var s aliasRwHA
+	q := (*aliasRwHB)(&s)
+	done := make(chan int, 1)
+	go func() {
+		q.mu.Lock()
+		s.x = 2
+		q.mu.Unlock()
+		done <- 0
+	}()
+	s.mu.RLock()
+	_ = s.x
+	s.mu.RUnlock()
+	<-done
+	return s.x
+}
+
+// BUG-111 audit F1 — the Once clock through two spellings: `q.o.Do` in the
+// child, `s.o.Do` in main, the observer's read of `s.x` ordered by the
+// completion edge (mem#more: the completion of f() "is synchronized before
+// the return of any call of once.Do(f)"). Race-free (gc green); main's
+// binary reported a false race on some paths (a split Once clock). Singleton
+// {1} — f runs once whichever Do begins it.
+type aliasOnceA struct {
+	o sync.Once
+	x int
+}
+type aliasOnceB struct {
+	o sync.Once
+	x int
+}
+
+func freeSyncStructTagAliasOnceObserve() int {
+	var s aliasOnceA
+	q := (*aliasOnceB)(&s)
+	done := make(chan int, 1)
+	go func() {
+		q.o.Do(func() { s.x = 1 })
+		done <- 0
+	}()
+	s.o.Do(func() { s.x = 1 })
+	_ = s.x
+	<-done
+	return s.x
 }

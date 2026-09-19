@@ -13,3 +13,10 @@ rmw-acquire	rmwAcquire	-	ok	-	sync,atomics,ints,goroutines,closures,race,nondet	
 cas-failure-acquires	casFailureAcquires	-	ok	-	sync,atomics,ints,goroutines,channels,loops,closures,race,nondet	membership	the isolating shape (audit fix H5): the reader spins on CompareAndSwap(&flag,0,0) — success while 0, FAILURE on observing the store — so the loop exit is the failing CAS and its acquire (TSan mo_acquire on failure; mem#atomic: the failed CAS observed the store) is the ONLY edge ordering the plain data read after the plain write; no path refuses; members {5}, the always-spin schedules are nonterm branches (no termination claim)	width=4,sites=200,members=1,nonterm=200,backedge=1
 sibling-words	siblingWords	-	ok	-	sync,atomics,ints,goroutines,waitgroup,closures,race	confluent	the atomic op lands on exactly its cell; a plain read of a sibling variable is a disjoint path	width=4,sites=64
 typed-sibling-field	typedSiblingField	-	ok	-	sync,atomics,ints,goroutines,waitgroup,methods,structs,closures,race	confluent	the typed wrapper's op lands on its `v` word under the field path; the sibling field's plain read is disjoint (locPrefix is per-path)	width=4,sites=64
+# BUG-111 audit F1 (C1 S2c fix round, 2026-09-19): the `sync/atomic` address
+# clock through two struct-tag-compatible spellings of ONE word. gc -race
+# green 5/5 at GOMAXPROCS 1 and 8; main's binary at the fix round REFUSED the
+# observing path (a false race: the atomic clock table keyed by the structural
+# spelling split the address); the canonical `HbAction` location keeps one
+# clock. Born PASS under the fix.
+struct-tag-alias-flag-handoff	atomicStructTagAliasFlagHandoff	-	ok	-	sync,atomics,ints,goroutines,channels,structs,pointers,conversions,race,nondet	membership	BUG-111 F1: StoreInt32(&s.flag) / LoadInt32(&q.flag) name ONE address — on the observing path the plain read of s.x is HB-after the plain write through the address clock (mem#atomic), on the other path no data read happens; members {0, 1}; a split clock (structural keys) refused the observing path on main's binary; no path refuses	width=4,sites=32,members=2

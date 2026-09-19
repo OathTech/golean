@@ -569,7 +569,26 @@ than as speculative cases.)
 
 ## 8. Counts and the closing arithmetic
 
-All numbers at the current tracked baseline (3676 cases, 3428 PASS /
+All numbers at the current tracked baseline (3686 cases, 3438 PASS /
+248 FAIL; [AGENT] worker, lane `core/c1-memory-module-s2c-0918` at the C1 S2c audit fix
+round, 2026-09-19; `scripts/capped scripts/ci --diff` at the fix-round commit, gate line in
+`docs/2026-09-18_c1-memory-module-s2c-handoff.md` «Audit fix round (2026-09-19)»;
+re-derived from the baseline's data rows by the header's `awk`). The delta over the
+2026-09-15 tally below is the lane's TEN rows, every one born and PASS: the two BUG-111
+rows (`race/negative/struct-tag-alias-field` — born FAIL at the lane's rows commit and
+flipped PASS by the ruled fix, the disclosed `Cases:` flip — and its guard
+`race/free/struct-tag-alias-disjoint-fields`) and the audit fix round's eight scope pins
+(`race/negative/struct-tag-alias-array-field`, `race/negative-sync/struct-tag-alias-nested-
+{mutex-copy,wg-overwrite}`, `race/negative-sync/nested-mutex-copy`, `race/free-sync/struct-tag-
+alias-{mutex-handoff,rwmutex-handoff,once-observe}`, `race/atomics-free/struct-tag-alias-flag-
+handoff`; BUG-111's and BUG-080's Cases: lines). 0 new reds, no PASS→non-PASS, no other
+result/stage movement, so the frontier arithmetic (… = 248) below is unchanged and every red
+stays on a named row. The reconciler's C4 finding from the lane's rows commit onward (§8 at
+3676 vs the tracked 3678) is closed by this paragraph — the lane had refreshed the baseline
+without §8 (the audit's F2). The 2026-09-15 paragraph is kept as written, its opening words
+demoted so the reconciler reads one current tally:
+
+Previous tally, then current (3676 cases, 3428 PASS /
 248 FAIL; [AGENT] coordinator, merge train r33, 2026-09-15, main `d0e234bd`; `scripts/ci --slow`
 `RESULT: PASS`, `baseline diff FULL (3676/3676, no regression)`, tail tracked at
 `docs/evidence/2026-09-11_review-boundary/r33-ci-slow.tail.txt`). The delta over the

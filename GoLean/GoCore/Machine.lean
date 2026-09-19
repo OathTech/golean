@@ -2271,11 +2271,18 @@ closed/nil panics fire before it) — checked under the closer's pre-release clo
 so it PRECEDES the `.closeOp` action in the label. -/
 def chanCloseWrite (loc : Loc) : AccessTrace := [.access .write (.chanObj loc.canon)]
 
-/-- `selectgo` pass 1 (select.go; BUG-046): one channel-object READ per polled
-SEND clause in clause order — receive clauses are acquire-only, nil channels are
-not in `pollorder`. Emitted at the select's apply position on every path from it
-(the cell path `applySelectCore`, the arrival pairing and the arrival commit —
-`arrivalPoll`, Multi.lean), never at a WAKE (the sudog was dequeued by the partner;
+/-- `selectgo` pass 1 (select.go; BUG-046): one channel-object READ per EVERY send
+clause — the UNION over gc's random `pollorder` (select.go:270–299: pass 1 walks
+`pollorder` and leaves at the first ready case, so gc's `racereadpc(c.raceaddr())`
+fires only for the send cases reached up to and including the chosen one; which
+those are is the shuffle's, and any pollorder is gc's, so the weakest-machine
+reading records them all — fail-closed, refusals ⊇ gc's per schedule; the C1 S2c
+audit's F7, `docs/2026-09-19_c1-s2c-audit.md`, litmus `selectPollVsClose`: gc
+2–3/5 by pollorder luck, the machine on every path; latitude inventory C10) —
+receive clauses are acquire-only, nil channels are not in `pollorder`. Emitted at
+the select's apply position on every path from it (the cell path
+`applySelectCore`, the arrival pairing and the arrival commit — `arrivalPoll`,
+Multi.lean), never at a WAKE (the sudog was dequeued by the partner;
 `resumeThread` re-polls nothing). Recording in clause order is
 detection-equivalent (same pre-op clock; same-goroutine re-records upsert). -/
 def selectPoll : List EvClause → AccessTrace
@@ -2541,6 +2548,18 @@ def syncEntryKinds (op : SyncOp) (pre : SyncPrim) (delta : Int) (acquired : Bool
   -- Once: a Do observing completion is the atomic load of `o.done`;
   -- every other Do is `doSlow`'s `o.m.Lock()` CAS; completion is the
   -- `o.done.Store(true)` (its Unlock's Add is the tail).
+  -- RECORDED, NOT FIXED (the C1 S2c audit's F5, 2026-09-19 — pre-existing,
+  -- main's fold had the same order): this row's read is recorded at the
+  -- PRE-acquire clock — `applySyncOpCore` emits it before the
+  -- `.hb (.syncAcquire …)` — where gc's `o.done.Load()` is a `sync/atomic`
+  -- load whose TSan hook acquires FIRST and records second (the machine's
+  -- own `atomicEvents .load` has that order). The difference is visible
+  -- only against a plain OVERWRITE of the Once cell, a program racy in
+  -- some schedule for gc as well (no program-level wrong verdict; per
+  -- schedule the machine refuses where gc's acquire-first read would be
+  -- ordered — fail-closed). A reorder is a semantic change and needs its
+  -- own row; the label-shape fact in `Tests/GoCoreEval.lean` pins the
+  -- order as it stands. Record: BUG-111's entry, `docs/BUGS.md`.
   | .onceBegin _, .once true true => [.access .atomicRead (at_ .done)]
   | .onceBegin _, _ => [.access .atomicWrite (at_ .m)]
   | .onceComplete, _ => [.access .atomicWrite (at_ .done)]

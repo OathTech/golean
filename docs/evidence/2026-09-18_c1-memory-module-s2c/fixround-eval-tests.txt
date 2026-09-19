@@ -1,0 +1,62 @@
+# gocore-eval-tests at the fix-round tree (2ce323ff + the fix round's edits), sequential warm build — 2026-09-19T03:17:49Z
+== warm build 4 start 2026-09-19T03:14:27Z tree=2ce323ff+dirty
+lake build gocore-eval-tests EXIT=0 2026-09-19T03:16:54Z
+lake exe gocore-eval-tests EXIT=0 ok=267 FAIL=0 2026-09-19T03:16:55Z
+# the 56 label-shape facts (C1 S2c audit F4):
+ok: LABEL chan send commit: [read chanObj, slotOp send]
+ok: LABEL chan send park (full): [read chanObj]
+ok: LABEL chan send on closed (panicking): [read chanObj]
+ok: LABEL chan recv buffered: [slotOp recv]
+ok: LABEL chan recv closed-empty: [closeAcquire]
+ok: LABEL chan recv park (empty, open): []
+ok: LABEL close: [write chanObj, closeOp]
+ok: LABEL commitClause send: [slotOp send]
+ok: LABEL commitClause recv buffered: [slotOp recv]
+ok: LABEL commitClause recv closed: [closeAcquire]
+ok: LABEL select one-ready commit: poll THEN commit — [read chanObj, slotOp send]
+ok: LABEL select park: the poll only — [read chanObj], blockedSelect
+ok: LABEL select wake: the commit's action only, no re-poll — [slotOp send]
+ok: LABEL Mutex Lock acquire: [atomicWrite state, acquire]
+ok: LABEL Mutex Lock park: [atomicWrite state]
+ok: LABEL Mutex Unlock: [release, atomicWrite state] — the state Add AFTER the release
+ok: LABEL RWMutex RLock: [read w, atomicRead readerCount, acquire]
+ok: LABEL RWMutex RUnlock: [read w, atomicWrite readerCount, release toB]
+ok: LABEL RWMutex Lock: [read w, atomicRead readerCount, acquire BOTH]
+ok: LABEL RWMutex Unlock: [read w, atomicWrite readerCount, release]
+ok: LABEL RWMutex TryRLock acquire: [read w, atomicRead readerCount, acquire]
+ok: LABEL RWMutex TryRLock spurious: [read w] — no go_mem kind, no acquire
+ok: LABEL RWMutex TryLock acquire: [read w, atomicRead readerCount, acquire BOTH]
+ok: LABEL RWMutex TryLock held: [read w]
+ok: LABEL WaitGroup Add(+1 from 0): [read sema, atomicWrite state]
+ok: LABEL WaitGroup Done: [atomicWrite state, release]
+ok: LABEL WaitGroup Wait fast: [atomicRead state, acquire]
+ok: LABEL WaitGroup Wait park (first waiter): [write sema, atomicRead state]
+ok: LABEL Once fresh Do: [atomicWrite m]
+ok: LABEL Once observe: [atomicRead done, acquire] (F5: recorded before the acquire — pre-existing, recorded)
+ok: LABEL Once park: [atomicWrite m]
+ok: LABEL Once complete: [atomicWrite done, release, atomicWrite m]
+ok: LABEL Mutex TryLock acquire: [atomicWrite state, acquire]
+ok: LABEL Mutex TryLock spurious: [atomicWrite state] — gc's lost CAS, no acquire
+ok: LABEL Mutex TryLock held: [] — the plain early return
+ok: LABEL atomic Load: [acquire, atomicRead] — acquire FIRST
+ok: LABEL atomic Store: [atomicWrite, releaseStore]
+ok: LABEL atomic Add: [atomicWrite, releaseAcquire]
+ok: LABEL atomic Swap: [atomicWrite, releaseAcquire]
+ok: LABEL atomic CAS success: [atomicWrite, releaseAcquire]
+ok: LABEL atomic CAS failure: [atomicWrite, acquire]
+ok: LABEL wake blocked send: [slotOp send]
+ok: LABEL wake blocked recv (buffered): [slotOp recv]
+ok: LABEL wake blocked recv (closed): [closeAcquire]
+ok: LABEL wake blocked Lock: [acquire]
+ok: LABEL wake blocked RLock: [acquire]
+ok: LABEL wake blocked write-Lock: [acquire BOTH]
+ok: LABEL wake blocked Wait: [acquire]
+ok: LABEL wake blocked Once.Do: [acquire]
+ok: LABEL pairing arriving send, cap 0: [rendezvous j]
+ok: LABEL pairing arriving send, cap 1: [slotOp send, attributed j (slotOp recv)]
+ok: LABEL pairing arriving recv at an empty buffer: [rendezvous j]
+ok: LABEL pairing arriving recv at a full buffer: [slotOp recv, attributed j (slotOp send)] — head THEN refill
+ok: LABEL spawn of a plain function: [spawn 1] (threads.size = 1), action .spawned 1
+ok: LABEL spawn with a pointer-box value-receiver dispatch: [spawn 1, attributed 1 (read receiver)]
+ok: LABEL spawn from thread 1 of 2: the child is threads.size = 2 in the edge AND the attribution
+# total: ok=267 FAIL=0

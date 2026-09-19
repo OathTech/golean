@@ -38,9 +38,12 @@ Design (mirroring the sequential checker's discipline,
   the stream returned untouched — `stepFn_oblivious` lifted through
   the pool dispatch (wake / marker strip / spawn / singleton pairing
   are stream-free by construction).
-* `raceUpdate_oblivious`: the detector's dispatcher replicates stream
-  consumption only at select applies (slice 4), so under the same
-  fail-closed flag its verdict is stream-independent.
+* (`raceUpdate_oblivious` — DELETED at stage B, audit Q2; the tombstone
+  below the checker's stepping core says why: since C1 S2c the detector
+  folds the step's EVENT and takes no stream, so its verdict is
+  stream-independent by SIGNATURE — the lemma's content moved into the
+  types. This header listed it as live until the C1 S2c audit's F10,
+  2026-09-19.)
 
 `execProgLoop_ok_of_allStreamsOkPool` is the soundness theorem: checker
 true at fuel `N` ⇒ every stream's pool run completes `.ok σf`

@@ -1,0 +1,22 @@
+# machine side — candidate 06e786532b91c05e… vs main's certified binary 42b7bf1ab5f2b17e… (.tmp/golean-main, read-only copy) — 2026-09-19T02:52:46Z
+=== negative / raceStructTagAliasArrayField (sites=16)
+  cand(rc=1): {"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"}
+  main(rc=0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}
+  cand-enum: coverage-observations: observations=1 steps=6242 probes=777 sites=259 leaves=334 maxdepth=9 width=4 {"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"} 
+  main-enum: coverage-observations: run consumes more than --max-sites 16 choice site(s) — raise the case's sites bound (never truncated silently) 
+=== negative-sync / raceSyncStructTagAliasNestedMutexCopy (sites=32)
+  cand(rc=1): {"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"}
+  main(rc=0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}
+  cand-enum: coverage-observations: observations=1 steps=234 probes=30 sites=10 leaves=11 maxdepth=7 width=4 {"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"} 
+  main-enum: coverage-observations: observations=2 steps=2546 probes=441 sites=147 leaves=148 maxdepth=12 width=4 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]} {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":2}]} 
+=== negative-sync / raceSyncStructTagAliasNestedWgOverwrite (sites=32)
+  cand(rc=1): {"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"}
+  main(rc=0): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":0}]}
+  cand-enum: coverage-observations: observations=1 steps=247 probes=30 sites=10 leaves=11 maxdepth=7 width=4 {"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"} 
+  main-enum: coverage-observations: observations=2 steps=1554 probes=315 sites=105 leaves=106 maxdepth=12 width=4 {"message":"sync: negative WaitGroup counter","output":"","schema":"golean-observation-v1","status":"panic"} {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":0}]} 
+=== negative-sync / raceSyncNestedMutexCopy (sites=32)
+  cand(rc=1): {"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"}
+  main(rc=1): {"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"}
+  cand-enum: coverage-observations: observations=1 steps=209 probes=30 sites=10 leaves=11 maxdepth=7 width=4 {"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"} 
+  main-enum: coverage-observations: observations=1 steps=209 probes=30 sites=10 leaves=11 maxdepth=7 width=4 {"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"} 
+# end 2026-09-19T02:52:46Z

@@ -144,4 +144,42 @@ func main() {
 	casFailureAcquires()
 	siblingWords()
 	typedSiblingField()
+	atomicStructTagAliasFlagHandoff()
+}
+
+// BUG-111 audit F1 (C1 S2c fix round, 2026-09-19) — the `sync/atomic`
+// per-address clock through two spellings of ONE word: the child publishes
+// `s.x` with `StoreInt32(&s.flag, 1)`, main polls `LoadInt32(&q.flag)`
+// through a struct-tag-compatible alias and reads `s.x` only on the
+// observing path. mem#atomic: the store is synchronized before the load
+// that observes it — through ONE address clock. Race-free (`go run -race`
+// green 5/5 at GOMAXPROCS 1 and 8); a clock table keyed by the STRUCTURAL
+// spelling splits the address and reports a false race on the observing
+// path (main's binary at the fix round: RACE-SOME). Pins the atomic
+// clock-table canonicalization. Members {0, 1}: the load may run before or
+// after the store (L1 latitude); the SC-excluded stale read is absent.
+type aliasAtA struct {
+	flag int32
+	x    int
+}
+type aliasAtB struct {
+	flag int32
+	x    int
+}
+
+func atomicStructTagAliasFlagHandoff() int {
+	var s aliasAtA
+	q := (*aliasAtB)(&s)
+	done := make(chan int, 1)
+	go func() {
+		s.x = 1
+		atomic.StoreInt32(&s.flag, 1)
+		done <- 0
+	}()
+	r := 0
+	if atomic.LoadInt32(&q.flag) == 1 {
+		r = s.x
+	}
+	<-done
+	return r
 }

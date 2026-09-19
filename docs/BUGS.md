@@ -4470,7 +4470,15 @@ kill, never a wrong answer, lifted by (1).
   trust-surface). Evidence: `docs/evidence/2026-09-02_detector-soundness/
   probes-u4kind-{pre,post}.*`, `corpus-bug080.*`.)
 - Pinned-by: differential
-- Cases: race/negative-sync/wg-overwrite, race/negative-sync/mutex-copy, race/negative-sync/rw-overwrite, race/negative-sync/once-copy
+- Cases: race/negative-sync/wg-overwrite, race/negative-sync/mutex-copy, race/negative-sync/rw-overwrite, race/negative-sync/once-copy, race/negative-sync/nested-mutex-copy
+- Field-path pin (2026-09-19, the C1 S2c audit fix round, audit F3 — `docs/2026-09-19_c1-s2c-
+  audit.md`; [AGENT]): the four pins above copy or overwrite ROOT variables, whose `.base` key is
+  a prefix of every path under it whatever the typeIds. `race/negative-sync/nested-mutex-copy`
+  (`raceSyncNestedMutexCopy`: `t := o.in` beside another goroutine's `o.in.mu.Lock()`, no alias;
+  gc `-race` RACE 5/5 at GOMAXPROCS 1 and 8; both main's and the fix binary refuse) pins the
+  class at a FIELD path, where the copy's key and the primitive's word key overlap only if BOTH
+  are keyed the same way — the must-stay-red guard of BUG-111 fix (i)'s sync-word
+  canonicalization (a `.data`-only canonicalization would MISS it).
 - Discovered: 2026-09-02 (the Tier-4 detector-soundness differential,
   `scripts/detector-soundness`, probe family U4 —
   `docs/evidence/2026-09-02_detector-soundness/probes/u4/`; report
@@ -6982,7 +6990,48 @@ malformed surrogates) driven through the CLI, not through an already-parsed
   guard stays PASS; no other row changed (handoff
   `docs/2026-09-18_c1-memory-module-s2c-handoff.md` §2/§3).
 - Pinned-by: differential
-- Cases: race/negative/struct-tag-alias-field, race/free/struct-tag-alias-disjoint-fields
+- Cases: race/negative/struct-tag-alias-field, race/free/struct-tag-alias-disjoint-fields, race/negative/struct-tag-alias-array-field, race/negative-sync/struct-tag-alias-nested-mutex-copy, race/negative-sync/struct-tag-alias-nested-wg-overwrite, race/free-sync/struct-tag-alias-mutex-handoff, race/free-sync/struct-tag-alias-rwmutex-handoff, race/free-sync/struct-tag-alias-once-observe, race/atomics-free/struct-tag-alias-flag-handoff
+- Scope pins (2026-09-19, the C1 S2c audit fix round — `docs/2026-09-19_c1-s2c-audit.md` F1, F3;
+  [AGENT] worker, lane `core/c1-memory-module-s2c-0918`): the fix canonicalizes EVERY emitted
+  location, not only the `.data` keys the ruling's letter names — the audit's litmus set showed
+  the wider scope is NECESSARY (six wrong verdicts on main's certified binary `42b7bf1a…`, all
+  right on the fix binary, gc agreeing) and that nothing pinned it. One row per key kind, each
+  born PASS under the fix with gc `-race` 5/5 at GOMAXPROCS 1 and 8 agreeing (transcripts:
+  `docs/evidence/2026-09-18_c1-memory-module-s2c/fixround-gc-transcript.txt`,
+  `fixround-machine-{racy,free}.txt`): `race/negative/struct-tag-alias-array-field` — the `.data`
+  key with an `.index` step under the alias (gc RACE; main `ok`, DRF on every enumerated path: a
+  HOLE); `race/negative-sync/struct-tag-alias-nested-mutex-copy` — the `.syncWord` key (Lock's
+  state CAS) at a NESTED alias path vs the copy of the nested struct (gc RACE; main `ok` on 148
+  leaves: a HOLE — the structural word path is not prefixed by the copy's path); `race/negative-
+  sync/struct-tag-alias-nested-wg-overwrite` — the WaitGroup `sema` word at a nested alias path
+  (Add-from-0's realized plain read vs main's overwrite of the nested struct; RESHAPED from the
+  audit's copy-beside-Wait litmus, which is RACE-SOME — racy only where the waiter parks first, gc
+  0/5 — to a shape racy on EVERY path, so the racy lane can pin it; gc RACE 5/5; main `ok`/`panic`
+  members, no refusal: a HOLE); `race/free-sync/struct-tag-alias-mutex-handoff` (membership {1, 2}),
+  `race/free-sync/struct-tag-alias-rwmutex-handoff` (2), `race/free-sync/struct-tag-alias-once-
+  observe` (1) and `race/atomics-free/struct-tag-alias-flag-handoff` (membership {0, 1}) — the
+  `HbAction` clock-table locations of Mutex, RWMutex, Once and `sync/atomic`: ONE primitive under
+  two spellings, race-free (gc clean 5/5), which main's binary FALSE-races (RACE-ALL on the mutex
+  and RWMutex handoffs, RACE-SOME on the Once and atomic ones — a split clock). A future narrowing
+  to the `.data` letter flips these eight rows visibly. The wider scope's [USER] ratification is
+  PENDING (handoff §6 — evidence-backed by this table; the [USER] may still narrow it knowing
+  which verdicts reopen). The BUG-080 argument for the sync words (handoff §4/§6) holds for the
+  FIELD-PATH class — pinned by `race/negative-sync/nested-mutex-copy` (audit F3, on BUG-080's
+  Cases: line: a copy of a NESTED struct holding a Mutex beside another goroutine's Lock, no
+  alias; gc RACE 5/5; both binaries refuse; a `.data`-only canonicalization would have keyed the
+  copy `.field o $canon "in"` against a structural word `.field (.field o outN "in") inN "mu"` — no
+  prefix, MISSED) — and NOT for the tracked BUG-080 pins, which copy ROOT variables (`c := b`):
+  their `.base` key prefixes every path whatever the typeIds, so they would not have opened.
+- Recorded, not fixed (audit F5; pre-existing, not S2c): a `Once.Do` that observes completion
+  emits its `o.done` atomic read (`syncEntryKinds`, the `.onceBegin _, .once true true` row) BEFORE
+  its acquire (`.hb (.syncAcquire …)`), where gc's `o.done.Load()` is a `sync/atomic` load whose
+  TSan hook acquires FIRST and then records (`tsan_interface_atomic.cpp` `AtomicLoad`; the machine's
+  own `atomicEvents .load` has that order). Verdict impact: the read's only conflicting partner is
+  a plain WRITE of the Once cell (an overwrite), and any program with such a write is racy in some
+  schedule for gc too (the audit's `onceFastPathOverwrite`: gc 1/5, both binaries `race`) — no
+  program-level wrong verdict; per schedule the machine refuses where gc's acquire-first read would
+  be ordered (fail-closed). Main's fold recorded the same order. A reorder is a semantic change and
+  would need its own row (annotated at the row in `Machine.lean`).
 - Rows (2026-09-18, lane `core/c1-memory-module-s2c-0918`): `race/negative/struct-tag-alias-field`
   (`raceStructTagAliasField`, lane `racy`, expected_status `race`): `type aliasA struct{ f int };
   type aliasB struct{ f int }`; `var a aliasA; q := (*aliasB)(&a)`; goroutine 1 `a.f = 1`, goroutine 2

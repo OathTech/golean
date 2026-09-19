@@ -2162,6 +2162,290 @@ private def coreFloatNaNMapFunction : GoCore.Func := {
     ]
 }
 
+
+/-! ## C1 S2c audit F4 — the LABEL-SHAPE assertions (the mechanical guard on emission ORDER)
+
+The adversarial audit of C1 S2c (`docs/2026-09-19_c1-s2c-audit.md`, F4 / question (c)) found
+that after S2c-ii nothing mechanical guards the ORDER of events inside a step's label: the
+S2c-i instrument and its positive control are deleted, `scripts/check-mem-callsites` guards
+emit/peek SITES, `RaceState.hbAction`'s enumerated match catches a new constructor but not a
+permutation. The facts below pin, per emitting arm, the EXACT `AccessTrace` the arm emits on a
+fixture store — the audit's table (a) is the expected shape (gc's instrumentation order: an
+Unlock's state Add AFTER its release, an atomic Load's read AFTER its acquire, a close's
+channel-object write BEFORE its release, …). Each was `#eval`ed first (the standing rule) and
+is asserted with `==` on the derived `DecidableEq`; a future permutation or omission fails the
+eval step BY NAME. Cells of `labelCells` (dense heap, `Store.allocCell`): 0 chan cap 1 empty ·
+1 chan cap 0 · 2 chan cap 1 full (`[7]`) · 3 chan cap 1 closed empty · 4 Mutex unlocked ·
+5 Mutex locked · 6 RWMutex free · 7 WaitGroup 0/0 · 8 WaitGroup counter 1, no waiter · 9 Once
+fresh · 10 Once done · 11 int32 cell 0 · 12 Once started-not-done · 13 bool `b` (the
+`onceBegin` target) · 14 RWMutex one reader · 15 RWMutex writer held.
+
+| arm | expected label |
+|---|---|
+| chan send commit (cap 1) | `[read chanObj, slotOp send]` |
+| chan send park (full) / send on closed (panicking config) | `[read chanObj]` |
+| chan recv buffered | `[slotOp recv]` |
+| chan recv closed-empty | `[closeAcquire]` |
+| chan recv park (empty, open) | `[]` |
+| close | `[write chanObj, closeOp]` |
+| `commitClause` send / recv buffered / recv closed | `[slotOp send]` / `[slotOp recv]` / `[closeAcquire]` |
+| select one-ready commit / park / wake | `poll ++ commit` / `poll` only (blockedSelect) / commit only |
+| Mutex Lock acquire / park / Unlock | `[atomicWrite state, acquire]` / `[atomicWrite state]` / `[release, atomicWrite state]` |
+| RWMutex RLock / RUnlock / Lock / Unlock | `[read w, atomicRead rc, acquire]` / `[read w, atomicWrite rc, release toB]` / `[read w, atomicRead rc, acquire both]` / `[read w, atomicWrite rc, release]` |
+| RWMutex TryRLock acquire / spurious; TryLock acquire / held | `[read w, atomicRead rc, acquire]` / `[read w]`; `[read w, atomicRead rc, acquire both]` / `[read w]` |
+| WaitGroup Add(+1 from 0) / Done / Wait fast / Wait park (first waiter) | `[read sema, atomicWrite state]` / `[atomicWrite state, release]` / `[atomicRead state, acquire]` / `[write sema, atomicRead state]` |
+| Once fresh / observe / park / complete | `[atomicWrite m]` / `[atomicRead done, acquire]` (F5: recorded BEFORE the acquire — pre-existing, recorded at BUG-111) / `[atomicWrite m]` / `[atomicWrite done, release, atomicWrite m]` |
+| Mutex TryLock acquire / spurious / held | `[atomicWrite state, acquire]` / `[atomicWrite state]` / `[]` |
+| atomics Load / Store / Add / Swap / CAS ok / CAS fail | `[acquire, atomicRead]` / `[atomicWrite, releaseStore]` / `[atomicWrite, releaseAcquire]` ×2 / `[atomicWrite, releaseAcquire]` / `[atomicWrite, acquire]` |
+| wakes (`resumeThread`): send / recv buffered / recv closed / Lock / RLock / write-Lock / Wait / Once / select | the op's ACTION only, no access |
+| pairing tables: arriving send cap 0 / cap 1; arriving recv at empty / full | `[rendezvous j]` / `[slotOp send, attributed j (slotOp recv)]`; `[rendezvous j]` / `[slotOp recv, attributed j (slotOp send)]` |
+| spawn (pool step): plain function / pointer-box value-receiver dispatch, from thread 0 and from thread 1 | `[spawn threads.size]` / `[spawn n, attributed n (read data receiver)]` with `n = threads.size` |
+-/
+
+private def labelLoc (n : Nat) : Loc := .base ⟨n⟩
+private def labelChan (n : Nat) : GoValue := .chan ⟨some (labelLoc n)⟩
+private def labelCells : GoCore.Store :=
+  let cellsOf : List GoCore.HeapCell := [
+    .chanPayload #[] 1 false, .chanPayload #[] 0 false, .chanPayload #[.int 7] 1 false,
+    .chanPayload #[] 1 true,
+    .value (.sync .mutex) (.syncData (.mutex false)), .value (.sync .mutex) (.syncData (.mutex true)),
+    .value (.sync .rwmutex) (.syncData (.rwmutex false 0 0)),
+    .value (.sync .waitGroup) (.syncData (.waitGroup 0 0)), .value (.sync .waitGroup) (.syncData (.waitGroup 1 0)),
+    .value (.sync .once) (.syncData (.once false false)), .value (.sync .once) (.syncData (.once true true)),
+    .value (.int .int32) (.int 0 .int32), .value (.sync .once) (.syncData (.once true false)),
+    .value .bool (.bool false),
+    .value (.sync .rwmutex) (.syncData (.rwmutex false 1 0)), .value (.sync .rwmutex) (.syncData (.rwmutex true 0 0))]
+  cellsOf.foldl (fun s c => (s.allocCell c).2) ({} : GoCore.Store)
+private def labelEnvB : GoCore.LocalEnv := GoCore.LocalEnv.declare [] "b" (labelLoc 13)
+/-- The label of an apply / wake result (`none` on a refusal, so a refusing arm fails the fact). -/
+private def labelOf (r : Except Stop (GoCore.Machine.Config × GoCore.Store × GoCore.AccessTrace)) :
+    Option GoCore.AccessTrace :=
+  match r with | .ok (_, _, tr) => some tr | .error _ => none
+private def expectLabel (name : String)
+    (r : Except Stop (GoCore.Machine.Config × GoCore.Store × GoCore.AccessTrace))
+    (expected : GoCore.AccessTrace) : IO Bool :=
+  expectTrue s!"LABEL {name}" (labelOf r == some expected)
+-- Shorthands for the expected events.
+private def evAcc (k : GoCore.AccessKind) (key : GoCore.ShadowKey) : GoCore.MemEvent := .access k key
+private def evHb (a : GoCore.HbAction) : GoCore.MemEvent := .hb a
+private def wd (n : Nat) (k : GoCore.SyncKind) (word : GoCore.SyncWordName) : GoCore.ShadowKey :=
+  .syncWord (labelLoc n) k word
+-- The spawn fixture: `main.Q` (table index 2 after the reserved prefix) with a VALUE-receiver
+-- method `M` reached through the interface method `main.I.M` on a POINTER box — the one
+-- entry-time read a spawn can carry (`dynamicDispatch?`'s receiver copy, attributed to the child).
+private def spawnTypes : GoCore.TypeEnv :=
+  GoCore.TypeEnv.reserved ++ #[(⟨"main.Q"⟩, .struct #[{ name := "v", typ := .int }])]
+private def spawnCtx : GoCore.ProgramCtx := GoCore.ProgramCtx.ofTables (types := spawnTypes)
+  (functions := #[{ id := ⟨"main.f"⟩, args := #[], results := #[], body := .seqn #[] },
+                  { id := ⟨"main.I.M"⟩, args := #[{ id := "recv", typ := .interface ⟨"main.I"⟩ }],
+                    results := #[], body := .seqn #[] },
+                  { id := ⟨"main.Q.M"⟩, args := #[{ id := "q", typ := .defined 2 }], results := #[],
+                    body := .seqn #[] }])
+  (methods := #[{ id := ⟨"M", ""⟩, funcId := ⟨"main.I.M"⟩, recv := .interface ⟨"main.I"⟩ },
+                { id := ⟨"M", ""⟩, funcId := ⟨"main.Q.M"⟩, recv := .defined 2 }])
+  (methodSets := #[{ key := "main.Q", coverage := .full }])
+private def spawnStore : GoCore.Store :=
+  (({} : GoCore.Store).allocCell (.value (.defined 2) (.struct ⟨"main.Q"⟩ #[("v", .int 0)]))).2
+private def spawnPlainCfg : GoCore.Machine.Config :=
+  .retV (.funcVal ⟨"main.f"⟩ []) (.goCalleeK [] [] .stop)
+private def spawnDispatchCfg : GoCore.Machine.Config :=
+  .retV (.funcVal ⟨"main.I.M"⟩ [.interface (.pointer (.defined 2)) (.addr (labelLoc 0))])
+    (.goCalleeK [] [] .stop)
+/-- The pool event's label and spawned index of one `stepMulti` step (`none` on a refusal). -/
+private def spawnLabelOf (r : Except Stop (GoCore.Machine.MultiConfig × GoCore.Choices × GoCore.Machine.StepEvent)) :
+    Option (Option Nat × GoCore.AccessTrace) :=
+  match r with
+  | .ok (_, _, ev) => some ((match ev.action with | .spawned n => some n | _ => none), ev.trace)
+  | .error _ => none
+
+set_option maxRecDepth 4096 in
+/-- The C1 S2c audit F4 label-shape facts (docstring table above `labelCells`), one
+`expectLabel`/`expectTrue` per emitting arm; `false` iff any fact fails (each failure
+is printed BY NAME by `expectTrue`). -/
+private def labelShapeFacts : IO Bool := do
+  let mut passed := true
+  -- C1 S2c audit F4: the label-shape assertions (docstring table above `labelCells`).
+  -- Channel statement applies.
+  passed := passed && (← expectLabel "chan send commit: [read chanObj, slotOp send]"
+    (GoCore.Machine.applyChanOp emptyCtx labelCells (.send .int) [labelChan 0, .int 1] [] .stop)
+    [evAcc .read (.chanObj (labelLoc 0)), evHb (.slotOp (labelLoc 0) 1 true)])
+  passed := passed && (← expectLabel "chan send park (full): [read chanObj]"
+    (GoCore.Machine.applyChanOp emptyCtx labelCells (.send .int) [labelChan 2, .int 1] [] .stop)
+    [evAcc .read (.chanObj (labelLoc 2))])
+  passed := passed && (← expectLabel "chan send on closed (panicking): [read chanObj]"
+    (GoCore.Machine.applyChanOp emptyCtx labelCells (.send .int) [labelChan 3, .int 1] [] .stop)
+    [evAcc .read (.chanObj (labelLoc 3))])
+  passed := passed && (← expectLabel "chan recv buffered: [slotOp recv]"
+    (GoCore.Machine.applyChanOp emptyCtx labelCells (.recv [] .int) [labelChan 2] [] .stop)
+    [evHb (.slotOp (labelLoc 2) 1 false)])
+  passed := passed && (← expectLabel "chan recv closed-empty: [closeAcquire]"
+    (GoCore.Machine.applyChanOp emptyCtx labelCells (.recv [] .int) [labelChan 3] [] .stop)
+    [evHb (.closeAcquire (labelLoc 3))])
+  passed := passed && (← expectLabel "chan recv park (empty, open): []"
+    (GoCore.Machine.applyChanOp emptyCtx labelCells (.recv [] .int) [labelChan 0] [] .stop) [])
+  passed := passed && (← expectLabel "close: [write chanObj, closeOp]"
+    (GoCore.Machine.applyChanOp emptyCtx labelCells .close [labelChan 0] [] .stop)
+    [evAcc .write (.chanObj (labelLoc 0)), evHb (.closeOp (labelLoc 0) 1)])
+  -- Select commits (the poll reads are the CALLER's, never the commit's).
+  passed := passed && (← expectLabel "commitClause send: [slotOp send]"
+    (GoCore.Machine.commitClause emptyCtx labelCells [] .stop (.sendEv (labelChan 0) (.int 1) .int (.seqn #[])))
+    [evHb (.slotOp (labelLoc 0) 1 true)])
+  passed := passed && (← expectLabel "commitClause recv buffered: [slotOp recv]"
+    (GoCore.Machine.commitClause emptyCtx labelCells [] .stop (.recvEv (labelChan 2) [] .int (.seqn #[])))
+    [evHb (.slotOp (labelLoc 2) 1 false)])
+  passed := passed && (← expectLabel "commitClause recv closed: [closeAcquire]"
+    (GoCore.Machine.commitClause emptyCtx labelCells [] .stop (.recvEv (labelChan 3) [] .int (.seqn #[])))
+    [evHb (.closeAcquire (labelLoc 3))])
+  passed := passed && (← expectTrue "LABEL select one-ready commit: poll THEN commit — [read chanObj, slotOp send]"
+    (match GoCore.Machine.applySelectCore emptyCtx labelCells
+        [(.send (.intLit 0) (.intLit 1) .int, .seqn #[])] none [labelChan 0, .int 1] [] .stop with
+      | .ok (.done _ _ (some _) tr) => tr == [evAcc .read (.chanObj (labelLoc 0)), evHb (.slotOp (labelLoc 0) 1 true)]
+      | _ => false))
+  passed := passed && (← expectTrue "LABEL select park: the poll only — [read chanObj], blockedSelect"
+    (match GoCore.Machine.applySelectCore emptyCtx labelCells
+        [(.send (.intLit 0) (.intLit 1) .int, .seqn #[])] none [labelChan 2, .int 1] [] .stop with
+      | .ok (.done (.blockedSelect ..) _ none tr) => tr == [evAcc .read (.chanObj (labelLoc 2))]
+      | _ => false))
+  passed := passed && (← expectLabel "select wake: the commit's action only, no re-poll — [slotOp send]"
+    (GoCore.Machine.resumeThread emptyCtx labelCells (.blockedSelect [.sendEv (labelChan 0) (.int 1) .int (.seqn #[])] [] .stop))
+    [evHb (.slotOp (labelLoc 0) 1 true)])
+  -- Mutex.
+  passed := passed && (← expectLabel "Mutex Lock acquire: [atomicWrite state, acquire]"
+    (GoCore.Machine.applySyncOpCore emptyCtx labelCells .lock [.addr (labelLoc 4)] [] .stop)
+    [evAcc .atomicWrite (wd 4 .mutex .state), evHb (.syncAcquire (labelLoc 4) false)])
+  passed := passed && (← expectLabel "Mutex Lock park: [atomicWrite state]"
+    (GoCore.Machine.applySyncOpCore emptyCtx labelCells .lock [.addr (labelLoc 5)] [] .stop)
+    [evAcc .atomicWrite (wd 5 .mutex .state)])
+  passed := passed && (← expectLabel "Mutex Unlock: [release, atomicWrite state] — the state Add AFTER the release"
+    (GoCore.Machine.applySyncOpCore emptyCtx labelCells .unlock [.addr (labelLoc 5)] [] .stop)
+    [evHb (.syncRelease (labelLoc 5) false), evAcc .atomicWrite (wd 5 .mutex .state)])
+  -- RWMutex (×6 with the TRY heads).
+  passed := passed && (← expectLabel "RWMutex RLock: [read w, atomicRead readerCount, acquire]"
+    (GoCore.Machine.applySyncOpCore emptyCtx labelCells .rlock [.addr (labelLoc 6)] [] .stop)
+    [evAcc .read (wd 6 .rwmutex .w), evAcc .atomicRead (wd 6 .rwmutex .readerCount), evHb (.syncAcquire (labelLoc 6) false)])
+  passed := passed && (← expectLabel "RWMutex RUnlock: [read w, atomicWrite readerCount, release toB]"
+    (GoCore.Machine.applySyncOpCore emptyCtx labelCells .runlock [.addr (labelLoc 14)] [] .stop)
+    [evAcc .read (wd 14 .rwmutex .w), evAcc .atomicWrite (wd 14 .rwmutex .readerCount), evHb (.syncRelease (labelLoc 14) true)])
+  passed := passed && (← expectLabel "RWMutex Lock: [read w, atomicRead readerCount, acquire BOTH]"
+    (GoCore.Machine.applySyncOpCore emptyCtx labelCells .wlock [.addr (labelLoc 6)] [] .stop)
+    [evAcc .read (wd 6 .rwmutex .w), evAcc .atomicRead (wd 6 .rwmutex .readerCount), evHb (.syncAcquire (labelLoc 6) true)])
+  passed := passed && (← expectLabel "RWMutex Unlock: [read w, atomicWrite readerCount, release]"
+    (GoCore.Machine.applySyncOpCore emptyCtx labelCells .wunlock [.addr (labelLoc 15)] [] .stop)
+    [evAcc .read (wd 15 .rwmutex .w), evAcc .atomicWrite (wd 15 .rwmutex .readerCount), evHb (.syncRelease (labelLoc 15) false)])
+  passed := passed && (← expectLabel "RWMutex TryRLock acquire: [read w, atomicRead readerCount, acquire]"
+    (GoCore.Machine.applyTryLock emptyCtx labelCells (.tryRLock []) (labelLoc 6) (.rwmutex false 0 0) false [] [] .stop)
+    [evAcc .read (wd 6 .rwmutex .w), evAcc .atomicRead (wd 6 .rwmutex .readerCount), evHb (.syncAcquire (labelLoc 6) false)])
+  passed := passed && (← expectLabel "RWMutex TryRLock spurious: [read w] — no go_mem kind, no acquire"
+    (GoCore.Machine.applyTryLock emptyCtx labelCells (.tryRLock []) (labelLoc 6) (.rwmutex false 0 0) true [] [] .stop)
+    [evAcc .read (wd 6 .rwmutex .w)])
+  passed := passed && (← expectLabel "RWMutex TryLock acquire: [read w, atomicRead readerCount, acquire BOTH]"
+    (GoCore.Machine.applyTryLock emptyCtx labelCells (.tryWLock []) (labelLoc 6) (.rwmutex false 0 0) false [] [] .stop)
+    [evAcc .read (wd 6 .rwmutex .w), evAcc .atomicRead (wd 6 .rwmutex .readerCount), evHb (.syncAcquire (labelLoc 6) true)])
+  passed := passed && (← expectLabel "RWMutex TryLock held: [read w]"
+    (GoCore.Machine.applyTryLock emptyCtx labelCells (.tryWLock []) (labelLoc 15) (.rwmutex true 0 0) false [] [] .stop)
+    [evAcc .read (wd 15 .rwmutex .w)])
+  -- WaitGroup.
+  passed := passed && (← expectLabel "WaitGroup Add(+1 from 0): [read sema, atomicWrite state]"
+    (GoCore.Machine.applySyncOpCore emptyCtx labelCells .wgAdd [.addr (labelLoc 7), .int 1] [] .stop)
+    [evAcc .read (wd 7 .waitGroup .sema), evAcc .atomicWrite (wd 7 .waitGroup .state)])
+  passed := passed && (← expectLabel "WaitGroup Done: [atomicWrite state, release]"
+    (GoCore.Machine.applySyncOpCore emptyCtx labelCells .wgAdd [.addr (labelLoc 8), .int (-1)] [] .stop)
+    [evAcc .atomicWrite (wd 8 .waitGroup .state), evHb (.syncRelease (labelLoc 8) false)])
+  passed := passed && (← expectLabel "WaitGroup Wait fast: [atomicRead state, acquire]"
+    (GoCore.Machine.applySyncOpCore emptyCtx labelCells .wgWait [.addr (labelLoc 7)] [] .stop)
+    [evAcc .atomicRead (wd 7 .waitGroup .state), evHb (.syncAcquire (labelLoc 7) false)])
+  passed := passed && (← expectLabel "WaitGroup Wait park (first waiter): [write sema, atomicRead state]"
+    (GoCore.Machine.applySyncOpCore emptyCtx labelCells .wgWait [.addr (labelLoc 8)] [] .stop)
+    [evAcc .write (wd 8 .waitGroup .sema), evAcc .atomicRead (wd 8 .waitGroup .state)])
+  -- Once.
+  passed := passed && (← expectLabel "Once fresh Do: [atomicWrite m]"
+    (GoCore.Machine.applySyncOpCore emptyCtx labelCells (.onceBegin [.var "b"]) [.addr (labelLoc 9)] labelEnvB .stop)
+    [evAcc .atomicWrite (wd 9 .once .m)])
+  passed := passed && (← expectLabel "Once observe: [atomicRead done, acquire] (F5: recorded before the acquire — pre-existing, recorded)"
+    (GoCore.Machine.applySyncOpCore emptyCtx labelCells (.onceBegin [.var "b"]) [.addr (labelLoc 10)] labelEnvB .stop)
+    [evAcc .atomicRead (wd 10 .once .done), evHb (.syncAcquire (labelLoc 10) false)])
+  passed := passed && (← expectLabel "Once park: [atomicWrite m]"
+    (GoCore.Machine.applySyncOpCore emptyCtx labelCells (.onceBegin [.var "b"]) [.addr (labelLoc 12)] labelEnvB .stop)
+    [evAcc .atomicWrite (wd 12 .once .m)])
+  passed := passed && (← expectLabel "Once complete: [atomicWrite done, release, atomicWrite m]"
+    (GoCore.Machine.applySyncOpCore emptyCtx labelCells .onceComplete [.addr (labelLoc 12)] [] .stop)
+    [evAcc .atomicWrite (wd 12 .once .done), evHb (.syncRelease (labelLoc 12) false), evAcc .atomicWrite (wd 12 .once .m)])
+  -- Mutex TryLock.
+  passed := passed && (← expectLabel "Mutex TryLock acquire: [atomicWrite state, acquire]"
+    (GoCore.Machine.applyTryLock emptyCtx labelCells (.tryLock []) (labelLoc 4) (.mutex false) false [] [] .stop)
+    [evAcc .atomicWrite (wd 4 .mutex .state), evHb (.syncAcquire (labelLoc 4) false)])
+  passed := passed && (← expectLabel "Mutex TryLock spurious: [atomicWrite state] — gc's lost CAS, no acquire"
+    (GoCore.Machine.applyTryLock emptyCtx labelCells (.tryLock []) (labelLoc 4) (.mutex false) true [] [] .stop)
+    [evAcc .atomicWrite (wd 4 .mutex .state)])
+  passed := passed && (← expectLabel "Mutex TryLock held: [] — the plain early return"
+    (GoCore.Machine.applyTryLock emptyCtx labelCells (.tryLock []) (labelLoc 5) (.mutex true) false [] [] .stop) [])
+  -- sync/atomic (×5 heads, CAS both outcomes).
+  passed := passed && (← expectLabel "atomic Load: [acquire, atomicRead] — acquire FIRST"
+    (GoCore.Machine.applyAtomicOp emptyCtx labelCells ⟨.load, .int32, []⟩ [.addr (labelLoc 11)] [] .stop)
+    [evHb (.atomicAcquire (labelLoc 11)), evAcc .atomicRead (.data (labelLoc 11))])
+  passed := passed && (← expectLabel "atomic Store: [atomicWrite, releaseStore]"
+    (GoCore.Machine.applyAtomicOp emptyCtx labelCells ⟨.store, .int32, []⟩ [.addr (labelLoc 11), .int 1 .int32] [] .stop)
+    [evAcc .atomicWrite (.data (labelLoc 11)), evHb (.atomicReleaseStore (labelLoc 11))])
+  passed := passed && (← expectLabel "atomic Add: [atomicWrite, releaseAcquire]"
+    (GoCore.Machine.applyAtomicOp emptyCtx labelCells ⟨.add, .int32, []⟩ [.addr (labelLoc 11), .int 1 .int32] [] .stop)
+    [evAcc .atomicWrite (.data (labelLoc 11)), evHb (.atomicReleaseAcquire (labelLoc 11))])
+  passed := passed && (← expectLabel "atomic Swap: [atomicWrite, releaseAcquire]"
+    (GoCore.Machine.applyAtomicOp emptyCtx labelCells ⟨.swap, .int32, []⟩ [.addr (labelLoc 11), .int 1 .int32] [] .stop)
+    [evAcc .atomicWrite (.data (labelLoc 11)), evHb (.atomicReleaseAcquire (labelLoc 11))])
+  passed := passed && (← expectLabel "atomic CAS success: [atomicWrite, releaseAcquire]"
+    (GoCore.Machine.applyAtomicOp emptyCtx labelCells ⟨.cas, .int32, []⟩ [.addr (labelLoc 11), .int 0 .int32, .int 1 .int32] [] .stop)
+    [evAcc .atomicWrite (.data (labelLoc 11)), evHb (.atomicReleaseAcquire (labelLoc 11))])
+  passed := passed && (← expectLabel "atomic CAS failure: [atomicWrite, acquire]"
+    (GoCore.Machine.applyAtomicOp emptyCtx labelCells ⟨.cas, .int32, []⟩ [.addr (labelLoc 11), .int 5 .int32, .int 1 .int32] [] .stop)
+    [evAcc .atomicWrite (.data (labelLoc 11)), evHb (.atomicAcquire (labelLoc 11))])
+  -- Wakes: the parked op's ACTION only, never an access.
+  passed := passed && (← expectLabel "wake blocked send: [slotOp send]"
+    (GoCore.Machine.resumeThread emptyCtx labelCells (.blockedSend (some (labelLoc 0)) (.int 1) .stop))
+    [evHb (.slotOp (labelLoc 0) 1 true)])
+  passed := passed && (← expectLabel "wake blocked recv (buffered): [slotOp recv]"
+    (GoCore.Machine.resumeThread emptyCtx labelCells (.blockedRecv (some (labelLoc 2)) [] .int [] .stop))
+    [evHb (.slotOp (labelLoc 2) 1 false)])
+  passed := passed && (← expectLabel "wake blocked recv (closed): [closeAcquire]"
+    (GoCore.Machine.resumeThread emptyCtx labelCells (.blockedRecv (some (labelLoc 3)) [] .int [] .stop))
+    [evHb (.closeAcquire (labelLoc 3))])
+  passed := passed && (← expectLabel "wake blocked Lock: [acquire]"
+    (GoCore.Machine.resumeThread emptyCtx labelCells (.blockedSync .lock (labelLoc 4) [] .stop))
+    [evHb (.syncAcquire (labelLoc 4) false)])
+  passed := passed && (← expectLabel "wake blocked RLock: [acquire]"
+    (GoCore.Machine.resumeThread emptyCtx labelCells (.blockedSync .rlock (labelLoc 6) [] .stop))
+    [evHb (.syncAcquire (labelLoc 6) false)])
+  passed := passed && (← expectLabel "wake blocked write-Lock: [acquire BOTH]"
+    (GoCore.Machine.resumeThread emptyCtx labelCells (.blockedSync .wlock (labelLoc 6) [] .stop))
+    [evHb (.syncAcquire (labelLoc 6) true)])
+  passed := passed && (← expectLabel "wake blocked Wait: [acquire]"
+    (GoCore.Machine.resumeThread emptyCtx labelCells (.blockedSync .wgWait (labelLoc 7) [] .stop))
+    [evHb (.syncAcquire (labelLoc 7) false)])
+  passed := passed && (← expectLabel "wake blocked Once.Do: [acquire]"
+    (GoCore.Machine.resumeThread emptyCtx labelCells (.blockedSync (.onceBegin [.var "b"]) (labelLoc 10) labelEnvB .stop))
+    [evHb (.syncAcquire (labelLoc 10) false)])
+  -- Pairing tables (the partner's action attributed to it).
+  passed := passed && (← expectTrue "LABEL pairing arriving send, cap 0: [rendezvous j]"
+    (GoCore.Machine.pairSendEvents (labelLoc 1) 0 3 == [evHb (.rendezvous 3)]))
+  passed := passed && (← expectTrue "LABEL pairing arriving send, cap 1: [slotOp send, attributed j (slotOp recv)]"
+    (GoCore.Machine.pairSendEvents (labelLoc 0) 1 3
+      == [evHb (.slotOp (labelLoc 0) 1 true), .attributed 3 (evHb (.slotOp (labelLoc 0) 1 false))]))
+  passed := passed && (← expectTrue "LABEL pairing arriving recv at an empty buffer: [rendezvous j]"
+    (GoCore.Machine.pairRecvEvents (labelLoc 1) 0 true 3 == [evHb (.rendezvous 3)]))
+  passed := passed && (← expectTrue "LABEL pairing arriving recv at a full buffer: [slotOp recv, attributed j (slotOp send)] — head THEN refill"
+    (GoCore.Machine.pairRecvEvents (labelLoc 2) 1 false 3
+      == [evHb (.slotOp (labelLoc 2) 1 false), .attributed 3 (evHb (.slotOp (labelLoc 2) 1 true))]))
+  -- The spawn (a pool step): the edge to the child = threads.size, then the child's entry read attributed to it.
+  passed := passed && (← expectTrue "LABEL spawn of a plain function: [spawn 1] (threads.size = 1), action .spawned 1"
+    (spawnLabelOf (GoCore.Machine.stepMulti spawnCtx ⟨#[.running spawnPlainCfg none], spawnStore, 0⟩ [])
+      == some (some 1, [evHb (.spawn 1)])))
+  passed := passed && (← expectTrue "LABEL spawn with a pointer-box value-receiver dispatch: [spawn 1, attributed 1 (read receiver)]"
+    (spawnLabelOf (GoCore.Machine.stepMulti spawnCtx ⟨#[.running spawnDispatchCfg none], spawnStore, 0⟩ [])
+      == some (some 1, [evHb (.spawn 1), .attributed 1 (evAcc .read (.data (labelLoc 0)))])))
+  passed := passed && (← expectTrue "LABEL spawn from thread 1 of 2: the child is threads.size = 2 in the edge AND the attribution"
+    (spawnLabelOf (GoCore.Machine.stepMulti spawnCtx ⟨#[.running (.next .stop) none, .running spawnDispatchCfg none], spawnStore, 1⟩ [])
+      == some (some 2, [evHb (.spawn 2), .attributed 2 (evAcc .read (.data (labelLoc 0)))])))
+  return passed
+
 set_option maxRecDepth 4096 in
 def main : IO UInt32 := do
   let mut passed := true
@@ -3244,6 +3528,9 @@ def main : IO UInt32 := do
       ((CLI.memberVocabularyRefusal? (.ok [])).isNone
         && (CLI.memberVocabularyRefusal? (.terminal (.panic "x"))).isNone
         && (CLI.memberVocabularyRefusal? (.terminal .raceDetected)).isNone))
+  -- C1 S2c audit F4: the label-shape assertions live in `labelShapeFacts` (their own
+  -- do-block: `main`'s is at the elaborator's recursion-depth limit already).
+  passed := passed && (← labelShapeFacts)
   if passed then
     return 0
   else

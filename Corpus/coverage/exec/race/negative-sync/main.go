@@ -242,4 +242,121 @@ func main() {
 	raceSyncMutexCopy()
 	raceSyncRwOverwrite()
 	raceSyncOnceCopy()
+	raceSyncStructTagAliasNestedMutexCopy()
+	raceSyncStructTagAliasNestedWgOverwrite()
+	raceSyncNestedMutexCopy()
+}
+
+// BUG-111 audit F1 (C1 S2c fix round, 2026-09-19): a NESTED Mutex through a
+// struct-tag-compatible alias — the `.syncWord` key (Lock's state CAS at
+// `q.in.mu`, an atomic write) vs the `.data` key of the copy `t := o.in`
+// (a plain read at a FIELD path). BUG-080's copy-beside-Lock class AND
+// BUG-111's alias in one program: `go run -race` RACE 5/5 at GOMAXPROCS 1
+// and 8. Structural keys MISS it — the sync word's path `.field (.field o
+// aliasNestOutB "in") aliasNestIn "mu"` is not prefixed by the copy's
+// `.field o aliasNestOutA "in"` (the typeIds differ at the `in` step) — so
+// main's binary at the fix round ACCEPTED it on every enumerated path (a
+// HOLE); with the sync words canonicalized the copy's path IS a prefix and
+// every path refuses. Born PASS under the fix; pins the `.syncWord`
+// canonicalization (the part of fix (i) beyond the ruling's `.data` letter).
+type aliasNestIn struct {
+	mu sync.Mutex
+	f  int
+}
+type aliasNestOutA struct {
+	in aliasNestIn
+	g  int
+}
+type aliasNestOutB struct {
+	in aliasNestIn
+	g  int
+}
+
+func raceSyncStructTagAliasNestedMutexCopy() int {
+	var o aliasNestOutA
+	q := (*aliasNestOutB)(&o)
+	done := make(chan int, 1)
+	go func() {
+		q.in.mu.Lock()
+		q.in.f = 1
+		q.in.mu.Unlock()
+		done <- 0
+	}()
+	t := o.in
+	<-done
+	return t.f + o.in.f
+}
+
+// BUG-111 audit F1 (C1 S2c fix round, 2026-09-19), RESHAPED to race on EVERY
+// schedule: the WaitGroup `sema` word through a NESTED alias. The audit's
+// litmus (`wgAliasNestedCopyBesideWait`: a copy of the nested struct beside
+// a parked Wait's first-waiter sema WRITE) is racy only on the schedules
+// where the waiter parks before the Done (RACE-SOME; gc's sampler 0/5 —
+// waitgroup.go:190 races in that schedule) and no lane pins a RACE-SOME
+// program honestly, so this row races the SAME word on every path: the
+// child's `Add(1)` from counter 0 through the alias performs gc's realized
+// `race.Read(&wg.sema)` (waitgroup.go:115 — the BUG-080 `wg-overwrite` pin's
+// access, here at a FIELD path), main OVERWRITES the nested struct. Both
+// accesses execute on every path and are HB-unordered (the join follows the
+// overwrite). Structural keys miss it (main's binary ACCEPTS); the canonical
+// sync-word path is prefixed by the overwrite's canonical path — refused.
+type aliasWgIn struct {
+	wg sync.WaitGroup
+	f  int
+}
+type aliasWgOutA struct {
+	in aliasWgIn
+	g  int
+}
+type aliasWgOutB struct {
+	in aliasWgIn
+	g  int
+}
+
+func raceSyncStructTagAliasNestedWgOverwrite() int {
+	var o aliasWgOutA
+	q := (*aliasWgOutB)(&o)
+	done := make(chan int, 1)
+	go func() {
+		q.in.wg.Add(1)
+		q.in.wg.Done()
+		done <- 0
+	}()
+	o.in = aliasWgIn{}
+	<-done
+	return o.in.f
+}
+
+// BUG-080's class at a FIELD path — NO alias (the C1 S2c audit's F3,
+// 2026-09-19): a copy of a NESTED struct holding a Mutex beside another
+// goroutine's Lock on it. `go run -race` RACE 5/5. The tracked BUG-080 pins
+// copy ROOT variables (`c := b`), whose `.base` key is a prefix of every
+// path whatever the typeIds — they could not have distinguished a
+// `.data`-only canonicalization from the landed every-emitter one; THIS
+// class could: with the sync words left structural, the copy's canonical
+// key `.field o $canon "in"` would no longer prefix `.field (.field o
+// nestedMuOut "in") nestedMuIn "mu"` and the race would be MISSED. Both
+// binaries refuse (born PASS); the must-stay-red guard of the sync-word
+// canonicalization (BUG-111 fix (i) at every emitter).
+type nestedMuIn struct {
+	mu sync.Mutex
+	f  int
+}
+type nestedMuOut struct {
+	in nestedMuIn
+	g  int
+}
+
+func raceSyncNestedMutexCopy() int {
+	var o nestedMuOut
+	done := make(chan int, 1)
+	go func() {
+		o.in.mu.Lock()
+		o.in.f = 1
+		o.in.mu.Unlock()
+		done <- 0
+	}()
+	t := o.in
+	<-done
+	return t.f + o.in.f
 }

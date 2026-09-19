@@ -23,3 +23,13 @@ once-copy	raceSyncOnceCopy	-	race	-	sync,once,goroutines,channels,structs,closur
 # red 20/20 each at GOMAXPROCS 1 and 8 (docs/evidence/2026-09-03_q-trylock/).
 overwrite-vs-trylock	raceSyncOverwriteVsTryLock	-	race	-	sync,mutex,goroutines,channels,structs,race	racy	Q-TRYLOCK: the TryLock's state CAS (.atomicWrite @state, recorded on the acquire AND the spurious member — gc's lost CAS) vs the whole-struct overwrite's plain write — refuses on every path	width=4,sites=32
 failed-trylock-no-edge	raceSyncFailedTryLockNoEdge	-	race	-	sync,mutex,goroutines,channels,globals,race	racy	Q-TRYLOCK success-edge-only detector: the forced-false TryLock (held cell, bound 1) records nothing and acquires nothing, so main's read and the worker's post-release write stay HB-unordered — a failed call that acquired would admit a value leaf	width=4,sites=32
+# BUG-111 audit F1/F3 (C1 S2c fix round, 2026-09-19): the `.syncWord` key
+# kind under a struct-tag-compatible alias at a NESTED (field) path, and the
+# BUG-080 field-path class without an alias. gc -race RACE 5/5 at GOMAXPROCS
+# 1 and 8 on all three; main's binary at the fix round ACCEPTED the two alias
+# rows on every enumerated path (HOLEs — the fix's wider scope pinned) and
+# refuses the no-alias one; the canonical keys refuse all three on every
+# path. Born PASS under the fix. sites=32: the BUG-080 rows' bound.
+struct-tag-alias-nested-mutex-copy	raceSyncStructTagAliasNestedMutexCopy	-	race	-	sync,mutex,goroutines,channels,structs,pointers,conversions,race	racy	BUG-111 F1: Lock's state CAS (.atomicWrite @state) at the ALIASED nested path vs the copy's plain read of the nested struct — the canonical sync-word path is prefixed by the copy's canonical path on every schedule; structural keys split at the `in` step (main's binary accepts)	width=4,sites=32
+struct-tag-alias-nested-wg-overwrite	raceSyncStructTagAliasNestedWgOverwrite	-	race	-	sync,waitgroup,goroutines,channels,structs,pointers,conversions,race	racy	BUG-111 F1 (reshaped RACE-ALL): Add-from-0's realized plain wg.sema READ through the alias vs main's overwrite of the nested struct — the audit's copy-beside-Wait litmus is RACE-SOME (gc 0/5), this shape races on every path; structural keys split at the `in` step (main's binary accepts)	width=4,sites=32
+nested-mutex-copy	raceSyncNestedMutexCopy	-	race	-	sync,mutex,goroutines,channels,structs,race	racy	audit F3: BUG-080's copy-beside-Lock class at a FIELD path, no alias — the copy's key `.field o … "in"` prefixes the Mutex's word path only if BOTH are keyed the same way (structural on both, or canonical on both); a `.data`-only canonicalization would MISS it; both binaries refuse	width=4,sites=32
