@@ -960,3 +960,19 @@ stale trailing fields since S2b-ii fixed); `scripts/mem-callsites.tsv` 78 → 72
 corpus 23,679 records `cmp` EXIT=0 (sha `0df092ee…`), twin 14,360 `cmp` EXIT=0 (sha `3b0b4c0a…`). Official
 detector-soundness: HOLE 0 / possible-HOLE 0 / over-refusal 6 / agree-DRF 502 / agree-race 36 / refused 9 / uncertified
 86 — cell for cell the fix round's. D9 DONE. Next: BUG-111 fix (i) (red-first rows first), then S3.
+
+**BUG-111 fix (i) (2026-09-18/19, three gated commits) — canonical-path keys at emission (RULED [USER] 2026-09-18
+relayed).** Red-first FIRST: `race/negative/struct-tag-alias-field` (racy; born FAIL — the S2c-ii binary accepts
+the alias race, `ok 1`) and the must-stay-green guard `race/free/struct-tag-alias-disjoint-fields` (confluent,
+`ok 12`) at `96f2d72d`, gate 3678 = 3428/250 (the born stage is `lean-observation`; pin corrected `12e196c7`).
+The fix `a8e0cf95`: `Loc.canon` (the `.field` step's static typeId erased to `TypeId.canon`, the field NAME the
+position) applied by EVERY emitter — `.data` (`Mem.*`), `.syncWord`, `.chanObj`, and the `HbAction` clock-table
+locations (an [AGENT] extension of the ruled `.data` fix, alternatives named in the handoff §4); machine paths
+untouched. The alias row REFUSES (`race`) on the default stream and all six tracer streams; the guard `ok 12`;
+choice trace on the 3,676 pre-existing rows byte-identical to main's (23,679 records, `cmp` EXIT=0); the twin
+identical; BUG-111 `Status: fixed`, `Cases:` both rows; the baseline flip disclosed with its reason. The fix gate
+showed the alias row FAIL/racy ONLY because three goroutines exceed the lane's default `sites=8` (the
+enumerator refuses by name; at 16 it certifies every path refuses, 334 leaves) → `87a3c90b` `sites=16`,
+gate **3678 = 3429/249, red ONLY on the 5a pair**. Detector-soundness: the intermediate matrix at `sites=8`
+had the alias row as its one possible-HOLE (gc RACE 5/5); the final matrix is in the evidence README.
+Next: S3 (the rollback) — the handoff §7.

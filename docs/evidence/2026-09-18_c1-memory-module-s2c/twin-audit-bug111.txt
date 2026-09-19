@@ -1,0 +1,11 @@
+# BUG-111 fix — the raft twin with the fix binary 06e78653… (2026-09-19 UTC): byte-identity vs main 42023bd9's certified binary 42b7bf1a…
+== twin b111 start 2026-09-19T00:06:52Z bin=06e786532b91c05e
+twin b111 EXIT=0 wall=1167s
+rows=30 statuses:
+  ok=30
+alarms_sum=0 consumed_total=14360
+  14360 .tmp/twin-dump-b111.sorted.tsv
+  14360 .tmp/twin-dump-main.sorted.tsv
+twin cmp EXIT=0
+3b0b4c0ae91856a08d3ed33e44b40623f647e088f4bca108bb530d7daebd85e9  .tmp/twin-dump-b111.sorted.tsv
+3b0b4c0ae91856a08d3ed33e44b40623f647e088f4bca108bb530d7daebd85e9  .tmp/twin-dump-main.sorted.tsv

@@ -1,0 +1,41 @@
+# BUG-111 fix — whole-corpus choice trace with the fix binary 06e78653… vs main 42023bd9's certified binary 42b7bf1a… (2026-09-19 UTC)
+# scripts/choice-trace-corpus --dump --jobs 6 --exclude goroutines/send-then-spin --exclude strings/trimspace-repeat/repeat-bound-refused
+== corpus b111 start 2026-09-19T00:06:52Z bin=06e786532b91c05e
+corpus b111 EXIT=1 wall=496s
+
+# the 3,676 PRE-EXISTING rows (the two BUG-111 rows excluded from the fix binary's dump — they are not in main's corpus):
+  23679 .tmp/dump-b111-pre.sorted.tsv
+  23679 .tmp/dump-main.sorted.tsv
+cmp EXIT=0
+0df092ee22f7609da6e3802d8f73a7cc6a00ce6cf5d04094cfa637b79ea3fb7e  .tmp/dump-b111-pre.sorted.tsv
+0df092ee22f7609da6e3802d8f73a7cc6a00ce6cf5d04094cfa637b79ea3fb7e  .tmp/dump-main.sorted.tsv
+
+# the two new rows, per stream (id stream status consumed): the alias row REFUSES on every stream, the guard is ok on every stream
+race/free/struct-tag-alias-disjoint-fields	default	ok	3
+race/free/struct-tag-alias-disjoint-fields	9,8,7,6,5,4,3,2,1,0	ok	6
+race/free/struct-tag-alias-disjoint-fields	1,3,5,7,9,2,4,6,8,0	ok	3
+race/free/struct-tag-alias-disjoint-fields	5,5,5,5,5,5,5,5	ok	3
+race/free/struct-tag-alias-disjoint-fields	rand:1:4096	ok	4
+race/free/struct-tag-alias-disjoint-fields	rand:2:4096	ok	3
+race/negative/struct-tag-alias-field	default	race	9
+race/negative/struct-tag-alias-field	9,8,7,6,5,4,3,2,1,0	race	5
+race/negative/struct-tag-alias-field	1,3,5,7,9,2,4,6,8,0	race	5
+race/negative/struct-tag-alias-field	5,5,5,5,5,5,5,5	race	5
+race/negative/struct-tag-alias-field	rand:1:4096	race	5
+race/negative/struct-tag-alias-field	rand:2:4096	race	6
+
+# census (fix binary; = the S2c-ii census + the alias row's 6 race streams and the guard's 6 ok streams)
+lines=21847
+  status unsupported=1095
+  status panic=2284
+  status deadlock=162
+  status race=258
+  status stuck=30
+  status ERROR=1
+  status ok=17963
+  status fatal=54
+rows traced: 3641 ids, 21846 (id,stream) lines; 1 id(s) the tracer could not run (ERROR)
+  menu-invariant violations: 0
+  self-check alarms (mirror/accountant, sentinel, pick-record): 0
+  driver-agreement mismatches: 0
+    ERROR arrays/materialization-budget/over-budget (baseline: FAIL/lean-observation): /home/dev/projects/golean/.claude/worktrees/c1-successor/artifacts/choice

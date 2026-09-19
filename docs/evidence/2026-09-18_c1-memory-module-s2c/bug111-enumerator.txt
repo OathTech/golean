@@ -1,0 +1,9 @@
+# BUG-111 fix — the racy-lane ENUMERATOR on the fix binary 06e78653… (2026-09-19 UTC): golean coverage-observations --max-width 4 --cap 64 --work-cap 200000 --expect-status race (the harness's values)
+== race/negative/struct-tag-alias-field at --max-sites 8 (the lane's default; the row's first params): REFUSED by name — the enumeration's depth exceeds 8 (three goroutines: two children + main), so the gate at a8e0cf95 reported the row FAIL/racy ("run consumes more than --max-sites 8 choice site(s) — raise the case's sites bound (never truncated silently)"), NOT a verdict
+coverage-observations: run consumes more than --max-sites 8 choice site(s) — raise the case's sites bound (never truncated silently)
+== the same at --max-sites 16 (the row's corrected params): EVERY enumerated path refuses
+coverage-observations: observations=1 steps=5805 probes=777 sites=259 leaves=334 maxdepth=9 width=4
+{"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"}
+== the guard race/free/struct-tag-alias-disjoint-fields at --max-sites 8 (confluent): the one member ok 12
+coverage-observations: observations=1 steps=559 probes=78 sites=26 leaves=27 maxdepth=7 width=4
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":12}]}

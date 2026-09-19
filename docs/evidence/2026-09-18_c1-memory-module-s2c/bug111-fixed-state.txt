@@ -1,0 +1,11 @@
+# BUG-111 — the FIXED state on the fix binary 06e78653… (2026-09-19 UTC; fix (i) canonical-path keys)
+# golean native-json-run --input <wire> --function <subject> (the default stream; the same exports as bug111-born-state.txt)
+raceStructTagAliasField (race/negative/struct-tag-alias-field; expected race — NOW REFUSED):
+{"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"}
+freeStructTagAliasDisjointFields (race/free/struct-tag-alias-disjoint-fields; expected ok 12 — unchanged):
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":12}]}
+controls: raceWriteWrite (refuses), freeFieldDisjoint (ok 56):
+{"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"}
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":56}]}
+
+# gocore-eval-tests on the fix tree: EXIT=0, 211 ok

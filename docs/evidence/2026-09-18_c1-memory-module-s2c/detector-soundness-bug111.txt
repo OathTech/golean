@@ -1,0 +1,40 @@
+# BUG-111 fix — the FINAL official detector-soundness matrix: fix binary 06e78653…, tree 87a3c90b (the alias row at sites=16) — 2026-09-19 UTC
+# scripts/detector-soundness --select in-scope --jobs 6 (the fixed runner, tracked); out dir artifacts/detector-soundness/20260919T003832Z
+== detector-soundness b111-final start 2026-09-19T00:38:32Z bin=06e786532b91c05e tree=87a3c90b
+detector-soundness EXIT=2 wall=1740s
+
+detector-soundness summary — 2026-09-19T01:07:32+00:00
+rows: 641   runs/proc: 5   procs: 1,8   worker-pool exit: 0
+
+cells:
+  agree-DRF      503
+  agree-race     37
+  over-refusal   6
+  refused        9
+  uncertified    86
+
+by lane × cell:
+  confluent	agree-DRF	90
+  confluent	uncertified	1
+  membership	agree-DRF	128
+  membership	refused	9
+  membership	uncertified	4
+  racy	agree-race	37
+  strict	agree-DRF	285
+  strict	over-refusal	6
+  strict	uncertified	81
+
+HOLE rows (gc RACE, machine DRF — exit-bearing; a HOLE not on a BUGS.md Cases: line is a STOP):
+
+possible-HOLE rows (gc RACE, machine ENUM-FAIL — exit-bearing; certify or diagnose each):
+
+over-refusal rows (machine RACE-*, gc DRF-in-N — three-way investigation):
+  race/free/array-dyn-index-read-write	p1:race=0,clean=5,exit=0,abnormal=0,timeout=0;p8:race=0,clean=5,exit=0,abnormal=0,timeout=0;	RACE-ALL (1/1 members)
+  race/gomem-only/rw-copy-vs-runlock	p1:race=0,clean=5,exit=0,abnormal=0,timeout=0;p8:race=0,clean=5,exit=0,abnormal=0,timeout=0;	RACE-ALL (1/1 members)
+  race/gomem-only/rw-copy-vs-unlock	p1:race=0,clean=5,exit=0,abnormal=0,timeout=0;p8:race=0,clean=5,exit=0,abnormal=0,timeout=0;	RACE-ALL (1/1 members)
+  race/gomem-only/wg-copy-vs-add-from-0	p1:race=0,clean=5,exit=0,abnormal=0,timeout=0;p8:race=0,clean=5,exit=0,abnormal=0,timeout=0;	RACE-ALL (1/1 members)
+  … (uncertified rows: the machine side's ENUM-FAIL classes as before; the full list in artifacts/detector-soundness/20260919T003832Z/summary.txt)
+
+# the two BUG-111 rows' cells (matrix.tsv)
+462:race/free/struct-tag-alias-disjoint-fields	confluent	goroutines,channels,structs,pointers,conversions,race	ok	p1:race=0,clean=5,exit=0,abnormal=0,timeout=0;p8:race=0,clean=5,exit=0,abnormal=0,timeout=0;	DRF-in-N	1	0	DRF	ok	agree-DRF	-
+499:race/negative/struct-tag-alias-field	racy	goroutines,channels,structs,pointers,conversions,race	race	p1:race=5,clean=0,exit=0,abnormal=0,timeout=0;p8:race=5,clean=0,exit=0,abnormal=0,timeout=0;	RACE	1	1	RACE-ALL	race	agree-race	-

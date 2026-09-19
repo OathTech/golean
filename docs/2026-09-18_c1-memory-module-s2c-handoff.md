@@ -18,10 +18,11 @@ ratification and BUG-111 ruling record (2026-09-18)»). Every decision below is 
   `raceUpdate` (no `ctx`/`sPre`/`tsPre`); the registry arms and their helpers deleted; the tracer's
   audit retired; the inventory at 72 rows. Choice trace byte-identical to main's (corpus and twin);
   the official detector-soundness run: §3.
-- **BUG-111 fix (i)** — IN PROGRESS: the red-first rows are committed (`race/negative/struct-tag-alias-field`
-  born FAIL, `race/free/struct-tag-alias-disjoint-fields` PASS — §1, §2 «BUG-111 rows»); the fix commit
-  (`Loc.canon` at every emitter) follows with the disclosed `Cases:` flip (§3 «BUG-111»).
-- **S3** (the rollback, cost B): after BUG-111 (§7).
+- **BUG-111 fix (i)** — DONE on the branch: rows `96f2d72d` (+ records `12e196c7`: the born stage), the fix
+  `a8e0cf95` (`Loc.canon` at every emitter; the disclosed FAIL→PASS flip; BUG-111 `Status: fixed`), the
+  row-params correction `87a3c90b` (`sites=16`) — the end-state gate green but for the 5a pair (§2a). The
+  final detector-soundness matrix: §2a.
+- **S3** (the rollback, cost B(b)/(c)): NEXT — the park statement §7 has the design sketch and the command.
 
 ## 1. What landed, per slice (gate lines in §2)
 
@@ -55,15 +56,15 @@ ratification and BUG-111 ruling record (2026-09-18)»). Every decision below is 
   (`status ok, value 1`; the control `raceWriteWrite` refuses `race`), pinned FAIL/racy; the guard (the same
   alias, main writes `c.f`, the child writes `q.g`, readout 12) is PASS/confluent
   (`bug111-born-state.txt`). Gate at the rows' commit: `GOLEAN_MEM_MAX=32G scripts/capped scripts/ci --diff` under the box-wide lock (acquired after 0 s, 23:48:13–23:59:44 UTC) on the committed tree `96f2d72d`: **EXIT=1, 691 s**; **3678 cases: 3428 PASS / 250 FAIL** (the two new rows: the guard PASS as pinned, the alias row FAIL); `eval tests` 211 ok; `bug-index cross-check` ok; `re-pin guard` ok (0 PASS→non-PASS flips); `memory-module raw call-site inventory` ok (72); every other step ok. RED: the two 5a-class items (`certificate provenance` STALE on `CLI.lean`; the one cached certified row) PLUS ONE drift line on the new row itself — `race/negative/struct-tag-alias-field baseline[FAIL/racy] -> now[FAIL/lean-observation]`: the row IS FAIL as pinned, its born STAGE is `lean-observation` (the machine observes `ok` where `go run -race` reports), not the `racy` word the first pin guessed — the pin corrected to what the gate observed in the records commit that follows (the verdict never changed). ZERO other drift. Tail: `gate-tail-bug111-rows.txt`.
-- **The fix** (commit FIX-SHA-TBD): `Loc.canon` (Ops.lean) — the `.field` step's static `typeId` erased to
+- **The fix** (commit `a8e0cf95`; the fix binary `06e78653…`): `Loc.canon` (Ops.lean) — the `.field` step's static `typeId` erased to
   `TypeId.canon`, the field NAME kept as the position, indices kept — applied by EVERY emitter: the `.data`
   keys (`Mem.*`), the `.syncWord` paths (`syncWord`), the `.chanObj` identities
   (`chanSendEntry`/`chanCloseWrite`/`selectPoll`), and the `HbAction` locations that key the clock tables
   (`atomicEvents`, the applies' `slotOp`/`closeOp`/`closeAcquire`/`syncAcquire`/`syncRelease`, the pairing
   tables). Machine paths untouched. The alias row flips FAIL → PASS (the DISCLOSED flip; the baseline re-pinned
   with the reason; BUG-111 `Status: fixed`, `Cases:` both rows); the guard stays PASS; NO other row changes
-  (a change would have been a STOP, not a re-pin). Gate: FIX-GATE-TBD. Detector-soundness after the fix:
-  FIX-DS-TBD.
+  (a change would have been a STOP, not a re-pin). Gate: `GOLEAN_MEM_MAX=32G scripts/capped scripts/ci --diff` under the box-wide lock (acquired after 0 s, 00:06:46–00:20:13 UTC 2026-09-19) on the committed tree `a8e0cf95`: **EXIT=1, 807 s**; **3678 cases: 3428 PASS / 250 FAIL**; `eval tests` 211 ok; `bug-index cross-check` ok; `re-pin guard` ok (0 PASS→non-PASS flips; the report-only note `GREENED race/negative/struct-tag-alias-field FAIL -> PASS` — the disclosed flip); `memory-module raw call-site inventory` ok (72); every other step ok. RED: the two 5a-class items PLUS one line on the alias row — `baseline[PASS/racy] -> now[FAIL/racy]`: NOT a verdict but the racy-lane enumerator's REFUSAL by name, «run consumes more than --max-sites 8 choice site(s) — raise the case's sites bound (never truncated silently)» (`artifacts/coverage/latest.tsv`): the row has three goroutines (two children + main) and its enumeration reaches depth 9, beyond the lane's default `sites=8` that the first row line copied. With the harness's own invocation at `--max-sites 16` the fix binary certifies the row — `observations=1`, `status race`, 334 leaves, depth 9: EVERY enumerated path refuses; the guard at 8 certifies its one member `ok 12` (`bug111-enumerator.txt`). The row's `sites=` corrected to 16 in the next commit (a row-params correction, the lane's `map-range-iter` precedent), re-gated. ZERO other drift. Tail: `gate-tail-bug111-fix.txt`. **The row-params commit `87a3c90b`** (`sites=16`): `GOLEAN_MEM_MAX=32G scripts/capped scripts/ci --diff` under the box-wide lock (acquired after 0 s, 00:37:14–00:49:03 UTC) — **EXIT=1, 709 s**; **3678 cases: 3429 PASS / 249 FAIL** — the alias row PASS/racy as pinned (the DISCLOSED flip complete), the guard PASS; `eval tests` 211 ok; `bug-index cross-check` ok; `memory-module raw call-site inventory` ok (72); every other step ok. RED: exactly the two 5a-class items (`certificate provenance` STALE on `CLI.lean`; the SINGLE drift line `imported-goose/channel/google-search`). ZERO other drift: BUG-111's end state. Tail: `gate-tail-bug111-params.txt`. Detector-soundness after the fix (the FINAL official matrix, tree `87a3c90b`):
+  EXIT=2 (the 9 `params-omit-sites=` membership refusals, as always), 1,740 s, worker-pool exit 0, **641 rows** (639 + the two BUG-111 rows): **HOLE 0, possible-HOLE 0**, agree-DRF 503 (the S2c-ii 502 + the guard: gc clean 5/5 at both procs, machine DRF), **agree-race 37** (the S2c-ii 36 + the alias row: gc RACE 5/5 at GOMAXPROCS 1 and 8, machine RACE-ALL 1/1 member at `sites=16`), over-refusal 6 (the same six: BUG-041's O1 residual and the five ruled `race/gomem-only/*` rows), refused 9, uncertified 86 — every pre-existing cell unchanged (`detector-soundness-bug111.txt`; the intermediate matrix at `sites=8`, whose one possible-HOLE was the alias row's enumerator refusal, is `detector-soundness-bug111-sites8.txt`).
 
 ## 3. The S2c-i audit — RESULT (the S2a pattern: both accounts in ONE binary, per step)
 
@@ -130,28 +131,60 @@ event label (the commit message lists them by name): `stepFn_sound`/`step_comple
 `step_complete_any_wf` with the four registry rules carrying the apply's label; `stepMulti_sound`/
 `stepM_complete` with the spawn, wake, pairing and arrival-commit labels; `step_preserves_wf` and the
 `*_wf` family with the extra component; `stepFn_consumption` and the stream lemmas; MultiStreams'
-obliviousness. Owed: S2c-ii (the switch and the deletions, the inventory rows, the docstrings that
-still say «until S2c»/«the registry arm»); a universal companion for the synchronization emissions
-(not chartered — recorded as a possible later theorem: `raceFold` on `stepThread`'s event equals the
-deleted fold's registry account per action; the executable audit stands in for it now).
+obliviousness. S2c-ii and BUG-111 added no theorem and weakened none (`raceUpdate_single` restated; the `Mem.*_eq`
+statements say `.data l.canon`). Owed: a universal companion for the synchronization emissions (not
+chartered — recorded as a possible later theorem: the one fold on `stepThread`'s event equals the deleted
+registry account per action; the executable S2c-i audit stands in for it); the disjoint-path frame law
+on the REAL `storeLoc` for the canonical relation (the spike's `f1_canon` on the stub of the same shape —
+porting is S3/C3 work); S3's per-arm «panic ⇒ store unchanged» theorems (charter §6).
 
 ## 6. PENDING [USER]
 
-None new. (The predecessor's §6 items are ruled/withdrawn.)
+None new; nothing asked. (The predecessor's §6 items are ruled/withdrawn.) For disclosure at the merge ask,
+not a decision: BUG-111's fix canonicalizes EVERY emitted location — the `.data` keys the ruling names AND
+the sync-word / channel-object keys and the `HbAction` clock-table locations (§4: the `.data`-only reading
+would have reopened the BUG-080 copy-beside-Lock class through a canonical data path that no longer
+prefix-overlaps a structural sync-word path, and the clock tables would split on an alias — a fail-closed
+residual). No corpus row's verdict changed (the differential, the choice trace on the 3,676 pre-existing rows
+and the detector-soundness matrix say so); the [USER] may narrow it to the `.data` keys if the letter of (i)
+is preferred — then the sync-word keys must be canonicalized too or the BUG-080 pins re-checked.
 
-## 7. Where the lane is; the next command
+## 7. Where the lane stopped; the next command — PARKED 2026-09-19 (UTC)
 
-NOT PARKED — the lane continues in the same session. S2c-i is landed on the branch as the gated runtime
-commit `f1ad88c3` with this records commit on top. THE NEXT COMMAND (S2c-ii, the switch): make `raceFold`
-the `raceUpdate` (`raceUpdate (ev : StepEvent) (m' : MultiConfig) (r : RaceState)` — no `ctx`, no
-`sPre`/`tsPre`); update the call sites (`execProgLoop`/`execProgLoopOut`, `EnumDedup`, `EnumDedupCheck`,
-`EnumDedupSound`, `PoolTrace`, `MultiStreams`, `MultiSound.raceUpdate_single`, `CLI` ×3, the tracer);
-delete the registry arms and their helpers (`raceChanEntryReads`, `racePairEvent`, `raceWakeEvent`,
-`raceCommitClauseEvent`, `raceWgAddEvent`, `chanApplyChan`, `tryLockAcquired`, `dataEvents`) with
-tombstones; retire the tracer's audit instrument (`Acc.mismatches`, `auditFold`, `labelText`,
-`stepActionName`, the two columns, the summarizer line — a column that can no longer be non-zero is a
-false witness); retire the six DETECTOR REGISTRY ARM rows of `scripts/mem-callsites.tsv` and reword the
-SYNCHRONIZATION rows that say «until S2c»/«the registry arm»; rewrite the docstrings («The registry's
-SECOND duty», `StepAction`, `raceUpdate`); gate; choice trace vs main's binary; the official
-`scripts/detector-soundness --select in-scope --jobs 6` (HOLE 0 / possible-HOLE 0 / over-refusal 6 expected).
-Then BUG-111 (red-first rows FIRST), then S3.
+PARKED at the records commit over the gated corpus-params commit **`87a3c90b`** (BUG-111's end state; §2a),
+which sits on the BUG-111 fix `a8e0cf95`, the born-stage records `12e196c7`, the red-first rows `96f2d72d`,
+S2c-ii `fc4e5d6b` (+ records `91a28366`), S2c-i `f1ad88c3` (+ records `b3bb801f`); branch
+`core/c1-memory-module-s2c-0918`, base main `42023bd9`; worktree `.claude/worktrees/c1-successor`, clean;
+nothing merged, nothing pushed; main untouched. Every runtime commit is gated (§2, §2a); the last gate is
+green but for the 5a pair. D9 DONE (S2c). BUG-111 FIXED (fix (i), disclosed flip). OPEN: **S3**.
+
+THE NEXT COMMAND (S3 — the rollback, cost B(b)/(c); charter §6): the sharing that makes `Array.modify` copy
+is now ONLY `deliverS`'s reference to the pre-apply store `s` (the detector's `sPre` is gone with S2c-ii —
+`raceUpdate` reads the label — and `execProgLoop` drops `m` after `stepMulti`), plus the enumerator's fork
+copies (B(c)). `deliverS s k ch next r` needs `s` only on the `.panic` path, and a thrown panic returns no
+store. Plan of record (sketched, [AGENT]): split every store-bearing apply into a VALIDATE phase that
+borrows `s` (every panic point: `valueAsLoc`, `arrayGet`, `validateSlice`, the map-key hash, the target
+chain checks — reads only) and a COMMIT phase that consumes `s` (writes only, cannot panic — `storeLoc` at
+a validated path, `Store.alloc`, the payload writers), so `stepFn`'s arm is `match toResult (validate …)
+with | .panic msg => (.panicking …, s, …) | .ok plan => commit s plan …` and `s` is referenced on ONE path
+after the validate call; the per-arm theorem «`.panic` ⇒ the store is `s`» (charter §6) is then the
+statement that the commit phase is unreachable on a panic. The S0 audit's eight W arms
+(`docs/evidence/2026-09-18_c1-memory-module/README.md` «The write-then-panic audit»: `allocNew`,
+`makeSlice`, `makeMap`, `makeChan`, `clearSlice`, `copySlice`, `appendSlice`, the dead `storeMany`) are
+where the phases must be REORDERED (hoist `valueAsLoc tv` before the alloc in makeMap/makeChan — a pure
+reordering; state or prove the header/backing invariant `offset + cap ≤ backing.size` so the element loops
+cannot fail after `validateSlice`); the V arms are reorganizations. Targets (charter §6): `alloc_new`
+linear, n = 32k < 1 s; the (h) scalar phase within 1.2× of h = 0; the OWED `append_grow` ×2 ratios ≤ 2.2
+(MISSED at S1: ×2.5–2.8). Measure BEFORE with main's binary and AFTER with
+`docs/evidence/2026-09-11_bug090-rediagnosis/run-probes.py --plan full` (3 runs, medians, net of the empty
+probe); a miss is reported as a miss and carried to C4 with the reason. Gate; choice trace byte-identical;
+the detector-soundness matrix unchanged. Then the merge ask for the whole branch (S2c + BUG-111 + S3).
+
+The pre-merge adversarial audit is ASKED at this park (charter §8; scope and waiver are the [USER]'s):
+the (b)/(c) bar of `docs/2026-09-18_c1-memory-module-audit.md` — (b) the label as an ORDERED list of
+events per rule (a rule whose emission order differs from gc's instrumentation order; an emission the fold
+attributes to the wrong goroutine; a wake or pairing whose action differs from the deleted arm's); (c) what
+guards the emit/peek discipline now (the 72-row inventory) and what guards the ORDER (nothing mechanical
+beyond the S2c-i audit's evidence and the positive control); BUG-111's canonical form (`TypeId.canon`
+inside a `Loc` — a key that is not a machine path; every emitter covered? the enumerator's `stepNeeds`
+mirrors untouched?); the extension of the fix to the HB locations (§6).

@@ -1,0 +1,40 @@
+# BUG-111 fix — the detector-soundness matrix on the fix binary 06e78653… at the ROWS' FIRST PARAMS (sites=8) — an INTERMEDIATE record (2026-09-19 UTC)
+# scripts/detector-soundness --select in-scope --jobs 6 (the fixed runner); out dir artifacts/detector-soundness/20260919T000718Z
+== detector-soundness b111 start 2026-09-19T00:07:18Z bin=06e786532b91c05e
+detector-soundness EXIT=2 wall=1748s
+
+detector-soundness summary — 2026-09-19T00:36:26+00:00
+rows: 641   runs/proc: 5   procs: 1,8   worker-pool exit: 0
+
+cells:
+  agree-DRF      503
+  agree-race     36
+  over-refusal   6
+  possible-HOLE  1
+  refused        9
+  uncertified    86
+
+by lane × cell:
+  confluent	agree-DRF	90
+  confluent	uncertified	1
+  membership	agree-DRF	128
+  membership	refused	9
+  membership	uncertified	4
+  racy	agree-race	36
+  racy	possible-HOLE	1
+  strict	agree-DRF	285
+  strict	over-refusal	6
+  strict	uncertified	81
+
+HOLE rows (gc RACE, machine DRF — exit-bearing; a HOLE not on a BUGS.md Cases: line is a STOP):
+
+possible-HOLE rows (gc RACE, machine ENUM-FAIL — exit-bearing; certify or diagnose each):
+  race/negative/struct-tag-alias-field	p1:race=5,clean=0,exit=0,abnormal=0,timeout=0;p8:race=5,clean=0,exit=0,abnormal=0,timeout=0;	single=race	ENUM-FAIL:run consumes more than --max-sites 8 choice site(s) — raise the case's sites bound (never truncated silently)
+
+over-refusal rows (machine RACE-*, gc DRF-in-N — three-way investigation):
+  race/free/array-dyn-index-read-write	p1:race=0,clean=5,exit=0,abnormal=0,timeout=0;p8:race=0,clean=5,exit=0,abnormal=0,timeout=0;	RACE-ALL (1/1 members)
+
+# the ONE possible-HOLE is the alias row at the lane's default sites=8: gc RACE 5/5 at GOMAXPROCS 1 and 8, the machine's single default-stream run = race, the ENUMERATOR refused by name (the sites bound; depth 9 needed) — corrected to sites=16 in the params commit; the final matrix after that commit is detector-soundness-bug111.txt
+# the guard is agree-DRF (gc clean 5/5 both procs; machine DRF): agree-DRF 503 = the S2c-ii 502 + the guard; every other cell identical to the S2c-ii matrix
+462:race/free/struct-tag-alias-disjoint-fields	confluent	goroutines,channels,structs,pointers,conversions,race	ok	p1:race=0,clean=5,exit=0,abnormal=0,timeout=0;p8:race=0,clean=5,exit=0,abnormal=0,timeout=0;	DRF-in-N	1	0	DRF	ok	agree-DRF	-
+499:race/negative/struct-tag-alias-field	racy	goroutines,channels,structs,pointers,conversions,race	race	p1:race=5,clean=0,exit=0,abnormal=0,timeout=0;p8:race=5,clean=0,exit=0,abnormal=0,timeout=0;	RACE	-	-	ENUM-FAIL:run consumes more than --max-sites 8 choice
