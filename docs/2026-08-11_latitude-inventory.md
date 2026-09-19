@@ -599,6 +599,33 @@ pick (`Step.selectApply`/`applySelect`'s stream+identity quantifiers,
   lock-holding goroutine and cannot be made deterministic, hence
   un-lane-able. Register #4 carries the same measured state in its
   own words.
+- DOCUMENTED ALIGNMENT FACTS (the C1 S2c adversarial audit, F6/F7 —
+  `docs/2026-09-19_c1-s2c-audit.md`; [AGENT] fix round 2026-09-19; no
+  status change — both are fail-closed deviations of the detector's HB
+  edge set from gc's REALIZED edges, in the direction «the machine
+  refuses ⊇ gc», recorded here so they stop being unrecorded):
+  (i) **channel HB accumulation** — chan.go:930–934 `racesync` and
+  :951–961 `racenotify` for `c.elemsize == 0` (`chan struct{}`) put the
+  release/acquire on ONE sync object (`chanbuf(c, 0)` / `c.buf`) for
+  every send AND receive whatever the capacity, so gc realizes MORE HB
+  than go_mem's counting rule (an unbuffered rendezvous or a
+  zero-size-element op acquires EVERY earlier participant's clock
+  through the object); the machine follows go_mem's per-slot model
+  (`ChanClocks`, `HbAction.slotOp`/`rendezvous`) and gives fewer edges.
+  Audit litmus `chanStructAccum` (cap-2 `chan struct{}`): machine
+  RACE-ALL on 122 leaves; gc 5/5 racy in the sampled schedules, but the
+  «both sends before the receive» schedule is gc-clean by the
+  accumulation and machine-refused. Program-level agreement; refusals ⊇
+  gc's. (ii) **the select poll is the UNION over `pollorder`** —
+  select.go:270–299: pass 1 walks gc's random `pollorder` and leaves at
+  the first ready case, so `racereadpc(c.raceaddr())` fires only for the
+  send cases reached up to and including the chosen one; `selectPoll`
+  (Machine.lean) emits one channel-object read per send clause on every
+  path — the weakest-machine reading (any pollorder is gc's). Audit
+  litmus `selectPollVsClose`: gc 3/5 and 2/5 racy by pollorder luck; the
+  machine RACE-ALL. Fail-closed; consistent with the racy lane's oracle
+  («one red sample proves the race»; pre-existing BUG-046 class). The
+  `selectPoll` docstring says so since this round.
 
 ### C11. Tie-breaks that look like latitude but are unreachable/unobservable — (c) FORCED
 

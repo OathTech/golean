@@ -976,3 +976,22 @@ enumerator refuses by name; at 16 it certifies every path refuses, 334 leaves) �
 gate **3678 = 3429/249, red ONLY on the 5a pair**. Detector-soundness: the intermediate matrix at `sites=8`
 had the alias row as its one possible-HOLE (gc RACE 5/5); the final matrix is in the evidence README.
 Next: S3 (the rollback) — the handoff §7.
+
+**C1 S2c audit fix round (2026-09-19, one gated commit `967712a3` + the records commit that follows it) — the audit's
+F1–F10 applied; still PARKED before S3.** The adversarial audit (`docs/2026-09-19_c1-s2c-audit.md`, FIX-FIRST
+records/coverage class: 33 litmus programs, the candidate right on all 32 that yield a verdict, MAIN's binary
+WRONG on six alias programs — exactly fix (i)'s wider-than-the-letter scope, unpinned). F1/F3: EIGHT rows, one
+per key kind, born on the RIGHT side under the fix binary with gc `-race` 5/5 agreeing at GOMAXPROCS 1 and 8 —
+`race/negative/struct-tag-alias-array-field`, `race/negative-sync/struct-tag-alias-nested-{mutex-copy,wg-overwrite}`
+(the wg row RESHAPED from the audit's RACE-SOME copy-beside-Wait to a RACE-ALL overwrite-beside-Add-from-0),
+`race/free-sync/struct-tag-alias-{mutex-handoff (membership {1,2}),rwmutex-handoff,once-observe}`,
+`race/atomics-free/struct-tag-alias-flag-handoff` (membership {0,1}) on BUG-111's `Cases:` line, plus
+`race/negative-sync/nested-mutex-copy` (BUG-080's class at a FIELD path, no alias; both binaries refuse) on
+BUG-080's; baseline 3678 → **3686 = 3438/248**, no existing row changed. F4: `Tests/GoCoreEval.lean`
+`labelShapeFacts` — **56** per-arm label-shape facts (`#eval`-first, `==`-asserted) pin the emission ORDER of
+every chan/select/sync/atomic/wake/pairing/spawn arm; eval tests 267 ok. F2: ledger §8 refreshed (the
+undisclosed reconciler C4 closed; the params gate's dirty tree noted). F5/F6/F7 recorded (Once observe's
+pre-acquire read; gc's `racesync`/`elemsize==0` accumulation; `selectPoll` = the union over `pollorder`) in
+`Machine.lean` docstrings, BUG-111's entry and latitude C10. F8/F9/F10 records. Gate at `967712a3`: EXIT=1, 741 s, 3686 = 3437/249 (gate count; baseline 3438/248 — the stale-certificate row), red ONLY on the 5a pair (`certificate provenance` STALE on `CLI.lean`; the single `google-search` drift line), eval tests 267 ok, inventory 72 ok, core audit ok, re-pin guard 0 flips, reconciler no C4/C5; the eight rows PASS at their lanes (`mutex-handoff`'s `1` member gc-unexhibited in 32 draws — the machine's, DRF).
+Choice trace vs main: 542 ids (the audit's subset), 3,252 results per side, sorted dumps 17,052 records each, sha256 `890c2e7a…` both, `cmp` EXIT=0. Detector-soundness: 649 rows, EXIT=2 (the 9 standing refusals), HOLE 0 / possible-HOLE 0 / agree-race 41 (37 + 4) / agree-DRF 507 (503 + 4) / over-refusal 6 / refused 9 / uncertified 86 — every pre-existing cell unchanged, 1,748 s. Wider-scope ratification PENDING
+[USER], evidence-backed. Next: S3 (the rollback) — the handoff §7.

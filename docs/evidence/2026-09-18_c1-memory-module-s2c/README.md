@@ -16,7 +16,7 @@ was released; byte-identical to the fix round's `42b7bf1a…`).
 |---|---|
 | `fold-audit-s2c1.txt` | the whole-corpus tracer run (`scripts/choice-trace-corpus --dump --jobs 6`, the standing 2 exclusions): 21,835 (row, stream) results, `foldMismatches` column sum 0, statuses census; the sorted-dump byte-identity vs main's binary (23,679 records, sha256 `0df092ee…` both, `cmp` EXIT=0) |
 | `twin-audit-s2c1.txt` | the raft twin (`raft-twin/probeTwin{Choice,Single,Elect,Perturb,Ticks}` × 6 streams, fuel 10,000,000) on both binaries: 30/30 ok, 0 fold mismatches, 0 alarms, 14,360 consumptions each; sorted dumps `cmp` EXIT=0, sha256 `3b0b4c0a…` both |
-| `probe-FoldOrder.lean` / `.log` | the positive control: two labels differing only in the order of `Mutex.Unlock`'s state Add and its release fold to DIFFERENT shadows; `Acc.auditFold` reports it; equal folds report nothing; a one-goroutine pool is inert |
+| `probe-FoldOrder.lean` / `.log` | the positive control: two labels differing only in the order of `Mutex.Unlock`'s state Add and its release fold to DIFFERENT shadows; `Acc.auditFold` reports it; equal folds report nothing; a one-goroutine pool is inert. COMPILES AT THE S2c-i TREE `f1ad88c3` ONLY (the audit's F9): it imports `GoLean.ChoiceTrace`'s `raceFold`/`Acc.auditFold`, deleted at S2c-ii — historical evidence, not a live probe; the live order guard since the fix round is the label-shape fact set in `Tests/GoCoreEval.lean` (`labelShapeFacts`) |
 | `eval-tests-s2c1.txt` | `gocore-eval-tests` at the S2c-i tree: 211 ok, EXIT=0 |
 | `gate-tail-s2c1.txt` | the `ci --diff` tail at `f1ad88c3` (EXIT=1, 770 s; red only on the two 5a-class items) |
 
@@ -80,3 +80,21 @@ gone with the arms). The SYNCHRONIZATION rows now name the apply's own emission 
 | `gate-tail-bug111-params.txt` | the `ci --diff` tail at the params commit `87a3c90b` (`sites=16`): EXIT=1, 709 s, **3678 = 3429/249**, red ONLY on the 5a pair — BUG-111's end state |
 | `detector-soundness-bug111.txt` | the FINAL official matrix (fix binary, tree `87a3c90b`): EXIT=2 (the 9 `params-omit-sites=` membership refusals, as always), 1,740 s, worker-pool exit 0, **641 rows** (639 + the two BUG-111 rows): **HOLE 0, possible-HOLE 0**, agree-DRF 503 (the S2c-ii 502 + the guard: gc clean 5/5 at both procs, machine DRF), **agree-race 37** (the S2c-ii 36 + the alias row: gc RACE 5/5 at GOMAXPROCS 1 and 8, machine RACE-ALL 1/1 member at `sites=16`), over-refusal 6 (the same six: BUG-041's O1 residual and the five ruled `race/gomem-only/*` rows), refused 9, uncertified 86 — every pre-existing cell unchanged (`detector-soundness-bug111.txt`; the intermediate matrix at `sites=8`, whose one possible-HOLE was the alias row's enumerator refusal, is `detector-soundness-bug111-sites8.txt`). |
 | `choice-trace-bug111.txt` | the whole-corpus choice trace with the fix binary vs main's on the 3,676 pre-existing rows: 23,679 records, sha256 `0df092ee…` = main's, `cmp` EXIT=0 (D4: no other row's consumption moved); the alias row `race` on all six streams, the guard `ok` on all six |
+
+## Audit fix round — the audit's F1–F10 applied (2026-09-19; gated commit `967712a3` + the records commit that follows it)
+
+Audit: `docs/2026-09-19_c1-s2c-audit.md` on `review/c1-memory-module-s2c-0918` @ `41bef7bc` (its litmus sources and
+outputs under `docs/evidence/2026-09-19_c1-s2c-audit/` on that branch; the eight corpus rows below reuse six of its
+programs verbatim modulo type names, one reshaped — the handoff's fix-round section). Candidate binary at the
+transcripts: `06e78653…` (the fix binary — the fix round's Lean edits are docstrings and the test module);
+main's certified binary `42b7bf1a…` (`.tmp/golean-main`, read-only copy).
+
+| file | what |
+|---|---|
+| `fixround-gc-transcript.txt` | gc `go run -race` ×5 at GOMAXPROCS 1 and 8 per new subject (`fixround-run-gc.sh`, the audit's `run-lit.sh` protocol; `GO111MODULE=off`, `GOCACHE` under `.tmp/`): the four racy subjects RACE 5/5 at both procs, the four race-free subjects clean 5/5 at both procs (the atomic handoff samples only its `0` member — the membership row admits both) |
+| `fixround-machine-racy.txt` | the four racy subjects on both binaries (default stream) and both enumerators at the rows' `sites=` (`fixround-run-machine.sh`, no `--expect-status`): the candidate RACE-ALL on every one (334 / 11 / 11 / 11 leaves); MAIN `ok` on the three alias rows (HOLEs — its enumerator: DRF on 148 leaves for the nested Mutex copy, `ok`/`panic` members for the wg overwrite, a `sites=16` refusal for the array field), `race` on the no-alias one |
+| `fixround-machine-free.txt` | the four race-free subjects: the candidate certifies {1, 2} (3,116 leaves), {2} (3,116), {1} (1,441), {0, 1} (406); MAIN `race` — RACE-ALL on the Mutex and RWMutex handoffs, RACE-SOME on the Once observe and the atomic flag handoff (FALSE races: split clock tables) |
+| `fixround-eval-tests.txt` | `gocore-eval-tests` at the fix-round tree, sequential warm build: `lake build` EXIT=0, `lake exe` EXIT=0, **267 ok** (211 + the 56 `LABEL …` facts, listed), 0 FAIL |
+| `gate-tail-fixround.txt` | the `ci --diff` tail at `967712a3`: EXIT=1, 741 s, 3686 = 3437/249 (gate count; baseline 3438/248 — the stale-certificate row), red ONLY on the 5a pair (`certificate provenance` STALE on `CLI.lean`; the single `google-search` drift line), eval tests 267 ok, inventory 72 ok, core audit ok, re-pin guard 0 flips, reconciler no C4/C5; the eight rows PASS at their lanes (`mutex-handoff`'s `1` member gc-unexhibited in 32 draws — the machine's, DRF) |
+| `choice-trace-fixround.txt` | 542 ids (the audit's subset), 3,252 results per side, sorted dumps 17,052 records each, sha256 `890c2e7a…` both, `cmp` EXIT=0 |
+| `detector-soundness-fixround.txt` | 649 rows, EXIT=2 (the 9 standing refusals), HOLE 0 / possible-HOLE 0 / agree-race 41 (37 + 4) / agree-DRF 507 (503 + 4) / over-refusal 6 / refused 9 / uncertified 86 — every pre-existing cell unchanged, 1,748 s |

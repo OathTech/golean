@@ -1,0 +1,21 @@
+# C1 S2c audit fix round — choice-trace byte-identity: the fix-round binary da7bb837… (gate-built at 967712a3) vs main 42023bd9's certified binary 42b7bf1a… on the audit's 543-id multi-goroutine subset (docs/evidence/2026-09-19_c1-s2c-audit/subset-ids.txt on the review branch; the 2 standing exclusions and the 2 BUG-111 rows absent; the fix round's 8 rows not in it) — scripts/choice-trace-corpus --dump --jobs 6, sorted per-consumption dumps (chunk headers dropped), sha256, cmp
+== trace start 2026-09-19T03:33:11Z cand=da7bb8376164e23f… main=42b7bf1ab5f2b17e… ids=543
+cand tracer EXIT=0 2026-09-19T03:34:05Z
+main tracer EXIT=0 2026-09-19T03:35:01Z
+  17052 .tmp/fixround/ct-cand.sorted.tsv
+  17052 .tmp/fixround/ct-main.sorted.tsv
+  34104 total
+890c2e7a405a90daeeb5a92ffb9990eb92e6d4989c067b33a07ef30e2d5c4462  .tmp/fixround/ct-cand.sorted.tsv
+890c2e7a405a90daeeb5a92ffb9990eb92e6d4989c067b33a07ef30e2d5c4462  .tmp/fixround/ct-main.sorted.tsv
+cmp EXIT=0
+# candidate tracer summary:
+2:rows traced: 542 ids, 3252 (id,stream) lines; 0 id(s) the tracer could not run (ERROR)
+7:  menu-invariant violations: 0
+8:  self-check alarms (mirror/accountant, sentinel, pick-record): 0
+9:  driver-agreement mismatches: 0
+# main tracer summary:
+2:rows traced: 542 ids, 3252 (id,stream) lines; 0 id(s) the tracer could not run (ERROR)
+7:  menu-invariant violations: 0
+8:  self-check alarms (mirror/accountant, sentinel, pick-record): 0
+9:  driver-agreement mismatches: 0
+== done 2026-09-19T03:35:01Z
