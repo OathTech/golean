@@ -18,7 +18,10 @@ ratification and BUG-111 ruling record (2026-09-18)»). Every decision below is 
   `raceUpdate` (no `ctx`/`sPre`/`tsPre`); the registry arms and their helpers deleted; the tracer's
   audit retired; the inventory at 72 rows. Choice trace byte-identical to main's (corpus and twin);
   the official detector-soundness run: §3.
-- **BUG-111 fix (i)** and **S3** (the rollback, cost B): after S2c-ii (§7).
+- **BUG-111 fix (i)** — IN PROGRESS: the red-first rows are committed (`race/negative/struct-tag-alias-field`
+  born FAIL, `race/free/struct-tag-alias-disjoint-fields` PASS — §1, §2 «BUG-111 rows»); the fix commit
+  (`Loc.canon` at every emitter) follows with the disclosed `Cases:` flip (§3 «BUG-111»).
+- **S3** (the rollback, cost B): after BUG-111 (§7).
 
 ## 1. What landed, per slice (gate lines in §2)
 
@@ -40,6 +43,27 @@ ratification and BUG-111 ruling record (2026-09-18)»). Every decision below is 
   `applyPairing`'s `chanCell` mentions are the same six, now binding the capacity). Eval tests
   (`gocore-eval-tests`) 211 ok, EXIT=0. Records checks at the S2c-i records commit: `scripts/check-bugs.sh`
   EXIT=0; `scripts/check-evidence-size` EXIT=0; `scripts/check-agents-alias` EXIT=0.
+
+## 2a. BUG-111 — the rows' born state and the fix (charter §7 D7: a disclosed `Cases:` flip)
+
+- **Rows** (commit `96f2d72d`, `Corpus/coverage/exec/race/{negative,free}`, `baselines/native-full.tsv`
+  re-pinned 3676 → 3678 with the reason, `docs/BUGS.md` BUG-111 `Pinned-by: differential`, `Cases:
+  race/negative/struct-tag-alias-field`): the alias row — `type aliasA struct{ f int }; type aliasB struct{ f
+  int }`, `q := (*aliasB)(&a)`, goroutine 1 `a.f = 1`, goroutine 2 `_ = q.f`, main joined by two receives on a
+  buffered channel (the lane's idiom in place of the entry's WaitGroup: the same HB shape, and the row's ONLY
+  race is the pair through the two spellings) — is BORN on the wrong side: the S2c-ii binary ACCEPTS it
+  (`status ok, value 1`; the control `raceWriteWrite` refuses `race`), pinned FAIL/racy; the guard (the same
+  alias, main writes `c.f`, the child writes `q.g`, readout 12) is PASS/confluent
+  (`bug111-born-state.txt`). Gate at the rows' commit: `GOLEAN_MEM_MAX=32G scripts/capped scripts/ci --diff` under the box-wide lock (acquired after 0 s, 23:48:13–23:59:44 UTC) on the committed tree `96f2d72d`: **EXIT=1, 691 s**; **3678 cases: 3428 PASS / 250 FAIL** (the two new rows: the guard PASS as pinned, the alias row FAIL); `eval tests` 211 ok; `bug-index cross-check` ok; `re-pin guard` ok (0 PASS→non-PASS flips); `memory-module raw call-site inventory` ok (72); every other step ok. RED: the two 5a-class items (`certificate provenance` STALE on `CLI.lean`; the one cached certified row) PLUS ONE drift line on the new row itself — `race/negative/struct-tag-alias-field baseline[FAIL/racy] -> now[FAIL/lean-observation]`: the row IS FAIL as pinned, its born STAGE is `lean-observation` (the machine observes `ok` where `go run -race` reports), not the `racy` word the first pin guessed — the pin corrected to what the gate observed in the records commit that follows (the verdict never changed). ZERO other drift. Tail: `gate-tail-bug111-rows.txt`.
+- **The fix** (commit FIX-SHA-TBD): `Loc.canon` (Ops.lean) — the `.field` step's static `typeId` erased to
+  `TypeId.canon`, the field NAME kept as the position, indices kept — applied by EVERY emitter: the `.data`
+  keys (`Mem.*`), the `.syncWord` paths (`syncWord`), the `.chanObj` identities
+  (`chanSendEntry`/`chanCloseWrite`/`selectPoll`), and the `HbAction` locations that key the clock tables
+  (`atomicEvents`, the applies' `slotOp`/`closeOp`/`closeAcquire`/`syncAcquire`/`syncRelease`, the pairing
+  tables). Machine paths untouched. The alias row flips FAIL → PASS (the DISCLOSED flip; the baseline re-pinned
+  with the reason; BUG-111 `Status: fixed`, `Cases:` both rows); the guard stays PASS; NO other row changes
+  (a change would have been a STOP, not a re-pin). Gate: FIX-GATE-TBD. Detector-soundness after the fix:
+  FIX-DS-TBD.
 
 ## 3. The S2c-i audit — RESULT (the S2a pattern: both accounts in ONE binary, per step)
 
@@ -94,6 +118,9 @@ differences.
 | the sync tables' home | Machine.lean, beside the applies that emit them (moved from Race.lean, return `AccessTrace`) | leave them in Race.lean and re-export | Race.lean is DOWNSTREAM of Machine.lean (it imports StepFn); the emitter cannot see them there |
 | the transitional old fold | `raceUpdate` reads the label only through `dataEvents` (accesses, attribution looked through) on its two label-reading arms; every registry arm untouched | rewrite the old fold to ignore the new events some other way | on a private data step the label has no other kind of event, on a spawn the child's accesses are exactly the S2b account — the old fold is byte-for-byte the detector of record (zero drift by construction), which is what makes the audit's EQUAL meaningful |
 | the audit's equality | STRUCTURAL `RaceState` equality (derived `BEq`), incl. the clock tables' insertion order; error class + message on failures | equality up to a semantic quotient | the two folds perform the SAME clock operations in the SAME order or they do not — structural equality is the stricter, cheaper check, and the tracer continues with the fold of record |
+| BUG-111's canonical form | `Loc.canon`: the same `Loc` type with the `.field` typeId erased to one canonical `TypeId.canon` (`⟨"$canon"⟩` — not a Go identifier) | a separate `KeyPath := Addr × List (String ⊕ Int)` type for shadow keys (the spike's `pathsDisjoint` shape) | the key stays a `Loc`, so `ShadowKey`, `locPrefix`/`overlap`, the clock tables, `Ord` and every lemma keep their types; on canonical keys structural prefix IS the spike's canonical prefix (`f1_canon`'s relation) |
+| what BUG-111's fix canonicalizes | EVERY emitted location — `.data`, `.syncWord`, `.chanObj` keys AND the `HbAction` locs that key the channel / sync / atomic clock tables | (a) the `.data` keys alone (the entry's letter); (b) canonicalize at CONSUMPTION in the fold | (a) would leave the sync words structural, and a canonical data path would then no longer prefix-overlap the primitive's words (the BUG-080 copy-beside-Lock refusals would silently OPEN); the clock tables keyed structurally would split on an alias (a fail-closed residual). One rule at the ONE place the module speaks — emission — is the charter's shape; (b) would put a second account in the fold |
+| the rows' join idiom | two receives on a buffered channel (the lane's idiom) | the entry's `sync.WaitGroup` | the same happens-before shape, no `sync` import in `race/negative`, and the row's only race stays the alias pair |
 | a delivered panic's label | `[]` (the standing `deliver` convention); a `.panicking` CONFIGURATION returned by an apply keeps the apply's label (a send on a closed channel carries its entry read; `wgAdd`'s negative-counter panic carries its entry pair and its release-merge) | strip the label on every panicking successor | gc records `chansend`'s entry read before the closed-channel panic and `Add`'s ReleaseMerge before the negative-counter check (waitgroup.go:81); the old fold recorded exactly these (`raceChanEntryReads` on every outcome, `raceWgAddEvent` regardless of outcome) and the audit confirms |
 
 ## 5. Proved vs owed after S2c-i

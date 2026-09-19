@@ -1,0 +1,9 @@
+# BUG-111 — the BORN state of the red-first rows on the S2c-ii binary b3354990… (2026-09-18), before fix (i)
+# frontend: GO111MODULE=off go run ./tools/nativefrontend --dir Corpus/coverage/exec/race/{negative,free} — both EXIT=0
+# golean native-json-run --input <wire> --function <subject> (the default stream)
+raceStructTagAliasField (race/negative/struct-tag-alias-field; expected race — BORN FAIL: the alias race is MISSED):
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}
+freeStructTagAliasDisjointFields (race/free/struct-tag-alias-disjoint-fields; expected ok 12 — PASS):
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":12}]}
+control raceWriteWrite (race/negative/write-write; refuses):
+{"message":"data race detected","output":"","schema":"golean-observation-v1","status":"race"}

@@ -65,3 +65,14 @@ Runtime commit `fc4e5d6b` (its message is the content inventory). Binary `b33549
 `scripts/check-mem-callsites` EXIT=0, PASS, **72 rows** (78 − the six DETECTOR REGISTRY ARM rows: `raceCommitClauseEvent` chanCell 2,
 `racePairEvent` chanCell 3, `raceUpdate` chanCell 3 / loadLoc 1 / syncCell 3, `raceWakeEvent` chanCell 2 — 14 raw memory-operation sites
 gone with the arms). The SYNCHRONIZATION rows now name the apply's own emission as the reason the peek/raw write is not a data access.
+
+## BUG-111 — fix (i), canonical-path keys (2026-09-18; RULED [USER] 2026-09-18, relayed)
+
+| file | what |
+|---|---|
+| `bug111-born-state.txt` | the two rows on the S2c-ii binary BEFORE the fix: the alias row ACCEPTED (`ok`, 1 — the missed race, born FAIL), the guard `ok` 12, the control racy row refuses |
+| `gate-tail-bug111-rows.txt` | the `ci --diff` tail at the rows' commit `96f2d72d`: EXIT=1, 691 s, 3678 = 3428/250; red on the 5a pair plus the new row's STAGE word (FAIL/racy pinned, FAIL/lean-observation observed — the pin corrected in the following records commit; the verdict FAIL unchanged) |
+| `bug111-fixed-state.txt` | the two rows on the fix binary: FIX-STATE-TBD |
+| `gate-tail-bug111-fix.txt` | the `ci --diff` tail at the fix commit: FIX-GATE-TBD |
+| `detector-soundness-bug111.txt` | the official matrix after the fix: FIX-DS-TBD |
+| `choice-trace-bug111.txt` | the whole-corpus choice trace after the fix vs main's, on the 3,676 pre-existing rows: FIX-CT-TBD |
