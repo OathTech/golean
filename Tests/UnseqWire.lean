@@ -17,7 +17,14 @@ observation set must equal the reference set EXACTLY. The negative variants
 NARROWED sets — the exact-set check names an edge mutation the decoder cannot.
 The one-edit MUTANTS (`mut-*.json`, needles in `mutants.tsv`) must be refused BY
 NAME by the decoder; `scripts/check-unseq-wire` drives the same files through the
-real CLI binary. -/
+real CLI binary. The Stage C audit fix round (2026-09-20) added the CONSTANT-HEAD
+witnesses `cguard`/`celem`/`cstr` (audit F2: a constant copied into a cell — a
+guard's test, a store's value — the frontend's own shape, which the C1 decoder
+refused by name; hand-built AND native, each a singleton main's legacy path
+also gives) and the mutant `mut-nested-completion-join` (audit F3: a NESTED
+guard's completion binder consumed outside its enclosing region — statically
+refused since D12's fix; the machine's `unproducedConsumer?` refusal stays
+behind it). -/
 
 namespace Tests.UnseqWire
 
@@ -74,6 +81,14 @@ def main (_args : List String) : IO Unit := do
     wireSet "R4 wire: old := a; a[0] += mut() (mut rebinds a)" "r4.json" "r4" [okOut "old 11 20\na 100 200\n", okOut "old 10 20\na 101 200\n"],
     wireSet "R6 wire SPLIT" "r6.json" "r6" [okZ 10, okZ 20],
     wireSet "R6 wire FUSED (the narrowing): a data-edge mutation the exact-set check names" "r6-fused.json" "r6" [okZ 20],
+    -- CONSTANT HEADS (audit fix round 2026-09-20, F2): a constant copied into a cell — the
+    -- guard's test (`true && f()`), the phase-2 store's value (`a[f()] = 5`, `a[f()] = "s"`);
+    -- D8 admits the bare constant, D9 types it against the cell. Singletons = main's answers.
+    wireSet "CGUARD wire: ok := true && f() — a constant guard test copied into a bool cell" "cguard.json" "cguard" [okZ 2],
+    wireSet "CELEM wire: a[f()] = 5 — an int constant as the store's value cell (a captured: header READ unordered vs f, same value)" "celem.json" "celem"
+      [{ status := "ok", values := [59], output := "f\n" }],
+    wireSet "CSTR wire: a[f()] = \"s\" — a string constant as the store's value cell" "cstr.json" "cstr"
+      [{ status := "ok", values := [1], output := "f\n" }],
     -- THE FRONTEND'S OWN LOWERING (C2): source → actual frontend bytes → strict decoder →
     -- machine → EXACT reference sets (v2.1 §7 row C's exit; the graphs are the emitter's,
     -- not hand-built — the same reference sets as the hand-built wires above).
@@ -90,6 +105,9 @@ def main (_args : List String) : IO Unit := do
     wireSet "NATIVE R2c b=false" "native-r2c.json" "r2cFalse" [okOut "g\nk\nsink 1 true 7\n", okOut "g\nk\nsink 1 false 7\n"],
     wireSet "NATIVE R4" "native-r4.json" "r4" [okOut "old 11 20\na 100 200\n", okOut "old 10 20\na 101 200\n"],
     wireSet "NATIVE R6" "native-r6.json" "r6" [okZ 10, okZ 20],
+    wireSet "NATIVE CGUARD (the frontend's constant-head copy, refused at C1 — audit F2)" "native-cguard.json" "cguard" [okZ 2],
+    wireSet "NATIVE CELEM" "native-celem.json" "celem" [{ status := "ok", values := [59], output := "f\n" }],
+    wireSet "NATIVE CSTR" "native-cstr.json" "cstr" [{ status := "ok", values := [1], output := "f\n" }],
     -- EDGE MUTATIONS of the LOWERED graphs (v2.1 §8): each decodes; the exact-set check
     -- names the changed set (the decoder cannot see a missing or wrong edge).
     wireSet "EDGE data (R6: the access reads the variable's header, not the frozen slot) → the fused {20}" "edge-data.json" "r6" [okZ 20],

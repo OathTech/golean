@@ -1,5 +1,19 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 3699 (3455 PASS / 244 FAIL)
+# cases: 3705 (3459 PASS / 246 FAIL)
+# re-pinned: 2026-09-20 [AGENT], core/unseq-stage-c-0919, STAGE C AUDIT FIX ROUND (docs/2026-09-20_unseq-stage-c-audit.md, FIX-FIRST; dispositions
+#   docs/2026-09-19_unseq-stage-c-handoff.md «Audit fix round (2026-09-20)»): SIX rows ADDED, no existing row changed. (F2) evalorder/unseq-const-cell/
+#   {const-guard-left,elem-assign-const-int,elem-assign-const-string} — a CONSTANT copied into a cell inside a native `unseq` graph (`true && f()`,
+#   `a[f()] = 5`, `a[f()] = "s"`; the audit's a14/a15/a16): RED-FIRST, born FAIL/lean-observation on the candidate 2dac6a75 (the decoder's D8 refused
+#   the frontend's own constant-head `copy` by name — a coverage REGRESSION vs main, whose legacy ANF ran all three), PASS since D8 admits constant
+#   heads (D9 types them against the cell); each observation byte-identical to main's binary + main's frontend (fixround-main-vs-candidate.txt); both
+#   states measured by scripts/diff-one on each binary (docs/evidence/2026-09-19_unseq-stage-c/fixround-born-state.txt, fixround-postfix-state.txt).
+#   (F1 → BUG-113, NEW RED with its reason) evalorder/legacy-logical-vs-call/{or-vs-call,and-vs-call} FAIL/differential — the LEGACY path evaluates a
+#   binary logical operation AFTER a lexically later call (gc `logical false 0`, the machine `logical true 0`; pre-existing on main, main = candidate,
+#   the wires byte-identical); on BUG-113's Cases line, fix owed to Stage E; the call-first control evalorder/legacy-logical-vs-call/call-first-control
+#   PASS. Confirmed by the fix round's full scripts/capped scripts/ci --slow at the fix tree (EXIT=1 in 954 s, K=80; 3705 rows 3458 PASS / 247 FAIL in
+#   the run; docs/evidence/2026-09-19_unseq-stage-c/fixround-gate-tail.txt) — every one of the six rows reproduced its pinned state, NO other row moved:
+#   the run's ONE drift line is the 5a-class imported-goose/channel/google-search PASS->FAIL/membership (STALE certificate for GoLean/NativeToIR.lean;
+#   fresh re-certification «unchanged set»; PASS kept here for the train's 5a step); re-pin guard 0 PASS->non-PASS. 3705 = 3459 PASS / 246 FAIL.
 # re-pinned: 2026-09-19 [AGENT], core/unseq-stage-c-0919, STAGE C of the evaluation-order model v2.1 — the native `unseq` PILOT (C2: the lowering; design
 #   docs/2026-09-19_unseq-stage-c-design.md §3 predicted every line of this movement; rulings [USER] Mike 2026-09-19 «Agree, merge» relayed: width of
 #   P = all mutable reads STAGED, N1 SPLIT, N3 REFUSE). Recorded from a full scripts/capped scripts/ci --diff at the C2 tree (gate #2, 701 s;
@@ -2149,6 +2163,12 @@ PASS	evalorder/unseq-pilot/w2	membership
 PASS	evalorder/unseq-pilot/w3	membership
 PASS	evalorder/unseq-pilot/w5	membership
 PASS	evalorder/unseq-pilot/w6	membership
+PASS	evalorder/unseq-const-cell/const-guard-left	-
+PASS	evalorder/unseq-const-cell/elem-assign-const-int	-
+PASS	evalorder/unseq-const-cell/elem-assign-const-string	-
+FAIL	evalorder/legacy-logical-vs-call/or-vs-call	differential
+FAIL	evalorder/legacy-logical-vs-call/and-vs-call	differential
+PASS	evalorder/legacy-logical-vs-call/call-first-control	-
 PASS	examples/binsearch/absent-above	-
 PASS	examples/binsearch/absent-below	-
 PASS	examples/binsearch/absent-gap	-

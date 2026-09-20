@@ -1,0 +1,312 @@
+{
+ "buildContext": {
+  "buildTags": [],
+  "cgoEnabled": true,
+  "compiler": "gc",
+  "goarch": "amd64",
+  "goos": "linux"
+ },
+ "fileOrder": [
+  {
+   "files": [
+    "main.go"
+   ],
+   "package": "main"
+  }
+ ],
+ "funcs": [
+  {
+   "body": {
+    "body": [
+     {
+      "define": false,
+      "lhs": [
+       {
+        "expr": {
+         "expr": "ident",
+         "name": "a$cap"
+        },
+        "target": "addr"
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "2"
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [
+       {
+        "expr": "bool",
+        "type": {
+         "kind": "bool"
+        },
+        "value": true
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "cguard$lit0",
+   "params": [
+    {
+     "id": "a$cap",
+     "type": {
+      "elem": {
+       "int": "int",
+       "kind": "int"
+      },
+      "kind": "pointer"
+     }
+    }
+   ],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "bool"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "a",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "1"
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "f",
+        "target": "declare",
+        "type": {
+         "kind": "func",
+         "params": [],
+         "results": [
+          {
+           "kind": "bool"
+          }
+         ],
+         "variadic": false
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "captured": [
+         {
+          "expr": "ref",
+          "id": "a"
+         }
+        ],
+        "expr": "func-value",
+        "func": "cguard$lit0",
+        "type": {
+         "kind": "func",
+         "params": [],
+         "results": [
+          {
+           "kind": "bool"
+          }
+         ],
+         "variadic": false
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "cells": [
+       {
+        "id": "$u0",
+        "type": {
+         "kind": "bool"
+        }
+       },
+       {
+        "id": "$u1",
+        "type": {
+         "kind": "bool"
+        }
+       },
+       {
+        "id": "$u2",
+        "type": {
+         "kind": "bool"
+        }
+       }
+      ],
+      "occs": [
+       {
+        "bind": "$u0",
+        "head": {
+         "expr": "bool",
+         "type": {
+          "kind": "bool"
+         },
+         "value": true
+        },
+        "kind": "eval",
+        "name": "copy0"
+       },
+       {
+        "kind": "guard",
+        "name": "guard1",
+        "out": "$u1",
+        "test": "$u0",
+        "when": true
+       },
+       {
+        "args": [],
+        "binds": [
+         "$u2"
+        ],
+        "callee": {
+         "expr": "ident",
+         "name": "f"
+        },
+        "kind": "invoke",
+        "name": "call2",
+        "region": "guard1",
+        "resultTypes": [
+         {
+          "kind": "bool"
+         }
+        ]
+       },
+       {
+        "bind": "$u1",
+        "head": {
+         "expr": "ident",
+         "name": "$u2",
+         "type": {
+          "kind": "bool"
+         }
+        },
+        "kind": "eval",
+        "name": "join3",
+        "region": "guard1"
+       }
+      ],
+      "stmt": "unseq",
+      "stores": [],
+      "then": {
+       "define": true,
+       "lhs": [
+        {
+         "id": "ok",
+         "target": "declare",
+         "type": {
+          "kind": "bool"
+         }
+        }
+       ],
+       "rhs": [
+        {
+         "expr": "ident",
+         "name": "$u1",
+         "type": {
+          "kind": "bool"
+         }
+        }
+       ],
+       "stmt": "assign"
+      }
+     },
+     {
+      "cond": {
+       "expr": "ident",
+       "name": "ok",
+       "type": {
+        "kind": "bool"
+       }
+      },
+      "stmt": "if",
+      "then": {
+       "body": [
+        {
+         "results": [
+          {
+           "expr": "ident",
+           "name": "a",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           }
+          }
+         ],
+         "stmt": "return"
+        }
+       ],
+       "stmt": "block"
+      }
+     },
+     {
+      "results": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "-1"
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "cguard",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  }
+ ],
+ "methodSets": [],
+ "methods": [],
+ "package": "main",
+ "schema": "golean-native-v1",
+ "types": []
+}

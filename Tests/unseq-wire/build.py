@@ -58,6 +58,13 @@ def strc(s):
     return {"expr": "string", "bytes": list(s.encode("utf-8")), "type": STR}
 
 
+def boolc(v):
+    return {"expr": "bool", "value": bool(v), "type": BOOL}
+
+
+SLICE_STR = {"kind": "slice", "elem": STR}
+
+
 def fv(func):
     """A top-level function as an already-evaluated callee value."""
     return {"expr": "func-value", "func": func, "captured": []}
@@ -280,6 +287,47 @@ def r6_graph(split=True):
         then=define("v", INT, ident("$u2", INT)))
 
 
+# ---------------------------------------------------------------- constant heads (audit fix round F2)
+# A CONSTANT copied into a cell — the emitter's `copy` occurrence where the consumer needs a
+# CELL (design §6): a guard's test (`true && f()`), a phase-2 store's value (`a[f()] = 5`,
+# `a[f()] = "s"`). The C1 decoder refused these heads by name — the frontend's own emission
+# (docs/2026-09-20_unseq-stage-c-audit.md F2); D8 admits them since the fix round, typed by
+# the wire's annotation (D9 checks the constant's type against its cell).
+
+def cguard_graph():
+    # ok := true && f(): copy0 puts the constant into the bool test cell; f in the region.
+    return unseq(
+        [cell("$u0", BOOL), cell("$u1", BOOL), cell("$u2", BOOL)],
+        [ev("copy0", "$u0", boolc(True)),
+         gd("guard1", "$u0", True, "$u1"),
+         inv("call2", ["$u2"], ident("f"), [], [BOOL], region="guard1"),
+         ev("join3", "$u1", ident("$u2", BOOL), region="guard1")],
+        then=define("ok", BOOL, ident("$u1", BOOL)))
+
+
+def celem_graph():
+    # a[f()] = 5: a captured -> its header is a READ occurrence; the constant 5 copied into
+    # the store's value cell; the plan on the frozen header and f's result.
+    return unseq(
+        [cell("$u0", SLICE_INT), cell("$u1", INT), cell("$u2", INT)],
+        [inv("call0", ["$u1"], ident("f"), [], [INT]),
+         ev("read1", "$u0", ident("a", SLICE_INT)),
+         tgt("target2", "$t0", elem_target(ident("$u0", SLICE_INT), ident("$u1", INT))),
+         ev("copy3", "$u2", intc(5))],
+        stores=[("$t0", "$u2")])
+
+
+def cstr_graph():
+    # a[f()] = "s": a private -> the header is read at the plan step; the string constant
+    # copied into the store's value cell.
+    return unseq(
+        [cell("$u0", INT), cell("$u1", STR)],
+        [inv("call0", ["$u0"], ident("f"), [], [INT]),
+         tgt("target1", "$t0", elem_target(ident("a", SLICE_STR), ident("$u0", INT))),
+         ev("copy2", "$u1", strc("s"))],
+        stores=[("$t0", "$u1")])
+
+
 # witness -> (src dir, [(function, until_decl, keep_tail, node, path)]): the emitted
 # setup statements are kept through the one that DECLARES `until_decl` (the frontend
 # may emit a source statement as several — `a := make([]int, 2)` is a make-slice into
@@ -303,6 +351,10 @@ WITNESSES = {
     "r4": ("r4", [("r4", "mut", 2, r4_graph(), None)]),
     "r6": ("r6", [("r6", "f", 1, r6_graph(), None)]),
     "r6-fused": ("r6", [("r6", "f", 1, r6_graph(split=False), None)]),
+    # constant heads (audit fix round F2): the copy of a constant into a cell
+    "cguard": ("cguard", [("cguard", "f", 2, cguard_graph(), None)]),
+    "celem": ("celem", [("celem", "f", 1, celem_graph(), None)]),
+    "cstr": ("cstr", [("cstr", "f", 2, cstr_graph(), None)]),
 }
 
 
@@ -385,6 +437,13 @@ def mutants(wires):
          "not a bool cell")
     # D1 an unknown key on an occurrence
     edit("mut-unknown-key", "w1", "w1", lambda n, w: occ(n, "read1").update(extra=1), "unknown key")
+    # D12 for a NESTED guard (audit fix round F3, the audit's m02/m02b): R2c's sink3 consumes the
+    # INNER guard4's completion binder $u4 (produced by join6 inside guard2's region) instead of
+    # the outer completion $u5 — a completion binder is confined to ITS guard's enclosing region;
+    # the C1 decoder admitted this (the machine refused it only dynamically when guard2 skipped).
+    edit("mut-nested-completion-join", "r2c", "r2cTrue",
+         lambda n, w: occ(n, "call9").update(args=[ident("$u0", INT), ident("$u4", BOOL), ident("$u6", INT)]),
+         "invalid branch join")
     return out
 
 

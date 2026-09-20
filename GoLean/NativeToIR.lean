@@ -867,11 +867,13 @@ binders (D2, D5), a non-empty graph and distinct occurrence names (D3), the
 kind (D4), sorts (D6), LIST ORDER = a linear extension of every edge —
 cycles and forward references refused in one check (D7), the internal
 NORMAL FORM of every head / callee / argument — no hidden read, no logical
-operator, no `recover`, no allocation (D8), head type = cell type (D9),
+operator, no `recover`, no allocation; a bare int/bool/string constant is an
+admitted head — the copy into a cell (D8), head type = cell type (D9),
 `resultTypes` = the bound cells' types (D10), guard cells bool with the
 completion inside the region (D11 — `wellFormed?`), the STATIC G rule: a
 region-confined binder is consumed only inside its region, the completion
-binder being the only join (D12), the target plan's shape (D13), and a
+binder being the only join — itself confined to its guard's enclosing region
+when the guard is nested (D12), the target plan's shape (D13), and a
 completion free of nested `unseq` / legacy `unseq-probe` (the whole-sweep
 boundary, audit N2) and of `recover` (D14). -/
 
@@ -902,11 +904,19 @@ private partial def jsonMentionsStmt (tags : List String) : Json → Bool
   | .arr xs => xs.any (jsonMentionsStmt tags)
   | _ => false
 
-/-- D8 for an `eval` head: one of the admitted heads over ATOM operands. The
-one structural exception is a `slice` whose `high` is `builtin-len` of the
-SAME base atom — spec#Slice_expressions' default high («the length of the
-sliced operand»), which the emitter spells as a length of the one evaluated
-base. -/
+/-- D8 for an `eval` head: one of the admitted heads over ATOM operands, or a
+bare CONSTANT (`int`/`bool`/`string`) — the emitter's copy of a constant into a
+cell where the consumer needs one (a guard's test, a phase-2 store's value;
+design §6 «a constant or atom value is copied into one»): trivially in normal
+form (no read, no failure), typed by the wire's own annotation, which D9 checks
+against the cell (a constant whose type disagrees with its slot refuses there).
+Admitted at the Stage C audit fix round (2026-09-20, F2): the C1 arm listed no
+constant head and refused the frontend's own emission — legal Go that ran on
+main (`x := true && f()`, `a[f()] = 5`) refused by name; rows
+`evalorder/unseq-const-cell/*`. The one structural exception is a `slice` whose
+`high` is `builtin-len` of the SAME base atom — spec#Slice_expressions' default
+high («the length of the sliced operand»), which the emitter spells as a length
+of the one evaluated base. -/
 private def unseqCheckHead (path : String) (head : Json) : LowerM Unit := do
   if jsonMentionsRecover head then
     fail s!"unseq: recover() inside an occurrence head at {path} — recover is an EVENT (it changes the continuation), never a pure op (v2.1 §3.1); refused by name"
@@ -918,6 +928,7 @@ private def unseqCheckHead (path : String) (head : Json) : LowerM Unit := do
       fail s!"unseq: hidden read in a pure node — {path}.{key} is not an atom (an identifier or an int/bool/string constant; v2.1 §3.1 internal normal form); refused by name"
   match tag with
   | "ident" => pure ()
+  | "int" | "bool" | "string" => pure ()   -- a constant copied into a cell (D9 types it)
   | "index-get" => do atom "base"; atom "index"
   | "slice" => do
       atom "base"
@@ -941,7 +952,7 @@ private def unseqCheckHead (path : String) (head : Json) : LowerM Unit := do
   | "unary" => atom "x"
   | "type-assert" => atom "operand"
   | other =>
-      fail s!"unseq: head '{other}' at {path} is outside the Stage C fragment (admitted heads: ident, index-get, slice, builtin-len, builtin-cap, binary, unary, type-assert); refused by name"
+      fail s!"unseq: head '{other}' at {path} is outside the Stage C fragment (admitted heads: ident, a constant (int/bool/string), index-get, slice, builtin-len, builtin-cap, binary, unary, type-assert); refused by name"
 
 /-- D8 for an `invoke` callee: an identifier (a func-typed local or slot) or
 a `func-value` whose captures are addresses (`ref`/`ident`/`globaladdr`). -/
@@ -985,15 +996,26 @@ private def unseqRegionChain (g : UnseqGraph) (o : UnseqOcc) : List String :=
           | none => [])
   go o.region g.occs.length
 
-/-- The region a binder is CONFINED to: its producer's region, unless the
-producer is that guard's completion (the one join). -/
+/-- The region a binder is CONFINED to (D12, STATIC G): its producer's region —
+unless the producer is that guard's completion (the one join), in which case
+the binder is confined to THE GUARD'S OWN region (its `region`, if any; `none`
+for a top-level guard). The audit fix round (2026-09-20, F3) added the second
+half: the C1 arm exempted a completion binder from confinement altogether, so a
+NESTED guard's completion (`(a && (b || f())) && g()`: the inner `||`'s `$u3`,
+produced by its join inside the outer `&&`'s region) could be consumed by a
+hand-built `then` OUTSIDE the outer region — the wire decoded, ran when the
+outer region was active, and was refused only DYNAMICALLY when it was skipped
+(`UnseqGraph.unproducedConsumer?`, GoLean/GoCore/Unseq.lean — the machine's
+own refusal, unchanged, stays behind this static net as defence in depth;
+mutant `mut-nested-completion-join`). -/
 private def unseqConfinedTo? (g : UnseqGraph) (slot : String) : Option String :=
   match (g.producer? slot).bind (g.occs[·]?) with
   | some p =>
       match p.region with
       | some gn =>
           match g.occs.find? (·.name == gn) with
-          | some ⟨_, .guard _ _ out, _, _⟩ => if out == slot then none else some gn
+          | some ⟨_, .guard _ _ out, _, guardRegion⟩ =>
+              if out == slot then guardRegion else some gn
           | _ => some gn
       | none => none
   | none => none

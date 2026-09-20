@@ -1,0 +1,10 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# evalorder/unseq-const-cell — a CONSTANT copied into a cell inside a native `unseq` graph
+# (Stage C audit F2, docs/2026-09-20_unseq-stage-c-audit.md; programs a14/a15/a16 verbatim).
+# Red-first rows: born FAIL/lean-observation on the candidate 2dac6a75 (the decoder's D8 refused
+# the frontend's own constant-head `copy` occurrence by name — a coverage REGRESSION vs main,
+# which ran all three), PASS since the fix round's D8 admits constant heads. Strict: every sweep
+# is all-forced (one call, a constant atom), the observation main's legacy ANF gives.
+const-guard-left	constGuardLeft	-	ok	-	closures,bools,calls,evaluation_order	strict	-	-
+elem-assign-const-int	elemAssignConstInt	-	ok	-	closures,slices,indexing,calls,assignment,print,evaluation_order	strict	-	-
+elem-assign-const-string	elemAssignConstString	-	ok	-	closures,slices,indexing,calls,assignment,print,strings,evaluation_order	strict	-	-

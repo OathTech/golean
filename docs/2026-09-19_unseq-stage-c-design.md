@@ -173,18 +173,32 @@ The machine's `UnseqGraph.wellFormed?` and its dynamic refusals stay the enforce
 | D5 | every `bind`/`binds` of eval/load/invoke is a declared cell; every cell produced by EXACTLY one occurrence; target binds `$`-prefixed, distinct, not cells | `result binder '<b>' is not a declared cell`; `duplicate result: binder '<b>' produced twice`; `cell '<c>' is produced by no occurrence`; `sort mismatch: '<b>' is both a TARGET and a VALUE binder` |
 | D6 | sorts: `load.target` is a target binder; a target binder never appears as a value (heads, callee, args, guard test, store value, `then`); store target is a target binder, store value a cell | `sort mismatch: …` |
 | D7 | LIST ORDER IS A LINEAR EXTENSION: every `after` name, every cell/target binder an occurrence consumes, and its `region` guard refer to an occurrence of STRICTLY LOWER rank (cycles included) | `list order is not a linear extension: '<o>' (rank i) depends on '<p>' (rank j ≥ i)` / `unknown occurrence reference '<p>'` |
-| D8 | NORMAL FORM: an `eval` head is one of `ident` (a read of a cell or a source local), `index-get(atom, atom)`, `slice(atom, atom, atom \| builtin-len(base atom), [atom])`, `builtin-len/cap(atom)`, `binary(op ∉ {&&, \|\|}; atom, atom)`, `unary(atom)`, `type-assert(atom)`; an atom is `ident`/`int`/`bool`/`string`; `args` are atoms or `to-interface(atom)`; `callee` is an `ident` or a `func-value` whose captures are `ref`/`ident`; no `recover`, no `unseq-probe`, no allocation head anywhere | `hidden read in a pure node: <head>.<operand> is not an atom`; `logical operator in a head (guards are occurrences)`; `recover() inside an unseq occurrence`; `head '<expr>' outside the Stage C fragment` |
+| D8 | NORMAL FORM: an `eval` head is one of `ident` (a read of a cell or a source local), a bare CONSTANT `int`/`bool`/`string` (the copy of a constant into a cell — §6's «a constant or atom value is copied into one»: a guard's test, a phase-2 store's value; trivially in normal form, typed by its own annotation, D9 checks it against the cell — admitted at the audit fix round 2026-09-20, F2: the C1 arm listed no constant head and REFUSED the frontend's own emission, a fail-closed regression on legal Go that ran on main; rows `evalorder/unseq-const-cell/*`, witnesses `cguard`/`celem`/`cstr`), `index-get(atom, atom)`, `slice(atom, atom, atom \| builtin-len(base atom), [atom])`, `builtin-len/cap(atom)`, `binary(op ∉ {&&, \|\|}; atom, atom)`, `unary(atom)`, `type-assert(atom)`; an atom is `ident`/`int`/`bool`/`string`; `args` are atoms or `to-interface(atom)`; `callee` is an `ident` or a `func-value` whose captures are `ref`/`ident`; no `recover`, no `unseq-probe`, no allocation head anywhere | `hidden read in a pure node: <head>.<operand> is not an atom`; `logical operator in a head (guards are occurrences)`; `recover() inside an unseq occurrence`; `head '<expr>' outside the Stage C fragment` (admitted heads listed, the constant among them) |
 | D9 | an `eval` head carries `type`; `decodeTy(head.type) = cell type` | `head type <T> disagrees with cell '$u' declared <T'>`; `eval head carries no type` |
 | D10 | `invoke`: 0 ≤ binds ≤ 2; `resultTypes` arity = binds; each = the cell's type | `invocation with n results outside the fragment`; `resultTypes arity …`; `result type … disagrees with cell …` |
 | D11 | `guard`: `test` and `out` are bool cells; `out` produced by exactly one occurrence whose `region` is this guard | `guard '<g>' tests '<c>', not a bool cell`; `… completion '<c>' is not produced inside its region` |
-| D12 | STATIC G (v2.1 §1): a binder produced inside region G by an occurrence other than G's completion is consumed only by occurrences whose region chain contains G — never by a store, `then`, or an occurrence outside | `invalid branch join: '<o>' uses '<b>', confined to region '<g>'` |
+| D12 | STATIC G (v2.1 §1): a binder produced inside region G by an occurrence other than G's completion is consumed only by occurrences whose region chain contains G — never by a store, `then`, or an occurrence outside; G's COMPLETION binder is itself confined to G's ENCLOSING region (a nested `&&`/`\|\|`'s completion is consumed only inside the outer region or by the outer completion; `none` for a top-level guard) — the second clause is the audit fix round's F3 correction (2026-09-20): the C1 arm exempted completion binders altogether, so a hand-built `then` consuming a NESTED guard's completion decoded, RAN when the outer region was active and was refused only dynamically when it skipped. DEFENCE IN DEPTH: the machine's own `UnseqGraph.unproducedConsumer?` (GoLean/GoCore/Unseq.lean; Stage B tests F1/A4–A5) still refuses a skipped producer's binder at the completion — unchanged, behind this static net; mutant `mut-nested-completion-join` | `invalid branch join: '<o>' uses '<b>', confined to region '<g>'` |
 | D13 | `target.lhs` is `{"target":"var","id":<source local>}` or `{"target":"addr","expr":{"expr":"index-addr","base":atom,"index":atom}}`; the id is not `$`-prefixed | `target plan outside the Stage C fragment`; `a binder cannot be a store target` |
 | D14 | `then` decodes (`decodeStmt`); contains no `unseq`, no `unseq-probe` (the whole-sweep boundary, machine-side defence in depth — audit N2), no `recover` | `nested unseq`; `legacy unseq-probe inside an unseq completion (mixture)` |
 
 Byte-input controls (C1, `scripts/check-wire-boundary` extended): duplicate binder (D5), a
 cycle / forward reference (D7), a skipped-branch value used without a join (D12), a sort
 mismatch (D6), a non-`$` binder (D2), an unknown slot (D8/D5), plus the positive control (the
-wire runs to its reference set).
+wire runs to its reference set); the audit fix round added the constant-head positive
+(`cguard.json` runs and answers 2 — F2) and the nested-completion refusal
+(`mut-nested-completion-join` — F3): 9 unseq-node controls.
+
+**What the decoder does NOT check (stated, not implied — audit F8).** (i) D8's «no hidden read»
+for `ident` heads and `ident` callees is RELATIVE to the frontend's privacy analysis: the
+decoder cannot tell a package-level variable from a private local by name (a hand-built
+`eval $u ident g` with `g` a global decodes and reads the global at its rank); identifier
+privacy is the frontend's (`unseqClassify`'s address-taken / package-variable rules, §1), not
+the wire's. (ii) D14 restricts `then` by EXCLUSION only (no `unseq`, no `unseq-probe`, no
+`recover`); v2.1 §3.1's completion contract — stores and control transfer over the results,
+no re-run of any source expression — is not checked, so a hand-built `then` may hold
+arbitrary statements. Both are hand-built-only gaps: for the frontend's wires the trust lies
+in `unseqClassify` and `emitUnseqSweep` (trusted surface #1), and the corpus differential is
+the check on them.
 
 ## 6. The lowering (C2, `tools/nativefrontend/unseq.go` `emitUnseqSweep`)
 
@@ -195,8 +209,9 @@ wire runs to its reference set).
 - **Ops.** Every arithmetic/comparison/unary op and every type assertion is an `eval`
   occurrence on atoms (v2.1 §1: unreduced graphs; no ordering optimization).
 - **Events.** `len`/`cap` → `eval $u builtin-len(atom)` with E1 `after`; a call → `invoke`
-  with result cells (0–2; a statement-position call with results gets DISCARD cells `$d<n>` —
-  a targetless value frame is stuck-closed), `callee` = `func-value{func}` for a top-level
+  with result cells (0–2; a statement-position call with results gets discard cells minted
+  like every other cell, `$u<n>` — the first text here said `$d<n>`, corrected at the audit
+  fix round, F6; a targetless value frame is stuck-closed), `callee` = `func-value{func}` for a top-level
   function, `ident` for a func local (a slot when address-taken), the lifted `func-value` for a
   literal; args atoms or `to-interface(atom)` (`wrapInterfaceConversion`); E1: `after` the
   previous event anchor; the anchor becomes this occurrence. Nested `f(g())`: g's occurrence
@@ -223,7 +238,16 @@ wire runs to its reference set).
   its argument subtree (and a guard's left operand and region) immediately before it, and the
   residual holds every other read/op/target/load in lexical order. The all-zero tape then
   realizes calls first, reads late (gc's realization where gc is call-first; BUG-104's
-  targets move late — the intended flip).
+  targets move late — the intended flip). **One named exception (audit F9): gc realizes TYPE
+  ASSERTIONS EARLY.** gc's `order.go` copies `x.(T)` to a temp AT ITS LEXICAL POSITION when
+  `T` is not pointer-shaped (`ODOTTYPE` → `copyExprClear`), so gc evaluates the assertion
+  BEFORE any later hoisted call, while the canonical slot evaluates it LATE. Every such gc
+  draw is a MEMBER of the row's set and every such row is a MEMBERSHIP row (`assert-left-call`
+  gc ``·conversion vs the default `wit 5`·conversion; `assert-middle` gc `wit 1` vs the default
+  `wit 1 wit 2`; `index-assert-left-call`; BUG-101's pair; the audit's a34 `iv.(string) + f()`);
+  a STRICT row of this shape cannot pass silently — its default ≠ gc goes red at
+  `differential` — so a future strict red there is this exception to route to membership,
+  not a machine bug.
 - **Mixture guard.** The lowering runs with `probeSuppress` raised and asserts the hoist
   accumulator is unchanged afterwards; a hoist produced inside a graph lowering is refused
   (`unseq lowering produced a legacy hoist — mixture refused`), never emitted.

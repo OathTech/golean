@@ -1,0 +1,411 @@
+{
+ "buildContext": {
+  "buildTags": [],
+  "cgoEnabled": true,
+  "compiler": "gc",
+  "goarch": "amd64",
+  "goos": "linux"
+ },
+ "fileOrder": [
+  {
+   "files": [
+    "main.go"
+   ],
+   "package": "main"
+  }
+ ],
+ "funcs": [
+  {
+   "body": {
+    "body": [
+     {
+      "args": [
+       {
+        "bytes": [
+         102
+        ],
+        "expr": "string",
+        "type": {
+         "kind": "string"
+        }
+       }
+      ],
+      "newline": true,
+      "stmt": "print"
+     },
+     {
+      "results": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "1"
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "cstr$lit0",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "elem": {
+       "kind": "string"
+      },
+      "elems": [
+       {
+        "index": 0,
+        "value": {
+         "bytes": [
+          120
+         ],
+         "expr": "string",
+         "type": {
+          "kind": "string"
+         }
+        }
+       },
+       {
+        "index": 1,
+        "value": {
+         "bytes": [
+          121
+         ],
+         "expr": "string",
+         "type": {
+          "kind": "string"
+         }
+        }
+       }
+      ],
+      "length": 2,
+      "stmt": "slice-lit",
+      "target": {
+       "id": "$c0",
+       "target": "declare",
+       "type": {
+        "elem": {
+         "kind": "string"
+        },
+        "kind": "slice"
+       }
+      }
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "a",
+        "target": "declare",
+        "type": {
+         "elem": {
+          "kind": "string"
+         },
+         "kind": "slice"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "ident",
+        "name": "$c0",
+        "type": {
+         "elem": {
+          "kind": "string"
+         },
+         "kind": "slice"
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "f",
+        "target": "declare",
+        "type": {
+         "kind": "func",
+         "params": [],
+         "results": [
+          {
+           "int": "int",
+           "kind": "int"
+          }
+         ],
+         "variadic": false
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "captured": [],
+        "expr": "func-value",
+        "func": "cstr$lit0",
+        "type": {
+         "kind": "func",
+         "params": [],
+         "results": [
+          {
+           "int": "int",
+           "kind": "int"
+          }
+         ],
+         "variadic": false
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "cells": [
+       {
+        "id": "$u1",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       },
+       {
+        "id": "$u3",
+        "type": {
+         "kind": "string"
+        }
+       }
+      ],
+      "occs": [
+       {
+        "args": [],
+        "binds": [
+         "$u1"
+        ],
+        "callee": {
+         "expr": "ident",
+         "name": "f",
+         "type": {
+          "kind": "func",
+          "params": [],
+          "results": [
+           {
+            "int": "int",
+            "kind": "int"
+           }
+          ],
+          "variadic": false
+         }
+        },
+        "kind": "invoke",
+        "name": "call0",
+        "resultTypes": [
+         {
+          "int": "int",
+          "kind": "int"
+         }
+        ]
+       },
+       {
+        "bind": "$t2",
+        "kind": "target",
+        "lhs": {
+         "expr": {
+          "base": {
+           "expr": "ident",
+           "name": "a",
+           "type": {
+            "elem": {
+             "kind": "string"
+            },
+            "kind": "slice"
+           }
+          },
+          "expr": "index-addr",
+          "index": {
+           "expr": "ident",
+           "name": "$u1",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           }
+          }
+         },
+         "target": "addr"
+        },
+        "name": "target1"
+       },
+       {
+        "bind": "$u3",
+        "head": {
+         "bytes": [
+          115
+         ],
+         "expr": "string",
+         "type": {
+          "kind": "string"
+         }
+        },
+        "kind": "eval",
+        "name": "copy2"
+       }
+      ],
+      "stmt": "unseq",
+      "stores": [
+       {
+        "target": "$t2",
+        "value": "$u3"
+       }
+      ],
+      "then": {
+       "body": [],
+       "stmt": "block"
+      }
+     },
+     {
+      "cond": {
+       "expr": "binary",
+       "op": "==",
+       "operandType": {
+        "kind": "string"
+       },
+       "type": {
+        "kind": "bool"
+       },
+       "x": {
+        "expr": "binary",
+        "op": "+",
+        "type": {
+         "kind": "string"
+        },
+        "x": {
+         "base": {
+          "expr": "ident",
+          "name": "a",
+          "type": {
+           "elem": {
+            "kind": "string"
+           },
+           "kind": "slice"
+          }
+         },
+         "expr": "index-get",
+         "index": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "0"
+         },
+         "type": {
+          "kind": "string"
+         }
+        },
+        "y": {
+         "base": {
+          "expr": "ident",
+          "name": "a",
+          "type": {
+           "elem": {
+            "kind": "string"
+           },
+           "kind": "slice"
+          }
+         },
+         "expr": "index-get",
+         "index": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "1"
+         },
+         "type": {
+          "kind": "string"
+         }
+        }
+       },
+       "y": {
+        "bytes": [
+         120,
+         115
+        ],
+        "expr": "string",
+        "type": {
+         "kind": "string"
+        }
+       }
+      },
+      "stmt": "if",
+      "then": {
+       "body": [
+        {
+         "results": [
+          {
+           "expr": "int",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "value": "1"
+          }
+         ],
+         "stmt": "return"
+        }
+       ],
+       "stmt": "block"
+      }
+     },
+     {
+      "results": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "0"
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "cstr",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  }
+ ],
+ "methodSets": [],
+ "methods": [],
+ "package": "main",
+ "schema": "golean-native-v1",
+ "types": []
+}

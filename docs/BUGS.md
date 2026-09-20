@@ -7039,42 +7039,6 @@ production-byte-input mutation tests (duplicate keys, absent vectors,
 malformed surrogates) driven through the CLI, not through an already-parsed
 `Json` value.
 
-## BUG-112 — the Stage C `unseq` pilot's two compound-target flips: `x[fnine()] += wit(5)` (BUG-104's slice-element spelling) and `x[fnine()] += len(b[j]) + wit(5)` (BUG-102's narrowed-A6 residue) lower as ONE `unseq` graph each and become membership sets with gc's draw inside [frontend lowering; evaluation order; the whole-sweep `unseq` graph — the FIXED entry the two rows moved to]
-
-- Status: fixed ([AGENT], 2026-09-19, lane `core/unseq-stage-c-0919`, Stage C of the
-  evaluation-order model v2.1 — `docs/2026-09-19_unseq-stage-c-design.md` §3 predicted both
-  flips with their sets; measured at the C2 gate)
-- Pinned-by: differential
-- Cases: builtins/e13-sibling-panic-order/compound-call-target-vs-call, builtins/e13-sibling-panic-order/compound-call-target-vs-len
-
-WHAT: BUG-104 recorded that `emitReadWriteTarget` hoists a call-bearing compound
-target's ADDRESS to a temp at the target's lexical position, so its bounds check
-fired BEFORE the RHS's ordered events on every stream (gc reads the target in the
-residual, after them); BUG-102 recorded the same target beside a hoisted `len` as
-a designed refusal (the narrowed A6 guard). The Stage C pilot lowers every sweep
-inside its grammar as ONE `unseq` graph (`tools/nativefrontend/unseq.go`
-`unseqClassify` + `unseq_lower.go`; the machine construct is Stage B's
-`Stmt.unseq`): the call `fnine` is an invocation occurrence; the target plan is
-ONE occurrence on its FROZEN result (the header of the private `x` read at the
-plan step — never `&x`, Stage B F2); the checked load reads through that plan and
-the phase-2 store writes through the same plan (one identity — v2.1 §3.4); `wit`
-follows `fnine` by E1 (`after`); `len` is an E1-ordered event whose operand `b[j]`
-is a checked read. Every linear extension is a member, the canonical (all-zero)
-tape realizing calls first, reads late — gc's realization:
-
-- `compound-call-target-vs-call`: {`f` · `wit 5` · panic `[9] with length 1`
-  (gc's, canonical), `f` · panic `[9]`} — members=2, width=2; FAIL/differential →
-  PASS/membership.
-- `compound-call-target-vs-len`: {`` · panic `[5] with length 1`, `f` · `[5]`
-  (gc's), `f` · `[9]`} — `wit` never runs (`len`'s operand `b[j]` panics and `wit`
-  follows `len`); members=3, width=2; FAIL/frontend-export (the designed
-  refusal) → PASS/membership.
-
-Both rows PASS with gc's draw inside the set on every K=32 draw (K=80 under
-`--slow`). The map-key and receive spellings of BUG-104 are NOT fixed (outside the
-pilot grammar — Stage E) and stay on BUG-104's line; the structural-allocation
-designed reds stay on BUG-102's.
-
 ## BUG-111 — the race detector's conflict relation compares `.field` path steps STRUCTURALLY, static `typeId` included, so a struct-tag-compatible pointer alias (`p.f` vs `(*B)(p).f`, triage L7) yields two «disjoint» shadow keys for ONE memory word: an HB-unordered write through one alias and a read through the other is NOT a conflict — a MISSED RACE, fail-OPEN vs `go run -race` [fidelity; race detector conflict relation (`locPrefix`/`ShadowKey.overlap`, Race.lean); found by the C1 S0 frame-law spike]
 
 - Status: fixed (2026-09-18, lane `core/c1-memory-module-s2c-0918` — fix (i), canonical-path
@@ -7172,3 +7136,101 @@ designed reds stay on BUG-102's.
   free/*` row (the disjoint-fields guard). Effort S once the trace exists; the C1 lane
   recommends (i) and will NOT implement it without the ruling (charter §7 D7: «Any OTHER
   difference = STOP, BUG, red-first row, referral»).
+
+## BUG-112 — the Stage C `unseq` pilot's two compound-target flips: `x[fnine()] += wit(5)` (BUG-104's slice-element spelling) and `x[fnine()] += len(b[j]) + wit(5)` (BUG-102's narrowed-A6 residue) lower as ONE `unseq` graph each and become membership sets with gc's draw inside [frontend lowering; evaluation order; the whole-sweep `unseq` graph — the FIXED entry the two rows moved to]
+
+- Status: fixed ([AGENT], 2026-09-19, lane `core/unseq-stage-c-0919`, Stage C of the
+  evaluation-order model v2.1 — `docs/2026-09-19_unseq-stage-c-design.md` §3 predicted both
+  flips with their sets; measured at the C2 gate)
+- Pinned-by: differential
+- Cases: builtins/e13-sibling-panic-order/compound-call-target-vs-call, builtins/e13-sibling-panic-order/compound-call-target-vs-len
+
+WHAT: BUG-104 recorded that `emitReadWriteTarget` hoists a call-bearing compound
+target's ADDRESS to a temp at the target's lexical position, so its bounds check
+fired BEFORE the RHS's ordered events on every stream (gc reads the target in the
+residual, after them); BUG-102 recorded the same target beside a hoisted `len` as
+a designed refusal (the narrowed A6 guard). The Stage C pilot lowers every sweep
+inside its grammar as ONE `unseq` graph (`tools/nativefrontend/unseq.go`
+`unseqClassify` + `unseq_lower.go`; the machine construct is Stage B's
+`Stmt.unseq`): the call `fnine` is an invocation occurrence; the target plan is
+ONE occurrence on its FROZEN result (the header of the private `x` read at the
+plan step — never `&x`, Stage B F2); the checked load reads through that plan and
+the phase-2 store writes through the same plan (one identity — v2.1 §3.4); `wit`
+follows `fnine` by E1 (`after`); `len` is an E1-ordered event whose operand `b[j]`
+is a checked read. Every linear extension is a member, the canonical (all-zero)
+tape realizing calls first, reads late — gc's realization:
+
+- `compound-call-target-vs-call`: {`f` · `wit 5` · panic `[9] with length 1`
+  (gc's, canonical), `f` · panic `[9]`} — members=2, width=2; FAIL/differential →
+  PASS/membership.
+- `compound-call-target-vs-len`: {`` · panic `[5] with length 1`, `f` · `[5]`
+  (gc's), `f` · `[9]`} — `wit` never runs (`len`'s operand `b[j]` panics and `wit`
+  follows `len`); members=3, width=2; FAIL/frontend-export (the designed
+  refusal) → PASS/membership.
+
+Both rows PASS with gc's draw inside the set on every K=32 draw (the C2/C3 `ci --diff`
+gates) and on every one of the 80 draws of the Stage C audit fix round's `scripts/capped
+scripts/ci --slow` at the fix tree — the FIRST `--slow` after the lowering existed
+(`draws=80 (K=80; …)` on both rows, gc drawing its one member every time: `f wit 5`·[9],
+`f`·[5]; EXIT=1 in 954 s (2026-09-20 19:39:04–19:54:58Z), K=80 (`membership_draws 80`); 3705 rows 3458 PASS / 247 FAIL in the run = the pinned 3459 / 246 with the one 5a-class row red; DRIFT = exactly `imported-goose/channel/google-search` PASS→FAIL/membership (STALE certificate for `NativeToIR.lean`; fresh re-certification «unchanged set; seconds=164.598»); every other step ok; re-pin guard 0 PASS→non-PASS). Audit F4: the C1 `--slow` this sentence first cited predates
+`unseq_lower.go`, so the K=80 claim as first written was unsupported. The map-key and
+receive spellings of BUG-104 are NOT fixed (outside the
+pilot grammar — Stage E) and stay on BUG-104's line; the structural-allocation
+designed reds stay on BUG-102's.
+
+## BUG-113 — the LEGACY evaluation-order path evaluates a binary LOGICAL operation AFTER a lexically LATER call in the same statement (`sinkL(left || b, change())` with `left` a package variable and `change` setting `b`: gc `logical false 0`, the machine `logical true 0`; the `&&` spelling the same) — spec#Order_of_evaluation orders «function calls, method calls, receive operations, and binary logical operations» lexically among themselves, so the `||` must read `b` BEFORE the later call [frontend lowering; the legacy ANF hoist (`tools/nativefrontend/emit.go`), every operand family OUTSIDE the Stage C pilot grammar; pre-existing on main `6a7beb3d` (main = candidate); exposed by the pilot's own `evalorder/unseq-pilot/r2b` and found by the Stage C adversarial audit, F1, 2026-09-20]
+
+- Status: open
+- Pinned-by: differential
+- Cases: evalorder/legacy-logical-vs-call/or-vs-call, evalorder/legacy-logical-vs-call/and-vs-call
+
+WHAT: `spec#Order_of_evaluation` («all function calls, method calls, receive
+operations, and binary logical operations are evaluated in lexical left-to-right
+order»; `spec#Logical_operators` — the operands of `&&`/`||` are evaluated as part
+of the operation, the right one conditionally; both anchors resolve against the
+spec pinned in `docs/spec-sources.md`, `scripts/check-spec-anchors`) fixes the order of `left || b` against the lexically LATER
+`change()`: the `||` is a binary logical operation, so it — and with it the read
+of its operands — comes first, and `change()`'s write to `b` cannot be seen:
+`false` is the ONLY permitted result. gc gives `logical false 0` on the plain and
+the `-gcflags=all='-N -l'` build. The legacy ANF hoist lifts the CALL to a temp
+BEFORE the statement (`$c17 := change()`) and leaves the `||` inline in the
+residual, so the machine reads the post-call `b`: `logical true 0` — a WRONG
+ANSWER at a FORCED point (observed gc ∉ modeled). The `&&` spelling
+(`leftT && b`, `leftT` true) is wrong the same way; the call-first control
+`sinkR(change(), left || b)` (the call lexically FIRST — the spec orders it
+before the `||`) matches gc, `logical 0 true`. The inventory's own E12 text names
+this hard constraint («calls/receives/binary-logical stay lexically ordered among
+themselves», `docs/2026-08-11_latitude-inventory.md`); the v2.1 review's R2/R2b
+(«E1 anchored at guard ENTRY — refuted») is the same class.
+
+WHERE: `tools/nativefrontend/emit.go`, the legacy E13-probe / ANF path — NOT the
+Stage C `unseq` lowering, which anchors a later call's E1 edge at the guard's
+COMPLETION (design `docs/2026-09-19_unseq-stage-c-design.md` §6 «Guards») and
+answers gc's `logical false 0` on the pilot's `r2b` (a PRIVATE `left`): that is
+exactly why the born strict row `evalorder/unseq-pilot/r2b` differs from main's
+legacy default in the C3 choice-trace comparison — main's default there is a
+spec-FORBIDDEN member (audit F5). Reached for every `&&`/`||` sweep the pilot
+grammar declines by name — a package-variable operand (these rows), pointers,
+fields, methods, maps, receives, conversions, allocations (design §1 «Outside»).
+Effect direction: the machine answers where gc does not — fail-OPEN on the
+observation, no refusal.
+
+ROWS (red-first, [AGENT] Stage C audit fix round 2026-09-20; the audit's c01 / c02
+programs verbatim, `Corpus/coverage/exec/evalorder/legacy-logical-vs-call/`):
+`or-vs-call` and `and-vs-call` born FAIL/differential (Lean `logical true 0`, Go
+`logical false 0`; main's binary + main's frontend give the machine's answer, the
+two frontends' wires byte-identical — `docs/evidence/2026-09-19_unseq-stage-c/
+fixround-born-state.txt`, `fixround-main-vs-candidate.txt`) and the control
+`call-first-control` PASS. The ratchet: a NEW red, added to the baseline with the
+written reason (a rowed wrong answer on this entry's Cases line, not an untriaged
+entrant).
+
+FIX PLAN (Stage E, not this lane — the legacy emitter's semantics are out of the
+fix round's scope): migrate the `&&`/`||` sweeps to the `unseq` lowering as the
+pilot grammar widens to the declined operand families (Stage E's list, handoff
+§7 — the guard protocol's E1-at-completion anchoring is the fix, already
+measured on `r2b`); or, interim, anchor the legacy hoister's E1 chain at the
+logical operation's completion (hoist a `$c := left || b` temp at the guard's
+lexical position before the later call's temp). Either flips both rows FAIL →
+PASS on this Cases line; the control must stay PASS.
+

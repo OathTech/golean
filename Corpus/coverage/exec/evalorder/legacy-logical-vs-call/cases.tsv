@@ -1,0 +1,10 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# evalorder/legacy-logical-vs-call — BUG-113: on the LEGACY path a binary logical operation beside a
+# lexically LATER call is evaluated after the call (spec#Order_of_evaluation orders them; gc
+# `logical false 0`, the machine `logical true 0`). The operand `left` is a package variable, so
+# the sweep is outside the Stage C pilot grammar and rides the legacy ANF hoist by name. Rows
+# `or-vs-call`/`and-vs-call` are born FAIL/differential (pre-existing on main 6a7beb3d) on
+# BUG-113's Cases line; `call-first-control` (the call lexically first) is the green control.
+or-vs-call	orVsCall	-	ok	-	globals,closures,bools,calls,print,evaluation_order	strict	-	-
+and-vs-call	andVsCall	-	ok	-	globals,closures,bools,calls,print,evaluation_order	strict	-	-
+call-first-control	callFirstControl	-	ok	-	globals,closures,bools,calls,print,evaluation_order	strict	-	-

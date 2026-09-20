@@ -8,7 +8,8 @@
 # enumerator path, the set compared EXACTLY with the v2.1 spike's reference sets
 # (Tests/UnseqWire.lean); (3) every one-edit MUTANT is driven through the REAL CLI
 # binary (`golean native-json-run`) and must refuse (exit 1) naming its cause
-# (Tests/unseq-wire/mutants.tsv), while the untouched W1 wire runs (the canonical
+# (Tests/unseq-wire/mutants.tsv; 19 since the audit fix round 2026-09-20 — the
+# nested-completion join, audit F3), while the untouched W1 wire runs (the canonical
 # tape gives 2: mut first). Fail closed on a missing binary, a failed
 # regeneration, a decoded mutant or a refusal that does not name its cause.
 set -Eeuo pipefail

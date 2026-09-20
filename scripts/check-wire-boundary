@@ -152,8 +152,14 @@ expect_refusal over-depth         'JSON parse error' 'JSON nesting deeper than'
 # `unseq` node must refuse through the same CLI path naming the decoder's cause:
 # a duplicate binder, a cycle (a forward reference in the rank order), a use of a
 # skipped-branch value without a join, a sort mismatch (a load through a VALUE
-# cell), a binder without the `$` reservation, an unknown slot. The full mutant
-# list (18) and the exact-set checks are scripts/check-unseq-wire's.
+# cell), a binder without the `$` reservation, an unknown slot. The Stage C audit
+# fix round (2026-09-20) added two controls: the CONSTANT-HEAD positive (audit F2 —
+# Tests/unseq-wire/cguard.json, `ok := true && f()`: the frontend's copy of a
+# constant into a cell, which the C1 decoder refused by name; it must run and
+# answer 2) and the NESTED-COMPLETION refusal (audit F3 — a nested guard's
+# completion binder consumed outside its enclosing region, refused STATICALLY as
+# an invalid branch join). The full mutant list (19) and the exact-set checks are
+# scripts/check-unseq-wire's.
 run_cli_fn() { "$GOLEAN" native-json-run --input "$1" --function "$2" 2>&1; }
 out="$(run_cli_fn Tests/unseq-wire/w1.json w1)" || { echo "check-wire-boundary: FAIL [unseq w1] — the hand-built wire did not run: $out" >&2; exit 1; }
 [[ "$out" == *'"status":"ok"'* && "$out" == *'"value":2'* ]] || { echo "check-wire-boundary: FAIL [unseq w1] — expected ok/2 on the canonical tape: $out" >&2; exit 1; }
@@ -174,4 +180,8 @@ expect_unseq_refusal unseq-skipped-join  mut-skipped-join  r2aTrue 'invalid bran
 expect_unseq_refusal unseq-sort-mismatch mut-sort          w3      'sort mismatch'
 expect_unseq_refusal unseq-nondollar     mut-nondollar     w1      'not a reserved'
 expect_unseq_refusal unseq-unknown-slot  mut-unknown-slot  w1      'unknown slot'
-echo 'Wire boundary gate: PASS (11 byte-level controls + 7 unseq-node controls through the real CLI)'
+out="$(run_cli_fn Tests/unseq-wire/cguard.json cguard)" || { echo "check-wire-boundary: FAIL [unseq const-head] — the constant-head wire (a constant copied into a cell) did not run: $out" >&2; exit 1; }
+[[ "$out" == *'"status":"ok"'* && "$out" == *'"value":2'* ]] || { echo "check-wire-boundary: FAIL [unseq const-head] — expected ok/2 (ok := true && f(), f sets a = 2): $out" >&2; exit 1; }
+echo "ok [unseq const-head] runs, answers 2 (a constant guard test copied into a bool cell — audit F2)"
+expect_unseq_refusal unseq-nested-completion mut-nested-completion-join r2cTrue 'invalid branch join'
+echo 'Wire boundary gate: PASS (11 byte-level controls + 9 unseq-node controls through the real CLI)'
