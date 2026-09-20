@@ -1,0 +1,5 @@
+# a36: 9 checked reads + 1 call in one sweep (ready set 10) at the corpus default width 8:
+coverage-observations: site bound 10 exceeds the case's width 8 — the width assertion is REFUTED (mechanically, at pick position 0); raise the case's width metadata
+
+# and at width 16 / work cap 5M:
+coverage-observations: work cap exceeded after 4801014 step(s) + 198987 probe(s) with subtrees still unexplored — raise --work-cap or narrow the case

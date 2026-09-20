@@ -1,0 +1,90 @@
+probe	admitted(sweep:form:events/calls/nonEvents)	legacy_reason_for_call_sweeps	unseq_nodes	probes_cand/main	enum	|set|	gc_in_set	default_is_gc	main_default==cand_default	set
+a01-captured-func-callee	subject@main.go:6:define:1/1/1	main@main.go:9:print-stmt:LEGACY(no non-event occurrence beside the call(s) (legacy path: every edge forced))	1	0/0	ok	2	True	True	True	ok···11; ok···12
+a02-shadowing	subject@main.go:7:define:1/1/1	main@main.go:12:print-stmt:LEGACY(no non-event occurrence beside the call(s) (legacy path: every edge forced))	1	0/0	ok	2	True	True	True	ok·inner 11
+··2; ok·inner 12
+··2
+a03-addr-taken-param	sub@main.go:6:return:1/1/1	subject@main.go:8:return:LEGACY(no non-event occurrence beside the call(s) (legacy path: every edge forced)); main@main.go:9:print-stmt:LEGACY(no non-event occurrence beside the call(s) (legacy path: every edge forced))	1	0/0	ok	2	True	True	True	ok···11; ok···15
+a04-nested-composite-lit	-	main@main.go:9:print-stmt:LEGACY(no non-event occurrence beside the call(s) (legacy path: every edge forced))	0	0/0	ok	1	True	True	True	ok···12
+a05-ptr-receiver-method	-	main@main.go:12:print-stmt:LEGACY(no non-event occurrence beside the call(s) (legacy path: every edge forced))	0	0/0	ok	1	True	True	True	ok···11
+a06-call-in-index-plus-call	subject@main.go:7:return:2/2/2	main@main.go:9:print-stmt:LEGACY(no non-event occurrence beside the call(s) (legacy path: every edge forced))	1	0/1	ok	2	True	True	True	ok·f
+g
+··105; ok·f
+g
+··6
+a07-map-compound-call-key	-	main@main.go:10:print-stmt:LEGACY(no non-event occurrence beside the call(s) (legacy path: every edge forced))	0	0/0	ok	1	True	True	True	ok·f
+g
+··105
+a08-defer-call-args	-	main@main.go:10:print-stmt:LEGACY(no non-event occurrence beside the call(s) (legacy path: every edge forced))	0	0/0	ok	1	True	True	True	ok·h 10 2
+··2
+a09-go-stmt-args	-	main@main.go:12:print-stmt:LEGACY(no non-event occurrence beside the call(s) (legacy path: every edge forced))	0	0/0	ok	1	True	True	True	ok·h 10 2
+··2
+a10-return-two-calls-plus-read	subject@main.go:7:return:2/2/4	-	1	0/1	ok	4	True	True	True	ok·f
+g
+··105 206; ok·f
+g
+··105 8; ok·f
+g
+··6 206; ok·f
+g
+··6 8
+a11-select-case-expr	-	main@main.go:12:print-stmt:LEGACY(no non-event occurrence beside the call(s) (legacy path: every edge forced))	0	0/0	ok	1	True	True	True	ok···14
+a12-if-init	-	main@main.go:11:print-stmt:LEGACY(no non-event occurrence beside the call(s) (legacy path: every edge forced))	0	0/0	ok	1	True	True	True	ok···12
+a13-mixture-admitted-head-map-operand	-	subject@main.go:7:define:LEGACY(index of a non-slice base (map[int]int)); main@main.go:10:print-stmt:LEGACY(no non-event occurrence beside the call(s) (legacy path: every edge forced))	0	0/0	ok	1	True	True	True	ok···82
+a14-const-guard-left	subject@main.go:6:define:1/1/1	main@main.go:12:print-stmt:LEGACY(no non-event occurrence beside the call(s) (legacy path: every edge forced))	1	0/0	REFUSED	0	None	False	False	2].occs[0].head is outside the Stage C fragment (admitted heads: ident, index-get, slice, builtin-len, builtin-cap, binary, unary, type-assert); refused by name
+a15-elem-assign-const-value	subject@main.go:6:elem-assign:1/1/2	main@main.go:9:print-stmt:LEGACY(no non-event occurrence beside the call(s) (legacy path: every edge forced))	1	0/0	REFUSED	0	None	False	False	3].occs[3].head is outside the Stage C fragment (admitted heads: ident, index-get, slice, builtin-len, builtin-cap, binary, unary, type-assert); refused by name
+a16-elem-assign-string-const	subject@main.go:6:elem-assign:1/1/1	main@main.go:9:print-stmt:LEGACY(no non-event occurrence beside the call(s) (legacy path: every edge forced))	1	0/0	REFUSED	0	None	False	False	3].occs[2].head is outside the Stage C fragment (admitted heads: ident, index-get, slice, builtin-len, builtin-cap, binary, unary, type-assert); refused by name
+a17-private-compound-fold-sibling-closure	subject@main.go:7:compound:1/1/1	main@main.go:10:print-stmt:LEGACY(no non-event occurrence beside the call(s) (legacy path: every edge forced))	1	0/0	ok	2	True	True	True	ok···11; ok···110
+a18-nested-guard-regions	subject@main.go:8:define:2/2/3	main@main.go:14:print-stmt:LEGACY(no non-event occurrence beside the call(s) (legacy path: every edge forced))	1	0/0	ok	1	True	True	True	ok·f
+g
+··1
+a19-nested-calls-with-read	subject@main.go:8:return:3/3/1	main@main.go:10:print-stmt:LEGACY(no non-event occurrence beside the call(s) (legacy path: every edge forced))	1	0/0	ok	3	True	True	True	ok·g
+h
+f 2 1 3
+··6; ok·g
+h
+f 2 10 3
+··15; ok·g
+h
+f 2 100 3
+··105
+a20-frozen-header-call-index-rebind	subject@main.go:8:elem-assign:2/2/2	main@main.go:11:print-stmt:LEGACY(no non-event occurrence beside the call(s) (legacy path: every edge forced))	1	0/0	ok	2	True	True	True	ok·f
+g
+··211020; ok·f
+g
+··81007
+a21-private-div-compound	subject@main.go:6:compound:1/1/1	main@main.go:9:print-stmt:LEGACY(no non-event occurrence beside the call(s) (legacy path: every edge forced))	1	0/0	ok	1	True	True	True	ok·f
+··20
+a22-loop-var-captured	subject@main.go:8:define:1/1/2	main@main.go:13:print-stmt:LEGACY(no non-event occurrence beside the call(s) (legacy path: every edge forced))	1	0/1	ok	2	True	True	True	ok···11; ok···21
+a23-named-result-captured-by-defer	subject@main.go:7:assign:1/1/1	main@main.go:10:print-stmt:LEGACY(no non-event occurrence beside the call(s) (legacy path: every edge forced))	1	0/0	ok	2	True	True	True	ok···22; ok···24
+a24-addr-via-pointer-not-capture	subject@main.go:7:return:1/1/1	main@main.go:9:print-stmt:LEGACY(no non-event occurrence beside the call(s) (legacy path: every edge forced))	1	0/0	ok	2	True	True	True	ok···11; ok···19
+a25-slice-param-elem-mutated-by-callee	sub@main.go:4:return:1/1/1	main@main.go:6:print-stmt:LEGACY(no non-event occurrence beside the call(s) (legacy path: every edge forced))	1	0/1	ok	2	True	True	True	ok···105; ok···6
+a26-func-local-reassigned-by-sibling	subject@main.go:6:define:2/2/1	main@main.go:9:print-stmt:LEGACY(no non-event occurrence beside the call(s) (legacy path: every edge forced))	1	0/0	ok	1	True	True	True	ok·f1
+g
+··11
+a27-guard-inside-args	subject@main.go:8:return:3/3/2	main@main.go:10:print-stmt:LEGACY(no non-event occurrence beside the call(s) (legacy path: every edge forced))	1	0/0	ok	1	True	True	True	ok·h
+f false 3
+··3
+a28-println-captured	subject@main.go:6:print-stmt:1/1/1	main@main.go:8:call-stmt:LEGACY(no non-event occurrence beside the call(s) (legacy path: every edge forced))	1	0/0	ok	2	False	False	True	ok·1 10
+··; ok·2 10
+··
+a29-two-elem-assign-index-call-ordering	subject@main.go:7:compound:1/1/2	main@main.go:10:print-stmt:LEGACY(no non-event occurrence beside the call(s) (legacy path: every edge forced))	1	0/1	ok	2	True	True	True	ok·f
+··130; ok·f
+··823
+a30-cap-and-len-events	subject@main.go:6:return:3/1/2	main@main.go:8:print-stmt:LEGACY(no non-event occurrence beside the call(s) (legacy path: every edge forced))	1	0/0	ok	1	True	True	True	ok·f
+··142
+a31-string-index-refused	-	main@main.go:8:print-stmt:LEGACY(no non-event occurrence beside the call(s) (legacy path: every edge forced))	0	1/1	ok	1	True	True	True	ok···100
+a32-unary-not-and-xor	subject@main.go:7:define:1/1/1	main@main.go:13:print-stmt:LEGACY(no non-event occurrence beside the call(s) (legacy path: every edge forced))	1	0/0	ok	2	True	True	True	ok···-3; ok···-5
+a33-shift-by-nonconst	subject@main.go:7:return:1/1/2	main@main.go:9:print-stmt:LEGACY(no non-event occurrence beside the call(s) (legacy path: every edge forced))	1	0/1	ok	2	True	True	True	ok···5; ok···9
+a34-assert-any-captured-to-string	subject@main.go:6:return:1/1/2	main@main.go:8:print-stmt:LEGACY(no non-event occurrence beside the call(s) (legacy path: every edge forced))	1	0/1	ok	2	False	False	True	ok···{'bytes': [115, 33], 'tag': 'string'}; panic··interface conversion: interface {} is int, not string·
+a35-slice3	subject@main.go:7:return:2/1/2	main@main.go:9:print-stmt:LEGACY(no non-event occurrence beside the call(s) (legacy path: every edge forced))	1	0/0	ok	1	True	True	True	ok···3
+a36-wide-ready-set	subject@main.go:6:return:1/1/18	main@main.go:8:print-stmt:LEGACY(no non-event occurrence beside the call(s) (legacy path: every edge forced))	1	0/9	REFUSED	0	None	True	True	coverage-observations: work cap exceeded after 4801014 step(s) + 198987 probe(s) with subtrees still unexplored — raise --work-cap or narrow the case
+a37-call-statement-discard-results	subject@main.go:7:call-stmt:2/2/1	main@main.go:10:print-stmt:LEGACY(no non-event occurrence beside the call(s) (legacy path: every edge forced))	1	0/0	ok	2	True	True	True	ok·two 11
+··2; ok·two 12
+··2
+a38-incdec-elem-call-index	subject@main.go:6:incdec:1/1/2	main@main.go:9:print-stmt:LEGACY(no non-event occurrence beside the call(s) (legacy path: every edge forced))	1	0/0	ok	1	True	True	True	ok·f
+··151
+a39-return-forwarding-two-result	subject@main.go:7:return:2/2/2	-	1	0/1	ok	2	True	True	True	ok·two 105
+··105 106; ok·two 6
+··6 7
+a40-iface-param-boxing	subject@main.go:7:return:2/2/1	main@main.go:9:print-stmt:LEGACY(no non-event occurrence beside the call(s) (legacy path: every edge forced))	1	0/0	ok	1	True	True	True	ok·take 10
+··10

@@ -1,0 +1,16 @@
+# continue-label (strict, depth=128): exhaustive enumeration over ALL tapes (candidate binary, candidate frontend)
+# command: golean coverage-observations --input <continue-label wire> --function continueLabelBias --max-width 8 --max-sites 64 --cap 64 --work-cap 200000000 --expect-status ok
+coverage-observations: observations=1 steps=39646083 probes=85290 sites=28430 leaves=32805 maxdepth=18 width=8
+$G coverage-observations --input $W --function continueLabelBias --max-width   101.73s user 0.01s system 99% cpu 1:41.76 total
+ENUM EXIT=0
+# the one observation:
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":3140111},{"kind":"int","tag":"int","value":6011010},{"kind":"int","tag":"int","value":8193041}]}
+
+# 40 random tapes (uniform 0..65535), 20 at depth 128 and 20 at depth 512:
+20 (128, 'ok', '', '', '3140111 6011010 8193041')
+20 (512, 'ok', '', '', '3140111 6011010 8193041')
+distinct observations ignoring depth: 1
+
+# at work cap 20M the same enumeration REFUSED BY NAME:
+$G coverage-observations --input .tmp/wires/continue-label.json --function     52.08s user 0.00s system 99% cpu 52.086 total
+ENUM EXIT=1

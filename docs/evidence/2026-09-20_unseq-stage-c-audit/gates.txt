@@ -1,0 +1,27 @@
+# gate reproductions in the audit worktree (candidate tip 2dac6a75; warm build copied from the candidate worktree at identical source)
+## scripts/capped lake build
+Build completed successfully (96 jobs).
+build EXIT=0
+## go test ./tools/nativefrontend
+ok  	_/home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-c/tools/nativefrontend	1.269s
+GOTEST EXIT=0
+## scripts/check-unseq-wire
+ok lines: 72
+build.py --check: 51 fixture(s) byte-identical to the generator's output
+Build completed successfully (99 jobs).
+Unseq wire (Stage C): PASS — every reference set exact over the wire, 18 mutants refused by name
+Unseq wire gate: PASS (18 mutants refused through the CLI; exact sets in tests.log)
+CHECK-UNSEQ-WIRE EXIT=0
+## scripts/check-unseq-scheduler
+Unseq scheduler audit: 24 required theorems; 15138 declarations across all imported local origins; classical trio only
+Unseq scheduler gate: PASS
+EXIT=0
+## scripts/check-frontend-pins
+check-frontend-pins: ok [hidden-dep-order] — realized deviation order matches the recorded pin
+check-frontend-pins: ok [twin-wire] — fresh emit = pinned wire (e1a877251021…)
+check-frontend-pins: ok [stdlib-pin] — 61 lowered stdlib source files match the pinned sha256 manifest
+EXIT=0
+## scripts/check-bugs.sh
+check-bugs: ok (112 bug(s); pinned cases behave as claimed)
+check-bugs: backlog — 14 unexplained fidelity failure(s): coverage 10/10; latitude 4/4; wrong-answer 0/0 ('scripts/check-bugs.sh --list')
+check-bugs: 'wrong-answer' is the class that ratchets toward 0; 'coverage' retires when the feature lands and 'latitude' only by an envelope.

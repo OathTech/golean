@@ -1,0 +1,53 @@
+# The legacy (non-pilot) path: a binary logical operation beside a LATER call — both binaries, gc, spec
+=== c01-legacy-or-vs-call/main.go
+package main
+
+var left = false
+
+func sinkL(b bool, n int) { println("logical", b, n) }
+func subject() int {
+	b := false
+	change := func() int { b = true; return 0 }
+	sinkL(left || b, change())
+	return 1
+}
+func main() { subject() }
+=== c02-and/main.go
+package main
+
+var left = true
+
+func sinkL(b bool, n int) { println("logical", b, n) }
+func subject() int {
+	b := false
+	change := func() int { b = true; return 0 }
+	sinkL(left && b, change())
+	return 1
+}
+func main() { subject() }
+=== c02-callfirst/main.go
+package main
+
+var left = false
+
+func sinkL(n int, b bool) { println("logical", n, b) }
+func subject() int {
+	b := false
+	change := func() int { b = true; return 0 }
+	sinkL(change(), left || b)
+	return 1
+}
+func main() { subject() }
+=== results
+c01 (left || b, change()):  CAND 'logical true 0' | MAIN 'logical true 0' | gc (default and -N -l) 'logical false 0' | wires byte-identical main/cand | census: legacy (package-level variable)
+c02-and (left && b, change()): CAND 'logical true 0' | gc 'logical false 0'
+c02-callfirst (change(), left || b): CAND 'logical 0 true' | gc 'logical 0 true'  (control: matches)
+
+=== main's legacy wire for the pilot's r2b (main frontend): the call hoisted to $c17 BEFORE the statement, the || left inline
+{"define": true, "lhs": [{"id": "$c17", "target": "declare", "type": {"int": "int", "kind": "int"}}], "rhs": [{"args": [], "callee": {"expr": "ident", "name": "change", "type": {"kind": "func", "params": [], "results": [{"int": "int", "kind": "int"}], "variadic": false}}, "expr": "call-value", "resultTypes": [{"int": "int", "kind": "int"}]}], "stmt": "assign"}
+{"expr": {"args": [{"expr": "binary", "op": "||", "type": {"kind": "bool"}, "x": {"expr": "ident", "name": "left", "type": {"kind": "bool"}}, "y": {"expr": "ident", "name": "b", "type": {"kind": "bool"}}}, {"expr": "ident", "name": "$c17", "type": {"int": "int", "kind": "int"}}], "expr": "call", "func": "sinkL", "resultTypes": []}, "stmt": "expr"}
+
+=== default-tape comparison line (main binary+frontend vs candidate) for r2b:
+DIFF evalorder/unseq-pilot/r2b 
+   MAIN: ('ok', 'logical true 0\n', '', '[{"kind": "int", "tag": "int", "value": 1}]') 
+   CAND: ('ok', 'logical false 0\n', '', '[{"kind": "int", "tag": "int", "value": 1}]')

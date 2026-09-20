@@ -1,0 +1,136 @@
+### a06-call-in-index-plus-call
+func subject() int {
+	a := []int{1, 2, 3}
+	f := func() int { println("f"); return 0 }
+	g := func() int { println("g"); a[0] = 100; return 5 }
+	return a[f()] + g()
+}
+func main() { println(subject()) }
+--- .tmp/probes/a06-call-in-index-plus-call/wire.json: cells=['$u1', '$u2', '$u3', '$u4', '$u5']
+   0 call1    invoke  ['$u2'] := f()                                after=- region=-
+   1 call3    invoke  ['$u4'] := g()                                after=['call1'] region=-
+   2 read0    eval    $u1 := a                                      after=- region=-
+   3 access2  eval    $u3 := $u1[$u2]                               after=- region=-
+   4 op4      eval    $u5 := ($u3 + $u4)                            after=- region=-
+  stores=[]
+  then=return {"results": [{"expr": "ident", "name": "$u5", "type": {"int": "int", "kind": "int"}}], "stmt": "return"}
+
+### a10-return-two-calls-plus-read
+func subject() (int, int) {
+	a := []int{1, 2}
+	f := func() int { println("f"); a[0] = 100; return 5 }
+	g := func() int { println("g"); a[1] = 200; return 6 }
+	return f() + a[0], g() + a[1]
+}
+func main() { x, y := subject(); println(x, y) }
+--- .tmp/probes/a10-return-two-calls-plus-read/wire.json: cells=['$u1', '$u2', '$u3', '$u4', '$u5', '$u6', '$u7', '$u8']
+   0 call0    invoke  ['$u1'] := f()                                after=- region=-
+   1 call4    invoke  ['$u5'] := g()                                after=['call0'] region=-
+   2 read1    eval    $u2 := a                                      after=- region=-
+   3 access2  eval    $u3 := $u2[0]                                 after=- region=-
+   4 op3      eval    $u4 := ($u1 + $u3)                            after=- region=-
+   5 read5    eval    $u6 := a                                      after=- region=-
+   6 access6  eval    $u7 := $u6[1]                                 after=- region=-
+   7 op7      eval    $u8 := ($u5 + $u7)                            after=- region=-
+  stores=[]
+  then=return {"results": [{"expr": "ident", "name": "$u4", "type": {"int": "int", "kind": "int"}}, {"expr": "ident", "name": "$u8", "type": {"int": "int", "kind": "int"}}], 
+
+### a18-nested-guard-regions
+func subject() int {
+	a := true
+	b := false
+	f := func() bool { println("f"); return true }
+	g := func() bool { println("g"); return true }
+	c := (a && (b || f())) && g()
+	if c {
+		return 1
+	}
+	return 0
+}
+func main() { println(subject()) }
+--- .tmp/probes/a18-nested-guard-regions/wire.json: cells=['$u0', '$u1', '$u2', '$u3', '$u4', '$u5', '$u6']
+   0 copy0    eval    $u0 := a                                      after=- region=-
+   1 guard1   guard   guard test=$u0 when=True out=$u1              after=- region=-
+   2 copy2    eval    $u2 := b                                      after=- region=guard1
+   3 guard3   guard   guard test=$u2 when=False out=$u3             after=- region=guard1
+   4 call4    invoke  ['$u4'] := f()                                after=- region=guard3
+   5 join5    eval    $u3 := $u4                                    after=- region=guard3
+   6 join6    eval    $u1 := $u3                                    after=- region=guard1
+   7 guard7   guard   guard test=$u1 when=True out=$u5              after=['join6'] region=-
+   8 call8    invoke  ['$u6'] := g()                                after=- region=guard7
+   9 join9    eval    $u5 := $u6                                    after=- region=guard7
+  stores=[]
+  then=assign {"define": true, "lhs": [{"id": "c", "target": "declare", "type": {"kind": "bool"}}], "rhs": [{"expr": "ident", "name": "$u5", "type": {"kind": "bool"}}], "stmt
+
+### a19-nested-calls-with-read
+func f(x, y, z int) int { println("f", x, y, z); return x + y + z }
+func subject() int {
+	a := 1
+	g := func() int { println("g"); a = 10; return 2 }
+	h := func() int { println("h"); a = 100; return 3 }
+	return f(g(), a, h())
+}
+func main() { println(subject()) }
+--- .tmp/probes/a19-nested-calls-with-read/wire.json: cells=['$u0', '$u1', '$u2', '$u3']
+   0 call0    invoke  ['$u0'] := g()                                after=- region=-
+   1 call2    invoke  ['$u2'] := h()                                after=['call0'] region=-
+   2 read1    eval    $u1 := a                                      after=- region=-
+   3 call3    invoke  ['$u3'] := fv:f($u0, $u1, $u2)                after=['call2'] region=-
+  stores=[]
+  then=return {"results": [{"expr": "ident", "name": "$u3", "type": {"int": "int", "kind": "int"}}], "stmt": "return"}
+
+### a20-frozen-header-call-index-rebind
+func subject() int {
+	a := []int{1, 2}
+	b := []int{10, 20}
+	f := func() int { println("f"); a = b; return 1 }
+	g := func() int { println("g"); return 7 }
+	a[f()] = g()
+	return a[0]*100 + a[1] + b[0]*1000 + b[1]*10000
+}
+func main() { println(subject()) }
+--- .tmp/probes/a20-frozen-header-call-index-rebind/wire.json: cells=['$u2', '$u3', '$u5']
+   0 call1    invoke  ['$u3'] := f()                                after=- region=-
+   1 call3    invoke  ['$u5'] := g()                                after=['call1'] region=-
+   2 read0    eval    $u2 := a                                      after=- region=-
+   3 target2  target  $t4 :=T &$u2[$u3]                             after=- region=-
+  stores=[('$t4', '$u5')]
+  then=block {"body": [], "stmt": "block"}
+
+### a27-guard-inside-args
+func f(b bool, n int) int { println("f", b, n); return n }
+func subject() int {
+	a := false
+	g := func() bool { println("g"); return true }
+	h := func() int { println("h"); a = true; return 3 }
+	return f(a && g(), h())
+}
+func main() { println(subject()) }
+--- .tmp/probes/a27-guard-inside-args/wire.json: cells=['$u0', '$u1', '$u2', '$u3', '$u4']
+   0 read0    eval    $u0 := a                                      after=- region=-
+   1 guard1   guard   guard test=$u0 when=True out=$u1              after=- region=-
+   2 call2    invoke  ['$u2'] := g()                                after=- region=guard1
+   3 join3    eval    $u1 := $u2                                    after=- region=guard1
+   4 call4    invoke  ['$u3'] := h()                                after=['join3'] region=-
+   5 call5    invoke  ['$u4'] := fv:f($u1, $u3)                     after=['call4'] region=-
+  stores=[]
+  then=return {"results": [{"expr": "ident", "name": "$u4", "type": {"int": "int", "kind": "int"}}], "stmt": "return"}
+
+### a29-two-elem-assign-index-call-ordering
+func subject() int {
+	a := []int{1, 2, 3}
+	i := 0
+	f := func() int { println("f"); i = 2; return 7 }
+	a[i] += f()
+	return a[0]*100 + a[1]*10 + a[2]
+}
+func main() { println(subject()) }
+--- .tmp/probes/a29-two-elem-assign-index-call-ordering/wire.json: cells=['$u1', '$u3', '$u4', '$u5']
+   0 call3    invoke  ['$u4'] := f()                                after=- region=-
+   1 read0    eval    $u1 := i                                      after=- region=-
+   2 target1  target  $t2 :=T &a[$u1]                               after=- region=-
+   3 load2    load    $u3 := load $t2                               after=- region=-
+   4 op4      eval    $u5 := ($u3 + $u4)                            after=- region=-
+  stores=[('$t2', '$u5')]
+  then=block {"body": [], "stmt": "block"}
+

@@ -1,0 +1,13 @@
+packages=1354 failures=0
+sweeps=107896
+admitted=133
+admitted_pkgs=29
+admitted_imported_units=0
+     26 assign
+      5 call-stmt
+     52 compound
+     12 define
+      5 elem-assign
+      1 print-stmt
+     32 return
+CENSUS EXIT=0

@@ -1,0 +1,45 @@
+=== a14-const-guard-left/main.go
+package main
+
+func subject() int {
+	a := 1
+	f := func() bool { a = 2; return true }
+	ok := true && f()
+	if ok {
+		return a
+	}
+	return -1
+}
+func main() { println(subject()) }
+--- census (candidate frontend): admitted; wire emitted (1 unseq node, 0 probes); main frontend: 0 probes (legacy ANF, runs)
+--- candidate decoder: e/dev/projects/golean/.claude/worktrees/audit-unseq-stage-c/.tmp/probes/a14-const-guard-left/wire.json: native lowering: unseq: head 'bool' at program.funcs[1].body.body[2].occs[0].head is outside the Stage C fragment (admitted heads: ident, index-get, slice, builtin-len, builtin-cap, binary, unary, type-assert); refused by name 
+--- main default: ['ok', '', '', '2']
+
+=== a15-elem-assign-const-value/main.go
+package main
+
+func subject() int {
+	a := []int{1, 2}
+	f := func() int { println("f"); a[1] = 9; return 0 }
+	a[f()] = 5
+	return a[0]*10 + a[1]
+}
+func main() { println(subject()) }
+--- census (candidate frontend): admitted; wire emitted (1 unseq node, 0 probes); main frontend: 0 probes (legacy ANF, runs)
+--- candidate decoder: projects/golean/.claude/worktrees/audit-unseq-stage-c/.tmp/probes/a15-elem-assign-const-value/wire.json: native lowering: unseq: head 'int' at program.funcs[1].body.body[3].occs[3].head is outside the Stage C fragment (admitted heads: ident, index-get, slice, builtin-len, builtin-cap, binary, unary, type-assert); refused by name 
+--- main default: ['ok', 'f\n', '', '59']
+
+=== a16-elem-assign-string-const/main.go
+package main
+
+func subject() string {
+	a := []string{"x", "y"}
+	f := func() int { println("f"); return 1 }
+	a[f()] = "s"
+	return a[0] + a[1]
+}
+func main() { println(subject()) }
+--- census (candidate frontend): admitted; wire emitted (1 unseq node, 0 probes); main frontend: 0 probes (legacy ANF, runs)
+--- candidate decoder: ects/golean/.claude/worktrees/audit-unseq-stage-c/.tmp/probes/a16-elem-assign-string-const/wire.json: native lowering: unseq: head 'string' at program.funcs[1].body.body[3].occs[2].head is outside the Stage C fragment (admitted heads: ident, index-get, slice, builtin-len, builtin-cap, binary, unary, type-assert); refused by name 
+--- main default: ['ok', 'f\n', '', "{'bytes': [120, 115], 'tag': 'string'}"]
+

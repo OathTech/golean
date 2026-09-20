@@ -1,0 +1,11 @@
+rows=359 identical=356 differ=3 missing_pkgs=['binop-order/mixed-order', 'strings/concat', 'closures/counter', 'slices/append-alias']
+DIFF builtins/e13-sibling-panic-order/compound-call-target-vs-len 
+   MAIN: ('unsupported', '', 'frontend-quarantined: len of a potentially-panicking operand hoisted past UNPROBED panicky material to its left (index expression at main.go:549:2) with a later ordered call/receive in the same statement — the left material sits where the E13 (b) envelope emits no unseq-probe (an assignment/IncDec/compound target, an address-of or receiver operand, or an operand containing recover() or an allocating conversion), so the hoist would realize only the events-first panic order where spec#Order_of_evaluation fixes none; refused by name (narrowed A6 guard, BUG-032/BUG-083; E13 (b) boundary, e13-b audit fix round R1)', '[]') 
+   CAND: ('panic', 'f\n', 'runtime error: index out of range [5] with length 1', '[]')
+DIFF builtins/e13-sibling-panic-order/compound-call-target-vs-call 
+   MAIN: ('panic', 'f\n', 'runtime error: index out of range [9] with length 1', '[]') 
+   CAND: ('panic', 'f\nwit 5\n', 'runtime error: index out of range [9] with length 1', '[]')
+DIFF evalorder/unseq-pilot/r2b 
+   MAIN: ('ok', 'logical true 0\n', '', '[{"kind": "int", "tag": "int", "value": 1}]') 
+   CAND: ('ok', 'logical false 0\n', '', '[{"kind": "int", "tag": "int", "value": 1}]')
+DEFTAPE EXIT=0

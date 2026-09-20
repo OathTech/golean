@@ -1,0 +1,33 @@
+packages=1354
+DIFFER=25  identical=1304  both-refused-identical=25  other=0
+unseq nodes total=117  pkgs with nodes=25
+probes cand=91 main=123
+--- DIFFER rows ---
+binop-order/operand-panic-vs-call	nodes=2	probes c/m=0/2
+bools/short-circuit-effects	nodes=1	probes c/m=0/0
+builtins/e13-sibling-panic-order	nodes=24	probes c/m=30/52
+builtins/len-vs-call-order	nodes=2	probes c/m=18/19
+evalorder/unseq-pilot	nodes=13	probes c/m=0/4
+fmt/formatter-precedence	nodes=4	probes c/m=0/0
+fmt/sprintf-dyn	nodes=4	probes c/m=1/1
+fmt/sprintf-verbs	nodes=4	probes c/m=0/0
+fmt/v-composites	nodes=4	probes c/m=0/0
+functions/closure-recursion	nodes=1	probes c/m=0/0
+imported-goose/semantics/operations	nodes=25	probes c/m=0/0
+multi-assign/index-target-rhs-call-order	nodes=1	probes c/m=0/0
+noodler/arith	nodes=1	probes c/m=0/0
+noodler/closures	nodes=1	probes c/m=0/0
+noodler/evalorder	nodes=4	probes c/m=0/0
+noodler/latitude	nodes=4	probes c/m=5/7
+noodler/maps	nodes=1	probes c/m=0/1
+noodler/strings	nodes=4	probes c/m=1/1
+panic-recover/shim-refusal-unrecoverable	nodes=4	probes c/m=1/1
+scoping/closure-shadow-binding	nodes=1	probes c/m=0/0
+slices/slice-elided-high-eval-once	nodes=4	probes c/m=0/0
+slices/slice-expr-eval-order	nodes=1	probes c/m=0/0
+spec-examples-decl/timezone-stringer	nodes=4	probes c/m=0/0
+spec-examples-stmt/continue-label	nodes=2	probes c/m=0/0
+spec-examples-stmt/operator-precedence	nodes=1	probes c/m=0/0
+--- other rows ---
+--- pkgs with nodes but identical?? ---
+ALLWIRES EXIT=0
