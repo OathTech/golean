@@ -1,0 +1,47 @@
+#!/usr/bin/env python3
+"""Per-row byte-identity of two whole-corpus choice-trace runs (the S3 lane's method, Stage C):
+for every id, the SORTED dump records (stream, idx, phase, site, bound, streamValue, pick) and the
+per-stream results (status, consumed, wide, obsHash, driverAgreement) must be identical on both sides.
+Usage: trace-compare.py <dirA> <dirB> <out.tsv>"""
+import glob, sys, collections
+a, b, out = sys.argv[1:4]
+
+def load(d):
+    dump = collections.defaultdict(list)
+    for f in glob.glob(f"{d}/dump-*.tsv"):
+        with open(f) as fh:
+            for line in fh:
+                p = line.rstrip("\n").split("\t")
+                if p[0] == "id" or len(p) < 8: continue
+                dump[p[0]].append(tuple(p[1:8]))
+    res = collections.defaultdict(list)
+    for f in glob.glob(f"{d}/results-*.tsv"):
+        with open(f) as fh:
+            for line in fh:
+                p = line.rstrip("\n").split("\t")
+                if p[0] == "id" or len(p) < 15: continue
+                res[p[0]].append((p[1], p[2], p[3], p[4], p[13], p[14]))
+    return dump, res
+
+dA, rA = load(a); dB, rB = load(b)
+ids = sorted(set(rA) | set(rB))
+same = differ = onlyA = onlyB = 0
+sites = collections.Counter(); sitesB = collections.Counter()
+with open(out, "w") as o:
+    o.write("id\tverdict\tdump_recs_A\tdump_recs_B\tstreams_A\tstreams_B\n")
+    for i in ids:
+        if i not in rA: onlyB += 1; o.write(f"{i}\tONLY_B\t-\t{len(dB[i])}\t-\t{len(rB[i])}\n"); continue
+        if i not in rB: onlyA += 1; o.write(f"{i}\tONLY_A\t{len(dA[i])}\t-\t{len(rA[i])}\t-\n"); continue
+        ok = sorted(dA[i]) == sorted(dB[i]) and sorted(rA[i]) == sorted(rB[i])
+        if ok: same += 1
+        else: differ += 1
+        o.write(f"{i}\t{'SAME' if ok else 'DIFFER'}\t{len(dA[i])}\t{len(dB[i])}\t{len(rA[i])}\t{len(rB[i])}\n")
+    for i in dA:
+        for r in dA[i]: sites[r[3]] += 1
+    for i in dB:
+        for r in dB[i]: sitesB[r[3]] += 1
+    o.write(f"#SUMMARY\tids={len(ids)}\tsame={same}\tdiffer={differ}\tonlyA={onlyA}\tonlyB={onlyB}\n")
+    o.write(f"#SITES_A\t{dict(sorted(sites.items()))}\n#SITES_B\t{dict(sorted(sitesB.items()))}\n")
+print(f"ids={len(ids)} same={same} differ={differ} onlyA={onlyA} onlyB={onlyB}")
+print("sitesA", dict(sorted(sites.items())))
+print("sitesB", dict(sorted(sitesB.items())))

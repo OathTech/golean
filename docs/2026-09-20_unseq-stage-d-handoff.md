@@ -52,7 +52,10 @@ declaration + wire boundaries; method identity; unseq scheduler (Stage B; 35 the
 pins (twin wire = pinned bytes); frontend/lowerdiag/harness unit tests; eval tests 274 ok; differential 3705 rows
 3458 PASS / 247 FAIL (= the pin with the one 5a-class row red); lane-validation fixtures incl. the go half; negative
 corpus 394 matched; FloatVectors + inittask-std byte-exact; executed library coverage PASS. `beside-loop` (the
-baseline's alternation row) did not drift. Gate tail: `docs/evidence/2026-09-20_unseq-stage-d/gate-tail.txt`. Sequential warms before it: `GoLean.GoCore.MachineSound` (67 s, EXIT=0), `MultiStreams` (EXIT=0),
+baseline's alternation row) did not drift. Gate tail: `docs/evidence/2026-09-20_unseq-stage-d/gate-tail.txt`. RECORDS GATE (`scripts/capped scripts/ci --diff` at
+the records commit `c253cadc`, clean tree, EXIT=1 in 789 s): DRIFT = exactly `google-search` (continue-label re-pinned);
+the same two 5a-class FAIL steps, everything else ok. WHOLE-CORPUS CHOICE TRACE vs main's binary: 3669 ids byte-identical,
+0 differ, identical site census (`unseqNext` 555, `unseqPanic` 288) — the engine changes no execution (README §7). Sequential warms before it: `GoLean.GoCore.MachineSound` (67 s, EXIT=0), `MultiStreams` (EXIT=0),
 `EnumDedupSound` (EXIT=0), `golean` (96 jobs, EXIT=0), `UnseqSchedulerTests` + `gocore-eval-tests` (EXIT=0);
 `scripts/check-unseq-scheduler` PASS (35 theorems, classical trio only); `gocore-eval-tests` 274 ok, EXIT=0.
 

@@ -32,6 +32,8 @@ the VERIFIED `checkCert` for α; `golean coverage-observations` for the corpus),
 | `alpha-vs-beta.sh.txt`, `alpha-vs-beta-sets.tsv` | for every CLOSED row, BOTH engines' printed member sets compared exactly (sorted JSON lines): 100/100 SAME | this lane, D1 binary |
 | `twin-control-trace.txt` | `scripts/choice-trace-corpus --dump` over the five `multipkg/mini-raft-twin` rows: 569 consumptions, all `appendSpill`, 0 `unseqNext`/`unseqPanic`, observation invariant over the six streams | the tracer, D1 binary |
 | `gate-tail.txt` | `scripts/capped scripts/ci --slow` at the runtime commit: the differential summary, the DRIFT lines and the step summary (ANSI stripped) | this lane |
+| `gate-records-diff-tail.txt` | `scripts/capped scripts/ci --diff` at the records commit `c253cadc` (clean tree): the same tail — DRIFT = exactly `google-search` | this lane |
+| `choice-trace-main-vs-d1.txt`, `trace-compare.py.txt` | the whole-corpus choice trace, main's binary vs this tree's: 3669 ids, 3669 byte-identical, 0 differ; identical site census | this lane |
 
 ## 2. Route β (the default DFS explorer; fuel 2 000 000, width 8, sites 64, cap 4096, work 50 000 000)
 
@@ -202,3 +204,22 @@ pins (twin wire = pinned bytes); frontend/lowerdiag/harness unit tests; eval tes
 3458 PASS / 247 FAIL (= the pin with the one 5a-class row red); lane-validation fixtures incl. the go half; negative
 corpus 394 matched; FloatVectors + inittask-std byte-exact; executed library coverage PASS. `beside-loop` (the
 baseline's alternation row) did not drift. Gate tail: `docs/evidence/2026-09-20_unseq-stage-d/gate-tail.txt`.
+
+Records gate (`scripts/capped scripts/ci --diff` at the records commit `c253cadc`, clean tree, lock held 22:09–22:22Z,
+EXIT=1 in 789 s): differential 3705 rows 3458 PASS / 247 FAIL; DRIFT = EXACTLY `imported-goose/channel/google-search`
+PASS/membership → FAIL/membership (the 5a-class stale record — `continue-label` is re-pinned and no longer drifts);
+FAIL steps = `certificate provenance` + `baseline diff`, both that one item; every other step ok (eval tests 274,
+negatives 394 matched, the record on a CLEAN tree). `gate-records-diff-tail.txt`.
+
+## 7. Whole-corpus choice trace — this tree's binary vs main's (the engine does not change execution)
+
+`choice-trace-main-vs-d1.txt`: `scripts/choice-trace-corpus --dump --jobs 6` over the executable corpus on main
+`10d2f2dc`'s binary (`90024323…`) and on the runtime commit's binary (`0681abc6…`), the two standing exclusions
+(`goroutines/send-then-spin`, `strings/trimspace-repeat/repeat-bound-refused`), compared PER ID on the sorted dump
+records (stream, idx, phase, site, bound, streamValue, pick) and the per-stream results (status, consumed, wide,
+obsHash, driverAgreement): **3669 ids, 3669 byte-identical, 0 differ, 0 only-on-one-side**; the consumption census
+is identical on both sides (`unseqNext` 555, `unseqPanic` 288, `l1Sched` 9690, `postOp` 4643, `appendSpill` 4874,
+`backEdge` 2404, `mapIter` 1307, `l5ExitWindow` 330, `repanicCollapse` 126, `tryLock` 101, `nilValueMethodText` 90,
+`l2Entry` 24, `l4Waiter` 22, `l2Arrival` 3). The one id neither side traces is `arrays/materialization-budget/
+over-budget` (BUG-078's designed lowering refusal). Each side's validator: 24 457 consumptions checked, 0 menu-invariant
+violations, 0 mirror/accountant/sentinel/pick-record alarms, 0 driver-agreement mismatches.
