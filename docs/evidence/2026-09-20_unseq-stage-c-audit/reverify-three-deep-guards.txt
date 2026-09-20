@@ -1,0 +1,37 @@
+# 3-deep nested guards through the emitter on the fixed binary: (a && (b || (c && f()))) && (g() || h())
+package main
+
+func subject() int {
+	a := true
+	b := false
+	c := true
+	f := func() bool { println("f"); return true }
+	g := func() bool { println("g"); return true }
+	h := func() bool { println("h"); c = false; return true }
+	r := (a && (b || (c && f()))) && (g() || h())
+	if r {
+		return 1
+	}
+	return 0
+}
+func main() { println(subject()) }
+# census: admitted 3 calls / 6 nonEvents; 1 unseq node; all-tape observations=1 'f g'·1; gc 'f g 1'
+--- .tmp/probes2/c04-three-deep-guards/wire.json: cells=['$u0', '$u1', '$u2', '$u3', '$u4', '$u5', '$u6', '$u7', '$u8', '$u9', '$u10']
+   0 copy0    eval    $u0 := a                                      after=- region=-
+   1 guard1   guard   guard test=$u0 when=True out=$u1              after=- region=-
+   2 copy2    eval    $u2 := b                                      after=- region=guard1
+   3 guard3   guard   guard test=$u2 when=False out=$u3             after=- region=guard1
+   4 read4    eval    $u4 := c                                      after=- region=guard3
+   5 guard5   guard   guard test=$u4 when=True out=$u5              after=- region=guard3
+   6 call6    invoke  ['$u6'] := f()                                after=- region=guard5
+   7 join7    eval    $u5 := $u6                                    after=- region=guard5
+   8 join8    eval    $u3 := $u5                                    after=- region=guard3
+   9 join9    eval    $u1 := $u3                                    after=- region=guard1
+  10 guard10  guard   guard test=$u1 when=True out=$u7              after=['join9'] region=-
+  11 call11   invoke  ['$u8'] := g()                                after=- region=guard10
+  12 guard12  guard   guard test=$u8 when=False out=$u9             after=['call11'] region=guard10
+  13 call13   invoke  ['$u10'] := h()                               after=- region=guard12
+  14 join14   eval    $u9 := $u10                                   after=- region=guard12
+  15 join15   eval    $u7 := $u9                                    after=- region=guard10
+  stores=[]
+  then=assign {"define": true, "lhs": [{"id": "r", "target": "declare", "type": {"kind": "bool"}}], "rhs": [{"expr": "ident", "name": "$u7", "type": {"kind": "bool"}}], "stmt

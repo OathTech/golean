@@ -1,0 +1,30 @@
+# Re-verification at fix round 6886fe00 (runtime e73c706f); golean sha256 90024323dbe00082; frontend binary byte-identical to the candidate's (tools/ unchanged in the fix round)
+## scripts/capped lake build
+Build completed successfully (96 jobs).
+build EXIT=0
+## scripts/check-unseq-wire
+ok lines: 80
+ok [mut-nested-completion-join] refused through the CLI, naming: invalid branch join
+Unseq wire gate: PASS (19 mutants refused through the CLI; exact sets in tests.log)
+EXIT=0
+## scripts/check-wire-boundary
+ok lines: 20
+ok [unseq-nested-completion] refused, naming: invalid branch join
+Wire boundary gate: PASS (11 byte-level controls + 9 unseq-node controls through the real CLI)
+EXIT=0
+## scripts/check-unseq-scheduler
+Unseq scheduler audit: 24 required theorems; 15138 declarations across all imported local origins; classical trio only
+Unseq scheduler gate: PASS
+EXIT=0
+## scripts/check-bugs.sh
+check-bugs: ok (113 bug(s); pinned cases behave as claimed)
+## scripts/check-evidence-size
+evidence-size gate: PASS — 1908 tracked files / 29287399 bytes in 109 evidence dirs; caps file 262144 B, dir 4194304 B, no archives, no source copies; 17 pre-existing offender(s) allowlisted (frozen 2026-09-07), 0 new
+## scripts/diff-one on the six new rows (EXIT=1 = the two designed reds)
+FAIL	evalorder/legacy-logical-vs-call/or-vs-call	globals,closures,bools,calls,print,evaluation_order	stage=differential	detail=Lean={"output":"logical true 0\n","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]} Go=
+FAIL	evalorder/legacy-logical-vs-call/and-vs-call	globals,closures,bools,calls,print,evaluation_order	stage=differential	detail=Lean={"output":"logical true 0\n","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]} Go
+PASS	evalorder/unseq-const-cell/elem-assign-const-string	closures,slices,indexing,calls,assignment,print,strings,evaluation_order
+PASS	evalorder/legacy-logical-vs-call/call-first-control	globals,closures,bools,calls,print,evaluation_order
+PASS	evalorder/unseq-const-cell/const-guard-left	closures,bools,calls,evaluation_order
+PASS	evalorder/unseq-const-cell/elem-assign-const-int	closures,slices,indexing,calls,assignment,print,evaluation_order
+EXIT=1

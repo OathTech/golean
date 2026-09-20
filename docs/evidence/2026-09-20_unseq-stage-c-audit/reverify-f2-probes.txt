@@ -1,0 +1,16 @@
+# F2 (a14/a15/a16) on the fixed binary vs main's frontend + main's binary
+a14-const-guard-left
+  FIX : {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":2}]}
+
+  MAIN: {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":2}]}
+
+a15-elem-assign-const-value
+  FIX : {"output":"f\n","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":59}]}
+
+  MAIN: {"output":"f\n","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":59}]}
+
+a16-elem-assign-string-const
+  FIX : {"output":"f\n","schema":"golean-observation-v1","status":"ok","values":[{"bytes":[120,115],"tag":"string"}]}
+
+  MAIN: {"output":"f\n","schema":"golean-observation-v1","status":"ok","values":[{"bytes":[120,115],"tag":"string"}]}
+
