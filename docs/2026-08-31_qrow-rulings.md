@@ -685,3 +685,26 @@ which posed five numbered items.
 C1 S3 (`core/c1-memory-module-s3-0919`) and its audit land at train r43; the Stage C lane
 follows (v2.1 §7 Stage C: one native `unseq` fragment end to end), then Stage D/E, then the
 NaN [a]+[b] lane, then P → C3 → C4 → B6.
+
+### The Stage C landing ratification record (2026-09-20)
+
+[USER] Mike, 2026-09-20, verbatim, relayed by the [AGENT] coordinator — cite as
+relayed: «land it» — answering the coordinator's merge ask for Stage C of the
+evaluation-order plan (`core/unseq-stage-c-0919` at `6886fe00`, audit + re-verification
+MERGE-CLEAN at `1494f742`), which posed two items for ratification.
+
+**What was decided (RATIFIED by the landing).**
+1. Latitude E2/E12 (the VALUE axis: a sensitive operand's read before or after a
+   sibling call) moves from (b) PINNED to (a) ENVELOPED on the NINE rows the Stage C
+   pilot fixed or moved (BUG-101's two; the seven strict → membership lane moves), and
+   ONLY those — the rest of the family stays (b) PINNED with the re-envelope obligation
+   (`docs/2026-08-11_latitude-inventory.md` §2 E2/E12 wording bounded accordingly).
+2. Two E13 narrowings are RETIRED on the pilot's rows — residual (1), the operand to the
+   RIGHT of the event, and residual (9), the operand before the FIRST of several events —
+   because the `unseq` graph models them there.
+
+Also landed with this ratification: BUG-113 (open; the LEGACY path's `||`/`&&` beside a
+lexically later call evaluated after the call — a pre-existing wrong answer, main =
+candidate, gc/spec `false`; two born-FAIL rows + a control; fix = Stage E) and BUG-112
+(fixed). Train r44 owes 5a with `--slow` (wire and decoder changed). Then Stage D (economics)
+and Stage E (migration; the BUG-113 fix; legacy probe retirement; twin re-pin).
