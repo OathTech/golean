@@ -603,9 +603,25 @@ func (e *emitter) unseqLocalTarget(id *ast.Ident, define bool, ctx *unseqCtx, d 
 	return loc, true
 }
 
+// unseqCtxNow is the classifier's context for the function whose statements
+// the emitter is emitting (nil outside any function body): its body, the
+// variables reached through capture pointers in a lifted body, its results.
+func (e *emitter) unseqCtxNow() *unseqCtx {
+	if e.unseqBody == nil {
+		return nil
+	}
+	captured := map[types.Object]bool{}
+	for obj := range e.captureParam {
+		captured[obj] = true
+	}
+	return &unseqCtx{body: e.unseqBody, captured: captured, results: e.curResults}
+}
+
 // unseqElemTarget classifies a slice-element target `a[i]`: base and index
 // inside the grammar; the target PLAN is a non-event occurrence (frozen
-// header + index, one identity for the load and the store — v2.1 §3.4).
+// header + index, one identity for the load and the store — v2.1 §3.4). An
+// interface-typed element is outside the pilot (its store would box the
+// value inside the graph; boxing is an argument/completion wrap here).
 func (e *emitter) unseqElemTarget(ix *ast.IndexExpr, ctx *unseqCtx, d *unseqDecision) bool {
 	refuse := func(why string) bool {
 		if d.reason == "" {
@@ -623,6 +639,9 @@ func (e *emitter) unseqElemTarget(ix *ast.IndexExpr, ctx *unseqCtx, d *unseqDeci
 	}
 	if !unseqTypeOK(sl.Elem()) {
 		return refuse("element target type outside the pilot grammar (" + sl.Elem().String() + ")")
+	}
+	if _, isIface := types.Unalias(sl.Elem()).Underlying().(*types.Interface); isIface {
+		return refuse("interface-typed element target (boxing inside a graph is outside the pilot)")
 	}
 	if _, ok := e.unseqExpr(ix.X, ctx, d); !ok {
 		return false

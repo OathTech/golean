@@ -1,0 +1,186 @@
+# C2 gates — scripts/capped scripts/ci --diff under the box-wide lock, TWICE: gate #1 MEASURED the movement against the untouched rows/baseline (the C2 tree before the row edits); gate #2 confirmed it after the row edits (the tree committed as C2, before the baseline re-pin and the BUGS.md moves — those are judged by the fast gate below)
+
+## gate #1 (measurement; tree = C1 fb03e38f + the lowering, the E13 test updates, the pilot package)
+1:2026-09-19T23:35:03Z lock acquired; running: scripts/capped scripts/ci --diff
+761:CMD_EXIT=1 SECONDS=705
+differential coverage summary: cases=3699 pass=3438 fail=261 export_status=0
+
+DRIFT vs baselines/native-full.tsv (3699 case(s) run):
+builtins/e13-sibling-panic-order/assert-middle	baseline[PASS/membership] -> now[FAIL/membership]
+builtins/e13-sibling-panic-order/assert-right-call	baseline[PASS/-] -> now[FAIL/nondet]
+builtins/e13-sibling-panic-order/compound-call-target-vs-call	baseline[FAIL/differential] -> now[FAIL/nondet]
+builtins/e13-sibling-panic-order/compound-call-target-vs-len	baseline[FAIL/frontend-export] -> now[FAIL/nondet]
+builtins/e13-sibling-panic-order/index-assert-left-call	baseline[PASS/membership] -> now[FAIL/membership]
+builtins/e13-sibling-panic-order/index-middle	baseline[PASS/membership] -> now[FAIL/membership]
+builtins/e13-sibling-panic-order/two-index-left-call	baseline[PASS/membership] -> now[FAIL/membership]
+evalorder/unseq-pilot/r1	NEW id (not in baseline) -> PASS/membership
+evalorder/unseq-pilot/r2a-false	NEW id (not in baseline) -> PASS/-
+evalorder/unseq-pilot/r2a-true	NEW id (not in baseline) -> PASS/-
+evalorder/unseq-pilot/r2b	NEW id (not in baseline) -> PASS/-
+evalorder/unseq-pilot/r2c-false	NEW id (not in baseline) -> PASS/membership
+evalorder/unseq-pilot/r2c-true	NEW id (not in baseline) -> PASS/membership
+evalorder/unseq-pilot/r4	NEW id (not in baseline) -> PASS/membership
+evalorder/unseq-pilot/r6	NEW id (not in baseline) -> PASS/membership
+evalorder/unseq-pilot/w1	NEW id (not in baseline) -> PASS/membership
+evalorder/unseq-pilot/w2	NEW id (not in baseline) -> PASS/membership
+evalorder/unseq-pilot/w3	NEW id (not in baseline) -> PASS/membership
+evalorder/unseq-pilot/w5	NEW id (not in baseline) -> PASS/membership
+evalorder/unseq-pilot/w6	NEW id (not in baseline) -> PASS/membership
+imported-goose/channel/google-search	baseline[PASS/membership] -> now[FAIL/membership]
+multi-assign/index-target-rhs-call-order	baseline[PASS/-] -> now[FAIL/nondet]
+noodler/latitude/args-index-vs-call	baseline[PASS/-] -> now[FAIL/differential]
+noodler/latitude/concat-var-vs-call	baseline[PASS/-] -> now[FAIL/nondet]
+noodler/latitude/index-call-index	baseline[PASS/-] -> now[FAIL/nondet]
+noodler/latitude/return-operands	baseline[PASS/-] -> now[FAIL/nondet]
+noodler/maps/slice-compound-call-mutates	baseline[PASS/-] -> now[FAIL/nondet]
+spec-examples-stmt/continue-label	baseline[PASS/-] -> now[FAIL/nondet]
+
+the moved rows' details (artifacts/coverage/latest.tsv of gate #1):
+  builtins/e13-sibling-panic-order/assert-middle
+  builtins/e13-sibling-panic-order/index-assert-left-call
+  builtins/e13-sibling-panic-order/index-middle
+  builtins/e13-sibling-panic-order/two-index-left-call
+  builtins/e13-sibling-panic-order/assert-right-call
+  builtins/e13-sibling-panic-order/compound-call-target-vs-call
+  builtins/e13-sibling-panic-order/compound-call-target-vs-len
+  builtins/e13-sibling-panic-order/assert-ok-early-len-hoist
+  builtins/e13-sibling-panic-order/slice-value-early-len-hoist
+  multi-assign/index-target-rhs-call-order
+  noodler/latitude/args-index-vs-call
+  noodler/latitude/concat-var-vs-call
+  noodler/latitude/index-call-index
+  noodler/latitude/return-operands
+  noodler/maps/slice-compound-call-mutates
+  spec-examples-stmt/continue-label
+  (the detail lines are in c2-moved-rows.txt)
+
+## gate #2 (confirmation; tree = gate #1 + the row edits: 4 pins, 7 lane moves, 4 flips to membership, continue-label depth=128)
+1:2026-09-19T23:55:35Z lock acquired; running: scripts/capped scripts/ci --diff
+762:CMD_EXIT=1 SECONDS=701
+differential coverage summary: cases=3699 pass=3454 fail=245 export_status=0
+
+DRIFT vs baselines/native-full.tsv (3699 case(s) run):
+builtins/e13-sibling-panic-order/assert-ok-early-len-hoist	baseline[FAIL/lean-observation] -> now[PASS/membership]
+builtins/e13-sibling-panic-order/assert-right-call	baseline[PASS/-] -> now[PASS/membership]
+builtins/e13-sibling-panic-order/compound-call-target-vs-call	baseline[FAIL/differential] -> now[PASS/membership]
+builtins/e13-sibling-panic-order/compound-call-target-vs-len	baseline[FAIL/frontend-export] -> now[PASS/membership]
+builtins/e13-sibling-panic-order/slice-value-early-len-hoist	baseline[FAIL/differential] -> now[PASS/membership]
+evalorder/unseq-pilot/r1	NEW id (not in baseline) -> PASS/membership
+evalorder/unseq-pilot/r2a-false	NEW id (not in baseline) -> PASS/-
+evalorder/unseq-pilot/r2a-true	NEW id (not in baseline) -> PASS/-
+evalorder/unseq-pilot/r2b	NEW id (not in baseline) -> PASS/-
+evalorder/unseq-pilot/r2c-false	NEW id (not in baseline) -> PASS/membership
+evalorder/unseq-pilot/r2c-true	NEW id (not in baseline) -> PASS/membership
+evalorder/unseq-pilot/r4	NEW id (not in baseline) -> PASS/membership
+evalorder/unseq-pilot/r6	NEW id (not in baseline) -> PASS/membership
+evalorder/unseq-pilot/w1	NEW id (not in baseline) -> PASS/membership
+evalorder/unseq-pilot/w2	NEW id (not in baseline) -> PASS/membership
+evalorder/unseq-pilot/w3	NEW id (not in baseline) -> PASS/membership
+evalorder/unseq-pilot/w5	NEW id (not in baseline) -> PASS/membership
+evalorder/unseq-pilot/w6	NEW id (not in baseline) -> PASS/membership
+imported-goose/channel/google-search	baseline[PASS/membership] -> now[FAIL/membership]
+multi-assign/index-target-rhs-call-order	baseline[PASS/-] -> now[PASS/membership]
+noodler/latitude/args-index-vs-call	baseline[PASS/-] -> now[PASS/membership]
+noodler/latitude/concat-var-vs-call	baseline[PASS/-] -> now[PASS/membership]
+noodler/latitude/index-call-index	baseline[PASS/-] -> now[PASS/membership]
+noodler/latitude/return-operands	baseline[PASS/-] -> now[PASS/membership]
+noodler/maps/slice-compound-call-mutates	baseline[PASS/-] -> now[PASS/membership]
+
+[1m══ scripts/ci summary ══[0m
+  ok   Tests/library ownership (no exceptions; executed builds checked at exit)
+  note build parallelism: cap 32G -> LEAN_NUM_THREADS=4 (cap/8G, floor 2; 32 cores on this box)
+  ok   oracle toolchain (go1.26.5 = pin)
+  ok   escape-hatch preflight
+  ok   meta-layer escape hatches (allowlist empty since the repo split)
+  ok   escape-hatch addendum (no decide +native / native-config spellings)
+  ok   bug-index cross-check
+  ok   feature-coverage (no dead tags)
+  ok   spec-anchor citations resolve at the pin
+  ok   stdlib admission register = frontend tables
+  ok   lane-validation fixtures (manifest gates reject bad shapes)
+  ok   evidence-on-main size gate
+  ok   AGENTS.md alias of CLAUDE.md
+  ok   imported-goose verbatim (above-marker bytes = pinned upstream)
+  ok   engine-isolation (core ↛ EnumDedup)
+  ok   memory-module raw call-site inventory (emit/peek discipline)
+  ok   core build (warning-free)
+  FAIL certificate provenance
+  ok   core totality audit (every GoLean/ module; required core theorems; poison controls)
+  ok   admission checker proofs and post-import audit
+  ok   declaration boundary
+  ok   wire boundary (byte-level controls through the real CLI)
+  ok   package-correct method identity
+  ok   unseq scheduler (Stage B)
+  ok   unseq wire (Stage C)
+  ok   frontend pins (realized init-order deviation + twin wire = pinned bytes)
+  ok   import-goose fixtures (importer + verbatim guard reject bad shapes)
+  ok   frontend unit tests
+  FAIL lowering-diagnostic tables (causes.tsv / machine-surface.tsv / library-refusals.tsv drifted, or the static pass disagrees with a wire)
+  ok   coverage-harness unit tests
+  ok   eval tests (267 ok)
+  ok   differential run completed (exit 1; failing-set judged by baseline diff)
+  ok   lane-validation fixtures incl. harness half (F4/F6/B3-B5/G5/T1-T8/D1-D6)
+  ok   negative run completed (exit 0; set judged by baseline diff)
+  ok   Tests/FloatVectors.lean = fresh hardware-oracle regeneration (byte-exact)
+  ok   inittask-std.tsv = fresh gc-derived regeneration (header at pin; byte-exact modulo date line)
+  note negative baseline diff matched (394 case(s)) but the record was made on a DIRTY tree (git_dirty=true) — certifies that worktree state, not a commit
+  FAIL baseline diff (DRIFT — see above)
+  note reconciler: 3 finding(s), 2 HIGH — report-only (details: tools/reconcile-records)
+  ok   executed library coverage (all declared libraries; all Tests modules)
+[1mRESULT: FAIL[0m
+Failed CI receipts retained: /home/dev/projects/golean/.claude/worktrees/unseq-stage-c/.tmp/ci-libraries-l13dg_ml
+CI coverage timing: close: seconds=0.007
+CI total wall seconds: 701
+
+lowering-diagnostic tables at gate #2: TestVocabularyCoverageIsTracked 372/425 — the lowering added 17 internal `unseq lowering:` refusal formats; fixed before the commit by causes.tsv unseq-lowering-invariant (388/425) + unclassified-formats.txt regenerated; go test ./tools/lowerdiag EXIT=0
+
+## the fast gate on the committed C2 tree (re-pinned baseline, BUGS.md moves, the causes row) — scripts/capped scripts/ci under the lock
+1:2026-09-20T00:13:55Z lock acquired; running: scripts/capped scripts/ci
+692:CMD_EXIT=1 SECONDS=414
+DRIFT vs baselines/native-full.tsv (3699 case(s) run):
+imported-goose/channel/google-search	baseline[PASS/membership] -> now[FAIL/membership]
+633:  re-pin note: GREENED	builtins/e13-sibling-panic-order/assert-ok-early-len-hoist	FAIL -> PASS
+634:  re-pin note: GREENED	builtins/e13-sibling-panic-order/compound-call-target-vs-call	FAIL -> PASS
+635:  re-pin note: GREENED	builtins/e13-sibling-panic-order/compound-call-target-vs-len	FAIL -> PASS
+636:  re-pin note: GREENED	builtins/e13-sibling-panic-order/slice-value-early-len-hoist	FAIL -> PASS
+684:  note re-pin baselines/native-full.tsv: 4 non-PASS→PASS flip(s), 0 deleted row(s) — report-only; verify the re-pin's written reason covers them
+  ok   Tests/library ownership (no exceptions; executed builds checked at exit)
+  note build parallelism: cap 32G -> LEAN_NUM_THREADS=4 (cap/8G, floor 2; 32 cores on this box)
+  ok   oracle toolchain (go1.26.5 = pin)
+  ok   escape-hatch preflight
+  ok   meta-layer escape hatches (allowlist empty since the repo split)
+  ok   escape-hatch addendum (no decide +native / native-config spellings)
+  ok   bug-index cross-check
+  ok   feature-coverage (no dead tags)
+  ok   spec-anchor citations resolve at the pin
+  ok   stdlib admission register = frontend tables
+  ok   lane-validation fixtures (manifest gates reject bad shapes)
+  ok   evidence-on-main size gate
+  ok   AGENTS.md alias of CLAUDE.md
+  ok   imported-goose verbatim (above-marker bytes = pinned upstream)
+  ok   engine-isolation (core ↛ EnumDedup)
+  ok   memory-module raw call-site inventory (emit/peek discipline)
+  ok   core build (warning-free)
+  FAIL certificate provenance
+  ok   core totality audit (every GoLean/ module; required core theorems; poison controls)
+  ok   admission checker proofs and post-import audit
+  ok   declaration boundary
+  ok   wire boundary (byte-level controls through the real CLI)
+  ok   package-correct method identity
+  ok   unseq scheduler (Stage B)
+  ok   unseq wire (Stage C)
+  ok   frontend pins (realized init-order deviation + twin wire = pinned bytes)
+  ok   import-goose fixtures (importer + verbatim guard reject bad shapes)
+  ok   frontend unit tests
+  ok   lowering-diagnostic tables
+  ok   coverage-harness unit tests
+  ok   eval tests (267 ok)
+  note negative baseline diff matched (394 case(s)) but the record was made on a DIRTY tree (git_dirty=true) — certifies that worktree state, not a commit
+  FAIL baseline diff (DRIFT — see above)
+  ok   re-pin guard (0 PASS→non-PASS flip(s), all listed in BUGS.md Cases)
+  note re-pin baselines/native-full.tsv: 4 non-PASS→PASS flip(s), 0 deleted row(s) — report-only; verify the re-pin's written reason covers them
+  note reconciler: 5 finding(s), 3 HIGH — report-only (details: tools/reconcile-records)
+  ok   executed library coverage (all declared libraries; all Tests modules)
+[01] C4  HIGH    the language-coverage ledger §8 arithmetic is computed over a STALE baseline: §8 says 3686 cases / 3438 PASS / 248 FAIL; the tracked baseline at this tip is 3699 / 3455 / 244 (delta: 13 cases, -4 reds). §8 claims 'every one on a named row' — that claim is not re-derivable at th
+[02] C4  HIGH    §8's red buckets account for 248 reds; the baseline at this tip has 244 — -4 red(s) are NOT on a named row at the current tip (the §8 invariant 'zero unmapped' does not hold as written)
+[03] C9  HIGH    certificate provenance: STALE certification: changed dependency build/files/GoLean/NativeToIR.lean

@@ -1,2 +1,8 @@
 # id	subject	args	expected_status	expected_reason	features
--	continueLabelBias	-	ok	-	labels,continue,loops,range,nested,slices,closures
+# STRICT-LANE DEPTH GUARD — DECLARED depth=128 (Stage C pilot, 2026-09-19, [AGENT]): `row[x] = data + bias(x, y)` in the
+# nested loop and `return enc(rows[0]), enc(rows[1]), enc(rows[2])` lower as unseq graphs — the target plan (frozen row header, x)
+# is spec-unsequenced against bias(x, y), and each enc's checked read against the earlier enc — one wide pick per iteration and
+# per read: default-stream wide count w=18 (the gate's trace), so the three fixed streams (8–10 entries) are exhausted; the
+# observation is a SINGLETON (nothing mutates row or rows), so the row stays strict with N = the smallest power of two >= 4·w
+# (docs/coverage-suite-structure.md sizing convention): 128.
+-	continueLabelBias	-	ok	-	labels,continue,loops,range,nested,slices,closures	-	-	depth=128

@@ -18,6 +18,7 @@
 # 2026-09-12 lane fix/review-boundary-0911 (BUG-109) [AGENT]: regenerated — the eight modfile.go formats (module `go` directive) are CLASSIFIED by the causes.tsv row foreign-module-version (by-design: RULED [USER] refuse non-1.26); nothing else moved. Coverage 364/401 -> 372/409.
 # DIAGNOSTIC — NOT A LOWERING. tools/lowerdiag report: no wire is written; nothing in this file is a gate input.
 # distinct unsup(...) formats: 409; classified by causes.tsv: 372; unclassified (listed): 37
+# 2026-09-19 lane core/unseq-stage-c-0919 [AGENT]: regenerated after Stage C (the `unseq` lowering, tools/nativefrontend/unseq_lower.go) — its 17 INTERNAL contract-breach formats (`unseq lowering: …`, unreachable for an admitted sweep) classify from the format alone (causes.tsv unseq-lowering-invariant, by-design); coverage 388/425; the list is unchanged in content.
 &composite (elided) in X
 &composite in X
 TypeDef X has no display record — its key was minted outside the identity boundary constructors (docs/2026-09-05_fr19-bug097-design.md §3.1)

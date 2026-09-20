@@ -114,6 +114,10 @@ type emitter struct {
 	// decision procedure `unseqClassify` reads (a private local is
 	// order-transparent; an address-taken one is a READ occurrence).
 	unseqAddr map[*ast.BlockStmt]map[types.Object]bool
+	// unseqBody: the body of the function whose statements are being emitted
+	// (a declaration's or a lifted literal's) — the classifier's address-taken
+	// analysis is per body. Set by emitFuncDecl / emitFuncLit, restored on exit.
+	unseqBody *ast.BlockStmt
 	// eventBeforeResidual is set by a statement emitter whose statement
 	// performs an ordered event BEFORE it evaluates its inline operands
 	// (the receive-statement form `x[k] = <-ch`: communication first, then

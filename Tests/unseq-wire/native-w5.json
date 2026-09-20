@@ -1,0 +1,484 @@
+{
+ "buildContext": {
+  "buildTags": [],
+  "cgoEnabled": true,
+  "compiler": "gc",
+  "goarch": "amd64",
+  "goos": "linux"
+ },
+ "fileOrder": [
+  {
+   "files": [
+    "main.go"
+   ],
+   "package": "main"
+  }
+ ],
+ "funcs": [
+  {
+   "body": {
+    "body": [
+     {
+      "define": false,
+      "lhs": [
+       {
+        "expr": {
+         "expr": "ident",
+         "name": "a$cap"
+        },
+        "target": "addr"
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "nil",
+        "type": {
+         "elem": {
+          "int": "int",
+          "kind": "int"
+         },
+         "kind": "slice"
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "0"
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "w5$lit0",
+   "params": [
+    {
+     "id": "a$cap",
+     "type": {
+      "elem": {
+       "elem": {
+        "int": "int",
+        "kind": "int"
+       },
+       "kind": "slice"
+      },
+      "kind": "pointer"
+     }
+    }
+   ],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "elem": {
+       "int": "int",
+       "kind": "int"
+      },
+      "len": {
+       "expr": "int",
+       "type": {
+        "int": "int",
+        "kind": "int"
+       },
+       "value": "1"
+      },
+      "stmt": "make-slice",
+      "target": {
+       "id": "$c0",
+       "target": "declare",
+       "type": {
+        "elem": {
+         "int": "int",
+         "kind": "int"
+        },
+        "kind": "slice"
+       }
+      }
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "a",
+        "target": "declare",
+        "type": {
+         "elem": {
+          "int": "int",
+          "kind": "int"
+         },
+         "kind": "slice"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "ident",
+        "name": "$c0",
+        "type": {
+         "elem": {
+          "int": "int",
+          "kind": "int"
+         },
+         "kind": "slice"
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": false,
+      "lhs": [
+       {
+        "expr": {
+         "base": {
+          "expr": "ident",
+          "name": "a",
+          "type": {
+           "elem": {
+            "int": "int",
+            "kind": "int"
+           },
+           "kind": "slice"
+          }
+         },
+         "expr": "index-addr",
+         "index": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "0"
+         }
+        },
+        "target": "addr"
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "7"
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "mut",
+        "target": "declare",
+        "type": {
+         "kind": "func",
+         "params": [],
+         "results": [
+          {
+           "int": "int",
+           "kind": "int"
+          }
+         ],
+         "variadic": false
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "captured": [
+         {
+          "expr": "ref",
+          "id": "a"
+         }
+        ],
+        "expr": "func-value",
+        "func": "w5$lit0",
+        "type": {
+         "kind": "func",
+         "params": [],
+         "results": [
+          {
+           "int": "int",
+           "kind": "int"
+          }
+         ],
+         "variadic": false
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "n",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "0"
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "body": {
+       "body": [
+        {
+         "cells": [
+          {
+           "id": "$u1",
+           "type": {
+            "elem": {
+             "int": "int",
+             "kind": "int"
+            },
+            "kind": "slice"
+           }
+          },
+          {
+           "id": "$u2",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           }
+          },
+          {
+           "id": "$u3",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           }
+          },
+          {
+           "id": "$u4",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           }
+          }
+         ],
+         "occs": [
+          {
+           "args": [],
+           "binds": [
+            "$u3"
+           ],
+           "callee": {
+            "expr": "ident",
+            "name": "mut",
+            "type": {
+             "kind": "func",
+             "params": [],
+             "results": [
+              {
+               "int": "int",
+               "kind": "int"
+              }
+             ],
+             "variadic": false
+            }
+           },
+           "kind": "invoke",
+           "name": "call2",
+           "resultTypes": [
+            {
+             "int": "int",
+             "kind": "int"
+            }
+           ]
+          },
+          {
+           "bind": "$u1",
+           "head": {
+            "expr": "ident",
+            "name": "a",
+            "type": {
+             "elem": {
+              "int": "int",
+              "kind": "int"
+             },
+             "kind": "slice"
+            }
+           },
+           "kind": "eval",
+           "name": "read0"
+          },
+          {
+           "bind": "$u2",
+           "head": {
+            "base": {
+             "expr": "ident",
+             "name": "$u1",
+             "type": {
+              "elem": {
+               "int": "int",
+               "kind": "int"
+              },
+              "kind": "slice"
+             }
+            },
+            "expr": "index-get",
+            "index": {
+             "expr": "int",
+             "type": {
+              "int": "int",
+              "kind": "int"
+             },
+             "value": "0"
+            },
+            "type": {
+             "int": "int",
+             "kind": "int"
+            }
+           },
+           "kind": "eval",
+           "name": "access1"
+          },
+          {
+           "bind": "$u4",
+           "head": {
+            "expr": "binary",
+            "op": "+",
+            "type": {
+             "int": "int",
+             "kind": "int"
+            },
+            "x": {
+             "expr": "ident",
+             "name": "$u2",
+             "type": {
+              "int": "int",
+              "kind": "int"
+             }
+            },
+            "y": {
+             "expr": "ident",
+             "name": "$u3",
+             "type": {
+              "int": "int",
+              "kind": "int"
+             }
+            }
+           },
+           "kind": "eval",
+           "name": "op3"
+          }
+         ],
+         "stmt": "unseq",
+         "stores": [],
+         "then": {
+          "args": [
+           {
+            "expr": "ident",
+            "name": "$u4",
+            "type": {
+             "int": "int",
+             "kind": "int"
+            }
+           }
+          ],
+          "newline": true,
+          "stmt": "print"
+         }
+        },
+        {
+         "op": "+",
+         "read": {
+          "expr": "ident",
+          "name": "n",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          }
+         },
+         "stmt": "incdec",
+         "target": {
+          "id": "n",
+          "target": "var"
+         },
+         "type": {
+          "int": "int",
+          "kind": "int"
+         }
+        }
+       ],
+       "stmt": "block"
+      },
+      "cond": {
+       "expr": "binary",
+       "op": "<",
+       "operandType": {
+        "int": "int",
+        "kind": "int"
+       },
+       "type": {
+        "kind": "bool"
+       },
+       "x": {
+        "expr": "ident",
+        "name": "n",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       },
+       "y": {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "2"
+       }
+      },
+      "stmt": "for"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "w5",
+   "params": [],
+   "results": [],
+   "variadic": false
+  }
+ ],
+ "methodSets": [],
+ "methods": [],
+ "package": "main",
+ "schema": "golean-native-v1",
+ "types": []
+}

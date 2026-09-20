@@ -2281,6 +2281,8 @@ func (e *emitter) emitFuncDecl(d *ast.FuncDecl) (map[string]any, error) {
 	savedSeg, savedPC, savedLoop := e.gotoSeg, e.gotoPC, e.gotoLoop
 	e.branchLabels, e.gotoLabels = scanLabelUses(d.Body)
 	e.gotoSeg, e.gotoPC, e.gotoLoop = nil, "", ""
+	savedUnseqBody := e.unseqBody
+	e.unseqBody = d.Body // the whole-sweep decision procedure's function (unseq.go)
 	var body any
 	var berr error
 	if len(e.gotoLabels) > 0 {
@@ -2288,6 +2290,7 @@ func (e *emitter) emitFuncDecl(d *ast.FuncDecl) (map[string]any, error) {
 	} else {
 		body, berr = e.emitBlock(d.Body)
 	}
+	e.unseqBody = savedUnseqBody
 	e.branchLabels, e.gotoLabels = savedBranch, savedGoto
 	e.gotoSeg, e.gotoPC, e.gotoLoop = savedSeg, savedPC, savedLoop
 	if berr != nil {
@@ -2899,6 +2902,29 @@ func (e *emitter) emitBlock(b *ast.BlockStmt) (map[string]any, error) {
 func (e *emitter) emitStmtList(list []ast.Stmt) ([]any, error) {
 	out := []any{}
 	for _, s := range list {
+		// THE WHOLE-SWEEP MIGRATION BOUNDARY (evaluation-order model v2.1 §3.7;
+		// Stage C, unseq.go): a sweep inside the pilot grammar with a call and
+		// an occurrence observable against it is lowered as ONE `unseq` graph
+		// (emitUnseqSweep) — the legacy ANF/probe path below never sees it;
+		// every other sweep takes the legacy path unchanged. The decision is
+		// `unseqClassify`, the same function the census prints; a graph
+		// lowering that leaks a legacy hoist is refused by name (never a
+		// mixture).
+		if ctx := e.unseqCtxNow(); ctx != nil && e.unseqClassify(s, ctx).admitted {
+			saved := e.hoisted
+			e.hoisted = nil
+			w, err := e.emitUnseqSweep(s, ctx)
+			leaked := len(e.hoisted)
+			e.hoisted = saved
+			if err != nil {
+				return nil, err
+			}
+			if leaked != 0 {
+				return nil, unsup("unseq lowering leaked %d legacy hoist(s) — a sweep is ONE unseq graph or the legacy path, never a mixture (v2.1 §3.7); refused by name", leaked)
+			}
+			out = append(out, w)
+			continue
+		}
 		// A-normal form: emit each statement with a fresh hoist accumulator, then
 		// emit the hoisted temp bindings (from calls/allocs in its expressions)
 		// immediately before it. The statement is the sweep root (A6): the
@@ -7953,8 +7979,10 @@ func (e *emitter) emitFuncLit(lit *ast.FuncLit) (any, error) {
 	savedSeg, savedPC, savedLoop := e.gotoSeg, e.gotoPC, e.gotoLoop
 	savedForbidden, savedSCHoistOK := e.hoistForbidden, e.scHoistOK
 	savedStarts, savedSuppress := e.nodeStarts, e.probeSuppress
-	defer func() { e.nodeStarts, e.probeSuppress = savedStarts, savedSuppress }()
+	savedUnseqBody := e.unseqBody
+	defer func() { e.nodeStarts, e.probeSuppress, e.unseqBody = savedStarts, savedSuppress, savedUnseqBody }()
 	e.nodeStarts, e.probeSuppress = nil, 0 // a lifted body is its own hoist context (E13 probes)
+	e.unseqBody = lit.Body                 // the lifted body is its own function for the unseq decision (unseq.go)
 	e.captureParam, e.hoisted = newCapture, nil
 	e.curResults = sig.Results()
 	// Named-result shadow renaming for the LIT's own body (its frame,

@@ -88,3 +88,10 @@ raft twin (raftsubject/{quorum,raftpb,tracker,proto,confchange,raft} + tools/raf
 
 wire neutrality of C0 (main-tip frontend built from `git archive main` vs the C0 frontend, every corpus package):
   packages=1353 identical(wire-or-refusal)=1353 differing-wires=0 differing-refusals=0
+
+## C2 (the lowering; frame-ordered canonical partition)
+
+census (all units): packages 1354  sweeps 107896  admitted 133 in 29 packages (the 13 pilot rows + the C0 120)
+emitted wires carrying unseq nodes: 25 packages, 117 nodes (.tmp/census/count-unseq.sh); the 4 admitted-but-absent packages are the fmt/formatter-box-* + formatter-dyn-hole exports the standing fmt.Formatter boxing refusal kills (24 standing frontend refusals, identical on both frontends)
+neutrality vs the main-tip frontend: packages=1354 identical=1329 differing-wires=25 (exactly the 25 above) differing-refusals=0
+raft twin: 0 admitted; check-frontend-pins ok (twin wire byte-identical)

@@ -439,15 +439,86 @@ def render(wire):
     return (json.dumps(wire, indent=1, sort_keys=True, ensure_ascii=False) + "\n").encode("utf-8")
 
 
+# ---------------------------------------------------------------- edge mutants on the LOWERED graphs
+def _unseq_in(stmts):
+    for s in stmts:
+        if isinstance(s, dict) and s.get("stmt") == "unseq":
+            return s
+        if isinstance(s, dict) and s.get("stmt") == "for":
+            found = _unseq_in(s["body"]["body"])
+            if found is not None:
+                return found
+    return None
+
+
+def _native_node(wire, fn):
+    node = _unseq_in(_func(wire, fn)["body"]["body"])
+    if node is None:
+        raise SystemExit(f"{fn}: the frontend emitted no unseq node (the sweep left the pilot grammar?)")
+    return node
+
+
+def _occs_of_kind(node, kind):
+    return [o for o in node["occs"] if o["kind"] == kind]
+
+
+def edge_mutants(natives):
+    """v2.1 §8: mutate one DATA, one LEXICAL, one GUARD and one PHASE edge of a
+    LOWERED graph; each decodes, and the exact-set check names the changed set."""
+    out = []
+
+    def edit(name, base, fn, mutate):
+        w = copy.deepcopy(natives[base])
+        mutate(_native_node(w, fn))
+        out.append((name, w))
+
+    # DATA edge (R6): the checked access reads the source local's header instead of
+    # the frozen slot — the FUSED narrowing: {20} instead of {10, 20}.
+    def data(n):
+        acc = [o for o in _occs_of_kind(n, "eval") if o["head"].get("expr") == "index-get"][0]
+        acc["head"]["base"] = ident("a", SLICE_INT)
+    edit("edge-data", "r6", "r6", data)
+
+    # LEXICAL edge (R2b): the later call anchored at the guard ENTRY instead of the
+    # completion — {false, true} instead of {false}.
+    def lexical(n):
+        g = _occs_of_kind(n, "guard")[0]
+        change = [o for o in _occs_of_kind(n, "invoke") if o.get("after")][0]
+        change["after"] = [g["name"]]
+    edit("edge-lexical", "r2b", "r2b", lexical)
+
+    # GUARD edge (R2a, z true): h's invocation taken OUT of the region — it runs
+    # unconditionally, unordered against k: {`guard h guard k …`, `guard k guard h …`}
+    # instead of the singleton {`guard k …`}.
+    def guard(n):
+        h = [o for o in _occs_of_kind(n, "invoke") if o.get("region")][0]
+        del h["region"]
+    edit("edge-guard", "r2a", "r2aTrue", guard)
+
+    # PHASE edge (W3): the phase-2 store writes the LOADED value instead of the op's
+    # result — the RHS event never reaches the store: {`w3 10 20` → 1020}.
+    def phase(n):
+        ld = _occs_of_kind(n, "load")[0]
+        n["stores"][0]["value"] = ld["bind"]
+    edit("edge-phase", "w3", "w3", phase)
+    return out
+
+
 def build(frontend):
     files = {}
     wires = {}
+    natives = {}
     for name, (src, specs) in WITNESSES.items():
         wire = emit(frontend, os.path.join(HERE, "src", src))
+        if src not in natives:
+            natives[src] = copy.deepcopy(wire)
+            files[f"native-{src}.json"] = render(wire)  # the frontend's OWN lowering, unmodified
         for (fn, head, tail, node, path) in specs:
             splice(wire, fn, head, tail, copy.deepcopy(node), path)
         wires[name] = wire
         files[f"{name}.json"] = render(wire)
+    for (ename, ewire) in edge_mutants(natives):
+        files[f"{ename}.json"] = render(ewire)
     rows = []
     for (mname, mwire, needle) in mutants(wires):
         files[f"{mname}.json"] = render(mwire)

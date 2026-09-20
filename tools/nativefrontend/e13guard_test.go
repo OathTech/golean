@@ -45,6 +45,42 @@ func funcRefusal(t *testing.T, program map[string]any, name string) string {
 	return ""
 }
 
+// unseqCount counts the `unseq` statements under the wire function (Stage C:
+// a sweep the whole-sweep decision procedure admits — unseq.go `unseqClassify`
+// — lowers as ONE `unseq` graph and carries no probe; the legacy path is for
+// every other sweep).
+func unseqCount(t *testing.T, program map[string]any, name string) int {
+	t.Helper()
+	fns, _ := program["funcs"].([]any)
+	for _, f := range fns {
+		ff, ok := f.(map[string]any)
+		if !ok || ff["name"] != name {
+			continue
+		}
+		n := 0
+		var walk func(any)
+		walk = func(o any) {
+			switch v := o.(type) {
+			case map[string]any:
+				if v["stmt"] == "unseq" {
+					n++
+				}
+				for _, c := range v {
+					walk(c)
+				}
+			case []any:
+				for _, c := range v {
+					walk(c)
+				}
+			}
+		}
+		walk(ff["body"])
+		return n
+	}
+	t.Fatalf("function %s not on the wire", name)
+	return 0
+}
+
 // probeCount counts the `unseq-probe` statements under the wire function.
 func probeCount(t *testing.T, program map[string]any, name string) int {
 	t.Helper()
@@ -323,8 +359,7 @@ func TestPhase1TargetOperandsAreProbed(t *testing.T) {
 		t.Fatalf("whole export refused: %v", err)
 	}
 	for fn, want := range map[string]int{
-		"tgtAssertVsLenHoist": 1, "tgtAssertVsMake": 1, "tgtAssertVsCall": 1,
-		"compoundAssertVsLen": 2, "mapKeyAssertVsLen": 1, "mapTgtAssertVsCall": 1,
+		"tgtAssertVsMake": 1, "mapKeyAssertVsLen": 1, "mapTgtAssertVsCall": 1,
 		"tgtAssertVsRecv": 1, "arrayBaseTargetVsLen": 1, "tgtAssertVsMin": 1,
 		"addrAssertLeftCall": 1,
 	} {
@@ -334,6 +369,24 @@ func TestPhase1TargetOperandsAreProbed(t *testing.T) {
 		}
 		if n := probeCount(t, program, fn); n != want {
 			t.Errorf("%s: expected %d unseq-probe(s), got %d", fn, want, n)
+		}
+	}
+	// Stage C (2026-09-19, the whole-sweep migration boundary): the sweeps INSIDE
+	// the pilot grammar — a slice-element target or compound target on int
+	// slices beside same-package calls / len, with the type assertion as the
+	// failing op — lower as ONE `unseq` graph and carry NO probe (v2.1 §3.7:
+	// never a mixture). The shapes above stay legacy (a map target, `make`, a
+	// receive, an array base, `min`, an address-of operand are outside the pilot).
+	for _, fn := range []string{"tgtAssertVsLenHoist", "tgtAssertVsCall", "compoundAssertVsLen"} {
+		if u := funcRefusal(t, program, fn); u != "" {
+			t.Errorf("%s: a pilot-grammar sweep must lower as an unseq graph, got refusal %q", fn, u)
+			continue
+		}
+		if n := unseqCount(t, program, fn); n != 1 {
+			t.Errorf("%s: expected exactly one unseq graph (the whole sweep), got %d", fn, n)
+		}
+		if n := probeCount(t, program, fn); n != 0 {
+			t.Errorf("%s: an unseq-lowered sweep must carry no legacy probe (mixture), got %d", fn, n)
 		}
 	}
 }
@@ -361,25 +414,44 @@ func TestRecoverResidualAndHoistedConversionAreProbed(t *testing.T) {
 	if n := probeCount(t, program, "bytesConvNoEvent"); n != 0 {
 		t.Errorf("bytesConvNoEvent: an INLINE allocating conversion must never be probed, got %d probes", n)
 	}
+	// Stage C: `iv.(int) + len(b[j]) + wit(5)` is inside the pilot grammar — one
+	// `unseq` graph (the assertion, the checked read, len as an E1 event, the
+	// call), no probe.
 	if u := funcRefusal(t, program, "assertLeftLenHoist"); u != "" {
-		t.Errorf("assertLeftLenHoist: probed left material must lower, got refusal %q", u)
+		t.Errorf("assertLeftLenHoist: a pilot-grammar sweep must lower, got refusal %q", u)
 	}
-	if n := probeCount(t, program, "assertLeftLenHoist"); n != 1 {
-		t.Errorf("assertLeftLenHoist: expected exactly one unseq-probe, got %d", n)
+	if n := unseqCount(t, program, "assertLeftLenHoist"); n != 1 {
+		t.Errorf("assertLeftLenHoist: expected exactly one unseq graph, got %d", n)
+	}
+	if n := probeCount(t, program, "assertLeftLenHoist"); n != 0 {
+		t.Errorf("assertLeftLenHoist: an unseq-lowered sweep must carry no legacy probe, got %d", n)
 	}
 	if u := funcRefusal(t, program, "nilOnlyTargetVsMake"); u != "" {
 		t.Errorf("nilOnlyTargetVsMake: FR-28's nil-deref transparency must hold, got refusal %q", u)
 	}
 }
 
-func TestNarrowedA6GuardRefusesTheResidue(t *testing.T) {
+// Stage C (2026-09-19): the narrowed A6 guard's LAST residue — a compound target
+// that CONTAINS A CALL beside a hoisted len (`x[fnine()] += len(b[j]) + wit(5)`,
+// BUG-102's designed red `compound-call-target-vs-len`) — is inside the pilot
+// grammar and lowers as ONE `unseq` graph: the target plan on the call's frozen
+// result, the load, `len` as an E1 event, the calls; no probe, no refusal (the
+// designed red RETIRES: BUG-102 → the flip is recorded on BUG-104/BUG-112's line).
+// The guard's refusal text stays a `lowerdiag` tripwire; nothing in the pilot
+// grammar reaches it any more, so this test asserts the graph, not the refusal.
+func TestNarrowedA6GuardResidueLowersAsUnseq(t *testing.T) {
 	program, err := emitSource(t, e13GuardSrc)
 	if err != nil {
 		t.Fatalf("whole export refused: %v", err)
 	}
-	u := funcRefusal(t, program, "compoundCallTargetVsLen")
-	if !strings.HasPrefix(u, "len of a potentially-panicking operand hoisted past UNPROBED panicky material") || !strings.Contains(u, "index expression") {
-		t.Errorf("compoundCallTargetVsLen: expected the narrowed A6 len refusal naming the unprobed hoisted-address target, got %q", u)
+	if u := funcRefusal(t, program, "compoundCallTargetVsLen"); u != "" {
+		t.Errorf("compoundCallTargetVsLen: the pilot lowers this sweep as an unseq graph, got refusal %q", u)
+	}
+	if n := unseqCount(t, program, "compoundCallTargetVsLen"); n != 1 {
+		t.Errorf("compoundCallTargetVsLen: expected exactly one unseq graph, got %d", n)
+	}
+	if n := probeCount(t, program, "compoundCallTargetVsLen"); n != 0 {
+		t.Errorf("compoundCallTargetVsLen: an unseq-lowered sweep must carry no legacy probe, got %d", n)
 	}
 }
 

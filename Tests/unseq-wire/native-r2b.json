@@ -1,0 +1,393 @@
+{
+ "buildContext": {
+  "buildTags": [],
+  "cgoEnabled": true,
+  "compiler": "gc",
+  "goarch": "amd64",
+  "goos": "linux"
+ },
+ "fileOrder": [
+  {
+   "files": [
+    "main.go"
+   ],
+   "package": "main"
+  }
+ ],
+ "funcs": [
+  {
+   "body": {
+    "body": [
+     {
+      "args": [
+       {
+        "bytes": [
+         108,
+         111,
+         103,
+         105,
+         99,
+         97,
+         108
+        ],
+        "expr": "string",
+        "type": {
+         "kind": "string"
+        }
+       },
+       {
+        "expr": "ident",
+        "name": "b",
+        "type": {
+         "kind": "bool"
+        }
+       },
+       {
+        "expr": "ident",
+        "name": "n",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "newline": true,
+      "stmt": "print"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "sinkL",
+   "params": [
+    {
+     "id": "b",
+     "type": {
+      "kind": "bool"
+     }
+    },
+    {
+     "id": "n",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "results": [],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "define": false,
+      "lhs": [
+       {
+        "expr": {
+         "expr": "ident",
+         "name": "b$cap"
+        },
+        "target": "addr"
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "bool",
+        "type": {
+         "kind": "bool"
+        },
+        "value": true
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "0"
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "r2b$lit0",
+   "params": [
+    {
+     "id": "b$cap",
+     "type": {
+      "elem": {
+       "kind": "bool"
+      },
+      "kind": "pointer"
+     }
+    }
+   ],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "left",
+        "target": "declare",
+        "type": {
+         "kind": "bool"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "bool",
+        "type": {
+         "kind": "bool"
+        },
+        "value": false
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "b",
+        "target": "declare",
+        "type": {
+         "kind": "bool"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "bool",
+        "type": {
+         "kind": "bool"
+        },
+        "value": false
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "change",
+        "target": "declare",
+        "type": {
+         "kind": "func",
+         "params": [],
+         "results": [
+          {
+           "int": "int",
+           "kind": "int"
+          }
+         ],
+         "variadic": false
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "captured": [
+         {
+          "expr": "ref",
+          "id": "b"
+         }
+        ],
+        "expr": "func-value",
+        "func": "r2b$lit0",
+        "type": {
+         "kind": "func",
+         "params": [],
+         "results": [
+          {
+           "int": "int",
+           "kind": "int"
+          }
+         ],
+         "variadic": false
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "cells": [
+       {
+        "id": "$u0",
+        "type": {
+         "kind": "bool"
+        }
+       },
+       {
+        "id": "$u1",
+        "type": {
+         "kind": "bool"
+        }
+       },
+       {
+        "id": "$u2",
+        "type": {
+         "kind": "bool"
+        }
+       },
+       {
+        "id": "$u3",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "occs": [
+       {
+        "bind": "$u0",
+        "head": {
+         "expr": "ident",
+         "name": "left",
+         "type": {
+          "kind": "bool"
+         }
+        },
+        "kind": "eval",
+        "name": "copy0"
+       },
+       {
+        "kind": "guard",
+        "name": "guard1",
+        "out": "$u1",
+        "test": "$u0",
+        "when": false
+       },
+       {
+        "bind": "$u2",
+        "head": {
+         "expr": "ident",
+         "name": "b",
+         "type": {
+          "kind": "bool"
+         }
+        },
+        "kind": "eval",
+        "name": "read2",
+        "region": "guard1"
+       },
+       {
+        "bind": "$u1",
+        "head": {
+         "expr": "ident",
+         "name": "$u2",
+         "type": {
+          "kind": "bool"
+         }
+        },
+        "kind": "eval",
+        "name": "join3",
+        "region": "guard1"
+       },
+       {
+        "after": [
+         "join3"
+        ],
+        "args": [],
+        "binds": [
+         "$u3"
+        ],
+        "callee": {
+         "expr": "ident",
+         "name": "change",
+         "type": {
+          "kind": "func",
+          "params": [],
+          "results": [
+           {
+            "int": "int",
+            "kind": "int"
+           }
+          ],
+          "variadic": false
+         }
+        },
+        "kind": "invoke",
+        "name": "call4",
+        "resultTypes": [
+         {
+          "int": "int",
+          "kind": "int"
+         }
+        ]
+       },
+       {
+        "after": [
+         "call4"
+        ],
+        "args": [
+         {
+          "expr": "ident",
+          "name": "$u1",
+          "type": {
+           "kind": "bool"
+          }
+         },
+         {
+          "expr": "ident",
+          "name": "$u3",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          }
+         }
+        ],
+        "binds": [],
+        "callee": {
+         "captured": [],
+         "expr": "func-value",
+         "func": "sinkL"
+        },
+        "kind": "invoke",
+        "name": "call5",
+        "resultTypes": []
+       }
+      ],
+      "stmt": "unseq",
+      "stores": [],
+      "then": {
+       "body": [],
+       "stmt": "block"
+      }
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "r2b",
+   "params": [],
+   "results": [],
+   "variadic": false
+  }
+ ],
+ "methodSets": [],
+ "methods": [],
+ "package": "main",
+ "schema": "golean-native-v1",
+ "types": []
+}

@@ -1,0 +1,144 @@
+package main
+
+// Unit tests for the Stage C LOWERING (unseq_lower.go): the graph the emitter
+// produces for an admitted sweep — kinds in canonical rank order (events first,
+// at every level; reads late), the E1 `after` chain, the region membership, the
+// frozen target plan shared by load and store, the mixture guard — on the
+// witnesses whose sets Tests/UnseqWire.lean checks over the wire.
+
+import (
+	"strings"
+	"testing"
+)
+
+// unseqNodes returns the `unseq` nodes under the wire function, in order.
+func unseqNodes(t *testing.T, program map[string]any, name string) []map[string]any {
+	t.Helper()
+	fns, _ := program["funcs"].([]any)
+	for _, f := range fns {
+		ff, ok := f.(map[string]any)
+		if !ok || ff["name"] != name {
+			continue
+		}
+		out := []map[string]any{}
+		var walk func(any)
+		walk = func(o any) {
+			switch v := o.(type) {
+			case map[string]any:
+				if v["stmt"] == "unseq" {
+					out = append(out, v)
+				}
+				for _, c := range v {
+					walk(c)
+				}
+			case []any:
+				for _, c := range v {
+					walk(c)
+				}
+			}
+		}
+		walk(ff["body"])
+		return out
+	}
+	t.Fatalf("function %s not on the wire", name)
+	return nil
+}
+
+// shape renders an occurrence list as "kind[/after][@region]" tokens with the
+// eval heads' expr tags, e.g. "invoke eval:ident eval:binary".
+func shape(node map[string]any) string {
+	toks := []string{}
+	for _, o := range node["occs"].([]any) {
+		m := o.(map[string]any)
+		tok := m["kind"].(string)
+		if m["kind"] == "eval" {
+			tok += ":" + m["head"].(map[string]any)["expr"].(string)
+		}
+		if a, ok := m["after"].([]any); ok && len(a) > 0 {
+			tok += "/after"
+		}
+		if _, ok := m["region"]; ok {
+			tok += "@region"
+		}
+		toks = append(toks, tok)
+	}
+	return strings.Join(toks, " ")
+}
+
+func TestUnseqLoweringShapes(t *testing.T) {
+	program, err := emitSource(t, unseqWitnessSrc)
+	if err != nil {
+		t.Fatalf("whole export refused: %v", err)
+	}
+	cases := []struct{ fn, want string }{
+		// W1: the call first (its own block), then the read and the op (residual).
+		{"w1", "invoke eval:ident eval:binary"},
+		// W6: two E1-ordered calls, then the read and the ops.
+		{"w6", "invoke invoke/after eval:ident eval:binary eval:binary"},
+		// R6: the call first; the header read and the checked access late.
+		{"r6", "invoke eval:ident eval:index-get"},
+		// BUG-104: fnine, wit (E1) first; the target plan on the frozen result, the load and the op late.
+		{"bug104a", "invoke invoke/after target load eval:binary"},
+		// BUG-102: fnine; then len's block — its operand's checked read, then len (E1 after fnine); wit after len; residual target/load/ops.
+		{"bug102", "invoke eval:index-get eval:builtin-len/after invoke/after target load eval:binary eval:binary"},
+		// R2c (this fixture's spelling `sink(gg(), b2i(a||(b&&h()))+k())`): gg; the || block =
+		// the read of the captured a, the guard (after gg), the region: b's copy, the && guard,
+		// h's block, the two joins; b2i after the completion; k after b2i; the `+` op (residual
+		// of sink's argument frame); sink after k.
+		{"r2c", "invoke eval:ident guard/after eval:ident@region guard@region invoke@region eval:ident@region eval:ident@region invoke/after invoke/after eval:binary invoke/after"},
+	}
+	for _, c := range cases {
+		nodes := unseqNodes(t, program, c.fn)
+		if len(nodes) != 1 {
+			t.Errorf("%s: expected exactly one unseq node, got %d", c.fn, len(nodes))
+			continue
+		}
+		if got := shape(nodes[0]); got != c.want {
+			t.Errorf("%s: canonical shape\n got  %s\n want %s", c.fn, got, c.want)
+		}
+		if n := probeCount(t, program, c.fn); n != 0 {
+			t.Errorf("%s: an unseq-lowered sweep must carry no legacy probe, got %d", c.fn, n)
+		}
+	}
+	// A read INSIDE a call's argument list follows the sibling call's block
+	// (legacy hoists the call before the residual call statement): g(a[0], f())
+	// with a CAPTURED by f lowers as f, then a's header read and the checked
+	// access, then g — the canonical tape gives gc's 1005.
+	src := unseqWitnessSrc + `
+func argsIndexVsCall() int {
+	a := []int{1, 2}
+	f := func() int { a[0] = 100; return 5 }
+	g := func(x, y int) int { return x*10 + y }
+	return g(a[0], f())
+}
+`
+	program2, err := emitSource(t, src)
+	if err != nil {
+		t.Fatalf("whole export refused: %v", err)
+	}
+	nodes := unseqNodes(t, program2, "argsIndexVsCall")
+	if len(nodes) != 1 {
+		t.Fatalf("argsIndexVsCall: expected one unseq node, got %d", len(nodes))
+	}
+	if got, want := shape(nodes[0]), "invoke eval:ident eval:index-get invoke/after"; got != want {
+		t.Errorf("argsIndexVsCall: canonical shape\n got  %s\n want %s", got, want)
+	}
+	// W3 / R4: ONE target binder shared by the load and the phase-2 store.
+	for _, fn := range []string{"w3", "r4"} {
+		n := unseqNodes(t, program, fn)[0]
+		stores := n["stores"].([]any)
+		if len(stores) != 1 {
+			t.Fatalf("%s: expected one store, got %d", fn, len(stores))
+		}
+		st := stores[0].(map[string]any)
+		var loadTarget string
+		for _, o := range n["occs"].([]any) {
+			if m := o.(map[string]any); m["kind"] == "load" {
+				loadTarget = m["target"].(string)
+			}
+		}
+		if loadTarget == "" || st["target"] != loadTarget {
+			t.Errorf("%s: the load (%q) and the store (%v) must share the target binder", fn, loadTarget, st["target"])
+		}
+	}
+}

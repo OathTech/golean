@@ -1,6 +1,6 @@
 # id	subject	args	expected_status	expected_reason	features
 compound-call-mutates	mapCompoundCallMutates	-	ok	-	maps,assignment,evaluation_order,calls
-slice-compound-call-mutates	sliceCompoundCallMutates	-	ok	-	slices,assignment,evaluation_order,calls
+slice-compound-call-mutates	sliceCompoundCallMutates	-	ok	-	slices,assignment,evaluation_order,calls,nondet,closures	membership	`a[0] += f()` where f sets a[0] = 100 and returns 5: the compound target's checked load is unsequenced against the RHS call, ONE frozen target plan for the load and the store (v2.1 §3.4): load first → 15, after f → 105 (gc's, call-first). E12's VALUE axis on a compound target, enveloped here by the Stage C pilot 2026-09-19. the ONE consumption site is the `unseq` scheduler's pick (`unseqNext`, bound = the ready-set size; Stage C pilot 2026-09-19, design docs/2026-09-19_unseq-stage-c-design.md §3 — the sweep lowers as ONE unseq graph; the legacy unseqPanic probe no longer fires here). members=2	width=2,sites=8,members=2
 compound-call-deletes	mapCompoundCallDeletes	-	ok	-	maps,assignment,evaluation_order,delete
 array-key-nan	arrayKeyWithNaN	-	ok	-	maps,arrays,floats,keys
 struct-key-nan	structKeyWithNaN	-	ok	-	maps,structs,floats,keys

@@ -73,7 +73,31 @@ def main (_args : List String) : IO Unit := do
     wireSet "R2c wire b=false" "r2c.json" "r2cFalse" [okOut "g\nk\nsink 1 true 7\n", okOut "g\nk\nsink 1 false 7\n"],
     wireSet "R4 wire: old := a; a[0] += mut() (mut rebinds a)" "r4.json" "r4" [okOut "old 11 20\na 100 200\n", okOut "old 10 20\na 101 200\n"],
     wireSet "R6 wire SPLIT" "r6.json" "r6" [okZ 10, okZ 20],
-    wireSet "R6 wire FUSED (the narrowing): a data-edge mutation the exact-set check names" "r6-fused.json" "r6" [okZ 20]]
+    wireSet "R6 wire FUSED (the narrowing): a data-edge mutation the exact-set check names" "r6-fused.json" "r6" [okZ 20],
+    -- THE FRONTEND'S OWN LOWERING (C2): source → actual frontend bytes → strict decoder →
+    -- machine → EXACT reference sets (v2.1 §7 row C's exit; the graphs are the emitter's,
+    -- not hand-built — the same reference sets as the hand-built wires above).
+    wireSet "NATIVE W1" "native-w1.json" "w1" [okZ 1, okZ 2],
+    wireSet "NATIVE W2" "native-w2.json" "w2" [okZ 10, okZ 30, okZ 40] 3,
+    wireSet "NATIVE W3" "native-w3.json" "w3" [okOut "w3 11 20\n", okOut "w3 10 21\n"],
+    wireSet "NATIVE W5" "native-w5.json" "w5" [panicOut (oob 0 0) "", panicOut (oob 0 0) "7\n"],
+    wireSet "NATIVE W6" "native-w6.json" "w6" [okZ 0, okZ 1, okZ 2],
+    wireSet "NATIVE R1" "native-r1.json" "r1" [okZ 0, okZ 1, okZ 2, okZ 3] 3,
+    wireSet "NATIVE R2a z=true" "native-r2a.json" "r2aTrue" [okOut "guard k\nguard result true 7\n"],
+    wireSet "NATIVE R2a z=false" "native-r2a.json" "r2aFalse" [okOut "guard h\nguard k\nguard result true 7\n"],
+    wireSet "NATIVE R2b" "native-r2b.json" "r2b" [okOut "logical false 0\n"],
+    wireSet "NATIVE R2c b=true" "native-r2c.json" "r2cTrue" [okOut "g\nk\nsink 1 true 7\n", okOut "g\nh\nk\nsink 1 true 7\n"],
+    wireSet "NATIVE R2c b=false" "native-r2c.json" "r2cFalse" [okOut "g\nk\nsink 1 true 7\n", okOut "g\nk\nsink 1 false 7\n"],
+    wireSet "NATIVE R4" "native-r4.json" "r4" [okOut "old 11 20\na 100 200\n", okOut "old 10 20\na 101 200\n"],
+    wireSet "NATIVE R6" "native-r6.json" "r6" [okZ 10, okZ 20],
+    -- EDGE MUTATIONS of the LOWERED graphs (v2.1 §8): each decodes; the exact-set check
+    -- names the changed set (the decoder cannot see a missing or wrong edge).
+    wireSet "EDGE data (R6: the access reads the variable's header, not the frozen slot) → the fused {20}" "edge-data.json" "r6" [okZ 20],
+    wireSet "EDGE lexical (R2b: change() anchored at the guard entry) → {false, true}" "edge-lexical.json" "r2b" [okOut "logical false 0\n", okOut "logical true 0\n"],
+    wireSet "EDGE guard (R2a z=true: h taken out of its region) → h runs unconditionally, unordered vs k AND vs sinkB" "edge-guard.json" "r2aTrue"
+      [okOut "guard h\nguard k\nguard result true 7\n", okOut "guard k\nguard h\nguard result true 7\n",
+       okOut "guard k\nguard result true 7\nguard h\n"],
+    wireSet "EDGE phase (W3: the store writes the loaded value, the op never reaches the store) → {w3 10 20}" "edge-phase.json" "w3" [okOut "w3 10 20\n"]]
   let mutantsL ← readMutants
   let mutantChecks : List (IO Bool) := mutantsL.map fun (m, needle) =>
     wireRefusal s!"mutant {m}" s!"{m}.json" needle

@@ -6211,7 +6211,18 @@ item 1 — never by a fix.
 
 ## BUG-101 — the VALUE observable of a spec-unsequenced operand reached through the E13 (b) probe: a type assertion that SUCCEEDS early and FAILS late (`iv.(int) + len(b[j:]) + func() int { iv = "s"; return 1 }()`) — gc evaluates the assertion first (value 6), the machine's probe evaluates it early too but DISCARDS the value and the residual re-evaluation after the mutating call panics [latitude E12's known divergence, now reachable through the shape the retired A6 guard used to refuse; frontend/machine evaluation order]
 
-- Status: open ([AGENT], e13-b audit fix round 2026-09-05 — audit finding R1, value axis)
+- Status: fixed ([AGENT], 2026-09-19, lane `core/unseq-stage-c-0919` — Stage C of the
+  evaluation-order model v2.1: both sweeps lower as `unseq` GRAPHS (design
+  `docs/2026-09-19_unseq-stage-c-design.md` §3/§6), in which the read of the CAPTURED local
+  (`iv`, `i`) is an occurrence spec-unsequenced against the mutating call, so the early
+  value (gc's) and the late value/panic are BOTH members: `assert-ok-early-len-hoist` =
+  {`mut` · 6, `mut` · «interface conversion: interface {} is string, not int»} (statuses
+  ok+panic), `slice-value-early-len-hoist` = {`mut` · 12, `mut` · 22}; both rows are
+  membership rows now, gc's draw in the set on every K=32 draw. The probe mechanism this
+  entry described (evaluate early, DISCARD the value) no longer runs on these sweeps — the
+  value axis of E2/E12 is ENVELOPED on exactly these rows (inventory §10.1, 2026-09-19).
+  The original Status: open ([AGENT], e13-b audit fix round 2026-09-05 — audit finding R1,
+  value axis).)
 - Pinned-by: differential
 - Cases: builtins/e13-sibling-panic-order/assert-ok-early-len-hoist, builtins/e13-sibling-panic-order/slice-value-early-len-hoist
 
@@ -6287,7 +6298,20 @@ the e13-b design cross-references this entry.
 - Status: open (designed reds — a refusal standing in for latitude, inventory E6 narrowed / E13 residuals 3 and 5; [AGENT], e13-b audit fix round 2026-09-05; Cases line re-derived at the re-audit fix round the same day)
 - Pinned-by: none
 - Expect: FAIL
-- Cases: builtins/e13-sibling-panic-order/composite-ptr-payload-vs-call, builtins/e13-sibling-panic-order/slice-lit-payload-vs-call, builtins/e13-sibling-panic-order/composite-ptr-payload-vs-call-printroot, builtins/e13-sibling-panic-order/slice-lit-payload-vs-call-sinkroot, builtins/e13-sibling-panic-order/slice-lit-payload-vs-recv, builtins/e13-sibling-panic-order/compound-call-target-vs-len
+- Cases: builtins/e13-sibling-panic-order/composite-ptr-payload-vs-call, builtins/e13-sibling-panic-order/slice-lit-payload-vs-call, builtins/e13-sibling-panic-order/composite-ptr-payload-vs-call-printroot, builtins/e13-sibling-panic-order/slice-lit-payload-vs-call-sinkroot, builtins/e13-sibling-panic-order/slice-lit-payload-vs-recv
+
+RETIRED 2026-09-19 (Stage C of the evaluation-order model v2.1, lane
+`core/unseq-stage-c-0919`, [AGENT]): the narrowed A6 guard's residue row
+`compound-call-target-vs-len` (`x[fnine()] += len(b[j]) + wit(5)`) LOWERS — the
+Stage C pilot lowers the whole sweep as one `unseq` graph (the target plan on
+`fnine`'s frozen result, the checked load, `len` as an E1 event after `fnine`,
+`wit` after `len`), so no hoist reorders unprobed material and the guard is
+never consulted; the row is a membership row now (three members, gc's `f` then
+`[5]` in the set) and sits on BUG-112's Cases line (the fixed entry) with the
+reason, per this entry's RETIREMENT PATH. The five structural-allocation rows
+above stay red by design (composite literals are outside the pilot grammar —
+Stage E). `lowerdiag`'s `len-hoist-panic-order` cause keeps its texts as the
+tripwire; no corpus row reaches it.
 
 HISTORY (the first fix round's six rows, RETIRED at the re-audit fix
 round): `tgt-assert-vs-len-hoist`, `tgt-assert-vs-make`,
@@ -6423,7 +6447,20 @@ typed admission is still owed. Design and evidence:
 - Status: open ([AGENT], e13-b re-audit fix round 2026-09-05 — found by the re-audit's measurements, pre-existing on main b77f3298; three more spellings rowed at the final verification fix round the same day, R''-2)
   Round-17 rebase note ([AGENT] reconciler, 2026-09-05): the renumber the Status line describes was applied at the rebase of the lane's re-audit commit itself (main's BUG-103, c-arc-c2's array-conversion entry, landed at this train before this lane), so no rebased commit ever carried two BUG-103 headings.
 - Pinned-by: differential
-- Cases: builtins/e13-sibling-panic-order/compound-call-target-vs-call, builtins/e13-sibling-panic-order/map-compound-index-key-vs-call, builtins/e13-sibling-panic-order/compound-call-target-vs-recv, builtins/e13-sibling-panic-order/map-compound-index-key-vs-recv, builtins/e13-sibling-panic-order/map-compound-index-key-vs-method
+- Cases: builtins/e13-sibling-panic-order/map-compound-index-key-vs-call, builtins/e13-sibling-panic-order/compound-call-target-vs-recv, builtins/e13-sibling-panic-order/map-compound-index-key-vs-recv, builtins/e13-sibling-panic-order/map-compound-index-key-vs-method
+
+PARTIAL FIX 2026-09-19 (Stage C of the evaluation-order model v2.1, lane
+`core/unseq-stage-c-0919`, [AGENT]): the SLICE-element spelling beside a plain
+call — `compound-call-target-vs-call` (`x[fnine()] += wit(5)`) — is FIXED by the
+pilot: the sweep lowers as one `unseq` graph whose target plan is ONE occurrence
+on `fnine`'s frozen result, shared by the checked load and the phase-2 store
+(v2.1 §3.4), and whose load is spec-unsequenced against `wit` — the members are
+`f`, `wit 5`, then `[9]` (gc's; the canonical tape) and `f` then `[9]`; the row
+is a membership row on BUG-112's Cases line (the fixed entry). The other four
+rows stay OPEN here: the three MAP-key spellings (a map-element target plan is
+the machine's own Stage E refusal, `unseqReadTarget`) and the RECEIVE spelling
+(a receive operand is outside the pilot grammar — Stage E); their observed-∉-
+modeled status is unchanged (inventory §10's known-≠-oracle list, 2026-09-19).
 
 MERGE-TRAIN NOTE ([AGENT], 2026-09-05, final verification fix round): this
 entry was filed on lane `e13-b` under the NEXT free number at the time,
@@ -7001,6 +7038,42 @@ refuse by name (or derive it from the validated callee signature); add
 production-byte-input mutation tests (duplicate keys, absent vectors,
 malformed surrogates) driven through the CLI, not through an already-parsed
 `Json` value.
+
+## BUG-112 — the Stage C `unseq` pilot's two compound-target flips: `x[fnine()] += wit(5)` (BUG-104's slice-element spelling) and `x[fnine()] += len(b[j]) + wit(5)` (BUG-102's narrowed-A6 residue) lower as ONE `unseq` graph each and become membership sets with gc's draw inside [frontend lowering; evaluation order; the whole-sweep `unseq` graph — the FIXED entry the two rows moved to]
+
+- Status: fixed ([AGENT], 2026-09-19, lane `core/unseq-stage-c-0919`, Stage C of the
+  evaluation-order model v2.1 — `docs/2026-09-19_unseq-stage-c-design.md` §3 predicted both
+  flips with their sets; measured at the C2 gate)
+- Pinned-by: differential
+- Cases: builtins/e13-sibling-panic-order/compound-call-target-vs-call, builtins/e13-sibling-panic-order/compound-call-target-vs-len
+
+WHAT: BUG-104 recorded that `emitReadWriteTarget` hoists a call-bearing compound
+target's ADDRESS to a temp at the target's lexical position, so its bounds check
+fired BEFORE the RHS's ordered events on every stream (gc reads the target in the
+residual, after them); BUG-102 recorded the same target beside a hoisted `len` as
+a designed refusal (the narrowed A6 guard). The Stage C pilot lowers every sweep
+inside its grammar as ONE `unseq` graph (`tools/nativefrontend/unseq.go`
+`unseqClassify` + `unseq_lower.go`; the machine construct is Stage B's
+`Stmt.unseq`): the call `fnine` is an invocation occurrence; the target plan is
+ONE occurrence on its FROZEN result (the header of the private `x` read at the
+plan step — never `&x`, Stage B F2); the checked load reads through that plan and
+the phase-2 store writes through the same plan (one identity — v2.1 §3.4); `wit`
+follows `fnine` by E1 (`after`); `len` is an E1-ordered event whose operand `b[j]`
+is a checked read. Every linear extension is a member, the canonical (all-zero)
+tape realizing calls first, reads late — gc's realization:
+
+- `compound-call-target-vs-call`: {`f` · `wit 5` · panic `[9] with length 1`
+  (gc's, canonical), `f` · panic `[9]`} — members=2, width=2; FAIL/differential →
+  PASS/membership.
+- `compound-call-target-vs-len`: {`` · panic `[5] with length 1`, `f` · `[5]`
+  (gc's), `f` · `[9]`} — `wit` never runs (`len`'s operand `b[j]` panics and `wit`
+  follows `len`); members=3, width=2; FAIL/frontend-export (the designed
+  refusal) → PASS/membership.
+
+Both rows PASS with gc's draw inside the set on every K=32 draw (K=80 under
+`--slow`). The map-key and receive spellings of BUG-104 are NOT fixed (outside the
+pilot grammar — Stage E) and stay on BUG-104's line; the structural-allocation
+designed reds stay on BUG-102's.
 
 ## BUG-111 — the race detector's conflict relation compares `.field` path steps STRUCTURALLY, static `typeId` included, so a struct-tag-compatible pointer alias (`p.f` vs `(*B)(p).f`, triage L7) yields two «disjoint» shadow keys for ONE memory word: an HB-unordered write through one alias and a read through the other is NOT a conflict — a MISSED RACE, fail-OPEN vs `go run -race` [fidelity; race detector conflict relation (`locPrefix`/`ShadowKey.overlap`, Race.lean); found by the C1 S0 frame-law spike]
 

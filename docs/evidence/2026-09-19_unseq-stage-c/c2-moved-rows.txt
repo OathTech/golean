@@ -1,0 +1,71 @@
+# The moved rows at gate #1 (measurement): result / stage / detail from artifacts/coverage/latest.tsv
+### builtins/e13-sibling-panic-order/assert-middle
+### builtins/e13-sibling-panic-order/index-assert-left-call
+### builtins/e13-sibling-panic-order/index-middle
+### builtins/e13-sibling-panic-order/two-index-left-call
+### builtins/e13-sibling-panic-order/assert-right-call
+### builtins/e13-sibling-panic-order/compound-call-target-vs-call
+### builtins/e13-sibling-panic-order/compound-call-target-vs-len
+### builtins/e13-sibling-panic-order/assert-ok-early-len-hoist
+### builtins/e13-sibling-panic-order/slice-value-early-len-hoist
+### multi-assign/index-target-rhs-call-order
+### noodler/latitude/args-index-vs-call
+### noodler/latitude/concat-var-vs-call
+### noodler/latitude/index-call-index
+### noodler/latitude/return-operands
+### noodler/maps/slice-compound-call-mutates
+### spec-examples-stmt/continue-label
+
+# The same rows at the focused re-run after the row edits (scripts/diff-one): all PASS except index-assert-left-call at members=3 (enumerated 4 → pinned 4)
+PASS	spec-examples-stmt/continue-label
+FAIL	builtins/e13-sibling-panic-order/index-assert-left-call	stage=membership	detail=enumerated set has 4 member(s), the case pins members=3 — the certified set moved (widen/narrow deliberately or fix the machine)
+PASS	builtins/e13-sibling-panic-order/assert-middle	stage=membership	detail=enumerated=3 exhibited=1 draws=32 (K=32; pin members=3 NOT reached — 1 distinct drawn) unexhibited=2 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/assert
+PASS	builtins/e13-sibling-panic-order/index-middle	stage=membership	detail=enumerated=3 exhibited=1 draws=32 (K=32; pin members=3 NOT reached — 1 distinct drawn) unexhibited=2 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/index-m
+PASS	builtins/e13-sibling-panic-order/compound-call-target-vs-len	stage=membership	detail=enumerated=3 exhibited=1 draws=32 (K=32; pin members=3 NOT reached — 1 distinct drawn) unexhibited=2 (members in artifacts/coverage/membership/builtins/e13-sibling-pani
+PASS	builtins/e13-sibling-panic-order/assert-right-call	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/as
+PASS	builtins/e13-sibling-panic-order/compound-call-target-vs-call	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-pan
+PASS	builtins/e13-sibling-panic-order/two-index-left-call	stage=membership	detail=enumerated=4 exhibited=1 draws=32 (K=32; pin members=4 NOT reached — 1 distinct drawn) unexhibited=3 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/
+PASS	multi-assign/index-target-rhs-call-order	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/multi-assign/index-target-rhs-call-order)
+PASS	noodler/latitude/concat-var-vs-call	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/noodler/latitude/concat-var-vs-call)
+PASS	noodler/maps/slice-compound-call-mutates	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/noodler/maps/slice-compound-call-mutates)
+PASS	noodler/latitude/args-index-vs-call	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/noodler/latitude/args-index-vs-call)
+PASS	builtins/e13-sibling-panic-order/slice-value-early-len-hoist	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-pani
+PASS	noodler/latitude/return-operands	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/noodler/latitude/return-operands)
+PASS	builtins/e13-sibling-panic-order/assert-ok-early-len-hoist	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-
+PASS	noodler/latitude/index-call-index	stage=membership	detail=enumerated=4 exhibited=1 draws=32 (K=32; pin members=4 NOT reached — 1 distinct drawn) unexhibited=3 (members in artifacts/coverage/membership/noodler/latitude/index-call-index)
+
+# The enumerated sets (artifacts/coverage/membership/<row>/observations.txt) of the flips and the widened pins
+### assert-ok-early-len-hoist
+{"message":"interface conversion: interface {} is string, not int","output":"mut | ","schema":"golean-observation-v1","status":"panic"}
+{"output":"mut | ","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":6}]}
+### slice-value-early-len-hoist
+{"output":"mut | ","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":12}]}
+{"output":"mut | ","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":22}]}
+### compound-call-target-vs-call
+{"message":"runtime error: index out of range [9] with length 1","output":"f | ","schema":"golean-observation-v1","status":"panic"}
+{"message":"runtime error: index out of range [9] with length 1","output":"f | wit 5 | ","schema":"golean-observation-v1","status":"panic"}
+### compound-call-target-vs-len
+{"message":"runtime error: index out of range [5] with length 1","output":"","schema":"golean-observation-v1","status":"panic"}
+{"message":"runtime error: index out of range [5] with length 1","output":"f | ","schema":"golean-observation-v1","status":"panic"}
+{"message":"runtime error: index out of range [9] with length 1","output":"f | ","schema":"golean-observation-v1","status":"panic"}
+### assert-middle
+{"message":"interface conversion: interface {} is string, not int","output":"","schema":"golean-observation-v1","status":"panic"}
+{"message":"interface conversion: interface {} is string, not int","output":"wit 1 | ","schema":"golean-observation-v1","status":"panic"}
+{"message":"interface conversion: interface {} is string, not int","output":"wit 1 | wit 2 | ","schema":"golean-observation-v1","status":"panic"}
+### index-middle
+{"message":"runtime error: index out of range [9] with length 1","output":"","schema":"golean-observation-v1","status":"panic"}
+{"message":"runtime error: index out of range [9] with length 1","output":"wit 1 | ","schema":"golean-observation-v1","status":"panic"}
+{"message":"runtime error: index out of range [9] with length 1","output":"wit 1 | wit 2 | ","schema":"golean-observation-v1","status":"panic"}
+### index-assert-left-call
+{"message":"interface conversion: interface {} is string, not int","output":"","schema":"golean-observation-v1","status":"panic"}
+{"message":"interface conversion: interface {} is string, not int","output":"wit 5 | ","schema":"golean-observation-v1","status":"panic"}
+{"message":"runtime error: index out of range [9] with length 1","output":"","schema":"golean-observation-v1","status":"panic"}
+{"message":"runtime error: index out of range [9] with length 1","output":"wit 5 | ","schema":"golean-observation-v1","status":"panic"}
+### two-index-left-call
+{"message":"runtime error: index out of range [5] with length 2","output":"","schema":"golean-observation-v1","status":"panic"}
+{"message":"runtime error: index out of range [5] with length 2","output":"wit 5 | ","schema":"golean-observation-v1","status":"panic"}
+{"message":"runtime error: index out of range [9] with length 1","output":"","schema":"golean-observation-v1","status":"panic"}
+{"message":"runtime error: index out of range [9] with length 1","output":"wit 5 | ","schema":"golean-observation-v1","status":"panic"}
+### assert-right-call
+{"message":"interface conversion: interface {} is string, not int","output":"","schema":"golean-observation-v1","status":"panic"}
+{"message":"interface conversion: interface {} is string, not int","output":"wit 5 | ","schema":"golean-observation-v1","status":"panic"}
