@@ -1,0 +1,34 @@
+rows traced: 5 ids, 30 (id,stream) lines; 0 id(s) the tracer could not run (ERROR)
+  by lane: strict=5
+
+VALIDATOR
+  consumptions checked: 569
+  menu-invariant violations: 0
+  self-check alarms (mirror/accountant, sentinel, pick-record): 0
+  driver-agreement mismatches: 0
+  fuel-out (id,stream) lines: 0
+  consumptions per site (all streams): appendSpill=569
+
+STRICT-LANE DEPTH EXPOSURE (lane=strict rows; confluent rows shown separately)
+  strict: 5 rows; consumptions under the default stream:
+    all consumptions:      0: 0, 1-8: 0, 9-10: 0, 11-32: 5, 33-128: 0, >128: 0
+    bound>=2 consumptions: 0: 0, 1-8: 0, 9-10: 0, 11-32: 5, 33-128: 0, >128: 0
+    rows with >=1 adversarial stream exhausted (any consumption past the prefix): 5
+    rows with a bound>=2 consumption PAST the prefix on >=1 adversarial stream (invisible order-sensitivity): 5
+      of which appendSpill and/or mapIter only (capacity / map-order latitude, no scheduling site): 5
+      multipkg/mini-raft-twin/duel: worst stream [5,5,5,5,5,5,5,5] consumed=9 wide=9 exhaustedAt=8 wideAfterExhaustion=1; all streams: [5,5,5,5,5,5,5,5] 9/9/8/1
+      multipkg/mini-raft-twin/elect-propose-commit: worst stream [5,5,5,5,5,5,5,5] consumed=30 wide=30 exhaustedAt=8 wideAfterExhaustion=22; all streams: [9,8,7,6,5,4,3,2,1,0] 28/28/10/18; [1,3,5,7,9,2,4,6,8,0] 29/29/10/19; [5,5,5,5,5,5,5,5] 30/30/8/22
+      multipkg/mini-raft-twin/perturb-picks: worst stream [5,5,5,5,5,5,5,5] consumed=14 wide=14 exhaustedAt=8 wideAfterExhaustion=6; all streams: [9,8,7,6,5,4,3,2,1,0] 14/14/10/4; [1,3,5,7,9,2,4,6,8,0] 14/14/10/4; [5,5,5,5,5,5,5,5] 14/14/8/6
+      multipkg/mini-raft-twin/perturb-rev: worst stream [5,5,5,5,5,5,5,5] consumed=21 wide=21 exhaustedAt=8 wideAfterExhaustion=13; all streams: [9,8,7,6,5,4,3,2,1,0] 21/21/10/11; [1,3,5,7,9,2,4,6,8,0] 21/21/10/11; [5,5,5,5,5,5,5,5] 21/21/8/13
+      multipkg/mini-raft-twin/starve-node: worst stream [5,5,5,5,5,5,5,5] consumed=21 wide=21 exhaustedAt=8 wideAfterExhaustion=13; all streams: [9,8,7,6,5,4,3,2,1,0] 21/21/10/11; [1,3,5,7,9,2,4,6,8,0] 21/21/10/11; [5,5,5,5,5,5,5,5] 21/21/8/13
+    rows whose observation VARIES across the traced streams (default, 3 adversarial, 2 random-4096): 0
+    rows with >10 bound>=2 consumptions under a random-4096 stream: 4
+  confluent: 0 rows; consumptions under the default stream:
+    all consumptions:      0: 0, 1-8: 0, 9-10: 0, 11-32: 0, 33-128: 0, >128: 0
+    bound>=2 consumptions: 0: 0, 1-8: 0, 9-10: 0, 11-32: 0, 33-128: 0, >128: 0
+    rows with >=1 adversarial stream exhausted (any consumption past the prefix): 0
+    rows with a bound>=2 consumption PAST the prefix on >=1 adversarial stream (invisible order-sensitivity): 0
+    rows whose observation VARIES across the traced streams (default, 3 adversarial, 2 random-4096): 0
+    rows with >10 bound>=2 consumptions under a random-4096 stream: 0
+
+ENUMERATING LANES (membership/racy): depth under the traced streams

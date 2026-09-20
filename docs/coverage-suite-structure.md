@@ -333,6 +333,18 @@ covered by the fixed streams):
   verifies the declared streams: a 256-entry seeded stream is itself
   exhausted there (67-123 wide picks after); 1024 covers, 2048 declared
   (the 4·w rule).
+- Stage D of the evaluation-order model (2026-09-20, lane
+  `core/unseq-stage-d-0920`, [AGENT]; `docs/2026-09-20_unseq-stage-d-design.md`
+  §3): `spec-examples-stmt/continue-label` — the strict `depth=128` the
+  Stage C pilot declared (w=18 `unseqNext` picks, a silent singleton) →
+  `lane=confluent`, `engine=dedup` (width 4, sites 64, work 200000). Route α
+  certifies the `unseq` scheduler's pick in the dedup engine (`innerVecs`
+  N-PICK; `checkCert_slowObs` unchanged in statement), so the spot check
+  became a certificate: 5122 unique states / 5145 edges / 24 dedup hits,
+  |set| = 1 checker-accepted, against the DFS's 32805 leaves / 39.6M steps.
+  The only row the rules license: the guard fired there, the observation is
+  a silent singleton, the engine closes it. The 41 membership rows the engine
+  also closes (their declared sets reproduced exactly) are recorded, not moved.
 - The tracer's wall budget: `LEAN_TRACE_TIMEOUT_SECONDS` (default 8 ×
   `LEAN_TIMEOUT_SECONDS` = 240 s; the tracer makes eight interpreter
   passes where `native-json-run` makes one). The guard's first full

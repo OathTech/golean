@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# Route-α corpus scan (scratch): every row of the given packages through the
+# REAL CLI's dedup path (`golean coverage-observations --engine dedup`) with the
+# row's own width/sites params (work cap 20M, cap 4096 unless the row says
+# otherwise); one TSV line per row: close (members nodes edges dedupHits wall)
+# or the refusal BY NAME. Usage: alpha-scan.sh <golean> <out.tsv> <pkg>...
+set -uo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT"
+GOLEAN="$1"; out="$2"; shift 2
+: > "$out"
+for pkg in "$@"; do
+  wire=".tmp/wires/$(echo "$pkg" | sed 's|/|_|g').json"
+  [[ -f "$wire" ]] || { echo "$pkg	-	NO WIRE" >> "$out"; continue; }
+  while IFS=$'\t' read -r id subject args status reason features lane why params; do
+    [[ -z "$id" || "$id" == \#* ]] && continue
+    width=8; sites=64; cap=4096; work=20000000
+    if [[ -n "${params:-}" && "$params" != "-" ]]; then
+      for kv in ${params//,/ }; do
+        case "$kv" in
+          width=*) width="${kv#width=}";;
+          sites=*) sites="${kv#sites=}";;
+          cap=*) cap="${kv#cap=}";;
+          work=*) work="${kv#work=}";;
+        esac
+      done
+    fi
+    argflags=()
+    if [[ -n "${args:-}" && "$args" != "-" ]]; then
+      for a in $args; do argflags+=(--arg-int "$a"); done
+    fi
+    t0=$(date +%s%N)
+    res="$("$GOLEAN" coverage-observations --input "$wire" --function "$subject" "${argflags[@]}" \
+      --max-width "$width" --max-sites "$sites" --cap "$cap" --work-cap "$work" --engine dedup 2>&1 >/dev/null)"
+    rc=$?
+    t1=$(date +%s%N)
+    ms=$(( (t1 - t0) / 1000000 ))
+    line="$(printf '%s' "$res" | grep '^coverage-observations:' | tail -1 | sed 's/^coverage-observations: //')"
+    printf '%s/%s\t%s\t%s\t%s\trc=%s\twall_ms=%s\t%s\n' "$pkg" "$id" "${lane:--}" "${params:--}" "$status" "$rc" "$ms" "$line" >> "$out"
+  done < "Corpus/coverage/exec/$pkg/cases.tsv"
+done
+echo "SCAN_DONE" >> "$out"

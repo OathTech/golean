@@ -1,0 +1,49 @@
+loop	N=1	silent	beta	members=1	leaves=2	sites=1	steps=181	probes=3	maxDepth=1	wall_ms=5	rc=0	time_wall=0:00.36	max_rss_kb=766052	
+loop	N=2	silent	beta	members=1	leaves=4	sites=3	steps=467	probes=9	maxDepth=2	wall_ms=15	rc=0	time_wall=0:00.37	max_rss_kb=766976	
+loop	N=3	silent	beta	members=1	leaves=8	sites=7	steps=1039	probes=21	maxDepth=3	wall_ms=42	rc=0	time_wall=0:00.41	max_rss_kb=770076	
+loop	N=4	silent	beta	members=1	leaves=16	sites=15	steps=2183	probes=45	maxDepth=4	wall_ms=101	rc=0	time_wall=0:00.47	max_rss_kb=768368	
+loop	N=5	silent	beta	members=1	leaves=32	sites=31	steps=4471	probes=93	maxDepth=5	wall_ms=239	rc=0	time_wall=0:00.60	max_rss_kb=768756	
+loop	N=6	silent	beta	members=1	leaves=64	sites=63	steps=9047	probes=189	maxDepth=6	wall_ms=563	rc=0	time_wall=0:00.94	max_rss_kb=771472	
+loop	N=7	silent	beta	members=1	leaves=128	sites=127	steps=18199	probes=381	maxDepth=7	wall_ms=1267	rc=0	time_wall=0:01.64	max_rss_kb=771728	
+loop	N=8	silent	beta	members=1	leaves=256	sites=255	steps=36503	probes=765	maxDepth=8	wall_ms=2847	rc=0	time_wall=0:03.23	max_rss_kb=770268	
+loop	N=9	silent	beta	members=1	leaves=512	sites=511	steps=73111	probes=1533	maxDepth=9	wall_ms=6377	rc=0	time_wall=0:06.75	max_rss_kb=772436	
+loop	N=10	silent	beta	members=1	leaves=1024	sites=1023	steps=146327	probes=3069	maxDepth=10	wall_ms=13837	rc=0	time_wall=0:14.20	max_rss_kb=770392	
+loop	N=11	silent	beta	members=1	leaves=2048	sites=2047	steps=292759	probes=6141	maxDepth=11	wall_ms=29751	rc=0	time_wall=0:30.11	max_rss_kb=770184	
+loop	N=12	silent	beta	members=1	leaves=4096	sites=4095	steps=585623	probes=12285	maxDepth=12	wall_ms=65936	rc=0	time_wall=1:06.30	max_rss_kb=771332	
+loop	N=1	printing	beta	members=2	leaves=2	sites=1	steps=205	probes=3	maxDepth=1	wall_ms=6	rc=0	time_wall=0:00.40	max_rss_kb=766844	
+loop	N=2	printing	beta	members=4	leaves=4	sites=3	steps=539	probes=9	maxDepth=2	wall_ms=18	rc=0	time_wall=0:00.42	max_rss_kb=766732	
+loop	N=3	printing	beta	members=8	leaves=8	sites=7	steps=1207	probes=21	maxDepth=3	wall_ms=46	rc=0	time_wall=0:00.41	max_rss_kb=769412	
+loop	N=4	printing	beta	members=16	leaves=16	sites=15	steps=2543	probes=45	maxDepth=4	wall_ms=112	rc=0	time_wall=0:00.50	max_rss_kb=767256	
+loop	N=5	printing	beta	members=32	leaves=32	sites=31	steps=5215	probes=93	maxDepth=5	wall_ms=274	rc=0	time_wall=0:00.63	max_rss_kb=768084	
+loop	N=6	printing	beta	members=64	leaves=64	sites=63	steps=10559	probes=189	maxDepth=6	wall_ms=636	rc=0	time_wall=0:01.03	max_rss_kb=767984	
+loop	N=7	printing	beta	members=128	leaves=128	sites=127	steps=21247	probes=381	maxDepth=7	wall_ms=1512	rc=0	time_wall=0:01.91	max_rss_kb=769920	
+loop	N=8	printing	beta	members=256	leaves=256	sites=255	steps=42623	probes=765	maxDepth=8	wall_ms=3303	rc=0	time_wall=0:03.69	max_rss_kb=771064	
+loop	N=9	printing	beta	members=512	leaves=512	sites=511	steps=85375	probes=1533	maxDepth=9	wall_ms=7490	rc=0	time_wall=0:07.87	max_rss_kb=771480	
+loop	N=10	printing	beta	members=1024	leaves=1024	sites=1023	steps=170879	probes=3069	maxDepth=10	wall_ms=16806	rc=0	time_wall=0:17.21	max_rss_kb=773976	
+loop	N=11	printing	beta	members=2048	leaves=2048	sites=2047	steps=341887	probes=6141	maxDepth=11	wall_ms=38118	rc=0	time_wall=0:38.49	max_rss_kb=773768	
+loop	N=12	printing	beta	members=4096	leaves=4096	sites=4095	steps=683903	probes=12285	maxDepth=12	wall_ms=88170	rc=0	time_wall=1:28.55	max_rss_kb=781728	
+loop	N=13	printing	beta	REFUSED	wall_ms=90405	observation cap N=4096 exceeded — the case is too wide for enumeration (design note: needs a per-case predicate)	rc=0	time_wall=1:30.78	max_rss_kb=780464	
+wide	N=2	silent	beta	members=1	leaves=2	sites=1	steps=180	probes=3	maxDepth=1	wall_ms=6	rc=0	time_wall=0:00.36	max_rss_kb=766100	
+wide	N=3	silent	beta	members=1	leaves=6	sites=4	steps=567	probes=12	maxDepth=2	wall_ms=19	rc=0	time_wall=0:00.39	max_rss_kb=766108	
+wide	N=4	silent	beta	members=1	leaves=24	sites=17	steps=2296	probes=51	maxDepth=3	wall_ms=82	rc=0	time_wall=0:00.47	max_rss_kb=764784	
+wide	N=5	silent	beta	members=1	leaves=120	sites=86	steps=11647	probes=258	maxDepth=4	wall_ms=474	rc=0	time_wall=0:00.84	max_rss_kb=768084	
+wide	N=6	silent	beta	members=1	leaves=720	sites=517	steps=71178	probes=1551	maxDepth=5	wall_ms=3349	rc=0	time_wall=0:03.72	max_rss_kb=767408	
+wide	N=7	silent	beta	members=1	leaves=5040	sites=3620	steps=508093	probes=10860	maxDepth=6	wall_ms=27432	rc=0	time_wall=0:27.81	max_rss_kb=769608	
+wide	N=8	silent	beta	members=1	leaves=40320	sites=28961	steps=4145044	probes=86883	maxDepth=7	wall_ms=256378	rc=0	time_wall=4:16.77	max_rss_kb=766624	
+wide	N=2	printing	beta	members=2	leaves=2	sites=1	steps=204	probes=3	maxDepth=1	wall_ms=7	rc=0	time_wall=0:00.37	max_rss_kb=765380	
+wide	N=3	printing	beta	members=6	leaves=6	sites=4	steps=657	probes=12	maxDepth=2	wall_ms=20	rc=0	time_wall=0:00.38	max_rss_kb=768552	
+wide	N=4	printing	beta	members=24	leaves=24	sites=17	steps=2680	probes=51	maxDepth=3	wall_ms=90	rc=0	time_wall=0:00.48	max_rss_kb=768176	
+wide	N=5	printing	beta	members=120	leaves=120	sites=86	steps=13597	probes=258	maxDepth=4	wall_ms=531	rc=0	time_wall=0:00.89	max_rss_kb=769716	
+wide	N=6	printing	beta	members=720	leaves=720	sites=517	steps=82914	probes=1551	maxDepth=5	wall_ms=3999	rc=0	time_wall=0:04.39	max_rss_kb=767704	
+wide	N=7	printing	beta	REFUSED	wall_ms=31545	observation cap N=4096 exceeded — the case is too wide for enumeration (design note: needs a per-case predicate)	rc=0	time_wall=0:31.91	max_rss_kb=774048	
+nest	N=1	silent	beta	members=1	leaves=6	sites=4	steps=717	probes=12	maxDepth=2	wall_ms=21	rc=0	time_wall=0:00.39	max_rss_kb=764764	
+nest	N=2	silent	beta	members=1	leaves=36	sites=28	steps=4683	probes=84	maxDepth=4	wall_ms=207	rc=0	time_wall=0:00.59	max_rss_kb=765712	
+nest	N=3	silent	beta	members=1	leaves=216	sites=172	steps=28479	probes=516	maxDepth=6	wall_ms=1625	rc=0	time_wall=0:02.02	max_rss_kb=766484	
+nest	N=4	silent	beta	members=1	leaves=1296	sites=1036	steps=171255	probes=3108	maxDepth=8	wall_ms=12113	rc=0	time_wall=0:12.49	max_rss_kb=771052	
+nest	N=5	silent	beta	members=1	leaves=7776	sites=6220	steps=1027911	probes=18660	maxDepth=10	wall_ms=87440	rc=0	time_wall=1:27.85	max_rss_kb=772268	
+nest	N=1	printing	beta	members=6	leaves=6	sites=4	steps=807	probes=12	maxDepth=2	wall_ms=24	rc=0	time_wall=0:00.42	max_rss_kb=767652	
+nest	N=2	printing	beta	members=36	leaves=36	sites=28	steps=5313	probes=84	maxDepth=4	wall_ms=224	rc=0	time_wall=0:00.63	max_rss_kb=769032	
+nest	N=3	printing	beta	members=216	leaves=216	sites=172	steps=32349	probes=516	maxDepth=6	wall_ms=1899	rc=0	time_wall=0:02.29	max_rss_kb=769000	
+nest	N=4	printing	beta	members=1296	leaves=1296	sites=1036	steps=194565	probes=3108	maxDepth=8	wall_ms=14722	rc=0	time_wall=0:15.11	max_rss_kb=771424	
+nest	N=5	printing	beta	REFUSED	wall_ms=58311	observation cap N=4096 exceeded — the case is too wide for enumeration (design note: needs a per-case predicate)	rc=0	time_wall=0:58.69	max_rss_kb=771780	
+LADDER_DONE mode=beta

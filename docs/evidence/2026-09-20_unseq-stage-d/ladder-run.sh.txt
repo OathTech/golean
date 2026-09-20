@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# Stage D ladder runner (scratch): every rung as its own process under
+# /usr/bin/time -v; one TSV line per rung with the explore/dedup line, the
+# time -v wall and max RSS. Usage: ladder-run.sh <mode> <outfile>
+#   mode = beta | alpha | heap
+set -uo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT"
+mode="$1"; out="$2"
+mkdir -p .tmp/ladder
+export GOLEAN_MEM_MAX=32G
+run() {
+  local rung="$1" n="$2" q="$3"
+  local tfile=".tmp/ladder/time-${mode}-${rung}-${n}-${q:-print}.txt"
+  local lfile=".tmp/ladder/log-${mode}-${rung}-${n}-${q:-print}.txt"
+  /usr/bin/time -v scripts/capped lake env lean --run .tmp/Ladder.lean "$mode" "$rung" "$n" $q > "$lfile" 2> "$tfile"
+  local rc=$?
+  local wall rss
+  wall="$(grep 'Elapsed (wall clock)' "$tfile" | sed 's/.*: //')"
+  rss="$(grep 'Maximum resident set size' "$tfile" | sed 's/.*: //')"
+  # the rung line(s): stdout lines + (alpha) the driver's stderr stats/refusal line
+  local line
+  line="$(grep -v '^{' "$lfile" | tr '\n' ' ' | sed 's/[[:space:]]*$//')"
+  local extra=""
+  if [[ "$mode" == alpha ]]; then
+    extra="$(grep '^coverage-observations:' "$tfile" | tail -1)"
+  fi
+  printf '%s\trc=%s\ttime_wall=%s\tmax_rss_kb=%s\t%s\n' "$line" "$rc" "$wall" "$rss" "$extra" >> "$out"
+}
+for n in 1 2 3 4 5 6 7 8 9 10 11 12; do run loop "$n" quiet; done
+for n in 1 2 3 4 5 6 7 8 9 10 11 12 13; do run loop "$n" ""; done
+for k in 2 3 4 5 6 7 8; do run wide "$k" quiet; done
+for k in 2 3 4 5 6 7; do run wide "$k" ""; done
+for m in 1 2 3 4 5; do run nest "$m" quiet; done
+for m in 1 2 3 4 5; do run nest "$m" ""; done
+echo "LADDER_DONE mode=$mode" >> "$out"

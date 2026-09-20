@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# For every row the dedup engine CLOSED (alpha-corpus-table.tsv), run BOTH
+# engines through the real CLI and compare the printed member sets exactly
+# (sorted JSON lines). Usage: alpha-vs-beta.sh <golean> <table.tsv> <out.tsv>
+set -uo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT"
+GOLEAN="$1"; table="$2"; out="$3"
+: > "$out"
+mkdir -p .tmp/ladder/sets
+while IFS=$'\t' read -r row lane members obs nodes hits cls; do
+  [[ "$cls" == CLOSED ]] || continue
+  pkg="${row%/*}"; id="${row##*/}"
+  wire=".tmp/wires/$(echo "$pkg" | sed 's|/|_|g').json"
+  line="$(awk -F'\t' -v id="$id" '$1==id' "Corpus/coverage/exec/$pkg/cases.tsv" | head -1)"
+  subject="$(printf '%s' "$line" | cut -f2)"
+  args="$(printf '%s' "$line" | cut -f3)"
+  params="$(printf '%s' "$line" | cut -f9)"
+  width=8; sites=64
+  if [[ -n "$params" && "$params" != "-" ]]; then
+    for kv in ${params//,/ }; do
+      case "$kv" in width=*) width="${kv#width=}";; sites=*) sites="${kv#sites=}";; esac
+    done
+  fi
+  argflags=()
+  if [[ -n "$args" && "$args" != "-" ]]; then for a in $args; do argflags+=(--arg-int "$a"); done; fi
+  base=".tmp/ladder/sets/$(echo "$row" | sed 's|/|_|g')"
+  "$GOLEAN" coverage-observations --input "$wire" --function "$subject" "${argflags[@]}" \
+    --max-width "$width" --max-sites "$sites" --cap 4096 --work-cap 20000000 --engine dedup \
+    2> "$base.alpha.err" | sort > "$base.alpha.txt"; rca=$?
+  "$GOLEAN" coverage-observations --input "$wire" --function "$subject" "${argflags[@]}" \
+    --max-width "$width" --max-sites "$sites" --cap 4096 --work-cap 50000000 --backedge full \
+    2> "$base.beta.err" | sort > "$base.beta.txt"; rcb=$?
+  betaline="$(grep '^coverage-observations: observations=' "$base.beta.err" | tail -1 | sed 's/^coverage-observations: //')"
+  if cmp -s "$base.alpha.txt" "$base.beta.txt"; then verdict="SAME"; else verdict="DIFFER"; fi
+  printf '%s\t%s\trc_alpha=%s\trc_beta=%s\t%s\t%s\n' "$row" "$verdict" "$rca" "$rcb" "$(wc -l < "$base.alpha.txt") members" "$betaline" >> "$out"
+done < "$table"
+echo "CMP_DONE" >> "$out"

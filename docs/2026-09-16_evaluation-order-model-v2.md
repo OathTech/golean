@@ -207,6 +207,15 @@ argument list, a loop; unique states and paths, runtime, RSS, consumed picks). [
 driver or the output/race plumbing); a checked-read adapter preserves the accesses `Race.strictOpAccesses` reports today
 (`GoLean/GoCore/Race.lean:506`, arm `:1545`).
 
+**Addendum (2026-09-20, [AGENT] Stage D worker, lane `core/unseq-stage-d-0920`; records only): route (β) was
+measured at Stage B and again on Stage D's ladder; route (α) LANDED at Stage D** — `EnumDedupCheck.innerVecs` gains the
+class N-PICK (the `unseqNext` pick at bound `unseqNextBound c = |ready|`, read off the frame; the legacy `unseqPanic` at
+bound 2 — the same `stepFn`-path shape), `poolThreadOblivious` is `true` at a bound-≤-1 pick, `stepThread_pick_run`
+(MultiStreams) determinizes the pick through `stepFn_consumption_some`, `stepThread_total_covered` (EnumDedupSound)
+carries the two cases, and `checkCert_slowObs` certifies the wider class with its STATEMENT unchanged. The engine's
+`refusalReason` for both sites is now unreachable and says so. What α does not close is the engine's output-is-a-trace
+rule (printing sweeps stay on β), not the pick. `docs/2026-09-20_unseq-stage-d-design.md`.
+
 ### 3.7 Where it lands (all at `433e7490`)
 
 The file-by-file anchor list of v2 @ `9a8ed328` §3 «Where it lands» (Syntax `:608`; Machine `Cont` arms `:2585`,

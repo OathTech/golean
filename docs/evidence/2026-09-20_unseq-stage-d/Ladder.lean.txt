@@ -1,0 +1,128 @@
+import GoLean.CLI
+open GoLean GoCore GoCore.Machine
+
+/-! Stage D workload ladder (v2.1 §7 row D; route β = `CLI.explore`, route α =
+`CLI.runDedupObservations` — both EXISTING drivers; this file is scratch glue
+that builds the rung programs and calls them). Rungs:
+
+  loop N [quiet]   — N width-2 sweeps in a loop (Stage B's shape): paths 2^N
+  wide k [quiet]   — ONE sweep, k unordered invocations feeding a sink: paths k!
+  nest M [quiet]   — a loop of M iterations, each a width-3 sweep: paths 6^M
+
+`quiet` = silent invoked functions (the outcome-equivalent product; members 1);
+otherwise each invocation prints its name (members = paths on β; α refuses the
+output event by name — the engine keys nodes on state, output is a trace).
+Mode `beta` / `alpha` / `heap` selects the driver: β prints the explore line,
+α calls the dedup driver (its stats line goes to stderr), `heap` runs the
+canonical tape through the machine's own `execProgLoop` and reports the
+final store's heap size / nextAddr (the per-sweep cell cost, D2). -/
+
+def intP (id : String) : Param := ⟨id, .int⟩
+def fnTy0 : Ty := .funcType [] [.int] false
+def silentF (fid : String) : Func :=
+  { id := ⟨fid⟩, args := #[], results := #[intP "r"], body := .assign (.var "r") (.intLit 0) }
+def printF (fid : String) : Func :=
+  { id := ⟨fid⟩, args := #[], results := #[intP "r"],
+    body := .seqn #[.print true #[.stringLit (GoString.fromLeanString fid)], .assign (.var "r") (.intLit 0)] }
+def mk (fid : String) (quiet : Bool) : Func := if quiet then silentF fid else printF fid
+
+/-- k unordered invocations `f0..f{k-1}` (each into its own cell) plus a sink
+consuming every cell — the argument-list shape. -/
+def wideGraph (k : Nat) : UnseqGraph :=
+  let cells := (List.range k).map fun j => intP s!"$c{j}"
+  let occs := (List.range k).map fun j =>
+    (⟨s!"O{j}", .invoke [s!"$c{j}"] (.var s!"f{j}") [], [], none⟩ : UnseqOcc)
+  { cells := cells ++ [intP "$s"],
+    occs := occs ++ [⟨"S", .invoke ["$s"] (.var "sinkv") ((List.range k).map fun j => Expr.var s!"$c{j}"), [], none⟩] }
+
+def sinkF (k : Nat) : Func :=
+  { id := ⟨"sink"⟩, args := ((List.range k).map fun j => intP s!"a{j}").toArray,
+    results := #[intP "r"], body := .assign (.var "r") (.intLit 0) }
+
+def fdecls (k : Nat) : List Param := (List.range k).map fun j => ⟨s!"f{j}", fnTy0⟩
+def fassigns (k : Nat) : List Stmt :=
+  (List.range k).map fun j => Stmt.assign (.var s!"f{j}") (.funcVal ⟨s!"f{j}"⟩ #[])
+def sinkTy (k : Nat) : Ty := .funcType ((List.range k).map fun _ => Ty.int) [.int] false
+
+def loopOf (n : Nat) (body : Stmt) : List Stmt :=
+  [Stmt.assign (.var "i") (.intLit 0),
+   Stmt.while (.lessCmp (.var "i") (.intLit n))
+     (.seqn #[body, .assign (.var "i") (.add (.var "i") (.intLit 1))])]
+
+def g2 : UnseqGraph := {
+  cells := [intP "$a", intP "$b"],
+  occs := [⟨"A", .invoke ["$a"] (.var "f0") [], [], none⟩,
+           ⟨"B", .invoke ["$b"] (.var "f1") [], [], none⟩] }
+
+/-- `loop N`: Stage B's shape — N width-2 sweeps in a loop. -/
+def loopProg (n : Nat) (quiet : Bool) : Program := { funcs := #[
+  { id := ⟨"main"⟩, args := #[], results := #[],
+    body := .block (#[intP "i"] ++ (fdecls 2).toArray)
+      ((fassigns 2) ++ loopOf n (Stmt.unseq g2 (.seqn #[]))).toArray },
+  mk "f0" quiet, mk "f1" quiet] }
+
+/-- `wide k`: one sweep, k unordered invocations into a sink. -/
+def wideProg (k : Nat) (quiet : Bool) : Program := { funcs :=
+  #[{ id := ⟨"main"⟩, args := #[], results := #[],
+      body := .block ((fdecls k).toArray ++ #[⟨"sinkv", sinkTy k⟩])
+        ((fassigns k) ++ [Stmt.assign (.var "sinkv") (.funcVal ⟨"sink"⟩ #[]),
+          Stmt.unseq (wideGraph k) (.seqn #[])]).toArray }, sinkF k]
+  ++ ((List.range k).map fun j => mk s!"f{j}" quiet).toArray }
+
+/-- `nest M`: a loop of M iterations, each iteration ONE width-3 sweep. -/
+def nestProg (m : Nat) (quiet : Bool) : Program := { funcs :=
+  #[{ id := ⟨"main"⟩, args := #[], results := #[],
+      body := .block (#[intP "i"] ++ (fdecls 3).toArray ++ #[⟨"sinkv", sinkTy 3⟩])
+        ((fassigns 3) ++ [Stmt.assign (.var "sinkv") (.funcVal ⟨"sink"⟩ #[])] ++
+          loopOf m (Stmt.unseq (wideGraph 3) (.seqn #[]))).toArray }, sinkF 3]
+  ++ ((List.range 3).map fun j => mk s!"f{j}" quiet).toArray }
+
+def pick (rung : String) (n : Nat) (quiet : Bool) : Program :=
+  match rung with
+  | "loop" => loopProg n quiet
+  | "wide" => wideProg n quiet
+  | _ => nestProg n quiet
+
+def main (args : List String) : IO Unit := do
+  let mode := args.getD 0 "beta"
+  let rung := args.getD 1 "loop"
+  let n := (args[2]? >>= String.toNat?).getD 1
+  let quiet := args.getD 3 "" == "quiet"
+  let prog := pick rung n quiet
+  let tag := s!"{rung}\tN={n}\t{if quiet then "silent" else "printing"}"
+  match CLI.enumSetup prog "main" #[] with
+  | .error e => IO.println s!"{tag}\tsetup: {repr e}"
+  | .ok ep =>
+    match mode with
+    | "beta" =>
+      let t0 ← IO.monoMsNow
+      match CLI.explore ep 2000000 8 64 4096 50000000 none with
+      | .error m =>
+        let t1 ← IO.monoMsNow
+        IO.println s!"{tag}\tbeta\tREFUSED\twall_ms={t1 - t0}\t{m}"
+      | .ok out =>
+        let t1 ← IO.monoMsNow
+        IO.println s!"{tag}\tbeta\tmembers={out.observations.size}\tleaves={out.leaves}\tsites={out.sitesSeen}\tsteps={out.steps}\tprobes={out.probes}\tmaxDepth={out.maxDepth}\twall_ms={t1 - t0}"
+    | "alpha" =>
+      IO.println s!"{tag}\talpha"
+      (← IO.getStdout).flush
+      let t0 ← IO.monoMsNow
+      let rc ← CLI.runDedupObservations ep
+        { maxWidth := 8, maxSites := 64, cap := 4096, workCap := 50000000, expectStatus := none }
+      let t1 ← IO.monoMsNow
+      IO.println s!"{tag}\talpha\trc={rc}\twall_ms={t1 - t0}"
+    | _ =>
+      -- the canonical (empty) tape through the machine's own pool driver;
+      -- report the final store's size — the per-sweep binder-cell cost.
+      match bindParams ep.ctx [] ep.σ₀ ep.func.args.toList ep.args.toList with
+      | .error e => IO.println s!"{tag}\theap\tentry: {repr e}"
+      | .ok (env, s₂) =>
+      match allocDecls ep.ctx env s₂ ep.func.results.toList with
+      | .error e => IO.println s!"{tag}\theap\tentry: {repr e}"
+      | .ok (frameEnv, s₃) =>
+        let m₀ : MultiConfig := ⟨#[.running (.exec ep.func.body frameEnv (.frame [] [] [] [] .stop)) none], s₃, 0⟩
+        let heap0 := s₃.heap.size
+        match execProgLoop ep.ctx 2000000 m₀ {} [] with
+        | .ok (σf, _) =>
+          IO.println s!"{tag}\theap\theap0={heap0}\theapF={σf.heap.size}\tnextAddr={σf.nextAddr}\tcells_added={σf.heap.size - heap0}"
+        | .error e => IO.println s!"{tag}\theap\tstop: {repr e}"

@@ -1,0 +1,26 @@
+loop	N=1	silent	heap	heap0=0	heapF=7	nextAddr=7	cells_added=7	rc=0	time_wall=0:00.36	max_rss_kb=760892	
+loop	N=2	silent	heap	heap0=0	heapF=11	nextAddr=11	cells_added=11	rc=0	time_wall=0:00.36	max_rss_kb=761024	
+loop	N=3	silent	heap	heap0=0	heapF=15	nextAddr=15	cells_added=15	rc=0	time_wall=0:00.37	max_rss_kb=764616	
+loop	N=4	silent	heap	heap0=0	heapF=19	nextAddr=19	cells_added=19	rc=0	time_wall=0:00.38	max_rss_kb=763144	
+loop	N=5	silent	heap	heap0=0	heapF=23	nextAddr=23	cells_added=23	rc=0	time_wall=0:00.37	max_rss_kb=762932	
+loop	N=6	silent	heap	heap0=0	heapF=27	nextAddr=27	cells_added=27	rc=0	time_wall=0:00.37	max_rss_kb=762460	
+loop	N=7	silent	heap	heap0=0	heapF=31	nextAddr=31	cells_added=31	rc=0	time_wall=0:00.37	max_rss_kb=762736	
+loop	N=8	silent	heap	heap0=0	heapF=35	nextAddr=35	cells_added=35	rc=0	time_wall=0:00.37	max_rss_kb=762552	
+loop	N=9	silent	heap	heap0=0	heapF=39	nextAddr=39	cells_added=39	rc=0	time_wall=0:00.39	max_rss_kb=763036	
+loop	N=10	silent	heap	heap0=0	heapF=43	nextAddr=43	cells_added=43	rc=0	time_wall=0:00.38	max_rss_kb=762792	
+loop	N=11	silent	heap	heap0=0	heapF=47	nextAddr=47	cells_added=47	rc=0	time_wall=0:00.39	max_rss_kb=764792	
+loop	N=12	silent	heap	heap0=0	heapF=51	nextAddr=51	cells_added=51	rc=0	time_wall=0:00.39	max_rss_kb=762664	
+loop	N=1	printing	heap	heap0=0	heapF=7	nextAddr=7	cells_added=7	rc=0	time_wall=0:00.37	max_rss_kb=760628	
+loop	N=2	printing	heap	heap0=0	heapF=11	nextAddr=11	cells_added=11	rc=0	time_wall=0:00.39	max_rss_kb=760272	
+loop	N=3	printing	heap	heap0=0	heapF=15	nextAddr=15	cells_added=15	rc=0	time_wall=0:00.37	max_rss_kb=762956	
+loop	N=4	printing	heap	heap0=0	heapF=19	nextAddr=19	cells_added=19	rc=0	time_wall=0:00.35	max_rss_kb=760580	
+loop	N=5	printing	heap	heap0=0	heapF=23	nextAddr=23	cells_added=23	rc=0	time_wall=0:00.37	max_rss_kb=762796	
+loop	N=6	printing	heap	heap0=0	heapF=27	nextAddr=27	cells_added=27	rc=0	time_wall=0:00.37	max_rss_kb=762632	
+loop	N=7	printing	heap	heap0=0	heapF=31	nextAddr=31	cells_added=31	rc=0	time_wall=0:00.38	max_rss_kb=762440	
+loop	N=8	printing	heap	heap0=0	heapF=35	nextAddr=35	cells_added=35	rc=0	time_wall=0:00.39	max_rss_kb=759000	
+loop	N=9	printing	heap	heap0=0	heapF=39	nextAddr=39	cells_added=39	rc=0	time_wall=0:00.36	max_rss_kb=762608	
+loop	N=10	printing	heap	heap0=0	heapF=43	nextAddr=43	cells_added=43	rc=0	time_wall=0:00.38	max_rss_kb=762108	
+loop	N=11	printing	heap	heap0=0	heapF=47	nextAddr=47	cells_added=47	rc=0	time_wall=0:00.36	max_rss_kb=762372	
+loop	N=12	printing	heap	heap0=0	heapF=51	nextAddr=51	cells_added=51	rc=0	time_wall=0:00.39	max_rss_kb=762540	
+loop	N=13	printing	heap	heap0=0	heapF=55	nextAddr=55	cells_added=55	rc=0	time_wall=0:00.40	max_rss_kb=762468	
+LADDER_DONE mode=heap
