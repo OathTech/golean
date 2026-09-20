@@ -1,5 +1,20 @@
 # GoLean native-frontend full-corpus differential baseline
 # cases: 3705 (3459 PASS / 246 FAIL)
+# re-pinned: 2026-09-20 [AGENT], core/unseq-stage-d-0920, STAGE D of the evaluation-order model v2.1 (route α —
+#   docs/2026-09-20_unseq-stage-d-design.md §2–§3; handoff docs/2026-09-20_unseq-stage-d-handoff.md): NO row added, NO
+#   result changed, ONE stage changed — spec-examples-stmt/continue-label PASS/- -> PASS/confluent, the strict depth=128
+#   spot check the Stage C pilot declared (w=18 `unseqNext` picks, a silent singleton) moved to lane=confluent engine=dedup
+#   (width=4,sites=64,work=200000): the `unseq` scheduler's pick is CERTIFIED in the dedup engine since this lane
+#   (EnumDedupCheck.innerVecs N-PICK; checkCert_slowObs unchanged in statement), and the engine closes the row at 5122
+#   nodes / 5145 edges / 24 dedup hits with |set| = 1 checker-accepted (the DFS: the same singleton over 32805 leaves /
+#   39.6M steps; gc's draw is the singleton). Measured by `scripts/capped scripts/ci --slow` at the runtime commit
+#   (2026-09-20 21:50–22:06Z, 946 s): 3705 rows 3458 PASS / 247 FAIL in the run = this pin with the one 5a-class row red
+#   (imported-goose/channel/google-search: STALE certification — changed dependency GoLean/CLI.lean; the FRESH
+#   re-certification reports the UNCHANGED six-member set, 187 s — the train installs the candidate at step 5a; not
+#   re-pinned here). DRIFT = exactly google-search + continue-label; every other result/stage row reproduces exactly; no
+#   PASS -> non-PASS flip; 394 negatives match; the channels/select-select/beside-loop alternation row is kept verbatim.
+#   Evidence + gate lines: docs/evidence/2026-09-20_unseq-stage-d/README.md.
+# Previous pin:
 # re-pinned: 2026-09-20 [AGENT], core/unseq-stage-c-0919, STAGE C AUDIT FIX ROUND (docs/2026-09-20_unseq-stage-c-audit.md, FIX-FIRST; dispositions
 #   docs/2026-09-19_unseq-stage-c-handoff.md «Audit fix round (2026-09-20)»): SIX rows ADDED, no existing row changed. (F2) evalorder/unseq-const-cell/
 #   {const-guard-left,elem-assign-const-int,elem-assign-const-string} — a CONSTANT copied into a cell inside a native `unseq` graph (`true && f()`,
@@ -4719,7 +4734,7 @@ PASS	spec-examples-stmt/complit-paren-ambiguity/match	-
 PASS	spec-examples-stmt/complit-paren-ambiguity/no-match	-
 PASS	spec-examples-stmt/complit-slice-is-array	-
 PASS	spec-examples-stmt/complit-struct-zero	-
-PASS	spec-examples-stmt/continue-label	-
+PASS	spec-examples-stmt/continue-label	confluent
 PASS	spec-examples-stmt/eval-order-calls/traced-recv	-
 PASS	spec-examples-stmt/eval-order-calls/verbatim	-
 PASS	spec-examples-stmt/expr-switch-forms/first-match-f1	-

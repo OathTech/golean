@@ -140,8 +140,12 @@ private def refusalReason (s : Store) (ts : Array Thread) (i : Nat) :
     else if consumesTryLock c then s!"goroutine {i}: TryLock/TryRLock apply (the tryLock spurious-failure site — outside the dedup checker's certified fragment; use the default enumerator)"
     else if isMapIterNext c then s!"goroutine {i}: mapIterK iteration pick"
     else if consumesNilValueMethod ctx c then s!"goroutine {i}: frame-entry panic-text pick (nilValueMethodText, BUG-087)"
-    else if consumesUnseqPanic c then s!"goroutine {i}: unsequenced-operand panic-order pick (unseqPanic, latitude E13 option (b) — outside the dedup checker's certified fragment; use the default enumerator)"
-    else if consumesUnseqNext c then s!"goroutine {i}: unseq scheduler pick (unseqNext, evaluation-order model v2.1 Stage B — outside the dedup checker's certified fragment; route α of the design's §3.6 is owed before Stage E; use the default enumerator)"
+    -- Route α (Stage D): both `stepFn`-path picks are CERTIFIED shapes now
+    -- (`innerVecs` N-PICK) — `unseqPanic` always, `unseqNext` at every
+    -- bound (≤ 1 oblivious, ≥ 2 enumerated); a refusal here is unreachable
+    -- and named as such.
+    else if consumesUnseqPanic c then s!"goroutine {i}: unsequenced-operand panic-order pick (unseqPanic — certified since Stage D; unreachable refusal)"
+    else if consumesUnseqNext c then s!"goroutine {i}: unseq scheduler pick (unseqNext, bound {unseqNextBound c} — certified since Stage D at every bound; unreachable refusal)"
     else
       match arrivalCases ctx s ts i c with
       | .ok (.multi _) => s!"goroutine {i}: multi-ready select arrival (L2 .multi)"

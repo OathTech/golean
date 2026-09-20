@@ -353,12 +353,62 @@ theorem stepThread_total_covered {s : Store} {ts : Array Thread}
                   rw [hnnv] at hiv
                   simp only [Bool.false_eq_true, reduceIte] at hiv
                   cases hnup : consumesUnseqPanic c with
-                  | true => rw [hnup] at hiv; simp at hiv
+                  | true =>
+                    -- N-PICK, `unseqPanic` (route α, Stage D): bound 2, the
+                    -- two singleton vectors; the run's raw pop at 2 lands on
+                    -- one of them and `stepThread_pick_run` determinizes.
+                    rw [hnup] at hiv
+                    simp only [reduceIte, Option.some.injEq] at hiv
+                    subst hiv
+                    obtain ⟨chain, k, rfl⟩ := consumesUnseqPanic_shape hnup
+                    rcases hcons : Choices.consume ch 2 with ⟨p, rest⟩
+                    have hplt : p < 2 := by
+                      have := consume_fst_lt (ch := ch) (bound := 2) (by omega)
+                      rw [hcons] at this
+                      exact this
+                    have hpmem : [p] ∈ [[0], [1]] := by
+                      match p, hplt with
+                      | 0, _ => simp
+                      | 1, _ => simp
+                      | _ + 2, h => exact absurd h (by omega)
+                    obtain ⟨ts', s', ev, hv⟩ := hedges [p] hpmem
+                    exact ⟨[p], hpmem, ts', s', ev, rest, hv,
+                      stepThread_pick_run (s := s) hti hblc hab hsp rfl rfl trivial
+                        seqConsumption_unseqPanic (by omega) hplt hv hcons⟩
                   | false =>
                   rw [hnup] at hiv
                   simp only [Bool.false_eq_true, reduceIte] at hiv
                   cases hnn : consumesUnseqNext c with
-                  | true => rw [hnn] at hiv; simp at hiv
+                  | true =>
+                    -- N-PICK, `unseqNext` (route α, Stage D): bound `|ready|`
+                    -- read off the frame; one singleton vector per ready
+                    -- position; the run's raw pop lands on one of them.
+                    rw [hnn] at hiv
+                    simp only [reduceIte] at hiv
+                    split at hiv
+                    · rename_i hge
+                      simp only [Option.some.injEq] at hiv
+                      subst hiv
+                      obtain ⟨g, thenB, st, tg, env, k, rfl⟩ := consumesUnseqNext_shape hnn
+                      simp only [unseqNextBound_pick] at hge ⊢
+                      have hsc : seqConsumption ctx s (.next (.unseqK g thenB st tg env .pick k))
+                          = some (.unseqNext, (g.ready st).length) := by
+                        rw [seqConsumption_unseqNext, if_pos hge]
+                      rcases hcons : Choices.consume ch (g.ready st).length with ⟨p, rest⟩
+                      have hplt : p < (g.ready st).length := by
+                        have := consume_fst_lt (ch := ch) (bound := (g.ready st).length)
+                          (by omega)
+                        rw [hcons] at this
+                        exact this
+                      have hpmem : [p] ∈ (List.range (g.ready st).length).map
+                          (fun q => [q]) := by
+                        simp only [List.mem_map, List.mem_range]
+                        exact ⟨p, hplt, rfl⟩
+                      obtain ⟨ts', s', ev, hv⟩ := hedges [p] hpmem
+                      exact ⟨[p], hpmem, ts', s', ev, rest, hv,
+                        stepThread_pick_run (s := s) hti hblc hab hsp rfl rfl trivial hsc hge hplt hv
+                          hcons⟩
+                    · cases hiv
                   | false =>
                   rw [hnn] at hiv
                   simp only [Bool.false_eq_true, reduceIte] at hiv

@@ -1584,6 +1584,49 @@ theorem stepUnseqNext_consumption_some {σ : Store} {g : UnseqGraph} {thenB : St
           simp [stepUnseqNext, hdep, hall, hpc₂, hi]
         · simp [throw, throwThe, MonadExceptOf.throw] at h'
 
+/-! ### The two configuration-determined `stepFn`-path picks (route α, Stage D)
+
+`unseqNext` (bound `|ready|`, read off the frame — `unseqNextBound`) and the
+legacy `unseqPanic` (bound 2, constant) are the two consumption sites whose
+bound is a function of the CONFIGURATION alone and whose step runs on the
+pool's plain `stepFn` path (no arrival, no select apply, no spawn, no
+abort). The dedup checker's branch vectors for them (`innerVecs`,
+EnumDedupCheck) rest on these shape facts plus `stepFn_consumption_some`. -/
+
+/-- A `consumesUnseqNext` configuration IS a sweep frame at its pick position. -/
+theorem consumesUnseqNext_shape {c : Config} (h : consumesUnseqNext c = true) :
+    ∃ g thenB st tg env k, c = .next (.unseqK g thenB st tg env .pick k) := by
+  unfold consumesUnseqNext at h
+  split at h
+  · exact ⟨_, _, _, _, _, _, rfl⟩
+  · cases h
+
+/-- A `consumesUnseqPanic` configuration IS a panic that reached a probe frame. -/
+theorem consumesUnseqPanic_shape {c : Config} (h : consumesUnseqPanic c = true) :
+    ∃ chain k, c = .panicking chain (.probeK k) := by
+  unfold consumesUnseqPanic at h
+  split at h
+  · exact ⟨_, _, rfl⟩
+  · cases h
+
+@[simp] theorem unseqNextBound_pick {g : UnseqGraph} {thenB : Stmt} {st : List UnseqStatus}
+    {tg : List (String × TargetRef)} {env : LocalEnv} {k : Cont} :
+    unseqNextBound (.next (.unseqK g thenB st tg env .pick k)) = (g.ready st).length := rfl
+
+/-- The accountant at a pick position reports the `unseqNext` site at EXACTLY
+`unseqNextBound` when that is ≥ 2, and nothing otherwise (G-U) — the same
+number the checker enumerates, read off the same frame, for every store. -/
+theorem seqConsumption_unseqNext {σ : Store} {g : UnseqGraph} {thenB : Stmt}
+    {st : List UnseqStatus} {tg : List (String × TargetRef)} {env : LocalEnv} {k : Cont} :
+    seqConsumption ctx σ (.next (.unseqK g thenB st tg env .pick k))
+      = if 2 ≤ (g.ready st).length then some (.unseqNext, (g.ready st).length) else none := by
+  simp only [seqConsumption]
+
+/-- The accountant at a probe-frame panic reports `unseqPanic` at bound 2, for every store. -/
+theorem seqConsumption_unseqPanic {σ : Store} {chain : List PanicEntry} {k : Cont} :
+    seqConsumption ctx σ (.panicking chain (.probeK k)) = some (.unseqPanic, 2) := by
+  simp only [seqConsumption]
+
 -- The unused-simp-arg linter misfires on the shared multi-goal combinator
 -- (an argument unused in one goal is load-bearing in another).
 set_option linter.unusedSimpArgs false in

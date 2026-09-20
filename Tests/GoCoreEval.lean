@@ -2258,6 +2258,71 @@ private def spawnLabelOf (r : Except Stop (GoCore.Machine.MultiConfig × GoCore.
   | .ok (_, _, ev) => some ((match ev.action with | .spawned n => some n | _ => none), ev.trace)
   | .error _ => none
 
+/-- Route α (Stage D): the dedup checker's NEW accepted shape (the `unseq` scheduler's
+pick, `innerVecs` N-PICK) under the positive-control-plus-mutations treatment — its own
+do-block (`main` is at the elaborator's recursion-depth limit; the C1 S2c precedent). -/
+private def dedupAlphaFacts : IO Bool := do
+  let mut passed := true
+  -- ROUTE α (Stage D, `docs/2026-09-20_unseq-stage-d-design.md`): the checker
+  -- now ACCEPTS certificates whose nodes branch at the `unseq` scheduler's
+  -- pick (`innerVecs` N-PICK) — a new accepted shape is new trust surface, so
+  -- it gets the same positive-control-plus-mutations treatment. Fixture: the
+  -- Stage B `W1` witness (`v := mut() + a`, a captured) as a hand-built
+  -- graph — ONE width-2 `unseqNext` pick, two members {1, 2}. The seeded pool
+  -- is the CLI's own (`CLI.dedupSeed`).
+  let w1mut : GoCore.Func := {
+    id := ⟨"w1mut"⟩, args := #[⟨"pa", .pointer .int⟩], results := #[⟨"r", .int⟩],
+    body := .seqn #[.assign (.addr (.var "pa")) (.intLit 2), .assign (.var "r") (.intLit 0)] }
+  let w1graph : GoCore.UnseqGraph := {
+    cells := [⟨"$m", .int⟩, ⟨"$a", .int⟩, ⟨"$op", .int⟩],
+    occs := [⟨"E_mut", .invoke ["$m"] (.var "mutv") [], [], none⟩,
+             ⟨"R_a", .eval "$a" (.var "a"), [], none⟩,
+             ⟨"Op", .eval "$op" (.add (.var "$m") (.var "$a")), [], none⟩,
+             ⟨"T_z", .target "$t" (.var "z"), [], none⟩],
+    stores := [("$t", "$op")] }
+  let w1prog : GoCore.Program := { funcs := #[
+    { id := ⟨"main"⟩, args := #[], results := #[⟨"z", .int⟩],
+      body := .block #[⟨"a", .int⟩, ⟨"mutv", .funcType [.pointer .int] [.int] false⟩]
+        #[.assign (.var "a") (.intLit 1),
+          .assign (.var "mutv") (.funcVal ⟨"w1mut"⟩ #[.ref "a"]),
+          .unseq w1graph (.seqn #[])] },
+    w1mut] }
+  match CLI.enumSetup w1prog "main" #[] with
+  | .error e =>
+      passed := passed && (← expectTrue s!"DEDUP-α: W1 fixture sets up (got: {repr e})" false)
+  | .ok ep =>
+    match CLI.dedupSeed ep with
+    | .error e =>
+        passed := passed && (← expectTrue s!"DEDUP-α: W1 fixture seeds (got: {repr e})" false)
+    | .ok (locs, m₀, r₀) =>
+      match GoLean.EnumDedup.buildCert ep.ctx locs m₀ r₀ 100000 with
+      | .error e =>
+          passed := passed && (← expectTrue s!"DEDUP-α: engine builds the W1 certificate (got error: {e})" false)
+      | .ok (cert, stats) =>
+        let acceptsU (c : GoCore.Machine.DedupCert) : Bool :=
+          GoCore.Machine.checkCert ep.ctx GoCore.Machine.dedupNodeEqb locs m₀ r₀ c
+        let vals := cert.members.toList.filterMap fun t => match t.1 with
+          | .ok [.int n _] => some n
+          | _ => none
+        passed := passed && (← expectTrue s!"DEDUP-α: the UNMUTATED W1 certificate is ACCEPTED with members exactly [1, 2] (nodes={stats.nodes} edges={stats.edges} dedupHits={stats.dedupHits})"
+          (acceptsU cert && cert.members.size == 2 && vals.contains 1 && vals.contains 2))
+        -- The first pick's ready set is {E_mut, R_a, T_z} (the target plan has no
+        -- dependency): the widest node branches EXACTLY 3 ways — |ready|, never the
+        -- occurrence count 4, never the stream width.
+        passed := passed && (← expectTrue "DEDUP-α: the widest pick node branches EXACTLY |ready| = 3 ways (the graph's first ready set; no node branches more)"
+          (cert.succ.any (fun a => a.size == 3) && cert.succ.all (fun a => a.size ≤ 3)))
+        passed := passed && (← expectTrue "DEDUP-α: M1 dropped member REFUSED"
+          (!acceptsU { cert with members := cert.members.pop }))
+        passed := passed && (← expectTrue "DEDUP-α: M2 successor hints redirected to node 0 REFUSED"
+          (!acceptsU { cert with succ := cert.succ.map (fun a => a.map (fun _ => 0)) }))
+        passed := passed && (← expectTrue "DEDUP-α: M3 dropped node REFUSED"
+          (!acceptsU { cert with nodes := cert.nodes.pop }))
+        passed := passed && (← expectTrue "DEDUP-α: M4 a pick node's last branch DROPPED (two hints where |ready| = 3) REFUSED — the checker enumerates the bound itself"
+          (!acceptsU { cert with succ := cert.succ.map (fun a => if a.size == 3 then a.pop else a) }))
+        passed := passed && (← expectTrue "DEDUP-α: M5 fabricated member REFUSED"
+          (!acceptsU { cert with members := cert.members.push (.terminal (.panic "fabricated"), [], 10) }))
+  return passed
+
 set_option maxRecDepth 4096 in
 /-- The C1 S2c audit F4 label-shape facts (docstring table above `labelCells`), one
 `expectLabel`/`expectTrue` per emitting arm; `false` iff any fact fails (each failure
@@ -2444,6 +2509,9 @@ private def labelShapeFacts : IO Bool := do
   passed := passed && (← expectTrue "LABEL spawn from thread 1 of 2: the child is threads.size = 2 in the edge AND the attribution"
     (spawnLabelOf (GoCore.Machine.stepMulti spawnCtx ⟨#[.running (.next .stop) none, .running spawnDispatchCfg none], spawnStore, 1⟩ [])
       == some (some 2, [evHb (.spawn 2), .attributed 2 (evAcc .read (.data (labelLoc 0)))])))
+  -- Route α (Stage D): the dedup checker's new accepted shape rides this do-block
+  -- (`main` is at the recursion-depth limit even with its `maxRecDepth` bump).
+  passed := passed && (← dedupAlphaFacts)
   return passed
 
 set_option maxRecDepth 4096 in

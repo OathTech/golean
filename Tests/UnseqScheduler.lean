@@ -794,8 +794,21 @@ def main (_args : List String) : IO Unit := do
     | some tape =>
         expectTape s!"replay: order {p} via rank tape {tape}" trace "main" tape
           (okOut (String.join (p.map fun i => ["A\n", "B\n", "C\n"][i]!)))
+  -- Route α (Stage D): the certified dedup engine on the SILENT reference
+  -- programs — the same exact sets, CERTIFIED (`checkCert` accepted; the set
+  -- equality is `checkCert_slowObs`'s), with the unique-state count beside the
+  -- DFS's path count; a PRINTING program is refused by name, never certified.
+  let alpha : List (IO Bool) := [
+    expectDedupSet "α W1 mut()+a: certified {1, 2}" w1 "main" [okZ 1, okZ 2],
+    expectDedupSet "α W2 a[b[0]]+mut(): certified {10, 30, 40}" w2 "main" [okZ 10, okZ 30, okZ 40],
+    expectDedupSet "α W6 x+inc()+inc(): certified {0, 1, 2}" w6 "main" [okZ 0, okZ 1, okZ 2],
+    expectDedupSet "α recursion: per-activation binder cells, certified {10}" recursion "main" [okZ 10],
+    expectDedupSet "α W4 a[1]+b[2] both nil: certified panic members (unseqPanic-free graph)" w4 "main"
+      [panicOut (oob 1 0), panicOut (oob 2 0)],
+    expectDedupRefusal "α replay graph (three PRINTING events): the engine refuses the output event by name"
+      trace "main" "output event"]
   let mut failuresN := 0
-  for c in checks ++ replays do
+  for c in checks ++ replays ++ alpha do
     if !(← c) then failuresN := failuresN + 1
   if failuresN == 0 then IO.println "Unseq scheduler (Stage B): PASS — every reference set exact, every refusal named"
   else

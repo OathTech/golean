@@ -1,8 +1,11 @@
 # id	subject	args	expected_status	expected_reason	features
-# STRICT-LANE DEPTH GUARD — DECLARED depth=128 (Stage C pilot, 2026-09-19, [AGENT]): `row[x] = data + bias(x, y)` in the
-# nested loop and `return enc(rows[0]), enc(rows[1]), enc(rows[2])` lower as unseq graphs — the target plan (frozen row header, x)
-# is spec-unsequenced against bias(x, y), and each enc's checked read against the earlier enc — one wide pick per iteration and
-# per read: default-stream wide count w=18 (the gate's trace), so the three fixed streams (8–10 entries) are exhausted; the
-# observation is a SINGLETON (nothing mutates row or rows), so the row stays strict with N = the smallest power of two >= 4·w
-# (docs/coverage-suite-structure.md sizing convention): 128.
--	continueLabelBias	-	ok	-	labels,continue,loops,range,nested,slices,closures	-	-	depth=128
+# LANE MOVE strict depth=128 → confluent engine=dedup (Stage D, 2026-09-20, [AGENT], lane core/unseq-stage-d-0920;
+# docs/2026-09-20_unseq-stage-d-design.md §3): the Stage C pilot (2026-09-19) DECLARED depth=128 here — `row[x] = data + bias(x, y)`
+# in the nested loop and `return enc(rows[0]), enc(rows[1]), enc(rows[2])` lower as unseq graphs, the target plan (frozen row header,
+# x) spec-unsequenced against bias(x, y) and each enc's checked read against the earlier enc: default-stream wide count w=18, the
+# three fixed streams exhausted, a SINGLETON observation (nothing mutates row or rows), so N = 128 was the strict lane's spot check.
+# Route α (the `unseqNext` pick certified in the dedup engine, `innerVecs` N-PICK) turns the spot check into a CERTIFICATE:
+# engine=dedup closes the state graph at 5122 nodes / 5145 edges / 24 dedup hits with |set| = 1 (checker-accepted; the set
+# equality is `checkCertM_slowObs`'s) — the DFS enumerates the same singleton over 32805 leaves / 39.6M steps. work=200000 is
+# ~20× the measured node+edge work; width 4 covers the picks' bounds (2–3); gc's draw is the singleton on every run.
+-	continueLabelBias	-	ok	-	labels,continue,loops,range,nested,slices,closures	confluent	the per-iteration sweep's picks (the frozen row-header target vs bias(x, y); each enc's checked read vs the earlier enc) are outcome-equivalent — nothing mutates row or rows across a sweep — so every schedule folds the same three encodings; engine=dedup certifies |set| = 1 over all picks (5122 unique states vs 32805 DFS paths)	width=4,sites=64,work=200000,engine=dedup

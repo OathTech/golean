@@ -1,9 +1,12 @@
 import Tests.UnseqScheduler
 import GoLean.GoCore.UnseqSound
+import GoLean.GoCore.EnumDedupSound
 import Lean
 
 /-! The post-import audit of the `unseq` construct's coherence and mechanism
-theorems (Stage B): every required theorem exists, and every declaration of
+theorems (Stage B) and of route α's certification of its pick (Stage D: the
+`stepFn`-path pick determinization, the pool coverage lemma and THE dedup
+checker theorem): every required theorem exists, and every declaration of
 every local module in the import closure depends on the classical trio only —
 no `sorry`, no axiom, no native decision. -/
 
@@ -12,6 +15,18 @@ open Lean
 namespace Tests.UnseqSchedulerAudit
 
 def exports : List Name := [
+    -- route α (Stage D): the `unseqNext`/`unseqPanic` picks in the certified dedup engine
+    ``GoLean.GoCore.Machine.consumesUnseqNext_shape,
+    ``GoLean.GoCore.Machine.consumesUnseqPanic_shape,
+    ``GoLean.GoCore.Machine.seqConsumption_unseqNext,
+    ``GoLean.GoCore.Machine.seqConsumption_unseqPanic,
+    ``GoLean.GoCore.Machine.stepThread_stepFn_path,
+    ``GoLean.GoCore.Machine.stepThread_oblivious,
+    ``GoLean.GoCore.Machine.stepThread_pick_run,
+    ``GoLean.GoCore.Machine.stepThread_total_covered,
+    ``GoLean.GoCore.Machine.stepMulti_total_covered,
+    ``GoLean.GoCore.Machine.checkCert_slowObs,
+    ``GoLean.GoCore.Machine.checkCertM_slowObs,
     ``GoLean.GoCore.Machine.stepUnseqEnter_sound,
     ``GoLean.GoCore.Machine.stepUnseqValue_sound,
     ``GoLean.GoCore.Machine.stepUnseqNext_sound,

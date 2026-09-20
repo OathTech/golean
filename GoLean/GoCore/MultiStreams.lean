@@ -120,11 +120,13 @@ def poolThreadOblivious (s : Store) (ts : Array Thread) (i : Nat) : Bool :=
     -- frame draws the `unseqPanic` site; the checker refuses it (fail
     -- closed) — the CLI enumerator carries such rows.
     else if consumesUnseqPanic c then false
-    -- Stage B: the `unseq` scheduler's pick position draws the `unseqNext`
-    -- site; the checker refuses it (fail closed — the certified dedup
-    -- engine is not extended in Stage B; route α of v2.1 §3.6 is owed
-    -- before Stage E). The default enumerator carries such rows.
-    else if consumesUnseqNext c then false
+    -- Stage B/D: the `unseq` scheduler's pick position draws the `unseqNext`
+    -- site at bound `|ready|`, read off the frame (`unseqNextBound`). A
+    -- bound-≤-1 consult pops nothing (G-U), so the step is oblivious; a
+    -- WIDE pick is a genuine draw — not oblivious, and the certified dedup
+    -- engine enumerates its branches instead (`innerVecs`, route α of
+    -- v2.1 §3.6, Stage D).
+    else if consumesUnseqNext c then decide (unseqNextBound c ≤ 1)
     else
       match arrivalCases ctx s ts i c with
       | .ok .cellPath => true
@@ -221,6 +223,33 @@ theorem stepFn_select_done {s : Store} {v : GoValue}
   simp only [applySelect_of_done h ch]
   rfl
 
+/-- **The `stepFn` path of the goroutine-step, as an equation** (route α,
+Stage D): at a live goroutine that is not blocked, not aborting, not
+spawning, whose arrival analysis is partnerless (`.cellPath`) and whose
+configuration is not a select apply, `stepThread` IS `stepFn`'s step
+wrapped in the pool's bookkeeping (the post-op boundary flag, the
+`privateStep` event with the pre-configuration's print bytes). Both the
+oblivious (`stepThread_oblivious`) and the one-pick (`stepThread_pick_run`)
+determinizations of `stepFn`-path shapes read the pool step off this
+equation. -/
+theorem stepThread_stepFn_path {s : Store} {ts : Array Thread} {i : Nat} {c : Config}
+    (hti : ts[i]? = some (.running c none))
+    (hblc : isBlockedConfig c = false)
+    (hab : c.abort? = none)
+    (hsp : spawnPlan c = none)
+    (harr : arrivalCases ctx s ts i c = .ok .cellPath)
+    (hselp : selectApplyPlan c = none)
+    (ch : Choices) :
+    stepThread ctx s ts i ch =
+      (stepFn ctx s c ch >>= fun (c', s', ch₂, tr) =>
+        pure (ts.setIfInBounds i (Thread.afterStepWith (c.boundaryFacts s) c'), s', ch₂,
+          ⟨i, .privateStep, [], (printOut? c).toList, tr⟩)) := by
+  unfold stepThread
+  rw [hti]
+  simp only [hblc, Bool.false_eq_true, reduceIte, hab, hsp, Bind.bind, Except.bind,
+    arrivalPlan_of_cellPath (ch := ch) harr]
+  rw [hselp]
+
 /-- **Stream obliviousness of the certified goroutine-step shapes**:
 under the `poolThreadOblivious` flags, a `stepThread` that succeeds
 under one stream succeeds under EVERY stream, with the same successor,
@@ -236,6 +265,7 @@ theorem stepThread_oblivious {s : Store} {ts : Array Thread} {i : Nat}
     (h : stepThread ctx s ts i ch₀ = .ok (ts', s', ch₀', ev)) :
     ch₀' = ch₀
       ∧ ∀ ch : Choices, stepThread ctx s ts i ch = .ok (ts', s', ch, ev) := by
+  have h₀ := h
   unfold poolThreadOblivious at hobl
   unfold stepThread at h
   cases hti : ts[i]? with
@@ -399,7 +429,27 @@ theorem stepThread_oblivious {s : Store} {ts : Array Thread} {i : Nat}
           rw [hnup] at hobl
           simp only [Bool.false_eq_true, reduceIte] at hobl
           cases hnn : consumesUnseqNext c with
-          | true => rw [hnn] at hobl; simp at hobl
+          | true =>
+            -- Route α (Stage D): a pick position whose ready set has ≤ 1
+            -- member — the consult pops nothing (G-U), the projection is
+            -- `none`, and `stepFn` is stream-oblivious there
+            -- (`stepFn_consumption_none`); the pool step is its wrapper.
+            rw [hnn] at hobl
+            simp only [reduceIte, decide_eq_true_eq] at hobl
+            obtain ⟨g, thenB, st, tg, env, k, rfl⟩ := consumesUnseqNext_shape hnn
+            simp only [unseqNextBound_pick] at hobl
+            have hsc : seqConsumption ctx s (.next (.unseqK g thenB st tg env .pick k)) = none := by
+              rw [seqConsumption_unseqNext, if_neg (by omega)]
+            have hpath := stepThread_stepFn_path (ctx := ctx) (s := s) hti hblc hab hsp rfl rfl
+            rw [hpath] at h₀
+            simp only [bind_eq_ok] at h₀
+            obtain ⟨⟨c₂, s₂, ch₂, tr₂⟩, hstep, h₀⟩ := h₀
+            simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h₀
+            obtain ⟨rfl, rfl, rfl, rfl⟩ := h₀
+            obtain ⟨rfl, hall⟩ := stepFn_consumption_none hsc hstep
+            refine ⟨rfl, fun ch => ?_⟩
+            rw [hpath ch, hall ch]
+            rfl
           | false =>
           rw [hnn] at hobl
           simp only [Bool.false_eq_true, reduceIte] at hobl
@@ -473,6 +523,51 @@ theorem stepThread_oblivious {s : Store} {ts : Array Thread} {i : Nat}
             | multi os =>
               rw [harr] at hobl
               cases hobl
+
+/-- **`stepFn`-path pick determinization** (route α, Stage D — the `stepFn`
+analogue of the L4 lemma `stepThread_l4_run`, vec→run direction): at a
+`stepFn`-path shape (`stepThread_stepFn_path`'s hypotheses) whose
+consumption projection is a bound-`b` pick with `2 ≤ b`, a SUCCESSFUL
+explicit-pick goroutine-step `[p]` determines the step under every stream
+whose raw pop at `b` reduces to `p` — same successor pool, same store, same
+event, the stream's tail returned. The dedup checker instantiates it at the
+two configuration-determined sites: `unseqPanic` (b = 2) and `unseqNext`
+(b = `unseqNextBound c`). Nothing about the rest of the pool is assumed:
+the pick's bound and effect are the stepping thread's own. -/
+theorem stepThread_pick_run {s : Store} {ts : Array Thread} {i : Nat} {c : Config}
+    (hti : ts[i]? = some (.running c none))
+    (hblc : isBlockedConfig c = false)
+    (hab : c.abort? = none)
+    (hsp : spawnPlan c = none)
+    (harr : arrivalCases ctx s ts i c = .ok .cellPath)
+    (hselp : selectApplyPlan c = none)
+    (hloc : c.appendTargetLocal)
+    {site : ChoiceSite} {b : Nat}
+    (hsc : seqConsumption ctx s c = some (site, b))
+    (hb : 2 ≤ b)
+    {p : Nat} (hplt : p < b)
+    {ts' : Array Thread} {s' : Store} {ev : StepEvent}
+    (hvec : stepThread ctx s ts i [p] = .ok (ts', s', [], ev)) :
+    ∀ {ch rest : Choices}, Choices.consume ch b = (p, rest) →
+      stepThread ctx s ts i ch = .ok (ts', s', rest, ev) := by
+  intro ch rest hcons
+  have hnb : ¬ b ≤ 1 := by omega
+  have hcP : Choices.consume [p] b = (p, []) := by
+    simp only [Choices.consume]
+    have hmax : max 1 b = b := by omega
+    rw [hmax, Nat.mod_eq_of_lt hplt]
+  rw [stepThread_stepFn_path hti hblc hab hsp harr hselp] at hvec
+  simp only [bind_eq_ok] at hvec
+  obtain ⟨⟨c₂, s₂, ch₂, tr₂⟩, hstep, hvec⟩ := hvec
+  simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hvec
+  obtain ⟨rfl, rfl, rfl, rfl⟩ := hvec
+  obtain ⟨-, hall⟩ := stepFn_consumption_some hloc hsc hstep
+  have hpk : (Choices.consumeAt site b ch).1 = (Choices.consumeAt site b [p]).1 := by
+    simp only [Choices.consumeAt, hnb, reduceIte, hcons, hcP]
+  have hrest : (Choices.consumeAt site b ch).2 = rest := by
+    simp only [Choices.consumeAt, hnb, reduceIte, hcons]
+  rw [stepThread_stepFn_path hti hblc hab hsp harr hselp ch, hall ch hpk, hrest]
+  rfl
 
 -- `raceUpdate_oblivious` DELETED (stage B, audit Q2): the detector
 -- folds the step's EVENT and takes no stream, so its verdict is

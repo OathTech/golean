@@ -5064,9 +5064,12 @@ def entryConsult? (σ : Store) (fid : FuncId) (args : List GoValue) : Option (Ch
 /-- Does this configuration's next step draw the `unseqPanic` pick (E13
 option (b), `e13-b`)? `true` exactly at a panic that has reached an
 unsequenced-operand probe frame — `.panicking _ (.probeK _)`, bound 2,
-always a pop. The stream-obliviousness checkers exclude exactly this
-(`stepFn_oblivious`' `hnu`, `poolThreadOblivious`, `innerVecs`) — a
-fail-closed flag like `consumesAppendSlice`. -/
+always a pop. The obliviousness checkers exclude exactly this
+(`stepFn_oblivious`' `hnu`, `poolThreadOblivious`) — a fail-closed flag
+like `consumesAppendSlice`; the certified dedup engine ENUMERATES it
+instead since Stage D (`innerVecs` N-PICK: the vectors `[0]`, `[1]`, the
+same `stepFn`-path shape as `unseqNext` — `stepThread_pick_run`). Retires
+with the legacy lowering at Stage E. -/
 def consumesUnseqPanic : Config → Bool
   | .panicking _ (.probeK _) => true
   | _ => false
@@ -5074,14 +5077,30 @@ def consumesUnseqPanic : Config → Bool
 /-- Does this configuration's next step draw the `unseqNext` pick (the
 `unseq` scheduler's step, Stage B)? `true` at EVERY pick position
 `.next (.unseqK … .pick _)` — conservative, like `consumesSelect`: the
-stream-obliviousness checkers (`stepFn_oblivious`' `hnn`,
-`poolThreadOblivious`, `innerVecs`) refuse the shape whether or not the
-ready set is wide; the certified dedup engine is NOT extended in Stage B
-(route α of v2.1 §3.6 is owed before Stage E — the default enumerator
-carries these rows). `seqConsumption` reports the EXACT bound. -/
+sequential obliviousness checker (`stepFn_oblivious`' `hnn`) refuses the
+shape whether or not the ready set is wide. The POOL checkers read the
+bound off the frame (`unseqNextBound`, below — route α of v2.1 §3.6,
+Stage D): `poolThreadOblivious` is `true` exactly at a bound-≤-1 pick (a
+consult that pops nothing, G-U) and the certified dedup engine's
+`innerVecs` enumerates a wide pick's `|ready|` branches
+(`stepThread_pick_run`). `seqConsumption` reports the EXACT bound. -/
 def consumesUnseqNext : Config → Bool
   | .next (.unseqK _ _ _ _ _ .pick _) => true
   | _ => false
+
+/-- **The `unseqNext` pick's BOUND, read off the configuration alone**
+(route α, Stage D): `|ready|` at a pick position, `0` elsewhere. The ONE
+`ready` computation (Unseq.lean, review R5) — `seqConsumption`'s arm below
+reports exactly this when it is ≥ 2 (`seqConsumption_unseqNext`,
+MachineSound), and the dedup checker's branch vectors enumerate exactly
+`[0, unseqNextBound c)` (`innerVecs`, EnumDedupCheck). It reads NO store
+and NO other goroutine: the scheduler's pick depends on the stepping
+thread's own frame only, which is what makes the branch-vector
+construction configuration-determined (the pool coverage lemma
+`stepThread_total_covered` needs nothing about the rest of the pool). -/
+def unseqNextBound : Config → Nat
+  | .next (.unseqK g _ st _ _ .pick _) => (g.ready st).length
+  | _ => 0
 
 /-- Does this configuration's abort draw the `repanicCollapse` pick
 (BUG-004 item 1, landing chunk L3)? `true` exactly at an abort

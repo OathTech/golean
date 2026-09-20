@@ -115,6 +115,62 @@ def expectTapeStop (name : String) (program : Program) (fn : String) (tape : Lis
       else fail s!"{name}: tape {tape} stopped without naming {repr needle}: {e}"
   | .ok (m, _) => fail s!"{name}: tape {tape} expected the stop {repr needle}, got {repr m}"
 
+/-! ## Route α (Stage D): the certified dedup engine on the same programs
+
+`expectDedupSet` runs the UNTRUSTED engine (`EnumDedup.buildCert`) from the
+CLI's own seeded pool (`CLI.dedupSeed` — the one construction the
+`--engine dedup` path uses), validates the certificate with THE VERIFIED
+CHECKER (`checkCert`, unmodified; `checkCert_slowObs` is what makes an
+accepted certificate the set-equality claim) and compares the certified
+member set EXACTLY with the expected members. The certified vocabulary is
+the readout values and the Go terminal — no output: a printing program is
+REFUSED by the engine by name (`expectDedupRefusal`), never certified. -/
+
+/-- A checker `Obs` as the harness's `Member` (int readouts; a panic's message). -/
+def projectObs (o : Obs) : Member :=
+  match o with
+  | .ok vs => { status := "ok",
+                values := vs.filterMap fun v => match v with | .int n _ => some n | _ => none }
+  | .terminal t => { status := t.status, msgHas := t.message }
+
+def expectDedupSet (name : String) (program : Program) (fn : String) (expected : List Member)
+    (workCap : Nat := 5000000) : IO Bool := do
+  match CLI.enumSetup program fn #[] with
+  | .error err => fail s!"{name}: setup failed: {repr err}"
+  | .ok ep =>
+  match CLI.dedupSeed ep with
+  | .error err => fail s!"{name}: seed failed: {repr err}"
+  | .ok (resultLocs, m₀, r₀) =>
+  match EnumDedup.buildCert ep.ctx resultLocs m₀ r₀ workCap with
+  | .error e => fail s!"{name}: dedup engine refused: {e}"
+  | .ok (cert, stats) =>
+    if !checkCert ep.ctx dedupNodeEqb resultLocs m₀ r₀ cert then
+      fail s!"{name}: certificate REFUSED by the verified checker (nodes={stats.nodes} edges={stats.edges})"
+    else
+      let actual := cert.members.toList.map fun t => projectObs t.1
+      let unmatchedExpected := expected.filter fun e => !(actual.any (memberMatches e ·))
+      let unmatchedActual := actual.filter fun a => !(expected.any (memberMatches · a))
+      if unmatchedExpected.isEmpty && unmatchedActual.isEmpty && actual.length == expected.length then
+        ok s!"{name}: CERTIFIED exact set of {expected.length} member(s) — nodes={stats.nodes} edges={stats.edges} dedupHits={stats.dedupHits}"
+      else
+        fail s!"{name}: certified set mismatch — expected {repr expected}; actual {repr actual}; unmatched expected {repr unmatchedExpected}; unmatched actual {repr unmatchedActual}"
+
+/-- The engine's NAMED refusal (a printing step, a refused shape, the work
+budget) — never a certificate. -/
+def expectDedupRefusal (name : String) (program : Program) (fn : String) (needle : String)
+    (workCap : Nat := 5000000) : IO Bool := do
+  match CLI.enumSetup program fn #[] with
+  | .error err => fail s!"{name}: setup failed: {repr err}"
+  | .ok ep =>
+  match CLI.dedupSeed ep with
+  | .error err => fail s!"{name}: seed failed: {repr err}"
+  | .ok (resultLocs, m₀, r₀) =>
+  match EnumDedup.buildCert ep.ctx resultLocs m₀ r₀ workCap with
+  | .error e =>
+      if (e.splitOn needle).length > 1 then ok s!"{name}: dedup engine refused by name ({needle})"
+      else fail s!"{name}: dedup engine refused, but not naming {repr needle}: {e}"
+  | .ok (cert, _) => fail s!"{name}: expected the dedup refusal {repr needle}, got a certificate with {cert.members.size} member(s)"
+
 def okZ (z : Int) : Member := { status := "ok", values := [z] }
 def okOut (out : String) : Member := { status := "ok", output := out }
 def panicOut (needle : String) (out : String := "") : Member :=

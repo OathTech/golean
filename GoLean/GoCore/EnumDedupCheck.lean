@@ -22,6 +22,12 @@ The certified shape classes (the fragment, §4 of the note):
 - **N-L4** — the target is a single-arrival multi-candidate pairing
   (`arrivalCases = .ok (.single _ cs)`, `2 ≤ cs.length`): one vector
   per waiter pick.
+- **N-PICK** (route α, Stage D; `docs/2026-09-20_unseq-stage-d-design.md`)
+  — the target's step is a `stepFn`-path pick whose bound is a function
+  of the CONFIGURATION alone: the `unseq` scheduler's `unseqNext`
+  (bound `|ready|`, `unseqNextBound`) and the legacy `unseqPanic`
+  (bound 2): one singleton vector per pick position, determinized by
+  `stepThread_pick_run` through `stepFn_consumption_some`.
 Everything else — L2 `.multi` arrivals, consuming selects, `mapIterK`
 picks, append spills — REFUSES (`none`), the Sym quit mold: a row
 needing a refused shape stays on the DFS engine with its existing
@@ -127,13 +133,20 @@ def innerVecs (s : Store) (ts : Array Thread) (i : Nat) :
       else if consumesTryLock c then none
       else if isMapIterNext c then none
       else if consumesNilValueMethod ctx c then none
-      -- E13 option (b): a panic at an unsequenced-operand probe frame draws
-      -- the `unseqPanic` pick — outside the certified fragment (fail
-      -- closed; the CLI enumerator carries such rows).
-      else if consumesUnseqPanic c then none
-      -- Stage B: the `unseq` scheduler's pick — outside the certified
-      -- fragment (fail closed; route α of v2.1 §3.6 is owed before Stage E).
-      else if consumesUnseqNext c then none
+      -- N-PICK (route α, Stage D): the two `stepFn`-path picks whose bound
+      -- is a function of the CONFIGURATION alone — one singleton vector per
+      -- pick, covered by `stepThread_pick_run` (EnumDedupSound). E13 option
+      -- (b)'s legacy `unseqPanic`: bound 2, constant.
+      else if consumesUnseqPanic c then some [[0], [1]]
+      -- The `unseq` scheduler's pick: bound `|ready|`, read off the frame
+      -- (`unseqNextBound`). A bound-≤-1 pick is oblivious and was taken
+      -- above (`poolThreadOblivious`); should one reach here, refuse
+      -- (fail closed) rather than emit a vector the coverage lemma does
+      -- not justify.
+      else if consumesUnseqNext c then
+        (if 2 ≤ unseqNextBound c then
+          some ((List.range (unseqNextBound c)).map fun p => [p])
+        else none)
       else
         match arrivalCases ctx s ts i c with
         | .ok (.single _ cs) =>

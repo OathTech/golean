@@ -1491,6 +1491,21 @@ def explore (ep : EnumProgram) (runFuel width sites cap workCap : Nat)
       throw s!"alias guard: a probe pick ≥ the computed site bound produced an observation OUTSIDE the enumerated set — the bound accountant (or the case's width assertion) is REFUTED; cannot certify. Probe observation: {pobs.compress}"
   return out
 
+/-- The dedup path's SEEDED POOL: the subject's entry (parameters bound,
+result cells allocated, result locations pinned) as the root `MultiConfig`
+with an empty detector — the one construction `runDedupObservations` and the
+tests' certified-set checks (`Tests/UnseqHarness.lean`) share, so a test's
+`m₀` is the CLI's `m₀` by definition, not by mirror. Factored out at Stage D
+(route α); the three entry failures fold into one `Stop`. -/
+def dedupSeed (ep : EnumProgram) :
+    Except Stop (List Loc × GoCore.Machine.MultiConfig × GoCore.Machine.RaceState) := do
+  let (env, s₂) ← GoCore.Machine.bindParams ep.ctx [] ep.σ₀ ep.func.args.toList ep.args.toList
+  let (frameEnv, s₃) ← GoCore.Machine.allocDecls ep.ctx env s₂ ep.func.results.toList
+  let resultLocs ← GoCore.Machine.pinResultLocs frameEnv ep.func.results.toList
+  return (resultLocs,
+    ⟨#[.running (.exec ep.func.body frameEnv (.frame [] [] [] [] .stop)) none], s₃, 0⟩,
+    ({} : GoCore.Machine.RaceState))
+
 /-- The dedup-engine path (POR slice, `docs/2026-08-21_w32-por-design.md`):
 build the state-graph certificate (untrusted engine), run THE VERIFIED
 CHECKER, and only then print the set — the printed lines are backed by
@@ -1510,24 +1525,11 @@ def runDedupObservations (ep : EnumProgram) (cfg : EnumArgs) : IO UInt32 := do
   if cfg.allowNonterm.isSome then
     IO.eprintln "coverage-observations: --engine dedup does not support --allow-nonterm (refused fail-closed pending the M-9 ruling; use the DFS engine)"
     return 1
-  match GoCore.Machine.bindParams ep.ctx [] ep.σ₀ ep.func.args.toList ep.args.toList with
+  match dedupSeed ep with
   | .error e =>
       IO.eprintln s!"coverage-observations: subject entry failed: {renderStop e}"
       return 1
-  | .ok (env, s₂) =>
-  match GoCore.Machine.allocDecls ep.ctx env s₂ ep.func.results.toList with
-  | .error e =>
-      IO.eprintln s!"coverage-observations: subject entry failed: {renderStop e}"
-      return 1
-  | .ok (frameEnv, s₃) =>
-  match GoCore.Machine.pinResultLocs frameEnv ep.func.results.toList with
-  | .error e =>
-      IO.eprintln s!"coverage-observations: subject entry failed: {renderStop e}"
-      return 1
-  | .ok resultLocs =>
-    let m₀ : GoCore.Machine.MultiConfig :=
-      ⟨#[.running (.exec ep.func.body frameEnv (.frame [] [] [] [] .stop)) none], s₃, 0⟩
-    let r₀ : GoCore.Machine.RaceState := {}
+  | .ok (resultLocs, m₀, r₀) =>
     match EnumDedup.buildCert ep.ctx resultLocs m₀ r₀ cfg.workCap with
     | .error err =>
         IO.eprintln s!"coverage-observations: dedup engine: {err}"
