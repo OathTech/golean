@@ -177,3 +177,9 @@ the quote; `check-spec-anchors` EXIT=0 after). 3705 rows otherwise unchanged; ne
 Tail: `r44-ci-slow.tail.txt`. Candidate vs tracked record: `claim` and `observations` IDENTICAL; 16 input
 hashes differ (the decoder and its dependants) and the receipt (clean `f14a05e5`, binary `90024323…`) —
 INSTALLED in this commit; a provenance refresh, not a re-pin.
+
+**Green re-run at the records commit `5678d253`** ([AGENT] coordinator, 2026-09-20): full
+`GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff` → EXIT=0, `RESULT: PASS`, `spec-anchor citations
+resolve at the pin`, `baseline diff FULL (3705/3705, no regression)`, `certificate provenance` ok, negatives
+394 no regression; the reconciler at its single pre-existing finding. Round 44 closed; Stage C is on main;
+the box-wide lock released.
