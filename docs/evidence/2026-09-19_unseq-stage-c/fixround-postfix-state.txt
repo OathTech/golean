@@ -1,0 +1,16 @@
+# post-fix state: scripts/diff-one on the six rows, FIXED candidate binary 90024323dbe00082, 2026-09-20T19:30:44Z
+diff-coverage: membership sampling budget K=32 (mode: gate; alternate plain/-race, early stop at members=)
+building Lean executable...
+Build completed successfully (96 jobs).
+native frontend: per-case type-check + emit (no batch export)
+FAIL	evalorder/legacy-logical-vs-call/and-vs-call	globals,closures,bools,calls,print,evaluation_order	stage=differential	detail=Lean={"output":"logical true 0\n","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]} Go={"output":"logical false 0\n","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]} left:  {"output":"logical true 0\n","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}\nright: {"output":"logical false 0\n","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}
+FAIL	evalorder/legacy-logical-vs-call/or-vs-call	globals,closures,bools,calls,print,evaluation_order	stage=differential	detail=Lean={"output":"logical true 0\n","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]} Go={"output":"logical false 0\n","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]} left:  {"output":"logical true 0\n","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}\nright: {"output":"logical false 0\n","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}
+PASS	evalorder/legacy-logical-vs-call/call-first-control	globals,closures,bools,calls,print,evaluation_order
+PASS	evalorder/unseq-const-cell/const-guard-left	closures,bools,calls,evaluation_order
+PASS	evalorder/unseq-const-cell/elem-assign-const-int	closures,slices,indexing,calls,assignment,print,evaluation_order
+PASS	evalorder/unseq-const-cell/elem-assign-const-string	closures,slices,indexing,calls,assignment,print,strings,evaluation_order
+
+differential coverage summary: cases=6 pass=4 fail=2 export_status=0
+results: artifacts/coverage/latest.tsv
+metadata: artifacts/coverage/latest.meta.tsv
+DIFF-ONE EXIT=1

@@ -1,0 +1,22 @@
+# Fix-round choice-trace SUBSET: main 6a7beb3d (main tree, main's frontend, main's binary a014183b0dfad716) vs this tree (the candidate frontend — unchanged by the fix round — and the FIXED binary 90024323dbe00082), lane core/unseq-stage-c-0919 audit fix round, [AGENT] 2026-09-20
+# method: the C3 comparison (choice-trace-c2.txt) on 279 ids OUTSIDE the pilot's 25 packages and outside the two new packages — every 12th outside-pilot id of scripts/coverage-manifest (3343 outside-pilot ids; 210 packages touched), the two standing exclusions left out; scripts/choice-trace-corpus --dump --jobs 6 --golean BIN on each side (.tmp/fixround/run-trace.sh); per-row comparison of the SORTED dump records (stream, idx, phase, site, bound, streamValue, pick) + the results (stream, status, consumed, wide, obsHash) — .tmp/fixround/trace-compare.py
+# runs:
+START 2026-09-20T19:37:08Z tree=.tmp/main-tree bin=/home/dev/projects/golean/.lake/build/bin/golean sha=a014183b0dfad716 ids=279
+TRACE_EXIT=0 END 2026-09-20T19:37:45Z
+START 2026-09-20T19:37:16Z tree=/home/dev/projects/golean/.claude/worktrees/unseq-stage-c bin=.lake/build/bin/golean sha=90024323dbe00082 ids=279
+TRACE_EXIT=0 END 2026-09-20T19:37:54Z
+# headline summaries (main, then candidate):
+rows traced: 278 ids, 1668 (id,stream) lines; 0 id(s) the tracer could not run (ERROR)
+  by lane: confluent=5, membership=8, racy=4, strict=261
+  consumptions per site (all streams): l1Sched=451, appendSpill=229, postOp=189, mapIter=90, backEdge=65, l5ExitWindow=18, tryLock=15, repanicCollapse=12, unseqPanic=6, nilValueMethodText=6
+rows traced: 278 ids, 1668 (id,stream) lines; 0 id(s) the tracer could not run (ERROR)
+  by lane: confluent=5, membership=8, racy=4, strict=261
+  consumptions per site (all streams): l1Sched=451, appendSpill=229, postOp=189, mapIter=90, backEdge=65, l5ExitWindow=18, tryLock=15, repanicCollapse=12, unseqPanic=6, nilValueMethodText=6
+# the one export refusal, identical on both sides:
+complex/generic-type-set/explicit-constant	nativefrontend: native frontend unsupported: basic type complex64
+# per-row comparison:
+main: 41 rows with dump records (1081 records), 278 rows with results
+cand: 41 rows with dump records (1081 records), 278 rows with results
+row ids compared: 278; byte-identical (dump + results): 278; differing: 0; sha256 of the identical block af6e9b95e7aad5c3
+COMPARE EXIT=0
+# per-chunk dump files: dump-0..5.tsv byte-identical (cmp) on both sides

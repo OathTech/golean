@@ -1,0 +1,18 @@
+# CLI sanity on the fixed binary 90024323dbe00082, 2026-09-20T19:30:33Z
+[cguard cguard] EXIT=0 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":2}]}
+[celem celem] EXIT=0 {"output":"f
+","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":59}]}
+[cstr cstr] EXIT=0 {"output":"f
+","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}
+[native-cguard cguard] EXIT=0 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":2}]}
+[native-celem celem] EXIT=0 {"output":"f
+","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":59}]}
+[native-cstr cstr] EXIT=0 {"output":"f
+","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}
+[mut-nested-completion-join r2cTrue] EXIT=1 {"message":"Tests/unseq-wire/mut-nested-completion-join.json: native lowering: unseq: invalid branch join at program.funcs[4].body.body[5] — 'call9' uses '$u4', confined to the region of 'guard2' (the completion binder is the only join; v2.1 §1 G); refused by name","schema":"golean-observation-
+[mut-nested-completion-join r2cFalse] EXIT=1 {"message":"Tests/unseq-wire/mut-nested-completion-join.json: native lowering: unseq: invalid branch join at program.funcs[4].body.body[5] — 'call9' uses '$u4', confined to the region of 'guard2' (the completion binder is the only join; v2.1 §1 G); refused by name","schema":"golean-observation
+# the untouched r2c (a nested completion consumed INSIDE the outer region) still decodes and runs:
+[r2c r2cTrue] EXIT=0 {"output":"g
+k
+sink 1 true 7
+","schema":"golean-observation-v1","status":"ok","values":[]}

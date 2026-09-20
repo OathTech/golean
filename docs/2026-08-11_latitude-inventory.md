@@ -823,7 +823,9 @@ gc's early store a deviation, L-016, 2026-09-02).
   call-mutates` (`a[0] += f()`: {15, 105}), BUG-104's `compound-call-target-vs-
   call` and BUG-102's `compound-call-target-vs-len` (BUG-112, the fixed entry),
   and the BUG-101 pair (`assert-ok-early-len-hoist` {6, panic}, `slice-value-
-  early-len-hoist` {12, 22}) — the **known ≠ gc** marker this heading carried
+  early-len-hoist` {12, 22}; on the assertion-kind rows gc's draw is the EARLY
+  member — gc copies `x.(T)` at its lexical position (audit F9, E13's Stage C
+  bullet) — a member, never the default) — the **known ≠ gc** marker this heading carried
   for the EARLY-realized kinds is RETIRED: BUG-101 is FIXED, and E2 LEAVES §10's
   known-≠-oracle list. Every other row of this axis (a target operand beside a
   call outside the pilot grammar — maps, pointers, fields, receives, multi-
@@ -1673,8 +1675,21 @@ machine construct §3, the frontend §4, the residuals §6).
   narrowing (`assert-middle`, `index-middle`: the operand before the FIRST
   call is the third member; `two-index-left-call`, `index-assert-left-call`:
   four members — each failing operand may win, before or after the call).
-  The 24 E13 rows the pilot lowers keep gc's draw in their sets (K=32 and
-  K=80). Rows outside the pilot grammar (maps, receives, allocations, method
+  The 24 E13 rows the pilot lowers keep gc's draw in their sets — K=32 at the
+  C2/C3 `ci --diff` gates and K=80 at the Stage C audit fix round's
+  `scripts/capped scripts/ci --slow` (2026-09-20, the first `--slow` after the
+  lowering existed: EXIT=1 in 954 s (2026-09-20 19:39:04–19:54:58Z), K=80 (`membership_draws 80`); 3705 rows 3458 PASS / 247 FAIL in the run = the pinned 3459 / 246 with the one 5a-class row red; DRIFT = exactly `imported-goose/channel/google-search` PASS→FAIL/membership (STALE certificate for `NativeToIR.lean`; fresh re-certification «unchanged set; seconds=164.598»); every other step ok; re-pin guard 0 PASS→non-PASS; audit F4 — the «K=80» this bullet first
+  carried cited C1's `--slow`, which predates the lowering). ONE NAMED
+  EXCEPTION to «the canonical slot = gc's realization» (audit F9): gc realizes
+  TYPE ASSERTIONS EARLY — `order.go` copies `x.(T)` to a temp at its lexical
+  position when `T` is not pointer-shaped (`ODOTTYPE` → `copyExprClear`), so
+  gc's draw on `assert-left-call` (``·conversion), `assert-middle` (`wit 1`),
+  `index-assert-left-call`, BUG-101's pair and the audit's a34 (`iv.(string) +
+  f()`: `s!`) is the EARLY member while the all-zero tape realizes the LATE
+  one; every such draw is a MEMBER and every such row a MEMBERSHIP row — a
+  STRICT row of that shape goes red at `differential` rather than passing
+  silently (route it to membership; it is this exception, not a machine bug).
+  Rows outside the pilot grammar (maps, receives, allocations, method
   calls, `make`, `min`, address-of operands) keep the probe and its residuals.
 - RESIDUAL NARROWINGS AND REFUSALS (recorded, design §6; rewritten at
   the e13-b audit fix round 2026-09-05 — the first cut over-stated the

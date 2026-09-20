@@ -80,6 +80,17 @@ under `GoLean/GoCore/` moved, no theorem restated, no positional proof tag touch
    `why` correction on `multi-assign/index-target-rhs-call-order` (752 → 932 — the design's own
    arithmetic slip), this handoff, the evidence README's C3 section, the whole-corpus
    choice-trace comparison (§4).
+5. **Audit fix round (2026-09-20; §10) — the runtime commit `e73c706f` [TRUST-SURFACE
+   `GoLean/NativeToIR.lean`] + a records commit.** The adversarial audit
+   (`docs/2026-09-20_unseq-stage-c-audit.md`) returned FIX-FIRST: F2 (the decoder refused the
+   frontend's own constant-in-a-cell copy — a coverage REGRESSION on legal Go; D8 now admits
+   constant heads, three red-first rows `evalorder/unseq-const-cell/*` born FAIL → PASS, three
+   hand-built + three native fixtures, a `check-wire-boundary` control), F3 (D12 now confines a
+   nested guard's completion binder to its enclosing region; the 19th mutant), F1 (a pre-existing
+   LEGACY-path wrong answer — a `||`/`&&` evaluated after a later call — ROWED as BUG-113 with two
+   FAIL rows + a control in `evalorder/legacy-logical-vs-call/`, fix owed to Stage E), F4 (the
+   K=80 claim backed by this round's `ci --slow`), F5–F9 records. Gate: `scripts/capped scripts/ci
+   --slow`, EXIT=1 in 954 s (2026-09-20 19:39:04–19:54:58Z), K=80 (`membership_draws 80`); 3705 rows 3458 PASS / 247 FAIL in the run = the pinned 3459 / 246 with the one 5a-class row red; DRIFT = exactly `imported-goose/channel/google-search` PASS→FAIL/membership (STALE certificate for `NativeToIR.lean`; fresh re-certification «unchanged set; seconds=164.598»); every other step ok; re-pin guard 0 PASS→non-PASS. Baseline 3705 = 3459 / 246.
 
 ## 2. The pilot grammar and the census
 
@@ -148,7 +159,13 @@ SET is unchanged but whose stream→member mapping differs (`compound-assert-vs-
 observation is main = C2 on every pre-existing row except the two designed fixes
 (`compound-call-target-vs-call`: main `f`·[9] → C2 `f wit 5`·[9], gc's; `compound-call-target-vs-len`:
 refused → ``·[5]). Consumption census: `unseqNext` 532 appears, `unseqPanic` 417 → 288, every other
-site's count identical on both sides.
+site's count identical on both sides. **What the born `r2b`'s difference from main IS (audit F5,
+added at the fix round):** on `sinkL(left || b, change())` main's legacy default is `logical true 0`
+— the `||` evaluated AFTER the lexically later call, a member spec#Order_of_evaluation FORBIDS (gc
+`logical false 0`); the pilot's graph anchors `change()` at the guard's COMPLETION and answers gc's
+value. The difference is a fix, not latitude — and on the legacy path (an operand outside the pilot
+grammar, e.g. a package variable) the wrong answer is still main's and the candidate's: BUG-113,
+rowed red-first (`evalorder/legacy-logical-vs-call/`), Stage E's fix (§10).
 
 ## 5. The latitude re-classifications (C3; `docs/2026-08-11_latitude-inventory.md`)
 
@@ -199,8 +216,9 @@ exact-key discipline, refused by every earlier decoder as an unknown statement).
 
 ## 8. Where this lane stopped; the next command
 
-Branch-complete at the C3 records commit (this file's commit), parked, clean. The merge train's
-command: `git checkout main && git merge --ff-only core/unseq-stage-c-0919`. **5a IS OWED**: the
+Branch-complete at the audit fix round's records commit (§10; the C3 records commit was the
+pre-audit end state), parked, clean. The merge train's command: `git checkout main && git merge
+--ff-only core/unseq-stage-c-0919`. **5a IS OWED**: the
 wire schema and the decoder changed (`GoLean/NativeToIR.lean` is a certification input — the
 certificate reports STALE at every gate of this lane; C1's `--slow` re-certified the one
 tier=slow row «unchanged set»), so at the merged tip the train runs `scripts/build-certified`,
@@ -230,3 +248,77 @@ round's 5a records commit and re-runs the gate green.
 - The records: the baseline re-pin's header vs gate #2's drift block; BUG-101/102/104/112's
   Cases lines vs `check-bugs`; the inventory's §10 list edit; the census numbers (120/28,
   133/29, 25/117, twin 0).
+
+## 10. Audit fix round (2026-09-20) — the dispositions of `docs/2026-09-20_unseq-stage-c-audit.md`
+
+[AGENT] fix-round worker, the same lane (`core/unseq-stage-c-0919`, worktree
+`.claude/worktrees/unseq-stage-c`), over the candidate `2dac6a75` (main `6a7beb3d`, no drift). The
+audit returned FIX-FIRST — MERGE-CLEAN on the semantics of every emitted graph, three items to fix
+before the merge (F1–F3), one records claim (F4), nits (F6–F8), one note (F9). Authority: [USER]
+Mike 2026-09-20 «Great, launch the audit» (verbatim, relayed by the [AGENT] coordinator — cited as
+relayed); the dispositions below are the coordinator's ([AGENT]), disclosed at the merge ask. Two
+commits: the RUNTIME commit `e73c706f` [TRUST-SURFACE `GoLean/NativeToIR.lean`] (the decoder's
+D8/D12, the fixtures, the gate controls, the six corpus rows, BUG-113, the baseline) gated by the
+full `scripts/capped scripts/ci --slow`, and the RECORDS commit that carries this section (the
+design note, the inventory, the ledger, the evidence README). No `GoLean/GoCore/` file changed; no
+legacy-emitter semantic change (`tools/nativefrontend` is byte-identical to `2dac6a75`'s); no
+theorem changed. Evidence: `docs/evidence/2026-09-19_unseq-stage-c/fixround-*.txt`.
+
+| finding | disposition | what changed | where |
+|---|---|---|---|
+| **F2** COHERENCE-GAP, a fail-closed REGRESSION: the frontend copies a CONSTANT into a cell (`x := true && f()`, `a[f()] = 5`, `a[f()] = "s"` — design §6's «a constant or atom value is copied into one»), the decoder's D8 refused the head by name; all three ran on main | **FIXED, decoder side** (the design is the authority): D8 admits a bare `int`/`bool`/`string` head — the copy into a cell, trivially in normal form; D9's existing check refuses a constant whose type disagrees with its cell (the named refusal the brief asks for). The refusal text lists the constant among the admitted heads. | `unseqCheckHead` (`\| "int" \| "bool" \| "string" => pure ()`); design §5 D8; three RED-FIRST rows `evalorder/unseq-const-cell/{const-guard-left,elem-assign-const-int,elem-assign-const-string}` (the audit's a14/a15/a16 verbatim): born FAIL/lean-observation on the pre-fix candidate binary (`dbf8fab1…`: «head 'bool' … outside the Stage C fragment», the program refused at its first function), PASS on the fixed binary (`90024323dbe00082`) — `fixround-born-state.txt`, `fixround-postfix-state.txt`; the fix RESTORES: main's frontend + main's binary (`a014183b…`) give the SAME three observations byte for byte (2; `f`·59; `f`·"xs") — `fixround-main-vs-candidate.txt`. Fixtures: `Tests/unseq-wire/{cguard,celem,cstr}.json` (hand-built) + `native-{cguard,celem,cstr}.json` (the frontend's own lowering) — each a singleton = main's answer, exact over the wire; `scripts/check-wire-boundary` gains the constant-head positive control (9 unseq-node controls). | `GoLean/NativeToIR.lean`; `Tests/unseq-wire/build.py`, `src/{cguard,celem,cstr}/`; `Tests/UnseqWire.lean`; `scripts/check-wire-boundary`; `Corpus/coverage/exec/evalorder/unseq-const-cell/` |
+| **F3** COHERENCE-GAP: D12's static G did not confine a NESTED guard's completion binder to the OUTER region — a hand-built `then` consuming it decoded and RAN when the outer region was active, refused only dynamically when it skipped | **FIXED, decoder side**: `unseqConfinedTo?` confines a guard's completion binder to THE GUARD'S OWN region (`region`, `none` for a top-level guard) instead of to nothing; the outer join (inside the outer region) still consumes it, a store/`then`/outside occurrence no longer can. The machine's dynamic refusal `UnseqGraph.unproducedConsumer?` (GoLean/GoCore/Unseq.lean, UNCHANGED; Stage B tests F1/A4–A5 in `Tests/UnseqScheduler.lean`) stays behind the static net — DEFENCE IN DEPTH, now said in the spec (design §5 D12). | Mutant `mut-nested-completion-join` (the audit's m02/m02b on R2c: `sink3` consumes the inner `&&`'s completion `$u4` instead of the outer `$u5`): refused BY NAME at decode for BOTH `b` values — «'call9' uses '$u4', confined to the region of 'guard2'» (`fixround-cli-sanity.txt`); the 19th mutant in `mutants.tsv`, in-process and through the CLI; `check-wire-boundary` control `unseq-nested-completion`. The untouched R2c wires (the inner completion consumed INSIDE the outer region by `join7`) still decode and run to their sets. | `GoLean/NativeToIR.lean` `unseqConfinedTo?`; `Tests/unseq-wire/build.py`, `mutants.tsv`; `scripts/check-wire-boundary`, `scripts/check-unseq-wire` |
+| **F1** WRONG-ANSWER, pre-existing on the LEGACY path: `sinkL(left \|\| b, change())` with `left` a package variable evaluates the `\|\|` AFTER the later call (main = candidate `logical true 0`; gc `logical false 0`; spec#Order_of_evaluation orders binary logical operations and calls lexically among themselves) | **ROWED, not fixed** (Stage E's; the legacy emitter is out of this round's scope): **BUG-113** filed — `Status: open`, `Pinned-by: differential`, the cause (the ANF hoist lifts the call to a temp BEFORE the statement, the `\|\|` stays inline), the fix plan (Stage E's migration of the `&&`/`\|\|` sweeps to `unseq`, or the E1 completion anchoring in the legacy hoister). | Package `evalorder/legacy-logical-vs-call/` (the audit's c01/c02 verbatim): `or-vs-call`, `and-vs-call` born FAIL/differential (Lean `logical true 0`, Go `logical false 0`) on BUG-113's `Cases:` line — the ratchet: a NEW red, added to the baseline with its written reason; `call-first-control` (`sinkR(change(), left \|\| b)`) PASS. The two frontends' wires for the package are byte-identical and both binaries answer the same (`fixround-main-vs-candidate.txt`). | `docs/BUGS.md` BUG-113; `Corpus/coverage/exec/evalorder/legacy-logical-vs-call/`; `baselines/native-full.tsv` |
+| **F5** RECORDS: the C3 trace analysis did not say what `r2b`'s difference from main IS | **CORRECTED** here and in the evidence README §C3: the born strict row `evalorder/unseq-pilot/r2b` (a PRIVATE `left`, lowered as an `unseq` graph with E1 anchored at the guard's COMPLETION) answers gc's `logical false 0`; main's legacy default on the same source is `logical true 0` — a spec-FORBIDDEN member, the F1 wrong answer on the legacy path. The difference is a FIX, not latitude: `r2b` is the pilot-grammar spelling of BUG-113. | §4 of this handoff (the C3 paragraph) and `docs/evidence/2026-09-19_unseq-stage-c/README.md` §C3 carry the sentence. | — |
+| **F4** RECORDS: «K=80» claimed for the lowered E13 rows without a `--slow` after the lowering | **MADE TRUE**: this fix round's gate IS `scripts/capped scripts/ci --slow` (K=80, `GOLEAN_SLOW=1`) at the fix tree — EXIT=1 in 954 s (2026-09-20 19:39:04–19:54:58Z), K=80 (`membership_draws 80`); 3705 rows 3458 PASS / 247 FAIL in the run = the pinned 3459 / 246 with the one 5a-class row red; DRIFT = exactly `imported-goose/channel/google-search` PASS→FAIL/membership (STALE certificate for `NativeToIR.lean`; fresh re-certification «unchanged set; seconds=164.598»); every other step ok; re-pin guard 0 PASS→non-PASS. BUG-112 and the inventory's E13 Stage C bullet now cite THIS run. | `docs/BUGS.md` BUG-112; `docs/2026-08-11_latitude-inventory.md` E13 | — |
+| **F6** NIT: design §6 «discard cells `$d<n>`» vs the emitted `$u<n>` | **CORRECTED** in §6 (discard cells are minted like every other cell, `$u<n>`). | design §6 | — |
+| **F7** NIT: `## BUG-112` above `## BUG-111` | **REORDERED**: BUG-111, BUG-112, BUG-113 ascending (`check-bugs.sh` parses by heading; it has no order rule — the file's convention is ascending). | `docs/BUGS.md` | — |
+| **F8** NIT: decoder limitations implied, not stated | **STATED** in design §5 («What the decoder does NOT check»): (i) D8's «no hidden read» for `ident` heads/callees is relative to the frontend's privacy analysis — identifier privacy is the frontend's; (ii) `then` is restricted by exclusion only, v2.1 §3.1's completion contract is not checked; both hand-built-only, the trust in `unseqClassify`/`emitUnseqSweep`. | design §5 | — |
+| **F9** NOTE: gc realizes TYPE ASSERTIONS EARLY (`order.go` copies `x.(T)` at its lexical position for non-pointer-shaped T) while the canonical slot realizes them late | **RECORDED** in design §6 and the inventory's E13 (Stage C bullet) and E2 (Stage C bullet): members only, membership rows only (`assert-left-call`, `assert-middle`, `index-assert-left-call`, BUG-101's pair, the audit's a34); a STRICT row of that shape goes red at `differential` rather than passing silently — the exception to route, not a machine bug. | design §6; inventory E13/E2 | — |
+
+**The gate (the runtime commit's tree; captured exits).** Frontend: `go build` EXIT=0, `go test
+./tools/nativefrontend/...` ok EXIT=0, `go test ./tools/lowerdiag/...` ok EXIT=0 (the frontend is
+unchanged; the tests are the standing suite). Decoder: `scripts/capped lake build GoLean.NativeToIR`
+EXIT=0 (11 jobs, warning-free), then `lake build UnseqWireTests golean` EXIT=0 (99 jobs; binary
+`90024323dbe00082`). `lake env lean --run Tests/UnseqWire.lean`: 60 ok lines, «every reference set exact
+over the wire, 19 mutants refused by name», EXIT=0. `scripts/check-wire-boundary` PASS (11 byte-level
++ 9 unseq-node controls) EXIT=0. `scripts/check-unseq-wire` PASS (58 fixtures byte-identical to the
+generator; 19 mutants through the CLI; 80 ok lines) EXIT=0. `scripts/check-bugs.sh` ok — 113 entries;
+BUG-113 open with two FAIL rows; BUG-101/112 fixed with PASS rows; the ratchet unchanged (coverage
+10/10, latitude 4/4, wrong-answer 0/0). **The full gate: `scripts/capped scripts/ci --slow` under the
+box-wide lock — EXIT=1 in 954 s (2026-09-20 19:39:04–19:54:58Z), K=80 (`membership_draws 80`); 3705 rows 3458 PASS / 247 FAIL in the run = the pinned 3459 / 246 with the one 5a-class row red; DRIFT = exactly `imported-goose/channel/google-search` PASS→FAIL/membership (STALE certificate for `NativeToIR.lean`; fresh re-certification «unchanged set; seconds=164.598»); every other step ok; re-pin guard 0 PASS→non-PASS.** Expected red = the two 5a-class items (`certificate provenance`
+STALE for `NativeToIR.lean`; the one certified row `imported-goose/channel/google-search`
+PASS→FAIL/membership in the run, PASS kept in the baseline for the train's 5a step) and NOTHING else:
+the six new rows reproduce their pre-pinned states (3 PASS F2, 2 FAIL/differential BUG-113, 1 PASS
+control) — the baseline was pinned from the focused measurements BEFORE the gate so `check-bugs`
+could see BUG-113's rows, and the gate confirmed every line. The run's per-row lines (`fixround-gate-tail.txt`): the three F2 rows PASS strict (`wide=0` / `wide=3` / `wide=2`, `exhausted=none depth=fixed` — the wide picks the graphs mint are covered by the three streams), BUG-113's two rows FAIL/differential (Lean `logical true 0`, Go `logical false 0`), the control PASS; BUG-112's two rows `draws=80 (K=80; pin members=N NOT reached — 1 distinct drawn)`: gc draws its one member every time, inside the set (audit F4 made true).
+
+**Choice-trace subset vs main's binary + main's frontend (rows OUTSIDE the pilot's 25 packages).**
+The C3 method (`scripts/choice-trace-corpus --dump --jobs 6`) on 279 ids — every 12th outside-pilot
+id of the manifest, 210 packages — on the main export tree (`.tmp/main-tree` = `git archive 6a7beb3d`,
+main's frontend, main's binary `a014183b…`) and on this tree (the candidate frontend, the fixed
+binary `90024323dbe00082`): **278/278 traced rows byte-identical** on the sorted dump records
+(stream, idx, phase, site, bound, streamValue, pick) and the per-stream results (status, consumed,
+wide, obsHash); sha256 of the identical block `af6e9b95e7aad5c3`; the 279th id
+(`complex/generic-type-set/explicit-constant`) refuses identically on both sides (`complex64`);
+headline counts identical (1668 (id, stream) lines; every site's consumption count equal) —
+`fixround-choice-trace.txt`. The decoder change touches only the `unseq` arm, which no
+outside-pilot wire reaches.
+
+**PENDING [USER] (unchanged, posed at the merge ask):** the E2/E12 value-axis envelope on the nine
+rows (§6 item 1) and the two E13 narrowings retired on the pilot's rows (§6 item 2). Nothing in this
+round rules either.
+
+**Re-verification ask for the auditor** (what to re-run at the fix-round tip): (a) the F2 probes
+a14/a15/a16 (`decoder-constant-head-regression.txt`) — the candidate frontend + the fixed binary must
+run each to main's observation (2; `f`·59; `f`·"xs"); the corpus rows `evalorder/unseq-const-cell/*`
+via `scripts/diff-one`; (b) the F3 mutants m02/m02b (`mutants.tsv`) — both must now refuse at DECODE
+with «invalid branch join … confined to the region of 'guard1'» (the audit's a18 graph) — and the
+tracked `mut-nested-completion-join.json` (R2c) for both `b`; the control m17 (a18 unchanged) still
+runs `f g` / 1; (c) the 18 original mutants unchanged; the r2a/r2c hand-built and native wires
+still decode and give their sets (`scripts/check-unseq-wire`); (d) the F1 rows
+`evalorder/legacy-logical-vs-call/*` — `or-vs-call`/`and-vs-call` FAIL/differential with Lean
+`logical true 0` vs Go `logical false 0`, `call-first-control` PASS; BUG-113's text against
+`legacy-logical-op-vs-call.txt`; (e) the default-tape comparison over the pilot's 25 packages
+(`default-tape-comparison.txt`) — unchanged (the fix touches no lowered graph's set); (f) the
+baseline delta over `2dac6a75`: exactly the six rows added, nothing else moved.

@@ -1,0 +1,74 @@
+# Stage C audit fix round — the full gate: scripts/capped scripts/ci --slow under the box-wide lock, at 2dac6a75 + the fix-round edits (the runtime commit's tree; golean 90024323dbe00082); [AGENT] fix-round worker, lane core/unseq-stage-c-0919, 2026-09-20
+GATE START 2026-09-20T19:39:04Z tree=2dac6a75+edits golean=90024323dbe00082
+GATE END 2026-09-20T19:54:58Z EXIT=1 WALL=954s
+lock released 2026-09-20T19:54:58Z
+# run meta (artifacts/coverage/latest.meta.tsv):
+frontend	native
+git_commit	2dac6a750862926a0c181a021ab29751fea606fb
+git_dirty	true
+membership_draws	80
+# differential summary line:
+differential coverage summary: cases=3705 pass=3458 fail=247 export_status=0
+# the DRIFT block:
+DRIFT vs baselines/native-full.tsv (3705 case(s) run):
+imported-goose/channel/google-search	baseline[PASS/membership] -> now[FAIL/membership]
+
+# the eight rows of interest (artifacts/coverage/latest.tsv):
+PASS	builtins/e13-sibling-panic-order/compound-call-target-vs-len	slices,indexing,len,calls,panic,evaluation_order,print,assignment,nondet	membership	enumerated=3 exhibited=1 draws=80 (K=80; pin members=3 NOT reached — 1 distinct drawn) unexhibited=2 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/compound-call-target-vs-len)
+PASS	builtins/e13-sibling-panic-order/compound-call-target-vs-call	slices,indexing,calls,panic,evaluation_order,print,assignment,nondet	membership	enumerated=2 exhibited=1 draws=80 (K=80; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/compound-call-target-vs-call)
+FAIL	evalorder/legacy-logical-vs-call/or-vs-call	globals,closures,bools,calls,print,evaluation_order	differential	Lean={"output":"logical true 0\n","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]} Go={"output":"logical false 0\n","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]} left:  {"output":"logical true 0\n","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}\nright: {"output":"logical false 0\n","schema":"golean-observation-v1","status":"ok","values":[
+FAIL	evalorder/legacy-logical-vs-call/and-vs-call	globals,closures,bools,calls,print,evaluation_order	differential	Lean={"output":"logical true 0\n","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]} Go={"output":"logical false 0\n","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]} left:  {"output":"logical true 0\n","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}\nright: {"output":"logical false 0\n","schema":"golean-observation-v1","status":"ok","values":
+PASS	evalorder/legacy-logical-vs-call/call-first-control	globals,closures,bools,calls,print,evaluation_order	-	wide=0 exhausted=none depth=fixed
+PASS	evalorder/unseq-const-cell/const-guard-left	closures,bools,calls,evaluation_order	-	wide=0 exhausted=none depth=fixed
+PASS	evalorder/unseq-const-cell/elem-assign-const-int	closures,slices,indexing,calls,assignment,print,evaluation_order	-	wide=3 exhausted=none depth=fixed
+PASS	evalorder/unseq-const-cell/elem-assign-const-string	closures,slices,indexing,calls,assignment,print,strings,evaluation_order	-	wide=2 exhausted=none depth=fixed
+FAIL	imported-goose/channel/google-search	imported_goose,channels,goroutines,nondet	membership	certification: STALE certification: changed dependency build/files/GoLean/NativeToIR.lean\nFresh certification: unchanged set; seconds=164.598; candidate=artifacts/coverage/membership/imported-goose/channel/google-search/certification-candidate.json
+# scripts/ci summary:
+══ scripts/ci summary ══
+  ok   Tests/library ownership (no exceptions; executed builds checked at exit)
+  note build parallelism: cap 64G -> LEAN_NUM_THREADS=8 (cap/8G, floor 2; 32 cores on this box)
+  ok   oracle toolchain (go1.26.5 = pin)
+  ok   escape-hatch preflight
+  ok   meta-layer escape hatches (allowlist empty since the repo split)
+  ok   escape-hatch addendum (no decide +native / native-config spellings)
+  ok   bug-index cross-check
+  ok   feature-coverage (no dead tags)
+  ok   spec-anchor citations resolve at the pin
+  ok   stdlib admission register = frontend tables
+  ok   lane-validation fixtures (manifest gates reject bad shapes)
+  ok   evidence-on-main size gate
+  ok   AGENTS.md alias of CLAUDE.md
+  ok   imported-goose verbatim (above-marker bytes = pinned upstream)
+  ok   engine-isolation (core ↛ EnumDedup)
+  ok   memory-module raw call-site inventory (emit/peek discipline)
+  ok   core build (warning-free)
+  FAIL certificate provenance
+  ok   core totality audit (every GoLean/ module; required core theorems; poison controls)
+  ok   admission checker proofs and post-import audit
+  ok   declaration boundary
+  ok   wire boundary (byte-level controls through the real CLI)
+  ok   package-correct method identity
+  ok   unseq scheduler (Stage B)
+  ok   unseq wire (Stage C)
+  ok   frontend pins (realized init-order deviation + twin wire = pinned bytes)
+  ok   import-goose fixtures (importer + verbatim guard reject bad shapes)
+  ok   frontend unit tests
+  ok   lowering-diagnostic tables
+  ok   coverage-harness unit tests
+  ok   eval tests (267 ok)
+  ok   differential run completed (exit 1; failing-set judged by baseline diff)
+  ok   lane-validation fixtures incl. harness half (F4/F6/B3-B5/G5/T1-T8/D1-D6)
+  ok   negative run completed (exit 0; set judged by baseline diff)
+  ok   Tests/FloatVectors.lean = fresh hardware-oracle regeneration (byte-exact)
+  ok   inittask-std.tsv = fresh gc-derived regeneration (header at pin; byte-exact modulo date line)
+  note negative baseline diff matched (394 case(s)) but the record was made on a DIRTY tree (git_dirty=true) — certifies that worktree state, not a commit
+  FAIL baseline diff (DRIFT — see above)
+  ok   re-pin guard (0 PASS→non-PASS flip(s), all listed in BUGS.md Cases)
+  note reconciler: 4 finding(s), 3 HIGH — report-only (details: tools/reconcile-records)
+  ok   executed library coverage (all declared libraries; all Tests modules)
+
+RESULT: FAIL
+Failed CI receipts retained: .tmp/ci-libraries-bjq97za6
+CI coverage timing: close: seconds=0.008
+CI total wall seconds: 954
+EXIT=1

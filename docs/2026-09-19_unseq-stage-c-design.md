@@ -321,3 +321,19 @@ enter.
   frontend's refusal-vocabulary coverage under the 90 % `TestVocabularyCoverageIsTracked` states).
 - **§8 PENDING [USER]:** unchanged — the value-axis envelope on the named rows and the two
   retired E13 narrowings, ratification asked at the merge (handoff §6).
+- **Audit fix round `e73c706f` (2026-09-20; `docs/2026-09-20_unseq-stage-c-audit.md`, FIX-FIRST;
+  dispositions in the handoff §10).** TWO decoder corrections, both spec-side edits made in §5 above
+  with the code: (F2) D8 admits a bare `int`/`bool`/`string` head — §6's «a constant … is copied
+  into one» was the emitter's shape from C2 and the C1 arm refused it (a fail-closed coverage
+  REGRESSION on `x := true && f()`, `a[f()] = 5`, `a[f()] = "s"`, which ran on main; rows
+  `evalorder/unseq-const-cell/*` red-first then PASS, byte-identical to main's observations;
+  witnesses `cguard`/`celem`/`cstr`); (F3) D12 confines a guard's COMPLETION binder to the guard's
+  enclosing region (the C1 arm exempted it altogether — a nested completion consumed by a
+  hand-built `then` decoded; the machine's `unproducedConsumer?` stays as defence in depth;
+  mutant `mut-nested-completion-join`, the 19th). (F1) the LEGACY path's `||`/`&&`-after-a-later-
+  call wrong answer is ROWED as BUG-113 (`evalorder/legacy-logical-vs-call/`), not fixed here —
+  Stage E's; §3's «NOT FLIPPED» list gains nothing (the rows are new reds, not pilot rows). (F4)
+  the «K=80» claim is now backed by the fix round's own `ci --slow` (EXIT=1 in 954 s (2026-09-20 19:39:04–19:54:58Z), K=80 (`membership_draws 80`); 3705 rows 3458 PASS / 247 FAIL in the run = the pinned 3459 / 246 with the one 5a-class row red; DRIFT = exactly `imported-goose/channel/google-search` PASS→FAIL/membership (STALE certificate for `NativeToIR.lean`; fresh re-certification «unchanged set; seconds=164.598»); every other step ok; re-pin guard 0 PASS→non-PASS). (F6) `$d<n>` →
+  `$u<n>` in §6; (F8) the decoder's stated limits in §5; (F9) gc's EARLY type-assertion copy in
+  §6. The frontend (`tools/nativefrontend`) is byte-identical to `2dac6a75`'s; `GoLean/GoCore/`
+  untouched; the choice-trace subset outside the pilot byte-identical vs main (handoff §10).

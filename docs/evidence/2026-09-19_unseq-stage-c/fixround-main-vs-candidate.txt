@@ -1,0 +1,37 @@
+# F2 verification — the fix RESTORES, not changes: main's frontend (built from .tmp/main-tree = git archive 6a7beb3d) + main's binary a014183b0dfad716 vs the candidate frontend (this tree, unchanged by the fix round) + the FIXED candidate binary 90024323dbe00082; the PRE-FIX candidate binary dbf8fab1abf5df43 refused the unseq-const-cell wire by name (see born-state.txt). 2026-09-20T19:31:22Z
+# wires: unseq-const-cell main legacy (0 unseq nodes) vs candidate (3 unseq nodes); legacy-logical-vs-call BYTE-IDENTICAL main/candidate (cmp EXIT=0)
+== constGuardLeft
+MAIN      EXIT=0 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":2}]}
+CAND-FIX  EXIT=0 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":2}]}
+IDENTICAL
+== elemAssignConstInt
+MAIN      EXIT=0 {"output":"f
+","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":59}]}
+CAND-FIX  EXIT=0 {"output":"f
+","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":59}]}
+IDENTICAL
+== elemAssignConstString
+MAIN      EXIT=0 {"output":"f
+","schema":"golean-observation-v1","status":"ok","values":[{"bytes":[120,115],"tag":"string"}]}
+CAND-FIX  EXIT=0 {"output":"f
+","schema":"golean-observation-v1","status":"ok","values":[{"bytes":[120,115],"tag":"string"}]}
+IDENTICAL
+# F2 result: 3/3 subjects byte-identical observations main vs fixed candidate
+== orVsCall (BUG-113 package, legacy path)
+MAIN      EXIT=0 {"output":"logical true 0
+","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}
+CAND-FIX  EXIT=0 {"output":"logical true 0
+","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}
+IDENTICAL (main = candidate; gc: orVsCall/andVsCall 'logical false 0' — see born-state.txt differential detail)
+== andVsCall (BUG-113 package, legacy path)
+MAIN      EXIT=0 {"output":"logical true 0
+","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}
+CAND-FIX  EXIT=0 {"output":"logical true 0
+","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}
+IDENTICAL (main = candidate; gc: orVsCall/andVsCall 'logical false 0' — see born-state.txt differential detail)
+== callFirstControl (BUG-113 package, legacy path)
+MAIN      EXIT=0 {"output":"logical 0 true
+","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}
+CAND-FIX  EXIT=0 {"output":"logical 0 true
+","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}
+IDENTICAL (main = candidate; gc: orVsCall/andVsCall 'logical false 0' — see born-state.txt differential detail)
