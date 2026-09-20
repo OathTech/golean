@@ -1,0 +1,77 @@
+# C3 records gate — scripts/capped scripts/ci --diff under the box-wide lock, on the C3 tree (C2 ce33ffd1 + the C3 records, staged; run 2026-09-20T00:40:49Z–00:52:40Z, wall 711 s, CMD_EXIT=1)
+# expected red: the two 5a-class items only (certificate provenance STALE for GoLean/NativeToIR.lean; the baseline diff's ONE line imported-goose/channel/google-search PASS→FAIL/membership — the run's stale-certificate red vs the PASS kept in the re-pin for the train's 5a step). Nothing else red.
+
+## differential summary
+differential coverage summary: cases=3699 pass=3454 fail=245 export_status=0
+
+## drift block + re-pin guard + reconciler
+── negative baseline diff
+no regression: 394 case(s) run in negative-latest.tsv match baselines/negative-full.tsv
+
+── differential baseline diff (scripts/coverage-baseline-diff)
+DRIFT vs baselines/native-full.tsv (3699 case(s) run):
+imported-goose/channel/google-search	baseline[PASS/membership] -> now[FAIL/membership]
+
+── baseline re-pin guard (HEAD-vs-HEAD~1; flips must be on a BUGS.md Cases: line)
+  re-pin note: GREENED	builtins/e13-sibling-panic-order/assert-ok-early-len-hoist	FAIL -> PASS
+  re-pin note: GREENED	builtins/e13-sibling-panic-order/compound-call-target-vs-call	FAIL -> PASS
+  re-pin note: GREENED	builtins/e13-sibling-panic-order/compound-call-target-vs-len	FAIL -> PASS
+  re-pin note: GREENED	builtins/e13-sibling-panic-order/slice-value-early-len-hoist	FAIL -> PASS
+
+── cross-ledger reconciliation (tools/reconcile-records — REPORT-ONLY, informs, never fails the gate)
+  [01] C9  HIGH    certificate provenance: STALE certification: changed dependency build/files/GoLean/NativeToIR.lean
+  [02] C13  MEDIUM  79 doc site(s) across 10 file(s) name a patch-level Go version other than the pin (go1.25.13/go1.26.5 per docs/spec-sources.md). Some are legitimately historical; a toolchain/oracle claim off the pin is not, because the pin's whole job is that the spec text and the thing that produced the numbers moved together.
+
+── executed library coverage (all named build receipts from this CI invocation)
+CI coverage timing: verify: seconds=0.008
+Executed library coverage: PASS; 9 libraries, 19 Tests modules, 8 named steps; timings: /home/dev/projects/golean/.claude/worktrees/unseq-stage-c/artifacts/ci-library-timings/01aede02565c452ca7e5f4dc02fd8ca9.json
+
+══ scripts/ci summary ══
+  ok   Tests/library ownership (no exceptions; executed builds checked at exit)
+
+## step summary
+  ok   oracle toolchain (go1.26.5 = pin)
+  ok   escape-hatch preflight
+  ok   meta-layer escape hatches (allowlist empty since the repo split)
+  ok   escape-hatch addendum (no decide +native / native-config spellings)
+  ok   bug-index cross-check
+  ok   feature-coverage (no dead tags)
+  ok   spec-anchor citations resolve at the pin
+  ok   stdlib admission register = frontend tables
+  ok   lane-validation fixtures (manifest gates reject bad shapes)
+  ok   evidence-on-main size gate
+  ok   AGENTS.md alias of CLAUDE.md
+  ok   imported-goose verbatim (above-marker bytes = pinned upstream)
+  ok   engine-isolation (core ↛ EnumDedup)
+  ok   memory-module raw call-site inventory (emit/peek discipline)
+  ok   core build (warning-free)
+  FAIL certificate provenance
+  ok   core totality audit (every GoLean/ module; required core theorems; poison controls)
+  ok   admission checker proofs and post-import audit
+  ok   declaration boundary
+  ok   wire boundary (byte-level controls through the real CLI)
+  ok   package-correct method identity
+  ok   unseq scheduler (Stage B)
+  ok   unseq wire (Stage C)
+  ok   frontend pins (realized init-order deviation + twin wire = pinned bytes)
+  ok   import-goose fixtures (importer + verbatim guard reject bad shapes)
+  ok   frontend unit tests
+  ok   lowering-diagnostic tables
+  ok   coverage-harness unit tests
+  ok   eval tests (267 ok)
+  ok   differential run completed (exit 1; failing-set judged by baseline diff)
+  ok   lane-validation fixtures incl. harness half (F4/F6/B3-B5/G5/T1-T8/D1-D6)
+  ok   negative run completed (exit 0; set judged by baseline diff)
+  ok   Tests/FloatVectors.lean = fresh hardware-oracle regeneration (byte-exact)
+  ok   inittask-std.tsv = fresh gc-derived regeneration (header at pin; byte-exact modulo date line)
+  note negative baseline diff matched (394 case(s)) but the record was made on a DIRTY tree (git_dirty=true) — certifies that worktree state, not a commit
+  FAIL baseline diff (DRIFT — see above)
+  ok   re-pin guard (0 PASS→non-PASS flip(s), all listed in BUGS.md Cases)
+  note re-pin baselines/native-full.tsv: 4 non-PASS→PASS flip(s), 0 deleted row(s) — report-only; verify the re-pin's written reason covers them
+  note reconciler: 2 finding(s), 1 HIGH — report-only (details: tools/reconcile-records)
+  ok   executed library coverage (all declared libraries; all Tests modules)
+
+RESULT: FAIL
+Failed CI receipts retained: /home/dev/projects/golean/.claude/worktrees/unseq-stage-c/.tmp/ci-libraries-p788gdkn
+CI coverage timing: close: seconds=0.007
+CI total wall seconds: 711

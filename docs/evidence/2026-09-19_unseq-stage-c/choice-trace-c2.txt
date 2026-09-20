@@ -1,0 +1,332 @@
+# Whole-corpus choice trace: main 6a7beb3d binary vs the C2 tree (Stage C, lane core/unseq-stage-c-0919; [AGENT] worker, 2026-09-20)
+# method (the S3 lane's): scripts/choice-trace-corpus --dump --jobs 6 --golean BIN --out <dir> --exclude goroutines/send-then-spin --exclude strings/trimspace-repeat/repeat-bound-refused, on each side;
+#   main side = a `git archive main` export tree (.tmp/main-tree, main 6a7beb3d: main's frontend + main's binary built from that tree) with a deps/ symlink to this worktree's pinned deps;
+#   c2 side   = this worktree at C2 ce33ffd1 (the C2 frontend + the C1/C2 binary). The corpus (Corpus/**) is identical on both sides except the 13 born evalorder/unseq-pilot rows.
+# binaries: main  sha256 a014183b0dfad716
+#           c2    sha256 dbf8fab1abf5df43
+# exits: MAIN_EXIT=1 C2_EXIT=1 (both «FINDINGS present» = the standing racy-row notes of the tracer, identical on both sides); wall main 00:23:13Z-00:30:25Z, c2 00:30:25Z-00:37:40Z
+# comparison unit per row id: the SORTED dump records (stream, idx, phase, site, bound, streamValue, pick) + the results (stream, status, consumed, wide, obsHash) — byte-equal or not.
+# pilot packages (25; the packages whose emitted wires carry unseq nodes, census-summary.txt S-C2): binop-order/operand-panic-vs-call bools/short-circuit-effects builtins/e13-sibling-panic-order builtins/len-vs-call-order evalorder/unseq-pilot fmt/formatter-precedence fmt/sprintf-dyn fmt/sprintf-verbs fmt/v-composites functions/closure-recursion imported-goose/semantics/operations multi-assign/index-target-rhs-call-order noodler/arith noodler/closures noodler/evalorder noodler/latitude noodler/maps noodler/strings panic-recover/shim-refusal-unrecoverable scoping/closure-shadow-binding slices/slice-elided-high-eval-once slices/slice-expr-eval-order spec-examples-decl/timezone-stringer spec-examples-stmt/continue-label spec-examples-stmt/operator-precedence
+
+## summaries (headline lines)
+main: rows traced: 3649 ids, 21894 (id,stream) lines; 1 id(s) the tracer could not run (ERROR)
+main:   by lane: confluent=93, membership=142, racy=41, strict=3373
+main:   consumptions per site (all streams): l1Sched=9690, appendSpill=4874, postOp=4643, backEdge=2404, mapIter=1307, unseqPanic=417, l5ExitWindow=330, repanicCollapse=126, tryLock=101, nilValueMethodText=90, l2Entry=24, l4Waiter=22, l2Arrival=3
+c2:   rows traced: 3662 ids, 21972 (id,stream) lines; 1 id(s) the tracer could not run (ERROR)
+c2:     by lane: confluent=93, membership=163, racy=41, strict=3365
+c2:     consumptions per site (all streams): l1Sched=9690, appendSpill=4874, postOp=4643, backEdge=2404, mapIter=1307, unseqNext=532, l5ExitWindow=330, unseqPanic=288, repanicCollapse=126, tryLock=101, nilValueMethodText=90, l2Entry=24, l4Waiter=22, l2Arrival=3
+# reading: 3662 - 3649 = the 13 born rows; membership 142 -> 163 = 13 born (10 membership) + 4 flips + 7 lane moves; strict 3373 -> 3365 = +3 born strict - 7 lane moves - 4 flips (their cases.tsv lane is membership since C2; on main's corpus they were traced under the strict lane); unseqNext 532 consumptions appear, unseqPanic 417 -> 288 (the pilot's sweeps no longer run the probe); every other site's consumption count IDENTICAL (l1Sched 9690, appendSpill 4874, postOp 4643, backEdge 2404, mapIter 1307, l5ExitWindow 330, repanicCollapse 126, tryLock 101, nilValueMethodText 90, l2Entry 24, l4Waiter 22, l2Arrival 3).
+
+## per-row comparison (.tmp/trace-compare.py)
+main: 669 rows with dump records (24031 records), 3650 rows with results
+c2:   692 rows with dump records (24434 records), 3663 rows with results
+row ids compared: 3663; byte-identical (dump + results): 3613; sha256 of the identical block 00dcfabe4235a68e
+differ INSIDE the pilot's packages: 50; differ OUTSIDE: 0
+
+rows inside the pilot's packages that differ (id, main records, c2 records, observations identical on every stream?):
+  binop-order/operand-panic-vs-call/call-before-left	6	9	obs-same=True
+       1,3,5,7,9,2,4,6,8,0: main status=panic consumed=1 wide=1 obs=10065953 | c2 status=panic consumed=2 wide=2 obs=10065953
+       5,5,5,5,5,5,5,5: main status=panic consumed=1 wide=1 obs=10065953 | c2 status=panic consumed=2 wide=2 obs=10065953
+       9,8,7,6,5,4,3,2,1,0: main status=panic consumed=1 wide=1 obs=10065953 | c2 status=panic consumed=2 wide=2 obs=10065953
+  binop-order/operand-panic-vs-call/call-before-left-div	6	9	obs-same=True
+       1,3,5,7,9,2,4,6,8,0: main status=panic consumed=1 wide=1 obs=10065953 | c2 status=panic consumed=2 wide=2 obs=10065953
+       5,5,5,5,5,5,5,5: main status=panic consumed=1 wide=1 obs=10065953 | c2 status=panic consumed=2 wide=2 obs=10065953
+       9,8,7,6,5,4,3,2,1,0: main status=panic consumed=1 wide=1 obs=10065953 | c2 status=panic consumed=2 wide=2 obs=10065953
+  builtins/e13-sibling-panic-order/assert-arg-sibling	6	6	obs-same=True
+  builtins/e13-sibling-panic-order/assert-left-call	6	6	obs-same=True
+  builtins/e13-sibling-panic-order/assert-left-len-slice-call	6	6	obs-same=True
+  builtins/e13-sibling-panic-order/assert-middle	6	9	obs-same=False
+       1,3,5,7,9,2,4,6,8,0: main status=panic consumed=1 wide=1 obs=93467432 | c2 status=panic consumed=1 wide=1 obs=28131339
+       5,5,5,5,5,5,5,5: main status=panic consumed=1 wide=1 obs=93467432 | c2 status=panic consumed=1 wide=1 obs=28131339
+       9,8,7,6,5,4,3,2,1,0: main status=panic consumed=1 wide=1 obs=93467432 | c2 status=panic consumed=1 wide=1 obs=28131339
+       default: main status=panic consumed=1 wide=1 obs=10084435 | c2 status=panic consumed=2 wide=2 obs=10084435
+       rand:1:4096: main status=panic consumed=1 wide=1 obs=10084435 | c2 status=panic consumed=2 wide=2 obs=93467432
+       rand:2:4096: main status=panic consumed=1 wide=1 obs=10084435 | c2 status=panic consumed=2 wide=2 obs=10084435
+  builtins/e13-sibling-panic-order/assert-ok-early-len-hoist	0	20	obs-same=False
+       1,3,5,7,9,2,4,6,8,0: main status=panic consumed=0 wide=0 obs=30533487 | c2 status=ok consumed=3 wide=3 obs=26925698
+       5,5,5,5,5,5,5,5: main status=panic consumed=0 wide=0 obs=30533487 | c2 status=ok consumed=3 wide=3 obs=26925698
+       9,8,7,6,5,4,3,2,1,0: main status=panic consumed=0 wide=0 obs=30533487 | c2 status=ok consumed=4 wide=4 obs=26925698
+       default: main status=panic consumed=0 wide=0 obs=30533487 | c2 status=panic consumed=3 wide=3 obs=30533487
+       rand:1:4096: main status=panic consumed=0 wide=0 obs=30533487 | c2 status=ok consumed=4 wide=4 obs=26925698
+       rand:2:4096: main status=panic consumed=0 wide=0 obs=30533487 | c2 status=panic consumed=3 wide=3 obs=30533487
+  builtins/e13-sibling-panic-order/assert-right-call	0	6	obs-same=False
+       1,3,5,7,9,2,4,6,8,0: main status=panic consumed=0 wide=0 obs=86404326 | c2 status=panic consumed=1 wide=1 obs=28131339
+       5,5,5,5,5,5,5,5: main status=panic consumed=0 wide=0 obs=86404326 | c2 status=panic consumed=1 wide=1 obs=28131339
+       9,8,7,6,5,4,3,2,1,0: main status=panic consumed=0 wide=0 obs=86404326 | c2 status=panic consumed=1 wide=1 obs=28131339
+       default: main status=panic consumed=0 wide=0 obs=86404326 | c2 status=panic consumed=1 wide=1 obs=86404326
+       rand:1:4096: main status=panic consumed=0 wide=0 obs=86404326 | c2 status=panic consumed=1 wide=1 obs=86404326
+       rand:2:4096: main status=panic consumed=0 wide=0 obs=86404326 | c2 status=panic consumed=1 wide=1 obs=86404326
+  builtins/e13-sibling-panic-order/assert-vs-mutating-call	6	9	obs-same=True
+       1,3,5,7,9,2,4,6,8,0: main status=panic consumed=1 wide=1 obs=28131339 | c2 status=panic consumed=2 wide=2 obs=28131339
+       5,5,5,5,5,5,5,5: main status=panic consumed=1 wide=1 obs=28131339 | c2 status=panic consumed=2 wide=2 obs=28131339
+       9,8,7,6,5,4,3,2,1,0: main status=panic consumed=1 wide=1 obs=28131339 | c2 status=panic consumed=2 wide=2 obs=28131339
+  builtins/e13-sibling-panic-order/compound-assert-vs-len	9	6	obs-same=False
+       default: main status=panic consumed=2 wide=2 obs=13710769 | c2 status=panic consumed=1 wide=1 obs=13710769
+       rand:1:4096: main status=panic consumed=2 wide=2 obs=28131339 | c2 status=panic consumed=1 wide=1 obs=13710769
+       rand:2:4096: main status=panic consumed=2 wide=2 obs=13710769 | c2 status=panic consumed=1 wide=1 obs=13710769
+  builtins/e13-sibling-panic-order/compound-call-target-vs-call	0	9	obs-same=False
+       1,3,5,7,9,2,4,6,8,0: main status=panic consumed=0 wide=0 obs=97140091 | c2 status=panic consumed=2 wide=2 obs=97140091
+       5,5,5,5,5,5,5,5: main status=panic consumed=0 wide=0 obs=97140091 | c2 status=panic consumed=2 wide=2 obs=97140091
+       9,8,7,6,5,4,3,2,1,0: main status=panic consumed=0 wide=0 obs=97140091 | c2 status=panic consumed=2 wide=2 obs=15723436
+       default: main status=panic consumed=0 wide=0 obs=97140091 | c2 status=panic consumed=1 wide=1 obs=15723436
+       rand:1:4096: main status=panic consumed=0 wide=0 obs=97140091 | c2 status=panic consumed=1 wide=1 obs=15723436
+       rand:2:4096: main status=panic consumed=0 wide=0 obs=97140091 | c2 status=panic consumed=1 wide=1 obs=15723436
+  builtins/e13-sibling-panic-order/compound-call-target-vs-len	0	10	obs-same=False
+       1,3,5,7,9,2,4,6,8,0: main status=unsupported consumed=0 wide=0 obs=18198659 | c2 status=panic consumed=1 wide=1 obs=13710769
+       5,5,5,5,5,5,5,5: main status=unsupported consumed=0 wide=0 obs=18198659 | c2 status=panic consumed=1 wide=1 obs=13710769
+       9,8,7,6,5,4,3,2,1,0: main status=unsupported consumed=0 wide=0 obs=18198659 | c2 status=panic consumed=1 wide=1 obs=13710769
+       default: main status=unsupported consumed=0 wide=0 obs=18198659 | c2 status=panic consumed=2 wide=2 obs=10337162
+       rand:1:4096: main status=unsupported consumed=0 wide=0 obs=18198659 | c2 status=panic consumed=3 wide=3 obs=10337162
+       rand:2:4096: main status=unsupported consumed=0 wide=0 obs=18198659 | c2 status=panic consumed=2 wide=2 obs=10337162
+  builtins/e13-sibling-panic-order/compound-index-vs-len	6	9	obs-same=False
+       1,3,5,7,9,2,4,6,8,0: main status=panic consumed=1 wide=1 obs=96501839 | c2 status=panic consumed=2 wide=2 obs=96501839
+       5,5,5,5,5,5,5,5: main status=panic consumed=1 wide=1 obs=96501839 | c2 status=panic consumed=2 wide=2 obs=96501839
+       9,8,7,6,5,4,3,2,1,0: main status=panic consumed=1 wide=1 obs=96501839 | c2 status=panic consumed=2 wide=2 obs=13710769
+  builtins/e13-sibling-panic-order/div-left-call	6	6	obs-same=True
+  builtins/e13-sibling-panic-order/index-arg-sibling	6	6	obs-same=True
+  builtins/e13-sibling-panic-order/index-assert-left-call	9	8	obs-same=False
+       5,5,5,5,5,5,5,5: main status=panic consumed=1 wide=1 obs=96501839 | c2 status=panic consumed=1 wide=1 obs=28131339
+       9,8,7,6,5,4,3,2,1,0: main status=panic consumed=1 wide=1 obs=96501839 | c2 status=panic consumed=2 wide=2 obs=24544179
+       rand:1:4096: main status=panic consumed=2 wide=2 obs=28131339 | c2 status=panic consumed=1 wide=1 obs=96501839
+       rand:2:4096: main status=panic consumed=2 wide=2 obs=24544179 | c2 status=panic consumed=1 wide=1 obs=28131339
+  builtins/e13-sibling-panic-order/index-left-call	6	6	obs-same=True
+  builtins/e13-sibling-panic-order/index-left-call-arg-panics	6	6	obs-same=True
+  builtins/e13-sibling-panic-order/index-middle	6	9	obs-same=False
+       1,3,5,7,9,2,4,6,8,0: main status=panic consumed=1 wide=1 obs=16285551 | c2 status=panic consumed=1 wide=1 obs=96501839
+       5,5,5,5,5,5,5,5: main status=panic consumed=1 wide=1 obs=16285551 | c2 status=panic consumed=1 wide=1 obs=96501839
+       9,8,7,6,5,4,3,2,1,0: main status=panic consumed=1 wide=1 obs=16285551 | c2 status=panic consumed=1 wide=1 obs=96501839
+       default: main status=panic consumed=1 wide=1 obs=26707075 | c2 status=panic consumed=2 wide=2 obs=26707075
+       rand:1:4096: main status=panic consumed=1 wide=1 obs=26707075 | c2 status=panic consumed=2 wide=2 obs=16285551
+       rand:2:4096: main status=panic consumed=1 wide=1 obs=26707075 | c2 status=panic consumed=2 wide=2 obs=26707075
+  builtins/e13-sibling-panic-order/shift-left-call	6	6	obs-same=True
+  builtins/e13-sibling-panic-order/slice-value-early-len-hoist	0	24	obs-same=False
+       1,3,5,7,9,2,4,6,8,0: main status=ok consumed=0 wide=0 obs=10036203 | c2 status=ok consumed=4 wide=4 obs=14098999
+       5,5,5,5,5,5,5,5: main status=ok consumed=0 wide=0 obs=10036203 | c2 status=ok consumed=4 wide=4 obs=14098999
+       9,8,7,6,5,4,3,2,1,0: main status=ok consumed=0 wide=0 obs=10036203 | c2 status=ok consumed=6 wide=6 obs=14098999
+       default: main status=ok consumed=0 wide=0 obs=10036203 | c2 status=ok consumed=3 wide=3 obs=10036203
+       rand:1:4096: main status=ok consumed=0 wide=0 obs=10036203 | c2 status=ok consumed=4 wide=4 obs=14098999
+       rand:2:4096: main status=ok consumed=0 wide=0 obs=10036203 | c2 status=ok consumed=3 wide=3 obs=10036203
+  builtins/e13-sibling-panic-order/tgt-assert-vs-call	6	6	obs-same=True
+  builtins/e13-sibling-panic-order/tgt-assert-vs-len-hoist	6	6	obs-same=True
+  builtins/e13-sibling-panic-order/two-index-left-call	9	8	obs-same=False
+       5,5,5,5,5,5,5,5: main status=panic consumed=1 wide=1 obs=96501839 | c2 status=panic consumed=1 wide=1 obs=10377530
+       9,8,7,6,5,4,3,2,1,0: main status=panic consumed=1 wide=1 obs=96501839 | c2 status=panic consumed=2 wide=2 obs=24544179
+       rand:1:4096: main status=panic consumed=2 wide=2 obs=10377530 | c2 status=panic consumed=1 wide=1 obs=96501839
+       rand:2:4096: main status=panic consumed=2 wide=2 obs=24544179 | c2 status=panic consumed=1 wide=1 obs=10377530
+  builtins/len-vs-call-order/panicky-between	6	6	obs-same=True
+  evalorder/unseq-pilot/r1	0	15	obs-same=False
+       1,3,5,7,9,2,4,6,8,0: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=3 wide=3 obs=87740212
+       5,5,5,5,5,5,5,5: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=3 wide=3 obs=87740212
+       9,8,7,6,5,4,3,2,1,0: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=2 wide=2 obs=13061840
+       default: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=2 wide=2 obs=13061840
+       rand:1:4096: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=3 wide=3 obs=87740212
+       rand:2:4096: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=2 wide=2 obs=60509308
+  evalorder/unseq-pilot/r2a-false	0	0	obs-same=False
+       1,3,5,7,9,2,4,6,8,0: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=0 wide=0 obs=38296356
+       5,5,5,5,5,5,5,5: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=0 wide=0 obs=38296356
+       9,8,7,6,5,4,3,2,1,0: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=0 wide=0 obs=38296356
+       default: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=0 wide=0 obs=38296356
+       rand:1:4096: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=0 wide=0 obs=38296356
+       rand:2:4096: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=0 wide=0 obs=38296356
+  evalorder/unseq-pilot/r2a-true	0	0	obs-same=False
+       1,3,5,7,9,2,4,6,8,0: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=0 wide=0 obs=46119750
+       5,5,5,5,5,5,5,5: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=0 wide=0 obs=46119750
+       9,8,7,6,5,4,3,2,1,0: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=0 wide=0 obs=46119750
+       default: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=0 wide=0 obs=46119750
+       rand:1:4096: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=0 wide=0 obs=46119750
+       rand:2:4096: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=0 wide=0 obs=46119750
+  evalorder/unseq-pilot/r2b	0	0	obs-same=False
+       1,3,5,7,9,2,4,6,8,0: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=0 wide=0 obs=16647974
+       5,5,5,5,5,5,5,5: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=0 wide=0 obs=16647974
+       9,8,7,6,5,4,3,2,1,0: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=0 wide=0 obs=16647974
+       default: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=0 wide=0 obs=16647974
+       rand:1:4096: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=0 wide=0 obs=16647974
+       rand:2:4096: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=0 wide=0 obs=16647974
+  evalorder/unseq-pilot/r2c-false	0	6	obs-same=False
+       1,3,5,7,9,2,4,6,8,0: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=1 wide=1 obs=24161497
+       5,5,5,5,5,5,5,5: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=1 wide=1 obs=24161497
+       9,8,7,6,5,4,3,2,1,0: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=1 wide=1 obs=24161497
+       default: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=1 wide=1 obs=17195376
+       rand:1:4096: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=1 wide=1 obs=17195376
+       rand:2:4096: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=1 wide=1 obs=17195376
+  evalorder/unseq-pilot/r2c-true	0	6	obs-same=False
+       1,3,5,7,9,2,4,6,8,0: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=1 wide=1 obs=82805629
+       5,5,5,5,5,5,5,5: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=1 wide=1 obs=82805629
+       9,8,7,6,5,4,3,2,1,0: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=1 wide=1 obs=82805629
+       default: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=1 wide=1 obs=17195376
+       rand:1:4096: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=1 wide=1 obs=17195376
+       rand:2:4096: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=1 wide=1 obs=17195376
+  evalorder/unseq-pilot/r4	0	11	obs-same=False
+       1,3,5,7,9,2,4,6,8,0: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=3 wide=3 obs=16885044
+       5,5,5,5,5,5,5,5: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=3 wide=3 obs=16885044
+       9,8,7,6,5,4,3,2,1,0: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=2 wide=2 obs=16885044
+       default: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=1 wide=1 obs=14585909
+       rand:1:4096: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=1 wide=1 obs=14585909
+       rand:2:4096: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=1 wide=1 obs=14585909
+  evalorder/unseq-pilot/r6	0	6	obs-same=False
+       1,3,5,7,9,2,4,6,8,0: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=1 wide=1 obs=15040247
+       5,5,5,5,5,5,5,5: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=1 wide=1 obs=15040247
+       9,8,7,6,5,4,3,2,1,0: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=1 wide=1 obs=15040247
+       default: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=1 wide=1 obs=23931122
+       rand:1:4096: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=1 wide=1 obs=23931122
+       rand:2:4096: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=1 wide=1 obs=23931122
+  evalorder/unseq-pilot/w1	0	6	obs-same=False
+       1,3,5,7,9,2,4,6,8,0: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=1 wide=1 obs=60509308
+       5,5,5,5,5,5,5,5: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=1 wide=1 obs=60509308
+       9,8,7,6,5,4,3,2,1,0: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=1 wide=1 obs=60509308
+       default: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=1 wide=1 obs=11773681
+       rand:1:4096: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=1 wide=1 obs=11773681
+       rand:2:4096: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=1 wide=1 obs=11773681
+  evalorder/unseq-pilot/w2	0	18	obs-same=False
+       1,3,5,7,9,2,4,6,8,0: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=4 wide=4 obs=15040247
+       5,5,5,5,5,5,5,5: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=4 wide=4 obs=15040247
+       9,8,7,6,5,4,3,2,1,0: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=2 wide=2 obs=96755528
+       default: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=2 wide=2 obs=96755528
+       rand:1:4096: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=3 wide=3 obs=96755528
+       rand:2:4096: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=3 wide=3 obs=15639781
+  evalorder/unseq-pilot/w3	0	11	obs-same=False
+       1,3,5,7,9,2,4,6,8,0: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=3 wide=3 obs=80924131
+       5,5,5,5,5,5,5,5: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=3 wide=3 obs=80924131
+       9,8,7,6,5,4,3,2,1,0: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=2 wide=2 obs=80924131
+       default: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=1 wide=1 obs=24069595
+       rand:1:4096: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=1 wide=1 obs=24069595
+       rand:2:4096: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=1 wide=1 obs=24069595
+  evalorder/unseq-pilot/w5	0	15	obs-same=False
+       1,3,5,7,9,2,4,6,8,0: main status=- consumed=- wide=- obs=- | c2 status=panic consumed=4 wide=4 obs=36257781
+       5,5,5,5,5,5,5,5: main status=- consumed=- wide=- obs=- | c2 status=panic consumed=4 wide=4 obs=36257781
+       9,8,7,6,5,4,3,2,1,0: main status=- consumed=- wide=- obs=- | c2 status=panic consumed=4 wide=4 obs=36257781
+       default: main status=- consumed=- wide=- obs=- | c2 status=panic consumed=1 wide=1 obs=31558404
+       rand:1:4096: main status=- consumed=- wide=- obs=- | c2 status=panic consumed=1 wide=1 obs=31558404
+       rand:2:4096: main status=- consumed=- wide=- obs=- | c2 status=panic consumed=1 wide=1 obs=31558404
+  evalorder/unseq-pilot/w6	0	13	obs-same=False
+       1,3,5,7,9,2,4,6,8,0: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=2 wide=2 obs=87740212
+       5,5,5,5,5,5,5,5: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=2 wide=2 obs=87740212
+       9,8,7,6,5,4,3,2,1,0: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=2 wide=2 obs=87740212
+       default: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=2 wide=2 obs=11773681
+       rand:1:4096: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=3 wide=3 obs=60509308
+       rand:2:4096: main status=- consumed=- wide=- obs=- | c2 status=ok consumed=2 wide=2 obs=11773681
+  multi-assign/index-target-rhs-call-order	0	9	obs-same=False
+       1,3,5,7,9,2,4,6,8,0: main status=ok consumed=0 wide=0 obs=11017871 | c2 status=ok consumed=2 wide=2 obs=11813742
+       5,5,5,5,5,5,5,5: main status=ok consumed=0 wide=0 obs=11017871 | c2 status=ok consumed=2 wide=2 obs=11813742
+       9,8,7,6,5,4,3,2,1,0: main status=ok consumed=0 wide=0 obs=11017871 | c2 status=ok consumed=2 wide=2 obs=11813742
+       default: main status=ok consumed=0 wide=0 obs=11017871 | c2 status=ok consumed=1 wide=1 obs=11017871
+       rand:1:4096: main status=ok consumed=0 wide=0 obs=11017871 | c2 status=ok consumed=1 wide=1 obs=11017871
+       rand:2:4096: main status=ok consumed=0 wide=0 obs=11017871 | c2 status=ok consumed=1 wide=1 obs=11017871
+  noodler/arith/compound-index-order	6	15	obs-same=True
+       1,3,5,7,9,2,4,6,8,0: main status=ok consumed=1 wide=1 obs=10400677 | c2 status=ok consumed=3 wide=3 obs=10400677
+       5,5,5,5,5,5,5,5: main status=ok consumed=1 wide=1 obs=10400677 | c2 status=ok consumed=3 wide=3 obs=10400677
+       9,8,7,6,5,4,3,2,1,0: main status=ok consumed=1 wide=1 obs=10400677 | c2 status=ok consumed=2 wide=2 obs=10400677
+       default: main status=ok consumed=1 wide=1 obs=10400677 | c2 status=ok consumed=2 wide=2 obs=10400677
+       rand:1:4096: main status=ok consumed=1 wide=1 obs=10400677 | c2 status=ok consumed=3 wide=3 obs=10400677
+       rand:2:4096: main status=ok consumed=1 wide=1 obs=10400677 | c2 status=ok consumed=2 wide=2 obs=10400677
+  noodler/evalorder/deref-call-before-rhs	6	15	obs-same=True
+       1,3,5,7,9,2,4,6,8,0: main status=ok consumed=1 wide=1 obs=10164276 | c2 status=ok consumed=2 wide=2 obs=10164276
+       5,5,5,5,5,5,5,5: main status=ok consumed=1 wide=1 obs=10164276 | c2 status=ok consumed=2 wide=2 obs=10164276
+       9,8,7,6,5,4,3,2,1,0: main status=ok consumed=1 wide=1 obs=10164276 | c2 status=ok consumed=3 wide=3 obs=10164276
+       default: main status=ok consumed=1 wide=1 obs=10164276 | c2 status=ok consumed=3 wide=3 obs=10164276
+       rand:1:4096: main status=ok consumed=1 wide=1 obs=10164276 | c2 status=ok consumed=2 wide=2 obs=10164276
+       rand:2:4096: main status=ok consumed=1 wide=1 obs=10164276 | c2 status=ok consumed=3 wide=3 obs=10164276
+  noodler/evalorder/index-before-rhs	6	21	obs-same=True
+       1,3,5,7,9,2,4,6,8,0: main status=ok consumed=1 wide=1 obs=10164276 | c2 status=ok consumed=3 wide=3 obs=10164276
+       5,5,5,5,5,5,5,5: main status=ok consumed=1 wide=1 obs=10164276 | c2 status=ok consumed=3 wide=3 obs=10164276
+       9,8,7,6,5,4,3,2,1,0: main status=ok consumed=1 wide=1 obs=10164276 | c2 status=ok consumed=3 wide=3 obs=10164276
+       default: main status=ok consumed=1 wide=1 obs=10164276 | c2 status=ok consumed=4 wide=4 obs=10164276
+       rand:1:4096: main status=ok consumed=1 wide=1 obs=10164276 | c2 status=ok consumed=4 wide=4 obs=10164276
+       rand:2:4096: main status=ok consumed=1 wide=1 obs=10164276 | c2 status=ok consumed=4 wide=4 obs=10164276
+  noodler/evalorder/slice-literal	6	12	obs-same=True
+       1,3,5,7,9,2,4,6,8,0: main status=ok consumed=1 wide=1 obs=28401503 | c2 status=ok consumed=2 wide=2 obs=28401503
+       5,5,5,5,5,5,5,5: main status=ok consumed=1 wide=1 obs=28401503 | c2 status=ok consumed=2 wide=2 obs=28401503
+       9,8,7,6,5,4,3,2,1,0: main status=ok consumed=1 wide=1 obs=28401503 | c2 status=ok consumed=2 wide=2 obs=28401503
+       default: main status=ok consumed=1 wide=1 obs=28401503 | c2 status=ok consumed=2 wide=2 obs=28401503
+       rand:1:4096: main status=ok consumed=1 wide=1 obs=28401503 | c2 status=ok consumed=2 wide=2 obs=28401503
+       rand:2:4096: main status=ok consumed=1 wide=1 obs=28401503 | c2 status=ok consumed=2 wide=2 obs=28401503
+  noodler/latitude/args-index-vs-call	0	9	obs-same=False
+       1,3,5,7,9,2,4,6,8,0: main status=ok consumed=0 wide=0 obs=16144074 | c2 status=ok consumed=2 wide=2 obs=76562093
+       5,5,5,5,5,5,5,5: main status=ok consumed=0 wide=0 obs=16144074 | c2 status=ok consumed=2 wide=2 obs=76562093
+       9,8,7,6,5,4,3,2,1,0: main status=ok consumed=0 wide=0 obs=16144074 | c2 status=ok consumed=2 wide=2 obs=16144074
+       default: main status=ok consumed=0 wide=0 obs=16144074 | c2 status=ok consumed=1 wide=1 obs=16144074
+       rand:1:4096: main status=ok consumed=0 wide=0 obs=16144074 | c2 status=ok consumed=1 wide=1 obs=16144074
+       rand:2:4096: main status=ok consumed=0 wide=0 obs=16144074 | c2 status=ok consumed=1 wide=1 obs=16144074
+  noodler/latitude/concat-var-vs-call	0	6	obs-same=False
+       1,3,5,7,9,2,4,6,8,0: main status=ok consumed=0 wide=0 obs=63409396 | c2 status=ok consumed=1 wide=1 obs=87717947
+       5,5,5,5,5,5,5,5: main status=ok consumed=0 wide=0 obs=63409396 | c2 status=ok consumed=1 wide=1 obs=87717947
+       9,8,7,6,5,4,3,2,1,0: main status=ok consumed=0 wide=0 obs=63409396 | c2 status=ok consumed=1 wide=1 obs=87717947
+       default: main status=ok consumed=0 wide=0 obs=63409396 | c2 status=ok consumed=1 wide=1 obs=63409396
+       rand:1:4096: main status=ok consumed=0 wide=0 obs=63409396 | c2 status=ok consumed=1 wide=1 obs=63409396
+       rand:2:4096: main status=ok consumed=0 wide=0 obs=63409396 | c2 status=ok consumed=1 wide=1 obs=63409396
+  noodler/latitude/index-call-index	0	24	obs-same=False
+       1,3,5,7,9,2,4,6,8,0: main status=ok consumed=0 wide=0 obs=16233597 | c2 status=ok consumed=4 wide=4 obs=16233597
+       5,5,5,5,5,5,5,5: main status=ok consumed=0 wide=0 obs=16233597 | c2 status=ok consumed=4 wide=4 obs=55126322
+       9,8,7,6,5,4,3,2,1,0: main status=ok consumed=0 wide=0 obs=16233597 | c2 status=ok consumed=5 wide=5 obs=16233597
+       default: main status=ok consumed=0 wide=0 obs=16233597 | c2 status=ok consumed=4 wide=4 obs=16233597
+       rand:1:4096: main status=ok consumed=0 wide=0 obs=16233597 | c2 status=ok consumed=4 wide=4 obs=16233597
+       rand:2:4096: main status=ok consumed=0 wide=0 obs=16233597 | c2 status=ok consumed=3 wide=3 obs=18430581
+  noodler/latitude/return-operands	0	6	obs-same=False
+       1,3,5,7,9,2,4,6,8,0: main status=ok consumed=0 wide=0 obs=57954080 | c2 status=ok consumed=1 wide=1 obs=58699754
+       5,5,5,5,5,5,5,5: main status=ok consumed=0 wide=0 obs=57954080 | c2 status=ok consumed=1 wide=1 obs=58699754
+       9,8,7,6,5,4,3,2,1,0: main status=ok consumed=0 wide=0 obs=57954080 | c2 status=ok consumed=1 wide=1 obs=58699754
+       default: main status=ok consumed=0 wide=0 obs=57954080 | c2 status=ok consumed=1 wide=1 obs=57954080
+       rand:1:4096: main status=ok consumed=0 wide=0 obs=57954080 | c2 status=ok consumed=1 wide=1 obs=57954080
+       rand:2:4096: main status=ok consumed=0 wide=0 obs=57954080 | c2 status=ok consumed=1 wide=1 obs=57954080
+  noodler/maps/slice-compound-call-mutates	0	11	obs-same=False
+       1,3,5,7,9,2,4,6,8,0: main status=ok consumed=0 wide=0 obs=32288667 | c2 status=ok consumed=3 wide=3 obs=76562093
+       5,5,5,5,5,5,5,5: main status=ok consumed=0 wide=0 obs=32288667 | c2 status=ok consumed=3 wide=3 obs=76562093
+       9,8,7,6,5,4,3,2,1,0: main status=ok consumed=0 wide=0 obs=32288667 | c2 status=ok consumed=2 wide=2 obs=32288667
+       default: main status=ok consumed=0 wide=0 obs=32288667 | c2 status=ok consumed=1 wide=1 obs=32288667
+       rand:1:4096: main status=ok consumed=0 wide=0 obs=32288667 | c2 status=ok consumed=1 wide=1 obs=32288667
+       rand:2:4096: main status=ok consumed=0 wide=0 obs=32288667 | c2 status=ok consumed=1 wide=1 obs=32288667
+  scoping/closure-shadow-binding	0	21	obs-same=True
+       1,3,5,7,9,2,4,6,8,0: main status=ok consumed=0 wide=0 obs=35688421 | c2 status=ok consumed=2 wide=2 obs=35688421
+       5,5,5,5,5,5,5,5: main status=ok consumed=0 wide=0 obs=35688421 | c2 status=ok consumed=2 wide=2 obs=35688421
+       9,8,7,6,5,4,3,2,1,0: main status=ok consumed=0 wide=0 obs=35688421 | c2 status=ok consumed=3 wide=3 obs=35688421
+       default: main status=ok consumed=0 wide=0 obs=35688421 | c2 status=ok consumed=5 wide=5 obs=35688421
+       rand:1:4096: main status=ok consumed=0 wide=0 obs=35688421 | c2 status=ok consumed=5 wide=5 obs=35688421
+       rand:2:4096: main status=ok consumed=0 wide=0 obs=35688421 | c2 status=ok consumed=4 wide=4 obs=35688421
+  spec-examples-stmt/continue-label	0	89	obs-same=True
+       1,3,5,7,9,2,4,6,8,0: main status=ok consumed=0 wide=0 obs=13953155 | c2 status=ok consumed=13 wide=13 obs=13953155
+       5,5,5,5,5,5,5,5: main status=ok consumed=0 wide=0 obs=13953155 | c2 status=ok consumed=10 wide=10 obs=13953155
+       9,8,7,6,5,4,3,2,1,0: main status=ok consumed=0 wide=0 obs=13953155 | c2 status=ok consumed=17 wide=17 obs=13953155
+       default: main status=ok consumed=0 wide=0 obs=13953155 | c2 status=ok consumed=18 wide=18 obs=13953155
+       rand:1:4096: main status=ok consumed=0 wide=0 obs=13953155 | c2 status=ok consumed=17 wide=17 obs=13953155
+       rand:2:4096: main status=ok consumed=0 wide=0 obs=13953155 | c2 status=ok consumed=14 wide=14 obs=13953155
+
+rows only on main side: 0 []
+rows only on c2 side: 23 ['builtins/e13-sibling-panic-order/assert-ok-early-len-hoist', 'builtins/e13-sibling-panic-order/assert-right-call', 'builtins/e13-sibling-panic-order/compound-call-target-vs-call', 'builtins/e13-sibling-panic-order/compound-call-target-vs-len', 'builtins/e13-sibling-panic-order/slice-value-early-len-hoist', 'evalorder/unseq-pilot/r1', 'evalorder/unseq-pilot/r2c-false', 'evalorder/unseq-pilot/r2c-true', 'evalorder/unseq-pilot/r4', 'evalorder/unseq-pilot/r6', 'evalorder/unseq-pilot/w1', 'evalorder/unseq-pilot/w2', 'evalorder/unseq-pilot/w3', 'evalorder/unseq-pilot/w5', 'evalorder/unseq-pilot/w6', 'multi-assign/index-target-rhs-call-order', 'noodler/latitude/args-index-vs-call', 'noodler/latitude/concat-var-vs-call', 'noodler/latitude/index-call-index', 'noodler/latitude/return-operands']
+
+## the 30 rows whose observation differs on some stream: the observation SET over the six traced streams, each side (.tmp/trace-obs-sets.py)
+row	main obs-set (status:hash) over 6 streams	c2 obs-set	relation	main default	c2 default
+builtins/e13-sibling-panic-order/assert-middle	panic:1008443541 panic:9346743229	panic:1008443541 panic:2813133959 panic:9346743229	c2 set WIDENS main set	panic:1008443541	panic:1008443541
+builtins/e13-sibling-panic-order/assert-ok-early-len-hoist	panic:3053348761	ok:2692569856 panic:3053348761	c2 set WIDENS main set	panic:3053348761	panic:3053348761
+builtins/e13-sibling-panic-order/assert-right-call	panic:8640432639	panic:2813133959 panic:8640432639	c2 set WIDENS main set	panic:8640432639	panic:8640432639
+builtins/e13-sibling-panic-order/compound-assert-vs-len	panic:1371076965 panic:2813133959	panic:1371076965 panic:2813133959	SAME set, different stream->member mapping	panic:1371076965	panic:1371076965
+builtins/e13-sibling-panic-order/compound-call-target-vs-call	panic:9714009182	panic:1572343673 panic:9714009182	c2 set WIDENS main set	panic:9714009182	panic:1572343673
+builtins/e13-sibling-panic-order/compound-call-target-vs-len	unsupported:1819865985	panic:1033716255 panic:1371076965	DISJOINT/OTHER	unsupported:1819865985	panic:1033716255
+builtins/e13-sibling-panic-order/compound-index-vs-len	panic:1371076965 panic:9650183921	panic:1371076965 panic:9650183921	SAME set, different stream->member mapping	panic:1371076965	panic:1371076965
+builtins/e13-sibling-panic-order/index-assert-left-call	panic:2454417912 panic:2813133959 panic:9650183921	panic:2454417912 panic:2813133959 panic:9650183921	SAME set, different stream->member mapping	panic:2454417912	panic:2454417912
+builtins/e13-sibling-panic-order/index-middle	panic:1628555184 panic:2670707595	panic:1628555184 panic:2670707595 panic:9650183921	c2 set WIDENS main set	panic:2670707595	panic:2670707595
+builtins/e13-sibling-panic-order/slice-value-early-len-hoist	ok:1003620375	ok:1003620375 ok:1409899916	c2 set WIDENS main set	ok:1003620375	ok:1003620375
+builtins/e13-sibling-panic-order/two-index-left-call	panic:1037753006 panic:2454417912 panic:9650183921	panic:1037753006 panic:2454417912 panic:9650183921	SAME set, different stream->member mapping	panic:2454417912	panic:2454417912
+evalorder/unseq-pilot/r1	-	ok:1306184024 ok:6050930876 ok:8774021277	born (no main row)	-	ok:1306184024
+evalorder/unseq-pilot/r2a-false	-	ok:3829635690	born (no main row)	-	ok:3829635690
+evalorder/unseq-pilot/r2a-true	-	ok:4611975010	born (no main row)	-	ok:4611975010
+evalorder/unseq-pilot/r2b	-	ok:1664797412	born (no main row)	-	ok:1664797412
+evalorder/unseq-pilot/r2c-false	-	ok:1719537657 ok:2416149794	born (no main row)	-	ok:1719537657
+evalorder/unseq-pilot/r2c-true	-	ok:1719537657 ok:8280562933	born (no main row)	-	ok:1719537657
+evalorder/unseq-pilot/r4	-	ok:1458590936 ok:1688504417	born (no main row)	-	ok:1458590936
+evalorder/unseq-pilot/r6	-	ok:1504024718 ok:2393112220	born (no main row)	-	ok:2393112220
+evalorder/unseq-pilot/w1	-	ok:1177368104 ok:6050930876	born (no main row)	-	ok:1177368104
+evalorder/unseq-pilot/w2	-	ok:1504024718 ok:1563978195 ok:9675552803	born (no main row)	-	ok:9675552803
+evalorder/unseq-pilot/w3	-	ok:2406959501 ok:8092413149	born (no main row)	-	ok:2406959501
+evalorder/unseq-pilot/w5	-	panic:3155840408 panic:3625778184	born (no main row)	-	panic:3155840408
+evalorder/unseq-pilot/w6	-	ok:1177368104 ok:6050930876 ok:8774021277	born (no main row)	-	ok:1177368104
+multi-assign/index-target-rhs-call-order	ok:1101787121	ok:1101787121 ok:1181374294	c2 set WIDENS main set	ok:1101787121	ok:1101787121
+noodler/latitude/args-index-vs-call	ok:1614407434	ok:1614407434 ok:7656209329	c2 set WIDENS main set	ok:1614407434	ok:1614407434
+noodler/latitude/concat-var-vs-call	ok:6340939642	ok:6340939642 ok:8771794773	c2 set WIDENS main set	ok:6340939642	ok:6340939642
+noodler/latitude/index-call-index	ok:1623359749	ok:1623359749 ok:1843058103 ok:5512632218	c2 set WIDENS main set	ok:1623359749	ok:1623359749
+noodler/latitude/return-operands	ok:5795408099	ok:5795408099 ok:5869975401	c2 set WIDENS main set	ok:5795408099	ok:5795408099
+noodler/maps/slice-compound-call-mutates	ok:3228866751	ok:3228866751 ok:7656209329	c2 set WIDENS main set	ok:3228866751	ok:3228866751
+
+## reading
+- Rows OUTSIDE the pilot's 25 packages: 0 differ — every one of the 3613 byte-identical rows plus none else; the brief's requirement holds.
+- Rows INSIDE the pilot's packages that differ: 50 = 20 whose observation is IDENTICAL on every stream (only the consumption SITE and count changed: `unseqNext` picks where main's binary consumed `unseqPanic` or nothing — e.g. binop-order/operand-panic-vs-call/*, len-vs-call-order/panicky-between, the E13 strict/membership rows whose set is a singleton or is realized by the same stream->member mapping, spec-examples-stmt/continue-label with its w=18 picks, scoping/closure-shadow-binding, noodler/evalorder/*) + 30 whose observation differs on some stream: 13 BORN rows (no main row), 4 FLIPS (BUG-101 x2 and compound-call-target-vs-call WIDEN main's singleton to the predicted two-member set; compound-call-target-vs-len: main `unsupported` (the designed refusal) -> two panic members among the six streams, the third member `f`·[9] appears under the full enumeration), 7 LANE MOVES (each WIDENS main's singleton by exactly the predicted second/third member; the default tape's observation identical to main's on every one), the 4 WIDENED PINS (assert-middle, index-middle: a third member visible already on the six streams; index-assert-left-call, two-index-left-call: the same three members on the six streams with a different stream->member mapping — the fourth member is reached by the K=32 enumeration, c2-moved-rows.txt), and 2 membership rows whose SET is unchanged but whose stream->member mapping differs (compound-assert-vs-len, compound-index-vs-len — the E13 probe's pick order vs the graph scheduler's; gate #2 enumerated the same sets, no drift line).
+- The default (all-zero) tape's observation is identical main = c2 on EVERY pre-existing row except the two designed fixes: compound-call-target-vs-call (main `f`·[9], the hoisted-address bug; c2 `f wit 5`·[9], gc's) and compound-call-target-vs-len (main refused; c2 ``·[5]).

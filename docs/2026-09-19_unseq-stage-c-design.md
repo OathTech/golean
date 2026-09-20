@@ -254,3 +254,46 @@ pointers, fields, maps, receives, comma-ok, methods, conversions, allocations); 
 `len`-only / call-only sweeps if a fused-panic observable ever demands them; remove
 `unseqProbe`/`probeK`/`unseqPanic` after every caller moved; the twin re-pin when its sweeps
 enter.
+
+## 10. As landed (C1–C3, 2026-09-19/20; [AGENT]) — the predictions of §3 against the measurement
+
+- **C1 `fb03e38f`** — the decoder arm exactly as §4/§5 specify, with one shape clarification found
+  while writing it: a `slice` head's default `high` is `builtin-len` of the SAME base atom (D8's
+  one structural exception; the spec's «length of the sliced operand»). 18 mutants (`Tests/unseq-
+  wire/mutants.tsv`) refuse by name; the hand-built wires reproduce EVERY reference set of the
+  spike EXACTLY over the wire (check (b)); `ci --slow` re-certified the one tier=slow row
+  «unchanged set».
+- **C2** — the lowering of §6, with TWO corrections to §6 as first written, both found by the
+  gates, both recorded here: (i) the canonical partition is PER FRAME — a level's event blocks
+  (each a nested call / len / guard with its own operand subtree) then that level's residual —
+  not a flat events-then-residual list: gate #1 caught `noodler/latitude/args-index-vs-call`
+  (`g(a[0], f())`) at `differential` because the flat partition ran the argument-list read
+  before the sibling call on the all-zero tape where today's ANF hoists the call first; fixed
+  before gate #2 (`Tests/unseq_lower_test.go` pins the shape). (ii) An INTERFACE-typed slice
+  element is outside the pilot's target grammar (its store would box inside the graph; boxing
+  is an argument/completion wrap here) — a classifier refinement, census unchanged (no corpus
+  sweep had one).
+- **§3's predictions, measured (gate #2's drift = 25 lines, nothing else):** the four FLIPS as
+  predicted, each set ∋ gc's draw (`assert-ok-early-len-hoist` {6, panic}; `slice-value-early-
+  len-hoist` {12, 22}; `compound-call-target-vs-call` {`f wit 5`·[9], `f`·[9]}; `compound-call-
+  target-vs-len` {``·[5], `f`·[5], `f`·[9]}); the SEVEN lane moves as predicted, with the sets
+  §3 derived — except §3's own arithmetic on `multi-assign/index-target-rhs-call-order`: the
+  read-before-`bump` member is 7·100 + 20·10 + 30 + 2 = **932** (xs[0] = 7, `i` = 2 at the
+  return), not 752 (xs[1]·10 was mis-added as 20); the measured set is {932, 1209}, gc 1209, and
+  the row's `why` said the same wrong 752 until C3 corrected it; the E13 pins: `assert-
+  middle`, `index-middle` 2 → 3 as predicted; `two-index-left-call` 3 → 4 and `index-assert-
+  left-call` 3 → 4 (§3 named the first three shapes; the fourth is the same class); the
+  `continue-label` depth declaration as predicted (w=18, depth=128); the `binop-order` rows'
+  sets unchanged (not in the drift); the 13 born pilot rows PASS on first run (W4 is a hand-
+  built wire only, as §1 says). The twin pin did not move. NO PASS→non-PASS flip.
+- **The census after C2:** 133 admitted sweeps in 29 packages (120 + the 13 pilot rows); 25
+  packages' emitted wires carry `unseq` nodes (117 nodes) — the 4 admitted-but-absent are the
+  `fmt/formatter-box-*`/`formatter-dyn-hole` exports the standing `fmt.Formatter` boxing refusal
+  kills before any sweep lowers; the main-tip frontend and the C2 frontend differ on EXACTLY
+  those 25 wires (`census-summary.txt`).
+- **§7's [AGENT] choices stand**; one added: the lowerdiag `causes.tsv` row `unseq-lowering-
+  invariant` (by-design) classifies the lowering's 17 internal `unseq lowering:` refusal formats
+  (unreachable for an admitted sweep — the alternative, leaving them unclassified, dropped the
+  frontend's refusal-vocabulary coverage under the 90 % `TestVocabularyCoverageIsTracked` states).
+- **§8 PENDING [USER]:** unchanged — the value-axis envelope on the named rows and the two
+  retired E13 narrowings, ratification asked at the merge (handoff §6).

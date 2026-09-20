@@ -809,7 +809,26 @@ into sequenced-before (matters the day an E-series envelope meets a
 concurrent observer; E5 is no longer residual latitude — FORCED, with
 gc's early store a deviation, L-016, 2026-09-02).
 
-### E2. Call vs. assignment-target operands — (b) PINNED call-first on the VALUE axis, **known ≠ gc** on the EARLY-realized kinds; the PANIC axis (a) ENVELOPED via E13's `unseqPanic` since the e13-b re-audit fix round (2026-09-05)
+### E2. Call vs. assignment-target operands — (b) PINNED call-first on the VALUE axis outside the Stage C pilot; (a) ENVELOPED on the pilot's rows (2026-09-19); the PANIC axis (a) ENVELOPED via E13's `unseqPanic` since the e13-b re-audit fix round (2026-09-05)
+
+- STAGE C PILOT (2026-09-19, [AGENT], lane `core/unseq-stage-c-0919`; design
+  `docs/2026-09-19_unseq-stage-c-design.md` §1/§3; the width-of-P ruling [USER]
+  Mike 2026-09-19 «Agree, merge», relayed — «ALL mutable reads, STAGED»): a
+  sweep inside the pilot grammar lowers as ONE `unseq` graph (v2.1 §3; the
+  `unseqNext` site) in which a target's index operand is a READ occurrence
+  spec-unsequenced against the RHS call — the VALUE axis is (a) ENVELOPED on
+  exactly these rows: `multi-assign/index-target-rhs-call-order` (`xs[i] =
+  bump()`, `i` captured: {932, 1209}, gc 1209 — the strict row that pinned
+  gc's call-first point is a membership row now), `noodler/maps/slice-compound-
+  call-mutates` (`a[0] += f()`: {15, 105}), BUG-104's `compound-call-target-vs-
+  call` and BUG-102's `compound-call-target-vs-len` (BUG-112, the fixed entry),
+  and the BUG-101 pair (`assert-ok-early-len-hoist` {6, panic}, `slice-value-
+  early-len-hoist` {12, 22}) — the **known ≠ gc** marker this heading carried
+  for the EARLY-realized kinds is RETIRED: BUG-101 is FIXED, and E2 LEAVES §10's
+  known-≠-oracle list. Every other row of this axis (a target operand beside a
+  call outside the pilot grammar — maps, pointers, fields, receives, multi-
+  target forms; BUG-104's four open rows) keeps the (b) call-first pin below
+  with its obligation; Stage E widens.
 
 - FINAL VERIFICATION FIX ROUND (e13-b, 2026-09-05, [AGENT]; R''-1): this
   entry's VALUE axis JOINS §10's known-≠-oracle list — the heading had
@@ -1460,6 +1479,23 @@ subexpressions of one binary operator).
   the pre-call state, so the machine offers the panic (RAISE) beside the
   call-first value (DEFER, gc's, this entry's pin) — E13's observable
   riding an E12 row.
+  STAGE C PILOT (2026-09-19, [AGENT]; design `docs/2026-09-19_unseq-stage-c-
+  design.md` §3): on the rows whose sweep the pilot lowers as an `unseq`
+  graph, the VALUE axis of this entry is (a) ENVELOPED — the read of a
+  captured local or a slice element beside a mutating call is an occurrence
+  unordered against the call, and BOTH values are members, gc's call-first
+  value among them: `noodler/latitude/args-index-vs-call` {15, 1005},
+  `noodler/latitude/concat-var-vs-call` {`ab`, `zb`}, `noodler/latitude/index-
+  call-index` {4, 103, 301, 400}, `noodler/latitude/return-operands` {(1,5),
+  (100,5)}, `noodler/maps/slice-compound-call-mutates` {15, 105} (strict →
+  membership at the pilot); the born pilot rows `evalorder/unseq-pilot/*`
+  (W1/W2/W3/W5/W6, R1, R2c, R4, R6 — the v2.1 spike's sets, exact). The
+  canonical (all-zero) tape realizes calls first, reads late — today's ANF —
+  so the strict rows OUTSIDE the pilot keep this entry's (b) pin unchanged
+  (the census's `noodler/latitude` rows not listed above did not move; 0 of
+  the fmt / imported-goose / slices sweeps that lower as all-forced graphs
+  changed observation). E12(ii)'s read-vs-read axis stays (b) with its
+  obligation: the pilot admits no call-free sweep.
   EXCEPTION TO THE CALL-FIRST VALUE PIN (e13-b re-audit fix round D4 (v),
   RECORDED at the final verification fix round 2026-09-05, R''-8,
   [AGENT]): for the two ALLOCATING CONVERSIONS `[]byte(s)` / `[]rune(s)`
@@ -1628,6 +1664,18 @@ machine construct §3, the frontend §4, the residuals §6).
   grossmith's (F-5) — answered: such a row now fails at stage `nondet`
   and is routed to membership (measured at the lane: the two binop rows
   and `make-hint-call` did exactly that).
+- STAGE C PILOT (2026-09-19, [AGENT]; design `docs/2026-09-19_unseq-stage-c-
+  design.md`): on the sweeps inside the pilot grammar the `unseqPanic` probe
+  no longer runs — the whole sweep is an `unseq` graph (`unseqNext`) and EVERY
+  linear extension is a member, so two residuals below retire on those rows:
+  (1) the operand RIGHT of the event (`assert-right-call`: {conversion before
+  `wit 5`, after it} — strict → membership) and (9) the two-or-more-events
+  narrowing (`assert-middle`, `index-middle`: the operand before the FIRST
+  call is the third member; `two-index-left-call`, `index-assert-left-call`:
+  four members — each failing operand may win, before or after the call).
+  The 24 E13 rows the pilot lowers keep gc's draw in their sets (K=32 and
+  K=80). Rows outside the pilot grammar (maps, receives, allocations, method
+  calls, `make`, `min`, address-of operands) keep the probe and its residuals.
 - RESIDUAL NARROWINGS AND REFUSALS (recorded, design §6; rewritten at
   the e13-b audit fix round 2026-09-05 — the first cut over-stated the
   envelope, audit R4): (1) an operand RIGHT of the event (`f() + a[i]`)
@@ -2955,19 +3003,17 @@ history block, never in a membership line.
   narrowed — back since the fix round; the previous "9 → 8" was not
   derivable from the list, audit R12).
 - Known-≠-oracle deterministic points (the honesty-critical list):
-  E2 (VALUE axis, its EARLY-realized kinds — BUG-101's two rows), E3,
-  E5, E7, R3(escaping path), BUG-104 (a compound target's hoisted
-  address/key temp — five rows). THREE CLASSES inside one list, stated
-  per row: E3, E7, R3 are (b)/(b-n) PINS with gc on another conforming
-  member (re-envelope debts, §7), and E2's value axis is a (b) PIN of
-  the same kind whose gc-elsewhere member is FILED as an open bug
-  (BUG-101) rather than only recorded; **E5 is a (c) FORCED row on which
-  gc DEVIATES** (L-016, [USER] ruling 2026-09-02) — it stays listed
-  because the oracle disagrees with the machine there, but the
-  disagreement is gc's, not a debt of ours; **BUG-104 is an OPEN
-  observed-∉-modeled bug** (no pin and no site — the frontend's eval-once
-  temp; the fix is an envelope) listed because the oracle's deterministic
-  answer is outside the machine's set on five rows. (E13 added 2026-08-20
+  E3, E5, E7, R3(escaping path), BUG-104 (a compound target's hoisted
+  address/key temp — four rows: the three map-key spellings and the
+  receive spelling). THREE CLASSES inside one list, stated per row: E3,
+  E7, R3 are (b)/(b-n) PINS with gc on another conforming member
+  (re-envelope debts, §7); **E5 is a (c) FORCED row on which gc
+  DEVIATES** (L-016, [USER] ruling 2026-09-02) — it stays listed because
+  the oracle disagrees with the machine there, but the disagreement is
+  gc's, not a debt of ours; **BUG-104 is an OPEN observed-∉-modeled bug**
+  (no pin and no site — the frontend's eval-once temp; the fix is an
+  envelope) listed because the oracle's deterministic answer is outside
+  the machine's set on four rows. (E13 added 2026-08-20
   and LEFT 2026-09-05 — re-enveloped at lane e13-b, gc's member is IN the
   set on both former axes; E2/BUG-101/BUG-104 JOINED 2026-09-05 at the
   e13-b final verification fix round, R''-1 — the doctrine's register #2
@@ -2976,11 +3022,40 @@ history block, never in a membership line.
   entry; the doctrine sentence was edited in the same change, per its
   standing rule; the C2+C3 send-then-spin wedge LEFT this list 2026-08-21
   — W3.2 stages C/D re-enveloped it, register #1 discharged; E5's class
-  changed 2026-09-02.)
+  changed 2026-09-02.; **E2's value axis LEFT and BUG-104 dropped to four
+  rows 2026-09-19** — Stage C of the evaluation-order model v2.1 (lane
+  `core/unseq-stage-c-0919`): BUG-101 FIXED and BUG-104's slice-element
+  spelling FIXED as `unseq` membership sets, BUG-112 the fixed entry.)
 
 ### 10.1 Movement and history (NOT membership)
 
 Nothing in this block is a class member by virtue of being named here.
+
+- **Stage C of the evaluation-order model v2.1 (2026-09-19, [AGENT] lane
+  `core/unseq-stage-c-0919`; design `docs/2026-09-19_unseq-stage-c-design.md`;
+  the rulings [USER] Mike 2026-09-19 «Agree, merge», relayed: width of P = all
+  mutable reads STAGED, N1 SPLIT, N3 REFUSE): the `unseqNext` site (Stage B's
+  census row above) is REACHED from native Go for the first time — the pilot
+  grammar's sweeps (a same-package call beside a read of an address-taken
+  local, a slice-element checked access, a failing pure op, an element target
+  plan or a guard) lower as `unseq` graphs. Entry classes UNCHANGED by count
+  ((a) 15 / (b) 17): E2 and E12 stay (b) PINNED as entries, ENVELOPED on the
+  pilot's rows only (each row named on the entries); E2's `known ≠ gc` marker
+  retires (BUG-101 fixed) and E2 leaves the known-≠-oracle list; BUG-104 stays
+  listed with four rows; E13 stays (a), its residuals (1)/(9) retired on the
+  pilot's rows; E3/E4 unchanged (the pilot has no multi-target form). New
+  membership rows: `evalorder/unseq-pilot/*` (10 membership + 3 strict);
+  lane moves strict → membership: `assert-right-call`, `multi-assign/index-
+  target-rhs-call-order`, `noodler/latitude/{args-index-vs-call,concat-var-
+  vs-call,index-call-index,return-operands}`, `noodler/maps/slice-compound-
+  call-mutates`; the flips `assert-ok-early-len-hoist`, `slice-value-early-
+  len-hoist` (BUG-101 → fixed), `compound-call-target-vs-call`, `compound-
+  call-target-vs-len` (→ BUG-112, fixed); pins widened `assert-middle`,
+  `index-middle` (2 → 3), `index-assert-left-call` (3 → 4), `two-index-left-
+  call` (3 → 4); one strict `depth=128` declaration (`spec-examples-stmt/
+  continue-label`, w=18). Stage E widens P (globals, pointers, fields, maps,
+  receives, comma-ok, methods, conversions, allocations) and retires the
+  `unseqPanic` probe.
 
 - **Landing chunk L3 (2026-09-07, [AGENT] lane `land-panic-text`,
   `docs/2026-09-07_land-panic-text-tape.md`): R10a JOINS the (a) list** —

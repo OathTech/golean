@@ -91,6 +91,34 @@ graph, `resultTypes` arity, guard cell type, unknown key.
   and the four §8 EDGE mutants of the lowered graphs (`edge-{data,lexical,guard,phase}.json`)
   decode and change the set as the exact-set check names (`c2-wire-sets.tsv`).
 
+## C3 — the records, and the whole-corpus choice trace (main's binary vs the C2 tree)
+
+- `choice-trace-c2.txt`: the S3 lane's method — `scripts/choice-trace-corpus --dump --jobs 6` on
+  BOTH sides (main `6a7beb3d`'s frontend + binary from a `git archive` export tree with this
+  worktree's pinned `deps/`; the C2 tree's frontend + the C1/C2 binary), the two standing
+  exclusions (`goroutines/send-then-spin`, `strings/trimspace-repeat/repeat-bound-refused`),
+  then a per-row comparison of the concatenated dump records (stream, idx, phase, site, bound,
+  streamValue, pick) AND the results' (status, consumed, wide, obsHash) per stream
+  (`.tmp/trace-compare.py`, its output in the file). The claim the brief asks for — rows OUTSIDE
+  the pilot's 25 packages byte-identical, rows inside changed by design and LISTED — is judged
+  there: 3663 row ids, 3613 byte-identical, **0 differ outside the pilot's 25 packages**, 50
+  differ inside — 20 with every observation identical on every stream (only the consumption
+  site moved: `unseqNext` where main's binary consumed `unseqPanic` or nothing) and 30 with an
+  observation difference on some stream (the 13 born rows, the 4 flips, the 7 lane moves —
+  each WIDENING main's singleton by the predicted member(s) —, the 4 widened pins, and 2
+  membership rows whose set is unchanged but whose stream→member mapping differs); the default
+  tape's observation is main = C2 on every pre-existing row except the two designed fixes.
+  `unseqNext` 532 consumptions appear, `unseqPanic` 417 → 288, every other site identical.
+- The records: the latitude inventory (E2 heading + Stage C bullet, E12 census note, E13
+  residuals (1)/(9) retired on the pilot's rows, §10 known-≠-oracle list, §10.1 movement entry);
+  the language-coverage ledger (§8 tally 3699 = 3455 / 244 with the derivation; the reds table
+  frontier 134 → 133, post-vintage 73 → 70, total 244; FR-28's reds cell 6 → 5; queue row 28;
+  the Order_of_evaluation row's Stage C note; §8y movement) — `tools/reconcile-records` after
+  the edits: C4/C5 clean, findings = the 5a STALE certificate (C9) and the standing C13 doc
+  sites only; the design note §10 «as landed»; the `why` correction on
+  `multi-assign/index-target-rhs-call-order` (752 → 932; the manifest hash changes, hence a
+  `--diff` gate); the handoff `docs/2026-09-19_unseq-stage-c-handoff.md`.
+
 ## Gate lines (captured exit codes; appended per slice)
 
 | slice | command | exit | wall | tree | result |
@@ -100,5 +128,6 @@ graph, `resultTypes` arity, guard cell type, unknown key.
 | C2 | `scripts/capped scripts/ci --diff` gate #1 (measurement) | **1** | 705 | C1 `fb03e38f` + the lowering, the E13 test updates, the pilot package (rows untouched) | 3699 rows 3454 PASS / 261 FAIL; drift = the design's predicted rows (as `nondet`/`membership` counts before their lane/pin edits) + the 5a row; every step ok but `certificate provenance` (5a) and the baseline diff — `c2-gate.txt` |
 | C2 | `scripts/capped scripts/ci --diff` gate #2 (confirmation) | **1** | 701 | gate #1 + the row edits (4 pins, 7 lane moves, 4 flips → membership, `depth=128`) | 3699 rows 3454 PASS / 245 FAIL; drift = EXACTLY the predicted 25 lines (13 born PASS, 4 FAIL→PASS, 7 PASS/-→PASS/membership, the 5a row); every step ok but `certificate provenance` (5a), the baseline diff (the movement), and `lowering-diagnostic tables` (372/425 vocabulary — the lowering's 17 internal `unseq lowering:` formats; classified before the commit: causes.tsv `unseq-lowering-invariant`, `go test ./tools/lowerdiag` ok) |
 | C2 | `scripts/capped scripts/ci` (fast; the re-pinned baseline + BUGS.md moves + causes row) | **1** | 414 | the committed C2 tree | 31 steps ok; red = the two 5a-class items only: `certificate provenance` STALE (`NativeToIR.lean`) and the baseline diff's ONE line `imported-goose/channel/google-search PASS→FAIL/membership` (the run's stale-certificate red vs the PASS kept in the re-pin for the train's 5a step); the re-pin guard accepts the 4 non-PASS→PASS flips (each on a BUGS.md Cases line); `check-bugs` ok (112 entries; ratchet coverage 10/10, latitude 4/4, wrong-answer 0/0); reconciler (report-only): C9 = the 5a item, C4 ×2 = the language-coverage ledger §8 tally stale at 3686/3438/248 — updated at C3 |
+| C3 | `scripts/capped scripts/ci --diff` (box-wide lock; `cases.tsv` changed → manifest hash) | **1** | 711 | C2 `ce33ffd1` + the C3 records (this commit's tree) | 3699 rows 3454 PASS / 245 FAIL; every step ok EXCEPT the two 5a-class items: `certificate provenance` STALE (`NativeToIR.lean`) and the baseline diff's ONE line `imported-goose/channel/google-search PASS→FAIL/membership`; re-pin guard ok (0 PASS→non-PASS; the 4 GREENED notes = C2's flips, each on a BUGS.md Cases line); `check-bugs`, `unseq wire (Stage C)`, `frontend pins` (twin byte-identical), `lowering-diagnostic tables`, eval 267, evidence size, reconciler C4/C5 clean (2 findings: C9 = the 5a item, C13 standing) — `c3-gate.txt` |
 | C1 | `scripts/capped scripts/ci --slow` (box-wide lock; the wire schema changed) | **1** | 1001 | C0 `ccd3bdab` + C1 edits (pre-commit) | 3686 rows 3437 PASS / 249 FAIL; every step ok — `core build` warning-free, `core totality audit`, `wire boundary` (11 + 7 unseq-node controls), `unseq scheduler (Stage B)` (64), **`unseq wire (Stage C)`** (new step: fixtures byte-identical to their generator, every reference set EXACT over the wire, 18 mutants refused by name in-process and through the CLI), `frontend pins` (twin byte-identical), go tests, eval 267 — EXCEPT the two 5a-class items: `certificate provenance` STALE («changed dependency build/files/GoLean/NativeToIR.lean») and, in consequence, the ONE certified row `imported-goose/channel/google-search` PASS→FAIL/membership whose fresh `--slow` re-enumeration reports «Fresh certification: unchanged set; seconds=135.578» — the certified SET is identical; the train's 5a step installs the candidate. No other row moved. `c1-gate.txt`; the per-witness enumeration figures `c1-wire-sets.tsv` |
 | C0 | `scripts/capped scripts/ci` (fast gate, box-wide lock) | **1** | 381 | same | every step ok EXCEPT: `certificate provenance` STALE — «changed dependency files/tools/nativefrontend/main.go» (the frontend is a certification input; the 5a-class item every frontend change raises, re-certified at C1's `--slow`), and the two fresh-worktree items `negative baseline diff` / `baseline diff` (NO recorded run in this worktree yet — the first `--diff` run is C1's). Core build warning-free; core audit, admission, declarations, wire boundary, method identity, unseq scheduler (Stage B), frontend pins, go tests, eval 267 ok. Reconciler: C9 HIGH = the same STALE certificate. `c0-gate.txt` |
