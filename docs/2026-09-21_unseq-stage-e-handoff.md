@@ -13,26 +13,31 @@ main `14006270` (the r45 train's records tip over `74d084ad`). Brief: `docs/2026
 | `0fe7bdce` | **E1** package-level variables (closes BUG-113) | EXIT=1 in 1083 s; 3709 = 3465 / 244 pinned; red = the 5a pair only | 2 flips FAIL → PASS (BUG-113), 4 born (`evalorder/unseq-globals`) |
 | `6960697f` | **E2** pointers, fields, maps (BUG-104's map row → BUG-112) | EXIT=1 in 1018 s; 3717 = 3474 / 243 | 1 flip, 5 lane moves strict → membership, 8 born (`evalorder/unseq-ptr-field-map`) |
 | `c1c27f27` | **E3** receives, method calls; the OBSERVABILITY trigger (BUG-104 FIXED) | EXIT=1 in 1021 s; 3722 = 3482 / 240 | 3 flips (BUG-104's last rows), `receiver-vs-arg-call` → membership, `nil-receiver-recursion` → confluent engine=dedup, `two-workers-own-chans` engine DFS → dedup, 5 born (`evalorder/unseq-recv-method`) |
+| `7f7e6b79` | **E4** conversions (pure ops), allocations (`allocate` bodies without E1 edges; `make`/`new` E1 participants) — BUG-102 FIXED | EXIT=1 in 1015 s; 3728 = 3493 / 235; red = the 5a pair only | 5 flips (BUG-102's designed reds: 4 membership + `slice-lit-payload-vs-recv` strict), 4 lane moves strict → membership (`bytes-conv-value-vs-mutating-call` — E12's recorded exception retires; `noodler/latitude/{slice-literal-index-vs-call,struct-literal-var-vs-call,conversion-index-vs-call}`), 6 born (`evalorder/unseq-conv-alloc`); the FR-28 frontier row retires to 0 reds |
 
 The 5a-class pair, identical at every gate: `certificate provenance` STALE for the changed core inputs (E1:
 NativeToIR.lean; E2: Machine.lean; E3: AdmissionIndices.lean and the other core modules) and the ONE drift line
 `imported-goose/channel/google-search PASS/membership → FAIL/membership` (its fresh re-certification «unchanged set»
 every time — the train installs the candidate at step 5a). Whole-corpus choice traces vs main `14006270`'s binary:
-E1 and E2 recorded in the README (the DIFFER set = exactly the rows whose sweeps the family admitted; every other id
-byte-identical); E3's: §4 below.
+E1, E2, E3 and E4 recorded in the README (the DIFFER set = exactly the rows whose sweeps the families admitted; every
+other id byte-identical); E4's: §4 below.
 
 Bug status: **BUG-113 fixed** (E1). **BUG-104 fixed** (E2 + E3; LEFT the inventory's known-≠-oracle list). **BUG-102
-open** — its five designed reds (`builtins/e13-sibling-panic-order/{composite-ptr-payload-vs-call,
-slice-lit-payload-vs-call,composite-ptr-payload-vs-call-printroot,slice-lit-payload-vs-call-sinkroot,
-slice-lit-payload-vs-recv}`) are E4's. **BUG-112** carries the Stage C / E2 fixed rows.
+fixed** (E4 — its five designed reds lower and PASS; the ledger's FR-28 frontier row retires to 0 reds; E12's recorded
+exception `bytes-conv-value-vs-mutating-call` retires into a membership set). **BUG-112** carries the Stage C / E2
+fixed rows.
 
 Twin (the raft twin assembly): 10 203 sweeps, **0 admitted** at every family; `scripts/check-frontend-pins` byte-identical.
 
-Legacy census (E6's condition — ZERO legacy `unseq-probe` emissions — is NOT met): the classifier census at E3
-(`census-e3.txt`) admits 110 of 108 045 corpus sweeps; the choice-trace site census still shows `unseqPanic` sites
-(E2's trace: 288 → 246; E3's: §4). The legacy triple (`Stmt.unseqProbe` / `Cont.probeK` / `ChoiceSite.unseqPanic`)
-stays until E4/E5 migrate the remaining probe emitters (conversions, allocations, multi-target forms, the interface-
-keyed / defined-key map compounds, non-main callees are OUTSIDE the grammar by design and never probed).
+Legacy census (E6's condition — ZERO legacy `unseq-probe` emissions — is NOT met): the classifier census at E4
+(`census-e4.txt`) admits 127 of 108 074 corpus sweeps; the choice-trace site census still shows `unseqPanic` sites
+(E2's trace: 288 → 246; E3's: 228; E4's: §4). The legacy triple (`Stmt.unseqProbe` / `Cont.probeK` /
+`ChoiceSite.unseqPanic`) stays until E5 migrates the remaining probe emitters by name: multi-target / tuple forms and
+comma-ok receives/assertions, map literals, array types and literals, `&x` of a variable, float/complex types,
+defined non-struct types, interface-keyed / defined-key map compounds, string indexing/slicing, interface
+conversions, method values/expressions, promoted fields/methods, variadic and non-main callees (the latter OUTSIDE
+the grammar by design — the shim helpers are never probed). The residue counts by former reason are in
+`census-e4.txt`.
 
 ## 2. PENDING [USER] (ratifications posed at the merge ask — none self-adjudicated)
 
@@ -50,12 +55,21 @@ keyed / defined-key map compounds, non-main callees are OUTSIDE the grammar by d
 4. **Lane moves via route α** (Stage D's amended caption «all choice streams the row consumes»):
    `noodler/methods/nil-receiver-recursion` strict → confluent `engine=dedup`; `goroutines/fork-join/two-workers-own-
    chans` engine DFS → dedup. Alternatives named on the rows (`depth=N`; a raised DFS work cap).
-5. **E3/E4 retirement + allocation-payload reclassification** (v2.1 §5 item 4) — E4's, not yet posed.
+5. **E3/E4 retirement + late structural allocations** (v2.1 §5 item 4) — REALIZED at E4: a composite literal is a
+   node without E1 edges (its payload reads unordered against the sibling calls / receives — BUG-102's rows and
+   the four moved rows), with the [AGENT] CORRECTION that `make`/`new` are E1 participants (function calls,
+   spec#Built-in_functions; the born control `make-len-vs-call` pins it against gc, 6 on 20/20). Ratification of
+   both posed at the merge ask (design §E4).
+6. **The `allocate` body kind** ([AGENT], design §E4): ONE constructor over `AllocSpec` (the frontend's five hoist
+   shapes) rather than a general `exec` statement body — alternative named there.
 
 ## 3. Next families (the plan of record, design §0)
 
-**E4 conversions + allocations** (closes BUG-102's five reds; retires E12's recorded exception
-`bytes-conv-value-vs-mutating-call`). Design sketch worked out at park, NOT started in code:
+**E4 conversions + allocations — LANDED** (`7f7e6b79`, design §E4). The sketch below was the plan at the E3
+park; what landed differs in one point: `make`/`new` are E1 participants (the control's gc draw decided it), so a
+payload read inside a `make` operand is forced before every later event and the E13 make rows
+(`assert-left-make-slice`, `tgt-assert-vs-make`) stay on the legacy probe path (no effectful event beside the
+assertion). Kept for the record:
 - Conversions are `Expr.convert ty e` in the core (an op; `convertValueToTy`) — an `eval` head `convert`
   (keys `target`, `x` an atom) — decoder D8 + classifier arm in `unseqExpr`'s CallExpr case (`tv.IsType()`, today's
   refusal «conversion», 5719 census rows); NO machine change. Type grammar: `unseqTypeOK` admits only
@@ -78,12 +92,19 @@ keyed / defined-key map compounds, non-main callees are OUTSIDE the grammar by d
   `assert-left-make-slice`, `tgt-assert-vs-make`, and every package whose sweeps enter); baseline re-pin; records
   (BUG-102 → fixed, inventory E12 exception retired, ledger §8ad); gate; trace.
 
-**E5 multi-target / residue** (tuple assignment, comma-ok forms incl. the comma-ok receive, blank targets;
-interface-keyed and defined-key map compounds; float types; the census residue stated). **E6** retire the legacy
-triple only when the census shows ZERO legacy `unseq-probe` emissions across corpus AND twin — E4/E5 decide whether
-that is reachable; if not, the handoff states why by name.
+**E5 multi-target / residue** (NEXT — not started): tuple / multi-value assignment (`a, b = f(), x`), the comma-ok
+forms (`v, ok := <-ch`, `v, ok := m[k]`, `v, ok := x.(T)`), blank targets, `&x` of a variable as an operand, map
+literals (an allocation whose dynamic entries gc evaluates at the literal's position — a `mapLit` `AllocSpec` arm
+with the E13 guard's measured note), array types/literals (a type-grammar widening: fixed-size arrays with the
+machine's `arrayLit`), string indexing/slicing (`runeAt`/`slice` on strings), interface conversions (`to-interface`
+heads), method values/expressions, defined non-struct types (the `conversion` residue's largest part), float/complex
+types; the census residue counted by former reason at each step. E5 also decides E3/E4 (the inventory's inter-target
+order entries): a multi-target form's targets are phase-1 siblings — the natural graph shape once tuple assignment
+enters. **E6** retire the legacy triple (`Stmt.unseqProbe` / `Cont.probeK` / `ChoiceSite.unseqPanic`) ONLY when the
+census shows ZERO legacy `unseq-probe` emissions across corpus AND twin — after E4 the trace still records 
+`unseqPanic` consumptions (§4), so E6 is NOT reachable yet; the handoff states the emitters by name above.
 
-## 4. E3 whole-corpus choice trace (main vs E3)
+## 4. Whole-corpus choice traces (main vs E3, main vs E4)
 
 `docs/evidence/2026-09-21_unseq-stage-e/choice-trace-main-vs-e3.txt`: 3686 ids — 3626 byte-identical, 43 DIFFER (exactly
 the rows of the 43 packages whose sweep decisions changed main → E3), 17 only on the E3 side (the born rows); the 94
@@ -91,8 +112,13 @@ sweeps returned to legacy at E3 are SAME (no consumption on either path). Site c
 `unseqPanic` 288 → 228 — the legacy `unseqPanic` probe is still consulted on 228 recorded consumptions across the
 corpus (E6's condition is not met; the probe emitters left are E4's conversions/allocations and E5's residue).
 
+E4: `choice-trace-main-vs-e4.txt`: ids=3692	same=3613	differ=56	onlyA=0	onlyB=23 — the DIFFER ids exactly the rows of the 40 packages whose sweep decisions changed main → E4, the ONLY_B ids the born rows; site census `unseqNext` 555 → 1436, `unseqPanic` 288 → 204 — the legacy probe is still consulted on 204 recorded consumptions (E6 NOT reachable; the emitters by name in §1).
+
 ## 5. Operational notes for the next session
 
+- E4's scratch: `.tmp/e4/edit-*.py` + `rename-alloc.py` (every edit as a replayable script — the rename runs AFTER
+  the others), `.tmp/e4/apply.sh` (the frontend half; NOT idempotent — the edits assert their anchors once),
+  `.tmp/gc-e4/`, `.tmp/gate-e4.sh`, `.tmp/nativefrontend-e4`, `.tmp/golean-e4`.
 - Scratch (all under the worktree's `.tmp/`, gitignored): `.tmp/census/{run.sh,summarize.py,diff.py}` (the census;
   `run.sh <frontend-binary> <out.tsv>` over every `cases.tsv` dir + the twin assembly; 23 s), `.tmp/trace-compare.py`
   (Stage D's per-id byte-identity), `.tmp/main-tree-full/.tmp/trace` (main `14006270`'s dump — reuse; the main
