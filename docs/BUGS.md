@@ -6295,10 +6295,37 @@ the e13-b design cross-references this entry.
 
 ## BUG-102 — DESIGNED REDS of the E13 (b) envelope's BOUNDARY, as moved by the re-audit fix round: the structural-allocation class (a `&T{…}`/slice literal or an interface method value whose PANICKY payload precedes an ordered call/receive — in return-, println- and sink-rooted spellings) and the narrowed A6 guard's residue (a compound target that CONTAINS A CALL beside a hoisted len) refuse by name [coverage; frontend hoist/guard surface; e13-b audit fix round R1/R2 + re-audit fix round R1'-1..R1'-4, R2'-1; the entry exists so the refusals cannot stop firing unnoticed]
 
-- Status: open (designed reds — a refusal standing in for latitude, inventory E6 narrowed / E13 residuals 3 and 5; [AGENT], e13-b audit fix round 2026-09-05; Cases line re-derived at the re-audit fix round the same day)
+- Status: fixed ([AGENT], 2026-09-21, lane `core/unseq-stage-e-0921` — Stage E of the
+  evaluation-order model v2.1, family E4: the structural-allocation class ENTERS the `unseq`
+  graph — `&T{…}` and a slice literal are `allocate` bodies without E1 edges (v2.1 R3) whose
+  payload reads are occurrences unordered against the later call / receive; the five designed
+  reds lower and PASS (four membership sets with gc's `wit 5`-then-panic member inside, the
+  receive spelling a strict singleton observation); design
+  `docs/2026-09-21_unseq-stage-e-design.md` §E4. Filed open as designed reds — a refusal
+  standing in for latitude, inventory E6 narrowed / E13 residuals 3 and 5; [AGENT], e13-b audit
+  fix round 2026-09-05; Cases line re-derived at the re-audit fix round the same day)
 - Pinned-by: none
-- Expect: FAIL
 - Cases: builtins/e13-sibling-panic-order/composite-ptr-payload-vs-call, builtins/e13-sibling-panic-order/slice-lit-payload-vs-call, builtins/e13-sibling-panic-order/composite-ptr-payload-vs-call-printroot, builtins/e13-sibling-panic-order/slice-lit-payload-vs-call-sinkroot, builtins/e13-sibling-panic-order/slice-lit-payload-vs-recv
+
+FIXED 2026-09-21 (Stage E family E4 — conversions and allocations; [AGENT]): the
+five structural-allocation rows lower as ONE `unseq` graph each. `(&T{x: s[i]}).x +
+wit(5)` (and its println-rooted spelling): the literal is an `allocate` body (`new`) — a
+composite literal is NOT a call, so it carries NO E1 edge (v2.1 R3; spec#Order_of_evaluation
+orders calls, method calls, receives and logical operations only) — on the payload's cell;
+the payload read `s[i]` is an occurrence spec-unsequenced against `wit`: the read first →
+the panic with nothing printed, `wit` first → `wit 5` then the panic (gc's member, 20/20
+draws under GOMAXPROCS 1/8, default and -N -l). `[]int{s[i]}[0] + wit(5)` (and the
+sink-rooted spelling): the slice literal an `allocate` body (`slice-lit`), the same two members.
+`[]int{s[i]}[0] + <-ch`: the payload read unsequenced against the RECEIVE (an E1-ordered
+event occurrence) — the two orders differ only in the channel's state, which the row does
+not witness, so its observation set is the singleton panic and the row is STRICT (the
+witnessed shape is enumerate.py E4c and the born `evalorder/unseq-recv-method` rows). All
+five FAIL/frontend-export → PASS on this entry's own Cases line (a fixed entry's rows must
+PASS — `check-bugs`). `structuralAllocGuard`'s refusal text stays a `lowerdiag` tripwire
+(the e13guard tests assert the graph, not the refusal); map literals stay on the legacy
+path by name (gc evaluates their dynamic entries at the literal's position — one member,
+gc's; E5's statement). This entry's other class, the narrowed A6 guard's residue, was
+RETIRED at Stage C (below).
 
 RETIRED 2026-09-19 (Stage C of the evaluation-order model v2.1, lane
 `core/unseq-stage-c-0919`, [AGENT]): the narrowed A6 guard's residue row

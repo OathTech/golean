@@ -1,0 +1,57 @@
+# AFTER E3 (the E3 frontend; the E4 baseline — the tree at the E3 commit c1c27f27)
+corpus sweeps 108045  admitted 110  packages-with-admitted 31  refused-packages 0
+admitted units: [('main', 110)]
+twin sweeps 10203  admitted 0
+
+# AFTER E4 (the E4 frontend; the tree with the born package evalorder/unseq-conv-alloc; .tmp/census/after-e4.tsv)
+corpus sweeps 108074  admitted 127  packages-with-admitted 32  refused-packages 0
+admitted units: [('main', 127)]
+admitted by form: [('return', 74), ('compound', 22), ('elem-assign', 8), ('call-stmt', 8), ('define', 8), ('print-stmt', 3), ('map-assign', 2), ('deref-assign', 1), ('assign', 1)]
+admitted per package:
+    43 Corpus/coverage/exec/builtins/e13-sibling-panic-order
+    13 Corpus/coverage/exec/evalorder/unseq-pilot
+     9 Corpus/coverage/exec/noodler/latitude
+     7 Corpus/coverage/exec/noodler/evalorder
+     6 Corpus/coverage/exec/evalorder/unseq-ptr-field-map
+     5 Corpus/coverage/exec/spec-examples-decl/select-forms
+     4 Corpus/coverage/exec/builtins/len-vs-call-order
+     4 Corpus/coverage/exec/evalorder/unseq-conv-alloc
+     4 Corpus/coverage/exec/evalorder/unseq-recv-method
+     3 Corpus/coverage/exec/evalorder/legacy-logical-vs-call
+     3 Corpus/coverage/exec/evalorder/unseq-globals
+     3 Corpus/coverage/exec/noodler/maps
+     2 Corpus/coverage/exec/binop-order/operand-panic-vs-call
+     2 Corpus/coverage/exec/noodler/methods
+     2 Corpus/coverage/exec/spec-examples-stmt/continue-label
+     1 Corpus/coverage/exec/channels/make-edge
+     1 Corpus/coverage/exec/channels/recv-edge
+     1 Corpus/coverage/exec/evalorder/unseq-const-cell
+     1 Corpus/coverage/exec/goroutines/fork-join
+     1 Corpus/coverage/exec/goroutines/worker-pool
+     1 Corpus/coverage/exec/init/stdlib-initializer-dependent
+     1 Corpus/coverage/exec/maps/compound-assign-eval-once
+     1 Corpus/coverage/exec/methods/nil-receiver
+     1 Corpus/coverage/exec/multi-assign/index-target-rhs-call-order
+     1 Corpus/coverage/exec/noodler/arith
+     1 Corpus/coverage/exec/noodler/frontier/pointer-to-pointer-chains
+     1 Corpus/coverage/exec/noodler/gotchas
+     1 Corpus/coverage/exec/pointers/deref-target-rhs-call-order
+     1 Corpus/coverage/exec/race/negative-sync
+     1 Corpus/coverage/exec/scoping/closure-shadow-binding
+     1 Corpus/coverage/exec/spec-examples-decl/conversion-parse-forms
+     1 Corpus/coverage/exec/sync/out-of-scope-cond
+twin sweeps 10203  admitted 0
+
+# the E4 residue by name (legacy reasons still counted after the widening):
+     222 unary operator & (address of a variable)
+
+# DIFF (E3 -> E4): the E3 census lacks the package born after it (unseq-conv-alloc: 4 admitted — conv-read-vs-call, struct-lit-vs-call, addr-lit-vs-call, slice-lit-vs-call; make-len-vs-call all-forced = legacy, map-lit-control refused by name = legacy). Over the shared rows: +13 admitted (7 composite literals, 3 conversions, 2 `&T{…}`, 1 `new`), 0 lost. 110 + 13 + 4 = 127.
+rows only in AFTER (new packages): 27 in ['Corpus/coverage/exec/evalorder/unseq-conv-alloc']
+newly admitted 13   lost 0
+newly admitted per package:
+    10 Corpus/coverage/exec/builtins/e13-sibling-panic-order
+     3 Corpus/coverage/exec/noodler/latitude
+newly admitted, by former reason: [('composite literal', 7), ('conversion', 3), ('unary operator &', 2), ('builtin new', 1)]
+newly admitted by form: [('return', 10), ('define', 2), ('print-stmt', 1)]
+twin newly admitted: 0
+still legacy with a package-level reason: [('package-level target of a type outside the grammar ([3]int)', 3), ('package-level target of a type outside the grammar ([2]int)', 2), ('package-level target of a type outside the grammar (main.Valuer)', 1), ('package-level target of a type outside the grammar (raft.Logger)', 1)]

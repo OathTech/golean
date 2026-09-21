@@ -77,6 +77,14 @@ def selectHeadIndices : SelectClauseHead → List TypeIdx
   | .send c v t => exprIndices c ++ exprIndices v ++ tyIndices t
   | .recv as c t => assigneesIndices as ++ exprIndices c ++ tyIndices t
 
+/-- An allocation's indices (Stage E E4): its types and operand expressions. -/
+def allocSpecIndices : AllocSpec → List TypeIdx
+  | .new v t => exprIndices v ++ tyIndices t
+  | .makeSlice e l c => tyIndices e ++ exprIndices l ++ optExprIndices c
+  | .makeMap k v h => tyIndices k ++ tyIndices v ++ optExprIndices h
+  | .makeChan e c => tyIndices e ++ optExprIndices c
+  | .sliceLit e _ es => tyIndices e ++ keyedExprIndices es
+
 /-- An `unseq` occurrence body's indices (Stage B): its head/operand
 expressions and target assignee; the graph's cells declare types too. -/
 def unseqBodyIndices : UnseqBody → List TypeIdx
@@ -84,6 +92,7 @@ def unseqBodyIndices : UnseqBody → List TypeIdx
   | .load _ _ => []
   | .invoke _ callee args => exprIndices callee ++ exprListIndices args
   | .recv _ ch elem => exprIndices ch ++ tyIndices elem
+  | .allocate _ spec => allocSpecIndices spec
   | .target _ lhs => assigneeIndices lhs
   | .guard _ _ _ => []
 def unseqGraphIndices (g : UnseqGraph) : List TypeIdx :=

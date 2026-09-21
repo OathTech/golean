@@ -116,6 +116,21 @@ E3d (BUG-104) m[t[k]] += q.M(), t[k] out of range: outcome set = [('panic', ()),
 E3e v.Plus(f()), value receiver, f writes v.n (E14): outcome set = [6, 15]
    trajectories per outcome: [(6, 1), (15, 1)]
    canonical (slot 0): R_recv E_f E_plus -> 6
+E4a int([]byte(s)[0]) + mut() (s = "ab", mut: s = "zz"): outcome set = [98, 123]
+   trajectories per outcome: [(98, 2), (123, 1)]
+   canonical (slot 0): R_s E_mut Conv Op -> 98
+E4b (&T{x: s[i]}).x + wit(5), s[i] out of range (BUG-102): outcome set = [('panic', ()), ('panic', ('wit 5',))]
+   trajectories per outcome: [(('panic', ()), 1), (('panic', ('wit 5',)), 1)]
+   canonical (slot 0): R_si -> ('panic', ())
+E4c []int{s[i]}[0] + <-ch, s[i] out of range; witness len(ch) (BUG-102): outcome set = [('panic', 'len(ch)=0'), ('panic', 'len(ch)=1')]
+   trajectories per outcome: [(('panic', 'len(ch)=0'), 1), (('panic', 'len(ch)=1'), 1)]
+   canonical (slot 0): R_si -> ('panic', 'len(ch)=1')
+E4d iv.(int) + len(make([]int, t[k])) (E13 assert-left-make-slice): outcome set = [('panic', 'index out of range [5] with length 1'), ('panic', 'interface conversion: interface {} is string, not int')]
+   trajectories per outcome: [(('panic', 'index out of range [5] with length 1'), 1), (('panic', 'interface conversion: interface {} is string, not int'), 1)]
+   canonical (slot 0): R_iv -> ('panic', 'interface conversion: interface {} is string, not int')
+E4e len(make([]int, n)) + mut() (make an E1 participant: n forced before mut): outcome set = [11]
+   trajectories per outcome: [(11, 1)]
+   canonical (slot 0): R_n A_make E_len E_mut Op -> 11
 C1 f(g()): outcome set = [8]
    trajectories per outcome: [(8, 1)]
    canonical (slot 0): E_g E_f -> 8

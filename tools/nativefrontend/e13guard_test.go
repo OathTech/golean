@@ -359,7 +359,7 @@ func TestPhase1TargetOperandsAreProbed(t *testing.T) {
 		t.Fatalf("whole export refused: %v", err)
 	}
 	for fn, want := range map[string]int{
-		"tgtAssertVsMake":      1,
+		"tgtAssertVsMake":      1, // Stage E E4: make is an E1 participant WITHOUT effect — no effectful event, the sweep stays legacy (probed)
 		"arrayBaseTargetVsLen": 1, "tgtAssertVsMin": 1,
 		"addrAssertLeftCall": 1,
 	} {
@@ -382,6 +382,8 @@ func TestPhase1TargetOperandsAreProbed(t *testing.T) {
 	// the frozen map value and the asserted key; one graph, no probe.
 	// Stage E E3 (2026-09-21): a RECEIVE on the right-hand side (`x[iv.(int)] = <-ch`) is an event
 	// occurrence — one graph, no probe.
+	// Stage E E4 (2026-09-21): `make` is an E1 participant WITHOUT effect, so `x[iv.(int)] =
+	// len(make([]int, t[k]))` has no effectful event and stays on the legacy path (above).
 	for _, fn := range []string{"tgtAssertVsLenHoist", "tgtAssertVsCall", "compoundAssertVsLen",
 		"mapKeyAssertVsLen", "mapTgtAssertVsCall", "tgtAssertVsRecv"} {
 		if u := funcRefusal(t, program, fn); u != "" {
@@ -408,17 +410,20 @@ func TestRecoverResidualAndHoistedConversionAreProbed(t *testing.T) {
 	if u := funcRefusal(t, program, "recoverAssertVsLen"); u != "" {
 		t.Errorf("recoverAssertVsLen: the hoisted recover()'s residual is probeable, got refusal %q", u)
 	}
-	for _, fn := range []string{"bytesConvVsLen", "bytesConvSlicePrintroot"} {
+	// Stage E E4 (2026-09-21): `[]byte(s)` is a pure conversion head in the graph and the checked
+	// `[7]` / `[1:7][0]` on the fresh bytes the occurrences beside len and wit — one graph, no probe
+	// (the legacy hoist and its residual probe are no longer reached by these sweeps).
+	for _, fn := range []string{"bytesConvVsLen", "bytesConvSlicePrintroot", "bytesConvNoEvent"} {
 		if u := funcRefusal(t, program, fn); u != "" {
-			t.Errorf("%s: a hoisted allocating conversion's residual is probeable, got refusal %q", fn, u)
+			t.Errorf("%s: an E4-grammar sweep must lower as an unseq graph, got refusal %q", fn, u)
 			continue
 		}
-		if n := probeCount(t, program, fn); n != 1 {
-			t.Errorf("%s: expected exactly one unseq-probe over the hoisted conversion's residual, got %d", fn, n)
+		if n := unseqCount(t, program, fn); n != 1 {
+			t.Errorf("%s: expected exactly one unseq graph (the whole sweep), got %d", fn, n)
 		}
-	}
-	if n := probeCount(t, program, "bytesConvNoEvent"); n != 0 {
-		t.Errorf("bytesConvNoEvent: an INLINE allocating conversion must never be probed, got %d probes", n)
+		if n := probeCount(t, program, fn); n != 0 {
+			t.Errorf("%s: an unseq-lowered sweep must carry no legacy probe (mixture), got %d", fn, n)
+		}
 	}
 	// Stage C: `iv.(int) + len(b[j]) + wit(5)` is inside the pilot grammar — one
 	// `unseq` graph (the assertion, the checked read, len as an E1 event, the
@@ -474,24 +479,35 @@ func TestStructuralAllocGuard(t *testing.T) {
 	if n := probeCount(t, program, "bytesConvPanickyPayload"); n != 1 {
 		t.Errorf("bytesConvPanickyPayload: expected the operand's probe to survive (1), got %d", n)
 	}
-	for fn, kind := range map[string]string{
-		"compositePtrPayload":               "&composite literal",
-		"compositePtrPayloadPrintroot":      "&composite literal",
-		"sliceLitPayload":                   "slice literal",
-		"sliceLitPayloadRecv":               "slice literal",
-		"compositePtrInArgWithSiblingEvent": "&composite literal",
-	} {
-		u := funcRefusal(t, program, fn)
-		if !strings.HasPrefix(u, "structural allocation ("+kind+") with a potentially-panicking payload") || !strings.Contains(u, "e13-b audit fix round R2") {
-			t.Errorf("%s: expected the structural-allocation refusal by name (%s), got %q", fn, kind, u)
-		}
-	}
-	for _, fn := range []string{"compositePtrPayloadNoEvent", "compositeSiblingEvent", "variadicSibling", "mapLitPayloadVsCall", "compositePtrInArgThenCall"} {
+	// Stage E E4 (2026-09-21): the structural-allocation class ENTERS the graph — `&T{…}` and a
+	// slice literal are `allocate` bodies (no E1 edge) whose payload reads are the occurrences
+	// unordered against the later call / receive: BUG-102's designed reds RETIRE (each sweep ONE
+	// `unseq` graph, no probe, no refusal — the guard's refusal text stays a `lowerdiag` tripwire
+	// nothing in the grammar reaches). The map literal keeps its legacy probe (E5).
+	for _, fn := range []string{"compositePtrPayload", "compositePtrPayloadPrintroot", "sliceLitPayload",
+		"sliceLitPayloadRecv", "compositePtrInArgWithSiblingEvent", "compositePtrPayloadNoEvent",
+		"compositeSiblingEvent"} {
 		if u := funcRefusal(t, program, fn); u != "" {
-			t.Errorf("%s: must lower (no event after / event inside / variadic pack / map literal / forced by the enclosing call), got refusal %q", fn, u)
+			t.Errorf("%s: an E4-grammar sweep must lower as an unseq graph, got refusal %q", fn, u)
+			continue
+		}
+		if n := unseqCount(t, program, fn); n != 1 {
+			t.Errorf("%s: expected exactly one unseq graph (the whole sweep), got %d", fn, n)
+		}
+		if n := probeCount(t, program, fn); n != 0 {
+			t.Errorf("%s: an unseq-lowered sweep must carry no legacy probe (mixture), got %d", fn, n)
 		}
 	}
-	if n := probeCount(t, program, "compositeSiblingEvent"); n != 1 {
-		t.Errorf("compositeSiblingEvent: expected the element's probe to survive, got %d", n)
+	// legacy by name, lowering: a variadic pack; a map literal (E5 — one member, gc's, no probe); a
+	// literal inside an EARLIER call's argument list (forced before that call, which precedes the
+	// later event — the trigger finds nothing observable).
+	for _, fn := range []string{"variadicSibling", "mapLitPayloadVsCall", "compositePtrInArgThenCall"} {
+		if u := funcRefusal(t, program, fn); u != "" {
+			t.Errorf("%s: must lower (variadic pack / map literal / forced by the enclosing call), got refusal %q", fn, u)
+		}
+		if n := unseqCount(t, program, fn); n != 0 {
+			t.Errorf("%s: expected the legacy path (no unseq graph), got %d graph(s)", fn, n)
+		}
 	}
+	_ = strings.HasPrefix
 }

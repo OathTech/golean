@@ -107,6 +107,12 @@ def main (_args : List String) : IO Unit := do
     -- or after the receive; the deferred witness prints len(ch). Reference enumerate.py X3 / E3c.
     wireSet "E3RECV wire: x[f()] += <-ch — the receive a `recv` occurrence after f" "e3recv.json" "e3recv"
       [panicOut (oob 9 1) "len 1\n", panicOut (oob 9 1) "len 0\n"],
+    -- STAGE E, family E4 (2026-09-21): a SLICE LITERAL as an `allocate` body (the machine's own makeSlice +
+    -- element store under the sweep frame; NO E1 edge — v2.1 R3) — BUG-102's shape as native Go:
+    -- `[]int{s[i]}[0] + wit5()`, the payload read `s[i]` unordered against the call. Reference
+    -- enumerate.py E4b/E4c.
+    wireSet "E4ALLOC wire: []int{s[i]}[0] + wit5() — the slice literal an `allocate` body on the payload's cell" "e4alloc.json" "e4alloc"
+      [panicOut (oob 9 1) "", panicOut (oob 9 1) "wit 5\n"],
     -- THE FRONTEND'S OWN LOWERING (C2): source → actual frontend bytes → strict decoder →
     -- machine → EXACT reference sets (v2.1 §7 row C's exit; the graphs are the emitter's,
     -- not hand-built — the same reference sets as the hand-built wires above).
@@ -134,6 +140,9 @@ def main (_args : List String) : IO Unit := do
     wireSet "NATIVE E3RECV (the frontend's own `recv` occurrence — Stage E E3)" "native-e3recv.json" "e3recv"
       [panicOut (oob 9 1) "len 1\n", panicOut (oob 9 1) "len 0\n"],
     wireSet "NATIVE E3METHOD (a value-receiver method call: the receiver copy vs the argument call — E14)" "native-e3method.json" "e3method" [okZ 6, okZ 15],
+    wireSet "NATIVE E4ALLOC (the frontend's own `allocate` occurrence — Stage E E4)" "native-e4alloc.json" "e4alloc"
+      [panicOut (oob 9 1) "", panicOut (oob 9 1) "wit 5\n"],
+    wireSet "NATIVE E4CONV (a conversion as a pure head: the captured string's read vs the mutating call — E12)" "native-e4conv.json" "e4conv" [okZ 98, okZ 123],
     -- EDGE MUTATIONS of the LOWERED graphs (v2.1 §8): each decodes; the exact-set check
     -- names the changed set (the decoder cannot see a missing or wrong edge).
     wireSet "EDGE data (R6: the access reads the variable's header, not the frozen slot) → the fused {20}" "edge-data.json" "r6" [okZ 20],

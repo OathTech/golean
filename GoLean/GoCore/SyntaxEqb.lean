@@ -392,12 +392,49 @@ theorem Param.eqb_sound (a b : Param) (h : Param.eqb a b = true) : a = b := by
 /-! ## The `unseq` graph (Stage B, 2026-09-16): structural equality over its
 bodies (`Expr`/`Assignee` at the same fuel), occurrences and graph. -/
 
+def AllocSpec.eqbF (f : Nat) : AllocSpec → AllocSpec → Bool
+  | .new v1 t1, .new v2 t2 => Expr.eqbF f v1 v2 && Ty.eqb t1 t2
+  | .makeSlice e1 l1 c1, .makeSlice e2 l2 c2 =>
+      Ty.eqb e1 e2 && Expr.eqbF f l1 l2 && eqbOptionP (Expr.eqbF f) c1 c2
+  | .makeMap k1 v1 h1, .makeMap k2 v2 h2 =>
+      Ty.eqb k1 k2 && Ty.eqb v1 v2 && eqbOptionP (Expr.eqbF f) h1 h2
+  | .makeChan e1 c1, .makeChan e2 c2 => Ty.eqb e1 e2 && eqbOptionP (Expr.eqbF f) c1 c2
+  | .sliceLit e1 n1 es1, .sliceLit e2 n2 es2 =>
+      Ty.eqb e1 e2 && n1 == n2 && eqbListP (eqbProdP (· == ·) (Expr.eqbF f)) es1 es2
+  | _, _ => false
+
+theorem AllocSpec.eqbF_sound (f : Nat) :
+    ∀ (a b : AllocSpec), AllocSpec.eqbF f a b = true → a = b := by
+  intro a b h
+  cases a <;> cases b <;> (try exact Bool.noConfusion h)
+  case new.new v1 t1 v2 t2 =>
+    obtain ⟨h1, h2⟩ := andSplit2 h
+    cases Expr.eqbF_sound _ _ _ h1; cases Ty.eqb_sound h2; rfl
+  case makeSlice.makeSlice e1 l1 c1 e2 l2 c2 =>
+    obtain ⟨h1, h2, h3⟩ := andSplit3 h
+    cases Ty.eqb_sound h1; cases Expr.eqbF_sound _ _ _ h2
+    cases eqbOptionP_sound (Expr.eqbF_sound f) h3; rfl
+  case makeMap.makeMap k1 v1 h1' k2 v2 h2' =>
+    obtain ⟨h1, h2, h3⟩ := andSplit3 h
+    cases Ty.eqb_sound h1; cases Ty.eqb_sound h2
+    cases eqbOptionP_sound (Expr.eqbF_sound f) h3; rfl
+  case makeChan.makeChan e1 c1 e2 c2 =>
+    obtain ⟨h1, h2⟩ := andSplit2 h
+    cases Ty.eqb_sound h1; cases eqbOptionP_sound (Expr.eqbF_sound f) h2; rfl
+  case sliceLit.sliceLit e1 n1 es1 e2 n2 es2 =>
+    obtain ⟨h1, h2, h3⟩ := andSplit3 h
+    cases Ty.eqb_sound h1; cases eq_of_beq h2
+    cases eqbListP_sound
+      (fun _ _ hh => eqbProdP_sound (fun _ _ k => eq_of_beq k) (Expr.eqbF_sound f) hh) h3
+    rfl
+
 def UnseqBody.eqbF (f : Nat) : UnseqBody → UnseqBody → Bool
   | .eval b1 h1, .eval b2 h2 => b1 == b2 && Expr.eqbF f h1 h2
   | .load b1 t1, .load b2 t2 => b1 == b2 && t1 == t2
   | .invoke bs1 c1 a1, .invoke bs2 c2 a2 =>
       bs1 == bs2 && Expr.eqbF f c1 c2 && eqbListP (Expr.eqbF f) a1 a2
   | .recv bs1 c1 e1, .recv bs2 c2 e2 => bs1 == bs2 && Expr.eqbF f c1 c2 && Ty.eqb e1 e2
+  | .allocate b1 s1, .allocate b2 s2 => b1 == b2 && AllocSpec.eqbF f s1 s2
   | .target b1 l1, .target b2 l2 => b1 == b2 && Assignee.eqbF f l1 l2
   | .guard t1 w1 o1, .guard t2 w2 o2 => t1 == t2 && w1 == w2 && o1 == o2
   | _, _ => false
@@ -419,6 +456,9 @@ theorem UnseqBody.eqbF_sound (f : Nat) :
   case recv.recv bs1 c1 e1 bs2 c2 e2 =>
     obtain ⟨h1, h2, h3⟩ := andSplit3 h
     cases eq_of_beq h1; cases Expr.eqbF_sound _ _ _ h2; cases Ty.eqb_sound h3; rfl
+  case allocate.allocate b1 s1 b2 s2 =>
+    obtain ⟨h1, h2⟩ := andSplit2 h
+    cases eq_of_beq h1; cases AllocSpec.eqbF_sound _ _ _ h2; rfl
   case target.target b1 l1 b2 l2 =>
     obtain ⟨h1, h2⟩ := andSplit2 h
     cases eq_of_beq h1; cases Assignee.eqbF_sound _ _ _ h2; rfl

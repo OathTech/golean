@@ -1,5 +1,5 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 3722 (3482 PASS / 240 FAIL)
+# cases: 3728 (3493 PASS / 235 FAIL)
 # re-pinned: 2026-09-20 [AGENT], core/unseq-stage-d-0920, STAGE D of the evaluation-order model v2.1 (route α —
 #   docs/2026-09-20_unseq-stage-d-design.md §2–§3; handoff docs/2026-09-20_unseq-stage-d-handoff.md): NO row added, NO
 #   result changed, ONE stage changed — spec-examples-stmt/continue-label PASS/- -> PASS/confluent, the strict depth=128
@@ -72,6 +72,25 @@
 #   2026-09-21_unseq-stage-e/diff-one-e3.txt); the full gate line is in the evidence README. 3717 + 5 = 3722; 3474 + 5 + 3 = 3482;
 #   243 - 3 = 240. No PASS -> non-PASS flip; the one 5a-class item (imported-goose/channel/google-search: STALE certification for the
 #   changed core inputs) is not re-pinned here.
+# re-pinned: 2026-09-21 [AGENT], core/unseq-stage-e-0921, STAGE E of the evaluation-order model v2.1, family E4 — CONVERSIONS and
+#   ALLOCATIONS (docs/2026-09-21_unseq-stage-e-design.md §E4; handoff docs/2026-09-21_unseq-stage-e-handoff.md): a conversion is a PURE
+#   OP head over its operand (never an occurrence of its own); `&T{…}`, `T{…}` and slice literals are allocation occurrences WITHOUT E1
+#   edges (v2.1 R3 — `UnseqBody.alloc` + `AllocSpec`, the hoisted allocation statement under the sweep frame; two Step rules) whose
+#   payload reads are the occurrences; `make`/`new` are function calls — E1 participants like len/cap (the born control make-len-vs-call
+#   tests it against gc: 6 on 20/20). The census 110 -> 127 admitted (+13 in two packages, +4 in the born package, 0 lost; the twin 0).
+#   FIVE FLIPS (BUG-102 -> fixed): builtins/e13-sibling-panic-order/{composite-ptr-payload-vs-call,composite-ptr-payload-vs-call-printroot,
+#   slice-lit-payload-vs-call,slice-lit-payload-vs-call-sinkroot} FAIL/frontend-export -> PASS/membership {panic [9] · ``, panic [9] ·
+#   `wit 5`} (gc's `wit 5` then the panic inside, 20/20 under GOMAXPROCS 1/8, default and -N -l); slice-lit-payload-vs-recv
+#   FAIL/frontend-export -> PASS strict (the two orders differ only in the unwitnessed channel state — one observation). FOUR LANE
+#   MOVES strict -> membership (E2/E12's VALUE axis enveloped; gc's call-first value in every set): builtins/e13-sibling-panic-order/
+#   bytes-conv-value-vs-mutating-call {98, 123} (E12's recorded EXCEPTION retires into the set — gc 98, the operand read early),
+#   noodler/latitude/slice-literal-index-vs-call {15, 1005}, struct-literal-var-vs-call {15, 1005}, conversion-index-vs-call {6, 105}.
+#   SIX rows BORN in evalorder/unseq-conv-alloc: conv-read-vs-call {98, 123}, struct-lit-vs-call / addr-lit-vs-call / slice-lit-vs-call
+#   {6, 15} PASS/membership; make-len-vs-call (the E1-participant control, 6) and map-lit-control (a map literal stays legacy, 6) PASS
+#   strict. The four E13 conversion/literal membership rows keep their 2-member sets; every other affected row reproduces its state —
+#   measured by scripts/diff-one on all 83 affected rows before this pin (docs/evidence/2026-09-21_unseq-stage-e/diff-one-e4.txt); the
+#   full gate line is in the evidence README. 3722 + 6 = 3728; 3482 + 6 + 5 = 3493; 240 - 5 = 235. No PASS -> non-PASS flip; the one
+#   5a-class item (imported-goose/channel/google-search: STALE certification for the changed core inputs) is not re-pinned here.
 # Previous pin:
 # re-pinned: 2026-09-20 [AGENT], core/unseq-stage-c-0919, STAGE C AUDIT FIX ROUND (docs/2026-09-20_unseq-stage-c-audit.md, FIX-FIRST; dispositions
 #   docs/2026-09-19_unseq-stage-c-handoff.md «Audit fix round (2026-09-20)»): SIX rows ADDED, no existing row changed. (F2) evalorder/unseq-const-cell/
@@ -1745,10 +1764,10 @@ PASS	builtins/e13-sibling-panic-order/assert-right-call	membership
 PASS	builtins/e13-sibling-panic-order/assert-vs-mutating-call	membership
 PASS	builtins/e13-sibling-panic-order/bytes-conv-left-len-hoist	membership
 PASS	builtins/e13-sibling-panic-order/bytes-conv-payload-vs-call	membership
-PASS	builtins/e13-sibling-panic-order/bytes-conv-value-vs-mutating-call	-
+PASS	builtins/e13-sibling-panic-order/bytes-conv-value-vs-mutating-call	membership
 PASS	builtins/e13-sibling-panic-order/composite-ptr-in-arg-then-call	-
-FAIL	builtins/e13-sibling-panic-order/composite-ptr-payload-vs-call	frontend-export
-FAIL	builtins/e13-sibling-panic-order/composite-ptr-payload-vs-call-printroot	frontend-export
+PASS	builtins/e13-sibling-panic-order/composite-ptr-payload-vs-call	membership
+PASS	builtins/e13-sibling-panic-order/composite-ptr-payload-vs-call-printroot	membership
 PASS	builtins/e13-sibling-panic-order/compound-assert-vs-len	membership
 PASS	builtins/e13-sibling-panic-order/compound-call-target-vs-call	membership
 PASS	builtins/e13-sibling-panic-order/compound-call-target-vs-len	membership
@@ -1777,9 +1796,9 @@ PASS	builtins/e13-sibling-panic-order/recover-assert-vs-len	-
 PASS	builtins/e13-sibling-panic-order/send-chan-index	membership
 PASS	builtins/e13-sibling-panic-order/shift-left-call	membership
 PASS	builtins/e13-sibling-panic-order/slice-left-len-call	-
-FAIL	builtins/e13-sibling-panic-order/slice-lit-payload-vs-call	frontend-export
-FAIL	builtins/e13-sibling-panic-order/slice-lit-payload-vs-call-sinkroot	frontend-export
-FAIL	builtins/e13-sibling-panic-order/slice-lit-payload-vs-recv	frontend-export
+PASS	builtins/e13-sibling-panic-order/slice-lit-payload-vs-call	membership
+PASS	builtins/e13-sibling-panic-order/slice-lit-payload-vs-call-sinkroot	membership
+PASS	builtins/e13-sibling-panic-order/slice-lit-payload-vs-recv	-
 PASS	builtins/e13-sibling-panic-order/slice-value-early-len-hoist	membership
 PASS	builtins/e13-sibling-panic-order/tgt-assert-vs-append	membership
 PASS	builtins/e13-sibling-panic-order/tgt-assert-vs-call	membership
@@ -2259,6 +2278,12 @@ PASS	evalorder/unseq-recv-method/value-recv-vs-arg-call	membership
 PASS	evalorder/unseq-recv-method/ptr-recv-vs-field-read	membership
 PASS	evalorder/unseq-recv-method/addr-recv-vs-slice-read	-
 PASS	evalorder/unseq-recv-method/recv-after-call	-
+PASS	evalorder/unseq-conv-alloc/conv-read-vs-call	membership
+PASS	evalorder/unseq-conv-alloc/struct-lit-vs-call	membership
+PASS	evalorder/unseq-conv-alloc/addr-lit-vs-call	membership
+PASS	evalorder/unseq-conv-alloc/slice-lit-vs-call	membership
+PASS	evalorder/unseq-conv-alloc/make-len-vs-call	-
+PASS	evalorder/unseq-conv-alloc/map-lit-control	-
 PASS	examples/binsearch/absent-above	-
 PASS	examples/binsearch/absent-below	-
 PASS	examples/binsearch/absent-gap	-
@@ -3943,7 +3968,7 @@ PASS	noodler/initpanic/recovered	-
 FAIL	noodler/initpanic/var-panic	go-observation
 PASS	noodler/latitude/args-index-vs-call	membership
 PASS	noodler/latitude/concat-var-vs-call	membership
-PASS	noodler/latitude/conversion-index-vs-call	-
+PASS	noodler/latitude/conversion-index-vs-call	membership
 PASS	noodler/latitude/deref-vs-call	membership
 PASS	noodler/latitude/index-call-index	membership
 PASS	noodler/latitude/map-literal-key-vs-call	-
@@ -3951,8 +3976,8 @@ PASS	noodler/latitude/receiver-vs-arg-call	membership
 PASS	noodler/latitude/return-operands	membership
 PASS	noodler/latitude/rhs-list-index-call-index	-
 PASS	noodler/latitude/send-value-vs-channel-call	-
-PASS	noodler/latitude/slice-literal-index-vs-call	-
-PASS	noodler/latitude/struct-literal-var-vs-call	-
+PASS	noodler/latitude/slice-literal-index-vs-call	membership
+PASS	noodler/latitude/struct-literal-var-vs-call	membership
 PASS	noodler/literals/big-constant-shift	-
 PASS	noodler/literals/boolean-constants	-
 PASS	noodler/literals/constant-division	-

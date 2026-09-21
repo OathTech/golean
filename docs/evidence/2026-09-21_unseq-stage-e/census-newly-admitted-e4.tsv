@@ -1,0 +1,14 @@
+dir	unit	file:line	function	form	calls	nonEvents	former-reason
+builtins/e13-sibling-panic-order	main	main.go:146	indexCompositeLit	return	1	2	composite literal
+builtins/e13-sibling-panic-order	main	main.go:343	bytesConvLeftLenHoist	return	1	2	conversion
+builtins/e13-sibling-panic-order	main	main.go:357	compositePtrPayloadVsCall	return	1	2	unary operator &
+builtins/e13-sibling-panic-order	main	main.go:363	sliceLitPayloadVsCall	return	1	2	composite literal
+builtins/e13-sibling-panic-order	main	main.go:520	compositePtrPayloadVsCallPrintroot	print-stmt	1	2	unary operator &
+builtins/e13-sibling-panic-order	main	main.go:526	sliceLitPayloadVsCallSinkroot	return	2	2	composite literal
+builtins/e13-sibling-panic-order	main	main.go:534	sliceLitPayloadVsRecv	return	1	2	composite literal
+builtins/e13-sibling-panic-order	main	main.go:54	assertCompositeLit	return	1	2	composite literal
+builtins/e13-sibling-panic-order	main	main.go:638	bytesConvValueVsMutatingCall	return	1	2	conversion
+builtins/e13-sibling-panic-order	main	main.go:85	assertLeftNewCall	return	1	2	builtin new
+noodler/latitude	main	main.go:13	sliceLiteralIndexVsCall	define	1	2	composite literal
+noodler/latitude	main	main.go:22	structLiteralVarVsCall	define	1	1	composite literal
+noodler/latitude	main	main.go:73	conversionIndexVsCall	return	1	2	conversion

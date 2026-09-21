@@ -96,6 +96,13 @@ func TestUnseqLoweringShapes(t *testing.T) {
 		// receiver sub-evaluation inside its argument frame (the auto-deref / &*v occurrences).
 		{"recvOperand", "invoke recv/after target load eval:binary"},
 		{"e3starRecv", "eval:addr-of-deref invoke eval:index-get eval:binary"},
+		// Stage E E4: the call first; the conversion a pure head over the read; the composite
+		// literal an `allocate` in the residual (no `after`); make an EVENT block (its size operand,
+		// then the allocate with `after`), len after it, wit after len.
+		{"e4convRead", "invoke eval:ident eval:bytes-from-string eval:index-get eval:convert eval:binary"},
+		{"e4addrLit", "invoke eval:index-get allocate eval:field-get eval:binary"},
+		{"e4sliceLit", "invoke eval:index-get allocate eval:index-get eval:binary"},
+		{"e4make", "eval:index-get allocate eval:builtin-len/after invoke/after eval:ident eval:binary eval:binary"},
 		// W6: two E1-ordered calls, then the read and the ops.
 		{"w6", "invoke invoke/after eval:ident eval:binary eval:binary"},
 		// R6: the call first; the header read and the checked access late.

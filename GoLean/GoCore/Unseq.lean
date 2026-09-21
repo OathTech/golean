@@ -66,6 +66,14 @@ def optExprNames : Option Expr → List String
   | some e => Expr.names e
 end
 
+/-- The names an allocation's operands mention (Stage E E4). -/
+def AllocSpec.names : AllocSpec → List String
+  | .new v _ => Expr.names v
+  | .makeSlice _ len cap => Expr.names len ++ optExprNames cap
+  | .makeMap _ _ hint => optExprNames hint
+  | .makeChan _ cap => optExprNames cap
+  | .sliceLit _ _ elems => keyedExprNames elems
+
 /-- The names an assignee's OPERANDS mention (`targetPlan`'s operand
 expressions: `x` ↦ `&x`'s name, `a[i]` ↦ the anchor and index names). -/
 def Assignee.names : Assignee → List String
@@ -106,7 +114,7 @@ namespace UnseqBody
 
 /-- The VALUE binders a body produces (its results). -/
 def valueBinds : UnseqBody → List String
-  | .eval b _ | .load b _ => [b]
+  | .eval b _ | .load b _ | .allocate b _ => [b]
   | .invoke bs _ _ | .recv bs _ _ => bs
   | .target _ _ | .guard _ _ _ => []
 
@@ -123,6 +131,7 @@ def mentions : UnseqBody → List String
   | .load _ _ => []
   | .invoke _ callee args => callee.names ++ exprListNames args
   | .recv _ ch _ => ch.names
+  | .allocate _ spec => spec.names
   | .target _ lhs => lhs.names
   | .guard test _ _ => [test]
 

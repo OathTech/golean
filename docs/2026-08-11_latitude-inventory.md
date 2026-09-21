@@ -811,6 +811,19 @@ gc's early store a deviation, L-016, 2026-09-02).
 
 ### E2. Call vs. assignment-target operands — (b) PINNED call-first on the VALUE axis outside the Stage C pilot; (a) ENVELOPED on the pilot's rows (2026-09-19); the PANIC axis (a) ENVELOPED via E13's `unseqPanic` since the e13-b re-audit fix round (2026-09-05)
 
+- STAGE E, FAMILY E4 (2026-09-21, [AGENT], lane `core/unseq-stage-e-0921`; design
+  `docs/2026-09-21_unseq-stage-e-design.md` §E4 — conversions and allocations): the
+  STRUCTURAL-ALLOCATION class (E13 residual 5) ENTERS the graph — `&T{…}`, `T{…}` and a slice
+  literal are allocation occurrences WITHOUT E1 edges (v2.1 R3; `UnseqBody.allocate`), their
+  payload reads the occurrences spec-unsequenced against the sibling calls / receives: BUG-102's
+  five designed reds LOWER and PASS (`builtins/e13-sibling-panic-order/{composite-ptr-payload-vs-
+  call,composite-ptr-payload-vs-call-printroot,slice-lit-payload-vs-call,slice-lit-payload-vs-
+  call-sinkroot}` membership {panic · ``, `wit 5` · panic} with gc's late member inside;
+  `slice-lit-payload-vs-recv` a strict singleton observation) — BUG-102 FIXED. The VALUE axis of
+  this entry is unchanged here (the literal payloads are E12's side — below); `make`/`new` are E1
+  PARTICIPANTS (function calls, spec#Built-in_functions) — the born control `evalorder/unseq-conv-
+  alloc/make-len-vs-call` pins it against gc (6, 20/20). The (b) pin stands outside the widened
+  grammar (map literals, array literals, `&x` of a variable — E5's).
 - STAGE E, FAMILY E3 (2026-09-21, [AGENT], lane `core/unseq-stage-e-0921`; design
   `docs/2026-09-21_unseq-stage-e-design.md` §E3 — receives and method calls as occurrences; the
   OBSERVABILITY trigger): this entry's TARGET-side rows at E3 are BUG-104's three remaining rows,
@@ -1106,7 +1119,8 @@ gc's early store a deviation, L-016, 2026-09-02).
   bytes-conv-left-len-hoist}` (BUG-102's Cases line — the designed-red
   entry; BUG-032/BUG-083 stay fixed). The
   STRUCTURAL-ALLOCATION class (E13 residual 5, R2) is a sibling refusal
-  recorded at E13. `lowerdiag`'s `len-hoist-panic-order` cause is LIVE
+  recorded at E13 (RETIRED 2026-09-21 at Stage E family E4 — the class
+  lowers as `allocate` bodies; BUG-102 fixed). `lowerdiag`'s `len-hoist-panic-order` cause is LIVE
   again (its 2026-09-04 texts stay a tripwire).
 - E13-B RE-AUDIT FIX ROUND (2026-09-05, [AGENT]; re-audit findings
   R1'-1..R1'-4): the fix-round residue above was itself too wide — the
@@ -1571,6 +1585,17 @@ subexpressions of one binary operator).
   locations no sibling event writes — no set widened; `two-workers-own-chans` moved its ENGINE to
   dedup (route α certifies the singleton where the DFS blew its work cap). Ratification posed at
   the merge ask. The (b) pin stands outside the widened grammar.
+  STAGE E, FAMILY E4 (2026-09-21, [AGENT]; design §E4 — conversions and allocations): a CONVERSION
+  is a PURE OP over its operand's value and a composite literal an allocation node without E1
+  edges, so the operand / payload READ is the occurrence spec-unsequenced against the sibling
+  call — the VALUE axis is (a) ENVELOPED on `builtins/e13-sibling-panic-order/bytes-conv-value-vs-
+  mutating-call` ({98, 123}, gc 98 — the recorded EXCEPTION below RETIRES into the set: gc's early
+  operand read is one member, the machine's call-first read the other), `noodler/latitude/
+  {slice-literal-index-vs-call,struct-literal-var-vs-call}` ({15, 1005}, gc 1005),
+  `noodler/latitude/conversion-index-vs-call` ({6, 105}, gc 105) and the born `evalorder/unseq-
+  conv-alloc/{conv-read-vs-call ({98, 123}, gc 98),struct-lit-vs-call,addr-lit-vs-call,slice-lit-
+  vs-call ({6, 15}, gc 15)}`. Ratification posed at the merge ask. The (b) pin stands outside the
+  widened grammar.
   EXCEPTION TO THE CALL-FIRST VALUE PIN (e13-b re-audit fix round D4 (v),
   RECORDED at the final verification fix round 2026-09-05, R''-8,
   [AGENT]): for the two ALLOCATING CONVERSIONS `[]byte(s)` / `[]rune(s)`
@@ -1590,6 +1615,10 @@ subexpressions of one binary operator).
   member on these two shapes is order.go's `safeExpr`/`copyExpr`
   treatment of the conversion (a value-producing allocation evaluated at
   its position); the machine's hoist now agrees. Design §6 item 7.
+  RETIRED 2026-09-21 (Stage E family E4, [AGENT]): the conversion is a pure
+  op inside the `unseq` graph and the read of `s` an occurrence unordered
+  against the call — the row is a membership set {98, 123} with gc's 98
+  inside (E12's bullet above); no realization is pinned on these shapes.
 
 ### E13. Non-call panicking operations (type assertion, indexing, …) vs SIBLING ordered events — (a) ENVELOPED (`unseqPanic`, lane e13-b 2026-09-05 — the implementation of the RULED (b) LATITUDE ruling of 2026-09-05 [USER] (relayed), landed at merge train round 17; was (b) PINNED structural, calls first)
 
@@ -1821,7 +1850,9 @@ machine construct §3, the frontend §4, the residuals §6).
   the machine's member is gc's, `map-lit-payload-vs-call`) or on a
   literal forced by an enclosing call (`composite-ptr-in-arg-then-call`);
   rows `{composite-ptr-payload-vs-call-printroot,slice-lit-payload-vs-
-  call-sinkroot,slice-lit-payload-vs-recv}` join BUG-102; (6) a probed operand is evaluated twice on the no-panic path
+  call-sinkroot,slice-lit-payload-vs-recv}` join BUG-102 (FIXED 2026-09-21
+  at Stage E family E4: the class lowers as `allocate` bodies without E1
+  edges, the five rows PASS — E2's bullet); (6) a probed operand is evaluated twice on the no-panic path
   — a constant-factor cost, no fuel-out flips measured; (7) the race
   detector sees the early read as an ordinary read, so under DEFER the
   operand is READ TWICE in program order — a write racing the first read
@@ -3138,6 +3169,19 @@ history block, never in a membership line.
 ### 10.1 Movement and history (NOT membership)
 
 Nothing in this block is a class member by virtue of being named here.
+
+- **Stage E of the evaluation-order model v2.1, family E4 (2026-09-21, [AGENT] lane
+  `core/unseq-stage-e-0921`; design `docs/2026-09-21_unseq-stage-e-design.md` §E4): CONVERSIONS
+  (pure ops) and ALLOCATIONS (`&T{…}`, `T{…}`, slice literals as `allocate` bodies WITHOUT E1
+  edges — v2.1 R3; `make`/`new` as E1-participant function calls) enter the `unseq` grammar.**
+  Entry classes UNCHANGED by count ((a) 15 / (b) 17): E12 stays (b) PINNED as an entry, ENVELOPED
+  on four moved rows and four born rows; E12's recorded EXCEPTION (the hoisted allocating
+  conversion, `bytes-conv-value-vs-mutating-call`) RETIRES into its set; **BUG-102 FIXED** (the
+  structural-allocation class — E13 residual 5 / E6's sibling refusal — lowers; its five rows
+  PASS); the v2.1 §5 item 4 «late structural allocations» is realized (an allocation is a node
+  without E1 edges) with the [AGENT] correction that `make`/`new` are E1 participants (the born
+  control pins it against gc); the census 110 → 127 admitted (+13, 0 lost, +4 born; the twin 0).
+  New rows: `evalorder/unseq-conv-alloc/*` (4 membership + 2 strict).
 
 - **Stage E of the evaluation-order model v2.1, family E3 (2026-09-21, [AGENT] lane
   `core/unseq-stage-e-0921`; design `docs/2026-09-21_unseq-stage-e-design.md` §E3): RECEIVES and

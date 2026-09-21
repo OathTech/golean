@@ -80,6 +80,11 @@ def rcv(name, binds, ch, elem, after=None, region=None):
     return occ(name, "recv", after, region, binds=list(binds), ch=ch, elem=elem)
 
 
+def alc(name, bind, spec, after=None, region=None):
+    """An ALLOCATION occurrence (Stage E E4): the hoisted statement's shape over payloads, one binder cell."""
+    return occ(name, "allocate", after, region, bind=bind, allocation=spec)
+
+
 def map_target(base, index):
     """A map-element target plan on the FROZEN map value and key value (Stage E E2)."""
     return {"target": "map", "base": base, "index": index, "keyType": INT, "valueType": INT}
@@ -417,6 +422,25 @@ def e3recv_graph():
         stores=[("$t0", "$u3")])
 
 
+# ---------------------------------------------------------------- Stage E, family E4: conversions and allocations
+# (2026-09-21): BUG-102's slice-literal shape as native Go — `[]int{s[i]}[0] + wit5()`: the call block
+# first (canonical order), then the residual: the payload read `s[i]` (s and i private: atoms; the
+# checked access the occurrence), the literal an `allocate` (slice-lit) on the payload's cell (NO E1 edge —
+# v2.1 R3), the element read, the op. Reference enumerate.py E4b/E4c's shape; {panic [9] · ``, panic
+# [9] · `wit 5`}.
+
+def e4alloc_graph():
+    return unseq(
+        [cell("$u0", INT), cell("$u1", INT), cell("$u2", SLICE_INT), cell("$u3", INT), cell("$u4", INT)],
+        [inv("call0", ["$u0"], fv("wit5"), [], [INT]),
+         ev("access1", "$u1", idxget(ident("s", SLICE_INT), ident("i", INT), INT)),
+         alc("lit2", "$u2", {"stmt": "slice-lit", "elem": INT, "length": 1,
+                              "elems": [{"index": 0, "value": ident("$u1", INT)}]}),
+         ev("access3", "$u3", idxget(ident("$u2", SLICE_INT), intc(0), INT)),
+         ev("op4", "$u4", binop("+", ident("$u3", INT), ident("$u0", INT), INT))],
+        then=ret(ident("$u4", INT)))
+
+
 # ---------------------------------------------------------------- constant heads (audit fix round F2)
 # A CONSTANT copied into a cell — the emitter's `copy` occurrence where the consumer needs a
 # CELL (design §6): a guard's test (`true && f()`), a phase-2 store's value (`a[f()] = 5`,
@@ -498,6 +522,10 @@ WITNESSES = {
     # method call is NATIVE-ONLY (the method's `$method$…` key is an envelope fact)
     "e3recv": ("e3recv", [("e3recv", "x", 1, e3recv_graph(), None)]),
     "e3method": ("e3method", []),
+    # Stage E E4 (2026-09-21): the slice literal as an `allocate` body (hand-built + native); the
+    # conversion witness is NATIVE-ONLY (the captured string's read vs the mutating call)
+    "e4alloc": ("e4alloc", [("e4alloc", "i", 0, e4alloc_graph(), None)]),
+    "e4conv": ("e4conv", []),
 }
 
 
@@ -606,6 +634,12 @@ def mutants(wires):
          lambda n, w: occ(n, "recv1").update(ch=binop("+", intc(0), intc(1), INT)), "hidden read in a receive")
     edit("mut-recv-two-binds", "e3recv", "e3recv",
          lambda n, w: occ(n, "recv1").update(binds=["$u1", "$u2"]), "outside the admitted fragment")
+    # the `alloc` kind (Stage E E4): a non-atom payload — a hidden read; a statement kind outside the fragment.
+    edit("mut-alloc-nonatom", "e4alloc", "e4alloc",
+         lambda n, w: occ(n, "lit2")["allocation"]["elems"][0].update(value=binop("+", ident("$u1", INT), intc(0), INT)),
+         "hidden read in an allocation payload")
+    edit("mut-alloc-kind", "e4alloc", "e4alloc",
+         lambda n, w: occ(n, "lit2")["allocation"].update(stmt="map-lit"), "outside the admitted fragment")
     return out
 
 

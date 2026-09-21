@@ -62,12 +62,27 @@ package main
 // argument), `eval addr-of-deref(p)` (for `(*p).M()`), the value atom / read, or
 // `eval deref(p)` (a value receiver through a pointer).
 //
+// STAGE E E4 (conversions, allocations). A conversion `T(x)` → a pure `eval` head
+// over the operand's atom — emitCallNode's own operator table (`convert`,
+// `bytes-from-string`, `string-from-bytes`, `runes-from-string`,
+// `string-from-runes`, `string-from-rune`; a bool retyping is the operand). A
+// VALUE struct literal `T{…}` → `eval struct-lit(payloads)` (the emitter's own
+// shape: fields in declaration order, omitted fields `default`, interface-typed
+// fields boxed). `&T{…}` → an `allocate` body `new(struct-lit, T)` and a slice
+// literal → an `allocate` body `slice-lit(elem, length, elems)`, both in the
+// RESIDUAL (no E1 edge — v2.1 R3: a composite literal is not a call; BUG-102's
+// evidence, gc leaves it in the residual after the call temps). `make(…)` /
+// `new(T)` → an `allocate` body (`make-slice` / `make-map` / `make-chan` / `new`)
+// as an E1-ordered EVENT with the anchor, like len/cap (spec#Built-in_functions;
+// the machine's hoist and gc's agree — BUG-062 / FR-28's rows).
+//
 // THE MIXTURE GUARD. The lowering runs with `probeSuppress` raised and asserts the
 // hoist accumulator unchanged afterwards: a legacy hoist or probe produced inside
 // a graph lowering is refused by name (v2.1 §3.7: never a mixture).
 
 import (
 	"go/ast"
+	"go/constant"
 	"go/token"
 	"go/types"
 )
@@ -306,6 +321,9 @@ func (b *unseqBuilder) value(x ast.Expr) (any, error) {
 		}
 		return b.evalOcc("slice", ty, head), nil
 	case *ast.CallExpr:
+		if tv, ok := e.info.Types[v.Fun]; ok && tv.IsType() {
+			return b.conv(v) // Stage E E4: a conversion is a pure head
+		}
 		slots, err := b.call(v, 1)
 		if err != nil {
 			return nil, err
@@ -314,6 +332,8 @@ func (b *unseqBuilder) value(x ast.Expr) (any, error) {
 			return nil, unsup("unseq lowering: call in value position with %d results", len(slots))
 		}
 		return slots[0], nil
+	case *ast.CompositeLit:
+		return b.compositeLit(v) // Stage E E4
 	case *ast.BinaryExpr:
 		op, ok := binaryOp(v.Op)
 		if !ok {
@@ -346,6 +366,14 @@ func (b *unseqBuilder) value(x ast.Expr) (any, error) {
 	case *ast.UnaryExpr:
 		if v.Op == token.ARROW {
 			return b.recv(v)
+		}
+		if v.Op == token.AND {
+			// Stage E E4: `&T{…}` — the struct literal's payloads, then an `allocate` body (`new`).
+			cl, isLit := ast.Unparen(v.X).(*ast.CompositeLit)
+			if !isLit {
+				return nil, unsup("unseq lowering: address of a non-literal operand")
+			}
+			return b.addrLit(cl, v)
 		}
 		var op string
 		switch v.Op {
@@ -464,6 +492,15 @@ func (b *unseqBuilder) call(c *ast.CallExpr, maxResults int) ([]any, error) {
 				b.emitEventBlock(block)
 				b.anchor = name
 				return []any{slotIdent(cell, intType("int"))}, nil
+			case "make", "new":
+				// Stage E E4: the allocation call — its size operands inside this frame,
+				// then the `alloc` body as an E1-ordered event (the frame is popped there).
+				slot, err := b.makeNew(c, id.Name)
+				if err != nil {
+					return nil, err
+				}
+				popped = true
+				return []any{slot}, nil
 			}
 			return nil, unsup("unseq lowering: builtin %s", id.Name)
 		}
@@ -605,6 +642,292 @@ func (b *unseqBuilder) guard(v *ast.BinaryExpr, op string) (any, error) {
 	block := append(append(leftBlock, g), regionBlock...)
 	b.emitEventBlock(block)
 	return slotIdent(out, boolTy), nil
+}
+
+// conv lowers a conversion T(x) (Stage E E4) as a PURE OP head over the operand's
+// atom, mirroring emitCallNode's operator table: the byte/rune/string forms have
+// their own machine operators, a bool retyping is the operand itself, the generic
+// `convert` covers the scalar conversions.
+func (b *unseqBuilder) conv(c *ast.CallExpr) (any, error) {
+	e := b.e
+	arg, err := b.value(c.Args[0])
+	if err != nil {
+		return nil, err
+	}
+	tt := types.Unalias(e.goTypeOf(c)).Underlying()
+	ot := types.Unalias(e.goTypeOf(c.Args[0])).Underlying()
+	ty, err := e.typeOf(c)
+	if err != nil {
+		return nil, err
+	}
+	var head map[string]any
+	switch {
+	case isByteSlice(tt) && isStringType(ot):
+		head = map[string]any{"expr": "bytes-from-string", "x": arg}
+	case isStringType(tt) && isByteSlice(ot):
+		head = map[string]any{"expr": "string-from-bytes", "x": arg}
+	case isRuneSlice(tt) && isStringType(ot):
+		head = map[string]any{"expr": "runes-from-string", "x": arg}
+	case isStringType(tt) && isRuneSlice(ot):
+		head = map[string]any{"expr": "string-from-runes", "x": arg}
+	}
+	if head == nil {
+		if tb, ok := tt.(*types.Basic); ok {
+			if ob, isOB := ot.(*types.Basic); isOB {
+				if tb.Kind() == types.Bool && ob.Kind() == types.Bool {
+					return arg, nil // a static retyping: no machine op (emitCallNode)
+				}
+				if tb.Info()&types.IsString != 0 && ob.Info()&types.IsInteger != 0 {
+					head = map[string]any{"expr": "string-from-rune", "x": arg}
+				}
+			}
+		}
+	}
+	if head == nil {
+		target, err := e.emitType(e.goTypeOf(c))
+		if err != nil {
+			return nil, err
+		}
+		head = map[string]any{"expr": "convert", "target": target, "x": arg}
+	}
+	return b.evalOcc("conv", ty, head), nil
+}
+
+// structLitHead lowers a VALUE struct literal `T{…}` (Stage E E4) to the emitter's
+// own `struct-lit` shape over PAYLOADS (atoms / boxed atoms / zero values), the
+// fields in declaration order; the element values are lowered in SOURCE order
+// (their calls are E1-ordered events; the head consumes their cells).
+func (b *unseqBuilder) structLitHead(cl *ast.CompositeLit) (map[string]any, error) {
+	e := b.e
+	t := e.goTypeOf(cl)
+	st, isStruct := types.Unalias(t).Underlying().(*types.Struct)
+	if !isStruct {
+		return nil, unsup("unseq lowering: struct literal of a non-struct type %s", t)
+	}
+	target, err := e.emitType(t)
+	if err != nil {
+		return nil, err
+	}
+	keyed := map[string]any{}
+	keyedTypes := map[string]types.Type{}
+	positional := []any{}
+	positionalTypes := []types.Type{}
+	for _, elt := range cl.Elts {
+		if kv, ok := elt.(*ast.KeyValueExpr); ok {
+			w, err := b.value(kv.Value)
+			if err != nil {
+				return nil, err
+			}
+			name := kv.Key.(*ast.Ident).Name
+			keyed[name] = w
+			keyedTypes[name] = e.goTypeOf(kv.Value)
+			continue
+		}
+		w, err := b.value(elt)
+		if err != nil {
+			return nil, err
+		}
+		positional = append(positional, w)
+		positionalTypes = append(positionalTypes, e.goTypeOf(elt))
+	}
+	args := []any{}
+	for i := 0; i < st.NumFields(); i++ {
+		fld := st.Field(i)
+		if len(positional) > 0 {
+			if i >= len(positional) {
+				return nil, unsup("unseq lowering: positional struct literal missing field %s", fld.Name())
+			}
+			w, err := e.wrapInterfaceConversion(fld.Type(), positionalTypes[i], positional[i])
+			if err != nil {
+				return nil, err
+			}
+			args = append(args, w)
+			continue
+		}
+		if w, ok := keyed[fld.Name()]; ok {
+			w, err := e.wrapInterfaceConversion(fld.Type(), keyedTypes[fld.Name()], w)
+			if err != nil {
+				return nil, err
+			}
+			args = append(args, w)
+			continue
+		}
+		fty, err := e.emitType(fld.Type())
+		if err != nil {
+			return nil, err
+		}
+		args = append(args, map[string]any{"expr": "default", "type": fty})
+	}
+	return map[string]any{"expr": "struct-lit", "target": target, "args": args}, nil
+}
+
+// compositeLit lowers a VALUE composite literal (Stage E E4): a struct literal as a
+// pure `struct-lit` head (one `eval` occurrence), a slice literal as an `allocate`
+// body (a fresh backing array — NO E1 edge, v2.1 R3) in the residual.
+func (b *unseqBuilder) compositeLit(cl *ast.CompositeLit) (any, error) {
+	e := b.e
+	t := e.goTypeOf(cl)
+	ty, err := e.typeOf(cl)
+	if err != nil {
+		return nil, err
+	}
+	switch u := types.Unalias(t).Underlying().(type) {
+	case *types.Struct:
+		head, err := b.structLitHead(cl)
+		if err != nil {
+			return nil, err
+		}
+		return b.evalOcc("lit", ty, head), nil
+	case *types.Slice:
+		elemTy, err := e.emitType(u.Elem())
+		if err != nil {
+			return nil, err
+		}
+		elems := []any{}
+		idx, length := int64(0), int64(0)
+		for _, elt := range cl.Elts {
+			val := elt
+			if kv, ok := elt.(*ast.KeyValueExpr); ok {
+				tv, isConst := e.info.Types[kv.Key]
+				if !isConst || tv.Value == nil {
+					return nil, unsup("unseq lowering: slice literal key is not constant")
+				}
+				idx, _ = constant.Int64Val(tv.Value)
+				val = kv.Value
+			}
+			w, err := b.value(val)
+			if err != nil {
+				return nil, err
+			}
+			w, err = e.wrapInterfaceConversion(u.Elem(), e.goTypeOf(val), w)
+			if err != nil {
+				return nil, err
+			}
+			elems = append(elems, map[string]any{"index": idx, "value": w})
+			if idx+1 > length {
+				length = idx + 1
+			}
+			idx++
+		}
+		spec := map[string]any{"stmt": "slice-lit", "elem": elemTy, "length": length, "elems": elems}
+		return b.allocOcc("lit", ty, spec, false), nil
+	}
+	return nil, unsup("unseq lowering: composite literal of type %s", t)
+}
+
+// addrLit lowers `&T{…}` (Stage E E4): the struct literal's payloads, then an
+// `allocate` body (`new`) binding the fresh pointer (no E1 edge).
+func (b *unseqBuilder) addrLit(cl *ast.CompositeLit, u *ast.UnaryExpr) (any, error) {
+	e := b.e
+	head, err := b.structLitHead(cl)
+	if err != nil {
+		return nil, err
+	}
+	elemTy, err := e.emitType(e.goTypeOf(cl))
+	if err != nil {
+		return nil, err
+	}
+	ty, err := e.typeOf(u)
+	if err != nil {
+		return nil, err
+	}
+	return b.allocOcc("new", ty, map[string]any{"stmt": "new", "value": head, "elemType": elemTy}, false), nil
+}
+
+// makeNew lowers `make(T, …)` / `new(T)` (Stage E E4) inside the call's operand
+// frame (pushed by `call`): the size operands as atoms, then the `alloc` body as
+// an E1-ordered EVENT after the anchor (the anchor moves to it) — a function
+// call like len/cap; the frame is popped into the event block.
+func (b *unseqBuilder) makeNew(c *ast.CallExpr, name string) (any, error) {
+	e := b.e
+	t := e.goTypeOf(c)
+	ty, err := e.typeOf(c)
+	if err != nil {
+		return nil, err
+	}
+	var spec map[string]any
+	if name == "new" {
+		pt, isPtr := types.Unalias(t).Underlying().(*types.Pointer)
+		if !isPtr {
+			return nil, unsup("unseq lowering: new without a pointer result")
+		}
+		elemTy, err := e.emitType(pt.Elem())
+		if err != nil {
+			return nil, err
+		}
+		spec = map[string]any{"stmt": "new", "value": map[string]any{"expr": "default", "type": elemTy}, "elemType": elemTy}
+	} else {
+		operands := []any{}
+		for _, a := range c.Args[1:] {
+			w, err := b.value(a)
+			if err != nil {
+				return nil, err
+			}
+			operands = append(operands, w)
+		}
+		switch u := types.Unalias(t).Underlying().(type) {
+		case *types.Slice:
+			elemTy, err := e.emitType(u.Elem())
+			if err != nil {
+				return nil, err
+			}
+			if len(operands) < 1 {
+				return nil, unsup("unseq lowering: make of a slice without a length")
+			}
+			spec = map[string]any{"stmt": "make-slice", "elem": elemTy, "len": operands[0]}
+			if len(operands) >= 2 {
+				spec["cap"] = operands[1]
+			}
+		case *types.Map:
+			keyTy, err := e.emitType(u.Key())
+			if err != nil {
+				return nil, err
+			}
+			valTy, err := e.emitType(u.Elem())
+			if err != nil {
+				return nil, err
+			}
+			spec = map[string]any{"stmt": "make-map", "keyType": keyTy, "valueType": valTy}
+			if len(operands) >= 1 {
+				spec["hint"] = operands[0]
+			}
+		case *types.Chan:
+			elemTy, err := e.emitType(u.Elem())
+			if err != nil {
+				return nil, err
+			}
+			spec = map[string]any{"stmt": "make-chan", "elem": elemTy}
+			if len(operands) >= 1 {
+				spec["cap"] = operands[0]
+			}
+		default:
+			return nil, unsup("unseq lowering: make of %s", t)
+		}
+	}
+	return b.allocOcc(name, ty, spec, true), nil
+}
+
+// allocOcc emits an `allocate` occurrence binding a fresh cell of type ty: a
+// composite literal in the RESIDUAL (no E1 edge); `make`/`new` as an EVENT with
+// the E1 anchor (the caller has pushed the operand frame, popped here).
+func (b *unseqBuilder) allocOcc(kind string, ty any, spec map[string]any, event bool) any {
+	cell := b.newCell(ty)
+	name := b.occName(kind)
+	o := map[string]any{"name": name, "kind": "allocate", "bind": cell, "allocation": spec}
+	if !event {
+		b.emit(o)
+		return slotIdent(cell, ty)
+	}
+	if after := b.eventAfter(); after != nil {
+		o["after"] = after
+	}
+	if b.region != "" {
+		o["region"] = b.region
+	}
+	block := append(b.pop(), o)
+	b.emitEventBlock(block)
+	b.anchor = name
+	return slotIdent(cell, ty)
 }
 
 // recv lowers `<-ch` (Stage E E3): the channel value, then the RECEIVE as an

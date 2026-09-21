@@ -585,6 +585,76 @@ def e3e():
     check('E3e v.Plus(f()), value receiver, f writes v.n (E14)', enumerate_graph(occs, state(v={'v.n': 1}), lambda st, v: v['E_plus']),
           lambda k: k[1], {6, 15})
 
+# ---------------------------------------------------------------- Stage E, family E4: conversions and allocations
+# (2026-09-21). A conversion is a PURE OP on its operand's value (never an occurrence); a composite
+# literal is an ALLOCATION node without E1 edges (v2.1 R3) whose payload reads are the occurrences;
+# `make` is a function call — an E1 participant like len (spec#Built-in_functions).
+
+def e4a():
+    # int([]byte(s)[0]) + mut(): s captured (mut: s = "zz", returns 1); the conversion and the index are
+    # pure ops on the fresh bytes; the READ of s is the occurrence unordered against mut.
+    def mut(st, v): st['v']['s'] = 'zz'; return 1
+    occs = [Occ('R_s', run=lambda st, v: st['v']['s']),
+            Occ('E_mut', run=mut),
+            Occ('Conv', deps=['R_s'], run=lambda st, v: ord(v['R_s'][0])),
+            Occ('Op', deps=['Conv', 'E_mut'], run=lambda st, v: v['Conv'] + v['E_mut'])]
+    check('E4a int([]byte(s)[0]) + mut() (s = "ab", mut: s = "zz")',
+          enumerate_graph(occs, state(v={'s': 'ab'}), lambda st, v: v['Op']), lambda k: k[1], {98, 123})
+
+def e4b():
+    # (&T{x: s[i]}).x + wit(5), s = [7], i = 9 (BUG-102): the payload read panics; the allocation (no E1
+    # edge) and the field read follow it by data; wit is unordered against the read.
+    def wit(st, v): println(st, 'wit 5'); return 5
+    occs = [Occ('R_si', run=lambda st, v: elem(st, hdr(st, 's'), 9)),
+            Occ('A', deps=['R_si'], run=lambda st, v: ('T', v['R_si'])),
+            Occ('F', deps=['A'], run=lambda st, v: v['A'][1]),
+            Occ('E_wit', run=wit),
+            Occ('Op', deps=['F', 'E_wit'], run=lambda st, v: v['F'] + v['E_wit'])]
+    check('E4b (&T{x: s[i]}).x + wit(5), s[i] out of range (BUG-102)',
+          enumerate_graph(occs, state(v={'s': 'S'}, arr={'S': [7]}), lambda st, v: v['Op']),
+          lambda k: (k[0], k[2]), {('panic', ()), ('panic', ('wit 5',))})
+
+def e4c():
+    # []int{s[i]}[0] + <-ch (BUG-102's receive spelling), ch buffered [3]; the witness len(ch).
+    def recv(st, v):
+        if not st['chan']: raise Blocked('receive would block: outside the terminating domain')
+        return st['chan'].pop(0)
+    occs = [Occ('R_si', run=lambda st, v: elem(st, hdr(st, 's'), 9)),
+            Occ('A', deps=['R_si'], run=lambda st, v: ('L', [v['R_si']])),
+            Occ('Rd', deps=['A'], run=lambda st, v: v['A'][1][0]),
+            Occ('E_recv', run=recv),
+            Occ('Op', deps=['Rd', 'E_recv'], run=lambda st, v: v['Rd'] + v['E_recv'])]
+    check('E4c []int{s[i]}[0] + <-ch, s[i] out of range; witness len(ch) (BUG-102)',
+          enumerate_graph(occs, state(v={'s': 'S'}, arr={'S': [7]}, chan=[3]), lambda st, v: v['Op']),
+          lambda k: (k[0], f"len(ch)={len(k[3][2])}"), {('panic', 'len(ch)=1'), ('panic', 'len(ch)=0')})
+
+def e4d():
+    # iv.(int) + len(make([]int, t[k])), iv a string, t = [1], k = 5 (E13 assert-left-make-slice): the
+    # assertion and the size operand's read are unordered; make and len follow the read by data.
+    def assert_int(st, v): raise Panic('interface conversion: interface {} is string, not int')
+    occs = [Occ('R_iv', run=assert_int),
+            Occ('R_tk', run=lambda st, v: elem(st, hdr(st, 't'), 5)),
+            Occ('A_make', deps=['R_tk'], run=lambda st, v: ('M', [0] * v['R_tk'])),
+            Occ('E_len', deps=['A_make'], run=lambda st, v: len(v['A_make'][1])),
+            Occ('Op', deps=['R_iv', 'E_len'], run=lambda st, v: v['R_iv'] + v['E_len'])]
+    check('E4d iv.(int) + len(make([]int, t[k])) (E13 assert-left-make-slice)',
+          enumerate_graph(occs, state(v={'t': 'T'}, arr={'T': [1]}), lambda st, v: v['Op']),
+          lambda k: (k[0], k[1]), {('panic', 'interface conversion: interface {} is string, not int'),
+                                   ('panic', 'index out of range [5] with length 1')})
+
+def e4e():
+    # len(make([]int, n)) + mut() with mut writing the captured n (n = 1 -> 3, returns 10): make is an E1
+    # participant BEFORE mut and n's read lies inside make's operand — forced before mut: a SINGLETON
+    # (the control for the [AGENT] choice «make is a function call»; gc's draw decides it).
+    def mut(st, v): st['v']['n'] = 3; return 10
+    occs = [Occ('R_n', run=lambda st, v: st['v']['n']),
+            Occ('A_make', deps=['R_n'], run=lambda st, v: ('M', [0] * v['R_n'])),
+            Occ('E_len', deps=['A_make'], run=lambda st, v: len(v['A_make'][1])),
+            Occ('E_mut', after=['E_len'], run=mut),
+            Occ('Op', deps=['E_len', 'E_mut'], run=lambda st, v: v['E_len'] + v['E_mut'])]
+    check('E4e len(make([]int, n)) + mut() (make an E1 participant: n forced before mut)',
+          enumerate_graph(occs, state(v={'n': 1}), lambda st, v: v['Op']), lambda k: k[1], {11})
+
 # ---------------------------------------------------------------- negative controls (forced pairs are singletons)
 def controls():
     # C1: f(g()) — argument before invocation (data edge); no unordered pair remains.
@@ -612,7 +682,8 @@ if __name__ == '__main__':
               lambda: r2b('C_or'), lambda: r2b('G'),
               lambda: r2c(True), lambda: r2c(False),
               r4, lambda: r6(True), lambda: r6(False),
-              e1a, e1c, e1b, e2a, e2c, e2d, e2e, e2f, e2g, e3a, e3c, e3d, e3e, controls):
+              e1a, e1c, e1b, e2a, e2c, e2d, e2e, e2f, e2g, e3a, e3c, e3d, e3e,
+              e4a, e4b, e4c, e4d, e4e, controls):
         f()
     print('RESULT:', 'FAIL' if FAILS else 'PASS', f'({FAILS} mismatch(es))')
     sys.exit(1 if FAILS else 0)

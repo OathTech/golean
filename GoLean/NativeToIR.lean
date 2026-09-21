@@ -885,6 +885,7 @@ private def unseqOccAllowedKeys : String → Option (List String)
   | "load" => some ["name", "kind", "bind", "target", "after", "region"]
   | "guard" => some ["name", "kind", "test", "when", "out", "after", "region"]
   | "recv" => some ["name", "kind", "binds", "ch", "elem", "after", "region"]
+  | "allocate" => some ["name", "kind", "bind", "allocation", "after", "region"]
   | _ => none
 
 /-- An ATOM on the wire (v2.1 §3.1's internal normal form): an identifier —
@@ -893,6 +894,31 @@ private def unseqIsAtom (j : Json) : Bool :=
   match j.getObjVal? "expr" with
   | .ok (.str "ident") | .ok (.str "int") | .ok (.str "bool") | .ok (.str "string") => true
   | _ => false
+
+/-- Stage E E4 (2026-09-21): an ALLOCATION PAYLOAD / a struct literal's field — an
+atom, a boxing `to-interface` of an atom, or a `default` (a field's zero value):
+already-evaluated values only; anything else is a hidden read, refused by name. -/
+private def unseqCheckPayload (path : String) (j : Json) : LowerM Unit := do
+  if jsonMentionsRecover j then
+    fail s!"unseq: recover() in an allocation payload at {path}; refused by name"
+  if unseqIsAtom j then return
+  match j.getObjVal? "expr" with
+  | .ok (.str "default") => pure ()
+  | .ok (.str "to-interface") =>
+      match j.getObjVal? "operand" with
+      | .ok operand =>
+          if !unseqIsAtom operand then
+            fail s!"unseq: hidden read in an allocation payload — {path} boxes a non-atom; refused by name"
+      | _ => fail s!"unseq: malformed to-interface at {path}; refused by name"
+  | _ =>
+      fail s!"unseq: hidden read in an allocation payload — {path} is not an atom (or a boxed atom / a zero value); an allocation's operands are already evaluated (v2.1 §3.1); refused by name"
+
+/-- Stage E E4: a VALUE struct literal's arguments are payloads. -/
+private def unseqCheckStructLit (path : String) (j : Json) : LowerM Unit := do
+  let o ← StrictJson.obj path j
+  let args ← StrictJson.array s!"{path}.args" (← StrictJson.field path o "args")
+  for k in [:args.size] do
+    unseqCheckPayload s!"{path}.args[{k}]" args[k]!
 
 /-- Does a wire JSON subtree contain a statement node whose `stmt` tag is one
 of `tags`? (D14: no nested `unseq`, no legacy `unseq-probe` in a completion.) -/
@@ -982,8 +1008,17 @@ private def unseqCheckHead (path : String) (head : Json) : LowerM Unit := do
         | _ => false
       if !(unseqIsAtom p || isGlobal) then
         fail s!"unseq: hidden read in a pure node — {path}.ptr is neither an atom nor a globaladdr (a pointer read dereferences a pointer VALUE or a package-level variable's cell; v2.1 §3.1 internal normal form); refused by name"
+  | "convert" | "bytes-from-string" | "string-from-bytes" | "string-from-rune"
+  | "runes-from-string" | "string-from-runes" =>
+      -- Stage E E4 (2026-09-21): a CONVERSION is a pure op over ONE atom — it cannot fail
+      -- inside the frontend's type grammar (slice-to-array conversions are refused there;
+      -- an interface target is a box, E5's), so it is never an occurrence of its own.
+      atom "x"
+  | "struct-lit" =>
+      -- Stage E E4: a VALUE struct literal over PAYLOADS (atoms, boxed atoms, zero values).
+      unseqCheckStructLit path head
   | other =>
-      fail s!"unseq: head '{other}' at {path} is outside the admitted fragment (admitted heads: ident, a constant (int/bool/string), index-get, slice, builtin-len, builtin-cap, binary, unary, type-assert, deref, field-get, map-get); refused by name"
+      fail s!"unseq: head '{other}' at {path} is outside the admitted fragment (admitted heads: ident, a constant (int/bool/string), index-get, slice, builtin-len, builtin-cap, binary, unary, type-assert, deref, field-get, map-get, convert and the string/byte/rune conversion forms, struct-lit); refused by name"
 
 /-- D8 for an `invoke` callee: an identifier (a func-typed local or slot) or
 a `func-value` whose captures are addresses (`ref`/`ident`/`globaladdr`). -/
@@ -1940,7 +1975,7 @@ partial def decodeUnseq (results : Array Param) (path : String) (obj : StrictJso
     let kind ← StrictJson.string s!"{opath}.kind" (← StrictJson.field opath o "kind")
     match unseqOccAllowedKeys kind with
     | some allowed => checkAllowedKeys opath o allowed
-    | none => fail s!"unseq: unknown occurrence kind '{kind}' at {opath} (eval | invoke | target | load | guard | recv); refused by name"
+    | none => fail s!"unseq: unknown occurrence kind '{kind}' at {opath} (eval | invoke | target | load | guard | recv | allocate); refused by name"
     let name ← StrictJson.string s!"{opath}.name" (← StrictJson.field opath o "name")
     if name.isEmpty then
       fail s!"unseq: empty occurrence name at {opath}; refused by name"
@@ -2023,6 +2058,79 @@ partial def decodeUnseq (results : Array Param) (path : String) (obj : StrictJso
             fail s!"unseq: receive element type {repr elem} at {opath} disagrees with cell '{binds[0]!}' declared {repr cty}; refused by name"
           let ch ← decodeExpr s!"{opath}.ch" chJ
           pure (UnseqBody.recv binds ch elem)
+      | "allocate" => do
+          -- Stage E E4 (2026-09-21): an ALLOCATION occurrence — the hoisted statement's
+          -- shape (new | make-slice | make-map | make-chan | slice-lit) with the binder
+          -- cell as its target; every operand an already-evaluated PAYLOAD; the cell's
+          -- type = the allocation's own type (a pointer / slice / map / channel).
+          let bind ← StrictJson.string s!"{opath}.bind" (← StrictJson.field opath o "bind")
+          let cty ← cellTy bind
+          let apath := s!"{opath}.allocation"
+          let aJ ← StrictJson.field opath o "allocation"
+          if jsonMentionsRecover aJ then
+            fail s!"unseq: recover() in an allocation at {apath}; refused by name"
+          let a ← StrictJson.obj apath aJ
+          let tag ← StrictJson.string s!"{apath}.stmt" (← StrictJson.field apath a "stmt")
+          let typeMismatch (yields : Ty) : LowerM Unit :=
+            if yields != cty then
+              fail s!"unseq: allocation '{name}' at {apath} yields {repr yields} but cell '{bind}' is declared {repr cty}; refused by name"
+            else pure ()
+          let optPayload (key : String) : LowerM (Option Expr) := do
+            match a.get? key with
+            | some c => do
+                unseqCheckPayload s!"{apath}.{key}" c
+                pure (some (← decodeExpr s!"{apath}.{key}" c))
+            | none => pure none
+          let spec ← match tag with
+            | "new" => do
+                checkAllowedKeys apath a ["stmt", "value", "elemType"]
+                let vJ ← StrictJson.field apath a "value"
+                let elemTy ← decodeTy s!"{apath}.elemType" (← StrictJson.field apath a "elemType")
+                (match vJ.getObjVal? "expr" with
+                  | .ok (.str "struct-lit") => unseqCheckStructLit s!"{apath}.value" vJ
+                  | .ok (.str "default") => pure ()
+                  | _ => fail s!"unseq: allocation '{name}' at {apath}: `new`'s value is neither a struct literal over payloads nor a zero value; refused by name")
+                typeMismatch (.pointer elemTy)
+                pure (AllocSpec.new (← decodeExpr s!"{apath}.value" vJ) elemTy)
+            | "make-slice" => do
+                checkAllowedKeys apath a ["stmt", "elem", "len", "cap"]
+                let elemTy ← decodeTy s!"{apath}.elem" (← StrictJson.field apath a "elem")
+                let lenJ ← StrictJson.field apath a "len"
+                unseqCheckPayload s!"{apath}.len" lenJ
+                let capE ← optPayload "cap"
+                typeMismatch (.slice elemTy)
+                pure (AllocSpec.makeSlice elemTy (← decodeExpr s!"{apath}.len" lenJ) capE)
+            | "make-map" => do
+                checkAllowedKeys apath a ["stmt", "keyType", "valueType", "hint"]
+                let keyTy ← decodeTy s!"{apath}.keyType" (← StrictJson.field apath a "keyType")
+                let valTy ← decodeTy s!"{apath}.valueType" (← StrictJson.field apath a "valueType")
+                let hintE ← optPayload "hint"
+                typeMismatch (.map keyTy valTy)
+                pure (AllocSpec.makeMap keyTy valTy hintE)
+            | "make-chan" => do
+                checkAllowedKeys apath a ["stmt", "elem", "cap"]
+                let elemTy ← decodeTy s!"{apath}.elem" (← StrictJson.field apath a "elem")
+                let capE ← optPayload "cap"
+                typeMismatch (.chan .both elemTy)
+                pure (AllocSpec.makeChan elemTy capE)
+            | "slice-lit" => do
+                checkAllowedKeys apath a ["stmt", "elem", "length", "elems"]
+                let elemTy ← decodeTy s!"{apath}.elem" (← StrictJson.field apath a "elem")
+                let length ← StrictJson.nat s!"{apath}.length" (← StrictJson.field apath a "length")
+                let elemsJ ← StrictJson.array s!"{apath}.elems" (← StrictJson.field apath a "elems")
+                let elems ← elemsJ.toList.mapIdxM (fun k el => do
+                  let epath := s!"{apath}.elems[{k}]"
+                  let eo ← StrictJson.obj epath el
+                  checkAllowedKeys epath eo ["index", "value"]
+                  let index ← StrictJson.int s!"{epath}.index" (← StrictJson.field epath eo "index")
+                  let vJ ← StrictJson.field epath eo "value"
+                  unseqCheckPayload s!"{epath}.value" vJ
+                  pure (index, ← decodeExpr s!"{epath}.value" vJ))
+                typeMismatch (.slice elemTy)
+                pure (AllocSpec.sliceLit elemTy length elems)
+            | other =>
+                fail s!"unseq: allocation '{name}' at {apath}: statement '{other}' is outside the admitted fragment (new | make-slice | make-map | make-chan | slice-lit); refused by name"
+          pure (UnseqBody.allocate bind spec)
       | other => fail s!"unseq: unknown occurrence kind '{other}' at {opath}; refused by name"
     occs := occs.push { name, body, after, region }
   -- stores

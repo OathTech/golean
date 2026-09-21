@@ -262,6 +262,31 @@ def x3r (buffered : Bool) : Program := { funcs := #[
       .unseq x3graphRecv (.seqn #[])]),
   x3f, x3defer] }
 
+/-! ## E4 (Stage E, 2026-09-21)  `[]int{s[i]}[0] + wit5()`, s[i] out of range — BUG-102's
+slice-literal shape: the payload read is an occurrence unordered against the call; the
+literal an `allocate` body (a slice literal — makeSlice + the element store; NO E1 edge, v2.1
+R3) on the payload's cell; the element read and the op follow by data.
+→ {panic [9] · ``, panic [9] · `wit 5`} -/
+
+def xaWit : Func := {
+  id := ⟨"xaWit"⟩, args := #[], results := #[intP "r"],
+  body := .seqn #[println [str "wit", .intLit 5 .int], ret "r" (.intLit 5)] }
+def xaGraph : UnseqGraph := {
+  cells := [intP "$si", sliceP "$lit", intP "$e0", intP "$w", intP "$op"],
+  occs := [occ "R_si" (.eval "$si" (.indexGet (.var "s") (.var "i"))),
+           occ "A" (.allocate "$lit" (.sliceLit .int 1 [(0, .var "$si")])),
+           occ "Rd" (.eval "$e0" (.indexGet (.var "$lit") (.intLit 0))),
+           occ "E_wit" (.invoke ["$w"] (.var "wv") []),
+           occ "Op" (.eval "$op" (.add (.var "$e0") (.var "$w"))),
+           occ "T_z" (.target "$t" (.var "z"))],
+  stores := [("$t", "$op")] }
+def xa : Program := { funcs := #[
+  mainInt [sliceP "s", intP "i", ⟨"wv", fnTy [] [.int]⟩]
+    (makeSlice "s" [7] ++
+     [.assign (.var "i") (.intLit 9), .assign (.var "wv") (clos "xaWit" []),
+      .unseq xaGraph (.seqn #[])]),
+  xaWit] }
+
 /-! ## R1  `v := x + y + mut()` — unreduced {0,1,2,3}; the REFUTED reduction {0,2,3} -/
 
 def r1mut : Func := {
@@ -769,6 +794,9 @@ def main (_args : List String) : IO Unit := do
     expectSet "X3 (recv body) x[f()] += <-ch, buffered" (x3r true) "main"
       [panicOut (oob 9 1) "len 0\n", panicOut (oob 9 1) "len 1\n"],
     expectRefusal "X3e (recv body) EMPTY channel: blocked is a refusal apart from the members" (x3r false) "main" "deadlock",
+    -- Stage E E4: a slice literal as an `allocate` body (BUG-102's shape)
+    expectSet "E4 []int{s[i]}[0] + wit5(), s[i] out of range: the slice literal an allocate body" xa "main"
+      [panicOut (oob 9 1) "", panicOut (oob 9 1) "wit 5\n"],
     expectTape "X3e canonical tape: the panic member (the receive never ran)" (x3 false) "main" []
       (panicOut (oob 9 1) "len 0\n"),
     -- R1

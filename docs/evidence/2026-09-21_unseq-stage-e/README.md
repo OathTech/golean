@@ -156,3 +156,42 @@ legacy probe); the goroutine-scheduling sites move by ≤ 5 consumptions in tota
 sweep frames entered. The same standing exit-1 findings on both sides (one line moved: `overwrite-vs-trylock` max consumed
 12 → 14, still one distinct observation).
 
+## E4 — conversions and allocations (closes BUG-102)
+
+| file | what | producer |
+|---|---|---|
+| `census-e4.txt` | the census AFTER E3 (the E3 frontend) vs AFTER E4 (the E4 frontend, the tree with the born package): admitted 110 → 127 = 110 + 13 (7 composite literals, 3 conversions, 2 `&T{…}`, 1 `new` — 10 in `builtins/e13-sibling-panic-order`, 3 in `noodler/latitude`) + 4 (the born package; `make-len-vs-call` all-forced = legacy, `map-lit-control` refused by name); 0 lost; 108 045 → 108 074 sweeps; the twin 10 203 / 0; the residue by name (5719 `conversion`, 875 `builtin make`, 864 `composite literal`, 402 `unary operator &`, 113 `builtin new` legacy rows remain) | `.tmp/census/run.sh`, `summarize.py`, `diff.py` |
+| `census-newly-admitted-e4.tsv` | the 13 sweeps that enter at E4 (function, form, former reason) | `diff.py` |
+| `diff-one-e4.txt` | the focused differential on the 83 affected rows (the two packages whose sweeps enter + the born package), both runs: the first REFUTED `assert-left-new-call`'s width 2 by name (→ 3, the set unchanged); the body kind was then RENAMED `alloc` → `allocate` (the bare token `alloc` is the memory module's raw-op token `check-mem-callsites` scans for — 10 false sites; no semantic change); the second run is the 83-row table — 83 PASS | `scripts/diff-one <ids…>` |
+| `gc-draws-e4.txt` | gc's draws for the born package (all six subjects: `98\|15\|15\|15\|6\|6`), BUG-102's five flipped subjects (`wit 5` then the panic; the receive spelling the panic alone), `bytesConvValueVsMutatingCall` (98) and the three moved noodler/latitude subjects (1005, 1005, 105): 5 × GOMAXPROCS 1/8 × default / `-N -l` = 20 per subject, every draw inside its derived set | `GOMAXPROCS=… go build [-gcflags=all='-N -l']` + run on a driver copy per row (`.tmp/gc-e4/`), go1.26.5 |
+| `choice-trace-main-vs-e4.txt` | the whole-corpus choice trace, main vs E4 (the paragraph below) | the same method as E1–E3 |
+| `ci-slow-e4.tail.txt` | the E4 full gate's tail (the paragraph below) | `scripts/capped scripts/ci --slow`, ANSI stripped |
+
+References: `enumerate.py` E4a–E4e (regenerated `outcomes.txt`, `RESULT: PASS`); over the wire: `Tests/UnseqWire.lean`
+82 ok, 26 mutants refused by name (`mut-alloc-nonatom`, `mut-alloc-kind` new); `scripts/check-unseq-wire` PASS (80
+fixtures byte-identical; 26 mutants through the CLI); `scripts/check-wire-boundary` PASS (11 + 20 unseq-node controls
+— the allocate positive and the two mutants new). Machine: `Tests/UnseqScheduler.lean` 73 ok — the new «E4
+[]int{s[i]}[0] + wit5()» set test on a hand-built `allocate` body (2 members exact); `scripts/check-unseq-scheduler`
+PASS; `scripts/check-mem-callsites` PASS (70 rows, inventory unchanged — after the rename; the first run flagged the
+constructor's token as 10 raw-op sites). Frontend: `go test ./tools/nativefrontend/ ./tools/lowerdiag/` ok (the E13
+guard tests assert the graph for the structural-allocation class; `make` stays an E1 participant without effect —
+`tgtAssertVsMake` keeps its legacy probe). Lean build (explicit targets): `GOLEAN_MEM_MAX=32G scripts/capped lake
+build golean UnseqWireTests UnseqSchedulerTests` EXIT=0 (102 jobs, 122 s after the rename). `scripts/check-bugs.sh`
+PASS at the re-pinned baseline (BUG-102 fixed: its five rows PASS; the entry's `Expect: FAIL` line removed).
+
+**The full gate: `scripts/capped scripts/ci --slow` at the E4 tree** (main `14006270` + E1 `0fe7bdce` + E2 `6960697f` +
+E3 `c1c27f27` + the E4 edits; the box-wide lock 05:00:29–05:17:24Z): **EXIT=1 in 1015 s, K=80 (`membership_draws 80`);
+3728 rows 3492 PASS / 236 FAIL in the run = the pinned 3493 / 235 with the one 5a-class row red; RESULT FAIL on
+EXACTLY the two 5a-class items** — `certificate provenance` («STALE certification: changed dependency
+build/files/GoLean/GoCore/AdmissionIndices.lean» — the `allocate` constructor's index arm; the changed core inputs) and
+the `baseline diff` DRIFT block's ONE line `imported-goose/channel/google-search baseline[PASS/membership] ->
+now[FAIL/membership]` (the row's detail: STALE for `AdmissionIndices.lean`; «Fresh certification: unchanged set;
+seconds=165.499» — the train installs the candidate at 5a). Every other step ok (core build warning-free, totality
+audit, engine isolation, check-mem-callsites (70 rows), admission proofs, declaration + wire boundaries (11 + 20
+unseq-node controls), method identity, unseq scheduler (Stage B + the recv and allocate bodies), unseq wire (26
+mutants), frontend pins (twin = pinned bytes), frontend / lowerdiag / harness unit tests, eval tests 274 ok,
+differential run, lane-validation fixtures incl. the go half, negative corpus 394 matched, FloatVectors + inittask-std
+byte-exact, re-pin guard 0 PASS→non-PASS with the 5 GREENED rows noted, executed library coverage).
+`ci-slow-e4.tail.txt` is the tail. Every row of this family reproduces its pinned state in the run: BUG-102's five
+flips (4 membership + 1 strict), the four moves PASS/membership, the six births in their lanes.
+

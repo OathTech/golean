@@ -599,6 +599,10 @@ func (e *emitter) unseqExpr(x ast.Expr, ctx *unseqCtx, d *unseqDecision) (unseqE
 		d.occ(start) // a failing pure op (slice bounds)
 		return unseqValue, true
 	case *ast.CallExpr:
+		if tv, ok := e.info.Types[v.Fun]; ok && tv.IsType() {
+			// Stage E E4: a CONVERSION T(x) — a pure op over the operand's value.
+			return e.unseqConversion(v, ctx, d)
+		}
 		if _, ok := e.unseqCall(v, ctx, d, 1); !ok {
 			return unseqConst, false
 		}
@@ -662,6 +666,14 @@ func (e *emitter) unseqExpr(x ast.Expr, ctx *unseqCtx, d *unseqDecision) (unseqE
 			d.events++
 			d.calls++
 			return unseqValue, true
+		}
+		if v.Op == token.AND {
+			// Stage E E4: `&T{…}` — a struct literal's payloads, then an `alloc new`
+			// body (no E1 edge, v2.1 R3). The address of a VARIABLE stays outside (E5).
+			if cl, isLit := ast.Unparen(v.X).(*ast.CompositeLit); isLit {
+				return e.unseqAddrLit(cl, ctx, d)
+			}
+			return refuse("unary operator & (address of a variable)")
 		}
 		switch v.Op {
 		case token.SUB, token.XOR, token.NOT:
@@ -734,9 +746,194 @@ func (e *emitter) unseqExpr(x ast.Expr, ctx *unseqCtx, d *unseqDecision) (unseqE
 		}
 		return unseqValue, true
 	case *ast.CompositeLit:
-		return refuse("composite literal")
+		// Stage E E4: a VALUE composite literal — a struct literal (a pure
+		// `struct-lit` head) or a slice literal (an `alloc` body).
+		return e.unseqCompositeLit(v, ctx, d)
 	}
 	return refuse("expression outside the pilot grammar")
+}
+
+// unseqConversion classifies a conversion T(x) (Stage E E4): a PURE OP over
+// the operand's value — integer <-> integer, bool <-> bool (a static
+// retyping), string <-> string, string <-> []byte / []rune, integer -> string
+// (emitCallNode's operator table) — admitted when both types are in the
+// grammar; never an occurrence of its own (it cannot fail: slice-to-array
+// conversions are outside the type grammar); a conversion to an interface
+// type is a box (E5's), refused by name.
+func (e *emitter) unseqConversion(c *ast.CallExpr, ctx *unseqCtx, d *unseqDecision) (unseqExprKind, bool) {
+	refuse := func(why string) (unseqExprKind, bool) {
+		if d.reason == "" {
+			d.reason = why
+		}
+		return unseqConst, false
+	}
+	if len(c.Args) != 1 {
+		return refuse("conversion arity")
+	}
+	tt := e.goTypeOf(c)
+	ot := e.goTypeOf(c.Args[0])
+	if tt == nil || ot == nil {
+		return refuse("conversion of an untyped operand")
+	}
+	if _, isIface := types.Unalias(tt).Underlying().(*types.Interface); isIface {
+		return refuse("conversion to an interface type (a box — E5)")
+	}
+	if !unseqTypeOK(tt) {
+		return refuse("conversion to a type outside the grammar (" + tt.String() + ")")
+	}
+	if !unseqTypeOK(ot) {
+		return refuse("conversion operand type outside the grammar (" + ot.String() + ")")
+	}
+	tu, ou := types.Unalias(tt).Underlying(), types.Unalias(ot).Underlying()
+	tb, tIsBasic := tu.(*types.Basic)
+	ob, oIsBasic := ou.(*types.Basic)
+	admitted := false
+	switch {
+	case tIsBasic && oIsBasic && tb.Info()&types.IsInteger != 0 && ob.Info()&types.IsInteger != 0,
+		tIsBasic && oIsBasic && tb.Info()&types.IsBoolean != 0 && ob.Info()&types.IsBoolean != 0,
+		tIsBasic && oIsBasic && tb.Info()&types.IsString != 0 && ob.Info()&types.IsString != 0,
+		tIsBasic && oIsBasic && tb.Info()&types.IsString != 0 && ob.Info()&types.IsInteger != 0,
+		isByteSlice(tu) && isStringType(ou), isStringType(tu) && isByteSlice(ou),
+		isRuneSlice(tu) && isStringType(ou), isStringType(tu) && isRuneSlice(ou):
+		admitted = true
+	}
+	if !admitted {
+		return refuse("conversion outside the admitted table (" + ot.String() + " -> " + tt.String() + ")")
+	}
+	if _, ok := e.unseqExpr(c.Args[0], ctx, d); !ok {
+		return unseqConst, false
+	}
+	return unseqValue, true
+}
+
+// unseqMakeNew classifies `make(T, …)` / `new(T)` (Stage E E4): a FUNCTION
+// CALL (spec#Built-in_functions «called like any other function») — an E1
+// participant like len/cap, WITHOUT effect (it does not admit a sweep by
+// itself; its size operands' reads are the occurrences); the allocation is an
+// `alloc` body. `pid` is the participant the caller opened.
+func (e *emitter) unseqMakeNew(c *ast.CallExpr, name string, ctx *unseqCtx, d *unseqDecision, pid int) (int, bool) {
+	refuse := func(why string) (int, bool) {
+		if d.reason == "" {
+			d.reason = why
+		}
+		return 0, false
+	}
+	t := e.goTypeOf(c)
+	if t == nil {
+		return refuse(name + " of an untyped result")
+	}
+	if !unseqTypeOK(t) {
+		return refuse(name + " of a type outside the grammar (" + t.String() + ")")
+	}
+	switch name {
+	case "new":
+		if len(c.Args) != 1 {
+			return refuse("new arity")
+		}
+		if _, isPtr := types.Unalias(t).Underlying().(*types.Pointer); !isPtr {
+			return refuse("new without a pointer result")
+		}
+	default:
+		switch types.Unalias(t).Underlying().(type) {
+		case *types.Slice, *types.Map, *types.Chan:
+		default:
+			return refuse("make of a type outside the grammar (" + t.String() + ")")
+		}
+		if len(c.Args) < 1 {
+			return refuse("make arity")
+		}
+		for _, a := range c.Args[1:] {
+			if _, ok := e.unseqExpr(a, ctx, d); !ok {
+				return 0, false
+			}
+		}
+	}
+	d.closeP(pid, false)
+	d.events++
+	return 1, true
+}
+
+// unseqCompositeLit classifies a VALUE composite literal (Stage E E4): a named
+// struct literal `T{…}` (a pure `struct-lit` head over its payloads) or a slice
+// literal `[]T{…}` (an `alloc` body — a fresh backing array; NO E1 edge, v2.1
+// R3); every element value is classified (its reads are the occurrences), a
+// keyed slice index is a constant. Map literals (gc evaluates their dynamic
+// entries at the literal's position — the E13 guard's measured note; E5's),
+// array literals (arrays are outside the type grammar) and elided `&T` elements
+// stay legacy by name.
+func (e *emitter) unseqCompositeLit(cl *ast.CompositeLit, ctx *unseqCtx, d *unseqDecision) (unseqExprKind, bool) {
+	refuse := func(why string) (unseqExprKind, bool) {
+		if d.reason == "" {
+			d.reason = why
+		}
+		return unseqConst, false
+	}
+	t := e.goTypeOf(cl)
+	if t == nil {
+		return refuse("composite literal of an untyped kind")
+	}
+	switch u := types.Unalias(t).Underlying().(type) {
+	case *types.Struct:
+		if _, isNamed := types.Unalias(t).(*types.Named); !isNamed {
+			return refuse("anonymous struct literal")
+		}
+		if !unseqTypeOK(t) {
+			return refuse("struct literal of a type outside the grammar (" + t.String() + ")")
+		}
+		for _, elt := range cl.Elts {
+			v := elt
+			if kv, ok := elt.(*ast.KeyValueExpr); ok {
+				v = kv.Value
+			}
+			if _, ok := e.unseqExpr(v, ctx, d); !ok {
+				return unseqConst, false
+			}
+		}
+		return unseqValue, true
+	case *types.Slice:
+		if !unseqTypeOK(u.Elem()) {
+			return refuse("slice literal element type outside the grammar (" + u.Elem().String() + ")")
+		}
+		for _, elt := range cl.Elts {
+			v := elt
+			if kv, ok := elt.(*ast.KeyValueExpr); ok {
+				if tv, isConst := e.info.Types[kv.Key]; !isConst || tv.Value == nil {
+					return refuse("slice literal key is not constant")
+				}
+				v = kv.Value
+			}
+			if _, ok := e.unseqExpr(v, ctx, d); !ok {
+				return unseqConst, false
+			}
+		}
+		return unseqValue, true
+	case *types.Map:
+		return refuse("map literal (gc evaluates its dynamic entries at the literal's position — E5)")
+	case *types.Array:
+		return refuse("array literal (arrays are outside the type grammar)")
+	case *types.Pointer:
+		return refuse("elided &T composite literal element")
+	}
+	return refuse("composite literal of type " + t.String())
+}
+
+// unseqAddrLit classifies `&T{…}` (Stage E E4): a struct literal's payloads,
+// then an `alloc new` body binding the fresh pointer (no E1 edge).
+func (e *emitter) unseqAddrLit(cl *ast.CompositeLit, ctx *unseqCtx, d *unseqDecision) (unseqExprKind, bool) {
+	t := e.goTypeOf(cl)
+	if t == nil {
+		if d.reason == "" {
+			d.reason = "address of an untyped composite literal"
+		}
+		return unseqConst, false
+	}
+	if _, isStruct := types.Unalias(t).Underlying().(*types.Struct); !isStruct {
+		if d.reason == "" {
+			d.reason = "address of a non-struct composite literal (" + t.String() + ")"
+		}
+		return unseqConst, false
+	}
+	return e.unseqCompositeLit(cl, ctx, d)
 }
 
 // unseqBinaryMayFail: integer `/` or `%` by a non-constant divisor, or a
@@ -986,6 +1183,9 @@ func (e *emitter) unseqCall(c *ast.CallExpr, ctx *unseqCtx, d *unseqDecision, ma
 				d.closeP(pid, false)
 				d.events++
 				return 1, true
+			case "make", "new":
+				// Stage E E4: an allocation call — an E1 participant like len/cap.
+				return e.unseqMakeNew(c, id.Name, ctx, d, pid)
 			}
 			return refuse("builtin " + id.Name)
 		}

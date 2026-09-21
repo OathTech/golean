@@ -2150,6 +2150,21 @@ WRITTEN there by the receive's own delivery, never declared. -/
 def unseqRecvStmt (binds : List String) (ch : Expr) (elem : Ty) : Stmt :=
   .chanRecv (binds.map Assignee.var).toArray ch elem
 
+/-- The `alloc` body's statement (Stage E E4): the hoisted allocation with the
+binder cell as its target — `new` (`&T{…}`, `new(T)`), `make`, or a slice
+literal's `makeSlice` followed by its element stores (the decoder's own
+`slice-lit` shape, `NativeToIR`). -/
+def unseqAllocStmt (bind : String) : AllocSpec → Stmt
+  | .new v ty => .allocNew (.var bind) v ty
+  | .makeSlice elem len cap => .makeSlice (.var bind) elem len cap
+  | .makeMap k v hint => .makeMap (.var bind) k v hint
+  | .makeChan elem cap => .makeChan (.var bind) elem cap
+  | .sliceLit elem len elems =>
+      .seqn (#[Stmt.makeSlice (.var bind) elem (.intLit (Int.ofNat len) .int)
+                (some (.intLit (Int.ofNat len) .int))] ++
+        (elems.map (fun (iv : Int × Expr) =>
+          Stmt.assign (.addr (.indexAddr (.var bind) (.intLit iv.1 .int))) iv.2)).toArray)
+
 /-- Head of a channel statement (send/receive/close). `elem` is the
 element type: sends normalize the value at it (the `mapAssign` key/value
 discipline, so buffered values are self-normalized); receives build the
@@ -6039,6 +6054,15 @@ inductive Step : Config → Store → Config → Store → AccessTrace → Prop 
       Step (.next (.unseqK g thenB st tg env (.run i) k)) s
         (.exec (unseqRecvStmt binds ch elem) env
           (.unseqK g thenB st tg env (.wait i) k)) s []
+  /-- Stage E E4: an ALLOCATION occurrence runs its hoisted statement with the
+  binder cell as its target under the wait frame (its completion is
+  `unseqAllocDone`); a `make` whose size is out of range panics as the
+  statement's own panic. -/
+  | unseqRunAlloc {g thenB st tg env k s o bind spec} {i : Nat} :
+      g.occs[i]? = some o → o.body = .allocate bind spec →
+      Step (.next (.unseqK g thenB st tg env (.run i) k)) s
+        (.exec (unseqAllocStmt bind spec) env
+          (.unseqK g thenB st tg env (.wait i) k)) s []
   /-- The checked access through a frozen plan: apply, then deliver — a
   bounds panic unwinds through the frame over the pre-state. -/
   | unseqRunLoad {g thenB st tg env k s o bind tgt r c' s' tr} {i : Nat} :
@@ -6076,6 +6100,12 @@ inductive Step : Config → Store → Config → Store → AccessTrace → Prop 
   by the receive's own delivery): the occurrence is DONE. -/
   | unseqRecvDone {g thenB st tg env k s o binds ch elem} {i : Nat} :
       g.occs[i]? = some o → o.body = .recv binds ch elem →
+      Step (.next (.unseqK g thenB st tg env (.wait i) k)) s
+        (.next (.unseqK g thenB (st.set i .done) tg env .pick k)) s []
+  /-- Stage E E4: an allocation's statement completed (the fresh object already
+  bound by the statement's own store): the occurrence is DONE. -/
+  | unseqAllocDone {g thenB st tg env k s o bind spec} {i : Nat} :
+      g.occs[i]? = some o → o.body = .allocate bind spec →
       Step (.next (.unseqK g thenB st tg env (.wait i) k)) s
         (.next (.unseqK g thenB (st.set i .done) tg env .pick k)) s []
 

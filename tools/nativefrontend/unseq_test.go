@@ -478,6 +478,68 @@ func e3promotedMethod() int {
 	return s[0] + w.Bump()
 }
 
+// --- Stage E E4: conversions and allocations ---
+
+func sinkAny(a any) int { _ = a; return 0 }
+
+// E4a: int([]byte(s)[0]) + mut(), s captured (mut: s = "zz"): the read of s beside the call;
+// the conversion and the index are pure ops on the fresh bytes.
+func e4convRead() int {
+	s := "ab"
+	mut := func() int { s = "zz"; return 1 }
+	return int([]byte(s)[0]) + mut()
+}
+
+// E4b: (&T{x: s[i]}).x + wit(5) — the payload read beside the call; the literal an allocate body.
+func e4addrLit() int {
+	s := []int{1}
+	i := 0
+	return (&T{x: s[i]}).x + wit(5)
+}
+
+// E4c: []int{s[i]}[0] + wit(5) — a slice literal's payload beside the call.
+func e4sliceLit() int {
+	s := []int{1}
+	i := 0
+	return []int{s[i]}[0] + wit(5)
+}
+
+// E4d: len(make([]int, t[k])) + x + mut(): make is an E1 participant (a function call), so
+// t[k] inside its operand is FORCED before mut; the sweep enters through the captured x's read,
+// unordered against mut. (Without x the sweep is all-forced and stays legacy — e4makeForced.)
+func e4make() int {
+	t := []int{1}
+	k := 0
+	x := 1
+	mut := func() int { x = 2; return 0 }
+	return len(make([]int, t[k])) + x + mut()
+}
+
+func e4makeForced() int {
+	t := []int{1}
+	k := 0
+	return len(make([]int, t[k])) + wit(5)
+}
+
+// A VALUE struct literal beside a call: a pure struct-lit head over the payload.
+func e4valueLit() int {
+	s := []int{1}
+	i := 0
+	return T{x: s[i]}.x + wit(5)
+}
+
+// A map literal stays legacy by name (E5).
+func e4mapLit() int {
+	s := []int{1}
+	return map[int]int{s[0]: 1}[0] + wit(5)
+}
+
+// A conversion to an interface type stays legacy by name (a box).
+func e4ifaceConv() int {
+	s := []int{1}
+	return sinkAny(any(s[0])) + wit(5)
+}
+
 func conversionOperand() int {
 	s := []int{1}
 	return int(int64(s[0])) + wit(1)
@@ -610,6 +672,13 @@ func TestUnseqAdmittedWitnesses(t *testing.T) {
 		{"e3ptrMethod", 0, "return", 1, 1},   // v.Bump() | the field read v.n through the pointer
 		{"e3addrRecv", 0, "return", 1, 1},    // v.Bump() on &v (no read) | s[k]
 		{"e3starRecv", 0, "return", 1, 2},    // (*v).Bump() | s[k] + the nil-asserting &*v
+		// Stage E E4: conversions and allocations
+		{"e4convRead", 0, "return", 1, 2},        // mut | the read of the captured s + the checked [0] on the bytes
+		{"e4addrLit", 0, "return", 1, 2},         // wit | s[i] + the field read through the fresh pointer
+		{"e4sliceLit", 0, "return", 1, 2},        // wit | s[i] + the checked [0] on the literal
+		{"e4make", 0, "return", 1, 2},            // mut | t[k] (inside make — forced) + the captured x (observable)
+		{"e4valueLit", 0, "return", 1, 1},        // wit | s[i] (the struct-lit and the field read on a value are pure)
+		{"conversionOperand", 0, "return", 1, 1}, // int(int64(s[0])) + wit(1): the checked access; the conversions pure
 	}
 	for _, c := range cases {
 		d := decisionAt(t, unseqWitnessSrc, c.fn, c.fromEnd)
@@ -676,20 +745,23 @@ func TestUnseqLegacyByReason(t *testing.T) {
 		{"e2promoted", 0, "promoted field selector"},
 		{"e2ifaceKey", 0, "map type outside the grammar"},
 		{"e2nestedFieldTarget", 1, "field target on a non-variable struct base"},
-		{"conversionOperand", 0, "conversion"},
 		{"multiTarget", 1, "multi-target or tuple assignment"},
 		{"lenOnly", 0, "no call occurrence"},
 		{"callOnly", 0, "no non-event occurrence"},
 		{"privateCompoundCall", 1, "no non-event occurrence"},
 		{"variadicCallee", 0, "variadic callee"},
 		{"genericCallee", 0, "generic function callee"},
-		{"stringIndex", 0, "conversion"}, // int(str[0]): the conversion is met first
+		{"stringIndex", 0, "index of a non-slice base"}, // int(str[0]): the conversion is admitted (E4), the string index is not
 		{"arrayIndex", 0, "index of a non-slice base"},
 		{"ifaceCompare", 0, "interface comparison"},
 		{"floatOperand", 0, "result type outside the pilot grammar"},
 		{"blankTarget", 0, "blank target"},
-		{"namedTypeLocal", 0, "conversion"},
+		{"namedTypeLocal", 0, "conversion operand type outside the grammar"},
 		{"printIface", 0, "print of an interface value"},
+		// Stage E E4
+		{"e4mapLit", 0, "map literal"},
+		{"e4ifaceConv", 0, "conversion to an interface type"},
+		{"e4makeForced", 0, "no occurrence observable against an effectful event"}, // t[k] precedes make, make precedes len, len precedes wit
 	}
 	for _, c := range cases {
 		d := decisionAt(t, unseqWitnessSrc, c.fn, c.fromEnd)

@@ -411,6 +411,21 @@ results over all runs is the sweep's semantics. Coexists with the legacy
 probe (`Stmt.unseqProbe`/`Cont.probeK`/`ChoiceSite.unseqPanic`) until Stage E
 retires it; per whole sweep a lowering is one or the other, never a mixture. -/
 
+/-- The ALLOCATION an `alloc` occurrence performs (Stage E E4, 2026-09-21): the
+statement shapes the frontend hoists for `&T{…}` / `new(T)` (`new`), `make`
+(`makeSlice` / `makeMap` / `makeChan`) and a slice literal (`sliceLit` — a fresh
+backing array of `len` elements, the keyed `elems` stored into it). Every
+operand is an already-evaluated PAYLOAD (an atom, a boxed atom, a struct
+literal / zero value over atoms — the decoder's check); expression payloads
+only, no statement nests inside a body (the graph is itself inside `Stmt`). -/
+inductive AllocSpec where
+  | new (value : Expr) (typ : Ty)
+  | makeSlice (elem : Ty) (len : Expr) (cap : Option Expr)
+  | makeMap (key value : Ty) (hint : Option Expr)
+  | makeChan (elem : Ty) (cap : Option Expr)
+  | sliceLit (elem : Ty) (len : Nat) (elems : List (Int × Expr))
+  deriving Repr, BEq, Inhabited
+
 /-- An occurrence's BODY — the bounded Stage B fragment of the v2.1 §3.1
 kind table (the internal normal form: every operand of a head is a
 constant, an explicitly admitted stable read of a source local, or a slot
@@ -442,6 +457,14 @@ inductive UnseqBody where
   machine's `blockedRecv` — a refusal apart from the sweep's members in the
   sequential domain (v2.1 §1), a wait in the pool. -/
   | recv (binds : List String) (ch : Expr) (elem : Ty)
+  /-- ALLOCATION (Stage E E4, 2026-09-21): ONE fresh object — `&T{…}`, `new(T)`,
+  `make(…)`, a slice literal — bound into the predeclared binder `bind`; the
+  body runs the hoisted allocation statement with the cell as its target, like
+  `invoke` runs `callValue`. A composite literal carries NO E1 edge (v2.1 R3 —
+  its payload reads are the occurrences); `make`/`new` are function calls
+  (spec#Built-in_functions «called like any other function») and carry E1
+  `after` edges like `len`/`cap`. -/
+  | allocate (bind : String) (spec : AllocSpec)
   /-- TARGET PLAN: a target's identity from FROZEN operand values — the
   assignee's operands are atoms (slots, `&local`, constants) resolved in
   one step through the machine's own `targetPlan`/`completeTargetRef`;

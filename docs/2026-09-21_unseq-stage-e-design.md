@@ -25,7 +25,7 @@ the rows born/flipped/moved with their sets, the latitude reclassifications pose
 | **E1** package-level variables (LANDED, §E1) | reads `g` / `pkg.V` as READ occurrences (`deref(globaladdr)`); operand-free targets (`g = e`, `g op= e`, `g++`) | **BUG-113** (two rows FAIL → PASS) | none (decoder D8: the `deref` head) |
 | **E2** pointers, fields, maps (LANDED, §E2) | `*p`, `p.f`/`s.f`, `m[k]` reads; map-element target plans (`m[k] = e`, `m[k] op= e`) — one frozen plan shared by load and store | BUG-104's `map-compound-index-key-vs-call` | `unseqReadTarget`'s `.mapElem` arm (+ its `locSup` lemma); `unseqAtom` string constants |
 | **E3** receives, method calls (LANDED, §E3) | `<-ch` as an EVENT occurrence (E1-ordered); concrete-receiver method calls as invocations (receiver sub-evaluation = occurrences) | BUG-104's `compound-call-target-vs-recv`, `map-compound-index-key-vs-{recv,method}` | a statement-bodied occurrence kind (the receive) + its `Step` rules and coherence arms |
-| E4 conversions, allocations | numeric/string/byte/rune conversions as ops; `&T{…}`, slice literals, `make` as allocation occurrences (payload reads are the occurrences; no E1 edges) | BUG-102's five designed reds | the same statement-bodied kind (allocation statements) |
+| **E4** conversions, allocations (LANDED, §E4) | numeric/string/byte/rune conversions as PURE OPS; `&T{…}`, `T{…}`, slice literals as allocation occurrences WITHOUT E1 edges (payload reads are the occurrences); `make`/`new` as E1-participant allocation calls (§E4 — the plan's «no E1 edges» corrected there for the builtins) | BUG-102's five designed reds | `UnseqBody.allocate` + `AllocSpec` (allocation statements under the wait frame) |
 | E5 multi-target forms, the residue | tuple/multi-value assignment, comma-ok forms, blank targets; the census residue migrated or stated | E3/E4 latitude entries (inter-target order) | — |
 | E6 retire the legacy triple | when the census shows ZERO legacy `unseq-probe` emissions | — | delete `Stmt.unseqProbe`/`Cont.probeK`/`ChoiceSite.unseqPanic` with their arms |
 
@@ -366,3 +366,91 @@ BUG-104 → `Status: fixed` (its three rows PASS on its own Cases line; it LEAVE
 list). Latitude: E14's receiver sub-axis (a) ENVELOPED on `receiver-vs-arg-call` and the born
 `value-recv-vs-arg-call`; E2/E12's value axis on `recv-vs-read`, `ptr-recv-vs-field-read` — posed for
 ratification at the merge ask.
+
+## E4. Conversions and allocations (landed 2026-09-21)
+
+**The grammar widening** (`unseq.go`). A CONVERSION `T(x)` is a PURE OP over the operand's value — integer ↔
+integer, bool ↔ bool (a static retyping, no machine op), string ↔ string, string ↔ `[]byte` / `[]rune`, integer →
+string — admitted when both types are in the grammar (`unseqConversion`); it is never an occurrence of its own
+(inside the type grammar a conversion cannot fail: slice-to-array conversions are refused with the array type, an
+interface target is a box — E5's, refused by name). A VALUE struct literal `T{…}` of a named struct type is a pure
+`struct-lit` head over its payloads (`unseqCompositeLit`); `&T{…}` and a slice literal `[]T{…}` are ALLOCATION
+occurrences — `allocate` bodies — WITHOUT E1 edges (v2.1 R3: spec#Order_of_evaluation orders calls, method calls,
+receives and logical operations; a composite literal is none of those — BUG-102's evidence, gc leaves the literal
+in the residual after the call temps); every element value is classified in source order (its reads are the
+occurrences; a keyed slice index is a constant). `make(…)` / `new(T)` are FUNCTION CALLS (spec#Built-in_functions
+«called like any other function»): E1 participants like `len`/`cap` — WITHOUT effect (they do not admit a sweep by
+themselves; their size operands' reads are the occurrences) — whose allocation is an `allocate` body carrying the E1
+`after` edge (`unseqMakeNew`). Map literals (gc evaluates their dynamic entries at the literal's position — the E13
+guard's measured note: one member, gc's), array literals (arrays are outside the type grammar), elided `&T` elements
+and `&x` of a variable stay legacy by name.
+
+**[AGENT] correction to the family plan** (§0's row said «`make` … no E1 edges»): `make`/`new` are E1 PARTICIPANTS.
+Evidence: the E13 lane's "unconditional make hoist" (FR-28) realizes `make` at its lexical position before later
+calls and its rows PASS against gc; the born control `evalorder/unseq-conv-alloc/make-len-vs-call` —
+`len(make([]int, n)) + m()` with `m` writing the captured `n` — is the direct test: an E1-ordered `make` forces
+`n`'s read before `m` (a singleton, 6), a `make` without E1 edges would give {6, 8}; gc draws 6 on 20/20 runs.
+Consequence: a sweep whose only unordered material sits inside a `make` operand is ALL-FORCED and stays legacy
+(`len(make([]int, t[k])) + wit(5)`; the E13 rows `assert-left-make-slice` / `tgt-assert-vs-make` keep their
+legacy probe sets — no effectful event beside the assertion). Alternative named: `make` as a node without E1 edges
+(the plan's wording) — refuted by the control's gc draw.
+
+**The machine** (TRUST SURFACE #1): `AllocSpec` (`new value typ` | `makeSlice elem len cap` | `makeMap key value
+hint` | `makeChan elem cap` | `sliceLit elem len elems`) and `UnseqBody.allocate bind spec` — ONE constructor with
+expression payloads only (no statement nests inside a body: `Stmt` already contains the graph). `unseqAllocStmt bind
+spec` is the hoisted allocation statement with the binder cell as its target (`allocNew` / `makeSlice` / `makeMap` /
+`makeChan` / a slice literal's `makeSlice` + element stores — the decoder's own `slice-lit` shape); two Step rules
+`unseqRunAlloc` / `unseqAllocDone` mirror the recv rules (StepFn's `.run`/`.wait` arms; `stepFn_sound`,
+`step_complete`, `step_complete_any_wf`, `stepUnseqNext_run_wait_stream`, `step_preserves_wf` with
+`unseqAllocStmt_locSup` (trivial — program text is loc-free, `Stmt.locSup_eq_zero`), `unseq_record_stable` and the
+done-monotone lemma; `allocSpecSup`/`allocSpecSup_eq_zero` in the bound network; `AllocSpec.names`,
+`AllocSpec.eqbF` + soundness, `allocSpecIndices`). `checkCert_slowObs` and the accountant untouched (no new pick).
+Decoder: the `allocate` kind (keys name/kind/bind/allocation/after/region — the names avoid the memory module's raw-op token `alloc`, which `check-mem-callsites` scans for; the spec's statement tag ∈ {new, make-slice,
+make-map, make-chan, slice-lit} with exact keys; every operand a PAYLOAD — an atom, a boxed atom or a `default`
+(`unseqCheckPayload`); `new`'s value a `struct-lit` over payloads or a `default`; the cell's type = the allocation's
+own type — pointer / slice / map / `chan both`); D8 admits the conversion heads (`convert` and the five
+string/byte/rune forms, one atom) and `struct-lit` (payload args). Lowering (`unseq_lower.go`): `conv` (emitCallNode's
+operator table), `structLitHead`/`compositeLit`/`addrLit` (a residual `allocate`, no `after`), `makeNew` (an event
+block with `after`, inside `call`'s frame), `allocOcc`. Alternative named for the kind: a general `exec binds stmt`
+body — rejected (a `Stmt` inside `UnseqBody` makes Stmt/UnseqBody a nested-inductive cycle and drags every statement
+shape into the body's well-formedness); the five allocation shapes are the frontend's own hoist statements, exactly.
+
+**References lead** (`enumerate.py` E4a–E4e; `outcomes.txt` PASS): E4a `int([]byte(s)[0]) + mut()` → {98, 123};
+E4b `(&T{x: s[i]}).x + wit(5)` → {panic · ``, panic · `wit 5`}; E4c `[]int{s[i]}[0] + <-ch` → the `len(ch)` witness
+{1, 0}; E4d `iv.(int) + len(make([]int, t[k]))` → {the assertion's panic, the index panic}; E4e `len(make([]int, n)) +
+mut()` → {11} (the E1-participant control). Wires: hand-built `e4alloc.json` (BUG-102's slice-literal shape as native
+Go) + native `native-{e4alloc,e4conv}.json`; mutants `mut-alloc-nonatom` (a payload that reads), `mut-alloc-kind` (a
+`map-lit` statement); the scheduler test «E4 []int{s[i]}[0] + wit5()» on a hand-built `allocate` body.
+
+**The census** (`census-e4.txt`): 110 → 127 admitted (+13 over the shared rows — 10 in
+`builtins/e13-sibling-panic-order` (BUG-102's five, `bytes-conv-{left-len-hoist,value-vs-mutating-call}`,
+`index-composite-lit`, `assert-composite-lit`, `assert-left-new-call`), 3 in `noodler/latitude`
+(`sliceLiteralIndexVsCall`, `structLiteralVarVsCall`, `conversionIndexVsCall`); 0 lost; +4 in the born package
+`evalorder/unseq-conv-alloc`); by former reason: composite literal 7, conversion 3, `&` 2, `new` 1. The raft twin
+10 203 sweeps, 0 admitted. The residue by name: 5719 `conversion` legacy rows remain (conversions inside sweeps with
+no other unordered material, float/named-type/interface targets), 875 `builtin make`, 864 `composite literal`
+(map/array/anonymous literals; literals in call-free sweeps), 402 `unary operator &` (addresses of variables — E5),
+113 `builtin new`.
+
+**Rows** — MEASURED (`scripts/diff-one` on the 83 affected rows — the three packages — twice: the first run REFUTED `assert-left-new-call`'s width 2 by name (three ready at once: the assertion, the fresh pointer's dereference, `wit` after `new`) → width 3, the set unchanged; the second run is the table, 83 PASS; `diff-one-e4.txt`):
+
+| row | before → after | set | gc (20/20) |
+|---|---|---|---|
+| `builtins/e13-sibling-panic-order/{composite-ptr-payload-vs-call,composite-ptr-payload-vs-call-printroot}` (BUG-102) | FAIL/frontend-export → PASS/membership | {panic [9] · ``, panic [9] · `wit 5`} (E4b) | `wit 5` · panic |
+| `…/{slice-lit-payload-vs-call,slice-lit-payload-vs-call-sinkroot}` (BUG-102) | FAIL/frontend-export → PASS/membership | the same two members | `wit 5` · panic |
+| `…/slice-lit-payload-vs-recv` (BUG-102) | FAIL/frontend-export → PASS strict | the two orders differ only in the unwitnessed channel state: ONE observation (E4c's shape without its witness) | panic |
+| `…/bytes-conv-value-vs-mutating-call` (E12's recorded exception) | PASS strict → PASS/membership | {98, 123} (E4a) — the exception RETIRES into the set | 98 |
+| `noodler/latitude/slice-literal-index-vs-call`, `struct-literal-var-vs-call` | PASS strict → PASS/membership | {15, 1005} — the payload read of the captured `a[0]` / `v` before or after `f` | 1005 |
+| `noodler/latitude/conversion-index-vs-call` | PASS strict → PASS/membership | {6, 105} | 105 |
+| `evalorder/unseq-conv-alloc/{conv-read-vs-call,struct-lit-vs-call,addr-lit-vs-call,slice-lit-vs-call}` | born PASS/membership | {98, 123}; {6, 15} ×3 | 98; 15; 15; 15 |
+| `evalorder/unseq-conv-alloc/{make-len-vs-call,map-lit-control}` | born PASS strict | 6 (make E1-ordered — the control); 6 (a map literal, legacy) | 6; 6 |
+| `builtins/e13-sibling-panic-order/{bytes-conv-left-len-hoist,index-composite-lit,assert-composite-lit,assert-left-new-call}` | PASS/membership, sets UNCHANGED (2) | the graph reproduces the legacy probe's two members (`assert-left-new-call`: width 2 → 3, a params correction) | unchanged |
+| every other row of the three packages | UNCHANGED | — | — |
+
+Baseline re-pinned 3722 = 3482 / 240 → 3728 = 3493 / 235 (the header carries the reason); no PASS → non-PASS.
+BUG-102 → `Status: fixed` (its five rows PASS on its own Cases line). Latitude: E2/E12's VALUE axis (a) ENVELOPED on
+the four lane moves and the four born membership rows; E12's recorded EXCEPTION (`bytes-conv-value-vs-mutating-call`,
+gc 98 — the operand read early) retires into the set; the E3/E4 «late structural allocations» item of v2.1 §5 (4) is
+REALIZED here (an allocation is a node without E1 edges) — posed for ratification at the merge ask, with the [AGENT]
+correction that `make`/`new` are E1 participants.
+

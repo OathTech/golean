@@ -207,4 +207,12 @@ out="$(run_cli_fn Tests/unseq-wire/e3recv.json e3recv)" || true
 echo "ok [unseq recv] runs, the canonical tape receives first then panics [9] (witness len 0) — Stage E E3"
 expect_unseq_refusal unseq-recv-nonatom mut-recv-nonatom e3recv 'hidden read in a receive'
 expect_unseq_refusal unseq-recv-two-binds mut-recv-two-binds e3recv 'outside the admitted fragment'
-echo 'Wire boundary gate: PASS (11 byte-level controls + 17 unseq-node controls through the real CLI)'
+# Stage E E4 (2026-09-21): an ALLOCATION (`allocate`) occurrence (Tests/unseq-wire/e4alloc.json, `[]int{s[i]}[0] + wit5()`):
+# runs on the canonical tape — wit5 first (calls first), then the payload's `[9]` panic after `wit 5`; the
+# non-atom payload and the out-of-fragment statement kind refuse by name.
+out="$(run_cli_fn Tests/unseq-wire/e4alloc.json e4alloc)" || true
+[[ "$out" == *'"status":"panic"'* && "$out" == *'wit 5'* ]] || { echo "check-wire-boundary: FAIL [unseq alloc] — expected the canonical tape's panic [9] after wit 5: $out" >&2; exit 1; }
+echo "ok [unseq alloc] runs, the canonical tape calls first then panics [9] on the literal's payload — Stage E E4"
+expect_unseq_refusal unseq-alloc-nonatom mut-alloc-nonatom e4alloc 'hidden read in an allocation payload'
+expect_unseq_refusal unseq-alloc-kind mut-alloc-kind e4alloc 'outside the admitted fragment'
+echo 'Wire boundary gate: PASS (11 byte-level controls + 20 unseq-node controls through the real CLI)'

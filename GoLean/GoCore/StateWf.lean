@@ -219,6 +219,14 @@ def assigneeListSup : List Assignee → Nat
   | [] => 0
   | a :: as => max (Assignee.locSup a) (assigneeListSup as)
 
+/-- An allocation's loc positions (Stage E E4): its operand expressions. -/
+def allocSpecSup : AllocSpec → Nat
+  | .new v _ => Expr.locSup v
+  | .makeSlice _ len cap => max (Expr.locSup len) (optExprSup cap)
+  | .makeMap _ _ hint => optExprSup hint
+  | .makeChan _ cap => optExprSup cap
+  | .sliceLit _ _ elems => keyedExprListSup elems
+
 /-- An `unseq` body's loc positions (Stage B): its head/operand expressions
 and target assignee — program text, zero since A4 like `Expr.locSup`, kept
 for the lemma network. -/
@@ -227,6 +235,7 @@ def unseqBodySup : UnseqBody → Nat
   | .load _ _ => 0
   | .invoke _ callee args => max (Expr.locSup callee) (exprListSup args)
   | .recv _ ch _ => Expr.locSup ch
+  | .allocate _ spec => allocSpecSup spec
   | .target _ lhs => Assignee.locSup lhs
   | .guard _ _ _ => 0
 
@@ -362,8 +371,11 @@ theorem assigneeListSup_eq_zero (l : List Assignee) : assigneeListSup l = 0 := b
   induction l with
   | nil => rfl
   | cons a l ih => simp [assigneeListSup, Assignee.locSup_eq_zero, ih]
+theorem allocSpecSup_eq_zero (a : AllocSpec) : allocSpecSup a = 0 := by
+  cases a <;> simp [allocSpecSup, Expr.locSup_eq_zero, optExprSup_eq_zero, keyedExprListSup_eq_zero]
 theorem unseqBodySup_eq_zero (b : UnseqBody) : unseqBodySup b = 0 := by
-  cases b <;> simp [unseqBodySup, Expr.locSup_eq_zero, exprListSup_eq_zero, Assignee.locSup_eq_zero]
+  cases b <;> simp [unseqBodySup, Expr.locSup_eq_zero, exprListSup_eq_zero, Assignee.locSup_eq_zero,
+    allocSpecSup_eq_zero]
 theorem unseqOccsSup_eq_zero (os : List UnseqOcc) : unseqOccsSup os = 0 := by
   induction os with
   | nil => rfl
@@ -7072,6 +7084,12 @@ theorem unseqRecvStmt_locSup {binds : List String} {ch : Expr} {elem : Ty} :
     assigneeListSup_vars]
   omega
 
+/-- Stage E E4: the allocation statement's loc bound is its body's (program text is
+loc-free since A4 — `Stmt.locSup_eq_zero`). -/
+theorem unseqAllocStmt_locSup {bind : String} {spec : AllocSpec} :
+    Stmt.locSup (unseqAllocStmt bind spec) ≤ unseqBodySup (.allocate bind spec) := by
+  simp [Stmt.locSup_eq_zero]
+
 /-- Close a `step_preserves_wf_loc` goal whose step DELIVERED A PANIC
 (B2): the successor is `.panicking (chain ++ [panicEntry msg]) k` over
 the unchanged state, loc-bounded by the source configuration's bound. -/
@@ -7922,6 +7940,13 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
     have hb := unseqBodySup_of_get hget
     rw [hbody] at hb
     have hst := unseqRecvStmt_locSup (binds := binds) (ch := ch) (elem := elem)
+    refine ⟨hs, ?_, Nat.le_refl _⟩
+    simp only [ConfigWf, Config.locSup, Cont.locSup, UnseqGraph.locSup, Nat.max_le] at hc hb hst ⊢
+    omega
+  case unseqRunAlloc g thenB st tg env k o bind spec i hget hbody =>
+    have hb := unseqBodySup_of_get hget
+    rw [hbody] at hb
+    have hst := unseqAllocStmt_locSup (bind := bind) (spec := spec)
     refine ⟨hs, ?_, Nat.le_refl _⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, UnseqGraph.locSup, Nat.max_le] at hc hb hst ⊢
     omega
