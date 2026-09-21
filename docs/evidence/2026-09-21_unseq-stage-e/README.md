@@ -196,7 +196,7 @@ byte-exact, re-pin guard 0 PASS→non-PASS with the 5 GREENED rows noted, execut
 flips (4 membership + 1 strict), the four moves PASS/membership, the six births in their lanes.
 
 **Whole-corpus choice trace, main vs E4** (`choice-trace-main-vs-e4.txt`; the E4 side = this worktree at the E4 commit
-`7f7e6b79`, the E4 binary `6caf640d…`): **3692	same=3613	differ=56	onlyA=0	onlyB=23 only on the E4 side** — the 56 DIFFER
+`7f7e6b79`, the E4 binary `6caf640d…`): **3692 ids, 3613 byte-identical, 56 DIFFER, 23 only on the E4 side** — the 56 DIFFER
 ids are EXACTLY rows of the 40 packages whose sweep decisions changed main → E4 (the E1–E4 admissions: E4's are the
 E13 conversion/literal rows — BUG-102's five, `bytes-conv-{left-len-hoist,value-vs-mutating-call}`,
 `index-composite-lit`, `assert-composite-lit`, `assert-left-new-call` — and the three noodler/latitude rows); the

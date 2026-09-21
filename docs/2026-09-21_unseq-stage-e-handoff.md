@@ -112,7 +112,7 @@ sweeps returned to legacy at E3 are SAME (no consumption on either path). Site c
 `unseqPanic` 288 → 228 — the legacy `unseqPanic` probe is still consulted on 228 recorded consumptions across the
 corpus (E6's condition is not met; the probe emitters left are E4's conversions/allocations and E5's residue).
 
-E4: `choice-trace-main-vs-e4.txt`: ids=3692	same=3613	differ=56	onlyA=0	onlyB=23 — the DIFFER ids exactly the rows of the 40 packages whose sweep decisions changed main → E4, the ONLY_B ids the born rows; site census `unseqNext` 555 → 1436, `unseqPanic` 288 → 204 — the legacy probe is still consulted on 204 recorded consumptions (E6 NOT reachable; the emitters by name in §1).
+E4: `choice-trace-main-vs-e4.txt`: 3692 ids — 3613 byte-identical, 56 DIFFER, 23 only on the E4 side — the DIFFER ids exactly the rows of the 40 packages whose sweep decisions changed main → E4, the ONLY_B ids the born rows; site census `unseqNext` 555 → 1436, `unseqPanic` 288 → 204 — the legacy probe is still consulted on 204 recorded consumptions (E6 NOT reachable; the emitters by name in §1).
 
 ## 5. Operational notes for the next session
 
