@@ -708,3 +708,14 @@ lexically later call evaluated after the call — a pre-existing wrong answer, m
 candidate, gc/spec `false`; two born-FAIL rows + a control; fix = Stage E) and BUG-112
 (fixed). Train r44 owes 5a with `--slow` (wire and decoder changed). Then Stage D (economics)
 and Stage E (migration; the BUG-113 fix; legacy probe retirement; twin re-pin).
+
+### The confluent-caption ruling record (2026-09-21) — Stage D audit F3
+
+[USER] Mike, 2026-09-21, verbatim, relayed by the [AGENT] coordinator — cite as relayed:
+«yes, I agree - go ahead» — to the coordinator's question whether to amend the `confluent`
+lane's caption in `docs/coverage-suite-structure.md` (a certificate «over all registry-point
+schedules») to say it ranges over ALL choice streams the row consumes — registry-point
+schedules and, since Stage D, expression-order picks — because `continue-label`'s certificate
+(its only choice site is `unseqNext`) is stronger than the old caption described. RULED:
+the caption is amended (records, train r45). «go ahead» also lands Stage D (`core/unseq-
+stage-d-0920`, audit MERGE-CLEAN at `5922ece7`) with the audit's F1/F2/F5 records fixes.

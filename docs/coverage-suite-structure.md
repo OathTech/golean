@@ -239,7 +239,10 @@ stream is compared with its own default trajectory):
    was exhausted at consumption n — the 3-stream invariance check did
    not cover this row; route to confluent, or declare depth" — unless
    the row carries `lane=confluent` (the enumerator certifies |set| = 1
-   over all registry-point schedules; the 3-stream check is then
+   over all choice streams the row consumes — registry-point schedules
+   and, since Stage D of the evaluation-order model (2026-09-20),
+   expression-order picks (`unseqNext`) — [USER] 2026-09-21 «yes, I agree»,
+   relayed, on the Stage D audit's F3; the 3-stream check is then
    redundant with the certificate and the guard does not run) or, when
    the enumerated set has ≥ 2 members, `lane=membership` with
    `members=`; or an explicit strict-lane `depth=N`, under which the

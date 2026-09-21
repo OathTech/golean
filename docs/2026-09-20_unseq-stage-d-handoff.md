@@ -35,6 +35,9 @@ was needed and none is posed (§6). Every logged decision below is [AGENT].
     widest node branches exactly |ready| = 3, mutations M1–M5 refused (M4 is new: a pick node's last branch dropped).
     Eval tests 267 → 274.
   - Lane move: `spec-examples-stmt/continue-label` strict `depth=128` → `lane=confluent`, `engine=dedup`
+    (gc draws for the move, supplied by the audit F5: 20/20 the certified singleton under GOMAXPROCS 1 and 8 —
+    `docs/2026-09-20_unseq-stage-d-audit.md`; the certificate ranges over ALL choice streams the row consumes — its only
+    site is `unseqNext` — see the confluent caption amended at train r45)
     (`width=4,sites=64,work=200000`; the row's comment block carries the reason).
 - Records: this handoff, the design note, the evidence README + small tables, `docs/coverage-suite-structure.md`
   (the lane move under the depth guard's standing consequence), v2.1 §3.6 addendum (route α landed),
@@ -90,8 +93,8 @@ certified by the same lemma; it retires with the legacy lowering at Stage E.
 
 Exactly one, named: `spec-examples-stmt/continue-label` (§1). The 41 membership rows the engine closes with their
 declared sets reproduced are recorded (`alpha-corpus-rows.tsv`), not moved — the rules license no move for rows the
-DFS closes, and switching engines there is not proposed. BUG-065's 16 rows: none closes (they refuse on budget or on
-`appendSpill`/scheduling shapes, never on the `unseq` pick); recorded, not forced.
+DFS closes, and switching engines there is not proposed. The 16 depth-guard rows of ledger T-8 (misattributed to BUG-065 in the first cut — audit F1; BUG-065 has one Cases
+row): none closes (they refuse on budget or on `appendSpill`/scheduling shapes, never on the `unseq` pick); recorded, not forced.
 
 ## 5. Where this lane stopped; the next command
 

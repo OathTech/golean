@@ -18,7 +18,7 @@ Rungs (v2.1 §7 row D / review R5), each measured on route β (`CLI.explore`: fu
 
 | rung | shape | paths (β) | budget derivation |
 |---|---|---|---|
-| `loop N` | N width-2 sweeps in a `for` loop (Stage B's shape), N = 1..12 (13 printing = the designed refusal) | 2^N | steps ≈ 2^N × 165 (silent); the cap 4096 is hit at N = 13 printing — REFUSED by name, never truncated (N3) |
+| `loop N` | N width-2 sweeps in a `for` loop (Stage B's shape), N = 1..12 (13 printing = the designed refusal) | 2^N | steps ≈ 2^N × 143 (silent; 165–167 is the PRINTING variant — audit F2); the cap 4096 is hit at N = 13 printing — REFUSED by name, never truncated (N3) |
 | `wide k` | ONE sweep, k unordered invocations feeding a sink, k = 2..8 | k! | k = 8: 40 320 paths, 4.1 M steps, ~4 m 15 s on β (254–256 s in two runs) — the last rung β closes under 50 M work; k = 9 would not |
 | `nest M` | a loop of M iterations, each ONE width-3 sweep, M = 1..5 | 6^M | M = 5: 7 776 paths |
 | corpus: the E13 family | `builtins/e13-sibling-panic-order/*` (65), `builtins/len-vs-call-order/*` (31), `binop-order/operand-panic-vs-call/*` (3); the Stage C pilot `evalorder/unseq-pilot/*` (13), `evalorder/unseq-const-cell/*` (3); the seven lane-moved rows' packages | per row: the baseline's own enumeration | the rows' declared `width`/`sites`; α at work 20 M |
@@ -63,8 +63,8 @@ certified count equals its declared `members=`. `continue-label`: 5 122 unique s
 states against 40 320 paths at k = 8 (37 s vs ~4 m 15 s) — exponential in k (the done-set lattice) but far below k!. What α does NOT close, by name: 42 rows whose sweep PRINTS (the engine keys
 nodes on state and refuses an output event — the standing G-OUT limit, not a pick limit; §5), 8 rows whose own
 refusal fires at node 0 (the BUG-102/BUG-104 designed reds — the machine refuses, not the engine), 3 rows on
-pre-existing refused shapes (`mapIterK` ×1, `appendSpill` ×2). BUG-065's 16 non-certifiable strict rows refuse on
-BUDGET or on `appendSpill`/scheduling shapes, never on the `unseq` pick — D1 changes shape acceptance only, so none
+pre-existing refused shapes (`mapIterK` ×1, `appendSpill` ×2). the 16 non-certifiable strict rows of ledger T-8 (the depth-guard `depth=N` rows; audit F1: BUG-065 itself
+has ONE Cases row, `goroutines/worker-pool/sum`) refuse on BUDGET or on `appendSpill`/scheduling shapes, never on the `unseq` pick — D1 changes shape acceptance only, so none
 closes; recorded, none forced.
 
 ## 3. Lane moves (each NAMED; the rules of `docs/coverage-suite-structure.md`)
