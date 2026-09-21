@@ -1,0 +1,12 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# evalorder/unseq-globals — Stage E family E1 (evaluation-order model v2.1 §7 row E; lane
+# core/unseq-stage-e-0921, 2026-09-21): PACKAGE-LEVEL variables as READ occurrences and as
+# operand-free targets. The frontend lowers the two membership rows' sweeps as ONE `unseq`
+# graph each (`unseqClassify`: a call beside a package-level read); the ONE consumption site is
+# the `unseq` scheduler's pick (`unseqNext`, bound = the ready-set size). The strict rows are
+# the controls: an unrelated call (both orders agree) and a plain global target (legacy by the
+# trigger — no non-event occurrence).
+read-vs-call	readVsCall	-	ok	-	globals,closures,calls,evaluation_order,nondet	membership	E1a `v := mut() + g`, g a PACKAGE-LEVEL variable mut writes (g = 2): the read of g is spec-UNSEQUENCED against the call (spec#Order_of_evaluation); the ONE consumption site is the `unseq` scheduler's pick (`unseqNext`, bound = the ready-set size at each pick; Stage E E1 — reference enumerate.py E1a): the read before the call gives 1, after it 2 (gc's, call-first). members=2	width=2,sites=8,members=2
+compound-vs-call	compoundVsCall	-	ok	-	globals,calls,assignment,evaluation_order,nondet	membership	E1c `g += setG()` (setG: g = 10, returns 1): the compound target's load of the package-level g is a READ occurrence unsequenced against the call, the store lands in phase 2 through g's operand-free identity; the ONE consumption site is the `unseq` scheduler's pick (`unseqNext`, bound = the ready-set size at each pick; Stage E E1 — reference enumerate.py E1c): read before → 2 (the 10 overwritten), after → 11 (gc's, call-first). members=2	width=2,sites=8,members=2
+read-vs-unrelated-call	readVsUnrelatedCall	-	ok	-	globals,calls,print,evaluation_order	strict	-	-
+plain-target-call	plainTargetCall	-	ok	-	globals,calls,assignment,print,evaluation_order	strict	-	-

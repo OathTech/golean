@@ -18,3 +18,4 @@ mut-result-arity	resultTypes arity
 mut-guard-type	not a bool cell
 mut-unknown-key	unknown key
 mut-nested-completion-join	invalid branch join
+mut-deref-hidden	hidden read in a pure node

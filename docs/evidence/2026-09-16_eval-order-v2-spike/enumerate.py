@@ -420,6 +420,41 @@ def r6(split):
     check(f"R6 a[f()], {'SPLIT header/index producers + one checked access' if split else 'FUSED read (the narrowing)'}",
           enumerate_graph(occs, state(v={'a': 'A'}, arr={'A': [10], 'B': [20]}), phase2), lambda k: k[1], {10, 20} if split else {20})
 
+# ---------------------------------------------------------------- Stage E, family E1 (2026-09-21): package-level variables
+# (lane core/unseq-stage-e-0921; the width-of-P ruling «ALL mutable reads, STAGED» widened to
+# package-level variables). A global is a mutable location like a captured local: its read is a
+# READ occurrence unordered against a sibling call; as a compound target its identity has no
+# operands (nothing to freeze), the store lands in phase 2. The reference LEADS the lowering:
+# Tests/unseq-wire/{e1,e1c}.json and the corpus rows evalorder/unseq-globals/* certify these sets.
+def e1a():
+    def mut(st, v): st['v']['g'] = 2; return 0
+    occs = [Occ('E_mut', run=mut),
+            Occ('R_g', run=lambda st, v: st['v']['g']),                     # the package-level read
+            Occ('Op', deps=['E_mut', 'R_g'], run=lambda st, v: v['E_mut'] + v['R_g'])]
+    check('E1a mut()+g, g a package-level variable (mut: g = 2)', enumerate_graph(occs, state(v={'g': 1}), lambda st, v: v['Op']),
+          lambda k: k[1], {1, 2})
+
+def e1c():
+    def f(st, v): st['v']['g'] = 10; return 1
+    occs = [Occ('E_f', run=f),
+            Occ('R_g', run=lambda st, v: st['v']['g']),                     # the compound target's load
+            Occ('Op', deps=['R_g', 'E_f'], run=lambda st, v: v['R_g'] + v['E_f'])]
+    def phase2(st, v): st['v']['g'] = v['Op']; return st['v']['g']         # the store: g's identity has no operands
+    check('E1c g += f() (f: g = 10, returns 1)', enumerate_graph(occs, state(v={'g': 1}), phase2), lambda k: k[1], {2, 11})
+
+def e1b():
+    # BUG-113's c01 `sinkL(left || b, change())` with `left` a package-level variable: the SAME
+    # graph as R2b (a global read is an occurrence like a captured local's) — the singleton
+    # {logical false 0}; the legacy path's `logical true 0` is spec-forbidden (E1 at completion).
+    def change(st, v): st['v']['b'] = True; return 0
+    region = [Occ('R_b', run=lambda st, v: st['v']['b']), Occ('C_or', deps=['R_b'], run=lambda st, v: v['R_b'])]
+    occs = [Occ('R_left', run=lambda st, v: st['v']['left']),               # the package-level read
+            Occ('G', deps=['R_left'], guard='R_left', when=False, region=region, out='C_or'),
+            Occ('E_change', after=['C_or'], run=change),
+            Occ('E_sink', deps=['C_or', 'E_change'], run=lambda st, v: println(st, 'logical', v['C_or'], v['E_change']))]
+    check('E1b (BUG-113) sinkL(left||b, change()), left a package-level variable', enumerate_graph(occs, state(v={'b': False, 'left': False}), lambda st, v: None),
+          lambda k: k[2], {('logical false 0',)}, forbid=(('logical true 0',),))
+
 # ---------------------------------------------------------------- negative controls (forced pairs are singletons)
 def controls():
     # C1: f(g()) — argument before invocation (data edge); no unordered pair remains.
@@ -446,7 +481,8 @@ if __name__ == '__main__':
               lambda: r2a(True, True), lambda: r2a(False, True), lambda: r2a(True, False), r2a3,
               lambda: r2b('C_or'), lambda: r2b('G'),
               lambda: r2c(True), lambda: r2c(False),
-              r4, lambda: r6(True), lambda: r6(False), controls):
+              r4, lambda: r6(True), lambda: r6(False),
+              e1a, e1c, e1b, controls):
         f()
     print('RESULT:', 'FAIL' if FAILS else 'PASS', f'({FAILS} mismatch(es))')
     sys.exit(1 if FAILS else 0)

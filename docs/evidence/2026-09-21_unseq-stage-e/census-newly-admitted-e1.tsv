@@ -1,0 +1,11 @@
+dir	unit	file:line	function	form	events	calls	nonEvents	former-reason
+Corpus/coverage/exec/evalorder/legacy-logical-vs-call	main	Corpus/coverage/exec/evalorder/legacy-logical-vs-call/main.go:34	orVsCall	call-stmt	2	2	3	package-level variable
+Corpus/coverage/exec/evalorder/legacy-logical-vs-call	main	Corpus/coverage/exec/evalorder/legacy-logical-vs-call/main.go:43	andVsCall	call-stmt	2	2	3	package-level variable
+Corpus/coverage/exec/evalorder/legacy-logical-vs-call	main	Corpus/coverage/exec/evalorder/legacy-logical-vs-call/main.go:53	callFirstControl	call-stmt	2	2	3	package-level variable
+Corpus/coverage/exec/init/stdlib-initializer-dependent	main	Corpus/coverage/exec/init/stdlib-initializer-dependent/main.go:14	main	print-stmt	1	1	1	package-level variable
+Corpus/coverage/exec/panic-recover/repanic-collapse	main	Corpus/coverage/exec/panic-recover/repanic-collapse/main.go:219	indexTwoFaults	assign	1	1	1	non-local target
+Corpus/coverage/exec/spec-examples-decl/select-forms	main	Corpus/coverage/exec/spec-examples-decl/select-forms/main.go:36	specSelect	compound	1	1	1	non-local target
+Corpus/coverage/exec/spec-examples-decl/select-forms	main	Corpus/coverage/exec/spec-examples-decl/select-forms/main.go:38	specSelect	compound	1	1	1	non-local target
+Corpus/coverage/exec/spec-examples-decl/select-forms	main	Corpus/coverage/exec/spec-examples-decl/select-forms/main.go:41	specSelect	compound	1	1	1	non-local target
+Corpus/coverage/exec/spec-examples-decl/select-forms	main	Corpus/coverage/exec/spec-examples-decl/select-forms/main.go:56	selectReady	return	1	1	2	package-level variable
+Corpus/coverage/exec/spec-examples-decl/select-forms	main	Corpus/coverage/exec/spec-examples-decl/select-forms/main.go:63	selectDefault	return	1	1	2	package-level variable

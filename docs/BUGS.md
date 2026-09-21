@@ -7180,9 +7180,35 @@ designed reds stay on BUG-102's.
 
 ## BUG-113 — the LEGACY evaluation-order path evaluates a binary LOGICAL operation AFTER a lexically LATER call in the same statement (`sinkL(left || b, change())` with `left` a package variable and `change` setting `b`: gc `logical false 0`, the machine `logical true 0`; the `&&` spelling the same) — spec#Order_of_evaluation orders «function calls, method calls, receive operations, and binary logical operations» lexically among themselves, so the `||` must read `b` BEFORE the later call [frontend lowering; the legacy ANF hoist (`tools/nativefrontend/emit.go`), every operand family OUTSIDE the Stage C pilot grammar; pre-existing on main `6a7beb3d` (main = candidate); exposed by the pilot's own `evalorder/unseq-pilot/r2b` and found by the Stage C adversarial audit, F1, 2026-09-20]
 
-- Status: open
+- Status: fixed ([AGENT], 2026-09-21, lane `core/unseq-stage-e-0921` — Stage E of the
+  evaluation-order model v2.1, family E1: PACKAGE-LEVEL VARIABLES enter the `unseq` grammar
+  as READ occurrences, so both rows' sweeps lower as ONE `unseq` graph each, where the guard
+  protocol anchors the later call's E1 edge at the `||`/`&&` COMPLETION — the fix plan's first
+  route, measured; design `docs/2026-09-21_unseq-stage-e-design.md` §E1)
 - Pinned-by: differential
 - Cases: evalorder/legacy-logical-vs-call/or-vs-call, evalorder/legacy-logical-vs-call/and-vs-call
+
+FIX (Stage E E1, 2026-09-21, [AGENT]): the only construct that kept these two sweeps on the
+legacy path was the package-level operand `left` / `leftT` (census reason «package-level
+variable»). Family E1 widens the whole-sweep grammar (`tools/nativefrontend/unseq.go`
+`unseqClassify`) to package-level variables — a read is a READ occurrence with the head
+`deref(globaladdr)` (the frontend's own spelling of a global read), a target's identity has no
+operands (the store rides `then`) — and the decoder (`GoLean/NativeToIR.lean` D8) admits the
+`deref` head over an atom or a `globaladdr` pointer. Both rows' sweeps now lower as the R2b
+graph of the v2.1 spike (reference `enumerate.py` E1b: the read of `left`, the guard testing it,
+the region's read of the captured `b` and the join, `change()` AFTER the completion, `sinkL`
+after `change`): every edge forced, a SINGLETON `logical false 0` = gc's, 0 wide picks. Measured
+(`scripts/diff-one`, candidate frontend + binary): `or-vs-call` and `and-vs-call` FAIL/differential
+→ PASS (strict); the control `call-first-control` stays PASS (its graph has ONE wide pick — the
+read of `left` against `change()`, which does not write `left` — same observation on both
+orders). gc's draw 20/20 `logical false 0` / `logical false 0` / `logical 0 true` under
+GOMAXPROCS 1 and 8, default and `-gcflags=all='-N -l'` (`docs/evidence/2026-09-21_unseq-stage-e/
+gc-draws-e1.txt`). The legacy ANF hoister's `&&`/`||`-beside-a-later-call order is UNCHANGED for
+the sweeps that still take the legacy path (an operand outside the widened grammar — pointers,
+fields, maps, receives, methods, conversions, allocations — Stage E's later families; each
+lowers into the graph as its family lands, the interim E1-at-completion anchoring in the legacy
+hoister was not taken: it would have been a second implementation of the ordering the graph
+already realizes).
 
 WHAT: `spec#Order_of_evaluation` («all function calls, method calls, receive
 operations, and binary logical operations are evaluated in lexical left-to-right

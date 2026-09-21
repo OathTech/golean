@@ -89,6 +89,12 @@ def main (_args : List String) : IO Unit := do
       [{ status := "ok", values := [59], output := "f\n" }],
     wireSet "CSTR wire: a[f()] = \"s\" — a string constant as the store's value cell" "cstr.json" "cstr"
       [{ status := "ok", values := [1], output := "f\n" }],
+    -- STAGE E, family E1 (2026-09-21): PACKAGE-LEVEL variables are READ occurrences — the head
+    -- `deref(globaladdr)` (D8 admits the `deref` head over an atom or a globaladdr pointer); a
+    -- compound target's store rides `then` through `addr(globaladdr)`. References enumerate.py
+    -- E1a / E1c.
+    wireSet "E1 wire: v := mut() + g — g a package-level variable mut writes" "e1.json" "e1" [okZ 1, okZ 2],
+    wireSet "E1C wire: g += f() — a package-level compound target, f writes g" "e1c.json" "e1c" [okZ 2, okZ 11],
     -- THE FRONTEND'S OWN LOWERING (C2): source → actual frontend bytes → strict decoder →
     -- machine → EXACT reference sets (v2.1 §7 row C's exit; the graphs are the emitter's,
     -- not hand-built — the same reference sets as the hand-built wires above).
@@ -108,6 +114,8 @@ def main (_args : List String) : IO Unit := do
     wireSet "NATIVE CGUARD (the frontend's constant-head copy, refused at C1 — audit F2)" "native-cguard.json" "cguard" [okZ 2],
     wireSet "NATIVE CELEM" "native-celem.json" "celem" [{ status := "ok", values := [59], output := "f\n" }],
     wireSet "NATIVE CSTR" "native-cstr.json" "cstr" [{ status := "ok", values := [1], output := "f\n" }],
+    wireSet "NATIVE E1 (the frontend's own lowering of a package-level read — Stage E E1)" "native-e1.json" "e1" [okZ 1, okZ 2],
+    wireSet "NATIVE E1C (the frontend's own lowering of a package-level compound target)" "native-e1c.json" "e1c" [okZ 2, okZ 11],
     -- EDGE MUTATIONS of the LOWERED graphs (v2.1 §8): each decodes; the exact-set check
     -- names the changed set (the decoder cannot see a missing or wrong edge).
     wireSet "EDGE data (R6: the access reads the variable's header, not the frozen slot) → the fused {20}" "edge-data.json" "r6" [okZ 20],

@@ -29,6 +29,12 @@ package main
 //
 // READS AND ATOMS. A constant or a PRIVATE local is an atom (order-transparent,
 // v2.1 §1); an ADDRESS-TAKEN local is a READ occurrence (`eval` of the ident); a
+// PACKAGE-LEVEL variable (Stage E E1, 2026-09-21 — unqualified `g` or a
+// source-package qualified `pkg.V`) is a READ occurrence whose head is the
+// frontend's own spelling of a global read, `deref(globaladdr gid)` (emitIdent /
+// emitQualifiedSelector); as a TARGET its identity has no operands, so its store
+// rides `then` (`assign addr(globaladdr) = $u`) and a compound form's load is
+// that same READ occurrence — one identity, nothing to freeze; a
 // slice element is base atom + index atom + ONE checked access (N1 SPLIT); a
 // private compound target's read is folded into the op head and its store rides
 // `then` (a plain-var plan has no operands and checks nothing; a `load` there
@@ -188,6 +194,16 @@ func (b *unseqBuilder) value(x ast.Expr) (any, error) {
 			return nil, err
 		}
 		m, ok := w.(map[string]any)
+		if _, isPkg := e.isPackageVar(obj); isPkg {
+			// Stage E E1: a package-level variable's read — `deref(globaladdr)`,
+			// the head of a READ occurrence (an unseeded / poisoned cell has
+			// already refused by name inside emitIdent, as on the legacy path).
+			if !ok || m["expr"] != "deref" {
+				return nil, unsup("unseq lowering: package-level variable %s did not lower to a global read (%v) — outside the admitted grammar", v.Name, w)
+			}
+			m["type"] = ty
+			return b.evalOcc("read", ty, m), nil
+		}
 		if !ok || m["expr"] != "ident" {
 			return nil, unsup("unseq lowering: local %s did not lower to an identifier (%v) — outside the admitted grammar", v.Name, w)
 		}
@@ -305,6 +321,27 @@ func (b *unseqBuilder) value(x ast.Expr) (any, error) {
 			return nil, err
 		}
 		return b.evalOcc("op", ty, map[string]any{"expr": "unary", "op": op, "x": x}), nil
+	case *ast.SelectorExpr:
+		// Stage E E1: `pkg.V`, a source-package qualified package-level
+		// variable — the same READ occurrence as the unqualified spelling.
+		pkgName, ok := e.qualifiedPkgRef(v)
+		if !ok {
+			return nil, unsup("unseq lowering: selector %s outside the admitted grammar", v.Sel.Name)
+		}
+		w, err := e.emitQualifiedSelector(v, pkgName)
+		if err != nil {
+			return nil, err
+		}
+		m, isMap := w.(map[string]any)
+		if !isMap || m["expr"] != "deref" {
+			return nil, unsup("unseq lowering: qualified package-level variable %s did not lower to a global read (%v) — outside the admitted grammar", v.Sel.Name, w)
+		}
+		ty, err := e.typeOf(v)
+		if err != nil {
+			return nil, err
+		}
+		m["type"] = ty
+		return b.evalOcc("read", ty, m), nil
 	case *ast.TypeAssertExpr:
 		operand, err := b.value(v.X)
 		if err != nil {
@@ -555,7 +592,10 @@ func (e *emitter) emitUnseqSweep(s ast.Stmt, ctx *unseqCtx) (any, error) {
 		case token.DEFINE, token.ASSIGN:
 			define := st.Tok == token.DEFINE
 			switch l := ast.Unparen(st.Lhs[0]).(type) {
-			case *ast.Ident:
+			case *ast.Ident, *ast.SelectorExpr:
+				// a local (`x := e`, `x = e`) or — Stage E E1 — a package-level
+				// variable (`g = e`, `pkg.V = e`): a plan with no operands; the
+				// store rides `then` (emitAssignTargetPhase1 spells both).
 				v, err := b.value(st.Rhs[0])
 				if err != nil {
 					return nil, err
@@ -677,7 +717,9 @@ func (e *emitter) emitUnseqSweep(s ast.Stmt, ctx *unseqCtx) (any, error) {
 
 // readWrite lowers `lv op= rhs` (and `lv++`): a slice element → target plan +
 // load + op + store; a local → the read (an occurrence when address-taken, the
-// bare ident when private) + op, the store in `then`.
+// bare ident when private) + op, the store in `then`; a package-level variable
+// (Stage E E1; `g` or `pkg.V`) → its READ occurrence + op, the store in `then`
+// through the same operand-free identity (`addr(globaladdr)`).
 func (b *unseqBuilder) readWrite(lv ast.Expr, op string, rhs func() (any, error)) (any, error) {
 	e := b.e
 	switch l := ast.Unparen(lv).(type) {
@@ -699,8 +741,8 @@ func (b *unseqBuilder) readWrite(lv ast.Expr, op string, rhs func() (any, error)
 		res := b.evalOcc("op", elemTy, map[string]any{"expr": "binary", "op": op, "x": slotIdent(rd, elemTy), "y": r})
 		b.stores = append(b.stores, map[string]any{"target": t, "value": res.(map[string]any)["name"]})
 		return emptyBlock(), nil
-	case *ast.Ident:
-		x, err := b.value(l) // a READ occurrence when address-taken, the bare ident when private
+	case *ast.Ident, *ast.SelectorExpr:
+		x, err := b.value(l) // a READ occurrence when address-taken or package-level, the bare ident when private
 		if err != nil {
 			return nil, err
 		}

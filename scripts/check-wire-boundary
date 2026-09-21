@@ -184,4 +184,11 @@ out="$(run_cli_fn Tests/unseq-wire/cguard.json cguard)" || { echo "check-wire-bo
 [[ "$out" == *'"status":"ok"'* && "$out" == *'"value":2'* ]] || { echo "check-wire-boundary: FAIL [unseq const-head] — expected ok/2 (ok := true && f(), f sets a = 2): $out" >&2; exit 1; }
 echo "ok [unseq const-head] runs, answers 2 (a constant guard test copied into a bool cell — audit F2)"
 expect_unseq_refusal unseq-nested-completion mut-nested-completion-join r2cTrue 'invalid branch join'
-echo 'Wire boundary gate: PASS (11 byte-level controls + 9 unseq-node controls through the real CLI)'
+# Stage E E1 (2026-09-21): a PACKAGE-LEVEL variable's read as an occurrence — the `deref(globaladdr)`
+# head (Tests/unseq-wire/e1.json, `v := mut() + g`): runs, canonical tape = mut first → 2; the
+# hidden-read mutant in the pointer position refuses by name.
+out="$(run_cli_fn Tests/unseq-wire/e1.json e1)" || { echo "check-wire-boundary: FAIL [unseq global-read] — the package-level-read wire (deref(globaladdr) head) did not run: $out" >&2; exit 1; }
+[[ "$out" == *'"status":"ok"'* && "$out" == *'"value":2'* ]] || { echo "check-wire-boundary: FAIL [unseq global-read] — expected ok/2 (v := mut() + g, mut sets g = 2, canonical = call first): $out" >&2; exit 1; }
+echo "ok [unseq global-read] runs, answers 2 (a package-level variable read as a deref(globaladdr) occurrence — Stage E E1)"
+expect_unseq_refusal unseq-deref-hidden mut-deref-hidden e1 'hidden read in a pure node'
+echo 'Wire boundary gate: PASS (11 byte-level controls + 11 unseq-node controls through the real CLI)'

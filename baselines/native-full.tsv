@@ -1,5 +1,5 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 3705 (3459 PASS / 246 FAIL)
+# cases: 3709 (3465 PASS / 244 FAIL)
 # re-pinned: 2026-09-20 [AGENT], core/unseq-stage-d-0920, STAGE D of the evaluation-order model v2.1 (route α —
 #   docs/2026-09-20_unseq-stage-d-design.md §2–§3; handoff docs/2026-09-20_unseq-stage-d-handoff.md): NO row added, NO
 #   result changed, ONE stage changed — spec-examples-stmt/continue-label PASS/- -> PASS/confluent, the strict depth=128
@@ -14,6 +14,23 @@
 #   re-pinned here). DRIFT = exactly google-search + continue-label; every other result/stage row reproduces exactly; no
 #   PASS -> non-PASS flip; 394 negatives match; the channels/select-select/beside-loop alternation row is kept verbatim.
 #   Evidence + gate lines: docs/evidence/2026-09-20_unseq-stage-d/README.md.
+# re-pinned: 2026-09-21 [AGENT], core/unseq-stage-e-0921, STAGE E of the evaluation-order model v2.1, family E1 — PACKAGE-LEVEL
+#   VARIABLES as occurrences (docs/2026-09-21_unseq-stage-e-design.md §E1; handoff docs/2026-09-21_unseq-stage-e-handoff.md): the
+#   whole-sweep grammar (unseq.go `unseqClassify`) admits a package-level variable — unqualified or source-package qualified — of an
+#   admitted type as a READ occurrence (`deref(globaladdr)`, decoder D8 admits the `deref` head over an atom or a globaladdr) and as an
+#   operand-free target whose store rides `then`; the census gains EXACTLY 10 admitted sweeps in 4 packages (136 -> 146; the raft twin 0,
+#   pin byte-identical). TWO FLIPS (BUG-113 -> fixed): evalorder/legacy-logical-vs-call/{or-vs-call,and-vs-call} FAIL/differential -> PASS
+#   strict — the sweeps lower as the R2b graph (the guard protocol anchors `change()` at the `||`/`&&` COMPLETION; a singleton `logical
+#   false 0` = gc's, 0 wide picks); the control call-first-control PASS unchanged (1 wide pick, both orders equal). FOUR rows BORN in
+#   evalorder/unseq-globals: read-vs-call PASS/membership {1, 2} and compound-vs-call PASS/membership {2, 11} (references enumerate.py E1a/E1c;
+#   gc 2 / 11 inside, 20/20 draws under GOMAXPROCS 1/8, default and -N -l), read-vs-unrelated-call and plain-target-call PASS strict (the
+#   controls). NO other row moved: the 7 other newly admitted sweeps (spec-examples-decl/select-forms x5, panic-recover/repanic-collapse/
+#   index-two-faults, init/stdlib-initializer-dependent's main) read globals no sibling call writes — every order gives the same observation
+#   (select-forms/{ready,default,block-forever} PASS strict, index-two-faults PASS/membership enumerated=2 unchanged, the init row a
+#   pre-existing frontend-export red) — measured by scripts/diff-one on all 13 affected rows before this pin (docs/evidence/
+#   2026-09-21_unseq-stage-e/diff-one-e1.txt); the full gate line is in the evidence README. 3705 + 4 = 3709; 3459 + 4 + 2 = 3465;
+#   246 - 2 = 244. No PASS -> non-PASS flip; the one 5a-class item (imported-goose/channel/google-search: STALE certification for
+#   GoLean/NativeToIR.lean — the `deref` head; the train installs the fresh candidate at step 5a) is not re-pinned here.
 # Previous pin:
 # re-pinned: 2026-09-20 [AGENT], core/unseq-stage-c-0919, STAGE C AUDIT FIX ROUND (docs/2026-09-20_unseq-stage-c-audit.md, FIX-FIRST; dispositions
 #   docs/2026-09-19_unseq-stage-c-handoff.md «Audit fix round (2026-09-20)»): SIX rows ADDED, no existing row changed. (F2) evalorder/unseq-const-cell/
@@ -2181,9 +2198,13 @@ PASS	evalorder/unseq-pilot/w6	membership
 PASS	evalorder/unseq-const-cell/const-guard-left	-
 PASS	evalorder/unseq-const-cell/elem-assign-const-int	-
 PASS	evalorder/unseq-const-cell/elem-assign-const-string	-
-FAIL	evalorder/legacy-logical-vs-call/or-vs-call	differential
-FAIL	evalorder/legacy-logical-vs-call/and-vs-call	differential
+PASS	evalorder/legacy-logical-vs-call/or-vs-call	-
+PASS	evalorder/legacy-logical-vs-call/and-vs-call	-
 PASS	evalorder/legacy-logical-vs-call/call-first-control	-
+PASS	evalorder/unseq-globals/read-vs-call	membership
+PASS	evalorder/unseq-globals/compound-vs-call	membership
+PASS	evalorder/unseq-globals/read-vs-unrelated-call	-
+PASS	evalorder/unseq-globals/plain-target-call	-
 PASS	examples/binsearch/absent-above	-
 PASS	examples/binsearch/absent-below	-
 PASS	examples/binsearch/absent-gap	-

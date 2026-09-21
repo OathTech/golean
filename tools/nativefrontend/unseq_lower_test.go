@@ -73,6 +73,14 @@ func TestUnseqLoweringShapes(t *testing.T) {
 	cases := []struct{ fn, want string }{
 		// W1: the call first (its own block), then the read and the op (residual).
 		{"w1", "invoke eval:ident eval:binary"},
+		// Stage E E1: a package-level variable's read is `eval deref(globaladdr)` — the
+		// call first, the global read and the op late (v := mut() + g; g += setG()).
+		{"e1read", "invoke eval:deref eval:binary"},
+		{"e1compound", "invoke eval:deref eval:binary"},
+		// BUG-113's shape: the global read and the guard on it (the guard's own block),
+		// the region's read of the address-taken b and the join; change() AFTER the
+		// completion; sinkL after change.
+		{"bug113or", "eval:deref guard eval:ident@region eval:ident@region invoke/after invoke/after"},
 		// W6: two E1-ordered calls, then the read and the ops.
 		{"w6", "invoke invoke/after eval:ident eval:binary eval:binary"},
 		// R6: the call first; the header read and the checked access late.

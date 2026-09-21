@@ -32,10 +32,29 @@ package main
 // that could be reordered against it, has no spec-unsequenced pair the
 // pilot envelopes and stays on the legacy path (E12(ii)'s read-vs-read
 // axis widens at Stage E). Everything the grammar does not name —
-// globals, pointers, fields, maps, arrays, strings indexing, methods,
+// pointers, fields, maps, arrays, strings indexing, methods,
 // receives, sends, conversions, allocations, `recover`, multi-target
 // assignment, blank targets, sub-accumulator sweeps (if/for/switch
 // heads) — sends the WHOLE sweep to the legacy path, by name.
+//
+// STAGE E, family E1 (lane core/unseq-stage-e-0921, 2026-09-21; v2.1 §7 row
+// E; the width-of-P ruling «ALL mutable reads, STAGED» widened one kind):
+// a PACKAGE-LEVEL VARIABLE — unqualified `g` or source-package qualified
+// `pkg.V` — of an admitted type is a mutable location: its read is a READ
+// occurrence (`deref(globaladdr)`, the frontend's spelling of a global
+// read) and counts toward `nonEvents`; as an assignment / compound /
+// IncDec TARGET its identity has no operands (a plan that checks
+// nothing), so the store rides `then` exactly like an address-taken
+// local's and the compound form's load is the same READ occurrence. This
+// is the family that closes BUG-113: the `&&`/`||` sweeps whose only
+// out-of-grammar operand was a package variable now lower as graphs,
+// where the guard protocol anchors a later call's E1 edge at the
+// COMPLETION. Whether the global's cell is SEEDED (`globalAddr`) is the
+// LOWERING's check, not the classifier's — the census runs before the
+// globals table exists (`emitProgram` builds it), and the two must not
+// drift; an unseeded or FR-24-poisoned global refuses by name at the
+// lowering exactly as the legacy path does (the same per-declaration
+// quarantine).
 //
 // The classifier has no emission side effects (it lifts no func literal,
 // hoists nothing), so `--unseq-census` (main.go) runs it over every
@@ -250,8 +269,14 @@ func (e *emitter) unseqExpr(x ast.Expr, ctx *unseqCtx, d *unseqDecision) (unseqE
 		}
 		loc, isLocal := e.unseqLocalVar(obj)
 		if !isLocal {
-			if _, isPkg := e.isPackageVar(obj); isPkg {
-				return refuse("package-level variable")
+			if pv, isPkg := e.isPackageVar(obj); isPkg {
+				// Stage E E1: a package-level variable's read is a READ
+				// occurrence of a mutable location (`deref(globaladdr)`).
+				if !unseqTypeOK(pv.Type()) {
+					return refuse("package-level variable of a type outside the grammar (" + pv.Type().String() + ")")
+				}
+				d.nonEvents++
+				return unseqValue, true
 			}
 			return refuse("non-local identifier")
 		}
@@ -383,6 +408,16 @@ func (e *emitter) unseqExpr(x ast.Expr, ctx *unseqCtx, d *unseqDecision) (unseqE
 	case *ast.StarExpr:
 		return refuse("pointer indirection")
 	case *ast.SelectorExpr:
+		if pv, ok := e.unseqQualifiedPackageVar(v); ok {
+			// Stage E E1: `pkg.V` (a source-package qualified package-level
+			// variable, W1.1) is name resolution, not selection — the same
+			// READ occurrence as the unqualified spelling.
+			if !unseqTypeOK(pv.Type()) {
+				return refuse("qualified package-level variable of a type outside the grammar (" + pv.Type().String() + ")")
+			}
+			d.nonEvents++
+			return unseqValue, true
+		}
 		return refuse("selector (field / method / qualified name)")
 	case *ast.CompositeLit:
 		return refuse("composite literal")
@@ -564,16 +599,27 @@ func (e *emitter) unseqCall(c *ast.CallExpr, ctx *unseqCtx, d *unseqDecision, ma
 	return n, true
 }
 
-// unseqLocalTarget classifies an assignment target that is a plain local
-// identifier: a local variable (not blank, not a package variable, not a
-// captured variable inside a lifted body) of an admitted type. `define`
-// selects Defs (a fresh `:=` declaration) over Uses.
-func (e *emitter) unseqLocalTarget(id *ast.Ident, define bool, ctx *unseqCtx, d *unseqDecision) (*types.Var, bool) {
-	refuse := func(why string) (*types.Var, bool) {
+// unseqQualifiedPackageVar recognizes `pkg.V` — a source-package qualified
+// PACKAGE-LEVEL VARIABLE (W1.1's name resolution, never a field selection).
+func (e *emitter) unseqQualifiedPackageVar(sel *ast.SelectorExpr) (*types.Var, bool) {
+	if _, ok := e.qualifiedPkgRef(sel); !ok {
+		return nil, false
+	}
+	return e.isPackageVar(e.info.Uses[sel.Sel])
+}
+
+// unseqVarTarget classifies an assignment target that is a plain variable
+// identifier: a LOCAL variable (not blank, not a captured variable inside a
+// lifted body) or — Stage E E1 — a PACKAGE-LEVEL variable, of an admitted
+// type. `define` selects Defs (a fresh `:=` declaration) over Uses. The
+// second result is true for a package-level variable (its target identity
+// has no operands; the store rides `then`).
+func (e *emitter) unseqVarTarget(id *ast.Ident, define bool, ctx *unseqCtx, d *unseqDecision) (*types.Var, bool, bool) {
+	refuse := func(why string) (*types.Var, bool, bool) {
 		if d.reason == "" {
 			d.reason = why
 		}
-		return nil, false
+		return nil, false, false
 	}
 	if id.Name == "_" {
 		return refuse("blank target")
@@ -592,6 +638,12 @@ func (e *emitter) unseqLocalTarget(id *ast.Ident, define bool, ctx *unseqCtx, d 
 	}
 	loc, isLocal := e.unseqLocalVar(obj)
 	if !isLocal {
+		if pv, isPkg := e.isPackageVar(obj); isPkg && !define {
+			if !unseqTypeOK(pv.Type()) {
+				return refuse("package-level target of a type outside the grammar (" + pv.Type().String() + ")")
+			}
+			return pv, true, true
+		}
 		return refuse("non-local target")
 	}
 	if ctx.captured[obj] {
@@ -600,7 +652,26 @@ func (e *emitter) unseqLocalTarget(id *ast.Ident, define bool, ctx *unseqCtx, d 
 	if !unseqTypeOK(loc.Type()) {
 		return refuse("target type outside the pilot grammar (" + loc.Type().String() + ")")
 	}
-	return loc, true
+	return loc, false, true
+}
+
+// unseqQualifiedTarget classifies a `pkg.V` assignment target (Stage E E1):
+// a source-package qualified package-level variable of an admitted type.
+func (e *emitter) unseqQualifiedTarget(sel *ast.SelectorExpr, d *unseqDecision) (*types.Var, bool) {
+	pv, ok := e.unseqQualifiedPackageVar(sel)
+	if !ok {
+		if d.reason == "" {
+			d.reason = "assignment target outside the pilot grammar"
+		}
+		return nil, false
+	}
+	if !unseqTypeOK(pv.Type()) {
+		if d.reason == "" {
+			d.reason = "qualified package-level target of a type outside the grammar (" + pv.Type().String() + ")"
+		}
+		return nil, false
+	}
+	return pv, true
 }
 
 // unseqCtxNow is the classifier's context for the function whose statements
@@ -684,7 +755,14 @@ func (e *emitter) unseqClassify(s ast.Stmt, ctx *unseqCtx) unseqDecision {
 			}
 			switch l := ast.Unparen(st.Lhs[0]).(type) {
 			case *ast.Ident:
-				if _, ok := e.unseqLocalTarget(l, define, ctx, &d); !ok {
+				if _, _, ok := e.unseqVarTarget(l, define, ctx, &d); !ok {
+					return refuse("target")
+				}
+			case *ast.SelectorExpr:
+				if define {
+					return refuse("define with a selector target")
+				}
+				if _, ok := e.unseqQualifiedTarget(l, &d); !ok {
 					return refuse("target")
 				}
 			case *ast.IndexExpr:
@@ -815,25 +893,40 @@ func (e *emitter) unseqClassify(s ast.Stmt, ctx *unseqCtx) unseqDecision {
 	return d
 }
 
-// unseqReadWriteTarget classifies a compound/IncDec target: a local
-// identifier (an address-taken local's load is a read occurrence; a
-// private local's target plan is order-transparent) or a slice element.
+// unseqReadWriteTarget classifies a compound/IncDec target: a variable
+// identifier (an address-taken local's or a package-level variable's load
+// is a READ occurrence of a mutable location — Stage E E1 for the latter; a
+// private local's target plan is order-transparent), a `pkg.V` qualified
+// package-level variable, or a slice element.
 func (e *emitter) unseqReadWriteTarget(lv ast.Expr, ctx *unseqCtx, d *unseqDecision) bool {
 	switch l := ast.Unparen(lv).(type) {
 	case *ast.Ident:
-		loc, ok := e.unseqLocalTarget(l, false, ctx, d)
+		loc, isPkg, ok := e.unseqVarTarget(l, false, ctx, d)
 		if !ok {
 			return false
 		}
 		if _, isIface := types.Unalias(loc.Type()).Underlying().(*types.Interface); isIface {
 			if d.reason == "" {
-				d.reason = "compound assignment on an interface-typed local"
+				d.reason = "compound assignment on an interface-typed variable"
 			}
 			return false
 		}
-		if e.unseqAddrTaken(ctx.body)[e.info.Uses[l]] {
+		if isPkg || e.unseqAddrTaken(ctx.body)[e.info.Uses[l]] {
 			d.nonEvents++ // the load through the target reads a mutable location
 		}
+		return true
+	case *ast.SelectorExpr:
+		pv, ok := e.unseqQualifiedTarget(l, d)
+		if !ok {
+			return false
+		}
+		if _, isIface := types.Unalias(pv.Type()).Underlying().(*types.Interface); isIface {
+			if d.reason == "" {
+				d.reason = "compound assignment on an interface-typed variable"
+			}
+			return false
+		}
+		d.nonEvents++ // the load of a package-level variable is a mutable read
 		return true
 	case *ast.IndexExpr:
 		return e.unseqElemTarget(l, ctx, d)

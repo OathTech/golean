@@ -1,0 +1,12 @@
+FAIL	init/stdlib-initializer-dependent	init,globals,stdlib,methods	stage=frontend-export	detail=native frontend: nativefrontend: native frontend unsupported: package-level initializer of maxYear does not lower (package-level var maxDatetime: its initializer does not lower (package-selector call time.Date (package "time" surface not modeled)) — H-11 poison: the cell is seeded as the `$poisoned` p
+PASS	evalorder/unseq-globals/read-vs-unrelated-call	globals,calls,print,evaluation_order
+PASS	spec-examples-decl/select-forms/block-forever	select,deadlock
+PASS	spec-examples-decl/select-forms/ready	select,channels,evaluation_order,nil
+PASS	evalorder/legacy-logical-vs-call/call-first-control	globals,closures,bools,calls,print,evaluation_order
+PASS	evalorder/unseq-globals/plain-target-call	globals,calls,assignment,print,evaluation_order
+PASS	evalorder/legacy-logical-vs-call/or-vs-call	globals,closures,bools,calls,print,evaluation_order
+PASS	spec-examples-decl/select-forms/default	select,channels,default,nil
+PASS	evalorder/legacy-logical-vs-call/and-vs-call	globals,closures,bools,calls,print,evaluation_order
+PASS	panic-recover/repanic-collapse/index-two-faults	panic,recover,defer,indexing,slices,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/panic-recover/repanic-collapse/index-two-faults)
+PASS	evalorder/unseq-globals/read-vs-call	globals,closures,calls,evaluation_order,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/evalorder/unseq-globals/read-vs-call)
+PASS	evalorder/unseq-globals/compound-vs-call	globals,calls,assignment,evaluation_order,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/evalorder/unseq-globals/compound-vs-call)

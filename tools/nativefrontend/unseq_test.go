@@ -4,8 +4,11 @@ package main
 // `unseqClassify`): the pilot grammar's admitted shapes — every reference
 // witness the native pilot lowers (W1/W2/W3/W5/W6, R1/R2a-c/R4/R6, the
 // BUG-101, BUG-104 and BUG-102 flip rows) — and the refusals BY REASON at
-// the boundary (map targets, receives, methods, derefs, globals,
-// conversions, multi-target forms, call-free and read-free sweeps). The
+// the boundary (map targets, receives, methods, derefs, conversions,
+// multi-target forms, call-free and read-free sweeps); Stage E E1 (2026-09-21)
+// adds the package-level variables — reads, compound targets, the BUG-113
+// shapes — as admitted witnesses and a global of a type outside the grammar
+// as a refusal by name. The
 // classifier is the ONE implementation the census and the emitter share,
 // so a shape admitted here is a shape the emitter lowers as an `unseq`
 // graph, and a reason named here is the reason the census prints.
@@ -65,6 +68,12 @@ func decisionAt(t *testing.T, src, fn string, fromEnd int) unseqDecision {
 const unseqWitnessSrc = `package main
 
 var g int
+var gf float64
+var left = false
+
+func sinkL(b bool, n int) { println("logical", b, n) }
+func sinkR(n int, b bool) { println("logical", n, b) }
+func setG() int { g = 10; return 1 }
 
 type T struct{ x int }
 
@@ -244,8 +253,51 @@ func derefRead() int {
 	return *p + wit(1)
 }
 
+// --- Stage E E1: package-level variables are READ occurrences / operand-free targets ---
+
+// A global read beside a call: admitted (the read is a mutable read).
 func globalRead() int {
 	return g + wit(1)
+}
+
+// E1a: v := mut() + g, g written by the call. {1, 2}.
+func e1read() int {
+	mut := func() int { g = 2; return 0 }
+	v := mut() + g
+	return v
+}
+
+// E1c: g += setG() with setG writing g — the read occurrence + the store in then. {2, 11}.
+func e1compound() int {
+	g += setG()
+	return g
+}
+
+// g = f(): a plain global target has no operands and the sweep no non-event → legacy.
+func e1plainTarget() int {
+	g = wit(1)
+	return g
+}
+
+// BUG-113's c01: sinkL(left || b, change()) with left a PACKAGE variable — admitted now.
+func bug113or() int {
+	b := false
+	change := func() int { b = true; return 0 }
+	sinkL(left || b, change())
+	return 1
+}
+
+// BUG-113's control: the call lexically first.
+func bug113control() int {
+	b := false
+	change := func() int { b = true; return 0 }
+	sinkR(change(), left || b)
+	return 1
+}
+
+// A global of a type outside the grammar (a float64 compound target) stays legacy by name.
+func globalTypeOut() {
+	gf += float64(wit(1))
 }
 
 func conversionOperand() int {
@@ -354,6 +406,13 @@ func TestUnseqAdmittedWitnesses(t *testing.T) {
 		{"bug102", 1, "compound", 2, 2}, // calls fnine, wit (len is the third EVENT) | the target plan, b[j]
 		{"forcedArg", 0, "return", 1, 1},
 		{"retTwo", 0, "return", 1, 0}, // two results in return position: in the grammar, but no non-event (legacy)
+		// Stage E E1: package-level variables
+		{"globalRead", 0, "return", 1, 1},    // the global read is a mutable READ occurrence
+		{"e1read", 1, "define", 1, 1},        // v := mut() + g
+		{"e1compound", 1, "compound", 1, 1},  // g += setG(): the load of g is the read occurrence
+		{"e1plainTarget", 1, "assign", 1, 0}, // g = wit(1): no non-event → legacy
+		{"bug113or", 1, "call-stmt", 2, 3},   // change, sinkL | the global read, the address-taken b's read, the guard
+		{"bug113control", 1, "call-stmt", 2, 3},
 	}
 	for _, c := range cases {
 		d := decisionAt(t, unseqWitnessSrc, c.fn, c.fromEnd)
@@ -414,7 +473,7 @@ func TestUnseqLegacyByReason(t *testing.T) {
 		{"recvOperand", 1, "unary operator <-"},
 		{"methodCall", 0, "callee expression outside the pilot grammar"},
 		{"derefRead", 0, "pointer indirection"},
-		{"globalRead", 0, "package-level variable"},
+		{"globalTypeOut", 0, "package-level target of a type outside the grammar"},
 		{"conversionOperand", 0, "conversion"},
 		{"multiTarget", 1, "multi-target or tuple assignment"},
 		{"lenOnly", 0, "no call occurrence"},

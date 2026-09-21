@@ -72,6 +72,16 @@ R6 a[f()], SPLIT header/index producers + one checked access: outcome set = [10,
 R6 a[f()], FUSED read (the narrowing): outcome set = [20]
    trajectories per outcome: [(20, 1)]
    canonical (slot 0): E_f Rd -> 20
+E1a mut()+g, g a package-level variable (mut: g = 2): outcome set = [1, 2]
+   trajectories per outcome: [(1, 1), (2, 1)]
+   canonical (slot 0): E_mut R_g Op -> 2
+E1c g += f() (f: g = 10, returns 1): outcome set = [2, 11]
+   trajectories per outcome: [(2, 1), (11, 1)]
+   canonical (slot 0): E_f R_g Op -> 11
+E1b (BUG-113) sinkL(left||b, change()), left a package-level variable: outcome set = [('logical false 0',)]
+   trajectories per outcome: [(('logical false 0',), 1)]
+   canonical (slot 0): R_left G R_b C_or E_change E_sink -> ('logical false 0',)
+   forbidden hybrid absent: ('logical true 0',)
 C1 f(g()): outcome set = [8]
    trajectories per outcome: [(8, 1)]
    canonical (slot 0): E_g E_f -> 8

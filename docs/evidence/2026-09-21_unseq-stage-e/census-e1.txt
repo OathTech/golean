@@ -1,0 +1,91 @@
+# BEFORE (main 74d084ad's frontend, .tmp/nativefrontend-main)
+corpus sweeps 107943  admitted 136  packages-with-admitted 30  refused-packages 0
+admitted units: [('main', 136)]
+admitted by form: [('compound', 52), ('return', 32), ('assign', 26), ('define', 13), ('elem-assign', 7), ('call-stmt', 5), ('print-stmt', 1)]
+admitted per package:
+admitted per package:
+    25 Corpus/coverage/exec/imported-goose/semantics/operations
+    24 Corpus/coverage/exec/builtins/e13-sibling-panic-order
+    13 Corpus/coverage/exec/evalorder/unseq-pilot
+     4 Corpus/coverage/exec/fmt/formatter-box-crosspkg
+     4 Corpus/coverage/exec/fmt/formatter-box-generic
+     4 Corpus/coverage/exec/fmt/formatter-box-range
+     4 Corpus/coverage/exec/fmt/formatter-dyn-hole
+     4 Corpus/coverage/exec/fmt/formatter-precedence
+     4 Corpus/coverage/exec/fmt/sprintf-dyn
+     4 Corpus/coverage/exec/fmt/sprintf-verbs
+     4 Corpus/coverage/exec/fmt/v-composites
+     4 Corpus/coverage/exec/noodler/evalorder
+     4 Corpus/coverage/exec/noodler/latitude
+     4 Corpus/coverage/exec/noodler/strings
+     4 Corpus/coverage/exec/panic-recover/shim-refusal-unrecoverable
+     4 Corpus/coverage/exec/slices/slice-elided-high-eval-once
+     4 Corpus/coverage/exec/spec-examples-decl/timezone-stringer
+     3 Corpus/coverage/exec/evalorder/unseq-const-cell
+     2 Corpus/coverage/exec/binop-order/operand-panic-vs-call
+     2 Corpus/coverage/exec/builtins/len-vs-call-order
+     2 Corpus/coverage/exec/spec-examples-stmt/continue-label
+     1 Corpus/coverage/exec/bools/short-circuit-effects
+     1 Corpus/coverage/exec/functions/closure-recursion
+     1 Corpus/coverage/exec/multi-assign/index-target-rhs-call-order
+     1 Corpus/coverage/exec/noodler/arith
+     1 Corpus/coverage/exec/noodler/closures
+     1 Corpus/coverage/exec/noodler/maps
+     1 Corpus/coverage/exec/scoping/closure-shadow-binding
+     1 Corpus/coverage/exec/slices/slice-expr-eval-order
+     1 Corpus/coverage/exec/spec-examples-stmt/operator-precedence
+twin sweeps 10203  admitted 0
+
+# AFTER E1 (the candidate frontend)
+corpus sweeps 107943  admitted 146  packages-with-admitted 34  refused-packages 0
+admitted units: [('main', 146)]
+admitted by form: [('compound', 55), ('return', 34), ('assign', 27), ('define', 13), ('call-stmt', 8), ('elem-assign', 7), ('print-stmt', 2)]
+admitted per package:
+admitted per package:
+    25 Corpus/coverage/exec/imported-goose/semantics/operations
+    24 Corpus/coverage/exec/builtins/e13-sibling-panic-order
+    13 Corpus/coverage/exec/evalorder/unseq-pilot
+     5 Corpus/coverage/exec/spec-examples-decl/select-forms
+     4 Corpus/coverage/exec/fmt/formatter-box-crosspkg
+     4 Corpus/coverage/exec/fmt/formatter-box-generic
+     4 Corpus/coverage/exec/fmt/formatter-box-range
+     4 Corpus/coverage/exec/fmt/formatter-dyn-hole
+     4 Corpus/coverage/exec/fmt/formatter-precedence
+     4 Corpus/coverage/exec/fmt/sprintf-dyn
+     4 Corpus/coverage/exec/fmt/sprintf-verbs
+     4 Corpus/coverage/exec/fmt/v-composites
+     4 Corpus/coverage/exec/noodler/evalorder
+     4 Corpus/coverage/exec/noodler/latitude
+     4 Corpus/coverage/exec/noodler/strings
+     4 Corpus/coverage/exec/panic-recover/shim-refusal-unrecoverable
+     4 Corpus/coverage/exec/slices/slice-elided-high-eval-once
+     4 Corpus/coverage/exec/spec-examples-decl/timezone-stringer
+     3 Corpus/coverage/exec/evalorder/legacy-logical-vs-call
+     3 Corpus/coverage/exec/evalorder/unseq-const-cell
+     2 Corpus/coverage/exec/binop-order/operand-panic-vs-call
+     2 Corpus/coverage/exec/builtins/len-vs-call-order
+     2 Corpus/coverage/exec/spec-examples-stmt/continue-label
+     1 Corpus/coverage/exec/bools/short-circuit-effects
+     1 Corpus/coverage/exec/functions/closure-recursion
+     1 Corpus/coverage/exec/init/stdlib-initializer-dependent
+     1 Corpus/coverage/exec/multi-assign/index-target-rhs-call-order
+     1 Corpus/coverage/exec/noodler/arith
+     1 Corpus/coverage/exec/noodler/closures
+     1 Corpus/coverage/exec/noodler/maps
+     1 Corpus/coverage/exec/panic-recover/repanic-collapse
+     1 Corpus/coverage/exec/scoping/closure-shadow-binding
+     1 Corpus/coverage/exec/slices/slice-expr-eval-order
+     1 Corpus/coverage/exec/spec-examples-stmt/operator-precedence
+twin sweeps 10203  admitted 0
+
+# DIFF
+newly admitted 10   lost 0
+newly admitted per package:
+     5 Corpus/coverage/exec/spec-examples-decl/select-forms
+     3 Corpus/coverage/exec/evalorder/legacy-logical-vs-call
+     1 Corpus/coverage/exec/init/stdlib-initializer-dependent
+     1 Corpus/coverage/exec/panic-recover/repanic-collapse
+newly admitted, by former reason: [('package-level variable', 6), ('non-local target', 4)]
+newly admitted by form: [('call-stmt', 3), ('compound', 3), ('return', 2), ('print-stmt', 1), ('assign', 1)]
+twin newly admitted: 0
+still legacy with a package-level reason: [('package-level target of a type outside the grammar (*int)', 4), ('package-level target of a type outside the grammar ([3]int)', 3), ('package-level target of a type outside the grammar (chan int)', 2), ('package-level target of a type outside the grammar ([2]int)', 2), ('package-level target of a type outside the grammar (main.freeSyncRwBox)', 2), ('package-level target of a type outside the grammar (main.gomemRwBox)', 2), ('package-level target of a type outside the grammar (main.gomemWgBox)', 2), ('package-level target of a type outside the grammar (main.Valuer)', 1), ('package-level target of a type outside the grammar (raft.Logger)', 1)]

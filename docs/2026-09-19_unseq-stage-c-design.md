@@ -57,6 +57,10 @@ string, slices of admitted types, the empty interface (`any`); aliases transpare
 selectors, methods, maps, arrays, strings indexing, named types, floats, funcs as values,
 conversions, allocations (composite literals, `make`, `new`, `append`, `[]byte(s)`), receives,
 sends, `recover`, comma-ok forms, multi-target and blank assignment, other statements.
+STAGE E WIDENS THIS LIST family by family ([AGENT] lane `core/unseq-stage-e-0921`, 2026-09-21;
+`docs/2026-09-21_unseq-stage-e-design.md` §0 table): package-level variables — unqualified or
+source-package qualified — are INSIDE since family E1 (reads as READ occurrences, operand-free
+targets); the rest of the «Outside» list is the standing boundary until its family lands.
 
 **THE TRIGGER.** `calls` counts the call occurrences (the events with EFFECTS); `nonEvents` counts
 the occurrences observable AGAINST an event: reads of address-taken locals, slice-element

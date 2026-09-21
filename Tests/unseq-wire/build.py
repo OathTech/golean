@@ -81,6 +81,44 @@ def idxget(base, index, ty):
     return {"expr": "index-get", "base": base, "index": index, "type": ty}
 
 
+def gaddr(gid):
+    """A package-level variable's statically resolved cell (the frontend's `globaladdr`)."""
+    return {"expr": "globaladdr", "gid": gid}
+
+
+def gread(gid, ty):
+    """The READ of a package-level variable: `deref(globaladdr)` — the frontend's own
+    spelling (emitIdent), admitted as a head by D8 since Stage E E1 (2026-09-21)."""
+    return {"expr": "deref", "ptr": gaddr(gid), "type": ty}
+
+
+def gstore(gid, rhs):
+    """`g = rhs` through the operand-free identity `addr(globaladdr)` (a `then` store)."""
+    return {"stmt": "assign", "define": False,
+            "lhs": [{"target": "addr", "expr": gaddr(gid)}], "rhs": [rhs]}
+
+
+def _gid(wire, fn):
+    """The gid of the ONE package-level variable the subject's emitted body reads or
+    writes (from the frontend's own emission — an envelope fact, like a lifted closure's
+    name); exactly one distinct gid is required."""
+    found = set()
+
+    def walk(o):
+        if isinstance(o, dict):
+            if o.get("expr") == "globaladdr":
+                found.add(o["gid"])
+            for v in o.values():
+                walk(v)
+        elif isinstance(o, list):
+            for v in o:
+                walk(v)
+    walk(_func(wire, fn)["body"])
+    if len(found) != 1:
+        raise SystemExit(f"{fn}: expected exactly one package-level variable, found gids {sorted(found)}")
+    return found.pop()
+
+
 def occ(name, kind, after=None, region=None, **fields):
     o = {"name": name, "kind": kind}
     o.update(fields)
@@ -287,6 +325,33 @@ def r6_graph(split=True):
         then=define("v", INT, ident("$u2", INT)))
 
 
+# ---------------------------------------------------------------- Stage E, family E1: package-level variables
+# (lane core/unseq-stage-e-0921, 2026-09-21): a PACKAGE-LEVEL variable is a mutable location —
+# its read is a READ occurrence with the head `deref(globaladdr)`; as a compound target its
+# identity has no operands, so the store rides `then` (`addr(globaladdr)`) and the load is the
+# same READ occurrence. References: enumerate.py E1a {1, 2}, E1c {2, 11}. The gid is an
+# envelope fact read off the frontend's own emission of the subject (`_gid`).
+
+def e1_graph(native):
+    gid = _gid(native, "e1")
+    return unseq(
+        [cell("$u0", INT), cell("$u1", INT), cell("$u2", INT)],
+        [inv("call0", ["$u0"], ident("mut"), [], [INT]),
+         ev("read1", "$u1", gread(gid, INT)),
+         ev("op2", "$u2", binop("+", ident("$u0", INT), ident("$u1", INT), INT))],
+        then=define("v", INT, ident("$u2", INT)))
+
+
+def e1c_graph(native):
+    gid = _gid(native, "e1c")
+    return unseq(
+        [cell("$u0", INT), cell("$u1", INT), cell("$u2", INT)],
+        [inv("call0", ["$u0"], fv("f"), [], [INT]),
+         ev("read1", "$u1", gread(gid, INT)),
+         ev("op2", "$u2", binop("+", ident("$u1", INT), ident("$u0", INT), INT))],
+        then=gstore(gid, ident("$u2", INT)))
+
+
 # ---------------------------------------------------------------- constant heads (audit fix round F2)
 # A CONSTANT copied into a cell — the emitter's `copy` occurrence where the consumer needs a
 # CELL (design §6): a guard's test (`true && f()`), a phase-2 store's value (`a[f()] = 5`,
@@ -355,6 +420,10 @@ WITNESSES = {
     "cguard": ("cguard", [("cguard", "f", 2, cguard_graph(), None)]),
     "celem": ("celem", [("celem", "f", 1, celem_graph(), None)]),
     "cstr": ("cstr", [("cstr", "f", 2, cstr_graph(), None)]),
+    # Stage E E1 (2026-09-21): package-level variables (the node is a callable over the
+    # frontend's own emission — the global's gid is read off it)
+    "e1": ("e1", [("e1", "mut", 1, e1_graph, None)]),
+    "e1c": ("e1c", [("e1c", None, 1, e1c_graph, None)]),
 }
 
 
@@ -444,6 +513,11 @@ def mutants(wires):
     edit("mut-nested-completion-join", "r2c", "r2cTrue",
          lambda n, w: occ(n, "call9").update(args=[ident("$u0", INT), ident("$u4", BOOL), ident("$u6", INT)]),
          "invalid branch join")
+    # D8 for the `deref` head (Stage E E1, 2026-09-21): the pointer position holds a
+    # non-atom (a binary over the global's address) — a hidden read, refused by name.
+    edit("mut-deref-hidden", "e1", "e1",
+         lambda n, w: occ(n, "read1")["head"].update(ptr=binop("+", ident("$u0", INT), intc(1), INT)),
+         "hidden read in a pure node")
     return out
 
 
@@ -573,6 +647,8 @@ def build(frontend):
             natives[src] = copy.deepcopy(wire)
             files[f"native-{src}.json"] = render(wire)  # the frontend's OWN lowering, unmodified
         for (fn, head, tail, node, path) in specs:
+            if callable(node):
+                node = node(natives[src])
             splice(wire, fn, head, tail, copy.deepcopy(node), path)
         wires[name] = wire
         files[f"{name}.json"] = render(wire)

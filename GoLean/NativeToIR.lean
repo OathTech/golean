@@ -916,7 +916,9 @@ main (`x := true && f()`, `a[f()] = 5`) refused by name; rows
 `evalorder/unseq-const-cell/*`. The one structural exception is a `slice` whose
 `high` is `builtin-len` of the SAME base atom — spec#Slice_expressions' default
 high («the length of the sliced operand»), which the emitter spells as a length
-of the one evaluated base. -/
+of the one evaluated base. Stage E E1 (2026-09-21) admits the `deref` head over
+an atom or a `globaladdr` pointer — the READ of a package-level variable
+(`deref(globaladdr)`) and, for E2, of `*p`. -/
 private def unseqCheckHead (path : String) (head : Json) : LowerM Unit := do
   if jsonMentionsRecover head then
     fail s!"unseq: recover() inside an occurrence head at {path} — recover is an EVENT (it changes the continuation), never a pure op (v2.1 §3.1); refused by name"
@@ -951,8 +953,20 @@ private def unseqCheckHead (path : String) (head : Json) : LowerM Unit := do
       atom "y"
   | "unary" => atom "x"
   | "type-assert" => atom "operand"
+  | "deref" =>
+      -- Stage E, family E1 (2026-09-21, lane `core/unseq-stage-e-0921`): ONE checked read
+      -- through a pointer VALUE — the pointer is an atom (a slot or an admitted local:
+      -- `*p`, the E2 family's spelling) or a `globaladdr` (a package-level variable's
+      -- statically resolved cell: `deref(globaladdr gid)` is the frontend's own spelling of a
+      -- global READ, `emitIdent`). Anything else in the pointer position is a hidden read.
+      let p ← StrictJson.field path obj "ptr"
+      let isGlobal := match p.getObjVal? "expr" with
+        | .ok (.str "globaladdr") => true
+        | _ => false
+      if !(unseqIsAtom p || isGlobal) then
+        fail s!"unseq: hidden read in a pure node — {path}.ptr is neither an atom nor a globaladdr (a pointer read dereferences a pointer VALUE or a package-level variable's cell; v2.1 §3.1 internal normal form); refused by name"
   | other =>
-      fail s!"unseq: head '{other}' at {path} is outside the Stage C fragment (admitted heads: ident, a constant (int/bool/string), index-get, slice, builtin-len, builtin-cap, binary, unary, type-assert); refused by name"
+      fail s!"unseq: head '{other}' at {path} is outside the admitted fragment (admitted heads: ident, a constant (int/bool/string), index-get, slice, builtin-len, builtin-cap, binary, unary, type-assert, deref); refused by name"
 
 /-- D8 for an `invoke` callee: an identifier (a func-typed local or slot) or
 a `func-value` whose captures are addresses (`ref`/`ident`/`globaladdr`). -/

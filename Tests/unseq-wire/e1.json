@@ -1,0 +1,309 @@
+{
+ "buildContext": {
+  "buildTags": [],
+  "cgoEnabled": true,
+  "compiler": "gc",
+  "goarch": "amd64",
+  "goos": "linux"
+ },
+ "fileOrder": [
+  {
+   "files": [
+    "main.go"
+   ],
+   "package": "main"
+  }
+ ],
+ "funcs": [
+  {
+   "body": {
+    "body": [
+     {
+      "define": false,
+      "lhs": [
+       {
+        "expr": {
+         "expr": "globaladdr",
+         "gid": 0
+        },
+        "target": "addr"
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "2"
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "0"
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "e1$lit0",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "mut",
+        "target": "declare",
+        "type": {
+         "kind": "func",
+         "params": [],
+         "results": [
+          {
+           "int": "int",
+           "kind": "int"
+          }
+         ],
+         "variadic": false
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "captured": [],
+        "expr": "func-value",
+        "func": "e1$lit0",
+        "type": {
+         "kind": "func",
+         "params": [],
+         "results": [
+          {
+           "int": "int",
+           "kind": "int"
+          }
+         ],
+         "variadic": false
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "cells": [
+       {
+        "id": "$u0",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       },
+       {
+        "id": "$u1",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       },
+       {
+        "id": "$u2",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "occs": [
+       {
+        "args": [],
+        "binds": [
+         "$u0"
+        ],
+        "callee": {
+         "expr": "ident",
+         "name": "mut"
+        },
+        "kind": "invoke",
+        "name": "call0",
+        "resultTypes": [
+         {
+          "int": "int",
+          "kind": "int"
+         }
+        ]
+       },
+       {
+        "bind": "$u1",
+        "head": {
+         "expr": "deref",
+         "ptr": {
+          "expr": "globaladdr",
+          "gid": 0
+         },
+         "type": {
+          "int": "int",
+          "kind": "int"
+         }
+        },
+        "kind": "eval",
+        "name": "read1"
+       },
+       {
+        "bind": "$u2",
+        "head": {
+         "expr": "binary",
+         "op": "+",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "x": {
+          "expr": "ident",
+          "name": "$u0",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          }
+         },
+         "y": {
+          "expr": "ident",
+          "name": "$u1",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          }
+         }
+        },
+        "kind": "eval",
+        "name": "op2"
+       }
+      ],
+      "stmt": "unseq",
+      "stores": [],
+      "then": {
+       "define": true,
+       "lhs": [
+        {
+         "id": "v",
+         "target": "declare",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         }
+        }
+       ],
+       "rhs": [
+        {
+         "expr": "ident",
+         "name": "$u2",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         }
+        }
+       ],
+       "stmt": "assign"
+      }
+     },
+     {
+      "results": [
+       {
+        "expr": "ident",
+        "name": "v",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "e1",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "define": false,
+      "lhs": [
+       {
+        "expr": {
+         "expr": "globaladdr",
+         "gid": 0
+        },
+        "target": "addr"
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "1"
+       }
+      ],
+      "stmt": "assign"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "$pkginit",
+   "params": [],
+   "results": [],
+   "variadic": false
+  }
+ ],
+ "globals": [
+  {
+   "name": "g",
+   "type": {
+    "int": "int",
+    "kind": "int"
+   }
+  }
+ ],
+ "methodSets": [],
+ "methods": [],
+ "package": "main",
+ "schema": "golean-native-v1",
+ "types": []
+}

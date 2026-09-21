@@ -811,6 +811,21 @@ gc's early store a deviation, L-016, 2026-09-02).
 
 ### E2. Call vs. assignment-target operands — (b) PINNED call-first on the VALUE axis outside the Stage C pilot; (a) ENVELOPED on the pilot's rows (2026-09-19); the PANIC axis (a) ENVELOPED via E13's `unseqPanic` since the e13-b re-audit fix round (2026-09-05)
 
+- STAGE E, FAMILY E1 (2026-09-21, [AGENT], lane `core/unseq-stage-e-0921`; design
+  `docs/2026-09-21_unseq-stage-e-design.md` §E1; the width-of-P ruling «ALL mutable
+  reads, STAGED» widened to PACKAGE-LEVEL VARIABLES): a package-level variable's read
+  beside a call is a READ occurrence of the `unseq` graph, and as a compound target its
+  load is that same read — the VALUE axis is (a) ENVELOPED on exactly TWO more rows,
+  `evalorder/unseq-globals/compound-vs-call` (`g += setG()`, setG writing g: {2, 11},
+  gc 11 — the target's identity has no operands; the store lands in phase 2) and, on
+  E12's side of the same family, `evalorder/unseq-globals/read-vs-call` ({1, 2}, gc 2);
+  ratification posed at the merge ask with the pilot's precedent. BUG-113's two rows
+  (`evalorder/legacy-logical-vs-call/{or-vs-call,and-vs-call}`) flip FAIL → PASS on the
+  same widening but are NOT this entry's latitude: the `||`/`&&`-before-a-later-call
+  order is spec-FORCED and the graph realizes it (BUG-113 fixed). Every other row of this
+  axis (pointers, fields, maps, receives, methods, multi-target forms; BUG-104's four
+  open rows) keeps the (b) pin below; E2–E5 of Stage E widen next.
+
 - STAGE C PILOT (2026-09-19, [AGENT], lane `core/unseq-stage-c-0919`; design
   `docs/2026-09-19_unseq-stage-c-design.md` §1/§3; the width-of-P ruling [USER]
   Mike 2026-09-19 «Agree, merge», relayed — «ALL mutable reads, STAGED»): a
@@ -1498,6 +1513,16 @@ subexpressions of one binary operator).
   the fmt / imported-goose / slices sweeps that lower as all-forced graphs
   changed observation). E12(ii)'s read-vs-read axis stays (b) with its
   obligation: the pilot admits no call-free sweep.
+  STAGE E, FAMILY E1 (2026-09-21, [AGENT]; design `docs/2026-09-21_unseq-stage-e-design.md`
+  §E1): PACKAGE-LEVEL variables enter the grammar as READ occurrences — on the rows whose
+  sweep now lowers as a graph the VALUE axis of this entry is (a) ENVELOPED: `evalorder/
+  unseq-globals/read-vs-call` (`v := mut() + g`, mut writing g: {1, 2}, gc 2 — call-first)
+  and `evalorder/unseq-globals/compound-vs-call` ({2, 11}, gc 11); ratification posed at
+  the merge ask. The seven other sweeps the family admits in the corpus (`spec-examples-
+  decl/select-forms` ×5, `panic-recover/repanic-collapse/index-two-faults`, `init/stdlib-
+  initializer-dependent`) read globals no sibling call writes — every order agrees, no
+  row moved (the strict rows carry 0–4 wide picks, covered by the fixed streams). The
+  (b) pin stands for the strict rows outside the widened grammar.
   EXCEPTION TO THE CALL-FIRST VALUE PIN (e13-b re-audit fix round D4 (v),
   RECORDED at the final verification fix round 2026-09-05, R''-8,
   [AGENT]): for the two ALLOCATING CONVERSIONS `[]byte(s)` / `[]rune(s)`
@@ -3045,6 +3070,18 @@ history block, never in a membership line.
 ### 10.1 Movement and history (NOT membership)
 
 Nothing in this block is a class member by virtue of being named here.
+
+- **Stage E of the evaluation-order model v2.1, family E1 (2026-09-21, [AGENT] lane
+  `core/unseq-stage-e-0921`; design `docs/2026-09-21_unseq-stage-e-design.md`): PACKAGE-LEVEL
+  variables enter the `unseq` grammar** (reads as READ occurrences, `deref(globaladdr)`;
+  operand-free targets). Entry classes UNCHANGED by count ((a) 15 / (b) 17): E2 and E12 stay
+  (b) PINNED as entries, ENVELOPED on two more rows each side (`evalorder/unseq-globals/
+  {read-vs-call,compound-vs-call}`, named on the entries); BUG-113 FIXED (its two rows were a
+  FORCED-order wrong answer, not a latitude row — the known-≠-oracle list is unchanged, BUG-104
+  stays listed with four rows); the census gains exactly 10 admitted sweeps (136 → 146; the
+  twin 0). New rows: `evalorder/unseq-globals/*` (2 membership + 2 strict); no lane move, no
+  widened pin. Stage E's next families: pointers/fields/maps (E2), receives/methods (E3),
+  conversions/allocations (E4), multi-target forms (E5), the legacy triple's retirement (E6).
 
 - **Stage C of the evaluation-order model v2.1 (2026-09-19, [AGENT] lane
   `core/unseq-stage-c-0919`; design `docs/2026-09-19_unseq-stage-c-design.md`;
