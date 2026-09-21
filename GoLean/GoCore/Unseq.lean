@@ -107,7 +107,7 @@ namespace UnseqBody
 /-- The VALUE binders a body produces (its results). -/
 def valueBinds : UnseqBody → List String
   | .eval b _ | .load b _ => [b]
-  | .invoke bs _ _ => bs
+  | .invoke bs _ _ | .recv bs _ _ => bs
   | .target _ _ | .guard _ _ _ => []
 
 /-- The TARGET binder a body produces, if any. -/
@@ -122,6 +122,7 @@ def mentions : UnseqBody → List String
   | .eval _ head => head.names
   | .load _ _ => []
   | .invoke _ callee args => callee.names ++ exprListNames args
+  | .recv _ ch _ => ch.names
   | .target _ lhs => lhs.names
   | .guard test _ _ => [test]
 
@@ -436,6 +437,11 @@ def wellFormed? (g : UnseqGraph) : Option String :=
         | .invoke binds _ _ =>
             if binds.length > 2 then
               some s!"invocation '{o.name}' with {binds.length} results is outside the Stage B fragment (0, 1 or 2)"
+            else none
+        | .recv binds _ _ =>
+            -- Stage E E3: one value (or the comma-ok pair) — never zero, never more.
+            if binds.length == 0 || binds.length > 2 then
+              some s!"receive '{o.name}' with {binds.length} results is outside the fragment (1, or 2 for the comma-ok form)"
             else none
         | _ => none) with
     | some msg => some msg

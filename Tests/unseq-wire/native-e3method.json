@@ -1,0 +1,419 @@
+{
+ "buildContext": {
+  "buildTags": [],
+  "cgoEnabled": true,
+  "compiler": "gc",
+  "goarch": "amd64",
+  "goos": "linux"
+ },
+ "fileOrder": [
+  {
+   "files": [
+    "main.go"
+   ],
+   "package": "main"
+  }
+ ],
+ "funcs": [
+  {
+   "body": {
+    "body": [
+     {
+      "define": false,
+      "lhs": [
+       {
+        "expr": {
+         "base": {
+          "expr": "ident",
+          "name": "v$cap"
+         },
+         "expr": "field-addr",
+         "field": "n",
+         "typeId": "main.V"
+        },
+        "target": "addr"
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "10"
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "5"
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "e3method$lit0",
+   "params": [
+    {
+     "id": "v$cap",
+     "type": {
+      "elem": {
+       "kind": "named",
+       "name": "main.V"
+      },
+      "kind": "pointer"
+     }
+    }
+   ],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "v",
+        "target": "declare",
+        "type": {
+         "kind": "named",
+         "name": "main.V"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "args": [
+         {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "1"
+         }
+        ],
+        "expr": "struct-lit",
+        "target": {
+         "kind": "named",
+         "name": "main.V"
+        },
+        "type": {
+         "kind": "named",
+         "name": "main.V"
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "f",
+        "target": "declare",
+        "type": {
+         "kind": "func",
+         "params": [],
+         "results": [
+          {
+           "int": "int",
+           "kind": "int"
+          }
+         ],
+         "variadic": false
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "captured": [
+         {
+          "expr": "ref",
+          "id": "v"
+         }
+        ],
+        "expr": "func-value",
+        "func": "e3method$lit0",
+        "type": {
+         "kind": "func",
+         "params": [],
+         "results": [
+          {
+           "int": "int",
+           "kind": "int"
+          }
+         ],
+         "variadic": false
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "cells": [
+       {
+        "id": "$u0",
+        "type": {
+         "kind": "named",
+         "name": "main.V"
+        }
+       },
+       {
+        "id": "$u1",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       },
+       {
+        "id": "$u2",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "occs": [
+       {
+        "args": [],
+        "binds": [
+         "$u1"
+        ],
+        "callee": {
+         "expr": "ident",
+         "name": "f",
+         "type": {
+          "kind": "func",
+          "params": [],
+          "results": [
+           {
+            "int": "int",
+            "kind": "int"
+           }
+          ],
+          "variadic": false
+         }
+        },
+        "kind": "invoke",
+        "name": "call1",
+        "resultTypes": [
+         {
+          "int": "int",
+          "kind": "int"
+         }
+        ]
+       },
+       {
+        "bind": "$u0",
+        "head": {
+         "expr": "ident",
+         "name": "v",
+         "type": {
+          "kind": "named",
+          "name": "main.V"
+         }
+        },
+        "kind": "eval",
+        "name": "read0"
+       },
+       {
+        "after": [
+         "call1"
+        ],
+        "args": [
+         {
+          "expr": "ident",
+          "name": "$u0",
+          "type": {
+           "kind": "named",
+           "name": "main.V"
+          }
+         },
+         {
+          "expr": "ident",
+          "name": "$u1",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          }
+         }
+        ],
+        "binds": [
+         "$u2"
+        ],
+        "callee": {
+         "captured": [],
+         "expr": "func-value",
+         "func": "$method$6:main.V0:Plus"
+        },
+        "kind": "invoke",
+        "name": "call2",
+        "resultTypes": [
+         {
+          "int": "int",
+          "kind": "int"
+         }
+        ]
+       }
+      ],
+      "stmt": "unseq",
+      "stores": [],
+      "then": {
+       "results": [
+        {
+         "expr": "ident",
+         "name": "$u2",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         }
+        }
+       ],
+       "stmt": "return"
+      }
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "e3method",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  }
+ ],
+ "methodSets": [
+  {
+   "coverage": "full",
+   "type": "main.V"
+  }
+ ],
+ "methods": [
+  {
+   "body": {
+    "body": [
+     {
+      "results": [
+       {
+        "expr": "binary",
+        "op": "+",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "field-get",
+         "field": "n",
+         "recv": {
+          "expr": "ident",
+          "name": "v",
+          "type": {
+           "kind": "named",
+           "name": "main.V"
+          }
+         },
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "typeId": "main.V"
+        },
+        "y": {
+         "expr": "ident",
+         "name": "a",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         }
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "id": {
+    "name": "Plus",
+    "package": ""
+   },
+   "params": [
+    {
+     "id": "a",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "recv": {
+    "id": "v",
+    "type": {
+     "kind": "named",
+     "name": "main.V"
+    }
+   },
+   "recvType": "main.V",
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  }
+ ],
+ "package": "main",
+ "schema": "golean-native-v1",
+ "types": [
+  {
+   "def": {
+    "fields": [
+     {
+      "embedded": false,
+      "name": "n",
+      "type": {
+       "int": "int",
+       "kind": "int"
+      }
+     }
+    ],
+    "kind": "struct"
+   },
+   "display": "main.V",
+   "name": "main.V",
+   "pkg": "main"
+  }
+ ]
+}

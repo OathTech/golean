@@ -531,6 +531,60 @@ def e2g():
     check('E2g *p + wit(5), p nil', enumerate_graph(occs, state(v={'p': None}), lambda st, v: v['Op']),
           lambda k: (k[0], k[2]), {('panic', ()), ('panic', ('wit 5',))})
 
+# ---------------------------------------------------------------- Stage E, family E3 (2026-09-21): receives and method calls
+# A receive is an EVENT (E1-ordered among the calls, one communication); a method call is an invocation
+# whose receiver sub-evaluation (E14's sub-axis) is an occurrence like any operand. The reference LEADS
+# the lowering: Tests/unseq-wire/{e3recv,e3method}.json and evalorder/unseq-recv-method/*.
+def e3a():
+    # <-ch + x + mut(): x captured (mut: x = 2), ch buffered [1]; E1: the receive BEFORE mut.
+    def recv(st, v):
+        if not st['chan']: raise Blocked('receive would block: outside the terminating domain')
+        return st['chan'].pop(0)
+    def mut(st, v): st['v']['x'] = 2; return 0
+    occs = [Occ('E_recv', run=recv), Occ('R_x', run=lambda st, v: st['v']['x']),
+            Occ('E_mut', after=['E_recv'], run=mut),
+            Occ('Op', deps=['E_recv', 'R_x', 'E_mut'], run=lambda st, v: v['E_recv'] + v['R_x'] + v['E_mut'])]
+    check('E3a <-ch + x + mut() (x = 1, mut: x = 2)', enumerate_graph(occs, state(v={'x': 1}, chan=[1]), lambda st, v: v['Op']),
+          lambda k: k[1], {2, 3})
+
+def e3c():
+    # BUG-104's map-key receive row: m[t[k]] += <-ch, t = [1], k = 5, ch buffered [3]; the witness len(ch).
+    def recv(st, v):
+        if not st['chan']: raise Blocked('receive would block: outside the terminating domain')
+        return st['chan'].pop(0)
+    occs = [Occ('R_tk', run=lambda st, v: elem(st, hdr(st, 't'), 5)),
+            Occ('E_recv', run=recv),
+            Occ('L', deps=['R_tk'], run=lambda st, v: ('M', v['R_tk'])),
+            Occ('Rd', deps=['L'], run=lambda st, v: st['maps'][v['L'][0]].get(v['L'][1], 0)),
+            Occ('Op', deps=['Rd', 'E_recv'], run=lambda st, v: v['Rd'] + v['E_recv'])]
+    def phase2(st, v): st['maps'][v['L'][0]][v['L'][1]] = v['Op']; return None
+    check('E3c (BUG-104) m[t[k]] += <-ch, t[k] out of range; witness len(ch)',
+          enumerate_graph(occs, state(v={'t': 'T', 'm': 'M'}, arr={'T': [1]}, maps={'M': {}}, chan=[3]), phase2),
+          lambda k: (k[0], f"len(ch)={len(k[3][2])}"), {('panic', 'len(ch)=1'), ('panic', 'len(ch)=0')})
+
+def e3d():
+    # BUG-104's method row: m[t[k]] += q.M() (M prints 'M', returns 7); the receiver q a pointer atom.
+    def M(st, v): println(st, 'M'); return 7
+    occs = [Occ('R_tk', run=lambda st, v: elem(st, hdr(st, 't'), 5)),
+            Occ('E_M', run=M),
+            Occ('L', deps=['R_tk'], run=lambda st, v: ('M', v['R_tk'])),
+            Occ('Rd', deps=['L'], run=lambda st, v: st['maps'][v['L'][0]].get(v['L'][1], 0)),
+            Occ('Op', deps=['Rd', 'E_M'], run=lambda st, v: v['Rd'] + v['E_M'])]
+    def phase2(st, v): st['maps'][v['L'][0]][v['L'][1]] = v['Op']; return None
+    check('E3d (BUG-104) m[t[k]] += q.M(), t[k] out of range',
+          enumerate_graph(occs, state(v={'t': 'T', 'm': 'M'}, arr={'T': [1]}, maps={'M': {}}), phase2),
+          lambda k: (k[0], k[2]), {('panic', ()), ('panic', ('M',))})
+
+def e3e():
+    # v.Plus(f()) with a VALUE receiver: the receiver COPY (v.n read) is an occurrence unordered against
+    # the argument event f (E14's sub-axis); f writes v.n = 10; Plus returns v.n + arg. v.n = 1, f returns 5.
+    def f(st, v): st['v']['v.n'] = 10; return 5
+    occs = [Occ('R_recv', run=lambda st, v: st['v']['v.n']),                 # the receiver copy
+            Occ('E_f', run=f),
+            Occ('E_plus', deps=['R_recv', 'E_f'], run=lambda st, v: v['R_recv'] + v['E_f'])]
+    check('E3e v.Plus(f()), value receiver, f writes v.n (E14)', enumerate_graph(occs, state(v={'v.n': 1}), lambda st, v: v['E_plus']),
+          lambda k: k[1], {6, 15})
+
 # ---------------------------------------------------------------- negative controls (forced pairs are singletons)
 def controls():
     # C1: f(g()) — argument before invocation (data edge); no unordered pair remains.
@@ -558,7 +612,7 @@ if __name__ == '__main__':
               lambda: r2b('C_or'), lambda: r2b('G'),
               lambda: r2c(True), lambda: r2c(False),
               r4, lambda: r6(True), lambda: r6(False),
-              e1a, e1c, e1b, e2a, e2c, e2d, e2e, e2f, e2g, controls):
+              e1a, e1c, e1b, e2a, e2c, e2d, e2e, e2f, e2g, e3a, e3c, e3d, e3e, controls):
         f()
     print('RESULT:', 'FAIL' if FAILS else 'PASS', f'({FAILS} mismatch(es))')
     sys.exit(1 if FAILS else 0)

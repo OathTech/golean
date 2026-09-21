@@ -104,6 +104,18 @@ E2f m[1] += mut() with mut rebinding m (m[1] = 10, m2[1] = 100): outcome set = [
 E2g *p + wit(5), p nil: outcome set = [('panic', ()), ('panic', ('wit 5',))]
    trajectories per outcome: [(('panic', ()), 1), (('panic', ('wit 5',)), 1)]
    canonical (slot 0): R_deref -> ('panic', ())
+E3a <-ch + x + mut() (x = 1, mut: x = 2): outcome set = [2, 3]
+   trajectories per outcome: [(2, 2), (3, 1)]
+   canonical (slot 0): E_recv R_x E_mut Op -> 2
+E3c (BUG-104) m[t[k]] += <-ch, t[k] out of range; witness len(ch): outcome set = [('panic', 'len(ch)=0'), ('panic', 'len(ch)=1')]
+   trajectories per outcome: [(('panic', 'len(ch)=0'), 1), (('panic', 'len(ch)=1'), 1)]
+   canonical (slot 0): R_tk -> ('panic', 'len(ch)=1')
+E3d (BUG-104) m[t[k]] += q.M(), t[k] out of range: outcome set = [('panic', ()), ('panic', ('M',))]
+   trajectories per outcome: [(('panic', ()), 1), (('panic', ('M',)), 1)]
+   canonical (slot 0): R_tk -> ('panic', ())
+E3e v.Plus(f()), value receiver, f writes v.n (E14): outcome set = [6, 15]
+   trajectories per outcome: [(6, 1), (15, 1)]
+   canonical (slot 0): R_recv E_f E_plus -> 6
 C1 f(g()): outcome set = [8]
    trajectories per outcome: [(8, 1)]
    canonical (slot 0): E_g E_f -> 8

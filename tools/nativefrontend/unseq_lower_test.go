@@ -92,6 +92,10 @@ func TestUnseqLoweringShapes(t *testing.T) {
 		{"e2derefCompound", "invoke eval:ident target load eval:binary"},
 		{"e2mapCompound", "invoke eval:ident target load eval:binary"},
 		{"mapTarget", "invoke eval:index-get target load eval:binary"},
+		// Stage E E3: the receive as a `recv` event after fnine (E1); the method call's
+		// receiver sub-evaluation inside its argument frame (the auto-deref / &*v occurrences).
+		{"recvOperand", "invoke recv/after target load eval:binary"},
+		{"e3starRecv", "eval:addr-of-deref invoke eval:index-get eval:binary"},
 		// W6: two E1-ordered calls, then the read and the ops.
 		{"w6", "invoke invoke/after eval:ident eval:binary eval:binary"},
 		// R6: the call first; the header read and the checked access late.

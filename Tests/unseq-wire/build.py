@@ -72,6 +72,14 @@ def deref_target(ptr):
     return {"target": "addr", "expr": ptr}
 
 
+CHAN_INT = {"kind": "chan", "dir": "both", "elem": INT}
+
+
+def rcv(name, binds, ch, elem, after=None, region=None):
+    """A RECEIVE occurrence (Stage E E3): the channel an atom, one binder cell."""
+    return occ(name, "recv", after, region, binds=list(binds), ch=ch, elem=elem)
+
+
 def map_target(base, index):
     """A map-element target plan on the FROZEN map value and key value (Stage E E2)."""
     return {"target": "map", "base": base, "index": index, "keyType": INT, "valueType": INT}
@@ -393,6 +401,22 @@ def e2map_graph():
         stores=[("$t0", "$u3")])
 
 
+# ---------------------------------------------------------------- Stage E, family E3: receives and method calls
+# (2026-09-21): X3 as native Go — `x[f()] += <-ch`: f, then the receive AFTER f (E1), the plan on f's
+# result (x private: its header read at the plan step), the load and the op; the deferred witness prints
+# len(ch). Reference enumerate.py X3/E3c; the observation {panic [9] · `len 1`, panic [9] · `len 0`}.
+
+def e3recv_graph():
+    return unseq(
+        [cell("$u0", INT), cell("$u1", INT), cell("$u2", INT), cell("$u3", INT)],
+        [inv("call0", ["$u0"], fv("f"), [], [INT]),
+         rcv("recv1", ["$u1"], ident("ch", CHAN_INT), INT, after=["call0"]),
+         tgt("target2", "$t0", elem_target(ident("x", SLICE_INT), ident("$u0", INT))),
+         ld("load3", "$u2", "$t0"),
+         ev("op4", "$u3", binop("+", ident("$u2", INT), ident("$u1", INT), INT))],
+        stores=[("$t0", "$u3")])
+
+
 # ---------------------------------------------------------------- constant heads (audit fix round F2)
 # A CONSTANT copied into a cell — the emitter's `copy` occurrence where the consumer needs a
 # CELL (design §6): a guard's test (`true && f()`), a phase-2 store's value (`a[f()] = 5`,
@@ -470,6 +494,10 @@ WITNESSES = {
     "e2ptr": ("e2ptr", [("e2ptr", "mut", 1, e2ptr_graph(), None)]),
     "e2map": ("e2map", [("e2map", "mut", 1, e2map_graph(), None)]),
     "e2fld": ("e2fld", []),
+    # Stage E E3 (2026-09-21): the receive as a `recv` body (hand-built + native); the value-receiver
+    # method call is NATIVE-ONLY (the method's `$method$…` key is an envelope fact)
+    "e3recv": ("e3recv", [("e3recv", "x", 1, e3recv_graph(), None)]),
+    "e3method": ("e3method", []),
 }
 
 
@@ -573,6 +601,11 @@ def mutants(wires):
     edit("mut-deref-target-nonatom", "e2ptr", "e2ptr",
          lambda n, w: occ(n, "target2")["lhs"].update(expr=binop("+", ident("$u0", INT), intc(0), INT)),
          "outside the admitted fragment")
+    # the `recv` kind (Stage E E3): a non-atom channel — a hidden read; two binders — outside the fragment.
+    edit("mut-recv-nonatom", "e3recv", "e3recv",
+         lambda n, w: occ(n, "recv1").update(ch=binop("+", intc(0), intc(1), INT)), "hidden read in a receive")
+    edit("mut-recv-two-binds", "e3recv", "e3recv",
+         lambda n, w: occ(n, "recv1").update(binds=["$u1", "$u2"]), "outside the admitted fragment")
     return out
 
 

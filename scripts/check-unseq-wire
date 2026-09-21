@@ -11,7 +11,8 @@
 # (Tests/unseq-wire/mutants.tsv; 19 since the audit fix round 2026-09-20 — the
 # nested-completion join, audit F3; 20 since Stage E E1, 2026-09-21 — the hidden
 # read in a `deref` head's pointer position; 22 since Stage E E2 — a non-atom map key
-# and a non-atom deref plan), while the untouched W1 wire runs (the canonical
+# and a non-atom deref plan; 24 since Stage E E3 — a receive's non-atom channel and a
+# two-binder receive), while the untouched W1 wire runs (the canonical
 # tape gives 2: mut first). Fail closed on a missing binary, a failed
 # regeneration, a decoded mutant or a refusal that does not name its cause.
 set -Eeuo pipefail

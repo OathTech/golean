@@ -83,6 +83,7 @@ def unseqBodyIndices : UnseqBody → List TypeIdx
   | .eval _ head => exprIndices head
   | .load _ _ => []
   | .invoke _ callee args => exprIndices callee ++ exprListIndices args
+  | .recv _ ch elem => exprIndices ch ++ tyIndices elem
   | .target _ lhs => assigneeIndices lhs
   | .guard _ _ _ => []
 def unseqGraphIndices (g : UnseqGraph) : List TypeIdx :=

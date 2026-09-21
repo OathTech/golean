@@ -811,6 +811,18 @@ gc's early store a deviation, L-016, 2026-09-02).
 
 ### E2. Call vs. assignment-target operands — (b) PINNED call-first on the VALUE axis outside the Stage C pilot; (a) ENVELOPED on the pilot's rows (2026-09-19); the PANIC axis (a) ENVELOPED via E13's `unseqPanic` since the e13-b re-audit fix round (2026-09-05)
 
+- STAGE E, FAMILY E3 (2026-09-21, [AGENT], lane `core/unseq-stage-e-0921`; design
+  `docs/2026-09-21_unseq-stage-e-design.md` §E3 — receives and method calls as occurrences; the
+  OBSERVABILITY trigger): this entry's TARGET-side rows at E3 are BUG-104's three remaining rows,
+  `builtins/e13-sibling-panic-order/{compound-call-target-vs-recv,map-compound-index-key-vs-recv,
+  map-compound-index-key-vs-method}` — each ONE `unseq` graph, the compound target's checked load
+  / key access unsequenced against the RECEIVE (an E1-ordered EVENT occurrence, `UnseqBody.recv`)
+  or the concrete-receiver METHOD CALL (an invocation): observed-∉-modeled FIXES (FAIL → PASS/
+  membership with gc's draw inside — witness {1, 0}, {1, 0}, {`` · `[5]`, `M` · `[5]`}), not
+  latitude — BUG-104 is FIXED and LEAVES §10's known-≠-oracle list. No VALUE-axis row of this
+  entry moved at E3 (the receive rows are E12's side — below). The (b) pin stands outside the
+  widened grammar; the trigger returned 94 all-forced sweeps to the legacy path with their
+  observations unchanged (design §E3, the [AGENT] choice — alternative named there).
 - STAGE E, FAMILY E2 (2026-09-21, [AGENT], lane `core/unseq-stage-e-0921`; design
   `docs/2026-09-21_unseq-stage-e-design.md` §E2 — POINTERS, FIELDS, MAPS): a dereference, a
   field selection and a map element are READ occurrences; as targets they are FROZEN plans (the
@@ -824,7 +836,8 @@ gc's early store a deviation, L-016, 2026-09-02).
   `evalorder/unseq-ptr-field-map/{deref,field}-compound-redirect`, `map-compound-rebind`
   ({11100, 10101}: the frozen identities, no hybrid); BUG-104's `map-compound-index-key-vs-call`
   is an observed-∉-modeled FIX (→ BUG-112), not latitude. Ratification posed at the merge ask.
-  BUG-104's three remaining rows (a receive or a method call on the RHS) keep the (b) pin — E3's.
+  BUG-104's three remaining rows (a receive or a method call on the RHS) keep the (b) pin — E3's
+  (FIXED there, the bullet above).
 
 - STAGE E, FAMILY E1 (2026-09-21, [AGENT], lane `core/unseq-stage-e-0921`; design
   `docs/2026-09-21_unseq-stage-e-design.md` §E1; the width-of-P ruling «ALL mutable
@@ -1546,6 +1559,18 @@ subexpressions of one binary operator).
   map/{deref,field,mapread}-vs-call` ({1, 2}, gc 2); the noodler map compounds are E2's (above).
   The 12 other rows whose sweeps entered read locations no sibling call writes — no row moved.
   Ratification posed at the merge ask. The (b) pin stands outside the widened grammar.
+  STAGE E, FAMILY E3 (2026-09-21, [AGENT]; design §E3 — receives, method calls): a RECEIVE is an
+  EVENT occurrence (E1-ordered among the calls) and the reads beside it are spec-unsequenced
+  against it — the VALUE axis is (a) ENVELOPED on the born `evalorder/unseq-recv-method/recv-vs-
+  read` (`<-ch + x + mut()`, x captured, mut writing it: {2, 3}, gc 3 — call-first) and, for a
+  concrete-receiver method call as the event, on `evalorder/unseq-recv-method/ptr-recv-vs-field-
+  read` (`p.n + p.Bump()`, Bump writing p.n: {3, 4}, gc 4); the receiver sub-evaluation itself is
+  E14's (below). The other receive sweeps the family admits (`channels/{make-edge,recv-edge}`,
+  `goroutines/{fork-join/two-workers-own-chans,worker-pool/shared-feed}`, `noodler/evalorder/send-
+  operand-order`, `race/negative-sync/overwrite-vs-trylock`, `sync/out-of-scope-cond`) read
+  locations no sibling event writes — no set widened; `two-workers-own-chans` moved its ENGINE to
+  dedup (route α certifies the singleton where the DFS blew its work cap). Ratification posed at
+  the merge ask. The (b) pin stands outside the widened grammar.
   EXCEPTION TO THE CALL-FIRST VALUE PIN (e13-b re-audit fix round D4 (v),
   RECORDED at the final verification fix round 2026-09-05, R''-8,
   [AGENT]): for the two ALLOCATING CONVERSIONS `[]byte(s)` / `[]rune(s)`
@@ -1886,6 +1911,25 @@ row so the axis stops being invisible, nothing more.
   (a probe reorders no events). Design `docs/2026-09-05_e13-b-design.md`
   §4 D4/D5 and §6 item 4 carry the same statement; the `receiverAddr`
   residue is E13 bullet (3)'s.
+- STAGE E, FAMILY E3 (2026-09-21, [AGENT], lane `core/unseq-stage-e-0921`; design
+  `docs/2026-09-21_unseq-stage-e-design.md` §E3): a method call on a CONCRETE receiver (a
+  non-generic, non-promoted method of a main-package named struct or a pointer to one — never an
+  interface method) lowers as an `unseq` INVOCATION whose callee is the method's function value
+  and whose FIRST argument is the receiver sub-evaluation: a value receiver's COPY (an
+  address-taken variable's read — an occurrence), a pointer operand's value (an atom or an
+  occurrence), an addressable variable's implicit `&x` (the frozen `ref x` — an address, no read,
+  no occurrence: the `receiverAddr` singleton above is now EXACT by construction), `*p`'s nil-
+  asserting `addr-of-deref` (an occurrence that may fail). The RECEIVER SUB-AXIS is (a) ENVELOPED
+  on the census's own row `noodler/latitude/receiver-vs-arg-call` (`v.Plus(f())`, a value
+  receiver, f writing v.n = 100: {6, 105}, gc 105 — strict → membership) and the born
+  `evalorder/unseq-recv-method/value-recv-vs-arg-call` ({6, 15}, gc 15); `addr-recv-vs-slice-read`
+  is the strict control (the frozen address orders nothing). The events-ahead-of-arguments
+  realization is one member of each set; the ADDRESS-TAKEN analysis is refined on the way (`x.m()`
+  marks `&x` only for a pointer-receiver method on a non-pointer operand — spec#Calls' `(&x).m()`
+  rewrite; Stage C marked every method-call operand). NO PIN IS TAKEN — the envelope is the row's
+  set; ratification of the (a) extension posed at the merge ask; E14 stays a (c) census row as an
+  entry (interface-typed receivers, promoted and generic methods remain the legacy path's — E5's
+  residue statement).
 
 ### R1. `int`/`uint` width — (b) PINNED to 64 bits
 
@@ -3066,11 +3110,10 @@ history block, never in a membership line.
   narrowed — back since the fix round; the previous "9 → 8" was not
   derivable from the list, audit R12).
 - Known-≠-oracle deterministic points (the honesty-critical list):
-  E3, E5, E7, R3(escaping path), BUG-104 (a compound target's hoisted
-  address/key temp — THREE rows since Stage E E2, 2026-09-21: the receive
-  spellings `compound-call-target-vs-recv`, `map-compound-index-key-vs-recv`
-  and the method spelling `map-compound-index-key-vs-method`; the map-key-
-  beside-a-call spelling FIXED at E2 → BUG-112). THREE CLASSES inside one list, stated per row: E3,
+  E3, E5, E7, R3(escaping path). (BUG-104 LEFT this list 2026-09-21 at
+  Stage E family E3: its last three rows — the receive spellings and the
+  method spelling — are membership sets with gc's draw inside; the entry is
+  FIXED.) THREE CLASSES inside one list, stated per row: E3,
   E7, R3 are (b)/(b-n) PINS with gc on another conforming member
   (re-envelope debts, §7); **E5 is a (c) FORCED row on which gc
   DEVIATES** (L-016, [USER] ruling 2026-09-02) — it stays listed because
@@ -3095,6 +3138,23 @@ history block, never in a membership line.
 ### 10.1 Movement and history (NOT membership)
 
 Nothing in this block is a class member by virtue of being named here.
+
+- **Stage E of the evaluation-order model v2.1, family E3 (2026-09-21, [AGENT] lane
+  `core/unseq-stage-e-0921`; design `docs/2026-09-21_unseq-stage-e-design.md` §E3): RECEIVES and
+  METHOD CALLS on concrete receivers enter the `unseq` grammar** (the receive an E1-ordered EVENT
+  occurrence — `UnseqBody.recv`, two `Step` rules, the coherence arms; the method call an
+  invocation whose receiver sub-evaluation is an occurrence), and the admission trigger becomes
+  OBSERVABILITY (an occurrence unordered against an effectful event — 94 all-forced sweeps return
+  to the legacy path, their observations unchanged; the [AGENT] choice, alternative named in §E3).
+  Entry classes UNCHANGED by count ((a) 15 / (b) 17): E12 stays (b) PINNED as an entry, ENVELOPED
+  on the born `evalorder/unseq-recv-method/{recv-vs-read,ptr-recv-vs-field-read}`; E14 stays a (c)
+  census row, its receiver sub-axis ENVELOPED on `noodler/latitude/receiver-vs-arg-call` (strict →
+  membership {6, 105}) and the born `value-recv-vs-arg-call`; **BUG-104 FIXED** (its three
+  remaining rows FAIL → PASS/membership — LEAVES §10's known-≠-oracle list); the census 176 → 110
+  admitted (+18 receives/methods, −94 by the trigger, +6 and +4 from the packages born after each
+  census; the twin 0). Lane moves route α: `noodler/methods/nil-receiver-recursion` strict →
+  confluent `engine=dedup` (|set| = 1 at 9053 states), `goroutines/fork-join/two-workers-own-chans`
+  engine DFS → dedup. New rows: `evalorder/unseq-recv-method/*` (3 membership + 2 strict).
 
 - **Stage E of the evaluation-order model v2.1, family E2 (2026-09-21, [AGENT] lane
   `core/unseq-stage-e-0921`; design `docs/2026-09-21_unseq-stage-e-design.md` §E2): POINTERS,

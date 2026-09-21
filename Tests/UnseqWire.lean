@@ -102,6 +102,11 @@ def main (_args : List String) : IO Unit := do
     -- enumerate.py E2e / E2f; the checksums 11100 (plan first) / 10101 (call first, gc's).
     wireSet "E2PTR wire: *p += mut(), mut redirects p — the frozen pointer VALUE" "e2ptr.json" "e2ptr" [okZ 11100, okZ 10101],
     wireSet "E2MAP wire: m[1] += mut(), mut rebinds m — the frozen map VALUE (unseqReadTarget's map arm)" "e2map.json" "e2map" [okZ 11100, okZ 10101],
+    -- STAGE E, family E3 (2026-09-21): the RECEIVE as a `recv` body (the machine's own chanRecv under the
+    -- sweep frame) — X3 as native Go: `x[f()] += <-ch`, f then the receive by E1, the load's `[9]` before
+    -- or after the receive; the deferred witness prints len(ch). Reference enumerate.py X3 / E3c.
+    wireSet "E3RECV wire: x[f()] += <-ch — the receive a `recv` occurrence after f" "e3recv.json" "e3recv"
+      [panicOut (oob 9 1) "len 1\n", panicOut (oob 9 1) "len 0\n"],
     -- THE FRONTEND'S OWN LOWERING (C2): source → actual frontend bytes → strict decoder →
     -- machine → EXACT reference sets (v2.1 §7 row C's exit; the graphs are the emitter's,
     -- not hand-built — the same reference sets as the hand-built wires above).
@@ -126,6 +131,9 @@ def main (_args : List String) : IO Unit := do
     wireSet "NATIVE E2PTR (the frontend's own deref plan — Stage E E2)" "native-e2ptr.json" "e2ptr" [okZ 11100, okZ 10101],
     wireSet "NATIVE E2MAP (the frontend's own map-element plan)" "native-e2map.json" "e2map" [okZ 11100, okZ 10101],
     wireSet "NATIVE E2FLD (the frontend's own field-addr plan through a redirected pointer)" "native-e2fld.json" "e2fld" [okZ 11100, okZ 10101],
+    wireSet "NATIVE E3RECV (the frontend's own `recv` occurrence — Stage E E3)" "native-e3recv.json" "e3recv"
+      [panicOut (oob 9 1) "len 1\n", panicOut (oob 9 1) "len 0\n"],
+    wireSet "NATIVE E3METHOD (a value-receiver method call: the receiver copy vs the argument call — E14)" "native-e3method.json" "e3method" [okZ 6, okZ 15],
     -- EDGE MUTATIONS of the LOWERED graphs (v2.1 §8): each decodes; the exact-set check
     -- names the changed set (the decoder cannot see a missing or wrong edge).
     wireSet "EDGE data (R6: the access reads the variable's header, not the frozen slot) → the fused {20}" "edge-data.json" "r6" [okZ 20],

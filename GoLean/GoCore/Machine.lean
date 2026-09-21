@@ -2144,6 +2144,12 @@ phase-2 stores — never declared; v2.1 §3.3). -/
 def unseqInvokeStmt (binds : List String) (callee : Expr) (args : List Expr) : Stmt :=
   .callValue (binds.map Assignee.var).toArray callee args.toArray
 
+/-- The `recv` body's statement (Stage E E3): a channel receive whose targets
+are the predeclared binder cells — the value (and the comma-ok flag) are
+WRITTEN there by the receive's own delivery, never declared. -/
+def unseqRecvStmt (binds : List String) (ch : Expr) (elem : Ty) : Stmt :=
+  .chanRecv (binds.map Assignee.var).toArray ch elem
+
 /-- Head of a channel statement (send/receive/close). `elem` is the
 element type: sends normalize the value at it (the `mapAssign` key/value
 discipline, so buffered values are self-normalized); receives build the
@@ -6025,6 +6031,14 @@ inductive Step : Config → Store → Config → Store → AccessTrace → Prop 
       Step (.next (.unseqK g thenB st tg env (.run i) k)) s
         (.exec (unseqInvokeStmt binds callee args) env
           (.unseqK g thenB st tg env (.wait i) k)) s []
+  /-- Stage E E3: a RECEIVE occurrence runs `chanRecv` with the binder cells
+  as targets under the wait frame (its completion is `unseqRecvDone`); a
+  receive that would block is the statement's own `blockedRecv`. -/
+  | unseqRunRecv {g thenB st tg env k s o binds ch elem} {i : Nat} :
+      g.occs[i]? = some o → o.body = .recv binds ch elem →
+      Step (.next (.unseqK g thenB st tg env (.run i) k)) s
+        (.exec (unseqRecvStmt binds ch elem) env
+          (.unseqK g thenB st tg env (.wait i) k)) s []
   /-- The checked access through a frozen plan: apply, then deliver — a
   bounds panic unwinds through the frame over the pre-state. -/
   | unseqRunLoad {g thenB st tg env k s o bind tgt r c' s' tr} {i : Nat} :
@@ -6056,6 +6070,12 @@ inductive Step : Config → Store → Config → Store → AccessTrace → Prop 
   the call's own phase-2 stores): the occurrence is DONE. -/
   | unseqStmtDone {g thenB st tg env k s o binds callee args} {i : Nat} :
       g.occs[i]? = some o → o.body = .invoke binds callee args →
+      Step (.next (.unseqK g thenB st tg env (.wait i) k)) s
+        (.next (.unseqK g thenB (st.set i .done) tg env .pick k)) s []
+  /-- Stage E E3: a receive's statement completed (its value already stored
+  by the receive's own delivery): the occurrence is DONE. -/
+  | unseqRecvDone {g thenB st tg env k s o binds ch elem} {i : Nat} :
+      g.occs[i]? = some o → o.body = .recv binds ch elem →
       Step (.next (.unseqK g thenB st tg env (.wait i) k)) s
         (.next (.unseqK g thenB (st.set i .done) tg env .pick k)) s []
 

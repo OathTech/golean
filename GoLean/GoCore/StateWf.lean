@@ -226,6 +226,7 @@ def unseqBodySup : UnseqBody → Nat
   | .eval _ head => Expr.locSup head
   | .load _ _ => 0
   | .invoke _ callee args => max (Expr.locSup callee) (exprListSup args)
+  | .recv _ ch _ => Expr.locSup ch
   | .target _ lhs => Assignee.locSup lhs
   | .guard _ _ _ => 0
 
@@ -7063,6 +7064,14 @@ theorem unseqInvokeStmt_locSup {binds : List String} {callee : Expr} {args : Lis
     assigneeListSup_vars]
   omega
 
+/-- Stage E E3: the receive statement's loc bound is its body's (the binder
+targets are `var`s, bound 0). -/
+theorem unseqRecvStmt_locSup {binds : List String} {ch : Expr} {elem : Ty} :
+    Stmt.locSup (unseqRecvStmt binds ch elem) ≤ unseqBodySup (.recv binds ch elem) := by
+  simp only [unseqRecvStmt, Stmt.locSup, unseqBodySup, List.toList_toArray,
+    assigneeListSup_vars]
+  omega
+
 /-- Close a `step_preserves_wf_loc` goal whose step DELIVERED A PANIC
 (B2): the successor is `.panicking (chain ++ [panicEntry msg]) k` over
 the unchanged state, loc-bounded by the source configuration's bound. -/
@@ -7906,6 +7915,13 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
     have hb := unseqBodySup_of_get hget
     rw [hbody] at hb
     have hst := unseqInvokeStmt_locSup (binds := binds) (callee := callee) (args := args)
+    refine ⟨hs, ?_, Nat.le_refl _⟩
+    simp only [ConfigWf, Config.locSup, Cont.locSup, UnseqGraph.locSup, Nat.max_le] at hc hb hst ⊢
+    omega
+  case unseqRunRecv g thenB st tg env k o binds ch elem i hget hbody =>
+    have hb := unseqBodySup_of_get hget
+    rw [hbody] at hb
+    have hst := unseqRecvStmt_locSup (binds := binds) (ch := ch) (elem := elem)
     refine ⟨hs, ?_, Nat.le_refl _⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, UnseqGraph.locSup, Nat.max_le] at hc hb hst ⊢
     omega

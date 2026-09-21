@@ -176,27 +176,20 @@
       "stmt": "assign"
      },
      {
-      "cells": [
+      "define": true,
+      "lhs": [
        {
-        "id": "$u1",
+        "id": "$c1",
+        "target": "declare",
         "type": {
          "int": "int",
          "kind": "int"
         }
-       },
-       {
-        "id": "$u3",
-        "type": {
-         "kind": "string"
-        }
        }
       ],
-      "occs": [
+      "rhs": [
        {
         "args": [],
-        "binds": [
-         "$u1"
-        ],
         "callee": {
          "expr": "ident",
          "name": "f",
@@ -212,70 +205,57 @@
           "variadic": false
          }
         },
-        "kind": "invoke",
-        "name": "call0",
+        "expr": "call-value",
         "resultTypes": [
          {
           "int": "int",
           "kind": "int"
          }
         ]
-       },
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": false,
+      "lhs": [
        {
-        "bind": "$t2",
-        "kind": "target",
-        "lhs": {
-         "expr": {
-          "base": {
-           "expr": "ident",
-           "name": "a",
-           "type": {
-            "elem": {
-             "kind": "string"
-            },
-            "kind": "slice"
-           }
-          },
-          "expr": "index-addr",
-          "index": {
-           "expr": "ident",
-           "name": "$u1",
-           "type": {
-            "int": "int",
-            "kind": "int"
-           }
+        "expr": {
+         "base": {
+          "expr": "ident",
+          "name": "a",
+          "type": {
+           "elem": {
+            "kind": "string"
+           },
+           "kind": "slice"
           }
          },
-         "target": "addr"
-        },
-        "name": "target1"
-       },
-       {
-        "bind": "$u3",
-        "head": {
-         "bytes": [
-          115
-         ],
-         "expr": "string",
-         "type": {
-          "kind": "string"
+         "expr": "index-addr",
+         "index": {
+          "expr": "ident",
+          "name": "$c1",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          }
          }
         },
-        "kind": "eval",
-        "name": "copy2"
+        "target": "addr"
        }
       ],
-      "stmt": "unseq",
-      "stores": [
+      "rhs": [
        {
-        "target": "$t2",
-        "value": "$u3"
+        "bytes": [
+         115
+        ],
+        "expr": "string",
+        "type": {
+         "kind": "string"
+        }
        }
       ],
-      "then": {
-       "body": [],
-       "stmt": "block"
-      }
+      "stmt": "assign"
      },
      {
       "cond": {

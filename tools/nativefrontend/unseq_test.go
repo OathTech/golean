@@ -406,6 +406,78 @@ func e2nestedFieldTarget() int {
 	return ss[0].f
 }
 
+// --- Stage E E3: receives and method calls ---
+
+type V struct{ n int }
+
+func (v V) Get() int   { return v.n }
+func (v *V) Bump() int { v.n++; return v.n }
+
+type I interface{ Get() int }
+
+// E3a: a receive beside a read of an address-taken local: the receive is the event.
+func e3recvRead() int {
+	ch := make(chan int, 1)
+	ch <- 1
+	x := 1
+	mut := func() int { x = 2; return 0 }
+	_ = mut
+	return <-ch + x + mut()
+}
+
+// E3b: a pointer-receiver method call on a pointer operand beside a read it mutates.
+func e3ptrMethod() int {
+	v := &V{n: 1}
+	return v.n + v.Bump()
+}
+
+// E3c: a pointer-receiver call on an addressable variable (the implicit &v: a frozen ref).
+func e3addrRecv() int {
+	var v V
+	s := []int{1}
+	k := 0
+	return s[k] + v.Bump()
+}
+
+// E3d: a value-receiver call through a pointer (the auto-deref is an occurrence).
+func e3valueViaPtr() int {
+	v := &V{n: 1}
+	return v.Get() + wit(1)
+}
+
+// E3e: (*p).M() — the nil-asserting address of the dereference.
+func e3starRecv() int {
+	v := &V{n: 1}
+	s := []int{1}
+	k := 0
+	return s[k] + (*v).Bump()
+}
+
+// An interface method call stays legacy by name (dynamic dispatch).
+func e3ifaceMethod() int {
+	var i I = V{n: 1}
+	s := []int{1}
+	return s[0] + i.Get()
+}
+
+// A comma-ok receive stays legacy by name (E5).
+func e3commaOk() int {
+	ch := make(chan int, 1)
+	ch <- 1
+	s := []int{1}
+	v, ok := <-ch
+	_ = ok
+	return s[0] + v
+}
+
+// A promoted method stays legacy by name.
+type W struct{ V }
+func e3promotedMethod() int {
+	w := &W{}
+	s := []int{1}
+	return s[0] + w.Bump()
+}
+
 func conversionOperand() int {
 	s := []int{1}
 	return int(int64(s[0])) + wit(1)
@@ -510,8 +582,7 @@ func TestUnseqAdmittedWitnesses(t *testing.T) {
 		{"bug101b", 0, "return", 1, 4}, // i read, slice, checked access, slice
 		{"bug104a", 1, "compound", 2, 1},
 		{"bug102", 1, "compound", 2, 2}, // calls fnine, wit (len is the third EVENT) | the target plan, b[j]
-		{"forcedArg", 0, "return", 1, 1},
-		{"retTwo", 0, "return", 1, 0}, // two results in return position: in the grammar, but no non-event (legacy)
+		{"retTwo", 0, "return", 1, 0},   // two results in return position: in the grammar, but no non-event (legacy)
 		// Stage E E1: package-level variables
 		{"globalRead", 0, "return", 1, 1},    // the global read is a mutable READ occurrence
 		{"e1read", 1, "define", 1, 1},        // v := mut() + g
@@ -532,6 +603,13 @@ func TestUnseqAdmittedWitnesses(t *testing.T) {
 		{"e2mapAssignPlain", 1, "map-assign", 1, 0}, // atoms only → legacy
 		{"mapTarget", 1, "compound", 1, 2},          // BUG-104's m[t[k]] += wit(5): the key's checked access + the load
 		{"derefRead", 0, "return", 1, 1},
+		// Stage E E3: receives and method calls
+		{"recvOperand", 1, "compound", 2, 1}, // BUG-104's x[fnine()] += <-ch: fnine + the receive | the target plan
+		{"methodCall", 0, "return", 1, 1},    // s[0] + q.M(): the pointer-receiver call | the checked access
+		{"e3recvRead", 0, "return", 2, 1},    // the receive + mut | the address-taken x
+		{"e3ptrMethod", 0, "return", 1, 1},   // v.Bump() | the field read v.n through the pointer
+		{"e3addrRecv", 0, "return", 1, 1},    // v.Bump() on &v (no read) | s[k]
+		{"e3starRecv", 0, "return", 1, 2},    // (*v).Bump() | s[k] + the nil-asserting &*v
 	}
 	for _, c := range cases {
 		d := decisionAt(t, unseqWitnessSrc, c.fn, c.fromEnd)
@@ -588,9 +666,13 @@ func TestUnseqLegacyByReason(t *testing.T) {
 		fromEnd int
 		reason  string
 	}{
-		{"recvOperand", 1, "unary operator <-"},
-		{"methodCall", 0, "callee expression outside the pilot grammar"},
 		{"globalTypeOut", 0, "package-level target of a type outside the grammar"},
+		{"e3ifaceMethod", 0, "interface method call"},
+		// the E3 observability trigger: an occurrence forced before the only event beside it
+		{"forcedArg", 0, "no occurrence observable against an effectful event"},
+		{"e3valueViaPtr", 0, "no occurrence observable against an effectful event"}, // the auto-deref precedes Get, which precedes wit
+		{"e3commaOk", 2, "multi-target or tuple assignment"},
+		{"e3promotedMethod", 0, "promoted method call"},
 		{"e2promoted", 0, "promoted field selector"},
 		{"e2ifaceKey", 0, "map type outside the grammar"},
 		{"e2nestedFieldTarget", 1, "field target on a non-variable struct base"},

@@ -53,6 +53,15 @@ package main
 // VALUE frozen — `Assignee.mapElem`); the compound forms load through the plan
 // and store through the same plan.
 //
+// STAGE E E3 (receives, method calls). `<-ch` → a `recv` occurrence (kind
+// "recv": the binder cell, the channel atom, the element type; E1 `after` like
+// a call — the machine runs `Stmt.chanRecv` with the cell as its target). A
+// method call `x.M(args)` → an `invoke` whose callee is `func-value{methodFuncKey}`
+// and whose first argument is the receiver sub-evaluation: the pointer atom,
+// `ref x` (an addressable variable's address — admitted as a frozen-address
+// argument), `eval addr-of-deref(p)` (for `(*p).M()`), the value atom / read, or
+// `eval deref(p)` (a value receiver through a pointer).
+//
 // THE MIXTURE GUARD. The lowering runs with `probeSuppress` raised and asserts the
 // hoist accumulator unchanged afterwards: a legacy hoist or probe produced inside
 // a graph lowering is refused by name (v2.1 §3.7: never a mixture).
@@ -335,6 +344,9 @@ func (b *unseqBuilder) value(x ast.Expr) (any, error) {
 		}
 		return b.evalOcc("op", ty, head), nil
 	case *ast.UnaryExpr:
+		if v.Op == token.ARROW {
+			return b.recv(v)
+		}
 		var op string
 		switch v.Op {
 		case token.SUB:
@@ -459,7 +471,17 @@ func (b *unseqBuilder) call(c *ast.CallExpr, maxResults int) ([]any, error) {
 	// the callee VALUE
 	var callee any
 	var sig *types.Signature
+	var recvArg any // Stage E E3: a method call's receiver argument (nil for a function)
 	switch fn := ast.Unparen(c.Fun).(type) {
+	case *ast.SelectorExpr:
+		// Stage E E3: a method call on a concrete receiver — the callee is the
+		// method's function value, the receiver its first argument.
+		r, key, s, err := b.methodCallee(fn)
+		if err != nil {
+			return nil, err
+		}
+		recvArg, sig = r, s
+		callee = map[string]any{"expr": "func-value", "func": key, "captured": []any{}}
 	case *ast.Ident:
 		switch obj := e.info.Uses[fn].(type) {
 		case *types.Func:
@@ -490,6 +512,9 @@ func (b *unseqBuilder) call(c *ast.CallExpr, maxResults int) ([]any, error) {
 	}
 	// the arguments (atoms, boxed where the parameter is interface-typed)
 	args := []any{}
+	if recvArg != nil {
+		args = append(args, recvArg)
+	}
 	for i, a := range c.Args {
 		w, err := b.value(a)
 		if err != nil {
@@ -580,6 +605,126 @@ func (b *unseqBuilder) guard(v *ast.BinaryExpr, op string) (any, error) {
 	block := append(append(leftBlock, g), regionBlock...)
 	b.emitEventBlock(block)
 	return slotIdent(out, boolTy), nil
+}
+
+// recv lowers `<-ch` (Stage E E3): the channel value, then the RECEIVE as an
+// E1-ordered event occurrence (kind "recv") writing its binder cell.
+func (b *unseqBuilder) recv(u *ast.UnaryExpr) (any, error) {
+	e := b.e
+	b.push()
+	popped := false
+	defer func() {
+		if !popped {
+			b.frames = b.frames[:len(b.frames)-1]
+		}
+	}()
+	ch, err := b.value(u.X)
+	if err != nil {
+		return nil, err
+	}
+	elemGo, err := e.chanElem(u.X)
+	if err != nil {
+		return nil, err
+	}
+	elemTy, err := e.emitType(elemGo)
+	if err != nil {
+		return nil, err
+	}
+	cell := b.newCell(elemTy)
+	name := b.occName("recv")
+	o := map[string]any{"name": name, "kind": "recv", "binds": []any{cell}, "ch": ch, "elem": elemTy}
+	if after := b.eventAfter(); after != nil {
+		o["after"] = after
+	}
+	if b.region != "" {
+		o["region"] = b.region
+	}
+	block := append(b.pop(), o)
+	popped = true
+	b.emitEventBlock(block)
+	b.anchor = name
+	return slotIdent(cell, elemTy), nil
+}
+
+// methodCallee lowers a concrete method call's callee (Stage E E3): the
+// receiver argument (the sub-evaluation, inside the call's operand frame), the
+// method's function key and its signature WITHOUT the receiver.
+func (b *unseqBuilder) methodCallee(sel *ast.SelectorExpr) (any, string, *types.Signature, error) {
+	e := b.e
+	seln, ok := e.info.Selections[sel]
+	if !ok || seln.Kind() != types.MethodVal {
+		return nil, "", nil, unsup("unseq lowering: method callee without a selection")
+	}
+	fn, ok := seln.Obj().(*types.Func)
+	if !ok {
+		return nil, "", nil, unsup("unseq lowering: method callee without a function object")
+	}
+	msig := fn.Type().(*types.Signature)
+	declRecv := msig.Recv().Type()
+	pointerRecv := false
+	if ptr, isPtr := types.Unalias(declRecv).Underlying().(*types.Pointer); isPtr {
+		pointerRecv = true
+		declRecv = ptr.Elem()
+	}
+	name, ok := e.namedTypeName(declRecv)
+	if !ok {
+		return nil, "", nil, unsup("unseq lowering: method on an anonymous receiver type")
+	}
+	member, err := declarationObjectName(fn)
+	if err != nil {
+		return nil, "", nil, err
+	}
+	recvT := e.goTypeOf(sel.X)
+	opPtr, opIsPtr := types.Unalias(recvT).Underlying().(*types.Pointer)
+	var recvArg any
+	if pointerRecv {
+		if opIsPtr {
+			recvArg, err = b.value(sel.X)
+			if err != nil {
+				return nil, "", nil, err
+			}
+		} else if st, isStar := ast.Unparen(sel.X).(*ast.StarExpr); isStar {
+			// (*p).M(): the nil-asserting address of the dereference (BUG-056/063)
+			p, err := b.value(st.X)
+			if err != nil {
+				return nil, "", nil, err
+			}
+			pty, err := e.typeOf(st.X)
+			if err != nil {
+				return nil, "", nil, err
+			}
+			recvArg = b.evalOcc("recvaddr", pty, map[string]any{"expr": "addr-of-deref", "ptr": p})
+		} else {
+			// an addressable variable: its address, frozen (no read)
+			id, isIdent := ast.Unparen(sel.X).(*ast.Ident)
+			if !isIdent {
+				return nil, "", nil, unsup("unseq lowering: pointer-receiver call on a non-variable operand")
+			}
+			recvArg, err = e.emitAddressOf(id)
+			if err != nil {
+				return nil, "", nil, err
+			}
+		}
+	} else {
+		v, err := b.value(sel.X)
+		if err != nil {
+			return nil, "", nil, err
+		}
+		if opIsPtr {
+			elemTy, err := e.emitType(opPtr.Elem())
+			if err != nil {
+				return nil, "", nil, err
+			}
+			recvArg = b.evalOcc("recvderef", elemTy, map[string]any{"expr": "deref", "ptr": v, "type": elemTy})
+		} else {
+			recvArg = v
+		}
+	}
+	sig, ok := seln.Type().(*types.Signature)
+	if !ok {
+		return nil, "", nil, unsup("unseq lowering: method callee without a call signature")
+	}
+	return recvArg, methodFuncKey(name, member), sig, nil
 }
 
 // elemTarget lowers a slice-element target plan `a[i]` on FROZEN atoms and

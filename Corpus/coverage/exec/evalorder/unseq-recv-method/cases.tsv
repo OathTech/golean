@@ -1,0 +1,11 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# evalorder/unseq-recv-method — Stage E family E3 (evaluation-order model v2.1 §7 row E; lane
+# core/unseq-stage-e-0921, 2026-09-21): receives as EVENT occurrences and method calls on concrete
+# receivers as invocations (the receiver sub-evaluation an occurrence — E14's sub-axis). Each
+# membership row's sweep lowers as ONE `unseq` graph; the ONE consumption site is the `unseq`
+# scheduler's pick (`unseqNext`, bound = the ready-set size). The strict rows are the controls.
+recv-vs-read	recvVsRead	-	ok	-	channels,closures,calls,evaluation_order,nondet	membership	E3a `<-ch + x + mut()` (x captured, mut: x = 2; ch holds 1): the receive is an E1-ordered EVENT before mut; the read of x is spec-unsequenced against both — before mut 2, after 3 (gc's, call-first); the ONE consumption site is the `unseq` scheduler's pick (`unseqNext`, bound = the ready-set size at each pick; Stage E E3 — reference enumerate.py E3a). members=2	width=2,sites=8,members=2
+value-recv-vs-arg-call	valueRecvVsArgCall	-	ok	-	structs,methods,closures,calls,evaluation_order,nondet	membership	E3e `v.Plus(f())` with a VALUE receiver, f writing v.n = 10 and returning 5: the receiver COPY is an occurrence spec-unsequenced against the argument call (E14's receiver sub-axis) — before f 6, after 15 (gc's); the ONE consumption site is the `unseq` scheduler's pick (`unseqNext`; Stage E E3 — reference enumerate.py E3e). members=2	width=2,sites=8,members=2
+ptr-recv-vs-field-read	ptrRecvVsFieldRead	-	ok	-	structs,methods,pointers,calls,evaluation_order,nondet	membership	`p.n + p.Bump()` (Bump: p.n++): the field read through the pointer is unsequenced against the pointer-receiver call — before it 1 + 2 = 3, after 2 + 2 = 4 (gc's); the ONE consumption site is the `unseq` scheduler's pick (`unseqNext`; Stage E E3). members=2	width=2,sites=8,members=2
+addr-recv-vs-slice-read	addrRecvVsSliceRead	-	ok	-	structs,methods,slices,indexing,calls,evaluation_order	strict	-	-
+recv-after-call	recvAfterCall	-	ok	-	channels,calls,print,evaluation_order	strict	-	-

@@ -884,6 +884,7 @@ private def unseqOccAllowedKeys : String → Option (List String)
   | "target" => some ["name", "kind", "bind", "lhs", "after", "region"]
   | "load" => some ["name", "kind", "bind", "target", "after", "region"]
   | "guard" => some ["name", "kind", "test", "when", "out", "after", "region"]
+  | "recv" => some ["name", "kind", "binds", "ch", "elem", "after", "region"]
   | _ => none
 
 /-- An ATOM on the wire (v2.1 §3.1's internal normal form): an identifier —
@@ -1000,11 +1001,18 @@ private def unseqCheckCallee (path : String) (callee : Json) : LowerM Unit := do
         | _ => fail s!"unseq: a func-value capture at {path}.captured is not an address (ref / ident / globaladdr); refused by name"
   | _ => fail s!"unseq: callee at {path} is neither an identifier nor a func-value — an invocation's callee is already evaluated (v2.1 §3.1); refused by name"
 
-/-- D8 for an `invoke` argument: an atom, or a boxing `to-interface` of an atom. -/
+/-- D8 for an `invoke` argument: an atom, a boxing `to-interface` of an atom, or —
+Stage E E3 (2026-09-21) — a FROZEN ADDRESS (`ref` of a source local, `globaladdr`
+of a package-level variable): the implicit `&x` of a pointer-receiver method call
+on an addressable variable, an address formation that reads nothing and cannot
+fail (spec#Address_operators; the callee's captures are the same shapes). -/
 private def unseqCheckArg (path : String) (arg : Json) : LowerM Unit := do
   if jsonMentionsRecover arg then
     fail s!"unseq: recover() in an argument at {path}; refused by name"
-  if unseqIsAtom arg then pure ()
+  let isAddr := match arg.getObjVal? "expr" with
+    | .ok (.str "ref") | .ok (.str "globaladdr") => true
+    | _ => false
+  if unseqIsAtom arg || isAddr then pure ()
   else
     match arg.getObjVal? "expr", arg.getObjVal? "operand" with
     | .ok (.str "to-interface"), .ok operand =>
@@ -1932,7 +1940,7 @@ partial def decodeUnseq (results : Array Param) (path : String) (obj : StrictJso
     let kind ← StrictJson.string s!"{opath}.kind" (← StrictJson.field opath o "kind")
     match unseqOccAllowedKeys kind with
     | some allowed => checkAllowedKeys opath o allowed
-    | none => fail s!"unseq: unknown occurrence kind '{kind}' at {opath} (eval | invoke | target | load | guard); refused by name"
+    | none => fail s!"unseq: unknown occurrence kind '{kind}' at {opath} (eval | invoke | target | load | guard | recv); refused by name"
     let name ← StrictJson.string s!"{opath}.name" (← StrictJson.field opath o "name")
     if name.isEmpty then
       fail s!"unseq: empty occurrence name at {opath}; refused by name"
@@ -1996,6 +2004,25 @@ partial def decodeUnseq (results : Array Param) (path : String) (obj : StrictJso
           let w ← StrictJson.bool s!"{opath}.when" (← StrictJson.field opath o "when")
           let out ← StrictJson.string s!"{opath}.out" (← StrictJson.field opath o "out")
           pure (UnseqBody.guard test w out)
+      | "recv" => do
+          -- Stage E E3 (2026-09-21): a RECEIVE occurrence — the channel an ATOM (the
+          -- channel VALUE already evaluated), one binder (the comma-ok form is E5's),
+          -- the element type = the binder cell's type.
+          let bindsJ ← StrictJson.array s!"{opath}.binds" (← StrictJson.field opath o "binds")
+          let binds ← bindsJ.toList.mapIdxM (fun j b => StrictJson.string s!"{opath}.binds[{j}]" b)
+          if binds.length != 1 then
+            fail s!"unseq: receive '{name}' with {binds.length} binders is outside the admitted fragment (one received value; the comma-ok form is a later family); refused by name"
+          let chJ ← StrictJson.field opath o "ch"
+          if jsonMentionsRecover chJ then
+            fail s!"unseq: recover() in a receive's channel at {opath}; refused by name"
+          if !unseqIsAtom chJ then
+            fail s!"unseq: hidden read in a receive — {opath}.ch is not an atom (the channel VALUE is already evaluated; v2.1 §3.1); refused by name"
+          let elem ← decodeTy s!"{opath}.elem" (← StrictJson.field opath o "elem")
+          let cty ← cellTy binds[0]!
+          if elem != cty then
+            fail s!"unseq: receive element type {repr elem} at {opath} disagrees with cell '{binds[0]!}' declared {repr cty}; refused by name"
+          let ch ← decodeExpr s!"{opath}.ch" chJ
+          pure (UnseqBody.recv binds ch elem)
       | other => fail s!"unseq: unknown occurrence kind '{other}' at {opath}; refused by name"
     occs := occs.push { name, body, after, region }
   -- stores

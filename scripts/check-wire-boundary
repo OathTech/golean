@@ -199,4 +199,12 @@ out="$(run_cli_fn Tests/unseq-wire/e2map.json e2map)" || { echo "check-wire-boun
 echo "ok [unseq map-plan] runs, answers 10101 (a frozen map-element target plan — Stage E E2)"
 expect_unseq_refusal unseq-map-target-key mut-map-target-key e2map 'non-atom base or key'
 expect_unseq_refusal unseq-deref-target-nonatom mut-deref-target-nonatom e2ptr 'outside the admitted fragment'
-echo 'Wire boundary gate: PASS (11 byte-level controls + 14 unseq-node controls through the real CLI)'
+# Stage E E3 (2026-09-21): a RECEIVE occurrence (Tests/unseq-wire/e3recv.json, `x[f()] += <-ch`): runs on the
+# canonical tape — f, the receive, then the load's `[9]` panic with the witness `len 0`; the non-atom channel and
+# the two-binder mutants refuse by name.
+out="$(run_cli_fn Tests/unseq-wire/e3recv.json e3recv)" || true
+[[ "$out" == *'"status":"panic"'* && "$out" == *'len 0'* ]] || { echo "check-wire-boundary: FAIL [unseq recv] — expected the canonical tape's panic [9] after the receive (witness len 0): $out" >&2; exit 1; }
+echo "ok [unseq recv] runs, the canonical tape receives first then panics [9] (witness len 0) — Stage E E3"
+expect_unseq_refusal unseq-recv-nonatom mut-recv-nonatom e3recv 'hidden read in a receive'
+expect_unseq_refusal unseq-recv-two-binds mut-recv-two-binds e3recv 'outside the admitted fragment'
+echo 'Wire boundary gate: PASS (11 byte-level controls + 17 unseq-node controls through the real CLI)'

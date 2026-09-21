@@ -1,0 +1,19 @@
+dir	unit	file:line	function	form	events	calls	nonEvents	former-reason
+Corpus/coverage/exec/builtins/e13-sibling-panic-order	main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:245	assertLeftRecvW	return	1	1	2	unary operator <-
+Corpus/coverage/exec/builtins/e13-sibling-panic-order	main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:447	tgtAssertVsRecvW	elem-assign	1	1	3	unary operator <-
+Corpus/coverage/exec/builtins/e13-sibling-panic-order	main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:597	compoundCallTargetVsRecv	compound	2	2	2	unary operator <-
+Corpus/coverage/exec/builtins/e13-sibling-panic-order	main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:612	mapCompoundIndexKeyVsRecv	compound	1	1	3	unary operator <-
+Corpus/coverage/exec/builtins/e13-sibling-panic-order	main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:624	mapCompoundIndexKeyVsMethod	compound	1	1	2	callee expression outside the pilot grammar
+Corpus/coverage/exec/builtins/e13-sibling-panic-order	main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:66	assertLeftMethod	return	1	1	1	callee expression outside the pilot grammar
+Corpus/coverage/exec/channels/make-edge	main	Corpus/coverage/exec/channels/make-edge/main.go:75	channelOrdinarySendEvalOrder	return	1	1	1	unary operator <-
+Corpus/coverage/exec/channels/recv-edge	main	Corpus/coverage/exec/channels/recv-edge/main.go:27	recvIntoIdx	elem-assign	1	1	1	unary operator <-
+Corpus/coverage/exec/goroutines/fork-join	main	Corpus/coverage/exec/goroutines/fork-join/main.go:43	forkJoinTwoWorkersOwnChans	return	2	2	2	unary operator <-
+Corpus/coverage/exec/goroutines/worker-pool	main	Corpus/coverage/exec/goroutines/worker-pool/main.go:43	workerPoolSharedFeed	return	2	2	2	unary operator <-
+Corpus/coverage/exec/methods/nil-receiver	main	Corpus/coverage/exec/methods/nil-receiver/main.go:13	*tree.size	return	2	2	2	callee expression outside the pilot grammar
+Corpus/coverage/exec/noodler/evalorder	main	Corpus/coverage/exec/noodler/evalorder/main.go:122	sendOperandOrder	return	2	2	1	unary operator <-
+Corpus/coverage/exec/noodler/frontier/pointer-to-pointer-chains	main	Corpus/coverage/exec/noodler/frontier/pointer-to-pointer-chains/main.go:21	pointerToPointerChains	return	2	2	4	callee expression outside the pilot grammar
+Corpus/coverage/exec/noodler/gotchas	main	Corpus/coverage/exec/noodler/gotchas/main.go:96	methodValueFromFieldPath	return	3	3	2	callee expression outside the pilot grammar
+Corpus/coverage/exec/noodler/latitude	main	Corpus/coverage/exec/noodler/latitude/main.go:51	receiverVsArgCall	return	2	2	1	callee expression outside the pilot grammar
+Corpus/coverage/exec/noodler/methods	main	Corpus/coverage/exec/noodler/methods/main.go:225	*Tree.Sum	return	2	2	3	callee expression outside the pilot grammar
+Corpus/coverage/exec/race/negative-sync	main	Corpus/coverage/exec/race/negative-sync/main.go:202	raceSyncOverwriteVsTryLock	return	2	2	2	unary operator <-
+Corpus/coverage/exec/sync/out-of-scope-cond	main	Corpus/coverage/exec/sync/out-of-scope-cond/main.go:65	condBroadcast	return	2	2	2	unary operator <-

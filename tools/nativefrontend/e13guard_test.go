@@ -359,8 +359,8 @@ func TestPhase1TargetOperandsAreProbed(t *testing.T) {
 		t.Fatalf("whole export refused: %v", err)
 	}
 	for fn, want := range map[string]int{
-		"tgtAssertVsMake": 1,
-		"tgtAssertVsRecv": 1, "arrayBaseTargetVsLen": 1, "tgtAssertVsMin": 1,
+		"tgtAssertVsMake":      1,
+		"arrayBaseTargetVsLen": 1, "tgtAssertVsMin": 1,
 		"addrAssertLeftCall": 1,
 	} {
 		if u := funcRefusal(t, program, fn); u != "" {
@@ -380,8 +380,10 @@ func TestPhase1TargetOperandsAreProbed(t *testing.T) {
 	// Stage E E2 (2026-09-21): a MAP target whose key is a type assertion (`m[iv.(string)]
 	// = wit(5)`, `… = len(b[j]) + wit(5)`) is inside the widened grammar — the map plan on
 	// the frozen map value and the asserted key; one graph, no probe.
+	// Stage E E3 (2026-09-21): a RECEIVE on the right-hand side (`x[iv.(int)] = <-ch`) is an event
+	// occurrence — one graph, no probe.
 	for _, fn := range []string{"tgtAssertVsLenHoist", "tgtAssertVsCall", "compoundAssertVsLen",
-		"mapKeyAssertVsLen", "mapTgtAssertVsCall"} {
+		"mapKeyAssertVsLen", "mapTgtAssertVsCall", "tgtAssertVsRecv"} {
 		if u := funcRefusal(t, program, fn); u != "" {
 			t.Errorf("%s: a pilot-grammar sweep must lower as an unseq graph, got refusal %q", fn, u)
 			continue

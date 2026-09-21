@@ -433,6 +433,15 @@ inductive UnseqBody where
   `binds` — the body WRITES predeclared destinations (`Stmt.callValue`'s
   targets), never declares. The callee's effects happen once. -/
   | invoke (binds : List String) (callee : Expr) (args : List Expr)
+  /-- RECEIVE (Stage E E3, 2026-09-21): one communication on the channel
+  VALUE `ch` (an atom), the received value (and, for the comma-ok form, the
+  ok flag) routed to the predeclared binders `binds` — the body runs
+  `Stmt.chanRecv` with the cells as its targets, like `invoke` runs
+  `callValue`. An EVENT: spec#Order_of_evaluation orders receives lexically
+  among the calls (E1 `after` edges); a receive that would block is the
+  machine's `blockedRecv` — a refusal apart from the sweep's members in the
+  sequential domain (v2.1 §1), a wait in the pool. -/
+  | recv (binds : List String) (ch : Expr) (elem : Ty)
   /-- TARGET PLAN: a target's identity from FROZEN operand values — the
   assignee's operands are atoms (slots, `&local`, constants) resolved in
   one step through the machine's own `targetPlan`/`completeTargetRef`;

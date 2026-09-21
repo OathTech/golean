@@ -1,0 +1,171 @@
+# scripts/diff-one on the 164 affected rows (the 18 newly admitted sweeps' packages + the 94 returned-to-legacy sweeps' packages + the born package evalorder/unseq-recv-method), E3 frontend + E3 binary.
+# FIRST run (.tmp/diff-one-e3.log, before two fixes): the five born rows refused at the decoder — «native lowering: unseq: hidden read in an argument» — the method call's receiver argument `ref v` (a frozen address, no read) was not yet admitted by unseqCheckArg (D9: atoms only); fixed in GoLean/NativeToIR.lean (an argument may be `ref`/`globaladdr` — an address, never a read); and two rows failed by name on their lane budgets:
+FAIL	noodler/methods/nil-receiver-recursion	methods,pointers,nil,recursion	stage=nondet	detail=strict row: 6 wide pick(s) served after stream [9,8,7,6,5,4,3,2,1,0] was exhausted at consumption 10 — the 3-stream invariance check did not cover this row; route to confluent, or declare depth (default-stream wide count w=16)
+FAIL	goroutines/fork-join/two-workers-own-chans	goroutines,channels	stage=confluent	detail=enumerator failed (exit 1; schedule-confluence not certified): coverage-observations: work cap exceeded after 165912 step(s) + 34089 probe(s) with subtrees still unexplored — raise --work-cap or narrow the case
+FAIL	evalorder/unseq-recv-method/recv-vs-read	channels,closures,calls,evaluation_order,nondet	stage=membership	detail=enumerator failed (exit 1; coverage not certified): coverage-observations: /home/dev/projects/golean/.claude/worktrees/unseq-stage-e/artifacts/coverage/native/evalorder/unseq-recv-method/recv-vs-read/wire.json: native lowering: unseq: hidden read in an argument — program.funcs[6].body.body[4].occs[0
+#   -> noodler/methods/nil-receiver-recursion strict -> confluent engine=dedup (route α; the row's comment names the alternative depth=N); goroutines/fork-join/two-workers-own-chans confluent, ENGINE DFS -> dedup, work=200000 (the row's comment). Every other row of the first run is as below.
+# SECOND run (.tmp/diff-one-e3b.log), the whole 164 after both fixes — 145 PASS / 19 FAIL; the 19 FAIL are baseline FAIL rows unchanged (frontend-export refusals: fmt/*, spec-examples-decl/timezone-stringer, sync/out-of-scope-cond/cond-broadcast — the packages whose fmt-shim sweeps RETURNED to legacy); the result/stage movement vs the E2 baseline is EXACTLY: 3 flips FAIL/differential -> PASS/membership (BUG-104's three rows), receiver-vs-arg-call strict -> membership, nil-receiver-recursion strict -> confluent, 5 rows born; two-workers-own-chans PASS/confluent -> PASS/confluent (engine only).
+PASS	bools/short-circuit-effects/assign-both	bools,calls,evaluation_order
+PASS	bools/short-circuit-effects/assign-left-false	bools,calls,evaluation_order
+PASS	builtins/e13-sibling-panic-order/assert-left-method	interfaces,type_assertions,methods,calls,panic,evaluation_order,print,pointers,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibli
+PASS	builtins/e13-sibling-panic-order/assert-left-recv-w	interfaces,type_assertions,channels,recover,defer,evaluation_order,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-ord
+PASS	builtins/e13-sibling-panic-order/compound-call-target-vs-recv	slices,indexing,channels,recover,defer,panic,evaluation_order,print,assignment,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins
+PASS	builtins/e13-sibling-panic-order/forced-arg-only	slices,indexing,calls,panic,evaluation_order,print
+PASS	builtins/e13-sibling-panic-order/map-compound-index-key-vs-method	maps,slices,indexing,methods,calls,pointers,panic,evaluation_order,print,assignment,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership
+PASS	builtins/e13-sibling-panic-order/map-compound-index-key-vs-recv	maps,slices,indexing,channels,recover,defer,panic,evaluation_order,assignment,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtin
+PASS	builtins/e13-sibling-panic-order/slice-left-len-call	slices,slicing,len,calls,panic,evaluation_order,print
+PASS	builtins/e13-sibling-panic-order/tgt-assert-vs-recv-w	slices,indexing,channels,recover,defer,panic,evaluation_order,print,interfaces,type_assertions,assignment,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/
+PASS	builtins/len-vs-call-order/panicky-before-call	slices,len,evaluation_order,calls,panic,recover,indexing
+PASS	channels/make-edge/ordinary-send-eval-order	channels,evaluation_order
+PASS	evalorder/unseq-const-cell/const-guard-left	closures,bools,calls,evaluation_order
+PASS	evalorder/unseq-const-cell/elem-assign-const-string	closures,slices,indexing,calls,assignment,print,strings,evaluation_order
+PASS	evalorder/unseq-recv-method/addr-recv-vs-slice-read	structs,methods,slices,indexing,calls,evaluation_order
+PASS	evalorder/unseq-recv-method/ptr-recv-vs-field-read	structs,methods,pointers,calls,evaluation_order,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/evalorder/unseq-recv-method/ptr-recv-vs-field-read
+PASS	evalorder/unseq-recv-method/recv-after-call	channels,calls,print,evaluation_order
+PASS	evalorder/unseq-recv-method/recv-vs-read	channels,closures,calls,evaluation_order,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/evalorder/unseq-recv-method/recv-vs-read)
+PASS	evalorder/unseq-recv-method/value-recv-vs-arg-call	structs,methods,closures,calls,evaluation_order,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/evalorder/unseq-recv-method/value-recv-vs-arg-call
+FAIL	fmt/formatter-box-crosspkg/cross-package	stdlib,strings,methods,defined_type,interfaces,multipackage,imports	stage=frontend-export	detail=native frontend: nativefrontend: native frontend unsupported: type fmtypes.Both implements fmt.Formatter and is boxed into any (var declaration at Corpus/coverage/exec/fmt/formatter-box-c
+FAIL	fmt/formatter-box-generic/generic-body	stdlib,strings,methods,defined_type,interfaces,generics	stage=frontend-export	detail=native frontend: nativefrontend: native frontend unsupported: type parameter T is boxed into any (return value at Corpus/coverage/exec/fmt/formatter-box-generic/main.go:22:36) inside a generic body whi
+FAIL	fmt/formatter-box-range/range-assign	stdlib,strings,methods,defined_type,interfaces,slices,range	stage=frontend-export	detail=native frontend: nativefrontend: native frontend unsupported: type main.both implements fmt.Formatter and is boxed into any (range assignment (value) at Corpus/coverage/exec/fmt/formatter-box-range/m
+FAIL	fmt/formatter-dyn-hole/dyn-boxed	stdlib,strings,methods,defined_type,interfaces	stage=frontend-export	detail=native frontend: nativefrontend: native frontend unsupported: type main.both implements fmt.Formatter and is boxed into any (var declaration at Corpus/coverage/exec/fmt/formatter-dyn-hole/main.go:35:14) while the dyn
+FAIL	fmt/formatter-precedence/at-depth	stdlib,strings,structs,methods,defined_type	stage=frontend-export	detail={"message":"frontend-quarantined: fmt.Sprintf verb %v: main.fmtBoth implements fmt.Formatter, which gc consults ahead of error/Stringer and the kind matrix for every verb — outside the modeled subset (fail closed)","
+FAIL	fmt/formatter-precedence/over-kind-matrix	stdlib,strings,methods,defined_type	stage=frontend-export	detail={"message":"frontend-quarantined: fmt.Sprintf verb %d: main.fmtOnly implements fmt.Formatter, which gc consults ahead of error/Stringer and the kind matrix for every verb — outside the modeled subset (fail closed)","
+FAIL	fmt/formatter-precedence/over-stringer	stdlib,strings,methods,defined_type	stage=frontend-export	detail={"message":"frontend-quarantined: fmt.Sprintf verb %v: main.fmtBoth implements fmt.Formatter, which gc consults ahead of error/Stringer and the kind matrix for every verb — outside the modeled subset (fail closed)","out
+FAIL	fmt/sprintf-dyn/arity-mismatch	stdlib,strings,variadic	stage=frontend-export	detail={"message":"normalizing frontend-quarantined: golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time — the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go 
+PASS	fmt/sprintf-dyn/logger-shape	stdlib,strings,variadic,interfaces,methods
+PASS	fmt/sprintf-dyn/slice-int	stdlib,strings,variadic,slices,ints
+PASS	fmt/sprintf-dyn/slice-string	stdlib,strings,variadic,slices
+PASS	fmt/sprintf-dyn/sprint-fixed-arity	stdlib,strings,variadic
+PASS	fmt/sprintf-dyn/sprintln	stdlib,strings,variadic
+PASS	fmt/sprintf-dyn/sprintln-fixed-arity	stdlib,strings,variadic
+PASS	fmt/sprintf-dyn/sprint-nil	stdlib,strings,variadic,nil
+PASS	fmt/sprintf-dyn/sprint-space-rule	stdlib,strings,variadic
+PASS	fmt/sprintf-dyn/stringer-error	stdlib,strings,variadic,methods,interfaces,nil
+PASS	fmt/sprintf-dyn/stringer-panic	stdlib,strings,variadic,methods,panic,recover
+FAIL	fmt/sprintf-dyn/struct-bound	stdlib,strings,variadic,structs	stage=frontend-export	detail={"message":"normalizing frontend-quarantined: golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time — the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as
+FAIL	fmt/sprintf-dyn/trailing-plus	stdlib,strings,variadic	stage=frontend-export	detail={"message":"normalizing frontend-quarantined: golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time — the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go p
+FAIL	fmt/sprintf-dyn/unmodeled-kind	stdlib,strings,variadic,floats	stage=frontend-export	detail={"message":"normalizing frontend-quarantined: golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time — the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): a
+PASS	fmt/sprintf-dyn/verb-kinds	stdlib,strings,variadic,ints,bools
+PASS	fmt/sprintf-verbs/decision-path	stdlib,strings,ints,if
+PASS	fmt/sprintf-verbs/d-enum	stdlib,strings,ints,methods,defined_type
+PASS	fmt/sprintf-verbs/d-int	stdlib,strings,ints
+PASS	fmt/sprintf-verbs/d-uint	stdlib,strings,ints
+PASS	fmt/sprintf-verbs/d-width	stdlib,strings,ints,widths
+PASS	fmt/sprintf-verbs/eval-order	stdlib,strings,methods,evaluation_order,globals
+PASS	fmt/sprintf-verbs/literal-only	stdlib,strings
+FAIL	fmt/sprintf-verbs/nonconst-format	stdlib,strings	stage=frontend-export	detail={"message":"normalizing frontend-quarantined: fmt.Sprintf with a non-constant format string is outside the modeled subset (the verb/kind pairing is checked at emit time)","output":"","schema":"golean-observation-v1","status":"unsupported"}
+PASS	fmt/sprintf-verbs/percent	stdlib,strings
+PASS	fmt/sprintf-verbs/plusv-nil-ptr	stdlib,strings,methods,interfaces,pointers,nil
+PASS	fmt/sprintf-verbs/plusv-ptr-stringer	stdlib,strings,methods,interfaces,pointers,panic,recover
+PASS	fmt/sprintf-verbs/q-bytes	stdlib,strings,slices,bytes
+PASS	fmt/sprintf-verbs/q-bytes-empty	stdlib,strings,slices,bytes,nil
+PASS	fmt/sprintf-verbs/q-string	stdlib,strings
+PASS	fmt/sprintf-verbs/q-string-empty	stdlib,strings
+PASS	fmt/sprintf-verbs/q-stringer	stdlib,strings,slices,bytes,methods,defined_type
+PASS	fmt/sprintf-verbs/q-stringer-panic	stdlib,strings,slices,bytes,methods,defined_type,panic,recover
+PASS	fmt/sprintf-verbs/s-error	stdlib,strings,interfaces
+PASS	fmt/sprintf-verbs/s-nil-error	stdlib,strings,interfaces,nil
+PASS	fmt/sprintf-verbs/s-string	stdlib,strings
+PASS	fmt/sprintf-verbs/s-stringer	stdlib,strings,methods,interfaces
+PASS	fmt/sprintf-verbs/s-stringer-panic	stdlib,strings,methods,interfaces,panic,recover
+PASS	fmt/sprintf-verbs/t-bool	stdlib,strings,bools
+FAIL	fmt/sprintf-verbs/verb-outside-set	stdlib,strings	stage=frontend-export	detail={"message":"frontend-quarantined: fmt.Sprintf format \"%T\": verb %T is outside the modeled fmt subset (modeled: %d %x %s %v %+v %q %t %%)","output":"","schema":"golean-observation-v1","status":"unsupported"}
+PASS	fmt/sprintf-verbs/v-kinds	stdlib,strings,ints,bools
+PASS	fmt/sprintf-verbs/v-nil-error	stdlib,strings,interfaces,nil
+PASS	fmt/sprintf-verbs/v-stringer-panic	stdlib,strings,methods,interfaces,panic,recover
+FAIL	fmt/sprintf-verbs/width-outside-set	stdlib,strings,ints,widths	stage=frontend-export	detail={"message":"frontend-quarantined: fmt.Sprintf format \"%5x\": width 5 on verb %x is outside the modeled fmt subset (width is modeled for %d only)","output":"","schema":"golean-observation-v1","status":"unsupported"}
+PASS	fmt/sprintf-verbs/x-error	stdlib,strings,interfaces
+PASS	fmt/sprintf-verbs/x-nil-error	stdlib,strings,interfaces,nil
+PASS	fmt/sprintf-verbs/x-stringer	stdlib,strings,ints,methods,defined_type
+PASS	fmt/sprintf-verbs/x-stringer-panic	stdlib,strings,ints,methods,defined_type,panic,recover
+PASS	fmt/sprintf-verbs/x-uint	stdlib,strings,ints,bitwise
+PASS	fmt/v-composites/emb-exported-slice	stdlib,strings,structs,slices,methods,defined_type,embedding
+FAIL	fmt/v-composites/emb-formatter-below	stdlib,strings,structs,methods,defined_type,embedding	stage=frontend-export	detail={"message":"frontend-quarantined: fmt.Sprintf verb %v: main.embFmt implements fmt.Formatter, which gc consults ahead of error/Stringer and the kind matrix for every verb — outside the modeled subset (fai
+PASS	fmt/v-composites/emb-method-at-level	stdlib,strings,structs,methods,defined_type,embedding
+PASS	fmt/v-composites/emb-mid	stdlib,strings,structs,methods,defined_type,embedding,nested
+PASS	fmt/v-composites/emb-named-slice-type	stdlib,strings,structs,slices,methods,defined_type,embedding
+PASS	fmt/v-composites/emb-sticky-over-embed	stdlib,strings,structs,methods,defined_type,embedding,nested
+PASS	fmt/v-composites/emb-stringer-field	stdlib,strings,structs,methods,defined_type,embedding
+PASS	fmt/v-composites/emb-two-level	stdlib,strings,structs,methods,defined_type,embedding,nested
+PASS	fmt/v-composites/emb-unexported-leaf	stdlib,strings,structs,methods,defined_type,embedding
+PASS	fmt/v-composites/plusv-slice-struct	stdlib,strings,slices,structs,bytes,nil
+PASS	fmt/v-composites/plusv-stringer-field	stdlib,strings,structs,methods,defined_type
+PASS	fmt/v-composites/plusv-struct	stdlib,strings,structs
+PASS	fmt/v-composites/v-conf-state-shape	stdlib,strings,slices,bools
+FAIL	fmt/v-composites/v-map-outside	stdlib,strings,maps	stage=frontend-export	detail={"message":"frontend-quarantined: fmt.Sprintf verb %v over an argument of type map[uint64]bool is outside the modeled verb/kind matrix (format \"%v\"; fail closed — widen with a differential pin first)","output":"","schema":"golean-observation
+PASS	fmt/v-composites/v-named-slice	stdlib,strings,slices,defined_type
+PASS	fmt/v-composites/v-nested-struct	stdlib,strings,structs,nested
+FAIL	fmt/v-composites/v-ptr-field-outside	stdlib,strings,structs,pointers	stage=frontend-export	detail={"message":"frontend-quarantined: fmt.Sprintf verb %v: composite leaf of type *int is outside the modeled composite subset (fail closed — widen with a differential pin first)","output":"","schema":"golean-observation-v1","sta
+PASS	fmt/v-composites/v-slice-struct-bytes	stdlib,strings,slices,structs,bytes,nil
+PASS	fmt/v-composites/v-slice-uint64	stdlib,strings,slices,nil
+PASS	fmt/v-composites/v-stringer-elem-panic	stdlib,strings,slices,methods,defined_type,panic,recover
+PASS	fmt/v-composites/v-stringer-elems	stdlib,strings,slices,methods,defined_type
+PASS	fmt/v-composites/v-struct	stdlib,strings,structs
+PASS	fmt/v-composites/v-unexported-slice-taint	stdlib,strings,structs,methods,defined_type,slices
+PASS	fmt/v-composites/v-unexported-stringer-field	stdlib,strings,structs,methods,defined_type
+PASS	fmt/v-composites/v-unexported-subtree-taint	stdlib,strings,structs,methods,defined_type,nested
+PASS	functions/closure-recursion	functions,closures,recursion,calls
+PASS	goroutines/fork-join/two-workers-own-chans	goroutines,channels	stage=confluent	detail=|set|=1 certified over all schedules; coverage-observations: observations=1 steps=9885 probes=0 sites=9015 leaves=0 maxdepth=0 width=4 engine=dedup nodes=9015 edges=9885 dedupHits=871 certified=checkCert
+PASS	goroutines/worker-pool/shared-feed	goroutines,channels,range,close
+PASS	maps/map-incdec	maps,assignment,indexing,evaluation_order,calls
+PASS	methods/nil-receiver	methods,nil,pointers,structs,calls
+PASS	noodler/closures/recursive-closure	closures,recursion
+PASS	noodler/evalorder/send-operand-order	evaluation_order,channels,calls
+PASS	noodler/frontier/pointer-to-pointer-chains	pointers,structs,methods,assignment
+PASS	noodler/gotchas/method-value-from-field-path	methods,pointers,fields,value_copy
+PASS	noodler/latitude/receiver-vs-arg-call	evaluation_order,methods,calls,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/noodler/latitude/receiver-vs-arg-call)
+PASS	noodler/methods/explicit-path-ambiguity	methods,embedding
+PASS	noodler/methods/func-type-satisfies	methods,functions,interfaces
+PASS	noodler/methods/method-expressions	methods,pointers
+PASS	noodler/methods/method-on-channel-type	methods,channels,defined_type
+PASS	noodler/methods/method-on-func-type	methods,functions,defined_type
+PASS	noodler/methods/method-on-map-type	methods,maps,defined_type
+PASS	noodler/methods/methods-on-array-type	methods,arrays,defined_type,value_copy
+PASS	noodler/methods/methods-on-literals	methods,literals,pointers
+PASS	noodler/methods/methods-on-slice-type	methods,slices,defined_type,append,aliasing
+PASS	noodler/methods/methods-on-string-bool	methods,strings,bools,defined_type
+PASS	noodler/methods/method-value-binding	methods,pointers,value_copy
+PASS	noodler/methods/method-value-from-iface	methods,interfaces,functions
+PASS	noodler/methods/nil-receiver-recursion	methods,pointers,nil,recursion	stage=confluent	detail=|set|=1 certified over all schedules; coverage-observations: observations=1 steps=9292 probes=0 sites=9053 leaves=0 maxdepth=0 width=4 engine=dedup nodes=9053 edges=9292 dedupHits=240 certified=checkCert
+PASS	noodler/methods/outer-shadows-promoted	methods,embedding,shadowing
+PASS	noodler/methods/pointer-receiver-elements	methods,pointers,arrays,slices,addressability
+PASS	noodler/methods/promoted-non-struct	methods,embedding,defined_type
+PASS	noodler/methods/shallower-wins	methods,embedding,nested
+PASS	noodler/methods/value-receiver-map-element	methods,maps
+PASS	noodler/misc/recursive-slice-struct	structs,slices,recursion,closures
+PASS	noodler/strings/byte-equal-strings	strings,bytes,runes,conversions,equality
+PASS	noodler/strings/byte-inside-rune	strings,indexing,bytes,unicode
+PASS	noodler/strings/concat-loop	strings,concat,loops
+PASS	noodler/strings/errors-new-errorf	stdlib,equality,interfaces
+PASS	noodler/strings/fields-unicode-spaces	strings,stdlib,unicode
+PASS	noodler/strings/invalid-bytes-preserved	strings,invalid_utf8,concat,slicing
+PASS	noodler/strings/join-repeat-edges	strings,stdlib,nil
+PASS	noodler/strings/parse-uint-edges	strings,stdlib,ints
+PASS	noodler/strings/range-indices-multibyte	strings,range,unicode
+PASS	noodler/strings/rune-count-vs-len	strings,range,unicode,len
+PASS	noodler/strings/split-edges	strings,stdlib
+PASS	noodler/strings/sprintf-verbs	strings,stdlib
+PASS	noodler/strings/sprintln-basics	strings,stdlib
+PASS	noodler/strings/sprint-spacing	strings,stdlib
+PASS	noodler/strings/stringer-rendering	strings,stdlib,methods,defined_type
+PASS	noodler/strings/string-from-bytes-copies	strings,bytes,conversions,aliasing
+PASS	noodler/strings/string-ordering	strings,comparisons
+PASS	noodler/strings/substring-then-bytes	strings,slicing,bytes,conversions
+PASS	noodler/strings/trimspace-unicode	strings,stdlib,unicode
+PASS	panic-recover/repanic-collapse/index-two-faults	panic,recover,defer,indexing,slices,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/panic-recover/repanic-collapse/index-two-faults)
+PASS	panic-recover/shim-refusal-unrecoverable/parse-recover	stdlib,strings,panic,recover,defer
+PASS	panic-recover/shim-refusal-unrecoverable/render-recover	stdlib,strings,methods,defined_type
+PASS	panic-recover/shim-refusal-unrecoverable/split-recover	stdlib,strings,panic,recover,defer
+PASS	race/negative-sync/overwrite-vs-trylock	sync,mutex,goroutines,channels,structs,race	stage=racy	detail=every enumerated path refuses: coverage-observations: observations=1 steps=66892 probes=11895 sites=3965 leaves=5078 maxdepth=14 width=4
+PASS	slices/slice-elided-high-eval-once/call-base	slices,slicing,evaluation_order,calls
+PASS	slices/slice-elided-high-eval-once/call-base-low-only	slices,slicing,evaluation_order,calls
+PASS	slices/slice-elided-high-eval-once/explicit-high-control	slices,slicing,evaluation_order,calls
+PASS	slices/slice-elided-high-eval-once/map-index-effectful-key	slices,maps,slicing,indexing,evaluation_order,calls
+PASS	slices/slice-elided-high-eval-once/nested-slice-expr	slices,slicing,evaluation_order,calls
+PASS	slices/slice-expr-eval-order	slices,slicing,evaluation_order,calls
+PASS	spec-examples-decl/address-op-nil-indirection/forms	pointers,addressability,arrays,indexing,structs,literals,calls
+FAIL	spec-examples-decl/timezone-stringer	methods,defined_type,constants,iota,strings,stdlib	stage=frontend-export	detail={"message":"frontend-quarantined: method main.TimeZone.String (fmt.Sprintf format \"GMT%+dh\": verb %+d is outside the modeled fmt subset; satisfaction answers, calls fail closed)","output":"","schema":"golea
+PASS	spec-examples-stmt/method-expr-five-forms	methods,structs,higher_order,calls
+PASS	spec-examples-stmt/operator-precedence/or-calls	bools,closures,calls,evaluation_order
+PASS	structs/selector-eval-once	structs,fields,assignment,evaluation_order,pointers,calls
+FAIL	sync/out-of-scope-cond/cond-broadcast	sync,cond,goroutines	stage=frontend-export	detail={"message":"frontend-quarantined: sync.Cond (only Mutex/RWMutex/WaitGroup/Once are modeled)","output":"","schema":"golean-observation-v1","status":"unsupported"}

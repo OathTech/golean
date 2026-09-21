@@ -1,0 +1,524 @@
+{
+ "buildContext": {
+  "buildTags": [],
+  "cgoEnabled": true,
+  "compiler": "gc",
+  "goarch": "amd64",
+  "goos": "linux"
+ },
+ "fileOrder": [
+  {
+   "files": [
+    "main.go"
+   ],
+   "package": "main"
+  }
+ ],
+ "funcs": [
+  {
+   "body": {
+    "body": [
+     {
+      "results": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "9"
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "f",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "args": [
+       {
+        "bytes": [
+         108,
+         101,
+         110
+        ],
+        "expr": "string",
+        "type": {
+         "kind": "string"
+        }
+       },
+       {
+        "expr": "builtin-len",
+        "operand": {
+         "expr": "deref",
+         "ptr": {
+          "expr": "ident",
+          "name": "ch$cap"
+         },
+         "type": {
+          "dir": "both",
+          "elem": {
+           "int": "int",
+           "kind": "int"
+          },
+          "kind": "chan"
+         }
+        },
+        "operandType": {
+         "dir": "both",
+         "elem": {
+          "int": "int",
+          "kind": "int"
+         },
+         "kind": "chan"
+        },
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "newline": true,
+      "stmt": "print"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "e3recv$lit0",
+   "params": [
+    {
+     "id": "ch$cap",
+     "type": {
+      "elem": {
+       "dir": "both",
+       "elem": {
+        "int": "int",
+        "kind": "int"
+       },
+       "kind": "chan"
+      },
+      "kind": "pointer"
+     }
+    }
+   ],
+   "results": [],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "cap": {
+       "expr": "int",
+       "type": {
+        "int": "int",
+        "kind": "int"
+       },
+       "value": "1"
+      },
+      "elem": {
+       "int": "int",
+       "kind": "int"
+      },
+      "stmt": "make-chan",
+      "target": {
+       "id": "$c0",
+       "target": "declare",
+       "type": {
+        "dir": "both",
+        "elem": {
+         "int": "int",
+         "kind": "int"
+        },
+        "kind": "chan"
+       }
+      }
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "ch",
+        "target": "declare",
+        "type": {
+         "dir": "both",
+         "elem": {
+          "int": "int",
+          "kind": "int"
+         },
+         "kind": "chan"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "ident",
+        "name": "$c0",
+        "type": {
+         "dir": "both",
+         "elem": {
+          "int": "int",
+          "kind": "int"
+         },
+         "kind": "chan"
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "args": [],
+      "callee": {
+       "captured": [
+        {
+         "expr": "ref",
+         "id": "ch"
+        }
+       ],
+       "expr": "func-value",
+       "func": "e3recv$lit0",
+       "type": {
+        "kind": "func",
+        "params": [],
+        "results": [],
+        "variadic": false
+       }
+      },
+      "stmt": "defer"
+     },
+     {
+      "ch": {
+       "expr": "ident",
+       "name": "ch",
+       "type": {
+        "dir": "both",
+        "elem": {
+         "int": "int",
+         "kind": "int"
+        },
+        "kind": "chan"
+       }
+      },
+      "elem": {
+       "int": "int",
+       "kind": "int"
+      },
+      "stmt": "chan-send",
+      "value": {
+       "expr": "int",
+       "type": {
+        "int": "int",
+        "kind": "int"
+       },
+       "value": "5"
+      }
+     },
+     {
+      "elem": {
+       "int": "int",
+       "kind": "int"
+      },
+      "len": {
+       "expr": "int",
+       "type": {
+        "int": "int",
+        "kind": "int"
+       },
+       "value": "1"
+      },
+      "stmt": "make-slice",
+      "target": {
+       "id": "$c1",
+       "target": "declare",
+       "type": {
+        "elem": {
+         "int": "int",
+         "kind": "int"
+        },
+        "kind": "slice"
+       }
+      }
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "x",
+        "target": "declare",
+        "type": {
+         "elem": {
+          "int": "int",
+          "kind": "int"
+         },
+         "kind": "slice"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "ident",
+        "name": "$c1",
+        "type": {
+         "elem": {
+          "int": "int",
+          "kind": "int"
+         },
+         "kind": "slice"
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "cells": [
+       {
+        "id": "$u2",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       },
+       {
+        "id": "$u4",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       },
+       {
+        "id": "$u5",
+        "type": {
+         "dir": "both",
+         "elem": {
+          "int": "int",
+          "kind": "int"
+         },
+         "kind": "chan"
+        }
+       },
+       {
+        "id": "$u6",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       },
+       {
+        "id": "$u7",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "occs": [
+       {
+        "args": [],
+        "binds": [
+         "$u2"
+        ],
+        "callee": {
+         "captured": [],
+         "expr": "func-value",
+         "func": "f"
+        },
+        "kind": "invoke",
+        "name": "call0",
+        "resultTypes": [
+         {
+          "int": "int",
+          "kind": "int"
+         }
+        ]
+       },
+       {
+        "bind": "$u5",
+        "head": {
+         "expr": "ident",
+         "name": "ch",
+         "type": {
+          "dir": "both",
+          "elem": {
+           "int": "int",
+           "kind": "int"
+          },
+          "kind": "chan"
+         }
+        },
+        "kind": "eval",
+        "name": "read3"
+       },
+       {
+        "after": [
+         "call0"
+        ],
+        "binds": [
+         "$u6"
+        ],
+        "ch": {
+         "expr": "ident",
+         "name": "$u5",
+         "type": {
+          "dir": "both",
+          "elem": {
+           "int": "int",
+           "kind": "int"
+          },
+          "kind": "chan"
+         }
+        },
+        "elem": {
+         "int": "int",
+         "kind": "int"
+        },
+        "kind": "recv",
+        "name": "recv4"
+       },
+       {
+        "bind": "$t3",
+        "kind": "target",
+        "lhs": {
+         "expr": {
+          "base": {
+           "expr": "ident",
+           "name": "x",
+           "type": {
+            "elem": {
+             "int": "int",
+             "kind": "int"
+            },
+            "kind": "slice"
+           }
+          },
+          "expr": "index-addr",
+          "index": {
+           "expr": "ident",
+           "name": "$u2",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           }
+          }
+         },
+         "target": "addr"
+        },
+        "name": "target1"
+       },
+       {
+        "bind": "$u4",
+        "kind": "load",
+        "name": "load2",
+        "target": "$t3"
+       },
+       {
+        "bind": "$u7",
+        "head": {
+         "expr": "binary",
+         "op": "+",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "x": {
+          "expr": "ident",
+          "name": "$u4",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          }
+         },
+         "y": {
+          "expr": "ident",
+          "name": "$u6",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          }
+         }
+        },
+        "kind": "eval",
+        "name": "op5"
+       }
+      ],
+      "stmt": "unseq",
+      "stores": [
+       {
+        "target": "$t3",
+        "value": "$u7"
+       }
+      ],
+      "then": {
+       "body": [],
+       "stmt": "block"
+      }
+     },
+     {
+      "results": [
+       {
+        "base": {
+         "expr": "ident",
+         "name": "x",
+         "type": {
+          "elem": {
+           "int": "int",
+           "kind": "int"
+          },
+          "kind": "slice"
+         }
+        },
+        "expr": "index-get",
+        "index": {
+         "expr": "int",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "value": "0"
+        },
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "e3recv",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  }
+ ],
+ "methodSets": [],
+ "methods": [],
+ "package": "main",
+ "schema": "golean-native-v1",
+ "types": []
+}

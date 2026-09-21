@@ -226,6 +226,18 @@ def x3graph : UnseqGraph := {
            occ "E_recv" (.invoke ["$rc"] (.var "recvv") []) ["E_f"],
            occ "Op" (.eval "$op" (.add (.var "$rd") (.var "$rc")))],
   stores := [("$t", "$op")] }
+/-- Stage E E3 (2026-09-21): the SAME sweep with the receive as a `recv` BODY on the
+channel value (the machine's own `chanRecv` under the wait frame) instead of Stage B's
+closure-invocation stand-in — the same set, the same refusal on the empty channel. -/
+def x3graphRecv : UnseqGraph := {
+  cells := [intP "$f", sliceP "$hdr", intP "$rd", intP "$rc", intP "$op"],
+  occs := [occ "E_f" (.invoke ["$f"] (.var "fv") []),
+           occ "R_x" (.eval "$hdr" (.var "x")),
+           occ "L" (.target "$t" (.addr (.indexAddr (.var "$hdr") (.var "$f")))),
+           occ "Rd" (.load "$rd" "$t"),
+           occ "E_recv" (.recv ["$rc"] (.var "ch") .int) ["E_f"],
+           occ "Op" (.eval "$op" (.add (.var "$rd") (.var "$rc")))],
+  stores := [("$t", "$op")] }
 def x3 (buffered : Bool) : Program := { funcs := #[
   mainUnit [sliceP "x", ⟨"ch", .chan .both .int⟩, ⟨"fv", fnTy [] [.int]⟩,
             ⟨"recvv", fnTy [.pointer (.chan .both .int)] [.int]⟩,
@@ -238,6 +250,17 @@ def x3 (buffered : Bool) : Program := { funcs := #[
       .deferCall (.var "dv") #[],
       .unseq x3graph (.seqn #[])]),
   x3f, x3recv, x3defer] }
+def x3r (buffered : Bool) : Program := { funcs := #[
+  mainUnit [sliceP "x", ⟨"ch", .chan .both .int⟩, ⟨"fv", fnTy [] [.int]⟩,
+            ⟨"dv", fnTy [.pointer (.chan .both .int)] []⟩]
+    (makeSlice "x" [1] ++
+     [.makeChan (.var "ch") .int (some (.intLit 1))] ++
+     (if buffered then [.chanSend (.var "ch") (.intLit 5) .int] else []) ++
+     [.assign (.var "fv") (clos "x3f" []),
+      .assign (.var "dv") (clos "x3defer" ["ch"]),
+      .deferCall (.var "dv") #[],
+      .unseq x3graphRecv (.seqn #[])]),
+  x3f, x3defer] }
 
 /-! ## R1  `v := x + y + mut()` — unreduced {0,1,2,3}; the REFUTED reduction {0,2,3} -/
 
@@ -742,6 +765,10 @@ def main (_args : List String) : IO Unit := do
     expectSet "X3 x[f()] += <-ch, buffered" (x3 true) "main"
       [panicOut (oob 9 1) "len 0\n", panicOut (oob 9 1) "len 1\n"],
     expectRefusal "X3e x[f()] += <-ch, EMPTY channel: blocked is a refusal apart from the members" (x3 false) "main" "deadlock",
+    -- Stage E E3: the receive as a `recv` BODY (the machine's chanRecv under the wait frame)
+    expectSet "X3 (recv body) x[f()] += <-ch, buffered" (x3r true) "main"
+      [panicOut (oob 9 1) "len 0\n", panicOut (oob 9 1) "len 1\n"],
+    expectRefusal "X3e (recv body) EMPTY channel: blocked is a refusal apart from the members" (x3r false) "main" "deadlock",
     expectTape "X3e canonical tape: the panic member (the receive never ran)" (x3 false) "main" []
       (panicOut (oob 9 1) "len 0\n"),
     -- R1

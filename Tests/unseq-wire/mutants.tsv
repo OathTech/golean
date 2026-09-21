@@ -21,3 +21,5 @@ mut-nested-completion-join	invalid branch join
 mut-deref-hidden	hidden read in a pure node
 mut-map-target-key	non-atom base or key
 mut-deref-target-nonatom	outside the admitted fragment
+mut-recv-nonatom	hidden read in a receive
+mut-recv-two-binds	outside the admitted fragment

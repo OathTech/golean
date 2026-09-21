@@ -74,6 +74,24 @@ package main
 // map values as targets, and nested value bases of a field target
 // (`a[i].f = e`) stay legacy by name.
 //
+// STAGE E, family E3 (2026-09-21): RECEIVES and METHOD CALLS. A receive
+// `<-ch` in operand position is an EVENT occurrence (spec#Order_of_evaluation
+// orders receives lexically among the calls — E1; the communication happens
+// once; the value lands in a predeclared binder) — it counts toward the
+// trigger like a call (an effect); the channel operand is an atom or a
+// produced value (channel types of admitted element types enter the type
+// grammar). A METHOD CALL on a CONCRETE receiver (a named struct, or a pointer
+// to one; never an interface — dynamic dispatch has no callee VALUE) is an
+// invocation whose callee is the method's function value and whose first
+// argument is the receiver sub-evaluation (E14's sub-axis): a pointer
+// receiver on a pointer operand passes the pointer atom; on an addressable
+// variable, its address (a frozen `ref`, no read); on `*p`, the nil-asserting
+// `addr-of-deref` — an occurrence that may fail; a value receiver copies the
+// operand (an address-taken variable's read is the occurrence) or, through a
+// pointer, dereferences it (an occurrence). Promoted methods, method values
+// and expressions, interface methods, generic methods stay legacy by name.
+// The comma-ok receive is E5's (a two-binder occurrence).
+//
 // The classifier has no emission side effects (it lifts no func literal,
 // hoists nothing), so `--unseq-census` (main.go) runs it over every
 // statement list of a program and prints one TSV row per sweep; the
@@ -102,9 +120,98 @@ type unseqDecision struct {
 	admitted  bool
 	form      string // define | assign | elem-assign | compound | incdec | return | call-stmt | print-stmt | other
 	reason    string // the FIRST construct outside the grammar ("" when every operand is inside it)
-	events    int    // every invocation-kind occurrence: calls AND non-constant len/cap (E1-ordered)
-	calls     int    // the CALLS among them — the events with effects; the trigger counts these
+	events    int    // every invocation-kind occurrence: calls, receives AND non-constant len/cap (E1-ordered)
+	calls     int    // the EFFECTFUL events among them — calls and receives; the trigger counts these
 	nonEvents int
+
+	// THE OBSERVABILITY RECORD (Stage E E3, 2026-09-21). The E1 PARTICIPANTS of the
+	// sweep — calls, receives, non-constant len/cap, `&&`/`||` guards — are numbered
+	// in COMPLETION order (`seq`: the order the lowering's E1 anchor chain
+	// realizes); an open participant holds an OPEN id on `open` until it completes,
+	// `closeIdx` maps the id to its completion index, `effect` marks the effectful
+	// ones (calls, receives). Every non-event occurrence records the innermost
+	// participant it lies inside (`anc`: an open id, or -1) and `lo`, the first
+	// participant index NOT forced before it — 0 when it consumes no participant
+	// (an earlier participant is then a sibling, unordered against it), else one
+	// past the last participant completed inside its own operand window (those it
+	// consumes, and every participant completing before one of them, precede it).
+	// The occurrence is OBSERVABLE against an effectful event X iff lo <= X < the
+	// completion index of `anc` (an occurrence inside a participant's operand
+	// subtree precedes that participant and hence every later one). A guard's
+	// window holds its own region, so it is observable iff an effectful event
+	// completes AFTER it — the later event is anchored at the guard's COMPLETION
+	// (BUG-113's fix; the legacy hoister realizes the wrong order there). A sweep is
+	// admitted iff some occurrence is observable: every other in-grammar sweep with
+	// a call has every edge forced, and the legacy path realizes that unique order
+	// exactly (the pilot's trigger rationale, made precise).
+	seq      int
+	open     []int
+	nextOpen int
+	closeIdx map[int]int
+	effect   map[int]bool
+	occs     []unseqOccRec
+}
+
+// unseqOccRec is one non-event occurrence's observability record.
+type unseqOccRec struct {
+	anc int // the innermost enclosing participant's OPEN id, -1 at the top level
+	lo  int // the first participant index not forced before the occurrence
+}
+
+// openP opens an E1 participant (a call, a receive, a len/cap, a guard) around
+// the classification of its operand subtree; closeP completes it.
+func (d *unseqDecision) openP() int {
+	id := d.nextOpen
+	d.nextOpen++
+	d.open = append(d.open, id)
+	return id
+}
+
+func (d *unseqDecision) closeP(id int, effect bool) {
+	if n := len(d.open); n > 0 && d.open[n-1] == id {
+		d.open = d.open[:n-1]
+	}
+	if d.closeIdx == nil {
+		d.closeIdx = map[int]int{}
+		d.effect = map[int]bool{}
+	}
+	d.closeIdx[id] = d.seq
+	d.effect[d.seq] = effect
+	d.seq++
+}
+
+// occ records one non-event occurrence (the census column AND the observability
+// record); `start` is the participant count when the occurrence's OWN operand
+// classification began.
+func (d *unseqDecision) occ(start int) {
+	d.nonEvents++
+	anc := -1
+	if n := len(d.open); n > 0 {
+		anc = d.open[n-1]
+	}
+	lo := 0
+	if d.seq > start {
+		lo = d.seq
+	}
+	d.occs = append(d.occs, unseqOccRec{anc: anc, lo: lo})
+}
+
+// observable decides the trigger from the record (the struct's comment).
+func (d *unseqDecision) observable() bool {
+	for _, o := range d.occs {
+		hi := d.seq
+		if o.anc >= 0 {
+			if c, done := d.closeIdx[o.anc]; done {
+				hi = c
+			}
+		}
+		for x := o.lo; x < hi; x++ {
+			if d.effect[x] {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // unseqLocalVar reports whether obj is a function-local variable (a
@@ -150,6 +257,10 @@ func unseqTypeOKSeen(t types.Type, seen map[*types.Named]bool) bool {
 	case *types.Pointer:
 		// Stage E E2: a pointer to an admitted type (its VALUE is an atom; the
 		// deref is the occurrence).
+		return unseqTypeOKSeen(u.Elem(), seen)
+	case *types.Chan:
+		// Stage E E3: a channel of an admitted element type (its VALUE is an
+		// atom; the receive is the event).
 		return unseqTypeOKSeen(u.Elem(), seen)
 	case *types.Map:
 		// Stage E E2: an int/bool/string key (a hash-safe, unboxed key) and an
@@ -336,7 +447,20 @@ func (e *emitter) unseqAddrTaken(body *ast.BlockStmt) map[types.Object]bool {
 		case *ast.CallExpr:
 			if sel, ok := ast.Unparen(v.Fun).(*ast.SelectorExpr); ok {
 				if s, isSel := e.info.Selections[sel]; isSel && s.Kind() == types.MethodVal {
-					mark(unseqRootIdent(sel.X))
+					// Stage E E3 (2026-09-21): the implicit `&x` exists only for a
+					// POINTER-receiver method on a NON-pointer operand (spec#Calls:
+					// `x.m()` is `(&x).m()`); a pointer operand passes its VALUE and a
+					// value receiver copies — no address of the variable is taken.
+					// Stage C marked every method-call operand conservatively.
+					if fn, isFn := s.Obj().(*types.Func); isFn {
+						if sig, isSig := fn.Type().(*types.Signature); isSig && sig.Recv() != nil {
+							_, recvIsPtr := types.Unalias(sig.Recv().Type()).Underlying().(*types.Pointer)
+							_, opIsPtr := types.Unalias(e.goTypeOf(sel.X)).Underlying().(*types.Pointer)
+							if recvIsPtr && !opIsPtr {
+								mark(unseqRootIdent(sel.X))
+							}
+						}
+					}
 				}
 			}
 		}
@@ -361,6 +485,7 @@ const (
 // carries. `valuePos` is true where a value is required (false only for
 // the callee-position and statement-position calls handled by callers).
 func (e *emitter) unseqExpr(x ast.Expr, ctx *unseqCtx, d *unseqDecision) (unseqExprKind, bool) {
+	start := d.seq // the occurrence window's start (unseqDecision.occ)
 	refuse := func(why string) (unseqExprKind, bool) {
 		if d.reason == "" {
 			d.reason = why
@@ -396,7 +521,7 @@ func (e *emitter) unseqExpr(x ast.Expr, ctx *unseqCtx, d *unseqDecision) (unseqE
 				if !unseqTypeOK(pv.Type()) {
 					return refuse("package-level variable of a type outside the grammar (" + pv.Type().String() + ")")
 				}
-				d.nonEvents++
+				d.occ(start)
 				return unseqValue, true
 			}
 			return refuse("non-local identifier")
@@ -408,7 +533,7 @@ func (e *emitter) unseqExpr(x ast.Expr, ctx *unseqCtx, d *unseqDecision) (unseqE
 			return refuse("local of a type outside the pilot grammar (" + loc.Type().String() + ")")
 		}
 		if e.unseqAddrTaken(ctx.body)[obj] {
-			d.nonEvents++ // a mutable read: the pilot's P(ii) read
+			d.occ(start) // a mutable read: the pilot's P(ii) read
 			return unseqValue, true
 		}
 		return unseqAtom, true
@@ -431,7 +556,7 @@ func (e *emitter) unseqExpr(x ast.Expr, ctx *unseqCtx, d *unseqDecision) (unseqE
 			if _, ok := e.unseqExpr(v.Index, ctx, d); !ok {
 				return unseqConst, false
 			}
-			d.nonEvents++
+			d.occ(start)
 			return unseqValue, true
 		}
 		sl, isSlice := types.Unalias(bt).Underlying().(*types.Slice)
@@ -447,7 +572,7 @@ func (e *emitter) unseqExpr(x ast.Expr, ctx *unseqCtx, d *unseqDecision) (unseqE
 		if _, ok := e.unseqExpr(v.Index, ctx, d); !ok {
 			return unseqConst, false
 		}
-		d.nonEvents++ // the ONE checked access (N1 SPLIT: base/index are producers)
+		d.occ(start) // the ONE checked access (N1 SPLIT: base/index are producers)
 		return unseqValue, true
 	case *ast.SliceExpr:
 		bt := e.goTypeOf(v.X)
@@ -471,7 +596,7 @@ func (e *emitter) unseqExpr(x ast.Expr, ctx *unseqCtx, d *unseqDecision) (unseqE
 				return unseqConst, false
 			}
 		}
-		d.nonEvents++ // a failing pure op (slice bounds)
+		d.occ(start) // a failing pure op (slice bounds)
 		return unseqValue, true
 	case *ast.CallExpr:
 		if _, ok := e.unseqCall(v, ctx, d, 1); !ok {
@@ -484,13 +609,15 @@ func (e *emitter) unseqExpr(x ast.Expr, ctx *unseqCtx, d *unseqDecision) (unseqE
 			return refuse("binary operator " + v.Op.String())
 		}
 		if op == "&&" || op == "||" {
+			gid := d.openP() // the guard is an E1 participant: its test and region precede its completion
 			if _, ok := e.unseqExpr(v.X, ctx, d); !ok {
 				return unseqConst, false
 			}
 			if _, ok := e.unseqExpr(v.Y, ctx, d); !ok {
 				return unseqConst, false
 			}
-			d.nonEvents++ // the guard entry + completion
+			d.closeP(gid, false)
+			d.occ(start) // the guard entry + completion: its window holds its region, so it is observable iff an effectful event FOLLOWS it
 			return unseqValue, true
 		}
 		xt := e.goTypeOf(v.X)
@@ -509,10 +636,33 @@ func (e *emitter) unseqExpr(x ast.Expr, ctx *unseqCtx, d *unseqDecision) (unseqE
 			return unseqConst, false
 		}
 		if e.unseqBinaryMayFail(v) {
-			d.nonEvents++ // division/remainder by a non-constant, shift by a non-constant signed count
+			d.occ(start) // division/remainder by a non-constant, shift by a non-constant signed count
 		}
 		return unseqValue, true
 	case *ast.UnaryExpr:
+		if v.Op == token.ARROW {
+			// Stage E E3: a RECEIVE — an E1-ordered EVENT occurrence with an
+			// effect (the trigger counts it like a call); one result.
+			if _, isTup := e.goTypeOf(v).(*types.Tuple); isTup {
+				return refuse("comma-ok receive in expression position")
+			}
+			ct := e.goTypeOf(v.X)
+			if ct == nil || !unseqTypeOK(ct) {
+				return refuse("receive on a channel type outside the grammar")
+			}
+			ch, isChan := types.Unalias(ct).Underlying().(*types.Chan)
+			if !isChan || ch.Dir() == types.SendOnly {
+				return refuse("receive on a non-receivable channel")
+			}
+			rid := d.openP()
+			if _, ok := e.unseqExpr(v.X, ctx, d); !ok {
+				return unseqConst, false
+			}
+			d.closeP(rid, true)
+			d.events++
+			d.calls++
+			return unseqValue, true
+		}
 		switch v.Op {
 		case token.SUB, token.XOR, token.NOT:
 		default:
@@ -539,7 +689,7 @@ func (e *emitter) unseqExpr(x ast.Expr, ctx *unseqCtx, d *unseqDecision) (unseqE
 		if _, ok := e.unseqExpr(v.X, ctx, d); !ok {
 			return unseqConst, false
 		}
-		d.nonEvents++ // a failing pure op (spec#Type_assertions)
+		d.occ(start) // a failing pure op (spec#Type_assertions)
 		return unseqValue, true
 	case *ast.FuncLit:
 		return refuse("func literal in value position")
@@ -553,7 +703,7 @@ func (e *emitter) unseqExpr(x ast.Expr, ctx *unseqCtx, d *unseqDecision) (unseqE
 		if _, ok := e.unseqExpr(v.X, ctx, d); !ok {
 			return unseqConst, false
 		}
-		d.nonEvents++
+		d.occ(start)
 		return unseqValue, true
 	case *ast.SelectorExpr:
 		if pv, ok := e.unseqQualifiedPackageVar(v); ok {
@@ -563,7 +713,7 @@ func (e *emitter) unseqExpr(x ast.Expr, ctx *unseqCtx, d *unseqDecision) (unseqE
 			if !unseqTypeOK(pv.Type()) {
 				return refuse("qualified package-level variable of a type outside the grammar (" + pv.Type().String() + ")")
 			}
-			d.nonEvents++
+			d.occ(start)
 			return unseqValue, true
 		}
 		// Stage E E2: a FIELD read. Through a pointer: the pointer value is the
@@ -580,7 +730,7 @@ func (e *emitter) unseqExpr(x ast.Expr, ctx *unseqCtx, d *unseqDecision) (unseqE
 			return unseqConst, false
 		}
 		if isPtr {
-			d.nonEvents++
+			d.occ(start)
 		}
 		return unseqValue, true
 	case *ast.CompositeLit:
@@ -618,6 +768,7 @@ func (e *emitter) unseqBinaryMayFail(b *ast.BinaryExpr) bool {
 // address-taken); or a func literal (lifted at lowering). Returns the
 // signature.
 func (e *emitter) unseqCallee(c *ast.CallExpr, ctx *unseqCtx, d *unseqDecision) (*types.Signature, bool) {
+	start := d.seq // the occurrence window's start (unseqDecision.occ)
 	refuse := func(why string) (*types.Signature, bool) {
 		if d.reason == "" {
 			d.reason = why
@@ -658,7 +809,7 @@ func (e *emitter) unseqCallee(c *ast.CallExpr, ctx *unseqCtx, d *unseqDecision) 
 				return refuse("call through a non-func local")
 			}
 			if e.unseqAddrTaken(ctx.body)[obj] {
-				d.nonEvents++ // the callee VALUE is a mutable read
+				d.occ(start) // the callee VALUE is a mutable read
 			}
 			return sig, true
 		case *types.Builtin:
@@ -671,8 +822,127 @@ func (e *emitter) unseqCallee(c *ast.CallExpr, ctx *unseqCtx, d *unseqDecision) 
 			return refuse("func literal without a signature")
 		}
 		return sig, true
+	case *ast.SelectorExpr:
+		// Stage E E3: a METHOD CALL on a concrete receiver.
+		sig, ok := e.unseqMethodCallee(fn, ctx, d)
+		if !ok {
+			return nil, false
+		}
+		return sig, true
 	}
 	return refuse("callee expression outside the pilot grammar")
+}
+
+// unseqMethodCallee classifies `x.M(...)`'s callee (Stage E E3): a non-generic
+// method of a named struct type of the main package (never an interface method,
+// never a promoted hop, never a method value / expression), with the receiver
+// SUB-EVALUATION classified here — the receiver is the invocation's first
+// argument: a pointer receiver takes the pointer operand (an atom or an
+// occurrence), an addressable variable's address (a frozen `ref`, no read), or
+// `*p`'s nil-asserting `addr-of-deref` (an occurrence that may fail); a value
+// receiver copies the operand (an address-taken variable's read is the
+// occurrence) or dereferences a pointer operand (an occurrence). Returns the
+// method's signature WITHOUT the receiver.
+func (e *emitter) unseqMethodCallee(sel *ast.SelectorExpr, ctx *unseqCtx, d *unseqDecision) (*types.Signature, bool) {
+	start := d.seq // the occurrence window's start (unseqDecision.occ)
+	refuse := func(why string) (*types.Signature, bool) {
+		if d.reason == "" {
+			d.reason = why
+		}
+		return nil, false
+	}
+	if _, isQual := e.qualifiedPkgRef(sel); isQual {
+		return refuse("qualified function callee (imported source package)")
+	}
+	seln, isSel := e.info.Selections[sel]
+	if !isSel || seln.Kind() != types.MethodVal {
+		return refuse("callee expression outside the pilot grammar")
+	}
+	fn, isFn := seln.Obj().(*types.Func)
+	if !isFn {
+		return refuse("method callee without a function object")
+	}
+	if len(seln.Index()) != 1 {
+		return refuse("promoted method call (embedded hops)")
+	}
+	msig, ok := fn.Type().(*types.Signature)
+	if !ok || msig.Recv() == nil {
+		return refuse("method callee without a receiver")
+	}
+	if msig.TypeParams().Len() > 0 || msig.RecvTypeParams().Len() > 0 {
+		return refuse("generic method callee")
+	}
+	if fn.Pkg() == nil || !e.isMainPackage(fn.Pkg()) {
+		return refuse("method callee outside the main package")
+	}
+	recvT := e.goTypeOf(sel.X)
+	if recvT == nil {
+		return refuse("method call on an untyped receiver")
+	}
+	if _, isIface := types.Unalias(recvT).Underlying().(*types.Interface); isIface {
+		return refuse("interface method call (dynamic dispatch has no callee value)")
+	}
+	// the DECLARED receiver: a named struct or a pointer to one
+	declRecv := msig.Recv().Type()
+	pointerRecv := false
+	if ptr, isPtr := types.Unalias(declRecv).Underlying().(*types.Pointer); isPtr {
+		pointerRecv = true
+		declRecv = ptr.Elem()
+	}
+	if !unseqTypeOK(declRecv) {
+		return refuse("method receiver type outside the grammar (" + declRecv.String() + ")")
+	}
+	if _, isNamedStruct := types.Unalias(declRecv).(*types.Named); !isNamedStruct {
+		return refuse("method on a non-struct named type (E5)")
+	}
+	opPtr, opIsPtr := types.Unalias(recvT).Underlying().(*types.Pointer)
+	if !unseqTypeOK(recvT) {
+		return refuse("method receiver operand type outside the grammar (" + recvT.String() + ")")
+	}
+	_ = opPtr
+	// the receiver sub-evaluation
+	if pointerRecv {
+		if opIsPtr {
+			if _, ok := e.unseqExpr(sel.X, ctx, d); !ok {
+				return nil, false
+			}
+		} else {
+			// the implicit &x: an addressable variable's address (frozen, no read);
+			// `(*p).M()` — the nil-asserting address of the dereference, an
+			// occurrence that may fail; anything else is outside
+			inner := ast.Unparen(sel.X)
+			switch x := inner.(type) {
+			case *ast.Ident:
+				obj := e.info.Uses[x]
+				if _, isLocal := e.unseqLocalVar(obj); isLocal {
+					if ctx.captured[obj] {
+						return refuse("pointer-receiver call on a captured variable (lifted body)")
+					}
+				} else if _, isPkg := e.isPackageVar(obj); !isPkg {
+					return refuse("pointer-receiver call on a non-variable operand")
+				}
+			case *ast.StarExpr:
+				if _, ok := e.unseqExpr(x.X, ctx, d); !ok {
+					return nil, false
+				}
+				d.occ(start) // &*p asserts p non-nil (spec#Address_operators)
+			default:
+				return refuse("pointer-receiver call on a non-variable operand")
+			}
+		}
+	} else {
+		if _, ok := e.unseqExpr(sel.X, ctx, d); !ok {
+			return nil, false
+		}
+		if opIsPtr {
+			d.occ(start) // the auto-dereference of the pointer operand (nil check + copy)
+		}
+	}
+	sig, ok := seln.Type().(*types.Signature)
+	if !ok {
+		return refuse("method callee without a call signature")
+	}
+	return sig, true
 }
 
 // unseqCall classifies a call: callee, arguments (atoms or values, no
@@ -687,6 +957,7 @@ func (e *emitter) unseqCall(c *ast.CallExpr, ctx *unseqCtx, d *unseqDecision, ma
 		}
 		return 0, false
 	}
+	pid := d.openP() // the call / len / cap is an E1 participant enclosing its operand subtree
 	if id, ok := ast.Unparen(c.Fun).(*ast.Ident); ok {
 		if _, isBuiltin := e.info.Uses[id].(*types.Builtin); isBuiltin {
 			switch id.Name {
@@ -712,6 +983,7 @@ func (e *emitter) unseqCall(c *ast.CallExpr, ctx *unseqCtx, d *unseqDecision, ma
 				// order against calls) — but it has no effect and cannot fail
 				// on a slice value, so a read reordered against it is
 				// unobservable: it does not by itself admit a sweep (`calls`).
+				d.closeP(pid, false)
 				d.events++
 				return 1, true
 			}
@@ -758,6 +1030,7 @@ func (e *emitter) unseqCall(c *ast.CallExpr, ctx *unseqCtx, d *unseqDecision, ma
 			return refuse("result type outside the pilot grammar (" + sig.Results().At(i).Type().String() + ")")
 		}
 	}
+	d.closeP(pid, true)
 	d.events++
 	d.calls++
 	return n, true
@@ -858,6 +1131,7 @@ func (e *emitter) unseqCtxNow() *unseqCtx {
 // interface-typed element is outside the pilot (its store would box the
 // value inside the graph; boxing is an argument/completion wrap here).
 func (e *emitter) unseqElemTarget(ix *ast.IndexExpr, ctx *unseqCtx, d *unseqDecision) bool {
+	start := d.seq // the occurrence window's start (unseqDecision.occ)
 	refuse := func(why string) bool {
 		if d.reason == "" {
 			d.reason = why
@@ -884,7 +1158,7 @@ func (e *emitter) unseqElemTarget(ix *ast.IndexExpr, ctx *unseqCtx, d *unseqDeci
 	if _, ok := e.unseqExpr(ix.Index, ctx, d); !ok {
 		return false
 	}
-	d.nonEvents++ // the target plan (and, for a compound target, its load)
+	d.occ(start) // the target plan (and, for a compound target, its load)
 	return true
 }
 
@@ -991,6 +1265,7 @@ func (e *emitter) unseqMapTarget(ix *ast.IndexExpr, ctx *unseqCtx, d *unseqDecis
 // It never emits: the census and the emitter call it alike.
 func (e *emitter) unseqClassify(s ast.Stmt, ctx *unseqCtx) unseqDecision {
 	d := unseqDecision{form: "other"}
+	start := d.seq // the occurrence window's start (unseqDecision.occ)
 	refuse := func(why string) unseqDecision {
 		if d.reason == "" {
 			d.reason = why
@@ -1078,14 +1353,14 @@ func (e *emitter) unseqClassify(s ast.Stmt, ctx *unseqCtx) unseqDecision {
 			}
 			if op == "/" || op == "%" {
 				if tv, ok := e.info.Types[st.Rhs[0]]; !ok || tv.Value == nil {
-					d.nonEvents++ // the compound op itself may fail
+					d.occ(start) // the compound op itself may fail
 				}
 			}
 			if op == "<<" || op == ">>" {
 				if tv, ok := e.info.Types[st.Rhs[0]]; !ok || tv.Value == nil {
 					if t := e.goTypeOf(st.Rhs[0]); t != nil {
 						if b, isB := types.Unalias(t).Underlying().(*types.Basic); !isB || b.Info()&types.IsUnsigned == 0 {
-							d.nonEvents++
+							d.occ(start)
 						}
 					}
 				}
@@ -1167,12 +1442,14 @@ func (e *emitter) unseqClassify(s ast.Stmt, ctx *unseqCtx) unseqDecision {
 	default:
 		return refuse("statement form outside the pilot grammar")
 	}
-	d.admitted = d.reason == "" && d.calls >= 1 && d.nonEvents >= 1
+	d.admitted = d.reason == "" && d.calls >= 1 && d.observable()
 	if d.reason == "" && !d.admitted {
 		if d.calls == 0 {
 			d.reason = "no call occurrence (legacy path: nothing with an effect to reorder against)"
-		} else {
+		} else if d.nonEvents == 0 {
 			d.reason = "no non-event occurrence beside the call(s) (legacy path: every edge forced)"
+		} else {
+			d.reason = "no occurrence observable against an effectful event (legacy path: every edge forced — Stage E E3 trigger)"
 		}
 	}
 	return d
@@ -1184,6 +1461,7 @@ func (e *emitter) unseqClassify(s ast.Stmt, ctx *unseqCtx) unseqDecision {
 // private local's target plan is order-transparent), a `pkg.V` qualified
 // package-level variable, or a slice element.
 func (e *emitter) unseqReadWriteTarget(lv ast.Expr, ctx *unseqCtx, d *unseqDecision) bool {
+	start := d.seq // the occurrence window's start (unseqDecision.occ)
 	switch l := ast.Unparen(lv).(type) {
 	case *ast.Ident:
 		loc, isPkg, ok := e.unseqVarTarget(l, false, ctx, d)
@@ -1197,7 +1475,7 @@ func (e *emitter) unseqReadWriteTarget(lv ast.Expr, ctx *unseqCtx, d *unseqDecis
 			return false
 		}
 		if isPkg || e.unseqAddrTaken(ctx.body)[e.info.Uses[l]] {
-			d.nonEvents++ // the load through the target reads a mutable location
+			d.occ(start) // the load through the target reads a mutable location
 		}
 		return true
 	case *ast.SelectorExpr:
@@ -1207,7 +1485,7 @@ func (e *emitter) unseqReadWriteTarget(lv ast.Expr, ctx *unseqCtx, d *unseqDecis
 			if !e.unseqFieldTarget(l, ctx, d) {
 				return false
 			}
-			d.nonEvents++
+			d.occ(start)
 			return true
 		}
 		pv, ok := e.unseqQualifiedTarget(l, d)
@@ -1220,7 +1498,7 @@ func (e *emitter) unseqReadWriteTarget(lv ast.Expr, ctx *unseqCtx, d *unseqDecis
 			}
 			return false
 		}
-		d.nonEvents++ // the load of a package-level variable is a mutable read
+		d.occ(start) // the load of a package-level variable is a mutable read
 		return true
 	case *ast.IndexExpr:
 		if _, isMap := e.unseqMapBase(l.X, d); isMap {
@@ -1230,7 +1508,7 @@ func (e *emitter) unseqReadWriteTarget(lv ast.Expr, ctx *unseqCtx, d *unseqDecis
 			if !e.unseqMapTarget(l, ctx, d) {
 				return false
 			}
-			d.nonEvents++
+			d.occ(start)
 			return true
 		}
 		return e.unseqElemTarget(l, ctx, d)
@@ -1240,7 +1518,7 @@ func (e *emitter) unseqReadWriteTarget(lv ast.Expr, ctx *unseqCtx, d *unseqDecis
 		if !e.unseqDerefTarget(l, ctx, d) {
 			return false
 		}
-		d.nonEvents++
+		d.occ(start)
 		return true
 	}
 	if d.reason == "" {

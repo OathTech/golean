@@ -397,6 +397,7 @@ def UnseqBody.eqbF (f : Nat) : UnseqBody → UnseqBody → Bool
   | .load b1 t1, .load b2 t2 => b1 == b2 && t1 == t2
   | .invoke bs1 c1 a1, .invoke bs2 c2 a2 =>
       bs1 == bs2 && Expr.eqbF f c1 c2 && eqbListP (Expr.eqbF f) a1 a2
+  | .recv bs1 c1 e1, .recv bs2 c2 e2 => bs1 == bs2 && Expr.eqbF f c1 c2 && Ty.eqb e1 e2
   | .target b1 l1, .target b2 l2 => b1 == b2 && Assignee.eqbF f l1 l2
   | .guard t1 w1 o1, .guard t2 w2 o2 => t1 == t2 && w1 == w2 && o1 == o2
   | _, _ => false
@@ -415,6 +416,9 @@ theorem UnseqBody.eqbF_sound (f : Nat) :
     obtain ⟨h1, h2, h3⟩ := andSplit3 h
     cases eq_of_beq h1; cases Expr.eqbF_sound _ _ _ h2
     cases eqbListP_sound (Expr.eqbF_sound f) h3; rfl
+  case recv.recv bs1 c1 e1 bs2 c2 e2 =>
+    obtain ⟨h1, h2, h3⟩ := andSplit3 h
+    cases eq_of_beq h1; cases Expr.eqbF_sound _ _ _ h2; cases Ty.eqb_sound h3; rfl
   case target.target b1 l1 b2 l2 =>
     obtain ⟨h1, h2⟩ := andSplit2 h
     cases eq_of_beq h1; cases Assignee.eqbF_sound _ _ _ h2; rfl

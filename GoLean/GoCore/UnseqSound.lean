@@ -104,6 +104,7 @@ theorem unseq_record_stable {g g' : UnseqGraph} {thenB thenB' : Stmt} {st st' : 
   | unseqRunTarget hget hbody hplan => exact ⟨rfl, rfl, rfl, rfl⟩
   | unseqRunGuard hget hbody hg => exact ⟨rfl, rfl, rfl, rfl⟩
   | unseqStmtDone hget hbody => exact ⟨rfl, rfl, rfl, rfl⟩
+  | unseqRecvDone hget hbody => exact ⟨rfl, rfl, rfl, rfl⟩
   | unseqRunLoad hget hbody hres hdel =>
       rcases toResult_cases hres with ⟨⟨s₂, tr₂⟩, rfl, hX⟩ | ⟨msg, rfl, hX⟩
       · simp only [deliver_ok, Prod.mk.injEq] at hdel
@@ -171,6 +172,11 @@ theorem unseq_done_permanent {g : UnseqGraph} {thenB : Stmt} {st st' : List Unse
       · subst hij; rw [List.getElem?_set_self hlt]
       · rw [List.getElem?_set_ne hij]; exact hi
   | unseqStmtDone hget hbody =>
+      rename_i j
+      by_cases hij : j = i
+      · subst hij; rw [List.getElem?_set_self hlt]
+      · rw [List.getElem?_set_ne hij]; exact hi
+  | unseqRecvDone hget hbody =>
       rename_i j
       by_cases hij : j = i
       · subst hij; rw [List.getElem?_set_self hlt]

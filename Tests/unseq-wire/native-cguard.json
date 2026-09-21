@@ -149,112 +149,120 @@
       "stmt": "assign"
      },
      {
-      "cells": [
+      "define": true,
+      "lhs": [
        {
-        "id": "$u0",
-        "type": {
-         "kind": "bool"
-        }
-       },
-       {
-        "id": "$u1",
-        "type": {
-         "kind": "bool"
-        }
-       },
-       {
-        "id": "$u2",
+        "id": "$c1",
+        "target": "declare",
         "type": {
          "kind": "bool"
         }
        }
       ],
-      "occs": [
+      "rhs": [
        {
-        "bind": "$u0",
-        "head": {
-         "expr": "bool",
-         "type": {
-          "kind": "bool"
-         },
-         "value": true
+        "expr": "bool",
+        "type": {
+         "kind": "bool"
         },
-        "kind": "eval",
-        "name": "copy0"
-       },
-       {
-        "kind": "guard",
-        "name": "guard1",
-        "out": "$u1",
-        "test": "$u0",
-        "when": true
-       },
-       {
-        "args": [],
-        "binds": [
-         "$u2"
-        ],
-        "callee": {
-         "expr": "ident",
-         "name": "f",
-         "type": {
-          "kind": "func",
-          "params": [],
-          "results": [
-           {
+        "value": true
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "cond": {
+       "expr": "ident",
+       "name": "$c1",
+       "type": {
+        "kind": "bool"
+       }
+      },
+      "stmt": "if",
+      "then": {
+       "body": [
+        {
+         "define": true,
+         "lhs": [
+          {
+           "id": "$c0",
+           "target": "declare",
+           "type": {
             "kind": "bool"
            }
-          ],
-          "variadic": false
-         }
+          }
+         ],
+         "rhs": [
+          {
+           "args": [],
+           "callee": {
+            "expr": "ident",
+            "name": "f",
+            "type": {
+             "kind": "func",
+             "params": [],
+             "results": [
+              {
+               "kind": "bool"
+              }
+             ],
+             "variadic": false
+            }
+           },
+           "expr": "call-value",
+           "resultTypes": [
+            {
+             "kind": "bool"
+            }
+           ]
+          }
+         ],
+         "stmt": "assign"
         },
-        "kind": "invoke",
-        "name": "call2",
-        "region": "guard1",
-        "resultTypes": [
-         {
-          "kind": "bool"
-         }
-        ]
-       },
+        {
+         "define": false,
+         "lhs": [
+          {
+           "id": "$c1",
+           "target": "var"
+          }
+         ],
+         "rhs": [
+          {
+           "expr": "ident",
+           "name": "$c0",
+           "type": {
+            "kind": "bool"
+           }
+          }
+         ],
+         "stmt": "assign"
+        }
+       ],
+       "stmt": "block"
+      }
+     },
+     {
+      "define": true,
+      "lhs": [
        {
-        "bind": "$u1",
-        "head": {
-         "expr": "ident",
-         "name": "$u2",
-         "type": {
-          "kind": "bool"
-         }
-        },
-        "kind": "eval",
-        "name": "join3",
-        "region": "guard1"
+        "id": "ok",
+        "target": "declare",
+        "type": {
+         "kind": "bool"
+        }
        }
       ],
-      "stmt": "unseq",
-      "stores": [],
-      "then": {
-       "define": true,
-       "lhs": [
-        {
-         "id": "ok",
-         "target": "declare",
-         "type": {
-          "kind": "bool"
-         }
+      "rhs": [
+       {
+        "expr": "ident",
+        "name": "$c1",
+        "type": {
+         "kind": "bool"
         }
-       ],
-       "rhs": [
-        {
-         "expr": "ident",
-         "name": "$u1",
-         "type": {
-          "kind": "bool"
-         }
-        }
-       ],
-       "stmt": "assign"
-      }
+       }
+      ],
+      "stmt": "assign"
      },
      {
       "cond": {

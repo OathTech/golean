@@ -1,5 +1,5 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 3717 (3474 PASS / 243 FAIL)
+# cases: 3722 (3482 PASS / 240 FAIL)
 # re-pinned: 2026-09-20 [AGENT], core/unseq-stage-d-0920, STAGE D of the evaluation-order model v2.1 (route α —
 #   docs/2026-09-20_unseq-stage-d-design.md §2–§3; handoff docs/2026-09-20_unseq-stage-d-handoff.md): NO row added, NO
 #   result changed, ONE stage changed — spec-examples-stmt/continue-label PASS/- -> PASS/confluent, the strict depth=128
@@ -50,6 +50,28 @@
 #   rows before this pin (docs/evidence/2026-09-21_unseq-stage-e/diff-one-e2.txt); the full gate line is in the evidence README.
 #   3709 + 8 = 3717; 3465 + 8 + 1 = 3474; 244 - 1 = 243. No PASS -> non-PASS flip; the one 5a-class item (imported-goose/channel/
 #   google-search: STALE certification for the changed core/decoder inputs) is not re-pinned here.
+# re-pinned: 2026-09-21 [AGENT], core/unseq-stage-e-0921, STAGE E of the evaluation-order model v2.1, family E3 — RECEIVES and METHOD
+#   CALLS as occurrences, and the OBSERVABILITY trigger (docs/2026-09-21_unseq-stage-e-design.md §E3; handoff
+#   docs/2026-09-21_unseq-stage-e-handoff.md): a receive is an E1-ordered EVENT occurrence (`UnseqBody.recv` — the machine runs its own
+#   chanRecv under the sweep frame; two Step rules), a concrete-receiver method call an invocation whose receiver sub-evaluation is an
+#   occurrence; the trigger admits a sweep only when some occurrence is UNORDERED against an effectful event (every other in-grammar sweep
+#   is all-forced and the legacy path exact): the census 176 -> 100 admitted (+18, and 94 all-forced graphs — the fmt shim loops, the goose
+#   guard chains, call-base slices, forced arguments — returned to legacy with their observations unchanged; the raft twin 0). THREE FLIPS
+#   (BUG-104 -> fixed): builtins/e13-sibling-panic-order/compound-call-target-vs-recv FAIL/differential -> PASS/membership (`f` · witness
+#   len(ch) {1, 0}), map-compound-index-key-vs-recv -> PASS/membership (witness {1, 0}), map-compound-index-key-vs-method ->
+#   PASS/membership {`` · [5], `M` · [5]}; gc's draws inside, 20/20 under GOMAXPROCS 1/8, default and -N -l. LANE MOVES: strict ->
+#   membership noodler/latitude/receiver-vs-arg-call {6, 105} (E14's receiver sub-axis (a) ENVELOPED: the value receiver's copy before /
+#   after the argument call that writes it; gc 105); strict -> confluent engine=dedup noodler/methods/nil-receiver-recursion (the per-node
+#   `t.v + t.l.Sum() + t.r.Sum()` sweep's 2-way picks, w=16 past the fixed streams; route α certifies |set| = 1 at 9053 states; gc 10);
+#   and goroutines/fork-join/two-workers-own-chans stays confluent but moves its ENGINE DFS -> dedup (`<-a*10 + <-b`'s pick joins the
+#   schedule; the DFS blew its work cap; dedup certifies |set| = 1 at 9015 states; gc 34). FIVE rows BORN in evalorder/unseq-recv-method:
+#   recv-vs-read {2, 3}, value-recv-vs-arg-call {6, 15}, ptr-recv-vs-field-read {3, 4} PASS/membership; addr-recv-vs-slice-read and
+#   recv-after-call PASS strict (the
+#   controls). Every other affected row (the E13 receive/method membership rows' 2-member sets; the rows whose sweeps entered or returned
+#   to legacy) reproduces its state — measured by scripts/diff-one on all 164 affected rows before this pin (docs/evidence/
+#   2026-09-21_unseq-stage-e/diff-one-e3.txt); the full gate line is in the evidence README. 3717 + 5 = 3722; 3474 + 5 + 3 = 3482;
+#   243 - 3 = 240. No PASS -> non-PASS flip; the one 5a-class item (imported-goose/channel/google-search: STALE certification for the
+#   changed core inputs) is not re-pinned here.
 # Previous pin:
 # re-pinned: 2026-09-20 [AGENT], core/unseq-stage-c-0919, STAGE C AUDIT FIX ROUND (docs/2026-09-20_unseq-stage-c-audit.md, FIX-FIRST; dispositions
 #   docs/2026-09-19_unseq-stage-c-handoff.md «Audit fix round (2026-09-20)»): SIX rows ADDED, no existing row changed. (F2) evalorder/unseq-const-cell/
@@ -1730,7 +1752,7 @@ FAIL	builtins/e13-sibling-panic-order/composite-ptr-payload-vs-call-printroot	fr
 PASS	builtins/e13-sibling-panic-order/compound-assert-vs-len	membership
 PASS	builtins/e13-sibling-panic-order/compound-call-target-vs-call	membership
 PASS	builtins/e13-sibling-panic-order/compound-call-target-vs-len	membership
-FAIL	builtins/e13-sibling-panic-order/compound-call-target-vs-recv	differential
+PASS	builtins/e13-sibling-panic-order/compound-call-target-vs-recv	membership
 PASS	builtins/e13-sibling-panic-order/compound-index-vs-len	membership
 PASS	builtins/e13-sibling-panic-order/conv-left-call	membership
 PASS	builtins/e13-sibling-panic-order/deref-left-call	membership
@@ -1745,8 +1767,8 @@ PASS	builtins/e13-sibling-panic-order/index-left-call	membership
 PASS	builtins/e13-sibling-panic-order/index-left-call-arg-panics	membership
 PASS	builtins/e13-sibling-panic-order/index-middle	membership
 PASS	builtins/e13-sibling-panic-order/map-compound-index-key-vs-call	membership
-FAIL	builtins/e13-sibling-panic-order/map-compound-index-key-vs-method	differential
-FAIL	builtins/e13-sibling-panic-order/map-compound-index-key-vs-recv	differential
+PASS	builtins/e13-sibling-panic-order/map-compound-index-key-vs-method	membership
+PASS	builtins/e13-sibling-panic-order/map-compound-index-key-vs-recv	membership
 PASS	builtins/e13-sibling-panic-order/map-key-assert-vs-len	membership
 PASS	builtins/e13-sibling-panic-order/map-lit-payload-vs-call	-
 PASS	builtins/e13-sibling-panic-order/map-tgt-assert-vs-call	membership
@@ -2232,6 +2254,11 @@ PASS	evalorder/unseq-ptr-field-map/field-compound-redirect	membership
 PASS	evalorder/unseq-ptr-field-map/map-compound-rebind	membership
 PASS	evalorder/unseq-ptr-field-map/field-private-vs-call	-
 PASS	evalorder/unseq-ptr-field-map/map-assign-plain-vs-call	-
+PASS	evalorder/unseq-recv-method/recv-vs-read	membership
+PASS	evalorder/unseq-recv-method/value-recv-vs-arg-call	membership
+PASS	evalorder/unseq-recv-method/ptr-recv-vs-field-read	membership
+PASS	evalorder/unseq-recv-method/addr-recv-vs-slice-read	-
+PASS	evalorder/unseq-recv-method/recv-after-call	-
 PASS	examples/binsearch/absent-above	-
 PASS	examples/binsearch/absent-below	-
 PASS	examples/binsearch/absent-gap	-
@@ -3920,7 +3947,7 @@ PASS	noodler/latitude/conversion-index-vs-call	-
 PASS	noodler/latitude/deref-vs-call	membership
 PASS	noodler/latitude/index-call-index	membership
 PASS	noodler/latitude/map-literal-key-vs-call	-
-PASS	noodler/latitude/receiver-vs-arg-call	-
+PASS	noodler/latitude/receiver-vs-arg-call	membership
 PASS	noodler/latitude/return-operands	membership
 PASS	noodler/latitude/rhs-list-index-call-index	-
 PASS	noodler/latitude/send-value-vs-channel-call	-
@@ -3986,7 +4013,7 @@ PASS	noodler/methods/methods-on-array-type	-
 PASS	noodler/methods/methods-on-literals	-
 PASS	noodler/methods/methods-on-slice-type	-
 PASS	noodler/methods/methods-on-string-bool	-
-PASS	noodler/methods/nil-receiver-recursion	-
+PASS	noodler/methods/nil-receiver-recursion	confluent
 PASS	noodler/methods/outer-shadows-promoted	-
 PASS	noodler/methods/pointer-receiver-elements	-
 PASS	noodler/methods/promoted-non-struct	-

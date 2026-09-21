@@ -1,0 +1,18 @@
+# whole-corpus choice trace, main 14006270's binary (sha256 0681abc6…) vs the E1 commit 0fe7bdce's binary; scripts/choice-trace-corpus --dump --jobs 5 on each side from its own export tree (main's: git archive 14006270 + deps; E1's: git archive 0fe7bdce + deps; E2's: this worktree at the E2 commit), the two standing exclusions; compared per id on the sorted dump records (stream, idx, phase, site, bound, streamValue, pick) and the per-stream results (status, consumed, wide, obsHash, driverAgreement) by Stage D's trace-compare.py
+#ids=3673 same=3664 differ=5 onlyA=0 onlyB=4
+#sitesA {'appendSpill': 4874, 'backEdge': 2404, 'l1Sched': 9690, 'l2Arrival': 3, 'l2Entry': 24, 'l4Waiter': 22, 'l5ExitWindow': 330, 'mapIter': 1307, 'nilValueMethodText': 90, 'postOp': 4643, 'repanicCollapse': 126, 'tryLock': 101, 'unseqNext': 555, 'unseqPanic': 288}
+#sitesB {'appendSpill': 4874, 'backEdge': 2404, 'l1Sched': 9690, 'l2Arrival': 3, 'l2Entry': 24, 'l4Waiter': 22, 'l5ExitWindow': 330, 'mapIter': 1307, 'nilValueMethodText': 90, 'postOp': 4643, 'repanicCollapse': 126, 'tryLock': 101, 'unseqNext': 616, 'unseqPanic': 288}
+# rows that DIFFER (every one a row whose sweep the family admitted) and rows ONLY on the candidate side (the born rows):
+{'appendSpill': 4874, 'backEdge': 2404, 'l1Sched': 9690, 'l2Arrival': 3, 'l2Entry': 24, 'l4Waiter': 22, 'l5ExitWindow': 330, 'mapIter': 1307, 'nilValueMethodText': 90, 'postOp': 4643, 'repanicCollapse': 126, 'tryLock': 101, 'unseqNext': 555, 'unseqPanic': 288}	#SITES_A
+{'appendSpill': 4874, 'backEdge': 2404, 'l1Sched': 9690, 'l2Arrival': 3, 'l2Entry': 24, 'l4Waiter': 22, 'l5ExitWindow': 330, 'mapIter': 1307, 'nilValueMethodText': 90, 'postOp': 4643, 'repanicCollapse': 126, 'tryLock': 101, 'unseqNext': 616, 'unseqPanic': 288}	#SITES_B
+DIFFER	evalorder/legacy-logical-vs-call/and-vs-call
+DIFFER	evalorder/legacy-logical-vs-call/call-first-control
+DIFFER	evalorder/legacy-logical-vs-call/or-vs-call
+DIFFER	spec-examples-decl/select-forms/default
+DIFFER	spec-examples-decl/select-forms/ready
+ids=3673	#SUMMARY
+ONLY_B	evalorder/unseq-globals/compound-vs-call
+ONLY_B	evalorder/unseq-globals/plain-target-call
+ONLY_B	evalorder/unseq-globals/read-vs-call
+ONLY_B	evalorder/unseq-globals/read-vs-unrelated-call
+# the tracer's exit on EVERY side is 1 — the summarizer's standing findings, identical on main: 187 baseline-red ids refuse under some traced stream; arrays/materialization-budget/over-budget refuses at export (BUG-078's designed lowering refusal); 0 menu-invariant violations, 0 self-check alarms, 0 driver-agreement mismatches on each side

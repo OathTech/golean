@@ -6444,10 +6444,30 @@ typed admission is still owed. Design and evidence:
 
 ## BUG-104 — a compound-assignment target whose ADDRESS or KEY is hoisted to a temp panics at the hoist, BEFORE the RHS's ordered events (calls, receives, method calls); gc reads the target in the residual, AFTER them (`x[f()] += wit(5)`: gc `f`, `wit 5`, then `index out of range [9]`; the machine `f` then the panic — `m[t[k]] += wit(5)`: gc `wit 5` then `[5] with length 1`, the machine the panic alone — `x[f()] += <-ch`: gc receives first, the machine panics first) [frontend lowering; evaluation order; spec#Assignment_statements phase 1 vs the eval-once rewrite]
 
-- Status: open ([AGENT], e13-b re-audit fix round 2026-09-05 — found by the re-audit's measurements, pre-existing on main b77f3298; three more spellings rowed at the final verification fix round the same day, R''-2)
+- Status: fixed ([AGENT], 2026-09-21, lane `core/unseq-stage-e-0921` — Stage E of the
+  evaluation-order model v2.1: the slice-element spelling at Stage C (→ BUG-112), the map-key
+  spelling beside a call at family E2 (→ BUG-112), the receive and method-call spellings at
+  family E3 — every row now a membership set with gc's draw inside; design
+  `docs/2026-09-21_unseq-stage-e-design.md` §E2/§E3. Filed open [AGENT], e13-b re-audit fix round
+  2026-09-05 — found by the re-audit's measurements, pre-existing on main b77f3298; three more
+  spellings rowed at the final verification fix round the same day, R''-2)
   Round-17 rebase note ([AGENT] reconciler, 2026-09-05): the renumber the Status line describes was applied at the rebase of the lane's re-audit commit itself (main's BUG-103, c-arc-c2's array-conversion entry, landed at this train before this lane), so no rebased commit ever carried two BUG-103 headings.
 - Pinned-by: differential
 - Cases: builtins/e13-sibling-panic-order/compound-call-target-vs-recv, builtins/e13-sibling-panic-order/map-compound-index-key-vs-recv, builtins/e13-sibling-panic-order/map-compound-index-key-vs-method
+
+FIX COMPLETED 2026-09-21 (Stage E family E3 — receives and method calls; [AGENT]): the three
+remaining rows lower as ONE `unseq` graph each. `compound-call-target-vs-recv` (`x[fnine()] += <-ch`):
+the RECEIVE is an EVENT occurrence (`UnseqBody.recv` — the machine runs its own `chanRecv` under the
+sweep frame) E1-ordered after `fnine`, the plan's checked load unsequenced against it — witness
+len(ch) 1 (the load's `[9]` first) or 0 (the receive first, gc's). `map-compound-index-key-vs-recv`
+(`m[t[k]] += <-ch`): the key's checked access `[5]` before or after the receive — witness 1 or 0
+(gc's). `map-compound-index-key-vs-method` (`m[t[k]] += q.M()`): the pointer-receiver method call is
+an invocation (callee = the method's function value, the receiver `q` its first argument), the
+access unsequenced against it — {`[5]` alone, `M` then `[5]` (gc's)}. All three FAIL/differential →
+PASS/membership on this entry's own Cases line (a fixed entry's rows must PASS — `check-bugs` (3));
+`emitMapCompound`'s unforced `probeSuppress` now governs only the legacy map compounds outside the
+widened grammar (interface-keyed maps, defined key types — E5's). This entry LEAVES the inventory's
+§10 known-≠-oracle list.
 
 PARTIAL FIX 2026-09-21 (Stage E of the evaluation-order model v2.1, family E2 — pointers,
 fields, maps; lane `core/unseq-stage-e-0921`, [AGENT]; design

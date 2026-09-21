@@ -16,4 +16,15 @@ outer-shadows-promoted	outerMethodShadowsPromoted	-	ok	-	methods,embedding,shado
 explicit-path-ambiguity	explicitPathAvoidsAmbiguity	-	ok	-	methods,embedding
 shallower-wins	shallowerMethodWins	-	ok	-	methods,embedding,nested
 method-value-from-iface	methodValueFromInterface	-	ok	-	methods,interfaces,functions
-nil-receiver-recursion	nilReceiverRecursion	-	ok	-	methods,pointers,nil,recursion
+# LANE MOVE strict → confluent engine=dedup (Stage E family E3, 2026-09-21, [AGENT], lane core/unseq-stage-e-0921;
+# docs/2026-09-21_unseq-stage-e-design.md §E3): `return t.v + t.l.Sum() + t.r.Sum()` in `(*Tree).Sum` lowers as ONE `unseq` graph per
+# non-nil node — the two pointer-receiver method calls are INVOCATIONS whose receivers `t.l`/`t.r` are field reads through `t`, and
+# `t.v` a read, each spec-unsequenced against the sibling call (E1 orders only the two calls) — so a 2-way `unseqNext` pick per node,
+# five non-nil nodes deep: the default stream served 6 wide picks AFTER the three fixed streams were exhausted (w=16), the strict
+# lane's 3-stream invariance check no longer covers the row. Sum mutates nothing, so every pick is outcome-equivalent: route α
+# (the pick certified in the dedup engine) turns the spot check into a CERTIFICATE — engine=dedup closes the state graph at 9053
+# unique states / 9292 edges / 240 dedup hits with |set| = 1 (checker-accepted, `checkCert_slowObs`'s set equality); gc's draw is the
+# singleton 10 on every run (20/20 under GOMAXPROCS 1/8, default and -N -l). work=200000 is ~10× the measured node+edge work; width 4
+# covers the picks' bound (2). Alternative named: `depth=N` (declare the wide-pick depth and keep the strict spot check) — not taken,
+# the certificate is the stronger claim at the same cost.
+nil-receiver-recursion	nilReceiverRecursion	-	ok	-	methods,pointers,nil,recursion	confluent	every pick of the per-node sweep (`t.v`, `t.l`, `t.r` reads vs the two Sum calls) is outcome-equivalent — Sum mutates nothing — so every schedule folds the same 10; engine=dedup certifies |set| = 1 over all picks (9053 unique states, checker-accepted); gc 10	width=4,sites=64,work=200000,engine=dedup

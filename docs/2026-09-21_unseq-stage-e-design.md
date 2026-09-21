@@ -23,8 +23,8 @@ the rows born/flipped/moved with their sets, the latitude reclassifications pose
 | family | what enters the grammar | closes | core change |
 |---|---|---|---|
 | **E1** package-level variables (LANDED, §E1) | reads `g` / `pkg.V` as READ occurrences (`deref(globaladdr)`); operand-free targets (`g = e`, `g op= e`, `g++`) | **BUG-113** (two rows FAIL → PASS) | none (decoder D8: the `deref` head) |
-| E2 pointers, fields, maps | `*p`, `p.f`/`s.f`, `m[k]` reads; map-element target plans (`m[k] = e`, `m[k] op= e`) — one frozen plan shared by load and store | BUG-104's `map-compound-index-key-vs-call` | `unseqReadTarget`'s `.mapElem` arm (+ its `locSup` lemma); `unseqAtom` string constants |
-| E3 receives, method calls | `<-ch` as an EVENT occurrence (E1-ordered); concrete-receiver method calls as invocations (receiver sub-evaluation = occurrences) | BUG-104's `compound-call-target-vs-recv`, `map-compound-index-key-vs-{recv,method}` | a statement-bodied occurrence kind (the receive) + its `Step` rules and coherence arms |
+| **E2** pointers, fields, maps (LANDED, §E2) | `*p`, `p.f`/`s.f`, `m[k]` reads; map-element target plans (`m[k] = e`, `m[k] op= e`) — one frozen plan shared by load and store | BUG-104's `map-compound-index-key-vs-call` | `unseqReadTarget`'s `.mapElem` arm (+ its `locSup` lemma); `unseqAtom` string constants |
+| **E3** receives, method calls (LANDED, §E3) | `<-ch` as an EVENT occurrence (E1-ordered); concrete-receiver method calls as invocations (receiver sub-evaluation = occurrences) | BUG-104's `compound-call-target-vs-recv`, `map-compound-index-key-vs-{recv,method}` | a statement-bodied occurrence kind (the receive) + its `Step` rules and coherence arms |
 | E4 conversions, allocations | numeric/string/byte/rune conversions as ops; `&T{…}`, slice literals, `make` as allocation occurrences (payload reads are the occurrences; no E1 edges) | BUG-102's five designed reds | the same statement-bodied kind (allocation statements) |
 | E5 multi-target forms, the residue | tuple/multi-value assignment, comma-ok forms, blank targets; the census residue migrated or stated | E3/E4 latitude entries (inter-target order) | — |
 | E6 retire the legacy triple | when the census shows ZERO legacy `unseq-probe` emissions | — | delete `Stmt.unseqProbe`/`Cont.probeK`/`ChoiceSite.unseqPanic` with their arms |
@@ -255,3 +255,114 @@ map-read helper: one lookup semantics, one `locSup` lemma. (iv) Map keys are int
 interface-containing key needs `to-interface` boxing inside the plan (Stage C's boxing rule) and a defined
 key type is E5's named-type family. (v) `e2fld` is native-only (no hand-built twin): the struct type's wire
 name is an envelope fact; the pointer and map hand-built wires carry the frozen-identity claim.
+
+## E3. Receives and method calls as occurrences; the OBSERVABILITY trigger (landed 2026-09-21)
+
+**The grammar widening** (`unseq.go`). A RECEIVE `<-ch` in operand position is an EVENT occurrence — E1-ordered
+among the calls (spec#Order_of_evaluation: «function calls, method calls, receive operations … in lexical
+left-to-right order»), an effect (it counts toward the trigger like a call), one result into a predeclared
+binder; the channel operand is an atom or a produced value (channel types of admitted element types enter the
+type grammar); the comma-ok receive is E5's. A METHOD CALL on a CONCRETE receiver (`unseqMethodCallee`: a
+non-generic, non-promoted method of a main-package named struct, or a pointer to one — never an interface
+method: dynamic dispatch has no callee VALUE) is an invocation whose callee is the method's function value and
+whose FIRST argument is the receiver sub-evaluation (E14's sub-axis): a pointer receiver on a pointer operand
+passes the pointer (an atom or an occurrence); on an addressable variable, its address (`ref x` — a frozen
+address, no read); on `*p`, the nil-asserting `addr-of-deref` (an occurrence that may fail); a value receiver
+copies the operand (an address-taken variable's read is the occurrence) or dereferences a pointer operand (an
+occurrence). The ADDRESS-TAKEN analysis is made precise on the way: `x.m()` takes `&x` only for a POINTER-
+receiver method on a NON-pointer operand (spec#Calls: `x.m()` is `(&x).m()`); Stage C marked every method-call
+operand conservatively — a pointer operand passes its value, a value receiver copies.
+
+**The OBSERVABILITY trigger** ([AGENT], the choice this family forces — the coarse trigger admitted 93 sweeps at
+E3, 71 of them `return <-done` in goroutine/race/sync rows whose only occurrence is the receive's OWN channel
+read, data-forced before it: no observation, every concurrent receive routed through the sweep frame, 403 rows
+in 45 packages re-enumerated for nothing). Stage C's rationale — an occurrence «observable AGAINST an event» —
+made exact: the E1 PARTICIPANTS of a sweep (calls, receives, non-constant `len`/`cap`, `&&`/`||` guards) are
+numbered in COMPLETION order (the order the lowering's E1 anchor chain realizes); every non-event occurrence
+records the innermost participant it lies INSIDE (its operand subtree, a guard's test or region — it precedes
+that participant and hence every later one) and `lo`, the first participant not forced before it (0 when it
+consumes none — an earlier participant is then a SIBLING, unordered; else one past the last participant that
+completed inside its own operand window — those it consumes, and every participant completing before one of
+them, precede it). It is OBSERVABLE iff an EFFECTFUL event (a call, a receive; never a `len`, never a guard)
+has an index in `[lo, completion of the enclosing participant)`. A guard's window holds its region, so it is
+observable iff an effectful event FOLLOWS it — the E1-at-completion anchoring, BUG-113's fix (the legacy
+hoister realizes the wrong order there — `r2a`/`r2b`/BUG-113's rows stay graphs); a guard whose region holds
+the sweep's only event (the goose `ok = ok && (f(x) == 0)` chains) is forced either way. A sweep is admitted
+iff some occurrence is observable (and the census's `events`/`calls`/`nonEvents` columns keep their meaning;
+the new legacy reason names the trigger). Every other in-grammar sweep with a call has EVERY edge forced and
+the legacy path realizes that unique order exactly — the pilot's own argument for the trigger, now applied
+consistently (the E2 asymmetry «a plan on atoms does not admit» is this rule's instance). Alternative named:
+keep the coarse trigger (admit the 71 forced receives; re-enumerate 403 concurrency rows for identical sets).
+
+**The census** (`census-e3.txt`): 176 → 110 admitted (176 + 18 − 94 + 6 from the E2 package born after the E2
+census + 4 in the born E3 package; the twin 0 / 10 203) — +18 (11 receives with a read unordered against them —
+BUG-104's two receive rows, the E13 receive rows, `channels/{make-edge,recv-edge}`, `goroutines/{fork-join/
+forkJoinTwoWorkersOwnChans,worker-pool/workerPoolSharedFeed}`, `noodler/evalorder/sendOperandOrder`, `race/negative-sync`,
+`sync/out-of-scope-cond/condBroadcast`; 7 method calls — BUG-104's method row, `assert-left-method`,
+`methods/nil-receiver`, `noodler/{methods/*Tree.Sum,gotchas,frontier/pointer-to-pointer-chains,latitude/
+receiverVsArgCall}`) and −94 RETURNED TO LEGACY (`census-lost-e3.tsv`): the four fmt shim helpers' `out +=
+goleanShimFmt…(verb, args[ai])` in 11 packages (44), the imported-goose `ok = ok && (f(…) == …)` chains (25 + 2
++ 1), `slices/slice-elided-high-eval-once`'s call-base slices (5), `evalorder/unseq-const-cell/{const-guard-
+left,elem-assign-const-string}` (a guard around the only event; a plan consuming the only event),
+`builtins/e13-sibling-panic-order/{forced-arg-only,slice-left-len-call}`, `builtins/len-vs-call-order/panicky-
+before-call`, `functions/closure-recursion`, `noodler/{closures/recursiveClosure,misc/recursiveSliceStruct}`,
+`maps/map-incdec`, `panic-recover/repanic-collapse/indexTwoFaults`, `slices/slice-expr-eval-order`,
+`spec-examples-decl/address-op-nil-indirection/addressForms`, `spec-examples-stmt/{operator-precedence/
+opPrecOrCalls,method-expr-five-forms ×2}`, `structs/selector-eval-once`, `bools/short-circuit-effects` (1) — every
+one an all-forced graph (a call whose operands are the sweep's only occurrences, a guard around the only event,
+a plan consuming the only event), every row of those packages a strict PASS, a frontend-export red or a
+membership row whose set the sweep never touched (`repanic-collapse`'s `repanicCollapse` site). The raft twin
+0 / 10 203 on both.
+
+**The machine** (TRUST SURFACE #1): `UnseqBody.recv (binds) (ch : Expr) (elem : Ty)` — a statement-bodied
+occurrence like `invoke`: `unseqRunRecv` runs `unseqRecvStmt binds ch elem = .chanRecv (binds.map .var) ch
+elem` under the wait frame, `unseqRecvDone` marks it DONE (two `Step` rules, the `stepFn` `.run`/`.wait` arms;
+`stepFn_sound`, `step_complete`, `step_complete_any_wf`, `step_preserves_wf` (with `unseqRecvStmt_locSup`),
+`unseq_record_stable` and the done-monotone lemma gain the two arms — each a copy of the invoke arm;
+`wellFormed?` requires 1 or 2 binders; `valueBinds`/`mentions`/`unseqBodyIndices`/`unseqBodySup`/`eqbF` gain
+the constructor). A receive that would block is the statement's own `blockedRecv` under the frame — the
+sequential explorer's `deadlock` refusal apart from the members (Stage B's X3e, re-run on the real body), a
+wait in the pool. `checkCert_slowObs` and the accountant are untouched (no new pick). The decoder's `recv`
+kind: one binder, an atom channel, `elem` = the cell's type (D1/D5/D8/D9 for the kind). Alternative named: a
+general statement-bodied kind `exec binds stmt` (E4's allocations would ride it) — deferred: `recv` is one
+statement shape, its shape check is the decoder's; E4 decides its own kind.
+
+**References lead** (`enumerate.py` E3a/E3c/E3d/E3e; `outcomes.txt` PASS): E3a `<-ch + x + mut()` → {2, 3}; E3c
+`m[t[k]] += <-ch` → the `len(ch)` witness {1, 0}; E3d `m[t[k]] += q.M()` → {`` · `[5]`, `M` · `[5]`}; E3e `v.Plus(f())`
+(a value receiver, f writing v.n) → {6, 15}. Wires: hand-built `e3recv.json` (X3 as native Go — the `recv` body
+after `f` by E1) + native `native-{e3recv,e3method}.json`; mutants `mut-recv-nonatom`, `mut-recv-two-binds`; the
+Stage B X3/X3e re-run on `x3graphRecv` (the receive as a `recv` body: the same set, the same `deadlock` refusal
+on the empty channel).
+
+**Rows** — MEASURED (`scripts/diff-one` on the 164 affected rows — the 18 newly admitted sweeps' packages, the
+94 returned sweeps' packages, the born package — twice: the first run surfaced the decoder's missing `ref`
+argument arm (D9 admitted atoms only; the method call's frozen-address receiver `ref v` is an address, never a
+read — `unseqCheckArg` admits `ref`/`globaladdr`) and the two lane budgets below; the second run is the table —
+145 PASS / 19 FAIL, the 19 the packages' pre-existing frontend-export reds; `diff-one-e3.txt`; then the gate):
+
+| row | before → after | set | gc |
+|---|---|---|---|
+| `builtins/e13-sibling-panic-order/compound-call-target-vs-recv` (BUG-104) | FAIL/differential → PASS/membership | `f` · witness {1, 0} — the load's `[9]` before the receive or after it (E3c's shape) | `f` · 0 |
+| `…/map-compound-index-key-vs-recv` (BUG-104) | FAIL/differential → PASS/membership | witness {1, 0} | 0 |
+| `…/map-compound-index-key-vs-method` (BUG-104) | FAIL/differential → PASS/membership | {`` · `[5]`, `M` · `[5]`} (E3d) | `M` · `[5]` |
+| `evalorder/unseq-recv-method/{recv-vs-read,value-recv-vs-arg-call,ptr-recv-vs-field-read}` | born PASS/membership | {2, 3} (E3a); {6, 15} (E3e); {3, 4} | 3; 15; 4 |
+| `evalorder/unseq-recv-method/{addr-recv-vs-slice-read,recv-after-call}` | born PASS strict | 8; `wit 2` · 3 (forced / both orders agree) | = |
+| `noodler/latitude/receiver-vs-arg-call` (E14's census row) | PASS strict → PASS/membership | {6, 105} — the value receiver's copy before / after `f` writes `v.n` | 105 |
+| `noodler/methods/nil-receiver-recursion` | PASS strict → PASS/confluent `engine=dedup` (LANE MOVE, route α) | `(*Tree).Sum`'s `t.v + t.l.Sum() + t.r.Sum()` — a 2-way pick per non-nil node, w=16, the default stream served 6 wide picks past the three fixed streams (the strict lane refused by name); Sum mutates nothing: the dedup engine certifies \|set\| = 1 at 9053 states / 9292 edges / 240 hits; alternative named `depth=N` | 10 (20/20) |
+| `goroutines/fork-join/two-workers-own-chans` | PASS/confluent → PASS/confluent, ENGINE DFS → `engine=dedup` (params only) | `<-a*10 + <-b` — the read of the captured `b` unsequenced against the receive on `a`; the pick joins the goroutine schedule and the DFS exceeded its work cap (165 912 steps + 34 089 probes; refused by name); dedup certifies \|set\| = 1 at 9015 states / 9885 edges / 871 hits | 34 (20/20) |
+| `builtins/e13-sibling-panic-order/{assert-left-method,assert-left-recv-w,tgt-assert-vs-recv-w}` | PASS/membership, sets UNCHANGED (2) | the assertion before / after the method call or receive | unchanged |
+| the other rows whose sweeps entered: `channels/make-edge/ordinary-send-eval-order`, `channels/recv-edge/*`, `goroutines/worker-pool/shared-feed`, `methods/nil-receiver`, `noodler/evalorder/send-operand-order`, `noodler/gotchas/method-value-from-field-path`, `noodler/frontier/pointer-to-pointer-chains`, `race/negative-sync/overwrite-vs-trylock` (racy lane) | PASS, result and stage UNCHANGED | the unordered read is of a location no sibling event writes — the same observation on every pick, inside the fixed streams' wide-pick cover | = |
+| `sync/out-of-scope-cond/cond-broadcast` | FAIL/frontend-export UNCHANGED | `sync.Cond` is outside the modeled sync subset — the sweep's admission is never reached | — |
+| the 94 sweeps returned to legacy | rows UNCHANGED | all-forced graphs → the legacy path's unique order | = |
+
+The movement vs the E2 baseline is EXACTLY the table: 3 flips, 1 strict → membership move, 1 strict → confluent
+move, 1 engine move (no result/stage change), 5 births, every other affected row its pinned result and stage
+(`diff-one-e3.txt` names all 164). Baseline re-pinned 3717 = 3474 / 243 → 3722 = 3482 / 240 (the header carries
+the reason); no PASS → non-PASS. Gates in-process at this tree: `Tests/UnseqWire.lean` 77 ok / 24 mutants,
+`check-unseq-wire`, `check-wire-boundary` (11 + 17), `check-unseq-scheduler` (72 ok incl. `x3graphRecv`),
+`check-mem-callsites` (70), `check-bugs` — all PASS; the full gate line is the README §E3's.
+
+BUG-104 → `Status: fixed` (its three rows PASS on its own Cases line; it LEAVES the inventory's known-≠-oracle
+list). Latitude: E14's receiver sub-axis (a) ENVELOPED on `receiver-vs-arg-call` and the born
+`value-recv-vs-arg-call`; E2/E12's value axis on `recv-vs-read`, `ptr-recv-vs-field-read` — posed for
+ratification at the merge ask.
