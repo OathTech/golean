@@ -1985,7 +1985,8 @@ def unseqAtom (env : LocalEnv) (s : Store) : Expr → Except Stop (GoValue × Ac
       | none => stuck s!"unseq: unbound target operand '{id}'"
   | .intLit value kind => return (.int (kind.normalize value) kind, [])
   | .boolLit b => return (.bool b, [])
-  | other => stuck s!"unseq: target operand is not an atom (a slot, an admitted local, the address of a local, or an int/bool constant): {repr other}"
+  | .stringLit v => return (.string v, [])   -- Stage E E2: a string map key
+  | other => stuck s!"unseq: target operand is not an atom (a slot, an admitted local, the address of a local, or an int/bool/string constant): {repr other}"
 
 /-- A binder cell's location: declared in the sweep's scope at ENTER. -/
 def unseqCellLoc (env : LocalEnv) (bind : String) : Except Stop Loc :=
@@ -2001,12 +2002,20 @@ def unseqLookupTarget : List (String × TargetRef) → String → Except Stop Ta
 /-- ONE checked access through a frozen target plan (review R6): replay the
 chain's own checks (`resolveChain` — bounds, nil) on the FROZEN operand
 values — the header and index VALUES the plan froze, never a re-read of
-the variable (review R4) — and load. A frozen map-element plan is outside
-the Stage B fragment (Stage E). -/
+the variable (review R4) — and load. A frozen MAP-ELEMENT plan (Stage E E2,
+2026-09-21) reads the entry of the frozen map VALUE at the frozen key VALUE —
+the same lookup the comma-ok source performs (`applyRhsOp .mapLookup`:
+normalize the key at the key type, `mapLookupValue`; a nil map yields the zero
+value after hashing the key; an absent key the zero value) — the compound
+form's `m[k] op= …` load through the ONE identity its store uses. -/
 def unseqReadTarget (s : Store) : TargetRef → Except Stop (GoValue × AccessTrace)
   | .chain anchor idxs steps => do
       Mem.load ctx s (← valueAsLoc (← resolveChain ctx s anchor steps idxs))
-  | .mapElem .. => unsupported "unseq: read through a frozen map-element plan (Stage E)"
+  | .mapElem b k kt vt => do
+      let map ← valueAsMap b
+      let key ← normalizeValueForTy ctx kt k
+      let (pair, tr) ← mapLookupValue ctx s map key kt vt
+      return (pair.1, tr)
 
 /-- The `load` body: read through the target, then write the binder cell.
 The read's panic precedes the store, so a failing load leaves the state as
@@ -2073,7 +2082,8 @@ def unseqUnfrozenAnchor? (s : Store) : GoValue → List TargetStep → List GoVa
   | _, _, _ => none
 
 /-- The frozen-anchor check over a completed plan (a map-element plan
-carries the map VALUE; its read is Stage E's refusal, `unseqReadTarget`). -/
+carries the map VALUE and the key VALUE — a reference and a value, nothing
+re-read; its read is `unseqReadTarget`'s map arm since Stage E E2). -/
 def unseqUnfrozenPlan? (s : Store) : TargetRef → Option String
   | .chain anchor idxs steps => unseqUnfrozenAnchor? ctx s anchor steps idxs
   | .mapElem .. => none

@@ -44,3 +44,41 @@ PASS→non-PASS, executed library coverage. `ci-slow-e1.tail.txt` is the tail (s
 verdict, the drift block, the row's detail). The seven rows of this family reproduce their pinned states in
 the run: `or-vs-call` / `and-vs-call` PASS strict, `call-first-control` PASS, `unseq-globals/read-vs-call` and
 `compound-vs-call` PASS/membership, `read-vs-unrelated-call` and `plain-target-call` PASS strict.
+
+## E2 — pointers, fields and maps as occurrences (closes BUG-104's map-key-beside-a-call row)
+
+| file | what | producer |
+|---|---|---|
+| `census-e2.txt` | the census AFTER E1 (the E1 frontend) vs AFTER E2 (the E2 frontend): admitted 146 → 176 (+27 from the widening in 17 packages, 0 lost; +3 from the E1 package born after the E1 census; 107 943 → 107 963 sweeps); the twin 10 203 / 0 on both; the per-package table, former reasons, forms | `.tmp/census/run.sh`, `summarize.py`, `diff.py` (tolerating the born package's rows) |
+| `census-newly-admitted-e2.tsv` | the 27 sweeps that enter at E2 | `diff.py` |
+| `diff-one-e2.txt` | the focused differential on the 38 affected rows on the E2 frontend + binary: the 1 flip, the 5 lane moves, the 8 births, the 4 E13 deref/map sets unchanged at 2 members, everything else unchanged; the one width/sites correction on `len-nil-only-none` and its re-run | `scripts/diff-one <ids…>` (the per-row details are in the run's `artifacts/coverage/latest.tsv` and quoted in the file) |
+| `ci-slow-e2.tail.txt` | the E2 full gate's tail (the paragraph below) | `scripts/capped scripts/ci --slow`, ANSI stripped |
+| `gc-draws-e2.txt` | gc's draws for the born package (all eight subjects) and the six moved/flipped subjects (`derefVsCall`, `mapCompoundCallMutates`, `mapCompoundCallDeletes`, `derefTargetRhsCallOrder`, `lenNilOnly(0)`, `mapCompoundIndexKeyVsCall` under a recovering driver): 5 × GOMAXPROCS 1/8 × default / `-N -l` = 20 per subject, every draw inside its derived set | `GOMAXPROCS=… go run [-gcflags=all='-N -l'] .` on a driver copy per row (`.tmp/gc-e2/`), go1.26.5 |
+
+References: `enumerate.py` E2a/E2c/E2d/E2e/E2f/E2g (regenerated `outcomes.txt`, `RESULT: PASS`); over the wire:
+`Tests/UnseqWire.lean` 72 ok, 22 mutants refused by name (`mut-map-target-key`, `mut-deref-target-nonatom` new);
+`scripts/check-unseq-wire` PASS (70 fixtures byte-identical; 22 mutants through the CLI); `scripts/check-wire-
+boundary` PASS (11 + 14 unseq-node controls — the map-plan positive and the two mutants new). Machine:
+`Tests/UnseqScheduler.lean` 70 ok — the Stage B «frozen map-element plan (Stage E)» REFUSAL test flipped to the
+set test «map replacement (frozen map VALUE)»: {`old 11 m 100`, `old 10 m 101`} exact; `scripts/check-unseq-
+scheduler` PASS (35 theorems, classical trio only); `scripts/check-mem-callsites` PASS (70 rows, inventory
+unchanged — the map arm reads through the emitting `mapLookupValue`). Frontend: `go test ./tools/nativefrontend/
+./tools/lowerdiag/` ok (the E13 guard test's two map-target shapes moved to the graph's truth: one graph, no
+probe). Lean build (explicit targets): `GOLEAN_MEM_MAX=32G scripts/capped lake build golean UnseqWireTests
+UnseqSchedulerTests` EXIT=0 (102 jobs, 119 s).
+
+**The full gate: `scripts/capped scripts/ci --slow` at the E2 tree** (main `14006270` + E1 `0fe7bdce` + the E2
+edits; the box-wide lock 02:45:52–03:02:50Z): **EXIT=1 in 1018 s, K=80 (`membership_draws 80`); 3717 rows 3473
+PASS / 244 FAIL in the run = the pinned 3474 / 243 with the one 5a-class row red; RESULT FAIL on EXACTLY the two
+5a-class items** — `certificate provenance` («STALE certification: changed dependency
+build/files/GoLean/GoCore/Machine.lean» — the map-element read arm) and the `baseline diff` DRIFT block's ONE line
+`imported-goose/channel/google-search baseline[PASS/membership] -> now[FAIL/membership]` (the row's detail: STALE
+for `Machine.lean`; «Fresh certification: unchanged set; seconds=169.317» — the train installs the candidate at 5a).
+Every other step ok (core build warning-free, totality audit, engine isolation, check-mem-callsites, admission
+proofs, declaration + wire boundaries (11 + 14 unseq-node controls), method identity, unseq scheduler (Stage B +
+the map-replacement set), unseq wire (22 mutants), frontend pins (twin = pinned bytes), frontend / lowerdiag /
+harness unit tests, eval tests 274 ok, differential run, lane-validation fixtures incl. the go half, negative
+corpus 394 matched, FloatVectors + inittask-std byte-exact, re-pin guard 0 PASS→non-PASS, executed library
+coverage). `ci-slow-e2.tail.txt` is the tail. Every row of this family reproduces its pinned state in the run:
+the flip `map-compound-index-key-vs-call` PASS/membership, the five moves PASS/membership, the eight births in
+their lanes.

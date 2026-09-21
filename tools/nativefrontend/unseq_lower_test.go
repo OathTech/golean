@@ -81,6 +81,17 @@ func TestUnseqLoweringShapes(t *testing.T) {
 		// the region's read of the address-taken b and the join; change() AFTER the
 		// completion; sinkL after change.
 		{"bug113or", "eval:deref guard eval:ident@region eval:ident@region invoke/after invoke/after"},
+		// Stage E E2: the call first, then the deref / field / map read (residual).
+		{"e2deref", "invoke eval:deref eval:binary"},
+		{"e2field", "invoke eval:field-get eval:binary"},
+		{"e2fieldAddrTaken", "invoke eval:field-get eval:binary"},
+		{"e2mapread", "invoke eval:map-get eval:binary"},
+		// the compound forms: the call first; the read of the address-taken base, the plan,
+		// the load and the op late (BUG-104's map row: the key's checked access, the plan on
+		// the private map's value, the load, the op)
+		{"e2derefCompound", "invoke eval:ident target load eval:binary"},
+		{"e2mapCompound", "invoke eval:ident target load eval:binary"},
+		{"mapTarget", "invoke eval:index-get target load eval:binary"},
 		// W6: two E1-ordered calls, then the read and the ops.
 		{"w6", "invoke invoke/after eval:ident eval:binary eval:binary"},
 		// R6: the call first; the header read and the checked access late.

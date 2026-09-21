@@ -6447,7 +6447,19 @@ typed admission is still owed. Design and evidence:
 - Status: open ([AGENT], e13-b re-audit fix round 2026-09-05 — found by the re-audit's measurements, pre-existing on main b77f3298; three more spellings rowed at the final verification fix round the same day, R''-2)
   Round-17 rebase note ([AGENT] reconciler, 2026-09-05): the renumber the Status line describes was applied at the rebase of the lane's re-audit commit itself (main's BUG-103, c-arc-c2's array-conversion entry, landed at this train before this lane), so no rebased commit ever carried two BUG-103 headings.
 - Pinned-by: differential
-- Cases: builtins/e13-sibling-panic-order/map-compound-index-key-vs-call, builtins/e13-sibling-panic-order/compound-call-target-vs-recv, builtins/e13-sibling-panic-order/map-compound-index-key-vs-recv, builtins/e13-sibling-panic-order/map-compound-index-key-vs-method
+- Cases: builtins/e13-sibling-panic-order/compound-call-target-vs-recv, builtins/e13-sibling-panic-order/map-compound-index-key-vs-recv, builtins/e13-sibling-panic-order/map-compound-index-key-vs-method
+
+PARTIAL FIX 2026-09-21 (Stage E of the evaluation-order model v2.1, family E2 — pointers,
+fields, maps; lane `core/unseq-stage-e-0921`, [AGENT]; design
+`docs/2026-09-21_unseq-stage-e-design.md` §E2): the MAP-key spelling beside a plain call —
+`map-compound-index-key-vs-call` (`m[t[k]] += wit(5)`) — is FIXED: the map-element target is a
+FROZEN plan (`Assignee.mapElem` on the map VALUE and the key VALUE, one identity for the load
+and the store — the machine's `unseqReadTarget` reads through a frozen map plan since E2), the
+key's checked access `t[k]` is a READ occurrence unsequenced against `wit`, so the members are
+`[5]` with nothing printed and `wit 5` then `[5]` (gc's; the canonical tape); the row is a
+membership row on BUG-112's Cases line (the fixed entry). `emitMapCompound`'s unforced
+`probeSuppress` still governs the legacy map compounds outside the widened grammar (an
+interface-keyed map, a receive or a method call on the RHS — the three rows left here: E3's).
 
 PARTIAL FIX 2026-09-19 (Stage C of the evaluation-order model v2.1, lane
 `core/unseq-stage-c-0919`, [AGENT]): the SLICE-element spelling beside a plain
@@ -7143,7 +7155,14 @@ malformed surrogates) driven through the CLI, not through an already-parsed
   evaluation-order model v2.1 — `docs/2026-09-19_unseq-stage-c-design.md` §3 predicted both
   flips with their sets; measured at the C2 gate)
 - Pinned-by: differential
-- Cases: builtins/e13-sibling-panic-order/compound-call-target-vs-call, builtins/e13-sibling-panic-order/compound-call-target-vs-len
+- Cases: builtins/e13-sibling-panic-order/compound-call-target-vs-call, builtins/e13-sibling-panic-order/compound-call-target-vs-len, builtins/e13-sibling-panic-order/map-compound-index-key-vs-call
+
+STAGE E E2 (2026-09-21, [AGENT], lane `core/unseq-stage-e-0921`): BUG-104's MAP-key spelling
+`map-compound-index-key-vs-call` (`m[t[k]] += wit(5)`) joins this line — the map-element target
+plan is a frozen `mapElem` (the map VALUE and the key VALUE; the machine's `unseqReadTarget` gained
+its map arm), the key's checked access `t[k]` the occurrence unsequenced against `wit`:
+{`` · `[5] with length 1`, `wit 5` · `[5] with length 1` (gc's, the canonical tape)} — members=2,
+width=2; FAIL/differential → PASS/membership (reference enumerate.py E2d).
 
 WHAT: BUG-104 recorded that `emitReadWriteTarget` hoists a call-bearing compound
 target's ADDRESS to a temp at the target's lexical position, so its bounds check

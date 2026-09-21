@@ -953,6 +953,22 @@ private def unseqCheckHead (path : String) (head : Json) : LowerM Unit := do
       atom "y"
   | "unary" => atom "x"
   | "type-assert" => atom "operand"
+  | "field-get" =>
+      -- Stage E, family E2 (2026-09-21): ONE field read — the receiver is an atom (a struct
+      -- value: a source local or a slot) or `deref(atom)` (through a pointer: the emitter's
+      -- own spelling, `fieldBase`; the nil check and the load are one occurrence).
+      let recv ← StrictJson.field path obj "recv"
+      if !unseqIsAtom recv then
+        match recv.getObjVal? "expr", recv.getObjVal? "ptr" with
+        | .ok (.str "deref"), .ok p =>
+            if !unseqIsAtom p then
+              fail s!"unseq: hidden read in a pure node — {path}.recv dereferences a non-atom pointer; refused by name"
+        | _, _ =>
+            fail s!"unseq: hidden read in a pure node — {path}.recv is neither an atom nor the dereference of an atom (a field read selects on a struct VALUE or through a pointer VALUE; v2.1 §3.1 internal normal form); refused by name"
+  | "map-get" =>
+      -- Stage E E2: ONE map read on the frozen map VALUE and key VALUE (both atoms).
+      atom "base"
+      atom "index"
   | "deref" =>
       -- Stage E, family E1 (2026-09-21, lane `core/unseq-stage-e-0921`): ONE checked read
       -- through a pointer VALUE — the pointer is an atom (a slot or an admitted local:
@@ -966,7 +982,7 @@ private def unseqCheckHead (path : String) (head : Json) : LowerM Unit := do
       if !(unseqIsAtom p || isGlobal) then
         fail s!"unseq: hidden read in a pure node — {path}.ptr is neither an atom nor a globaladdr (a pointer read dereferences a pointer VALUE or a package-level variable's cell; v2.1 §3.1 internal normal form); refused by name"
   | other =>
-      fail s!"unseq: head '{other}' at {path} is outside the admitted fragment (admitted heads: ident, a constant (int/bool/string), index-get, slice, builtin-len, builtin-cap, binary, unary, type-assert, deref); refused by name"
+      fail s!"unseq: head '{other}' at {path} is outside the admitted fragment (admitted heads: ident, a constant (int/bool/string), index-get, slice, builtin-len, builtin-cap, binary, unary, type-assert, deref, field-get, map-get); refused by name"
 
 /-- D8 for an `invoke` callee: an identifier (a func-typed local or slot) or
 a `func-value` whose captures are addresses (`ref`/`ident`/`globaladdr`). -/
@@ -1034,22 +1050,39 @@ private def unseqConfinedTo? (g : UnseqGraph) (slot : String) : Option String :=
       | none => none
   | none => none
 
-/-- D13: a target plan's shape — a plain source local or a slice element
-whose base and index are atoms (the header FROZEN through the atom: a slot,
-or the local read at the plan step — never `&a`, Stage B F2). -/
+/-- D13: a target plan's shape — a plain source local; a slice element whose
+base and index are atoms (the header FROZEN through the atom: a slot, or the
+local read at the plan step — never `&a`, Stage B F2); and, since Stage E E2
+(2026-09-21): a DEREFERENCE target on a pointer atom (`addr(p)` — the pointer
+VALUE frozen), a FIELD target on a pointer atom or a variable's address
+(`addr(field-addr(p | ref s | globaladdr))` — a stable anchor; the machine's
+`unseqUnfrozenPlan?` refuses a slice-variable address under an index step, not
+a field step), and a MAP-ELEMENT target on a map atom and a key atom
+(`mapElem` — the map VALUE and key VALUE frozen; the store's nil-map check is
+phase 2's). -/
 private def unseqCheckTargetShape (path : String) (a : Assignee) : LowerM Unit :=
+  let atomE : Expr → Bool
+    | .var _ | .intLit _ _ | .boolLit _ | .stringLit _ => true
+    | _ => false
+  let anchorE : Expr → Bool
+    | .var _ | .ref _ | .global _ => true
+    | _ => false
   match a with
   | .var id =>
       if id.startsWith "$" then
         fail s!"unseq: a binder ('{id}') cannot be a store target at {path}; refused by name"
       else pure ()
   | .addr (.indexAddr base idx) =>
-      let atomE : Expr → Bool
-        | .var _ | .intLit _ _ => true
-        | _ => false
       if atomE base && atomE idx then pure ()
       else fail s!"unseq: target plan at {path} indexes with a non-atom base or index (the header and index are frozen VALUES, v2.1 §3.4); refused by name"
-  | _ => fail s!"unseq: target plan at {path} is outside the Stage C fragment (a local, or a slice element on atoms; maps / fields / pointers are Stage E); refused by name"
+  | .addr (.var _) => pure ()
+  | .addr (.fieldAddr base _ _) =>
+      if anchorE base then pure ()
+      else fail s!"unseq: target plan at {path} selects a field on a non-atom base (the pointer VALUE or the variable's address is the frozen anchor, v2.1 §3.4); refused by name"
+  | .mapElem base key _ _ =>
+      if atomE base && atomE key then pure ()
+      else fail s!"unseq: target plan at {path} indexes a map with a non-atom base or key (the map VALUE and key VALUE are frozen, v2.1 §3.4); refused by name"
+  | _ => fail s!"unseq: target plan at {path} is outside the admitted fragment (a local; a slice element, a dereference, a field or a map element on atoms); refused by name"
 
 mutual
 

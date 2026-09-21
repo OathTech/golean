@@ -191,4 +191,12 @@ out="$(run_cli_fn Tests/unseq-wire/e1.json e1)" || { echo "check-wire-boundary: 
 [[ "$out" == *'"status":"ok"'* && "$out" == *'"value":2'* ]] || { echo "check-wire-boundary: FAIL [unseq global-read] — expected ok/2 (v := mut() + g, mut sets g = 2, canonical = call first): $out" >&2; exit 1; }
 echo "ok [unseq global-read] runs, answers 2 (a package-level variable read as a deref(globaladdr) occurrence — Stage E E1)"
 expect_unseq_refusal unseq-deref-hidden mut-deref-hidden e1 'hidden read in a pure node'
-echo 'Wire boundary gate: PASS (11 byte-level controls + 11 unseq-node controls through the real CLI)'
+# Stage E E2 (2026-09-21): a MAP-ELEMENT target plan (Tests/unseq-wire/e2map.json, `m[1] += mut()` with
+# mut rebinding m): runs, canonical tape = the call first → the new map's entry, 10101; the non-atom-key
+# mutant refuses by name (D13); the non-atom deref-plan mutant refuses by name.
+out="$(run_cli_fn Tests/unseq-wire/e2map.json e2map)" || { echo "check-wire-boundary: FAIL [unseq map-plan] — the map-element plan wire did not run: $out" >&2; exit 1; }
+[[ "$out" == *'"status":"ok"'* && "$out" == *'"value":10101'* ]] || { echo "check-wire-boundary: FAIL [unseq map-plan] — expected ok/10101 (m[1] += mut(), mut rebinds m; canonical = call first): $out" >&2; exit 1; }
+echo "ok [unseq map-plan] runs, answers 10101 (a frozen map-element target plan — Stage E E2)"
+expect_unseq_refusal unseq-map-target-key mut-map-target-key e2map 'non-atom base or key'
+expect_unseq_refusal unseq-deref-target-nonatom mut-deref-target-nonatom e2ptr 'outside the admitted fragment'
+echo 'Wire boundary gate: PASS (11 byte-level controls + 14 unseq-node controls through the real CLI)'

@@ -1,0 +1,41 @@
+# scripts/diff-one on the 38 affected rows (the 27 newly admitted sweeps' subject rows + the born package + imported-goose/semantics/{defer,maps}), E2 frontend + E2 binary; first run:
+FAIL	builtins/len-vs-call-order/len-nil-only-none	pointers,structs,len,evaluation_order,calls,bools,nil,nondet	stage=membership	detail=enumerator failed (exit 1; coverage not certified): coverage-observations: site bound 3 exceeds the case's width 2 — the width assertion is REFUTED (mechanically, at pick position 0); raise the
+PASS	builtins/e13-sibling-panic-order/deref-left-call	pointers,nil,calls,panic,evaluation_order,print,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/deref-left-call)
+PASS	builtins/e13-sibling-panic-order/deref-left-index-arg-call	pointers,nil,slices,indexing,calls,panic,evaluation_order,print,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic
+PASS	builtins/e13-sibling-panic-order/map-compound-index-key-vs-call	maps,slices,indexing,calls,panic,evaluation_order,print,assignment,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibli
+PASS	builtins/e13-sibling-panic-order/map-key-assert-vs-len	maps,slices,indexing,len,calls,panic,evaluation_order,print,interfaces,type_assertions,assignment,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/members
+PASS	builtins/e13-sibling-panic-order/map-tgt-assert-vs-call	maps,indexing,calls,panic,evaluation_order,print,interfaces,type_assertions,assignment,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builti
+PASS	builtins/len-vs-call-order/len-assert-vs-nil-operand	pointers,structs,len,evaluation_order,calls,panic,interfaces,type_assertions
+PASS	builtins/len-vs-call-order/len-nil-left-vs-index-operand	pointers,structs,len,evaluation_order,calls,panic,indexing,slices
+PASS	builtins/len-vs-call-order/len-nil-only-both	pointers,structs,len,evaluation_order,calls,bools,nil,panic
+PASS	builtins/len-vs-call-order/len-nil-only-left	pointers,structs,len,evaluation_order,calls,bools,nil,panic
+PASS	builtins/len-vs-call-order/len-nil-only-operand	pointers,structs,len,evaluation_order,calls,bools,nil,panic
+PASS	evalorder/unseq-ptr-field-map/deref-compound-redirect	pointers,closures,calls,assignment,evaluation_order,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/evalorder/unseq-ptr-field-map/deref-compoun
+PASS	evalorder/unseq-ptr-field-map/deref-vs-call	pointers,calls,evaluation_order,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/evalorder/unseq-ptr-field-map/deref-vs-call)
+PASS	evalorder/unseq-ptr-field-map/field-compound-redirect	pointers,structs,closures,calls,assignment,evaluation_order,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/evalorder/unseq-ptr-field-map/field
+PASS	evalorder/unseq-ptr-field-map/field-private-vs-call	structs,calls,print,evaluation_order
+PASS	evalorder/unseq-ptr-field-map/field-vs-call	pointers,structs,calls,evaluation_order,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/evalorder/unseq-ptr-field-map/field-vs-call)
+PASS	evalorder/unseq-ptr-field-map/map-assign-plain-vs-call	maps,calls,print,assignment,evaluation_order
+PASS	evalorder/unseq-ptr-field-map/map-compound-rebind	maps,closures,calls,assignment,evaluation_order,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/evalorder/unseq-ptr-field-map/map-compound-rebind)
+PASS	evalorder/unseq-ptr-field-map/mapread-vs-call	maps,calls,evaluation_order,nondet	stage=membership	detail=enumerated=2 exhibited=2 draws=2 (K=32; stopped at the members=2 pin) unexhibited=0 (members in artifacts/coverage/membership/evalorder/unseq-ptr-field-map/mapread-vs-call)
+PASS	imported-goose/semantics/defer/defer-func-lit	imported_goose,defer
+PASS	imported-goose/semantics/defer/defer	imported_goose,defer
+PASS	imported-goose/semantics/maps/iterate-map	imported_goose,maps,range
+PASS	imported-goose/semantics/maps/map-size	imported_goose,maps,range
+PASS	maps/compound-assign-eval-once	maps,assignment,indexing,evaluation_order,calls
+PASS	maps/map-incdec	maps,assignment,indexing,evaluation_order,calls
+PASS	noodler/evalorder/elided-pointer-literal	evaluation_order,literals,pointers,calls
+PASS	noodler/evalorder/map-index-before-rhs	evaluation_order,assignment,maps,calls
+PASS	noodler/latitude/deref-vs-call	evaluation_order,pointers,calls,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/noodler/latitude/deref-vs-call)
+PASS	noodler/maps/compound-call-deletes	maps,assignment,evaluation_order,delete,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/noodler/maps/compound-call-deletes)
+PASS	noodler/maps/compound-call-mutates	maps,assignment,evaluation_order,calls,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/noodler/maps/compound-call-mutates)
+PASS	noodler/methods/method-expressions	methods,pointers
+PASS	noodler/misc/recursive-slice-struct	structs,slices,recursion,closures
+PASS	pointers/deref-target-rhs-call-order	pointers,assignment,evaluation_order,calls,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/pointers/deref-target-rhs-call-order)
+PASS	slices/slice-elided-high-eval-once/map-index-effectful-key	slices,maps,slicing,indexing,evaluation_order,calls
+PASS	spec-examples-decl/address-op-nil-indirection/forms	pointers,addressability,arrays,indexing,structs,literals,calls
+PASS	spec-examples-decl/conversion-parse-forms	conversions,channels,functions,pointers,structs,calls
+PASS	spec-examples-stmt/method-expr-five-forms	methods,structs,higher_order,calls
+PASS	structs/selector-eval-once	structs,fields,assignment,evaluation_order,pointers,calls
+# len-nil-only-none's first pin (width=2,sites=8) was REFUTED by the enumerator twice — «site bound 3 exceeds the case's width 2» (three reads ready at once: p.n, q.s, w4), then «run consumes more than --max-sites 8» — the row's params corrected to width=3,sites=16 (the why argues both); its re-run:
+PASS	builtins/len-vs-call-order/len-nil-only-none	pointers,structs,len,evaluation_order,calls,bools,nil,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1

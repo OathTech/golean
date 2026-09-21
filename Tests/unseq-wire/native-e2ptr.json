@@ -1,0 +1,435 @@
+{
+ "buildContext": {
+  "buildTags": [],
+  "cgoEnabled": true,
+  "compiler": "gc",
+  "goarch": "amd64",
+  "goos": "linux"
+ },
+ "fileOrder": [
+  {
+   "files": [
+    "main.go"
+   ],
+   "package": "main"
+  }
+ ],
+ "funcs": [
+  {
+   "body": {
+    "body": [
+     {
+      "define": false,
+      "lhs": [
+       {
+        "expr": {
+         "expr": "ident",
+         "name": "p$cap"
+        },
+        "target": "addr"
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "ident",
+        "name": "y$cap",
+        "type": {
+         "elem": {
+          "int": "int",
+          "kind": "int"
+         },
+         "kind": "pointer"
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "1"
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "e2ptr$lit0",
+   "params": [
+    {
+     "id": "p$cap",
+     "type": {
+      "elem": {
+       "elem": {
+        "int": "int",
+        "kind": "int"
+       },
+       "kind": "pointer"
+      },
+      "kind": "pointer"
+     }
+    },
+    {
+     "id": "y$cap",
+     "type": {
+      "elem": {
+       "int": "int",
+       "kind": "int"
+      },
+      "kind": "pointer"
+     }
+    }
+   ],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "x",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       },
+       {
+        "id": "y",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "10"
+       },
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "100"
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "p",
+        "target": "declare",
+        "type": {
+         "elem": {
+          "int": "int",
+          "kind": "int"
+         },
+         "kind": "pointer"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "ref",
+        "id": "x",
+        "type": {
+         "elem": {
+          "int": "int",
+          "kind": "int"
+         },
+         "kind": "pointer"
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "mut",
+        "target": "declare",
+        "type": {
+         "kind": "func",
+         "params": [],
+         "results": [
+          {
+           "int": "int",
+           "kind": "int"
+          }
+         ],
+         "variadic": false
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "captured": [
+         {
+          "expr": "ref",
+          "id": "p"
+         },
+         {
+          "expr": "ref",
+          "id": "y"
+         }
+        ],
+        "expr": "func-value",
+        "func": "e2ptr$lit0",
+        "type": {
+         "kind": "func",
+         "params": [],
+         "results": [
+          {
+           "int": "int",
+           "kind": "int"
+          }
+         ],
+         "variadic": false
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "cells": [
+       {
+        "id": "$u0",
+        "type": {
+         "elem": {
+          "int": "int",
+          "kind": "int"
+         },
+         "kind": "pointer"
+        }
+       },
+       {
+        "id": "$u2",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       },
+       {
+        "id": "$u3",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       },
+       {
+        "id": "$u4",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "occs": [
+       {
+        "args": [],
+        "binds": [
+         "$u3"
+        ],
+        "callee": {
+         "expr": "ident",
+         "name": "mut",
+         "type": {
+          "kind": "func",
+          "params": [],
+          "results": [
+           {
+            "int": "int",
+            "kind": "int"
+           }
+          ],
+          "variadic": false
+         }
+        },
+        "kind": "invoke",
+        "name": "call3",
+        "resultTypes": [
+         {
+          "int": "int",
+          "kind": "int"
+         }
+        ]
+       },
+       {
+        "bind": "$u0",
+        "head": {
+         "expr": "ident",
+         "name": "p",
+         "type": {
+          "elem": {
+           "int": "int",
+           "kind": "int"
+          },
+          "kind": "pointer"
+         }
+        },
+        "kind": "eval",
+        "name": "read0"
+       },
+       {
+        "bind": "$t1",
+        "kind": "target",
+        "lhs": {
+         "expr": {
+          "expr": "ident",
+          "name": "$u0",
+          "type": {
+           "elem": {
+            "int": "int",
+            "kind": "int"
+           },
+           "kind": "pointer"
+          }
+         },
+         "target": "addr"
+        },
+        "name": "target1"
+       },
+       {
+        "bind": "$u2",
+        "kind": "load",
+        "name": "load2",
+        "target": "$t1"
+       },
+       {
+        "bind": "$u4",
+        "head": {
+         "expr": "binary",
+         "op": "+",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "x": {
+          "expr": "ident",
+          "name": "$u2",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          }
+         },
+         "y": {
+          "expr": "ident",
+          "name": "$u3",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          }
+         }
+        },
+        "kind": "eval",
+        "name": "op4"
+       }
+      ],
+      "stmt": "unseq",
+      "stores": [
+       {
+        "target": "$t1",
+        "value": "$u4"
+       }
+      ],
+      "then": {
+       "body": [],
+       "stmt": "block"
+      }
+     },
+     {
+      "results": [
+       {
+        "expr": "binary",
+        "op": "+",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "x": {
+         "expr": "binary",
+         "op": "*",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "x": {
+          "expr": "ident",
+          "name": "x",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          }
+         },
+         "y": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "1000"
+         }
+        },
+        "y": {
+         "expr": "ident",
+         "name": "y",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         }
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "e2ptr",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  }
+ ],
+ "methodSets": [],
+ "methods": [],
+ "package": "main",
+ "schema": "golean-native-v1",
+ "types": []
+}

@@ -1,0 +1,28 @@
+dir	unit	file:line	function	form	events	calls	nonEvents	former-reason
+Corpus/coverage/exec/builtins/e13-sibling-panic-order	main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:158	derefLeftCall	return	1	1	1	pointer indirection
+Corpus/coverage/exec/builtins/e13-sibling-panic-order	main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:211	derefLeftIndexArgCall	return	1	1	2	pointer indirection
+Corpus/coverage/exec/builtins/e13-sibling-panic-order	main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:307	mapKeyAssertVsLen	map-assign	2	1	2	element target on a non-slice base (map[string]int)
+Corpus/coverage/exec/builtins/e13-sibling-panic-order	main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:405	mapTgtAssertVsCall	map-assign	1	1	1	element target on a non-slice base (map[string]int)
+Corpus/coverage/exec/builtins/e13-sibling-panic-order	main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:570	mapCompoundIndexKeyVsCall	compound	1	1	2	element target on a non-slice base (map[int]int)
+Corpus/coverage/exec/builtins/len-vs-call-order	main	Corpus/coverage/exec/builtins/len-vs-call-order/main.go:281	lenNilOnly	return	3	2	4	selector (field / method / qualified name)
+Corpus/coverage/exec/builtins/len-vs-call-order	main	Corpus/coverage/exec/builtins/len-vs-call-order/main.go:321	lenAssertVsNilOperand	return	2	1	2	selector (field / method / qualified name)
+Corpus/coverage/exec/builtins/len-vs-call-order	main	Corpus/coverage/exec/builtins/len-vs-call-order/main.go:328	lenNilLeftVsIndexOperand	return	2	1	2	selector (field / method / qualified name)
+Corpus/coverage/exec/imported-goose/semantics/defer	main	Corpus/coverage/exec/imported-goose/semantics/defer/main.go:20	testDefer	return	1	1	1	pointer indirection
+Corpus/coverage/exec/imported-goose/semantics/maps	main	Corpus/coverage/exec/imported-goose/semantics/maps/main.go:35	testIterateMap	assign	1	1	1	parameter type outside the pilot grammar (map[uint64]uint64)
+Corpus/coverage/exec/imported-goose/semantics/maps	main	Corpus/coverage/exec/imported-goose/semantics/maps/main.go:38	testIterateMap	assign	1	1	1	parameter type outside the pilot grammar (map[uint64]uint64)
+Corpus/coverage/exec/maps/compound-assign-eval-once	main	Corpus/coverage/exec/maps/compound-assign-eval-once/main.go:14	mapCompoundAssignEvalOnce	compound	2	2	1	element target on a non-slice base (map[int]int)
+Corpus/coverage/exec/maps/map-incdec	main	Corpus/coverage/exec/maps/map-incdec/main.go:10	mapIncDec	incdec	1	1	1	element target on a non-slice base (map[int]int)
+Corpus/coverage/exec/noodler/evalorder	main	Corpus/coverage/exec/noodler/evalorder/main.go:104	mapIndexBeforeRHS	return	1	1	1	index of a non-slice base (map[int]int)
+Corpus/coverage/exec/noodler/evalorder	main	Corpus/coverage/exec/noodler/evalorder/main.go:193	elidedPointerLiteralOrder	return	1	1	4	selector (field / method / qualified name)
+Corpus/coverage/exec/noodler/latitude	main	Corpus/coverage/exec/noodler/latitude/main.go:81	derefVsCall	return	1	1	2	pointer indirection
+Corpus/coverage/exec/noodler/maps	main	Corpus/coverage/exec/noodler/maps/main.go:11	mapCompoundCallMutates	compound	1	1	2	element target on a non-slice base (map[int]int)
+Corpus/coverage/exec/noodler/maps	main	Corpus/coverage/exec/noodler/maps/main.go:28	mapCompoundCallDeletes	compound	1	1	2	element target on a non-slice base (map[int]int)
+Corpus/coverage/exec/noodler/methods	main	Corpus/coverage/exec/noodler/methods/main.go:103	methodExpressions	return	1	1	2	parameter type outside the pilot grammar (main.Counter)
+Corpus/coverage/exec/noodler/misc	main	Corpus/coverage/exec/noodler/misc/main.go:143	recursiveSliceStruct	return	1	1	1	parameter type outside the pilot grammar (main.tree)
+Corpus/coverage/exec/pointers/deref-target-rhs-call-order	main	Corpus/coverage/exec/pointers/deref-target-rhs-call-order/main.go:11	derefTargetRhsCallOrder	deref-assign	1	1	1	assignment target outside the pilot grammar
+Corpus/coverage/exec/slices/slice-elided-high-eval-once	main	Corpus/coverage/exec/slices/slice-elided-high-eval-once/main.go:69	mapIndexEffectfulKey	define	1	1	2	index of a non-slice base (map[int][]int)
+Corpus/coverage/exec/spec-examples-decl/address-op-nil-indirection	main	Corpus/coverage/exec/spec-examples-decl/address-op-nil-indirection/main.go:27	addressForms	define	1	1	2	pointer indirection
+Corpus/coverage/exec/spec-examples-decl/conversion-parse-forms	main	Corpus/coverage/exec/spec-examples-decl/conversion-parse-forms/main.go:26	conversionParseForms	return	2	2	1	selector (field / method / qualified name)
+Corpus/coverage/exec/spec-examples-stmt/method-expr-five-forms	main	Corpus/coverage/exec/spec-examples-stmt/method-expr-five-forms/main.go:24	methodExprFiveForms	define	1	1	1	parameter type outside the pilot grammar (main.mefT)
+Corpus/coverage/exec/spec-examples-stmt/method-expr-five-forms	main	Corpus/coverage/exec/spec-examples-stmt/method-expr-five-forms/main.go:26	methodExprFiveForms	define	1	1	1	parameter type outside the pilot grammar (main.mefT)
+Corpus/coverage/exec/structs/selector-eval-once	main	Corpus/coverage/exec/structs/selector-eval-once/main.go:14	structSelectorEvalOnce	compound	1	1	1	assignment target outside the pilot grammar

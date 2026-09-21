@@ -76,7 +76,8 @@ def store(st, h, i, v):
     st['arr'][h][i] = v
 def freeze(st):
     return (tuple(sorted(st['v'].items())), tuple((k, tuple(a)) for k, a in sorted(st['arr'].items())),
-            tuple(st.get('chan', ())))
+            tuple(st.get('chan', ())),
+            tuple((k, tuple(sorted(m.items()))) for k, m in sorted(st.get('maps', {}).items())))
 
 def enumerate_graph(occs, init, phase2):
     """Return ({result_key: (n_trajectories, final_state)}, canonical); result_key =
@@ -182,10 +183,12 @@ def refuse(name, thunk, needle):
     else:
         print(f"{name}: MISMATCH: expected a named refusal ({needle!r}), got results"); FAILS += 1
 
-def state(v=None, arr=None, chan=None):
+def state(v=None, arr=None, chan=None, maps=None):
     st = {'v': dict(v or {}), 'arr': {k: list(a) for k, a in (arr or {}).items()}, 'out': []}
     if chan is not None:
         st['chan'] = list(chan)
+    if maps is not None:
+        st['maps'] = {k: dict(m) for k, m in maps.items()}   # Stage E E2: map ids -> {key: value}
     return st
 
 def println(st, *xs):
@@ -455,6 +458,79 @@ def e1b():
     check('E1b (BUG-113) sinkL(left||b, change()), left a package-level variable', enumerate_graph(occs, state(v={'b': False, 'left': False}), lambda st, v: None),
           lambda k: k[2], {('logical false 0',)}, forbid=(('logical true 0',),))
 
+# ---------------------------------------------------------------- Stage E, family E2 (2026-09-21): pointers, fields, maps
+# A dereference `*p`, a field selection `p.f`, a map element `m[k]` are READ occurrences of mutable
+# locations (nil-checked through a pointer); as targets they are FROZEN plans — the pointer VALUE,
+# the struct's address, the map VALUE and key VALUE — one identity for the load and the store. The
+# reference LEADS the lowering: Tests/unseq-wire/{e2ptr,e2map}.json and evalorder/unseq-ptr-field-map/*.
+# Pointers are state variables holding a variable NAME ('x'); a field `q.f` is the variable 'q.f'.
+def e2a():
+    def mut(st, v): st['v']['x'] = 2; return 0                              # setVia(p): *p = 2
+    occs = [Occ('E_mut', run=mut),
+            Occ('R_deref', run=lambda st, v: st['v'][st['v']['p']]),           # *p: nil-checked read
+            Occ('Op', deps=['E_mut', 'R_deref'], run=lambda st, v: v['E_mut'] + v['R_deref'])]
+    check('E2a *p + setVia(p) (p -> x = 1; setVia: *p = 2)', enumerate_graph(occs, state(v={'x': 1, 'p': 'x'}), lambda st, v: v['Op']),
+          lambda k: k[1], {1, 2})
+
+def e2c():
+    def mut(st, v): st['maps']['M'][1] = 2; return 0                       # setM(m): m[1] = 2
+    occs = [Occ('E_mut', run=mut),
+            Occ('R_m', run=lambda st, v: st['maps'][st['v']['m']].get(1, 0)),   # m[1]: the map read
+            Occ('Op', deps=['E_mut', 'R_m'], run=lambda st, v: v['E_mut'] + v['R_m'])]
+    check('E2c m[1] + setM(m) (m[1] = 1; setM: m[1] = 2)', enumerate_graph(occs, state(v={'m': 'M'}, maps={'M': {1: 1}}), lambda st, v: v['Op']),
+          lambda k: k[1], {1, 2})
+
+def e2d():
+    # BUG-104's map row: m[t[k]] += wit(5) with t = [1], k = 5 — the key's checked access panics
+    # before or after wit prints; the plan / load / store never run.
+    def wit(st, v): println(st, 'wit', 5); return 5
+    occs = [Occ('R_tk', run=lambda st, v: elem(st, hdr(st, 't'), 5)),
+            Occ('E_wit', run=wit),
+            Occ('L', deps=['R_tk'], run=lambda st, v: ('M', v['R_tk'])),
+            Occ('Rd', deps=['L'], run=lambda st, v: st['maps'][v['L'][0]].get(v['L'][1], 0)),
+            Occ('Op', deps=['Rd', 'E_wit'], run=lambda st, v: v['Rd'] + v['E_wit'])]
+    def phase2(st, v): st['maps'][v['L'][0]][v['L'][1]] = v['Op']; return None
+    check('E2d (BUG-104) m[t[k]] += wit(5), t[k] out of range', enumerate_graph(occs, state(v={'t': 'T', 'm': 'M'}, arr={'T': [1]}, maps={'M': {}}), phase2),
+          lambda k: (k[0], k[1], k[2]),
+          {('panic', 'index out of range [5] with length 1', ()), ('panic', 'index out of range [5] with length 1', ('wit 5',))})
+
+def e2e():
+    # *p += mut() with mut REDIRECTING the captured p to y: the plan freezes the pointer VALUE.
+    def mut(st, v): st['v']['p'] = 'y'; return 1
+    occs = [Occ('R_p', run=lambda st, v: st['v']['p']),                          # the pointer value (p captured)
+            Occ('L', deps=['R_p'], run=lambda st, v: v['R_p']),                  # identity: the frozen pointee name
+            Occ('Rd', deps=['L'], run=lambda st, v: st['v'][v['L']]),            # the load through the plan
+            Occ('E_mut', run=mut),
+            Occ('Op', deps=['Rd', 'E_mut'], run=lambda st, v: v['Rd'] + v['E_mut'])]
+    def phase2(st, v): st['v'][v['L']] = v['Op']; println(st, 'x y', st['v']['x'], st['v']['y']); return None
+    check('E2e *p += mut() with mut redirecting p (x = 10, y = 100)', enumerate_graph(occs, state(v={'x': 10, 'y': 100, 'p': 'x'}), phase2),
+          lambda k: k[2], {('x y 11 100',), ('x y 10 101',)}, forbid=(('x y 10 11',), ('x y 101 100',)))
+
+def e2f():
+    # m[1] += mut() with mut REBINDING the captured m to m2: the plan freezes the map VALUE (a reference).
+    def mut(st, v): st['v']['m'] = 'M2'; return 1
+    occs = [Occ('R_m', run=lambda st, v: st['v']['m']),
+            Occ('L', deps=['R_m'], run=lambda st, v: (v['R_m'], 1)),
+            Occ('Rd', deps=['L'], run=lambda st, v: st['maps'][v['L'][0]].get(v['L'][1], 0)),
+            Occ('E_mut', run=mut),
+            Occ('Op', deps=['Rd', 'E_mut'], run=lambda st, v: v['Rd'] + v['E_mut'])]
+    def phase2(st, v):
+        st['maps'][v['L'][0]][v['L'][1]] = v['Op']
+        println(st, 'old', st['maps']['M'][1], 'm', st['maps'][st['v']['m']][1]); return None
+    check('E2f m[1] += mut() with mut rebinding m (m[1] = 10, m2[1] = 100)', enumerate_graph(occs, state(v={'m': 'M'}, maps={'M': {1: 10}, 'M2': {1: 100}}), phase2),
+          lambda k: k[2], {('old 11 m 100',), ('old 10 m 101',)}, forbid=(('old 10 m 11',), ('old 101 m 100',)))
+
+def e2g():
+    # *p + wit(5) with p nil: the nil dereference before or after the call (E13's deref shape; gc LATE).
+    def wit(st, v): println(st, 'wit', 5); return 5
+    def deref(st, v):
+        if st['v']['p'] is None: raise Panic('invalid memory address or nil pointer dereference')
+        return st['v'][st['v']['p']]
+    occs = [Occ('R_deref', run=deref), Occ('E_wit', run=wit),
+            Occ('Op', deps=['R_deref', 'E_wit'], run=lambda st, v: v['R_deref'] + v['E_wit'])]
+    check('E2g *p + wit(5), p nil', enumerate_graph(occs, state(v={'p': None}), lambda st, v: v['Op']),
+          lambda k: (k[0], k[2]), {('panic', ()), ('panic', ('wit 5',))})
+
 # ---------------------------------------------------------------- negative controls (forced pairs are singletons)
 def controls():
     # C1: f(g()) — argument before invocation (data edge); no unordered pair remains.
@@ -482,7 +558,7 @@ if __name__ == '__main__':
               lambda: r2b('C_or'), lambda: r2b('G'),
               lambda: r2c(True), lambda: r2c(False),
               r4, lambda: r6(True), lambda: r6(False),
-              e1a, e1c, e1b, controls):
+              e1a, e1c, e1b, e2a, e2c, e2d, e2e, e2f, e2g, controls):
         f()
     print('RESULT:', 'FAIL' if FAILS else 'PASS', f'({FAILS} mismatch(es))')
     sys.exit(1 if FAILS else 0)

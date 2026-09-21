@@ -135,3 +135,123 @@ already realizes, for sweeps the later families migrate anyway. (v) No corpus ro
 `pkg.V` spelling: it needs a multi-package program; the classifier/lowering arms are exercised by the
 unit test's shape only through the unqualified path and by the census (0 qualified sweeps admitted in
 the corpus or the twin) — recorded as a gap, not claimed covered.
+
+## E2. Pointers, fields and maps as occurrences (landed 2026-09-21)
+
+**The grammar widening** (`unseq.go`). TYPES: pointers to admitted types; NAMED STRUCT types (non-generic,
+no embedded fields) whose every field is admitted (cycle-guarded — a self-pointing field is admitted once);
+maps with an int/bool/string key (never a defined or interface-containing key: the boxed key would sit
+inside the graph) and an admitted value. READS: `*p` is ONE occurrence on the pointer value (a nil check +
+a mutable read, `nonEvents++`); a FIELD selection `x.f` (`unseqFieldSel`: `FieldVal`, no promoted hop, a named
+struct, an admitted field type) through a POINTER is one occurrence (`nonEvents++`), on a struct VALUE it
+takes the base's own classification — an address-taken struct local's read is the occurrence (the
+lowering FUSES it with the selection into one `field-get` read, no struct-typed cell), a private struct
+local's field is a stable read (an `eval` op, no count), a nested base (`a[i].f`) produces a slot; a MAP
+element read `m[k]` is one occurrence on the frozen base and key values (`nonEvents++`; hash-safe by the
+type grammar). TARGETS (`unseqDerefTarget`, `unseqFieldTarget`, `unseqMapTarget`): `*p`, `p.f` / `s.f`
+(a pointer operand, or a struct VARIABLE — local or package-level — whose address is the anchor; a nested
+value base refuses by name), `m[k]` — each a FROZEN plan that checks nothing and reads nothing of its own,
+so a plan on atoms does NOT by itself admit a sweep (`m[1] = wit(5)`, `*p = f()` with p private stay
+legacy — the [AGENT] choice below); the compound / IncDec forms' LOAD is the mutable read that does
+(`nonEvents++`). Interface-typed pointees / fields / map values as targets refuse by name (boxing inside a
+graph). The whole-sweep boundary and the trigger are unchanged.
+
+**The lowering** (`unseq_lower.go`). `*p` → `eval deref(ptr atom)`; `p.f` → `eval field-get(deref(ptr atom))`
+(the emitter's own `fieldBase` spelling), `s.f` → `eval field-get(ident s)` (fused) or `field-get(slot)`;
+`m[k]` → `eval map-get(base atom, key atom, keyType, valueType)`. Plans: `*p` → `target $t addr(ptr atom)`;
+`p.f` / `s.f` → `target $t addr(field-addr(ptr atom | ref s | globaladdr, typeId, f))`; `m[k]` → `target $t
+map(base atom, key atom, keyType, valueType)` — `Assignee.mapElem`, the machine's `TargetRef.mapElem` (the
+map VALUE and key VALUE frozen). `planTarget`/`plannedAssign`/`readWrite` share ONE path for every planned
+target (slice element, map element, dereference, field): plan → (load → op →) store in phase 2.
+
+**The decoder** (`NativeToIR.lean`). D8: `field-get` with an atom or `deref(atom)` receiver; `map-get` over
+atoms. D13: `.addr (.var p)` (a dereference plan on a pointer atom), `.addr (.fieldAddr base …)` with an
+anchor `.var`/`.ref`/`.global`, `.mapElem base key` over atoms (int/bool/string constants included). Mutants
+`mut-map-target-key` (a non-atom key) and `mut-deref-target-nonatom` (a non-atom pointer position) — the
+21st and 22nd.
+
+**The machine** (`GoLean/GoCore/Machine.lean`, TRUST SURFACE #1 — ONE arm + ONE atom): `unseqReadTarget`'s
+`.mapElem` arm reads the frozen map VALUE's entry at the frozen key VALUE — `valueAsMap`, `normalizeValueForTy`
+at the key type, `mapLookupValue` — exactly the comma-ok source's lookup (`applyRhsOp .mapLookup`; a nil map
+hashes the key and yields the zero value, an absent key the zero value); `unseqAtom` gains `.stringLit` (a
+string map key). `StateWf`: `unseqReadTarget_locSup`'s map arm is `mapLookupValue_locSup`; `unseqAtom_locSup`
+gains the string case. `unseqUnfrozenPlan?`'s `.mapElem` stays `none` (a map value is a reference, a key a
+value — nothing re-read). No `Step` rule, no `stepFn` arm, no coherence statement changed: `unseqRunLoad`
+runs the same `unseqLoad.plan`; `stepFn_sound`/`step_complete` are untouched. `check-mem-callsites`: the arm
+reaches memory through the emitting `Mem.mapRead` inside `mapLookupValue` — no raw op, the inventory
+unchanged. The Stage B hand-built test «target: frozen map-element plan (Stage E)» FLIPS from a refusal to
+the set test «map replacement (frozen map VALUE)»: `m[1] += mut()` with `mut` rebinding the captured map →
+{`old 11 m 100`, `old 10 m 101`}, the hybrids absent (the spike's R4 on a map; the Stage B acceptance
+matrix's «map/pointer deferred to E» — pointer redirection was already Stage B's `ptr` test).
+
+**The reference leads** (`enumerate.py`, a `maps` state component; `outcomes.txt` PASS): E2a `*p + setVia(p)`
+→ {1, 2}; E2c `m[1] + setM(m)` → {1, 2}; E2d BUG-104's `m[t[k]] += wit(5)` → {`` · `[5]`, `wit 5` · `[5]`}; E2e
+`*p += mut()` with mut redirecting p → {`x y 11 100`, `x y 10 101`}, the hybrids FORBIDDEN; E2f `m[1] += mut()`
+with mut rebinding m → {`old 11 m 100`, `old 10 m 101`}, hybrids forbidden; E2g `*p + wit(5)`, p nil → the
+nil dereference before or after the call. Wires: hand-built `e2ptr.json` / `e2map.json` + the frontend's own
+`native-{e2ptr,e2map,e2fld}.json` (checksums 11100 / 10101) — `Tests/UnseqWire.lean`, `check-unseq-wire`,
+`check-wire-boundary` (+ 3 controls: the map-plan positive, the two mutants).
+
+**The census** (`census-e2.txt`): admitted 146 → 176 — +27 in 17 packages from the widening (0 lost) and +3 from
+the E1 package `evalorder/unseq-globals`, born after the E1 census (107 943 → 107 963 sweeps); the raft twin 0
+(its sweeps' callees are outside its main unit). By former reason: 5 pointer indirections, 7 map-element
+targets, 5 selectors, 5 struct/map parameter types, 2 map reads, 2 assignment targets, 1 dereference
+target. The 27 (`census-newly-admitted-e2.tsv`): the four E13 deref/map rows' sweeps and BUG-104's map row;
+`len-vs-call-order`'s `lenNilOnly` / `lenAssertVsNilOperand` / `lenNilLeftVsIndexOperand` (field reads
+through pointers beside `len`/`wit4`); `imported-goose` (`*(deferSimple()) == 10`, two `ok = ok &&
+IterateMap…(m) == …` with a map argument); `maps/compound-assign-eval-once`, `maps/map-incdec`; noodler's
+`mapIndexBeforeRHS`, `elidedPointerLiteralOrder`, `derefVsCall`, the two map compounds, `methodExpressions`
+(`get(c), c.n`), `recursiveSliceStruct`; `pointers/deref-target-rhs-call-order`; `slices/slice-elided-high-
+eval-once`'s `m[k()][1:]`; `spec-examples-decl`'s `*pf(x)` and `pp.x*10000 + …`; `method-expr-five-forms`'s
+`f1(t, 7)` / `f2(t, 7)`; `structs/selector-eval-once`'s `get().x += 4`.
+
+**Rows** — DERIVED before measurement from the graphs (the sets are the enumerator's shapes; gc's draws
+`gc-draws-e2.txt`, 20/20 per row under GOMAXPROCS 1 and 8, default and `-N -l`, each inside its set):
+
+| row | before → after | set (output · result) | gc |
+|---|---|---|---|
+| `builtins/e13-sibling-panic-order/map-compound-index-key-vs-call` (BUG-104) | FAIL/differential → PASS/membership | {`` · `[5]`, `wit 5` · `[5]`} (E2d) | `wit 5` · `[5]` |
+| `evalorder/unseq-ptr-field-map/{deref,field,mapread}-vs-call` | born PASS/membership | {1, 2} each (E2a/E2b/E2c) | 2 |
+| `evalorder/unseq-ptr-field-map/{deref,field}-compound-redirect`, `map-compound-rebind` | born PASS/membership | {11100, 10101} each (E2e/E2h/E2f; hybrids absent) | 10101 |
+| `evalorder/unseq-ptr-field-map/{field-private-vs-call,map-assign-plain-vs-call}` | born PASS strict | `wit 1` · 2; `wit 5` · 6 (legacy by the trigger — the controls) | = |
+| `noodler/latitude/deref-vs-call` | PASS strict → PASS/membership | {11, 12} — `*p + f()`, f redirects p (E12's value axis on a deref) | 12 |
+| `noodler/maps/compound-call-mutates` | PASS strict → PASS/membership | {15, 105} — the frozen map plan's load before / after `f` writes m[1] | 105 |
+| `noodler/maps/compound-call-deletes` | PASS strict → PASS/membership | {(15, 1), (5, 1)} — the load before / after `f` deletes m[1] | (5, 1) |
+| `pointers/deref-target-rhs-call-order` | PASS strict → PASS/membership | {92, 19} — `*p = swapP()`, the frozen pointer plan before / after the redirect (E2's value axis; the row's call-first pin enveloped) | 19 |
+| `builtins/len-vs-call-order/len-nil-only-none` | PASS strict → PASS/membership | {10, 14} — the package-level `w4` read vs `wit4` inside the `&&` region (E12's value axis; the sweep entered through its field reads) | 14 |
+| `builtins/e13-sibling-panic-order/{deref-left-call,deref-left-index-arg-call,map-key-assert-vs-len,map-tgt-assert-vs-call}` | PASS/membership, sets UNCHANGED (2 members each) | a first failure ends the run; `wit` sits after `len` by E1 | unchanged |
+| `builtins/len-vs-call-order/{len-nil-only-left,-operand,-both,len-assert-vs-nil-operand,len-nil-left-vs-index-operand}` | PASS strict (unchanged) | the failing operand precedes the region / the call; identical nil panics | = |
+| the 12 other rows whose sweeps entered (`imported-goose/semantics/{defer,maps}`, `maps/{compound-assign-eval-once,map-incdec}`, `noodler/evalorder/{map-index-before-rhs,elided-pointer-literal}`, `noodler/methods/method-expressions`, `noodler/misc/recursive-slice-struct`, `slices/slice-elided-high-eval-once/map-index-effectful-key`, `spec-examples-decl/{address-op-nil-indirection,conversion-parse-forms}`, `spec-examples-stmt/method-expr-five-forms`, `structs/selector-eval-once`) | unchanged | every edge forced, or reads no sibling call writes (wide picks within the fixed streams) | = |
+
+MEASURED (`scripts/diff-one` on the 38 affected rows — the 27 sweeps' subject rows, the born package,
+`imported-goose/semantics/{defer,maps}`; `diff-one-e2.txt`): EXACTLY the table — the flip, the five moves, the
+eight births, the four E13 sets unchanged at 2 members, every other row unchanged. One correction of my own
+pin, not of the set: `len-nil-only-none`'s first `width=2,sites=8` was REFUTED by the enumerator by name
+(«site bound 3 exceeds the case's width 2» — the three reads `p.n`, `q.s`, `w4` are ready at once — then «run
+consumes more than --max-sites 8»: the sweep's reads, `len`, guard, region call, ops and the `b2i` call make up
+to ten wide picks per run); `width=3,sites=16` closes it with the same two members. **The full gate** (`scripts/capped scripts/ci --slow` at the
+E2 tree under the box-wide lock, 02:45–03:02Z): EXIT=1 in 1018 s, K=80; 3717 rows 3473 PASS / 244 FAIL in the run =
+the pin with the one 5a-class row red; RESULT FAIL on exactly the two 5a-class items (`certificate provenance`
+STALE for `GoLean/GoCore/Machine.lean`; the drift line `imported-goose/channel/google-search` PASS→FAIL/membership,
+fresh set unchanged); every other step ok — the evidence README §E2 and `ci-slow-e2.tail.txt`.
+
+**Latitude.** E2's and E12's VALUE axis is (a) ENVELOPED on SEVEN more rows — the four lane moves
+(`noodler/latitude/deref-vs-call`, `noodler/maps/compound-call-{mutates,deletes}`, `pointers/deref-target-rhs-
+call-order` — the last was E2's own (b) call-first pin row) plus `builtins/len-vs-call-order/len-nil-only-none`
+(a global read) and the born `evalorder/unseq-ptr-field-map/*` membership rows — posed for ratification at the
+merge ask with the pilot's and E1's precedent; the entries stay (b) PINNED for the rest of their families
+(receives, methods, multi-target forms, conversions/allocations — E3/E4/E5). BUG-104's map row is an
+observed-∉-modeled FIX (the row moves to BUG-112's Cases line), not latitude.
+
+**[AGENT] choices (alternatives named).** (i) A plan on ATOMS does not admit a sweep (pointer / field / map
+targets): the alternative — counting every plan as the pilot counts a slice-element plan — would admit
+`m[1] = wit(5)`, `*p = f()`, `s.f = g()` on private operands (hundreds of sweeps: the census's «assignment
+target outside» reason alone is 2124) for singleton sets and one wide pick per sweep; the slice rule is
+left as Stage C set it (consistency of the pilot's rows), recorded as an asymmetry to reconcile at E5. (ii)
+An address-taken struct local's field read is FUSED into one `field-get` read (no struct-typed cell): the
+alternative (a struct-valued read cell + a pure projection) spends a cell and a copy per read for the same
+observation. (iii) The machine's map read reuses `mapLookupValue` (the comma-ok lookup) rather than a new
+map-read helper: one lookup semantics, one `locSup` lemma. (iv) Map keys are int/bool/string only: an
+interface-containing key needs `to-interface` boxing inside the plan (Stage C's boxing rule) and a defined
+key type is E5's named-type family. (v) `e2fld` is native-only (no hand-built twin): the struct type's wire
+name is an envelope fact; the pointer and map hand-built wires carry the frozen-identity claim.

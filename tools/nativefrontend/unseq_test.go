@@ -300,6 +300,112 @@ func globalTypeOut() {
 	gf += float64(wit(1))
 }
 
+// --- Stage E E2: pointers, fields, maps ---
+
+type P struct {
+	f int
+	n *P
+}
+
+func setVia(p *int) int { *p = 2; return 0 }
+
+// E2a: *p + setVia(p) — the dereference is ONE read occurrence beside the call. {1, 2}.
+func e2deref() int {
+	x := 1
+	p := &x
+	return *p + setVia(p)
+}
+
+// E2b: q.f + setF(q) — a field read through a pointer. {1, 2}.
+func setF(q *P) int { q.f = 2; return 0 }
+func e2field() int {
+	q := &P{f: 1}
+	return q.f + setF(q)
+}
+
+// A field read on a PRIVATE struct variable beside a call that cannot touch it: no non-event → legacy.
+func e2fieldPrivate() int {
+	var s P
+	s.f = 1
+	return s.f + wit(1)
+}
+
+// A field read on an ADDRESS-TAKEN struct variable: the fused read is the occurrence.
+func e2fieldAddrTaken() int {
+	var s P
+	mut := func() int { s.f = 2; return 0 }
+	return s.f + mut()
+}
+
+// E2c: m[1] + setM(m) — a map element read. {1, 2}.
+func setM(m map[int]int) int { m[1] = 2; return 0 }
+func e2mapread() int {
+	m := map[int]int{1: 1}
+	return m[1] + setM(m)
+}
+
+// E2e: *p += redirect() — the plan freezes the pointer VALUE (mut redirects p).
+func e2derefCompound() int {
+	x, y := 10, 100
+	p := &x
+	mut := func() int { p = &y; return 1 }
+	*p += mut()
+	return x*1000 + y
+}
+
+// E2h: q.f += redirectQ() — a field compound target through a pointer.
+func e2fieldCompound() int {
+	a, b := &P{f: 10}, &P{f: 100}
+	q := a
+	mut := func() int { q = b; return 1 }
+	q.f += mut()
+	return a.f*1000 + b.f
+}
+
+// E2f: m[1] += rebind() — the plan freezes the map VALUE (mut rebinds m).
+func e2mapCompound() int {
+	m, m2 := map[int]int{1: 10}, map[int]int{1: 100}
+	mut := func() int { m = m2; return 1 }
+	m[1] += mut()
+	return 0
+}
+
+// A map assign with a computed key beside a call: the key's checked access is the occurrence.
+func e2mapAssignKey() int {
+	m := map[int]int{}
+	t := []int{1}
+	k := 0
+	m[t[k]] = wit(5)
+	return len(m)
+}
+
+// A map assign on private atoms beside a call: no non-event (the plan checks nothing) → legacy.
+func e2mapAssignPlain() int {
+	m := map[int]int{}
+	m[1] = wit(5)
+	return len(m)
+}
+
+// A promoted field selector stays legacy by name.
+type Outer struct{ P }
+func e2promoted() int {
+	o := &Outer{}
+	return o.f + wit(1)
+}
+
+// An interface-keyed map stays legacy by name (the boxed key would sit inside the graph).
+func e2ifaceKey() int {
+	m := map[interface{}]int{}
+	return m[1] + wit(1)
+}
+
+// A field target on a nested value base stays legacy by name.
+func e2nestedFieldTarget() int {
+	ss := []P{{}}
+	ss[0].f = wit(1)
+	return ss[0].f
+}
+
 func conversionOperand() int {
 	s := []int{1}
 	return int(int64(s[0])) + wit(1)
@@ -413,6 +519,19 @@ func TestUnseqAdmittedWitnesses(t *testing.T) {
 		{"e1plainTarget", 1, "assign", 1, 0}, // g = wit(1): no non-event → legacy
 		{"bug113or", 1, "call-stmt", 2, 3},   // change, sinkL | the global read, the address-taken b's read, the guard
 		{"bug113control", 1, "call-stmt", 2, 3},
+		// Stage E E2: pointers, fields, maps
+		{"e2deref", 0, "return", 1, 1},              // *p: the dereference
+		{"e2field", 0, "return", 1, 1},              // q.f through a pointer
+		{"e2fieldPrivate", 0, "return", 1, 0},       // s.f on a private struct: a stable read → legacy
+		{"e2fieldAddrTaken", 0, "return", 1, 1},     // the fused read of the address-taken s
+		{"e2mapread", 0, "return", 1, 1},            // m[1]: the map read
+		{"e2derefCompound", 1, "compound", 1, 2},    // the plan on the address-taken p's read + the load
+		{"e2fieldCompound", 1, "compound", 1, 2},    // the plan on the address-taken q's read + the load
+		{"e2mapCompound", 1, "compound", 1, 2},      // the plan on the address-taken m's read + the load
+		{"e2mapAssignKey", 1, "map-assign", 1, 1},   // the key's checked access
+		{"e2mapAssignPlain", 1, "map-assign", 1, 0}, // atoms only → legacy
+		{"mapTarget", 1, "compound", 1, 2},          // BUG-104's m[t[k]] += wit(5): the key's checked access + the load
+		{"derefRead", 0, "return", 1, 1},
 	}
 	for _, c := range cases {
 		d := decisionAt(t, unseqWitnessSrc, c.fn, c.fromEnd)
@@ -469,11 +588,12 @@ func TestUnseqLegacyByReason(t *testing.T) {
 		fromEnd int
 		reason  string
 	}{
-		{"mapTarget", 1, "element target on a non-slice base"},
 		{"recvOperand", 1, "unary operator <-"},
 		{"methodCall", 0, "callee expression outside the pilot grammar"},
-		{"derefRead", 0, "pointer indirection"},
 		{"globalTypeOut", 0, "package-level target of a type outside the grammar"},
+		{"e2promoted", 0, "promoted field selector"},
+		{"e2ifaceKey", 0, "map type outside the grammar"},
+		{"e2nestedFieldTarget", 1, "field target on a non-variable struct base"},
 		{"conversionOperand", 0, "conversion"},
 		{"multiTarget", 1, "multi-target or tuple assignment"},
 		{"lenOnly", 0, "no call occurrence"},

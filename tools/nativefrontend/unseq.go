@@ -56,6 +56,24 @@ package main
 // lowering exactly as the legacy path does (the same per-declaration
 // quarantine).
 //
+// STAGE E, family E2 (2026-09-21): POINTERS, FIELDS, MAPS. A read through a
+// pointer (`*p`), a field selection (`p.f` through a pointer — nil check +
+// load — or `s.f` on a struct variable), and a map element read (`m[k]`) are
+// READ occurrences of mutable locations (`deref`, `field-get`, `map-get`
+// heads over atoms); as TARGETS (`*p = e`, `p.f = e`, `s.f = e`, `m[k] = e`
+// and the compound / IncDec forms) they are FROZEN target plans — the pointer
+// VALUE, the struct's address, the map VALUE and the key VALUE — shared by the
+// load and the phase-2 store (v2.1 §3.4); a plan whose operands are all atoms
+// (a private pointer / struct / map local, a constant key) checks nothing and
+// reads nothing, so it does not by itself admit a sweep — the compound forms'
+// LOAD is the mutable read that does. TYPES widen with the operands: pointers
+// to admitted types, named struct types whose fields are admitted (cycle-
+// guarded), maps with an int/bool/string key (never an interface-containing
+// key: the boxed key would sit inside the graph) and an admitted value.
+// Promoted (embedded-hop) selectors, interface-typed pointees / fields /
+// map values as targets, and nested value bases of a field target
+// (`a[i].f = e`) stay legacy by name.
+//
 // The classifier has no emission side effects (it lifts no func literal,
 // hoists nothing), so `--unseq-census` (main.go) runs it over every
 // statement list of a program and prints one TSV row per sweep; the
@@ -110,6 +128,12 @@ func (e *emitter) unseqLocalVar(obj types.Object) (*types.Var, bool) {
 // maps, structs, channels, funcs (except in callee position), floats and
 // complex are outside.
 func unseqTypeOK(t types.Type) bool {
+	return unseqTypeOKSeen(t, map[*types.Named]bool{})
+}
+
+// unseqTypeOKSeen is unseqTypeOK with the named types under examination (a
+// struct whose field points back at it is admitted once, never re-entered).
+func unseqTypeOKSeen(t types.Type, seen map[*types.Named]bool) bool {
 	if t == nil {
 		return false
 	}
@@ -120,11 +144,108 @@ func unseqTypeOK(t types.Type) bool {
 		}
 		return u.Info()&(types.IsInteger|types.IsBoolean|types.IsString) != 0
 	case *types.Slice:
-		return unseqTypeOK(u.Elem())
+		return unseqTypeOKSeen(u.Elem(), seen)
 	case *types.Interface:
 		return u.Empty()
+	case *types.Pointer:
+		// Stage E E2: a pointer to an admitted type (its VALUE is an atom; the
+		// deref is the occurrence).
+		return unseqTypeOKSeen(u.Elem(), seen)
+	case *types.Map:
+		// Stage E E2: an int/bool/string key (a hash-safe, unboxed key) and an
+		// admitted value type.
+		kb, isBasic := types.Unalias(u.Key()).Underlying().(*types.Basic)
+		if !isBasic || kb.Info()&(types.IsInteger|types.IsBoolean|types.IsString) == 0 {
+			return false
+		}
+		if _, keyNamed := types.Unalias(u.Key()).(*types.Named); keyNamed {
+			return false // a defined key type is outside (named non-struct types are E5's)
+		}
+		return unseqTypeOKSeen(u.Elem(), seen)
+	case *types.Named:
+		// Stage E E2: a NAMED STRUCT type (non-generic) whose every field is an
+		// admitted type — the base of a field selection or target.
+		if u.TypeArgs().Len() > 0 || u.TypeParams().Len() > 0 {
+			return false
+		}
+		st, isStruct := u.Underlying().(*types.Struct)
+		if !isStruct {
+			return false
+		}
+		if seen[u] {
+			return true
+		}
+		seen[u] = true
+		for i := 0; i < st.NumFields(); i++ {
+			if st.Field(i).Embedded() || !unseqTypeOKSeen(st.Field(i).Type(), seen) {
+				return false
+			}
+		}
+		return true
 	}
 	return false
+}
+
+// unseqFieldSel classifies a FIELD selection `x.f` (never a method, never a
+// qualified name, never a promoted hop): the base type (a pointer to a named
+// struct, or a named struct), the struct's wire name, and whether the base is
+// a pointer. `ok` false names the reason in d.
+func (e *emitter) unseqFieldSel(v *ast.SelectorExpr, d *unseqDecision) (isPtr bool, structName string, ok bool) {
+	refuse := func(why string) (bool, string, bool) {
+		if d.reason == "" {
+			d.reason = why
+		}
+		return false, "", false
+	}
+	seln, isSel := e.info.Selections[v]
+	if !isSel || seln.Kind() != types.FieldVal {
+		return refuse("selector (method / method value / qualified name)")
+	}
+	if len(seln.Index()) != 1 {
+		return refuse("promoted field selector (embedded hops)")
+	}
+	bt := e.goTypeOf(v.X)
+	if bt == nil {
+		return refuse("field selector on an untyped base")
+	}
+	structT := bt
+	if ptr, ok := types.Unalias(bt).Underlying().(*types.Pointer); ok {
+		isPtr = true
+		structT = ptr.Elem()
+	}
+	name, named := e.namedTypeName(structT)
+	if !named {
+		return refuse("field selector on an anonymous struct type")
+	}
+	if !unseqTypeOK(structT) {
+		return refuse("field selector on a struct type outside the grammar (" + structT.String() + ")")
+	}
+	if !unseqTypeOK(e.goTypeOf(v)) {
+		return refuse("field type outside the grammar (" + e.goTypeOf(v).String() + ")")
+	}
+	return isPtr, name, true
+}
+
+// unseqMapBase classifies a map-typed base: the map type when admitted.
+func (e *emitter) unseqMapBase(x ast.Expr, d *unseqDecision) (*types.Map, bool) {
+	bt := e.goTypeOf(x)
+	if bt == nil {
+		if d.reason == "" {
+			d.reason = "map element on an untyped base"
+		}
+		return nil, false
+	}
+	mt, isMap := types.Unalias(bt).Underlying().(*types.Map)
+	if !isMap {
+		return nil, false
+	}
+	if !unseqTypeOK(bt) {
+		if d.reason == "" {
+			d.reason = "map type outside the grammar (" + bt.String() + ")"
+		}
+		return nil, false
+	}
+	return mt, true
 }
 
 // unseqConstTypeOK admits a CONSTANT operand: an integer/bool/string
@@ -296,6 +417,23 @@ func (e *emitter) unseqExpr(x ast.Expr, ctx *unseqCtx, d *unseqDecision) (unseqE
 		if bt == nil {
 			return refuse("index of an untyped base")
 		}
+		if _, isMap := types.Unalias(bt).Underlying().(*types.Map); isMap {
+			// Stage E E2: a map element READ — base and key are producers, the
+			// lookup is ONE occurrence (a mutable read; the key is hash-safe by
+			// the type grammar, so it cannot panic — still an occurrence: it
+			// reads the map at that instant).
+			if _, ok := e.unseqMapBase(v.X, d); !ok {
+				return unseqConst, false
+			}
+			if _, ok := e.unseqExpr(v.X, ctx, d); !ok {
+				return unseqConst, false
+			}
+			if _, ok := e.unseqExpr(v.Index, ctx, d); !ok {
+				return unseqConst, false
+			}
+			d.nonEvents++
+			return unseqValue, true
+		}
 		sl, isSlice := types.Unalias(bt).Underlying().(*types.Slice)
 		if !isSlice {
 			return refuse("index of a non-slice base (" + bt.String() + ")")
@@ -406,7 +544,17 @@ func (e *emitter) unseqExpr(x ast.Expr, ctx *unseqCtx, d *unseqDecision) (unseqE
 	case *ast.FuncLit:
 		return refuse("func literal in value position")
 	case *ast.StarExpr:
-		return refuse("pointer indirection")
+		// Stage E E2: `*p` — the pointer VALUE is the producer, the dereference
+		// ONE occurrence (a nil check + a mutable read).
+		pt := e.goTypeOf(v.X)
+		if pt == nil || !unseqTypeOK(pt) {
+			return refuse("pointer indirection on a pointer type outside the grammar")
+		}
+		if _, ok := e.unseqExpr(v.X, ctx, d); !ok {
+			return unseqConst, false
+		}
+		d.nonEvents++
+		return unseqValue, true
 	case *ast.SelectorExpr:
 		if pv, ok := e.unseqQualifiedPackageVar(v); ok {
 			// Stage E E1: `pkg.V` (a source-package qualified package-level
@@ -418,7 +566,23 @@ func (e *emitter) unseqExpr(x ast.Expr, ctx *unseqCtx, d *unseqDecision) (unseqE
 			d.nonEvents++
 			return unseqValue, true
 		}
-		return refuse("selector (field / method / qualified name)")
+		// Stage E E2: a FIELD read. Through a pointer: the pointer value is the
+		// producer, the selection ONE occurrence (nil check + mutable read). On a
+		// struct VALUE: the base's own classification decides (an address-taken
+		// struct local's read is the occurrence — the lowering fuses it with the
+		// selection into one `field-get` read; a private struct local's field is
+		// a stable read, order-transparent; a nested value base produces a slot).
+		isPtr, _, ok := e.unseqFieldSel(v, d)
+		if !ok {
+			return unseqConst, false
+		}
+		if _, ok := e.unseqExpr(v.X, ctx, d); !ok {
+			return unseqConst, false
+		}
+		if isPtr {
+			d.nonEvents++
+		}
+		return unseqValue, true
 	case *ast.CompositeLit:
 		return refuse("composite literal")
 	}
@@ -724,6 +888,105 @@ func (e *emitter) unseqElemTarget(ix *ast.IndexExpr, ctx *unseqCtx, d *unseqDeci
 	return true
 }
 
+// unseqDerefTarget classifies a dereference target `*p` (Stage E E2): the
+// pointer operand inside the grammar, an admitted non-interface pointee. The
+// plan FREEZES the pointer VALUE and checks nothing (nil at the store, phase 2);
+// it is an occurrence only through its operand (a read of an address-taken or
+// package-level pointer counts there), so it does not by itself admit a sweep.
+func (e *emitter) unseqDerefTarget(st *ast.StarExpr, ctx *unseqCtx, d *unseqDecision) bool {
+	refuse := func(why string) bool {
+		if d.reason == "" {
+			d.reason = why
+		}
+		return false
+	}
+	pt := e.goTypeOf(st.X)
+	if pt == nil || !unseqTypeOK(pt) {
+		return refuse("dereference target on a pointer type outside the grammar")
+	}
+	ptr, isPtr := types.Unalias(pt).Underlying().(*types.Pointer)
+	if !isPtr {
+		return refuse("dereference target on a non-pointer")
+	}
+	if _, isIface := types.Unalias(ptr.Elem()).Underlying().(*types.Interface); isIface {
+		return refuse("interface-typed dereference target (boxing inside a graph is outside the grammar)")
+	}
+	if _, ok := e.unseqExpr(st.X, ctx, d); !ok {
+		return false
+	}
+	return true
+}
+
+// unseqFieldTarget classifies a field target `p.f` / `s.f` (Stage E E2): a
+// non-promoted field of a named struct, reached through a pointer operand
+// inside the grammar or on a struct VARIABLE (a local or a package-level
+// variable — its address is the frozen anchor); a nested value base
+// (`a[i].f = e`) is outside. The plan checks nothing (nil at the store).
+func (e *emitter) unseqFieldTarget(sel *ast.SelectorExpr, ctx *unseqCtx, d *unseqDecision) bool {
+	refuse := func(why string) bool {
+		if d.reason == "" {
+			d.reason = why
+		}
+		return false
+	}
+	isPtr, _, ok := e.unseqFieldSel(sel, d)
+	if !ok {
+		return false
+	}
+	if _, isIface := types.Unalias(e.goTypeOf(sel)).Underlying().(*types.Interface); isIface {
+		return refuse("interface-typed field target (boxing inside a graph is outside the grammar)")
+	}
+	if isPtr {
+		if _, ok := e.unseqExpr(sel.X, ctx, d); !ok {
+			return false
+		}
+		return true
+	}
+	id, isIdent := ast.Unparen(sel.X).(*ast.Ident)
+	if !isIdent {
+		return refuse("field target on a non-variable struct base")
+	}
+	obj := e.info.Uses[id]
+	if _, isLocal := e.unseqLocalVar(obj); isLocal {
+		if ctx.captured[obj] {
+			return refuse("field target on a captured struct variable (lifted body)")
+		}
+		return true // the struct variable's address is the frozen anchor (no read)
+	}
+	if _, isPkg := e.isPackageVar(obj); isPkg {
+		return true
+	}
+	return refuse("field target on a non-variable struct base")
+}
+
+// unseqMapTarget classifies a map-element target `m[k]` (Stage E E2): base and
+// key inside the grammar (the map type admitted — an int/bool/string key, an
+// admitted non-interface value). The plan FREEZES the map VALUE and the key
+// VALUE — one identity for the load and the store (v2.1 §3.4); its checks
+// (nil map) are the store's, phase 2.
+func (e *emitter) unseqMapTarget(ix *ast.IndexExpr, ctx *unseqCtx, d *unseqDecision) bool {
+	refuse := func(why string) bool {
+		if d.reason == "" {
+			d.reason = why
+		}
+		return false
+	}
+	mt, ok := e.unseqMapBase(ix.X, d)
+	if !ok {
+		return refuse("map element target on a base outside the grammar")
+	}
+	if _, isIface := types.Unalias(mt.Elem()).Underlying().(*types.Interface); isIface {
+		return refuse("interface-typed map value target (boxing inside a graph is outside the grammar)")
+	}
+	if _, ok := e.unseqExpr(ix.X, ctx, d); !ok {
+		return false
+	}
+	if _, ok := e.unseqExpr(ix.Index, ctx, d); !ok {
+		return false
+	}
+	return true
+}
+
 // unseqClassify is THE whole-sweep decision procedure (header comment).
 // It never emits: the census and the emitter call it alike.
 func (e *emitter) unseqClassify(s ast.Stmt, ctx *unseqCtx) unseqDecision {
@@ -762,15 +1025,37 @@ func (e *emitter) unseqClassify(s ast.Stmt, ctx *unseqCtx) unseqDecision {
 				if define {
 					return refuse("define with a selector target")
 				}
-				if _, ok := e.unseqQualifiedTarget(l, &d); !ok {
-					return refuse("target")
+				if _, isQual := e.unseqQualifiedPackageVar(l); isQual {
+					if _, ok := e.unseqQualifiedTarget(l, &d); !ok {
+						return refuse("target")
+					}
+				} else {
+					d.form = "field-assign"
+					if !e.unseqFieldTarget(l, ctx, &d) {
+						return refuse("target")
+					}
 				}
 			case *ast.IndexExpr:
 				if define {
 					return refuse("define with an index target")
 				}
-				d.form = "elem-assign"
-				if !e.unseqElemTarget(l, ctx, &d) {
+				if _, isMap := e.unseqMapBase(l.X, &d); isMap {
+					d.form = "map-assign"
+					if !e.unseqMapTarget(l, ctx, &d) {
+						return refuse("target")
+					}
+				} else {
+					d.form = "elem-assign"
+					if !e.unseqElemTarget(l, ctx, &d) {
+						return refuse("target")
+					}
+				}
+			case *ast.StarExpr:
+				if define {
+					return refuse("define with a dereference target")
+				}
+				d.form = "deref-assign"
+				if !e.unseqDerefTarget(l, ctx, &d) {
 					return refuse("target")
 				}
 			default:
@@ -916,6 +1201,15 @@ func (e *emitter) unseqReadWriteTarget(lv ast.Expr, ctx *unseqCtx, d *unseqDecis
 		}
 		return true
 	case *ast.SelectorExpr:
+		if _, isQual := e.unseqQualifiedPackageVar(l); !isQual {
+			// Stage E E2: a field compound target — the plan (frozen base), the
+			// LOAD a mutable read.
+			if !e.unseqFieldTarget(l, ctx, d) {
+				return false
+			}
+			d.nonEvents++
+			return true
+		}
 		pv, ok := e.unseqQualifiedTarget(l, d)
 		if !ok {
 			return false
@@ -929,7 +1223,25 @@ func (e *emitter) unseqReadWriteTarget(lv ast.Expr, ctx *unseqCtx, d *unseqDecis
 		d.nonEvents++ // the load of a package-level variable is a mutable read
 		return true
 	case *ast.IndexExpr:
+		if _, isMap := e.unseqMapBase(l.X, d); isMap {
+			// Stage E E2: a map compound target — the plan (frozen map VALUE and
+			// key VALUE, one identity for the load and the store), the LOAD a
+			// mutable read.
+			if !e.unseqMapTarget(l, ctx, d) {
+				return false
+			}
+			d.nonEvents++
+			return true
+		}
 		return e.unseqElemTarget(l, ctx, d)
+	case *ast.StarExpr:
+		// Stage E E2: `*p op= e` — the plan freezes the pointer VALUE; the LOAD
+		// is a mutable read (nil-checked).
+		if !e.unseqDerefTarget(l, ctx, d) {
+			return false
+		}
+		d.nonEvents++
+		return true
 	}
 	if d.reason == "" {
 		d.reason = "read-write target outside the pilot grammar"

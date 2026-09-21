@@ -63,6 +63,18 @@ def boolc(v):
 
 
 SLICE_STR = {"kind": "slice", "elem": STR}
+PTR_INT = {"kind": "pointer", "elem": INT}
+MAP_INT_INT = {"kind": "map", "key": INT, "value": INT}
+
+
+def deref_target(ptr):
+    """A dereference target plan `*p` on the FROZEN pointer value (Stage E E2)."""
+    return {"target": "addr", "expr": ptr}
+
+
+def map_target(base, index):
+    """A map-element target plan on the FROZEN map value and key value (Stage E E2)."""
+    return {"target": "map", "base": base, "index": index, "keyType": INT, "valueType": INT}
 
 
 def fv(func):
@@ -352,6 +364,35 @@ def e1c_graph(native):
         then=gstore(gid, ident("$u2", INT)))
 
 
+# ---------------------------------------------------------------- Stage E, family E2: pointers, fields, maps
+# (2026-09-21): the FROZEN target identities of v2.1 §3.4 on a pointer and a map — the Stage B
+# acceptance matrix's «map/pointer deferred to E». References: enumerate.py E2e {x y 11 100, x y 10 101}
+# and E2f {old 11 m 100, old 10 m 101}, returned here as the checksums 11100 / 10101.
+
+def e2ptr_graph():
+    # p is captured by mut: its VALUE is a read occurrence; the plan `addr($u0)` freezes it.
+    return unseq(
+        [cell("$u0", PTR_INT), cell("$u1", INT), cell("$u2", INT), cell("$u3", INT)],
+        [inv("call0", ["$u2"], ident("mut"), [], [INT]),
+         ev("read1", "$u0", ident("p", PTR_INT)),
+         tgt("target2", "$t0", deref_target(ident("$u0", PTR_INT))),
+         ld("load3", "$u1", "$t0"),
+         ev("op4", "$u3", binop("+", ident("$u1", INT), ident("$u2", INT), INT))],
+        stores=[("$t0", "$u3")])
+
+
+def e2map_graph():
+    # m is captured by mut: its VALUE (a reference) is a read occurrence; the plan freezes it and the key.
+    return unseq(
+        [cell("$u0", MAP_INT_INT), cell("$u1", INT), cell("$u2", INT), cell("$u3", INT)],
+        [inv("call0", ["$u2"], ident("mut"), [], [INT]),
+         ev("read1", "$u0", ident("m", MAP_INT_INT)),
+         tgt("target2", "$t0", map_target(ident("$u0", MAP_INT_INT), intc(1))),
+         ld("load3", "$u1", "$t0"),
+         ev("op4", "$u3", binop("+", ident("$u1", INT), ident("$u2", INT), INT))],
+        stores=[("$t0", "$u3")])
+
+
 # ---------------------------------------------------------------- constant heads (audit fix round F2)
 # A CONSTANT copied into a cell — the emitter's `copy` occurrence where the consumer needs a
 # CELL (design §6): a guard's test (`true && f()`), a phase-2 store's value (`a[f()] = 5`,
@@ -424,6 +465,11 @@ WITNESSES = {
     # frontend's own emission — the global's gid is read off it)
     "e1": ("e1", [("e1", "mut", 1, e1_graph, None)]),
     "e1c": ("e1c", [("e1c", None, 1, e1c_graph, None)]),
+    # Stage E E2 (2026-09-21): the frozen pointer / map identities; e2fld is NATIVE-ONLY (no
+    # hand-built node — the struct type's wire name is an envelope fact)
+    "e2ptr": ("e2ptr", [("e2ptr", "mut", 1, e2ptr_graph(), None)]),
+    "e2map": ("e2map", [("e2map", "mut", 1, e2map_graph(), None)]),
+    "e2fld": ("e2fld", []),
 }
 
 
@@ -518,6 +564,15 @@ def mutants(wires):
     edit("mut-deref-hidden", "e1", "e1",
          lambda n, w: occ(n, "read1")["head"].update(ptr=binop("+", ident("$u0", INT), intc(1), INT)),
          "hidden read in a pure node")
+    # D13 for a MAP-ELEMENT plan (Stage E E2): the key position holds a non-atom — refused by name.
+    edit("mut-map-target-key", "e2map", "e2map",
+         lambda n, w: occ(n, "target2")["lhs"].update(index=binop("+", intc(0), intc(1), INT)),
+         "non-atom base or key")
+    # D13 for a DEREFERENCE plan (Stage E E2): the pointer position holds a non-atom (an index-get
+    # of a pointer slice would be the shape) — here a binary, refused by name.
+    edit("mut-deref-target-nonatom", "e2ptr", "e2ptr",
+         lambda n, w: occ(n, "target2")["lhs"].update(expr=binop("+", ident("$u0", INT), intc(0), INT)),
+         "outside the admitted fragment")
     return out
 
 
@@ -646,6 +701,8 @@ def build(frontend):
         if src not in natives:
             natives[src] = copy.deepcopy(wire)
             files[f"native-{src}.json"] = render(wire)  # the frontend's OWN lowering, unmodified
+        if not specs:
+            continue  # a NATIVE-ONLY witness (Stage E E2's e2fld): no hand-built node
         for (fn, head, tail, node, path) in specs:
             if callable(node):
                 node = node(natives[src])

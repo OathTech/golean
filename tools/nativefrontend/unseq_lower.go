@@ -43,6 +43,16 @@ package main
 // base is address-taken, through the local's own read at the plan step when
 // private — never `&a`, Stage B F2) shared by the `load` and the store.
 //
+// STAGE E E2 (pointers, fields, maps). `*p` → `eval deref(ptr atom)`; `p.f` →
+// `eval field-get(deref(ptr atom))`, `s.f` → `eval field-get(base atom or slot)`
+// (an address-taken struct local's read is FUSED with the selection: one read
+// occurrence, no struct-typed cell); `m[k]` → `eval map-get(base atom, key atom)`.
+// Targets: `*p` → `target $t addr(ptr atom)` (the pointer VALUE frozen), `p.f` /
+// `s.f` → `target $t addr(field-addr(ptr atom | ref s | globaladdr))`, `m[k]` →
+// `target $t map(base atom, key atom, keyType, valueType)` (the map VALUE and key
+// VALUE frozen — `Assignee.mapElem`); the compound forms load through the plan
+// and store through the same plan.
+//
 // THE MIXTURE GUARD. The lowering runs with `probeSuppress` raised and asserts the
 // hoist accumulator unchanged afterwards: a legacy hoist or probe produced inside
 // a graph lowering is refused by name (v2.1 §3.7: never a mixture).
@@ -225,7 +235,31 @@ func (b *unseqBuilder) value(x ast.Expr) (any, error) {
 		if err != nil {
 			return nil, err
 		}
+		if mt, isMap := types.Unalias(e.goTypeOf(v.X)).Underlying().(*types.Map); isMap {
+			// Stage E E2: ONE map read on the frozen base and key values.
+			kt, err := e.emitType(mt.Key())
+			if err != nil {
+				return nil, err
+			}
+			vt, err := e.emitType(mt.Elem())
+			if err != nil {
+				return nil, err
+			}
+			return b.evalOcc("mapread", ty, map[string]any{"expr": "map-get", "base": base, "index": idx,
+				"keyType": kt, "valueType": vt}), nil
+		}
 		return b.evalOcc("access", ty, map[string]any{"expr": "index-get", "base": base, "index": idx}), nil
+	case *ast.StarExpr:
+		// Stage E E2: `*p` — the dereference is ONE occurrence on the pointer value.
+		ptr, err := b.value(v.X)
+		if err != nil {
+			return nil, err
+		}
+		ty, err := e.typeOf(v)
+		if err != nil {
+			return nil, err
+		}
+		return b.evalOcc("deref", ty, map[string]any{"expr": "deref", "ptr": ptr, "type": ty}), nil
 	case *ast.SliceExpr:
 		base, err := b.value(v.X)
 		if err != nil {
@@ -326,7 +360,20 @@ func (b *unseqBuilder) value(x ast.Expr) (any, error) {
 		// variable — the same READ occurrence as the unqualified spelling.
 		pkgName, ok := e.qualifiedPkgRef(v)
 		if !ok {
-			return nil, unsup("unseq lowering: selector %s outside the admitted grammar", v.Sel.Name)
+			// Stage E E2: a FIELD read — ONE occurrence: `field-get(deref(ptr))` through a
+			// pointer (nil check + load), `field-get(base)` on a struct value (an
+			// address-taken struct local's read fused with the selection; a private
+			// local an atom; a nested base a slot).
+			recv, structName, err := b.fieldRecv(v)
+			if err != nil {
+				return nil, err
+			}
+			ty, err := e.typeOf(v)
+			if err != nil {
+				return nil, err
+			}
+			return b.evalOcc("field", ty, map[string]any{"expr": "field-get", "recv": recv, "typeId": structName,
+				"field": v.Sel.Name}), nil
 		}
 		w, err := e.emitQualifiedSelector(v, pkgName)
 		if err != nil {
@@ -552,6 +599,193 @@ func (b *unseqBuilder) elemTarget(ix *ast.IndexExpr) (string, error) {
 	return t, nil
 }
 
+// fieldRecv lowers the receiver of a field read `x.f` (Stage E E2): through a
+// pointer, `deref(ptr atom)` at the struct type; on a struct value, the base atom
+// (an identifier — private or address-taken — is passed to `field-get` DIRECTLY,
+// so the selection is one occurrence and no struct-typed cell is minted) or the
+// slot a nested base produced. Returns the struct's wire name too.
+func (b *unseqBuilder) fieldRecv(sel *ast.SelectorExpr) (any, string, error) {
+	e := b.e
+	bt := e.goTypeOf(sel.X)
+	if ptr, isPtr := types.Unalias(bt).Underlying().(*types.Pointer); isPtr {
+		p, err := b.value(sel.X)
+		if err != nil {
+			return nil, "", err
+		}
+		name, ok := e.namedTypeName(ptr.Elem())
+		if !ok {
+			return nil, "", unsup("unseq lowering: field selector on pointer to anonymous struct")
+		}
+		elemTy, err := e.emitType(ptr.Elem())
+		if err != nil {
+			return nil, "", err
+		}
+		return map[string]any{"expr": "deref", "ptr": p, "type": elemTy}, name, nil
+	}
+	name, ok := e.namedTypeName(bt)
+	if !ok {
+		return nil, "", unsup("unseq lowering: field selector on anonymous struct type %s", bt)
+	}
+	if id, isIdent := ast.Unparen(sel.X).(*ast.Ident); isIdent {
+		w, err := e.emitIdent(id)
+		if err != nil {
+			return nil, "", err
+		}
+		m, isMap := w.(map[string]any)
+		if !isMap || (m["expr"] != "ident" && m["expr"] != "deref") {
+			return nil, "", unsup("unseq lowering: struct variable %s did not lower to an identifier or a global read (%v)", id.Name, w)
+		}
+		if m["expr"] == "deref" { // a package-level struct variable: field-get on the read value
+			return m, name, nil
+		}
+		ty, err := e.typeOf(id)
+		if err != nil {
+			return nil, "", err
+		}
+		m["type"] = ty
+		return m, name, nil
+	}
+	base, err := b.value(sel.X)
+	if err != nil {
+		return nil, "", err
+	}
+	return base, name, nil
+}
+
+// derefTarget lowers a dereference target plan `*p` on the FROZEN pointer value
+// (Stage E E2) and returns its binder.
+func (b *unseqBuilder) derefTarget(st *ast.StarExpr) (string, error) {
+	ptr, err := b.value(st.X)
+	if err != nil {
+		return "", err
+	}
+	t := b.newTargetBinder()
+	b.emit(map[string]any{"name": b.occName("target"), "kind": "target", "bind": t,
+		"lhs": map[string]any{"target": "addr", "expr": ptr}})
+	return t, nil
+}
+
+// fieldTarget lowers a field target plan `p.f` / `s.f` (Stage E E2): the anchor is
+// the pointer VALUE (frozen atom) or the struct VARIABLE's address (`ref s` /
+// `globaladdr` — a stable identity); the plan checks nothing.
+func (b *unseqBuilder) fieldTarget(sel *ast.SelectorExpr) (string, error) {
+	e := b.e
+	bt := e.goTypeOf(sel.X)
+	var base any
+	var structT types.Type = bt
+	if ptr, isPtr := types.Unalias(bt).Underlying().(*types.Pointer); isPtr {
+		p, err := b.value(sel.X)
+		if err != nil {
+			return "", err
+		}
+		base, structT = p, ptr.Elem()
+	} else {
+		id, isIdent := ast.Unparen(sel.X).(*ast.Ident)
+		if !isIdent {
+			return "", unsup("unseq lowering: field target on a non-variable struct base")
+		}
+		addr, err := e.emitAddressOf(id)
+		if err != nil {
+			return "", err
+		}
+		base = addr
+	}
+	name, ok := e.namedTypeName(structT)
+	if !ok {
+		return "", unsup("unseq lowering: field target on anonymous struct type %s", structT)
+	}
+	t := b.newTargetBinder()
+	b.emit(map[string]any{"name": b.occName("target"), "kind": "target", "bind": t,
+		"lhs": map[string]any{"target": "addr", "expr": map[string]any{"expr": "field-addr", "base": base,
+			"typeId": name, "field": sel.Sel.Name}}})
+	return t, nil
+}
+
+// mapTarget lowers a map-element target plan `m[k]` on the FROZEN map value and
+// key value (Stage E E2; `Assignee.mapElem`) and returns its binder.
+func (b *unseqBuilder) mapTarget(ix *ast.IndexExpr, mt *types.Map) (string, error) {
+	e := b.e
+	base, err := b.value(ix.X)
+	if err != nil {
+		return "", err
+	}
+	key, err := b.value(ix.Index)
+	if err != nil {
+		return "", err
+	}
+	kt, err := e.emitType(mt.Key())
+	if err != nil {
+		return "", err
+	}
+	vt, err := e.emitType(mt.Elem())
+	if err != nil {
+		return "", err
+	}
+	t := b.newTargetBinder()
+	b.emit(map[string]any{"name": b.occName("target"), "kind": "target", "bind": t,
+		"lhs": map[string]any{"target": "map", "base": base, "index": key, "keyType": kt, "valueType": vt}})
+	return t, nil
+}
+
+// isPlannedTarget: a slice element, a map element, a dereference or a FIELD (not a
+// qualified package-level variable) — the targets lowered as FROZEN plans.
+func (b *unseqBuilder) isPlannedTarget(lv ast.Expr) bool {
+	switch l := ast.Unparen(lv).(type) {
+	case *ast.IndexExpr, *ast.StarExpr:
+		return true
+	case *ast.SelectorExpr:
+		_, isQual := b.e.unseqQualifiedPackageVar(l)
+		return !isQual
+	}
+	return false
+}
+
+// planTarget lowers a planned target (isPlannedTarget) for an assignment /
+// compound target `lv`, returning the binder and the target's element type wire.
+func (b *unseqBuilder) planTarget(lv ast.Expr) (string, any, error) {
+	e := b.e
+	var t string
+	var err error
+	switch l := ast.Unparen(lv).(type) {
+	case *ast.IndexExpr:
+		if mt, isMap := types.Unalias(e.goTypeOf(l.X)).Underlying().(*types.Map); isMap {
+			t, err = b.mapTarget(l, mt)
+		} else {
+			t, err = b.elemTarget(l)
+		}
+	case *ast.StarExpr:
+		t, err = b.derefTarget(l)
+	case *ast.SelectorExpr:
+		t, err = b.fieldTarget(l)
+	default:
+		return "", nil, unsup("unseq lowering: target plan %T outside the admitted grammar", lv)
+	}
+	if err != nil {
+		return "", nil, err
+	}
+	elemTy, err := e.typeOf(lv)
+	if err != nil {
+		return "", nil, err
+	}
+	return t, elemTy, nil
+}
+
+// plannedAssign lowers `lv = e` for a planned target: the plan, the value copied
+// into a cell, the store in phase 2 (an empty completion).
+func (b *unseqBuilder) plannedAssign(lv ast.Expr, rhs ast.Expr) (any, error) {
+	t, elemTy, err := b.planTarget(lv)
+	if err != nil {
+		return nil, err
+	}
+	v, err := b.value(rhs)
+	if err != nil {
+		return nil, err
+	}
+	cell, _ := b.ensureCell(v, elemTy)
+	b.stores = append(b.stores, map[string]any{"target": t, "value": cell})
+	return emptyBlock(), nil
+}
+
 func (b *unseqBuilder) node(then any) map[string]any {
 	occs := append(append([]any{}, b.frames[0].events...), b.frames[0].residual...)
 	stores := b.stores
@@ -591,6 +825,16 @@ func (e *emitter) emitUnseqSweep(s ast.Stmt, ctx *unseqCtx) (any, error) {
 		switch st.Tok {
 		case token.DEFINE, token.ASSIGN:
 			define := st.Tok == token.DEFINE
+			if b.isPlannedTarget(st.Lhs[0]) {
+				// a slice element, or (Stage E E2) a map element / a dereference / a
+				// field: a FROZEN plan, the value copied into a cell, the store in phase 2
+				var err error
+				then, err = b.plannedAssign(st.Lhs[0], st.Rhs[0])
+				if err != nil {
+					return nil, err
+				}
+				break
+			}
 			switch l := ast.Unparen(st.Lhs[0]).(type) {
 			case *ast.Ident, *ast.SelectorExpr:
 				// a local (`x := e`, `x = e`) or — Stage E E1 — a package-level
@@ -609,22 +853,6 @@ func (e *emitter) emitUnseqSweep(s ast.Stmt, ctx *unseqCtx) (any, error) {
 					return nil, err
 				}
 				then = map[string]any{"stmt": "assign", "define": define, "lhs": []any{lhs}, "rhs": []any{v}}
-			case *ast.IndexExpr:
-				t, err := b.elemTarget(l)
-				if err != nil {
-					return nil, err
-				}
-				v, err := b.value(st.Rhs[0])
-				if err != nil {
-					return nil, err
-				}
-				elemTy, err := e.typeOf(l)
-				if err != nil {
-					return nil, err
-				}
-				cell, _ := b.ensureCell(v, elemTy)
-				b.stores = append(b.stores, map[string]any{"target": t, "value": cell})
-				then = emptyBlock()
 			default:
 				return nil, unsup("unseq lowering: assignment target %T", st.Lhs[0])
 			}
@@ -715,20 +943,17 @@ func (e *emitter) emitUnseqSweep(s ast.Stmt, ctx *unseqCtx) (any, error) {
 	return b.node(then), nil
 }
 
-// readWrite lowers `lv op= rhs` (and `lv++`): a slice element → target plan +
-// load + op + store; a local → the read (an occurrence when address-taken, the
-// bare ident when private) + op, the store in `then`; a package-level variable
-// (Stage E E1; `g` or `pkg.V`) → its READ occurrence + op, the store in `then`
-// through the same operand-free identity (`addr(globaladdr)`).
+// readWrite lowers `lv op= rhs` (and `lv++`): a PLANNED target (a slice element;
+// Stage E E2: a map element, a dereference, a field) — ONE frozen target plan
+// shared by the load and the store: plan + load + op + store; a variable — a
+// local (the read an occurrence when address-taken, the bare ident when
+// private) or a package-level variable (Stage E E1; `g` or `pkg.V` — its READ
+// occurrence, the store in `then` through the operand-free identity
+// `addr(globaladdr)`) — the read + op, the store in `then`.
 func (b *unseqBuilder) readWrite(lv ast.Expr, op string, rhs func() (any, error)) (any, error) {
 	e := b.e
-	switch l := ast.Unparen(lv).(type) {
-	case *ast.IndexExpr:
-		t, err := b.elemTarget(l)
-		if err != nil {
-			return nil, err
-		}
-		elemTy, err := e.typeOf(l)
+	if b.isPlannedTarget(lv) {
+		t, elemTy, err := b.planTarget(lv)
 		if err != nil {
 			return nil, err
 		}
@@ -741,6 +966,8 @@ func (b *unseqBuilder) readWrite(lv ast.Expr, op string, rhs func() (any, error)
 		res := b.evalOcc("op", elemTy, map[string]any{"expr": "binary", "op": op, "x": slotIdent(rd, elemTy), "y": r})
 		b.stores = append(b.stores, map[string]any{"target": t, "value": res.(map[string]any)["name"]})
 		return emptyBlock(), nil
+	}
+	switch l := ast.Unparen(lv).(type) {
 	case *ast.Ident, *ast.SelectorExpr:
 		x, err := b.value(l) // a READ occurrence when address-taken or package-level, the bare ident when private
 		if err != nil {

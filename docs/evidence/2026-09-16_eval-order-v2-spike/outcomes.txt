@@ -82,6 +82,28 @@ E1b (BUG-113) sinkL(left||b, change()), left a package-level variable: outcome s
    trajectories per outcome: [(('logical false 0',), 1)]
    canonical (slot 0): R_left G R_b C_or E_change E_sink -> ('logical false 0',)
    forbidden hybrid absent: ('logical true 0',)
+E2a *p + setVia(p) (p -> x = 1; setVia: *p = 2): outcome set = [1, 2]
+   trajectories per outcome: [(1, 1), (2, 1)]
+   canonical (slot 0): E_mut R_deref Op -> 2
+E2c m[1] + setM(m) (m[1] = 1; setM: m[1] = 2): outcome set = [1, 2]
+   trajectories per outcome: [(1, 1), (2, 1)]
+   canonical (slot 0): E_mut R_m Op -> 2
+E2d (BUG-104) m[t[k]] += wit(5), t[k] out of range: outcome set = [('panic', 'index out of range [5] with length 1', ()), ('panic', 'index out of range [5] with length 1', ('wit 5',))]
+   trajectories per outcome: [(('panic', 'index out of range [5] with length 1', ()), 1), (('panic', 'index out of range [5] with length 1', ('wit 5',)), 1)]
+   canonical (slot 0): R_tk -> ('panic', 'index out of range [5] with length 1', ())
+E2e *p += mut() with mut redirecting p (x = 10, y = 100): outcome set = [('x y 10 101',), ('x y 11 100',)]
+   trajectories per outcome: [(('x y 10 101',), 1), (('x y 11 100',), 3)]
+   canonical (slot 0): R_p L Rd E_mut Op -> ('x y 11 100',)
+   forbidden hybrid absent: ('x y 10 11',)
+   forbidden hybrid absent: ('x y 101 100',)
+E2f m[1] += mut() with mut rebinding m (m[1] = 10, m2[1] = 100): outcome set = [('old 10 m 101',), ('old 11 m 100',)]
+   trajectories per outcome: [(('old 10 m 101',), 1), (('old 11 m 100',), 3)]
+   canonical (slot 0): R_m L Rd E_mut Op -> ('old 11 m 100',)
+   forbidden hybrid absent: ('old 10 m 11',)
+   forbidden hybrid absent: ('old 101 m 100',)
+E2g *p + wit(5), p nil: outcome set = [('panic', ()), ('panic', ('wit 5',))]
+   trajectories per outcome: [(('panic', ()), 1), (('panic', ('wit 5',)), 1)]
+   canonical (slot 0): R_deref -> ('panic', ())
 C1 f(g()): outcome set = [8]
    trajectories per outcome: [(8, 1)]
    canonical (slot 0): E_g E_f -> 8

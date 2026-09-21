@@ -6904,6 +6904,10 @@ theorem unseqAtom_locSup {env : LocalEnv} {s : Store} {e : Expr} {v : GoValue} {
     simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     simp [GoValue.locSup]
+  · -- `.stringLit` (Stage E E2)
+    simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    simp [GoValue.locSup]
   · -- `.ref`
     split at h
     · rename_i hl
@@ -6958,7 +6962,12 @@ theorem unseqReadTarget_locSup {s : Store} {r : TargetRef} {v : GoValue} {tr : A
       obtain ⟨cur, -, loc, -, hload⟩ := h
       exact loadLoc_locSup (Mem.load_eq hload).1
   | mapElem b k kt vt =>
-      simp [unseqReadTarget, unsupported, throw, throwThe, MonadExceptOf.throw] at h
+      -- Stage E E2: the frozen map-element read is `mapLookupValue`'s bound.
+      simp only [unseqReadTarget, bind_eq_ok] at h
+      obtain ⟨map, -, key, -, ⟨⟨rv, b'⟩, tr'⟩, hlook, h⟩ := h
+      simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      exact mapLookupValue_locSup hlook
 
 theorem unseqLoad_pres {σ : Store} {env : LocalEnv} {tg : List (String × TargetRef)}
     {bind tgt : String} {σ' : Store} {tr : AccessTrace}

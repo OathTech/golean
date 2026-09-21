@@ -1,5 +1,5 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 3709 (3465 PASS / 244 FAIL)
+# cases: 3717 (3474 PASS / 243 FAIL)
 # re-pinned: 2026-09-20 [AGENT], core/unseq-stage-d-0920, STAGE D of the evaluation-order model v2.1 (route α —
 #   docs/2026-09-20_unseq-stage-d-design.md §2–§3; handoff docs/2026-09-20_unseq-stage-d-handoff.md): NO row added, NO
 #   result changed, ONE stage changed — spec-examples-stmt/continue-label PASS/- -> PASS/confluent, the strict depth=128
@@ -31,6 +31,25 @@
 #   2026-09-21_unseq-stage-e/diff-one-e1.txt); the full gate line is in the evidence README. 3705 + 4 = 3709; 3459 + 4 + 2 = 3465;
 #   246 - 2 = 244. No PASS -> non-PASS flip; the one 5a-class item (imported-goose/channel/google-search: STALE certification for
 #   GoLean/NativeToIR.lean — the `deref` head; the train installs the fresh candidate at step 5a) is not re-pinned here.
+# re-pinned: 2026-09-21 [AGENT], core/unseq-stage-e-0921, STAGE E of the evaluation-order model v2.1, family E2 — POINTERS, FIELDS
+#   and MAPS as occurrences (docs/2026-09-21_unseq-stage-e-design.md §E2; handoff docs/2026-09-21_unseq-stage-e-handoff.md): `*p`, `p.f`/`s.f`
+#   and `m[k]` reads are READ occurrences (heads deref / field-get / map-get over atoms — decoder D8), their targets FROZEN plans (the
+#   pointer VALUE, the struct's address, the map VALUE and key VALUE — decoder D13; the machine's `unseqReadTarget` reads through a frozen
+#   map-element plan since this family, `unseqAtom` admits a string constant); the census gains 27 admitted sweeps in 17 packages (the
+#   raft twin 0, pin byte-identical). ONE FLIP: builtins/e13-sibling-panic-order/map-compound-index-key-vs-call FAIL/differential ->
+#   PASS/membership {`` · [5], `wit 5` · [5]} (BUG-104's map row -> BUG-112's Cases line; gc `wit 5` then [5] inside, 20/20 draws).
+#   FIVE LANE MOVES strict -> membership, each the E2/E12 VALUE axis (a) ENVELOPED on a pointer / map / global read beside a call that
+#   writes what it reads (gc's call-first value in every set, 20/20 draws under GOMAXPROCS 1/8, default and -N -l): noodler/latitude/
+#   deref-vs-call {11, 12}; noodler/maps/compound-call-mutates {15, 105}; noodler/maps/compound-call-deletes {(15, 1), (5, 1)};
+#   pointers/deref-target-rhs-call-order {92, 19} (E2's own call-first pin row); builtins/len-vs-call-order/len-nil-only-none {10, 14}
+#   (the package-level w4 vs wit4, entered through its field reads). EIGHT rows BORN in evalorder/unseq-ptr-field-map: {deref,field,
+#   mapread}-vs-call PASS/membership {1, 2}, {deref,field}-compound-redirect and map-compound-rebind PASS/membership {11100, 10101} (the
+#   frozen identities; hybrids absent), field-private-vs-call and map-assign-plain-vs-call PASS strict (the controls). NO other row moved:
+#   the four E13 deref/map membership rows keep their 2-member sets, the five other len-vs-call-order rows their singletons, the 12
+#   other rows whose sweeps entered are forced or read locations no sibling call writes — measured by scripts/diff-one on all 38 affected
+#   rows before this pin (docs/evidence/2026-09-21_unseq-stage-e/diff-one-e2.txt); the full gate line is in the evidence README.
+#   3709 + 8 = 3717; 3465 + 8 + 1 = 3474; 244 - 1 = 243. No PASS -> non-PASS flip; the one 5a-class item (imported-goose/channel/
+#   google-search: STALE certification for the changed core/decoder inputs) is not re-pinned here.
 # Previous pin:
 # re-pinned: 2026-09-20 [AGENT], core/unseq-stage-c-0919, STAGE C AUDIT FIX ROUND (docs/2026-09-20_unseq-stage-c-audit.md, FIX-FIRST; dispositions
 #   docs/2026-09-19_unseq-stage-c-handoff.md «Audit fix round (2026-09-20)»): SIX rows ADDED, no existing row changed. (F2) evalorder/unseq-const-cell/
@@ -1725,7 +1744,7 @@ PASS	builtins/e13-sibling-panic-order/index-composite-lit	membership
 PASS	builtins/e13-sibling-panic-order/index-left-call	membership
 PASS	builtins/e13-sibling-panic-order/index-left-call-arg-panics	membership
 PASS	builtins/e13-sibling-panic-order/index-middle	membership
-FAIL	builtins/e13-sibling-panic-order/map-compound-index-key-vs-call	differential
+PASS	builtins/e13-sibling-panic-order/map-compound-index-key-vs-call	membership
 FAIL	builtins/e13-sibling-panic-order/map-compound-index-key-vs-method	differential
 FAIL	builtins/e13-sibling-panic-order/map-compound-index-key-vs-recv	differential
 PASS	builtins/e13-sibling-panic-order/map-key-assert-vs-len	membership
@@ -1769,7 +1788,7 @@ PASS	builtins/len-vs-call-order/len-assert-vs-nil-operand	-
 PASS	builtins/len-vs-call-order/len-nil-left-vs-index-operand	-
 PASS	builtins/len-vs-call-order/len-nil-only-both	-
 PASS	builtins/len-vs-call-order/len-nil-only-left	-
-PASS	builtins/len-vs-call-order/len-nil-only-none	-
+PASS	builtins/len-vs-call-order/len-nil-only-none	membership
 PASS	builtins/len-vs-call-order/len-nil-only-operand	-
 PASS	builtins/len-vs-call-order/len-struct-any-key-left-assert	membership
 PASS	builtins/len-vs-call-order/lexer-idiom	-
@@ -2205,6 +2224,14 @@ PASS	evalorder/unseq-globals/read-vs-call	membership
 PASS	evalorder/unseq-globals/compound-vs-call	membership
 PASS	evalorder/unseq-globals/read-vs-unrelated-call	-
 PASS	evalorder/unseq-globals/plain-target-call	-
+PASS	evalorder/unseq-ptr-field-map/deref-vs-call	membership
+PASS	evalorder/unseq-ptr-field-map/field-vs-call	membership
+PASS	evalorder/unseq-ptr-field-map/mapread-vs-call	membership
+PASS	evalorder/unseq-ptr-field-map/deref-compound-redirect	membership
+PASS	evalorder/unseq-ptr-field-map/field-compound-redirect	membership
+PASS	evalorder/unseq-ptr-field-map/map-compound-rebind	membership
+PASS	evalorder/unseq-ptr-field-map/field-private-vs-call	-
+PASS	evalorder/unseq-ptr-field-map/map-assign-plain-vs-call	-
 PASS	examples/binsearch/absent-above	-
 PASS	examples/binsearch/absent-below	-
 PASS	examples/binsearch/absent-gap	-
@@ -3890,7 +3917,7 @@ FAIL	noodler/initpanic/var-panic	go-observation
 PASS	noodler/latitude/args-index-vs-call	membership
 PASS	noodler/latitude/concat-var-vs-call	membership
 PASS	noodler/latitude/conversion-index-vs-call	-
-PASS	noodler/latitude/deref-vs-call	-
+PASS	noodler/latitude/deref-vs-call	membership
 PASS	noodler/latitude/index-call-index	membership
 PASS	noodler/latitude/map-literal-key-vs-call	-
 PASS	noodler/latitude/receiver-vs-arg-call	-
@@ -3919,8 +3946,8 @@ PASS	noodler/literals/typed-float32-constants	-
 PASS	noodler/local-types/distinct	-
 PASS	noodler/local-types/shadow	-
 PASS	noodler/maps/array-key-nan	-
-PASS	noodler/maps/compound-call-deletes	-
-PASS	noodler/maps/compound-call-mutates	-
+PASS	noodler/maps/compound-call-deletes	membership
+PASS	noodler/maps/compound-call-mutates	membership
 PASS	noodler/maps/delete-nan-key	-
 PASS	noodler/maps/element-copy	-
 PASS	noodler/maps/extreme-int-keys	-
@@ -4236,7 +4263,7 @@ PASS	pointers/address-array-index	-
 PASS	pointers/address-field	-
 PASS	pointers/composite-literal-address	-
 PASS	pointers/deref-assign	-
-PASS	pointers/deref-target-rhs-call-order	-
+PASS	pointers/deref-target-rhs-call-order	membership
 PASS	pointers/inc-via-call	-
 PASS	pointers/nil-array-elem-store	-
 PASS	pointers/nil-array-elem-store/second-target	-

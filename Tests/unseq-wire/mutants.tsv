@@ -19,3 +19,5 @@ mut-guard-type	not a bool cell
 mut-unknown-key	unknown key
 mut-nested-completion-join	invalid branch join
 mut-deref-hidden	hidden read in a pure node
+mut-map-target-key	non-atom base or key
+mut-deref-target-nonatom	outside the admitted fragment

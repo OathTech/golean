@@ -456,7 +456,7 @@ def mSortTargetAsValue : UnseqGraph := {
 def mUnknownAfter : UnseqGraph := { cells := [intP "$a"], occs := [occ "A" (.eval "$a" (.intLit 0)) ["Q"]] }
 def mUnproduced : UnseqGraph := { cells := [intP "$a", intP "$b"], occs := [occ "A" (.eval "$a" (.intLit 0))] }
 
-/-! ## Target identity (§3.4): pointer redirection, cell mutation at a stable address, map (Stage E refusal) -/
+/-! ## Target identity (§3.4): pointer redirection, cell mutation at a stable address, map (Stage E E2: the frozen map VALUE) -/
 
 def ptrMut : Func := {
   id := ⟨"ptrMut"⟩, args := #[⟨"pp", .pointer pInt⟩, ⟨"py", pInt⟩], results := #[intP "r"],
@@ -487,14 +487,31 @@ def cell : Program := { funcs := #[
       .unseq cellGraph (println [str "a", .indexGet (.var "a") (.intLit 0)])]),
   cellMut] }
 
+/-- Stage E E2 (2026-09-21): `m[1] += mut()` where `mut` REBINDS the captured map
+variable to a second map — the plan freezes the map VALUE (a reference): plan
+before mut → the OLD map's entry becomes 11 (`old 11 / m 100`); plan after mut →
+the NEW map's entry becomes 101 (`old 10 / m 101`); the hybrids (a read through one
+map, a store into the other) are not members. The v2.1 spike's R4, on a map. -/
+def mapMut : Func := {
+  id := ⟨"mapMut"⟩, args := #[⟨"pm", .pointer (.map .int .int)⟩, ⟨"pm2", .pointer (.map .int .int)⟩], results := #[intP "r"],
+  body := .seqn #[.assign (.addr (.var "pm")) (.deref (.var "pm2") (.map .int .int)), ret "r" (.intLit 1)] }
 def mapGraph : UnseqGraph := {
-  cells := [intP "$rd"],
-  occs := [occ "L" (.target "$t" (.mapElem (.var "m") (.intLit 1) .int .int)),
-           occ "Rd" (.load "$rd" "$t")] }
+  cells := [⟨"$hdr", .map .int .int⟩, intP "$rd", intP "$m", intP "$op"],
+  occs := [occ "R_m" (.eval "$hdr" (.var "m")),
+           occ "L" (.target "$t" (.mapElem (.var "$hdr") (.intLit 1) .int .int)),
+           occ "Rd" (.load "$rd" "$t"),
+           occ "E_mut" (.invoke ["$m"] (.var "mutv") []),
+           occ "Op" (.eval "$op" (.add (.var "$rd") (.var "$m")))],
+  stores := [("$t", "$op")] }
 def mapProg : Program := { funcs := #[
-  mainUnit [⟨"m", .map .int .int⟩]
-    [.makeMap (.var "m") .int .int none, .mapAssign (.var "m") (.intLit 1) (.intLit 5) .int .int,
-     .unseq mapGraph (.seqn #[])]] }
+  mainUnit [⟨"m", .map .int .int⟩, ⟨"m2", .map .int .int⟩, ⟨"old", .map .int .int⟩, ⟨"mutv", fnTy [.pointer (.map .int .int), .pointer (.map .int .int)] [.int]⟩]
+    [.makeMap (.var "m") .int .int none, .mapAssign (.var "m") (.intLit 1) (.intLit 10) .int .int,
+     .makeMap (.var "m2") .int .int none, .mapAssign (.var "m2") (.intLit 1) (.intLit 100) .int .int,
+     .assign (.var "old") (.var "m"),
+     .assign (.var "mutv") (clos "mapMut" ["m", "m2"]),
+     .unseq mapGraph (println [str "old", .mapGet (.var "old") (.intLit 1) .int .int,
+                               str "m", .mapGet (.var "m") (.intLit 1) .int .int])],
+  mapMut] }
 
 /-! ## Audit fix round (2026-09-16; `docs/2026-09-16_unseq-stage-b-audit.md`) — the
 FAIL-OPEN paths F1–F3 as named refusals, N3, the R5 lowering, the R2 machine-side
@@ -760,7 +777,7 @@ def main (_args : List String) : IO Unit := do
     -- Target identity
     expectSet "target: pointer redirection (frozen pointee)" ptr "main" [okOut "x y 11 100\n", okOut "x y 10 101\n"],
     expectSet "target: cell mutation at a stable address" cell "main" [okOut "a 11\n", okOut "a 101\n"],
-    expectRefusal "target: frozen map-element plan (Stage E)" mapProg "main" "frozen map-element plan",
+    expectSet "target: map replacement (frozen map VALUE — Stage E E2)" mapProg "main" [okOut "old 11 m 100\n", okOut "old 10 m 101\n"],
     -- Recursion
     expectSet "recursion: per-activation binder cells" recursion "main" [okZ 10],
     -- Audit fix round (2026-09-16): F1

@@ -1,0 +1,86 @@
+# AFTER E1 (the E1 frontend; the E2 baseline)
+corpus sweeps 107943  admitted 146  packages-with-admitted 34  refused-packages 0
+admitted units: [('main', 146)]
+admitted by form: [('compound', 55), ('return', 34), ('assign', 27), ('define', 13), ('call-stmt', 8), ('elem-assign', 7), ('print-stmt', 2)]
+admitted per package:
+twin sweeps 10203  admitted 0
+
+# AFTER E2 (the E2 frontend)
+corpus sweeps 107963  admitted 176  packages-with-admitted 46  refused-packages 0
+admitted units: [('main', 176)]
+admitted by form: [('compound', 61), ('return', 47), ('assign', 29), ('define', 18), ('call-stmt', 8), ('elem-assign', 7), ('map-assign', 2), ('print-stmt', 2), ('incdec', 1), ('deref-assign', 1)]
+admitted per package:
+admitted per package:
+    29 Corpus/coverage/exec/builtins/e13-sibling-panic-order
+    25 Corpus/coverage/exec/imported-goose/semantics/operations
+    13 Corpus/coverage/exec/evalorder/unseq-pilot
+     6 Corpus/coverage/exec/noodler/evalorder
+     5 Corpus/coverage/exec/builtins/len-vs-call-order
+     5 Corpus/coverage/exec/noodler/latitude
+     5 Corpus/coverage/exec/slices/slice-elided-high-eval-once
+     5 Corpus/coverage/exec/spec-examples-decl/select-forms
+     4 Corpus/coverage/exec/fmt/formatter-box-crosspkg
+     4 Corpus/coverage/exec/fmt/formatter-box-generic
+     4 Corpus/coverage/exec/fmt/formatter-box-range
+     4 Corpus/coverage/exec/fmt/formatter-dyn-hole
+     4 Corpus/coverage/exec/fmt/formatter-precedence
+     4 Corpus/coverage/exec/fmt/sprintf-dyn
+     4 Corpus/coverage/exec/fmt/sprintf-verbs
+     4 Corpus/coverage/exec/fmt/v-composites
+     4 Corpus/coverage/exec/noodler/strings
+     4 Corpus/coverage/exec/panic-recover/shim-refusal-unrecoverable
+     4 Corpus/coverage/exec/spec-examples-decl/timezone-stringer
+     3 Corpus/coverage/exec/evalorder/legacy-logical-vs-call
+     3 Corpus/coverage/exec/evalorder/unseq-const-cell
+     3 Corpus/coverage/exec/evalorder/unseq-globals
+     3 Corpus/coverage/exec/noodler/maps
+     2 Corpus/coverage/exec/binop-order/operand-panic-vs-call
+     2 Corpus/coverage/exec/imported-goose/semantics/maps
+     2 Corpus/coverage/exec/spec-examples-stmt/continue-label
+     2 Corpus/coverage/exec/spec-examples-stmt/method-expr-five-forms
+     1 Corpus/coverage/exec/bools/short-circuit-effects
+     1 Corpus/coverage/exec/functions/closure-recursion
+     1 Corpus/coverage/exec/imported-goose/semantics/defer
+     1 Corpus/coverage/exec/init/stdlib-initializer-dependent
+     1 Corpus/coverage/exec/maps/compound-assign-eval-once
+     1 Corpus/coverage/exec/maps/map-incdec
+     1 Corpus/coverage/exec/multi-assign/index-target-rhs-call-order
+     1 Corpus/coverage/exec/noodler/arith
+     1 Corpus/coverage/exec/noodler/closures
+     1 Corpus/coverage/exec/noodler/methods
+     1 Corpus/coverage/exec/noodler/misc
+     1 Corpus/coverage/exec/panic-recover/repanic-collapse
+     1 Corpus/coverage/exec/pointers/deref-target-rhs-call-order
+     1 Corpus/coverage/exec/scoping/closure-shadow-binding
+     1 Corpus/coverage/exec/slices/slice-expr-eval-order
+     1 Corpus/coverage/exec/spec-examples-decl/address-op-nil-indirection
+     1 Corpus/coverage/exec/spec-examples-decl/conversion-parse-forms
+     1 Corpus/coverage/exec/spec-examples-stmt/operator-precedence
+     1 Corpus/coverage/exec/structs/selector-eval-once
+twin sweeps 10203  admitted 0
+
+# DIFF (E1 -> E2; the rows only in AFTER are the E1 package born after the E1 census)
+rows only in AFTER (new packages): 17 in ['Corpus/coverage/exec/evalorder/unseq-globals']
+newly admitted 27   lost 0
+newly admitted per package:
+     5 Corpus/coverage/exec/builtins/e13-sibling-panic-order
+     3 Corpus/coverage/exec/builtins/len-vs-call-order
+     2 Corpus/coverage/exec/imported-goose/semantics/maps
+     2 Corpus/coverage/exec/noodler/evalorder
+     2 Corpus/coverage/exec/noodler/maps
+     2 Corpus/coverage/exec/spec-examples-stmt/method-expr-five-forms
+     1 Corpus/coverage/exec/imported-goose/semantics/defer
+     1 Corpus/coverage/exec/maps/compound-assign-eval-once
+     1 Corpus/coverage/exec/maps/map-incdec
+     1 Corpus/coverage/exec/noodler/latitude
+     1 Corpus/coverage/exec/noodler/methods
+     1 Corpus/coverage/exec/noodler/misc
+     1 Corpus/coverage/exec/pointers/deref-target-rhs-call-order
+     1 Corpus/coverage/exec/slices/slice-elided-high-eval-once
+     1 Corpus/coverage/exec/spec-examples-decl/address-op-nil-indirection
+     1 Corpus/coverage/exec/spec-examples-decl/conversion-parse-forms
+     1 Corpus/coverage/exec/structs/selector-eval-once
+newly admitted, by former reason: [('pointer indirection', 5), ('element target on a non-slice base (map[int]int)', 5), ('selector (field / method / qualified name)', 5), ('element target on a non-slice base (map[string]int)', 2), ('parameter type outside the pilot grammar (map[uint64]uint64)', 2), ('assignment target outside the pilot grammar', 2), ('parameter type outside the pilot grammar (main.mefT)', 2), ('index of a non-slice base (map[int]int)', 1), ('parameter type outside the pilot grammar (main.Counter)', 1), ('parameter type outside the pilot grammar (main.tree)', 1), ('index of a non-slice base (map[int][]int)', 1)]
+newly admitted by form: [('return', 12), ('compound', 5), ('define', 4), ('map-assign', 2), ('assign', 2), ('incdec', 1), ('deref-assign', 1)]
+twin newly admitted: 0
+still legacy with a package-level reason: [('package-level target of a type outside the grammar ([3]int)', 3), ('package-level target of a type outside the grammar (chan int)', 2), ('package-level target of a type outside the grammar ([2]int)', 2), ('package-level target of a type outside the grammar (main.Valuer)', 1), ('package-level target of a type outside the grammar (raft.Logger)', 1)]

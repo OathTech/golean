@@ -95,6 +95,13 @@ def main (_args : List String) : IO Unit := do
     -- E1a / E1c.
     wireSet "E1 wire: v := mut() + g — g a package-level variable mut writes" "e1.json" "e1" [okZ 1, okZ 2],
     wireSet "E1C wire: g += f() — a package-level compound target, f writes g" "e1c.json" "e1c" [okZ 2, okZ 11],
+    -- STAGE E, family E2 (2026-09-21): the FROZEN target identities of v2.1 §3.4 on a POINTER and a
+    -- MAP (the Stage B acceptance matrix's «map/pointer deferred to E»): `*p += mut()` with mut
+    -- redirecting p, `m[1] += mut()` with mut rebinding m — the plan's pointer / map VALUE is frozen,
+    -- so the load and the store hit ONE pointee / ONE map; the hybrids are not members. References
+    -- enumerate.py E2e / E2f; the checksums 11100 (plan first) / 10101 (call first, gc's).
+    wireSet "E2PTR wire: *p += mut(), mut redirects p — the frozen pointer VALUE" "e2ptr.json" "e2ptr" [okZ 11100, okZ 10101],
+    wireSet "E2MAP wire: m[1] += mut(), mut rebinds m — the frozen map VALUE (unseqReadTarget's map arm)" "e2map.json" "e2map" [okZ 11100, okZ 10101],
     -- THE FRONTEND'S OWN LOWERING (C2): source → actual frontend bytes → strict decoder →
     -- machine → EXACT reference sets (v2.1 §7 row C's exit; the graphs are the emitter's,
     -- not hand-built — the same reference sets as the hand-built wires above).
@@ -116,6 +123,9 @@ def main (_args : List String) : IO Unit := do
     wireSet "NATIVE CSTR" "native-cstr.json" "cstr" [{ status := "ok", values := [1], output := "f\n" }],
     wireSet "NATIVE E1 (the frontend's own lowering of a package-level read — Stage E E1)" "native-e1.json" "e1" [okZ 1, okZ 2],
     wireSet "NATIVE E1C (the frontend's own lowering of a package-level compound target)" "native-e1c.json" "e1c" [okZ 2, okZ 11],
+    wireSet "NATIVE E2PTR (the frontend's own deref plan — Stage E E2)" "native-e2ptr.json" "e2ptr" [okZ 11100, okZ 10101],
+    wireSet "NATIVE E2MAP (the frontend's own map-element plan)" "native-e2map.json" "e2map" [okZ 11100, okZ 10101],
+    wireSet "NATIVE E2FLD (the frontend's own field-addr plan through a redirected pointer)" "native-e2fld.json" "e2fld" [okZ 11100, okZ 10101],
     -- EDGE MUTATIONS of the LOWERED graphs (v2.1 §8): each decodes; the exact-set check
     -- names the changed set (the decoder cannot see a missing or wrong edge).
     wireSet "EDGE data (R6: the access reads the variable's header, not the frozen slot) → the fused {20}" "edge-data.json" "r6" [okZ 20],

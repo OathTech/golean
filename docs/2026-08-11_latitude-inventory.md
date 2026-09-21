@@ -811,6 +811,21 @@ gc's early store a deviation, L-016, 2026-09-02).
 
 ### E2. Call vs. assignment-target operands — (b) PINNED call-first on the VALUE axis outside the Stage C pilot; (a) ENVELOPED on the pilot's rows (2026-09-19); the PANIC axis (a) ENVELOPED via E13's `unseqPanic` since the e13-b re-audit fix round (2026-09-05)
 
+- STAGE E, FAMILY E2 (2026-09-21, [AGENT], lane `core/unseq-stage-e-0921`; design
+  `docs/2026-09-21_unseq-stage-e-design.md` §E2 — POINTERS, FIELDS, MAPS): a dereference, a
+  field selection and a map element are READ occurrences; as targets they are FROZEN plans (the
+  pointer VALUE, the struct's address, the map VALUE and key VALUE — one identity for the load
+  and the store, v2.1 §3.4). This entry's VALUE axis is (a) ENVELOPED on these rows:
+  `pointers/deref-target-rhs-call-order` (`*p = swapP()`, swapP redirecting the captured p: the
+  plan before the call stores into x → 92, after → into y → 19, gc's — THE row that pinned this
+  entry's call-first point for a dereference target), `noodler/maps/compound-call-mutates`
+  ({15, 105}) and `compound-call-deletes` ({(15, 1), (5, 1)}) — a map compound's frozen plan, the
+  load before / after the call that writes or deletes the entry — and the born
+  `evalorder/unseq-ptr-field-map/{deref,field}-compound-redirect`, `map-compound-rebind`
+  ({11100, 10101}: the frozen identities, no hybrid); BUG-104's `map-compound-index-key-vs-call`
+  is an observed-∉-modeled FIX (→ BUG-112), not latitude. Ratification posed at the merge ask.
+  BUG-104's three remaining rows (a receive or a method call on the RHS) keep the (b) pin — E3's.
+
 - STAGE E, FAMILY E1 (2026-09-21, [AGENT], lane `core/unseq-stage-e-0921`; design
   `docs/2026-09-21_unseq-stage-e-design.md` §E1; the width-of-P ruling «ALL mutable
   reads, STAGED» widened to PACKAGE-LEVEL VARIABLES): a package-level variable's read
@@ -1523,6 +1538,14 @@ subexpressions of one binary operator).
   initializer-dependent`) read globals no sibling call writes — every order agrees, no
   row moved (the strict rows carry 0–4 wide picks, covered by the fixed streams). The
   (b) pin stands for the strict rows outside the widened grammar.
+  STAGE E, FAMILY E2 (2026-09-21, [AGENT]; design §E2 — pointers, fields, maps): the VALUE axis
+  is (a) ENVELOPED on `noodler/latitude/deref-vs-call` (`*p + f()`, f redirecting the captured p:
+  {11, 12}, gc 12 — the census's own deref-vs-call row), `builtins/len-vs-call-order/len-nil-only-
+  none` (the package-level `w4` read vs `wit4` inside the `&&` region: {10, 14}, gc 14 — the sweep
+  entered the grammar through its field reads `p.n`/`q.s`) and the born `evalorder/unseq-ptr-field-
+  map/{deref,field,mapread}-vs-call` ({1, 2}, gc 2); the noodler map compounds are E2's (above).
+  The 12 other rows whose sweeps entered read locations no sibling call writes — no row moved.
+  Ratification posed at the merge ask. The (b) pin stands outside the widened grammar.
   EXCEPTION TO THE CALL-FIRST VALUE PIN (e13-b re-audit fix round D4 (v),
   RECORDED at the final verification fix round 2026-09-05, R''-8,
   [AGENT]): for the two ALLOCATING CONVERSIONS `[]byte(s)` / `[]rune(s)`
@@ -3044,8 +3067,10 @@ history block, never in a membership line.
   derivable from the list, audit R12).
 - Known-≠-oracle deterministic points (the honesty-critical list):
   E3, E5, E7, R3(escaping path), BUG-104 (a compound target's hoisted
-  address/key temp — four rows: the three map-key spellings and the
-  receive spelling). THREE CLASSES inside one list, stated per row: E3,
+  address/key temp — THREE rows since Stage E E2, 2026-09-21: the receive
+  spellings `compound-call-target-vs-recv`, `map-compound-index-key-vs-recv`
+  and the method spelling `map-compound-index-key-vs-method`; the map-key-
+  beside-a-call spelling FIXED at E2 → BUG-112). THREE CLASSES inside one list, stated per row: E3,
   E7, R3 are (b)/(b-n) PINS with gc on another conforming member
   (re-envelope debts, §7); **E5 is a (c) FORCED row on which gc
   DEVIATES** (L-016, [USER] ruling 2026-09-02) — it stays listed because
@@ -3070,6 +3095,18 @@ history block, never in a membership line.
 ### 10.1 Movement and history (NOT membership)
 
 Nothing in this block is a class member by virtue of being named here.
+
+- **Stage E of the evaluation-order model v2.1, family E2 (2026-09-21, [AGENT] lane
+  `core/unseq-stage-e-0921`; design `docs/2026-09-21_unseq-stage-e-design.md` §E2): POINTERS,
+  FIELDS and MAPS enter the `unseq` grammar** (reads as READ occurrences; frozen target plans; the
+  machine's `unseqReadTarget` gains its map-element arm). Entry classes UNCHANGED by count ((a) 15 /
+  (b) 17): E2 and E12 stay (b) PINNED as entries, ENVELOPED on the named rows (five lane moves —
+  `noodler/latitude/deref-vs-call`, `noodler/maps/compound-call-{mutates,deletes}`, `pointers/deref-
+  target-rhs-call-order`, `builtins/len-vs-call-order/len-nil-only-none` — and the six born
+  `evalorder/unseq-ptr-field-map` membership rows); **BUG-104 drops to THREE rows** (the map-key-
+  beside-a-call spelling FIXED → BUG-112's Cases line; the receive and method spellings remain — E3's);
+  the census 146 → 176 admitted (+27 from the widening, +3 from the E1 package born after the E1
+  census; the twin 0). New rows: `evalorder/unseq-ptr-field-map/*` (6 membership + 2 strict).
 
 - **Stage E of the evaluation-order model v2.1, family E1 (2026-09-21, [AGENT] lane
   `core/unseq-stage-e-0921`; design `docs/2026-09-21_unseq-stage-e-design.md`): PACKAGE-LEVEL
