@@ -1,0 +1,99 @@
+### evalorder/unseq-globals/read-vs-call
+   ok '' [1] 
+   ok '' [2] 
+### evalorder/unseq-globals/compound-vs-call
+   ok '' [11] 
+   ok '' [2] 
+### evalorder/unseq-ptr-field-map/deref-vs-call
+   ok '' [1] 
+   ok '' [2] 
+### evalorder/unseq-ptr-field-map/field-vs-call
+   ok '' [1] 
+   ok '' [2] 
+### evalorder/unseq-ptr-field-map/mapread-vs-call
+   ok '' [1] 
+   ok '' [2] 
+### evalorder/unseq-ptr-field-map/deref-compound-redirect
+   ok '' [10101] 
+   ok '' [11100] 
+### evalorder/unseq-ptr-field-map/field-compound-redirect
+   ok '' [10101] 
+   ok '' [11100] 
+### evalorder/unseq-ptr-field-map/map-compound-rebind
+   ok '' [10101] 
+   ok '' [11100] 
+### evalorder/unseq-recv-method/recv-vs-read
+   ok '' [2] 
+   ok '' [3] 
+### evalorder/unseq-recv-method/value-recv-vs-arg-call
+   ok '' [15] 
+   ok '' [6] 
+### evalorder/unseq-recv-method/ptr-recv-vs-field-read
+   ok '' [3] 
+   ok '' [4] 
+### evalorder/unseq-conv-alloc/conv-read-vs-call
+   ok '' [123] 
+   ok '' [98] 
+### evalorder/unseq-conv-alloc/struct-lit-vs-call
+   ok '' [15] 
+   ok '' [6] 
+### evalorder/unseq-conv-alloc/addr-lit-vs-call
+   ok '' [15] 
+   ok '' [6] 
+### evalorder/unseq-conv-alloc/slice-lit-vs-call
+   ok '' [15] 
+   ok '' [6] 
+### noodler/latitude/deref-vs-call
+   ok '' [11] 
+   ok '' [12] 
+### noodler/latitude/receiver-vs-arg-call
+   ok '' [105] 
+   ok '' [6] 
+### noodler/latitude/slice-literal-index-vs-call
+   ok '' [1005] 
+   ok '' [15] 
+### noodler/latitude/struct-literal-var-vs-call
+   ok '' [1005] 
+   ok '' [15] 
+### noodler/latitude/conversion-index-vs-call
+   ok '' [105] 
+   ok '' [6] 
+### noodler/maps/compound-call-mutates
+   ok '' [105] 
+   ok '' [15] 
+### noodler/maps/compound-call-deletes
+   ok '' [15, 1] 
+   ok '' [5, 1] 
+### pointers/deref-target-rhs-call-order
+   ok '' [19] 
+   ok '' [92] 
+### builtins/len-vs-call-order/len-nil-only-none
+   ok '' [10] 
+   ok '' [14] 
+### builtins/e13-sibling-panic-order/map-compound-index-key-vs-call
+   panic '' [] runtime error: index out of range [5] with length 1
+   panic 'wit 5\n' [] runtime error: index out of range [5] with length 1
+### builtins/e13-sibling-panic-order/compound-call-target-vs-recv
+   ok 'f\n' [0] 
+   ok 'f\n' [1] 
+### builtins/e13-sibling-panic-order/map-compound-index-key-vs-recv
+   ok '' [0] 
+   ok '' [1] 
+### builtins/e13-sibling-panic-order/map-compound-index-key-vs-method
+   panic '' [] runtime error: index out of range [5] with length 1
+   panic 'M\n' [] runtime error: index out of range [5] with length 1
+### builtins/e13-sibling-panic-order/composite-ptr-payload-vs-call
+   panic '' [] runtime error: index out of range [9] with length 1
+   panic 'wit 5\n' [] runtime error: index out of range [9] with length 1
+### builtins/e13-sibling-panic-order/composite-ptr-payload-vs-call-printroot
+   panic '' [] runtime error: index out of range [9] with length 1
+   panic 'wit 5\n' [] runtime error: index out of range [9] with length 1
+### builtins/e13-sibling-panic-order/slice-lit-payload-vs-call
+   panic '' [] runtime error: index out of range [9] with length 1
+   panic 'wit 5\n' [] runtime error: index out of range [9] with length 1
+### builtins/e13-sibling-panic-order/slice-lit-payload-vs-call-sinkroot
+   panic '' [] runtime error: index out of range [9] with length 1
+   panic 'wit 5\n' [] runtime error: index out of range [9] with length 1
+### builtins/e13-sibling-panic-order/bytes-conv-value-vs-mutating-call
+   ok '' [123] 
+   ok '' [98] 

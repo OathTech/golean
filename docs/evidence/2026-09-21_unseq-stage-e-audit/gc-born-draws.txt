@@ -1,0 +1,8 @@
+### unseq-globals
+     20 2 11 wit 1 2 wit 1 2 
+### unseq-ptr-field-map
+     20 2 2 2 10101 10101 10101 wit 1 2 wit 5 6 
+### unseq-recv-method
+     20 3 15 4 8 wit 2 3 
+### unseq-conv-alloc
+     20 98 15 15 15 6 6 

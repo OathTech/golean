@@ -1,0 +1,13 @@
+# 191 affected rows (scripts/diff-one on the candidate frontend + binary, this worktree, gate-mode K=32)
+      4 FAIL	frontend-export
+     81 PASS	-
+      9 PASS	confluent
+     97 PASS	membership
+# non-PASS (all pre-existing frontend-export reds in the baseline)
+new/new-expr/untyped-defaults	FAIL	frontend-export
+noodler/maps/swap-with-missing	FAIL	frontend-export
+noodler/maps/tuple-two-map-targets	FAIL	frontend-export
+noodler/maps/tuple-map-and-var	FAIL	frontend-export
+# 15 remaining DIFFER ids
+     14 PASS	-
+      1 PASS	racy

@@ -1,0 +1,30 @@
+### check-mem-callsites
+Memory-module raw call-site inventory: PASS (70 (file, declaration, raw-op) rows, all inventoried with reasons)
+### check-unseq-wire
+ok [mut-alloc-nonatom] refused through the CLI, naming: hidden read in an allocation payload
+ok [mut-alloc-kind] refused through the CLI, naming: outside the admitted fragment
+Unseq wire gate: PASS (26 mutants refused through the CLI; exact sets in tests.log)
+### check-wire-boundary
+ok [unseq-alloc-nonatom] refused, naming: hidden read in an allocation payload
+ok [unseq-alloc-kind] refused, naming: outside the admitted fragment
+Wire boundary gate: PASS (11 byte-level controls + 20 unseq-node controls through the real CLI)
+### check-bugs
+check-bugs: ok (114 bug(s); pinned cases behave as claimed)
+check-bugs: backlog — 14 unexplained fidelity failure(s): coverage 10/10; latitude 4/4; wrong-answer 0/0 ('scripts/check-bugs.sh --list')
+check-bugs: 'wrong-answer' is the class that ratchets toward 0; 'coverage' retires when the feature lands and 'latitude' only by an envelope.
+### check-unseq-scheduler
+Unseq scheduler audit: 35 required theorems; 15303 declarations across all imported local origins; classical trio only
+Unseq scheduler gate: PASS
+EXIT=0
+### check-core-audit
+core-audit-audit PASS; scratch removed (9929605 owned bytes; dependencies symlinked)
+Core totality audit gate: PASS
+EXIT=0
+### eval-tests
+ok: DEDUP-α: M4 a pick node's last branch DROPPED (two hints where |ready| = 3) REFUSED — the checker enumerates the bound itself
+ok: DEDUP-α: M5 fabricated member REFUSED
+EXIT=0
+### check-frontend-pins
+check-frontend-pins: ok [hidden-dep-order] — realized deviation order matches the recorded pin
+check-frontend-pins: ok [twin-wire] — fresh emit = pinned wire (e1a877251021…)
+check-frontend-pins: ok [stdlib-pin] — 61 lowered stdlib source files match the pinned sha256 manifest

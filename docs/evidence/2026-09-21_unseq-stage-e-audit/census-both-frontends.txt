@@ -1,0 +1,6 @@
+# whole-corpus classifier census, this worktree (candidate frontend vs main 14006270's frontend), Corpus/coverage/exec/**/cases.tsv dirs (no twin)
+cand:
+rows=108074 admitted=127
+main:
+rows=108074 admitted=136
+EXIT=0
