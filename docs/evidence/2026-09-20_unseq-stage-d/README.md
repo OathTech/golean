@@ -244,3 +244,9 @@ was copied; BUG-114 records the exact classification text and the truncated snip
 `r45-ci-slow.tail.txt`. Candidate vs tracked record: `claim` and `observations` IDENTICAL; 7 input hashes
 differ (the dedup engine and its dependants) and the receipt (clean `74d084ad`, binary `0681abc6…`) —
 INSTALLED in this commit; a provenance refresh, not a re-pin.
+
+**Green re-run at the records commit `14006270`** ([AGENT] coordinator, 2026-09-21): full
+`GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff` → EXIT=0, `RESULT: PASS`, `baseline diff FULL
+(3705/3705, no regression)` — `goroutines/wake-then-abort` PASS at the gate's K=32 (BUG-114 is a K=80
+exposure), `certificate provenance` ok, negatives 394 no regression; the reconciler at its single pre-existing
+finding. Round 45 closed; Stage D (route α) is on main; the box-wide lock released.
