@@ -223,3 +223,24 @@ is identical on both sides (`unseqNext` 555, `unseqPanic` 288, `l1Sched` 9690, `
 `l2Entry` 24, `l4Waiter` 22, `l2Arrival` 3). The one id neither side traces is `arrays/materialization-budget/
 over-budget` (BUG-078's designed lowering refusal). Each side's validator: 24 457 consumptions checked, 0 menu-invariant
 violations, 0 mirror/accountant/sentinel/pick-record alarms, 0 driver-agreement mismatches.
+
+## Merge train r45 — the 5a record ([AGENT] coordinator, 2026-09-21)
+
+[USER] Mike 2026-09-21, verbatim (relayed): «yes, I agree - go ahead». Pre-merge main `10d2f2dc` →
+`refs/snapshots/r45/main`; Stage D + the audit-records/caption commit (`5e3348be`) fast-forwarded; the audit
+branch rebased (`74d084ad`) and fast-forwarded. Under the lock at `74d084ad`: `scripts/build-certified`
+EXIT=0, 114 s (binary `0681abc69cf9…`); `release-check --base refs/snapshots/r45/main` EXIT=2
+(EXPECTED — «STALE certification: changed dependency build/files/GoLean/CLI.lean»); `GOLEAN_MEM_MAX=48G
+scripts/capped scripts/ci --slow` EXIT=1, 1054 s — red on the 5a pair (`certificate provenance` STALE; the
+drift line `imported-goose/channel/google-search PASS→FAIL/membership`, fresh re-certification «unchanged
+set») PLUS ONE MORE drift line: `goroutines/wake-then-abort PASS→FAIL/membership` — an ORACLE-SIDE observer
+refusal at draw 61/80 («abort classification: additional or unknown report boundary after selected origin,
+refused»; the machine's values `ok 42`), a K=80 sampling exposure of a terminal-race report shape: filed as
+**BUG-114** (apparatus, trusted surface #2); the row PASSES in isolation at K=32 (`scripts/diff-one`,
+«enumerated=2 exhibited=1 draws=32») and its baseline stays PASS. NOT caused by Stage D (the dedup engine
+explores; the refusal is the Go sample's classification). Disclosure: the refusing draw's full stderr was
+lost — the coordinator's focused re-run overwrote `artifacts/coverage/latest.tsv` before the reason line
+was copied; BUG-114 records the exact classification text and the truncated snippet. Tail:
+`r45-ci-slow.tail.txt`. Candidate vs tracked record: `claim` and `observations` IDENTICAL; 7 input hashes
+differ (the dedup engine and its dependants) and the receipt (clean `74d084ad`, binary `0681abc6…`) —
+INSTALLED in this commit; a provenance refresh, not a re-pin.

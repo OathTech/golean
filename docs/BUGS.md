@@ -7234,3 +7234,37 @@ logical operation's completion (hoist a `$c := left || b` temp at the guard's
 lexical position before the later call's temp). Either flips both rows FAIL →
 PASS on this Cases line; the control must stay PASS.
 
+
+## BUG-114 — the abort observer REFUSES a gc sample of a wake-then-abort program when a SECOND report boundary (`panic: `, `fatal error: ` or `runtime stack:`) appears after the selected panic origin — a terminal-race report shape (main exiting while the worker's panic prints) the crash-channel classifier does not model; exposure-dependent (1 of 80 draws at the slow tier's K=80; 0 of 32 at the gate's K=32) [apparatus; terminal classification; trusted surface #2; found by train r45's `ci --slow` at `74d084ad`, 2026-09-21]
+
+- Status: open ([AGENT] coordinator 2026-09-21; the row's baseline stays PASS/membership — the refusal is ORACLE-side and draw-dependent; the machine's own values were `ok 42` / `panic` as certified)
+- Pinned-by: none (the exposure is a sampling event, not a deterministic row state: `goroutines/wake-then-abort` PASSES at K=32 (`scripts/diff-one`, 2026-09-21, «enumerated=2 exhibited=1 draws=32») and passed every earlier `--slow` run at K=80; the refusal appeared at draw 61/80 of round 45's slow run and is recorded in `docs/evidence/2026-09-20_unseq-stage-d/README.md` (train r45). Reproduce: `GOLEAN_SLOW=1` membership sampling at K=80 (or higher) on the row until a draw's stderr carries a second boundary.)
+
+What happened: `draw 61/80 (plain) go sample: could not extract Go panic message: abort classification:
+additional or unknown report boundary after selected origin, refused; stdout="{…\"status\":\"ok\",
+\"values\":[{\"kind\":\"int\",\"tag\":\"int\",\"value\":42}]}" stderr="panic: worker abort in the pr…"` — the
+observer's `crashview.go` (~121) refuses when the tail of the authenticated report AFTER the selected
+origin contains another `panic: `, `fatal error: ` or `\nruntime stack:` (A-R6: no unauthenticated
+read; a second boundary means the report is not one attributable abort). The program
+(`Corpus/coverage/exec/goroutines/wake-then-abort/main.go`): a worker sends on a buffered channel then
+panics in its private segment; main receives and exits — the L5 exit-window latitude. On this draw gc's
+stderr carried, after the worker's `panic:` report, a second boundary — the shape is consistent with
+main's exit racing the runtime's panic printing (the report interleaved with the exit path's own
+output), but the FULL stderr was NOT preserved: the coordinator overwrote `artifacts/coverage/latest.tsv`
+with a focused re-run before copying the reason line (disclosed; the classification text above is
+exact, the stderr tail is truncated at the harness's snippet width). The machine's certified set for the
+row is unchanged ({panic "worker abort in the private segment", 42}).
+
+Why it matters: an apparatus refusal is a FAIL by doctrine (never a pass), so a K-dependent exposure
+turns a certified-green row red on the slow tier at random — noise that hides real drift. The gap is
+COVERAGE of gc's concurrent-exit report shapes in the observer, not a machine or oracle disagreement
+(same family as BUG-106 fatal-during-unwind and BUG-107 pre-main abort: report shapes the
+authenticated channel cannot attribute).
+
+Fix plan ([AGENT]): capture the full stderr of a refusing draw (run the row at K=200 under
+`GOLEAN_SLOW=1` with the harness's raw-stderr retention), classify the exact second-boundary shape
+against the runtime's `printpanics`/`exit` interleaving (`deps/go/src/runtime/panic.go`,
+`proc.go`), then EITHER extend `crashview.go`'s attribution to that shape (with a positive control and
+a forgery control, per the L4 observer rules) OR, if the shape is genuinely unattributable, keep the
+refusal and move the row's exposure into a named apparatus limit (a `params` note + this entry's
+Cases line). Observer changes are trusted surface #2 → their own lane, audit ask unconditional.
