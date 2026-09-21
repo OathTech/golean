@@ -1,0 +1,65 @@
+# whole-corpus choice trace, main 14006270's binary (sha256 0681abc6…) vs the E3 commit c1c27f27's binary (sha256 c8249420…); scripts/choice-trace-corpus --dump --jobs 5 on each side from its own tree (main's: git archive 14006270 + deps, .tmp/main-tree-full; E3's: this worktree at the E3 commit, clean), the two standing exclusions (goroutines/send-then-spin, strings/trimspace-repeat/repeat-bound-refused); compared per id on the sorted dump records (stream, idx, phase, site, bound, streamValue, pick) and the per-stream results (status, consumed, wide, obsHash, driverAgreement) by Stage D's trace-compare.py
+#ids=3686	same=3626	differ=43	onlyA=0	onlyB=17
+#sitesA {'appendSpill': 4874, 'backEdge': 2404, 'l1Sched': 9690, 'l2Arrival': 3, 'l2Entry': 24, 'l4Waiter': 22, 'l5ExitWindow': 330, 'mapIter': 1307, 'nilValueMethodText': 90, 'postOp': 4643, 'repanicCollapse': 126, 'tryLock': 101, 'unseqNext': 555, 'unseqPanic': 288}
+#sitesB {'appendSpill': 4874, 'backEdge': 2403, 'l1Sched': 9695, 'l2Arrival': 3, 'l2Entry': 24, 'l4Waiter': 22, 'l5ExitWindow': 328, 'mapIter': 1307, 'nilValueMethodText': 90, 'postOp': 4645, 'repanicCollapse': 126, 'tryLock': 101, 'unseqNext': 1288, 'unseqPanic': 228}
+# the 43 DIFFER ids are EXACTLY rows of the 43 packages whose sweep decisions changed main -> E3 (E1 +10, E2 +27, E3 +18 admitted; the 94 returned to legacy at E3 consume nothing on either path — all-forced graphs and probe-free legacy — so they are SAME); the 17 ONLY_B ids are the born rows (E1 4, E2 8, E3 5); every other id byte-identical. Site census: unseqNext 555 -> 1288, unseqPanic 288 -> 228; the goroutine-scheduling sites (backEdge 2404 -> 2403, l1Sched 9690 -> 9695, l5ExitWindow 330 -> 328, postOp 4643 -> 4645) move by <= 5 consumptions in total, necessarily inside the DIFFER rows (a SAME id has an identical dump) — the sweep frame's steps shift the schedule's consultation points in the three concurrency rows whose sweeps entered (two-workers-own-chans, worker-pool/shared-feed, overwrite-vs-trylock). The tracer's exit is 1 on BOTH sides with the same standing findings (187 baseline-red ids refuse under some stream; 37 rows with an exhausted adversarial stream; 0 menu-invariant violations); the one finding line that changed: `racy race/negative-sync/overwrite-vs-trylock: max consumed=12 -> 14`, still 1 distinct observation across 6 streams.
+DIFFER	builtins/e13-sibling-panic-order/assert-left-method
+DIFFER	builtins/e13-sibling-panic-order/assert-left-recv-w
+DIFFER	builtins/e13-sibling-panic-order/compound-call-target-vs-recv
+DIFFER	builtins/e13-sibling-panic-order/deref-left-call
+DIFFER	builtins/e13-sibling-panic-order/deref-left-index-arg-call
+DIFFER	builtins/e13-sibling-panic-order/map-compound-index-key-vs-call
+DIFFER	builtins/e13-sibling-panic-order/map-compound-index-key-vs-method
+DIFFER	builtins/e13-sibling-panic-order/map-compound-index-key-vs-recv
+DIFFER	builtins/e13-sibling-panic-order/map-key-assert-vs-len
+DIFFER	builtins/e13-sibling-panic-order/map-tgt-assert-vs-call
+DIFFER	builtins/e13-sibling-panic-order/tgt-assert-vs-recv-w
+DIFFER	builtins/len-vs-call-order/len-assert-vs-nil-operand
+DIFFER	builtins/len-vs-call-order/len-nil-left-vs-index-operand
+DIFFER	builtins/len-vs-call-order/len-nil-only-both
+DIFFER	builtins/len-vs-call-order/len-nil-only-left
+DIFFER	builtins/len-vs-call-order/len-nil-only-none
+DIFFER	builtins/len-vs-call-order/len-nil-only-operand
+DIFFER	channels/make-edge/ordinary-send-eval-order
+DIFFER	channels/recv-edge/oob-target-drains
+DIFFER	evalorder/legacy-logical-vs-call/and-vs-call
+DIFFER	evalorder/legacy-logical-vs-call/call-first-control
+DIFFER	evalorder/legacy-logical-vs-call/or-vs-call
+DIFFER	evalorder/unseq-const-cell/elem-assign-const-string
+DIFFER	goroutines/fork-join/two-workers-own-chans
+DIFFER	goroutines/worker-pool/shared-feed
+DIFFER	maps/compound-assign-eval-once
+DIFFER	methods/nil-receiver
+DIFFER	noodler/evalorder/elided-pointer-literal
+DIFFER	noodler/evalorder/map-index-before-rhs
+DIFFER	noodler/evalorder/send-operand-order
+DIFFER	noodler/frontier/pointer-to-pointer-chains
+DIFFER	noodler/gotchas/method-value-from-field-path
+DIFFER	noodler/latitude/deref-vs-call
+DIFFER	noodler/latitude/receiver-vs-arg-call
+DIFFER	noodler/maps/compound-call-deletes
+DIFFER	noodler/maps/compound-call-mutates
+DIFFER	noodler/methods/method-expressions
+DIFFER	noodler/methods/nil-receiver-recursion
+DIFFER	pointers/deref-target-rhs-call-order
+DIFFER	race/negative-sync/overwrite-vs-trylock
+DIFFER	spec-examples-decl/conversion-parse-forms
+DIFFER	spec-examples-decl/select-forms/default
+DIFFER	spec-examples-decl/select-forms/ready
+ONLY_B	evalorder/unseq-globals/compound-vs-call
+ONLY_B	evalorder/unseq-globals/plain-target-call
+ONLY_B	evalorder/unseq-globals/read-vs-call
+ONLY_B	evalorder/unseq-globals/read-vs-unrelated-call
+ONLY_B	evalorder/unseq-ptr-field-map/deref-compound-redirect
+ONLY_B	evalorder/unseq-ptr-field-map/deref-vs-call
+ONLY_B	evalorder/unseq-ptr-field-map/field-compound-redirect
+ONLY_B	evalorder/unseq-ptr-field-map/field-private-vs-call
+ONLY_B	evalorder/unseq-ptr-field-map/field-vs-call
+ONLY_B	evalorder/unseq-ptr-field-map/map-assign-plain-vs-call
+ONLY_B	evalorder/unseq-ptr-field-map/map-compound-rebind
+ONLY_B	evalorder/unseq-ptr-field-map/mapread-vs-call
+ONLY_B	evalorder/unseq-recv-method/addr-recv-vs-slice-read
+ONLY_B	evalorder/unseq-recv-method/ptr-recv-vs-field-read
+ONLY_B	evalorder/unseq-recv-method/recv-after-call
+ONLY_B	evalorder/unseq-recv-method/recv-vs-read
+ONLY_B	evalorder/unseq-recv-method/value-recv-vs-arg-call

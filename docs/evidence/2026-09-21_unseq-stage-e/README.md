@@ -145,3 +145,14 @@ with the 3 GREENED rows noted, executed library coverage). `ci-slow-e3.tail.txt`
 reproduces its pinned state in the run: BUG-104's three flips PASS/membership, `receiver-vs-arg-call` PASS/membership,
 `nil-receiver-recursion` and `two-workers-own-chans` PASS/confluent, the five births in their lanes.
 
+**Whole-corpus choice trace, main vs E3** (`choice-trace-main-vs-e3.txt`; the E3 side = this worktree at the E3 commit
+`c1c27f27`, the E3 binary `c8249420…`): **3686 ids, 3626 byte-identical, 43 DIFFER, 17 only on the E3 side** — the 43 are
+EXACTLY rows of the 43 packages whose sweep decisions changed main → E3 (the E1/E2/E3 admissions: the E13 receive/method/
+deref/map rows, the six `len-vs-call-order` rows, BUG-113's three rows, `channels/{make-edge,recv-edge}`, the two noodler
+method rows, `goroutines/{fork-join/two-workers-own-chans,worker-pool/shared-feed}`, `race/negative-sync/overwrite-vs-
+trylock`, …); the 94 sweeps RETURNED to legacy at E3 are SAME (all-forced graphs and probe-free legacy consume nothing); the
+17 the born E1 + E2 + E3 rows. Site census: `unseqNext` 555 → 1288, `unseqPanic` 288 → 228 (the E3 rows that left the
+legacy probe); the goroutine-scheduling sites move by ≤ 5 consumptions in total, inside the three concurrency rows whose
+sweep frames entered. The same standing exit-1 findings on both sides (one line moved: `overwrite-vs-trylock` max consumed
+12 → 14, still one distinct observation).
+
