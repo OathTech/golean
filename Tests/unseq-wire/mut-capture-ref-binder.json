@@ -1,0 +1,547 @@
+{
+ "buildContext": {
+  "buildTags": [],
+  "cgoEnabled": true,
+  "compiler": "gc",
+  "goarch": "amd64",
+  "goos": "linux"
+ },
+ "fileOrder": [
+  {
+   "files": [
+    "main.go"
+   ],
+   "package": "main"
+  }
+ ],
+ "funcs": [
+  {
+   "body": {
+    "body": [
+     {
+      "args": [
+       {
+        "bytes": [
+         103,
+         117,
+         97,
+         114,
+         100,
+         32,
+         104
+        ],
+        "expr": "string",
+        "type": {
+         "kind": "string"
+        }
+       }
+      ],
+      "newline": true,
+      "stmt": "print"
+     },
+     {
+      "results": [
+       {
+        "expr": "bool",
+        "type": {
+         "kind": "bool"
+        },
+        "value": true
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "h",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "bool"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "args": [
+       {
+        "bytes": [
+         103,
+         117,
+         97,
+         114,
+         100,
+         32,
+         107
+        ],
+        "expr": "string",
+        "type": {
+         "kind": "string"
+        }
+       }
+      ],
+      "newline": true,
+      "stmt": "print"
+     },
+     {
+      "results": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "7"
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "k",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "args": [
+       {
+        "bytes": [
+         103,
+         117,
+         97,
+         114,
+         100,
+         32,
+         114,
+         101,
+         115,
+         117,
+         108,
+         116
+        ],
+        "expr": "string",
+        "type": {
+         "kind": "string"
+        }
+       },
+       {
+        "expr": "ident",
+        "name": "b",
+        "type": {
+         "kind": "bool"
+        }
+       },
+       {
+        "expr": "ident",
+        "name": "n",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "newline": true,
+      "stmt": "print"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "sinkB",
+   "params": [
+    {
+     "id": "b",
+     "type": {
+      "kind": "bool"
+     }
+    },
+    {
+     "id": "n",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "results": [],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "z",
+        "target": "declare",
+        "type": {
+         "kind": "bool"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "bool",
+        "type": {
+         "kind": "bool"
+        },
+        "value": true
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "cells": [
+       {
+        "id": "$u0",
+        "type": {
+         "kind": "bool"
+        }
+       },
+       {
+        "id": "$u1",
+        "type": {
+         "kind": "bool"
+        }
+       },
+       {
+        "id": "$u2",
+        "type": {
+         "kind": "bool"
+        }
+       },
+       {
+        "id": "$u3",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "occs": [
+       {
+        "bind": "$u0",
+        "head": {
+         "expr": "ident",
+         "name": "z",
+         "type": {
+          "kind": "bool"
+         }
+        },
+        "kind": "eval",
+        "name": "copy0"
+       },
+       {
+        "kind": "guard",
+        "name": "guard1",
+        "out": "$u2",
+        "test": "$u0",
+        "when": false
+       },
+       {
+        "args": [],
+        "binds": [
+         "$u1"
+        ],
+        "callee": {
+         "captured": [],
+         "expr": "func-value",
+         "func": "h"
+        },
+        "kind": "invoke",
+        "name": "call2",
+        "region": "guard1",
+        "resultTypes": [
+         {
+          "kind": "bool"
+         }
+        ]
+       },
+       {
+        "bind": "$u2",
+        "head": {
+         "expr": "ident",
+         "name": "$u1",
+         "type": {
+          "kind": "bool"
+         }
+        },
+        "kind": "eval",
+        "name": "join3",
+        "region": "guard1"
+       },
+       {
+        "after": [
+         "join3"
+        ],
+        "args": [],
+        "binds": [
+         "$u3"
+        ],
+        "callee": {
+         "captured": [
+          {
+           "expr": "ref",
+           "id": "$u0"
+          }
+         ],
+         "expr": "func-value",
+         "func": "k"
+        },
+        "kind": "invoke",
+        "name": "call4",
+        "resultTypes": [
+         {
+          "int": "int",
+          "kind": "int"
+         }
+        ]
+       },
+       {
+        "after": [
+         "call4"
+        ],
+        "args": [
+         {
+          "expr": "ident",
+          "name": "$u2",
+          "type": {
+           "kind": "bool"
+          }
+         },
+         {
+          "expr": "ident",
+          "name": "$u3",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          }
+         }
+        ],
+        "binds": [],
+        "callee": {
+         "captured": [],
+         "expr": "func-value",
+         "func": "sinkB"
+        },
+        "kind": "invoke",
+        "name": "call5",
+        "resultTypes": []
+       }
+      ],
+      "stmt": "unseq",
+      "stores": [],
+      "then": {
+       "body": [],
+       "stmt": "block"
+      }
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "r2aTrue",
+   "params": [],
+   "results": [],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "z",
+        "target": "declare",
+        "type": {
+         "kind": "bool"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "bool",
+        "type": {
+         "kind": "bool"
+        },
+        "value": false
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "cells": [
+       {
+        "id": "$u0",
+        "type": {
+         "kind": "bool"
+        }
+       },
+       {
+        "id": "$u1",
+        "type": {
+         "kind": "bool"
+        }
+       },
+       {
+        "id": "$u2",
+        "type": {
+         "kind": "bool"
+        }
+       },
+       {
+        "id": "$u3",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "occs": [
+       {
+        "bind": "$u0",
+        "head": {
+         "expr": "ident",
+         "name": "z",
+         "type": {
+          "kind": "bool"
+         }
+        },
+        "kind": "eval",
+        "name": "copy0"
+       },
+       {
+        "kind": "guard",
+        "name": "guard1",
+        "out": "$u2",
+        "test": "$u0",
+        "when": false
+       },
+       {
+        "args": [],
+        "binds": [
+         "$u1"
+        ],
+        "callee": {
+         "captured": [],
+         "expr": "func-value",
+         "func": "h"
+        },
+        "kind": "invoke",
+        "name": "call2",
+        "region": "guard1",
+        "resultTypes": [
+         {
+          "kind": "bool"
+         }
+        ]
+       },
+       {
+        "bind": "$u2",
+        "head": {
+         "expr": "ident",
+         "name": "$u1",
+         "type": {
+          "kind": "bool"
+         }
+        },
+        "kind": "eval",
+        "name": "join3",
+        "region": "guard1"
+       },
+       {
+        "after": [
+         "join3"
+        ],
+        "args": [],
+        "binds": [
+         "$u3"
+        ],
+        "callee": {
+         "captured": [],
+         "expr": "func-value",
+         "func": "k"
+        },
+        "kind": "invoke",
+        "name": "call4",
+        "resultTypes": [
+         {
+          "int": "int",
+          "kind": "int"
+         }
+        ]
+       },
+       {
+        "after": [
+         "call4"
+        ],
+        "args": [
+         {
+          "expr": "ident",
+          "name": "$u2",
+          "type": {
+           "kind": "bool"
+          }
+         },
+         {
+          "expr": "ident",
+          "name": "$u3",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          }
+         }
+        ],
+        "binds": [],
+        "callee": {
+         "captured": [],
+         "expr": "func-value",
+         "func": "sinkB"
+        },
+        "kind": "invoke",
+        "name": "call5",
+        "resultTypes": []
+       }
+      ],
+      "stmt": "unseq",
+      "stores": [],
+      "then": {
+       "body": [],
+       "stmt": "block"
+      }
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "r2aFalse",
+   "params": [],
+   "results": [],
+   "variadic": false
+  }
+ ],
+ "methodSets": [],
+ "methods": [],
+ "package": "main",
+ "schema": "golean-native-v1",
+ "types": []
+}

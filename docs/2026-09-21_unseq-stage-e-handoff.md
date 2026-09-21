@@ -1,7 +1,10 @@
 # Stage E of the evaluation-order model v2.1 — lane handoff (`core/unseq-stage-e-0921`)
 
 [AGENT] worker, 2026-09-21. Worktree `.claude/worktrees/unseq-stage-e`, branch `core/unseq-stage-e-0921`, based on
-main `14006270` (the r45 train's records tip over `74d084ad`). Brief: `docs/2026-09-16_evaluation-order-model-v2.md`
+main `14006270` (the r45 train's records tip over `74d084ad`); REBASED at the audit fix round onto main `769bbf23` (the
+r45 close, records only — the family commits keep their content: E1 `0fe7bdce` → `a2c8a35f`, E2 `6960697f` → `d1db8a14`,
+E3 `c1c27f27` → `22ec98d5`, E4 `7f7e6b79` → `d5363273`; the SHAs cited in §1, §4 and the evidence README are the
+pre-rebase ones). Brief: `docs/2026-09-16_evaluation-order-model-v2.md`
 §7 row E; the family plan and every [AGENT] choice: `docs/2026-09-21_unseq-stage-e-design.md`; evidence
 `docs/evidence/2026-09-21_unseq-stage-e/`. NOT merged, NOT pushed. Every runtime commit below is GATED (the full
 `scripts/capped scripts/ci --slow` under the box-wide lock, red on EXACTLY the two 5a-class items and nothing else).
@@ -14,6 +17,7 @@ main `14006270` (the r45 train's records tip over `74d084ad`). Brief: `docs/2026
 | `6960697f` | **E2** pointers, fields, maps (BUG-104's map row → BUG-112) | EXIT=1 in 1018 s; 3717 = 3474 / 243 | 1 flip, 5 lane moves strict → membership, 8 born (`evalorder/unseq-ptr-field-map`) |
 | `c1c27f27` | **E3** receives, method calls; the OBSERVABILITY trigger (BUG-104 FIXED) | EXIT=1 in 1021 s; 3722 = 3482 / 240 | 3 flips (BUG-104's last rows), `receiver-vs-arg-call` → membership, `nil-receiver-recursion` → confluent engine=dedup, `two-workers-own-chans` engine DFS → dedup, 5 born (`evalorder/unseq-recv-method`) |
 | `7f7e6b79` | **E4** conversions (pure ops), allocations (`allocate` bodies without E1 edges; `make`/`new` E1 participants) — BUG-102 FIXED | EXIT=1 in 1015 s; 3728 = 3493 / 235; red = the 5a pair only | 5 flips (BUG-102's designed reds: 4 membership + `slice-lit-payload-vs-recv` strict), 4 lane moves strict → membership (`bytes-conv-value-vs-mutating-call` — E12's recorded exception retires; `noodler/latitude/{slice-literal-index-vs-call,struct-literal-var-vs-call,conversion-index-vs-call}`), 6 born (`evalorder/unseq-conv-alloc`); the FR-28 frontier row retires to 0 reds |
+| the fix-round commit (§5; on the rebased branch over main `769bbf23`) | **the audit fix round** — F1 `new(x)` lowered correctly (a wrong answer on the candidate), F2 `ref $binder` refused, F3 decode-time size/index checks, F4 `string([]byte)`/`string([]rune)` an occurrence; F5–F9 recorded | EXIT=1 in 863 s; 3732 = 3497 / 235; red = the 5a pair only | 4 born (`evalorder/unseq-conv-alloc/{new-expr-vs-call,new-call-vs-call,string-bytes-vs-call,string-runes-vs-call}`), nothing else moved; 7 new wire mutants |
 
 The 5a-class pair, identical at every gate: `certificate provenance` STALE for the changed core inputs (E1:
 NativeToIR.lean; E2: Machine.lean; E3: AdmissionIndices.lean and the other core modules) and the ONE drift line
@@ -59,7 +63,12 @@ the grammar by design — the shim helpers are never probed). The residue counts
    node without E1 edges (its payload reads unordered against the sibling calls / receives — BUG-102's rows and
    the four moved rows), with the [AGENT] CORRECTION that `make`/`new` are E1 participants (function calls,
    spec#Built-in_functions; the born control `make-len-vs-call` pins it against gc, 6 on 20/20). Ratification of
-   both posed at the merge ask (design §E4).
+   both posed at the merge ask (design §E4). **The audit's F5 names the READING behind the correction** (design §E4
+   «the audit fix round»): (a) the built-ins are the «function calls» of spec#Order_of_evaluation's ordering sentence
+   (spec#Built-in_functions «called like any other function»; Stage C's `len` rule; gc's `order.go` call class) — under
+   it `make-len-vs-call` is a FORCED singleton and `min`/`max`/`copy`/`append` are ordered calls too (E5's item); (b)
+   only user calls are «function calls» — under it the row is a (b) pin of gc's order ({6, 8} the set). The [AGENT]
+   choice is (a); ratification of the reading posed with this item.
 6. **The `allocate` body kind** ([AGENT], design §E4): ONE constructor over `AllocSpec` (the frontend's five hoist
    shapes) rather than a general `exec` statement body — alternative named there.
 
@@ -114,8 +123,48 @@ corpus (E6's condition is not met; the probe emitters left are E4's conversions/
 
 E4: `choice-trace-main-vs-e4.txt`: 3692 ids — 3613 byte-identical, 56 DIFFER, 23 only on the E4 side — the DIFFER ids exactly the rows of the 40 packages whose sweep decisions changed main → E4, the ONLY_B ids the born rows; site census `unseqNext` 555 → 1436, `unseqPanic` 288 → 204 — the legacy probe is still consulted on 204 recorded consumptions (E6 NOT reachable; the emitters by name in §1).
 
-## 5. Operational notes for the next session
+## 5. Audit fix round (2026-09-21)
 
+The Stage E adversarial audit (`docs/2026-09-21_unseq-stage-e-audit.md`, candidate `3649b7db`, verdict FIX-FIRST;
+evidence `docs/evidence/2026-09-21_unseq-stage-e-audit/`) was dispatched by [USER] Mike 2026-09-21 («Dispatch the audit
+as you propose», relayed); the dispositions below are the [AGENT] coordinator's, disclosed at the merge ask; the design
+record is §E4 «the audit fix round». The round changes the frontend (`unseq.go`, `unseq_lower.go`) and the decoder
+(`NativeToIR.lean`) — no core module, no legacy arm, no theorem.
+
+| finding | disposition | what changed |
+|---|---|---|
+| **F1** WRONG ANSWER: `new(expr)` inside an admitted sweep lowered as `new(T)` with the zero value (5 for gc's 6; `g` 103 for gc's `m` `g` 110) | **LOWERED CORRECTLY** (the occurrence contract admits it: the argument is an operand of the E1-ordered `new` call — reads occurrences inside its window, calls events; the allocation stores its value) | `unseqMakeNew` classifies the argument; `makeNew` emits its atom as the `new` value; the decoder admits a payload value and checks its type against the element type; born `evalorder/unseq-conv-alloc/new-expr-vs-call` (strict 6) and `new-call-vs-call` ({`m` `g` 109, 110}) — RED-FIRST on the candidate; `mut-new-value-type`; wires `e4new` + native; unit witnesses; census counts (F7) |
+| **F2** FAIL-OPEN: `ref $binder` admitted as an invoke argument (M10b ran; the callee wrote the cell) | **REFUSED by name** in `unseqCheckArg` AND the capture arm of `unseqCheckCallee` (the audit's suspicion confirmed by mutant) | `unseqRefOfBinder?`; `mut-arg-ref-binder`, `mut-capture-ref-binder`; both wire gates |
+| **F3** FAIL-OPEN (minor): `slice-lit` indices / constant `make` sizes unchecked (M6 panicked, M11 panicked, M12 ran) | **decode-time NAMED refusals**: indices in `[0, length)` and distinct; constant sizes non-negative, `int`-representable, len ≤ cap | `unseqCheckConstSize`, the slice-lit index loop; `mut-slicelit-index-oob`, `mut-slicelit-dup-index`, `mut-make-negative-len`, `mut-make-len-over-cap`; wire `e4make` + native |
+| **F4** RECORDS-CLAIM: `string([]byte)`/`string([]rune)` on an aliased slice sent to legacy as «every edge forced» — a pin of gc's order | **WIDENED**: the conversion's backing-array read is an occurrence (`d.occ`); the sweep is admitted and the set enveloped | `unseqConversion`; census 127 → 127 (no other corpus sweep admitted; 357 count-only changes); born `string-bytes-vs-call`, `string-runes-vs-call` {ab, zb}, gc zb; reference E4h; wires `e4strb` + native |
+| **F5** RECORDS: the `make`/`new` E1 participation grounded in gc's draw, not the spec | the SPEC READING written (design §E4; §2 item 5 amended): reading (a) — the built-ins are the ordering sentence's «function calls» — with reading (b) as the named alternative; the `min`/`max`/`copy`/`append` consequence recorded for E5 | PENDING [USER] with the six items |
+| **F6** NIT: boxed literal payloads read late on the canonical tape (main early = gc; the set holds gc) | recorded for E5's `to-interface` payload family (§3) | design §E4 |
+| **F7** NIT: census counts for `new(expr)` | subsumed by F1 (`TestUnseqNewExprCensusCounts`) | — |
+| **F8** NIT: an `after` edge on a literal `allocate` decodes | a design fact (the wire does not express the lowering's «no E1 edge» policy); recorded, not a defect | design §E4 |
+| **F9** the `alloc` → `allocate` rename | legitimate per the audit (no raw op; a token-rule collision); no action | — |
+
+Measured before the gate (captured exits): `go test ./tools/nativefrontend/ ./tools/lowerdiag/` ok; `scripts/capped
+lake build GoLean.NativeToIR golean UnseqWireTests` EXIT=0; `Tests/UnseqWire.lean` 95 ok / 33 mutants; `check-unseq-wire`
+PASS, `check-wire-boundary` PASS (11 + 28), `check-frontend-pins` PASS (twin byte-identical), `check-mem-callsites` PASS
+(70), `check-bugs` PASS at the re-pinned baseline; `scripts/diff-one` on the 87 affected rows: 87 PASS
+(`docs/evidence/2026-09-21_unseq-stage-e/diff-one-fix.txt`); gc 20/20 inside every born set (`gc-draws-fix.txt`); the
+audit's litmuses reproduced OLD → NEW (`f1-f4-litmus.txt`). Baseline 3728 = 3493 / 235 → 3732 = 3497 / 235 (four born
+PASS, nothing else moved; the header carries the reason). The gate line, the other gates and the choice-trace subset
+follow in the records addendum below this table once run.
+
+**The full gate: `scripts/capped scripts/ci --slow` at the fix-round tree** (main `769bbf23` + the rebased family commits + the fix-round edits, the worktree dirty with exactly them; the box-wide lock 23:20:28–23:34:51Z): **EXIT=1 in 863 s, K=80 (`membership_draws 80`); 3732 rows 3496 PASS / 236 FAIL in the run = the pinned 3497 / 235 with the one 5a-class row red; RESULT FAIL on EXACTLY the two 5a-class items** — `certificate provenance` («STALE certification: changed dependency build/files/GoLean/GoCore/AdmissionIndices.lean» — the E3/E4 core inputs vs main's certificates; the decoder `GoLean/NativeToIR.lean` changed here too) and the `baseline diff` DRIFT block's ONE line `imported-goose/channel/google-search baseline[PASS/membership] -> now[FAIL/membership]` (the row's detail: STALE for `AdmissionIndices.lean`; «Fresh certification: unchanged set; seconds=165.819» — the train installs the candidate at 5a). Every other step ok (core build warning-free, totality audit, engine isolation, check-mem-callsites (70 rows), admission proofs, declaration + wire boundaries (11 + 28 unseq-node controls), method identity, unseq scheduler (Stage B), unseq wire (33 mutants), frontend pins (twin = pinned bytes), frontend / lowerdiag / harness unit tests, eval tests 274 ok, differential run, lane-validation fixtures incl. the go half, negative corpus 394 matched, FloatVectors + inittask-std byte-exact, re-pin guard 0 PASS→non-PASS, executed library coverage; the reconciler's two report-only findings are the same as at E4). `ci-slow-fix.tail.txt` is the tail. The four born rows reproduce their pinned states in the run: `new-expr-vs-call` PASS strict, `new-call-vs-call` / `string-bytes-vs-call` / `string-runes-vs-call` PASS/membership; every E4 row unchanged.
+
+**E5 additions from the round:** `min`/`max`/`copy`/`append` as E1 participants under reading (a) (F5); the
+`to-interface` payload family's canonical-tape default (F6); `new(x)` of a struct value / a boxed operand (the payload
+arms are in place — `struct-lit` and `to-interface` — but no corpus row exercises them yet).
+
+## 6. Operational notes for the next session
+
+- The audit fix round's scratch: `.tmp/fix/edit-{frontend,tests,lean,buildpy,wiretests,corpus,enum,baseline,records,
+  ledger}.py` (every edit a replayable script asserting its anchors once; apply on a clean tree in that order, then
+  `gofmt -w` the four Go files and `python3 Tests/unseq-wire/build.py --frontend <bin>`), `.tmp/fix/f1/`, `.tmp/fix/f4/`
+  (the audit's litmuses + the OLD/NEW wires), `.tmp/fix/gc/` (the 20 draws), `.tmp/fix/evidence/`, the gate logs
+  `.tmp/fix/*.log`.
 - E4's scratch: `.tmp/e4/edit-*.py` + `rename-alloc.py` (every edit as a replayable script — the rename runs AFTER
   the others), `.tmp/e4/apply.sh` (the frontend half; NOT idempotent — the edits assert their anchors once),
   `.tmp/gc-e4/`, `.tmp/gate-e4.sh`, `.tmp/nativefrontend-e4`, `.tmp/golean-e4`.

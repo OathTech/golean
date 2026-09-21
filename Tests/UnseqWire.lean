@@ -113,6 +113,17 @@ def main (_args : List String) : IO Unit := do
     -- enumerate.py E4b/E4c.
     wireSet "E4ALLOC wire: []int{s[i]}[0] + wit5() — the slice literal an `allocate` body on the payload's cell" "e4alloc.json" "e4alloc"
       [panicOut (oob 9 1) "", panicOut (oob 9 1) "wit 5\n"],
+    -- STAGE E AUDIT FIX ROUND (2026-09-21). F1: Go 1.26 `new(x)` — `*new(m()) + x + h() + g()`: m's call
+    -- inside new's window, the allocate storing m's value (the first E4 cut stored the ZERO value and
+    -- never ran m), x's read unordered against the calls. Reference enumerate.py E4g. F4: `string(b)`
+    -- reads the backing array — an occurrence; b aliased by c, m writes c[0]. Reference E4h. F3's base:
+    -- a make-slice allocate beside an observable read.
+    wireSet "E4NEW wire: *new(m()) + x + h() + g() — new(x) stores m's value; x's read vs the calls" "e4new.json" "e4new"
+      [{ status := "ok", values := [109], output := "m\ng\n" }, { status := "ok", values := [110], output := "m\ng\n" }],
+    wireSet "E4STRB wire: println(string(b) + m()) — string([]byte) reads the backing array m's alias writes" "e4strb.json" "e4strb"
+      [okOut "ab\n", okOut "zb\n"],
+    wireSet "E4MAKE wire: len(make([]int, n)) + x + h() — the make-slice allocate; x's read vs h" "e4make.json" "e4make"
+      [okZ 103, okZ 112],
     -- THE FRONTEND'S OWN LOWERING (C2): source → actual frontend bytes → strict decoder →
     -- machine → EXACT reference sets (v2.1 §7 row C's exit; the graphs are the emitter's,
     -- not hand-built — the same reference sets as the hand-built wires above).
@@ -143,6 +154,12 @@ def main (_args : List String) : IO Unit := do
     wireSet "NATIVE E4ALLOC (the frontend's own `allocate` occurrence — Stage E E4)" "native-e4alloc.json" "e4alloc"
       [panicOut (oob 9 1) "", panicOut (oob 9 1) "wit 5\n"],
     wireSet "NATIVE E4CONV (a conversion as a pure head: the captured string's read vs the mutating call — E12)" "native-e4conv.json" "e4conv" [okZ 98, okZ 123],
+    wireSet "NATIVE E4NEW (the frontend's own new(x) lowering — audit fix round F1)" "native-e4new.json" "e4new"
+      [{ status := "ok", values := [109], output := "m\ng\n" }, { status := "ok", values := [110], output := "m\ng\n" }],
+    wireSet "NATIVE E4STRB (the frontend's own string([]byte) occurrence — audit fix round F4)" "native-e4strb.json" "e4strb"
+      [okOut "ab\n", okOut "zb\n"],
+    wireSet "NATIVE E4MAKE (the frontend's own make-slice allocate beside an observable read)" "native-e4make.json" "e4make"
+      [okZ 103, okZ 112],
     -- EDGE MUTATIONS of the LOWERED graphs (v2.1 §8): each decodes; the exact-set check
     -- names the changed set (the decoder cannot see a missing or wrong edge).
     wireSet "EDGE data (R6: the access reads the variable's header, not the frozen slot) → the fused {20}" "edge-data.json" "r6" [okZ 20],

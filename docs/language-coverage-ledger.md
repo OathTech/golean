@@ -569,27 +569,21 @@ than as speculative cases.)
 
 ## 8. Counts and the closing arithmetic
 
-All numbers at the current tracked baseline (3728 cases, 3493 PASS / 235 FAIL; [AGENT] worker, lane
-`core/unseq-stage-e-0921` — STAGE E of the evaluation-order model v2.1, family E4: CONVERSIONS and
-ALLOCATIONS (`docs/2026-09-16_evaluation-order-model-v2.md` §7 row E; design
-`docs/2026-09-21_unseq-stage-e-design.md` §E4; handoff `docs/2026-09-21_unseq-stage-e-handoff.md`); measured
-by `scripts/diff-one` on all 83 affected rows before the pin and by the full `scripts/capped scripts/ci
---slow` at the E4 runtime tree — the gate line in `docs/evidence/2026-09-21_unseq-stage-e/README.md`). The
-delta over the E3 tally (§8ac, 3722 = 3482 / 240): 6 rows BORN — `evalorder/unseq-conv-alloc/conv-read-vs-
-call` {98, 123}, `struct-lit-vs-call`, `addr-lit-vs-call`, `slice-lit-vs-call` {6, 15} PASS/membership;
-`make-len-vs-call` (the E1-participant control, 6) and `map-lit-control` (a map literal stays legacy, 6)
-PASS strict — 5 FLIPS FAIL → PASS, BUG-102's designed reds `builtins/e13-sibling-panic-order/{composite-ptr-
-payload-vs-call,composite-ptr-payload-vs-call-printroot,slice-lit-payload-vs-call,slice-lit-payload-vs-call-
-sinkroot}` (PASS/membership {panic [9] · ``, panic [9] · `wit 5`}, gc's `wit 5`-then-panic inside) and
-`slice-lit-payload-vs-recv` (PASS strict — the two orders differ only in the unwitnessed channel state) —
-and 4 LANE MOVES strict → membership (the E2/E12 VALUE axis enveloped): `builtins/e13-sibling-panic-order/
-bytes-conv-value-vs-mutating-call` {98, 123} (E12's recorded exception retires into the set),
-`noodler/latitude/slice-literal-index-vs-call` {15, 1005}, `struct-literal-var-vs-call` {15, 1005},
-`conversion-index-vs-call` {6, 105}. 3722 + 6 = 3728; 3482 + 6 + 5 = 3493; 240 − 5 = 235. No other
-result/stage movement, no removal, no widened pin (one params correction: `assert-left-new-call` width 2 → 3,
-refuted by name, the set unchanged), no PASS → non-PASS. Reds table: frontier 133 → 128 (FR-28's five designed
-reds — BUG-102's structural-allocation class — lower; the FR-28 row RETIRES to 0 reds), post-vintage unchanged at
-66, the other buckets unchanged: 128 + 9 + (24 + 1) + 7 + 66 = 235 ✓. Movement §8ad.
+All numbers at the current tracked baseline (3732 cases, 3497 PASS / 235 FAIL; [AGENT] worker, lane
+`core/unseq-stage-e-0921` — the STAGE E ADVERSARIAL AUDIT'S FIX ROUND (`docs/2026-09-21_unseq-stage-e-audit.md`,
+verdict FIX-FIRST; dispositions `docs/2026-09-21_unseq-stage-e-handoff.md` §5; design
+`docs/2026-09-21_unseq-stage-e-design.md` §E4 «the audit fix round»); measured by `scripts/diff-one` on all 87
+affected rows before the pin and by the full `scripts/capped scripts/ci --slow` at the fix-round tree — the gate line
+in `docs/evidence/2026-09-21_unseq-stage-e/README.md`). The delta over the E4 tally (§8ad, 3728 = 3493 / 235): 4 rows
+BORN, nothing else moved — `evalorder/unseq-conv-alloc/new-expr-vs-call` PASS strict (`*new(x) + m()`: 6 = gc = main;
+the E4 candidate answered the ZERO value, 5 — the audit's F1 wrong answer, fixed: Go 1.26 `new(x)`'s argument is
+classified and its value stored) and `new-call-vs-call` PASS/membership {`m` `g` 109, `m` `g` 110} (the call inside
+`new` an E1-ordered event; gc 110; the candidate `g` 103), both RED-FIRST on the candidate; `string-bytes-vs-call` and
+`string-runes-vs-call` PASS/membership {ab, zb} (the audit's F4: `string([]byte)`/`string([]rune)` read the backing
+array — an occurrence since this round; the candidate sent the sweep to legacy as «forced», gc's zb alone; gc zb
+inside). 3728 + 4 = 3732; 3493 + 4 = 3497; 235 unchanged. No other result/stage movement, no removal, no widened pin,
+no PASS → non-PASS. Reds table: frontier unchanged at 128, post-vintage unchanged at 66, the other buckets unchanged:
+128 + 9 + (24 + 1) + 7 + 66 = 235 ✓. Movement §8ae (and §8ad for E4).
 
 Previous tally, then current (3709 cases, 3465 PASS / 244 FAIL; [AGENT] worker, lane
 `core/unseq-stage-e-0921` — STAGE E of the evaluation-order model v2.1, family E1: PACKAGE-LEVEL
@@ -1296,6 +1290,12 @@ bucket's BUG-041 red changed ROW, not count):**
 | (a)-queued fixes (triage §3.2: A3 5, A4 1, A5 1; A7 FIXED at landing chunk L3, 2026-09-07 — `panic-recover/panic-newline-abort` PASS, §8w) + the observer landing's six BUG-004 item-3 witnesses (`panic-recover/panic-controls/{newline,recovered-newline,child-confluent}`, `panic-recover/panic-markers/{mixed-line,fake-trace,literal-continuation}` — multi-line string payloads main's `asciiString?` refuses, red-first on BUG-004's Cases line until chunk L3's renderer repair; §8x, 2026-09-07 — ALL SIX GREEN at merge train round 24, L3 rebased onto L4's pin, §8w's round-24 note; not counted here) | 7 |
 | post-vintage arc reds — raft W4.1–W4.3, holes-arc, L:R15, goose-parity (§8b) + the Tier-1 round's 12 refusal pins (§8c) + the gotest-fixes BUG-078 budget refusal pin (`arrays/materialization-budget/over-budget`, on BUG-078's Cases line since the audit fix round) + the bug082-maphint audit-round BUG-083 hoist-order pin (`builtins/len-vs-call-order/hint-panicky-between`, 2026-09-02) + the q-u4-gomem BUG-084 designed-divergence pins (`race/gomem-only/*`, 5 rows: go_mem-racy / TSan-green shapes REFUSED by [USER] ruling Q-U4RESIDUAL (A), 2026-09-02) + the noodler lane's 23 born-FAIL probe rows (2026-09-03, `docs/2026-09-03_noodler-report.md`: 3 on BUG-087's Cases line (RETIRED 2026-09-03 by the `bug087-paniktext` fix — all three PASS/membership under the R9a two-member envelope, not counted here), 2 on BUG-086's (RETIRED 2026-09-03 by the `bug086-shim-closure` fix — both PASS, not counted here), 11 FG-1..FG-5 frontier candidates (MOVED OUT 2026-09-03 to their own rows FR-16..FR-20 — counted in the frontier bucket above, §8e), 2 BUG-068 red-by-design re-hits, 1 FR-3 re-hit, 3 triage-F6/A3 re-hits, 1 FR-10 value-copy witness in untriaged-ids — 7 noodler reds remain in this bucket) − the shim-surface refusal pins flipped green by `stdlib-source-1` (7, 2026-09-03; movement below) + BUG-089's designed ParseUint error-path reds (4 pre-existing rows flipped + 5 born; Cases line — ALL NINE GREEN since `stdlib-source-2`, 2026-09-03: the Clone overlay; BUG-089 fixed) − the two W4.3 SortFunc/cmp bound pins `slices/sortfunc-cmp/{named-slice-bound,float-compare-bound}` flipped green by the real `slices`/`cmp` source (`stdlib-source-2`); the BUG-073 pin `strings/trimspace-repeat/repeat-bound-refused` stays (a runner-budget red since `stdlib-source-2`, ; BUG-090's Cases-line budget pin since its audit fix round) − `slices/sortfunc-cmp/sortfunc-local-type` MOVED to FR-19's line (fr24 audit fix round L5, 2026-09-04: the identical C6 naming refusal, now with FR-19's plan) + the stdlib-slice-3 gotest-surfaced fidelity pins (2026-09-04: `generics/type-switch-interface-param{,/bound,/plain}` on BUG-095's Cases line, `ints/shift-count-huge` on BUG-096's — ALL FOUR GREEN since the `bug095-096` fix landed at merge train round 15, 2026-09-05: re-pinned FAIL→PASS at the rebase, the ids moved to the FIXED entries' Cases lines; not counted here) + the bug095-096 audit-round BUG-097 pin (`multipkg/same-name-anon-iface`, 2026-09-05: the anonymous-interface wire name is package-NAME-qualified, two same-named packages fuse two interfaces — a wrong answer on main, refused by name since BUG-095's conflict guard; open, plan on the entry — FIXED 2026-09-05 by `fr19-bug097`, GREEN, not counted here) − BUG-059's W1.1 pin `multipkg/same-name-identity-panic` (red since 2026-08-18 in this bucket; FIXED 2026-09-05 by `fr19-bug097`, GREEN — §8s) + the fr19-bug097 audit-round BUG-099 pins (`panic-recover/recovered-runtime-error-type/{observed,assert-int}`, 2026-09-05: the recovered runtime error's ONE synthetic type vs gc's concrete type per fault — `observed` an open WRONG ANSWER at the differential stage, `assert-int` its fail-closed face; open, plan on the entry) + the c-arc-c2 audit-round BUG-103 pin (`structs/decl-order-reversed/conversion-array-target`, 2026-09-05: a conversion whose target's resolved shape is an ARRAY falls into `convertValueToTy`'s catch-all — the arm BUG-020's fix left out; a fail-closed refusal of legal Go, gc 104; open, plan on the entry; §8u) − the two A6-residual pins `builtins/len-vs-call-order/{panicky-between,hint-panicky-between}` flipped green at lane `e13-b` 2026-09-05 (the refusal retired into latitude E13; panicky-between strict, hint-panicky-between membership; §8t) + the e13-b audit-round BUG-101 pin (`builtins/e13-sibling-panic-order/assert-ok-early-len-hoist`, 2026-09-05: the VALUE axis reached through the len shape — an assertion that succeeds early and fails late across a mutating call; open, E12's obligation; §8t) + the e13-b re-audit-round BUG-101 pin `builtins/e13-sibling-panic-order/slice-value-early-len-hoist` (the value axis, slice kind) + the e13-b re-audit-round BUG-104 pins (`builtins/e13-sibling-panic-order/{compound-call-target-vs-call,map-compound-index-key-vs-call}`, 2026-09-05: a compound target's hoisted address/key temp panics BEFORE the RHS call, gc after — pre-existing on main b77f3298; open, plan on the entry; the lane's BUG-103, renumbered BUG-104 at the round-17 rebase; §8t) + the e13-b final-verification-round BUG-104 pins (`builtins/e13-sibling-panic-order/{compound-call-target-vs-recv,map-compound-index-key-vs-recv,map-compound-index-key-vs-method}`, 2026-09-05: the receive and method-call spellings of the same hoisted-temp class; §8t) − BUG-103's array-value conversion pin (FIXED 2026-09-05, §8v; its original row now PASS) + the observer landing's five APPARATUS refusals (2026-09-07, chunk L4, §8x: `sync/mutex-unlock-fatal/during-panic-unwind` on BUG-106's Cases line — the fatal's message precedes `m.dying`; `init/init-panic`, `noodler/initpanic/{panic,var-panic,deadlock}` on BUG-107's — pre-`main` abort, no crash-channel acknowledgement can exist; stage go-observation, never a machine verdict; `init/quarantined-var-panicking/sibling` changed stage only and stays in its bucket) + landing chunk L3's BUG-004 D5 pins (`panic-recover/panic-text/{invalid-single,invalid-first-line,invalid-recovered-equal}`, 2026-09-07: a string payload whose FIRST LINE is not valid UTF-8 refuses BY NAME — gc writes the raw bytes and the String-valued observation cannot carry them; red until a byte channel is ruled — D5 RULED (i) at merge train round 24, no channel; stage go-observation since that round, L4's harness refusing the invalid first line by name before the machine does, the red unmoved; §8w) − the Stage C pilot's three retirements (2026-09-19, lane `core/unseq-stage-c-0919`, §8y: BUG-101's `builtins/e13-sibling-panic-order/{assert-ok-early-len-hoist,slice-value-early-len-hoist}` and BUG-104's `builtins/e13-sibling-panic-order/compound-call-target-vs-call` FIXED — each sweep ONE `unseq` graph, PASS/membership with gc's draw in the set; BUG-101 fixed, BUG-104 to four rows, the compound row on BUG-112's Cases line; not counted here) + the Stage C audit fix round's BUG-113 pins (2026-09-20, §8y addendum: `evalorder/legacy-logical-vs-call/{or-vs-call,and-vs-call}` — the LEGACY path evaluates a binary logical operation AFTER a lexically later call, gc `logical false 0` vs the machine's `logical true 0`; pre-existing on main `6a7beb3d`, found by the audit's F1; open, fix owed to Stage E's migration of the logical-operator sweeps) + the two BUG-113 rows LEFT at Stage E E1 (2026-09-21, §8aa — FIXED, PASS) + BUG-104's map row LEFT at Stage E E2 (2026-09-21, §8ab — FIXED, → BUG-112) − BUG-104's three remaining rows LEFT at Stage E E3 (2026-09-21, §8ac — the receive and method-call spellings FIXED, PASS/membership on the entry's own Cases line) | 66 |
 | **total** | **235** |
+
+*(Movement at the STAGE E AUDIT FIX ROUND, 2026-09-21 (lane `core/unseq-stage-e-0921`, [AGENT] worker; §8ae;
+tracked figure 3728 = 3493 / 235 → 3732 = 3497 / 235): 4 rows born (3 membership, 1 strict —
+`evalorder/unseq-conv-alloc/{new-expr-vs-call,new-call-vs-call,string-bytes-vs-call,string-runes-vs-call}`: the
+audit's F1 wrong-answer witnesses, red-first on the candidate, and F4's enveloped conversion reads), 0 flips, 0 lane
+moves, 0 removals. Frontier unchanged 128; post-vintage unchanged 66: 128 + 9 + (24 + 1) + 7 + 66 = 235 ✓.)*
 
 *(Movement at STAGE E of the evaluation-order model v2.1, family E4, 2026-09-21 (lane
 `core/unseq-stage-e-0921`, [AGENT] worker; §8ad; tracked figure 3722 = 3482 / 240 → 3728 = 3493 / 235):
@@ -2410,6 +2410,30 @@ tallied by row:
   twin 10 203 sweeps, 0 admitted, pin byte-identical. No lane move, no widened pin, no PASS → non-PASS.
 - Reds table: post-vintage 72 → 70; 133 + 9 + (24 + 1) + 7 + 70 = 244 ✓. FR-28's cell unchanged (the
   BUG-102 designed reds are E4's).
+
+### 8ae. Movement at the Stage E audit fix round (2026-09-21, lane `core/unseq-stage-e-0921`; rebased onto main `769bbf23`)
+
+[AGENT] worker. The audit `docs/2026-09-21_unseq-stage-e-audit.md` (verdict FIX-FIRST); dispositions
+`docs/2026-09-21_unseq-stage-e-handoff.md` §5; design `docs/2026-09-21_unseq-stage-e-design.md` §E4 «the audit fix
+round»; evidence `docs/evidence/2026-09-21_unseq-stage-e/` (`census-fix.txt`, `gc-draws-fix.txt`, `f1-f4-litmus.txt`,
+`diff-one-fix.txt`, the gate tail). Tracked figure 3728 = 3493 / 235 → 3732 = 3497 / 235 (re-pin reason in the
+baseline header). Movement, tallied by row:
+
+- BORN 4, all PASS (`Corpus/coverage/exec/evalorder/unseq-conv-alloc/`): `new-expr-vs-call` strict (`*new(x) + m()`,
+  m writing the captured x — Go 1.26 `new(x)` holds x's VALUE, read inside the E1-ordered `new`'s window and so forced
+  before m: 6; gc 6 on 20/20; the E4 candidate answered 5, the zero value — the audit's F1) and `new-call-vs-call`
+  membership {`m` `g` 109, `m` `g` 110} (`*new(mPrint()) + x + h() + gPrint()`: the call inside `new` is an E1-ordered
+  event whose value the allocation stores; x's read before / after h; gc 110; the candidate never ran mPrint — `g`
+  103) — both born FAIL on the candidate's frontend + binary and PASS since the fix; `string-bytes-vs-call` and
+  `string-runes-vs-call` membership {ab, zb} (`string(b) + m()`, b private but aliased by c which m writes: the
+  conversion reads the backing array at the conversion — the audit's F4; gc zb — OBYTES2STR is not in order.go's call
+  class).
+- No flip, no lane move, no removal: `scripts/diff-one` on the 87 affected rows (E4's 83 + the four born) — 87 PASS,
+  every existing row in its pinned lane and set; the census 127 → 127 admitted (F4 admits no other corpus sweep).
+- Decoder hardening without row movement (F2/F3): `ref` of a `$` binder cell refused as an invoke argument and as a
+  func-value capture; slice-literal indices in range and distinct; constant `make` sizes non-negative, `int`-
+  representable, len ≤ cap — seven new wire mutants (`Tests/unseq-wire/mutants.tsv`, 26 → 33), all refused by name
+  through the CLI.
 
 ### 8ad. Movement at Stage E of the evaluation-order model v2.1, family E4 — conversions, allocations (2026-09-21, lane `core/unseq-stage-e-0921`; on main `14006270`)
 

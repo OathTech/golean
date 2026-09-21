@@ -204,3 +204,39 @@ E13 conversion/literal rows — BUG-102's five, `bytes-conv-{left-len-hoist,valu
 that left the legacy probe); the goroutine-scheduling sites move only inside the DIFFER rows (a SAME id has an
 identical dump). The same standing exit-1 findings on both sides (  racy race/negative-sync/overwrite-vs-trylock: max consumed=14 max wide=14 distinct observations across 6 streams=1).
 
+## The audit fix round (2026-09-21) — F1–F4 closed, F5–F9 recorded
+
+The adversarial audit (`docs/2026-09-21_unseq-stage-e-audit.md`, candidate `3649b7db`, verdict FIX-FIRST; its evidence
+`docs/evidence/2026-09-21_unseq-stage-e-audit/`) dispatched by [USER] Mike («Dispatch the audit as you propose», relayed);
+dispositions in the handoff §5, the design §E4 «the audit fix round». The branch was rebased onto main `769bbf23` first
+(the family commits map E1 `0fe7bdce` → `a2c8a35f`, E2 `6960697f` → `d1db8a14`, E3 `c1c27f27` → `22ec98d5`, E4 `7f7e6b79` →
+`d5363273`).
+
+| file | what | producer |
+|---|---|---|
+| `f1-f4-litmus.txt` | the audit's F1 litmuses (`*new(x) + m()`, `*new(m()) + x + h() + g()`) and F4 probes (`string(b) + m()` on an aliased `[]byte` / `[]rune`) exported by the E4 candidate's frontend and run on its binary (OLD) vs the fix-round frontend + binary (NEW), the default tape per function, then NEW's enumerated set: F1 OLD 5 → NEW 6 (set {6}; gc 6), OLD `g` 103 → NEW `m` `g` 110 (set {109, 110}; gc 110); F4 OLD zb (legacy, all-forced) → NEW default zb, set {ab, zb} (gc zb); the audit's k1 (`min` beside a call) unchanged | the litmus sources from `git show review/unseq-stage-e-0921:…`; `.tmp/nativefrontend-e4` + `.tmp/golean-e4` vs `.tmp/nativefrontend` + `.lake/build/bin/golean`; `native-json-run`, `coverage-observations` |
+| `census-fix.txt` | the census, the E4 frontend vs the fix-round frontend: admitted 127 → 127, newly admitted 0, lost 0 (F4 admits no other corpus sweep; 357 legacy sweeps count the conversion's read now — 341 count-only, 16 with the E3 trigger's reason instead of «no non-event»: the fmt shim's `goleanShimFmtQuoteBytes`, its `string(b)` inside a call's argument, forced); the one admitted `new` sweep unchanged; the twin 0 | `.tmp/census/run.sh`, `summarize.py`, a key-wise diff |
+| `diff-one-fix.txt` | `scripts/diff-one` on the 87 affected rows (E4's 83 + the four born), K=32: 87 PASS; the born rows in their lanes (new-expr-vs-call strict, one 2-way pick; new-call-vs-call / string-bytes-vs-call / string-runes-vs-call membership enumerated=2) | `scripts/diff-one <ids…>`; the compact table of `artifacts/coverage/latest.tsv` |
+| `gc-draws-fix.txt` | gc's 20 draws on the extended package (5 × GOMAXPROCS 1/8 × default / `-N -l`): `98\|15\|15\|15\|6\|6\|6\|m\|g\|110\|zb\|zb` on every draw — inside every derived set | `go build [-gcflags=all='-N -l']` + `GOMAXPROCS=… ./bin`, go1.26.5 |
+| `ci-slow-fix.tail.txt` | the fix-round full gate's tail (the paragraph in the records addendum) | `scripts/capped scripts/ci --slow`, ANSI stripped |
+| `choice-trace-fix.txt` | the choice-trace subset: ≥ 200 outside-family ids on main's binary + frontend vs the fix-round's (the paragraph in the records addendum) | `scripts/choice-trace-corpus --dump` per side + `trace-compare.py` |
+
+References: `enumerate.py` E4f {6} (forbidding the candidate's 5), E4g {(109, m g), (110, m g)} (forbidding (103, g)),
+E4h {ab, zb} (regenerated `outcomes.txt`, `RESULT: PASS`); over the wire: `Tests/UnseqWire.lean` 95 ok, 33 mutants refused
+by name (`mut-arg-ref-binder`, `mut-capture-ref-binder` — F2; `mut-new-value-type` — F1; `mut-slicelit-index-oob`,
+`mut-slicelit-dup-index`, `mut-make-negative-len`, `mut-make-len-over-cap` — F3), the hand-built + native `e4new`
+({109, 110}), `e4strb` ({ab, zb}), `e4make` ({103, 112}) exact; `scripts/check-unseq-wire` PASS (93 fixtures
+byte-identical to the generator; 33 mutants through the CLI); `scripts/check-wire-boundary` PASS (11 + 28 unseq-node
+controls — the `new(x)` positive answering 110 after `m` `g`, and the seven refusals). Frontend: `go test
+./tools/nativefrontend/ ./tools/lowerdiag/` ok (`e4newExpr` admitted 1/2 — through the fresh pointer's dereference, the
+set a singleton; `e4newCall` 3/2; `e4strBytes`/`e4strRunes` 1/1; `e4newCallOnly` events=2 calls=1 — the F7 counts;
+`e4bytesFromStr` legacy by name; the lowering shapes). Lean build (explicit targets): `GOLEAN_MEM_MAX=32G scripts/capped
+lake build GoLean.NativeToIR golean UnseqWireTests` EXIT=0 (99 jobs, 13 s). `scripts/check-frontend-pins` PASS (twin =
+pinned bytes), `scripts/check-mem-callsites` PASS (70 rows), `scripts/check-bugs.sh` PASS at the re-pinned baseline
+3732 = 3497 / 235, `scripts/check-evidence-size` PASS. `scripts/capped scripts/check-unseq-scheduler` PASS (35 theorems,
+classical trio only), `scripts/capped bash scripts/check-core-audit` PASS, `scripts/capped lake exe gocore-eval-tests` 274 ok,
+`tools/reconcile-records` — the same two report-only findings as at E4 (the 5a-class STALE certification; the pre-existing
+doc version sites), none new.
+
+**The full gate: `scripts/capped scripts/ci --slow` at the fix-round tree** (main `769bbf23` + the rebased family commits + the fix-round edits, the worktree dirty with exactly them; the box-wide lock 23:20:28–23:34:51Z): **EXIT=1 in 863 s, K=80 (`membership_draws 80`); 3732 rows 3496 PASS / 236 FAIL in the run = the pinned 3497 / 235 with the one 5a-class row red; RESULT FAIL on EXACTLY the two 5a-class items** — `certificate provenance` («STALE certification: changed dependency build/files/GoLean/GoCore/AdmissionIndices.lean» — the E3/E4 core inputs vs main's certificates; the decoder `GoLean/NativeToIR.lean` changed here too) and the `baseline diff` DRIFT block's ONE line `imported-goose/channel/google-search baseline[PASS/membership] -> now[FAIL/membership]` (the row's detail: STALE for `AdmissionIndices.lean`; «Fresh certification: unchanged set; seconds=165.819» — the train installs the candidate at 5a). Every other step ok (core build warning-free, totality audit, engine isolation, check-mem-callsites (70 rows), admission proofs, declaration + wire boundaries (11 + 28 unseq-node controls), method identity, unseq scheduler (Stage B), unseq wire (33 mutants), frontend pins (twin = pinned bytes), frontend / lowerdiag / harness unit tests, eval tests 274 ok, differential run, lane-validation fixtures incl. the go half, negative corpus 394 matched, FloatVectors + inittask-std byte-exact, re-pin guard 0 PASS→non-PASS, executed library coverage; the reconciler's two report-only findings are the same as at E4). `ci-slow-fix.tail.txt` is the tail. The four born rows reproduce their pinned states in the run: `new-expr-vs-call` PASS strict, `new-call-vs-call` / `string-bytes-vs-call` / `string-runes-vs-call` PASS/membership; every E4 row unchanged.
+

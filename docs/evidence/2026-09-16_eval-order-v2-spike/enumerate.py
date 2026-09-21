@@ -655,6 +655,57 @@ def e4e():
     check('E4e len(make([]int, n)) + mut() (make an E1 participant: n forced before mut)',
           enumerate_graph(occs, state(v={'n': 1}), lambda st, v: v['Op']), lambda k: k[1], {11})
 
+# ---------------------------------------------------------------- Stage E audit fix round (2026-09-21)
+# F1: Go 1.26 `new(x)` is a function call (E1-ordered) whose argument is an OPERAND — its reads are
+# occurrences inside new's window (forced before every later participant), its calls E1-ordered events —
+# and whose allocation holds the argument's VALUE (spec#Allocation). F4: `string([]byte)` READS the
+# slice's backing array at the conversion — an occurrence unordered against a sibling call that writes
+# an alias of the slice.
+
+def e4f():
+    # *new(x) + mut(): mut writes the captured x (1 -> 10, returns 5). x's read precedes new by data, new
+    # precedes mut by E1: the read is forced before mut — a SINGLETON 6 (the fresh pointer's dereference
+    # is unordered against mut, but nobody else holds the pointee). The E4 candidate answered 5 (the zero value).
+    def mut(st, v): st['v']['x'] = 10; return 5
+    occs = [Occ('R_x', run=lambda st, v: st['v']['x']),
+            Occ('A_new', deps=['R_x'], run=lambda st, v: ('P', v['R_x'])),
+            Occ('D', deps=['A_new'], run=lambda st, v: v['A_new'][1]),
+            Occ('E_mut', after=['A_new'], run=mut),
+            Occ('Op', deps=['D', 'E_mut'], run=lambda st, v: v['D'] + v['E_mut'])]
+    check('E4f *new(x) + mut() (new an E1 participant: x forced before mut; the E4 candidate gave 5)',
+          enumerate_graph(occs, state(v={'x': 1}), lambda st, v: v['Op']), lambda k: k[1], {6}, forbid={5})
+
+def e4g():
+    # *new(m()) + x + h() + g(): m prints `m` and returns 7, h writes the captured x (1 -> 2, returns 100), g
+    # prints `g` and returns 1. m, new, h, g E1-ordered (m inside new's window); x's read unordered against
+    # them: 109 (x before h) / 110 (after). The E4 candidate never ran m (`g` 103).
+    def m(st, v): println(st, 'm'); return 7
+    def h(st, v): st['v']['x'] = 2; return 100
+    def g(st, v): println(st, 'g'); return 1
+    occs = [Occ('E_m', run=m),
+            Occ('A_new', deps=['E_m'], after=['E_m'], run=lambda st, v: ('P', v['E_m'])),
+            Occ('D', deps=['A_new'], run=lambda st, v: v['A_new'][1]),
+            Occ('R_x', run=lambda st, v: st['v']['x']),
+            Occ('E_h', after=['A_new'], run=h),
+            Occ('E_g', after=['E_h'], run=g),
+            Occ('Op1', deps=['D', 'R_x'], run=lambda st, v: v['D'] + v['R_x']),
+            Occ('Op2', deps=['Op1', 'E_h'], run=lambda st, v: v['Op1'] + v['E_h']),
+            Occ('Op3', deps=['Op2', 'E_g'], run=lambda st, v: v['Op2'] + v['E_g'])]
+    check('E4g *new(m()) + x + h() + g() (m inside new; x unordered vs the calls; the E4 candidate gave `g` 103)',
+          enumerate_graph(occs, state(v={'x': 1}), lambda st, v: v['Op3']),
+          lambda k: (k[1], k[2]), {(109, ('m', 'g')), (110, ('m', 'g'))}, forbid={(103, ('g',))})
+
+def e4h():
+    # string(b) + m(): b private but ALIASED by c; m writes c[0] ('a' -> 'z'). The conversion reads the
+    # BACKING ARRAY at the conversion: {ab, zb}; gc zb (OBYTES2STR is not in order.go's call class).
+    def m(st, v): store(st, 'B', 0, 'z'); return ''
+    occs = [Occ('Conv', run=lambda st, v: ''.join(st['arr']['B'])),
+            Occ('E_m', run=m),
+            Occ('Op', deps=['Conv', 'E_m'], run=lambda st, v: v['Conv'] + v['E_m'])]
+    check('E4h string(b) + m(), b aliased by c, m writes c[0] (the conversion reads the backing array)',
+          enumerate_graph(occs, state(v={'b': 'B'}, arr={'B': ['a', 'b']}), lambda st, v: v['Op']),
+          lambda k: k[1], {'ab', 'zb'})
+
 # ---------------------------------------------------------------- negative controls (forced pairs are singletons)
 def controls():
     # C1: f(g()) — argument before invocation (data edge); no unordered pair remains.
@@ -683,7 +734,7 @@ if __name__ == '__main__':
               lambda: r2c(True), lambda: r2c(False),
               r4, lambda: r6(True), lambda: r6(False),
               e1a, e1c, e1b, e2a, e2c, e2d, e2e, e2f, e2g, e3a, e3c, e3d, e3e,
-              e4a, e4b, e4c, e4d, e4e, controls):
+              e4a, e4b, e4c, e4d, e4e, e4f, e4g, e4h, controls):
         f()
     print('RESULT:', 'FAIL' if FAILS else 'PASS', f'({FAILS} mismatch(es))')
     sys.exit(1 if FAILS else 0)

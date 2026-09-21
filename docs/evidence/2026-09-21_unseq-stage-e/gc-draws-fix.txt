@@ -1,0 +1,21 @@
+# gc draws (go1.26.5) for Corpus/coverage/exec/evalorder/unseq-conv-alloc after the audit fix round: 5 runs x GOMAXPROCS 1/8 x default / -gcflags=all=-N -l = 20; the subjects in main() order: convReadVsCall | structLitVsCall | addrLitVsCall | sliceLitVsCall | makeLenVsCall | mapLitControl | newExprVsCall | newCallVsCall (prints m, g) | stringBytesVsCall | stringRunesVsCall. Every draw inside its derived set; the four born rows: 6 (singleton), `m` `g` 110 (of {109, 110}), zb (of {ab, zb}) x2.
+evalorder/unseq-conv-alloc:main GOMAXPROCS=1 default run1: 98|15|15|15|6|6|6|m|g|110|zb|zb|
+evalorder/unseq-conv-alloc:main GOMAXPROCS=1 default run2: 98|15|15|15|6|6|6|m|g|110|zb|zb|
+evalorder/unseq-conv-alloc:main GOMAXPROCS=1 default run3: 98|15|15|15|6|6|6|m|g|110|zb|zb|
+evalorder/unseq-conv-alloc:main GOMAXPROCS=1 default run4: 98|15|15|15|6|6|6|m|g|110|zb|zb|
+evalorder/unseq-conv-alloc:main GOMAXPROCS=1 default run5: 98|15|15|15|6|6|6|m|g|110|zb|zb|
+evalorder/unseq-conv-alloc:main GOMAXPROCS=1 -N -l run1: 98|15|15|15|6|6|6|m|g|110|zb|zb|
+evalorder/unseq-conv-alloc:main GOMAXPROCS=1 -N -l run2: 98|15|15|15|6|6|6|m|g|110|zb|zb|
+evalorder/unseq-conv-alloc:main GOMAXPROCS=1 -N -l run3: 98|15|15|15|6|6|6|m|g|110|zb|zb|
+evalorder/unseq-conv-alloc:main GOMAXPROCS=1 -N -l run4: 98|15|15|15|6|6|6|m|g|110|zb|zb|
+evalorder/unseq-conv-alloc:main GOMAXPROCS=1 -N -l run5: 98|15|15|15|6|6|6|m|g|110|zb|zb|
+evalorder/unseq-conv-alloc:main GOMAXPROCS=8 default run1: 98|15|15|15|6|6|6|m|g|110|zb|zb|
+evalorder/unseq-conv-alloc:main GOMAXPROCS=8 default run2: 98|15|15|15|6|6|6|m|g|110|zb|zb|
+evalorder/unseq-conv-alloc:main GOMAXPROCS=8 default run3: 98|15|15|15|6|6|6|m|g|110|zb|zb|
+evalorder/unseq-conv-alloc:main GOMAXPROCS=8 default run4: 98|15|15|15|6|6|6|m|g|110|zb|zb|
+evalorder/unseq-conv-alloc:main GOMAXPROCS=8 default run5: 98|15|15|15|6|6|6|m|g|110|zb|zb|
+evalorder/unseq-conv-alloc:main GOMAXPROCS=8 -N -l run1: 98|15|15|15|6|6|6|m|g|110|zb|zb|
+evalorder/unseq-conv-alloc:main GOMAXPROCS=8 -N -l run2: 98|15|15|15|6|6|6|m|g|110|zb|zb|
+evalorder/unseq-conv-alloc:main GOMAXPROCS=8 -N -l run3: 98|15|15|15|6|6|6|m|g|110|zb|zb|
+evalorder/unseq-conv-alloc:main GOMAXPROCS=8 -N -l run4: 98|15|15|15|6|6|6|m|g|110|zb|zb|
+evalorder/unseq-conv-alloc:main GOMAXPROCS=8 -N -l run5: 98|15|15|15|6|6|6|m|g|110|zb|zb|

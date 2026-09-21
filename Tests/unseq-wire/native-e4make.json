@@ -1,0 +1,423 @@
+{
+ "buildContext": {
+  "buildTags": [],
+  "cgoEnabled": true,
+  "compiler": "gc",
+  "goarch": "amd64",
+  "goos": "linux"
+ },
+ "fileOrder": [
+  {
+   "files": [
+    "main.go"
+   ],
+   "package": "main"
+  }
+ ],
+ "funcs": [
+  {
+   "body": {
+    "body": [
+     {
+      "define": false,
+      "lhs": [
+       {
+        "expr": {
+         "expr": "ident",
+         "name": "x$cap"
+        },
+        "target": "addr"
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "10"
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "100"
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "e4make$lit0",
+   "params": [
+    {
+     "id": "x$cap",
+     "type": {
+      "elem": {
+       "int": "int",
+       "kind": "int"
+      },
+      "kind": "pointer"
+     }
+    }
+   ],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "n",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "2"
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "x",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "1"
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "h",
+        "target": "declare",
+        "type": {
+         "kind": "func",
+         "params": [],
+         "results": [
+          {
+           "int": "int",
+           "kind": "int"
+          }
+         ],
+         "variadic": false
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "captured": [
+         {
+          "expr": "ref",
+          "id": "x"
+         }
+        ],
+        "expr": "func-value",
+        "func": "e4make$lit0",
+        "type": {
+         "kind": "func",
+         "params": [],
+         "results": [
+          {
+           "int": "int",
+           "kind": "int"
+          }
+         ],
+         "variadic": false
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "cells": [
+       {
+        "id": "$u0",
+        "type": {
+         "elem": {
+          "int": "int",
+          "kind": "int"
+         },
+         "kind": "slice"
+        }
+       },
+       {
+        "id": "$u1",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       },
+       {
+        "id": "$u2",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       },
+       {
+        "id": "$u3",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       },
+       {
+        "id": "$u4",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       },
+       {
+        "id": "$u5",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "occs": [
+       {
+        "allocation": {
+         "elem": {
+          "int": "int",
+          "kind": "int"
+         },
+         "len": {
+          "expr": "ident",
+          "name": "n",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          }
+         },
+         "stmt": "make-slice"
+        },
+        "bind": "$u0",
+        "kind": "allocate",
+        "name": "make0"
+       },
+       {
+        "after": [
+         "make0"
+        ],
+        "bind": "$u1",
+        "head": {
+         "expr": "builtin-len",
+         "operand": {
+          "expr": "ident",
+          "name": "$u0",
+          "type": {
+           "elem": {
+            "int": "int",
+            "kind": "int"
+           },
+           "kind": "slice"
+          }
+         },
+         "operandType": {
+          "elem": {
+           "int": "int",
+           "kind": "int"
+          },
+          "kind": "slice"
+         },
+         "type": {
+          "int": "int",
+          "kind": "int"
+         }
+        },
+        "kind": "eval",
+        "name": "len1"
+       },
+       {
+        "after": [
+         "len1"
+        ],
+        "args": [],
+        "binds": [
+         "$u4"
+        ],
+        "callee": {
+         "expr": "ident",
+         "name": "h",
+         "type": {
+          "kind": "func",
+          "params": [],
+          "results": [
+           {
+            "int": "int",
+            "kind": "int"
+           }
+          ],
+          "variadic": false
+         }
+        },
+        "kind": "invoke",
+        "name": "call4",
+        "resultTypes": [
+         {
+          "int": "int",
+          "kind": "int"
+         }
+        ]
+       },
+       {
+        "bind": "$u2",
+        "head": {
+         "expr": "ident",
+         "name": "x",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         }
+        },
+        "kind": "eval",
+        "name": "read2"
+       },
+       {
+        "bind": "$u3",
+        "head": {
+         "expr": "binary",
+         "op": "+",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "x": {
+          "expr": "ident",
+          "name": "$u1",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          }
+         },
+         "y": {
+          "expr": "ident",
+          "name": "$u2",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          }
+         }
+        },
+        "kind": "eval",
+        "name": "op3"
+       },
+       {
+        "bind": "$u5",
+        "head": {
+         "expr": "binary",
+         "op": "+",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "x": {
+          "expr": "ident",
+          "name": "$u3",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          }
+         },
+         "y": {
+          "expr": "ident",
+          "name": "$u4",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          }
+         }
+        },
+        "kind": "eval",
+        "name": "op5"
+       }
+      ],
+      "stmt": "unseq",
+      "stores": [],
+      "then": {
+       "results": [
+        {
+         "expr": "ident",
+         "name": "$u5",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         }
+        }
+       ],
+       "stmt": "return"
+      }
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "e4make",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  }
+ ],
+ "methodSets": [],
+ "methods": [],
+ "package": "main",
+ "schema": "golean-native-v1",
+ "types": []
+}

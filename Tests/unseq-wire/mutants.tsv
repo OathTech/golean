@@ -25,3 +25,10 @@ mut-recv-nonatom	hidden read in a receive
 mut-recv-two-binds	outside the admitted fragment
 mut-alloc-nonatom	hidden read in an allocation payload
 mut-alloc-kind	outside the admitted fragment
+mut-arg-ref-binder	address of a binder cell
+mut-capture-ref-binder	address of a binder cell
+mut-new-value-type	disagrees with the allocation's element type
+mut-slicelit-index-oob	outside the literal's length
+mut-slicelit-dup-index	duplicate slice-literal index
+mut-make-negative-len	negative constant len
+mut-make-len-over-cap	larger than constant cap

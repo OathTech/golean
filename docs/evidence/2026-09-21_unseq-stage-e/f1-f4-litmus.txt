@@ -1,0 +1,31 @@
+# The audit's F1/F4 litmuses (docs/evidence/2026-09-21_unseq-stage-e-audit/{f1-new-expr-litmus,f1-new-call-dropped-litmus,probes-litmus}.go) exported by the E4 candidate's frontend (.tmp/nativefrontend-e4, commit d5363273 = pre-rebase 7f7e6b79) + run on its binary (.tmp/golean-e4, sha256 6caf640d…) = OLD, and by the fix-round frontend + binary = NEW; the default tape per function, then the fix-round binary's enumerated set (coverage-observations, width 4 / sites 16 / cap 64). gc = go run, go1.26.5. F1: newExprVsCall OLD 5 (spec-forbidden: the zero value) -> NEW 6 = gc = main, the set {6}; newCallDropped OLD 'g' 103 (m never ran) -> NEW 'm' 'g' 110 = gc = main, the set {109, 110}. F4: d1/a6 (string of an aliased []byte/[]rune) OLD zb (legacy, all-forced) -> NEW default zb, the set {ab, zb} (gc zb); d2 (captured) {ab, zb} on both. k1 (min beside a call) unchanged: legacy 1001 = gc.
+=== f1/lit1 ===
+newExprVsCall              OLD default: {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":5}]} 
+newExprVsCall              NEW default: {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":6}]} 
+newExprVsCall              NEW set:     ["('', [6], 'ok')", 'coverage-observations: observations=1 steps=181 probes=3 sites=1 leaves=2 maxdepth=1 width=4']
+newExprPlain               OLD default: {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":7}]} 
+newExprPlain               NEW default: {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":7}]} 
+newExprPlain               NEW set:     ["('', [7], 'ok')", 'coverage-observations: observations=1 steps=54 probes=0 sites=0 leaves=1 maxdepth=0 width=4']
+newExprCallArg             OLD default: {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":15}]} 
+newExprCallArg             NEW default: {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":15}]} 
+newExprCallArg             NEW set:     ["('', [15], 'ok')", 'coverage-observations: observations=1 steps=113 probes=0 sites=0 leaves=1 maxdepth=0 width=4']
+=== f1/lit2 ===
+newCallDropped             OLD default: {"output":"g\n","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":103}]} 
+newCallDropped             NEW default: {"output":"m\ng\n","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":110}]} 
+newCallDropped             NEW set:     ["('m\\ng\\n', [109], 'ok')", "('m\\ng\\n', [110], 'ok')", 'coverage-observations: observations=2 steps=3928 probes=129 sites=43 leaves=46 maxdepth=7 width=4']
+=== f4/probes ===
+d1StringOfAliasedBytes     OLD default: {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"bytes":[122,98],"tag":"string"}]} 
+d1StringOfAliasedBytes     NEW default: {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"bytes":[122,98],"tag":"string"}]} 
+d1StringOfAliasedBytes     NEW set:     ["('', [None], 'ok')", 'coverage-observations: observations=2 steps=192 probes=3 sites=1 leaves=2 maxdepth=1 width=4']
+d2StringOfCapturedBytes    OLD default: {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"bytes":[122,98],"tag":"string"}]} 
+d2StringOfCapturedBytes    NEW default: {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"bytes":[122,98],"tag":"string"}]} 
+d2StringOfCapturedBytes    NEW set:     ["('', [None], 'ok')", 'coverage-observations: observations=2 steps=260 probes=6 sites=2 leaves=3 maxdepth=2 width=4']
+a6StringOfRunes            OLD default: {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"bytes":[122,98],"tag":"string"}]} 
+a6StringOfRunes            NEW default: {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"bytes":[122,98],"tag":"string"}]} 
+a6StringOfRunes            NEW set:     ["('', [None], 'ok')", 'coverage-observations: observations=2 steps=192 probes=3 sites=1 leaves=2 maxdepth=1 width=4']
+k1MinVsCall                OLD default: {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1001}]} 
+k1MinVsCall                NEW default: {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1001}]} 
+k1MinVsCall                NEW set:     ["('', [1001], 'ok')", 'coverage-observations: observations=1 steps=105 probes=0 sites=0 leaves=1 maxdepth=0 width=4']
+d1StringOfAliasedBytes     NEW set (strings): [('ab',), ('zb',)]
+a6StringOfRunes            NEW set (strings): [('ab',), ('zb',)]
+d2StringOfCapturedBytes    NEW set (strings): [('ab',), ('zb',)]

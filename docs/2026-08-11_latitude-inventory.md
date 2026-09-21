@@ -824,6 +824,18 @@ gc's early store a deviation, L-016, 2026-09-02).
   PARTICIPANTS (function calls, spec#Built-in_functions) — the born control `evalorder/unseq-conv-
   alloc/make-len-vs-call` pins it against gc (6, 20/20). The (b) pin stands outside the widened
   grammar (map literals, array literals, `&x` of a variable — E5's).
+  THE AUDIT FIX ROUND (2026-09-21, [AGENT]; design §E4 «the audit fix round», F5): the E1
+  participation of `make`/`new` (and `len`/`cap`, Stage C) rests on READING (a) of
+  spec#Order_of_evaluation — the built-ins are the ordering sentence's «function calls»
+  (spec#Built-in_functions «called like any other function»; gc's order.go call class agrees) —
+  under which `make-len-vs-call` is a FORCED singleton; under READING (b) (only user calls) the
+  same row is a (b) pin of gc's order ({6, 8}). Reading (a) is the [AGENT] choice, PENDING [USER]
+  ratification with the Stage E items; its consequence — `min`/`max`/`copy`/`append` are ordered
+  calls too, today legacy by name (the legacy hoist realizes gc's early evaluation: `min(x, 100) +
+  m()` → 1001 on gc and the machine) — is E5's. F1 of the same round: Go 1.26 `new(x)` is admitted
+  as the same E1 participant with its argument an operand (the E4 candidate had dropped the
+  initializer — a wrong answer fixed before landing; `evalorder/unseq-conv-alloc/{new-expr-vs-call
+  (6), new-call-vs-call ({109, 110}, gc 110)}`).
 - STAGE E, FAMILY E3 (2026-09-21, [AGENT], lane `core/unseq-stage-e-0921`; design
   `docs/2026-09-21_unseq-stage-e-design.md` §E3 — receives and method calls as occurrences; the
   OBSERVABILITY trigger): this entry's TARGET-side rows at E3 are BUG-104's three remaining rows,
@@ -1596,6 +1608,15 @@ subexpressions of one binary operator).
   conv-alloc/{conv-read-vs-call ({98, 123}, gc 98),struct-lit-vs-call,addr-lit-vs-call,slice-lit-
   vs-call ({6, 15}, gc 15)}`. Ratification posed at the merge ask. The (b) pin stands outside the
   widened grammar.
+  THE AUDIT FIX ROUND (2026-09-21, [AGENT]; design §E4 «the audit fix round», F4): `string([]byte)`
+  / `string([]rune)` READ the slice's backing array at the conversion — an occurrence of its own
+  (the E4 cut treated every conversion as pure over its operand's VALUE and sent `string(b) + m()`
+  — b private but aliased, m writing the alias — to the legacy path as all-forced, realizing gc's
+  member alone: a pin presented as forced). The VALUE axis is (a) ENVELOPED on the born
+  `evalorder/unseq-conv-alloc/{string-bytes-vs-call,string-runes-vs-call}` ({ab, zb}, gc zb —
+  OBYTES2STR is not in order.go's call class: gc converts after the call); no other corpus sweep
+  enters (census 127 → 127). The `[]byte(s)` / `[]rune(s)` forms read an immutable string and stay
+  pure.
   EXCEPTION TO THE CALL-FIRST VALUE PIN (e13-b re-audit fix round D4 (v),
   RECORDED at the final verification fix round 2026-09-05, R''-8,
   [AGENT]): for the two ALLOCATING CONVERSIONS `[]byte(s)` / `[]rune(s)`

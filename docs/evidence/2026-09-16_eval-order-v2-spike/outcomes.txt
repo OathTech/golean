@@ -131,6 +131,17 @@ E4d iv.(int) + len(make([]int, t[k])) (E13 assert-left-make-slice): outcome set 
 E4e len(make([]int, n)) + mut() (make an E1 participant: n forced before mut): outcome set = [11]
    trajectories per outcome: [(11, 1)]
    canonical (slot 0): R_n A_make E_len E_mut Op -> 11
+E4f *new(x) + mut() (new an E1 participant: x forced before mut; the E4 candidate gave 5): outcome set = [6]
+   trajectories per outcome: [(6, 2)]
+   canonical (slot 0): R_x A_new D E_mut Op -> 6
+   forbidden hybrid absent: 5
+E4g *new(m()) + x + h() + g() (m inside new; x unordered vs the calls; the E4 candidate gave `g` 103): outcome set = [(109, ('m', 'g')), (110, ('m', 'g'))]
+   trajectories per outcome: [((109, ('m', 'g')), 32), ((110, ('m', 'g')), 14)]
+   canonical (slot 0): E_m A_new D R_x E_h E_g Op1 Op2 Op3 -> (109, ('m', 'g'))
+   forbidden hybrid absent: (103, ('g',))
+E4h string(b) + m(), b aliased by c, m writes c[0] (the conversion reads the backing array): outcome set = ['ab', 'zb']
+   trajectories per outcome: [('ab', 1), ('zb', 1)]
+   canonical (slot 0): Conv E_m Op -> ab
 C1 f(g()): outcome set = [8]
    trajectories per outcome: [(8, 1)]
    canonical (slot 0): E_g E_f -> 8

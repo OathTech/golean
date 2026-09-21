@@ -913,6 +913,47 @@ private def unseqCheckPayload (path : String) (j : Json) : LowerM Unit := do
   | _ =>
       fail s!"unseq: hidden read in an allocation payload — {path} is not an atom (or a boxed atom / a zero value); an allocation's operands are already evaluated (v2.1 §3.1); refused by name"
 
+/-- A constant `int` payload's value (`{"expr":"int","value":"…"}`), when the payload is one. -/
+private def unseqConstInt? (j : Json) : Option Int :=
+  match j.getObjVal? "expr", j.getObjVal? "value" with
+  | .ok (.str "int"), .ok (.str s) => s.toInt?
+  | _, _ => none
+
+/-- Stage E audit fix round F3 (2026-09-21): a CONSTANT size operand of `make` must be a legal Go
+constant argument — non-negative and representable as `int` (go/types rejects the program
+otherwise: «negative … argument in make», «… argument too large»); the run-time classes (a
+non-constant negative, a size over `maxAlloc`) stay the machine's own `makeslice` panics, as in Go.
+The audit's mutant M6 (`len -1`) decoded and answered with a Go-observable panic. -/
+private def unseqCheckConstSize (path what : String) (j : Json) : LowerM Unit := do
+  match unseqConstInt? j with
+  | some v =>
+      if v < 0 then
+        fail s!"unseq: {path}: negative constant {what} {v} in make — a compile-time error in Go, never a run-time panic (audit F3, 2026-09-21); refused by name"
+      if v ≥ (platform.intExclusiveUpperBound : Int) then
+        fail s!"unseq: {path}: constant {what} {v} in make does not fit the platform's int (a compile-time error in Go — audit F3, 2026-09-21); refused by name"
+  | none => pure ()
+
+/-- Stage E audit fix round F1 (2026-09-21): the static type a PAYLOAD carries on the wire, when it
+carries one — a `$` slot's declared cell type (`none` for an undeclared slot: the graph-level
+«unknown slot» check names that), a source local's / constant's / zero value's `type` annotation,
+a boxing's `target`, a struct literal's `target`. Used to check `new`'s value against the
+allocation's element type. -/
+private def unseqPayloadTy? (cells : Array Param) (path : String) (j : Json) : LowerM (Option Ty) := do
+  let typeField (key : String) : LowerM (Option Ty) := do
+    match j.getObjVal? key with
+    | .ok t => pure (some (← decodeTy s!"{path}.{key}" t))
+    | _ => pure none
+  match j.getObjVal? "expr" with
+  | .ok (.str "ident") =>
+      match j.getObjVal? "name" with
+      | .ok (.str n) =>
+          if n.startsWith "$" then pure ((cells.find? (·.id == n)).map (·.typ))
+          else typeField "type"
+      | _ => pure none
+  | .ok (.str "int") | .ok (.str "bool") | .ok (.str "string") | .ok (.str "default") => typeField "type"
+  | .ok (.str "to-interface") | .ok (.str "struct-lit") => typeField "target"
+  | _ => pure none
+
 /-- Stage E E4: a VALUE struct literal's arguments are payloads. -/
 private def unseqCheckStructLit (path : String) (j : Json) : LowerM Unit := do
   let o ← StrictJson.obj path j
@@ -1020,8 +1061,19 @@ private def unseqCheckHead (path : String) (head : Json) : LowerM Unit := do
   | other =>
       fail s!"unseq: head '{other}' at {path} is outside the admitted fragment (admitted heads: ident, a constant (int/bool/string), index-get, slice, builtin-len, builtin-cap, binary, unary, type-assert, deref, field-get, map-get, convert and the string/byte/rune conversion forms, struct-lit); refused by name"
 
+/-- Stage E audit fix round F2 (2026-09-21): a `ref` whose `id` is a reserved `$` slot names a
+GRAPH CELL — an address through which a callee could WRITE a binder (a cell is written only by
+its producer; `unseqCheckTargetShape` refuses a `$` store target for the same reason) — and the
+frontend never emits it (a receiver's frozen address is `ref` of a SOURCE local). The audit's
+mutant M10b decoded and RAN: the callee incremented the binder cell through the address. -/
+private def unseqRefOfBinder? (j : Json) : Option String :=
+  match j.getObjVal? "expr", j.getObjVal? "id" with
+  | .ok (.str "ref"), .ok (.str id) => if id.startsWith "$" then some id else none
+  | _, _ => none
+
 /-- D8 for an `invoke` callee: an identifier (a func-typed local or slot) or
-a `func-value` whose captures are addresses (`ref`/`ident`/`globaladdr`). -/
+a `func-value` whose captures are addresses (`ref`/`ident`/`globaladdr`) of SOURCE
+locations — never `ref` of a `$` binder cell (audit F2, 2026-09-21). -/
 private def unseqCheckCallee (path : String) (callee : Json) : LowerM Unit := do
   if jsonMentionsRecover callee then
     fail s!"unseq: recover() in a callee at {path}; refused by name"
@@ -1031,6 +1083,8 @@ private def unseqCheckCallee (path : String) (callee : Json) : LowerM Unit := do
       let obj ← StrictJson.obj path callee
       let caps ← StrictJson.array s!"{path}.captured" (← StrictJson.field path obj "captured")
       for c in caps do
+        if let some id := unseqRefOfBinder? c then
+          fail s!"unseq: a func-value capture at {path}.captured takes the address of a binder cell '{id}' — a graph cell is written only by its producer, and the frontend captures source locations only (audit F2, 2026-09-21); refused by name"
         match c.getObjVal? "expr" with
         | .ok (.str "ref") | .ok (.str "ident") | .ok (.str "globaladdr") => pure ()
         | _ => fail s!"unseq: a func-value capture at {path}.captured is not an address (ref / ident / globaladdr); refused by name"
@@ -1044,6 +1098,8 @@ fail (spec#Address_operators; the callee's captures are the same shapes). -/
 private def unseqCheckArg (path : String) (arg : Json) : LowerM Unit := do
   if jsonMentionsRecover arg then
     fail s!"unseq: recover() in an argument at {path}; refused by name"
+  if let some id := unseqRefOfBinder? arg then
+    fail s!"unseq: an invocation argument at {path} takes the address of a binder cell '{id}' — a graph cell is written only by its producer; an address argument is `ref` of a SOURCE local or a `globaladdr` (audit F2, 2026-09-21); refused by name"
   let isAddr := match arg.getObjVal? "expr" with
     | .ok (.str "ref") | .ok (.str "globaladdr") => true
     | _ => false
@@ -2086,10 +2142,19 @@ partial def decodeUnseq (results : Array Param) (path : String) (obj : StrictJso
                 checkAllowedKeys apath a ["stmt", "value", "elemType"]
                 let vJ ← StrictJson.field apath a "value"
                 let elemTy ← decodeTy s!"{apath}.elemType" (← StrictJson.field apath a "elemType")
+                -- `new`'s value: a `struct-lit` over payloads (`&T{…}`), or a PAYLOAD — a zero value
+                -- (`new(T)`) or, since the audit fix round F1 (2026-09-21), an atom / a boxed atom (Go
+                -- 1.26 `new(x)`: the argument's already-evaluated value; the first cut admitted only the
+                -- zero value, and the lowering emitted it for every `new`) — whose static type is the
+                -- allocation's element type.
                 (match vJ.getObjVal? "expr" with
                   | .ok (.str "struct-lit") => unseqCheckStructLit s!"{apath}.value" vJ
-                  | .ok (.str "default") => pure ()
-                  | _ => fail s!"unseq: allocation '{name}' at {apath}: `new`'s value is neither a struct literal over payloads nor a zero value; refused by name")
+                  | _ => unseqCheckPayload s!"{apath}.value" vJ)
+                match ← unseqPayloadTy? cells s!"{apath}.value" vJ with
+                | some vt =>
+                    if vt != elemTy then
+                      fail s!"unseq: allocation '{name}' at {apath}: `new`'s value is typed {repr vt}, which disagrees with the allocation's element type {repr elemTy} (audit F1, 2026-09-21); refused by name"
+                | none => pure ()
                 typeMismatch (.pointer elemTy)
                 pure (AllocSpec.new (← decodeExpr s!"{apath}.value" vJ) elemTy)
             | "make-slice" => do
@@ -2097,6 +2162,14 @@ partial def decodeUnseq (results : Array Param) (path : String) (obj : StrictJso
                 let elemTy ← decodeTy s!"{apath}.elem" (← StrictJson.field apath a "elem")
                 let lenJ ← StrictJson.field apath a "len"
                 unseqCheckPayload s!"{apath}.len" lenJ
+                unseqCheckConstSize s!"{apath}.len" "len" lenJ
+                if let some capJ := a.get? "cap" then
+                  unseqCheckConstSize s!"{apath}.cap" "cap" capJ
+                  match unseqConstInt? lenJ, unseqConstInt? capJ with
+                  | some l, some c =>
+                      if l > c then
+                        fail s!"unseq: {apath}: constant len {l} larger than constant cap {c} in make — a compile-time error in Go (audit F3, 2026-09-21); refused by name"
+                  | _, _ => pure ()
                 let capE ← optPayload "cap"
                 typeMismatch (.slice elemTy)
                 pure (AllocSpec.makeSlice elemTy (← decodeExpr s!"{apath}.len" lenJ) capE)
@@ -2104,12 +2177,16 @@ partial def decodeUnseq (results : Array Param) (path : String) (obj : StrictJso
                 checkAllowedKeys apath a ["stmt", "keyType", "valueType", "hint"]
                 let keyTy ← decodeTy s!"{apath}.keyType" (← StrictJson.field apath a "keyType")
                 let valTy ← decodeTy s!"{apath}.valueType" (← StrictJson.field apath a "valueType")
+                if let some hintJ := a.get? "hint" then
+                  unseqCheckConstSize s!"{apath}.hint" "size" hintJ
                 let hintE ← optPayload "hint"
                 typeMismatch (.map keyTy valTy)
                 pure (AllocSpec.makeMap keyTy valTy hintE)
             | "make-chan" => do
                 checkAllowedKeys apath a ["stmt", "elem", "cap"]
                 let elemTy ← decodeTy s!"{apath}.elem" (← StrictJson.field apath a "elem")
+                if let some capJ := a.get? "cap" then
+                  unseqCheckConstSize s!"{apath}.cap" "buffer" capJ
                 let capE ← optPayload "cap"
                 typeMismatch (.chan .both elemTy)
                 pure (AllocSpec.makeChan elemTy capE)
@@ -2126,6 +2203,16 @@ partial def decodeUnseq (results : Array Param) (path : String) (obj : StrictJso
                   let vJ ← StrictJson.field epath eo "value"
                   unseqCheckPayload s!"{epath}.value" vJ
                   pure (index, ← decodeExpr s!"{epath}.value" vJ))
+                -- audit F3 (2026-09-21): a Go slice literal's keys are constant, DISTINCT and within
+                -- the literal's length (go/types rejects the rest); the emitter's `length` is the
+                -- greatest index + 1. A malformed wire answered with a Go-observable index panic
+                -- (M11) or ran with the second store winning (M12) — refused at decode by name.
+                for (index, _) in elems do
+                  if index < 0 || index ≥ (length : Int) then
+                    fail s!"unseq: allocation '{name}' at {apath}: slice-literal index {index} is outside the literal's length {length} — the emitter's literal is dense and keyed by distinct constants within its length (audit F3, 2026-09-21); refused by name"
+                let idxs := elems.map (·.1)
+                if idxs.length != idxs.eraseDups.length then
+                  fail s!"unseq: allocation '{name}' at {apath}: duplicate slice-literal index — the emitter's literal is keyed by DISTINCT constants (audit F3, 2026-09-21); refused by name"
                 typeMismatch (.slice elemTy)
                 pure (AllocSpec.sliceLit elemTy length elems)
             | other =>

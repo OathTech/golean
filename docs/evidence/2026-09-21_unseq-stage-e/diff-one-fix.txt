@@ -1,0 +1,89 @@
+# scripts/diff-one on the 87 affected rows (E4's 83: builtins/e13-sibling-panic-order, noodler/latitude, evalorder/unseq-conv-alloc — plus the four born rows) on the fix-round frontend + binary, K=32 (the gate path): 87 PASS; every existing row in its pinned lane and set; the born rows: new-expr-vs-call strict (one 2-way pick, the singleton 6), new-call-vs-call membership {`m` `g` 109, `m` `g` 110} (enumerated=2, width 3), string-bytes-vs-call / string-runes-vs-call membership {ab, zb} (enumerated=2). Columns: result, id, stage, detail (truncated).
+result	id	stage	detail
+PASS	builtins/e13-sibling-panic-order/assert-left-call	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	builtins/e13-sibling-panic-order/assert-middle	membership	enumerated=3 exhibited=1 draws=32 (K=32; pin members=3 NOT reached — 1 distinct drawn) unexhibited=2 (members 
+PASS	builtins/e13-sibling-panic-order/assert-arg-sibling	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	builtins/e13-sibling-panic-order/assert-composite-lit	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	builtins/e13-sibling-panic-order/assert-return-list	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	builtins/e13-sibling-panic-order/assert-left-method	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	builtins/e13-sibling-panic-order/assert-left-make-slice	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	builtins/e13-sibling-panic-order/assert-left-len-slice-call	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	builtins/e13-sibling-panic-order/assert-left-new-call	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	builtins/e13-sibling-panic-order/assert-left-append	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	builtins/e13-sibling-panic-order/assert-left-copy	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	builtins/e13-sibling-panic-order/assert-vs-mutating-call	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	builtins/e13-sibling-panic-order/iface-cmp-left-call	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	builtins/e13-sibling-panic-order/index-left-call	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	builtins/e13-sibling-panic-order/index-middle	membership	enumerated=3 exhibited=1 draws=32 (K=32; pin members=3 NOT reached — 1 distinct drawn) unexhibited=2 (members 
+PASS	builtins/e13-sibling-panic-order/index-arg-sibling	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	builtins/e13-sibling-panic-order/index-composite-lit	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	builtins/e13-sibling-panic-order/send-chan-index	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	builtins/e13-sibling-panic-order/deref-left-call	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	builtins/e13-sibling-panic-order/div-left-call	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	builtins/e13-sibling-panic-order/shift-left-call	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	builtins/e13-sibling-panic-order/conv-left-call	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	builtins/e13-sibling-panic-order/two-index-left-call	membership	enumerated=4 exhibited=1 draws=32 (K=32; pin members=4 NOT reached — 1 distinct drawn) unexhibited=3 (members 
+PASS	builtins/e13-sibling-panic-order/index-assert-left-call	membership	enumerated=4 exhibited=1 draws=32 (K=32; pin members=4 NOT reached — 1 distinct drawn) unexhibited=3 (members 
+PASS	builtins/e13-sibling-panic-order/index-left-call-arg-panics	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	builtins/e13-sibling-panic-order/deref-left-index-arg-call	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	builtins/e13-sibling-panic-order/forced-arg-only	-	wide=0 exhausted=none depth=fixed
+PASS	builtins/e13-sibling-panic-order/assert-right-call	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	builtins/e13-sibling-panic-order/assert-left-min-inline	-	wide=0 exhausted=none depth=fixed
+PASS	builtins/e13-sibling-panic-order/slice-left-len-call	-	wide=0 exhausted=none depth=fixed
+PASS	builtins/e13-sibling-panic-order/assert-left-recv-w	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	builtins/e13-sibling-panic-order/tgt-assert-vs-len-hoist	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	builtins/e13-sibling-panic-order/tgt-assert-vs-make	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	builtins/e13-sibling-panic-order/compound-assert-vs-len	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	builtins/e13-sibling-panic-order/map-key-assert-vs-len	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	builtins/e13-sibling-panic-order/recover-assert-vs-len	-	wide=0 exhausted=none depth=fixed
+PASS	builtins/e13-sibling-panic-order/bytes-conv-left-len-hoist	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	builtins/e13-sibling-panic-order/addr-index-left-len-hoist	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	builtins/e13-sibling-panic-order/tgt-assert-vs-call	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	builtins/e13-sibling-panic-order/map-tgt-assert-vs-call	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	builtins/e13-sibling-panic-order/tgt-assert-vs-min-call	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	builtins/e13-sibling-panic-order/tgt-assert-vs-copy-call	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	builtins/e13-sibling-panic-order/tgt-assert-vs-append	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	builtins/e13-sibling-panic-order/tgt-assert-vs-recv-w	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	builtins/e13-sibling-panic-order/addr-assert-left-call	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	builtins/e13-sibling-panic-order/compound-index-vs-len	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	builtins/e13-sibling-panic-order/array-base-target-vs-len	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	builtins/e13-sibling-panic-order/recover-assert-vs-call-w	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	builtins/e13-sibling-panic-order/map-lit-payload-vs-call	-	wide=0 exhausted=none depth=fixed
+PASS	builtins/e13-sibling-panic-order/composite-ptr-in-arg-then-call	-	wide=0 exhausted=none depth=fixed
+PASS	builtins/e13-sibling-panic-order/composite-ptr-payload-vs-call	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	builtins/e13-sibling-panic-order/slice-lit-payload-vs-call	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	builtins/e13-sibling-panic-order/composite-ptr-payload-vs-call-printroot	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	builtins/e13-sibling-panic-order/slice-lit-payload-vs-call-sinkroot	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	builtins/e13-sibling-panic-order/slice-lit-payload-vs-recv	-	wide=1 exhausted=none depth=fixed
+PASS	builtins/e13-sibling-panic-order/bytes-conv-payload-vs-call	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	builtins/e13-sibling-panic-order/compound-call-target-vs-len	membership	enumerated=3 exhibited=1 draws=32 (K=32; pin members=3 NOT reached — 1 distinct drawn) unexhibited=2 (members 
+PASS	builtins/e13-sibling-panic-order/compound-call-target-vs-call	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	builtins/e13-sibling-panic-order/map-compound-index-key-vs-call	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	builtins/e13-sibling-panic-order/assert-ok-early-len-hoist	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	builtins/e13-sibling-panic-order/slice-value-early-len-hoist	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	builtins/e13-sibling-panic-order/compound-call-target-vs-recv	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	builtins/e13-sibling-panic-order/map-compound-index-key-vs-recv	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	builtins/e13-sibling-panic-order/map-compound-index-key-vs-method	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	builtins/e13-sibling-panic-order/bytes-conv-value-vs-mutating-call	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	evalorder/unseq-conv-alloc/conv-read-vs-call	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	evalorder/unseq-conv-alloc/struct-lit-vs-call	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	evalorder/unseq-conv-alloc/addr-lit-vs-call	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	evalorder/unseq-conv-alloc/slice-lit-vs-call	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	evalorder/unseq-conv-alloc/make-len-vs-call	-	wide=0 exhausted=none depth=fixed
+PASS	evalorder/unseq-conv-alloc/map-lit-control	-	wide=0 exhausted=none depth=fixed
+PASS	evalorder/unseq-conv-alloc/new-expr-vs-call	-	wide=1 exhausted=none depth=fixed
+PASS	evalorder/unseq-conv-alloc/new-call-vs-call	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	evalorder/unseq-conv-alloc/string-bytes-vs-call	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	evalorder/unseq-conv-alloc/string-runes-vs-call	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	noodler/latitude/slice-literal-index-vs-call	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	noodler/latitude/struct-literal-var-vs-call	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	noodler/latitude/map-literal-key-vs-call	-	wide=0 exhausted=none depth=fixed
+PASS	noodler/latitude/receiver-vs-arg-call	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	noodler/latitude/args-index-vs-call	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	noodler/latitude/concat-var-vs-call	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	noodler/latitude/conversion-index-vs-call	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	noodler/latitude/deref-vs-call	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	noodler/latitude/index-call-index	membership	enumerated=4 exhibited=1 draws=32 (K=32; pin members=4 NOT reached — 1 distinct drawn) unexhibited=3 (members 
+PASS	noodler/latitude/return-operands	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members 
+PASS	noodler/latitude/send-value-vs-channel-call	-	wide=0 exhausted=none depth=fixed
+PASS	noodler/latitude/rhs-list-index-call-index	-	wide=0 exhausted=none depth=fixed

@@ -215,4 +215,21 @@ out="$(run_cli_fn Tests/unseq-wire/e4alloc.json e4alloc)" || true
 echo "ok [unseq alloc] runs, the canonical tape calls first then panics [9] on the literal's payload — Stage E E4"
 expect_unseq_refusal unseq-alloc-nonatom mut-alloc-nonatom e4alloc 'hidden read in an allocation payload'
 expect_unseq_refusal unseq-alloc-kind mut-alloc-kind e4alloc 'outside the admitted fragment'
-echo 'Wire boundary gate: PASS (11 byte-level controls + 20 unseq-node controls through the real CLI)'
+# The Stage E audit fix round (2026-09-21). F1: Go 1.26 `new(x)` (Tests/unseq-wire/e4new.json, `*new(m()) + x +
+# h() + g()`): runs on the canonical tape — m, new (storing m's value), h, g, then the residual reads — `m` `g`
+# 110 (the first E4 cut answered `g` 103: the initializer and m's call dropped); a value typed against the
+# allocation's element type refuses by name. F2: `ref` of a `$` binder cell as an invocation argument or a
+# func-value capture refuses by name (the audit's M10b decoded and RAN). F3: a slice literal's index outside
+# its length / duplicated, a constant make length that is negative or over a constant cap — refused at decode
+# by name (the audit's M6/M11/M12 answered with Go-observable panics or ran).
+out="$(run_cli_fn Tests/unseq-wire/e4new.json e4new)" || { echo "check-wire-boundary: FAIL [unseq new-expr] — the new(x) wire did not run: $out" >&2; exit 1; }
+[[ "$out" == *'"status":"ok"'* && "$out" == *'"value":110'* && "$out" == *'m\ng\n'* ]] || { echo "check-wire-boundary: FAIL [unseq new-expr] — expected ok/110 with the output m, g (canonical tape: the calls first, new stores m's value): $out" >&2; exit 1; }
+echo "ok [unseq new-expr] runs, answers 110 after m and g (new(x) stores the argument's value — audit fix round F1)"
+expect_unseq_refusal unseq-new-value-type    mut-new-value-type    e4new   'disagrees with the allocation'"'"'s element type'
+expect_unseq_refusal unseq-arg-ref-binder    mut-arg-ref-binder    w1      'address of a binder cell'
+expect_unseq_refusal unseq-capture-ref-binder mut-capture-ref-binder r2aTrue 'address of a binder cell'
+expect_unseq_refusal unseq-slicelit-index-oob mut-slicelit-index-oob e4alloc 'outside the literal'"'"'s length'
+expect_unseq_refusal unseq-slicelit-dup-index mut-slicelit-dup-index e4alloc 'duplicate slice-literal index'
+expect_unseq_refusal unseq-make-negative-len mut-make-negative-len e4make  'negative constant len'
+expect_unseq_refusal unseq-make-len-over-cap mut-make-len-over-cap e4make  'larger than constant cap'
+echo 'Wire boundary gate: PASS (11 byte-level controls + 28 unseq-node controls through the real CLI)'

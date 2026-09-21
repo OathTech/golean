@@ -540,6 +540,61 @@ func e4ifaceConv() int {
 	return sinkAny(any(s[0])) + wit(5)
 }
 
+// --- Stage E audit fix round (2026-09-21) ---
+
+// F1: Go 1.26 new(x). The argument is an OPERAND inside new's window: x's read is forced
+// before m (new is an E1-ordered call, m follows it); the sweep enters the graph through the
+// fresh pointer's dereference (an occurrence unordered against m) and its set is the singleton
+// 6 = gc = main (the first E4 cut answered the ZERO value, 5).
+func e4newExpr() int {
+	x := 1
+	m := func() int { x = 10; return 5 }
+	return *new(x) + m()
+}
+
+func mPrint() int { println("m"); return 7 }
+func gPrint() int { println("g"); return 1 }
+
+// F1: a CALL inside new's argument is an E1-ordered event (m, new, h, g); the fresh pointer's
+// dereference follows new by data; the captured x's read is observable against h → admitted,
+// {109, 110} with the output m g (the first cut never ran m: g 103).
+func e4newCall() int {
+	x := 1
+	h := func() int { x = 2; return 100 }
+	return *new(mPrint()) + x + h() + gPrint()
+}
+
+// F7: the census counts q := new(wit(1)) as TWO events (wit inside new's window) and ONE
+// call, no non-event — legacy by name.
+func e4newCallOnly() int {
+	q := new(wit(1))
+	return *q
+}
+
+// F4: string(b) READS b's backing array — an occurrence of its own; b is private but aliased
+// by c, which m writes: the read is unordered against m → admitted ({ab, zb}; gc zb).
+func e4strBytes() string {
+	b := []byte("ab")
+	c := b
+	m := func() string { c[0] = 'z'; return "" }
+	return string(b) + m()
+}
+
+func e4strRunes() string {
+	r := []rune("ab")
+	c := r
+	m := func() string { c[0] = 'z'; return "" }
+	return string(r) + m()
+}
+
+// F4 control: []byte(s) reads a STRING (immutable) — no occurrence of its own; with s private
+// and nothing else unordered, the sweep is all-forced and stays legacy by name.
+func e4bytesFromStr() int {
+	s := "ab"
+	m := func() int { return 1 }
+	return len([]byte(s)) + m()
+}
+
 func conversionOperand() int {
 	s := []int{1}
 	return int(int64(s[0])) + wit(1)
@@ -673,11 +728,16 @@ func TestUnseqAdmittedWitnesses(t *testing.T) {
 		{"e3addrRecv", 0, "return", 1, 1},    // v.Bump() on &v (no read) | s[k]
 		{"e3starRecv", 0, "return", 1, 2},    // (*v).Bump() | s[k] + the nil-asserting &*v
 		// Stage E E4: conversions and allocations
-		{"e4convRead", 0, "return", 1, 2},        // mut | the read of the captured s + the checked [0] on the bytes
-		{"e4addrLit", 0, "return", 1, 2},         // wit | s[i] + the field read through the fresh pointer
-		{"e4sliceLit", 0, "return", 1, 2},        // wit | s[i] + the checked [0] on the literal
-		{"e4make", 0, "return", 1, 2},            // mut | t[k] (inside make — forced) + the captured x (observable)
-		{"e4valueLit", 0, "return", 1, 1},        // wit | s[i] (the struct-lit and the field read on a value are pure)
+		{"e4convRead", 0, "return", 1, 2}, // mut | the read of the captured s + the checked [0] on the bytes
+		{"e4addrLit", 0, "return", 1, 2},  // wit | s[i] + the field read through the fresh pointer
+		{"e4sliceLit", 0, "return", 1, 2}, // wit | s[i] + the checked [0] on the literal
+		{"e4make", 0, "return", 1, 2},     // mut | t[k] (inside make — forced) + the captured x (observable)
+		{"e4valueLit", 0, "return", 1, 1}, // wit | s[i] (the struct-lit and the field read on a value are pure)
+		// the audit fix round (2026-09-21): F1 new(expr) with a call inside; F4 the backing-array read
+		{"e4newCall", 0, "return", 3, 2},         // mPrint (inside new), h, gPrint | the fresh pointer's deref + the captured x
+		{"e4newExpr", 0, "return", 1, 2},         // m | x's read INSIDE new's window (forced before m) + the fresh pointer's deref (observable vs m; the set is the singleton 6)
+		{"e4strBytes", 0, "return", 1, 1},        // m | string(b)'s read of the backing array
+		{"e4strRunes", 0, "return", 1, 1},        // m | string(r)'s read of the backing array
 		{"conversionOperand", 0, "return", 1, 1}, // int(int64(s[0])) + wit(1): the checked access; the conversions pure
 	}
 	for _, c := range cases {
@@ -762,6 +822,9 @@ func TestUnseqLegacyByReason(t *testing.T) {
 		{"e4mapLit", 0, "map literal"},
 		{"e4ifaceConv", 0, "conversion to an interface type"},
 		{"e4makeForced", 0, "no occurrence observable against an effectful event"}, // t[k] precedes make, make precedes len, len precedes wit
+		// the audit fix round (2026-09-21)
+		{"e4newCallOnly", 1, "no non-event occurrence"},  // F7: q := new(wit(1)) — wit inside new, nothing unordered
+		{"e4bytesFromStr", 0, "no non-event occurrence"}, // F4 control: []byte(s) reads an immutable string; len on the fresh slice is an event
 	}
 	for _, c := range cases {
 		d := decisionAt(t, unseqWitnessSrc, c.fn, c.fromEnd)
@@ -857,5 +920,28 @@ func f() {
 		if byName[private] {
 			t.Errorf("%s should be private", private)
 		}
+	}
+}
+
+// The audit fix round's F7 (2026-09-21): `q := new(wit(1))` — the call inside new's argument is
+// an E1 participant inside new's window, so the census prints events=2 calls=1 nonEvents=0 (the
+// first E4 cut printed events=1 calls=0: new's argument was never classified). The sweep is
+// legacy by name (no non-event occurrence) with the CORRECT counts.
+func TestUnseqNewExprCensusCounts(t *testing.T) {
+	d := decisionAt(t, unseqWitnessSrc, "e4newCallOnly", 1)
+	if d.admitted {
+		t.Fatalf("e4newCallOnly: admitted, want legacy (%+v)", d)
+	}
+	if d.events != 2 || d.calls != 1 || d.nonEvents != 0 {
+		t.Errorf("e4newCallOnly: events=%d calls=%d nonEvents=%d, want 2/1/0 (new's argument is classified)", d.events, d.calls, d.nonEvents)
+	}
+	// F1's first witness `*new(x) + m()`: new's argument IS classified — x's read is an occurrence
+	// inside new's window (forced before m, since new is an E1-ordered call) — and the sweep is
+	// ADMITTED through the fresh pointer's dereference, an occurrence the trigger cannot know
+	// reads memory nobody else holds; the graph's set is the singleton 6 (= gc = main; the first
+	// E4 cut answered the zero value, 5).
+	d = decisionAt(t, unseqWitnessSrc, "e4newExpr", 0)
+	if !d.admitted || d.calls != 1 || d.nonEvents != 2 {
+		t.Errorf("e4newExpr: admitted=%v calls=%d nonEvents=%d, want admitted with 1/2 (x's read inside new + the deref)", d.admitted, d.calls, d.nonEvents)
 	}
 }

@@ -757,10 +757,19 @@ func (e *emitter) unseqExpr(x ast.Expr, ctx *unseqCtx, d *unseqDecision) (unseqE
 // the operand's value — integer <-> integer, bool <-> bool (a static
 // retyping), string <-> string, string <-> []byte / []rune, integer -> string
 // (emitCallNode's operator table) — admitted when both types are in the
-// grammar; never an occurrence of its own (it cannot fail: slice-to-array
-// conversions are outside the type grammar); a conversion to an interface
-// type is a box (E5's), refused by name.
+// grammar; it cannot fail (slice-to-array conversions are outside the type
+// grammar) and is never an occurrence of its own EXCEPT for the two forms
+// that read MUTABLE memory: `string([]byte)` / `string([]rune)` copy the
+// slice's BACKING ARRAY at the conversion — a mutable read, spec-unordered
+// against a sibling call that writes an alias of the slice — so those two are
+// occurrences (the Stage E audit's F4, 2026-09-21: the first E4 cut treated
+// them as pure over the slice VALUE, which classified `string(b) + m()` — b
+// private but aliased, m writing the alias — as all-forced and sent it to the
+// legacy path, a (b) pin of gc's order presented as forced; gc's order.go
+// call class holds OSTR2BYTES/OSTR2RUNES, not OBYTES2STR/ORUNES2STR). A
+// conversion to an interface type is a box (E5's), refused by name.
 func (e *emitter) unseqConversion(c *ast.CallExpr, ctx *unseqCtx, d *unseqDecision) (unseqExprKind, bool) {
+	start := d.seq // the occurrence window's start (unseqDecision.occ)
 	refuse := func(why string) (unseqExprKind, bool) {
 		if d.reason == "" {
 			d.reason = why
@@ -803,14 +812,19 @@ func (e *emitter) unseqConversion(c *ast.CallExpr, ctx *unseqCtx, d *unseqDecisi
 	if _, ok := e.unseqExpr(c.Args[0], ctx, d); !ok {
 		return unseqConst, false
 	}
+	if isStringType(tu) && (isByteSlice(ou) || isRuneSlice(ou)) {
+		d.occ(start) // the backing array's read (audit F4): a mutable read of its own
+	}
 	return unseqValue, true
 }
 
-// unseqMakeNew classifies `make(T, …)` / `new(T)` (Stage E E4): a FUNCTION
-// CALL (spec#Built-in_functions «called like any other function») — an E1
-// participant like len/cap, WITHOUT effect (it does not admit a sweep by
-// itself; its size operands' reads are the occurrences); the allocation is an
-// `alloc` body. `pid` is the participant the caller opened.
+// unseqMakeNew classifies `make(T, …)` / `new(T)` / `new(x)` (Stage E E4): a
+// FUNCTION CALL (spec#Built-in_functions «called like any other function») —
+// an E1 participant like len/cap, WITHOUT effect (it does not admit a sweep by
+// itself; its size operands' reads — and, for Go 1.26's `new(x)`, the
+// argument's reads and calls — are the occurrences and events inside its
+// window); the allocation is an `allocate` body. `pid` is the participant the
+// caller opened.
 func (e *emitter) unseqMakeNew(c *ast.CallExpr, name string, ctx *unseqCtx, d *unseqDecision, pid int) (int, bool) {
 	refuse := func(why string) (int, bool) {
 		if d.reason == "" {
@@ -832,6 +846,20 @@ func (e *emitter) unseqMakeNew(c *ast.CallExpr, name string, ctx *unseqCtx, d *u
 		}
 		if _, isPtr := types.Unalias(t).Underlying().(*types.Pointer); !isPtr {
 			return refuse("new without a pointer result")
+		}
+		// Go 1.26 `new(x)` (spec#Allocation: «If the argument is an expression x,
+		// then new(x) allocates a variable of the type of x initialized to the
+		// value of x»): the argument is an OPERAND, classified like a call's
+		// argument — its reads are occurrences inside new's window (new is
+		// E1-ordered, so they are forced before every later participant), a call
+		// inside it an E1-ordered event. The Stage E audit's F1 (2026-09-21): the
+		// first E4 cut never inspected the argument — `*new(x) + m()` answered
+		// the ZERO value and `*new(m())` never ran m (a wrong answer against gc
+		// and main; the census counted `q := new(m())` as events=1 calls=0).
+		if tv, ok := e.info.Types[c.Args[0]]; !ok || !tv.IsType() {
+			if _, ok := e.unseqExpr(c.Args[0], ctx, d); !ok {
+				return 0, false
+			}
 		}
 	default:
 		switch types.Unalias(t).Underlying().(type) {

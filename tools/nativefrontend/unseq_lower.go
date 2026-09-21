@@ -834,10 +834,14 @@ func (b *unseqBuilder) addrLit(cl *ast.CompositeLit, u *ast.UnaryExpr) (any, err
 	return b.allocOcc("new", ty, map[string]any{"stmt": "new", "value": head, "elemType": elemTy}, false), nil
 }
 
-// makeNew lowers `make(T, …)` / `new(T)` (Stage E E4) inside the call's operand
-// frame (pushed by `call`): the size operands as atoms, then the `alloc` body as
-// an E1-ordered EVENT after the anchor (the anchor moves to it) — a function
-// call like len/cap; the frame is popped into the event block.
+// makeNew lowers `make(T, …)` / `new(T)` / `new(x)` (Stage E E4) inside the
+// call's operand frame (pushed by `call`): the size operands — or Go 1.26
+// `new(x)`'s argument — as atoms, then the `allocate` body as an E1-ordered
+// EVENT after the anchor (the anchor moves to it) — a function call like
+// len/cap; the frame is popped into the event block. `new(x)`'s allocation
+// stores the argument's value (the audit's F1, 2026-09-21: the first cut
+// emitted the zero value for every `new`, dropping the initializer and any
+// call inside it — the legacy arm in emit.go had the value form since Go 1.26).
 func (b *unseqBuilder) makeNew(c *ast.CallExpr, name string) (any, error) {
 	e := b.e
 	t := e.goTypeOf(c)
@@ -855,7 +859,25 @@ func (b *unseqBuilder) makeNew(c *ast.CallExpr, name string) (any, error) {
 		if err != nil {
 			return nil, err
 		}
-		spec = map[string]any{"stmt": "new", "value": map[string]any{"expr": "default", "type": elemTy}, "elemType": elemTy}
+		val := map[string]any{"expr": "default", "type": elemTy}
+		if tv, ok := e.info.Types[c.Args[0]]; !ok || !tv.IsType() {
+			// new(x): the argument's VALUE — a slot, a private local or a constant
+			// (its occurrences land in this frame, before the allocate event).
+			w, err := b.value(c.Args[0])
+			if err != nil {
+				return nil, err
+			}
+			w, err = e.wrapInterfaceConversion(pt.Elem(), e.goTypeOf(c.Args[0]), w)
+			if err != nil {
+				return nil, err
+			}
+			m, ok := w.(map[string]any)
+			if !ok {
+				return nil, unsup("unseq lowering: new operand emission shape (%T)", w)
+			}
+			val = m
+		}
+		spec = map[string]any{"stmt": "new", "value": val, "elemType": elemTy}
 	} else {
 		operands := []any{}
 		for _, a := range c.Args[1:] {

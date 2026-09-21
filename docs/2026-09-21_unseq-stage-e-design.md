@@ -25,7 +25,7 @@ the rows born/flipped/moved with their sets, the latitude reclassifications pose
 | **E1** package-level variables (LANDED, §E1) | reads `g` / `pkg.V` as READ occurrences (`deref(globaladdr)`); operand-free targets (`g = e`, `g op= e`, `g++`) | **BUG-113** (two rows FAIL → PASS) | none (decoder D8: the `deref` head) |
 | **E2** pointers, fields, maps (LANDED, §E2) | `*p`, `p.f`/`s.f`, `m[k]` reads; map-element target plans (`m[k] = e`, `m[k] op= e`) — one frozen plan shared by load and store | BUG-104's `map-compound-index-key-vs-call` | `unseqReadTarget`'s `.mapElem` arm (+ its `locSup` lemma); `unseqAtom` string constants |
 | **E3** receives, method calls (LANDED, §E3) | `<-ch` as an EVENT occurrence (E1-ordered); concrete-receiver method calls as invocations (receiver sub-evaluation = occurrences) | BUG-104's `compound-call-target-vs-recv`, `map-compound-index-key-vs-{recv,method}` | a statement-bodied occurrence kind (the receive) + its `Step` rules and coherence arms |
-| **E4** conversions, allocations (LANDED, §E4) | numeric/string/byte/rune conversions as PURE OPS; `&T{…}`, `T{…}`, slice literals as allocation occurrences WITHOUT E1 edges (payload reads are the occurrences); `make`/`new` as E1-participant allocation calls (§E4 — the plan's «no E1 edges» corrected there for the builtins) | BUG-102's five designed reds | `UnseqBody.allocate` + `AllocSpec` (allocation statements under the wait frame) |
+| **E4** conversions, allocations (LANDED, §E4; the audit fix round of 2026-09-21 closes the audit's F1–F4 there) | numeric/string/byte/rune conversions as PURE OPS (`string([]byte)`/`string([]rune)` an occurrence — the fix round); `&T{…}`, `T{…}`, slice literals as allocation occurrences WITHOUT E1 edges (payload reads are the occurrences); `make`/`new(T)`/`new(x)` as E1-participant allocation calls (§E4 — the plan's «no E1 edges» corrected there for the builtins) | BUG-102's five designed reds | `UnseqBody.allocate` + `AllocSpec` (allocation statements under the wait frame) |
 | E5 multi-target forms, the residue | tuple/multi-value assignment, comma-ok forms, blank targets; the census residue migrated or stated | E3/E4 latitude entries (inter-target order) | — |
 | E6 retire the legacy triple | when the census shows ZERO legacy `unseq-probe` emissions | — | delete `Stmt.unseqProbe`/`Cont.probeK`/`ChoiceSite.unseqPanic` with their arms |
 
@@ -371,17 +371,20 @@ ratification at the merge ask.
 
 **The grammar widening** (`unseq.go`). A CONVERSION `T(x)` is a PURE OP over the operand's value — integer ↔
 integer, bool ↔ bool (a static retyping, no machine op), string ↔ string, string ↔ `[]byte` / `[]rune`, integer →
-string — admitted when both types are in the grammar (`unseqConversion`); it is never an occurrence of its own
-(inside the type grammar a conversion cannot fail: slice-to-array conversions are refused with the array type, an
-interface target is a box — E5's, refused by name). A VALUE struct literal `T{…}` of a named struct type is a pure
+string — admitted when both types are in the grammar (`unseqConversion`); inside the type grammar a conversion cannot
+fail (slice-to-array conversions are refused with the array type, an interface target is a box — E5's, refused by name)
+and it is never an occurrence of its own EXCEPT — since the audit fix round (F4, below) — the two forms that read
+MUTABLE memory, `string([]byte)` / `string([]rune)`: they copy the slice's backing array at the conversion. A VALUE struct literal `T{…}` of a named struct type is a pure
 `struct-lit` head over its payloads (`unseqCompositeLit`); `&T{…}` and a slice literal `[]T{…}` are ALLOCATION
 occurrences — `allocate` bodies — WITHOUT E1 edges (v2.1 R3: spec#Order_of_evaluation orders calls, method calls,
 receives and logical operations; a composite literal is none of those — BUG-102's evidence, gc leaves the literal
 in the residual after the call temps); every element value is classified in source order (its reads are the
-occurrences; a keyed slice index is a constant). `make(…)` / `new(T)` are FUNCTION CALLS (spec#Built-in_functions
-«called like any other function»): E1 participants like `len`/`cap` — WITHOUT effect (they do not admit a sweep by
-themselves; their size operands' reads are the occurrences) — whose allocation is an `allocate` body carrying the E1
-`after` edge (`unseqMakeNew`). Map literals (gc evaluates their dynamic entries at the literal's position — the E13
+occurrences; a keyed slice index is a constant). `make(…)` / `new(T)` / Go 1.26's `new(x)` are FUNCTION CALLS
+(spec#Built-in_functions «called like any other function»): E1 participants like `len`/`cap` — WITHOUT effect (they do
+not admit a sweep by themselves; their size operands' reads — and `new(x)`'s argument, an operand whose reads are
+occurrences inside new's window and whose calls are E1-ordered events — are the occurrences) — whose allocation is an
+`allocate` body carrying the E1 `after` edge (`unseqMakeNew`); `new(x)`'s allocation stores the argument's value
+(spec#Allocation; the audit fix round's F1, below). Map literals (gc evaluates their dynamic entries at the literal's position — the E13
 guard's measured note: one member, gc's), array literals (arrays are outside the type grammar), elided `&T` elements
 and `&x` of a variable stay legacy by name.
 
@@ -453,4 +456,100 @@ the four lane moves and the four born membership rows; E12's recorded EXCEPTION 
 gc 98 — the operand read early) retires into the set; the E3/E4 «late structural allocations» item of v2.1 §5 (4) is
 REALIZED here (an allocation is a node without E1 edges) — posed for ratification at the merge ask, with the [AGENT]
 correction that `make`/`new` are E1 participants.
+
+### E4 — the audit fix round (2026-09-21)
+
+The Stage E adversarial audit (`docs/2026-09-21_unseq-stage-e-audit.md`, candidate `3649b7db` over main `14006270`;
+verdict FIX-FIRST) returned one WRONG ANSWER, one decoder FAIL-OPEN, one minor decoder FAIL-OPEN class, one records
+claim and five records/nits. Dispositions ([AGENT], the coordinator's, disclosed at the merge ask; authority [USER]
+Mike 2026-09-21 «Dispatch the audit as you propose», relayed); the branch was rebased onto main `769bbf23` first (the
+r45 records commit; the pre-rebase SHAs of §E1–§E4 map to `a2c8a35f` E1, `d1db8a14` E2, `22ec98d5` E3, `d5363273` E4).
+
+**F1 — `new(expr)` LOWERED CORRECTLY (a wrong answer on the candidate).** Go 1.26's `new(x)` (spec#Allocation: «If the
+argument is an expression x, then new(x) allocates a variable of the type of x initialized to the value of x») inside an
+admitted sweep was lowered as `new(T)` with the zero value: `unseqMakeNew` never inspected the argument, `makeNew`
+emitted `value: default`. `*new(x) + m()` answered 5 where gc and main answer 6; `*new(m()) + x + h() + g()` answered
+`g` 103 without ever running `m` where gc and main print `m` `g` and return 110 — a dropped side effect and a
+spec-forbidden member; no corpus row reached it (the corpus's `new(expr)` uses sit in call-free sweeps). The occurrence
+contract admits the argument as an OPERAND of the E1-ordered `new` call: its reads are occurrences inside new's window
+(forced before every later participant, exactly as `make`'s size operands), a call inside it an E1-ordered event; the
+`allocate`'s `new` value payload is the argument's atom (the decoder admits a PAYLOAD — an atom, a boxed atom or a
+`default` — besides the `struct-lit`, and checks its static type against the allocation's element type: a `$` slot's
+cell type, a local's / constant's `type`, a boxing's or literal's `target`; mutant `mut-new-value-type`). Census
+counts corrected on the way (F7: `q := new(m())` is events=2 calls=1). Born rows (RED-FIRST — FAIL on the candidate's
+frontend + binary, the audit's own two litmuses; `f1-f4-litmus.txt`): `evalorder/unseq-conv-alloc/new-expr-vs-call`
+strict 6 (gc 6 on 20/20) and `new-call-vs-call` membership {`m` `g` 109, `m` `g` 110} (gc 110). One fact worth its
+sentence: `*new(x) + m()` is ADMITTED to the graph — through the fresh pointer's dereference, an occurrence the
+trigger cannot know reads memory nobody else holds — and its set is the singleton {6}: x's read inside new's window is
+forced, the dereference's order against `m` is unobservable. Harmless (a 2-way pick, one observation), recorded.
+References `enumerate.py` E4f {6} (forbidding 5), E4g {(109, m g), (110, m g)} (forbidding (103, g)); wires
+`e4new.json` + `native-e4new.json`; frontend unit witnesses `e4newExpr` (admitted 1/2), `e4newCall` (3/2),
+`e4newCallOnly` (the F7 counts), the lowering shapes.
+
+**F2 — the decoder REFUSES `ref` of a `$` binder cell**, in `unseqCheckArg` (the audit's M10b decoded and RAN: the
+callee wrote the binder cell through the address) AND in `unseqCheckCallee`'s capture arm (the audit's suspicion,
+confirmed by mutant: closed). A graph cell is written only by its producer; the frontend's address arguments are `ref`
+of a SOURCE local (E3's frozen receiver) or a `globaladdr`. Mutants `mut-arg-ref-binder` (on W1), `mut-capture-ref-
+binder` (on R2a's `k`, a func-value with a `ref $u0` capture); both refuse by name («takes the address of a binder
+cell») through the CLI (`check-unseq-wire`, `check-wire-boundary`).
+
+**F3 — decode-time checks.** A `slice-lit`'s indices must be non-negative, below its `length` and DISTINCT (Go's
+literal keys are constant, distinct and in range; the emitter's `length` is the greatest index + 1) — the audit's M11
+answered with a Go-observable index panic and M12 ran with the second store winning; both refuse at decode now
+(`mut-slicelit-index-oob`, `mut-slicelit-dup-index`). A CONSTANT `make` size must be a legal Go constant argument —
+non-negative and representable as `int` (`platform.intExclusiveUpperBound`; go/types rejects the program otherwise),
+and a constant len must not exceed a constant cap (`mut-make-negative-len` — the audit's M6 — and
+`mut-make-len-over-cap`; `make-chan`'s buffer and `make-map`'s size likewise); the RUN-TIME classes (a non-constant
+negative, a size over `maxAlloc`) stay the machine's own `makeslice` panics, as in Go. The legacy statement arms keep
+their shapes (no legacy-arm change this round; the audit notes they share the property).
+
+**F4 — `string([]byte)` / `string([]rune)` are OCCURRENCES (the hidden pin, enveloped).** The conversion copies the
+slice's BACKING ARRAY at the conversion — a mutable read, spec-unordered against a sibling call that writes an alias of
+the slice (spec#Order_of_evaluation orders calls, not conversions; gc's `order.go` call class holds
+`OSTR2BYTES`/`OSTR2RUNES` and not `OBYTES2STR`/`ORUNES2STR`, so gc converts AFTER the call — «zb»). The first cut
+treated every conversion as pure over its operand's VALUE, so `string(b) + m()` (b private but aliased by `c`, m writing
+`c[0]`) was classified all-forced and sent to the legacy path, which realizes gc's member alone — a (b) pin presented
+as «every edge forced». `unseqConversion` records `d.occ` for the two forms; the graph already realized both orders
+where the sweep was admitted (the audit's d2), so only the TRIGGER changes. Census: 127 → 127 admitted — F4 admits NO
+other corpus sweep (357 legacy sweeps count the conversion's read now; 16 print the E3 trigger's reason instead of «no
+non-event» — the fmt shim's `goleanShimFmtQuoteBytes`, whose `string(b)` sits inside a call's argument: forced). Born
+rows `evalorder/unseq-conv-alloc/string-bytes-vs-call` and `string-runes-vs-call`, membership {ab, zb}, gc zb on
+20/20; reference `enumerate.py` E4h; wires `e4strb.json` + `native-e4strb.json` (println-rooted). The `[]byte(s)` /
+`[]rune(s)` forms read a STRING (immutable) and stay pure (`e4bytesFromStr`, legacy by name).
+
+**F5 — the SPEC reading behind «`make`/`new` are E1 participants», named (PENDING [USER] ratification with the six
+items — handoff §2 item 5).** spec#Order_of_evaluation orders «all function calls, method calls, receive operations,
+and binary logical operations … in lexical left-to-right order»; spec#Built-in_functions: the built-ins «are called
+like any other function». READING (a): the built-ins are the sentence's «function calls» — `len`/`cap` (Stage C's
+rule, BUG-062's precedent), `make`, `new`, and by the same sentence `min`/`max`/`copy`/`append`/`clear`/`complex`/… —
+ordered among the calls; gc's `order.go` call class (`OCALLFUNC, OCALLINTER, OCAP, OCOPY, OLEN, OMAKECHAN, OMAKEMAP,
+OMAKESLICE, OMAX, OMIN, ONEW, ORECOVER, OSTR2BYTES, OSTR2RUNES, …`) is this reading (with the two conversions gc adds
+for its own reasons, which the spec does not order — E12's retired exception is exactly gc's early `[]byte(s)`, one
+member of our set). READING (b): only user function calls are «function calls»; then the read of `n` inside
+`make([]int, n)` is unordered against a sibling `m()`, `make-len-vs-call`'s set is {6, 8}, and the strict row is a (b)
+pin of gc's order. §E4 grounded the choice in the control's gc draw; the ground is reading (a), gc agreeing.
+CONSEQUENCE for E5: under reading (a) `min`/`max`/`copy`/`append` are ordered calls too — today refused by name to the
+legacy path, whose hoist happens to realize gc's early evaluation (the audit's k1 `min(x, 100) + m()` → 1001 on gc and
+both binaries); E5 admits them as E1 participants under the same reading, or the inventory states reading (b) for the
+residue. `make-len-vs-call` is a FORCED SINGLETON UNDER READING (a); reading (b) is the named alternative.
+
+**F6 — boxed literal payloads read LATE on the canonical tape.** `[]any{x}[0].(int) + m()`: gc 6 (the boxing reads
+`x` before `m`), main's legacy path 6, the graph's canonical tape 15 — the set {6, 15} exact, membership-fine; a
+STRICT row of this shape would flip default ≠ gc. No admitted corpus sweep carries a boxed literal payload beside a
+call (the audit's census); recorded for E5's `to-interface` payload family (handoff §3).
+
+**F7** — the census counts for `new(expr)`: fixed by F1 (`TestUnseqNewExprCensusCounts`). **F8** — the decoder
+accepts an `after` edge on a composite-literal `allocate` (the audit's M8; the set unchanged): the frontend's «no E1
+edge on literals» is a LOWERING policy the wire does not express (`new(T)` and `&T{…}` share the `new` statement) — a
+design fact, not a defect; recorded. **F9** — the `alloc` → `allocate` rename is legitimate (the audit's own verdict:
+the body performs no raw memory operation; the token rule of `check-mem-callsites` matched a constructor spelled
+`.alloc`); no action.
+
+**Measured.** Frontend `go test ./tools/nativefrontend/ ./tools/lowerdiag/` ok; Lean `scripts/capped lake build
+GoLean.NativeToIR golean UnseqWireTests` EXIT=0; `Tests/UnseqWire.lean` 95 ok, 33 mutants refused by name;
+`check-unseq-wire` PASS (33 through the CLI), `check-wire-boundary` PASS (11 + 28), `check-frontend-pins` PASS (the
+twin byte-identical), `check-mem-callsites` PASS (70). `scripts/diff-one` on all 87 affected rows (E4's 83 + the four
+born): 87 PASS, every existing row in its pinned lane and set (`diff-one-fix.txt`). Baseline 3728 = 3493 / 235 →
+3732 = 3497 / 235 (four born, nothing else moved). The gate line and the choice-trace subset are in the evidence
+README and the handoff §5.
 

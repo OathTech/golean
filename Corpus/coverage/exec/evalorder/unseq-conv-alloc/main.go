@@ -13,6 +13,17 @@ package main
 // e4alloc.json + native-{e4alloc,e4conv}.json. gc's draws are call-first (the literal's
 // payload read after the call; the conversion operand's read BEFORE the call — E12's
 // recorded exception, retired here into the set).
+//
+// The Stage E audit fix round (2026-09-21; docs/2026-09-21_unseq-stage-e-audit.md): F1 — Go 1.26
+// `new(x)` (spec#Allocation) inside an admitted sweep was lowered as `new(T)` with the zero
+// value, dropping the initializer and any call inside it (a WRONG ANSWER against gc and main; no
+// corpus row reached it). The argument is now an operand of the E1-ordered `new` call: its reads
+// occurrences inside new's window, its calls E1-ordered events, the allocation storing its value.
+// new-expr-vs-call and new-call-vs-call are the audit's two witnesses, born FAIL on the candidate
+// (5; `g` 103) → PASS here. F4 — `string([]byte)` / `string([]rune)` READ the slice's backing
+// array at the conversion: an occurrence of its own (the first cut sent `string(b) + m()` to the
+// legacy path as «every edge forced» — a pin of gc's order); string-bytes-vs-call and
+// string-runes-vs-call envelope it, gc's zb inside.
 
 type T struct{ x int }
 
@@ -69,6 +80,50 @@ func mapLitControl() int {
 	return map[int]int{7: 1}[7] + m()
 }
 
+// AUDIT FIX ROUND F1, witness 1 (the audit's f1-new-expr-litmus): `*new(x) + m()` with m writing the
+// captured x (1 → 10, returns 5). Go 1.26 `new(x)` allocates a variable initialized to x's VALUE; new
+// is an E1-ordered call, so x's read inside its window is forced before m: 1 + 5 = 6 on every stream
+// (the fresh pointer's dereference is the sweep's observable occurrence — its order against m
+// changes nothing). gc 6; main 6; the E4 candidate 5 (the zero value). STRICT.
+func newExprVsCall() int {
+	x := 1
+	m := mut(&x, 10)
+	return *new(x) + m()
+}
+
+func mPrint() int { println("m"); return 7 }
+func gPrint() int { println("g"); return 1 }
+
+// AUDIT FIX ROUND F1, witness 2 (the audit's f1-new-call-dropped-litmus): `*new(mPrint()) + x + h() +
+// gPrint()` with h writing the captured x (1 → 2, returns 100). mPrint, new, h and gPrint are E1-ordered
+// (mPrint inside new's window); x's read is spec-unsequenced against the calls — before h 7 + 1 + 100 +
+// 1 = 109, after h 110; the output is `m` then `g` on both. gc `m` `g` 110; main the same; the E4
+// candidate `g` 103 (mPrint never ran). {109, 110}.
+func newCallVsCall() int {
+	x := 1
+	h := func() int { x = 2; return 100 }
+	return *new(mPrint()) + x + h() + gPrint()
+}
+
+// AUDIT FIX ROUND F4 (the audit's probe d1): `string(b) + m()` with b private but ALIASED by c, m
+// writing c[0] ('a' → 'z'): the conversion copies b's backing array at the conversion — a mutable
+// read spec-unsequenced against m — before m "ab", after "zb". gc "zb" (OBYTES2STR is not in
+// order.go's call class: the conversion runs after the call). {ab, zb}.
+func stringBytesVsCall() string {
+	b := []byte("ab")
+	c := b
+	m := func() string { c[0] = 'z'; return "" }
+	return string(b) + m()
+}
+
+// AUDIT FIX ROUND F4 (the audit's probe a6): the same on `[]rune`. {ab, zb}; gc "zb".
+func stringRunesVsCall() string {
+	r := []rune("ab")
+	c := r
+	m := func() string { c[0] = 'z'; return "" }
+	return string(r) + m()
+}
+
 func main() {
 	println(convReadVsCall())
 	println(structLitVsCall())
@@ -76,4 +131,8 @@ func main() {
 	println(sliceLitVsCall())
 	println(makeLenVsCall())
 	println(mapLitControl())
+	println(newExprVsCall())
+	println(newCallVsCall())
+	println(stringBytesVsCall())
+	println(stringRunesVsCall())
 }

@@ -13,7 +13,10 @@
 # read in a `deref` head's pointer position; 22 since Stage E E2 — a non-atom map key
 # and a non-atom deref plan; 24 since Stage E E3 — a receive's non-atom channel and a
 # two-binder receive; 26 since Stage E E4 — an allocation's non-atom payload and a
-# statement kind outside the fragment), while the untouched W1 wire runs (the canonical
+# statement kind outside the fragment; 33 since the Stage E audit fix round, 2026-09-21 —
+# `ref` of a binder cell as an argument / a capture (F2), `new`'s value typed against the
+# element type (F1), a slice literal's index out of range / duplicated and a constant make
+# size Go rejects at compile time (F3)), while the untouched W1 wire runs (the canonical
 # tape gives 2: mut first). Fail closed on a missing binary, a failed
 # regeneration, a decoded mutant or a refusal that does not name its cause.
 set -Eeuo pipefail

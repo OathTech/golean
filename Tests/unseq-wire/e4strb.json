@@ -1,0 +1,338 @@
+{
+ "buildContext": {
+  "buildTags": [],
+  "cgoEnabled": true,
+  "compiler": "gc",
+  "goarch": "amd64",
+  "goos": "linux"
+ },
+ "fileOrder": [
+  {
+   "files": [
+    "main.go"
+   ],
+   "package": "main"
+  }
+ ],
+ "funcs": [
+  {
+   "body": {
+    "body": [
+     {
+      "define": false,
+      "lhs": [
+       {
+        "expr": {
+         "base": {
+          "expr": "deref",
+          "ptr": {
+           "expr": "ident",
+           "name": "c$cap"
+          },
+          "type": {
+           "elem": {
+            "int": "uint8",
+            "kind": "int"
+           },
+           "kind": "slice"
+          }
+         },
+         "expr": "index-addr",
+         "index": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "0"
+         }
+        },
+        "target": "addr"
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "uint8",
+         "kind": "int"
+        },
+        "value": "122"
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "results": [
+       {
+        "bytes": [],
+        "expr": "string",
+        "type": {
+         "kind": "string"
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "e4strb$lit0",
+   "params": [
+    {
+     "id": "c$cap",
+     "type": {
+      "elem": {
+       "elem": {
+        "int": "uint8",
+        "kind": "int"
+       },
+       "kind": "slice"
+      },
+      "kind": "pointer"
+     }
+    }
+   ],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "kind": "string"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "b",
+        "target": "declare",
+        "type": {
+         "elem": {
+          "int": "uint8",
+          "kind": "int"
+         },
+         "kind": "slice"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "bytes-from-string",
+        "type": {
+         "elem": {
+          "int": "uint8",
+          "kind": "int"
+         },
+         "kind": "slice"
+        },
+        "x": {
+         "bytes": [
+          97,
+          98
+         ],
+         "expr": "string",
+         "type": {
+          "kind": "string"
+         }
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "c",
+        "target": "declare",
+        "type": {
+         "elem": {
+          "int": "uint8",
+          "kind": "int"
+         },
+         "kind": "slice"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "ident",
+        "name": "b",
+        "type": {
+         "elem": {
+          "int": "uint8",
+          "kind": "int"
+         },
+         "kind": "slice"
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "m",
+        "target": "declare",
+        "type": {
+         "kind": "func",
+         "params": [],
+         "results": [
+          {
+           "kind": "string"
+          }
+         ],
+         "variadic": false
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "captured": [
+         {
+          "expr": "ref",
+          "id": "c"
+         }
+        ],
+        "expr": "func-value",
+        "func": "e4strb$lit0",
+        "type": {
+         "kind": "func",
+         "params": [],
+         "results": [
+          {
+           "kind": "string"
+          }
+         ],
+         "variadic": false
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "cells": [
+       {
+        "id": "$u0",
+        "type": {
+         "kind": "string"
+        }
+       },
+       {
+        "id": "$u1",
+        "type": {
+         "kind": "string"
+        }
+       },
+       {
+        "id": "$u2",
+        "type": {
+         "kind": "string"
+        }
+       }
+      ],
+      "occs": [
+       {
+        "args": [],
+        "binds": [
+         "$u1"
+        ],
+        "callee": {
+         "expr": "ident",
+         "name": "m"
+        },
+        "kind": "invoke",
+        "name": "call0",
+        "resultTypes": [
+         {
+          "kind": "string"
+         }
+        ]
+       },
+       {
+        "bind": "$u0",
+        "head": {
+         "expr": "string-from-bytes",
+         "type": {
+          "kind": "string"
+         },
+         "x": {
+          "expr": "ident",
+          "name": "b",
+          "type": {
+           "elem": {
+            "int": "uint8",
+            "kind": "int"
+           },
+           "kind": "slice"
+          }
+         }
+        },
+        "kind": "eval",
+        "name": "conv1"
+       },
+       {
+        "bind": "$u2",
+        "head": {
+         "expr": "binary",
+         "op": "+",
+         "type": {
+          "kind": "string"
+         },
+         "x": {
+          "expr": "ident",
+          "name": "$u0",
+          "type": {
+           "kind": "string"
+          }
+         },
+         "y": {
+          "expr": "ident",
+          "name": "$u1",
+          "type": {
+           "kind": "string"
+          }
+         }
+        },
+        "kind": "eval",
+        "name": "op2"
+       }
+      ],
+      "stmt": "unseq",
+      "stores": [],
+      "then": {
+       "args": [
+        {
+         "expr": "ident",
+         "name": "$u2",
+         "type": {
+          "kind": "string"
+         }
+        }
+       ],
+       "newline": true,
+       "stmt": "print"
+      }
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "e4strb",
+   "params": [],
+   "results": [],
+   "variadic": false
+  }
+ ],
+ "methodSets": [],
+ "methods": [],
+ "package": "main",
+ "schema": "golean-native-v1",
+ "types": []
+}

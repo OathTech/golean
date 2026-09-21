@@ -103,6 +103,15 @@ func TestUnseqLoweringShapes(t *testing.T) {
 		{"e4addrLit", "invoke eval:index-get allocate eval:field-get eval:binary"},
 		{"e4sliceLit", "invoke eval:index-get allocate eval:index-get eval:binary"},
 		{"e4make", "eval:index-get allocate eval:builtin-len/after invoke/after eval:ident eval:binary eval:binary"},
+		// the audit fix round (2026-09-21): F1 — `*new(mPrint()) + x + h() + gPrint()`: mPrint's block inside
+		// new's frame, the allocate AFTER it (its value = mPrint's slot), h after new, gPrint after h; the
+		// residual: the deref, x's read, the ops. F4 — `string(b) + m()`: the conversion is an eval head
+		// (string-from-bytes) in the residual, the call first.
+		{"e4newCall", "invoke allocate/after invoke/after invoke/after eval:deref eval:ident eval:binary eval:binary eval:binary"},
+		// `*new(x) + m()`: x's read inside new's frame (before the allocate, which has no anchor yet), m after
+		// new (E1); the deref and the op in the residual.
+		{"e4newExpr", "eval:ident allocate invoke/after eval:deref eval:binary"},
+		{"e4strBytes", "invoke eval:string-from-bytes eval:binary"},
 		// W6: two E1-ordered calls, then the read and the ops.
 		{"w6", "invoke invoke/after eval:ident eval:binary eval:binary"},
 		// R6: the call first; the header read and the checked access late.

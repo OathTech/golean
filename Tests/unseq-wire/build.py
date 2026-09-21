@@ -64,6 +64,7 @@ def boolc(v):
 
 SLICE_STR = {"kind": "slice", "elem": STR}
 PTR_INT = {"kind": "pointer", "elem": INT}
+BYTES = {"kind": "slice", "elem": {"kind": "int", "int": "uint8"}}
 MAP_INT_INT = {"kind": "map", "key": INT, "value": INT}
 
 
@@ -441,6 +442,57 @@ def e4alloc_graph():
         then=ret(ident("$u4", INT)))
 
 
+# ---------------------------------------------------------------- Stage E audit fix round (2026-09-21)
+# F1: Go 1.26 `new(x)` — `*new(m()) + x + h() + g()`: m's invocation inside new's window, the `new`
+# allocate AFTER it storing m's slot (spec#Allocation: «initialized to the value of x»), h after new,
+# g after h (E1); the fresh pointer's dereference by data; x's read (captured by h) unordered against
+# the calls. Reference enumerate.py E4g; {`m g` 109, `m g` 110}.
+
+def e4new_graph():
+    return unseq(
+        [cell("$u0", INT), cell("$u1", PTR_INT), cell("$u2", INT), cell("$u3", INT), cell("$u4", INT),
+         cell("$u5", INT), cell("$u6", INT), cell("$u7", INT), cell("$u8", INT)],
+        [inv("call0", ["$u0"], fv("m"), [], [INT]),
+         alc("new1", "$u1", {"stmt": "new", "value": ident("$u0", INT), "elemType": INT}, after=["call0"]),
+         inv("call2", ["$u5"], ident("h"), [], [INT], after=["new1"]),
+         inv("call3", ["$u7"], fv("g"), [], [INT], after=["call2"]),
+         ev("deref4", "$u2", {"expr": "deref", "ptr": ident("$u1", PTR_INT), "type": INT}),
+         ev("read5", "$u3", ident("x", INT)),
+         ev("op6", "$u4", binop("+", ident("$u2", INT), ident("$u3", INT), INT)),
+         ev("op7", "$u6", binop("+", ident("$u4", INT), ident("$u5", INT), INT)),
+         ev("op8", "$u8", binop("+", ident("$u6", INT), ident("$u7", INT), INT))],
+        then=ret(ident("$u8", INT)))
+
+
+# F4: `string(b)` reads the backing array — an eval occurrence (`string-from-bytes` over the private
+# slice atom) unordered against m, which writes the alias c. Reference enumerate.py E4h; {ab, zb}.
+
+def e4strb_graph():
+    return unseq(
+        [cell("$u0", STR), cell("$u1", STR), cell("$u2", STR)],
+        [inv("call0", ["$u1"], ident("m"), [], [STR]),
+         ev("conv1", "$u0", {"expr": "string-from-bytes", "x": ident("b", BYTES), "type": STR}),
+         ev("op2", "$u2", binop("+", ident("$u0", STR), ident("$u1", STR), STR))],
+        then=prn(ident("$u2", STR)))
+
+
+# F3's base: `len(make([]int, n)) + x + h()` — the make-slice allocate (len = the private atom n), len
+# after it, h after len; x's read unordered against h. {103, 112}.
+
+def e4make_graph():
+    return unseq(
+        [cell("$u0", SLICE_INT), cell("$u1", INT), cell("$u2", INT), cell("$u3", INT), cell("$u4", INT),
+         cell("$u5", INT)],
+        [alc("make0", "$u0", {"stmt": "make-slice", "elem": INT, "len": ident("n", INT)}),
+         ev("len1", "$u1", {"expr": "builtin-len", "operand": ident("$u0", SLICE_INT), "operandType": SLICE_INT,
+                            "type": INT}, after=["make0"]),
+         inv("call2", ["$u2"], ident("h"), [], [INT], after=["len1"]),
+         ev("read3", "$u3", ident("x", INT)),
+         ev("op4", "$u4", binop("+", ident("$u1", INT), ident("$u3", INT), INT)),
+         ev("op5", "$u5", binop("+", ident("$u4", INT), ident("$u2", INT), INT))],
+        then=ret(ident("$u5", INT)))
+
+
 # ---------------------------------------------------------------- constant heads (audit fix round F2)
 # A CONSTANT copied into a cell — the emitter's `copy` occurrence where the consumer needs a
 # CELL (design §6): a guard's test (`true && f()`), a phase-2 store's value (`a[f()] = 5`,
@@ -526,6 +578,11 @@ WITNESSES = {
     # conversion witness is NATIVE-ONLY (the captured string's read vs the mutating call)
     "e4alloc": ("e4alloc", [("e4alloc", "i", 0, e4alloc_graph(), None)]),
     "e4conv": ("e4conv", []),
+    # the Stage E audit fix round (2026-09-21): F1 new(x) with a call inside (hand-built + native);
+    # F4 string([]byte) as an occurrence (hand-built + native); F3's make-slice base (hand-built + native)
+    "e4new": ("e4new", [("e4new", "h", 0, e4new_graph(), None)]),
+    "e4strb": ("e4strb", [("e4strb", "m", 0, e4strb_graph(), None)]),
+    "e4make": ("e4make", [("e4make", "h", 0, e4make_graph(), None)]),
 }
 
 
@@ -640,6 +697,30 @@ def mutants(wires):
          "hidden read in an allocation payload")
     edit("mut-alloc-kind", "e4alloc", "e4alloc",
          lambda n, w: occ(n, "lit2")["allocation"].update(stmt="map-lit"), "outside the admitted fragment")
+    # ---- the Stage E audit fix round (2026-09-21)
+    # F2: `ref` of a `$` BINDER cell as an invocation argument (the audit's M10b: the callee wrote the
+    # graph cell) and as a func-value capture (the audit's suspicion, closed here) — refused by name.
+    edit("mut-arg-ref-binder", "w1", "w1",
+         lambda n, w: occ(n, "call0").update(args=[{"expr": "ref", "id": "$u1"}]), "address of a binder cell")
+    edit("mut-capture-ref-binder", "r2a", "r2aTrue",
+         lambda n, w: occ(n, "call4").update(callee={"expr": "func-value", "func": "k",
+                                                     "captured": [{"expr": "ref", "id": "$u0"}]}),
+         "address of a binder cell")
+    # F1: `new`'s value is a payload whose static type must be the allocation's element type.
+    edit("mut-new-value-type", "e4new", "e4new",
+         lambda n, w: occ(n, "new1")["allocation"].update(value=boolc(True)), "disagrees with the allocation's element type")
+    # F3: a slice literal's index outside its length (M11) / duplicated (M12); a constant make size
+    # that Go rejects at compile time — negative (M6), len over cap.
+    edit("mut-slicelit-index-oob", "e4alloc", "e4alloc",
+         lambda n, w: occ(n, "lit2")["allocation"]["elems"][0].update(index=5), "outside the literal's length")
+    def dup_index(n, w):
+        e = occ(n, "lit2")["allocation"]["elems"]
+        e.append(copy.deepcopy(e[0]))
+    edit("mut-slicelit-dup-index", "e4alloc", "e4alloc", dup_index, "duplicate slice-literal index")
+    edit("mut-make-negative-len", "e4make", "e4make",
+         lambda n, w: occ(n, "make0")["allocation"].update(len=intc(-1)), "negative constant len")
+    edit("mut-make-len-over-cap", "e4make", "e4make",
+         lambda n, w: occ(n, "make0")["allocation"].update(len=intc(3), cap=intc(2)), "larger than constant cap")
     return out
 
 

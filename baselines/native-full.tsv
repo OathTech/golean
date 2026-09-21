@@ -1,5 +1,5 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 3728 (3493 PASS / 235 FAIL)
+# cases: 3732 (3497 PASS / 235 FAIL)
 # re-pinned: 2026-09-20 [AGENT], core/unseq-stage-d-0920, STAGE D of the evaluation-order model v2.1 (route α —
 #   docs/2026-09-20_unseq-stage-d-design.md §2–§3; handoff docs/2026-09-20_unseq-stage-d-handoff.md): NO row added, NO
 #   result changed, ONE stage changed — spec-examples-stmt/continue-label PASS/- -> PASS/confluent, the strict depth=128
@@ -91,6 +91,25 @@
 #   measured by scripts/diff-one on all 83 affected rows before this pin (docs/evidence/2026-09-21_unseq-stage-e/diff-one-e4.txt); the
 #   full gate line is in the evidence README. 3722 + 6 = 3728; 3482 + 6 + 5 = 3493; 240 - 5 = 235. No PASS -> non-PASS flip; the one
 #   5a-class item (imported-goose/channel/google-search: STALE certification for the changed core inputs) is not re-pinned here.
+# re-pinned: 2026-09-21 [AGENT], core/unseq-stage-e-0921, the STAGE E ADVERSARIAL AUDIT'S FIX ROUND (the audit
+#   docs/2026-09-21_unseq-stage-e-audit.md, verdict FIX-FIRST; dispositions docs/2026-09-21_unseq-stage-e-handoff.md §5; design
+#   docs/2026-09-21_unseq-stage-e-design.md §E4 «the audit fix round»): FOUR rows BORN in evalorder/unseq-conv-alloc, NO existing row
+#   changed. (F1 — a WRONG ANSWER on the candidate, fixed) new-expr-vs-call PASS strict (`*new(x) + m()`, m writing the captured x: 6 =
+#   gc = main; the E4 candidate answered 5 — Go 1.26 `new(x)` was lowered as `new(T)` with the ZERO value; the audit's f1-new-expr-litmus)
+#   and new-call-vs-call PASS/membership {`m` `g` 109, `m` `g` 110} (`*new(mPrint()) + x + h() + gPrint()`: the call inside new's argument
+#   is an E1-ordered event and the allocation stores its value; gc `m` `g` 110 inside, 20/20 draws under GOMAXPROCS 1/8, default and -N -l;
+#   the candidate never ran mPrint — `g` 103; the audit's f1-new-call-dropped-litmus) — both RED-FIRST: born FAIL on the candidate's frontend +
+#   binary, PASS since new(x)'s argument is classified (its reads occurrences inside new's window, its calls events) and lowered as the
+#   allocate's value payload (docs/evidence/2026-09-21_unseq-stage-e/f1-f4-litmus.txt). (F4 — a pin hidden as «forced», enveloped)
+#   string-bytes-vs-call and string-runes-vs-call PASS/membership {ab, zb} (`string(b) + m()` with b private but aliased by c, m writing
+#   c[0]: string([]byte)/string([]rune) READ the backing array at the conversion — an occurrence of its own since this round; the
+#   candidate sent the sweep to the legacy path as all-forced, realizing gc's zb alone; gc zb inside, 20/20). The census: 127 -> 127
+#   admitted (0 newly admitted, 0 lost — F4 admits no other corpus sweep; 357 legacy sweeps count the conversion's read now, 16 of them
+#   with the E3 trigger's reason instead of «no non-event»), the twin 0. Measured by scripts/diff-one on all 87 affected rows (E4's 83 +
+#   the four born; 87 PASS, every existing row in its pinned lane and set — docs/evidence/2026-09-21_unseq-stage-e/diff-one-fix.txt);
+#   the full gate line is in the evidence README. 3728 + 4 = 3732; 3493 + 4 = 3497; 235 unchanged. No PASS -> non-PASS flip; the one
+#   5a-class item (imported-goose/channel/google-search: STALE certification for GoLean/NativeToIR.lean — the decoder's F1/F2/F3 arms)
+#   is not re-pinned here.
 # Previous pin:
 # re-pinned: 2026-09-20 [AGENT], core/unseq-stage-c-0919, STAGE C AUDIT FIX ROUND (docs/2026-09-20_unseq-stage-c-audit.md, FIX-FIRST; dispositions
 #   docs/2026-09-19_unseq-stage-c-handoff.md «Audit fix round (2026-09-20)»): SIX rows ADDED, no existing row changed. (F2) evalorder/unseq-const-cell/
@@ -2284,6 +2303,10 @@ PASS	evalorder/unseq-conv-alloc/addr-lit-vs-call	membership
 PASS	evalorder/unseq-conv-alloc/slice-lit-vs-call	membership
 PASS	evalorder/unseq-conv-alloc/make-len-vs-call	-
 PASS	evalorder/unseq-conv-alloc/map-lit-control	-
+PASS	evalorder/unseq-conv-alloc/new-expr-vs-call	-
+PASS	evalorder/unseq-conv-alloc/new-call-vs-call	membership
+PASS	evalorder/unseq-conv-alloc/string-bytes-vs-call	membership
+PASS	evalorder/unseq-conv-alloc/string-runes-vs-call	membership
 PASS	examples/binsearch/absent-above	-
 PASS	examples/binsearch/absent-below	-
 PASS	examples/binsearch/absent-gap	-

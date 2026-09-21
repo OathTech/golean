@@ -1,0 +1,51 @@
+# whole-sweep classifier census, the E4 frontend (commit d5363273 = pre-rebase 7f7e6b79) vs the audit-fix-round frontend, over every Corpus/coverage/exec/**/cases.tsv package + the raft twin assembly (.tmp/census/run.sh; summarize.py; diff.py)
+# corpus sweeps 108074 (summarize.py; 107848 distinct (package, unit, position, function) keys); admitted BEFORE 127 / AFTER 127; newly admitted 0; lost 0; the twin 0 admitted on both
+# F4 makes string([]byte)/string([]rune) an OCCURRENCE: 357 legacy sweeps changed their printed counts/reason — 341 count-only (nonEvents += the conversion's backing-array read; the reason unchanged: no call beside it, or a result type outside the grammar), 16 reason changes (all still legacy):
+REASON	fmt/errorf	golean-stdlib-shims.go:66	goleanShimFmtQuoteBytes	1/1/0 no non-event occurrence beside the call(s) (legacy path: every edge forced)	->	1/1/1 no occurrence observable against an effectful event (legacy path: every edge forced — Stage E E3 trigger)
+REASON	fmt/formatter-box-crosspkg	golean-stdlib-shims.go:298	goleanShimFmtQuoteBytes	1/1/0 no non-event occurrence beside the call(s) (legacy path: every edge forced)	->	1/1/1 no occurrence observable against an effectful event (legacy path: every edge forced — Stage E E3 trigger)
+REASON	fmt/formatter-box-generic	golean-stdlib-shims.go:298	goleanShimFmtQuoteBytes	1/1/0 no non-event occurrence beside the call(s) (legacy path: every edge forced)	->	1/1/1 no occurrence observable against an effectful event (legacy path: every edge forced — Stage E E3 trigger)
+REASON	fmt/formatter-box-range	golean-stdlib-shims.go:298	goleanShimFmtQuoteBytes	1/1/0 no non-event occurrence beside the call(s) (legacy path: every edge forced)	->	1/1/1 no occurrence observable against an effectful event (legacy path: every edge forced — Stage E E3 trigger)
+REASON	fmt/formatter-dyn-hole	golean-stdlib-shims.go:298	goleanShimFmtQuoteBytes	1/1/0 no non-event occurrence beside the call(s) (legacy path: every edge forced)	->	1/1/1 no occurrence observable against an effectful event (legacy path: every edge forced — Stage E E3 trigger)
+REASON	fmt/formatter-precedence	golean-stdlib-shims.go:298	goleanShimFmtQuoteBytes	1/1/0 no non-event occurrence beside the call(s) (legacy path: every edge forced)	->	1/1/1 no occurrence observable against an effectful event (legacy path: every edge forced — Stage E E3 trigger)
+REASON	fmt/fprint-writers	golean-stdlib-shims.go:54	goleanShimFmtQuoteBytes	1/1/0 no non-event occurrence beside the call(s) (legacy path: every edge forced)	->	1/1/1 no occurrence observable against an effectful event (legacy path: every edge forced — Stage E E3 trigger)
+REASON	fmt/fprintf-builder	golean-stdlib-shims.go:54	goleanShimFmtQuoteBytes	1/1/0 no non-event occurrence beside the call(s) (legacy path: every edge forced)	->	1/1/1 no occurrence observable against an effectful event (legacy path: every edge forced — Stage E E3 trigger)
+REASON	fmt/sprintf-dyn	golean-stdlib-shims.go:298	goleanShimFmtQuoteBytes	1/1/0 no non-event occurrence beside the call(s) (legacy path: every edge forced)	->	1/1/1 no occurrence observable against an effectful event (legacy path: every edge forced — Stage E E3 trigger)
+REASON	fmt/sprintf-verbs	golean-stdlib-shims.go:310	goleanShimFmtQuoteBytes	1/1/0 no non-event occurrence beside the call(s) (legacy path: every edge forced)	->	1/1/1 no occurrence observable against an effectful event (legacy path: every edge forced — Stage E E3 trigger)
+REASON	fmt/v-composites	golean-stdlib-shims.go:298	goleanShimFmtQuoteBytes	1/1/0 no non-event occurrence beside the call(s) (legacy path: every edge forced)	->	1/1/1 no occurrence observable against an effectful event (legacy path: every edge forced — Stage E E3 trigger)
+REASON	new/new-expr	Corpus/coverage/exec/new/new-expr/main.go:33	newExprEvalOnce	1/0/0 no call occurrence (legacy path: nothing with an effect to reorder against)	->	2/1/0 no non-event occurrence beside the call(s) (legacy path: every edge forced)
+REASON	noodler/strings	golean-stdlib-shims.go:310	goleanShimFmtQuoteBytes	1/1/0 no non-event occurrence beside the call(s) (legacy path: every edge forced)	->	1/1/1 no occurrence observable against an effectful event (legacy path: every edge forced — Stage E E3 trigger)
+REASON	panic-recover/shim-refusal-unrecoverable	golean-stdlib-shims.go:298	goleanShimFmtQuoteBytes	1/1/0 no non-event occurrence beside the call(s) (legacy path: every edge forced)	->	1/1/1 no occurrence observable against an effectful event (legacy path: every edge forced — Stage E E3 trigger)
+REASON	spec-examples-decl/timezone-stringer	golean-stdlib-shims.go:298	goleanShimFmtQuoteBytes	1/1/0 no non-event occurrence beside the call(s) (legacy path: every edge forced)	->	1/1/1 no occurrence observable against an effectful event (legacy path: every edge forced — Stage E E3 trigger)
+REASON	TWIN	/home/dev/projects/golean/.claude/worktrees/unseq-stage-e/.tmp/census/twin-prog/raft/raft.go:524	*raft.hardState	3/0/0 no call occurrence (legacy path: nothing with an effect to reorder against)	->	0/0/0 field selector on a struct type outside the grammar (raft.raft)
+# F1 makes new(x)'s argument an operand: the one admitted `new` sweep (builtins/e13-sibling-panic-order assertLeftNewCall, `new(int)`) is unchanged; no corpus sweep carries new(expr) beside an effectful event (the audit's census finding stands) — the born evalorder/unseq-conv-alloc rows are the first.
+# count-only changes per package (top 30):
+COUNT	35	TWIN
+COUNT	19	noodler/strings
+COUNT	14	panic-recover/shim-refusal-unrecoverable
+COUNT	12	fmt/fprint-writers
+COUNT	11	stdlib-source/frontier
+COUNT	10	fmt/fprintf-builder
+COUNT	9	fmt/formatter-box-crosspkg
+COUNT	6	examples/wordfreq
+COUNT	6	fmt/sprintf-dyn
+COUNT	6	init/stdlib-initializer-source-through
+COUNT	6	interfaces/assert-imported-method-set
+COUNT	6	noodler/strconv-formatint
+COUNT	6	stdlib-source/builder-cap
+COUNT	6	stdlib-source/builder-fuzz
+COUNT	6	stdlib-source/builder-overlay
+COUNT	6	stdlib-source/errors-wrap
+COUNT	6	stdlib-source/fields-fuzz
+COUNT	6	stdlib-source/slices-sortfunc
+COUNT	6	stdlib-source/strconv-format
+COUNT	6	stdlib-source/strconv-parseuint
+COUNT	6	stdlib-source/strings-fields
+COUNT	6	stdlib-source/strings-split
+COUNT	6	stdlib-source/strings-trimspace
+COUNT	6	strconv/format-parse
+COUNT	6	strings/builder-model
+COUNT	6	strings/fields-conformance
+COUNT	6	strings/join-conformance
+COUNT	6	strings/shim-value-refused
+COUNT	6	strings/split-conformance
+COUNT	6	strings/trimspace-repeat
