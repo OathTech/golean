@@ -1,0 +1,42 @@
+# re-verification at bcf0b371 (tree cc860b04): fixed frontend c2270ff8… + binary 73734062…
+## F1 litmus defaults/sets
+newExprVsCall default 6; set {6}. newCallDropped default «m g» 110; set {109, 110}.
+## F4 probes
+d1StringOfAliasedBytes: census unseq 1 1 1; set {ab, zb}. a6StringOfRunes: census unseq 1 1 1; set {ab, zb}.
+## focused run (195 = 191 affected + 4 born)
+      4 FAIL	frontend-export
+     82 PASS	-
+      9 PASS	confluent
+    100 PASS	membership
+  new/new-expr/untyped-defaults	frontend-export
+  noodler/maps/swap-with-missing	frontend-export
+  noodler/maps/tuple-two-map-targets	frontend-export
+  noodler/maps/tuple-map-and-var	frontend-export
+PASS	evalorder/unseq-conv-alloc/new-expr-vs-call	-
+PASS	evalorder/unseq-conv-alloc/new-call-vs-call	membership
+PASS	evalorder/unseq-conv-alloc/string-bytes-vs-call	membership
+PASS	evalorder/unseq-conv-alloc/string-runes-vs-call	membership
+## census (corpus only, no twin): audited-tip frontend vs fixed frontend
+cand:
+rows=108074 admitted=127
+rows=108102 admitted=131
+EXIT=0
+admitted 127 -> 131 = 127 + the 4 new sweeps of evalorder/unseq-conv-alloc; 321 legacy sweeps changed counts/reason only
+## gates (captured exits)
+### check-unseq-wire
+ok [mut-make-len-over-cap] refused through the CLI, naming: larger than constant cap
+Unseq wire gate: PASS (33 mutants refused through the CLI; exact sets in tests.log)
+### check-wire-boundary
+ok [unseq-make-len-over-cap] refused, naming: larger than constant cap
+Wire boundary gate: PASS (11 byte-level controls + 28 unseq-node controls through the real CLI)
+### check-mem-callsites
+Memory-module raw call-site inventory: PASS (70 (file, declaration, raw-op) rows, all inventoried with reasons)
+### check-bugs
+check-bugs: backlog — 14 unexplained fidelity failure(s): coverage 10/10; latitude 4/4; wrong-answer 0/0 ('scripts/check-bugs.sh --list')
+check-bugs: 'wrong-answer' is the class that ratchets toward 0; 'coverage' retires when the feature lands and 'latitude' only by an envelope.
+### check-unseq-scheduler
+Unseq scheduler gate: PASS
+EXIT=0
+### lake build
+Build completed successfully (96 jobs).
+EXIT=0

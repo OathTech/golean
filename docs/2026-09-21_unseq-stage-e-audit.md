@@ -352,3 +352,71 @@ or the NaN lane. Outside-family behaviour: 241 rows sampled from baseline PASS r
 4. F4: `d.occ` for the `[]byte`/`[]rune → string` conversions, or the pin recorded by name.
 5. F5/F6/F7/F8: records — one sentence each in the design §E4 / inventory / handoff E5 list.
 6. F9: no action.
+
+## Re-verification (fix round `bcf0b371`, 2026-09-21)
+
+**REVISED VERDICT: MERGE-CLEAN** — F1 (the `new(expr)` wrong answer), F2 (`ref $binder` fail-open) and F3
+(unchecked literal indices / constant sizes) are fixed and refuse or compute exactly as the spec and gc do on
+my own litmuses and mutants; F4 (`string([]byte)`/`string([]rune)` as a pin hidden as forced) is now an
+occurrence with the envelope {ab, zb} and gc's `zb` inside; F5's spec reading is written AS a reading with the
+alternative named and marked PENDING [USER] (design §E4, inventory, handoff). The baseline moves by exactly the
+four born rows over my audited tree; 195 affected + born rows PASS in their pinned lanes; 241 outside-family rows
+are byte-identical to main's frontend + binary; the census is unchanged over shared rows; every gate I ran is
+green with captured exits. Nothing new of finding grade; two nits recorded below. The seven ratification items
+(the handoff's six + F5's reading) remain PENDING [USER].
+
+[AGENT] auditor, ordered by the [AGENT] coordinator's re-verification request (2026-09-21, relayed). Method:
+`git checkout --detach bcf0b371` in my worktree (audited tip `3649b7db` = tree `0be0603a`, snapshotted at
+`refs/snapshots/fix-round-0921/pre-rebase`; the fix round = tree `cc860b04`, compared as TREES because of the
+rebase over `769bbf23`); my previously copied `.lake` removed and re-copied from the candidate worktree at
+identical source (binary `73734062…`), `scripts/capped lake build` EXIT=0 (96 jobs); the fixed frontend rebuilt
+(`c2270ff8…`); main's frontend/binary as before (`0e3eff71…` / `0681abc6…`). The runtime diff is confined to
+`tools/nativefrontend/unseq.go` (+36/−8), `unseq_lower.go` (+27/−5), `GoLean/NativeToIR.lean` (+90/−3) and
+tests/wires;
+`GoLean/GoCore/` is byte-identical to the audited tree (0 lines), so the coherence/totality results of the first
+pass carry over unchanged (I did not re-run `check-core-audit` / the eval tests). Evidence:
+`docs/evidence/2026-09-21_unseq-stage-e-audit/reverify-*`.
+
+### Per item
+
+| item | what I ran | observed | verdict |
+|---|---|---|---|
+| **F1** `new(x)` | `f1-new-expr-litmus.go` on the fixed pair; census; set; the emitted graph | `*new(x) + m()` → **6**, set {6} (gc 6, main 6); census `unseq 2 1 2`; graph: `read0(x)` is an OPERAND consumed by `new1` (inside `new`'s window), `call3 after new1` — `x`'s read forced before `m`; the only unordered node is `deref2` of the fresh pointer | FIXED |
+| **F1** dropped call | `f1-new-call-dropped-litmus.go` | `*new(m()) + x + h() + g()` → **«m g» 110**, set {109, 110} (gc 110, main 110); graph `call0(m) → new1 after call0 → call5(h) after new1 → call7(g) after call5` — `m` ordered first | FIXED |
+| **F1** rows | `scripts/diff-one` (in the 195-row run) | `unseq-conv-alloc/new-expr-vs-call` PASS strict (wide=1); `new-call-vs-call` PASS/membership (2 members); gc 20/20 `6` / «m g» 110 | PASS |
+| **F1** fresh-pointer deref admission | census of `newPrivateArg` (`*new(x) + m()`, x private) | admitted `unseq 2 1 1` — the deref of the fresh pointer is the "observable" occurrence; set {6} | harmless (NIT R1: one superfluous wide pick per `*new(…)` sweep; the fresh cell has no other writer) |
+| **F2** `ref $binder` argument | M10a, M10a2, M10b re-run | REFUSED at decode «an invocation argument at … takes the address of a binder cell '$u6' — a graph cell is written only by its producer … (audit F2)» | FIXED |
+| **F2** capture arm | M16 (`setG` with `ref $u3` capture) | REFUSED at decode «a func-value capture at … takes the address of a binder cell '$u3' …» (the first pass only reached the arity stuck) | FIXED |
+| **F2** new placement | **M18** `ref $u7` (a binder produced by a NESTED call) as the outer call's argument; **M19** `ref $u7` boxed inside `to-interface`; **M20** `ref $u0` as `new`'s value payload | M18 REFUSED by the F2 text; M19 «hidden read in an argument — boxes a non-atom»; M20 «hidden read in an allocation payload … not an atom» | closed (all three paths refuse at decode) |
+| **F3** constant sizes/indices | M6 (`len -1`), M11 (index 5 / length 1), M12 (duplicate index), **M22** (constant len 2 > cap 1) | all REFUSED at decode, each naming «a compile-time error in Go … (audit F3)» / «outside the literal's length» / «duplicate slice-literal index» | FIXED |
+| **F3** run-time class | Go probe `makeRuntimeNegative` (`len(make([]int, n)) + x + m()`, `n := -1` at run time, sweep admitted) | machine `panic` «makeslice: len out of range» = gc's; NOT a decode refusal | correct (run-time stays Go's panic) |
+| **F4** probes | `d1StringOfAliasedBytes`, `a6StringOfRunes` on the fixed pair | census `unseq 1 1 1` (were legacy «every edge forced»); sets **{ab, zb}** each; gc `zb` 4/4 configs; defaults unchanged (`zb` = gc) | FIXED |
+| **F4** rows / census | `diff-one`; my whole-corpus census fixed vs audited frontend | `string-bytes-vs-call`, `string-runes-vs-call` PASS/membership (2 members; gc 20/20 `zb`); census admitted 131 = 127 + exactly the 4 new sweeps of the born package (the per-function "lost/new" pairs inside that package are line-number shifts); 321 legacy sweeps changed only printed counts/reason (the fmt shim `goleanShimFmtQuoteBytes` sweeps — legacy either way); 0 admission changes elsewhere | as claimed |
+| **F4** strict-default risk | `stringBytesInGuard` (`sink(t && string(b) == "ab", m())`, m writes an alias) | census admitted; set {105} singleton = gc 105 (the `&&` is ordered before `m`, the conversion inside its region forced) | no strict default changed |
+| **F5** reading text | design §E4 «F5» paragraph (l. 520–534), inventory E12 addition, handoff §1/§2 | reading (a) stated as READING (a) with READING (b) named ({6, 8}, a (b) pin), «[AGENT] choice, PENDING [USER] ratification with the Stage E items», the `min/max/copy/append` consequence routed to E5 | as requested |
+| gates | `check-unseq-wire`; `check-wire-boundary`; `check-mem-callsites`; `check-bugs.sh`; `scripts/capped scripts/check-unseq-scheduler` | EXIT=0 each: 33 mutants refused through the CLI; 11 + 28 controls; 70 rows; 114 bugs ok; 35 theorems, classical trio only | green |
+| baseline | `git show 3649b7db:baselines/native-full.tsv` vs the fix round's | 3728 → 3732; born exactly {`new-expr-vs-call`, `new-call-vs-call`, `string-bytes-vs-call`, `string-runes-vs-call`}; changed 0; lost 0; PASS→non-PASS 0; header `# cases: 3732 (3497 PASS / 235 FAIL)` with the written reason | as claimed |
+| `--slow` tail | `ci-slow-fix.tail.txt` | RESULT FAIL on exactly `certificate provenance` STALE (`AdmissionIndices.lean`) + the one `imported-goose/channel/google-search` DRIFT line; every other step ok | 5a pair only |
+| focused rows | `scripts/diff-one` on my 191 affected ids + the 4 born (195) | 82 PASS strict / 9 PASS confluent / 100 PASS membership / 4 FAIL frontend-export = the same four pre-existing reds (`new/new-expr/untyped-defaults`, `noodler/maps/{swap-with-missing,tuple-two-map-targets,tuple-map-and-var}`) | as before |
+| outside-family | `outside-check.py` re-run: 241 baseline-PASS rows outside DIFFER∪born (≤ 2 per package), both frontends × both binaries, default tape | 241/241 identical observations (the worker's 879/879 is the same class) | reproduced |
+| new probes | `newInGuardRegion` (`sink(b && *new(x) > 3, w())`, w writes x); `newCallInGuardRegion` (`new(pr())` in a region before `w()`); `newStructLitArg` (`(*new(T{x: x})).x + m()`); `newPrivateArg` | {0} = gc 0 (the `&&` before `w`, `x` read inside `new` forced); «pr w» 100 = gc (calls in lexical order); {6} = gc 6 (the payload read inside `new`'s window is forced before `m` under reading (a)); 6 = gc | nothing new |
+
+### Anything new
+
+- **R1 (NIT)**: every `*new(…)` beside a call is admitted through the fresh pointer's dereference (`deref` of
+  the `allocate` binder is an occurrence unordered against the sibling call) — one superfluous wide pick per
+  such sweep; the set is a singleton because the fresh cell has no other writer. Recorded by the worker
+  (`new-expr-vs-call` strict, wide=1); a later refinement could mark a deref of a fresh `allocate` binder as
+  stable. No observation depends on it.
+- **R2 (records)**: my census counts 321 legacy sweeps whose printed `nonEvents`/reason changed under F4
+  (the worker's file says 357 including the raft twin) — all legacy on both frontends, so the «census 127 → 127»
+  claim over shared rows holds; the born package adds 4 admitted sweeps (131 in my corpus-only census).
+- F8 (an `after` on a literal `allocate` decodes) stands as the recorded NIT; F6/F7 are subsumed (F7 by F1's
+  fix — `new(m())` now counts `events=2 calls=1`).
+
+### Not re-checked
+
+`check-core-audit` and the eval tests (the core is byte-identical to the audited tree); the full `ci --slow`
+(the worker's tail read instead); the qualified `pkg.V` spelling; a real lifted-closure `ref $binder` capture
+(M16 now refuses at decode on the capture arm, so the earlier suspicion is closed by the arm's text rather than
+by a closure wire).
