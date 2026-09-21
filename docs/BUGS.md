@@ -7360,3 +7360,57 @@ against the runtime's `printpanics`/`exit` interleaving (`deps/go/src/runtime/pa
 a forgery control, per the L4 observer rules) OR, if the shape is genuinely unattributable, keep the
 refusal and move the row's exposure into a named apparatus limit (a `params` note + this entry's
 Cases line). Observer changes are trusted surface #2 → their own lane, audit ask unconditional.
+
+Capture (2026-09-21, [AGENT] worker, lane `records/bug114-capture-0921`; RECORDS ONLY — no observer
+code changed; evidence `docs/evidence/2026-09-21_bug114-capture/`): **the second-boundary shape was NOT
+reproduced on the row.** 73,600 recorded draws (45,600 plain, 28,000 `-race`) plus 1,140 smoke draws —
+74,740 total — over 11 configurations (the generated oracle package, the gate's exact environment
+`GO111MODULE=off GOFLAGS= GODEBUG=panicnil=0 GOTRACEBACK=system`, a freshly truncated
+`oracle.crash`/`oracle.registered` per draw; GOMAXPROCS 1/2/4/8 sequential and unset (=32) under 8- and
+16-way concurrency; both the built binary and the gate's own `go run .`): **0 draws whose authenticated
+report carried a second `panic: `, `fatal error: ` or `runtime stack:`.** Three outcome classes only,
+all with exactly one boundary — abort with the `ok 42` JSON on stdout (the class draw 61 was in:
+13081/32000 plain, 1996/9600 under `go run`), abort with no stdout, and a CLEAN exit 0 with empty stderr
+and empty crash file (57/9600 under `go run`, never with the bare binary). No truncated report was
+observed in any draw. Per-draw exposure, rule of three, one-sided 95%: <= 6.6e-5 on plain draws
+(3/45,600), so P(a K=80 slow run reds on this row) <= ~2.6e-3 (~1 run in 380) under ISOLATED conditions —
+plainly not the gate's regime (the one event occurred inside a `GOLEAN_MEM_MAX=48G scripts/capped
+scripts/ci --slow` run with the slow-tier enumerator saturating the box); with a single observed event
+the gate-conditions rate is not estimable to better than an order of magnitude (at p = 6e-4 / 2.5e-3 /
+1e-2 per plain draw the per-slow-run risk is 2.4% / 9.5% / 33%). Box-wide memory pressure was NOT
+manufactured to chase it — the box is shared with other lanes.
+
+Classification against the pin (go1.26.5, `deps/go` @ `c19862e5f8`): the three boundary tokens have
+exactly these printers — `panic: ` in `printpanics` (`panic.go:747`) and in `gopanic`'s four
+bad-context guards (`panic.go:820,827,833,842`, each followed immediately by a `throw`); `fatal error: `
+in `throw` (`panic.go:1224`) and `fatal` (`panic.go:1248`); `runtime stack:` in `dopanic_m`
+(`panic.go:1587`), only when the crashing g IS the M's g0. All are on the terminal path, which is
+serialised by `startpanic_m` case 0 (`panic.go:1530-1538`: `m.dying=1`, `panicking.Add(1)`,
+`lock(&paniclk)`, `freezetheworld`) and `dopanic_m`'s `unlock(&paniclk)` / `panicking.Add(-1)`
+(`panic.go:1604,1606`), and all printing is under the global `debuglock` (`print.go:59,69`) so reports
+concatenate and never interleave. Therefore **a token after the selected origin's trace header means a
+SECOND terminal event began printing after the first report's traceback**, in one of two sub-shapes:
+(a) a second complete report from another M that was parked on `paniclk` — two independent origins,
+genuinely UNATTRIBUTABLE, the refusal is correct; (b) a same-M continuation — a `throw` on the M that is
+already printing (`m.dying==1`) prints `fatal error: <msg>` and then `startpanic_m` case 1 prints the
+literal line `panic during panic` (`panic.go:1544`) — one origin, ATTRIBUTABLE. Shape (a) was exhibited
+and the gate's refusal text reproduced byte for byte on a throwaway probe (eight goroutines panicking
+together; `probe-two-abort.report`, two complete reports in one crash file), with two real row draws as
+the positive control (`refusal-repro.txt`). **Shape (b) was NOT observed and is named from the source,
+not from a capture.** For THIS row shape (a) with a second `panic: ` is not reachable from the program
+text (one panic site; the generated `main` can only panic if the stdout JSON encode fails, and stdout is
+a regular file under the gate), so a second terminal event here must be runtime-internal — but which
+token draw 61 carried is NOT DETERMINED, and this lane does not guess it.
+
+Consequence for the fix plan above: it still stands, but **the interim "a `params` note" is not
+implementable as written** — `scripts/diff-coverage`'s `parse_lane_params` fails closed on any key
+outside `{width,sites,cap,work,members,statuses,tier,backedge,nonterm,engine}` ("unknown lane param
+key") and requires a positive integer for the rest, so a free-text apparatus limit must go in the row's
+`why` column in `Corpus/coverage/exec/goroutines/wake-then-abort/cases.tsv` (proposed wording in the
+evidence README §5b). On the Cases line: `Cases: goroutines/wake-then-abort` would be safe under
+`scripts/check-bugs.sh` — for `Pinned-by: none` the checker verifies EXISTENCE only (the row is in
+`baselines/native-full.tsv` as PASS) and must NOT be paired with `- Expect: FAIL`, which would demand a
+red row; it does not move the untriaged ratchet either. Proposed, not applied: the entry's header lines
+are unchanged. No widening of `crashview.go` is licensed by this evidence (shape (a) must stay refused;
+shape (b) is uncaptured); the follow-up observer lane's rule, its positive control and its FOUR forgery
+controls are specified in the evidence README §5a.

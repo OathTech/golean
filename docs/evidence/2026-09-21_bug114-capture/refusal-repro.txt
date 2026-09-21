@@ -1,0 +1,24 @@
+# Observer transcript — BUG-114 capture lane, 2026-09-21 [AGENT]
+# harness: go build -o .tmp/coverageharness ./tools/coverageharness  (worktree bug114-capture, branch records/bug114-capture-0921)
+# ack file: 11 bytes, exactly "registered\n" (the byte-exact oracle.registered the crash hook writes)
+
+## A. POSITIVE CONTROL — a real draw of goroutines/wake-then-abort (plain, `go run .`, abort with 42 on stdout)
+$ coverageharness --abort-message row-abort-42-printed.stderr --expected-status panic --crash-report <same bytes minus the 'exit status 2' trailer> --crash-registered ack
+"worker abort in the private segment" EXIT=0
+$ coverageharness --split-stderr ... --expected-status panic ...
+"" EXIT=0
+
+## B. POSITIVE CONTROL — a real draw, abort with no stdout
+"worker abort in the private segment" EXIT=0
+
+## C. THE REFUSAL, reproduced on a two-abort report (probe p1, NOT a corpus row)
+$ coverageharness --abort-message probe.stderr --expected-status panic --crash-report probe-two-abort.report --crash-registered ack
+abort classification: additional or unknown report boundary after selected origin, refused
+ EXIT=3
+$ coverageharness --split-stderr probe.stderr --expected-status panic ...
+abort classification: additional or unknown report boundary after selected origin, refused
+ EXIT=3
+
+## D. boundary tokens in probe-two-abort.report (line numbers of un-indented occurrences)
+1:panic: probe concurrent abort
+159:panic: probe concurrent abort

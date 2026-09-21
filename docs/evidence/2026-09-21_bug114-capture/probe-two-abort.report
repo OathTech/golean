@@ -1,0 +1,169 @@
+panic: probe concurrent abort
+
+goroutine 18 gp=0x1a5e9b8261e0 m=0 mp=0x55cf00 [running]:
+panic({0x4951c0?, 0x4b66f0?})
+	/usr/local/go/src/runtime/panic.go:879 +0x16f fp=0x1a5e9b6f67c0 sp=0x1a5e9b6f6710 pc=0x4776ef
+main.main.func1()
+	/home/dev/projects/golean/.claude/worktrees/bug114-capture/.tmp/probes/p1/main.go:11 +0x2c fp=0x1a5e9b6f67e0 sp=0x1a5e9b6f67c0 pc=0x48b90c
+runtime.goexit({})
+	/usr/local/go/src/runtime/asm_amd64.s:1771 +0x1 fp=0x1a5e9b6f67e8 sp=0x1a5e9b6f67e0 pc=0x47d641
+created by main.main in goroutine 1
+	/home/dev/projects/golean/.claude/worktrees/bug114-capture/.tmp/probes/p1/main.go:9 +0x37
+
+goroutine 1 gp=0x1a5e9b6461e0 m=nil [select (no cases)]:
+runtime.gopark(0x1a5e9b8020d8?, 0x412e80?, 0xe0?, 0x61?, 0x3?)
+	/usr/local/go/src/runtime/proc.go:462 +0xce fp=0x1a5e9b80cee8 sp=0x1a5e9b80cec8 pc=0x477b8e
+runtime.block()
+	/usr/local/go/src/runtime/select.go:104 +0x26 fp=0x1a5e9b80cf18 sp=0x1a5e9b80cee8 pc=0x459f26
+main.main()
+	/home/dev/projects/golean/.claude/worktrees/bug114-capture/.tmp/probes/p1/main.go:15 +0x8e fp=0x1a5e9b80cf48 sp=0x1a5e9b80cf18 pc=0x48b8ce
+runtime.main()
+	/usr/local/go/src/runtime/proc.go:290 +0x2d5 fp=0x1a5e9b80cfe0 sp=0x1a5e9b80cf48 pc=0x4479b5
+runtime.goexit({})
+	/usr/local/go/src/runtime/asm_amd64.s:1771 +0x1 fp=0x1a5e9b80cfe8 sp=0x1a5e9b80cfe0 pc=0x47d641
+
+goroutine 2 gp=0x1a5e9b646780 m=nil [force gc (idle)]:
+runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+	/usr/local/go/src/runtime/proc.go:462 +0xce fp=0x1a5e9b6fafa8 sp=0x1a5e9b6faf88 pc=0x477b8e
+runtime.goparkunlock(...)
+	/usr/local/go/src/runtime/proc.go:468
+runtime.forcegchelper()
+	/usr/local/go/src/runtime/proc.go:375 +0xb3 fp=0x1a5e9b6fafe0 sp=0x1a5e9b6fafa8 pc=0x447cd3
+runtime.goexit({})
+	/usr/local/go/src/runtime/asm_amd64.s:1771 +0x1 fp=0x1a5e9b6fafe8 sp=0x1a5e9b6fafe0 pc=0x47d641
+created by runtime.init.7 in goroutine 1
+	/usr/local/go/src/runtime/proc.go:363 +0x1a
+
+goroutine 3 gp=0x1a5e9b646d20 m=nil [GC sweep wait]:
+runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+	/usr/local/go/src/runtime/proc.go:462 +0xce fp=0x1a5e9b6fb788 sp=0x1a5e9b6fb768 pc=0x477b8e
+runtime.goparkunlock(...)
+	/usr/local/go/src/runtime/proc.go:468
+runtime.bgsweep(0x1a5e9b71a000)
+	/usr/local/go/src/runtime/mgcsweep.go:279 +0x94 fp=0x1a5e9b6fb7c8 sp=0x1a5e9b6fb788 pc=0x432dd4
+runtime.gcenable.gowrap1()
+	/usr/local/go/src/runtime/mgc.go:214 +0x17 fp=0x1a5e9b6fb7e0 sp=0x1a5e9b6fb7c8 pc=0x4243f7
+runtime.goexit({})
+	/usr/local/go/src/runtime/asm_amd64.s:1771 +0x1 fp=0x1a5e9b6fb7e8 sp=0x1a5e9b6fb7e0 pc=0x47d641
+created by runtime.gcenable in goroutine 1
+	/usr/local/go/src/runtime/mgc.go:214 +0x66
+
+goroutine 4 gp=0x1a5e9b646f00 m=nil [GC scavenge wait]:
+runtime.gopark(0x1a5e9b71a000?, 0x4b60a8?, 0x1?, 0x0?, 0x1a5e9b646f00?)
+	/usr/local/go/src/runtime/proc.go:462 +0xce fp=0x1a5e9b6fbf78 sp=0x1a5e9b6fbf58 pc=0x477b8e
+runtime.goparkunlock(...)
+	/usr/local/go/src/runtime/proc.go:468
+runtime.(*scavengerState).park(0x55bf00)
+	/usr/local/go/src/runtime/mgcscavenge.go:425 +0x49 fp=0x1a5e9b6fbfa8 sp=0x1a5e9b6fbf78 pc=0x430909
+runtime.bgscavenge(0x1a5e9b71a000)
+	/usr/local/go/src/runtime/mgcscavenge.go:653 +0x3c fp=0x1a5e9b6fbfc8 sp=0x1a5e9b6fbfa8 pc=0x430e7c
+runtime.gcenable.gowrap2()
+	/usr/local/go/src/runtime/mgc.go:215 +0x17 fp=0x1a5e9b6fbfe0 sp=0x1a5e9b6fbfc8 pc=0x4243b7
+runtime.goexit({})
+	/usr/local/go/src/runtime/asm_amd64.s:1771 +0x1 fp=0x1a5e9b6fbfe8 sp=0x1a5e9b6fbfe0 pc=0x47d641
+created by runtime.gcenable in goroutine 1
+	/usr/local/go/src/runtime/mgc.go:215 +0xa5
+
+goroutine 17 gp=0x1a5e9b826000 m=nil [finalizer wait]:
+runtime.gopark(0x457115?, 0x57c960?, 0x13?, 0x0?, 0x1a5e9b6fa670?)
+	/usr/local/go/src/runtime/proc.go:462 +0xce fp=0x1a5e9b6fa620 sp=0x1a5e9b6fa600 pc=0x477b8e
+runtime.runFinalizers()
+	/usr/local/go/src/runtime/mfinal.go:210 +0x107 fp=0x1a5e9b6fa7e0 sp=0x1a5e9b6fa620 pc=0x423407
+runtime.goexit({})
+	/usr/local/go/src/runtime/asm_amd64.s:1771 +0x1 fp=0x1a5e9b6fa7e8 sp=0x1a5e9b6fa7e0 pc=0x47d641
+created by runtime.createfing in goroutine 1
+	/usr/local/go/src/runtime/mfinal.go:172 +0x3d
+
+goroutine 19 gp=0x1a5e9b8263c0 m=nil [runnable]:
+runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+	/usr/local/go/src/runtime/proc.go:462 +0xce fp=0x1a5e9b6f6f20 sp=0x1a5e9b6f6f00 pc=0x477b8e
+runtime.chanrecv(0x1a5e9b802070, 0x0, 0x1)
+	/usr/local/go/src/runtime/chan.go:667 +0x4ae fp=0x1a5e9b6f6f98 sp=0x1a5e9b6f6f20 pc=0x41340e
+runtime.chanrecv1(0x0?, 0x0?)
+	/usr/local/go/src/runtime/chan.go:509 +0x12 fp=0x1a5e9b6f6fc0 sp=0x1a5e9b6f6f98 pc=0x412f52
+main.main.func1()
+	/home/dev/projects/golean/.claude/worktrees/bug114-capture/.tmp/probes/p1/main.go:10 +0x19 fp=0x1a5e9b6f6fe0 sp=0x1a5e9b6f6fc0 pc=0x48b8f9
+runtime.goexit({})
+	/usr/local/go/src/runtime/asm_amd64.s:1771 +0x1 fp=0x1a5e9b6f6fe8 sp=0x1a5e9b6f6fe0 pc=0x47d641
+created by main.main in goroutine 1
+	/home/dev/projects/golean/.claude/worktrees/bug114-capture/.tmp/probes/p1/main.go:9 +0x37
+
+goroutine 20 gp=0x1a5e9b8265a0 m=nil [runnable]:
+runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+	/usr/local/go/src/runtime/proc.go:462 +0xce fp=0x1a5e9b6f7720 sp=0x1a5e9b6f7700 pc=0x477b8e
+runtime.chanrecv(0x1a5e9b802070, 0x0, 0x1)
+	/usr/local/go/src/runtime/chan.go:667 +0x4ae fp=0x1a5e9b6f7798 sp=0x1a5e9b6f7720 pc=0x41340e
+runtime.chanrecv1(0x0?, 0x0?)
+	/usr/local/go/src/runtime/chan.go:509 +0x12 fp=0x1a5e9b6f77c0 sp=0x1a5e9b6f7798 pc=0x412f52
+main.main.func1()
+	/home/dev/projects/golean/.claude/worktrees/bug114-capture/.tmp/probes/p1/main.go:10 +0x19 fp=0x1a5e9b6f77e0 sp=0x1a5e9b6f77c0 pc=0x48b8f9
+runtime.goexit({})
+	/usr/local/go/src/runtime/asm_amd64.s:1771 +0x1 fp=0x1a5e9b6f77e8 sp=0x1a5e9b6f77e0 pc=0x47d641
+created by main.main in goroutine 1
+	/home/dev/projects/golean/.claude/worktrees/bug114-capture/.tmp/probes/p1/main.go:9 +0x37
+
+goroutine 21 gp=0x1a5e9b826780 m=nil [runnable]:
+runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+	/usr/local/go/src/runtime/proc.go:462 +0xce fp=0x1a5e9b6f7f20 sp=0x1a5e9b6f7f00 pc=0x477b8e
+runtime.chanrecv(0x1a5e9b802070, 0x0, 0x1)
+	/usr/local/go/src/runtime/chan.go:667 +0x4ae fp=0x1a5e9b6f7f98 sp=0x1a5e9b6f7f20 pc=0x41340e
+runtime.chanrecv1(0x0?, 0x0?)
+	/usr/local/go/src/runtime/chan.go:509 +0x12 fp=0x1a5e9b6f7fc0 sp=0x1a5e9b6f7f98 pc=0x412f52
+main.main.func1()
+	/home/dev/projects/golean/.claude/worktrees/bug114-capture/.tmp/probes/p1/main.go:10 +0x19 fp=0x1a5e9b6f7fe0 sp=0x1a5e9b6f7fc0 pc=0x48b8f9
+runtime.goexit({})
+	/usr/local/go/src/runtime/asm_amd64.s:1771 +0x1 fp=0x1a5e9b6f7fe8 sp=0x1a5e9b6f7fe0 pc=0x47d641
+created by main.main in goroutine 1
+	/home/dev/projects/golean/.claude/worktrees/bug114-capture/.tmp/probes/p1/main.go:9 +0x37
+
+goroutine 22 gp=0x1a5e9b826960 m=nil [runnable]:
+runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+	/usr/local/go/src/runtime/proc.go:462 +0xce fp=0x1a5e9b6f8720 sp=0x1a5e9b6f8700 pc=0x477b8e
+runtime.chanrecv(0x1a5e9b802070, 0x0, 0x1)
+	/usr/local/go/src/runtime/chan.go:667 +0x4ae fp=0x1a5e9b6f8798 sp=0x1a5e9b6f8720 pc=0x41340e
+runtime.chanrecv1(0x0?, 0x0?)
+	/usr/local/go/src/runtime/chan.go:509 +0x12 fp=0x1a5e9b6f87c0 sp=0x1a5e9b6f8798 pc=0x412f52
+main.main.func1()
+	/home/dev/projects/golean/.claude/worktrees/bug114-capture/.tmp/probes/p1/main.go:10 +0x19 fp=0x1a5e9b6f87e0 sp=0x1a5e9b6f87c0 pc=0x48b8f9
+runtime.goexit({})
+	/usr/local/go/src/runtime/asm_amd64.s:1771 +0x1 fp=0x1a5e9b6f87e8 sp=0x1a5e9b6f87e0 pc=0x47d641
+created by main.main in goroutine 1
+	/home/dev/projects/golean/.claude/worktrees/bug114-capture/.tmp/probes/p1/main.go:9 +0x37
+
+goroutine 23 gp=0x1a5e9b826b40 m=4 mp=0x1a5e9b780008 [running]:
+	goroutine running on other thread; stack unavailable
+created by main.main in goroutine 1
+	/home/dev/projects/golean/.claude/worktrees/bug114-capture/.tmp/probes/p1/main.go:9 +0x37
+
+goroutine 24 gp=0x1a5e9b826d20 m=nil [runnable]:
+runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+	/usr/local/go/src/runtime/proc.go:462 +0xce fp=0x1a5e9b6f9720 sp=0x1a5e9b6f9700 pc=0x477b8e
+runtime.chanrecv(0x1a5e9b802070, 0x0, 0x1)
+	/usr/local/go/src/runtime/chan.go:667 +0x4ae fp=0x1a5e9b6f9798 sp=0x1a5e9b6f9720 pc=0x41340e
+runtime.chanrecv1(0x0?, 0x0?)
+	/usr/local/go/src/runtime/chan.go:509 +0x12 fp=0x1a5e9b6f97c0 sp=0x1a5e9b6f9798 pc=0x412f52
+main.main.func1()
+	/home/dev/projects/golean/.claude/worktrees/bug114-capture/.tmp/probes/p1/main.go:10 +0x19 fp=0x1a5e9b6f97e0 sp=0x1a5e9b6f97c0 pc=0x48b8f9
+runtime.goexit({})
+	/usr/local/go/src/runtime/asm_amd64.s:1771 +0x1 fp=0x1a5e9b6f97e8 sp=0x1a5e9b6f97e0 pc=0x47d641
+created by main.main in goroutine 1
+	/home/dev/projects/golean/.claude/worktrees/bug114-capture/.tmp/probes/p1/main.go:9 +0x37
+
+goroutine 25 gp=0x1a5e9b826f00 m=nil [runnable]:
+main.main.func1()
+	/home/dev/projects/golean/.claude/worktrees/bug114-capture/.tmp/probes/p1/main.go:9 fp=0x1a5e9b6f9fe0 sp=0x1a5e9b6f9fd8 pc=0x48b8e0
+runtime.goexit({})
+	/usr/local/go/src/runtime/asm_amd64.s:1771 +0x1 fp=0x1a5e9b6f9fe8 sp=0x1a5e9b6f9fe0 pc=0x47d641
+created by main.main in goroutine 1
+	/home/dev/projects/golean/.claude/worktrees/bug114-capture/.tmp/probes/p1/main.go:9 +0x37
+panic: probe concurrent abort
+
+goroutine 23 gp=0x1a5e9b826b40 m=4 mp=0x1a5e9b780008 [running]:
+panic({0x4951c0?, 0x4b66f0?})
+	/usr/local/go/src/runtime/panic.go:879 +0x16f fp=0x1a5e9b6f8fc0 sp=0x1a5e9b6f8f10 pc=0x4776ef
+main.main.func1()
+	/home/dev/projects/golean/.claude/worktrees/bug114-capture/.tmp/probes/p1/main.go:11 +0x2c fp=0x1a5e9b6f8fe0 sp=0x1a5e9b6f8fc0 pc=0x48b90c
+runtime.goexit({})
+	/usr/local/go/src/runtime/asm_amd64.s:1771 +0x1 fp=0x1a5e9b6f8fe8 sp=0x1a5e9b6f8fe0 pc=0x47d641
+created by main.main in goroutine 1
+	/home/dev/projects/golean/.claude/worktrees/bug114-capture/.tmp/probes/p1/main.go:9 +0x37

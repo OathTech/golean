@@ -1,0 +1,12 @@
+configuration	driver	draws	abort, 42 on stdout	abort, no stdout	clean exit 0 (ok 42)	other	draws with >1 report boundary
+plain binary, GOMAXPROCS=1, sequential	binary	1000	0	1000	0	0	0
+-race binary, GOMAXPROCS=1, sequential	binary	1000	0	1000	0	0	0
+plain binary, GOMAXPROCS=2, sequential	binary	1000	766	234	0	0	0
+-race binary, GOMAXPROCS=2, sequential	binary	1000	436	564	0	0	0
+plain binary, GOMAXPROCS=4, sequential	binary	1000	477	523	0	0	0
+-race binary, GOMAXPROCS=4, sequential	binary	1000	567	433	0	0	0
+plain binary, GOMAXPROCS=8, sequential	binary	1000	518	482	0	0	0
+-race binary, GOMAXPROCS=8, sequential	binary	1000	558	442	0	0	0
+plain binary, GOMAXPROCS unset (=32), 16 concurrent loops	binary	32000	13081	18919	0	0	0
+-race binary, GOMAXPROCS unset (=32), 8 concurrent loops	binary	24000	9712	14288	0	0	0
+plain `go run .`, GOMAXPROCS unset (=32), 16 concurrent loops	go run	9600	1996	7547	57	0	0
