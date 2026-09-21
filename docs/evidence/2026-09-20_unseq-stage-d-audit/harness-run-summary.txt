@@ -1,0 +1,7 @@
+# scripts/capped scripts/coverage run over the 100 alpha-CLOSED ids (harness = gc oracle + DFS engine; continue-label on its new confluent/dedup lane)
+differential coverage summary: cases=100 pass=97 fail=3 export_status=0
+# FAIL rows (all three are baseline FAIL / BUG-104 Cases pins; alpha set = DFS set on each)
+FAIL	builtins/e13-sibling-panic-order/map-compound-index-key-vs-call	differential
+FAIL	builtins/e13-sibling-panic-order/map-compound-index-key-vs-recv	differential
+FAIL	builtins/e13-sibling-panic-order/map-compound-index-key-vs-method	differential
+PASS	spec-examples-stmt/continue-label	labels,continue,loops,range,nested,slices,closures	confluent	|set|=1 certified over all schedules; coverage-observations: observations=1 steps=5145 probes=0 sites=5122 leaves=0 maxdepth=0 width=4 engine=dedup nodes=5122 edges=5145 dedupHits=24 certified=checkCert

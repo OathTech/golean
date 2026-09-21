@@ -1,0 +1,45 @@
+## P1-rankorder (beta=12 alpha=12 SAME)
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1203}]}
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1302}]}
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":2013}]}
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":2103}]}
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":2301}]}
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":2310}]}
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":3012}]}
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":3021}]}
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":3102}]}
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":3120}]}
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":3201}]}
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":3210}]}
+## P2-growshrink (beta=8 alpha=8 SAME)
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1023}]}
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1032}]}
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":123}]}
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":132}]}
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":213}]}
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":231}]}
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":312}]}
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":321}]}
+## P3-guard (beta=3 alpha=3 SAME)
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":100}]}
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":11}]}
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":111}]}
+## P4-pool-indep (beta=4 alpha=4 SAME)
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1001}]}
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":101}]}
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1010}]}
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":110}]}
+## P4b-pool-chan (beta=2 alpha=2 SAME)
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":12}]}
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":21}]}
+## P7-merge (beta=2 alpha=2 SAME)
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":10}]}
+## P8-cycle
+ALPHA (stderr): coverage-observations: dedup engine: machine step failed at node 25 under vector []: unseq: malformed graph — pending active work with no ready occurrence
+ALPHA-STATS: coverage-observations: observations=12 steps=3649 probes=0 sites=3604 leaves=0 maxdepth=0 width=8 engine=dedup nodes=3604 edges=3649 dedupHits=46 certified=checkCert
+ALPHA-STATS: coverage-observations: observations=8 steps=2385 probes=0 sites=2356 leaves=0 maxdepth=0 width=8 engine=dedup nodes=2356 edges=2385 dedupHits=30 certified=checkCert
+ALPHA-STATS: coverage-observations: observations=3 steps=1473 probes=0 sites=1443 leaves=0 maxdepth=0 width=8 engine=dedup nodes=1443 edges=1473 dedupHits=31 certified=checkCert
+ALPHA-STATS: coverage-observations: observations=4 steps=4583 probes=0 sites=4502 leaves=0 maxdepth=0 width=8 engine=dedup nodes=4502 edges=4583 dedupHits=82 certified=checkCert
+ALPHA-STATS: coverage-observations: observations=2 steps=1200 probes=0 sites=1127 leaves=0 maxdepth=0 width=8 engine=dedup nodes=1127 edges=1200 dedupHits=74 certified=checkCert
+ALPHA-STATS: coverage-observations: observations=2 steps=4076 probes=0 sites=3998 leaves=0 maxdepth=0 width=8 engine=dedup nodes=3998 edges=4076 dedupHits=79 certified=checkCert

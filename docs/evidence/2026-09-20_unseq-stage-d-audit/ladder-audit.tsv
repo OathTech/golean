@@ -1,0 +1,18 @@
+START 2026-09-20T23:40:05Z
+loop	N=1	silent	heap	heap0=0	heapF=7	nextAddr=7	cells_added=7	rc=0	time_wall=0:00.40	max_rss_kb=754924	
+loop	N=2	silent	heap	heap0=0	heapF=11	nextAddr=11	cells_added=11	rc=0	time_wall=0:00.37	max_rss_kb=750696	
+loop	N=3	silent	heap	heap0=0	heapF=15	nextAddr=15	cells_added=15	rc=0	time_wall=0:00.37	max_rss_kb=754816	
+loop	N=4	silent	heap	heap0=0	heapF=19	nextAddr=19	cells_added=19	rc=0	time_wall=0:00.40	max_rss_kb=756960	
+loop	N=5	silent	heap	heap0=0	heapF=23	nextAddr=23	cells_added=23	rc=0	time_wall=0:00.37	max_rss_kb=755416	
+loop	N=6	silent	heap	heap0=0	heapF=27	nextAddr=27	cells_added=27	rc=0	time_wall=0:00.39	max_rss_kb=755068	
+loop	N=8	silent	heap	heap0=0	heapF=35	nextAddr=35	cells_added=35	rc=0	time_wall=0:00.39	max_rss_kb=755836	
+loop	N=12	silent	heap	heap0=0	heapF=51	nextAddr=51	cells_added=51	rc=0	time_wall=0:00.38	max_rss_kb=754668	
+loop	N=8	silent	beta	members=1	leaves=256	sites=255	steps=36503	probes=765	maxDepth=8	wall_ms=2852	rc=0	time_wall=0:03.22	max_rss_kb=755612	
+wide	N=6	silent	beta	members=1	leaves=720	sites=517	steps=71178	probes=1551	maxDepth=5	wall_ms=3360	rc=0	time_wall=0:03.72	max_rss_kb=759632	
+loop	N=12	silent	alpha loop	N=12	silent	alpha	rc=0	wall_ms=107	rc=0	time_wall=0:00.48	max_rss_kb=756864	coverage-observations: observations=1 steps=1430 probes=0 sites=1419 leaves=0 maxdepth=0 width=8 engine=dedup nodes=1419 edges=1430 dedupHits=12 certified=checkCert
+loop	N=3	printing	alpha loop	N=3	printing	alpha	rc=1	wall_ms=3	rc=0	time_wall=0:00.38	max_rss_kb=756592	coverage-observations: dedup engine: output event at node 49 (a print/println step wrote 1 chunk(s)): engine=dedup keys nodes on state and output is a trace — this row cannot use engine=dedup (use the default enumerator)
+wide	N=4	printing	alpha wide	N=4	printing	alpha	rc=1	wall_ms=3	rc=0	time_wall=0:00.38	max_rss_kb=755924	coverage-observations: dedup engine: output event at node 60 (a print/println step wrote 1 chunk(s)): engine=dedup keys nodes on state and output is a trace — this row cannot use engine=dedup (use the default enumerator)
+wide	N=8	silent	alpha wide	N=8	silent	alpha	rc=0	wall_ms=37579	rc=0	time_wall=0:37.98	max_rss_kb=767164	coverage-observations: observations=1 steps=22655 probes=0 sites=21887 leaves=0 maxdepth=0 width=8 engine=dedup nodes=21887 edges=22655 dedupHits=769 certified=checkCert
+wide	N=7	printing	beta	REFUSED	wall_ms=31578	observation cap N=4096 exceeded — the case is too wide for enumeration (design note: needs a per-case predicate)	rc=0	time_wall=0:31.97	max_rss_kb=762052	
+loop	N=13	printing	beta	REFUSED	wall_ms=91824	observation cap N=4096 exceeded — the case is too wide for enumeration (design note: needs a per-case predicate)	rc=0	time_wall=1:32.20	max_rss_kb=773640	
+LADDER_AUDIT_DONE 2026-09-20T23:42:59Z

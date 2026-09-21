@@ -1,0 +1,12 @@
+MUT P1 unmutated accepted=true members=12 nodes=3604 edges=3649 hits=46 widest=4 n3way=9 n2way=33
+MUT M1 dropped-member accepted=false
+MUT M2 hints->0 accepted=false
+MUT M3 dropped-node accepted=false
+MUT M4 3way-last-branch-dropped accepted=false
+MUT M5 fabricated-member accepted=false
+MUT M6 3way-hints-swapped accepted=false
+MUT M7 3way-hints-all-first accepted=false
+MUT M8 2way-hints-swapped accepted=false
+MUT M9 4way-last-branch-dropped accepted=false
+MUT M10 4way-hints-rotated accepted=false
+MUT M11 4way-extra-branch-added accepted=false

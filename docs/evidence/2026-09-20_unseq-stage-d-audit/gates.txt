@@ -1,0 +1,16 @@
+check-mem-callsites EXIT=0
+check-unseq-scheduler EXIT=0 (35 required theorems; classical trio only)
+check-core-audit EXIT=0
+check-bugs EXIT=0 (113 bugs)
+check-evidence-size EXIT=0
+check-agents-alias EXIT=0
+gocore-eval-tests EXIT=0: 274 ok
+ok: DEDUP-α: the UNMUTATED W1 certificate is ACCEPTED with members exactly [1, 2] (nodes=224 edges=229 dedupHits=6)
+ok: DEDUP-α: the widest pick node branches EXACTLY |ready| = 3 ways (the graph's first ready set; no node branches more)
+ok: DEDUP-α: M1 dropped member REFUSED
+ok: DEDUP-α: M2 successor hints redirected to node 0 REFUSED
+ok: DEDUP-α: M3 dropped node REFUSED
+ok: DEDUP-α: M4 a pick node's last branch DROPPED (two hints where |ready| = 3) REFUSED — the checker enumerates the bound itself
+ok: DEDUP-α: M5 fabricated member REFUSED
+warm lake build EXIT=0, warnings: 0
+candidate binary sha256: 0681abc69cf90894…; main binary: 90024323dbe00082…

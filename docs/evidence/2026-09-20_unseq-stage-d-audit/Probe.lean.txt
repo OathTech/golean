@@ -1,0 +1,234 @@
+import GoLean.CLI
+open GoLean GoCore GoCore.Machine
+
+/-! Audit probes for Stage D route α (2026-09-20, [AGENT] auditor). Each probe is a hand-built
+program run through BOTH engines via the EXISTING drivers: β = `CLI.explore`, α =
+`CLI.runDedupObservations` (prints the certified set) / `EnumDedup.buildCert` + the VERIFIED
+`checkCert` for the mutation controls. Output: `PROBE <name> BETA` lines, then `PROBE <name> ALPHA`
+lines; the shell compares the sorted member lines. -/
+
+def intP (id : String) : Param := ⟨id, .int⟩
+def boolP (id : String) : Param := ⟨id, .bool⟩
+def fnTy (ps rs : List Ty) : Ty := .funcType ps rs false
+def pInt : Ty := .pointer .int
+def chanTy : Ty := .chan .both .int
+def derefI (p : String) : Expr := .deref (.var p) .int
+def storeP (p : String) (e : Expr) : Stmt := .assign (.addr (.var p)) e
+def ret (r : String) (e : Expr) : Stmt := .assign (.var r) e
+def clos (fid : String) (caps : List String) : Expr := .funcVal ⟨fid⟩ (caps.map Expr.ref).toArray
+def occ (name : String) (body : UnseqBody) (after : List String := []) (region : Option String := none) : UnseqOcc :=
+  ⟨name, body, after, region⟩
+def mainInt (decls : List Param) (body : List Stmt) : Func :=
+  { id := ⟨"main"⟩, args := #[], results := #[intP "z"], body := .block decls.toArray body.toArray }
+
+/-- `stamp(pn *int) int { r = *pn; *pn = *pn + 1 }` — an order stamp on a counter. -/
+def stampF : Func := {
+  id := ⟨"stampF"⟩, args := #[⟨"pn", pInt⟩], results := #[intP "r"],
+  body := .seqn #[ret "r" (derefI "pn"), storeP "pn" (.add (derefI "pn") (.intLit 1))] }
+/-- `hF(pn *int) bool { *pn = *pn + 10; r = true }` -/
+def hF : Func := {
+  id := ⟨"hF"⟩, args := #[⟨"pn", pInt⟩], results := #[boolP "r"],
+  body := .seqn #[storeP "pn" (.add (derefI "pn") (.intLit 10)), ret "r" (.boolLit true)] }
+def b2i : Func := {
+  id := ⟨"b2i"⟩, args := #[boolP "b"], results := #[intP "r"],
+  body := .ifThenElse (.var "b") (ret "r" (.intLit 1)) (ret "r" (.intLit 0)) }
+def silentF : Func := {
+  id := ⟨"silentF"⟩, args := #[], results := #[intP "r"], body := ret "r" (.intLit 0) }
+
+def enc4 : Expr := .add (.add (.add (.mul (.var "$a") (.intLit 1000)) (.mul (.var "$b") (.intLit 100)))
+  (.mul (.var "$c") (.intLit 10))) (.var "$d")
+
+/-- P1: canonical rank order ≠ occurrence order — occurrence 0 (A) is NOT ready at first (order edge
+after C); ready₀ = [B, C, D] = indices [1, 2, 3], so pick p=0 must select occurrence 1. Expected: the 12
+orderings with C before A, each a distinct z. -/
+def p1graph : UnseqGraph := {
+  cells := [intP "$a", intP "$b", intP "$c", intP "$d", intP "$op"],
+  occs := [occ "A" (.invoke ["$a"] (.var "stv") []) ["C"],
+           occ "B" (.invoke ["$b"] (.var "stv") []),
+           occ "C" (.invoke ["$c"] (.var "stv") []),
+           occ "D" (.invoke ["$d"] (.var "stv") []),
+           occ "Op" (.eval "$op" enc4),
+           occ "T" (.target "$t" (.var "z"))],
+  stores := [("$t", "$op")] }
+def p1 : Program := { funcs := #[
+  mainInt [intP "n", ⟨"stv", fnTy [pInt] [.int]⟩]
+    [.assign (.var "n") (.intLit 0), .assign (.var "stv") (clos "stampF" ["n"]), .unseq p1graph (.seqn #[])],
+  stampF] }
+
+/-- P2: the ready set CHANGES size between picks — ready₀ = [A, B] (bound 2); after A: [B, C, D]
+(bound 3); after B first: [A] (bound 1, the oblivious path). Expected: the 8 orderings with A before C
+and D. -/
+def p2graph : UnseqGraph := {
+  cells := [intP "$a", intP "$b", intP "$c", intP "$d", intP "$op"],
+  occs := [occ "A" (.invoke ["$a"] (.var "stv") []),
+           occ "B" (.invoke ["$b"] (.var "stv") []),
+           occ "C" (.invoke ["$c"] (.var "stv") []) ["A"],
+           occ "D" (.invoke ["$d"] (.var "stv") []) ["A"],
+           occ "Op" (.eval "$op" enc4),
+           occ "T" (.target "$t" (.var "z"))],
+  stores := [("$t", "$op")] }
+def p2 : Program := { funcs := #[
+  mainInt [intP "n", ⟨"stv", fnTy [pInt] [.int]⟩]
+    [.assign (.var "n") (.intLit 0), .assign (.var "stv") (clos "stampF" ["n"]), .unseq p2graph (.seqn #[])],
+  stampF] }
+
+/-- P3: a GUARD whose decision depends on the pick order (`$a == 0` iff A was stamped first); the
+region's activation changes the later ready sets and their bounds path by path. h adds 10 to the
+counter, so B-after-h reads 11. z = $a*100 + $b*10 + b2i($cand). Expected {11, 111, 100}. -/
+def p3graph : UnseqGraph := {
+  cells := [intP "$a", intP "$b", boolP "$tst", boolP "$h", boolP "$cand", intP "$ci", intP "$op"],
+  occs := [occ "A" (.invoke ["$a"] (.var "stv") []),
+           occ "B" (.invoke ["$b"] (.var "stv") []),
+           occ "Tst" (.eval "$tst" (.eqCmp .int (.var "$a") (.intLit 0))),
+           occ "G" (.guard "$tst" true "$cand"),
+           occ "E_h" (.invoke ["$h"] (.var "hv") []) [] (some "G"),
+           occ "C_and" (.eval "$cand" (.var "$h")) [] (some "G"),
+           occ "E_b2i" (.invoke ["$ci"] (.var "b2iv") [.var "$cand"]),
+           occ "Op" (.eval "$op" (.add (.add (.mul (.var "$a") (.intLit 100)) (.mul (.var "$b") (.intLit 10))) (.var "$ci"))),
+           occ "T" (.target "$t" (.var "z"))],
+  stores := [("$t", "$op")] }
+def p3 : Program := { funcs := #[
+  mainInt [intP "n", ⟨"stv", fnTy [pInt] [.int]⟩, ⟨"hv", fnTy [] [.bool]⟩, ⟨"b2iv", fnTy [.bool] [.int]⟩]
+    [.assign (.var "n") (.intLit 0), .assign (.var "stv") (clos "stampF" ["n"]),
+     .assign (.var "hv") (clos "hF" ["n"]), .assign (.var "b2iv") (clos "b2i" []),
+     .unseq p3graph (.seqn #[])],
+  stampF, hF, b2i] }
+
+/-- Two-stamp sweep into `$op = $a*10 + $b`, the target `z` (or a channel send in `thenB`). -/
+def two (thenB : Stmt) (store : Bool) : UnseqGraph := {
+  cells := [intP "$a", intP "$b", intP "$op"],
+  occs := [occ "A" (.invoke ["$a"] (.var "stv") []),
+           occ "B" (.invoke ["$b"] (.var "stv") []),
+           occ "Op" (.eval "$op" (.add (.mul (.var "$a") (.intLit 10)) (.var "$b")))] ++
+          (if store then [occ "T" (.target "$t" (.var "z"))] else []),
+  stores := if store then [("$t", "$op")] else [] }
+def _unusedThen := two
+
+/-- P4: a POOL — the worker goroutine runs its own width-2 sweep on its own counter and sends the
+encoding; main runs a width-2 sweep on its counter, then receives. Expected {101, 110, 1001, 1010}. -/
+def worker4 : Func := {
+  id := ⟨"worker4"⟩, args := #[⟨"ch", chanTy⟩], results := #[],
+  body := .block #[intP "m", ⟨"stv", fnTy [pInt] [.int]⟩]
+    #[.assign (.var "m") (.intLit 0), .assign (.var "stv") (clos "stampF" ["m"]),
+      .unseq (two (.seqn #[]) false) (.chanSend (.var "ch") (.var "$op") .int)] }
+def p4 : Program := { funcs := #[
+  mainInt [intP "n", ⟨"stv", fnTy [pInt] [.int]⟩, ⟨"ch", chanTy⟩, intP "w"]
+    [.assign (.var "n") (.intLit 0), .assign (.var "stv") (clos "stampF" ["n"]),
+     .makeChan (.var "ch") .int (some (.intLit 1)),
+     .goStmt (.funcVal ⟨"worker4"⟩ #[]) #[.var "ch"],
+     .unseq (two (.seqn #[]) true) (.seqn #[]),
+     .chanRecv #[.var "w"] (.var "ch") .int,
+     .assign (.var "z") (.add (.var "z") (.mul (.var "w") (.intLit 100)))],
+  worker4, stampF] }
+
+/-- P4b: channel-COUPLED sweeps — the worker sends 1 then 2 on an UNBUFFERED channel; main's sweep
+has two receive invocations; the first-picked receive blocks until the worker's first send.
+Expected {12, 21}. -/
+def recvF : Func := {
+  id := ⟨"recvF"⟩, args := #[⟨"pc", .pointer chanTy⟩], results := #[intP "r"],
+  body := .chanRecv #[.var "r"] (.deref (.var "pc") chanTy) .int }
+def worker4b : Func := {
+  id := ⟨"worker4b"⟩, args := #[⟨"ch", chanTy⟩], results := #[],
+  body := .seqn #[.chanSend (.var "ch") (.intLit 1) .int, .chanSend (.var "ch") (.intLit 2) .int] }
+def p4bgraph : UnseqGraph := {
+  cells := [intP "$r0", intP "$r1", intP "$op"],
+  occs := [occ "R0" (.invoke ["$r0"] (.var "recvv") []),
+           occ "R1" (.invoke ["$r1"] (.var "recvv") []),
+           occ "Op" (.eval "$op" (.add (.mul (.var "$r0") (.intLit 10)) (.var "$r1"))),
+           occ "T" (.target "$t" (.var "z"))],
+  stores := [("$t", "$op")] }
+def p4b : Program := { funcs := #[
+  mainInt [⟨"ch", chanTy⟩, ⟨"recvv", fnTy [.pointer chanTy] [.int]⟩]
+    [.makeChan (.var "ch") .int none,
+     .assign (.var "recvv") (clos "recvF" ["ch"]),
+     .goStmt (.funcVal ⟨"worker4b"⟩ #[]) #[.var "ch"],
+     .unseq p4bgraph (.seqn #[])],
+  worker4b, recvF] }
+
+/-- P7: MERGING states with picks — two stamped + two silent occurrences: 24 orderings, distinct
+states merge on the silent ones; z = $a*10 + $b ∈ {1, 10}. -/
+def p7graph : UnseqGraph := {
+  cells := [intP "$a", intP "$b", intP "$c", intP "$d", intP "$op"],
+  occs := [occ "A" (.invoke ["$a"] (.var "stv") []),
+           occ "B" (.invoke ["$b"] (.var "stv") []),
+           occ "C" (.invoke ["$c"] (.var "sv") []),
+           occ "D" (.invoke ["$d"] (.var "sv") []),
+           occ "Op" (.eval "$op" (.add (.add (.mul (.var "$a") (.intLit 10)) (.var "$b")) (.add (.var "$c") (.var "$d")))),
+           occ "T" (.target "$t" (.var "z"))],
+  stores := [("$t", "$op")] }
+def p7 : Program := { funcs := #[
+  mainInt [intP "n", ⟨"stv", fnTy [pInt] [.int]⟩, ⟨"sv", fnTy [] [.int]⟩]
+    [.assign (.var "n") (.intLit 0), .assign (.var "stv") (clos "stampF" ["n"]),
+     .assign (.var "sv") (clos "silentF" []), .unseq p7graph (.seqn #[])],
+  stampF, silentF] }
+
+
+/-- P8 (fail-closed): a CYCLIC order graph — A after B, B after A — passes `wellFormed?` (cycles are
+dynamic refusals) and reaches a pick with ready = [] and active work: bound 0. Both engines must
+REFUSE by name, never certify. -/
+def p8graph : UnseqGraph := {
+  cells := [intP "$a", intP "$b", intP "$op"],
+  occs := [occ "A" (.invoke ["$a"] (.var "stv") []) ["B"],
+           occ "B" (.invoke ["$b"] (.var "stv") []) ["A"],
+           occ "Op" (.eval "$op" (.add (.var "$a") (.var "$b"))),
+           occ "T" (.target "$t" (.var "z"))],
+  stores := [("$t", "$op")] }
+def p8 : Program := { funcs := #[
+  mainInt [intP "n", ⟨"stv", fnTy [pInt] [.int]⟩]
+    [.assign (.var "n") (.intLit 0), .assign (.var "stv") (clos "stampF" ["n"]), .unseq p8graph (.seqn #[])],
+  stampF] }
+
+def probes : List (String × Program) :=
+  [("P1-rankorder", p1), ("P2-growshrink", p2), ("P3-guard", p3), ("P4-pool-indep", p4),
+   ("P4b-pool-chan", p4b), ("P7-merge", p7), ("P8-cycle", p8)]
+
+def runBoth (name : String) (prog : Program) : IO Unit := do
+  match CLI.enumSetup prog "main" #[] with
+  | .error e => IO.println s!"PROBE {name} SETUP-ERROR {repr e}"
+  | .ok ep =>
+    match CLI.explore ep 2000000 8 64 4096 50000000 none with
+    | .error m => IO.println s!"PROBE {name} BETA REFUSED {m}"
+    | .ok out =>
+      for l in (out.observations.map (·.compress)).qsort (· < ·) do IO.println s!"PROBE {name} BETA {l}"
+      IO.println s!"PROBE {name} BETA-STATS members={out.observations.size} leaves={out.leaves} steps={out.steps} sites={out.sitesSeen} maxDepth={out.maxDepth}"
+    IO.println s!"PROBE {name} ALPHA-BEGIN"
+    (← IO.getStdout).flush
+    let rc ← CLI.runDedupObservations ep { maxWidth := 8, maxSites := 64, cap := 4096, workCap := 50000000, expectStatus := none }
+    IO.println s!"PROBE {name} ALPHA-END rc={rc}"
+
+/-- Mutation controls on P1's certificate (the widest node branches 3 ways): the five recorded ones
+plus NEW M6 (two hints of a 3-way pick node SWAPPED — the vector→successor correspondence lies) and
+M7 (a 3-way node's hints all pointed at its own first successor). -/
+def mutations : IO Unit := do
+  match CLI.enumSetup p1 "main" #[] with
+  | .error e => IO.println s!"MUT SETUP-ERROR {repr e}"
+  | .ok ep =>
+  match CLI.dedupSeed ep with
+  | .error e => IO.println s!"MUT SEED-ERROR {repr e}"
+  | .ok (locs, m₀, r₀) =>
+  match GoLean.EnumDedup.buildCert ep.ctx locs m₀ r₀ 5000000 with
+  | .error e => IO.println s!"MUT BUILD-ERROR {e}"
+  | .ok (cert, stats) =>
+    let acc (c : DedupCert) : Bool := checkCert ep.ctx dedupNodeEqb locs m₀ r₀ c
+    IO.println s!"MUT P1 unmutated accepted={acc cert} members={cert.members.size} nodes={stats.nodes} edges={stats.edges} hits={stats.dedupHits} widest={(cert.succ.map (·.size)).foldl max 0} n3way={(cert.succ.filter (·.size == 3)).size} n2way={(cert.succ.filter (·.size == 2)).size}"
+    IO.println s!"MUT M1 dropped-member accepted={acc { cert with members := cert.members.pop }}"
+    IO.println s!"MUT M2 hints->0 accepted={acc { cert with succ := cert.succ.map (fun a => a.map (fun _ => 0)) }}"
+    IO.println s!"MUT M3 dropped-node accepted={acc { cert with nodes := cert.nodes.pop }}"
+    IO.println s!"MUT M4 3way-last-branch-dropped accepted={acc { cert with succ := cert.succ.map (fun a => if a.size == 3 then a.pop else a) }}"
+    IO.println s!"MUT M5 fabricated-member accepted={acc { cert with members := cert.members.push (.terminal (.panic "fabricated"), [], 10) }}"
+    let swap (a : Array Nat) : Array Nat := if a.size == 3 then #[a[1]!, a[0]!, a[2]!] else a
+    IO.println s!"MUT M6 3way-hints-swapped accepted={acc { cert with succ := cert.succ.map swap }}"
+    let same (a : Array Nat) : Array Nat := if a.size == 3 then #[a[0]!, a[0]!, a[0]!] else a
+    IO.println s!"MUT M7 3way-hints-all-first accepted={acc { cert with succ := cert.succ.map same }}"
+    let swap2 (a : Array Nat) : Array Nat := if a.size == 2 then #[a[1]!, a[0]!] else a
+    IO.println s!"MUT M8 2way-hints-swapped accepted={acc { cert with succ := cert.succ.map swap2 }}"
+    let drop4 (a : Array Nat) : Array Nat := if a.size == 4 then a.pop else a
+    IO.println s!"MUT M9 4way-last-branch-dropped accepted={acc { cert with succ := cert.succ.map drop4 }}"
+    let rot4 (a : Array Nat) : Array Nat := if a.size == 4 then #[a[1]!, a[2]!, a[3]!, a[0]!] else a
+    IO.println s!"MUT M10 4way-hints-rotated accepted={acc { cert with succ := cert.succ.map rot4 }}"
+    let ext4 (a : Array Nat) : Array Nat := if a.size == 4 then a.push a[0]! else a
+    IO.println s!"MUT M11 4way-extra-branch-added accepted={acc { cert with succ := cert.succ.map ext4 }}"
+
+def main (args : List String) : IO Unit := do
+  if args.contains "mut" then mutations else
+  for (n, p) in probes do runBoth n p

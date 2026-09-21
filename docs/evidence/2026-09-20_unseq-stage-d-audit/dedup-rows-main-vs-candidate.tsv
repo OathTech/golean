@@ -1,0 +1,70 @@
+noodler/syncmisuse/unlock-from-other-goroutine	main	rc=0	wall_s=0	1 members	observations=1 steps=342 probes=0 sites=315 leaves=0 maxdepth=0 width=4 engine=dedup nodes=315 edges=342 dedupHits=28 certified=checkCert
+noodler/syncmisuse/unlock-from-other-goroutine	cand	rc=0	wall_s=0	1 members	observations=1 steps=342 probes=0 sites=315 leaves=0 maxdepth=0 width=4 engine=dedup nodes=315 edges=342 dedupHits=28 certified=checkCert
+noodler/syncmisuse/unlock-from-other-goroutine	VERDICT	SAME	SAME_STATS	main[nodes=315 edges=342 dedupHits=28]	cand[nodes=315 edges=342 dedupHits=28]
+noodler/goroutines/fifo-one-sender	main	rc=0	wall_s=0	1 members	observations=1 steps=4955 probes=0 sites=4794 leaves=0 maxdepth=0 width=4 engine=dedup nodes=4794 edges=4955 dedupHits=162 certified=checkCert
+noodler/goroutines/fifo-one-sender	cand	rc=0	wall_s=1	1 members	observations=1 steps=4955 probes=0 sites=4794 leaves=0 maxdepth=0 width=4 engine=dedup nodes=4794 edges=4955 dedupHits=162 certified=checkCert
+noodler/goroutines/fifo-one-sender	VERDICT	SAME	SAME_STATS	main[nodes=4794 edges=4955 dedupHits=162]	cand[nodes=4794 edges=4955 dedupHits=162]
+noodler/goroutines/directional-params	main	rc=0	wall_s=0	1 members	observations=1 steps=5718 probes=0 sites=5521 leaves=0 maxdepth=0 width=4 engine=dedup nodes=5521 edges=5718 dedupHits=198 certified=checkCert
+noodler/goroutines/directional-params	cand	rc=0	wall_s=0	1 members	observations=1 steps=5718 probes=0 sites=5521 leaves=0 maxdepth=0 width=4 engine=dedup nodes=5521 edges=5718 dedupHits=198 certified=checkCert
+noodler/goroutines/directional-params	VERDICT	SAME	SAME_STATS	main[nodes=5521 edges=5718 dedupHits=198]	cand[nodes=5521 edges=5718 dedupHits=198]
+noodler/goroutines/lockstep-transcript	main	rc=0	wall_s=0	1 members	observations=1 steps=2018 probes=0 sites=1933 leaves=0 maxdepth=0 width=4 engine=dedup nodes=1933 edges=2018 dedupHits=86 certified=checkCert
+noodler/goroutines/lockstep-transcript	cand	rc=0	wall_s=0	1 members	observations=1 steps=2018 probes=0 sites=1933 leaves=0 maxdepth=0 width=4 engine=dedup nodes=1933 edges=2018 dedupHits=86 certified=checkCert
+noodler/goroutines/lockstep-transcript	VERDICT	SAME	SAME_STATS	main[nodes=1933 edges=2018 dedupHits=86]	cand[nodes=1933 edges=2018 dedupHits=86]
+noodler/select/ping-pong	main	rc=0	wall_s=0	1 members	observations=1 steps=18694 probes=0 sites=17705 leaves=0 maxdepth=0 width=4 engine=dedup nodes=17705 edges=18694 dedupHits=990 certified=checkCert
+noodler/select/ping-pong	cand	rc=0	wall_s=0	1 members	observations=1 steps=18694 probes=0 sites=17705 leaves=0 maxdepth=0 width=4 engine=dedup nodes=17705 edges=18694 dedupHits=990 certified=checkCert
+noodler/select/ping-pong	VERDICT	SAME	SAME_STATS	main[nodes=17705 edges=18694 dedupHits=990]	cand[nodes=17705 edges=18694 dedupHits=990]
+imported-goose/channel/google-search	main	rc=0	wall_s=93	6 members	observations=6 steps=6565663 probes=0 sites=6193933 leaves=0 maxdepth=0 width=4 engine=dedup nodes=6193933 edges=6565663 dedupHits=371731 certified=checkCert
+imported-goose/channel/google-search	cand	rc=0	wall_s=92	6 members	observations=6 steps=6565663 probes=0 sites=6193933 leaves=0 maxdepth=0 width=4 engine=dedup nodes=6193933 edges=6565663 dedupHits=371731 certified=checkCert
+imported-goose/channel/google-search	VERDICT	SAME	SAME_STATS	main[nodes=6193933 edges=6565663 dedupHits=371731]	cand[nodes=6193933 edges=6565663 dedupHits=371731]
+goroutines/buffered-wake/fifo	main	rc=0	wall_s=0	1 members	observations=1 steps=13744 probes=0 sites=13205 leaves=0 maxdepth=0 width=4 engine=dedup nodes=13205 edges=13744 dedupHits=540 certified=checkCert
+goroutines/buffered-wake/fifo	cand	rc=0	wall_s=0	1 members	observations=1 steps=13744 probes=0 sites=13205 leaves=0 maxdepth=0 width=4 engine=dedup nodes=13205 edges=13744 dedupHits=540 certified=checkCert
+goroutines/buffered-wake/fifo	VERDICT	SAME	SAME_STATS	main[nodes=13205 edges=13744 dedupHits=540]	cand[nodes=13205 edges=13744 dedupHits=540]
+goroutines/buffered-wake/cap-one	main	rc=0	wall_s=0	1 members	observations=1 steps=3983 probes=0 sites=3764 leaves=0 maxdepth=0 width=4 engine=dedup nodes=3764 edges=3983 dedupHits=220 certified=checkCert
+goroutines/buffered-wake/cap-one	cand	rc=0	wall_s=1	1 members	observations=1 steps=3983 probes=0 sites=3764 leaves=0 maxdepth=0 width=4 engine=dedup nodes=3764 edges=3983 dedupHits=220 certified=checkCert
+goroutines/buffered-wake/cap-one	VERDICT	SAME	SAME_STATS	main[nodes=3764 edges=3983 dedupHits=220]	cand[nodes=3764 edges=3983 dedupHits=220]
+goroutines/ping-pong/alternate	main	rc=0	wall_s=0	1 members	observations=1 steps=7286 probes=0 sites=7033 leaves=0 maxdepth=0 width=4 engine=dedup nodes=7033 edges=7286 dedupHits=254 certified=checkCert
+goroutines/ping-pong/alternate	cand	rc=0	wall_s=0	1 members	observations=1 steps=7286 probes=0 sites=7033 leaves=0 maxdepth=0 width=4 engine=dedup nodes=7033 edges=7286 dedupHits=254 certified=checkCert
+goroutines/ping-pong/alternate	VERDICT	SAME	SAME_STATS	main[nodes=7033 edges=7286 dedupHits=254]	cand[nodes=7033 edges=7286 dedupHits=254]
+goroutines/pipeline/two-stage	main	rc=0	wall_s=8	1 members	observations=1 steps=954907 probes=0 sites=866780 leaves=0 maxdepth=0 width=4 engine=dedup nodes=866780 edges=954907 dedupHits=88128 certified=checkCert
+goroutines/pipeline/two-stage	cand	rc=0	wall_s=9	1 members	observations=1 steps=954907 probes=0 sites=866780 leaves=0 maxdepth=0 width=4 engine=dedup nodes=866780 edges=954907 dedupHits=88128 certified=checkCert
+goroutines/pipeline/two-stage	VERDICT	SAME	SAME_STATS	main[nodes=866780 edges=954907 dedupHits=88128]	cand[nodes=866780 edges=954907 dedupHits=88128]
+goroutines/pipeline/buffered-stage	main	rc=0	wall_s=2	1 members	observations=1 steps=207482 probes=0 sites=187497 leaves=0 maxdepth=0 width=4 engine=dedup nodes=187497 edges=207482 dedupHits=19986 certified=checkCert
+goroutines/pipeline/buffered-stage	cand	rc=0	wall_s=2	1 members	observations=1 steps=207482 probes=0 sites=187497 leaves=0 maxdepth=0 width=4 engine=dedup nodes=187497 edges=207482 dedupHits=19986 certified=checkCert
+goroutines/pipeline/buffered-stage	VERDICT	SAME	SAME_STATS	main[nodes=187497 edges=207482 dedupHits=19986]	cand[nodes=187497 edges=207482 dedupHits=19986]
+goroutines/pipeline/request-reply	main	rc=0	wall_s=0	1 members	observations=1 steps=18350 probes=0 sites=17601 leaves=0 maxdepth=0 width=4 engine=dedup nodes=17601 edges=18350 dedupHits=750 certified=checkCert
+goroutines/pipeline/request-reply	cand	rc=0	wall_s=0	1 members	observations=1 steps=18350 probes=0 sites=17601 leaves=0 maxdepth=0 width=4 engine=dedup nodes=17601 edges=18350 dedupHits=750 certified=checkCert
+goroutines/pipeline/request-reply	VERDICT	SAME	SAME_STATS	main[nodes=17601 edges=18350 dedupHits=750]	cand[nodes=17601 edges=18350 dedupHits=750]
+goroutines/sched-dependent/first-come	main	rc=0	wall_s=0	2 members	observations=2 steps=56957 probes=0 sites=49248 leaves=0 maxdepth=0 width=3 engine=dedup nodes=49248 edges=56957 dedupHits=7710 certified=checkCert
+goroutines/sched-dependent/first-come	cand	rc=0	wall_s=1	2 members	observations=2 steps=56957 probes=0 sites=49248 leaves=0 maxdepth=0 width=3 engine=dedup nodes=49248 edges=56957 dedupHits=7710 certified=checkCert
+goroutines/sched-dependent/first-come	VERDICT	SAME	SAME_STATS	main[nodes=49248 edges=56957 dedupHits=7710]	cand[nodes=49248 edges=56957 dedupHits=7710]
+sync/rwmutex-order/acquisition	main	rc=0	wall_s=0	2 members	observations=2 steps=54803 probes=0 sites=47008 leaves=0 maxdepth=0 width=4 engine=dedup nodes=47008 edges=54803 dedupHits=7796 certified=checkCert
+sync/rwmutex-order/acquisition	cand	rc=0	wall_s=0	2 members	observations=2 steps=54803 probes=0 sites=47008 leaves=0 maxdepth=0 width=4 engine=dedup nodes=47008 edges=54803 dedupHits=7796 certified=checkCert
+sync/rwmutex-order/acquisition	VERDICT	SAME	SAME_STATS	main[nodes=47008 edges=54803 dedupHits=7796]	cand[nodes=47008 edges=54803 dedupHits=7796]
+race/litmus/sb-chan	main	rc=0	wall_s=1	3 members	observations=3 steps=89205 probes=0 sites=79374 leaves=0 maxdepth=0 width=3 engine=dedup nodes=79374 edges=89205 dedupHits=9832 certified=checkCert
+race/litmus/sb-chan	cand	rc=0	wall_s=0	3 members	observations=3 steps=89205 probes=0 sites=79374 leaves=0 maxdepth=0 width=3 engine=dedup nodes=79374 edges=89205 dedupHits=9832 certified=checkCert
+race/litmus/sb-chan	VERDICT	SAME	SAME_STATS	main[nodes=79374 edges=89205 dedupHits=9832]	cand[nodes=79374 edges=89205 dedupHits=9832]
+race/free-sync/rw-writers	main	rc=0	wall_s=0	1 members	observations=1 steps=4303 probes=0 sites=3462 leaves=0 maxdepth=0 width=4 engine=dedup nodes=3462 edges=4303 dedupHits=842 certified=checkCert
+race/free-sync/rw-writers	cand	rc=0	wall_s=1	1 members	observations=1 steps=4303 probes=0 sites=3462 leaves=0 maxdepth=0 width=4 engine=dedup nodes=3462 edges=4303 dedupHits=842 certified=checkCert
+race/free-sync/rw-writers	VERDICT	SAME	SAME_STATS	main[nodes=3462 edges=4303 dedupHits=842]	cand[nodes=3462 edges=4303 dedupHits=842]
+race/atomics-free/atomic-vs-atomic	main	rc=0	wall_s=0	1 members	observations=1 steps=12858 probes=0 sites=10411 leaves=0 maxdepth=0 width=4 engine=dedup nodes=10411 edges=12858 dedupHits=2448 certified=checkCert
+race/atomics-free/atomic-vs-atomic	cand	rc=0	wall_s=0	1 members	observations=1 steps=12858 probes=0 sites=10411 leaves=0 maxdepth=0 width=4 engine=dedup nodes=10411 edges=12858 dedupHits=2448 certified=checkCert
+race/atomics-free/atomic-vs-atomic	VERDICT	SAME	SAME_STATS	main[nodes=10411 edges=12858 dedupHits=2448]	cand[nodes=10411 edges=12858 dedupHits=2448]
+atomics/counter/add	main	rc=0	wall_s=0	1 members	observations=1 steps=3378 probes=0 sites=2761 leaves=0 maxdepth=0 width=4 engine=dedup nodes=2761 edges=3378 dedupHits=618 certified=checkCert
+atomics/counter/add	cand	rc=0	wall_s=0	1 members	observations=1 steps=3378 probes=0 sites=2761 leaves=0 maxdepth=0 width=4 engine=dedup nodes=2761 edges=3378 dedupHits=618 certified=checkCert
+atomics/counter/add	VERDICT	SAME	SAME_STATS	main[nodes=2761 edges=3378 dedupHits=618]	cand[nodes=2761 edges=3378 dedupHits=618]
+atomics/counter/typed	main	rc=0	wall_s=0	1 members	observations=1 steps=17366 probes=0 sites=15747 leaves=0 maxdepth=0 width=4 engine=dedup nodes=15747 edges=17366 dedupHits=1620 certified=checkCert
+atomics/counter/typed	cand	rc=0	wall_s=0	1 members	observations=1 steps=17366 probes=0 sites=15747 leaves=0 maxdepth=0 width=4 engine=dedup nodes=15747 edges=17366 dedupHits=1620 certified=checkCert
+atomics/counter/typed	VERDICT	SAME	SAME_STATS	main[nodes=15747 edges=17366 dedupHits=1620]	cand[nodes=15747 edges=17366 dedupHits=1620]
+atomics/counter/cas-loop	main	rc=0	wall_s=0	1 members	observations=1 steps=20601 probes=0 sites=17535 leaves=0 maxdepth=0 width=4 engine=dedup nodes=17535 edges=20601 dedupHits=3067 certified=checkCert
+atomics/counter/cas-loop	cand	rc=0	wall_s=0	1 members	observations=1 steps=20601 probes=0 sites=17535 leaves=0 maxdepth=0 width=4 engine=dedup nodes=17535 edges=20601 dedupHits=3067 certified=checkCert
+atomics/counter/cas-loop	VERDICT	SAME	SAME_STATS	main[nodes=17535 edges=20601 dedupHits=3067]	cand[nodes=17535 edges=20601 dedupHits=3067]
+atomics/counter/swap-claim	main	rc=0	wall_s=0	1 members	observations=1 steps=17887 probes=0 sites=15268 leaves=0 maxdepth=0 width=4 engine=dedup nodes=15268 edges=17887 dedupHits=2620 certified=checkCert
+atomics/counter/swap-claim	cand	rc=0	wall_s=1	1 members	observations=1 steps=17887 probes=0 sites=15268 leaves=0 maxdepth=0 width=4 engine=dedup nodes=15268 edges=17887 dedupHits=2620 certified=checkCert
+atomics/counter/swap-claim	VERDICT	SAME	SAME_STATS	main[nodes=15268 edges=17887 dedupHits=2620]	cand[nodes=15268 edges=17887 dedupHits=2620]
+atomics/counter/plain-read-after-join	main	rc=0	wall_s=0	1 members	observations=1 steps=2642 probes=0 sites=2121 leaves=0 maxdepth=0 width=4 engine=dedup nodes=2121 edges=2642 dedupHits=522 certified=checkCert
+atomics/counter/plain-read-after-join	cand	rc=0	wall_s=0	1 members	observations=1 steps=2642 probes=0 sites=2121 leaves=0 maxdepth=0 width=4 engine=dedup nodes=2121 edges=2642 dedupHits=522 certified=checkCert
+atomics/counter/plain-read-after-join	VERDICT	SAME	SAME_STATS	main[nodes=2121 edges=2642 dedupHits=522]	cand[nodes=2121 edges=2642 dedupHits=522]
+spec-examples-stmt/go-statements/func-literal	main	rc=0	wall_s=0	1 members	observations=1 steps=3440 probes=0 sites=3343 leaves=0 maxdepth=0 width=4 engine=dedup nodes=3343 edges=3440 dedupHits=98 certified=checkCert
+spec-examples-stmt/go-statements/func-literal	cand	rc=0	wall_s=0	1 members	observations=1 steps=3440 probes=0 sites=3343 leaves=0 maxdepth=0 width=4 engine=dedup nodes=3343 edges=3440 dedupHits=98 certified=checkCert
+spec-examples-stmt/go-statements/func-literal	VERDICT	SAME	SAME_STATS	main[nodes=3343 edges=3440 dedupHits=98]	cand[nodes=3343 edges=3440 dedupHits=98]
+DEDUP_ROWS_DONE

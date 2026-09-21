@@ -1,0 +1,20 @@
+# two-binary choice trace, 421 ids (builtins/ evalorder/ binop-order/ multi-assign/ spec-examples-stmt/ noodler/latitude noodler/maps); main 90024323 vs candidate 0681abc6
+#SUMMARY	ids=421	same=421	differ=0	onlyA=0	onlyB=0
+#SITES_A	{'appendSpill': 30, 'backEdge': 973, 'l1Sched': 2263, 'l5ExitWindow': 25, 'postOp': 727, 'unseqNext': 495, 'unseqPanic': 270}
+#SITES_B	{'appendSpill': 30, 'backEdge': 973, 'l1Sched': 2263, 'l5ExitWindow': 25, 'postOp': 727, 'unseqNext': 495, 'unseqPanic': 270}
+# validator (each side)
+VALIDATOR
+  consumptions checked: 4783
+  menu-invariant violations: 0
+  self-check alarms (mirror/accountant, sentinel, pick-record): 0
+  driver-agreement mismatches: 0
+# ids consuming unseqPanic in the subset / of which CLOSED by alpha:
+45 / 30
+# ids consuming unseqNext in the subset / of which CLOSED by alpha:
+44 / 21
+# the 23 pre-existing engine=dedup rows, candidate binary, 6 streams each:
+rows traced: 23 ids, 138 (id,stream) lines; 0 id(s) the tracer could not run (ERROR)
+  consumptions per site (all streams): l1Sched=1430, postOp=722, backEdge=438, l5ExitWindow=33
+# the raft twin (5 rows), candidate binary:
+rows traced: 5 ids, 30 (id,stream) lines; 0 id(s) the tracer could not run (ERROR)
+  consumptions per site (all streams): appendSpill=569

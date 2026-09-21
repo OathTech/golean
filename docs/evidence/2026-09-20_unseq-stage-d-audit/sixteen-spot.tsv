@@ -1,0 +1,4 @@
+spec-examples-stmt/prime-sieve/five	rc=0	wall_s=224	scripts/capped: line 161: 3780154 Killed                  env GOLEAN_CAPPED=1 "$0" "$@"
+goroutines/worker-pool/sum	rc=0	wall_s=464	coverage-observations: dedup engine: dedup work budget exceeded (9538077 nodes, 10461924 edges, 923848 hits, 2672013 hashes, maxBucket 1056) — raise the row's work cap
+goroutines/worker-pool/shared-feed	rc=0	wall_s=46	coverage-observations: dedup engine: dedup work budget exceeded (9363137 nodes, 10636864 edges, 1273728 hits, 4093127 hashes, maxBucket 76) — raise the row's work cap
+SIXTEEN_DONE
