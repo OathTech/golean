@@ -1,0 +1,125 @@
+mA1-maplit-key-ref               REFUSED-LATE   exit=1  {"message":"expected int value, got GoLean.GoValue.addr (GoLean.Loc.base { id := 1 })","output":"","schema":"golean-observation-v1","status":"stuck"}
+    expected: an address as an int-keyed map's key: refuse (type) or late by type
+mA2-maplit-key-bool-on-int       REFUSED-LATE   exit=1  {"message":"expected int value, got GoLean.GoValue.bool true","output":"","schema":"golean-observation-v1","status":"stuck"}
+    expected: key typed as a bool on keyType int: refuse or late by type
+mA3-maplit-value-ref-binder      REFUSED-DECODE exit=1  {"message":".tmp/mut/mA3-maplit-value-ref-binder.json: native lowering: unseq: an allocation payload at program.funcs[1].body.body[2].occs[2].allocation.entries[0].value takes the address of a binder cell '$u1' — a graph cell is written only by its producer (audit F2, 2026-09-21); refused by name","schema":"golean-observation-v1","status":"error"}
+    expected: F2: address of a binder cell as a payload — refuse by name
+mA4-maplit-cell-type             REFUSED-DECODE exit=1  {"message":".tmp/mut/mA4-maplit-cell-type.json: native lowering: unseq: allocation 'lit2' at program.funcs[1].body.body[2].occs[2].allocation yields GoLean.GoCore.Ty.map\n  (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))\n  (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int)) but cell '$u2' is declared GoLean.GoCore.Ty.map (GoLean.GoCore.Ty.int (GoLean
+    expected: cell map[int]bool vs valueType int: refuse (typeMismatch)
+mA5-maplit-after-edge            RAN            exit=0  {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":15}]} SET: {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":15}]} | {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":6}]} | coverage-observations: observations=2 steps=215 probes=3 sites=1 leaves=2 maxdepth=1 width=8
+    expected: audit F8 / PENDING item 4: an `after` on a literal allocate DECODES (policy not on the wire)
+mA6-maplit-value-string-on-int   REFUSED-LATE   exit=1  {"message":".tmp/mut/mA6-maplit-value-string-on-int.json: native lowering: unknown key 'value' at program.funcs[1].body.body[2].occs[2].allocation.entries[0].value — the emitter never produces it for this node kind (exact-key discipline, fail closed)","schema":"golean-observation-v1","status":"error"}
+    expected: value typed string on valueType int: refuse or late by type
+mA7-maplit-entries-object        REFUSED-LATE   exit=1  {"message":".tmp/mut/mA7-maplit-entries-object.json: program.funcs[1].body.body[2].occs[2].allocation.entries: array expected","schema":"golean-observation-v1","status":"error"}
+    expected: entries not an array: StrictJson refusal
+mA8-maplit-dup-const-key-control REFUSED-DECODE exit=1  {"message":".tmp/mut/mA8-maplit-dup-const-key-control.json: native lowering: unseq: allocation 'lit2' at program.funcs[1].body.body[2].occs[2].allocation: duplicate constant key in a map literal — a compile-time error in Go (spec#Composite_literals); refused by name","schema":"golean-observation-v1","status":"error"}
+    expected: control: duplicate constant key refused (lane's mutant class)
+mW1-append-elems-int-atom        REFUSED-LATE   exit=1  {"message":"expected slice value, got GoLean.GoValue.int 3 (GoLean.GoCore.IntKind.int)","output":"","schema":"golean-observation-v1","status":"stuck"}
+    expected: an int atom where a slice is expected: refuse or late by type
+mW2-append-slice-ref-local       REFUSED-DECODE exit=1  {"message":".tmp/mut/mW2-append-slice-ref-local.json: native lowering: unseq: hidden read in a wide built-in — program.funcs[1].body.body[5].occs[2].wide.slice is not an atom (an identifier or an int/bool/string constant; the statement's operands are already evaluated, v2.1 §3.1); refused by name","schema":"golean-observation-v1","status":"error"}
+    expected: a ref (not an atom) as a wide operand: hidden read refusal
+mW3-append-elem-vs-cell          REFUSED-DECODE exit=1  {"message":".tmp/mut/mW3-append-elem-vs-cell.json: native lowering: unseq: wide append 'append2' at program.funcs[1].body.body[5].occs[2].wide yields GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.bool) but cell '$u3' is declared GoLean.GoCore.Ty.slice (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int)); refused by name","schema":"golean-observation-v1","statu
+    expected: elem bool vs cell []int: refuse
+mW4-wide-unknown-key             REFUSED-LATE   exit=1  {"message":".tmp/mut/mW4-wide-unknown-key.json: native lowering: unknown key 'extra' at program.funcs[1].body.body[5].occs[2].wide — the emitter never produces it for this node kind (exact-key discipline, fail closed)","schema":"golean-observation-v1","status":"error"}
+    expected: unknown key: refuse
+mW5-wide-unknown-region          REFUSED-DECODE exit=1  {"message":".tmp/mut/mW5-wide-unknown-region.json: native lowering: unseq: malformed graph at program.funcs[1].body.body[5] — region of 'append2' names 'nosuch', which is not a guard occurrence; refused by name","schema":"golean-observation-v1","status":"error"}
+    expected: unknown region: refuse
+mW6-append-dup-result-cell       REFUSED-DECODE exit=1  {"message":".tmp/mut/mW6-append-dup-result-cell.json: native lowering: unseq: malformed graph at program.funcs[1].body.body[5] — duplicate result (a value binder produced twice); refused by name","schema":"golean-observation-v1","status":"error"}
+    expected: binder = the base read's cell: duplicate result
+mW7-copy-dup-result              REFUSED-DECODE exit=1  {"message":".tmp/mut/mW7-copy-dup-result.json: native lowering: unseq: malformed graph at program.funcs[0].body.body[4] — duplicate result (a value binder produced twice); refused by name","schema":"golean-observation-v1","status":"error"}
+    expected: duplicate result
+mW8-copy-src-int-atom            REFUSED-LATE   exit=1  {"message":"expected slice value, got GoLean.GoValue.int 7 (GoLean.GoCore.IntKind.int)","output":"","schema":"golean-observation-v1","status":"stuck"}
+    expected: an int atom as copy's source: refuse or late by type
+mW9-lookup-dup-binders-bool      REFUSED-DECODE exit=1  {"message":".tmp/mut/mW9-lookup-dup-binders-bool.json: native lowering: unseq: malformed graph at program.funcs[40].body.body[6] — duplicate result (a value binder produced twice); refused by name","schema":"golean-observation-v1","status":"error"}
+    expected: the same bool cell twice (value and ok): duplicate result expected
+mW10-recv-dup-binders-bool       REFUSED-DECODE exit=1  {"message":".tmp/mut/mW10-recv-dup-binders-bool.json: native lowering: unseq: malformed graph at program.funcs[42].body.body[7] — duplicate result (a value binder produced twice); refused by name","schema":"golean-observation-v1","status":"error"}
+    expected: the same bool cell twice on a chan bool receive: duplicate result expected
+mW11-lookup-index-string-on-int  REFUSED-LATE   exit=1  {"message":".tmp/mut/mW11-lookup-index-string-on-int.json: native lowering: unknown key 'value' at program.funcs[30].body.body[6].occs[2].wide.index — the emitter never produces it for this node kind (exact-key discipline, fail closed)","schema":"golean-observation-v1","status":"error"}
+    expected: a string key atom on an int-keyed map: refuse or late by type
+mW12-lookup-keyType-vs-base      RAN            exit=0  {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":0}]} SET: coverage-observations: alias-guard probe [1, 7] failed: the probed member's run errored — stuck: string equality expected string operands, got GoLean.GoValue.int 1 (GoLean.GoCore.IntKind.int) and GoLean.GoValue.int 1 (GoLean.GoCore.IntKind.int). Under a correct bound this rung aliases onto an in-bound member, so this is a member-class failure (e.g. a deadlocking or fuel-out member, which has no me
+    expected: keyType string vs the map[int]int base: refuse or late by type
+mW13-assert-target-vs-cell       REFUSED-DECODE exit=1  {"message":".tmp/mut/mW13-assert-target-vs-cell.json: native lowering: unseq: wide type assertion 'assert0' at program.funcs[0].body.body[3].occs[0].wide yields GoLean.GoCore.Ty.string but its value cell '$u0' is declared GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int); refused by name","schema":"golean-observation-v1","status":"error"}
+    expected: target string vs value cell int: refuse
+mW14-assert-operand-ref-binder   REFUSED-DECODE exit=1  {"message":".tmp/mut/mW14-assert-operand-ref-binder.json: native lowering: unseq: a wide built-in operand at program.funcs[0].body.body[3].occs[0].wide.operand takes the address of a binder cell '$u1' — a graph cell is written only by its producer (audit F2, 2026-09-21); refused by name","schema":"golean-observation-v1","status":"error"}
+    expected: F2 text
+mW15-assert-dup-binders-int      REFUSED-DECODE exit=1  {"message":".tmp/mut/mW15-assert-dup-binders-int.json: native lowering: unseq: wide type assertion 'assert0' at program.funcs[0].body.body[3].occs[0].wide: the comma-ok flag cell '$u0' is declared GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int), not bool; refused by name","schema":"golean-observation-v1","status":"error"}
+    expected: value and ok into the same int cell: refuse (ok cell not bool) — type check
+mD1-payload-ref-undeclared       REFUSED-LATE   exit=1  {"message":"unbound GoCore variable address: nosuch","output":"","schema":"golean-observation-v1","status":"stuck"}
+    expected: ref of an undeclared local as a payload: refuse or late by name
+mD2-payload-globaladdr-oob       REFUSED-LATE   exit=1  {"message":".tmp/mut/mD2-payload-globaladdr-oob.json: native lowering: globaladdr gid 9999 out of range at program.funcs[1].body.body[2].occs[1].allocation.value.args[0] (program declares 0 global(s))","schema":"golean-observation-v1","status":"error"}
+    expected: globaladdr out of range as a payload: refuse
+mD3-payload-ref-func-local       REFUSED-LATE   exit=1  {"message":"expected int value, got GoLean.GoValue.funcVal { key := \"e5dlit$lit0\" } [GoLean.GoValue.addr (GoLean.Loc.base { id := 1 })]","output":"","schema":"golean-observation-v1","status":"stuck"}
+    expected: address of the func-typed local m as a *int field payload: type confusion — refuse or late by type
+mD4-arg-ref-undeclared           REFUSED-LATE   exit=1  {"message":"unbound GoCore variable address: nosuch","output":"","schema":"golean-observation-v1","status":"stuck"}
+    expected: ref of an undeclared local as an argument: refuse or late by name
+mM1-min-type-string-int-args     REFUSED-DECODE exit=1  {"message":".tmp/mut/mM1-min-type-string-int-args.json: native lowering: unseq: head type GoLean.GoCore.Ty.string at program.funcs[1].body.body[3].occs[0] disagrees with cell '$u0' declared GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int); refused by name","schema":"golean-observation-v1","status":"error"}
+    expected: head type string over int args, cell int: refuse (disagrees with cell) or late
+mM2-min-arg-ref                  REFUSED-DECODE exit=1  {"message":".tmp/mut/mM2-min-arg-ref.json: native lowering: unseq: hidden read in a pure node — program.funcs[1].body.body[3].occs[0].head.args[0] is not an atom (an identifier or an int/bool/string constant; v2.1 §3.1 internal normal form); refused by name","schema":"golean-observation-v1","status":"error"}
+    expected: not an atom: refuse
+mM3-min-no-args                  REFUSED-DECODE exit=1  {"message":".tmp/mut/mM3-min-no-args.json: native lowering: unseq: min with no operands at program.funcs[1].body.body[3].occs[0].head (Go requires at least one); refused by name","schema":"golean-observation-v1","status":"error"}
+    expected: no operands: refuse
+mM4-min-mixed-int-string-args    REFUSED-LATE   exit=1  {"message":".tmp/mut/mM4-min-mixed-int-string-args.json: native lowering: unknown key 'value' at program.funcs[1].body.body[3].occs[0].head.args[1] — the emitter never produces it for this node kind (exact-key discipline, fail closed)","schema":"golean-observation-v1","status":"error"}
+    expected: mixed int/string operands: refuse or late by type
+mB1-var-target-undeclared        REFUSED-DECODE exit=1  {"message":"unseq: unbound target operand 'nosuch'","output":"","schema":"golean-observation-v1","status":"stuck"}
+    expected: a .var plan on an undeclared variable: refuse or late by name
+mB2-var-target-binder            REFUSED-DECODE exit=1  {"message":".tmp/mut/mB2-var-target-binder.json: native lowering: unseq: a binder ('$u2') cannot be a store target at program.funcs[2].body.body[5].occs[3].lhs; refused by name","schema":"golean-observation-v1","status":"error"}
+    expected: a binder as a store target: refuse (unseqCheckTargetShape)
+mB3-store-value-target-binder    REFUSED-DECODE exit=1  {"message":".tmp/mut/mB3-store-value-target-binder.json: native lowering: unseq: malformed graph at program.funcs[2].body.body[5] — store value '$t0' is not a VALUE binder; refused by name","schema":"golean-observation-v1","status":"error"}
+    expected: a TARGET binder as a store value: sort mismatch
+mB4-store-same-target-twice      RAN            exit=0  {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":15}]} SET: {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":15}]} | {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":57}]} | coverage-observations: observations=2 steps=7169 probes=135 sites=45 leaves=60 maxdepth=4 width=8
+    expected: the same target stored twice: Go allows x[0], x[0] = ..; a decode-level question — observe
+
+SUMMARY
+mA1-maplit-key-ref               REFUSED-LATE   exit=1
+mA2-maplit-key-bool-on-int       REFUSED-LATE   exit=1
+mA3-maplit-value-ref-binder      REFUSED-DECODE exit=1
+mA4-maplit-cell-type             REFUSED-DECODE exit=1
+mA5-maplit-after-edge            RAN            exit=0
+mA6-maplit-value-string-on-int   REFUSED-LATE   exit=1
+mA7-maplit-entries-object        REFUSED-LATE   exit=1
+mA8-maplit-dup-const-key-control REFUSED-DECODE exit=1
+mW1-append-elems-int-atom        REFUSED-LATE   exit=1
+mW2-append-slice-ref-local       REFUSED-DECODE exit=1
+mW3-append-elem-vs-cell          REFUSED-DECODE exit=1
+mW4-wide-unknown-key             REFUSED-LATE   exit=1
+mW5-wide-unknown-region          REFUSED-DECODE exit=1
+mW6-append-dup-result-cell       REFUSED-DECODE exit=1
+mW7-copy-dup-result              REFUSED-DECODE exit=1
+mW8-copy-src-int-atom            REFUSED-LATE   exit=1
+mW9-lookup-dup-binders-bool      REFUSED-DECODE exit=1
+mW10-recv-dup-binders-bool       REFUSED-DECODE exit=1
+mW11-lookup-index-string-on-int  REFUSED-LATE   exit=1
+mW12-lookup-keyType-vs-base      RAN            exit=0
+mW13-assert-target-vs-cell       REFUSED-DECODE exit=1
+mW14-assert-operand-ref-binder   REFUSED-DECODE exit=1
+mW15-assert-dup-binders-int      REFUSED-DECODE exit=1
+mD1-payload-ref-undeclared       REFUSED-LATE   exit=1
+mD2-payload-globaladdr-oob       REFUSED-LATE   exit=1
+mD3-payload-ref-func-local       REFUSED-LATE   exit=1
+mD4-arg-ref-undeclared           REFUSED-LATE   exit=1
+mM1-min-type-string-int-args     REFUSED-DECODE exit=1
+mM2-min-arg-ref                  REFUSED-DECODE exit=1
+mM3-min-no-args                  REFUSED-DECODE exit=1
+mM4-min-mixed-int-string-args    REFUSED-LATE   exit=1
+mB1-var-target-undeclared        REFUSED-DECODE exit=1
+mB2-var-target-binder            REFUSED-DECODE exit=1
+mB3-store-value-target-binder    REFUSED-DECODE exit=1
+mB4-store-same-target-twice      RAN            exit=0
+mA6b-maplit-value-string-on-int    REFUSED-LATE   exit=1  {"message":"expected int value, got GoLean.GoValue.string { bytes := #[122] }","output":"","schema":"golean-observation-v1","status":"stuck"}
+    expected: a string constant payload on valueType int: refuse or late by type
+mA9-maplit-key-string-on-int       REFUSED-LATE   exit=1  {"message":"expected int value, got GoLean.GoValue.string { bytes := #[122] }","output":"","schema":"golean-observation-v1","status":"stuck"}
+    expected: a string constant key on keyType int: refuse or late by type
+mW11b-lookup-index-string-on-int   REFUSED-LATE   exit=1  {"message":"expected int value, got GoLean.GoValue.string { bytes := #[122] }","output":"","schema":"golean-observation-v1","status":"stuck"}
+    expected: a string key atom on an int-keyed lookup: refuse or late by type
+mM4b-min-mixed-int-string-args     REFUSED-LATE   exit=1  {"message":"mismatched < operands: GoLean.GoValue.string { bytes := #[122] } and GoLean.GoValue.int 1 (GoLean.GoCore.IntKind.int)","output":"","schema":"golean-observation-v1","status":"stuck"}
+    expected: mixed int/string min operands: refuse or late by type
+mW16-append-slice-annotation-vs-cell RAN            exit=0  {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":15}]} SET: {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":15}]} | {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":6}]} | coverage-observations: observations=2 steps=445 probes=9 sites=3 leaves=4 maxdepth=2 width=8
+    expected: the slice atom's wire annotation []bool disagrees with its cell []int: is an operand annotation checked at decode?
+mW17-lookup-base-annotation-and-keyType-string RAN            exit=0  {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":0}]} SET: coverage-observations: alias-guard probe [1, 7] failed: the probed member's run errored — stuck: string equality expected string operands, got GoLean.GoValue.int 1 (GoLean.GoCore.IntKind.int) and GoLean.GoValue.int 1 (GoLean.GoCore.IntKind.int). Under a correct bound this rung aliases onto an in-bound member, so this is a member-class failure (e.g. a deadlocking or fuel-out member, which has no me
+    expected: annotation and keyType consistent with each other but not with the base cell map[int]int
+mE2-mapget-head-keyType-string     REFUSED-LATE   exit=1  {"message":"string equality expected string operands, got GoLean.GoValue.int 1 (GoLean.GoCore.IntKind.int) and GoLean.GoValue.int 1 (GoLean.GoCore.IntKind.int)","output":"","schema":"golean-observation-v1","status":"stuck"}
+    expected: PRE-EXISTING E2 map-get head: keyType string on an int-keyed base — same class as mW12?
+mW19-lookup-valueType-bool-cell-int REFUSED-DECODE exit=1  {"message":".tmp/mut/mW19-lookup-valueType-bool-cell-int.json: native lowering: unseq: wide map lookup 'lookup2' at program.funcs[30].body.body[6].occs[2].wide yields GoLean.GoCore.Ty.bool but its value cell '$u66' is declared GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int); refused by name","schema":"golean-observation-v1","status":"error"}
+    expected: valueType bool vs value cell int: refuse (twoBinds)
+mW20-lookup-valueType-bool-cell-bool-base-int REFUSED-LATE   exit=1  {"message":"expected int value, got GoLean.GoValue.bool false","output":"","schema":"golean-observation-v1","status":"stuck"}
+    expected: valueType and cell both bool, base map[int]int: refuse or late by type — the store into xs[] (int) would get a bool

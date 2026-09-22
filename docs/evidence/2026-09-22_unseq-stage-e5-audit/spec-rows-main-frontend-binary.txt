@@ -1,0 +1,10 @@
+=== evalOrderCallsVerbatim
+  CANON exit=0 {"output":"","status":"ok","values":[{"bytes":[102,44,104,44,105,44,106,44,103,44,107],"tag":"string"},{"kind":"int","tag":"int","value":192},{"tag":"bool","value":true}]} 
+  SET coverage-observations: observations=1 steps=1149 probes=0 sites=0 leaves=1 maxdepth=0 width=6
+  MEMBER {"output":"","status":"ok","values":[{"bytes":[102,44,104,44,105,44,106,44,103,44,107],"tag":"string"},{"kind":"int","tag":"int","value":192},{"tag":"bool","value":true}]}
+  SET exit=0
+=== evalOrderCallsTracedRecv
+  CANON exit=0 {"output":"","status":"ok","values":[{"bytes":[102,44,104,44,105,44,106,44,99,44,103,44,107],"tag":"string"},{"kind":"int","tag":"int","value":192},{"tag":"bool","value":true}]} 
+  SET coverage-observations: observations=1 steps=1239 probes=0 sites=0 leaves=1 maxdepth=0 width=6
+  MEMBER {"output":"","status":"ok","values":[{"bytes":[102,44,104,44,105,44,106,44,99,44,103,44,107],"tag":"string"},{"kind":"int","tag":"int","value":192},{"tag":"bool","value":true}]}
+  SET exit=0

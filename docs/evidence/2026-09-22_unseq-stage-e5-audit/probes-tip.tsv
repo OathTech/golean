@@ -1,0 +1,44 @@
+dir	probes	unseqs
+Corpus/coverage/exec/builtins/e13-sibling-panic-order	11	50
+Corpus/coverage/exec/builtins/len-vs-call-order	15	4
+Corpus/coverage/exec/channels/recv-map-elem	1	0
+Corpus/coverage/exec/channels/recv-edge	1	2
+#refused	Corpus/coverage/exec/complex/defined-type-ops
+#refused	Corpus/coverage/exec/complex/generic-type-set
+#refused	Corpus/coverage/exec/complex/real-imag-defined
+#refused	Corpus/coverage/exec/constants/typed-complex-binary
+#refused	Corpus/coverage/exec/fmt/formatter-box-crosspkg
+#refused	Corpus/coverage/exec/fmt/formatter-box-range
+#refused	Corpus/coverage/exec/fmt/formatter-box-generic
+#refused	Corpus/coverage/exec/fmt/formatter-dyn-hole
+Corpus/coverage/exec/fmt/sprintf-dyn	1	0
+#refused	Corpus/coverage/exec/generics/stencil-residual-field-iterseq
+#refused	Corpus/coverage/exec/generics/stencil-residual-sig-anon-struct
+Corpus/coverage/exec/imported-goose/generics/generic-conversion	1	0
+#refused	Corpus/coverage/exec/init/hidden-dep-order
+#refused	Corpus/coverage/exec/init/hidden-dep-refused
+#refused	Corpus/coverage/exec/init/quarantined-var-syscall
+#refused	Corpus/coverage/exec/init/quarantined-var-impure
+#refused	Corpus/coverage/exec/init/quarantined-var-callee
+#refused	Corpus/coverage/exec/init/quarantined-var-panicking
+#refused	Corpus/coverage/exec/init/stdlib-initializer-dependent
+#refused	Corpus/coverage/exec/init/quarantined-var-writer
+#refused	Corpus/coverage/exec/init/stdlib-initializer-unregistered
+#refused	Corpus/coverage/exec/init/user-var-struct-field-unlowerable
+#refused	Corpus/coverage/exec/interfaces/comma-ok-into-interface
+Corpus/coverage/exec/multipkg/mini-raft-twin	7	0
+Corpus/coverage/exec/noodler/frontier2/array-of-funcs-indexed-call	1	0
+Corpus/coverage/exec/noodler/frontier2/typed-nil-error-return	1	0
+Corpus/coverage/exec/noodler/misc	1	0
+Corpus/coverage/exec/noodler/strings	1	0
+Corpus/coverage/exec/panic-recover/shim-refusal-unrecoverable	1	0
+#refused	Corpus/coverage/exec/spec-examples-decl/struct-tag-conversion
+Corpus/coverage/exec/stdlib-source/errors-join	5	0
+Corpus/coverage/exec/stdlib-source/errors-wrap	3	0
+Corpus/coverage/exec/stdlib-source/strconv-parseuint	4	0
+Corpus/coverage/exec/strconv/format-parse	1	0
+Corpus/coverage/exec/stdlib-source/frontier	3	0
+#refused	Corpus/coverage/exec/structs/tag-nested-conversion
+#refused	Corpus/coverage/exec/unsafe/dot-import
+#refused	Corpus/coverage/exec/unsafe/layout-ops
+TWIN	128	0

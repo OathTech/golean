@@ -1,0 +1,512 @@
+=== derefAddrVsCall
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() int)
+  CENSUS legacy form=return reason=unary operator & (address of a variable) in a computing position — admitted only as an argument, a payload or a stored value (E5d)
+  CANON exit=0 {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":15}]} 
+  SET coverage-observations: observations=1 steps=110 probes=0 sites=0 leaves=1 maxdepth=0 width=6
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":15}]}
+  SET exit=0
+=== addrCmpVsCall
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() int)
+  CENSUS legacy form=return reason=unary operator & (address of a variable) in a computing position — admitted only as an argument, a payload or a stored value (E5d)
+  CANON exit=0 {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":5}]} 
+  SET coverage-observations: observations=1 steps=164 probes=0 sites=0 leaves=1 maxdepth=0 width=6
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":5}]}
+  SET exit=0
+=== addrElemVsCall
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() int)
+  CENSUS legacy form=return reason=unary operator & (address of a variable) in a computing position — admitted only as an argument, a payload or a stored value (E5d)
+  CANON exit=0 {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":16}]} 
+  SET coverage-observations: observations=1 steps=192 probes=0 sites=0 leaves=1 maxdepth=0 width=6
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":16}]}
+  SET exit=0
+=== addrFieldVsCall
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() int)
+  CENSUS legacy form=return reason=unary operator & (address of a variable) in a computing position — admitted only as an argument, a payload or a stored value (E5d)
+  CANON exit=0 {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":16}]} 
+  SET coverage-observations: observations=1 steps=152 probes=0 sites=0 leaves=1 maxdepth=0 width=6
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":16}]}
+  SET exit=0
+=== addrDerefVsCall
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() int)
+  CENSUS legacy form=return reason=unary operator & (address of a variable) in a computing position — admitted only as an argument, a payload or a stored value (E5d)
+  CANON exit=0 {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":16}]} 
+  SET coverage-observations: observations=1 steps=161 probes=0 sites=0 leaves=1 maxdepth=0 width=6
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":16}]}
+  SET exit=0
+=== addrAppendElem
+  CENSUS legacy form=other reason=statement form outside the pilot grammar
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() int)
+  CENSUS legacy form=return reason=unary operator & (address of a variable) in a computing position — admitted only as an argument, a payload or a stored value (E5d)
+  CANON exit=0 {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":15}]} 
+  SET coverage-observations: site bound 32 exceeds the case's width 6 — the width assertion is REFUTED (mechanically, at pick position 0); raise the case's width metadata
+  SET exit=1
+=== addrStoredPlanned
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() int)
+  CENSUS legacy form=elem-assign reason=address of a variable (x) as a planned target's value — the store would copy a `ref` head into a cell; E5d admits &x as an argument, a payload, a plain local's or a return's value
+  CANON exit=0 {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":10}]} 
+  SET coverage-observations: observations=1 steps=140 probes=0 sites=0 leaves=1 maxdepth=0 width=6
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":10}]}
+  SET exit=0
+=== addrMapValue
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() int)
+  CENSUS unseq form=return events=1 calls=1 nonEvents=2
+  CANON exit=0 {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":15}]} 
+  SET coverage-observations: observations=2 steps=379 probes=9 sites=3 leaves=4 maxdepth=3 width=6
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":15}]}
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":6}]}
+  SET exit=0
+=== addrGlobalPayload
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() int)
+  CENSUS unseq form=return events=1 calls=1 nonEvents=2
+  CANON exit=0 {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":15}]} 
+  SET coverage-observations: observations=2 steps=361 probes=9 sites=3 leaves=4 maxdepth=3 width=6
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":15}]}
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":6}]}
+  SET exit=0
+=== addrArgThenWrite
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() int)
+  CENSUS legacy form=return reason=no non-event occurrence beside the call(s) (legacy path: every edge forced)
+  CANON exit=0 {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":1}]} 
+  SET coverage-observations: observations=1 steps=133 probes=0 sites=0 leaves=1 maxdepth=0 width=6
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}
+  SET exit=0
+=== addrArgCallWritesFirst
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() int)
+  CENSUS legacy form=return reason=no non-event occurrence beside the call(s) (legacy path: every edge forced)
+  CANON exit=0 {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":5}]} 
+  SET coverage-observations: observations=1 steps=135 probes=0 sites=0 leaves=1 maxdepth=0 width=6
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":5}]}
+  SET exit=0
+=== addrTwoWritersRead
+  CENSUS unseq form=return events=2 calls=2 nonEvents=1
+  CANON exit=0 {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":76}]} 
+  SET coverage-observations: observations=3 steps=409 probes=9 sites=3 leaves=4 maxdepth=3 width=6
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":10}]}
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":4}]}
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":76}]}
+  SET exit=0
+=== addrPtrRecv
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() int)
+  CENSUS unseq form=return events=2 calls=2 nonEvents=1
+  CANON exit=0 {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":106}]} 
+  SET coverage-observations: observations=3 steps=410 probes=9 sites=3 leaves=4 maxdepth=3 width=6
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":106}]}
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":17}]}
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":7}]}
+  SET exit=0
+=== addrClosureCaptured
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() int)
+  CENSUS legacy form=define reason=no non-event occurrence beside the call(s) (legacy path: every edge forced)
+  CANON exit=0 {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":67}]} 
+  SET coverage-observations: observations=1 steps=207 probes=0 sites=0 leaves=1 maxdepth=0 width=6
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":67}]}
+  SET exit=0
+=== addrReturnPairDriver
+  CENSUS legacy form=multi-call reason=no non-event occurrence beside the call(s) (legacy path: every edge forced)
+  CANON exit=0 {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":1015}]} 
+  SET coverage-observations: observations=2 steps=316 probes=3 sites=1 leaves=2 maxdepth=1 width=6
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":1006}]}
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":1015}]}
+  SET exit=0
+=== addrNestedLit
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() int)
+  CENSUS unseq form=return events=1 calls=1 nonEvents=2
+  CANON exit=0 {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":15}]} 
+  SET coverage-observations: observations=2 steps=605 probes=15 sites=5 leaves=6 maxdepth=5 width=6
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":15}]}
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":6}]}
+  SET exit=0
+=== addrParamDriver
+  CENSUS legacy form=return reason=no non-event occurrence beside the call(s) (legacy path: every edge forced)
+  CANON exit=0 {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":8}]} 
+  SET coverage-observations: observations=2 steps=204 probes=3 sites=1 leaves=2 maxdepth=1 width=6
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":2}]}
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":8}]}
+  SET exit=0
+=== addrClosureAdmitted
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() int)
+  CENSUS legacy form=define reason=no non-event occurrence beside the call(s) (legacy path: every edge forced)
+  CANON exit=0 {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":67}]} 
+  SET coverage-observations: observations=1 steps=316 probes=3 sites=1 leaves=2 maxdepth=1 width=6
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":67}]}
+  SET exit=0
+=== oobTargetVsCall
+  CENSUS unseq form=tuple-assign events=1 calls=1 nonEvents=1
+  CANON exit=1 {"message":"runtime error: index out of range [9] with length 3","output":"wit 1\n","status":"panic"} 
+  SET coverage-observations: observations=1 steps=912 probes=51 sites=17 leaves=24 maxdepth=3 width=6
+  MEMBER {"message":"runtime error: index out of range [9] with length 3","output":"wit 1\n","status":"panic"}
+  SET exit=0
+=== nilMapTargetVsCall
+  CENSUS legacy form=other reason=statement form outside the pilot grammar
+  CENSUS legacy form=tuple-assign reason=no non-event occurrence beside the call(s) (legacy path: every edge forced)
+  CANON exit=1 {"message":"frontend-quarantined: map element as assignment target outside a single assignment","output":"","status":"unsupported"} 
+  SET coverage-observations: machine step failed under pick assignment [] — cannot certify the observation set: unsupported: frontend-quarantined: map element as assignment target outside a single assignment
+  SET exit=1
+=== nilDerefTargetVsCall
+  CENSUS legacy form=other reason=statement form outside the pilot grammar
+  CENSUS legacy form=tuple-assign reason=no non-event occurrence beside the call(s) (legacy path: every edge forced)
+  CANON exit=1 {"message":"runtime error: invalid memory address or nil pointer dereference","output":"wit 1\n","status":"panic"} 
+  SET coverage-observations: observations=1 steps=83 probes=0 sites=0 leaves=1 maxdepth=0 width=6
+  MEMBER {"message":"runtime error: invalid memory address or nil pointer dereference","output":"wit 1\n","status":"panic"}
+  SET exit=0
+=== secondTargetPanics
+  CENSUS legacy form=other reason=statement form outside the pilot grammar
+  CENSUS unseq form=tuple-assign events=1 calls=1 nonEvents=4
+  CANON exit=1 {"message":"runtime error: index out of range [9] with length 2","output":"wit 5\nxs0 4\n","status":"panic"} 
+  SET coverage-observations: observations=1 steps=8634 probes=417 sites=139 leaves=180 maxdepth=5 width=6
+  MEMBER {"message":"runtime error: index out of range [9] with length 2","output":"wit 5\nxs0 4\n","status":"panic"}
+  SET exit=0
+=== nilMapCapturedKeyTarget
+  CENSUS legacy form=other reason=statement form outside the pilot grammar
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() int)
+  CENSUS unseq form=tuple-assign events=1 calls=1 nonEvents=1
+  CANON exit=1 {"message":"assignment to entry in nil map","output":"wit 1\n","status":"panic"} 
+  SET coverage-observations: observations=1 steps=3324 probes=135 sites=45 leaves=60 maxdepth=4 width=6
+  MEMBER {"message":"assignment to entry in nil map","output":"wit 1\n","status":"panic"}
+  SET exit=0
+=== specExampleOldIndex
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() int)
+  CENSUS unseq form=tuple-assign events=1 calls=1 nonEvents=1
+  CANON exit=0 {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":122}]} 
+  SET coverage-observations: observations=1 steps=1757 probes=51 sites=17 leaves=24 maxdepth=3 width=6
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":122}]}
+  SET exit=0
+=== capturedIndexTarget
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() int)
+  CENSUS unseq form=tuple-assign events=1 calls=1 nonEvents=2
+  CANON exit=0 {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":1127}]} 
+  SET coverage-observations: observations=2 steps=5260 probes=135 sites=45 leaves=60 maxdepth=4 width=6
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":1127}]}
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":1723}]}
+  SET exit=0
+=== sameTargetTwice
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() int)
+  CENSUS unseq form=tuple-assign events=1 calls=1 nonEvents=2
+  CANON exit=0 {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":2}]} 
+  SET coverage-observations: observations=1 steps=1253 probes=51 sites=17 leaves=24 maxdepth=3 width=6
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":2}]}
+  SET exit=0
+=== plainTargetWrittenByCall
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() int)
+  CENSUS unseq form=tuple-assign events=1 calls=1 nonEvents=1
+  CANON exit=0 {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":19}]} 
+  SET coverage-observations: observations=1 steps=1625 probes=51 sites=17 leaves=24 maxdepth=3 width=6
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":19}]}
+  SET exit=0
+=== targetOperandCallsOrder
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() int)
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() int)
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() (int, int))
+  CENSUS unseq form=multi-call events=3 calls=3 nonEvents=2
+  CANON exit=0 {"output":"f\ng\ntwo\n","status":"ok","values":[{"kind":"int","tag":"int","value":78}]} 
+  SET coverage-observations: observations=1 steps=959 probes=18 sites=6 leaves=8 maxdepth=3 width=6
+  MEMBER {"output":"f\ng\ntwo\n","status":"ok","values":[{"kind":"int","tag":"int","value":78}]}
+  SET exit=0
+=== targetOperandVsRHSCalls
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() int)
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() int)
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() int)
+  CENSUS unseq form=tuple-assign events=3 calls=3 nonEvents=2
+  CANON exit=0 {"output":"f\ng\nh\n","status":"ok","values":[{"kind":"int","tag":"int","value":12}]} 
+  SET coverage-observations: observations=1 steps=1414 probes=36 sites=12 leaves=15 maxdepth=4 width=6
+  MEMBER {"output":"f\ng\nh\n","status":"ok","values":[{"kind":"int","tag":"int","value":12}]}
+  SET exit=0
+=== swapVsCall
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() int)
+  CENSUS unseq form=tuple-assign events=1 calls=1 nonEvents=1
+  CANON exit=0 {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":2005}]} 
+  SET coverage-observations: observations=2 steps=242 probes=3 sites=1 leaves=2 maxdepth=1 width=6
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":2005}]}
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":205}]}
+  SET exit=0
+=== blankBesidePlanned
+  CENSUS unseq form=tuple-assign events=1 calls=1 nonEvents=1
+  CANON exit=0 {"output":"wit 1\n","status":"ok","values":[{"kind":"int","tag":"int","value":2}]} 
+  SET coverage-observations: observations=1 steps=407 probes=12 sites=4 leaves=6 maxdepth=2 width=6
+  MEMBER {"output":"wit 1\n","status":"ok","values":[{"kind":"int","tag":"int","value":2}]}
+  SET exit=0
+=== commaOkClosedChan
+  CENSUS legacy form=call-stmt reason=builtin close statement
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() int)
+  CENSUS legacy form=other reason=statement form outside the pilot grammar
+  CENSUS unseq form=comma-ok events=2 calls=2 nonEvents=1
+  CENSUS legacy form=other reason=statement form outside the pilot grammar
+  CANON exit=0 {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":100}]} 
+  SET coverage-observations: observations=1 steps=575 probes=18 sites=6 leaves=8 maxdepth=3 width=6
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":100}]}
+  SET exit=0
+=== commaOkNilIface
+  CENSUS legacy form=other reason=statement form outside the pilot grammar
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() int)
+  CENSUS legacy form=other reason=statement form outside the pilot grammar
+  CENSUS legacy form=comma-ok reason=no occurrence observable against an effectful event (legacy path: every edge forced — Stage E E3 trigger)
+  CENSUS legacy form=other reason=statement form outside the pilot grammar
+  CANON exit=0 {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":100}]} 
+  SET coverage-observations: observations=1 steps=156 probes=0 sites=0 leaves=1 maxdepth=0 width=6
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":100}]}
+  SET exit=0
+=== commaOkMapVsWriter
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() int)
+  CENSUS legacy form=other reason=statement form outside the pilot grammar
+  CENSUS unseq form=comma-ok events=1 calls=1 nonEvents=3
+  CENSUS legacy form=other reason=statement form outside the pilot grammar
+  CANON exit=0 {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":0}]} 
+  SET coverage-observations: observations=2 steps=1929 probes=72 sites=24 leaves=30 maxdepth=4 width=6
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":0}]}
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":11}]}
+  SET exit=0
+=== globalBesidePlanned
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() int)
+  CENSUS legacy form=other reason=package-level target beside a planned target in a multi-target assignment (the global plan atom is deferred — E5b)
+  CANON exit=0 {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":13}]} 
+  SET coverage-observations: observations=1 steps=140 probes=0 sites=0 leaves=1 maxdepth=0 width=6
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":13}]}
+  SET exit=0
+=== multiCallWritesPlain
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() (int, int))
+  CENSUS unseq form=multi-call events=1 calls=1 nonEvents=1
+  CANON exit=0 {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":19}]} 
+  SET coverage-observations: observations=1 steps=664 probes=12 sites=4 leaves=6 maxdepth=2 width=6
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":19}]}
+  SET exit=0
+=== mapCapturedKeyTargetVsWriter
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() int)
+  CENSUS unseq form=tuple-assign events=1 calls=1 nonEvents=1
+  CANON exit=0 {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":79}]} 
+  SET coverage-observations: observations=2 steps=4516 probes=135 sites=45 leaves=60 maxdepth=4 width=6
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":709}]}
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":79}]}
+  SET exit=0
+=== boolMapCommaOk
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() int)
+  CENSUS legacy form=other reason=statement form outside the pilot grammar
+  CENSUS unseq form=comma-ok events=1 calls=1 nonEvents=3
+  CENSUS legacy form=other reason=statement form outside the pilot grammar
+  CANON exit=0 {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":0}]} 
+  SET coverage-observations: observations=2 steps=1979 probes=72 sites=24 leaves=30 maxdepth=4 width=6
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":0}]}
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":11}]}
+  SET exit=0
+=== defineRecvTuple
+  CENSUS legacy form=other reason=statement form outside the pilot grammar
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() int)
+  CENSUS unseq form=tuple-assign events=2 calls=2 nonEvents=1
+  CANON exit=0 {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":307}]} 
+  SET coverage-observations: observations=2 steps=386 probes=6 sites=2 leaves=3 maxdepth=2 width=6
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":306}]}
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":307}]}
+  SET exit=0
+=== minArgVsCall
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() int)
+  CENSUS unseq form=return events=2 calls=1 nonEvents=1
+  CANON exit=0 {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":5}]} 
+  SET coverage-observations: observations=2 steps=165 probes=3 sites=1 leaves=2 maxdepth=1 width=6
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":5}]}
+  SET exit=0
+=== callThenMin
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() int)
+  CENSUS unseq form=return events=2 calls=1 nonEvents=1
+  CANON exit=0 {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":15}]} 
+  SET coverage-observations: observations=2 steps=181 probes=3 sites=1 leaves=2 maxdepth=1 width=6
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":15}]}
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":6}]}
+  SET exit=0
+=== maxFloatVsCall
+  CENSUS legacy form=define reason=target type outside the pilot grammar (float64)
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() float64)
+  CENSUS legacy form=return reason=result type outside the pilot grammar (float64)
+  CANON exit=0 {"output":"","status":"ok","values":[{"bits":4613937818241073152,"kind":"float64","tag":"float"}]} 
+  SET coverage-observations: observations=1 steps=105 probes=0 sites=0 leaves=1 maxdepth=0 width=6
+  MEMBER {"output":"","status":"ok","values":[{"bits":4613937818241073152,"kind":"float64","tag":"float"}]}
+  SET exit=0
+=== appendAliasRead
+  CENSUS unseq form=return events=1 calls=1 nonEvents=2
+  CANON exit=0 {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":3}]} 
+  SET coverage-observations: observations=2 steps=285 probes=9 sites=3 leaves=4 maxdepth=3 width=6
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":0}]}
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":3}]}
+  SET exit=0
+=== copyOverlapVsRead
+  CENSUS unseq form=return events=1 calls=1 nonEvents=2
+  CANON exit=0 {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":5}]} 
+  SET coverage-observations: observations=2 steps=222 probes=6 sites=2 leaves=3 maxdepth=2 width=6
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":5}]}
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":6}]}
+  SET exit=0
+=== capVsAppendCall
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() int)
+  CENSUS legacy form=return reason=no occurrence observable against an effectful event (legacy path: every edge forced — Stage E E3 trigger)
+  CANON exit=0 {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":6}]} 
+  SET coverage-observations: site bound 31 exceeds the case's width 6 — the width assertion is REFUTED (mechanically, at pick position 0); raise the case's width metadata
+  SET exit=1
+=== appendFullBase
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() int)
+  CENSUS unseq form=return events=2 calls=2 nonEvents=2
+  CANON exit=0 {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":6}]} 
+  SET coverage-observations: site bound 30 exceeds the case's width 6 — the width assertion is REFUTED (mechanically, at pick position 1); raise the case's width metadata
+  SET exit=1
+=== minStringVsCall
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() string)
+  CENSUS legacy form=return reason=no occurrence observable against an effectful event (legacy path: every edge forced — Stage E E3 trigger)
+  CANON exit=0 {"output":"","status":"ok","values":[{"bytes":[98,122],"tag":"string"}]} 
+  SET coverage-observations: observations=1 steps=105 probes=0 sites=0 leaves=1 maxdepth=0 width=6
+  MEMBER {"output":"","status":"ok","values":[{"bytes":[98,122],"tag":"string"}]}
+  SET exit=0
+=== appendResultPlanned
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() int)
+  CENSUS unseq form=elem-assign events=2 calls=2 nonEvents=2
+  CANON exit=0 {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":3}]} 
+  SET coverage-observations: site bound 31 exceeds the case's width 6 — the width assertion is REFUTED (mechanically, at pick position 1); raise the case's width metadata
+  SET exit=1
+=== realVsCall
+  CENSUS legacy form=define reason=target type outside the pilot grammar (complex128)
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() float64)
+  CENSUS legacy form=return reason=result type outside the pilot grammar (float64)
+  CANON exit=1 {"message":"frontend-quarantined: basic type complex128","output":"","status":"unsupported"} 
+  SET coverage-observations: machine step failed under pick assignment [] — cannot certify the observation set: unsupported: frontend-quarantined: basic type complex128
+  SET exit=1
+=== appendIfaceElemAddr
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() int)
+  CENSUS unseq form=return events=3 calls=2 nonEvents=1
+  CANON exit=0 {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":2}]} 
+  SET coverage-observations: site bound 31 exceeds the case's width 6 — the width assertion is REFUTED (mechanically, at pick position 2); raise the case's width metadata
+  SET exit=1
+=== callThenMinTwo
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() int)
+  CENSUS unseq form=return events=2 calls=1 nonEvents=2
+  CANON exit=0 {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":15}]} 
+  SET coverage-observations: observations=3 steps=522 probes=12 sites=4 leaves=6 maxdepth=2 width=6
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":15}]}
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":6}]}
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":7}]}
+  SET exit=0
+=== mapLitCallsInside
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() int)
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() int)
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() int)
+  CENSUS unseq form=return events=3 calls=3 nonEvents=1
+  CANON exit=0 {"output":"k\nv\nm\n","status":"ok","values":[{"kind":"int","tag":"int","value":7}]} 
+  SET coverage-observations: observations=1 steps=332 probes=6 sites=2 leaves=3 maxdepth=2 width=6
+  MEMBER {"output":"k\nv\nm\n","status":"ok","values":[{"kind":"int","tag":"int","value":7}]}
+  SET exit=0
+=== mapLitDupDynamic
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() int)
+  CENSUS unseq form=return events=1 calls=1 nonEvents=1
+  CANON exit=0 {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":7}]} 
+  SET coverage-observations: observations=1 steps=266 probes=6 sites=2 leaves=3 maxdepth=2 width=6
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":7}]}
+  SET exit=0
+=== mapLitDupDynamicSpec
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() int)
+  CENSUS legacy form=call-stmt reason=no non-event occurrence beside the call(s) (legacy path: every edge forced)
+  CENSUS legacy form=return reason=len of a non-slice operand (map[int]int)
+  CANON exit=0 {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":21}]} 
+  SET coverage-observations: observations=1 steps=141 probes=0 sites=0 leaves=1 maxdepth=0 width=6
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":21}]}
+  SET exit=0
+=== mapLitIfaceValue
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() int)
+  CENSUS unseq form=return events=1 calls=1 nonEvents=3
+  CANON exit=0 {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":15}]} 
+  SET coverage-observations: observations=2 steps=473 probes=12 sites=4 leaves=5 maxdepth=4 width=6
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":15}]}
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":6}]}
+  SET exit=0
+=== mapLitStringKeyVsCall
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() int)
+  CENSUS unseq form=return events=1 calls=1 nonEvents=2
+  CANON exit=0 {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":5}]} 
+  SET coverage-observations: observations=2 steps=374 probes=9 sites=3 leaves=4 maxdepth=3 width=6
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":5}]}
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":6}]}
+  SET exit=0
+=== mapLitAsCommaOkBase
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() int)
+  CENSUS legacy form=other reason=statement form outside the pilot grammar
+  CENSUS unseq form=comma-ok events=1 calls=1 nonEvents=3
+  CENSUS legacy form=other reason=statement form outside the pilot grammar
+  CANON exit=0 {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":-1}]} 
+  SET coverage-observations: observations=2 steps=3949 probes=150 sites=50 leaves=60 maxdepth=5 width=6
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":-1}]}
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":7}]}
+  SET exit=0
+=== mapLitValueCallVsKeyRead
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() int)
+  CENSUS unseq form=define events=1 calls=1 nonEvents=2
+  CANON exit=0 {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":5}]} 
+  SET coverage-observations: observations=2 steps=401 probes=6 sites=2 leaves=3 maxdepth=2 width=6
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":5}]}
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":50}]}
+  SET exit=0
+=== mapLitNestedValue
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() int)
+  CENSUS unseq form=return events=1 calls=1 nonEvents=3
+  CANON exit=0 {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":15}]} 
+  SET coverage-observations: observations=2 steps=645 probes=15 sites=5 leaves=6 maxdepth=5 width=6
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":15}]}
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":6}]}
+  SET exit=0
+=== strReassignVsIndex
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() int)
+  CENSUS unseq form=return events=1 calls=1 nonEvents=2
+  CANON exit=0 {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":127}]} 
+  SET coverage-observations: observations=2 steps=339 probes=9 sites=3 leaves=4 maxdepth=3 width=6
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":102}]}
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":127}]}
+  SET exit=0
+=== strConcatIndexVsCall
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() int)
+  CENSUS unseq form=return events=1 calls=1 nonEvents=2
+  CANON exit=0 {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":103}]} 
+  SET coverage-observations: observations=2 steps=440 probes=12 sites=4 leaves=5 maxdepth=4 width=6
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":102}]}
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":103}]}
+  SET exit=0
+=== strSliceReassign
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() string)
+  CENSUS unseq form=return events=1 calls=1 nonEvents=2
+  CANON exit=0 {"output":"","status":"ok","values":[{"bytes":[121,122,33],"tag":"string"}]} 
+  SET coverage-observations: observations=2 steps=264 probes=6 sites=2 leaves=3 maxdepth=2 width=6
+  MEMBER {"output":"","status":"ok","values":[{"bytes":[121,122,33],"tag":"string"}]}
+  MEMBER {"output":"","status":"ok","values":[{"bytes":[98,99,33],"tag":"string"}]}
+  SET exit=0
+=== strLenSliceForced
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() int)
+  CENSUS legacy form=return reason=no occurrence observable against an effectful event (legacy path: every edge forced — Stage E E3 trigger)
+  CANON exit=0 {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":7}]} 
+  SET coverage-observations: observations=1 steps=124 probes=0 sites=0 leaves=1 maxdepth=0 width=6
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":7}]}
+  SET exit=0
+=== strFullSliceRefused
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() string)
+  CENSUS unseq form=return events=1 calls=1 nonEvents=2
+  CANON exit=0 {"output":"","status":"ok","values":[{"bytes":[97,33],"tag":"string"}]} 
+  SET coverage-observations: observations=1 steps=277 probes=6 sites=2 leaves=3 maxdepth=2 width=6
+  MEMBER {"output":"","status":"ok","values":[{"bytes":[97,33],"tag":"string"}]}
+  SET exit=0
+=== strIndexStatusDiverse
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() int)
+  CENSUS unseq form=return events=1 calls=1 nonEvents=2
+  CANON exit=1 {"message":"runtime error: index out of range [9] with length 2","output":"","status":"panic"} 
+  SET coverage-observations: observations=2 steps=325 probes=9 sites=3 leaves=4 maxdepth=3 width=6
+  MEMBER {"message":"runtime error: index out of range [9] with length 2","output":"","status":"panic"}
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":102}]}
+  SET exit=0
+=== strIndexVsReassignBoth
+  CENSUS legacy form=define reason=target type outside the pilot grammar (func() int)
+  CENSUS unseq form=return events=1 calls=1 nonEvents=3
+  CANON exit=0 {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":127}]} 
+  SET coverage-observations: observations=4 steps=873 probes=24 sites=8 leaves=10 maxdepth=4 width=6
+  MEMBER {"message":"runtime error: index out of range [2] with length 2","output":"","status":"panic"}
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":102}]}
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":125}]}
+  MEMBER {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":127}]}
+  SET exit=0
+=== strSliceOOBVsPrint
+  CENSUS unseq form=return events=1 calls=1 nonEvents=2
+  CANON exit=1 {"message":"runtime error: slice bounds out of range [9:2]","output":"wit 5\n","status":"panic"} 
+  SET coverage-observations: observations=2 steps=95 probes=3 sites=1 leaves=2 maxdepth=1 width=6
+  MEMBER {"message":"runtime error: slice bounds out of range [9:2]","output":"","status":"panic"}
+  MEMBER {"message":"runtime error: slice bounds out of range [9:2]","output":"wit 5\n","status":"panic"}
+  SET exit=0

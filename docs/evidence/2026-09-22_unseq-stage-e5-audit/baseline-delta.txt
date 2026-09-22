@@ -1,0 +1,37 @@
+# baseline delta main dc5de785 -> candidate 403cde75 (baselines/native-full.tsv), [AGENT] auditor 2026-09-22
+# main 3732 rows = 3497 PASS / 235 non-PASS; tip 3757 rows = 3522 PASS / 235 non-PASS
+# born 25  lost 0  changed 9  PASS->nonPASS 0
+BORN	evalorder/unseq-addr/addr-arg-pure-control	PASS	-
+BORN	evalorder/unseq-addr/addr-arg-vs-read	PASS	membership
+BORN	evalorder/unseq-addr/addr-global-arg-vs-read	PASS	membership
+BORN	evalorder/unseq-addr/addr-payload-vs-call	PASS	membership
+BORN	evalorder/unseq-addr/addr-stored-vs-read	PASS	membership
+BORN	evalorder/unseq-builtins/append-read-vs-call	PASS	membership
+BORN	evalorder/unseq-builtins/append-spread-str-vs-call	PASS	membership
+BORN	evalorder/unseq-builtins/copy-effect-vs-read	PASS	membership
+BORN	evalorder/unseq-builtins/copy-stmt-control	PASS	-
+BORN	evalorder/unseq-builtins/min-read-vs-call	PASS	membership
+BORN	evalorder/unseq-builtins/min-vs-call	PASS	-
+BORN	evalorder/unseq-maplit/map-lit-const-control	PASS	-
+BORN	evalorder/unseq-maplit/map-lit-entry-vs-call	PASS	membership
+BORN	evalorder/unseq-maplit/map-lit-key-vs-call	PASS	membership
+BORN	evalorder/unseq-multi/blank-panic-vs-call	PASS	membership
+BORN	evalorder/unseq-multi/comma-ok-map-control	PASS	-
+BORN	evalorder/unseq-multi/comma-ok-recv-target-vs-panic	PASS	membership
+BORN	evalorder/unseq-multi/define-tuple-vs-call	PASS	membership
+BORN	evalorder/unseq-multi/multi-call-header-vs-call	PASS	membership
+BORN	evalorder/unseq-multi/swap-control	PASS	-
+BORN	evalorder/unseq-multi/tuple-header-vs-call	PASS	membership
+BORN	evalorder/unseq-strings/str-index-panic-vs-print	PASS	membership
+BORN	evalorder/unseq-strings/str-index-vs-call	PASS	membership
+BORN	evalorder/unseq-strings/str-len-vs-call	PASS	-
+BORN	evalorder/unseq-strings/str-slice-vs-call	PASS	membership
+CHANGED	builtins/e13-sibling-panic-order/map-lit-payload-vs-call	PASS/-	->	PASS/membership
+CHANGED	channels/make-edge/ordinary-receive-eval-order	PASS/-	->	PASS/membership
+CHANGED	multi-assign/call-write-back-order-value/deref-target	PASS/-	->	PASS/membership
+CHANGED	multi-assign/call-write-back-order/deref-target	PASS/-	->	PASS/membership
+CHANGED	multi-assign/call-write-back-order/slice-header-base	PASS/-	->	PASS/membership
+CHANGED	multi-assign/deref-target-before-rhs	PASS/-	->	PASS/membership
+CHANGED	multi-assign/selector-target-before-rhs	PASS/-	->	PASS/membership
+CHANGED	noodler/latitude/map-literal-key-vs-call	PASS/-	->	PASS/membership
+CHANGED	noodler/latitude/rhs-list-index-call-index	PASS/-	->	PASS/membership

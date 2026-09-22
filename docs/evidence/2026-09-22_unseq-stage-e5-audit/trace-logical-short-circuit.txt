@@ -1,0 +1,28 @@
+streams=default;9,8,7,6,5,4,3,2,1,0;1,3,5,7,9,2,4,6,8,0;5,5,5,5,5,5,5,5;rand:1:4096;rand:2:4096 fuel=10000000
+tip EXIT=0
+main EXIT=0
+#### results tip
+id	stream	status	consumed	wide	exhaustedAt	wideAfterExhaustion	perSite	maxBound	violations	firstViolation	alarms	firstAlarm	obsHash	driverAgreement
+noodler/evalorder/logical-short-circuit	default	ok	2	2	0	2	appendSpill=2	32	0	-	0	-	8455375086945765218	ok
+noodler/evalorder/logical-short-circuit	9,8,7,6,5,4,3,2,1,0	ok	1	1	-	0	appendSpill=1	32	0	-	0	-	8455375086945765218	ok
+noodler/evalorder/logical-short-circuit	1,3,5,7,9,2,4,6,8,0	ok	1	1	-	0	appendSpill=1	32	0	-	0	-	8455375086945765218	ok
+noodler/evalorder/logical-short-circuit	5,5,5,5,5,5,5,5	ok	1	1	-	0	appendSpill=1	32	0	-	0	-	8455375086945765218	ok
+noodler/evalorder/logical-short-circuit	rand:1:4096	ok	1	1	-	0	appendSpill=1	32	0	-	0	-	8455375086945765218	ok
+noodler/evalorder/logical-short-circuit	rand:2:4096	ok	1	1	-	0	appendSpill=1	32	0	-	0	-	8455375086945765218	ok
+#### results main
+id	stream	status	consumed	wide	exhaustedAt	wideAfterExhaustion	perSite	maxBound	violations	firstViolation	alarms	firstAlarm	obsHash	driverAgreement
+noodler/evalorder/logical-short-circuit	default	ok	2	2	0	2	appendSpill=2	32	0	-	0	-	8455375086945765218	ok
+noodler/evalorder/logical-short-circuit	9,8,7,6,5,4,3,2,1,0	ok	1	1	-	0	appendSpill=1	32	0	-	0	-	8455375086945765218	ok
+noodler/evalorder/logical-short-circuit	1,3,5,7,9,2,4,6,8,0	ok	1	1	-	0	appendSpill=1	32	0	-	0	-	8455375086945765218	ok
+noodler/evalorder/logical-short-circuit	5,5,5,5,5,5,5,5	ok	1	1	-	0	appendSpill=1	32	0	-	0	-	8455375086945765218	ok
+noodler/evalorder/logical-short-circuit	rand:1:4096	ok	1	1	-	0	appendSpill=1	32	0	-	0	-	8455375086945765218	ok
+noodler/evalorder/logical-short-circuit	rand:2:4096	ok	1	1	-	0	appendSpill=1	32	0	-	0	-	8455375086945765218	ok
+#### dump tip (sites)
+      1 phase	site
+      7 pool	appendSpill
+#### dump main (sites)
+      1 phase	site
+      7 pool	appendSpill
+#### identical?
+DUMP-SAME
+RES-SAME

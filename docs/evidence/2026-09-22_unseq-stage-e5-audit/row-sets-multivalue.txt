@@ -1,0 +1,15 @@
+=== rhsListIndexCallIndex
+      1 coverage-observations: observations=4 steps=4190 probes=72 sites=24 leaves=30 maxdepth=4 width=8
+      1 {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":1},{"kind":"int","tag":"int","value":5},{"kind":"int","tag":"int","value":1}]}
+      1 {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":1},{"kind":"int","tag":"int","value":5},{"kind":"int","tag":"int","value":9}]}
+      1 {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":9},{"kind":"int","tag":"int","value":5},{"kind":"int","tag":"int","value":1}]}
+      1 {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":9},{"kind":"int","tag":"int","value":5},{"kind":"int","tag":"int","value":9}]}
+=== evalOrderCallsVerbatim
+      1 coverage-observations: observations=1 steps=290673 probes=2589 sites=863 leaves=966 maxdepth=13 width=16
+      1 {"output":"","status":"ok","values":[{"bytes":[102,44,104,44,105,44,106,44,103,44,107],"tag":"string"},{"kind":"int","tag":"int","value":192},{"tag":"bool","value":true}]}
+=== evalOrderCallsTracedRecv
+      1 coverage-observations: observations=1 steps=331497 probes=2589 sites=863 leaves=966 maxdepth=13 width=16
+      1 {"output":"","status":"ok","values":[{"bytes":[102,44,104,44,105,44,106,44,99,44,103,44,107],"tag":"string"},{"kind":"int","tag":"int","value":192},{"tag":"bool","value":true}]}
+=== logicalShortCircuit
+      1 coverage-observations: observations=1 steps=302924 probes=48 sites=16 leaves=448 maxdepth=5 width=64
+      1 {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":13567}]}
