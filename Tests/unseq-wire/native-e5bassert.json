@@ -1,0 +1,161 @@
+{
+ "buildContext": {
+  "buildTags": [],
+  "cgoEnabled": true,
+  "compiler": "gc",
+  "goarch": "amd64",
+  "goos": "linux"
+ },
+ "fileOrder": [
+  {
+   "files": [
+    "main.go"
+   ],
+   "package": "main"
+  }
+ ],
+ "funcs": [
+  {
+   "body": {
+    "body": [
+     {
+      "decls": [
+       {
+        "id": "iv",
+        "init": {
+         "dynamic": {
+          "int": "int",
+          "kind": "int"
+         },
+         "expr": "to-interface",
+         "operand": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "7"
+         },
+         "target": {
+          "kind": "interface",
+          "name": "any"
+         }
+        },
+        "type": {
+         "kind": "interface",
+         "name": "any"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "decls": [
+       {
+        "id": "v",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "decls": [
+       {
+        "id": "ok",
+        "type": {
+         "kind": "bool"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "expr": {
+       "expr": "ident",
+       "name": "iv",
+       "type": {
+        "kind": "interface",
+        "name": "any"
+       }
+      },
+      "okTarget": {
+       "id": "ok",
+       "target": "var"
+      },
+      "stmt": "type-assert",
+      "target": {
+       "id": "v",
+       "target": "var"
+      },
+      "targetType": {
+       "int": "int",
+       "kind": "int"
+      }
+     },
+     {
+      "cond": {
+       "expr": "ident",
+       "name": "ok",
+       "type": {
+        "kind": "bool"
+       }
+      },
+      "stmt": "if",
+      "then": {
+       "body": [
+        {
+         "results": [
+          {
+           "expr": "ident",
+           "name": "v",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           }
+          }
+         ],
+         "stmt": "return"
+        }
+       ],
+       "stmt": "block"
+      }
+     },
+     {
+      "results": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "0"
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "e5bassert",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  }
+ ],
+ "methodSets": [],
+ "methods": [],
+ "package": "main",
+ "schema": "golean-native-v1",
+ "types": []
+}

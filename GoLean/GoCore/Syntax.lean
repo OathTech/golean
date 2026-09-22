@@ -440,12 +440,21 @@ only, no statement nests inside a body. -/
 inductive WideSpec where
   | append (elem : Ty) (slice elems : Expr)
   | copy (dst src : Expr)
+  /-- The comma-ok MAP LOOKUP `v, ok = m[k]` (Stage E5 E5b, 2026-09-22): ONE
+  read of the map VALUE at the key VALUE (a mutable read, never failing) with
+  TWO results — `Stmt.mapLookup` with the binder cells as its targets. -/
+  | mapLookup (base key : Expr) (keyTy valueTy : Ty)
+  /-- The comma-ok TYPE ASSERTION `v, ok = x.(T)` (E5b): a pure op on the
+  interface VALUE with TWO results (never failing) — `Stmt.typeAssert`. -/
+  | typeAssert (operand : Expr) (target : Ty)
   deriving Repr, BEq, Inhabited
 
 /-- The result arity a wide statement writes (its predeclared binders). -/
 def WideSpec.arity : WideSpec → Nat
   | .append .. => 1
   | .copy .. => 1
+  | .mapLookup .. => 2
+  | .typeAssert .. => 2
 
 /-- An occurrence's BODY — the bounded Stage B fragment of the v2.1 §3.1
 kind table (the internal normal form: every operand of a head is a

@@ -1,0 +1,62 @@
+# The whole-sweep census, E5b: the E5a frontend (BEFORE) vs the E5b frontend (AFTER), over 1361 corpus packages + the raft twin; producers .tmp/census/run.sh, summarize.py, diff.py.
+
+## AFTER (summary)
+corpus sweeps 108135  admitted 154  packages-with-admitted 41  refused-packages 0
+admitted units: [('main', 154)]
+admitted by form: [('return', 84), ('compound', 22), ('elem-assign', 11), ('call-stmt', 9), ('define', 9), ('multi-call', 6), ('tuple-assign', 4), ('print-stmt', 3), ('map-assign', 2), ('comma-ok', 1), ('blank-assign', 1), ('deref-assign', 1), ('assign', 1)]
+admitted per package:
+    48 Corpus/coverage/exec/builtins/e13-sibling-panic-order
+    13 Corpus/coverage/exec/evalorder/unseq-pilot
+    10 Corpus/coverage/exec/noodler/latitude
+     8 Corpus/coverage/exec/evalorder/unseq-conv-alloc
+     8 Corpus/coverage/exec/noodler/evalorder
+     6 Corpus/coverage/exec/evalorder/unseq-ptr-field-map
+     5 Corpus/coverage/exec/evalorder/unseq-builtins
+     5 Corpus/coverage/exec/spec-examples-decl/select-forms
+     4 Corpus/coverage/exec/builtins/len-vs-call-order
+     4 Corpus/coverage/exec/evalorder/unseq-recv-method
+     3 Corpus/coverage/exec/evalorder/legacy-logical-vs-call
+     3 Corpus/coverage/exec/evalorder/unseq-globals
+     3 Corpus/coverage/exec/noodler/maps
+     2 Corpus/coverage/exec/binop-order/operand-panic-vs-call
+     2 Corpus/coverage/exec/channels/recv-edge
+     2 Corpus/coverage/exec/multi-assign/call-write-back-order
+     2 Corpus/coverage/exec/noodler/methods
+     2 Corpus/coverage/exec/spec-examples-stmt/continue-label
+     2 Corpus/coverage/exec/spec-examples-stmt/eval-order-calls
+     1 Corpus/coverage/exec/channels/make-edge
+     1 Corpus/coverage/exec/evalorder/unseq-const-cell
+     1 Corpus/coverage/exec/goroutines/fork-join
+     1 Corpus/coverage/exec/goroutines/worker-pool
+     1 Corpus/coverage/exec/init/stdlib-initializer-dependent
+     1 Corpus/coverage/exec/maps/compound-assign-eval-once
+     1 Corpus/coverage/exec/methods/nil-receiver
+     1 Corpus/coverage/exec/multi-assign/call-write-back
+     1 Corpus/coverage/exec/multi-assign/call-write-back-order-value
+     1 Corpus/coverage/exec/multi-assign/index-target-rhs-call-order
+     1 Corpus/coverage/exec/multi-assign/lhs-index-eval-order
+     1 Corpus/coverage/exec/multi-assign/target-eval-before-call
+     1 Corpus/coverage/exec/noodler/arith
+     1 Corpus/coverage/exec/noodler/frontier/pointer-to-pointer-chains
+     1 Corpus/coverage/exec/noodler/gotchas
+     1 Corpus/coverage/exec/pointers/deref-target-rhs-call-order
+     1 Corpus/coverage/exec/race/negative-sync
+
+## BEFORE (E5a) -> AFTER (E5b) (diff.py; the 28 rows only in AFTER are the E5a package's sweeps, born after its census)
+rows only in AFTER (new packages): 28 in ['Corpus/coverage/exec/evalorder/unseq-builtins']
+newly admitted 12   lost 0
+newly admitted per package:
+     2 Corpus/coverage/exec/multi-assign/call-write-back-order
+     2 Corpus/coverage/exec/spec-examples-stmt/eval-order-calls
+     1 Corpus/coverage/exec/channels/recv-edge
+     1 Corpus/coverage/exec/multi-assign/call-write-back
+     1 Corpus/coverage/exec/multi-assign/call-write-back-order-value
+     1 Corpus/coverage/exec/multi-assign/lhs-index-eval-order
+     1 Corpus/coverage/exec/multi-assign/target-eval-before-call
+     1 Corpus/coverage/exec/noodler/evalorder
+     1 Corpus/coverage/exec/noodler/latitude
+     1 Corpus/coverage/exec/returns/multi-result-assign-order
+newly admitted, by former reason: [('multi-target or tuple assignment', 11), ('blank target', 1)]
+newly admitted by form: [('multi-call', 6), ('tuple-assign', 4), ('comma-ok', 1), ('blank-assign', 1)]
+twin newly admitted: 0
+still legacy with a package-level reason: [('package-level target of a type outside the grammar ([3]int)', 3), ('package-level target of a type outside the grammar ([2]int)', 2), ('package-level target of a type outside the grammar (main.Valuer)', 1), ('package-level target of a type outside the grammar (raft.Logger)', 1)]

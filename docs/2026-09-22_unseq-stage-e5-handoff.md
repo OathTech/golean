@@ -15,7 +15,8 @@ nothing else; the train installs the candidate at step 5a, this lane does not).
 
 | commit | family | gate | rows | census (admitted / probes corpus+twin) | trace |
 |---|---|---|---|---|---|
-| (E5a, this tree) | **E5a** the reading-(a) built-ins `min`/`max`/`copy`/`append` — `min`/`max` pure E1 participants, `append`/`copy` effectful `wide` bodies (PENDING [USER], §2 item 1) | `ci --diff` EXIT=1 in 971 s, K=32; 3738 = 3502 / 236 in the run = the pin with the one 5a-class row red; red = the 5a pair only (provenance STALE `AdmissionIndices.lean`; the `google-search` drift line) | 6 born (`evalorder/unseq-builtins`: 4 membership + 2 strict); 5 e13 rows probe → graph, sets unchanged; `copy-min` unchanged; 3732 = 3497 / 235 → 3738 = 3503 / 235 | 131 → 137 admitted (+6, 0 lost); probes 70 → 63 corpus (e13 17 → 12, copy-min 2 → 0), twin 128 | TRACE-LINE |
+| (E5b, this tree) | **E5b** multi-target assignments — tuple, blank, multi-value call, the comma-ok forms; every target a phase-1 sibling plan; `WideSpec.mapLookup`/`.typeAssert` ARMS (no new kind) | `ci --diff` run 2 EXIT=1 in 765 s, K=32; 3745 = 3509 / 236 in the run = the pin with the one 5a-class row red; red = the 5a pair only (run 1 also red on stale native fixtures — regenerated) | 7 born (`evalorder/unseq-multi`: 5 membership + 2 strict); 4 lane moves strict → membership (BUG-052's deref-target ×2, slice-header-base; noodler rhs-list-index-call-index); the spec example red-first then PASS; 3738 = 3503 / 235 → 3745 = 3510 / 235 | 137 → 154 admitted (+12 widening, +5 E5a's package; 0 lost); probes 63 → 60 corpus, twin 128 | TRACE-LINE-B |
+| `732da84c` | **E5a** the reading-(a) built-ins `min`/`max`/`copy`/`append` — `min`/`max` pure E1 participants, `append`/`copy` effectful `wide` bodies (PENDING [USER], §2 item 1) | `ci --diff` EXIT=1 in 971 s, K=32; 3738 = 3502 / 236 in the run = the pin with the one 5a-class row red; red = the 5a pair only (provenance STALE `AdmissionIndices.lean`; the `google-search` drift line) | 6 born (`evalorder/unseq-builtins`: 4 membership + 2 strict); 5 e13 rows probe → graph, sets unchanged; `copy-min` unchanged; 3732 = 3497 / 235 → 3738 = 3503 / 235 | 131 → 137 admitted (+6, 0 lost); probes 70 → 63 corpus (e13 17 → 12, copy-min 2 → 0), twin 128 | 3702 ids: 3690 SAME, 6 DIFFER (= the 6 admitted sweeps' rows), 6 ONLY_B (the born rows); `unseqNext` 1482 → 1609, `unseqPanic` 204 → 174 |
 
 ## 2. PENDING [USER] — posed, never self-adjudicated
 
@@ -43,7 +44,7 @@ lane's tip: (filled at park).
 
 ## 4. Whole-corpus choice traces
 
-(filled per family)
+`docs/evidence/2026-09-22_unseq-stage-e5/choice-trace-main-vs-e5a.txt`: main `d76721bd` vs the E5a commit `732da84c` — 3702 ids, 3690 byte-identical, 6 DIFFER (exactly the six sweeps E5a admits: the five e13 built-in rows and `slices/copy-min`), 6 only on the E5a side (the born rows); site census `unseqNext` 1482 → 1609, `unseqPanic` 204 → 174 — the legacy probe is still consulted on 174 recorded consumptions (E6 not reachable; §2/§3).
 
 ## 6. Operational notes for the next session
 

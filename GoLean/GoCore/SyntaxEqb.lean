@@ -431,6 +431,9 @@ theorem AllocSpec.eqbF_sound (f : Nat) :
 def WideSpec.eqbF (f : Nat) : WideSpec → WideSpec → Bool
   | .append e1 s1 x1, .append e2 s2 x2 => Ty.eqb e1 e2 && Expr.eqbF f s1 s2 && Expr.eqbF f x1 x2
   | .copy d1 s1, .copy d2 s2 => Expr.eqbF f d1 d2 && Expr.eqbF f s1 s2
+  | .mapLookup b1 k1 kt1 vt1, .mapLookup b2 k2 kt2 vt2 =>
+      Expr.eqbF f b1 b2 && Expr.eqbF f k1 k2 && Ty.eqb kt1 kt2 && Ty.eqb vt1 vt2
+  | .typeAssert o1 t1, .typeAssert o2 t2 => Expr.eqbF f o1 o2 && Ty.eqb t1 t2
   | _, _ => false
 
 theorem WideSpec.eqbF_sound (f : Nat) :
@@ -443,6 +446,13 @@ theorem WideSpec.eqbF_sound (f : Nat) :
   case copy.copy d1 s1 d2 s2 =>
     obtain ⟨h1, h2⟩ := andSplit2 h
     cases Expr.eqbF_sound _ _ _ h1; cases Expr.eqbF_sound _ _ _ h2; rfl
+  case mapLookup.mapLookup b1 k1 kt1 vt1 b2 k2 kt2 vt2 =>
+    obtain ⟨h1, h2, h3, h4⟩ := andSplit4 h
+    cases Expr.eqbF_sound _ _ _ h1; cases Expr.eqbF_sound _ _ _ h2
+    cases Ty.eqb_sound h3; cases Ty.eqb_sound h4; rfl
+  case typeAssert.typeAssert o1 t1 o2 t2 =>
+    obtain ⟨h1, h2⟩ := andSplit2 h
+    cases Expr.eqbF_sound _ _ _ h1; cases Ty.eqb_sound h2; rfl
 
 def UnseqBody.eqbF (f : Nat) : UnseqBody → UnseqBody → Bool
   | .eval b1 h1, .eval b2 h2 => b1 == b2 && Expr.eqbF f h1 h2

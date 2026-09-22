@@ -1,0 +1,30 @@
+# gc's draws (go1.26.5), 5 runs x GOMAXPROCS 1/8 x default / -N -l = 20 per subject; producer .tmp/e5/gc-draws.sh. Born: evalorder/unseq-multi (7 subjects; the panicking rows print gc's stderr — the driver's copy). Moved: multi-assign/call-write-back-order/{derefTarget,sliceHeaderBase}, call-write-back-order-value/valueCallDerefTarget, noodler/latitude/rhsListIndexCallIndex.
+
+## born (tally: the last field of each draw)
+20 Corpus/coverage/exec/evalorder/unseq-multi:blankPanicVsCall -> 2]
+20 Corpus/coverage/exec/evalorder/unseq-multi:commaOkMapControl -> 21
+20 Corpus/coverage/exec/evalorder/unseq-multi:commaOkRecvTargetVsPanic -> 2]
+20 Corpus/coverage/exec/evalorder/unseq-multi:defineTupleVsCall -> 15
+20 Corpus/coverage/exec/evalorder/unseq-multi:multiCallHeaderVsCall -> 15
+20 Corpus/coverage/exec/evalorder/unseq-multi:swapControl -> 21
+20 Corpus/coverage/exec/evalorder/unseq-multi:tupleHeaderVsCall -> 15
+
+## born (first draw per subject, verbatim)
+Corpus/coverage/exec/evalorder/unseq-multi:tupleHeaderVsCall GOMAXPROCS=1 default run1: 15
+Corpus/coverage/exec/evalorder/unseq-multi:blankPanicVsCall GOMAXPROCS=1 default run1: wit 1|panic: runtime error: index out of range [9] with length 1||goroutine 1 [running]:|main.blankPanicVsCall(...)|	/home/dev/projects/golean/.claude/worktrees/unseq-stage-
+Corpus/coverage/exec/evalorder/unseq-multi:commaOkRecvTargetVsPanic GOMAXPROCS=1 default run1: len 0|panic: runtime error: index out of range [9] with length 1||goroutine 1 [running]:|main.commaOkRecvTargetVsPanic()|	/home/dev/projects/golean/.claude/worktrees
+Corpus/coverage/exec/evalorder/unseq-multi:multiCallHeaderVsCall GOMAXPROCS=1 default run1: 15
+Corpus/coverage/exec/evalorder/unseq-multi:defineTupleVsCall GOMAXPROCS=1 default run1: 15
+Corpus/coverage/exec/evalorder/unseq-multi:swapControl GOMAXPROCS=1 default run1: 21
+Corpus/coverage/exec/evalorder/unseq-multi:commaOkMapControl GOMAXPROCS=1 default run1: 21
+
+## moved (tally)
+20 Corpus/coverage/exec/multi-assign/call-write-back-order:derefTarget -> 4207
+20 Corpus/coverage/exec/multi-assign/call-write-back-order:sliceHeaderBase -> 774203
+20 Corpus/coverage/exec/multi-assign/call-write-back-order-value:valueCallDerefTarget -> 4207
+20 Corpus/coverage/exec/noodler/latitude:rhsListIndexCallIndex -> 9
+
+Corpus/coverage/exec/multi-assign/call-write-back-order:derefTarget GOMAXPROCS=1 default run1: 4207
+Corpus/coverage/exec/multi-assign/call-write-back-order:sliceHeaderBase GOMAXPROCS=1 default run1: 774203
+Corpus/coverage/exec/multi-assign/call-write-back-order-value:valueCallDerefTarget GOMAXPROCS=1 default run1: 4207
+Corpus/coverage/exec/noodler/latitude:rhsListIndexCallIndex GOMAXPROCS=1 default run1: 9 5 9

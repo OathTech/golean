@@ -164,6 +164,18 @@ E5a6 x[iv.(int)] = copy(d, s) + wit(5) (E13 tgt-assert-vs-copy-call: the asserti
 E5a7 len(append(b, "xy"...)) + x + m() (a spread string; append, len, m E1-ordered; x vs them): outcome set = [9, 18]
    trajectories per outcome: [(9, 8), (18, 1)]
    canonical (slot 0): Conv E_app E_len E_m R_x Op1 Op2 -> 18
+E5b1 s[0], x = m(), 3 (m rebinds s: the element plan's frozen header vs m): outcome set = [(1, 5), (5, 7)]
+   trajectories per outcome: [((1, 5), 4), ((5, 7), 8)]
+   canonical (slot 0): E_m R_s T_s0 C3 -> (1, 5)
+E5b2 _, x = a[9], wit(1) (the blank's panic vs the sibling call): outcome set = [('panic', ()), ('panic', ('wit 1',))]
+   trajectories per outcome: [(('panic', ()), 2), (('panic', ('wit 1',)), 3)]
+   canonical (slot 0): R_a9 -> ('panic', ())
+E5b3 xs[a[9]], ok = <-ch (the planned target's panic vs the comma-ok receive; witness len(ch)): outcome set = [('panic', 'len(ch)=0'), ('panic', 'len(ch)=1')]
+   trajectories per outcome: [(('panic', 'len(ch)=0'), 3), (('panic', 'len(ch)=1'), 2)]
+   canonical (slot 0): R_a9 -> ('panic', 'len(ch)=1')
+E5b4 x, s[0] = two() (a multi-value call rebinding s: the frozen header vs the call): outcome set = [(1, 5), (5, 7)]
+   trajectories per outcome: [((1, 5), 4), ((5, 7), 8)]
+   canonical (slot 0): E_two R_s T_s0 T_x -> (1, 5)
 C1 f(g()): outcome set = [8]
    trajectories per outcome: [(8, 1)]
    canonical (slot 0): E_g E_f -> 8

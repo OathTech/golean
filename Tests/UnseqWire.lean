@@ -130,6 +130,13 @@ def main (_args : List String) : IO Unit := do
     wireSet "E5APPEND wire: append(s, 3)[0] + m() — the append a wide body (in place, E1-ordered); the result read vs m" "e5append.json" "e5append" [okZ 6, okZ 15],
     wireSet "E5COPY wire: d[0] + copy(d, s) — the copy's write vs the sibling checked read" "e5copy.json" "e5copy" [okZ 2, okZ 9],
     wireSet "E5MINMAX wire: min(x, 100) + y + m() — min a pure E1-ordered head; y's read vs m" "e5minmax.json" "e5minmax" [okZ 7, okZ 16],
+    -- STAGE E5, family E5b (2026-09-22): MULTI-TARGET assignments — every target a phase-1 SIBLING plan, the
+    -- stores left to right (spec#Assignment_statements); the comma-ok forms two-binder bodies. References
+    -- enumerate.py E5b1 / E5b3.
+    wireSet "E5BTUPLE wire: s[0], x = m(), 3 — m rebinds s; the element plan's frozen header vs m; two stores" "e5btuple.json" "e5btuple" [okZ 57, okZ 15],
+    wireSet "E5BRECV2 wire: xs[a[9]], ok = <-ch — the comma-ok receive (two binders) vs the planned target's panic" "e5brecv2.json" "e5brecv2"
+      [panicOut (oob 9 1) "len 1\n", panicOut (oob 9 1) "len 0\n"],
+    wireSet "E5BASSERT wire: v, ok = iv.(int) — the comma-ok assertion a two-binder wide body" "e5bassert.json" "e5bassert" [okZ 7],
     -- THE FRONTEND'S OWN LOWERING (C2): source → actual frontend bytes → strict decoder →
     -- machine → EXACT reference sets (v2.1 §7 row C's exit; the graphs are the emitter's,
     -- not hand-built — the same reference sets as the hand-built wires above).
@@ -169,6 +176,9 @@ def main (_args : List String) : IO Unit := do
     wireSet "NATIVE E5APPEND (the frontend's own wide append — Stage E5 E5a)" "native-e5append.json" "e5append" [okZ 6, okZ 15],
     wireSet "NATIVE E5COPY (the frontend's own wide copy)" "native-e5copy.json" "e5copy" [okZ 2, okZ 9],
     wireSet "NATIVE E5MINMAX (the frontend's own min head, E1-ordered)" "native-e5minmax.json" "e5minmax" [okZ 7, okZ 16],
+    wireSet "NATIVE E5BTUPLE (the frontend's own multi-target plans — Stage E5 E5b)" "native-e5btuple.json" "e5btuple" [okZ 57, okZ 15],
+    wireSet "NATIVE E5BRECV2 (the frontend's own comma-ok receive with a planned target)" "native-e5brecv2.json" "e5brecv2"
+      [panicOut (oob 9 1) "len 1\n", panicOut (oob 9 1) "len 0\n"],
     -- EDGE MUTATIONS of the LOWERED graphs (v2.1 §8): each decodes; the exact-set check
     -- names the changed set (the decoder cannot see a missing or wrong edge).
     wireSet "EDGE data (R6: the access reads the variable's header, not the frozen slot) → the fused {20}" "edge-data.json" "r6" [okZ 20],

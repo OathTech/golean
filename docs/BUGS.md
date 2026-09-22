@@ -365,6 +365,17 @@ and only differentially-visibly.
   probed the same discrimination independently).)
 - Pinned-by: differential
 - Cases: multi-assign/call-write-back-order/index-missed-panic, multi-assign/call-write-back-order/index-spurious-panic, multi-assign/call-write-back-order/global-index, multi-assign/call-write-back-order/deref-target, multi-assign/call-write-back-order/slice-header-base
+
+ENVELOPED (Stage E5 E5b, 2026-09-22, [AGENT] lane `core/unseq-stage-e5-0922`; design
+`docs/2026-09-22_unseq-stage-e5-design.md` §E5b): the fixed post-call target-operand order is gc's
+REALIZATION of a spec-unordered pair, not a spec requirement (this entry's own title: «deterministic
+divergence inside spec-unordered latitude»). Once multi-target assignments lower as `unseq` graphs
+— every target a phase-1 SIBLING plan on FROZEN operands — three rows of this family whose call
+REDIRECTS the target's pointer or REBINDS its slice become membership sets with gc's post-call
+member inside: `deref-target` {42007, 4207} (gc 4207, 20/20), `slice-header-base` {1120003,
+774203} (gc 774203), and `multi-assign/call-write-back-order-value/deref-target` {42007, 4207}
+(gc 4207); the other rows on this line keep one observation on every order. The fix's order is
+one member; the pre-call plan the other — the envelope E2's VALUE axis names.
 - Discovered: 2026-08-09 (S1 pre-merge audit, semantics dimension,
   verifier-reproduced with an independent probe matrix; PRE-EXISTING on
   main — the pre-migration `callTargetLoc` path also resolved target

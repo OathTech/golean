@@ -569,7 +569,25 @@ than as speculative cases.)
 
 ## 8. Counts and the closing arithmetic
 
-All numbers at the current tracked baseline (3738 cases, 3503 PASS / 235 FAIL; [AGENT] worker, lane
+All numbers at the current tracked baseline (3745 cases, 3510 PASS / 235 FAIL; [AGENT] worker, lane
+`core/unseq-stage-e5-0922` — STAGE E5 of the evaluation-order model v2.1, family E5b: MULTI-TARGET assignments
+(tuple, blank, multi-value call, the comma-ok forms) as `unseq` graphs whose targets are phase-1 sibling plans (design
+`docs/2026-09-22_unseq-stage-e5-design.md` §E5b; handoff `docs/2026-09-22_unseq-stage-e5-handoff.md`); measured by
+`scripts/diff-one` on all 65 affected rows (three runs) before the pin and by the full `GOLEAN_MEM_MAX=48G scripts/capped
+scripts/ci --diff` at the E5b tree — the gate line in `docs/evidence/2026-09-22_unseq-stage-e5/README.md`). The delta over
+the E5a tally (§8af, 3738 = 3503 / 235): 7 rows BORN in `evalorder/unseq-multi` — `tuple-header-vs-call` {57, 15},
+`blank-panic-vs-call` {panic, `wit 1` · panic}, `comma-ok-recv-target-vs-panic` {`len 1`, `len 0`} (each · panic),
+`multi-call-header-vs-call` {57, 15}, `define-tuple-vs-call` {6, 15} PASS/membership (gc's call-first member inside, 20/20),
+`swap-control` and `comma-ok-map-control` PASS strict (call-free); 4 LANE MOVES strict → membership (E2/E12's value axis
+enveloped, gc's member inside): BUG-052's `multi-assign/call-write-back-order/{deref-target {42007, 4207}, slice-header-base
+{1120003, 774203}}`, `multi-assign/call-write-back-order-value/deref-target` {42007, 4207} (the fixed post-call order is one
+member), `noodler/latitude/rhs-list-index-call-index` {(1,5,1), (1,5,9), (9,5,1), (9,5,9)}; the spec's own example
+`spec-examples-stmt/eval-order-calls/{verbatim,traced-recv}` UNCHANGED (red on the first E5b cut — the lowering's E1 chain
+put the target's `f()` after `k()`; fixed before landing). 3738 + 7 = 3745; 3503 + 7 = 3510; 235 unchanged. No other
+result/stage movement, no removal, no widened pin, no PASS → non-PASS. Reds table unchanged: 128 + 9 + (24 + 1) + 7 + 66 =
+235 ✓. Movement §8ag (and §8af for E5a).
+
+Previous tally, then current (3738 cases, 3503 PASS / 235 FAIL; [AGENT] worker, lane
 `core/unseq-stage-e5-0922` — STAGE E5 of the evaluation-order model v2.1, family E5a: the READING-(a) BUILT-INS
 `min`/`max`/`copy`/`append` as E1 participants (RATIFIED [USER] 2026-09-22, relayed; design
 `docs/2026-09-22_unseq-stage-e5-design.md` §E5a; handoff `docs/2026-09-22_unseq-stage-e5-handoff.md`); measured by
@@ -2426,6 +2444,35 @@ tallied by row:
   twin 10 203 sweeps, 0 admitted, pin byte-identical. No lane move, no widened pin, no PASS → non-PASS.
 - Reds table: post-vintage 72 → 70; 133 + 9 + (24 + 1) + 7 + 70 = 244 ✓. FR-28's cell unchanged (the
   BUG-102 designed reds are E4's).
+
+### 8ag. Movement at Stage E5 of the evaluation-order model v2.1, family E5b — multi-target assignments (2026-09-22, lane `core/unseq-stage-e5-0922`; on main `d76721bd`)
+
+[AGENT] worker. Design `docs/2026-09-22_unseq-stage-e5-design.md` §E5b; evidence
+`docs/evidence/2026-09-22_unseq-stage-e5/` (`census-e5b.txt`, `census-newly-admitted-e5b.tsv`, `probes-e5b.txt`,
+`diff-one-e5b.txt` (three runs), `gc-draws-e5b.txt`, the gate tail). Tracked figure 3738 = 3503 / 235 → 3745 = 3510 / 235
+(re-pin reason in the baseline header). Movement, tallied by row:
+
+- BORN 7, all PASS (`Corpus/coverage/exec/evalorder/unseq-multi/`): `tuple-header-vs-call` membership {57, 15} (`s[0], x =
+  m(), 3`, m rebinding the captured s — the element plan's frozen header before / after m; gc 15), `blank-panic-vs-call`
+  membership {panic · ``, `wit 1` · panic} (`_, x = a[9], wit(1)`), `comma-ok-recv-target-vs-panic` membership {`len 1` ·
+  panic, `len 0` · panic} (`xs[a[9]], ok = <-ch`, the two-binder receive; gc `len 0`), `multi-call-header-vs-call`
+  membership {57, 15} (`x, s[0] = twoRebind()`; gc 15), `define-tuple-vs-call` membership {6, 15} (`x, y := m(), s[0]`;
+  gc 15); `swap-control` (21) and `comma-ok-map-control` (21) strict — call-free, legacy by name.
+- LANE MOVES strict → membership 4 (E2/E12's VALUE axis enveloped; gc's draw in every set, 20/20): BUG-052's
+  `multi-assign/call-write-back-order/deref-target` {42007, 4207} (gc 4207 — the fixed post-call order, one member) and
+  `slice-header-base` {1120003, 774203} (gc 774203); `multi-assign/call-write-back-order-value/deref-target` {42007, 4207}
+  (gc 4207); `noodler/latitude/rhs-list-index-call-index` {(1,5,1), (1,5,9), (9,5,1), (9,5,9)} (gc (9,5,9); the two reads
+  of `a[0]` unordered against `f` and against each other — R1).
+- UNCHANGED though newly admitted (52 rows): the other `multi-assign/*` rows (a plan checking nothing beside a call
+  that cannot write its frozen operands: one observation), `channels/recv-edge/dep-index-target`,
+  `returns/multi-result-assign-order`, `noodler/evalorder/logical-short-circuit`, and the spec's own example
+  `spec-examples-stmt/eval-order-calls/{verbatim,traced-recv}` — RED-FIRST on the first E5b cut (the lowering ordered the
+  right-hand events before the target's `f()`: the trace `h,i,j,g,k,f`, a wrong answer the corpus caught), PASS since the
+  targets' operands lower first (the trace `f h i j <-c g k`).
+- Census 137 → 154 admitted (+12 in 10 packages by former reason `multi-target or tuple assignment` 11 / `blank target`
+  1; +5 the E5a package's sweeps; 0 lost); the twin 0. Legacy probe emissions 63 → 60 (corpus), the twin 128 unchanged.
+- The core gains two ARMS of E5a's `wide` kind (`mapLookup`, `typeAssert`) — no new constructor, no new Step rule; three
+  new wire mutants (38 → 41) and E3's two-binder receive mutant re-pointed (two binders are the admitted comma-ok form).
 
 ### 8af. Movement at Stage E5 of the evaluation-order model v2.1, family E5a — the reading-(a) built-ins (2026-09-22, lane `core/unseq-stage-e5-0922`; on main `d76721bd`)
 

@@ -89,6 +89,8 @@ def allocSpecIndices : AllocSpec → List TypeIdx
 def wideSpecIndices : WideSpec → List TypeIdx
   | .append e s x => tyIndices e ++ exprIndices s ++ exprIndices x
   | .copy d s => exprIndices d ++ exprIndices s
+  | .mapLookup b k kt vt => exprIndices b ++ exprIndices k ++ tyIndices kt ++ tyIndices vt
+  | .typeAssert o t => exprIndices o ++ tyIndices t
 
 /-- An `unseq` occurrence body's indices (Stage B): its head/operand
 expressions and target assignee; the graph's cells declare types too. -/

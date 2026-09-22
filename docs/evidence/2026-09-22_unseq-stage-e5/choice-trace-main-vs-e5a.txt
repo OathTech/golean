@@ -1,0 +1,17 @@
+# whole-corpus choice trace, main d76721bd's binary (sha256 73734062…; == dc5de785's sources) vs the E5a commit 732da84c's binary (sha256 4d5b3c13…); scripts/choice-trace-corpus --dump --jobs 5 on each side from its own export tree (main's: git archive d76721bd + deps, .tmp/main-tree; E5a's: git archive 732da84c + deps, .tmp/e5a-tree — each tree's own frontend), the two standing exclusions (goroutines/send-then-spin, strings/trimspace-repeat/repeat-bound-refused); compared per id on the sorted dump records (stream, idx, phase, site, bound, streamValue, pick) and the per-stream results (status, consumed, wide, obsHash, driverAgreement) by Stage D's trace-compare.py
+#SUMMARY	ids=3702	same=3690	differ=6	onlyA=0	onlyB=6
+#SITES_A	{'appendSpill': 4874, 'backEdge': 2403, 'l1Sched': 9695, 'l2Arrival': 3, 'l2Entry': 24, 'l4Waiter': 22, 'l5ExitWindow': 328, 'mapIter': 1307, 'nilValueMethodText': 90, 'postOp': 4645, 'repanicCollapse': 126, 'tryLock': 101, 'unseqNext': 1482, 'unseqPanic': 204}
+#SITES_B	{'appendSpill': 4874, 'backEdge': 2403, 'l1Sched': 9695, 'l2Arrival': 3, 'l2Entry': 24, 'l4Waiter': 22, 'l5ExitWindow': 328, 'mapIter': 1307, 'nilValueMethodText': 90, 'postOp': 4645, 'repanicCollapse': 126, 'tryLock': 101, 'unseqNext': 1609, 'unseqPanic': 174}
+# the 6 DIFFER ids are EXACTLY the rows of the 6 sweeps E5a admits (the five builtins/e13-sibling-panic-order rows whose legacy unseqPanic probe became an unseq graph, and slices/copy-min); the 6 ONLY_B ids are the born evalorder/unseq-builtins rows; every other id (3690) byte-identical. Site census: unseqNext 1482 -> 1609, unseqPanic 204 -> 174 (the five e13 rows' probes retired into graphs); every other site identical. The tracer exits 1 on BOTH sides with the standing findings (41 finding lines each, identical; 34 export refusals each — the pre-existing frontend-export reds).
+DIFFER	builtins/e13-sibling-panic-order/assert-left-append
+DIFFER	builtins/e13-sibling-panic-order/assert-left-copy
+DIFFER	builtins/e13-sibling-panic-order/tgt-assert-vs-append
+DIFFER	builtins/e13-sibling-panic-order/tgt-assert-vs-copy-call
+DIFFER	builtins/e13-sibling-panic-order/tgt-assert-vs-min-call
+ONLY_B	evalorder/unseq-builtins/append-read-vs-call
+ONLY_B	evalorder/unseq-builtins/append-spread-str-vs-call
+ONLY_B	evalorder/unseq-builtins/copy-effect-vs-read
+ONLY_B	evalorder/unseq-builtins/copy-stmt-control
+ONLY_B	evalorder/unseq-builtins/min-read-vs-call
+ONLY_B	evalorder/unseq-builtins/min-vs-call
+DIFFER	slices/copy-min

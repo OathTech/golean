@@ -1,0 +1,13 @@
+dir	unit	file:line	function	form	events	calls	nonEvents	former-reason
+Corpus/coverage/exec/channels/recv-edge	main	Corpus/coverage/exec/channels/recv-edge/main.go:109	recvDepIndexTarget	comma-ok	1	1	1	multi-target or tuple assignment
+Corpus/coverage/exec/multi-assign/call-write-back	main	Corpus/coverage/exec/multi-assign/call-write-back/main.go:45	callPanicIdentity	multi-call	1	1	2	multi-target or tuple assignment
+Corpus/coverage/exec/multi-assign/call-write-back-order	main	Corpus/coverage/exec/multi-assign/call-write-back-order/main.go:114	sliceHeaderBase	multi-call	1	1	2	multi-target or tuple assignment
+Corpus/coverage/exec/multi-assign/call-write-back-order	main	Corpus/coverage/exec/multi-assign/call-write-back-order/main.go:99	derefTarget	multi-call	1	1	1	multi-target or tuple assignment
+Corpus/coverage/exec/multi-assign/call-write-back-order-value	main	Corpus/coverage/exec/multi-assign/call-write-back-order-value/main.go:47	valueCallDerefTarget	multi-call	1	1	1	multi-target or tuple assignment
+Corpus/coverage/exec/multi-assign/lhs-index-eval-order	main	Corpus/coverage/exec/multi-assign/lhs-index-eval-order/main.go:11	multiAssignLhsIndexEvalOrder	tuple-assign	2	2	2	multi-target or tuple assignment
+Corpus/coverage/exec/multi-assign/target-eval-before-call	main	Corpus/coverage/exec/multi-assign/target-eval-before-call/main.go:11	multiAssignTargetEvalBeforeCall	multi-call	1	1	1	multi-target or tuple assignment
+Corpus/coverage/exec/noodler/evalorder	main	Corpus/coverage/exec/noodler/evalorder/main.go:176	logicalShortCircuit	blank-assign	3	3	2	blank target
+Corpus/coverage/exec/noodler/latitude	main	Corpus/coverage/exec/noodler/latitude/main.go:113	rhsListIndexCallIndex	tuple-assign	1	1	4	multi-target or tuple assignment
+Corpus/coverage/exec/returns/multi-result-assign-order	main	Corpus/coverage/exec/returns/multi-result-assign-order/main.go:10	multiResultAssignOrder	multi-call	1	1	1	multi-target or tuple assignment
+Corpus/coverage/exec/spec-examples-stmt/eval-order-calls	main	Corpus/coverage/exec/spec-examples-stmt/eval-order-calls/main.go:53	evalOrderCallsVerbatim	tuple-assign	7	7	3	multi-target or tuple assignment
+Corpus/coverage/exec/spec-examples-stmt/eval-order-calls	main	Corpus/coverage/exec/spec-examples-stmt/eval-order-calls/main.go:76	evalOrderCallsTracedRecv	tuple-assign	7	7	3	multi-target or tuple assignment

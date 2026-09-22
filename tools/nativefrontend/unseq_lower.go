@@ -974,6 +974,186 @@ func (b *unseqBuilder) makeNew(c *ast.CallExpr, name string) (any, error) {
 	return b.allocOcc(name, ty, spec, true), nil
 }
 
+// isBlankTarget: the blank identifier `_`.
+func isBlankTarget(l ast.Expr) bool {
+	id, ok := ast.Unparen(l).(*ast.Ident)
+	return ok && id.Name == "_"
+}
+
+// varTarget lowers a PLAIN variable target as a `target` plan on its own address
+// (E5b: a plain target beside a planned sibling rides the same phase-2 store list;
+// the plan checks nothing and reads nothing) and returns its binder.
+func (b *unseqBuilder) varTarget(id *ast.Ident) string {
+	t := b.newTargetBinder()
+	b.emit(map[string]any{"name": b.occName("target"), "kind": "target", "bind": t,
+		"lhs": map[string]any{"target": "var", "id": b.e.localRename(b.e.info.Uses[id], id.Name)}})
+	return t
+}
+
+// multiAssign lowers a MULTI-TARGET assignment (Stage E5 E5b): phase 1 — the
+// right-hand values (a tuple's expressions; a multi-value call's two results; a
+// comma-ok receive's two binders; a comma-ok map lookup / type assertion as a
+// two-binder `wide` occurrence in the residual — a read / a pure op, never an
+// event); phase 2 — when some target is PLANNED, every non-blank target is a
+// `target` plan (siblings) and the stores ride `stores` left to right; otherwise
+// (plain / global / blank targets only) the multi-assign rides `then` — the
+// legacy `assign` shape with declares, blank discards and the interface boxing
+// wraps, whose plain-variable stores never fail.
+func (b *unseqBuilder) multiAssign(st *ast.AssignStmt) (any, error) {
+	e := b.e
+	define := st.Tok == token.DEFINE
+	// phase 1, in SOURCE order: the targets' operands first (a call inside a target's
+	// index precedes the right-hand side's events — spec#Order_of_evaluation; the spec's
+	// own `y[f()], ok = g(…), k()` traces f before g and k), then the right-hand values
+	prepared := map[int]*preparedTarget{}
+	for i, l := range st.Lhs {
+		if b.isPlannedTarget(l) {
+			p, err := b.prepareTarget(l)
+			if err != nil {
+				return nil, err
+			}
+			prepared[i] = p
+		}
+	}
+	var vals []any
+	var valTys []types.Type
+	if len(st.Rhs) == 1 && len(st.Lhs) == 2 {
+		switch r := ast.Unparen(st.Rhs[0]).(type) {
+		case *ast.UnaryExpr:
+			if r.Op == token.ARROW {
+				slots, elemGo, err := b.recvN(r, 2)
+				if err != nil {
+					return nil, err
+				}
+				vals, valTys = slots, []types.Type{elemGo, types.Typ[types.Bool]}
+			}
+		case *ast.IndexExpr:
+			if mt, isMap := types.Unalias(e.goTypeOf(r.X)).Underlying().(*types.Map); isMap {
+				base, err := b.value(r.X)
+				if err != nil {
+					return nil, err
+				}
+				idx, err := b.value(r.Index)
+				if err != nil {
+					return nil, err
+				}
+				kt, err := e.emitType(mt.Key())
+				if err != nil {
+					return nil, err
+				}
+				vt, err := e.emitType(mt.Elem())
+				if err != nil {
+					return nil, err
+				}
+				vals = b.wideOcc("lookup", []any{vt, map[string]any{"kind": "bool"}},
+					map[string]any{"stmt": "map-lookup", "base": base, "index": idx, "keyType": kt, "valueType": vt}, false)
+				valTys = []types.Type{mt.Elem(), types.Typ[types.Bool]}
+			}
+		case *ast.TypeAssertExpr:
+			if r.Type != nil {
+				operand, err := b.value(r.X)
+				if err != nil {
+					return nil, err
+				}
+				target, err := e.emitType(e.goTypeOf(r.Type))
+				if err != nil {
+					return nil, err
+				}
+				vals = b.wideOcc("assert", []any{target, map[string]any{"kind": "bool"}},
+					map[string]any{"stmt": "type-assert", "operand": operand, "target": target}, false)
+				valTys = []types.Type{e.goTypeOf(r.Type), types.Typ[types.Bool]}
+			}
+		}
+	}
+	if vals == nil && len(st.Rhs) == 1 {
+		call, isCall := ast.Unparen(st.Rhs[0]).(*ast.CallExpr)
+		if !isCall {
+			return nil, unsup("unseq lowering: multi-target assignment with a single non-call right-hand side")
+		}
+		tup, isTup := e.goTypeOf(call).(*types.Tuple)
+		if !isTup || tup.Len() != len(st.Lhs) {
+			return nil, unsup("unseq lowering: multi-value call arity")
+		}
+		slots, err := b.call(call, len(st.Lhs))
+		if err != nil {
+			return nil, err
+		}
+		vals = slots
+		for i := 0; i < tup.Len(); i++ {
+			valTys = append(valTys, tup.At(i).Type())
+		}
+	}
+	if vals == nil {
+		if len(st.Lhs) != len(st.Rhs) {
+			return nil, unsup("unseq lowering: assignment arity")
+		}
+		for _, r := range st.Rhs {
+			w, err := b.value(r)
+			if err != nil {
+				return nil, err
+			}
+			vals = append(vals, w)
+			valTys = append(valTys, e.goTypeOf(r))
+		}
+	}
+	if len(vals) != len(st.Lhs) {
+		return nil, unsup("unseq lowering: %d values for %d targets", len(vals), len(st.Lhs))
+	}
+	anyPlanned := false
+	for _, l := range st.Lhs {
+		if b.isPlannedTarget(l) {
+			anyPlanned = true
+		}
+	}
+	if anyPlanned {
+		// phase 2 through the store list: every non-blank target a plan, in order
+		for i, l := range st.Lhs {
+			if isBlankTarget(l) {
+				continue
+			}
+			var t string
+			if p, isPrepared := prepared[i]; isPrepared {
+				var err error
+				t, err = b.emitPrepared(p)
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				id, isIdent := ast.Unparen(l).(*ast.Ident)
+				if !isIdent {
+					return nil, unsup("unseq lowering: multi-target plain target %T", l)
+				}
+				t = b.varTarget(id)
+			}
+			ty, err := e.typeOf(l)
+			if err != nil {
+				return nil, err
+			}
+			cell, _ := b.ensureCell(vals[i], ty)
+			b.stores = append(b.stores, map[string]any{"target": t, "value": cell})
+		}
+		return emptyBlock(), nil
+	}
+	lhs := []any{}
+	rhs := []any{}
+	for i, l := range st.Lhs {
+		w, err := e.emitAssignTargetPhase1(l, define)
+		if err != nil {
+			return nil, err
+		}
+		lhs = append(lhs, w)
+		v := vals[i]
+		if !isBlankTarget(l) {
+			v, err = e.wrapInterfaceConversion(e.assignTargetType(l, define), valTys[i], v)
+			if err != nil {
+				return nil, err
+			}
+		}
+		rhs = append(rhs, v)
+	}
+	return map[string]any{"stmt": "assign", "define": define, "lhs": lhs, "rhs": rhs}, nil
+}
+
 // allocOcc emits an `allocate` occurrence binding a fresh cell of type ty: a
 // composite literal in the RESIDUAL (no E1 edge); `make`/`new` as an EVENT with
 // the E1 anchor (the caller has pushed the operand frame, popped here).
@@ -1001,7 +1181,7 @@ func (b *unseqBuilder) allocOcc(kind string, ty any, spec map[string]any, event 
 // as a wide statement, its results into fresh cells of the given types, as an
 // E1-ordered EVENT with the anchor (the caller has pushed the operand frame,
 // popped here). Returns the result slots.
-func (b *unseqBuilder) wideOcc(kind string, tys []any, spec map[string]any) []any {
+func (b *unseqBuilder) wideOcc(kind string, tys []any, spec map[string]any, event bool) []any {
 	binds := []any{}
 	slots := []any{}
 	for _, ty := range tys {
@@ -1011,6 +1191,11 @@ func (b *unseqBuilder) wideOcc(kind string, tys []any, spec map[string]any) []an
 	}
 	name := b.occName(kind)
 	o := map[string]any{"name": name, "kind": "wide", "binds": binds, "wide": spec}
+	if !event {
+		// E5b: the comma-ok lookup / assertion — a read / a pure op in the RESIDUAL (no E1 edge)
+		b.emit(o)
+		return slots
+	}
 	if after := b.eventAfter(); after != nil {
 		o["after"] = after
 	}
@@ -1085,7 +1270,7 @@ func (b *unseqBuilder) wideAppend(c *ast.CallExpr) (any, error) {
 		return nil, err
 	}
 	return b.wideOcc("append", []any{ty},
-		map[string]any{"stmt": "append", "elem": elemTy, "slice": base, "elems": elems})[0], nil
+		map[string]any{"stmt": "append", "elem": elemTy, "slice": base, "elems": elems}, true)[0], nil
 }
 
 // wideCopy lowers `copy(dst, src)` (Stage E5 E5a): the destination and source
@@ -1100,12 +1285,22 @@ func (b *unseqBuilder) wideCopy(c *ast.CallExpr) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return b.wideOcc("copy", []any{intType("int")}, map[string]any{"stmt": "copy", "dst": dst, "src": src})[0], nil
+	return b.wideOcc("copy", []any{intType("int")}, map[string]any{"stmt": "copy", "dst": dst, "src": src}, true)[0], nil
 }
 
 // recv lowers `<-ch` (Stage E E3): the channel value, then the RECEIVE as an
 // E1-ordered event occurrence (kind "recv") writing its binder cell.
 func (b *unseqBuilder) recv(u *ast.UnaryExpr) (any, error) {
+	slots, _, err := b.recvN(u, 1)
+	if err != nil {
+		return nil, err
+	}
+	return slots[0], nil
+}
+
+// recvN lowers a receive with n binders (1: the value; 2 — Stage E5 E5b — the
+// comma-ok pair, the second cell bool); returns the slots and the element type.
+func (b *unseqBuilder) recvN(u *ast.UnaryExpr, n int) ([]any, types.Type, error) {
 	e := b.e
 	b.push()
 	popped := false
@@ -1116,19 +1311,27 @@ func (b *unseqBuilder) recv(u *ast.UnaryExpr) (any, error) {
 	}()
 	ch, err := b.value(u.X)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	elemGo, err := e.chanElem(u.X)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	elemTy, err := e.emitType(elemGo)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	cell := b.newCell(elemTy)
+	binds := []any{cell}
+	slots := []any{slotIdent(cell, elemTy)}
+	if n == 2 {
+		boolTy := map[string]any{"kind": "bool"}
+		ok := b.newCell(boolTy)
+		binds = append(binds, ok)
+		slots = append(slots, slotIdent(ok, boolTy))
+	}
 	name := b.occName("recv")
-	o := map[string]any{"name": name, "kind": "recv", "binds": []any{cell}, "ch": ch, "elem": elemTy}
+	o := map[string]any{"name": name, "kind": "recv", "binds": binds, "ch": ch, "elem": elemTy}
 	if after := b.eventAfter(); after != nil {
 		o["after"] = after
 	}
@@ -1139,7 +1342,7 @@ func (b *unseqBuilder) recv(u *ast.UnaryExpr) (any, error) {
 	popped = true
 	b.emitEventBlock(block)
 	b.anchor = name
-	return slotIdent(cell, elemTy), nil
+	return slots, elemGo, nil
 }
 
 // methodCallee lowers a concrete method call's callee (Stage E E3): the
@@ -1381,6 +1584,103 @@ func (b *unseqBuilder) isPlannedTarget(lv ast.Expr) bool {
 	return false
 }
 
+// preparedTarget is a planned target whose OPERANDS are lowered (E5b: in source
+// order, before the right-hand values — spec#Order_of_evaluation orders the
+// events lexically, and a call inside a target's index precedes the right-hand
+// side's calls) but whose plan node is not yet emitted.
+type preparedTarget struct {
+	kind   string // "elem" | "map" | "deref" | "field"
+	atoms  []any  // elem: base, index; map: base, key; deref: ptr; field: base (pointer atom or address)
+	mt     *types.Map
+	fieldT string // the struct's wire name (field)
+	field  string
+}
+
+// prepareTarget lowers a planned target's operands (its events get their lexical
+// E1 edges here) without emitting the plan.
+func (b *unseqBuilder) prepareTarget(lv ast.Expr) (*preparedTarget, error) {
+	e := b.e
+	switch l := ast.Unparen(lv).(type) {
+	case *ast.IndexExpr:
+		base, err := b.value(l.X)
+		if err != nil {
+			return nil, err
+		}
+		idx, err := b.value(l.Index)
+		if err != nil {
+			return nil, err
+		}
+		if mt, isMap := types.Unalias(e.goTypeOf(l.X)).Underlying().(*types.Map); isMap {
+			return &preparedTarget{kind: "map", atoms: []any{base, idx}, mt: mt}, nil
+		}
+		return &preparedTarget{kind: "elem", atoms: []any{base, idx}}, nil
+	case *ast.StarExpr:
+		ptr, err := b.value(l.X)
+		if err != nil {
+			return nil, err
+		}
+		return &preparedTarget{kind: "deref", atoms: []any{ptr}}, nil
+	case *ast.SelectorExpr:
+		bt := e.goTypeOf(l.X)
+		var base any
+		var structT types.Type = bt
+		if ptr, isPtr := types.Unalias(bt).Underlying().(*types.Pointer); isPtr {
+			p, err := b.value(l.X)
+			if err != nil {
+				return nil, err
+			}
+			base, structT = p, ptr.Elem()
+		} else {
+			id, isIdent := ast.Unparen(l.X).(*ast.Ident)
+			if !isIdent {
+				return nil, unsup("unseq lowering: field target on a non-variable struct base")
+			}
+			addr, err := e.emitAddressOf(id)
+			if err != nil {
+				return nil, err
+			}
+			base = addr
+		}
+		name, ok := e.namedTypeName(structT)
+		if !ok {
+			return nil, unsup("unseq lowering: field target on anonymous struct type %s", structT)
+		}
+		return &preparedTarget{kind: "field", atoms: []any{base}, fieldT: name, field: l.Sel.Name}, nil
+	}
+	return nil, unsup("unseq lowering: target plan %T outside the admitted grammar", lv)
+}
+
+// emitPrepared emits the plan node of a prepared target on its frozen atoms and
+// returns its binder.
+func (b *unseqBuilder) emitPrepared(p *preparedTarget) (string, error) {
+	e := b.e
+	t := b.newTargetBinder()
+	var lhs map[string]any
+	switch p.kind {
+	case "elem":
+		lhs = map[string]any{"target": "addr", "expr": map[string]any{"expr": "index-addr", "base": p.atoms[0], "index": p.atoms[1]}}
+	case "map":
+		kt, err := e.emitType(p.mt.Key())
+		if err != nil {
+			return "", err
+		}
+		vt, err := e.emitType(p.mt.Elem())
+		if err != nil {
+			return "", err
+		}
+		lhs = map[string]any{"target": "map", "base": p.atoms[0], "index": p.atoms[1], "keyType": kt, "valueType": vt}
+	case "deref":
+		lhs = map[string]any{"target": "addr", "expr": p.atoms[0]}
+	case "field":
+		lhs = map[string]any{"target": "addr", "expr": map[string]any{"expr": "field-addr", "base": p.atoms[0],
+			"typeId": p.fieldT, "field": p.field}}
+	default:
+		return "", unsup("unseq lowering: prepared target kind %s", p.kind)
+	}
+	b.emit(map[string]any{"name": b.occName("target"), "kind": "target", "bind": t, "lhs": lhs})
+	return t, nil
+}
+
 // planTarget lowers a planned target (isPlannedTarget) for an assignment /
 // compound target `lv`, returning the binder and the target's element type wire.
 func (b *unseqBuilder) planTarget(lv ast.Expr) (string, any, error) {
@@ -1466,6 +1766,15 @@ func (e *emitter) emitUnseqSweep(s ast.Stmt, ctx *unseqCtx) (any, error) {
 		switch st.Tok {
 		case token.DEFINE, token.ASSIGN:
 			define := st.Tok == token.DEFINE
+			if len(st.Lhs) != 1 || len(st.Rhs) != 1 {
+				// Stage E5 E5b: the multi-target forms — every target a phase-1 sibling plan
+				var err error
+				then, err = b.multiAssign(st)
+				if err != nil {
+					return nil, err
+				}
+				break
+			}
 			if b.isPlannedTarget(st.Lhs[0]) {
 				// a slice element, or (Stage E E2) a map element / a dereference / a
 				// field: a FROZEN plan, the value copied into a cell, the store in phase 2

@@ -1,5 +1,5 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 3738 (3503 PASS / 235 FAIL)
+# cases: 3745 (3510 PASS / 235 FAIL)
 # re-pinned: 2026-09-20 [AGENT], core/unseq-stage-d-0920, STAGE D of the evaluation-order model v2.1 (route α —
 #   docs/2026-09-20_unseq-stage-d-design.md §2–§3; handoff docs/2026-09-20_unseq-stage-d-handoff.md): NO row added, NO
 #   result changed, ONE stage changed — spec-examples-stmt/continue-label PASS/- -> PASS/confluent, the strict depth=128
@@ -130,6 +130,27 @@
 #   docs/evidence/2026-09-22_unseq-stage-e5/diff-one-e5a.txt); the full gate line is in the evidence README. 3732 + 6 = 3738;
 #   3497 + 6 = 3503; 235 unchanged. No PASS -> non-PASS flip; the 5a-class item (imported-goose/channel/google-search: STALE
 #   certification for the changed core/decoder inputs) is not re-pinned here.
+# re-pinned: 2026-09-22 [AGENT], core/unseq-stage-e5-0922, STAGE E5 of the evaluation-order model v2.1, family E5b — MULTI-TARGET
+#   assignments (tuple, blank, multi-value call, the comma-ok forms; design docs/2026-09-22_unseq-stage-e5-design.md §E5b; handoff
+#   docs/2026-09-22_unseq-stage-e5-handoff.md): every target a PHASE-1 SIBLING plan on frozen operands, the stores left to right
+#   (spec#Assignment_statements) — the inventory's E3/E4 inter-target axis is the graph's own shape. SEVEN rows BORN in
+#   evalorder/unseq-multi: tuple-header-vs-call {57, 15} (`s[0], x = m(), 3`, m rebinding the captured s: the element plan's frozen
+#   header before / after m; gc 15 on 20/20 under GOMAXPROCS 1/8, default and -N -l), blank-panic-vs-call {panic · ``, `wit 1` · panic}
+#   (`_, x = a[9], wit(1)`; gc wit first), comma-ok-recv-target-vs-panic {panic · len 1, panic · len 0} (`xs[a[9]], ok = <-ch`, the
+#   comma-ok receive a two-binder recv; gc len 0), multi-call-header-vs-call {57, 15} (`x, s[0] = twoRebind()`; gc 15),
+#   define-tuple-vs-call {6, 15} (`x, y := m(), s[0]`; gc 15) PASS/membership; swap-control (21) and comma-ok-map-control (21) PASS
+#   strict (call-free: legacy by name). FOUR strict rows -> membership, the graph enveloping the legacy path's gc-order pins (gc's
+#   member inside, 20/20 each): BUG-052's multi-assign/call-write-back-order/deref-target {42007, 4207} and slice-header-base
+#   {1120003, 774203}, multi-assign/call-write-back-order-value/deref-target {42007, 4207} (the target plan's frozen pointer / header
+#   before or after the redirecting call — the fixed post-call order is gc's member), noodler/latitude/rhs-list-index-call-index
+#   {(1,5,1), (1,5,9), (9,5,1), (9,5,9)} (the two reads of a[0] beside f, unordered between themselves — R1; gc (9,5,9)). The
+#   spec's own example spec-examples-stmt/eval-order-calls/{verbatim,traced-recv} (`y[f()], ok = g(z || h(), i()+x[j()], <-c),
+#   k()`) now lowers as ONE graph and keeps its forced trace `f h i j <-c g k` — RED-FIRST on the first E5b cut, whose lowering
+#   ordered the right-hand events before the target's f (a wrong answer caught by the corpus, fixed: target operands lower first);
+#   the other 50 affected rows unchanged. Census 137 -> 154 admitted (+12: the multi-assign family, the spec example, a recv-edge
+#   comma-ok, two noodler rows; +5 the E5a package born after its census; 0 lost), the twin 0; legacy probes 63 -> 60 (corpus), the
+#   twin 128 unchanged. Measured by scripts/diff-one on all 65 affected rows (three runs — docs/evidence/2026-09-22_unseq-stage-e5/
+#   diff-one-e5b.txt); the full gate line is in the evidence README. 3738 + 7 = 3745; 3503 + 7 = 3510; 235 unchanged. No PASS -> non-PASS.
 # Previous pin:
 # re-pinned: 2026-09-20 [AGENT], core/unseq-stage-c-0919, STAGE C AUDIT FIX ROUND (docs/2026-09-20_unseq-stage-c-audit.md, FIX-FIRST; dispositions
 #   docs/2026-09-19_unseq-stage-c-handoff.md «Audit fix round (2026-09-20)»): SIX rows ADDED, no existing row changed. (F2) evalorder/unseq-const-cell/
@@ -2306,6 +2327,13 @@ PASS	evalorder/unseq-builtins/append-read-vs-call	membership
 PASS	evalorder/unseq-builtins/copy-effect-vs-read	membership
 PASS	evalorder/unseq-builtins/append-spread-str-vs-call	membership
 PASS	evalorder/unseq-builtins/copy-stmt-control	-
+PASS	evalorder/unseq-multi/tuple-header-vs-call	membership
+PASS	evalorder/unseq-multi/blank-panic-vs-call	membership
+PASS	evalorder/unseq-multi/comma-ok-recv-target-vs-panic	membership
+PASS	evalorder/unseq-multi/multi-call-header-vs-call	membership
+PASS	evalorder/unseq-multi/define-tuple-vs-call	membership
+PASS	evalorder/unseq-multi/swap-control	-
+PASS	evalorder/unseq-multi/comma-ok-map-control	-
 PASS	evalorder/unseq-globals/read-vs-call	membership
 PASS	evalorder/unseq-globals/compound-vs-call	membership
 PASS	evalorder/unseq-globals/read-vs-unrelated-call	-
@@ -3591,14 +3619,14 @@ PASS	methods/value-receiver-via-pointer-var/addr-of-var	-
 PASS	multi-assign/blank-dep-index	-
 PASS	multi-assign/blank-discard-nonint	-
 PASS	multi-assign/call-return-assignment	-
-PASS	multi-assign/call-write-back-order-value/deref-target	-
+PASS	multi-assign/call-write-back-order-value/deref-target	membership
 PASS	multi-assign/call-write-back-order-value/index-target	-
-PASS	multi-assign/call-write-back-order/deref-target	-
+PASS	multi-assign/call-write-back-order/deref-target	membership
 PASS	multi-assign/call-write-back-order/global-index	-
 PASS	multi-assign/call-write-back-order/hoisted-control	-
 PASS	multi-assign/call-write-back-order/index-missed-panic	-
 PASS	multi-assign/call-write-back-order/index-spurious-panic	-
-PASS	multi-assign/call-write-back-order/slice-header-base	-
+PASS	multi-assign/call-write-back-order/slice-header-base	membership
 PASS	multi-assign/call-write-back/effects-suppressed	-
 PASS	multi-assign/call-write-back/nil-field-store	-
 PASS	multi-assign/call-write-back/panic-identity	-
@@ -4023,7 +4051,7 @@ PASS	noodler/latitude/index-call-index	membership
 PASS	noodler/latitude/map-literal-key-vs-call	-
 PASS	noodler/latitude/receiver-vs-arg-call	membership
 PASS	noodler/latitude/return-operands	membership
-PASS	noodler/latitude/rhs-list-index-call-index	-
+PASS	noodler/latitude/rhs-list-index-call-index	membership
 PASS	noodler/latitude/send-value-vs-channel-call	-
 PASS	noodler/latitude/slice-literal-index-vs-call	membership
 PASS	noodler/latitude/struct-literal-var-vs-call	membership

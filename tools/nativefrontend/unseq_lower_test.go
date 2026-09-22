@@ -119,6 +119,17 @@ func TestUnseqLoweringShapes(t *testing.T) {
 		{"e5aAppendRead", "eval:ident allocate wide invoke/after eval:index-get eval:binary"},
 		{"e5aCopyRead", "eval:ident wide eval:ident eval:index-get eval:binary"},
 		{"e5aAppendSpreadStr", "eval:bytes-from-string wide eval:builtin-len/after invoke/after eval:ident eval:binary eval:binary"},
+		// Stage E5 E5b: the tuple with a planned target — m first, then the residual: the captured s's header
+		// read, the plans (the element target on the frozen header, the plain x's own address), the constant
+		// copied into a cell; the stores in the store list. The comma-ok receive with a planned target: the
+		// receive block, then the residual reads, the plan. The multi-value call: two binds, then the plans.
+		// (the targets' OPERANDS are lowered first, in source order, so their EVENTS chain lexically before the
+		// right-hand side's — the E1 edges, not the list positions: the canonical list stays events first,
+		// residual after — then the plan nodes on the frozen atoms and the constant's copy)
+		{"e5bTupleHeader", "invoke eval:ident target target eval:int"},
+		{"e5bCommaOkRecvTarget", "recv eval:index-get target target"}, // a private: the checked access alone
+		{"e5bMultiCall", "invoke eval:ident target target"},
+		{"e5bDefineTuple", "invoke eval:ident eval:index-get"},
 		// W6: two E1-ordered calls, then the read and the ops.
 		{"w6", "invoke invoke/after eval:ident eval:binary eval:binary"},
 		// R6: the call first; the header read and the checked access late.

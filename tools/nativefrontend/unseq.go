@@ -1653,8 +1653,17 @@ func (e *emitter) unseqClassify(s ast.Stmt, ctx *unseqCtx) unseqDecision {
 	switch st := s.(type) {
 	case *ast.AssignStmt:
 		if len(st.Lhs) != 1 || len(st.Rhs) != 1 {
-			d.form = "assign"
-			return refuse("multi-target or tuple assignment")
+			// Stage E5 E5b (2026-09-22): the MULTI-TARGET forms — a tuple assignment, a
+			// multi-value call, the comma-ok receive / map lookup / type assertion; every
+			// target a phase-1 sibling.
+			if st.Tok != token.DEFINE && st.Tok != token.ASSIGN {
+				d.form = "compound"
+				return refuse("compound assignment arity")
+			}
+			if !e.unseqMultiAssign(st, ctx, &d) {
+				return refuse("multi-target assignment")
+			}
+			break
 		}
 		if _, isTup := e.goTypeOf(st.Rhs[0]).(*types.Tuple); isTup {
 			d.form = "assign"
@@ -1670,7 +1679,10 @@ func (e *emitter) unseqClassify(s ast.Stmt, ctx *unseqCtx) unseqDecision {
 			}
 			switch l := ast.Unparen(st.Lhs[0]).(type) {
 			case *ast.Ident:
-				if _, _, ok := e.unseqVarTarget(l, define, ctx, &d); !ok {
+				if l.Name == "_" {
+					// Stage E5 E5b: `_ = e` — the value is evaluated (its occurrences), nothing is stored.
+					d.form = "blank-assign"
+				} else if _, _, ok := e.unseqVarTarget(l, define, ctx, &d); !ok {
 					return refuse("target")
 				}
 			case *ast.SelectorExpr:
@@ -1836,6 +1848,201 @@ func (e *emitter) unseqClassify(s ast.Stmt, ctx *unseqCtx) unseqDecision {
 		}
 	}
 	return d
+}
+
+// unseqMultiAssign classifies a MULTI-TARGET assignment (Stage E5 E5b, 2026-09-22):
+// a tuple assignment `a, b = e1, e2` (equal arity; blanks allowed), a multi-value
+// call `a, b = f()`, or a comma-ok form `v, ok = <-ch` / `m[k]` / `x.(T)` —
+// spec#Assignment_statements' two phases: every target's operands and every
+// right-hand expression are evaluated «in the usual order» (unordered among
+// themselves except as E1 orders the events), the stores left to right. The
+// inter-target operand order (inventory E3/E4) is the graph's: the target plans
+// are phase-1 SIBLINGS. Every target rides the same store phase — plain variable
+// targets beside a PLANNED target become `target` plans on their own address —
+// so a package-level target beside a planned one refuses by name (the global
+// plan atom is deferred), as does an interface-typed target beside a planned one
+// (the store's value would box inside the graph).
+func (e *emitter) unseqMultiAssign(st *ast.AssignStmt, ctx *unseqCtx, d *unseqDecision) bool {
+	start := d.seq // the occurrence window's start (unseqDecision.occ)
+	refuse := func(why string) bool {
+		if d.reason == "" {
+			d.reason = why
+		}
+		return false
+	}
+	define := st.Tok == token.DEFINE
+	planned, global, iface := false, false, false
+	for _, l := range st.Lhs {
+		kind, ok := e.unseqMultiTarget(l, define, ctx, d)
+		if !ok {
+			return false
+		}
+		switch kind {
+		case "planned":
+			planned = true
+		case "global":
+			global = true
+		}
+		if kind != "blank" && kind != "planned" {
+			if tt := e.assignTargetType(l, define); tt != nil {
+				if _, isIface := types.Unalias(tt).Underlying().(*types.Interface); isIface {
+					iface = true
+				}
+			}
+		}
+	}
+	if planned && global {
+		return refuse("package-level target beside a planned target in a multi-target assignment (the global plan atom is deferred — E5b)")
+	}
+	if planned && iface {
+		return refuse("interface-typed target beside a planned target in a multi-target assignment (the store's value would box inside the graph)")
+	}
+	if len(st.Rhs) == 1 && len(st.Lhs) == 2 {
+		switch r := ast.Unparen(st.Rhs[0]).(type) {
+		case *ast.UnaryExpr:
+			if r.Op == token.ARROW {
+				// the comma-ok RECEIVE: an EVENT with two results (E3's receive, two binders)
+				d.form = "comma-ok"
+				ct := e.goTypeOf(r.X)
+				if ct == nil || !unseqTypeOK(ct) {
+					return refuse("comma-ok receive on a channel type outside the grammar")
+				}
+				ch, isChan := types.Unalias(ct).Underlying().(*types.Chan)
+				if !isChan || ch.Dir() == types.SendOnly {
+					return refuse("comma-ok receive on a non-receivable channel")
+				}
+				rid := d.openP()
+				if _, ok := e.unseqExpr(r.X, ctx, d); !ok {
+					return false
+				}
+				d.closeP(rid, true)
+				d.events++
+				d.calls++
+				return true
+			}
+		case *ast.IndexExpr:
+			if _, isMap := e.unseqMapBase(r.X, d); isMap {
+				// the comma-ok MAP LOOKUP: ONE mutable read with two results (never fails)
+				d.form = "comma-ok"
+				if _, ok := e.unseqExpr(r.X, ctx, d); !ok {
+					return false
+				}
+				if _, ok := e.unseqExpr(r.Index, ctx, d); !ok {
+					return false
+				}
+				d.occ(start)
+				return true
+			}
+		case *ast.TypeAssertExpr:
+			if r.Type != nil {
+				// the comma-ok TYPE ASSERTION: a pure op with two results (never fails)
+				d.form = "comma-ok"
+				ot := e.goTypeOf(r.X)
+				if ot == nil || !unseqTypeOK(ot) {
+					return refuse("comma-ok assertion on an operand type outside the grammar")
+				}
+				if !unseqTypeOK(e.goTypeOf(r.Type)) {
+					return refuse("comma-ok assertion to a type outside the grammar")
+				}
+				if _, ok := e.unseqExpr(r.X, ctx, d); !ok {
+					return false
+				}
+				return true
+			}
+		}
+	}
+	if len(st.Rhs) == 1 {
+		call, isCall := ast.Unparen(st.Rhs[0]).(*ast.CallExpr)
+		if !isCall {
+			return refuse("multi-target assignment with a single non-call right-hand side")
+		}
+		tup, isTup := e.goTypeOf(call).(*types.Tuple)
+		if !isTup || tup.Len() != len(st.Lhs) {
+			return refuse("multi-value call arity")
+		}
+		d.form = "multi-call"
+		if _, ok := e.unseqCall(call, ctx, d, len(st.Lhs)); !ok {
+			return false
+		}
+		return true
+	}
+	if len(st.Lhs) != len(st.Rhs) {
+		return refuse("assignment arity")
+	}
+	d.form = "tuple-assign"
+	for _, r := range st.Rhs {
+		if _, isTup := e.goTypeOf(r).(*types.Tuple); isTup {
+			return refuse("multi-value right-hand side")
+		}
+		if _, ok := e.unseqExpr(r, ctx, d); !ok {
+			return false
+		}
+	}
+	return true
+}
+
+// unseqMultiTarget classifies one target of a multi-target assignment (E5b):
+// "blank", "plain" (a local variable), "global" (a package-level variable) or
+// "planned" (a slice element, map element, dereference or field — a FROZEN plan
+// whose operand reads are the occurrences).
+func (e *emitter) unseqMultiTarget(l ast.Expr, define bool, ctx *unseqCtx, d *unseqDecision) (string, bool) {
+	refuse := func(why string) (string, bool) {
+		if d.reason == "" {
+			d.reason = why
+		}
+		return "", false
+	}
+	switch t := ast.Unparen(l).(type) {
+	case *ast.Ident:
+		if t.Name == "_" {
+			return "blank", true
+		}
+		_, isPkg, ok := e.unseqVarTarget(t, define, ctx, d)
+		if !ok {
+			return "", false
+		}
+		if isPkg {
+			return "global", true
+		}
+		return "plain", true
+	case *ast.SelectorExpr:
+		if define {
+			return refuse("define with a selector target")
+		}
+		if _, isQual := e.unseqQualifiedPackageVar(t); isQual {
+			if _, ok := e.unseqQualifiedTarget(t, d); !ok {
+				return "", false
+			}
+			return "global", true
+		}
+		if !e.unseqFieldTarget(t, ctx, d) {
+			return "", false
+		}
+		return "planned", true
+	case *ast.IndexExpr:
+		if define {
+			return refuse("define with an index target")
+		}
+		if _, isMap := e.unseqMapBase(t.X, d); isMap {
+			if !e.unseqMapTarget(t, ctx, d) {
+				return "", false
+			}
+			return "planned", true
+		}
+		if !e.unseqElemTarget(t, ctx, d) {
+			return "", false
+		}
+		return "planned", true
+	case *ast.StarExpr:
+		if define {
+			return refuse("define with a dereference target")
+		}
+		if !e.unseqDerefTarget(t, ctx, d) {
+			return "", false
+		}
+		return "planned", true
+	}
+	return refuse("assignment target outside the pilot grammar")
 }
 
 // unseqReadWriteTarget classifies a compound/IncDec target: a variable

@@ -813,6 +813,70 @@ def e5a7():
     check('E5a7 len(append(b, "xy"...)) + x + m() (a spread string; append, len, m E1-ordered; x vs them)',
           enumerate_graph(occs, state(v={'x': 1}), lambda st, v: v['Op2']), lambda k: k[1], {9, 18})
 
+# ---------------------------------------------------------------- Stage E5, family E5b (2026-09-22)
+# MULTI-TARGET assignments: every target a phase-1 SIBLING plan (spec#Assignment_statements: the index operands on
+# the left and the right-hand expressions «in the usual order», the stores left to right) — the inventory's E3/E4
+# inter-target axis is the graph's own shape; the comma-ok forms are two-result occurrences.
+
+def e5b1():
+    # s[0], x = m(), 3: s = [1, 2] captured, `old` aliases it; m REBINDS s to [7, 8, 9] and returns 5. The element
+    # target's plan freezes s's HEADER before or after m — the store of 5 lands in the old array or the new one:
+    # (old[0], s[0]) ∈ {(5, 7), (1, 5)}; x's store (3) is unobservable.
+    def m(st, v): st['v']['s'] = 'S2'; return 5
+    occs = [Occ('E_m', run=m),
+            Occ('R_s', run=lambda st, v: hdr(st, 's')),
+            Occ('T_s0', deps=['R_s'], run=lambda st, v: (v['R_s'], 0)),
+            Occ('C3', run=lambda st, v: 3)]
+    def phase2(st, v):
+        store(st, v['T_s0'][0], v['T_s0'][1], v['E_m']); st['v']['x'] = v['C3']
+        return (elem(st, 'S1', 0), elem(st, hdr(st, 's'), 0))
+    check('E5b1 s[0], x = m(), 3 (m rebinds s: the element plan\'s frozen header vs m)',
+          enumerate_graph(occs, state(v={'s': 'S1', 'x': 0}, arr={'S1': [1, 2], 'S2': [7, 8, 9]}), phase2),
+          lambda k: k[1], {(5, 7), (1, 5)})
+
+def e5b2():
+    # _, x = a[9], wit(1): the blank's checked read panics (a = [1]); wit is the sibling event, unordered against it.
+    def wit(st, v): println(st, 'wit 1'); return 1
+    occs = [Occ('R_a9', run=lambda st, v: elem(st, 'A', 9)),
+            Occ('E_wit', run=wit),
+            Occ('T_x', run=lambda st, v: 'x')]
+    def phase2(st, v):
+        st['v']['x'] = v['E_wit']; return st['v']['x']
+    check('E5b2 _, x = a[9], wit(1) (the blank\'s panic vs the sibling call)',
+          enumerate_graph(occs, state(v={'x': 0}, arr={'A': [1]}), phase2),
+          lambda k: (k[0], k[2]), {('panic', ()), ('panic', ('wit 1',))})
+
+def e5b3():
+    # xs[a[9]], ok = <-ch (ch buffered [3]; a = [1]): the planned target's index read panics before the receive
+    # (ch still holds 3) or after it (ch drained) — the witness len(ch).
+    def recv(st, v):
+        if not st['chan']: raise Blocked('receive would block')
+        return (st['chan'].pop(0), True)
+    occs = [Occ('R_a9', run=lambda st, v: elem(st, 'A', 9)),
+            Occ('T_xs', deps=['R_a9'], run=lambda st, v: ('X', v['R_a9'])),
+            Occ('E_recv', run=recv),
+            Occ('T_ok', run=lambda st, v: 'ok')]
+    def phase2(st, v):
+        store(st, v['T_xs'][0], v['T_xs'][1], v['E_recv'][0]); st['v']['ok'] = v['E_recv'][1]; return None
+    check('E5b3 xs[a[9]], ok = <-ch (the planned target\'s panic vs the comma-ok receive; witness len(ch))',
+          enumerate_graph(occs, state(v={'ok': False}, arr={'A': [1], 'X': [0]}, chan=[3]), phase2),
+          lambda k: (k[0], f"len(ch)={len(k[3][2])}"), {('panic', 'len(ch)=1'), ('panic', 'len(ch)=0')})
+
+def e5b4():
+    # x, s[0] = two(): two() returns (1, 5) and REBINDS s ([1, 2] -> [7, 8, 9]); the element plan's frozen header
+    # before or after the call: (old[0], s[0]) ∈ {(5, 7), (1, 5)}.
+    def two(st, v): st['v']['s'] = 'S2'; return (1, 5)
+    occs = [Occ('E_two', run=two),
+            Occ('R_s', run=lambda st, v: hdr(st, 's')),
+            Occ('T_s0', deps=['R_s'], run=lambda st, v: (v['R_s'], 0)),
+            Occ('T_x', run=lambda st, v: 'x')]
+    def phase2(st, v):
+        st['v']['x'] = v['E_two'][0]; store(st, v['T_s0'][0], v['T_s0'][1], v['E_two'][1])
+        return (elem(st, 'S1', 0), elem(st, hdr(st, 's'), 0))
+    check('E5b4 x, s[0] = two() (a multi-value call rebinding s: the frozen header vs the call)',
+          enumerate_graph(occs, state(v={'s': 'S1', 'x': 0}, arr={'S1': [1, 2], 'S2': [7, 8, 9]}), phase2),
+          lambda k: k[1], {(5, 7), (1, 5)})
+
 # ---------------------------------------------------------------- negative controls (forced pairs are singletons)
 def controls():
     # C1: f(g()) — argument before invocation (data edge); no unordered pair remains.
@@ -842,7 +906,8 @@ if __name__ == '__main__':
               r4, lambda: r6(True), lambda: r6(False),
               e1a, e1c, e1b, e2a, e2c, e2d, e2e, e2f, e2g, e3a, e3c, e3d, e3e,
               e4a, e4b, e4c, e4d, e4e, e4f, e4g, e4h,
-              e5a1, e5a2, e5a3, e5a4, e5a5, e5a6, e5a7, controls):
+              e5a1, e5a2, e5a3, e5a4, e5a5, e5a6, e5a7,
+              e5b1, e5b2, e5b3, e5b4, controls):
         f()
     print('RESULT:', 'FAIL' if FAILS else 'PASS', f'({FAILS} mismatch(es))')
     sys.exit(1 if FAILS else 0)

@@ -2112,8 +2112,14 @@ partial def decodeUnseq (results : Array Param) (path : String) (obj : StrictJso
           -- the element type = the binder cell's type.
           let bindsJ ← StrictJson.array s!"{opath}.binds" (← StrictJson.field opath o "binds")
           let binds ← bindsJ.toList.mapIdxM (fun j b => StrictJson.string s!"{opath}.binds[{j}]" b)
-          if binds.length != 1 then
-            fail s!"unseq: receive '{name}' with {binds.length} binders is outside the admitted fragment (one received value; the comma-ok form is a later family); refused by name"
+          -- Stage E5 E5b (2026-09-22): the comma-ok receive `v, ok = <-ch` — two binders, the
+          -- second the bool flag (the machine's `chanRecv` writes both; `wellFormed?` checks 1–2).
+          if binds.length == 0 || binds.length > 2 then
+            fail s!"unseq: receive '{name}' with {binds.length} binders is outside the admitted fragment (one received value, or two for the comma-ok form); refused by name"
+          if binds.length == 2 then
+            let okTy ← cellTy binds[1]!
+            if okTy != .bool then
+              fail s!"unseq: receive '{name}' at {opath}: the comma-ok flag cell '{binds[1]!}' is declared {repr okTy}, not bool; refused by name"
           let chJ ← StrictJson.field opath o "ch"
           if jsonMentionsRecover chJ then
             fail s!"unseq: recover() in a receive's channel at {opath}; refused by name"
@@ -2255,6 +2261,18 @@ partial def decodeUnseq (results : Array Param) (path : String) (obj : StrictJso
             match binds with
             | [b] => pure b
             | _ => fail s!"unseq: wide built-in '{name}' ({what}) with {binds.length} results at {opath}; the statement writes exactly one; refused by name"
+          -- Stage E5 E5b: the comma-ok forms write TWO cells — the value and the bool flag.
+          let twoBinds (what : String) (valTy : Ty) : LowerM (String × String) := do
+            match binds with
+            | [v, ok] =>
+                let cv ← cellTy v
+                if cv != valTy then
+                  fail s!"unseq: wide {what} '{name}' at {wpath} yields {repr valTy} but its value cell '{v}' is declared {repr cv}; refused by name"
+                let cok ← cellTy ok
+                if cok != .bool then
+                  fail s!"unseq: wide {what} '{name}' at {wpath}: the comma-ok flag cell '{ok}' is declared {repr cok}, not bool; refused by name"
+                pure (v, ok)
+            | _ => fail s!"unseq: wide built-in '{name}' ({what}) with {binds.length} results at {opath}; the statement writes exactly two (the value and the ok flag); refused by name"
           let spec ← match tag with
             | "append" => do
                 checkAllowedKeys wpath w ["stmt", "elem", "slice", "elems"]
@@ -2275,8 +2293,24 @@ partial def decodeUnseq (results : Array Param) (path : String) (obj : StrictJso
                 if cty != .int .int then
                   fail s!"unseq: wide copy '{name}' at {wpath} yields int (the copied count) but cell '{b}' is declared {repr cty}; refused by name"
                 pure (WideSpec.copy dst src)
+            | "map-lookup" => do
+                -- Stage E5 E5b: `v, ok = m[k]` — ONE read of the frozen map VALUE at the key VALUE.
+                checkAllowedKeys wpath w ["stmt", "base", "index", "keyType", "valueType"]
+                let base ← atomField "base"
+                let index ← atomField "index"
+                let kt ← decodeTy s!"{wpath}.keyType" (← StrictJson.field wpath w "keyType")
+                let vt ← decodeTy s!"{wpath}.valueType" (← StrictJson.field wpath w "valueType")
+                let _ ← twoBinds "map lookup" vt
+                pure (WideSpec.mapLookup base index kt vt)
+            | "type-assert" => do
+                -- Stage E5 E5b: `v, ok = x.(T)` — a pure op on the interface VALUE, never failing.
+                checkAllowedKeys wpath w ["stmt", "operand", "target"]
+                let operand ← atomField "operand"
+                let target ← decodeTy s!"{wpath}.target" (← StrictJson.field wpath w "target")
+                let _ ← twoBinds "type assertion" target
+                pure (WideSpec.typeAssert operand target)
             | other =>
-                fail s!"unseq: wide built-in '{name}' at {wpath}: statement '{other}' is outside the admitted fragment (append | copy); refused by name"
+                fail s!"unseq: wide built-in '{name}' at {wpath}: statement '{other}' is outside the admitted fragment (append | copy | map-lookup | type-assert); refused by name"
           pure (UnseqBody.wide binds spec)
       | other => fail s!"unseq: unknown occurrence kind '{other}' at {opath}; refused by name"
     occs := occs.push { name, body, after, region }

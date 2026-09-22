@@ -2180,6 +2180,15 @@ def unseqWideStmt (binds : List String) : WideSpec → Stmt
       match binds with
       | [b] => .copySlice (.var b) dst src
       | _ => .unsupported "unseq: wide copy with a result arity other than one"
+  | .mapLookup base key kt vt =>
+      -- Stage E5 E5b: the comma-ok lookup writes the value and the ok flag into the two cells.
+      match binds with
+      | [v, ok] => .mapLookup (.var v) (.var ok) base key kt vt
+      | _ => .unsupported "unseq: wide map lookup with a result arity other than two"
+  | .typeAssert operand target =>
+      match binds with
+      | [v, ok] => .typeAssert (.var v) (.var ok) operand target
+      | _ => .unsupported "unseq: wide type assertion with a result arity other than two"
 
 /-- Head of a channel statement (send/receive/close). `elem` is the
 element type: sends normalize the value at it (the `mapAssign` key/value

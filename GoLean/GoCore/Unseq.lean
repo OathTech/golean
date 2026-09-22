@@ -78,6 +78,8 @@ def AllocSpec.names : AllocSpec → List String
 def WideSpec.names : WideSpec → List String
   | .append _ slice elems => Expr.names slice ++ Expr.names elems
   | .copy dst src => Expr.names dst ++ Expr.names src
+  | .mapLookup base key _ _ => Expr.names base ++ Expr.names key
+  | .typeAssert operand _ => Expr.names operand
 
 /-- The names an assignee's OPERANDS mention (`targetPlan`'s operand
 expressions: `x` ↦ `&x`'s name, `a[i]` ↦ the anchor and index names). -/

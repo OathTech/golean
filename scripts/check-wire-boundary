@@ -206,7 +206,7 @@ out="$(run_cli_fn Tests/unseq-wire/e3recv.json e3recv)" || true
 [[ "$out" == *'"status":"panic"'* && "$out" == *'len 0'* ]] || { echo "check-wire-boundary: FAIL [unseq recv] — expected the canonical tape's panic [9] after the receive (witness len 0): $out" >&2; exit 1; }
 echo "ok [unseq recv] runs, the canonical tape receives first then panics [9] (witness len 0) — Stage E E3"
 expect_unseq_refusal unseq-recv-nonatom mut-recv-nonatom e3recv 'hidden read in a receive'
-expect_unseq_refusal unseq-recv-two-binds mut-recv-two-binds e3recv 'outside the admitted fragment'
+expect_unseq_refusal unseq-recv-two-binds mut-recv-two-binds e3recv 'comma-ok flag cell'   # E5b: two binders admitted; the flag cell's type refuses
 # Stage E E4 (2026-09-21): an ALLOCATION (`allocate`) occurrence (Tests/unseq-wire/e4alloc.json, `[]int{s[i]}[0] + wit5()`):
 # runs on the canonical tape — wit5 first (calls first), then the payload's `[9]` panic after `wit 5`; the
 # non-atom payload and the out-of-fragment statement kind refuse by name.
@@ -245,4 +245,14 @@ expect_unseq_refusal unseq-wide-nonatom   mut-wide-nonatom   e5copy   'hidden re
 expect_unseq_refusal unseq-wide-binds     mut-wide-binds     e5copy   'writes exactly one'
 expect_unseq_refusal unseq-wide-cell-type mut-wide-cell-type e5copy   'the copied count'
 expect_unseq_refusal unseq-min-nonatom    mut-min-nonatom    e5minmax 'hidden read in a pure node'
-echo 'Wire boundary gate: PASS (11 byte-level controls + 34 unseq-node controls through the real CLI)'
+# Stage E5 E5b (2026-09-22): MULTI-TARGET assignments (Tests/unseq-wire/e5btuple.json, `s[0], x = m(), 3` with m rebinding
+# the captured s): runs on the canonical tape — m first, then the header read: the store lands in the NEW array, 15
+# (gc's); the comma-ok forms' refusals by name — one binder for a two-result wide statement, a receive's comma-ok flag
+# cell not bool, a hidden read in the assertion's operand.
+out="$(run_cli_fn Tests/unseq-wire/e5btuple.json e5btuple)" || { echo "check-wire-boundary: FAIL [unseq multi] — the multi-target wire did not run: $out" >&2; exit 1; }
+[[ "$out" == *'"status":"ok"'* && "$out" == *'"value":15'* ]] || { echo "check-wire-boundary: FAIL [unseq multi] — expected ok/15 (s[0], x = m(), 3; canonical = m first, the new header): $out" >&2; exit 1; }
+echo "ok [unseq multi] runs, answers 15 (every target a sibling plan; the stores in order — Stage E5 E5b)"
+expect_unseq_refusal unseq-wide-two-binds     mut-wide-two-binds     e5bassert 'writes exactly two'
+expect_unseq_refusal unseq-recv-ok-type       mut-recv-ok-type       e5brecv2  'comma-ok flag cell'
+expect_unseq_refusal unseq-wide-assert-nonatom mut-wide-assert-nonatom e5bassert 'hidden read in a wide built-in'
+echo 'Wire boundary gate: PASS (11 byte-level controls + 38 unseq-node controls through the real CLI)'

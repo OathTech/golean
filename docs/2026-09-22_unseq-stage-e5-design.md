@@ -208,3 +208,119 @@ Go's grammar — nothing to reorder against). (v) The spread-string row keeps it
 declaring `width=30`: the `appendSpill` site's latitude is CAPACITY, observable only through `cap()`, which the
 row does not read — a 30-way pick with one observation would document a non-site (the depth-guard note's
 capacity rows are the precedent).
+
+## E5b. Multi-target assignments, blank targets, the comma-ok forms (landed 2026-09-22)
+
+**The spec clause and the graph shape.** spec#Assignment_statements: «The assignment proceeds in two phases. First,
+the operands of index expressions and pointer indirections … on the left and the expressions on the right are all
+evaluated in the usual order. Second, the assignments are carried out in left-to-right order.» In the graph every
+TARGET is a phase-1 SIBLING: a PLANNED target (a slice element, map element, dereference or field — E2's frozen plans)
+is a `target` occurrence on its frozen operand atoms; a PLAIN local target beside a planned sibling is a `target` plan
+on its own address (`{"target": "var"}` → the machine's `.var` plan through `.ref`, checks nothing); the stores ride
+the phase-2 `stores` list in target order — the inventory's E3/E4 INTER-TARGET axis is thereby the graph's own shape
+(the plans unordered among themselves and against the right-hand reads; the events E1-ordered). When NO target is
+planned (plain / blank / package-level targets only) the multi-assign rides `then` — the legacy `assign` shape with
+its declares, blank discards and interface-boxing wraps — because plain-variable stores never fail and their order is
+unobservable (Stage C's `x := e` precedent, E1's global store). The forms: a TUPLE `a, b = e1, e2` (equal arity; blanks
+allowed), a MULTI-VALUE CALL `a, b = f()` (an `invoke` with two binders — Stage C's fragment), the COMMA-OK RECEIVE
+`v, ok = <-ch` (E3's `recv` body with TWO binders — the machine's `chanRecv` always wrote both; the decoder now admits
+the pair, the flag cell bool), the comma-ok MAP LOOKUP `v, ok = m[k]` and TYPE ASSERTION `v, ok = x.(T)` (two-binder
+`wide` bodies — `WideSpec.mapLookup` / `.typeAssert`, ARMS of E5a's kind: `Stmt.mapLookup` / `Stmt.typeAssert` with
+the binder cells as targets; a mutable READ never failing / a pure op never failing — RESIDUAL occurrences, no E1
+edge), and the single blank `_ = e` (the value's occurrences, nothing stored).
+
+**Refused by name** ([AGENT] choices): a PACKAGE-LEVEL target beside a planned sibling («the global plan atom is
+deferred» — every target must ride the same store phase, and `unseqAtom` has no `.global` arm: the alternative, a core
+arm returning the seeded cell's address behind the heap-size check, is one lemma and posed for the next lane rather
+than taken beside the family's other changes); an INTERFACE-TYPED target beside a planned sibling («the store's value
+would box inside the graph» — `to-interface` is not an admitted head); a compound multi-target (Go has none); a
+non-call single right-hand side of arity ≠ 1.
+
+**The lowering** (`unseq_lower.go`, `multiAssign`): phase 1 IN SOURCE ORDER — every planned target's OPERANDS first
+(`prepareTarget`: their events chain lexically before the right-hand side's — the plan node itself is emitted later,
+on the frozen atoms, `emitPrepared`), then the right-hand values (a tuple's expressions; the call's binders; `recvN(u,
+2)`; the `wide` lookup / assertion via `wideOcc(…, event=false)`), then — some target planned — the plan nodes and
+the `stores` in target order (blanks skipped; `ensureCell` copies a constant into a cell), else the `then` multi-assign.
+**A WRONG ANSWER caught RED-FIRST by the spec's own example** (`spec-examples-stmt/eval-order-calls/{verbatim,
+traced-recv}`: `y[f()], ok = g(z || h(), i()+x[j()], <-c), k()`): the first E5b cut lowered the right-hand values
+BEFORE the targets' operands, so `f()` — lexically first — received its E1 edge after `k()` and the machine traced
+`h,i,j,g,k,f` where the spec fixes `f h i j <-c g k`. Both rows went FAIL/differential on the candidate (`diff-one-e5b.txt`
+run 1), the lowering was corrected (target operands first), both PASS strict again (run 2) with the graph's chain
+`call0(f) → guard2(||) after f → call3(h) in the region → join4 → call5(i) after the completion → call6(j) → recv9
+after j → call10(g) → call11(k)`. The canonical LIST order (events first, residual after, per level) is unchanged —
+only the `after` edges moved.
+
+**The machine**: `WideSpec.mapLookup (base key) (keyTy valueTy)` and `.typeAssert (operand) (target)` — arms of E5a's
+`wide` kind (`unseqWideStmt` writes `.mapLookup (.var v) (.var ok) …` / `.typeAssert (.var v) (.var ok) …`;
+`WideSpec.arity` 2; names, `eqbF` + soundness, indices, `wideSpecSup` arms). No new constructor, no new Step rule, no
+new pick; `check-mem-callsites` unchanged. **The decoder**: the `wide` arm's `map-lookup` (keys stmt/base/index/keyType/
+valueType; the value cell typed `valueType`, the flag cell bool — `twoBinds`) and `type-assert` (keys stmt/operand/
+target; the value cell typed `target`); the `recv` kind admits 2 binders with a bool flag cell. Mutants
+`mut-wide-two-binds`, `mut-recv-ok-type`, `mut-wide-assert-nonatom` (38 → 41); E3's `mut-recv-two-binds` RE-POINTED —
+two binders are now the admitted comma-ok form, so its refusal is the flag cell's type (`$u2` an int cell), and the
+gate control's needle moved with it.
+
+**References lead** (`enumerate.py` E5b1–E5b4, PASS): E5b1 `s[0], x = m(), 3` (m rebinding s) → {(old[0], s[0])} = {(5, 7),
+(1, 5)}; E5b2 `_, x = a[9], wit(1)` → {panic · ``, panic · `wit 1`}; E5b3 `xs[a[9]], ok = <-ch` → {panic · len 1, panic
+· len 0}; E5b4 `x, s[0] = two()` (two rebinding s) → {(5, 7), (1, 5)}. Wires: hand-built `e5btuple` {57, 15}, `e5brecv2`
+(the comma-ok receive, two binders, a planned target) and `e5bassert` (the comma-ok assertion as a `wide` body, a
+singleton — the decoder's arm) + native `e5btuple`/`e5brecv2` (`Tests/UnseqWire.lean` 114 ok / 41 mutants; `check-wire-
+boundary` 11 + 38 — the tuple positive control answers 15 on the canonical tape: m first, the NEW header). Frontend
+unit tests: witnesses `e5bTupleHeader` (tuple-assign, 1/2), `e5bBlankPanic` (1/1), `e5bCommaOkRecvTarget` (comma-ok,
+1/2), `e5bMultiCall` (multi-call, 1/2), `e5bDefineTuple` (1/2), and the Stage C witnesses `multiTarget` (`a, b = s[0],
+wit(1)`) and `blankTarget` (`_ = s[0] + wit(1)`) MOVE from the legacy list to the admitted list (a checked access beside
+`wit` — their former refusals were the grammar's, not the trigger's); legacy `e5bSwap`, `e5bCommaOkMapOnly`,
+`e5bCommaOkAssertOnly` («no call occurrence»), E3's `e3commaOk` now «no non-event occurrence» (the comma-ok receive alone
+is all-forced).
+
+**The census** (`census-e5b.txt`): admitted **137 → 154** — +12 from the widening in 10 packages (by former reason
+`multi-target or tuple assignment` 11, `blank target` 1; by form multi-call 6, tuple-assign 4, comma-ok 1, blank-assign 1:
+`multi-assign/{call-write-back/callPanicIdentity, call-write-back-order/{derefTarget,sliceHeaderBase},
+call-write-back-order-value/valueCallDerefTarget, lhs-index-eval-order, target-eval-before-call}`,
+`returns/multi-result-assign-order`, `channels/recv-edge/recvDepIndexTarget`, `spec-examples-stmt/eval-order-calls/
+{evalOrderCallsVerbatim,evalOrderCallsTracedRecv}`, `noodler/evalorder/logicalShortCircuit`, `noodler/latitude/
+rhsListIndexCallIndex`) and +5 the E5a package's sweeps born after its census; 0 lost; the twin 10 203 / 0. Legacy probes
+63 → 60 (corpus), the twin 128 unchanged (`probes-e5b.txt`). The 577 + 139 main-unit first-reason sweeps beyond these are
+call-free (comma-ok forms, swaps, multi-value calls into plain locals) — legacy under the trigger, as §0 measured.
+
+**Rows** (`scripts/diff-one` on all 65 affected rows, three runs — `diff-one-e5b.txt`; gc's draws `gc-draws-e5b.txt`,
+20/20 per subject):
+
+| row | before → after | set | gc |
+|---|---|---|---|
+| `evalorder/unseq-multi/tuple-header-vs-call` | born PASS/membership (width 4: call, header read, the plain target's plan and the constant's copy all ready) | {57, 15} (E5b1) | 15 |
+| `evalorder/unseq-multi/blank-panic-vs-call` | born PASS/membership | {panic · ``, `wit 1` · panic} (E5b2) | `wit 1` · panic |
+| `evalorder/unseq-multi/comma-ok-recv-target-vs-panic` | born PASS/membership (width 3) | {`len 1` · panic, `len 0` · panic} (E5b3) | `len 0` |
+| `evalorder/unseq-multi/multi-call-header-vs-call` | born PASS/membership (width 3) | {57, 15} (E5b4) | 15 |
+| `evalorder/unseq-multi/define-tuple-vs-call` | born PASS/membership | {6, 15} | 15 |
+| `evalorder/unseq-multi/{swap-control,comma-ok-map-control}` | born PASS strict, wide=0 | 21; 21 (call-free — legacy by name) | = |
+| `multi-assign/call-write-back-order/deref-target` (BUG-052) | PASS strict → PASS/membership (width 3) | {42007, 4207} — the frozen pointer plan before / after `swapPtr` redirects `pg` | 4207 |
+| `multi-assign/call-write-back-order/slice-header-base` (BUG-052) | PASS strict → PASS/membership | {1120003, 774203} — the frozen header before / after `replaceHeader` rebinds `sg` | 774203 |
+| `multi-assign/call-write-back-order-value/deref-target` | PASS strict → PASS/membership | {42007, 4207} (the call through a func value) | 4207 |
+| `noodler/latitude/rhs-list-index-call-index` | PASS strict → PASS/membership (members 4) | {(1,5,1), (1,5,9), (9,5,1), (9,5,9)} — `x, y, z := a[0], f(), a[0]`: two reads of `a[0]` each unordered against `f`, and against each other (R1) | (9,5,9) |
+| `spec-examples-stmt/eval-order-calls/{verbatim,traced-recv}` | PASS strict, UNCHANGED (red on the first cut, above) | the forced trace `f h i j <-c g k` · 192 · true | = |
+| the other 52 affected rows (`multi-assign/*`, `channels/recv-edge/*`, `returns/multi-result-assign-order`, `noodler/evalorder/*`, `noodler/latitude/*`) | UNCHANGED | every admitted sweep beside these has ONE observation on every order (a plan checking nothing, a call that cannot write the plan's frozen operands) | = |
+
+Baseline 3738 = 3503 / 235 → **3745 = 3510 / 235** (+7 born; 4 stage moves strict → membership; the header carries the
+reason). NO PASS → non-PASS. Gates in-process: `check-unseq-wire` PASS (41), `check-wire-boundary` PASS (11 + 38),
+`check-mem-callsites` PASS (70), `check-frontend-pins` PASS (the twin byte-identical), `check-unseq-scheduler` PASS,
+`check-core-audit` PASS; the full gate line is in the evidence README.
+
+**Latitude.** E2/E12's VALUE axis is (a) ENVELOPED on the five born membership rows and the four moved rows (BUG-052's
+three: the fixed post-call target-operand order — gc's — is ONE member of the frozen-plan set, the pre-call plan the
+other; `rhs-list-index-call-index`) — posed for ratification at the merge ask; BUG-052's entry carries an ENVELOPED
+paragraph. **E3/E4 (inter-target operand order)**: the MECHANISM now exists — targets are phase-1 siblings and the
+graph realizes every order of their operand evaluations — but BUG-032's own rows (two panicking target operands, no
+call: `aa[5][0], b[*pn] = f6()` has its call as the forced multi-value RHS; `xs[ys[9]], b = zs[7], 2` is call-free) are
+routed to the legacy path by the RATIFIED trigger (no effectful event beside the failing operands), so E3 stays (b)
+PINNED known-≠-gc and E4 (b) PINNED as entries; their re-envelope is the trigger refinement POSED in the handoff §2 item
+2 (panic identity as an observable), one ruling away — not this lane's to take.
+
+**[AGENT] choices (alternatives named).** (i) Plain targets beside a planned sibling become `.var` plans (one store
+phase) — the alternative, plain stores in `then` with planned stores in `stores`, would store the planned targets
+BEFORE the plain ones regardless of source order (observable when a planned store panics after a plain store that
+recovery reads). (ii) All-plain multi-assigns ride `then` (the legacy shape) — the alternative mints a plan and a wide
+pick per target for stores that cannot fail. (iii) The comma-ok lookup / assertion are RESIDUAL `wide` bodies (no E1
+edge): a map lookup is a read, an assertion a pure op — neither is a call, receive or logical operation. (iv) Target
+operands lower first — the lexical E1 chain (the red-first fix). (v) The global-beside-planned and interface-beside-
+planned refusals (above).

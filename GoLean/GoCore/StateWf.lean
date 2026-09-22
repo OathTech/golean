@@ -231,6 +231,8 @@ def allocSpecSup : AllocSpec → Nat
 def wideSpecSup : WideSpec → Nat
   | .append _ slice elems => max (Expr.locSup slice) (Expr.locSup elems)
   | .copy dst src => max (Expr.locSup dst) (Expr.locSup src)
+  | .mapLookup base key _ _ => max (Expr.locSup base) (Expr.locSup key)
+  | .typeAssert operand _ => Expr.locSup operand
 
 /-- An `unseq` body's loc positions (Stage B): its head/operand expressions
 and target assignee — program text, zero since A4 like `Expr.locSup`, kept

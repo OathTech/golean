@@ -736,6 +736,81 @@ func e5aTgtAssertMin() int {
 	x[iv.(int)] = min(q, t[k]) + wit(5)
 	return x[0]
 }
+
+// --- Stage E5 E5b: the multi-target forms ---
+
+func rebindS(ps *[]int) int { *ps = []int{7, 8, 9}; return 5 }
+
+// s[0], x = m(), 3 with s captured and m rebinding it: the target plan's header read vs m; x plain.
+func e5bTupleHeader() (int, int) {
+	s := []int{1, 2}
+	old := s
+	var x int
+	m := func() int { return rebindS(&s) }
+	s[0], x = m(), 3
+	return old[0], s[0] + x
+}
+
+// _, x = a[9], wit(1): the blank's checked read panics; wit is the sibling event.
+func e5bBlankPanic() int {
+	a := []int{1}
+	var x int
+	_, x = a[9], wit(1)
+	return x
+}
+
+// xs[a[9]], ok = <-ch: a comma-ok receive with a PLANNED target whose index panics — the panic vs the receive.
+func e5bCommaOkRecvTarget() int {
+	ch := make(chan int, 1)
+	ch <- 3
+	xs := []int{0}
+	a := []int{1}
+	var ok bool
+	xs[a[9]], ok = <-ch
+	_ = ok
+	return len(ch)
+}
+
+// v, ok := m[1] alone: the lookup's reads are the only occurrences — no event, legacy.
+func e5bCommaOkMapOnly() int {
+	m := map[int]int{1: 2}
+	v, ok := m[1]
+	_ = ok
+	return v
+}
+
+// x, s[0] = two(): a multi-value call with a planned target whose header read is unordered against it.
+func e5bMultiCall() int {
+	s := []int{1, 2}
+	keep := func() { _ = s }
+	keep()
+	var x int
+	x, s[0] = two()
+	return x + s[0]
+}
+
+// a, b = b, a: a swap with no event — legacy.
+func e5bSwap() int {
+	a, b := 1, 2
+	a, b = b, a
+	return a*10 + b
+}
+
+// x, y := m(), s[0] — a DEFINE tuple: s captured and written by m, its checked read vs m; the declares ride then.
+func e5bDefineTuple() int {
+	s := []int{1}
+	m := func() int { s[0] = 10; return 5 }
+	x, y := m(), s[0]
+	return x + y
+}
+
+// v, ok := x.(int) beside nothing: legacy (a pure op with no event).
+func e5bCommaOkAssertOnly() int {
+	var x interface{} = 1
+	v, ok := x.(int)
+	_ = ok
+	return v
+}
 `
 
 func TestUnseqAdmittedWitnesses(t *testing.T) {
@@ -804,6 +879,14 @@ func TestUnseqAdmittedWitnesses(t *testing.T) {
 		{"e5aCopyRead", 0, "return", 1, 3},          // copy (effectful) | d's read + the checked d[0], d's read inside copy
 		{"e5aAppendSpreadStr", 0, "return", 2, 1},   // append + m (len an event) | the captured x's read
 		{"e5aTgtAssertMin", 1, "elem-assign", 1, 3}, // wit | the target plan (its assertion), t[k] inside min, the plan
+		// Stage E5 E5b: the multi-target forms
+		{"e5bTupleHeader", 1, "tuple-assign", 1, 2},   // m | the captured s's header read + the plan
+		{"e5bBlankPanic", 1, "tuple-assign", 1, 1},    // wit | the checked a[9]
+		{"e5bCommaOkRecvTarget", 2, "comma-ok", 1, 2}, // the receive | the checked a[9] + the plan
+		{"e5bMultiCall", 1, "multi-call", 1, 2},       // two | the captured s's header read + the plan
+		{"e5bDefineTuple", 1, "tuple-assign", 1, 2},   // m | the captured s's header read + the checked s[0]
+		{"multiTarget", 1, "tuple-assign", 1, 1},      // wit | the checked s[0] (E5b: the pilot's former refusal, now a graph)
+		{"blankTarget", 0, "blank-assign", 1, 1},      // wit | the checked s[0] (E5b: `_ = e` evaluates its occurrences)
 	}
 	for _, c := range cases {
 		d := decisionAt(t, unseqWitnessSrc, c.fn, c.fromEnd)
@@ -865,12 +948,11 @@ func TestUnseqLegacyByReason(t *testing.T) {
 		// the E3 observability trigger: an occurrence forced before the only event beside it
 		{"forcedArg", 0, "no occurrence observable against an effectful event"},
 		{"e3valueViaPtr", 0, "no occurrence observable against an effectful event"}, // the auto-deref precedes Get, which precedes wit
-		{"e3commaOk", 2, "multi-target or tuple assignment"},
+		{"e3commaOk", 2, "no non-event occurrence"},                                 // E5b: the comma-ok receive alone is all-forced (its channel atom the only operand)
 		{"e3promotedMethod", 0, "promoted method call"},
 		{"e2promoted", 0, "promoted field selector"},
 		{"e2ifaceKey", 0, "map type outside the grammar"},
 		{"e2nestedFieldTarget", 1, "field target on a non-variable struct base"},
-		{"multiTarget", 1, "multi-target or tuple assignment"},
 		{"lenOnly", 0, "no call occurrence"},
 		{"callOnly", 0, "no non-event occurrence"},
 		{"privateCompoundCall", 1, "no non-event occurrence"},
@@ -880,7 +962,6 @@ func TestUnseqLegacyByReason(t *testing.T) {
 		{"arrayIndex", 0, "index of a non-slice base"},
 		{"ifaceCompare", 0, "interface comparison"},
 		{"floatOperand", 0, "result type outside the pilot grammar"},
-		{"blankTarget", 0, "blank target"},
 		{"namedTypeLocal", 0, "conversion operand type outside the grammar"},
 		{"printIface", 0, "print of an interface value"},
 		// Stage E E4
@@ -894,6 +975,10 @@ func TestUnseqLegacyByReason(t *testing.T) {
 		{"e5aMin", 0, "no occurrence observable against an effectful event"},
 		{"e5aMaxForced", 0, "no occurrence observable against an effectful event"},
 		{"e5aCopyStmt", 1, "no non-event occurrence"},
+		// Stage E5 E5b
+		{"e5bCommaOkMapOnly", 2, "no call occurrence"},
+		{"e5bSwap", 1, "no call occurrence"},
+		{"e5bCommaOkAssertOnly", 2, "no call occurrence"},
 	}
 	for _, c := range cases {
 		d := decisionAt(t, unseqWitnessSrc, c.fn, c.fromEnd)

@@ -544,6 +544,51 @@ def e5minmax_graph():
         then=ret(ident("$u4", INT)))
 
 
+# ---------------------------------------------------------------- Stage E5, family E5b (2026-09-22)
+# MULTI-TARGET assignments: every target a phase-1 SIBLING plan (frozen operands), the stores left to right in
+# phase 2; the comma-ok forms as two-binder occurrences (a `recv`, or a `wide` map-lookup / type-assert).
+# References enumerate.py E5b1 / E5b3.
+
+def var_target(name):
+    """A plain variable target plan (E5b): its own address, frozen; checks nothing."""
+    return {"target": "var", "id": name}
+
+
+def e5btuple_graph():
+    # s[0], x = m(), 3: m (rebinding the captured s), the header read of s, the element plan on the frozen header,
+    # the plain x's plan, the constant 3 copied into a cell; the two stores in order. {57, 15}.
+    return unseq(
+        [cell("$u0", INT), cell("$u1", SLICE_INT), cell("$u2", INT)],
+        [inv("call0", ["$u0"], ident("m"), [], [INT]),
+         ev("read1", "$u1", ident("s", SLICE_INT)),
+         tgt("target2", "$t0", elem_target(ident("$u1", SLICE_INT), intc(0))),
+         tgt("target3", "$t1", var_target("x")),
+         ev("copy4", "$u2", intc(3))],
+        stores=[("$t0", "$u0"), ("$t1", "$u2")])
+
+
+def e5brecv2_graph():
+    # xs[a[9]], ok = <-ch: the comma-ok receive (two binders), the checked a[9], the element plan on the private
+    # xs and the produced index, the plain ok's plan; the stores. {panic · len 1, panic · len 0}.
+    return unseq(
+        [cell("$u0", INT), cell("$u1", BOOL), cell("$u2", INT)],
+        [rcv("recv0", ["$u0", "$u1"], ident("ch", CHAN_INT), INT),
+         ev("access1", "$u2", idxget(ident("a", SLICE_INT), intc(9), INT)),
+         tgt("target2", "$t0", elem_target(ident("xs", SLICE_INT), ident("$u2", INT))),
+         tgt("target3", "$t1", var_target("ok"))],
+        stores=[("$t0", "$u0"), ("$t1", "$u1")])
+
+
+def e5bassert_graph():
+    # v, ok = iv.(int): the comma-ok assertion as a two-binder wide body over the interface atom; the plans. {7}.
+    return unseq(
+        [cell("$u0", INT), cell("$u1", BOOL)],
+        [wd("assert0", ["$u0", "$u1"], {"stmt": "type-assert", "operand": ident("iv"), "target": INT}),
+         tgt("target1", "$t0", var_target("v")),
+         tgt("target2", "$t1", var_target("ok"))],
+        stores=[("$t0", "$u0"), ("$t1", "$u1")])
+
+
 # ---------------------------------------------------------------- constant heads (audit fix round F2)
 # A CONSTANT copied into a cell — the emitter's `copy` occurrence where the consumer needs a
 # CELL (design §6): a guard's test (`true && f()`), a phase-2 store's value (`a[f()] = 5`,
@@ -639,6 +684,12 @@ WITNESSES = {
     "e5append": ("e5append", [("e5append", "m", 0, e5append_graph(), None)]),
     "e5copy": ("e5copy", [("e5copy", "s", 0, e5copy_graph(), None)]),
     "e5minmax": ("e5minmax", [("e5minmax", "m", 0, e5minmax_graph(), None)]),
+    # Stage E5 E5b (2026-09-22): multi-target assignments — the tuple with a planned target (hand-built + native), the
+    # comma-ok receive with a planned target (hand-built + native), the comma-ok assertion (the decoder's arm; the
+    # frontend's own lowering of this call-free sweep is legacy)
+    "e5btuple": ("e5btuple", [("e5btuple", "m", 1, e5btuple_graph(), None)]),
+    "e5brecv2": ("e5brecv2", [("e5brecv2", "ok", 2, e5brecv2_graph(), None)]),
+    "e5bassert": ("e5bassert", [("e5bassert", "ok", 2, e5bassert_graph(), None)]),
 }
 
 
@@ -745,8 +796,9 @@ def mutants(wires):
     # the `recv` kind (Stage E E3): a non-atom channel — a hidden read; two binders — outside the fragment.
     edit("mut-recv-nonatom", "e3recv", "e3recv",
          lambda n, w: occ(n, "recv1").update(ch=binop("+", intc(0), intc(1), INT)), "hidden read in a receive")
+    # (E5b: two binders are ADMITTED — the comma-ok form; the refusal is the flag cell's type, `$u2` an int cell)
     edit("mut-recv-two-binds", "e3recv", "e3recv",
-         lambda n, w: occ(n, "recv1").update(binds=["$u1", "$u2"]), "outside the admitted fragment")
+         lambda n, w: occ(n, "recv1").update(binds=["$u1", "$u2"]), "comma-ok flag cell")
     # the `alloc` kind (Stage E E4): a non-atom payload — a hidden read; a statement kind outside the fragment.
     edit("mut-alloc-nonatom", "e4alloc", "e4alloc",
          lambda n, w: occ(n, "lit2")["allocation"]["elems"][0].update(value=binop("+", ident("$u1", INT), intc(0), INT)),
@@ -787,6 +839,15 @@ def mutants(wires):
     edit("mut-min-nonatom", "e5minmax", "e5minmax",
          lambda n, w: occ(n, "min0")["head"]["args"].__setitem__(0, binop("+", ident("x", INT), intc(1), INT)),
          "hidden read in a pure node")
+    # Stage E5 E5b (2026-09-22): the comma-ok forms — one binder for a two-result wide statement; the receive's flag
+    # cell not bool; a hidden read in the assertion's operand.
+    edit("mut-wide-two-binds", "e5bassert", "e5bassert",
+         lambda n, w: occ(n, "assert0").update(binds=["$u0"]), "writes exactly two")
+    edit("mut-recv-ok-type", "e5brecv2", "e5brecv2",
+         lambda n, w: n["cells"][1].update(type=INT), "comma-ok flag cell")
+    edit("mut-wide-assert-nonatom", "e5bassert", "e5bassert",
+         lambda n, w: occ(n, "assert0")["wide"].update(operand=binop("+", intc(1), intc(2), INT)),
+         "hidden read in a wide built-in")
     edit("mut-make-negative-len", "e4make", "e4make",
          lambda n, w: occ(n, "make0")["allocation"].update(len=intc(-1)), "negative constant len")
     edit("mut-make-len-over-cap", "e4make", "e4make",

@@ -17,7 +17,10 @@
 # `ref` of a binder cell as an argument / a capture (F2), `new`'s value typed against the
 # element type (F1), a slice literal's index out of range / duplicated and a constant make
 # size Go rejects at compile time (F3); 38 since Stage E5 E5a, 2026-09-22 — the `wide` kind's statement tag,
-# a non-atom operand, the binder arity, the result cell's type, a non-atom `min` operand), while the untouched W1 wire runs (the canonical
+# a non-atom operand, the binder arity, the result cell's type, a non-atom `min` operand; 41 since Stage E5 E5b — one
+# binder for a two-result wide statement, a receive's comma-ok flag cell not bool, a hidden read in a comma-ok assertion's
+# operand; E3's two-binder receive mutant re-pointed at the flag cell's type, two binders being the admitted comma-ok
+# form), while the untouched W1 wire runs (the canonical
 # tape gives 2: mut first). Fail closed on a missing binary, a failed
 # regeneration, a decoded mutant or a refusal that does not name its cause.
 set -Eeuo pipefail

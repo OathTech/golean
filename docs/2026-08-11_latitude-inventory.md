@@ -811,6 +811,20 @@ gc's early store a deviation, L-016, 2026-09-02).
 
 ### E2. Call vs. assignment-target operands — (b) PINNED call-first on the VALUE axis outside the Stage C pilot; (a) ENVELOPED on the pilot's rows (2026-09-19); the PANIC axis (a) ENVELOPED via E13's `unseqPanic` since the e13-b re-audit fix round (2026-09-05)
 
+- STAGE E5, FAMILY E5b (2026-09-22, [AGENT], lane `core/unseq-stage-e5-0922`; design
+  `docs/2026-09-22_unseq-stage-e5-design.md` §E5b — multi-target assignments): every target of a
+  tuple / multi-value-call / comma-ok assignment is a PHASE-1 SIBLING plan on frozen operands, the
+  stores left to right (spec#Assignment_statements). The VALUE axis of this entry is (a) ENVELOPED
+  on the born `evalorder/unseq-multi/{tuple-header-vs-call ({57, 15}: the element plan's frozen
+  header before / after the rebinding call, gc 15), multi-call-header-vs-call ({57, 15}, gc 15),
+  define-tuple-vs-call ({6, 15}, gc 15), blank-panic-vs-call, comma-ok-recv-target-vs-panic}` and
+  on the MOVED rows `multi-assign/call-write-back-order/{deref-target ({42007, 4207}), slice-header-
+  base ({1120003, 774203})}`, `multi-assign/call-write-back-order-value/deref-target` ({42007, 4207})
+  — BUG-052's fixed post-call order is gc's member (4207 / 774203 / 4207, 20/20), the pre-call plan
+  the other — and `noodler/latitude/rhs-list-index-call-index` ({(1,5,1), (1,5,9), (9,5,1),
+  (9,5,9)}, gc (9,5,9)); posed for ratification at the merge ask. The spec's own example
+  `spec-examples-stmt/eval-order-calls` keeps its forced trace as one graph. The (b) pin stands
+  outside the widened grammar.
 - STAGE E5, FAMILY E5a (2026-09-22, [AGENT], lane `core/unseq-stage-e5-0922`; design
   `docs/2026-09-22_unseq-stage-e5-design.md` §E5a — the reading-(a) built-ins): READING (a),
   RATIFIED [USER] 2026-09-22 (relayed), is EXECUTED — `min`/`max` are pure E1 participants,
@@ -974,6 +988,15 @@ gc's early store a deviation, L-016, 2026-09-02).
 
 ### E3. Inter-target phase-1 operand order — (b) PINNED to OUR point, **known ≠ gc** (open envelope)
 
+- STAGE E5, FAMILY E5b (2026-09-22, [AGENT], lane `core/unseq-stage-e5-0922`; design
+  `docs/2026-09-22_unseq-stage-e5-design.md` §E5b): THE MECHANISM this entry's re-envelope
+  obligation named now EXISTS — a multi-target assignment lowers as ONE `unseq` graph whose
+  targets are PHASE-1 SIBLING plans (every order of their operand evaluations a legal run; the
+  stores left to right in phase 2) — but this entry's rows are two PANICKING target operands with
+  no effectful event beside them, which the RATIFIED observability trigger (2026-09-22, item 2)
+  routes to the legacy path; so the entry STAYS (b) PINNED, known ≠ gc. Its re-envelope is one
+  ruling away: the trigger refinement «unordered against an effectful event OR against another
+  FAILING occurrence» (panic identity as the observable), POSED in the E5 handoff §2 — not taken.
 - WHERE: spec#Order_of_evaluation (only calls/receives/binary-logical
   are ordered — target-vs-target operand order is open). Machine:
   left-to-right inter-target walk (the tgtOpK spine; the rule-site
@@ -1005,6 +1028,9 @@ gc's early store a deviation, L-016, 2026-09-02).
 
 ### E4. Targets-vs-RHS unordered panic order — same class as E3 — (b) PINNED to OUR point
 
+- STAGE E5, FAMILY E5b (2026-09-22, [AGENT]): as E3 — the graph shape (targets as phase-1
+  siblings beside the right-hand reads) is landed; the row is call-free, legacy under the ratified
+  trigger; the entry stays (b) PINNED pending the same POSED refinement.
 - WHERE: BUG-032 round-4 amendment (b): `xs[ys[9]], b = zs[7], 2`
   realizes the LHS-operand panic where gc realizes the RHS's; both
   spec-legal. Machine: phase-1 targets-then-RHS order (tgtOpK → rhsK,
@@ -1580,6 +1606,13 @@ subexpressions of one binary operator).
   the fmt / imported-goose / slices sweeps that lower as all-forced graphs
   changed observation). E12(ii)'s read-vs-read axis stays (b) with its
   obligation: the pilot admits no call-free sweep.
+  STAGE E5, FAMILY E5b (2026-09-22, [AGENT]; design `docs/2026-09-22_unseq-stage-e5-design.md`
+  §E5b — multi-target assignments): the right-hand reads of a tuple beside its calls are
+  spec-unsequenced — the VALUE axis is (a) ENVELOPED on `noodler/latitude/rhs-list-index-call-index`
+  (`x, y, z := a[0], f(), a[0]`, f writing a[0]: each read before / after f and unordered against
+  the other — R1's no-reduction — {(1,5,1), (1,5,9), (9,5,1), (9,5,9)}, gc (9,5,9); strict →
+  membership) and the born `evalorder/unseq-multi/define-tuple-vs-call` ({6, 15}, gc 15); the
+  target-plan rows are E2's (above). Ratification posed at the merge ask.
   STAGE E5, FAMILY E5a (2026-09-22, [AGENT]; design `docs/2026-09-22_unseq-stage-e5-design.md`
   §E5a — the reading-(a) built-ins, RATIFIED [USER] 2026-09-22): `min`/`max`/`copy`/`append` are
   E1 participants (reading (a) executed: their operands' reads lie inside their windows, forced
@@ -3225,6 +3258,15 @@ history block, never in a membership line.
 
 Nothing in this block is a class member by virtue of being named here.
 
+- **Stage E5 of the evaluation-order model v2.1, family E5b (2026-09-22, [AGENT] lane
+  `core/unseq-stage-e5-0922`; design `docs/2026-09-22_unseq-stage-e5-design.md` §E5b): MULTI-TARGET
+  assignments (tuple, blank, multi-value call, the comma-ok forms) enter the `unseq` grammar — every
+  target a phase-1 sibling plan.** Entry classes UNCHANGED by count ((a) 15 / (b) 17): E2/E12 stay (b)
+  PINNED as entries, ENVELOPED on five born membership rows and four moved rows (BUG-052's fixed
+  order one member of each set); E3/E4 stay (b) PINNED — the mechanism is landed, the trigger
+  refinement that would reach their call-free rows is POSED. A wrong answer on the candidate
+  (the spec example's E1 chain) was caught red-first and fixed before landing. Census 137 → 154;
+  legacy probes 63 → 60 (corpus), the twin 128 unchanged.
 - **Stage E5 of the evaluation-order model v2.1, family E5a (2026-09-22, [AGENT] lane
   `core/unseq-stage-e5-0922`; design `docs/2026-09-22_unseq-stage-e5-design.md` §E5a): the READING-(a)
   BUILT-INS `min`/`max`/`copy`/`append` enter the `unseq` grammar as E1 participants (RATIFIED [USER]
