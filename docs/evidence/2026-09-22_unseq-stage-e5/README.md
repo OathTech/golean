@@ -196,3 +196,23 @@ UnseqWireTests` EXIT=0 (122 s under the lock — the core rebuilt for the F2 doc
 **The full gate at the fix-round tree:** `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff` at the fix-round tree (`403cde75` + the round's edits, the worktree dirty with exactly them; the box-wide lock 2026-09-22T06:05:42Z–2026-09-22T06:22:36Z): **EXIT=1 in 931 s (the box-wide lock 2026-09-22T06:05:42Z–2026-09-22T06:22:36Z); `differential coverage summary: cases=3760 pass=3523 fail=237` = the re-pinned 3760 = 3524 / 236 with the one 5a-class row red; RESULT FAIL on EXACTLY the two 5a-class items — `certificate provenance` («STALE certification: changed dependency build/files/GoLean/GoCore/AdmissionIndices.lean» — the core/decoder inputs vs main's certificates) and the `baseline diff` DRIFT block's ONE line `imported-goose/channel/google-search baseline[PASS/membership] -> now[FAIL/membership]`; every other step ok (the re-pin guard 0 PASS→non-PASS; the reconciler's standing two report-only findings); the three born rows reproduce their pinned states in the run** (`ci-diff-fix.tail.txt`).
 
 **Whole-corpus choice trace, the audited tip vs the fix round** (`choice-trace-fix.txt`; `403cde75`'s binary `2159163d…` (the E5d trace) vs the runtime commit `263866da`'s `63e9c661…`, each side from its own export tree): 3724 ids — **3721 byte-identical, 0 DIFFER, 3 only on the fix-round side** (the three born rows); site census deltas `unseqNext` 2101 → 2147, every other site identical; 34 export refusals (identical sets), the exhausted-stream lists identical, the two standing exclusions. The decoder's F1 check refuses only forged wires; the F2 docstring and the F6/F7 texts change no execution.
+
+## Merge train r47 — the 5a record ([AGENT] coordinator, 2026-09-22)
+
+[USER] Mike 2026-09-22, verbatim (relayed): «Great, agree with all recommendations, land it» — the merge sign-off for
+Stage E5 (E5a–E5e + the audit fix round) with the seven ratification items RULED as recommended (rulings ledger «The
+Stage E5 landing ratification record (2026-09-22)»). Pre-merge main `dc5de785` → `refs/snapshots/r47/main` (also
+`refs/snapshots/r47/{core-pre-train,review-pre-rebase}`); one train branch fast-forwarded: the lane
+`core/unseq-stage-e5-0922` at `28919dd6`, the audit branch rebased onto it (`0a390343`) and the ratification records
+commit `159c7b20`. Under the lock at `159c7b20` (the `.lake` warmed from the lane worktree — identical Lean sources):
+`scripts/build-certified` EXIT=0, 5 s (binary `63e9c661…`); `release-check --base refs/snapshots/r47/main`
+EXIT=2 (EXPECTED — «STALE certification: changed dependency build/files/GoLean/GoCore/AdmissionIndices.lean»);
+`GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --slow` EXIT=1, 900 s — red on EXACTLY the 5a pair (`certificate
+provenance` STALE; the one drift line `imported-goose/channel/google-search PASS→FAIL/membership`, fresh
+re-certification «unchanged set; seconds=158.003» per the receipt); 3760 rows run, 3523 PASS / 237 FAIL =
+the pin 3524 / 236 with the one 5a-class row red; no other drift line (the 28 born rows and the 9 moved rows in their
+pinned lanes; BUG-115's by-design red as pinned; the re-pin guard 0 PASS→non-PASS); negatives 394 no regression; the
+reconciler's two report-only findings = C9 (this STALE, cleared by the install) and the pre-existing C13. Tail:
+`r47-ci-slow.tail.txt`. Candidate vs tracked record: `claim` and `observations_sha256` IDENTICAL; input hashes differ
+in the compiled inputs `build.files` (10: `GoLean/GoCore/AdmissionIndices.lean`, `GoLean/GoCore/Machine.lean`, `GoLean/GoCore/MachineSound.lean`, `GoLean/GoCore/StateWf.lean`, `GoLean/GoCore/StepFn.lean`, `GoLean/GoCore/Syntax.lean`, `GoLean/GoCore/SyntaxEqb.lean`, `GoLean/GoCore/Unseq.lean`, `GoLean/GoCore/UnseqSound.lean`, `GoLean/NativeToIR.lean`) and the tool files `files` (7: `scripts/check-unseq-wire`, `scripts/check-wire-boundary`, `tools/nativefrontend/e13guard_test.go`, `tools/nativefrontend/unseq.go`, `tools/nativefrontend/unseq_lower.go`, `tools/nativefrontend/unseq_lower_test.go`, `tools/nativefrontend/unseq_test.go`) plus the receipt
+(`159c7b20`, binary `63e9c661…`) — INSTALLED in this commit; a provenance refresh, not a re-pin.
