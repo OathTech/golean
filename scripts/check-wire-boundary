@@ -232,4 +232,17 @@ expect_unseq_refusal unseq-slicelit-index-oob mut-slicelit-index-oob e4alloc 'ou
 expect_unseq_refusal unseq-slicelit-dup-index mut-slicelit-dup-index e4alloc 'duplicate slice-literal index'
 expect_unseq_refusal unseq-make-negative-len mut-make-negative-len e4make  'negative constant len'
 expect_unseq_refusal unseq-make-len-over-cap mut-make-len-over-cap e4make  'larger than constant cap'
-echo 'Wire boundary gate: PASS (11 byte-level controls + 28 unseq-node controls through the real CLI)'
+# Stage E5 E5a (2026-09-22): a WIDE built-in occurrence (Tests/unseq-wire/e5copy.json, `d[0] + copy(d, s)` — the
+# reading-(a) built-ins, RATIFIED [USER] 2026-09-22): runs on the canonical tape — the copy first (gc's), then the
+# read: 9; the kind's refusals by name — a statement tag outside the fragment, a non-atom operand (a hidden read), a
+# binder arity the statement does not write, a cell typed against the statement's result; a `min` head over a
+# non-atom operand.
+out="$(run_cli_fn Tests/unseq-wire/e5copy.json e5copy)" || { echo "check-wire-boundary: FAIL [unseq wide] — the wide copy wire did not run: $out" >&2; exit 1; }
+[[ "$out" == *'"status":"ok"'* && "$out" == *'"value":9'* ]] || { echo "check-wire-boundary: FAIL [unseq wide] — expected ok/9 (d[0] + copy(d, s); canonical = the copy first): $out" >&2; exit 1; }
+echo "ok [unseq wide] runs, answers 9 (the copy a wide body, an effectful E1 participant — Stage E5 E5a)"
+expect_unseq_refusal unseq-wide-kind      mut-wide-kind      e5append 'outside the admitted fragment'
+expect_unseq_refusal unseq-wide-nonatom   mut-wide-nonatom   e5copy   'hidden read in a wide built-in'
+expect_unseq_refusal unseq-wide-binds     mut-wide-binds     e5copy   'writes exactly one'
+expect_unseq_refusal unseq-wide-cell-type mut-wide-cell-type e5copy   'the copied count'
+expect_unseq_refusal unseq-min-nonatom    mut-min-nonatom    e5minmax 'hidden read in a pure node'
+echo 'Wire boundary gate: PASS (11 byte-level controls + 34 unseq-node controls through the real CLI)'

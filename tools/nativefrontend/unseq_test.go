@@ -676,6 +676,66 @@ func printIface() {
 	s := []int{1}
 	println(s[0]+wit(1), iv)
 }
+
+// --- Stage E5 E5a: the reading-(a) built-ins ---
+
+// min(x, 100) + m(): x's read inside min's window, forced before m — every edge forced (legacy by the trigger).
+func e5aMin() int {
+	x := 1
+	m := func() int { x = 10; return 5 }
+	return min(x, 100) + m()
+}
+
+// append(s, 3)[0] + m(): the append (effectful, E1-ordered before m) then the result's [0] read vs m.
+func e5aAppendRead() int {
+	s := make([]int, 2, 4)
+	s[0], s[1] = 1, 2
+	m := func() int { s[0] = 10; return 5 }
+	return append(s, 3)[0] + m()
+}
+
+// d[0] + copy(d, s): the sibling read of the captured d vs the effectful copy.
+func e5aCopyRead() int {
+	d := []int{0, 0}
+	s := []int{7, 8}
+	keep := func() { _ = d }
+	keep()
+	return d[0] + copy(d, s)
+}
+
+// copy(d, s) as a statement: no non-event beside it → legacy.
+func e5aCopyStmt() int {
+	d := []int{0, 0}
+	s := []int{7, 8}
+	copy(d, s)
+	return d[0]
+}
+
+// append(b, "xy"...) spread of a string: the bytes-from-string head; x's read vs m.
+func e5aAppendSpreadStr() int {
+	b := []byte("a")
+	x := 1
+	m := func() int { x = 10; return 5 }
+	return len(append(b, "xy"...)) + x + m()
+}
+
+// max(x, y) + m() with x captured — the reads inside max's window, forced (legacy by the trigger).
+func e5aMaxForced() int {
+	x := 1
+	m := func() int { x = 10; return 5 }
+	return max(x, 2) + m()
+}
+
+// E13's tgt-assert-vs-min-call shape: the target's assertion vs t[k] inside min; wit after min.
+func e5aTgtAssertMin() int {
+	x := []int{1, 2, 3}
+	t := []int{1, 2}
+	k := 9
+	q := 3
+	var iv interface{} = "s"
+	x[iv.(int)] = min(q, t[k]) + wit(5)
+	return x[0]
+}
 `
 
 func TestUnseqAdmittedWitnesses(t *testing.T) {
@@ -739,6 +799,11 @@ func TestUnseqAdmittedWitnesses(t *testing.T) {
 		{"e4strBytes", 0, "return", 1, 1},        // m | string(b)'s read of the backing array
 		{"e4strRunes", 0, "return", 1, 1},        // m | string(r)'s read of the backing array
 		{"conversionOperand", 0, "return", 1, 1}, // int(int64(s[0])) + wit(1): the checked access; the conversions pure
+		// Stage E5 E5a: the reading-(a) built-ins
+		{"e5aAppendRead", 0, "return", 2, 2},        // append (effectful) + m | the captured s's read (inside append), the result's checked [0]
+		{"e5aCopyRead", 0, "return", 1, 3},          // copy (effectful) | d's read + the checked d[0], d's read inside copy
+		{"e5aAppendSpreadStr", 0, "return", 2, 1},   // append + m (len an event) | the captured x's read
+		{"e5aTgtAssertMin", 1, "elem-assign", 1, 3}, // wit | the target plan (its assertion), t[k] inside min, the plan
 	}
 	for _, c := range cases {
 		d := decisionAt(t, unseqWitnessSrc, c.fn, c.fromEnd)
@@ -825,6 +890,10 @@ func TestUnseqLegacyByReason(t *testing.T) {
 		// the audit fix round (2026-09-21)
 		{"e4newCallOnly", 1, "no non-event occurrence"},  // F7: q := new(wit(1)) — wit inside new, nothing unordered
 		{"e4bytesFromStr", 0, "no non-event occurrence"}, // F4 control: []byte(s) reads an immutable string; len on the fresh slice is an event
+		// Stage E5 E5a: min/max are pure E1 participants — a read inside their window is forced before a later call
+		{"e5aMin", 0, "no occurrence observable against an effectful event"},
+		{"e5aMaxForced", 0, "no occurrence observable against an effectful event"},
+		{"e5aCopyStmt", 1, "no non-event occurrence"},
 	}
 	for _, c := range cases {
 		d := decisionAt(t, unseqWitnessSrc, c.fn, c.fromEnd)

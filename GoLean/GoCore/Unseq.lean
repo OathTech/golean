@@ -74,6 +74,11 @@ def AllocSpec.names : AllocSpec → List String
   | .makeChan _ cap => optExprNames cap
   | .sliceLit _ _ elems => keyedExprNames elems
 
+/-- The names a wide statement's operands mention (Stage E5 E5a). -/
+def WideSpec.names : WideSpec → List String
+  | .append _ slice elems => Expr.names slice ++ Expr.names elems
+  | .copy dst src => Expr.names dst ++ Expr.names src
+
 /-- The names an assignee's OPERANDS mention (`targetPlan`'s operand
 expressions: `x` ↦ `&x`'s name, `a[i]` ↦ the anchor and index names). -/
 def Assignee.names : Assignee → List String
@@ -115,7 +120,7 @@ namespace UnseqBody
 /-- The VALUE binders a body produces (its results). -/
 def valueBinds : UnseqBody → List String
   | .eval b _ | .load b _ | .allocate b _ => [b]
-  | .invoke bs _ _ | .recv bs _ _ => bs
+  | .invoke bs _ _ | .recv bs _ _ | .wide bs _ => bs
   | .target _ _ | .guard _ _ _ => []
 
 /-- The TARGET binder a body produces, if any. -/
@@ -132,6 +137,7 @@ def mentions : UnseqBody → List String
   | .invoke _ callee args => callee.names ++ exprListNames args
   | .recv _ ch _ => ch.names
   | .allocate _ spec => spec.names
+  | .wide _ spec => spec.names
   | .target _ lhs => lhs.names
   | .guard test _ _ => [test]
 
@@ -451,6 +457,11 @@ def wellFormed? (g : UnseqGraph) : Option String :=
             -- Stage E E3: one value (or the comma-ok pair) — never zero, never more.
             if binds.length == 0 || binds.length > 2 then
               some s!"receive '{o.name}' with {binds.length} results is outside the fragment (1, or 2 for the comma-ok form)"
+            else none
+        | .wide binds spec =>
+            -- Stage E5 E5a: exactly the statement's result arity.
+            if binds.length != spec.arity then
+              some s!"wide built-in '{o.name}' with {binds.length} results; its statement writes {spec.arity}"
             else none
         | _ => none) with
     | some msg => some msg

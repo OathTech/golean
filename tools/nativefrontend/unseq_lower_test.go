@@ -112,6 +112,13 @@ func TestUnseqLoweringShapes(t *testing.T) {
 		// new (E1); the deref and the op in the residual.
 		{"e4newExpr", "eval:ident allocate invoke/after eval:deref eval:binary"},
 		{"e4strBytes", "invoke eval:string-from-bytes eval:binary"},
+		// Stage E5 E5a: append's block — the captured base's read, the packed literal (an allocate inside the
+		// window, no after), the wide append (the first event: no anchor yet) — then m after it; the residual:
+		// the result's checked [0], the op. copy's block: d's read (inside the window), the wide copy; the
+		// residual: d's read, the checked access, the op.
+		{"e5aAppendRead", "eval:ident allocate wide invoke/after eval:index-get eval:binary"},
+		{"e5aCopyRead", "eval:ident wide eval:ident eval:index-get eval:binary"},
+		{"e5aAppendSpreadStr", "eval:bytes-from-string wide eval:builtin-len/after invoke/after eval:ident eval:binary eval:binary"},
 		// W6: two E1-ordered calls, then the read and the ops.
 		{"w6", "invoke invoke/after eval:ident eval:binary eval:binary"},
 		// R6: the call first; the header read and the checked access late.

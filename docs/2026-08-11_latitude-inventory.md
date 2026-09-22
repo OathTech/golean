@@ -811,6 +811,19 @@ gc's early store a deviation, L-016, 2026-09-02).
 
 ### E2. Call vs. assignment-target operands — (b) PINNED call-first on the VALUE axis outside the Stage C pilot; (a) ENVELOPED on the pilot's rows (2026-09-19); the PANIC axis (a) ENVELOPED via E13's `unseqPanic` since the e13-b re-audit fix round (2026-09-05)
 
+- STAGE E5, FAMILY E5a (2026-09-22, [AGENT], lane `core/unseq-stage-e5-0922`; design
+  `docs/2026-09-22_unseq-stage-e5-design.md` §E5a — the reading-(a) built-ins): READING (a),
+  RATIFIED [USER] 2026-09-22 (relayed), is EXECUTED — `min`/`max` are pure E1 participants,
+  `append`/`copy` EFFECTFUL E1 participants (`wide` bodies: the in-place element store, the
+  destination write — [AGENT] choice, PENDING [USER] ratification), never unordered reads. The
+  VALUE axis of this entry is (a) ENVELOPED on the born membership rows `evalorder/unseq-builtins/
+  {append-read-vs-call ({6, 15}: the in-place append's result read beside m, gc 15), copy-effect-vs-
+  read ({2, 9}: the sibling checked read beside the copy's write, gc 9), append-spread-str-vs-call
+  ({9, 18}, gc 18), min-read-vs-call ({7, 16}, gc 16)}` — posed for ratification at the merge ask
+  with E1–E4's precedent; `min-vs-call` (6) is a FORCED singleton under reading (a) like
+  `make-len-vs-call` (reading (b) the named alternative, NOT taken). The five `builtins/e13-sibling-
+  panic-order` rows whose sweeps enter the graph keep their 2-member sets (E13's, below). The (b)
+  pin stands outside the widened grammar (E5b–E5e's families).
 - STAGE E, FAMILY E4 (2026-09-21, [AGENT], lane `core/unseq-stage-e-0921`; design
   `docs/2026-09-21_unseq-stage-e-design.md` §E4 — conversions and allocations): the
   STRUCTURAL-ALLOCATION class (E13 residual 5) ENTERS the graph — `&T{…}`, `T{…}` and a slice
@@ -1567,6 +1580,17 @@ subexpressions of one binary operator).
   the fmt / imported-goose / slices sweeps that lower as all-forced graphs
   changed observation). E12(ii)'s read-vs-read axis stays (b) with its
   obligation: the pilot admits no call-free sweep.
+  STAGE E5, FAMILY E5a (2026-09-22, [AGENT]; design `docs/2026-09-22_unseq-stage-e5-design.md`
+  §E5a — the reading-(a) built-ins, RATIFIED [USER] 2026-09-22): `min`/`max`/`copy`/`append` are
+  E1 participants (reading (a) executed: their operands' reads lie inside their windows, forced
+  before every later participant; `append`/`copy` effectful, `min`/`max` not), so the VALUE axis
+  of this entry is (a) ENVELOPED on the born `evalorder/unseq-builtins/{min-read-vs-call ({7,
+  16}: min first, the captured y's read vs m, gc 16), append-read-vs-call ({6, 15}: the in-place
+  append's result read vs m, gc 15), copy-effect-vs-read ({2, 9}: d[0] vs the copy's write, gc 9),
+  append-spread-str-vs-call ({9, 18}, gc 18)}`; the audit's k1 shape `min(x, 100) + m()` is the
+  born strict control `min-vs-call` (6 = gc: x's read inside min's window is FORCED — the legacy
+  hoist's early `min` was reading (a)'s realization, not a pin). Ratification posed at the merge
+  ask. The (b) pin stands outside the widened grammar.
   STAGE E, FAMILY E1 (2026-09-21, [AGENT]; design `docs/2026-09-21_unseq-stage-e-design.md`
   §E1): PACKAGE-LEVEL variables enter the grammar as READ occurrences — on the rows whose
   sweep now lowers as a graph the VALUE axis of this entry is (a) ENVELOPED: `evalorder/
@@ -1658,6 +1682,16 @@ what (b) means right?» — design of record
 `docs/2026-09-05_e13-b-design.md` (the decision procedure §1, the
 machine construct §3, the frontend §4, the residuals §6).
 
+- STAGE E5, FAMILY E5a (2026-09-22, [AGENT], lane `core/unseq-stage-e5-0922`; design
+  `docs/2026-09-22_unseq-stage-e5-design.md` §E5a): five rows of this entry's `e13-sibling-panic-
+  order` family — `assert-left-append`, `assert-left-copy`, `tgt-assert-vs-min-call`, `tgt-assert-vs-
+  copy-call`, `tgt-assert-vs-append` — leave the legacy `unseqPanic` probe for the `unseq` graph
+  (the built-in an E1 participant under reading (a), the assertion an occurrence unordered against
+  the failing read inside its window or against the later `wit`); their 2-member sets are
+  REPRODUCED exactly (no reclassification; `scripts/diff-one`, design §E5a). The legacy probe
+  emitters left in the family are the PANIC-vs-PANIC pairs with no effectful event
+  (`assert-left-make-slice`, `tgt-assert-vs-make`, the `len-vs-call-order` make rows) — routed to
+  the legacy path by the RATIFIED trigger; E6's dependence on them is POSED in the E5 handoff §2.
 - WHERE: spec#Order_of_evaluation, OMISSION-grounded (the absence is
   the anchor, as at C1/C5/E12(ii)): the left-to-right rule's scope is
   "function calls, method calls, receive operations, and binary logical
@@ -3191,6 +3225,14 @@ history block, never in a membership line.
 
 Nothing in this block is a class member by virtue of being named here.
 
+- **Stage E5 of the evaluation-order model v2.1, family E5a (2026-09-22, [AGENT] lane
+  `core/unseq-stage-e5-0922`; design `docs/2026-09-22_unseq-stage-e5-design.md` §E5a): the READING-(a)
+  BUILT-INS `min`/`max`/`copy`/`append` enter the `unseq` grammar as E1 participants (RATIFIED [USER]
+  2026-09-22 — pure heads / effectful `wide` bodies, the kind PENDING [USER]).** Entry classes
+  UNCHANGED by count ((a) 15 / (b) 17): E2/E12 stay (b) PINNED as entries, ENVELOPED on four born
+  membership rows (`evalorder/unseq-builtins/*`); E13's five built-in rows move probe → graph with
+  their sets reproduced; no bug fixed, no row moved, no widened pin. Census 131 → 137 admitted; legacy
+  probe emissions 70 → 63 (corpus), the twin 128 unchanged.
 - **Stage E of the evaluation-order model v2.1, family E4 (2026-09-21, [AGENT] lane
   `core/unseq-stage-e-0921`; design `docs/2026-09-21_unseq-stage-e-design.md` §E4): CONVERSIONS
   (pure ops) and ALLOCATIONS (`&T{…}`, `T{…}`, slice literals as `allocate` bodies WITHOUT E1

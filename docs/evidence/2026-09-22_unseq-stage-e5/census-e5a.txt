@@ -1,0 +1,76 @@
+# The whole-sweep census, E5a: main dc5de785's frontend (BEFORE) vs the E5a frontend (AFTER), over 1360 corpus packages + the raft twin; producers .tmp/census/run.sh, summarize.py, diff.py.
+
+## AFTER (summary)
+corpus sweeps 108102  admitted 137  packages-with-admitted 33  refused-packages 0
+admitted units: [('main', 137)]
+admitted by form: [('return', 80), ('compound', 22), ('elem-assign', 11), ('define', 9), ('call-stmt', 8), ('print-stmt', 3), ('map-assign', 2), ('deref-assign', 1), ('assign', 1)]
+admitted per package:
+    48 Corpus/coverage/exec/builtins/e13-sibling-panic-order
+    13 Corpus/coverage/exec/evalorder/unseq-pilot
+     9 Corpus/coverage/exec/noodler/latitude
+     8 Corpus/coverage/exec/evalorder/unseq-conv-alloc
+     7 Corpus/coverage/exec/noodler/evalorder
+     6 Corpus/coverage/exec/evalorder/unseq-ptr-field-map
+     5 Corpus/coverage/exec/spec-examples-decl/select-forms
+     4 Corpus/coverage/exec/builtins/len-vs-call-order
+     4 Corpus/coverage/exec/evalorder/unseq-recv-method
+     3 Corpus/coverage/exec/evalorder/legacy-logical-vs-call
+     3 Corpus/coverage/exec/evalorder/unseq-globals
+     3 Corpus/coverage/exec/noodler/maps
+     2 Corpus/coverage/exec/binop-order/operand-panic-vs-call
+     2 Corpus/coverage/exec/noodler/methods
+     2 Corpus/coverage/exec/spec-examples-stmt/continue-label
+     1 Corpus/coverage/exec/channels/make-edge
+     1 Corpus/coverage/exec/channels/recv-edge
+     1 Corpus/coverage/exec/evalorder/unseq-const-cell
+     1 Corpus/coverage/exec/goroutines/fork-join
+     1 Corpus/coverage/exec/goroutines/worker-pool
+     1 Corpus/coverage/exec/init/stdlib-initializer-dependent
+     1 Corpus/coverage/exec/maps/compound-assign-eval-once
+     1 Corpus/coverage/exec/methods/nil-receiver
+     1 Corpus/coverage/exec/multi-assign/index-target-rhs-call-order
+     1 Corpus/coverage/exec/noodler/arith
+     1 Corpus/coverage/exec/noodler/frontier/pointer-to-pointer-chains
+
+## BEFORE -> AFTER (diff.py)
+rows only in AFTER (new packages): 0 in []
+newly admitted 6   lost 0
+newly admitted per package:
+     5 Corpus/coverage/exec/builtins/e13-sibling-panic-order
+     1 Corpus/coverage/exec/slices/copy-min
+newly admitted, by former reason: [('builtin copy', 3), ('builtin append', 2), ('builtin min', 1)]
+newly admitted by form: [('elem-assign', 3), ('return', 2), ('define', 1)]
+twin newly admitted: 0
+still legacy with a package-level reason: [('package-level target of a type outside the grammar ([3]int)', 3), ('package-level target of a type outside the grammar ([2]int)', 2), ('package-level target of a type outside the grammar (main.Valuer)', 1), ('package-level target of a type outside the grammar (raft.Logger)', 1)]
+
+## Top legacy reasons AFTER (main units)
+  8756 no call occurrence (legacy path: nothing with an effect to reorder against)
+  6025 statement form outside the pilot grammar
+  2211 no non-event occurrence beside the call(s) (legacy path: every edge forced)
+   629 method callee outside the main package
+   577 multi-target or tuple assignment
+   465 captured target written through its pointer parameter (lifted body)
+   351 callee expression outside the pilot grammar
+   347 builtin panic statement
+   267 no occurrence observable against an effectful event (legacy path: every edge forced — Stage E E3 trigger)
+   190 qualified function callee (imported source package)
+   186 target type outside the pilot grammar (float64)
+   164 target type outside the pilot grammar (func() int)
+   149 map literal (gc evaluates its dynamic entries at the literal's position — E5)
+   142 expression statement that is not a call
+   139 blank target
+   127 shim runtime-refusal helper callee
+   122 interface method call (dynamic dispatch has no callee value)
+   119 len of a non-slice operand (string)
+   118 captured variable read through its pointer parameter (lifted body)
+   108 unary operator & (address of a variable)
+    96 index of a non-slice base (string)
+    76 builtin close statement
+    76 bare return
+    60 binary operand type outside the pilot grammar
+    58 method receiver type outside the grammar (main.twin)
+    51 more than two results
+    50 len of a non-slice operand (map[int]int)
+    50 generic function callee
+    49 print operand type outside the pilot grammar
+    48 nil

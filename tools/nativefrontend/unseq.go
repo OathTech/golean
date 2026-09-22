@@ -881,6 +881,147 @@ func (e *emitter) unseqMakeNew(c *ast.CallExpr, name string, ctx *unseqCtx, d *u
 	return 1, true
 }
 
+// unseqMinMax classifies `min(...)` / `max(...)` (Stage E5 E5a, 2026-09-22):
+// READING (a) — RATIFIED [USER] 2026-09-22 (relayed) — the built-ins are the
+// «function calls» of spec#Order_of_evaluation's ordering sentence, so min/max
+// are E1 participants: their operands' reads are occurrences inside their
+// window, forced before every later participant; they have no effect and cannot
+// fail, so like len/cap/make they do not admit a sweep by themselves. The
+// result is a pure `min`/`max` head over the operand atoms (Expr.minOf/maxOf).
+func (e *emitter) unseqMinMax(c *ast.CallExpr, name string, ctx *unseqCtx, d *unseqDecision, pid int) (int, bool) {
+	refuse := func(why string) (int, bool) {
+		if d.reason == "" {
+			d.reason = why
+		}
+		return 0, false
+	}
+	t := e.goTypeOf(c)
+	if t == nil || !unseqTypeOK(t) {
+		return refuse(name + " of a type outside the grammar (" + typeStringOrUntyped(t) + ")")
+	}
+	if len(c.Args) == 0 {
+		return refuse(name + " arity")
+	}
+	for _, a := range c.Args {
+		if _, ok := e.unseqExpr(a, ctx, d); !ok {
+			return 0, false
+		}
+	}
+	d.closeP(pid, false)
+	d.events++
+	return 1, true
+}
+
+// unseqAppend classifies `append(s, x…)` / `append(s, t...)` (Stage E5 E5a): an
+// EFFECTFUL E1 participant (reading (a)) — when the base has capacity the append
+// stores the elements IN PLACE in the shared backing array (observable through
+// every alias) and always returns a fresh header; the base and element reads are
+// occurrences inside its window (forced before every later participant); a
+// non-spread element list is packed into a slice literal (an allocate node inside
+// the window, as the legacy hoist packs it); a spread string operand is a pure
+// bytes-from-string head. Lowered as a `wide` body (`Stmt.appendSlice`).
+func (e *emitter) unseqAppend(c *ast.CallExpr, ctx *unseqCtx, d *unseqDecision, pid int) (int, bool) {
+	refuse := func(why string) (int, bool) {
+		if d.reason == "" {
+			d.reason = why
+		}
+		return 0, false
+	}
+	t := e.goTypeOf(c)
+	if t == nil {
+		return refuse("append of an untyped result")
+	}
+	sl, isSlice := types.Unalias(t).Underlying().(*types.Slice)
+	if !isSlice || !unseqTypeOK(t) {
+		return refuse("append result type outside the grammar (" + t.String() + ")")
+	}
+	if len(c.Args) == 0 {
+		return refuse("append arity")
+	}
+	if _, ok := e.unseqExpr(c.Args[0], ctx, d); !ok {
+		return 0, false
+	}
+	if c.Ellipsis != token.NoPos {
+		if len(c.Args) != 2 {
+			return refuse("append spread arity")
+		}
+		at := e.goTypeOf(c.Args[1])
+		if at == nil {
+			return refuse("append spread of an untyped operand")
+		}
+		au := types.Unalias(at).Underlying()
+		_, spreadSlice := au.(*types.Slice)
+		if !(spreadSlice && unseqTypeOK(at)) && !(isStringType(au) && isByteSlice(types.Unalias(t).Underlying())) {
+			return refuse("append spread operand type outside the grammar (" + at.String() + ")")
+		}
+		if _, ok := e.unseqExpr(c.Args[1], ctx, d); !ok {
+			return 0, false
+		}
+	} else {
+		for _, a := range c.Args[1:] {
+			if _, isTup := e.goTypeOf(a).(*types.Tuple); isTup {
+				return refuse("multi-value argument")
+			}
+			if _, ok := e.unseqExpr(a, ctx, d); !ok {
+				return 0, false
+			}
+		}
+	}
+	_ = sl
+	d.closeP(pid, true)
+	d.events++
+	d.calls++
+	return 1, true
+}
+
+// unseqCopy classifies `copy(dst, src)` (Stage E5 E5a): an EFFECTFUL E1 participant
+// (reading (a)) writing the destination's elements; both operands' reads are
+// occurrences inside its window; a string source is a pure bytes-from-string head.
+// Lowered as a `wide` body (`Stmt.copySlice`) — in value position (the count) and
+// in statement position alike.
+func (e *emitter) unseqCopy(c *ast.CallExpr, ctx *unseqCtx, d *unseqDecision, pid int) (int, bool) {
+	refuse := func(why string) (int, bool) {
+		if d.reason == "" {
+			d.reason = why
+		}
+		return 0, false
+	}
+	if len(c.Args) != 2 {
+		return refuse("copy arity")
+	}
+	dt := e.goTypeOf(c.Args[0])
+	st := e.goTypeOf(c.Args[1])
+	if dt == nil || st == nil {
+		return refuse("copy of an untyped operand")
+	}
+	if _, isSlice := types.Unalias(dt).Underlying().(*types.Slice); !isSlice || !unseqTypeOK(dt) {
+		return refuse("copy destination type outside the grammar (" + dt.String() + ")")
+	}
+	su := types.Unalias(st).Underlying()
+	_, srcSlice := su.(*types.Slice)
+	if !(srcSlice && unseqTypeOK(st)) && !(isStringType(su) && isByteSlice(types.Unalias(dt).Underlying())) {
+		return refuse("copy source type outside the grammar (" + st.String() + ")")
+	}
+	if _, ok := e.unseqExpr(c.Args[0], ctx, d); !ok {
+		return 0, false
+	}
+	if _, ok := e.unseqExpr(c.Args[1], ctx, d); !ok {
+		return 0, false
+	}
+	d.closeP(pid, true)
+	d.events++
+	d.calls++
+	return 1, true
+}
+
+// typeStringOrUntyped renders a type for a refusal text (nil = untyped).
+func typeStringOrUntyped(t types.Type) string {
+	if t == nil {
+		return "untyped"
+	}
+	return t.String()
+}
+
 // unseqCompositeLit classifies a VALUE composite literal (Stage E E4): a named
 // struct literal `T{…}` (a pure `struct-lit` head over its payloads) or a slice
 // literal `[]T{…}` (an `alloc` body — a fresh backing array; NO E1 edge, v2.1
@@ -1214,6 +1355,14 @@ func (e *emitter) unseqCall(c *ast.CallExpr, ctx *unseqCtx, d *unseqDecision, ma
 			case "make", "new":
 				// Stage E E4: an allocation call — an E1 participant like len/cap.
 				return e.unseqMakeNew(c, id.Name, ctx, d, pid)
+			case "min", "max":
+				// Stage E5 E5a: a pure E1 participant (reading (a)).
+				return e.unseqMinMax(c, id.Name, ctx, d, pid)
+			case "append":
+				// Stage E5 E5a: an EFFECTFUL E1 participant (reading (a)) — a `wide` body.
+				return e.unseqAppend(c, ctx, d, pid)
+			case "copy":
+				return e.unseqCopy(c, ctx, d, pid)
 			}
 			return refuse("builtin " + id.Name)
 		}
@@ -1654,6 +1803,12 @@ func (e *emitter) unseqClassify(s ast.Stmt, ctx *unseqCtx) unseqDecision {
 						}
 					}
 					break
+				case "copy":
+					// Stage E5 E5a: the statement form of copy — the count discarded.
+					d.form = "call-stmt"
+					if _, ok := e.unseqCall(call, ctx, &d, 2); !ok {
+						return refuse("copy statement")
+					}
 				default:
 					d.form = "call-stmt"
 					return refuse("builtin " + id.Name + " statement")

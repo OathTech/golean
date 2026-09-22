@@ -30,5 +30,10 @@ mut-capture-ref-binder	address of a binder cell
 mut-new-value-type	disagrees with the allocation's element type
 mut-slicelit-index-oob	outside the literal's length
 mut-slicelit-dup-index	duplicate slice-literal index
+mut-wide-kind	outside the admitted fragment
+mut-wide-nonatom	hidden read in a wide built-in
+mut-wide-binds	writes exactly one
+mut-wide-cell-type	the copied count
+mut-min-nonatom	hidden read in a pure node
 mut-make-negative-len	negative constant len
 mut-make-len-over-cap	larger than constant cap

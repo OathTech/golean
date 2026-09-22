@@ -1,5 +1,5 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 3732 (3497 PASS / 235 FAIL)
+# cases: 3738 (3503 PASS / 235 FAIL)
 # re-pinned: 2026-09-20 [AGENT], core/unseq-stage-d-0920, STAGE D of the evaluation-order model v2.1 (route α —
 #   docs/2026-09-20_unseq-stage-d-design.md §2–§3; handoff docs/2026-09-20_unseq-stage-d-handoff.md): NO row added, NO
 #   result changed, ONE stage changed — spec-examples-stmt/continue-label PASS/- -> PASS/confluent, the strict depth=128
@@ -110,6 +110,26 @@
 #   the full gate line is in the evidence README. 3728 + 4 = 3732; 3493 + 4 = 3497; 235 unchanged. No PASS -> non-PASS flip; the one
 #   5a-class item (imported-goose/channel/google-search: STALE certification for GoLean/NativeToIR.lean — the decoder's F1/F2/F3 arms)
 #   is not re-pinned here.
+# re-pinned: 2026-09-22 [AGENT], core/unseq-stage-e5-0922, STAGE E5 of the evaluation-order model v2.1, family E5a — the
+#   READING-(a) BUILT-INS (design docs/2026-09-22_unseq-stage-e5-design.md §E5a; handoff docs/2026-09-22_unseq-stage-e5-handoff.md;
+#   READING (a) RATIFIED [USER] 2026-09-22, relayed: the built-ins are the «function calls» of spec#Order_of_evaluation's ordering
+#   sentence, so min/max/copy/append are E1 participants — min/max PURE heads, append/copy EFFECTFUL `wide` bodies, [AGENT] choice
+#   PENDING [USER]): SIX rows BORN in evalorder/unseq-builtins, NO existing row changed. min-vs-call PASS strict (`min(x, 100) + m()`,
+#   m writing the captured x: x's read inside min's window is forced before m — 6, legacy by the trigger, every edge forced; gc 6 on
+#   20/20 under GOMAXPROCS 1/8, default and -N -l), min-read-vs-call PASS/membership {7, 16} (`min(x, 100) + y + m()`, y captured: min
+#   first, y's read vs m; gc 16), append-read-vs-call PASS/membership {6, 15} (`append(s, 3)[0] + m()`, s = make([]int, 2, 4): the
+#   in-place append E1-ordered before m, the result's [0] read vs m; gc 15), copy-effect-vs-read PASS/membership {2, 9} (`d[0] +
+#   copy(d, s)`: the copy's write vs the sibling checked read; gc 9 — OCOPY is in order.go's call class), append-spread-str-vs-call
+#   PASS/membership {9, 18} (`len(append(b, "xy"...)) + x + m()`, the spread string a bytes-from-string head inside append's window;
+#   gc 18; the base has capacity so no appendSpill pick joins — a full base was REFUTED by name at width 2, site bound 30),
+#   copy-stmt-control PASS strict (`copy(d, f())`, 78, wide=1: d's header read vs f inside copy's window — one observation). The five
+#   e13-sibling-panic-order rows whose sweeps enter the graph (assert-left-append, assert-left-copy, tgt-assert-vs-min-call,
+#   tgt-assert-vs-copy-call, tgt-assert-vs-append) keep their 2-member sets; slices/copy-min stays PASS strict (wide=5). The census:
+#   131 -> 137 admitted (+6: the five e13 rows and copy-min; 0 lost), the twin 0; legacy probe emissions 70 -> 63 in the corpus
+#   (e13 17 -> 12, copy-min 2 -> 0), the twin 128 unchanged. Measured by scripts/diff-one on all 12 affected rows (12 PASS —
+#   docs/evidence/2026-09-22_unseq-stage-e5/diff-one-e5a.txt); the full gate line is in the evidence README. 3732 + 6 = 3738;
+#   3497 + 6 = 3503; 235 unchanged. No PASS -> non-PASS flip; the 5a-class item (imported-goose/channel/google-search: STALE
+#   certification for the changed core/decoder inputs) is not re-pinned here.
 # Previous pin:
 # re-pinned: 2026-09-20 [AGENT], core/unseq-stage-c-0919, STAGE C AUDIT FIX ROUND (docs/2026-09-20_unseq-stage-c-audit.md, FIX-FIRST; dispositions
 #   docs/2026-09-19_unseq-stage-c-handoff.md «Audit fix round (2026-09-20)»): SIX rows ADDED, no existing row changed. (F2) evalorder/unseq-const-cell/
@@ -2280,6 +2300,12 @@ PASS	evalorder/unseq-const-cell/elem-assign-const-string	-
 PASS	evalorder/legacy-logical-vs-call/or-vs-call	-
 PASS	evalorder/legacy-logical-vs-call/and-vs-call	-
 PASS	evalorder/legacy-logical-vs-call/call-first-control	-
+PASS	evalorder/unseq-builtins/min-vs-call	-
+PASS	evalorder/unseq-builtins/min-read-vs-call	membership
+PASS	evalorder/unseq-builtins/append-read-vs-call	membership
+PASS	evalorder/unseq-builtins/copy-effect-vs-read	membership
+PASS	evalorder/unseq-builtins/append-spread-str-vs-call	membership
+PASS	evalorder/unseq-builtins/copy-stmt-control	-
 PASS	evalorder/unseq-globals/read-vs-call	membership
 PASS	evalorder/unseq-globals/compound-vs-call	membership
 PASS	evalorder/unseq-globals/read-vs-unrelated-call	-

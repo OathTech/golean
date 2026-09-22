@@ -265,6 +265,10 @@ def stepUnseqNext (s : Store) (g : UnseqGraph) (thenB : Stmt) (st : List UnseqSt
             -- Stage E E4: the allocation runs as a statement under the wait frame
             return (.exec (unseqAllocStmt bind spec) env
               (.unseqK g thenB st tg env (.wait i) k), s, choices, [])
+        | .wide binds spec =>
+            -- Stage E5 E5a: the wide built-in runs as a statement under the wait frame
+            return (.exec (unseqWideStmt binds spec) env
+              (.unseqK g thenB st tg env (.wait i) k), s, choices, [])
         | .load bind tgt => do
             let r ← toResult (unseqLoad.plan ctx s env tg bind tgt)
             deliverV s (.unseqK g thenB st tg env .pick k) choices
@@ -287,6 +291,8 @@ def stepUnseqNext (s : Store) (g : UnseqGraph) (thenB : Stmt) (st : List UnseqSt
         | .recv _ _ _ =>
             return (.next (.unseqK g thenB (st.set i .done) tg env .pick k), s, choices, [])
         | .allocate _ _ =>
+            return (.next (.unseqK g thenB (st.set i .done) tg env .pick k), s, choices, [])
+        | .wide _ _ =>
             return (.next (.unseqK g thenB (st.set i .done) tg env .pick k), s, choices, [])
         | _ => throw (.internal "unseq: statement completion delivered for a value-producing occurrence")
 

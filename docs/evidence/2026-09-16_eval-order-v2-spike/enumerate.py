@@ -706,6 +706,113 @@ def e4h():
           enumerate_graph(occs, state(v={'b': 'B'}, arr={'B': ['a', 'b']}), lambda st, v: v['Op']),
           lambda k: k[1], {'ab', 'zb'})
 
+# ---------------------------------------------------------------- Stage E5, family E5a (2026-09-22)
+# READING (a) — RATIFIED [USER] 2026-09-22: the built-ins are the «function calls» of spec#Order_of_evaluation's
+# ordering sentence (spec#Built-in_functions «called like any other function»), so `min`/`max`/`copy`/`append`
+# are E1 participants — ordered among the calls, their operands inside their windows. `min`/`max` have no
+# effect; `append` (the in-place element store when capacity allows) and `copy` (the destination's write)
+# are EFFECTFUL: a sibling read is observable against them (the trigger).
+
+def e5a1():
+    # min(x, 100) + m(): x captured (x = 1), m writes x = 10 and returns 5. min is E1-ordered before m and x's
+    # read lies inside min's window — forced before m: a SINGLETON 6 (the audit's probe k1; gc agrees).
+    def m(st, v): st['v']['x'] = 10; return 5
+    occs = [Occ('R_x', run=lambda st, v: st['v']['x']),
+            Occ('E_min', deps=['R_x'], run=lambda st, v: min(v['R_x'], 100)),
+            Occ('E_m', after=['E_min'], run=m),
+            Occ('Op', deps=['E_min', 'E_m'], run=lambda st, v: v['E_min'] + v['E_m'])]
+    check('E5a1 min(x, 100) + m() (min an E1 participant: x forced before m)',
+          enumerate_graph(occs, state(v={'x': 1}), lambda st, v: v['Op']), lambda k: k[1], {6}, forbid={15})
+
+def e5a2():
+    # append(s, 3)[0] + m(): s = make([]int, 2, 4) holding [1, 2] (capacity for the in-place append), m writes
+    # s[0] = 10 and returns 5. append is E1-ordered before m and stores 3 in place (the result aliases s's
+    # array); the READ of the result's [0] is unordered against m: before m 1 + 5 = 6, after 10 + 5 = 15.
+    def m(st, v): store(st, 'S', 0, 10); return 5
+    def app(st, v): st['arr']['S'].append(3); return 'S'
+    occs = [Occ('E_app', run=app),
+            Occ('E_m', after=['E_app'], run=m),
+            Occ('Rd', deps=['E_app'], run=lambda st, v: elem(st, v['E_app'], 0)),
+            Occ('Op', deps=['Rd', 'E_m'], run=lambda st, v: v['Rd'] + v['E_m'])]
+    check('E5a2 append(s, 3)[0] + m() (append in place, E1-ordered; the result read vs m)',
+          enumerate_graph(occs, state(v={'s': 'S'}, arr={'S': [1, 2]}), lambda st, v: v['Op']), lambda k: k[1], {6, 15})
+
+def e5a3():
+    # d[0] + copy(d, s): d = [0, 0], s = [7, 8]. copy is an EFFECTFUL E1 participant (it writes d); the sibling
+    # read d[0] is unordered against it: before the copy 0 + 2 = 2, after 7 + 2 = 9 (gc's: OCOPY is in
+    # order.go's call class — the copy first).
+    def cp(st, v):
+        n = min(length(st, 'D'), length(st, 'S'))
+        for i in range(n): store(st, 'D', i, st['arr']['S'][i])
+        return n
+    occs = [Occ('R_d0', run=lambda st, v: elem(st, 'D', 0)),
+            Occ('E_copy', run=cp),
+            Occ('Op', deps=['R_d0', 'E_copy'], run=lambda st, v: v['R_d0'] + v['E_copy'])]
+    check('E5a3 d[0] + copy(d, s) (copy effectful, E1-ordered; the sibling read vs its write)',
+          enumerate_graph(occs, state(v={'d': 'D', 's': 'S'}, arr={'D': [0, 0], 'S': [7, 8]}), lambda st, v: v['Op']),
+          lambda k: k[1], {2, 9})
+
+def e5a4():
+    # x[iv.(int)] = min(q, t[k]) + wit(5) (E13's tgt-assert-vs-min-call): iv a string, t = [1, 2], k = 9. The
+    # target operand's assertion FAILS; t[k] FAILS inside min's window; wit is E1-ordered after min and never
+    # runs. Two failing occurrences unordered against each other: {the assertion's panic, the index panic}.
+    def assert_int(st, v): raise Panic('interface conversion: interface {} is string, not int')
+    def wit(st, v): println(st, 'wit 5'); return 5
+    occs = [Occ('A', run=assert_int),
+            Occ('R_tk', run=lambda st, v: elem(st, 'T', 9)),
+            Occ('E_min', deps=['R_tk'], run=lambda st, v: min(3, v['R_tk'])),
+            Occ('E_wit', after=['E_min'], run=wit),
+            Occ('Op', deps=['E_min', 'E_wit'], run=lambda st, v: v['E_min'] + v['E_wit']),
+            Occ('T', deps=['A'], run=lambda st, v: ('X', v['A']))]
+    check('E5a4 x[iv.(int)] = min(q, t[k]) + wit(5) (E13 tgt-assert-vs-min-call: the assertion vs the index panic inside min)',
+          enumerate_graph(occs, state(v={'t': 'T'}, arr={'T': [1, 2], 'X': [1, 2, 3]}), lambda st, v: None),
+          lambda k: (k[0], k[1], k[2]),
+          {('panic', 'interface conversion: interface {} is string, not int', ()),
+           ('panic', 'index out of range [9] with length 2', ())})
+
+def e5a6():
+    # x[iv.(int)] = copy(d, s) + wit(5) (E13 tgt-assert-vs-copy-call): the copy completes, wit after it; the
+    # target's assertion is unordered against both: {the assertion alone, `wit 5` then the assertion}.
+    def assert_int(st, v): raise Panic('interface conversion: interface {} is string, not int')
+    def wit(st, v): println(st, 'wit 5'); return 5
+    def cp(st, v): store(st, 'D', 0, st['arr']['S'][0]); return 1
+    occs = [Occ('A', run=assert_int),
+            Occ('E_copy', run=cp),
+            Occ('E_wit', after=['E_copy'], run=wit),
+            Occ('Op', deps=['E_copy', 'E_wit'], run=lambda st, v: v['E_copy'] + v['E_wit']),
+            Occ('T', deps=['A'], run=lambda st, v: ('X', v['A']))]
+    check('E5a6 x[iv.(int)] = copy(d, s) + wit(5) (E13 tgt-assert-vs-copy-call: the assertion vs copy, wit)',
+          enumerate_graph(occs, state(v={'d': 'D', 's': 'S'}, arr={'D': [0], 'S': [1], 'X': [1, 2, 3]}), lambda st, v: None),
+          lambda k: (k[0], k[2]),
+          {('panic', ()), ('panic', ('wit 5',))})
+
+def e5a5():
+    # min(x, 100) + y + m(): x private, y captured (m: y = 10, returns 5). min is a pure E1 participant before m;
+    # y's read is unordered against min and m: before m 1 + 1 + 5 = 7, after 1 + 10 + 5 = 16 (gc's).
+    def m(st, v): st['v']['y'] = 10; return 5
+    occs = [Occ('E_min', run=lambda st, v: min(1, 100)),
+            Occ('E_m', after=['E_min'], run=m),
+            Occ('R_y', run=lambda st, v: st['v']['y']),
+            Occ('Op1', deps=['E_min', 'R_y'], run=lambda st, v: v['E_min'] + v['R_y']),
+            Occ('Op2', deps=['Op1', 'E_m'], run=lambda st, v: v['Op1'] + v['E_m'])]
+    check('E5a5 min(x, 100) + y + m() (min a pure E1 participant; y captured, read vs m)',
+          enumerate_graph(occs, state(v={'y': 1}), lambda st, v: v['Op2']), lambda k: k[1], {7, 16})
+
+def e5a7():
+    # len(append(b, "xy"...)) + x + m(): b = []byte("a"), the spread string a pure bytes-from-string head inside
+    # append's window; append, len, m E1-ordered; x captured (m: x = 10, returns 5) — its read unordered against them:
+    # before m 3 + 1 + 5 = 9, after 3 + 10 + 5 = 18 (gc's).
+    def m(st, v): st['v']['x'] = 10; return 5
+    occs = [Occ('Conv', run=lambda st, v: ['x', 'y']),
+            Occ('E_app', deps=['Conv'], run=lambda st, v: ['a'] + v['Conv']),
+            Occ('E_len', deps=['E_app'], after=['E_app'], run=lambda st, v: len(v['E_app'])),
+            Occ('E_m', after=['E_len'], run=m),
+            Occ('R_x', run=lambda st, v: st['v']['x']),
+            Occ('Op1', deps=['E_len', 'R_x'], run=lambda st, v: v['E_len'] + v['R_x']),
+            Occ('Op2', deps=['Op1', 'E_m'], run=lambda st, v: v['Op1'] + v['E_m'])]
+    check('E5a7 len(append(b, "xy"...)) + x + m() (a spread string; append, len, m E1-ordered; x vs them)',
+          enumerate_graph(occs, state(v={'x': 1}), lambda st, v: v['Op2']), lambda k: k[1], {9, 18})
+
 # ---------------------------------------------------------------- negative controls (forced pairs are singletons)
 def controls():
     # C1: f(g()) — argument before invocation (data edge); no unordered pair remains.
@@ -734,7 +841,8 @@ if __name__ == '__main__':
               lambda: r2c(True), lambda: r2c(False),
               r4, lambda: r6(True), lambda: r6(False),
               e1a, e1c, e1b, e2a, e2c, e2d, e2e, e2f, e2g, e3a, e3c, e3d, e3e,
-              e4a, e4b, e4c, e4d, e4e, e4f, e4g, e4h, controls):
+              e4a, e4b, e4c, e4d, e4e, e4f, e4g, e4h,
+              e5a1, e5a2, e5a3, e5a4, e5a5, e5a6, e5a7, controls):
         f()
     print('RESULT:', 'FAIL' if FAILS else 'PASS', f'({FAILS} mismatch(es))')
     sys.exit(1 if FAILS else 0)

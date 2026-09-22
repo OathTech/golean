@@ -124,6 +124,12 @@ def main (_args : List String) : IO Unit := do
       [okOut "ab\n", okOut "zb\n"],
     wireSet "E4MAKE wire: len(make([]int, n)) + x + h() — the make-slice allocate; x's read vs h" "e4make.json" "e4make"
       [okZ 103, okZ 112],
+    -- STAGE E5, family E5a (2026-09-22): the reading-(a) built-ins (RATIFIED [USER] 2026-09-22) — `append` /
+    -- `copy` as `wide` bodies (the machine's own appendSlice / copySlice under the sweep frame; EFFECTFUL E1
+    -- participants), `min` as a pure E1-ordered head. References enumerate.py E5a2 / E5a3 / E5a5.
+    wireSet "E5APPEND wire: append(s, 3)[0] + m() — the append a wide body (in place, E1-ordered); the result read vs m" "e5append.json" "e5append" [okZ 6, okZ 15],
+    wireSet "E5COPY wire: d[0] + copy(d, s) — the copy's write vs the sibling checked read" "e5copy.json" "e5copy" [okZ 2, okZ 9],
+    wireSet "E5MINMAX wire: min(x, 100) + y + m() — min a pure E1-ordered head; y's read vs m" "e5minmax.json" "e5minmax" [okZ 7, okZ 16],
     -- THE FRONTEND'S OWN LOWERING (C2): source → actual frontend bytes → strict decoder →
     -- machine → EXACT reference sets (v2.1 §7 row C's exit; the graphs are the emitter's,
     -- not hand-built — the same reference sets as the hand-built wires above).
@@ -160,6 +166,9 @@ def main (_args : List String) : IO Unit := do
       [okOut "ab\n", okOut "zb\n"],
     wireSet "NATIVE E4MAKE (the frontend's own make-slice allocate beside an observable read)" "native-e4make.json" "e4make"
       [okZ 103, okZ 112],
+    wireSet "NATIVE E5APPEND (the frontend's own wide append — Stage E5 E5a)" "native-e5append.json" "e5append" [okZ 6, okZ 15],
+    wireSet "NATIVE E5COPY (the frontend's own wide copy)" "native-e5copy.json" "e5copy" [okZ 2, okZ 9],
+    wireSet "NATIVE E5MINMAX (the frontend's own min head, E1-ordered)" "native-e5minmax.json" "e5minmax" [okZ 7, okZ 16],
     -- EDGE MUTATIONS of the LOWERED graphs (v2.1 §8): each decodes; the exact-set check
     -- names the changed set (the decoder cannot see a missing or wrong edge).
     wireSet "EDGE data (R6: the access reads the variable's header, not the frozen slot) → the fused {20}" "edge-data.json" "r6" [okZ 20],

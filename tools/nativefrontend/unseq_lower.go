@@ -501,6 +501,51 @@ func (b *unseqBuilder) call(c *ast.CallExpr, maxResults int) ([]any, error) {
 				}
 				popped = true
 				return []any{slot}, nil
+			case "min", "max":
+				// Stage E5 E5a: a pure E1-ordered head over the operand atoms (Expr.minOf/maxOf),
+				// its block like len/cap's: the operands, then the event with the anchor.
+				args := []any{}
+				for _, a := range c.Args {
+					w, err := b.value(a)
+					if err != nil {
+						return nil, err
+					}
+					args = append(args, w)
+				}
+				ty, err := e.typeOf(c)
+				if err != nil {
+					return nil, err
+				}
+				cell := b.newCell(ty)
+				name := b.occName(id.Name)
+				o := map[string]any{"name": name, "kind": "eval", "bind": cell,
+					"head": map[string]any{"expr": id.Name, "args": args, "type": ty}}
+				if after := b.eventAfter(); after != nil {
+					o["after"] = after
+				}
+				if b.region != "" {
+					o["region"] = b.region
+				}
+				block := append(b.pop(), o)
+				popped = true
+				b.emitEventBlock(block)
+				b.anchor = name
+				return []any{slotIdent(cell, ty)}, nil
+			case "append":
+				// Stage E5 E5a: the effectful append as a `wide` body (the frame is popped there).
+				slot, err := b.wideAppend(c)
+				if err != nil {
+					return nil, err
+				}
+				popped = true
+				return []any{slot}, nil
+			case "copy":
+				slot, err := b.wideCopy(c)
+				if err != nil {
+					return nil, err
+				}
+				popped = true
+				return []any{slot}, nil
 			}
 			return nil, unsup("unseq lowering: builtin %s", id.Name)
 		}
@@ -950,6 +995,112 @@ func (b *unseqBuilder) allocOcc(kind string, ty any, spec map[string]any, event 
 	b.emitEventBlock(block)
 	b.anchor = name
 	return slotIdent(cell, ty)
+}
+
+// wideOcc emits a `wide` occurrence (Stage E5 E5a): a built-in the machine models
+// as a wide statement, its results into fresh cells of the given types, as an
+// E1-ordered EVENT with the anchor (the caller has pushed the operand frame,
+// popped here). Returns the result slots.
+func (b *unseqBuilder) wideOcc(kind string, tys []any, spec map[string]any) []any {
+	binds := []any{}
+	slots := []any{}
+	for _, ty := range tys {
+		cell := b.newCell(ty)
+		binds = append(binds, cell)
+		slots = append(slots, slotIdent(cell, ty))
+	}
+	name := b.occName(kind)
+	o := map[string]any{"name": name, "kind": "wide", "binds": binds, "wide": spec}
+	if after := b.eventAfter(); after != nil {
+		o["after"] = after
+	}
+	if b.region != "" {
+		o["region"] = b.region
+	}
+	block := append(b.pop(), o)
+	b.emitEventBlock(block)
+	b.anchor = name
+	return slots
+}
+
+// bytesOperand lowers a slice operand, or a STRING operand as the pure
+// `bytes-from-string` head over its atom (the legacy `byteSliceOrWrappedString`).
+func (b *unseqBuilder) bytesOperand(x ast.Expr) (any, error) {
+	w, err := b.value(x)
+	if err != nil {
+		return nil, err
+	}
+	if isStringType(types.Unalias(b.e.goTypeOf(x)).Underlying()) {
+		bytesTy := map[string]any{"kind": "slice", "elem": intType("uint8")}
+		return b.evalOcc("conv", bytesTy, map[string]any{"expr": "bytes-from-string", "x": w}), nil
+	}
+	return w, nil
+}
+
+// wideAppend lowers `append(s, x…)` / `append(s, t...)` (Stage E5 E5a) inside the
+// call's operand frame: the base atom, the elements — a non-spread list packed
+// into a slice literal (an `allocate` in the frame, no E1 edge — the legacy
+// hoist's own packing), a spread slice as its atom, a spread string as a
+// bytes-from-string head — then the `wide` append event.
+func (b *unseqBuilder) wideAppend(c *ast.CallExpr) (any, error) {
+	e := b.e
+	resTy := e.goTypeOf(c)
+	sl, ok := types.Unalias(resTy).Underlying().(*types.Slice)
+	if !ok {
+		return nil, unsup("unseq lowering: append result is not a slice")
+	}
+	elemTy, err := e.emitType(sl.Elem())
+	if err != nil {
+		return nil, err
+	}
+	base, err := b.value(c.Args[0])
+	if err != nil {
+		return nil, err
+	}
+	var elems any
+	if c.Ellipsis != token.NoPos {
+		elems, err = b.bytesOperand(c.Args[1])
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		packed := []any{}
+		for i := 1; i < len(c.Args); i++ {
+			w, err := b.value(c.Args[i])
+			if err != nil {
+				return nil, err
+			}
+			w, err = e.wrapInterfaceConversion(sl.Elem(), e.goTypeOf(c.Args[i]), w)
+			if err != nil {
+				return nil, err
+			}
+			packed = append(packed, map[string]any{"index": int64(i - 1), "value": w})
+		}
+		sliceTy := map[string]any{"kind": "slice", "elem": elemTy}
+		elems = b.allocOcc("pack", sliceTy,
+			map[string]any{"stmt": "slice-lit", "elem": elemTy, "length": int64(len(packed)), "elems": packed}, false)
+	}
+	ty, err := e.typeOf(c)
+	if err != nil {
+		return nil, err
+	}
+	return b.wideOcc("append", []any{ty},
+		map[string]any{"stmt": "append", "elem": elemTy, "slice": base, "elems": elems})[0], nil
+}
+
+// wideCopy lowers `copy(dst, src)` (Stage E5 E5a): the destination and source
+// atoms (a string source as a bytes-from-string head), then the `wide` copy event
+// producing the count.
+func (b *unseqBuilder) wideCopy(c *ast.CallExpr) (any, error) {
+	dst, err := b.value(c.Args[0])
+	if err != nil {
+		return nil, err
+	}
+	src, err := b.bytesOperand(c.Args[1])
+	if err != nil {
+		return nil, err
+	}
+	return b.wideOcc("copy", []any{intType("int")}, map[string]any{"stmt": "copy", "dst": dst, "src": src})[0], nil
 }
 
 // recv lowers `<-ch` (Stage E E3): the channel value, then the RECEIVE as an

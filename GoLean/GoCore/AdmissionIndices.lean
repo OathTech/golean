@@ -85,6 +85,11 @@ def allocSpecIndices : AllocSpec → List TypeIdx
   | .makeChan e c => tyIndices e ++ optExprIndices c
   | .sliceLit e _ es => tyIndices e ++ keyedExprIndices es
 
+/-- A wide statement's indices (Stage E5 E5a): its types and operand expressions. -/
+def wideSpecIndices : WideSpec → List TypeIdx
+  | .append e s x => tyIndices e ++ exprIndices s ++ exprIndices x
+  | .copy d s => exprIndices d ++ exprIndices s
+
 /-- An `unseq` occurrence body's indices (Stage B): its head/operand
 expressions and target assignee; the graph's cells declare types too. -/
 def unseqBodyIndices : UnseqBody → List TypeIdx
@@ -93,6 +98,7 @@ def unseqBodyIndices : UnseqBody → List TypeIdx
   | .invoke _ callee args => exprIndices callee ++ exprListIndices args
   | .recv _ ch elem => exprIndices ch ++ tyIndices elem
   | .allocate _ spec => allocSpecIndices spec
+  | .wide _ spec => wideSpecIndices spec
   | .target _ lhs => assigneeIndices lhs
   | .guard _ _ _ => []
 def unseqGraphIndices (g : UnseqGraph) : List TypeIdx :=

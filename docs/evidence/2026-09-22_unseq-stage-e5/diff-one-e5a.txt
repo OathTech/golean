@@ -1,0 +1,26 @@
+# scripts/diff-one on the 12 E5a-affected rows (the E5a frontend + binary). RUN 1: 11 PASS / 1 FAIL — append-spread-str-vs-call REFUTED by name (site bound 30: the appendSpill capacity pick of an append on a FULL base); copy-stmt-control PASS strict wide=1 (admitted: the header read vs f). RUN 2 (the base given capacity; the comment corrected): 12 PASS.
+
+## run 1 (artifacts/coverage/latest.tsv rows)
+PASS	builtins/e13-sibling-panic-order/assert-left-append	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/assert-left-ap
+PASS	builtins/e13-sibling-panic-order/assert-left-copy	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/assert-left-copy
+PASS	builtins/e13-sibling-panic-order/tgt-assert-vs-min-call	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/tgt-assert
+PASS	builtins/e13-sibling-panic-order/tgt-assert-vs-copy-call	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/tgt-asser
+PASS	builtins/e13-sibling-panic-order/tgt-assert-vs-append	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/tgt-assert-v
+PASS	evalorder/unseq-builtins/min-vs-call	-	wide=0 exhausted=none depth=fixed
+PASS	evalorder/unseq-builtins/min-read-vs-call	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/evalorder/unseq-builtins/min-read-vs-call)
+PASS	evalorder/unseq-builtins/append-read-vs-call	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/evalorder/unseq-builtins/append-read-vs-call)
+PASS	evalorder/unseq-builtins/copy-effect-vs-read	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/evalorder/unseq-builtins/copy-effect-vs-read)
+FAIL	evalorder/unseq-builtins/append-spread-str-vs-call	membership	enumerator failed (exit 1; coverage not certified): coverage-observations: site bound 30 exceeds the case's width 2 — the width assertion is REFUTED (mechanically, at pick position 2); raise 
+PASS	evalorder/unseq-builtins/copy-stmt-control	-	wide=1 exhausted=none depth=fixed
+PASS	slices/copy-min	-	wide=5 exhausted=none depth=fixed
+
+differential coverage summary: cases=12 pass=11 fail=1 export_status=0
+results: artifacts/coverage/latest.tsv
+metadata: artifacts/coverage/latest.meta.tsv
+EXIT=1 (44 s)
+
+## run 2 (the two fixed rows)
+PASS	evalorder/unseq-builtins/append-spread-str-vs-call	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage
+PASS	evalorder/unseq-builtins/copy-stmt-control	-	wide=1 exhausted=none depth=fixed
+20 Corpus/coverage/exec/evalorder/unseq-builtins:appendSpreadStrVsCall 18
+20 Corpus/coverage/exec/evalorder/unseq-builtins:copyStmtControl 78

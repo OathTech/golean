@@ -1,0 +1,101 @@
+# The LEGACY PROBE EMISSION census AFTER E5a (the E5a frontend): unseq-probe / unseq nodes per emitted package wire; producer .tmp/census/probes.sh + probe-sites.py.
+
+TWIN	128	0
+Corpus/coverage/exec/builtins/len-vs-call-order	15	4
+Corpus/coverage/exec/builtins/e13-sibling-panic-order	12	48
+Corpus/coverage/exec/multipkg/mini-raft-twin	7	0
+Corpus/coverage/exec/stdlib-source/errors-join	5	0
+Corpus/coverage/exec/stdlib-source/strconv-parseuint	4	0
+Corpus/coverage/exec/stdlib-source/errors-wrap	3	0
+Corpus/coverage/exec/stdlib-source/frontier	3	0
+Corpus/coverage/exec/noodler/latitude	2	9
+Corpus/coverage/exec/spec-examples-stmt/eval-order-calls	2	0
+Corpus/coverage/exec/channels/recv-edge	1	1
+Corpus/coverage/exec/channels/recv-map-elem	1	0
+Corpus/coverage/exec/fmt/sprintf-dyn	1	0
+Corpus/coverage/exec/imported-goose/generics/generic-conversion	1	0
+Corpus/coverage/exec/noodler/frontier2/array-of-funcs-indexed-call	1	0
+Corpus/coverage/exec/noodler/frontier2/typed-nil-error-return	1	0
+Corpus/coverage/exec/noodler/misc	1	0
+Corpus/coverage/exec/noodler/strings	1	0
+Corpus/coverage/exec/panic-recover/shim-refusal-unrecoverable	1	0
+Corpus/coverage/exec/strconv/format-parse	1	0
+dir	probes	unseqs
+
+## Corpus emitters by function and probed head (the twin's 128 are unchanged from probes-before.txt)
+== Corpus/coverage/exec/builtins_e13-sibling-panic-order.json  probes=12
+     1  assertReturnList$lit0  {'type-assert': 1}
+     1  assertLeftMakeSlice  {'type-assert': 1}
+     1  ifaceCmpLeftCall  {'binary': 1}
+     1  sendChanIndex  {'index-get': 1}
+     1  convLeftCall  {'index-get': 1}
+     1  tgtAssertVsMake  {'type-assert': 1}
+     1  recoverAssertVsLen$lit0  {'type-assert': 1}
+     1  addrIndexLeftLenHoist  {'index-addr': 1}
+     1  addrAssertLeftCall  {'index-addr': 1}
+     1  arrayBaseTargetVsLen  {'index-addr': 1}
+     1  recoverAssertVsCallW$lit2  {'type-assert': 1}
+     1  bytesConvPayloadVsCall  {'slice': 1}
+== Corpus/coverage/exec/builtins_len-vs-call-order.json  probes=15
+     1  hintPanickyBetween  {'type-assert': 1}
+     1  makeSlicePanickyBetween  {'type-assert': 1}
+     1  makeChanCapPanickyBetween  {'type-assert': 1}
+     1  makeIndexLeft  {'index-get': 1}
+     1  makeInnerLen  {'type-assert': 1}
+     1  makeHintPanicFree  {'type-assert': 1}
+     1  makeHintMapRead  {'type-assert': 1}
+     1  makeHintCall  {'index-get': 1}
+     1  makeHintStructAnyKey  {'type-assert': 1}
+     1  makeHintArrayAnyKey  {'type-assert': 1}
+     1  lenStructAnyKeyLeftAssert  {'type-assert': 1}
+     1  makeNilOnly  {'field-get': 1}
+     1  lexerIdiom  {'field-get': 1}
+     1  makeHintGenericKey[interface {}]  {'type-assert': 1}
+     1  makeHintGenericKey[int]  {'type-assert': 1}
+== Corpus/coverage/exec/channels_recv-edge.json  probes=1
+     1  recvNilIndexBaseSecond$lit0  {'deref': 1}
+== Corpus/coverage/exec/channels_recv-map-elem.json  probes=1
+     1  mapKeyPanicDrains$lit0  {'index-get': 1}
+== Corpus/coverage/exec/fmt_sprintf-dyn.json  probes=1
+     1  {'name': 'Infof', 'package': ''}  {'field-get': 1}
+== Corpus/coverage/exec/imported-goose_generics_generic-conversion.json  probes=1
+     1  genericConversions  {'index-addr': 1}
+== Corpus/coverage/exec/multipkg_mini-raft-twin.json  probes=7
+     2  twinElectProposeCommit  {'field-get': 2}
+     1  newDriver  {'field-get': 1}
+     1  twinPerturbRev  {'field-get': 1}
+     1  twinPerturbPicks  {'field-get': 1}
+     1  twinStarveNode  {'field-get': 1}
+     1  twinDuel  {'field-get': 1}
+== Corpus/coverage/exec/noodler_frontier2_array-of-funcs-indexed-call.json  probes=1
+     1  arrayOfFuncsIndexedCall  {'index-get': 1}
+== Corpus/coverage/exec/noodler_frontier2_typed-nil-error-return.json  probes=1
+     1  typedNilErrorReturn  {'binary': 1}
+== Corpus/coverage/exec/noodler_latitude.json  probes=2
+     1  mapLiteralKeyVsCall  {'index-get': 1}
+     1  rhsListIndexCallIndex  {'index-get': 1}
+== Corpus/coverage/exec/noodler_misc.json  probes=1
+     1  copyIntoArrayView  {'slice': 1}
+== Corpus/coverage/exec/noodler_strings.json  probes=1
+     1  {'name': 'Error', 'package': ''}  {'field-get': 1}
+== Corpus/coverage/exec/panic-recover_shim-refusal-unrecoverable.json  probes=1
+     1  {'name': 'Error', 'package': ''}  {'field-get': 1}
+== Corpus/coverage/exec/spec-examples-stmt_eval-order-calls.json  probes=2
+     1  evalOrderCallsVerbatim  {'index-get': 1}
+     1  evalOrderCallsTracedRecv  {'index-get': 1}
+== Corpus/coverage/exec/stdlib-source_errors-join.json  probes=5
+     2  joinAllNil  {'binary': 2}
+     2  newIsFresh  {'binary': 2}
+     1  joinDistinct  {'binary': 1}
+== Corpus/coverage/exec/stdlib-source_errors-wrap.json  probes=3
+     2  errorsUnwrap  {'binary': 2}
+     1  {'name': 'Error', 'package': ''}  {'field-get': 1}
+== Corpus/coverage/exec/stdlib-source_frontier.json  probes=3
+     1  internal/strconv.pow10  {'index-get': 1}
+     1  slices.Insert[[]int,int]  {'slice': 1}
+     1  {'name': 'Error', 'package': ''}  {'field-get': 1}
+== Corpus/coverage/exec/stdlib-source_strconv-parseuint.json  probes=4
+     3  parseUintNumErrorType  {'field-get': 2, 'binary': 1}
+     1  {'name': 'Error', 'package': ''}  {'field-get': 1}
+== Corpus/coverage/exec/strconv_format-parse.json  probes=1
+     1  {'name': 'Error', 'package': ''}  {'field-get': 1}

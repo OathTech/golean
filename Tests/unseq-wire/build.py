@@ -86,6 +86,12 @@ def alc(name, bind, spec, after=None, region=None):
     return occ(name, "allocate", after, region, bind=bind, allocation=spec)
 
 
+def wd(name, binds, spec, after=None, region=None):
+    """A WIDE built-in occurrence (Stage E5 E5a): append / copy — the hoisted wide statement's shape over
+    atoms, its results into the binder cells."""
+    return occ(name, "wide", after, region, binds=list(binds), wide=spec)
+
+
 def map_target(base, index):
     """A map-element target plan on the FROZEN map value and key value (Stage E E2)."""
     return {"target": "map", "base": base, "index": index, "keyType": INT, "valueType": INT}
@@ -493,6 +499,51 @@ def e4make_graph():
         then=ret(ident("$u5", INT)))
 
 
+# ---------------------------------------------------------------- Stage E5, family E5a (2026-09-22)
+# The reading-(a) built-ins (RATIFIED [USER] 2026-09-22): `append`/`copy` as `wide` bodies — EFFECTFUL E1
+# participants (the in-place element store / the destination write) whose operands are atoms inside their
+# windows (a non-spread element list packed into a slice literal, an `allocate` in the window); `min`/`max` as
+# pure E1-ordered heads. References enumerate.py E5a2 / E5a3 / E5a5.
+
+def e5append_graph():
+    # append(s, 3)[0] + m(): s captured (its header a READ occurrence), the packed [3] literal, the wide append
+    # (the first event), m after it (E1); the residual: the result's checked [0], the op. {6, 15}.
+    return unseq(
+        [cell("$u0", SLICE_INT), cell("$u1", SLICE_INT), cell("$u2", SLICE_INT), cell("$u3", INT), cell("$u4", INT),
+         cell("$u5", INT)],
+        [ev("read0", "$u0", ident("s", SLICE_INT)),
+         alc("pack1", "$u1", {"stmt": "slice-lit", "elem": INT, "length": 1, "elems": [{"index": 0, "value": intc(3)}]}),
+         wd("append2", ["$u2"], {"stmt": "append", "elem": INT, "slice": ident("$u0", SLICE_INT),
+                                 "elems": ident("$u1", SLICE_INT)}),
+         inv("call3", ["$u3"], ident("m"), [], [INT], after=["append2"]),
+         ev("access4", "$u4", idxget(ident("$u2", SLICE_INT), intc(0), INT)),
+         ev("op5", "$u5", binop("+", ident("$u4", INT), ident("$u3", INT), INT))],
+        then=ret(ident("$u5", INT)))
+
+
+def e5copy_graph():
+    # d[0] + copy(d, s): d and s private atoms; the wide copy (an effectful event) vs the checked read d[0]. {2, 9}.
+    return unseq(
+        [cell("$u0", INT), cell("$u1", INT), cell("$u2", INT)],
+        [wd("copy0", ["$u0"], {"stmt": "copy", "dst": ident("d", SLICE_INT), "src": ident("s", SLICE_INT)}),
+         ev("access1", "$u1", idxget(ident("d", SLICE_INT), intc(0), INT)),
+         ev("op2", "$u2", binop("+", ident("$u1", INT), ident("$u0", INT), INT))],
+        then=ret(ident("$u2", INT)))
+
+
+def e5minmax_graph():
+    # min(x, 100) + y + m(): min a pure head over the private x and a constant (the first event), m after it; the
+    # captured y's read unordered against both; the ops. {7, 16}.
+    return unseq(
+        [cell("$u0", INT), cell("$u1", INT), cell("$u2", INT), cell("$u3", INT), cell("$u4", INT)],
+        [ev("min0", "$u0", {"expr": "min", "args": [ident("x", INT), intc(100)], "type": INT}),
+         inv("call1", ["$u1"], ident("m"), [], [INT], after=["min0"]),
+         ev("read2", "$u2", ident("y", INT)),
+         ev("op3", "$u3", binop("+", ident("$u0", INT), ident("$u2", INT), INT)),
+         ev("op4", "$u4", binop("+", ident("$u3", INT), ident("$u1", INT), INT))],
+        then=ret(ident("$u4", INT)))
+
+
 # ---------------------------------------------------------------- constant heads (audit fix round F2)
 # A CONSTANT copied into a cell — the emitter's `copy` occurrence where the consumer needs a
 # CELL (design §6): a guard's test (`true && f()`), a phase-2 store's value (`a[f()] = 5`,
@@ -583,6 +634,11 @@ WITNESSES = {
     "e4new": ("e4new", [("e4new", "h", 0, e4new_graph(), None)]),
     "e4strb": ("e4strb", [("e4strb", "m", 0, e4strb_graph(), None)]),
     "e4make": ("e4make", [("e4make", "h", 0, e4make_graph(), None)]),
+    # Stage E5 E5a (2026-09-22): the reading-(a) built-ins — append / copy as `wide` bodies, min as a pure head
+    # (hand-built + native each)
+    "e5append": ("e5append", [("e5append", "m", 0, e5append_graph(), None)]),
+    "e5copy": ("e5copy", [("e5copy", "s", 0, e5copy_graph(), None)]),
+    "e5minmax": ("e5minmax", [("e5minmax", "m", 0, e5minmax_graph(), None)]),
 }
 
 
@@ -717,6 +773,20 @@ def mutants(wires):
         e = occ(n, "lit2")["allocation"]["elems"]
         e.append(copy.deepcopy(e[0]))
     edit("mut-slicelit-dup-index", "e4alloc", "e4alloc", dup_index, "duplicate slice-literal index")
+    # Stage E5 E5a (2026-09-22): the `wide` kind — a statement tag outside the fragment; a non-atom operand (a hidden
+    # read); two binders for a one-result statement; a cell typed against the statement's result; a `min` head over
+    # a non-atom operand.
+    edit("mut-wide-kind", "e5append", "e5append",
+         lambda n, w: occ(n, "append2")["wide"].update(stmt="clear"), "outside the admitted fragment")
+    edit("mut-wide-nonatom", "e5copy", "e5copy",
+         lambda n, w: occ(n, "copy0")["wide"].update(dst=binop("+", intc(0), intc(1), INT)), "hidden read in a wide built-in")
+    edit("mut-wide-binds", "e5copy", "e5copy",
+         lambda n, w: occ(n, "copy0").update(binds=["$u0", "$u1"]), "writes exactly one")
+    edit("mut-wide-cell-type", "e5copy", "e5copy",
+         lambda n, w: n["cells"][0].update(type=BOOL), "the copied count")
+    edit("mut-min-nonatom", "e5minmax", "e5minmax",
+         lambda n, w: occ(n, "min0")["head"]["args"].__setitem__(0, binop("+", ident("x", INT), intc(1), INT)),
+         "hidden read in a pure node")
     edit("mut-make-negative-len", "e4make", "e4make",
          lambda n, w: occ(n, "make0")["allocation"].update(len=intc(-1)), "negative constant len")
     edit("mut-make-len-over-cap", "e4make", "e4make",

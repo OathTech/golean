@@ -2165,6 +2165,22 @@ def unseqAllocStmt (bind : String) : AllocSpec → Stmt
         (elems.map (fun (iv : Int × Expr) =>
           Stmt.assign (.addr (.indexAddr (.var bind) (.intLit iv.1 .int))) iv.2)).toArray)
 
+/-- The `wide` body's statement (Stage E5 E5a, 2026-09-22): the hoisted wide
+built-in with the binder cells as its targets — `append` (`Stmt.appendSlice`:
+the base slice and the packed / spread elements, already evaluated) and `copy`
+(`Stmt.copySlice`), each writing its ONE result cell. The arity is checked
+statically (`UnseqGraph.wellFormed?`); a binder list of another length reaches
+the machine's own `unsupported` refusal by name, never a silent store. -/
+def unseqWideStmt (binds : List String) : WideSpec → Stmt
+  | .append elem slice elems =>
+      match binds with
+      | [b] => .appendSlice (.var b) elem slice elems
+      | _ => .unsupported "unseq: wide append with a result arity other than one"
+  | .copy dst src =>
+      match binds with
+      | [b] => .copySlice (.var b) dst src
+      | _ => .unsupported "unseq: wide copy with a result arity other than one"
+
 /-- Head of a channel statement (send/receive/close). `elem` is the
 element type: sends normalize the value at it (the `mapAssign` key/value
 discipline, so buffered values are self-normalized); receives build the
@@ -6063,6 +6079,15 @@ inductive Step : Config → Store → Config → Store → AccessTrace → Prop 
       Step (.next (.unseqK g thenB st tg env (.run i) k)) s
         (.exec (unseqAllocStmt bind spec) env
           (.unseqK g thenB st tg env (.wait i) k)) s []
+  /-- Stage E5 E5a: a WIDE built-in occurrence (`append`, `copy`) runs its
+  hoisted statement with the binder cells as its targets under the wait frame
+  (its completion is `unseqWideDone`); its own panics (an append past the
+  address space, a copy through a nil slice's element) are the statement's. -/
+  | unseqRunWide {g thenB st tg env k s o binds spec} {i : Nat} :
+      g.occs[i]? = some o → o.body = .wide binds spec →
+      Step (.next (.unseqK g thenB st tg env (.run i) k)) s
+        (.exec (unseqWideStmt binds spec) env
+          (.unseqK g thenB st tg env (.wait i) k)) s []
   /-- The checked access through a frozen plan: apply, then deliver — a
   bounds panic unwinds through the frame over the pre-state. -/
   | unseqRunLoad {g thenB st tg env k s o bind tgt r c' s' tr} {i : Nat} :
@@ -6106,6 +6131,12 @@ inductive Step : Config → Store → Config → Store → AccessTrace → Prop 
   bound by the statement's own store): the occurrence is DONE. -/
   | unseqAllocDone {g thenB st tg env k s o bind spec} {i : Nat} :
       g.occs[i]? = some o → o.body = .allocate bind spec →
+      Step (.next (.unseqK g thenB st tg env (.wait i) k)) s
+        (.next (.unseqK g thenB (st.set i .done) tg env .pick k)) s []
+  /-- Stage E5 E5a: a wide built-in's statement completed (its results already
+  stored by the statement's own phase-2 stores): the occurrence is DONE. -/
+  | unseqWideDone {g thenB st tg env k s o binds spec} {i : Nat} :
+      g.occs[i]? = some o → o.body = .wide binds spec →
       Step (.next (.unseqK g thenB st tg env (.wait i) k)) s
         (.next (.unseqK g thenB (st.set i .done) tg env .pick k)) s []
 

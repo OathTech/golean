@@ -287,6 +287,33 @@ def xa : Program := { funcs := #[
       .unseq xaGraph (.seqn #[])]),
   xaWit] }
 
+/-! ## E5a (Stage E5, 2026-09-22)  `append(s, 3)[0] + m()`, s = make([]int, 2, 4) holding [1, 2], m writing
+s[0] = 10 and returning 5 — the reading-(a) built-in `append` as a `wide` body: an EFFECTFUL E1 participant
+before m (the in-place element store, the fresh header aliasing s's array); the packed element literal an
+`allocate` inside append's window; the result's [0] read unordered against m. → {6, 15} -/
+
+def e5aM : Func := {
+  id := ⟨"e5aM"⟩, args := #[⟨"ps", pSlice⟩], results := #[intP "r"],
+  body := .seqn #[storeElem "ps" (.intLit 0) (.intLit 10), ret "r" (.intLit 5)] }
+def e5aGraph : UnseqGraph := {
+  cells := [sliceP "$s", sliceP "$pack", sliceP "$app", intP "$m", intP "$e0", intP "$op"],
+  occs := [occ "R_s" (.eval "$s" (.var "s")),
+           occ "Pack" (.allocate "$pack" (.sliceLit .int 1 [(0, .intLit 3)])),
+           occ "E_app" (.wide ["$app"] (.append .int (.var "$s") (.var "$pack"))),
+           occ "E_m" (.invoke ["$m"] (.var "mv") []) (after := ["E_app"]),
+           occ "Rd" (.eval "$e0" (.indexGet (.var "$app") (.intLit 0))),
+           occ "Op" (.eval "$op" (.add (.var "$e0") (.var "$m"))),
+           occ "T_z" (.target "$t" (.var "z"))],
+  stores := [("$t", "$op")] }
+def e5a : Program := { funcs := #[
+  mainInt [sliceP "s", ⟨"mv", fnTy [] [.int]⟩]
+    [.makeSlice (.var "s") .int (.intLit 2) (some (.intLit 4)),
+     .assign (.addr (.indexAddr (.var "s") (.intLit 0))) (.intLit 1),
+     .assign (.addr (.indexAddr (.var "s") (.intLit 1))) (.intLit 2),
+     .assign (.var "mv") (clos "e5aM" ["s"]),
+     .unseq e5aGraph (.seqn #[])],
+  e5aM] }
+
 /-! ## R1  `v := x + y + mut()` — unreduced {0,1,2,3}; the REFUTED reduction {0,2,3} -/
 
 def r1mut : Func := {
@@ -797,6 +824,8 @@ def main (_args : List String) : IO Unit := do
     -- Stage E E4: a slice literal as an `allocate` body (BUG-102's shape)
     expectSet "E4 []int{s[i]}[0] + wit5(), s[i] out of range: the slice literal an allocate body" xa "main"
       [panicOut (oob 9 1) "", panicOut (oob 9 1) "wit 5\n"],
+    -- Stage E5 E5a: append as a `wide` body (in place, E1-ordered before m); the result read vs m
+    expectSet "E5a append(s, 3)[0] + m(): the append a wide body, its result's read vs m" e5a "main" [okZ 6, okZ 15],
     expectTape "X3e canonical tape: the panic member (the receive never ran)" (x3 false) "main" []
       (panicOut (oob 9 1) "len 0\n"),
     -- R1
@@ -877,6 +906,7 @@ def main (_args : List String) : IO Unit := do
     expectDedupSet "α recursion: per-activation binder cells, certified {10}" recursion "main" [okZ 10],
     expectDedupSet "α W4 a[1]+b[2] both nil: certified panic members (unseqPanic-free graph)" w4 "main"
       [panicOut (oob 1 0), panicOut (oob 2 0)],
+    expectDedupSet "α E5a append wide body: certified {6, 15}" e5a "main" [okZ 6, okZ 15],
     expectDedupRefusal "α replay graph (three PRINTING events): the engine refuses the output event by name"
       trace "main" "output event"]
   let mut failuresN := 0

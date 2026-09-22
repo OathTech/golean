@@ -1,0 +1,180 @@
+# The LEGACY PROBE EMISSION census BEFORE E5 (E6's entry metric): unseq-probe statement nodes and unseq graph nodes per emitted package wire, main dc5de785's frontend; producer .tmp/census/probes.sh + probe-sites.py (this lane). 25 packages refuse export (pre-existing frontend-export reds) and emit nothing.
+
+TWIN	128	0
+Corpus/coverage/exec/builtins/e13-sibling-panic-order	17	43
+Corpus/coverage/exec/builtins/len-vs-call-order	15	4
+Corpus/coverage/exec/multipkg/mini-raft-twin	7	0
+Corpus/coverage/exec/stdlib-source/errors-join	5	0
+Corpus/coverage/exec/stdlib-source/strconv-parseuint	4	0
+Corpus/coverage/exec/stdlib-source/errors-wrap	3	0
+Corpus/coverage/exec/stdlib-source/frontier	3	0
+Corpus/coverage/exec/noodler/latitude	2	9
+Corpus/coverage/exec/slices/copy-min	2	0
+Corpus/coverage/exec/spec-examples-stmt/eval-order-calls	2	0
+Corpus/coverage/exec/channels/recv-edge	1	1
+Corpus/coverage/exec/channels/recv-map-elem	1	0
+Corpus/coverage/exec/fmt/sprintf-dyn	1	0
+Corpus/coverage/exec/imported-goose/generics/generic-conversion	1	0
+Corpus/coverage/exec/noodler/frontier2/array-of-funcs-indexed-call	1	0
+Corpus/coverage/exec/noodler/frontier2/typed-nil-error-return	1	0
+Corpus/coverage/exec/noodler/misc	1	0
+Corpus/coverage/exec/noodler/strings	1	0
+Corpus/coverage/exec/panic-recover/shim-refusal-unrecoverable	1	0
+Corpus/coverage/exec/strconv/format-parse	1	0
+dir	probes	unseqs
+
+refused-export: Corpus/coverage/exec/complex/defined-type-ops
+refused-export: Corpus/coverage/exec/complex/generic-type-set
+refused-export: Corpus/coverage/exec/complex/real-imag-defined
+refused-export: Corpus/coverage/exec/constants/typed-complex-binary
+refused-export: Corpus/coverage/exec/fmt/formatter-box-generic
+refused-export: Corpus/coverage/exec/fmt/formatter-dyn-hole
+refused-export: Corpus/coverage/exec/fmt/formatter-box-range
+refused-export: Corpus/coverage/exec/fmt/formatter-box-crosspkg
+refused-export: Corpus/coverage/exec/generics/stencil-residual-field-iterseq
+refused-export: Corpus/coverage/exec/generics/stencil-residual-sig-anon-struct
+refused-export: Corpus/coverage/exec/init/hidden-dep-order
+refused-export: Corpus/coverage/exec/init/hidden-dep-refused
+refused-export: Corpus/coverage/exec/init/quarantined-var-callee
+refused-export: Corpus/coverage/exec/init/quarantined-var-impure
+refused-export: Corpus/coverage/exec/init/quarantined-var-syscall
+refused-export: Corpus/coverage/exec/init/quarantined-var-panicking
+refused-export: Corpus/coverage/exec/init/quarantined-var-writer
+refused-export: Corpus/coverage/exec/init/stdlib-initializer-dependent
+refused-export: Corpus/coverage/exec/init/stdlib-initializer-unregistered
+refused-export: Corpus/coverage/exec/init/user-var-struct-field-unlowerable
+refused-export: Corpus/coverage/exec/interfaces/comma-ok-into-interface
+refused-export: Corpus/coverage/exec/spec-examples-decl/struct-tag-conversion
+refused-export: Corpus/coverage/exec/structs/tag-nested-conversion
+refused-export: Corpus/coverage/exec/unsafe/dot-import
+refused-export: Corpus/coverage/exec/unsafe/layout-ops
+
+## Emitters by function and probed head (probe-sites.py)
+== TWIN (the raft twin assembly)  probes=128
+    29  raft.stepLeader  {'field-get': 29}
+    23  {'name': 'Step', 'package': ''}  {'field-get': 23}
+     6  raft.stepCandidate  {'field-get': 6}
+     6  raft.stepFollower  {'field-get': 6}
+     6  {'name': 'handleAppendEntries', 'package': 'raft'}  {'field-get': 6}
+     4  raft.DescribeConfState  {'field-get': 4}
+     4  {'name': 'loadState', 'package': 'raft'}  {'field-get': 4}
+     3  raft.newRaft  {'field-get': 3}
+     3  {'name': 'send', 'package': 'raft'}  {'field-get': 3}
+     3  {'name': 'CreateSnapshot', 'package': ''}  {'field-get': 3}
+     2  raft.sendMsgReadIndexResponse  {'field-get': 2}
+     2  newTwin  {'field-get': 2}
+     2  {'name': 'CloneMessage', 'package': ''}  {'field-get': 2}
+     2  {'name': 'maybeSendSnapshot', 'package': 'raft'}  {'field-get': 2}
+     2  {'name': 'appendEntry', 'package': 'raft'}  {'index-get': 2}
+     2  {'name': 'restore', 'package': 'raft'}  {'field-get': 2}
+     2  {'name': 'recvAck', 'package': 'raft'}  {'field-get': 2}
+     1  {'name': 'Error', 'package': ''}  {'field-get': 1}
+     1  {'name': 'CloneMessage', 'package': ''}  {'field-get': 1}
+     1  {'name': 'Bootstrap', 'package': ''}  {'field-get': 1}
+     1  {'name': 'findConflict', 'package': 'raft'}  {'field-get': 1}
+     1  {'name': 'nextCommittedEnts', 'package': 'raft'}  {'field-get': 1}
+     1  {'name': 'hasNextCommittedEnts', 'package': 'raft'}  {'field-get': 1}
+     1  {'name': 'commitTo', 'package': 'raft'}  {'field-get': 1}
+     1  {'name': 'restore', 'package': 'raft'}  {'field-get': 1}
+     1  {'name': 'mustCheckOutOfBounds', 'package': 'raft'}  {'field-get': 1}
+     1  {'name': 'maybeCommit', 'package': 'raft'}  {'field-get': 1}
+     1  {'name': 'handleHeartbeat', 'package': 'raft'}  {'field-get': 1}
+     1  {'name': 'resetRandomizedElectionTimeout', 'package': 'raft'}  {'field-get': 1}
+     1  {'name': 'responseToReadIndexReq', 'package': 'raft'}  {'field-get': 1}
+     1  {'name': 'Campaign', 'package': ''}  {'field-get': 1}
+     1  {'name': 'Propose', 'package': ''}  {'field-get': 1}
+     1  {'name': 'ApplyConfChange', 'package': ''}  {'field-get': 1}
+     1  {'name': 'Step', 'package': ''}  {'field-get': 1}
+     1  {'name': 'readyWithoutAccept', 'package': 'raft'}  {'field-get': 1}
+     1  {'name': 'acceptReady', 'package': 'raft'}  {'field-get': 1}
+     1  {'name': 'HasReady', 'package': ''}  {'field-get': 1}
+     1  {'name': 'ReportUnreachable', 'package': ''}  {'field-get': 1}
+     1  {'name': 'ReportSnapshot', 'package': ''}  {'field-get': 1}
+     1  {'name': 'TransferLeader', 'package': ''}  {'field-get': 1}
+     1  {'name': 'ForgetLeader', 'package': ''}  {'field-get': 1}
+     1  {'name': 'ReadIndex', 'package': ''}  {'field-get': 1}
+     1  {'name': 'addRequest', 'package': 'raft'}  {'field-get': 1}
+     1  {'name': 'deliverIdx', 'package': 'main'}  {'field-get': 1}
+== Corpus/coverage/exec/builtins_e13-sibling-panic-order.json  probes=17
+     1  assertReturnList$lit0  {'type-assert': 1}
+     1  assertLeftMakeSlice  {'type-assert': 1}
+     1  assertLeftAppend  {'type-assert': 1}
+     1  assertLeftCopy  {'type-assert': 1}
+     1  ifaceCmpLeftCall  {'binary': 1}
+     1  sendChanIndex  {'index-get': 1}
+     1  convLeftCall  {'index-get': 1}
+     1  tgtAssertVsMake  {'type-assert': 1}
+     1  recoverAssertVsLen$lit0  {'type-assert': 1}
+     1  addrIndexLeftLenHoist  {'index-addr': 1}
+     1  tgtAssertVsMinCall  {'type-assert': 1}
+     1  tgtAssertVsCopyCall  {'type-assert': 1}
+     1  tgtAssertVsAppend  {'type-assert': 1}
+     1  addrAssertLeftCall  {'index-addr': 1}
+     1  arrayBaseTargetVsLen  {'index-addr': 1}
+     1  recoverAssertVsCallW$lit2  {'type-assert': 1}
+     1  bytesConvPayloadVsCall  {'slice': 1}
+== Corpus/coverage/exec/builtins_len-vs-call-order.json  probes=15
+     1  hintPanickyBetween  {'type-assert': 1}
+     1  makeSlicePanickyBetween  {'type-assert': 1}
+     1  makeChanCapPanickyBetween  {'type-assert': 1}
+     1  makeIndexLeft  {'index-get': 1}
+     1  makeInnerLen  {'type-assert': 1}
+     1  makeHintPanicFree  {'type-assert': 1}
+     1  makeHintMapRead  {'type-assert': 1}
+     1  makeHintCall  {'index-get': 1}
+     1  makeHintStructAnyKey  {'type-assert': 1}
+     1  makeHintArrayAnyKey  {'type-assert': 1}
+     1  lenStructAnyKeyLeftAssert  {'type-assert': 1}
+     1  makeNilOnly  {'field-get': 1}
+     1  lexerIdiom  {'field-get': 1}
+     1  makeHintGenericKey[interface {}]  {'type-assert': 1}
+     1  makeHintGenericKey[int]  {'type-assert': 1}
+== Corpus/coverage/exec/channels_recv-edge.json  probes=1
+     1  recvNilIndexBaseSecond$lit0  {'deref': 1}
+== Corpus/coverage/exec/channels_recv-map-elem.json  probes=1
+     1  mapKeyPanicDrains$lit0  {'index-get': 1}
+== Corpus/coverage/exec/fmt_sprintf-dyn.json  probes=1
+     1  {'name': 'Infof', 'package': ''}  {'field-get': 1}
+== Corpus/coverage/exec/imported-goose_generics_generic-conversion.json  probes=1
+     1  genericConversions  {'index-addr': 1}
+== Corpus/coverage/exec/multipkg_mini-raft-twin.json  probes=7
+     2  twinElectProposeCommit  {'field-get': 2}
+     1  newDriver  {'field-get': 1}
+     1  twinPerturbRev  {'field-get': 1}
+     1  twinPerturbPicks  {'field-get': 1}
+     1  twinStarveNode  {'field-get': 1}
+     1  twinDuel  {'field-get': 1}
+== Corpus/coverage/exec/noodler_frontier2_array-of-funcs-indexed-call.json  probes=1
+     1  arrayOfFuncsIndexedCall  {'index-get': 1}
+== Corpus/coverage/exec/noodler_frontier2_typed-nil-error-return.json  probes=1
+     1  typedNilErrorReturn  {'binary': 1}
+== Corpus/coverage/exec/noodler_latitude.json  probes=2
+     1  mapLiteralKeyVsCall  {'index-get': 1}
+     1  rhsListIndexCallIndex  {'index-get': 1}
+== Corpus/coverage/exec/noodler_misc.json  probes=1
+     1  copyIntoArrayView  {'slice': 1}
+== Corpus/coverage/exec/noodler_strings.json  probes=1
+     1  {'name': 'Error', 'package': ''}  {'field-get': 1}
+== Corpus/coverage/exec/panic-recover_shim-refusal-unrecoverable.json  probes=1
+     1  {'name': 'Error', 'package': ''}  {'field-get': 1}
+== Corpus/coverage/exec/slices_copy-min.json  probes=2
+     2  copyMin  {'index-get': 2}
+== Corpus/coverage/exec/spec-examples-stmt_eval-order-calls.json  probes=2
+     1  evalOrderCallsVerbatim  {'index-get': 1}
+     1  evalOrderCallsTracedRecv  {'index-get': 1}
+== Corpus/coverage/exec/stdlib-source_errors-join.json  probes=5
+     2  joinAllNil  {'binary': 2}
+     2  newIsFresh  {'binary': 2}
+     1  joinDistinct  {'binary': 1}
+== Corpus/coverage/exec/stdlib-source_errors-wrap.json  probes=3
+     2  errorsUnwrap  {'binary': 2}
+     1  {'name': 'Error', 'package': ''}  {'field-get': 1}
+== Corpus/coverage/exec/stdlib-source_frontier.json  probes=3
+     1  internal/strconv.pow10  {'index-get': 1}
+     1  slices.Insert[[]int,int]  {'slice': 1}
+     1  {'name': 'Error', 'package': ''}  {'field-get': 1}
+== Corpus/coverage/exec/stdlib-source_strconv-parseuint.json  probes=4
+     3  parseUintNumErrorType  {'field-get': 2, 'binary': 1}
+     1  {'name': 'Error', 'package': ''}  {'field-get': 1}
+== Corpus/coverage/exec/strconv_format-parse.json  probes=1
+     1  {'name': 'Error', 'package': ''}  {'field-get': 1}

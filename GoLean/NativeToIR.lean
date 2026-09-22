@@ -886,6 +886,7 @@ private def unseqOccAllowedKeys : String → Option (List String)
   | "guard" => some ["name", "kind", "test", "when", "out", "after", "region"]
   | "recv" => some ["name", "kind", "binds", "ch", "elem", "after", "region"]
   | "allocate" => some ["name", "kind", "bind", "allocation", "after", "region"]
+  | "wide" => some ["name", "kind", "binds", "wide", "after", "region"]
   | _ => none
 
 /-- An ATOM on the wire (v2.1 §3.1's internal normal form): an identifier —
@@ -1013,6 +1014,16 @@ private def unseqCheckHead (path : String) (head : Json) : LowerM Unit := do
             fail s!"unseq: hidden read in a pure node — {path}.high is neither an atom nor the base's own length (the default high); refused by name"
       if obj.contains "max" then atom "max"
   | "builtin-len" | "builtin-cap" => atom "operand"
+  | "min" | "max" =>
+      -- Stage E5 E5a (2026-09-22): `min`/`max` are E1 participants (reading (a), RATIFIED [USER]
+      -- 2026-09-22) — pure heads over ATOM operands (Expr.minOf/maxOf: ints or strings), their
+      -- `after` edge the lowering's; at least one operand (Go's arity).
+      let args ← StrictJson.array s!"{path}.args" (← StrictJson.field path obj "args")
+      if args.isEmpty then
+        fail s!"unseq: {tag} with no operands at {path} (Go requires at least one); refused by name"
+      for k in [:args.size] do
+        if !unseqIsAtom args[k]! then
+          fail s!"unseq: hidden read in a pure node — {path}.args[{k}] is not an atom (an identifier or an int/bool/string constant; v2.1 §3.1 internal normal form); refused by name"
   | "binary" => do
       let op ← StrictJson.string s!"{path}.op" (← StrictJson.field path obj "op")
       if op == "&&" || op == "||" then
@@ -1059,7 +1070,7 @@ private def unseqCheckHead (path : String) (head : Json) : LowerM Unit := do
       -- Stage E E4: a VALUE struct literal over PAYLOADS (atoms, boxed atoms, zero values).
       unseqCheckStructLit path head
   | other =>
-      fail s!"unseq: head '{other}' at {path} is outside the admitted fragment (admitted heads: ident, a constant (int/bool/string), index-get, slice, builtin-len, builtin-cap, binary, unary, type-assert, deref, field-get, map-get, convert and the string/byte/rune conversion forms, struct-lit); refused by name"
+      fail s!"unseq: head '{other}' at {path} is outside the admitted fragment (admitted heads: ident, a constant (int/bool/string), index-get, slice, builtin-len, builtin-cap, min, max, binary, unary, type-assert, deref, field-get, map-get, convert and the string/byte/rune conversion forms, struct-lit); refused by name"
 
 /-- Stage E audit fix round F2 (2026-09-21): a `ref` whose `id` is a reserved `$` slot names a
 GRAPH CELL — an address through which a callee could WRITE a binder (a cell is written only by
@@ -2031,7 +2042,7 @@ partial def decodeUnseq (results : Array Param) (path : String) (obj : StrictJso
     let kind ← StrictJson.string s!"{opath}.kind" (← StrictJson.field opath o "kind")
     match unseqOccAllowedKeys kind with
     | some allowed => checkAllowedKeys opath o allowed
-    | none => fail s!"unseq: unknown occurrence kind '{kind}' at {opath} (eval | invoke | target | load | guard | recv | allocate); refused by name"
+    | none => fail s!"unseq: unknown occurrence kind '{kind}' at {opath} (eval | invoke | target | load | guard | recv | allocate | wide); refused by name"
     let name ← StrictJson.string s!"{opath}.name" (← StrictJson.field opath o "name")
     if name.isEmpty then
       fail s!"unseq: empty occurrence name at {opath}; refused by name"
@@ -2218,6 +2229,55 @@ partial def decodeUnseq (results : Array Param) (path : String) (obj : StrictJso
             | other =>
                 fail s!"unseq: allocation '{name}' at {apath}: statement '{other}' is outside the admitted fragment (new | make-slice | make-map | make-chan | slice-lit); refused by name"
           pure (UnseqBody.allocate bind spec)
+      | "wide" => do
+          -- Stage E5 E5a (2026-09-22): a WIDE built-in occurrence — `append` / `copy` (the comma-ok
+          -- `map-lookup` / `type-assert` join at E5b) — the hoisted wide statement's shape with the
+          -- binder cells as its targets; every operand an already-evaluated ATOM (never `ref` of a
+          -- binder cell — audit F2); the cells' types = the statement's result types (the slice type
+          -- for append, `int` for copy's count); exactly the statement's arity of binders
+          -- (`UnseqGraph.wellFormed?` checks it again at ENTER).
+          let bindsJ ← StrictJson.array s!"{opath}.binds" (← StrictJson.field opath o "binds")
+          let binds ← bindsJ.toList.mapIdxM (fun j b => StrictJson.string s!"{opath}.binds[{j}]" b)
+          let wpath := s!"{opath}.wide"
+          let wJ ← StrictJson.field opath o "wide"
+          if jsonMentionsRecover wJ then
+            fail s!"unseq: recover() in a wide built-in at {wpath}; refused by name"
+          let w ← StrictJson.obj wpath wJ
+          let tag ← StrictJson.string s!"{wpath}.stmt" (← StrictJson.field wpath w "stmt")
+          let atomField (key : String) : LowerM Expr := do
+            let j ← StrictJson.field wpath w key
+            if let some id := unseqRefOfBinder? j then
+              fail s!"unseq: a wide built-in operand at {wpath}.{key} takes the address of a binder cell '{id}' — a graph cell is written only by its producer (audit F2, 2026-09-21); refused by name"
+            if !unseqIsAtom j then
+              fail s!"unseq: hidden read in a wide built-in — {wpath}.{key} is not an atom (an identifier or an int/bool/string constant; the statement's operands are already evaluated, v2.1 §3.1); refused by name"
+            decodeExpr s!"{wpath}.{key}" j
+          let oneBind (what : String) : LowerM String := do
+            match binds with
+            | [b] => pure b
+            | _ => fail s!"unseq: wide built-in '{name}' ({what}) with {binds.length} results at {opath}; the statement writes exactly one; refused by name"
+          let spec ← match tag with
+            | "append" => do
+                checkAllowedKeys wpath w ["stmt", "elem", "slice", "elems"]
+                let elemTy ← decodeTy s!"{wpath}.elem" (← StrictJson.field wpath w "elem")
+                let slice ← atomField "slice"
+                let elems ← atomField "elems"
+                let b ← oneBind "append"
+                let cty ← cellTy b
+                if cty != .slice elemTy then
+                  fail s!"unseq: wide append '{name}' at {wpath} yields {repr (Ty.slice elemTy)} but cell '{b}' is declared {repr cty}; refused by name"
+                pure (WideSpec.append elemTy slice elems)
+            | "copy" => do
+                checkAllowedKeys wpath w ["stmt", "dst", "src"]
+                let dst ← atomField "dst"
+                let src ← atomField "src"
+                let b ← oneBind "copy"
+                let cty ← cellTy b
+                if cty != .int .int then
+                  fail s!"unseq: wide copy '{name}' at {wpath} yields int (the copied count) but cell '{b}' is declared {repr cty}; refused by name"
+                pure (WideSpec.copy dst src)
+            | other =>
+                fail s!"unseq: wide built-in '{name}' at {wpath}: statement '{other}' is outside the admitted fragment (append | copy); refused by name"
+          pure (UnseqBody.wide binds spec)
       | other => fail s!"unseq: unknown occurrence kind '{other}' at {opath}; refused by name"
     occs := occs.push { name, body, after, region }
   -- stores

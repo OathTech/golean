@@ -16,7 +16,8 @@
 # statement kind outside the fragment; 33 since the Stage E audit fix round, 2026-09-21 —
 # `ref` of a binder cell as an argument / a capture (F2), `new`'s value typed against the
 # element type (F1), a slice literal's index out of range / duplicated and a constant make
-# size Go rejects at compile time (F3)), while the untouched W1 wire runs (the canonical
+# size Go rejects at compile time (F3); 38 since Stage E5 E5a, 2026-09-22 — the `wide` kind's statement tag,
+# a non-atom operand, the binder arity, the result cell's type, a non-atom `min` operand), while the untouched W1 wire runs (the canonical
 # tape gives 2: mut first). Fail closed on a missing binary, a failed
 # regeneration, a decoded mutant or a refusal that does not name its cause.
 set -Eeuo pipefail

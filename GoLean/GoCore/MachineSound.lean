@@ -1376,6 +1376,10 @@ theorem stepUnseqNext_sound {s : Store} {g : UnseqGraph} {thenB : Stmt}
         simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl, rfl, rfl⟩ := h
         exact Step.unseqRunAlloc hget hbody
+      · rename_i binds spec hbody
+        simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl, rfl, rfl⟩ := h
+        exact Step.unseqRunWide hget hbody
       · rename_i bind tgt hbody
         simp only [bind_eq_ok] at h
         obtain ⟨r, hres, h⟩ := h
@@ -1414,6 +1418,10 @@ theorem stepUnseqNext_sound {s : Store} {g : UnseqGraph} {thenB : Stmt}
         simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl, rfl, rfl⟩ := h
         exact Step.unseqAllocDone hget hbody
+      · rename_i binds spec hbody
+        simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl, rfl, rfl⟩ := h
+        exact Step.unseqWideDone hget hbody
       · simp [throw, throwThe, MonadExceptOf.throw] at h
 
 
@@ -1484,6 +1492,10 @@ theorem stepUnseqNext_run_wait_stream {s : Store} {g : UnseqGraph} {thenB : Stmt
         simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl, rfl, rfl⟩ := h
         exact ⟨rfl, fun ch₂ => by simp [stepUnseqNext, hget, hbody]⟩
+      · rename_i binds spec hbody
+        simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl, rfl, rfl⟩ := h
+        exact ⟨rfl, fun ch₂ => by simp [stepUnseqNext, hget, hbody]⟩
       · rename_i bind tgt hbody
         simp only [bind_eq_ok] at h
         obtain ⟨r, hres, h⟩ := h
@@ -1519,6 +1531,10 @@ theorem stepUnseqNext_run_wait_stream {s : Store} {g : UnseqGraph} {thenB : Stmt
         obtain ⟨rfl, rfl, rfl, rfl⟩ := h
         exact ⟨rfl, fun ch₂ => by simp [stepUnseqNext, hget, hbody]⟩
       · rename_i bind spec hbody
+        simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl, rfl, rfl⟩ := h
+        exact ⟨rfl, fun ch₂ => by simp [stepUnseqNext, hget, hbody]⟩
+      · rename_i binds spec hbody
         simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl, rfl, rfl⟩ := h
         exact ⟨rfl, fun ch₂ => by simp [stepUnseqNext, hget, hbody]⟩
@@ -2356,6 +2372,9 @@ theorem step_complete {c : Config} {s : Store} {c' : Config} {s' : Store} {tr : 
   case unseqRunAlloc =>
     rename_i g thenB st tg env k o bind spec i hget hbody
     exact ⟨[], [], by simp [stepFn, stepUnseqNext, hget, hbody]⟩
+  case unseqRunWide =>
+    rename_i g thenB st tg env k o binds spec i hget hbody
+    exact ⟨[], [], by simp [stepFn, stepUnseqNext, hget, hbody]⟩
   case unseqRunLoad =>
     rename_i g thenB st tg env k o bind tgt r i hget hbody hres hdel
     rcases toResult_cases hres with ⟨⟨s₂, tr₂⟩, rfl, hX⟩ | ⟨msg, rfl, hX⟩
@@ -2384,6 +2403,9 @@ theorem step_complete {c : Config} {s : Store} {c' : Config} {s' : Store} {tr : 
     exact ⟨[], [], by simp [stepFn, stepUnseqNext, hget, hbody]⟩
   case unseqAllocDone =>
     rename_i g thenB st tg env k o bind spec i hget hbody
+    exact ⟨[], [], by simp [stepFn, stepUnseqNext, hget, hbody]⟩
+  case unseqWideDone =>
+    rename_i g thenB st tg env k o binds spec i hget hbody
     exact ⟨[], [], by simp [stepFn, stepUnseqNext, hget, hbody]⟩
   all_goals
     exact ⟨[], [], by simp_all [stepFn, stepFrameExit, Bind.bind, Except.bind, valueAsBool]⟩
@@ -4820,6 +4842,8 @@ theorem step_complete_any_wf_aux {c : Config} {σ : Store} {c' : Config}
     simp [stepFn, stepUnseqNext, hget, hbody]
   case unseqRunAlloc g thenB st tg env k o bind spec i hget hbody =>
     simp [stepFn, stepUnseqNext, hget, hbody]
+  case unseqRunWide g thenB st tg env k o binds spec i hget hbody =>
+    simp [stepFn, stepUnseqNext, hget, hbody]
   case unseqRunLoad g thenB st tg env k o bind tgt r i hget hbody hres hdel =>
     rcases toResult_cases hres with ⟨⟨s₂, tr₂⟩, rfl, hX⟩ | ⟨msg, rfl, hX⟩
     · obtain ⟨c, hpl, hc⟩ := unseqLoad_inv_ok hX
@@ -4844,6 +4868,8 @@ theorem step_complete_any_wf_aux {c : Config} {σ : Store} {c' : Config}
   case unseqRecvDone g thenB st tg env k o binds ch elem i hget hbody =>
     simp [stepFn, stepUnseqNext, hget, hbody]
   case unseqAllocDone g thenB st tg env k o bind spec i hget hbody =>
+    simp [stepFn, stepUnseqNext, hget, hbody]
+  case unseqWideDone g thenB st tg env k o binds spec i hget hbody =>
     simp [stepFn, stepUnseqNext, hget, hbody]
   all_goals simp_all [stepFn, stepFrameExit, Bind.bind, Except.bind, valueAsBool]
 

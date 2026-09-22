@@ -426,6 +426,27 @@ inductive AllocSpec where
   | sliceLit (elem : Ty) (len : Nat) (elems : List (Int × Expr))
   deriving Repr, BEq, Inhabited
 
+/-- The WIDE STATEMENT a `wide` occurrence performs (Stage E5 E5a, 2026-09-22): the
+built-in operations with one or two results that the machine models as WIDE
+statements (`stmtPlan`'s mold — `Stmt.appendSlice`, `Stmt.copySlice`; the
+comma-ok `Stmt.mapLookup` / `Stmt.typeAssert` join at E5b) rather than as
+expression heads. READING (a) — RATIFIED [USER] 2026-09-22 (relayed): the
+built-ins are the «function calls» of spec#Order_of_evaluation's ordering
+sentence (spec#Built-in_functions «called like any other function»), so
+`append`/`copy` are E1 participants carrying `after` edges; both are EFFECTFUL
+(the append's in-place element store, the copy's destination write). Every
+operand is an already-evaluated ATOM (the decoder's check); expression payloads
+only, no statement nests inside a body. -/
+inductive WideSpec where
+  | append (elem : Ty) (slice elems : Expr)
+  | copy (dst src : Expr)
+  deriving Repr, BEq, Inhabited
+
+/-- The result arity a wide statement writes (its predeclared binders). -/
+def WideSpec.arity : WideSpec → Nat
+  | .append .. => 1
+  | .copy .. => 1
+
 /-- An occurrence's BODY — the bounded Stage B fragment of the v2.1 §3.1
 kind table (the internal normal form: every operand of a head is a
 constant, an explicitly admitted stable read of a source local, or a slot
@@ -465,6 +486,16 @@ inductive UnseqBody where
   (spec#Built-in_functions «called like any other function») and carry E1
   `after` edges like `len`/`cap`. -/
   | allocate (bind : String) (spec : AllocSpec)
+  /-- WIDE built-in (Stage E5 E5a, 2026-09-22): ONE built-in operation the
+  machine models as a wide statement — `append`, `copy` (E5b: the comma-ok
+  lookup and assertion) — its results routed to the predeclared binders
+  `binds` (`WideSpec.arity` of them); the body runs the hoisted statement with
+  the cells as its targets, like `invoke` runs `callValue` and `allocate` its
+  allocation. An E1 participant (reading (a)) carrying `after` edges; the
+  effectful ones (`append`, `copy`) count toward the trigger like a call.
+  [AGENT] choice, PENDING [USER] ratification at the merge ask (design
+  `docs/2026-09-22_unseq-stage-e5-design.md` §E5a — alternatives named there). -/
+  | wide (binds : List String) (spec : WideSpec)
   /-- TARGET PLAN: a target's identity from FROZEN operand values — the
   assignee's operands are atoms (slots, `&local`, constants) resolved in
   one step through the machine's own `targetPlan`/`completeTargetRef`;

@@ -1,0 +1,81 @@
+# GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff at the E5a tree (main d76721bd + the E5a edits, the worktree dirty with exactly them), under the box-wide lock 2026-09-22T01:34:42Z–01:50:53Z: EXIT=1 in 971 s; RESULT FAIL on EXACTLY the two 5a-class items (certificate provenance STALE for the changed core input GoLean/GoCore/AdmissionIndices.lean; the ONE drift line imported-goose/channel/google-search PASS/membership -> FAIL/membership, its detail the same STALE certification — under --diff no fresh re-certification runs; the train's step 5a does, with --slow). 3738 rows 3502 PASS / 236 FAIL in the run = the pin 3503 / 235 with that one row red. ANSI stripped; the step/verdict lines, the provenance verdict, the drift block and the run summary.
+
+## the provenance verdict
+Certification control PASS: current entry drift -> STALE certification case metadata
+Certification control PASS: complete confluent cache branch with real oracle and coupling
+Certification control PASS: complete confluent cache branch refuses stale inputs by name
+Certification control PASS: both consumers clean after controls; root inputs unchanged
+certification-controls PASS; scratch removed (95188843 owned bytes; dependencies symlinked)
+Certification controls: 68 PASS; wall_seconds=62.316
+certification: STALE certification: changed dependency build/files/GoLean/GoCore/AdmissionIndices.lean
+Certificate provenance wall seconds: 74
+
+── core totality audit (every GoLean/ module post-import: classical trio only, required core theorems, compiled poison controls)
+Build completed successfully (32 jobs).
+
+## the differential summary
+differential coverage summary: cases=3738 pass=3502 fail=236 export_status=0
+results: artifacts/coverage/latest.tsv
+
+## the drift block and the reconciler
+
+── differential baseline diff (scripts/coverage-baseline-diff)
+DRIFT vs baselines/native-full.tsv (3738 case(s) run):
+imported-goose/channel/google-search	baseline[PASS/membership] -> now[FAIL/membership]
+
+── baseline re-pin guard (worktree-vs-HEAD; flips must be on a BUGS.md Cases: line)
+
+── cross-ledger reconciliation (tools/reconcile-records — REPORT-ONLY, informs, never fails the gate)
+  [01] C9  HIGH    certificate provenance: STALE certification: changed dependency build/files/GoLean/GoCore/AdmissionIndices.lean
+  [02] C13  MEDIUM  79 doc site(s) across 10 file(s) name a patch-level Go version other than the pin (go1.25.13/go1.26.5 per docs/spec-sources.md). Some are legitimately historical; a toolchain/oracle claim off the pin is not, because the pin's whole job is that the spec text and the thing that pro
+
+── executed library coverage (all named build receipts from this CI invocation)
+
+## the step lines
+══ scripts/ci summary ══
+  ok   Tests/library ownership (no exceptions; executed builds checked at exit)
+  note build parallelism: cap 48G -> LEAN_NUM_THREADS=6 (cap/8G, floor 2; 32 cores on this box)
+  ok   oracle toolchain (go1.26.5 = pin)
+  ok   escape-hatch preflight
+  ok   meta-layer escape hatches (allowlist empty since the repo split)
+  ok   escape-hatch addendum (no decide +native / native-config spellings)
+  ok   bug-index cross-check
+  ok   feature-coverage (no dead tags)
+  ok   spec-anchor citations resolve at the pin
+  ok   stdlib admission register = frontend tables
+  ok   lane-validation fixtures (manifest gates reject bad shapes)
+  ok   evidence-on-main size gate
+  ok   AGENTS.md alias of CLAUDE.md
+  ok   imported-goose verbatim (above-marker bytes = pinned upstream)
+  ok   engine-isolation (core ↛ EnumDedup)
+  ok   memory-module raw call-site inventory (emit/peek discipline)
+  ok   core build (warning-free)
+  FAIL certificate provenance
+  ok   core totality audit (every GoLean/ module; required core theorems; poison controls)
+  ok   admission checker proofs and post-import audit
+  ok   declaration boundary
+  ok   wire boundary (byte-level controls through the real CLI)
+  ok   package-correct method identity
+  ok   unseq scheduler (Stage B)
+  ok   unseq wire (Stage C)
+  ok   frontend pins (realized init-order deviation + twin wire = pinned bytes)
+  ok   import-goose fixtures (importer + verbatim guard reject bad shapes)
+  ok   frontend unit tests
+  ok   lowering-diagnostic tables
+  ok   coverage-harness unit tests
+  ok   eval tests (274 ok)
+  ok   differential run completed (exit 1; failing-set judged by baseline diff)
+  ok   lane-validation fixtures incl. harness half (F4/F6/B3-B5/G5/T1-T8/D1-D6)
+  ok   negative run completed (exit 0; set judged by baseline diff)
+  ok   Tests/FloatVectors.lean = fresh hardware-oracle regeneration (byte-exact)
+  ok   inittask-std.tsv = fresh gc-derived regeneration (header at pin; byte-exact modulo date line)
+  note negative baseline diff matched (394 case(s)) but the record was made on a DIRTY tree (git_dirty=true) — certifies that worktree state, not a commit
+  FAIL baseline diff (DRIFT — see above)
+  ok   re-pin guard (0 PASS→non-PASS flip(s), all listed in BUGS.md Cases)
+  note reconciler: 2 finding(s), 1 HIGH — report-only (details: tools/reconcile-records)
+  ok   executed library coverage (all declared libraries; all Tests modules)
+
+RESULT: FAIL
+Failed CI receipts retained: /home/dev/projects/golean/.claude/worktrees/unseq-stage-e5/.tmp/ci-libraries-pom2sjld
+CI coverage timing: close: seconds=0.012
+CI total wall seconds: 971

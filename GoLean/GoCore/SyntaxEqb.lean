@@ -428,6 +428,22 @@ theorem AllocSpec.eqbF_sound (f : Nat) :
       (fun _ _ hh => eqbProdP_sound (fun _ _ k => eq_of_beq k) (Expr.eqbF_sound f) hh) h3
     rfl
 
+def WideSpec.eqbF (f : Nat) : WideSpec → WideSpec → Bool
+  | .append e1 s1 x1, .append e2 s2 x2 => Ty.eqb e1 e2 && Expr.eqbF f s1 s2 && Expr.eqbF f x1 x2
+  | .copy d1 s1, .copy d2 s2 => Expr.eqbF f d1 d2 && Expr.eqbF f s1 s2
+  | _, _ => false
+
+theorem WideSpec.eqbF_sound (f : Nat) :
+    ∀ (a b : WideSpec), WideSpec.eqbF f a b = true → a = b := by
+  intro a b h
+  cases a <;> cases b <;> (try exact Bool.noConfusion h)
+  case append.append e1 s1 x1 e2 s2 x2 =>
+    obtain ⟨h1, h2, h3⟩ := andSplit3 h
+    cases Ty.eqb_sound h1; cases Expr.eqbF_sound _ _ _ h2; cases Expr.eqbF_sound _ _ _ h3; rfl
+  case copy.copy d1 s1 d2 s2 =>
+    obtain ⟨h1, h2⟩ := andSplit2 h
+    cases Expr.eqbF_sound _ _ _ h1; cases Expr.eqbF_sound _ _ _ h2; rfl
+
 def UnseqBody.eqbF (f : Nat) : UnseqBody → UnseqBody → Bool
   | .eval b1 h1, .eval b2 h2 => b1 == b2 && Expr.eqbF f h1 h2
   | .load b1 t1, .load b2 t2 => b1 == b2 && t1 == t2
@@ -435,6 +451,7 @@ def UnseqBody.eqbF (f : Nat) : UnseqBody → UnseqBody → Bool
       bs1 == bs2 && Expr.eqbF f c1 c2 && eqbListP (Expr.eqbF f) a1 a2
   | .recv bs1 c1 e1, .recv bs2 c2 e2 => bs1 == bs2 && Expr.eqbF f c1 c2 && Ty.eqb e1 e2
   | .allocate b1 s1, .allocate b2 s2 => b1 == b2 && AllocSpec.eqbF f s1 s2
+  | .wide bs1 s1, .wide bs2 s2 => bs1 == bs2 && WideSpec.eqbF f s1 s2
   | .target b1 l1, .target b2 l2 => b1 == b2 && Assignee.eqbF f l1 l2
   | .guard t1 w1 o1, .guard t2 w2 o2 => t1 == t2 && w1 == w2 && o1 == o2
   | _, _ => false
@@ -459,6 +476,9 @@ theorem UnseqBody.eqbF_sound (f : Nat) :
   case allocate.allocate b1 s1 b2 s2 =>
     obtain ⟨h1, h2⟩ := andSplit2 h
     cases eq_of_beq h1; cases AllocSpec.eqbF_sound _ _ _ h2; rfl
+  case wide.wide bs1 s1 bs2 s2 =>
+    obtain ⟨h1, h2⟩ := andSplit2 h
+    cases eq_of_beq h1; cases WideSpec.eqbF_sound _ _ _ h2; rfl
   case target.target b1 l1 b2 l2 =>
     obtain ⟨h1, h2⟩ := andSplit2 h
     cases eq_of_beq h1; cases Assignee.eqbF_sound _ _ _ h2; rfl

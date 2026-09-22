@@ -569,7 +569,22 @@ than as speculative cases.)
 
 ## 8. Counts and the closing arithmetic
 
-All numbers at the current tracked baseline (3732 cases, 3497 PASS / 235 FAIL; [AGENT] worker, lane
+All numbers at the current tracked baseline (3738 cases, 3503 PASS / 235 FAIL; [AGENT] worker, lane
+`core/unseq-stage-e5-0922` — STAGE E5 of the evaluation-order model v2.1, family E5a: the READING-(a) BUILT-INS
+`min`/`max`/`copy`/`append` as E1 participants (RATIFIED [USER] 2026-09-22, relayed; design
+`docs/2026-09-22_unseq-stage-e5-design.md` §E5a; handoff `docs/2026-09-22_unseq-stage-e5-handoff.md`); measured by
+`scripts/diff-one` on all 12 affected rows before the pin and by the full `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci
+--diff` at the E5a tree — the gate line in `docs/evidence/2026-09-22_unseq-stage-e5/README.md`). The delta over the
+fix-round tally (§8ae, 3732 = 3497 / 235): 6 rows BORN in `evalorder/unseq-builtins`, nothing else moved —
+`min-vs-call` PASS strict (6: x's read inside min's window forced before m — reading (a)'s control, gc 6),
+`min-read-vs-call` PASS/membership {7, 16} (gc 16), `append-read-vs-call` PASS/membership {6, 15} (the in-place append
+E1-ordered before m, the result's read vs m; gc 15), `copy-effect-vs-read` PASS/membership {2, 9} (the copy's write vs
+the sibling checked read; gc 9), `append-spread-str-vs-call` PASS/membership {9, 18} (gc 18), `copy-stmt-control` PASS
+strict (78); the five `builtins/e13-sibling-panic-order` rows whose sweeps enter the graph keep their 2-member sets,
+`slices/copy-min` stays strict. 3732 + 6 = 3738; 3497 + 6 = 3503; 235 unchanged. No other result/stage movement, no
+removal, no widened pin, no PASS → non-PASS. Reds table unchanged: 128 + 9 + (24 + 1) + 7 + 66 = 235 ✓. Movement §8af.
+
+Previous tally, then current (3732 cases, 3497 PASS / 235 FAIL; [AGENT] worker, lane
 `core/unseq-stage-e-0921` — the STAGE E ADVERSARIAL AUDIT'S FIX ROUND (`docs/2026-09-21_unseq-stage-e-audit.md`,
 verdict FIX-FIRST; dispositions `docs/2026-09-21_unseq-stage-e-handoff.md` §5; design
 `docs/2026-09-21_unseq-stage-e-design.md` §E4 «the audit fix round»); measured by `scripts/diff-one` on all 87
@@ -2411,6 +2426,31 @@ tallied by row:
   twin 10 203 sweeps, 0 admitted, pin byte-identical. No lane move, no widened pin, no PASS → non-PASS.
 - Reds table: post-vintage 72 → 70; 133 + 9 + (24 + 1) + 7 + 70 = 244 ✓. FR-28's cell unchanged (the
   BUG-102 designed reds are E4's).
+
+### 8af. Movement at Stage E5 of the evaluation-order model v2.1, family E5a — the reading-(a) built-ins (2026-09-22, lane `core/unseq-stage-e5-0922`; on main `d76721bd`)
+
+[AGENT] worker. Design `docs/2026-09-22_unseq-stage-e5-design.md` §E5a; evidence
+`docs/evidence/2026-09-22_unseq-stage-e5/` (`census-e5a.txt`, `census-newly-admitted-e5a.tsv`, `probes-e5a.txt`,
+`diff-one-e5a.txt`, `gc-draws-e5a.txt`, the gate tail). Tracked figure 3732 = 3497 / 235 → 3738 = 3503 / 235 (re-pin
+reason in the baseline header). Movement, tallied by row:
+
+- BORN 6, all PASS (`Corpus/coverage/exec/evalorder/unseq-builtins/`): `min-vs-call` strict (`min(x, 100) + m()`, m
+  writing the captured x — x's read inside min's window is forced before m under reading (a): 6; gc 6 on 20/20),
+  `min-read-vs-call` membership {7, 16} (`min(x, 100) + y + m()`: min first, y's read vs m; gc 16), `append-read-vs-call`
+  membership {6, 15} (`append(s, 3)[0] + m()`, s with capacity: the in-place append E1-ordered before m, its result's
+  [0] read vs m; gc 15), `copy-effect-vs-read` membership {2, 9} (`d[0] + copy(d, s)`: the copy's write vs the sibling
+  checked read; gc 9), `append-spread-str-vs-call` membership {9, 18} (`len(append(b, "xy"...)) + x + m()`, the spread
+  string a bytes-from-string head inside append's window, the base under capacity so no `appendSpill` pick joins — a
+  full base was REFUTED by name at width 2, site bound 30; gc 18), `copy-stmt-control` strict (`copy(d, f())`, 78 —
+  admitted through the header read vs f, one observation).
+- UNCHANGED though newly admitted: `builtins/e13-sibling-panic-order/{assert-left-append,assert-left-copy,
+  tgt-assert-vs-min-call,tgt-assert-vs-copy-call,tgt-assert-vs-append}` — 2-member sets reproduced by the graph (the
+  assertion vs the index panic inside the built-in's window, or vs `wit`); `slices/copy-min` strict (wide=5).
+- No flip, no lane move, no removal: `scripts/diff-one` on the 12 affected rows — 12 PASS; the census 131 → 137
+  admitted (+6, 0 lost; the twin 0); legacy probe emissions 70 → 63 in the corpus (e13 17 → 12, copy-min 2 → 0), the
+  twin 128 unchanged (E6 not reachable — handoff §3).
+- The core gains ONE occurrence kind (`UnseqBody.wide` over `WideSpec`: append | copy; two Step rules) — [AGENT] choice,
+  PENDING [USER] ratification; five new wire mutants (33 → 38), all refused by name through the CLI.
 
 ### 8ae. Movement at the Stage E audit fix round (2026-09-21, lane `core/unseq-stage-e-0921`; rebased onto main `769bbf23`)
 

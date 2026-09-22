@@ -1,0 +1,7 @@
+dir	unit	file:line	function	form	events	calls	nonEvents	former-reason
+Corpus/coverage/exec/builtins/e13-sibling-panic-order	main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:102	assertLeftCopy	return	1	1	3	builtin copy
+Corpus/coverage/exec/builtins/e13-sibling-panic-order	main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:416	tgtAssertVsMinCall	elem-assign	2	1	3	builtin min
+Corpus/coverage/exec/builtins/e13-sibling-panic-order	main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:425	tgtAssertVsCopyCall	elem-assign	2	2	2	builtin copy
+Corpus/coverage/exec/builtins/e13-sibling-panic-order	main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:433	tgtAssertVsAppend	elem-assign	3	2	2	builtin append
+Corpus/coverage/exec/builtins/e13-sibling-panic-order	main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:93	assertLeftAppend	return	3	2	2	builtin append
+Corpus/coverage/exec/slices/copy-min	main	Corpus/coverage/exec/slices/copy-min/main.go:10	copyMin	define	1	1	2	builtin copy

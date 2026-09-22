@@ -142,6 +142,28 @@ E4g *new(m()) + x + h() + g() (m inside new; x unordered vs the calls; the E4 ca
 E4h string(b) + m(), b aliased by c, m writes c[0] (the conversion reads the backing array): outcome set = ['ab', 'zb']
    trajectories per outcome: [('ab', 1), ('zb', 1)]
    canonical (slot 0): Conv E_m Op -> ab
+E5a1 min(x, 100) + m() (min an E1 participant: x forced before m): outcome set = [6]
+   trajectories per outcome: [(6, 1)]
+   canonical (slot 0): R_x E_min E_m Op -> 6
+   forbidden hybrid absent: 15
+E5a2 append(s, 3)[0] + m() (append in place, E1-ordered; the result read vs m): outcome set = [6, 15]
+   trajectories per outcome: [(6, 1), (15, 1)]
+   canonical (slot 0): E_app E_m Rd Op -> 15
+E5a3 d[0] + copy(d, s) (copy effectful, E1-ordered; the sibling read vs its write): outcome set = [2, 9]
+   trajectories per outcome: [(2, 1), (9, 1)]
+   canonical (slot 0): R_d0 E_copy Op -> 2
+E5a4 x[iv.(int)] = min(q, t[k]) + wit(5) (E13 tgt-assert-vs-min-call: the assertion vs the index panic inside min): outcome set = [('panic', 'index out of range [9] with length 2', ()), ('panic', 'interface conversion: interface {} is string, not int', ())]
+   trajectories per outcome: [(('panic', 'index out of range [9] with length 2', ()), 1), (('panic', 'interface conversion: interface {} is string, not int', ()), 1)]
+   canonical (slot 0): A -> ('panic', 'interface conversion: interface {} is string, not int', ())
+E5a5 min(x, 100) + y + m() (min a pure E1 participant; y captured, read vs m): outcome set = [7, 16]
+   trajectories per outcome: [(7, 4), (16, 1)]
+   canonical (slot 0): E_min E_m R_y Op1 Op2 -> 16
+E5a6 x[iv.(int)] = copy(d, s) + wit(5) (E13 tgt-assert-vs-copy-call: the assertion vs copy, wit): outcome set = [('panic', ()), ('panic', ('wit 5',))]
+   trajectories per outcome: [(('panic', ()), 2), (('panic', ('wit 5',)), 2)]
+   canonical (slot 0): A -> ('panic', ())
+E5a7 len(append(b, "xy"...)) + x + m() (a spread string; append, len, m E1-ordered; x vs them): outcome set = [9, 18]
+   trajectories per outcome: [(9, 8), (18, 1)]
+   canonical (slot 0): Conv E_app E_len E_m R_x Op1 Op2 -> 18
 C1 f(g()): outcome set = [8]
    trajectories per outcome: [(8, 1)]
    canonical (slot 0): E_g E_f -> 8

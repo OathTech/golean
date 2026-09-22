@@ -1,0 +1,131 @@
+# The whole-sweep census BEFORE E5 — main dc5de785's frontend (== d76721bd's: records-only commits between), over every Corpus/coverage/exec/**/cases.tsv directory (1360 packages) + the raft twin assembly; producer .tmp/census/run.sh + summarize.py (Stage E's scripts).
+
+corpus sweeps 108102  admitted 131  packages-with-admitted 32  refused-packages 0
+admitted units: [('main', 131)]
+admitted by form: [('return', 78), ('compound', 22), ('elem-assign', 8), ('call-stmt', 8), ('define', 8), ('print-stmt', 3), ('map-assign', 2), ('deref-assign', 1), ('assign', 1)]
+admitted per package:
+    43 Corpus/coverage/exec/builtins/e13-sibling-panic-order
+    13 Corpus/coverage/exec/evalorder/unseq-pilot
+     9 Corpus/coverage/exec/noodler/latitude
+     8 Corpus/coverage/exec/evalorder/unseq-conv-alloc
+     7 Corpus/coverage/exec/noodler/evalorder
+     6 Corpus/coverage/exec/evalorder/unseq-ptr-field-map
+     5 Corpus/coverage/exec/spec-examples-decl/select-forms
+     4 Corpus/coverage/exec/builtins/len-vs-call-order
+     4 Corpus/coverage/exec/evalorder/unseq-recv-method
+     3 Corpus/coverage/exec/evalorder/legacy-logical-vs-call
+     3 Corpus/coverage/exec/evalorder/unseq-globals
+     3 Corpus/coverage/exec/noodler/maps
+     2 Corpus/coverage/exec/binop-order/operand-panic-vs-call
+     2 Corpus/coverage/exec/noodler/methods
+     2 Corpus/coverage/exec/spec-examples-stmt/continue-label
+     1 Corpus/coverage/exec/channels/make-edge
+     1 Corpus/coverage/exec/channels/recv-edge
+     1 Corpus/coverage/exec/evalorder/unseq-const-cell
+     1 Corpus/coverage/exec/goroutines/fork-join
+     1 Corpus/coverage/exec/goroutines/worker-pool
+     1 Corpus/coverage/exec/init/stdlib-initializer-dependent
+     1 Corpus/coverage/exec/maps/compound-assign-eval-once
+     1 Corpus/coverage/exec/methods/nil-receiver
+     1 Corpus/coverage/exec/multi-assign/index-target-rhs-call-order
+     1 Corpus/coverage/exec/noodler/arith
+     1 Corpus/coverage/exec/noodler/frontier/pointer-to-pointer-chains
+     1 Corpus/coverage/exec/noodler/gotchas
+     1 Corpus/coverage/exec/pointers/deref-target-rhs-call-order
+     1 Corpus/coverage/exec/race/negative-sync
+     1 Corpus/coverage/exec/scoping/closure-shadow-binding
+     1 Corpus/coverage/exec/spec-examples-decl/conversion-parse-forms
+     1 Corpus/coverage/exec/sync/out-of-scope-cond
+top legacy reasons:
+   35612 no call occurrence (legacy path: nothing with an effect to reorder against)
+   33379 statement form outside the pilot grammar
+    4218 multi-target or tuple assignment
+    4147 callee outside the main package
+    2910 method callee outside the main package
+    1994 no non-event occurrence beside the call(s) (legacy path: every edge forced)
+    1768 bare return
+    1495 result type outside the pilot grammar (error)
+    1398 builtin append
+    1308 slice expression on a non-slice base (string)
+    1137 builtin panic statement
+    1129 index of a non-slice base (string)
+    1123 qualified function callee (imported source package)
+    1050 generic function callee
+     988 len of a non-slice operand (string)
+     586 captured target written through its pointer parameter (lifted body)
+     499 index of a non-slice base ([256]uint8)
+     450 index of a non-slice base (untyped string)
+     408 result type outside the pilot grammar (S)
+     399 blank target
+     399 field selector on a struct type outside the grammar (bytes.Buffer)
+     369 callee expression outside the pilot grammar
+     353 target type outside the pilot grammar (error)
+     327 builtin copy statement
+     323 index of a non-slice base (T)
+     312 field selector on a struct type outside the grammar (internal/strconv.decimal)
+     288 result type outside the pilot grammar (float64)
+     275 builtin copy
+     270 nil
+     226 target type outside the pilot grammar (float64)
+     224 result type outside the pilot grammar (E)
+     222 unary operator & (address of a variable)
+     210 no occurrence observable against an effectful event (legacy path: every edge forced — Stage E E3 trigger)
+     198 index of a non-slice base ([16]unicode/utf8.acceptRange)
+     174 captured variable read through its pointer parameter (lifted body)
+     171 target type outside the pilot grammar (func() int)
+     169 target type outside the pilot grammar (S)
+     163 binary operand type outside the pilot grammar
+     153 result type outside the pilot grammar (float32)
+     148 map literal (gc evaluates its dynamic entries at the literal's position — E5)
+twin sweeps 10203  admitted 0
+
+## Legacy sweeps by unit (main = the package's main unit; nonmain = imported source units, refused by their callees before any E5 reason)
+main 24421
+nonmain 93753
+
+## Main-unit legacy sweeps by FIRST refusal reason (top 45)
+  8747 no call occurrence (legacy path: nothing with an effect to reorder against)
+  6025 statement form outside the pilot grammar
+  1953 no non-event occurrence beside the call(s) (legacy path: every edge forced)
+   629 method callee outside the main package
+   577 multi-target or tuple assignment
+   465 captured target written through its pointer parameter (lifted body)
+   351 callee expression outside the pilot grammar
+   347 builtin panic statement
+   338 builtin append
+   210 no occurrence observable against an effectful event (legacy path: every edge forced — Stage E E3 trigger)
+   190 qualified function callee (imported source package)
+   186 target type outside the pilot grammar (float64)
+   164 target type outside the pilot grammar (func() int)
+   149 map literal (gc evaluates its dynamic entries at the literal's position — E5)
+   142 expression statement that is not a call
+   139 blank target
+   127 shim runtime-refusal helper callee
+   122 interface method call (dynamic dispatch has no callee value)
+   119 len of a non-slice operand (string)
+   117 captured variable read through its pointer parameter (lifted body)
+   101 unary operator & (address of a variable)
+    76 builtin close statement
+    76 bare return
+    60 binary operand type outside the pilot grammar
+    58 method receiver type outside the grammar (main.twin)
+    54 index of a non-slice base (string)
+    51 more than two results
+    50 len of a non-slice operand (map[int]int)
+    50 generic function callee
+    49 print operand type outside the pilot grammar
+    48 nil
+    47 promoted method call (embedded hops)
+    47 builtin delete statement
+    44 slice expression on a non-slice base (string)
+    43 result type outside the pilot grammar (T)
+    43 len of a non-slice operand (chan int)
+    40 result type outside the pilot grammar (float64)
+    38 variadic callee
+    33 field selector on a struct type outside the grammar (main.twin)
+    31 method receiver type outside the grammar (main.driver)
+    30 target type outside the pilot grammar (error)
+    30 index of a non-slice base ([2]int)
+    30 builtin copy
+    28 target type outside the pilot grammar (float32)
+    28 target type outside the pilot grammar ([3]int)

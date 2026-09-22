@@ -360,8 +360,8 @@ func TestPhase1TargetOperandsAreProbed(t *testing.T) {
 	}
 	for fn, want := range map[string]int{
 		"tgtAssertVsMake":      1, // Stage E E4: make is an E1 participant WITHOUT effect — no effectful event, the sweep stays legacy (probed)
-		"arrayBaseTargetVsLen": 1, "tgtAssertVsMin": 1,
-		"addrAssertLeftCall": 1,
+		"arrayBaseTargetVsLen": 1,
+		"addrAssertLeftCall":   1,
 	} {
 		if u := funcRefusal(t, program, fn); u != "" {
 			t.Errorf("%s: a phase-1 target/address-of operand must lower probed, got refusal %q", fn, u)
@@ -384,8 +384,11 @@ func TestPhase1TargetOperandsAreProbed(t *testing.T) {
 	// occurrence — one graph, no probe.
 	// Stage E E4 (2026-09-21): `make` is an E1 participant WITHOUT effect, so `x[iv.(int)] =
 	// len(make([]int, t[k]))` has no effectful event and stays on the legacy path (above).
+	// Stage E5 E5a (2026-09-22): `min` is an E1 participant (reading (a), RATIFIED [USER]
+	// 2026-09-22), so `x[iv.(int)] = min(q, t[k]) + wit(5)` — the target's assertion unordered
+	// against t[k] inside min's window and against the later wit — lowers as one graph, no probe.
 	for _, fn := range []string{"tgtAssertVsLenHoist", "tgtAssertVsCall", "compoundAssertVsLen",
-		"mapKeyAssertVsLen", "mapTgtAssertVsCall", "tgtAssertVsRecv"} {
+		"mapKeyAssertVsLen", "mapTgtAssertVsCall", "tgtAssertVsRecv", "tgtAssertVsMin"} {
 		if u := funcRefusal(t, program, fn); u != "" {
 			t.Errorf("%s: a pilot-grammar sweep must lower as an unseq graph, got refusal %q", fn, u)
 			continue
