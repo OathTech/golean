@@ -829,8 +829,8 @@ gc's early store a deviation, L-016, 2026-09-02).
   spec#Order_of_evaluation — the built-ins are the ordering sentence's «function calls»
   (spec#Built-in_functions «called like any other function»; gc's order.go call class agrees) —
   under which `make-len-vs-call` is a FORCED singleton; under READING (b) (only user calls) the
-  same row is a (b) pin of gc's order ({6, 8}). Reading (a) is the [AGENT] choice, PENDING [USER]
-  ratification with the Stage E items; its consequence — `min`/`max`/`copy`/`append` are ordered
+  same row is a (b) pin of gc's order ({6, 8}). Reading (a) is the [AGENT] choice, RATIFIED [USER]
+  2026-09-22 with the Stage E items («Agree on the judgements, go ahead», relayed); its consequence — `min`/`max`/`copy`/`append` are ordered
   calls too, today legacy by name (the legacy hoist realizes gc's early evaluation: `min(x, 100) +
   m()` → 1001 on gc and the machine) — is E5's. F1 of the same round: Go 1.26 `new(x)` is admitted
   as the same E1 participant with its argument an operand (the E4 candidate had dropped the
@@ -847,7 +847,7 @@ gc's early store a deviation, L-016, 2026-09-02).
   latitude — BUG-104 is FIXED and LEAVES §10's known-≠-oracle list. No VALUE-axis row of this
   entry moved at E3 (the receive rows are E12's side — below). The (b) pin stands outside the
   widened grammar; the trigger returned 94 all-forced sweeps to the legacy path with their
-  observations unchanged (design §E3, the [AGENT] choice — alternative named there).
+  observations unchanged (design §E3, the [AGENT] choice — alternative named there; RATIFIED [USER] 2026-09-22).
 - STAGE E, FAMILY E2 (2026-09-21, [AGENT], lane `core/unseq-stage-e-0921`; design
   `docs/2026-09-21_unseq-stage-e-design.md` §E2 — POINTERS, FIELDS, MAPS): a dereference, a
   field selection and a map element are READ occurrences; as targets they are FROZEN plans (the
@@ -1572,7 +1572,7 @@ subexpressions of one binary operator).
   sweep now lowers as a graph the VALUE axis of this entry is (a) ENVELOPED: `evalorder/
   unseq-globals/read-vs-call` (`v := mut() + g`, mut writing g: {1, 2}, gc 2 — call-first)
   and `evalorder/unseq-globals/compound-vs-call` ({2, 11}, gc 11); ratification posed at
-  the merge ask. The seven other sweeps the family admits in the corpus (`spec-examples-
+  the merge ask, RATIFIED [USER] 2026-09-22 («Agree on the judgements, go ahead», relayed). The seven other sweeps the family admits in the corpus (`spec-examples-
   decl/select-forms` ×5, `panic-recover/repanic-collapse/index-two-faults`, `init/stdlib-
   initializer-dependent`) read globals no sibling call writes — every order agrees, no
   row moved (the strict rows carry 0–4 wide picks, covered by the fixed streams). The
@@ -1979,7 +1979,7 @@ row so the axis stops being invisible, nothing more.
   realization is one member of each set; the ADDRESS-TAKEN analysis is refined on the way (`x.m()`
   marks `&x` only for a pointer-receiver method on a non-pointer operand — spec#Calls' `(&x).m()`
   rewrite; Stage C marked every method-call operand). NO PIN IS TAKEN — the envelope is the row's
-  set; ratification of the (a) extension posed at the merge ask; E14 stays a (c) census row as an
+  set; ratification of the (a) extension posed at the merge ask, RATIFIED [USER] 2026-09-22; E14 stays a (c) census row as an
   entry (interface-typed receivers, promoted and generic methods remain the legacy path's — E5's
   residue statement).
 
@@ -3210,7 +3210,7 @@ Nothing in this block is a class member by virtue of being named here.
   occurrence — `UnseqBody.recv`, two `Step` rules, the coherence arms; the method call an
   invocation whose receiver sub-evaluation is an occurrence), and the admission trigger becomes
   OBSERVABILITY (an occurrence unordered against an effectful event — 94 all-forced sweeps return
-  to the legacy path, their observations unchanged; the [AGENT] choice, alternative named in §E3).
+  to the legacy path, their observations unchanged; the [AGENT] choice, alternative named in §E3; RATIFIED [USER] 2026-09-22).
   Entry classes UNCHANGED by count ((a) 15 / (b) 17): E12 stays (b) PINNED as an entry, ENVELOPED
   on the born `evalorder/unseq-recv-method/{recv-vs-read,ptr-recv-vs-field-read}`; E14 stays a (c)
   census row, its receiver sub-axis ENVELOPED on `noodler/latitude/receiver-vs-arg-call` (strict →

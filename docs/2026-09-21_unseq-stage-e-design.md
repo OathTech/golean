@@ -517,7 +517,7 @@ rows `evalorder/unseq-conv-alloc/string-bytes-vs-call` and `string-runes-vs-call
 20/20; reference `enumerate.py` E4h; wires `e4strb.json` + `native-e4strb.json` (println-rooted). The `[]byte(s)` /
 `[]rune(s)` forms read a STRING (immutable) and stay pure (`e4bytesFromStr`, legacy by name).
 
-**F5 — the SPEC reading behind «`make`/`new` are E1 participants», named (PENDING [USER] ratification with the six
+**F5 — the SPEC reading behind «`make`/`new` are E1 participants», named (RATIFIED (a) by [USER] Mike 2026-09-22 «Agree on the judgements, go ahead», relayed — posed with the six
 items — handoff §2 item 5).** spec#Order_of_evaluation orders «all function calls, method calls, receive operations,
 and binary logical operations … in lexical left-to-right order»; spec#Built-in_functions: the built-ins «are called
 like any other function». READING (a): the built-ins are the sentence's «function calls» — `len`/`cap` (Stage C's

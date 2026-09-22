@@ -719,3 +719,59 @@ schedules and, since Stage D, expression-order picks — because `continue-label
 (its only choice site is `unseqNext`) is stronger than the old caption described. RULED:
 the caption is amended (records, train r45). «go ahead» also lands Stage D (`core/unseq-
 stage-d-0920`, audit MERGE-CLEAN at `5922ece7`) with the audit's F1/F2/F5 records fixes.
+
+### The Stage E landing ratification record (2026-09-22) — seven items
+
+[USER] Mike, 2026-09-22 (the ask posed 2026-09-21), verbatim, relayed by the [AGENT]
+coordinator — cite as relayed: «Agree on the judgements, go ahead» — answering the coordinator's
+merge ask for Stage E, families E1–E4, of the evaluation-order plan (`core/unseq-stage-e-0921`
+at `bcf0b371` after the audit fix round; audit FIX-FIRST at `e957700f` → re-verification
+MERGE-CLEAN at `22b64a42`, rebased onto the fixed tip as `f5f84595`/`2e3a011b`), which posed
+seven items with the coordinator's judgement on each. «go ahead» is the merge sign-off (train
+r46) and the dispatch of the E5/E6 lane.
+
+**What was decided (RATIFIED by the landing — every item as the [AGENT] judgement posed it).**
+1. **The spec reading for the built-ins — READING (a)**: the built-ins (`len`/`cap`, `make`,
+   `new`, and by the same sentence `min`/`max`/`copy`/`append`/`clear`/…) are the «function
+   calls» of spec#Order_of_evaluation's ordering sentence (spec#Built-in_functions «called like
+   any other function»); `evalorder/unseq-conv-alloc/make-len-vs-call` is a FORCED singleton;
+   E5 admits `min`/`max`/`copy`/`append` as E1 participants under the same reading. Reading (b)
+   — only user calls are ordered; the row's set {6, 8}, a (b) pin of gc's order — was the named
+   alternative, NOT taken (design §E4 F5; inventory E2/E12).
+2. **The OBSERVABILITY trigger** (design §E3): a sweep enters the `unseq` graph iff some
+   occurrence is unordered against an EFFECTFUL event; the 94 all-forced sweeps stay on the
+   legacy path with their observations unchanged. The coarse trigger (admit the forced receives;
+   re-enumerate the 403 concurrency rows for identical sets) was the named alternative, NOT taken.
+3. **E2/E12 VALUE axis (b) PINNED → (a) ENVELOPED on the named rows only** — E1 `evalorder/
+   unseq-globals/{read-vs-call,compound-vs-call}`; E2 `noodler/latitude/deref-vs-call`,
+   `noodler/maps/compound-call-{mutates,deletes}`, `pointers/deref-target-rhs-call-order`,
+   `builtins/len-vs-call-order/len-nil-only-none`, the born `evalorder/unseq-ptr-field-map/*`
+   membership rows; E3 `evalorder/unseq-recv-method/{recv-vs-read,ptr-recv-vs-field-read}` — the
+   Stage C pilot's precedent; the rest of the family stays (b) PINNED with the re-envelope
+   obligation.
+4. **E14 receiver sub-axis (a) ENVELOPED** on `noodler/latitude/receiver-vs-arg-call` {6, 105}
+   and the born `evalorder/unseq-recv-method/value-recv-vs-arg-call` {6, 15}; E14 stays a (c)
+   census row as an entry.
+5. **Two lane moves via route α** (Stage D's amended caption «all choice streams the row
+   consumes»): `noodler/methods/nil-receiver-recursion` strict → confluent `engine=dedup`;
+   `goroutines/fork-join/two-workers-own-chans` engine DFS → dedup. The alternatives named on the
+   rows (`depth=N`; a raised DFS work cap) NOT taken.
+6. **Late structural allocations** (eval-order v2.1 §5 item 4, REALIZED at E4): a composite
+   literal is a node without E1 edges — its payload reads unordered against the sibling calls
+   and receives — with the [AGENT] correction that `make`/`new` are E1 participants (item 1's
+   reading; the born control pins it against gc, 6 on 20/20).
+7. **The `allocate` body kind**: ONE constructor over `AllocSpec` (the frontend's five hoist
+   shapes), not a general `exec` statement body (design §E4; alternative named there).
+
+Also landed with this ratification: the audit fix round — F1 (Go 1.26 `new(x)` inside an
+admitted sweep lowered with the zero value, a WRONG ANSWER, lowered correctly; two born rows),
+F2/F3 (a binder cell's address as an argument or capture; slice-literal indices and constant
+`make` sizes — decode-time refusals by name), F4 (the trigger's hidden pin on `string([]byte)`/
+`string([]rune)` widened; two born rows) — the re-verification's R1 NIT (one superfluous
+singleton pick per `*new(…)` sweep) recorded, not fixed; BUG-104, BUG-102, BUG-113 carried to FIXED on the
+branch (`docs/BUGS.md`); BUG-114's capture addendum (`records/bug114-capture-0921`: shape (b)
+not reproducible over 73,600 draws; the observer refusal stands as filed, no observer change).
+Train r46 owes 5a with `--slow` (frontend, decoder and core changed); the expected baseline is
+3732 = 3497 PASS / 235 FAIL (four born rows, nothing else moved). Next: the E5 residue + E6
+legacy-retirement lane (E6 waits on the legacy census reaching zero), then the NaN [a]+[b]
+lane, then P → C3 → C4 → B6.

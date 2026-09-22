@@ -43,7 +43,12 @@ conversions, method values/expressions, promoted fields/methods, variadic and no
 the grammar by design — the shim helpers are never probed). The residue counts by former reason are in
 `census-e4.txt`.
 
-## 2. PENDING [USER] (ratifications posed at the merge ask — none self-adjudicated)
+## 2. RATIFIED [USER] 2026-09-22 (posed at the merge ask 2026-09-21 — none self-adjudicated)
+
+RULED: [USER] Mike, 2026-09-22, verbatim, relayed by the [AGENT] coordinator: «Agree on the judgements, go ahead» — every item
+below as the [AGENT] judgement posed it (item 5's reading (a) included); the ruling record is
+`docs/2026-08-31_qrow-rulings.md` «The Stage E landing ratification record (2026-09-22)». The items stay
+as posed, for the record.
 
 1. **E2/E12 VALUE axis (b) → (a)** on the named rows: E1 `evalorder/unseq-globals/{read-vs-call,compound-vs-call}`;
    E2 `noodler/latitude/deref-vs-call`, `noodler/maps/compound-call-{mutates,deletes}`,
@@ -63,12 +68,12 @@ the grammar by design — the shim helpers are never probed). The residue counts
    node without E1 edges (its payload reads unordered against the sibling calls / receives — BUG-102's rows and
    the four moved rows), with the [AGENT] CORRECTION that `make`/`new` are E1 participants (function calls,
    spec#Built-in_functions; the born control `make-len-vs-call` pins it against gc, 6 on 20/20). Ratification of
-   both posed at the merge ask (design §E4). **The audit's F5 names the READING behind the correction** (design §E4
+   both posed at the merge ask (design §E4) — RATIFIED [USER] 2026-09-22. **The audit's F5 names the READING behind the correction** (design §E4
    «the audit fix round»): (a) the built-ins are the «function calls» of spec#Order_of_evaluation's ordering sentence
    (spec#Built-in_functions «called like any other function»; Stage C's `len` rule; gc's `order.go` call class) — under
    it `make-len-vs-call` is a FORCED singleton and `min`/`max`/`copy`/`append` are ordered calls too (E5's item); (b)
    only user calls are «function calls» — under it the row is a (b) pin of gc's order ({6, 8} the set). The [AGENT]
-   choice is (a); ratification of the reading posed with this item.
+   choice is (a); ratification of the reading posed with this item — RATIFIED (a) [USER] 2026-09-22 («Agree on the judgements, go ahead», relayed).
 6. **The `allocate` body kind** ([AGENT], design §E4): ONE constructor over `AllocSpec` (the frontend's five hoist
    shapes) rather than a general `exec` statement body — alternative named there.
 
@@ -137,7 +142,7 @@ record is §E4 «the audit fix round». The round changes the frontend (`unseq.g
 | **F2** FAIL-OPEN: `ref $binder` admitted as an invoke argument (M10b ran; the callee wrote the cell) | **REFUSED by name** in `unseqCheckArg` AND the capture arm of `unseqCheckCallee` (the audit's suspicion confirmed by mutant) | `unseqRefOfBinder?`; `mut-arg-ref-binder`, `mut-capture-ref-binder`; both wire gates |
 | **F3** FAIL-OPEN (minor): `slice-lit` indices / constant `make` sizes unchecked (M6 panicked, M11 panicked, M12 ran) | **decode-time NAMED refusals**: indices in `[0, length)` and distinct; constant sizes non-negative, `int`-representable, len ≤ cap | `unseqCheckConstSize`, the slice-lit index loop; `mut-slicelit-index-oob`, `mut-slicelit-dup-index`, `mut-make-negative-len`, `mut-make-len-over-cap`; wire `e4make` + native |
 | **F4** RECORDS-CLAIM: `string([]byte)`/`string([]rune)` on an aliased slice sent to legacy as «every edge forced» — a pin of gc's order | **WIDENED**: the conversion's backing-array read is an occurrence (`d.occ`); the sweep is admitted and the set enveloped | `unseqConversion`; census 127 → 127 (no other corpus sweep admitted; 357 count-only changes); born `string-bytes-vs-call`, `string-runes-vs-call` {ab, zb}, gc zb; reference E4h; wires `e4strb` + native |
-| **F5** RECORDS: the `make`/`new` E1 participation grounded in gc's draw, not the spec | the SPEC READING written (design §E4; §2 item 5 amended): reading (a) — the built-ins are the ordering sentence's «function calls» — with reading (b) as the named alternative; the `min`/`max`/`copy`/`append` consequence recorded for E5 | PENDING [USER] with the six items |
+| **F5** RECORDS: the `make`/`new` E1 participation grounded in gc's draw, not the spec | the SPEC READING written (design §E4; §2 item 5 amended): reading (a) — the built-ins are the ordering sentence's «function calls» — with reading (b) as the named alternative; the `min`/`max`/`copy`/`append` consequence recorded for E5 | RATIFIED (a) [USER] 2026-09-22 with the six items |
 | **F6** NIT: boxed literal payloads read late on the canonical tape (main early = gc; the set holds gc) | recorded for E5's `to-interface` payload family (§3) | design §E4 |
 | **F7** NIT: census counts for `new(expr)` | subsumed by F1 (`TestUnseqNewExprCensusCounts`) | — |
 | **F8** NIT: an `after` edge on a literal `allocate` decodes | a design fact (the wire does not express the lowering's «no E1 edge» policy); recorded, not a defect | design §E4 |

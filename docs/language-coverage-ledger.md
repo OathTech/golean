@@ -2349,7 +2349,8 @@ C2 commit `ce33ffd1` (re-pin reason in the baseline header). Movement, tallied b
 Reds table: frontier 134 → 133 (FR-28: 6 → 5 designed reds), post-vintage 73 → 70, the other
 buckets unchanged: 133 + 9 + (24 + 1) + 7 + 70 = 244 ✓. Latitude: entry classes unchanged by
 count ((a) 15 / (b) 17); E2's `known ≠ gc` marker retired and E2 LEFT §10's known-≠-oracle
-list; BUG-104 listed with four rows (inventory §10.1). PENDING [USER] at the merge ask: the
+list; BUG-104 listed with four rows (inventory §10.1). posed at the merge ask and RATIFIED at the Stage C landing ([USER] Mike 2026-09-20 «land it», relayed;
+rulings ledger): the
 E2/E12 value-axis envelope on the named rows and the two E13 narrowings retired there
 (handoff §6). The whole-corpus choice trace: rows outside the pilot's 25 packages byte-
 identical vs main's binary (handoff §4).
