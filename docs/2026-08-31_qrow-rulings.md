@@ -813,3 +813,20 @@ check deleted). Baseline 3732 = 3497 / 235 → 3760 = 3524 / 236 (28 born incl. 
 membership moves; 0 PASS → non-PASS). Train r47 owes 5a with `--slow` (core and decoder changed). Next: the E6 lane
 (the trigger refinement, the non-main-unit grammar, legacy retirement at census zero, the two decoder follow-ups),
 then the NaN [a]+[b] lane, then P → C3 → C4 → B6.
+
+### Roadmap review requested (2026-09-22) — statement received, review PENDING
+
+[USER] Mike, 2026-09-22, verbatim, relayed by the [AGENT] coordinator — cite as relayed (received during train r47,
+before its close): «Can we pause once the merge is done and then talk about the overall roadmap for this project. Our
+ultimate aim here is to support the GoLean logic that we're building in a different repo. That's our upstream customer.
+Which of the things that we're building are actually useful for those customer proofs and is our prioritization right?»
+
+Effect ([AGENT] reading, no ruling taken): the 2026-09-11 «We don't have as of now a customer» framing is REVISED by
+the [USER] — the customer is the GoLean logic (a program logic over GoCore, built in a separate repository that will
+consume this one at a pin); the 2026-09-16 «what this repo provides» statement and the 2026-09-05 F10 boundary stand.
+The coordinator PAUSED after train r47's close: the E6 lane (ruled 2026-09-22 at the Stage E5 landing) is NOT
+dispatched pending the review. An [AGENT] analysis memo was prepared for the discussion on branch
+`docs/roadmap-customer-alignment-0922` (`docs/2026-09-22_roadmap-customer-alignment.md`, unmerged): its
+recommendations (C3 and the end-to-end simulation ahead of NaN; a reader-only `Language` spike; a minimal interface +
+pin record; an `unseq` confluence lemma) are [AGENT] and every reorder is PENDING [USER]. The rulings of the review will
+be recorded here when taken.
