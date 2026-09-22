@@ -7,5 +7,5 @@ close-does-not-drain	channelCloseDoesNotDrain	-	ok	-	channels,close,len,comma_ok
 buffered-fifo	channelBufferedFifo	-	ok	-	channels,make
 receive-comma-ok-open	channelReceiveCommaOkOpen	-	ok	-	channels,comma_ok,len
 ordinary-send-eval-order	channelOrdinarySendEvalOrder	-	ok	-	channels,evaluation_order
-ordinary-receive-eval-order	channelOrdinaryReceiveEvalOrder	-	ok	-	channels,evaluation_order
+ordinary-receive-eval-order	channelOrdinaryReceiveEvalOrder	-	ok	-	channels,evaluation_order,nondet	membership	Stage E5 E5d (2026-09-22): `channelEvalValue(&score, 1)*100 + (<-channelEvalChan(&score, 2, ch))*10 + score` — both calls write score through their `&score` argument (no occurrence); the calls and the receive are E1-ordered, the read of the address-taken score spec-unsequenced against them: before the first call 0 (170), between the calls 1 (171), after the second 12 (182 — gc's, call-first, 20/20 under GOMAXPROCS 1/8, default and -N -l), the former strict pin now ONE member; the ONE consumption site is the `unseq` scheduler's pick (`unseqNext`, bound = the ready-set size at each pick; design docs/2026-09-22_unseq-stage-e5-design.md §E5d). members=3	width=3,sites=8,members=3
 close-eval-order	channelCloseEvalOrder	-	ok	-	channels,close,evaluation_order

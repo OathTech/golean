@@ -569,18 +569,19 @@ than as speculative cases.)
 
 ## 8. Counts and the closing arithmetic
 
-All numbers at the current tracked baseline (3752 cases, 3517 PASS / 235 FAIL; [AGENT] worker, lane
-`core/unseq-stage-e5-0922` — STAGE E5 of the evaluation-order model v2.1, family E5e: STRINGS — a string index / slice a
-FAILING PURE OP on the string value, an occurrence of the `unseq` graph (a classifier-only widening; design
-`docs/2026-09-22_unseq-stage-e5-design.md` §E5e; handoff `docs/2026-09-22_unseq-stage-e5-handoff.md`); measured by
-`scripts/diff-one` on all 68 affected rows before the pin and by the full `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff`
-at the E5e tree — the gate line in `docs/evidence/2026-09-22_unseq-stage-e5/README.md`). The delta over the E5c tally (§8ah,
-3748 = 3513 / 235): 4 rows BORN in `evalorder/unseq-strings` — `str-index-vs-call` {102, 103} (gc 103, the byte read after the
-call), `str-index-panic-vs-print` {panic · ``, `wit 5` · panic} (gc the second) and `str-slice-vs-call` {102, 103} (gc 102 — the
-string slice hoisted BEFORE the call) PASS/membership (gc's member inside each, 20/20), `str-len-vs-call` PASS strict (7, forced);
-`builtins/e13-sibling-panic-order/bytes-conv-payload-vs-call` leaves the legacy probe for a graph, its set reproduced (no row
-change). 3748 + 4 = 3752; 3513 + 4 = 3517; 235 unchanged. No other result/stage movement, no removal, no widened pin, no PASS →
-non-PASS. Reds table unchanged: 128 + 9 + (24 + 1) + 7 + 66 = 235 ✓. Movement §8ai (and §8ah for E5c, §8ag for E5b, §8af for E5a).
+All numbers at the current tracked baseline (3757 cases, 3522 PASS / 235 FAIL; [AGENT] worker, lane
+`core/unseq-stage-e5-0922` — STAGE E5 of the evaluation-order model v2.1, family E5d: THE ADDRESS OF A VARIABLE as an operand — an
+address formation, no occurrence of the `unseq` graph, admitted on an allowed list of value positions; the decoder gains one payload
+arm (design `docs/2026-09-22_unseq-stage-e5-design.md` §E5d; handoff `docs/2026-09-22_unseq-stage-e5-handoff.md`); measured by
+`scripts/diff-one` on the affected rows before the pin and by the full `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff` at the
+E5d tree — the gate line in `docs/evidence/2026-09-22_unseq-stage-e5/README.md`). The delta over the E5e tally (§8ai, 3752 = 3517 /
+235): 5 rows BORN in `evalorder/unseq-addr` — `addr-arg-vs-read` {2, 8}, `addr-payload-vs-call` {6, 15}, `addr-stored-vs-read` {72, 78},
+`addr-global-arg-vs-read` {2, 8} PASS/membership (gc call-first on each — the second member, 20/20), `addr-arg-pure-control` PASS strict (2);
+3 LANE MOVES strict → membership (the sweeps enter the graph — an `&x` argument beside a read of the address-taken variable; gc's
+call-first member inside each, 20/20): `multi-assign/deref-target-before-rhs` {828, 822, 181, 188} (gc 188), `multi-assign/selector-
+target-before-rhs` {727, 722, 171, 177} (gc 177), `channels/make-edge/ordinary-receive-eval-order` {170, 171, 182} (gc 182).
+3752 + 5 = 3757; 3517 + 5 = 3522; 235 unchanged. No other result/stage movement, no removal, no widened pin, no PASS → non-PASS. Reds
+table unchanged: 128 + 9 + (24 + 1) + 7 + 66 = 235 ✓. Movement §8aj (and §8ai for E5e, §8ah for E5c, §8ag for E5b, §8af for E5a).
 
 Previous tally, then current (3745 cases, 3510 PASS / 235 FAIL; [AGENT] worker, lane
 `core/unseq-stage-e5-0922` — STAGE E5 of the evaluation-order model v2.1, family E5b: MULTI-TARGET assignments
@@ -2458,6 +2459,30 @@ tallied by row:
 - Reds table: post-vintage 72 → 70; 133 + 9 + (24 + 1) + 7 + 70 = 244 ✓. FR-28's cell unchanged (the
   BUG-102 designed reds are E4's).
 
+### 8aj. Movement at Stage E5 of the evaluation-order model v2.1, family E5d — the address of a variable (2026-09-22, lane `core/unseq-stage-e5-0922`; on main `d76721bd`)
+
+[AGENT] worker. Design `docs/2026-09-22_unseq-stage-e5-design.md` §E5d; evidence `docs/evidence/2026-09-22_unseq-stage-e5/`
+(`census-e5d.txt`, `census-newly-admitted-e5d.tsv`, `probes-e5d.txt`, `diff-one-e5d.txt`, `gc-draws-e5d.txt`, the gate tail).
+Tracked figure 3752 = 3517 / 235 → 3757 = 3522 / 235 (re-pin reason in the baseline header). Movement, tallied by row:
+
+- BORN 5, all PASS (`Corpus/coverage/exec/evalorder/unseq-addr/`): `addr-arg-vs-read` membership {2, 8} (`use(&x) + x`, use writing
+  *p = 7 — the address an argument, no occurrence; the address-taken x's read vs use; gc 8), `addr-payload-vs-call` membership {6, 15}
+  (`*(&PT{p: &x}).p + m()` — the address a struct-literal payload inside a `new` allocate; gc 15), `addr-stored-vs-read` membership
+  {72, 78} (`p, y = &x, use(&x)+x; *p*10 + y` — the stored address rides the completion; gc 78), `addr-global-arg-vs-read` membership
+  {2, 8} (`use(&g) + g` on a package-level g — `globaladdr` the argument, `deref(globaladdr)` the read; gc 8), `addr-arg-pure-control`
+  strict (2 — `peek(&x) + x`, peek only reading: both picks agree).
+- LANE MOVES strict → membership 3 (E2/E12's VALUE axis enveloped; gc's call-first draw inside, 20/20): `multi-assign/deref-target-
+  before-rhs` {828, 822, 181, 188} (`*p, p = derefTargetRHS(&p, &b), p` — the deref target's operand and the right-hand read of p
+  each before / after the call redirecting p; gc 188), `multi-assign/selector-target-before-rhs` {727, 722, 171, 177} (the field
+  target's implicit indirection × the read of p; gc 177), `channels/make-edge/ordinary-receive-eval-order` {170, 171, 182}
+  (`channelEvalValue(&score, 1)*100 + (<-channelEvalChan(&score, 2, ch))*10 + score` — score's read before / between / after the
+  two calls writing it; gc 182). Each was a strict pin of gc's call-first order; under the graph the pin is one member.
+- Census 168 → 177 admitted (+3 from the widening — three `&x`-argument sweeps; +5 the born package's own sweeps; +1 the E5e row split
+  after its census — the E5e commit's true count is 169, §8ai's «165 → 168» being the pre-split measurement); the twin 0. Legacy probe
+  emissions 58 → 58 (corpus), the twin 128 unchanged.
+- The decoder gains ONE payload arm (`ref` of a source local / `globaladdr` as an allocation payload; `ref` of a binder cell refused —
+  audit F2's class) and no head arm; two new wire mutants (43 → 45); no core change.
+
 ### 8ai. Movement at Stage E5 of the evaluation-order model v2.1, family E5e — strings (2026-09-22, lane `core/unseq-stage-e5-0922`; on main `d76721bd`)
 
 [AGENT] worker. Design `docs/2026-09-22_unseq-stage-e5-design.md` §E5e; evidence `docs/evidence/2026-09-22_unseq-stage-e5/`
@@ -2474,7 +2499,8 @@ Tracked figure 3748 = 3513 / 235 → 3752 = 3517 / 235 (re-pin reason in the bas
   s[i:j])[0]) + wit(5)`, s[5:7] out of range) — enumerated=2 under the graph as under the probe.
 - A status-diverse single row (the first `str-index-vs-call`, m writing i = 9: {102, panic}) was REFUSED BY NAME by the
   membership lane (the audit-F8 `ok,panic` declaration exists but no corpus row uses it) and split into the two rows above.
-- Census 165 → 168 admitted (+1 from the widening, +2 the born package's own sweeps; 0 lost); the twin 0. Legacy probe
+- Census 165 → 168 admitted at the census (+1 from the widening, +2 the born package's own sweeps; 0 lost) — 169 at the commit:
+  the row split (`str-index-panic-vs-print`) happened after the census was taken (measured at E5d, §8aj); the twin 0. Legacy probe
   emissions 59 → 58 (corpus), the twin 128 unchanged.
 - No core, decoder or wire-schema change; one hand-built wire (`e5estr`) + native as positive controls (`check-wire-boundary`
   11 + 42); the mutant set unchanged (43).

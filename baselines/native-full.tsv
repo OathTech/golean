@@ -1,5 +1,5 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 3752 (3517 PASS / 235 FAIL)
+# cases: 3757 (3522 PASS / 235 FAIL)
 # re-pinned: 2026-09-20 [AGENT], core/unseq-stage-d-0920, STAGE D of the evaluation-order model v2.1 (route α —
 #   docs/2026-09-20_unseq-stage-d-design.md §2–§3; handoff docs/2026-09-20_unseq-stage-d-handoff.md): NO row added, NO
 #   result changed, ONE stage changed — spec-examples-stmt/continue-label PASS/- -> PASS/confluent, the strict depth=128
@@ -189,6 +189,28 @@
 #   the twin 0; legacy probes 59 -> 58 (corpus), the twin 128 unchanged. Measured by scripts/diff-one on the 68 affected rows (all
 #   65 e13 rows + the born rows; two runs — docs/evidence/2026-09-22_unseq-stage-e5/diff-one-e5e.txt); the full gate line is in the
 #   evidence README. 3748 + 4 = 3752; 3513 + 4 = 3517; 235 unchanged. No PASS -> non-PASS.
+# re-pinned: 2026-09-22 [AGENT], core/unseq-stage-e5-0922, STAGE E5 of the evaluation-order model v2.1, family E5d — THE ADDRESS OF A
+#   VARIABLE as an operand: `&x` is an ADDRESS FORMATION (spec#Address_operators — no read, no failure), NO occurrence of the graph,
+#   carried as the frontend's own `ref x` / `globaladdr` where an already-evaluated value is consumed (an invocation argument, an
+#   allocation payload, a plain local's stored value, a return operand); the READS of the address-taken variable beside the receiving
+#   call are the occurrences. Design docs/2026-09-22_unseq-stage-e5-design.md §E5d; handoff docs/2026-09-22_unseq-stage-e5-handoff.md.
+#   FIVE rows BORN in evalorder/unseq-addr: addr-arg-vs-read {2, 8} (`use(&x) + x`, use writing *p = 7; gc 8 on 20/20 under
+#   GOMAXPROCS 1/8, default and -N -l — call-first), addr-payload-vs-call {6, 15} (`*(&PT{p: &x}).p + m()`, m writing x = 10; gc 15),
+#   addr-stored-vs-read {72, 78} (`p, y = &x, use(&x)+x; *p*10 + y` — the stored address rides the completion; gc 78),
+#   addr-global-arg-vs-read {2, 8} (`use(&g) + g`, a package-level g — `globaladdr` the argument, `deref(globaladdr)` the read; gc 8)
+#   PASS/membership; addr-arg-pure-control (2) PASS strict (`peek(&x) + x`, peek only reading: both picks agree). Refused by name:
+#   `&x` in a COMPUTING position (`*&x`, `&x == p`, an index …), `&x` as a PLANNED target's value (single or beside a planned sibling —
+#   the store would copy a `ref` head into a cell), `&` of a non-variable identifier, a pointee type outside the grammar. The decoder
+#   gains ONE payload arm (`ref` of a SOURCE local / `globaladdr` as an allocation payload; `ref` of a `$` binder cell refused —
+#   audit F2's class) and NO head arm; mutants mut-addr-payload-binder, mut-addr-head (43 -> 45). THREE strict rows -> membership (their
+#   sweeps enter the graph — an `&x` argument beside a read of the address-taken variable; gc's call-first member inside each, 20/20):
+#   multi-assign/deref-target-before-rhs {828, 822, 181, 188} (gc 188), multi-assign/selector-target-before-rhs {727, 722, 171, 177}
+#   (gc 177), channels/make-edge/ordinary-receive-eval-order {170, 171, 182} (gc 182) — each a strict pin of gc's order, now one member.
+#   Census 168 -> 177 admitted (+3 from the widening — those three sweeps; +5 the born package's own sweeps; +1 the E5e row split after
+#   its census: the E5e commit's true count is 169; 0 lost), the twin 0; legacy probes 58 -> 58 (corpus), the twin 128 unchanged. Measured by
+#   scripts/diff-one on the 17 affected rows (the born package, the three packages whose sweeps enter; two runs —
+#   docs/evidence/2026-09-22_unseq-stage-e5/diff-one-e5d.txt); the full gate line is in the
+#   evidence README. 3752 + 5 = 3757; 3517 + 5 = 3522; 235 unchanged. No PASS -> non-PASS.
 # Previous pin:
 # re-pinned: 2026-09-20 [AGENT], core/unseq-stage-c-0919, STAGE C AUDIT FIX ROUND (docs/2026-09-20_unseq-stage-c-audit.md, FIX-FIRST; dispositions
 #   docs/2026-09-19_unseq-stage-c-handoff.md «Audit fix round (2026-09-20)»): SIX rows ADDED, no existing row changed. (F2) evalorder/unseq-const-cell/
@@ -2075,7 +2097,7 @@ PASS	channels/make-edge/close-eval-order	-
 PASS	channels/make-edge/len-cap-directional	-
 PASS	channels/make-edge/len-expression	-
 PASS	channels/make-edge/negative-buffer-panic	-
-PASS	channels/make-edge/ordinary-receive-eval-order	-
+PASS	channels/make-edge/ordinary-receive-eval-order	membership
 PASS	channels/make-edge/ordinary-send-eval-order	-
 PASS	channels/make-edge/receive-comma-ok-open	-
 PASS	channels/make-edge/zero-buffer	-
@@ -2379,6 +2401,11 @@ PASS	evalorder/unseq-strings/str-index-vs-call	membership
 PASS	evalorder/unseq-strings/str-index-panic-vs-print	membership
 PASS	evalorder/unseq-strings/str-slice-vs-call	membership
 PASS	evalorder/unseq-strings/str-len-vs-call	-
+PASS	evalorder/unseq-addr/addr-arg-vs-read	membership
+PASS	evalorder/unseq-addr/addr-payload-vs-call	membership
+PASS	evalorder/unseq-addr/addr-stored-vs-read	membership
+PASS	evalorder/unseq-addr/addr-global-arg-vs-read	membership
+PASS	evalorder/unseq-addr/addr-arg-pure-control	-
 PASS	evalorder/unseq-globals/read-vs-call	membership
 PASS	evalorder/unseq-globals/compound-vs-call	membership
 PASS	evalorder/unseq-globals/read-vs-unrelated-call	-
@@ -3683,14 +3710,14 @@ PASS	multi-assign/chain-field-over-index/nil-slice-field	-
 PASS	multi-assign/comma-ok-forms/assert-nil-field	-
 PASS	multi-assign/comma-ok-forms/dep-index	-
 PASS	multi-assign/comma-ok-forms/map-oob	-
-PASS	multi-assign/deref-target-before-rhs	-
+PASS	multi-assign/deref-target-before-rhs	membership
 PASS	multi-assign/field-nil-store-time	-
 PASS	multi-assign/index-target-rhs-call-order	membership
 PASS	multi-assign/lhs-index-eval-order	-
 PASS	multi-assign/repeated-index-write	-
 PASS	multi-assign/repeated-variable-write	-
 PASS	multi-assign/rhs-before-writes	-
-PASS	multi-assign/selector-target-before-rhs	-
+PASS	multi-assign/selector-target-before-rhs	membership
 PASS	multi-assign/store-order-plain	-
 PASS	multi-assign/target-eval-before-call	-
 PASS	multi-assign/tuple-assign-order	-

@@ -143,6 +143,11 @@ def main (_args : List String) : IO Unit := do
     -- STAGE E5, family E5e (2026-09-22): a STRING substring and its byte read as bounds-checked pure ops on the string
     -- VALUE beside a call (the conversion a pure head). Reference enumerate.py E5e2.
     wireSet "E5ESTR wire: int(s[i:][0]) + m() — the substring and its byte read failing pure ops vs m" "e5estr.json" "e5estr" [okZ 102, okZ 103],
+    -- STAGE E5, family E5d (2026-09-22): the ADDRESS of a variable as an operand — an address formation (no read, no
+    -- failure): `ref x` as an invocation argument (E5d1 {2, 8}) and as a struct literal's payload inside a `new` allocate
+    -- (E5d2 {6, 15}); the sibling read of the address-taken x is the occurrence. Reference enumerate.py E5d1/E5d2.
+    wireSet "E5DADDR wire: use(&x) + x — &x an argument, no occurrence; x's read vs use (writing *p = 7)" "e5daddr.json" "e5daddr" [okZ 2, okZ 8],
+    wireSet "E5DLIT wire: *(&PT{p: &x}).p + m() — &x a struct-literal payload inside new; the deref vs m" "e5dlit.json" "e5dlit" [okZ 6, okZ 15],
     -- THE FRONTEND'S OWN LOWERING (C2): source → actual frontend bytes → strict decoder →
     -- machine → EXACT reference sets (v2.1 §7 row C's exit; the graphs are the emitter's,
     -- not hand-built — the same reference sets as the hand-built wires above).
@@ -187,6 +192,8 @@ def main (_args : List String) : IO Unit := do
       [panicOut (oob 9 1) "len 1\n", panicOut (oob 9 1) "len 0\n"],
     wireSet "NATIVE E5CMAPLIT (the frontend's own map-lit allocate — Stage E5 E5c)" "native-e5cmaplit.json" "e5cmaplit" [okZ 6, okZ 15],
     wireSet "NATIVE E5ESTR (the frontend's own string substring + byte-read heads — Stage E5 E5e)" "native-e5estr.json" "e5estr" [okZ 102, okZ 103],
+    wireSet "NATIVE E5DADDR (the frontend's own ref-argument lowering — Stage E5 E5d)" "native-e5daddr.json" "e5daddr" [okZ 2, okZ 8],
+    wireSet "NATIVE E5DLIT (the frontend's own ref-payload lowering inside new — Stage E5 E5d)" "native-e5dlit.json" "e5dlit" [okZ 6, okZ 15],
     -- EDGE MUTATIONS of the LOWERED graphs (v2.1 §8): each decodes; the exact-set check
     -- names the changed set (the decoder cannot see a missing or wrong edge).
     wireSet "EDGE data (R6: the access reads the variable's header, not the frozen slot) → the fused {20}" "edge-data.json" "r6" [okZ 20],

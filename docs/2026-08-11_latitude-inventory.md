@@ -811,6 +811,15 @@ gc's early store a deviation, L-016, 2026-09-02).
 
 ### E2. Call vs. assignment-target operands — (b) PINNED call-first on the VALUE axis outside the Stage C pilot; (a) ENVELOPED on the pilot's rows (2026-09-19); the PANIC axis (a) ENVELOPED via E13's `unseqPanic` since the e13-b re-audit fix round (2026-09-05)
 
+- STAGE E5, FAMILY E5d (2026-09-22, [AGENT], lane `core/unseq-stage-e5-0922`; design
+  `docs/2026-09-22_unseq-stage-e5-design.md` §E5d — the address of a variable): `&x` is an ADDRESS
+  FORMATION (no read, no failure), NO occurrence of the graph, admitted on an allowed list of value
+  positions (a call argument, a payload, a plain stored value, a return operand); the reads of the
+  address-taken variable beside the call that receives the address are the occurrences. The VALUE axis
+  is (a) ENVELOPED on the born `evalorder/unseq-addr/{addr-arg-vs-read ({2, 8}, gc 8), addr-payload-vs-
+  call ({6, 15}, gc 15), addr-stored-vs-read ({72, 78}, gc 78), addr-global-arg-vs-read ({2, 8}, gc 8)}`
+  — gc call-first on each (the write through the address before the read). Three strict rows whose sweeps enter the graph MOVE to membership with gc's member inside: `multi-assign/deref-target-before-rhs` ({828, 822, 181, 188}, gc 188), `multi-assign/selector-target-before-rhs` ({727, 722, 171, 177}, gc 177), `channels/make-edge/ordinary-receive-eval-order` ({170, 171, 182}, gc 182). Posed for ratification
+  at the merge ask. The (b) pin stands outside the widened grammar.
 - STAGE E5, FAMILY E5e (2026-09-22, [AGENT], lane `core/unseq-stage-e5-0922`; design
   `docs/2026-09-22_unseq-stage-e5-design.md` §E5e — strings): a string index / slice is a FAILING
   PURE OP on the string VALUE (a classifier widening only). The VALUE axis is (a) ENVELOPED on the
@@ -1622,6 +1631,11 @@ subexpressions of one binary operator).
   the fmt / imported-goose / slices sweeps that lower as all-forced graphs
   changed observation). E12(ii)'s read-vs-read axis stays (b) with its
   obligation: the pilot admits no call-free sweep.
+  STAGE E5, FAMILY E5d (2026-09-22, [AGENT]; design `docs/2026-09-22_unseq-stage-e5-design.md`
+  §E5d — the address of a variable): the address-taken variable's read is spec-unsequenced against
+  the call that receives `&x` — the VALUE axis is (a) ENVELOPED on the born `evalorder/unseq-addr`
+  membership rows ({2, 8}, {6, 15}, {72, 78}, {2, 8}; gc call-first on each); ratification posed at
+  the merge ask.
   STAGE E5, FAMILY E5e (2026-09-22, [AGENT]; design `docs/2026-09-22_unseq-stage-e5-design.md`
   §E5e — strings): a captured index's read on a string base is spec-unsequenced against the sibling
   call — the VALUE axis is (a) ENVELOPED on the born `evalorder/unseq-strings/{str-index-vs-call
@@ -3301,6 +3315,12 @@ history block, never in a membership line.
 
 Nothing in this block is a class member by virtue of being named here.
 
+- **Stage E5 of the evaluation-order model v2.1, family E5d (2026-09-22, [AGENT] lane
+  `core/unseq-stage-e5-0922`; design `docs/2026-09-22_unseq-stage-e5-design.md` §E5d): THE ADDRESS OF A
+  VARIABLE enters the `unseq` grammar as an operand — an address formation, no occurrence, on an allowed
+  list of value positions; the decoder gains one payload arm, no head arm; no core change.** Entry classes
+  UNCHANGED by count ((a) 15 / (b) 17): E2/E12 stay (b) PINNED as entries, ENVELOPED on four born
+  membership rowsand three moved rows (two multi-assign target-before-rhs pins and a make-edge receive pin — each a strict pin of gc's call-first order, now one member of its set). Census 168 → 177; legacy probes 58 (corpus) and the twin 128 unchanged.
 - **Stage E5 of the evaluation-order model v2.1, family E5e (2026-09-22, [AGENT] lane
   `core/unseq-stage-e5-0922`; design `docs/2026-09-22_unseq-stage-e5-design.md` §E5e): STRINGS enter the
   `unseq` grammar as index / slice BASES — a byte read / substring a failing pure op on the string value;

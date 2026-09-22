@@ -608,6 +608,40 @@ def e5cmaplit_graph():
         then=ret(ident("$u4", INT)))
 
 
+# ---------------------------------------------------------------- Stage E5, family E5d (2026-09-22)
+# THE ADDRESS OF A VARIABLE as an operand: an ADDRESS FORMATION (spec#Address_operators) — no read, no failure — carried as
+# `ref x` / `globaladdr` where an already-evaluated value is consumed (an invocation argument, an allocation payload); never
+# a head (a planned target's copied value — the frontend refuses that shape by name).
+
+def e5daddr_graph():
+    # use(&x) + x: use first (canonical; its argument `ref x` is no occurrence), the address-taken x's read, the op. {2, 8}.
+    return unseq(
+        [cell("$u0", INT), cell("$u1", INT), cell("$u2", INT)],
+        [inv("call0", ["$u0"], fv("use"), [{"expr": "ref", "id": "x"}], [INT]),
+         ev("read1", "$u1", ident("x", INT)),
+         ev("op2", "$u2", binop("+", ident("$u0", INT), ident("$u1", INT), INT))],
+        then=ret(ident("$u2", INT)))
+
+
+PT = {"kind": "named", "name": "main.PT"}
+PTR_PT = {"kind": "pointer", "elem": PT}
+
+
+def e5dlit_graph():
+    # *(&PT{p: &x}).p + m(): m first (canonical); the literal — a `new` allocate over the struct-lit whose payload is `ref x`
+    # (no read) — the field read through the fresh pointer, the deref of the payload pointer (x's read), the op. {6, 15}.
+    return unseq(
+        [cell("$u0", PTR_PT), cell("$u1", PTR_INT), cell("$u2", INT), cell("$u3", INT), cell("$u4", INT)],
+        [inv("call3", ["$u3"], ident("m"), [], [INT]),
+         alc("new0", "$u0", {"stmt": "new", "elemType": PT,
+                             "value": {"expr": "struct-lit", "target": PT, "args": [{"expr": "ref", "id": "x"}]}}),
+         ev("field1", "$u1", {"expr": "field-get", "field": "p", "typeId": "main.PT", "type": PTR_INT,
+                              "recv": {"expr": "deref", "ptr": ident("$u0", PTR_PT), "type": PT}}),
+         ev("deref2", "$u2", {"expr": "deref", "ptr": ident("$u1", PTR_INT), "type": INT}),
+         ev("op4", "$u4", binop("+", ident("$u2", INT), ident("$u3", INT), INT))],
+        then=ret(ident("$u4", INT)))
+
+
 # ---------------------------------------------------------------- Stage E5, family E5e (2026-09-22)
 # STRINGS: a substring / byte read is a bounds-checked pure op on the string VALUE (the conversion a pure head); len(s) an E1
 # participant (`len(s[i:]) + m()` is all-forced — the substring inside len's window — hence the byte-read form).
@@ -733,6 +767,9 @@ WITNESSES = {
     "e5cmaplit": ("e5cmaplit", [("e5cmaplit", "m", 0, e5cmaplit_graph(), None)]),
     # Stage E5 E5e (2026-09-22): a string substring as a failing pure op beside a call (hand-built + native)
     "e5estr": ("e5estr", [("e5estr", "m", 0, e5estr_graph(), None)]),
+    # Stage E5 E5d (2026-09-22): the address of a variable as an invocation argument / as an allocation payload (hand-built + native)
+    "e5daddr": ("e5daddr", [("e5daddr", "x", 0, e5daddr_graph(), None)]),
+    "e5dlit": ("e5dlit", [("e5dlit", "m", 0, e5dlit_graph(), None)]),
 }
 
 
@@ -901,6 +938,14 @@ def mutants(wires):
     edit("mut-maplit-nonatom", "e5cmaplit", "e5cmaplit",
          lambda n, w: occ(n, "lit2")["allocation"]["entries"][0].update(value=binop("+", ident("$u1", INT), intc(0), INT)),
          "hidden read in an allocation payload")
+    # Stage E5 E5d (2026-09-22): the address of a BINDER cell as an allocation payload (audit F2's class — a graph cell is
+    # written only by its producer); `ref` as a HEAD (a planned target's copied value: the frontend refuses the shape by
+    # name, the decoder keeps refusing the head — no widening for a shape the lowering never emits).
+    edit("mut-addr-payload-binder", "e5dlit", "e5dlit",
+         lambda n, w: occ(n, "new0")["allocation"]["value"]["args"].__setitem__(0, {"expr": "ref", "id": "$u3"}),
+         "address of a binder cell")
+    edit("mut-addr-head", "e5daddr", "e5daddr",
+         lambda n, w: occ(n, "read1").update(head={"expr": "ref", "id": "x"}), "outside the admitted fragment")
     edit("mut-make-negative-len", "e4make", "e4make",
          lambda n, w: occ(n, "make0")["allocation"].update(len=intc(-1)), "negative constant len")
     edit("mut-make-len-over-cap", "e4make", "e4make",

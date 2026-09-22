@@ -371,7 +371,12 @@ func (b *unseqBuilder) value(x ast.Expr) (any, error) {
 			// Stage E E4: `&T{…}` — the struct literal's payloads, then an `allocate` body (`new`).
 			cl, isLit := ast.Unparen(v.X).(*ast.CompositeLit)
 			if !isLit {
-				return nil, unsup("unseq lowering: address of a non-literal operand")
+				// Stage E5 E5d: `&x` of a variable — the frontend's own address spelling (`ref x`,
+				// `globaladdr`, the captured pointer parameter): no read, no occurrence.
+				if id, isIdent := ast.Unparen(v.X).(*ast.Ident); isIdent {
+					return e.emitAddressOf(id)
+				}
+				return nil, unsup("unseq lowering: address of a non-literal, non-variable operand")
 			}
 			return b.addrLit(cl, v)
 		}

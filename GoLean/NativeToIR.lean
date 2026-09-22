@@ -896,6 +896,16 @@ private def unseqIsAtom (j : Json) : Bool :=
   | .ok (.str "ident") | .ok (.str "int") | .ok (.str "bool") | .ok (.str "string") => true
   | _ => false
 
+/-- Stage E audit fix round F2 (2026-09-21): a `ref` whose `id` is a reserved `$` slot names a
+GRAPH CELL — an address through which a callee could WRITE a binder (a cell is written only by
+its producer; `unseqCheckTargetShape` refuses a `$` store target for the same reason) — and the
+frontend never emits it (a receiver's frozen address is `ref` of a SOURCE local). The audit's
+mutant M10b decoded and RAN: the callee incremented the binder cell through the address. -/
+private def unseqRefOfBinder? (j : Json) : Option String :=
+  match j.getObjVal? "expr", j.getObjVal? "id" with
+  | .ok (.str "ref"), .ok (.str id) => if id.startsWith "$" then some id else none
+  | _, _ => none
+
 /-- Stage E E4 (2026-09-21): an ALLOCATION PAYLOAD / a struct literal's field — an
 atom, a boxing `to-interface` of an atom, or a `default` (a field's zero value):
 already-evaluated values only; anything else is a hidden read, refused by name. -/
@@ -903,7 +913,12 @@ private def unseqCheckPayload (path : String) (j : Json) : LowerM Unit := do
   if jsonMentionsRecover j then
     fail s!"unseq: recover() in an allocation payload at {path}; refused by name"
   if unseqIsAtom j then return
+  -- Stage E5 E5d (2026-09-22): the ADDRESS of a source variable (`ref x` / `globaladdr`) is an
+  -- already-evaluated value — no read, no failure; never `ref` of a `$` binder cell (audit F2).
+  if let some id := unseqRefOfBinder? j then
+    fail s!"unseq: an allocation payload at {path} takes the address of a binder cell '{id}' — a graph cell is written only by its producer (audit F2, 2026-09-21); refused by name"
   match j.getObjVal? "expr" with
+  | .ok (.str "ref") | .ok (.str "globaladdr") => pure ()
   | .ok (.str "default") => pure ()
   | .ok (.str "to-interface") =>
       match j.getObjVal? "operand" with
@@ -1071,16 +1086,6 @@ private def unseqCheckHead (path : String) (head : Json) : LowerM Unit := do
       unseqCheckStructLit path head
   | other =>
       fail s!"unseq: head '{other}' at {path} is outside the admitted fragment (admitted heads: ident, a constant (int/bool/string), index-get, slice, builtin-len, builtin-cap, min, max, binary, unary, type-assert, deref, field-get, map-get, convert and the string/byte/rune conversion forms, struct-lit); refused by name"
-
-/-- Stage E audit fix round F2 (2026-09-21): a `ref` whose `id` is a reserved `$` slot names a
-GRAPH CELL — an address through which a callee could WRITE a binder (a cell is written only by
-its producer; `unseqCheckTargetShape` refuses a `$` store target for the same reason) — and the
-frontend never emits it (a receiver's frozen address is `ref` of a SOURCE local). The audit's
-mutant M10b decoded and RAN: the callee incremented the binder cell through the address. -/
-private def unseqRefOfBinder? (j : Json) : Option String :=
-  match j.getObjVal? "expr", j.getObjVal? "id" with
-  | .ok (.str "ref"), .ok (.str id) => if id.startsWith "$" then some id else none
-  | _, _ => none
 
 /-- D8 for an `invoke` callee: an identifier (a func-typed local or slot) or
 a `func-value` whose captures are addresses (`ref`/`ident`/`globaladdr`) of SOURCE

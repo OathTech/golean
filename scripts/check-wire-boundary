@@ -268,4 +268,15 @@ expect_unseq_refusal unseq-maplit-nonatom mut-maplit-nonatom e5cmaplit 'hidden r
 out="$(run_cli_fn Tests/unseq-wire/e5estr.json e5estr)" || { echo "check-wire-boundary: FAIL [unseq string] — the string wire did not run: $out" >&2; exit 1; }
 [[ "$out" == *'"status":"ok"'* && "$out" == *'"value":103'* ]] || { echo "check-wire-boundary: FAIL [unseq string] — expected ok/103 (canonical = m first, the substring and its byte after): $out" >&2; exit 1; }
 echo "ok [unseq string] runs, answers 103 (a substring and its byte read bounds-checked pure ops on the string value — Stage E5 E5e)"
-echo 'Wire boundary gate: PASS (11 byte-level controls + 42 unseq-node controls through the real CLI)'
+# Stage E5 E5d (2026-09-22): the ADDRESS of a variable as an invocation argument (Tests/unseq-wire/e5daddr.json, `use(&x) + x`)
+# and as an allocation payload (e5dlit.json, `*(&PT{p: &x}).p + m()`): run on the canonical tape — the call first: 8 / 15;
+# the address of a BINDER cell as a payload and `ref` as a head refuse by name.
+out="$(run_cli_fn Tests/unseq-wire/e5daddr.json e5daddr)" || { echo "check-wire-boundary: FAIL [unseq addr-arg] — the address-argument wire did not run: $out" >&2; exit 1; }
+[[ "$out" == *'"status":"ok"'* && "$out" == *'"value":8'* ]] || { echo "check-wire-boundary: FAIL [unseq addr-arg] — expected ok/8 (canonical = use first, x's read after): $out" >&2; exit 1; }
+echo "ok [unseq addr-arg] runs, answers 8 (the address of a variable an invocation argument, no occurrence — Stage E5 E5d)"
+out="$(run_cli_fn Tests/unseq-wire/e5dlit.json e5dlit)" || { echo "check-wire-boundary: FAIL [unseq addr-payload] — the address-payload wire did not run: $out" >&2; exit 1; }
+[[ "$out" == *'"status":"ok"'* && "$out" == *'"value":15'* ]] || { echo "check-wire-boundary: FAIL [unseq addr-payload] — expected ok/15 (canonical = m first, the deref after): $out" >&2; exit 1; }
+echo "ok [unseq addr-payload] runs, answers 15 (the address of a variable a struct-literal payload inside new — Stage E5 E5d)"
+expect_unseq_refusal unseq-addr-payload-binder mut-addr-payload-binder e5dlit 'address of a binder cell'
+expect_unseq_refusal unseq-addr-head mut-addr-head e5daddr 'outside the admitted fragment'
+echo 'Wire boundary gate: PASS (11 byte-level controls + 46 unseq-node controls through the real CLI)'

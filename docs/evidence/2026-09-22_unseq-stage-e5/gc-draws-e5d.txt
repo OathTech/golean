@@ -1,0 +1,12 @@
+# gc's draws (go1.26.5), 20 per subject (5 runs x GOMAXPROCS 1/8 x default / -N -l); producer .tmp/e5/gc-draws.sh (on the package's sources as committed). Born: evalorder/unseq-addr (5). gc is CALL-FIRST on every row: addrArgVsRead 8 (use's write through &x before x's read), addrPayloadVsCall 15, addrStoredVsRead 78, addrGlobalArgVsRead 8 — each the second member of its set; addrArgPureControl 2 (the strict control, both orders agree).
+
+20 Corpus/coverage/exec/evalorder/unseq-addr:addrArgPureControl -> 2
+20 Corpus/coverage/exec/evalorder/unseq-addr:addrArgVsRead -> 8
+20 Corpus/coverage/exec/evalorder/unseq-addr:addrGlobalArgVsRead -> 8
+20 Corpus/coverage/exec/evalorder/unseq-addr:addrPayloadVsCall -> 15
+20 Corpus/coverage/exec/evalorder/unseq-addr:addrStoredVsRead -> 78
+
+# The three strict rows whose sweeps ENTER the graph at E5d (an `&x` argument beside a read of the address-taken variable): gc CALL-FIRST on each, 20/20 — the strict pin's value is one member of the enumerated set (moved to membership with the reason).
+20 Corpus/coverage/exec/channels/make-edge:channelOrdinaryReceiveEvalOrder -> 182
+20 Corpus/coverage/exec/multi-assign/deref-target-before-rhs:derefTargetBeforeRHS -> 188
+20 Corpus/coverage/exec/multi-assign/selector-target-before-rhs:selectorTargetBeforeRHS -> 177

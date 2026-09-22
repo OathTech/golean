@@ -906,6 +906,41 @@ def e5c2():
     check('E5c2 m := map[int]int{a[0]: f()} (the key read vs the value\'s call inside the literal)',
           enumerate_graph(occs, state(arr={'A': [1, 2]}), r), lambda k: k[1], {5, 50})
 
+# ---------------------------------------------------------------- Stage E5, family E5d (2026-09-22)
+# THE ADDRESS OF A VARIABLE as an operand (`&x`): an ADDRESS FORMATION (spec#Address_operators) — no read, no failure — so
+# it is NO occurrence of the graph; the reads of the address-taken variable beside the call that receives the address are.
+
+def e5d1():
+    # use(&x) + x: use writes *p = 7 and returns 1. x's read before use 1 + 1 = 2, after 7 + 1 = 8. {2, 8}.
+    def use(st, v): st['v']['x'] = 7; return 1
+    occs = [Occ('E_use', run=use),
+            Occ('R_x', run=lambda st, v: st['v']['x']),
+            Occ('Op', deps=['E_use', 'R_x'], run=lambda st, v: v['E_use'] + v['R_x'])]
+    check('E5d1 use(&x) + x (the address an argument — no occurrence; the address-taken x\'s read vs use writing *p)',
+          enumerate_graph(occs, state(v={'x': 1}), lambda st, v: v['Op']), lambda k: k[1], {2, 8})
+
+def e5d2():
+    # *(&PT{p: &x}).p + m(): m writes x = 10 and returns 5. The literal is an allocate over the payload `ref x` (no read);
+    # the field read yields the address; the deref READS x — before m 1 + 5 = 6, after 10 + 5 = 15. {6, 15}.
+    def m(st, v): st['v']['x'] = 10; return 5
+    occs = [Occ('E_m', run=m),
+            Occ('A_lit', run=lambda st, v: 'ptr'),
+            Occ('R_f', deps=['A_lit'], run=lambda st, v: 'x'),
+            Occ('R_d', deps=['R_f'], run=lambda st, v: st['v'][v['R_f']]),
+            Occ('Op', deps=['R_d', 'E_m'], run=lambda st, v: v['R_d'] + v['E_m'])]
+    check('E5d2 *(&PT{p: &x}).p + m() (the address a payload — no read; the deref through the fresh pointer vs m)',
+          enumerate_graph(occs, state(v={'x': 1}), lambda st, v: v['Op']), lambda k: k[1], {6, 15})
+
+def e5d3():
+    # p, y = &x, use(&x) + x; *p*10 + y: a tuple with no planned target — the stored address rides the completion; y's
+    # sweep is E5d1's; *p reads x = 7 after the sweep. {72, 78}.
+    def use(st, v): st['v']['x'] = 7; return 1
+    occs = [Occ('E_use', run=use),
+            Occ('R_x', run=lambda st, v: st['v']['x']),
+            Occ('Op', deps=['E_use', 'R_x'], run=lambda st, v: v['E_use'] + v['R_x'])]
+    check('E5d3 p, y = &x, use(&x) + x; *p*10 + y (the stored address no occurrence; the read vs use)',
+          enumerate_graph(occs, state(v={'x': 1}), lambda st, v: st['v']['x'] * 10 + v['Op']), lambda k: k[1], {72, 78})
+
 # ---------------------------------------------------------------- Stage E5, family E5e (2026-09-22)
 # STRINGS: an index / slice of an immutable string is a bounds-checked PURE OP on the string VALUE — a failing
 # occurrence unordered against the sibling calls; len(s) is an E1 participant.
@@ -1003,7 +1038,7 @@ if __name__ == '__main__':
               e1a, e1c, e1b, e2a, e2c, e2d, e2e, e2f, e2g, e3a, e3c, e3d, e3e,
               e4a, e4b, e4c, e4d, e4e, e4f, e4g, e4h,
               e5a1, e5a2, e5a3, e5a4, e5a5, e5a6, e5a7,
-              e5b1, e5b2, e5b3, e5b4, e5c1, e5c2, e5e1, e5e2, e5e3, e5e4, controls):
+              e5b1, e5b2, e5b3, e5b4, e5c1, e5c2, e5d1, e5d2, e5d3, e5e1, e5e2, e5e3, e5e4, controls):
         f()
     print('RESULT:', 'FAIL' if FAILS else 'PASS', f'({FAILS} mismatch(es))')
     sys.exit(1 if FAILS else 0)

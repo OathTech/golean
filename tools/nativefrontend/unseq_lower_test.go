@@ -138,6 +138,12 @@ func TestUnseqLoweringShapes(t *testing.T) {
 		// conversion, the op.
 		{"e5eStrSlice", "invoke eval:ident eval:slice eval:index-get eval:convert eval:binary"},
 		{"e5eStrIndexVsCall", "invoke eval:ident eval:index-get eval:convert eval:binary"},
+		// Stage E5 E5d: use first (its argument `ref x` is no occurrence); the residual: the address-taken x's read,
+		// the op. The payload form: m first; the residual: the literal (an allocate over the `ref x` payload), the
+		// field read, the deref, the op.
+		{"e5dAddrArgVsRead", "invoke eval:ident eval:binary"},
+		{"e5dAddrStored", "invoke eval:ident eval:binary"},
+		{"e5dAddrPayloadVsCall", "invoke allocate eval:field-get eval:deref eval:binary"},
 		// W6: two E1-ordered calls, then the read and the ops.
 		{"w6", "invoke invoke/after eval:ident eval:binary eval:binary"},
 		// R6: the call first; the header read and the checked access late.

@@ -460,3 +460,71 @@ the classifier, nothing else (no core, no decoder, no wire schema change). (ii) 
 ratified reading (a) names `len` among the built-ins). (iii) The full slice expression on a string refused by name. (iv) The
 status-diverse row split, not declared (above).
 
+## E5d. The address of a variable as an operand (landed 2026-09-22)
+
+**The class.** spec#Address_operators: «For an operand x of type T, the address operation &x generates a pointer of type *T
+to x. The operand must be addressable … As an exception to the addressability requirement, x may also be a (possibly
+parenthesized) composite literal.» Taking the address of a VARIABLE reads nothing and cannot fail (the failing case, `&*p`
+with a nil p, has a dereference operand — outside this family; `&T{…}` is E4's allocation) — so `&x` is NO occurrence of the
+graph. What IS observable beside it: the reads of the address-taken variable, unordered against the call that receives the
+address and may write through it (`use(&x) + x`: x's read before or after use's `*p = 7`). §0 measured 101 main-unit
+first-reason «unary operator & (address of a variable)» sweeps at the baseline.
+
+**The grammar: an ALLOWED LIST of value positions.** `&x` is admitted exactly where the lowering consumes an ALREADY-EVALUATED
+value and the decoder admits the frontend's own address spelling (`ref x` for a local, `globaladdr` for a package-level
+variable, the captured pointer parameter inside a lifted body): a call argument, a method receiver operand, a `new(x)` payload,
+a struct / slice / map-literal element (a map literal's VALUE — its key is computed on), a plain local's or package variable's
+stored value (`p = &x`, `p := &x` — the store rides `then`), a return operand, a tuple's value beside NO planned target. The
+helper `unseqValueOrAddr` (tools/nativefrontend/unseq.go) classifies these eleven sites; every other position calls `unseqExpr`
+directly, where `&x` REFUSES BY NAME: «unary operator & (address of a variable) in a computing position — admitted only as an
+argument, a payload or a stored value (E5d)» (`*&x`, `&x == p`, an index, a conversion, a `min` operand …). Refused by name too:
+`&x` as a PLANNED target's value — `a[f()] = &x`, or `a[f()], p = 1, &x` — because the lowering copies a planned store's value
+into a cell (`ensureCell`) and that copy would be a `ref` HEAD, which the decoder does not admit (below); `&` of a non-variable
+identifier; a pointee type outside the grammar (named). The lowering (`value`, unseq_lower.go): the `&` case emits
+`emitAddressOf(id)` — the frontend's own spelling, no occurrence. The classifier still marks the variable ADDRESS-TAKEN
+(`unseqAddrTaken`), so its reads inside the sweep are occurrences (never atoms) — the pair `use(&x) + x` is a two-member set,
+never a forced singleton.
+
+**The decoder** (GoLean/NativeToIR.lean): ONE arm — an allocation / struct-literal PAYLOAD may be `ref` of a SOURCE local or
+`globaladdr` (`unseqCheckPayload`; the argument position admitted them since audit F2); `ref` of a `$` binder cell is refused
+by name (F2's class — a graph cell is written only by its producer; `unseqRefOfBinder?` hoisted above the payload check). NO
+head arm: the frontend never emits a `ref` head (the planned-target shapes are refused by name at the classifier), so the
+decoder keeps refusing it — no widening for a shape the lowering never emits; mutant `mut-addr-head` pins the refusal, mutant
+`mut-addr-payload-binder` the F2 class (43 → 45). NO core change (no new kind, no new Step rule, no new pick).
+
+**References lead** (`enumerate.py` E5d1 `use(&x) + x` {2, 8}; E5d2 `*(&PT{p: &x}).p + m()` {6, 15}; E5d3 `p, y = &x,
+use(&x)+x; *p*10 + y` {72, 78}; PASS). Wires: hand-built `e5daddr` (the `ref x` argument) and `e5dlit` (the `ref x` payload
+inside a `new` allocate over a struct literal) + natives, EXACT (`Tests/UnseqWire.lean` 124 ok / 45 mutants; `check-wire-
+boundary` 11 + 46 — the two positive controls answer 8 / 15 on the canonical tape). Frontend unit tests: witnesses
+`e5dAddrArgVsRead` 1/1 (use | the address-taken x's read), `e5dAddrPayloadVsCall` 1/2, `e5dAddrStored` 1/1; refusals by name
+`e5dDerefAddr` («in a computing position»), `e5dAddrPlanned` («beside a planned target»); canonical shapes `invoke eval:ident
+eval:binary` / `invoke allocate eval:field-get eval:deref eval:binary`.
+
+**The census** (`census-e5d.txt`): admitted **168 → 177** — +3 from the widening (`channels/make-edge/channelOrdinaryReceiveEvalOrder`, `multi-assign/deref-target-before-rhs/derefTargetBeforeRHS`, `multi-assign/selector-target-before-rhs/selectorTargetBeforeRHS`, all by former reason «unary operator & (address of a variable)» — the address a call ARGUMENT in each), +5 the born package's sweeps, +1 `evalorder/unseq-strings/strIndexPanicVsPrint` (E5e's row split happened after the E5e census: the E5e commit's true count is 169, corrected in §8ai and the handoff); 0 lost; the twin 10 203 / 0. Legacy probes 58 → 58 (the three sweeps that enter carried no probe — their legacy paths had no failing sibling), the twin 128 unchanged. The remaining main-unit «address of a variable» residue is the computing-position and planned-target shapes (refused by name) and call-free sweeps.
+
+**gc's members** (`gc-draws-e5d.txt`, 20/20 under GOMAXPROCS 1/8, default and `-N -l`): CALL-FIRST on every row (8, 15, 78, 8)
+— the second member of each set; the control 2.
+
+**Rows** (`scripts/diff-one` — `diff-one-e5d.txt`):
+
+| row | before → after | set | gc |
+|---|---|---|---|
+| `evalorder/unseq-addr/addr-arg-vs-read` | born PASS/membership | {2, 8} (E5d1) | 8 |
+| `evalorder/unseq-addr/addr-payload-vs-call` | born PASS/membership | {6, 15} (E5d2) | 15 |
+| `evalorder/unseq-addr/addr-stored-vs-read` | born PASS/membership | {72, 78} (E5d3) | 78 |
+| `evalorder/unseq-addr/addr-global-arg-vs-read` | born PASS/membership | {2, 8} (E5d1 on a package-level variable) | 8 |
+| `evalorder/unseq-addr/addr-arg-pure-control` | born PASS strict | 2 (both picks agree) | 2 |
+| `multi-assign/deref-target-before-rhs` | PASS strict → PASS/membership | {828, 822, 181, 188} — `*p, p = derefTargetRHS(&p, &b), p`: the deref target's operand × the right-hand read of p, each before / after the call | 188 (call-first) |
+| `multi-assign/selector-target-before-rhs` | PASS strict → PASS/membership | {727, 722, 171, 177} — the field target's implicit indirection × the read of p | 177 |
+| `channels/make-edge/ordinary-receive-eval-order` | PASS strict → PASS/membership | {170, 171, 182} — score's read before / between / after the two calls writing it through `&score` | 182 |
+| the other 9 `channels/make-edge` rows | UNCHANGED | — | — |
+
+Baseline 3752 = 3517 / 235 → **3757 = 3522 / 235**; NO PASS → non-PASS.
+
+**Latitude.** E2/E12's VALUE axis (a) ENVELOPED on the four born membership rows (the address-taken variable's read vs the
+call writing through the address) — posed for ratification at the merge ask with the others. **[AGENT] choices.** (i) An
+ALLOWED LIST of value positions, not a general admission — the address is admitted only where its consumer takes a finished
+value and the decoder already spells it; every computing position refuses by name. (ii) NO `ref` head at the decoder; the
+planned-target shapes refused at the classifier instead (fail closed on both sides of the boundary). (iii) `ref` of a binder
+cell refused in the payload position by the F2 rule, with a mutant. (iv) The pointee type must be in the grammar (the address
+is opaque, but the type spelling and the E2 pointer admission agree on the elem type).

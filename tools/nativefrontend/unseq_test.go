@@ -737,6 +737,53 @@ func e5aTgtAssertMin() int {
 	return x[0]
 }
 
+// --- Stage E5 E5d: &x of a variable ---
+
+func use(p *int) int { *p = 7; return 1 }
+
+type PT struct{ p *int }
+
+// use(&x) + x with use writing *p = 7 (returns 1): &x an argument — an address formation, no read; the
+// sibling read of the address-taken x is unordered against use — before 1 + 1 = 2, after 7 + 1 = 8.
+func e5dAddrArgVsRead() int {
+	x := 1
+	return use(&x) + x
+}
+
+// *(&PT{p: &x}).p + m() with m writing x: &x a struct-literal payload; the deref reads x before / after m.
+func e5dAddrPayloadVsCall() int {
+	x := 1
+	m := func() int { x = 10; return 5 }
+	return *(&PT{p: &x}).p + m()
+}
+
+// p, y = &x, use(&x)+x — a tuple with NO planned target: the stored address rides then (no occurrence); the
+// sibling read of x vs use is the graph: y before use 2, after 8; *p = 7 after the sweep — 72 or 78.
+func e5dAddrStored() int {
+	x := 1
+	var p *int
+	var y int
+	p, y = &x, use(&x)+x
+	return *p*10 + y
+}
+
+// a[f()], p = 1, &x: &x beside a PLANNED target — refused by name (the store would copy a ref head).
+func e5dAddrPlanned() int {
+	a := []int{0}
+	x := 1
+	var p *int
+	f := func() int { return 0 }
+	a[f()], p = 1, &x
+	return a[0] + *p
+}
+
+// *&x + m(): &x in a computing position (the dereference) — refused by name.
+func e5dDerefAddr() int {
+	x := 1
+	m := func() int { x = 10; return 5 }
+	return *&x + m()
+}
+
 // --- Stage E5 E5e: strings ---
 
 // int(s[i:][0]) + m() with i captured (m: i = 1): the substring's bounds check and its byte read vs m
@@ -919,6 +966,10 @@ func TestUnseqAdmittedWitnesses(t *testing.T) {
 		{"stringIndex", 0, "return", 1, 1},       // wit | the checked byte read str[0] (a private string; the conversion pure)
 		{"e5eStrSlice", 0, "return", 1, 3},       // m | the captured i's read, the checked substring, its checked byte [0]
 		{"e5eStrIndexVsCall", 0, "return", 1, 2}, // m | the captured i's read, the checked byte read
+		// Stage E5 E5d: &x
+		{"e5dAddrArgVsRead", 0, "return", 1, 1},     // use | the address-taken x's read; &x itself no occurrence
+		{"e5dAddrPayloadVsCall", 0, "return", 1, 2}, // m | the field read through the fresh pointer, the deref of the payload pointer
+		{"e5dAddrStored", 1, "tuple-assign", 1, 1},  // use | the address-taken x's read; the stored address and the argument are no occurrences
 	}
 	for _, c := range cases {
 		d := decisionAt(t, unseqWitnessSrc, c.fn, c.fromEnd)
@@ -1011,6 +1062,9 @@ func TestUnseqLegacyByReason(t *testing.T) {
 		{"e5bCommaOkAssertOnly", 2, "no call occurrence"},
 		// Stage E5 E5e
 		{"e5eStrLenForced", 0, "no occurrence observable against an effectful event"},
+		// Stage E5 E5d
+		{"e5dDerefAddr", 0, "address of a variable) in a computing position"},
+		{"e5dAddrPlanned", 1, "beside a planned target in a multi-target assignment"},
 	}
 	for _, c := range cases {
 		d := decisionAt(t, unseqWitnessSrc, c.fn, c.fromEnd)

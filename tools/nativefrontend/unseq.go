@@ -477,7 +477,54 @@ const (
 	unseqConst unseqExprKind = iota // a constant: an atom
 	unseqAtom                       // a private local: an admitted stable read, an atom
 	unseqValue                      // a produced VALUE (one or more occurrences)
+	unseqAddr                       // Stage E5 E5d: the ADDRESS of a variable (`&x`): no read, no failure — an argument / payload / stored value, never a head's operand
 )
+
+// unseqValueOrAddr classifies an operand in a VALUE position whose consumer takes
+// an already-evaluated value (Stage E5 E5d, 2026-09-22): `&x` of a local or
+// package-level variable is an ADDRESS FORMATION — spec#Address_operators: it
+// reads nothing and cannot fail (the operand is a variable, not `*p`) — lowered as
+// `ref x` / `globaladdr` (the frontend's own address spelling); every other
+// operand is `unseqExpr`'s. Positions that COMPUTE on their operand (an index, a
+// dereference, a comparison, a conversion, a head) call `unseqExpr` directly,
+// where `&x` refuses by name — the decoder admits `ref` only as an invocation
+// argument or an allocation payload (never as a head), so the classifier's allowed
+// list mirrors the decoder's; a PLANNED target's copied value is refused by name at
+// its site (the store would copy a `ref` head into a cell).
+func (e *emitter) unseqValueOrAddr(x ast.Expr, ctx *unseqCtx, d *unseqDecision) (unseqExprKind, bool) {
+	if id, isAddr := unseqAddrOfVar(x); isAddr {
+		pt := e.goTypeOf(x)
+		if pt == nil || !unseqTypeOK(pt) {
+			if d.reason == "" {
+				d.reason = "address of a variable of a type outside the grammar (" + typeStringOrUntyped(pt) + ")"
+			}
+			return unseqConst, false
+		}
+		obj := e.info.Uses[id]
+		if _, isLocal := e.unseqLocalVar(obj); isLocal {
+			return unseqAddr, true
+		}
+		if _, isPkg := e.isPackageVar(obj); isPkg {
+			return unseqAddr, true
+		}
+		if d.reason == "" {
+			d.reason = "address of a non-variable identifier"
+		}
+		return unseqConst, false
+	}
+	return e.unseqExpr(x, ctx, d)
+}
+
+// unseqAddrOfVar reports `&ident` (parenthesised or not) — the address of a named variable,
+// as opposed to `&T{…}` (an allocation, E4) or `&a[i]` / `&s.f` (outside the grammar).
+func unseqAddrOfVar(x ast.Expr) (*ast.Ident, bool) {
+	u, isUnary := ast.Unparen(x).(*ast.UnaryExpr)
+	if !isUnary || u.Op != token.AND {
+		return nil, false
+	}
+	id, isIdent := ast.Unparen(u.X).(*ast.Ident)
+	return id, isIdent
+}
 
 // unseqExpr classifies an operand expression: whether it lies inside the
 // pilot expression grammar (reason names the first construct outside it),
@@ -697,7 +744,9 @@ func (e *emitter) unseqExpr(x ast.Expr, ctx *unseqCtx, d *unseqDecision) (unseqE
 			if cl, isLit := ast.Unparen(v.X).(*ast.CompositeLit); isLit {
 				return e.unseqAddrLit(cl, ctx, d)
 			}
-			return refuse("unary operator & (address of a variable)")
+			// Stage E5 E5d: `&x` is admitted only in VALUE positions (`unseqValueOrAddr`);
+			// here a head would compute on the address.
+			return refuse("unary operator & (address of a variable) in a computing position — admitted only as an argument, a payload or a stored value (E5d)")
 		}
 		switch v.Op {
 		case token.SUB, token.XOR, token.NOT:
@@ -881,7 +930,7 @@ func (e *emitter) unseqMakeNew(c *ast.CallExpr, name string, ctx *unseqCtx, d *u
 		// the ZERO value and `*new(m())` never ran m (a wrong answer against gc
 		// and main; the census counted `q := new(m())` as events=1 calls=0).
 		if tv, ok := e.info.Types[c.Args[0]]; !ok || !tv.IsType() {
-			if _, ok := e.unseqExpr(c.Args[0], ctx, d); !ok {
+			if _, ok := e.unseqValueOrAddr(c.Args[0], ctx, d); !ok {
 				return 0, false
 			}
 		}
@@ -1077,7 +1126,7 @@ func (e *emitter) unseqCompositeLit(cl *ast.CompositeLit, ctx *unseqCtx, d *unse
 			if kv, ok := elt.(*ast.KeyValueExpr); ok {
 				v = kv.Value
 			}
-			if _, ok := e.unseqExpr(v, ctx, d); !ok {
+			if _, ok := e.unseqValueOrAddr(v, ctx, d); !ok {
 				return unseqConst, false
 			}
 		}
@@ -1094,7 +1143,7 @@ func (e *emitter) unseqCompositeLit(cl *ast.CompositeLit, ctx *unseqCtx, d *unse
 				}
 				v = kv.Value
 			}
-			if _, ok := e.unseqExpr(v, ctx, d); !ok {
+			if _, ok := e.unseqValueOrAddr(v, ctx, d); !ok {
 				return unseqConst, false
 			}
 		}
@@ -1116,7 +1165,7 @@ func (e *emitter) unseqCompositeLit(cl *ast.CompositeLit, ctx *unseqCtx, d *unse
 			if _, ok := e.unseqExpr(kv.Key, ctx, d); !ok {
 				return unseqConst, false
 			}
-			if _, ok := e.unseqExpr(kv.Value, ctx, d); !ok {
+			if _, ok := e.unseqValueOrAddr(kv.Value, ctx, d); !ok {
 				return unseqConst, false
 			}
 		}
@@ -1312,7 +1361,7 @@ func (e *emitter) unseqMethodCallee(sel *ast.SelectorExpr, ctx *unseqCtx, d *uns
 	// the receiver sub-evaluation
 	if pointerRecv {
 		if opIsPtr {
-			if _, ok := e.unseqExpr(sel.X, ctx, d); !ok {
+			if _, ok := e.unseqValueOrAddr(sel.X, ctx, d); !ok {
 				return nil, false
 			}
 		} else {
@@ -1435,7 +1484,7 @@ func (e *emitter) unseqCall(c *ast.CallExpr, ctx *unseqCtx, d *unseqDecision, ma
 		if !unseqTypeOK(pt) {
 			return refuse("parameter type outside the pilot grammar (" + pt.String() + ")")
 		}
-		if _, ok := e.unseqExpr(a, ctx, d); !ok {
+		if _, ok := e.unseqValueOrAddr(a, ctx, d); !ok {
 			return 0, false
 		}
 	}
@@ -1772,8 +1821,19 @@ func (e *emitter) unseqClassify(s ast.Stmt, ctx *unseqCtx) unseqDecision {
 			default:
 				return refuse("assignment target outside the pilot grammar")
 			}
-			if _, ok := e.unseqExpr(st.Rhs[0], ctx, &d); !ok {
-				return refuse("right-hand side")
+			// Stage E5 E5d: a plain identifier target's value rides `then` — `&x` admitted there; a PLANNED
+			// target's value is copied into a store cell (a `ref` head the decoder refuses) — `&x` refused by name.
+			if _, isPlain := ast.Unparen(st.Lhs[0]).(*ast.Ident); isPlain {
+				if _, ok := e.unseqValueOrAddr(st.Rhs[0], ctx, &d); !ok {
+					return refuse("right-hand side")
+				}
+			} else {
+				if id, isAddr := unseqAddrOfVar(st.Rhs[0]); isAddr {
+					return refuse("address of a variable (" + id.Name + ") as a planned target's value — the store would copy a `ref` head into a cell; E5d admits &x as an argument, a payload, a plain local's or a return's value")
+				}
+				if _, ok := e.unseqExpr(st.Rhs[0], ctx, &d); !ok {
+					return refuse("right-hand side")
+				}
 			}
 		default:
 			d.form = "compound"
@@ -1832,7 +1892,7 @@ func (e *emitter) unseqClassify(s ast.Stmt, ctx *unseqCtx) unseqDecision {
 			if !unseqTypeOK(ctx.results.At(i).Type()) {
 				return refuse("result type outside the pilot grammar (" + ctx.results.At(i).Type().String() + ")")
 			}
-			if _, ok := e.unseqExpr(r, ctx, &d); !ok {
+			if _, ok := e.unseqValueOrAddr(r, ctx, &d); !ok {
 				return refuse("return operand")
 			}
 		}
@@ -2021,7 +2081,14 @@ func (e *emitter) unseqMultiAssign(st *ast.AssignStmt, ctx *unseqCtx, d *unseqDe
 		if _, isTup := e.goTypeOf(r).(*types.Tuple); isTup {
 			return refuse("multi-value right-hand side")
 		}
-		if _, ok := e.unseqExpr(r, ctx, d); !ok {
+		// Stage E5 E5d: beside a planned target every value is copied into a store cell — `&x` (a `ref` head)
+		// refused by name; otherwise the tuple rides `then` and `&x` is admitted.
+		if planned {
+			if id, isAddr := unseqAddrOfVar(r); isAddr {
+				return refuse("address of a variable (" + id.Name + ") beside a planned target in a multi-target assignment — the store would copy a `ref` head into a cell; E5d admits &x as an argument, a payload, a plain local's or a return's value")
+			}
+		}
+		if _, ok := e.unseqValueOrAddr(r, ctx, d); !ok {
 			return false
 		}
 	}

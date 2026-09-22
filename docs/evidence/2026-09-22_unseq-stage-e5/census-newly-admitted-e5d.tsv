@@ -1,0 +1,4 @@
+dir	unit	file:line	function	form	events	calls	nonEvents	former-reason
+Corpus/coverage/exec/channels/make-edge	main	Corpus/coverage/exec/channels/make-edge/main.go:82	channelOrdinaryReceiveEvalOrder	return	3	3	1	unary operator & (address of a variable)
+Corpus/coverage/exec/multi-assign/deref-target-before-rhs	main	Corpus/coverage/exec/multi-assign/deref-target-before-rhs/main.go:12	derefTargetBeforeRHS	tuple-assign	1	1	2	unary operator & (address of a variable)
+Corpus/coverage/exec/multi-assign/selector-target-before-rhs	main	Corpus/coverage/exec/multi-assign/selector-target-before-rhs/main.go:16	selectorTargetBeforeRHS	tuple-assign	1	1	2	unary operator & (address of a variable)
