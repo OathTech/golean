@@ -71,9 +71,10 @@ func makeLenVsCall() int {
 	return len(make([]int, n)) + m()
 }
 
-// STRICT CONTROL: a MAP literal stays on the legacy path by name (E5 — gc evaluates its
-// dynamic entries at the literal's position); both orders agree here (m writes nothing the
-// literal reads). 1 + 5 = 6.
+// STRICT CONTROL: a MAP literal with CONSTANT entries beside a call — since Stage E5 E5c
+// (2026-09-22) an `allocate` body (`map-lit`) whose only occurrence unordered against m is the
+// fresh map's read (nobody else holds the map): one observation, 1 + 5 = 6. (Before E5c it stayed
+// on the legacy path by name.)
 func mapLitControl() int {
 	x := 1
 	m := mut(&x, 10)

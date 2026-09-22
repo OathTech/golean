@@ -19,29 +19,27 @@
    "body": {
     "body": [
      {
-      "args": [
+      "define": false,
+      "lhs": [
        {
-        "bytes": [
-         119,
-         105,
-         116
-        ],
-        "expr": "string",
-        "type": {
-         "kind": "string"
-        }
-       },
+        "expr": {
+         "expr": "ident",
+         "name": "x$cap"
+        },
+        "target": "addr"
+       }
+      ],
+      "rhs": [
        {
         "expr": "int",
         "type": {
          "int": "int",
          "kind": "int"
         },
-        "value": "5"
+        "value": "10"
        }
       ],
-      "newline": true,
-      "stmt": "print"
+      "stmt": "assign"
      },
      {
       "results": [
@@ -59,8 +57,19 @@
     ],
     "stmt": "block"
    },
-   "name": "wit5",
-   "params": [],
+   "name": "e5cmaplit$lit0",
+   "params": [
+    {
+     "id": "x$cap",
+     "type": {
+      "elem": {
+       "int": "int",
+       "kind": "int"
+      },
+      "kind": "pointer"
+     }
+    }
+   ],
    "results": [
     {
      "id": "$res0",
@@ -76,66 +85,10 @@
    "body": {
     "body": [
      {
-      "elem": {
-       "int": "int",
-       "kind": "int"
-      },
-      "len": {
-       "expr": "int",
-       "type": {
-        "int": "int",
-        "kind": "int"
-       },
-       "value": "1"
-      },
-      "stmt": "make-slice",
-      "target": {
-       "id": "$c0",
-       "target": "declare",
-       "type": {
-        "elem": {
-         "int": "int",
-         "kind": "int"
-        },
-        "kind": "slice"
-       }
-      }
-     },
-     {
       "define": true,
       "lhs": [
        {
-        "id": "s",
-        "target": "declare",
-        "type": {
-         "elem": {
-          "int": "int",
-          "kind": "int"
-         },
-         "kind": "slice"
-        }
-       }
-      ],
-      "rhs": [
-       {
-        "expr": "ident",
-        "name": "$c0",
-        "type": {
-         "elem": {
-          "int": "int",
-          "kind": "int"
-         },
-         "kind": "slice"
-        }
-       }
-      ],
-      "stmt": "assign"
-     },
-     {
-      "define": true,
-      "lhs": [
-       {
-        "id": "i",
+        "id": "x",
         "target": "declare",
         "type": {
          "int": "int",
@@ -150,7 +103,51 @@
          "int": "int",
          "kind": "int"
         },
-        "value": "9"
+        "value": "1"
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "m",
+        "target": "declare",
+        "type": {
+         "kind": "func",
+         "params": [],
+         "results": [
+          {
+           "int": "int",
+           "kind": "int"
+          }
+         ],
+         "variadic": false
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "captured": [
+         {
+          "expr": "ref",
+          "id": "x"
+         }
+        ],
+        "expr": "func-value",
+        "func": "e5cmaplit$lit0",
+        "type": {
+         "kind": "func",
+         "params": [],
+         "results": [
+          {
+           "int": "int",
+           "kind": "int"
+          }
+         ],
+         "variadic": false
+        }
        }
       ],
       "stmt": "assign"
@@ -167,18 +164,22 @@
        {
         "id": "$u1",
         "type": {
-         "int": "int",
-         "kind": "int"
+         "key": {
+          "int": "int",
+          "kind": "int"
+         },
+         "kind": "map",
+         "value": {
+          "int": "int",
+          "kind": "int"
+         }
         }
        },
        {
         "id": "$u2",
         "type": {
-         "elem": {
-          "int": "int",
-          "kind": "int"
-         },
-         "kind": "slice"
+         "int": "int",
+         "kind": "int"
         }
        },
        {
@@ -200,15 +201,25 @@
        {
         "args": [],
         "binds": [
-         "$u0"
+         "$u3"
         ],
         "callee": {
-         "captured": [],
-         "expr": "func-value",
-         "func": "wit5"
+         "expr": "ident",
+         "name": "m",
+         "type": {
+          "kind": "func",
+          "params": [],
+          "results": [
+           {
+            "int": "int",
+            "kind": "int"
+           }
+          ],
+          "variadic": false
+         }
         },
         "kind": "invoke",
-        "name": "call0",
+        "name": "call3",
         "resultTypes": [
          {
           "int": "int",
@@ -217,48 +228,33 @@
         ]
        },
        {
-        "bind": "$u1",
+        "bind": "$u0",
         "head": {
-         "base": {
-          "expr": "ident",
-          "name": "s",
-          "type": {
-           "elem": {
-            "int": "int",
-            "kind": "int"
-           },
-           "kind": "slice"
-          }
-         },
-         "expr": "index-get",
-         "index": {
-          "expr": "ident",
-          "name": "i",
-          "type": {
-           "int": "int",
-           "kind": "int"
-          }
-         },
+         "expr": "ident",
+         "name": "x",
          "type": {
           "int": "int",
           "kind": "int"
          }
         },
         "kind": "eval",
-        "name": "access1"
+        "name": "read0"
        },
        {
         "allocation": {
-         "elem": {
-          "int": "int",
-          "kind": "int"
-         },
-         "elems": [
+         "entries": [
           {
-           "index": 0,
+           "key": {
+            "expr": "int",
+            "type": {
+             "int": "int",
+             "kind": "int"
+            },
+            "value": "1"
+           },
            "value": {
             "expr": "ident",
-            "name": "$u1",
+            "name": "$u0",
             "type": {
              "int": "int",
              "kind": "int"
@@ -266,43 +262,62 @@
            }
           }
          ],
-         "length": 1,
-         "stmt": "array-lit"
+         "keyType": {
+          "int": "int",
+          "kind": "int"
+         },
+         "stmt": "map-lit",
+         "valueType": {
+          "int": "int",
+          "kind": "int"
+         }
         },
-        "bind": "$u2",
+        "bind": "$u1",
         "kind": "allocate",
-        "name": "lit2"
+        "name": "lit1"
        },
        {
-        "bind": "$u3",
+        "bind": "$u2",
         "head": {
          "base": {
           "expr": "ident",
-          "name": "$u2",
+          "name": "$u1",
           "type": {
-           "elem": {
+           "key": {
             "int": "int",
             "kind": "int"
            },
-           "kind": "slice"
+           "kind": "map",
+           "value": {
+            "int": "int",
+            "kind": "int"
+           }
           }
          },
-         "expr": "index-get",
+         "expr": "map-get",
          "index": {
           "expr": "int",
           "type": {
            "int": "int",
            "kind": "int"
           },
-          "value": "0"
+          "value": "1"
+         },
+         "keyType": {
+          "int": "int",
+          "kind": "int"
          },
          "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "valueType": {
           "int": "int",
           "kind": "int"
          }
         },
         "kind": "eval",
-        "name": "access3"
+        "name": "mapread2"
        },
        {
         "bind": "$u4",
@@ -315,7 +330,7 @@
          },
          "x": {
           "expr": "ident",
-          "name": "$u3",
+          "name": "$u2",
           "type": {
            "int": "int",
            "kind": "int"
@@ -323,7 +338,7 @@
          },
          "y": {
           "expr": "ident",
-          "name": "$u0",
+          "name": "$u3",
           "type": {
            "int": "int",
            "kind": "int"
@@ -353,7 +368,7 @@
     ],
     "stmt": "block"
    },
-   "name": "e4alloc",
+   "name": "e5cmaplit",
    "params": [],
    "results": [
     {

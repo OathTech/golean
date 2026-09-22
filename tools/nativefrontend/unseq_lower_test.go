@@ -130,6 +130,9 @@ func TestUnseqLoweringShapes(t *testing.T) {
 		{"e5bCommaOkRecvTarget", "recv eval:index-get target target"}, // a private: the checked access alone
 		{"e5bMultiCall", "invoke eval:ident target target"},
 		{"e5bDefineTuple", "invoke eval:ident eval:index-get"},
+		// Stage E5 E5c: the map literal an `allocate` in the residual (no after) on its key's checked read; the
+		// fresh map's read; the op.
+		{"e4mapLit", "invoke eval:index-get allocate eval:map-get eval:binary"},
 		// W6: two E1-ordered calls, then the read and the ops.
 		{"w6", "invoke invoke/after eval:ident eval:binary eval:binary"},
 		// R6: the call first; the header read and the checked access late.

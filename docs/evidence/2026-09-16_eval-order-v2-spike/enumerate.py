@@ -877,6 +877,35 @@ def e5b4():
           enumerate_graph(occs, state(v={'s': 'S1', 'x': 0}, arr={'S1': [1, 2], 'S2': [7, 8, 9]}), phase2),
           lambda k: k[1], {(5, 7), (1, 5)})
 
+# ---------------------------------------------------------------- Stage E5, family E5c (2026-09-22)
+# MAP LITERALS: an allocation node WITHOUT E1 edges (v2.1 R3 — a composite literal is not a call), the entries'
+# reads the occurrences; gc realizes the literal at its lexical position (the E13 guard's measured note) — one member.
+
+def e5c1():
+    # map[int]int{1: x}[1] + m(): x captured (m: x = 10, returns 5); the entry's read of x is unordered against m:
+    # before m 1 + 5 = 6, after 10 + 5 = 15.
+    def m(st, v): st['v']['x'] = 10; return 5
+    occs = [Occ('R_x', run=lambda st, v: st['v']['x']),
+            Occ('A', deps=['R_x'], run=lambda st, v: {1: v['R_x']}),
+            Occ('Rd', deps=['A'], run=lambda st, v: v['A'].get(1, 0)),
+            Occ('E_m', run=m),
+            Occ('Op', deps=['Rd', 'E_m'], run=lambda st, v: v['Rd'] + v['E_m'])]
+    check('E5c1 map[int]int{1: x}[1] + m() (the map literal an allocation node; the entry read vs m)',
+          enumerate_graph(occs, state(v={'x': 1}), lambda st, v: v['Op']), lambda k: k[1], {6, 15})
+
+def e5c2():
+    # m := map[int]int{a[0]: f()} (noodler/latitude map-literal-key-vs-call): a = [1, 2] captured, f writes a[0] = 7
+    # and returns 5; the key read a[0] is unordered against the value's call f INSIDE the same literal: {1: 5} or
+    # {7: 5} — the row's r = k1 + 10*k7 ∈ {5, 50}.
+    def f(st, v): store(st, 'A', 0, 7); return 5
+    occs = [Occ('R_a0', run=lambda st, v: elem(st, 'A', 0)),
+            Occ('E_f', run=f),
+            Occ('A', deps=['R_a0', 'E_f'], run=lambda st, v: {v['R_a0']: v['E_f']})]
+    def r(st, v):
+        m = v['A']; return m.get(1, 0) + 10 * m.get(7, 0)
+    check('E5c2 m := map[int]int{a[0]: f()} (the key read vs the value\'s call inside the literal)',
+          enumerate_graph(occs, state(arr={'A': [1, 2]}), r), lambda k: k[1], {5, 50})
+
 # ---------------------------------------------------------------- negative controls (forced pairs are singletons)
 def controls():
     # C1: f(g()) — argument before invocation (data edge); no unordered pair remains.
@@ -907,7 +936,7 @@ if __name__ == '__main__':
               e1a, e1c, e1b, e2a, e2c, e2d, e2e, e2f, e2g, e3a, e3c, e3d, e3e,
               e4a, e4b, e4c, e4d, e4e, e4f, e4g, e4h,
               e5a1, e5a2, e5a3, e5a4, e5a5, e5a6, e5a7,
-              e5b1, e5b2, e5b3, e5b4, controls):
+              e5b1, e5b2, e5b3, e5b4, e5c1, e5c2, controls):
         f()
     print('RESULT:', 'FAIL' if FAILS else 'PASS', f'({FAILS} mismatch(es))')
     sys.exit(1 if FAILS else 0)

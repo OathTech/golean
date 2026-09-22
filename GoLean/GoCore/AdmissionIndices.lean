@@ -77,6 +77,11 @@ def selectHeadIndices : SelectClauseHead → List TypeIdx
   | .send c v t => exprIndices c ++ exprIndices v ++ tyIndices t
   | .recv as c t => assigneesIndices as ++ exprIndices c ++ tyIndices t
 
+/-- A map literal's entries' indices (Stage E5 E5c). -/
+def pairExprIndices : List (Expr × Expr) → List TypeIdx
+  | [] => []
+  | (k, v) :: es => exprIndices k ++ exprIndices v ++ pairExprIndices es
+
 /-- An allocation's indices (Stage E E4): its types and operand expressions. -/
 def allocSpecIndices : AllocSpec → List TypeIdx
   | .new v t => exprIndices v ++ tyIndices t
@@ -84,6 +89,7 @@ def allocSpecIndices : AllocSpec → List TypeIdx
   | .makeMap k v h => tyIndices k ++ tyIndices v ++ optExprIndices h
   | .makeChan e c => tyIndices e ++ optExprIndices c
   | .sliceLit e _ es => tyIndices e ++ keyedExprIndices es
+  | .mapLit k v es => tyIndices k ++ tyIndices v ++ pairExprIndices es
 
 /-- A wide statement's indices (Stage E5 E5a): its types and operand expressions. -/
 def wideSpecIndices : WideSpec → List TypeIdx

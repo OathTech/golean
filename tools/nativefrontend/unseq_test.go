@@ -528,7 +528,7 @@ func e4valueLit() int {
 	return T{x: s[i]}.x + wit(5)
 }
 
-// A map literal stays legacy by name (E5).
+// Stage E5 E5c: a map literal is an allocate body — the checked s[0] (its key) and the fresh map's read.
 func e4mapLit() int {
 	s := []int{1}
 	return map[int]int{s[0]: 1}[0] + wit(5)
@@ -887,6 +887,8 @@ func TestUnseqAdmittedWitnesses(t *testing.T) {
 		{"e5bDefineTuple", 1, "tuple-assign", 1, 2},   // m | the captured s's header read + the checked s[0]
 		{"multiTarget", 1, "tuple-assign", 1, 1},      // wit | the checked s[0] (E5b: the pilot's former refusal, now a graph)
 		{"blankTarget", 0, "blank-assign", 1, 1},      // wit | the checked s[0] (E5b: `_ = e` evaluates its occurrences)
+		// Stage E5 E5c: map literals
+		{"e4mapLit", 0, "return", 1, 2}, // wit | the key's checked s[0] + the fresh map's read
 	}
 	for _, c := range cases {
 		d := decisionAt(t, unseqWitnessSrc, c.fn, c.fromEnd)
@@ -965,7 +967,6 @@ func TestUnseqLegacyByReason(t *testing.T) {
 		{"namedTypeLocal", 0, "conversion operand type outside the grammar"},
 		{"printIface", 0, "print of an interface value"},
 		// Stage E E4
-		{"e4mapLit", 0, "map literal"},
 		{"e4ifaceConv", 0, "conversion to an interface type"},
 		{"e4makeForced", 0, "no occurrence observable against an effectful event"}, // t[k] precedes make, make precedes len, len precedes wit
 		// the audit fix round (2026-09-21)

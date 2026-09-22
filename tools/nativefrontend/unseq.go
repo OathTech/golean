@@ -1023,13 +1023,12 @@ func typeStringOrUntyped(t types.Type) string {
 }
 
 // unseqCompositeLit classifies a VALUE composite literal (Stage E E4): a named
-// struct literal `T{…}` (a pure `struct-lit` head over its payloads) or a slice
+// struct literal `T{…}` (a pure `struct-lit` head over its payloads), a slice
 // literal `[]T{…}` (an `alloc` body — a fresh backing array; NO E1 edge, v2.1
-// R3); every element value is classified (its reads are the occurrences), a
-// keyed slice index is a constant. Map literals (gc evaluates their dynamic
-// entries at the literal's position — the E13 guard's measured note; E5's),
-// array literals (arrays are outside the type grammar) and elided `&T` elements
-// stay legacy by name.
+// R3) or — Stage E5 E5c — a map literal (an `alloc` body: the fresh map + its
+// entry stores; no E1 edge); every element value is classified (its reads are
+// the occurrences), a keyed slice index is a constant. Array literals (arrays
+// are outside the type grammar) and elided `&T` elements stay legacy by name.
 func (e *emitter) unseqCompositeLit(cl *ast.CompositeLit, ctx *unseqCtx, d *unseqDecision) (unseqExprKind, bool) {
 	refuse := func(why string) (unseqExprKind, bool) {
 		if d.reason == "" {
@@ -1077,7 +1076,27 @@ func (e *emitter) unseqCompositeLit(cl *ast.CompositeLit, ctx *unseqCtx, d *unse
 		}
 		return unseqValue, true
 	case *types.Map:
-		return refuse("map literal (gc evaluates its dynamic entries at the literal's position — E5)")
+		// Stage E5 E5c (2026-09-22): a MAP literal — an `allocate` body (the fresh map + its keyed
+		// entry stores) WITHOUT E1 edges (v2.1 R3: a composite literal is not a call); the entries'
+		// reads are the occurrences, unordered against the sibling calls. gc realizes the literal
+		// at its lexical position (the E13 guard's measured note) — one member of the set. The
+		// type grammar's map types only (an int/bool/string key, an admitted value).
+		if !unseqTypeOK(t) {
+			return refuse("map literal of a type outside the grammar (" + t.String() + ")")
+		}
+		for _, elt := range cl.Elts {
+			kv, ok := elt.(*ast.KeyValueExpr)
+			if !ok {
+				return refuse("map literal element without a key")
+			}
+			if _, ok := e.unseqExpr(kv.Key, ctx, d); !ok {
+				return unseqConst, false
+			}
+			if _, ok := e.unseqExpr(kv.Value, ctx, d); !ok {
+				return unseqConst, false
+			}
+		}
+		return unseqValue, true
 	case *types.Array:
 		return refuse("array literal (arrays are outside the type grammar)")
 	case *types.Pointer:

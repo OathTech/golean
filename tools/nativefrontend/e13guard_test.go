@@ -486,10 +486,11 @@ func TestStructuralAllocGuard(t *testing.T) {
 	// slice literal are `allocate` bodies (no E1 edge) whose payload reads are the occurrences
 	// unordered against the later call / receive: BUG-102's designed reds RETIRE (each sweep ONE
 	// `unseq` graph, no probe, no refusal — the guard's refusal text stays a `lowerdiag` tripwire
-	// nothing in the grammar reaches). The map literal keeps its legacy probe (E5).
+	// nothing in the grammar reaches). Stage E5 E5c (2026-09-22): the MAP literal joins them — an
+	// `allocate` body (`map-lit`) whose key read is the occurrence.
 	for _, fn := range []string{"compositePtrPayload", "compositePtrPayloadPrintroot", "sliceLitPayload",
 		"sliceLitPayloadRecv", "compositePtrInArgWithSiblingEvent", "compositePtrPayloadNoEvent",
-		"compositeSiblingEvent"} {
+		"compositeSiblingEvent", "mapLitPayloadVsCall"} {
 		if u := funcRefusal(t, program, fn); u != "" {
 			t.Errorf("%s: an E4-grammar sweep must lower as an unseq graph, got refusal %q", fn, u)
 			continue
@@ -501,12 +502,11 @@ func TestStructuralAllocGuard(t *testing.T) {
 			t.Errorf("%s: an unseq-lowered sweep must carry no legacy probe (mixture), got %d", fn, n)
 		}
 	}
-	// legacy by name, lowering: a variadic pack; a map literal (E5 — one member, gc's, no probe); a
-	// literal inside an EARLIER call's argument list (forced before that call, which precedes the
-	// later event — the trigger finds nothing observable).
-	for _, fn := range []string{"variadicSibling", "mapLitPayloadVsCall", "compositePtrInArgThenCall"} {
+	// legacy by name, lowering: a variadic pack; a literal inside an EARLIER call's argument list
+	// (forced before that call, which precedes the later event — the trigger finds nothing observable).
+	for _, fn := range []string{"variadicSibling", "compositePtrInArgThenCall"} {
 		if u := funcRefusal(t, program, fn); u != "" {
-			t.Errorf("%s: must lower (variadic pack / map literal / forced by the enclosing call), got refusal %q", fn, u)
+			t.Errorf("%s: must lower (variadic pack / forced by the enclosing call), got refusal %q", fn, u)
 		}
 		if n := unseqCount(t, program, fn); n != 0 {
 			t.Errorf("%s: expected the legacy path (no unseq graph), got %d graph(s)", fn, n)

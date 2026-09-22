@@ -1,0 +1,9 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# evalorder/unseq-maplit — Stage E5 family E5c (evaluation-order model v2.1 §7 row E; lane
+# core/unseq-stage-e5-0922, 2026-09-22): map literals as `allocate` bodies (the `AllocSpec.mapLit` arm) WITHOUT
+# E1 edges — the entries' reads spec-unsequenced against the sibling calls; gc realizes the literal at its
+# position (one member). Each membership row's sweep lowers as ONE `unseq` graph; the ONE consumption site is
+# the `unseq` scheduler's pick (`unseqNext`, bound = the ready-set size). The strict row is the control.
+map-lit-entry-vs-call	mapLitEntryVsCall	-	ok	-	maps,literals,indexing,closures,pointers,calls,evaluation_order,nondet	membership	E5c1 `map[int]int{1: x}[1] + m()` (x captured, m: x = 10, returns 5): the map literal is an `allocate` body without an E1 edge; the entry's read of x is spec-unsequenced against m — before m 6 (gc's: the literal at its lexical position), after 15; the ONE consumption site is the `unseq` scheduler's pick (`unseqNext`, bound = the ready-set size at each pick; Stage E5 E5c, 2026-09-22 — design docs/2026-09-22_unseq-stage-e5-design.md §E5c). members=2	width=2,sites=8,members=2
+map-lit-key-vs-call	mapLitKeyVsCall	-	ok	-	maps,literals,indexing,closures,pointers,calls,evaluation_order,nondet	membership	`map[int]int{k: 1}[7] + m()` (k captured, m: k = 1, returns 5): the KEY's read is spec-unsequenced against m — before m the entry lands at 7 and the lookup hits (6, gc's), after m it lands at 1 and the lookup of 7 misses (5); the ONE consumption site is the `unseq` scheduler's pick (`unseqNext`; Stage E5 E5c — design §E5c). members=2	width=2,sites=8,members=2
+map-lit-const-control	mapLitConstControl	-	ok	-	maps,literals,indexing,closures,pointers,calls,evaluation_order	strict	-	-

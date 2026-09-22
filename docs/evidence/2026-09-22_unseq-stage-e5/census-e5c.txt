@@ -1,0 +1,62 @@
+# The whole-sweep census, E5c: the E5b frontend (BEFORE) vs the E5c frontend (AFTER); producers .tmp/census/run.sh, summarize.py, diff.py. The 66 rows only in AFTER are the born packages' sweeps (unseq-multi, unseq-maplit) and unseq-conv-alloc's re-numbered lines; the four «lost/new» pairs there are LINE SHIFTS of a comment edit (map-lit-control's), not lost admissions.
+
+## AFTER (summary)
+corpus sweeps 108195  admitted 165  packages-with-admitted 43  refused-packages 0
+admitted units: [('main', 165)]
+admitted by form: [('return', 89), ('compound', 22), ('elem-assign', 11), ('define', 10), ('call-stmt', 9), ('tuple-assign', 7), ('multi-call', 7), ('print-stmt', 3), ('map-assign', 2), ('comma-ok', 2), ('blank-assign', 1), ('deref-assign', 1), ('assign', 1)]
+admitted per package:
+    49 Corpus/coverage/exec/builtins/e13-sibling-panic-order
+    13 Corpus/coverage/exec/evalorder/unseq-pilot
+    11 Corpus/coverage/exec/noodler/latitude
+     9 Corpus/coverage/exec/evalorder/unseq-conv-alloc
+     8 Corpus/coverage/exec/noodler/evalorder
+     6 Corpus/coverage/exec/evalorder/unseq-ptr-field-map
+     5 Corpus/coverage/exec/evalorder/unseq-builtins
+     5 Corpus/coverage/exec/evalorder/unseq-multi
+     5 Corpus/coverage/exec/spec-examples-decl/select-forms
+     4 Corpus/coverage/exec/builtins/len-vs-call-order
+     4 Corpus/coverage/exec/evalorder/unseq-recv-method
+     3 Corpus/coverage/exec/evalorder/legacy-logical-vs-call
+     3 Corpus/coverage/exec/evalorder/unseq-globals
+     3 Corpus/coverage/exec/evalorder/unseq-maplit
+     3 Corpus/coverage/exec/noodler/maps
+     2 Corpus/coverage/exec/binop-order/operand-panic-vs-call
+     2 Corpus/coverage/exec/channels/recv-edge
+     2 Corpus/coverage/exec/multi-assign/call-write-back-order
+     2 Corpus/coverage/exec/noodler/methods
+     2 Corpus/coverage/exec/spec-examples-stmt/continue-label
+     2 Corpus/coverage/exec/spec-examples-stmt/eval-order-calls
+     1 Corpus/coverage/exec/channels/make-edge
+     1 Corpus/coverage/exec/evalorder/unseq-const-cell
+     1 Corpus/coverage/exec/goroutines/fork-join
+     1 Corpus/coverage/exec/goroutines/worker-pool
+     1 Corpus/coverage/exec/init/stdlib-initializer-dependent
+     1 Corpus/coverage/exec/maps/compound-assign-eval-once
+     1 Corpus/coverage/exec/methods/nil-receiver
+     1 Corpus/coverage/exec/multi-assign/call-write-back
+     1 Corpus/coverage/exec/multi-assign/call-write-back-order-value
+     1 Corpus/coverage/exec/multi-assign/index-target-rhs-call-order
+     1 Corpus/coverage/exec/multi-assign/lhs-index-eval-order
+     1 Corpus/coverage/exec/multi-assign/target-eval-before-call
+     1 Corpus/coverage/exec/noodler/arith
+     1 Corpus/coverage/exec/noodler/frontier/pointer-to-pointer-chains
+     1 Corpus/coverage/exec/noodler/gotchas
+     1 Corpus/coverage/exec/pointers/deref-target-rhs-call-order
+     1 Corpus/coverage/exec/race/negative-sync
+     1 Corpus/coverage/exec/returns/multi-result-assign-order
+     1 Corpus/coverage/exec/scoping/closure-shadow-binding
+
+## BEFORE (E5b) -> AFTER (E5c)
+rows only in AFTER (new packages): 66 in ['Corpus/coverage/exec/evalorder/unseq-conv-alloc', 'Corpus/coverage/exec/evalorder/unseq-maplit', 'Corpus/coverage/exec/evalorder/unseq-multi']
+newly admitted 2   lost 4
+  LOST ['Corpus/coverage/exec/evalorder/unseq-conv-alloc', 'main', 'Corpus/coverage/exec/evalorder/unseq-conv-alloc/main.go:91', 'newExprVsCall', 'define', 'legacy', '0', '0', '0', 'target type outside the pilot grammar (func() int)']
+  LOST ['Corpus/coverage/exec/evalorder/unseq-conv-alloc', 'main', 'Corpus/coverage/exec/evalorder/unseq-conv-alloc/main.go:105', 'newCallVsCall', 'define', 'legacy', '0', '0', '0', 'target type outside the pilot grammar (func() int)']
+  LOST ['Corpus/coverage/exec/evalorder/unseq-conv-alloc', 'main', 'Corpus/coverage/exec/evalorder/unseq-conv-alloc/main.go:116', 'stringBytesVsCall', 'define', 'legacy', '0', '0', '0', 'target type outside the pilot grammar (func() string)']
+  LOST ['Corpus/coverage/exec/evalorder/unseq-conv-alloc', 'main', 'Corpus/coverage/exec/evalorder/unseq-conv-alloc/main.go:124', 'stringRunesVsCall', 'define', 'legacy', '0', '0', '0', 'target type outside the pilot grammar (func() string)']
+newly admitted per package:
+     1 Corpus/coverage/exec/builtins/e13-sibling-panic-order
+     1 Corpus/coverage/exec/noodler/latitude
+newly admitted, by former reason: [("map literal (gc evaluates its dynamic entries at the literal's position — E5)", 2)]
+newly admitted by form: [('return', 1), ('define', 1)]
+twin newly admitted: 0
+still legacy with a package-level reason: [('package-level target of a type outside the grammar ([3]int)', 3), ('package-level target of a type outside the grammar ([2]int)', 2), ('package-level target of a type outside the grammar (main.Valuer)', 1), ('package-level target of a type outside the grammar (raft.Logger)', 1)]

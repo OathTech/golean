@@ -569,7 +569,21 @@ than as speculative cases.)
 
 ## 8. Counts and the closing arithmetic
 
-All numbers at the current tracked baseline (3745 cases, 3510 PASS / 235 FAIL; [AGENT] worker, lane
+All numbers at the current tracked baseline (3748 cases, 3513 PASS / 235 FAIL; [AGENT] worker, lane
+`core/unseq-stage-e5-0922` — STAGE E5 of the evaluation-order model v2.1, family E5c: MAP LITERALS as `allocate` bodies
+(the `AllocSpec.mapLit` arm) without E1 edges (design `docs/2026-09-22_unseq-stage-e5-design.md` §E5c; handoff
+`docs/2026-09-22_unseq-stage-e5-handoff.md`); measured by `scripts/diff-one` on all 90 affected rows before the pin and by
+the full `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff` at the E5c tree — the gate line in
+`docs/evidence/2026-09-22_unseq-stage-e5/README.md`). The delta over the E5b tally (§8ag, 3745 = 3510 / 235): 3 rows BORN in
+`evalorder/unseq-maplit` — `map-lit-entry-vs-call` {6, 15} and `map-lit-key-vs-call` {6, 5} PASS/membership (gc's
+literal-first member inside, 20/20), `map-lit-const-control` PASS strict (6); 2 LANE MOVES strict → membership:
+`noodler/latitude/map-literal-key-vs-call` {5, 50} (gc 50) and `builtins/e13-sibling-panic-order/map-lit-payload-vs-call`
+{panic, `wit 5` · panic} (gc's the panic alone — the audit's F6 shape: the strict control's pin of gc's literal-first order
+enveloped, a membership row by rule). 3745 + 3 = 3748; 3510 + 3 = 3513; 235 unchanged. No other result/stage movement, no
+removal, no widened pin, no PASS → non-PASS. Reds table unchanged: 128 + 9 + (24 + 1) + 7 + 66 = 235 ✓. Movement §8ah (and
+§8ag for E5b, §8af for E5a).
+
+Previous tally, then current (3745 cases, 3510 PASS / 235 FAIL; [AGENT] worker, lane
 `core/unseq-stage-e5-0922` — STAGE E5 of the evaluation-order model v2.1, family E5b: MULTI-TARGET assignments
 (tuple, blank, multi-value call, the comma-ok forms) as `unseq` graphs whose targets are phase-1 sibling plans (design
 `docs/2026-09-22_unseq-stage-e5-design.md` §E5b; handoff `docs/2026-09-22_unseq-stage-e5-handoff.md`); measured by
@@ -2444,6 +2458,27 @@ tallied by row:
   twin 10 203 sweeps, 0 admitted, pin byte-identical. No lane move, no widened pin, no PASS → non-PASS.
 - Reds table: post-vintage 72 → 70; 133 + 9 + (24 + 1) + 7 + 70 = 244 ✓. FR-28's cell unchanged (the
   BUG-102 designed reds are E4's).
+
+### 8ah. Movement at Stage E5 of the evaluation-order model v2.1, family E5c — map literals (2026-09-22, lane `core/unseq-stage-e5-0922`; on main `d76721bd`)
+
+[AGENT] worker. Design `docs/2026-09-22_unseq-stage-e5-design.md` §E5c; evidence `docs/evidence/2026-09-22_unseq-stage-e5/`
+(`census-e5c.txt`, `census-newly-admitted-e5c.tsv`, `probes-e5c.txt`, `diff-one-e5c.txt`, `gc-draws-e5c.txt`, the gate tail).
+Tracked figure 3745 = 3510 / 235 → 3748 = 3513 / 235 (re-pin reason in the baseline header). Movement, tallied by row:
+
+- BORN 3, all PASS (`Corpus/coverage/exec/evalorder/unseq-maplit/`): `map-lit-entry-vs-call` membership {6, 15}
+  (`map[int]int{1: x}[1] + m()`, m writing the captured x; gc 6 — gc realizes a map literal at its lexical position, BEFORE
+  the later call, the E13 guard's measured note), `map-lit-key-vs-call` membership {6, 5} (`{k: 1}[7] + m()`, m writing k;
+  gc 6), `map-lit-const-control` strict (6; the fresh map's read the only unordered occurrence).
+- LANE MOVES strict → membership 2 (E2/E12's VALUE axis enveloped; gc's draw inside, 20/20): `noodler/latitude/map-literal-
+  key-vs-call` {5, 50} (`m := map[int]int{a[0]: f()}`, f writing a[0] — the key's read vs the value's call inside the literal;
+  gc 50); `builtins/e13-sibling-panic-order/map-lit-payload-vs-call` {panic · ``, `wit 5` · panic} (`{s[i]: 1}[0] + wit(5)`,
+  s[i] out of range — the strict control pinned gc's literal-first panic; the canonical call-first tape gives the other
+  member: the audit's F6 shape, a membership row by rule).
+- UNCHANGED though a graph now: `evalorder/unseq-conv-alloc/map-lit-control` strict (6, wide=1 — its comment corrected).
+- Census 154 → 165 admitted (+2 from the widening, +9 the born packages' own sweeps; 0 lost); the twin 0. Legacy probe
+  emissions 60 → 59 (corpus), the twin 128 unchanged.
+- The core gains ONE `AllocSpec` arm (`mapLit`) — the ratified extension mechanism; two new wire mutants (41 → 43) and E4's
+  `mut-alloc-kind` re-pointed at `array-lit` (`map-lit` being admitted now).
 
 ### 8ag. Movement at Stage E5 of the evaluation-order model v2.1, family E5b — multi-target assignments (2026-09-22, lane `core/unseq-stage-e5-0922`; on main `d76721bd`)
 

@@ -38,5 +38,7 @@ mut-min-nonatom	hidden read in a pure node
 mut-wide-two-binds	writes exactly two
 mut-recv-ok-type	comma-ok flag cell
 mut-wide-assert-nonatom	hidden read in a wide built-in
+mut-maplit-dup-key	duplicate constant key
+mut-maplit-nonatom	hidden read in an allocation payload
 mut-make-negative-len	negative constant len
 mut-make-len-over-cap	larger than constant cap

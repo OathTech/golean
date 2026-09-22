@@ -811,6 +811,15 @@ gc's early store a deviation, L-016, 2026-09-02).
 
 ### E2. Call vs. assignment-target operands — (b) PINNED call-first on the VALUE axis outside the Stage C pilot; (a) ENVELOPED on the pilot's rows (2026-09-19); the PANIC axis (a) ENVELOPED via E13's `unseqPanic` since the e13-b re-audit fix round (2026-09-05)
 
+- STAGE E5, FAMILY E5c (2026-09-22, [AGENT], lane `core/unseq-stage-e5-0922`; design
+  `docs/2026-09-22_unseq-stage-e5-design.md` §E5c — map literals): a MAP literal is an `allocate`
+  body (`AllocSpec.mapLit`, the ratified arm mechanism) WITHOUT E1 edges, its entries' reads the
+  occurrences. The VALUE axis is (a) ENVELOPED on the born `evalorder/unseq-maplit/{map-lit-entry-
+  vs-call ({6, 15}, gc 6 — gc realizes a map literal at its LEXICAL position, before the later call:
+  the E13 guard's measured note, the opposite member from E4's slice/struct literals), map-lit-key-vs-
+  call ({6, 5}, gc 6)}` and the moved `noodler/latitude/map-literal-key-vs-call` ({5, 50}, gc 50 —
+  the call inside the literal); E13's `map-lit-payload-vs-call` moves to membership (below). Posed
+  for ratification at the merge ask. The (b) pin stands outside the widened grammar.
 - STAGE E5, FAMILY E5b (2026-09-22, [AGENT], lane `core/unseq-stage-e5-0922`; design
   `docs/2026-09-22_unseq-stage-e5-design.md` §E5b — multi-target assignments): every target of a
   tuple / multi-value-call / comma-ok assignment is a PHASE-1 SIBLING plan on frozen operands, the
@@ -1606,6 +1615,11 @@ subexpressions of one binary operator).
   the fmt / imported-goose / slices sweeps that lower as all-forced graphs
   changed observation). E12(ii)'s read-vs-read axis stays (b) with its
   obligation: the pilot admits no call-free sweep.
+  STAGE E5, FAMILY E5c (2026-09-22, [AGENT]; design `docs/2026-09-22_unseq-stage-e5-design.md`
+  §E5c — map literals): a map literal's entry reads are spec-unsequenced against the sibling calls
+  — the VALUE axis is (a) ENVELOPED on the born `evalorder/unseq-maplit/{map-lit-entry-vs-call ({6,
+  15}, gc 6), map-lit-key-vs-call ({6, 5}, gc 6)}` and the moved `noodler/latitude/map-literal-key-
+  vs-call` ({5, 50}, gc 50); ratification posed at the merge ask.
   STAGE E5, FAMILY E5b (2026-09-22, [AGENT]; design `docs/2026-09-22_unseq-stage-e5-design.md`
   §E5b — multi-target assignments): the right-hand reads of a tuple beside its calls are
   spec-unsequenced — the VALUE axis is (a) ENVELOPED on `noodler/latitude/rhs-list-index-call-index`
@@ -1715,6 +1729,14 @@ what (b) means right?» — design of record
 `docs/2026-09-05_e13-b-design.md` (the decision procedure §1, the
 machine construct §3, the frontend §4, the residuals §6).
 
+- STAGE E5, FAMILY E5c (2026-09-22, [AGENT], lane `core/unseq-stage-e5-0922`; design
+  `docs/2026-09-22_unseq-stage-e5-design.md` §E5c): `builtins/e13-sibling-panic-order/map-lit-
+  payload-vs-call` (`map[int]int{s[i]: 1}[0] + wit(5)`, s[i] out of range) — the STRICT CONTROL that
+  pinned gc's literal-first panic through the legacy structural hoist — enters the graph and becomes a
+  MEMBERSHIP row {panic · ``, `wit 5` · panic} (gc's member the first, 20/20): the audit's F6 shape
+  (the machine's canonical call-first tape differs from gc's) is realized on a corpus row, by rule a
+  lane move with the reason written, never a silent default flip. The last map-literal probe in the
+  corpus (`noodler/latitude/map-literal-key-vs-call`) retires into a graph.
 - STAGE E5, FAMILY E5a (2026-09-22, [AGENT], lane `core/unseq-stage-e5-0922`; design
   `docs/2026-09-22_unseq-stage-e5-design.md` §E5a): five rows of this entry's `e13-sibling-panic-
   order` family — `assert-left-append`, `assert-left-copy`, `tgt-assert-vs-min-call`, `tgt-assert-vs-
@@ -3258,6 +3280,12 @@ history block, never in a membership line.
 
 Nothing in this block is a class member by virtue of being named here.
 
+- **Stage E5 of the evaluation-order model v2.1, family E5c (2026-09-22, [AGENT] lane
+  `core/unseq-stage-e5-0922`; design `docs/2026-09-22_unseq-stage-e5-design.md` §E5c): MAP LITERALS enter
+  the `unseq` grammar as `allocate` bodies (the `AllocSpec.mapLit` arm) without E1 edges.** Entry classes
+  UNCHANGED by count ((a) 15 / (b) 17): E2/E12 stay (b) PINNED as entries, ENVELOPED on two born membership
+  rows and two moved rows (a noodler strict row; E13's map-literal strict control — the F6 shape). Census
+  154 → 165; legacy probes 60 → 59 (corpus), the twin 128 unchanged.
 - **Stage E5 of the evaluation-order model v2.1, family E5b (2026-09-22, [AGENT] lane
   `core/unseq-stage-e5-0922`; design `docs/2026-09-22_unseq-stage-e5-design.md` §E5b): MULTI-TARGET
   assignments (tuple, blank, multi-value call, the comma-ok forms) enter the `unseq` grammar — every

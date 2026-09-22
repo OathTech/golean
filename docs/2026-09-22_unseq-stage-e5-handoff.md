@@ -15,7 +15,8 @@ nothing else; the train installs the candidate at step 5a, this lane does not).
 
 | commit | family | gate | rows | census (admitted / probes corpus+twin) | trace |
 |---|---|---|---|---|---|
-| (E5b, this tree) | **E5b** multi-target assignments — tuple, blank, multi-value call, the comma-ok forms; every target a phase-1 sibling plan; `WideSpec.mapLookup`/`.typeAssert` ARMS (no new kind) | `ci --diff` run 2 EXIT=1 in 765 s, K=32; 3745 = 3509 / 236 in the run = the pin with the one 5a-class row red; red = the 5a pair only (run 1 also red on stale native fixtures — regenerated) | 7 born (`evalorder/unseq-multi`: 5 membership + 2 strict); 4 lane moves strict → membership (BUG-052's deref-target ×2, slice-header-base; noodler rhs-list-index-call-index); the spec example red-first then PASS; 3738 = 3503 / 235 → 3745 = 3510 / 235 | 137 → 154 admitted (+12 widening, +5 E5a's package; 0 lost); probes 63 → 60 corpus, twin 128 | TRACE-LINE-B |
+| (E5c, this tree) | **E5c** map literals as `allocate` bodies (`AllocSpec.mapLit`, the ratified arm mechanism) without E1 edges | `ci --diff` EXIT=1 in 909 s; cases=3748 pass=3512 fail=236 in the run = the pin with the one 5a-class row red; red = the 5a pair only (provenance STALE `AdmissionIndices.lean`; the `google-search` drift line) | 3 born (`evalorder/unseq-maplit`: 2 membership + 1 strict); 2 lane moves strict → membership (noodler `map-literal-key-vs-call`; e13 `map-lit-payload-vs-call` — the F6 shape); 3745 = 3510 / 235 → 3748 = 3513 / 235 | 154 → 165 admitted (+2 widening, +9 the born packages; 0 lost); probes 60 → 59 corpus, twin 128 | TRACE-LINE-C |
+| `1a0ff398` | **E5b** multi-target assignments — tuple, blank, multi-value call, the comma-ok forms; every target a phase-1 sibling plan; `WideSpec.mapLookup`/`.typeAssert` ARMS (no new kind) | `ci --diff` run 2 EXIT=1 in 765 s, K=32; 3745 = 3509 / 236 in the run = the pin with the one 5a-class row red; red = the 5a pair only (run 1 also red on stale native fixtures — regenerated) | 7 born (`evalorder/unseq-multi`: 5 membership + 2 strict); 4 lane moves strict → membership (BUG-052's deref-target ×2, slice-header-base; noodler rhs-list-index-call-index); the spec example red-first then PASS; 3738 = 3503 / 235 → 3745 = 3510 / 235 | 137 → 154 admitted (+12 widening, +5 E5a's package; 0 lost); probes 63 → 60 corpus, twin 128 | 3709 ids: 3679 SAME, 17 DIFFER (= E5a's 6 + E5b's 11 admitted sweeps' rows), 13 ONLY_B (the born rows); `unseqNext` 1482 → 1903, `unseqPanic` 204 → 174 |
 | `732da84c` | **E5a** the reading-(a) built-ins `min`/`max`/`copy`/`append` — `min`/`max` pure E1 participants, `append`/`copy` effectful `wide` bodies (PENDING [USER], §2 item 1) | `ci --diff` EXIT=1 in 971 s, K=32; 3738 = 3502 / 236 in the run = the pin with the one 5a-class row red; red = the 5a pair only (provenance STALE `AdmissionIndices.lean`; the `google-search` drift line) | 6 born (`evalorder/unseq-builtins`: 4 membership + 2 strict); 5 e13 rows probe → graph, sets unchanged; `copy-min` unchanged; 3732 = 3497 / 235 → 3738 = 3503 / 235 | 131 → 137 admitted (+6, 0 lost); probes 70 → 63 corpus (e13 17 → 12, copy-min 2 → 0), twin 128 | 3702 ids: 3690 SAME, 6 DIFFER (= the 6 admitted sweeps' rows), 6 ONLY_B (the born rows); `unseqNext` 1482 → 1609, `unseqPanic` 204 → 174 |
 
 ## 2. PENDING [USER] — posed, never self-adjudicated
@@ -32,6 +33,10 @@ nothing else; the train installs the candidate at step 5a, this lane does not).
    len(make([]int, t[k]))` and kin) from two members to one. A refinement — «unordered against an effectful
    event OR against another FAILING occurrence» (panic identity is an observable) — is a change to ratified
    item 2 and is POSED here, not taken; with it, E6 still waits on the non-main-unit emitters (item 3).
+4. **Audit F8 — an `after` edge on a literal `allocate` decodes** (E5c touched the decoder's `allocate` rules — the `map-lit`
+   arm): the wire still does not express the lowering's «no E1 edge on literals» policy; making it a NAMED refusal at
+   decode (the frontend never emits such an edge; a hand-built or forged wire could) is a design choice POSED here, not
+   taken. Alternative: leave it a lowering-only policy (the audit's own disposition: a design fact, not a defect).
 3. **Non-main units and E6** (design §0): 128 of the twin's probes and 12 of the corpus's sit in imported source
    units the whole-sweep grammar refuses by design. E6's zero condition is unreachable without lowering those
    units as graphs — a grammar widening the brief forbids «merely to reach zero». POSED: whether the next lane
@@ -45,6 +50,8 @@ lane's tip: (filled at park).
 ## 4. Whole-corpus choice traces
 
 `docs/evidence/2026-09-22_unseq-stage-e5/choice-trace-main-vs-e5a.txt`: main `d76721bd` vs the E5a commit `732da84c` — 3702 ids, 3690 byte-identical, 6 DIFFER (exactly the six sweeps E5a admits: the five e13 built-in rows and `slices/copy-min`), 6 only on the E5a side (the born rows); site census `unseqNext` 1482 → 1609, `unseqPanic` 204 → 174 — the legacy probe is still consulted on 174 recorded consumptions (E6 not reachable; §2/§3).
+
+`docs/evidence/2026-09-22_unseq-stage-e5/choice-trace-main-vs-e5b.txt`: main `d76721bd` vs the E5b commit `1a0ff398` — 3709 ids, 3679 byte-identical, 17 DIFFER (exactly the rows of E5a's six and E5b's eleven admitted sweeps — the multi-assign family incl. BUG-052's rows and the spec's own example), 13 only on the E5b side (the born rows); site census `unseqNext` 1482 → 1903, `unseqPanic` 204 → 174 (unchanged from E5a); 34 export refusals and the exhausted-stream lists identical on both sides.
 
 ## 6. Operational notes for the next session
 

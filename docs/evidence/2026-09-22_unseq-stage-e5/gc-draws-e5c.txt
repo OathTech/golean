@@ -1,0 +1,10 @@
+# gc's draws (go1.26.5), 20 per subject (5 runs x GOMAXPROCS 1/8 x default / -N -l); producer .tmp/e5/gc-draws.sh. Born: evalorder/unseq-maplit (3). Moved: noodler/latitude/mapLiteralKeyVsCall, builtins/e13-sibling-panic-order/mapLitPayloadVsCall (the panic alone, 20/20 — gc's literal-first member). Control: evalorder/unseq-conv-alloc/mapLitControl.
+
+20 Corpus/coverage/exec/evalorder/unseq-conv-alloc:mapLitControl -> 6
+20 Corpus/coverage/exec/evalorder/unseq-maplit:mapLitConstControl -> 6
+20 Corpus/coverage/exec/evalorder/unseq-maplit:mapLitEntryVsCall -> 6
+20 Corpus/coverage/exec/evalorder/unseq-maplit:mapLitKeyVsCall -> 6
+20 Corpus/coverage/exec/noodler/latitude:mapLiteralKeyVsCall -> 50
+
+## mapLitPayloadVsCall (first draw verbatim; 20/20 the panic without wit 5)
+Corpus/coverage/exec/builtins/e13-sibling-panic-order:mapLitPayloadVsCall GOMAXPROCS=1 default run1: panic: runtime error: index out of range [5] with length 1||goroutine 1 [running]:|main.mapLitPayloadVsCall(...)|	/home/dev/projects/golean

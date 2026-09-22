@@ -137,6 +137,9 @@ def main (_args : List String) : IO Unit := do
     wireSet "E5BRECV2 wire: xs[a[9]], ok = <-ch — the comma-ok receive (two binders) vs the planned target's panic" "e5brecv2.json" "e5brecv2"
       [panicOut (oob 9 1) "len 1\n", panicOut (oob 9 1) "len 0\n"],
     wireSet "E5BASSERT wire: v, ok = iv.(int) — the comma-ok assertion a two-binder wide body" "e5bassert.json" "e5bassert" [okZ 7],
+    -- STAGE E5, family E5c (2026-09-22): a MAP literal as an `allocate` body (`map-lit`: the machine's own makeMap +
+    -- mapAssign under the sweep frame; NO E1 edge — v2.1 R3) on the captured x's read, beside m. Reference enumerate.py E5c1.
+    wireSet "E5CMAPLIT wire: map[int]int{1: x}[1] + m() — the map literal an allocate body; the entry read vs m" "e5cmaplit.json" "e5cmaplit" [okZ 6, okZ 15],
     -- THE FRONTEND'S OWN LOWERING (C2): source → actual frontend bytes → strict decoder →
     -- machine → EXACT reference sets (v2.1 §7 row C's exit; the graphs are the emitter's,
     -- not hand-built — the same reference sets as the hand-built wires above).
@@ -179,6 +182,7 @@ def main (_args : List String) : IO Unit := do
     wireSet "NATIVE E5BTUPLE (the frontend's own multi-target plans — Stage E5 E5b)" "native-e5btuple.json" "e5btuple" [okZ 57, okZ 15],
     wireSet "NATIVE E5BRECV2 (the frontend's own comma-ok receive with a planned target)" "native-e5brecv2.json" "e5brecv2"
       [panicOut (oob 9 1) "len 1\n", panicOut (oob 9 1) "len 0\n"],
+    wireSet "NATIVE E5CMAPLIT (the frontend's own map-lit allocate — Stage E5 E5c)" "native-e5cmaplit.json" "e5cmaplit" [okZ 6, okZ 15],
     -- EDGE MUTATIONS of the LOWERED graphs (v2.1 §8): each decodes; the exact-set check
     -- names the changed set (the decoder cannot see a missing or wrong edge).
     wireSet "EDGE data (R6: the access reads the variable's header, not the frozen slot) → the fused {20}" "edge-data.json" "r6" [okZ 20],

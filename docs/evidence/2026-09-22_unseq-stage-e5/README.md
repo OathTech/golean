@@ -70,6 +70,7 @@ sides (the tracer exits 1 on both for the summarizer's standing findings).
 | `diff-one-e5b.txt` | `scripts/diff-one` on the 65 affected rows, THREE runs: run 1 (the first E5b cut) — the spec example's two rows FAIL/differential (the lowering's E1 chain put the target's `f()` after `k()`: a WRONG ANSWER caught red-first), three born widths refuted by name, four strict rows varying across streams; run 2 (the fix) — 61 PASS, the four varying rows; run 3 (the lane moves; two widths corrected) — 4 PASS/membership | `scripts/diff-one <ids…>`; rows quoted from `artifacts/coverage/latest.tsv` |
 | `gc-draws-e5b.txt` | gc's draws for the seven born subjects and the four moved rows (20 each), every one inside its set — the call-first member on every membership row | `.tmp/e5/gc-draws.sh`, go1.26.5 |
 | `ci-diff-e5b.tail.txt` | the full gate's tail (the paragraph below) | `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff`, ANSI stripped |
+| `choice-trace-main-vs-e5b.txt` | the whole-corpus choice trace, main vs E5b (summary, the differing / born rows, site censuses) | `scripts/choice-trace-corpus --dump --jobs 5` per side from export trees + `trace-compare.py` |
 
 Reference sets: `enumerate.py` E5b1–E5b4 (`outcomes.txt` PASS); over the wire: `Tests/UnseqWire.lean` 114 ok / 41 mutants
 (`mut-wide-two-binds`, `mut-recv-ok-type`, `mut-wide-assert-nonatom` new; `mut-recv-two-binds` re-pointed at the flag cell's
@@ -89,3 +90,24 @@ dependency build/files/GoLean/GoCore/AdmissionIndices.lean») and the `baseline 
 `imported-goose/channel/google-search baseline[PASS/membership] -> now[FAIL/membership]`. Every other step ok (re-pin guard 0
 PASS→non-PASS; the reconciler's standing two report-only findings). The seven born rows and the four moved rows reproduce
 their pinned states in the run; the spec's own example PASS strict.
+
+**Whole-corpus choice trace, main vs E5b** (`choice-trace-main-vs-e5b.txt`; main `d76721bd`'s binary `73734062…` vs the E5b commit `1a0ff398`'s binary `44a9c8e6…`, each side from its own export tree — `git archive` + `deps`, its own frontend — by `scripts/choice-trace-corpus --dump --jobs 5` and Stage D's `trace-compare.py`): 3709 ids — **3679 byte-identical, 17 DIFFER, 13 only on the E5b side**. The 17 DIFFER ids are exactly the rows of the sweeps E5a and E5b admit (`census-newly-admitted-e5{a,b}.tsv`): E5a's six (the five `builtins/e13-sibling-panic-order` built-in rows, `slices/copy-min`) and E5b's eleven — `channels/recv-edge/dep-index-target`, BUG-052's `multi-assign/call-write-back-order/{deref-target,slice-header-base}` and `call-write-back-order-value/deref-target`, `multi-assign/call-write-back/panic-identity`, `multi-assign/lhs-index-eval-order`, `multi-assign/target-eval-before-call`, `noodler/latitude/rhs-list-index-call-index`, `returns/multi-result-assign-order`, the spec's own example `spec-examples-stmt/eval-order-calls/{verbatim,traced-recv}`; the 13 ONLY_B ids are the born `evalorder/unseq-builtins` (6) and `evalorder/unseq-multi` (7) rows. Site census: `unseqNext` 1482 → 1903, `unseqPanic` 204 → 174 (E5a's retirements; E5b's three retired probe emissions recorded no consumption on the traced streams); every other site identical. Both sides: 34 export refusals (identical sets — the standing frontend-export reds), the exhausted-stream lists identical (strict 100, confluent 94), the two standing exclusions.
+
+## E5c — map literals
+
+| file | what | producer |
+|---|---|---|
+| `census-e5c.txt` | the E5b frontend vs the E5c frontend: admitted 154 → 165 (+2 from the widening — the noodler and e13 map-literal rows; +9 the born packages' sweeps; 0 lost — four «lost/new» pairs are line shifts of a comment edit); the twin 10 203 / 0 | `run.sh`, `summarize.py`, `diff.py` |
+| `census-newly-admitted-e5c.tsv` | the 2 sweeps that enter | `diff.py` |
+| `probes-e5c.txt` | the probe emission census AFTER E5c: 59 corpus probes in 18 packages (the noodler row's retired), the twin 128 unchanged | `probes.sh`, `probe-sites.py` |
+| `diff-one-e5c.txt` | `scripts/diff-one` on the 90 affected rows: run 1 (89 PASS; `map-lit-payload-vs-call` FAIL/differential — the strict control's pin of gc's literal-first panic vs the canonical call-first tape, the F6 shape) and run 2 (the row moved to membership, PASS) | `scripts/diff-one <ids…>` |
+| `gc-draws-e5c.txt` | gc's draws (20 each) for the three born subjects (6, 6, 6 — the literal at its lexical position), the two moved rows (50; the panic alone) and the `map-lit-control` control (6) | `.tmp/e5/gc-draws.sh`, go1.26.5 |
+| `ci-diff-e5c.tail.txt` | the full gate's tail (the paragraph below) | `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff`, ANSI stripped |
+
+Reference sets: `enumerate.py` E5c1 {6, 15}, E5c2 {5, 50} (PASS); over the wire: `Tests/UnseqWire.lean` 118 ok / 43 mutants
+(`mut-maplit-dup-key`, `mut-maplit-nonatom` new; E4's `mut-alloc-kind` re-pointed at `array-lit`); `check-unseq-wire` PASS,
+`check-wire-boundary` PASS (11 + 41 — the map-literal positive control answers 15), `check-unseq-scheduler` PASS,
+`check-mem-callsites` PASS (70), `check-frontend-pins` PASS, `check-core-audit` PASS; `go test ./tools/nativefrontend/
+./tools/lowerdiag/` ok; `scripts/capped lake build …` EXIT=0 (139 s).
+
+**The full gate at the E5c tree:** `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff` at the E5c tree (the commit's exact content; the box-wide lock 03:03:15–03:18:24Z): **EXIT=1 in 909 s (32 cores, LEAN_NUM_THREADS=6 under the 48G cap); `differential coverage summary: cases=3748 pass=3512 fail=236` = the pinned 3513 / 235 with the one 5a-class row red; RESULT FAIL on EXACTLY the two 5a-class items** — `certificate provenance` («STALE certification: changed dependency build/files/GoLean/GoCore/AdmissionIndices.lean») and the `baseline diff` DRIFT block's ONE line `imported-goose/channel/google-search baseline[PASS/membership] -> now[FAIL/membership]`. Every other step ok (unseq scheduler; unseq wire — 43 mutants, `build.py --check` no drift; frontend pins; the frontend and harness unit tests; eval tests 274; the lane-validation fixtures; the negative corpus 394 matched; re-pin guard 0 PASS→non-PASS; the reconciler's standing two report-only findings). The three born rows and the two moved rows reproduce their pinned states in the run (`ci-diff-e5c.tail.txt`).

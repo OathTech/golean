@@ -324,3 +324,70 @@ pick per target for stores that cannot fail. (iii) The comma-ok lookup / asserti
 edge): a map lookup is a read, an assertion a pure op — neither is a call, receive or logical operation. (iv) Target
 operands lower first — the lexical E1 chain (the red-first fix). (v) The global-beside-planned and interface-beside-
 planned refusals (above).
+
+## E5c. Map literals as `allocate` bodies (landed 2026-09-22)
+
+**The ruling executed.** Item 6/7 ([USER] 2026-09-22): a composite literal is a node WITHOUT E1 edges (v2.1 R3 —
+spec#Order_of_evaluation orders calls, method calls, receives and logical operations; a literal is none of those), its
+payload reads the occurrences; the `allocate` body is ONE constructor over `AllocSpec`, extended by ARMS. **`AllocSpec.mapLit
+(key value : Ty) (entries : List (Expr × Expr))`** is that arm: `unseqAllocStmt` runs `makeMap` into the binder cell then the
+keyed entry stores in source order (`mapAssign` — a later duplicate DYNAMIC key overrides, as Go's successive stores do); names
+(`pairExprNames`), `eqbF` + soundness, indices (`pairExprIndices`), the loc bound (`pairExprListSup`, `_eq_zero` by
+induction) gain the arm. No new constructor, no new Step rule, no new pick.
+
+**The grammar and lowering.** `unseqCompositeLit`'s `*types.Map` case admits a literal of a grammar map type (int/bool/string
+key, admitted value) whose every element is keyed (Go's map literals are); each key and value is classified (its reads are the
+occurrences). `compositeLit` lowers it as `allocOcc("lit", …, {"stmt": "map-lit", keyType, valueType, entries: [{key, value}]},
+event=false)` — in the RESIDUAL, no `after`. **The decoder**'s `map-lit` arm: exact keys, every key and value a PAYLOAD, the
+cell typed `map[K]V`, and duplicate CONSTANT keys refused by name (a compile-time error in Go, spec#Composite_literals —
+compared on the constants' wire spelling; audit F3's class); mutants `mut-maplit-dup-key`, `mut-maplit-nonatom` (41 → 43). E4's
+`mut-alloc-kind` (a slice literal re-tagged `map-lit`) is RE-POINTED at `array-lit`: `map-lit` is an admitted kind now, so its
+refusal text had become the exact-key check's. **Audit F8, POSED** (handoff §2 item 4): the wire still does not express the
+lowering's «no E1 edge on literals» policy — an `after` edge on a literal `allocate` decodes; making it a named refusal (the
+frontend never emits one) is a design choice, not this lane's.
+
+**gc's member.** The E13 guard's measured note holds: gc realizes a map literal at its LEXICAL position — its dynamic entries
+BEFORE a later sibling call — where it realizes slice and struct literals AFTER the call (E4's rows). Both are members of the
+same sets; the born rows' gc draws are the literal-first ones (6, 6), the noodler row's the call-first one (50 — its call is
+INSIDE the literal), and `map-lit-payload-vs-call`'s the panic alone. **The F6 shape realized**: that e13 row was a STRICT
+control pinning gc's literal-first panic; under the graph the machine's canonical (call-first) tape prints `wit 5` first — a
+strict row whose default ≠ gc — so it becomes a membership row with the reason written (the audit's rule), never a silent
+default flip.
+
+**References lead** (`enumerate.py` E5c1 {6, 15}, E5c2 {5, 50}; PASS). Wires: hand-built `e5cmaplit` + native, EXACT
+(`Tests/UnseqWire.lean` 118 ok / 43 mutants; `check-wire-boundary` 11 + 41 — the map-literal positive control answers 15 on
+the canonical tape). Frontend unit tests: `e4mapLit` MOVES from the legacy list to the admitted list (1/2 — the key's checked
+read and the fresh map's read), its canonical shape `invoke eval:index-get allocate eval:map-get eval:binary`; the E13 guard
+test's `mapLitPayloadVsCall` moves to the one-graph list.
+
+**The census** (`census-e5c.txt`): admitted **154 → 165** — +2 from the widening (`builtins/e13-sibling-panic-order/
+mapLitPayloadVsCall`, `noodler/latitude/mapLiteralKeyVsCall`, both by former reason «map literal») and +9 the born packages'
+own sweeps (E5b's `unseq-multi` and `unseq-maplit`); 0 lost (the four «lost/new» pairs the diff prints in `unseq-conv-alloc`
+are LINE SHIFTS of the `map-lit-control` comment edit); the twin 10 203 / 0. Legacy probes 60 → 59 (the noodler row's
+`index-get` probe), the twin 128 unchanged. The 149 main-unit «map literal» first-reason sweeps beyond these are call-free
+(`m := map[int]int{1: 1, …}` declarations) — legacy under the trigger.
+
+**Rows** (`scripts/diff-one` on all 90 affected rows, two runs — `diff-one-e5c.txt`; gc's draws `gc-draws-e5c.txt`, 20/20):
+
+| row | before → after | set | gc |
+|---|---|---|---|
+| `evalorder/unseq-maplit/map-lit-entry-vs-call` | born PASS/membership | {6, 15} (E5c1) | 6 (literal-first) |
+| `evalorder/unseq-maplit/map-lit-key-vs-call` | born PASS/membership | {6, 5} — the key's read before m hits, after m misses | 6 |
+| `evalorder/unseq-maplit/map-lit-const-control` | born PASS strict, wide=1 | 6 (the fresh map's read the only unordered occurrence — the R1-NIT class) | 6 |
+| `noodler/latitude/map-literal-key-vs-call` | PASS strict → PASS/membership | {5, 50} (E5c2) — the key read vs the value's call inside the literal | 50 |
+| `builtins/e13-sibling-panic-order/map-lit-payload-vs-call` | PASS strict → PASS/membership (the F6 shape) | {panic · ``, `wit 5` · panic} | panic alone |
+| `evalorder/unseq-conv-alloc/map-lit-control` | PASS strict (unchanged), wide=1 — a graph now | 6 | 6 |
+| the other 84 affected rows | UNCHANGED | — | — |
+
+Baseline 3745 = 3510 / 235 → **3748 = 3513 / 235**. Gates in-process: `check-unseq-wire` PASS (43), `check-wire-boundary`
+PASS (11 + 41), `check-mem-callsites` PASS (70 — the map-literal statements are the legacy path's own `makeMap`/`mapAssign`),
+`check-frontend-pins` PASS, `check-unseq-scheduler` PASS, `check-core-audit` PASS; the full gate line is in the evidence README.
+
+**Latitude.** E2/E12's VALUE axis (a) ENVELOPED on the two born membership rows and the two moved rows — posed for
+ratification at the merge ask; E13's `map-lit-payload-vs-call` leaves the strict controls for the membership lane (its
+legacy-path pin of gc's literal-first order was a (b) pin by construction — the structural hoist — now enveloped).
+**[AGENT] choices.** (i) An `AllocSpec` ARM, not a kind (the ruling's mechanism). (ii) Duplicate constant keys refused at
+decode (F3's class: Go rejects the program). (iii) `mut-alloc-kind` re-pointed rather than dropped (its purpose — a
+statement kind outside the fragment — stands). (iv) The R1-NIT class recurs (`map-lit-const-control`: the fresh map's read is
+a superfluous wide pick, one observation) — recorded, not fixed, with E5a's `min-vs-call` and E4's `*new(x)`: a later
+refinement could mark a read of a fresh `allocate` binder stable.

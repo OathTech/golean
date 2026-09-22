@@ -219,6 +219,11 @@ def assigneeListSup : List Assignee → Nat
   | [] => 0
   | a :: as => max (Assignee.locSup a) (assigneeListSup as)
 
+/-- A map literal's entries' loc positions (Stage E5 E5c). -/
+def pairExprListSup : List (Expr × Expr) → Nat
+  | [] => 0
+  | (k, v) :: es => max (max (Expr.locSup k) (Expr.locSup v)) (pairExprListSup es)
+
 /-- An allocation's loc positions (Stage E E4): its operand expressions. -/
 def allocSpecSup : AllocSpec → Nat
   | .new v _ => Expr.locSup v
@@ -226,6 +231,7 @@ def allocSpecSup : AllocSpec → Nat
   | .makeMap _ _ hint => optExprSup hint
   | .makeChan _ cap => optExprSup cap
   | .sliceLit _ _ elems => keyedExprListSup elems
+  | .mapLit _ _ entries => pairExprListSup entries
 
 /-- A wide statement's loc positions (Stage E5 E5a): its operand expressions. -/
 def wideSpecSup : WideSpec → Nat
@@ -379,8 +385,13 @@ theorem assigneeListSup_eq_zero (l : List Assignee) : assigneeListSup l = 0 := b
   induction l with
   | nil => rfl
   | cons a l ih => simp [assigneeListSup, Assignee.locSup_eq_zero, ih]
+theorem pairExprListSup_eq_zero (l : List (Expr × Expr)) : pairExprListSup l = 0 := by
+  induction l with
+  | nil => rfl
+  | cons kv l ih => simp [pairExprListSup, Expr.locSup_eq_zero, ih]
 theorem allocSpecSup_eq_zero (a : AllocSpec) : allocSpecSup a = 0 := by
-  cases a <;> simp [allocSpecSup, Expr.locSup_eq_zero, optExprSup_eq_zero, keyedExprListSup_eq_zero]
+  cases a <;> simp [allocSpecSup, Expr.locSup_eq_zero, optExprSup_eq_zero, keyedExprListSup_eq_zero,
+    pairExprListSup_eq_zero]
 theorem wideSpecSup_eq_zero (w : WideSpec) : wideSpecSup w = 0 := by
   cases w <;> simp [wideSpecSup, Expr.locSup_eq_zero]
 theorem unseqBodySup_eq_zero (b : UnseqBody) : unseqBodySup b = 0 := by

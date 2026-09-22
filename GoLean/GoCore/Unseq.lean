@@ -66,6 +66,11 @@ def optExprNames : Option Expr → List String
   | some e => Expr.names e
 end
 
+/-- The names a map literal's entries mention (Stage E5 E5c). -/
+def pairExprNames : List (Expr × Expr) → List String
+  | [] => []
+  | (k, v) :: es => Expr.names k ++ Expr.names v ++ pairExprNames es
+
 /-- The names an allocation's operands mention (Stage E E4). -/
 def AllocSpec.names : AllocSpec → List String
   | .new v _ => Expr.names v
@@ -73,6 +78,7 @@ def AllocSpec.names : AllocSpec → List String
   | .makeMap _ _ hint => optExprNames hint
   | .makeChan _ cap => optExprNames cap
   | .sliceLit _ _ elems => keyedExprNames elems
+  | .mapLit _ _ entries => pairExprNames entries
 
 /-- The names a wide statement's operands mention (Stage E5 E5a). -/
 def WideSpec.names : WideSpec → List String

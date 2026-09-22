@@ -255,4 +255,12 @@ echo "ok [unseq multi] runs, answers 15 (every target a sibling plan; the stores
 expect_unseq_refusal unseq-wide-two-binds     mut-wide-two-binds     e5bassert 'writes exactly two'
 expect_unseq_refusal unseq-recv-ok-type       mut-recv-ok-type       e5brecv2  'comma-ok flag cell'
 expect_unseq_refusal unseq-wide-assert-nonatom mut-wide-assert-nonatom e5bassert 'hidden read in a wide built-in'
-echo 'Wire boundary gate: PASS (11 byte-level controls + 38 unseq-node controls through the real CLI)'
+# Stage E5 E5c (2026-09-22): a MAP literal as an `allocate` body (Tests/unseq-wire/e5cmaplit.json, `map[int]int{1: x}[1] +
+# m()`): runs on the canonical tape — m first, the literal's entry read after: 15; a duplicate CONSTANT key (a compile-time
+# error in Go) and a hidden read in an entry refuse by name.
+out="$(run_cli_fn Tests/unseq-wire/e5cmaplit.json e5cmaplit)" || { echo "check-wire-boundary: FAIL [unseq maplit] — the map-literal wire did not run: $out" >&2; exit 1; }
+[[ "$out" == *'"status":"ok"'* && "$out" == *'"value":15'* ]] || { echo "check-wire-boundary: FAIL [unseq maplit] — expected ok/15 (canonical = m first, the entry read after): $out" >&2; exit 1; }
+echo "ok [unseq maplit] runs, answers 15 (the map literal an allocate body without an E1 edge — Stage E5 E5c)"
+expect_unseq_refusal unseq-maplit-dup-key mut-maplit-dup-key e5cmaplit 'duplicate constant key'
+expect_unseq_refusal unseq-maplit-nonatom mut-maplit-nonatom e5cmaplit 'hidden read in an allocation payload'
+echo 'Wire boundary gate: PASS (11 byte-level controls + 41 unseq-node controls through the real CLI)'

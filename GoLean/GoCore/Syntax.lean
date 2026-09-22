@@ -424,6 +424,12 @@ inductive AllocSpec where
   | makeMap (key value : Ty) (hint : Option Expr)
   | makeChan (elem : Ty) (cap : Option Expr)
   | sliceLit (elem : Ty) (len : Nat) (elems : List (Int × Expr))
+  /-- A MAP LITERAL `map[K]V{k: v, …}` (Stage E5 E5c, 2026-09-22): a fresh map
+  (`makeMap`) with the keyed `entries` stored in order (`mapAssign` — a later
+  duplicate dynamic key overrides, as Go's successive stores do; duplicate
+  CONSTANT keys are a compile-time error the decoder refuses by name). No E1
+  edge (v2.1 R3); the entries' reads are the occurrences. -/
+  | mapLit (key value : Ty) (entries : List (Expr × Expr))
   deriving Repr, BEq, Inhabited
 
 /-- The WIDE STATEMENT a `wide` occurrence performs (Stage E5 E5a, 2026-09-22): the

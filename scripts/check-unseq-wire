@@ -20,7 +20,7 @@
 # a non-atom operand, the binder arity, the result cell's type, a non-atom `min` operand; 41 since Stage E5 E5b — one
 # binder for a two-result wide statement, a receive's comma-ok flag cell not bool, a hidden read in a comma-ok assertion's
 # operand; E3's two-binder receive mutant re-pointed at the flag cell's type, two binders being the admitted comma-ok
-# form), while the untouched W1 wire runs (the canonical
+# form; 43 since Stage E5 E5c — a map literal's duplicate constant key, a hidden read in an entry), while the untouched W1 wire runs (the canonical
 # tape gives 2: mut first). Fail closed on a missing binary, a failed
 # regeneration, a decoded mutant or a refusal that does not name its cause.
 set -Eeuo pipefail

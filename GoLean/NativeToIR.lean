@@ -2232,8 +2232,39 @@ partial def decodeUnseq (results : Array Param) (path : String) (obj : StrictJso
                   fail s!"unseq: allocation '{name}' at {apath}: duplicate slice-literal index — the emitter's literal is keyed by DISTINCT constants (audit F3, 2026-09-21); refused by name"
                 typeMismatch (.slice elemTy)
                 pure (AllocSpec.sliceLit elemTy length elems)
+            | "map-lit" => do
+                -- Stage E5 E5c (2026-09-22): a MAP literal — the fresh map and its keyed entry stores in
+                -- order; every key and value a PAYLOAD; duplicate CONSTANT keys are a compile-time error
+                -- in Go (spec#Composite_literals) and refuse at decode by name; duplicate DYNAMIC keys are
+                -- the successive stores' last-wins, as in Go.
+                checkAllowedKeys apath a ["stmt", "keyType", "valueType", "entries"]
+                let keyTy ← decodeTy s!"{apath}.keyType" (← StrictJson.field apath a "keyType")
+                let valTy ← decodeTy s!"{apath}.valueType" (← StrictJson.field apath a "valueType")
+                let entriesJ ← StrictJson.array s!"{apath}.entries" (← StrictJson.field apath a "entries")
+                let entries ← entriesJ.toList.mapIdxM (fun k el => do
+                  let epath := s!"{apath}.entries[{k}]"
+                  let eo ← StrictJson.obj epath el
+                  checkAllowedKeys epath eo ["key", "value"]
+                  let kJ ← StrictJson.field epath eo "key"
+                  let vJ ← StrictJson.field epath eo "value"
+                  unseqCheckPayload s!"{epath}.key" kJ
+                  unseqCheckPayload s!"{epath}.value" vJ
+                  pure (← decodeExpr s!"{epath}.key" kJ, ← decodeExpr s!"{epath}.value" vJ))
+                -- the CONSTANT keys, compared on their wire spelling (an int/bool/string constant node
+                -- is spelled once per value by the emitter)
+                let constKeys := entriesJ.toList.filterMap (fun el =>
+                  match el.getObjVal? "key" with
+                  | .ok k =>
+                      match k.getObjVal? "expr" with
+                      | .ok (.str "int") | .ok (.str "bool") | .ok (.str "string") => some k.compress
+                      | _ => none
+                  | _ => none)
+                if constKeys.length != constKeys.eraseDups.length then
+                  fail s!"unseq: allocation '{name}' at {apath}: duplicate constant key in a map literal — a compile-time error in Go (spec#Composite_literals); refused by name"
+                typeMismatch (.map keyTy valTy)
+                pure (AllocSpec.mapLit keyTy valTy entries)
             | other =>
-                fail s!"unseq: allocation '{name}' at {apath}: statement '{other}' is outside the admitted fragment (new | make-slice | make-map | make-chan | slice-lit); refused by name"
+                fail s!"unseq: allocation '{name}' at {apath}: statement '{other}' is outside the admitted fragment (new | make-slice | make-map | make-chan | slice-lit | map-lit); refused by name"
           pure (UnseqBody.allocate bind spec)
       | "wide" => do
           -- Stage E5 E5a (2026-09-22): a WIDE built-in occurrence — `append` / `copy` (the comma-ok

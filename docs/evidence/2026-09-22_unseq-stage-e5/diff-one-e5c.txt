@@ -1,0 +1,8 @@
+# scripts/diff-one on the 90 E5c-affected rows (builtins/e13-sibling-panic-order, noodler/latitude, the born evalorder/unseq-maplit, evalorder/unseq-conv-alloc). RUN 1: 89 PASS / 1 FAIL — map-lit-payload-vs-call FAIL/differential (the strict control pinned gc's literal-first panic; the canonical call-first tape prints wit 5 first — the F6 shape). RUN 2 (the row moved to membership {panic, wit 5 · panic}): PASS.
+
+## run 1 (changed rows)
+builtins/e13-sibling-panic-order/map-lit-payload-vs-call	PASS/membership -> FAIL/differential	Lean={"message":"runtime error: index out of range [5] with length 1","output":"wit 5\n","schema":"golean-observation-v1","status":"panic"} Go={"output":"","message":"runtime error: index out of range [5] with length 1","schema":"golean-observation-v1","status
+evalorder/unseq-conv-alloc/map-lit-control	PASS/- -> PASS/-	wide=1 exhausted=none depth=fixed
+
+## run 2 (the moved row)
+PASS	builtins/e13-sibling-panic-order/map-lit-payload-vs-call	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/co

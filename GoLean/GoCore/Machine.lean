@@ -2164,6 +2164,10 @@ def unseqAllocStmt (bind : String) : AllocSpec → Stmt
                 (some (.intLit (Int.ofNat len) .int))] ++
         (elems.map (fun (iv : Int × Expr) =>
           Stmt.assign (.addr (.indexAddr (.var bind) (.intLit iv.1 .int))) iv.2)).toArray)
+  | .mapLit k v entries =>
+      -- Stage E5 E5c: the fresh map, then the entry stores in order (the emitter's own map-literal shape).
+      .seqn (#[Stmt.makeMap (.var bind) k v none] ++
+        (entries.map (fun (kv : Expr × Expr) => Stmt.mapAssign (.var bind) kv.1 kv.2 k v)).toArray)
 
 /-- The `wide` body's statement (Stage E5 E5a, 2026-09-22): the hoisted wide
 built-in with the binder cells as its targets — `append` (`Stmt.appendSlice`:

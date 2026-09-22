@@ -856,6 +856,39 @@ func (b *unseqBuilder) compositeLit(cl *ast.CompositeLit) (any, error) {
 		}
 		spec := map[string]any{"stmt": "slice-lit", "elem": elemTy, "length": length, "elems": elems}
 		return b.allocOcc("lit", ty, spec, false), nil
+	case *types.Map:
+		// Stage E5 E5c: the map literal as an `allocate` body (`map-lit`: the fresh map + the keyed
+		// entry stores, in source order) in the residual — no E1 edge.
+		kt, err := e.emitType(u.Key())
+		if err != nil {
+			return nil, err
+		}
+		vt, err := e.emitType(u.Elem())
+		if err != nil {
+			return nil, err
+		}
+		entries := []any{}
+		for _, elt := range cl.Elts {
+			kv, ok := elt.(*ast.KeyValueExpr)
+			if !ok {
+				return nil, unsup("unseq lowering: map literal element without a key")
+			}
+			k, err := b.value(kv.Key)
+			if err != nil {
+				return nil, err
+			}
+			v, err := b.value(kv.Value)
+			if err != nil {
+				return nil, err
+			}
+			v, err = e.wrapInterfaceConversion(u.Elem(), e.goTypeOf(kv.Value), v)
+			if err != nil {
+				return nil, err
+			}
+			entries = append(entries, map[string]any{"key": k, "value": v})
+		}
+		spec := map[string]any{"stmt": "map-lit", "keyType": kt, "valueType": vt, "entries": entries}
+		return b.allocOcc("lit", ty, spec, false), nil
 	}
 	return nil, unsup("unseq lowering: composite literal of type %s", t)
 }

@@ -401,6 +401,8 @@ def AllocSpec.eqbF (f : Nat) : AllocSpec → AllocSpec → Bool
   | .makeChan e1 c1, .makeChan e2 c2 => Ty.eqb e1 e2 && eqbOptionP (Expr.eqbF f) c1 c2
   | .sliceLit e1 n1 es1, .sliceLit e2 n2 es2 =>
       Ty.eqb e1 e2 && n1 == n2 && eqbListP (eqbProdP (· == ·) (Expr.eqbF f)) es1 es2
+  | .mapLit k1 v1 es1, .mapLit k2 v2 es2 =>
+      Ty.eqb k1 k2 && Ty.eqb v1 v2 && eqbListP (eqbProdP (Expr.eqbF f) (Expr.eqbF f)) es1 es2
   | _, _ => false
 
 theorem AllocSpec.eqbF_sound (f : Nat) :
@@ -426,6 +428,12 @@ theorem AllocSpec.eqbF_sound (f : Nat) :
     cases Ty.eqb_sound h1; cases eq_of_beq h2
     cases eqbListP_sound
       (fun _ _ hh => eqbProdP_sound (fun _ _ k => eq_of_beq k) (Expr.eqbF_sound f) hh) h3
+    rfl
+  case mapLit.mapLit k1 v1 es1 k2 v2 es2 =>
+    obtain ⟨h1, h2, h3⟩ := andSplit3 h
+    cases Ty.eqb_sound h1; cases Ty.eqb_sound h2
+    cases eqbListP_sound
+      (fun _ _ hh => eqbProdP_sound (Expr.eqbF_sound f) (Expr.eqbF_sound f) hh) h3
     rfl
 
 def WideSpec.eqbF (f : Nat) : WideSpec → WideSpec → Bool

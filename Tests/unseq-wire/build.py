@@ -589,6 +589,25 @@ def e5bassert_graph():
         stores=[("$t0", "$u0"), ("$t1", "$u1")])
 
 
+# ---------------------------------------------------------------- Stage E5, family E5c (2026-09-22)
+# MAP LITERALS as `allocate` bodies (`map-lit`: the fresh map + its keyed entry stores) WITHOUT E1 edges (v2.1 R3);
+# the entries' reads are the occurrences. Reference enumerate.py E5c1.
+
+def e5cmaplit_graph():
+    # map[int]int{1: x}[1] + m(): m's block first (canonical), the captured x's read, the literal on it (residual, no
+    # after), the fresh map's read at key 1, the op. {6, 15}.
+    return unseq(
+        [cell("$u0", INT), cell("$u1", INT), cell("$u2", MAP_INT_INT), cell("$u3", INT), cell("$u4", INT)],
+        [inv("call0", ["$u0"], ident("m"), [], [INT]),
+         ev("read1", "$u1", ident("x", INT)),
+         alc("lit2", "$u2", {"stmt": "map-lit", "keyType": INT, "valueType": INT,
+                             "entries": [{"key": intc(1), "value": ident("$u1", INT)}]}),
+         ev("mapread3", "$u3", {"expr": "map-get", "base": ident("$u2", MAP_INT_INT), "index": intc(1),
+                                "keyType": INT, "valueType": INT, "type": INT}),
+         ev("op4", "$u4", binop("+", ident("$u3", INT), ident("$u0", INT), INT))],
+        then=ret(ident("$u4", INT)))
+
+
 # ---------------------------------------------------------------- constant heads (audit fix round F2)
 # A CONSTANT copied into a cell — the emitter's `copy` occurrence where the consumer needs a
 # CELL (design §6): a guard's test (`true && f()`), a phase-2 store's value (`a[f()] = 5`,
@@ -690,6 +709,8 @@ WITNESSES = {
     "e5btuple": ("e5btuple", [("e5btuple", "m", 1, e5btuple_graph(), None)]),
     "e5brecv2": ("e5brecv2", [("e5brecv2", "ok", 2, e5brecv2_graph(), None)]),
     "e5bassert": ("e5bassert", [("e5bassert", "ok", 2, e5bassert_graph(), None)]),
+    # Stage E5 E5c (2026-09-22): the map literal as an `allocate` body (hand-built + native)
+    "e5cmaplit": ("e5cmaplit", [("e5cmaplit", "m", 0, e5cmaplit_graph(), None)]),
 }
 
 
@@ -803,8 +824,9 @@ def mutants(wires):
     edit("mut-alloc-nonatom", "e4alloc", "e4alloc",
          lambda n, w: occ(n, "lit2")["allocation"]["elems"][0].update(value=binop("+", ident("$u1", INT), intc(0), INT)),
          "hidden read in an allocation payload")
+    # (E5c re-pointed the tag: `map-lit` is an admitted allocation kind since Stage E5 E5c, 2026-09-22; `array-lit` stays outside)
     edit("mut-alloc-kind", "e4alloc", "e4alloc",
-         lambda n, w: occ(n, "lit2")["allocation"].update(stmt="map-lit"), "outside the admitted fragment")
+         lambda n, w: occ(n, "lit2")["allocation"].update(stmt="array-lit"), "outside the admitted fragment")
     # ---- the Stage E audit fix round (2026-09-21)
     # F2: `ref` of a `$` BINDER cell as an invocation argument (the audit's M10b: the callee wrote the
     # graph cell) and as a func-value capture (the audit's suspicion, closed here) — refused by name.
@@ -848,6 +870,15 @@ def mutants(wires):
     edit("mut-wide-assert-nonatom", "e5bassert", "e5bassert",
          lambda n, w: occ(n, "assert0")["wide"].update(operand=binop("+", intc(1), intc(2), INT)),
          "hidden read in a wide built-in")
+    # Stage E5 E5c (2026-09-22): a map literal's duplicate CONSTANT key (a compile-time error in Go); a hidden read in
+    # an entry's value.
+    def dup_key(n, w):
+        e = occ(n, "lit2")["allocation"]["entries"]
+        e.append({"key": intc(1), "value": intc(7)})
+    edit("mut-maplit-dup-key", "e5cmaplit", "e5cmaplit", dup_key, "duplicate constant key")
+    edit("mut-maplit-nonatom", "e5cmaplit", "e5cmaplit",
+         lambda n, w: occ(n, "lit2")["allocation"]["entries"][0].update(value=binop("+", ident("$u1", INT), intc(0), INT)),
+         "hidden read in an allocation payload")
     edit("mut-make-negative-len", "e4make", "e4make",
          lambda n, w: occ(n, "make0")["allocation"].update(len=intc(-1)), "negative constant len")
     edit("mut-make-len-over-cap", "e4make", "e4make",

@@ -1,5 +1,5 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 3745 (3510 PASS / 235 FAIL)
+# cases: 3748 (3513 PASS / 235 FAIL)
 # re-pinned: 2026-09-20 [AGENT], core/unseq-stage-d-0920, STAGE D of the evaluation-order model v2.1 (route α —
 #   docs/2026-09-20_unseq-stage-d-design.md §2–§3; handoff docs/2026-09-20_unseq-stage-d-handoff.md): NO row added, NO
 #   result changed, ONE stage changed — spec-examples-stmt/continue-label PASS/- -> PASS/confluent, the strict depth=128
@@ -151,6 +151,24 @@
 #   comma-ok, two noodler rows; +5 the E5a package born after its census; 0 lost), the twin 0; legacy probes 63 -> 60 (corpus), the
 #   twin 128 unchanged. Measured by scripts/diff-one on all 65 affected rows (three runs — docs/evidence/2026-09-22_unseq-stage-e5/
 #   diff-one-e5b.txt); the full gate line is in the evidence README. 3738 + 7 = 3745; 3503 + 7 = 3510; 235 unchanged. No PASS -> non-PASS.
+# re-pinned: 2026-09-22 [AGENT], core/unseq-stage-e5-0922, STAGE E5 of the evaluation-order model v2.1, family E5c — MAP LITERALS as
+#   `allocate` bodies (the `AllocSpec.mapLit` ARM — the ratified extension mechanism; design docs/2026-09-22_unseq-stage-e5-design.md
+#   §E5c; handoff docs/2026-09-22_unseq-stage-e5-handoff.md) WITHOUT E1 edges (v2.1 R3), the entries' reads the occurrences. THREE
+#   rows BORN in evalorder/unseq-maplit: map-lit-entry-vs-call {6, 15} (`map[int]int{1: x}[1] + m()`, m writing the captured x — the
+#   entry's read before / after m; gc 6 on 20/20 under GOMAXPROCS 1/8, default and -N -l: gc realizes a map literal at its LEXICAL
+#   position, before the later call — the E13 guard's measured note, unlike the slice/struct literals gc reads after the call),
+#   map-lit-key-vs-call {6, 5} (`map[int]int{k: 1}[7] + m()`, m writing k; gc 6) PASS/membership; map-lit-const-control (6) PASS strict
+#   (constant entries: the fresh map's read the only unordered occurrence — one observation). TWO strict rows -> membership (gc's
+#   member inside, 20/20): noodler/latitude/map-literal-key-vs-call {5, 50} (`m := map[int]int{a[0]: f()}`, f writing a[0] — the key's
+#   read vs the value's call INSIDE the literal; gc 50, the call first) and builtins/e13-sibling-panic-order/map-lit-payload-vs-call
+#   {panic · ``, `wit 5` · panic} (`map[int]int{s[i]: 1}[0] + wit(5)`, s[i] out of range: the strict control had pinned gc's
+#   literal-first panic; the machine's canonical call-first tape gives the other member — the audit's F6 shape, a membership row by
+#   rule, never a silent default flip). evalorder/unseq-conv-alloc/map-lit-control stays PASS strict (wide=1: it lowers as a graph now,
+#   the fresh map's read its only unordered occurrence). Census 154 -> 165 admitted (+2 from the widening — the two moved rows'
+#   sweeps; +9 the born packages' own sweeps; 0 lost — the four «lost/new» pairs in unseq-conv-alloc are line shifts of a comment
+#   edit), the twin 0; legacy probes 60 -> 59 (corpus — the noodler row's), the twin 128 unchanged. Measured by scripts/diff-one on all
+#   90 affected rows (docs/evidence/2026-09-22_unseq-stage-e5/diff-one-e5c.txt); the full gate line is in the evidence README.
+#   3745 + 3 = 3748; 3510 + 3 = 3513; 235 unchanged. No PASS -> non-PASS.
 # Previous pin:
 # re-pinned: 2026-09-20 [AGENT], core/unseq-stage-c-0919, STAGE C AUDIT FIX ROUND (docs/2026-09-20_unseq-stage-c-audit.md, FIX-FIRST; dispositions
 #   docs/2026-09-19_unseq-stage-c-handoff.md «Audit fix round (2026-09-20)»): SIX rows ADDED, no existing row changed. (F2) evalorder/unseq-const-cell/
@@ -1849,7 +1867,7 @@ PASS	builtins/e13-sibling-panic-order/map-compound-index-key-vs-call	membership
 PASS	builtins/e13-sibling-panic-order/map-compound-index-key-vs-method	membership
 PASS	builtins/e13-sibling-panic-order/map-compound-index-key-vs-recv	membership
 PASS	builtins/e13-sibling-panic-order/map-key-assert-vs-len	membership
-PASS	builtins/e13-sibling-panic-order/map-lit-payload-vs-call	-
+PASS	builtins/e13-sibling-panic-order/map-lit-payload-vs-call	membership
 PASS	builtins/e13-sibling-panic-order/map-tgt-assert-vs-call	membership
 PASS	builtins/e13-sibling-panic-order/recover-assert-vs-call-w	membership
 PASS	builtins/e13-sibling-panic-order/recover-assert-vs-len	-
@@ -2334,6 +2352,9 @@ PASS	evalorder/unseq-multi/multi-call-header-vs-call	membership
 PASS	evalorder/unseq-multi/define-tuple-vs-call	membership
 PASS	evalorder/unseq-multi/swap-control	-
 PASS	evalorder/unseq-multi/comma-ok-map-control	-
+PASS	evalorder/unseq-maplit/map-lit-entry-vs-call	membership
+PASS	evalorder/unseq-maplit/map-lit-key-vs-call	membership
+PASS	evalorder/unseq-maplit/map-lit-const-control	-
 PASS	evalorder/unseq-globals/read-vs-call	membership
 PASS	evalorder/unseq-globals/compound-vs-call	membership
 PASS	evalorder/unseq-globals/read-vs-unrelated-call	-
@@ -4048,7 +4069,7 @@ PASS	noodler/latitude/concat-var-vs-call	membership
 PASS	noodler/latitude/conversion-index-vs-call	membership
 PASS	noodler/latitude/deref-vs-call	membership
 PASS	noodler/latitude/index-call-index	membership
-PASS	noodler/latitude/map-literal-key-vs-call	-
+PASS	noodler/latitude/map-literal-key-vs-call	membership
 PASS	noodler/latitude/receiver-vs-arg-call	membership
 PASS	noodler/latitude/return-operands	membership
 PASS	noodler/latitude/rhs-list-index-call-index	membership
