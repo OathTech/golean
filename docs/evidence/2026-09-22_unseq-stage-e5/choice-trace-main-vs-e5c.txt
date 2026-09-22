@@ -1,0 +1,41 @@
+# whole-corpus choice trace, main d76721bd's binary (sha256 73734062…; == dc5de785's sources) vs the E5c commit 6bf3d780's binary (sha256 c8613c32…); scripts/choice-trace-corpus --dump --jobs 5 on each side from its own export tree (main's: git archive d76721bd + deps, .tmp/main-tree; E5c's: git archive 6bf3d780 + deps, .tmp/e5c-tree — each tree's own frontend), the two standing exclusions (goroutines/send-then-spin, strings/trimspace-repeat/repeat-bound-refused); compared per id on the sorted dump records (stream, idx, phase, site, bound, streamValue, pick) and the per-stream results (status, consumed, wide, obsHash, driverAgreement) by Stage D's trace-compare.py
+#SUMMARY	ids=3712	same=3676	differ=20	onlyA=0	onlyB=16
+#SITES_A	{'appendSpill': 4874, 'backEdge': 2403, 'l1Sched': 9695, 'l2Arrival': 3, 'l2Entry': 24, 'l4Waiter': 22, 'l5ExitWindow': 328, 'mapIter': 1307, 'nilValueMethodText': 90, 'postOp': 4645, 'repanicCollapse': 126, 'tryLock': 101, 'unseqNext': 1482, 'unseqPanic': 204}
+#SITES_B	{'appendSpill': 4874, 'backEdge': 2403, 'l1Sched': 9695, 'l2Arrival': 3, 'l2Entry': 24, 'l4Waiter': 22, 'l5ExitWindow': 328, 'mapIter': 1307, 'nilValueMethodText': 90, 'postOp': 4645, 'repanicCollapse': 126, 'tryLock': 101, 'unseqNext': 1958, 'unseqPanic': 174}
+# the 20 DIFFER ids are EXACTLY the rows of the sweeps E5a, E5b and E5c admit (census-newly-admitted-e5{a,b,c}.tsv): E5a's six (the five builtins/e13-sibling-panic-order built-in rows, slices/copy-min), E5b's eleven (the multi-assign family incl. BUG-052's three rows, channels/recv-edge/dep-index-target, returns/multi-result-assign-order, noodler/latitude/rhs-list-index-call-index, the spec's own example spec-examples-stmt/eval-order-calls/{verbatim,traced-recv}) and E5c's three (builtins/e13-sibling-panic-order/map-lit-payload-vs-call, noodler/latitude/map-literal-key-vs-call, evalorder/unseq-conv-alloc/map-lit-control — a graph now, its single outcome unchanged); the 16 ONLY_B ids are the born evalorder/unseq-builtins (6), unseq-multi (7) and unseq-maplit (3) rows; every other id (3676) byte-identical. Site census: unseqNext 1482 -> 1958, unseqPanic 204 -> 174 (unchanged from E5a); every other site identical. Both sides exit 1 with the standing findings (257 lane finding lines on the E5c side): 34 export refusals each (export-fail.tsv, identical sets — the pre-existing frontend-export reds), the exhausted-stream lists identical (exhausted-strict.tsv 100, exhausted-confluent.tsv 94), the two exclusions.
+DIFFER	builtins/e13-sibling-panic-order/assert-left-append
+DIFFER	builtins/e13-sibling-panic-order/assert-left-copy
+DIFFER	builtins/e13-sibling-panic-order/map-lit-payload-vs-call
+DIFFER	builtins/e13-sibling-panic-order/tgt-assert-vs-append
+DIFFER	builtins/e13-sibling-panic-order/tgt-assert-vs-copy-call
+DIFFER	builtins/e13-sibling-panic-order/tgt-assert-vs-min-call
+DIFFER	channels/recv-edge/dep-index-target
+ONLY_B	evalorder/unseq-builtins/append-read-vs-call
+ONLY_B	evalorder/unseq-builtins/append-spread-str-vs-call
+ONLY_B	evalorder/unseq-builtins/copy-effect-vs-read
+ONLY_B	evalorder/unseq-builtins/copy-stmt-control
+ONLY_B	evalorder/unseq-builtins/min-read-vs-call
+ONLY_B	evalorder/unseq-builtins/min-vs-call
+DIFFER	evalorder/unseq-conv-alloc/map-lit-control
+ONLY_B	evalorder/unseq-maplit/map-lit-const-control
+ONLY_B	evalorder/unseq-maplit/map-lit-entry-vs-call
+ONLY_B	evalorder/unseq-maplit/map-lit-key-vs-call
+ONLY_B	evalorder/unseq-multi/blank-panic-vs-call
+ONLY_B	evalorder/unseq-multi/comma-ok-map-control
+ONLY_B	evalorder/unseq-multi/comma-ok-recv-target-vs-panic
+ONLY_B	evalorder/unseq-multi/define-tuple-vs-call
+ONLY_B	evalorder/unseq-multi/multi-call-header-vs-call
+ONLY_B	evalorder/unseq-multi/swap-control
+ONLY_B	evalorder/unseq-multi/tuple-header-vs-call
+DIFFER	multi-assign/call-write-back-order-value/deref-target
+DIFFER	multi-assign/call-write-back-order/deref-target
+DIFFER	multi-assign/call-write-back-order/slice-header-base
+DIFFER	multi-assign/call-write-back/panic-identity
+DIFFER	multi-assign/lhs-index-eval-order
+DIFFER	multi-assign/target-eval-before-call
+DIFFER	noodler/latitude/map-literal-key-vs-call
+DIFFER	noodler/latitude/rhs-list-index-call-index
+DIFFER	returns/multi-result-assign-order
+DIFFER	slices/copy-min
+DIFFER	spec-examples-stmt/eval-order-calls/traced-recv
+DIFFER	spec-examples-stmt/eval-order-calls/verbatim

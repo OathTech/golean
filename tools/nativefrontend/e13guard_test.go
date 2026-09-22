@@ -474,14 +474,9 @@ func TestStructuralAllocGuard(t *testing.T) {
 	if err != nil {
 		t.Fatalf("whole export refused: %v", err)
 	}
-	// An allocating conversion whose OWN operand panics stays inline and
-	// keeps the operand's probe (both orders of the payload's panic).
-	if u := funcRefusal(t, program, "bytesConvPanickyPayload"); u != "" {
-		t.Errorf("bytesConvPanickyPayload: an inline conversion with a probed operand must lower, got refusal %q", u)
-	}
-	if n := probeCount(t, program, "bytesConvPanickyPayload"); n != 1 {
-		t.Errorf("bytesConvPanickyPayload: expected the operand's probe to survive (1), got %d", n)
-	}
+	// An allocating conversion whose OWN operand panics: until Stage E5 E5e the operand's probe
+	// survived inline; since E5e (2026-09-22) the string slice is a failing pure op OF THE GRAPH and
+	// the sweep lowers as ONE `unseq` graph (the one-graph list below), no probe.
 	// Stage E E4 (2026-09-21): the structural-allocation class ENTERS the graph — `&T{…}` and a
 	// slice literal are `allocate` bodies (no E1 edge) whose payload reads are the occurrences
 	// unordered against the later call / receive: BUG-102's designed reds RETIRE (each sweep ONE
@@ -490,7 +485,8 @@ func TestStructuralAllocGuard(t *testing.T) {
 	// `allocate` body (`map-lit`) whose key read is the occurrence.
 	for _, fn := range []string{"compositePtrPayload", "compositePtrPayloadPrintroot", "sliceLitPayload",
 		"sliceLitPayloadRecv", "compositePtrInArgWithSiblingEvent", "compositePtrPayloadNoEvent",
-		"compositeSiblingEvent", "mapLitPayloadVsCall"} {
+		"compositeSiblingEvent", "mapLitPayloadVsCall",
+		"bytesConvPanickyPayload"} { // Stage E5 E5e: the conversion's string-slice operand is the occurrence
 		if u := funcRefusal(t, program, fn); u != "" {
 			t.Errorf("%s: an E4-grammar sweep must lower as an unseq graph, got refusal %q", fn, u)
 			continue

@@ -811,6 +811,13 @@ gc's early store a deviation, L-016, 2026-09-02).
 
 ### E2. Call vs. assignment-target operands — (b) PINNED call-first on the VALUE axis outside the Stage C pilot; (a) ENVELOPED on the pilot's rows (2026-09-19); the PANIC axis (a) ENVELOPED via E13's `unseqPanic` since the e13-b re-audit fix round (2026-09-05)
 
+- STAGE E5, FAMILY E5e (2026-09-22, [AGENT], lane `core/unseq-stage-e5-0922`; design
+  `docs/2026-09-22_unseq-stage-e5-design.md` §E5e — strings): a string index / slice is a FAILING
+  PURE OP on the string VALUE (a classifier widening only). The VALUE axis is (a) ENVELOPED on the
+  born `evalorder/unseq-strings/{str-index-vs-call ({102, 103}, gc 103 — the plain byte read
+  deferred after the call), str-slice-vs-call ({102, 103}, gc 102 — the string slice HOISTED before
+  the call: two members of two isomorphic sets, both inside)}`. Posed for ratification at the merge
+  ask. The (b) pin stands outside the widened grammar.
 - STAGE E5, FAMILY E5c (2026-09-22, [AGENT], lane `core/unseq-stage-e5-0922`; design
   `docs/2026-09-22_unseq-stage-e5-design.md` §E5c — map literals): a MAP literal is an `allocate`
   body (`AllocSpec.mapLit`, the ratified arm mechanism) WITHOUT E1 edges, its entries' reads the
@@ -1615,6 +1622,10 @@ subexpressions of one binary operator).
   the fmt / imported-goose / slices sweeps that lower as all-forced graphs
   changed observation). E12(ii)'s read-vs-read axis stays (b) with its
   obligation: the pilot admits no call-free sweep.
+  STAGE E5, FAMILY E5e (2026-09-22, [AGENT]; design `docs/2026-09-22_unseq-stage-e5-design.md`
+  §E5e — strings): a captured index's read on a string base is spec-unsequenced against the sibling
+  call — the VALUE axis is (a) ENVELOPED on the born `evalorder/unseq-strings/{str-index-vs-call
+  ({102, 103}, gc 103), str-slice-vs-call ({102, 103}, gc 102)}`; ratification posed at the merge ask.
   STAGE E5, FAMILY E5c (2026-09-22, [AGENT]; design `docs/2026-09-22_unseq-stage-e5-design.md`
   §E5c — map literals): a map literal's entry reads are spec-unsequenced against the sibling calls
   — the VALUE axis is (a) ENVELOPED on the born `evalorder/unseq-maplit/{map-lit-entry-vs-call ({6,
@@ -1729,6 +1740,16 @@ what (b) means right?» — design of record
 `docs/2026-09-05_e13-b-design.md` (the decision procedure §1, the
 machine construct §3, the frontend §4, the residuals §6).
 
+- STAGE E5, FAMILY E5e (2026-09-22, [AGENT], lane `core/unseq-stage-e5-0922`; design
+  `docs/2026-09-22_unseq-stage-e5-design.md` §E5e): a STRING byte read / substring is a failing pure
+  op of the graph — `builtins/e13-sibling-panic-order/bytes-conv-payload-vs-call` (`int([]byte(s[i:j])
+  [0]) + wit(5)`, s[5:7] out of range) leaves the legacy `unseqPanic` probe for the `unseq` graph with
+  its 2-member set REPRODUCED exactly (no reclassification; `scripts/diff-one`, design §E5e); the born
+  `evalorder/unseq-strings/str-index-panic-vs-print` (`int(s[i]) + wit(5)`, i = 9) is this entry's
+  shape on a string byte read — {panic · ``, `wit 5` · panic}, gc's member the second (call-first,
+  20/20). A status-diverse single row (ok before the call, panic after) was refused by the membership
+  lane by name — the audit-F8 status-set declaration, unused in the corpus, was not taken; the row was
+  split (design §E5e).
 - STAGE E5, FAMILY E5c (2026-09-22, [AGENT], lane `core/unseq-stage-e5-0922`; design
   `docs/2026-09-22_unseq-stage-e5-design.md` §E5c): `builtins/e13-sibling-panic-order/map-lit-
   payload-vs-call` (`map[int]int{s[i]: 1}[0] + wit(5)`, s[i] out of range) — the STRICT CONTROL that
@@ -3280,6 +3301,14 @@ history block, never in a membership line.
 
 Nothing in this block is a class member by virtue of being named here.
 
+- **Stage E5 of the evaluation-order model v2.1, family E5e (2026-09-22, [AGENT] lane
+  `core/unseq-stage-e5-0922`; design `docs/2026-09-22_unseq-stage-e5-design.md` §E5e): STRINGS enter the
+  `unseq` grammar as index / slice BASES — a byte read / substring a failing pure op on the string value;
+  a classifier-only widening (no core, no decoder change).** Entry classes UNCHANGED by count ((a) 15 /
+  (b) 17): E2/E12 stay (b) PINNED as entries, ENVELOPED on two born membership rows; E13's axis on a born
+  panic row and on `bytes-conv-payload-vs-call` (probe → graph, set reproduced). gc realizes the plain byte
+  read AFTER the sibling call but the string SLICE BEFORE it — two members of isomorphic sets, both inside.
+  Census 165 → 168; legacy probes 59 → 58 (corpus), the twin 128 unchanged.
 - **Stage E5 of the evaluation-order model v2.1, family E5c (2026-09-22, [AGENT] lane
   `core/unseq-stage-e5-0922`; design `docs/2026-09-22_unseq-stage-e5-design.md` §E5c): MAP LITERALS enter
   the `unseq` grammar as `allocate` bodies (the `AllocSpec.mapLit` arm) without E1 edges.** Entry classes

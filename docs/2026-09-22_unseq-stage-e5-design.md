@@ -391,3 +391,72 @@ decode (F3's class: Go rejects the program). (iii) `mut-alloc-kind` re-pointed r
 statement kind outside the fragment — stands). (iv) The R1-NIT class recurs (`map-lit-const-control`: the fresh map's read is
 a superfluous wide pick, one observation) — recorded, not fixed, with E5a's `min-vs-call` and E4's `*new(x)`: a later
 refinement could mark a read of a fresh `allocate` binder stable.
+
+## E5e. Strings — a string index / slice as a failing pure op on the string value (landed 2026-09-22)
+
+**The class.** spec#Index_expressions (for a string `a[x]`: «a[x] is the non-constant byte value at index x … if x is out of
+range at run time, a run-time panic occurs») and spec#Slice_expressions (for a string operand «the result of the slice
+operation is a … string»; the indices are range-checked at run time). A string VALUE is immutable, so a byte read or a
+substring observes nothing but its own operands — the string atom and the index / bounds — and its only observable is its
+FAILURE: the same class as a slice's checked access (the pilot's P(ii) read, E13's sibling-panic axis), on a base the pilot's
+TYPE grammar admitted as an atom but not as an index / slice base («index of a non-slice base», «slice expression on a
+non-slice base (string)» — 217 main-unit «string» first-reason sweeps at the baseline, §0). `len(s)` of a string is an E1
+participant like a slice's (reading (a), RATIFIED: spec#Length_and_capacity — its operand's read lies inside its window, so
+`len(s) + m()` is all-forced and stays legacy under the trigger — the strict control). The conversion `int(b)` is a pure head
+(E4). Refused by name: a full slice expression on a string (Go forbids it).
+
+**The grammar and lowering.** Classifier only (`unseqExpr`, tools/nativefrontend/unseq.go): the `*ast.IndexExpr` case admits
+a string base (the base and index classified — a captured or package-level string is a READ occurrence, a private one an
+atom — then ONE checked occurrence, the byte read); the `*ast.SliceExpr` case admits a string base (its bounds classified, the
+substring the checked occurrence); the `len` arm admits a string operand. The LOWERING already spelled these heads over a
+string base (`index-get` typed `uint8`, `slice` with the base's own `builtin-len` as the default high bound, `convert`), and the
+DECODER already admitted them (D8's `index-get`/`slice`/`convert` heads, D9 typing the byte cell `uint8`): NO core change, NO
+decoder change, NO new mutant — the hand-built wire `e5estr` and its native are the positive controls (`Tests/UnseqWire.lean`
+120 ok; `check-wire-boundary` 11 + 42 — the string wire answers 103 on the canonical tape).
+
+**References lead** (`enumerate.py`: E5e1 `int(s[i]) + m()` {102, 103}; E5e2 `int(s[i:][0]) + m()` {102, 103}; E5e3
+`len(s[i:]) + m()` {7} — the forced singleton (the substring inside len's window: a first draft of E5e2 as `len(s[i:]) + m()`
+was REFUTED by the reference and by the classifier alike — «no occurrence observable against an effectful event» — before any
+row was written); E5e4 `int(s[i]) + wit(5)` {panic · (), panic · (wit 5)}; PASS). Frontend unit tests: witnesses
+`e5eStrSlice` 1/3 (m | i's read, the substring, its byte), `e5eStrIndexVsCall` 1/2, the legacy `e5eStrLenForced` («no
+occurrence observable …»); Stage C's `stringIndex` MOVES from the refused list to the admitted list (1/1); canonical shapes
+`invoke eval:ident eval:slice eval:index-get eval:convert eval:binary` / `invoke eval:ident eval:index-get eval:convert
+eval:binary`; the E13 guard's `bytesConvPanickyPayload` moves to the one-graph list (its inline conversion's string-slice
+operand is the occurrence now — the «probe survives» assertion retired with it).
+
+**The census** (`census-e5e.txt`): admitted **165 → 168** — +1 from the widening (`builtins/e13-sibling-panic-order/
+bytesConvPayloadVsCall`, former reason «slice expression on a non-slice base (string)») and +2 the born package's membership
+sweeps; 0 lost; the twin 10 203 / 0. Legacy probes 59 → 58 (corpus — that e13 row's), the twin 128 unchanged. The remaining
+main-unit «string» residue is call-free or forced (`len(s)` forms, concatenation, conversions without a sibling event).
+
+**gc's members** (`gc-draws-e5e.txt`, 20/20 under GOMAXPROCS 1/8, default and `-N -l`): the plain byte read `s[i]` is
+deferred AFTER the sibling call (call-first: `str-index-vs-call` 103; `str-index-panic-vs-print` `wit 5` then the panic) —
+but the string SLICE `s[i:]` is realized BEFORE the call (`str-slice-vs-call` 102: order.go hoists the string-slice temporary).
+Two different members of two isomorphic sets, both inside the machine's envelope — a measured instance of the doctrine's
+«gc pins are scaffolding».
+
+**Rows** (`scripts/diff-one` on all 68 affected rows — the 65 e13 rows and the born package — two runs; `diff-one-e5e.txt`):
+
+| row | before → after | set | gc |
+|---|---|---|---|
+| `evalorder/unseq-strings/str-index-vs-call` | born PASS/membership | {102, 103} (E5e1) | 103 (call-first) |
+| `evalorder/unseq-strings/str-index-panic-vs-print` | born PASS/membership | {panic · ``, `wit 5` · panic} (E5e4) | `wit 5` · panic |
+| `evalorder/unseq-strings/str-slice-vs-call` | born PASS/membership | {102, 103} (E5e2) | 102 (the slice hoisted before the call) |
+| `evalorder/unseq-strings/str-len-vs-call` | born PASS strict | 7 (E5e3, forced) | 7 |
+| `builtins/e13-sibling-panic-order/bytes-conv-payload-vs-call` | PASS/membership, probe → graph | its 2-member set REPRODUCED (enumerated=2) | unchanged |
+| the other 64 e13 rows | UNCHANGED | — | — |
+
+**A refusal met and honoured.** The first `str-index-vs-call` (m writing i = 9) had a STATUS-DIVERSE set {102, panic}: the
+membership lane refused it BY NAME («member … has status ok, outside the case's declared status set [panic] … status-diverse
+envelopes declare e.g. ok,panic — audit F8»). The F8 status-set declaration exists in the harness but NO corpus row uses it;
+rather than be the first consumer of an unexercised path inside a runtime lane, the row was SPLIT into the ok/ok form (m: i = 1)
+and the panic/panic form (`+ wit(5)`, the E13 shape) — [AGENT] choice, recorded in the row's `why`. Baseline 3748 = 3513 / 235
+→ **3752 = 3517 / 235**; NO PASS → non-PASS.
+
+**Latitude.** E2/E12's VALUE axis (a) ENVELOPED on `str-index-vs-call` and `str-slice-vs-call` (the captured index's read vs
+the call, on a string base); E13's sibling-panic axis on `str-index-panic-vs-print` and on the e13 row that leaves the probe —
+posed for ratification at the merge ask with the others. **[AGENT] choices.** (i) Strings admitted as index / slice BASES in
+the classifier, nothing else (no core, no decoder, no wire schema change). (ii) `len(s)` of a string an E1 participant (the
+ratified reading (a) names `len` among the built-ins). (iii) The full slice expression on a string refused by name. (iv) The
+status-diverse row split, not declared (above).
+

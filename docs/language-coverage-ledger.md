@@ -569,19 +569,18 @@ than as speculative cases.)
 
 ## 8. Counts and the closing arithmetic
 
-All numbers at the current tracked baseline (3748 cases, 3513 PASS / 235 FAIL; [AGENT] worker, lane
-`core/unseq-stage-e5-0922` — STAGE E5 of the evaluation-order model v2.1, family E5c: MAP LITERALS as `allocate` bodies
-(the `AllocSpec.mapLit` arm) without E1 edges (design `docs/2026-09-22_unseq-stage-e5-design.md` §E5c; handoff
-`docs/2026-09-22_unseq-stage-e5-handoff.md`); measured by `scripts/diff-one` on all 90 affected rows before the pin and by
-the full `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff` at the E5c tree — the gate line in
-`docs/evidence/2026-09-22_unseq-stage-e5/README.md`). The delta over the E5b tally (§8ag, 3745 = 3510 / 235): 3 rows BORN in
-`evalorder/unseq-maplit` — `map-lit-entry-vs-call` {6, 15} and `map-lit-key-vs-call` {6, 5} PASS/membership (gc's
-literal-first member inside, 20/20), `map-lit-const-control` PASS strict (6); 2 LANE MOVES strict → membership:
-`noodler/latitude/map-literal-key-vs-call` {5, 50} (gc 50) and `builtins/e13-sibling-panic-order/map-lit-payload-vs-call`
-{panic, `wit 5` · panic} (gc's the panic alone — the audit's F6 shape: the strict control's pin of gc's literal-first order
-enveloped, a membership row by rule). 3745 + 3 = 3748; 3510 + 3 = 3513; 235 unchanged. No other result/stage movement, no
-removal, no widened pin, no PASS → non-PASS. Reds table unchanged: 128 + 9 + (24 + 1) + 7 + 66 = 235 ✓. Movement §8ah (and
-§8ag for E5b, §8af for E5a).
+All numbers at the current tracked baseline (3752 cases, 3517 PASS / 235 FAIL; [AGENT] worker, lane
+`core/unseq-stage-e5-0922` — STAGE E5 of the evaluation-order model v2.1, family E5e: STRINGS — a string index / slice a
+FAILING PURE OP on the string value, an occurrence of the `unseq` graph (a classifier-only widening; design
+`docs/2026-09-22_unseq-stage-e5-design.md` §E5e; handoff `docs/2026-09-22_unseq-stage-e5-handoff.md`); measured by
+`scripts/diff-one` on all 68 affected rows before the pin and by the full `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff`
+at the E5e tree — the gate line in `docs/evidence/2026-09-22_unseq-stage-e5/README.md`). The delta over the E5c tally (§8ah,
+3748 = 3513 / 235): 4 rows BORN in `evalorder/unseq-strings` — `str-index-vs-call` {102, 103} (gc 103, the byte read after the
+call), `str-index-panic-vs-print` {panic · ``, `wit 5` · panic} (gc the second) and `str-slice-vs-call` {102, 103} (gc 102 — the
+string slice hoisted BEFORE the call) PASS/membership (gc's member inside each, 20/20), `str-len-vs-call` PASS strict (7, forced);
+`builtins/e13-sibling-panic-order/bytes-conv-payload-vs-call` leaves the legacy probe for a graph, its set reproduced (no row
+change). 3748 + 4 = 3752; 3513 + 4 = 3517; 235 unchanged. No other result/stage movement, no removal, no widened pin, no PASS →
+non-PASS. Reds table unchanged: 128 + 9 + (24 + 1) + 7 + 66 = 235 ✓. Movement §8ai (and §8ah for E5c, §8ag for E5b, §8af for E5a).
 
 Previous tally, then current (3745 cases, 3510 PASS / 235 FAIL; [AGENT] worker, lane
 `core/unseq-stage-e5-0922` — STAGE E5 of the evaluation-order model v2.1, family E5b: MULTI-TARGET assignments
@@ -2458,6 +2457,27 @@ tallied by row:
   twin 10 203 sweeps, 0 admitted, pin byte-identical. No lane move, no widened pin, no PASS → non-PASS.
 - Reds table: post-vintage 72 → 70; 133 + 9 + (24 + 1) + 7 + 70 = 244 ✓. FR-28's cell unchanged (the
   BUG-102 designed reds are E4's).
+
+### 8ai. Movement at Stage E5 of the evaluation-order model v2.1, family E5e — strings (2026-09-22, lane `core/unseq-stage-e5-0922`; on main `d76721bd`)
+
+[AGENT] worker. Design `docs/2026-09-22_unseq-stage-e5-design.md` §E5e; evidence `docs/evidence/2026-09-22_unseq-stage-e5/`
+(`census-e5e.txt`, `census-newly-admitted-e5e.tsv`, `probes-e5e.txt`, `diff-one-e5e.txt`, `gc-draws-e5e.txt`, the gate tail).
+Tracked figure 3748 = 3513 / 235 → 3752 = 3517 / 235 (re-pin reason in the baseline header). Movement, tallied by row:
+
+- BORN 4, all PASS (`Corpus/coverage/exec/evalorder/unseq-strings/`): `str-index-vs-call` membership {102, 103} (`int(s[i]) +
+  m()`, m writing the captured i = 1; gc 103 — the plain byte read deferred after the call), `str-index-panic-vs-print`
+  membership {panic · ``, `wit 5` · panic} (`int(s[i]) + wit(5)`, i = 9 — the E13 sibling-panic shape on a string byte read;
+  gc the second, call-first), `str-slice-vs-call` membership {102, 103} (`int(s[i:][0]) + m()`; gc 102 — the string SLICE
+  realized BEFORE the call: order.go hoists its temporary; the opposite member from the plain index row, both inside),
+  `str-len-vs-call` strict (7 — `len(s) + m()`: s's read inside len's window, forced; legacy under the trigger).
+- PROBE → GRAPH, set reproduced (no row change): `builtins/e13-sibling-panic-order/bytes-conv-payload-vs-call` (`int([]byte(
+  s[i:j])[0]) + wit(5)`, s[5:7] out of range) — enumerated=2 under the graph as under the probe.
+- A status-diverse single row (the first `str-index-vs-call`, m writing i = 9: {102, panic}) was REFUSED BY NAME by the
+  membership lane (the audit-F8 `ok,panic` declaration exists but no corpus row uses it) and split into the two rows above.
+- Census 165 → 168 admitted (+1 from the widening, +2 the born package's own sweeps; 0 lost); the twin 0. Legacy probe
+  emissions 59 → 58 (corpus), the twin 128 unchanged.
+- No core, decoder or wire-schema change; one hand-built wire (`e5estr`) + native as positive controls (`check-wire-boundary`
+  11 + 42); the mutant set unchanged (43).
 
 ### 8ah. Movement at Stage E5 of the evaluation-order model v2.1, family E5c — map literals (2026-09-22, lane `core/unseq-stage-e5-0922`; on main `d76721bd`)
 

@@ -133,6 +133,11 @@ func TestUnseqLoweringShapes(t *testing.T) {
 		// Stage E5 E5c: the map literal an `allocate` in the residual (no after) on its key's checked read; the
 		// fresh map's read; the op.
 		{"e4mapLit", "invoke eval:index-get allocate eval:map-get eval:binary"},
+		// Stage E5 E5e: m first (the event); the residual — the captured i's read, the substring (a failing pure
+		// op), its checked byte [0], the conversion, the op. The byte read: m, then i's read, the checked s[i], the
+		// conversion, the op.
+		{"e5eStrSlice", "invoke eval:ident eval:slice eval:index-get eval:convert eval:binary"},
+		{"e5eStrIndexVsCall", "invoke eval:ident eval:index-get eval:convert eval:binary"},
 		// W6: two E1-ordered calls, then the read and the ops.
 		{"w6", "invoke invoke/after eval:ident eval:binary eval:binary"},
 		// R6: the call first; the header read and the checked access late.

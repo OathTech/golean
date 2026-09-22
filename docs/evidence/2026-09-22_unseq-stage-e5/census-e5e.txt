@@ -1,0 +1,103 @@
+# The whole-sweep census, E5e: the E5c frontend (BEFORE) vs the E5e frontend (AFTER); producers .tmp/census/run.sh, summarize.py, diff.py. The 14 rows only in AFTER are the born package's sweeps (evalorder/unseq-strings). Admitted 165 -> 168: +1 from the widening (builtins/e13-sibling-panic-order/bytesConvPayloadVsCall, former reason «slice expression on a non-slice base (string)») and +2 the born package's two membership sweeps; 0 lost; the twin 10 203 / 0 (byte-identical, check-frontend-pins). The main-unit «string» first-reason residue beyond these (217 sweeps at the baseline) is call-free or forced (a string read inside len's window, string concatenation without a sibling event) — legacy under the trigger.
+
+## AFTER (summary)
+corpus sweeps 108212  admitted 168  packages-with-admitted 44  refused-packages 0
+admitted units: [('main', 168)]
+admitted by form: [('return', 92), ('compound', 22), ('elem-assign', 11), ('define', 10), ('call-stmt', 9), ('tuple-assign', 7), ('multi-call', 7), ('print-stmt', 3), ('map-assign', 2), ('comma-ok', 2), ('blank-assign', 1), ('deref-assign', 1), ('assign', 1)]
+admitted per package:
+    50 Corpus/coverage/exec/builtins/e13-sibling-panic-order
+    13 Corpus/coverage/exec/evalorder/unseq-pilot
+    11 Corpus/coverage/exec/noodler/latitude
+     9 Corpus/coverage/exec/evalorder/unseq-conv-alloc
+     8 Corpus/coverage/exec/noodler/evalorder
+     6 Corpus/coverage/exec/evalorder/unseq-ptr-field-map
+     5 Corpus/coverage/exec/evalorder/unseq-builtins
+     5 Corpus/coverage/exec/evalorder/unseq-multi
+     5 Corpus/coverage/exec/spec-examples-decl/select-forms
+     4 Corpus/coverage/exec/builtins/len-vs-call-order
+     4 Corpus/coverage/exec/evalorder/unseq-recv-method
+     3 Corpus/coverage/exec/evalorder/legacy-logical-vs-call
+     3 Corpus/coverage/exec/evalorder/unseq-globals
+     3 Corpus/coverage/exec/evalorder/unseq-maplit
+     3 Corpus/coverage/exec/noodler/maps
+     2 Corpus/coverage/exec/binop-order/operand-panic-vs-call
+     2 Corpus/coverage/exec/channels/recv-edge
+     2 Corpus/coverage/exec/evalorder/unseq-strings
+     2 Corpus/coverage/exec/multi-assign/call-write-back-order
+     2 Corpus/coverage/exec/noodler/methods
+     2 Corpus/coverage/exec/spec-examples-stmt/continue-label
+     2 Corpus/coverage/exec/spec-examples-stmt/eval-order-calls
+     1 Corpus/coverage/exec/channels/make-edge
+     1 Corpus/coverage/exec/evalorder/unseq-const-cell
+     1 Corpus/coverage/exec/goroutines/fork-join
+     1 Corpus/coverage/exec/goroutines/worker-pool
+     1 Corpus/coverage/exec/init/stdlib-initializer-dependent
+     1 Corpus/coverage/exec/maps/compound-assign-eval-once
+     1 Corpus/coverage/exec/methods/nil-receiver
+     1 Corpus/coverage/exec/multi-assign/call-write-back
+     1 Corpus/coverage/exec/multi-assign/call-write-back-order-value
+     1 Corpus/coverage/exec/multi-assign/index-target-rhs-call-order
+     1 Corpus/coverage/exec/multi-assign/lhs-index-eval-order
+     1 Corpus/coverage/exec/multi-assign/target-eval-before-call
+     1 Corpus/coverage/exec/noodler/arith
+     1 Corpus/coverage/exec/noodler/frontier/pointer-to-pointer-chains
+     1 Corpus/coverage/exec/noodler/gotchas
+     1 Corpus/coverage/exec/pointers/deref-target-rhs-call-order
+     1 Corpus/coverage/exec/race/negative-sync
+     1 Corpus/coverage/exec/returns/multi-result-assign-order
+     1 Corpus/coverage/exec/scoping/closure-shadow-binding
+     1 Corpus/coverage/exec/slices/copy-min
+     1 Corpus/coverage/exec/spec-examples-decl/conversion-parse-forms
+     1 Corpus/coverage/exec/sync/out-of-scope-cond
+top legacy reasons:
+   40068 no call occurrence (legacy path: nothing with an effect to reorder against)
+   33386 statement form outside the pilot grammar
+    4991 callee outside the main package
+    3221 no non-event occurrence beside the call(s) (legacy path: every edge forced)
+    3062 method callee outside the main package
+    1768 bare return
+    1757 qualified function callee (imported source package)
+    1579 result type outside the pilot grammar (error)
+    1266 generic function callee
+    1137 builtin panic statement
+     751 target type outside the pilot grammar (error)
+     661 captured target written through its pointer parameter (lifted body)
+     607 no occurrence observable against an effectful event (legacy path: every edge forced — Stage E E3 trigger)
+     514 index of a string type outside the grammar (untyped string)
+     504 element target type outside the pilot grammar (E)
+     499 index of a non-slice base ([256]uint8)
+     427 field selector on a struct type outside the grammar (bytes.Buffer)
+     408 result type outside the pilot grammar (S)
+     376 callee expression outside the pilot grammar
+     323 index of a non-slice base (T)
+     312 field selector on a struct type outside the grammar (internal/strconv.decimal)
+     299 captured variable read through its pointer parameter (lifted body)
+     299 target type outside the pilot grammar (float64)
+     288 result type outside the pilot grammar (float64)
+     276 nil
+     266 copy destination type outside the grammar (S)
+     238 unary operator & (address of a variable)
+     224 result type outside the pilot grammar (E)
+     198 index of a non-slice base ([16]unicode/utf8.acceptRange)
+     186 target type outside the pilot grammar (func() int)
+     169 target type outside the pilot grammar (S)
+     163 binary operand type outside the pilot grammar
+     153 result type outside the pilot grammar (float32)
+     143 dereference target on a pointer type outside the grammar
+     142 define target is not a fresh declaration
+     142 expression statement that is not a call
+     132 result type outside the pilot grammar (iter.Seq[string])
+     132 target type outside the pilot grammar (io.StringWriter)
+     132 field selector on a struct type outside the grammar (strings.stringFinder)
+     127 shim runtime-refusal helper callee
+twin sweeps 10203  admitted 0
+
+## BEFORE (E5c) -> AFTER (E5e)
+rows only in AFTER (new packages): 14 in ['Corpus/coverage/exec/evalorder/unseq-strings']
+newly admitted 1   lost 0
+newly admitted per package:
+     1 Corpus/coverage/exec/builtins/e13-sibling-panic-order
+newly admitted, by former reason: [('slice expression on a non-slice base (string)', 1)]
+newly admitted by form: [('return', 1)]
+twin newly admitted: 0
+still legacy with a package-level reason: [('package-level target of a type outside the grammar ([3]int)', 3), ('package-level target of a type outside the grammar ([2]int)', 2), ('package-level target of a type outside the grammar (main.Valuer)', 1), ('package-level target of a type outside the grammar (raft.Logger)', 1)]

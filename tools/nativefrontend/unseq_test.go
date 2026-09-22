@@ -737,6 +737,32 @@ func e5aTgtAssertMin() int {
 	return x[0]
 }
 
+// --- Stage E5 E5e: strings ---
+
+// int(s[i:][0]) + m() with i captured (m: i = 1): the substring's bounds check and its byte read vs m
+// (len(s[i:]) + m() would be all-forced: the substring lies inside len's window, len before m).
+func e5eStrSlice() int {
+	s := "ab"
+	i := 0
+	m := func() int { i = 1; return 5 }
+	return int(s[i:][0]) + m()
+}
+
+// int(s[i]) + m() with i captured (m: i = 9): the byte read's bounds check vs m.
+func e5eStrIndexVsCall() int {
+	s := "ab"
+	i := 0
+	m := func() int { i = 9; return 5 }
+	return int(s[i]) + m()
+}
+
+// len(s) + m() with s captured (m: s = "xyz"): s's read inside len's window — forced before m (legacy by the trigger).
+func e5eStrLenForced() int {
+	s := "ab"
+	m := func() int { s = "xyz"; return 5 }
+	return len(s) + m()
+}
+
 // --- Stage E5 E5b: the multi-target forms ---
 
 func rebindS(ps *[]int) int { *ps = []int{7, 8, 9}; return 5 }
@@ -889,6 +915,10 @@ func TestUnseqAdmittedWitnesses(t *testing.T) {
 		{"blankTarget", 0, "blank-assign", 1, 1},      // wit | the checked s[0] (E5b: `_ = e` evaluates its occurrences)
 		// Stage E5 E5c: map literals
 		{"e4mapLit", 0, "return", 1, 2}, // wit | the key's checked s[0] + the fresh map's read
+		// Stage E5 E5e: strings
+		{"stringIndex", 0, "return", 1, 1},       // wit | the checked byte read str[0] (a private string; the conversion pure)
+		{"e5eStrSlice", 0, "return", 1, 3},       // m | the captured i's read, the checked substring, its checked byte [0]
+		{"e5eStrIndexVsCall", 0, "return", 1, 2}, // m | the captured i's read, the checked byte read
 	}
 	for _, c := range cases {
 		d := decisionAt(t, unseqWitnessSrc, c.fn, c.fromEnd)
@@ -960,7 +990,6 @@ func TestUnseqLegacyByReason(t *testing.T) {
 		{"privateCompoundCall", 1, "no non-event occurrence"},
 		{"variadicCallee", 0, "variadic callee"},
 		{"genericCallee", 0, "generic function callee"},
-		{"stringIndex", 0, "index of a non-slice base"}, // int(str[0]): the conversion is admitted (E4), the string index is not
 		{"arrayIndex", 0, "index of a non-slice base"},
 		{"ifaceCompare", 0, "interface comparison"},
 		{"floatOperand", 0, "result type outside the pilot grammar"},
@@ -980,6 +1009,8 @@ func TestUnseqLegacyByReason(t *testing.T) {
 		{"e5bCommaOkMapOnly", 2, "no call occurrence"},
 		{"e5bSwap", 1, "no call occurrence"},
 		{"e5bCommaOkAssertOnly", 2, "no call occurrence"},
+		// Stage E5 E5e
+		{"e5eStrLenForced", 0, "no occurrence observable against an effectful event"},
 	}
 	for _, c := range cases {
 		d := decisionAt(t, unseqWitnessSrc, c.fn, c.fromEnd)

@@ -1,0 +1,6 @@
+# gc's draws (go1.26.5), 20 per subject (5 runs x GOMAXPROCS 1/8 x default / -N -l); producer .tmp/e5/gc-draws.sh. Born: evalorder/unseq-strings (4). strIndexVsCall: 103, 20/20 — gc defers the plain byte read s[i] AFTER the call (call-first: i = 1 -> 'b'); strIndexPanicVsPrint: `wit 5` then the panic, 20/20 (call-first); strSliceVsCall: 102, 20/20 — gc realizes the string SLICE (and its byte read) BEFORE the call (order.go hoists the string-slice temporary): the opposite member from the plain index row, both inside the reference sets; strLenVsCall (the strict control): 7, 20/20 (forced — s's read inside len's window). An earlier measurement of the first str-index design (m writing i = 9): the panic alone, 20/20 (call-first).
+
+20 Corpus/coverage/exec/evalorder/unseq-strings:strIndexPanicVsPrint -> wit 5|panic: runtime error: index out of range [9] with length 2
+20 Corpus/coverage/exec/evalorder/unseq-strings:strIndexVsCall -> 103
+20 Corpus/coverage/exec/evalorder/unseq-strings:strLenVsCall -> 7
+20 Corpus/coverage/exec/evalorder/unseq-strings:strSliceVsCall -> 102

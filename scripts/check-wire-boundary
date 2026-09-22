@@ -263,4 +263,9 @@ out="$(run_cli_fn Tests/unseq-wire/e5cmaplit.json e5cmaplit)" || { echo "check-w
 echo "ok [unseq maplit] runs, answers 15 (the map literal an allocate body without an E1 edge — Stage E5 E5c)"
 expect_unseq_refusal unseq-maplit-dup-key mut-maplit-dup-key e5cmaplit 'duplicate constant key'
 expect_unseq_refusal unseq-maplit-nonatom mut-maplit-nonatom e5cmaplit 'hidden read in an allocation payload'
-echo 'Wire boundary gate: PASS (11 byte-level controls + 41 unseq-node controls through the real CLI)'
+# Stage E5 E5e (2026-09-22): a STRING substring and its byte read as failing pure ops (Tests/unseq-wire/e5estr.json,
+# `int(s[i:][0]) + m()`): runs on the canonical tape — m first (i = 1), then the substring "b" and its byte: 98 + 5 = 103 (gc's).
+out="$(run_cli_fn Tests/unseq-wire/e5estr.json e5estr)" || { echo "check-wire-boundary: FAIL [unseq string] — the string wire did not run: $out" >&2; exit 1; }
+[[ "$out" == *'"status":"ok"'* && "$out" == *'"value":103'* ]] || { echo "check-wire-boundary: FAIL [unseq string] — expected ok/103 (canonical = m first, the substring and its byte after): $out" >&2; exit 1; }
+echo "ok [unseq string] runs, answers 103 (a substring and its byte read bounds-checked pure ops on the string value — Stage E5 E5e)"
+echo 'Wire boundary gate: PASS (11 byte-level controls + 42 unseq-node controls through the real CLI)'

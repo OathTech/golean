@@ -1,5 +1,5 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 3748 (3513 PASS / 235 FAIL)
+# cases: 3752 (3517 PASS / 235 FAIL)
 # re-pinned: 2026-09-20 [AGENT], core/unseq-stage-d-0920, STAGE D of the evaluation-order model v2.1 (route α —
 #   docs/2026-09-20_unseq-stage-d-design.md §2–§3; handoff docs/2026-09-20_unseq-stage-d-handoff.md): NO row added, NO
 #   result changed, ONE stage changed — spec-examples-stmt/continue-label PASS/- -> PASS/confluent, the strict depth=128
@@ -169,6 +169,26 @@
 #   edit), the twin 0; legacy probes 60 -> 59 (corpus — the noodler row's), the twin 128 unchanged. Measured by scripts/diff-one on all
 #   90 affected rows (docs/evidence/2026-09-22_unseq-stage-e5/diff-one-e5c.txt); the full gate line is in the evidence README.
 #   3745 + 3 = 3748; 3510 + 3 = 3513; 235 unchanged. No PASS -> non-PASS.
+# re-pinned: 2026-09-22 [AGENT], core/unseq-stage-e5-0922, STAGE E5 of the evaluation-order model v2.1, family E5e — STRINGS: a
+#   string index `s[i]` (a bounds-checked byte read of an immutable value) and a string slice `s[lo:hi]` (a bounds-checked
+#   substring) are FAILING PURE OPS on the string VALUE (spec#Index_expressions, spec#Slice_expressions), occurrences of the graph
+#   spec-unsequenced against the sibling calls; `len(s)` stays an E1 participant (its operand inside its window). Design
+#   docs/2026-09-22_unseq-stage-e5-design.md §E5e; handoff docs/2026-09-22_unseq-stage-e5-handoff.md. FOUR rows BORN in
+#   evalorder/unseq-strings: str-index-vs-call {102, 103} (`int(s[i]) + m()`, m writing the captured i = 1; gc 103 on 20/20 under
+#   GOMAXPROCS 1/8, default and -N -l — the plain byte read deferred AFTER the call), str-index-panic-vs-print {panic · ``, `wit 5`
+#   · panic} (`int(s[i]) + wit(5)`, i = 9: the byte read's panic before / after the printing call — the E13 sibling-panic shape;
+#   gc `wit 5` · panic, 20/20), str-slice-vs-call {102, 103} (`int(s[i:][0]) + m()`, m writing i = 1; gc 102, 20/20 — gc HOISTS
+#   the string slice's temporary BEFORE the call: the opposite member from the plain index row, both inside the set)
+#   PASS/membership; str-len-vs-call (7) PASS strict (`len(s) + m()`, s captured: s's read inside len's window, len before m —
+#   forced, legacy under the trigger). A status-diverse single row (the before-m byte read ok, the after-m read panicking) was
+#   REFUSED BY NAME by the membership lane (coverage-observations: «member … has status ok, outside the case's declared status set
+#   [panic]») — the F8 status-set declaration exists but no corpus row uses it; the row was split into the ok/ok and panic/panic
+#   forms instead. builtins/e13-sibling-panic-order/bytes-conv-payload-vs-call (`int([]byte(s[i:j])[0]) + wit(5)`) leaves the
+#   legacy probe for a graph with its 2-member set REPRODUCED (PASS/membership unchanged). Census 165 -> 168 admitted (+1 the e13
+#   row's sweep, former reason «slice expression on a non-slice base (string)»; +2 the born package's membership sweeps; 0 lost),
+#   the twin 0; legacy probes 59 -> 58 (corpus), the twin 128 unchanged. Measured by scripts/diff-one on the 68 affected rows (all
+#   65 e13 rows + the born rows; two runs — docs/evidence/2026-09-22_unseq-stage-e5/diff-one-e5e.txt); the full gate line is in the
+#   evidence README. 3748 + 4 = 3752; 3513 + 4 = 3517; 235 unchanged. No PASS -> non-PASS.
 # Previous pin:
 # re-pinned: 2026-09-20 [AGENT], core/unseq-stage-c-0919, STAGE C AUDIT FIX ROUND (docs/2026-09-20_unseq-stage-c-audit.md, FIX-FIRST; dispositions
 #   docs/2026-09-19_unseq-stage-c-handoff.md «Audit fix round (2026-09-20)»): SIX rows ADDED, no existing row changed. (F2) evalorder/unseq-const-cell/
@@ -2355,6 +2375,10 @@ PASS	evalorder/unseq-multi/comma-ok-map-control	-
 PASS	evalorder/unseq-maplit/map-lit-entry-vs-call	membership
 PASS	evalorder/unseq-maplit/map-lit-key-vs-call	membership
 PASS	evalorder/unseq-maplit/map-lit-const-control	-
+PASS	evalorder/unseq-strings/str-index-vs-call	membership
+PASS	evalorder/unseq-strings/str-index-panic-vs-print	membership
+PASS	evalorder/unseq-strings/str-slice-vs-call	membership
+PASS	evalorder/unseq-strings/str-len-vs-call	-
 PASS	evalorder/unseq-globals/read-vs-call	membership
 PASS	evalorder/unseq-globals/compound-vs-call	membership
 PASS	evalorder/unseq-globals/read-vs-unrelated-call	-

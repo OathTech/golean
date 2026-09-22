@@ -182,6 +182,18 @@ E5c1 map[int]int{1: x}[1] + m() (the map literal an allocation node; the entry r
 E5c2 m := map[int]int{a[0]: f()} (the key read vs the value's call inside the literal): outcome set = [5, 50]
    trajectories per outcome: [(5, 1), (50, 1)]
    canonical (slot 0): R_a0 E_f A -> 5
+E5e1 int(s[i]) + m() (a string byte read, bounds-checked, vs m writing i): outcome set = [102, 103]
+   trajectories per outcome: [(102, 1), (103, 1)]
+   canonical (slot 0): R_si E_m Op -> 102
+E5e2 int(s[i:][0]) + m() (a substring and its byte read, bounds-checked, vs m writing i): outcome set = [102, 103]
+   trajectories per outcome: [(102, 2), (103, 1)]
+   canonical (slot 0): Sl R_b E_m Op -> 102
+E5e3 len(s[i:]) + m() (the substring inside the window of len, len before m: a forced singleton): outcome set = [7]
+   trajectories per outcome: [(7, 1)]
+   canonical (slot 0): Sl E_len E_m Op -> 7
+E5e4 int(s[i]) + wit(5) (the byte read's panic vs the printing sibling call): outcome set = [('panic', ()), ('panic', ('wit 5',))]
+   trajectories per outcome: [(('panic', ()), 1), (('panic', ('wit 5',)), 1)]
+   canonical (slot 0): R_si -> ('panic', ())
 C1 f(g()): outcome set = [8]
    trajectories per outcome: [(8, 1)]
    canonical (slot 0): E_g E_f -> 8

@@ -559,6 +559,23 @@ func (e *emitter) unseqExpr(x ast.Expr, ctx *unseqCtx, d *unseqDecision) (unseqE
 			d.occ(start)
 			return unseqValue, true
 		}
+		if isStringType(types.Unalias(bt).Underlying()) {
+			// Stage E5 E5e (2026-09-22): a STRING index `s[i]` — a byte read of an immutable value,
+			// bounds-checked: a FAILING PURE OP on the string VALUE and index VALUE (the machine's
+			// `indexGet` on a string; spec#Index_expressions). The string's own read is the base's
+			// classification (a captured / package-level string is a READ occurrence).
+			if !unseqTypeOK(bt) {
+				return refuse("index of a string type outside the grammar (" + bt.String() + ")")
+			}
+			if _, ok := e.unseqExpr(v.X, ctx, d); !ok {
+				return unseqConst, false
+			}
+			if _, ok := e.unseqExpr(v.Index, ctx, d); !ok {
+				return unseqConst, false
+			}
+			d.occ(start) // the checked byte read
+			return unseqValue, true
+		}
 		sl, isSlice := types.Unalias(bt).Underlying().(*types.Slice)
 		if !isSlice {
 			return refuse("index of a non-slice base (" + bt.String() + ")")
@@ -580,7 +597,14 @@ func (e *emitter) unseqExpr(x ast.Expr, ctx *unseqCtx, d *unseqDecision) (unseqE
 			return refuse("slice of an untyped base")
 		}
 		if _, isSlice := types.Unalias(bt).Underlying().(*types.Slice); !isSlice {
-			return refuse("slice expression on a non-slice base (" + bt.String() + ")")
+			// Stage E5 E5e: a STRING slice `s[lo:hi]` — a substring of an immutable value,
+			// bounds-checked (spec#Slice_expressions): a FAILING PURE OP on the string VALUE.
+			if !isStringType(types.Unalias(bt).Underlying()) {
+				return refuse("slice expression on a non-slice base (" + bt.String() + ")")
+			}
+			if v.Slice3 {
+				return refuse("full slice expression on a string (Go forbids it)")
+			}
 		}
 		if !unseqTypeOK(bt) {
 			return refuse("slice type outside the pilot grammar (" + bt.String() + ")")
@@ -1355,7 +1379,11 @@ func (e *emitter) unseqCall(c *ast.CallExpr, ctx *unseqCtx, d *unseqDecision, ma
 					return refuse(id.Name + " of an untyped operand")
 				}
 				if _, isSlice := types.Unalias(at).Underlying().(*types.Slice); !isSlice {
-					return refuse(id.Name + " of a non-slice operand (" + at.String() + ")")
+					// Stage E5 E5e: `len(s)` of a STRING — an E1 participant like a slice's
+					// (spec#Length_and_capacity; a constant string's len never reaches here).
+					if !(id.Name == "len" && isStringType(types.Unalias(at).Underlying())) {
+						return refuse(id.Name + " of a non-slice operand (" + at.String() + ")")
+					}
 				}
 				if !unseqTypeOK(at) {
 					return refuse(id.Name + " operand type outside the pilot grammar")

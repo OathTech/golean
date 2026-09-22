@@ -608,6 +608,26 @@ def e5cmaplit_graph():
         then=ret(ident("$u4", INT)))
 
 
+# ---------------------------------------------------------------- Stage E5, family E5e (2026-09-22)
+# STRINGS: a substring / byte read is a bounds-checked pure op on the string VALUE (the conversion a pure head); len(s) an E1
+# participant (`len(s[i:]) + m()` is all-forced — the substring inside len's window — hence the byte-read form).
+
+def e5estr_graph():
+    # int(s[i:][0]) + m(): m's block first (canonical); the residual — the captured i's read, the substring (default high =
+    # the base's own length), its byte [0] (a uint8 cell), the conversion, the op. {102, 103}.
+    U8 = {"kind": "int", "int": "uint8"}
+    return unseq(
+        [cell("$u0", INT), cell("$u1", STR), cell("$u2", U8), cell("$u3", INT), cell("$u4", INT), cell("$u5", INT)],
+        [inv("call4", ["$u4"], ident("m"), [], [INT]),
+         ev("read0", "$u0", ident("i", INT)),
+         ev("slice1", "$u1", {"expr": "slice", "base": ident("s", STR), "low": ident("$u0", INT),
+                              "high": {"expr": "builtin-len", "operand": ident("s", STR), "operandType": STR}, "type": STR}),
+         ev("access2", "$u2", idxget(ident("$u1", STR), intc(0), U8)),
+         ev("conv3", "$u3", {"expr": "convert", "x": ident("$u2", U8), "target": INT, "type": INT}),
+         ev("op5", "$u5", binop("+", ident("$u3", INT), ident("$u4", INT), INT))],
+        then=ret(ident("$u5", INT)))
+
+
 # ---------------------------------------------------------------- constant heads (audit fix round F2)
 # A CONSTANT copied into a cell — the emitter's `copy` occurrence where the consumer needs a
 # CELL (design §6): a guard's test (`true && f()`), a phase-2 store's value (`a[f()] = 5`,
@@ -711,6 +731,8 @@ WITNESSES = {
     "e5bassert": ("e5bassert", [("e5bassert", "ok", 2, e5bassert_graph(), None)]),
     # Stage E5 E5c (2026-09-22): the map literal as an `allocate` body (hand-built + native)
     "e5cmaplit": ("e5cmaplit", [("e5cmaplit", "m", 0, e5cmaplit_graph(), None)]),
+    # Stage E5 E5e (2026-09-22): a string substring as a failing pure op beside a call (hand-built + native)
+    "e5estr": ("e5estr", [("e5estr", "m", 0, e5estr_graph(), None)]),
 }
 
 

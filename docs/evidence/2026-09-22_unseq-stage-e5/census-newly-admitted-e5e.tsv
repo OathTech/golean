@@ -1,0 +1,2 @@
+dir	unit	file:line	function	form	events	calls	nonEvents	former-reason
+Corpus/coverage/exec/builtins/e13-sibling-panic-order	main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:540	bytesConvPayloadVsCall	return	1	1	2	slice expression on a non-slice base (string)

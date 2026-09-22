@@ -906,6 +906,73 @@ def e5c2():
     check('E5c2 m := map[int]int{a[0]: f()} (the key read vs the value\'s call inside the literal)',
           enumerate_graph(occs, state(arr={'A': [1, 2]}), r), lambda k: k[1], {5, 50})
 
+# ---------------------------------------------------------------- Stage E5, family E5e (2026-09-22)
+# STRINGS: an index / slice of an immutable string is a bounds-checked PURE OP on the string VALUE — a failing
+# occurrence unordered against the sibling calls; len(s) is an E1 participant.
+
+def e5e1():
+    # int(s[i]) + m(): s = "ab", i captured (m: i = 1, returns 5). The byte read before m: 97 + 5 = 102; after m: 98 + 5 = 103.
+    # {102, 103}. (With m writing i = 9 the after-m member panics — a status-diverse set the membership lane refuses by name
+    # unless the row declares a status set; the corpus row keeps the ok/ok form and E5e4 carries the panic/panic form.)
+    def m(st, v): st['v']['i'] = 1; return 5
+    def byte(st, v):
+        i = st['v']['i']
+        if not (0 <= i < 2): raise Panic(f"index out of range [{i}] with length 2")
+        return ord('ab'[i])
+    occs = [Occ('R_si', run=byte),
+            Occ('E_m', run=m),
+            Occ('Op', deps=['R_si', 'E_m'], run=lambda st, v: v['R_si'] + v['E_m'])]
+    check('E5e1 int(s[i]) + m() (a string byte read, bounds-checked, vs m writing i)',
+          enumerate_graph(occs, state(v={'i': 0}), lambda st, v: v['Op']), lambda k: k[1], {102, 103})
+
+def e5e4():
+    # int(s[i]) + wit(5): i = 9 — the byte read PANICS before wit (no output) or after it (`wit 5` printed): the E13
+    # sibling-panic shape on a string byte read. {panic · (), panic · ('wit 5',)}.
+    def wit(st, v): println(st, 'wit 5'); return 5
+    def byte(st, v):
+        i = st['v']['i']
+        if not (0 <= i < 2): raise Panic(f"index out of range [{i}] with length 2")
+        return ord('ab'[i])
+    occs = [Occ('R_si', run=byte),
+            Occ('E_wit', run=wit),
+            Occ('Op', deps=['R_si', 'E_wit'], run=lambda st, v: v['R_si'] + v['E_wit'])]
+    check('E5e4 int(s[i]) + wit(5) (the byte read\'s panic vs the printing sibling call)',
+          enumerate_graph(occs, state(v={'i': 9}), lambda st, v: v['Op']),
+          lambda k: (k[0], k[2]), {('panic', ()), ('panic', ('wit 5',))})
+
+def e5e2():
+    # int(s[i:][0]) + m(): i captured (m: i = 1, returns 5). The substring and its byte [0] are pure failing ops,
+    # unordered against m: before m 'a' (97 + 5 = 102), after m 'b' (98 + 5 = 103). (`len(s[i:]) + m()` is all-forced:
+    # the substring inside len's window, len an E1 participant before m — a singleton, the strict control.)
+    def m(st, v): st['v']['i'] = 1; return 5
+    def sub(st, v):
+        i = st['v']['i']
+        if not (0 <= i <= 2): raise Panic(f"slice bounds out of range [{i}:] with length 2")
+        return 'ab'[i:]
+    def byte0(st, v):
+        if len(v['Sl']) < 1: raise Panic("index out of range [0] with length 0")
+        return ord(v['Sl'][0])
+    occs = [Occ('Sl', run=sub),
+            Occ('R_b', deps=['Sl'], run=byte0),
+            Occ('E_m', run=m),
+            Occ('Op', deps=['R_b', 'E_m'], run=lambda st, v: v['R_b'] + v['E_m'])]
+    check('E5e2 int(s[i:][0]) + m() (a substring and its byte read, bounds-checked, vs m writing i)',
+          enumerate_graph(occs, state(v={'i': 0}), lambda st, v: v['Op']), lambda k: k[1], {102, 103})
+
+def e5e3():
+    # len(s[i:]) + m(): the substring is inside len's window; len (an E1 participant) precedes m: forced — {7}.
+    def m(st, v): st['v']['i'] = 1; return 5
+    def sub(st, v):
+        i = st['v']['i']
+        if not (0 <= i <= 2): raise Panic(f"slice bounds out of range [{i}:] with length 2")
+        return 'ab'[i:]
+    occs = [Occ('Sl', run=sub),
+            Occ('E_len', deps=['Sl'], run=lambda st, v: len(v['Sl'])),
+            Occ('E_m', after=['E_len'], run=m),
+            Occ('Op', deps=['E_len', 'E_m'], run=lambda st, v: v['E_len'] + v['E_m'])]
+    check('E5e3 len(s[i:]) + m() (the substring inside the window of len, len before m: a forced singleton)',
+          enumerate_graph(occs, state(v={'i': 0}), lambda st, v: v['Op']), lambda k: k[1], {7})
+
 # ---------------------------------------------------------------- negative controls (forced pairs are singletons)
 def controls():
     # C1: f(g()) — argument before invocation (data edge); no unordered pair remains.
@@ -936,7 +1003,7 @@ if __name__ == '__main__':
               e1a, e1c, e1b, e2a, e2c, e2d, e2e, e2f, e2g, e3a, e3c, e3d, e3e,
               e4a, e4b, e4c, e4d, e4e, e4f, e4g, e4h,
               e5a1, e5a2, e5a3, e5a4, e5a5, e5a6, e5a7,
-              e5b1, e5b2, e5b3, e5b4, e5c1, e5c2, controls):
+              e5b1, e5b2, e5b3, e5b4, e5c1, e5c2, e5e1, e5e2, e5e3, e5e4, controls):
         f()
     print('RESULT:', 'FAIL' if FAILS else 'PASS', f'({FAILS} mismatch(es))')
     sys.exit(1 if FAILS else 0)
