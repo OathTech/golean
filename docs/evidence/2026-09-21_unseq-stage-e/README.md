@@ -242,3 +242,23 @@ doc version sites), none new.
 
 **Choice-trace subset, main vs the fix round** (`choice-trace-fix.txt`; main `14006270`'s whole-corpus dump — main `769bbf23` is records-only over it — vs this worktree at the runtime commit `bdd29170`, its frontend + binary; `scripts/choice-trace-corpus --dump --jobs 5` on 879 OUTSIDE-FAMILY ids — every SAME id of the E4 trace, at most two per package over 462 packages, the three E4-affected packages and the tracer's two standing exclusions left out; compared per id on the sorted dump records and the per-stream results by Stage D's method): **879 ids, 879 byte-identical, 0 DIFFER, 0 only on one side**; 177 of the rows consume choices, the site census identical on both sides (`unseqNext` 121, `unseqPanic` 18, `l1Sched` 4715, `backEdge` 1458, `postOp` 1817, `appendSpill` 1176, `mapIter` 411, …); the tracer exits 1 on both sides for the summarizer's standing findings (baseline-red ids refusing under some stream; the racy rows), with no finding line on this side absent from main's. The decoder's F2/F3 refusals and the frontend's F1/F4 classification change no execution outside the family: the F4 census confirms no other corpus sweep is admitted.
 
+
+## Merge train r46 — the 5a record ([AGENT] coordinator, 2026-09-22)
+
+[USER] Mike 2026-09-22, verbatim (relayed): «Agree on the judgements, go ahead» — the merge sign-off for Stage E
+(E1–E4 + the audit fix round) with the seven ratification items RULED as posed (the ask 2026-09-21; rulings ledger
+«The Stage E landing ratification record (2026-09-22)»). Pre-merge main `769bbf23` → `refs/snapshots/r46/main`
+(also `refs/snapshots/r46/{core-pre-train,review-pre-rebase}`); one train branch fast-forwarded: the lane
+`core/unseq-stage-e-0921` at `bcf0b371`, the audit branch rebased onto it (`f5f84595`/`2e3a011b`), BUG-114's
+capture addendum (`d13d1ea9`, cherry-picked as `dc6f5092`) and the ratification records commit `e23f29b3`. Under
+the lock at `e23f29b3` (the `.lake` warmed from the lane worktree — identical Lean sources): `scripts/build-certified`
+EXIT=0, 5 s (binary `73734062…`); `release-check --base refs/snapshots/r46/main` EXIT=2 (EXPECTED —
+«STALE certification: changed dependency build/files/GoLean/GoCore/AdmissionIndices.lean»); `GOLEAN_MEM_MAX=48G
+scripts/capped scripts/ci --slow` EXIT=1, 881 s — red on EXACTLY the 5a pair (`certificate provenance` STALE; the
+one drift line `imported-goose/channel/google-search PASS→FAIL/membership`, fresh re-certification «unchanged set;
+seconds=?»); 3732 rows run, 3496 PASS / 236 FAIL = the pin 3497 / 235 with the one 5a-class row red; no other drift
+line (the four born rows PASS in their lanes; the re-pin guard 0 PASS→non-PASS); negatives 394 no regression; the
+reconciler's two report-only findings = C9 (this STALE, cleared by the install) and the pre-existing C13. Tail:
+`r46-ci-slow.tail.txt`. Candidate vs tracked record: `claim` and `observations_sha256` IDENTICAL; input hashes
+differ in `build` (1) and `files` (7: `scripts/check-unseq-wire`, `scripts/check-wire-boundary`, `tools/nativefrontend/e13guard_test.go`, `tools/nativefrontend/unseq.go`, `tools/nativefrontend/unseq_lower.go`, `tools/nativefrontend/unseq_lower_test.go`, `tools/nativefrontend/unseq_test.go`) plus the receipt (`e23f29b3`, binary
+`73734062…`) — INSTALLED in this commit; a provenance refresh, not a re-pin.
