@@ -262,3 +262,13 @@ reconciler's two report-only findings = C9 (this STALE, cleared by the install) 
 `r46-ci-slow.tail.txt`. Candidate vs tracked record: `claim` and `observations_sha256` IDENTICAL; input hashes
 differ in the compiled inputs `build.files` (10: `GoLean/GoCore/AdmissionIndices.lean`, `GoLean/GoCore/Machine.lean`, `GoLean/GoCore/MachineSound.lean`, `GoLean/GoCore/StateWf.lean`, `GoLean/GoCore/StepFn.lean`, `GoLean/GoCore/Syntax.lean`, `GoLean/GoCore/SyntaxEqb.lean`, `GoLean/GoCore/Unseq.lean`, `GoLean/GoCore/UnseqSound.lean`, `GoLean/NativeToIR.lean`) and the tool files `files` (7: `scripts/check-unseq-wire`, `scripts/check-wire-boundary`, `tools/nativefrontend/e13guard_test.go`, `tools/nativefrontend/unseq.go`, `tools/nativefrontend/unseq_lower.go`, `tools/nativefrontend/unseq_lower_test.go`, `tools/nativefrontend/unseq_test.go`) plus the receipt (`e23f29b3`, binary
 `73734062…`) — INSTALLED in this commit; a provenance refresh, not a re-pin.
+
+**Green re-run at the records commit `d76721bd`** ([AGENT] coordinator, 2026-09-22): full
+`GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff` → EXIT=0 in 779 s, `RESULT: PASS`, `baseline diff FULL
+(3732/3732, no regression)` — 3497 PASS / 235 FAIL = the pin; `certificate provenance` ok (the installed record;
+inputs `d0d40f1a…`); negatives 394 no regression; the reconciler at its single pre-existing report-only finding
+(C13). Round 46 closed: Stage E (E1–E4 + the audit fix round), the audit and its re-verification, BUG-114's capture
+addendum and the seven-item ratification record are on main; the box-wide lock released; the transient `train/r46`
+branch and worktree removed (every commit of it is main's). Next: the E5/E6 lane (`core/unseq-stage-e5-0922`,
+dispatched 2026-09-22 off `d76721bd`; E6 only at a zero legacy census), then the NaN [a]+[b] lane, then P → C3 → C4
+→ B6.
