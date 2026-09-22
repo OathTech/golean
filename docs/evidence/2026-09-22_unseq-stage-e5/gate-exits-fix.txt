@@ -8,3 +8,10 @@ check-mem-callsites EXIT=0 (0 s)
 check-core-audit EXIT=0 (16 s)
 scripts/diff-one (10 unseq-multi rows)  EXIT=1 = the red-by-design row; 9 PASS (2 born membership enumerated=2), 1 FAIL/frontend-export by design
 enumerate.py (the v2.1 reference)  RESULT: PASS (E5b5 {0, 11} added)
+scripts/capped scripts/check-unseq-scheduler  EXIT=0 (81 s) — PASS
+scripts/check-bugs.sh EXIT=0 (2 s)
+scripts/check-evidence-size EXIT=0 (0 s)
+scripts/check-spec-anchors EXIT=0 (4 s)
+scripts/check-agents-alias EXIT=0 (0 s)
+python3 tools/reconcile-records EXIT=0 (23 s)
+GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff  EXIT=1 (931 s) 2026-09-22T06:22:36Z — RESULT FAIL on EXACTLY the 5a pair (certificate provenance STALE; the google-search drift line); cases=3760 pass=3523 fail=237 = the pin 3524 / 236 with the one 5a-class row red (ci-diff-fix.tail.txt)
