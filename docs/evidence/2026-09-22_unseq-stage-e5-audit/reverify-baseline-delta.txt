@@ -1,0 +1,6 @@
+# baseline delta audited tip 403cde75 -> fix tip 28919dd6, [AGENT] auditor 2026-09-22
+# audited 3757 = 3522 PASS / 235; fix 3760 = 3524 PASS / 236
+# born 3 lost 0 changed 0 PASS->nonPASS 0
+BORN	evalorder/unseq-multi/comma-ok-map-target-vs-delete	PASS	membership
+BORN	evalorder/unseq-multi/map-target-key-vs-writer	PASS	membership
+BORN	evalorder/unseq-multi/map-target-nil-legacy-refusal	FAIL	frontend-export

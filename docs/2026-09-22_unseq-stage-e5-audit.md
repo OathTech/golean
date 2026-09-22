@@ -356,3 +356,81 @@ exe gocore-eval-tests` 0 · `check-frontend-pins` 0 (twin wire = pinned bytes `e
 | F4 | RECORDS | correct the status-set wording (manifest admits one status); row the harness gap | records only |
 | F5 | RECORDS | «3 widening sweeps» (E5c), «12 admitted / 11 differ» (E5b); the coordinator's 10/28 → 9/27 | records only |
 | F6–F9 | NIT | refusal text; dead check; `ref` id check optional; none blocking | optional |
+
+## Re-verification (fix round `28919dd6`, 2026-09-22)
+
+**REVISED VERDICT: MERGE-CLEAN** — F1 is fixed at decode by name on all three map arms (my mW12/mW17/mE2/mW20, the
+round's four mutants and my own target-plan mutant mT1 all refuse «keyType/valueType … disagree with the map base's
+declared type» on the fix binary; every positive control answers identically on both binaries); F2–F5 are corrected
+as claimed and honestly; F6/F7 are fixed with the census relabel exactly as claimed (147 = 97 + 36 + 8 + 5 + 1, no
+sweep moved); the three born rows are correct, correctly labelled and gc's draws are inside (20/20 each, mine); the
+baseline moves by exactly those three; 54 rows PASS in their lanes (the one red by design); 260 outside-family rows
+are byte-identical to main's frontend + binary; every gate exits 0 on the fix tip. One RESIDUAL of F1 is named below
+(R1, the mW16 class the round left OPEN): a consistently forged annotation on a SOURCE-LOCAL map base still decodes
+and answers; I judge it recordable-not-blocking, with the reasons stated, for the coordinator/[USER] to overrule.
+
+[AGENT] auditor, ordered by the [AGENT] coordinator's re-verification request (2026-09-22, relayed). Method: a second
+worktree `.claude/worktrees/audit-unseq-stage-e5-fix` detached at `28919dd6` (runtime commit `263866da`; the diff
+over my audited tip `403cde75` is confined to `GoLean/NativeToIR.lean` (+41/−3, `unseqCheckMapBase` + its three call
+sites), a `Syntax.lean` docstring, `tools/nativefrontend/unseq.go` (+41/−3, refusal texts, one dead arm deleted),
+tests, wires, three corpus rows and records); the lane's `.lake` at identical sources, `scripts/capped lake build`
+EXIT=0 under the lock (golean `63e9c661…`, the lane's hash); the fix frontend built from that tree (`4586fa01…`);
+the audited binary (`2159163d…`) kept for before/after. Evidence: `docs/evidence/2026-09-22_unseq-stage-e5-audit/
+reverify-*` (16 files). No edit to the candidate or main; no push; the rebase onto the fix tip is the coordinator's.
+
+### Per item
+
+| item | what I ran | observed | verdict |
+|---|---|---|---|
+| **F1** the audit's mutants | `reverify-mutants.py`: mW12, mW17, mE2, mW20 on the audited vs the fix binary | audited: mW12/mW17 RAN (0), mE2/mW20 stuck late; fix: all four **REFUSED at decode** «… disagree with the map base's declared type … (audit F1)» | FIXED |
+| **F1** the round's four mutants | `mut-wide-lookup-{keytype,valuetype}-vs-base`, `mut-mapget-keytype-vs-base`, `mut-map-target-keytype-vs-base` on both binaries | audited: the lookup-keytype one RAN (0), the other three stuck late; fix: all REFUSED by name (`mutants.tsv` 45 → 49; `check-unseq-wire` 49; `check-wire-boundary` 11 + 49; `Tests/UnseqWire.lean` 132 ok) | as claimed |
+| **F1** the third path (`map` target plan) | my mT1: the target plan's `keyType → string` on a `$`-cell base (probe `mapCapturedKeyTargetVsWriter`, empty map) | **audited binary RAN, answered 79** — so the target-plan path was a full «decodes and answers» too, not only late-stuck as the round's own (non-empty-map) mutant showed; fix: REFUSED «map-element target plan … disagree …» | FIXED; the round's «stuck late on it» was true of its wire, the class was the whole F1 symptom |
+| **F1** positive controls | `e5blookup`, `native-e5blookup`, `e2map`, `native-e2map`, `e5cmaplit`, `native-e5cmaplit`, `e5btuple`, `w1` on both binaries | identical answers (0 / 0 / 10101 / 10101 / 15 / 15 / 15 / 2) | as claimed |
+| **F1** the new positive control | `enumerate.py` E5b5; the corpus row `comma-ok-map-target-vs-delete` | E5b5 `[0, 11]`, `RESULT: PASS`; row {0, 11} (`diff-one` PASS/membership enumerated=2), gc 0 on 20/20 — the lookup before the deleting call (1, true) → 11, after (0, false) → 0: both spec-permitted (a read unordered against a call), the `why` carries «[AGENT] addition» and the reason (no row or wire had exercised the arm) | correct and honestly labelled |
+| **R1** the residual (mW16 class, left OPEN) | `reverify-mutants2.py` mS1–mS5 on an ADMITTED sweep whose map base is a PRIVATE source local (`commaOkPrivateMapKeyRead`: `xs[f()], ok = m[a[0]]`, m empty; `mapTargetPrivateVsCall` for the target plan) | keyType forged alone (mS2/mS5) → REFUSED (the annotation disagrees); annotation REMOVED (mS3) → REFUSED «the map base carries no static type on the wire»; **annotation AND keyType forged consistently (mS1/mS4) → decodes and RUNS on the fix binary (100 / 79)** — `unseqPayloadTy?` trusts a source local's annotation, so a consistent forgery passes; the wire does carry the local's declared type (its `define` `{"target":"declare","type":map[int]int}`), so a cross-check is possible | OPEN, recorded below |
+| **F2** | `Syntax.lean` docstring, design §E5c, inventory E12/E2 bullets, handoff §2 item 6 | the (b) PIN stated with the spec example verbatim, the legacy row named, the re-envelope POSED; the core rebuilt (docstring); the trace/baseline unmoved (below) | as claimed |
+| **F3** rows | `diff-one` at the fix tip; my gc draws 20/20 | `map-target-key-vs-writer` {709, 79} PASS/membership, gc 79; `map-target-nil-legacy-refusal` FAIL/frontend-export «map element as assignment target outside a single assignment», gc `wit 1` · «assignment to entry in nil map» 20/20 — the red is the quarantine's own, by design | as claimed |
+| **F3** the correctness argument vs spec#Assignment_statements | probes (`reverify-probes-f3.go`, fix toolchain; gc 12 draws each): `mapTargetKeyPanicVsCall` (`m[a[9]], y = 1, wit(1)`), `mapTargetRhsDeletesKey`, `mapTargetRhsRewritesKey`, `mapTargetRhsRebindsMap`, `mapTwoTargetsVsCall`, `commaOkMapTargetVsRewrite`, `mapTargetPrivateVsCall` | {panic·``, `wit 1`·panic} (the key operand's panic is phase 1, unordered vs wit — gc `wit 1`·panic inside); **719** and **709** singletons (the store is phase 2 — a deleting or rewriting call cannot outrun it; gc =); {109, 119} (the frozen map VALUE before / after the rebinding call; gc 119); {51, 59} (two map targets, the read key vs the writing call; gc 59); {11, 15} (gc 15); {709, 79} (gc 79) | the argument holds: `Assignee.mapElem` freezes the map and key VALUES in phase 1 and checks nothing; the store is phase 2; no member outside spec#Assignment_statements' two phases |
+| **F3** records | BUG-115 (Status open, Pinned-by differential, Cases = the born red + the five A3 rows — all six FAIL/frontend-export in the baseline); triage A3 5 → 6; ledger §2/§8; design §E5b + «the audit fix round» | consistent; `check-bugs` EXIT=0 | as claimed |
+| **F4** | design §E5e rewritten; handoff §3 owed apparatus item; §6 note corrected | states the manifest admits one status (`diff-coverage:629`), the split was forced, the CLI path unreachable from a row; the future row's body named | as claimed |
+| **F5** | design §E5c/§E5b, ledger §8ah, README, handoff §4; handoff §2 item 5 | «+3 pre-existing sweeps», «12 admitted / 11 differ»; item 5 now names **29** rows = the baseline's 20 born-membership + 9 moved vs main exactly (my recount, no surplus, no omission) and states the implicit alternative (reverting to (b) pins) | as claimed |
+| **F6** | census with the fix frontend vs the audited tip's (`reverify-census-f6-relabel.txt`); my p_addr probes' refusal texts | the «unary operator &» first-reason class: audited 147 (all «address of a variable») → fix **97 element + 36 field + 8 indirection + 5 variable + 1 qualified package var = 147**, corpus + twin (corpus-only 139 = 139); no sweep moved (admitted 177 → 179 = exactly the two born graph rows; 0 lost); `*(&x)`/`&x == &y` keep the variable text, `&a[0]`/`&s.f`/`&*p` name their shape; unit tests in `go test` (EXIT=0) | as claimed |
+| **F7** | `go build` of `func f(s string) string { return s[0:1:2] }` | «invalid operation: 3-index slice of string» — go/types rejects the form; the deleted arm was unreachable | as claimed |
+| baseline | `reverify-baseline-delta.txt` | 3757 = 3522 / 235 → 3760 = 3524 / 236: born exactly the three rows (2 PASS/membership, 1 FAIL/frontend-export), changed 0, lost 0, PASS→non-PASS 0; header reason written | as claimed |
+| trace | not re-run whole-corpus; instead: 260 outside-family rows (204 packages) with the fix frontend + binary vs main's (`reverify-outside-check.log`) and the 54 rows' sets | **260/260 identical**; the 51 audited rows' lanes and enumerated sets unchanged (35 membership + 18 strict PASS + the 1 red by design = 54); the census diff audited → fix: newly admitted 0, lost 0 beyond the born package | consistent with «3721 byte-identical, 0 DIFFER, 3 ONLY_B» |
+| gates on the fix tip | `reverify-gate-exits.txt` / `-tails.txt` | check-bugs 0 · check-spec-anchors 0 · check-mem-callsites 0 (70) · go test frontend 0 · go test lowerdiag 0 · check-wire-boundary 0 (11 + 49) · check-unseq-wire 0 (49) · check-unseq-scheduler 0 · check-core-audit 0 · eval-tests 0 · check-frontend-pins 0 (twin byte-identical) · reconcile-records 0 (the standing C9/C13) · `scripts/capped lake build` 0 | green |
+| probe emissions | `probes.sh` with the fix frontend | 58 corpus in 17 packages + 128 twin unchanged; `unseq` graph nodes 175 → 177 (the two born graph rows) | as claimed |
+| provenance | design «the audit fix round», handoff §5, the row `why`, BUG-115, the baseline header | every choice tagged [AGENT]; «dispositions the [AGENT] coordinator's, disclosed at the merge ask»; the addition beyond the dispositions stated as such; nothing briefed as a default | honest |
+
+### R1 — the residual of F1 on the source-local base path (the mW16 class, OPEN by the round's own record)
+
+`unseqCheckMapBase` compares `keyType`/`valueType` with the base atom's static type: a `$` cell's DECLARED type
+(authoritative — the atom's own annotation is not consulted, so mW17 refuses) or, for a SOURCE LOCAL, the atom's `type`
+annotation (`unseqPayloadTy?`). The annotation is the wire's word, not the decoder's knowledge: mS1 (`wide map-lookup`)
+and mS4 (`map` target plan) forge annotation and `keyType` together to `map[string]int` on a private `map[int]int`
+base and the fix binary decodes and answers (100 / 79 — empty maps, no comparison). The same trust-the-annotation
+rule has governed every source-local atom since Stage C (D9: «a source local's / constant's / zero value's `type`
+annotation»), so this is not a regression and not new to E5; the emitter never produces it; the wire does carry the
+authoritative declaration (`{"id":"m","target":"declare","type":…}` in the local's `define`), so a decoder pass that
+cross-checks source-local annotations against the enclosing function's declarations would close the whole mW16 class
+at once. **Judgement ([AGENT])**: recordable, not blocking — the round's record already names the class OPEN, the
+residual needs a forged wire with a self-consistent lie, and the fix is a decoder-wide item rather than a map-arm
+patch. What I ask the coordinator to add to the record: (i) the sentence that the F1 check on a source-local base is
+only as strong as the annotation (mS1/mS4), and (ii) the follow-up item «validate source-local atom annotations
+against the function's `declare` types» beside the owed apparatus item in the handoff §3. If the [USER] holds that a
+forged-wire answer of any kind must not land, this becomes FIX-FIRST; I do not think doctrine requires that here,
+because the trust boundary is the one Stage C set, not one this lane opened.
+
+### Anything new
+
+- mT1: the audited binary's `map` target plan was a full «decodes and answers» (79) on an empty map, not merely
+  late-stuck — the round fixed it either way; its record should not understate the class.
+- R1 (above).
+- Nothing else: no new lane move, no set changed outside the born rows, no refusal text lost a cause.
+
+### Not re-checked
+
+The full `ci --diff` on the fix tip (the lane's tail read: EXIT=1 in 931 s on exactly the 5a pair; every standalone
+gate re-run here); K = 80 draws (mine: 20 per born row, 12 per probe); the whole-corpus choice trace (the 260-row
+outside check + the 54 rows' sets stand in); `check-evidence-size` and `check-spec-anchors` on the fix tip's own tree
+(EXIT=0 in `reverify-gate-exits.txt`; also EXIT=0 on this branch after this commit).

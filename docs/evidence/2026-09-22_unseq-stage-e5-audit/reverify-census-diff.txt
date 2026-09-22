@@ -1,0 +1,8 @@
+rows only in AFTER (new packages): 3685 in ['Corpus/coverage/exec/evalorder/unseq-multi', 'TWIN']
+newly admitted 0   lost 0
+newly admitted per package:
+newly admitted, by former reason: []
+newly admitted by form: []
+twin newly admitted: 0
+still legacy with a package-level reason: [('package-level target of a type outside the grammar ([3]int)', 3), ('package-level target of a type outside the grammar ([2]int)', 2), ('unary operator & on a qualified package-level variable (&pkg.V) — outside the E5d grammar (the unqualified spelling is admitted as an argument, a payload or a stored value)', 1), ('package-level target of a type outside the grammar (main.Valuer)', 1), ('package-level target of a type outside the grammar (raft.Logger)', 1)]
+Traceback (most recent call last):

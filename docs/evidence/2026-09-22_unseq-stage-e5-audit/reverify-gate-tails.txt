@@ -1,0 +1,41 @@
+== check-unseq-wire
+ok [mut-make-negative-len] refused through the CLI, naming: negative constant len
+ok [mut-make-len-over-cap] refused through the CLI, naming: larger than constant cap
+Unseq wire gate: PASS (49 mutants refused through the CLI; exact sets in tests.log)
+== check-wire-boundary
+ok [unseq-wide-lookup-keytype-vs-base] refused, naming: disagree with the map base's declared type
+ok [unseq-mapget-keytype-vs-base] refused, naming: disagree with the map base's declared type
+Wire boundary gate: PASS (11 byte-level controls + 49 unseq-node controls through the real CLI)
+== check-unseq-scheduler
+Unseq scheduler (Stage B): PASS — every reference set exact, every refusal named
+Unseq scheduler audit: 35 required theorems; 15450 declarations across all imported local origins; classical trio only
+Unseq scheduler gate: PASS
+== check-core-audit
+Typed audit: core-audit: 5 compiled controls passed
+core-audit-audit PASS; scratch removed (9929635 owned bytes; dependencies symlinked)
+Core totality audit gate: PASS
+== check-frontend-pins
+check-frontend-pins: ok [hidden-dep-order] — realized deviation order matches the recorded pin
+check-frontend-pins: ok [twin-wire] — fresh emit = pinned wire (e1a877251021…)
+check-frontend-pins: ok [stdlib-pin] — 61 lowered stdlib source files match the pinned sha256 manifest
+== check-mem-callsites
+Memory-module raw call-site inventory: PASS (70 (file, declaration, raw-op) rows, all inventoried with reasons)
+== check-bugs
+check-bugs: ok (115 bug(s); pinned cases behave as claimed)
+check-bugs: backlog — 14 unexplained fidelity failure(s): coverage 10/10; latitude 4/4; wrong-answer 0/0 ('scripts/check-bugs.sh --list')
+check-bugs: 'wrong-answer' is the class that ratchets toward 0; 'coverage' retires when the feature lands and 'latitude' only by an envelope.
+== check-spec-anchors
+grep: docs/BUGS.md: binary file matches
+check-spec-anchors: ok — 976 spec# + 261 mem# + 26 godoc: citations all resolve at pin c19862e5f
+== eval-tests
+ok: DEDUP-α: M3 dropped node REFUSED
+ok: DEDUP-α: M4 a pick node's last branch DROPPED (two hints where |ready| = 3) REFUSED — the checker enumerates the bound itself
+ok: DEDUP-α: M5 fabricated member REFUSED
+== go-test-frontend
+ok  	_/home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e5-fix/tools/nativefrontend	1.291s
+== go-test-lowerdiag
+ok  	_/home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e5-fix/tools/lowerdiag	1.295s
+== reconcile-records
+  --heavy     also re-derive the census evidence
+  --strict    exit 1 if any finding is emitted
+  --selftest  synthetic-input checks for check_decay_dates (audit T3-2)

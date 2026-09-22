@@ -1,0 +1,71 @@
+== the audit's RAN / late mutants, old vs new binary
+mW12-lookup-keyType-vs-base                  OLD RAN            exit=0  {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":0}]}
+mW12-lookup-keyType-vs-base                  NEW REFUSED-DECODE exit=1  {"message":".tmp/mut/mW12-lookup-keyType-vs-base.json: native lowering: unseq: wide map lookup 'lookup2' at program.funcs[30].body.body[6].occs[2].wide.base: keyType/valueType GoLean.GoCore.Ty.string / GoLean.GoCore.Ty.int (GoLean
+mW17-lookup-base-annotation-and-keyType-string OLD RAN            exit=0  {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":0}]}
+mW17-lookup-base-annotation-and-keyType-string NEW REFUSED-DECODE exit=1  {"message":".tmp/mut/mW17-lookup-base-annotation-and-keyType-string.json: native lowering: unseq: wide map lookup 'lookup2' at program.funcs[30].body.body[6].occs[2].wide.base: keyType/valueType GoLean.GoCore.Ty.string / GoLean.Go
+mE2-mapget-head-keyType-string               OLD REFUSED-LATE   exit=1  {"message":"string equality expected string operands, got GoLean.GoValue.int 1 (GoLean.GoCore.IntKind.int) and GoLean.GoValue.int 1 (GoLean.GoCore.IntKind.int)","output":"","status":"stuck"}
+mE2-mapget-head-keyType-string               NEW REFUSED-DECODE exit=1  {"message":".tmp/mut/mE2-mapget-head-keyType-string.json: native lowering: unseq: map-get head at program.funcs[1].body.body[2].occs[3].head.base: keyType/valueType GoLean.GoCore.Ty.string / GoLean.GoCore.Ty.int (GoLean.GoCore.Int
+mW20-lookup-valueType-bool-cell-bool-base-int OLD REFUSED-LATE   exit=1  {"message":"expected int value, got GoLean.GoValue.bool false","output":"","status":"stuck"}
+mW20-lookup-valueType-bool-cell-bool-base-int NEW REFUSED-DECODE exit=1  {"message":".tmp/mut/mW20-lookup-valueType-bool-cell-bool-base-int.json: native lowering: unseq: wide map lookup 'lookup2' at program.funcs[30].body.body[6].occs[2].wide.base: keyType/valueType GoLean.GoCore.Ty.int (GoLean.GoCore.
+mW16-append-slice-annotation-vs-cell         OLD RAN            exit=0  {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":15}]}
+mW16-append-slice-annotation-vs-cell         NEW RAN            exit=0  {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":15}]}
+mA5-maplit-after-edge                        OLD RAN            exit=0  {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":15}]}
+mA5-maplit-after-edge                        NEW RAN            exit=0  {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":15}]}
+mB4-store-same-target-twice                  OLD RAN            exit=0  {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":15}]}
+mB4-store-same-target-twice                  NEW RAN            exit=0  {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":15}]}
+mA1-maplit-key-ref                           OLD REFUSED-LATE   exit=1  {"message":"expected int value, got GoLean.GoValue.addr (GoLean.Loc.base { id := 1 })","output":"","status":"stuck"}
+mA1-maplit-key-ref                           NEW REFUSED-LATE   exit=1  {"message":"expected int value, got GoLean.GoValue.addr (GoLean.Loc.base { id := 1 })","output":"","status":"stuck"}
+mD1-payload-ref-undeclared                   OLD REFUSED-LATE   exit=1  {"message":"unbound GoCore variable address: nosuch","output":"","status":"stuck"}
+mD1-payload-ref-undeclared                   NEW REFUSED-LATE   exit=1  {"message":"unbound GoCore variable address: nosuch","output":"","status":"stuck"}
+== the round's four mutants (tracked), old vs new
+mut-wide-lookup-keytype-vs-base              OLD RAN            exit=0  {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":0}]}
+mut-wide-lookup-keytype-vs-base              NEW REFUSED-DECODE exit=1  {"message":"Tests/unseq-wire/mut-wide-lookup-keytype-vs-base.json: native lowering: unseq: wide map lookup 'lookup2' at program.funcs[1].body.body[6].occs[2].wide.base: keyType/valueType GoLean.GoCore.Ty.string / GoLean.GoCore.Ty.
+mut-wide-lookup-valuetype-vs-base            OLD REFUSED-LATE   exit=1  {"message":"expected int value, got GoLean.GoValue.bool false","output":"","status":"stuck"}
+mut-wide-lookup-valuetype-vs-base            NEW REFUSED-DECODE exit=1  {"message":"Tests/unseq-wire/mut-wide-lookup-valuetype-vs-base.json: native lowering: unseq: wide map lookup 'lookup2' at program.funcs[1].body.body[6].occs[2].wide.base: keyType/valueType GoLean.GoCore.Ty.int (GoLean.GoCore.IntKi
+mut-mapget-keytype-vs-base                   OLD REFUSED-LATE   exit=1  {"message":"string equality expected string operands, got GoLean.GoValue.int 1 (GoLean.GoCore.IntKind.int) and GoLean.GoValue.int 1 (GoLean.GoCore.IntKind.int)","output":"","status":"stuck"}
+mut-mapget-keytype-vs-base                   NEW REFUSED-DECODE exit=1  {"message":"Tests/unseq-wire/mut-mapget-keytype-vs-base.json: native lowering: unseq: map-get head at program.funcs[1].body.body[2].occs[3].head.base: keyType/valueType GoLean.GoCore.Ty.string / GoLean.GoCore.Ty.int (GoLean.GoCore
+mut-map-target-keytype-vs-base               OLD REFUSED-LATE   exit=1  {"message":"string equality expected string operands, got GoLean.GoValue.int 1 (GoLean.GoCore.IntKind.int) and GoLean.GoValue.int 1 (GoLean.GoCore.IntKind.int)","output":"","status":"stuck"}
+mut-map-target-keytype-vs-base               NEW REFUSED-DECODE exit=1  {"message":"Tests/unseq-wire/mut-map-target-keytype-vs-base.json: native lowering: unseq: map-element target plan at program.funcs[1].body.body[6].occs[2].lhs.base: keyType/valueType GoLean.GoCore.Ty.string / GoLean.GoCore.Ty.int 
+== positive controls, old vs new (canonical tape)
+e5blookup                                    OLD RAN            exit=0  {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":0}]}
+e5blookup                                    NEW RAN            exit=0  {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":0}]}
+native-e5blookup                             OLD RAN            exit=0  {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":0}]}
+native-e5blookup                             NEW RAN            exit=0  {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":0}]}
+e2map                                        OLD RAN            exit=0  {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":10101}]}
+e2map                                        NEW RAN            exit=0  {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":10101}]}
+native-e2map                                 OLD RAN            exit=0  {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":10101}]}
+native-e2map                                 NEW RAN            exit=0  {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":10101}]}
+e5cmaplit                                    OLD RAN            exit=0  {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":15}]}
+e5cmaplit                                    NEW RAN            exit=0  {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":15}]}
+native-e5cmaplit                             OLD RAN            exit=0  {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":15}]}
+native-e5cmaplit                             NEW RAN            exit=0  {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":15}]}
+e5btuple                                     OLD RAN            exit=0  {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":15}]}
+e5btuple                                     NEW RAN            exit=0  {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":15}]}
+w1                                           OLD RAN            exit=0  {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":2}]}
+w1                                           NEW RAN            exit=0  {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":2}]}
+== my own: the map TARGET plan's keyType on a `$`-cell base (probe mapCapturedKeyTargetVsWriter, fix-frontend export)
+mT1-map-target-plan-keyType-string           OLD RAN            exit=0  {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":79}]}
+mT1-map-target-plan-keyType-string           NEW REFUSED-DECODE exit=1  {"message":".tmp/mut/mT1-map-target-plan-keyType.json: native lowering: unseq: map-element target plan at program.funcs[38].body.body[5].occs[2].lhs.base: keyType/valueType GoLean.GoCore.Ty.string / GoLean.GoCore.Ty.int (GoLean.Go
+== my own: the SOURCE-LOCAL base path — a private EMPTY map, annotation AND keyType forged consistently
+Traceback (most recent call last):
+  File "/home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e5-fix/.tmp/reverify-mutants.py", line 40, in <module>
+    j=json.load(open(P3)); u=unseq_of(j,'commaOkPrivateEmptyMap'); w=[o for o in u['occs'] if o['kind']=='wide'][0]; print("   base atom:",json.dumps(w['wide']['base'])[:160])
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e5-fix/.tmp/reverify-mutants.py", line 24, in unseq_of
+    walk(f["body"]); return acc[0]
+                            ~~~^^^
+IndexError: list index out of range
+== SOURCE-LOCAL base (a private empty map `m`), wide map-lookup
+   base atom: {"expr": "ident", "name": "m", "type": {"key": {"int": "int", "kind": "int"}, "kind": "map", "value": {"int": "int", "kind": "int"}}}
+mS1-private-map: annotation+keyType both string OLD RAN            exit=0  {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":100}]}
+mS1-private-map: annotation+keyType both string NEW RAN            exit=0  {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":100}]}
+mS2-private-map: keyType string only           OLD RAN            exit=0  {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":100}]}
+mS2-private-map: keyType string only           NEW REFUSED-DECODE exit=1  {"message":".tmp/mut/mS2.json: native lowering: unseq: wide map lookup 'lookup3' at program.funcs[17].body.body[8].occs[3].wide.base: keyType/valueType GoLean.GoCore.Ty.string / GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int) dis
+mS3-private-map: base annotation removed       OLD RAN            exit=0  {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":100}]}
+mS3-private-map: base annotation removed       NEW REFUSED-DECODE exit=1  {"message":".tmp/mut/mS3.json: native lowering: unseq: wide map lookup 'lookup3' at program.funcs[17].body.body[8].occs[3].wide.base: the map base carries no static type on the wire (a `$` cell's declared type or a source local's 
+== SOURCE-LOCAL base, map TARGET plan (mapTargetPrivateVsCall: private empty map m, captured key k)
+   plan base: {"expr": "ident", "name": "m", "type": {"key": {"int": "int", "kind": "int"}, "kind": "map", "value": {"int": "int", "kind": "int"}}}
+mS4-private-map target plan: annotation+keyType string OLD RAN            exit=0  {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":79}]}
+mS4-private-map target plan: annotation+keyType string NEW RAN            exit=0  {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":79}]}
+mS5-private-map target plan: keyType string only OLD RAN            exit=0  {"output":"","status":"ok","values":[{"kind":"int","tag":"int","value":79}]}
+mS5-private-map target plan: keyType string only NEW REFUSED-DECODE exit=1  {"message":".tmp/mut/mS5.json: native lowering: unseq: map-element target plan at program.funcs[15].body.body[5].occs[2].lhs.base: keyType/valueType GoLean.GoCore.Ty.string / GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int) disagr

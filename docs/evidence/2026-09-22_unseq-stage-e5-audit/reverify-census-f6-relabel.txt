@@ -1,0 +1,10 @@
+# F6 relabel of the «unary operator &» first-reason class, corpus + twin (my census, the fix frontend vs the audited tip's)
+## fix 28919dd6
+     97 unary operator & on an element
+     36 unary operator & on a field
+      8 unary operator & on an indirection
+      5 unary operator & (address of a variable)
+      1 unary operator & on a qualified package-level variable
+## audited 403cde75
+    147 unary operator & (address of a variable)
+## probe emissions (fix): corpus probes=58 in 17 packages, unseq graphs=177; twin probes=128
