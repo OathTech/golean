@@ -279,4 +279,13 @@ out="$(run_cli_fn Tests/unseq-wire/e5dlit.json e5dlit)" || { echo "check-wire-bo
 echo "ok [unseq addr-payload] runs, answers 15 (the address of a variable a struct-literal payload inside new — Stage E5 E5d)"
 expect_unseq_refusal unseq-addr-payload-binder mut-addr-payload-binder e5dlit 'address of a binder cell'
 expect_unseq_refusal unseq-addr-head mut-addr-head e5daddr 'outside the admitted fragment'
-echo 'Wire boundary gate: PASS (11 byte-level controls + 46 unseq-node controls through the real CLI)'
+# Stage E5 audit fix round F1 (2026-09-22): a MAP operand's keyType/valueType must be the base's DECLARED map type. The
+# `wide map-lookup` positive control (Tests/unseq-wire/e5blookup.json, `xs[f()], ok = m[1]` with f deleting m[1]) runs on
+# the canonical tape — f first, the lookup misses: 0 (gc's); the audit's mW12 (keyType string on the map[int]int base of
+# the lookup) and the E2 map-get HEAD's keyType (the audit's mE2) refuse by name.
+out="$(run_cli_fn Tests/unseq-wire/e5blookup.json e5blookup)" || { echo "check-wire-boundary: FAIL [unseq map-lookup] — the wide map-lookup wire did not run: $out" >&2; exit 1; }
+[[ "$out" == *'"status":"ok"'* && "$out" == *'"value":0'* ]] || { echo "check-wire-boundary: FAIL [unseq map-lookup] — expected ok/0 (canonical = f first, the lookup misses): $out" >&2; exit 1; }
+echo "ok [unseq map-lookup] runs, answers 0 (the comma-ok map lookup a residual wide body beside the deleting call — the audit fix round's F1 control)"
+expect_unseq_refusal unseq-wide-lookup-keytype-vs-base mut-wide-lookup-keytype-vs-base e5blookup "disagree with the map base's declared type"
+expect_unseq_refusal unseq-mapget-keytype-vs-base mut-mapget-keytype-vs-base e5cmaplit "disagree with the map base's declared type"
+echo 'Wire boundary gate: PASS (11 byte-level controls + 49 unseq-node controls through the real CLI)'

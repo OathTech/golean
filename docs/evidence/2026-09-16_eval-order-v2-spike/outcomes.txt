@@ -176,6 +176,9 @@ E5b3 xs[a[9]], ok = <-ch (the planned target's panic vs the comma-ok receive; wi
 E5b4 x, s[0] = two() (a multi-value call rebinding s: the frozen header vs the call): outcome set = [(1, 5), (5, 7)]
    trajectories per outcome: [((1, 5), 4), ((5, 7), 8)]
    canonical (slot 0): E_two R_s T_s0 T_x -> (1, 5)
+E5b5 xs[f()], ok = m[1] (f deletes m[1]: the comma-ok lookup vs the deleting call — the audit fix round F1 control): outcome set = [0, 11]
+   trajectories per outcome: [(0, 25), (11, 5)]
+   canonical (slot 0): E_f R_m L T_xs T_ok -> 0
 E5c1 map[int]int{1: x}[1] + m() (the map literal an allocation node; the entry read vs m): outcome set = [6, 15]
    trajectories per outcome: [(6, 3), (15, 1)]
    canonical (slot 0): R_x A Rd E_m Op -> 6

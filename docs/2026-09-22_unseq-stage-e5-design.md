@@ -236,6 +236,26 @@ than taken beside the family's other changes); an INTERFACE-TYPED target beside 
 would box inside the graph» — `to-interface` is not an admitted head); a compound multi-target (Go has none); a
 non-call single right-hand side of arity ≠ 1.
 
+**Map-element targets — a TRIGGER-DEPENDENT widening (audit fix round F3, 2026-09-22).** The legacy multi-target emitter
+QUARANTINES a map element as an assignment target («map element as assignment target outside a single assignment»,
+`tools/nativefrontend/emit.go` — the generic path takes ADDRESSES and a map element has none; the triage table's F6 →
+mini-slice A3, (a)-queued, five red rows). E5b's `unseqMultiTarget` classes a map element as a PLANNED target and the graph
+path handles it, so since E5b the SAME source shape RUNS when the RATIFIED trigger admits the sweep and REFUSES when it does
+not — a boundary the family's records had not named (the audit's F3). WHY the graph path is correct where the quarantine's
+reason does not apply: the target is a phase-1 SIBLING plan on FROZEN atoms — E2's `{"target": "map"}` plan decodes to
+`Assignee.mapElem` (the map VALUE and the key VALUE frozen; the plan checks nothing, so a nil map or a hash panic cannot fire
+in phase 1), and the store is phase 2 through `unseqStorePlan` → `TargetRef.mapElem` → the machine's `mapAssignValue` on the
+frozen pair — the very store a single `m[k] = v` performs; no element address is ever taken. Rowed from BOTH sides:
+`evalorder/unseq-multi/map-target-key-vs-writer` (`m[k], y = 7, f()`, f writing k = 2: the frozen key read before / after f
+— {709, 79}, gc 79 call-first, 20/20) PASS/membership; `map-target-nil-legacy-refusal` (`m[1], y = 1, wit(1)` on a nil map:
+constant target operands, no non-event occurrence beside `wit` — legacy under the trigger, the quarantine fires) born
+FAIL/frontend-export BY DESIGN on BUG-115's Cases line beside the five A3 rows (gc `wit 1` then «assignment to entry in nil
+map» — the phase-2 store panics after the call, 20/20). The lifting of the legacy quarantine stays mini-slice A3's (the plan
+of record, unchanged); the alternative — widening the TRIGGER so the call-free forms lower as graphs — is the handoff §2
+item 2's posed refinement, not taken. Also born, the `wide map-lookup` arm's corpus control `comma-ok-map-target-vs-delete`
+(`xs[f()], ok = m[1]`, f deleting m[1]: {11, 0}, gc 0) — audit F1 found the arm exercised by no row and no tracked wire
+([AGENT] addition beyond the dispositions, stated as such).
+
 **The lowering** (`unseq_lower.go`, `multiAssign`): phase 1 IN SOURCE ORDER — every planned target's OPERANDS first
 (`prepareTarget`: their events chain lexically before the right-hand side's — the plan node itself is emitted later,
 on the frozen atoms, `emitPrepared`), then the right-hand values (a tuple's expressions; the call's binders; `recvN(u,
@@ -279,7 +299,10 @@ is all-forced).
 call-write-back-order-value/valueCallDerefTarget, lhs-index-eval-order, target-eval-before-call}`,
 `returns/multi-result-assign-order`, `channels/recv-edge/recvDepIndexTarget`, `spec-examples-stmt/eval-order-calls/
 {evalOrderCallsVerbatim,evalOrderCallsTracedRecv}`, `noodler/evalorder/logicalShortCircuit`, `noodler/latitude/
-rhsListIndexCallIndex`) and +5 the E5a package's sweeps born after its census; 0 lost; the twin 10 203 / 0. Legacy probes
+rhsListIndexCallIndex`) and +5 the E5a package's sweeps born after its census; 0 lost; the twin 10 203 / 0. Precisely (audit
+fix round F5b): TWELVE sweeps are admitted and ELEVEN rows differ in the trace — `logicalShortCircuit` is admitted (blank-assign,
+3 events) but its graph never picks at bound ≥ 2 (its `wide=2` is two `appendSpill` picks of the digits helper; dump and results
+byte-identical on both sides), so «E5b's eleven» in the trace records counts differing ROWS, not admitted sweeps. Legacy probes
 63 → 60 (corpus), the twin 128 unchanged (`probes-e5b.txt`). The 577 + 139 main-unit first-reason sweeps beyond these are
 call-free (comma-ok forms, swaps, multi-value calls into plain locals) — legacy under the trigger, as §0 measured.
 
@@ -331,7 +354,13 @@ planned refusals (above).
 spec#Order_of_evaluation orders calls, method calls, receives and logical operations; a literal is none of those), its
 payload reads the occurrences; the `allocate` body is ONE constructor over `AllocSpec`, extended by ARMS. **`AllocSpec.mapLit
 (key value : Ty) (entries : List (Expr × Expr))`** is that arm: `unseqAllocStmt` runs `makeMap` into the binder cell then the
-keyed entry stores in source order (`mapAssign` — a later duplicate DYNAMIC key overrides, as Go's successive stores do); names
+keyed entry stores in SOURCE ORDER (`mapAssign` — a later duplicate DYNAMIC key overwrites an earlier one; that order is a (b) PIN
+of gc's realization, NOT spec behaviour: spec#Order_of_evaluation's own example `map[int]int{a: 1, a: 2}` «may be {2: 1} or
+{2: 2}: evaluation order between the two map assignments is not specified», so the other member is spec-permitted and the arm
+never produces it — the pre-existing legacy hoist's pin, `maps/map-literal-duplicate-eval-order`, now carried by the arm; the
+re-envelope obligation — a choice site over the store order of duplicate dynamic keys, or a per-entry store node — rides E12
+and is POSED for a later lane, handoff §2 item 6; audit fix round F2, which corrected this sentence's former «as Go's successive
+stores do»); names
 (`pairExprNames`), `eqbF` + soundness, indices (`pairExprIndices`), the loc bound (`pairExprListSup`, `_eq_zero` by
 induction) gain the arm. No new constructor, no new Step rule, no new pick.
 
@@ -360,10 +389,12 @@ the canonical tape). Frontend unit tests: `e4mapLit` MOVES from the legacy list 
 read and the fresh map's read), its canonical shape `invoke eval:index-get allocate eval:map-get eval:binary`; the E13 guard
 test's `mapLitPayloadVsCall` moves to the one-graph list.
 
-**The census** (`census-e5c.txt`): admitted **154 → 165** — +2 from the widening (`builtins/e13-sibling-panic-order/
-mapLitPayloadVsCall`, `noodler/latitude/mapLiteralKeyVsCall`, both by former reason «map literal») and +9 the born packages'
-own sweeps (E5b's `unseq-multi` and `unseq-maplit`); 0 lost (the four «lost/new» pairs the diff prints in `unseq-conv-alloc`
-are LINE SHIFTS of the `map-lit-control` comment edit); the twin 10 203 / 0. Legacy probes 60 → 59 (the noodler row's
+**The census** (`census-e5c.txt`): admitted **154 → 165** — +3 pre-existing sweeps ENTER (`builtins/e13-sibling-panic-order/
+mapLitPayloadVsCall`, `noodler/latitude/mapLiteralKeyVsCall`, both by former reason «map literal», counted by the census diff as
+«newly admitted»; and `evalorder/unseq-conv-alloc/map-lit-control`, which the diff filed under «rows only in AFTER» because the
+same commit's comment edit shifted its line — the trace's E5c DIFFER list has it; audit fix round F5a corrected the former «+2»)
+and +8 the born packages' own sweeps (E5b's `unseq-multi` and `unseq-maplit`); 0 lost (the four «lost/new» pairs the diff prints
+in `unseq-conv-alloc` are those line shifts); the twin 10 203 / 0. Legacy probes 60 → 59 (the noodler row's
 `index-get` probe), the twin 128 unchanged. The 149 main-unit «map literal» first-reason sweeps beyond these are call-free
 (`m := map[int]int{1: 1, …}` declarations) — legacy under the trigger.
 
@@ -385,7 +416,10 @@ PASS (11 + 41), `check-mem-callsites` PASS (70 — the map-literal statements ar
 
 **Latitude.** E2/E12's VALUE axis (a) ENVELOPED on the two born membership rows and the two moved rows — posed for
 ratification at the merge ask; E13's `map-lit-payload-vs-call` leaves the strict controls for the membership lane (its
-legacy-path pin of gc's literal-first order was a (b) pin by construction — the structural hoist — now enveloped).
+legacy-path pin of gc's literal-first order was a (b) pin by construction — the structural hoist — now enveloped). The
+duplicate-DYNAMIC-key store order inside the literal stays a (b) PIN (above; audit fix round F2): the machine realizes one
+member (the audit's probes: 7 for `map[int]int{k1: 1, k2: 2}[1] + m()` with k1 = k2 = 1; 21 for the spec's own example — gc the
+same, 8/8), the spec permits two; its re-envelope is POSED, not taken.
 **[AGENT] choices.** (i) An `AllocSpec` ARM, not a kind (the ruling's mechanism). (ii) Duplicate constant keys refused at
 decode (F3's class: Go rejects the program). (iii) `mut-alloc-kind` re-pointed rather than dropped (its purpose — a
 statement kind outside the fragment — stands). (iv) The R1-NIT class recurs (`map-lit-const-control`: the fresh map's read is
@@ -403,7 +437,8 @@ TYPE grammar admitted as an atom but not as an index / slice base («index of a 
 non-slice base (string)» — 217 main-unit «string» first-reason sweeps at the baseline, §0). `len(s)` of a string is an E1
 participant like a slice's (reading (a), RATIFIED: spec#Length_and_capacity — its operand's read lies inside its window, so
 `len(s) + m()` is all-forced and stays legacy under the trigger — the strict control). The conversion `int(b)` is a pure head
-(E4). Refused by name: a full slice expression on a string (Go forbids it).
+(E4). (A 3-index slice of a string is rejected by go/types before the classifier runs — «3-index slice of string» — so the
+classifier's own refusal for it, «full slice expression on a string (Go forbids it)», was DEAD; deleted at the audit fix round, F7.)
 
 **The grammar and lowering.** Classifier only (`unseqExpr`, tools/nativefrontend/unseq.go): the `*ast.IndexExpr` case admits
 a string base (the base and index classified — a captured or package-level string is a READ occurrence, a private one an
@@ -446,19 +481,24 @@ Two different members of two isomorphic sets, both inside the machine's envelope
 | `builtins/e13-sibling-panic-order/bytes-conv-payload-vs-call` | PASS/membership, probe → graph | its 2-member set REPRODUCED (enumerated=2) | unchanged |
 | the other 64 e13 rows | UNCHANGED | — | — |
 
-**A refusal met and honoured.** The first `str-index-vs-call` (m writing i = 9) had a STATUS-DIVERSE set {102, panic}: the
-membership lane refused it BY NAME («member … has status ok, outside the case's declared status set [panic] … status-diverse
-envelopes declare e.g. ok,panic — audit F8»). The F8 status-set declaration exists in the harness but NO corpus row uses it;
-rather than be the first consumer of an unexercised path inside a runtime lane, the row was SPLIT into the ok/ok form (m: i = 1)
-and the panic/panic form (`+ wit(5)`, the E13 shape) — [AGENT] choice, recorded in the row's `why`. Baseline 3748 = 3513 / 235
-→ **3752 = 3517 / 235**; NO PASS → non-PASS.
+**A refusal met — and a split the APPARATUS forced (corrected at the audit fix round, F4).** The first `str-index-vs-call` (m
+writing i = 9) had a STATUS-DIVERSE set {102, panic}: the membership lane refused it BY NAME («member … has status ok, outside the
+case's declared status set [panic] … status-diverse envelopes declare e.g. ok,panic»). The E5e record then said the lane CHOSE not to
+declare `ok,panic` on the row; that was wrong: a manifest row ADMITS ONE status — `scripts/diff-coverage:629` accepts exactly
+`ok | panic | deadlock | race | fatal` in `expected_status` and refuses a set by name — so the CLI's status-set mechanism
+(`coverage-observations --expect-status ok,panic`, which enumerates {102, panic} exactly — the audit's probe) is NOT reachable
+from any row. The split into the ok/ok form (m: i = 1) and the panic/panic form (`+ wit(5)`, the E13 shape) was the ONLY option,
+not a lane-shape choice, and the latitude the lane detected — a sibling call flipping a checked read's STATUS — has no row and
+cannot have one until the manifest admits a status set: an OWED apparatus item (trusted surface #2, a manifest `expected_status`
+set with the F8 CLI path behind it; the probe `int(s[i]) + m()`, m: i = 9, is the future row's body), recorded in the handoff §3 and
+NOT changed in this lane. Baseline 3748 = 3513 / 235 → **3752 = 3517 / 235**; NO PASS → non-PASS.
 
 **Latitude.** E2/E12's VALUE axis (a) ENVELOPED on `str-index-vs-call` and `str-slice-vs-call` (the captured index's read vs
 the call, on a string base); E13's sibling-panic axis on `str-index-panic-vs-print` and on the e13 row that leaves the probe —
 posed for ratification at the merge ask with the others. **[AGENT] choices.** (i) Strings admitted as index / slice BASES in
 the classifier, nothing else (no core, no decoder, no wire schema change). (ii) `len(s)` of a string an E1 participant (the
-ratified reading (a) names `len` among the built-ins). (iii) The full slice expression on a string refused by name. (iv) The
-status-diverse row split, not declared (above).
+ratified reading (a) names `len` among the built-ins). (iii) The full-slice-on-a-string refusal — DEAD (go/types rejects the form
+first), deleted at the audit fix round (F7). (iv) The status-diverse row split — FORCED by the apparatus, not a choice (F4, above).
 
 ## E5d. The address of a variable as an operand (landed 2026-09-22)
 
@@ -477,7 +517,11 @@ a struct / slice / map-literal element (a map literal's VALUE — its key is com
 stored value (`p = &x`, `p := &x` — the store rides `then`), a return operand, a tuple's value beside NO planned target. The
 helper `unseqValueOrAddr` (tools/nativefrontend/unseq.go) classifies these eleven sites; every other position calls `unseqExpr`
 directly, where `&x` REFUSES BY NAME: «unary operator & (address of a variable) in a computing position — admitted only as an
-argument, a payload or a stored value (E5d)» (`*&x`, `&x == p`, an index, a conversion, a `min` operand …). Refused by name too:
+argument, a payload or a stored value (E5d)» (`*&x`, `&x == p`, an index, a conversion, a `min` operand …). A NON-variable operand
+— `&a[i]`, `&s.f`, `&*p`, `&pkg.V` — refuses in EVERY position NAMING ITS SHAPE since the audit fix round (F6: «unary operator & on
+an element (&a[i]) / a field (&s.f) / an indirection (&*p) — outside the E5d grammar (E5z)»; «… on a qualified package-level variable
+(&pkg.V) — the unqualified spelling is admitted …»; unit-tested each) — the family's first text had called every one of them
+«address of a variable», a misnomer the audit caught. Refused by name too:
 `&x` as a PLANNED target's value — `a[f()] = &x`, or `a[f()], p = 1, &x` — because the lowering copies a planned store's value
 into a cell (`ensureCell`) and that copy would be a `ref` HEAD, which the decoder does not admit (below); `&` of a non-variable
 identifier; a pointee type outside the grammar (named). The lowering (`value`, unseq_lower.go): the `&` case emits
@@ -528,3 +572,83 @@ value and the decoder already spells it; every computing position refuses by nam
 planned-target shapes refused at the classifier instead (fail closed on both sides of the boundary). (iii) `ref` of a binder
 cell refused in the payload position by the F2 rule, with a mutant. (iv) The pointee type must be in the grammar (the address
 is opaque, but the type spelling and the E2 pointer admission agree on the elem type).
+
+## The audit fix round (2026-09-22)
+
+The Stage E5 adversarial audit (`docs/2026-09-22_unseq-stage-e5-audit.md`, candidate `403cde75`, verdict FIX-FIRST — one
+minor decoder FAIL-OPEN and four records corrections; no wrong answer, no over-wide set; evidence
+`docs/evidence/2026-09-22_unseq-stage-e5-audit/`) was ordered under the [USER]'s standing direction that every merge is audited
+and its findings fixed before landing (Mike 2026-09-11, relayed); the dispositions below are the [AGENT] coordinator's, disclosed
+at the merge ask, executed by the [AGENT] worker. The round changes the DECODER (`GoLean/NativeToIR.lean` — trust surface #1: one
+check in three arms, no core rule, no lowering semantics), the FRONTEND's refusal texts (`unseq.go` — F6/F7: no classification
+change, measured by the census) and a core DOCSTRING (`Syntax.lean` — F2: no semantics; the trace and the baseline do not move);
+it bears three corpus rows and files BUG-115.
+
+**F1 — FAIL-OPEN (decoder, minor): FIXED at decode, by name.** The `wide map-lookup` arm (E5b) and the pre-existing E2 `map-get`
+head decoded a map operand's `keyType`/`valueType` and typed the RESULT cells by them but never compared them with the BASE's
+declared type: the audit's mW12 (`keyType: string` on a `map[int]int` cell) DECODED and, on the canonical tape, answered `0`
+(the delete-first order left the map empty — no key comparison ran); mW17 (the base annotation and `keyType` both string) the
+same; the head's mE2 stuck LATE («string equality expected string operands») only because its map was non-empty. Now
+`unseqCheckMapBase` resolves the base atom's static type — a `$` cell's DECLARED type (authoritative; the atom's own annotation is
+not consulted for a slot, so mW17 refuses too), a source local's `type` annotation (`unseqPayloadTy?`) — and refuses by name
+unless it is exactly `.map keyTy valueTy`, in the `wide map-lookup` arm, the `map-get` head (`unseqCheckHead` now takes the cells)
+AND the E2 `map` TARGET plan (the audit's third possible path, code-read only there — the same class: the audited binary stuck
+late on it, `mut-map-target-keytype-vs-base`). The frontend spells both sides from the ONE go/types map type (`emitType(mt.Key())`
+/ `emitType(mt.Elem())` beside the base's own annotation; a NAMED map type never reaches the grammar — `unseqTypeOK` admits only
+`map[K]V` with a basic unnamed key), so no emitted wire changes: the whole-corpus trace vs the audited tip is byte-identical outside
+the born rows and `check-frontend-pins` holds the twin. Mutants (45 → 49): `mut-wide-lookup-keytype-vs-base` (the audit's mW12),
+`mut-wide-lookup-valuetype-vs-base` (valueType bool WITH the value cell bool, so the result-cell check passes — the audit's mW20
+class, late-stuck before), `mut-mapget-keytype-vs-base` (mE2), `mut-map-target-keytype-vs-base`. Because NO tracked wire and NO
+corpus row exercised the `map-lookup` arm (the audit reached it through its own probe), the round adds the positive control it
+lacked: the hand-built wire `e5blookup` + its native (`xs[f()], ok = m[1]`, f deleting m[1] — {11, 0}; reference `enumerate.py`
+E5b5; `Tests/UnseqWire.lean`; `check-wire-boundary` runs it, 0 on the canonical tape, and two of the mutants: 11 + 49) and the
+corpus row `evalorder/unseq-multi/comma-ok-map-target-vs-delete` ({11, 0}, gc 0 on 20/20). Before → after (`f1-litmus.txt`, the
+audited binary `2159163d…` vs this round's): mW12 / mW17 exit 0 value 0 → exit 1 «keyType/valueType … disagree with the map base's
+declared type»; mE2 and the map-target mutant stuck late → refused at decode; every positive control (e5blookup, e2map, e5cmaplit
+and their natives) answers identically on both binaries. NOT closed ([AGENT], stated): the audit's mW16 class — an operand ATOM's
+wire `type` annotation is never compared with its cell (the machine uses the cell; the set is unchanged) — the audit called it
+harmless/optional; recorded, not taken.
+
+**F2 — RECORDS: the `mapLit` arm restated a (b) PIN as spec behaviour — REWORDED** in the `AllocSpec.mapLit` docstring
+(`GoLean/GoCore/Syntax.lean`), §E5c above and the inventory's E12 entry + E2/E12 E5c bullets: the entries are stored in SOURCE
+ORDER, a (b) pin of gc's realization carried since the legacy hoist (`maps/map-literal-duplicate-eval-order`), NOT spec behaviour
+(spec#Order_of_evaluation's own example: «{2: 1} or {2: 2} … not specified»); the machine realizes one member (the audit's probes
+7 / 21, gc the same); the re-envelope obligation — a choice site over the store order of duplicate dynamic keys, or a per-entry
+store node — is POSED in the handoff §2 (item 6) as a design item for a later lane, not taken. A docstring edit in a core file is
+a Lean source change: the build and the full gate re-ran; no semantics changed (the trace and the baseline do not move).
+
+**F3 — RECORDS / coverage: the map-element-target widening ROWED and RECORDED** (§E5b above; BUG-115 filed for the quarantine —
+the record behind it was the triage table's F6 / mini-slice A3, which had the five rows and no BUG entry; the triage table's A3
+count 5 → 6; the ledger's §2 `Assignment_statements` cell and reds table ((a)-queued 7 → 8); the inventory's E2/E12/E3 bullets;
+the handoff §3). Rows: `map-target-key-vs-writer` {709, 79} PASS/membership (gc 79), `map-target-nil-legacy-refusal`
+FAIL/frontend-export by design (gc `wit 1` · panic), `comma-ok-map-target-vs-delete` {11, 0} PASS/membership (gc 0). Census
+(`census-fix.txt`, the fix-round frontend vs E5d's): admitted 177 → 179 — exactly the two born graph rows' sweeps; 0 lost; the
+F6/F7 texts move NO sweep (the «unary operator &» first-reason class is relabelled by shape, its count unchanged); legacy probes
+58 corpus / 128 twin unchanged.
+
+**F4 — RECORDS: the E5e status-diverse split DESCRIBED HONESTLY** (§E5e above; the handoff §6 note corrected): the manifest admits
+ONE status (`scripts/diff-coverage:629`); the CLI's `--expect-status ok,panic` set is unreachable from a row; the split was FORCED by
+the apparatus. The OWED apparatus item — a manifest row admitting a status-diverse set, with the F8 CLI path behind it; trusted
+surface #2, NOT changed in this lane — is recorded in the handoff §3 with the audit's probe as the future row's body.
+
+**F5 — RECORDS (counts) — CORRECTED**: §E5c «+2 from the widening» → +3 pre-existing sweeps entered (`map-lit-control` filed by
+the census diff under «rows only in AFTER» — a line shift) and +8 the born packages' sweeps (the ledger §8ah and the evidence README
+corrected the same way); §E5b «+12 from the widening» stands with the precision «12 sweeps admitted, 11 rows differ»
+(`logicalShortCircuit` admitted, no bound-≥2 pick — the trace records «E5b's eleven» as differing rows); the lane's records say
+9 moved / 27 named consistently (verified: no «10» / «28» anywhere in them — the coordinator's brief had the miscount, not the lane).
+
+**F6 — NIT: the `&a[i]` / `&s.f` / `&*p` / `&pkg.V` refusal text FIXED** — each names its operand's shape (§E5d above;
+`unseqAddrOperandRefusal`; unit tests `f6AddrElem`, `f6AddrField`, `f6AddrDeref`). **F7 — NIT: the dead «full slice expression on a
+string» check DELETED** (§E5e above) rather than made reachable — go/types rejects the form before the classifier runs, so no
+program can reach it; the classifier keeps the string-base admission it guarded. **F8 — recorded, not taken**: undeclared `ref` ids
+and type-confused constant payloads decode and stick LATE, by name (the standing «closed (late, named)» class; the emitter never
+produces them; a declared-id check on `ref` is cheap and optional). **F9 — recorded**: the E5d planned-target refusal text is a
+true statement about the decoder (the `ref` head stays refused — `mut-addr-head`); an `after` edge on a literal `allocate`
+decodes with the set unchanged = the Stage E audit's F8 = PENDING [USER] item 4, confirmed on the `map-lit` arm.
+
+**[AGENT] choices of the round (alternatives named).** (i) The base-type check in all THREE map arms, not the two the audit
+probed — the target plan shares the shape and the audited binary stuck late on it. (ii) A hand-built + native positive control
+AND a corpus row for the `map-lookup` arm — the alternative (mutants alone on the auditor's probe wire) would have left the arm
+without a tracked positive control; the corpus row is the differential's own witness. (iii) BUG-115 filed with the five A3 rows
+on its Cases line beside the born red — the alternative (the born row alone) would have split one refusal's pins across two records.
+(iv) The mW16 class left open (recorded). (v) F7 deleted, not kept as an unreachable arm.

@@ -784,6 +784,29 @@ func e5dDerefAddr() int {
 	return *&x + m()
 }
 
+// --- Stage E5 audit fix round F6 (2026-09-22): a non-variable & operand refuses NAMING ITS SHAPE ---
+
+type F6S struct{ f int }
+
+// use(&a[0]) + a[0]: the address of an ELEMENT — outside the E5d grammar (E5z), named as such.
+func f6AddrElem() int {
+	a := []int{1}
+	return use(&a[0]) + a[0]
+}
+
+// use(&s.f) + s.f: the address of a FIELD — named as such.
+func f6AddrField() int {
+	var s F6S
+	return use(&s.f) + s.f
+}
+
+// use(&*p) + x: the address of an INDIRECTION — named as such (p := &x is its own admitted sweep).
+func f6AddrDeref() int {
+	x := 1
+	p := &x
+	return use(&*p) + x
+}
+
 // --- Stage E5 E5e: strings ---
 
 // int(s[i:][0]) + m() with i captured (m: i = 1): the substring's bounds check and its byte read vs m
@@ -1065,6 +1088,11 @@ func TestUnseqLegacyByReason(t *testing.T) {
 		// Stage E5 E5d
 		{"e5dDerefAddr", 0, "address of a variable) in a computing position"},
 		{"e5dAddrPlanned", 1, "beside a planned target in a multi-target assignment"},
+		// Stage E5 audit fix round F6 (2026-09-22): the non-variable & operands name their shape (the former text said
+		// «address of a variable» for every one of them — the audit's F6)
+		{"f6AddrElem", 0, "unary operator & on an element (&a[i])"},
+		{"f6AddrField", 0, "unary operator & on a field (&s.f)"},
+		{"f6AddrDeref", 0, "unary operator & on an indirection (&*p)"},
 	}
 	for _, c := range cases {
 		d := decisionAt(t, unseqWitnessSrc, c.fn, c.fromEnd)

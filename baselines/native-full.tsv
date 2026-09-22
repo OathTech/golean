@@ -1,5 +1,5 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 3757 (3522 PASS / 235 FAIL)
+# cases: 3760 (3524 PASS / 236 FAIL)
 # re-pinned: 2026-09-20 [AGENT], core/unseq-stage-d-0920, STAGE D of the evaluation-order model v2.1 (route α —
 #   docs/2026-09-20_unseq-stage-d-design.md §2–§3; handoff docs/2026-09-20_unseq-stage-d-handoff.md): NO row added, NO
 #   result changed, ONE stage changed — spec-examples-stmt/continue-label PASS/- -> PASS/confluent, the strict depth=128
@@ -211,6 +211,26 @@
 #   scripts/diff-one on the 17 affected rows (the born package, the three packages whose sweeps enter; two runs —
 #   docs/evidence/2026-09-22_unseq-stage-e5/diff-one-e5d.txt); the full gate line is in the
 #   evidence README. 3752 + 5 = 3757; 3517 + 5 = 3522; 235 unchanged. No PASS -> non-PASS.
+# re-pinned: 2026-09-22 [AGENT], core/unseq-stage-e5-0922, the STAGE E5 AUDIT FIX ROUND (the adversarial audit
+#   docs/2026-09-22_unseq-stage-e5-audit.md returned FIX-FIRST on candidate 403cde75; dispositions the [AGENT] coordinator's,
+#   disclosed at the merge ask; design docs/2026-09-22_unseq-stage-e5-design.md «the audit fix round», handoff §5). THREE rows
+#   BORN in evalorder/unseq-multi, the audit's F3 («every detected gap is rowed»): map-target-key-vs-writer PASS/membership
+#   {709, 79} (`m[k], y = 7, f()`, f writing k = 2 — a MAP-ELEMENT target in a multi-target assignment as a phase-1 sibling plan
+#   on the GRAPH path, the frozen key read before / after f; gc 79 on 20/20 under GOMAXPROCS 1/8, default and -N -l — the LEGACY
+#   path QUARANTINES this shape by name, so the widening is TRIGGER-DEPENDENT: rowed from both sides), map-target-nil-legacy-refusal
+#   FAIL/frontend-export BY DESIGN (`m[1], y = 1, wit(1)` on a nil map — constant target operands, no non-event occurrence beside
+#   wit: legacy under the ratified trigger, where the multi-target emitter refuses «map element as assignment target outside a
+#   single assignment» — the triage table's F6 / mini-slice A3 quarantine, its five existing reds and this one on BUG-115's Cases
+#   line; gc `wit 1` then «assignment to entry in nil map», 20/20; born RED, not a PASS -> non-PASS), and comma-ok-map-target-vs-delete
+#   PASS/membership {11, 0} (`xs[f()], ok = m[1]`, f deleting m[1] — the `wide map-lookup` arm's CORPUS control, which no row exercised
+#   before the round (audit F1); gc 0 on 20/20). Decoder (trust surface #1, GoLean/NativeToIR.lean): a map operand's keyType/valueType
+#   must be the base's DECLARED map type in the `wide map-lookup` arm, the `map-get` head and the `map` target plan (audit F1 — the
+#   forged keyType decoded and answered 0; four mutants, 45 -> 49); the frontend's non-variable `&` operands refuse naming their shape
+#   (F6) and a dead string-slice check is deleted (F7); the AllocSpec.mapLit docstring records the (b) pin (F2) — none of these moves
+#   any row (scripts/diff-one on the 10 unseq-multi rows — docs/evidence/2026-09-22_unseq-stage-e5/diff-one-fix.txt; the whole-corpus
+#   choice trace vs the audited tip byte-identical outside the born rows — choice-trace-fix.txt). 3757 + 3 = 3760; 3522 + 2 = 3524;
+#   235 + 1 = 236. No PASS -> non-PASS. The one 5a-class item (imported-goose/channel/google-search: STALE certification for the
+#   changed core/decoder inputs; the train installs the fresh candidate at step 5a) is not re-pinned here.
 # Previous pin:
 # re-pinned: 2026-09-20 [AGENT], core/unseq-stage-c-0919, STAGE C AUDIT FIX ROUND (docs/2026-09-20_unseq-stage-c-audit.md, FIX-FIRST; dispositions
 #   docs/2026-09-19_unseq-stage-c-handoff.md «Audit fix round (2026-09-20)»): SIX rows ADDED, no existing row changed. (F2) evalorder/unseq-const-cell/
@@ -2394,6 +2414,9 @@ PASS	evalorder/unseq-multi/multi-call-header-vs-call	membership
 PASS	evalorder/unseq-multi/define-tuple-vs-call	membership
 PASS	evalorder/unseq-multi/swap-control	-
 PASS	evalorder/unseq-multi/comma-ok-map-control	-
+PASS	evalorder/unseq-multi/map-target-key-vs-writer	membership
+PASS	evalorder/unseq-multi/comma-ok-map-target-vs-delete	membership
+FAIL	evalorder/unseq-multi/map-target-nil-legacy-refusal	frontend-export
 PASS	evalorder/unseq-maplit/map-lit-entry-vs-call	membership
 PASS	evalorder/unseq-maplit/map-lit-key-vs-call	membership
 PASS	evalorder/unseq-maplit/map-lit-const-control	-

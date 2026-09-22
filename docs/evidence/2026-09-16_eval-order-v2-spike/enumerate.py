@@ -877,6 +877,24 @@ def e5b4():
           enumerate_graph(occs, state(v={'s': 'S1', 'x': 0}, arr={'S1': [1, 2], 'S2': [7, 8, 9]}), phase2),
           lambda k: k[1], {(5, 7), (1, 5)})
 
+def e5b5():
+    # (Stage E5 audit fix round F1, 2026-09-22 — the `wide map-lookup` arm's control) xs[f()], ok = m[1] with m = {1: 1}
+    # captured and f DELETING m[1] (returns 0): the comma-ok lookup is a RESIDUAL two-result occurrence (a read of the
+    # frozen map value, no E1 edge) unordered against f; the element plan's index is f's result. Before the delete
+    # (1, true): xs[0] = 1, ok → 11; after it (0, false) → 0.
+    def f(st, v): st['maps']['M'].pop(1, None); return 0
+    occs = [Occ('E_f', run=f),
+            Occ('R_m', run=lambda st, v: st['v']['m']),
+            Occ('L', deps=['R_m'], run=lambda st, v: (st['maps'][v['R_m']].get(1, 0), 1 in st['maps'][v['R_m']])),
+            Occ('T_xs', deps=['E_f'], run=lambda st, v: ('X', v['E_f'])),
+            Occ('T_ok', run=lambda st, v: 'ok')]
+    def phase2(st, v):
+        store(st, v['T_xs'][0], v['T_xs'][1], v['L'][0]); st['v']['ok'] = v['L'][1]
+        return elem(st, 'X', 0) + (10 if st['v']['ok'] else 0)
+    check('E5b5 xs[f()], ok = m[1] (f deletes m[1]: the comma-ok lookup vs the deleting call — the audit fix round F1 control)',
+          enumerate_graph(occs, state(v={'m': 'M', 'ok': False}, arr={'X': [0, 0]}, maps={'M': {1: 1}}), phase2),
+          lambda k: k[1], {11, 0})
+
 # ---------------------------------------------------------------- Stage E5, family E5c (2026-09-22)
 # MAP LITERALS: an allocation node WITHOUT E1 edges (v2.1 R3 — a composite literal is not a call), the entries'
 # reads the occurrences; gc realizes the literal at its lexical position (the E13 guard's measured note) — one member.
@@ -1038,7 +1056,7 @@ if __name__ == '__main__':
               e1a, e1c, e1b, e2a, e2c, e2d, e2e, e2f, e2g, e3a, e3c, e3d, e3e,
               e4a, e4b, e4c, e4d, e4e, e4f, e4g, e4h,
               e5a1, e5a2, e5a3, e5a4, e5a5, e5a6, e5a7,
-              e5b1, e5b2, e5b3, e5b4, e5c1, e5c2, e5d1, e5d2, e5d3, e5e1, e5e2, e5e3, e5e4, controls):
+              e5b1, e5b2, e5b3, e5b4, e5b5, e5c1, e5c2, e5d1, e5d2, e5d3, e5e1, e5e2, e5e3, e5e4, controls):
         f()
     print('RESULT:', 'FAIL' if FAILS else 'PASS', f'({FAILS} mismatch(es))')
     sys.exit(1 if FAILS else 0)

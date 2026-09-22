@@ -21,7 +21,9 @@
 # binder for a two-result wide statement, a receive's comma-ok flag cell not bool, a hidden read in a comma-ok assertion's
 # operand; E3's two-binder receive mutant re-pointed at the flag cell's type, two binders being the admitted comma-ok
 # form; 43 since Stage E5 E5c — a map literal's duplicate constant key, a hidden read in an entry; 45 since Stage E5 E5d — the
-# address of a binder cell as an allocation payload, `ref` as a head), while the untouched W1 wire runs (the canonical
+# address of a binder cell as an allocation payload, `ref` as a head; 49 since the Stage E5 audit fix round, 2026-09-22 — a
+# map operand's keyType/valueType against the base's DECLARED map type in the `wide map-lookup` arm (keyType; valueType),
+# the E2 `map-get` head and the E2 `map` target plan (audit F1: a forged keyType decoded and answered)), while the untouched W1 wire runs (the canonical
 # tape gives 2: mut first). Fail closed on a missing binary, a failed
 # regeneration, a decoded mutant or a refusal that does not name its cause.
 set -Eeuo pipefail

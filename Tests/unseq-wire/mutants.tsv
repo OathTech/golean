@@ -42,5 +42,9 @@ mut-maplit-dup-key	duplicate constant key
 mut-maplit-nonatom	hidden read in an allocation payload
 mut-addr-payload-binder	address of a binder cell
 mut-addr-head	outside the admitted fragment
+mut-wide-lookup-keytype-vs-base	disagree with the map base's declared type
+mut-wide-lookup-valuetype-vs-base	disagree with the map base's declared type
+mut-mapget-keytype-vs-base	disagree with the map base's declared type
+mut-map-target-keytype-vs-base	disagree with the map base's declared type
 mut-make-negative-len	negative constant len
 mut-make-len-over-cap	larger than constant cap

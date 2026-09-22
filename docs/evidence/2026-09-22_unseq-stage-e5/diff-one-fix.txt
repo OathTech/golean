@@ -1,0 +1,30 @@
+# scripts/diff-one on the 10 evalorder/unseq-multi rows at the fix-round tree (the round's frontend + binary 63e9c661…), 2026-09-22; the born rows: map-target-key-vs-writer PASS/membership enumerated=2 ({709, 79}), comma-ok-map-target-vs-delete PASS/membership enumerated=2 ({11, 0}), map-target-nil-legacy-refusal FAIL/frontend-export BY DESIGN (the quarantine's text) — the seven E5b rows unchanged. EXIT=1 is the red row's.
+diff-coverage: membership sampling budget K=32 (mode: gate; alternate plain/-race, early stop at members=)
+building Lean executable...
+Build completed successfully (96 jobs).
+native frontend: per-case type-check + emit (no batch export)
+FAIL	evalorder/unseq-multi/map-target-nil-legacy-refusal	maps,multi_assign,nil,calls,print,evaluation_order	stage=frontend-export	detail={"message":"frontend-quarantined: map element as assignment target outside a single assignment","output":"","schema":"golean-observation-v1","status":"unsupported"}
+PASS	evalorder/unseq-multi/swap-control	multi_assign,evaluation_order
+PASS	evalorder/unseq-multi/comma-ok-map-control	maps,multi_assign,evaluation_order
+PASS	evalorder/unseq-multi/blank-panic-vs-call	slices,multi_assign,indexing,calls,print,evaluation_order,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/evalorder/unseq-multi/blank-panic-vs-call)
+PASS	evalorder/unseq-multi/comma-ok-recv-target-vs-panic	channels,slices,multi_assign,indexing,defer,print,evaluation_order,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/evalorder/unseq-multi/comma-ok-recv-target-vs-panic)
+PASS	evalorder/unseq-multi/comma-ok-map-target-vs-delete	maps,slices,multi_assign,closures,calls,evaluation_order,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/evalorder/unseq-multi/comma-ok-map-target-vs-delete)
+PASS	evalorder/unseq-multi/define-tuple-vs-call	slices,multi_assign,closures,calls,evaluation_order,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/evalorder/unseq-multi/define-tuple-vs-call)
+PASS	evalorder/unseq-multi/multi-call-header-vs-call	slices,multi_assign,closures,calls,evaluation_order,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/evalorder/unseq-multi/multi-call-header-vs-call)
+PASS	evalorder/unseq-multi/map-target-key-vs-writer	maps,multi_assign,closures,calls,evaluation_order,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/evalorder/unseq-multi/map-target-key-vs-writer)
+PASS	evalorder/unseq-multi/tuple-header-vs-call	slices,multi_assign,closures,pointers,calls,evaluation_order,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/evalorder/unseq-multi/tuple-header-vs-call)
+
+differential coverage summary: cases=10 pass=9 fail=1 export_status=0
+results: artifacts/coverage/latest.tsv
+metadata: artifacts/coverage/latest.meta.tsv
+EXIT=1
+
+# the enumerated member sets (golean coverage-observations on the round's frontend export of the package, --max-width 8 --max-sites 32 --cap 256 --work-cap 400000 --expect-status ok):
+== mapTargetKeyVsWriter
+coverage-observations: observations=2 steps=4502 probes=135 sites=45 leaves=60 maxdepth=4 width=8
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":709}]}
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":79}]}
+== commaOkMapTargetVsDelete
+coverage-observations: observations=2 steps=1915 probes=72 sites=24 leaves=30 maxdepth=4 width=8
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":0}]}
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":11}]}

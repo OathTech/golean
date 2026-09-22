@@ -1,0 +1,41 @@
+# The whole-sweep census with the fix-round frontend (.tmp/fix/nativefrontend-fix) vs E5d's (.tmp/nativefrontend-e5d), 2026-09-22 — .tmp/census/run.sh + summarize.py + diff.py; the probe emission census (probes.sh).
+
+## AFTER (the fix-round frontend) — summary head
+corpus sweeps 108258  admitted 179  packages-with-admitted 47  refused-packages 0
+admitted units: [('main', 179)]
+admitted by form: [('return', 98), ('compound', 22), ('elem-assign', 11), ('tuple-assign', 11), ('define', 10), ('call-stmt', 9), ('multi-call', 7), ('print-stmt', 3), ('comma-ok', 3), ('map-assign', 2), ('blank-assign', 1), ('deref-assign', 1), ('assign', 1)]
+admitted per package:
+
+## diff E5d -> fix (rows only in AFTER = the born package's new functions; newly admitted among common keys / lost)
+rows only in AFTER (new packages): 20 in ['Corpus/coverage/exec/evalorder/unseq-multi']
+newly admitted 0   lost 0
+newly admitted per package:
+newly admitted, by former reason: []
+newly admitted by form: []
+twin newly admitted: 0
+
+## the admitted sweeps of the born functions
+Corpus/coverage/exec/evalorder/unseq-multi	main	Corpus/coverage/exec/evalorder/unseq-multi/main.go:106	mapTargetKeyVsWriter	tuple-assign	unseq	1	1	1	
+Corpus/coverage/exec/evalorder/unseq-multi	main	Corpus/coverage/exec/evalorder/unseq-multi/main.go:120	commaOkMapTargetVsDelete	comma-ok	unseq	1	1	3	
+## the quarantine row's sweep (legacy by the trigger's reason)
+Corpus/coverage/exec/evalorder/unseq-multi	main	Corpus/coverage/exec/evalorder/unseq-multi/main.go:137	mapTargetNilLegacyRefusal	tuple-assign	legacy	1	1	0	no non-event occurrence beside the call(s) (legacy path: every edge forced)
+
+## the F6 relabel: legacy first reasons starting «unary operator &», E5d vs fix (the class total 147 preserved; no sweep moved)
+e5d:
+    147 unary operator &
+fix:
+     97 unary operator & on an element
+     36 unary operator & on a field
+      8 unary operator & on an indirection
+      5 unary operator &
+      1 unary operator & on a qualified package-level variable
+
+## probe emission census (probes.sh): E5d vs fix
+packages-with-probes=18 probes=186 unseqs=175 refused=25
+packages-with-probes=18 probes=186 unseqs=177 refused=25
+diff of the per-package rows:
+287c287
+< Corpus/coverage/exec/evalorder/unseq-multi	0	5
+---
+> Corpus/coverage/exec/evalorder/unseq-multi	0	7
+(the only change: unseq-multi's graph count 5 -> 7; probes 58 corpus + 128 twin = 186 unchanged)

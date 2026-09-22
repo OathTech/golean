@@ -88,3 +88,52 @@ func commaOkMapControl() int {
 	}
 	return 0
 }
+
+// --- the audit fix round (2026-09-22), F3: MAP-ELEMENT targets in a multi-target assignment ---
+
+// m[k], y = 7, f() with k captured and f WRITING it (k = 2; returns 9): the map-element target is a
+// PHASE-1 SIBLING plan on the frozen map value and the key's read — spec-unsequenced against f
+// (spec#Assignment_statements phase 1, spec#Order_of_evaluation) — so the phase-2 store lands at
+// the OLD key (m[1] = 7 → 709) or the NEW one (m[2] = 7 → 79, gc's: call-first). The LEGACY path
+// QUARANTINES this shape («map element as assignment target outside a single assignment» —
+// triage F6 / mini-slice A3, BUG-115); the graph path handles it: the store goes through the frozen
+// `mapElem` plan in phase 2, no element address is ever taken. {709, 79}.
+func mapTargetKeyVsWriter() int {
+	m := map[int]int{}
+	k := 1
+	y := 0
+	f := func() int { k = 2; return 9 }
+	m[k], y = 7, f()
+	return m[1]*100 + m[2]*10 + y
+}
+
+// xs[f()], ok = m[1] with m captured by f, which DELETES m[1] (returns 0): the comma-ok lookup is a
+// RESIDUAL two-binder `wide` body (`WideSpec.mapLookup`, no E1 edge) unordered against f — before
+// the delete (1, true): xs[0] = 1, ok → 11; after it (0, false) → 0 (gc's, call-first). The `wide
+// map-lookup` arm's corpus control: audit F1 found the arm exercised by no row and no tracked wire.
+// {11, 0}.
+func commaOkMapTargetVsDelete() int {
+	m := map[int]int{1: 1}
+	xs := []int{0, 0}
+	f := func() int { delete(m, 1); return 0 }
+	var ok bool
+	xs[f()], ok = m[1]
+	if ok {
+		return xs[0] + 10
+	}
+	return xs[0]
+}
+
+// THE QUARANTINE'S OWN ROW (red by design until mini-slice A3 lands — BUG-115): m[1], y = 1, wit(1)
+// on a NIL map. Constant target operands and no non-event occurrence beside wit, so the RATIFIED
+// trigger routes the sweep to the LEGACY path, which refuses the map-element target by name («map
+// element as assignment target outside a single assignment»); gc runs it — `wit 1`, then
+// «assignment to entry in nil map» (the store is phase 2, after the call). The SAME target shape
+// with an observable operand (mapTargetKeyVsWriter above) runs on the GRAPH path: the
+// trigger-dependent boundary the audit's F3 named.
+func mapTargetNilLegacyRefusal() int {
+	var m map[int]int
+	y := 0
+	m[1], y = 1, wit(1)
+	return y
+}

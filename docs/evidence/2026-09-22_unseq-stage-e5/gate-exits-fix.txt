@@ -1,0 +1,10 @@
+# Stage E5 audit fix round — gate exits (captured; this box, 2026-09-22). Build hashes: the audited tip 403cde75's golean 2159163d…, the round's 63e9c661…; the round's frontend .tmp/fix/nativefrontend-fix.
+go test ./tools/nativefrontend/ ./tools/lowerdiag/  ok (both)
+scripts/capped lake build GoLean.NativeToIR golean UnseqWireTests  build EXIT=0 (122 s)
+scripts/check-unseq-wire  EXIT=0 — Unseq wire gate: PASS (49 mutants refused through the CLI; exact sets in tests.log)
+scripts/check-wire-boundary  EXIT=0 — Wire boundary gate: PASS (11 byte-level controls + 49 unseq-node controls through the real CLI)
+check-frontend-pins EXIT=0 (1 s)
+check-mem-callsites EXIT=0 (0 s)
+check-core-audit EXIT=0 (16 s)
+scripts/diff-one (10 unseq-multi rows)  EXIT=1 = the red-by-design row; 9 PASS (2 born membership enumerated=2), 1 FAIL/frontend-export by design
+enumerate.py (the v2.1 reference)  RESULT: PASS (E5b5 {0, 11} added)

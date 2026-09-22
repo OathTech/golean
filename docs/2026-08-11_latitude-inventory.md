@@ -835,7 +835,10 @@ gc's early store a deviation, L-016, 2026-09-02).
   the E13 guard's measured note, the opposite member from E4's slice/struct literals), map-lit-key-vs-
   call ({6, 5}, gc 6)}` and the moved `noodler/latitude/map-literal-key-vs-call` ({5, 50}, gc 50 —
   the call inside the literal); E13's `map-lit-payload-vs-call` moves to membership (below). Posed
-  for ratification at the merge ask. The (b) pin stands outside the widened grammar.
+  for ratification at the merge ask. The (b) pin stands outside the widened grammar. AUDIT FIX ROUND F2
+  (2026-09-22): the arm's SOURCE-ORDER store of duplicate DYNAMIC keys is the pre-existing (b) pin of gc's
+  order (`maps/map-literal-duplicate-eval-order`), not spec behaviour — spec#Order_of_evaluation's own
+  example leaves it unspecified; re-envelope POSED (E12's entry, the E5 handoff §2 item 6).
 - STAGE E5, FAMILY E5b (2026-09-22, [AGENT], lane `core/unseq-stage-e5-0922`; design
   `docs/2026-09-22_unseq-stage-e5-design.md` §E5b — multi-target assignments): every target of a
   tuple / multi-value-call / comma-ok assignment is a PHASE-1 SIBLING plan on frozen operands, the
@@ -849,7 +852,14 @@ gc's early store a deviation, L-016, 2026-09-02).
   the other — and `noodler/latitude/rhs-list-index-call-index` ({(1,5,1), (1,5,9), (9,5,1),
   (9,5,9)}, gc (9,5,9)); posed for ratification at the merge ask. The spec's own example
   `spec-examples-stmt/eval-order-calls` keeps its forced trace as one graph. The (b) pin stands
-  outside the widened grammar.
+  outside the widened grammar. AUDIT FIX ROUND F3 (2026-09-22): a MAP-ELEMENT target in a multi-target
+  assignment — quarantined by name on the LEGACY path (triage F6 / mini-slice A3, BUG-115) — rides the
+  graph path when the trigger admits the sweep: the VALUE axis is (a) ENVELOPED on the born
+  `evalorder/unseq-multi/map-target-key-vs-writer` ({709, 79} — the frozen key read before / after the
+  writing call; gc 79, 20/20) and `comma-ok-map-target-vs-delete` ({11, 0} — the comma-ok lookup before
+  / after the deleting call; gc 0, 20/20 — the `wide map-lookup` arm's corpus control, audit F1);
+  the quarantine's own row `map-target-nil-legacy-refusal` is red by design (FAIL/frontend-export) —
+  the TRIGGER-DEPENDENT boundary pinned from both sides. Posed for ratification with the others.
 - STAGE E5, FAMILY E5a (2026-09-22, [AGENT], lane `core/unseq-stage-e5-0922`; design
   `docs/2026-09-22_unseq-stage-e5-design.md` §E5a — the reading-(a) built-ins): READING (a),
   RATIFIED [USER] 2026-09-22 (relayed), is EXECUTED — `min`/`max` are pure E1 participants,
@@ -1022,6 +1032,10 @@ gc's early store a deviation, L-016, 2026-09-02).
   routes to the legacy path; so the entry STAYS (b) PINNED, known ≠ gc. Its re-envelope is one
   ruling away: the trigger refinement «unordered against an effectful event OR against another
   FAILING occurrence» (panic identity as the observable), POSED in the E5 handoff §2 — not taken.
+  AUDIT FIX ROUND F3 (2026-09-22): the same trigger decides whether a MAP-ELEMENT target runs (the
+  graph path — `evalorder/unseq-multi/map-target-key-vs-writer`) or refuses by name (the legacy
+  quarantine, triage F6 / A3 — `map-target-nil-legacy-refusal`, BUG-115); the boundary is rowed
+  from both sides.
 - WHERE: spec#Order_of_evaluation (only calls/receives/binary-logical
   are ordered — target-vs-target operand order is open). Machine:
   left-to-right inter-target walk (the tgtOpK spine; the rule-site
@@ -1583,6 +1597,17 @@ subexpressions of one binary operator).
   `maps/map-literal-duplicate-eval-order`. E12 was written for binary
   operators only; the census now covers these sibling positions under
   the same pin.
+  STAGE E5 AUDIT FIX ROUND F2 (2026-09-22, [AGENT]): the duplicate-DYNAMIC-key
+  store order of a map literal is a (b) PIN of gc's SOURCE order, NOT spec
+  behaviour — spec#Order_of_evaluation's own example, `map[int]int{a: 1, a: 2}`
+  «may be {2: 1} or {2: 2}: evaluation order between the two map assignments
+  is not specified» — carried since E5c by the `AllocSpec.mapLit` arm (its
+  entries stored in source order, `mapAssign`) as it was by the legacy hoist;
+  the machine realizes ONE member (7 / 21 on the audit's probes; gc the same
+  8/8). The RE-ENVELOPE obligation — a choice site over the store order of
+  duplicate dynamic keys, or a per-entry store node — is POSED for a later
+  lane (the E5 handoff §2 item 6), not taken; the docstring that had called
+  the source order «as Go's successive stores do» is corrected.
   E13 BY-PRODUCT NOTE (lane e13-b, 2026-09-05): the `unseqPanic` probe
   (E13) consults ONLY when a non-call operand PANICS ahead of a sibling
   event, so this entry's VALUE observable is untouched — every
@@ -1644,14 +1669,17 @@ subexpressions of one binary operator).
   §E5c — map literals): a map literal's entry reads are spec-unsequenced against the sibling calls
   — the VALUE axis is (a) ENVELOPED on the born `evalorder/unseq-maplit/{map-lit-entry-vs-call ({6,
   15}, gc 6), map-lit-key-vs-call ({6, 5}, gc 6)}` and the moved `noodler/latitude/map-literal-key-
-  vs-call` ({5, 50}, gc 50); ratification posed at the merge ask.
+  vs-call` ({5, 50}, gc 50); ratification posed at the merge ask. The arm's source-order store of
+  duplicate DYNAMIC keys stays the (b) PIN above (audit fix round F2, 2026-09-22 — re-envelope POSED).
   STAGE E5, FAMILY E5b (2026-09-22, [AGENT]; design `docs/2026-09-22_unseq-stage-e5-design.md`
   §E5b — multi-target assignments): the right-hand reads of a tuple beside its calls are
   spec-unsequenced — the VALUE axis is (a) ENVELOPED on `noodler/latitude/rhs-list-index-call-index`
   (`x, y, z := a[0], f(), a[0]`, f writing a[0]: each read before / after f and unordered against
   the other — R1's no-reduction — {(1,5,1), (1,5,9), (9,5,1), (9,5,9)}, gc (9,5,9); strict →
   membership) and the born `evalorder/unseq-multi/define-tuple-vs-call` ({6, 15}, gc 15); the
-  target-plan rows are E2's (above). Ratification posed at the merge ask.
+  target-plan rows are E2's (above), the audit fix round's map-element target rows among them
+  (`map-target-key-vs-writer` {709, 79}, `comma-ok-map-target-vs-delete` {11, 0} — F3 / F1,
+  2026-09-22). Ratification posed at the merge ask.
   STAGE E5, FAMILY E5a (2026-09-22, [AGENT]; design `docs/2026-09-22_unseq-stage-e5-design.md`
   §E5a — the reading-(a) built-ins, RATIFIED [USER] 2026-09-22): `min`/`max`/`copy`/`append` are
   E1 participants (reading (a) executed: their operands' reads lie inside their windows, forced
@@ -3314,6 +3342,17 @@ history block, never in a membership line.
 ### 10.1 Movement and history (NOT membership)
 
 Nothing in this block is a class member by virtue of being named here.
+
+- **Stage E5 AUDIT FIX ROUND (2026-09-22, [AGENT] lane `core/unseq-stage-e5-0922`; audit
+  `docs/2026-09-22_unseq-stage-e5-audit.md`, dispositions the [AGENT] coordinator's; design
+  `docs/2026-09-22_unseq-stage-e5-design.md` «the audit fix round»): F1 the decoder compares a map operand's
+  keyType/valueType with the base's DECLARED type (the `wide map-lookup` arm, the `map-get` head, the `map`
+  target plan — four mutants); F2 the `mapLit` arm's source-order store of duplicate dynamic keys RECORDED as
+  the pre-existing (b) pin it is (E12), re-envelope POSED; F3 the map-element-target widening of E5b rowed
+  from both sides (two born membership rows, the quarantine's own red row — BUG-115); F6 the non-variable `&`
+  operands refuse naming their shape; F7 a dead check deleted.** Entry classes UNCHANGED by count ((a) 15 /
+  (b) 17): E2/E12 stay (b) PINNED as entries, ENVELOPED on two more born membership rows. Census 177 → 179
+  admitted (the two born graph rows; 0 lost); legacy probes 58 (corpus) and the twin 128 unchanged.
 
 - **Stage E5 of the evaluation-order model v2.1, family E5d (2026-09-22, [AGENT] lane
   `core/unseq-stage-e5-0922`; design `docs/2026-09-22_unseq-stage-e5-design.md` §E5d): THE ADDRESS OF A

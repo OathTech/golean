@@ -1,0 +1,43 @@
+OLD = .tmp/golean-e5d (2159163d…, the audited tip 403cde75's binary); NEW = .lake/build/bin/golean (63e9c661…)
+== the auditor's mW12-lookup-keyType-vs-base (function commaOkMapVsWriter)
+  OLD   exit=0 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":0}]}
+  NEW   exit=1 {"message":"/home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e5/.tmp/mut/mW12-lookup-keyType-vs-base.json: native lowering: unseq: wide map lookup 'lookup2' at program.funcs[30].body.body[6].occs[2].wide.base: keyType/valueType GoLean.GoCore.Ty.string / GoLean.GoCore.Ty.int (GoLean.GoCo
+== the auditor's mW17-lookup-base-annotation-and-keyType-string (function commaOkMapVsWriter)
+  OLD   exit=0 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":0}]}
+  NEW   exit=1 {"message":"/home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e5/.tmp/mut/mW17-lookup-base-annotation-and-keyType-string.json: native lowering: unseq: wide map lookup 'lookup2' at program.funcs[30].body.body[6].occs[2].wide.base: keyType/valueType GoLean.GoCore.Ty.string / GoLean.GoCore.
+== the auditor's mE2-mapget-head-keyType-string (function e5cmaplit)
+  OLD   exit=1 {"message":"string equality expected string operands, got GoLean.GoValue.int 1 (GoLean.GoCore.IntKind.int) and GoLean.GoValue.int 1 (GoLean.GoCore.IntKind.int)","output":"","schema":"golean-observation-v1","status":"stuck"}
+  NEW   exit=1 {"message":"/home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e5/.tmp/mut/mE2-mapget-head-keyType-string.json: native lowering: unseq: map-get head at program.funcs[1].body.body[2].occs[3].head.base: keyType/valueType GoLean.GoCore.Ty.string / GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.
+== the auditor's mW20-lookup-valueType-bool-cell-bool-base-int (function commaOkMapVsWriter)
+  OLD   exit=1 {"message":"expected int value, got GoLean.GoValue.bool false","output":"","schema":"golean-observation-v1","status":"stuck"}
+  NEW   exit=1 {"message":"/home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e5/.tmp/mut/mW20-lookup-valueType-bool-cell-bool-base-int.json: native lowering: unseq: wide map lookup 'lookup2' at program.funcs[30].body.body[6].occs[2].wide.base: keyType/valueType GoLean.GoCore.Ty.int (GoLean.GoCore.IntKi
+== this round's mut-wide-lookup-keytype-vs-base (function e5blookup)
+  OLD   exit=0 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":0}]}
+  NEW   exit=1 {"message":"/home/dev/projects/golean/.claude/worktrees/unseq-stage-e5/Tests/unseq-wire/mut-wide-lookup-keytype-vs-base.json: native lowering: unseq: wide map lookup 'lookup2' at program.funcs[1].body.body[6].occs[2].wide.base: keyType/valueType GoLean.GoCore.Ty.string / GoLean.GoCore.Ty.int (GoLean
+== this round's mut-wide-lookup-valuetype-vs-base (function e5blookup)
+  OLD   exit=1 {"message":"expected int value, got GoLean.GoValue.bool false","output":"","schema":"golean-observation-v1","status":"stuck"}
+  NEW   exit=1 {"message":"/home/dev/projects/golean/.claude/worktrees/unseq-stage-e5/Tests/unseq-wire/mut-wide-lookup-valuetype-vs-base.json: native lowering: unseq: wide map lookup 'lookup2' at program.funcs[1].body.body[6].occs[2].wide.base: keyType/valueType GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int) / G
+== this round's mut-mapget-keytype-vs-base (function e5cmaplit)
+  OLD   exit=1 {"message":"string equality expected string operands, got GoLean.GoValue.int 1 (GoLean.GoCore.IntKind.int) and GoLean.GoValue.int 1 (GoLean.GoCore.IntKind.int)","output":"","schema":"golean-observation-v1","status":"stuck"}
+  NEW   exit=1 {"message":"/home/dev/projects/golean/.claude/worktrees/unseq-stage-e5/Tests/unseq-wire/mut-mapget-keytype-vs-base.json: native lowering: unseq: map-get head at program.funcs[1].body.body[2].occs[3].head.base: keyType/valueType GoLean.GoCore.Ty.string / GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.in
+== this round's mut-map-target-keytype-vs-base (function e2map)
+  OLD   exit=1 {"message":"string equality expected string operands, got GoLean.GoValue.int 1 (GoLean.GoCore.IntKind.int) and GoLean.GoValue.int 1 (GoLean.GoCore.IntKind.int)","output":"","schema":"golean-observation-v1","status":"stuck"}
+  NEW   exit=1 {"message":"/home/dev/projects/golean/.claude/worktrees/unseq-stage-e5/Tests/unseq-wire/mut-map-target-keytype-vs-base.json: native lowering: unseq: map-element target plan at program.funcs[1].body.body[6].occs[2].lhs.base: keyType/valueType GoLean.GoCore.Ty.string / GoLean.GoCore.Ty.int (GoLean.GoC
+== positive control e5blookup (canonical tape)
+  OLD   exit=0 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":0}]}
+  NEW   exit=0 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":0}]}
+== positive control native-e5blookup (canonical tape)
+  OLD   exit=0 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":0}]}
+  NEW   exit=0 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":0}]}
+== positive control e2map (unchanged wire; canonical tape)
+  OLD   exit=0 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":10101}]}
+  NEW   exit=0 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":10101}]}
+== positive control native-e2map (unchanged wire; canonical tape)
+  OLD   exit=0 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":10101}]}
+  NEW   exit=0 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":10101}]}
+== positive control e5cmaplit (unchanged wire; canonical tape)
+  OLD   exit=0 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":15}]}
+  NEW   exit=0 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":15}]}
+== positive control native-e5cmaplit (unchanged wire; canonical tape)
+  OLD   exit=0 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":15}]}
+  NEW   exit=0 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":15}]}

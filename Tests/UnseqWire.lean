@@ -137,6 +137,10 @@ def main (_args : List String) : IO Unit := do
     wireSet "E5BRECV2 wire: xs[a[9]], ok = <-ch — the comma-ok receive (two binders) vs the planned target's panic" "e5brecv2.json" "e5brecv2"
       [panicOut (oob 9 1) "len 1\n", panicOut (oob 9 1) "len 0\n"],
     wireSet "E5BASSERT wire: v, ok = iv.(int) — the comma-ok assertion a two-binder wide body" "e5bassert.json" "e5bassert" [okZ 7],
+    -- STAGE E5 AUDIT FIX ROUND (2026-09-22), F1: the `wide map-lookup` arm's positive control — no tracked wire or corpus
+    -- row exercised the arm before the round; `xs[f()], ok = m[1]` with f DELETING m[1]: the residual comma-ok lookup
+    -- before / after the deleting call. Reference enumerate.py E5b5.
+    wireSet "E5BLOOKUP wire: xs[f()], ok = m[1] — the comma-ok map lookup a two-binder wide body vs the deleting call" "e5blookup.json" "e5blookup" [okZ 11, okZ 0],
     -- STAGE E5, family E5c (2026-09-22): a MAP literal as an `allocate` body (`map-lit`: the machine's own makeMap +
     -- mapAssign under the sweep frame; NO E1 edge — v2.1 R3) on the captured x's read, beside m. Reference enumerate.py E5c1.
     wireSet "E5CMAPLIT wire: map[int]int{1: x}[1] + m() — the map literal an allocate body; the entry read vs m" "e5cmaplit.json" "e5cmaplit" [okZ 6, okZ 15],
@@ -190,6 +194,7 @@ def main (_args : List String) : IO Unit := do
     wireSet "NATIVE E5BTUPLE (the frontend's own multi-target plans — Stage E5 E5b)" "native-e5btuple.json" "e5btuple" [okZ 57, okZ 15],
     wireSet "NATIVE E5BRECV2 (the frontend's own comma-ok receive with a planned target)" "native-e5brecv2.json" "e5brecv2"
       [panicOut (oob 9 1) "len 1\n", panicOut (oob 9 1) "len 0\n"],
+    wireSet "NATIVE E5BLOOKUP (the frontend's own wide map-lookup beside a planned target — the audit fix round's F1 control)" "native-e5blookup.json" "e5blookup" [okZ 11, okZ 0],
     wireSet "NATIVE E5CMAPLIT (the frontend's own map-lit allocate — Stage E5 E5c)" "native-e5cmaplit.json" "e5cmaplit" [okZ 6, okZ 15],
     wireSet "NATIVE E5ESTR (the frontend's own string substring + byte-read heads — Stage E5 E5e)" "native-e5estr.json" "e5estr" [okZ 102, okZ 103],
     wireSet "NATIVE E5DADDR (the frontend's own ref-argument lowering — Stage E5 E5d)" "native-e5daddr.json" "e5daddr" [okZ 2, okZ 8],

@@ -5,7 +5,8 @@ based on main `d76721bd` (train r46's 5a records) and REBASED onto main's record
 (a clean rebase; the five commits' hashes below are post-rebase — the evidence files cite the pre-rebase ones, map in §6). Brief: the Stage E handoff §3 (`docs/2026-09-21_unseq-stage-e-handoff.md`)
 under the seven rulings of 2026-09-22 ([USER] Mike «Agree on the judgements, go ahead», relayed —
 `docs/2026-08-31_qrow-rulings.md`); the family plan and every [AGENT] choice:
-`docs/2026-09-22_unseq-stage-e5-design.md`; evidence `docs/evidence/2026-09-22_unseq-stage-e5/`. NOT merged,
+`docs/2026-09-22_unseq-stage-e5-design.md`; evidence `docs/evidence/2026-09-22_unseq-stage-e5/`. The adversarial audit
+(`docs/2026-09-22_unseq-stage-e5-audit.md`, FIX-FIRST on `403cde75`) and its fix round (§5, 2026-09-22) followed. NOT merged,
 NOT pushed. Every runtime commit below is GATED (`GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff` under
 the box-wide lock; when the wire schema, the decoder or the core changed the gate is red on EXACTLY the two
 5a-class items — `certificate provenance` STALE + the `imported-goose/channel/google-search` drift line — and
@@ -15,6 +16,7 @@ nothing else; the train installs the candidate at step 5a, this lane does not).
 
 | commit | family | gate | rows | census (admitted / probes corpus+twin) | trace |
 |---|---|---|---|---|---|
+| (the fix round's runtime commit — the hash follows in the records commit) | **the AUDIT FIX ROUND** (§5): F1 the decoder compares a map operand's keyType/valueType with the base's DECLARED type (the `wide map-lookup` arm, the `map-get` head, the `map` target plan; 4 mutants, 45 → 49; the `e5blookup` positive control born); F6/F7 frontend refusal texts (no classification change); F2 a core docstring; F3 three rows + BUG-115; F4/F5 records | `ci --diff` EXIT=1 in 931 s; cases=3760 pass=3523 fail=237 in the run = the pin 3524 / 236 with the one 5a-class row red; red = the 5a pair only (provenance STALE `AdmissionIndices.lean`; the `google-search` drift line) | 3 born in `evalorder/unseq-multi`: `map-target-key-vs-writer` {709, 79} PASS/membership (gc 79), `comma-ok-map-target-vs-delete` {11, 0} PASS/membership (gc 0), `map-target-nil-legacy-refusal` FAIL/frontend-export BY DESIGN (the A3 quarantine — BUG-115; gc `wit 1` · panic); 3757 = 3522 / 235 → 3760 = 3524 / 236; NO PASS → non-PASS | 177 → 179 admitted (the two born graph rows' sweeps; 0 lost; the F6 relabel moves no sweep); probes 58 corpus / 128 twin unchanged | the whole-corpus trace vs the audited tip — follows in the records commit (§4) |
 | `5570a190` | **E5d** the ADDRESS of a variable as an operand — an address formation (no read, no failure), NO occurrence; an ALLOWED LIST of value positions (argument, receiver, payload, plain stored value, return, tuple beside no planned target); the decoder gains ONE payload arm (`ref`/`globaladdr`; `ref $cell` refused — F2); no core change | `ci --diff` EXIT=1 in 902 s; cases=3757 pass=3521 fail=236 in the run = the pin with the one 5a-class row red; red = the 5a pair only | 5 born (`evalorder/unseq-addr`: 4 membership + 1 strict); 3 lane moves strict → membership (`multi-assign/deref-target-before-rhs` {828, 822, 181, 188}, `multi-assign/selector-target-before-rhs` {727, 722, 171, 177}, `channels/make-edge/ordinary-receive-eval-order` {170, 171, 182} — an `&x` argument beside a read of the address-taken variable; gc's call-first member inside each); 3752 = 3517 / 235 → 3757 = 3522 / 235 | 169 → 177 admitted (+3 widening, +5 the born package; 0 lost); probes 58 → 58 corpus, twin 128 | 3721 ids: 3672 SAME, 24 DIFFER (= E5a's 6 + E5b's 11 + E5c's 3 + E5e's 1 + E5d's 3 admitted sweeps' rows), 25 ONLY_B (the born rows); `unseqNext` 1482 → 2101, `unseqPanic` 204 → 168 |
 | `6f6244f0` | **E5e** strings — `s[i]` / `s[lo:hi]` FAILING PURE OPS on the string value (E13's class on a string base), `len(s)` an E1 participant; a CLASSIFIER-ONLY widening (no core, no decoder, no schema change) | `ci --diff` EXIT=1 in 761 s; cases=3752 pass=3516 fail=236 in the run = the pin with the one 5a-class row red; red = the 5a pair only (the binary byte-identical to E5c's) | 4 born (`evalorder/unseq-strings`: 3 membership + 1 strict); `builtins/e13-sibling-panic-order/bytes-conv-payload-vs-call` probe → graph, set reproduced; a status-diverse first row refused by name and split; 3748 = 3513 / 235 → 3752 = 3517 / 235 | 165 → 168 admitted (+1 widening, +2 the born package; 0 lost); probes 59 → 58 corpus, twin 128 | 3716 ids: 3675 SAME, 21 DIFFER (= E5a's 6 + E5b's 11 + E5c's 3 + E5e's 1 admitted sweeps' rows), 20 ONLY_B (the born rows); `unseqNext` 1482 → 1994, `unseqPanic` 204 → 168 |
 | `f5903528` | **E5c** map literals as `allocate` bodies (`AllocSpec.mapLit`, the ratified arm mechanism) without E1 edges | `ci --diff` EXIT=1 in 909 s; cases=3748 pass=3512 fail=236 in the run = the pin with the one 5a-class row red; red = the 5a pair only (provenance STALE `AdmissionIndices.lean`; the `google-search` drift line) | 3 born (`evalorder/unseq-maplit`: 2 membership + 1 strict); 2 lane moves strict → membership (noodler `map-literal-key-vs-call`; e13 `map-lit-payload-vs-call` — the F6 shape); 3745 = 3510 / 235 → 3748 = 3513 / 235 | 154 → 165 admitted (+2 widening, +9 the born packages; 0 lost); probes 60 → 59 corpus, twin 128 | 3712 ids: 3676 SAME, 20 DIFFER (= E5a's 6 + E5b's 11 + E5c's 3 admitted sweeps' rows), 16 ONLY_B (the born rows); `unseqNext` 1482 → 1958, `unseqPanic` 204 → 174 |
@@ -54,7 +56,17 @@ nothing else; the train installs the candidate at step 5a, this lane does not).
    vs-call, str-slice-vs-call, str-index-panic-vs-print}`; E5d `evalorder/unseq-addr/{addr-arg-vs-read, addr-payload-vs-call,
    addr-stored-vs-read, addr-global-arg-vs-read}` and the moved `multi-assign/deref-target-before-rhs`, `multi-assign/selector-
    target-before-rhs`, `channels/make-edge/ordinary-receive-eval-order`. POSED: ratify this row list as the named (a) rows (the
-   inventory's E2/E12 bullets carry each with its set and gc's member); the entries themselves stay (b) PINNED.
+   inventory's E2/E12 bullets carry each with its set and gc's member); the entries themselves stay (b) PINNED. THE
+  ALTERNATIVE, stated (the audit noted it was only implicit): NOT ratifying the list means those rows REVERT to (b) pins — the
+  nine moved rows back to strict rows pinned to gc's member, the eighteen born membership rows re-pinned strict to gc's draw —
+  i.e. the graph's second member is then a modeled-but-unratified realization the differential does not admit. The audit fix
+  round's two born membership rows (`evalorder/unseq-multi/{map-target-key-vs-writer, comma-ok-map-target-vs-delete}`) join the
+  list under the same question (27 → 29 named rows).
+6. **The `mapLit` arm's duplicate-DYNAMIC-key store order — a (b) PIN's re-envelope** (audit fix round F2; design §E5c): the arm
+   stores a literal's entries in SOURCE ORDER, so `map[int]int{a: 1, a: 2}` realizes ONE member where spec#Order_of_evaluation's
+   own example permits two («{2: 1} or {2: 2} … not specified») — the pre-existing legacy pin (`maps/map-literal-duplicate-eval-
+   order`), now the arm's. POSED, not taken: a choice site over the store order of duplicate dynamic keys (or a per-entry store
+   node with the stores as unordered occurrences) — a design item for a later lane; until then the pin stands, honestly labelled.
 
 ## 3. What remains — E6's census
 
@@ -81,11 +93,25 @@ the trigger's own forced class), string types outside the grammar (`untyped stri
 Deferred families (design §E5z): floats (254 main-unit sweeps — a Platform contract, not a grammar hole), the element /
 field address `&a[i]`/`&s.f`, arrays as index bases, the non-main-unit grammar, the trigger refinement.
 
+**OWED apparatus item (audit fix round F4; trusted surface #2 — NOT changed in this lane):** a manifest row that admits a
+STATUS-DIVERSE observation set. `scripts/diff-coverage:629` accepts exactly ONE `expected_status` (`ok | panic | deadlock | race
+| fatal`), so the CLI's `coverage-observations --expect-status ok,panic` path (audit F8's mechanism) is unreachable from any
+row; E5e's first `str-index-vs-call` ({102, panic} — a sibling call flipping a checked read's STATUS, a genuine spec-permitted
+latitude) had to be SPLIT into an ok/ok and a panic/panic row and the status-diverse shape has no row. Next-lane item: a manifest
+`expected_status` set (e.g. `ok,panic`) routed to the CLI path, the membership checker's status check widened to the set, one
+row born from the probe `int(s[i]) + m()` with m: i = 9 (the audit's `strIndexStatusDiverse`; gc's draw the panic, 4/4).
+
+**The fix round's census note (F3/F6):** admitted 177 → 179 — exactly the two born graph rows' sweeps
+(`mapTargetKeyVsWriter` tuple-assign, `commaOkMapTargetVsDelete` comma-ok); the quarantine's row `mapTargetNilLegacyRefusal` is
+legacy by «no non-event occurrence beside the call(s)» (all-forced) and refuses at the emitter; 0 lost. The F6 texts relabel
+the «unary operator &» first-reason class by operand shape without moving a sweep; legacy probe emissions 58 corpus / 128 twin
+unchanged (`census-fix.txt`). The E6 residue table above is unchanged by the round.
+
 ## 4. Whole-corpus choice traces
 
 `docs/evidence/2026-09-22_unseq-stage-e5/choice-trace-main-vs-e5a.txt`: main `d76721bd` vs the E5a commit `732da84c` — 3702 ids, 3690 byte-identical, 6 DIFFER (exactly the six sweeps E5a admits: the five e13 built-in rows and `slices/copy-min`), 6 only on the E5a side (the born rows); site census `unseqNext` 1482 → 1609, `unseqPanic` 204 → 174 — the legacy probe is still consulted on 174 recorded consumptions (E6 not reachable; §2/§3).
 
-`docs/evidence/2026-09-22_unseq-stage-e5/choice-trace-main-vs-e5b.txt`: main `d76721bd` vs the E5b commit `1a0ff398` — 3709 ids, 3679 byte-identical, 17 DIFFER (exactly the rows of E5a's six and E5b's eleven admitted sweeps — the multi-assign family incl. BUG-052's rows and the spec's own example), 13 only on the E5b side (the born rows); site census `unseqNext` 1482 → 1903, `unseqPanic` 204 → 174 (unchanged from E5a); 34 export refusals and the exhausted-stream lists identical on both sides.
+`docs/evidence/2026-09-22_unseq-stage-e5/choice-trace-main-vs-e5b.txt`: main `d76721bd` vs the E5b commit `1a0ff398` — 3709 ids, 3679 byte-identical, 17 DIFFER (exactly the rows of E5a's six and E5b's eleven DIFFERING admitted sweeps — E5b admits TWELVE, `noodler/evalorder/logicalShortCircuit` among them with no bound-≥2 pick, so its row is byte-identical (audit fix round F5b) — the multi-assign family incl. BUG-052's rows and the spec's own example), 13 only on the E5b side (the born rows); site census `unseqNext` 1482 → 1903, `unseqPanic` 204 → 174 (unchanged from E5a); 34 export refusals and the exhausted-stream lists identical on both sides.
 
 `docs/evidence/2026-09-22_unseq-stage-e5/choice-trace-main-vs-e5c.txt`: main `d76721bd` vs the E5c commit `6bf3d780` — 3712 ids, 3676 byte-identical, 20 DIFFER (exactly the rows of E5a's six, E5b's eleven and E5c's three admitted sweeps), 16 only on the E5c side (the born rows); site census `unseqNext` 1482 → 1958, `unseqPanic` 204 → 174 (unchanged from E5a); 34 export refusals and the exhausted-stream lists identical on both sides.
 
@@ -93,7 +119,41 @@ field address `&a[i]`/`&s.f`, arrays as index bases, the non-main-unit grammar, 
 
 `docs/evidence/2026-09-22_unseq-stage-e5/choice-trace-main-vs-e5d.txt`: main `d76721bd` vs the E5d commit (`50fdf05e` pre-rebase = `5570a190`) — 3721 ids, 3672 byte-identical, 24 DIFFER (exactly the rows of the sweeps E5a–E5e admit — E5d's three the former strict pins), 25 only on the E5d side (the born rows); site census `unseqNext` 1482 → 2101, `unseqPanic` 204 → 168; 34 export refusals and the exhausted-stream lists identical on both sides. Outside the admitted families every id of every trace is byte-identical to main's.
 
-## 5. The gate at the rebased tip
+## 5. The audit fix round (2026-09-22) and the gate
+
+The Stage E5 adversarial audit (`docs/2026-09-22_unseq-stage-e5-audit.md`, candidate `403cde75`, verdict FIX-FIRST — one minor
+decoder FAIL-OPEN, four records corrections, no wrong answer; evidence `docs/evidence/2026-09-22_unseq-stage-e5-audit/`) was
+ordered under the [USER]'s standing direction that every merge is audited adversarially and its findings fixed before landing
+(Mike 2026-09-11, relayed); the dispositions are the [AGENT] coordinator's, disclosed at the merge ask, executed by the [AGENT]
+worker; the design record is the design's «The audit fix round». The round changes the decoder (`NativeToIR.lean` — trust
+surface #1, no core rule, no lowering semantics), the frontend's refusal texts (`unseq.go`), one core docstring (`Syntax.lean`)
+and bears three rows + BUG-115.
+
+| finding | disposition | what changed | evidence |
+|---|---|---|---|
+| **F1** FAIL-OPEN (decoder): a `wide map-lookup` / `map-get` head whose keyType/valueType disagree with the base decoded; mW12 answered 0 on the canonical tape | **FIXED at decode, by name** — `unseqCheckMapBase`: the base atom's DECLARED type (a `$` cell's; a source local's annotation) must be `map[keyType]valueType`, in the lookup arm, the head AND the `map` target plan (the third path, code-read only in the audit) | `NativeToIR.lean`; mutants `mut-wide-lookup-{keytype,valuetype}-vs-base`, `mut-mapget-keytype-vs-base`, `mut-map-target-keytype-vs-base` (45 → 49); the `e5blookup` hand-built + native positive control (the arm had none — `enumerate.py` E5b5 {11, 0}); `check-wire-boundary` 11 + 49; the corpus control `comma-ok-map-target-vs-delete` ([AGENT] addition) | `f1-litmus.txt` (mW12/mW17 exit 0 value 0 → refused by name; mE2 and the target plan stuck late → refused at decode; positive controls identical on both binaries); `check-unseq-wire` 49; `gate-exits-fix.txt` |
+| **F2** RECORDS: the `mapLit` docstring / §E5c / inventory presented source-order duplicate-key stores as spec behaviour | **REWORDED** — a (b) PIN of gc's order (the legacy hoist's, `maps/map-literal-duplicate-eval-order`), the spec's own example cited, the re-envelope POSED (§2 item 6) | `Syntax.lean` docstring (a Lean source change: build + gate re-run, no semantics — the trace and baseline do not move), design §E5c, inventory E12 + E2/E12 bullets | the trace `choice-trace-fix.txt` (byte-identical outside the born rows); the gate tail |
+| **F3** RECORDS / coverage: E5b's graph path bypasses the legacy map-element-target quarantine when the trigger admits the sweep — unnamed, unrowed | **ROWED from both sides + RECORDED** — `map-target-key-vs-writer` {709, 79} PASS/membership (gc 79, 20/20); `map-target-nil-legacy-refusal` FAIL/frontend-export by design (gc `wit 1` · panic); BUG-115 filed (Pinned-by differential; the five A3 rows + the born red on its Cases line); the triage table's F6/A3 5 → 6; the ledger §2 cell + reds table ((a)-queued 7 → 8); design §E5b names the widening and argues its correctness (frozen `mapElem` plan in phase 1, the store in phase 2 through `mapAssignValue` — no address taken); inventory E2/E12/E3 bullets; §3 above | `diff-one-fix.txt`, `gc-draws-fix.txt`, `census-fix.txt`; the baseline header |
+| **F4** RECORDS: the E5e status-diverse split described as a lane choice — the manifest admits ONE status, the split was forced | **DESCRIBED HONESTLY + OWED** — design §E5e rewritten; the apparatus item (a manifest status set) recorded in §3 as a next-lane item on trusted surface #2, NOT changed here; §6's note corrected | design §E5e; §3; §6 | — (records) |
+| **F5** RECORDS (counts): E5c «+2» (3 pre-existing sweeps entered — `map-lit-control` filed under «rows only in AFTER» by a line shift); E5b «eleven» (12 admitted, 11 rows differ); the brief's 10/28 vs the lane's 9/27 | **CORRECTED** in design §E5c/§E5b, ledger §8ah, the README, §4 above; the lane's 9 / 27 verified consistent (no «10»/«28» in its records) — the brief had the miscount | — | — (records) |
+| **F6** NIT: `&a[i]` / `&s.f` / `&*p` / `&pkg.V` refused as «address of a variable» | **FIXED** — `unseqAddrOperandRefusal` names the shape (an element / a field / an indirection / a qualified package-level variable — outside the E5d grammar, E5z); unit tests `f6AddrElem`, `f6AddrField`, `f6AddrDeref` | `unseq.go`, `unseq_test.go`; the census relabels the class without moving a sweep (`census-fix.txt`) | `go test ./tools/nativefrontend/` ok |
+| **F7** NIT: the «full slice expression on a string» check is dead (go/types rejects the form first) | **DELETED** (not made reachable — no program can reach it) | `unseq.go`; design §E5e | — |
+| **F8** NIT: undeclared `ref` ids / type-confused constants decode and stick late, by name | **RECORDED** (the standing «closed (late, named)» class; the emitter never produces them; a declared-id check optional) | design «the audit fix round» | — |
+| **F9** the E5d planned-target refusal text; mA5 (an `after` edge on a `map-lit` allocate decodes) | **RECORDED** = PENDING [USER] item 4 (§2), confirmed on the new arm | design | — |
+
+Measured before the gate (captured exits, `docs/evidence/2026-09-22_unseq-stage-e5/gate-exits-fix.txt`): `go test
+./tools/nativefrontend/ ./tools/lowerdiag/` ok; `scripts/capped lake build GoLean.NativeToIR golean UnseqWireTests` EXIT=0 (122 s
+under the lock; the core rebuilt for the docstring); `check-unseq-wire` PASS (49 mutants; `Tests/UnseqWire.lean` 132 ok lines — 83 exact-set checks + 49 mutants);
+`check-wire-boundary` PASS (11 + 49); `check-frontend-pins` PASS (the twin byte-identical, `e1a87725…`); `check-mem-callsites` PASS
+(70); `check-core-audit` PASS; `scripts/capped check-unseq-scheduler` PASS; `scripts/diff-one` on the 10 `evalorder/unseq-multi`
+rows (`diff-one-fix.txt`); gc 20/20 inside every born set (`gc-draws-fix.txt`); `check-bugs`, `check-evidence-size`,
+`check-spec-anchors`, `tools/reconcile-records` green at the re-pinned records. Baseline 3757 = 3522 / 235 → 3760 = 3524 / 236
+(two born PASS/membership, one born FAIL by design; nothing else moved; the header carries the reason). The gate line and the
+trace follow here.
+
+**The full gate at the fix-round tree** (`ci-diff-fix.tail.txt`): EXIT=1 in 931 s (the box-wide lock 2026-09-22T06:05:42Z–2026-09-22T06:22:36Z); `differential coverage summary: cases=3760 pass=3523 fail=237` = the re-pinned 3760 = 3524 / 236 with the one 5a-class row red; RESULT FAIL on EXACTLY the two 5a-class items — `certificate provenance` («STALE certification: changed dependency build/files/GoLean/GoCore/AdmissionIndices.lean» — the core/decoder inputs vs main's certificates) and the `baseline diff` DRIFT block's ONE line `imported-goose/channel/google-search baseline[PASS/membership] -> now[FAIL/membership]`; every other step ok (the re-pin guard 0 PASS→non-PASS; the reconciler's standing two report-only findings); the three born rows reproduce their pinned states in the run.
+
+## 5a. The gate at the rebased tip (the park record, 2026-09-22)
 
 `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff` at the rebased tip (E5d's content on main `dc5de785`; the box-wide lock 2026-09-22T04:38:01Z–2026-09-22T04:50:53Z): EXIT=1 in 772 s; `cases=3757 pass=3521 fail=236` = the pin 3522 / 235 with the one 5a-class row red; RESULT FAIL on EXACTLY the two 5a-class items (`certificate provenance` STALE for `GoLean/GoCore/AdmissionIndices.lean`; the one `imported-goose/channel/google-search` drift line); every other step ok (`ci-diff-park.tail.txt`).
 
@@ -113,7 +173,17 @@ field address `&a[i]`/`&s.f`, arrays as index bases, the non-main-unit grammar, 
   word-split an unquoted `$var`, so `scripts/diff-one $ids` from the zsh tool shell passed one 68-line id (the manifest's
   «no executable case id» names the whole blob). A single-row package's id is the bare package path (no `/-`).
 - The membership lane REFUSES a status-diverse set by name («member … has status ok, outside the case's declared status set
-  [panic]») unless the row declares `ok,panic` — audit F8's mechanism, unused by every corpus row; E5e split the row instead.
+  [panic]»); the manifest CANNOT declare `ok,panic` — `scripts/diff-coverage:629` admits ONE status per row, the CLI's status-set
+  path is unreachable from a row (audit fix round F4 corrected the former wording here) — so a status-diverse shape must be split
+  into one row per status until the OWED apparatus item (§3) lands.
+- The manifest gate refuses a strict row whose `why` is not `-` («strict-lane rows must leave why as -»): a red-by-design strict
+  row's explanation lives in its Go comment and its BUG entry (the fix round's `map-target-nil-legacy-refusal`).
+- Fix-round scratch: `.tmp/fix/` — the replayable edit scripts (`edit-decoder-f1.py`, `edit-wires-f1.py`, `edit-frontend-f6f7.py`,
+  `edit-syntax-f2.py`, `edit-corpus-f3.py`, `edit-bugs-triage.py`, `edit-inventory.py`, `edit-design.py`, `edit-handoff.py`,
+  `edit-ledger.py`, `edit-readme.py`, `edit-baseline.py`), `build-f1.sh` (the decoder build + wire gates under the lock),
+  `f1-litmus.sh` (old vs new binary on the audit's mutant wires — the audit worktree's `.tmp/mut`, read-only), `gate-fix.sh`
+  (the full gate under the lock), `census-fix.sh`, `diff-one-fix.ids`, `nativefrontend-fix` (the round's frontend);
+  `.tmp/golean-e5d` stays the audited tip's binary (`2159163d…`), the round's is `.lake/build/bin/golean` (`63e9c661…`).
 - Feature tags are validated against `Corpus/coverage/tags.tsv` (`addressability`, `literals`, `globals`, `pointers` …); an
   unknown tag refuses the whole manifest before any row runs.
 - Take the census AFTER the last corpus edit of a family: E5e's census preceded its row split and recorded 168 where the

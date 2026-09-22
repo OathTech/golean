@@ -7425,3 +7425,52 @@ red row; it does not move the untriaged ratchet either. Proposed, not applied: t
 are unchanged. No widening of `crashview.go` is licensed by this evidence (shape (a) must stay refused;
 shape (b) is uncaptured); the follow-up observer lane's rule, its positive control and its FOUR forgery
 controls are specified in the evidence README §5a.
+
+## BUG-115 — the LEGACY multi-target emitter QUARANTINES a map element as an assignment target (`m[k], y = 7, f()`, `m[0], m[1] = m[1], m[0]`: `emit.go` `unsup("map element as assignment target outside a single assignment")`) — legal Go refused by name where gc runs it; since Stage E5 E5b the SAME source shape RUNS on the `unseq` graph path whenever the ratified observability trigger admits the sweep, so the refusal is TRIGGER-DEPENDENT [frontend lowering; coverage gap, not a wrong answer; the triage table's F6 → mini-slice A3 ((a)-queued) is the plan of record; found by the Stage E5 adversarial audit, F3, 2026-09-22]
+
+- Status: open ([AGENT] worker, Stage E5 audit fix round 2026-09-22, lane `core/unseq-stage-e5-0922`; the
+  disposition the [AGENT] coordinator's, disclosed at the merge ask: «every detected gap is rowed» — [USER]
+  Mike 2026-09-03, relayed)
+- Pinned-by: differential
+- Cases: evalorder/unseq-multi/map-target-nil-legacy-refusal, imported-goose/semantics/multiple-assign/multiple-assign-to-map, maps/tuple-assign-key-eval, maps/tuple-map-expr-targets, maps/tuple-rhs-before-target-write, maps/tuple-swap-values
+- Discovered: 2026-07-26 (the pre-merge adversarial audit that installed the quarantine: a map element is
+  not addressable, and the generic multi-target path took ADDRESSES — an `index-addr` on a map would have
+  died as a runtime stuck instead of a boundary refusal); ROWED as the triage table's F6 / mini-slice A3
+  2026-08-19 (5 reds, (a)-queued, the ledger's reds table); the TRIGGER-DEPENDENT boundary found by the
+  Stage E5 audit F3 2026-09-22 (`docs/2026-09-22_unseq-stage-e5-audit.md`), this entry filed at its fix round
+
+WHAT: `spec#Assignment_statements` — a map element is a legal assignment operand («the operands of index
+expressions … on the left … are all evaluated in the usual order», then «the assignments are carried out in
+left-to-right order»); the two-phase multi-target form `m[k], y = 7, f()` is legal Go and gc runs it (the
+store into a nil map panics in PHASE 2, after every phase-1 call: `wit 1` then «assignment to entry in nil
+map» on `m[1], y = 1, wit(1)`). The legacy emitter's generic multi-target path (`tools/nativefrontend/emit.go`,
+`emitAssignTarget`'s map arm) refuses the shape BY NAME — a per-declaration quarantine (`unsupported`; the
+differential stages it `frontend-export`): a fail-closed COVERAGE gap, never a wrong answer.
+
+THE TRIGGER-DEPENDENT BOUNDARY (Stage E5 E5b, 2026-09-22; design `docs/2026-09-22_unseq-stage-e5-design.md`
+§E5b and its «the audit fix round» section): the whole-sweep `unseq` grammar admits a multi-target assignment
+whose targets are PHASE-1 SIBLING plans, a map-element target among them — E2's frozen `{"target": "map"}` plan
+(`Assignee.mapElem`: the map VALUE and the key VALUE frozen in phase 1, the plan checks nothing) with the store
+in phase 2 through the machine's `mapAssignValue` on the frozen pair (`unseqStorePlan`) — the SAME store a
+single `m[k] = v` performs; no element address is taken anywhere on that path, which is exactly why the
+quarantine's reason does not apply there. So the shape RUNS when the RATIFIED trigger («an occurrence
+unordered against an EFFECTFUL event», [USER] 2026-09-22 item 2) admits the sweep — `m[k], y = 7, f()` with
+`f` writing `k`: {709, 79}, gc 79 inside (`evalorder/unseq-multi/map-target-key-vs-writer`, membership) —
+and REFUSES when it does not: `m[1], y = 1, wit(1)` (constant target operands, no non-event occurrence beside
+`wit`: the legacy path by the trigger's own reason «no non-event occurrence beside the call(s)») is the
+quarantine's own red row `evalorder/unseq-multi/map-target-nil-legacy-refusal` (FAIL/frontend-export where gc
+prints `wit 1` and panics). The five A3 rows above are the pre-existing pins of the same refusal (call-free
+swaps and tuple forms — legacy by «no call occurrence»). Both sides of the boundary are pinned by rows.
+
+WHERE: `tools/nativefrontend/emit.go` (the legacy multi-target lowering's map-element arm, ~line 7466);
+NOT the `unseq` lowering (`unseq_lower.go` `mapTarget` / `prepareTarget`), which handles the shape.
+Effect direction: the machine REFUSES where gc runs — fail-closed, a red the differential shows.
+
+FIX PLAN (mini-slice A3, the triage table §3.2 — unchanged by this entry): in the legacy path's generic
+multi-target arm, hoist the map BASE and KEY temps in target order alongside the RHS hoists and emit the
+existing `map-assign` store nodes in target order (no address; the E2 frozen-plan machinery is the model);
+its own edge enumeration of the two phases (BUG-025/BUG-052's assignment spine). Alternatively, widen the
+`unseq` grammar's TRIGGER so the call-free forms lower as graphs too — a change to ratified item 2, POSED
+in the E5 handoff §2 (item 2), not this entry's to take. Fix criterion: every Cases row PASS (the five A3
+rows strict against gc; `map-target-nil-legacy-refusal` PASS strict: `wit 1` · panic).
+

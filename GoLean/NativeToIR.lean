@@ -970,6 +970,26 @@ private def unseqPayloadTy? (cells : Array Param) (path : String) (j : Json) : L
   | .ok (.str "to-interface") | .ok (.str "struct-lit") => typeField "target"
   | _ => pure none
 
+/-- Stage E5 audit fix round F1 (2026-09-22): a MAP operand's `keyType`/`valueType` on the wire
+must be the base atom's own DECLARED type — a `$` slot's cell type, a source local's `type`
+annotation (`unseqPayloadTy?`) — spelled `map[K]V`. The `wide map-lookup` arm (E5b) and the
+`map-get` head (E2) decoded the pair and typed the RESULT cells by it but never compared it with
+the base: a forged wire (`keyType: string` on a `map[int]int` cell — the audit's mW12/mW17; the
+head's mE2) DECODED and, on the canonical tape, answered a Go-observable value or stuck LATE (the
+Stage E audit's F3 class: a malformed wire that decodes and answers). The frontend spells both from
+the ONE go/types map type (`emitType(mt.Key())` / `emitType(mt.Elem())` beside the base's own
+annotation), so no emitted wire changes; the `map` TARGET plan (E2's `{"target":"map"}`) is checked
+the same way. Mutants `mut-wide-lookup-keytype-vs-base`, `mut-wide-lookup-valuetype-vs-base`,
+`mut-mapget-keytype-vs-base`, `mut-map-target-keytype-vs-base`. -/
+private def unseqCheckMapBase (cells : Array Param) (path what : String) (baseJ : Json)
+    (keyTy valueTy : Ty) : LowerM Unit := do
+  match ← unseqPayloadTy? cells path baseJ with
+  | none =>
+      fail s!"unseq: {what} at {path}: the map base carries no static type on the wire (a `$` cell's declared type or a source local's `type` annotation is needed to check keyType/valueType against it — audit F1, 2026-09-22); refused by name"
+  | some t =>
+      if t != .map keyTy valueTy then
+        fail s!"unseq: {what} at {path}: keyType/valueType {repr keyTy} / {repr valueTy} disagree with the map base's declared type {repr t} (the wire's map[K]V must be the base's own — audit F1, 2026-09-22); refused by name"
+
 /-- Stage E E4: a VALUE struct literal's arguments are payloads. -/
 private def unseqCheckStructLit (path : String) (j : Json) : LowerM Unit := do
   let o ← StrictJson.obj path j
@@ -1003,7 +1023,7 @@ high («the length of the sliced operand»), which the emitter spells as a lengt
 of the one evaluated base. Stage E E1 (2026-09-21) admits the `deref` head over
 an atom or a `globaladdr` pointer — the READ of a package-level variable
 (`deref(globaladdr)`) and, for E2, of `*p`. -/
-private def unseqCheckHead (path : String) (head : Json) : LowerM Unit := do
+private def unseqCheckHead (cells : Array Param) (path : String) (head : Json) : LowerM Unit := do
   if jsonMentionsRecover head then
     fail s!"unseq: recover() inside an occurrence head at {path} — recover is an EVENT (it changes the continuation), never a pure op (v2.1 §3.1); refused by name"
   let obj ← StrictJson.obj path head
@@ -1063,6 +1083,10 @@ private def unseqCheckHead (path : String) (head : Json) : LowerM Unit := do
       -- Stage E E2: ONE map read on the frozen map VALUE and key VALUE (both atoms).
       atom "base"
       atom "index"
+      -- Stage E5 audit fix round F1 (2026-09-22): the head's keyType/valueType are the base's own map type.
+      let keyTy ← decodeTy s!"{path}.keyType" (← StrictJson.field path obj "keyType")
+      let valueTy ← decodeTy s!"{path}.valueType" (← StrictJson.field path obj "valueType")
+      unseqCheckMapBase cells s!"{path}.base" "map-get head" (← StrictJson.field path obj "base") keyTy valueTy
   | "deref" =>
       -- Stage E, family E1 (2026-09-21, lane `core/unseq-stage-e-0921`): ONE checked read
       -- through a pointer VALUE — the pointer is an atom (a slot or an admitted local:
@@ -2067,7 +2091,7 @@ partial def decodeUnseq (results : Array Param) (path : String) (obj : StrictJso
       | "eval" => do
           let bind ← StrictJson.string s!"{opath}.bind" (← StrictJson.field opath o "bind")
           let headJ ← StrictJson.field opath o "head"
-          unseqCheckHead s!"{opath}.head" headJ
+          unseqCheckHead cells s!"{opath}.head" headJ
           let hobj ← StrictJson.obj s!"{opath}.head" headJ
           let cty ← cellTy bind
           match hobj.get? "type" with
@@ -2097,7 +2121,16 @@ partial def decodeUnseq (results : Array Param) (path : String) (obj : StrictJso
           pure (UnseqBody.invoke binds callee args.toList)
       | "target" => do
           let bind ← StrictJson.string s!"{opath}.bind" (← StrictJson.field opath o "bind")
-          let t ← decodeTarget s!"{opath}.lhs" (← StrictJson.field opath o "lhs")
+          let lhsJ ← StrictJson.field opath o "lhs"
+          -- Stage E5 audit fix round F1 (2026-09-22): a map-element plan's keyType/valueType are the base's own map type.
+          match lhsJ.getObjVal? "target" with
+          | .ok (.str "map") =>
+              let lo ← StrictJson.obj s!"{opath}.lhs" lhsJ
+              let keyTy ← decodeTy s!"{opath}.lhs.keyType" (← StrictJson.field s!"{opath}.lhs" lo "keyType")
+              let valueTy ← decodeTy s!"{opath}.lhs.valueType" (← StrictJson.field s!"{opath}.lhs" lo "valueType")
+              unseqCheckMapBase cells s!"{opath}.lhs.base" "map-element target plan" (← StrictJson.field s!"{opath}.lhs" lo "base") keyTy valueTy
+          | _ => pure ()
+          let t ← decodeTarget s!"{opath}.lhs" lhsJ
           if t.declare.isSome then
             fail s!"unseq: a target plan at {opath} cannot declare its target; refused by name"
           unseqCheckTargetShape s!"{opath}.lhs" t.assignee
@@ -2336,6 +2369,8 @@ partial def decodeUnseq (results : Array Param) (path : String) (obj : StrictJso
                 let index ← atomField "index"
                 let kt ← decodeTy s!"{wpath}.keyType" (← StrictJson.field wpath w "keyType")
                 let vt ← decodeTy s!"{wpath}.valueType" (← StrictJson.field wpath w "valueType")
+                -- Stage E5 audit fix round F1 (2026-09-22): kt/vt are the base's own map type (the audit's mW12/mW17).
+                unseqCheckMapBase cells s!"{wpath}.base" s!"wide map lookup '{name}'" (← StrictJson.field wpath w "base") kt vt
                 let _ ← twoBinds "map lookup" vt
                 pure (WideSpec.mapLookup base index kt vt)
             | "type-assert" => do

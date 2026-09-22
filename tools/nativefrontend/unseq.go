@@ -515,6 +515,24 @@ func (e *emitter) unseqValueOrAddr(x ast.Expr, ctx *unseqCtx, d *unseqDecision) 
 	return e.unseqExpr(x, ctx, d)
 }
 
+// unseqAddrOperandRefusal names the SHAPE of a non-variable `&` operand (Stage E5 audit fix
+// round F6, 2026-09-22): an element, a field, an indirection, a qualified package-level
+// variable, or another operand form — each outside the E5d grammar, each refused by name.
+func (e *emitter) unseqAddrOperandRefusal(x ast.Expr) string {
+	switch u := ast.Unparen(x).(type) {
+	case *ast.IndexExpr:
+		return "unary operator & on an element (&a[i]) — the address of an element is outside the E5d grammar (E5z)"
+	case *ast.SelectorExpr:
+		if _, isQual := e.unseqQualifiedPackageVar(u); isQual {
+			return "unary operator & on a qualified package-level variable (&pkg.V) — outside the E5d grammar (the unqualified spelling is admitted as an argument, a payload or a stored value)"
+		}
+		return "unary operator & on a field (&s.f) — the address of a field is outside the E5d grammar (E5z)"
+	case *ast.StarExpr:
+		return "unary operator & on an indirection (&*p) — the address of an indirection is outside the E5d grammar (E5z)"
+	}
+	return "unary operator & on an operand that is neither a variable, an element, a field nor an indirection — outside the E5d grammar"
+}
+
 // unseqAddrOfVar reports `&ident` (parenthesised or not) — the address of a named variable,
 // as opposed to `&T{…}` (an allocation, E4) or `&a[i]` / `&s.f` (outside the grammar).
 func unseqAddrOfVar(x ast.Expr) (*ast.Ident, bool) {
@@ -646,11 +664,11 @@ func (e *emitter) unseqExpr(x ast.Expr, ctx *unseqCtx, d *unseqDecision) (unseqE
 		if _, isSlice := types.Unalias(bt).Underlying().(*types.Slice); !isSlice {
 			// Stage E5 E5e: a STRING slice `s[lo:hi]` — a substring of an immutable value,
 			// bounds-checked (spec#Slice_expressions): a FAILING PURE OP on the string VALUE.
+			// A 3-index slice of a string is rejected by go/types before the classifier runs
+			// («3-index slice of string»), so the former `v.Slice3` refusal here was DEAD and is
+			// deleted rather than kept as an unreachable arm (audit fix round F7, 2026-09-22).
 			if !isStringType(types.Unalias(bt).Underlying()) {
 				return refuse("slice expression on a non-slice base (" + bt.String() + ")")
-			}
-			if v.Slice3 {
-				return refuse("full slice expression on a string (Go forbids it)")
 			}
 		}
 		if !unseqTypeOK(bt) {
@@ -740,13 +758,22 @@ func (e *emitter) unseqExpr(x ast.Expr, ctx *unseqCtx, d *unseqDecision) (unseqE
 		}
 		if v.Op == token.AND {
 			// Stage E E4: `&T{…}` — a struct literal's payloads, then an `alloc new`
-			// body (no E1 edge, v2.1 R3). The address of a VARIABLE stays outside (E5).
+			// body (no E1 edge, v2.1 R3).
 			if cl, isLit := ast.Unparen(v.X).(*ast.CompositeLit); isLit {
 				return e.unseqAddrLit(cl, ctx, d)
 			}
-			// Stage E5 E5d: `&x` is admitted only in VALUE positions (`unseqValueOrAddr`);
-			// here a head would compute on the address.
-			return refuse("unary operator & (address of a variable) in a computing position — admitted only as an argument, a payload or a stored value (E5d)")
+			// Stage E5 E5d: `&x` of a VARIABLE is admitted only in VALUE positions
+			// (`unseqValueOrAddr`); here a head would compute on the address.
+			if _, isVar := ast.Unparen(v.X).(*ast.Ident); isVar {
+				return refuse("unary operator & (address of a variable) in a computing position — admitted only as an argument, a payload or a stored value (E5d)")
+			}
+			// Stage E5 audit fix round F6 (2026-09-22): the operand is NOT a variable — name its
+			// shape. The address of an ELEMENT (`&a[i]`), a FIELD (`&s.f`) or an INDIRECTION
+			// (`&*p`) is outside the E5d grammar in EVERY position (the element / field address
+			// axis, design §E5z); a QUALIFIED package-level variable (`&pkg.V`) is admitted in
+			// no position either (E5d admits the unqualified spelling). The former text named
+			// «address of a variable» for all of these — a misnomer the audit caught.
+			return refuse(e.unseqAddrOperandRefusal(v.X))
 		}
 		switch v.Op {
 		case token.SUB, token.XOR, token.NOT:

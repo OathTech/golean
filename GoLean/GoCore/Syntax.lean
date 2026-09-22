@@ -425,10 +425,17 @@ inductive AllocSpec where
   | makeChan (elem : Ty) (cap : Option Expr)
   | sliceLit (elem : Ty) (len : Nat) (elems : List (Int × Expr))
   /-- A MAP LITERAL `map[K]V{k: v, …}` (Stage E5 E5c, 2026-09-22): a fresh map
-  (`makeMap`) with the keyed `entries` stored in order (`mapAssign` — a later
-  duplicate dynamic key overrides, as Go's successive stores do; duplicate
-  CONSTANT keys are a compile-time error the decoder refuses by name). No E1
-  edge (v2.1 R3); the entries' reads are the occurrences. -/
+  (`makeMap`) with the keyed `entries` stored in SOURCE ORDER (`mapAssign`), so a
+  later entry whose DYNAMIC key repeats an earlier one overwrites it. That order is
+  a (b) PIN of gc's realization, NOT spec behaviour: spec#Order_of_evaluation leaves
+  the order of a literal's map assignments UNSPECIFIED (its own example,
+  `map[int]int{a: 1, a: 2}` «may be {2: 1} or {2: 2}»), so the other member is
+  spec-permitted and this arm never produces it — the pre-existing legacy hoist's
+  pin (`maps/map-literal-duplicate-eval-order`), now carried here; the re-envelope
+  obligation (a choice site over the store order of duplicate dynamic keys) rides
+  E12 and is POSED for a later lane (audit fix round F2, 2026-09-22 — the Stage E5
+  handoff §2). Duplicate CONSTANT keys are a compile-time error the decoder refuses
+  by name. No E1 edge (v2.1 R3); the entries' reads are the occurrences. -/
   | mapLit (key value : Ty) (entries : List (Expr × Expr))
   deriving Repr, BEq, Inhabited
 

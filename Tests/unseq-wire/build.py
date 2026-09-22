@@ -589,6 +589,26 @@ def e5bassert_graph():
         stores=[("$t0", "$u0"), ("$t1", "$u1")])
 
 
+# ---------------------------------------------------------------- Stage E5 audit fix round F1 (2026-09-22)
+# The `wide map-lookup` arm's POSITIVE CONTROL — no tracked wire or corpus row exercised the arm before the round; the
+# audit's mW12 (keyType string on a map[int]int base) decoded through it and answered 0 on the canonical tape. Reference
+# enumerate.py E5b5.
+
+def e5blookup_graph():
+    # xs[f()], ok = m[1]: f (deleting m[1]; canonical first), the captured m's read, the comma-ok lookup on the frozen map
+    # value (a residual two-binder wide body, no after), the element plan on the private xs at f's result, the plain ok's
+    # plan; the two stores. {11, 0}.
+    return unseq(
+        [cell("$u0", INT), cell("$u1", MAP_INT_INT), cell("$u2", INT), cell("$u3", BOOL)],
+        [inv("call0", ["$u0"], ident("f"), [], [INT]),
+         ev("read1", "$u1", ident("m", MAP_INT_INT)),
+         wd("lookup2", ["$u2", "$u3"], {"stmt": "map-lookup", "base": ident("$u1", MAP_INT_INT), "index": intc(1),
+                                        "keyType": INT, "valueType": INT}),
+         tgt("target3", "$t0", elem_target(ident("xs", SLICE_INT), ident("$u0", INT))),
+         tgt("target4", "$t1", var_target("ok"))],
+        stores=[("$t0", "$u2"), ("$t1", "$u3")])
+
+
 # ---------------------------------------------------------------- Stage E5, family E5c (2026-09-22)
 # MAP LITERALS as `allocate` bodies (`map-lit`: the fresh map + its keyed entry stores) WITHOUT E1 edges (v2.1 R3);
 # the entries' reads are the occurrences. Reference enumerate.py E5c1.
@@ -763,6 +783,8 @@ WITNESSES = {
     "e5btuple": ("e5btuple", [("e5btuple", "m", 1, e5btuple_graph(), None)]),
     "e5brecv2": ("e5brecv2", [("e5brecv2", "ok", 2, e5brecv2_graph(), None)]),
     "e5bassert": ("e5bassert", [("e5bassert", "ok", 2, e5bassert_graph(), None)]),
+    # Stage E5 audit fix round F1 (2026-09-22): the wide map-lookup positive control (hand-built + native)
+    "e5blookup": ("e5blookup", [("e5blookup", "ok", 2, e5blookup_graph(), None)]),
     # Stage E5 E5c (2026-09-22): the map literal as an `allocate` body (hand-built + native)
     "e5cmaplit": ("e5cmaplit", [("e5cmaplit", "m", 0, e5cmaplit_graph(), None)]),
     # Stage E5 E5e (2026-09-22): a string substring as a failing pure op beside a call (hand-built + native)
@@ -946,6 +968,22 @@ def mutants(wires):
          "address of a binder cell")
     edit("mut-addr-head", "e5daddr", "e5daddr",
          lambda n, w: occ(n, "read1").update(head={"expr": "ref", "id": "x"}), "outside the admitted fragment")
+    # ---- the Stage E5 audit fix round (2026-09-22), F1: a MAP operand's keyType/valueType must be the base's DECLARED
+    # map type — the `wide map-lookup` arm (the audit's mW12: keyType string on a map[int]int cell DECODED and answered 0
+    # on the canonical tape), its valueType (bool, with the value cell bool so the result-cell check passes — mW20's
+    # late-stuck class), the E2 `map-get` HEAD (the audit's mE2, pre-existing) and the E2 `map` TARGET plan (the audit's
+    # third path, code-read only there).
+    edit("mut-wide-lookup-keytype-vs-base", "e5blookup", "e5blookup",
+         lambda n, w: occ(n, "lookup2")["wide"].update(keyType=STR), "disagree with the map base's declared type")
+    def lookup_valuetype(n, w):
+        occ(n, "lookup2")["wide"]["valueType"] = BOOL
+        n["cells"][2]["type"] = BOOL
+    edit("mut-wide-lookup-valuetype-vs-base", "e5blookup", "e5blookup", lookup_valuetype,
+         "disagree with the map base's declared type")
+    edit("mut-mapget-keytype-vs-base", "e5cmaplit", "e5cmaplit",
+         lambda n, w: occ(n, "mapread3")["head"].update(keyType=STR), "disagree with the map base's declared type")
+    edit("mut-map-target-keytype-vs-base", "e2map", "e2map",
+         lambda n, w: occ(n, "target2")["lhs"].update(keyType=STR), "disagree with the map base's declared type")
     edit("mut-make-negative-len", "e4make", "e4make",
          lambda n, w: occ(n, "make0")["allocation"].update(len=intc(-1)), "negative constant len")
     edit("mut-make-len-over-cap", "e4make", "e4make",
