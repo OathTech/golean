@@ -109,7 +109,7 @@ string as a pure `bytes-from-string` head), then the `wide` occurrence `{"stmt":
 elems}` as the E1-ordered event (`wideAppend`, `wideOcc`); `copy` → the destination and source atoms (a string
 source as a `bytes-from-string` head), then `{"stmt": "copy", dst, src}` producing the count (`wideCopy`).
 
-**The machine** (TRUST SURFACE #1; [AGENT] choice, PENDING [USER] ratification at the merge ask): **`WideSpec`**
+**The machine** (TRUST SURFACE #1; [AGENT] choice, RATIFIED [USER] 2026-09-22 at the merge ask («Great, agree with all recommendations, land it», relayed)): **`WideSpec`**
 (`append (elem : Ty) (slice elems : Expr)` | `copy (dst src : Expr)`; `WideSpec.arity` = 1 for both) and
 **`UnseqBody.wide (binds : List String) (spec : WideSpec)`** — ONE statement-bodied occurrence kind over a
 CLOSED spec, mirroring `allocate`: `unseqWideStmt binds spec` is the hoisted wide statement with the binder
@@ -191,7 +191,7 @@ only), `check-core-audit` PASS; the full gate line is in the evidence README.
 
 **Latitude.** E2's and E12's VALUE axis is (a) ENVELOPED on the four born membership rows (a sibling read
 beside an effectful `append`/`copy`, or beside a call after a pure `min`) — posed for ratification at the merge
-ask with the E1–E4 precedent; the entries stay (b) PINNED for the rest of their families. The five E13 rows are
+ask (RATIFIED [USER] 2026-09-22, the Stage E5 landing) with the E1–E4 precedent; the entries stay (b) PINNED for the rest of their families. The five E13 rows are
 NOT a reclassification: their legacy `unseqPanic` sets are reproduced exactly by the graph. `min-vs-call` is a
 FORCED singleton under reading (a) (as `make-len-vs-call`); reading (b) is the named alternative, NOT taken.
 
@@ -331,7 +331,7 @@ reason). NO PASS → non-PASS. Gates in-process: `check-unseq-wire` PASS (41), `
 
 **Latitude.** E2/E12's VALUE axis is (a) ENVELOPED on the five born membership rows and the four moved rows (BUG-052's
 three: the fixed post-call target-operand order — gc's — is ONE member of the frozen-plan set, the pre-call plan the
-other; `rhs-list-index-call-index`) — posed for ratification at the merge ask; BUG-052's entry carries an ENVELOPED
+other; `rhs-list-index-call-index`) — posed for ratification at the merge ask (RATIFIED [USER] 2026-09-22, the Stage E5 landing); BUG-052's entry carries an ENVELOPED
 paragraph. **E3/E4 (inter-target operand order)**: the MECHANISM now exists — targets are phase-1 siblings and the
 graph realizes every order of their operand evaluations — but BUG-032's own rows (two panicking target operands, no
 call: `aa[5][0], b[*pn] = f6()` has its call as the forced multi-value RHS; `xs[ys[9]], b = zs[7], 2` is call-free) are
@@ -415,7 +415,7 @@ PASS (11 + 41), `check-mem-callsites` PASS (70 — the map-literal statements ar
 `check-frontend-pins` PASS, `check-unseq-scheduler` PASS, `check-core-audit` PASS; the full gate line is in the evidence README.
 
 **Latitude.** E2/E12's VALUE axis (a) ENVELOPED on the two born membership rows and the two moved rows — posed for
-ratification at the merge ask; E13's `map-lit-payload-vs-call` leaves the strict controls for the membership lane (its
+ratification at the merge ask (RATIFIED [USER] 2026-09-22, the Stage E5 landing); E13's `map-lit-payload-vs-call` leaves the strict controls for the membership lane (its
 legacy-path pin of gc's literal-first order was a (b) pin by construction — the structural hoist — now enveloped). The
 duplicate-DYNAMIC-key store order inside the literal stays a (b) PIN (above; audit fix round F2): the machine realizes one
 member (the audit's probes: 7 for `map[int]int{k1: 1, k2: 2}[1] + m()` with k1 = k2 = 1; 21 for the spec's own example — gc the
@@ -495,7 +495,7 @@ NOT changed in this lane. Baseline 3748 = 3513 / 235 → **3752 = 3517 / 235**; 
 
 **Latitude.** E2/E12's VALUE axis (a) ENVELOPED on `str-index-vs-call` and `str-slice-vs-call` (the captured index's read vs
 the call, on a string base); E13's sibling-panic axis on `str-index-panic-vs-print` and on the e13 row that leaves the probe —
-posed for ratification at the merge ask with the others. **[AGENT] choices.** (i) Strings admitted as index / slice BASES in
+posed for ratification at the merge ask (RATIFIED [USER] 2026-09-22, the Stage E5 landing) with the others. **[AGENT] choices.** (i) Strings admitted as index / slice BASES in
 the classifier, nothing else (no core, no decoder, no wire schema change). (ii) `len(s)` of a string an E1 participant (the
 ratified reading (a) names `len` among the built-ins). (iii) The full-slice-on-a-string refusal — DEAD (go/types rejects the form
 first), deleted at the audit fix round (F7). (iv) The status-diverse row split — FORCED by the apparatus, not a choice (F4, above).
@@ -566,7 +566,7 @@ eval:binary` / `invoke allocate eval:field-get eval:deref eval:binary`.
 Baseline 3752 = 3517 / 235 → **3757 = 3522 / 235**; NO PASS → non-PASS.
 
 **Latitude.** E2/E12's VALUE axis (a) ENVELOPED on the four born membership rows (the address-taken variable's read vs the
-call writing through the address) — posed for ratification at the merge ask with the others. **[AGENT] choices.** (i) An
+call writing through the address) — posed for ratification at the merge ask (RATIFIED [USER] 2026-09-22, the Stage E5 landing) with the others. **[AGENT] choices.** (i) An
 ALLOWED LIST of value positions, not a general admission — the address is admitted only where its consumer takes a finished
 value and the decoder already spells it; every computing position refuses by name. (ii) NO `ref` head at the decoder; the
 planned-target shapes refused at the classifier instead (fail closed on both sides of the boundary). (iii) `ref` of a binder
@@ -644,7 +644,7 @@ program can reach it; the classifier keeps the string-base admission it guarded.
 and type-confused constant payloads decode and stick LATE, by name (the standing «closed (late, named)» class; the emitter never
 produces them; a declared-id check on `ref` is cheap and optional). **F9 — recorded**: the E5d planned-target refusal text is a
 true statement about the decoder (the `ref` head stays refused — `mut-addr-head`); an `after` edge on a literal `allocate`
-decodes with the set unchanged = the Stage E audit's F8 = PENDING [USER] item 4, confirmed on the `map-lit` arm.
+decodes with the set unchanged = the Stage E audit's F8 = item 4, RATIFIED [USER] 2026-09-22 (a named refusal, queued for the next decoder-touching lane), confirmed on the `map-lit` arm.
 
 **[AGENT] choices of the round (alternatives named).** (i) The base-type check in all THREE map arms, not the two the audit
 probed — the target plan shares the shape and the audited binary stuck late on it. (ii) A hand-built + native positive control

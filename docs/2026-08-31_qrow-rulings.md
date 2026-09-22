@@ -775,3 +775,41 @@ Train r46 owes 5a with `--slow` (frontend, decoder and core changed); the expect
 3732 = 3497 PASS / 235 FAIL (four born rows, nothing else moved). Next: the E5 residue + E6
 legacy-retirement lane (E6 waits on the legacy census reaching zero), then the NaN [a]+[b]
 lane, then P → C3 → C4 → B6.
+
+### The Stage E5 landing ratification record (2026-09-22) — seven items
+
+[USER] Mike, 2026-09-22, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «Great, agree with all recommendations, land it»
+— answering the coordinator's merge ask for Stage E5 of the evaluation-order plan (`core/unseq-stage-e5-0922` at
+`28919dd6` after the audit fix round; audit FIX-FIRST at `bb79c34a` → re-verification MERGE-CLEAN at `0125f5ad`,
+rebased onto the fixed tip as `0a390343`), which posed seven items with the coordinator's recommendation on each.
+«land it» is the merge sign-off (train r47) and the dispatch of the E6 lane.
+
+**What was decided (RATIFIED by the landing — every item as recommended).**
+1. **The trigger refinement — ADOPTED, executed in the E6 lane.** The Stage E trigger («a sweep enters the graph iff
+   some occurrence is unordered against an EFFECTFUL event», ratified 2026-09-22 item 2) is amended to «… OR against
+   another FAILING occurrence» — panic identity is an observable; without it, retiring the legacy probe would narrow
+   the ~30 panic-vs-panic rows with no effectful event from two members to one (handoff §2 item 2).
+2. **Non-main units — WIDEN the grammar.** The next lane lowers imported source units as graphs (the raft twin re-pins
+   with a written reason); E6's zero-probe condition stays whole-corpus + twin. Re-scoping E6 to the main unit (two
+   models coexisting in imported code) NOT taken (handoff §2 item 3).
+3. **The re-verification's R1 — LAND with the follow-up.** A self-consistently forged source-local map annotation
+   still decodes and answers (a pre-existing class: Stage C's D9 trust rule; the emitter never produces it). The
+   follow-up — a decoder-wide cross-check of source-local annotations against their `declare` types — is owed to the
+   next decoder-touching lane (handoff §3). FIX-FIRST now NOT taken.
+4. **The `wide` body kind** (`UnseqBody.wide (binds) (spec : WideSpec)`, one closed kind mirroring `allocate`; arms
+   `append`/`copy`/`mapLookup`/`typeAssert`) — as posed; `AllocSpec` arms and one-kind-per-built-in NOT taken.
+5. **E2/E12's VALUE axis (a) ENVELOPED on the lane's 29 named rows** (handoff §2 item 5: the 20 born membership rows
+   + the 9 moved rows, by name) — the entries stay (b) PINNED; reversion to (b) pins NOT taken.
+6. **A named decoder refusal for an `after` edge on a literal `allocate`** (Stage E audit F8) — ADOPTED, queued for the
+   next decoder-touching lane (not blocking this landing).
+7. **The duplicate-dynamic-key store order** (audit F2: the (b) pin of gc's source-order store, spec-unspecified) —
+   QUEUED as a future choice-site item; the pin stands with its re-envelope obligation (handoff §2 item 6).
+
+Also landed with this ratification: the audit fix round — F1 (decoder map-type checks on all three map arms; mutants
+45 → 49; a positive-control row added as an [AGENT] addition), F2 (reworded), F3 (the map-element-target widening
+rowed from both sides; **BUG-115** filed for the legacy quarantine), F4 (the forced status split described; an
+apparatus item owed — a manifest row admitting a status-diverse set), F5 (counts), F6/F7 (refusal texts; a dead
+check deleted). Baseline 3732 = 3497 / 235 → 3760 = 3524 / 236 (28 born incl. one FAIL by design; 9 strict →
+membership moves; 0 PASS → non-PASS). Train r47 owes 5a with `--slow` (core and decoder changed). Next: the E6 lane
+(the trigger refinement, the non-main-unit grammar, legacy retirement at census zero, the two decoder follow-ups),
+then the NaN [a]+[b] lane, then P → C3 → C4 → B6.

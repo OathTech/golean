@@ -2628,7 +2628,7 @@ reason in the baseline header). Movement, tallied by row:
   admitted (+6, 0 lost; the twin 0); legacy probe emissions 70 → 63 in the corpus (e13 17 → 12, copy-min 2 → 0), the
   twin 128 unchanged (E6 not reachable — handoff §3).
 - The core gains ONE occurrence kind (`UnseqBody.wide` over `WideSpec`: append | copy; two Step rules) — [AGENT] choice,
-  PENDING [USER] ratification; five new wire mutants (33 → 38), all refused by name through the CLI.
+  RATIFIED [USER] 2026-09-22 at the Stage E5 landing; five new wire mutants (33 → 38), all refused by name through the CLI.
 
 ### 8ae. Movement at the Stage E audit fix round (2026-09-21, lane `core/unseq-stage-e-0921`; rebased onto main `769bbf23`)
 

@@ -835,7 +835,7 @@ gc's early store a deviation, L-016, 2026-09-02).
   the E13 guard's measured note, the opposite member from E4's slice/struct literals), map-lit-key-vs-
   call ({6, 5}, gc 6)}` and the moved `noodler/latitude/map-literal-key-vs-call` ({5, 50}, gc 50 —
   the call inside the literal); E13's `map-lit-payload-vs-call` moves to membership (below). Posed
-  for ratification at the merge ask. The (b) pin stands outside the widened grammar. AUDIT FIX ROUND F2
+  for ratification at the merge ask (RATIFIED [USER] 2026-09-22, the Stage E5 landing). The (b) pin stands outside the widened grammar. AUDIT FIX ROUND F2
   (2026-09-22): the arm's SOURCE-ORDER store of duplicate DYNAMIC keys is the pre-existing (b) pin of gc's
   order (`maps/map-literal-duplicate-eval-order`), not spec behaviour — spec#Order_of_evaluation's own
   example leaves it unspecified; re-envelope POSED (E12's entry, the E5 handoff §2 item 6).
@@ -850,7 +850,7 @@ gc's early store a deviation, L-016, 2026-09-02).
   base ({1120003, 774203})}`, `multi-assign/call-write-back-order-value/deref-target` ({42007, 4207})
   — BUG-052's fixed post-call order is gc's member (4207 / 774203 / 4207, 20/20), the pre-call plan
   the other — and `noodler/latitude/rhs-list-index-call-index` ({(1,5,1), (1,5,9), (9,5,1),
-  (9,5,9)}, gc (9,5,9)); posed for ratification at the merge ask. The spec's own example
+  (9,5,9)}, gc (9,5,9)); posed for ratification at the merge ask (RATIFIED [USER] 2026-09-22, the Stage E5 landing). The spec's own example
   `spec-examples-stmt/eval-order-calls` keeps its forced trace as one graph. The (b) pin stands
   outside the widened grammar. AUDIT FIX ROUND F3 (2026-09-22): a MAP-ELEMENT target in a multi-target
   assignment — quarantined by name on the LEGACY path (triage F6 / mini-slice A3, BUG-115) — rides the
@@ -864,11 +864,11 @@ gc's early store a deviation, L-016, 2026-09-02).
   `docs/2026-09-22_unseq-stage-e5-design.md` §E5a — the reading-(a) built-ins): READING (a),
   RATIFIED [USER] 2026-09-22 (relayed), is EXECUTED — `min`/`max` are pure E1 participants,
   `append`/`copy` EFFECTFUL E1 participants (`wide` bodies: the in-place element store, the
-  destination write — [AGENT] choice, PENDING [USER] ratification), never unordered reads. The
+  destination write — [AGENT] choice, RATIFIED [USER] 2026-09-22 at the Stage E5 landing), never unordered reads. The
   VALUE axis of this entry is (a) ENVELOPED on the born membership rows `evalorder/unseq-builtins/
   {append-read-vs-call ({6, 15}: the in-place append's result read beside m, gc 15), copy-effect-vs-
   read ({2, 9}: the sibling checked read beside the copy's write, gc 9), append-spread-str-vs-call
-  ({9, 18}, gc 18), min-read-vs-call ({7, 16}, gc 16)}` — posed for ratification at the merge ask
+  ({9, 18}, gc 18), min-read-vs-call ({7, 16}, gc 16)}` — posed for ratification at the merge ask (RATIFIED [USER] 2026-09-22, the Stage E5 landing)
   with E1–E4's precedent; `min-vs-call` (6) is a FORCED singleton under reading (a) like
   `make-len-vs-call` (reading (b) the named alternative, NOT taken). The five `builtins/e13-sibling-
   panic-order` rows whose sweeps enter the graph keep their 2-member sets (E13's, below). The (b)
@@ -922,7 +922,7 @@ gc's early store a deviation, L-016, 2026-09-02).
   load before / after the call that writes or deletes the entry — and the born
   `evalorder/unseq-ptr-field-map/{deref,field}-compound-redirect`, `map-compound-rebind`
   ({11100, 10101}: the frozen identities, no hybrid); BUG-104's `map-compound-index-key-vs-call`
-  is an observed-∉-modeled FIX (→ BUG-112), not latitude. Ratification posed at the merge ask.
+  is an observed-∉-modeled FIX (→ BUG-112), not latitude. Ratification posed at the merge ask (RATIFIED [USER] 2026-09-20, the Stage C landing — «land it»).
   BUG-104's three remaining rows (a receive or a method call on the RHS) keep the (b) pin — E3's
   (FIXED there, the bullet above).
 
@@ -934,7 +934,7 @@ gc's early store a deviation, L-016, 2026-09-02).
   `evalorder/unseq-globals/compound-vs-call` (`g += setG()`, setG writing g: {2, 11},
   gc 11 — the target's identity has no operands; the store lands in phase 2) and, on
   E12's side of the same family, `evalorder/unseq-globals/read-vs-call` ({1, 2}, gc 2);
-  ratification posed at the merge ask with the pilot's precedent. BUG-113's two rows
+  ratification posed at the merge ask (RATIFIED [USER] 2026-09-22, the Stage E landing — «Agree on the judgements, go ahead») with the pilot's precedent. BUG-113's two rows
   (`evalorder/legacy-logical-vs-call/{or-vs-call,and-vs-call}`) flip FAIL → PASS on the
   same widening but are NOT this entry's latitude: the `||`/`&&`-before-a-later-call
   order is spec-FORCED and the graph realizes it (BUG-113 fixed). Every other row of this
@@ -1660,16 +1660,16 @@ subexpressions of one binary operator).
   §E5d — the address of a variable): the address-taken variable's read is spec-unsequenced against
   the call that receives `&x` — the VALUE axis is (a) ENVELOPED on the born `evalorder/unseq-addr`
   membership rows ({2, 8}, {6, 15}, {72, 78}, {2, 8}; gc call-first on each); ratification posed at
-  the merge ask.
+  the merge ask (RATIFIED [USER] 2026-09-22, the Stage E5 landing).
   STAGE E5, FAMILY E5e (2026-09-22, [AGENT]; design `docs/2026-09-22_unseq-stage-e5-design.md`
   §E5e — strings): a captured index's read on a string base is spec-unsequenced against the sibling
   call — the VALUE axis is (a) ENVELOPED on the born `evalorder/unseq-strings/{str-index-vs-call
-  ({102, 103}, gc 103), str-slice-vs-call ({102, 103}, gc 102)}`; ratification posed at the merge ask.
+  ({102, 103}, gc 103), str-slice-vs-call ({102, 103}, gc 102)}`; ratification posed at the merge ask (RATIFIED [USER] 2026-09-22, the Stage E5 landing).
   STAGE E5, FAMILY E5c (2026-09-22, [AGENT]; design `docs/2026-09-22_unseq-stage-e5-design.md`
   §E5c — map literals): a map literal's entry reads are spec-unsequenced against the sibling calls
   — the VALUE axis is (a) ENVELOPED on the born `evalorder/unseq-maplit/{map-lit-entry-vs-call ({6,
   15}, gc 6), map-lit-key-vs-call ({6, 5}, gc 6)}` and the moved `noodler/latitude/map-literal-key-
-  vs-call` ({5, 50}, gc 50); ratification posed at the merge ask. The arm's source-order store of
+  vs-call` ({5, 50}, gc 50); ratification posed at the merge ask (RATIFIED [USER] 2026-09-22, the Stage E5 landing). The arm's source-order store of
   duplicate DYNAMIC keys stays the (b) PIN above (audit fix round F2, 2026-09-22 — re-envelope POSED).
   STAGE E5, FAMILY E5b (2026-09-22, [AGENT]; design `docs/2026-09-22_unseq-stage-e5-design.md`
   §E5b — multi-target assignments): the right-hand reads of a tuple beside its calls are
@@ -1679,7 +1679,7 @@ subexpressions of one binary operator).
   membership) and the born `evalorder/unseq-multi/define-tuple-vs-call` ({6, 15}, gc 15); the
   target-plan rows are E2's (above), the audit fix round's map-element target rows among them
   (`map-target-key-vs-writer` {709, 79}, `comma-ok-map-target-vs-delete` {11, 0} — F3 / F1,
-  2026-09-22). Ratification posed at the merge ask.
+  2026-09-22). Ratification posed at the merge ask (RATIFIED [USER] 2026-09-22, the Stage E5 landing).
   STAGE E5, FAMILY E5a (2026-09-22, [AGENT]; design `docs/2026-09-22_unseq-stage-e5-design.md`
   §E5a — the reading-(a) built-ins, RATIFIED [USER] 2026-09-22): `min`/`max`/`copy`/`append` are
   E1 participants (reading (a) executed: their operands' reads lie inside their windows, forced
@@ -1690,7 +1690,7 @@ subexpressions of one binary operator).
   append-spread-str-vs-call ({9, 18}, gc 18)}`; the audit's k1 shape `min(x, 100) + m()` is the
   born strict control `min-vs-call` (6 = gc: x's read inside min's window is FORCED — the legacy
   hoist's early `min` was reading (a)'s realization, not a pin). Ratification posed at the merge
-  ask. The (b) pin stands outside the widened grammar.
+  ask (RATIFIED [USER] 2026-09-22, the Stage E5 landing). The (b) pin stands outside the widened grammar.
   STAGE E, FAMILY E1 (2026-09-21, [AGENT]; design `docs/2026-09-21_unseq-stage-e-design.md`
   §E1): PACKAGE-LEVEL variables enter the grammar as READ occurrences — on the rows whose
   sweep now lowers as a graph the VALUE axis of this entry is (a) ENVELOPED: `evalorder/
@@ -1708,7 +1708,7 @@ subexpressions of one binary operator).
   entered the grammar through its field reads `p.n`/`q.s`) and the born `evalorder/unseq-ptr-field-
   map/{deref,field,mapread}-vs-call` ({1, 2}, gc 2); the noodler map compounds are E2's (above).
   The 12 other rows whose sweeps entered read locations no sibling call writes — no row moved.
-  Ratification posed at the merge ask. The (b) pin stands outside the widened grammar.
+  Ratification posed at the merge ask (RATIFIED [USER] 2026-09-22, the Stage E landing — «Agree on the judgements, go ahead»). The (b) pin stands outside the widened grammar.
   STAGE E, FAMILY E3 (2026-09-21, [AGENT]; design §E3 — receives, method calls): a RECEIVE is an
   EVENT occurrence (E1-ordered among the calls) and the reads beside it are spec-unsequenced
   against it — the VALUE axis is (a) ENVELOPED on the born `evalorder/unseq-recv-method/recv-vs-
@@ -1720,7 +1720,7 @@ subexpressions of one binary operator).
   operand-order`, `race/negative-sync/overwrite-vs-trylock`, `sync/out-of-scope-cond`) read
   locations no sibling event writes — no set widened; `two-workers-own-chans` moved its ENGINE to
   dedup (route α certifies the singleton where the DFS blew its work cap). Ratification posed at
-  the merge ask. The (b) pin stands outside the widened grammar.
+  the merge ask (RATIFIED [USER] 2026-09-22, the Stage E landing — «Agree on the judgements, go ahead»). The (b) pin stands outside the widened grammar.
   STAGE E, FAMILY E4 (2026-09-21, [AGENT]; design §E4 — conversions and allocations): a CONVERSION
   is a PURE OP over its operand's value and a composite literal an allocation node without E1
   edges, so the operand / payload READ is the occurrence spec-unsequenced against the sibling
@@ -1730,7 +1730,7 @@ subexpressions of one binary operator).
   {slice-literal-index-vs-call,struct-literal-var-vs-call}` ({15, 1005}, gc 1005),
   `noodler/latitude/conversion-index-vs-call` ({6, 105}, gc 105) and the born `evalorder/unseq-
   conv-alloc/{conv-read-vs-call ({98, 123}, gc 98),struct-lit-vs-call,addr-lit-vs-call,slice-lit-
-  vs-call ({6, 15}, gc 15)}`. Ratification posed at the merge ask. The (b) pin stands outside the
+  vs-call ({6, 15}, gc 15)}`. Ratification posed at the merge ask (RATIFIED [USER] 2026-09-22, the Stage E landing — «Agree on the judgements, go ahead»). The (b) pin stands outside the
   widened grammar.
   THE AUDIT FIX ROUND (2026-09-21, [AGENT]; design §E4 «the audit fix round», F4): `string([]byte)`
   / `string([]rune)` READ the slice's backing array at the conversion — an occurrence of its own
@@ -3386,7 +3386,7 @@ Nothing in this block is a class member by virtue of being named here.
 - **Stage E5 of the evaluation-order model v2.1, family E5a (2026-09-22, [AGENT] lane
   `core/unseq-stage-e5-0922`; design `docs/2026-09-22_unseq-stage-e5-design.md` §E5a): the READING-(a)
   BUILT-INS `min`/`max`/`copy`/`append` enter the `unseq` grammar as E1 participants (RATIFIED [USER]
-  2026-09-22 — pure heads / effectful `wide` bodies, the kind PENDING [USER]).** Entry classes
+  2026-09-22 — pure heads / effectful `wide` bodies, the kind RATIFIED [USER] 2026-09-22 at the Stage E5 landing).** Entry classes
   UNCHANGED by count ((a) 15 / (b) 17): E2/E12 stay (b) PINNED as entries, ENVELOPED on four born
   membership rows (`evalorder/unseq-builtins/*`); E13's five built-in rows move probe → graph with
   their sets reproduced; no bug fixed, no row moved, no widened pin. Census 131 → 137 admitted; legacy
