@@ -256,9 +256,9 @@ EXIT=0, 5 s (binary `73734062…`); `release-check --base refs/snapshots/r46/mai
 «STALE certification: changed dependency build/files/GoLean/GoCore/AdmissionIndices.lean»); `GOLEAN_MEM_MAX=48G
 scripts/capped scripts/ci --slow` EXIT=1, 881 s — red on EXACTLY the 5a pair (`certificate provenance` STALE; the
 one drift line `imported-goose/channel/google-search PASS→FAIL/membership`, fresh re-certification «unchanged set;
-seconds=?»); 3732 rows run, 3496 PASS / 236 FAIL = the pin 3497 / 235 with the one 5a-class row red; no other drift
+seconds=166.113» (the receipt's wall seconds)); 3732 rows run, 3496 PASS / 236 FAIL = the pin 3497 / 235 with the one 5a-class row red; no other drift
 line (the four born rows PASS in their lanes; the re-pin guard 0 PASS→non-PASS); negatives 394 no regression; the
 reconciler's two report-only findings = C9 (this STALE, cleared by the install) and the pre-existing C13. Tail:
 `r46-ci-slow.tail.txt`. Candidate vs tracked record: `claim` and `observations_sha256` IDENTICAL; input hashes
-differ in `build` (1) and `files` (7: `scripts/check-unseq-wire`, `scripts/check-wire-boundary`, `tools/nativefrontend/e13guard_test.go`, `tools/nativefrontend/unseq.go`, `tools/nativefrontend/unseq_lower.go`, `tools/nativefrontend/unseq_lower_test.go`, `tools/nativefrontend/unseq_test.go`) plus the receipt (`e23f29b3`, binary
+differ in the compiled inputs `build.files` (10: `GoLean/GoCore/AdmissionIndices.lean`, `GoLean/GoCore/Machine.lean`, `GoLean/GoCore/MachineSound.lean`, `GoLean/GoCore/StateWf.lean`, `GoLean/GoCore/StepFn.lean`, `GoLean/GoCore/Syntax.lean`, `GoLean/GoCore/SyntaxEqb.lean`, `GoLean/GoCore/Unseq.lean`, `GoLean/GoCore/UnseqSound.lean`, `GoLean/NativeToIR.lean`) and the tool files `files` (7: `scripts/check-unseq-wire`, `scripts/check-wire-boundary`, `tools/nativefrontend/e13guard_test.go`, `tools/nativefrontend/unseq.go`, `tools/nativefrontend/unseq_lower.go`, `tools/nativefrontend/unseq_lower_test.go`, `tools/nativefrontend/unseq_test.go`) plus the receipt (`e23f29b3`, binary
 `73734062…`) — INSTALLED in this commit; a provenance refresh, not a re-pin.
