@@ -935,3 +935,36 @@ statement is redesigned as `Prefix`/`Finish` with `LRun` derived and the five co
 contract + inventory (BridgeSet, changelog, statement note, re-lowering their fourteen fixtures and variants);
 the confluence item is corrected to «commutation under independence hypotheses, deferred». The [USER]'s rulings
 on the charter, the records lane, the branch landing and the E6 dispatch are posed with it.
+
+### The Codex review of the window charter (2026-09-23) — received; dispositions
+
+Source: branch `review/batched-window-charter-0923` @ `28b12c50` (`docs/2026-09-23_batched-window-charter-review.md`
++ evidence `docs/evidence/2026-09-23_batched-window-review/{FuelBoundary.lean,validation.json}`; candidate = the charter
+at `e8758442`; production code identical to main `9269912e`; the fuel witness freshly checked under `scripts/capped`).
+[USER] Mike: «Window charter review landed from codex». Verdict: «support the direction; revise three points before
+treating this as an execution-ready charter».
+
+**F1 (P1) — E6's retirement exit is broader than its listed work.** The E5 handoff's residue names FIVE shape emitters
+(three element-address cases `&a[i]` — `addrIndexLeftLenHoist`, `addrAssertLeftCall`, `arrayBaseTargetVsLen` — and two
+`recover()`-in-lifted-body cases) and NINE singleton emitters beyond the non-main-unit and panic-vs-panic classes; the
+frontend still refuses element-address operands by name (`unseqAddrOperandRefusal`). The trigger refinement and the
+non-main-unit grammar do not reach them, so the whole-corpus + twin ZERO exit is unreachable by the listed work.
+Disposition ([AGENT], PENDING [USER]): E6 is SPLIT into named prerequisite slices covering every residual emitter
+class (E6a non-main units + trigger refinement; E6b element/field addresses `&a[i]`/`&s.f` as operands — E5z's family;
+E6c `recover()` in lifted bodies; E6d the nine singletons by per-function disposition), then E6e the retirement slice;
+the exit stays whole-corpus + twin zero with a fresh census AND behavioural-preservation evidence (zero by dropping or
+refusing covered programs, or by silently picking one order, is NOT success); the estimate is redone after the
+accounting. Rationale: retirement is the BREAKING part; moving it out of the window would force a second re-pin,
+against ruling 1 — so the window absorbs the residual families rather than the customer absorbing a second port.
+**F2 (P2) — zero-cost classification vs abort completion.** `classified` was undefined in the sketch; a renderable
+abort has a `Finish` yet the driver returns `fuelOut` at fuel zero (the review's Lean witness: `abort? = some _`,
+`fuelOut` at 0, the panic terminal at 1; normal completion at 0). Disposition ([AGENT], accepted): a predicate for
+the driver's ZERO-COST classification (normal + the four blocked forms) with its negation in the fuel-out theorem;
+finishing cost tracked explicitly (0 for those; 1 for the abort call incl. renderer refusal); boundary controls at
+fuel 0/1; the existing convention kept.
+**F3 (P2) — the fixture inventory's procedure.** `scripts/lower-diagnose` deletes its probe wire, so grepping its
+report cannot certify graph absence. Disposition ([AGENT], accepted): the pinned production frontend with an owned
+scratch `--out` per fixture and variant, source/frontend pins and export status recorded, actual JSON statement
+nodes counted recursively; failed export distinguished from zero graphs; `lower-diagnose` explains failures only.
+The charter is revised on this branch under F1–F3; the review branch lands with it. The [USER]'s decisions of the
+charter's §7 stay posed, with F1's split added as its own decision.
