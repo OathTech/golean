@@ -875,3 +875,9 @@ the (iii) question are the logic team's to answer in their review of `docs/2026-
 continuation frame and a choice site — a removal is breaking for a downstream `cases` — so E6 is treated as the FIRST
 item INSIDE the batched window (the window opens with it), not as a change outside it; the single re-pin still comes
 after everything. Posed to the [USER] for a nod with the note's summary.
+
+Addendum (2026-09-23, later). [USER] Mike, verbatim, relayed: «We can leave it on a branch while they look at it» —
+the proposal note, the analysis memo and these records STAY on branch `docs/roadmap-customer-alignment-0922`
+(unmerged, unpushed; worktree `.claude/worktrees/roadmap-0922`) while the logic team reviews the note. The merge of the
+branch and the window's dispatch (E6 first) follow their answers; the [USER]'s audit-trim/waiver for this
+documentation-only branch is posed at that landing.
