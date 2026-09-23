@@ -1,0 +1,25 @@
+{
+  "date": "2026-09-23",
+  "candidate": "e8758442ee0c438b64b30187f64ededac0d1268b",
+  "main": "9269912e639c7c099d4766a943ece9e39bdafb3c",
+  "scope": "planning review; source inspection plus fresh capped Lean fuel-boundary witness using existing main build artifacts",
+  "witness_command": "GOLEAN_MEM_MAX=16G LEAN_NUM_THREADS=2 LEAN_PATH=/home/dev/projects/golean/.lake/build/lib/lean scripts/capped lean docs/evidence/2026-09-23_batched-window-review/FuelBoundary.lean",
+  "witness_exit": 0,
+  "witness_sha256": "93b54c620486281f13cda5f0269e6416b7c90134b65eb3ce8038e20219684547",
+  "witness_output": [
+    "\"Except.error (GoLean.Stop.fuelOut)\"",
+    "\"Except.error (GoLean.Stop.terminal (GoLean.Terminal.panic \\\"review\\\"))\""
+  ],
+  "findings": {
+    "F1": "P1: E6 prerequisite breakdown omits recorded residual grammar families",
+    "F2": "P2: define zero-cost classification separately from abort Finish",
+    "F3": "P2: lower-diagnose discards wire; inventory must inspect real emitted JSON"
+  },
+  "not_run": [
+    "full scripts/ci",
+    "cold build",
+    "fresh corpus census",
+    "fourteen-fixture lowering",
+    "downstream logic acceptance"
+  ]
+}
