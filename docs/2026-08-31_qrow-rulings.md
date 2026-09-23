@@ -881,3 +881,57 @@ the proposal note, the analysis memo and these records STAY on branch `docs/road
 (unmerged, unpushed; worktree `.claude/worktrees/roadmap-0922`) while the logic team reviews the note. The merge of the
 branch and the window's dispatch (E6 first) follow their answers; the [USER]'s audit-trim/waiver for this
 documentation-only branch is posed at that landing.
+
+### The logic team's response to the proposal (2026-09-23) — received; the window revised under it
+
+Source: `docs/2026-09-23_response-from-logic-team.md` (a verbatim copy of golean-logic's
+`docs/2026-09-23_response-to-golean-proposal.md`, branch `docs/upstream-response-0923` @ `a9950b2`, sha256
+`a1008badba858724bfc3f1f32a117ca81c50fee19fb1869aec37898fd86c5067`; their inspection record names our note at `6f1256f6`). Provenance: the logic
+team's ([their AGENT] under [their USER]'s request «endorsing the plan or requesting changes … the reasoning
+structures must be general: Raft is the first target and challenge, not the model for the logic's design»). Their
+answers are NOT rulings in this repo; the [USER] Mike rules on the revised window (posed by the coordinator).
+
+**Their answers to the ten questions (§7, condensed; the document is authoritative).** (1) ENDORSE the batch with
+semantic conditions; order E6 → label + execution bridges → P → C3 → B6 → C4. (2) E6 INSIDE the window as its first
+item. (3) the shared `{trace, picks, out}` record suffices; exact per-channel order; terminal effects and projections
+proved; the silent projection preserved (no `[emptyLabel]` per step); client observations come from proved execution
+cuts, not printed bytes («Ready is not stdout»). (4) YES to `BridgeSet.lean`, plus the prefix/terminal/choice/memory/
+entry-layout families (§6); pin statements AND semantic equations, not names/types. (5) YES to equation lemmas over
+the FINAL labelled shape; control/calls/defer and owned-memory operations first. (6) first bridge = sequential
+terminal-aware PREFIXES (`Step` primitive; a counted, choice-threaded labelled prefix closure with arbitrary endpoints
++ a `Finish` classification; `LRun` derived), then the initialized single-goroutine readout/embedding; the pool
+later. (7) records NOW for the contract and inventory; the exact changelog and evidence at the offer. (8) agree on
+NaN, parked profiles, no upstream `Language` spike; the proposed «DRF `unseq` confluence» is FALSE as stated
+(`Tests/unseq-wire/src/w1`: one goroutine, a mutating closure, an unordered read → {1, 2}) — defer a correctly scoped
+theorem; keep `NPDRFReduction` explicitly unusable. (9) keep the corpus, add the staged §5 examples (direct methods,
+multi-field records, byte slices near-term). (10) a dedicated migration after the completed offer, before their
+receiver/E2 simulation proof; no calendar deadline, no interim pin.
+
+**Their required changes to the execution statement (§2 — binding on the statement lane).** (i) retain the endpoint
+state and residual choices on failure; (ii) account for terminal work (`abortConsult`, the `repanicCollapse` draw,
+fallible `abortMsg`) — a zero-step `aborted` constructor is insufficient; (iii) exact fuel conventions, prefixes
+proved independently of termination, earlier observations available under fuel-out/divergence; (iv) replay choices
+by site/bound/value (modulo selection, empty-tape default, bound-≤1 no-consumption, terminal draws) with a coverage
+theorem that no unrecorded consultation affects a step; (v) refusal kept separate — an unconditional interpreter/
+prefix correspondence reporting refusal, terminal and fuel apart, then a corollary under a proved reachable-state
+domain invariant. Program level: initialization, readout, output and residual choices in one composable account; a
+scoped single-goroutine embedding first; a proved cost/stuttering translation if pool administration changes fuel;
+the `initPrintRefusal?` scope stated. **Conditions on the reshapes (§4)**: P preserves receiver evaluation once,
+receiver adjustment, embedded traversal, nil behaviour, method identity, method-value capture, recover eligibility;
+exposes resolution/entry equations. B6: declaration IDs + a checked source table; lexical ID ≠ activation location;
+numeric IDs NOT an API promise across source edits. C4: storage allocation separate from initializer execution;
+captured cells survive lexical exit; per-iteration variables; «up to heap isomorphism» scoped as an injection with
+private cells + stuttering over a stated observable domain, address-sensitive escapes audited first. C1: expose the
+allocation-normalization premise and the read/write/frame laws; no unexplained global well-formedness premise per
+client. **§5**: general simulation interfaces staged by their clients (MaybeUpdate, SentEntries, recvAck, Ready
+return, slices, callbacks/Storage/timers, loops/concurrency); aliasing kept real; choices coupled by meaning.
+**§6**: gate the semantic equations and a small independent consumer; the re-pin offer lists changed constructors,
+wire schemas, choices, allocations, fuel, refusals, theorem premises + the differential/certification receipt; a dry
+run is evidence, not their acceptance gate.
+
+**Disposition ([AGENT] coordinator, PENDING [USER]):** the window is revised into a short charter
+(`docs/2026-09-23_batched-window-charter.md`, this branch) adopting their order and conditions; the execution
+statement is redesigned as `Prefix`/`Finish` with `LRun` derived and the five corrections; the «now» lane =
+contract + inventory (BridgeSet, changelog, statement note, re-lowering their fourteen fixtures and variants);
+the confluence item is corrected to «commutation under independence hypotheses, deferred». The [USER]'s rulings
+on the charter, the records lane, the branch landing and the E6 dispatch are posed with it.
