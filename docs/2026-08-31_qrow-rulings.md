@@ -830,3 +830,38 @@ dispatched pending the review. An [AGENT] analysis memo was prepared for the dis
 recommendations (C3 and the end-to-end simulation ahead of NaN; a reader-only `Language` spike; a minimal interface +
 pin record; an `unseq` confluence lemma) are [AGENT] and every reorder is PENDING [USER]. The rulings of the review will
 be recorded here when taken.
+### The roadmap review under the customer framing — rulings of 2026-09-22/23
+
+Context: the [USER]'s 2026-09-22 request («Roadmap review requested (2026-09-22)» above); the coordinator's
+assessment rested on the analysis memo `docs/2026-09-22_roadmap-customer-alignment.md` (rev. 2, surveying the
+customer repo `~/projects/golean-logic/`, which the [USER] named: «The draft logic is in ~/projects/golean-logic/»).
+The coordinator posed seven decisions; [USER] Mike answered, verbatim, relayed by the [AGENT] coordinator — cite as
+relayed: «I think we'll want to give them one repin after all the breaking changes have landed. Can we batch these
+together. (2) agree, we should make the model as regular as possible (3) litigate depending on the rest? (4) I don't
+understand this point? (5) yes, if this isn't in the target, we can defer it, (6) the decision on all this is what
+would be needed by the logic, (7) same answer. Can you write a note addressed at the logic team, proposing your
+updated design, then we'll get their review».
+
+**RULED.**
+1. **Re-pin cadence — BATCH.** The remaining breaking reshapes of the core (the sequential `Step`/`stepFn` label,
+   C3 `Cont := List Frame`, P native method promotion, B6 numeric locals, C4 block-scoped allocation) land in ONE
+   window; the customer receives ONE re-pin offer after all of them, with a changelog. No breaking change lands
+   outside the window without a separate ruling.
+2. **The sequential step label — the FULL EVENT LABEL** (memory accesses ⊕ choice picks ⊕ output), matching the
+   pool's `StepEvent` shape: «we should make the model as regular as possible». Executed inside the batched window,
+   before C3 (its shape is part of the re-pin).
+5. **NaN [a]+[b] — DEFERRED**: floats are outside the customer's target («if this isn't in the target, we can defer
+   it»). The 2026-09-19 slot (after Stage E) is vacated; BUG-094's plan stands as a fidelity item without a lane.
+
+**NOT RULED — referred to the customer's review** (the [USER]: «the decision on all this is what would be needed
+by the logic»): 3. the timing of the records lane (the changelog + the simulation statement note) — «litigate
+depending on the rest»; 6. the drops (no GoLean-side `Language` spike; the `unseq` confluence lemma deferred; NPDRF
+restate-only; typed profiles parked); 7. weighting the differential corpus toward the customer's feature list.
+Item 4 (the FORM of the stable interface: named bridge theorems + a per-pin changelog, optionally per-arm `stepFn`
+equation lemmas as a supported `simp` surface, rather than a re-export module) was not understood as posed and is
+re-explained in the proposal note.
+
+**Direction.** [USER]: «Can you write a note addressed at the logic team, proposing your updated design, then we'll
+get their review» → the proposal note `docs/2026-09-23_proposal-to-logic-team.md` ([AGENT], on this branch; the
+customer's review decides items 3/4/6/7 and the contents of the window). The E6 lane (ruled 2026-09-22) stays
+undispatched until the note is out; whether it precedes the window is part of the proposal.
