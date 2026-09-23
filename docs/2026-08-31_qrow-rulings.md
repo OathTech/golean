@@ -865,3 +865,13 @@ re-explained in the proposal note.
 get their review» → the proposal note `docs/2026-09-23_proposal-to-logic-team.md` ([AGENT], on this branch; the
 customer's review decides items 3/4/6/7 and the contents of the window). The E6 lane (ruled 2026-09-22) stays
 undispatched until the note is out; whether it precedes the window is part of the proposal.
+
+Addendum (2026-09-23). Item 4 re-explained and RULED — [USER] Mike, verbatim, relayed: «Right, I agree regarding
+item 4, let's see what that team asks for». The stable interface for the logic team is (i) a NAMED stable set of
+bridge declarations with pinned statements, gated fail-closed, and (ii) a per-pin changelog, plus (iii) per-arm
+`stepFn` equation lemmas if the logic team asks for them; a re-export facade module is NOT wanted. The exact set and
+the (iii) question are the logic team's to answer in their review of `docs/2026-09-23_proposal-to-logic-team.md`.
+[AGENT] reading of ruling 1 for E6 (flagged by the note's writer): the E6 lane retires a statement form, a
+continuation frame and a choice site — a removal is breaking for a downstream `cases` — so E6 is treated as the FIRST
+item INSIDE the batched window (the window opens with it), not as a change outside it; the single re-pin still comes
+after everything. Posed to the [USER] for a nod with the note's summary.
