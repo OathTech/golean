@@ -179,3 +179,9 @@ init-print refusal, DEFERS pool/registry coverage; the restricted sequential res
 10. `initPrintRefusal?` — RETAIN the named limitation through the window (§2 above); lifting it is a later item.
 11. CLAUDE.md's owed-simulation sentence («terminal priority») will need the `Prefix`/`Finish` wording AND the stated limits (§2 tail) at
     landing — a CLAUDE.md edit, [USER]-approved; it must not mark the owed simulation discharged.
+
+**Landing record ([AGENT] coordinator, 2026-09-24).** This charter (rev. 2), the proposal, the logic team's response, the
+Codex review and the rulings landed on `main` at `3fb4a0d1` (train r48, documentation only): pre-merge main `9269912e` →
+`refs/snapshots/r48/main`; `release-check` «No certification inputs/claims changed»; `GOLEAN_MEM_MAX=48G scripts/capped
+scripts/ci` EXIT=0 in 413 s, `RESULT: PASS`; the adversarial audit WAIVED for this docs-only landing by [USER] ruling 3
+(2026-09-24). The window is open: E6a and the fixture inventory dispatched; Codex packet A's brief in preparation.
