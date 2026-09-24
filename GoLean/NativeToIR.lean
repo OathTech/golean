@@ -1024,13 +1024,32 @@ private partial def jsonMentionsStmt (tags : List String) : Json → Bool
   | .arr xs => xs.any (jsonMentionsStmt tags)
   | _ => false
 
-/-- The keys of a statement node under which NESTED statements live — a body, a branch, an `init` /
-`post` statement, a clause: the block-scoping forms. E6a audit fix round (2026-09-24, the audit's F2):
-a declaration under one of these keys belongs to the INNER scope and never reaches the enclosing
-block's environment — `jsonDeclaredLocals` does not descend through them; the arm that decodes the
-nested statement extends the environment itself (`decodeStmt`'s `block` fold, `decodeIf`, `decodeFor`,
-`decodeRange`, the `select` arm). Every other statement kind — the `unseq` node with its `then`
-completion and its allocation bodies included — is ONE declaration site and is walked whole. -/
+/-- THE SCOPE RULE for the R1 declaration environment, one statement of it, audited construct by
+construct (E6a audit fix round, 2026-09-24, the audit's F2; **corrected at fix round 2, the audit
+RE-VERIFICATION's R1**): *a statement contributes to its ENCLOSING block exactly the declarations Go
+gives the statements that FOLLOW it there, and nothing a scoped binder of its own introduces.* So
+`jsonDeclaredLocals` — the walk the `block` fold runs per statement — descends into neither a
+block-scoping statement's nested statement keys (`nestedStmtKeys`, below) NOR any binder a
+construct declares for its own inner scope; the arm that decodes the construct extends the
+environment itself, for the inner scope alone. The constructs with a scoped binder, each audited
+once (fix round 2):
+
+| wire node | binder | inner scope opened by | in the enclosing block |
+| --- | --- | --- | --- |
+| `block` / `breakable` / `labeled` | its `body`'s declarations | `decodeStmt`'s `block` fold | no (`body` skipped) |
+| `if` | its `init`'s declarations | `decodeIf` (`initDeclaredLocals`, through a wrapping block) | no (`init`/`then`/`else` skipped) |
+| `for` | its `init`'s declarations | `decodeFor` (`initDeclaredLocals`) | no (`init`/`post`/`condPre`/`body` skipped) |
+| `range` | its `keyVar` / `valVar` | `decodeRange` (`rangeBinderLocals`) | **no** (`body` skipped AND the binders are not walked) |
+| `select` | a receive clause's `targets` | the `select` arm, per clause | no (`clauses`/`default` skipped) |
+| `func` / method | params, results | `decodeFunc` / `decodeMethod` | — (the function's own scope) |
+
+A `switch` / type switch is not a wire node: the frontend desugars it, and its per-clause binder
+arrives as a `declare` inside the clause's BLOCK — block scope, row one (witness `e6ats`). Every
+other statement kind — the `unseq` node with its `then` completion and its allocation bodies
+included — is ONE declaration site in its enclosing block and is walked whole.
+
+The keys below are the nested-statement keys: a declaration under one of them belongs to the INNER
+scope and never reaches the enclosing block's environment. -/
 private def nestedStmtKeys : String → List String
   | "block" | "breakable" | "labeled" => ["body"]
   | "if" => ["init", "then", "else"]
@@ -1039,21 +1058,56 @@ private def nestedStmtKeys : String → List String
   | "select" => ["clauses", "default"]
   | _ => []
 
+/-- A `range` statement's implicitly declared key / value variables, typed by the range kind exactly
+as `decodeRange` types them: a map's key/value types, a channel's element, an index `int` + the
+element for slices / arrays / array pointers, the operand's kind for an integer range, `int` +
+`int32` for a string. They are declared for the loop's BODY and for nothing else — `decodeRange` is
+the only caller (fix round 2 of the E6a audit, 2026-09-24, the re-verification's R1: while this
+lived inside `jsonDeclaredLocals` the enclosing block's per-statement fold picked the binders up
+when it walked the range node, and a legal program shadowing an outer variable of another type with
+a range variable and graphing the OUTER one after the loop was refused whole — the scope rule on
+`nestedStmtKeys`). -/
+private def rangeBinderLocals (path : String) (kvs : StrictJson.Obj) : LowerM (Array Param) := do
+  let var? (key : String) : Option String :=
+    match kvs.get? key with
+    | some (Json.str n) => some n
+    | _ => none
+  let tyOf (key : String) : LowerM (Option Ty) := do
+    match kvs.get? key with
+    | some t => pure (some (← decodeTy s!"{path}.range.{key}" t))
+    | none => pure none
+  let push (n? : Option String) (t? : Option Ty) : LowerM (Array Param) := do
+    match n?, t? with
+    | some n, some t => pure #[{ id := n, typ := t }]
+    | _, _ => pure #[]
+  match kvs.get? "kind" with
+  | some (Json.str "map") =>
+      pure ((← push (var? "keyVar") (← tyOf "keyType")) ++ (← push (var? "valVar") (← tyOf "valueType")))
+  | some (Json.str "chan") =>
+      push (var? "keyVar") (← tyOf "elemType")
+  | some (Json.str "slice") | some (Json.str "array") | some (Json.str "array-pointer") =>
+      pure ((← push (var? "keyVar") (some (.int .int))) ++ (← push (var? "valVar") (← tyOf "elemType")))
+  | some (Json.str "int") =>
+      push (var? "keyVar") (← tyOf "operandType")
+  | some (Json.str "string") =>
+      pure ((← push (var? "keyVar") (some (.int .int))) ++ (← push (var? "valVar") (some (.int .int32))))
+  | _ => pure #[]
+
 /-- Stage E6a R1 (2026-09-24; the Stage E5 audit re-verification's R1, RATIFIED [USER] 2026-09-22
 item 3 — «a decoder-wide cross-check of source-local annotations against their `declare` types»):
 the LOCALS one statement DECLARES for the statements after it in its block, with their declared
 types — a walk over the wire's own declaration spellings: every `{"target":"declare","id","type"}`
 target (an assignment's lhs, the allocation / built-in / sync / type-assert / chan-recv targets — the
-emitter's one target shape), every `var` statement's `decls`, and a `range` statement's implicitly
-declared key / value variables (typed by the range kind exactly as `decodeRange` types them: a map's
-key/value types, a channel's element, an index `int` + the element for slices / arrays / array
-pointers, the operand's kind for an integer range, `int` + `int32` for a string). SCOPE-EXACT since
-the E6a audit fix round (2026-09-24, F2): the walk does NOT descend into a block-scoping statement's
-nested bodies (`nestedStmtKeys`) — what a `then` branch, a loop body or a `select` clause declares is
-theirs, not the enclosing block's; the `block` arm of `decodeStmt` folds these per statement into
+emitter's one target shape) and every `var` statement's `decls`. SCOPE-EXACT since the E6a audit fix
+round (2026-09-24, F2): the walk does NOT descend into a block-scoping statement's nested bodies
+(`nestedStmtKeys`) — what a `then` branch, a loop body or a `select` clause declares is theirs, not
+the enclosing block's; the `block` arm of `decodeStmt` folds these per statement into
 `LowerCtx.locals`, so at every statement the environment is exactly the declarations in scope
 before it (Go: a variable's scope begins at the END of its declaration — a statement never sees its
-own declarations). The tip's version walked the WHOLE body once per function (a flat table). -/
+own declarations). The tip's version walked the WHOLE body once per function (a flat table).
+A construct's own scoped binders are NOT here either (fix round 2, the re-verification's R1): a
+`range` node's key / value variables are `rangeBinderLocals`, opened by `decodeRange` for the body
+alone — the scope rule on `nestedStmtKeys` has the full construct table. -/
 private partial def jsonDeclaredLocals (path : String) : Json → LowerM (Array Param)
   | .obj kvs => do
       let mut acc : Array Param := #[]
@@ -1070,32 +1124,9 @@ private partial def jsonDeclaredLocals (path : String) : Json → LowerM (Array 
                 | .ok (Json.str id), .ok t => acc := acc.push { id, typ := ← decodeTy s!"{path}.var({id}).type" t }
                 | _, _ => pure ()
           | _ => pure ()
-      | some (Json.str "range") =>
-          let var? (key : String) : Option String :=
-            match kvs.get? key with
-            | some (Json.str n) => some n
-            | _ => none
-          let tyOf (key : String) : LowerM (Option Ty) := do
-            match kvs.get? key with
-            | some t => pure (some (← decodeTy s!"{path}.range.{key}" t))
-            | none => pure none
-          let push (n? : Option String) (t? : Option Ty) : LowerM (Array Param) := do
-            match n?, t? with
-            | some n, some t => pure #[{ id := n, typ := t }]
-            | _, _ => pure #[]
-          match kvs.get? "kind" with
-          | some (Json.str "map") =>
-              acc := acc ++ (← push (var? "keyVar") (← tyOf "keyType")) ++ (← push (var? "valVar") (← tyOf "valueType"))
-          | some (Json.str "chan") =>
-              acc := acc ++ (← push (var? "keyVar") (← tyOf "elemType"))
-          | some (Json.str "slice") | some (Json.str "array") | some (Json.str "array-pointer") =>
-              acc := acc ++ (← push (var? "keyVar") (some (.int .int))) ++ (← push (var? "valVar") (← tyOf "elemType"))
-          | some (Json.str "int") =>
-              acc := acc ++ (← push (var? "keyVar") (← tyOf "operandType"))
-          | some (Json.str "string") =>
-              acc := acc ++ (← push (var? "keyVar") (some (.int .int))) ++ (← push (var? "valVar") (some (.int .int32)))
-          | _ => pure ()
       | _ => pure ()
+      -- a `range` node's key / value variables are the BODY's alone (`rangeBinderLocals`, opened
+      -- by `decodeRange`) — never the enclosing block's (fix round 2, the re-verification's R1)
       -- the nested bodies of a block-scoping statement are the INNER scope's (F2)
       let skip : List String := match kvs.get? "stmt" with
         | some (Json.str tag) => nestedStmtKeys tag
@@ -1878,9 +1909,13 @@ partial def decodeRange (results : Array Param) (path : String) (obj : StrictJso
   let valVar := optString obj "valVar"
   let collJson ← StrictJson.field path obj "collection"
   let coll ← decodeExpr s!"{path}.collection" collJson
-  -- F2 (scope-exact R1): the range's implicitly declared key / value variables are in scope in the
-  -- body (`jsonDeclaredLocals` over the range node itself — its `body` is skipped by `nestedStmtKeys`).
-  let rangeLocals ← jsonDeclaredLocals path (Json.mkObj obj.toList)
+  -- F2 (scope-exact R1), corrected at fix round 2 (the audit re-verification's R1): the range's
+  -- implicitly declared key / value variables are in scope in the BODY and nowhere else —
+  -- `rangeBinderLocals` is opened HERE and the enclosing block's fold never sees them. The walk
+  -- over the node's remaining keys (its `body` skipped by `nestedStmtKeys`) keeps any `declare` a
+  -- future emitter might hoist into the node itself; today it contributes nothing.
+  let binders ← rangeBinderLocals path obj
+  let rangeLocals := binders ++ (← jsonDeclaredLocals path (Json.mkObj obj.toList))
   let body ← withLocals rangeLocals (decodeStmt results s!"{path}.body" (← StrictJson.field path obj "body"))
   let lab : Stmt → Stmt := fun st =>
     match label with

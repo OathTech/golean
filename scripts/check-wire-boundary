@@ -313,4 +313,18 @@ echo "ok [unseq block-shadow] runs, answers 108 (a block-shadowed name resolves 
 expect_unseq_refusal unseq-local-annotation-shadowed mut-local-annotation-shadowed e6ats 'disagrees with its declaration'
 expect_unseq_refusal unseq-local-shadow-other-decl mut-local-shadow-other-decl e6ashadow 'disagrees with its declaration'
 expect_unseq_refusal unseq-local-out-of-scope mut-local-out-of-scope e6ashadow 'has no declaration in the enclosing function'
-echo 'Wire boundary gate: PASS (11 byte-level controls + 55 unseq-node controls through the real CLI)'
+# FIX ROUND 2 of the E6a audit (2026-09-24), the RE-VERIFICATION's R1: a `range` statement's key / value variables are
+# the loop BODY's and contribute NOTHING to the enclosing block. While they leaked, «innermost = last» made a legal
+# program that shadows an outer variable of ANOTHER type with a range variable and graphs the OUTER one after the loop
+# REFUSE WHOLE — a fail-closed wrong refusal against main and gc. Positive controls on the NATIVE witness
+# (Tests/unseq-wire/native-e6arange.json): the value-variable spelling (outer `k` string, the loop's `k` int; 23 = gc),
+# the key-variable spelling (outer `i`; 9 = gc). Refusal by name: the auditor's h12 — the post-loop graph's `r` renamed
+# to the loop's `k`, RIGHT-typed, so only the SCOPE says no (under the leak it decoded and stuck late).
+out="$(run_cli_fn Tests/unseq-wire/native-e6arange.json e6arange)" || { echo "check-wire-boundary: FAIL [unseq range-scope] — the native range-shadow wire did not run: $out" >&2; exit 1; }
+[[ "$out" == *'"status":"ok"'* && "$out" == *'"value":23'* ]] || { echo "check-wire-boundary: FAIL [unseq range-scope] — expected ok/23 (the outer string k after the loop): $out" >&2; exit 1; }
+echo "ok [unseq range-scope] runs, answers 23 (a range VALUE variable does not leak past its loop — fix round 2, the re-verification's R1)"
+out="$(run_cli_fn Tests/unseq-wire/native-e6arange.json e6arangekey)" || { echo "check-wire-boundary: FAIL [unseq range-scope-key] — the native range-key wire did not run: $out" >&2; exit 1; }
+[[ "$out" == *'"status":"ok"'* && "$out" == *'"value":9'* ]] || { echo "check-wire-boundary: FAIL [unseq range-scope-key] — expected ok/9 (the outer string i after the loop): $out" >&2; exit 1; }
+echo "ok [unseq range-scope-key] runs, answers 9 (a range KEY variable does not leak past its loop — fix round 2)"
+expect_unseq_refusal unseq-local-range-var-after-loop mut-local-range-var-after-loop e6arangeafter 'has no declaration in the enclosing function'
+echo 'Wire boundary gate: PASS (11 byte-level controls + 56 unseq-node controls through the real CLI)'

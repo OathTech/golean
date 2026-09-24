@@ -207,6 +207,17 @@ def main (_args : List String) : IO Unit := do
       [{ status := "ok", values := [1], output := "wit 1\n" }],
     wireSet "NATIVE E6ASHADOW (a block-shadowed name with two types — the audit fix round's F2 control)" "native-e6ashadow.json" "e6ashadow"
       [{ status := "ok", values := [108], output := "wit 1\nwit 2\n" }],
+    -- THE E6a AUDIT RE-VERIFICATION's R1 (fix round 2, 2026-09-24): a `range` node's key / value variables are the
+    -- BODY's, never the enclosing block's. The auditor's two positive controls — an outer `k` / `i` string shadowed
+    -- by the loop's int value / key variable and GRAPHED after the loop (gc 23 / 9; fix round 1 refused the wire
+    -- whole, a fail-closed WRONG REFUSAL) — plus the base of `mut-local-range-var-after-loop` (the auditor's h12:
+    -- the post-loop graph's `r` renamed to the loop's `k`, right-typed, which the leak decoded).
+    wireSet "NATIVE E6ARANGE (an outer string shadowed by a range VALUE variable, graphed after the loop)" "native-e6arange.json" "e6arange"
+      [{ status := "ok", values := [23], output := "wit 1\n" }],
+    wireSet "NATIVE E6ARANGEKEY (the same with the range KEY variable)" "native-e6arange.json" "e6arangekey"
+      [{ status := "ok", values := [9], output := "wit 1\n" }],
+    wireSet "NATIVE E6ARANGEAFTER (a graph after a loop whose range variable is declared nowhere else)" "native-e6arange.json" "e6arangeafter"
+      [{ status := "ok", values := [8], output := "wit 1\n" }],
     -- EDGE MUTATIONS of the LOWERED graphs (v2.1 §8): each decodes; the exact-set check
     -- names the changed set (the decoder cannot see a missing or wrong edge).
     wireSet "EDGE data (R6: the access reads the variable's header, not the frozen slot) → the fused {20}" "edge-data.json" "r6" [okZ 20],

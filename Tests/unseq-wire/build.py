@@ -797,6 +797,11 @@ WITNESSES = {
     # (e6ashadow); the three scope mutants below ride on their native wires.
     "e6ats": ("e6ats", []),
     "e6ashadow": ("e6ashadow", []),
+    # the Stage E6a audit RE-VERIFICATION's R1 (fix round 2, 2026-09-24): a `range` statement's key / value
+    # variables are the BODY's, never the enclosing block's — NATIVE-ONLY positive controls (three functions in
+    # one source unit: the value-variable and key-variable outer shadows, and the range variable declared nowhere
+    # else, on which `mut-local-range-var-after-loop` rides).
+    "e6arange": ("e6arange", []),
 }
 
 
@@ -1090,6 +1095,19 @@ def mutants(wires, natives):
     edit_native("mut-local-out-of-scope", "e6ashadow", "e6ashadow",
                 lambda g, idents: any(x.get("type") == INT for x in idents(g, "x", [])),  # the outer graph (x an int)
                 name_later_local, "has no declaration in the enclosing function")
+    # ---- the Stage E6a audit RE-VERIFICATION's R1 (fix round 2, 2026-09-24): a `range` node's key / value
+    # variables belong to its BODY alone. The auditor's h12 on the NATIVE e6arange wire: in `e6arangeafter`'s
+    # post-loop graph the atom `r` is renamed to the loop's `k` — RIGHT-typed (both int), so only the SCOPE
+    # says no. Under fix round 1's leak it DECODED and stuck late («unbound GoCore variable address: k»).
+    def name_range_var_after_loop(n, w, idents):
+        rs = idents(n, "r", [])
+        if not rs:
+            raise SystemExit("e6arangeafter: no atom r in the post-loop graph")
+        for x in rs:
+            x["name"] = "k"
+    edit_native("mut-local-range-var-after-loop", "e6arange", "e6arangeafter",
+                lambda g, idents: bool(idents(g, "r", [])),  # the post-loop graph (the only one reading r)
+                name_range_var_after_loop, "has no declaration in the enclosing function")
     return out
 
 

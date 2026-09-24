@@ -28,7 +28,9 @@
 # against its declaration and an atom naming an undeclared local (the E5 re-verification's R1, ratified 2026-09-22); 55 since the E6a audit fix
 # round, 2026-09-24 — the R1 environment SCOPE-EXACT (audit F2): a type-switch clause binder's annotation forged to the OTHER clause's type
 # (the audit's mS1-via-typeswitch-binder, which the tip's flat table decoded and answered), a block-shadowed name annotated with the OUTER
-# declaration's type, an atom naming a local declared only LATER in its block — on the NATIVE e6ats / e6ashadow witnesses), while the untouched W1 wire runs (the canonical
+# declaration's type, an atom naming a local declared only LATER in its block — on the NATIVE e6ats / e6ashadow witnesses); 56 since fix round 2 of the E6a audit,
+# 2026-09-24 — a post-loop atom naming a `range` statement's key/value variable, RIGHT-typed (the re-verification's R1 and its h12: the binders are the loop BODY's,
+# and while they leaked into the enclosing block a legal outer-shadow program was refused whole — NATIVE witness e6arange), while the untouched W1 wire runs (the canonical
 # tape gives 2: mut first). Fail closed on a missing binary, a failed
 # regeneration, a decoded mutant or a refusal that does not name its cause.
 set -Eeuo pipefail

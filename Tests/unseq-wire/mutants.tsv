@@ -54,3 +54,4 @@ mut-local-undeclared	has no declaration in the enclosing function
 mut-local-annotation-shadowed	disagrees with its declaration
 mut-local-shadow-other-decl	disagrees with its declaration
 mut-local-out-of-scope	has no declaration in the enclosing function
+mut-local-range-var-after-loop	has no declaration in the enclosing function
