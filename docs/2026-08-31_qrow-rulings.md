@@ -968,3 +968,30 @@ scratch `--out` per fixture and variant, source/frontend pins and export status 
 nodes counted recursively; failed export distinguished from zero graphs; `lower-diagnose` explains failures only.
 The charter is revised on this branch under F1–F3; the review branch lands with it. The [USER]'s decisions of the
 charter's §7 stay posed, with F1's split added as its own decision.
+
+### The window charter (rev. 2) and the Codex packaging — RULED (2026-09-24)
+
+[USER] Mike, 2026-09-24, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «I'm happy to go with your
+rec. What remains that *needs* my judgement?» — answering the coordinator's eleven decisions on the charter
+(`docs/2026-09-23_batched-window-charter.md` §7, each posed with a recommendation) and the coordinator's answer to
+«Could we reasonably batch all of these into a single plan and then send a Codex worker to do it all?» (2026-09-23/24):
+NOT as one project — one plan cut into Codex-shaped packets (A contract: the stable-set file, the execution-statement
+note as checked Lean statements, the changelog draft; B bridges: the prefix closure, composition/erasure/executable
+agreement, choice-replay coverage, the fuel-out and terminal bridges; C continuations `Cont := List Frame`; D the
+per-arm `stepFn` equations + the toy semantic-equation client), the judgement-heavy items (the E6 grammar slices,
+P, B6's table, C4 with its escape audit, the label reshape) staying with Fable/Opus lanes; Codex lanes launched by
+the [USER] against brief files the coordinator writes.
+
+**RULED, as recommended.** (1) the charter rev. 2 is the window of record; (2) the records/contract lane starts now —
+the fixture inventory as an Opus lane, the stable-set file + statement note + changelog draft as Codex packet A;
+(3) the documentation branches `docs/roadmap-customer-alignment-0922` + `review/batched-window-charter-0923` LAND by
+fast-forward with the fast gate, the adversarial audit WAIVED for this docs-only landing (reviewed by Codex, the logic
+team and the [USER]); (4) E6 is dispatched as the window's first item, starting with E6a; (5) the E6 split E6a–E6e is
+APPROVED — each of E6b/E6c/E6d is a grammar widening now authorized as a slice, the exit whole-corpus + twin zero with
+preservation evidence; (6) Codex for the statement/bridges lane and the equations (packets B and D), forking from the
+reshape; (8) the «independent in-repo consumer» is a toy semantic-equation client in the test/contract graph, not a
+reasoning facade; (9) C4's preservation claim in the scoped form, the behavioural gate unchanged; (10) `initPrintRefusal?`
+retained through the window. **Left open by the [USER]'s question, to be posed at their time:** (7) dry-run access at
+the offer; (11) the CLAUDE.md wording at row 2's landing; plus the standing [USER] roles — each train's merge sign-off
+and audit trim, the named design gates G-P/G-C3/G-C4 and any (b) pin, new entry class or unsound lift an E6 slice turns
+up, the launch of each Codex packet, and any push or tag the re-pin offer needs.
