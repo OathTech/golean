@@ -1,0 +1,53 @@
+# the twin's three born graphs, decoded from baselines/pins/twin-chdriver.wire.json (= the candidate frontend's fresh emit, sha 1c4e7038…, reproduced by twin-emit.sh; main's emit = e1a87725…): occurrence name, kind, head / callee, after, region. NO failing occurrence in isHardStateEqual or MustSync: their non-events are the two `&&` / `||` GUARDS (the raftpb getters have POINTER receivers, nil-checked inside their bodies) — the graphs are admitted by Stage E's E3 rule (a guard followed by an effectful call), newly reachable through the unit boundary, not by the panic-identity refinement. SizeMessage: the nil-checked field reads x.Data beside the FUNCTION call plainpbSizeVarint (E3's rule).
+== raft.isHardStateEqual graphs 1
+    call0 invoke $method$16:raftpb.HardState0:GetTerm after=None region=None
+    call1 invoke $method$16:raftpb.HardState0:GetTerm after=['call0'] region=None
+    op2 eval binary after=None region=None
+    guard3 guard  after=['call1'] region=None
+    call4 invoke $method$16:raftpb.HardState0:GetVote after=None region=guard3
+    call5 invoke $method$16:raftpb.HardState0:GetVote after=['call4'] region=guard3
+    op6 eval binary after=None region=guard3
+    join7 eval ident after=None region=guard3
+    guard8 guard  after=['join7'] region=None
+    call9 invoke $method$16:raftpb.HardState0:GetCommit after=None region=guard8
+    call10 invoke $method$16:raftpb.HardState0:GetCommit after=['call9'] region=guard8
+    op11 eval binary after=None region=guard8
+    join12 eval ident after=None region=guard8
+== raft.MustSync graphs 1
+    op0 eval binary after=None region=None
+    guard1 guard  after=None region=None
+    call2 invoke $method$16:raftpb.HardState0:GetVote after=None region=guard1
+    call3 invoke $method$16:raftpb.HardState0:GetVote after=['call2'] region=guard1
+    op4 eval binary after=None region=guard1
+    join5 eval ident after=None region=guard1
+    guard6 guard  after=['join5'] region=None
+    call7 invoke $method$16:raftpb.HardState0:GetTerm after=None region=guard6
+    call8 invoke $method$16:raftpb.HardState0:GetTerm after=['call7'] region=guard6
+    op9 eval binary after=None region=guard6
+    join10 eval ident after=None region=guard6
+== {'name': 'SizeMessage', 'package': ''} graphs 1
+    field0 eval field-get after=None region=None
+    len1 eval builtin-len after=None region=None
+    conv2 eval convert after=None region=None
+    call3 invoke raftpb.plainpbSizeVarint after=['len1'] region=None
+    field5 eval field-get after=None region=None
+    len6 eval builtin-len after=['call3'] region=None
+    op4 eval binary after=None region=None
+    op7 eval binary after=None region=None
+    op8 eval binary after=None region=None
+
+# census lines (the candidate's frontend) for the twin sweeps and for the auditor's main-unit replicas (p5): nonEvents=2 = the two guards
+TWIN admitted: ['bytes', 'deps/go/src/bytes/bytes.go:989', 'Trim', 'return', 'unseq', '2', '2', '2', '']
+TWIN admitted: ['bytes', 'deps/go/src/bytes/reader.go:30', '*Reader.Len', 'return', 'unseq', '1', '0', '2', '']
+TWIN admitted: ['strings', 'deps/go/src/strings/reader.go:29', '*Reader.Len', 'return', 'unseq', '1', '0', '2', '']
+TWIN admitted: ['strings', 'deps/go/src/strings/strings.go:987', 'Trim', 'return', 'unseq', '2', '2', '2', '']
+TWIN admitted: ['raftpb', '/home/dev/projects/golean/.claude/worktrees/unseq-stage-e6a/.tmp/census/twin-prog/raftpb/plain_codec.go:330', '*Snapshot.SizeMessage', 'compound', 'unseq', '3', '1', '2', '']
+TWIN admitted: ['raft', '/home/dev/projects/golean/.claude/worktrees/unseq-stage-e6a/.tmp/census/twin-prog/raft/node_decls.go:98', 'isHardStateEqual', 'return', 'unseq', '6', '6', '2', '']
+TWIN admitted: ['raft', '/home/dev/projects/golean/.claude/worktrees/unseq-stage-e6a/.tmp/census/twin-prog/raft/rawnode.go:197', 'MustSync', 'return', 'unseq', '4', '4', '2', '']
+p5 isHSEqual form=return unseq events=6 calls=6 nonEvents=2 
+p5 mustSyncShape form=return unseq events=4 calls=4 nonEvents=2 
+p5 *Snap.SizeMessage form=define legacy events=0 calls=0 nonEvents=0 no call occurrence (legacy path: no effectful event to reorder against, and no failing occurrence unordered against a failing participant window — Stage E6a trigger)
+p5 *Snap.SizeMessage form=compound unseq events=2 calls=1 nonEvents=2 
+p5 *Snap.SizeMessage form=return legacy events=0 calls=0 nonEvents=0 no call occurrence (legacy path: no effectful event to reorder against, and no failing occurrence unordered against a failing participant window — Stage E6a trigger)
+p5 (MAIN frontend) isHSEqual unseq nonEvents=2
+p5 (MAIN frontend) mustSyncShape unseq nonEvents=2

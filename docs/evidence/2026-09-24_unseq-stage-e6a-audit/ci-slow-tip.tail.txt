@@ -1,0 +1,59 @@
+# The full gate at the candidate tip 1f0dee94 in the audit worktree (tree clean; GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --slow under the box-wide lock 2026-09-24T03:34:51Z–03:49:48Z, .tmp/audit/gate/run-slow.sh): EXIT=1 in 897 s; ANSI stripped; the DRIFT block, the re-pin guard, the reconciler and the summary.
+
+843:DRIFT vs baselines/native-full.tsv (3761 case(s) run):
+844:imported-goose/channel/google-search	baseline[PASS/membership] -> now[FAIL/membership]
+846:── cross-ledger reconciliation (tools/reconcile-records — REPORT-ONLY, informs, never fails the gate)
+847:  [01] C9  HIGH    certificate provenance: STALE certification: changed dependency build/files/GoLean/NativeToIR.lean
+848:  [02] C13  MEDIUM  79 doc site(s) across 10 file(s) name a patch-level Go version other than the pin (go1.25.13/go1.26.5 per docs/spec-sources.md). Some are legitimately historical; a toolchain/oracle claim off the pin is not, because the pin's whole job is that the spec text and the thing that produced the numbers moved together.
+854:══ scripts/ci summary ══
+893:  note reconciler: 2 finding(s), 1 HIGH — report-only (details: tools/reconcile-records)
+
+══ scripts/ci summary ══
+  ok   Tests/library ownership (no exceptions; executed builds checked at exit)
+  note build parallelism: cap 48G -> LEAN_NUM_THREADS=6 (cap/8G, floor 2; 32 cores on this box)
+  ok   oracle toolchain (go1.26.5 = pin)
+  ok   escape-hatch preflight
+  ok   meta-layer escape hatches (allowlist empty since the repo split)
+  ok   escape-hatch addendum (no decide +native / native-config spellings)
+  ok   bug-index cross-check
+  ok   feature-coverage (no dead tags)
+  ok   spec-anchor citations resolve at the pin
+  ok   stdlib admission register = frontend tables
+  ok   lane-validation fixtures (manifest gates reject bad shapes)
+  ok   evidence-on-main size gate
+  ok   AGENTS.md alias of CLAUDE.md
+  ok   imported-goose verbatim (above-marker bytes = pinned upstream)
+  ok   engine-isolation (core ↛ EnumDedup)
+  ok   memory-module raw call-site inventory (emit/peek discipline)
+  ok   core build (warning-free)
+  FAIL certificate provenance
+  ok   core totality audit (every GoLean/ module; required core theorems; poison controls)
+  ok   admission checker proofs and post-import audit
+  ok   declaration boundary
+  ok   wire boundary (byte-level controls through the real CLI)
+  ok   package-correct method identity
+  ok   unseq scheduler (Stage B)
+  ok   unseq wire (Stage C)
+  ok   frontend pins (realized init-order deviation + twin wire = pinned bytes)
+  ok   import-goose fixtures (importer + verbatim guard reject bad shapes)
+  ok   frontend unit tests
+  ok   lowering-diagnostic tables
+  ok   coverage-harness unit tests
+  ok   eval tests (274 ok)
+  ok   differential run completed (exit 1; failing-set judged by baseline diff)
+  ok   lane-validation fixtures incl. harness half (F4/F6/B3-B5/G5/T1-T8/D1-D6)
+  ok   negative run completed (exit 0; set judged by baseline diff)
+  ok   Tests/FloatVectors.lean = fresh hardware-oracle regeneration (byte-exact)
+  ok   inittask-std.tsv = fresh gc-derived regeneration (header at pin; byte-exact modulo date line)
+  note negative baseline diff matched (394 case(s)) but the record was made on a DIRTY tree (git_dirty=true) — certifies that worktree state, not a commit
+  FAIL baseline diff (DRIFT — see above)
+  note reconciler: 2 finding(s), 1 HIGH — report-only (details: tools/reconcile-records)
+  ok   executed library coverage (all declared libraries; all Tests modules)
+
+RESULT: FAIL
+Failed CI receipts retained: /home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e6a/.tmp/ci-libraries-77uwdffg
+CI coverage timing: close: seconds=0.014
+CI total wall seconds: 897
+EXIT=1 in 897 s
+
+EXIT=1 in 897 s

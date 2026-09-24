@@ -1,0 +1,87 @@
+# gc draws (go1.26.5, the pin): 5 runs x GOMAXPROCS 1/8 x default / -gcflags=all='-N -l' = 20 per subject; producer .tmp/audit/gc-draws-args.sh (the lane's script, copied; p3 by hand under a GOPATH layout for its sub package). Tabulated: subject -> {realized output/panic: count}; '|' joins output lines; the SIGSEGV trailer of nil-deref panics dropped.
+## gc-p1
+.tmp/audit/probes/p1:twoIdxNoEvent	20x panic: runtime error: index out of range [5] with length 1|
+.tmp/audit/probes/p1:divIdxNoEvent	20x panic: runtime error: integer divide by zero|
+.tmp/audit/probes/p1:ptrFieldNoEvent	20x panic: runtime error: invalid memory address or nil pointer dereference|
+.tmp/audit/probes/p1:assertIdxNoEvent	20x panic: interface conversion: interface {} is string, not int|
+.tmp/audit/probes/p1:bug032Shape	20x panic: runtime error: index out of range [7] with length 1|
+.tmp/audit/probes/p1:tupleTwoFail	20x panic: runtime error: index out of range [5] with length 1|
+.tmp/audit/probes/p1:assertVsLenIdx	20x panic: interface conversion: interface {} is string, not int|
+.tmp/audit/probes/p1:idxVsMakeNeg	20x panic: runtime error: makeslice: len out of range|
+.tmp/audit/probes/p1:rightOfEvent	20x panic: runtime error: index out of range [5] with length 1|
+.tmp/audit/probes/p1:threeFail	20x panic: interface conversion: interface {} is string, not int|
+.tmp/audit/probes/p1:twoAssertsVsCall	20x panic: interface conversion: interface {} is string, not int|
+.tmp/audit/probes/p1:minShape	20x panic: interface conversion: interface {} is string, not int|
+.tmp/audit/probes/p1:guardTestRegion	20x panic: runtime error: index out of range [5] with length 1|
+.tmp/audit/probes/p1:guardRegionFail	20x panic: interface conversion: interface {} is string, not int|
+.tmp/audit/probes/p1:nestedWindow	20x panic: interface conversion: interface {} is string, not int|
+.tmp/audit/probes/p1:oneFailVsLenPlain	20x panic: runtime error: index out of range [5] with length 1|
+.tmp/audit/probes/p1:twoInsideWindow	20x panic: runtime error: index out of range [5] with length 1|
+.tmp/audit/probes/p1:compoundLoadVsLen	20x panic: runtime error: index out of range [5] with length 1|
+.tmp/audit/probes/p1:compoundDivVsLen	20x panic: runtime error: index out of range [5] with length 1|
+## gc-p2
+.tmp/audit/probes/p2:lenNilMap	20x wit 1|1
+.tmp/audit/probes/p2:lenNilChan	20x wit 1|1
+.tmp/audit/probes/p2:capChanBuffered	20x wit 1|24
+.tmp/audit/probes/p2:lenMapVsMutator	20x 11
+.tmp/audit/probes/p2:mutatorVsLenMap	20x 12
+.tmp/audit/probes/p2:lenMapReassign	20x 11
+.tmp/audit/probes/p2:lenChanVsSend	20x 100
+.tmp/audit/probes/p2:sendVsLenChan	20x 101
+.tmp/audit/probes/p2:assertVsLenMapIdx	20x panic: interface conversion: interface {} is string, not int|
+.tmp/audit/probes/p2:lenMapMissingInner	20x wit 2|2
+.tmp/audit/probes/p2:lenMapVsIdx	20x wit 5|panic: runtime error: index out of range [9] with length 1|
+.tmp/audit/probes/p2:capChanVsCall	20x 5
+## gc-p3
+p3:qualCallVsRead	20x 100
+p3:methodOnSubPtr	20x 2
+p3:sameNameCollision	20x 106
+p3:subHGraph	20x 100
+p3:qualGraphInSub	20x wit 5|panic: runtime error: index out of range [9] with length 1|
+p3:libMethodVsIdx	20x panic: runtime error: index out of range [9] with length 1|
+p3:valueRecvSub	20x wit 5|8
+## gc-p5
+.tmp/audit/probes/p5:hsEqualNonNil	20x 0
+.tmp/audit/probes/p5:hsEqualNilRight	20x 1
+.tmp/audit/probes/p5:vsEqualNilRight	20x get|panic: runtime error: invalid memory address or nil pointer dereference|
+.tmp/audit/probes/p5:mustSync	20x 0
+.tmp/audit/probes/p5:sizeMessage	20x 5
+.tmp/audit/probes/p5:sizeMessageNilMeta	20x 5
+.tmp/audit/probes/p5:strIndexStatusDiverse	20x panic: runtime error: index out of range [9] with length 2|
+## gc-p6
+.tmp/audit/probes/p6:plainStoreVsLen	20x panic: runtime error: index out of range [5] with length 1|
+.tmp/audit/probes/p6:derefCompoundVsLen	20x panic: runtime error: index out of range [5] with length 1|
+.tmp/audit/probes/p6:fieldPtrCompoundVsLen	20x panic: runtime error: index out of range [5] with length 1|
+.tmp/audit/probes/p6:derefVsLen	20x panic: runtime error: index out of range [5] with length 1|
+.tmp/audit/probes/p6:fieldPtrVsLen	20x panic: runtime error: index out of range [5] with length 1|
+.tmp/audit/probes/p6:idxVsLenSliceExpr	20x panic: runtime error: slice bounds out of range [5:2]|
+.tmp/audit/probes/p6:assertVsLenStrSlice	20x panic: interface conversion: interface {} is string, not int|
+.tmp/audit/probes/p6:assertVsCapSlice	20x panic: interface conversion: interface {} is string, not int|
+.tmp/audit/probes/p6:divVsLen	20x panic: runtime error: index out of range [5] with length 1|
+.tmp/audit/probes/p6:shiftVsLen	20x panic: runtime error: index out of range [5] with length 1|
+.tmp/audit/probes/p6:idxVsLenValid	20x panic: runtime error: index out of range [9] with length 1|
+.tmp/audit/probes/p6:compoundIdxVsLenValid	20x panic: runtime error: index out of range [9] with length 1|
+## gc-p7
+.tmp/audit/probes/p7:idxVsMin	20x panic: runtime error: index out of range [5] with length 2|
+.tmp/audit/probes/p7:idxVsMax	20x panic: runtime error: index out of range [5] with length 2|
+.tmp/audit/probes/p7:idxVsCapSlice	20x panic: runtime error: slice bounds out of range [5:2]|
+.tmp/audit/probes/p7:derefVsLenStr	20x panic: runtime error: slice bounds out of range [9:2]|
+.tmp/audit/probes/p7:idxVsLenMapIdx	20x panic: runtime error: index out of range [5] with length 2|
+.tmp/audit/probes/p7:compoundVsMin	20x panic: runtime error: index out of range [5] with length 2|
+.tmp/audit/probes/p7:idxVsLenNested	20x panic: runtime error: index out of range [5] with length 1|
+.tmp/audit/probes/p7:idxVsLenRightIdx	20x panic: runtime error: index out of range [5] with length 1|
+## gc-corpus
+Corpus/coverage/exec/builtins/e13-sibling-panic-order:assertLeftMinInline	20x panic: interface conversion: interface {} is string, not int|
+Corpus/coverage/exec/builtins/e13-sibling-panic-order:assertLeftMakeSlice	20x panic: interface conversion: interface {} is string, not int|
+Corpus/coverage/exec/builtins/e13-sibling-panic-order:tgtAssertVsMake	20x panic: interface conversion: interface {} is string, not int|
+Corpus/coverage/exec/channels/recv-order:recvOrderDeadRecvLenOperand	20x panic: interface conversion: interface {} is string, not int|
+Corpus/coverage/exec/builtins/len-vs-call-order:hintPanickyBetween	20x panic: interface conversion: interface {} is string, not int|
+Corpus/coverage/exec/builtins/len-vs-call-order:makeSlicePanickyBetween	20x panic: interface conversion: interface {} is string, not int|
+Corpus/coverage/exec/builtins/len-vs-call-order:makeChanCapPanickyBetween	20x panic: interface conversion: interface {} is string, not int|
+Corpus/coverage/exec/builtins/len-vs-call-order:makeIndexLeft	20x panic: runtime error: index out of range [5] with length 2|
+Corpus/coverage/exec/builtins/len-vs-call-order:makeInnerLen	20x panic: interface conversion: interface {} is string, not int|
+Corpus/coverage/exec/builtins/len-vs-call-order:makeHintPanicFree	20x panic: interface conversion: interface {} is string, not int|
+Corpus/coverage/exec/builtins/len-vs-call-order:makeHintMapRead	20x panic: interface conversion: interface {} is string, not int|
+Corpus/coverage/exec/builtins/len-vs-call-order:makeHintCall	20x panic: boom-call|
+Corpus/coverage/exec/builtins/len-vs-call-order:makeNilOnly	20x 8
+Corpus/coverage/exec/evalorder/unseq-strings:strIndexStatusDiverse	20x panic: runtime error: index out of range [9] with length 2|

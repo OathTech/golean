@@ -1,0 +1,15 @@
+# the full gate's artifacts/coverage/latest.tsv (candidate tip 1f0dee94, this worktree) vs main 3fb4a0d1's baselines/native-full.tsv and vs the candidate's re-pinned baseline — every row whose result or stage differs
+rows: run 3761 main baseline 3760 candidate baseline 3761
+run PASS/FAIL: {'PASS': 3524, 'FAIL': 237}
+## vs MAIN baseline
+  born (in run, not in main): [('evalorder/unseq-strings/str-index-status-diverse', ('PASS', 'membership'))]
+  missing (in main, not run): []
+   builtins/e13-sibling-panic-order/assert-left-min-inline ('PASS', '-') -> ('PASS', 'membership')
+   channels/recv-order/dead-recv-len-operand ('PASS', '-') -> ('PASS', 'membership')
+   channels/select-select/beside-loop ('FAIL', 'lean-observation|differential') -> ('FAIL', 'lean-observation')
+   imported-goose/channel/google-search ('PASS', 'membership') -> ('FAIL', 'membership')
+  changed vs main: 4
+## vs the CANDIDATE baseline
+   channels/select-select/beside-loop ('FAIL', 'lean-observation|differential') -> ('FAIL', 'lean-observation')
+   imported-goose/channel/google-search ('PASS', 'membership') -> ('FAIL', 'membership')
+  changed vs candidate baseline: 2  born/missing: [] []

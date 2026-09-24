@@ -1,0 +1,69 @@
+# legacy probe-emission census reproduced (probes.sh + probe-sites.py) — before (main's frontend) / after (the candidate's)
+packages-with-probes=18 probes=186 unseqs=178 refused=25
+packages-with-probes=18 probes=175 unseqs=208 refused=25
+## per-package (probes, unseqs) where changed
+Corpus/coverage/exec/builtins/e13-sibling-panic-order (11, 50) -> (9, 53)
+Corpus/coverage/exec/builtins/len-vs-call-order (15, 4) -> (6, 13)
+Corpus/coverage/exec/channels/recv-order (0, 0) -> (0, 1)
+Corpus/coverage/exec/functions/untyped-nil-sinks (0, 0) -> (0, 1)
+Corpus/coverage/exec/interfaces/tuple-forward-boxing (0, 0) -> (0, 2)
+Corpus/coverage/exec/multipkg/wire-codec (0, 0) -> (0, 2)
+Corpus/coverage/exec/new/new-slice-pointer (0, 0) -> (0, 1)
+Corpus/coverage/exec/noodler/bounds (0, 0) -> (0, 1)
+Corpus/coverage/exec/noodler/builtins (0, 0) -> (0, 1)
+Corpus/coverage/exec/noodler/indexkinds (0, 0) -> (0, 1)
+Corpus/coverage/exec/slices/append-spill-below-formula (0, 0) -> (0, 1)
+Corpus/coverage/exec/stdlib-source/binary-order (0, 0) -> (0, 1)
+Corpus/coverage/exec/stdlib-source/builder-overlay (0, 0) -> (0, 1)
+Corpus/coverage/exec/stdlib-source/strconv-format (0, 0) -> (0, 1)
+Corpus/coverage/exec/stdlib-source/strings-split (0, 0) -> (0, 1)
+TWIN (128, 0) -> (128, 3)
+TWIN (128, 0) -> (128, 3)
+## emitters by function (the two panic-vs-panic packages), main then candidate
+== [main]
+== Corpus_coverage_exec_builtins_len-vs-call-order.json  probes=15
+     1  hintPanickyBetween  {'type-assert': 1}
+     1  makeSlicePanickyBetween  {'type-assert': 1}
+     1  makeChanCapPanickyBetween  {'type-assert': 1}
+     1  makeIndexLeft  {'index-get': 1}
+     1  makeInnerLen  {'type-assert': 1}
+     1  makeHintPanicFree  {'type-assert': 1}
+     1  makeHintMapRead  {'type-assert': 1}
+     1  makeHintCall  {'index-get': 1}
+     1  makeHintStructAnyKey  {'type-assert': 1}
+     1  makeHintArrayAnyKey  {'type-assert': 1}
+     1  lenStructAnyKeyLeftAssert  {'type-assert': 1}
+     1  makeNilOnly  {'field-get': 1}
+     1  lexerIdiom  {'field-get': 1}
+     1  makeHintGenericKey[interface {}]  {'type-assert': 1}
+     1  makeHintGenericKey[int]  {'type-assert': 1}
+== Corpus_coverage_exec_builtins_e13-sibling-panic-order.json  probes=11
+     1  assertReturnList$lit0  {'type-assert': 1}
+     1  assertLeftMakeSlice  {'type-assert': 1}
+     1  ifaceCmpLeftCall  {'binary': 1}
+     1  sendChanIndex  {'index-get': 1}
+     1  convLeftCall  {'index-get': 1}
+     1  tgtAssertVsMake  {'type-assert': 1}
+     1  recoverAssertVsLen$lit0  {'type-assert': 1}
+     1  addrIndexLeftLenHoist  {'index-addr': 1}
+     1  addrAssertLeftCall  {'index-addr': 1}
+     1  arrayBaseTargetVsLen  {'index-addr': 1}
+     1  recoverAssertVsCallW$lit2  {'type-assert': 1}
+== [e6a]
+== Corpus_coverage_exec_builtins_len-vs-call-order.json  probes=6
+     1  makeHintStructAnyKey  {'type-assert': 1}
+     1  makeHintArrayAnyKey  {'type-assert': 1}
+     1  lenStructAnyKeyLeftAssert  {'type-assert': 1}
+     1  lexerIdiom  {'field-get': 1}
+     1  makeHintGenericKey[interface {}]  {'type-assert': 1}
+     1  makeHintGenericKey[int]  {'type-assert': 1}
+== Corpus_coverage_exec_builtins_e13-sibling-panic-order.json  probes=9
+     1  assertReturnList$lit0  {'type-assert': 1}
+     1  ifaceCmpLeftCall  {'binary': 1}
+     1  sendChanIndex  {'index-get': 1}
+     1  convLeftCall  {'index-get': 1}
+     1  recoverAssertVsLen$lit0  {'type-assert': 1}
+     1  addrIndexLeftLenHoist  {'index-addr': 1}
+     1  addrAssertLeftCall  {'index-addr': 1}
+     1  arrayBaseTargetVsLen  {'index-addr': 1}
+     1  recoverAssertVsCallW$lit2  {'type-assert': 1}
