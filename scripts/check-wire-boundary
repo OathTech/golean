@@ -288,4 +288,13 @@ out="$(run_cli_fn Tests/unseq-wire/e5blookup.json e5blookup)" || { echo "check-w
 echo "ok [unseq map-lookup] runs, answers 0 (the comma-ok map lookup a residual wide body beside the deleting call — the audit fix round's F1 control)"
 expect_unseq_refusal unseq-wide-lookup-keytype-vs-base mut-wide-lookup-keytype-vs-base e5blookup "disagree with the map base's declared type"
 expect_unseq_refusal unseq-mapget-keytype-vs-base mut-mapget-keytype-vs-base e5cmaplit "disagree with the map base's declared type"
-echo 'Wire boundary gate: PASS (11 byte-level controls + 49 unseq-node controls through the real CLI)'
+# Stage E6a (2026-09-24): the two decoder follow-ups RATIFIED [USER] 2026-09-22 (the Stage E5 landing record items 6 and 3).
+# F8: an `after` edge on a LITERAL allocation (e4alloc's slice literal anchored behind wit5) — a composite literal is not an E1
+# participant (v2.1 R3); the lowering never emits the edge; refused by name. R1: a SOURCE-LOCAL atom's `type` annotation forged
+# self-consistently (the re-verification's mS1 class — the annotation, its cell and the lookup's keyType all say map[string]int on
+# a map[int]int local, so D9 and audit F1's base check pass) refuses against the local's DECLARATION; an atom naming a local the
+# function never declares refuses too. The positive controls above are unchanged.
+expect_unseq_refusal unseq-alloc-literal-after mut-alloc-literal-after e4alloc 'an `after` edge on a literal allocation'
+expect_unseq_refusal unseq-local-annotation-forged mut-local-annotation-forged e5blookup 'disagrees with its declaration'
+expect_unseq_refusal unseq-local-undeclared mut-local-undeclared e5daddr 'has no declaration in the enclosing function'
+echo 'Wire boundary gate: PASS (11 byte-level controls + 52 unseq-node controls through the real CLI)'

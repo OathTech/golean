@@ -1,0 +1,601 @@
+{
+ "buildContext": {
+  "buildTags": [],
+  "cgoEnabled": true,
+  "compiler": "gc",
+  "goarch": "amd64",
+  "goos": "linux"
+ },
+ "fileOrder": [
+  {
+   "files": [
+    "main.go"
+   ],
+   "package": "main"
+  }
+ ],
+ "funcs": [
+  {
+   "body": {
+    "body": [
+     {
+      "base": {
+       "expr": "deref",
+       "ptr": {
+        "expr": "ident",
+        "name": "m$cap"
+       },
+       "type": {
+        "key": {
+         "int": "int",
+         "kind": "int"
+        },
+        "kind": "map",
+        "value": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      },
+      "index": {
+       "expr": "int",
+       "type": {
+        "int": "int",
+        "kind": "int"
+       },
+       "value": "1"
+      },
+      "keyType": {
+       "int": "int",
+       "kind": "int"
+      },
+      "stmt": "map-delete"
+     },
+     {
+      "results": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "0"
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "e5blookup$lit0",
+   "params": [
+    {
+     "id": "m$cap",
+     "type": {
+      "elem": {
+       "key": {
+        "int": "int",
+        "kind": "int"
+       },
+       "kind": "map",
+       "value": {
+        "int": "int",
+        "kind": "int"
+       }
+      },
+      "kind": "pointer"
+     }
+    }
+   ],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "entries": [
+       {
+        "key": {
+         "expr": "int",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "value": "1"
+        },
+        "value": {
+         "expr": "int",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "value": "1"
+        }
+       }
+      ],
+      "keyType": {
+       "int": "int",
+       "kind": "int"
+      },
+      "stmt": "map-lit",
+      "target": {
+       "id": "$c0",
+       "target": "declare",
+       "type": {
+        "key": {
+         "int": "int",
+         "kind": "int"
+        },
+        "kind": "map",
+        "value": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      },
+      "valueType": {
+       "int": "int",
+       "kind": "int"
+      }
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "m",
+        "target": "declare",
+        "type": {
+         "key": {
+          "int": "int",
+          "kind": "int"
+         },
+         "kind": "map",
+         "value": {
+          "int": "int",
+          "kind": "int"
+         }
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "ident",
+        "name": "$c0",
+        "type": {
+         "key": {
+          "int": "int",
+          "kind": "int"
+         },
+         "kind": "map",
+         "value": {
+          "int": "int",
+          "kind": "int"
+         }
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "elem": {
+       "int": "int",
+       "kind": "int"
+      },
+      "elems": [
+       {
+        "index": 0,
+        "value": {
+         "expr": "int",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "value": "0"
+        }
+       },
+       {
+        "index": 1,
+        "value": {
+         "expr": "int",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "value": "0"
+        }
+       }
+      ],
+      "length": 2,
+      "stmt": "slice-lit",
+      "target": {
+       "id": "$c1",
+       "target": "declare",
+       "type": {
+        "elem": {
+         "int": "int",
+         "kind": "int"
+        },
+        "kind": "slice"
+       }
+      }
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "xs",
+        "target": "declare",
+        "type": {
+         "elem": {
+          "int": "int",
+          "kind": "int"
+         },
+         "kind": "slice"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "ident",
+        "name": "$c1",
+        "type": {
+         "elem": {
+          "int": "int",
+          "kind": "int"
+         },
+         "kind": "slice"
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "f",
+        "target": "declare",
+        "type": {
+         "kind": "func",
+         "params": [],
+         "results": [
+          {
+           "int": "int",
+           "kind": "int"
+          }
+         ],
+         "variadic": false
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "captured": [
+         {
+          "expr": "ref",
+          "id": "m"
+         }
+        ],
+        "expr": "func-value",
+        "func": "e5blookup$lit0",
+        "type": {
+         "kind": "func",
+         "params": [],
+         "results": [
+          {
+           "int": "int",
+           "kind": "int"
+          }
+         ],
+         "variadic": false
+        }
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "decls": [
+       {
+        "id": "ok",
+        "type": {
+         "kind": "bool"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "cells": [
+       {
+        "id": "$u0",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       },
+       {
+        "id": "$u1",
+        "type": {
+         "key": {
+          "kind": "string"
+         },
+         "kind": "map",
+         "value": {
+          "int": "int",
+          "kind": "int"
+         }
+        }
+       },
+       {
+        "id": "$u2",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       },
+       {
+        "id": "$u3",
+        "type": {
+         "kind": "bool"
+        }
+       }
+      ],
+      "occs": [
+       {
+        "args": [],
+        "binds": [
+         "$u0"
+        ],
+        "callee": {
+         "expr": "ident",
+         "name": "f"
+        },
+        "kind": "invoke",
+        "name": "call0",
+        "resultTypes": [
+         {
+          "int": "int",
+          "kind": "int"
+         }
+        ]
+       },
+       {
+        "bind": "$u1",
+        "head": {
+         "expr": "ident",
+         "name": "m",
+         "type": {
+          "key": {
+           "kind": "string"
+          },
+          "kind": "map",
+          "value": {
+           "int": "int",
+           "kind": "int"
+          }
+         }
+        },
+        "kind": "eval",
+        "name": "read1"
+       },
+       {
+        "binds": [
+         "$u2",
+         "$u3"
+        ],
+        "kind": "wide",
+        "name": "lookup2",
+        "wide": {
+         "base": {
+          "expr": "ident",
+          "name": "$u1",
+          "type": {
+           "key": {
+            "kind": "string"
+           },
+           "kind": "map",
+           "value": {
+            "int": "int",
+            "kind": "int"
+           }
+          }
+         },
+         "index": {
+          "expr": "int",
+          "type": {
+           "int": "int",
+           "kind": "int"
+          },
+          "value": "1"
+         },
+         "keyType": {
+          "kind": "string"
+         },
+         "stmt": "map-lookup",
+         "valueType": {
+          "int": "int",
+          "kind": "int"
+         }
+        }
+       },
+       {
+        "bind": "$t0",
+        "kind": "target",
+        "lhs": {
+         "expr": {
+          "base": {
+           "expr": "ident",
+           "name": "xs",
+           "type": {
+            "elem": {
+             "int": "int",
+             "kind": "int"
+            },
+            "kind": "slice"
+           }
+          },
+          "expr": "index-addr",
+          "index": {
+           "expr": "ident",
+           "name": "$u0",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           }
+          }
+         },
+         "target": "addr"
+        },
+        "name": "target3"
+       },
+       {
+        "bind": "$t1",
+        "kind": "target",
+        "lhs": {
+         "id": "ok",
+         "target": "var"
+        },
+        "name": "target4"
+       }
+      ],
+      "stmt": "unseq",
+      "stores": [
+       {
+        "target": "$t0",
+        "value": "$u2"
+       },
+       {
+        "target": "$t1",
+        "value": "$u3"
+       }
+      ],
+      "then": {
+       "body": [],
+       "stmt": "block"
+      }
+     },
+     {
+      "cond": {
+       "expr": "ident",
+       "name": "ok",
+       "type": {
+        "kind": "bool"
+       }
+      },
+      "stmt": "if",
+      "then": {
+       "body": [
+        {
+         "results": [
+          {
+           "expr": "binary",
+           "op": "+",
+           "type": {
+            "int": "int",
+            "kind": "int"
+           },
+           "x": {
+            "base": {
+             "expr": "ident",
+             "name": "xs",
+             "type": {
+              "elem": {
+               "int": "int",
+               "kind": "int"
+              },
+              "kind": "slice"
+             }
+            },
+            "expr": "index-get",
+            "index": {
+             "expr": "int",
+             "type": {
+              "int": "int",
+              "kind": "int"
+             },
+             "value": "0"
+            },
+            "type": {
+             "int": "int",
+             "kind": "int"
+            }
+           },
+           "y": {
+            "expr": "int",
+            "type": {
+             "int": "int",
+             "kind": "int"
+            },
+            "value": "10"
+           }
+          }
+         ],
+         "stmt": "return"
+        }
+       ],
+       "stmt": "block"
+      }
+     },
+     {
+      "results": [
+       {
+        "base": {
+         "expr": "ident",
+         "name": "xs",
+         "type": {
+          "elem": {
+           "int": "int",
+           "kind": "int"
+          },
+          "kind": "slice"
+         }
+        },
+        "expr": "index-get",
+        "index": {
+         "expr": "int",
+         "type": {
+          "int": "int",
+          "kind": "int"
+         },
+         "value": "0"
+        },
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "e5blookup",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  }
+ ],
+ "methodSets": [],
+ "methods": [],
+ "package": "main",
+ "schema": "golean-native-v1",
+ "types": []
+}

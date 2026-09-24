@@ -48,3 +48,6 @@ mut-mapget-keytype-vs-base	disagree with the map base's declared type
 mut-map-target-keytype-vs-base	disagree with the map base's declared type
 mut-make-negative-len	negative constant len
 mut-make-len-over-cap	larger than constant cap
+mut-alloc-literal-after	an `after` edge on a literal allocation
+mut-local-annotation-forged	disagrees with its declaration
+mut-local-undeclared	has no declaration in the enclosing function

@@ -51,6 +51,11 @@ machine-reserved entries — BEFORE any body decodes). -/
 private structure LowerCtx where
   nGlobals : Nat
   typeIdx : Std.HashMap String TypeIdx
+  /-- Stage E6a R1 (2026-09-24): the locals the ENCLOSING function declares — params,
+  results, every `declare` target / `var` declaration / `range` variable of its body, with
+  the declared type (`jsonDeclaredLocals`); the `unseq` arm checks every source-local atom's
+  `type` annotation against it. Empty outside a function body. -/
+  locals : Array Param := #[]
 
 private abbrev LowerM := ReaderT LowerCtx (Except String)
 
@@ -875,7 +880,12 @@ region-confined binder is consumed only inside its region, the completion
 binder being the only join — itself confined to its guard's enclosing region
 when the guard is nested (D12), the target plan's shape (D13), and a
 completion free of nested `unseq` / legacy `unseq-probe` (the whole-sweep
-boundary, audit N2) and of `recover` (D14). -/
+boundary, audit N2) and of `recover` (D14). Stage E6a (2026-09-24) adds two
+named refusals ratified 2026-09-22 (the Stage E5 landing record items 3 and
+6): every SOURCE-LOCAL atom the node mentions is a local the enclosing
+function declares, its `type` annotation that declaration's (R1 —
+`unseqCheckLocalAtoms`, over `LowerCtx.locals`), and a LITERAL allocation
+carries no `after` edge (the Stage E audit's F8). -/
 
 /-- Allowed key sets for `unseq` occurrence nodes, by `kind`. -/
 private def unseqOccAllowedKeys : String → Option (List String)
@@ -1007,6 +1017,103 @@ private partial def jsonMentionsStmt (tags : List String) : Json → Bool
       || kvs.toList.any (fun (_, v) => jsonMentionsStmt tags v)
   | .arr xs => xs.any (jsonMentionsStmt tags)
   | _ => false
+
+/-- Stage E6a R1 (2026-09-24; the Stage E5 audit re-verification's R1, RATIFIED [USER] 2026-09-22
+item 3 — «a decoder-wide cross-check of source-local annotations against their `declare` types»):
+every LOCAL a function body DECLARES, with its declared type — collected by a whole-body walk over
+the wire's own declaration spellings: every `{"target":"declare","id","type"}` target (an assignment's
+lhs, the allocation / built-in / sync / type-assert / chan-recv targets — the emitter's one target
+shape), every `var` statement's `decls`, and a `range` statement's implicitly declared key / value
+variables (typed by the range kind exactly as `decodeRange` types them: a map's key/value types, a
+channel's element, an index `int` + the element for slices / arrays / array pointers, the operand's
+kind for an integer range, `int` + `int32` for a string). The caller prepends the params and
+results. -/
+private partial def jsonDeclaredLocals (path : String) : Json → LowerM (Array Param)
+  | .obj kvs => do
+      let mut acc : Array Param := #[]
+      match kvs.get? "target", kvs.get? "id", kvs.get? "type" with
+      | some (Json.str "declare"), some (Json.str id), some t =>
+          acc := acc.push { id, typ := ← decodeTy s!"{path}.declare({id}).type" t }
+      | _, _, _ => pure ()
+      match kvs.get? "stmt" with
+      | some (Json.str "var") =>
+          match kvs.get? "decls" with
+          | some (.arr ds) =>
+              for d in ds do
+                match d.getObjVal? "id", d.getObjVal? "type" with
+                | .ok (Json.str id), .ok t => acc := acc.push { id, typ := ← decodeTy s!"{path}.var({id}).type" t }
+                | _, _ => pure ()
+          | _ => pure ()
+      | some (Json.str "range") =>
+          let var? (key : String) : Option String :=
+            match kvs.get? key with
+            | some (Json.str n) => some n
+            | _ => none
+          let tyOf (key : String) : LowerM (Option Ty) := do
+            match kvs.get? key with
+            | some t => pure (some (← decodeTy s!"{path}.range.{key}" t))
+            | none => pure none
+          let push (n? : Option String) (t? : Option Ty) : LowerM (Array Param) := do
+            match n?, t? with
+            | some n, some t => pure #[{ id := n, typ := t }]
+            | _, _ => pure #[]
+          match kvs.get? "kind" with
+          | some (Json.str "map") =>
+              acc := acc ++ (← push (var? "keyVar") (← tyOf "keyType")) ++ (← push (var? "valVar") (← tyOf "valueType"))
+          | some (Json.str "chan") =>
+              acc := acc ++ (← push (var? "keyVar") (← tyOf "elemType"))
+          | some (Json.str "slice") | some (Json.str "array") | some (Json.str "array-pointer") =>
+              acc := acc ++ (← push (var? "keyVar") (some (.int .int))) ++ (← push (var? "valVar") (← tyOf "elemType"))
+          | some (Json.str "int") =>
+              acc := acc ++ (← push (var? "keyVar") (← tyOf "operandType"))
+          | some (Json.str "string") =>
+              acc := acc ++ (← push (var? "keyVar") (some (.int .int))) ++ (← push (var? "valVar") (some (.int .int32)))
+          | _ => pure ()
+      | _ => pure ()
+      for (_, v) in kvs.toList do
+        acc := acc ++ (← jsonDeclaredLocals path v)
+      pure acc
+  | .arr xs => do
+      let mut acc : Array Param := #[]
+      for x in xs do
+        acc := acc ++ (← jsonDeclaredLocals path x)
+      pure acc
+  | _ => pure #[]
+
+/-- Stage E6a R1: every SOURCE-LOCAL atom mentioned anywhere in an `unseq` node — an `ident` whose
+name is not a reserved `$` slot, a `ref` of a source local — must be DECLARED by the enclosing
+function, and an `ident`'s `type` annotation must be one of its declared types. Stage C's D9 trusted
+a source-local atom's annotation (the wire's word, not the decoder's knowledge): the E5 audit
+re-verification's mS1 / mS4 forged an annotation together with a `map-lookup`'s / `map` target
+plan's keyType on a PRIVATE map base and the wire decoded and ANSWERED; the emitter spells the
+annotation from the one go/types object the `declare` carries, so no emitted wire changes. A name
+declared with several types in one function (Go's block shadowing — the wire keeps the source
+names, GoCore scopes them lexically) is checked against the set of its declared types — recorded
+in the E6a design as the residual this flat table leaves. -/
+private partial def unseqCheckLocalAtoms (locals : Array Param) (path : String) : Json → LowerM Unit
+  | .obj kvs => do
+      match kvs.get? "expr", kvs.get? "name" with
+      | some (Json.str "ident"), some (Json.str n) =>
+          if !n.startsWith "$" then
+            let decls := locals.filter (·.id == n)
+            if decls.isEmpty then
+              fail s!"unseq: source-local atom '{n}' at {path} has no declaration in the enclosing function (its params, results, `declare` targets, var and range declarations) — the graph may name only the function's own locals (Stage E6a R1, 2026-09-24); refused by name"
+            match kvs.get? "type" with
+            | some t =>
+                let ty ← decodeTy s!"{path}.type" t
+                if !decls.any (·.typ == ty) then
+                  fail s!"unseq: source-local atom '{n}' at {path} is annotated {repr ty}, which disagrees with its declaration {repr (decls.map (·.typ))} — a forged annotation must not type a graph operand (the Stage E5 audit re-verification's R1, ratified 2026-09-22; Stage E6a); refused by name"
+            | none => pure ()
+      | _, _ => pure ()
+      match kvs.get? "expr", kvs.get? "id" with
+      | some (Json.str "ref"), some (Json.str n) =>
+          if !n.startsWith "$" && !(locals.any (·.id == n)) then
+            fail s!"unseq: `ref` of '{n}' at {path} names no local the enclosing function declares (Stage E6a R1, 2026-09-24); refused by name"
+      | _, _ => pure ()
+      for (_, v) in kvs.toList do
+        unseqCheckLocalAtoms locals path v
+  | .arr xs => xs.forM (unseqCheckLocalAtoms locals path)
+  | _ => pure ()
 
 /-- D8 for an `eval` head: one of the admitted heads over ATOM operands, or a
 bare CONSTANT (`int`/`bool`/`string`) — the emitter's copy of a constant into a
@@ -2060,6 +2167,13 @@ partial def decodeUnseq (results : Array Param) (path : String) (obj : StrictJso
   -- cells (D2)
   let cellsJ ← StrictJson.array s!"{path}.cells" (← StrictJson.field path obj "cells")
   let cells ← cellsJ.mapIdxM (fun i c => decodeParam s!"{path}.cells[{i}]" c)
+  -- Stage E6a R1 (2026-09-24): every SOURCE-LOCAL atom the node mentions is a local the enclosing
+  -- function declares, and its `type` annotation is that declaration's — checked before any
+  -- occurrence decodes, over the whole node (heads, callees, arguments, payloads, plans, wide
+  -- operands and the completion alike), so that no later check (`unseqPayloadTy?`,
+  -- `unseqCheckMapBase`) reads a forged annotation. A name that is one of the graph's own CELLS is
+  -- a binder, not a source local (its `$` reservation is D2's check, `wellFormed?`), so it is skipped.
+  unseqCheckLocalAtoms ((← read).locals ++ cells) path (Json.mkObj (obj.toList))
   -- occurrences (D3, D4, D8–D10, D13)
   let occsJ ← StrictJson.array s!"{path}.occs" (← StrictJson.field path obj "occs")
   if occsJ.isEmpty then
@@ -2303,6 +2417,20 @@ partial def decodeUnseq (results : Array Param) (path : String) (obj : StrictJso
                 pure (AllocSpec.mapLit keyTy valTy entries)
             | other =>
                 fail s!"unseq: allocation '{name}' at {apath}: statement '{other}' is outside the admitted fragment (new | make-slice | make-map | make-chan | slice-lit | map-lit); refused by name"
+          -- Stage E6a (2026-09-24; the Stage E audit's F8, RATIFIED [USER] 2026-09-22 item 6): a LITERAL
+          -- allocation — a slice literal, a map literal, `&T{…}` (a `new` over a `struct-lit`) — is a node
+          -- WITHOUT E1 edges (v2.1 R3: a composite literal is not a call, receive or logical operation), and the
+          -- lowering emits no `after` on one; an `after` edge here would FORCE the literal behind an event by an
+          -- order the language does not impose — a narrowing the wire could not otherwise express. `make` /
+          -- `new(T)` / `new(x)` are E1 participants (spec#Built-in_functions) and carry their anchor.
+          let structLitValue := match a.get? "value" with
+            | some v =>
+                match v.getObjVal? "expr" with
+                | .ok (Json.str "struct-lit") => true
+                | _ => false
+            | none => false
+          if (tag == "slice-lit" || tag == "map-lit" || (tag == "new" && structLitValue)) && !after.isEmpty then
+            fail s!"unseq: allocation '{name}' at {apath}: an `after` edge on a literal allocation ({tag}) — a composite literal is not an E1 participant (v2.1 R3), so the lowering never orders it behind an event; the edge would narrow the set by a policy the wire cannot express (Stage E audit F8, ratified 2026-09-22; Stage E6a); refused by name"
           pure (UnseqBody.allocate bind spec)
       | "wide" => do
           -- Stage E5 E5a (2026-09-22): a WIDE built-in occurrence — `append` / `copy` (the comma-ok
@@ -2648,7 +2776,10 @@ private def decodeFunc (path : String) (json : Json) : LowerM Func := do
   let variadic ← StrictJson.bool s!"{path}.variadic" (← StrictJson.field path obj "variadic")
   let args ← params.mapIdxM (fun i p => decodeParam s!"{path}.params[{i}]" p)
   let res ← results.mapIdxM (fun i p => decodeParam s!"{path}.results[{i}]" p)
-  let body ← decodeStmt res s!"{path}.body" (← StrictJson.field path obj "body")
+  let bodyJ ← StrictJson.field path obj "body"
+  -- Stage E6a R1: the function's declared locals, for the `unseq` arm's annotation cross-check
+  let locals := args ++ res ++ (← jsonDeclaredLocals s!"{path}.body" bodyJ)
+  let body ← withReader (fun ctx => { ctx with locals }) (decodeStmt res s!"{path}.body" bodyJ)
   pure { id := ⟨name⟩, args, results := res, body, variadic }
 
 /-- The receiver key used to derive a callable target and the receiver type
@@ -2717,7 +2848,10 @@ private def decodeMethod (path : String) (json : Json) : LowerM (Func × MethodI
       pure ({ id := funcId, args := #[recv] ++ args, results := res, body := stub,
               variadic, wrapper }, info)
   else
-      let body ← decodeStmt res s!"{path}.body" (← StrictJson.field path obj "body")
+      let bodyJ ← StrictJson.field path obj "body"
+      -- Stage E6a R1: the method's declared locals (the receiver among the params)
+      let locals := #[recv] ++ args ++ res ++ (← jsonDeclaredLocals s!"{path}.body" bodyJ)
+      let body ← withReader (fun ctx => { ctx with locals }) (decodeStmt res s!"{path}.body" bodyJ)
       pure ({ id := funcId, args := #[recv] ++ args, results := res, body,
               variadic, wrapper }, info)
 

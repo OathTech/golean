@@ -869,8 +869,10 @@ def mutants(wires):
     edit("mut-empty", "w1", "w1", lambda n, w: n.update(occs=[], cells=[], then={"stmt": "block", "body": []}), "empty graph")
     # D10 resultTypes arity
     edit("mut-result-arity", "w1", "w1", lambda n, w: occ(n, "call0").update(resultTypes=[INT, INT]), "resultTypes arity")
-    # D11 guard test cell not bool
-    edit("mut-guard-type", "r2a", "r2aTrue", lambda n, w: n["cells"][0].update(type=INT) or occ(n, "copy0")["head"].update(type=INT),
+    # D11 guard test cell not bool. (Stage E6a, 2026-09-24: the edit forges the test CELL's type and feeds it a constant
+    # int head — the former edit re-annotated the source local `z` as int, which the E6a R1 check now refuses FIRST, by
+    # its own name, before D11 is reached; the mutant keeps pinning D11's needle.)
+    edit("mut-guard-type", "r2a", "r2aTrue", lambda n, w: n["cells"][0].update(type=INT) or occ(n, "copy0").update(head=intc(0)),
          "not a bool cell")
     # D1 an unknown key on an occurrence
     edit("mut-unknown-key", "w1", "w1", lambda n, w: occ(n, "read1").update(extra=1), "unknown key")
@@ -988,6 +990,24 @@ def mutants(wires):
          lambda n, w: occ(n, "make0")["allocation"].update(len=intc(-1)), "negative constant len")
     edit("mut-make-len-over-cap", "e4make", "e4make",
          lambda n, w: occ(n, "make0")["allocation"].update(len=intc(3), cap=intc(2)), "larger than constant cap")
+    # ---- Stage E6a (2026-09-24): the two decoder follow-ups RATIFIED [USER] 2026-09-22 (the Stage E5 landing record,
+    # items 6 and 3). F8: an `after` edge on a LITERAL allocation (the slice literal of e4alloc anchored behind wit5's
+    # call) — a composite literal is not an E1 participant; the lowering never emits the edge; it would narrow the set.
+    edit("mut-alloc-literal-after", "e4alloc", "e4alloc",
+         lambda n, w: occ(n, "lit2").update(after=["call0"]), "an `after` edge on a literal allocation")
+    # R1: a SOURCE-LOCAL atom's `type` annotation forged self-consistently with everything that reads it (the audit
+    # re-verification's mS1 class — the annotation, the cell it feeds and the lookup's keyType all say map[string]int
+    # on a map[int]int local, so D9 and the audit-F1 base check pass): only the declaration says otherwise.
+    MAP_STR_INT = {"kind": "map", "key": STR, "value": INT}
+    def forge_local_annotation(n, w):
+        occ(n, "read1")["head"]["type"] = MAP_STR_INT
+        n["cells"][1]["type"] = MAP_STR_INT
+        occ(n, "lookup2")["wide"]["keyType"] = STR
+        occ(n, "lookup2")["wide"]["base"]["type"] = MAP_STR_INT
+    edit("mut-local-annotation-forged", "e5blookup", "e5blookup", forge_local_annotation, "disagrees with its declaration")
+    # R1: an atom naming a local the function never declares (the audit's F8 nit: undeclared ids decoded and stuck late).
+    edit("mut-local-undeclared", "e5daddr", "e5daddr",
+         lambda n, w: occ(n, "read1")["head"].update(name="y"), "has no declaration in the enclosing function")
     return out
 
 

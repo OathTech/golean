@@ -243,12 +243,12 @@
        {
         "bind": "$u0",
         "head": {
-         "expr": "ident",
-         "name": "z",
+         "expr": "int",
          "type": {
           "int": "int",
           "kind": "int"
-         }
+         },
+         "value": "0"
         },
         "kind": "eval",
         "name": "copy0"
