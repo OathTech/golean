@@ -1,0 +1,26 @@
+# Recursive statement-node census of the RETAINED nativefrontend wires for the customer's
+# fourteen examples/fixtures/* units plus the eight generated f2 proof variants.
+# Producer: count-stmts.py (this dir) over .tmp/inventory/wires/*.json; see README Reproduction.
+unit	total_stmts	unseq_nodes	legacy_unseq_probe	occ_eval	occ_invoke	occ_target	occ_load	occ_guard	occ_recv	occ_allocate	occ_wide	occ_other	stmt_histogram
+callchain	10	0	0	0	0	0	0	0	0	0	0	0	assign=2 block=4 defer=1 expr=2 return=1
+e1-equivalent	49	0	0	0	0	0	0	0	0	0	0	0	assign=19 block=10 expr=10 if=1 make-map=1 map-assign=1 new=1 return=6
+e1-local	62	0	0	0	0	0	0	0	0	0	0	0	assign=28 block=13 expr=11 if=1 make-map=1 map-assign=1 new=1 return=6
+e1-wrong	49	0	0	0	0	0	0	0	0	0	0	0	assign=19 block=10 expr=10 if=1 make-map=1 map-assign=1 new=1 return=6
+e1	49	0	0	0	0	0	0	0	0	0	0	0	assign=19 block=10 expr=10 if=1 make-map=1 map-assign=1 new=1 return=6
+error-string	10	0	0	0	0	0	0	0	0	0	0	0	assign=2 block=3 new=2 return=3
+f1-alternative	45	0	0	0	0	0	0	0	0	0	0	0	assign=16 block=11 expr=6 return=8 var=4
+f1-s-local	49	0	0	0	0	0	0	0	0	0	0	0	assign=16 block=11 expr=8 return=8 var=6
+f1-s-results	45	0	0	0	0	0	0	0	0	0	0	0	assign=16 block=11 expr=6 return=8 var=4
+f1-s-wrong-target	45	0	0	0	0	0	0	0	0	0	0	0	assign=16 block=11 expr=6 return=8 var=4
+f1	45	0	0	0	0	0	0	0	0	0	0	0	assign=16 block=11 expr=6 return=8 var=4
+f2-proof-positive-block-fallthrough	59	0	0	0	0	0	0	0	0	0	0	0	assign=17 block=17 defer=9 expr=4 if=1 return=9 var=2
+f2-proof-positive-closure	58	0	0	0	0	0	0	0	0	0	0	0	assign=17 block=17 defer=9 expr=4 if=1 return=9 var=1
+f2-proof-positive-declare-after-defer	59	0	0	0	0	0	0	0	0	0	0	0	assign=17 block=17 defer=9 expr=4 if=1 return=9 var=2
+f2-proof-positive-declare-before-defer	59	0	0	0	0	0	0	0	0	0	0	0	assign=17 block=17 defer=9 expr=4 if=1 return=9 var=2
+f2-proof-positive-set	60	0	0	0	0	0	0	0	0	0	0	0	assign=18 block=17 defer=9 expr=4 if=1 return=9 var=2
+f2-proof-wrong-capture-target	57	0	0	0	0	0	0	0	0	0	0	0	assign=16 block=17 defer=9 expr=4 if=1 return=9 var=1
+f2-proof-wrong-helper-value	57	0	0	0	0	0	0	0	0	0	0	0	assign=16 block=17 defer=9 expr=4 if=1 return=9 var=1
+f2-proof-wrong-shared-order	57	0	0	0	0	0	0	0	0	0	0	0	assign=16 block=17 defer=9 expr=4 if=1 return=9 var=1
+f2	57	0	0	0	0	0	0	0	0	0	0	0	assign=16 block=17 defer=9 expr=4 if=1 return=9 var=1
+recovery	16	0	0	0	0	0	0	0	0	0	0	0	assign=3 block=6 defer=1 expr=2 if=1 panic=1 return=2
+shared	69	0	0	0	0	0	0	0	0	0	0	0	assign=22 block=22 defer=6 if=6 panic=3 return=10

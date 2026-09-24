@@ -1,0 +1,48 @@
+# nativefrontend export: exit status and stderr VERBATIM, one section per unit.
+# Producer: .tmp/inventory/nativefrontend --dir .tmp/inventory/src/<unit> --out <wire>
+# (wires kept in scratch, not landed). Every unit: exit 0, stderr EMPTY.
+
+--- callchain: exit 0 ---
+(stderr empty)
+--- e1: exit 0 ---
+(stderr empty)
+--- e1-equivalent: exit 0 ---
+(stderr empty)
+--- e1-local: exit 0 ---
+(stderr empty)
+--- e1-wrong: exit 0 ---
+(stderr empty)
+--- error-string: exit 0 ---
+(stderr empty)
+--- f1: exit 0 ---
+(stderr empty)
+--- f1-alternative: exit 0 ---
+(stderr empty)
+--- f1-s-local: exit 0 ---
+(stderr empty)
+--- f1-s-results: exit 0 ---
+(stderr empty)
+--- f1-s-wrong-target: exit 0 ---
+(stderr empty)
+--- f2: exit 0 ---
+(stderr empty)
+--- f2-proof-positive-block-fallthrough: exit 0 ---
+(stderr empty)
+--- f2-proof-positive-closure: exit 0 ---
+(stderr empty)
+--- f2-proof-positive-declare-after-defer: exit 0 ---
+(stderr empty)
+--- f2-proof-positive-declare-before-defer: exit 0 ---
+(stderr empty)
+--- f2-proof-positive-set: exit 0 ---
+(stderr empty)
+--- f2-proof-wrong-capture-target: exit 0 ---
+(stderr empty)
+--- f2-proof-wrong-helper-value: exit 0 ---
+(stderr empty)
+--- f2-proof-wrong-shared-order: exit 0 ---
+(stderr empty)
+--- recovery: exit 0 ---
+(stderr empty)
+--- shared: exit 0 ---
+(stderr empty)

@@ -1,0 +1,29 @@
+# --unseq-census (main-unit sweep decisions) admitted-column tally per unit.
+# Producer: .tmp/inventory/nativefrontend --dir <unit> --unseq-census (see README Reproduction).
+unit	admitted	rows
+callchain	legacy	6
+e1-equivalent	legacy	37
+e1	legacy	37
+e1-local	legacy	48
+e1-wrong	legacy	37
+error-string	legacy	3
+f1-alternative	legacy	36
+f1	legacy	36
+f1-s-local	legacy	40
+f1-s-results	legacy	36
+f1-s-wrong-target	legacy	36
+f2	legacy	42
+f2-proof-positive-block-fallthrough	legacy	44
+f2-proof-positive-closure	legacy	43
+f2-proof-positive-declare-after-defer	legacy	44
+f2-proof-positive-declare-before-defer	legacy	44
+f2-proof-positive-set	legacy	45
+f2-proof-wrong-capture-target	legacy	42
+f2-proof-wrong-helper-value	legacy	42
+f2-proof-wrong-shared-order	legacy	42
+recovery	legacy	9
+shared	legacy	37
+CONTROL:e13-sibling-panic-order	legacy	243
+CONTROL:e13-sibling-panic-order	unseq	50
+CONTROL:len-vs-call-order	legacy	120
+CONTROL:len-vs-call-order	unseq	4

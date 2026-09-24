@@ -1,0 +1,7 @@
+# POSITIVE CONTROL for count-stmts.py: two OUR-corpus packages known to emit graphs and
+# legacy probes (E5d census docs/evidence/2026-09-22_unseq-stage-e5/probes-e5d.txt:
+# len-vs-call-order 15 probes / 4 graphs; e13-sibling-panic-order 11 probes / 50 graphs).
+# Producer: count-stmts.py (this dir); same binary, same walk.
+unit	total_stmts	unseq_nodes	legacy_unseq_probe	occ_eval	occ_invoke	occ_target	occ_load	occ_guard	occ_recv	occ_allocate	occ_wide	occ_other	stmt_histogram
+e13-sibling-panic-order	569	50	11	155	52	16	8	0	5	11	4	0	append=2 assign=169 block=102 chan-send=6 copy=2 defer=7 expr=1 if=1 incdec=1 make-chan=5 make-slice=18 map-lit=6 new=6 panic=2 print=8 return=76 slice-lit=64 unseq=50 unseq-probe=11 var=32
+len-vs-call-order	257	4	15	25	5	0	0	1	0	0	0	0	append=1 assign=75 block=45 chan-recv=1 chan-send=6 defer=2 for=1 if=8 incdec=1 make-chan=5 make-map=9 make-slice=7 map-lit=6 new=7 panic=1 return=34 slice-lit=14 unseq=4 unseq-probe=15 var=15
