@@ -463,3 +463,53 @@ declaration … in scope». Re-gate `check-unseq-wire`, `check-wire-boundary`, `
 R1 above (new, introduced by the fix round). Nothing else: the seven sets are exact, the decoder refuses only forged
 wires plus the R1 class of legal programs, the frontend is unchanged (the census, the inventory and the twin emit are
 byte-for-byte the E6a ones), the trace is byte-identical outside the seven born rows.
+
+## Re-verification 2 (fix round `86df4cc9`, 2026-09-24)
+
+**FINAL VERDICT: MERGE-CLEAN.** Fix round 2 (`afb25c7c` runtime + `86df4cc9` records over `17e12e74`) closes R1 as
+named and disturbs nothing else. My own build of the fix-2 tip in the detached checkout (Lean `ada4125e…` — capped
+no-op `lake build` on the lane's rsynced artifacts at `git ls-tree`-identical sources; the frontend `45464b37…`
+byte-identical to fix round 1's — this round changed no Go) reproduces every claim. [AGENT] auditor; no edit to the
+candidate or main; no merge; no push; the rebase is the coordinator's. Evidence
+`docs/evidence/2026-09-24_unseq-stage-e6a-audit/reverify2-*`.
+
+- **The change, read.** The `range` arm left `jsonDeclaredLocals` for `rangeBinderLocals`, whose ONE caller is
+  `decodeRange` (for the body); the `block` fold therefore sees a `range` node contribute nothing (its `body` skipped
+  by `nestedStmtKeys`, its binders no longer walked); the scope rule is stated once on `nestedStmtKeys` with the
+  construct table (block / breakable / labeled body, `if` init, `for` init, `range` key/value, `select` receive-clause
+  targets, func / method params + results; `switch` / type switch are desugared to `declare`s in clause blocks). No
+  wire-schema change; `baselines/` and `Corpus/` untouched.
+- **R1 closed.** `qRangeLeakOuter` → 23·`wit 1`, `qRangeKeyLeakOuter` → 9·`wit 1` (isolated and in the p8 wire) on
+  the fix-2 binary = main = gc (20/20); `qForInitNoLeak` 9, `qAfterSelect` 8, `qAfterConstructs` 8 unchanged. My h12
+  (a right-typed reference to the range variable after its loop) now REFUSES BY NAME («has no declaration in the
+  enclosing function that is in scope at this statement»); `h-after-construct-k` refuses by name too (it refused for
+  the wrong reason under the leak); new h14 / h15 (the post-loop OUTER variable annotated with the RANGE's type) refuse
+  by name. The tracked witnesses match: `e6arange` 23, `e6arangekey` 9, `e6arangeafter` 8 (verbatim my probes), the
+  mutant `mut-local-range-var-after-loop` (my h12's base) in `mutants.tsv` (55 → 56); `check-unseq-wire` 56 and
+  `check-wire-boundary` 11 + 56 pass in the gate below.
+- **Round-1 mutants and positives untouched.** My 27 mutants + the mS1 type-switch forgery replayed on the fix-2
+  binary: every R1 / F8 forgery refuses by name, every control runs, the legal p4 wire (23 functions) decodes and runs;
+  the round-1 scope holes (h5, h7–h11, h13, `h-after-construct-{v,w,z}`) still refuse by name (`reverify2-mutants.txt`).
+- **The 29 p8 declaration-form / scope probes** re-run on the new binary: every canonical observation identical to
+  main and to gc (`reverify2-probes.txt`); `qRangeFunc` is refused by the FRONTEND on both sides (range over a
+  function iterator — outside the modeled subset, not R1).
+- **New constructs (`reverify2-p9-main.go`, 14):** a range body redeclaring the key with another type; nested ranges
+  reusing `i` with different element types, graphs in both bodies and after each loop; a labelled range with
+  `continue` and a post-loop graph; map / string / channel / integer ranges shadowing outer strings and graphed after;
+  two sequential ranges reusing `k` with different types and graphs after each; a range inside a `select` clause body,
+  inside a labelled block reached by `goto`, inside a lifted closure — each with a post-construct graph on the outer
+  shadowed name; a body graph on the range `k` beside a post-loop graph on the outer `k`; a same-type shadow; a
+  key-only range with a blank value — **main = fix-2 on all 14, gc 20/20 the same value on all 14**; nothing leaks,
+  nothing is over-refused. A range «inside an `unseq` node's region» is not a Go shape (a region is an expression's
+  guard region; the node's completion is one statement) — not testable, not a gap.
+- **Baseline UNCHANGED** `3768 = 3532/236` (`git diff 17e12e74 86df4cc9 -- baselines/ Corpus/` empty) — assessed: no
+  corpus row is owed. R1 was a decoder wrong-refusal INTRODUCED and FIXED inside the candidate (main never had it, so
+  no fidelity gap was ever observable on main); the shapes are pinned where the defect lived — as NATIVE witnesses with
+  exact sets equal to gc's draw (`Tests/UnseqWire.lean`, `check-wire-boundary`) and a refusing mutant. A corpus
+  membership row for `e6arange` would add a standing gc-side check cheaply; optional, not owed.
+- **Trace.** The worker's whole-corpus trace vs `17e12e74` (3732/3732 byte-identical) is coherent with mine: my 225
+  outside-family ids on the fix-2 binary — 225 SAME vs main's frontend + binary and 225 SAME vs the fix-round-1 binary
+  (`reverify2-trace.txt`).
+- **Gate at `86df4cc9`.** `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --slow` at `86df4cc9` (the detached checkout, tree clean) under the box-wide lock 06:18:01Z–06:32:38Z: **EXIT=1 in 877 s; `cases=3768 pass=3531 fail=237`** = the unchanged baseline 3768 = 3532/236 with the one 5a-class row red; RESULT FAIL on EXACTLY the two 5a-class items (`certificate provenance` STALE for the changed decoder; the `baseline diff` DRIFT block's one line `imported-goose/channel/google-search`); `unseq wire (Stage C)` ok (56 mutants), `wire boundary` ok (11 + 56), `frontend pins` ok (the twin = pinned bytes, `1c4e7038…`), every other step ok (`reverify2-ci-slow.tail.txt`). The run's `latest.tsv` vs the baseline: no row moves except the 5a-class line and the standing both-sides-FAIL stage-string variance (`channels/select-select/beside-loop`) — the decoder change moves no row (`reverify2-latest-vs-baseline.txt`).
+
+Nothing new.

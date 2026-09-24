@@ -1,0 +1,5 @@
+# the fix-2 gate's latest.tsv (86df4cc9) vs the (unchanged) baseline 3768 = 3532/236 — every row whose result or stage differs
+rows: run 3768 baseline 3768 run PASS/FAIL {'PASS': 3531, 'FAIL': 237}
+born/missing: [] []
+   channels/select-select/beside-loop ('FAIL', 'lean-observation|differential') -> ('FAIL', 'lean-observation')
+   imported-goose/channel/google-search ('PASS', 'membership') -> ('FAIL', 'membership')

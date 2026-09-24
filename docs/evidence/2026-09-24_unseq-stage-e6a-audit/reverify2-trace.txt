@@ -1,0 +1,7 @@
+# Re-verification 2: the same 225 outside-family ids (reverify-trace.txt) on the fix-2 binary vs main 3fb4a0d1's frontend+binary (the main-side run of re-verification 1 reused)
+ids=225 same=225 differ=0 onlyA=0 onlyB=0
+sitesA {'appendSpill': 85, 'backEdge': 274, 'l1Sched': 1000, 'l5ExitWindow': 34, 'mapIter': 60, 'nilValueMethodText': 12, 'postOp': 349, 'repanicCollapse': 6, 'tryLock': 9, 'unseqNext': 97}
+sitesB {'appendSpill': 85, 'backEdge': 274, 'l1Sched': 1000, 'l5ExitWindow': 34, 'mapIter': 60, 'nilValueMethodText': 12, 'postOp': 349, 'repanicCollapse': 6, 'tryLock': 9, 'unseqNext': 97}
+## and vs the fix-round-1 binary's run of the same ids
+ids=225 same=225 differ=0 onlyA=0 onlyB=0
+sitesA {'appendSpill': 85, 'backEdge': 274, 'l1Sched': 1000, 'l5ExitWindow': 34, 'mapIter': 60, 'nilValueMethodText': 12, 'postOp': 349, 'repanicCollapse': 6, 'tryLock': 9, 'unseqNext': 97}

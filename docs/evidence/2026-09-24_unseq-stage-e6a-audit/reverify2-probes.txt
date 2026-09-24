@@ -1,0 +1,111 @@
+# Re-verification 2: the 29 p8 declaration-form / scope probes (source reverify-p8-main.go) on main 3fb4a0d1 vs the fix-2 tip (frontend unchanged, binary ada4125e…): every canonical observation identical (qRangeFunc is refused by the FRONTEND on both sides — range over a function iterator is outside the modeled subset, not R1).
+[main]	qLabelledLoop	graphs=1	canonical=ok 17 
+[fix]	qLabelledLoop	graphs=1	canonical=ok 17 
+[main]	qLabelledBlock	graphs=1	canonical=ok 8 
+[fix]	qLabelledBlock	graphs=1	canonical=ok 8 
+[main]	qSwitchInit	graphs=1	canonical=ok 8 
+[fix]	qSwitchInit	graphs=1	canonical=ok 8 
+[main]	qTypeSwitchInit	graphs=1	canonical=ok 8 
+[fix]	qTypeSwitchInit	graphs=1	canonical=ok 8 
+[main]	qSwitchCaseDecl	graphs=1	canonical=ok 8 
+[fix]	qSwitchCaseDecl	graphs=1	canonical=ok 8 
+[main]	qRangeFunc	graphs=1	canonical=unsupported  frontend-quarantined: range over func(yield func(int) bool)
+[fix]	qRangeFunc	graphs=1	canonical=unsupported  frontend-quarantined: range over func(yield func(int) bool)
+[main]	qRangeShadow	graphs=1	canonical=ok 16 
+[fix]	qRangeShadow	graphs=1	canonical=ok 16 
+[main]	qOuterAfterInner	graphs=1	canonical=ok 8 
+[fix]	qOuterAfterInner	graphs=1	canonical=ok 8 
+[main]	qTwoBlocks	graphs=2	canonical=ok 108 
+[fix]	qTwoBlocks	graphs=2	canonical=ok 108 
+[main]	qElseIfInit	graphs=1	canonical=ok 9 
+[fix]	qElseIfInit	graphs=1	canonical=ok 9 
+[main]	qIfInitInElse	graphs=1	canonical=ok 8 
+[fix]	qIfInitInElse	graphs=1	canonical=ok 8 
+[main]	qClosureParamShadow	graphs=0	canonical=ok 10 
+[fix]	qClosureParamShadow	graphs=0	canonical=ok 10 
+[main]	qCapturedInLifted	graphs=0	canonical=ok 8 
+[fix]	qCapturedInLifted	graphs=0	canonical=ok 8 
+[main]	qNamedResultAfterBlock	graphs=1	canonical=ok 8 
+[fix]	qNamedResultAfterBlock	graphs=1	canonical=ok 8 
+[main]	qMethodRecv	graphs=1	canonical=ok 2 
+[fix]	qMethodRecv	graphs=1	canonical=ok 2 
+[main]	qSelectSendRecv	graphs=1	canonical=ok -1 
+[fix]	qSelectSendRecv	graphs=1	canonical=ok -1 
+[main]	qVarInCase	graphs=1	canonical=ok 8 
+[fix]	qVarInCase	graphs=1	canonical=ok 8 
+[main]	qDeferLifted	graphs=0	canonical=ok 8 
+[fix]	qDeferLifted	graphs=0	canonical=ok 8 
+[main]	qForPostVar	graphs=1	canonical=ok 18 
+[fix]	qForPostVar	graphs=1	canonical=ok 18 
+[main]	qAfterConstructs	graphs=1	canonical=ok 8 
+[fix]	qAfterConstructs	graphs=1	canonical=ok 8 
+[main]	qShadowByDefine	graphs=1	canonical=ok 8 
+[fix]	qShadowByDefine	graphs=1	canonical=ok 8 
+[main]	qRangeShadowType	graphs=1	canonical=ok 19 
+[fix]	qRangeShadowType	graphs=1	canonical=ok 19 
+[main]	qForInitShadowType	graphs=1	canonical=ok 10 
+[fix]	qForInitShadowType	graphs=1	canonical=ok 10 
+[main]	qIfInitShadowType	graphs=1	canonical=ok 8 
+[fix]	qIfInitShadowType	graphs=1	canonical=ok 8 
+[main]	qSelectBinderShadowType	graphs=1	canonical=ok 10 
+[fix]	qSelectBinderShadowType	graphs=1	canonical=ok 10 
+[main]	qRangeLeakOuter	graphs=1	canonical=ok 23 
+[fix]	qRangeLeakOuter	graphs=1	canonical=ok 23 
+[main]	qRangeKeyLeakOuter	graphs=1	canonical=ok 9 
+[fix]	qRangeKeyLeakOuter	graphs=1	canonical=ok 9 
+[main]	qForInitNoLeak	graphs=1	canonical=ok 9 
+[fix]	qForInitNoLeak	graphs=1	canonical=ok 9 
+[main]	qAfterSelect	graphs=1	canonical=ok 8 
+[fix]	qAfterSelect	graphs=1	canonical=ok 8 
+
+## the isolated leak probes on fix-2 (one function per package): qRangeLeakOuter 23, qRangeKeyLeakOuter 9, qForInitNoLeak 9, qAfterSelect 8, qAfterConstructs 8
+  canonical: {"output":"wit 1\n","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":23}]}
+  canonical: {"output":"wit 1\n","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":9}]}
+  canonical: {"output":"wit 1\n","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":9}]}
+  canonical: {"output":"wit 1\n","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":8}]}
+  canonical: {"output":"wit 0\nwit 1\n","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":8}]}
+
+# the 14 NEW range-construct probes (source reverify2-p9-main.go): a body redeclaring the key with another type, nested ranges reusing i with different element types (graphs in both bodies and after each), a labelled range with continue, map / string / chan / int ranges shadowing outer strings and graphed after, two sequential ranges reusing k with different types, a range inside a select clause / a labelled block / a lifted closure, a body graph on the range k beside a post-loop graph on the outer k, a same-type shadow, a key-only range with a blank value — main = fix-2 on all 14; gc 20/20 = the same value on all 14.
+[main]	rBodyRedeclaresKey	graphs=1	canonical=ok 12 
+[fix]	rBodyRedeclaresKey	graphs=1	canonical=ok 12 
+[main]	rNestedReuse	graphs=2	canonical=ok 53 
+[fix]	rNestedReuse	graphs=2	canonical=ok 53 
+[main]	rLabelledContinue	graphs=1	canonical=ok 18 
+[fix]	rLabelledContinue	graphs=1	canonical=ok 18 
+[main]	rMapShadow	graphs=1	canonical=ok 16 
+[fix]	rMapShadow	graphs=1	canonical=ok 16 
+[main]	rStringShadow	graphs=1	canonical=ok 15 
+[fix]	rStringShadow	graphs=1	canonical=ok 15 
+[main]	rChanShadow	graphs=1	canonical=ok 11 
+[fix]	rChanShadow	graphs=1	canonical=ok 11 
+[main]	rIntShadow	graphs=1	canonical=ok 9 
+[fix]	rIntShadow	graphs=1	canonical=ok 9 
+[main]	rSequential	graphs=3	canonical=ok 43 
+[fix]	rSequential	graphs=3	canonical=ok 43 
+[main]	rInSelectClause	graphs=1	canonical=ok 23 
+[fix]	rInSelectClause	graphs=1	canonical=ok 23 
+[main]	rInLabelledBlock	graphs=1	canonical=ok 23 
+[fix]	rInLabelledBlock	graphs=1	canonical=ok 23 
+[main]	rInLiftedClosure	graphs=1	canonical=ok 23 
+[fix]	rInLiftedClosure	graphs=1	canonical=ok 23 
+[main]	rBodyGraphAndAfter	graphs=2	canonical=ok 26 
+[fix]	rBodyGraphAndAfter	graphs=2	canonical=ok 26 
+[main]	rSameTypeShadow	graphs=1	canonical=ok 23 
+[fix]	rSameTypeShadow	graphs=1	canonical=ok 23 
+[main]	rKeyOnlyBlankValue	graphs=1	canonical=ok 9 
+[fix]	rKeyOnlyBlankValue	graphs=1	canonical=ok 9 
+## gc (go1.26.5), 5 runs x GOMAXPROCS 1/8 x default / -N -l
+rBodyRedeclaresKey	20x wit 1|12
+rNestedReuse	20x wit 1|wit 2|wit 1|wit 2|53
+rLabelledContinue	20x wit 1|wit 2|18
+rMapShadow	20x wit 1|16
+rStringShadow	20x wit 1|15
+rChanShadow	20x wit 1|11
+rIntShadow	20x wit 1|9
+rSequential	20x wit 1|wit 2|wit 3|43
+rInSelectClause	20x wit 1|23
+rInLabelledBlock	20x wit 1|23
+rInLiftedClosure	20x wit 1|23
+rBodyGraphAndAfter	20x wit 1|wit 1|wit 2|26
+rSameTypeShadow	20x wit 1|23
+rKeyOnlyBlankValue	20x wit 1|9

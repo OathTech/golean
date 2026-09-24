@@ -1,0 +1,55 @@
+# Re-verification 2 (fix round 86df4cc9; Lean ada4125e…, frontend 45464b37… = fix round 1's, unchanged): the audit's 27 mutants + the mS1 type-switch forgery replayed on the fix-2 binary (mutants-fix2.py = mutants-fix.py re-pointed; the p4 wire re-lowered by the unchanged frontend), then the scope-hole forgeries on the p8 / isolated wires (h12 = the range variable referenced after its loop, right-typed; h14/h15 = the post-loop OUTER variable annotated with the RANGE's type; ctl-legal-* the legal wires).
+## mutants
+mR1-range-slice-valvar	REFUSED-NAMED
+mR1-range-slice-keyvar	REFUSED-NAMED
+mR1-range-map-valvar	REFUSED-NAMED
+mR1-range-chan-var	REFUSED-NAMED
+mR1-range-int-var	REFUSED-NAMED
+mR1-range-string-rune	REFUSED-NAMED
+mR1-param	REFUSED-NAMED
+mR1-named-result	EDIT-FAILED
+mR1-select-binder	REFUSED-NAMED
+mR1-typeswitch-binder	REFUSED-NAMED
+mR1-if-init-var	REFUSED-NAMED
+mR1-comma-ok-var	REFUSED-NAMED
+mR1-var-decl	REFUSED-NAMED
+mR1-for-init-var	REFUSED-NAMED
+mR1-captured-addr-taken	REFUSED-NAMED
+mR1-shadow-other-decl-type	REFUSED-NAMED
+mR1-other-functions-local	REFUSED-NAMED
+mR1-undeclared-in-select	REFUSED-NAMED
+mS4-map-target-plan-forged	REFUSED-NAMED
+mF8-after-on-new-struct-lit	REFUSED-NAMED
+mF8-after-on-map-lit	REFUSED-NAMED
+ctl-p4-shadow-legal	RUN-FAILED
+ctl-p4-typeswitch-legal	RUN-OK
+ctl-e4new-new-with-after-legal	RUN-OK
+mR1-ref-undeclared	REFUSED-NAMED
+mS1-via-typeswitch-binder	REFUSED-NAMED
+legal-p4 decoded-and-ran 23/23
+
+## scope holes
+h-after-construct-v	fix2:REFUSED-NAMED	{"message":"/home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e6a/.tmp/fix2/mutants/h-after-construct-v.json: native lowering: unseq: sour
+h-after-construct-w	fix2:REFUSED-NAMED	{"message":"/home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e6a/.tmp/fix2/mutants/h-after-construct-w.json: native lowering: unseq: sour
+h-after-construct-z	fix2:REFUSED-NAMED	{"message":"/home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e6a/.tmp/fix2/mutants/h-after-construct-z.json: native lowering: unseq: sour
+h-after-construct-k	fix2:REFUSED-NAMED	{"message":"/home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e6a/.tmp/fix2/mutants/h-after-construct-k.json: native lowering: unseq: sour
+h5-use-before-declare	fix2:REFUSED-NAMED	{"message":"/home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e6a/.tmp/fix2/mutants/h5-use-before-declare.json: native lowering: unseq: so
+h7-outer-after-inner-annotated-inner-type	fix2:REFUSED-NAMED	{"message":"/home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e6a/.tmp/fix2/mutants/h7-outer-after-inner-annotated-inner-type.j
+h8-if-init-else-annotated	fix2:REFUSED-NAMED	{"message":"/home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e6a/.tmp/fix2/mutants/h8-if-init-else-annotated.json: native lowering: unseq
+h9-for-init-second-var-annotated	fix2:REFUSED-NAMED	{"message":"/home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e6a/.tmp/fix2/mutants/h9-for-init-second-var-annotated.json: native loweri
+h10-range-shadow-annotated-outer	fix2:REFUSED-NAMED	{"message":"/home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e6a/.tmp/fix2/mutants/h10-range-shadow-annotated-outer.json: native loweri
+h11-define-own-decl-type	fix2:REFUSED-NAMED	{"message":"/home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e6a/.tmp/fix2/mutants/h11-define-own-decl-type.json: native lowering: unseq:
+h12-range-var-after-loop-right-type	fix2:REFUSED-NAMED	{"message":"/home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e6a/.tmp/fix2/mutants/h12-range-var-after-loop-right-type.json: native 
+h13-select-binder-after-select-right-type	fix2:REFUSED-NAMED	{"message":"/home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e6a/.tmp/fix2/mutants/h13-select-binder-after-select-right-type.j
+ctl-legal-qRangeLeakOuter	fix2:RUN-OK	{"output":"wit 1\n","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":23}]}
+ctl-legal-qRangeKeyLeakOuter	fix2:RUN-OK	{"output":"wit 1\n","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":9}]}
+h14-post-loop-outer-annotated-range-type	fix2:REFUSED-NAMED	{"message":"/home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e6a/.tmp/fix2/mutants/h14-post-loop-outer-annotated-range-type.jso
+h15-post-loop-outer-key-annotated-range-type	fix2:REFUSED-NAMED	{"message":"/home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e6a/.tmp/fix2/mutants/h15-post-loop-outer-key-annotated-range-
+ctl-legal-qAfterConstructs	fix2:RUN-OK	{"output":"wit 0\nwit 1\n","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":8}]}
+ctl-legal-qAfterSelect	fix2:RUN-OK	{"output":"wit 1\n","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":8}]}
+ctl-legal-qVarInCase	fix2:RUN-OK	{"output":"wit 0\nwit 1\n","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":8}]}
+ctl-legal-qOuterAfterInner	fix2:RUN-OK	{"output":"wit 1\n","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":8}]}
+ctl-legal-qIfInitInElse	fix2:RUN-OK	{"output":"wit 0\nwit 1\n","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":8}]}
+ctl-legal-qForPostVar	fix2:RUN-OK	{"output":"wit 1\nwit 2\n","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":18}]}
+ctl-legal-qRangeShadowType	fix2:RUN-OK	{"output":"wit 1\nwit 1\n","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":19}]}
+ctl-legal-qShadowByDefine	fix2:RUN-OK	{"output":"wit 1\n","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":8}]}
