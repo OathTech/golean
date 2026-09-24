@@ -6,6 +6,8 @@ draft as Codex packet A»). Executes charter row 0 (`docs/2026-09-23_batched-win
 Provenance on every logged choice: **[AGENT Codex, packet A]**. Launched by the [USER].
 **Ambiguity policy: if two readings of this brief differ materially, STOP, write both in the report, do not choose.**
 
+> **Input commit ([AGENT] coordinator, 2026-09-24):** every `3fb4a0d1` below means «`main` at `3fb4a0d1` or any later commit whose `GoLean/`, `tools/`, `scripts/`, `Corpus/`, `baselines/` trees are identical to it» — verify first with `git diff --stat 3fb4a0d1 main -- GoLean tools scripts Corpus baselines` (must print nothing) and record the commit you used in the report; if that diff is non-empty, STOP and report (the window has moved under you; the coordinator refreshes the brief).
+
 ## 1. Purpose
 Make the consumed interface CHECKABLE before any breaking change lands: (i) a Lean file whose BUILD FAILS when a pinned statement drifts;
 (ii) charter §2's execution statement as Lean `Prop` definitions that ELABORATE — statements only, packet B proves them after the label
