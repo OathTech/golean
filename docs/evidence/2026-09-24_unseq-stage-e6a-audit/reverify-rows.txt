@@ -1,0 +1,23 @@
+# Re-verification (fix round 17e12e74): the seven BUG-116 rows — sets on main 3fb4a0d1's frontend+binary vs the fix tip's frontend (45464b37…) + binary (567c0289…), from a scratch copy of the e13 package; then gc's 20 draws per subject (tabulated).
+[main]	idxLeftVsMinOperand	 observations=1 steps=121 probes=0 sit	members=['runtime error: index out of range [9] with length 1']
+[fix]	idxLeftVsMinOperand	 observations=2 steps=128 probes=3 sit	members=['runtime error: index out of range [5] with length 2', 'runtime error: index out of range [9] with length 1']
+[main]	idxLeftVsLenSliceExpr	 observations=1 steps=121 probes=0 sit	members=['runtime error: index out of range [9] with length 1']
+[fix]	idxLeftVsLenSliceExpr	 observations=2 steps=132 probes=3 sit	members=['runtime error: index out of range [9] with length 1', 'runtime error: slice bounds out of range [5:2]']
+[main]	derefLeftVsLenOperand	 observations=1 steps=92 probes=0 site	members=['runtime error: invalid memory address or nil pointer dereference']
+[fix]	derefLeftVsLenOperand	 observations=2 steps=99 probes=3 site	members=['runtime error: index out of range [5] with length 1', 'runtime error: invalid memory address or nil pointer dereference']
+[main]	ptrFieldLeftVsLenOperand	 observations=1 steps=94 probes=0 site	members=['runtime error: invalid memory address or nil pointer dereference']
+[fix]	ptrFieldLeftVsLenOperand	 observations=2 steps=101 probes=3 sit	members=['runtime error: index out of range [5] with length 1', 'runtime error: invalid memory address or nil pointer dereference']
+[main]	divLeftVsLenOperand	 observations=1 steps=110 probes=0 sit	members=['runtime error: integer divide by zero']
+[fix]	divLeftVsLenOperand	 observations=2 steps=117 probes=3 sit	members=['runtime error: index out of range [5] with length 1', 'runtime error: integer divide by zero']
+[main]	shiftLeftVsLenOperand	 observations=1 steps=116 probes=0 sit	members=['runtime error: negative shift amount']
+[fix]	shiftLeftVsLenOperand	 observations=2 steps=123 probes=3 sit	members=['runtime error: index out of range [5] with length 1', 'runtime error: negative shift amount']
+[main]	compoundLoadVsLenOperand	 observations=1 steps=113 probes=0 sit	members=['runtime error: index out of range [9] with length 1']
+[fix]	compoundLoadVsLenOperand	 observations=2 steps=128 probes=6 sit	members=['runtime error: index out of range [5] with length 1', 'runtime error: index out of range [9] with length 1']
+## gc (go1.26.5), 5 runs x GOMAXPROCS 1/8 x default / -N -l
+idxLeftVsMinOperand	20x panic: runtime error: index out of range [5] with length 2|
+idxLeftVsLenSliceExpr	20x panic: runtime error: slice bounds out of range [5:2]|
+derefLeftVsLenOperand	20x panic: runtime error: index out of range [5] with length 1|
+ptrFieldLeftVsLenOperand	20x panic: runtime error: index out of range [5] with length 1|
+divLeftVsLenOperand	20x panic: runtime error: index out of range [5] with length 1|
+shiftLeftVsLenOperand	20x panic: runtime error: index out of range [5] with length 1|
+compoundLoadVsLenOperand	20x panic: runtime error: index out of range [5] with length 1|

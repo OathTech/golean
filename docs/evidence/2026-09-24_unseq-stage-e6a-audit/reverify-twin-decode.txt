@@ -1,0 +1,3 @@
+# the pinned twin wire under the fix binary: decode precedes the function lookup / the fuel-out
+{"message":"GoCore function not found: __nosuch__","output":"","schema":"golean-observation-v1","status":"stuck"}
+{"message":"GoCore execution fuel exhausted","output":"","schema":"golean-observation-v1","status":"fuel-out"}

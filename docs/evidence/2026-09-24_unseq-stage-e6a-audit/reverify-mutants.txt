@@ -1,0 +1,80 @@
+# Re-verification (fix round 17e12e74): the audit's 27 mutants replayed against the FIX binary (567c0289…) on the p4 wire re-lowered by the fix frontend (mutants-fix.py = mutants.py re-pointed), then the scope-hole forgeries on the p8 wire (fix vs the audited tip's binary bb607430…).
+## mutants-fix
+mR1-range-slice-valvar	REFUSED-NAMED	{"message":"/home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e6a/.tmp/fix/mutants/mR1-range-slice-valvar.json: native lowering: unseq: source-local at
+mR1-range-slice-keyvar	REFUSED-NAMED	{"message":"/home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e6a/.tmp/fix/mutants/mR1-range-slice-keyvar.json: native lowering: unseq: source-local at
+mR1-range-map-valvar	REFUSED-NAMED	{"message":"/home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e6a/.tmp/fix/mutants/mR1-range-map-valvar.json: native lowering: unseq: source-local atom '
+mR1-range-chan-var	REFUSED-NAMED	{"message":"/home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e6a/.tmp/fix/mutants/mR1-range-chan-var.json: native lowering: unseq: source-local atom 'v' a
+mR1-range-int-var	REFUSED-NAMED	{"message":"/home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e6a/.tmp/fix/mutants/mR1-range-int-var.json: native lowering: unseq: source-local atom 'i' at 
+mR1-range-string-rune	REFUSED-NAMED	{"message":"/home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e6a/.tmp/fix/mutants/mR1-range-string-rune.json: native lowering: unseq: source-local atom
+mR1-param	REFUSED-NAMED	{"message":"/home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e6a/.tmp/fix/mutants/mR1-param.json: native lowering: unseq: source-local atom 's' at program.funcs[1]
+mR1-named-result	EDIT-FAILED	no ident r in graph of pNamedResult
+mR1-select-binder	REFUSED-NAMED	{"message":"/home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e6a/.tmp/fix/mutants/mR1-select-binder.json: native lowering: unseq: source-local atom 'v' at 
+mR1-typeswitch-binder	REFUSED-NAMED	{"message":"/home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e6a/.tmp/fix/mutants/mR1-typeswitch-binder.json: native lowering: unseq: source-local atom
+mR1-if-init-var	REFUSED-NAMED	{"message":"/home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e6a/.tmp/fix/mutants/mR1-if-init-var.json: native lowering: unseq: source-local atom 'v' at prog
+mR1-comma-ok-var	REFUSED-NAMED	{"message":"/home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e6a/.tmp/fix/mutants/mR1-comma-ok-var.json: native lowering: unseq: source-local atom 'v' at pr
+mR1-var-decl	REFUSED-NAMED	{"message":"/home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e6a/.tmp/fix/mutants/mR1-var-decl.json: native lowering: unseq: source-local atom 'v' at program.fu
+mR1-for-init-var	REFUSED-NAMED	{"message":"/home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e6a/.tmp/fix/mutants/mR1-for-init-var.json: native lowering: unseq: source-local atom 'i' at pr
+mR1-captured-addr-taken	REFUSED-NAMED	{"message":"/home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e6a/.tmp/fix/mutants/mR1-captured-addr-taken.json: native lowering: unseq: source-local 
+mR1-shadow-other-decl-type	REFUSED-NAMED	{"message":"/home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e6a/.tmp/fix/mutants/mR1-shadow-other-decl-type.json: native lowering: unseq: source-
+mR1-other-functions-local	REFUSED-NAMED	{"message":"/home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e6a/.tmp/fix/mutants/mR1-other-functions-local.json: native lowering: unseq: source-lo
+mR1-undeclared-in-select	REFUSED-NAMED	{"message":"/home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e6a/.tmp/fix/mutants/mR1-undeclared-in-select.json: native lowering: unseq: source-loca
+mS4-map-target-plan-forged	REFUSED-NAMED	{"message":"/home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e6a/.tmp/fix/mutants/mS4-map-target-plan-forged.json: native lowering: unseq: source-
+mF8-after-on-new-struct-lit	REFUSED-NAMED	{"message":"/home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e6a/.tmp/fix/mutants/mF8-after-on-new-struct-lit.json: native lowering: unseq: alloc
+mF8-after-on-map-lit	REFUSED-NAMED	{"message":"/home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e6a/.tmp/fix/mutants/mF8-after-on-map-lit.json: native lowering: unseq: allocation 'lit1' a
+ctl-p4-shadow-legal	RUN-FAILED	{"message":"runtime error: index out of range [9] with length 2","output":"wit 1\nwit 2\n","schema":"golean-observation-v1","status":"panic"}
+ctl-p4-typeswitch-legal	RUN-OK	{"output":"wit 1\n","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":8}]}
+ctl-e4new-new-with-after-legal	RUN-OK	{"output":"m\ng\n","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":110}]}
+mR1-ref-undeclared	REFUSED-NAMED	{"message":"/home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e6a/.tmp/fix/mutants/mR1-ref-undeclared.json: native lowering: unseq: `ref` of 'nosuch' at pr
+mS1-via-typeswitch-binder	REFUSED-NAMED	{"message":"/home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e6a/.tmp/fix/mutants/mS1-via-typeswitch-binder.json: native lowering: unseq: source-local atom 'v' at program.funcs[27].body.b
+legal-p4	pTypeSwitchMap	ok
+legal-p4	pTypeSwitch	ok
+legal-p4	pShadow	panic
+legal-p4	pRangeSlice	panic
+legal-p4	pRangeMap	ok
+legal-p4	pRangeChan	panic
+legal-p4	pRangeInt	panic
+legal-p4	pRangeString	ok
+legal-p4	pSelect	ok
+legal-p4	pSelectOk	ok
+legal-p4	pIfInit	ok
+legal-p4	pCommaOk	ok
+legal-p4	pVarDecl	ok
+legal-p4	pTypeAssertDecl	ok
+legal-p4	pRecvDecl	ok
+legal-p4	pClosureCapture	panic
+legal-p4	pLiftedBody	ok
+legal-p4	pMapTargetMulti	ok
+legal-p4	pForInit	ok
+legal-p4	pNew	ok
+legal-p4	pAddrLit	ok
+legal-p4	pMapLit	ok
+legal-p4	pMake	ok
+
+## scope holes (p8): h-after-construct-{v,w,z,k} rename the final graph's atom to a binder whose Go scope has closed (v type-switch, w if-init, z inner block, k range); h5 swaps a var statement after its graph (use-before-declare); h7/h10/h11 annotate with an out-of-scope or own-declaration type; h8/h9 forge in-scope if-init / f
+h-after-construct-v	fix:REFUSED-NAMED tip:REFUSED-OTHER	{"message":"/home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e6a/.tmp/fix/mutants/h-after-construct-v.json: native lowering: unseq: source-local atom 'v' at 
+h-after-construct-w	fix:REFUSED-NAMED tip:REFUSED-OTHER	{"message":"/home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e6a/.tmp/fix/mutants/h-after-construct-w.json: native lowering: unseq: source-local atom 'w' at 
+h-after-construct-z	fix:REFUSED-NAMED tip:REFUSED-OTHER	{"message":"/home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e6a/.tmp/fix/mutants/h-after-construct-z.json: native lowering: unseq: source-local atom 'z' at 
+h-after-construct-k	fix:REFUSED-OTHER tip:REFUSED-OTHER	{"message":"/home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e6a/.tmp/fix/mutants/h-after-construct-k.json: native lowering: unseq: source-local atom 'k' at 
+h5-use-before-declare	fix:REFUSED-NAMED tip:REFUSED-OTHER	{"message":"unbound GoCore variable address: i","output":"wit 0\nwit 1\n","schema":"golean-observation-v1","status":"stuck"}
+h6-lifted-param-annotated-outer-type	EDIT-FAILED	no graph atom x in lifted bodies: [None]
+h7-outer-after-inner-annotated-inner-type	fix:REFUSED-NAMED tip:DECODED-AND-RAN	{"output":"wit 1\n","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":8}]}
+h8-if-init-else-annotated	fix:REFUSED-NAMED tip:REFUSED-NAMED	{"message":"/home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e6a/.tmp/fix/mutants/h8-if-init-else-annotated.json: native lowering: unseq: source-local atom '
+h9-for-init-second-var-annotated	fix:REFUSED-NAMED tip:REFUSED-NAMED	{"message":"/home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e6a/.tmp/fix/mutants/h9-for-init-second-var-annotated.json: native lowering: unseq: source-local
+h10-range-shadow-annotated-outer	fix:REFUSED-NAMED tip:DECODED-AND-RAN	{"output":"wit 1\nwit 1\n","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":19}]}
+h11-define-own-decl-type	fix:REFUSED-NAMED tip:DECODED-AND-RAN	{"output":"wit 1\n","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":8}]}
+ctl-legal-qAfterConstructs	fix:RUN-OK tip:RUN-OK	{"output":"wit 0\nwit 1\n","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":8}]}
+ctl-legal-qVarInCase	fix:RUN-OK tip:RUN-OK	{"output":"wit 0\nwit 1\n","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":8}]}
+ctl-legal-qClosureParamShadow	fix:RUN-OK tip:RUN-OK	{"output":"wit 1\n","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":10}]}
+ctl-legal-qOuterAfterInner	fix:RUN-OK tip:RUN-OK	{"output":"wit 1\n","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":8}]}
+ctl-legal-qIfInitInElse	fix:RUN-OK tip:RUN-OK	{"output":"wit 0\nwit 1\n","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":8}]}
+ctl-legal-qForPostVar	fix:RUN-OK tip:RUN-OK	{"output":"wit 1\nwit 2\n","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":18}]}
+ctl-legal-qRangeShadowType	fix:RUN-OK tip:RUN-OK	{"output":"wit 1\nwit 1\n","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":19}]}
+ctl-legal-qShadowByDefine	fix:RUN-OK tip:RUN-OK	{"output":"wit 1\n","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":8}]}
+lifted funcs: [(None, 'qClosureParamShadow$lit0'), (None, 'qCapturedInLifted$lit0'), (None, 'qDeferLifted$lit0')]
+Traceback (most recent call last):
+  File "<stdin>", line 45, in <module>
+  File "<stdin>", line 26, in run
+  File "<stdin>", line 40, in h6
+Exception: lifted body has no graph: {"body": [{"expr": {"base": {"expr": "deref", "ptr": {"expr": "ident", "name": "s$cap"}, "type": {"elem": {"int": "int", "kind": "int"}, "kind": "slice"}}, "expr": "index-get", "index": {"expr": "iden
+h12-range-var-after-loop-right-type	fix:REFUSED-OTHER tip:REFUSED-OTHER	{"message":"unbound GoCore variable address: k","output":"wit 0\nwit 1\n","schema":"golean-observation-v1","status":"stuck"}
+h13-select-binder-after-select-right-type	fix:REFUSED-NAMED tip:REFUSED-OTHER	{"message":"unbound GoCore variable address: v","output":"wit 1\n","schema":"golean-observation-v1","status":"stuck"}

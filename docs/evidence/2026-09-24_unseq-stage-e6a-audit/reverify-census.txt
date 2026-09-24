@@ -1,0 +1,22 @@
+# Re-verification (fix round 17e12e74): the census at the fix tree, both frontends (main's vs the fix frontend), the lane's tooling copied into the detached checkout.
+## main
+corpus sweeps 108294  admitted 180  packages-with-admitted 47  refused-packages 0
+admitted units: [('main', 180)]
+admitted by form: [('return', 99), ('compound', 22), ('elem-assign', 11), ('tuple-assign', 11), ('define', 10), ('call-stmt', 9), ('multi-call', 7), ('print-stmt', 3), ('comma-ok', 3), ('map-assign', 2), ('blank-assign', 1), ('deref-assign', 1), ('assign', 1)]
+## fix
+corpus sweeps 108294  admitted 273  packages-with-admitted 86  refused-packages 0
+admitted units: [('main', 213), ('strings', 44), ('bytes', 14), ('wirepb', 2)]
+admitted by form: [('return', 187), ('compound', 25), ('elem-assign', 12), ('tuple-assign', 11), ('define', 11), ('call-stmt', 9), ('multi-call', 7), ('print-stmt', 3), ('comma-ok', 3), ('map-assign', 2), ('blank-assign', 1), ('deref-assign', 1), ('assign', 1)]
+## diff
+rows only in AFTER (new packages): 0 in []
+newly admitted 100   lost 0
+newly admitted per package:
+    10 Corpus/coverage/exec/builtins/e13-sibling-panic-order
+     9 Corpus/coverage/exec/builtins/len-vs-call-order
+     7 TWIN
+     4 Corpus/coverage/exec/fmt/fprint-writers
+     4 Corpus/coverage/exec/stdlib-source/frontier
+## probes
+packages-with-probes=18 probes=186 unseqs=178 refused=25
+packages-with-probes=18 probes=175 unseqs=215 refused=25
+probes corpus 58 -> 47 twin (128, 0) -> (128, 3)

@@ -352,3 +352,114 @@ behavioural preservation, § Gates); gc's draws are samples (20 per subject), no
 `gc-draws.txt` (tabulated 20-draw matrices, 75 subjects) · `mutants.txt` · `census-repro.txt`,
 `probe-census-repro.txt` · `twin-born-graphs.txt` · `customer-inventory-e6a-{counts.tsv,export.txt}` ·
 `ci-slow-tip.tail.txt`, `latest-vs-main-baseline.txt` (the gate).
+
+## Re-verification (fix round `17e12e74`, 2026-09-24)
+
+**REVISED VERDICT: FIX-FIRST (one small decoder defect introduced by the fix round — R1 below; everything else
+verified).** The fix round (`973119c2` runtime + `17e12e74` records over the audited tip `1f0dee94`) closes F1–F7 as
+claimed; my own build of the fix tip (Lean `567c0289…` after a capped no-op `lake build` on the lane's rsynced
+artifacts at `git ls-tree`-identical sources; frontend `45464b37…`) reproduces every measurement below. But the new
+scope-exact declaration environment LEAKS a `range` statement's key / value variables into the enclosing block's
+scope after the loop, and — with «innermost = last» — REFUSES a legal program that shadows an outer variable of another
+type with a range variable and uses the outer one in a graph after the loop (main and the audited tip decode it; gc
+agrees with main). A covered-program refusal, fail-closed, one-line fix, two witnesses supplied. Evidence
+`docs/evidence/2026-09-24_unseq-stage-e6a-audit/reverify-*`. [AGENT] auditor; detached checkout
+`.claude/worktrees/audit-unseq-stage-e6a-fix` at `17e12e74` (tree clean, `deps/` cloned at the pins); no edit to the
+candidate or main; no merge; no push; the rebase of this branch is the coordinator's.
+
+### R1 — FAIL-CLOSED WRONG REFUSAL (decoder, new in the fix round): range variables leak into the enclosing scope, so a legal outer-shadow program is refused
+
+What I did. `reverify-p8-main.go` `qRangeLeakOuter`: `k := "ab"; s := []int{7, 8}; r := 0; for _, k := range s { r +=
+k }; return s[len(k)-2] + wit(1) + r` — legal Go (the range's `k` is body-scoped; the final graph's `k` is the outer
+string), gc 23 (20/20), main's frontend + binary 23. The FIX binary REFUSES the whole wire: «source-local atom 'k' …
+is annotated string, which disagrees with its declaration int (the innermost declaration of 'k' in scope at this
+statement)». Key-variable spelling the same (`qRangeKeyLeakOuter`: `i := "ab"; for i := range s {…}; s[len(i)-2] +
+wit(1)` — main 9 = gc, fix REFUSED). Controls: the `for`-init spelling (`qForInitNoLeak`) and a `select` binder
+(`qAfterSelect`) are scoped correctly (fix 9 / 8 = main = gc; a right-typed forged reference to the select binder after
+its `select` refuses by name — `h13`). The mechanism, confirmed by `h12`: a right-typed forged reference to the range
+variable AFTER the loop DECODES on the fix binary (and sticks late, «unbound GoCore variable address: k» — the
+desugaring declares it inside the loop block) — `jsonDeclaredLocals` pushes a `range` node's `keyVar` / `valVar`
+whenever it sees the node, and the `block` fold calls it on the range statement, so the body-scoped variables join the
+ENCLOSING environment after the loop; `nestedStmtKeys "range"` skips only `body`. (`decodeRange` adds the same
+variables for the body — correctly.) `reverify-probes-p8.txt` (the isolated runs), `reverify-mutants.txt` (h12, h13).
+
+Why it matters. A legal, covered program class is refused by the decoder — the trust surface's fail-closed
+direction, but a REGRESSION against the audited tip and main, and exactly the kind of «zero by refusing a covered
+program» the window forbids. The whole corpus + twin pass only because no corpus row shadows an outer variable of a
+different type with a range variable and then graphs the outer one.
+
+Fix (one place). In the `block` fold (or in `jsonDeclaredLocals` when called from it), a `range` statement
+contributes NOTHING to the enclosing scope — its `keyVar` / `valVar` are the body's (`decodeRange`'s `rangeLocals`
+already supplies them); e.g. add `"keyVar"`, `"valVar"` handling behind a flag, or have the fold skip `range` nodes'
+own declarations. Witnesses to track: NATIVE positive controls from `qRangeLeakOuter` (23) and `qRangeKeyLeakOuter`
+(9) — must RUN; mutant `h12` (a right-typed reference to the range variable after the loop) — must refuse «has no
+declaration … in scope». Re-gate `check-unseq-wire`, `check-wire-boundary`, `lake build`, `ci --diff`.
+
+### The worker's claims, verified one by one
+
+- **F1 — BUG-116 + BUG-032's A6 correction + seven rows.** Read: BUG-116 (`Status: fixed`, `Pinned-by:
+  differential`, the seven Cases; its text matches my F1 witnesses — the class, gc's member, main's singleton, the
+  assertion-left exception, the general form excluded), BUG-032's dated correction inside the A6 paragraph, handoff
+  §2 item 6 reworded, the inventory E13 bullet, the ledger §8 + §8am. Measured (`reverify-rows.txt`): on the fix tip
+  each of the seven rows PASS/membership (`scripts/diff-one`, enumerated=2) and its set is EXACTLY {the left operand's
+  panic, the built-in's operand's panic}: `idx-left-vs-min-operand` {`[9] with length 1`, `[5] with length 2`},
+  `idx-left-vs-len-slice-expr` {`[9] with length 1`, `slice bounds [5:2]`}, `deref-left-vs-len-operand` and
+  `ptr-field-left-vs-len-operand` {nil dereference, `[5] with length 1`}, `div-left-vs-len-operand` {`integer divide
+  by zero`, `[5] with length 1`}, `shift-left-vs-len-operand` {`negative shift amount`, `[5] with length 1`},
+  `compound-load-vs-len-operand` {`[9] with length 1`, `[5] with length 1`}; on main's frontend + binary each is the
+  singleton {left panic}; gc 20/20 the built-in operand's panic on all seven (my own draws). Both members are
+  spec-permitted (spec#Order_of_evaluation orders neither check); nothing over-wide (no third member anywhere).
+- **F2 — the scope-exact environment.** Read the diff (`decodeStmt` `block` fold; `nestedStmtKeys`; `initDeclaredLocals`
+  for `if` / `for` init; `decodeRange` key/value; `select` clause targets; `decodeFunc` / `decodeMethod` params + results;
+  `unseqCheckLocalAtoms` `findRev?`); no wire-schema change. Measured (`reverify-mutants.txt`): my 27 mutants replayed
+  against the fix binary — `mS1-via-typeswitch-binder`, `mR1-typeswitch-binder`, `mR1-shadow-other-decl-type` now
+  REFUSE by name («disagrees with its declaration … the innermost declaration of 'v'/'x' in scope»); every other R1 /
+  F8 mutant still refuses by name; the positive controls run; the legal p4 wire (23 functions, re-lowered by the fix
+  frontend) decodes and runs. The new tracked mutants (52 → 55) and `check-wire-boundary` 11 + 55 are in the gate
+  (§ Gates). New probes (`reverify-probes-p8.txt`): labelled loop / labelled block with `goto`, `switch` init,
+  type-switch init, a `case`-body define and `var`, `range` with a body shadow, an outer variable used AFTER an inner
+  shadowing block, two sibling blocks declaring one name with two types, `else if` init, an if-init variable used in
+  the ELSE branch, a closure param shadowing the enclosing block's name, captured reads in a lifted body (legacy — no
+  graph, as before), a named result after a shadowing block, a method receiver, a `select` with send + recv clauses, a
+  `for` init declaring two variables, a define that redeclares its own operand's name (`s := s[0] + wit(1)`), and
+  range / for-init / if-init / select binders shadowing an outer name of ANOTHER type — every one decodes and matches
+  main and gc on the fix side EXCEPT the range-variable leak (R1). Range over a function iterator is refused by the
+  FRONTEND («range over func(yield …)») on both sides — not R1. Scoping holes CLOSED (fix refuses where the tip did
+  not): a use-before-declare (`h5`, a `var` statement moved after its graph — the tip decoded it and stuck late), a
+  type-switch binder / if-init variable / inner-block variable referenced after its construct (`h-after-construct-
+  {v,w,z}`), the closed inner block's type on the outer variable (`h7`), the range shadow annotated with the outer type
+  (`h10`), a define's own declaration type on its operand (`h11`). Left open: the range leak (R1) — `h-after-construct-k`
+  refused for the wrong reason («disagrees», via the leaked int `k`) and `h12` decodes. The pinned twin decodes under
+  the fix binary (`reverify-twin-decode.txt`: `probeTwinChoice --fuel 20000` → fuel-out, i.e. the whole 800+-function
+  program decoded; main's binary the same).
+- **F3 — the twin's graphs re-described.** Design §E6a «the twin re-pin», `scripts/check-frontend-pins` header,
+  handoff §5 / changelog lines: pointer receivers, the guards, `plainpbSizeVarint` a function, «E3's rule through the
+  unit boundary, none by the refinement, all-forced» — correct. Pin bytes unchanged: `baselines/pins/twin-chdriver.wire.json`
+  sha256 `1c4e7038…` at `17e12e74`; `check-frontend-pins` ok in the gate.
+- **F4 — the SUBSET phrase** in design «the scope» and handoff §2 item 1, with the gc facts (lexical on every general-form
+  probe except BUG-032's tuple) — as I measured; the charter carries ONE dated correction line under the slice table
+  naming the 7 mis-labelled emitters (the row's text kept as ruled); `generic-conversion` counted once (22 + 128, the
+  sum 4 + 2 + 9 + 22 + 128 + 10 = 175) in the design's and the handoff's residue tables.
+- **F5 — census re-taken.** My reproduction at the fix tree, both frontends (`reverify-census.txt`): 108 294 sweeps,
+  180 → 273 admitted, 100 newly admitted (the 93 + the seven born rows' sweeps), 0 lost; legacy probes corpus 58 → 47
+  (e13 11 → 9 with 50 → 60 graphs, `len-vs-call-order` 15 → 6), the twin 128 → 128 with 3 graphs; 25 refused packages
+  identical — the worker's figures exactly.
+- **F6** — the handoff's changelog section now states the file does not exist and packet A creates it. **F7** — the
+  late-named store-target refusal is recorded in design §E6a «R1» as outside R1's reach.
+- **Baseline** `3761 = 3525/236 → 3768 = 3532/236`: by name exactly the seven born rows, 0 changed, 0 removed (`git
+  show 1f0dee94:baselines/native-full.tsv` vs the fix tip's); the header records the first re-pin attempt's malformed
+  stage-alternation refusal (`ci-diff-fix-run1.tail.txt` — the gate caught the worker's own error, honestly kept) and
+  the rebuilt header. `check-bugs` ok (116) in the gate.
+- **Trace.** The worker's whole-corpus trace vs `1f0dee94` (3732 ids, 3725 identical, 0 DIFFER, 7 ONLY_B; `unseqNext`
+  2550 → 2595, every other site identical) is coherent with my own outside-family check: **225 ids** from packages
+  outside the 42 E6a-affected packages, main `3fb4a0d1`'s frontend + binary vs the fix tip's — **225 SAME, 0 DIFFER**,
+  identical site censuses (`reverify-trace.txt`).
+- **Customer inventory** under the fix frontend (unchanged by the round — the wires are byte-identical to the E6a
+  emit): 22/22 export, 0 `unseq`, 0 probes (`reverify-inventory-counts.tsv`).
+- **Gates on the fixed tip.** `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --slow` at `17e12e74` (the detached checkout, tree clean, `deps/` at the pins) under the box-wide lock 05:05:20Z–05:20:24Z: **EXIT=1 in 904 s; `cases=3768 pass=3531 fail=237`** = the re-pinned 3768 = 3532/236 with the one 5a-class row red; RESULT FAIL on EXACTLY the two 5a-class items (`certificate provenance` STALE for the changed decoder; the `baseline diff` DRIFT block's one line `imported-goose/channel/google-search`); `unseq wire (Stage C)` ok (55 mutants), `wire boundary` ok (11 + 55), `frontend pins` ok (the twin = pinned bytes), `bug-index cross-check` ok (116), every other step ok (`reverify-ci-slow.tail.txt`). The run's `latest.tsv` vs the fix baseline: no row moves except the 5a-class line and the standing both-sides-FAIL stage-string variance (`channels/select-select/beside-loop`); vs the audited tip's baseline: exactly the seven born rows PASS/membership and nothing else (`reverify-latest-vs-baselines.txt`) — the decoder change moves no row, as claimed.
+
+### Anything new
+
+R1 above (new, introduced by the fix round). Nothing else: the seven sets are exact, the decoder refuses only forged
+wires plus the R1 class of legal programs, the frontend is unchanged (the census, the inventory and the twin emit are
+byte-for-byte the E6a ones), the trace is byte-identical outside the seven born rows.

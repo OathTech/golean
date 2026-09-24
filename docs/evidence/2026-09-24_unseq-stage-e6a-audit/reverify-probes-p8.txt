@@ -1,0 +1,80 @@
+# Re-verification (fix round 17e12e74): the p8 declaration-form / scope probes (source reverify-p8-main.go) on main 3fb4a0d1 (frontend+binary) vs the fix tip (frontend+binary); run-probe-fix.sh. Then the four LEAK probes re-lowered in ISOLATION (one function per package — a refusal of one function refuses the whole wire).
+[main]	qLabelledLoop	graphs=1	canonical=ok 17 	members=1
+[fix]	qLabelledLoop	graphs=1	canonical=ok 17 	members=1
+[main]	qLabelledBlock	graphs=1	canonical=ok 8 	members=1
+[fix]	qLabelledBlock	graphs=1	canonical=ok 8 	members=1
+[main]	qSwitchInit	graphs=1	canonical=ok 8 	members=1
+[fix]	qSwitchInit	graphs=1	canonical=ok 8 	members=1
+[main]	qTypeSwitchInit	graphs=1	canonical=ok 8 	members=1
+[fix]	qTypeSwitchInit	graphs=1	canonical=ok 8 	members=1
+[main]	qSwitchCaseDecl	graphs=1	canonical=ok 8 	members=1
+[fix]	qSwitchCaseDecl	graphs=1	canonical=ok 8 	members=1
+[main]	qRangeFunc	graphs=1	canonical=unsupported  frontend-quarantined: range over func(yield func(int) bool)	members=0
+[fix]	qRangeFunc	graphs=1	canonical=unsupported  frontend-quarantined: range over func(yield func(int) bool)	members=0
+[main]	qRangeShadow	graphs=1	canonical=ok 16 	members=1
+[fix]	qRangeShadow	graphs=1	canonical=ok 16 	members=1
+[main]	qOuterAfterInner	graphs=1	canonical=ok 8 	members=1
+[fix]	qOuterAfterInner	graphs=1	canonical=ok 8 	members=1
+[main]	qTwoBlocks	graphs=2	canonical=ok 108 	members=1
+[fix]	qTwoBlocks	graphs=2	canonical=ok 108 	members=1
+[main]	qElseIfInit	graphs=1	canonical=ok 9 	members=1
+[fix]	qElseIfInit	graphs=1	canonical=ok 9 	members=1
+[main]	qIfInitInElse	graphs=1	canonical=ok 8 	members=1
+[fix]	qIfInitInElse	graphs=1	canonical=ok 8 	members=1
+[main]	qClosureParamShadow	graphs=0	canonical=ok 10 	members=1
+[fix]	qClosureParamShadow	graphs=0	canonical=ok 10 	members=1
+[main]	qCapturedInLifted	graphs=0	canonical=ok 8 	members=1
+[fix]	qCapturedInLifted	graphs=0	canonical=ok 8 	members=1
+[main]	qNamedResultAfterBlock	graphs=1	canonical=ok 8 	members=1
+[fix]	qNamedResultAfterBlock	graphs=1	canonical=ok 8 	members=1
+[main]	qMethodRecv	graphs=1	canonical=ok 2 	members=2
+[fix]	qMethodRecv	graphs=1	canonical=ok 2 	members=2
+[main]	qSelectSendRecv	graphs=1	canonical=ok -1 	members=2
+[fix]	qSelectSendRecv	graphs=1	canonical=ok -1 	members=2
+[main]	qVarInCase	graphs=1	canonical=ok 8 	members=1
+[fix]	qVarInCase	graphs=1	canonical=ok 8 	members=1
+[main]	qDeferLifted	graphs=0	canonical=ok 8 	members=1
+[fix]	qDeferLifted	graphs=0	canonical=ok 8 	members=1
+[main]	qForPostVar	graphs=1	canonical=ok 18 	members=1
+[fix]	qForPostVar	graphs=1	canonical=ok 18 	members=1
+[main]	qAfterConstructs	graphs=1	canonical=ok 8 	members=1
+[fix]	qAfterConstructs	graphs=1	canonical=ok 8 	members=1
+[main]	qShadowByDefine	graphs=1	canonical=ok 8 	members=1
+[fix]	qShadowByDefine	graphs=1	canonical=ok 8 	members=1
+[main]	qRangeShadowType	graphs=1	canonical=ok 19 	members=1
+[fix]	qRangeShadowType	graphs=1	canonical=ok 19 	members=1
+[main]	qForInitShadowType	graphs=1	canonical=ok 10 	members=1
+[fix]	qForInitShadowType	graphs=1	canonical=ok 10 	members=1
+[main]	qIfInitShadowType	graphs=1	canonical=ok 8 	members=1
+[fix]	qIfInitShadowType	graphs=1	canonical=ok 8 	members=1
+[main]	qSelectBinderShadowType	graphs=1	canonical=ok 10 	members=1
+[fix]	qSelectBinderShadowType	graphs=1	canonical=ok 10 	members=1
+[main]	qRangeLeakOuter	graphs=1	canonical=ok 23 	members=1
+[fix]	qRangeLeakOuter	graphs=1	canonical=REFUSED  /home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e6a/.tmp/audit/probes/p8/wire-fix.json: native lowering: unseq: source-local atom 'k' at program.funcs[30].body.body[5] is annotated GoLea	members=0
+[main]	qRangeKeyLeakOuter	graphs=1	canonical=ok 9 	members=1
+[fix]	qRangeKeyLeakOuter	graphs=1	canonical=REFUSED  /home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e6a/.tmp/audit/probes/p8/wire-fix.json: native lowering: unseq: source-local atom 'k' at program.funcs[30].body.body[5] is annotated GoLea	members=0
+[main]	qForInitNoLeak	graphs=1	canonical=ok 9 	members=1
+[fix]	qForInitNoLeak	graphs=1	canonical=REFUSED  /home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e6a/.tmp/audit/probes/p8/wire-fix.json: native lowering: unseq: source-local atom 'k' at program.funcs[30].body.body[5] is annotated GoLea	members=0
+[main]	qAfterSelect	graphs=1	canonical=ok 8 	members=1
+[fix]	qAfterSelect	graphs=1	canonical=REFUSED  /home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e6a/.tmp/audit/probes/p8/wire-fix.json: native lowering: unseq: source-local atom 'k' at program.funcs[30].body.body[5] is annotated GoLea	members=0
+## isolated
+== [main] .tmp/fix/iso-qRangeLeakOuter qRangeLeakOuter
+  canonical: {"output":"wit 1\n","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":23}]}
+== [fix] .tmp/fix/iso-qRangeLeakOuter qRangeLeakOuter
+  canonical: {"message":"/home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e6a/.tmp/fix/iso-qRangeLeakOuter/wire-fix.json: native lowering: unseq: source-local atom 'k' at program.funcs[1].body.body[5] is annotated GoLean.GoCore.Ty.string, which disagrees with its declaration GoLean.GoCo
+== [main] .tmp/fix/iso-qRangeKeyLeakOuter qRangeKeyLeakOuter
+  canonical: {"output":"wit 1\n","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":9}]}
+== [fix] .tmp/fix/iso-qRangeKeyLeakOuter qRangeKeyLeakOuter
+  canonical: {"message":"/home/dev/projects/golean/.claude/worktrees/audit-unseq-stage-e6a/.tmp/fix/iso-qRangeKeyLeakOuter/wire-fix.json: native lowering: unseq: source-local atom 'i' at program.funcs[1].body.body[5] is annotated GoLean.GoCore.Ty.string, which disagrees with its declaration GoLean.G
+== [main] .tmp/fix/iso-qForInitNoLeak qForInitNoLeak
+  canonical: {"output":"wit 1\n","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":9}]}
+== [fix] .tmp/fix/iso-qForInitNoLeak qForInitNoLeak
+  canonical: {"output":"wit 1\n","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":9}]}
+== [main] .tmp/fix/iso-qAfterSelect qAfterSelect
+  canonical: {"output":"wit 1\n","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":8}]}
+== [fix] .tmp/fix/iso-qAfterSelect qAfterSelect
+  canonical: {"output":"wit 1\n","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":8}]}
+## gc for the leak probes (20 draws each)
+     20 .tmp/audit/probes/p8:qForInitNoLeak: wit 1|9
+     20 .tmp/audit/probes/p8:qRangeKeyLeakOuter: wit 1|9
+     20 .tmp/audit/probes/p8:qRangeLeakOuter: wit 1|23

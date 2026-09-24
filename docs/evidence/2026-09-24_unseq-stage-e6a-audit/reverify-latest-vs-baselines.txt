@@ -1,0 +1,11 @@
+# the fix-tip gate's artifacts/coverage/latest.tsv (17e12e74) vs the fix baseline and vs the audited tip 1f0dee94's baseline — every row whose result or stage differs
+rows: run 3768 fix baseline 3768 tip baseline 3761 run PASS/FAIL {'PASS': 3531, 'FAIL': 237}
+## vs the FIX baseline
+  born/missing: [] []
+   channels/select-select/beside-loop ('FAIL', 'lean-observation|differential') -> ('FAIL', 'lean-observation')
+   imported-goose/channel/google-search ('PASS', 'membership') -> ('FAIL', 'membership')
+## vs the AUDITED TIP baseline
+  born (in run, not in tip): ['builtins/e13-sibling-panic-order/compound-load-vs-len-operand', 'builtins/e13-sibling-panic-order/deref-left-vs-len-operand', 'builtins/e13-sibling-panic-order/div-left-vs-len-operand', 'builtins/e13-sibling-panic-order/idx-left-vs-len-slice-expr', 'builtins/e13-sibling-panic-order/idx-left-vs-min-operand', 'builtins/e13-sibling-panic-order/ptr-field-left-vs-len-operand', 'builtins/e13-sibling-panic-order/shift-left-vs-len-operand']
+  missing: []
+   channels/select-select/beside-loop ('FAIL', 'lean-observation|differential') -> ('FAIL', 'lean-observation')
+   imported-goose/channel/google-search ('PASS', 'membership') -> ('FAIL', 'membership')
