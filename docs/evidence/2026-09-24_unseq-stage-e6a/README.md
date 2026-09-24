@@ -24,7 +24,7 @@ nothing.
 | `gate-exits-e6a.txt` | the standalone gates' captured exits at the tree (go tests, the two wire gates, mem-callsites, core audit, unseq scheduler, frontend pins, bugs, evidence size, spec anchors, agents alias, lane validation) | `.tmp/e6a/gates-small.sh`, `wire-gates.sh`, `wire-gate2.sh` |
 | `ci-diff-c1.tail.txt` | the C1 gate's tail (the frontend + twin + rows + baseline; the C2 files stashed): EXIT=1 in 871 s, cases=3761 pass=3524 fail=237, RESULT FAIL on EXACTLY the 5a pair | `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff` under the lock, ANSI stripped |
 | `ci-slow-c2.tail.txt` | the C2 gate's tail (the decoder + wires): EXIT=1 in 1097 s, cases=3761 pass=3523 fail=238, RESULT FAIL on the 5a pair + one oracle-side racy sample under load (`race/negative/struct-tag-alias-field`; PASS re-run alone) | `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --slow` under the lock, ANSI stripped |
-| `ci-slow-tip.tail.txt` | the tip's full gate (`--slow`) | `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --slow` under the lock, ANSI stripped |
+| `ci-slow-tip.tail.txt` | the tip's full gate (`--slow`, the tree clean at `e453bb38`): EXIT=1 in 899 s, cases=3761 pass=3524 fail=237, RESULT FAIL on EXACTLY the 5a pair (provenance STALE for `GoLean/NativeToIR.lean`; the `google-search` line) | `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --slow` under the lock, ANSI stripped |
 | `choice-trace-main-vs-e6a.txt` | the whole-corpus choice trace, main vs the E6a tip (summary, the differing / born rows, site censuses) | `scripts/choice-trace-corpus --dump --jobs 4 --golean <bin> --out <root-relative dir>` per side (main from a `git archive main` export) + `.tmp/trace-compare.py` |
 
 ## Conclusions (the design §E6a and the handoff §1–§3 carry them in full)
@@ -48,5 +48,6 @@ pin 3525 / 236 with the one 5a-class row red; RESULT FAIL on EXACTLY the two 5a-
 `scripts/check-frontend-pins`; the `google-search` drift line); every other step ok. The C2 `ci --slow` (decoder + wires; lock
 02:34:54Z–02:53:11Z): EXIT=1 in 1097 s; cases=3761 pass=3523 fail=238; RESULT FAIL on the 5a pair plus `race/negative/struct-tag-alias-field`
 PASS/racy → FAIL/go-observation — the Go oracle's `-race` sample stayed green under the box's load (two whole-corpus traces ran beside the
-gate); the row is outside E6a's 41 packages and PASSes re-run alone. The tip's `ci --slow` after the records commit: [filled at park —
-`ci-slow-tip.tail.txt`].
+gate); the row is outside E6a's 41 packages and PASSes re-run alone. The tip's `ci --slow` after the records commit (the tree clean at `e453bb38`; lock 02:56:19Z–03:11:18Z): EXIT=1 in 899 s; cases=3761
+pass=3524 fail=237 = the pin with the one 5a-class row red; RESULT FAIL on EXACTLY the two 5a-class items (`certificate provenance` STALE for
+`GoLean/NativeToIR.lean`; the `google-search` drift line); the racy sample did not recur; every other step ok (`ci-slow-tip.tail.txt`).
