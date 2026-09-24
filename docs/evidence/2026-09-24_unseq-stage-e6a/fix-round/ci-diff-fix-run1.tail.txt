@@ -1,0 +1,62 @@
+# The audit fix round's FIRST full gate (run 1, SUPERSEDED — recorded because its baseline-diff step REFUSED by this worker's own error): GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff under the box-wide lock 2026-09-24T04:29:46Z–04:44:22Z, EXIT=1 in 876 s; cases=3768 pass=3531 fail=237 = the pin 3532 / 236 with the one 5a-class row red. The `baseline diff` step REFUSED (exit 2 — «NOT a drift verdict»): the first re-pin edit had rebuilt baselines/native-full.tsv as header-comments + data rows, which HOISTED the `# reason:` comment block that must sit immediately above channels/select-select/beside-loop into the header — a malformed stage alternation the check names. Every other step ok except `certificate provenance` (the 5a class: STALE for GoLean/NativeToIR.lean); the re-pin guard 0 PASS→non-PASS. The file was rebuilt from HEAD's text line by line (+28 / −1: the tally, the re-pin block, the seven rows inside the sorted e13 block) and scripts/coverage-baseline-diff against THIS run's latest.tsv then judged DRIFT = exactly the one 5a-class line; run 2 (ci-diff-fix.tail.txt) is the gate of record. ANSI stripped.
+
+── differential baseline diff (scripts/coverage-baseline-diff)
+REFUSED: baselines/native-full.tsv carries a malformed stage alternation — cannot judge latest.tsv against it (fix the record; this is NOT a no-drift result):
+  channels/select-select/beside-loop	stage alternation [lean-observation|differential] without a `# reason:` line in the comment block immediately above it (the oracle mechanism must be named; the alternation is [USER]-ruled per row)
+
+── baseline re-pin guard (worktree-vs-HEAD; flips must be on a BUGS.md Cases: line)
+
+── cross-ledger reconciliation (tools/reconcile-records — REPORT-ONLY, informs, never fails the gate)
+  [01] C9  HIGH    certificate provenance: STALE certification: changed dependency build/files/GoLean/NativeToIR.lean
+  [02] C13  MEDIUM  79 doc site(s) across 10 file(s) name a patch-level Go version other than the pin (go1.25.13/go1.26.5 per docs/spec-sources.md). Some are legitimately historical; a toolchain/oracle claim off the pin is not, because the pin's whole job is t
+
+── executed library coverage (all named build receipts from this CI invocation)
+CI coverage timing: verify: seconds=0.015
+Executed library coverage: PASS; 9 libraries, 19 Tests modules, 8 named steps; timings: /home/dev/projects/golean/.claude/worktrees/unseq-stage-e6a/artifacts/ci-library-timings/170c71b9213a46c492f9fadb17ad2ae0.json
+
+══ scripts/ci summary ══
+  ok   Tests/library ownership (no exceptions; executed builds checked at exit)
+  note build parallelism: cap 48G -> LEAN_NUM_THREADS=6 (cap/8G, floor 2; 32 cores on this box)
+  ok   oracle toolchain (go1.26.5 = pin)
+  ok   escape-hatch preflight
+  ok   meta-layer escape hatches (allowlist empty since the repo split)
+  ok   escape-hatch addendum (no decide +native / native-config spellings)
+  ok   bug-index cross-check
+  ok   feature-coverage (no dead tags)
+  ok   spec-anchor citations resolve at the pin
+  ok   stdlib admission register = frontend tables
+  ok   lane-validation fixtures (manifest gates reject bad shapes)
+  ok   evidence-on-main size gate
+  ok   AGENTS.md alias of CLAUDE.md
+  ok   imported-goose verbatim (above-marker bytes = pinned upstream)
+  ok   engine-isolation (core ↛ EnumDedup)
+  ok   memory-module raw call-site inventory (emit/peek discipline)
+  ok   core build (warning-free)
+  FAIL certificate provenance
+  ok   core totality audit (every GoLean/ module; required core theorems; poison controls)
+  ok   admission checker proofs and post-import audit
+  ok   declaration boundary
+  ok   wire boundary (byte-level controls through the real CLI)
+  ok   package-correct method identity
+  ok   unseq scheduler (Stage B)
+  ok   unseq wire (Stage C)
+  ok   frontend pins (realized init-order deviation + twin wire = pinned bytes)
+  ok   import-goose fixtures (importer + verbatim guard reject bad shapes)
+  ok   frontend unit tests
+  ok   lowering-diagnostic tables
+  ok   coverage-harness unit tests
+  ok   eval tests (274 ok)
+  ok   differential run completed (exit 1; failing-set judged by baseline diff)
+  ok   lane-validation fixtures incl. harness half (F4/F6/B3-B5/G5/T1-T8/D1-D6)
+  ok   negative run completed (exit 0; set judged by baseline diff)
+  ok   Tests/FloatVectors.lean = fresh hardware-oracle regeneration (byte-exact)
+  ok   inittask-std.tsv = fresh gc-derived regeneration (header at pin; byte-exact modulo date line)
+  note negative baseline diff matched (394 case(s)) but the record was made on a DIRTY tree (git_dirty=true) — certifies that worktree state, not a commit
+  FAIL baseline diff (REFUSED / could not judge, exit 2 — see above; NOT a drift verdict)
+  ok   re-pin guard (0 PASS→non-PASS flip(s), all listed in BUGS.md Cases)
+  note reconciler: 2 finding(s), 1 HIGH — report-only (details: tools/reconcile-records)
+  ok   executed library coverage (all declared libraries; all Tests modules)
+
+RESULT: FAIL
+differential coverage summary: cases=3768 pass=3531 fail=237 export_status=0
+CI total wall seconds: 876

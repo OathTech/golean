@@ -1,0 +1,39 @@
+# The F2 decoder change through the real CLI — the fix-round binary (sha256 567c0289…, GoLean/NativeToIR.lean with the scope-exact R1 environment) vs the audited tip binary (bb607430…, the flat per-function table; the audit's mutants.txt) and main's (63e9c661…). Mutants are driven with --function w1 like the gate does: a decode refusal fires before the function lookup, so "GoCore function not found: w1" means the wire DECODED.
+
+== the three new mutants (Tests/unseq-wire/mutants.tsv 52 -> 55), fix-round binary
+mut-local-annotation-shadowed: {"message":"/home/dev/projects/golean/.claude/worktrees/unseq-stage-e6a/Tests/unseq-wire/mut-local-annotation-shadowed.json: native lowering: unseq: source-local atom 'v' at program.funcs[1].body.body[3].body.body[1].body[1].then.body[1] is annotated GoLean.GoCore.Ty.map (GoLean.GoCore.Ty.string) (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int)), which disagrees with its declaration GoLean.GoCore.Ty.map\n  (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))\n  (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int)) (the innermost declaration of 'v' in scope at this statement) — a forged annotatio
+ [rc=1]
+mut-local-shadow-other-decl: {"message":"/home/dev/projects/golean/.claude/worktrees/unseq-stage-e6a/Tests/unseq-wire/mut-local-shadow-other-decl.json: native lowering: unseq: source-local atom 'x' at program.funcs[1].body.body[4].body[1] is annotated GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int), which disagrees with its declaration GoLean.GoCore.Ty.string (the innermost declaration of 'x' in scope at this statement) — a forged annotation must not type a graph operand (the Stage E5 audit re-verification's R1, ratified 2026-09-22; Stage E6a; scope-exact since the E6a audit fix round 2026-09-24); refused by name","sch
+ [rc=1]
+mut-local-out-of-scope: {"message":"/home/dev/projects/golean/.claude/worktrees/unseq-stage-e6a/Tests/unseq-wire/mut-local-out-of-scope.json: native lowering: unseq: source-local atom 'z' at program.funcs[1].body.body[3] has no declaration in the enclosing function that is in scope at this statement (its params, results, and the `declare` / var / range / clause declarations that precede the statement in its enclosing blocks) — the graph may name only locals in scope (Stage E6a R1, scope-exact since the audit fix round 2026-09-24); refused by name","schema":"golean-observation-v1","status":"error"}
+ [rc=1]
+
+== the same three on MAIN's binary (the E6a tip's flat table is not on main either — main has no R1 check at all): every one DECODES (the audit's F2 class; on the E6a tip the audit measured mS1-via-typeswitch-binder DECODED AND ANSWERED 1)
+mut-local-annotation-shadowed: {"message":"GoCore function not found: w1","output":"","schema":"golean-observation-v1","status":"stuck"}
+ [rc=1]
+mut-local-shadow-other-decl: {"message":"GoCore function not found: w1","output":"","schema":"golean-observation-v1","status":"stuck"}
+ [rc=1]
+mut-local-out-of-scope: {"message":"GoCore function not found: w1","output":"","schema":"golean-observation-v1","status":"stuck"}
+ [rc=1]
+
+== the two NATIVE positive controls (the emitter's own wires) and the two E6a R1 mutants, fix-round binary
+native-e6ats.json e6ats: {"output":"wit 1\n","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":1}]}
+
+native-e6ashadow.json e6ashadow: {"output":"wit 1\nwit 2\n","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":108}]}
+
+e5blookup.json e5blookup: {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":0}]}
+
+w1.json w1: {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":2}]}
+
+mut-local-annotation-forged: {"message":"/home/dev/projects/golean/.claude/worktrees/unseq-stage-e6a/Tests/unseq-wire/mut-local-annotation-forged.json: native lowering: unseq: source-local atom 'm' at program.funcs[1].body.body[6] is annotated GoLean.GoCore.Ty.map (GoLean.GoCore.Ty.string) (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int)), which disagrees with its declaration GoLean.GoCore.Ty.map\n  (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.
+ [rc=1]
+mut-local-undeclared: {"message":"/home/dev/projects/golean/.claude/worktrees/unseq-stage-e6a/Tests/unseq-wire/mut-local-undeclared.json: native lowering: unseq: source-local atom 'y' at program.funcs[1].body.body[1] has no declaration in the enclosing function that is in scope at this statement (its params, results, and the `declare` / var / range / clause declarations that precede the statement in its enclosing blocks) — the graph may
+ [rc=1]
+
+== the pinned raft twin wire (baselines/pins/twin-chdriver.wire.json, 1c4e7038…) DECODES under the scope-exact environment: the decode precedes the function lookup, so a function-not-found answer = a successful decode of the whole program (3 unseq graphs among 800+ functions)
+fix-round binary: {"message":"GoCore function not found: __nosuch_function__","output":"","schema":"golean-observation-v1","status":"stuck"}
+
+main binary:      {"message":"GoCore function not found: __nosuch_function__","output":"","schema":"golean-observation-v1","status":"stuck"}
+
+
+== the audit's own probe wire replayed? — the audit's p4 wire (.tmp/audit/probes/p4/wire-e6a.json) lives in the read-only audit worktree; the tracked NATIVE e6ats witness carries the same forgery shape (build.py forge_typeswitch_binder = the audit's mS1 edit: the int-map clause's v annotated, keyType'd and keyed as map[string]int / string / "a").

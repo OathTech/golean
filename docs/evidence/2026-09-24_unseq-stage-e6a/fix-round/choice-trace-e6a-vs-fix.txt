@@ -1,0 +1,83 @@
+# The whole-corpus choice trace — the audited tip 1f0dee94 (.tmp/trace/e6a-rel: the lane's run with the tip's binary bb607430… and frontend) vs the audit fix round (.tmp/trace/fix-rel: the fix-round binary 567c0289…, the frontend unchanged by the round; `scripts/choice-trace-corpus --dump --jobs 4` + the rest of the rows by a direct `golean choice-trace --batch` — the wrapper's job 1 stalls on goroutines/send-then-spin and its job 3 aborts with the tracer's stack overflow on strings/trimspace-repeat/repeat-bound-refused, on BOTH sides of every trace so far (the lane's main and E6a runs, this one): the two standing exclusions, traced by no side). Stage D's trace-compare.py (.tmp/trace-compare.py): per id the SORTED dump records (stream, idx, phase, site, bound, streamValue, pick) and the per-stream results (status, consumed, wide, obsHash, driverAgreement) must be identical. Producers .tmp/fix/trace-fix.sh, trace-rest-fix.sh, trace-compare-fix.sh.
+
+== summary
+ids=3732 same=3725 differ=0 onlyA=0 onlyB=7
+sitesA {'appendSpill': 4872, 'backEdge': 2403, 'l1Sched': 9695, 'l2Arrival': 3, 'l2Entry': 24, 'l4Waiter': 22, 'l5ExitWindow': 328, 'mapIter': 1307, 'nilValueMethodText': 90, 'postOp': 4645, 'repanicCollapse': 126, 'tryLock': 101, 'unseqNext': 2550, 'unseqPanic': 96}
+sitesB {'appendSpill': 4872, 'backEdge': 2403, 'l1Sched': 9695, 'l2Arrival': 3, 'l2Entry': 24, 'l4Waiter': 22, 'l5ExitWindow': 328, 'mapIter': 1307, 'nilValueMethodText': 90, 'postOp': 4645, 'repanicCollapse': 126, 'tryLock': 101, 'unseqNext': 2595, 'unseqPanic': 96}
+
+Reading: 3732 ids, 3725 byte-identical, 0 DIFFER, 0 ONLY_A, 7 ONLY_B — exactly the seven rows born at the fix round (BUG-116). The DECODER change (the scope-exact R1 environment) moves NO pick anywhere: every site census is identical except unseqNext 2550 → 2595, the born rows' own picks (below). Export refusals 34 / 34, identical sets.
+
+== DIFFER / ONLY ids
+builtins/e13-sibling-panic-order/compound-load-vs-len-operand	ONLY_B
+builtins/e13-sibling-panic-order/deref-left-vs-len-operand	ONLY_B
+builtins/e13-sibling-panic-order/div-left-vs-len-operand	ONLY_B
+builtins/e13-sibling-panic-order/idx-left-vs-len-slice-expr	ONLY_B
+builtins/e13-sibling-panic-order/idx-left-vs-min-operand	ONLY_B
+builtins/e13-sibling-panic-order/ptr-field-left-vs-len-operand	ONLY_B
+builtins/e13-sibling-panic-order/shift-left-vs-len-operand	ONLY_B
+
+== export refusals: e6a 34 / fix 34; identical sets: yes
+== ids traced: e6a 3725 / fix 3732; batch rows: e6a 3727 / fix 3734
+== the two standing exclusions traced by neither side: goroutines/send-then-spin (the stalled job), strings/trimspace-repeat/repeat-bound-refused (the tracer's stack overflow) — on both sides of every prior trace too (the lane's, the audit's)
+
+== the seven born rows' dump records (fix side; columns: id stream idx phase site bound streamValue pick …)
+builtins/e13-sibling-panic-order/idx-left-vs-min-operand	default	0	pool	unseqNext	2	-	0
+builtins/e13-sibling-panic-order/idx-left-vs-min-operand	9,8,7,6,5,4,3,2,1,0	0	pool	unseqNext	2	9	1
+builtins/e13-sibling-panic-order/idx-left-vs-min-operand	1,3,5,7,9,2,4,6,8,0	0	pool	unseqNext	2	1	1
+builtins/e13-sibling-panic-order/idx-left-vs-min-operand	5,5,5,5,5,5,5,5	0	pool	unseqNext	2	5	1
+builtins/e13-sibling-panic-order/idx-left-vs-min-operand	rand:1:4096	0	pool	unseqNext	2	47062	0
+builtins/e13-sibling-panic-order/idx-left-vs-min-operand	rand:2:4096	0	pool	unseqNext	2	45548	0
+builtins/e13-sibling-panic-order/idx-left-vs-len-slice-expr	default	0	pool	unseqNext	2	-	0
+builtins/e13-sibling-panic-order/idx-left-vs-len-slice-expr	9,8,7,6,5,4,3,2,1,0	0	pool	unseqNext	2	9	1
+builtins/e13-sibling-panic-order/idx-left-vs-len-slice-expr	1,3,5,7,9,2,4,6,8,0	0	pool	unseqNext	2	1	1
+builtins/e13-sibling-panic-order/idx-left-vs-len-slice-expr	5,5,5,5,5,5,5,5	0	pool	unseqNext	2	5	1
+builtins/e13-sibling-panic-order/idx-left-vs-len-slice-expr	rand:1:4096	0	pool	unseqNext	2	47062	0
+builtins/e13-sibling-panic-order/idx-left-vs-len-slice-expr	rand:2:4096	0	pool	unseqNext	2	45548	0
+builtins/e13-sibling-panic-order/deref-left-vs-len-operand	default	0	pool	unseqNext	2	-	0
+builtins/e13-sibling-panic-order/deref-left-vs-len-operand	9,8,7,6,5,4,3,2,1,0	0	pool	unseqNext	2	9	1
+builtins/e13-sibling-panic-order/deref-left-vs-len-operand	1,3,5,7,9,2,4,6,8,0	0	pool	unseqNext	2	1	1
+builtins/e13-sibling-panic-order/deref-left-vs-len-operand	5,5,5,5,5,5,5,5	0	pool	unseqNext	2	5	1
+builtins/e13-sibling-panic-order/deref-left-vs-len-operand	rand:1:4096	0	pool	unseqNext	2	47062	0
+builtins/e13-sibling-panic-order/deref-left-vs-len-operand	rand:2:4096	0	pool	unseqNext	2	45548	0
+builtins/e13-sibling-panic-order/ptr-field-left-vs-len-operand	default	0	pool	unseqNext	2	-	0
+builtins/e13-sibling-panic-order/ptr-field-left-vs-len-operand	9,8,7,6,5,4,3,2,1,0	0	pool	unseqNext	2	9	1
+builtins/e13-sibling-panic-order/ptr-field-left-vs-len-operand	1,3,5,7,9,2,4,6,8,0	0	pool	unseqNext	2	1	1
+builtins/e13-sibling-panic-order/ptr-field-left-vs-len-operand	5,5,5,5,5,5,5,5	0	pool	unseqNext	2	5	1
+builtins/e13-sibling-panic-order/ptr-field-left-vs-len-operand	rand:1:4096	0	pool	unseqNext	2	47062	0
+builtins/e13-sibling-panic-order/ptr-field-left-vs-len-operand	rand:2:4096	0	pool	unseqNext	2	45548	0
+builtins/e13-sibling-panic-order/div-left-vs-len-operand	default	0	pool	unseqNext	2	-	0
+builtins/e13-sibling-panic-order/div-left-vs-len-operand	9,8,7,6,5,4,3,2,1,0	0	pool	unseqNext	2	9	1
+builtins/e13-sibling-panic-order/div-left-vs-len-operand	1,3,5,7,9,2,4,6,8,0	0	pool	unseqNext	2	1	1
+builtins/e13-sibling-panic-order/div-left-vs-len-operand	5,5,5,5,5,5,5,5	0	pool	unseqNext	2	5	1
+builtins/e13-sibling-panic-order/div-left-vs-len-operand	rand:1:4096	0	pool	unseqNext	2	47062	0
+builtins/e13-sibling-panic-order/div-left-vs-len-operand	rand:2:4096	0	pool	unseqNext	2	45548	0
+builtins/e13-sibling-panic-order/shift-left-vs-len-operand	default	0	pool	unseqNext	2	-	0
+builtins/e13-sibling-panic-order/shift-left-vs-len-operand	9,8,7,6,5,4,3,2,1,0	0	pool	unseqNext	2	9	1
+builtins/e13-sibling-panic-order/shift-left-vs-len-operand	1,3,5,7,9,2,4,6,8,0	0	pool	unseqNext	2	1	1
+builtins/e13-sibling-panic-order/shift-left-vs-len-operand	5,5,5,5,5,5,5,5	0	pool	unseqNext	2	5	1
+builtins/e13-sibling-panic-order/shift-left-vs-len-operand	rand:1:4096	0	pool	unseqNext	2	47062	0
+builtins/e13-sibling-panic-order/shift-left-vs-len-operand	rand:2:4096	0	pool	unseqNext	2	45548	0
+builtins/e13-sibling-panic-order/compound-load-vs-len-operand	default	0	pool	unseqNext	2	-	0
+builtins/e13-sibling-panic-order/compound-load-vs-len-operand	9,8,7,6,5,4,3,2,1,0	0	pool	unseqNext	2	9	1
+builtins/e13-sibling-panic-order/compound-load-vs-len-operand	9,8,7,6,5,4,3,2,1,0	1	pool	unseqNext	2	8	0
+builtins/e13-sibling-panic-order/compound-load-vs-len-operand	1,3,5,7,9,2,4,6,8,0	0	pool	unseqNext	2	1	1
+builtins/e13-sibling-panic-order/compound-load-vs-len-operand	1,3,5,7,9,2,4,6,8,0	1	pool	unseqNext	2	3	1
+builtins/e13-sibling-panic-order/compound-load-vs-len-operand	5,5,5,5,5,5,5,5	0	pool	unseqNext	2	5	1
+builtins/e13-sibling-panic-order/compound-load-vs-len-operand	5,5,5,5,5,5,5,5	1	pool	unseqNext	2	5	1
+builtins/e13-sibling-panic-order/compound-load-vs-len-operand	rand:1:4096	0	pool	unseqNext	2	47062	0
+builtins/e13-sibling-panic-order/compound-load-vs-len-operand	rand:2:4096	0	pool	unseqNext	2	45548	0
+
+== the seven born rows' per-stream results (fix side; the results columns as the tracer writes them)
+id	stream	status	consumed	wide	exhaustedAt	wideAfterExhaustion	perSite	maxBound	violations	firstViolation	alarms	firstAlarm	obsHash	driverAgreement
+builtins/e13-sibling-panic-order/idx-left-vs-min-operand	default	panic	1	1	0	1	unseqNext=1	2	0	-	0	-	10377530067132144669	ok
+builtins/e13-sibling-panic-order/idx-left-vs-min-operand	9,8,7,6,5,4,3,2,1,0	panic	1	1	-	0	unseqNext=1	2	0	-	0	-	9650183921897640410	ok
+builtins/e13-sibling-panic-order/idx-left-vs-min-operand	1,3,5,7,9,2,4,6,8,0	panic	1	1	-	0	unseqNext=1	2	0	-	0	-	9650183921897640410	ok
+builtins/e13-sibling-panic-order/idx-left-vs-min-operand	5,5,5,5,5,5,5,5	panic	1	1	-	0	unseqNext=1	2	0	-	0	-	9650183921897640410	ok
+builtins/e13-sibling-panic-order/idx-left-vs-min-operand	rand:1:4096	panic	1	1	-	0	unseqNext=1	2	0	-	0	-	10377530067132144669	ok
+builtins/e13-sibling-panic-order/idx-left-vs-min-operand	rand:2:4096	panic	1	1	-	0	unseqNext=1	2	0	-	0	-	10377530067132144669	ok
+builtins/e13-sibling-panic-order/compound-load-vs-len-operand	default	panic	1	1	0	1	unseqNext=1	2	0	-	0	-	13710769657536276740	ok
+builtins/e13-sibling-panic-order/compound-load-vs-len-operand	9,8,7,6,5,4,3,2,1,0	panic	2	2	-	0	unseqNext=2	2	0	-	0	-	13710769657536276740	ok
+builtins/e13-sibling-panic-order/compound-load-vs-len-operand	1,3,5,7,9,2,4,6,8,0	panic	2	2	-	0	unseqNext=2	2	0	-	0	-	9650183921897640410	ok
+builtins/e13-sibling-panic-order/compound-load-vs-len-operand	5,5,5,5,5,5,5,5	panic	2	2	-	0	unseqNext=2	2	0	-	0	-	9650183921897640410	ok
+builtins/e13-sibling-panic-order/compound-load-vs-len-operand	rand:1:4096	panic	1	1	-	0	unseqNext=1	2	0	-	0	-	13710769657536276740	ok
+builtins/e13-sibling-panic-order/compound-load-vs-len-operand	rand:2:4096	panic	1	1	-	0	unseqNext=1	2	0	-	0	-	13710769657536276740	ok

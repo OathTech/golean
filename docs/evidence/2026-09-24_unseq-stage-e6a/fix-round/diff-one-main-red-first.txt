@@ -1,0 +1,13 @@
+# RED-FIRST, take 1 — the seven born MEMBERSHIP rows on MAIN 3fb4a0d1's frontend + binary (.tmp/main-tree: a git-archive export of main with the primary's .lake artifacts rsynced in — main 58aa7dbe is a records-only landing over 3fb4a0d1, the binary 63e9c661… = the primary's; scripts/diff-one under GOLEAN_MEM_MAX=32G scripts/capped; producer .tmp/fix/diff-one-main2.sh). Every row FAILS at stage membership: main's machine enumerates a SINGLETON — the LEFT operand's panic alone — and the membership lane refuses a one-member set before comparing with gc; the WRONG-ANSWER witness proper (Lean's member ≠ gc's draw) is the strict-twin run, diff-one-main-strict.txt. (A first attempt ran diff-coverage's bare `lake build` from an EMPTY .lake in the scratch tree and hit its 120 s timeout — EXIT=2, no result, nothing published; it is superseded by this run.)
+
+== no-op build check
+lake build EXIT=0 (0 s)
+FAIL	builtins/e13-sibling-panic-order/div-left-vs-len-operand	division,slices,indexing,len,panic,evaluation_order,nondet	stage=membership	detail=enumerated observation set is a singleton (1 member) — the case belongs in the strict or confluent lane
+FAIL	builtins/e13-sibling-panic-order/idx-left-vs-len-slice-expr	slices,indexing,slicing,len,panic,evaluation_order,nondet	stage=membership	detail=enumerated observation set is a singleton (1 member) — the case belongs in the strict or confluent lane
+FAIL	builtins/e13-sibling-panic-order/shift-left-vs-len-operand	shifts,slices,indexing,len,panic,evaluation_order,nondet	stage=membership	detail=enumerated observation set is a singleton (1 member) — the case belongs in the strict or confluent lane
+FAIL	builtins/e13-sibling-panic-order/deref-left-vs-len-operand	pointers,nil,slices,indexing,len,panic,evaluation_order,nondet	stage=membership	detail=enumerated observation set is a singleton (1 member) — the case belongs in the strict or confluent lane
+FAIL	builtins/e13-sibling-panic-order/compound-load-vs-len-operand	slices,indexing,len,assignment,panic,evaluation_order,nondet	stage=membership	detail=enumerated observation set is a singleton (1 member) — the case belongs in the strict or confluent lane
+FAIL	builtins/e13-sibling-panic-order/ptr-field-left-vs-len-operand	pointers,structs,nil,slices,indexing,len,panic,evaluation_order,nondet	stage=membership	detail=enumerated observation set is a singleton (1 member) — the case belongs in the strict or confluent lane
+FAIL	builtins/e13-sibling-panic-order/idx-left-vs-min-operand	slices,indexing,min,builtins,panic,evaluation_order,nondet	stage=membership	detail=enumerated observation set is a singleton (1 member) — the case belongs in the strict or confluent lane
+differential coverage summary: cases=7 pass=0 fail=7 export_status=0
+EXIT=1 (28 s)

@@ -1,0 +1,53 @@
+# Standalone gate exits — the Stage E6a AUDIT FIX ROUND (2026-09-24), at the fix round's working tree (the decoder, the wires, the seven rows, the baseline, BUGS.md, the pin-script header in place; captured exits — a killed command decides nothing). Producers .tmp/fix/gates-small.sh (each: <cmd> > log; EXIT=$?) and .tmp/fix/wire-gates.sh; GOLEAN_MEM_MAX=32G scripts/capped on the Lean-running ones. The wire gates' FIRST run failed on purpose-defeating grounds and is recorded: mut-local-annotation-shadowed DECODED because the positional graph pick hit the string clause (the emitter's sorted JSON keys put else before then) — a no-op forgery; the pick is by content since (Tests/unseq-wire/build.py edit_native).
+
+== check-bugs: EXIT=0 (2 s)
+== check-evidence-size: EXIT=0 (0 s)
+== check-spec-anchors: EXIT=0 (5 s)
+== check-agents-alias: EXIT=0 (0 s)
+== reconcile-records: EXIT=0 (25 s)
+== test-lane-validation: EXIT=0 (3 s)
+== go-test: EXIT=0 (2 s)
+== check-mem-callsites: EXIT=0 (0 s)
+== check-frontend-pins: EXIT=0 (1 s)
+== check-core-audit: EXIT=0 (12 s)
+== check-unseq-scheduler: EXIT=0 (91 s)
+== check-unseq-wire: EXIT=0 (5 s)
+== check-wire-boundary: EXIT=0 (2 s)
+
+## check-frontend-pins (the twin UNCHANGED by this round — the frontend did not change)
+check-frontend-pins: ok [hidden-dep-order] — realized deviation order matches the recorded pin
+check-frontend-pins: ok [twin-wire] — fresh emit = pinned wire (1c4e70383d7a…)
+check-frontend-pins: ok [stdlib-pin] — 61 lowered stdlib source files match the pinned sha256 manifest
+
+## check-bugs
+check-bugs: backlog — 14 unexplained fidelity failure(s): coverage 10/10; latitude 4/4; wrong-answer 0/0 ('scripts/check-bugs.sh --list')
+check-bugs: 'wrong-answer' is the class that ratchets toward 0; 'coverage' retires when the feature lands and 'latitude' only by an envelope.
+EXIT=0 (2 s)
+
+## reconcile-records (findings)
+[02] C9  HIGH    certificate provenance: STALE certification: changed dependency build/files/GoLean/NativeToIR.lean
+[03] C13  MEDIUM  79 doc site(s) across 10 file(s) name a patch-level Go version other than the pin (go1.25.13/go1.26.5 per docs/spec-sources.md). Some are legitimately historical; a toolchain/oracle claim off the pin is not, because the pin's whole job is that the spec text and the thing that produced the numbers moved together.
+3 finding(s).
+
+## check-unseq-wire tail
+ok [mut-local-out-of-scope] refused through the CLI, naming: has no declaration in the enclosing function
+Unseq wire gate: PASS (55 mutants refused through the CLI; exact sets in tests.log)
+EXIT=0 (5 s)
+## check-wire-boundary (the fix round's controls)
+ok [unseq typeswitch-binder] runs, answers 1 (a type-switch binder declared per clause, in scope for its clause — audit fix round F2)
+ok [unseq block-shadow] runs, answers 108 (a block-shadowed name resolves to the innermost declaration in scope — audit fix round F2)
+ok [unseq-local-annotation-shadowed] refused, naming: disagrees with its declaration
+ok [unseq-local-shadow-other-decl] refused, naming: disagrees with its declaration
+ok [unseq-local-out-of-scope] refused, naming: has no declaration in the enclosing function
+Wire boundary gate: PASS (11 byte-level controls + 55 unseq-node controls through the real CLI)
+
+## test-lane-validation
+ok lines: 68
+FAIL lines (^FAIL): 0 (five ok lines carry the word FAIL in an expected-refusal text)
+
+## the wire gates' first (failing) run
+The retained scratch .tmp/typed-gate.VM19mR/tests.log lists 54 mutants as ok — every one EXCEPT mut-local-annotation-shadowed (its FAIL line went to
+the harness's stderr, which the gate's `tee` does not capture into tests.log; the gate log itself was overwritten by the second run) — and the
+gate EXIT=1 (4 s): the mutant DECODED because build.py's positional graph pick edited the string clause's graph (a no-op forgery). The mutant
+on the fix-round binary BEFORE the content-based pick (this worker's own CLI probe, 04:09Z): {"message":"GoCore function not found: w1", …
+"status":"stuck"} — decoded. After: refused by name (mutants-fix.txt). The second run (the pick by content) is the PASS above.

@@ -51,3 +51,36 @@ PASS/racy → FAIL/go-observation — the Go oracle's `-race` sample stayed gree
 gate); the row is outside E6a's 41 packages and PASSes re-run alone. The tip's `ci --slow` after the records commit (the tree clean at `e453bb38`; lock 02:56:19Z–03:11:18Z): EXIT=1 in 899 s; cases=3761
 pass=3524 fail=237 = the pin with the one 5a-class row red; RESULT FAIL on EXACTLY the two 5a-class items (`certificate provenance` STALE for
 `GoLean/NativeToIR.lean`; the `google-search` drift line); the racy sample did not recur; every other step ok (`ci-slow-tip.tail.txt`).
+
+## The audit fix round (2026-09-24) — `fix-round/`
+
+[AGENT] worker. The adversarial audit `docs/2026-09-24_unseq-stage-e6a-audit.md` (candidate `1f0dee94`; FIX-FIRST, records, small);
+dispositions the [AGENT] coordinator's, disclosed at the merge ask; the per-finding table is the handoff §5, the design record §E6a
+«the audit fix round». Producers under the worktree's `.tmp/fix/` (replayable edit scripts and drivers; the handoff §6 names them).
+Toolchain and host as above; binaries: the fix-round golean sha256 `567c0289…` (the audited tip's `bb607430…`, main's `63e9c661…`);
+the frontend unchanged by the round (main's for the red-first runs from a `git archive 3fb4a0d1` tree).
+
+| file | what | producer |
+|---|---|---|
+| `fix-round/diff-one-fix.txt` | `scripts/diff-one` on the SEVEN born rows (BUG-116, audit F1) on the candidate: 7 PASS/membership, enumerated=2, gc's draw exhibited | `.tmp/fix/diff-one-fix.sh` |
+| `fix-round/diff-one-main-red-first.txt` | the same seven MEMBERSHIP rows on MAIN 3fb4a0d1's frontend + binary: 7 FAIL/membership — main's machine enumerates a SINGLETON (the left operand's panic); the first take's timeout noted | `.tmp/fix/diff-one-main2.sh` (main's tree `.tmp/main-tree` with the primary's `.lake` rsynced; `scripts/capped`) |
+| `fix-round/diff-one-main-strict.txt` | STRICT twins of the seven subjects on main: 7 FAIL/differential — Lean the LEFT panic ≠ Go the BUILT-IN's OPERAND's panic: observed ∉ modeled, the wrong answer BUG-116 records | `.tmp/fix/diff-one-main-strict.sh` |
+| `fix-round/gc-draws-fix.txt` | gc's 20 draws per born subject (5 runs × GOMAXPROCS 1/8 × default / `-N -l`): every one the built-in's operand's panic 20/20 — inside the candidate's set, outside main's singleton; tabulated + raw | `.tmp/fix/gc-draws-fix.sh` (the lane's `gc-draws.sh`) |
+| `fix-round/mutants-fix.txt` | the F2 decoder change through the real CLI: the three new mutants refuse by name (main's binary decodes them); the two NATIVE positive controls run; the audit's own forged files refuse under the fix-round binary; the pinned raft twin wire decodes | by hand (the commands in the file's header) |
+| `fix-round/census-fix.txt` | the census RE-TAKEN at this tree (audit F5), both frontends: 108 294 sweeps, 180 → 273 admitted (100 newly, 0 lost); probes 58 → 47 corpus, twin 128 → 128 with 3 graphs; the seven born subjects' sweeps both sides | `.tmp/fix/census-fix.sh` (the lane's census tooling) |
+| `fix-round/gate-exits-fix.txt` | the standalone gates' captured exits at the fix round's tree (all green; the twin pin unchanged; `check-bugs` 116; the wire gates 55 — and their FIRST run's failure, recorded) | `.tmp/fix/gates-small.sh`, `wire-gates.sh` |
+| `fix-round/ci-diff-fix-run1.tail.txt` | the SUPERSEDED first run of the full gate: its `baseline diff` step REFUSED on a malformed re-pin of the baseline (the `# reason:` block hoisted into the header — this worker's error, repaired before run 2); every other step as run 2 | `.tmp/fix/gate-ci.sh` (run 1) |
+| `fix-round/ci-diff-fix.tail.txt` | the fix round's full gate: `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff` under the box-wide lock (the line below) | `.tmp/fix/gate-ci.sh` |
+| `fix-round/choice-trace-e6a-vs-fix.txt` | the whole-corpus choice trace, the audited tip `1f0dee94` (`.tmp/trace/e6a-rel`) vs the fix-round binary (`.tmp/trace/fix-rel`): summary, differing / born rows, site censuses (the line below) | `.tmp/fix/trace-fix.sh` + `.tmp/trace-compare.py` |
+
+Conclusions: (1) F1 — the class is a WRONG ANSWER on main (7/7 strict twins FAIL/differential) and PASS/membership on the candidate with
+gc inside; rowed, BUG-116 filed, BUG-032 corrected. (2) F2 — the scope-exact R1 environment refuses the audit's forgeries by name and
+decodes every emitted wire (the two NATIVE controls, the corpus, the twin). (3) F3–F7 — records corrected as the handoff §5 table says.
+
+The full gate of the fix round: `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff` at the fix round's tree (runtime commit `973119c2` + the
+records, all in the working tree; the box-wide lock 2026-09-24T04:46:13Z–04:58:35Z): EXIT=1 in 742 s; cases=3768 pass=3531 fail=237 = the pin
+3768 = 3532 / 236 with the one 5a-class row red; RESULT FAIL on EXACTLY the two 5a-class items (`certificate provenance` STALE for
+`GoLean/NativeToIR.lean`; the `google-search` drift line); every other step ok (`fix-round/ci-diff-fix.tail.txt`; a first run's `baseline diff` REFUSED on a malformed re-pin of the baseline — this worker's
+error, repaired before run 2 — `fix-round/ci-diff-fix-run1.tail.txt`). The whole-corpus choice
+trace vs the audited tip `1f0dee94`: 3732 ids, 3725 byte-identical, 0 DIFFER, 0 ONLY_A, 7 ONLY_B (the born rows); `unseqNext` 2550 → 2595,
+every other site identical; 34 / 34 export refusals (`fix-round/choice-trace-e6a-vs-fix.txt`).

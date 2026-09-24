@@ -1820,6 +1820,23 @@ machine construct §3, the frontend §4, the residuals §6).
   `assert-return-list` (a captured read in a lifted body), the E6b/E6c shapes. The GENERAL form of the
   refinement — any two unordered failing occurrences with NO event between them — is NOT taken (it would
   move E3/E4/E12's (b) pins as ENTRIES; footprint 856 sweeps): POSED in the E6a handoff §2.
+- STAGE E6a AUDIT FIX ROUND (2026-09-24, [AGENT], lane `core/unseq-stage-e6a-0924`; the audit
+  `docs/2026-09-24_unseq-stage-e6a-audit.md` F1; BUG-116): the two RED-FIRST moves above are the
+  ASSERTION-LEFT members of a class whose other members were WRONG ANSWERS on main — a LATE-realized failing
+  NON-CALL operand (index / slice expression / dereference / pointer-field read / division / shift / compound
+  LOAD) LEFT of an INLINE `len` / `cap` / `min` / `max` whose own operand panics, CALL-FREE: main's legacy
+  lexical path answered the LEFT panic alone where gc realizes the BUILT-IN's OPERAND's panic (20/20 on all
+  fifteen audited shapes) — observed ∉ modeled, unrowed until the audit (no corpus row had the call-free
+  shape); the E6a refined trigger fixed it silently (the sweep is ONE `unseq` graph holding both panics).
+  SEVEN rows BORN in `builtins/e13-sibling-panic-order` — `idx-left-vs-min-operand`,
+  `idx-left-vs-len-slice-expr`, `deref-left-vs-len-operand`, `ptr-field-left-vs-len-operand`,
+  `div-left-vs-len-operand`, `shift-left-vs-len-operand`, `compound-load-vs-len-operand` — each
+  PASS/membership {the left panic, the built-in's operand's panic} with gc's member inside (20/20), each
+  RED-FIRST on main's frontend + binary (FAIL/membership as born, FAIL/differential as strict twins). This
+  entry's axis, (a) ENVELOPED — no entry moves; BUG-032's A6 sentence «len stays inline and realizes gc's
+  left-to-right point» is corrected there (it holds for the assertion-left exception only). The trigger as
+  shipped is a faithful SUBSET of the ruled wording (the audit's F4); gc realizes the lexical order on every
+  GENERAL-form probe except BUG-032's tuple (E3's recorded pin) — the general form stays POSED.
 - STAGE E5, FAMILY E5e (2026-09-22, [AGENT], lane `core/unseq-stage-e5-0922`; design
   `docs/2026-09-22_unseq-stage-e5-design.md` §E5e): a STRING byte read / substring is a failing pure
   op of the graph — `builtins/e13-sibling-panic-order/bytes-conv-payload-vs-call` (`int([]byte(s[i:j])

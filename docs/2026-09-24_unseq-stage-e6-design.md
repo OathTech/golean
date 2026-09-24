@@ -89,7 +89,14 @@ also moves the inventory's E3, E4 and E12 (the left-to-right order among non-cal
 to (a) ENVELOPED as ENTRIES — «a new entry class as an ENTRY … is a HARD STOP — pose, do not take» (the
 brief). E6a ships (B): it executes the ruling's purpose (the probe can retire without narrowing its rows),
 touches only E13's axis (already (a) ENVELOPED), and admits **48 sweeps by the trigger**. (A) is posed with
-its footprint; the legacy path keeps realizing the general form's one lexical order, as today.
+its footprint; the legacy path keeps realizing the general form's one lexical order, as today. [The E6a audit
+(2026-09-24, F4): (B) is a faithful SUBSET of the ruled wording — a narrowing of the ruling's literal scope by
+[AGENT] choice, POSED as handoff §2 item 1 with that phrase. On every general-form probe the audit ran
+(`a[i] + b[j]`, `x/y + s[i]`, `p.f + q.g` through pointers, `iv.(int) + s[i]`, the tuple `x, y = a[i], b[j]`,
+two failing operands inside ONE `make` window) gc realizes the LEXICAL order 20/20, so NOT taking (A) creates
+no new observed-∉-modeled; the ONE general-form shape where gc differs is BUG-032's own tuple `xs[ys[9]], b =
+zs[7], 2` (gc `[7]`, the machine `[9]` on both sides — the inventory's E3 «(b) PINNED, known ≠ gc»), which (A)
+would fix.]
 
 **`len`/`cap` over map and channel operands — [AGENT] choice, POSED (handoff §2 item 2).** The census
 BEFORE shows the panic-vs-panic rows were refused by the GRAMMAR, not the trigger: `len(make(map[int]int,
@@ -131,7 +138,9 @@ library unit — `Trim`, `*Reader.Len`, … across 26 corpus packages that impor
 (2, `multipkg/wire-codec`), and the twin: 7 sweeps (`bytes.Trim`, `bytes.(*Reader).Len`,
 `strings.(*Reader).Len`, `strings.Trim`, `raftpb.(*Snapshot).SizeMessage`, `raft.isHardStateEqual`,
 `raft.MustSync`), of which 3 reach the wire (reachability pruning drops the library ones) — the twin's THREE
-born graphs. **The 151 non-main probe emitters are unchanged: 128 twin, 23 corpus.** Every one is refused by
+born graphs. **The 151 non-main probe emitters are unchanged: 128 twin, 23 corpus** (22 once
+`imported-goose/generics/generic-conversion`'s `index-addr` is counted under E6b, where the residue table below
+files it — the audit's F4c). Every one is refused by
 a reason the unit boundary never was: the twin's `field-get` probes sit on `raft.raft`, `raftpb.Message`,
 `tracker.Progress`, `raft.raftLog`, `raft.unstable` — «field selector on a struct type outside the grammar»
 (the struct carries an interface field — `Logger`, `Storage` — or a defined non-struct field type —
@@ -156,14 +165,25 @@ fell. E6d/E6e must plan for them (handoff §3).
 
 **The twin re-pin** (`scripts/check-frontend-pins`, `baselines/pins/twin-chdriver.wire.json` e1a87725… →
 1c4e7038…; the reason in the script's header; `twin-structural-diff.txt`): the SOLE structural change is
-the three born graphs — `raft.isHardStateEqual` (`a.GetTerm() == b.GetTerm() && …`: the HardState getters'
-nil-checked field reads unordered against each other across the `&&` chain's E1 windows), `raft.MustSync`
-(the same getters over two states), `raftpb.(*Snapshot).SizeMessage` (a compound `n += …` whose nil-checked
-field read is unordered against the sibling method call); 0 funcs / methods / types / globals / methodSets
-added or removed, `fileOrder` identical, the 128 `unseq-probe` statements unchanged; every other changed
-entry differs only by program-wide temporary renumbering (`$uN` cells consume the counter). The born graphs'
-sets are singletons on the twin's non-nil states (the getters cannot fail), so the twin's observations are
-unchanged — the corpus twin rows (`multipkg/mini-raft-twin/*`) reproduce their pinned states.
+the three born graphs — `raft.isHardStateEqual` (`a.GetTerm() == b.GetTerm() && …`: the raftpb getters have
+POINTER receivers, so `a` and `b` are ATOMS; the graph's occurrences are six `invoke`s, three pure `binary`s
+and two GUARDS with their joins — NO failing occurrence), `raft.MustSync` (the same shape over `||`),
+`raftpb.(*Snapshot).SizeMessage` (`n += 1 + plainpbSizeVarint(uint64(len(x.Data))) + len(x.Data)`: the
+nil-checked `x.Data` reads beside the effectful FUNCTION call `plainpbSizeVarint`). All three enter through
+the generalized UNIT BOUNDARY under Stage E's E3 rule (a guard whose window is followed by an effectful call;
+a nil-checked field read beside a call) — NONE by the E6a trigger refinement; the audit's main-unit replicas
+of the shapes are admitted by MAIN's frontend too. [CORRECTED at the audit fix round, 2026-09-24, the audit's
+F3: this paragraph, the pin script's header, the handoff and the changelog lines first described «the
+HardState getters' nil-checked field reads unordered against each other across the `&&` chain's E1 windows»
+and «a compound whose nil-checked field read is unordered against the sibling method call» — wrong on both
+counts.] 0 funcs / methods / types / globals / methodSets added or removed, `fileOrder` identical, the 128
+`unseq-probe` statements unchanged; every other changed entry differs only by program-wide temporary
+renumbering (`$uN` cells consume the counter). The born graphs are ALL-FORCED (every occurrence an E1-ordered
+call, a pure op or a guard), so their sets are singletons on EVERY state and the twin's observations are
+unchanged — a structural argument (reproduced by the audit on its p5 replicas: one observation on both sides,
+gc =), not the «getters cannot fail on non-nil states» argument first written; the twin driver under the
+machine was not re-run (40–65 min); the corpus twin rows (`multipkg/mini-raft-twin/*`) reproduce their pinned
+states.
 
 ### The two decoder follow-ups (RULED [USER] 2026-09-22 items 6 and 3; `GoLean/NativeToIR.lean`, trust surface #1)
 
@@ -188,13 +208,46 @@ built-in / sync / type-assert / chan-recv targets, the emitter's one target shap
 them) — set by `withReader` in `decodeFunc` and `decodeMethod` around the body decode. `decodeUnseq` walks
 the WHOLE node after the cells decode (`unseqCheckLocalAtoms`): an `ident` whose name is not a reserved `$`
 slot and not one of the graph's own cells must be declared («has no declaration in the enclosing
-function»), and its `type` annotation, when present, must be one of its declared types («is annotated …,
-which disagrees with its declaration …»); a `ref` of a source local must be declared. The residual, stated:
-a name Go's block scoping declares TWICE with DIFFERENT types in one function is checked against the SET of
-its declared types (the wire keeps source names; GoCore scopes them lexically) — a forged annotation equal to
-the OTHER declaration's type passes this flat check; the alternative (a scope-exact environment threaded
-through every statement kind's decoder) was not built ([AGENT], the shadow-with-different-types-inside-a-
-sweep case is refused nowhere and reaches the machine's own type checks). Mutants
+function»), and its `type` annotation, when present, must be that declaration's («is annotated …, which
+disagrees with its declaration …»); a `ref` of a source local must be declared. **The environment is
+SCOPE-EXACT since the audit fix round (2026-09-24, the audit's F2).** At the tip the table was FLAT — the
+whole body's declarations, a name checked against the SET of every type declared under it — and the residual
+stated was «a name Go's block scoping declares TWICE with DIFFERENT types in one function»; the audit showed
+its true reach: the emitter spells a TYPE-SWITCH clause binder PER CLAUSE with the clause's type (`declare v
+: map[int]int` in one clause body, `declare v : map[string]int` in the other — ONE source declaration, a
+common idiom), so the flat table held both, and the audit's `mS1-via-typeswitch-binder` (the int-map clause's
+`v` annotated, its `map-get` head keyType'd and keyed as the OTHER clause's map) DECODED AND ANSWERED 1 — the
+E5 audit's F1 class one layer down. The fix, taken (no wire-schema change: the wire's block structure and its
+in-order declaration spellings carry the scope already): `LowerCtx.locals` is the set of declarations IN
+SCOPE at the statement being decoded — `decodeStmt`'s `block` arm folds it statement by statement (each
+statement decodes under the declarations BEFORE it; its own join the environment for the statements after
+it — Go: a variable's scope begins at the END of its declaration, so a statement never sees its own),
+`jsonDeclaredLocals` no longer descends into a block-scoping statement's nested bodies (`nestedStmtKeys`:
+`block`/`breakable`/`labeled` body, `if` init/then/else, `for` init/post/condPre/body, `range` body, `select`
+clauses/default — the `unseq` node with its `then` and allocation bodies is ONE declaration site, walked
+whole), `decodeIf` / `decodeFor` extend the environment with their `init`'s declarations (looking through a
+wrapping block) for the condition, the branches, the body and the post, `decodeRange` with its key / value
+variables for the body, the `select` arm with each receive clause's targets for THAT clause's body, and
+`decodeFunc` / `decodeMethod` open it with the params and results only; `unseqCheckLocalAtoms` resolves an
+atom to the LAST entry of its name — the INNERMOST declaration in scope (a shadowing redeclaration, a
+per-clause binder, a per-iteration loop-variable copy sit after what they shadow) — and checks the
+annotation against that one type. The auditor's mutant, the legal-shadowing positive control and the
+type-switch positive control are tracked: NATIVE witnesses `e6ats` (`switch v := iv.(type) { case
+map[int]int: r = v[1] + wit(1); case map[string]int: r = v["a"] + wit(2) }` → {1 · `wit 1`}) and `e6ashadow`
+(`x := 0; …; r := s[x] + wit(1); { x := "ab"; r += int(x[1]) + wit(2) }; z := 0` → {108 · `wit 1` `wit 2`});
+mutants `mut-local-annotation-shadowed` (the audit's mS1 edit on `e6ats`), `mut-local-shadow-other-decl`
+(the inner string `x` annotated with the OUTER declaration's int — the residual the tip stated, now refused),
+`mut-local-out-of-scope` (the outer graph names `z`, declared only LATER in the block — in the function, not
+in scope). The audit's own forged files (`mS1-via-typeswitch-binder`, `mR1-typeswitch-binder`,
+`mR1-shadow-other-decl-type`) refuse by name under the fix-round binary; its legal p4 wire decodes and runs as
+before (`docs/evidence/2026-09-24_unseq-stage-e6a/fix-round/mutants-fix.txt`); the pinned raft twin wire and
+every corpus wire decode (the differential gate; the whole-corpus choice trace byte-identical outside the born
+rows). WHAT REMAINS OUTSIDE R1 (stated, not a residual of the environment): the emitter's `$`-temps and the
+graph's own cells (D2's reservation, not R1's); a store TARGET's id — not an atom — which R1 does not see
+(the audit's F7, a NAMED LATE REFUSAL of the standing class the Stage E and E5 audits recorded: `mR1-target-
+id-undeclared` renames a `then` store's `{"target":"var","id":…}` to an undeclared name, and the machine
+sticks by name «expected array, slice, or string value for index access, got int 0» — closed late, not an
+answer; a declared-id check on store targets is optional and not taken). Mutants
 `mut-local-annotation-forged` (e5blookup: the annotation, its cell and the lookup's `keyType` all say
 `map[string]int` on a `map[int]int` local — D9 and audit F1's base check pass, only the declaration says
 otherwise), `mut-local-undeclared` (e5daddr's `read1` names an undeclared `y`). Two existing mutants met the
@@ -202,7 +255,8 @@ new check first and were re-pointed to keep their needles: `mut-nondollar` (a ce
 D2's business, so the walk skips the graph's own cell ids) and `mut-guard-type` (its edit re-annotated the
 source local `z` as int; the edit now forges the test CELL's type and feeds it a constant head, so D11 is
 reached). 49 → 52 mutants (`Tests/unseq-wire/mutants.tsv`, `scripts/check-unseq-wire`,
-`scripts/check-wire-boundary` 11 + 52 controls); every positive control unchanged.
+`scripts/check-wire-boundary` 11 + 52 controls); every positive control unchanged. The audit fix round: 52 →
+55 mutants, 11 + 55 controls, the two NATIVE witnesses above (`Tests/UnseqWire.lean` exact sets).
 
 ### The owed status-diverse manifest row (the E5 audit fix round's F4; trusted surface #2)
 
@@ -236,6 +290,12 @@ admitted **179 → 265** (+86 corpus in 41 packages + 7 twin = 93 newly admitted
 operand (map)» 5, «method callee outside the main package» 3, «qualified function callee» 2, «cap of a
 non-slice operand (chan)» 1; by form `return` 88, `compound` 3, `elem-assign` 1, `define` 1; admitted units
 `main` 205, `strings` 44, `bytes` 14, `wirepb` 2. The twin 10 203 sweeps: 0 → 7 admitted, 3 reach the wire.
+[The audit's F5 (2026-09-24): these figures were taken on the working tree BEFORE `str-index-status-diverse`
+existed; at the tip `1f0dee94` both frontends admit its sweep — 108 264 sweeps, **180 → 266** (the 93 newly
+admitted identical BY NAME; the audit's `census-repro.txt`). At the audit fix round's tree (the seven BUG-116
+rows born in `e13-sibling-panic-order`): 108 294 sweeps, **180 → 273** (100 newly admitted = the 93 + the
+seven born rows' sweeps; 0 lost; `main` 213, `strings` 44, `bytes` 14, `wirepb` 2); legacy probes corpus 58
+→ 47, the twin 128 → 128 with 3 graphs — `docs/evidence/2026-09-24_unseq-stage-e6a/fix-round/census-fix.txt`.]
 
 Legacy probe emission (`probes-before.txt`, `probes-e6a.txt`): **corpus 58 → 47** (17 → 17 packages;
 `builtins/len-vs-call-order` 15 → 6, `builtins/e13-sibling-panic-order` 11 → 9, every other package
@@ -247,7 +307,7 @@ reason (the handoff §3 carries the same table for E6b–E6e):
 | E6b — element / field addresses | 4 | e13 `addrIndexLeftLenHoist`, `addrAssertLeftCall`, `arrayBaseTargetVsLen` (`index-addr`); `imported-goose/generics/generic-conversion` `genericConversions` (`index-addr`) — «unary operator & on an element (&a[i])», an array base |
 | E6c — `recover()` in a lifted body | 2 | e13 `recoverAssertVsLen$lit0`, `recoverAssertVsCallW$lit2` (`type-assert`) — «builtin recover statement» / a captured target in the lifted body |
 | E6d — the nine singletons | 9 | `channels/recv-edge` `recvNilIndexBaseSecond$lit0` (`deref`), `channels/recv-map-elem` `mapKeyPanicDrains$lit0` (`index-get`), `fmt/sprintf-dyn` `Infof` (`field-get`), `noodler/frontier2/array-of-funcs-indexed-call` (`index-get`, array base), `noodler/frontier2/typed-nil-error-return` (`binary`, interface comparison), `noodler/misc` `copyIntoArrayView` (`slice`, array), `noodler/strings`, `panic-recover/shim-refusal-unrecoverable`, `strconv/format-parse` — each an `Error` method (`field-get`, a library struct with an `error` field) |
-| NON-MAIN units — unchanged by the boundary's fall | 23 corpus + 128 twin | `mini-raft-twin` 7 (`field-get` on `*mnode.Node`: a struct type outside the grammar); `stdlib-source/errors-join` 5 and `errors-wrap` 2 `binary` (interface comparison `err == nil`); `strconv-parseuint` 3 + 1, `errors-wrap` 1, `frontier` 1 `field-get` (library structs with an `error` field: `*strconv.NumError`; the `Error` methods); `frontier` `internal/strconv.pow10` (`index-get`, an array), `slices.Insert[[]int,int]` (`slice`, a generic stencil); the twin's 128 `field-get` (`raft.stepLeader` 29, `raft.Step` 23, `stepCandidate`/`stepFollower`/`handleAppendEntries` 6 each, …) — every one «field selector on a struct type outside the grammar» (`raft.raft`, `raftpb.Message`, `tracker.Progress`, `raft.raftLog`, `raft.unstable`: interface / defined-non-struct fields) or «method receiver type outside the grammar (raft.raft)» |
+| NON-MAIN units — unchanged by the boundary's fall | 22 corpus + 128 twin (`generic-conversion` counted ONCE, under E6b — the audit's F4c; 4 + 2 + 9 + 22 + 128 + 10 = 175) | `mini-raft-twin` 7 (`field-get` on `*mnode.Node`: a struct type outside the grammar); `stdlib-source/errors-join` 5 and `errors-wrap` 2 `binary` (interface comparison `err == nil`); `strconv-parseuint` 3 + 1, `errors-wrap` 1, `frontier` 1 `field-get` (library structs with an `error` field: `*strconv.NumError`; the `Error` methods); `frontier` `internal/strconv.pow10` (`index-get`, an array), `slices.Insert[[]int,int]` (`slice`, a generic stencil); the twin's 128 `field-get` (`raft.stepLeader` 29, `raft.Step` 23, `stepCandidate`/`stepFollower`/`handleAppendEntries` 6 each, …) — every one «field selector on a struct type outside the grammar» (`raft.raft`, `raftpb.Message`, `tracker.Progress`, `raft.raftLog`, `raft.unstable`: interface / defined-non-struct fields) or «method receiver type outside the grammar (raft.raft)» |
 | PANIC-vs-PANIC — the residue after the refinement | 10 | `len-vs-call-order` `makeHintStructAnyKey`, `makeHintArrayAnyKey`, `lenStructAnyKeyLeftAssert` (an interface-CONTAINING map key — «map type outside the grammar»: a hash-panicking map read, E2 admits hash-safe keys only), `lexerIdiom` (`for l.pos < len(l.src) && l.peek() != '\n'` — a `for` CONDITION is a sub-accumulator sweep the whole-sweep grammar never visits), `makeHintGenericKey[interface {}]` and `[int]` (a generic stencil: the classifier reads a local's type unsubstituted — `map[K]int` — «local of a type outside the pilot grammar»); e13 `convLeftCall` (a slice-to-array conversion — «index of a non-slice base ([2]int)»), `ifaceCmpLeftCall` (an interface comparison), `sendChanIndex` (a SEND statement — «statement form outside the pilot grammar»), `assertReturnList$lit0` (a captured read inside a lifted body) |
 
 Every remaining emitter is a GRAMMAR axis (E5z's list: interface / defined-non-struct field types, interface
@@ -279,6 +339,33 @@ panic) and MOVED to membership with the reason written (E5c's F6 precedent; gc's
 Baseline `3760 = 3524 / 236 → 3761 = 3525 / 236` (+1 born; 2 strict → membership; the header carries the
 reason). NO PASS → non-PASS.
 
+**The audit fix round (2026-09-24, the audit's F1 — BUG-116).** The two moved rows are the ASSERTION-LEFT
+members of a class whose other members were WRONG ANSWERS on main, which the refined trigger fixed
+SILENTLY: a LATE-realized failing NON-CALL operand — an index, a slice expression, a dereference, a
+pointer-field read, a division, a shift, a compound target's LOAD — LEFT of an inline built-in E1 participant
+(`len` / `cap` / `min` / `max`) whose own operand panics, CALL-FREE. On main every such sweep is a legacy
+lexical singleton holding the LEFT operand's panic; gc realizes the BUILT-IN's OPERAND's panic on all fifteen
+shapes the audit probed (20/20 each) — observed ∉ modeled, undetected because every earlier E13 row of the
+form carried a trailing `wit(5)` (a graph since Stage E). Only for a type ASSERTION on the left does gc
+happen to agree with the lexical order (assertions are EARLY in gc) — the two moved rows; BUG-032's A6
+sentence «len stays inline and realizes gc's left-to-right point» is corrected there with a pointer to
+BUG-116. SEVEN rows BORN in `builtins/e13-sibling-panic-order`, one per operand class, from the audit's
+litmuses: `idx-left-vs-min-operand` (`s[i] + min(t[k], 1)` {`[9] with length 1`, `[5] with length 2`}),
+`idx-left-vs-len-slice-expr` (`s[i] + len(t[k:])` {`[9]`, `slice bounds [5:2]`}), `deref-left-vs-len-operand`
+(`*p + len(b[j])` {nil dereference, `[5] with length 1`}), `ptr-field-left-vs-len-operand` (`q.x + len(b[j])`
+{nil dereference, `[5]`}), `div-left-vs-len-operand` (`x/y + len(b[j])` {`integer divide by zero`, `[5]`}),
+`shift-left-vs-len-operand` (`x<<s + len(b[j])` {`negative shift amount`, `[5]`}),
+`compound-load-vs-len-operand` (`x[9] += len(b[j])` {`[9]`, `[5]`}) — each PASS/membership on the candidate
+(`scripts/diff-one`: enumerated=2, gc's draw inside — gc the built-in's operand's panic 20/20 under
+GOMAXPROCS 1/8, default and `-N -l`), each RED-FIRST on main `3fb4a0d1`'s frontend + binary (a `git archive`
+tree with the primary's build artifacts): as the born membership rows FAIL/membership («enumerated observation
+set is a singleton (1 member)» — main's machine offers ONE member), as strict twins of the same subjects
+FAIL/differential (Lean the left panic ≠ Go the built-in's operand's) — `docs/evidence/2026-09-24_unseq-
+stage-e6a/fix-round/{diff-one-fix,diff-one-main-red-first,diff-one-main-strict,gc-draws-fix}.txt`. Baseline
+`3761 = 3525 / 236 → 3768 = 3532 / 236` (+7 born; the header carries the reason). The main-side PASS →
+non-PASS is NOT a flip of a tracked row — no tracked row had the call-free shape; the seven are born here.
+Latitude: E13's axis, (a) ENVELOPED — no entry moves; the inventory's E13 entry gains the fix-round bullet.
+
 **Latitude.** The two moved rows and the fourteen moved probe rows are E13's axis ((a) ENVELOPED since
 2026-09-05) — no entry moves; the inventory's E13 entry gains the E6a bullet; E3/E4 and E12 gain a bullet
 stating the general rule is POSED (handoff §2 item 1). The born row is E5e's axis (E2/E12's VALUE axis on a
@@ -298,6 +385,24 @@ other step ok (`ci-diff-c1.tail.txt`). The C2 gate (`ci --slow` at the decoder +
 
 **The whole-corpus choice trace** — `docs/evidence/2026-09-24_unseq-stage-e6a/choice-trace-main-vs-e6a.txt`: main `3fb4a0d1`'s binary (`63e9c661…`, the E5 fix round's = main's sources; main's frontend from a `git archive main` export) vs the E6a tip's binary and frontend, `scripts/choice-trace-corpus --dump --jobs 4` per side (the two standing spin exclusions `goroutines/send-then-spin` and `strings/trimspace-repeat/repeat-bound-refused` traced by no side; the rows the wrapper had not reached traced by a direct `golean choice-trace --batch` per side — the wrapper's summary step did not run), Stage D's `trace-compare.py`: **3725 ids, 3694 byte-identical, 30 DIFFER, 0 ONLY_A, 1 ONLY_B** (the born row). EVERY differing id lies in a package whose sweeps entered the grammar — the 14 probe → graph rows (`unseqPanic` 6 → 0, `unseqNext` 0 → 6/9/11), the 2 moved rows (`unseqNext` 0 → 6), and 14 rows whose newly admitted sweeps add `unseqNext` picks with one observation (`functions/untyped-nil-sinks/slice-lit-elem`, `interfaces/tuple-forward-boxing/{fixed-any, interface-source-control, variadic-any}`, `multipkg/wire-codec/size`, `new/new-slice-pointer`, `noodler/bounds/slice-within-cap`, `noodler/builtins/cap-after-slicing`, `noodler/indexkinds/slice-bounds-kinds`, `slices/append-spill-below-formula`, `stdlib-source/{binary-order/be-roundtrip, builder-overlay/repeat-doubling-loop, strconv-format/siblings, strings-split/empty-sep-invalid-utf8}`); the one non-`unseq` site movement — `multipkg/wire-codec/size` `appendSpill` 21 → 19 — is the finite fixed streams' knock-on (the new picks shift the slots the later spill picks read; the observation unchanged). Site census: `unseqNext` 2147 → 2550, `unseqPanic` 168 → 96, `appendSpill` 4874 → 4872, every other site identical; 34 export refusals each, identical sets.
 
+### The audit fix round (2026-09-24)
+
+The adversarial audit of the candidate `1f0dee94` (`docs/2026-09-24_unseq-stage-e6a-audit.md`, branch
+`review/unseq-stage-e6a-0924` @ `300f0e74`; evidence `docs/evidence/2026-09-24_unseq-stage-e6a-audit/`)
+returned FIX-FIRST (records, small): no wrong answer and no over-wide set on the candidate; F1 a main-side
+WRONG-ANSWER class the candidate fixed silently (rowed above, BUG-116); F2 the R1 flat table reaching
+type-switch binders (a minor FAIL-OPEN on forged wires; the scope-exact environment built above); F3 the
+twin's three born graphs mis-described (corrected above, in the pin script's header, the handoff and the
+changelog lines); F4 the trigger a faithful SUBSET of the ruled wording (posed with that phrase), the
+charter's «21 with no effectful event» mis-labelling 7 emitters that contain calls (a dated correction line
+appended to the charter), `generic-conversion` counted twice (once now); F5–F7 nits (the census figures at
+the tip and at this tree, the changelog pointer, the late-named store-target forgery). The dispositions are
+the [AGENT] coordinator's, disclosed at the merge ask, under the [USER]'s standing direction that every merge
+is audited and its findings fixed before landing; executed by the [AGENT] worker; the per-finding table with
+witnesses is the handoff §5. Trust surface #1 changed (the decoder's R1 environment — refuses forged wires
+only); the frontend, the core and the wire schema did not. Gates and the trace: the handoff §5 (the fix
+round's gate line and the trace summary vs the audited tip).
+
 ### [AGENT] choices (alternatives named) — each posed in the handoff §2
 
 (i) The trigger's SCOPE: the event-mediated form shipped, the general form posed with its footprint
@@ -306,7 +411,9 @@ emitters probed). (iii) The unit boundary generalized to EVERY source unit at on
 imports, library units — rather than case-local imports only: the twin (the ruled re-pin) is a case-local
 import set, but the stdlib-source rows are the same grammar on the same wire spellings, and a boundary at
 «library units» would be a second pilot scope with no semantic ground. (iv) The R1 check as a flat
-per-function declaration table (above; the scope-exact alternative not built; the shadow residual stated).
+per-function declaration table at the tip (the scope-exact alternative not built there; the shadow residual
+stated) — SUPERSEDED at the audit fix round: the audit's F2 showed the residual reaching type-switch clause
+binders, and the scope-exact environment was BUILT (above; the alternative taken).
 (v) The status set reused from `params` (above; a second spelling in `expected_status` not built). (vi) The
 two red-first strict rows moved to membership (the F6 rule) rather than the graph narrowed to gc's member
 (a (b) pin the doctrine forbids) or the rows left red (a wrong answer they are not — both members are

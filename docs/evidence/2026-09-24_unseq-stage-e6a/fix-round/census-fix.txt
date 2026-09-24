@@ -1,0 +1,142 @@
+# The census at the FIX-ROUND tree (the audit's F5: the lane's figures were pre-born-row; both frontends re-run over the corpus WITH the seven born rows and the E6a born row; the twin assembly as scripts/check-frontend-pins builds it). main = main 3fb4a0d1's frontend (.tmp/nativefrontend-main); fix = this tree's frontend (.tmp/fix/nativefrontend — E6a's, unchanged by the fix round). Producers .tmp/census/run.sh + summarize.py + diff.py, .tmp/census/probes.sh (the lane's tooling) via .tmp/fix/census-fix.sh.
+
+== whole-sweep census, main
+corpus sweeps 108294  admitted 180  packages-with-admitted 47  refused-packages 0
+admitted units: [('main', 180)]
+admitted by form: [('return', 99), ('compound', 22), ('elem-assign', 11), ('tuple-assign', 11), ('define', 10), ('call-stmt', 9), ('multi-call', 7), ('print-stmt', 3), ('comma-ok', 3), ('map-assign', 2), ('blank-assign', 1), ('deref-assign', 1), ('assign', 1)]
+admitted per package:
+    50 Corpus/coverage/exec/builtins/e13-sibling-panic-order
+    13 Corpus/coverage/exec/evalorder/unseq-pilot
+== whole-sweep census, fix
+corpus sweeps 108294  admitted 273  packages-with-admitted 86  refused-packages 0
+admitted units: [('main', 213), ('strings', 44), ('bytes', 14), ('wirepb', 2)]
+admitted by form: [('return', 187), ('compound', 25), ('elem-assign', 12), ('tuple-assign', 11), ('define', 11), ('call-stmt', 9), ('multi-call', 7), ('print-stmt', 3), ('comma-ok', 3), ('map-assign', 2), ('blank-assign', 1), ('deref-assign', 1), ('assign', 1)]
+admitted per package:
+    60 Corpus/coverage/exec/builtins/e13-sibling-panic-order
+    13 Corpus/coverage/exec/builtins/len-vs-call-order
+
+== newly admitted, main -> fix (the audit reproduced 93 at the E6a tip; + the seven born rows' sweeps)
+rows only in AFTER (new packages): 0 in []
+newly admitted 100   lost 0
+newly admitted per package:
+    10 Corpus/coverage/exec/builtins/e13-sibling-panic-order
+     9 Corpus/coverage/exec/builtins/len-vs-call-order
+     7 TWIN
+     4 Corpus/coverage/exec/fmt/fprint-writers
+     4 Corpus/coverage/exec/stdlib-source/frontier
+     3 Corpus/coverage/exec/stdlib-source/builder-overlay
+     3 Corpus/coverage/exec/stdlib-source/strings-split
+     2 Corpus/coverage/exec/bytes/buffer-model
+     2 Corpus/coverage/exec/bytes/equal-conformance
+     2 Corpus/coverage/exec/examples/wordfreq
+     2 Corpus/coverage/exec/fmt/fprintf-builder
+     2 Corpus/coverage/exec/init/library-var-type-poisoned
+     2 Corpus/coverage/exec/init/library-var-type-unlowerable
+     2 Corpus/coverage/exec/init/stdlib-initializer-source-through
+     2 Corpus/coverage/exec/interfaces/assert-imported-method-set
+     2 Corpus/coverage/exec/interfaces/tuple-forward-boxing
+     2 Corpus/coverage/exec/multipkg/wire-codec
+     2 Corpus/coverage/exec/noodler/strings
+     2 Corpus/coverage/exec/panic-recover/shim-refusal-unrecoverable
+     2 Corpus/coverage/exec/stdlib-source/builder-cap
+     2 Corpus/coverage/exec/stdlib-source/builder-fuzz
+     2 Corpus/coverage/exec/stdlib-source/bytes-buffer
+     2 Corpus/coverage/exec/stdlib-source/fields-fuzz
+     2 Corpus/coverage/exec/stdlib-source/slices-sortfunc
+     2 Corpus/coverage/exec/stdlib-source/strings-fields
+     2 Corpus/coverage/exec/stdlib-source/strings-trimspace
+     2 Corpus/coverage/exec/strings/builder-model
+     2 Corpus/coverage/exec/strings/fields-conformance
+     2 Corpus/coverage/exec/strings/join-conformance
+     2 Corpus/coverage/exec/strings/shim-value-refused
+     2 Corpus/coverage/exec/strings/split-conformance
+     2 Corpus/coverage/exec/strings/trimspace-repeat
+     1 Corpus/coverage/exec/channels/recv-order
+     1 Corpus/coverage/exec/functions/untyped-nil-sinks
+     1 Corpus/coverage/exec/new/new-expr
+     1 Corpus/coverage/exec/new/new-slice-pointer
+     1 Corpus/coverage/exec/noodler/bounds
+     1 Corpus/coverage/exec/noodler/builtins
+     1 Corpus/coverage/exec/noodler/indexkinds
+     1 Corpus/coverage/exec/slices/append-spill-below-formula
+     1 Corpus/coverage/exec/stdlib-source/binary-order
+     1 Corpus/coverage/exec/stdlib-source/strconv-format
+newly admitted, by former reason: [('no call occurrence (legacy path: nothing with an effect to reorder against)', 55), ('callee outside the main package', 34), ('len of a non-slice operand (map[int]int)', 5), ('method callee outside the main package', 3), ('qualified function callee (imported source package)', 2), ('cap of a non-slice operand (chan int)', 1)]
+newly admitted by form: [('return', 94), ('compound', 4), ('elem-assign', 1), ('define', 1)]
+twin newly admitted: 7
+   ['bytes', 'deps/go/src/bytes/bytes.go:989', 'Trim', 'return', 'unseq', '2', '2', '2', '']
+   ['bytes', 'deps/go/src/bytes/reader.go:30', '*Reader.Len', 'return', 'unseq', '1', '0', '2', '']
+   ['strings', 'deps/go/src/strings/reader.go:29', '*Reader.Len', 'return', 'unseq', '1', '0', '2', '']
+   ['strings', 'deps/go/src/strings/strings.go:987', 'Trim', 'return', 'unseq', '2', '2', '2', '']
+   ['raftpb', '/home/dev/projects/golean/.claude/worktrees/unseq-stage-e6a/.tmp/census/twin-prog/raftpb/plain_codec.go:330', '*Snapshot.SizeMessage', 'compound', 'unseq', '3', '1', '2', '']
+   ['raft', '/home/dev/projects/golean/.claude/worktrees/unseq-stage-e6a/.tmp/census/twin-prog/raft/node_decls.go:98', 'isHardStateEqual', 'return', 'unseq', '6', '6', '2', '']
+   ['raft', '/home/dev/projects/golean/.claude/worktrees/unseq-stage-e6a/.tmp/census/twin-prog/raft/rawnode.go:197', 'MustSync', 'return', 'unseq', '4', '4', '2', '']
+still legacy with a package-level reason: [('package-level target of a type outside the grammar ([3]int)', 3), ('package-level target of a type outside the grammar ([2]int)', 2), ('unary operator & on a qualified package-level variable (&pkg.V) — outside the E5d grammar (the unqualified spelling is admitted as an argument, a payload or a stored value)', 1), ('package-level target of a type outside the grammar (main.Valuer)', 1), ('package-level target of a type outside the grammar (raft.Logger)', 1)]
+
+== legacy probe emission (E6's entry metric)
+main: corpus probes=58 unseq graphs=178 packages-with-probes=17 | twin probes=128 unseq graphs=0 | export-refused packages=25
+fix: corpus probes=47 unseq graphs=212 packages-with-probes=17 | twin probes=128 unseq graphs=3 | export-refused packages=25
+
+== the seven born subjects' sweeps, both sides (dir unit file:line function form admitted events calls nonEvents reason)
+-- main
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:655	idxLeftVsMinOperand	define	legacy	0	0	0	no call occurrence (legacy path: nothing with an effect to reorder against)
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:656	idxLeftVsMinOperand	define	legacy	0	0	0	no call occurrence (legacy path: nothing with an effect to reorder against)
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:657	idxLeftVsMinOperand	tuple-assign	legacy	0	0	0	no call occurrence (legacy path: nothing with an effect to reorder against)
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:658	idxLeftVsMinOperand	return	legacy	1	0	2	no call occurrence (legacy path: nothing with an effect to reorder against)
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:662	idxLeftVsLenSliceExpr	define	legacy	0	0	0	no call occurrence (legacy path: nothing with an effect to reorder against)
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:663	idxLeftVsLenSliceExpr	define	legacy	0	0	0	no call occurrence (legacy path: nothing with an effect to reorder against)
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:664	idxLeftVsLenSliceExpr	tuple-assign	legacy	0	0	0	no call occurrence (legacy path: nothing with an effect to reorder against)
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:665	idxLeftVsLenSliceExpr	return	legacy	1	0	2	no call occurrence (legacy path: nothing with an effect to reorder against)
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:669	derefLeftVsLenOperand	other	legacy	0	0	0	statement form outside the pilot grammar
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:670	derefLeftVsLenOperand	define	legacy	0	0	0	no call occurrence (legacy path: nothing with an effect to reorder against)
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:671	derefLeftVsLenOperand	define	legacy	0	0	0	no call occurrence (legacy path: nothing with an effect to reorder against)
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:672	derefLeftVsLenOperand	return	legacy	1	0	2	no call occurrence (legacy path: nothing with an effect to reorder against)
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:676	ptrFieldLeftVsLenOperand	other	legacy	0	0	0	statement form outside the pilot grammar
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:677	ptrFieldLeftVsLenOperand	define	legacy	0	0	0	no call occurrence (legacy path: nothing with an effect to reorder against)
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:678	ptrFieldLeftVsLenOperand	define	legacy	0	0	0	no call occurrence (legacy path: nothing with an effect to reorder against)
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:679	ptrFieldLeftVsLenOperand	return	legacy	1	0	2	no call occurrence (legacy path: nothing with an effect to reorder against)
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:683	divLeftVsLenOperand	tuple-assign	legacy	0	0	0	no call occurrence (legacy path: nothing with an effect to reorder against)
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:684	divLeftVsLenOperand	define	legacy	0	0	0	no call occurrence (legacy path: nothing with an effect to reorder against)
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:685	divLeftVsLenOperand	define	legacy	0	0	0	no call occurrence (legacy path: nothing with an effect to reorder against)
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:686	divLeftVsLenOperand	return	legacy	1	0	2	no call occurrence (legacy path: nothing with an effect to reorder against)
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:690	shiftLeftVsLenOperand	define	legacy	0	0	0	no call occurrence (legacy path: nothing with an effect to reorder against)
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:691	shiftLeftVsLenOperand	other	legacy	0	0	0	statement form outside the pilot grammar
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:692	shiftLeftVsLenOperand	define	legacy	0	0	0	no call occurrence (legacy path: nothing with an effect to reorder against)
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:693	shiftLeftVsLenOperand	define	legacy	0	0	0	no call occurrence (legacy path: nothing with an effect to reorder against)
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:694	shiftLeftVsLenOperand	return	legacy	1	0	2	no call occurrence (legacy path: nothing with an effect to reorder against)
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:698	compoundLoadVsLenOperand	define	legacy	1	0	0	no call occurrence (legacy path: nothing with an effect to reorder against)
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:699	compoundLoadVsLenOperand	define	legacy	0	0	0	no call occurrence (legacy path: nothing with an effect to reorder against)
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:700	compoundLoadVsLenOperand	define	legacy	0	0	0	no call occurrence (legacy path: nothing with an effect to reorder against)
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:701	compoundLoadVsLenOperand	compound	legacy	1	0	2	no call occurrence (legacy path: nothing with an effect to reorder against)
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:702	compoundLoadVsLenOperand	return	legacy	0	0	1	no call occurrence (legacy path: nothing with an effect to reorder against)
+-- fix
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:655	idxLeftVsMinOperand	define	legacy	0	0	0	no call occurrence (legacy path: no effectful event to reorder against, and no failing occurrence unordered against a f
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:656	idxLeftVsMinOperand	define	legacy	0	0	0	no call occurrence (legacy path: no effectful event to reorder against, and no failing occurrence unordered against a f
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:657	idxLeftVsMinOperand	tuple-assign	legacy	0	0	0	no call occurrence (legacy path: no effectful event to reorder against, and no failing occurrence unordered again
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:658	idxLeftVsMinOperand	return	unseq	1	0	2	
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:662	idxLeftVsLenSliceExpr	define	legacy	0	0	0	no call occurrence (legacy path: no effectful event to reorder against, and no failing occurrence unordered against a
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:663	idxLeftVsLenSliceExpr	define	legacy	0	0	0	no call occurrence (legacy path: no effectful event to reorder against, and no failing occurrence unordered against a
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:664	idxLeftVsLenSliceExpr	tuple-assign	legacy	0	0	0	no call occurrence (legacy path: no effectful event to reorder against, and no failing occurrence unordered aga
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:665	idxLeftVsLenSliceExpr	return	unseq	1	0	2	
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:669	derefLeftVsLenOperand	other	legacy	0	0	0	statement form outside the pilot grammar
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:670	derefLeftVsLenOperand	define	legacy	0	0	0	no call occurrence (legacy path: no effectful event to reorder against, and no failing occurrence unordered against a
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:671	derefLeftVsLenOperand	define	legacy	0	0	0	no call occurrence (legacy path: no effectful event to reorder against, and no failing occurrence unordered against a
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:672	derefLeftVsLenOperand	return	unseq	1	0	2	
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:676	ptrFieldLeftVsLenOperand	other	legacy	0	0	0	statement form outside the pilot grammar
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:677	ptrFieldLeftVsLenOperand	define	legacy	0	0	0	no call occurrence (legacy path: no effectful event to reorder against, and no failing occurrence unordered agains
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:678	ptrFieldLeftVsLenOperand	define	legacy	0	0	0	no call occurrence (legacy path: no effectful event to reorder against, and no failing occurrence unordered agains
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:679	ptrFieldLeftVsLenOperand	return	unseq	1	0	2	
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:683	divLeftVsLenOperand	tuple-assign	legacy	0	0	0	no call occurrence (legacy path: no effectful event to reorder against, and no failing occurrence unordered again
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:684	divLeftVsLenOperand	define	legacy	0	0	0	no call occurrence (legacy path: no effectful event to reorder against, and no failing occurrence unordered against a f
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:685	divLeftVsLenOperand	define	legacy	0	0	0	no call occurrence (legacy path: no effectful event to reorder against, and no failing occurrence unordered against a f
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:686	divLeftVsLenOperand	return	unseq	1	0	2	
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:690	shiftLeftVsLenOperand	define	legacy	0	0	0	no call occurrence (legacy path: no effectful event to reorder against, and no failing occurrence unordered against a
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:691	shiftLeftVsLenOperand	other	legacy	0	0	0	statement form outside the pilot grammar
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:692	shiftLeftVsLenOperand	define	legacy	0	0	0	no call occurrence (legacy path: no effectful event to reorder against, and no failing occurrence unordered against a
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:693	shiftLeftVsLenOperand	define	legacy	0	0	0	no call occurrence (legacy path: no effectful event to reorder against, and no failing occurrence unordered against a
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:694	shiftLeftVsLenOperand	return	unseq	1	0	2	
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:698	compoundLoadVsLenOperand	define	legacy	1	0	0	no call occurrence (legacy path: no effectful event to reorder against, and no failing occurrence unordered agains
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:699	compoundLoadVsLenOperand	define	legacy	0	0	0	no call occurrence (legacy path: no effectful event to reorder against, and no failing occurrence unordered agains
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:700	compoundLoadVsLenOperand	define	legacy	0	0	0	no call occurrence (legacy path: no effectful event to reorder against, and no failing occurrence unordered agains
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:701	compoundLoadVsLenOperand	compound	unseq	1	0	2	
+main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:702	compoundLoadVsLenOperand	return	legacy	0	0	1	no call occurrence (legacy path: no effectful event to reorder against, and no failing occurrence unordered agains

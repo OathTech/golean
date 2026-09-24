@@ -569,7 +569,22 @@ than as speculative cases.)
 
 ## 8. Counts and the closing arithmetic
 
-All numbers at the current tracked baseline (3761 cases, 3525 PASS / 236 FAIL; [AGENT] worker, lane
+All numbers at the current tracked baseline (3768 cases, 3532 PASS / 236 FAIL; [AGENT] worker, lane
+`core/unseq-stage-e6a-0924` — the Stage E6a AUDIT FIX ROUND (the audit `docs/2026-09-24_unseq-stage-e6a-audit.md`, verdict
+FIX-FIRST (records, small); the dispositions the [AGENT] coordinator's, disclosed at the merge ask; design
+`docs/2026-09-24_unseq-stage-e6-design.md` §E6a «the audit fix round»; handoff `docs/2026-09-24_unseq-stage-e6a-handoff.md` §5);
+measured by `scripts/diff-one` on the seven born rows on both sides — the candidate and main `3fb4a0d1`'s frontend + binary — and by
+the full gate at the fix round's tree, the gate line in `docs/evidence/2026-09-24_unseq-stage-e6a/README.md` «the audit fix round»).
+The delta over the E6a tally (3761 = 3525 / 236): 7 rows BORN in `builtins/e13-sibling-panic-order`, the audit's F1 class (BUG-116 —
+a late-realized failing NON-CALL operand LEFT of an inline `len` / `cap` / `min` / `max` whose operand panics, call-free: main's
+lexical singleton excluded gc's member, a WRONG ANSWER the E6a trigger fixed silently) — `idx-left-vs-min-operand`,
+`idx-left-vs-len-slice-expr`, `deref-left-vs-len-operand`, `ptr-field-left-vs-len-operand`, `div-left-vs-len-operand`,
+`shift-left-vs-len-operand`, `compound-load-vs-len-operand`, each PASS/membership {the left panic, the built-in's operand's panic}
+with gc's member the latter (20/20), each RED-FIRST on main (FAIL/membership as born — a singleton set; FAIL/differential as strict
+twins). 3761 + 7 = 3768; 3525 + 7 = 3532; 236 unchanged; no PASS → non-PASS of a tracked row (the main-side red is the born rows').
+The decoder change of the round (the R1 environment scope-exact — the audit's F2; mutants 52 → 55) moves no row.
+
+Previous tally, then current (3761 cases, 3525 PASS / 236 FAIL; [AGENT] worker, lane
 `core/unseq-stage-e6a-0924` — STAGE E6a of the evaluation-order model v2.1, the first slice of the batched breaking window
 (design `docs/2026-09-24_unseq-stage-e6-design.md` §E6a; handoff `docs/2026-09-24_unseq-stage-e6a-handoff.md`); measured by
 `scripts/diff-one` on the 395 rows of the 41 packages whose sweeps entered the grammar + the born row's package before the pin
@@ -2477,6 +2492,33 @@ tallied by row:
   twin 10 203 sweeps, 0 admitted, pin byte-identical. No lane move, no widened pin, no PASS → non-PASS.
 - Reds table: post-vintage 72 → 70; 133 + 9 + (24 + 1) + 7 + 70 = 244 ✓. FR-28's cell unchanged (the
   BUG-102 designed reds are E4's).
+
+### 8am. Movement at the Stage E6a AUDIT FIX ROUND (2026-09-24, lane `core/unseq-stage-e6a-0924`; on main `3fb4a0d1`)
+
+[AGENT] worker. The audit `docs/2026-09-24_unseq-stage-e6a-audit.md` (FIX-FIRST, records, small); the dispositions the [AGENT]
+coordinator's, disclosed at the merge ask; design `docs/2026-09-24_unseq-stage-e6-design.md` §E6a «the audit fix round»; handoff
+`docs/2026-09-24_unseq-stage-e6a-handoff.md` §5; evidence `docs/evidence/2026-09-24_unseq-stage-e6a/fix-round/`. Tracked figure
+3761 = 3525 / 236 → 3768 = 3532 / 236 (re-pin reason in the baseline header). Movement, tallied by row:
+
+- BORN 7 (the audit's F1; BUG-116, `Status: fixed`, `Pinned-by: differential`): `builtins/e13-sibling-panic-order/{idx-left-vs-min-
+  operand, idx-left-vs-len-slice-expr, deref-left-vs-len-operand, ptr-field-left-vs-len-operand, div-left-vs-len-operand,
+  shift-left-vs-len-operand, compound-load-vs-len-operand}` PASS/membership, enumerated=2 each — the left operand's panic (the
+  machine's canonical tape; main's ONLY answer) and the built-in's operand's panic (gc's, 20/20 under GOMAXPROCS 1/8, default and
+  -N -l). RED-FIRST on main `3fb4a0d1`'s frontend + binary: FAIL/membership as the born rows («enumerated observation set is a
+  singleton (1 member)»), FAIL/differential as strict twins of the same subjects (Lean the left panic ≠ Go the built-in's operand's)
+  — observed ∉ modeled on main, a wrong answer the E6a candidate fixed silently; the two assertion-left rows moved at E6a (§8al) are
+  the class's exception (gc evaluates assertions early). NOT a flip of a tracked row: no tracked row had the call-free shape.
+- 0 flips, 0 removals, 0 lane moves. The decoder's scope-exact R1 environment (the audit's F2; `Tests/unseq-wire` mutants 52 → 55,
+  two NATIVE witnesses `e6ats` / `e6ashadow`) refuses forged wires only — the whole-corpus choice trace vs the audited tip `1f0dee94`
+  is byte-identical outside the seven born rows (the handoff §5); the pinned raft twin wire decodes (the pin unchanged, 1c4e7038…).
+- Census at the fix-round tree (the audit's F5 — the lane's figures were pre-born-row): 108 294 sweeps, 180 → 273 admitted (100 newly
+  = the audit's 93 at the tip + the seven born rows' sweeps; 0 lost); legacy probes corpus 58 → 47, the twin 128 → 128 with 3 graphs
+  (`census-fix.txt`).
+- Records corrected (F3, F4, F6, F7): the twin's three born graphs enter by Stage E's E3 rule through the unit boundary, not by the
+  refinement (all-forced singletons); the shipped trigger is a faithful SUBSET of the ruled wording (posed as such; gc lexical on every
+  general-form probe except BUG-032's tuple); the charter's «21 panic-vs-panic with no effectful event» mis-labelled 7 (a dated line
+  under the charter's slice table); `generic-conversion` counted once (22 corpus + 128 twin non-main); the changelog pointer and the
+  late-named store-target refusal stated.
 
 ### 8al. Movement at Stage E6a of the evaluation-order model v2.1 — the trigger refinement, the non-main-unit grammar, the decoder follow-ups, the status-diverse row (2026-09-24, lane `core/unseq-stage-e6a-0924`; on main `3fb4a0d1`)
 
