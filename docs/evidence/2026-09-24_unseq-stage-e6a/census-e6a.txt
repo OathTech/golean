@@ -1,0 +1,199 @@
+# The whole-sweep census AFTER E6a — the E6a frontend (the refined trigger, len/cap over map/chan operands, the unit boundary generalized) over the same 1365 packages + the twin; producer .tmp/census/run.sh + summarize.py + diff.py. 2026-09-24.
+
+corpus sweeps 108258  admitted 265  packages-with-admitted 86  refused-packages 0
+admitted units: [('main', 205), ('strings', 44), ('bytes', 14), ('wirepb', 2)]
+admitted by form: [('return', 180), ('compound', 24), ('elem-assign', 12), ('tuple-assign', 11), ('define', 11), ('call-stmt', 9), ('multi-call', 7), ('print-stmt', 3), ('comma-ok', 3), ('map-assign', 2), ('blank-assign', 1), ('deref-assign', 1), ('assign', 1)]
+admitted per package:
+    53 Corpus/coverage/exec/builtins/e13-sibling-panic-order
+    13 Corpus/coverage/exec/builtins/len-vs-call-order
+    13 Corpus/coverage/exec/evalorder/unseq-pilot
+    11 Corpus/coverage/exec/noodler/latitude
+     9 Corpus/coverage/exec/evalorder/unseq-conv-alloc
+     8 Corpus/coverage/exec/noodler/evalorder
+     7 Corpus/coverage/exec/evalorder/unseq-multi
+     6 Corpus/coverage/exec/evalorder/unseq-ptr-field-map
+     5 Corpus/coverage/exec/evalorder/unseq-addr
+     5 Corpus/coverage/exec/evalorder/unseq-builtins
+     5 Corpus/coverage/exec/spec-examples-decl/select-forms
+     4 Corpus/coverage/exec/evalorder/unseq-recv-method
+     4 Corpus/coverage/exec/fmt/fprint-writers
+     4 Corpus/coverage/exec/stdlib-source/frontier
+     3 Corpus/coverage/exec/evalorder/legacy-logical-vs-call
+     3 Corpus/coverage/exec/evalorder/unseq-globals
+     3 Corpus/coverage/exec/evalorder/unseq-maplit
+     3 Corpus/coverage/exec/evalorder/unseq-strings
+     3 Corpus/coverage/exec/noodler/maps
+     3 Corpus/coverage/exec/stdlib-source/builder-overlay
+     3 Corpus/coverage/exec/stdlib-source/strings-split
+     2 Corpus/coverage/exec/binop-order/operand-panic-vs-call
+     2 Corpus/coverage/exec/bytes/buffer-model
+     2 Corpus/coverage/exec/bytes/equal-conformance
+     2 Corpus/coverage/exec/channels/make-edge
+     2 Corpus/coverage/exec/channels/recv-edge
+     2 Corpus/coverage/exec/examples/wordfreq
+     2 Corpus/coverage/exec/fmt/fprintf-builder
+     2 Corpus/coverage/exec/init/library-var-type-poisoned
+     2 Corpus/coverage/exec/init/library-var-type-unlowerable
+     2 Corpus/coverage/exec/init/stdlib-initializer-source-through
+     2 Corpus/coverage/exec/interfaces/assert-imported-method-set
+     2 Corpus/coverage/exec/interfaces/tuple-forward-boxing
+     2 Corpus/coverage/exec/multi-assign/call-write-back-order
+     2 Corpus/coverage/exec/multipkg/wire-codec
+     2 Corpus/coverage/exec/noodler/methods
+     2 Corpus/coverage/exec/noodler/strings
+     2 Corpus/coverage/exec/panic-recover/shim-refusal-unrecoverable
+     2 Corpus/coverage/exec/spec-examples-stmt/continue-label
+     2 Corpus/coverage/exec/spec-examples-stmt/eval-order-calls
+     2 Corpus/coverage/exec/stdlib-source/builder-cap
+     2 Corpus/coverage/exec/stdlib-source/builder-fuzz
+     2 Corpus/coverage/exec/stdlib-source/bytes-buffer
+     2 Corpus/coverage/exec/stdlib-source/fields-fuzz
+     2 Corpus/coverage/exec/stdlib-source/slices-sortfunc
+     2 Corpus/coverage/exec/stdlib-source/strings-fields
+     2 Corpus/coverage/exec/stdlib-source/strings-trimspace
+     2 Corpus/coverage/exec/strings/builder-model
+     2 Corpus/coverage/exec/strings/fields-conformance
+     2 Corpus/coverage/exec/strings/join-conformance
+     2 Corpus/coverage/exec/strings/shim-value-refused
+     2 Corpus/coverage/exec/strings/split-conformance
+     2 Corpus/coverage/exec/strings/trimspace-repeat
+     1 Corpus/coverage/exec/channels/recv-order
+     1 Corpus/coverage/exec/evalorder/unseq-const-cell
+     1 Corpus/coverage/exec/functions/untyped-nil-sinks
+     1 Corpus/coverage/exec/goroutines/fork-join
+     1 Corpus/coverage/exec/goroutines/worker-pool
+     1 Corpus/coverage/exec/init/stdlib-initializer-dependent
+     1 Corpus/coverage/exec/maps/compound-assign-eval-once
+     1 Corpus/coverage/exec/methods/nil-receiver
+     1 Corpus/coverage/exec/multi-assign/call-write-back
+     1 Corpus/coverage/exec/multi-assign/call-write-back-order-value
+     1 Corpus/coverage/exec/multi-assign/deref-target-before-rhs
+     1 Corpus/coverage/exec/multi-assign/index-target-rhs-call-order
+     1 Corpus/coverage/exec/multi-assign/lhs-index-eval-order
+     1 Corpus/coverage/exec/multi-assign/selector-target-before-rhs
+     1 Corpus/coverage/exec/multi-assign/target-eval-before-call
+     1 Corpus/coverage/exec/new/new-expr
+     1 Corpus/coverage/exec/new/new-slice-pointer
+     1 Corpus/coverage/exec/noodler/arith
+     1 Corpus/coverage/exec/noodler/bounds
+     1 Corpus/coverage/exec/noodler/builtins
+     1 Corpus/coverage/exec/noodler/frontier/pointer-to-pointer-chains
+     1 Corpus/coverage/exec/noodler/gotchas
+     1 Corpus/coverage/exec/noodler/indexkinds
+     1 Corpus/coverage/exec/pointers/deref-target-rhs-call-order
+     1 Corpus/coverage/exec/race/negative-sync
+     1 Corpus/coverage/exec/returns/multi-result-assign-order
+     1 Corpus/coverage/exec/scoping/closure-shadow-binding
+     1 Corpus/coverage/exec/slices/append-spill-below-formula
+     1 Corpus/coverage/exec/slices/copy-min
+     1 Corpus/coverage/exec/spec-examples-decl/conversion-parse-forms
+     1 Corpus/coverage/exec/stdlib-source/binary-order
+     1 Corpus/coverage/exec/stdlib-source/strconv-format
+     1 Corpus/coverage/exec/sync/out-of-scope-cond
+top legacy reasons:
+   40212 no call occurrence (legacy path: no effectful event to reorder against, and no failing occurrence unordered against a failing participant window — Stage E6a trigger)
+   33391 statement form outside the pilot grammar
+    7763 no non-event occurrence beside the call(s) (legacy path: every edge forced)
+    2212 result type outside the pilot grammar (error)
+    1875 no occurrence observable against an effectful event or another failing occurrence (legacy path: every edge forced — Stage E E3 trigger, refined at E6a)
+    1768 bare return
+    1407 generic function callee
+    1137 builtin panic statement
+     860 method callee outside the program's source units
+     751 target type outside the pilot grammar (error)
+     663 captured target written through its pointer parameter (lifted body)
+     514 index of a string type outside the grammar (untyped string)
+     504 element target type outside the pilot grammar (E)
+     499 index of a non-slice base ([256]uint8)
+     434 field selector on a struct type outside the grammar (bytes.Buffer)
+     416 captured variable read through its pointer parameter (lifted body)
+     408 result type outside the pilot grammar (S)
+     376 callee expression outside the pilot grammar
+     345 interface method call (dynamic dispatch has no callee value)
+     328 field selector on a struct type outside the grammar (internal/strconv.decimal)
+     323 index of a non-slice base (T)
+     306 nil
+     299 target type outside the pilot grammar (float64)
+     288 result type outside the pilot grammar (float64)
+     266 copy destination type outside the grammar (S)
+     224 result type outside the pilot grammar (E)
+     206 parameter type outside the pilot grammar (func(rune) bool)
+     198 index of a non-slice base ([16]unicode/utf8.acceptRange)
+     189 target type outside the pilot grammar (func() int)
+     182 method receiver type outside the grammar (bytes.Buffer)
+     169 target type outside the pilot grammar (S)
+     168 method receiver type outside the grammar (internal/strconv.decimal)
+     163 binary operand type outside the pilot grammar
+     160 len operand type outside the pilot grammar
+     154 parameter type outside the pilot grammar (func(rune) rune)
+     153 result type outside the pilot grammar (float32)
+     143 dereference target on a pointer type outside the grammar
+     143 more than two results
+     142 define target is not a fresh declaration
+     142 expression statement that is not a call
+twin sweeps 10203  admitted 7
+  TWIN admitted: ['bytes', 'deps/go/src/bytes/bytes.go:989', 'Trim', 'return', 'unseq', '2', '2', '2', '']
+  TWIN admitted: ['bytes', 'deps/go/src/bytes/reader.go:30', '*Reader.Len', 'return', 'unseq', '1', '0', '2', '']
+  TWIN admitted: ['strings', 'deps/go/src/strings/reader.go:29', '*Reader.Len', 'return', 'unseq', '1', '0', '2', '']
+  TWIN admitted: ['strings', 'deps/go/src/strings/strings.go:987', 'Trim', 'return', 'unseq', '2', '2', '2', '']
+  TWIN admitted: ['raftpb', '/home/dev/projects/golean/.claude/worktrees/unseq-stage-e6a/.tmp/census/twin-prog/raftpb/plain_codec.go:330', '*Snapshot.SizeMessage', 'compound', 'unseq', '3', '1', '2', '']
+  TWIN admitted: ['raft', '/home/dev/projects/golean/.claude/worktrees/unseq-stage-e6a/.tmp/census/twin-prog/raft/node_decls.go:98', 'isHardStateEqual', 'return', 'unseq', '6', '6', '2', '']
+  TWIN admitted: ['raft', '/home/dev/projects/golean/.claude/worktrees/unseq-stage-e6a/.tmp/census/twin-prog/raft/rawnode.go:197', 'MustSync', 'return', 'unseq', '4', '4', '2', '']
+
+## diff vs BEFORE
+rows only in AFTER (new packages): 0 in []
+newly admitted 93   lost 0
+newly admitted per package:
+     9 Corpus/coverage/exec/builtins/len-vs-call-order
+     7 TWIN
+     4 Corpus/coverage/exec/fmt/fprint-writers
+     4 Corpus/coverage/exec/stdlib-source/frontier
+     3 Corpus/coverage/exec/builtins/e13-sibling-panic-order
+     3 Corpus/coverage/exec/stdlib-source/builder-overlay
+     3 Corpus/coverage/exec/stdlib-source/strings-split
+     2 Corpus/coverage/exec/bytes/buffer-model
+     2 Corpus/coverage/exec/bytes/equal-conformance
+     2 Corpus/coverage/exec/examples/wordfreq
+     2 Corpus/coverage/exec/fmt/fprintf-builder
+     2 Corpus/coverage/exec/init/library-var-type-poisoned
+     2 Corpus/coverage/exec/init/library-var-type-unlowerable
+     2 Corpus/coverage/exec/init/stdlib-initializer-source-through
+     2 Corpus/coverage/exec/interfaces/assert-imported-method-set
+     2 Corpus/coverage/exec/interfaces/tuple-forward-boxing
+     2 Corpus/coverage/exec/multipkg/wire-codec
+     2 Corpus/coverage/exec/noodler/strings
+     2 Corpus/coverage/exec/panic-recover/shim-refusal-unrecoverable
+     2 Corpus/coverage/exec/stdlib-source/builder-cap
+     2 Corpus/coverage/exec/stdlib-source/builder-fuzz
+     2 Corpus/coverage/exec/stdlib-source/bytes-buffer
+     2 Corpus/coverage/exec/stdlib-source/fields-fuzz
+     2 Corpus/coverage/exec/stdlib-source/slices-sortfunc
+     2 Corpus/coverage/exec/stdlib-source/strings-fields
+     2 Corpus/coverage/exec/stdlib-source/strings-trimspace
+     2 Corpus/coverage/exec/strings/builder-model
+     2 Corpus/coverage/exec/strings/fields-conformance
+     2 Corpus/coverage/exec/strings/join-conformance
+     2 Corpus/coverage/exec/strings/shim-value-refused
+     2 Corpus/coverage/exec/strings/split-conformance
+     2 Corpus/coverage/exec/strings/trimspace-repeat
+     1 Corpus/coverage/exec/channels/recv-order
+     1 Corpus/coverage/exec/functions/untyped-nil-sinks
+     1 Corpus/coverage/exec/new/new-expr
+     1 Corpus/coverage/exec/new/new-slice-pointer
+     1 Corpus/coverage/exec/noodler/bounds
+     1 Corpus/coverage/exec/noodler/builtins
+     1 Corpus/coverage/exec/noodler/indexkinds
+     1 Corpus/coverage/exec/slices/append-spill-below-formula
+     1 Corpus/coverage/exec/stdlib-source/binary-order
+     1 Corpus/coverage/exec/stdlib-source/strconv-format
+newly admitted, by former reason: [('no call occurrence (legacy path: nothing with an effect to reorder against)', 48), ('callee outside the main package', 34), ('len of a non-slice operand (map[int]int)', 5), ('method callee outside the main package', 3), ('qualified function callee (imported source package)', 2), ('cap of a non-slice operand (chan int)', 1)]
+newly admitted by form: [('return', 88), ('compound', 3), ('elem-assign', 1), ('define', 1)]
+twin newly admitted: 7
+   ['bytes', 'deps/go/src/bytes/bytes.go:989', 'Trim', 'return', 'unseq', '2', '2', '2', '']
+   ['bytes', 'deps/go/src/bytes/reader.go:30', '*Reader.Len', 'return', 'unseq', '1', '0', '2', '']
+   ['strings', 'deps/go/src/strings/reader.go:29', '*Reader.Len', 'return', 'unseq', '1', '0', '2', '']
+   ['strings', 'deps/go/src/strings/strings.go:987', 'Trim', 'return', 'unseq', '2', '2', '2', '']
+   ['raftpb', '/home/dev/projects/golean/.claude/worktrees/unseq-stage-e6a/.tmp/census/twin-prog/raftpb/plain_codec.go:330', '*Snapshot.SizeMessage', 'compound', 'unseq', '3', '1', '2', '']
+   ['raft', '/home/dev/projects/golean/.claude/worktrees/unseq-stage-e6a/.tmp/census/twin-prog/raft/node_decls.go:98', 'isHardStateEqual', 'return', 'unseq', '6', '6', '2', '']
+   ['raft', '/home/dev/projects/golean/.claude/worktrees/unseq-stage-e6a/.tmp/census/twin-prog/raft/rawnode.go:197', 'MustSync', 'return', 'unseq', '4', '4', '2', '']
+still legacy with a package-level reason: [('package-level target of a type outside the grammar ([3]int)', 3), ('package-level target of a type outside the grammar ([2]int)', 2), ('unary operator & on a qualified package-level variable (&pkg.V) — outside the E5d grammar (the unqualified spelling is admitted as an argument, a payload or a stored value)', 1), ('package-level target of a type outside the grammar (main.Valuer)', 1), ('package-level target of a type outside the grammar (raft.Logger)', 1)]

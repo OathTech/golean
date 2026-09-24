@@ -1,0 +1,93 @@
+# whole-corpus choice trace, main 3fb4a0d1's binary (sha256 63e9c661… — the E5 fix round's = main's sources; main's frontend from a `git archive main` export under .tmp/main-tree) vs the E6a tip's binary (sha256 bb607430…; the E6a frontend) — Stage E6a, 2026-09-24. Each side: scripts/choice-trace-corpus --dump --jobs 4 --golean <bin> --out <root-relative dir> (six streams: default, the three fixed adversarial, rand:1:4096, rand:2:4096; fuel 10 000 000), the two STANDING EXCLUSIONS traced by no side — goroutines/send-then-spin (spins to the fuel cap under every stream: the wrapper's chunk 1 hung on it 25 min and was stopped by PID) and strings/trimspace-repeat/repeat-bound-refused (a Lean stack overflow, baseline FAIL/lean-observation: the wrapper's chunk 3 aborted on it); the rows the wrapper had not reached were traced by a direct `golean choice-trace --batch` over the remaining ids per side (results-4/dump-4). The wrapper's own summary step (exhausted-stream lists, findings) therefore did NOT run; the per-id byte identity below is Stage D's trace-compare.py over every dump-*.tsv / results-*.tsv (sorted dump records: stream, idx, phase, site, bound, streamValue, pick; per-stream results: status, consumed, wide, obsHash, driverAgreement).
+
+ids=3725 same=3694 differ=30 onlyA=0 onlyB=1
+sitesA {'appendSpill': 4874, 'backEdge': 2403, 'l1Sched': 9695, 'l2Arrival': 3, 'l2Entry': 24, 'l4Waiter': 22, 'l5ExitWindow': 328, 'mapIter': 1307, 'nilValueMethodText': 90, 'postOp': 4645, 'repanicCollapse': 126, 'tryLock': 101, 'unseqNext': 2147, 'unseqPanic': 168}
+sitesB {'appendSpill': 4872, 'backEdge': 2403, 'l1Sched': 9695, 'l2Arrival': 3, 'l2Entry': 24, 'l4Waiter': 22, 'l5ExitWindow': 328, 'mapIter': 1307, 'nilValueMethodText': 90, 'postOp': 4645, 'repanicCollapse': 126, 'tryLock': 101, 'unseqNext': 2550, 'unseqPanic': 96}
+
+## DIFFER / ONLY_A / ONLY_B ids
+builtins/e13-sibling-panic-order/assert-left-make-slice	DIFFER
+builtins/e13-sibling-panic-order/assert-left-min-inline	DIFFER
+builtins/e13-sibling-panic-order/tgt-assert-vs-make	DIFFER
+builtins/len-vs-call-order/hint-panicky-between	DIFFER
+builtins/len-vs-call-order/make-chan-cap-panicky-between	DIFFER
+builtins/len-vs-call-order/make-hint-call	DIFFER
+builtins/len-vs-call-order/make-hint-map-read	DIFFER
+builtins/len-vs-call-order/make-hint-panic-free	DIFFER
+builtins/len-vs-call-order/make-index-left	DIFFER
+builtins/len-vs-call-order/make-inner-len	DIFFER
+builtins/len-vs-call-order/make-nil-only-both	DIFFER
+builtins/len-vs-call-order/make-nil-only-left	DIFFER
+builtins/len-vs-call-order/make-nil-only-none	DIFFER
+builtins/len-vs-call-order/make-nil-only-operand	DIFFER
+builtins/len-vs-call-order/make-slice-panicky-between	DIFFER
+channels/recv-order/dead-recv-len-operand	DIFFER
+evalorder/unseq-strings/str-index-status-diverse	ONLY_B
+functions/untyped-nil-sinks/slice-lit-elem	DIFFER
+interfaces/tuple-forward-boxing/fixed-any	DIFFER
+interfaces/tuple-forward-boxing/interface-source-control	DIFFER
+interfaces/tuple-forward-boxing/variadic-any	DIFFER
+multipkg/wire-codec/size	DIFFER
+new/new-slice-pointer	DIFFER
+noodler/bounds/slice-within-cap	DIFFER
+noodler/builtins/cap-after-slicing	DIFFER
+noodler/indexkinds/slice-bounds-kinds	DIFFER
+slices/append-spill-below-formula	DIFFER
+stdlib-source/binary-order/be-roundtrip	DIFFER
+stdlib-source/builder-overlay/repeat-doubling-loop	DIFFER
+stdlib-source/strconv-format/siblings	DIFFER
+stdlib-source/strings-split/empty-sep-invalid-utf8	DIFFER
+
+## export refusals: main 34 / e6a 34; identical id sets: yes
+## rows traced: main 3725 / e6a 3726
+
+## the differing ids against the census: the packages whose sweeps entered the grammar at E6a (census-newly-admitted-e6a.tsv) and the 3 rows born / moved
+DIFFER ids in a package whose sweeps entered: 30 | outside every such package: 0 []
+   12 builtins/len-vs-call-order
+    3 builtins/e13-sibling-panic-order
+    3 interfaces/tuple-forward-boxing
+    1 channels/recv-order
+    1 functions/untyped-nil-sinks
+    1 multipkg/wire-codec
+    1 new/new-slice-pointer
+    1 noodler/bounds
+    1 noodler/builtins
+    1 noodler/indexkinds
+    1 slices/append-spill-below-formula
+    1 stdlib-source/binary-order
+    1 stdlib-source/builder-overlay
+    1 stdlib-source/strconv-format
+    1 stdlib-source/strings-split
+
+## per differing id: the choice sites whose recorded consumption count changed (main → E6a), over all six streams
+builtins/e13-sibling-panic-order/assert-left-make-slice {'unseqNext': (0, 6), 'unseqPanic': (6, 0)}
+builtins/e13-sibling-panic-order/assert-left-min-inline {'unseqNext': (0, 6)}
+builtins/e13-sibling-panic-order/tgt-assert-vs-make {'unseqNext': (0, 6), 'unseqPanic': (6, 0)}
+builtins/len-vs-call-order/hint-panicky-between {'unseqNext': (0, 6), 'unseqPanic': (6, 0)}
+builtins/len-vs-call-order/make-chan-cap-panicky-between {'unseqNext': (0, 6), 'unseqPanic': (6, 0)}
+builtins/len-vs-call-order/make-hint-call {'unseqNext': (0, 6), 'unseqPanic': (6, 0)}
+builtins/len-vs-call-order/make-hint-map-read {'unseqNext': (0, 11), 'unseqPanic': (6, 0)}
+builtins/len-vs-call-order/make-hint-panic-free {'unseqNext': (0, 9), 'unseqPanic': (6, 0)}
+builtins/len-vs-call-order/make-index-left {'unseqNext': (0, 6), 'unseqPanic': (6, 0)}
+builtins/len-vs-call-order/make-inner-len {'unseqNext': (0, 6), 'unseqPanic': (6, 0)}
+builtins/len-vs-call-order/make-nil-only-both {'unseqNext': (0, 6), 'unseqPanic': (6, 0)}
+builtins/len-vs-call-order/make-nil-only-left {'unseqNext': (0, 11), 'unseqPanic': (6, 0)}
+builtins/len-vs-call-order/make-nil-only-none {'unseqNext': (0, 11)}
+builtins/len-vs-call-order/make-nil-only-operand {'unseqNext': (0, 6)}
+builtins/len-vs-call-order/make-slice-panicky-between {'unseqNext': (0, 6), 'unseqPanic': (6, 0)}
+channels/recv-order/dead-recv-len-operand {'unseqNext': (0, 6)}
+functions/untyped-nil-sinks/slice-lit-elem {'unseqNext': (0, 17)}
+interfaces/tuple-forward-boxing/fixed-any {'unseqNext': (0, 9)}
+interfaces/tuple-forward-boxing/interface-source-control {'unseqNext': (0, 9)}
+interfaces/tuple-forward-boxing/variadic-any {'unseqNext': (0, 17)}
+multipkg/wire-codec/size {'appendSpill': (21, 19), 'unseqNext': (0, 20)}
+new/new-slice-pointer {'unseqNext': (0, 22)}
+noodler/bounds/slice-within-cap {'unseqNext': (0, 26)}
+noodler/builtins/cap-after-slicing {'unseqNext': (0, 16)}
+noodler/indexkinds/slice-bounds-kinds {'unseqNext': (0, 33)}
+slices/append-spill-below-formula {'unseqNext': (0, 29)}
+stdlib-source/binary-order/be-roundtrip {'unseqNext': (0, 15)}
+stdlib-source/builder-overlay/repeat-doubling-loop {'unseqNext': (0, 29)}
+stdlib-source/strconv-format/siblings {'unseqNext': (0, 12)}
+stdlib-source/strings-split/empty-sep-invalid-utf8 {'unseqNext': (0, 24)}
+
+## reading. 3725 ids: 3694 byte-identical, 30 DIFFER, 0 ONLY_A, 1 ONLY_B (the born row evalorder/unseq-strings/str-index-status-diverse). EVERY differing id lies in a package whose sweeps entered the grammar at E6a — none outside. The 30: (a) the 14 rows whose legacy unseqPanic probe retired into the graph (unseqPanic 6 → 0 = one probe consultation per stream; unseqNext 0 → 6/9/11: the graph's own picks) — builtins/len-vs-call-order ×12 and builtins/e13-sibling-panic-order/{assert-left-make-slice, tgt-assert-vs-make}; (b) the 2 strict rows moved to membership — e13/assert-left-min-inline and channels/recv-order/dead-recv-len-operand (unseqNext 0 → 6); (c) 14 rows whose newly admitted sweeps (the library units strings/bytes, `len` over a map, the refined trigger) add unseqNext picks with ONE observation on every order (their diff-one results and stages unchanged): functions/untyped-nil-sinks/slice-lit-elem, interfaces/tuple-forward-boxing/{fixed-any, interface-source-control, variadic-any}, multipkg/wire-codec/size, new/new-slice-pointer, noodler/bounds/slice-within-cap, noodler/builtins/cap-after-slicing, noodler/indexkinds/slice-bounds-kinds, slices/append-spill-below-formula, stdlib-source/{binary-order/be-roundtrip, builder-overlay/repeat-doubling-loop, strconv-format/siblings, strings-split/empty-sep-invalid-utf8}. The ONE non-unseq site movement — multipkg/wire-codec/size appendSpill 21 → 19 — is the finite fixed streams' knock-on: the new unseqNext picks consume tape slots ahead of the later appendSpill picks, which then read other slot values and choose a capacity that spills twice less; the row's observation (a wire size, never cap()) is unchanged (diff-one PASS strict). Site census over the corpus: unseqNext 2147 → 2550, unseqPanic 168 → 96 (the legacy probe is still consulted on 96 recorded consumptions — E6's residue, the handoff §3), appendSpill 4874 → 4872 (the one row above), every other site identical; 34 export refusals on both sides, identical id sets.

@@ -108,7 +108,7 @@ STATUS-DIVERSE observation set. `scripts/diff-coverage:629` accepts exactly ONE 
 row; E5e's first `str-index-vs-call` ({102, panic} — a sibling call flipping a checked read's STATUS, a genuine spec-permitted
 latitude) had to be SPLIT into an ok/ok and a panic/panic row and the status-diverse shape has no row. Next-lane item: a manifest
 `expected_status` set (e.g. `ok,panic`) routed to the CLI path, the membership checker's status check widened to the set, one
-row born from the probe `int(s[i]) + m()` with m: i = 9 (the audit's `strIndexStatusDiverse`; gc's draw the panic, 4/4).
+row born from the probe `int(s[i]) + m()` with m: i = 9 (the audit's `strIndexStatusDiverse`; gc's draw the panic, 4/4). [CORRECTED at Stage E6a, 2026-09-24 (lane `core/unseq-stage-e6a-0924`, design `docs/2026-09-24_unseq-stage-e6-design.md` §E6a): the status set WAS reachable from a row — through the membership lane's `params` column, `statuses=ok+panic` (`scripts/coverage-manifest` + `scripts/diff-coverage` `parse_lane_params`, the BUG-044 / audit-F8 mechanism landed 2026-08-08 and in use on `binop-order/operand-panic-vs-call/{call-before-left,call-before-left-div}` and `goroutines/wake-window`) — not through the `expected_status` column, which admits one status by design (that column pins gc's default-stream member); the born row `evalorder/unseq-strings/str-index-status-diverse` declares the set that way. The apparatus was NOT changed; the self-tests gained the rejecting shapes.]
 
 **OWED decoder item (the audit re-verification's R1; trusted surface #1 — [USER] 2026-09-22 landed the lane with this
 follow-up recorded, FIX-FIRST not taken):** `unseqCheckMapBase` trusts a SOURCE-LOCAL atom's `type` annotation (Stage C's D9
@@ -196,7 +196,7 @@ trace follow here.
 - The membership lane REFUSES a status-diverse set by name («member … has status ok, outside the case's declared status set
   [panic]»); the manifest CANNOT declare `ok,panic` — `scripts/diff-coverage:629` admits ONE status per row, the CLI's status-set
   path is unreachable from a row (audit fix round F4 corrected the former wording here) — so a status-diverse shape must be split
-  into one row per status until the OWED apparatus item (§3) lands.
+  into one row per status until the OWED apparatus item (§3) lands. [CORRECTED at Stage E6a, 2026-09-24 (lane `core/unseq-stage-e6a-0924`, design `docs/2026-09-24_unseq-stage-e6-design.md` §E6a): the status set WAS reachable from a row — through the membership lane's `params` column, `statuses=ok+panic` (`scripts/coverage-manifest` + `scripts/diff-coverage` `parse_lane_params`, the BUG-044 / audit-F8 mechanism landed 2026-08-08 and in use on `binop-order/operand-panic-vs-call/{call-before-left,call-before-left-div}` and `goroutines/wake-window`) — not through the `expected_status` column, which admits one status by design (that column pins gc's default-stream member); the born row `evalorder/unseq-strings/str-index-status-diverse` declares the set that way. The apparatus was NOT changed; the self-tests gained the rejecting shapes.]
 - The manifest gate refuses a strict row whose `why` is not `-` («strict-lane rows must leave why as -»): a red-by-design strict
   row's explanation lives in its Go comment and its BUG entry (the fix round's `map-target-nil-legacy-refusal`).
 - Fix-round scratch: `.tmp/fix/` — the replayable edit scripts (`edit-decoder-f1.py`, `edit-wires-f1.py`, `edit-frontend-f6f7.py`,

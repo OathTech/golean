@@ -1023,6 +1023,15 @@ gc's early store a deviation, L-016, 2026-09-02).
 
 ### E3. Inter-target phase-1 operand order — (b) PINNED to OUR point, **known ≠ gc** (open envelope)
 
+- STAGE E6a (2026-09-24, [AGENT], lane `core/unseq-stage-e6a-0924`; design
+  `docs/2026-09-24_unseq-stage-e6-design.md` §E6a): the trigger refinement LANDED in its EVENT-MEDIATED form
+  (a failing occurrence vs an E1 participant's window holding another failing occurrence) — this entry's rows
+  (two panicking target operands, NO event between them) are the GENERAL form's shape and stay on the legacy
+  path: the entry STAYS (b) PINNED, known ≠ gc. The general form («any two unordered failing occurrences»)
+  is POSED in the E6a handoff §2 with its measured footprint (856 newly admitted sweeps in 197 packages,
+  57 in the raft twin, hundreds in stdlib library units — `docs/evidence/2026-09-24_unseq-stage-e6a/
+  trigger-general-footprint.txt`); taking it moves THIS entry (and E4, E12's non-call order) to (a)
+  ENVELOPED — a [USER] decision, not a lane's.
 - STAGE E5, FAMILY E5b (2026-09-22, [AGENT], lane `core/unseq-stage-e5-0922`; design
   `docs/2026-09-22_unseq-stage-e5-design.md` §E5b): THE MECHANISM this entry's re-envelope
   obligation named now EXISTS — a multi-target assignment lowers as ONE `unseq` graph whose
@@ -1067,6 +1076,8 @@ gc's early store a deviation, L-016, 2026-09-02).
 
 ### E4. Targets-vs-RHS unordered panic order — same class as E3 — (b) PINNED to OUR point
 
+- STAGE E6a (2026-09-24, [AGENT]): as E3 — the event-mediated refinement landed; the general form that
+  would re-envelope this entry is POSED (E6a handoff §2), not taken; the entry stays (b) PINNED.
 - STAGE E5, FAMILY E5b (2026-09-22, [AGENT]): as E3 — the graph shape (targets as phase-1
   siblings beside the right-hand reads) is landed; the row is call-free, legacy under the ratified
   trigger; the entry stays (b) PINNED pending the same POSED refinement.
@@ -1519,6 +1530,11 @@ gc's early store a deviation, L-016, 2026-09-02).
 
 ### E12. Binary-operator operand order: calls vs non-call operand events — (b) PINNED, structural (frontend ANF): call-first; left-to-right among non-calls
 
+- STAGE E6a (2026-09-24, [AGENT], lane `core/unseq-stage-e6a-0924`; design
+  `docs/2026-09-24_unseq-stage-e6-design.md` §E6a): the «left-to-right among non-calls» half of this pin is
+  the GENERAL trigger form's ground — two FAILING non-call operands with no event between them (`a[i] +
+  b[j]`) — which the E6a lane measured (856 sweeps) and POSED, not taken (the E6a handoff §2): the half
+  stays (b) PINNED, structural. The refinement's EVENT-MEDIATED form landed instead (E13's axis).
 Added 2026-08-17 at spec-truth P2, closing prior-art finding F1
 (`docs/2026-08-17_prior-art-ch2o-cerberus.md` §3: the census hole at
 the center of CH2O's redex-selection latitude; E11-adjacent — E11 is
@@ -1782,6 +1798,28 @@ what (b) means right?» — design of record
 `docs/2026-09-05_e13-b-design.md` (the decision procedure §1, the
 machine construct §3, the frontend §4, the residuals §6).
 
+- STAGE E6a (2026-09-24, [AGENT], lane `core/unseq-stage-e6a-0924`; design
+  `docs/2026-09-24_unseq-stage-e6-design.md` §E6a — the trigger refinement RATIFIED [USER] 2026-09-22, the
+  Stage E5 landing record item 1, relayed): the observability trigger admits a FAILING occurrence unordered
+  against an E1 participant's window that holds another failing occurrence or may itself fail (`make`'s
+  size check) — panic identity is the observable — so this entry's PANIC-vs-PANIC rows with no effectful
+  event leave the legacy `unseqPanic` probe for the `unseq` graph with their 2-member sets REPRODUCED:
+  `builtins/len-vs-call-order/{hint-panicky-between, make-slice-panicky-between,
+  make-chan-cap-panicky-between, make-index-left, make-inner-len}` (with `len`/`cap` over a map / channel
+  operand admitted to the grammar — those rows were refused by the grammar, not the trigger),
+  `builtins/e13-sibling-panic-order/{assert-left-make-slice, tgt-assert-vs-make}`; the strict rows
+  `make-hint-{panic-free,map-read,call}`, `make-nil-only-*` likewise (singletons). TWO strict pins of one
+  spec-legal order — `e13-sibling-panic-order/assert-left-min-inline` (`iv.(int) + min(t[k], 1)`, the
+  e13-b design §6 «inline min» residual) and `channels/recv-order/dead-recv-len-operand` (`iv.(int) +
+  len(b[j])`, BUG-032's A6 family) — went RED-FIRST on the candidate (the machine's canonical tape realized
+  the index panic where gc realizes the conversion) and MOVED to membership {conversion, index}, gc's
+  member inside (20/20). STILL PROBED after E6a, each named with its reason in the design's residue table:
+  the interface-containing-key rows (`make-hint-{struct,array}-any-key`, `len-struct-any-key-left-assert`),
+  `lexer-idiom` (a `for` condition — a sub-accumulator sweep), `make-hint-generic-*` (a stencil's
+  unsubstituted local types), `conv-left-call`, `iface-cmp-left-call`, `send-chan-index`,
+  `assert-return-list` (a captured read in a lifted body), the E6b/E6c shapes. The GENERAL form of the
+  refinement — any two unordered failing occurrences with NO event between them — is NOT taken (it would
+  move E3/E4/E12's (b) pins as ENTRIES; footprint 856 sweeps): POSED in the E6a handoff §2.
 - STAGE E5, FAMILY E5e (2026-09-22, [AGENT], lane `core/unseq-stage-e5-0922`; design
   `docs/2026-09-22_unseq-stage-e5-design.md` §E5e): a STRING byte read / substring is a failing pure
   op of the graph — `builtins/e13-sibling-panic-order/bytes-conv-payload-vs-call` (`int([]byte(s[i:j])
@@ -1791,7 +1829,7 @@ machine construct §3, the frontend §4, the residuals §6).
   shape on a string byte read — {panic · ``, `wit 5` · panic}, gc's member the second (call-first,
   20/20). A status-diverse single row (ok before the call, panic after) was refused by the membership
   lane by name — the audit-F8 status-set declaration, unused in the corpus, was not taken; the row was
-  split (design §E5e).
+  split (design §E5e). [CORRECTED at Stage E6a, 2026-09-24 (lane `core/unseq-stage-e6a-0924`, design `docs/2026-09-24_unseq-stage-e6-design.md` §E6a): the status set WAS reachable from a row — through the membership lane's `params` column, `statuses=ok+panic` (`scripts/coverage-manifest` + `scripts/diff-coverage` `parse_lane_params`, the BUG-044 / audit-F8 mechanism landed 2026-08-08 and in use on `binop-order/operand-panic-vs-call/{call-before-left,call-before-left-div}` and `goroutines/wake-window`) — not through the `expected_status` column, which admits one status by design (that column pins gc's default-stream member); the born row `evalorder/unseq-strings/str-index-status-diverse` declares the set that way. The apparatus was NOT changed; the self-tests gained the rejecting shapes.]
 - STAGE E5, FAMILY E5c (2026-09-22, [AGENT], lane `core/unseq-stage-e5-0922`; design
   `docs/2026-09-22_unseq-stage-e5-design.md` §E5c): `builtins/e13-sibling-panic-order/map-lit-
   payload-vs-call` (`map[int]int{s[i]: 1}[0] + wit(5)`, s[i] out of range) — the STRICT CONTROL that

@@ -1,0 +1,34 @@
+# twin wire structural diff — Stage E6a (lane core/unseq-stage-e6a-0924, 2026-09-24): the pinned twin (main 3fb4a0d1, e1a87725…) vs the E6a frontend's fresh emit over the twin assembly (1c4e7038…).
+# producer: docs/evidence/2026-09-05_fr19-bug097/twin-repin/twin-structural-diff.py (the tracked producer; its methods section keys entries in a way that classes raftpb.(*Snapshot).SizeMessage's born graph under temp-renumber — the per-entry unseq/probe counts below, from a direct count over funcs and methods, are the authoritative structural summary).
+
+## unseq / unseq-probe counts per section (direct count)
+funcs entries 450 -> 450 | unseq 0 -> 2 | unseq-probe 52 -> 52
+    raft.isHardStateEqual unseq 0 -> 1 | probes 0 -> 0
+    raft.MustSync unseq 0 -> 1 | probes 0 -> 0
+methods entries 537 -> 537 | unseq 0 -> 1 | unseq-probe 76 -> 76
+    {"name": "SizeMessage", "package": ""}@raftpb.Snapshot unseq 0 -> 1 | probes 0 -> 0
+buildContext identical
+fileOrder identical
+globals identical
+methodSets identical
+package identical
+schema identical
+types identical
+
+## the tracked producer's leaf classification
+old sha256 e1a877251021b5f2f10b248ff2acdd975c15c7e66f54e4a8bd2332b21dd71ad8
+new sha256 1c4e70383d7ab1e87d3552e1840c95a0e8238cd81fbf3de547d48abede0e6464
+funcs: added 0 removed 0 changed 198
+  change classes over all changed funcs: {'other': 644, 'temp-renumber': 2982}
+methods: added 0 removed 0 changed 11
+  change classes over all changed methods: {'temp-renumber': 91}
+  (every changed methods differs ONLY by program-wide temporary renumbering — $cN/$swfN/$swiN/$tsN — the downstream shift of quorum.MajorityConfig.Describe now lowering)
+types: added 0 removed 0 changed 0
+globals: added 0 removed 0 changed 0
+methodSets: added 0 removed 0 changed 0
+fileOrder: identical: True
+top-level keys identical: True; remaining top-level values identical: True
+
+## per-function 'other' leaf changes (the born graphs)
+    351   ~ raft.isHardStateEqual
+    293   ~ raft.MustSync

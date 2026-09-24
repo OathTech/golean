@@ -491,7 +491,7 @@ from any row. The split into the ok/ok form (m: i = 1) and the panic/panic form 
 not a lane-shape choice, and the latitude the lane detected — a sibling call flipping a checked read's STATUS — has no row and
 cannot have one until the manifest admits a status set: an OWED apparatus item (trusted surface #2, a manifest `expected_status`
 set with the F8 CLI path behind it; the probe `int(s[i]) + m()`, m: i = 9, is the future row's body), recorded in the handoff §3 and
-NOT changed in this lane. Baseline 3748 = 3513 / 235 → **3752 = 3517 / 235**; NO PASS → non-PASS.
+NOT changed in this lane. Baseline 3748 = 3513 / 235 → **3752 = 3517 / 235**; NO PASS → non-PASS. [CORRECTED at Stage E6a, 2026-09-24 (lane `core/unseq-stage-e6a-0924`, design `docs/2026-09-24_unseq-stage-e6-design.md` §E6a): the status set WAS reachable from a row — through the membership lane's `params` column, `statuses=ok+panic` (`scripts/coverage-manifest` + `scripts/diff-coverage` `parse_lane_params`, the BUG-044 / audit-F8 mechanism landed 2026-08-08 and in use on `binop-order/operand-panic-vs-call/{call-before-left,call-before-left-div}` and `goroutines/wake-window`) — not through the `expected_status` column, which admits one status by design (that column pins gc's default-stream member); the born row `evalorder/unseq-strings/str-index-status-diverse` declares the set that way. The apparatus was NOT changed; the self-tests gained the rejecting shapes.]
 
 **Latitude.** E2/E12's VALUE axis (a) ENVELOPED on `str-index-vs-call` and `str-slice-vs-call` (the captured index's read vs
 the call, on a string base); E13's sibling-panic axis on `str-index-panic-vs-print` and on the e13 row that leaves the probe —
@@ -629,7 +629,7 @@ F6/F7 texts move NO sweep (the «unary operator &» first-reason class is relabe
 **F4 — RECORDS: the E5e status-diverse split DESCRIBED HONESTLY** (§E5e above; the handoff §6 note corrected): the manifest admits
 ONE status (`scripts/diff-coverage:629`); the CLI's `--expect-status ok,panic` set is unreachable from a row; the split was FORCED by
 the apparatus. The OWED apparatus item — a manifest row admitting a status-diverse set, with the F8 CLI path behind it; trusted
-surface #2, NOT changed in this lane — is recorded in the handoff §3 with the audit's probe as the future row's body.
+surface #2, NOT changed in this lane — is recorded in the handoff §3 with the audit's probe as the future row's body. [CORRECTED at Stage E6a, 2026-09-24 (lane `core/unseq-stage-e6a-0924`, design `docs/2026-09-24_unseq-stage-e6-design.md` §E6a): the status set WAS reachable from a row — through the membership lane's `params` column, `statuses=ok+panic` (`scripts/coverage-manifest` + `scripts/diff-coverage` `parse_lane_params`, the BUG-044 / audit-F8 mechanism landed 2026-08-08 and in use on `binop-order/operand-panic-vs-call/{call-before-left,call-before-left-div}` and `goroutines/wake-window`) — not through the `expected_status` column, which admits one status by design (that column pins gc's default-stream member); the born row `evalorder/unseq-strings/str-index-status-diverse` declares the set that way. The apparatus was NOT changed; the self-tests gained the rejecting shapes.]
 
 **F5 — RECORDS (counts) — CORRECTED**: §E5c «+2 from the widening» → +3 pre-existing sweeps entered (`map-lit-control` filed by
 the census diff under «rows only in AFTER» — a line shift) and +8 the born packages' sweeps (the ledger §8ah and the evidence README

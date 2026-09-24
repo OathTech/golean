@@ -1,0 +1,94 @@
+dir	unit	file:line	function	form	events	calls	nonEvents	former-reason
+Corpus/coverage/exec/builtins/e13-sibling-panic-order	main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:235	assertLeftMinInline	return	1	0	2	no call occurrence (legacy path: nothing with an effect to reorder against)
+Corpus/coverage/exec/builtins/e13-sibling-panic-order	main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:284	tgtAssertVsMake	elem-assign	2	0	3	no call occurrence (legacy path: nothing with an effect to reorder against)
+Corpus/coverage/exec/builtins/e13-sibling-panic-order	main	Corpus/coverage/exec/builtins/e13-sibling-panic-order/main.go:73	assertLeftMakeSlice	return	2	0	2	no call occurrence (legacy path: nothing with an effect to reorder against)
+Corpus/coverage/exec/builtins/len-vs-call-order	main	Corpus/coverage/exec/builtins/len-vs-call-order/main.go:128	hintPanickyBetween	return	2	0	2	len of a non-slice operand (map[int]int)
+Corpus/coverage/exec/builtins/len-vs-call-order	main	Corpus/coverage/exec/builtins/len-vs-call-order/main.go:152	makeSlicePanickyBetween	return	2	0	2	no call occurrence (legacy path: nothing with an effect to reorder against)
+Corpus/coverage/exec/builtins/len-vs-call-order	main	Corpus/coverage/exec/builtins/len-vs-call-order/main.go:159	makeChanCapPanickyBetween	return	2	0	2	cap of a non-slice operand (chan int)
+Corpus/coverage/exec/builtins/len-vs-call-order	main	Corpus/coverage/exec/builtins/len-vs-call-order/main.go:166	makeIndexLeft	return	2	0	2	len of a non-slice operand (map[int]int)
+Corpus/coverage/exec/builtins/len-vs-call-order	main	Corpus/coverage/exec/builtins/len-vs-call-order/main.go:173	makeInnerLen	return	3	0	2	no call occurrence (legacy path: nothing with an effect to reorder against)
+Corpus/coverage/exec/builtins/len-vs-call-order	main	Corpus/coverage/exec/builtins/len-vs-call-order/main.go:185	makeHintPanicFree	return	2	0	1	len of a non-slice operand (map[int]int)
+Corpus/coverage/exec/builtins/len-vs-call-order	main	Corpus/coverage/exec/builtins/len-vs-call-order/main.go:197	makeHintMapRead	return	2	0	2	len of a non-slice operand (map[int]int)
+Corpus/coverage/exec/builtins/len-vs-call-order	main	Corpus/coverage/exec/builtins/len-vs-call-order/main.go:203	makeHintCall	return	3	1	1	len of a non-slice operand (map[int]int)
+Corpus/coverage/exec/builtins/len-vs-call-order	main	Corpus/coverage/exec/builtins/len-vs-call-order/main.go:292	makeNilOnly	return	2	0	2	no call occurrence (legacy path: nothing with an effect to reorder against)
+Corpus/coverage/exec/bytes/buffer-model	bytes	deps/go/src/bytes/bytes.go:989	Trim	return	2	2	2	callee outside the main package
+Corpus/coverage/exec/bytes/buffer-model	bytes	deps/go/src/bytes/reader.go:30	*Reader.Len	return	1	0	2	no call occurrence (legacy path: nothing with an effect to reorder against)
+Corpus/coverage/exec/bytes/equal-conformance	bytes	deps/go/src/bytes/bytes.go:989	Trim	return	2	2	2	callee outside the main package
+Corpus/coverage/exec/bytes/equal-conformance	bytes	deps/go/src/bytes/reader.go:30	*Reader.Len	return	1	0	2	no call occurrence (legacy path: nothing with an effect to reorder against)
+Corpus/coverage/exec/channels/recv-order	main	Corpus/coverage/exec/channels/recv-order/main.go:120	recvOrderDeadRecvLenOperand	return	1	0	2	no call occurrence (legacy path: nothing with an effect to reorder against)
+Corpus/coverage/exec/examples/wordfreq	strings	deps/go/src/strings/reader.go:29	*Reader.Len	return	1	0	2	no call occurrence (legacy path: nothing with an effect to reorder against)
+Corpus/coverage/exec/examples/wordfreq	strings	deps/go/src/strings/strings.go:987	Trim	return	2	2	2	callee outside the main package
+Corpus/coverage/exec/fmt/fprint-writers	bytes	deps/go/src/bytes/bytes.go:989	Trim	return	2	2	2	callee outside the main package
+Corpus/coverage/exec/fmt/fprint-writers	bytes	deps/go/src/bytes/reader.go:30	*Reader.Len	return	1	0	2	no call occurrence (legacy path: nothing with an effect to reorder against)
+Corpus/coverage/exec/fmt/fprint-writers	strings	deps/go/src/strings/reader.go:29	*Reader.Len	return	1	0	2	no call occurrence (legacy path: nothing with an effect to reorder against)
+Corpus/coverage/exec/fmt/fprint-writers	strings	deps/go/src/strings/strings.go:987	Trim	return	2	2	2	callee outside the main package
+Corpus/coverage/exec/fmt/fprintf-builder	strings	deps/go/src/strings/reader.go:29	*Reader.Len	return	1	0	2	no call occurrence (legacy path: nothing with an effect to reorder against)
+Corpus/coverage/exec/fmt/fprintf-builder	strings	deps/go/src/strings/strings.go:987	Trim	return	2	2	2	callee outside the main package
+Corpus/coverage/exec/functions/untyped-nil-sinks	main	Corpus/coverage/exec/functions/untyped-nil-sinks/main.go:50	unsSliceLitElem	return	2	0	2	no call occurrence (legacy path: nothing with an effect to reorder against)
+Corpus/coverage/exec/init/library-var-type-poisoned	bytes	deps/go/src/bytes/bytes.go:989	Trim	return	2	2	2	callee outside the main package
+Corpus/coverage/exec/init/library-var-type-poisoned	bytes	deps/go/src/bytes/reader.go:30	*Reader.Len	return	1	0	2	no call occurrence (legacy path: nothing with an effect to reorder against)
+Corpus/coverage/exec/init/library-var-type-unlowerable	bytes	deps/go/src/bytes/bytes.go:989	Trim	return	2	2	2	callee outside the main package
+Corpus/coverage/exec/init/library-var-type-unlowerable	bytes	deps/go/src/bytes/reader.go:30	*Reader.Len	return	1	0	2	no call occurrence (legacy path: nothing with an effect to reorder against)
+Corpus/coverage/exec/init/stdlib-initializer-source-through	strings	deps/go/src/strings/reader.go:29	*Reader.Len	return	1	0	2	no call occurrence (legacy path: nothing with an effect to reorder against)
+Corpus/coverage/exec/init/stdlib-initializer-source-through	strings	deps/go/src/strings/strings.go:987	Trim	return	2	2	2	callee outside the main package
+Corpus/coverage/exec/interfaces/assert-imported-method-set	strings	deps/go/src/strings/reader.go:29	*Reader.Len	return	1	0	2	no call occurrence (legacy path: nothing with an effect to reorder against)
+Corpus/coverage/exec/interfaces/assert-imported-method-set	strings	deps/go/src/strings/strings.go:987	Trim	return	2	2	2	callee outside the main package
+Corpus/coverage/exec/interfaces/tuple-forward-boxing	main	Corpus/coverage/exec/interfaces/tuple-forward-boxing/main.go:17	sinkAnyAny	return	1	0	2	no call occurrence (legacy path: nothing with an effect to reorder against)
+Corpus/coverage/exec/interfaces/tuple-forward-boxing	main	Corpus/coverage/exec/interfaces/tuple-forward-boxing/main.go:19	sinkVariadicAny	return	1	0	4	no call occurrence (legacy path: nothing with an effect to reorder against)
+Corpus/coverage/exec/multipkg/wire-codec	wirepb	Corpus/coverage/exec/multipkg/wire-codec/wirepb/wirepb.go:102	*Entry.SizeMessage	compound	3	1	2	callee outside the main package
+Corpus/coverage/exec/multipkg/wire-codec	wirepb	Corpus/coverage/exec/multipkg/wire-codec/wirepb/wirepb.go:142	*ConfChange.SizeMessage	compound	3	1	2	callee outside the main package
+Corpus/coverage/exec/new/new-expr	main	Corpus/coverage/exec/new/new-expr/main.go:19	newExprUntypedDefaults	define	1	0	3	no call occurrence (legacy path: nothing with an effect to reorder against)
+Corpus/coverage/exec/new/new-slice-pointer	main	Corpus/coverage/exec/new/new-slice-pointer/main.go:10	newSlicePointer	return	1	0	3	no call occurrence (legacy path: nothing with an effect to reorder against)
+Corpus/coverage/exec/noodler/bounds	main	Corpus/coverage/exec/noodler/bounds/main.go:78	sliceWithinCap	return	2	0	3	no call occurrence (legacy path: nothing with an effect to reorder against)
+Corpus/coverage/exec/noodler/builtins	main	Corpus/coverage/exec/noodler/builtins/main.go:155	capAfterSlicing	return	3	0	3	no call occurrence (legacy path: nothing with an effect to reorder against)
+Corpus/coverage/exec/noodler/indexkinds	main	Corpus/coverage/exec/noodler/indexkinds/main.go:44	sliceBoundsWithKinds	return	2	0	4	no call occurrence (legacy path: nothing with an effect to reorder against)
+Corpus/coverage/exec/noodler/strings	strings	deps/go/src/strings/reader.go:29	*Reader.Len	return	1	0	2	no call occurrence (legacy path: nothing with an effect to reorder against)
+Corpus/coverage/exec/noodler/strings	strings	deps/go/src/strings/strings.go:987	Trim	return	2	2	2	callee outside the main package
+Corpus/coverage/exec/panic-recover/shim-refusal-unrecoverable	strings	deps/go/src/strings/reader.go:29	*Reader.Len	return	1	0	2	no call occurrence (legacy path: nothing with an effect to reorder against)
+Corpus/coverage/exec/panic-recover/shim-refusal-unrecoverable	strings	deps/go/src/strings/strings.go:987	Trim	return	2	2	2	callee outside the main package
+Corpus/coverage/exec/slices/append-spill-below-formula	main	Corpus/coverage/exec/slices/append-spill-below-formula/main.go:12	appendSpillBelowFormula	return	3	0	2	no call occurrence (legacy path: nothing with an effect to reorder against)
+Corpus/coverage/exec/stdlib-source/binary-order	main	Corpus/coverage/exec/stdlib-source/binary-order/main.go:31	beRoundTrip	return	2	2	3	method callee outside the main package
+Corpus/coverage/exec/stdlib-source/builder-cap	strings	deps/go/src/strings/reader.go:29	*Reader.Len	return	1	0	2	no call occurrence (legacy path: nothing with an effect to reorder against)
+Corpus/coverage/exec/stdlib-source/builder-cap	strings	deps/go/src/strings/strings.go:987	Trim	return	2	2	2	callee outside the main package
+Corpus/coverage/exec/stdlib-source/builder-fuzz	strings	deps/go/src/strings/reader.go:29	*Reader.Len	return	1	0	2	no call occurrence (legacy path: nothing with an effect to reorder against)
+Corpus/coverage/exec/stdlib-source/builder-fuzz	strings	deps/go/src/strings/strings.go:987	Trim	return	2	2	2	callee outside the main package
+Corpus/coverage/exec/stdlib-source/builder-overlay	main	Corpus/coverage/exec/stdlib-source/builder-overlay/main.go:139	repeatDoublingLoop	return	4	3	1	qualified function callee (imported source package)
+Corpus/coverage/exec/stdlib-source/builder-overlay	strings	deps/go/src/strings/reader.go:29	*Reader.Len	return	1	0	2	no call occurrence (legacy path: nothing with an effect to reorder against)
+Corpus/coverage/exec/stdlib-source/builder-overlay	strings	deps/go/src/strings/strings.go:987	Trim	return	2	2	2	callee outside the main package
+Corpus/coverage/exec/stdlib-source/bytes-buffer	bytes	deps/go/src/bytes/bytes.go:989	Trim	return	2	2	2	callee outside the main package
+Corpus/coverage/exec/stdlib-source/bytes-buffer	bytes	deps/go/src/bytes/reader.go:30	*Reader.Len	return	1	0	2	no call occurrence (legacy path: nothing with an effect to reorder against)
+Corpus/coverage/exec/stdlib-source/fields-fuzz	strings	deps/go/src/strings/reader.go:29	*Reader.Len	return	1	0	2	no call occurrence (legacy path: nothing with an effect to reorder against)
+Corpus/coverage/exec/stdlib-source/fields-fuzz	strings	deps/go/src/strings/strings.go:987	Trim	return	2	2	2	callee outside the main package
+Corpus/coverage/exec/stdlib-source/frontier	bytes	deps/go/src/bytes/bytes.go:989	Trim	return	2	2	2	callee outside the main package
+Corpus/coverage/exec/stdlib-source/frontier	bytes	deps/go/src/bytes/reader.go:30	*Reader.Len	return	1	0	2	no call occurrence (legacy path: nothing with an effect to reorder against)
+Corpus/coverage/exec/stdlib-source/frontier	strings	deps/go/src/strings/reader.go:29	*Reader.Len	return	1	0	2	no call occurrence (legacy path: nothing with an effect to reorder against)
+Corpus/coverage/exec/stdlib-source/frontier	strings	deps/go/src/strings/strings.go:987	Trim	return	2	2	2	callee outside the main package
+Corpus/coverage/exec/stdlib-source/slices-sortfunc	strings	deps/go/src/strings/reader.go:29	*Reader.Len	return	1	0	2	no call occurrence (legacy path: nothing with an effect to reorder against)
+Corpus/coverage/exec/stdlib-source/slices-sortfunc	strings	deps/go/src/strings/strings.go:987	Trim	return	2	2	2	callee outside the main package
+Corpus/coverage/exec/stdlib-source/strconv-format	main	Corpus/coverage/exec/stdlib-source/strconv-format/main.go:67	formatSiblings	return	1	1	2	qualified function callee (imported source package)
+Corpus/coverage/exec/stdlib-source/strings-fields	strings	deps/go/src/strings/reader.go:29	*Reader.Len	return	1	0	2	no call occurrence (legacy path: nothing with an effect to reorder against)
+Corpus/coverage/exec/stdlib-source/strings-fields	strings	deps/go/src/strings/strings.go:987	Trim	return	2	2	2	callee outside the main package
+Corpus/coverage/exec/stdlib-source/strings-split	main	Corpus/coverage/exec/stdlib-source/strings-split/main.go:39	splitEmptySepInvalidUTF8	return	4	0	3	no call occurrence (legacy path: nothing with an effect to reorder against)
+Corpus/coverage/exec/stdlib-source/strings-split	strings	deps/go/src/strings/reader.go:29	*Reader.Len	return	1	0	2	no call occurrence (legacy path: nothing with an effect to reorder against)
+Corpus/coverage/exec/stdlib-source/strings-split	strings	deps/go/src/strings/strings.go:987	Trim	return	2	2	2	callee outside the main package
+Corpus/coverage/exec/stdlib-source/strings-trimspace	strings	deps/go/src/strings/reader.go:29	*Reader.Len	return	1	0	2	no call occurrence (legacy path: nothing with an effect to reorder against)
+Corpus/coverage/exec/stdlib-source/strings-trimspace	strings	deps/go/src/strings/strings.go:987	Trim	return	2	2	2	callee outside the main package
+Corpus/coverage/exec/strings/builder-model	strings	deps/go/src/strings/reader.go:29	*Reader.Len	return	1	0	2	no call occurrence (legacy path: nothing with an effect to reorder against)
+Corpus/coverage/exec/strings/builder-model	strings	deps/go/src/strings/strings.go:987	Trim	return	2	2	2	callee outside the main package
+Corpus/coverage/exec/strings/fields-conformance	strings	deps/go/src/strings/reader.go:29	*Reader.Len	return	1	0	2	no call occurrence (legacy path: nothing with an effect to reorder against)
+Corpus/coverage/exec/strings/fields-conformance	strings	deps/go/src/strings/strings.go:987	Trim	return	2	2	2	callee outside the main package
+Corpus/coverage/exec/strings/join-conformance	strings	deps/go/src/strings/reader.go:29	*Reader.Len	return	1	0	2	no call occurrence (legacy path: nothing with an effect to reorder against)
+Corpus/coverage/exec/strings/join-conformance	strings	deps/go/src/strings/strings.go:987	Trim	return	2	2	2	callee outside the main package
+Corpus/coverage/exec/strings/shim-value-refused	strings	deps/go/src/strings/reader.go:29	*Reader.Len	return	1	0	2	no call occurrence (legacy path: nothing with an effect to reorder against)
+Corpus/coverage/exec/strings/shim-value-refused	strings	deps/go/src/strings/strings.go:987	Trim	return	2	2	2	callee outside the main package
+Corpus/coverage/exec/strings/split-conformance	strings	deps/go/src/strings/reader.go:29	*Reader.Len	return	1	0	2	no call occurrence (legacy path: nothing with an effect to reorder against)
+Corpus/coverage/exec/strings/split-conformance	strings	deps/go/src/strings/strings.go:987	Trim	return	2	2	2	callee outside the main package
+Corpus/coverage/exec/strings/trimspace-repeat	strings	deps/go/src/strings/reader.go:29	*Reader.Len	return	1	0	2	no call occurrence (legacy path: nothing with an effect to reorder against)
+Corpus/coverage/exec/strings/trimspace-repeat	strings	deps/go/src/strings/strings.go:987	Trim	return	2	2	2	callee outside the main package
+TWIN	bytes	deps/go/src/bytes/bytes.go:989	Trim	return	2	2	2	callee outside the main package
+TWIN	bytes	deps/go/src/bytes/reader.go:30	*Reader.Len	return	1	0	2	no call occurrence (legacy path: nothing with an effect to reorder against)
+TWIN	raft	/home/dev/projects/golean/.claude/worktrees/unseq-stage-e6a/.tmp/census/twin-prog/raft/node_decls.go:98	isHardStateEqual	return	6	6	2	method callee outside the main package
+TWIN	raft	/home/dev/projects/golean/.claude/worktrees/unseq-stage-e6a/.tmp/census/twin-prog/raft/rawnode.go:197	MustSync	return	4	4	2	method callee outside the main package
+TWIN	raftpb	/home/dev/projects/golean/.claude/worktrees/unseq-stage-e6a/.tmp/census/twin-prog/raftpb/plain_codec.go:330	*Snapshot.SizeMessage	compound	3	1	2	callee outside the main package
+TWIN	strings	deps/go/src/strings/reader.go:29	*Reader.Len	return	1	0	2	no call occurrence (legacy path: nothing with an effect to reorder against)
+TWIN	strings	deps/go/src/strings/strings.go:987	Trim	return	2	2	2	callee outside the main package

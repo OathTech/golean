@@ -1,0 +1,167 @@
+# The GENERAL panic-identity rule's footprint (E6a, 2026-09-24): the trigger refinement read LITERALLY — any FAILING occurrence unordered against any other FAILING occurrence, calls or no calls — measured by the whole-sweep census with the binary .tmp/nativefrontend-e6a-trigger (main's frontend + the general rule; NO len/cap or unit widening) over the corpus (1365 packages) + the raft twin. NOT SHIPPED: the general rule re-envelopes E3/E4/E12's non-call panic order ((b) pins → (a)) — an ENTRY-class move, a HARD STOP posed in the handoff §2; E6a ships the event-mediated form (design §E6a).
+
+corpus sweeps 108258  admitted 978  packages-with-admitted 197  refused-packages 0
+admitted units: [('main', 413), ('strings', 132), ('internal/strconv', 88), ('math/bits', 84), ('unicode', 81), ('internal/bytealg', 64), ('bytes', 63), ('internal/stringslite', 27)]
+admitted by form: [('return', 466), ('define', 140), ('tuple-assign', 129), ('assign', 103), ('compound', 88), ('call-stmt', 18), ('elem-assign', 13), ('multi-call', 7), ('print-stmt', 6), ('comma-ok', 3), ('map-assign', 2), ('deref-assign', 2), ('blank-assign', 1)]
+admitted per package:
+    53 Corpus/coverage/exec/builtins/e13-sibling-panic-order
+    34 Corpus/coverage/exec/stdlib-source/frontier
+    30 Corpus/coverage/exec/noodler/strings
+    27 Corpus/coverage/exec/panic-recover/shim-refusal-unrecoverable
+    25 Corpus/coverage/exec/fmt/fprint-writers
+    22 Corpus/coverage/exec/init/library-var-type-poisoned
+    22 Corpus/coverage/exec/init/library-var-type-unlowerable
+    18 Corpus/coverage/exec/evalorder/unseq-pilot
+    17 Corpus/coverage/exec/stdlib-source/builder-fuzz
+    16 Corpus/coverage/exec/bytes/buffer-model
+    16 Corpus/coverage/exec/bytes/equal-conformance
+    16 Corpus/coverage/exec/fmt/fprintf-builder
+    16 Corpus/coverage/exec/noodler/strconv-formatint
+    16 Corpus/coverage/exec/stdlib-source/builder-overlay
+    16 Corpus/coverage/exec/stdlib-source/bytes-buffer
+    16 Corpus/coverage/exec/stdlib-source/errors-wrap
+    16 Corpus/coverage/exec/stdlib-source/strconv-format
+    16 Corpus/coverage/exec/stdlib-source/strconv-parseuint
+    16 Corpus/coverage/exec/strconv/format-parse
+    15 Corpus/coverage/exec/stdlib-source/strings-split
+    14 Corpus/coverage/exec/examples/wordfreq
+    14 Corpus/coverage/exec/init/stdlib-initializer-source-through
+    14 Corpus/coverage/exec/interfaces/assert-imported-method-set
+    14 Corpus/coverage/exec/stdlib-source/builder-cap
+    14 Corpus/coverage/exec/stdlib-source/fields-fuzz
+    14 Corpus/coverage/exec/stdlib-source/slices-sortfunc
+    14 Corpus/coverage/exec/stdlib-source/strings-fields
+    14 Corpus/coverage/exec/stdlib-source/strings-trimspace
+    14 Corpus/coverage/exec/strings/builder-model
+    14 Corpus/coverage/exec/strings/fields-conformance
+    14 Corpus/coverage/exec/strings/join-conformance
+    14 Corpus/coverage/exec/strings/shim-value-refused
+    14 Corpus/coverage/exec/strings/split-conformance
+    14 Corpus/coverage/exec/strings/trimspace-repeat
+    12 Corpus/coverage/exec/noodler/latitude
+     9 Corpus/coverage/exec/evalorder/unseq-conv-alloc
+     9 Corpus/coverage/exec/evalorder/unseq-multi
+     8 Corpus/coverage/exec/binary/little-endian
+     8 Corpus/coverage/exec/builtins/len-vs-call-order
+     8 Corpus/coverage/exec/noodler/arith
+     8 Corpus/coverage/exec/noodler/builtins
+     8 Corpus/coverage/exec/noodler/evalorder
+     8 Corpus/coverage/exec/stdlib-source/binary-order
+     7 Corpus/coverage/exec/evalorder/unseq-ptr-field-map
+     7 Corpus/coverage/exec/noodler/slices
+     6 Corpus/coverage/exec/builtins/copy-edge
+     6 Corpus/coverage/exec/evalorder/unseq-builtins
+     6 Corpus/coverage/exec/strings/literal-edge
+     5 Corpus/coverage/exec/builtins/statement-position
+     5 Corpus/coverage/exec/evalorder/unseq-addr
+     5 Corpus/coverage/exec/slices/slices-sort-edges
+     5 Corpus/coverage/exec/spec-examples-decl/select-forms
+     4 Corpus/coverage/exec/evalorder/unseq-recv-method
+     4 Corpus/coverage/exec/fmt/formatter-box-crosspkg
+     4 Corpus/coverage/exec/slices/append-overlap
+     4 Corpus/coverage/exec/slices/slices-sort
+
+## diff vs BEFORE (main's frontend)
+rows only in AFTER (new packages): 0 in []
+newly admitted 856   lost 0
+newly admitted per package:
+    57 TWIN
+    34 Corpus/coverage/exec/stdlib-source/frontier
+    30 Corpus/coverage/exec/noodler/strings
+    27 Corpus/coverage/exec/panic-recover/shim-refusal-unrecoverable
+    25 Corpus/coverage/exec/fmt/fprint-writers
+    22 Corpus/coverage/exec/init/library-var-type-poisoned
+    22 Corpus/coverage/exec/init/library-var-type-unlowerable
+    17 Corpus/coverage/exec/stdlib-source/builder-fuzz
+    16 Corpus/coverage/exec/bytes/buffer-model
+    16 Corpus/coverage/exec/bytes/equal-conformance
+    16 Corpus/coverage/exec/fmt/fprintf-builder
+    16 Corpus/coverage/exec/noodler/strconv-formatint
+    16 Corpus/coverage/exec/stdlib-source/builder-overlay
+    16 Corpus/coverage/exec/stdlib-source/bytes-buffer
+    16 Corpus/coverage/exec/stdlib-source/errors-wrap
+    16 Corpus/coverage/exec/stdlib-source/strconv-format
+    16 Corpus/coverage/exec/stdlib-source/strconv-parseuint
+    16 Corpus/coverage/exec/strconv/format-parse
+    15 Corpus/coverage/exec/stdlib-source/strings-split
+    14 Corpus/coverage/exec/examples/wordfreq
+    14 Corpus/coverage/exec/init/stdlib-initializer-source-through
+    14 Corpus/coverage/exec/interfaces/assert-imported-method-set
+    14 Corpus/coverage/exec/stdlib-source/builder-cap
+    14 Corpus/coverage/exec/stdlib-source/fields-fuzz
+    14 Corpus/coverage/exec/stdlib-source/slices-sortfunc
+    14 Corpus/coverage/exec/stdlib-source/strings-fields
+    14 Corpus/coverage/exec/stdlib-source/strings-trimspace
+    14 Corpus/coverage/exec/strings/builder-model
+    14 Corpus/coverage/exec/strings/fields-conformance
+    14 Corpus/coverage/exec/strings/join-conformance
+    14 Corpus/coverage/exec/strings/shim-value-refused
+    14 Corpus/coverage/exec/strings/split-conformance
+    14 Corpus/coverage/exec/strings/trimspace-repeat
+     8 Corpus/coverage/exec/binary/little-endian
+     8 Corpus/coverage/exec/noodler/builtins
+     8 Corpus/coverage/exec/stdlib-source/binary-order
+     7 Corpus/coverage/exec/noodler/arith
+     7 Corpus/coverage/exec/noodler/slices
+     6 Corpus/coverage/exec/builtins/copy-edge
+     6 Corpus/coverage/exec/strings/literal-edge
+     5 Corpus/coverage/exec/builtins/statement-position
+     5 Corpus/coverage/exec/evalorder/unseq-pilot
+     5 Corpus/coverage/exec/slices/slices-sort-edges
+     4 Corpus/coverage/exec/builtins/len-vs-call-order
+     4 Corpus/coverage/exec/fmt/formatter-box-crosspkg
+     4 Corpus/coverage/exec/slices/append-overlap
+     4 Corpus/coverage/exec/slices/slices-sort
+     4 Corpus/coverage/exec/structs/pointer-literal-elision
+     3 Corpus/coverage/exec/builtins/e13-sibling-panic-order
+     3 Corpus/coverage/exec/examples/bubble
+     3 Corpus/coverage/exec/examples/isort
+     3 Corpus/coverage/exec/examples/reverse
+     3 Corpus/coverage/exec/examples/selsort
+     3 Corpus/coverage/exec/new/new-expr
+     3 Corpus/coverage/exec/noodler/indexkinds
+     3 Corpus/coverage/exec/quorum/committed-index-real
+     3 Corpus/coverage/exec/slices/slices-sort-kinds
+     3 Corpus/coverage/exec/spec-examples-decl/assign-tuple-order
+     3 Corpus/coverage/exec/structs/swap
+     2 Corpus/coverage/exec/builtins/clear-delete-edge
+     2 Corpus/coverage/exec/channels/recv-order
+     2 Corpus/coverage/exec/evalorder/unseq-const-cell
+     2 Corpus/coverage/exec/evalorder/unseq-multi
+     2 Corpus/coverage/exec/examples/rle
+     2 Corpus/coverage/exec/fmt/errorf
+     2 Corpus/coverage/exec/fmt/formatter-box-generic
+     2 Corpus/coverage/exec/fmt/formatter-box-range
+     2 Corpus/coverage/exec/fmt/formatter-dyn-hole
+     2 Corpus/coverage/exec/fmt/formatter-precedence
+     2 Corpus/coverage/exec/fmt/sprintf-dyn
+     2 Corpus/coverage/exec/fmt/sprintf-verbs
+     2 Corpus/coverage/exec/fmt/v-composites
+     2 Corpus/coverage/exec/generics/qualified-instantiation
+     2 Corpus/coverage/exec/interfaces/tuple-forward-boxing
+     2 Corpus/coverage/exec/noodler/ranges
+     2 Corpus/coverage/exec/range/range-struct-copy
+     2 Corpus/coverage/exec/slices/append-overlap-window
+
+## legacy probe emission with the general rule: corpus 53 / twin 128 (unseq graphs born in the twin: 23)
+
+## The general rule PLUS E6a's widenings (len/cap operands, non-main units): the same binary shape with the unit boundary removed — .tmp/nativefrontend-e6a as first built
+corpus sweeps 108258  admitted 1069  packages-with-admitted 198  refused-packages 0
+admitted units: [('main', 422), ('strings', 198), ('internal/strconv', 88), ('math/bits', 84), ('unicode', 81), ('bytes', 77), ('internal/bytealg', 64), ('internal/stringslite', 27)]
+admitted by form: [('return', 504), ('define', 162), ('tuple-assign', 129), ('assign', 103), ('compound', 90), ('multi-call', 36), ('call-stmt', 18), ('elem-assign', 13), ('print-stmt', 6), ('comma-ok', 3), ('map-assign', 2), ('deref-assign', 2), ('blank-assign', 1)]
+admitted per package:
+    53 Corpus/coverage/exec/builtins/e13-sibling-panic-order
+    39 Corpus/coverage/exec/stdlib-source/frontier
+    33 Corpus/coverage/exec/noodler/strings
+    30 Corpus/coverage/exec/fmt/fprint-writers
+    30 Corpus/coverage/exec/panic-recover/shim-refusal-unrecoverable
+    24 Corpus/coverage/exec/init/library-var-type-poisoned
+    24 Corpus/coverage/exec/init/library-var-type-unlowerable
+    20 Corpus/coverage/exec/stdlib-source/builder-fuzz
+    20 Corpus/coverage/exec/stdlib-source/builder-overlay
+    19 Corpus/coverage/exec/fmt/fprintf-builder
+rows only in AFTER (new packages): 0 in []
+newly admitted 955   lost 0
+newly admitted per package:
+    65 TWIN
+probes: corpus 47 / twin 128; unseq graphs 26

@@ -1619,6 +1619,14 @@ alongside every `e.lifted` rollback (both paths).
   the once-refused rows now pin the inline realization green; the
   refusal shape that survived A6 and FR-28 was RETIRED 2026-09-05 —
   the E13-b amendment above)
+- STAGE E6a AMENDMENT (2026-09-24, [AGENT] worker, lane `core/unseq-stage-e6a-0924`; design
+  `docs/2026-09-24_unseq-stage-e6-design.md` §E6a): `channels/recv-order/dead-recv-len-operand` (this
+  entry's Cases row, PASS strict since the A6 amendment — gc's conversion panic through the inline
+  left-to-right residual) is a MEMBERSHIP row now: the refined observability trigger (panic identity —
+  RATIFIED [USER] 2026-09-22, relayed) admits `iv.(int) + len(b[j])` as ONE `unseq` graph whose set is
+  {conversion, `index out of range [7] with length 0`} — both spec-legal orders (E13's axis); the row went
+  RED-FIRST on the E6a candidate (the machine's canonical tape realized the index panic) and was moved with
+  the reason written, gc's member (the conversion, 20/20) inside. Status unchanged (fixed): the row PASSes.
 - Cases: channels/recv-order/dead-recv-len-operand, channels/recv-order/dead-recv-len-embedded, bools/short-circuit-funclit/e6-recv-len-in-sc, bools/short-circuit-funclit/e6-recv-len-outside, builtins/len-vs-call-order/panicky-between, builtins/len-vs-call-order/len-assert-vs-nil-operand, builtins/len-vs-call-order/len-nil-left-vs-index-operand
 - E13-b AUDIT FIX ROUND AMENDMENT (2026-09-05, [AGENT] worker; findings
   R1/R2/R3 of the lane's adversarial audit): (i) the three len-path rows

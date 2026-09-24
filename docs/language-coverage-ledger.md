@@ -569,20 +569,17 @@ than as speculative cases.)
 
 ## 8. Counts and the closing arithmetic
 
-All numbers at the current tracked baseline (3760 cases, 3524 PASS / 236 FAIL; [AGENT] worker, lane
-`core/unseq-stage-e5-0922` — the STAGE E5 AUDIT FIX ROUND (the adversarial audit `docs/2026-09-22_unseq-stage-e5-audit.md`
-returned FIX-FIRST on candidate `403cde75`; dispositions the [AGENT] coordinator's, disclosed at the merge ask; design
-`docs/2026-09-22_unseq-stage-e5-design.md` «the audit fix round»; handoff §5); measured by `scripts/diff-one` on the 10
-`evalorder/unseq-multi` rows before the pin and by the full `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff` at the fix-round
-tree — the gate line in `docs/evidence/2026-09-22_unseq-stage-e5/README.md`). The delta over the E5d tally (§8aj, 3757 = 3522 /
-235): 3 rows BORN in `evalorder/unseq-multi`, the audit's F3 («every detected gap is rowed») — `map-target-key-vs-writer` {709, 79}
-PASS/membership (a MAP-ELEMENT target in a multi-target assignment on the GRAPH path; gc 79, 20/20), `comma-ok-map-target-vs-delete`
-{11, 0} PASS/membership (the `wide map-lookup` arm's corpus control, audit F1; gc 0, 20/20), `map-target-nil-legacy-refusal`
-FAIL/frontend-export BY DESIGN (the same target shape all-forced under the trigger → the LEGACY path's map-element quarantine,
-triage F6 / mini-slice A3 — BUG-115 filed, the five A3 rows and this one on its Cases line; gc `wit 1` · panic). 3757 + 3 = 3760;
-3522 + 2 = 3524; 235 + 1 = 236. No other result/stage movement, no removal, no widened pin, no PASS → non-PASS (a red born red).
-Reds table: (a)-queued 7 → 8 (A3 5 → 6), the other buckets unchanged: 128 + 9 + (24 + 1) + 8 + 66 = 236 ✓. Movement §8ak (and
-§8aj for E5d, §8ai for E5e, §8ah for E5c, §8ag for E5b, §8af for E5a).
+All numbers at the current tracked baseline (3761 cases, 3525 PASS / 236 FAIL; [AGENT] worker, lane
+`core/unseq-stage-e6a-0924` — STAGE E6a of the evaluation-order model v2.1, the first slice of the batched breaking window
+(design `docs/2026-09-24_unseq-stage-e6-design.md` §E6a; handoff `docs/2026-09-24_unseq-stage-e6a-handoff.md`); measured by
+`scripts/diff-one` on the 395 rows of the 41 packages whose sweeps entered the grammar + the born row's package before the pin
+and by the full gate at the lane's tip — the gate line in `docs/evidence/2026-09-24_unseq-stage-e6a/README.md`). The delta over
+the E5 audit fix round's tally (3760 = 3524 / 236): 1 row BORN — `evalorder/unseq-strings/str-index-status-diverse`
+PASS/membership {102 ok, panic `[9] with length 2`}, the first STATUS-DIVERSE `unseq` row (`statuses=ok+panic`; gc's member the
+panic, 20/20); 2 strict rows → membership, each red-first on the candidate and moved with the reason written —
+`builtins/e13-sibling-panic-order/assert-left-min-inline` {conversion, `[5] with length 2`}, `channels/recv-order/
+dead-recv-len-operand` {conversion, `[7] with length 0`} (gc the conversion, 20/20 each); 14 rows leave the legacy `unseqPanic`
+probe for the graph with results and stages unchanged. 3760 + 1 = 3761; 3524 + 1 = 3525; 236 unchanged; no PASS → non-PASS.
 
 Previous tally, then current (3757 cases, 3522 PASS / 235 FAIL; [AGENT] worker, lane
 `core/unseq-stage-e5-0922` — STAGE E5 of the evaluation-order model v2.1, family E5d: THE ADDRESS OF A VARIABLE as an operand — an
@@ -2481,6 +2478,37 @@ tallied by row:
 - Reds table: post-vintage 72 → 70; 133 + 9 + (24 + 1) + 7 + 70 = 244 ✓. FR-28's cell unchanged (the
   BUG-102 designed reds are E4's).
 
+### 8al. Movement at Stage E6a of the evaluation-order model v2.1 — the trigger refinement, the non-main-unit grammar, the decoder follow-ups, the status-diverse row (2026-09-24, lane `core/unseq-stage-e6a-0924`; on main `3fb4a0d1`)
+
+[AGENT] worker. Design `docs/2026-09-24_unseq-stage-e6-design.md` §E6a; handoff `docs/2026-09-24_unseq-stage-e6a-handoff.md`;
+evidence `docs/evidence/2026-09-24_unseq-stage-e6a/` (`census-*.txt`, `probes-*.txt`, `trigger-general-footprint.txt`,
+`twin-structural-diff.txt`, `diff-one-e6a.txt`, `gc-draws-e6a.txt`, `gate-exits-e6a.txt`, the gate tail, `choice-trace-main-vs-e6a.txt`).
+Tracked figure 3760 = 3524 / 236 → 3761 = 3525 / 236 (re-pin reason in the baseline header). Movement, tallied by row:
+
+- BORN 1: `evalorder/unseq-strings/str-index-status-diverse` PASS/membership {102 ok, panic `index out of range [9] with length 2`}
+  (`int(s[i]) + m()`, m: i = 9 — the E5 audit fix round's OWED status-diverse row, declared through the membership lane's
+  `statuses=ok+panic`, the BUG-044 / audit-F8 mechanism E5e's records wrongly called unreachable from a row; gc's member the panic,
+  20/20 under GOMAXPROCS 1/8, default and -N -l). The first status-diverse `unseq` row.
+- LANE MOVES 2, strict → membership, each RED-FIRST on the E6a candidate (`scripts/diff-one` FAIL/differential: the machine's
+  canonical tape realized the OTHER spec-legal panic) and moved with the reason written (E5c's F6 precedent; E13's axis, (a)
+  ENVELOPED since 2026-09-05): `builtins/e13-sibling-panic-order/assert-left-min-inline` {conversion, `[5] with length 2`}
+  (`iv.(int) + min(t[k], 1)`), `channels/recv-order/dead-recv-len-operand` {conversion, `[7] with length 0`} (`iv.(int) + len(b[j])`;
+  BUG-032's Cases line amended) — gc the conversion, 20/20 each.
+- 14 rows leave the legacy `unseqPanic` probe for the `unseq` graph with results, stages and sets UNCHANGED: `builtins/len-vs-call-order/
+  {hint-panicky-between, make-slice-panicky-between, make-chan-cap-panicky-between, make-index-left, make-inner-len}` (membership, 2
+  each), `{make-hint-panic-free, make-hint-map-read, make-hint-call, make-nil-only-none/-left/-operand/-both}` (strict),
+  `builtins/e13-sibling-panic-order/{assert-left-make-slice, tgt-assert-vs-make}` (membership, 2 each).
+- 0 flips, 0 removals, 0 PASS → non-PASS. The 375 other rows of the 41 packages whose sweeps entered the grammar (the `strings` /
+  `bytes` library units' sweeps among them) reproduce their pinned results and stages.
+- Census 179 → 265 admitted (+86 corpus in 41 packages + 7 twin, by former reason «no call occurrence» 48 — the refined trigger —,
+  «callee outside the main package» 34, `len` over a map 5, «method callee outside the main package» 3, `pkg.F` callees 2, `cap` over a
+  channel 1; 0 lost); legacy probe emissions corpus 58 → 47 (`len-vs-call-order` 15 → 6, e13 11 → 9), the twin 128 → 128 (3 `unseq`
+  graphs born in the twin; every twin probe is refused by the struct-type grammar, not by the unit boundary — the design's residue
+  table). The twin wire re-pins e1a87725… → 1c4e7038… (`scripts/check-frontend-pins`, the reason in its header).
+- The two decoder follow-ups (an `after` edge on a literal `allocate`; a source-local atom's `type` annotation vs its declaration —
+  mutants 49 → 52) refuse only forged wires: the whole-corpus choice trace vs main is byte-identical outside the born / moved / migrated
+  rows (`choice-trace-main-vs-e6a.txt`).
+
 ### 8ak. Movement at the Stage E5 AUDIT FIX ROUND (2026-09-22, lane `core/unseq-stage-e5-0922`; on main `dc5de785`)
 
 [AGENT] worker; the dispositions the [AGENT] coordinator's (the audit `docs/2026-09-22_unseq-stage-e5-audit.md`, FIX-FIRST on
@@ -2546,6 +2574,10 @@ Tracked figure 3748 = 3513 / 235 → 3752 = 3517 / 235 (re-pin reason in the bas
   s[i:j])[0]) + wit(5)`, s[5:7] out of range) — enumerated=2 under the graph as under the probe.
 - A status-diverse single row (the first `str-index-vs-call`, m writing i = 9: {102, panic}) was REFUSED BY NAME by the
   membership lane (the audit-F8 `ok,panic` declaration exists but no corpus row uses it) and split into the two rows above.
+  [CORRECTED at Stage E6a, 2026-09-24: the declaration is the membership lane's `params` `statuses=ok+panic` (BUG-044,
+  2026-08-08 — `binop-order/operand-panic-vs-call` and `goroutines/wake-window` DO use it); the refusal came from a row that
+  did not declare it. The shape is now the row `evalorder/unseq-strings/str-index-status-diverse` ({102 ok, panic [9]}, gc's
+  member the panic), the first status-diverse `unseq` row; the two split rows stay.]
 - Census 165 → 168 admitted at the census (+1 from the widening, +2 the born package's own sweeps; 0 lost) — 169 at the commit:
   the row split (`str-index-panic-vs-print`) happened after the census was taken (measured at E5d, §8aj); the twin 0. Legacy probe
   emissions 59 → 58 (corpus), the twin 128 unchanged.

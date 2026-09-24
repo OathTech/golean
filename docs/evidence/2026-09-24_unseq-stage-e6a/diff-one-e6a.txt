@@ -1,0 +1,427 @@
+# scripts/diff-one on every affected row — Stage E6a (2026-09-24): the 395 rows of the 41 corpus packages whose sweeps newly entered the grammar (census-newly-admitted-e6a.tsv) + the born row's package evalorder/unseq-strings, run ONCE on the E6a candidate BEFORE the two lane moves were declared (so the two strict rows show RED-FIRST: FAIL/differential, the machine's canonical tape realizing the other spec-legal panic). Producer: .tmp/e6a/diff-one-run.sh <ids> <log> (scripts/diff-one under bash); the rows quoted from artifacts/coverage/latest.tsv; details truncated to 400 chars. Then the re-run on the two moved rows + the born row AFTER their manifests moved (all PASS/membership). Comparison against baselines/native-full.tsv (main 3fb4a0d1): 392 unchanged, 1 born, 2 moves — the python summary at the tail.
+
+## run 1 — the 395 rows on the candidate
+diff-coverage: membership sampling budget K=32 (mode: gate; alternate plain/-race, early stop at members=)
+building Lean executable...
+Build completed successfully (96 jobs).
+native frontend: per-case type-check + emit (no batch export)
+PASS	noodler/builtins/cap-after-slicing	builtins,cap,slices,slicing,full_slice
+PASS	noodler/indexkinds/index-integer-kinds	indexing,slices,widths
+PASS	noodler/bounds/slice-within-cap	slices,slicing,cap
+PASS	channels/recv-order/for-cond	channels,loops,len,evaluation_order
+PASS	builtins/len-vs-call-order/len-assert-vs-nil-operand	pointers,structs,len,evaluation_order,calls,panic,interfaces,type_assertions
+PASS	builtins/len-vs-call-order/short-circuit-skipped	channels,len,evaluation_order,calls,bools
+PASS	functions/untyped-nil-sinks/plain-assign	nil,untyped,assignment,slices,len
+PASS	builtins/len-vs-call-order/len-nil-only-operand	pointers,structs,len,evaluation_order,calls,bools,nil,panic
+FAIL	fmt/fprint-writers/non-string	stdlib,strings,ints	stage=frontend-export	detail={"message":"frontend-quarantined: fmt.Fprint operand of type int is outside the modeled subset (modeled: string kinds)","output":"","schema":"golean-observation-v1","status":"unsupported"}
+FAIL	stdlib-source/frontier/div64-overflow-value	stdlib,ints,overflow,panic	stage=frontend-export	detail={"message":"normalizing frontend-quarantined: math/bits.Div64: package-level var math/bits.divideError: its initializer does not lower (stdlib source-through: package-level variable math/bits.divideError is a `//go:linkname divideError runtime.divideError` pull whose value lives in the runtime,
+PASS	bytes/equal-conformance/nil-empty	stdlib,bytes,slices,equality,nil
+PASS	init/stdlib-initializer-source-through	init,globals,stdlib,strings
+PASS	stdlib-source/strings-trimspace/empty-and-single	stdlib,strings,empty
+PASS	stdlib-source/bytes-buffer/available-buffer	stdlib,bytes,methods,append,cap
+PASS	stdlib-source/builder-overlay/copy-panics-after-grow	stdlib,strings,methods,copy_semantics,panic
+membership: slices/append-spill-below-formula has NO members= pin — no early stop; drawing the full budget K=32
+PASS	stdlib-source/strings-fields/mixed-runs	stdlib,strings,slices,unicode
+PASS	stdlib-source/strings-fields/ascii-table	stdlib,strings,slices
+PASS	stdlib-source/strings-split/sep-longer-than-s	stdlib,strings,slices
+PASS	strings/fields-conformance/unicode-space	strings,slices,loops,if,ints,stdlib
+PASS	strings/fields-conformance/all-space	strings,slices,loops,if,ints,stdlib
+PASS	fmt/fprintf-builder/returns	stdlib,strings,methods,returns
+PASS	channels/recv-order/dead-recv-len-embedded	channels,interfaces,structs,embedding,len,panic,evaluation_order
+PASS	stdlib-source/slices-sortfunc/sortfunc-strings-by-len	stdlib,sort,slices,generics,strings,len
+PASS	noodler/bounds/slice-low-past-len	slices,slicing,panic
+PASS	panic-recover/shim-refusal-unrecoverable/split-recover	stdlib,strings,panic,recover,defer
+PASS	fmt/fprintf-builder/describe-shape	stdlib,strings,methods,interfaces,panic,recover,range
+PASS	noodler/strings/join-repeat-edges	strings,stdlib,nil
+PASS	noodler/builtins/min-max-float-specials	builtins,min,max,floats
+FAIL	init/library-var-type-poisoned/write-int	init,globals,stdlib,ints	stage=frontend-export	detail={"message":"normalizing frontend-quarantined: encoding/binary.Write: package-selector call reflect.Indirect (package \"reflect\" surface not modeled)","output":"","schema":"golean-observation-v1","status":"unsupported"}
+PASS	strings/builder-model/len-reset	stdlib,strings,methods
+PASS	stdlib-source/slices-sortfunc/sortfunc-large	stdlib,sort,slices,generics,closures,loops
+PASS	stdlib-source/strings-split/splitn-and-after	stdlib,strings,slices
+PASS	stdlib-source/strings-split/empty-sep-multibyte	stdlib,strings,slices,runes,unicode
+PASS	noodler/bounds/make-negative-len	slices,make,panic
+PASS	stdlib-source/strings-trimspace/left-unicode-only	stdlib,strings,unicode
+PASS	strings/join-conformance/single	stdlib,strings,slices
+PASS	noodler/indexkinds/index-string-kinds	indexing,strings,widths
+PASS	stdlib-source/strconv-format/int-all-bases	stdlib,strings,ints,loops
+PASS	stdlib-source/strings-split/trailing-and-consecutive	stdlib,strings,slices
+PASS	stdlib-source/fields-fuzz/group-03	stdlib,strings,slices,unicode,loops
+PASS	strings/fields-conformance/invalid-utf8	strings,slices,loops,if,ints,stdlib
+FAIL	stdlib-source/frontier/format-float-unsafe	stdlib,strings,floats,unsafe	stage=frontend-export	detail={"message":"normalizing frontend-quarantined: internal/strconv.float64bits: basic type unsafe.Pointer","output":"","schema":"golean-observation-v1","status":"unsupported"}
+PASS	builtins/len-vs-call-order/make-nil-only-left	pointers,structs,make,len,evaluation_order,slices,nil,panic
+PASS	noodler/strings/string-ordering	strings,comparisons
+PASS	examples/wordfreq/lit-space-only	strings,maps,range,loops,if,ints,stdlib
+PASS	stdlib-source/fields-fuzz/group-02	stdlib,strings,slices,unicode,loops
+PASS	noodler/bounds/nested-index-panic	slices,indexing,nested,panic
+PASS	fmt/fprint-writers/fprintf-buffer-shape	stdlib,strings,bytes,ints
+PASS	multipkg/wire-codec/unknown-skip	slices,structs,methods,switch,multipackage,imports
+PASS	stdlib-source/builder-overlay/string-after-writes	stdlib,strings,methods,unicode,runes,bytes
+PASS	examples/wordfreq/harness-one	strings,maps,range,loops,if,ints,stdlib
+PASS	builtins/len-vs-call-order/len-nil-only-both	pointers,structs,len,evaluation_order,calls,bools,nil,panic
+PASS	strings/split-conformance/single-byte-sep	stdlib,strings,slices
+PASS	noodler/strings/substring-then-bytes	strings,slicing,bytes,conversions
+PASS	noodler/indexkinds/array-index-kinds	indexing,arrays,widths
+PASS	stdlib-source/strconv-format/siblings	stdlib,strings,ints,bytes
+PASS	stdlib-source/strings-trimspace/all-unicode-space	stdlib,strings,unicode,empty
+PASS	builtins/e13-sibling-panic-order/composite-ptr-in-arg-then-call	slices,indexing,calls,panic,evaluation_order,print,literals,pointers,structs
+PASS	strings/trimspace-repeat/trim-unicode	stdlib,strings,unicode
+PASS	noodler/indexkinds/make-with-kinds	make,slices,widths
+PASS	stdlib-source/strings-trimspace/both-unicode	stdlib,strings,unicode
+PASS	strings/fields-conformance/lead-trail	strings,slices,loops,if,ints,stdlib
+PASS	interfaces/tuple-forward-boxing/mixed-second-any	interfaces,calls,multi_result,type_assertions
+PASS	examples/wordfreq/harness-empty	strings,maps,range,loops,if,ints,stdlib
+PASS	stdlib-source/bytes-buffer/next-bytes-truncate	stdlib,bytes,methods,slicing
+PASS	builtins/len-vs-call-order/panicky-before-call	slices,len,evaluation_order,calls,panic,recover,indexing
+PASS	stdlib-source/fields-fuzz/group-09	stdlib,strings,slices,unicode,loops
+PASS	strings/trimspace-repeat/trim-inner-runes	stdlib,strings,unicode
+PASS	new/new-expr/generic-operand	new,pointers,generics,type_sets,typed
+PASS	functions/untyped-nil-sinks/call-arg	nil,untyped,calls,slices,len
+FAIL	builtins/e13-sibling-panic-order/assert-left-min-inline	interfaces,type_assertions,min,builtins,slices,indexing,panic,evaluation_order	stage=differential	detail=Lean={"message":"runtime error: index out of range [5] with length 2","output":"","schema":"golean-observation-v1","status":"panic"} Go={"output":"","message":"interface conversion: interface {} is string, not int","schema":"golean-ob
+PASS	builtins/len-vs-call-order/lexer-idiom	pointers,structs,methods,len,evaluation_order,calls,bools,loops,slices
+PASS	stdlib-source/builder-overlay/write-rune-invalid	stdlib,strings,methods,runes,unicode,invalid_utf8
+FAIL	stdlib-source/frontier/buffer-readbyte-io	stdlib,bytes,methods,imports	stage=frontend-export	detail={"message":"frontend-quarantined: method bytes.Buffer.ReadByte (bytes.Buffer.ReadByte: stdlib-qualified selector io.EOF in value position: only allowlisted DIRECT CALLS of modeled stdlib members lower (E5 shims / fmt desugar); the value shape is outside the modeled surface (package \"io\"); sat
+PASS	builtins/len-vs-call-order/len-nil-only-left	pointers,structs,len,evaluation_order,calls,bools,nil,panic
+PASS	noodler/indexkinds/map-key-kinds-distinct	maps,interfaces,keys,widths
+PASS	noodler/builtins/min-max-single-defined	builtins,min,max,defined_type
+PASS	strings/builder-model/string-stable	stdlib,strings,methods,aliasing
+PASS	stdlib-source/strconv-format/uint-all-bases	stdlib,strings,ints,loops
+PASS	strings/builder-model/write-string	stdlib,strings,methods
+PASS	noodler/strings/sprintln-basics	strings,stdlib
+PASS	new/new-expr/typed-value	new,pointers,typed,assignment
+PASS	functions/untyped-nil-sinks/ctl-map-lit-value	nil,untyped,maps,literals,slices,len
+PASS	noodler/bounds/slice-low-past-high	slices,slicing,panic
+PASS	init/library-var-type-unlowerable	init,globals,stdlib
+PASS	strings/split-conformance/overlap	stdlib,strings,slices,prefix
+PASS	channels/recv-order/switch-case	channels,switch,len,evaluation_order
+PASS	strings/join-conformance/empty-slice	stdlib,strings,slices,nil
+PASS	builtins/len-vs-call-order/make-hint-map-read	maps,make,len,evaluation_order,panic,interfaces,type_assertions,indexing
+PASS	noodler/strings/invalid-bytes-preserved	strings,invalid_utf8,concat,slicing
+PASS	noodler/bounds/array-pointer-slice-high	arrays,pointers,slicing,panic
+PASS	noodler/builtins/copy-string-to-bytes	builtins,copy,strings,bytes
+PASS	new/new-expr/eval-once	new,pointers,evaluation_order,functions,calls
+PASS	stdlib-source/strconv-format/illegal-base-one	stdlib,strings,ints,panic
+PASS	examples/wordfreq/harness-eight	strings,maps,range,loops,if,ints,stdlib
+PASS	examples/wordfreq/harness-mid	strings,maps,range,loops,if,ints,stdlib
+PASS	noodler/strings/range-indices-multibyte	strings,range,unicode
+PASS	stdlib-source/builder-fuzz/seed-8	stdlib,strings,methods,loops,switch,bitwise,unicode
+PASS	stdlib-source/strings-split/sep-equals-s	stdlib,strings,slices
+PASS	multipkg/wire-codec/roundtrip	slices,strings,pointers,structs,methods,multipackage,imports
+PASS	strings/shim-value-refused/shimmed-value	stdlib,strings,closures
+PASS	stdlib-source/strings-trimspace/right-unicode-only	stdlib,strings,unicode
+PASS	stdlib-source/builder-fuzz/seed-2	stdlib,strings,methods,loops,switch,bitwise,unicode
+PASS	bytes/buffer-model/len-reset	stdlib,bytes,len,methods
+PASS	interfaces/tuple-forward-boxing/variadic-any	interfaces,calls,multi_result,variadic,type_assertions
+PASS	builtins/len-vs-call-order/make-nil-only-none	pointers,structs,make,len,evaluation_order,slices,nil
+PASS	noodler/bounds/index-after-reslice	slices,slicing,indexing
+PASS	stdlib-source/strings-split/empty-s	stdlib,strings,slices,empty
+PASS	strings/shim-value-refused/unmodeled-value	stdlib,strings,closures
+PASS	stdlib-source/strconv-format/power-of-two-bases	stdlib,strings,ints,shifts
+PASS	builtins/len-vs-call-order/slice	slices,len,evaluation_order,calls,append
+PASS	stdlib-source/bytes-buffer/grow-contract	stdlib,bytes,methods,cap,loops
+PASS	stdlib-source/builder-overlay/grow-contract	stdlib,strings,methods,cap,loops
+PASS	builtins/len-vs-call-order/make-slice-panicky-between	slices,make,len,evaluation_order,panic,indexing,interfaces,type_assertions,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/len-vs-call-order/make-slice-panicky-between)
+PASS	builtins/e13-sibling-panic-order/assert-left-append	interfaces,type_assertions,append,slices,len,indexing,calls,panic,evaluation_order,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/assert-left-append)
+PASS	evalorder/unseq-strings/str-index-status-diverse	strings,indexing,conversions,closures,calls,panic,evaluation_order,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/evalorder/unseq-strings/str-index-status-diverse)
+PASS	builtins/e13-sibling-panic-order/conv-left-call	conversions,slices,arrays,calls,panic,evaluation_order,print,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/conv-left-call)
+PASS	builtins/e13-sibling-panic-order/assert-left-make-slice	interfaces,type_assertions,make,slices,len,indexing,panic,evaluation_order,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/assert-left-make-slice)
+PASS	builtins/e13-sibling-panic-order/tgt-assert-vs-make	slices,indexing,len,make,panic,evaluation_order,interfaces,type_assertions,assignment,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/tgt-assert-vs-make)
+PASS	builtins/e13-sibling-panic-order/compound-call-target-vs-len	slices,indexing,len,calls,panic,evaluation_order,print,assignment,nondet	stage=membership	detail=enumerated=3 exhibited=1 draws=32 (K=32; pin members=3 NOT reached — 1 distinct drawn) unexhibited=2 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/compound-call-target-vs-len)
+PASS	builtins/e13-sibling-panic-order/assert-left-new-call	interfaces,type_assertions,new,pointers,calls,panic,evaluation_order,print,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/assert-left-new-call)
+PASS	builtins/e13-sibling-panic-order/addr-assert-left-call	slices,indexing,calls,panic,evaluation_order,print,pointers,interfaces,type_assertions,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/addr-assert-left-call)
+PASS	builtins/e13-sibling-panic-order/index-left-call-arg-panics	slices,indexing,calls,panic,evaluation_order,print,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/index-left-call-arg-panics)
+PASS	builtins/e13-sibling-panic-order/assert-middle	interfaces,type_assertions,calls,panic,evaluation_order,print,nondet	stage=membership	detail=enumerated=3 exhibited=1 draws=32 (K=32; pin members=3 NOT reached — 1 distinct drawn) unexhibited=2 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/assert-middle)
+PASS	functions/untyped-nil-sinks/struct-lit-append	nil,untyped,structs,literals,slices,append
+PASS	builtins/e13-sibling-panic-order/assert-return-list	interfaces,type_assertions,calls,panic,evaluation_order,print,closures,multi_result,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/assert-return-list)
+PASS	channels/recv-order/return-list	channels,returns,multi_result,len,evaluation_order
+PASS	builtins/len-vs-call-order/make-hint-struct-any-key	maps,make,len,evaluation_order,panic,interfaces,type_assertions,indexing,structs,comparability,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/len-vs-call-order/make-hint-struct-any-key)
+PASS	builtins/e13-sibling-panic-order/index-arg-sibling	slices,indexing,calls,panic,evaluation_order,print,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/index-arg-sibling)
+PASS	strings/trimspace-repeat/trim-empty	stdlib,strings,empty
+PASS	builtins/e13-sibling-panic-order/map-key-assert-vs-len	maps,slices,indexing,len,calls,panic,evaluation_order,print,interfaces,type_assertions,assignment,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/map-key-assert-vs-len)
+PASS	builtins/e13-sibling-panic-order/index-assert-left-call	slices,indexing,interfaces,type_assertions,calls,panic,evaluation_order,print,nondet	stage=membership	detail=enumerated=4 exhibited=1 draws=32 (K=32; pin members=4 NOT reached — 1 distinct drawn) unexhibited=3 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/index-assert-left-call)
+PASS	channels/recv-order/binary	channels,len,evaluation_order
+PASS	channels/recv-order/len-embedded-no-recv	interfaces,structs,embedding,len,panic
+PASS	builtins/e13-sibling-panic-order/index-left-call	slices,indexing,calls,panic,evaluation_order,print,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/index-left-call)
+PASS	noodler/bounds/three-index-low-past-high	slices,slicing,full_slice,panic
+PASS	builtins/e13-sibling-panic-order/array-base-target-vs-len	arrays,indexing,len,calls,panic,evaluation_order,print,assignment,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/array-base-target-vs-len)
+PASS	stdlib-source/builder-fuzz/seed-4	stdlib,strings,methods,loops,switch,bitwise,unicode
+PASS	bytes/equal-conformance/step-shape	stdlib,bytes,slices,equality,append
+PASS	noodler/builtins/len-cap-zero-values	builtins,len,cap,nil,zero_values
+PASS	stdlib-source/bytes-buffer/nil-receiver-string	stdlib,bytes,methods,nil,pointers
+PASS	stdlib-source/binary-order/le-roundtrip-64	stdlib,bytes,slices,bitwise,globals
+FAIL	stdlib-source/frontier/bytes-toupper-makenozero	stdlib,bytes,unicode	stage=frontend-export	detail={"message":"normalizing frontend-quarantined: internal/bytealg.MakeNoZero: stdlib source-through: internal/bytealg.MakeNoZero is a body-less declaration — assembly or runtime linkname, no portable substitution row in tools/nativefrontend/stdlib-substitutions.tsv (fail closed)","output":"","sche
+PASS	bytes/buffer-model/write-paths	stdlib,bytes,strings,methods
+PASS	strings/fields-conformance/single	strings,slices,loops,if,ints,stdlib
+PASS	stdlib-source/bytes-buffer/write-side	stdlib,bytes,methods,runes,unicode
+PASS	strings/trimspace-repeat/repeat-basic	stdlib,strings,concat
+PASS	stdlib-source/bytes-buffer/unread-byte-error	stdlib,bytes,methods,interfaces
+PASS	strings/trimspace-repeat/repeat-overflow	stdlib,strings,panic
+PASS	stdlib-source/builder-overlay/repeat-doubling-loop	stdlib,strings,loops,concat
+PASS	noodler/builtins/copy-overlap-both-ways	builtins,copy,overlap,slices
+PASS	builtins/e13-sibling-panic-order/deref-left-index-arg-call	pointers,nil,slices,indexing,calls,panic,evaluation_order,print,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/deref-left-index-arg-call)
+PASS	noodler/bounds/index-negative	slices,indexing,panic
+PASS	noodler/indexkinds/index-out-of-range-unsigned	indexing,widths,panic
+PASS	functions/untyped-nil-sinks/return-nil	nil,untyped,returns,slices,len
+PASS	builtins/e13-sibling-panic-order/assert-composite-lit	interfaces,type_assertions,calls,panic,evaluation_order,print,slices,literals,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/assert-composite-lit)
+FAIL	fmt/fprint-writers/multi-operand	stdlib,strings	stage=frontend-export	detail={"message":"frontend-quarantined: fmt.Fprint with 2 operand(s) is outside the modeled subset (modeled: exactly one operand of string kind)","output":"","schema":"golean-observation-v1","status":"unsupported"}
+PASS	builtins/e13-sibling-panic-order/slice-lit-payload-vs-call-sinkroot	slices,indexing,calls,panic,evaluation_order,print,literals,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/slice-lit-payload-vs-call-sinkroot)
+PASS	stdlib-source/binary-order/append-orders	stdlib,bytes,slices,bitwise,append,nil
+FAIL	new/new-expr/untyped-defaults	new,pointers,untyped,conversions,ints,bools,strings,runes,floats,complex	stage=frontend-export	detail={"message":"frontend-quarantined: basic type complex128","output":"","schema":"golean-observation-v1","status":"unsupported"}
+PASS	stdlib-source/bytes-buffer/reset-reuse	stdlib,bytes,methods,cap
+PASS	noodler/strings/sprint-spacing	strings,stdlib
+PASS	noodler/builtins/clear-slice-kinds	builtins,clear,slices,strings,structs
+PASS	strings/split-conformance/empty-sep	stdlib,strings,slices,runes
+PASS	functions/untyped-nil-sinks/variadic-spread	nil,untyped,variadic,slices
+PASS	channels/recv-order/multi-assign	channels,multi_assign,len,evaluation_order
+PASS	stdlib-source/builder-overlay/join-large	stdlib,strings,slices,append,loops
+PASS	noodler/bounds/nil-slice-slicing	slices,slicing,nil
+PASS	new/new-slice-pointer	new,pointers,slices,nil,append
+PASS	stdlib-source/binary-order/byteorder-interface	stdlib,bytes,interfaces,methods,globals
+PASS	stdlib-source/bytes-buffer/truncate-out-of-range	stdlib,bytes,methods,panic
+PASS	stdlib-source/strings-fields/high-bit-no-space	stdlib,strings,slices,unicode
+PASS	strings/trimspace-repeat/repeat-negative	stdlib,strings,panic
+PASS	strings/split-conformance/whole-match	stdlib,strings,slices
+PASS	stdlib-source/fields-fuzz/group-06	stdlib,strings,slices,unicode,loops
+PASS	noodler/bounds/string-slice-low-past-high	strings,slicing,panic
+PASS	stdlib-source/strings-trimspace/inner-preserved	stdlib,strings,unicode
+PASS	stdlib-source/strings-trimspace/ascii-table	stdlib,strings
+PASS	builtins/len-vs-call-order/recv-bearing	channels,len,evaluation_order,calls
+PASS	noodler/bounds/array-slice-high-past-len	arrays,slicing,panic
+PASS	stdlib-source/strconv-format/extremes	stdlib,strings,ints,overflow
+PASS	stdlib-source/binary-order/be-roundtrip	stdlib,bytes,slices,bitwise,slicing
+PASS	functions/untyped-nil-sinks/nested-map-value	nil,untyped,maps,structs,literals,slices
+PASS	strings/trimspace-repeat/trim-ascii	stdlib,strings
+PASS	noodler/indexkinds/slice-bounds-kinds	slicing,full_slice,widths
+PASS	noodler/strings/rune-count-vs-len	strings,range,unicode,len
+PASS	builtins/e13-sibling-panic-order/composite-ptr-payload-vs-call-printroot	slices,indexing,calls,panic,evaluation_order,print,literals,pointers,structs,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/composite-ptr-payload-vs-call-printr
+PASS	fmt/fprint-writers/buffer-single	stdlib,strings,bytes,multi_result
+PASS	stdlib-source/strconv-format/small-boundary	stdlib,strings,ints
+PASS	stdlib-source/strings-trimspace/non-space-ends	stdlib,strings,unicode
+PASS	builtins/e13-sibling-panic-order/compound-call-target-vs-call	slices,indexing,calls,panic,evaluation_order,print,assignment,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/compound-call-target-vs-call)
+PASS	stdlib-source/fields-fuzz/group-07	stdlib,strings,slices,unicode,loops
+PASS	stdlib-source/slices-sortfunc/sortfunc-ties-projected	stdlib,sort,slices,generics,structs,closures
+PASS	builtins/e13-sibling-panic-order/index-composite-lit	slices,indexing,calls,panic,evaluation_order,print,literals,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/index-composite-lit)
+PASS	stdlib-source/strconv-format/illegal-base-zero	stdlib,strings,ints,panic
+PASS	panic-recover/shim-refusal-unrecoverable/render-recover	stdlib,strings,methods,defined_type
+PASS	stdlib-source/strings-trimspace/invalid-utf8-ends	stdlib,strings,invalid_utf8
+PASS	stdlib-source/strings-split/single-byte-many	stdlib,strings,slices
+PASS	builtins/len-vs-call-order/len-nil-left-vs-index-operand	pointers,structs,len,evaluation_order,calls,panic,indexing,slices
+PASS	strings/fields-conformance/unicode-non-space	strings,slices,loops,if,ints,stdlib
+PASS	bytes/buffer-model/zero-value	stdlib,bytes,zero_values
+PASS	functions/untyped-nil-sinks/struct-lit-map-field	nil,untyped,structs,literals,maps,range
+PASS	builtins/e13-sibling-panic-order/assert-arg-sibling	interfaces,type_assertions,calls,panic,evaluation_order,print,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/assert-arg-sibling)
+PASS	builtins/e13-sibling-panic-order/tgt-assert-vs-len-hoist	slices,indexing,len,calls,panic,evaluation_order,print,interfaces,type_assertions,assignment,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/tgt-assert-vs-len-hoist)
+PASS	interfaces/tuple-forward-boxing/fixed-any	interfaces,calls,multi_result,type_assertions
+PASS	functions/untyped-nil-sinks/array-lit-elem	nil,untyped,arrays,literals,slices,len
+PASS	interfaces/assert-imported-method-set/comma-ok	interfaces,type_assertions,comma_ok,methods,imports
+PASS	noodler/strings/fields-unicode-spaces	strings,stdlib,unicode
+PASS	builtins/e13-sibling-panic-order/slice-lit-payload-vs-call	slices,indexing,calls,panic,evaluation_order,print,literals,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/slice-lit-payload-vs-call)
+PASS	stdlib-source/strings-fields/non-space-runes	stdlib,strings,slices,unicode
+FAIL	init/library-var-type-poisoned/write-struct	init,globals,stdlib,structs	stage=frontend-export	detail={"message":"normalizing frontend-quarantined: encoding/binary.Write: package-selector call reflect.Indirect (package \"reflect\" surface not modeled)","output":"","schema":"golean-observation-v1","status":"unsupported"}
+PASS	noodler/builtins/append-string-spread	builtins,append,strings,bytes
+PASS	builtins/len-vs-call-order/make-chan-cap-panicky-between	channels,make,cap,evaluation_order,panic,indexing,interfaces,type_assertions,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/len-vs-call-order/make-chan-cap-panicky-between)
+PASS	stdlib-source/strings-trimspace/near-miss-ends	stdlib,strings,unicode
+PASS	noodler/bounds/slice-high-past-cap	slices,slicing,panic
+PASS	builtins/e13-sibling-panic-order/send-chan-index	channels,slices,indexing,calls,panic,evaluation_order,print,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/send-chan-index)
+PASS	multipkg/wire-codec/malformed	slices,structs,methods,range,multipackage,imports
+PASS	noodler/strings/trimspace-unicode	strings,stdlib,unicode
+PASS	stdlib-source/builder-fuzz/seed-0	stdlib,strings,methods,loops,switch,bitwise,unicode
+PASS	stdlib-source/builder-fuzz/seed-6	stdlib,strings,methods,loops,switch,bitwise,unicode
+PASS	stdlib-source/strings-fields/empty	stdlib,strings,slices,empty
+PASS	noodler/indexkinds/shift-counts-of-kinds	shifts,widths
+PASS	examples/wordfreq/build-text	strings,loops,if,ints
+PASS	examples/wordfreq/lit-empty	strings,maps,range,loops,if,ints,stdlib
+PASS	stdlib-source/fields-fuzz/group-04	stdlib,strings,slices,unicode,loops
+PASS	noodler/bounds/array-pointer-index	arrays,pointers,indexing,panic
+PASS	stdlib-source/builder-overlay/grow-negative	stdlib,strings,methods,panic
+PASS	stdlib-source/fields-fuzz/group-01	stdlib,strings,slices,unicode,loops
+PASS	new/new-expr/composite-operand	new,pointers,structs,literals,fields
+PASS	builtins/e13-sibling-panic-order/tgt-assert-vs-min-call	slices,indexing,min,builtins,calls,panic,evaluation_order,print,interfaces,type_assertions,assignment,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/tgt-assert-vs-min-call)
+FAIL	stdlib-source/frontier/index-rune-goto	stdlib,strings,goto,runes	stage=frontend-export	detail={"message":"normalizing frontend-quarantined: strings.IndexRune: goto target label fallback not at function body top level","output":"","schema":"golean-observation-v1","status":"unsupported"}
+PASS	noodler/builtins/min-max-strings-ints	builtins,min,max,strings,ints
+PASS	bytes/buffer-model/pointer-use	stdlib,bytes,pointers,methods
+PASS	builtins/e13-sibling-panic-order/forced-arg-only	slices,indexing,calls,panic,evaluation_order,print
+PASS	builtins/len-vs-call-order/short-circuit	channels,len,evaluation_order,calls,bools
+PASS	multipkg/wire-codec/golden	slices,structs,methods,multipackage,imports
+PASS	channels/recv-order/else-if	channels,if,len,evaluation_order
+PASS	examples/wordfreq/lit-all-same	strings,maps,range,loops,if,ints,stdlib
+PASS	noodler/bounds/string-index-uint-kind	strings,indexing,widths,panic
+PASS	evalorder/unseq-strings/str-len-vs-call	strings,len,closures,calls,evaluation_order
+PASS	noodler/strings/byte-equal-strings	strings,bytes,runes,conversions,equality
+PASS	noodler/strings/errors-new-errorf	stdlib,equality,interfaces
+PASS	strings/split-conformance/confchange-shape	stdlib,strings,slices
+PASS	channels/recv-order/composite-lit	channels,literals,slices,len,evaluation_order
+PASS	functions/untyped-nil-sinks/struct-lit-field	nil,untyped,structs,literals,slices,len
+PASS	channels/recv-order/call-arg	channels,calls,len,evaluation_order
+PASS	builtins/len-vs-call-order/make-inner-len	slices,make,len,evaluation_order,panic,indexing,interfaces,type_assertions,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/len-vs-call-order/make-inner-len)
+PASS	stdlib-source/builder-overlay/grow-noop	stdlib,strings,methods,cap
+PASS	stdlib-source/bytes-buffer/bytes-others	stdlib,bytes,equality,unicode,nil
+PASS	strings/trimspace-repeat/repeat-describe-shape	stdlib,strings,concat
+PASS	stdlib-source/strings-fields/all-unicode-space	stdlib,strings,slices,unicode,empty
+PASS	noodler/bounds/three-index-high-past-max	slices,slicing,full_slice,panic
+PASS	stdlib-source/builder-fuzz/seed-1	stdlib,strings,methods,loops,switch,bitwise,unicode
+PASS	noodler/strings/string-from-bytes-copies	strings,bytes,conversions,aliasing
+PASS	noodler/strings/sprintf-verbs	strings,stdlib
+PASS	builtins/e13-sibling-panic-order/div-left-call	division,ints,calls,panic,evaluation_order,print,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/div-left-call)
+PASS	noodler/builtins/min-max-untyped-float	builtins,min,max,untyped,floats
+PASS	interfaces/tuple-forward-boxing/concrete-control	calls,multi_result,strings
+PASS	noodler/strings/parse-uint-edges	strings,stdlib,ints
+PASS	interfaces/tuple-forward-boxing/fixed-plus-variadic	interfaces,calls,multi_result,variadic,type_assertions
+PASS	strings/fields-conformance/consec-mixed	strings,slices,loops,if,ints,stdlib
+PASS	builtins/len-vs-call-order/make-hint-array-any-key	maps,make,len,evaluation_order,panic,interfaces,type_assertions,indexing,arrays,comparability,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/len-vs-call-order/make-hint-array-any-key)
+PASS	stdlib-source/fields-fuzz/group-00	stdlib,strings,slices,unicode,loops
+PASS	noodler/builtins/append-nil-cases	builtins,append,nil,slices
+PASS	builtins/len-vs-call-order/make-index-left	maps,make,len,evaluation_order,panic,indexing,slices,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/len-vs-call-order/make-index-left)
+PASS	channels/recv-order/for-init	channels,loops,len,evaluation_order
+PASS	noodler/builtins/clear-subslice	builtins,clear,slices,slicing
+PASS	builtins/len-vs-call-order/panicky-between	slices,len,evaluation_order,calls,panic,recover,indexing,interfaces,type_assertions
+PASS	examples/wordfreq/harness-wrap	strings,maps,range,loops,if,ints,stdlib,widths
+PASS	interfaces/assert-imported-method-set/panic-form	interfaces,type_assertions,methods,imports
+PASS	noodler/strings/split-edges	strings,stdlib
+PASS	new/new-expr/distinct-pointers	new,pointers,identity,assignment
+PASS	builtins/e13-sibling-panic-order/bytes-conv-payload-vs-call	slices,slicing,indexing,calls,panic,evaluation_order,print,conversions,strings,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/bytes-conv-payload-vs-call)
+PASS	strings/fields-conformance/empty	strings,slices,loops,if,ints,stdlib
+PASS	stdlib-source/bytes-buffer/grow-negative	stdlib,bytes,methods,panic
+PASS	builtins/len-vs-call-order/make-hint-generic-int-key	maps,make,len,evaluation_order,panic,interfaces,type_assertions,indexing,generics
+PASS	strings/builder-model/copy-panics	stdlib,strings,methods,copy_semantics,panic
+PASS	builtins/e13-sibling-panic-order/tgt-assert-vs-call	slices,indexing,calls,panic,evaluation_order,print,interfaces,type_assertions,assignment,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/tgt-assert-vs-call)
+PASS	stdlib-source/strings-split/both-empty	stdlib,strings,slices,empty
+PASS	noodler/strings/stringer-rendering	strings,stdlib,methods,defined_type
+PASS	builtins/e13-sibling-panic-order/assert-left-call	interfaces,type_assertions,calls,panic,evaluation_order,print,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/assert-left-call)
+PASS	noodler/builtins/clear-nils	builtins,clear,nil,maps,slices
+PASS	noodler/builtins/copy-min-length	builtins,copy,slices
+PASS	stdlib-source/binary-order/put-short-panics	stdlib,bytes,slices,panic
+PASS	stdlib-source/frontier/atoi-error-path-clone	stdlib,strings,ints,unsafe
+PASS	builtins/e13-sibling-panic-order/tgt-assert-vs-append	slices,indexing,len,append,calls,panic,evaluation_order,print,interfaces,type_assertions,assignment,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/tgt-assert-vs-append)
+PASS	interfaces/tuple-forward-boxing/interface-source-control	interfaces,calls,multi_result,type_assertions
+PASS	noodler/bounds/three-index-max-past-cap	slices,slicing,full_slice,panic
+PASS	builtins/e13-sibling-panic-order/tgt-assert-vs-copy-call	slices,indexing,copy,calls,panic,evaluation_order,print,interfaces,type_assertions,assignment,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/tgt-assert-vs-copy-call)
+PASS	evalorder/unseq-strings/str-slice-vs-call	strings,slicing,indexing,conversions,closures,calls,evaluation_order,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/evalorder/unseq-strings/str-slice-vs-call)
+PASS	evalorder/unseq-strings/str-index-panic-vs-print	strings,indexing,conversions,calls,panic,print,evaluation_order,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/evalorder/unseq-strings/str-index-panic-vs-print)
+PASS	noodler/bounds/slice-at-end	slices,slicing
+PASS	stdlib-source/builder-fuzz/seed-9	stdlib,strings,methods,loops,switch,bitwise,unicode
+PASS	builtins/e13-sibling-panic-order/tgt-assert-vs-recv-w	slices,indexing,channels,recover,defer,panic,evaluation_order,print,interfaces,type_assertions,assignment,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/tgt-assert-vs-recv-w)
+PASS	stdlib-source/builder-cap/grow-then-write	stdlib,strings,methods,cap,nondet	stage=membership	detail=enumerated=23 exhibited=1 draws=32 (K=32; pin members=23 NOT reached — 1 distinct drawn) unexhibited=22 (members in artifacts/coverage/membership/stdlib-source/builder-cap/grow-then-write)
+PASS	builtins/e13-sibling-panic-order/assert-left-method	interfaces,type_assertions,methods,calls,panic,evaluation_order,print,pointers,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/assert-left-method)
+PASS	noodler/strings/concat-loop	strings,concat,loops
+PASS	builtins/e13-sibling-panic-order/index-middle	slices,indexing,calls,panic,evaluation_order,print,nondet	stage=membership	detail=enumerated=3 exhibited=1 draws=32 (K=32; pin members=3 NOT reached — 1 distinct drawn) unexhibited=2 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/index-middle)
+PASS	builtins/len-vs-call-order/chan	channels,len,evaluation_order,calls
+PASS	stdlib-source/strings-fields/func-value	stdlib,strings,slices,closures
+PASS	builtins/len-vs-call-order/make-hint-panic-free	maps,make,len,evaluation_order,panic,interfaces,type_assertions
+PASS	stdlib-source/slices-sortfunc/sortfunc-reversed-input	stdlib,sort,slices,generics,closures
+PASS	examples/wordfreq/harness-one-miss	strings,maps,range,loops,if,ints,stdlib
+PASS	stdlib-source/builder-overlay/string-stable-in-place	stdlib,strings,methods,aliasing,cap
+PASS	noodler/builtins/min-max-integer-boundaries	builtins,min,max,ints,widths
+PASS	stdlib-source/slices-sortfunc/sort-stable-func	stdlib,sort,slices,generics,structs
+FAIL	init/library-var-type-poisoned/size-int	init,globals,stdlib,ints	stage=frontend-export	detail={"message":"normalizing frontend-quarantined: encoding/binary.Size: package-selector call reflect.Indirect (package \"reflect\" surface not modeled)","output":"","schema":"golean-observation-v1","status":"unsupported"}
+PASS	noodler/indexkinds/index-negative-int8	indexing,widths,panic
+PASS	strings/builder-model/zero	stdlib,strings,methods
+PASS	examples/wordfreq/harness-qwrap	strings,maps,range,loops,if,ints,stdlib,widths
+PASS	stdlib-source/slices-sortfunc/sortfunc-named-slice	stdlib,sort,slices,generics,defined_type
+PASS	builtins/e13-sibling-panic-order/deref-left-call	pointers,nil,calls,panic,evaluation_order,print,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/deref-left-call)
+PASS	functions/untyped-nil-sinks/ctl-zero-value	nil,zero_values,slices,len
+PASS	bytes/equal-conformance/basic	stdlib,bytes,slices,equality
+PASS	builtins/len-vs-call-order/make-hint-call	maps,make,len,evaluation_order,panic,calls,indexing,slices,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/len-vs-call-order/make-hint-call)
+PASS	stdlib-source/slices-sortfunc/others	stdlib,slices,generics,comma_ok,max,min
+PASS	examples/wordfreq/lit-basic	strings,maps,range,loops,if,ints,stdlib
+PASS	slices/append-spill-below-formula	slices,append,cap,strings,nondet	stage=membership	detail=enumerated=31 exhibited=1 draws=32 (K=32; no members= pin — no early stop) unexhibited=30 (members in artifacts/coverage/membership/slices/append-spill-below-formula)
+PASS	builtins/len-vs-call-order/make-nil-only-both	pointers,structs,make,len,evaluation_order,slices,nil,panic
+PASS	functions/untyped-nil-sinks/slice-lit-elem	nil,untyped,slices,literals,len
+PASS	noodler/builtins/new-kinds	builtins,new,structs,slices,maps,nil
+PASS	stdlib-source/builder-fuzz/seed-3	stdlib,strings,methods,loops,switch,bitwise,unicode
+PASS	stdlib-source/builder-cap/grow-hundred	stdlib,strings,methods,cap,nondet	stage=membership	detail=enumerated=101 exhibited=1 draws=32 (K=32; pin members=101 NOT reached — 1 distinct drawn) unexhibited=100 (members in artifacts/coverage/membership/stdlib-source/builder-cap/grow-hundred)
+PASS	stdlib-source/fields-fuzz/group-08	stdlib,strings,slices,unicode,loops
+PASS	strings/split-conformance/basic	stdlib,strings,slices
+PASS	builtins/e13-sibling-panic-order/recover-assert-vs-len	slices,indexing,len,calls,panic,recover,defer,evaluation_order,print,interfaces,type_assertions
+PASS	noodler/bounds/string-slice-high-past-len	strings,slicing,panic
+PASS	stdlib-source/fields-fuzz/group-05	stdlib,strings,slices,unicode,loops
+PASS	builtins/len-vs-call-order/make-nil-only-operand	pointers,structs,make,len,evaluation_order,slices,nil,panic
+PASS	builtins/e13-sibling-panic-order/two-index-left-call	slices,indexing,calls,panic,evaluation_order,print,nondet	stage=membership	detail=enumerated=4 exhibited=1 draws=32 (K=32; pin members=4 NOT reached — 1 distinct drawn) unexhibited=3 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/two-index-left-call)
+PASS	stdlib-source/strings-fields/mixed-unicode	stdlib,strings,slices,unicode
+PASS	stdlib-source/strings-fields/func-direct	stdlib,strings,slices,closures,unicode
+PASS	init/library-var-type-poisoned/sibling	init,globals,stdlib
+PASS	builtins/e13-sibling-panic-order/bytes-conv-left-len-hoist	slices,indexing,len,calls,panic,evaluation_order,print,conversions,strings,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/bytes-conv-left-len-hoist)
+FAIL	strings/trimspace-repeat/repeat-bound-refused	stdlib,strings	stage=lean-observation	detail=Lean run KILLED (exit 134 — died on signal 6; did not decide) — no observation produced (expected status ok); captured output: \nStack overflow detected. Aborting.
+PASS	builtins/e13-sibling-panic-order/compound-index-vs-len	slices,indexing,len,calls,panic,evaluation_order,print,assignment,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/compound-index-vs-len)
+PASS	builtins/e13-sibling-panic-order/assert-left-copy	interfaces,type_assertions,copy,slices,slicing,indexing,panic,evaluation_order,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/assert-left-copy)
+PASS	strings/split-conformance/multi-byte-sep	stdlib,strings,slices,unicode
+PASS	builtins/len-vs-call-order/len-struct-any-key-left-assert	maps,len,evaluation_order,calls,panic,interfaces,type_assertions,indexing,structs,comparability,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/len-vs-call-order/len-struct-any-key-left-assert)
+PASS	noodler/bounds/string-index-past-len	strings,indexing,panic
+PASS	builtins/e13-sibling-panic-order/map-lit-payload-vs-call	maps,slices,indexing,calls,panic,evaluation_order,print,literals,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/map-lit-payload-vs-call)
+PASS	strings/builder-model/write-bytes	stdlib,strings,methods,slices,nil
+PASS	strings/join-conformance/newraft-shape	stdlib,strings,slices,range,append
+PASS	bytes/buffer-model/nil-receiver-string	stdlib,bytes,nil,pointers,methods
+PASS	strings/builder-model/copy-zero-ok	stdlib,strings,methods,copy_semantics
+PASS	builtins/e13-sibling-panic-order/assert-ok-early-len-hoist	interfaces,type_assertions,len,slicing,calls,closures,evaluation_order,print,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/assert-ok-early-len-hoist)
+PASS	stdlib-source/builder-fuzz/seed-5	stdlib,strings,methods,loops,switch,bitwise,unicode
+PASS	fmt/fprint-writers/builder-single	stdlib,strings,concat
+PASS	strings/trimspace-repeat/trim-all-space	stdlib,strings,empty
+PASS	builtins/e13-sibling-panic-order/slice-lit-payload-vs-recv	slices,indexing,channels,panic,evaluation_order,literals
+PASS	stdlib-source/strings-split/unicode-sep	stdlib,strings,slices,unicode
+PASS	examples/wordfreq/harness-twelve	strings,maps,range,loops,if,ints,stdlib
+PASS	examples/wordfreq/lit-tabs-newlines	strings,maps,range,loops,if,ints,stdlib
+PASS	stdlib-source/builder-overlay/reset-reuse	stdlib,strings,methods
+PASS	noodler/builtins/append-aliasing-within-cap	builtins,append,aliasing,slices,cap
+PASS	panic-recover/shim-refusal-unrecoverable/parse-recover	stdlib,strings,panic,recover,defer
+PASS	noodler/builtins/delete-noops	builtins,delete,maps,nil
+PASS	stdlib-source/builder-overlay/repeat-1k	stdlib,strings,shifts
+PASS	builtins/e13-sibling-panic-order/shift-left-call	shifts,ints,calls,panic,evaluation_order,print,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/shift-left-call)
+PASS	builtins/e13-sibling-panic-order/addr-index-left-len-hoist	slices,indexing,len,calls,panic,evaluation_order,print,pointers,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/addr-index-left-len-hoist)
+PASS	strings/join-conformance/empty-sep	stdlib,strings,slices
+PASS	strings/join-conformance/basic	stdlib,strings,slices
+PASS	builtins/e13-sibling-panic-order/iface-cmp-left-call	interfaces,comparisons,comparability,calls,panic,evaluation_order,print,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/iface-cmp-left-call)
+PASS	builtins/e13-sibling-panic-order/map-compound-index-key-vs-call	maps,slices,indexing,calls,panic,evaluation_order,print,assignment,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/map-compound-index-key-vs-call)
+PASS	stdlib-source/strings-split/empty-sep-invalid-utf8	stdlib,strings,slices,runes,invalid_utf8
+FAIL	channels/recv-order/dead-recv-len-operand	channels,interfaces,slices,indexing,len,panic,evaluation_order	stage=differential	detail=Lean={"message":"runtime error: index out of range [7] with length 0","output":"","schema":"golean-observation-v1","status":"panic"} Go={"output":"","message":"interface conversion: interface {} is string, not int","schema":"golean-observation-v1","status":"panic"
+PASS	multipkg/wire-codec/size	slices,pointers,structs,methods,range,multipackage,imports
+PASS	builtins/e13-sibling-panic-order/map-compound-index-key-vs-recv	maps,slices,indexing,channels,recover,defer,panic,evaluation_order,assignment,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/map-compound-index-key-vs-recv)
+PASS	builtins/e13-sibling-panic-order/slice-left-len-call	slices,slicing,len,calls,panic,evaluation_order,print
+PASS	noodler/builtins/append-growth-len	builtins,append,slices,len
+PASS	noodler/strings/byte-inside-rune	strings,indexing,bytes,unicode
+PASS	stdlib-source/strings-split/rabin-karp-path	stdlib,strings,slices,loops
+PASS	strings/split-conformance/empty-input	stdlib,strings,slices,empty
+PASS	stdlib-source/slices-sortfunc/sortfunc-ties-realized	stdlib,sort,slices,generics,structs
+PASS	examples/wordfreq/lit-miss	strings,maps,range,loops,if,ints,stdlib
+FAIL	stdlib-source/frontier/slices-overlaps	stdlib,slices,generics,unsafe	stage=frontend-export	detail={"message":"normalizing frontend-quarantined: stdlib source-through: slices.overlaps[int] needs unsafe.Sizeof (out of language — ledger row Package_unsafe; a library overlay is the planned remedy, memo §2.3.2 — slice 2)","output":"","schema":"golean-observation-v1","status":"unsupported"}
+PASS	builtins/e13-sibling-panic-order/compound-call-target-vs-recv	slices,indexing,channels,recover,defer,panic,evaluation_order,print,assignment,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/compound-call-target-vs-recv)
+PASS	builtins/len-vs-call-order/make-hint-generic-any-key	maps,make,len,evaluation_order,panic,interfaces,type_assertions,indexing,generics,comparability,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/len-vs-call-order/make-hint-generic-any-key)
+PASS	builtins/e13-sibling-panic-order/assert-vs-mutating-call	interfaces,type_assertions,calls,closures,panic,evaluation_order,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/assert-vs-mutating-call)
+PASS	builtins/len-vs-call-order/hint-panicky-between	maps,make,len,evaluation_order,panic,indexing,interfaces,type_assertions,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/len-vs-call-order/hint-panicky-between)
+PASS	builtins/e13-sibling-panic-order/compound-assert-vs-len	slices,indexing,len,calls,panic,evaluation_order,print,interfaces,type_assertions,assignment,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/compound-assert-vs-len)
+PASS	builtins/e13-sibling-panic-order/assert-right-call	interfaces,type_assertions,calls,panic,evaluation_order,print,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/assert-right-call)
+PASS	builtins/e13-sibling-panic-order/map-tgt-assert-vs-call	maps,indexing,calls,panic,evaluation_order,print,interfaces,type_assertions,assignment,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/map-tgt-assert-vs-call)
+PASS	stdlib-source/builder-fuzz/seed-7	stdlib,strings,methods,loops,switch,bitwise,unicode
+PASS	builtins/e13-sibling-panic-order/composite-ptr-payload-vs-call	slices,indexing,calls,panic,evaluation_order,print,literals,pointers,structs,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/composite-ptr-payload-vs-call)
+PASS	builtins/e13-sibling-panic-order/map-compound-index-key-vs-method	maps,slices,indexing,methods,calls,pointers,panic,evaluation_order,print,assignment,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/map-compound-index-key-vs-method)
+PASS	builtins/e13-sibling-panic-order/assert-left-len-slice-call	interfaces,type_assertions,len,slicing,calls,panic,evaluation_order,print,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/assert-left-len-slice-call)
+PASS	stdlib-source/builder-cap/grow-empty	stdlib,strings,methods,cap,nondet	stage=membership	detail=enumerated=23 exhibited=1 draws=32 (K=32; pin members=23 NOT reached — 1 distinct drawn) unexhibited=22 (members in artifacts/coverage/membership/stdlib-source/builder-cap/grow-empty)
+PASS	evalorder/unseq-strings/str-index-vs-call	strings,indexing,conversions,closures,calls,evaluation_order,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/evalorder/unseq-strings/str-index-vs-call)
+PASS	builtins/len-vs-call-order/len-nil-only-none	pointers,structs,len,evaluation_order,calls,bools,nil,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/len-vs-call-order/len-nil-only-none)
+PASS	builtins/e13-sibling-panic-order/assert-left-recv-w	interfaces,type_assertions,channels,recover,defer,evaluation_order,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/assert-left-recv-w)
+PASS	builtins/e13-sibling-panic-order/recover-assert-vs-call-w	recover,defer,panic,calls,evaluation_order,print,interfaces,type_assertions,closures,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/recover-assert-vs-call-w)
+PASS	builtins/e13-sibling-panic-order/slice-value-early-len-hoist	slices,slicing,indexing,len,calls,closures,evaluation_order,print,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/slice-value-early-len-hoist)
+PASS	builtins/e13-sibling-panic-order/bytes-conv-value-vs-mutating-call	conversions,strings,slices,indexing,calls,closures,evaluation_order,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/bytes-conv-value-vs-mutating-call)
+PASS	stdlib-source/builder-cap/grow-after-write	stdlib,strings,methods,cap,nondet	stage=membership	detail=enumerated=112 exhibited=1 draws=32 (K=32; pin members=112 NOT reached — 1 distinct drawn) unexhibited=111 (members in artifacts/coverage/membership/stdlib-source/builder-cap/grow-after-write)
+
+differential coverage summary: cases=395 pass=380 fail=15 export_status=0
+results: artifacts/coverage/latest.tsv
+metadata: artifacts/coverage/latest.meta.tsv
+EXIT=1
+
+## run 2 — the two moved rows + the born row, manifests declared
+diff-coverage: membership sampling budget K=32 (mode: gate; alternate plain/-race, early stop at members=)
+building Lean executable...
+Build completed successfully (96 jobs).
+native frontend: per-case type-check + emit (no batch export)
+PASS	evalorder/unseq-strings/str-index-status-diverse	strings,indexing,conversions,closures,calls,panic,evaluation_order,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/evalorder/unseq-strings/str-index-status-diverse)
+PASS	channels/recv-order/dead-recv-len-operand	channels,interfaces,slices,indexing,len,panic,evaluation_order,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/channels/recv-order/dead-recv-len-operand)
+PASS	builtins/e13-sibling-panic-order/assert-left-min-inline	interfaces,type_assertions,min,builtins,slices,indexing,panic,evaluation_order,nondet	stage=membership	detail=enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/builtins/e13-sibling-panic-order/assert-left-min-inline)
+
+differential coverage summary: cases=3 pass=3 fail=0 export_status=0
+results: artifacts/coverage/latest.tsv
+metadata: artifacts/coverage/latest.meta.tsv
+EXIT=0
+
+## vs the baseline
+rows 395 differing from the RE-PINNED baseline (run 1, pre-move): 2
+  ('builtins/e13-sibling-panic-order/assert-left-min-inline', ('PASS', 'membership'), ('FAIL', 'differential'))
+  ('channels/recv-order/dead-recv-len-operand', ('PASS', 'membership'), ('FAIL', 'differential'))

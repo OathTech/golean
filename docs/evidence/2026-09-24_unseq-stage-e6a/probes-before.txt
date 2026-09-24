@@ -1,0 +1,23 @@
+# The LEGACY PROBE EMISSION census BEFORE E6a (main 3fb4a0d1's frontend); producer .tmp/census/probes.sh + probe-sites.py (E5's tooling). Corpus: 58 probes in 17 packages; the twin 128; 25 packages export-refused (the standing frontend-export reds). Columns: dir, probes, unseqs. 2026-09-24.
+
+TWIN	128	0
+Corpus/coverage/exec/builtins/len-vs-call-order	15	4
+Corpus/coverage/exec/builtins/e13-sibling-panic-order	11	50
+Corpus/coverage/exec/multipkg/mini-raft-twin	7	0
+Corpus/coverage/exec/stdlib-source/errors-join	5	0
+Corpus/coverage/exec/stdlib-source/strconv-parseuint	4	0
+Corpus/coverage/exec/stdlib-source/errors-wrap	3	0
+Corpus/coverage/exec/stdlib-source/frontier	3	0
+Corpus/coverage/exec/channels/recv-edge	1	2
+Corpus/coverage/exec/channels/recv-map-elem	1	0
+Corpus/coverage/exec/fmt/sprintf-dyn	1	0
+Corpus/coverage/exec/imported-goose/generics/generic-conversion	1	0
+Corpus/coverage/exec/noodler/frontier2/array-of-funcs-indexed-call	1	0
+Corpus/coverage/exec/noodler/frontier2/typed-nil-error-return	1	0
+Corpus/coverage/exec/noodler/misc	1	0
+Corpus/coverage/exec/noodler/strings	1	0
+Corpus/coverage/exec/panic-recover/shim-refusal-unrecoverable	1	0
+Corpus/coverage/exec/strconv/format-parse	1	0
+dir	probes	unseqs
+
+packages-with-probes=18 probes=186 unseqs=177 refused=25
