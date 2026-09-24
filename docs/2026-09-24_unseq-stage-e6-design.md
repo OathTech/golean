@@ -205,7 +205,8 @@ every local its body DECLARES, collected by `jsonDeclaredLocals` (a whole-body w
 declaration spellings: every `{"target":"declare","id","type"}` target — assignment lhs, the allocation /
 built-in / sync / type-assert / chan-recv targets, the emitter's one target shape; every `var` statement's
 `decls`; a `range` statement's implicitly declared key / value variables, typed as `decodeRange` types
-them) — set by `withReader` in `decodeFunc` and `decodeMethod` around the body decode. `decodeUnseq` walks
+them — those moved OUT of this walk at fix round 2, see below) — set by `withReader` in `decodeFunc` and
+`decodeMethod` around the body decode. `decodeUnseq` walks
 the WHOLE node after the cells decode (`unseqCheckLocalAtoms`): an `ident` whose name is not a reserved `$`
 slot and not one of the graph's own cells must be declared («has no declaration in the enclosing
 function»), and its `type` annotation, when present, must be that declaration's («is annotated …, which
@@ -242,7 +243,38 @@ in scope). The audit's own forged files (`mS1-via-typeswitch-binder`, `mR1-types
 `mR1-shadow-other-decl-type`) refuse by name under the fix-round binary; its legal p4 wire decodes and runs as
 before (`docs/evidence/2026-09-24_unseq-stage-e6a/fix-round/mutants-fix.txt`); the pinned raft twin wire and
 every corpus wire decode (the differential gate; the whole-corpus choice trace byte-identical outside the born
-rows). WHAT REMAINS OUTSIDE R1 (stated, not a residual of the environment): the emitter's `$`-temps and the
+rows).
+
+**FIX ROUND 2 (2026-09-24) — the audit RE-VERIFICATION's R1: the reach statement above was WRONG for one
+construct, and the defect was a FAIL-CLOSED WRONG REFUSAL of legal Go.** Fix round 1 stated the scope rule
+only for a construct's nested BODIES (`nestedStmtKeys`); a construct's OWN binders were left in
+`jsonDeclaredLocals`, and the only such binders on the wire are a `range` statement's `keyVar` / `valVar`. The
+`block` fold calls `jsonDeclaredLocals` on every statement of the block, the range node included, so the loop's
+key / value variables JOINED THE ENCLOSING ENVIRONMENT after the loop; with «innermost = last» a legal program
+that shadows an outer variable of ANOTHER type with a range variable and graphs the OUTER one after the loop
+was refused WHOLE — `k := "ab"; …; for _, k := range s { r += k }; return s[len(k)-2] + wit(1) + r` (gc 23,
+main 23, fix round 1 «annotated string, disagrees with its declaration int»), and the key-variable spelling
+the same (gc 9). Not a corpus red — no corpus row has the shape — but a covered class refused, and exactly the
+«zero by refusing a covered program» the window forbids. FIXED as the auditor named it: a `range` node
+contributes NOTHING to the enclosing scope. The binders moved out of `jsonDeclaredLocals` into their own
+`rangeBinderLocals`, whose ONE caller is `decodeRange`, for the body alone (their typing unchanged: the map's
+key/value types, the channel's element, index `int` + element for slices / arrays / array pointers, the
+operand's kind for an integer range, `int` + `int32` for a string). The rule is now stated once, as a
+docstring on `nestedStmtKeys`, with the construct table — *a statement contributes to its enclosing block
+exactly the declarations Go gives the statements that FOLLOW it there, and nothing a scoped binder of its own
+introduces* — and every construct with a scoped binder was audited against it once: `block` / `breakable` /
+`labeled` body, `if` init, `for` init, `range` key/value (this fix), `select` receive-clause targets, the
+function's params and results. A `switch` / type switch is not a wire node (the frontend desugars it; its
+per-clause binder is a `declare` inside the clause's block — block scope, `e6ats`). No wire-schema change; no
+other behaviour change; the whole-corpus choice trace is byte-identical to fix round 1 on every id and the
+baseline does not move. Tracked: NATIVE witness `e6arange` with the auditor's two positive controls verbatim
+(`e6arange` → {23 · `wit 1`}, `e6arangekey` → {9 · `wit 1`}) and `e6arangeafter` (→ {8 · `wit 1`}, the loop's
+`k` declared nowhere else), and the mutant `mut-local-range-var-after-loop` — the auditor's h12: the post-loop
+graph's `r` renamed to the loop's `k`, RIGHT-typed, so only the SCOPE says no; under the leak it decoded and
+stuck late («unbound GoCore variable address: k»), and it now refuses «has no declaration in the enclosing
+function». Evidence `docs/evidence/2026-09-24_unseq-stage-e6a/fix-round-2/`.
+
+WHAT REMAINS OUTSIDE R1 (stated, not a residual of the environment): the emitter's `$`-temps and the
 graph's own cells (D2's reservation, not R1's); a store TARGET's id — not an atom — which R1 does not see
 (the audit's F7, a NAMED LATE REFUSAL of the standing class the Stage E and E5 audits recorded: `mR1-target-
 id-undeclared` renames a `then` store's `{"target":"var","id":…}` to an undeclared name, and the machine

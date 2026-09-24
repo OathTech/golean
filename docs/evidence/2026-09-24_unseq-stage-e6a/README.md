@@ -84,3 +84,23 @@ records, all in the working tree; the box-wide lock 2026-09-24T04:46:13Z–04:58
 error, repaired before run 2 — `fix-round/ci-diff-fix-run1.tail.txt`). The whole-corpus choice
 trace vs the audited tip `1f0dee94`: 3732 ids, 3725 byte-identical, 0 DIFFER, 0 ONLY_A, 7 ONLY_B (the born rows); `unseqNext` 2550 → 2595,
 every other site identical; 34 / 34 export refusals (`fix-round/choice-trace-e6a-vs-fix.txt`).
+
+## `fix-round-2/` — the audit RE-VERIFICATION's R1 (2026-09-24)
+
+The auditor's re-verification of fix round 1 (`docs/2026-09-24_unseq-stage-e6a-audit.md` § «Re-verification (fix round
+`17e12e74`, 2026-09-24)», branch `review/unseq-stage-e6a-0924` @ `8eb94f7e`, evidence `…-audit/reverify-*`) returned a
+revised FIX-FIRST: ONE decoder defect NEW in fix round 1 — a `range` statement's key / value variables leaked into the
+ENCLOSING block after the loop, so a LEGAL outer-shadow program was refused whole (a fail-closed WRONG REFUSAL against
+main and gc). Fixed as the auditor named it: a `range` node contributes nothing to the enclosing scope
+(`rangeBinderLocals`, opened by `decodeRange` for the body alone); the scope rule is stated once as a docstring on
+`nestedStmtKeys`, with the construct table. Decoder only — no frontend change, no wire-schema change, no core rule, no
+baseline change.
+
+| file | what | producer |
+|---|---|---|
+| `fix-round-2/before-after.txt` | the two positive controls (the auditor's `qRangeLeakOuter` / `qRangeKeyLeakOuter` verbatim), the h12 base and the mutant through the SAME wire bytes on the fix-round-1 and the fix-round-2 binaries: REFUSED-whole → 23 / 9 / 8 = gc, and the forgery refused BY NAME | by hand (the commands in the file's header); `.tmp/fix2/replay.sh` |
+| `fix-round-2/gate-exits.txt` | the standalone gates' captured exits at this tree: all green; the wire gates at 56 mutants / 11 + 56 controls; the twin pin unchanged; `reconcile-records` 2 findings, both standing (C9 the 5a-class STALE, C13 the doc-version note), 0 new | by hand (the `run()` helper in the file's header) |
+| `fix-round-2/choice-trace-fix2.txt` | the whole-corpus choice trace, the lane tip `17e12e74` (`.tmp/trace/fix-rel`) vs the fix-round-2 binary (`.tmp/trace/fix2-rel`): summary, differing ids, site censuses | `.tmp/fix2/trace-fix2.sh` + `.tmp/fix2/trace-compare-fix2.sh` + `.tmp/trace-compare.py` |
+| `fix-round-2/ci-diff-fix2.tail.txt` | the full gate: `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff` under the box-wide lock | `.tmp/fix2/gate-ci2.sh` |
+
+The replayable edit script is `.tmp/fix2/replay.sh` (scratch, not tracked).

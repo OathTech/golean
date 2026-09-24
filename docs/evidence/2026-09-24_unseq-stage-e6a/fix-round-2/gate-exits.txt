@@ -1,0 +1,19 @@
+check-unseq-wire	EXIT=0	Unseq wire gate: PASS (56 mutants refused through the CLI; exact sets in tests.log)
+check-wire-boundary	EXIT=0	Wire boundary gate: PASS (11 byte-level controls + 56 unseq-node controls through the real CLI)
+check-mem-callsites	EXIT=0	Memory-module raw call-site inventory: PASS (70 (file, declaration, raw-op) rows, all inventoried with reasons)
+check-core-audit	EXIT=0	Core totality audit gate: PASS
+go test nativefrontend+lowerdiag	EXIT=0	ok  	_/home/dev/projects/golean/.claude/worktrees/unseq-stage-e6a/tools/lowerdiag	0.587s
+check-unseq-scheduler	EXIT=0	Unseq scheduler gate: PASS
+check-frontend-pins	EXIT=0	check-frontend-pins: ok [stdlib-pin] — 61 lowered stdlib source files match the pinned sha256 manifest
+check-bugs	EXIT=0	check-bugs: 'wrong-answer' is the class that ratchets toward 0; 'coverage' retires when the feature lands and 'latitude' only by an envelope.
+check-evidence-size	EXIT=0	evidence-size gate: PASS — 2134 tracked files / 30947613 bytes in 119 evidence dirs; caps file 262144 B, dir 4194304 B, no archives, no source copies; 17 pre-existing offender(s) allowlisted (frozen 2026-09-07), 0 new
+check-spec-anchors	EXIT=0	check-spec-anchors: ok — 997 spec# + 261 mem# + 26 godoc: citations all resolve at pin c19862e5f
+check-agents-alias	EXIT=0	agents-alias: PASS — shape SYMLINK: AGENTS.md -> CLAUDE.md, tracked at mode 120000 (edit CLAUDE.md only; architecture rules: docs/architecture-rules.md)
+reconcile-records	EXIT=0	2 finding(s).
+
+# Producer: a `run()` helper capturing EXIT and the last line of each gate's output, at the fix-round-2 tree
+# (worktree .claude/worktrees/unseq-stage-e6a, branch core/unseq-stage-e6a-0924). All via scripts/capped where
+# the gate builds. `reconcile-records` EXIT=0 with 2 findings, BOTH standing: C9 = the 5a-class certificate-
+# provenance STALE for the changed GoLean/NativeToIR.lean (the train installs the candidate at step 5a, this
+# lane does not), C13 = the pre-existing doc-version note across 10 unrelated files. 0 new findings.
+# The full gate is ci-diff-fix2.tail.txt; the baseline is UNCHANGED (3768 = 3532 / 236, no re-pin, no row born).

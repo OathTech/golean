@@ -1,0 +1,27 @@
+# The whole-corpus choice trace — the lane tip 17e12e74 (.tmp/trace/fix-rel: fix round 1's binary 567c0289… and frontend) vs
+# AUDIT FIX ROUND 2 (.tmp/trace/fix2-rel: the fix-round-2 binary ada4125e…, the frontend UNCHANGED by this round — the same
+# lowering on both sides). Producers .tmp/fix2/trace-fix2.sh (scripts/choice-trace-corpus --dump --jobs 4), .tmp/fix2/
+# trace-rest-fix2.sh (the rows the wrapper's jobs did not reach, by a direct `golean choice-trace --batch`) and
+# .tmp/fix2/trace-compare-fix2.sh (Stage D's .tmp/trace-compare.py: per id the SORTED dump records — stream, idx, phase,
+# site, bound, streamValue, pick — and the per-stream results — status, consumed, wide, obsHash, driverAgreement — must be
+# identical). As on every prior trace (the lane's main and E6a runs, the audit's, fix round 1's), the wrapper's job 1
+# STALLED on goroutines/send-then-spin (its tracer stopped BY PID, never by pattern) and job 3 ABORTED with the tracer's
+# stack overflow on strings/trimspace-repeat/repeat-bound-refused: the two standing exclusions, traced by no side.
+
+== summary
+ids=3732 same=3732 differ=0 onlyA=0 onlyB=0
+sitesA {'appendSpill': 4872, 'backEdge': 2403, 'l1Sched': 9695, 'l2Arrival': 3, 'l2Entry': 24, 'l4Waiter': 22, 'l5ExitWindow': 328, 'mapIter': 1307, 'nilValueMethodText': 90, 'postOp': 4645, 'repanicCollapse': 126, 'tryLock': 101, 'unseqNext': 2595, 'unseqPanic': 96}
+sitesB {'appendSpill': 4872, 'backEdge': 2403, 'l1Sched': 9695, 'l2Arrival': 3, 'l2Entry': 24, 'l4Waiter': 22, 'l5ExitWindow': 328, 'mapIter': 1307, 'nilValueMethodText': 90, 'postOp': 4645, 'repanicCollapse': 126, 'tryLock': 101, 'unseqNext': 2595, 'unseqPanic': 96}
+
+
+Reading: 3732 ids, ALL 3732 byte-identical — 0 DIFFER, 0 ONLY_A, 0 ONLY_B. The fix-round-2 decoder change (a `range`
+node's key / value binders no longer reach the enclosing block) moves NO pick anywhere and BORNS / RETIRES no id: every
+site census is identical, `unseqNext` 2595 = 2595 included. That is the expected shape — the change can only affect a
+REFUSAL on a forged or edge wire (the leaked binder was never consulted by any emitted corpus wire, which is why the
+corpus stayed green through the defect), never a choice on a wire that decodes. The baseline is unchanged at
+3768 = 3532 / 236 and no row is born.
+== DIFFER / ONLY ids
+
+== export refusals: fix 34 / fix2 34; identical sets: yes
+== ids traced: fix 3732 / fix2 3732; batch rows: fix 3734 / fix2 3734
+== the two standing exclusions traced by neither side: goroutines/send-then-spin (the stalled job, stopped by PID), strings/trimspace-repeat/repeat-bound-refused (the tracer's stack overflow) — on both sides of every prior trace too
