@@ -1,4 +1,4 @@
-# id	subject	args	expected_status	expected_reason	features
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
 call-arg	recvOrderCallArg	-	ok	-	channels,calls,len,evaluation_order
 return-list	recvOrderReturnList	-	ok	-	channels,returns,multi_result,len,evaluation_order
 composite-lit	recvOrderCompositeLit	-	ok	-	channels,literals,slices,len,evaluation_order
@@ -8,6 +8,6 @@ for-init	recvOrderForInit	-	ok	-	channels,loops,len,evaluation_order
 for-cond	recvOrderForCond	-	ok	-	channels,loops,len,evaluation_order
 else-if	recvOrderElseIf	-	ok	-	channels,if,len,evaluation_order
 switch-case	recvOrderSwitchCase	-	ok	-	channels,switch,len,evaluation_order
-dead-recv-len-operand	recvOrderDeadRecvLenOperand	7	panic	interface conversion	channels,interfaces,slices,indexing,len,panic,evaluation_order
+dead-recv-len-operand	recvOrderDeadRecvLenOperand	7	panic	interface conversion	channels,interfaces,slices,indexing,len,panic,evaluation_order,nondet	membership	STRICT → MEMBERSHIP at Stage E6a (2026-09-24, lane core/unseq-stage-e6a-0924; design docs/2026-09-24_unseq-stage-e6-design.md §E6a): `iv.(int) + len(b[j])` with b empty and j = 7 — the assertion is unordered against `len`'s window, where `b[j]`'s bounds check panics (the refined trigger admits a failing occurrence against an E1 participant's window holding another failing occurrence — panic identity is the observable; E13's axis); the sweep lowers as ONE `unseq` graph and the ONE consumption site is the scheduler's pick (`unseqNext`, bound = the ready-set size): RAISE = the conversion (gc's, 20/20 under GOMAXPROCS 1/8, default and -N -l — assertions are EARLY in gc), the other member `index out of range [7] with length 0` (the len operand's panic first — the machine's canonical tape). The strict pin (round-4, BUG-039's A6 guard family: the dead receive keeps len inline) realized gc's member through the legacy left-to-right residual — a (b) pin of one spec-legal order; RED-FIRST on the E6a candidate (scripts/diff-one: FAIL/differential), moved with the reason written. members=2	width=2,sites=8,members=2
 dead-recv-len-embedded	recvOrderDeadRecvLenEmbedded	7	panic	interface conversion	channels,interfaces,structs,embedding,len,panic,evaluation_order
 len-embedded-no-recv	recvOrderLenEmbeddedNoRecv	7	panic	interface conversion	interfaces,structs,embedding,len,panic

@@ -907,6 +907,85 @@ func e5bCommaOkAssertOnly() int {
 	_ = ok
 	return v
 }
+
+// --- Stage E6a (2026-09-24): the trigger refinement — panic identity across an E1 participant's window ---
+
+// 'iv.(int) + len(make([]int, t[k]))': NO effectful event; the assertion is unordered against make's
+// window, where t[k]'s bounds check may panic — which panic fires first is the observation (E13's
+// probe realized both; the graph does now). Admitted.
+func e6aAssertVsMake() int {
+	var iv interface{} = "s"
+	t := []int{1, 2}
+	k := 5
+	return iv.(int) + len(make([]int, t[k]))
+}
+
+// len over a MAP operand (the E6a operand widening: 'len(m)' reads the count, cannot fail).
+func e6aLenMap() int {
+	var iv interface{} = "s"
+	t := []int{1, 2}
+	k := 5
+	return iv.(int) + len(make(map[int]int, t[k]))
+}
+
+// cap over a CHANNEL operand (the same widening).
+func e6aCapChan() int {
+	var iv interface{} = "s"
+	t := []int{1, 2}
+	k := 5
+	return iv.(int) + cap(make(chan int, t[k]))
+}
+
+// make's OWN completion may fail (a negative size): the checked a[i] is unordered against it.
+func e6aMakeMayFail() int {
+	a := []int{1}
+	i, n := 5, -1
+	return a[i] + len(make([]int, n))
+}
+
+// a failing operand RIGHT of the event whose window holds a failing occurrence: unordered too
+// (Stage C retired E13's «right of the event» residual for calls; the same for len's window).
+func e6aRightOfEvent() int {
+	var iv interface{} = "s"
+	b := [][]int{{1}}
+	j := 5
+	return len(b[j]) + iv.(int)
+}
+
+// LEGACY: two unordered failing operands with NO event between them — the GENERAL rule's shape
+// ('a[i] + b[j]', BUG-032's axis), posed in the E6a handoff §2, not taken: left-to-right, as today.
+func e6aTwoIdxNoEvent() int {
+	a := []int{1}
+	b := []int{2}
+	i, j := 5, 7
+	return a[i] + b[j]
+}
+
+// LEGACY: one failing operand beside a participant that cannot fail and holds nothing failing.
+func e6aOneFailVsLen() int {
+	a := []int{1}
+	b := []int{2}
+	i := 5
+	return a[i] + len(b)
+}
+
+// LEGACY: ordered through the E1 chain — b[j] lies inside f's window, a[·] consumes f.
+func e6aChainOrdered() int {
+	a := []int{1}
+	b := []int{2}
+	j := 5
+	f := func(x int) int { return x }
+	return a[f(b[j])]
+}
+
+// LEGACY: the guard protocol orders a TEST occurrence before a REGION occurrence — a[i] in the test,
+// b[j] inside len's window in the region.
+func e6aGuardTestVsRegion() bool {
+	a := []int{1}
+	b := [][]int{{1}}
+	i, j := 5, 7
+	return a[i] > 0 && len(b[j]) > 0
+}
 `
 
 func TestUnseqAdmittedWitnesses(t *testing.T) {
@@ -915,84 +994,91 @@ func TestUnseqAdmittedWitnesses(t *testing.T) {
 		fromEnd          int
 		form             string
 		calls, nonEvents int
+		e6a              bool // Stage E6a: admitted by panic identity across a participant's window (no effectful event)
 	}{
-		{"w1", 1, "define", 1, 1},
-		{"w6", 0, "return", 2, 1},
-		{"r1", 0, "return", 1, 2},
-		{"r6", 0, "return", 1, 2},   // header read of the captured a + the checked access
-		{"w2", 0, "return", 1, 4},   // two captured headers (a, b) + two checked accesses (b[0], a[$b0])
-		{"w3", 0, "compound", 1, 2}, // the element target plan + the read of the captured i
-		{"r4", 1, "compound", 1, 2}, // the target plan + the header read of the captured a
-		{"r2a", 0, "call-stmt", 3, 1},
-		{"r2b", 0, "call-stmt", 2, 2},  // the guard + the read of the captured b
-		{"r2c", 0, "call-stmt", 5, 3},  // gg, h, k, b2i, sink | the read of the captured a + two guards
-		{"bug101a", 0, "return", 1, 3}, // the func literal is the ONE call; len is an event; iv read, assertion, slice expr
-		{"bug101b", 0, "return", 1, 4}, // i read, slice, checked access, slice
-		{"bug104a", 1, "compound", 2, 1},
-		{"bug102", 1, "compound", 2, 2}, // calls fnine, wit (len is the third EVENT) | the target plan, b[j]
-		{"retTwo", 0, "return", 1, 0},   // two results in return position: in the grammar, but no non-event (legacy)
+		{"w1", 1, "define", 1, 1, false},
+		{"w6", 0, "return", 2, 1, false},
+		{"r1", 0, "return", 1, 2, false},
+		{"r6", 0, "return", 1, 2, false},   // header read of the captured a + the checked access
+		{"w2", 0, "return", 1, 4, false},   // two captured headers (a, b) + two checked accesses (b[0], a[$b0])
+		{"w3", 0, "compound", 1, 2, false}, // the element target plan + the read of the captured i
+		{"r4", 1, "compound", 1, 2, false}, // the target plan + the header read of the captured a
+		{"r2a", 0, "call-stmt", 3, 1, false},
+		{"r2b", 0, "call-stmt", 2, 2, false},  // the guard + the read of the captured b
+		{"r2c", 0, "call-stmt", 5, 3, false},  // gg, h, k, b2i, sink | the read of the captured a + two guards
+		{"bug101a", 0, "return", 1, 3, false}, // the func literal is the ONE call; len is an event; iv read, assertion, slice expr
+		{"bug101b", 0, "return", 1, 4, false}, // i read, slice, checked access, slice
+		{"bug104a", 1, "compound", 2, 1, false},
+		{"bug102", 1, "compound", 2, 2, false}, // calls fnine, wit (len is the third EVENT) | the target plan, b[j]
+		{"retTwo", 0, "return", 1, 0, false},   // two results in return position: in the grammar, but no non-event (legacy)
 		// Stage E E1: package-level variables
-		{"globalRead", 0, "return", 1, 1},    // the global read is a mutable READ occurrence
-		{"e1read", 1, "define", 1, 1},        // v := mut() + g
-		{"e1compound", 1, "compound", 1, 1},  // g += setG(): the load of g is the read occurrence
-		{"e1plainTarget", 1, "assign", 1, 0}, // g = wit(1): no non-event → legacy
-		{"bug113or", 1, "call-stmt", 2, 3},   // change, sinkL | the global read, the address-taken b's read, the guard
-		{"bug113control", 1, "call-stmt", 2, 3},
+		{"globalRead", 0, "return", 1, 1, false},    // the global read is a mutable READ occurrence
+		{"e1read", 1, "define", 1, 1, false},        // v := mut() + g
+		{"e1compound", 1, "compound", 1, 1, false},  // g += setG(): the load of g is the read occurrence
+		{"e1plainTarget", 1, "assign", 1, 0, false}, // g = wit(1): no non-event → legacy
+		{"bug113or", 1, "call-stmt", 2, 3, false},   // change, sinkL | the global read, the address-taken b's read, the guard
+		{"bug113control", 1, "call-stmt", 2, 3, false},
 		// Stage E E2: pointers, fields, maps
-		{"e2deref", 0, "return", 1, 1},              // *p: the dereference
-		{"e2field", 0, "return", 1, 1},              // q.f through a pointer
-		{"e2fieldPrivate", 0, "return", 1, 0},       // s.f on a private struct: a stable read → legacy
-		{"e2fieldAddrTaken", 0, "return", 1, 1},     // the fused read of the address-taken s
-		{"e2mapread", 0, "return", 1, 1},            // m[1]: the map read
-		{"e2derefCompound", 1, "compound", 1, 2},    // the plan on the address-taken p's read + the load
-		{"e2fieldCompound", 1, "compound", 1, 2},    // the plan on the address-taken q's read + the load
-		{"e2mapCompound", 1, "compound", 1, 2},      // the plan on the address-taken m's read + the load
-		{"e2mapAssignKey", 1, "map-assign", 1, 1},   // the key's checked access
-		{"e2mapAssignPlain", 1, "map-assign", 1, 0}, // atoms only → legacy
-		{"mapTarget", 1, "compound", 1, 2},          // BUG-104's m[t[k]] += wit(5): the key's checked access + the load
-		{"derefRead", 0, "return", 1, 1},
+		{"e2deref", 0, "return", 1, 1, false},              // *p: the dereference
+		{"e2field", 0, "return", 1, 1, false},              // q.f through a pointer
+		{"e2fieldPrivate", 0, "return", 1, 0, false},       // s.f on a private struct: a stable read → legacy
+		{"e2fieldAddrTaken", 0, "return", 1, 1, false},     // the fused read of the address-taken s
+		{"e2mapread", 0, "return", 1, 1, false},            // m[1]: the map read
+		{"e2derefCompound", 1, "compound", 1, 2, false},    // the plan on the address-taken p's read + the load
+		{"e2fieldCompound", 1, "compound", 1, 2, false},    // the plan on the address-taken q's read + the load
+		{"e2mapCompound", 1, "compound", 1, 2, false},      // the plan on the address-taken m's read + the load
+		{"e2mapAssignKey", 1, "map-assign", 1, 1, false},   // the key's checked access
+		{"e2mapAssignPlain", 1, "map-assign", 1, 0, false}, // atoms only → legacy
+		{"mapTarget", 1, "compound", 1, 2, false},          // BUG-104's m[t[k]] += wit(5): the key's checked access + the load
+		{"derefRead", 0, "return", 1, 1, false},
 		// Stage E E3: receives and method calls
-		{"recvOperand", 1, "compound", 2, 1}, // BUG-104's x[fnine()] += <-ch: fnine + the receive | the target plan
-		{"methodCall", 0, "return", 1, 1},    // s[0] + q.M(): the pointer-receiver call | the checked access
-		{"e3recvRead", 0, "return", 2, 1},    // the receive + mut | the address-taken x
-		{"e3ptrMethod", 0, "return", 1, 1},   // v.Bump() | the field read v.n through the pointer
-		{"e3addrRecv", 0, "return", 1, 1},    // v.Bump() on &v (no read) | s[k]
-		{"e3starRecv", 0, "return", 1, 2},    // (*v).Bump() | s[k] + the nil-asserting &*v
+		{"recvOperand", 1, "compound", 2, 1, false}, // BUG-104's x[fnine()] += <-ch: fnine + the receive | the target plan
+		{"methodCall", 0, "return", 1, 1, false},    // s[0] + q.M(): the pointer-receiver call | the checked access
+		{"e3recvRead", 0, "return", 2, 1, false},    // the receive + mut | the address-taken x
+		{"e3ptrMethod", 0, "return", 1, 1, false},   // v.Bump() | the field read v.n through the pointer
+		{"e3addrRecv", 0, "return", 1, 1, false},    // v.Bump() on &v (no read) | s[k]
+		{"e3starRecv", 0, "return", 1, 2, false},    // (*v).Bump() | s[k] + the nil-asserting &*v
 		// Stage E E4: conversions and allocations
-		{"e4convRead", 0, "return", 1, 2}, // mut | the read of the captured s + the checked [0] on the bytes
-		{"e4addrLit", 0, "return", 1, 2},  // wit | s[i] + the field read through the fresh pointer
-		{"e4sliceLit", 0, "return", 1, 2}, // wit | s[i] + the checked [0] on the literal
-		{"e4make", 0, "return", 1, 2},     // mut | t[k] (inside make — forced) + the captured x (observable)
-		{"e4valueLit", 0, "return", 1, 1}, // wit | s[i] (the struct-lit and the field read on a value are pure)
+		{"e4convRead", 0, "return", 1, 2, false}, // mut | the read of the captured s + the checked [0] on the bytes
+		{"e4addrLit", 0, "return", 1, 2, false},  // wit | s[i] + the field read through the fresh pointer
+		{"e4sliceLit", 0, "return", 1, 2, false}, // wit | s[i] + the checked [0] on the literal
+		{"e4make", 0, "return", 1, 2, false},     // mut | t[k] (inside make — forced) + the captured x (observable)
+		{"e4valueLit", 0, "return", 1, 1, false}, // wit | s[i] (the struct-lit and the field read on a value are pure)
 		// the audit fix round (2026-09-21): F1 new(expr) with a call inside; F4 the backing-array read
-		{"e4newCall", 0, "return", 3, 2},         // mPrint (inside new), h, gPrint | the fresh pointer's deref + the captured x
-		{"e4newExpr", 0, "return", 1, 2},         // m | x's read INSIDE new's window (forced before m) + the fresh pointer's deref (observable vs m; the set is the singleton 6)
-		{"e4strBytes", 0, "return", 1, 1},        // m | string(b)'s read of the backing array
-		{"e4strRunes", 0, "return", 1, 1},        // m | string(r)'s read of the backing array
-		{"conversionOperand", 0, "return", 1, 1}, // int(int64(s[0])) + wit(1): the checked access; the conversions pure
+		{"e4newCall", 0, "return", 3, 2, false},         // mPrint (inside new), h, gPrint | the fresh pointer's deref + the captured x
+		{"e4newExpr", 0, "return", 1, 2, false},         // m | x's read INSIDE new's window (forced before m) + the fresh pointer's deref (observable vs m; the set is the singleton 6)
+		{"e4strBytes", 0, "return", 1, 1, false},        // m | string(b)'s read of the backing array
+		{"e4strRunes", 0, "return", 1, 1, false},        // m | string(r)'s read of the backing array
+		{"conversionOperand", 0, "return", 1, 1, false}, // int(int64(s[0])) + wit(1): the checked access; the conversions pure
 		// Stage E5 E5a: the reading-(a) built-ins
-		{"e5aAppendRead", 0, "return", 2, 2},        // append (effectful) + m | the captured s's read (inside append), the result's checked [0]
-		{"e5aCopyRead", 0, "return", 1, 3},          // copy (effectful) | d's read + the checked d[0], d's read inside copy
-		{"e5aAppendSpreadStr", 0, "return", 2, 1},   // append + m (len an event) | the captured x's read
-		{"e5aTgtAssertMin", 1, "elem-assign", 1, 3}, // wit | the target plan (its assertion), t[k] inside min, the plan
+		{"e5aAppendRead", 0, "return", 2, 2, false},        // append (effectful) + m | the captured s's read (inside append), the result's checked [0]
+		{"e5aCopyRead", 0, "return", 1, 3, false},          // copy (effectful) | d's read + the checked d[0], d's read inside copy
+		{"e5aAppendSpreadStr", 0, "return", 2, 1, false},   // append + m (len an event) | the captured x's read
+		{"e5aTgtAssertMin", 1, "elem-assign", 1, 3, false}, // wit | the target plan (its assertion), t[k] inside min, the plan
 		// Stage E5 E5b: the multi-target forms
-		{"e5bTupleHeader", 1, "tuple-assign", 1, 2},   // m | the captured s's header read + the plan
-		{"e5bBlankPanic", 1, "tuple-assign", 1, 1},    // wit | the checked a[9]
-		{"e5bCommaOkRecvTarget", 2, "comma-ok", 1, 2}, // the receive | the checked a[9] + the plan
-		{"e5bMultiCall", 1, "multi-call", 1, 2},       // two | the captured s's header read + the plan
-		{"e5bDefineTuple", 1, "tuple-assign", 1, 2},   // m | the captured s's header read + the checked s[0]
-		{"multiTarget", 1, "tuple-assign", 1, 1},      // wit | the checked s[0] (E5b: the pilot's former refusal, now a graph)
-		{"blankTarget", 0, "blank-assign", 1, 1},      // wit | the checked s[0] (E5b: `_ = e` evaluates its occurrences)
+		{"e5bTupleHeader", 1, "tuple-assign", 1, 2, false},   // m | the captured s's header read + the plan
+		{"e5bBlankPanic", 1, "tuple-assign", 1, 1, false},    // wit | the checked a[9]
+		{"e5bCommaOkRecvTarget", 2, "comma-ok", 1, 2, false}, // the receive | the checked a[9] + the plan
+		{"e5bMultiCall", 1, "multi-call", 1, 2, false},       // two | the captured s's header read + the plan
+		{"e5bDefineTuple", 1, "tuple-assign", 1, 2, false},   // m | the captured s's header read + the checked s[0]
+		{"multiTarget", 1, "tuple-assign", 1, 1, false},      // wit | the checked s[0] (E5b: the pilot's former refusal, now a graph)
+		{"blankTarget", 0, "blank-assign", 1, 1, false},      // wit | the checked s[0] (E5b: `_ = e` evaluates its occurrences)
 		// Stage E5 E5c: map literals
-		{"e4mapLit", 0, "return", 1, 2}, // wit | the key's checked s[0] + the fresh map's read
+		{"e4mapLit", 0, "return", 1, 2, false}, // wit | the key's checked s[0] + the fresh map's read
 		// Stage E5 E5e: strings
-		{"stringIndex", 0, "return", 1, 1},       // wit | the checked byte read str[0] (a private string; the conversion pure)
-		{"e5eStrSlice", 0, "return", 1, 3},       // m | the captured i's read, the checked substring, its checked byte [0]
-		{"e5eStrIndexVsCall", 0, "return", 1, 2}, // m | the captured i's read, the checked byte read
+		{"stringIndex", 0, "return", 1, 1, false},       // wit | the checked byte read str[0] (a private string; the conversion pure)
+		{"e5eStrSlice", 0, "return", 1, 3, false},       // m | the captured i's read, the checked substring, its checked byte [0]
+		{"e5eStrIndexVsCall", 0, "return", 1, 2, false}, // m | the captured i's read, the checked byte read
 		// Stage E5 E5d: &x
-		{"e5dAddrArgVsRead", 0, "return", 1, 1},     // use | the address-taken x's read; &x itself no occurrence
-		{"e5dAddrPayloadVsCall", 0, "return", 1, 2}, // m | the field read through the fresh pointer, the deref of the payload pointer
-		{"e5dAddrStored", 1, "tuple-assign", 1, 1},  // use | the address-taken x's read; the stored address and the argument are no occurrences
+		{"e5dAddrArgVsRead", 0, "return", 1, 1, false},     // use | the address-taken x's read; &x itself no occurrence
+		{"e5dAddrPayloadVsCall", 0, "return", 1, 2, false}, // m | the field read through the fresh pointer, the deref of the payload pointer
+		{"e5dAddrStored", 1, "tuple-assign", 1, 1, false},  // use | the address-taken x's read; the stored address and the argument are no occurrences
+		// Stage E6a: panic identity across an E1 participant's window (no effectful event)
+		{"e6aAssertVsMake", 0, "return", 0, 2, true}, // make, len (events) | the assertion, the checked t[k] inside make's window
+		{"e6aLenMap", 0, "return", 0, 2, true},       // len over a map operand
+		{"e6aCapChan", 0, "return", 0, 2, true},      // cap over a channel operand
+		{"e6aMakeMayFail", 0, "return", 0, 1, true},  // a[i] vs make's own size panic
+		{"e6aRightOfEvent", 0, "return", 0, 2, true}, // the assertion right of len's window holding b[j]
 	}
 	for _, c := range cases {
 		d := decisionAt(t, unseqWitnessSrc, c.fn, c.fromEnd)
@@ -1002,7 +1088,7 @@ func TestUnseqAdmittedWitnesses(t *testing.T) {
 		if d.calls != c.calls || d.nonEvents != c.nonEvents {
 			t.Errorf("%s: calls=%d nonEvents=%d, want %d/%d (reason %q)", c.fn, d.calls, d.nonEvents, c.calls, c.nonEvents, d.reason)
 		}
-		wantAdmitted := c.calls >= 1 && c.nonEvents >= 1
+		wantAdmitted := (c.calls >= 1 && c.nonEvents >= 1) || c.e6a
 		if d.admitted != wantAdmitted {
 			t.Errorf("%s: admitted=%v, want %v (reason %q)", c.fn, d.admitted, wantAdmitted, d.reason)
 		}
@@ -1093,6 +1179,12 @@ func TestUnseqLegacyByReason(t *testing.T) {
 		{"f6AddrElem", 0, "unary operator & on an element (&a[i])"},
 		{"f6AddrField", 0, "unary operator & on a field (&s.f)"},
 		{"f6AddrDeref", 0, "unary operator & on an indirection (&*p)"},
+		// Stage E6a (2026-09-24): the panic-identity rule is event-mediated — no event between two failing operands,
+		// one failing operand beside a participant that cannot fail, the E1 chain, the guard protocol
+		{"e6aTwoIdxNoEvent", 0, "no call occurrence"},
+		{"e6aOneFailVsLen", 0, "no call occurrence"},
+		{"e6aChainOrdered", 0, "no occurrence observable against an effectful event or another failing occurrence"},
+		{"e6aGuardTestVsRegion", 0, "no call occurrence"},
 	}
 	for _, c := range cases {
 		d := decisionAt(t, unseqWitnessSrc, c.fn, c.fromEnd)

@@ -144,19 +144,45 @@ type unseqDecision struct {
 	// admitted iff some occurrence is observable: every other in-grammar sweep with
 	// a call has every edge forced, and the legacy path realizes that unique order
 	// exactly (the pilot's trigger rationale, made precise).
-	seq      int
-	open     []int
-	nextOpen int
-	closeIdx map[int]int
-	effect   map[int]bool
-	occs     []unseqOccRec
+	seq       int
+	open      []int
+	nextOpen  int
+	closeIdx  map[int]int
+	effect    map[int]bool
+	mayFail   map[int]bool // Stage E6a: the participant's OWN completion may panic (`make`'s size check)
+	guardTest map[int]bool // Stage E6a: the open guards whose TEST is being classified (false/absent = the region)
+	occs      []unseqOccRec
 }
 
 // unseqOccRec is one non-event occurrence's observability record.
+//
+// STAGE E6a (2026-09-24; the trigger refinement RATIFIED [USER] 2026-09-22, the
+// Stage E5 landing record item 1, relayed): the record carries what the
+// panic-identity rule needs — whether the occurrence may FAIL (a bounds check,
+// a nil check, a type assertion, a division / shift by a non-constant: its panic
+// TEXT is an observable), the whole chain of open participants it lies inside
+// (outermost first; the innermost is Stage E's `anc`), for each guard in that
+// chain whether it sits in the guard's TEST or its REGION, and `first` — the
+// index of the first occurrence recorded inside its OWN operand subtree (its
+// data-predecessors are occs[first:idx)). Two failing occurrences are ORDERED
+// iff one lies in the other's operand subtree, or the earlier one lies inside a
+// participant whose completion the later one consumes (transitively through the
+// E1 chain), or the earlier one is in a guard's test and the later in that
+// guard's region; every other pair is UNORDERED — the scheduler may fire either
+// panic first — and admits the sweep.
 type unseqOccRec struct {
-	anc int // the innermost enclosing participant's OPEN id, -1 at the top level
-	lo  int // the first participant index not forced before the occurrence
+	chain   []int        // the OPEN participants enclosing the occurrence, outermost first ([] at the top level)
+	inTest  map[int]bool // for each guard in `chain`: true when the occurrence lies in the guard's TEST (its region otherwise)
+	lo      int          // the first participant index not forced before the occurrence
+	first   int          // the index of the first occurrence inside this occurrence's own operand subtree
+	failing bool         // the occurrence may panic (its panic identity is observable — the E6a rule)
 }
+
+// unseqMark is the start of an occurrence's OWN operand window: the participant
+// count and the occurrence count when its operand classification began.
+type unseqMark struct{ seq, occs int }
+
+func (d *unseqDecision) mark() unseqMark { return unseqMark{seq: d.seq, occs: len(d.occs)} }
 
 // openP opens an E1 participant (a call, a receive, a len/cap, a guard) around
 // the classification of its operand subtree; closeP completes it.
@@ -168,46 +194,149 @@ func (d *unseqDecision) openP() int {
 }
 
 func (d *unseqDecision) closeP(id int, effect bool) {
+	d.closePF(id, effect, false)
+}
+
+// closePF completes a participant whose OWN completion may panic (Stage E6a:
+// `make`'s size check — spec#Making_slices_maps_and_channels «a run-time panic
+// occurs if … negative or larger than …»): a failing occurrence unordered against
+// it is observable by panic identity.
+func (d *unseqDecision) closePF(id int, effect, mayFail bool) {
 	if n := len(d.open); n > 0 && d.open[n-1] == id {
 		d.open = d.open[:n-1]
 	}
 	if d.closeIdx == nil {
 		d.closeIdx = map[int]int{}
 		d.effect = map[int]bool{}
+		d.mayFail = map[int]bool{}
 	}
 	d.closeIdx[id] = d.seq
 	d.effect[d.seq] = effect
+	d.mayFail[d.seq] = mayFail
 	d.seq++
 }
 
-// occ records one non-event occurrence (the census column AND the observability
-// record); `start` is the participant count when the occurrence's OWN operand
-// classification began.
-func (d *unseqDecision) occ(start int) {
-	d.nonEvents++
-	anc := -1
-	if n := len(d.open); n > 0 {
-		anc = d.open[n-1]
+// guardPhase marks the open guard `gid` as classifying its TEST (true) or its
+// REGION (false); occurrences snapshot the flag (unseqOccRec.inTest).
+func (d *unseqDecision) guardPhase(gid int, test bool) {
+	if d.guardTest == nil {
+		d.guardTest = map[int]bool{}
 	}
-	lo := 0
-	if d.seq > start {
-		lo = d.seq
+	if test {
+		d.guardTest[gid] = true
+	} else {
+		delete(d.guardTest, gid)
 	}
-	d.occs = append(d.occs, unseqOccRec{anc: anc, lo: lo})
 }
 
-// observable decides the trigger from the record (the struct's comment).
+// occ records one non-event occurrence (the census column AND the observability
+// record); `m` is the window mark taken when the occurrence's OWN operand
+// classification began; `failing` says whether the occurrence may panic (the
+// E6a panic-identity rule — the struct's comment).
+func (d *unseqDecision) occ(m unseqMark, failing bool) {
+	d.nonEvents++
+	chain := append([]int(nil), d.open...)
+	var inTest map[int]bool
+	for _, g := range chain {
+		if d.guardTest[g] {
+			if inTest == nil {
+				inTest = map[int]bool{}
+			}
+			inTest[g] = true
+		}
+	}
+	lo := 0
+	if d.seq > m.seq {
+		lo = d.seq
+	}
+	d.occs = append(d.occs, unseqOccRec{chain: chain, inTest: inTest, lo: lo, first: m.occs, failing: failing})
+}
+
+// ordered reports whether occurrence i PRECEDES occurrence j (i < j, both
+// non-event) in every run of the graph: j consumes i (i lies inside j's operand
+// subtree), or i lies inside a participant whose completion precedes j (the
+// participant completed before one j consumes — the E1 chain orders the
+// completions), or i lies in a guard's TEST and j in that guard's REGION (the
+// guard protocol runs the test before the entry, the region after it).
+func (d *unseqDecision) ordered(i, j int) bool {
+	o, p := d.occs[i], d.occs[j]
+	if i >= p.first {
+		return true
+	}
+	for _, g := range o.chain {
+		if c, done := d.closeIdx[g]; done && c < p.lo {
+			return true
+		}
+		if o.inTest[g] && !p.inTest[g] {
+			for _, h := range p.chain {
+				if h == g {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+// observable decides the trigger from the record (the struct's comment): some
+// occurrence is unordered against an EFFECTFUL event (Stage E E3's rule) — OR,
+// since Stage E6a, some FAILING occurrence is unordered against an E1
+// PARTICIPANT that may itself fail (`make`) or whose window holds another
+// FAILING occurrence unordered against it (panic identity is an observable:
+// which panic fires first is the observation). THE SCOPE ([AGENT], posed in the
+// E6a handoff §2): the panic-identity rule is applied where the legacy
+// `unseq-probe` realized it — a failing operand against an E1 participant's
+// window (`iv.(int) + len(make([]int, t[k]))`: the assertion vs the size
+// operand's index panic, or vs make's own size panic) — so that the probe can
+// retire without narrowing its rows (the ruling's purpose). The GENERAL form —
+// any two unordered failing occurrences, no event between them (`a[i] + b[j]`,
+// BUG-032's `xs[ys[9]], b = zs[7], 2`) — is NOT taken here: it would move the
+// inventory's E3/E4/E12 (b) PINS (left-to-right among non-call operands) to (a)
+// ENVELOPED as ENTRIES — a [USER] decision — and its measured footprint is 856
+// newly admitted sweeps in 197 packages incl. 57 in the raft twin and hundreds
+// in stdlib library units (docs/evidence/2026-09-24_unseq-stage-e6a/
+// trigger-general-footprint.txt). The legacy path keeps realizing those
+// sweeps' one lexical order, as today.
 func (d *unseqDecision) observable() bool {
-	for _, o := range d.occs {
+	// the failing occurrences inside each participant's window (by completion index)
+	var failInside map[int][]int
+	for j, p := range d.occs {
+		if !p.failing {
+			continue
+		}
+		for _, g := range p.chain {
+			if c, done := d.closeIdx[g]; done {
+				if failInside == nil {
+					failInside = map[int][]int{}
+				}
+				failInside[c] = append(failInside[c], j)
+			}
+		}
+	}
+	for i, o := range d.occs {
 		hi := d.seq
-		if o.anc >= 0 {
-			if c, done := d.closeIdx[o.anc]; done {
+		if n := len(o.chain); n > 0 {
+			if c, done := d.closeIdx[o.chain[n-1]]; done {
 				hi = c
 			}
 		}
 		for x := o.lo; x < hi; x++ {
 			if d.effect[x] {
 				return true
+			}
+			if !o.failing {
+				continue
+			}
+			if d.mayFail[x] {
+				return true
+			}
+			for _, j := range failInside[x] {
+				if j == i {
+					continue
+				}
+				if (i < j && !d.ordered(i, j)) || (j < i && !d.ordered(j, i)) {
+					return true
+				}
 			}
 		}
 	}
@@ -550,7 +679,7 @@ func unseqAddrOfVar(x ast.Expr) (*ast.Ident, bool) {
 // carries. `valuePos` is true where a value is required (false only for
 // the callee-position and statement-position calls handled by callers).
 func (e *emitter) unseqExpr(x ast.Expr, ctx *unseqCtx, d *unseqDecision) (unseqExprKind, bool) {
-	start := d.seq // the occurrence window's start (unseqDecision.occ)
+	start := d.mark() // the occurrence window's start (unseqDecision.occ)
 	refuse := func(why string) (unseqExprKind, bool) {
 		if d.reason == "" {
 			d.reason = why
@@ -586,7 +715,7 @@ func (e *emitter) unseqExpr(x ast.Expr, ctx *unseqCtx, d *unseqDecision) (unseqE
 				if !unseqTypeOK(pv.Type()) {
 					return refuse("package-level variable of a type outside the grammar (" + pv.Type().String() + ")")
 				}
-				d.occ(start)
+				d.occ(start, false)
 				return unseqValue, true
 			}
 			return refuse("non-local identifier")
@@ -598,7 +727,7 @@ func (e *emitter) unseqExpr(x ast.Expr, ctx *unseqCtx, d *unseqDecision) (unseqE
 			return refuse("local of a type outside the pilot grammar (" + loc.Type().String() + ")")
 		}
 		if e.unseqAddrTaken(ctx.body)[obj] {
-			d.occ(start) // a mutable read: the pilot's P(ii) read
+			d.occ(start, false) // a mutable read: the pilot's P(ii) read
 			return unseqValue, true
 		}
 		return unseqAtom, true
@@ -621,7 +750,7 @@ func (e *emitter) unseqExpr(x ast.Expr, ctx *unseqCtx, d *unseqDecision) (unseqE
 			if _, ok := e.unseqExpr(v.Index, ctx, d); !ok {
 				return unseqConst, false
 			}
-			d.occ(start)
+			d.occ(start, false) // a map read never fails (the key is hash-safe by the type grammar)
 			return unseqValue, true
 		}
 		if isStringType(types.Unalias(bt).Underlying()) {
@@ -638,7 +767,7 @@ func (e *emitter) unseqExpr(x ast.Expr, ctx *unseqCtx, d *unseqDecision) (unseqE
 			if _, ok := e.unseqExpr(v.Index, ctx, d); !ok {
 				return unseqConst, false
 			}
-			d.occ(start) // the checked byte read
+			d.occ(start, true) // the checked byte read (may fail: bounds)
 			return unseqValue, true
 		}
 		sl, isSlice := types.Unalias(bt).Underlying().(*types.Slice)
@@ -654,7 +783,7 @@ func (e *emitter) unseqExpr(x ast.Expr, ctx *unseqCtx, d *unseqDecision) (unseqE
 		if _, ok := e.unseqExpr(v.Index, ctx, d); !ok {
 			return unseqConst, false
 		}
-		d.occ(start) // the ONE checked access (N1 SPLIT: base/index are producers)
+		d.occ(start, true) // the ONE checked access (N1 SPLIT: base/index are producers; may fail: bounds)
 		return unseqValue, true
 	case *ast.SliceExpr:
 		bt := e.goTypeOf(v.X)
@@ -685,7 +814,7 @@ func (e *emitter) unseqExpr(x ast.Expr, ctx *unseqCtx, d *unseqDecision) (unseqE
 				return unseqConst, false
 			}
 		}
-		d.occ(start) // a failing pure op (slice bounds)
+		d.occ(start, true) // a failing pure op (slice bounds)
 		return unseqValue, true
 	case *ast.CallExpr:
 		if tv, ok := e.info.Types[v.Fun]; ok && tv.IsType() {
@@ -702,15 +831,17 @@ func (e *emitter) unseqExpr(x ast.Expr, ctx *unseqCtx, d *unseqDecision) (unseqE
 			return refuse("binary operator " + v.Op.String())
 		}
 		if op == "&&" || op == "||" {
-			gid := d.openP() // the guard is an E1 participant: its test and region precede its completion
+			gid := d.openP()        // the guard is an E1 participant: its test and region precede its completion
+			d.guardPhase(gid, true) // Stage E6a: the test's occurrences precede the region's (the guard protocol)
 			if _, ok := e.unseqExpr(v.X, ctx, d); !ok {
 				return unseqConst, false
 			}
+			d.guardPhase(gid, false)
 			if _, ok := e.unseqExpr(v.Y, ctx, d); !ok {
 				return unseqConst, false
 			}
 			d.closeP(gid, false)
-			d.occ(start) // the guard entry + completion: its window holds its region, so it is observable iff an effectful event FOLLOWS it
+			d.occ(start, false) // the guard entry + completion: its window holds its region, so it is observable iff an effectful event FOLLOWS it
 			return unseqValue, true
 		}
 		xt := e.goTypeOf(v.X)
@@ -729,7 +860,7 @@ func (e *emitter) unseqExpr(x ast.Expr, ctx *unseqCtx, d *unseqDecision) (unseqE
 			return unseqConst, false
 		}
 		if e.unseqBinaryMayFail(v) {
-			d.occ(start) // division/remainder by a non-constant, shift by a non-constant signed count
+			d.occ(start, true) // division/remainder by a non-constant, shift by a non-constant signed count (may fail)
 		}
 		return unseqValue, true
 	case *ast.UnaryExpr:
@@ -801,7 +932,7 @@ func (e *emitter) unseqExpr(x ast.Expr, ctx *unseqCtx, d *unseqDecision) (unseqE
 		if _, ok := e.unseqExpr(v.X, ctx, d); !ok {
 			return unseqConst, false
 		}
-		d.occ(start) // a failing pure op (spec#Type_assertions)
+		d.occ(start, true) // a failing pure op (spec#Type_assertions)
 		return unseqValue, true
 	case *ast.FuncLit:
 		return refuse("func literal in value position")
@@ -815,7 +946,7 @@ func (e *emitter) unseqExpr(x ast.Expr, ctx *unseqCtx, d *unseqDecision) (unseqE
 		if _, ok := e.unseqExpr(v.X, ctx, d); !ok {
 			return unseqConst, false
 		}
-		d.occ(start)
+		d.occ(start, true) // the dereference may fail (nil)
 		return unseqValue, true
 	case *ast.SelectorExpr:
 		if pv, ok := e.unseqQualifiedPackageVar(v); ok {
@@ -825,7 +956,7 @@ func (e *emitter) unseqExpr(x ast.Expr, ctx *unseqCtx, d *unseqDecision) (unseqE
 			if !unseqTypeOK(pv.Type()) {
 				return refuse("qualified package-level variable of a type outside the grammar (" + pv.Type().String() + ")")
 			}
-			d.occ(start)
+			d.occ(start, false)
 			return unseqValue, true
 		}
 		// Stage E E2: a FIELD read. Through a pointer: the pointer value is the
@@ -842,7 +973,7 @@ func (e *emitter) unseqExpr(x ast.Expr, ctx *unseqCtx, d *unseqDecision) (unseqE
 			return unseqConst, false
 		}
 		if isPtr {
-			d.occ(start)
+			d.occ(start, true) // the nil check + the load through the pointer (may fail)
 		}
 		return unseqValue, true
 	case *ast.CompositeLit:
@@ -869,7 +1000,7 @@ func (e *emitter) unseqExpr(x ast.Expr, ctx *unseqCtx, d *unseqDecision) (unseqE
 // call class holds OSTR2BYTES/OSTR2RUNES, not OBYTES2STR/ORUNES2STR). A
 // conversion to an interface type is a box (E5's), refused by name.
 func (e *emitter) unseqConversion(c *ast.CallExpr, ctx *unseqCtx, d *unseqDecision) (unseqExprKind, bool) {
-	start := d.seq // the occurrence window's start (unseqDecision.occ)
+	start := d.mark() // the occurrence window's start (unseqDecision.occ)
 	refuse := func(why string) (unseqExprKind, bool) {
 		if d.reason == "" {
 			d.reason = why
@@ -913,7 +1044,7 @@ func (e *emitter) unseqConversion(c *ast.CallExpr, ctx *unseqCtx, d *unseqDecisi
 		return unseqConst, false
 	}
 	if isStringType(tu) && (isByteSlice(ou) || isRuneSlice(ou)) {
-		d.occ(start) // the backing array's read (audit F4): a mutable read of its own
+		d.occ(start, false) // the backing array's read (audit F4): a mutable read of its own
 	}
 	return unseqValue, true
 }
@@ -976,7 +1107,7 @@ func (e *emitter) unseqMakeNew(c *ast.CallExpr, name string, ctx *unseqCtx, d *u
 			}
 		}
 	}
-	d.closeP(pid, false)
+	d.closePF(pid, false, name == "make") // Stage E6a: make's size check may panic — a failing participant
 	d.events++
 	return 1, true
 }
@@ -1248,12 +1379,13 @@ func (e *emitter) unseqBinaryMayFail(b *ast.BinaryExpr) bool {
 	return false
 }
 
-// unseqCallee classifies a call's callee: a same-package, non-generic,
-// non-variadic top-level function; a func-typed local (private or
-// address-taken); or a func literal (lifted at lowering). Returns the
-// signature.
+// unseqCallee classifies a call's callee: a non-generic, non-variadic
+// top-level function of a source unit (bare or `pkg.F`-qualified — Stage E6a
+// widened the pilot's «same package» to every unit of the program); a
+// func-typed local (private or address-taken); a method of a source unit's
+// named struct; or a func literal (lifted at lowering). Returns the signature.
 func (e *emitter) unseqCallee(c *ast.CallExpr, ctx *unseqCtx, d *unseqDecision) (*types.Signature, bool) {
-	start := d.seq // the occurrence window's start (unseqDecision.occ)
+	start := d.mark() // the occurrence window's start (unseqDecision.occ)
 	refuse := func(why string) (*types.Signature, bool) {
 		if d.reason == "" {
 			d.reason = why
@@ -1274,8 +1406,16 @@ func (e *emitter) unseqCallee(c *ast.CallExpr, ctx *unseqCtx, d *unseqDecision) 
 			if sig.TypeParams().Len() > 0 || sig.RecvTypeParams().Len() > 0 {
 				return refuse("generic function callee")
 			}
-			if obj.Pkg() == nil || !e.isMainPackage(obj.Pkg()) {
-				return refuse("callee outside the main package")
+			if obj.Pkg() == nil || !e.isSourcePackage(obj.Pkg()) {
+				// Stage E6a (2026-09-24, RULED [USER] 2026-09-22 item 2: WIDEN to non-main units):
+				// a function of ANY source unit of the program — the main package, a case-local
+				// import, a stdlib source-through library unit — is a callee VALUE the wire
+				// names (`funcWireName`: bare for main, path-qualified otherwise). Stage C's
+				// «callee outside the main package» refusal was the pilot's scope, not a
+				// semantic fact: the graph's callee is a `func-value` over a FuncId exactly as
+				// the legacy path's static call is, whatever unit declares it. Anything else
+				// (a universe function, a stdlib package the frontend shims) stays outside.
+				return refuse("callee outside the program's source units")
 			}
 			if _, isShim := shimRuntimeRefusalReasons[obj.Name()]; isShim {
 				return refuse("shim runtime-refusal helper callee")
@@ -1294,7 +1434,7 @@ func (e *emitter) unseqCallee(c *ast.CallExpr, ctx *unseqCtx, d *unseqDecision) 
 				return refuse("call through a non-func local")
 			}
 			if e.unseqAddrTaken(ctx.body)[obj] {
-				d.occ(start) // the callee VALUE is a mutable read
+				d.occ(start, false) // the callee VALUE is a mutable read
 			}
 			return sig, true
 		case *types.Builtin:
@@ -1308,6 +1448,29 @@ func (e *emitter) unseqCallee(c *ast.CallExpr, ctx *unseqCtx, d *unseqDecision) 
 		}
 		return sig, true
 	case *ast.SelectorExpr:
+		if pkgName, isQual := e.qualifiedPkgRef(fn); isQual {
+			// Stage E6a: a QUALIFIED call into an imported SOURCE unit (`pkg.F(args)` — W1.1's
+			// static call to the path-qualified FuncId, `emitQualifiedCall`): name resolution, not
+			// a selection. A func-typed package VARIABLE of the imported unit is a call through a
+			// read value the legacy path spells as `call-value`; it stays outside by name.
+			switch obj := e.info.Uses[fn.Sel].(type) {
+			case *types.Func:
+				sig, _ := obj.Type().(*types.Signature)
+				if sig == nil || sig.Recv() != nil {
+					return refuse("qualified callee without a function signature")
+				}
+				if sig.TypeParams().Len() > 0 {
+					return refuse("generic function callee")
+				}
+				if !e.isSourcePackage(obj.Pkg()) {
+					return refuse("callee outside the program's source units")
+				}
+				return sig, true
+			case *types.Var:
+				return refuse("call through a qualified func-typed package variable (" + pkgName.Imported().Path() + "." + fn.Sel.Name + ")")
+			}
+			return refuse("qualified callee kind")
+		}
 		// Stage E E3: a METHOD CALL on a concrete receiver.
 		sig, ok := e.unseqMethodCallee(fn, ctx, d)
 		if !ok {
@@ -1319,7 +1482,8 @@ func (e *emitter) unseqCallee(c *ast.CallExpr, ctx *unseqCtx, d *unseqDecision) 
 }
 
 // unseqMethodCallee classifies `x.M(...)`'s callee (Stage E E3): a non-generic
-// method of a named struct type of the main package (never an interface method,
+// method of a named struct type of a source unit (main since E3, any unit since
+// Stage E6a; never an interface method,
 // never a promoted hop, never a method value / expression), with the receiver
 // SUB-EVALUATION classified here — the receiver is the invocation's first
 // argument: a pointer receiver takes the pointer operand (an atom or an
@@ -1329,7 +1493,7 @@ func (e *emitter) unseqCallee(c *ast.CallExpr, ctx *unseqCtx, d *unseqDecision) 
 // occurrence) or dereferences a pointer operand (an occurrence). Returns the
 // method's signature WITHOUT the receiver.
 func (e *emitter) unseqMethodCallee(sel *ast.SelectorExpr, ctx *unseqCtx, d *unseqDecision) (*types.Signature, bool) {
-	start := d.seq // the occurrence window's start (unseqDecision.occ)
+	start := d.mark() // the occurrence window's start (unseqDecision.occ)
 	refuse := func(why string) (*types.Signature, bool) {
 		if d.reason == "" {
 			d.reason = why
@@ -1357,8 +1521,10 @@ func (e *emitter) unseqMethodCallee(sel *ast.SelectorExpr, ctx *unseqCtx, d *uns
 	if msig.TypeParams().Len() > 0 || msig.RecvTypeParams().Len() > 0 {
 		return refuse("generic method callee")
 	}
-	if fn.Pkg() == nil || !e.isMainPackage(fn.Pkg()) {
-		return refuse("method callee outside the main package")
+	if fn.Pkg() == nil || !e.isSourcePackage(fn.Pkg()) {
+		// Stage E6a: a method of ANY source unit's named struct (the wire's method key is
+		// receiver-qualified through `namedTypeName` — the same key the legacy path calls).
+		return refuse("method callee outside the program's source units")
 	}
 	recvT := e.goTypeOf(sel.X)
 	if recvT == nil {
@@ -1410,7 +1576,7 @@ func (e *emitter) unseqMethodCallee(sel *ast.SelectorExpr, ctx *unseqCtx, d *uns
 				if _, ok := e.unseqExpr(x.X, ctx, d); !ok {
 					return nil, false
 				}
-				d.occ(start) // &*p asserts p non-nil (spec#Address_operators)
+				d.occ(start, true) // &*p asserts p non-nil (spec#Address_operators; may fail)
 			default:
 				return refuse("pointer-receiver call on a non-variable operand")
 			}
@@ -1420,7 +1586,7 @@ func (e *emitter) unseqMethodCallee(sel *ast.SelectorExpr, ctx *unseqCtx, d *uns
 			return nil, false
 		}
 		if opIsPtr {
-			d.occ(start) // the auto-dereference of the pointer operand (nil check + copy)
+			d.occ(start, true) // the auto-dereference of the pointer operand (nil check + copy; may fail)
 		}
 	}
 	sig, ok := seln.Type().(*types.Signature)
@@ -1454,7 +1620,22 @@ func (e *emitter) unseqCall(c *ast.CallExpr, ctx *unseqCtx, d *unseqDecision, ma
 				if at == nil {
 					return refuse(id.Name + " of an untyped operand")
 				}
-				if _, isSlice := types.Unalias(at).Underlying().(*types.Slice); !isSlice {
+				switch types.Unalias(at).Underlying().(type) {
+				case *types.Slice:
+				case *types.Chan:
+					// Stage E6a (2026-09-24): `len(ch)` / `cap(ch)` — the buffered count / the
+					// capacity of a channel VALUE (spec#Length_and_capacity): an E1 participant
+					// that reads the channel and cannot fail. The panic-vs-panic rows of
+					// `builtins/len-vs-call-order` (`iv.(int) + cap(make(chan int, t[k]))`) were
+					// refused HERE, not by the trigger — the widening the refinement needs to
+					// reach them ([AGENT] choice, posed in the E6a handoff §2).
+				case *types.Map:
+					// Stage E6a: `len(m)` — the entry count of a map VALUE, a read that cannot fail
+					// (spec#Length_and_capacity); `cap` has no map form (go/types rejects it).
+					if id.Name != "len" {
+						return refuse(id.Name + " of a non-slice operand (" + at.String() + ")")
+					}
+				default:
 					// Stage E5 E5e: `len(s)` of a STRING — an E1 participant like a slice's
 					// (spec#Length_and_capacity; a constant string's len never reaches here).
 					if !(id.Name == "len" && isStringType(types.Unalias(at).Underlying())) {
@@ -1630,8 +1811,12 @@ func (e *emitter) unseqCtxNow() *unseqCtx {
 // header + index, one identity for the load and the store — v2.1 §3.4). An
 // interface-typed element is outside the pilot (its store would box the
 // value inside the graph; boxing is an argument/completion wrap here).
-func (e *emitter) unseqElemTarget(ix *ast.IndexExpr, ctx *unseqCtx, d *unseqDecision) bool {
-	start := d.seq // the occurrence window's start (unseqDecision.occ)
+// `load` marks the compound / IncDec forms, whose LOAD through the plan is a
+// bounds-checked read (Stage E6a: a FAILING occurrence); a plain target's plan
+// checks nothing — its bounds check is the phase-2 store's (`targetPlan`:
+// «the chain's own checks are phase-2 store-time events»).
+func (e *emitter) unseqElemTarget(ix *ast.IndexExpr, ctx *unseqCtx, d *unseqDecision, load bool) bool {
+	start := d.mark() // the occurrence window's start (unseqDecision.occ)
 	refuse := func(why string) bool {
 		if d.reason == "" {
 			d.reason = why
@@ -1658,7 +1843,7 @@ func (e *emitter) unseqElemTarget(ix *ast.IndexExpr, ctx *unseqCtx, d *unseqDeci
 	if _, ok := e.unseqExpr(ix.Index, ctx, d); !ok {
 		return false
 	}
-	d.occ(start) // the target plan (and, for a compound target, its load)
+	d.occ(start, load) // the target plan (checks nothing) — and, for a compound target, its bounds-checked load
 	return true
 }
 
@@ -1696,25 +1881,27 @@ func (e *emitter) unseqDerefTarget(st *ast.StarExpr, ctx *unseqCtx, d *unseqDeci
 // inside the grammar or on a struct VARIABLE (a local or a package-level
 // variable — its address is the frozen anchor); a nested value base
 // (`a[i].f = e`) is outside. The plan checks nothing (nil at the store).
-func (e *emitter) unseqFieldTarget(sel *ast.SelectorExpr, ctx *unseqCtx, d *unseqDecision) bool {
-	refuse := func(why string) bool {
+// The first result reports a POINTER base (Stage E6a: a compound form's load
+// through it is nil-checked — a FAILING occurrence).
+func (e *emitter) unseqFieldTarget(sel *ast.SelectorExpr, ctx *unseqCtx, d *unseqDecision) (bool, bool) {
+	refuse := func(why string) (bool, bool) {
 		if d.reason == "" {
 			d.reason = why
 		}
-		return false
+		return false, false
 	}
 	isPtr, _, ok := e.unseqFieldSel(sel, d)
 	if !ok {
-		return false
+		return false, false
 	}
 	if _, isIface := types.Unalias(e.goTypeOf(sel)).Underlying().(*types.Interface); isIface {
 		return refuse("interface-typed field target (boxing inside a graph is outside the grammar)")
 	}
 	if isPtr {
 		if _, ok := e.unseqExpr(sel.X, ctx, d); !ok {
-			return false
+			return false, false
 		}
-		return true
+		return true, true
 	}
 	id, isIdent := ast.Unparen(sel.X).(*ast.Ident)
 	if !isIdent {
@@ -1725,10 +1912,10 @@ func (e *emitter) unseqFieldTarget(sel *ast.SelectorExpr, ctx *unseqCtx, d *unse
 		if ctx.captured[obj] {
 			return refuse("field target on a captured struct variable (lifted body)")
 		}
-		return true // the struct variable's address is the frozen anchor (no read)
+		return false, true // the struct variable's address is the frozen anchor (no read)
 	}
 	if _, isPkg := e.isPackageVar(obj); isPkg {
-		return true
+		return false, true
 	}
 	return refuse("field target on a non-variable struct base")
 }
@@ -1765,7 +1952,7 @@ func (e *emitter) unseqMapTarget(ix *ast.IndexExpr, ctx *unseqCtx, d *unseqDecis
 // It never emits: the census and the emitter call it alike.
 func (e *emitter) unseqClassify(s ast.Stmt, ctx *unseqCtx) unseqDecision {
 	d := unseqDecision{form: "other"}
-	start := d.seq // the occurrence window's start (unseqDecision.occ)
+	start := d.mark() // the occurrence window's start (unseqDecision.occ)
 	refuse := func(why string) unseqDecision {
 		if d.reason == "" {
 			d.reason = why
@@ -1818,7 +2005,7 @@ func (e *emitter) unseqClassify(s ast.Stmt, ctx *unseqCtx) unseqDecision {
 					}
 				} else {
 					d.form = "field-assign"
-					if !e.unseqFieldTarget(l, ctx, &d) {
+					if _, ok := e.unseqFieldTarget(l, ctx, &d); !ok {
 						return refuse("target")
 					}
 				}
@@ -1833,7 +2020,7 @@ func (e *emitter) unseqClassify(s ast.Stmt, ctx *unseqCtx) unseqDecision {
 					}
 				} else {
 					d.form = "elem-assign"
-					if !e.unseqElemTarget(l, ctx, &d) {
+					if !e.unseqElemTarget(l, ctx, &d, false) {
 						return refuse("target")
 					}
 				}
@@ -1876,14 +2063,14 @@ func (e *emitter) unseqClassify(s ast.Stmt, ctx *unseqCtx) unseqDecision {
 			}
 			if op == "/" || op == "%" {
 				if tv, ok := e.info.Types[st.Rhs[0]]; !ok || tv.Value == nil {
-					d.occ(start) // the compound op itself may fail
+					d.occ(start, true) // the compound op itself may fail
 				}
 			}
 			if op == "<<" || op == ">>" {
 				if tv, ok := e.info.Types[st.Rhs[0]]; !ok || tv.Value == nil {
 					if t := e.goTypeOf(st.Rhs[0]); t != nil {
 						if b, isB := types.Unalias(t).Underlying().(*types.Basic); !isB || b.Info()&types.IsUnsigned == 0 {
-							d.occ(start)
+							d.occ(start, true) // a shift by a non-constant signed count may fail
 						}
 					}
 				}
@@ -1971,14 +2158,26 @@ func (e *emitter) unseqClassify(s ast.Stmt, ctx *unseqCtx) unseqDecision {
 	default:
 		return refuse("statement form outside the pilot grammar")
 	}
-	d.admitted = d.reason == "" && d.calls >= 1 && d.observable()
+	// THE TRIGGER (Stage E E3, refined at Stage E6a — RATIFIED [USER] 2026-09-22, the Stage E5
+	// landing record item 1, relayed): a sweep enters the graph iff some occurrence is unordered
+	// against an EFFECTFUL event, OR some FAILING occurrence is unordered against another FAILING
+	// occurrence across an E1 participant's window (or against a participant whose own completion
+	// may fail) — panic identity is an observable (spec#Order_of_evaluation orders only the calls,
+	// receives and logical operations against each other; which of two unordered failing operations
+	// panics first is spec-open, and gc realizes either, docs/evidence/2026-09-05_e13-b/
+	// gc-realization.txt). The refinement admits the panic-vs-panic sweeps with NO effectful event
+	// (`iv.(int) + len(make([]int, t[k]))` — E13's rows the legacy probe realized) so that the probe
+	// can retire without narrowing them. A sweep with no event at all (`a[i] + b[j]`) stays on the
+	// legacy path — the general form is POSED, not taken (`observable`'s comment). Every other
+	// in-grammar sweep has every edge forced and the legacy path realizes that unique order.
+	d.admitted = d.reason == "" && d.observable()
 	if d.reason == "" && !d.admitted {
 		if d.calls == 0 {
-			d.reason = "no call occurrence (legacy path: nothing with an effect to reorder against)"
+			d.reason = "no call occurrence (legacy path: no effectful event to reorder against, and no failing occurrence unordered against a failing participant window — Stage E6a trigger)"
 		} else if d.nonEvents == 0 {
 			d.reason = "no non-event occurrence beside the call(s) (legacy path: every edge forced)"
 		} else {
-			d.reason = "no occurrence observable against an effectful event (legacy path: every edge forced — Stage E E3 trigger)"
+			d.reason = "no occurrence observable against an effectful event or another failing occurrence (legacy path: every edge forced — Stage E E3 trigger, refined at E6a)"
 		}
 	}
 	return d
@@ -1997,7 +2196,7 @@ func (e *emitter) unseqClassify(s ast.Stmt, ctx *unseqCtx) unseqDecision {
 // plan atom is deferred), as does an interface-typed target beside a planned one
 // (the store's value would box inside the graph).
 func (e *emitter) unseqMultiAssign(st *ast.AssignStmt, ctx *unseqCtx, d *unseqDecision) bool {
-	start := d.seq // the occurrence window's start (unseqDecision.occ)
+	start := d.mark() // the occurrence window's start (unseqDecision.occ)
 	refuse := func(why string) bool {
 		if d.reason == "" {
 			d.reason = why
@@ -2064,7 +2263,7 @@ func (e *emitter) unseqMultiAssign(st *ast.AssignStmt, ctx *unseqCtx, d *unseqDe
 				if _, ok := e.unseqExpr(r.Index, ctx, d); !ok {
 					return false
 				}
-				d.occ(start)
+				d.occ(start, false) // the comma-ok lookup never fails
 				return true
 			}
 		case *ast.TypeAssertExpr:
@@ -2156,7 +2355,7 @@ func (e *emitter) unseqMultiTarget(l ast.Expr, define bool, ctx *unseqCtx, d *un
 			}
 			return "global", true
 		}
-		if !e.unseqFieldTarget(t, ctx, d) {
+		if _, ok := e.unseqFieldTarget(t, ctx, d); !ok {
 			return "", false
 		}
 		return "planned", true
@@ -2170,7 +2369,7 @@ func (e *emitter) unseqMultiTarget(l ast.Expr, define bool, ctx *unseqCtx, d *un
 			}
 			return "planned", true
 		}
-		if !e.unseqElemTarget(t, ctx, d) {
+		if !e.unseqElemTarget(t, ctx, d, false) {
 			return "", false
 		}
 		return "planned", true
@@ -2192,7 +2391,7 @@ func (e *emitter) unseqMultiTarget(l ast.Expr, define bool, ctx *unseqCtx, d *un
 // private local's target plan is order-transparent), a `pkg.V` qualified
 // package-level variable, or a slice element.
 func (e *emitter) unseqReadWriteTarget(lv ast.Expr, ctx *unseqCtx, d *unseqDecision) bool {
-	start := d.seq // the occurrence window's start (unseqDecision.occ)
+	start := d.mark() // the occurrence window's start (unseqDecision.occ)
 	switch l := ast.Unparen(lv).(type) {
 	case *ast.Ident:
 		loc, isPkg, ok := e.unseqVarTarget(l, false, ctx, d)
@@ -2206,17 +2405,18 @@ func (e *emitter) unseqReadWriteTarget(lv ast.Expr, ctx *unseqCtx, d *unseqDecis
 			return false
 		}
 		if isPkg || e.unseqAddrTaken(ctx.body)[e.info.Uses[l]] {
-			d.occ(start) // the load through the target reads a mutable location
+			d.occ(start, false) // the load through the target reads a mutable location
 		}
 		return true
 	case *ast.SelectorExpr:
 		if _, isQual := e.unseqQualifiedPackageVar(l); !isQual {
 			// Stage E E2: a field compound target — the plan (frozen base), the
 			// LOAD a mutable read.
-			if !e.unseqFieldTarget(l, ctx, d) {
+			throughPtr, ok := e.unseqFieldTarget(l, ctx, d)
+			if !ok {
 				return false
 			}
-			d.occ(start)
+			d.occ(start, throughPtr) // the load: nil-checked through a pointer base (may fail), a plain read on a struct variable
 			return true
 		}
 		pv, ok := e.unseqQualifiedTarget(l, d)
@@ -2229,7 +2429,7 @@ func (e *emitter) unseqReadWriteTarget(lv ast.Expr, ctx *unseqCtx, d *unseqDecis
 			}
 			return false
 		}
-		d.occ(start) // the load of a package-level variable is a mutable read
+		d.occ(start, false) // the load of a package-level variable is a mutable read
 		return true
 	case *ast.IndexExpr:
 		if _, isMap := e.unseqMapBase(l.X, d); isMap {
@@ -2239,17 +2439,17 @@ func (e *emitter) unseqReadWriteTarget(lv ast.Expr, ctx *unseqCtx, d *unseqDecis
 			if !e.unseqMapTarget(l, ctx, d) {
 				return false
 			}
-			d.occ(start)
+			d.occ(start, false) // the map load never fails (a nil map reads the zero value)
 			return true
 		}
-		return e.unseqElemTarget(l, ctx, d)
+		return e.unseqElemTarget(l, ctx, d, true) // the compound load bounds-checks
 	case *ast.StarExpr:
 		// Stage E E2: `*p op= e` — the plan freezes the pointer VALUE; the LOAD
 		// is a mutable read (nil-checked).
 		if !e.unseqDerefTarget(l, ctx, d) {
 			return false
 		}
-		d.occ(start)
+		d.occ(start, true) // the load through the frozen pointer is nil-checked (may fail)
 		return true
 	}
 	if d.reason == "" {

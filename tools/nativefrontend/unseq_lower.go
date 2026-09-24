@@ -561,6 +561,17 @@ func (b *unseqBuilder) call(c *ast.CallExpr, maxResults int) ([]any, error) {
 	var recvArg any // Stage E E3: a method call's receiver argument (nil for a function)
 	switch fn := ast.Unparen(c.Fun).(type) {
 	case *ast.SelectorExpr:
+		if _, isQual := e.qualifiedPkgRef(fn); isQual {
+			// Stage E6a: a qualified call into an imported source unit — the static
+			// callee value over the path-qualified FuncId (emitQualifiedCall's name).
+			obj, isFn := e.info.Uses[fn.Sel].(*types.Func)
+			if !isFn {
+				return nil, unsup("unseq lowering: qualified callee %s is not a function", fn.Sel.Name)
+			}
+			sig, _ = obj.Type().(*types.Signature)
+			callee = map[string]any{"expr": "func-value", "func": e.funcWireName(obj), "captured": []any{}}
+			break
+		}
 		// Stage E E3: a method call on a concrete receiver — the callee is the
 		// method's function value, the receiver its first argument.
 		r, key, s, err := b.methodCallee(fn)

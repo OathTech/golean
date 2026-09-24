@@ -238,6 +238,33 @@ cd "$ROOT"
 # excluded file (its one constraint, state_trace_nop.go `!with_tla`, is the
 # standing custom-tag acceptance). Structural diff:
 # docs/evidence/2026-09-11_review-boundary/twin-repin/structural-diff.txt.
+# [AGENT] 2026-09-24, lane core/unseq-stage-e6a-0924 (Stage E6a of the
+# evaluation-order model v2.1; RULED [USER] 2026-09-22, the Stage E5 landing
+# record item 2 — WIDEN the whole-sweep grammar to non-main units, «the raft
+# twin re-pins with a written reason», relayed): e1a87725… -> 1c4e7038….
+# The unit boundary of the graph grammar is GENERALIZED (tools/nativefrontend/
+# unseq.go: a callee of ANY source unit — bare or `pkg.F`-qualified — and a
+# method of any source unit's named struct; Stage C's «callee outside the main
+# package» was the pilot's scope), the trigger REFINED (a failing occurrence
+# unordered against an E1 participant's window holding another failing
+# occurrence — panic identity), `len`/`cap` admitted over map / channel
+# operands. THE SOLE STRUCTURAL CHANGE OF THIS TWIN: THREE `unseq` graphs BORN —
+# raft.isHardStateEqual (`a.GetTerm() == b.GetTerm() && a.GetVote() == …`: the
+# HardState getters' nil-checked field reads unordered against each other
+# across the &&-chain's E1 windows), raft.MustSync (the same getters over two
+# HardStates), raftpb.(*Snapshot).SizeMessage (a compound `n += …` whose
+# nil-checked field read is unordered against the sibling method call) — 0
+# added / 0 removed funcs, methods, types, globals, methodSets, fileOrder; the
+# 128 `unseq-probe` statements UNCHANGED (their sweeps stay legacy: every one
+# is refused by the STRUCT-TYPE grammar — `raft.raft`, `raftpb.Message`,
+# `tracker.Progress`, `raft.raftLog` carry interface / defined-non-struct
+# fields — not by the unit boundary; docs/2026-09-24_unseq-stage-e6-design.md
+# §E6a, the residue table); every other changed entry differs ONLY by
+# program-wide temporary renumbering ($uN cells consume the counter). Per-
+# function counts + the leaf classes: docs/evidence/2026-09-24_unseq-stage-e6a/
+# twin-structural-diff.txt. Raft's twin driver's observations are unchanged
+# (the born graphs' sets are singletons — the getters cannot fail on the
+# twin's non-nil states — measured by the corpus twin rows and the full run).
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/check-frontend-pins.XXXXXX")"
 trap 'rm -rf "$WORK"' EXIT
 

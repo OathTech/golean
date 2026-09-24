@@ -45,6 +45,19 @@ func strSliceVsCall() int {
 	return int(s[i:][0]) + m()
 }
 
+// STATUS-DIVERSE (Stage E6a, 2026-09-24 — the OWED apparatus row of the E5 audit fix round F4, design §E5e): int(s[i]) + m()
+// with i captured and m: i = 9 (returns 5). The byte read's bounds check before m succeeds ('a' 97 + 5 = 102, status ok);
+// after m it FAILS (index out of range [9] with length 2, status panic — gc's, 20/20: the plain byte read is deferred after the
+// call). One sweep, one `unseq` graph, two members that differ in STATUS — declared through the manifest's `statuses=ok+panic`
+// set (the membership lane's status-set declaration, BUG-044 / audit F8, 2026-08-08 — the mechanism E5e believed unreachable
+// from a row; it was reachable through `params`, not `expected_status`, as `binop-order/operand-panic-vs-call` already shows).
+func strIndexStatusDiverse() int {
+	s := "ab"
+	i := 0
+	m := func() int { i = 9; return 5 }
+	return int(s[i]) + m()
+}
+
 // STRICT CONTROL: len(s) + m() with s captured (m: s = "xyz", returns 5): len is an E1 participant
 // and s's read lies inside its window — forced before m: 2 + 5 = 7 on every stream (legacy by the
 // trigger, every edge forced).

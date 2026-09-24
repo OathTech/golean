@@ -358,8 +358,11 @@ func TestPhase1TargetOperandsAreProbed(t *testing.T) {
 	if err != nil {
 		t.Fatalf("whole export refused: %v", err)
 	}
+	// Stage E6a (2026-09-24): `tgtAssertVsMake` LEFT this list — the target's assertion is unordered
+	// against `t[k]` inside make's window (two FAILING occurrences, panic identity observable), so the
+	// refined trigger admits the sweep as a graph (the one-graph list below). The two `&a[i]` / array-base
+	// shapes stay probed: the ELEMENT ADDRESS (`index-addr`) and arrays as index bases are E6b's axis.
 	for fn, want := range map[string]int{
-		"tgtAssertVsMake":      1, // Stage E E4: make is an E1 participant WITHOUT effect — no effectful event, the sweep stays legacy (probed)
 		"arrayBaseTargetVsLen": 1,
 		"addrAssertLeftCall":   1,
 	} {
@@ -383,12 +386,14 @@ func TestPhase1TargetOperandsAreProbed(t *testing.T) {
 	// Stage E E3 (2026-09-21): a RECEIVE on the right-hand side (`x[iv.(int)] = <-ch`) is an event
 	// occurrence — one graph, no probe.
 	// Stage E E4 (2026-09-21): `make` is an E1 participant WITHOUT effect, so `x[iv.(int)] =
-	// len(make([]int, t[k]))` has no effectful event and stays on the legacy path (above).
+	// len(make([]int, t[k]))` had no effectful event and stayed on the legacy path — until Stage E6a
+	// (2026-09-24, the trigger refinement RATIFIED [USER] 2026-09-22): the assertion and `t[k]` are two
+	// FAILING occurrences unordered against each other, so the sweep is a graph now (panic identity).
 	// Stage E5 E5a (2026-09-22): `min` is an E1 participant (reading (a), RATIFIED [USER]
 	// 2026-09-22), so `x[iv.(int)] = min(q, t[k]) + wit(5)` — the target's assertion unordered
 	// against t[k] inside min's window and against the later wit — lowers as one graph, no probe.
 	for _, fn := range []string{"tgtAssertVsLenHoist", "tgtAssertVsCall", "compoundAssertVsLen",
-		"mapKeyAssertVsLen", "mapTgtAssertVsCall", "tgtAssertVsRecv", "tgtAssertVsMin"} {
+		"mapKeyAssertVsLen", "mapTgtAssertVsCall", "tgtAssertVsRecv", "tgtAssertVsMin", "tgtAssertVsMake"} {
 		if u := funcRefusal(t, program, fn); u != "" {
 			t.Errorf("%s: a pilot-grammar sweep must lower as an unseq graph, got refusal %q", fn, u)
 			continue

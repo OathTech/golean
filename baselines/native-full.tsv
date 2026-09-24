@@ -1,5 +1,5 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 3760 (3524 PASS / 236 FAIL)
+# cases: 3761 (3525 PASS / 236 FAIL)
 # re-pinned: 2026-09-20 [AGENT], core/unseq-stage-d-0920, STAGE D of the evaluation-order model v2.1 (route α —
 #   docs/2026-09-20_unseq-stage-d-design.md §2–§3; handoff docs/2026-09-20_unseq-stage-d-handoff.md): NO row added, NO
 #   result changed, ONE stage changed — spec-examples-stmt/continue-label PASS/- -> PASS/confluent, the strict depth=128
@@ -231,6 +231,34 @@
 #   choice trace vs the audited tip byte-identical outside the born rows — choice-trace-fix.txt). 3757 + 3 = 3760; 3522 + 2 = 3524;
 #   235 + 1 = 236. No PASS -> non-PASS. The one 5a-class item (imported-goose/channel/google-search: STALE certification for the
 #   changed core/decoder inputs; the train installs the fresh candidate at step 5a) is not re-pinned here.
+# re-pinned: 2026-09-24 [AGENT], core/unseq-stage-e6a-0924, STAGE E6a of the evaluation-order model v2.1 — the first slice of the
+#   batched breaking window (docs/2026-09-23_batched-window-charter.md row E6a; RULED [USER] 2026-09-22 items 1–3/6 and 2026-09-24
+#   «I'm happy to go with your rec», relayed): (1) THE TRIGGER REFINED — a sweep enters the `unseq` graph iff some occurrence is
+#   unordered against an EFFECTFUL event OR some FAILING occurrence is unordered against an E1 participant's window that holds another
+#   failing occurrence or may itself fail (`make`'s size check) — panic identity is the observable (the event-mediated scope; the
+#   GENERAL «any two unordered failing occurrences» form is POSED, not taken — it would move E3/E4/E12's (b) pins as entries; its
+#   measured footprint is 856 sweeps, docs/evidence/2026-09-24_unseq-stage-e6a/trigger-general-footprint.txt); `len`/`cap` admitted
+#   over map / channel operands (the panic-vs-panic rows were refused by the grammar there, not by the trigger); (2) the UNIT BOUNDARY
+#   GENERALIZED — a callee / method of ANY source unit, `pkg.F` qualified callees (the raft twin re-pins: 3 graphs born, 128 probes
+#   unchanged — every one is refused by the STRUCT-TYPE grammar, not by the unit boundary; scripts/check-frontend-pins); (3) the two
+#   decoder follow-ups (an `after` edge on a literal allocate; a source-local atom's annotation vs its declaration — 3 mutants, 49 → 52);
+#   (4) the OWED status-diverse row. Design docs/2026-09-24_unseq-stage-e6-design.md §E6a; handoff docs/2026-09-24_unseq-stage-e6a-handoff.md.
+#   ONE row BORN: evalorder/unseq-strings/str-index-status-diverse PASS/membership {102 ok, panic `[9] with length 2`} — the first
+#   STATUS-DIVERSE `unseq` row, declared through the membership lane's `statuses=ok+panic` (the BUG-044 / audit-F8 mechanism of
+#   2026-08-08, which E5e's records wrongly called unreachable from a row — it rides `params`; gc's member the panic, 20/20 under
+#   GOMAXPROCS 1/8, default and -N -l). TWO strict rows → MEMBERSHIP, each RED-FIRST on the candidate (scripts/diff-one FAIL/differential:
+#   the machine's canonical tape realized the OTHER spec-legal panic) and moved with the reason written (E5c's F6 precedent): builtins/
+#   e13-sibling-panic-order/assert-left-min-inline {conversion, `[5] with length 2`} (`iv.(int) + min(t[k], 1)`; gc the conversion,
+#   20/20), channels/recv-order/dead-recv-len-operand {conversion, `[7] with length 0`} (`iv.(int) + len(b[j])`; gc the conversion,
+#   20/20; BUG-032's Cases line, amended) — E13's axis, (a) ENVELOPED already. FOURTEEN rows leave the legacy `unseqPanic` probe for
+#   the graph with their results and stages UNCHANGED (sets reproduced, gc inside): builtins/len-vs-call-order/{hint-panicky-between,
+#   make-slice-panicky-between, make-chan-cap-panicky-between, make-index-left, make-inner-len} (membership), {make-hint-panic-free,
+#   make-hint-map-read, make-hint-call, make-nil-only-none/-left/-operand/-both} (strict), builtins/e13-sibling-panic-order/{assert-
+#   left-make-slice, tgt-assert-vs-make} (membership). Census 179 → 265 admitted (+86 corpus in 41 packages + 7 twin; 0 lost); legacy
+#   probes 58 → 47 corpus (len-vs-call-order 15 → 6, e13 11 → 9), the twin 128 → 128 (the residue by class: the handoff §3). Measured
+#   by scripts/diff-one on all 395 rows of the 41 affected packages + the born row's package (392 unchanged, 1 born, 2 moves; docs/
+#   evidence/2026-09-24_unseq-stage-e6a/diff-one-e6a.txt) before this pin; the full gate line is in the evidence README. 3760 + 1 =
+#   3761; 3524 + 1 = 3525; 236 unchanged. No PASS -> non-PASS.
 # Previous pin:
 # re-pinned: 2026-09-20 [AGENT], core/unseq-stage-c-0919, STAGE C AUDIT FIX ROUND (docs/2026-09-20_unseq-stage-c-audit.md, FIX-FIRST; dispositions
 #   docs/2026-09-19_unseq-stage-c-handoff.md «Audit fix round (2026-09-20)»): SIX rows ADDED, no existing row changed. (F2) evalorder/unseq-const-cell/
@@ -1894,7 +1922,7 @@ PASS	builtins/e13-sibling-panic-order/assert-left-copy	membership
 PASS	builtins/e13-sibling-panic-order/assert-left-len-slice-call	membership
 PASS	builtins/e13-sibling-panic-order/assert-left-make-slice	membership
 PASS	builtins/e13-sibling-panic-order/assert-left-method	membership
-PASS	builtins/e13-sibling-panic-order/assert-left-min-inline	-
+PASS	builtins/e13-sibling-panic-order/assert-left-min-inline	membership
 PASS	builtins/e13-sibling-panic-order/assert-left-new-call	membership
 PASS	builtins/e13-sibling-panic-order/assert-left-recv-w	membership
 PASS	builtins/e13-sibling-panic-order/assert-middle	membership
@@ -2142,7 +2170,7 @@ PASS	channels/recv-order/binary	-
 PASS	channels/recv-order/call-arg	-
 PASS	channels/recv-order/composite-lit	-
 PASS	channels/recv-order/dead-recv-len-embedded	-
-PASS	channels/recv-order/dead-recv-len-operand	-
+PASS	channels/recv-order/dead-recv-len-operand	membership
 PASS	channels/recv-order/else-if	-
 PASS	channels/recv-order/for-cond	-
 PASS	channels/recv-order/for-init	-
@@ -2422,6 +2450,7 @@ PASS	evalorder/unseq-maplit/map-lit-key-vs-call	membership
 PASS	evalorder/unseq-maplit/map-lit-const-control	-
 PASS	evalorder/unseq-strings/str-index-vs-call	membership
 PASS	evalorder/unseq-strings/str-index-panic-vs-print	membership
+PASS	evalorder/unseq-strings/str-index-status-diverse	membership
 PASS	evalorder/unseq-strings/str-slice-vs-call	membership
 PASS	evalorder/unseq-strings/str-len-vs-call	-
 PASS	evalorder/unseq-addr/addr-arg-vs-read	membership
