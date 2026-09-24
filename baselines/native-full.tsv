@@ -1,5 +1,5 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 3761 (3525 PASS / 236 FAIL)
+# cases: 3768 (3532 PASS / 236 FAIL)
 # re-pinned: 2026-09-20 [AGENT], core/unseq-stage-d-0920, STAGE D of the evaluation-order model v2.1 (route α —
 #   docs/2026-09-20_unseq-stage-d-design.md §2–§3; handoff docs/2026-09-20_unseq-stage-d-handoff.md): NO row added, NO
 #   result changed, ONE stage changed — spec-examples-stmt/continue-label PASS/- -> PASS/confluent, the strict depth=128
@@ -259,6 +259,26 @@
 #   by scripts/diff-one on all 395 rows of the 41 affected packages + the born row's package (392 unchanged, 1 born, 2 moves; docs/
 #   evidence/2026-09-24_unseq-stage-e6a/diff-one-e6a.txt) before this pin; the full gate line is in the evidence README. 3760 + 1 =
 #   3761; 3524 + 1 = 3525; 236 unchanged. No PASS -> non-PASS.
+# re-pinned: 2026-09-24 [AGENT], core/unseq-stage-e6a-0924, the Stage E6a AUDIT FIX ROUND (docs/2026-09-24_unseq-stage-e6a-audit.md,
+#   verdict FIX-FIRST (records, small); the dispositions the [AGENT] coordinator's, disclosed at the merge ask; design
+#   docs/2026-09-24_unseq-stage-e6-design.md §E6a «the audit fix round», handoff docs/2026-09-24_unseq-stage-e6a-handoff.md §5):
+#   SEVEN rows BORN in builtins/e13-sibling-panic-order — the audit's F1, BUG-116: a LATE-realized failing NON-CALL operand LEFT of an
+#   INLINE built-in E1 participant whose own operand panics, CALL-FREE — idx-left-vs-min-operand (`s[i] + min(t[k], 1)` {[9] with
+#   length 1, [5] with length 2}), idx-left-vs-len-slice-expr (`s[i] + len(t[k:])` {[9], slice bounds [5:2]}), deref-left-vs-len-operand
+#   (`*p + len(b[j])` {nil dereference, [5] with length 1}), ptr-field-left-vs-len-operand (`q.x + len(b[j])` {nil dereference, [5]}),
+#   div-left-vs-len-operand (`x/y + len(b[j])` {integer divide by zero, [5]}), shift-left-vs-len-operand (`x<<s + len(b[j])` {negative
+#   shift amount, [5]}), compound-load-vs-len-operand (`x[9] += len(b[j])` {[9], [5]}) — each PASS/membership (enumerated=2) with gc's
+#   member the BUILT-IN's operand's panic, 20/20 under GOMAXPROCS 1/8, default and -N -l (docs/evidence/2026-09-24_unseq-stage-e6a/
+#   fix-round/gc-draws-fix.txt). RED-FIRST on MAIN 3fb4a0d1's frontend + binary: as these membership rows FAIL/membership (main's
+#   machine enumerates a SINGLETON — the left operand's panic alone), as strict twins of the same subjects FAIL/differential (Lean the
+#   left panic ≠ Go the built-in's operand's) — observed ∉ modeled on main, a WRONG ANSWER the E6a candidate's refined trigger fixed
+#   silently (the sweep is ONE `unseq` graph holding both panics); the two assertion-left rows moved at E6a are the class's exception
+#   (gc evaluates assertions early). The main-side PASS → non-PASS is NOT a flip of a tracked row: no tracked row had the call-free
+#   shape; the seven are born here. The DECODER change of the same round (the R1 environment scope-exact — audit F2; mutants 52 → 55)
+#   refuses forged wires only: no row moves (the whole-corpus choice trace vs the audited tip 1f0dee94 is byte-identical outside the
+#   seven born rows — the handoff §5). Measured by scripts/diff-one on the seven rows on both sides (docs/evidence/2026-09-24_unseq-
+#   stage-e6a/fix-round/diff-one-{fix,main-red-first,main-strict}.txt) before this pin; the full gate line is in the evidence README.
+#   3761 + 7 = 3768; 3525 + 7 = 3532; 236 unchanged. No PASS -> non-PASS.
 # Previous pin:
 # re-pinned: 2026-09-20 [AGENT], core/unseq-stage-c-0919, STAGE C AUDIT FIX ROUND (docs/2026-09-20_unseq-stage-c-audit.md, FIX-FIRST; dispositions
 #   docs/2026-09-19_unseq-stage-c-handoff.md «Audit fix round (2026-09-20)»): SIX rows ADDED, no existing row changed. (F2) evalorder/unseq-const-cell/
@@ -1941,11 +1961,16 @@ PASS	builtins/e13-sibling-panic-order/compound-call-target-vs-call	membership
 PASS	builtins/e13-sibling-panic-order/compound-call-target-vs-len	membership
 PASS	builtins/e13-sibling-panic-order/compound-call-target-vs-recv	membership
 PASS	builtins/e13-sibling-panic-order/compound-index-vs-len	membership
+PASS	builtins/e13-sibling-panic-order/compound-load-vs-len-operand	membership
 PASS	builtins/e13-sibling-panic-order/conv-left-call	membership
 PASS	builtins/e13-sibling-panic-order/deref-left-call	membership
 PASS	builtins/e13-sibling-panic-order/deref-left-index-arg-call	membership
+PASS	builtins/e13-sibling-panic-order/deref-left-vs-len-operand	membership
 PASS	builtins/e13-sibling-panic-order/div-left-call	membership
+PASS	builtins/e13-sibling-panic-order/div-left-vs-len-operand	membership
 PASS	builtins/e13-sibling-panic-order/forced-arg-only	-
+PASS	builtins/e13-sibling-panic-order/idx-left-vs-len-slice-expr	membership
+PASS	builtins/e13-sibling-panic-order/idx-left-vs-min-operand	membership
 PASS	builtins/e13-sibling-panic-order/iface-cmp-left-call	membership
 PASS	builtins/e13-sibling-panic-order/index-arg-sibling	membership
 PASS	builtins/e13-sibling-panic-order/index-assert-left-call	membership
@@ -1959,10 +1984,12 @@ PASS	builtins/e13-sibling-panic-order/map-compound-index-key-vs-recv	membership
 PASS	builtins/e13-sibling-panic-order/map-key-assert-vs-len	membership
 PASS	builtins/e13-sibling-panic-order/map-lit-payload-vs-call	membership
 PASS	builtins/e13-sibling-panic-order/map-tgt-assert-vs-call	membership
+PASS	builtins/e13-sibling-panic-order/ptr-field-left-vs-len-operand	membership
 PASS	builtins/e13-sibling-panic-order/recover-assert-vs-call-w	membership
 PASS	builtins/e13-sibling-panic-order/recover-assert-vs-len	-
 PASS	builtins/e13-sibling-panic-order/send-chan-index	membership
 PASS	builtins/e13-sibling-panic-order/shift-left-call	membership
+PASS	builtins/e13-sibling-panic-order/shift-left-vs-len-operand	membership
 PASS	builtins/e13-sibling-panic-order/slice-left-len-call	-
 PASS	builtins/e13-sibling-panic-order/slice-lit-payload-vs-call	membership
 PASS	builtins/e13-sibling-panic-order/slice-lit-payload-vs-call-sinkroot	membership

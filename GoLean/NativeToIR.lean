@@ -51,10 +51,16 @@ machine-reserved entries — BEFORE any body decodes). -/
 private structure LowerCtx where
   nGlobals : Nat
   typeIdx : Std.HashMap String TypeIdx
-  /-- Stage E6a R1 (2026-09-24): the locals the ENCLOSING function declares — params,
-  results, every `declare` target / `var` declaration / `range` variable of its body, with
-  the declared type (`jsonDeclaredLocals`); the `unseq` arm checks every source-local atom's
-  `type` annotation against it. Empty outside a function body. -/
+  /-- Stage E6a R1 (2026-09-24): the locals IN SCOPE at the statement being decoded — the
+  enclosing function's params and results, then every `declare` target / `var` declaration /
+  `range` variable / `select` clause binder / `if`-`for` init declaration that PRECEDES the
+  statement in its enclosing blocks, in declaration order (`jsonDeclaredLocals`; the `block`
+  arm of `decodeStmt` folds the environment statement by statement, the control-flow arms
+  extend it for their bodies). The `unseq` arm resolves every source-local atom to the LAST
+  entry of its name — the innermost declaration in scope — and checks the atom's `type`
+  annotation against it (the E6a audit fix round, 2026-09-24, F2: the tip's flat per-function
+  table let a forged annotation equal to ANOTHER declaration of the same name pass — a
+  type-switch clause binder, a block-shadowed name). Empty outside a function body. -/
   locals : Array Param := #[]
 
 private abbrev LowerM := ReaderT LowerCtx (Except String)
@@ -884,7 +890,7 @@ boundary, audit N2) and of `recover` (D14). Stage E6a (2026-09-24) adds two
 named refusals ratified 2026-09-22 (the Stage E5 landing record items 3 and
 6): every SOURCE-LOCAL atom the node mentions is a local the enclosing
 function declares, its `type` annotation that declaration's (R1 —
-`unseqCheckLocalAtoms`, over `LowerCtx.locals`), and a LITERAL allocation
+`unseqCheckLocalAtoms`, over `LowerCtx.locals` — the locals IN SCOPE at the node since the audit fix round's F2), and a LITERAL allocation
 carries no `after` edge (the Stage E audit's F8). -/
 
 /-- Allowed key sets for `unseq` occurrence nodes, by `kind`. -/
@@ -1018,16 +1024,36 @@ private partial def jsonMentionsStmt (tags : List String) : Json → Bool
   | .arr xs => xs.any (jsonMentionsStmt tags)
   | _ => false
 
+/-- The keys of a statement node under which NESTED statements live — a body, a branch, an `init` /
+`post` statement, a clause: the block-scoping forms. E6a audit fix round (2026-09-24, the audit's F2):
+a declaration under one of these keys belongs to the INNER scope and never reaches the enclosing
+block's environment — `jsonDeclaredLocals` does not descend through them; the arm that decodes the
+nested statement extends the environment itself (`decodeStmt`'s `block` fold, `decodeIf`, `decodeFor`,
+`decodeRange`, the `select` arm). Every other statement kind — the `unseq` node with its `then`
+completion and its allocation bodies included — is ONE declaration site and is walked whole. -/
+private def nestedStmtKeys : String → List String
+  | "block" | "breakable" | "labeled" => ["body"]
+  | "if" => ["init", "then", "else"]
+  | "for" => ["init", "post", "condPre", "body"]
+  | "range" => ["body"]
+  | "select" => ["clauses", "default"]
+  | _ => []
+
 /-- Stage E6a R1 (2026-09-24; the Stage E5 audit re-verification's R1, RATIFIED [USER] 2026-09-22
 item 3 — «a decoder-wide cross-check of source-local annotations against their `declare` types»):
-every LOCAL a function body DECLARES, with its declared type — collected by a whole-body walk over
-the wire's own declaration spellings: every `{"target":"declare","id","type"}` target (an assignment's
-lhs, the allocation / built-in / sync / type-assert / chan-recv targets — the emitter's one target
-shape), every `var` statement's `decls`, and a `range` statement's implicitly declared key / value
-variables (typed by the range kind exactly as `decodeRange` types them: a map's key/value types, a
-channel's element, an index `int` + the element for slices / arrays / array pointers, the operand's
-kind for an integer range, `int` + `int32` for a string). The caller prepends the params and
-results. -/
+the LOCALS one statement DECLARES for the statements after it in its block, with their declared
+types — a walk over the wire's own declaration spellings: every `{"target":"declare","id","type"}`
+target (an assignment's lhs, the allocation / built-in / sync / type-assert / chan-recv targets — the
+emitter's one target shape), every `var` statement's `decls`, and a `range` statement's implicitly
+declared key / value variables (typed by the range kind exactly as `decodeRange` types them: a map's
+key/value types, a channel's element, an index `int` + the element for slices / arrays / array
+pointers, the operand's kind for an integer range, `int` + `int32` for a string). SCOPE-EXACT since
+the E6a audit fix round (2026-09-24, F2): the walk does NOT descend into a block-scoping statement's
+nested bodies (`nestedStmtKeys`) — what a `then` branch, a loop body or a `select` clause declares is
+theirs, not the enclosing block's; the `block` arm of `decodeStmt` folds these per statement into
+`LowerCtx.locals`, so at every statement the environment is exactly the declarations in scope
+before it (Go: a variable's scope begins at the END of its declaration — a statement never sees its
+own declarations). The tip's version walked the WHOLE body once per function (a flat table). -/
 private partial def jsonDeclaredLocals (path : String) : Json → LowerM (Array Param)
   | .obj kvs => do
       let mut acc : Array Param := #[]
@@ -1070,8 +1096,13 @@ private partial def jsonDeclaredLocals (path : String) : Json → LowerM (Array 
               acc := acc ++ (← push (var? "keyVar") (some (.int .int))) ++ (← push (var? "valVar") (some (.int .int32)))
           | _ => pure ()
       | _ => pure ()
-      for (_, v) in kvs.toList do
-        acc := acc ++ (← jsonDeclaredLocals path v)
+      -- the nested bodies of a block-scoping statement are the INNER scope's (F2)
+      let skip : List String := match kvs.get? "stmt" with
+        | some (Json.str tag) => nestedStmtKeys tag
+        | _ => []
+      for (k, v) in kvs.toList do
+        if !skip.contains k then
+          acc := acc ++ (← jsonDeclaredLocals path v)
       pure acc
   | .arr xs => do
       let mut acc : Array Param := #[]
@@ -1080,35 +1111,63 @@ private partial def jsonDeclaredLocals (path : String) : Json → LowerM (Array 
       pure acc
   | _ => pure #[]
 
+/-- The declarations an `init` statement (of an `if` / `for`) contributes to the statement's own
+scope: the init's declarations, looking THROUGH a wrapping `block` (the emitter may wrap an init
+with its hoists) — Go's rule makes an init's declarations visible in the condition, the branches,
+the loop body and the post statement, and nowhere after. -/
+private partial def initDeclaredLocals (path : String) (json : Json) : LowerM (Array Param) := do
+  match json with
+  | .obj kvs =>
+      match kvs.get? "stmt", kvs.get? "body" with
+      | some (Json.str "block"), some (.arr body) => do
+          let mut acc : Array Param := #[]
+          for i in [:body.size] do
+            acc := acc ++ (← initDeclaredLocals s!"{path}.body[{i}]" body[i]!)
+          pure acc
+      | _, _ => jsonDeclaredLocals path json
+  | _ => jsonDeclaredLocals path json
+
+/-- Decode under the environment extended by `more` (the declarations a control-flow statement
+brings into scope for its bodies). -/
+private def withLocals {α} (more : Array Param) (act : LowerM α) : LowerM α :=
+  withReader (fun ctx => { ctx with locals := ctx.locals ++ more }) act
+
 /-- Stage E6a R1: every SOURCE-LOCAL atom mentioned anywhere in an `unseq` node — an `ident` whose
-name is not a reserved `$` slot, a `ref` of a source local — must be DECLARED by the enclosing
-function, and an `ident`'s `type` annotation must be one of its declared types. Stage C's D9 trusted
-a source-local atom's annotation (the wire's word, not the decoder's knowledge): the E5 audit
-re-verification's mS1 / mS4 forged an annotation together with a `map-lookup`'s / `map` target
-plan's keyType on a PRIVATE map base and the wire decoded and ANSWERED; the emitter spells the
-annotation from the one go/types object the `declare` carries, so no emitted wire changes. A name
-declared with several types in one function (Go's block shadowing — the wire keeps the source
-names, GoCore scopes them lexically) is checked against the set of its declared types — recorded
-in the E6a design as the residual this flat table leaves. -/
+name is not a reserved `$` slot, a `ref` of a source local — must be a local IN SCOPE at the node
+(`LowerCtx.locals`: the enclosing function's params and results and the declarations that precede
+the node in its enclosing blocks), and an `ident`'s `type` annotation must be the type of the
+INNERMOST such declaration — the LAST entry of its name in the environment (a block-shadowing
+redeclaration, a type-switch clause's per-clause binder, a per-iteration loop-variable copy sit
+after the declaration they shadow). Stage C's D9 trusted a source-local atom's annotation (the
+wire's word, not the decoder's knowledge): the E5 audit re-verification's mS1 / mS4 forged an
+annotation together with a `map-lookup`'s / `map` target plan's keyType on a PRIVATE map base and
+the wire decoded and ANSWERED; the emitter spells the annotation from the one go/types object the
+`declare` carries, so no emitted wire changes. The E6a tip checked against the SET of every type
+the whole function declared under the name (a flat table) — the E6a audit's F2 forged a
+type-switch clause binder's annotation to the OTHER clause's type and the wire decoded and
+answered; since the fix round (2026-09-24) the environment is scope-exact and that forgery, the
+block-shadow forgery and an atom naming a local declared only later or in a sibling block all
+refuse by name (`Tests/unseq-wire/mut-local-{annotation-shadowed,shadow-other-decl,out-of-scope}`). -/
 private partial def unseqCheckLocalAtoms (locals : Array Param) (path : String) : Json → LowerM Unit
   | .obj kvs => do
       match kvs.get? "expr", kvs.get? "name" with
       | some (Json.str "ident"), some (Json.str n) =>
           if !n.startsWith "$" then
-            let decls := locals.filter (·.id == n)
-            if decls.isEmpty then
-              fail s!"unseq: source-local atom '{n}' at {path} has no declaration in the enclosing function (its params, results, `declare` targets, var and range declarations) — the graph may name only the function's own locals (Stage E6a R1, 2026-09-24); refused by name"
-            match kvs.get? "type" with
-            | some t =>
-                let ty ← decodeTy s!"{path}.type" t
-                if !decls.any (·.typ == ty) then
-                  fail s!"unseq: source-local atom '{n}' at {path} is annotated {repr ty}, which disagrees with its declaration {repr (decls.map (·.typ))} — a forged annotation must not type a graph operand (the Stage E5 audit re-verification's R1, ratified 2026-09-22; Stage E6a); refused by name"
-            | none => pure ()
+            match locals.findRev? (·.id == n) with
+            | none =>
+                fail s!"unseq: source-local atom '{n}' at {path} has no declaration in the enclosing function that is in scope at this statement (its params, results, and the `declare` / var / range / clause declarations that precede the statement in its enclosing blocks) — the graph may name only locals in scope (Stage E6a R1, scope-exact since the audit fix round 2026-09-24); refused by name"
+            | some d =>
+                match kvs.get? "type" with
+                | some t =>
+                    let ty ← decodeTy s!"{path}.type" t
+                    if d.typ != ty then
+                      fail s!"unseq: source-local atom '{n}' at {path} is annotated {repr ty}, which disagrees with its declaration {repr d.typ} (the innermost declaration of '{n}' in scope at this statement) — a forged annotation must not type a graph operand (the Stage E5 audit re-verification's R1, ratified 2026-09-22; Stage E6a; scope-exact since the E6a audit fix round 2026-09-24); refused by name"
+                | none => pure ()
       | _, _ => pure ()
       match kvs.get? "expr", kvs.get? "id" with
       | some (Json.str "ref"), some (Json.str n) =>
           if !n.startsWith "$" && !(locals.any (·.id == n)) then
-            fail s!"unseq: `ref` of '{n}' at {path} names no local the enclosing function declares (Stage E6a R1, 2026-09-24); refused by name"
+            fail s!"unseq: `ref` of '{n}' at {path} names no local the enclosing function declares in scope at this statement (Stage E6a R1, 2026-09-24); refused by name"
       | _, _ => pure ()
       for (_, v) in kvs.toList do
         unseqCheckLocalAtoms locals path v
@@ -1342,7 +1401,17 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
   match tag with
   | "block" =>
       let body ← StrictJson.array s!"{path}.body" (← StrictJson.field path obj "body")
-      pure (.block #[] (← body.mapIdxM (fun i s => decodeStmt results s!"{path}.body[{i}]" s)))
+      -- E6a audit fix round (2026-09-24, F2 — the R1 environment is SCOPE-EXACT): each statement
+      -- decodes under the locals declared BEFORE it in this block and in the enclosing scopes; its
+      -- own declarations join the environment for the statements AFTER it, never for itself.
+      let mut env := (← read).locals
+      let mut stmts : Array Stmt := #[]
+      for i in [:body.size] do
+        let s := body[i]!
+        stmts := stmts.push
+          (← withReader (fun ctx => { ctx with locals := env }) (decodeStmt results s!"{path}.body[{i}]" s))
+        env := env ++ (← jsonDeclaredLocals s!"{path}.body[{i}]" s)
+      pure (.block #[] stmts)
   | "defer" =>
       let callee ← decodeExpr s!"{path}.callee" (← StrictJson.field path obj "callee")
       let args ← StrictJson.array s!"{path}.args" (← StrictJson.field path obj "args")
@@ -1621,7 +1690,12 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
             let cpath := s!"{path}.clauses[{i}]"
             let co ← StrictJson.obj cpath cJ
             let ckind ← StrictJson.string s!"{cpath}.clause" (← StrictJson.field cpath co "clause")
-            let body ← decodeStmt results s!"{cpath}.body" (← StrictJson.field cpath co "body")
+            -- F2 (scope-exact R1): a receive clause's declared targets are in scope in THAT clause's
+            -- body and nowhere else.
+            let clauseLocals ← match co.get? "targets" with
+              | some tJ => jsonDeclaredLocals s!"{cpath}.targets" tJ
+              | none => pure #[]
+            let body ← withLocals clauseLocals (decodeStmt results s!"{cpath}.body" (← StrictJson.field cpath co "body"))
             match ckind with
             | "send" =>
                 checkAllowedKeys cpath co ["clause", "ch", "value", "elem", "body"]
@@ -1804,7 +1878,10 @@ partial def decodeRange (results : Array Param) (path : String) (obj : StrictJso
   let valVar := optString obj "valVar"
   let collJson ← StrictJson.field path obj "collection"
   let coll ← decodeExpr s!"{path}.collection" collJson
-  let body ← decodeStmt results s!"{path}.body" (← StrictJson.field path obj "body")
+  -- F2 (scope-exact R1): the range's implicitly declared key / value variables are in scope in the
+  -- body (`jsonDeclaredLocals` over the range node itself — its `body` is skipped by `nestedStmtKeys`).
+  let rangeLocals ← jsonDeclaredLocals path (Json.mkObj obj.toList)
+  let body ← withLocals rangeLocals (decodeStmt results s!"{path}.body" (← StrictJson.field path obj "body"))
   let lab : Stmt → Stmt := fun st =>
     match label with
     | some l => .labeled l st
@@ -2594,35 +2671,52 @@ partial def decodeVar (path : String) (obj : StrictJson.Obj) : LowerM Stmt := do
   pure (.seqn stmts)
 
 partial def decodeIf (results : Array Param) (path : String) (obj : StrictJson.Obj) : LowerM Stmt := do
-  let cond ← decodeExpr s!"{path}.cond" (← StrictJson.field path obj "cond")
-  let thenS ← decodeStmt results s!"{path}.then" (← StrictJson.field path obj "then")
-  let elseS ← (match obj.get? "else" with
-    | some e => decodeStmt results s!"{path}.else" e
-    | none => pure (.seqn #[]))
-  let core := Stmt.ifThenElse cond thenS elseS
+  -- F2 (scope-exact R1): the init statement decodes first, under the enclosing environment; what it
+  -- declares is in scope for the condition and both branches (Go's if-statement scope) — and nowhere
+  -- after (the enclosing block's fold skips `init`, `then`, `else`: `nestedStmtKeys`).
+  let core (initLocals : Array Param) : LowerM Stmt := withLocals initLocals do
+    let cond ← decodeExpr s!"{path}.cond" (← StrictJson.field path obj "cond")
+    let thenS ← decodeStmt results s!"{path}.then" (← StrictJson.field path obj "then")
+    let elseS ← (match obj.get? "else" with
+      | some e => decodeStmt results s!"{path}.else" e
+      | none => pure (.seqn #[]))
+    pure (Stmt.ifThenElse cond thenS elseS)
   match obj.get? "init" with
   | some initE =>
-      pure (.block #[] #[← decodeStmt results s!"{path}.init" initE, core])
-  | none => pure core
+      let initS ← decodeStmt results s!"{path}.init" initE
+      let initLocals ← initDeclaredLocals s!"{path}.init" initE
+      pure (.block #[] #[initS, ← core initLocals])
+  | none => core #[]
 
 partial def decodeFor (results : Array Param) (path : String) (obj : StrictJson.Obj)
     (label : Option String := none) : LowerM Stmt := do
   checkAllowedKeys path obj ["stmt", "body", "init", "cond", "post", "condPre"]
-  let cond ← (match obj.get? "cond" with
-    | some c => decodeExpr s!"{path}.cond" c
-    | none => pure (.boolLit true))
-  let body ← decodeStmt results s!"{path}.body" (← StrictJson.field path obj "body")
-  let post ← (match obj.get? "post" with
-    | some p => decodeStmt results s!"{path}.post" p
-    | none => pure (.seqn #[]))
-  -- `condPre`: the condition's hoisted call/alloc temps, re-run before
-  -- EVERY test (the test happens inside the loop body, so hoists are
-  -- legal here — control-flow slice, docs/2026-08-04_control-flow-design.md).
-  let condPre ← (match obj.get? "condPre" with
-    | some cp => do
-        let arr ← StrictJson.array s!"{path}.condPre" cp
-        arr.mapIdxM (fun i s => decodeStmt results s!"{path}.condPre[{i}]" s)
+  -- F2 (scope-exact R1): the init statement decodes first, under the enclosing environment; what it
+  -- declares is in scope for the condition, its hoists, the post statement and the body (Go's
+  -- for-statement scope) — and nowhere after (the enclosing block's fold skips them: `nestedStmtKeys`).
+  let initS? ← (match obj.get? "init" with
+    | some initE => some <$> decodeStmt results s!"{path}.init" initE
+    | none => pure none)
+  let initLocals ← (match obj.get? "init" with
+    | some initE => initDeclaredLocals s!"{path}.init" initE
     | none => pure #[])
+  let (cond, body, post, condPre) ← withLocals initLocals do
+    let cond ← (match obj.get? "cond" with
+      | some c => decodeExpr s!"{path}.cond" c
+      | none => pure (.boolLit true))
+    let body ← decodeStmt results s!"{path}.body" (← StrictJson.field path obj "body")
+    let post ← (match obj.get? "post" with
+      | some p => decodeStmt results s!"{path}.post" p
+      | none => pure (.seqn #[]))
+    -- `condPre`: the condition's hoisted call/alloc temps, re-run before
+    -- EVERY test (the test happens inside the loop body, so hoists are
+    -- legal here — control-flow slice, docs/2026-08-04_control-flow-design.md).
+    let condPre ← (match obj.get? "condPre" with
+      | some cp => do
+          let arr ← StrictJson.array s!"{path}.condPre" cp
+          arr.mapIdxM (fun i s => decodeStmt results s!"{path}.condPre[{i}]" s)
+      | none => pure #[])
+    pure (cond, body, post, condPre)
   -- `continue` must still run the post statement, but GoCore's `while` re-runs
   -- its whole body on continue. So run post at the top of the body except on
   -- the first iteration (guarded by a flag), then re-check the condition; this
@@ -2646,8 +2740,8 @@ partial def decodeFor (results : Array Param) (path : String) (obj : StrictJson.
     .assign (.var "$forFirst") (.boolLit true),
     whileStmt
   ]
-  match obj.get? "init" with
-  | some initE => pure (.block #[] #[← decodeStmt results s!"{path}.init" initE, loop])
+  match initS? with
+  | some initS => pure (.block #[] #[initS, loop])
   | none => pure loop
 
 end
@@ -2777,8 +2871,9 @@ private def decodeFunc (path : String) (json : Json) : LowerM Func := do
   let args ← params.mapIdxM (fun i p => decodeParam s!"{path}.params[{i}]" p)
   let res ← results.mapIdxM (fun i p => decodeParam s!"{path}.results[{i}]" p)
   let bodyJ ← StrictJson.field path obj "body"
-  -- Stage E6a R1: the function's declared locals, for the `unseq` arm's annotation cross-check
-  let locals := args ++ res ++ (← jsonDeclaredLocals s!"{path}.body" bodyJ)
+  -- Stage E6a R1: the function's params and results open the environment for the `unseq` arm's
+  -- annotation cross-check; the body's `block` fold adds each declaration as it is passed (F2).
+  let locals := args ++ res
   let body ← withReader (fun ctx => { ctx with locals }) (decodeStmt res s!"{path}.body" bodyJ)
   pure { id := ⟨name⟩, args, results := res, body, variadic }
 
@@ -2849,8 +2944,9 @@ private def decodeMethod (path : String) (json : Json) : LowerM (Func × MethodI
               variadic, wrapper }, info)
   else
       let bodyJ ← StrictJson.field path obj "body"
-      -- Stage E6a R1: the method's declared locals (the receiver among the params)
-      let locals := #[recv] ++ args ++ res ++ (← jsonDeclaredLocals s!"{path}.body" bodyJ)
+      -- Stage E6a R1: the receiver, params and results open the environment; the body's `block`
+      -- fold adds each declaration as it is passed (F2)
+      let locals := #[recv] ++ args ++ res
       let body ← withReader (fun ctx => { ctx with locals }) (decodeStmt res s!"{path}.body" bodyJ)
       pure ({ id := funcId, args := #[recv] ++ args, results := res, body,
               variadic, wrapper }, info)

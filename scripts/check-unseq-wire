@@ -25,7 +25,10 @@
 # map operand's keyType/valueType against the base's DECLARED map type in the `wide map-lookup` arm (keyType; valueType),
 # the E2 `map-get` head and the E2 `map` target plan (audit F1: a forged keyType decoded and answered); 52 since Stage E6a, 2026-09-24 — an
 # `after` edge on a LITERAL allocation (the Stage E audit's F8, ratified 2026-09-22), a source-local atom's `type` annotation forged
-# against its declaration and an atom naming an undeclared local (the E5 re-verification's R1, ratified 2026-09-22)), while the untouched W1 wire runs (the canonical
+# against its declaration and an atom naming an undeclared local (the E5 re-verification's R1, ratified 2026-09-22); 55 since the E6a audit fix
+# round, 2026-09-24 — the R1 environment SCOPE-EXACT (audit F2): a type-switch clause binder's annotation forged to the OTHER clause's type
+# (the audit's mS1-via-typeswitch-binder, which the tip's flat table decoded and answered), a block-shadowed name annotated with the OUTER
+# declaration's type, an atom naming a local declared only LATER in its block — on the NATIVE e6ats / e6ashadow witnesses), while the untouched W1 wire runs (the canonical
 # tape gives 2: mut first). Fail closed on a missing binary, a failed
 # regeneration, a decoded mutant or a refusal that does not name its cause.
 set -Eeuo pipefail

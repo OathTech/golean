@@ -792,6 +792,11 @@ WITNESSES = {
     # Stage E5 E5d (2026-09-22): the address of a variable as an invocation argument / as an allocation payload (hand-built + native)
     "e5daddr": ("e5daddr", [("e5daddr", "x", 0, e5daddr_graph(), None)]),
     "e5dlit": ("e5dlit", [("e5dlit", "m", 0, e5dlit_graph(), None)]),
+    # the Stage E6a audit fix round (2026-09-24), F2: the R1 declaration environment follows BLOCK / CLAUSE scope —
+    # NATIVE-ONLY positive controls: a type-switch binder declared per clause (e6ats), block shadowing with two types
+    # (e6ashadow); the three scope mutants below ride on their native wires.
+    "e6ats": ("e6ats", []),
+    "e6ashadow": ("e6ashadow", []),
 }
 
 
@@ -810,15 +815,49 @@ def _func(wire, name):
     raise SystemExit(f"function {name} not on the wire")
 
 
-def mutants(wires):
+def mutants(wires, natives):
     """(name, base witness, edit, needle) — the decoder must refuse each edit BY NAME.
-    The needle is the substring the refusal text must carry (design §5)."""
+    The needle is the substring the refusal text must carry (design §5). `natives` are the
+    frontend's own lowerings (a NATIVE-ONLY witness has no hand-built wire); `edit_native` finds
+    the i-th `unseq` node anywhere in the function body (nested blocks included)."""
     out = []
 
     def edit(name, base, fn, mutate, needle):
         w = copy.deepcopy(wires[base])
         node = _find_unseq(_func(w, fn)["body"]["body"])
         mutate(node, w)
+        out.append((name, w, needle))
+
+    def _all_unseq(node, acc):
+        if isinstance(node, dict):
+            if node.get("stmt") == "unseq":
+                acc.append(node)
+            for v in node.values():
+                _all_unseq(v, acc)
+        elif isinstance(node, list):
+            for v in node:
+                _all_unseq(v, acc)
+        return acc
+
+    def _idents(node, name, acc):
+        if isinstance(node, dict):
+            if node.get("expr") == "ident" and node.get("name") == name:
+                acc.append(node)
+            for v in node.values():
+                _idents(v, name, acc)
+        elif isinstance(node, list):
+            for v in node:
+                _idents(v, name, acc)
+        return acc
+
+    def edit_native(name, base, fn, select, mutate, needle):
+        """`select(graph, idents) -> bool` picks the ONE graph to edit BY CONTENT (the emitter's JSON has
+        sorted keys, so an `if`'s `else` precedes its `then` in the walk — a positional pick is not stable)."""
+        w = copy.deepcopy(natives[base])
+        graphs = [g for g in _all_unseq(_func(w, fn)["body"], []) if select(g, _idents)]
+        if len(graphs) != 1:
+            raise SystemExit(f"{base}/{fn}: expected exactly one selected unseq graph, found {len(graphs)}")
+        mutate(graphs[0], w, _idents)
         out.append((name, w, needle))
 
     def occ(node, oname):
@@ -1008,6 +1047,49 @@ def mutants(wires):
     # R1: an atom naming a local the function never declares (the audit's F8 nit: undeclared ids decoded and stuck late).
     edit("mut-local-undeclared", "e5daddr", "e5daddr",
          lambda n, w: occ(n, "read1")["head"].update(name="y"), "has no declaration in the enclosing function")
+    # ---- the Stage E6a audit fix round (2026-09-24), F2: the R1 environment is SCOPE-EXACT (the tip's flat per-function
+    # table let a forged annotation equal to ANOTHER declaration of the same name pass). (a) the audit's
+    # mS1-via-typeswitch-binder on the NATIVE e6ats wire: in the map[int]int clause's graph the binder `v`'s annotation,
+    # the map-get head's keyType and its key constant are forged to the OTHER clause's map[string]int / string / "a" —
+    # DECODED AND ANSWERED 1 on the tip. (b) the block-shadow residual the tip STATED: the inner graph's string `x`
+    # annotated with the OUTER declaration's int. (c) an atom naming a local declared only LATER in the block (`z`) —
+    # in the function's flat table, not in scope.
+    MAP_STR_INT = {"kind": "map", "key": STR, "value": INT}
+    def forge_typeswitch_binder(n, w, idents):
+        vs = idents(n, "v", [])
+        if not vs:
+            raise SystemExit("e6ats: no atom v in the first clause's graph")
+        for x in vs:
+            x["type"] = MAP_STR_INT
+        hit = 0
+        for o in n["occs"]:
+            if o["kind"] == "eval" and o["head"].get("expr") == "map-get":
+                o["head"]["keyType"] = STR
+                o["head"]["index"] = strc("a")
+                hit += 1
+        if hit != 1:
+            raise SystemExit(f"e6ats: expected one map-get head, found {hit}")
+    MAP_INT_INT_ = {"kind": "map", "key": INT, "value": INT}
+    edit_native("mut-local-annotation-shadowed", "e6ats", "e6ats",
+                lambda g, idents: any(x.get("type") == MAP_INT_INT_ for x in idents(g, "v", [])),  # the map[int]int clause's graph
+                forge_typeswitch_binder, "disagrees with its declaration")
+    def forge_shadow_outer_type(n, w, idents):
+        xs = idents(n, "x", [])
+        if not xs:
+            raise SystemExit("e6ashadow: no atom x in the inner graph")
+        for x in xs:
+            x["type"] = INT
+    edit_native("mut-local-shadow-other-decl", "e6ashadow", "e6ashadow",
+                lambda g, idents: any(x.get("type") == STR for x in idents(g, "x", [])),  # the inner block's graph (x a string)
+                forge_shadow_outer_type, "disagrees with its declaration")
+    def name_later_local(n, w, idents):
+        ss = idents(n, "s", [])
+        if not ss:
+            raise SystemExit("e6ashadow: no atom s in the outer graph")
+        ss[0]["name"] = "z"
+    edit_native("mut-local-out-of-scope", "e6ashadow", "e6ashadow",
+                lambda g, idents: any(x.get("type") == INT for x in idents(g, "x", [])),  # the outer graph (x an int)
+                name_later_local, "has no declaration in the enclosing function")
     return out
 
 
@@ -1147,7 +1229,7 @@ def build(frontend):
     for (ename, ewire) in edge_mutants(natives):
         files[f"{ename}.json"] = render(ewire)
     rows = []
-    for (mname, mwire, needle) in mutants(wires):
+    for (mname, mwire, needle) in mutants(wires, natives):
         files[f"{mname}.json"] = render(mwire)
         rows.append(f"{mname}\t{needle}")
     files["mutants.tsv"] = ("# mutant\trefusal needle (design docs/2026-09-19_unseq-stage-c-design.md §5); generated by build.py\n"

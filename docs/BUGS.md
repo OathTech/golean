@@ -1415,7 +1415,20 @@ alongside every `e.lifted` rollback (both paths).
   left-to-right point — so `iv.(int) + len(b[j])` is now GREEN with
   gc's interface-conversion panic whether or not a dead receive exists
   anywhere in the function, and the four standing over-refusal rows
-  flip PASS (the Cases below, all oracle-matched). With an event after,
+  flip PASS (the Cases below, all oracle-matched). [CORRECTED at the
+  Stage E6a audit fix round, 2026-09-24 (the audit's F1; BUG-116): «len
+  stays inline and realizes gc's left-to-right point» holds ONLY when the
+  inline material to the built-in's left is a type ASSERTION (gc evaluates
+  assertions EARLY — the assertion-left rows dead-recv-len-operand here
+  and e13-sibling-panic-order/assert-left-min-inline, both membership
+  since E6a). For an INDEX, a SLICE EXPRESSION, a DEREFERENCE, a
+  POINTER-FIELD read, a DIVISION, a SHIFT or a compound target's LOAD to
+  the built-in's left, gc realizes the built-in's OPERAND's panic first
+  (20/20 on all fifteen audited shapes), so the inline lexical order was
+  a WRONG ANSWER there — observed ∉ modeled, undetected until the E6a
+  audit because no corpus row had the call-free shape. Fixed at Stage E6a
+  by the refined trigger (the sweep is ONE `unseq` graph holding both
+  panics) and rowed by BUG-116's seven rows.] With an event after,
   the hoist is taken unless BOTH the residual operand can panic
   (`residualPanicFreeOperand` — real calls hoist out first, retiring
   the F23 `len(f())` instance) AND potentially-panicking INLINE
@@ -7433,6 +7446,62 @@ red row; it does not move the untriaged ratchet either. Proposed, not applied: t
 are unchanged. No widening of `crashview.go` is licensed by this evidence (shape (a) must stay refused;
 shape (b) is uncaptured); the follow-up observer lane's rule, its positive control and its FOUR forgery
 controls are specified in the evidence README §5a.
+
+## BUG-116 — the legacy inline `len`/`cap`/`min`/`max` path realized the LEFT operand's panic where gc realizes the BUILT-IN's OPERAND's panic: a late-failing NON-CALL operand (index / slice expression / dereference / pointer-field read / division / shift / compound LOAD) left of an inline built-in whose own operand panics, CALL-FREE — main's strict singleton excluded gc's member (observed ∉ modeled) [frontend lowering; wrong answer; FIXED at Stage E6a by the refined trigger; found by the Stage E6a adversarial audit, F1, 2026-09-24]
+
+- Status: fixed ([AGENT] worker, the Stage E6a audit fix round 2026-09-24, lane `core/unseq-stage-e6a-0924`; the
+  disposition the [AGENT] coordinator's, disclosed at the merge ask: «every detected gap is rowed» — [USER] Mike
+  2026-09-03, relayed; the fix itself is E6a's refined observability trigger, RULED [USER] 2026-09-22 item 1, relayed)
+- Pinned-by: differential
+- Cases: builtins/e13-sibling-panic-order/idx-left-vs-min-operand, builtins/e13-sibling-panic-order/idx-left-vs-len-slice-expr, builtins/e13-sibling-panic-order/deref-left-vs-len-operand, builtins/e13-sibling-panic-order/ptr-field-left-vs-len-operand, builtins/e13-sibling-panic-order/div-left-vs-len-operand, builtins/e13-sibling-panic-order/shift-left-vs-len-operand, builtins/e13-sibling-panic-order/compound-load-vs-len-operand
+- Discovered: 2026-09-24 by the Stage E6a adversarial audit (`docs/2026-09-24_unseq-stage-e6a-audit.md` F1: fifteen
+  call-free probe shapes, gc 20/20 on the built-in's operand's panic on every one; evidence
+  `docs/evidence/2026-09-24_unseq-stage-e6a-audit/{probe-results.txt,gc-draws.txt}`); pre-existing on main since the
+  A6 amendment of BUG-032 (2026-08-31) made the inline `len` the realized shape for these operands
+
+WHAT: `s[i] + min(t[k], 1)`, `s[i] + len(t[k:])`, `*p + len(b[j])`, `q.x + len(b[j])`, `x/y + len(b[j])`,
+`x<<s + len(b[j])`, `x[9] += len(b[j])` — with BOTH run-time checks failing and NO call anywhere in the sweep.
+spec#Order_of_evaluation orders «function calls, method calls, receive operations, and binary logical
+operations» against each other and forces an operand only inside the call that consumes it; which of the two
+checks panics first is spec-OPEN, and it is OBSERVED in the abort line's text. gc realizes the BUILT-IN's
+OPERAND's panic on every one of these shapes (20/20 draws under GOMAXPROCS 1/8, default and `-N -l` — the
+audit's fifteen, this entry's seven: `index out of range [5] with length 2`, `slice bounds out of range
+[5:2]`, `index out of range [5] with length 1` …): the built-in behaves as the call reading (a) says it is,
+and index / dereference / division / shift / load operands to its left are LATE in gc. Main `3fb4a0d1`'s legacy
+path — the A6 amendment's «with NO ordered event after the builtin in its sweep, len stays inline and realizes
+gc's left-to-right point» (BUG-032) — realized the LEFT operand's panic ALONE (`[9] with length 1`, the nil
+dereference, `integer divide by zero`, `negative shift amount`): a strict singleton that EXCLUDES gc's member —
+observed ∉ modeled, a silent WRONG ANSWER. Undetected because no corpus row had the call-free shape: every
+earlier E13 row of the form carried a trailing `wit(5)`, which admits the sweep to the `unseq` graph since
+Stage E (and the graph holds both panics). The assertion-left instances of the same syntactic class
+(`iv.(int) + len(b[j])` — `channels/recv-order/dead-recv-len-operand`; `iv.(int) + min(t[k], 1)` —
+`e13-sibling-panic-order/assert-left-min-inline`) are the EXCEPTION: gc evaluates a type assertion EARLY, so
+main's lexical singleton happened to be gc's member there — a (b) pin of one spec-legal order, not a wrong
+answer; those two rows moved strict → membership at E6a (their sets hold both panics too). A6's sentence is
+corrected in BUG-032 with a pointer here.
+
+WHERE: `tools/nativefrontend/unseq.go` — the observability trigger (`observable`, `unseqDecision.ordered`,
+`unseqOccRec.failing`). BEFORE E6a the trigger admitted a sweep only when some occurrence was unordered
+against an EFFECTFUL event; a call-free sweep went to the legacy path, which evaluates lexically. SINCE E6a
+(RULED [USER] 2026-09-22 item 1: «… OR against another FAILING occurrence», executed in its event-mediated
+form — design `docs/2026-09-24_unseq-stage-e6-design.md` §E6a «the trigger refinement») a FAILING occurrence
+unordered against an E1 participant's window that holds another failing occurrence enters the graph; the
+sweep lowers as ONE `unseq` graph whose set holds BOTH panics and the ONE consumption site is the scheduler's
+pick (`unseqNext`). Effect direction on main: the machine ANSWERED where gc differs — a wrong answer, not a
+refusal.
+
+FIX: landed at Stage E6a (`dc8d4372` on the lane — the refined trigger), rowed at the audit fix round: the
+seven Cases rows are PASS/membership on the candidate (`scripts/diff-one`: enumerated=2, gc's draw inside; the
+machine's canonical tape realizes the LEFT panic, gc the built-in's operand's) and RED-FIRST on main
+`3fb4a0d1`'s frontend + binary — as the born membership rows FAIL/membership («enumerated observation set is
+a singleton (1 member)»: main's machine offers ONE member), as strict twins of the same subjects
+FAIL/differential (Lean the left panic ≠ Go the built-in's operand's) — `docs/evidence/2026-09-24_unseq-
+stage-e6a/fix-round/`. The two assertion-left rows stay where E6a put them. NOT covered here and NOT a wrong
+answer on main: the GENERAL form (two unordered failing occurrences with NO E1 participant between them —
+`a[i] + b[j]`, `x/y + s[i]`, BUG-032's tuple `xs[ys[9]], b = zs[7], 2`), which stays on the legacy lexical
+path; gc realizes the lexical order on every general-form probe the audit ran EXCEPT BUG-032's tuple (gc
+`[7]`, the machine `[9]` on both sides — the inventory's E3 «(b) PINNED, known ≠ gc»). Taking the general form
+is POSED in the E6a handoff §2 item 1, not this entry's to take.
 
 ## BUG-115 — the LEGACY multi-target emitter QUARANTINES a map element as an assignment target (`m[k], y = 7, f()`, `m[0], m[1] = m[1], m[0]`: `emit.go` `unsup("map element as assignment target outside a single assignment")`) — legal Go refused by name where gc runs it; since Stage E5 E5b the SAME source shape RUNS on the `unseq` graph path whenever the ratified observability trigger admits the sweep, so the refusal is TRIGGER-DEPENDENT [frontend lowering; coverage gap, not a wrong answer; the triage table's F6 → mini-slice A3 ((a)-queued) is the plan of record; found by the Stage E5 adversarial audit, F3, 2026-09-22]
 

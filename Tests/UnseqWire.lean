@@ -199,6 +199,14 @@ def main (_args : List String) : IO Unit := do
     wireSet "NATIVE E5ESTR (the frontend's own string substring + byte-read heads — Stage E5 E5e)" "native-e5estr.json" "e5estr" [okZ 102, okZ 103],
     wireSet "NATIVE E5DADDR (the frontend's own ref-argument lowering — Stage E5 E5d)" "native-e5daddr.json" "e5daddr" [okZ 2, okZ 8],
     wireSet "NATIVE E5DLIT (the frontend's own ref-payload lowering inside new — Stage E5 E5d)" "native-e5dlit.json" "e5dlit" [okZ 6, okZ 15],
+    -- THE E6a AUDIT FIX ROUND (2026-09-24), F2: the R1 declaration environment follows BLOCK / CLAUSE scope. The
+    -- positive controls — a type-switch binder the emitter declares PER CLAUSE with the clause's type (each clause's
+    -- sweep a graph; the int-map clause reads the empty map: 0 + wit(1)), block shadowing with two types of one name
+    -- (7 + 1, then 'b' 98 + 2). Their forgeries are the mutants mut-local-{annotation-shadowed,shadow-other-decl,out-of-scope}.
+    wireSet "NATIVE E6ATS (a type-switch clause binder, declared per clause — the audit fix round's F2 control)" "native-e6ats.json" "e6ats"
+      [{ status := "ok", values := [1], output := "wit 1\n" }],
+    wireSet "NATIVE E6ASHADOW (a block-shadowed name with two types — the audit fix round's F2 control)" "native-e6ashadow.json" "e6ashadow"
+      [{ status := "ok", values := [108], output := "wit 1\nwit 2\n" }],
     -- EDGE MUTATIONS of the LOWERED graphs (v2.1 §8): each decodes; the exact-set check
     -- names the changed set (the decoder cannot see a missing or wrong edge).
     wireSet "EDGE data (R6: the access reads the variable's header, not the frozen slot) → the fused {20}" "edge-data.json" "r6" [okZ 20],

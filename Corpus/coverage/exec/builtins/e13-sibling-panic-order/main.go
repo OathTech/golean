@@ -637,3 +637,67 @@ func bytesConvValueVsMutatingCall() int {
 	s := "ab"
 	return int([]byte(s)[0]) + func() int { s = "zz"; return 1 }()
 }
+
+// --- Stage E6a audit fix round (2026-09-24, lane core/unseq-stage-e6a-0924; the audit's F1;
+// BUG-116): a LATE-realized failing NON-CALL operand (an index, a dereference, a pointer-field
+// read, a division, a shift, a compound target's LOAD) LEFT of an INLINE built-in E1 participant
+// (`len` / `cap` / `min` / `max`) whose own operand panics — call-free. spec#Order_of_evaluation
+// orders neither run-time check first; gc realizes the BUILT-IN's operand's panic on every one
+// of these shapes (20/20 draws — the built-in behaves as the call reading (a) says it is), where
+// main 3fb4a0d1's legacy path realized the LEFT operand's panic alone (observed ∉ modeled — a
+// wrong answer, undetected because every prior E13 row of the shape carried a trailing call).
+// Since E6a's refined trigger the sweep is ONE `unseq` graph holding BOTH panics. The two
+// assertion-left rows (assert-left-min-inline, recv-order/dead-recv-len-operand) are the
+// exception of the class: gc evaluates a type assertion EARLY, so main's lexical singleton
+// happened to be gc's member there.
+
+func idxLeftVsMinOperand() int { // s[i] + min(t[k], 1): gc `[5] with length 2` (min's operand first)
+	s := []int{1}
+	t := []int{1, 2}
+	i, k := 9, 5
+	return s[i] + min(t[k], 1)
+}
+
+func idxLeftVsLenSliceExpr() int { // s[i] + len(t[k:]): gc `slice bounds out of range [5:2]`
+	s := []int{1}
+	t := []int{1, 2}
+	i, k := 9, 5
+	return s[i] + len(t[k:])
+}
+
+func derefLeftVsLenOperand() int { // *p + len(b[j]), p nil: gc `[5] with length 1`
+	var p *int
+	b := [][]int{{1}}
+	j := 5
+	return *p + len(b[j])
+}
+
+func ptrFieldLeftVsLenOperand() int { // q.x + len(b[j]), q nil: gc `[5] with length 1`
+	var q *T
+	b := [][]int{{1}}
+	j := 5
+	return q.x + len(b[j])
+}
+
+func divLeftVsLenOperand() int { // x/y + len(b[j]), y zero: gc `[5] with length 1`
+	x, y := 1, 0
+	b := [][]int{{1}}
+	j := 5
+	return x/y + len(b[j])
+}
+
+func shiftLeftVsLenOperand() int { // x<<s + len(b[j]), s negative: gc `[5] with length 1`
+	x := 1
+	var s int = -1
+	b := [][]int{{1}}
+	j := 5
+	return x<<s + len(b[j])
+}
+
+func compoundLoadVsLenOperand() int { // x[9] += len(b[j]): the target's LOAD vs len's operand; gc `[5] with length 1`
+	x := make([]int, 1)
+	b := [][]int{{1}}
+	j := 5
+	x[9] += len(b[j])
+	return x[0]
+}

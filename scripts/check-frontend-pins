@@ -250,10 +250,19 @@ cd "$ROOT"
 # occurrence — panic identity), `len`/`cap` admitted over map / channel
 # operands. THE SOLE STRUCTURAL CHANGE OF THIS TWIN: THREE `unseq` graphs BORN —
 # raft.isHardStateEqual (`a.GetTerm() == b.GetTerm() && a.GetVote() == …`: the
-# HardState getters' nil-checked field reads unordered against each other
-# across the &&-chain's E1 windows), raft.MustSync (the same getters over two
-# HardStates), raftpb.(*Snapshot).SizeMessage (a compound `n += …` whose
-# nil-checked field read is unordered against the sibling method call) — 0
+# raftpb getters have POINTER receivers, so `a` and `b` are atoms — the graph's
+# occurrences are six `invoke`s, three pure `binary`s and two GUARDS, NO failing
+# occurrence), raft.MustSync (the same shape over `||`), raftpb.(*Snapshot).
+# SizeMessage (`n += 1 + plainpbSizeVarint(uint64(len(x.Data))) + len(x.Data)`:
+# the nil-checked `x.Data` reads beside the effectful FUNCTION call). All three
+# enter through the generalized UNIT BOUNDARY under Stage E's E3 rule (a guard
+# whose window is followed by an effectful call; a nil-checked field read beside
+# a call) — NONE by the E6a trigger refinement. [CORRECTED at the E6a audit fix
+# round, 2026-09-24, the audit's F3: this header first described «the HardState
+# getters' nil-checked field reads unordered against each other across the
+# &&-chain's E1 windows» and «a compound whose nil-checked field read is
+# unordered against the sibling method call» — wrong on both counts; the pin's
+# bytes are unchanged by the correction.] 0
 # added / 0 removed funcs, methods, types, globals, methodSets, fileOrder; the
 # 128 `unseq-probe` statements UNCHANGED (their sweeps stay legacy: every one
 # is refused by the STRUCT-TYPE grammar — `raft.raft`, `raftpb.Message`,
@@ -262,9 +271,11 @@ cd "$ROOT"
 # §E6a, the residue table); every other changed entry differs ONLY by
 # program-wide temporary renumbering ($uN cells consume the counter). Per-
 # function counts + the leaf classes: docs/evidence/2026-09-24_unseq-stage-e6a/
-# twin-structural-diff.txt. Raft's twin driver's observations are unchanged
-# (the born graphs' sets are singletons — the getters cannot fail on the
-# twin's non-nil states — measured by the corpus twin rows and the full run).
+# twin-structural-diff.txt. Raft's twin driver's observations are unchanged:
+# the born graphs are ALL-FORCED (every occurrence an E1-ordered call, a pure
+# op or a guard), so their sets are singletons on EVERY state — a structural
+# argument, reproduced by the E6a audit on main-unit replicas (its p5); the
+# twin driver under the machine was not re-run (40–65 min).
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/check-frontend-pins.XXXXXX")"
 trap 'rm -rf "$WORK"' EXIT
 

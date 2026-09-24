@@ -1,0 +1,743 @@
+{
+ "buildContext": {
+  "buildTags": [],
+  "cgoEnabled": true,
+  "compiler": "gc",
+  "goarch": "amd64",
+  "goos": "linux"
+ },
+ "fileOrder": [
+  {
+   "files": [
+    "main.go"
+   ],
+   "package": "main"
+  }
+ ],
+ "funcs": [
+  {
+   "body": {
+    "body": [
+     {
+      "args": [
+       {
+        "bytes": [
+         119,
+         105,
+         116
+        ],
+        "expr": "string",
+        "type": {
+         "kind": "string"
+        }
+       },
+       {
+        "expr": "ident",
+        "name": "x",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "newline": true,
+      "stmt": "print"
+     },
+     {
+      "results": [
+       {
+        "expr": "ident",
+        "name": "x",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "wit",
+   "params": [
+    {
+     "id": "x",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  },
+  {
+   "body": {
+    "body": [
+     {
+      "entries": [],
+      "keyType": {
+       "int": "int",
+       "kind": "int"
+      },
+      "stmt": "map-lit",
+      "target": {
+       "id": "$c0",
+       "target": "declare",
+       "type": {
+        "key": {
+         "int": "int",
+         "kind": "int"
+        },
+        "kind": "map",
+        "value": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      },
+      "valueType": {
+       "int": "int",
+       "kind": "int"
+      }
+     },
+     {
+      "decls": [
+       {
+        "id": "iv",
+        "init": {
+         "dynamic": {
+          "key": {
+           "int": "int",
+           "kind": "int"
+          },
+          "kind": "map",
+          "value": {
+           "int": "int",
+           "kind": "int"
+          }
+         },
+         "expr": "to-interface",
+         "operand": {
+          "expr": "ident",
+          "name": "$c0",
+          "type": {
+           "key": {
+            "int": "int",
+            "kind": "int"
+           },
+           "kind": "map",
+           "value": {
+            "int": "int",
+            "kind": "int"
+           }
+          }
+         },
+         "target": {
+          "kind": "interface",
+          "name": "any"
+         }
+        },
+        "type": {
+         "kind": "interface",
+         "name": "any"
+        }
+       }
+      ],
+      "stmt": "var"
+     },
+     {
+      "define": true,
+      "lhs": [
+       {
+        "id": "r",
+        "target": "declare",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "rhs": [
+       {
+        "expr": "int",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        },
+        "value": "0"
+       }
+      ],
+      "stmt": "assign"
+     },
+     {
+      "body": {
+       "body": [
+        {
+         "define": true,
+         "lhs": [
+          {
+           "id": "$ts1",
+           "target": "declare",
+           "type": {
+            "kind": "interface",
+            "name": "any"
+           }
+          }
+         ],
+         "rhs": [
+          {
+           "expr": "ident",
+           "name": "iv",
+           "type": {
+            "kind": "interface",
+            "name": "any"
+           }
+          }
+         ],
+         "stmt": "assign"
+        },
+        {
+         "body": [
+          {
+           "expr": {
+            "expr": "ident",
+            "name": "$ts1",
+            "type": {
+             "kind": "interface",
+             "name": "any"
+            }
+           },
+           "okTarget": {
+            "id": "$tso6",
+            "target": "declare",
+            "type": {
+             "kind": "bool"
+            }
+           },
+           "stmt": "type-assert",
+           "target": {
+            "id": "$tsv6",
+            "target": "declare",
+            "type": {
+             "key": {
+              "int": "int",
+              "kind": "int"
+             },
+             "kind": "map",
+             "value": {
+              "int": "int",
+              "kind": "int"
+             }
+            }
+           },
+           "targetType": {
+            "key": {
+             "int": "int",
+             "kind": "int"
+            },
+            "kind": "map",
+            "value": {
+             "int": "int",
+             "kind": "int"
+            }
+           }
+          },
+          {
+           "cond": {
+            "expr": "ident",
+            "name": "$tso6",
+            "type": {
+             "kind": "bool"
+            }
+           },
+           "else": {
+            "body": [
+             {
+              "expr": {
+               "expr": "ident",
+               "name": "$ts1",
+               "type": {
+                "kind": "interface",
+                "name": "any"
+               }
+              },
+              "okTarget": {
+               "id": "$tso2",
+               "target": "declare",
+               "type": {
+                "kind": "bool"
+               }
+              },
+              "stmt": "type-assert",
+              "target": {
+               "id": "$tsv2",
+               "target": "declare",
+               "type": {
+                "key": {
+                 "kind": "string"
+                },
+                "kind": "map",
+                "value": {
+                 "int": "int",
+                 "kind": "int"
+                }
+               }
+              },
+              "targetType": {
+               "key": {
+                "kind": "string"
+               },
+               "kind": "map",
+               "value": {
+                "int": "int",
+                "kind": "int"
+               }
+              }
+             },
+             {
+              "cond": {
+               "expr": "ident",
+               "name": "$tso2",
+               "type": {
+                "kind": "bool"
+               }
+              },
+              "stmt": "if",
+              "then": {
+               "body": [
+                {
+                 "define": true,
+                 "lhs": [
+                  {
+                   "id": "v",
+                   "target": "declare",
+                   "type": {
+                    "key": {
+                     "kind": "string"
+                    },
+                    "kind": "map",
+                    "value": {
+                     "int": "int",
+                     "kind": "int"
+                    }
+                   }
+                  }
+                 ],
+                 "rhs": [
+                  {
+                   "expr": "ident",
+                   "name": "$tsv2",
+                   "type": {
+                    "key": {
+                     "kind": "string"
+                    },
+                    "kind": "map",
+                    "value": {
+                     "int": "int",
+                     "kind": "int"
+                    }
+                   }
+                  }
+                 ],
+                 "stmt": "assign"
+                },
+                {
+                 "cells": [
+                  {
+                   "id": "$u3",
+                   "type": {
+                    "int": "int",
+                    "kind": "int"
+                   }
+                  },
+                  {
+                   "id": "$u4",
+                   "type": {
+                    "int": "int",
+                    "kind": "int"
+                   }
+                  },
+                  {
+                   "id": "$u5",
+                   "type": {
+                    "int": "int",
+                    "kind": "int"
+                   }
+                  }
+                 ],
+                 "occs": [
+                  {
+                   "args": [
+                    {
+                     "expr": "int",
+                     "type": {
+                      "int": "int",
+                      "kind": "int"
+                     },
+                     "value": "2"
+                    }
+                   ],
+                   "binds": [
+                    "$u4"
+                   ],
+                   "callee": {
+                    "captured": [],
+                    "expr": "func-value",
+                    "func": "wit"
+                   },
+                   "kind": "invoke",
+                   "name": "call1",
+                   "resultTypes": [
+                    {
+                     "int": "int",
+                     "kind": "int"
+                    }
+                   ]
+                  },
+                  {
+                   "bind": "$u3",
+                   "head": {
+                    "base": {
+                     "expr": "ident",
+                     "name": "v",
+                     "type": {
+                      "key": {
+                       "kind": "string"
+                      },
+                      "kind": "map",
+                      "value": {
+                       "int": "int",
+                       "kind": "int"
+                      }
+                     }
+                    },
+                    "expr": "map-get",
+                    "index": {
+                     "bytes": [
+                      97
+                     ],
+                     "expr": "string"
+                    },
+                    "keyType": {
+                     "kind": "string"
+                    },
+                    "type": {
+                     "int": "int",
+                     "kind": "int"
+                    },
+                    "valueType": {
+                     "int": "int",
+                     "kind": "int"
+                    }
+                   },
+                   "kind": "eval",
+                   "name": "mapread0"
+                  },
+                  {
+                   "bind": "$u5",
+                   "head": {
+                    "expr": "binary",
+                    "op": "+",
+                    "type": {
+                     "int": "int",
+                     "kind": "int"
+                    },
+                    "x": {
+                     "expr": "ident",
+                     "name": "$u3",
+                     "type": {
+                      "int": "int",
+                      "kind": "int"
+                     }
+                    },
+                    "y": {
+                     "expr": "ident",
+                     "name": "$u4",
+                     "type": {
+                      "int": "int",
+                      "kind": "int"
+                     }
+                    }
+                   },
+                   "kind": "eval",
+                   "name": "op2"
+                  }
+                 ],
+                 "stmt": "unseq",
+                 "stores": [],
+                 "then": {
+                  "define": false,
+                  "lhs": [
+                   {
+                    "id": "r",
+                    "target": "var"
+                   }
+                  ],
+                  "rhs": [
+                   {
+                    "expr": "ident",
+                    "name": "$u5",
+                    "type": {
+                     "int": "int",
+                     "kind": "int"
+                    }
+                   }
+                  ],
+                  "stmt": "assign"
+                 }
+                }
+               ],
+               "stmt": "block"
+              }
+             }
+            ],
+            "stmt": "block"
+           },
+           "stmt": "if",
+           "then": {
+            "body": [
+             {
+              "define": true,
+              "lhs": [
+               {
+                "id": "v",
+                "target": "declare",
+                "type": {
+                 "key": {
+                  "int": "int",
+                  "kind": "int"
+                 },
+                 "kind": "map",
+                 "value": {
+                  "int": "int",
+                  "kind": "int"
+                 }
+                }
+               }
+              ],
+              "rhs": [
+               {
+                "expr": "ident",
+                "name": "$tsv6",
+                "type": {
+                 "key": {
+                  "int": "int",
+                  "kind": "int"
+                 },
+                 "kind": "map",
+                 "value": {
+                  "int": "int",
+                  "kind": "int"
+                 }
+                }
+               }
+              ],
+              "stmt": "assign"
+             },
+             {
+              "cells": [
+               {
+                "id": "$u7",
+                "type": {
+                 "int": "int",
+                 "kind": "int"
+                }
+               },
+               {
+                "id": "$u8",
+                "type": {
+                 "int": "int",
+                 "kind": "int"
+                }
+               },
+               {
+                "id": "$u9",
+                "type": {
+                 "int": "int",
+                 "kind": "int"
+                }
+               }
+              ],
+              "occs": [
+               {
+                "args": [
+                 {
+                  "expr": "int",
+                  "type": {
+                   "int": "int",
+                   "kind": "int"
+                  },
+                  "value": "1"
+                 }
+                ],
+                "binds": [
+                 "$u8"
+                ],
+                "callee": {
+                 "captured": [],
+                 "expr": "func-value",
+                 "func": "wit"
+                },
+                "kind": "invoke",
+                "name": "call1",
+                "resultTypes": [
+                 {
+                  "int": "int",
+                  "kind": "int"
+                 }
+                ]
+               },
+               {
+                "bind": "$u7",
+                "head": {
+                 "base": {
+                  "expr": "ident",
+                  "name": "v",
+                  "type": {
+                   "key": {
+                    "int": "int",
+                    "kind": "int"
+                   },
+                   "kind": "map",
+                   "value": {
+                    "int": "int",
+                    "kind": "int"
+                   }
+                  }
+                 },
+                 "expr": "map-get",
+                 "index": {
+                  "expr": "int",
+                  "type": {
+                   "int": "int",
+                   "kind": "int"
+                  },
+                  "value": "1"
+                 },
+                 "keyType": {
+                  "int": "int",
+                  "kind": "int"
+                 },
+                 "type": {
+                  "int": "int",
+                  "kind": "int"
+                 },
+                 "valueType": {
+                  "int": "int",
+                  "kind": "int"
+                 }
+                },
+                "kind": "eval",
+                "name": "mapread0"
+               },
+               {
+                "bind": "$u9",
+                "head": {
+                 "expr": "binary",
+                 "op": "+",
+                 "type": {
+                  "int": "int",
+                  "kind": "int"
+                 },
+                 "x": {
+                  "expr": "ident",
+                  "name": "$u7",
+                  "type": {
+                   "int": "int",
+                   "kind": "int"
+                  }
+                 },
+                 "y": {
+                  "expr": "ident",
+                  "name": "$u8",
+                  "type": {
+                   "int": "int",
+                   "kind": "int"
+                  }
+                 }
+                },
+                "kind": "eval",
+                "name": "op2"
+               }
+              ],
+              "stmt": "unseq",
+              "stores": [],
+              "then": {
+               "define": false,
+               "lhs": [
+                {
+                 "id": "r",
+                 "target": "var"
+                }
+               ],
+               "rhs": [
+                {
+                 "expr": "ident",
+                 "name": "$u9",
+                 "type": {
+                  "int": "int",
+                  "kind": "int"
+                 }
+                }
+               ],
+               "stmt": "assign"
+              }
+             }
+            ],
+            "stmt": "block"
+           }
+          }
+         ],
+         "stmt": "block"
+        }
+       ],
+       "stmt": "block"
+      },
+      "stmt": "breakable"
+     },
+     {
+      "results": [
+       {
+        "expr": "ident",
+        "name": "r",
+        "type": {
+         "int": "int",
+         "kind": "int"
+        }
+       }
+      ],
+      "stmt": "return"
+     }
+    ],
+    "stmt": "block"
+   },
+   "name": "e6ats",
+   "params": [],
+   "results": [
+    {
+     "id": "$res0",
+     "type": {
+      "int": "int",
+      "kind": "int"
+     }
+    }
+   ],
+   "variadic": false
+  }
+ ],
+ "methodSets": [],
+ "methods": [],
+ "package": "main",
+ "schema": "golean-native-v1",
+ "types": []
+}

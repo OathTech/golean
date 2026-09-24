@@ -297,4 +297,20 @@ expect_unseq_refusal unseq-mapget-keytype-vs-base mut-mapget-keytype-vs-base e5c
 expect_unseq_refusal unseq-alloc-literal-after mut-alloc-literal-after e4alloc 'an `after` edge on a literal allocation'
 expect_unseq_refusal unseq-local-annotation-forged mut-local-annotation-forged e5blookup 'disagrees with its declaration'
 expect_unseq_refusal unseq-local-undeclared mut-local-undeclared e5daddr 'has no declaration in the enclosing function'
-echo 'Wire boundary gate: PASS (11 byte-level controls + 52 unseq-node controls through the real CLI)'
+# The Stage E6a audit fix round (2026-09-24), F2: the R1 declaration environment is SCOPE-EXACT (block / clause scope, the
+# innermost declaration wins) — the tip's flat per-function table let a forged annotation equal to ANOTHER declaration of the
+# same name pass. Positive controls: the NATIVE type-switch witness (Tests/unseq-wire/native-e6ats.json — `v` declared per
+# clause with the clause's type; runs, answers 1 after `wit 1`) and the NATIVE block-shadow witness (native-e6ashadow.json —
+# `x` int then string; runs, answers 108). Refusals by name: the audit's mS1-via-typeswitch-binder (the int-map clause's `v`
+# annotated, keyType'd and keyed as the OTHER clause's map — DECODED AND ANSWERED 1 on the tip), the block-shadow forgery
+# (the inner string `x` annotated with the outer int), an atom naming a local declared only later in its block.
+out="$(run_cli_fn Tests/unseq-wire/native-e6ats.json e6ats)" || { echo "check-wire-boundary: FAIL [unseq typeswitch-binder] — the native type-switch wire did not run: $out" >&2; exit 1; }
+[[ "$out" == *'"status":"ok"'* && "$out" == *'"value":1'* && "$out" == *'wit 1'* ]] || { echo "check-wire-boundary: FAIL [unseq typeswitch-binder] — expected ok/1 after wit 1 (the int-map clause's read of the empty map): $out" >&2; exit 1; }
+echo "ok [unseq typeswitch-binder] runs, answers 1 (a type-switch binder declared per clause, in scope for its clause — audit fix round F2)"
+out="$(run_cli_fn Tests/unseq-wire/native-e6ashadow.json e6ashadow)" || { echo "check-wire-boundary: FAIL [unseq block-shadow] — the native block-shadow wire did not run: $out" >&2; exit 1; }
+[[ "$out" == *'"status":"ok"'* && "$out" == *'"value":108'* ]] || { echo "check-wire-boundary: FAIL [unseq block-shadow] — expected ok/108 (x int in the function block, string in the inner block): $out" >&2; exit 1; }
+echo "ok [unseq block-shadow] runs, answers 108 (a block-shadowed name resolves to the innermost declaration in scope — audit fix round F2)"
+expect_unseq_refusal unseq-local-annotation-shadowed mut-local-annotation-shadowed e6ats 'disagrees with its declaration'
+expect_unseq_refusal unseq-local-shadow-other-decl mut-local-shadow-other-decl e6ashadow 'disagrees with its declaration'
+expect_unseq_refusal unseq-local-out-of-scope mut-local-out-of-scope e6ashadow 'has no declaration in the enclosing function'
+echo 'Wire boundary gate: PASS (11 byte-level controls + 55 unseq-node controls through the real CLI)'

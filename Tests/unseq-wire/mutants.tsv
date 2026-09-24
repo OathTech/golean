@@ -51,3 +51,6 @@ mut-make-len-over-cap	larger than constant cap
 mut-alloc-literal-after	an `after` edge on a literal allocation
 mut-local-annotation-forged	disagrees with its declaration
 mut-local-undeclared	has no declaration in the enclosing function
+mut-local-annotation-shadowed	disagrees with its declaration
+mut-local-shadow-other-decl	disagrees with its declaration
+mut-local-out-of-scope	has no declaration in the enclosing function
