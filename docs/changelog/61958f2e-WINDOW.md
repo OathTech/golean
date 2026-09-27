@@ -7,7 +7,8 @@ model — RULED (2026-09-27)»). `61958f2e` is the customer's pin (train r39 clo
 `5946adfa` (train r49 close; the packet's input commit — the brief's `3fb4a0d1` superseded by the coordinator:
 `git diff --stat 3fb4a0d1 5946adfa -- GoLean/GoCore` is empty; r49 moved only the decoder and the frontend). The
 packet branch was rebased onto `main` @ `7d2a62e5` (r49 5a records + r50 docs: no `GoLean/` change), so every cell
-holds there too.
+holds there too. It now sits on `core/stray-panic-refusal-0927` @ `05d0dbd4` (under audit), whose changes are the
+window line below, not the table (its `GoLean/GoCore` edits are line-for-line, so every line number holds).
 
 Every cell is RESOLVED from `git diff 61958f2e 5946adfa -- GoLean/` and `git show 61958f2e:<path>`; `file:line` is
 at the commit named in its column (paths under `GoLean/GoCore/` unless given). `Tests/` is out of scope. Every
@@ -28,7 +29,7 @@ at the commit named in its column (paths under `GoLean/GoCore/` unless given). `
 | the legacy `unseq-probe` triple | present | PRESENT and SURVIVES into the re-pin ([USER] 2026-09-27, rulings ledger above): `Stmt.unseqProbe` (`Syntax.lean:774`), `Cont.probeK` (`Machine.lean:3512`), `Step.unseqProbe` (`Machine.lean:6009`), `ChoiceSite.unseqPanic` (`State.lean:329`) | [inf] one extra `Cont` constructor and one `Step` rule to port; their retirement is a LATER removal-only change |
 | the wire | no `"unseq"` statement key-schema in the decoder (`GoLean/NativeToIR.lean` @ pin: 0 matches) | `{"stmt":"unseq","cells","occs","stores","then"}` and eight occurrence kinds `eval`/`invoke`/`target`/`load`/`guard`/`recv`/`allocate`/`wide` (key schemas `GoLean/NativeToIR.lean:212` and `:898`–`905`); the map arms inside a graph carry `keyType`/`valueType` CHECKED against the base's declared type (`GoLean/NativeToIR.lean:1004`, `:1007`); no other key schema changed (diff of the decoder's `some [...]` key tables: additions only) | [inf] re-emit fixtures; a fixture whose statement fires the observability trigger now sees `Stmt.unseq` |
 | the decoder's named refusals | 62 `fail` sites, 0 `unseq:` | 142 `fail` sites (`git show <rev>:GoLean/NativeToIR.lean \| grep -cE '(^\|[^A-Za-z])fail +(s!)?"'` → 62 / 142; audit F6), 80 `unseq:`-prefixed named refusals (`grep -c 'fail s!"unseq'`), all in the `unseq` grammar (`decodeUnseq`, `GoLean/NativeToIR.lean:2278`); incl. E6a's `after` edge on a literal `allocate` (`:2545`) and the scope-exact source-local checks (`:1189`, `:1195`, `:1201`); no non-`unseq` `fail` line added or removed | [inf] none for wires the frontend emits; a hand-built wire meets the refusals by name |
-| the window's contract modules (packet A) | — | NEW, in the default build via `GoLean.lean`: `GoLean/GoCore/BridgeSet.lean` (24 pinned statements — a drift fails the build) and `GoLean/GoCore/ExecutionStatement.lean` (`Prefix`, `Finish` with FIVE constructors incl. `fatal` — [AGENT] coordinator disposition 2026-09-27 — `LRun`, `replays`, `NoRefusal`, the owed `_stmt` Props; statements only, packet B proves; audit F1 OPEN — four statements refuted pending a [USER] ruling, `docs/2026-09-24_execution-statement.md`); one `scripts/mem-callsites.tsv` row («NO EXECUTION», `program_bridge_stmt`) | [inf] import the two modules; `BridgeSet.lean`'s diff between pins IS the interface diff |
+| the window's contract modules (packet A) | — | NEW, in the default build via `GoLean.lean`: `GoLean/GoCore/BridgeSet.lean` (24 pinned statements — a drift fails the build) and `GoLean/GoCore/ExecutionStatement.lean` (`Prefix`, `Finish` with FIVE constructors incl. `fatal` — [AGENT] coordinator disposition 2026-09-27 — `LRun`, `replays`, `NoRefusal`, the owed `_stmt` Props; statements only, packet B proves; audit F1 resolved by `core/stray-panic-refusal-0927`, disposition (b), [AGENT] coordinator, disclosed at the merge ask); one `scripts/mem-callsites.tsv` row («NO EXECUTION», `program_bridge_stmt`) | [inf] import the two modules; `BridgeSet.lean`'s diff between pins IS the interface diff |
 
 ## Window lines (landed since the pin, per lane)
 
@@ -67,6 +68,11 @@ at the commit named in its column (paths under `GoLean/GoCore/` unless given). `
   docstring on `nestedStmtKeys`. NATIVE witness `e6arange` (the auditor's two positive controls verbatim + the h12
   base), mutant `mut-local-range-var-after-loop` (55 → 56). No corpus row, no baseline change, the choice trace
   byte-identical.
+- **2026-09-27 core/stray-panic-refusal-0927** (packet A audit F1; disposition (b), [AGENT] coordinator, disclosed at
+  the merge ask): root-only reader `loadRoot` (+ `Mem.loadBinding`/`loadBindingFor`) at the six binding-cell reads; a
+  non-root location refuses as `.internal «binding cell is not a root location»` instead of escaping `stepFn` as an
+  unwound Go panic (audit F1); `Step.evalVar`'s premise follows; no row moved. (The lane note's «changelog line»,
+  `docs/2026-09-27_stray-panic-refusal.md`, verbatim.)
 - **E6 re-scoped ([USER] Mike 2026-09-27, verbatim, relayed — rulings ledger «E6's shape, train r49 and the
   execution model — RULED (2026-09-27)»):** E6a lands; E6b–E6d and the retirement E6e LEAVE the window's critical
   path. The legacy triple `Stmt.unseqProbe` / `Cont.probeK` / `Step.unseqProbe` / `ChoiceSite.unseqPanic`

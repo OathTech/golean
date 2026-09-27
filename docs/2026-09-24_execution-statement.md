@@ -109,12 +109,12 @@ discharge the whole owed simulation.
 Two items packet A had STOPPED: (1) the four-constructor `Finish` missed `.terminal (.fatal m)` — Reading A (a fifth
 constructor, cost 1: «a fatal is a classified terminal, not a refusal») over B (a fifth disjunct); (2)
 `program_bridge_stmt` — Reading A (the inventory row; `scripts/` lifted for it) over B (via `ProgramRun`).
-Audit round (2026-09-27): F2, F3 fixed; F4, F5, F6 recorded; F1 OPEN (below). Packet B proves every `_stmt`
-as `<name>` after row 2's reshape (over `StepLabel`), once F1 is ruled.
-**OPEN — audit F1** (`docs/2026-09-27_packet-a-audit.md`, branch `review/packet-a-contract-0927`; HELD by the
-[AGENT] coordinator pending a [USER] semantics decision + a reachability investigation): `stepFn` raises the Go
-PANIC terminal at a NON-abort configuration (a `←`-bound helper, e.g. `Mem.loadFor` → `arrayGet`, `StepFn.lean:580`),
-which no `Finish` constructor classifies. REFUTED as stated (auditor's Lean witness): `finish_abort_step_stmt`,
-`run_panic_iff_stmt`, `classification_stmt`, `classification_wf_stmt`. Candidates: (a) widen `Finish.fatal`-style
-to any `stepFn` terminal at a non-abort configuration; (b) semantics: the stray panic → a named `.internal` refusal;
-(c) semantics: it enters the ordinary panicking/unwinding path. Nothing changed for F1 here.
+Audit round (2026-09-27): F2, F3 fixed; F4, F5, F6 recorded; F1 resolved (below). Packet B proves every `_stmt`
+as `<name>` after row 2's reshape (over `StepLabel`).
+**Audit F1 — resolved by `core/stray-panic-refusal-0927`** (disposition (b), [AGENT] coordinator, disclosed at the
+merge ask; `docs/2026-09-27_stray-panic-refusal.md`): `stepFn` raised the Go PANIC terminal at a NON-abort
+configuration (a binding-cell read, `Mem.loadFor` → `arrayGet`), unclassified by `Finish`, refuting
+`finish_abort_step_stmt`, `run_panic_iff_stmt`, `classification_stmt`, `classification_wf_stmt`. The core lane's
+root-only reader `loadRoot` refuses a non-root binding location as `.internal "binding cell is not a root location: …"`.
+The statements are UNCHANGED; the auditor's witness now evaluates to that refusal and is PROVED `ClassRefusal`, not
+`ClassTerminal` (`docs/evidence/2026-09-24_packet-a/F1Witness.lean`). (Rejected: (a) widen `Finish`; (c) unwind.)

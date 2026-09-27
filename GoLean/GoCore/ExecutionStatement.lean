@@ -27,16 +27,16 @@ configuration (`Machine.lean:4392`, `:4416`, `:4443`; propagated by `toResult`,
 stated over the five constructors. (2) Reading A for `program_bridge_stmt` — stated; its
 `loadMany` mention is recorded in `scripts/mem-callsites.tsv` («NO EXECUTION»).
 
-OPEN — audit F1 (2026-09-27, `docs/2026-09-27_packet-a-audit.md` on branch
-`review/packet-a-contract-0927`; HELD by the [AGENT] coordinator pending a [USER] semantics
-decision and a reachability investigation): `stepFn` can raise the Go PANIC terminal at a
-NON-abort configuration (a helper bound with `←`, not `toResult`, e.g. `Mem.loadFor` →
-`loadLoc` → `arrayGet`), which no `Finish` constructor classifies. As stated,
-`finish_abort_step_stmt`, `run_panic_iff_stmt`, `classification_stmt` and
-`classification_wf_stmt` are REFUTED by the auditor's Lean witness. Candidate fixes, not
-taken here: (a) widen `Finish.fatal`-style to any `stepFn` terminal at a non-abort
-configuration; (b) the semantics: such a stray panic becomes a named `.internal` refusal;
-(c) the semantics: it enters the ordinary panicking/unwinding path.
+Audit F1 (2026-09-27, `docs/2026-09-27_packet-a-audit.md` on branch
+`review/packet-a-contract-0927`) — RESOLVED by `core/stray-panic-refusal-0927` (disposition
+(b), [AGENT] coordinator, disclosed at the merge ask): `stepFn` raised the Go PANIC terminal
+at a NON-abort configuration (a binding cell read through `Mem.loadFor` → `loadLoc` →
+`arrayGet`), which no `Finish` constructor classifies, refuting `finish_abort_step_stmt`,
+`run_panic_iff_stmt`, `classification_stmt` and `classification_wf_stmt` as stated. The core
+lane's root-only reader `loadRoot` makes a non-root binding location refuse as `.internal
+"binding cell is not a root location: …"`; the statements are UNCHANGED, and the auditor's
+witness is now a `ClassRefusal` (not a `ClassTerminal`) —
+`docs/evidence/2026-09-24_packet-a/F1Witness.lean`.
 -/
 
 namespace GoLean.GoCore.ExecutionStatement

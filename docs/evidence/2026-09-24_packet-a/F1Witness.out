@@ -1,0 +1,7 @@
+# GOLEAN_MEM_MAX=48G scripts/capped lake env lean docs/evidence/2026-09-24_packet-a/F1Witness.lean — on the branch rebased onto core/stray-panic-refusal-0927 @ 05d0dbd4; EXIT=0
+false
+"GoLean.Stop.refusal\n  (GoLean.Refusal.internal\n    \"binding cell is not a root location: GoLean.Loc.index (GoLean.Loc.base { id := 0 }) 5 (a variable, pinned result or unseq binder cell is always a fresh root cell; machine invariant breached)\")"
+"GoLean.Stop.refusal\n  (GoLean.Refusal.internal\n    \"binding cell is not a root location: GoLean.Loc.index (GoLean.Loc.base { id := 0 }) 5 (a variable, pinned result or unseq binder cell is always a fresh root cell; machine invariant breached)\")"
+"GoLean.Stop.fuelOut"
+'f1_witness_refusal' depends on axioms: [propext, Classical.choice, Quot.sound]
+'f1_witness_not_terminal' depends on axioms: [propext, Classical.choice, Quot.sound]
