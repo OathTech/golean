@@ -1,0 +1,10 @@
+false
+"GoLean.Stop.refusal\n  (GoLean.Refusal.internal\n    \"binding cell is not a root location: GoLean.Loc.index (GoLean.Loc.base { id := 0 }) 5 (a variable, pinned result or unseq binder cell is always a fresh root cell; machine invariant breached)\")"
+"GoLean.Stop.refusal\n  (GoLean.Refusal.internal\n    \"binding cell is not a root location: GoLean.Loc.index (GoLean.Loc.base { id := 0 }) 5 (a variable, pinned result or unseq binder cell is always a fresh root cell; machine invariant breached)\")"
+true
+true
+'witness_classRefusal' depends on axioms: [propext, Classical.choice, Quot.sound]
+'witness_not_noRefusal' depends on axioms: [propext, Classical.choice, Quot.sound]
+'witness_not_panic' depends on axioms: [propext, Classical.choice, Quot.sound]
+"ok st=[GoLean.GoCore.UnseqStatus.done] sameStore=true tr=[GoLean.GoCore.MemEvent.access\n   (GoLean.GoCore.AccessKind.read)\n   (GoLean.GoCore.ShadowKey.data (GoLean.Loc.base { id := 0 }))]"
+LEAN=0

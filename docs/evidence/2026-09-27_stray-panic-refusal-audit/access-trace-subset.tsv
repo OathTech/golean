@@ -1,0 +1,1020 @@
+atomics/ops/discarded-result	default	ok steps=72 h=17073173435388478043 outhash=9877294847684254529
+atomics/ops/discarded-result	rand1	ok steps=72 h=17073173435388478043 outhash=9877294847684254529
+atomics/ops/nil-address-recovered	default	ok steps=93 h=6739834569015378912 outhash=9877294847684254529
+atomics/ops/nil-address-recovered	rand1	ok steps=93 h=6739834569015378912 outhash=9877294847684254529
+binop-order/operand-panic-vs-call/left-first	default	panic: runtime error: index out of range [8] with length 3 steps=154 h=1733510304875519846 outhash=9877294847684254529
+binop-order/operand-panic-vs-call/left-first	rand1	panic: runtime error: index out of range [8] with length 3 steps=154 h=1733510304875519846 outhash=9877294847684254529
+binop-order/operand-panic-vs-call/call-before-left	default	ok steps=164 h=14895620616002464594 outhash=9877294847684254529
+binop-order/operand-panic-vs-call/call-before-left	rand1	ok steps=164 h=14895620616002464594 outhash=9877294847684254529
+binop-order/operand-panic-vs-call/call-before-left-div	default	ok steps=262 h=18123694520757802403 outhash=9877294847684254529
+binop-order/operand-panic-vs-call/call-before-left-div	rand1	ok steps=262 h=18123694520757802403 outhash=9877294847684254529
+builtins/e13-sibling-panic-order/recover-assert-vs-len	default	panic: 3 [recovered] steps=128 h=4315456371586189270 outhash=9877294847684254529
+builtins/e13-sibling-panic-order/recover-assert-vs-len	rand1	panic: 3 [recovered] steps=128 h=4315456371586189270 outhash=9877294847684254529
+builtins/e13-sibling-panic-order/recover-assert-vs-call-w	default	ok steps=145 h=7383178395439543500 outhash=10160248721042334423
+builtins/e13-sibling-panic-order/recover-assert-vs-call-w	rand1	ok steps=145 h=7383178395439543500 outhash=10160248721042334423
+builtins/make-map-hint-eval/named-int-type	default	ok steps=70 h=9939852970913040402 outhash=9877294847684254529
+builtins/make-map-hint-eval/named-int-type	rand1	ok steps=70 h=9939852970913040402 outhash=9877294847684254529
+builtins/make-maxalloc/recover-slice-len-over	default	ok steps=71 h=16692410698984289294 outhash=9877294847684254529
+builtins/make-maxalloc/recover-slice-len-over	rand1	ok steps=71 h=16692410698984289294 outhash=9877294847684254529
+builtins/make-maxalloc/recover-chan-size-over	default	ok steps=71 h=16692410698984289294 outhash=9877294847684254529
+builtins/make-maxalloc/recover-chan-size-over	rand1	ok steps=71 h=16692410698984289294 outhash=9877294847684254529
+builtins/print/print-then-recover	default	ok steps=62 h=6232424028114177677 outhash=16874756501765482596
+builtins/print/print-then-recover	rand1	ok steps=62 h=6232424028114177677 outhash=16874756501765482596
+builtins/recover-outside-defer	default	ok steps=39 h=9839728628581880939 outhash=9877294847684254529
+builtins/recover-outside-defer	rand1	ok steps=39 h=9839728628581880939 outhash=9877294847684254529
+builtins/statement-position/recover-stmt-in-defer	default	ok steps=57 h=454922129613477404 outhash=9877294847684254529
+builtins/statement-position/recover-stmt-in-defer	rand1	ok steps=57 h=454922129613477404 outhash=9877294847684254529
+builtins/statement-position/recover-stmt-no-panic	default	ok steps=69 h=527803458197638954 outhash=9877294847684254529
+builtins/statement-position/recover-stmt-no-panic	rand1	ok steps=69 h=527803458197638954 outhash=9877294847684254529
+builtins/statement-position/recover-stmt-outside-defer	default	ok steps=42 h=13942258823286819908 outhash=9877294847684254529
+builtins/statement-position/recover-stmt-outside-defer	rand1	ok steps=42 h=13942258823286819908 outhash=9877294847684254529
+channels/close-edge/recover-negative-make	default	ok steps=58 h=5036775805471287721 outhash=9877294847684254529
+channels/close-edge/recover-negative-make	rand1	ok steps=58 h=5036775805471287721 outhash=9877294847684254529
+channels/close-edge/recover-send-closed	default	ok steps=82 h=16016885297385270795 outhash=9877294847684254529
+channels/close-edge/recover-send-closed	rand1	ok steps=82 h=16016885297385270795 outhash=9877294847684254529
+channels/close-edge/recover-close-closed	default	ok steps=78 h=5205989071513118687 outhash=9877294847684254529
+channels/close-edge/recover-close-closed	rand1	ok steps=78 h=5205989071513118687 outhash=9877294847684254529
+channels/close-edge/recover-close-nil	default	ok steps=56 h=12927952231572492010 outhash=9877294847684254529
+channels/close-edge/recover-close-nil	rand1	ok steps=56 h=12927952231572492010 outhash=9877294847684254529
+channels/recv-edge/nil-deref-target-recovered	default	ok steps=127 h=2499514794951117626 outhash=9877294847684254529
+channels/recv-edge/nil-deref-target-recovered	rand1	ok steps=127 h=2499514794951117626 outhash=9877294847684254529
+defer/defer-arg-eval	default	ok steps=63 h=7840575017890535836 outhash=9877294847684254529
+defer/defer-arg-eval	rand1	ok steps=63 h=7840575017890535836 outhash=9877294847684254529
+defer/defer-arg-panic-before-register	default	ok steps=83 h=18191591209482912047 outhash=9877294847684254529
+defer/defer-arg-panic-before-register	rand1	ok steps=83 h=18191591209482912047 outhash=9877294847684254529
+defer/defer-function-result-discard	default	ok steps=50 h=8901038925670606543 outhash=9877294847684254529
+defer/defer-function-result-discard	rand1	ok steps=50 h=8901038925670606543 outhash=9877294847684254529
+defer/defer-function-value-eval	default	ok steps=61 h=515006886719930887 outhash=9877294847684254529
+defer/defer-function-value-eval	rand1	ok steps=61 h=515006886719930887 outhash=9877294847684254529
+defer/defer-in-loop	default	ok steps=283 h=11907602592615058163 outhash=9877294847684254529
+defer/defer-in-loop	rand1	ok steps=283 h=11907602592615058163 outhash=9877294847684254529
+defer/defer-interface-value-eval	default	ok steps=95 h=15567824425029856620 outhash=9877294847684254529
+defer/defer-interface-value-eval	rand1	ok steps=95 h=15567824425029856620 outhash=9877294847684254529
+defer/defer-method-receiver-eval	default	ok steps=67 h=4765919714346642268 outhash=9877294847684254529
+defer/defer-method-receiver-eval	rand1	ok steps=67 h=4765919714346642268 outhash=9877294847684254529
+defer/defer-named-result-lifo	default	ok steps=78 h=4834673962507186982 outhash=9877294847684254529
+defer/defer-named-result-lifo	rand1	ok steps=78 h=4834673962507186982 outhash=9877294847684254529
+defer/defer-named-return	default	ok steps=41 h=15004003366892761347 outhash=9877294847684254529
+defer/defer-named-return	rand1	ok steps=41 h=15004003366892761347 outhash=9877294847684254529
+defer/defer-nil-function-panic	default	panic: runtime error: invalid memory address or nil pointer dereference steps=13 h=9665035747817144391 outhash=9877294847684254529
+defer/defer-nil-function-panic	rand1	panic: runtime error: invalid memory address or nil pointer dereference steps=13 h=9665035747817144391 outhash=9877294847684254529
+defer/defer-nil-function-recover-order	default	ok steps=80 h=8659672616530727121 outhash=9877294847684254529
+defer/defer-nil-function-recover-order	rand1	ok steps=80 h=8659672616530727121 outhash=9877294847684254529
+defer/defer-pointer-receiver-live	default	ok steps=79 h=674273116574615544 outhash=9877294847684254529
+defer/defer-pointer-receiver-live	rand1	ok steps=79 h=674273116574615544 outhash=9877294847684254529
+defer/deferred-dispatch-entry-panic/return-drain	default	ok steps=109 h=16609143017796870462 outhash=9877294847684254529
+defer/deferred-dispatch-entry-panic/return-drain	rand1	ok steps=109 h=16609143017796870462 outhash=9877294847684254529
+defer/deferred-dispatch-entry-panic/fallthrough-drain	default	ok steps=131 h=16117021490911827625 outhash=9877294847684254529
+defer/deferred-dispatch-entry-panic/fallthrough-drain	rand1	ok steps=131 h=16117021490911827625 outhash=9877294847684254529
+defer/deferred-dispatch-entry-panic/during-panic	default	ok steps=142 h=660132200681181779 outhash=9877294847684254529
+defer/deferred-dispatch-entry-panic/during-panic	rand1	ok steps=142 h=660132200681181779 outhash=9877294847684254529
+defer/multiple-lifo	default	ok steps=78 h=4834673962507186982 outhash=9877294847684254529
+defer/multiple-lifo	rand1	ok steps=78 h=4834673962507186982 outhash=9877294847684254529
+defer/recover-noop-after-quarantine	default	ok steps=24 h=15234463301340001510 outhash=9877294847684254529
+defer/recover-noop-after-quarantine	rand1	ok steps=24 h=15234463301340001510 outhash=9877294847684254529
+defer/recover-normal-return	default	ok steps=64 h=4523591879042668191 outhash=9877294847684254529
+defer/recover-normal-return	rand1	ok steps=64 h=4523591879042668191 outhash=9877294847684254529
+defer/unnamed-return	default	ok steps=50 h=9886273348667792511 outhash=9877294847684254529
+defer/unnamed-return	rand1	ok steps=50 h=9886273348667792511 outhash=9877294847684254529
+evalorder/legacy-logical-vs-call/or-vs-call	default	ok steps=151 h=12347711051628391561 outhash=12966118684575911528
+evalorder/legacy-logical-vs-call/or-vs-call	rand1	ok steps=151 h=12347711051628391561 outhash=12966118684575911528
+evalorder/legacy-logical-vs-call/and-vs-call	default	ok steps=151 h=5522675307716758330 outhash=12966118684575911528
+evalorder/legacy-logical-vs-call/and-vs-call	rand1	ok steps=151 h=5522675307716758330 outhash=12966118684575911528
+evalorder/legacy-logical-vs-call/call-first-control	default	ok steps=151 h=12952657385826423077 outhash=7680113023793709051
+evalorder/legacy-logical-vs-call/call-first-control	rand1	ok steps=151 h=12952657385826423077 outhash=7680113023793709051
+evalorder/unseq-addr/addr-arg-vs-read	default	ok steps=99 h=6648232178997222508 outhash=9877294847684254529
+evalorder/unseq-addr/addr-arg-vs-read	rand1	ok steps=99 h=6648232178997222508 outhash=9877294847684254529
+evalorder/unseq-addr/addr-payload-vs-call	default	ok steps=132 h=17153141734000769395 outhash=9877294847684254529
+evalorder/unseq-addr/addr-payload-vs-call	rand1	ok steps=132 h=17153141734000769395 outhash=9877294847684254529
+evalorder/unseq-addr/addr-stored-vs-read	default	ok steps=133 h=4538195356887780572 outhash=9877294847684254529
+evalorder/unseq-addr/addr-stored-vs-read	rand1	ok steps=133 h=4538195356887780572 outhash=9877294847684254529
+evalorder/unseq-addr/addr-global-arg-vs-read	default	ok steps=99 h=14923337367939907873 outhash=9877294847684254529
+evalorder/unseq-addr/addr-global-arg-vs-read	rand1	ok steps=99 h=14923337367939907873 outhash=9877294847684254529
+evalorder/unseq-addr/addr-arg-pure-control	default	ok steps=90 h=2878703206116121208 outhash=9877294847684254529
+evalorder/unseq-addr/addr-arg-pure-control	rand1	ok steps=90 h=2878703206116121208 outhash=9877294847684254529
+evalorder/unseq-builtins/min-vs-call	default	ok steps=105 h=7303102576661458585 outhash=9877294847684254529
+evalorder/unseq-builtins/min-vs-call	rand1	ok steps=105 h=7303102576661458585 outhash=9877294847684254529
+evalorder/unseq-builtins/min-read-vs-call	default	ok steps=127 h=15130253951113394079 outhash=9877294847684254529
+evalorder/unseq-builtins/min-read-vs-call	rand1	ok steps=127 h=12199211105205882355 outhash=9877294847684254529
+evalorder/unseq-builtins/append-read-vs-call	default	ok steps=176 h=8633583832620057595 outhash=9877294847684254529
+evalorder/unseq-builtins/append-read-vs-call	rand1	ok steps=176 h=8651235990234066939 outhash=9877294847684254529
+evalorder/unseq-builtins/copy-effect-vs-read	default	ok steps=139 h=8939479916614650185 outhash=9877294847684254529
+evalorder/unseq-builtins/copy-effect-vs-read	rand1	ok steps=139 h=8939479916614650185 outhash=9877294847684254529
+evalorder/unseq-builtins/append-spread-str-vs-call	default	ok steps=166 h=3864685736225613524 outhash=9877294847684254529
+evalorder/unseq-builtins/append-spread-str-vs-call	rand1	ok steps=166 h=10457506911061717096 outhash=9877294847684254529
+evalorder/unseq-builtins/copy-stmt-control	default	ok steps=191 h=877985985539195287 outhash=9877294847684254529
+evalorder/unseq-builtins/copy-stmt-control	rand1	ok steps=191 h=877985985539195287 outhash=9877294847684254529
+evalorder/unseq-const-cell/const-guard-left	default	ok steps=133 h=4229119481318927789 outhash=9877294847684254529
+evalorder/unseq-const-cell/const-guard-left	rand1	ok steps=133 h=4229119481318927789 outhash=9877294847684254529
+evalorder/unseq-const-cell/elem-assign-const-int	default	ok steps=158 h=7364703769340230362 outhash=867120110347038787
+evalorder/unseq-const-cell/elem-assign-const-int	rand1	ok steps=158 h=7237646185684503630 outhash=867120110347038787
+evalorder/unseq-const-cell/elem-assign-const-string	default	ok steps=134 h=12041343555773902660 outhash=867120110347038787
+evalorder/unseq-const-cell/elem-assign-const-string	rand1	ok steps=134 h=12041343555773902660 outhash=867120110347038787
+evalorder/unseq-conv-alloc/conv-read-vs-call	default	ok steps=118 h=6474317527939920958 outhash=9877294847684254529
+evalorder/unseq-conv-alloc/conv-read-vs-call	rand1	ok steps=118 h=6474317527939920958 outhash=9877294847684254529
+evalorder/unseq-conv-alloc/struct-lit-vs-call	default	ok steps=134 h=16800960231423535051 outhash=9877294847684254529
+evalorder/unseq-conv-alloc/struct-lit-vs-call	rand1	ok steps=134 h=16800960231423535051 outhash=9877294847684254529
+evalorder/unseq-conv-alloc/addr-lit-vs-call	default	ok steps=140 h=18394738925028030076 outhash=9877294847684254529
+evalorder/unseq-conv-alloc/addr-lit-vs-call	rand1	ok steps=140 h=18394738925028030076 outhash=9877294847684254529
+evalorder/unseq-conv-alloc/slice-lit-vs-call	default	ok steps=154 h=9710452048187661885 outhash=9877294847684254529
+evalorder/unseq-conv-alloc/slice-lit-vs-call	rand1	ok steps=154 h=9710452048187661885 outhash=9877294847684254529
+evalorder/unseq-conv-alloc/make-len-vs-call	default	ok steps=137 h=1859844019826610634 outhash=9877294847684254529
+evalorder/unseq-conv-alloc/make-len-vs-call	rand1	ok steps=137 h=1859844019826610634 outhash=9877294847684254529
+evalorder/unseq-conv-alloc/map-lit-control	default	ok steps=143 h=18351541543518869991 outhash=9877294847684254529
+evalorder/unseq-conv-alloc/map-lit-control	rand1	ok steps=143 h=18351541543518869991 outhash=9877294847684254529
+evalorder/unseq-conv-alloc/new-expr-vs-call	default	ok steps=136 h=8339710815803640030 outhash=9877294847684254529
+evalorder/unseq-conv-alloc/new-expr-vs-call	rand1	ok steps=136 h=8339710815803640030 outhash=9877294847684254529
+evalorder/unseq-conv-alloc/new-call-vs-call	default	ok steps=192 h=10458315973116639031 outhash=6315414878702435459
+evalorder/unseq-conv-alloc/new-call-vs-call	rand1	ok steps=192 h=12346291073900622715 outhash=6315414878702435459
+evalorder/unseq-conv-alloc/string-bytes-vs-call	default	ok steps=119 h=7497732159738115324 outhash=9877294847684254529
+evalorder/unseq-conv-alloc/string-bytes-vs-call	rand1	ok steps=119 h=7497732159738115324 outhash=9877294847684254529
+evalorder/unseq-conv-alloc/string-runes-vs-call	default	ok steps=119 h=7497732159738115324 outhash=9877294847684254529
+evalorder/unseq-conv-alloc/string-runes-vs-call	rand1	ok steps=119 h=7497732159738115324 outhash=9877294847684254529
+evalorder/unseq-globals/read-vs-call	default	ok steps=123 h=1692469689249974172 outhash=9877294847684254529
+evalorder/unseq-globals/read-vs-call	rand1	ok steps=123 h=1692469689249974172 outhash=9877294847684254529
+evalorder/unseq-globals/compound-vs-call	default	ok steps=121 h=11399245660530923128 outhash=9877294847684254529
+evalorder/unseq-globals/compound-vs-call	rand1	ok steps=121 h=11399245660530923128 outhash=9877294847684254529
+evalorder/unseq-globals/read-vs-unrelated-call	default	ok steps=94 h=2361722594540673427 outhash=5319662154012995875
+evalorder/unseq-globals/read-vs-unrelated-call	rand1	ok steps=94 h=2361722594540673427 outhash=5319662154012995875
+evalorder/unseq-globals/plain-target-call	default	ok steps=104 h=10298854840280641249 outhash=5319662154012995875
+evalorder/unseq-globals/plain-target-call	rand1	ok steps=104 h=10298854840280641249 outhash=5319662154012995875
+evalorder/unseq-maplit/map-lit-entry-vs-call	default	ok steps=147 h=16885735215887941191 outhash=9877294847684254529
+evalorder/unseq-maplit/map-lit-entry-vs-call	rand1	ok steps=147 h=16885735215887941191 outhash=9877294847684254529
+evalorder/unseq-maplit/map-lit-key-vs-call	default	ok steps=147 h=16701218259621929599 outhash=9877294847684254529
+evalorder/unseq-maplit/map-lit-key-vs-call	rand1	ok steps=147 h=16701218259621929599 outhash=9877294847684254529
+evalorder/unseq-maplit/map-lit-const-control	default	ok steps=143 h=18351541543518869991 outhash=9877294847684254529
+evalorder/unseq-maplit/map-lit-const-control	rand1	ok steps=143 h=18351541543518869991 outhash=9877294847684254529
+evalorder/unseq-multi/tuple-header-vs-call	default	ok steps=252 h=3903742809379260247 outhash=9877294847684254529
+evalorder/unseq-multi/tuple-header-vs-call	rand1	ok steps=252 h=5566499961007092391 outhash=9877294847684254529
+evalorder/unseq-multi/blank-panic-vs-call	default	panic: runtime error: index out of range [9] with length 1 steps=90 h=3811004395759569049 outhash=5319662154012995875
+evalorder/unseq-multi/blank-panic-vs-call	rand1	panic: runtime error: index out of range [9] with length 1 steps=90 h=3811004395759569049 outhash=5319662154012995875
+evalorder/unseq-multi/comma-ok-recv-target-vs-panic	default	panic: runtime error: index out of range [9] with length 1 steps=161 h=10186498479321078016 outhash=16866900478061614880
+evalorder/unseq-multi/comma-ok-recv-target-vs-panic	rand1	panic: runtime error: index out of range [9] with length 1 steps=141 h=14881286137845474106 outhash=80930921029173098
+evalorder/unseq-multi/multi-call-header-vs-call	default	ok steps=253 h=11482121887781660066 outhash=9877294847684254529
+evalorder/unseq-multi/multi-call-header-vs-call	rand1	ok steps=253 h=144420890511295384 outhash=9877294847684254529
+evalorder/unseq-multi/define-tuple-vs-call	default	ok steps=149 h=13770894496495826785 outhash=9877294847684254529
+evalorder/unseq-multi/define-tuple-vs-call	rand1	ok steps=149 h=13770894496495826785 outhash=9877294847684254529
+evalorder/unseq-multi/swap-control	default	ok steps=60 h=14338151926228735554 outhash=9877294847684254529
+evalorder/unseq-multi/swap-control	rand1	ok steps=60 h=14338151926228735554 outhash=9877294847684254529
+evalorder/unseq-multi/comma-ok-map-control	default	ok steps=79 h=12348422608027122653 outhash=9877294847684254529
+evalorder/unseq-multi/comma-ok-map-control	rand1	ok steps=79 h=12348422608027122653 outhash=9877294847684254529
+evalorder/unseq-multi/map-target-key-vs-writer	default	ok steps=161 h=1555758897978995952 outhash=9877294847684254529
+evalorder/unseq-multi/map-target-key-vs-writer	rand1	ok steps=161 h=3089217201188484232 outhash=9877294847684254529
+evalorder/unseq-multi/comma-ok-map-target-vs-delete	default	ok steps=189 h=16584289671870782579 outhash=9877294847684254529
+evalorder/unseq-multi/comma-ok-map-target-vs-delete	rand1	ok steps=189 h=13398862366671844151 outhash=9877294847684254529
+evalorder/unseq-multi/map-target-nil-legacy-refusal	default	unsupported: frontend-quarantined: map element as assignment target outside a single assignment steps=0 h=7 outhash=9877294847684254529
+evalorder/unseq-multi/map-target-nil-legacy-refusal	rand1	unsupported: frontend-quarantined: map element as assignment target outside a single assignment steps=0 h=7 outhash=9877294847684254529
+evalorder/unseq-pilot/w1	default	ok steps=111 h=18068554320477879731 outhash=9877294847684254529
+evalorder/unseq-pilot/w1	rand1	ok steps=111 h=18068554320477879731 outhash=9877294847684254529
+evalorder/unseq-pilot/w2	default	ok steps=239 h=10423123704980760221 outhash=9877294847684254529
+evalorder/unseq-pilot/w2	rand1	ok steps=239 h=18222063967714847141 outhash=9877294847684254529
+evalorder/unseq-pilot/w3	default	ok steps=187 h=17800248477145030648 outhash=3280908811524427269
+evalorder/unseq-pilot/w3	rand1	ok steps=187 h=17800248477145030648 outhash=3280908811524427269
+evalorder/unseq-pilot/w5	default	panic: runtime error: index out of range [0] with length 0 steps=168 h=15051714143221552869 outhash=9877294847684254529
+evalorder/unseq-pilot/w5	rand1	panic: runtime error: index out of range [0] with length 0 steps=168 h=15051714143221552869 outhash=9877294847684254529
+evalorder/unseq-pilot/w6	default	ok steps=166 h=12533207112693156646 outhash=9877294847684254529
+evalorder/unseq-pilot/w6	rand1	ok steps=166 h=8820866153806225630 outhash=9877294847684254529
+evalorder/unseq-pilot/r1	default	ok steps=143 h=11265617365805659488 outhash=9877294847684254529
+evalorder/unseq-pilot/r1	rand1	ok steps=143 h=14404726614952391024 outhash=9877294847684254529
+evalorder/unseq-pilot/r2a-true	default	ok steps=94 h=1165896413825212197 outhash=5812770145406070098
+evalorder/unseq-pilot/r2a-true	rand1	ok steps=94 h=1165896413825212197 outhash=5812770145406070098
+evalorder/unseq-pilot/r2a-false	default	ok steps=130 h=16119380601581820107 outhash=12344910446626540570
+evalorder/unseq-pilot/r2a-false	rand1	ok steps=130 h=16119380601581820107 outhash=12344910446626540570
+evalorder/unseq-pilot/r2b	default	ok steps=137 h=305500046846472973 outhash=12966118684575911528
+evalorder/unseq-pilot/r2b	rand1	ok steps=137 h=305500046846472973 outhash=12966118684575911528
+evalorder/unseq-pilot/r2c-true	default	ok steps=195 h=11815198356756949766 outhash=10507528455029934021
+evalorder/unseq-pilot/r2c-true	rand1	ok steps=195 h=11815198356756949766 outhash=10507528455029934021
+evalorder/unseq-pilot/r2c-false	default	ok steps=195 h=11815198356756949766 outhash=10507528455029934021
+evalorder/unseq-pilot/r2c-false	rand1	ok steps=195 h=11815198356756949766 outhash=10507528455029934021
+evalorder/unseq-pilot/r4	default	ok steps=256 h=5676850682382119101 outhash=14542622958893706258
+evalorder/unseq-pilot/r4	rand1	ok steps=256 h=5676850682382119101 outhash=14542622958893706258
+evalorder/unseq-pilot/r6	default	ok steps=174 h=17645333143153341246 outhash=9877294847684254529
+evalorder/unseq-pilot/r6	rand1	ok steps=174 h=17645333143153341246 outhash=9877294847684254529
+evalorder/unseq-ptr-field-map/deref-vs-call	default	ok steps=100 h=18010629635308189893 outhash=9877294847684254529
+evalorder/unseq-ptr-field-map/deref-vs-call	rand1	ok steps=100 h=18010629635308189893 outhash=9877294847684254529
+evalorder/unseq-ptr-field-map/field-vs-call	default	ok steps=101 h=16132499483575980774 outhash=9877294847684254529
+evalorder/unseq-ptr-field-map/field-vs-call	rand1	ok steps=101 h=16132499483575980774 outhash=9877294847684254529
+evalorder/unseq-ptr-field-map/mapread-vs-call	default	ok steps=102 h=2397705552720263748 outhash=9877294847684254529
+evalorder/unseq-ptr-field-map/mapread-vs-call	rand1	ok steps=102 h=2397705552720263748 outhash=9877294847684254529
+evalorder/unseq-ptr-field-map/deref-compound-redirect	default	ok steps=136 h=2797841299531734384 outhash=9877294847684254529
+evalorder/unseq-ptr-field-map/deref-compound-redirect	rand1	ok steps=136 h=2797841299531734384 outhash=9877294847684254529
+evalorder/unseq-ptr-field-map/field-compound-redirect	default	ok steps=170 h=11819356703280921465 outhash=9877294847684254529
+evalorder/unseq-ptr-field-map/field-compound-redirect	rand1	ok steps=170 h=11819356703280921465 outhash=9877294847684254529
+evalorder/unseq-ptr-field-map/map-compound-rebind	default	ok steps=184 h=8744358518071111094 outhash=9877294847684254529
+evalorder/unseq-ptr-field-map/map-compound-rebind	rand1	ok steps=184 h=8744358518071111094 outhash=9877294847684254529
+evalorder/unseq-ptr-field-map/field-private-vs-call	default	ok steps=72 h=3259389394205758101 outhash=5319662154012995875
+evalorder/unseq-ptr-field-map/field-private-vs-call	rand1	ok steps=72 h=3259389394205758101 outhash=5319662154012995875
+evalorder/unseq-ptr-field-map/map-assign-plain-vs-call	default	ok steps=90 h=4026023953209471293 outhash=10160248721042334423
+evalorder/unseq-ptr-field-map/map-assign-plain-vs-call	rand1	ok steps=90 h=4026023953209471293 outhash=10160248721042334423
+evalorder/unseq-recv-method/recv-vs-read	default	ok steps=149 h=6482143448249004643 outhash=9877294847684254529
+evalorder/unseq-recv-method/recv-vs-read	rand1	ok steps=149 h=8770778854163242231 outhash=9877294847684254529
+evalorder/unseq-recv-method/value-recv-vs-arg-call	default	ok steps=130 h=6470073240064916541 outhash=9877294847684254529
+evalorder/unseq-recv-method/value-recv-vs-arg-call	rand1	ok steps=130 h=6470073240064916541 outhash=9877294847684254529
+evalorder/unseq-recv-method/ptr-recv-vs-field-read	default	ok steps=111 h=16436461697065645901 outhash=9877294847684254529
+evalorder/unseq-recv-method/ptr-recv-vs-field-read	rand1	ok steps=111 h=16436461697065645901 outhash=9877294847684254529
+evalorder/unseq-recv-method/addr-recv-vs-slice-read	default	ok steps=139 h=14271112250692121357 outhash=9877294847684254529
+evalorder/unseq-recv-method/addr-recv-vs-slice-read	rand1	ok steps=139 h=14271112250692121357 outhash=9877294847684254529
+evalorder/unseq-recv-method/recv-after-call	default	ok steps=99 h=6969883961036896159 outhash=1190984127897628848
+evalorder/unseq-recv-method/recv-after-call	rand1	ok steps=99 h=6969883961036896159 outhash=1190984127897628848
+evalorder/unseq-strings/str-index-vs-call	default	ok steps=125 h=4450417491375038591 outhash=9877294847684254529
+evalorder/unseq-strings/str-index-vs-call	rand1	ok steps=125 h=4450417491375038591 outhash=9877294847684254529
+evalorder/unseq-strings/str-index-panic-vs-print	default	panic: runtime error: index out of range [9] with length 2 steps=76 h=14871311228881879262 outhash=10160248721042334423
+evalorder/unseq-strings/str-index-panic-vs-print	rand1	panic: runtime error: index out of range [9] with length 2 steps=76 h=14871311228881879262 outhash=10160248721042334423
+evalorder/unseq-strings/str-slice-vs-call	default	ok steps=137 h=4202980637442402297 outhash=9877294847684254529
+evalorder/unseq-strings/str-slice-vs-call	rand1	ok steps=137 h=4202980637442402297 outhash=9877294847684254529
+evalorder/unseq-strings/str-index-status-diverse	default	panic: runtime error: index out of range [9] with length 2 steps=98 h=6609856242288260700 outhash=9877294847684254529
+evalorder/unseq-strings/str-index-status-diverse	rand1	panic: runtime error: index out of range [9] with length 2 steps=98 h=6609856242288260700 outhash=9877294847684254529
+evalorder/unseq-strings/str-len-vs-call	default	ok steps=103 h=8204560066100205941 outhash=9877294847684254529
+evalorder/unseq-strings/str-len-vs-call	rand1	ok steps=103 h=8204560066100205941 outhash=9877294847684254529
+fmt/sprintf-dyn/unmodeled-kind	default	unsupported: normalizing frontend-quarantined: golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time — the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers steps=816 h=15504829090415170209 outhash=9877294847684254529
+fmt/sprintf-dyn/unmodeled-kind	rand1	unsupported: normalizing frontend-quarantined: golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time — the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers steps=816 h=15504829090415170209 outhash=9877294847684254529
+fmt/sprintf-dyn/arity-mismatch	default	unsupported: normalizing frontend-quarantined: golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time — the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers steps=1221 h=11124122387927549089 outhash=9877294847684254529
+fmt/sprintf-dyn/arity-mismatch	rand1	unsupported: normalizing frontend-quarantined: golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time — the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers steps=1221 h=11124122387927549089 outhash=9877294847684254529
+fmt/sprintf-dyn/struct-bound	default	unsupported: normalizing frontend-quarantined: golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time — the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers steps=803 h=15972528751663655898 outhash=9877294847684254529
+fmt/sprintf-dyn/struct-bound	rand1	unsupported: normalizing frontend-quarantined: golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time — the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers steps=803 h=15972528751663655898 outhash=9877294847684254529
+fmt/sprintf-dyn/trailing-plus	default	unsupported: normalizing frontend-quarantined: golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time — the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers steps=380 h=16023657904102539484 outhash=9877294847684254529
+fmt/sprintf-dyn/trailing-plus	rand1	unsupported: normalizing frontend-quarantined: golean stdlib shim RUNTIME refusal (fail closed): a modeled member hit a recorded bound at run time — the bound's text is at the shim call site. Unrecoverable BY DESIGN (audit R4-C-3): as a Go panic this was catchable, and user recover() turned refusals into silent wrong answers steps=380 h=16023657904102539484 outhash=9877294847684254529
+fmt/v-composites/v-named-slice	default	ok steps=1154 h=14183050637003731334 outhash=9877294847684254529
+fmt/v-composites/v-named-slice	rand1	ok steps=1154 h=14183050637003731334 outhash=9877294847684254529
+fmt/v-composites/emb-named-slice-type	default	ok steps=1250 h=9430824855907376961 outhash=9877294847684254529
+fmt/v-composites/emb-named-slice-type	rand1	ok steps=1250 h=9430824855907376961 outhash=9877294847684254529
+functions/bare-call-chain/chain	default	ok steps=145 h=3248194956803284939 outhash=9877294847684254529
+functions/bare-call-chain/chain	rand1	ok steps=145 h=3248194956803284939 outhash=9877294847684254529
+functions/bare-call-chain/helper	default	ok steps=102 h=13926120161167106280 outhash=9877294847684254529
+functions/bare-call-chain/helper	rand1	ok steps=102 h=13926120161167106280 outhash=9877294847684254529
+functions/bare-call-chain/func-value	default	ok steps=73 h=15116375482785534665 outhash=9877294847684254529
+functions/bare-call-chain/func-value	rand1	ok steps=73 h=15116375482785534665 outhash=9877294847684254529
+functions/bare-call-chain/multi-result	default	ok steps=115 h=6393031374836791664 outhash=9877294847684254529
+functions/bare-call-chain/multi-result	rand1	ok steps=115 h=6393031374836791664 outhash=9877294847684254529
+functions/bare-call-discard-result	default	ok steps=66 h=7484786477065332487 outhash=9877294847684254529
+functions/bare-call-discard-result	rand1	ok steps=66 h=7484786477065332487 outhash=9877294847684254529
+functions/callchain/base	default	ok steps=93 h=16518751915860749780 outhash=9877294847684254529
+functions/callchain/base	rand1	ok steps=93 h=16518751915860749780 outhash=9877294847684254529
+functions/callchain/zero	default	ok steps=93 h=16518751915860749780 outhash=9877294847684254529
+functions/callchain/zero	rand1	ok steps=93 h=16518751915860749780 outhash=9877294847684254529
+functions/callchain/neg	default	ok steps=93 h=16518751915860749780 outhash=9877294847684254529
+functions/callchain/neg	rand1	ok steps=93 h=16518751915860749780 outhash=9877294847684254529
+functions/closure-arg-and-capture	default	ok steps=161 h=10974700147845060557 outhash=9877294847684254529
+functions/closure-arg-and-capture	rand1	ok steps=161 h=10974700147845060557 outhash=9877294847684254529
+functions/closure-block-scope-capture	default	ok steps=124 h=6988345953806395187 outhash=9877294847684254529
+functions/closure-block-scope-capture	rand1	ok steps=124 h=6988345953806395187 outhash=9877294847684254529
+functions/closure-captures-named-result	default	ok steps=67 h=8162524119761079588 outhash=9877294847684254529
+functions/closure-captures-named-result	rand1	ok steps=67 h=8162524119761079588 outhash=9877294847684254529
+functions/closure-captures-param	default	ok steps=125 h=2418634236585208198 outhash=9877294847684254529
+functions/closure-captures-param	rand1	ok steps=125 h=2418634236585208198 outhash=9877294847684254529
+functions/closure-frame-sees-mutation	default	ok steps=106 h=6128334576561362319 outhash=9877294847684254529
+functions/closure-frame-sees-mutation	rand1	ok steps=106 h=6128334576561362319 outhash=9877294847684254529
+functions/closure-loop-var-capture	default	ok steps=652 h=6247192002433146373 outhash=9877294847684254529
+functions/closure-loop-var-capture	rand1	ok steps=652 h=6247192002433146373 outhash=9877294847684254529
+functions/closure-nested-recapture	default	ok steps=169 h=10322817066811195519 outhash=9877294847684254529
+functions/closure-nested-recapture	rand1	ok steps=169 h=10322817066811195519 outhash=9877294847684254529
+functions/closure-param-shadows-capture	default	ok steps=85 h=16161022291538986276 outhash=9877294847684254529
+functions/closure-param-shadows-capture	rand1	ok steps=85 h=16161022291538986276 outhash=9877294847684254529
+functions/closure-recursion	default	ok steps=274 h=4381832687679151806 outhash=9877294847684254529
+functions/closure-recursion	rand1	ok steps=274 h=4381832687679151806 outhash=9877294847684254529
+functions/closure-returns-closure	default	ok steps=260 h=17350553616115591596 outhash=9877294847684254529
+functions/closure-returns-closure	rand1	ok steps=260 h=17350553616115591596 outhash=9877294847684254529
+functions/closure-return-state	default	ok steps=160 h=11130128871701441380 outhash=9877294847684254529
+functions/closure-return-state	rand1	ok steps=160 h=11130128871701441380 outhash=9877294847684254529
+functions/closure-share	default	ok steps=134 h=3805788825654564518 outhash=9877294847684254529
+functions/closure-share	rand1	ok steps=134 h=3805788825654564518 outhash=9877294847684254529
+functions/closure-two-vars-one-closure	default	ok steps=133 h=14792470091736442137 outhash=9877294847684254529
+functions/closure-two-vars-one-closure	rand1	ok steps=133 h=14792470091736442137 outhash=9877294847684254529
+functions/closure-value-reassigned	default	ok steps=113 h=940355360036211751 outhash=9877294847684254529
+functions/closure-value-reassigned	rand1	ok steps=113 h=940355360036211751 outhash=9877294847684254529
+functions/composite-function-values/struct-call	default	ok steps=68 h=13748670677641304125 outhash=9877294847684254529
+functions/composite-function-values/struct-call	rand1	ok steps=68 h=13748670677641304125 outhash=9877294847684254529
+functions/composite-function-values/slice-call	default	ok steps=200 h=8967667777233164830 outhash=9877294847684254529
+functions/composite-function-values/slice-call	rand1	ok steps=200 h=8967667777233164830 outhash=9877294847684254529
+functions/composite-function-values/map-call	default	ok steps=136 h=9713268845113326637 outhash=9877294847684254529
+functions/composite-function-values/map-call	rand1	ok steps=136 h=9713268845113326637 outhash=9877294847684254529
+functions/composite-function-values/struct-reassign	default	ok steps=124 h=12679416832405841357 outhash=9877294847684254529
+functions/composite-function-values/struct-reassign	rand1	ok steps=124 h=12679416832405841357 outhash=9877294847684254529
+functions/function-in-interface	default	ok steps=85 h=10421186568433788736 outhash=9877294847684254529
+functions/function-in-interface	rand1	ok steps=85 h=10421186568433788736 outhash=9877294847684254529
+functions/function-interface-compare-panic	default	panic: runtime error: comparing uncomparable type func() steps=27 h=8492423647879625912 outhash=9877294847684254529
+functions/function-interface-compare-panic	rand1	panic: runtime error: comparing uncomparable type func() steps=27 h=8492423647879625912 outhash=9877294847684254529
+functions/function-nil-compare	default	ok steps=133 h=13840804476817400276 outhash=9877294847684254529
+functions/function-nil-compare	rand1	ok steps=133 h=13840804476817400276 outhash=9877294847684254529
+functions/function-reassign	default	ok steps=118 h=2522876132559240532 outhash=9877294847684254529
+functions/function-reassign	rand1	ok steps=118 h=2522876132559240532 outhash=9877294847684254529
+functions/higher-order-arg	default	ok steps=252 h=16971403161736856730 outhash=9877294847684254529
+functions/higher-order-arg	rand1	ok steps=252 h=16971403161736856730 outhash=9877294847684254529
+functions/method-value-callback	default	ok steps=174 h=3743707274943382349 outhash=9877294847684254529
+functions/method-value-callback	rand1	ok steps=174 h=3743707274943382349 outhash=9877294847684254529
+functions/nil-function-call-panic	default	panic: runtime error: invalid memory address or nil pointer dereference steps=16 h=5087286071827572289 outhash=9877294847684254529
+functions/nil-function-call-panic	rand1	panic: runtime error: invalid memory address or nil pointer dereference steps=16 h=5087286071827572289 outhash=9877294847684254529
+functions/recursion	default	ok steps=239 h=13638374127458147952 outhash=9877294847684254529
+functions/recursion	rand1	ok steps=239 h=13638374127458147952 outhash=9877294847684254529
+functions/return-function	default	ok steps=160 h=11078303600050845227 outhash=9877294847684254529
+functions/return-function	rand1	ok steps=160 h=11078303600050845227 outhash=9877294847684254529
+functions/untyped-nil-sinks/struct-lit-field	default	ok steps=37 h=11687593087298573308 outhash=9877294847684254529
+functions/untyped-nil-sinks/struct-lit-field	rand1	ok steps=37 h=11687593087298573308 outhash=9877294847684254529
+functions/untyped-nil-sinks/struct-lit-append	default	ok steps=96 h=2020509169165149901 outhash=9877294847684254529
+functions/untyped-nil-sinks/struct-lit-append	rand1	ok steps=96 h=2020509169165149901 outhash=9877294847684254529
+functions/untyped-nil-sinks/struct-lit-map-field	default	ok steps=69 h=4431103471123649235 outhash=9877294847684254529
+functions/untyped-nil-sinks/struct-lit-map-field	rand1	ok steps=69 h=4431103471123649235 outhash=9877294847684254529
+functions/untyped-nil-sinks/slice-lit-elem	default	ok steps=144 h=5124221293077901262 outhash=9877294847684254529
+functions/untyped-nil-sinks/slice-lit-elem	rand1	ok steps=144 h=935889462212701014 outhash=9877294847684254529
+functions/untyped-nil-sinks/array-lit-elem	default	ok steps=87 h=2237359106557851672 outhash=9877294847684254529
+functions/untyped-nil-sinks/array-lit-elem	rand1	ok steps=87 h=2237359106557851672 outhash=9877294847684254529
+functions/untyped-nil-sinks/return-nil	default	ok steps=155 h=15300973619951483416 outhash=9877294847684254529
+functions/untyped-nil-sinks/return-nil	rand1	ok steps=155 h=15300973619951483416 outhash=9877294847684254529
+functions/untyped-nil-sinks/call-arg	default	ok steps=47 h=18178965015757108165 outhash=9877294847684254529
+functions/untyped-nil-sinks/call-arg	rand1	ok steps=47 h=18178965015757108165 outhash=9877294847684254529
+functions/untyped-nil-sinks/plain-assign	default	ok steps=88 h=16111142238651269389 outhash=9877294847684254529
+functions/untyped-nil-sinks/plain-assign	rand1	ok steps=88 h=16111142238651269389 outhash=9877294847684254529
+functions/untyped-nil-sinks/variadic-spread	default	ok steps=135 h=7418373894290877868 outhash=9877294847684254529
+functions/untyped-nil-sinks/variadic-spread	rand1	ok steps=135 h=7418373894290877868 outhash=9877294847684254529
+functions/untyped-nil-sinks/nested-map-value	default	ok steps=59 h=5793604053512464673 outhash=9877294847684254529
+functions/untyped-nil-sinks/nested-map-value	rand1	ok steps=59 h=5793604053512464673 outhash=9877294847684254529
+functions/untyped-nil-sinks/ctl-map-lit-value	default	ok steps=55 h=4646232531705209017 outhash=9877294847684254529
+functions/untyped-nil-sinks/ctl-map-lit-value	rand1	ok steps=55 h=4646232531705209017 outhash=9877294847684254529
+functions/untyped-nil-sinks/ctl-zero-value	default	ok steps=22 h=1743272049862343356 outhash=9877294847684254529
+functions/untyped-nil-sinks/ctl-zero-value	rand1	ok steps=22 h=1743272049862343356 outhash=9877294847684254529
+generics/higher-order-inference/named-function-type	default	ok steps=64 h=15080529607993453558 outhash=9877294847684254529
+generics/higher-order-inference/named-function-type	rand1	ok steps=64 h=15080529607993453558 outhash=9877294847684254529
+goroutines/close-wake/send-closed-recovered	default	ok steps=177 h=8949803149077809639 outhash=9877294847684254529
+goroutines/close-wake/send-closed-recovered	rand1	ok steps=177 h=18054745396558659911 outhash=9877294847684254529
+goroutines/fork-join/result-discarded	default	ok steps=82 h=4605069522089808297 outhash=9877294847684254529
+goroutines/fork-join/result-discarded	rand1	ok steps=82 h=859822471813225237 outhash=9877294847684254529
+goroutines/go-builtin/recover	default	unsupported: frontend-quarantined: go of builtin recover steps=0 h=7 outhash=9877294847684254529
+goroutines/go-builtin/recover	rand1	unsupported: frontend-quarantined: go of builtin recover steps=0 h=7 outhash=9877294847684254529
+goroutines/spawn-edge/child-recovers	default	ok steps=112 h=10197011631907076655 outhash=9877294847684254529
+goroutines/spawn-edge/child-recovers	rand1	ok steps=112 h=9841050792273848227 outhash=9877294847684254529
+goroutines/spawn-edge/nil-interface-recovered	default	ok steps=78 h=1613688427637181020 outhash=9877294847684254529
+goroutines/spawn-edge/nil-interface-recovered	rand1	ok steps=78 h=1613688427637181020 outhash=9877294847684254529
+init/init-defer-recover	default	ok steps=148 h=15544392872560104438 outhash=9877294847684254529
+init/init-defer-recover	rand1	ok steps=148 h=15544392872560104438 outhash=9877294847684254529
+interfaces/anon-iface-display/named-result	default	panic: interface conversion: main.T is not interface { Get() main.T }: missing method Get steps=31 h=13141881018211500662 outhash=9877294847684254529
+interfaces/anon-iface-display/named-result	rand1	panic: interface conversion: main.T is not interface { Get() main.T }: missing method Get steps=31 h=13141881018211500662 outhash=9877294847684254529
+interfaces/call-assign-boxing/named-result	default	ok steps=45 h=10466522535088811442 outhash=9877294847684254529
+interfaces/call-assign-boxing/named-result	rand1	ok steps=45 h=10466522535088811442 outhash=9877294847684254529
+interfaces/interface-valued-observation/named-iface	default	ok steps=18 h=14432696035830232786 outhash=9877294847684254529
+interfaces/interface-valued-observation/named-iface	rand1	ok steps=18 h=14432696035830232786 outhash=9877294847684254529
+interfaces/method-set-signature-mismatch/result-type	default	ok steps=56 h=17785365240652103905 outhash=9877294847684254529
+interfaces/method-set-signature-mismatch/result-type	rand1	ok steps=56 h=17785365240652103905 outhash=9877294847684254529
+interfaces/recover-nil-dispatch/nil-interface	default	ok steps=60 h=8500883597679033169 outhash=9877294847684254529
+interfaces/recover-nil-dispatch/nil-interface	rand1	ok steps=60 h=8500883597679033169 outhash=9877294847684254529
+interfaces/recover-nil-dispatch/nil-pointer-box	default	ok steps=75 h=12705133199489586343 outhash=9877294847684254529
+interfaces/recover-nil-dispatch/nil-pointer-box	rand1	ok steps=75 h=12705133199489586343 outhash=9877294847684254529
+interfaces/recover-promoted-wrapper/silent-value-embed	default	ok steps=158 h=11645301985777258403 outhash=9877294847684254529
+interfaces/recover-promoted-wrapper/silent-value-embed	rand1	ok steps=158 h=11645301985777258403 outhash=9877294847684254529
+interfaces/recover-promoted-wrapper/status-value-embed	default	ok steps=126 h=5540475416370557080 outhash=9877294847684254529
+interfaces/recover-promoted-wrapper/status-value-embed	rand1	ok steps=126 h=5540475416370557080 outhash=9877294847684254529
+interfaces/recover-promoted-wrapper/silent-pointer-embed	default	ok steps=170 h=12189313326235096637 outhash=9877294847684254529
+interfaces/recover-promoted-wrapper/silent-pointer-embed	rand1	ok steps=170 h=12189313326235096637 outhash=9877294847684254529
+interfaces/recover-promoted-wrapper/silent-iface-embed	default	ok steps=160 h=1125200787571969820 outhash=9877294847684254529
+interfaces/recover-promoted-wrapper/silent-iface-embed	rand1	ok steps=160 h=1125200787571969820 outhash=9877294847684254529
+interfaces/recover-promoted-wrapper/ctl-direct-iface	default	ok steps=125 h=10570281146401745378 outhash=9877294847684254529
+interfaces/recover-promoted-wrapper/ctl-direct-iface	rand1	ok steps=125 h=10570281146401745378 outhash=9877294847684254529
+interfaces/recover-promoted-wrapper/ctl-concrete-promoted	default	ok steps=105 h=17030115088632153064 outhash=9877294847684254529
+interfaces/recover-promoted-wrapper/ctl-concrete-promoted	rand1	ok steps=105 h=17030115088632153064 outhash=9877294847684254529
+interfaces/recover-promoted-wrapper/ctl-method-value	default	ok steps=118 h=14482035094490810490 outhash=9877294847684254529
+interfaces/recover-promoted-wrapper/ctl-method-value	rand1	ok steps=118 h=14482035094490810490 outhash=9877294847684254529
+interfaces/recover-promoted-wrapper/ctl-chain-join	default	ok steps=123 h=15121185268476991840 outhash=9877294847684254529
+interfaces/recover-promoted-wrapper/ctl-chain-join	rand1	ok steps=123 h=15121185268476991840 outhash=9877294847684254529
+interfaces/type-assert-from-named-interface-panic/to-pointer	default	panic: interface conversion: main.namedIface is main.namedT, not *main.namedT steps=35 h=6023967308018941366 outhash=9877294847684254529
+interfaces/type-assert-from-named-interface-panic/to-pointer	rand1	panic: interface conversion: main.namedIface is main.namedT, not *main.namedT steps=35 h=6023967308018941366 outhash=9877294847684254529
+interfaces/type-assert-from-named-interface-panic/nil-operand	default	panic: interface conversion: main.namedIface is nil, not main.namedT steps=20 h=9553227263564655521 outhash=9877294847684254529
+interfaces/type-assert-from-named-interface-panic/nil-operand	rand1	panic: interface conversion: main.namedIface is nil, not main.namedT steps=20 h=9553227263564655521 outhash=9877294847684254529
+ints/defined-incdec/unnamed-control	default	ok steps=44 h=12735508126924477630 outhash=9877294847684254529
+ints/defined-incdec/unnamed-control	rand1	ok steps=44 h=12735508126924477630 outhash=9877294847684254529
+maps/imported-named-key-unhashable	default	unsupported: map key hashability for unknown defined type sort.IntSlice steps=65 h=1146908835811641207 outhash=9877294847684254529
+maps/imported-named-key-unhashable	rand1	unsupported: map key hashability for unknown defined type sort.IntSlice steps=65 h=1146908835811641207 outhash=9877294847684254529
+maps/named-nil-flows/return	default	ok steps=63 h=1924158217919452393 outhash=9877294847684254529
+maps/named-nil-flows/return	rand1	ok steps=63 h=1924158217919452393 outhash=9877294847684254529
+maps/named-nil-flows/composite	default	ok steps=184 h=11129306635943969050 outhash=9877294847684254529
+maps/named-nil-flows/composite	rand1	ok steps=184 h=11129306635943969050 outhash=9877294847684254529
+maps/named-nil-flows/literal-elem	default	ok steps=49 h=4656816884562245189 outhash=9877294847684254529
+maps/named-nil-flows/literal-elem	rand1	ok steps=49 h=4656816884562245189 outhash=9877294847684254529
+maps/named-nil-flows/arg	default	ok steps=49 h=14757865747305400345 outhash=9877294847684254529
+maps/named-nil-flows/arg	rand1	ok steps=49 h=14757865747305400345 outhash=9877294847684254529
+maps/named-nil-flows/slice	default	ok steps=64 h=17542784598029467728 outhash=9877294847684254529
+maps/named-nil-flows/slice	rand1	ok steps=64 h=17542784598029467728 outhash=9877294847684254529
+multi-assign/blank-dep-index	default	ok steps=136 h=1314031102129843849 outhash=9877294847684254529
+multi-assign/blank-dep-index	rand1	ok steps=136 h=1314031102129843849 outhash=9877294847684254529
+multi-assign/blank-discard-nonint	default	ok steps=79 h=8627514125791186398 outhash=9877294847684254529
+multi-assign/blank-discard-nonint	rand1	ok steps=79 h=8627514125791186398 outhash=9877294847684254529
+multi-assign/call-return-assignment	default	ok steps=103 h=14495205946695232148 outhash=9877294847684254529
+multi-assign/call-return-assignment	rand1	ok steps=103 h=14495205946695232148 outhash=9877294847684254529
+multi-assign/call-write-back/effects-suppressed	default	ok steps=273 h=4575508613668272979 outhash=9877294847684254529
+multi-assign/call-write-back/effects-suppressed	rand1	ok steps=273 h=4575508613668272979 outhash=9877294847684254529
+multi-assign/call-write-back/panic-identity	default	panic: from-call steps=93 h=7118836008700662125 outhash=9877294847684254529
+multi-assign/call-write-back/panic-identity	rand1	panic: from-call steps=97 h=9532716969858741241 outhash=9877294847684254529
+multi-assign/call-write-back/nil-field-store	default	ok steps=172 h=5411162978171175915 outhash=9877294847684254529
+multi-assign/call-write-back/nil-field-store	rand1	ok steps=172 h=5411162978171175915 outhash=9877294847684254529
+multi-assign/call-write-back-order/index-missed-panic	default	ok steps=218 h=5706570600113144010 outhash=9877294847684254529
+multi-assign/call-write-back-order/index-missed-panic	rand1	ok steps=218 h=5706570600113144010 outhash=9877294847684254529
+multi-assign/call-write-back-order/index-spurious-panic	default	ok steps=208 h=17465423825196450499 outhash=9877294847684254529
+multi-assign/call-write-back-order/index-spurious-panic	rand1	ok steps=208 h=17465423825196450499 outhash=9877294847684254529
+multi-assign/call-write-back-order/global-index	default	ok steps=162 h=4505288258295997470 outhash=9877294847684254529
+multi-assign/call-write-back-order/global-index	rand1	ok steps=162 h=4505288258295997470 outhash=9877294847684254529
+multi-assign/call-write-back-order/deref-target	default	ok steps=167 h=182378269200073445 outhash=9877294847684254529
+multi-assign/call-write-back-order/deref-target	rand1	ok steps=167 h=11714134583211302942 outhash=9877294847684254529
+multi-assign/call-write-back-order/slice-header-base	default	ok steps=268 h=14384346909266215678 outhash=9877294847684254529
+multi-assign/call-write-back-order/slice-header-base	rand1	ok steps=268 h=18280669797666604012 outhash=9877294847684254529
+multi-assign/call-write-back-order/hoisted-control	default	ok steps=146 h=1022213869284709432 outhash=9877294847684254529
+multi-assign/call-write-back-order/hoisted-control	rand1	ok steps=146 h=1022213869284709432 outhash=9877294847684254529
+multi-assign/call-write-back-order-value/index-target	default	ok steps=177 h=9794780094910042716 outhash=9877294847684254529
+multi-assign/call-write-back-order-value/index-target	rand1	ok steps=177 h=9794780094910042716 outhash=9877294847684254529
+multi-assign/call-write-back-order-value/deref-target	default	ok steps=180 h=17841056995353649924 outhash=9877294847684254529
+multi-assign/call-write-back-order-value/deref-target	rand1	ok steps=180 h=3021115695059893978 outhash=9877294847684254529
+multi-assign/chain-field-over-index	default	ok steps=156 h=6512343660405404821 outhash=9877294847684254529
+multi-assign/chain-field-over-index	rand1	ok steps=156 h=6512343660405404821 outhash=9877294847684254529
+multi-assign/chain-field-over-index/nil-slice-field	default	ok steps=135 h=14572837097120105900 outhash=9877294847684254529
+multi-assign/chain-field-over-index/nil-slice-field	rand1	ok steps=135 h=14572837097120105900 outhash=9877294847684254529
+multi-assign/chain-field-over-index/array-field	default	ok steps=150 h=8608497877468184782 outhash=9877294847684254529
+multi-assign/chain-field-over-index/array-field	rand1	ok steps=150 h=8608497877468184782 outhash=9877294847684254529
+multi-assign/chain-field-over-index/array-nested	default	ok steps=152 h=175539381255033458 outhash=9877294847684254529
+multi-assign/chain-field-over-index/array-nested	rand1	ok steps=152 h=175539381255033458 outhash=9877294847684254529
+multi-assign/chain-field-over-index/inner-value-guard	default	ok steps=152 h=3072905211906552038 outhash=9877294847684254529
+multi-assign/chain-field-over-index/inner-value-guard	rand1	ok steps=152 h=3072905211906552038 outhash=9877294847684254529
+multi-assign/comma-ok-forms/map-oob	default	ok steps=227 h=15642860509347551716 outhash=9877294847684254529
+multi-assign/comma-ok-forms/map-oob	rand1	ok steps=227 h=15642860509347551716 outhash=9877294847684254529
+multi-assign/comma-ok-forms/assert-nil-field	default	ok steps=177 h=12566824149542643475 outhash=9877294847684254529
+multi-assign/comma-ok-forms/assert-nil-field	rand1	ok steps=177 h=12566824149542643475 outhash=9877294847684254529
+multi-assign/comma-ok-forms/dep-index	default	ok steps=408 h=6868612201708096835 outhash=9877294847684254529
+multi-assign/comma-ok-forms/dep-index	rand1	ok steps=408 h=6868612201708096835 outhash=9877294847684254529
+multi-assign/deref-target-before-rhs	default	ok steps=136 h=9611375764648285459 outhash=9877294847684254529
+multi-assign/deref-target-before-rhs	rand1	ok steps=136 h=915396500664588490 outhash=9877294847684254529
+multi-assign/field-nil-store-time	default	ok steps=163 h=14228732809037335380 outhash=9877294847684254529
+multi-assign/field-nil-store-time	rand1	ok steps=163 h=14228732809037335380 outhash=9877294847684254529
+multi-assign/index-target-rhs-call-order	default	ok steps=186 h=14801017090510931106 outhash=9877294847684254529
+multi-assign/index-target-rhs-call-order	rand1	ok steps=186 h=14801017090510931106 outhash=9877294847684254529
+multi-assign/lhs-index-eval-order	default	ok steps=251 h=12499268879819370215 outhash=9877294847684254529
+multi-assign/lhs-index-eval-order	rand1	ok steps=251 h=8996837812892778639 outhash=9877294847684254529
+multi-assign/repeated-index-write	default	ok steps=76 h=1808569657888704998 outhash=9877294847684254529
+multi-assign/repeated-index-write	rand1	ok steps=76 h=1808569657888704998 outhash=9877294847684254529
+multi-assign/repeated-variable-write	default	ok steps=45 h=15816640305713904523 outhash=9877294847684254529
+multi-assign/repeated-variable-write	rand1	ok steps=45 h=15816640305713904523 outhash=9877294847684254529
+multi-assign/rhs-before-writes	default	ok steps=66 h=17627802869952743261 outhash=9877294847684254529
+multi-assign/rhs-before-writes	rand1	ok steps=66 h=17627802869952743261 outhash=9877294847684254529
+multi-assign/selector-target-before-rhs	default	ok steps=170 h=7077258436871622360 outhash=9877294847684254529
+multi-assign/selector-target-before-rhs	rand1	ok steps=170 h=2531833720233626333 outhash=9877294847684254529
+multi-assign/store-order-plain	default	ok steps=118 h=6480962073761459094 outhash=9877294847684254529
+multi-assign/store-order-plain	rand1	ok steps=118 h=6480962073761459094 outhash=9877294847684254529
+multi-assign/target-eval-before-call	default	ok steps=189 h=14416872302064737494 outhash=9877294847684254529
+multi-assign/target-eval-before-call	rand1	ok steps=189 h=2806688552984499402 outhash=9877294847684254529
+multi-assign/tuple-assign-order	default	ok steps=154 h=3128301809111874512 outhash=9877294847684254529
+multi-assign/tuple-assign-order	rand1	ok steps=154 h=3128301809111874512 outhash=9877294847684254529
+noodler/closures/closure-named-result-return	default	ok steps=71 h=13703969588366656198 outhash=9877294847684254529
+noodler/closures/closure-named-result-return	rand1	ok steps=71 h=13703969588366656198 outhash=9877294847684254529
+noodler/defers/deferred-method-recovers	default	ok steps=112 h=3443663275399862901 outhash=9877294847684254529
+noodler/defers/deferred-method-recovers	rand1	ok steps=112 h=3443663275399862901 outhash=9877294847684254529
+noodler/defers/deferred-method-value-recovers	default	ok steps=125 h=10382246961908393972 outhash=9877294847684254529
+noodler/defers/deferred-method-value-recovers	rand1	ok steps=125 h=10382246961908393972 outhash=9877294847684254529
+noodler/defers/recover-via-func-value	default	panic: indirect-value steps=78 h=7893928303691319980 outhash=9877294847684254529
+noodler/defers/recover-via-func-value	rand1	panic: indirect-value steps=78 h=7893928303691319980 outhash=9877294847684254529
+noodler/defers/recover-via-immediate-literal	default	panic: immediate steps=52 h=14206448523202522609 outhash=9877294847684254529
+noodler/defers/recover-via-immediate-literal	rand1	panic: immediate steps=52 h=14206448523202522609 outhash=9877294847684254529
+noodler/defers/goroutine-recovers-own	default	ok steps=125 h=5190242355022727145 outhash=9877294847684254529
+noodler/defers/goroutine-recovers-own	rand1	ok steps=125 h=3123074399736930529 outhash=9877294847684254529
+noodler/defers/nested-recover-levels	default	ok steps=231 h=10722018105727125103 outhash=9877294847684254529
+noodler/defers/nested-recover-levels	rand1	ok steps=231 h=10722018105727125103 outhash=9877294847684254529
+noodler/defers/panic-nil-recovered	default	ok steps=81 h=4059029942589630103 outhash=9877294847684254529
+noodler/defers/panic-nil-recovered	rand1	ok steps=81 h=4059029942589630103 outhash=9877294847684254529
+noodler/defers/recover-in-loop	default	ok steps=903 h=8912749865284852151 outhash=9877294847684254529
+noodler/defers/recover-in-loop	rand1	ok steps=903 h=8912749865284852151 outhash=9877294847684254529
+noodler/frontier2/recover-into-named-error	default	ok steps=463 h=8150335471471665793 outhash=9877294847684254529
+noodler/frontier2/recover-into-named-error	rand1	ok steps=463 h=8150335471471665793 outhash=9877294847684254529
+noodler/frontier/named-result-shadow-range	default	unsupported: frontend-quarantined: local i shadows the named result i in a construct outside the rename set (e.g. a range clause) — fail closed, widen with a guardrail row first steps=0 h=7 outhash=9877294847684254529
+noodler/frontier/named-result-shadow-range	rand1	unsupported: frontend-quarantined: local i shadows the named result i in a construct outside the rename set (e.g. a range clause) — fail closed, widen with a guardrail row first steps=0 h=7 outhash=9877294847684254529
+noodler/frontier/named-result-shadow-typeswitch	default	unsupported: frontend-quarantined: type-switch guard x shadows the named result x — outside the rename set (the clause bindings live in Implicits), fail closed; widen with a guardrail row first steps=0 h=7 outhash=9877294847684254529
+noodler/frontier/named-result-shadow-typeswitch	rand1	unsupported: frontend-quarantined: type-switch guard x shadows the named result x — outside the rename set (the clause bindings live in Implicits), fail closed; widen with a guardrail row first steps=0 h=7 outhash=9877294847684254529
+noodler/gotchas/defer-after-recover-path	default	ok steps=130 h=15038497687281981155 outhash=9877294847684254529
+noodler/gotchas/defer-after-recover-path	rand1	ok steps=130 h=15038497687281981155 outhash=9877294847684254529
+noodler/ifaces/iface-dispatch-value-nil-recovered	default	ok steps=69 h=13058159081126411390 outhash=9877294847684254529
+noodler/ifaces/iface-dispatch-value-nil-recovered	rand1	ok steps=69 h=13058159081126411390 outhash=9877294847684254529
+noodler/ifaces/assert-named-iface-nil	default	panic: interface conversion: main.Valuer is nil, not main.Inner steps=20 h=2940699336852711548 outhash=9877294847684254529
+noodler/ifaces/assert-named-iface-nil	rand1	panic: interface conversion: main.Valuer is nil, not main.Inner steps=20 h=2940699336852711548 outhash=9877294847684254529
+noodler/initpanic/recovered	default	ok steps=104 h=6863112770964261267 outhash=9877294847684254529
+noodler/initpanic/recovered	rand1	ok steps=104 h=6863112770964261267 outhash=9877294847684254529
+noodler/misc/convert-named-func-types	default	ok steps=186 h=119679244185354658 outhash=9877294847684254529
+noodler/misc/convert-named-func-types	rand1	ok steps=186 h=119679244185354658 outhash=9877294847684254529
+noodler/names/method-named-builtin	default	ok steps=144 h=500064647469347990 outhash=9877294847684254529
+noodler/names/method-named-builtin	rand1	ok steps=144 h=500064647469347990 outhash=9877294847684254529
+noodler/panics/assert-named-iface-mismatch	default	panic: interface conversion: main.I is main.T, not *main.T steps=35 h=6023967308018941366 outhash=9877294847684254529
+noodler/panics/assert-named-iface-mismatch	rand1	panic: interface conversion: main.I is main.T, not *main.T steps=35 h=6023967308018941366 outhash=9877294847684254529
+noodler/panics/assert-nil-named-to-iface	default	panic: interface conversion: interface is nil, not main.Other steps=18 h=9764475064291748197 outhash=9877294847684254529
+noodler/panics/assert-nil-named-to-iface	rand1	panic: interface conversion: interface is nil, not main.Other steps=18 h=9764475064291748197 outhash=9877294847684254529
+noodler/typeswitch/switch-on-named-interface	default	ok steps=122 h=7455576421565521538 outhash=9877294847684254529
+noodler/typeswitch/switch-on-named-interface	rand1	ok steps=122 h=7455576421565521538 outhash=9877294847684254529
+panic-recover/defer-arg-during-panic	default	ok steps=80 h=12321475326786607806 outhash=9877294847684254529
+panic-recover/defer-arg-during-panic	rand1	ok steps=80 h=12321475326786607806 outhash=9877294847684254529
+panic-recover/defer-panic-after-return	default	panic: defer boom steps=31 h=9409860715998737143 outhash=9877294847684254529
+panic-recover/defer-panic-after-return	rand1	panic: defer boom steps=31 h=9409860715998737143 outhash=9877294847684254529
+panic-recover/defer-panic-recovered-after-return	default	ok steps=85 h=16208609736237030418 outhash=9877294847684254529
+panic-recover/defer-panic-recovered-after-return	rand1	ok steps=85 h=16208609736237030418 outhash=9877294847684254529
+panic-recover/defer-recover-builtin	default	panic: boom steps=41 h=6988399694013653389 outhash=9877294847684254529
+panic-recover/defer-recover-builtin	rand1	panic: boom steps=41 h=6988399694013653389 outhash=9877294847684254529
+panic-recover/deferred-panic-replaces	default	panic: first steps=25 h=12199256420092559606 outhash=9877294847684254529
+panic-recover/deferred-panic-replaces	rand1	panic: first steps=25 h=12199256420092559606 outhash=9877294847684254529
+panic-recover/defer-registered-during-unwind	default	ok steps=127 h=4529067758663190572 outhash=9877294847684254529
+panic-recover/defer-registered-during-unwind	rand1	ok steps=127 h=4529067758663190572 outhash=9877294847684254529
+panic-recover/named-result-preserved-after-recover	default	ok steps=69 h=9686704641043044030 outhash=9877294847684254529
+panic-recover/named-result-preserved-after-recover	rand1	ok steps=69 h=9686704641043044030 outhash=9877294847684254529
+panic-recover/nested-frame-recover	default	ok steps=89 h=16461688238011497295 outhash=9877294847684254529
+panic-recover/nested-frame-recover	rand1	ok steps=89 h=16461688238011497295 outhash=9877294847684254529
+panic-recover/nil-defer-during-unwind-abort	default	panic: boom steps=19 h=2226150109753297763 outhash=9877294847684254529
+panic-recover/nil-defer-during-unwind-abort	rand1	panic: boom steps=19 h=2226150109753297763 outhash=9877294847684254529
+panic-recover/nil-defer-during-unwind	default	ok steps=63 h=17379920969502425791 outhash=9877294847684254529
+panic-recover/nil-defer-during-unwind	rand1	ok steps=63 h=17379920969502425791 outhash=9877294847684254529
+panic-recover/panic-bool-abort	default	panic: true steps=10 h=9980521280247651243 outhash=9877294847684254529
+panic-recover/panic-bool-abort	rand1	panic: true steps=10 h=9980521280247651243 outhash=9877294847684254529
+panic-recover/panic-controls/nul	default	panic: a b steps=10 h=9980521280247651243 outhash=9877294847684254529
+panic-recover/panic-controls/nul	rand1	panic: a b steps=10 h=9980521280247651243 outhash=9877294847684254529
+panic-recover/panic-controls/soh	default	panic: ab steps=10 h=9980521280247651243 outhash=9877294847684254529
+panic-recover/panic-controls/soh	rand1	panic: ab steps=10 h=9980521280247651243 outhash=9877294847684254529
+panic-recover/panic-controls/tab	default	panic: a b steps=10 h=9980521280247651243 outhash=9877294847684254529
+panic-recover/panic-controls/tab	rand1	panic: a b steps=10 h=9980521280247651243 outhash=9877294847684254529
+panic-recover/panic-controls/cr	default	panic: ab steps=10 h=9980521280247651243 outhash=9877294847684254529
+panic-recover/panic-controls/cr	rand1	panic: ab steps=10 h=9980521280247651243 outhash=9877294847684254529
+panic-recover/panic-controls/newline	default	panic: a   steps=10 h=9980521280247651243 outhash=9877294847684254529
+panic-recover/panic-controls/newline	rand1	panic: a   steps=10 h=9980521280247651243 outhash=9877294847684254529
+panic-recover/panic-controls/recovered-newline	default	panic: a   steps=51 h=174706453708167040 outhash=9877294847684254529
+panic-recover/panic-controls/recovered-newline	rand1	panic: a   steps=51 h=174706453708167040 outhash=9877294847684254529
+panic-recover/panic-controls/output-prefix	default	panic: a b steps=14 h=15147312838872718195 outhash=12370952174474943929
+panic-recover/panic-controls/output-prefix	rand1	panic: a b steps=14 h=15147312838872718195 outhash=12370952174474943929
+panic-recover/panic-controls/output-ok	default	ok steps=20 h=13644241561655737614 outhash=12370952174474943929
+panic-recover/panic-controls/output-ok	rand1	ok steps=20 h=13644241561655737614 outhash=12370952174474943929
+panic-recover/panic-controls/child-confluent	default	panic: a   steps=30 h=2130680938226603327 outhash=9877294847684254529
+panic-recover/panic-controls/child-confluent	rand1	panic: a   steps=29 h=13966601933660144794 outhash=9877294847684254529
+panic-recover/panic-defer-order	default	ok steps=96 h=5334973315499102946 outhash=9877294847684254529
+panic-recover/panic-defer-order	rand1	ok steps=96 h=5334973315499102946 outhash=9877294847684254529
+panic-recover/panic-defined-payload-methods/error	default	unsupported: panic abort rendering for payload GoLean.GoValue.interface (GoLean.GoCore.Ty.defined 2) (GoLean.GoValue.int 9 (GoLean.GoCore.IntKind.int)) (dynamic type main.payloadCode) steps=9 h=9062367561482017174 outhash=9877294847684254529
+panic-recover/panic-defined-payload-methods/error	rand1	unsupported: panic abort rendering for payload GoLean.GoValue.interface (GoLean.GoCore.Ty.defined 2) (GoLean.GoValue.int 9 (GoLean.GoCore.IntKind.int)) (dynamic type main.payloadCode) steps=9 h=9062367561482017174 outhash=9877294847684254529
+panic-recover/panic-defined-payload-methods/stringer	default	unsupported: panic abort rendering for payload GoLean.GoValue.interface (GoLean.GoCore.Ty.defined 3) (GoLean.GoValue.int 3 (GoLean.GoCore.IntKind.int)) (dynamic type main.payloadName) steps=9 h=9062367561482017174 outhash=9877294847684254529
+panic-recover/panic-defined-payload-methods/stringer	rand1	unsupported: panic abort rendering for payload GoLean.GoValue.interface (GoLean.GoCore.Ty.defined 3) (GoLean.GoValue.int 3 (GoLean.GoCore.IntKind.int)) (dynamic type main.payloadName) steps=9 h=9062367561482017174 outhash=9877294847684254529
+panic-recover/panic-defined-payload-methods/plain	default	panic: main.payloadPlain(7) steps=10 h=9980521280247651243 outhash=9877294847684254529
+panic-recover/panic-defined-payload-methods/plain	rand1	panic: main.payloadPlain(7) steps=10 h=9980521280247651243 outhash=9877294847684254529
+panic-recover/panic-defined-payload-methods/error-forced-half	default	ok steps=195 h=3055527966637408476 outhash=9877294847684254529
+panic-recover/panic-defined-payload-methods/error-forced-half	rand1	ok steps=195 h=3055527966637408476 outhash=9877294847684254529
+panic-recover/panic-defined-payload-methods/stringer-forced-half	default	ok steps=196 h=1622275108087059026 outhash=9877294847684254529
+panic-recover/panic-defined-payload-methods/stringer-forced-half	rand1	ok steps=196 h=1622275108087059026 outhash=9877294847684254529
+panic-recover/panic-int-abort	default	panic: 4 steps=10 h=9980521280247651243 outhash=9877294847684254529
+panic-recover/panic-int-abort	rand1	panic: 4 steps=10 h=9980521280247651243 outhash=9877294847684254529
+panic-recover/panic-markers/first-line	default	panic: fatal error: harmless payload steps=10 h=9980521280247651243 outhash=9877294847684254529
+panic-recover/panic-markers/first-line	rand1	panic: fatal error: harmless payload steps=10 h=9980521280247651243 outhash=9877294847684254529
+panic-recover/panic-markers/nil-go-literal	default	panic: fakefatal error: go of nil func value steps=10 h=9980521280247651243 outhash=9877294847684254529
+panic-recover/panic-markers/nil-go-literal	rand1	panic: fakefatal error: go of nil func value steps=10 h=9980521280247651243 outhash=9877294847684254529
+panic-recover/panic-markers/deadlock-literal	default	panic: fatal error: all goroutines are asleep - deadlock! steps=10 h=9980521280247651243 outhash=9877294847684254529
+panic-recover/panic-markers/deadlock-literal	rand1	panic: fatal error: all goroutines are asleep - deadlock! steps=10 h=9980521280247651243 outhash=9877294847684254529
+panic-recover/panic-markers/output-midline	default	panic: original steps=14 h=15147312838872718195 outhash=15285375304964221984
+panic-recover/panic-markers/output-midline	rand1	panic: original steps=14 h=15147312838872718195 outhash=15285375304964221984
+panic-recover/panic-markers/output-line	default	panic: original steps=14 h=15147312838872718195 outhash=1863742739355813088
+panic-recover/panic-markers/output-line	rand1	panic: original steps=14 h=15147312838872718195 outhash=1863742739355813088
+panic-recover/panic-markers/mixed-line	default	panic: original steps=10 h=9980521280247651243 outhash=9877294847684254529
+panic-recover/panic-markers/mixed-line	rand1	panic: original steps=10 h=9980521280247651243 outhash=9877294847684254529
+panic-recover/panic-markers/fake-trace	default	panic: original steps=10 h=9980521280247651243 outhash=9877294847684254529
+panic-recover/panic-markers/fake-trace	rand1	panic: original steps=10 h=9980521280247651243 outhash=9877294847684254529
+panic-recover/panic-markers/printed-continuation	default	panic: actual steps=14 h=15147312838872718195 outhash=1192599442501070469
+panic-recover/panic-markers/printed-continuation	rand1	panic: actual steps=14 h=15147312838872718195 outhash=1192599442501070469
+panic-recover/panic-markers/literal-continuation	default	panic: forged steps=10 h=9980521280247651243 outhash=9877294847684254529
+panic-recover/panic-markers/literal-continuation	rand1	panic: forged steps=10 h=9980521280247651243 outhash=9877294847684254529
+panic-recover/panic-markers/glued-output	default	panic: actual steps=14 h=15147312838872718195 outhash=14625855214527495637
+panic-recover/panic-markers/glued-output	rand1	panic: actual steps=14 h=15147312838872718195 outhash=14625855214527495637
+panic-recover/panic-markers/printed-trace	default	panic: actual steps=14 h=15147312838872718195 outhash=5065444263983608230
+panic-recover/panic-markers/printed-trace	rand1	panic: actual steps=14 h=15147312838872718195 outhash=5065444263983608230
+panic-recover/panic-named-type-abort	default	panic: main.panicCode(7) steps=10 h=9980521280247651243 outhash=9877294847684254529
+panic-recover/panic-named-type-abort	rand1	panic: main.panicCode(7) steps=10 h=9980521280247651243 outhash=9877294847684254529
+panic-recover/panic-newline-abort	default	panic: first line steps=10 h=9980521280247651243 outhash=9877294847684254529
+panic-recover/panic-newline-abort	rand1	panic: first line steps=10 h=9980521280247651243 outhash=9877294847684254529
+panic-recover/panic-nil-abort	default	panic: panic called with nil argument steps=8 h=1103206446712287255 outhash=9877294847684254529
+panic-recover/panic-nil-abort	rand1	panic: panic called with nil argument steps=8 h=1103206446712287255 outhash=9877294847684254529
+panic-recover/panic-nil-recover	default	ok steps=52 h=6354680660147752993 outhash=9877294847684254529
+panic-recover/panic-nil-recover	rand1	ok steps=52 h=6354680660147752993 outhash=9877294847684254529
+panic-recover/panic-text/unicode-two	default	panic: é steps=10 h=9980521280247651243 outhash=9877294847684254529
+panic-recover/panic-text/unicode-two	rand1	panic: é steps=10 h=9980521280247651243 outhash=9877294847684254529
+panic-recover/panic-text/unicode-three	default	panic: 界 steps=10 h=9980521280247651243 outhash=9877294847684254529
+panic-recover/panic-text/unicode-three	rand1	panic: 界 steps=10 h=9980521280247651243 outhash=9877294847684254529
+panic-recover/panic-text/unicode-four	default	panic: 😀 steps=10 h=9980521280247651243 outhash=9877294847684254529
+panic-recover/panic-text/unicode-four	rand1	panic: 😀 steps=10 h=9980521280247651243 outhash=9877294847684254529
+panic-recover/panic-text/unicode-mixed	default	panic: aé界😀z steps=10 h=9980521280247651243 outhash=9877294847684254529
+panic-recover/panic-text/unicode-mixed	rand1	panic: aé界😀z steps=10 h=9980521280247651243 outhash=9877294847684254529
+panic-recover/panic-text/unicode-newline	default	panic: é steps=10 h=9980521280247651243 outhash=9877294847684254529
+panic-recover/panic-text/unicode-newline	rand1	panic: é steps=10 h=9980521280247651243 outhash=9877294847684254529
+panic-recover/panic-text/trailing-newline	default	panic: first steps=10 h=9980521280247651243 outhash=9877294847684254529
+panic-recover/panic-text/trailing-newline	rand1	panic: first steps=10 h=9980521280247651243 outhash=9877294847684254529
+panic-recover/panic-text/recovered-newline	default	panic: first steps=51 h=174706453708167040 outhash=9877294847684254529
+panic-recover/panic-text/recovered-newline	rand1	panic: first steps=51 h=174706453708167040 outhash=9877294847684254529
+panic-recover/panic-text/recovered-unicode	default	panic: é [recovered] steps=51 h=174706453708167040 outhash=9877294847684254529
+panic-recover/panic-text/recovered-unicode	rand1	panic: é [recovered] steps=51 h=174706453708167040 outhash=9877294847684254529
+panic-recover/panic-text/output-prefix	default	panic: é steps=14 h=15147312838872718195 outhash=5542662650661794979
+panic-recover/panic-text/output-prefix	rand1	panic: é steps=14 h=15147312838872718195 outhash=5542662650661794979
+panic-recover/panic-text/invalid-after-lf	default	panic: a steps=10 h=9980521280247651243 outhash=9877294847684254529
+panic-recover/panic-text/invalid-after-lf	rand1	panic: a steps=10 h=9980521280247651243 outhash=9877294847684254529
+panic-recover/panic-text/invalid-recovered-value	default	ok steps=93 h=4452363012976036318 outhash=9877294847684254529
+panic-recover/panic-text/invalid-recovered-value	rand1	ok steps=93 h=4452363012976036318 outhash=9877294847684254529
+panic-recover/panic-typed-nil-recover	default	ok steps=102 h=16625201319361651599 outhash=9877294847684254529
+panic-recover/panic-typed-nil-recover	rand1	ok steps=102 h=16625201319361651599 outhash=9877294847684254529
+panic-recover/recover-direct	default	ok steps=54 h=323458649326076573 outhash=9877294847684254529
+panic-recover/recover-direct	rand1	ok steps=54 h=323458649326076573 outhash=9877294847684254529
+panic-recover/recovered-runtime-error-type/observed	default	ok steps=61 h=3152173135724780740 outhash=9877294847684254529
+panic-recover/recovered-runtime-error-type/observed	rand1	ok steps=61 h=3152173135724780740 outhash=9877294847684254529
+panic-recover/recovered-runtime-error-type/assert-int	default	unsupported: type-assertion panic text names the dynamic type of a recovered runtime error, which the machine models as one synthetic id ($runtime.Error, reserved table index 1) where gc has a concrete runtime type per fault (runtime.errorString / runtime.boundsError / *runtime.TypeAssertionError / …) — no byte-exact text exists (BUG-009/BUG-053 class) steps=67 h=5286051712901895061 outhash=9877294847684254529
+panic-recover/recovered-runtime-error-type/assert-int	rand1	unsupported: type-assertion panic text names the dynamic type of a recovered runtime error, which the machine models as one synthetic id ($runtime.Error, reserved table index 1) where gc has a concrete runtime type per fault (runtime.errorString / runtime.boundsError / *runtime.TypeAssertionError / …) — no byte-exact text exists (BUG-009/BUG-053 class) steps=67 h=5286051712901895061 outhash=9877294847684254529
+panic-recover/recover-in-defer-args	default	ok steps=64 h=11226453209955609209 outhash=9877294847684254529
+panic-recover/recover-in-defer-args	rand1	ok steps=64 h=11226453209955609209 outhash=9877294847684254529
+panic-recover/recover-in-defer-args-panicking	default	ok steps=129 h=9147979351802193670 outhash=9877294847684254529
+panic-recover/recover-in-defer-args-panicking	rand1	ok steps=129 h=9147979351802193670 outhash=9877294847684254529
+panic-recover/recover-in-deferred-method	default	ok steps=60 h=1727763151581767481 outhash=9877294847684254529
+panic-recover/recover-in-deferred-method	rand1	ok steps=60 h=1727763151581767481 outhash=9877294847684254529
+panic-recover/recover-indirect	default	panic: boom-indirect steps=52 h=14206448523202522609 outhash=9877294847684254529
+panic-recover/recover-indirect	rand1	panic: boom-indirect steps=52 h=14206448523202522609 outhash=9877294847684254529
+panic-recover/recover-loop-defer	default	ok steps=362 h=9367957607790572236 outhash=9877294847684254529
+panic-recover/recover-loop-defer	rand1	ok steps=362 h=9367957607790572236 outhash=9877294847684254529
+panic-recover/recover-outside-defer	default	ok steps=38 h=14296858348871564374 outhash=9877294847684254529
+panic-recover/recover-outside-defer	rand1	ok steps=38 h=14296858348871564374 outhash=9877294847684254529
+panic-recover/recover-repanic	default	panic: inner panic [recovered] steps=48 h=12560776331320097187 outhash=9877294847684254529
+panic-recover/recover-repanic	rand1	panic: inner panic [recovered] steps=48 h=12560776331320097187 outhash=9877294847684254529
+panic-recover/recover-store-local	default	ok steps=67 h=14310220301884429077 outhash=9877294847684254529
+panic-recover/recover-store-local	rand1	ok steps=67 h=14310220301884429077 outhash=9877294847684254529
+panic-recover/recover-twice	default	ok steps=96 h=14075187080351434547 outhash=9877294847684254529
+panic-recover/recover-twice	rand1	ok steps=96 h=14075187080351434547 outhash=9877294847684254529
+panic-recover/recover-value	default	ok steps=106 h=5409831498422656736 outhash=9877294847684254529
+panic-recover/recover-value	rand1	ok steps=106 h=5409831498422656736 outhash=9877294847684254529
+panic-recover/repanic-collapse/passthrough-var	default	panic: orig [recovered, repanicked] steps=63 h=18042264478097534806 outhash=9877294847684254529
+panic-recover/repanic-collapse/passthrough-var	rand1	panic: orig [recovered, repanicked] steps=63 h=18042264478097534806 outhash=9877294847684254529
+panic-recover/repanic-collapse/two-literals	default	panic: orig [recovered, repanicked] steps=65 h=2144579966843582823 outhash=9877294847684254529
+panic-recover/repanic-collapse/two-literals	rand1	panic: orig [recovered, repanicked] steps=65 h=2144579966843582823 outhash=9877294847684254529
+panic-recover/repanic-collapse/empty-literals	default	panic:  [recovered, repanicked] steps=65 h=2144579966843582823 outhash=9877294847684254529
+panic-recover/repanic-collapse/empty-literals	rand1	panic:  [recovered, repanicked] steps=65 h=2144579966843582823 outhash=9877294847684254529
+panic-recover/repanic-collapse/multiple	default	panic: orig [recovered, repanicked] steps=106 h=7564652808311295758 outhash=9877294847684254529
+panic-recover/repanic-collapse/multiple	rand1	panic: orig [recovered, repanicked] steps=106 h=7564652808311295758 outhash=9877294847684254529
+panic-recover/repanic-collapse/bool-reboxed	default	panic: true [recovered, repanicked] steps=67 h=9092099307122887166 outhash=9877294847684254529
+panic-recover/repanic-collapse/bool-reboxed	rand1	panic: true [recovered, repanicked] steps=67 h=9092099307122887166 outhash=9877294847684254529
+panic-recover/repanic-collapse/int-literals	default	panic: 1000 [recovered, repanicked] steps=65 h=2144579966843582823 outhash=9877294847684254529
+panic-recover/repanic-collapse/int-literals	rand1	panic: 1000 [recovered, repanicked] steps=65 h=2144579966843582823 outhash=9877294847684254529
+panic-recover/repanic-collapse/defined-passthrough	default	panic: main.Code(7) [recovered, repanicked] steps=63 h=18042264478097534806 outhash=9877294847684254529
+panic-recover/repanic-collapse/defined-passthrough	rand1	panic: main.Code(7) [recovered, repanicked] steps=63 h=18042264478097534806 outhash=9877294847684254529
+panic-recover/repanic-collapse/runtime-error-passthrough	default	panic: runtime error: invalid memory address or nil pointer dereference [recovered, repanicked] steps=80 h=7681357920462624317 outhash=9877294847684254529
+panic-recover/repanic-collapse/runtime-error-passthrough	rand1	panic: runtime error: invalid memory address or nil pointer dereference [recovered, repanicked] steps=80 h=7681357920462624317 outhash=9877294847684254529
+panic-recover/repanic-collapse/nil-passthrough	default	panic: panic called with nil argument [recovered, repanicked] steps=61 h=16993557104832776746 outhash=9877294847684254529
+panic-recover/repanic-collapse/nil-passthrough	rand1	panic: panic called with nil argument [recovered, repanicked] steps=61 h=16993557104832776746 outhash=9877294847684254529
+panic-recover/repanic-collapse/unicode-literals	default	panic: é [recovered, repanicked] steps=65 h=2144579966843582823 outhash=9877294847684254529
+panic-recover/repanic-collapse/unicode-literals	rand1	panic: é [recovered, repanicked] steps=65 h=2144579966843582823 outhash=9877294847684254529
+panic-recover/repanic-collapse/runtime-error-two-faults	default	panic: runtime error: invalid memory address or nil pointer dereference [recovered, repanicked] steps=99 h=16634507730206529320 outhash=9877294847684254529
+panic-recover/repanic-collapse/runtime-error-two-faults	rand1	panic: runtime error: invalid memory address or nil pointer dereference [recovered, repanicked] steps=99 h=16634507730206529320 outhash=9877294847684254529
+panic-recover/repanic-collapse/reboxed-string	default	panic: orig [recovered, repanicked] steps=67 h=9092099307122887166 outhash=9877294847684254529
+panic-recover/repanic-collapse/reboxed-string	rand1	panic: orig [recovered, repanicked] steps=67 h=9092099307122887166 outhash=9877294847684254529
+panic-recover/repanic-collapse/runtime-computed	default	panic: orig [recovered, repanicked] steps=135 h=15026847896715101432 outhash=9877294847684254529
+panic-recover/repanic-collapse/runtime-computed	rand1	panic: orig [recovered, repanicked] steps=135 h=15026847896715101432 outhash=9877294847684254529
+panic-recover/repanic-collapse/global-var	default	panic: orig [recovered, repanicked] steps=69 h=17573244068826021183 outhash=9877294847684254529
+panic-recover/repanic-collapse/global-var	rand1	panic: orig [recovered, repanicked] steps=69 h=17573244068826021183 outhash=9877294847684254529
+panic-recover/repanic-collapse/empty-reboxed	default	panic:  [recovered, repanicked] steps=67 h=9092099307122887166 outhash=9877294847684254529
+panic-recover/repanic-collapse/empty-reboxed	rand1	panic:  [recovered, repanicked] steps=67 h=9092099307122887166 outhash=9877294847684254529
+panic-recover/repanic-collapse/int-reboxed	default	panic: 7 [recovered, repanicked] steps=67 h=9092099307122887166 outhash=9877294847684254529
+panic-recover/repanic-collapse/int-reboxed	rand1	panic: 7 [recovered, repanicked] steps=67 h=9092099307122887166 outhash=9877294847684254529
+panic-recover/repanic-collapse/defined-reboxed	default	panic: main.Code(1000) [recovered, repanicked] steps=67 h=9092099307122887166 outhash=9877294847684254529
+panic-recover/repanic-collapse/defined-reboxed	rand1	panic: main.Code(1000) [recovered, repanicked] steps=67 h=9092099307122887166 outhash=9877294847684254529
+panic-recover/repanic-collapse/index-two-faults	default	panic: runtime error: index out of range [5] with length 1 [recovered, repanicked] steps=139 h=7148448262186989024 outhash=9877294847684254529
+panic-recover/repanic-collapse/index-two-faults	rand1	panic: runtime error: index out of range [5] with length 1 [recovered, repanicked] steps=139 h=7148448262186989024 outhash=9877294847684254529
+panic-recover/repanic-collapse/unequal	default	panic: orig [recovered] steps=65 h=2144579966843582823 outhash=9877294847684254529
+panic-recover/repanic-collapse/unequal	rand1	panic: orig [recovered] steps=65 h=2144579966843582823 outhash=9877294847684254529
+panic-recover/repanic-collapse/unrecovered-equal	default	panic: a steps=39 h=13243248498071930382 outhash=9877294847684254529
+panic-recover/repanic-collapse/unrecovered-equal	rand1	panic: a steps=39 h=13243248498071930382 outhash=9877294847684254529
+panic-recover/repanic-collapse/equal-pair-not-head	default	panic: a [recovered] steps=104 h=9276295938066036162 outhash=9877294847684254529
+panic-recover/repanic-collapse/equal-pair-not-head	rand1	panic: a [recovered] steps=104 h=9276295938066036162 outhash=9877294847684254529
+panic-recover/repanic-collapse/multiline-passthrough	default	panic: first steps=63 h=18042264478097534806 outhash=9877294847684254529
+panic-recover/repanic-collapse/multiline-passthrough	rand1	panic: first steps=63 h=18042264478097534806 outhash=9877294847684254529
+panic-recover/repanic-recovered-by-outer	default	ok steps=125 h=2816373341745823343 outhash=9877294847684254529
+panic-recover/repanic-recovered-by-outer	rand1	ok steps=125 h=2816373341745823343 outhash=9877294847684254529
+panic-recover/repanic-same-value-abort	default	panic: orig [recovered, repanicked] steps=36 h=3231308790840887311 outhash=9877294847684254529
+panic-recover/repanic-same-value-abort	rand1	panic: orig [recovered, repanicked] steps=36 h=3231308790840887311 outhash=9877294847684254529
+panic-recover/repanic-same-value-abort/forced-half	default	ok steps=179 h=17296399169506241689 outhash=9877294847684254529
+panic-recover/repanic-same-value-abort/forced-half	rand1	ok steps=179 h=17296399169506241689 outhash=9877294847684254529
+panic-recover/return-expression-panic-recovered	default	ok steps=78 h=7981033201688515358 outhash=9877294847684254529
+panic-recover/return-expression-panic-recovered	rand1	ok steps=78 h=7981033201688515358 outhash=9877294847684254529
+panic-recover/self-recovered-defer-panic	default	ok steps=136 h=7724400202313076716 outhash=9877294847684254529
+panic-recover/self-recovered-defer-panic	rand1	ok steps=136 h=7724400202313076716 outhash=9877294847684254529
+panic-recover/shim-refusal-unrecoverable/parse-recover	default	ok steps=16673 h=9867969349275141786 outhash=9877294847684254529
+panic-recover/shim-refusal-unrecoverable/parse-recover	rand1	ok steps=16673 h=9867969349275141786 outhash=9877294847684254529
+panic-recover/shim-refusal-unrecoverable/split-recover	default	ok steps=15487 h=11847784484557814762 outhash=9877294847684254529
+panic-recover/shim-refusal-unrecoverable/split-recover	rand1	ok steps=15487 h=11847784484557814762 outhash=9877294847684254529
+panic-recover/shim-refusal-unrecoverable/render-recover	default	ok steps=16187 h=1553558873941608730 outhash=9877294847684254529
+panic-recover/shim-refusal-unrecoverable/render-recover	rand1	ok steps=16187 h=1553558873941608730 outhash=9877294847684254529
+panic-recover/unnamed-recover-zero-return	default	ok steps=44 h=16593127897078796913 outhash=9877294847684254529
+panic-recover/unnamed-recover-zero-return	rand1	ok steps=44 h=16593127897078796913 outhash=9877294847684254529
+quorum/vote-result/empty-wins	default	ok steps=194 h=2618392247689156645 outhash=9877294847684254529
+quorum/vote-result/empty-wins	rand1	ok steps=194 h=2618392247689156645 outhash=9877294847684254529
+quorum/vote-result/won-exact	default	ok steps=624 h=3061127409369948129 outhash=9877294847684254529
+quorum/vote-result/won-exact	rand1	ok steps=624 h=14740330650837641605 outhash=9877294847684254529
+quorum/vote-result/lost	default	ok steps=608 h=10168329656294916683 outhash=9877294847684254529
+quorum/vote-result/lost	rand1	ok steps=608 h=10168329656294916683 outhash=9877294847684254529
+quorum/vote-result/pending	default	ok steps=631 h=3622106473759478931 outhash=9877294847684254529
+quorum/vote-result/pending	rand1	ok steps=631 h=16692006878493680698 outhash=9877294847684254529
+quorum/vote-result/even-won	default	ok steps=749 h=1676713702572540046 outhash=9877294847684254529
+quorum/vote-result/even-won	rand1	ok steps=749 h=1676713702572540046 outhash=9877294847684254529
+quorum/vote-result/even-one-short	default	ok steps=747 h=11889247979605429877 outhash=9877294847684254529
+quorum/vote-result/even-one-short	rand1	ok steps=747 h=2238627181149726197 outhash=9877294847684254529
+quorum/vote-result/tie-lost	default	ok steps=511 h=772929072725871605 outhash=9877294847684254529
+quorum/vote-result/tie-lost	rand1	ok steps=511 h=772929072725871605 outhash=9877294847684254529
+quorum/vote-result-small-n/n1-won	default	ok steps=388 h=17456302013902747654 outhash=9877294847684254529
+quorum/vote-result-small-n/n1-won	rand1	ok steps=388 h=17456302013902747654 outhash=9877294847684254529
+quorum/vote-result-small-n/n1-lost	default	ok steps=386 h=12876828277112896535 outhash=9877294847684254529
+quorum/vote-result-small-n/n1-lost	rand1	ok steps=386 h=12876828277112896535 outhash=9877294847684254529
+quorum/vote-result-small-n/n1-pending	default	ok steps=391 h=11426858272044149954 outhash=9877294847684254529
+quorum/vote-result-small-n/n1-pending	rand1	ok steps=391 h=11426858272044149954 outhash=9877294847684254529
+quorum/vote-result-small-n/n2-won	default	ok steps=513 h=971185083178804576 outhash=9877294847684254529
+quorum/vote-result-small-n/n2-won	rand1	ok steps=513 h=971185083178804576 outhash=9877294847684254529
+quorum/vote-result-small-n/n2-one-yes-lost	default	ok steps=511 h=772929072725871605 outhash=9877294847684254529
+quorum/vote-result-small-n/n2-one-yes-lost	rand1	ok steps=511 h=772929072725871605 outhash=9877294847684254529
+quorum/vote-result-small-n/n2-one-missing-pending	default	ok steps=516 h=3703158810915062559 outhash=9877294847684254529
+quorum/vote-result-small-n/n2-one-missing-pending	rand1	ok steps=516 h=3703158810915062559 outhash=9877294847684254529
+race/atomics-free/atomic-vs-atomic	default	ok steps=127 h=8825477585774233488 outhash=9877294847684254529
+race/atomics-free/atomic-vs-atomic	rand1	ok steps=128 h=4895900698141985800 outhash=9877294847684254529
+race/atomics-free/plain-read-vs-load	default	ok steps=118 h=12383349179737303597 outhash=9877294847684254529
+race/atomics-free/plain-read-vs-load	rand1	ok steps=118 h=4623457663056385173 outhash=9877294847684254529
+race/atomics-free/publish-acquire	default	ok steps=56 h=15896658301006453943 outhash=9877294847684254529
+race/atomics-free/publish-acquire	rand1	ok steps=73 h=18378456986368957348 outhash=9877294847684254529
+race/atomics-free/rmw-acquire	default	ok steps=58 h=16208598019069435681 outhash=9877294847684254529
+race/atomics-free/rmw-acquire	rand1	ok steps=75 h=4633191699430883514 outhash=9877294847684254529
+race/atomics-free/cas-failure-acquires	default	ok steps=161 h=10401195783402680099 outhash=9877294847684254529
+race/atomics-free/cas-failure-acquires	rand1	ok steps=158 h=3342214787087859744 outhash=9877294847684254529
+race/atomics-free/sibling-words	default	ok steps=109 h=844347847215818881 outhash=9877294847684254529
+race/atomics-free/sibling-words	rand1	ok steps=109 h=9940719873846319205 outhash=9877294847684254529
+race/atomics-free/typed-sibling-field	default	ok steps=208 h=5743425575319792132 outhash=9877294847684254529
+race/atomics-free/typed-sibling-field	rand1	ok steps=208 h=10214483700826589172 outhash=9877294847684254529
+race/atomics-free/struct-tag-alias-flag-handoff	default	ok steps=143 h=3515709539155760387 outhash=9877294847684254529
+race/atomics-free/struct-tag-alias-flag-handoff	rand1	ok steps=140 h=7133085104731031816 outhash=9877294847684254529
+race/atomics-misuse/plain-write-vs-add	default	race: data race detected steps=59 h=4216389341371026900 outhash=9877294847684254529
+race/atomics-misuse/plain-write-vs-add	rand1	race: data race detected steps=59 h=13451639268355074744 outhash=9877294847684254529
+race/atomics-misuse/plain-read-vs-store	default	race: data race detected steps=61 h=9091810369267243813 outhash=9877294847684254529
+race/atomics-misuse/plain-read-vs-store	rand1	race: data race detected steps=61 h=12786116116048096433 outhash=9877294847684254529
+race/atomics-misuse/plain-read-vs-failed-cas	default	race: data race detected steps=72 h=6635344990141375643 outhash=9877294847684254529
+race/atomics-misuse/plain-read-vs-failed-cas	rand1	race: data race detected steps=72 h=13246192507695286751 outhash=9877294847684254529
+race/atomics-misuse/struct-copy-vs-typed-add	default	race: data race detected steps=107 h=16280343981330768056 outhash=9877294847684254529
+race/atomics-misuse/struct-copy-vs-typed-add	rand1	race: data race detected steps=107 h=3248278887054879960 outhash=9877294847684254529
+race/atomics-misuse/plain-read-vs-swap	default	race: data race detected steps=70 h=13556087478842971977 outhash=9877294847684254529
+race/atomics-misuse/plain-read-vs-swap	rand1	race: data race detected steps=70 h=2923921334274841877 outhash=9877294847684254529
+race/free/slice-disjoint	default	ok steps=131 h=2483613599105140411 outhash=9877294847684254529
+race/free/slice-disjoint	rand1	ok steps=131 h=3615109331708152843 outhash=9877294847684254529
+race/free/field-disjoint	default	ok steps=115 h=2589497187598720756 outhash=9877294847684254529
+race/free/field-disjoint	rand1	ok steps=115 h=4349806193495130932 outhash=9877294847684254529
+race/free/field-read-write	default	ok steps=128 h=3700008951520803180 outhash=9877294847684254529
+race/free/field-read-write	rand1	ok steps=128 h=1893549418191317420 outhash=9877294847684254529
+race/free/ptr-field-read-write	default	ok steps=144 h=8152202905696080278 outhash=9877294847684254529
+race/free/ptr-field-read-write	rand1	ok steps=144 h=15555997108510856178 outhash=9877294847684254529
+race/free/array-read-write	default	ok steps=123 h=18016194484477231008 outhash=9877294847684254529
+race/free/array-read-write	rand1	ok steps=123 h=5635627669185288960 outhash=9877294847684254529
+race/free/array-const-index-field	default	ok steps=127 h=6149241634063832526 outhash=9877294847684254529
+race/free/array-const-index-field	rand1	ok steps=127 h=4184768051150036198 outhash=9877294847684254529
+race/free/field-array-const-index	default	ok steps=127 h=5536430499633529906 outhash=9877294847684254529
+race/free/field-array-const-index	rand1	ok steps=127 h=12175906964727659586 outhash=9877294847684254529
+race/free/array-dyn-index-read-write	default	race: data race detected steps=83 h=4966727564199693667 outhash=9877294847684254529
+race/free/array-dyn-index-read-write	rand1	race: data race detected steps=82 h=17865219127252516650 outhash=9877294847684254529
+race/free/promoted-ptr-box	default	ok steps=200 h=9619559122192793445 outhash=9877294847684254529
+race/free/promoted-ptr-box	rand1	ok steps=200 h=8299554039554471293 outhash=9877294847684254529
+race/free/addr-deref-no-read	default	ok steps=162 h=1842378916531581866 outhash=9877294847684254529
+race/free/addr-deref-no-read	rand1	ok steps=162 h=4995865186625933286 outhash=9877294847684254529
+race/free/method-value-order	default	ok steps=185 h=7930680729066624499 outhash=9877294847684254529
+race/free/method-value-order	rand1	ok steps=185 h=3489570202274793767 outhash=9877294847684254529
+race/free/spawn-dispatch-free	default	ok steps=144 h=14837642556145463438 outhash=9877294847684254529
+race/free/spawn-dispatch-free	rand1	ok steps=144 h=14514885703816571854 outhash=9877294847684254529
+race/free/struct-tag-alias-disjoint-fields	default	ok steps=121 h=6506114136937968204 outhash=9877294847684254529
+race/free/struct-tag-alias-disjoint-fields	rand1	ok steps=121 h=13268111555275274320 outhash=9877294847684254529
+race/free-sync/mutex	default	ok steps=158 h=4661346394753874270 outhash=9877294847684254529
+race/free-sync/mutex	rand1	ok steps=156 h=5412333846788480662 outhash=9877294847684254529
+race/free-sync/wg-edge	default	ok steps=74 h=4972673404812812886 outhash=9877294847684254529
+race/free-sync/wg-edge	rand1	ok steps=74 h=9285339955760205074 outhash=9877294847684254529
+race/free-sync/once-edge	default	ok steps=190 h=10291219278933910758 outhash=9877294847684254529
+race/free-sync/once-edge	rand1	ok steps=189 h=12953739958639506256 outhash=9877294847684254529
+race/free-sync/rw-writers	default	ok steps=142 h=14607776780297048961 outhash=9877294847684254529
+race/free-sync/rw-writers	rand1	ok steps=143 h=10415721270440397889 outhash=9877294847684254529
+race/free-sync/mutex-siblings	default	ok steps=126 h=8744720760493417904 outhash=9877294847684254529
+race/free-sync/mutex-siblings	rand1	ok steps=124 h=1554775636208290668 outhash=9877294847684254529
+race/free-sync/disjoint-prims	default	ok steps=126 h=4516554608713261559 outhash=9877294847684254529
+race/free-sync/disjoint-prims	rand1	ok steps=124 h=12569472279487665763 outhash=9877294847684254529
+race/free-sync/rw-copy-beside-rlock	default	ok steps=135 h=6511179039734736859 outhash=9877294847684254529
+race/free-sync/rw-copy-beside-rlock	rand1	ok steps=132 h=10669859948120297196 outhash=9877294847684254529
+race/free-sync/rw-copy-beside-lock	default	ok steps=135 h=173672467491784400 outhash=9877294847684254529
+race/free-sync/rw-copy-beside-lock	rand1	ok steps=132 h=9627618896472734763 outhash=9877294847684254529
+race/free-sync/trylock-publish	default	ok steps=148 h=8089833119848763264 outhash=9877294847684254529
+race/free-sync/trylock-publish	rand1	ok steps=148 h=1066341272294889684 outhash=9877294847684254529
+race/free-sync/rw-trylock-publish	default	ok steps=148 h=5148127957515664163 outhash=9877294847684254529
+race/free-sync/rw-trylock-publish	rand1	ok steps=148 h=14722813476457901791 outhash=9877294847684254529
+race/free-sync/rw-tryrlock-acquire	default	ok steps=141 h=4100076945433266557 outhash=9877294847684254529
+race/free-sync/rw-tryrlock-acquire	rand1	ok steps=139 h=1746742888491216401 outhash=9877294847684254529
+race/free-sync/struct-tag-alias-mutex-handoff	default	ok steps=143 h=11790462003656001907 outhash=9877294847684254529
+race/free-sync/struct-tag-alias-mutex-handoff	rand1	ok steps=144 h=162428837249560786 outhash=9877294847684254529
+race/free-sync/struct-tag-alias-rwmutex-handoff	default	ok steps=147 h=10629549313278955988 outhash=9877294847684254529
+race/free-sync/struct-tag-alias-rwmutex-handoff	rand1	ok steps=148 h=14570787787354011369 outhash=9877294847684254529
+race/free-sync/struct-tag-alias-once-observe	default	ok steps=208 h=9293828779471190557 outhash=9877294847684254529
+race/free-sync/struct-tag-alias-once-observe	rand1	ok steps=209 h=3914206918186807356 outhash=9877294847684254529
+race/gomem-only/rw-copy-vs-runlock	default	race: data race detected steps=66 h=6127100700974631279 outhash=9877294847684254529
+race/gomem-only/rw-copy-vs-runlock	rand1	race: data race detected steps=66 h=13461297555027575719 outhash=9877294847684254529
+race/gomem-only/rw-copy-vs-unlock	default	race: data race detected steps=66 h=2351328169548138995 outhash=9877294847684254529
+race/gomem-only/rw-copy-vs-unlock	rand1	race: data race detected steps=66 h=3007607350615576747 outhash=9877294847684254529
+race/gomem-only/wg-copy-vs-add-from-0	default	race: data race detected steps=61 h=4072837302575853992 outhash=9877294847684254529
+race/gomem-only/wg-copy-vs-add-from-0	rand1	race: data race detected steps=61 h=3097278154708074144 outhash=9877294847684254529
+race/gomem-only/wg-copy-vs-done	default	race: data race detected steps=70 h=10498499430369130016 outhash=9877294847684254529
+race/gomem-only/wg-copy-vs-done	rand1	race: data race detected steps=70 h=1349188050517223816 outhash=9877294847684254529
+race/gomem-only/wg-overwrite-vs-wait-at-0	default	race: data race detected steps=63 h=11684686614042264724 outhash=9877294847684254529
+race/gomem-only/wg-overwrite-vs-wait-at-0	rand1	race: data race detected steps=63 h=7858258739191255492 outhash=9877294847684254529
+race/litmus/mp-sync	default	ok steps=90 h=11372695335614298361 outhash=9877294847684254529
+race/litmus/mp-sync	rand1	ok steps=90 h=14100988770009462425 outhash=9877294847684254529
+race/litmus/mp-racy	default	race: data race detected steps=101 h=4733909780632807129 outhash=9877294847684254529
+race/litmus/mp-racy	rand1	race: data race detected steps=100 h=7068998770429470028 outhash=9877294847684254529
+race/litmus/lb-racy	default	race: data race detected steps=105 h=1385186072873905412 outhash=9877294847684254529
+race/litmus/lb-racy	rand1	race: data race detected steps=104 h=17718698096491720077 outhash=9877294847684254529
+race/litmus/close-hb	default	ok steps=88 h=4485129422425095230 outhash=9877294847684254529
+race/litmus/close-hb	rand1	ok steps=88 h=4702794553073344814 outhash=9877294847684254529
+race/litmus/chan-mutex	default	ok steps=166 h=9419486241142967868 outhash=9877294847684254529
+race/litmus/chan-mutex	rand1	ok steps=163 h=15152190185203461119 outhash=9877294847684254529
+race/litmus/sb-chan	default	ok steps=255 h=975083526993790934 outhash=9877294847684254529
+race/litmus/sb-chan	rand1	ok steps=254 h=870549283147701276 outhash=9877294847684254529
+race/negative/write-write	default	race: data race detected steps=71 h=6317375704357032303 outhash=9877294847684254529
+race/negative/write-write	rand1	race: data race detected steps=70 h=7145553338408898170 outhash=9877294847684254529
+race/negative/read-write	default	race: data race detected steps=73 h=5827731033015922181 outhash=9877294847684254529
+race/negative/read-write	rand1	race: data race detected steps=72 h=13350867573529176952 outhash=9877294847684254529
+race/negative/increment	default	race: data race detected steps=76 h=6781386924778223875 outhash=9877294847684254529
+race/negative/increment	rand1	race: data race detected steps=75 h=7416249357371345378 outhash=9877294847684254529
+race/negative/map-rw	default	race: data race detected steps=94 h=6108028477304210960 outhash=9877294847684254529
+race/negative/map-rw	rand1	race: data race detected steps=93 h=764409684374553813 outhash=9877294847684254529
+race/negative/slice-elem	default	race: data race detected steps=87 h=2557225219607129517 outhash=9877294847684254529
+race/negative/slice-elem	rand1	race: data race detected steps=86 h=7048846512623480488 outhash=9877294847684254529
+race/negative/iface-dispatch	default	race: data race detected steps=120 h=12740034050786773618 outhash=9877294847684254529
+race/negative/iface-dispatch	rand1	race: data race detected steps=119 h=11722211676067730527 outhash=9877294847684254529
+race/negative/len-map	default	race: data race detected steps=84 h=757120949630797336 outhash=9877294847684254529
+race/negative/len-map	rand1	race: data race detected steps=83 h=10248812981637987117 outhash=9877294847684254529
+race/negative/method-value	default	race: data race detected steps=157 h=18179015293059701897 outhash=9877294847684254529
+race/negative/method-value	rand1	race: data race detected steps=156 h=2017591317329611624 outhash=9877294847684254529
+race/negative/defer-dispatch	default	race: data race detected steps=147 h=948940984710529382 outhash=9877294847684254529
+race/negative/defer-dispatch	rand1	race: data race detected steps=146 h=11973068439715479491 outhash=9877294847684254529
+race/negative/spawn-dispatch	default	race: data race detected steps=102 h=7727468536569742159 outhash=9877294847684254529
+race/negative/spawn-dispatch	rand1	race: data race detected steps=102 h=7727468536569742159 outhash=9877294847684254529
+race/negative/promoted-dispatch	default	race: data race detected steps=153 h=16430163662566433085 outhash=9877294847684254529
+race/negative/promoted-dispatch	rand1	race: data race detected steps=152 h=12845156354831760884 outhash=9877294847684254529
+race/negative/map-range-iter	default	race: data race detected steps=117 h=8228595174893237390 outhash=9877294847684254529
+race/negative/map-range-iter	rand1	race: data race detected steps=135 h=6545436973632690672 outhash=9877294847684254529
+race/negative/array-const-index-same-elem	default	race: data race detected steps=70 h=6236882592952015697 outhash=9877294847684254529
+race/negative/array-const-index-same-elem	rand1	race: data race detected steps=69 h=6753483297485311428 outhash=9877294847684254529
+race/negative/array-const-index-whole-write	default	race: data race detected steps=72 h=2051336679118416977 outhash=9877294847684254529
+race/negative/array-const-index-whole-write	rand1	race: data race detected steps=71 h=12467388126513224644 outhash=9877294847684254529
+race/negative/struct-tag-alias-field	default	race: data race detected steps=111 h=7824260905428098776 outhash=9877294847684254529
+race/negative/struct-tag-alias-field	rand1	race: data race detected steps=95 h=5287957334568288343 outhash=9877294847684254529
+race/negative/struct-tag-alias-array-field	default	race: data race detected steps=114 h=8041092153457221695 outhash=9877294847684254529
+race/negative/struct-tag-alias-array-field	rand1	race: data race detected steps=98 h=8430301561903569356 outhash=9877294847684254529
+race/negative-sync/one-side	default	race: data race detected steps=82 h=7500780457807947875 outhash=9877294847684254529
+race/negative-sync/one-side	rand1	race: data race detected steps=82 h=17112632670707422463 outhash=9877294847684254529
+race/negative-sync/rlock-serialized	default	race: data race detected steps=102 h=8027003763745964596 outhash=9877294847684254529
+race/negative-sync/rlock-serialized	rand1	race: data race detected steps=91 h=14286501361619493091 outhash=9877294847684254529
+race/negative-sync/wg-no-edge	default	race: data race detected steps=82 h=7428630679545680446 outhash=9877294847684254529
+race/negative-sync/wg-no-edge	rand1	race: data race detected steps=82 h=12663900433314047466 outhash=9877294847684254529
+race/negative-sync/wg-overwrite	default	race: data race detected steps=65 h=16354181052772354017 outhash=9877294847684254529
+race/negative-sync/wg-overwrite	rand1	race: data race detected steps=65 h=9251686652483171069 outhash=9877294847684254529
+race/negative-sync/mutex-copy	default	race: data race detected steps=61 h=1979214435652359308 outhash=9877294847684254529
+race/negative-sync/mutex-copy	rand1	race: data race detected steps=61 h=11234012741110677776 outhash=9877294847684254529
+race/negative-sync/rw-overwrite	default	race: data race detected steps=63 h=15418576180455568179 outhash=9877294847684254529
+race/negative-sync/rw-overwrite	rand1	race: data race detected steps=63 h=11762374887628434295 outhash=9877294847684254529
+race/negative-sync/once-copy	default	race: data race detected steps=74 h=3374325264543134932 outhash=9877294847684254529
+race/negative-sync/once-copy	rand1	race: data race detected steps=74 h=12911300454104910504 outhash=9877294847684254529
+race/negative-sync/overwrite-vs-trylock	default	race: data race detected steps=113 h=3088765395292401342 outhash=9877294847684254529
+race/negative-sync/overwrite-vs-trylock	rand1	race: data race detected steps=113 h=7238561712666602050 outhash=9877294847684254529
+race/negative-sync/failed-trylock-no-edge	default	race: data race detected steps=167 h=5693322643927390933 outhash=9877294847684254529
+race/negative-sync/failed-trylock-no-edge	rand1	race: data race detected steps=172 h=6550544360418472837 outhash=9877294847684254529
+race/negative-sync/struct-tag-alias-nested-mutex-copy	default	race: data race detected steps=84 h=4867697167055884684 outhash=9877294847684254529
+race/negative-sync/struct-tag-alias-nested-mutex-copy	rand1	race: data race detected steps=84 h=12306461453390409020 outhash=9877294847684254529
+race/negative-sync/struct-tag-alias-nested-wg-overwrite	default	race: data race detected steps=86 h=5971786334451988645 outhash=9877294847684254529
+race/negative-sync/struct-tag-alias-nested-wg-overwrite	rand1	race: data race detected steps=86 h=8820723102444675637 outhash=9877294847684254529
+race/negative-sync/nested-mutex-copy	default	race: data race detected steps=67 h=11847947559017705693 outhash=9877294847684254529
+race/negative-sync/nested-mutex-copy	rand1	race: data race detected steps=67 h=8658496120698996433 outhash=9877294847684254529
+returns/early-return-named	default	ok steps=104 h=13640859360672266343 outhash=9877294847684254529
+returns/early-return-named	rand1	ok steps=104 h=13640859360672266343 outhash=9877294847684254529
+returns/method-multi-result-arg	default	ok steps=141 h=14851542860875041499 outhash=9877294847684254529
+returns/method-multi-result-arg	rand1	ok steps=141 h=14851542860875041499 outhash=9877294847684254529
+returns/multi-result-argument	default	ok steps=118 h=9270576911375207375 outhash=9877294847684254529
+returns/multi-result-argument	rand1	ok steps=118 h=9270576911375207375 outhash=9877294847684254529
+returns/multi-result-assignment	default	ok steps=87 h=3133722468614999692 outhash=9877294847684254529
+returns/multi-result-assignment	rand1	ok steps=87 h=3133722468614999692 outhash=9877294847684254529
+returns/multi-result-assign-order	default	ok steps=185 h=3329963152738406712 outhash=9877294847684254529
+returns/multi-result-assign-order	rand1	ok steps=185 h=3778041119784214080 outhash=9877294847684254529
+returns/multi-result-blank-forward	default	ok steps=83 h=16728744976421472978 outhash=9877294847684254529
+returns/multi-result-blank-forward	rand1	ok steps=83 h=16728744976421472978 outhash=9877294847684254529
+returns/multi-result-forward	default	ok steps=110 h=15258319047036423016 outhash=9877294847684254529
+returns/multi-result-forward	rand1	ok steps=110 h=15258319047036423016 outhash=9877294847684254529
+returns/multi-result-forward-named	default	ok steps=150 h=13823839409881065903 outhash=9877294847684254529
+returns/multi-result-forward-named	rand1	ok steps=150 h=13823839409881065903 outhash=9877294847684254529
+returns/multi-result-forward-nested	default	ok steps=149 h=337684683587049625 outhash=9877294847684254529
+returns/multi-result-forward-nested	rand1	ok steps=149 h=337684683587049625 outhash=9877294847684254529
+returns/multi-result-forward-three	default	ok steps=208 h=15058342140230764196 outhash=9877294847684254529
+returns/multi-result-forward-three	rand1	ok steps=208 h=15058342140230764196 outhash=9877294847684254529
+returns/multi-result-map-value	default	ok steps=96 h=2757991094572538202 outhash=9877294847684254529
+returns/multi-result-map-value	rand1	ok steps=96 h=2757991094572538202 outhash=9877294847684254529
+returns/multi-result-method	default	ok steps=97 h=18383350403000761587 outhash=9877294847684254529
+returns/multi-result-method	rand1	ok steps=97 h=18383350403000761587 outhash=9877294847684254529
+returns/multi-result-method-forward	default	ok steps=162 h=1211071489249652687 outhash=9877294847684254529
+returns/multi-result-method-forward	rand1	ok steps=162 h=1211071489249652687 outhash=9877294847684254529
+returns/multi-result-three	default	ok steps=120 h=8122621554094781184 outhash=9877294847684254529
+returns/multi-result-three	rand1	ok steps=120 h=8122621554094781184 outhash=9877294847684254529
+returns/multi-result-to-existing	default	ok steps=109 h=16174514912731894176 outhash=9877294847684254529
+returns/multi-result-to-existing	rand1	ok steps=109 h=16174514912731894176 outhash=9877294847684254529
+returns/multi-return-two-phase/panic-second-operand-unnamed	default	ok steps=102 h=3620015170908277174 outhash=9877294847684254529
+returns/multi-return-two-phase/panic-second-operand-unnamed	rand1	ok steps=102 h=3620015170908277174 outhash=9877294847684254529
+returns/multi-return-two-phase/panic-second-operand-blank-named	default	ok steps=102 h=3620015170908277174 outhash=9877294847684254529
+returns/multi-return-two-phase/panic-second-operand-blank-named	rand1	ok steps=102 h=3620015170908277174 outhash=9877294847684254529
+returns/named-multi-defer	default	ok steps=113 h=15076407048126000233 outhash=9877294847684254529
+returns/named-multi-defer	rand1	ok steps=113 h=15076407048126000233 outhash=9877294847684254529
+returns/named-result-defaults	default	ok steps=100 h=9502149416593569450 outhash=9877294847684254529
+returns/named-result-defaults	rand1	ok steps=100 h=9502149416593569450 outhash=9877294847684254529
+scoping/named-result-shadow/enterjoint-shape	default	ok steps=246 h=6363310226749746962 outhash=9877294847684254529
+scoping/named-result-shadow/enterjoint-shape	rand1	ok steps=246 h=6363310226749746962 outhash=9877294847684254529
+scoping/named-result-shadow/bare-return	default	ok steps=82 h=3615469028784483407 outhash=9877294847684254529
+scoping/named-result-shadow/bare-return	rand1	ok steps=82 h=3615469028784483407 outhash=9877294847684254529
+scoping/named-result-shadow/short-decl	default	ok steps=50 h=1858137853827687963 outhash=9877294847684254529
+scoping/named-result-shadow/short-decl	rand1	ok steps=50 h=1858137853827687963 outhash=9877294847684254529
+scoping/named-result-shadow/deferred-write	default	ok steps=83 h=2036416794299110609 outhash=9877294847684254529
+scoping/named-result-shadow/deferred-write	rand1	ok steps=83 h=2036416794299110609 outhash=9877294847684254529
+scoping/named-result-shadow/range-clause	default	unsupported: frontend-quarantined: local i shadows the named result i in a construct outside the rename set (e.g. a range clause) — fail closed, widen with a guardrail row first steps=0 h=7 outhash=9877294847684254529
+scoping/named-result-shadow/range-clause	rand1	unsupported: frontend-quarantined: local i shadows the named result i in a construct outside the rename set (e.g. a range clause) — fail closed, widen with a guardrail row first steps=0 h=7 outhash=9877294847684254529
+scoping/named-result-shadow/closure-write	default	ok steps=97 h=14054563205572185821 outhash=9877294847684254529
+scoping/named-result-shadow/closure-write	rand1	ok steps=97 h=14054563205572185821 outhash=9877294847684254529
+scoping/named-result-shadow/closure-read	default	ok steps=108 h=9829609017230514643 outhash=9877294847684254529
+scoping/named-result-shadow/closure-read	rand1	ok steps=108 h=9829609017230514643 outhash=9877294847684254529
+scoping/named-result-shadow/loopvar-capture	default	ok steps=886 h=9380731863363535986 outhash=9877294847684254529
+scoping/named-result-shadow/loopvar-capture	rand1	ok steps=886 h=9380731863363535986 outhash=9877294847684254529
+scoping/named-result-shadow/ts-guard	default	unsupported: frontend-quarantined: type-switch guard ok shadows the named result ok — outside the rename set (the clause bindings live in Implicits), fail closed; widen with a guardrail row first steps=0 h=7 outhash=9877294847684254529
+scoping/named-result-shadow/ts-guard	rand1	unsupported: frontend-quarantined: type-switch guard ok shadows the named result ok — outside the rename set (the clause bindings live in Implicits), fail closed; widen with a guardrail row first steps=0 h=7 outhash=9877294847684254529
+scoping/named-result-shadow/commaok-map	default	ok steps=109 h=6221465381706264383 outhash=9877294847684254529
+scoping/named-result-shadow/commaok-map	rand1	ok steps=109 h=6221465381706264383 outhash=9877294847684254529
+scoping/named-result-shadow/commaok-recv	default	ok steps=107 h=1257393388177436095 outhash=9877294847684254529
+scoping/named-result-shadow/commaok-recv	rand1	ok steps=107 h=1257393388177436095 outhash=9877294847684254529
+scoping/named-result-shadow/commaok-assert	default	ok steps=91 h=12980666168058441701 outhash=9877294847684254529
+scoping/named-result-shadow/commaok-assert	rand1	ok steps=91 h=12980666168058441701 outhash=9877294847684254529
+slices/slices-sort-kinds/named-string	default	ok steps=2739 h=6925899030866138911 outhash=9877294847684254529
+slices/slices-sort-kinds/named-string	rand1	ok steps=2739 h=6925899030866138911 outhash=9877294847684254529
+slices/slices-sort-kinds/named-float	default	ok steps=2755 h=4883222249423543479 outhash=9877294847684254529
+slices/slices-sort-kinds/named-float	rand1	ok steps=2755 h=4883222249423543479 outhash=9877294847684254529
+slices/sortfunc-cmp/named-slice-bound	default	ok steps=1383 h=17353403046156704901 outhash=9877294847684254529
+slices/sortfunc-cmp/named-slice-bound	rand1	ok steps=1383 h=17353403046156704901 outhash=9877294847684254529
+spec-examples-decl/defer-order-named-result/loop-order	default	ok steps=370 h=6454821168253348802 outhash=9877294847684254529
+spec-examples-decl/defer-order-named-result/loop-order	rand1	ok steps=370 h=6454821168253348802 outhash=9877294847684254529
+spec-examples-decl/defer-order-named-result/named-result	default	ok steps=68 h=3227562292571351532 outhash=9877294847684254529
+spec-examples-decl/defer-order-named-result/named-result	rand1	ok steps=68 h=3227562292571351532 outhash=9877294847684254529
+spec-examples-decl/generic-dot-product/named	default	ok steps=386 h=2983174042598950278 outhash=9877294847684254529
+spec-examples-decl/generic-dot-product/named	rand1	ok steps=386 h=2983174042598950278 outhash=9877294847684254529
+spec-examples-decl/recover-protect/panics	default	ok steps=156 h=16273330881200120728 outhash=9877294847684254529
+spec-examples-decl/recover-protect/panics	rand1	ok steps=156 h=16273330881200120728 outhash=9877294847684254529
+spec-examples-decl/recover-protect/clean	default	ok steps=134 h=3041080712623485827 outhash=9877294847684254529
+spec-examples-decl/recover-protect/clean	rand1	ok steps=134 h=3041080712623485827 outhash=9877294847684254529
+spec-examples-stmt/go-statements/named-call	default	ok steps=67 h=2891767582052448347 outhash=9877294847684254529
+spec-examples-stmt/go-statements/named-call	rand1	ok steps=67 h=17678094270197395695 outhash=9877294847684254529
+stdlib-source/cmp-compare/float32-and-named	default	ok steps=459 h=3394474269067211674 outhash=9877294847684254529
+stdlib-source/cmp-compare/float32-and-named	rand1	ok steps=459 h=3394474269067211674 outhash=9877294847684254529
+stdlib-source/slices-sortfunc/sortfunc-named-slice	default	ok steps=5412 h=12745875997266234218 outhash=9877294847684254529
+stdlib-source/slices-sortfunc/sortfunc-named-slice	rand1	ok steps=5412 h=12745875997266234218 outhash=9877294847684254529
+structs/decl-order-reversed/conversion-unnamed-target	default	ok steps=89 h=7975696259804958781 outhash=9877294847684254529
+structs/decl-order-reversed/conversion-unnamed-target	rand1	ok steps=89 h=7975696259804958781 outhash=9877294847684254529
+structs/empty-struct-literal-at-named-type/var-init	default	ok steps=42 h=13942258823286819908 outhash=9877294847684254529
+structs/empty-struct-literal-at-named-type/var-init	rand1	ok steps=42 h=13942258823286819908 outhash=9877294847684254529
+structs/empty-struct-literal-at-named-type/param	default	ok steps=58 h=686048275401160143 outhash=9877294847684254529
+structs/empty-struct-literal-at-named-type/param	rand1	ok steps=58 h=686048275401160143 outhash=9877294847684254529
+structs/empty-struct-literal-at-named-type/return	default	ok steps=56 h=6426771017819823847 outhash=9877294847684254529
+structs/empty-struct-literal-at-named-type/return	rand1	ok steps=56 h=6426771017819823847 outhash=9877294847684254529
+structs/empty-struct-literal-at-named-type/map-store	default	ok steps=47 h=7927669304056698674 outhash=9877294847684254529
+structs/empty-struct-literal-at-named-type/map-store	rand1	ok steps=47 h=7927669304056698674 outhash=9877294847684254529
+structs/empty-struct-literal-at-named-type/reverse	default	ok steps=42 h=13942258823286819908 outhash=9877294847684254529
+structs/empty-struct-literal-at-named-type/reverse	rand1	ok steps=42 h=13942258823286819908 outhash=9877294847684254529
+structs/empty-struct-literal-at-named-type/compare	default	ok steps=39 h=9839728628581880939 outhash=9877294847684254529
+structs/empty-struct-literal-at-named-type/compare	rand1	ok steps=39 h=9839728628581880939 outhash=9877294847684254529
+structs/empty-struct-observation/ctl-named	default	ok steps=16 h=14399491185310245110 outhash=9877294847684254529
+structs/empty-struct-observation/ctl-named	rand1	ok steps=16 h=14399491185310245110 outhash=9877294847684254529
+structs/selector-addressability-edge/read-call-result	default	ok steps=53 h=7731865885116801403 outhash=9877294847684254529
+structs/selector-addressability-edge/read-call-result	rand1	ok steps=53 h=7731865885116801403 outhash=9877294847684254529
+structs/selector-addressability-edge/read-conversion-result	default	ok steps=26 h=11613846381003659810 outhash=9877294847684254529
+structs/selector-addressability-edge/read-conversion-result	rand1	ok steps=26 h=11613846381003659810 outhash=9877294847684254529
+structs/selector-addressability-edge/pointer-result-assign	default	ok steps=76 h=656122597845652450 outhash=9877294847684254529
+structs/selector-addressability-edge/pointer-result-assign	rand1	ok steps=76 h=656122597845652450 outhash=9877294847684254529
+structs/selector-addressability-edge/pointer-field-from-call-result	default	ok steps=97 h=5348036352070116618 outhash=9877294847684254529
+structs/selector-addressability-edge/pointer-field-from-call-result	rand1	ok steps=97 h=5348036352070116618 outhash=9877294847684254529
+structs/tag-unnamed-conversion	default	unsupported: frontend-quarantined: anonymous non-empty struct type struct{X int "tag:\"a\""} steps=0 h=7 outhash=9877294847684254529
+structs/tag-unnamed-conversion	rand1	unsupported: frontend-quarantined: anonymous non-empty struct type struct{X int "tag:\"a\""} steps=0 h=7 outhash=9877294847684254529
+structs/unnamed-conversion-targets/pointer	default	ok steps=50 h=7227195607608463750 outhash=9877294847684254529
+structs/unnamed-conversion-targets/pointer	rand1	ok steps=50 h=7227195607608463750 outhash=9877294847684254529
+structs/unnamed-conversion-targets/pointer-nil	default	ok steps=41 h=18005970758133347071 outhash=9877294847684254529
+structs/unnamed-conversion-targets/pointer-nil	rand1	ok steps=41 h=18005970758133347071 outhash=9877294847684254529
+structs/unnamed-conversion-targets/slice	default	ok steps=99 h=3702661977206230724 outhash=9877294847684254529
+structs/unnamed-conversion-targets/slice	rand1	ok steps=99 h=3702661977206230724 outhash=9877294847684254529
+structs/unnamed-conversion-targets/slice-to-defined	default	ok steps=88 h=566215633150332592 outhash=9877294847684254529
+structs/unnamed-conversion-targets/slice-to-defined	rand1	ok steps=88 h=566215633150332592 outhash=9877294847684254529
+structs/unnamed-conversion-targets/map	default	ok steps=64 h=7632996193595331604 outhash=9877294847684254529
+structs/unnamed-conversion-targets/map	rand1	ok steps=64 h=7632996193595331604 outhash=9877294847684254529
+structs/unnamed-conversion-targets/func	default	ok steps=79 h=4961809268063749320 outhash=9877294847684254529
+structs/unnamed-conversion-targets/func	rand1	ok steps=79 h=4961809268063749320 outhash=9877294847684254529
+structs/unnamed-conversion-targets/func-from-defined	default	ok steps=81 h=10777952513112583531 outhash=9877294847684254529
+structs/unnamed-conversion-targets/func-from-defined	rand1	ok steps=81 h=10777952513112583531 outhash=9877294847684254529
+structs/unnamed-conversion-targets/slice-nil	default	ok steps=169 h=12587841051512637989 outhash=9877294847684254529
+structs/unnamed-conversion-targets/slice-nil	rand1	ok steps=169 h=12587841051512637989 outhash=9877294847684254529
+structs/unnamed-conversion-targets/map-nil	default	ok steps=77 h=7076370064200436595 outhash=9877294847684254529
+structs/unnamed-conversion-targets/map-nil	rand1	ok steps=77 h=7076370064200436595 outhash=9877294847684254529
+sync/mutex-unlock-fatal/unlock-recover-attempt	default	fatal: sync: unlock of unlocked mutex steps=34 h=9551099848494337702 outhash=9877294847684254529
+sync/mutex-unlock-fatal/unlock-recover-attempt	rand1	fatal: sync: unlock of unlocked mutex steps=34 h=9551099848494337702 outhash=9877294847684254529
+sync/waitgroup-basic/recovered-negative-continue	default	ok steps=95 h=5368208214733867484 outhash=9877294847684254529
+sync/waitgroup-basic/recovered-negative-continue	rand1	ok steps=95 h=5368208214733867484 outhash=9877294847684254529
+sync/waitgroup-negative-after-recover/negative-after-recover	default	deadlock steps=112 h=15157125531674720594 outhash=9877294847684254529
+sync/waitgroup-negative-after-recover/negative-after-recover	rand1	deadlock steps=112 h=5790929130723548470 outhash=9877294847684254529
+variadic/multi-result-call	default	ok steps=168 h=4454406790779161325 outhash=9877294847684254529
+variadic/multi-result-call	rand1	ok steps=168 h=4454406790779161325 outhash=9877294847684254529
+variadic/multi-result-into-fixed-variadic	default	ok steps=384 h=16334343711841364434 outhash=9877294847684254529
+variadic/multi-result-into-fixed-variadic	rand1	ok steps=384 h=16334343711841364434 outhash=9877294847684254529

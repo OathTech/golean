@@ -1,0 +1,7 @@
+name = "accessdump"
+[[require]]
+name = "GoLean"
+path = "../.."
+[[lean_exe]]
+name = "accessdump"
+root = "AccessDump"

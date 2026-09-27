@@ -1,0 +1,63 @@
+# Access-trace byte-identity: main 7d2a62e5 vs candidate 05d0dbd4 ([AGENT] auditor, 2026-09-27)
+# Harness: AccessDump.lean (this dir), built against each tree's GoLean; per (id, stream): status,
+# step count, a running mixHash over reprStr of EVERY step's label (init-phase stepFn trace, then pool StepEvent.who|trace),
+# output hash. Streams: default [] and ChoiceTrace.randomStream 1 4096. Fuel 2000000. Wires: the candidate ci run's
+# frontend exports (frontend untouched by the lane) for every manifest row with a wire (3725 of 3768).
+ids traced: 3724  lines: 7448 per tree
+excluded: strings/trimspace-repeat/repeat-bound-refused — harness stack overflow (EXIT 134) on BOTH trees (the audit harness's non-tail loop / repr, not the machine)
+sha256 main.all: 4d2c0c2390c74fc5d13c001fc13466511d169445c6e0662bcdcd6e9616a6efc8
+sha256 cand.all: 4d2c0c2390c74fc5d13c001fc13466511d169445c6e0662bcdcd6e9616a6efc8
+cmp main.all cand.all: IDENTICAL
+status histogram (candidate; identical on main):
+   6142 ok
+    785 panic:
+    330 unsupported:
+     92 race:
+     52 deadlock
+     16 fatal:
+     14 BIND
+     10 stuck:
+      3 fuel-out
+      2 LOADERR
+      2 INIT
+'binding cell is not a root location' occurrences on the candidate: 0
+subset committed here: access-trace-subset.tsv (the evalorder/multi-assign/panic-recover/functions/race/binop-order/named/recover/result rows, 510 ids; byte-identical on main)
+
+# Frontend probes (probes/*.go; lowered by tools/nativefrontend, run by golean native-json-run --function probe)
+p1 go-run: 11 22 15 112215 
+p1 cand: {"output":"11 22 15
+","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":112215}]}
+p1 main: {"output":"11 22 15
+","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":112215}]}
+p2 go-run: 2 100 4 3 3 7 8 127 
+p2 cand: {"output":"2 100 4 3 3 7 8
+","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":127}]}
+p2 main: {"output":"2 100 4 3 3 7 8
+","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":127}]}
+p3 go-run: 2 1 30 20 2 1 0 1 1 1 2 4 3 68 
+p3 cand: {"output":"2 1 30 20 2 1 0 1 1 1 2 4 3
+","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":68}]}
+p3 main: {"output":"2 1 30 20 2 1 0 1 1 1 2 4 3
+","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":68}]}
+p4 go-run: 6 6 606 
+p4 cand: {"output":"6 6
+","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":606}]}
+p4 main: {"output":"6 6
+","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":606}]}
+p5 go-run: 1 0 2 2 0 9 9221 
+p5 cand: {"output":"1 0 2 2 0 9
+","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":9221}]}
+p5 main: {"output":"1 0 2 2 0 9
+","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":9221}]}
+probe access traces (AccessDump, both trees):
+probe/p1	default	ok steps=271 h=12633252070783687382 outhash=16025999720922158190
+probe/p1	rand1	ok steps=271 h=12633252070783687382 outhash=16025999720922158190
+probe/p2	default	ok steps=2172 h=12807585828068084755 outhash=7620712184719854589
+probe/p2	rand1	ok steps=2172 h=12807585828068084755 outhash=7620712184719854589
+probe/p3	default	ok steps=484 h=10219563980018205639 outhash=1122477304329983023
+probe/p3	rand1	ok steps=484 h=10219563980018205639 outhash=1122477304329983023
+probe/p4	default	ok steps=478 h=9536613264306985206 outhash=1781306450546766057
+probe/p4	rand1	ok steps=478 h=2604246260802975266 outhash=1781306450546766057
+probe/p5	default	ok steps=223 h=11852422367347098756 outhash=10469018642271264203
+probe/p5	rand1	ok steps=223 h=11852422367347098756 outhash=10469018642271264203
+probe traces: IDENTICAL
