@@ -65,6 +65,16 @@ and resolve locally.
   provisional — «golean-reasoning»; the survey's `deps/reasoning-revival/
   golean-logic/`), consuming golean PINNED at that SHA. Revive with
   `git checkout typed-profiles/last-main-2026-09-16 -- <paths>`.
+- **raft-proofs** (not a ref here) — the reasoning-side raft proof
+  repository (its own git repo, remote `OathTech/raft-proofs`; imports
+  nothing from GoLean). It lived at the gitignored
+  `deps/reasoning-revival/raft-proofs` during the migration; MOVED
+  2026-09-27 to `~/projects/raft-proofs` ([USER] Mike, 2026-09-27,
+  directed; the move and its `git worktree repair` [AGENT]). Paths of
+  the form `golean/deps/reasoning-revival/raft-proofs/…` in either
+  repo's older docs and provenance are historical and now resolve under
+  `~/projects/raft-proofs/`; its tools still take golean's `deps/`
+  reference checkouts (raft, verdi-raft, opam-coq818) by explicit path.
 - **`archive/callspec-era`** — the killed CallSpec judgment track
   (2026-08-27 triage).
 - **`archive/fixed-trajectory-era`** — the killed enumeration-era
