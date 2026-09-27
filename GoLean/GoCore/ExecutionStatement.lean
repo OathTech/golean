@@ -16,7 +16,8 @@ label by `StepLabel := { trace, picks, out }`; packet B re-states this file over
 then PROVES each `<name>_stmt` as `<name>`. Every theorem here is a `def <name>_stmt :
 Prop` — it elaborates with no proof. The only proofs in this file are the boundary
 CONTROLS, each closed by `rfl`: three copied from the review witness
-(`docs/evidence/2026-09-23_batched-window-review/FuelBoundary.lean`) and two for the fatal.
+(`docs/evidence/2026-09-23_batched-window-review/FuelBoundary.lean`) and two for the fatal;
+plus one `NoRefusal` positive control (a short case analysis, audit F2).
 
 Coordinator dispositions ([AGENT] coordinator, 2026-09-27; disclosed at the merge ask):
 (1) Reading A for the classification — `Finish` gains a FIFTH constructor `fatal` for the
@@ -25,6 +26,17 @@ configuration (`Machine.lean:4392`, `:4416`, `:4443`; propagated by `toResult`,
 `Value.lean:394`), finishing cost 1; `classification_stmt` / `classification_wf_stmt` are
 stated over the five constructors. (2) Reading A for `program_bridge_stmt` — stated; its
 `loadMany` mention is recorded in `scripts/mem-callsites.tsv` («NO EXECUTION»).
+
+OPEN — audit F1 (2026-09-27, `docs/2026-09-27_packet-a-audit.md` on branch
+`review/packet-a-contract-0927`; HELD by the [AGENT] coordinator pending a [USER] semantics
+decision and a reachability investigation): `stepFn` can raise the Go PANIC terminal at a
+NON-abort configuration (a helper bound with `←`, not `toResult`, e.g. `Mem.loadFor` →
+`loadLoc` → `arrayGet`), which no `Finish` constructor classifies. As stated,
+`finish_abort_step_stmt`, `run_panic_iff_stmt`, `classification_stmt` and
+`classification_wf_stmt` are REFUTED by the auditor's Lean witness. Candidate fixes, not
+taken here: (a) widen `Finish.fatal`-style to any `stepFn` terminal at a non-abort
+configuration; (b) the semantics: such a stray panic becomes a named `.internal` refusal;
+(c) the semantics: it enters the ordinary panicking/unwinding path.
 -/
 
 namespace GoLean.GoCore.ExecutionStatement
@@ -141,11 +153,15 @@ def replays (ctx : ProgramCtx) (s : Store) (c : Config) (ch ch₂ ch₂' : Choic
       (Choices.consumeAtE site b ch).2.2 = (Choices.consumeAtE site b ch₂).2.2 ∧
         ch₂' = (Choices.consumeAtE site b ch₂).2.1
 
-/-- No `Prefix`-reachable configuration, on any initial tape, has a refusing `stepFn`
-call, and no reachable abort has a refusing renderer under the pick its consult draws. -/
+/-- No `Prefix`-reachable NON-zero-cost configuration, on any initial tape, has a refusing
+`stepFn` call, and no reachable abort has a refusing renderer under the pick its consult
+draws. The zero-cost endpoints are excluded (audit F2, 2026-09-27; [AGENT] coordinator
+disposition): the driver never calls `stepFn` there, and `stepFn` REFUSES at `.next .stop`
+(`StepFn.lean:850`, `.internal "step on terminal configuration"`), so without the exclusion
+this premise failed on every normally completing run (the positive control below). -/
 def NoRefusal (ctx : ProgramCtx) (s : Store) (c : Config) : Prop :=
   ∀ n ch ls sf cf chf, Prefix ctx n s c ch ls sf cf chf →
-    (∀ r, stepFn ctx sf cf chf ≠ .error (.refusal r)) ∧
+    (¬ ZeroCost cf → ∀ r, stepFn ctx sf cf chf ≠ .error (.refusal r)) ∧
     (∀ first rest, cf.abort? = some (first, rest) →
       ∀ e, abortMsg ctx first rest
         (Choices.consumeAtE .repanicCollapse (repanicCollapseWidth first rest) chf).1
@@ -205,6 +221,24 @@ def finish_refused_step_stmt : Prop :=
     ((∃ (rec : List PickRecord) (ch'' : Choices), Finish ctx s c ch rec (.refused r s ch'') 1) ↔
       stepFn ctx s c ch = .error (.refusal r))
 
+/-- TERMINAL-draw replay (audit F3, 2026-09-27; [AGENT] coordinator disposition; response
+§2 (4) / §6 «terminal consultation coverage»): a second tape `ch₂` whose `repanicCollapse`
+consult emits the SAME record replays the abort's finish — same text (or refusal), `ch₂`'s
+own residual. -/
+def finish_replay_stmt : Prop :=
+  ∀ (ctx : ProgramCtx) (s : Store) (c : Config) (ch ch₂ : Choices) (first : PanicEntry)
+    (rest : List PanicEntry) (rec : List PickRecord),
+    c.abort? = some (first, rest) →
+    (Choices.consumeAtE .repanicCollapse (repanicCollapseWidth first rest) ch₂).2.2 = rec →
+    (∀ (t : String) (ch'' : Choices), Finish ctx s c ch rec (.aborted t s ch'') 1 →
+      Finish ctx s c ch₂ rec
+        (.aborted t s (Choices.consumeAtE .repanicCollapse (repanicCollapseWidth first rest) ch₂).2.1)
+        1) ∧
+    (∀ (r : Refusal) (ch'' : Choices), Finish ctx s c ch rec (.refused r s ch'') 1 →
+      Finish ctx s c ch₂ rec
+        (.refused r s (Choices.consumeAtE .repanicCollapse (repanicCollapseWidth first rest) ch₂).2.1)
+        1)
+
 /-- Normal completion: a prefix of length `n ≤ fuel` to `.next .stop` (cost 0). -/
 def run_ok_iff_stmt : Prop :=
   ∀ (ctx : ProgramCtx) (fuel : Nat) (s sf : Store) (c : Config) (ch chf : Choices),
@@ -237,7 +271,9 @@ def run_fuelOut_iff_stmt : Prop :=
 
 /-- Consultation COVERAGE: no unrecorded consultation affects a step. Stated WITHOUT the
 `c.appendTargetLocal` premise `stepFn_consumption_some` carries (`MachineSound.lean:6175`;
-its `none` twin `:5785`) — packet B's first question (design note). -/
+its `none` twin `:5785`): the proof already drops it — «`hloc` is no longer needed here
+(kept in the statement for its callers)», `MachineSound.lean:6243` (audit F4) — so the
+premise-free statement is expected TRUE (unproven here). -/
 def replay_coverage_stmt : Prop :=
   ∀ (ctx : ProgramCtx) (s s' : Store) (c c' : Config) (ch ch' : Choices) (l : AccessTrace),
     stepFn ctx s c ch = .ok (c', s', ch', l) →
@@ -249,7 +285,8 @@ def silent_projection_stmt : Prop :=
   ∀ (ls₁ ls₂ : List AccessTrace), (ls₁ ++ [] :: ls₂).flatten = (ls₁ ++ ls₂).flatten
 
 /-- The single-goroutine embedding: `execProgLoop_single` (`MultiSound.lean:666`) restated;
-the cost relation IS `seqOpCount` (`MultiSound.lean:640`), never «equal fuel». -/
+the cost relation IS `seqOpCount` (`MultiSound.lean:640`), never «equal fuel». DEFINITIONAL
+(audit F5): it is literally `execProgLoop_single` — pinned, NOT counted as a new bridge. -/
 def single_embedding_stmt : Prop :=
   ∀ (ctx : ProgramCtx) (fuel : Nat) (σ : Store) (c : Config) (ch : Choices) (rs : RaceState)
     (r : Except Stop (Store × Choices)),
@@ -259,7 +296,10 @@ def single_embedding_stmt : Prop :=
 /-- The program bridge under successful setup (setup's tape `ch → ch₁` INCLUDED): the
 driver is the pool fold from the setup seam's context, configuration, store and residual
 tape, with the `loadMany` readout. Init OUTPUT is empty BY REFUSAL (`initPrintRefusal?`,
-`StepFn.lean:1118`) — the named limitation is RETAINED. -/
+`StepFn.lean:1118`) — the named limitation is RETAINED. DEFINITIONAL (audit F5): it is
+`runProgramPoolOutM`'s own equation unfolded under the setup premise; it pins the setup →
+pool-fold → readout seam and does NOT connect to `Prefix`/`LRun` — NOT counted as a bridge
+(the pool half waits, charter §2). -/
 def program_bridge_stmt : Prop :=
   ∀ (fuel : Nat) (p : Program) (name : String) (args : Array GoValue) (ch : Choices)
     (pctx : ProgramCtx) (c₀ : Config) (s₀ : Store) (locs : List Loc) (ch₁ : Choices),
@@ -359,6 +399,22 @@ example (ch : Choices) :
       { heap := #[.value (.sync .mutex) (.syncData (.mutex false))] }
       (.retV (.addr (.base ⟨0⟩)) (.syncStK .unlock [] [] [] .stop)) ch
       = .error (.terminal (.fatal "sync: unlock of unlocked mutex")) := rfl
+
+/- `NoRefusal` POSITIVE CONTROL (audit F2; the auditor's `not_noRefusal_of_completes` shape,
+`docs/evidence/2026-09-27_packet-a-audit/NoRefusalVacuous.lean`, now reversed): a run that
+completes normally — one step from `.next (.seq [] [] .stop)` to `.next .stop` (checked by
+`#eval` first) — SATISFIES the corrected `NoRefusal`, for every context and store. -/
+example (ctx : ProgramCtx) (s : Store) : NoRefusal ctx s (.next (.seq [] [] .stop)) := by
+  intro n ch ls sf cf chf hp
+  cases hp with
+  | done => exact ⟨(fun _ r h => nomatch h), (fun _ _ h => nomatch h)⟩
+  | step h hp' =>
+    injection h with h'
+    simp only [Prod.mk.injEq] at h'
+    obtain ⟨rfl, rfl, rfl, rfl⟩ := h'
+    cases hp' with
+    | done => exact ⟨(fun hz => absurd (Or.inl rfl) hz), (fun _ _ h => nomatch h)⟩
+    | step h2 _ => exact nomatch h2
 
 /-- An abort whose renderer succeeds is the panic terminal at fuel 1. -/
 def boundary_abort_one_stmt : Prop :=

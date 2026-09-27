@@ -45,9 +45,10 @@ endpoint store and tape, record `[]` ([AGENT packet A worker] reading: no consul
 replayed residual. At `b ≤ 1` both records are `[]` and nothing is popped (`Choices.consumeAtE_le_one`, `State.lean:485`); an empty tape
 picks 0 (`Choices.consume`). Discharges (4)'s «replay by record».
 
-**`NoRefusal ctx s c`** — no `Prefix`-reachable endpoint, from any initial tape, has `stepFn … = .error
-(.refusal _)`, and no reachable abort's renderer errs under the pick its consult draws from the residual. The
-domain premise of the corollary (5).
+**`NoRefusal ctx s c`** — no `Prefix`-reachable NON-`ZeroCost` endpoint, from any initial tape, has `stepFn … =
+.error (.refusal _)`, and no reachable abort's renderer errs under the pick its consult draws. The domain premise of
+(5). ZeroCost excluded (audit F2): `stepFn` refuses at `.next .stop` (`StepFn.lean:850`), so the first form failed
+on EVERY completing run; a positive control (`example`, a one-step completing run) now shows it holds there.
 
 ## Statements owed (packet B proves each `<name>_stmt` as `<name>`)
 
@@ -55,19 +56,20 @@ domain premise of the corollary (5).
 (→ `Steps`, `Machine.lean:6157`), `prefix_erase_trace_stmt` (→ `Trace`), `prefix_iter_stmt` (↔ `stepFnIter`,
 `StepFn.lean:1042`) — response §2's refl / composition / splitting / erasure / exact iteration agreement.
 `finish_abort_step_stmt`, `finish_refused_step_stmt` — `Finish`'s abort constructors ARE `stepFn`'s abort
-outcomes (2). `run_ok_iff_stmt` (today's `run_ok_iff`, `Trace.lean:60`, labelled), `run_panic_iff_stmt`,
+outcomes (2); `finish_replay_stmt` — the TERMINAL draw replays by record (audit F3; (4), response §6). `run_ok_iff_stmt` (today's `run_ok_iff`, `Trace.lean:60`, labelled), `run_panic_iff_stmt`,
 `run_deadlock_iff_stmt`, `run_fuelOut_iff_stmt` — (3). `replay_coverage_stmt` — (4): no unrecorded
 consultation affects a step; its pieces are `stepFn_consumption_none` (`MachineSound.lean:5785`) and
 `stepFn_consumption_some` (`:6175`). `silent_projection_stmt` — a `[]` label contributes `[]` to the flatten
 (post-reshape: `⟨[], [], []⟩` → `[]` per channel, response §3). `single_embedding_stmt` —
-`execProgLoop_single` restated (`MultiSound.lean:666`). `program_bridge_stmt` — the program level (below).
+`execProgLoop_single` restated (`MultiSound.lean:666`) and `program_bridge_stmt` — both DEFINITIONAL (audit F5:
+literally `execProgLoop_single`; `runProgramPoolOutM` unfolded) — pinned, NOT counted as bridges.
 `classification_stmt` — (5), unconditional: exactly one of `ClassOk` / `ClassTerminal` (a `Finish` over the FIVE
 constructors, `n + cost ≤ fuel`, `FinishOutcome.terminal? = some t`) / `ClassFuelOut` / `ClassRefusal` (a prefix of
 `n + 1 ≤ fuel` to a refusing `stepFn` call, or `Finish.abortRefused`); exclusive by result shape.
 `classification_wf_stmt` — under `StateWf ctx s ∧ NoRefusal ctx s c`, the first three only. Four boundary `_stmt`s.
 
-**Packet B's first question.** `replay_coverage_stmt` omits the `c.appendTargetLocal` premise of
-`stepFn_consumption_some` (`MachineSound.lean:6177`; `Machine.lean:4085`): whether it holds without it is B's to answer.
+`replay_coverage_stmt` omits `stepFn_consumption_some`'s `c.appendTargetLocal` premise (`MachineSound.lean:6177`);
+the proof already drops it («`hloc` is no longer needed here», `:6243`; audit F4) — expected TRUE, unproven.
 
 ## The F2 cost accounting and the fuel convention (KEPT)
 
@@ -104,12 +106,15 @@ setup, RETAINS the init-print refusal, DEFERS pool/registry coverage; the restri
 discharge the whole owed simulation.
 
 ## Dispositions ([AGENT] coordinator, 2026-09-27; disclosed at the merge ask)
-
-Packet A had STOPPED two items under the ambiguity policy. (1) The classification: `Finish` as briefed (four
-constructors) did not classify `.terminal (.fatal m)` (corpus family `sync/mutex-unlock-fatal`), so the briefed
-statements would be FALSE — Reading A taken (a fifth constructor, cost 1; «a fatal is a classified terminal, not a
-refusal»), over Reading B (a fifth classification disjunct). (2) `program_bridge_stmt`: Reading A taken (the
-inventory row, the no-`scripts/` rule lifted for that one row) over Reading B (restating via `ProgramRun`).
-
-**What packet B proves:** every `_stmt` as `<name>` after row 2's reshape (re-stated over `StepLabel`), the two
-classifications, and the relabelled `stepFn_sound`/`step_complete`/`run_ok_iff`/`program_run_iff`/`observation_iff`.
+Two items packet A had STOPPED: (1) the four-constructor `Finish` missed `.terminal (.fatal m)` — Reading A (a fifth
+constructor, cost 1: «a fatal is a classified terminal, not a refusal») over B (a fifth disjunct); (2)
+`program_bridge_stmt` — Reading A (the inventory row; `scripts/` lifted for it) over B (via `ProgramRun`).
+Audit round (2026-09-27): F2, F3 fixed; F4, F5, F6 recorded; F1 OPEN (below). Packet B proves every `_stmt`
+as `<name>` after row 2's reshape (over `StepLabel`), once F1 is ruled.
+**OPEN — audit F1** (`docs/2026-09-27_packet-a-audit.md`, branch `review/packet-a-contract-0927`; HELD by the
+[AGENT] coordinator pending a [USER] semantics decision + a reachability investigation): `stepFn` raises the Go
+PANIC terminal at a NON-abort configuration (a `←`-bound helper, e.g. `Mem.loadFor` → `arrayGet`, `StepFn.lean:580`),
+which no `Finish` constructor classifies. REFUTED as stated (auditor's Lean witness): `finish_abort_step_stmt`,
+`run_panic_iff_stmt`, `classification_stmt`, `classification_wf_stmt`. Candidates: (a) widen `Finish.fatal`-style
+to any `stepFn` terminal at a non-abort configuration; (b) semantics: the stray panic → a named `.internal` refusal;
+(c) semantics: it enters the ordinary panicking/unwinding path. Nothing changed for F1 here.
