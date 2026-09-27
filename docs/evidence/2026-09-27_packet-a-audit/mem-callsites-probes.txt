@@ -1,0 +1,31 @@
+# check-mem-callsites probes at 209a1833 (each mutation appended to GoLean/GoCore/ExecutionStatement.lean in the
+# audit worktree, the check run, the file restored from a byte copy; the candidate branch is untouched)
+# base : unmodified                                          -> PASS (expected)
+# mut1 : `open … in` + ONE-LINE `def scratchExec … := loadMany ctx s l`        -> PASS  (header-line blind spot)
+# mut3 : ONE-LINE fully-qualified `def scratchExec … := GoLean.GoCore.Machine.loadMany ctx s l` -> PASS (same)
+# mut4 : ONE-LINE def inside `namespace X` with `open … in`   -> PASS  (same)
+# mut5 : the same def with the body on the SECOND line        -> FAIL naming the site (the gate works)
+# mut2 : a second `loadMany` inside program_bridge_stmt       -> FAIL (count change: NEW + STALE)
+== base
+Memory-module raw call-site inventory: PASS (71 (file, declaration, raw-op) rows, all inventoried with reasons)
+== mut1
+Memory-module raw call-site inventory: PASS (71 (file, declaration, raw-op) rows, all inventoried with reasons)
+== mut3
+Memory-module raw call-site inventory: PASS (71 (file, declaration, raw-op) rows, all inventoried with reasons)
+== mut4
+Memory-module raw call-site inventory: PASS (71 (file, declaration, raw-op) rows, all inventoried with reasons)
+== mut5
+check-mem-callsites: RAW memory-operation site(s) NOT in the inventory (file, declaration, raw-op, count):
+  NEW    GoLean/GoCore/ExecutionStatement.lean	scratchExec	loadMany	1
+  A row whose COUNT changed appears once as NEW (the new count) and once as
+  STALE (the old count): re-derive the reason for every added mention.
+check-mem-callsites: FAIL (scan 72 rows; 1 new, 0 stale)
+== mut2
+check-mem-callsites: RAW memory-operation site(s) NOT in the inventory (file, declaration, raw-op, count):
+  NEW    GoLean/GoCore/ExecutionStatement.lean	program_bridge_stmt	loadMany	2
+  A row whose COUNT changed appears once as NEW (the new count) and once as
+  STALE (the old count): re-derive the reason for every added mention.
+check-mem-callsites: STALE inventory row(s) — no such site exists any more (file, declaration, raw-op, count):
+  STALE  GoLean/GoCore/ExecutionStatement.lean	program_bridge_stmt	loadMany	1
+  Remove the row from scripts/mem-callsites.tsv (an inventory naming sites that do not exist is a false witness).
+check-mem-callsites: FAIL (scan 71 rows; 1 new, 1 stale)

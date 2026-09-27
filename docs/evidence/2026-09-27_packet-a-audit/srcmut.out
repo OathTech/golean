@@ -1,0 +1,17 @@
+# real-source mutation: Trace.erase gains (_hn : True); lake build GoLean.GoCore.BridgeSet (restored + rebuilt after)
+✔ [21/22] Built GoLean.GoCore.Trace (202ms)
+✖ [22/22] Building GoLean.GoCore.BridgeSet (187ms)
+trace: .> LEAN_PATH=<worktree>/.lake/build/lib/lean /home/dev/.elan/toolchains/leanprover--lean4---v4.32.2/bin/lean <worktree>/GoLean/GoCore/BridgeSet.lean -o <worktree>/.lake/build/lib/lean/GoLean/GoCore/BridgeSet.olean -i <worktree>/.lake/build/lib/lean/GoLean/GoCore/BridgeSet.ilean -c <worktree>/.lake/build/ir/GoLean/GoCore/BridgeSet.c --setup <worktree>/.lake/build/ir/GoLean/GoCore/BridgeSet.setup.json --json
+error: GoLean/GoCore/BridgeSet.lean:58:2: Type mismatch
+  @Trace.erase
+has type
+  ∀ {ctx : ProgramCtx} {n : Nat} {s : Store} {c : Config} {ch : Choices} {sf : Store} {cf : Config} {chf : Choices},
+    Trace ctx n s c ch sf cf chf → True → Steps ctx c s cf sf
+but is expected to have type
+  ∀ {ctx : ProgramCtx} {n : Nat} {s : Store} {c : Config} {ch : Choices} {sf : Store} {cf : Config} {chf : Choices},
+    Trace ctx n s c ch sf cf chf → Steps ctx c s cf sf
+error: Lean exited with code 1
+Some required targets logged failures:
+- GoLean.GoCore.BridgeSet
+error: build failed
+EXIT=1

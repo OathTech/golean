@@ -1,0 +1,24 @@
+.tmp/w/PinMutation.lean:9:2: error: Type mismatch
+  @run_ok_iff
+has type
+  ∀ {ctx : ProgramCtx} {fuel : Nat} {s : Store} {c : Config} {ch : Choices} {sf : Store} {chf : Choices},
+    execStmtLoop ctx fuel s c ch = Except.ok (sf, chf) ↔
+      ∃ n, n ≤ fuel ∧ Trace ctx n s c ch sf (Config.next Cont.stop) chf
+but is expected to have type
+  ∀ {ctx : ProgramCtx} {fuel : Nat} {s : Store} {c : Config} {ch : Choices} {sf : Store} {chf : Choices},
+    execStmtLoop ctx fuel s c ch = Except.ok (sf, chf) ↔
+      ∃ n, n < fuel ∧ Trace ctx n s c ch sf (Config.next Cont.stop) chf
+.tmp/w/PinMutation.lean:17:58: error: Type mismatch
+  @erase_drifted
+has type
+  ∀ {ctx : ProgramCtx} {n : Nat} {s : Store} {c : Config} {ch : Choices} {sf : Store} {cf : Config} {chf : Choices},
+    Trace ctx n s c ch sf cf chf → n = 0 → Steps ctx c s cf sf
+but is expected to have type
+  ∀ {ctx : ProgramCtx} {n : Nat} {s : Store} {c : Config} {ch : Choices} {sf : Store} {cf : Config} {chf : Choices},
+    Trace ctx n s c ch sf cf chf → Steps ctx c s cf sf
+.tmp/w/PinMutation.lean:20:26: warning: Variable name `ctx` is not explicitly referenced.
+
+The binding can be removed (if unused) or named `_` (if used implicitly).
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+EXIT=1 (expected: two Type mismatch errors, lines 9 and 17; the same-type case at line 24 passes)

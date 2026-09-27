@@ -1,0 +1,9 @@
+false
+"GoLean.Stop.terminal (GoLean.Terminal.panic \"runtime error: index out of range [5] with length 0\")"
+"GoLean.Stop.terminal (GoLean.Terminal.panic \"runtime error: index out of range [5] with length 0\")"
+true
+true
+'not_classification_wf' depends on axioms: [propext, Classical.choice, Quot.sound]
+'not_run_panic_iff' depends on axioms: [propext, Classical.choice, Quot.sound]
+'not_finish_abort_step' depends on axioms: [propext, Classical.choice, Quot.sound]
+EXIT=0
