@@ -104,3 +104,18 @@ baseline change.
 | `fix-round-2/ci-diff-fix2.tail.txt` | the full gate: `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff` under the box-wide lock | `.tmp/fix2/gate-ci2.sh` |
 
 The replayable edit script is `.tmp/fix2/replay.sh` (scratch, not tracked).
+
+## Merge train r49 — the 5a record ([AGENT] coordinator, 2026-09-27)
+
+[USER] Mike 2026-09-27, verbatim (relayed): «(1) agree, (2) agree, …» — the landing of the documentation chain (window
+plan + briefs + customer-fixture inventory; audit waived) and E6a with its audit (MERGE-CLEAN after two fix rounds),
+plus the E6 re-scoping (rulings ledger «E6's shape, train r49 and the execution model — RULED (2026-09-27)»). Pre-merge
+main `58aa7dbe` → `refs/snapshots/r49/main`; the train branch (the chain + the eleven E6a/audit commits cherry-picked +
+the rulings commit `5946adfa`) fast-forwarded. Under the lock at `5946adfa`: `scripts/build-certified` EXIT=0, 5 s
+(binary `ada4125e…`); `release-check` EXIT=2 (EXPECTED — «STALE certification: changed dependency
+build/files/GoLean/NativeToIR.lean»); `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --slow` EXIT=1, 875 s — red on
+EXACTLY the 5a pair (`certificate provenance` STALE; the one drift line `imported-goose/channel/google-search
+PASS→FAIL/membership`); 3768 rows run, 3531 PASS / 237 FAIL = the pin 3532 / 236 with the one 5a-class row red; no other
+drift. Tail: `r49-ci-slow.tail.txt`. Candidate vs tracked record: `claim` and `observations_sha256` IDENTICAL; inputs
+differ in `build.files` (`GoLean/NativeToIR.lean`) and nine frontend/script files, plus the receipt (`5946adfa`, binary
+`ada4125e…`, 126.024 s) — INSTALLED in this commit; a provenance refresh, not a re-pin.
