@@ -2323,6 +2323,79 @@ private def dedupAlphaFacts : IO Bool := do
           (!acceptsU { cert with members := cert.members.push (.terminal (.panic "fabricated"), [], 10) }))
   return passed
 
+/-! ### Stray-panic refusal controls (2026-09-27, lane `core/stray-panic-refusal-0927`;
+`docs/2026-09-27_stray-panic-refusal.md`; packet A audit F1). A binding / pinned
+result / unseq binder cell bound to a NON-root location is refused BY NAME as
+`.internal` by the root-only reader `loadRoot` (never read through `loadLoc`'s index
+arm, whose out-of-range panic used to leave `stepFn` as a Go panic terminal without
+unwinding). The configurations are hand-built: no lowered program binds a non-root
+location (`LocalEnv.declare`'s callers bind `Store.alloc`'s fresh `.base`). Positive
+controls: the ordinary root reads are unchanged, value and access label. -/
+
+/-- The audit F1 witness store: one zero-length int array cell. -/
+private def strayArrStore : GoCore.Store := { heap := #[.value (.array 0 .int) (.array #[])] }
+/-- One int cell holding 7. -/
+private def strayIntStore : GoCore.Store := { heap := #[.value .int (.int 7 .int)] }
+/-- The witness's non-root location: element 5 of the zero-length array. -/
+private def strayBadLoc : Loc := .index (.base ⟨0⟩) 5
+private def strayReadLabel : GoCore.AccessTrace := [.access .read (.data (.base ⟨0⟩))]
+
+/-- `true` iff the result is the root-only reader's named `.internal` refusal. -/
+private def isRootRefusal {α : Type} : Except Stop α → Bool
+  | .error (.refusal (.internal m)) => m.startsWith "binding cell is not a root location"
+  | _ => false
+
+/-- A frame exit (`return`) with one caller target and one pinned result cell. -/
+private def strayFrameExit (r : Loc) : GoCore.Machine.Config :=
+  .signal .ret (.frame [(.chain [], [.var "t"])] [[("t", .base ⟨0⟩)]] [r] [] .stop false)
+
+private def strayPanicRefusalFacts : IO Bool := do
+  let mut passed := true
+  -- S6, the audit F1 witness: `x` bound to element 5 of a zero-length array.
+  passed := passed && (← expectTrue "STRAY S6: the F1 witness (variable bound to a non-root out-of-range element) is the named .internal refusal, not a Go panic terminal"
+    (isRootRefusal (GoCore.Machine.stepFn emptyCtx strayArrStore
+      (.evalE (.var "x") [[("x", strayBadLoc)]] .stop) [])))
+  passed := passed && (← expectTrue "STRAY S6 positive: an ordinary variable read is unchanged (value 7, one read at the root)"
+    (match GoCore.Machine.stepFn emptyCtx strayIntStore
+        (.evalE (.var "x") [[("x", .base ⟨0⟩)]] .stop) [] with
+     | .ok (.retV v .stop, _, [], tr) => v == .int 7 .int && tr == strayReadLabel
+     | _ => false))
+  -- S2: the frame-exit result readout (`loadResults`).
+  passed := passed && (← expectTrue "STRAY S2: a pinned result cell at a non-root location is the named .internal refusal"
+    (isRootRefusal (GoCore.Machine.stepFn emptyCtx strayArrStore (strayFrameExit strayBadLoc) [])))
+  passed := passed && (← expectTrue "STRAY S2 positive: the frame-exit readout of a root result cell is unchanged (values [7], one read at the root)"
+    (match GoCore.Machine.stepFn emptyCtx strayIntStore (strayFrameExit (.base ⟨0⟩)) [] with
+     | .ok (.evalE (.var "t") _ (.tgtOpK _ _ _ _ _ _ _ vs _ _ _), _, [], tr) =>
+         vs == [.int 7 .int] && tr == strayReadLabel
+     | _ => false))
+  -- S1: the targetless frame exit with results (refused either way; the root case keeps its old refusal).
+  passed := passed && (← expectTrue "STRAY S1: a targetless frame exit whose result cell is non-root is the named .internal refusal"
+    (isRootRefusal (GoCore.Machine.stepFn emptyCtx strayArrStore
+      (.signal .ret (.frame [] [] [strayBadLoc] [] .stop false)) [])))
+  passed := passed && (← expectTrue "STRAY S1 positive: with a root result cell the targetless exit keeps its old stuck refusal"
+    (match GoCore.Machine.stepFn emptyCtx strayIntStore
+        (.signal .ret (.frame [] [] [.base ⟨0⟩] [] .stop false)) [] with
+     | .error (.refusal (.stuck m)) => m == "extra GoCore assignment value"
+     | _ => false))
+  -- S4/S3/S5: the unseq helpers `stepFn` binds (target atoms, phase-2 binder values, the guard test).
+  passed := passed && (← expectTrue "STRAY S4: an unseq target atom bound to a non-root location is the named .internal refusal"
+    (isRootRefusal (GoCore.Machine.unseqAtom emptyCtx [[("x", strayBadLoc)]] strayArrStore (.var "x"))))
+  passed := passed && (← expectTrue "STRAY S4 positive: a root target atom reads 7 with one read at the root"
+    (match GoCore.Machine.unseqAtom emptyCtx [[("x", .base ⟨0⟩)]] strayIntStore (.var "x") with
+     | .ok (v, tr) => v == .int 7 .int && tr == strayReadLabel
+     | _ => false))
+  passed := passed && (← expectTrue "STRAY S3: an unseq binder cell at a non-root location is the named .internal refusal at the phase-2 plan"
+    (isRootRefusal (GoCore.Machine.unseqStorePlan emptyCtx strayArrStore [[("v", strayBadLoc)]]
+      [("t", .chain (.int 0 .int) [] [])] [("t", "v")])))
+  passed := passed && (← expectTrue "STRAY S3 positive: a root binder cell's value is planned unchanged"
+    (match GoCore.Machine.unseqStorePlan emptyCtx strayIntStore [[("v", .base ⟨0⟩)]]
+        [("t", .chain (.int 0 .int) [] [])] [("t", "v")] with
+     | .ok (_, vals) => vals == [.int 7 .int]
+     | _ => false))
+  passed := passed && (← expectTrue "STRAY S5: an unseq guard test binder at a non-root location is the named .internal refusal"
+    (isRootRefusal (GoCore.Machine.unseqGuard emptyCtx strayArrStore default [[("b", strayBadLoc)]] [] 0 "b" true "o")))
+  return passed
+
 set_option maxRecDepth 4096 in
 /-- The C1 S2c audit F4 label-shape facts (docstring table above `labelCells`), one
 `expectLabel`/`expectTrue` per emitting arm; `false` iff any fact fails (each failure
@@ -3599,6 +3672,8 @@ def main : IO UInt32 := do
   -- C1 S2c audit F4: the label-shape assertions live in `labelShapeFacts` (their own
   -- do-block: `main`'s is at the elaborator's recursion-depth limit already).
   passed := passed && (← labelShapeFacts)
+  -- The stray-panic refusal controls (2026-09-27): their own do-block, same reason.
+  passed := passed && (← strayPanicRefusalFacts)
   if passed then
     return 0
   else

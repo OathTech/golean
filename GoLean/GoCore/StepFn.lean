@@ -157,7 +157,7 @@ def stepFrameExit (s : Store) (targets : List (TargetShape × List Expr))
   match targets, results, ds with
   | [], [], [] => return (.next k', s, choices, [])
   | [], rl :: rls, [] => do
-      let _ ← loadMany ctx s (rl :: rls)
+      let _ ← loadResults ctx s (rl :: rls)
       throw (.stuck "extra GoCore assignment value")
   | (sh, e :: ops) :: rest, results, [] => do
       -- The pinned result cells are READ here (one emitting read each).
@@ -577,7 +577,7 @@ def stepFn (s : Store) (c : Config) (choices : Choices) :
               -- THE VARIABLE READ, recorded at the leaf the continuation
               -- projects (`projChainTarget`; the caller names the leaf, the
               -- module emits — charter §3 `loadFor`).
-              let (v, tr) ← Mem.loadFor ctx s loc (projChainTarget ctx s k loc)
+              let (v, tr) ← Mem.loadBindingFor ctx s loc (projChainTarget ctx s k loc)
               return (.retV v k, s, choices, tr)
           | none => throw (.stuck s!"unbound GoCore variable address: {id}")
       | .intLit value kind =>

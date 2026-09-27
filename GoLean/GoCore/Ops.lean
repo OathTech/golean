@@ -1378,6 +1378,19 @@ def loadLoc (state : Store) : Loc → Except Stop GoValue
       | .array values => arrayGet values index
       | other => stuck s!"expected array base for index load, got {repr other}"
 
+/-- The ROOT-ONLY read of a binding cell (stray-panic refusal, 2026-09-27;
+`docs/2026-09-27_stray-panic-refusal.md`). A variable binding, a pinned
+result cell and an unseq binder cell are always FRESH ROOT cells
+(`LocalEnv.declare`'s callers bind `Store.alloc`'s `.base`), so a `.base`
+location is read exactly as `loadLoc` reads it; a field/index path here is a
+machine-invariant breach and is REFUSED BY NAME as `.internal` — never read
+through the index arm, whose recoverable out-of-range panic would otherwise
+leave `stepFn` as a Go panic terminal without unwinding (packet A audit F1;
+the read-side twin of the write path's `.internal` on a formed index). -/
+def loadRoot (state : Store) : Loc → Except Stop GoValue
+  | loc@(.base _) => loadLoc ctx state loc
+  | loc => throw (.internal s!"binding cell is not a root location: {repr loc} (a variable, pinned result or unseq binder cell is always a fresh root cell; machine invariant breached)")
+
 /-! ## The memory module's write path (C1 S1, 2026-09-18 —
 `docs/2026-09-17_c1-memory-module-charter.md` §2 (i), D1/D2/D3)
 
@@ -1846,7 +1859,8 @@ def traceAccesses (tr : AccessTrace) : List Access := tr.filterMap MemEvent.acce
 /-! ## The memory module's access discipline — what emits, what peeks (C1 S2b, 2026-09-18)
 
 EVERY user-memory access the machine performs goes through an EMITTING operation of
-this module (`Mem.load`, `Mem.loadFor`, `Mem.store`, `Mem.mapRead`, `Mem.mapWrite`,
+this module (`Mem.load`, `Mem.loadFor` — for a binding cell their root-only twins
+`Mem.loadBinding`/`Mem.loadBindingFor`, 2026-09-27 — `Mem.store`, `Mem.mapRead`, `Mem.mapWrite`,
 `Mem.loadElems`/`Mem.storeElems`, `Mem.loadRun`/`Mem.storeRun`, `Mem.loadSlice`,
 `loadResults`, `dynamicDispatch?`'s receiver read), which returns the access it
 performed as the last component of its result (`AccessTrace`); the step relation
@@ -1861,7 +1875,7 @@ every rule's label EQUAL to the table's account on a non-panicking successor, an
 the whole-corpus + raft-twin audit (`docs/evidence/2026-09-18_c1-memory-module/`)
 found 0 differences; the table and the theorem left together.
 
-The PEEK operations — `loadLoc`, `mapPayload?`, `chanPayload?`, `syncCell`,
+The PEEK operations — `loadLoc` (and its root-only guard `loadRoot`), `mapPayload?`, `chanPayload?`, `syncCell`,
 `chanCell` — read a cell WITHOUT emitting; the raw writers — `storeLoc`,
 `storeMapPayload`, `storeChanPayload`, the `.syncData` stores — write without
 emitting. Their call sites are the inventory below, each a DECISION that gc's
@@ -1946,6 +1960,36 @@ here). -/
 def Mem.loadFor (state : Store) (root leaf : Loc) : Except Stop (GoValue × AccessTrace) := do
   let v ← loadLoc ctx state root
   return (v, [.access .read (.data leaf.canon)])
+
+/-- The emitting read of a BINDING cell (`Mem.load` over the root-only
+`loadRoot`): a non-root location is refused by name, never read. -/
+def Mem.loadBinding (state : Store) (l : Loc) : Except Stop (GoValue × AccessTrace) := do
+  let v ← loadRoot ctx state l
+  return (v, [.access .read (.data l.canon)])
+
+/-- The narrowed read of a BINDING cell (`Mem.loadFor` over the root-only
+`loadRoot`): the variable read, access recorded at `leaf`. -/
+def Mem.loadBindingFor (state : Store) (root leaf : Loc) : Except Stop (GoValue × AccessTrace) := do
+  let v ← loadRoot ctx state root
+  return (v, [.access .read (.data leaf.canon)])
+
+theorem loadRoot_ok {state : Store} {l : Loc} {v : GoValue}
+    (h : loadRoot ctx state l = .ok v) : loadLoc ctx state l = .ok v := by
+  cases l <;> first | exact h | simp [loadRoot, throw, throwThe, MonadExceptOf.throw] at h
+
+theorem loadBinding_ok {state : Store} {l : Loc} {r : GoValue × AccessTrace}
+    (h : Mem.loadBinding ctx state l = .ok r) : Mem.load ctx state l = .ok r := by
+  unfold Mem.loadBinding at h; unfold Mem.load
+  cases hr : loadRoot ctx state l with
+  | error e => simp [hr, bind, Except.bind] at h
+  | ok v => simp [hr, bind, Except.bind] at h; simp [loadRoot_ok ctx hr, bind, Except.bind, h]
+
+theorem loadBindingFor_ok {state : Store} {root leaf : Loc} {r : GoValue × AccessTrace}
+    (h : Mem.loadBindingFor ctx state root leaf = .ok r) : Mem.loadFor ctx state root leaf = .ok r := by
+  unfold Mem.loadBindingFor at h; unfold Mem.loadFor
+  cases hr : loadRoot ctx state root with
+  | error e => simp [hr, bind, Except.bind] at h
+  | ok v => simp [hr, bind, Except.bind] at h; simp [loadRoot_ok ctx hr, bind, Except.bind, h]
 
 /-- The emitting WRITE of a cell path (leaf-normalized by `storeLoc`). -/
 def Mem.store (state : Store) (l : Loc) (value : GoValue) : Except Stop (Store × AccessTrace) := do

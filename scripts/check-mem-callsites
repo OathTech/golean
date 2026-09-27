@@ -9,7 +9,7 @@
 # discipline — what emits, what peeks»): every user-memory access goes through
 # an EMITTING operation (`Mem.load`/`loadFor`/`store`/`mapRead`/`mapWrite`/
 # the element runs/`loadResults`/the dispatch read); the RAW operations —
-# the peeks `loadLoc`, `mapPayload?`, `chanPayload?`, `syncCell`, `chanCell`,
+# the peeks `loadLoc` (and its root-only guard `loadRoot`), `mapPayload?`, `chanPayload?`, `syncCell`, `chanCell`,
 # `loadMany`, `Heap.lookup`, and the raw writers `storeLoc`, `storeMany`,
 # `storeMapPayload`, `storeChanPayload`, `Store.updateCell`, the allocators
 # `Store.alloc`/`Store.allocCell` — read or write a cell without emitting.
@@ -69,7 +69,7 @@ esac
 INVENTORY="$ROOT/scripts/mem-callsites.tsv"
 
 # The raw operations, by LAST dotted component (see the token rule).
-RAW_OPS='loadLoc storeLoc loadMany storeMany mapPayload? chanPayload? storeMapPayload storeChanPayload syncCell chanCell updateCell allocCell alloc'
+RAW_OPS='loadLoc loadRoot storeLoc loadMany storeMany mapPayload? chanPayload? storeMapPayload storeChanPayload syncCell chanCell updateCell allocCell alloc'
 
 scan_file() {
   local f="$1"

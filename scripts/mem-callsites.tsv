@@ -48,7 +48,7 @@ GoLean/GoCore/Machine.lean	loadMany	loadMany	1	THE DRIVERS' PEEK ITSELF — load
 GoLean/GoCore/Machine.lean	projChainTarget	loadLoc	1	ADDRESS FORMATION — the root check of the constant-index narrowing (the cell must be an ARRAY; the root is being loaded by the emitting Mem.loadFor anyway)
 GoLean/GoCore/Machine.lean	syncCell	loadLoc	1	SYNCHRONIZATION PEEK ITSELF — the sync-primitive state-word reader's body
 GoLean/GoCore/Machine.lean	tryLockConsult?	syncCell	1	SYNCHRONIZATION — TryLock's state-word read at the consult
-GoLean/GoCore/Machine.lean	unseqStorePlan	loadLoc	1	MACHINE-INTERNAL CELLS — binder-value loads of the unseq sweep (no goroutine can name a binder cell; the binder WRITES emit via Mem.store)
+GoLean/GoCore/Machine.lean	unseqStorePlan	loadRoot	1	MACHINE-INTERNAL CELLS — binder-value loads of the unseq sweep through the root-only peek (no goroutine can name a binder cell; the binder WRITES emit via Mem.store; a non-root binder cell refuses by name, 2026-09-27)
 GoLean/GoCore/Machine.lean	unseqUnfrozenAnchor?	loadLoc	1	ADDRESS FORMATION — the frozen-anchor shape walk at plan time (unseq sweep)
 GoLean/GoCore/Multi.lean	applyPairing	chanCell	6	SYNCHRONIZATION — the pairing reads the channel object's state; it EMITS the arriving op's entry accesses (`arrivalPoll`) and both goroutines' actions (`pairSendEvents`/`pairRecvEvents`, C1 S2c)
 GoLean/GoCore/Multi.lean	applyPairing	storeChanPayload	3	SYNCHRONIZATION — unbuffered pairing's channel payload write
@@ -63,12 +63,15 @@ GoLean/GoCore/Multi.lean	wakeReady	chanPayload?	2	SYNCHRONIZATION — channel-pa
 GoLean/GoCore/Multi.lean	wakeReady	loadLoc	1	SYNCHRONIZATION — sync-park readiness reads the primitive's .syncData state word (.blockedSync)
 GoLean/GoCore/Ops.lean	Mem.load	loadLoc	1	EMITTING OPERATION BODY — the whole-cell read emits [(read, data l)]
 GoLean/GoCore/Ops.lean	Mem.loadFor	loadLoc	1	EMITTING OPERATION BODY — the root is loaded, the access recorded at the narrowed leaf
+GoLean/GoCore/Ops.lean	Mem.loadBinding	loadRoot	1	EMITTING OPERATION BODY — the binding-cell read (root-only) emits [(read, data l)]
+GoLean/GoCore/Ops.lean	Mem.loadBindingFor	loadRoot	1	EMITTING OPERATION BODY — the variable read (root-only): the root is loaded, the access recorded at the narrowed leaf
 GoLean/GoCore/Ops.lean	Mem.mapRead	mapPayload?	1	EMITTING OPERATION BODY — the map object as ONE location, its read emitted
 GoLean/GoCore/Ops.lean	Mem.mapWrite	storeMapPayload	1	EMITTING OPERATION BODY — the one map write emitted
 GoLean/GoCore/Ops.lean	Mem.store	storeLoc	1	EMITTING OPERATION BODY — the write emits [(write, data l)]
 GoLean/GoCore/Ops.lean	Store.alloc	allocCell	1	FRESH ALLOCATION — the value-cell allocator's own cell push (normalizes, then allocCell)
 GoLean/GoCore/Ops.lean	loadLoc	Heap.lookup	1	THE PEEK ITSELF — loadLoc's root-cell lookup (module primitive)
 GoLean/GoCore/Ops.lean	loadLoc	loadLoc	2	THE PEEK ITSELF — loadLoc's own leaf-first recursion on .field/.index
+GoLean/GoCore/Ops.lean	loadRoot	loadLoc	1	THE ROOT-ONLY PEEK ITSELF — loadRoot reads a .base binding cell via loadLoc and refuses a non-root location by name (stray-panic refusal, 2026-09-27)
 GoLean/GoCore/Ops.lean	mapEntries	mapPayload?	1	THE MAP RMW's ENTRY PEEK — mapAssignValue/mapDelete/clearMap fetch the entries here and then EMIT the one write (Mem.mapWrite); gc instruments one write per mapassign/mapdelete
 GoLean/GoCore/Ops.lean	storeLoc	updateCell	1	THE RAW WRITER ITSELF — storeLoc's one root-cell update (module primitive)
 GoLean/GoCore/ProgramTrace.lean	ProgramRun	loadMany	2	NO EXECUTION — the program-level run relation's readout premise (Prop-level twin of the drivers' loadMany)
@@ -76,7 +79,6 @@ GoLean/GoCore/StepFn.lean	runFunctionWithContextM	loadMany	1	DRIVER READOUT — 
 GoLean/GoCore/StepFn.lean	runProgramM	loadMany	1	DRIVER READOUT — result cells after termination
 GoLean/GoCore/StepFn.lean	seedGlobals	alloc	1	FRESH ALLOCATION — the globals' cells at program setup
 GoLean/GoCore/StepFn.lean	stepFn	alloc	1	FRESH ALLOCATION — the `initialization` arm allocates the declared variable's cell (the Step premise mirrors it)
-GoLean/GoCore/StepFn.lean	stepFrameExit	loadMany	1	A REFUSAL, NOT A STEP — the targetless-with-results readout is refused by name (the emitting loadResults carries the frame-exit reads)
 GoLean/GoCore/Store.lean	Store.updateCell	alloc	1	NOT A CALL — the .internal refusal text names `Store.alloc` («allocation goes through Store.alloc only», D10)
 GoLean/GoCore/Store.lean	chanPayload?	Heap.lookup	1	THE PEEK ITSELF — the channel-payload reader's cell lookup (module primitive)
 GoLean/GoCore/Store.lean	mapPayload?	Heap.lookup	1	THE PEEK ITSELF — the map-payload reader's cell lookup (module primitive)

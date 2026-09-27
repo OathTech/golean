@@ -779,7 +779,7 @@ itself stays the drivers' PEEK readout after termination. -/
 def loadResults (s : Store) : List Loc → Except Stop (List GoValue × AccessTrace)
   | [] => return ([], [])
   | loc :: locs => do
-      let (v, t) ← Mem.load ctx s loc
+      let (v, t) ← Mem.loadBinding ctx s loc
       let (vs, ts) ← loadResults s locs
       return (v :: vs, t ++ ts)
 
@@ -1977,7 +1977,7 @@ else refuses by name. -/
 def unseqAtom (env : LocalEnv) (s : Store) : Expr → Except Stop (GoValue × AccessTrace)
   | .var id =>
       match env.lookup id with
-      | some loc => Mem.load ctx s loc
+      | some loc => Mem.loadBinding ctx s loc
       | none => stuck s!"unseq: unbound target operand '{id}'"
   | .ref id =>
       match env.lookup id with
@@ -2114,7 +2114,7 @@ join), and the guard is DONE. -/
 def unseqGuard (s : Store) (g : UnseqGraph) (env : LocalEnv) (st : List UnseqStatus)
     (i : Nat) (test : String) (w : Bool) (out : String) :
     Except Stop (List UnseqStatus × Store × AccessTrace) := do
-  let (tv, t₁) ← Mem.load ctx s (← unseqCellLoc env test)
+  let (tv, t₁) ← Mem.loadBinding ctx s (← unseqCellLoc env test)
   let b ← valueAsBool tv
   if b == w then
     return (st.set i .done, s, t₁)
@@ -2134,7 +2134,7 @@ def unseqStorePlan (s : Store) (env : LocalEnv) (targets : List (String × Targe
   | [] => return ([], [])
   | (t, v) :: rest => do
       let r ← unseqLookupTarget targets t
-      let val ← loadLoc ctx s (← unseqCellLoc env v)
+      let val ← loadRoot ctx s (← unseqCellLoc env v)
       let (rs, vs) ← unseqStorePlan s env targets rest
       return (r :: rs, val :: vs)
 
@@ -5260,7 +5260,7 @@ This is what keeps disjoint-field READ/WRITE pairs race-free at the
 detector (S3 audit: the free lane's read/write direction) for both the
 local (`evalVar` under a `fieldGet` frame) and pointer (`deref` under a
 `fieldGet` frame) forms. Since C1 S2a the CALLER of the module's
-`Mem.loadFor` names this leaf — `Step.evalVar`/`stepFn`'s `.var` arm and
+`Mem.loadFor` (for a variable, its root-only twin `Mem.loadBindingFor`) names this leaf — `Step.evalVar`/`stepFn`'s `.var` arm and
 the strict apply's `leafOf` for `.deref` — a semantic statement about
 what Go reads here, never an emission of its own.
 
@@ -5324,7 +5324,7 @@ inductive Step : Config → Store → Config → Store → AccessTrace → Prop 
       LocalEnv.lookup env id = some loc →
       -- The variable read, recorded at the leaf its continuation projects
       -- (`projChainTarget`): the caller names the leaf, the module emits.
-      Mem.loadFor ctx s loc (projChainTarget ctx s k loc) = .ok (v, tr) →
+      Mem.loadBindingFor ctx s loc (projChainTarget ctx s k loc) = .ok (v, tr) →
       Step (.evalE (.var id) env k) s (.retV v k) s tr
   | evalIntLit {value kind env k s} :
       Step (.evalE (.intLit value kind) env k) s

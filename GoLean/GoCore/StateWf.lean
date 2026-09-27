@@ -3317,7 +3317,7 @@ theorem loadResults_locSup {σ : Store} :
     intro vs tr h
     simp only [loadResults, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
     obtain ⟨⟨v, t⟩, hv, ⟨tail, ts⟩, htail, rfl, rfl⟩ := h
-    have h1 := loadLoc_locSup (Mem.load_eq hv).1
+    have h1 := loadLoc_locSup (Mem.load_eq (loadBinding_ok ctx hv)).1
     have h2 := ih htail
     simp only [goValueListSup]
     omega
@@ -6927,7 +6927,7 @@ theorem unseqAtom_locSup {env : LocalEnv} {s : Store} {e : Expr} {v : GoValue} {
   all_goals try (simp [stuck, throw, throwThe, MonadExceptOf.throw] at h; done)
   · -- `.var`
     split at h
-    · have := loadLoc_locSup (Mem.load_eq h).1
+    · have := loadLoc_locSup (Mem.load_eq (loadBinding_ok ctx h)).1
       omega
     · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
   · -- `.intLit`
@@ -7066,7 +7066,7 @@ theorem unseqStorePlan_locSup {s : Store} {env : LocalEnv} {tg : List (String ×
       obtain ⟨rfl, rfl⟩ := h
       have h0 := unseqStorePlan_locSup hrest
       have h1 := unseqLookupTarget_locSup hr
-      have h2 := loadLoc_locSup hval
+      have h2 := loadLoc_locSup (loadRoot_ok ctx hval)
       simp only [targetRefListSup, goValueListSup]
       omega
 
@@ -7191,7 +7191,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
     omega
   case evalVar id loc v env k hlook hload =>
     refine ⟨hs, ?_, Nat.le_refl _⟩
-    have h1 := loadLoc_locSup (Mem.loadFor_eq hload).1
+    have h1 := loadLoc_locSup (Mem.loadFor_eq (loadBindingFor_ok ctx hload)).1
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
       stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
