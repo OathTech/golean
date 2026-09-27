@@ -94,3 +94,5 @@ README and `MANIFEST.tsv`. No `archive/evidence-*` branch yet (2026-09-07);
 the first payload kept off main under this rule is the typed-consumer
 sprint's, whose archive is the sprint branch itself (above) and whose
 manifest is `docs/evidence/2026-09-05_typed-consumer-sprint/`.
+  (Landed on `main` by train r50, 2026-09-27, documentation only: release-check no inputs changed; fast
+  `scripts/ci` PASS; the adversarial audit waived — [USER] Mike, verbatim, relayed: «No, a review isn't needed».)
