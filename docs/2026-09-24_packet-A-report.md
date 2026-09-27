@@ -10,8 +10,7 @@ coordinator overrides + [AGENT] coordinator dispositions (disclosed at the merge
 `docs/2026-09-24_execution-statement.md` 120 · `docs/changelog/61958f2e-WINDOW.md` 96 · `GoLean.lean` +5 (two imports
 + comment) · `scripts/mem-callsites.tsv` +1 row (disposition 2) · the evidence dir (README + 7 files) · this report.
 
-**The 24 pins.** `#check @<name>` = the brief's table on EVERY row (kind, source line, `ctx` binder; types in
-`checks.txt`); no row flagged; a two-row mutant fails the build (`Type mismatch` ×2).
+**The 24 pins.** `#check @<name>` = the brief's table on EVERY row (`checks.txt`); no row flagged; a mutant fails.
 
 **Dispositions ([AGENT] coordinator, 2026-09-27)**: (1) Reading A — `Finish.fatal` (`.terminal (.fatal m)` from a `stepFn`
 call, cost 1, record `[]`); both classifications WRITTEN over five constructors (`ClassOk`/`ClassTerminal`/`ClassFuelOut`/
