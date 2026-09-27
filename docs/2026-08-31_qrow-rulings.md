@@ -995,3 +995,24 @@ retained through the window. **Left open by the [USER]'s question, to be posed a
 the offer; (11) the CLAUDE.md wording at row 2's landing; plus the standing [USER] roles — each train's merge sign-off
 and audit trim, the named design gates G-P/G-C3/G-C4 and any (b) pin, new entry class or unsound lift an E6 slice turns
 up, the launch of each Codex packet, and any push or tag the re-pin offer needs.
+
+### E6's shape, train r49 and the execution model — RULED (2026-09-27)
+
+[USER] Mike, 2026-09-27, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «(1) agree, (2) agree, (3) we're going to change plans here a bit, and run the build through you and subagents on this thread. We just upgraded to the Opus 5.5. model so you can use that (rather than legacy-fable)» — answering the
+coordinator's three items (posed 2026-09-24, restated 2026-09-27).
+
+**RULED.** (1) **E6 re-scoped by measurement**: E6a lands; the remaining slices E6b–E6d and the retirement E6e LEAVE the
+window's critical path. E6a showed 160 of the 175 remaining legacy-probe emitters sit on type-grammar axes (interfaces,
+defined non-struct types, arrays, generics) no planned slice covers. The legacy triple (`Stmt.unseqProbe`, `Cont.probeK`,
+`Step.unseqProbe`, `ChoiceSite.unseqPanic`) SURVIVES into the re-pin offer; the logic team is told plainly (one extra
+`Cont` constructor and `Step` rule to port) and retirement becomes a later removal-only change. E6b–E6d remain fidelity
+lanes off the critical path. The window proceeds to row 2 (label + execution bridges). (2) **Train r49 lands**: the
+documentation chain (window plan + briefs + customer-fixture inventory; the adversarial audit WAIVED as for r48) and E6a
+with its audit (MERGE-CLEAN after two fix rounds), with the E6a lane's ratifications as posed: the trigger refinement
+shipped as an event-mediated SUBSET of the ruled wording (the general form stays posed, not taken); `len`/`cap` over
+map/channel operands; the unit boundary generalized to every source unit; the status-diverse row via the existing
+`statuses` parameter; the two red-first strict → membership moves. BUG-116 lands with it. (3) **Execution model
+changed**: the Codex packets A–D are NOT launched as Codex lanes; the build runs through the coordinator and subagents on
+this thread. Subagents use Opus 5.5 (the upgraded model) rather than legacy Fable. The packet briefs stand as the
+subagents' specifications; everything else in the window plan (serialization, gates, audits, the single re-pin) is
+unchanged.

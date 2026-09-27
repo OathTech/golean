@@ -71,3 +71,5 @@ STOPS and poses it (`CLAUDE.md`: «Named design gates are HARD STOPS»). Every L
 3. For TODAY's shape (no `picks` in the label yet) the choice-replay coverage statement is written by RECORD through `seqConsumption`
    (`Machine.lean:5190`) + `Choices.consumeAtE`; packet B restates it over `StepLabel.picks`. Packet A flags `stepFn_consumption_some`'s
    `c.appendTargetLocal` premise as packet B's first question rather than baking it into the statement.
+
+**Execution model changed ([USER] 2026-09-27).** Every «Codex packet» row runs as an Opus 5.5 SUBAGENT dispatched by the coordinator against the same brief; no [USER] launch step. Rows 1b–1e (E6b–E6e) are OFF the critical path (legacy triple survives into the re-pin).

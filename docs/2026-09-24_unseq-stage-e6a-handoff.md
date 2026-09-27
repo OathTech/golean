@@ -22,7 +22,9 @@ forced: 11 of the 21 panic-vs-panic emitters close; 0 of the 151 non-main ones d
 reason it stays; the summary: every one is a TYPE-GRAMMAR axis (E5z's list) that the unit boundary had hidden behind its own
 first refusal reason in the E5 census.
 
-## 2. PENDING [USER] — posed at the audit ask, never self-adjudicated
+## 2. RATIFIED [USER] 2026-09-27 (posed at the audit ask, never self-adjudicated)
+
+RULED: items 1–3, 5, 6 as posed; item 4 resolved at the fix round; item 7 — E6b–E6e leave the window's critical path, the legacy triple survives into the re-pin (rulings ledger «E6's shape, train r49 and the execution model — RULED (2026-09-27)»). The items stay as posed, for the record.
 
 Each item is an [AGENT] choice the rulings did not make, with its alternative stated; a (b) pin, a new entry class as an
 ENTRY, or a refusal of a covered program is a HARD STOP and is posed here rather than taken.

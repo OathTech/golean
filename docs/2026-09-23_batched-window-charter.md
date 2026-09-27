@@ -187,3 +187,5 @@ Codex review and the rulings landed on `main` at `3fb4a0d1` (train r48, document
 `refs/snapshots/r48/main`; `release-check` «No certification inputs/claims changed»; `GOLEAN_MEM_MAX=48G scripts/capped
 scripts/ci` EXIT=0 in 413 s, `RESULT: PASS`; the adversarial audit WAIVED for this docs-only landing by [USER] ruling 3
 (2026-09-24). The window is open: E6a and the fixture inventory dispatched; Codex packet A's brief in preparation.
+
+**Re-scoping ([USER] 2026-09-27; rulings ledger «E6's shape, train r49 and the execution model»).** E6a landed at train r49; E6b–E6e leave the window's critical path (160 of 175 residual emitters are type-grammar axes); the legacy triple survives into the re-pin offer and the changelog says so. Codex packets A–D run as Opus 5.5 subagents on the coordinator's thread, not as Codex lanes; the briefs are their specifications.
