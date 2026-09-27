@@ -74,6 +74,7 @@ GoLean/GoCore/Ops.lean	loadLoc	loadLoc	2	THE PEEK ITSELF — loadLoc's own leaf-
 GoLean/GoCore/Ops.lean	loadRoot	loadLoc	1	THE ROOT-ONLY PEEK ITSELF — loadRoot reads a .base binding cell via loadLoc and refuses a non-root location by name (stray-panic refusal, 2026-09-27)
 GoLean/GoCore/Ops.lean	mapEntries	mapPayload?	1	THE MAP RMW's ENTRY PEEK — mapAssignValue/mapDelete/clearMap fetch the entries here and then EMIT the one write (Mem.mapWrite); gc instruments one write per mapassign/mapdelete
 GoLean/GoCore/Ops.lean	storeLoc	updateCell	1	THE RAW WRITER ITSELF — storeLoc's one root-cell update (module primitive)
+GoLean/GoCore/ExecutionStatement.lean	program_bridge_stmt	loadMany	1	NO EXECUTION — the program bridge statement's readout (a Prop definition, statements only; Prop-level twin of the drivers' loadMany)
 GoLean/GoCore/ProgramTrace.lean	ProgramRun	loadMany	2	NO EXECUTION — the program-level run relation's readout premise (Prop-level twin of the drivers' loadMany)
 GoLean/GoCore/StepFn.lean	runFunctionWithContextM	loadMany	1	DRIVER READOUT — result cells after termination
 GoLean/GoCore/StepFn.lean	runProgramM	loadMany	1	DRIVER READOUT — result cells after termination
