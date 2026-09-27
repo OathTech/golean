@@ -41,3 +41,6 @@ ledgers             16 L-entries  7 I-rows  34 FR-rows  10 Q-rows  44 latitude r
 # at c3a351ac: GOLEAN_MEM_MAX=48G scripts/capped lake build GoLean -> EXIT=0, warning lines: 0
 # scripts/check-mem-callsites -> EXIT=0: Memory-module raw call-site inventory: PASS (71 (file, declaration, raw-op) rows, all inventoried with reasons)
 # fatal boundary witness pre-check (.tmp/Fatal.lean, #eval): fuel 0 -> Except.error (GoLean.Stop.fuelOut); fuel 1 -> Except.error (GoLean.Stop.terminal (GoLean.Terminal.fatal "sync: unlock of unlocked mutex"))
+
+# at 92aaab2a: lake build GoLean -> EXIT=0, warning lines: 0; check-mem-callsites -> EXIT=0 (PASS)
+# NoRefusal positive-control pre-check (.tmp/NR2.lean, #eval): stepFn ctx0 {} (.next (.seq [] [] .stop)) [] -> ok next-stop [] (label length 0); stepFn at .next .stop -> refusal (internal "step on terminal configuration")

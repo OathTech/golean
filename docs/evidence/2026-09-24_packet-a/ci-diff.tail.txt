@@ -1,8 +1,8 @@
-# GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff at c3a351ac (rebased on main 7d2a62e5; dispositions applied); summary tail + the drift block
+# GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff at 92aaab2a (audit round; base main 7d2a62e5); summary tail + drift block
 CI-DIFF EXIT=1
 certification: STALE certification: changed dependency build/files/GoLean.lean
-Certificate provenance wall seconds: 69
-CI total wall seconds: 781
+Certificate provenance wall seconds: 71
+CI total wall seconds: 752
 ── differential baseline diff (scripts/coverage-baseline-diff)
 DRIFT vs baselines/native-full.tsv (3768 case(s) run):
 imported-goose/channel/google-search	baseline[PASS/membership] -> now[FAIL/membership]
@@ -53,6 +53,6 @@ Memory-module raw call-site inventory: PASS (71 (file, declaration, raw-op) rows
   ok   executed library coverage (all declared libraries; all Tests modules)
 
 RESULT: FAIL
-Failed CI receipts retained: .tmp/ci-libraries-i5dyfga8
-CI coverage timing: close: seconds=0.014
-CI total wall seconds: 781
+Failed CI receipts retained: .tmp/ci-libraries-b635ykrc
+CI coverage timing: close: seconds=0.015
+CI total wall seconds: 752
