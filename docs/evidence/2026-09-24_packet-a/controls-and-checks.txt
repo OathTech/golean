@@ -37,3 +37,7 @@ ledgers             16 L-entries  7 I-rows  34 FR-rows  10 Q-rows  44 latitude r
         docs/assessment/lane-e-outsider-review.md: 1 site(s)
 
 2 finding(s).
+
+# at c3a351ac: GOLEAN_MEM_MAX=48G scripts/capped lake build GoLean -> EXIT=0, warning lines: 0
+# scripts/check-mem-callsites -> EXIT=0: Memory-module raw call-site inventory: PASS (71 (file, declaration, raw-op) rows, all inventoried with reasons)
+# fatal boundary witness pre-check (.tmp/Fatal.lean, #eval): fuel 0 -> Except.error (GoLean.Stop.fuelOut); fuel 1 -> Except.error (GoLean.Stop.terminal (GoLean.Terminal.fatal "sync: unlock of unlocked mutex"))

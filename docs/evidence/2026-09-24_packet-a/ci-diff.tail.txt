@@ -1,14 +1,18 @@
-# scripts/capped scripts/ci --diff at 0317b64a (program_bridge_stmt held); summary tail + the drift block
+# GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff at c3a351ac (rebased on main 7d2a62e5; dispositions applied); summary tail + the drift block
 CI-DIFF EXIT=1
 certification: STALE certification: changed dependency build/files/GoLean.lean
-Certificate provenance wall seconds: 76
+Certificate provenance wall seconds: 69
+CI total wall seconds: 781
 ── differential baseline diff (scripts/coverage-baseline-diff)
 DRIFT vs baselines/native-full.tsv (3768 case(s) run):
 imported-goose/channel/google-search	baseline[PASS/membership] -> now[FAIL/membership]
 
+── memory-module raw call sites (scripts/check-mem-callsites vs scripts/mem-callsites.tsv)
+Memory-module raw call-site inventory: PASS (71 (file, declaration, raw-op) rows, all inventoried with reasons)
+
 ══ scripts/ci summary ══
   ok   Tests/library ownership (no exceptions; executed builds checked at exit)
-  note build parallelism: cap 64G -> LEAN_NUM_THREADS=8 (cap/8G, floor 2; 32 cores on this box)
+  note build parallelism: cap 48G -> LEAN_NUM_THREADS=6 (cap/8G, floor 2; 32 cores on this box)
   ok   oracle toolchain (go1.26.5 = pin)
   ok   escape-hatch preflight
   ok   meta-layer escape hatches (allowlist empty since the repo split)
@@ -49,6 +53,6 @@ imported-goose/channel/google-search	baseline[PASS/membership] -> now[FAIL/membe
   ok   executed library coverage (all declared libraries; all Tests modules)
 
 RESULT: FAIL
-Failed CI receipts retained: .tmp/ci-libraries-1so1zqqi
-CI coverage timing: close: seconds=0.016
-CI total wall seconds: 865
+Failed CI receipts retained: .tmp/ci-libraries-i5dyfga8
+CI coverage timing: close: seconds=0.014
+CI total wall seconds: 781
