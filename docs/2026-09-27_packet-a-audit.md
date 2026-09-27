@@ -205,3 +205,93 @@ the F5 one-line proofs. `PinMutation.lean` (+ `.out`): the stable-set mutations.
 mutation build. `mem-callsites-probes.txt`: the inventory probes. `ci-diff.tail.txt`: the gate tail. Reproduce from
 a worktree of this branch with warm `.lake`: `GOLEAN_MEM_MAX=16G scripts/capped lake env lean
 docs/evidence/2026-09-27_packet-a-audit/<file>.lean`.
+
+## Re-verification (`09c7fb0a`), 2026-09-27
+
+[AGENT] auditor, at the coordinator's request. The candidate is now `window/packet-a-contract-0927` @ `09c7fb0a`,
+rebased onto `core/stray-panic-refusal-0927` @ `05d0dbd4` (the F1 fix, disposition (b)). That lane is under its own
+audit, and I reviewed it only as far as packet A's statements depend on it. This branch was rebased onto
+`09c7fb0a`; the pre-rebase tip is `refs/snapshots/audit-packet-a-0927/pre-reverify`. Evidence: `reverify-*` in
+`docs/evidence/2026-09-27_packet-a-audit/`.
+
+### REVISED VERDICT: MERGE-CLEAN (conditional on the core lane's own audit), with one RECORDS nit
+
+F1–F6 are resolved or recorded as disposed. I found no new false statement. The four statements F1 refuted are TRUE
+in my assessment on the fixed interpreter, but they are not proved; packet B's proofs are the check. The merge
+depends on `core/stray-panic-refusal-0927` passing its own audit, because packet A's four statements are true only
+on top of it.
+
+### Per item
+
+- **F1 (resolved).** The old witness now gives `.error (.refusal (.internal "binding cell is not a root
+  location: …"))` at fuel 1 (`#eval`; `step0_not_panic` proved for every tape). The original refutation file
+  `StrayPanic.lean` now FAILS to elaborate (`reverify-StrayPanic-rerun.out`), and the packet's `F1Witness.lean`
+  proves the witness is `ClassRefusal`, not `ClassTerminal`.
+  - **Independent re-hunt for any other escaping `.terminal`.** I re-read every un-`toResult`ed bind in `stepFn`,
+    `stepFrameExit`, `stepUnseqEnter`/`Value`/`Next` and their helpers on the fixed tree, and found NO other
+    source.
+    - `enterFramePick(V)` converts entry panics itself (`Machine.lean:901`/`921`).
+    - Every `apply*`/`unseqLoad.plan` goes through `toResult` → `deliverS`/`deliverV`, and a commit-phase panic
+      becomes `.internal` (`runCommit`).
+    - `valueAsBool` and `unseqCellLoc`/`unseqLookupTarget` are stuck-only.
+    - `mapRangeStartSets`/`mapIterCandidates` read through `Mem.mapRead` → `mapPayload?` (`Heap.lookup` +
+      stuck; no path descent).
+    - `allocDecls`/`bindIterVars`/`Store.alloc`/`defaultValue`/`normalizeValueForTy` have no panic source in
+      their bodies (the normalizer's `NoPanic` lemmas live in `MachineSound.lean`).
+    - `Mem.store`/`storeLoc`/`writeAt` refuse a bad formed index as `.internal` (`arrayIndexNatFormed`).
+    - The six binding reads now go through `loadRoot`, and `loadRoot (.base _)` is exactly `loadLoc`'s `.base` arm
+      (no panic). My census agrees with the investigation's (S1–S6).
+  - **The other terminals.** `.deadlock` is raised only at the four blocked forms, which the driver never passes
+    to `stepFn`. `.fatal` is raised only at the three sync throws (`Finish.fatal`). `.raceDetected` is never raised
+    by `stepFn`. `stepFn` never raises `fuelOut`. On this reading `finish_abort_step_stmt`, `run_panic_iff_stmt`,
+    `classification_stmt` and `classification_wf_stmt` are TRUE, though not proved.
+- **F2 (resolved).** The new `NoRefusal` (`¬ ZeroCost cf → …`) is NON-VACUOUS: the packet's in-file positive
+  control shows a one-step completing run satisfies it, for every `ctx`/`s`. It is SOUND, which I proved as
+  `noRefusal_sound : NoRefusal ctx s c → ∀ fuel ch r, execStmtLoop ctx fuel s c ch ≠ .error (.refusal r)`
+  (`reverify-Proofs.lean`, classical trio only). So it cannot admit a refusing run. The renderer clause is
+  redundant (an abort configuration is not `ZeroCost`, so the first clause already covers its refusal). It is
+  harmless.
+- **F3 (resolved).** `finish_replay_stmt` is TRUE: I proved it as `finish_replay` (a same record implies the same
+  pick, `pick_of_rec`). It is what the logic team asked for: the terminal `repanicCollapse` draw replays by
+  site/bound/value record (§2 (4) «terminal draws», §6 «terminal consultation coverage»), for both `aborted` and
+  `refused`, with `ch₂`'s own residual.
+- **F4/F5/F6 (recorded).** The header, docstrings and note now cite `MachineSound.lean:6243`, call
+  `single_embedding_stmt`/`program_bridge_stmt` DEFINITIONAL, and anchor the 62/142 count to its command. All as
+  asked.
+- **Pre-existing `check-mem-callsites` header-line gap:** recorded by the coordinator for a later tooling lane. Not
+  re-checked; the core lane's `loadRoot` addition to `RAW_OPS` is a strengthening.
+- **New RECORDS nit R1.** The changelog's new sentence says the core lane's `GoLean/GoCore` edits «are
+  line-for-line, so every line number holds». That is false for `Ops.lean` after line 1380. The core lane
+  inserted `loadRoot` (+13 lines) and `Mem.loadBinding*` plus bridge lemmas.
+  - At `09c7fb0a`, `AccessKind` is at `:1758` (not `:1745`), `MemEvent` at `:1834` (not `:1821`), `AccessTrace`
+    at `:1854` (not `:1841`) and `Mem.load` at `:1953` (not `:1939`).
+  - The table's cells are stated at `5946adfa` and stay correct there. Only the parenthetical claim is wrong.
+  - `StepFn.lean`/`Machine.lean` are line-for-line, and `Store.alloc` `:1251` holds.
+  - Fix: say «line numbers are at `5946adfa`; `Ops.lean` shifts by +13/+14 after line 1380».
+- **No new false statement.** The diff since `209a1833` touches only `NoRefusal`, `finish_replay_stmt`, docstrings
+  and the positive control. All 24 pins elaborate unchanged against the core lane's edits (the default build is
+  green, and `Step.evalVar`'s changed premise does not change any pinned type).
+
+### Gate (re-verification)
+
+- `GOLEAN_MEM_MAX=48G scripts/capped lake build GoLean` (warm): EXIT=0.
+- `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff` at `09c7fb0a` (plus this branch's first audit commit,
+  docs only), under the box-wide lock: **EXIT=1, RESULT: FAIL, 803 s, red on EXACTLY the 5a pair**.
+  - `certificate provenance` (STALE: `build/files/GoLean.lean`) and `baseline diff` with the one line
+    `imported-goose/channel/google-search PASS→FAIL/membership`, over 3768 rows.
+  - Every other step is ok: core totality audit PASS (47 modules; the five poison controls compiled then
+    rejected, as designed), engine isolation, memory inventory, the warning-free core build, eval tests
+    (285 ok), and the negative baseline (no regression).
+  - Honest scope: the run's receipt is marked `git_dirty=true`, because this re-verification's untracked
+    `reverify-*` evidence files were in the tree (docs only, not compiled). The runtime state gated is `09c7fb0a`.
+  - Tail: `reverify-ci-diff.tail.txt`.
+- `scripts/check-evidence-size` with this section staged: PASS, EXIT=0.
+
+### Not verified
+
+- The four un-refuted statements, `replay_coverage_stmt` and the bridges are still assessed by reading, NOT
+  proved.
+- The census of escaping `.terminal`s is by reading the case tree, not by a machine check. Proving
+  `c.abort? = none → stepFn … ≠ .error (.terminal (.panic _))` would be the machine check (a candidate lemma for
+  packet B).
+- The core lane beyond packet A's needs: its relation edits, its `Tests/` controls and its inventory rows.

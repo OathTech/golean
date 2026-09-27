@@ -1,0 +1,5 @@
+"GoLean.Stop.refusal\n  (GoLean.Refusal.internal\n    \"binding cell is not a root location: GoLean.Loc.index (GoLean.Loc.base { id := 0 }) 5 (a variable, pinned result or unseq binder cell is always a fresh root cell; machine invariant breached)\")"
+"GoLean.Stop.refusal\n  (GoLean.Refusal.internal\n    \"binding cell is not a root location: GoLean.Loc.index (GoLean.Loc.base { id := 0 }) 5 (a variable, pinned result or unseq binder cell is always a fresh root cell; machine invariant breached)\")"
+'noRefusal_sound' depends on axioms: [propext, Classical.choice, Quot.sound]
+'finish_replay' depends on axioms: [propext, Classical.choice, Quot.sound]
+EXIT=0

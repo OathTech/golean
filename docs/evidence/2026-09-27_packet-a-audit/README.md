@@ -29,3 +29,15 @@ GOLEAN_MEM_MAX=16G scripts/capped lake env lean docs/evidence/2026-09-27_packet-
 #   scripts/check-mem-callsites, restore
 GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff     # under artifacts/build-lock.d at the primary root
 ```
+
+## Re-verification at `09c7fb0a` (2026-09-27; this branch rebased onto it)
+
+| File | What |
+|---|---|
+| `reverify-Proofs.lean` / `.out` | the F1 witness now REFUSES (`#eval` + `step0_not_panic`); `noRefusal_sound` (the corrected `NoRefusal` excludes every refusing run, at every fuel); `finish_replay` (a PROOF of `finish_replay_stmt`); EXIT=0, classical trio only |
+| `reverify-StrayPanic-rerun.out` | the ORIGINAL `StrayPanic.lean` re-run: it now FAILS (its `rfl` panic facts no longer hold), EXIT=1 |
+| `reverify-ci-diff.tail.txt` | `ci --diff` at `09c7fb0a` + this audit's docs commit: RESULT FAIL on exactly the 5a pair |
+
+Build: `.lake/build` rsynced from the packet-a worktree (identical `git ls-tree` of `GoLean`, `GoLean.lean`,
+`lakefile.toml`, `lean-toolchain`, `lake-manifest.json`), then `GOLEAN_MEM_MAX=48G scripts/capped lake build GoLean`
+EXIT=0. Reproduce: `GOLEAN_MEM_MAX=16G scripts/capped lake env lean docs/evidence/2026-09-27_packet-a-audit/reverify-Proofs.lean`.

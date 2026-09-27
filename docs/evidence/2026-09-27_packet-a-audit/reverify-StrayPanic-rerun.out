@@ -1,0 +1,14 @@
+# the ORIGINAL F1 refutation file (StrayPanic.lean) re-run at 09c7fb0a: it must now FAIL (the witness refuses)
+"GoLean.Stop.refusal\n  (GoLean.Refusal.internal\n    \"binding cell is not a root location: GoLean.Loc.index (GoLean.Loc.base { id := 0 }) 5 (a variable, pinned result or unseq binder cell is always a fresh root cell; machine invariant breached)\")"
+"GoLean.Stop.refusal\n  (GoLean.Refusal.internal\n    \"binding cell is not a root location: GoLean.Loc.index (GoLean.Loc.base { id := 0 }) 5 (a variable, pinned result or unseq binder cell is always a fresh root cell; machine invariant breached)\")"
+docs/evidence/2026-09-27_packet-a-audit/StrayPanic.lean:21:0: error: Not a definitional equality: the left-hand side
+  Except.error (Stop.terminal (Terminal.panic msg0))
+docs/evidence/2026-09-27_packet-a-audit/StrayPanic.lean:21:90: error: Type mismatch
+  stepFn ctx0 s0 c0 ch = Except.error (Stop.terminal (Terminal.panic msg0))
+docs/evidence/2026-09-27_packet-a-audit/StrayPanic.lean:22:0: error: Not a definitional equality: the left-hand side
+  Except.error (Stop.terminal (Terminal.panic msg0))
+docs/evidence/2026-09-27_packet-a-audit/StrayPanic.lean:22:98: error: Type mismatch
+  execStmtLoop ctx0 1 s0 c0 ch = Except.error (Stop.terminal (Terminal.panic msg0))
+docs/evidence/2026-09-27_packet-a-audit/StrayPanic.lean:67:8: error: Tactic `rewrite` failed: Did not find an occurrence of the pattern
+⊢ stepFn ctx0 s0 c0 chf ≠ Except.error (Stop.refusal hr)
+EXIT=1

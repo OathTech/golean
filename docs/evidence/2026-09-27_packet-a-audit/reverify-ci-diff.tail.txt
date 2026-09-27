@@ -1,0 +1,61 @@
+# GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff at 09c7fb0a (+ this audit's docs-only commit), under the box-wide lock; ANSI stripped
+192:certification: STALE certification: changed dependency build/files/GoLean.lean
+200:Core totality audit: 47 GoLean modules in the closure (38 under GoLean.GoCore), all on disk; 51 required theorems present; 16414 declarations across all imported local modules; classical trio only
+201:<worktree>/.tmp/core-audit-audit-3x9xyzoc/AuditAll.lean:49:0: error: Core totality audit: _private.GoLean.GoCore.Trace.0.coreAuditTraceHole depends on forbidden axiom _private.GoLean.GoCore.Trace.0.coreAuditTraceHole
+203:<worktree>/.tmp/core-audit-audit-3x9xyzoc/AuditAll.lean:49:0: error: Core totality audit: _private.GoLean.GoCore.AbortObservation.0.coreAuditObserverHole depends on forbidden axiom _private.GoLean.GoCore.AbortObservation.0.coreAuditObserverHole
+205:<worktree>/.tmp/core-audit-audit-3x9xyzoc/AuditAll.lean:49:0: error: Core totality audit: _private.GoLean.GoCore.StringPanic.0.coreAuditStringPanicHole depends on forbidden axiom _private.GoLean.GoCore.StringPanic.0.coreAuditStringPanicHole
+207:<worktree>/.tmp/core-audit-audit-3x9xyzoc/AuditAll.lean:49:0: error: Core totality audit: _private.Tests.GoCoreAudit.0.coreAuditSelfHole depends on forbidden axiom _private.Tests.GoCoreAudit.0.coreAuditSelfHole
+210:<worktree>/.tmp/core-audit-audit-3x9xyzoc/AuditAll.lean:49:0: error: Core totality audit: _private.Tests.GoCoreContract.0.coreAuditContractHole depends on forbidden axiom sorryAx
+212:Core totality audit: 47 GoLean modules in the closure (38 under GoLean.GoCore), all on disk; 51 required theorems present; 16414 declarations across all imported local modules; classical trio only
+215:Core totality audit gate: PASS
+864:DRIFT vs baselines/native-full.tsv (3768 case(s) run):
+865:imported-goose/channel/google-search	baseline[PASS/membership] -> now[FAIL/membership]
+
+
+══ scripts/ci summary ══
+  ok   Tests/library ownership (no exceptions; executed builds checked at exit)
+  note build parallelism: cap 48G -> LEAN_NUM_THREADS=6 (cap/8G, floor 2; 32 cores on this box)
+  ok   oracle toolchain (go1.26.5 = pin)
+  ok   escape-hatch preflight
+  ok   meta-layer escape hatches (allowlist empty since the repo split)
+  ok   escape-hatch addendum (no decide +native / native-config spellings)
+  ok   bug-index cross-check
+  ok   feature-coverage (no dead tags)
+  ok   spec-anchor citations resolve at the pin
+  ok   stdlib admission register = frontend tables
+  ok   lane-validation fixtures (manifest gates reject bad shapes)
+  ok   evidence-on-main size gate
+  ok   AGENTS.md alias of CLAUDE.md
+  ok   imported-goose verbatim (above-marker bytes = pinned upstream)
+  ok   engine-isolation (core ↛ EnumDedup)
+  ok   memory-module raw call-site inventory (emit/peek discipline)
+  ok   core build (warning-free)
+  FAIL certificate provenance
+  ok   core totality audit (every GoLean/ module; required core theorems; poison controls)
+  ok   admission checker proofs and post-import audit
+  ok   declaration boundary
+  ok   wire boundary (byte-level controls through the real CLI)
+  ok   package-correct method identity
+  ok   unseq scheduler (Stage B)
+  ok   unseq wire (Stage C)
+  ok   frontend pins (realized init-order deviation + twin wire = pinned bytes)
+  ok   import-goose fixtures (importer + verbatim guard reject bad shapes)
+  ok   frontend unit tests
+  ok   lowering-diagnostic tables
+  ok   coverage-harness unit tests
+  ok   eval tests (285 ok)
+  ok   differential run completed (exit 1; failing-set judged by baseline diff)
+  ok   lane-validation fixtures incl. harness half (F4/F6/B3-B5/G5/T1-T8/D1-D6)
+  ok   negative run completed (exit 0; set judged by baseline diff)
+  ok   Tests/FloatVectors.lean = fresh hardware-oracle regeneration (byte-exact)
+  ok   inittask-std.tsv = fresh gc-derived regeneration (header at pin; byte-exact modulo date line)
+  note negative baseline diff matched (394 case(s)) but the record was made on a DIRTY tree (git_dirty=true) — certifies that worktree state, not a commit
+  FAIL baseline diff (DRIFT — see above)
+  note reconciler: 2 finding(s), 1 HIGH — report-only (details: tools/reconcile-records)
+  ok   executed library coverage (all declared libraries; all Tests modules)
+
+RESULT: FAIL
+Failed CI receipts retained: <worktree>/.tmp/ci-libraries-qeb4hmna
+CI coverage timing: close: seconds=0.014
+CI total wall seconds: 803
+EXIT=1
