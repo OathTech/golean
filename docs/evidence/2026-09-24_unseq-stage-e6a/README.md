@@ -119,3 +119,9 @@ PASS→FAIL/membership`); 3768 rows run, 3531 PASS / 237 FAIL = the pin 3532 / 2
 drift. Tail: `r49-ci-slow.tail.txt`. Candidate vs tracked record: `claim` and `observations_sha256` IDENTICAL; inputs
 differ in `build.files` (`GoLean/NativeToIR.lean`) and nine frontend/script files, plus the receipt (`5946adfa`, binary
 `ada4125e…`, 126.024 s) — INSTALLED in this commit; a provenance refresh, not a re-pin.
+
+**Green re-run at the records commit `7696d262`** ([AGENT] coordinator, 2026-09-27): full `GOLEAN_MEM_MAX=48G
+scripts/capped scripts/ci --diff` → EXIT=0 in 738 s, `RESULT: PASS`, `baseline diff FULL (3768/3768, no regression)` —
+3532 PASS / 236 FAIL = the pin; `certificate provenance` ok. Round 49 closed: the window plan and briefs, the customer
+fixture inventory, E6a with its audit and BUG-116, and the 2026-09-27 rulings are on main. Next: the raft-proofs ARCHIVE
+note (docs-only, audit waived by the [USER]); Codex-style packet A as an Opus 5.5 subagent; then the label reshape.
