@@ -1,0 +1,129 @@
+# #check @<name> for the 24 members (scratch .tmp/Checks.lean + .tmp/Checks2.lean; the first without the Trace import — rows 3/4/24 unknown there, re-checked in Checks2 with it)
+@GoLean.GoCore.Machine.stepFn_sound : ∀ {ctx : GoLean.GoCore.ProgramCtx} {s : GoLean.GoCore.Store}
+  {c : GoLean.GoCore.Machine.Config} {ch : GoLean.GoCore.Choices} {c' : GoLean.GoCore.Machine.Config}
+  {s' : GoLean.GoCore.Store} {ch' : GoLean.GoCore.Choices} {tr : GoLean.GoCore.AccessTrace},
+  GoLean.GoCore.Machine.stepFn ctx s c ch = Except.ok (c', s', ch', tr) → GoLean.GoCore.Machine.Step ctx c s c' s' tr
+@GoLean.GoCore.Machine.step_complete : ∀ {ctx : GoLean.GoCore.ProgramCtx} {c : GoLean.GoCore.Machine.Config}
+  {s : GoLean.GoCore.Store} {c' : GoLean.GoCore.Machine.Config} {s' : GoLean.GoCore.Store}
+  {tr : GoLean.GoCore.AccessTrace},
+  GoLean.GoCore.Machine.Step ctx c s c' s' tr →
+    ∃ (ch : GoLean.GoCore.Choices),
+      ∃ (ch' : GoLean.GoCore.Choices), GoLean.GoCore.Machine.stepFn ctx s c ch = Except.ok (c', s', ch', tr)
+.tmp/Checks.lean:8:8: error(lean.unknownIdentifier): Unknown identifier `GoLean.Semantics.run_ok_iff`
+.tmp/Checks.lean:9:8: error(lean.unknownIdentifier): Unknown identifier `GoLean.Semantics.Trace.erase`
+@GoLean.GoCore.Machine.execProgLoop_single : ∀ {ctx : GoLean.GoCore.ProgramCtx} {fuel : Nat} {σ : GoLean.GoCore.Store}
+  {c : GoLean.GoCore.Machine.Config} {ch : GoLean.GoCore.Choices} {rs : GoLean.GoCore.Machine.RaceState}
+  {r : Except GoLean.Stop (GoLean.GoCore.Store × GoLean.GoCore.Choices)},
+  GoLean.GoCore.Machine.execStmtLoop ctx fuel σ c ch = r →
+    GoLean.GoCore.Machine.transferable r →
+      GoLean.GoCore.Machine.execProgLoop ctx (fuel + GoLean.GoCore.Machine.seqOpCount ctx fuel σ c ch)
+          { threads := #[GoLean.GoCore.Machine.Thread.running c none], shared := σ } rs ch =
+        r
+@GoLean.GoCore.Machine.execProgLoopOut_snd : ∀ {ctx : GoLean.GoCore.ProgramCtx} (fuel : Nat)
+  (m : GoLean.GoCore.Machine.MultiConfig) (r : GoLean.GoCore.Machine.RaceState) (choices : GoLean.GoCore.Choices)
+  (acc : GoLean.GoString),
+  (GoLean.GoCore.Machine.execProgLoopOut ctx fuel m r choices acc).snd =
+    GoLean.GoCore.Machine.execProgLoop ctx fuel m r choices
+@GoLean.Semantics.Pool.program_run_iff : ∀ {fuel : Nat} {p : GoLean.GoCore.Program} {name : String}
+  {args : Array GoLean.GoValue} {ch : GoLean.GoCore.Choices} {result : GoLean.GoCore.Machine.RunResult},
+  GoLean.GoCore.Machine.runProgramPoolOutM fuel p name args ch = result ↔
+    GoLean.Semantics.Pool.ProgramRun fuel p name args ch result
+@GoLean.Semantics.Pool.observation_iff : ∀ {p : GoLean.GoCore.Program} {name : String} {args : Array GoLean.GoValue}
+  {obs : GoLean.Semantics.Pool.Observation},
+  (∃ (fuel : Nat),
+      ∃ (ch : GoLean.GoCore.Choices),
+        GoLean.Semantics.Pool.observationOf (GoLean.GoCore.Machine.runProgramPoolOutM fuel p name args ch) = some obs) ↔
+    ∃ (fuel : Nat),
+      ∃ (ch : GoLean.GoCore.Choices),
+        ∃ (result : GoLean.GoCore.Machine.RunResult),
+          GoLean.Semantics.Pool.ProgramRun fuel p name args ch result ∧
+            GoLean.Semantics.Pool.observationOf result = some obs
+@GoLean.GoCore.Machine.runProgramSetupM : Nat →
+  GoLean.GoCore.Program →
+    String →
+      Array GoLean.GoValue →
+        optParam GoLean.GoCore.Choices [] →
+          Except GoLean.Stop
+            (GoLean.GoCore.ProgramCtx ×
+              GoLean.GoCore.Machine.Config × GoLean.GoCore.Store × List GoLean.Loc × GoLean.GoCore.Choices)
+GoLean.GoCore.Machine.loadMany : GoLean.GoCore.ProgramCtx →
+  GoLean.GoCore.Store → List GoLean.Loc → Except GoLean.Stop (List GoLean.GoValue)
+GoLean.GoCore.Machine.enterFrame : GoLean.GoCore.ProgramCtx →
+  GoLean.GoCore.Store →
+    GoLean.GoCore.FuncId →
+      List GoLean.GoValue →
+        Except GoLean.Stop
+          (GoLean.GoCore.Func ×
+            GoLean.GoCore.LocalEnv × List GoLean.Loc × GoLean.GoCore.Store × GoLean.GoCore.AccessTrace)
+GoLean.GoCore.Machine.seqCont : List GoLean.GoCore.Stmt →
+  GoLean.GoCore.LocalEnv → GoLean.GoCore.Machine.Cont → GoLean.GoCore.Machine.Cont
+GoLean.GoCore.Machine.stepFrameExit : GoLean.GoCore.ProgramCtx →
+  GoLean.GoCore.Store →
+    List (GoLean.GoCore.Machine.TargetShape × List GoLean.GoCore.Expr) →
+      GoLean.GoCore.LocalEnv →
+        List GoLean.Loc →
+          List (GoLean.GoValue × List GoLean.GoValue) →
+            GoLean.GoCore.Machine.Cont →
+              Bool →
+                GoLean.GoCore.Choices →
+                  Except GoLean.Stop
+                    (GoLean.GoCore.Machine.Config ×
+                      GoLean.GoCore.Store × GoLean.GoCore.Choices × GoLean.GoCore.AccessTrace)
+GoLean.GoCore.Machine.recoverResult : GoLean.GoCore.Machine.Cont → GoLean.GoValue × GoLean.GoCore.Machine.Cont
+GoLean.GoCore.Machine.enterFramePick : GoLean.GoCore.ProgramCtx →
+  GoLean.GoCore.Store →
+    GoLean.GoCore.FuncId →
+      List GoLean.GoValue →
+        GoLean.GoCore.Choices →
+          Except GoLean.Stop
+            (GoLean.Result
+                (GoLean.GoCore.Func ×
+                  GoLean.GoCore.LocalEnv × List GoLean.Loc × GoLean.GoCore.Store × GoLean.GoCore.AccessTrace) ×
+              GoLean.GoCore.Choices)
+GoLean.GoCore.Machine.pushDefer : GoLean.GoValue × List GoLean.GoValue →
+  GoLean.GoCore.Machine.Cont → Option GoLean.GoCore.Machine.Cont
+GoLean.GoCore.Machine.execStmtLoop : GoLean.GoCore.ProgramCtx →
+  Nat →
+    GoLean.GoCore.Store →
+      GoLean.GoCore.Machine.Config →
+        GoLean.GoCore.Choices → Except GoLean.Stop (GoLean.GoCore.Store × GoLean.GoCore.Choices)
+GoLean.GoCore.Machine.Steps : GoLean.GoCore.ProgramCtx →
+  GoLean.GoCore.Machine.Config → GoLean.GoCore.Store → GoLean.GoCore.Machine.Config → GoLean.GoCore.Store → Prop
+GoLean.GoCore.Machine.Config.abort? : GoLean.GoCore.Machine.Config →
+  Option (GoLean.GoCore.Machine.PanicEntry × List GoLean.GoCore.Machine.PanicEntry)
+GoLean.GoCore.findFunctionIn? : Array GoLean.GoCore.Func → GoLean.GoCore.FuncId → Option GoLean.GoCore.Func
+GoLean.GoCore.methodInfoByFuncId? : GoLean.GoCore.ProgramCtx → GoLean.GoCore.FuncId → Option GoLean.GoCore.MethodInfo
+GoLean.GoCore.Machine.stepFn : GoLean.GoCore.ProgramCtx →
+  GoLean.GoCore.Store →
+    GoLean.GoCore.Machine.Config →
+      GoLean.GoCore.Choices →
+        Except GoLean.Stop
+          (GoLean.GoCore.Machine.Config × GoLean.GoCore.Store × GoLean.GoCore.Choices × GoLean.GoCore.AccessTrace)
+GoLean.GoCore.Machine.stepFnIter : GoLean.GoCore.ProgramCtx →
+  Nat →
+    GoLean.GoCore.Store →
+      GoLean.GoCore.Machine.Config →
+        GoLean.GoCore.Choices →
+          Except GoLean.Stop (GoLean.GoCore.Machine.Config × GoLean.GoCore.Store × GoLean.GoCore.Choices)
+.tmp/Checks.lean:29:8: error(lean.unknownIdentifier): Unknown identifier `GoLean.Semantics.iter_iff_trace`
+@GoLean.Semantics.run_ok_iff : ∀ {ctx : GoLean.GoCore.ProgramCtx} {fuel : Nat} {s : GoLean.GoCore.Store}
+  {c : GoLean.GoCore.Machine.Config} {ch : GoLean.GoCore.Choices} {sf : GoLean.GoCore.Store}
+  {chf : GoLean.GoCore.Choices},
+  GoLean.GoCore.Machine.execStmtLoop ctx fuel s c ch = Except.ok (sf, chf) ↔
+    ∃ (n : Nat),
+      n ≤ fuel ∧
+        GoLean.Semantics.Trace ctx n s c ch sf (GoLean.GoCore.Machine.Config.next GoLean.GoCore.Machine.Cont.stop) chf
+@GoLean.Semantics.Trace.erase : ∀ {ctx : GoLean.GoCore.ProgramCtx} {n : Nat} {s : GoLean.GoCore.Store}
+  {c : GoLean.GoCore.Machine.Config} {ch : GoLean.GoCore.Choices} {sf : GoLean.GoCore.Store}
+  {cf : GoLean.GoCore.Machine.Config} {chf : GoLean.GoCore.Choices},
+  GoLean.Semantics.Trace ctx n s c ch sf cf chf → GoLean.GoCore.Machine.Steps ctx c s cf sf
+@GoLean.Semantics.iter_iff_trace : ∀ {ctx : GoLean.GoCore.ProgramCtx} {n : Nat} {s : GoLean.GoCore.Store}
+  {c : GoLean.GoCore.Machine.Config} {ch : GoLean.GoCore.Choices} {sf : GoLean.GoCore.Store}
+  {cf : GoLean.GoCore.Machine.Config} {chf : GoLean.GoCore.Choices},
+  GoLean.GoCore.Machine.stepFnIter ctx n s c ch = Except.ok (cf, sf, chf) ↔
+    GoLean.Semantics.Trace ctx n s c ch sf cf chf
+GoLean.Semantics.Trace : GoLean.GoCore.ProgramCtx →
+  Nat →
+    GoLean.GoCore.Store →
+      GoLean.GoCore.Machine.Config →
+        GoLean.GoCore.Choices → GoLean.GoCore.Store → GoLean.GoCore.Machine.Config → GoLean.GoCore.Choices → Prop

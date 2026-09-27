@@ -1,0 +1,22 @@
+-- HELD, not in the build: the brief's program_bridge_stmt (packet A §5), as written and
+-- elaborated (lake build EXIT=0 at commit 60251b78) inside GoLean/GoCore/ExecutionStatement.lean,
+-- namespace GoLean.GoCore.ExecutionStatement, opens GoLean GoLean.GoCore GoLean.GoCore.Machine
+-- GoLean.Semantics. Removed because scripts/check-mem-callsites flags its raw `loadMany`
+-- mention (NEW row) and the brief forbids editing scripts/ (see the packet report).
+
+/-- The program bridge under successful setup (setup's tape `ch → ch₁` INCLUDED): the
+driver is the pool fold from the setup seam's context, configuration, store and residual
+tape, with the `loadMany` readout. Init OUTPUT is empty BY REFUSAL (`initPrintRefusal?`,
+`StepFn.lean:1118`) — the named limitation is RETAINED. -/
+def program_bridge_stmt : Prop :=
+  ∀ (fuel : Nat) (p : Program) (name : String) (args : Array GoValue) (ch : Choices)
+    (pctx : ProgramCtx) (c₀ : Config) (s₀ : Store) (locs : List Loc) (ch₁ : Choices),
+    runProgramSetupM fuel p name args ch = .ok (pctx, c₀, s₀, locs, ch₁) →
+    runProgramPoolOutM fuel p name args ch =
+      (match execProgLoopOut pctx fuel ⟨#[Thread.running c₀ none], s₀, 0⟩ {} ch₁
+          GoString.empty with
+        | (out, .error e) => .error (e, out)
+        | (out, .ok (sf, _)) =>
+            match loadMany pctx sf locs with
+            | .ok vs => .ok { values := vs.toArray, output := out }
+            | .error e => .error (e, out))

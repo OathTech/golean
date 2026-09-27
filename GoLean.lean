@@ -10,6 +10,11 @@ import GoLean.GoCore
 import GoLean.GoCore.ProgramTrace
 import GoLean.GoCore.AbortObservation
 import GoLean.GoCore.StringPanic
+-- The window's contract (charter row 0; packet A, 2026-09-27): the pinned stable bridge set
+-- (a statement drift fails THIS build) and the execution statement (Prop definitions only;
+-- packet B proves them). Enrolled here = default-build membership.
+import GoLean.GoCore.BridgeSet
+import GoLean.GoCore.ExecutionStatement
 import GoLean.NativeToIR
 import GoLean.CLI
 import GoLean.ChoiceTrace
