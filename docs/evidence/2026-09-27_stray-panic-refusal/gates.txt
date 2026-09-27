@@ -1,0 +1,9 @@
+lake-build EXIT=0
+lake-build-GoLean EXIT=0
+check-core-audit EXIT=0
+check-mem-callsites EXIT=0
+check-unseq-scheduler EXIT=0
+check-wire-boundary EXIT=0
+check-unseq-wire EXIT=0
+eval-tests EXIT=0
+(individual gates at the working tree later committed as 9862be1c)

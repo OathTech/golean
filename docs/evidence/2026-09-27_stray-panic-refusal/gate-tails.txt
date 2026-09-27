@@ -1,0 +1,37 @@
+== lake-build (tail)
+✔ [95/96] Built Main:c.o (69ms)
+✔ [96/96] Built golean:exe (498ms)
+Build completed successfully (96 jobs).
+== lake-build-GoLean (tail)
+Build completed successfully (48 jobs).
+== check-core-audit (tail)
+Typed audit: core-audit: 5 compiled controls passed
+core-audit-audit PASS; scratch removed (9929613 owned bytes; dependencies symlinked)
+Core totality audit gate: PASS
+== check-mem-callsites (tail)
+Memory-module raw call-site inventory: PASS (72 (file, declaration, raw-op) rows, all inventoried with reasons)
+== check-unseq-scheduler (tail)
+Unseq scheduler (Stage B): PASS — every reference set exact, every refusal named
+Unseq scheduler audit: 35 required theorems; 15491 declarations across all imported local origins; classical trio only
+Unseq scheduler gate: PASS
+== check-wire-boundary (tail)
+ok [unseq range-scope-key] runs, answers 9 (a range KEY variable does not leak past its loop — fix round 2)
+ok [unseq-local-range-var-after-loop] refused, naming: has no declaration in the enclosing function
+Wire boundary gate: PASS (11 byte-level controls + 56 unseq-node controls through the real CLI)
+== check-unseq-wire (tail)
+ok [mut-local-out-of-scope] refused through the CLI, naming: has no declaration in the enclosing function
+ok [mut-local-range-var-after-loop] refused through the CLI, naming: has no declaration in the enclosing function
+Unseq wire gate: PASS (56 mutants refused through the CLI; exact sets in tests.log)
+== eval-tests: STRAY lines + totals
+ok: STRAY S6: the F1 witness (variable bound to a non-root out-of-range element) is the named .internal refusal, not a Go panic terminal
+ok: STRAY S6 positive: an ordinary variable read is unchanged (value 7, one read at the root)
+ok: STRAY S2: a pinned result cell at a non-root location is the named .internal refusal
+ok: STRAY S2 positive: the frame-exit readout of a root result cell is unchanged (values [7], one read at the root)
+ok: STRAY S1: a targetless frame exit whose result cell is non-root is the named .internal refusal
+ok: STRAY S1 positive: with a root result cell the targetless exit keeps its old stuck refusal
+ok: STRAY S4: an unseq target atom bound to a non-root location is the named .internal refusal
+ok: STRAY S4 positive: a root target atom reads 7 with one read at the root
+ok: STRAY S3: an unseq binder cell at a non-root location is the named .internal refusal at the phase-2 plan
+ok: STRAY S3 positive: a root binder cell's value is planned unchanged
+ok: STRAY S5: an unseq guard test binder at a non-root location is the named .internal refusal
+ok: 285  fail: 0
