@@ -1,7 +1,7 @@
-# scripts/capped scripts/check-core-audit at 92aaab2a (tail)
+# scripts/capped scripts/check-core-audit at 36d8571b (tail)
 CORE-AUDIT EXIT=0
 Core audit harness: 47 GoLean modules on disk (38 under GoLean/GoCore/)
-Core totality audit: 47 GoLean modules in the closure (38 under GoLean.GoCore), all on disk; 51 required theorems present; 16400 declarations across all imported local modules; classical trio only
+Core totality audit: 47 GoLean modules in the closure (38 under GoLean.GoCore), all on disk; 51 required theorems present; 16414 declarations across all imported local modules; classical trio only
 Core totality audit gate: PASS
 Typed audit: core-audit: 5 compiled controls passed
-# at main 7d2a62e5: 45 GoLean modules on disk (worktree: 47)
+# base (core lane tip 05d0dbd4): 45 GoLean modules on disk (worktree: 47)

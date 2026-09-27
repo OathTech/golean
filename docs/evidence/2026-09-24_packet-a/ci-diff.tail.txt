@@ -1,14 +1,14 @@
-# GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff at 92aaab2a (audit round; base main 7d2a62e5); summary tail + drift block
+# GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff at 36d8571b (on core/stray-panic-refusal-0927 @ 05d0dbd4); summary tail + drift block
 CI-DIFF EXIT=1
 certification: STALE certification: changed dependency build/files/GoLean.lean
-Certificate provenance wall seconds: 71
-CI total wall seconds: 752
+Certificate provenance wall seconds: 73
+CI total wall seconds: 948
 ── differential baseline diff (scripts/coverage-baseline-diff)
 DRIFT vs baselines/native-full.tsv (3768 case(s) run):
 imported-goose/channel/google-search	baseline[PASS/membership] -> now[FAIL/membership]
 
 ── memory-module raw call sites (scripts/check-mem-callsites vs scripts/mem-callsites.tsv)
-Memory-module raw call-site inventory: PASS (71 (file, declaration, raw-op) rows, all inventoried with reasons)
+Memory-module raw call-site inventory: PASS (73 (file, declaration, raw-op) rows, all inventoried with reasons)
 
 ══ scripts/ci summary ══
   ok   Tests/library ownership (no exceptions; executed builds checked at exit)
@@ -41,7 +41,7 @@ Memory-module raw call-site inventory: PASS (71 (file, declaration, raw-op) rows
   ok   frontend unit tests
   ok   lowering-diagnostic tables
   ok   coverage-harness unit tests
-  ok   eval tests (274 ok)
+  ok   eval tests (285 ok)
   ok   differential run completed (exit 1; failing-set judged by baseline diff)
   ok   lane-validation fixtures incl. harness half (F4/F6/B3-B5/G5/T1-T8/D1-D6)
   ok   negative run completed (exit 0; set judged by baseline diff)
@@ -53,6 +53,6 @@ Memory-module raw call-site inventory: PASS (71 (file, declaration, raw-op) rows
   ok   executed library coverage (all declared libraries; all Tests modules)
 
 RESULT: FAIL
-Failed CI receipts retained: .tmp/ci-libraries-b635ykrc
+Failed CI receipts retained: .tmp/ci-libraries-y_5__il_
 CI coverage timing: close: seconds=0.015
-CI total wall seconds: 752
+CI total wall seconds: 948

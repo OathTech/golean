@@ -44,3 +44,5 @@ ledgers             16 L-entries  7 I-rows  34 FR-rows  10 Q-rows  44 latitude r
 
 # at 92aaab2a: lake build GoLean -> EXIT=0, warning lines: 0; check-mem-callsites -> EXIT=0 (PASS)
 # NoRefusal positive-control pre-check (.tmp/NR2.lean, #eval): stepFn ctx0 {} (.next (.seq [] [] .stop)) [] -> ok next-stop [] (label length 0); stepFn at .next .stop -> refusal (internal "step on terminal configuration")
+
+# at 36d8571b: lake build GoLean -> EXIT=0, warning lines: 0; check-mem-callsites -> EXIT=0 (Memory-module raw call-site inventory: PASS (73 (file, declaration, raw-op) rows, all inventoried with reasons))
