@@ -1041,3 +1041,22 @@ five modules). D2: `CLAUDE.md`'s item (2) of «What this repo provides» replace
 end-to-end statement proved, the pool/registry half and the two single-goroutine projections still OWED, the limits stated
 (charter decision 11, 2026-09-24). Owed before the re-pin offer: the single-goroutine output agreement and the
 sequential-to-pool terminal projection (packet B audit F5); folding `stepFn_consumption_some'` back into `MachineSound` (F3).
+
+### The logic team's reply on the legacy triple (2026-09-28)
+
+The logic team, relayed by [USER] Mike, relayed by the [AGENT] coordinator — cite as relayed; 2026-09-28, verbatim, in
+reply to the note `docs/2026-09-27_note-to-logic-team-e6-rescope.md` (the legacy triple `Stmt.unseqProbe` / `Cont.probeK`
+/ `Step.unseqProbe` (with `probeValue` / `probeDefer` / `probeRaise`) / `ChoiceSite.unseqPanic` survives into the single
+re-pin offer, [USER] 2026-09-27): «No change: our live package references none of the four constructors (only a parked
+experiment outside the live build does), so the survivors cost only cases arms. Our question-10 answer stands: one
+dedicated migration after the completed offer, before the first receiver/E2 simulation proof, with no interim pin. Please
+record the triple's unchanged behaviour and choice consumption in the changelog as you describe.»
+
+Recorded ([AGENT] records worker): (1) NO change to the window — the order and the single re-pin offer stand as ruled
+2026-09-27. (2) Their re-pin point stands as in their question-10 answer (`docs/2026-09-23_response-from-logic-team.md:331`,
+row 10): one dedicated migration after the completed offer, before the receiver/E2 simulation proof, no
+interim pin. (3) The requested record is the changelog section «The legacy evaluation-order triple (survives the re-pin,
+[USER] 2026-09-27)» in `docs/changelog/61958f2e-WINDOW.md`: every constructor, rule and `stepFn` arm of the triple is
+BEHAVIOUR-identical to the pin `61958f2e`; the only changes are SHAPE (the `Step` label / `stepFn`'s fourth component,
+whose `picks` now records the `unseqPanic` consultation as `⟨.unseqPanic, 2, pick⟩`); the frontend emits fewer probes
+(E6a: corpus 58 → 47, twin 128 → 128), which changes which programs reach the triple, not what it does.

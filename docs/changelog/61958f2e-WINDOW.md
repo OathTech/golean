@@ -26,7 +26,7 @@ at the commit named in its column (paths under `GoLean/GoCore/` unless given). `
 | `Trace.step` | `stepFn ctx s c ch = .ok (c₁, s₁, ch₁) → …` (`Trace.lean:18`) | `… = .ok (c₁, s₁, ch₁, tr) → …` (`Trace.lean:18`); `run_ok_iff` / `Trace.erase` statements textually unchanged (`Trace.lean:60`, `:42`) | [inf] none for users of `run_ok_iff` + `Trace.erase` only |
 | `Step` rule count | 122 | 128 — added `unseqRunRecv`, `unseqRunAlloc`, `unseqRunWide` (`Machine.lean:6081`, `:6090`, `:6099`), `unseqRecvDone`, `unseqAllocDone`, `unseqWideDone` (`:6139`, `:6145`, `:6151`); none removed. Counting command, run at both commits: `git show <rev>:GoLean/GoCore/Machine.lean \| awk '/^inductive Step :/{f=1;next} f&&/^[^ -]/{exit} f&&/^  \| /{n++} END{print n}'` → 122 / 128 | [inf] an exhaustive `cases` on `Step` gains six arms |
 | `Stmt` / `Cont` / `ChoiceSite` / `Config` constructors | 44 / 33 / 10 / 10 | IDENTICAL lists at both commits (verified by extracting each `inductive`'s `  \| ` constructor names from `Syntax.lean` / `Machine.lean` / `State.lean` at both revs and diffing: equal, in order) | [inf] none |
-| the legacy `unseq-probe` triple | present | PRESENT and SURVIVES into the re-pin ([USER] 2026-09-27, rulings ledger above): `Stmt.unseqProbe` (`Syntax.lean:774`), `Cont.probeK` (`Machine.lean:3512`), `Step.unseqProbe` (`Machine.lean:6009`), `ChoiceSite.unseqPanic` (`State.lean:329`) | [inf] one extra `Cont` constructor and one `Step` rule to port; their retirement is a LATER removal-only change |
+| the legacy `unseq-probe` triple | present | PRESENT and SURVIVES into the re-pin ([USER] 2026-09-27, rulings ledger above): `Stmt.unseqProbe` (`Syntax.lean:774`), `Cont.probeK` (`Machine.lean:3512`), `Step.unseqProbe` (`Machine.lean:6009`), `ChoiceSite.unseqPanic` (`State.lean:329`) | [inf] one extra `Cont` constructor and one `Step` rule to port; their retirement is a LATER removal-only change (the triple at the r52 tip, shape vs behaviour: § «The legacy evaluation-order triple» below; the line numbers in this cell are at `5946adfa`) |
 | the wire | no `"unseq"` statement key-schema in the decoder (`GoLean/NativeToIR.lean` @ pin: 0 matches) | `{"stmt":"unseq","cells","occs","stores","then"}` and eight occurrence kinds `eval`/`invoke`/`target`/`load`/`guard`/`recv`/`allocate`/`wide` (key schemas `GoLean/NativeToIR.lean:212` and `:898`–`905`); the map arms inside a graph carry `keyType`/`valueType` CHECKED against the base's declared type (`GoLean/NativeToIR.lean:1004`, `:1007`); no other key schema changed (diff of the decoder's `some [...]` key tables: additions only) | [inf] re-emit fixtures; a fixture whose statement fires the observability trigger now sees `Stmt.unseq` |
 | the decoder's named refusals | 62 `fail` sites, 0 `unseq:` | 142 `fail` sites (`git show <rev>:GoLean/NativeToIR.lean \| grep -cE '(^\|[^A-Za-z])fail +(s!)?"'` → 62 / 142; audit F6), 80 `unseq:`-prefixed named refusals (`grep -c 'fail s!"unseq'`), all in the `unseq` grammar (`decodeUnseq`, `GoLean/NativeToIR.lean:2278`); incl. E6a's `after` edge on a literal `allocate` (`:2545`) and the scope-exact source-local checks (`:1189`, `:1195`, `:1201`); no non-`unseq` `fail` line added or removed | [inf] none for wires the frontend emits; a hand-built wire meets the refusals by name |
 | the window's contract modules (packet A) | — | NEW, in the default build via `GoLean.lean`: `GoLean/GoCore/BridgeSet.lean` (24 pinned statements — a drift fails the build) and `GoLean/GoCore/ExecutionStatement.lean` (`Prefix`, `Finish` with FIVE constructors incl. `fatal` — [AGENT] coordinator disposition 2026-09-27 — `LRun`, `replays`, `NoRefusal`, the owed `_stmt` Props; statements only, packet B proves; audit F1 resolved by `core/stray-panic-refusal-0927`, disposition (b), [AGENT] coordinator, disclosed at the merge ask); one `scripts/mem-callsites.tsv` row («NO EXECUTION», `program_bridge_stmt`) | [inf] import the two modules; `BridgeSet.lean`'s diff between pins IS the interface diff |
@@ -81,6 +81,62 @@ at the commit named in its column (paths under `GoLean/GoCore/` unless given). `
 
 (The E6a lines above are the E6a lane's «changelog lines», `docs/2026-09-24_unseq-stage-e6a-handoff.md` §«Changelog
 lines for the window», folded here verbatim except the closing clause of the first line, which pointed at E6e.)
+
+## The legacy evaluation-order triple (survives the re-pin, [USER] 2026-09-27)
+
+[AGENT records worker] 2026-09-28, at the logic team's request (their reply of 2026-09-28, rulings ledger «The logic
+team's reply on the legacy triple (2026-09-28)»). Every cell is read from `git show 61958f2e:<path>` against the train
+r52 tip `d640a5ac` (the step label + packet B landed); an aligned-block `diff` of each definition at the two commits.
+`file:line` is at the commit of its column; paths under `GoLean/GoCore/` unless given. A SHAPE change alters an arity, an
+index or a label field; a BEHAVIOUR change alters which configuration steps to which, or what the tape consumes. The
+intermediate state (main @ `5946adfa`, after C1, before the label reshape): the four rules carried the `AccessTrace` label
+`[]` (`Machine.lean:6010`–`6019` there) and the consult used `Choices.consumeAt` (`StepFn.lean:366` there).
+
+| Constructor / arm | At `61958f2e` | At the tip `d640a5ac` | Shape vs behaviour | What a re-pin touches [inf] |
+|---|---|---|---|---|
+| `Stmt.unseqProbe (e : Expr)` | `Syntax.lean:689` (docstring from `:672`) | `Syntax.lean:774` (docstring from `:757`) | textually IDENTICAL, docstring included; `Stmt` constructor list identical (44) | nothing but the line shift |
+| `Cont.probeK (k : Cont)` and its structural arms `Cont.tail` / `Cont.withTail` / `Cont.class` (`.probe`) | `Machine.lean:2751`; arms `:2802`, `:2838`, `:2871` | `Machine.lean:3530`; arms `:3581`, `:3617`, `:3650` | IDENTICAL (constructor, docstring, the three arms) | nothing |
+| `ChoiceSite.unseqPanic` (the site; slot text DEFER = 0 / RAISE = 1) | `State.lean:344`; census entry `:263`–`282`; slot text `:379`–`380` | `State.lean:329`; `:248`–`267`; `:364`–`365` | IDENTICAL; `ChoiceSite` constructor list identical (10) | nothing |
+| `Step.unseqProbe` — `.exec (.unseqProbe e) env k` → `.evalE e env (.probeK k)`, store unchanged | `Machine.lean:5071`, no label (`Step : Config → Store → Config → Store → Prop`, `:4390`) | `Machine.lean:6071`, label `⟨[], [], []⟩` (`Step : … → StepLabel → Prop`, `:5374`) | SHAPE only (the fifth index: C1's `AccessTrace`, then the reshape's `StepLabel`); same successor | the label argument (`⟨[], [], []⟩`) |
+| `Step.probeValue` — `.retV v (.probeK k)` → `.next k` (the value discarded; no consult) | `Machine.lean:5073`, no label | `Machine.lean:6073`, `⟨[], [], []⟩` | SHAPE only | the label argument |
+| `Step.probeDefer` — `.panicking chain (.probeK k)` → `.next k` (slot 0) | `Machine.lean:5077`, no label | `Machine.lean:6077`, `⟨[], [⟨.unseqPanic, 2, 0⟩], []⟩` | SHAPE only: the label's `picks` now RECORDS the consultation (site, bound 2, value 0); same successor | the label, whose `picks` names the pick |
+| `Step.probeRaise` — `.panicking chain (.probeK k)` → `.panicking chain k` (slot 1) | `Machine.lean:5080`, no label | `Machine.lean:6080`, `⟨[], [⟨.unseqPanic, 2, 1⟩], []⟩` | SHAPE only, as `probeDefer` (value 1) | as `probeDefer` |
+| `stepFn`'s `.exec (.unseqProbe e)` arm | `StepFn.lean:482`–`486`, result `(.evalE e env (.probeK k), s, choices)` | `StepFn.lean:556`–`560`, `…, choices, ⟨[], [], []⟩)` | SHAPE only (`stepFn`'s fourth component, `StepFn.lean:255` → `:329`) | the fourth tuple component |
+| `stepFn`'s `.retV v (.probeK k')` arm | `StepFn.lean:761`–`764`, `(.next k', s, choices)` | `StepFn.lean:845`–`848`, `…, choices, ⟨[], [], []⟩)` | SHAPE only; still NO consult | the fourth component |
+| `stepFn`'s `.panicking chain (.probeK k')` arm — THE consult | `StepFn.lean:282`–`296`: `let (pick, ch') := Choices.consumeAt .unseqPanic 2 choices`; `if pick = 0 then .next k' else .panicking chain k'` | `StepFn.lean:356`–`370`: `let (pick, ch', ps) := Choices.consumeAtE .unseqPanic 2 choices`; the same `if`; label `⟨[], ps, []⟩` | SHAPE only: `consumeAtE`'s pick and stream ARE `consumeAt`'s (definition `State.lean:467`–`471`; `Choices.consumeAtE_eq`, `:482`); `ps` = the record | the fourth component; a proof that unfolded `consumeAt` here now meets `consumeAtE` (`Choices.consumeAtE_eq` / `_inv` rewrite it back) |
+| `.signal _ (.probeK _)` / `.next (.probeK _)` (unreachable; refused through `signalRefusal`'s expression-frame arm and the `.next` catch-all) | `StepFn.lean:835`, `:848`; the reachability comment `Machine.lean:5050`–`5070` | `StepFn.lean:919`, `:932`; `Machine.lean:6050`–`6070` | the refusals IDENTICAL (only the success returns gained a label); the comment identical | nothing |
+| `seqConsumption`'s `.panicking _ (.probeK _) ↦ some (.unseqPanic, 2)`; `consumesUnseqPanic` | `Machine.lean:4322`; `:4277`–`4278` | `Machine.lean:5249`; `:5188`–`5189` | IDENTICAL code; `consumesUnseqPanic`'s DOCSTRING changed (the certified dedup engine enumerates the site since Stage D, 2026-09-20 — apparatus, not semantics) | nothing |
+| the decoder's `"unseq-probe"` arm (`GoLean/NativeToIR.lean`; the two named refusals: an operand mentioning `recover()`, an allocating conversion) | `GoLean/NativeToIR.lean:1205`–`1223`; key schema `:199` | `GoLean/NativeToIR.lean:1794`–`1812`; key schema `:211` | IDENTICAL. NEW beside it (the graph path, Stage C onward): `decodeUnseq` refuses a legacy `unseq-probe` inside an `unseq` completion by name (`GoLean/NativeToIR.lean:2641`) — a mixture is refused; the probe itself is untouched | nothing for emitted wires |
+| the stray-panic reader (`loadRoot`, `Ops.lean:1381`; 2026-09-27) | — | touches NO probe arm; a probed operand's binding-cell reads go through it | BEHAVIOUR unchanged on every reachable configuration (a non-root binding location is a machine-invariant breach, now an `.internal` refusal; no row moved) | nothing |
+
+**The triple's choice consumption.** `ChoiceSite.unseqPanic` is consulted at exactly ONE place: `stepFn`'s
+`.panicking chain (.probeK k')` arm (`StepFn.lean:282` at the pin, `:356` at the tip), mirrored by `seqConsumption`'s
+`.panicking _ (.probeK _) ↦ some (.unseqPanic, 2)` (`Machine.lean:4322` / `:5249`). Its bound is the CONSTANT 2 — so the
+uniform bound-≤-1 rule (`Choices.consumeAt`: `(0, ch)`, nothing popped, `State.lean:393`–`396` at the tip) never applies
+at this site. A probe whose operand yields a value consults nothing (`.retV v (.probeK k') ↦ .next k'`). On a non-empty
+tape the head `c` is popped and the pick is `c % 2` (`Choices.consume`, `State.lean:173`–`177`); on an EMPTY tape the pick
+is 0 and the tape is unchanged — DEFER, the pre-E13 trajectory. Slot 0 DEFER steps to `.next k'` (the operand is
+re-evaluated at its residual position after the sibling events); slot 1 RAISE propagates the panic now
+(`.panicking chain k'`). All of this is textually the pin's. What the tip ADDS is the record: the step label's `picks`
+carries `⟨.unseqPanic, 2, pick⟩` (`Choices.consumeAtE`, `State.lean:467`; the relation's rules state it literally,
+`Machine.lean:6078`, `:6081`; `PrefixFacts.lean`'s `stepFn_consumption_some'` covers the arm at `:485`–`500`, and
+`stepFn_picks_some`, `:300`, equates a step's `picks` with `PickRecord.ofPick` of `seqConsumption`'s site and bound). Because the bound is
+2 > 1, the record is emitted on an EMPTY tape too (pick 0, the tape not advanced) — the uniform rule of
+`consumeAtE`, not a site-specific choice. The pool layer's stream-obliviousness checker answers `false` at the site (fail closed;
+`MultiStreams.lean:122` at the tip, `:119` at the pin), as at the pin.
+
+**What changed around it: which programs reach the triple, not what it does.** At the pin the decoder had no `"unseq"`
+graph statement (`GoLean/NativeToIR.lean` @ `61958f2e`: no match); every sibling-panic sweep the frontend handled lowered
+through the probe. Since the pin, Stages C–E5 and then E6a moved sweeps to the `unseq` graph path AT LOWERING TIME: the
+frontend emits fewer probes; the triple's rules are unchanged. The choice-trace `unseqPanic` consultation census over the
+corpus records the movement stage by stage: 417 → 288 (Stage C, `docs/2026-09-19_unseq-stage-c-handoff.md:161`), 288 → 204
+(Stage E, `docs/2026-09-21_unseq-stage-e-handoff.md:129`), 204 → 168 (E5, `docs/2026-09-22_unseq-stage-e5-handoff.md:137`),
+168 → 96 (E6a, `docs/2026-09-24_unseq-stage-e6a-handoff.md:121`). E6a's emitter census
+(`docs/2026-09-24_unseq-stage-e6a-handoff.md:97`, §3; the fix round re-took it at `:112`): legacy `unseq-probe` emission
+**corpus 58 → 47** (in 17 packages), **the raft twin 128 → 128** (the twin gained 3 graphs at its unit boundary, no probe
+removed); the 175 remaining emitters are classed at `:97`–`104`. The logic team's fourteen fixtures and eight F2 variants
+lower with zero probes and zero graphs (`docs/2026-09-24_customer-fixture-inventory.md`), so for their fragment the
+survivors cost `cases` arms only (their reply, 2026-09-28).
 
 ## Window rows (PENDING)
 
