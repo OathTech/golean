@@ -1104,3 +1104,8 @@ Dispositions ([AGENT] coordinator; item 6 PENDING [USER] — it would change the
    → the changelog, maintained through the window.
 9. The single-goroutine embedding without `seqOpCount = 0` → already owed (packet B audit F5 area); low priority, before the
    offer if cheap, else a stated limit.
+
+RULED ([USER] Mike, 2026-09-28, verbatim, relayed): «Agree on (1). Agree on landing». Item 6: option 1 — frames record their
+callee's `FuncId` as a field, added in the P lane's S3 reshape in place of the deleted `wrapper` field, with entry/exit
+lemmas pinned; the `StepLabel` shape is unchanged (a call/return label channel NOT taken). This branch lands, documentation
+only, the adversarial audit waived.
