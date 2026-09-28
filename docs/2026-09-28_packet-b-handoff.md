@@ -138,3 +138,15 @@ Recorded, NOT fixed (dispositions):
   sequential labels' fold) and the sequential-to-pool TERMINAL projection.
 
 Gates of this round: `scripts/capped lake build` EXIT=0 (warning-free); `scripts/capped scripts/check-core-audit` EXIT=0 PASS (85 required theorems); `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff` (12:58–13:10 UTC, 738 s) EXIT=1, RED ON EXACTLY THE 5a PAIR (`certificate provenance` STALE; `imported-goose/channel/google-search` PASS → FAIL), 3768 = 3531 / 237, no other row moved, negative baseline 394 matched. The evidence dir's `ci-diff-tail.txt` and `core-audit-tail.txt` are this round's.
+
+## Merge train r52 — the 5a record ([AGENT] coordinator, 2026-09-28)
+
+The label reshape, packet B, both audits and the approved `CLAUDE.md` wording landed ([USER] Mike 2026-09-28 «D1: approved,
+D2: approved. Go ahead», relayed). Pre-merge main `fd1135ff` → `refs/snapshots/r52/main`; train tip `d640a5ac` fast-forwarded.
+Under the lock: `scripts/build-certified` EXIT=0 (binary `476cd29f…`); `release-check` EXIT=2 (EXPECTED — «STALE
+certification: changed dependency build/files/GoLean.lean»); `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --slow` EXIT=1,
+983 s — red on EXACTLY the 5a pair (`certificate provenance`; the one drift line `imported-goose/channel/google-search
+PASS→FAIL/membership`); 3768 rows run, 3531 PASS / 237 FAIL = the pin 3532 / 236 with the one 5a-class row red; no other
+drift. Tail: `docs/evidence/2026-09-28_packet-b/r52-ci-slow.tail.txt`. Candidate vs tracked record: `claim` and
+`observations_sha256` IDENTICAL; 20 compiled modules differ (the label reshape and the bridge modules), no tool file, plus the
+receipt (`d640a5ac`, 162.964 s) — INSTALLED in this commit; a provenance refresh, not a re-pin.
