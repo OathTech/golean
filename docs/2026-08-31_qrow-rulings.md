@@ -1075,3 +1075,32 @@ promoted dispatch (fuel only); wire schema v2 with the twin re-pinned under `--s
 documentation branches `docs/logic-reply-0928` (the note to the logic team, their reply, the legacy-triple changelog section)
 and `docs/gp-design-0928` land, the adversarial audit waived for documentation only.
 Landed on `main` by train r53 (documentation only): release-check no inputs changed; fast `scripts/ci` PASS; audit waived per the ruling above.
+
+### The logic team's window feedback note (2026-09-28) — received; dispositions
+
+Source: `docs/2026-09-28_note-from-logic-team.md` (verbatim copy of golean-logic `docs/2026-09-28_note-to-golean.md`,
+branch `docs/golean-note-0928` @ `c01bf0d`, sha256 `89e9969c03aa50388db0cedc88980f29c549acbd2217623d096c718e9df07533`; relayed by the [USER] Mike 2026-09-28). They read our main at
+`89792db1`; their pin is still `61958f2e`; their question-10 answer (one migration after the offer) stands. They acknowledge
+BridgeSet rows 35–64 cover their 2026-09-23 requests and that the G-P design meets their method conditions.
+
+Dispositions ([AGENT] coordinator; item 6 PENDING [USER] — it would change the ruled `StepLabel` shape):
+1. Arm equations whose premises bottom out in `loadLoc`/`loadRoot`/`storeLoc`/`Store.alloc` laws, plus their filing
+   correction (`callArgsK`, `callValCalleeK`, `callValArgsK`, `deferCalleeK`, `deferArgsK`, `stmtOpK` are `.retV v` arms) →
+   packet D's brief, refreshed at its slot.
+2. A pinned setup equation for the no-globals, no-package-initializer case (entry configuration, argument/result layout,
+   residual tape) → packet D.
+3. The B6 name table as a Lean interface (its type; lookup agrees with the activation's slot; spellings retained; whether
+   `Param.id`/`Expr.var` become numeric), pinned → the B6 lane's brief.
+4. C4's address shift as a stated layout function for frame entry and block entry, plus lifetime lemmas (escaped result
+   cells, shadowing, per-activation cells, captured variables vs saved defer arguments) → the C4 lane's brief (the G-C4 gate).
+5. Pin `enterFrame_declared`, `receiverAt_nil_path`, `resolveMethod?_declared`; confirm `findFunctionIn?`'s narrowing leaves
+   declared non-wrapper results unchanged → sent to the running P lane.
+6. Callee identity at frame exit, as a frame field or a call/return channel in `StepLabel` → PENDING [USER] (a label-channel
+   option changes the ruled three-field shape; the frame-field option may need none — to be assessed before posing).
+7. Unwinding equations (`panicPassthrough` over sequence/block glue; `panicResumeK` with an unrecovered chain;
+   `CallSite.deferPanic` entry; stripping a frame with an empty defer list) → packet D.
+8. Changelog scope widened to the tool interfaces their gate calls (`tools/nativefrontend` flags, the `scripts/diff-coverage`
+   manifest schema, `NativeToIR.decodeProgram`'s signature, `runProgramM`'s `RunResult`, the Lean toolchain, the `deps/go` pin)
+   → the changelog, maintained through the window.
+9. The single-goroutine embedding without `seqOpCount = 0` → already owed (packet B audit F5 area); low priority, before the
+   offer if cheap, else a stated limit.

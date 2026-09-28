@@ -151,3 +151,7 @@ survivors cost `cases` arms only (their reply, 2026-09-28).
 | C4 | PENDING — filled by the landing lane |
 
 LIVE through the window; FROZEN at the offer commit (charter row 7).
+
+## Scope of this changelog (logic team request 8, 2026-09-28)
+
+Besides the semantics, every re-pin entry lists changes to the tool interfaces the logic team's gate calls: `tools/nativefrontend` flags; the `scripts/diff-coverage` manifest schema; `NativeToIR.decodeProgram`'s signature; `runProgramM`'s `RunResult`; the Lean toolchain; the `deps/go` pin. Rows for these are added as each lane lands and checked at the offer.
