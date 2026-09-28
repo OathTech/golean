@@ -83,11 +83,12 @@ theorem spawnPlan_locSup {c : Config} {cv : GoValue} {args : List GoValue}
 /-- `spawnStep` preservation: wf state out, both successor
 configurations bounded, allocator monotone. -/
 theorem spawnStep_wf {s : Store} {cv : GoValue} {args : List GoValue}
-    {k : Cont} {ch : Choices} {p child : Config} {s' : Store} {ch' : Choices} {tr : AccessTrace}
+    {k : Cont} {ch : Choices} {p child : Config} {s' : Store} {ch' : Choices}
+    {ps : List PickRecord} {tr : AccessTrace}
     (hw : StateWf ctx s) (hcv : GoValue.locSup cv ≤ s.nextAddr)
     (hargs : goValueListSup args ≤ s.nextAddr)
     (hk : Cont.locSup k ≤ s.nextAddr)
-    (h : spawnStep ctx s cv args k ch = .ok (p, child, s', ch', tr)) :
+    (h : spawnStep ctx s cv args k ch = .ok (p, child, s', ch', ps, tr)) :
     StateWf ctx s' ∧ Config.locSup p ≤ s'.nextAddr
       ∧ Config.locSup child ≤ s'.nextAddr ∧ s.nextAddr ≤ s'.nextAddr := by
   unfold spawnStep at h
@@ -96,16 +97,16 @@ theorem spawnStep_wf {s : Store} {cv : GoValue} {args : List GoValue}
     -- B2 + C1 S3: the V entry funnel classifies; the commit runs on the owned
     -- store (`runCommit`), the composed entry is what `enterFrame_wf` reads.
     simp only [bind_eq_ok] at h
-    obtain ⟨⟨r, ch₁⟩, hpick, h⟩ := h
+    obtain ⟨⟨r, ch₁, ps₁⟩, hpick, h⟩ := h
     have hcap : goValueListSup captured ≤ s.nextAddr := by
       simpa [GoValue.locSup] using hcv
-    rcases enterFramePickV_cases hpick with ⟨c, rfl, hplan, rfl⟩ | ⟨msg, rfl, hplan, rfl⟩
+    rcases enterFramePickV_cases hpick with ⟨c, rfl, hplan, rfl, rfl⟩ | ⟨msg, rfl, hplan, rfl, rfl⟩
     · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
       obtain ⟨w, hrun, h⟩ := h
       obtain ⟨func, frameEnv, resultLocs, s₂, tr₂⟩ := w
       try dsimp only at h
       try simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl, rfl, rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl, rfl, rfl, rfl, rfl⟩ := h
       have henter : enterFrame ctx s fid (captured ++ args)
           = .ok (func, frameEnv, resultLocs, s₂, tr₂) := by
         simp [enterFrame, hplan, Bind.bind, Except.bind, runCommit_eq_ok.mp hrun]
@@ -117,7 +118,7 @@ theorem spawnStep_wf {s : Store} {cv : GoValue} {args : List GoValue}
           targetPlansSup, LocalEnv.locSup, Nat.max_le]
         omega
     · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl, rfl, rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl, rfl, rfl, rfl, rfl⟩ := h
       refine ⟨hw, ?_, ?_, Nat.le_refl _⟩
       · simpa [Config.locSup] using hk
       · simp [Config.locSup, panicChainSup, panicEntry_locSup, Cont.locSup]

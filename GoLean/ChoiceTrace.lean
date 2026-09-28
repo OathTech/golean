@@ -54,8 +54,10 @@ from what it traces): (a) the tagged projection here must agree with
 channel stays as the drift alarm it was); (b) the sentinel discipline of the
 enumerator — a pool step fed exactly the accounted picks plus one
 sentinel must leave the sentinel alone; (c) the machine's OWN labeled
-records (`StepEvent.picks`, emitted by `Choices.consumeAtE` at the
-pool-layer sites) must equal the tracer's records for those sites.
+records (the step label's picks — `StepEvent.picks` in the pool phase,
+`stepFn`'s `StepLabel.picks` in the init phase — emitted by
+`Choices.consumeAtE` at every step-level site since the step-label
+reshape, 2026-09-28) must equal the tracer's records for those sites.
 Additionally the run's status and consumption count are checked
 against `CLI.enumRunProgram`'s leftover meter and the real engine's
 observation (`runProgramPoolIntsM`) — the driver-agreement pin.
@@ -116,17 +118,22 @@ theorem allSites_complete : ∀ s : ChoiceSite, s ∈ allSites := by
   intro s; cases s <;> simp [allSites]
 
 variable (ctx)
-/-- Pool-layer sites: the ones whose consumption the machine records in
-`StepEvent.picks` (`Choices.consumeAtE`); the sequential-machine sites
-(`mapIter`, `appendSpill`, `l2Entry`, `tryLock`) and the driver's
-`l5ExitWindow` consume through `Choices.consumeAt` and emit no record.
-The abort's `repanicCollapse` consult (landing chunk L3) is RECORDED when
-the pool's tombstone arm draws it (`stepThread`, `consumeAtE`); the
-sequential `$pkginit` phase's abort has no event to record into and this
-tracer's `initLoop` compares no records there. -/
-def isPoolRecorded : ChoiceSite → Bool
-  | .l1Sched | .postOp | .backEdge | .l2Arrival | .l4Waiter | .repanicCollapse => true
-  | _ => false
+/-- The sites whose consumption the machine RECORDS in a step's label
+(`StepLabel.picks`, emitted by `Choices.consumeAtE` at the consulting site).
+Since the step-label reshape (2026-09-28) that is EVERY step-level site:
+the pool layer's (`l1Sched`/`postOp`/`backEdge`, `l2Arrival`, `l4Waiter`,
+the tombstone's `repanicCollapse`) and the sequential machine's
+(`mapIter`, `appendSpill`, `l2Entry`, `tryLock`, `nilValueMethodText`,
+`unseqPanic`, `unseqNext`) — the pool event takes the sequential step's
+picks from its label. The one exception is the driver's `l5ExitWindow`,
+drawn between steps (no step's label). The sequential abort's
+`repanicCollapse` draw (the `$pkginit` phase's `stepFn` abort arm) raises
+the terminal without a label, so the init loop's comparison never sees it.
+(Before the reshape only the pool-layer sites were recorded; the name
+`isPoolRecorded` went with that scope.) -/
+def isEventRecorded : ChoiceSite → Bool
+  | .l5ExitWindow => false
+  | _ => true
 
 /-- The menu facts for one consumption, computed from the PRE-STATE
 before the pick is drawn. -/
@@ -637,11 +644,12 @@ structure RunOutcome where
   status : String
   acc : Acc
 
-/-- Records of THIS step for the pool-recorded sites, in order — to be
-compared with the machine's own `StepEvent.picks`. -/
+/-- Records of THIS step for the label-recorded sites, in order — to be
+compared with the machine's own label picks (`StepEvent.picks` in the
+pool phase, `stepFn`'s `StepLabel.picks` in the init phase). -/
 def stepRecords (a : Acc) (from_ : Nat) : List PickRecord :=
   (a.consumed.toList.drop from_).filterMap fun c =>
-    if isPoolRecorded c.site then some ⟨c.site, c.bound, c.pick⟩ else none
+    if isEventRecorded c.site then some ⟨c.site, c.bound, c.pick⟩ else none
 
 partial def feedPicks (m : MultiConfig) (picks : List Nat) (a : Acc) : List Nat × Acc :=
   match poolSite ctx m picks with
@@ -704,7 +712,7 @@ partial def poolStep (fuel : Nat) (m : MultiConfig) (r : RaceState) (a : Acc) :
       -- Cross-check (c): the machine's own labeled records.
       let mine := stepRecords a from_
       let a := if mine == ev.picks then a
-        else a.alarm s!"pick-record mismatch: machine emitted {ev.picks.length} record(s), tracer has {mine.length} for the pool-recorded sites at consumption #{from_}"
+        else a.alarm s!"pick-record mismatch: machine emitted {ev.picks.length} record(s), tracer has {mine.length} for the label-recorded sites at consumption #{from_}"
       let a := { a with steps := a.steps + 1 }
       match raceUpdate ev m' r with
       | .error .raceDetected => return { status := "race", acc := a }
@@ -727,6 +735,7 @@ partial def initLoop (fuel : Nat) (σ : Store) (c : Config) (a : Acc) :
       -- `runInitConfig` — no output fold on the sequential phase.
       if let some e := initPrintRefusal? c then
         return .inr { status := (markInitPhase e).status, acc := a }
+      let from_ := a.consumed.size
       let tagged := seqSite ctx σ c
       let acct := CLI.stepNeedsSeq ctx σ c
       let a := match tagged, acct with
@@ -742,9 +751,14 @@ partial def initLoop (fuel : Nat) (σ : Store) (c : Config) (a : Acc) :
         | none => ([], a)
       match stepFn ctx σ c (picks ++ [0]) with
       | .error e => return .inr { status := (markInitPhase e).status, acc := a }
-      | .ok (c', σ', leftover, _) =>
+      | .ok (c', σ', leftover, l) =>
           let a := if leftover == [0] then a
             else a.alarm s!"init sentinel drift: step left {leftover}"
+          -- Cross-check (c) in the init phase (step-label reshape): the
+          -- sequential step's OWN labeled records vs the tracer's.
+          let mine := stepRecords a from_
+          let a := if mine == l.picks then a
+            else a.alarm s!"init pick-record mismatch: step emitted {l.picks.length} record(s), tracer has {mine.length} at consumption #{from_}"
           initLoop fuel' σ' c' { a with steps := a.steps + 1 }
 
 /-- One traced run of the whole program under `stream`. -/

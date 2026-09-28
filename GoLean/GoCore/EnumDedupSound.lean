@@ -625,9 +625,9 @@ theorem stepMulti_total_covered {m : MultiConfig} {vecs : List (List Nat)}
             simpa using hp
           refine ⟨pick :: v, hvecmem,
             ⟨ts', s', (r0 :: r1 :: rest')[pick]⟩,
-            { ev with picks :=
-                ⟨t.boundarySite, (r0 :: r1 :: rest').length, pick⟩
-                  :: ev.picks },
+            { ev with label := { ev.label with picks :=
+                [⟨t.boundarySite, (r0 :: r1 :: rest').length, pick⟩]
+                  ++ ev.label.picks } },
             tail, ?_, ?_⟩
           · unfold stepMulti
             rw [hti]

@@ -288,25 +288,25 @@ completeness proofs cross at the pool's select interception. -/
 theorem stepFn_selectApply_inv {σ : Store} {v : GoValue}
     {clauses : List (SelectClauseHead × Stmt)} {default? : Option Stmt}
     {done : List GoValue} {env : LocalEnv} {k' : Cont}
-    {ch : Choices} {c' : Config} {σ' : Store} {ch' : Choices} {tr : AccessTrace}
+    {ch : Choices} {c' : Config} {σ' : Store} {ch' : Choices} {tr : StepLabel}
     (h : stepFn ctx σ (.retV v (.selectOpsK clauses default? done [] env k')) ch
       = .ok (c', σ', ch', tr)) :
     (∃ cl?, applySelect ctx σ clauses default? ((v :: done).reverse) env k' ch
-        = .ok (c', σ', ch', cl?, tr))
+        = .ok (c', σ', ch', tr.picks, cl?, tr.trace) ∧ tr.out = [])
       ∨ (∃ msg, applySelect ctx σ clauses default? ((v :: done).reverse) env k' ch
           = .error (.panic msg)
           ∧ c' = .panicking [panicEntry msg] k'
-          ∧ σ' = σ ∧ ch' = ch ∧ tr = []) := by
+          ∧ σ' = σ ∧ ch' = ch ∧ tr = ⟨[], [], []⟩) := by
   unfold stepFn at h
   dsimp only at h
   cases happ : applySelect ctx σ clauses default? ((v :: done).reverse) env k' ch with
   | ok r =>
-      obtain ⟨c₂, s₂, ch₂, cl₂, tr₂⟩ := r
+      obtain ⟨c₂, s₂, ch₂, ps₂, cl₂, tr₂⟩ := r
       rw [happ] at h
       simp only [toResult_ok, Bind.bind, Except.bind, pure_eq_ok, deliverS_ok,
         Except.ok.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl, rfl, rfl⟩ := h
-      exact .inl ⟨cl₂, rfl⟩
+      exact .inl ⟨cl₂, rfl, rfl⟩
   | error e =>
       rw [happ] at h
       cases_stop e <;>
@@ -341,10 +341,10 @@ theorem stepThread_single {σ : Store} {c : Config} {ch : Choices}
   | none =>
       -- The event's trace is the step's (S2a): choose it after the step.
       cases hstep : stepFn ctx σ c ch with
-      | error e => exact ⟨⟨0, .privateStep, [], (printOut? c).toList, []⟩, rfl⟩
+      | error e => exact ⟨⟨0, .privateStep, ⟨[], [], []⟩⟩, rfl⟩
       | ok r =>
-          obtain ⟨c', s', ch₁, tr⟩ := r
-          exact ⟨⟨0, .privateStep, [], (printOut? c).toList, tr⟩, by simp [Functor.map, Except.map]⟩
+          obtain ⟨c', s', ch₁, l⟩ := r
+          exact ⟨⟨0, .privateStep, { l with picks := [] ++ l.picks }⟩, by simp [Functor.map, Except.map]⟩
   | some p =>
       obtain ⟨v, clauses, default?, done, env, k'⟩ := p
       obtain rfl := selectApplyPlan_shape hselp
@@ -352,17 +352,17 @@ theorem stepThread_single {σ : Store} {c : Config} {ch : Choices}
       cases happly : applySelect ctx σ clauses default?
           ((v :: done).reverse) env k' ch with
       | ok r =>
-          obtain ⟨c', s', ch₂, cl?, tr⟩ := r
+          obtain ⟨c', s', ch₂, ps, cl?, tr⟩ := r
           have hfn : stepFn ctx σ
               (.retV v (.selectOpsK clauses default? done [] env k')) ch
-              = .ok (c', s', ch₂, tr) := by
+              = .ok (c', s', ch₂, ⟨tr, ps, []⟩) := by
             unfold stepFn
             dsimp only
             rw [happly]
             rfl
           refine ⟨⟨0, match cl? with
             | some cl => .selectCommit cl
-            | none => .selectPass, [], [], tr⟩, ?_⟩
+            | none => .selectPass, ⟨tr, [] ++ ps, []⟩⟩, ?_⟩
           rw [hfn]
           simp only [Functor.map, Except.map]
           cases cl? <;> rfl
@@ -371,13 +371,13 @@ theorem stepThread_single {σ : Store} {c : Config} {ch : Choices}
               (.retV v (.selectOpsK clauses default? done [] env k')) ch
               = (match e with
                  | .panic msg =>
-                     .ok (.panicking [panicEntry msg] k', σ, ch, [])
+                     .ok (.panicking [panicEntry msg] k', σ, ch, ⟨[], [], []⟩)
                  | e => .error e) := by
             unfold stepFn
             dsimp only
             simp only [happly]
             cases_stop e <;> rfl
-          refine ⟨⟨0, .selectPass, [], [], []⟩, ?_⟩
+          refine ⟨⟨0, .selectPass, ⟨[], [], []⟩⟩, ?_⟩
           rw [hfn]
           cases_stop e <;> first | rfl | simp [Functor.map, Except.map]
 
@@ -516,7 +516,7 @@ theorem stepMulti_abort_single {σ : Store} {c : Config} {ch : Choices}
           (fun msg => (⟨#[.aborted msg], σ, 0⟩,
             (Choices.consumeAtE .repanicCollapse (repanicCollapseWidth first rest) ch).2.1,
             ⟨0, .aborted,
-              (Choices.consumeAtE .repanicCollapse (repanicCollapseWidth first rest) ch).2.2, [], []⟩)) := by
+              ⟨[], (Choices.consumeAtE .repanicCollapse (repanicCollapseWidth first rest) ch).2.2, []⟩⟩)) := by
   unfold stepMulti
   have h0 : (#[Thread.running c none] : Array Thread)[0]? = some (.running c none) := rfl
   simp only [h0]
@@ -833,8 +833,9 @@ fork's completion is a registry op; the pool flags it `l1Sched` —
 `Thread.afterStep` — preserving the spawn boundary's shipped default;
 the flag clears at the next step). -/
 theorem spawnStep_shape {s : Store} {cv : GoValue} {args : List GoValue}
-    {k : Cont} {ch : Choices} {p c : Config} {s' : Store} {ch' : Choices} {tr : AccessTrace}
-    (h : spawnStep ctx s cv args k ch = .ok (p, c, s', ch', tr)) :
+    {k : Cont} {ch : Choices} {p c : Config} {s' : Store} {ch' : Choices}
+    {ps : List PickRecord} {tr : AccessTrace}
+    (h : spawnStep ctx s cv args k ch = .ok (p, c, s', ch', ps, tr)) :
     p = .next k := by
   -- C1 S3: the V entry funnel, then the commit (or the child's panic); every
   -- `.ok` leaf carries `.next k` as the parent's successor.
@@ -918,7 +919,7 @@ theorem schedPick_cur {m : MultiConfig} {t : Thread}
 /-- The per-goroutine relation is silent at spawn positions (the spawn
 is `StepE`'s rule, not `Step`'s). -/
 theorem step_spawnPos_elim {c : Config} {σ : Store} {c' : Config}
-    {σ' : Store} {p : GoValue × List GoValue × Cont} {tr : AccessTrace}
+    {σ' : Store} {p : GoValue × List GoValue × Cont} {tr : StepLabel}
     (hsp : spawnPlan c = some p) : ¬ Step ctx c σ c' σ' tr := by
   intro h
   match c, hsp with
@@ -928,7 +929,7 @@ theorem step_spawnPos_elim {c : Config} {σ : Store} {c' : Config}
 /-- A per-goroutine step never starts at an abort (B4: the abort has no
 `Step`, and a spawn position is never one). -/
 theorem abort?_none_of_stepE {n : Nat} {c : Config} {σ : Store} {c' : Config}
-    {σ' : Store} {efs : List Config} {tr : AccessTrace} (h : StepE ctx n c σ c' σ' efs tr) :
+    {σ' : Store} {efs : List Config} {tr : StepLabel} (h : StepE ctx n c σ c' σ' efs tr) :
     c.abort? = none := by
   cases hab : c.abort? with
   | none => rfl
@@ -1335,7 +1336,7 @@ theorem stepM_complete {m m' : MultiConfig} {tr : AccessTrace} (h : StepM ctx m 
     ∃ ch ch' ev, stepMulti ctx m ch = .ok (m', ch', ev) ∧ ev.trace = tr := by
   cases h with
   | thread hsched hti hblc hplan hstepE =>
-    rename_i i c c' σ' efs
+    rename_i i c c' σ' efs l
     have hab : c.abort? = none := abort?_none_of_stepE hstepE
     cases hstepE with
     | lift hstep =>
@@ -1353,7 +1354,7 @@ theorem stepM_complete {m m' : MultiConfig} {tr : AccessTrace} (h : StepM ctx m 
       | none =>
         have hinner : ∃ evI, stepThread ctx m.shared m.threads i ch₀
             = .ok (m.threads.setIfInBounds i (Thread.afterStep m.shared c c'), σ', ch₀', evI)
-            ∧ evI.trace = tr :=
+            ∧ evI.trace = l.trace :=
           ⟨_, by
             unfold stepThread
             rw [hti]
@@ -1376,10 +1377,10 @@ theorem stepM_complete {m m' : MultiConfig} {tr : AccessTrace} (h : StepM ctx m 
         have hshape := selectApplyPlan_shape hselp
         subst hshape
         have hinv := stepFn_selectApply_inv hfn
-        rcases hinv with ⟨cl?, happly⟩ | ⟨msg, happly, rfl, rfl, -, rfl⟩
+        rcases hinv with ⟨cl?, happly, -⟩ | ⟨msg, happly, rfl, rfl, -, rfl⟩
         · have hinner : ∃ evI, stepThread ctx m.shared m.threads i ch₀
               = .ok (m.threads.setIfInBounds i (Thread.afterStep m.shared (.retV v (.selectOpsK clauses default? done [] env k')) c'), σ', ch₀', evI)
-              ∧ evI.trace = tr :=
+              ∧ evI.trace = l.trace :=
             ⟨_, by
               unfold stepThread
               rw [hti]
@@ -1420,7 +1421,7 @@ theorem stepM_complete {m m' : MultiConfig} {tr : AccessTrace} (h : StepM ctx m 
       -- the spawn's entry panic draws the nilValueMethodText pick); the
       -- label is the spawn edge and the child's entry read attributed to
       -- it (S2c).
-      rename_i cv args k child chs chs' trS
+      rename_i cv args k child chs chs' psS trS
       have hinner : ∃ evI, stepThread ctx m.shared m.threads i chs
           = .ok ((m.threads.setIfInBounds i (Thread.afterStep m.shared c c')).push
               (.running child none), σ', chs', evI)
@@ -1690,5 +1691,44 @@ theorem stepM_complete {m m' : MultiConfig} {tr : AccessTrace} (h : StepM ctx m 
     obtain ⟨evI, hinner, hevI⟩ := hinner
     obtain ⟨ch, ch', ev, hsm, hev⟩ := stepMulti_of_inner hsched hinner
     exact ⟨ch, ch', ev, hsm, hev.trans hevI⟩
+
+
+/-! ### The pool event's label projections (step-label reshape, 2026-09-28)
+
+The pool event carries the SAME `StepLabel` as the sequential step (design note
+`docs/2026-09-28_step-label.md`). At a goroutine step the event's label is `stepFn`'s:
+trace and output verbatim, picks = the pool's own arrival-plan picks followed by the
+step's — taken FROM the label (no double accounting). The abort's terminal event is
+`stepMulti_abort_single` (its label: no trace, the `repanicCollapse` record, no output);
+the spawn's attribution is `StepE.spawn`'s label. -/
+
+/-- **A goroutine step's event label IS the sequential step's label** (the pool's
+arrival-plan picks prepended). -/
+theorem stepThread_privateStep_label {s : Store} {threads : Array Thread} {i : Nat}
+    {ch : Choices} {ts' : Array Thread} {s' : Store} {ch' : Choices} {ev : StepEvent}
+    (h : stepThread ctx s threads i ch = .ok (ts', s', ch', ev))
+    (ha : ev.action = .privateStep) :
+    ev.who = i ∧ ∃ c ch₁ ps₁ c' l, threads[i]? = some (.running c none) ∧
+      stepFn ctx s c ch₁ = .ok (c', s', ch', l) ∧
+      ev.label = ⟨l.trace, ps₁ ++ l.picks, l.out⟩ := by
+  unfold stepThread at h
+  repeat' (first
+    | (cases h; done)
+    | (simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+       obtain ⟨ha1, ha2, ha3, rfl⟩ := h
+       first | (cases ha; done) | skip)
+    | (rw [bind_eq_ok] at h; obtain ⟨_, _, h⟩ := h)
+    | split at h
+    | (dsimp only at h))
+  -- The select interception's two actions are not `privateStep`.
+  all_goals first
+    | (simp only at ha; split at ha <;> cases ha; done)
+    | skip
+  -- The one remaining leaf: the goroutine's own `stepFn` step.
+  rename_i _ c hthr _ _ _ _ _ _ ch₁ ps₁ _ _ _ w hstep
+  obtain ⟨c', s₁, ch₂, l⟩ := w
+  simp only at ha2 ha3
+  subst ha2; subst ha3
+  exact ⟨rfl, c, ch₁, ps₁, c', l, hthr, hstep, rfl⟩
 
 end GoLean.GoCore.Machine

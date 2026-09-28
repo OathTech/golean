@@ -2349,6 +2349,79 @@ private def isRootRefusal {α : Type} : Except Stop α → Bool
 private def strayFrameExit (r : Loc) : GoCore.Machine.Config :=
   .signal .ret (.frame [(.chain [], [.var "t"])] [[("t", .base ⟨0⟩)]] [r] [] .stop false)
 
+/-! ### The step-label controls (row-2 label reshape, 2026-09-28)
+
+`StepLabel := { trace, picks, out }` at both layers (`docs/2026-09-28_step-label.md`):
+a pure step's label is `⟨[], [], []⟩`; a `println` apply's `out` is its bytes; a
+bound-2 consultation is recorded with site/bound/value; a bound-1 consultation is not;
+and the pool event's label carries each (the pool projection). -/
+
+private def slMutexStore (locked : Bool) : GoCore.Store :=
+  { heap := #[.value (.sync .mutex) (.syncData (.mutex locked))] }
+private def slTryLock : GoCore.Machine.Config :=
+  .retV (.addr (.base ⟨0⟩)) (.syncStK (.tryLock []) [] [] [] .stop)
+private def slPrintln : GoCore.Machine.Config :=
+  .retV (.int 7 .int) (.stmtOpK (.print true) 0 [] [] [] .stop)
+private def slPure : GoCore.Machine.Config := .next (.seq [] [] .stop)
+private def slAbort : GoCore.Machine.Config := .panicking [GoCore.Machine.panicEntry "sl"] .stop
+
+/-- The label of one sequential step (`none` on a refusal/terminal). -/
+private def slSeq (σ : GoCore.Store) (c : GoCore.Machine.Config) (ch : GoCore.Choices) :
+    Option GoCore.StepLabel :=
+  match GoCore.Machine.stepFn emptyCtx σ c ch with
+  | .ok (_, _, _, l) => some l
+  | .error _ => none
+
+/-- The label of the one-goroutine pool step over the same configuration. -/
+private def slPool (σ : GoCore.Store) (c : GoCore.Machine.Config) (ch : GoCore.Choices) :
+    Option (GoCore.Machine.StepAction × GoCore.StepLabel) :=
+  match GoCore.Machine.stepMulti emptyCtx ⟨#[.running c none], σ, 0⟩ ch with
+  | .ok (_, _, ev) => some (ev.action, ev.label)
+  | .error _ => none
+
+private def slIsSilent (l : GoCore.StepLabel) : Bool :=
+  l.trace.isEmpty && l.picks.isEmpty && l.out.isEmpty
+
+private def stepLabelControls : IO Bool := do
+  let mut passed := true
+  -- A pure step: the label is ⟨[], [], []⟩, sequential and pool.
+  passed := passed && (← expectTrue "LABEL pure: a pure step's label is ⟨[], [], []⟩"
+    (match slSeq {} slPure [] with | some l => slIsSilent l | none => false))
+  passed := passed && (← expectTrue "LABEL pure (pool): the pool event's label is ⟨[], [], []⟩"
+    (match slPool {} slPure [] with
+     | some (.privateStep, l) => slIsSilent l | _ => false))
+  -- A println apply: `out` is exactly the rendered bytes, nothing else.
+  let bytes := GoString.fromLeanString "7\n"
+  passed := passed && (← expectTrue "LABEL println: the step's out is [\"7\\n\"], no trace, no picks"
+    (match slSeq {} slPrintln [] with
+     | some l => l.out == [bytes] && l.trace.isEmpty && l.picks.isEmpty | none => false))
+  passed := passed && (← expectTrue "LABEL println (pool): the event's out is the step's out"
+    (match slPool {} slPrintln [] with
+     | some (.privateStep, l) => l.out == [bytes] && l.picks.isEmpty | _ => false))
+  -- A bound-2 consultation (TryLock on an unlocked mutex): recorded with site/bound/value.
+  let rec2 : List GoCore.PickRecord := [⟨.tryLock, 2, 1⟩]
+  passed := passed && (← expectTrue "LABEL pick bound 2: TryLock on an unlocked mutex under tape [1] records ⟨tryLock, 2, 1⟩"
+    (match slSeq (slMutexStore false) slTryLock [1] with
+     | some l => l.picks == rec2 && l.out.isEmpty | none => false))
+  passed := passed && (← expectTrue "LABEL pick bound 2 (empty tape): the default pick 0 is recorded ⟨tryLock, 2, 0⟩"
+    (match slSeq (slMutexStore false) slTryLock [] with
+     | some l => l.picks == [⟨.tryLock, 2, 0⟩] | none => false))
+  passed := passed && (← expectTrue "LABEL pick bound 2 (pool): the event's picks are the step's (no pool-layer pick at one goroutine)"
+    (match slPool (slMutexStore false) slTryLock [1] with
+     | some (.privateStep, l) => l.picks == rec2 | _ => false))
+  -- A bound-1 consultation (TryLock on a LOCKED mutex): unrecorded, tape untouched.
+  passed := passed && (← expectTrue "LABEL pick bound 1: TryLock on a locked mutex records nothing and pops nothing"
+    (match GoCore.Machine.stepFn emptyCtx (slMutexStore true) slTryLock [1] with
+     | .ok (_, _, ch', l) => l.picks.isEmpty && ch' == [1] | .error _ => false))
+  passed := passed && (← expectTrue "LABEL pick bound 1 (pool): the event records nothing"
+    (match slPool (slMutexStore true) slTryLock [1] with
+     | some (.privateStep, l) => l.picks.isEmpty | _ => false))
+  -- The abort (terminal event, pool only): bound-1 repanicCollapse, label ⟨[], [], []⟩.
+  passed := passed && (← expectTrue "LABEL abort (pool): the tombstone event's label is ⟨[], [], []⟩ at bound 1"
+    (match slPool {} slAbort [5] with
+     | some (.aborted, l) => slIsSilent l | _ => false))
+  return passed
+
 private def strayPanicRefusalFacts : IO Bool := do
   let mut passed := true
   -- S6, the audit F1 witness: `x` bound to element 5 of a zero-length array.
@@ -2358,7 +2431,7 @@ private def strayPanicRefusalFacts : IO Bool := do
   passed := passed && (← expectTrue "STRAY S6 positive: an ordinary variable read is unchanged (value 7, one read at the root)"
     (match GoCore.Machine.stepFn emptyCtx strayIntStore
         (.evalE (.var "x") [[("x", .base ⟨0⟩)]] .stop) [] with
-     | .ok (.retV v .stop, _, [], tr) => v == .int 7 .int && tr == strayReadLabel
+     | .ok (.retV v .stop, _, [], l) => v == .int 7 .int && l.trace == strayReadLabel && l.picks.isEmpty && l.out.isEmpty
      | _ => false))
   -- S2: the frame-exit result readout (`loadResults`).
   passed := passed && (← expectTrue "STRAY S2: a pinned result cell at a non-root location is the named .internal refusal"
@@ -2366,7 +2439,7 @@ private def strayPanicRefusalFacts : IO Bool := do
   passed := passed && (← expectTrue "STRAY S2 positive: the frame-exit readout of a root result cell is unchanged (values [7], one read at the root)"
     (match GoCore.Machine.stepFn emptyCtx strayIntStore (strayFrameExit (.base ⟨0⟩)) [] with
      | .ok (.evalE (.var "t") _ (.tgtOpK _ _ _ _ _ _ _ vs _ _ _), _, [], tr) =>
-         vs == [.int 7 .int] && tr == strayReadLabel
+         vs == [.int 7 .int] && tr.trace == strayReadLabel && tr.picks.isEmpty && tr.out.isEmpty
      | _ => false))
   -- S1: the targetless frame exit with results (refused either way; the root case keeps its old refusal).
   passed := passed && (← expectTrue "STRAY S1: a targetless frame exit whose result cell is non-root is the named .internal refusal"
@@ -3674,6 +3747,8 @@ def main : IO UInt32 := do
   passed := passed && (← labelShapeFacts)
   -- The stray-panic refusal controls (2026-09-27): their own do-block, same reason.
   passed := passed && (← strayPanicRefusalFacts)
+  -- The step-label controls (2026-09-28): their own do-block.
+  passed := passed && (← stepLabelControls)
   if passed then
     return 0
   else

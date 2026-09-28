@@ -5314,9 +5314,9 @@ theorem applyStmtOpCore_wf {σ : Store} {op : StmtOp}
 
 set_option maxHeartbeats 1600000 in
 theorem applyStmtOp_wf {σ : Store} {ch : Choices} {op : StmtOp} {nt : Nat}
-    {vs : List GoValue} {σ' : Store} {ch' : Choices} {tr : AccessTrace}
+    {vs : List GoValue} {σ' : Store} {ch' : Choices} {ps : List PickRecord} {tr : AccessTrace}
     (hw : StateWf ctx σ) (hvs : goValueListSup vs ≤ σ.nextAddr)
-    (h : applyStmtOp ctx σ ch op nt vs = .ok (σ', ch', tr)) :
+    (h : applyStmtOp ctx σ ch op nt vs = .ok (σ', ch', ps, tr)) :
     StmtOpPres ctx σ σ' := by
   have hheap := hw.heap_le
   -- C1 S3: the VALIDATE phase (`hplan`), then its COMMIT on `σ` (`h`).
@@ -6669,12 +6669,12 @@ through `applyTryLock_wf`, everything else through
 `applySyncOpCore_wf`. The stream plays no part in the state claims. -/
 theorem applySyncOp_wf {σ : Store} {ch : Choices} {op : SyncOp}
     {vs : List GoValue} {env : LocalEnv} {k : Cont} {c' : Config}
-    {σ' : Store} {ch' : Choices} {tr : AccessTrace}
+    {σ' : Store} {ch' : Choices} {ps : List PickRecord} {tr : AccessTrace}
     (hw : StateWf ctx σ) (hvs : goValueListSup vs ≤ σ.nextAddr)
     (hop : syncOpSup op ≤ σ.nextAddr)
     (henv : LocalEnv.locSup env ≤ σ.nextAddr)
     (hk : Cont.locSup k ≤ σ.nextAddr)
-    (h : applySyncOp ctx σ ch op vs env k = .ok (c', σ', ch', tr)) :
+    (h : applySyncOp ctx σ ch op vs env k = .ok (c', σ', ch', ps, tr)) :
     StateWf ctx σ' ∧ Config.locSup c' ≤ σ'.nextAddr
       ∧ σ.nextAddr ≤ σ'.nextAddr := by
   rw [applySyncOp.eq_def] at h
@@ -6688,14 +6688,14 @@ theorem applySyncOp_wf {σ : Store} {ch : Choices} {op : SyncOp}
     obtain ⟨pre, hcell, h⟩ := h
     obtain ⟨⟨c₀, σ₀, tr₀⟩, happ, h⟩ := h
     simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl, rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl, rfl, rfl, rfl⟩ := h
     rw [syncOpSup_of_tryTargets htry] at hop
     exact applyTryLock_wf hw hlocb hop henv hk happ
   · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
   · try simp only [bind_eq_ok] at h
     obtain ⟨⟨c₀, σ₀, tr₀⟩, hcore, h⟩ := h
     simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl, rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl, rfl, rfl, rfl⟩ := h
     exact applySyncOpCore_wf hw hvs hop henv hk hcore
 
 set_option maxHeartbeats 1600000 in
@@ -6730,13 +6730,14 @@ bounds argument is per committed clause, membership-generalized). -/
 theorem applySelect_wf {σ : Store}
     {clauses : List (SelectClauseHead × Stmt)} {default? : Option Stmt}
     {vs : List GoValue} {env : LocalEnv} {k : Cont} {c' : Config}
-    {σ' : Store} {ch ch' : Choices} {cl? : Option EvClause} {tr : AccessTrace}
+    {σ' : Store} {ch ch' : Choices} {ps : List PickRecord} {cl? : Option EvClause}
+    {tr : AccessTrace}
     (hw : StateWf ctx σ) (hcl : selectClausesSup clauses ≤ σ.nextAddr)
     (hd : optStmtSup default? ≤ σ.nextAddr)
     (hvs : goValueListSup vs ≤ σ.nextAddr)
     (henv : LocalEnv.locSup env ≤ σ.nextAddr)
     (hk : Cont.locSup k ≤ σ.nextAddr)
-    (h : applySelect ctx σ clauses default? vs env k ch = .ok (c', σ', ch', cl?, tr)) :
+    (h : applySelect ctx σ clauses default? vs env k ch = .ok (c', σ', ch', ps, cl?, tr)) :
     StateWf ctx σ' ∧ Config.locSup c' ≤ σ'.nextAddr
       ∧ σ.nextAddr ≤ σ'.nextAddr := by
   rw [applySelect.eq_def] at h
@@ -6762,7 +6763,7 @@ theorem applySelect_wf {σ : Store}
   · -- outc = .done c₂ σ₂ clq tr₂: no pick was consumed
     rename_i c₂ σ₂ clq tr₂
     simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl, rfl, rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl, rfl, rfl, rfl, rfl⟩ := h
     split at hcore
     · split at hcore <;>
         (simp only [pure_eq_ok, Except.ok.injEq, SelectOutcome.done.injEq] at hcore;
@@ -6790,7 +6791,7 @@ theorem applySelect_wf {σ : Store}
     split at h
     · rename_i clp r₂c r₂σ r₂tr hget
       simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl, rfl, rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl, rfl, rfl, rfl, rfl⟩ := h
       split at hcore
       · split at hcore <;>
           (simp only [pure_eq_ok, Except.ok.injEq] at hcore; cases hcore)
@@ -6817,7 +6818,7 @@ theorem applySelect_wf {σ : Store}
     · -- defensive `.inr` (unreachable today): the picked panic as a
       -- `.panicking` configuration over the input state
       simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl, rfl, rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl, rfl, rfl, rfl, rfl⟩ := h
       refine ⟨hw, ?_, Nat.le_refl _⟩
       simp only [Config.locSup, panicChainSup, runtimeErrorValue_locSup, panicEntry_locSup,
         Nat.max_le]
@@ -7143,7 +7144,7 @@ state and the configuration loc-bounded (every location root strictly
 below `nextAddr`), and never mutates the type environment. The combined
 `step_preserves_wf` below adds the map-iteration typing component. -/
 theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
-    {σ' : Store} {tr : AccessTrace} (h : Step ctx c σ c' σ' tr)
+    {σ' : Store} {l : StepLabel} (h : Step ctx c σ c' σ' l)
     (hs : StateWf ctx σ) (hc : ConfigWf σ.nextAddr c) :
     StateWf ctx σ' ∧ ConfigWf σ'.nextAddr c'
       ∧ σ.nextAddr ≤ σ'.nextAddr := by
@@ -7347,8 +7348,8 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
       runtimeErrorValue_locSup, panicEntry_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc h1 h2 ⊢
     omega
-  case callImmediate targets fid args plans r env k ch ch' hplan hargs hres hdel =>
-    rcases enterFramePick_cases hres with ⟨func, frameEnv, resultLocs, s₂, tr₂, rfl, henter, rfl⟩ | ⟨msg, rfl, -, rfl⟩
+  case callImmediate targets fid args plans r env k ch ch' ps hplan hargs hres hdel =>
+    rcases enterFramePick_cases hres with ⟨func, frameEnv, resultLocs, s₂, tr₂, rfl, henter, rfl, rfl⟩ | ⟨msg, rfl, -, rfl, rfl⟩
     · simp only [deliver_ok, Prod.mk.injEq] at hdel
       obtain ⟨rfl, rfl, rfl⟩ := hdel
 
@@ -7367,8 +7368,8 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
         Nat.max_le] at hc h1 ⊢
       omega
     · wf_loc_panic hs hc hdel
-  case callArgsDoneEnter v fid plans vals r env k ch ch' hres hdel =>
-    rcases enterFramePick_cases hres with ⟨func, frameEnv, resultLocs, s₂, tr₂, rfl, henter, rfl⟩ | ⟨msg, rfl, -, rfl⟩
+  case callArgsDoneEnter v fid plans vals r env k ch ch' ps hres hdel =>
+    rcases enterFramePick_cases hres with ⟨func, frameEnv, resultLocs, s₂, tr₂, rfl, henter, rfl, rfl⟩ | ⟨msg, rfl, -, rfl, rfl⟩
     · simp only [deliver_ok, Prod.mk.injEq] at hdel
       obtain ⟨rfl, rfl, rfl⟩ := hdel
 
@@ -7476,7 +7477,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
   -- (The label-bearing premise is moved after the others by `cases`'
   -- substitution of the label index, hence the name order `hbind hcands`.)
   case mapIterNext keyVar valVar keyTy valTy body base produced start cands idx env env' k
- hidx hbind hcands =>
+ tr hidx hcands hbind =>
     have hentb : goValueEntriesSup cands.toList ≤ σ.nextAddr :=
       Nat.le_trans (mapIterCandidates_locSup hcands) hheap
     have hkb : max (GoValue.locSup cands[idx].2.1)
@@ -7520,8 +7521,8 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
       runtimeErrorValue_locSup, panicEntry_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc h1 ⊢
     omega
-  case callValCalleeEnter fid captured plans r env k ch ch' hres hdel =>
-    rcases enterFramePick_cases hres with ⟨func, frameEnv, resultLocs, s₂, tr₂, rfl, henter, rfl⟩ | ⟨msg, rfl, -, rfl⟩
+  case callValCalleeEnter fid captured plans r env k ch ch' ps hres hdel =>
+    rcases enterFramePick_cases hres with ⟨func, frameEnv, resultLocs, s₂, tr₂, rfl, henter, rfl, rfl⟩ | ⟨msg, rfl, -, rfl, rfl⟩
     · simp only [deliver_ok, Prod.mk.injEq] at hdel
       obtain ⟨rfl, rfl, rfl⟩ := hdel
 
@@ -7549,8 +7550,8 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
         Nat.max_le] at hc ⊢
       omega
     · wf_loc_panic hs hc hdel
-  case callValArgsEnter v fid captured plans vals r env k ch ch' hres hdel =>
-    rcases enterFramePick_cases hres with ⟨func, frameEnv, resultLocs, s₂, tr₂, rfl, henter, rfl⟩ | ⟨msg, rfl, -, rfl⟩
+  case callValArgsEnter v fid captured plans vals r env k ch ch' ps hres hdel =>
+    rcases enterFramePick_cases hres with ⟨func, frameEnv, resultLocs, s₂, tr₂, rfl, henter, rfl, rfl⟩ | ⟨msg, rfl, -, rfl, rfl⟩
     · simp only [deliver_ok, Prod.mk.injEq] at hdel
       obtain ⟨rfl, rfl, rfl⟩ := hdel
 
@@ -7606,8 +7607,8 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
       runtimeErrorValue_locSup, panicEntry_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le, LocalEnv.locSup] at hc h1 ⊢
     omega
-  case frameDeferFall targets tenv results fid captured args ds k w r ch ch' hres hdel =>
-    rcases enterFramePick_cases hres with ⟨func, frameEnv, resultLocs, s₂, tr₂, rfl, henter, rfl⟩ | ⟨msg, rfl, -, rfl⟩
+  case frameDeferFall targets tenv results fid captured args ds k w r ch ch' ps hres hdel =>
+    rcases enterFramePick_cases hres with ⟨func, frameEnv, resultLocs, s₂, tr₂, rfl, henter, rfl, rfl⟩ | ⟨msg, rfl, -, rfl, rfl⟩
     · simp only [deliver_ok, Prod.mk.injEq] at hdel
       obtain ⟨rfl, rfl, rfl⟩ := hdel
 
@@ -7636,8 +7637,8 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
         Nat.max_le] at hc ⊢
       omega
     · wf_loc_panic hs hc hdel
-  case frameDeferReturn targets tenv results fid captured args ds k w r ch ch' hres hdel =>
-    rcases enterFramePick_cases hres with ⟨func, frameEnv, resultLocs, s₂, tr₂, rfl, henter, rfl⟩ | ⟨msg, rfl, -, rfl⟩
+  case frameDeferReturn targets tenv results fid captured args ds k w r ch ch' ps hres hdel =>
+    rcases enterFramePick_cases hres with ⟨func, frameEnv, resultLocs, s₂, tr₂, rfl, henter, rfl, rfl⟩ | ⟨msg, rfl, -, rfl, rfl⟩
     · simp only [deliver_ok, Prod.mk.injEq] at hdel
       obtain ⟨rfl, rfl, rfl⟩ := hdel
 
@@ -7708,8 +7709,8 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
       runtimeErrorValue_locSup, panicEntry_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc ⊢
     omega
-  case panicFrameDefer chain targets tenv results fid captured args ds k w r ch ch' hres hdel =>
-    rcases enterFramePick_cases hres with ⟨func, frameEnv, resultLocs, s₂, tr₂, rfl, henter, rfl⟩ | ⟨msg, rfl, -, rfl⟩
+  case panicFrameDefer chain targets tenv results fid captured args ds k w r ch ch' ps hres hdel =>
+    rcases enterFramePick_cases hres with ⟨func, frameEnv, resultLocs, s₂, tr₂, rfl, henter, rfl, rfl⟩ | ⟨msg, rfl, -, rfl, rfl⟩
     · simp only [deliver_ok, Prod.mk.injEq] at hdel
       obtain ⟨rfl, rfl, rfl⟩ := hdel
 
@@ -7995,7 +7996,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
       simp only [ConfigWf, Config.locSup, Cont.locSup, Nat.max_le] at hc ⊢
       omega
     · wf_loc_panic hs hc hdel
-  case unseqRunTarget g thenB st tg env k o bind lhs r i hget hbody hplan =>
+  case unseqRunTarget g thenB st tg env k o bind lhs r tr i hget hbody hplan =>
     have hr := unseqTargetPlan_locSup hplan
     have hh := hs.heap_le
     refine ⟨hs, ?_, Nat.le_refl _⟩
@@ -8104,7 +8105,7 @@ theorem snapshotEntriesSelfNormalized_eraseIdx {types : TypeEnv} {kt vt : Ty}
 invariant — loc-boundedness of state and configuration (B7 / D6: the
 former map-iteration typing conjunct is gone from `MachineWf`). -/
 theorem step_preserves_wf {c : Config} {σ : Store} {c' : Config}
-    {σ' : Store} {tr : AccessTrace} (h : Step ctx c σ c' σ' tr) (hwf : MachineWf ctx σ c) :
+    {σ' : Store} {l : StepLabel} (h : Step ctx c σ c' σ' l) (hwf : MachineWf ctx σ c) :
     MachineWf ctx σ' c' := by
   obtain ⟨hs, hc⟩ := hwf
   obtain ⟨hs', hc', _⟩ := step_preserves_wf_loc h hs hc

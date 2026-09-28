@@ -470,6 +470,33 @@ def Choices.consumeAtE (site : ChoiceSite) (bound : Nat) (ch : Choices) :
   if bound ≤ 1 then (p, ch', [])
   else (p, ch', [⟨site, bound, p⟩])
 
+/-- The records a consultation at `site` of bound `bound` that selected
+`pick` emits (step-label reshape, 2026-09-28): none at bound ≤ 1 (the
+uniform rule), else the one labeled pick. The relation's rules that
+choose an index state their label's picks through this; the executable
+emits them through `Choices.consumeAtE` (`Choices.consumeAtE_eq`). -/
+def PickRecord.ofPick (site : ChoiceSite) (bound pick : Nat) : List PickRecord :=
+  if bound ≤ 1 then [] else [⟨site, bound, pick⟩]
+
+/-- `consumeAtE` IS `consumeAt` plus the records of the pick it made. -/
+theorem Choices.consumeAtE_eq {site : ChoiceSite} {bound : Nat} {ch : Choices} :
+    Choices.consumeAtE site bound ch
+      = ((Choices.consumeAt site bound ch).1, (Choices.consumeAt site bound ch).2,
+         PickRecord.ofPick site bound (Choices.consumeAt site bound ch).1) := by
+  simp only [Choices.consumeAtE, PickRecord.ofPick]
+  split <;> rfl
+
+/-- Reading a record-emitting consultation's result back: the records are
+the pick's (`PickRecord.ofPick`), the pick and stream are `consumeAt`'s. -/
+theorem Choices.consumeAtE_inv {site : ChoiceSite} {bound : Nat} {ch : Choices}
+    {p : Nat} {ch' : Choices} {ps : List PickRecord}
+    (h : Choices.consumeAtE site bound ch = (p, ch', ps)) :
+    ps = PickRecord.ofPick site bound p ∧ Choices.consumeAt site bound ch = (p, ch') := by
+  rw [Choices.consumeAtE_eq] at h
+  simp only [Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl, rfl⟩ := h
+  exact ⟨rfl, rfl⟩
+
 /-- The record-emitting form projects onto `consumeAt` (the two can
 never disagree on pick or stream). -/
 theorem Choices.consumeAtE_fst_snd {site : ChoiceSite} {bound : Nat}

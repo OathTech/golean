@@ -54,7 +54,7 @@ open GoLean
 
 theorem unseq_pick_ready {g : UnseqGraph} {thenB : Stmt} {st : List UnseqStatus}
     {tg : List (String × TargetRef)} {env : LocalEnv} {k : Cont} {s : Store} {i : Nat}
-    {tr : AccessTrace}
+    {tr : StepLabel}
     (h : Step ctx (.next (.unseqK g thenB st tg env .pick k)) s
       (.next (.unseqK g thenB st tg env (.run i) k)) s tr) :
     i ∈ g.ready st := by
@@ -63,7 +63,7 @@ theorem unseq_pick_ready {g : UnseqGraph} {thenB : Stmt} {st : List UnseqStatus}
 
 theorem unseq_pick_active {g : UnseqGraph} {thenB : Stmt} {st : List UnseqStatus}
     {tg : List (String × TargetRef)} {env : LocalEnv} {k : Cont} {s : Store} {i : Nat}
-    {tr : AccessTrace}
+    {tr : StepLabel}
     (h : Step ctx (.next (.unseqK g thenB st tg env .pick k)) s
       (.next (.unseqK g thenB st tg env (.run i) k)) s tr) :
     i < g.occs.length ∧ st[i]? = some .active := by
@@ -72,7 +72,7 @@ theorem unseq_pick_active {g : UnseqGraph} {thenB : Stmt} {st : List UnseqStatus
 
 theorem unseq_panic_drops_frame {chain : List PanicEntry} {g : UnseqGraph} {thenB : Stmt}
     {st : List UnseqStatus} {tg : List (String × TargetRef)} {env : LocalEnv} {ph : UnseqPhase}
-    {k : Cont} {s : Store} {c' : Config} {s' : Store} {tr : AccessTrace}
+    {k : Cont} {s : Store} {c' : Config} {s' : Store} {tr : StepLabel}
     (h : Step ctx (.panicking chain (.unseqK g thenB st tg env ph k)) s c' s' tr) :
     c' = .panicking chain k ∧ s' = s := by
   cases h with
@@ -84,7 +84,7 @@ theorem unseq_panic_drops_frame {chain : List PanicEntry} {g : UnseqGraph} {then
 theorem unseq_complete_settled {g : UnseqGraph} {thenB : Stmt} {st : List UnseqStatus}
     {tg : List (String × TargetRef)} {env : LocalEnv} {k : Cont} {s : Store}
     {refs : List TargetRef} {vals : List GoValue} {thenB' : Stmt} {env' : LocalEnv} {k' : Cont}
-    {s' : Store} {tr : AccessTrace}
+    {s' : Store} {tr : StepLabel}
     (h : Step ctx (.next (.unseqK g thenB st tg env .pick k)) s
       (.next (.storeK refs vals thenB' env' k')) s' tr) :
     g.allSettled st = true ∧ g.unproducedConsumer? st thenB = none
@@ -95,7 +95,7 @@ theorem unseq_complete_settled {g : UnseqGraph} {thenB : Stmt} {st : List UnseqS
 
 theorem unseq_record_stable {g g' : UnseqGraph} {thenB thenB' : Stmt} {st st' : List UnseqStatus}
     {tg tg' : List (String × TargetRef)} {env env' : LocalEnv} {ph ph' : UnseqPhase} {k k' : Cont}
-    {s s' : Store} {tr : AccessTrace}
+    {s s' : Store} {tr : StepLabel}
     (h : Step ctx (.next (.unseqK g thenB st tg env ph k)) s
       (.next (.unseqK g' thenB' st' tg' env' ph' k')) s' tr) :
     g' = g ∧ thenB' = thenB ∧ env' = env ∧ k' = k := by
@@ -160,7 +160,7 @@ theorem UnseqGraph.skipRegion_length {g : UnseqGraph} {st : List UnseqStatus} {g
 
 theorem unseq_done_permanent {g : UnseqGraph} {thenB : Stmt} {st st' : List UnseqStatus}
     {tg tg' : List (String × TargetRef)} {env : LocalEnv} {ph ph' : UnseqPhase} {k : Cont}
-    {s s' : Store} {i : Nat} {tr : AccessTrace}
+    {s s' : Store} {i : Nat} {tr : StepLabel}
     (hlen : st.length = g.occs.length)
     (h : Step ctx (.next (.unseqK g thenB st tg env ph k)) s
       (.next (.unseqK g thenB st' tg' env ph' k)) s' tr)

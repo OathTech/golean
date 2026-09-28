@@ -199,14 +199,14 @@ machine and every statement carrier stay on registry-point
 `StepM`/`stepMulti`. -/
 inductive StepMFine : MultiConfig → MultiConfig → AccessTrace → Prop where
   | thread {m : MultiConfig} {i : Nat} {c : Config} {c' : Config} {σ' : Store}
-      {efs : List Config} {tr : AccessTrace} :
+      {efs : List Config} {l : StepLabel} :
       schedPickFine ctx m i →
       m.threads[i]? = some (.running c none) →
       isBlockedConfig c = false →
       arrivalCases ctx m.shared m.threads i c = .ok .cellPath →
-      StepE ctx m.threads.size c m.shared c' σ' efs tr →
+      StepE ctx m.threads.size c m.shared c' σ' efs l →
       StepMFine m ⟨(m.threads.setIfInBounds i (Thread.afterStep m.shared c c'))
-        ++ (efs.map (Thread.running · none)).toArray, σ', i⟩ tr
+        ++ (efs.map (Thread.running · none)).toArray, σ', i⟩ l.trace
   | strip {m : MultiConfig} {i : Nat} {c : Config} {site : ChoiceSite} :
       schedPickFine ctx m i →
       m.threads[i]? = some (.running c (some site)) →
@@ -448,10 +448,10 @@ def RacyFine (m₀ : MultiConfig) : Prop :=
       m.threads[i]? = some (.running ci none) ∧ m.threads[j]? = some (.running cj none) ∧
       threadRunnable ctx m.shared (.running ci none) = true
         ∧ threadRunnable ctx m.shared (.running cj none) = true ∧
-      ∃ (ci' cj' : Config) (σi σj : Store) (efsi efsj : List Config) (tri trj : AccessTrace),
+      ∃ (ci' cj' : Config) (σi σj : Store) (efsi efsj : List Config) (tri trj : StepLabel),
         StepE ctx m.threads.size ci m.shared ci' σi efsi tri
           ∧ StepE ctx m.threads.size cj m.shared cj' σj efsj trj ∧
-        footprintsConflict tri trj
+        footprintsConflict tri.trace trj.trace
 
 /-- **DEPRECATED — UNSOUND AS STATED (RULED [USER] Mike 2026-09-18,
 verbatim, relayed by the [AGENT] coordinator — cite as relayed: «We

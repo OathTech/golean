@@ -1856,6 +1856,46 @@ abbrev AccessTrace := List MemEvent
 /-- The accesses of a label, in order (attribution looked through). -/
 def traceAccesses (tr : AccessTrace) : List Access := tr.filterMap MemEvent.access?
 
+/-- **The FULL event label of one machine step** (charter row 2, 2026-09-28;
+[USER] 2026-09-22/23 «the sequential step label becomes the full event label
+(access ⊕ pick ⊕ out)»; design note `docs/2026-09-28_step-label.md`): `Step`'s
+fifth index, `stepFn`'s fourth component and the pool event's `label` — ONE
+label type at both layers. Three channels, each ORDERED within the step:
+
+* `trace` — the memory-model events (`AccessTrace`, above), gc's
+  instrumentation order;
+* `picks` — every tape consultation of bound > 1 the step KEEPS, exactly as
+  `Choices.consumeAtE` returns it, in consultation order (a bound-≤-1
+  consultation records nothing; a delivered panic that restores the
+  pre-apply tape drops the record with the stream advance);
+* `out` — the bytes a `print`/`println` apply step wrote to fd 2.
+
+There is NO cross-channel interleaving inside a step (documented
+limitation, logic team §3 — never an invented instrumentation order). A
+pure step's label is `⟨[], [], []⟩`; an observation is the per-field FOLD
+over the steps' labels, so a pure step contributes NOTHING (the silent
+projection — no `[emptyLabel]` element ever appears). -/
+structure StepLabel where
+  trace : AccessTrace
+  picks : List PickRecord
+  out : List GoString
+
+/-- A trace-only label: the memory events, no consultation, no output. -/
+abbrev StepLabel.ofTrace (tr : AccessTrace) : StepLabel := ⟨tr, [], []⟩
+
+/-- The per-field fold of a label sequence — THE observation of a run's
+labels (concatenation per channel; a pure step's `⟨[], [], []⟩` is its
+unit). -/
+def StepLabel.fold (ls : List StepLabel) : StepLabel :=
+  ⟨(ls.map StepLabel.trace).flatten, (ls.map StepLabel.picks).flatten,
+    (ls.map StepLabel.out).flatten⟩
+
+/-- The silent projection: a pure step's label contributes nothing to any
+channel of the fold. -/
+theorem StepLabel.fold_silent (ls₁ ls₂ : List StepLabel) :
+    StepLabel.fold (ls₁ ++ ⟨[], [], []⟩ :: ls₂) = StepLabel.fold (ls₁ ++ ls₂) := by
+  simp [StepLabel.fold]
+
 /-! ## The memory module's access discipline — what emits, what peeks (C1 S2b, 2026-09-18)
 
 EVERY user-memory access the machine performs goes through an EMITTING operation of
@@ -1864,9 +1904,9 @@ this module (`Mem.load`, `Mem.loadFor` — for a binding cell their root-only tw
 `Mem.loadElems`/`Mem.storeElems`, `Mem.loadRun`/`Mem.storeRun`, `Mem.loadSlice`,
 `loadResults`, `dynamicDispatch?`'s receiver read), which returns the access it
 performed as the last component of its result (`AccessTrace`); the step relation
-`Step` carries the concatenation as its label, `stepFn` as its fourth component,
-the pool event as `StepEvent.trace`, and the detector's fold (`raceUpdate`,
-Multi.lean) records the label. A caller chooses an operation; it never builds an
+`Step` carries the concatenation as its label's `trace` channel (`StepLabel`,
+below), `stepFn` in its fourth component, the pool event in `StepEvent.label`
+(`ev.trace`), and the detector's fold (`raceUpdate`, Multi.lean) records it. A caller chooses an operation; it never builds an
 `Access`. Since C1 S2b-ii the FOOTPRINT TABLE that formerly computed a step's
 accesses from its pre-configuration (`stepAccesses`, Race.lean) is gone: the
 theorem `accesses_eq_stepAccesses` (GoLean/GoCore/AccessTableEq.lean at the

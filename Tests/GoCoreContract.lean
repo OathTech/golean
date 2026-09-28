@@ -60,12 +60,12 @@ theorem recover_changes_handler : (recoverResult panicFrame).2 ≠ panicFrame :=
 
 theorem recover_stepFn (s : Store) (env : LocalEnv) (k : Cont) (ch : Choices) :
     stepFn ctx s (.evalE .recoverCall env k) ch =
-      .ok (.retV (recoverResult k).1 (recoverResult k).2, s, ch, []) := rfl
+      .ok (.retV (recoverResult k).1 (recoverResult k).2, s, ch, ⟨[], [], []⟩) := rfl
 
 /-- Transporting the bare-frame recover successor under the added handler
 is not a step. This refutes the concrete instance of the proposed fill law. -/
 theorem recover_step_does_not_transport (s : Store) :
-    Step ctx (.evalE .recoverCall [] bareFrame) s (.retV .nil bareFrame) s [] ∧
+    Step ctx (.evalE .recoverCall [] bareFrame) s (.retV .nil bareFrame) s ⟨[], [], []⟩ ∧
     ¬ ∃ tr, Step ctx (.evalE .recoverCall [] panicFrame) s (.retV .nil panicFrame) s tr := by
   refine ⟨.evalRecover recover_bare, ?_⟩
   rintro ⟨tr, h⟩
@@ -132,12 +132,13 @@ def forkPoint : Config := .panicking [panicEntry "audit"] (.probeK .stop)
 def raised : Config := .panicking [panicEntry "audit"] .stop
 
 theorem choose_defer (s : Store) (tail : Choices) :
-    stepFn ctx s forkPoint (0 :: tail) = .ok (.next .stop, s, tail, []) := rfl
+    stepFn ctx s forkPoint (0 :: tail) = .ok (.next .stop, s, tail, ⟨[], [⟨.unseqPanic, 2, 0⟩], []⟩) := rfl
 theorem choose_raise (s : Store) (tail : Choices) :
-    stepFn ctx s forkPoint (1 :: tail) = .ok (raised, s, tail, []) := rfl
+    stepFn ctx s forkPoint (1 :: tail) = .ok (raised, s, tail, ⟨[], [⟨.unseqPanic, 2, 1⟩], []⟩) := rfl
 
 theorem both_relational_successors (s : Store) :
-    Step ctx forkPoint s (.next .stop) s [] ∧ Step ctx forkPoint s raised s [] :=
+    Step ctx forkPoint s (.next .stop) s ⟨[], [⟨.unseqPanic, 2, 0⟩], []⟩ ∧
+      Step ctx forkPoint s raised s ⟨[], [⟨.unseqPanic, 2, 1⟩], []⟩ :=
   ⟨.probeDefer, .probeRaise⟩
 
 /-- The old fixed-stream ⇐ existential-path claim already fails at one step. -/

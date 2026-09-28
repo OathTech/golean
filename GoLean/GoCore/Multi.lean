@@ -615,7 +615,8 @@ upstream (recorded hazard, S2 audit response). A nil callee is gc's
 refuting the older child-panic analysis): modeled as `Stop.fatal`
 (triage L10). -/
 def spawnStep (s : Store) (cv : GoValue) (args : List GoValue) (k : Cont)
-    (ch : Choices) : Except Stop (Config × Config × Store × Choices × AccessTrace) := do
+    (ch : Choices) :
+    Except Stop (Config × Config × Store × Choices × List PickRecord × AccessTrace) := do
   match cv with
   | .funcVal fid captured =>
       -- The ONE entry funnel (B2): the child's entry panic draws the
@@ -624,7 +625,7 @@ def spawnStep (s : Store) (cv : GoValue) (args : List GoValue) (k : Cont)
       -- with gc's panicwrap text) and is DELIVERED in the child, under
       -- the child's empty continuation — its first observable act is
       -- aborting on that panic.
-      let (r, ch') ← enterFramePickV ctx s fid (captured ++ args) ch
+      let (r, ch', ps) ← enterFramePickV ctx s fid (captured ++ args) ch
       -- The parent's successor is `.next k`; the pool flags it
       -- `l1Sched` (`Thread.afterStep` — BUG-040, slice 4; stage C's
       -- `.spawned k`/`.opDone .l1Sched` marker, a flag since C5): a
@@ -646,9 +647,11 @@ def spawnStep (s : Store) (cv : GoValue) (args : List GoValue) (k : Cont)
       | .ok c => do
           let (func, frameEnv, _, s', tr) ← runCommit c s
           return (.next k, .exec func.body frameEnv (.frame [] [] [] [] .stop func.wrapper),
-            s', ch', tr)
+            s', ch', ps, tr)
       | .panic msg =>
-          return (.next k, .panicking [panicEntry msg] .stop, s, ch', [])
+          -- The entry pick drawn on the panic path is KEPT (the child
+          -- aborts under the drawn text): recorded in the spawn's label.
+          return (.next k, .panicking [panicEntry msg] .stop, s, ch', ps, [])
   -- A nil callee is gc's "go of nil func value" runtime FATAL, raised
   -- AT THE SPAWN in the spawning goroutine (probed 2026-08-07;
   -- unrecoverable, exit 2). Routed through the machine's own fatal
@@ -681,11 +684,12 @@ theorem entryCallSite?_of_spawnPlan {c : Config} {cv : GoValue} {args : List GoV
 /-- Outside the wrapper family a spawn is stream-oblivious: the entry
 panic's `nilValueMethodText` consult is at bound 1 and pops nothing. -/
 theorem spawnStep_oblivious {s : Store} {cv : GoValue} {args : List GoValue}
-    {k : Cont} {ch₀ : Choices} {p c : Config} {s' : Store} {ch₀' : Choices} {tr : AccessTrace}
+    {k : Cont} {ch₀ : Choices} {p c : Config} {s' : Store} {ch₀' : Choices}
+    {ps : List PickRecord} {tr : AccessTrace}
     (hn : ∀ fid captured, cv = .funcVal fid captured →
       nilValueMethodText? ctx fid (captured ++ args) = none)
-    (h : spawnStep ctx s cv args k ch₀ = .ok (p, c, s', ch₀', tr)) :
-    ch₀' = ch₀ ∧ ∀ ch : Choices, spawnStep ctx s cv args k ch = .ok (p, c, s', ch, tr) := by
+    (h : spawnStep ctx s cv args k ch₀ = .ok (p, c, s', ch₀', ps, tr)) :
+    ch₀' = ch₀ ∧ ∀ ch : Choices, spawnStep ctx s cv args k ch = .ok (p, c, s', ch, ps, tr) := by
   unfold spawnStep at h ⊢
   cases cv with
   | funcVal fid captured =>
@@ -704,12 +708,12 @@ theorem spawnStep_oblivious {s : Store} {cv : GoValue} {args : List GoValue}
         | ok v =>
           obtain ⟨func, frameEnv, locs, s₂, tr₂⟩ := v
           simp only [hrc, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-          obtain ⟨rfl, rfl, rfl, rfl, rfl⟩ := h
+          obtain ⟨rfl, rfl, rfl, rfl, rfl, rfl⟩ := h
           exact ⟨rfl, fun ch => by simp⟩
       | panic msg =>
         simp only [hx, Except.map, Bind.bind, Except.bind, pure_eq_ok,
           Except.ok.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl, rfl, rfl, rfl⟩ := h
+        obtain ⟨rfl, rfl, rfl, rfl, rfl, rfl⟩ := h
         exact ⟨rfl, fun ch => by simp [Except.map, Bind.bind, Except.bind]⟩
   | nil => simp [throw, throwThe, MonadExceptOf.throw] at h
   | _ => simp [throw, throwThe, MonadExceptOf.throw] at h
@@ -950,24 +954,14 @@ clause by REPLAYING the step's stream consumption (three consumption
 re-derivations in lockstep by review alone — audit O-2/C-4); both now
 arrive in the event.
 
-Scope (stage B, recorded deviation from the boundary note §3): the
-event channel lives at the POOL layer. `stepFn`'s signature is
-UNCHANGED — the note's `stepFn : … × List PickRecord` reshape would
-re-state the entire sequential correspondence + gallery surface
-(hundreds of pinned 3-tuple equations in `MachineSound`, `StepKit`,
-and ~40 example files), far beyond this stage's re-proof budget, and
-no stage-B consumer needs the apply-layer picks: the detector gets
-the select-commit identity from `applySelect`'s emitted 4th component
-(the pool's select interception in `stepThread`), fairness quantifies
-SCHEDULING picks (all pool-layer), and the enumerator's widths ride
-`stepNeeds`. Consequently `StepEvent.picks` carries the POOL-layer
-consumption (`l1Sched`, `l2Arrival`, `l4Waiter`); the apply-layer
-data picks (`mapIter`, `appendSpill`, `l2Entry`) are not in the event
-stream. Re-open trigger: a consumer that needs the full labeled
-sequential trace (e.g. S6a's rule-label runtime counterpart) — then
-the `stepFn` reshape lands with its own budget. Stages C/D add the
-`postOp`/`backEdge` scheduling picks here when the boundary set
-widens (G1). -/
+Scope: stage B recorded a deviation from the boundary note §3 — the event
+channel lived at the POOL layer and `StepEvent.picks` carried only the
+pool-layer consumption, the apply-layer data picks staying out of the
+event stream, with the re-open trigger «a consumer that needs the full
+labeled sequential trace». That trigger fired ([USER] 2026-09-22/23, the
+batched window's row 2): since the step-label reshape (2026-09-28) the
+sequential `stepFn`/`Step` carry the full `StepLabel` and the event's label
+takes the step's picks and output FROM it (`StepEvent`, below). -/
 
 /-- The action classification of one pool step (the note's
 `StepAction`, instantiated at the machine's real types: the note's
@@ -1004,32 +998,45 @@ inductive StepAction where
   and private steps — their label carries whatever the step emitted. -/
   | privateStep
 
-/-- One pool step's event (Q2): who ran, what the step did, and the
-POOL-layer picks it consumed, in order (scope note above). -/
+/-- One pool step's event (Q2): who ran, what the step did, and the step's
+LABEL — since the step-label reshape (2026-09-28) the SAME `StepLabel` type
+the sequential `Step`/`stepFn` carry (ONE label type at both layers;
+design note `docs/2026-09-28_step-label.md`):
+
+* `label.trace` — the memory-model events (C1 S2a/S2c; charter §3,
+  D5/D9), gc's instrumentation order. A goroutine step carries `stepFn`'s
+  trace (data accesses; a registry apply's channel-object / sync-word
+  accesses and its happens-before actions); a spawn carries the `go` edge
+  and the CHILD's frame-entry read `attributed` to it; a wake the resumed
+  op's action; a pairing the arriving op's entry emission and both
+  goroutines' actions; an arrival commit the select's poll and the
+  commit's action; the boundary clear and the abort `[]`. The detector's
+  fold (`raceUpdate`) consumes exactly this.
+* `label.picks` — EVERY kept tape consultation of bound > 1 the pool step
+  made, in consultation order: the pool layer's own (`l1Sched`/`postOp`/
+  `backEdge` at a boundary, `l2Arrival`, `l4Waiter`, the abort's
+  `repanicCollapse`) FOLLOWED by the sequential step's label picks
+  (`mapIter`, `appendSpill`, `l2Entry`, `tryLock`, `nilValueMethodText`
+  — also at a spawn's child entry —, `unseqPanic`, `unseqNext`), taken
+  FROM that label, never re-derived. The driver's `l5ExitWindow` draw is
+  between steps and belongs to no step's label.
+* `label.out` — the bytes the step wrote to fd 2 (stdlib slice 3,
+  2026-09-04; G-OUT): a goroutine step's `stepFn` label `out` (one element
+  per `print`/`println` apply), `[]` for every pool-only step. The
+  drivers fold these in step order (`execProgLoopOut`); the fold IS the
+  program output the differential compares. Output is a TRACE of the run,
+  never a heap cell (design note §1). -/
 structure StepEvent where
   who : Nat
   action : StepAction
-  picks : List PickRecord
-  /-- The bytes this step wrote to fd 2 (stdlib slice 3, 2026-09-04;
-  G-OUT): one element per `print`/`println` apply step
-  (`printOut?`, Machine.lean), empty for every other step. The drivers
-  fold these in step order (`execProgLoopOut`); the fold IS the program
-  output the differential compares. Output is a TRACE of the run, never a
-  heap cell (design note §1): for the reasoning consumer a spec about
-  printed bytes is a statement about the event trace, exactly parallel
-  to a spec about the access trace. -/
-  out : List GoString := []
-  /-- The step's LABEL (C1 S2a/S2c; charter §3, D5/D9): the memory-model
-  events the step's operations emitted, in gc's instrumentation order —
-  the `Step` label lifted into the event. A goroutine step carries
-  `stepFn`'s label (data accesses; a registry apply's channel-object /
-  sync-word accesses and its happens-before actions); a spawn carries the
-  `go` edge and the CHILD's frame-entry read `attributed` to it; a wake
-  the resumed op's action; a pairing the arriving op's entry emission and
-  both goroutines' actions; an arrival commit the select's poll and the
-  commit's action; the boundary clear and the abort `[]`. The detector's
-  fold (`raceUpdate`) consumes exactly this. -/
-  trace : AccessTrace := []
+  label : StepLabel := ⟨[], [], []⟩
+
+/-- The event's picks (the label's `picks` channel). -/
+abbrev StepEvent.picks (ev : StepEvent) : List PickRecord := ev.label.picks
+/-- The event's output (the label's `out` channel). -/
+abbrev StepEvent.out (ev : StepEvent) : List GoString := ev.label.out
+/-- The event's memory trace (the label's `trace` channel). -/
+abbrev StepEvent.trace (ev : StepEvent) : AccessTrace := ev.label.trace
 
 /-- The per-clause channel of a select's evaluated entry operands,
 extracted TOTALLY (no exceptions): `(isSend, loc)` per clause, `none`
@@ -1487,12 +1494,12 @@ def stepThread (s : Store) (threads : Array Thread) (i : Nat)
       -- POOL step, never a `Config` step — the sequential machine has
       -- no flag to clear (`execProg_single_eq_execStmt` counts these).
       return (threads.setIfInBounds i (.running c none), s, ch,
-        ⟨i, .opDoneStrip, [], [], []⟩)
+        ⟨i, .opDoneStrip, ⟨[], [], []⟩⟩)
   | some (.running c none) =>
     if isBlockedConfig c then do
       -- The wake's label is the resumed op's ACTION (C1 S2c).
       let (c', s', tr) ← resumeThread ctx s c
-      return (threads.setIfInBounds i (Thread.completed c'), s', ch, ⟨i, .woke, [], [], tr⟩)
+      return (threads.setIfInBounds i (Thread.completed c'), s', ch, ⟨i, .woke, ⟨tr, [], []⟩⟩)
     else
       match c.abort? with
       | some (first, rest) => do
@@ -1510,21 +1517,22 @@ def stepThread (s : Store) (threads : Array Thread) (i : Nat)
           let (pick, ch', ps) :=
             Choices.consumeAtE .repanicCollapse (repanicCollapseWidth first rest) ch
           let msg ← abortMsg ctx first rest pick
-          return (threads.setIfInBounds i (.aborted msg), s, ch', ⟨i, .aborted, ps, [], []⟩)
+          return (threads.setIfInBounds i (.aborted msg), s, ch', ⟨i, .aborted, ⟨[], ps, []⟩⟩)
       | none =>
       -- THE BOUNDARY RULE'S PRE-STEP FACTS (C1 S3): read before the step, so
       -- the step's writes see the heap's ONE reference (`Config.boundaryFacts`).
       let facts := c.boundaryFacts s
       match spawnPlan c with
       | some (cv, args, k) => do
-          let (parent', child, s', ch', tr) ← spawnStep ctx s cv args k ch
+          let (parent', child, s', ch', ps, tr) ← spawnStep ctx s cv args k ch
           -- The spawn's label (C1 S2c): the `go` statement's edge to the
           -- child (`threads.size`, its index), then the CHILD's entry read
           -- (S2a's trace) attributed to it — gc attributes the receiver
-          -- dispatch's read to the spawned goroutine, after the edge.
+          -- dispatch's read to the spawned goroutine, after the edge. Its
+          -- picks: the child entry's kept consultation (step-label reshape).
           return ((threads.setIfInBounds i (Thread.afterStepWith facts parent')).push (.running child none),
-            s', ch', ⟨i, .spawned threads.size, [], [],
-              .hb (.spawn threads.size) :: tr.map (.attributed threads.size)⟩)
+            s', ch', ⟨i, .spawned threads.size,
+              ⟨.hb (.spawn threads.size) :: tr.map (.attributed threads.size), ps, []⟩⟩)
       | none => do
           match ← arrivalPlan ctx s threads i c ch with
           | (some (.pair bc cs), ch₁, ps₁) =>
@@ -1542,7 +1550,7 @@ def stepThread (s : Store) (threads : Array Thread) (i : Nat)
                       -- and both goroutines' actions (C1 S2c, `applyPairing`).
                       let (ts', s'', tr) ← applyPairing ctx s threads i bc cand
                       return (ts', s'', ch₂,
-                        ⟨i, .paired cand.2.partnerIdx, ps₁ ++ ps₂, [], tr⟩)
+                        ⟨i, .paired cand.2.partnerIdx, ⟨tr, ps₁ ++ ps₂, []⟩⟩)
                   | none => throw (.internal "waiter pick out of range")
           | (some (.commit evs cl env k), ch₁, ps₁) => do
               -- The L2-picked clause is cell-only ready: commit it
@@ -1552,7 +1560,7 @@ def stepThread (s : Store) (threads : Array Thread) (i : Nat)
               -- poll over ALL its clauses, then the commit's action.
               let (c', s', trc) ← commitClause ctx s env k cl
               return (threads.setIfInBounds i (Thread.afterStepWith facts c'), s', ch₁,
-                ⟨i, .selectCommit cl, ps₁, [], selectPoll evs ++ trc⟩)
+                ⟨i, .selectCommit cl, ⟨selectPoll evs ++ trc, ps₁, []⟩⟩)
           | (none, ch₁, ps₁) =>
               match selectApplyPlan c with
               | some (v, clauses, default?, done, env, k') =>
@@ -1566,25 +1574,27 @@ def stepThread (s : Store) (threads : Array Thread) (i : Nat)
                   -- with the pre-consumption stream.
                   match ← toResult (applySelect ctx s clauses default?
                       ((v :: done).reverse) env k' ch₁) with
-                  | .ok (c', s', ch₂, cl?, tr) =>
+                  | .ok (c', s', ch₂, ps₂, cl?, tr) =>
                       return (threads.setIfInBounds i (Thread.afterStepWith facts c'), s', ch₂,
                         ⟨i, match cl? with
                             | some cl => .selectCommit cl
-                            | none => .selectPass, ps₁, [], tr⟩)
+                            | none => .selectPass, ⟨tr, ps₁ ++ ps₂, []⟩⟩)
                   | .panic msg =>
-                      let (c', s', _) := deliver s k' (fun (p : Config × Store) => (p.1, p.2, ([] : AccessTrace))) (.panic msg)
+                      let (c', s', _) := deliver s k'
+                        (fun (p : Config × Store) => (p.1, p.2, (⟨[], [], []⟩ : StepLabel))) (.panic msg)
                       return (threads.setIfInBounds i (Thread.afterStepWith facts c'), s', ch₁,
-                        ⟨i, .selectPass, ps₁, [], []⟩)
+                        ⟨i, .selectPass, ⟨[], ps₁, []⟩⟩)
               | none => do
-                  let (c', s', ch₂, tr) ← stepFn ctx s c ch₁
-                  -- The OUTPUT EVENT (stdlib slice 3): a `print`/`println`
-                  -- apply position's bytes, derived from the PRE-configuration
-                  -- by the same `renderPrint` the step just validated through
-                  -- (`printOut?`); `[]` at every other configuration. The
+                  let (c', s', ch₂, l) ← stepFn ctx s c ch₁
+                  -- The goroutine step's LABEL is the sequential step's
+                  -- (step-label reshape, 2026-09-28): its trace, its picks
+                  -- AFTER the pool's arrival-plan picks, and its OUTPUT (the
+                  -- `print`/`println` bytes `stepFn` emitted, `stmtOpOut`) —
+                  -- taken from the label, never re-derived here. The
                   -- successor's boundary flag: the post-op boundary rule
                   -- (`Thread.afterStep`, C5).
                   return (threads.setIfInBounds i (Thread.afterStepWith facts c'), s', ch₂,
-                    ⟨i, .privateStep, ps₁, (printOut? c).toList, tr⟩)
+                    ⟨i, .privateStep, { l with picks := ps₁ ++ l.picks }⟩)
 
 /-- `stepThread` lifted back into a `MultiConfig` (the stepped goroutine
 becomes the running one). -/
@@ -1666,7 +1676,7 @@ def stepMulti (m : MultiConfig) (ch : Choices) :
           match rs[pick]? with
           | some i => do
               let (m', ch₂, ev) ← stepThreadInto ctx m i ch₁
-              return (m', ch₂, { ev with picks := ps ++ ev.picks })
+              return (m', ch₂, { ev with label := { ev.label with picks := ps ++ ev.label.picks } })
           | none => throw (.internal "scheduler pick out of range")
     else
       stepThreadInto ctx m m.cur ch
@@ -2081,17 +2091,17 @@ lifts with no forked goroutines; the completed spawn positions (where
 `Step` is deliberately silent) fork exactly one. Proof infrastructure
 (statement-TCB: forbidden from designated statement closures, like
 `Step`/`Steps`). -/
-inductive StepE : Nat → Config → Store → Config → Store → List Config → AccessTrace → Prop where
+inductive StepE : Nat → Config → Store → Config → Store → List Config → StepLabel → Prop where
   /-- `n` is the index the spawned child WOULD take (the pool's size); a lift
   spawns nothing and is indifferent to it. -/
   | lift {n c σ c' σ' tr} : Step ctx c σ c' σ' tr → StepE n c σ c' σ' [] tr
   /-- The spawn's label (C1 S2c): the `go` statement's edge to the child at
   index `n`, then the CHILD's frame-entry read (its receiver dispatch)
   attributed to it — gc's attribution, after the edge. -/
-  | spawn {n c σ cv args k parent' child σ' ch ch' tr} :
+  | spawn {n c σ cv args k parent' child σ' ch ch' ps tr} :
       spawnPlan c = some (cv, args, k) →
-      spawnStep ctx σ cv args k ch = .ok (parent', child, σ', ch', tr) →
-      StepE n c σ parent' σ' [child] (.hb (.spawn n) :: tr.map (.attributed n))
+      spawnStep ctx σ cv args k ch = .ok (parent', child, σ', ch', ps, tr) →
+      StepE n c σ parent' σ' [child] ⟨.hb (.spawn n) :: tr.map (.attributed n), ps, []⟩
 
 /-- Legal scheduler picks (D2a): between boundaries only the running
 goroutine steps; at a boundary any RUNNABLE goroutine may be picked —
@@ -2123,14 +2133,14 @@ relation-SILENT (no rule from an all-asleep pool), mirroring the
 sequential machine's silent blocked configs. -/
 inductive StepM : MultiConfig → MultiConfig → AccessTrace → Prop where
   | thread {m : MultiConfig} {i : Nat} {c : Config} {c' : Config} {σ' : Store}
-      {efs : List Config} {tr : AccessTrace} :
+      {efs : List Config} {l : StepLabel} :
       schedPick ctx m i →
       m.threads[i]? = some (.running c none) →
       isBlockedConfig c = false →
       arrivalCases ctx m.shared m.threads i c = .ok .cellPath →
-      StepE ctx m.threads.size c m.shared c' σ' efs tr →
+      StepE ctx m.threads.size c m.shared c' σ' efs l →
       StepM m ⟨(m.threads.setIfInBounds i (Thread.afterStep m.shared c c'))
-        ++ (efs.map (Thread.running · none)).toArray, σ', i⟩ tr
+        ++ (efs.map (Thread.running · none)).toArray, σ', i⟩ l.trace
   /-- The boundary CLEAR (C5): a goroutine whose last op opened a boundary
   clears it — a pool step, the sequential relation has no counterpart. -/
   | strip {m : MultiConfig} {i : Nat} {c : Config} {site : ChoiceSite} :

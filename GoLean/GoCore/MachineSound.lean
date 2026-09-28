@@ -910,8 +910,9 @@ theorem runCommit_of_noPanic {α : Type} {c : Commit α} {s : Store} (h : NoPani
     exact absurd heq (h msg)
   · rfl
 
-theorem runCommit_withStream {ch : Choices} {c : Commit (Store × AccessTrace)} {s : Store} :
-    runCommit (Commit.withStream ch c) s = (runCommit c s).map fun p => (p.1, ch, p.2) := by
+theorem runCommit_withStream {ch : Choices} {ps : List PickRecord} {c : Commit (Store × AccessTrace)}
+    {s : Store} :
+    runCommit (Commit.withStream ch ps c) s = (runCommit c s).map fun p => (p.1, ch, ps, p.2) := by
   unfold runCommit Commit.withStream
   cases hcs : c s with
   | error e =>
@@ -922,9 +923,9 @@ theorem runCommit_withStream {ch : Choices} {c : Commit (Store × AccessTrace)} 
     simp [Bind.bind, Except.bind, Except.map, pure, Except.pure]
 
 theorem deliverV_ok_inv {α : Type} {s : Store} {k : Cont} {ch : Choices}
-    {next : α → Config × Store × Choices × AccessTrace} {c : Commit α} {chain : List PanicEntry}
-    {out : Config × Store × Choices × AccessTrace}
-    (h : deliverV s k ch next (.ok c) chain = .ok out) : ∃ a, c s = .ok a ∧ next a = out := by
+    {next : α → Config × Store × Choices × StepLabel} {c : Commit α} {chain : List PanicEntry}
+    {ps : List PickRecord} {out : Config × Store × Choices × StepLabel}
+    (h : deliverV s k ch next (.ok c) chain ps = .ok out) : ∃ a, c s = .ok a ∧ next a = out := by
   simp only [deliverV_ok] at h
   cases hr : runCommit c s with
   | error e => rw [hr] at h; simp [Functor.map, Except.map] at h
@@ -962,7 +963,7 @@ theorem toResult_plan_inv_panic {α : Type} {plan : Except Stop (Commit α)} {s 
 /-! #### The per-family inversions (the composed apply's `.ok`/`.panic` read back to its phases) -/
 
 theorem applyStmtOp_inv_ok {s : Store} {ch : Choices} {op : StmtOp} {nt : Nat} {vs : List GoValue}
-    {a : Store × Choices × AccessTrace} (h : applyStmtOp ctx s ch op nt vs = .ok a) :
+    {a : Store × Choices × List PickRecord × AccessTrace} (h : applyStmtOp ctx s ch op nt vs = .ok a) :
     ∃ c, applyStmtOp.plan ctx s ch op nt vs = .ok c ∧ c s = .ok a := by
   unfold applyStmtOp at h
   exact bind_eq_ok.mp h
@@ -1022,7 +1023,7 @@ theorem enterFrame_inv_panic {s : Store} {fid : FuncId} {args : List GoValue} {m
 theorem enterFramePickV_of_plan_ok {s : Store} {fid : FuncId} {args : List GoValue}
     {c : Commit (Func × LocalEnv × List Loc × Store × AccessTrace)}
     (h : enterFrame.plan ctx s fid args = .ok c) (ch : Choices) :
-    enterFramePickV ctx s fid args ch = .ok (.ok c, ch) := by
+    enterFramePickV ctx s fid args ch = .ok (.ok c, ch, []) := by
   simp [enterFramePickV, h]
 
 theorem enterFramePickV_of_plan_panic {s : Store} {fid : FuncId} {args : List GoValue}
@@ -1030,14 +1031,15 @@ theorem enterFramePickV_of_plan_panic {s : Store} {fid : FuncId} {args : List Go
     enterFramePickV ctx s fid args ch
       = .ok (.panic (entryPanicText ctx fid args msg
             (Choices.consumeAt .nilValueMethodText (nilValueMethodWidth ctx fid args) ch).1),
-          (Choices.consumeAt .nilValueMethodText (nilValueMethodWidth ctx fid args) ch).2) := by
-  simp [enterFramePickV, h]
+          (Choices.consumeAt .nilValueMethodText (nilValueMethodWidth ctx fid args) ch).2,
+          (PickRecord.ofPick .nilValueMethodText (nilValueMethodWidth ctx fid args) (Choices.consumeAt .nilValueMethodText (nilValueMethodWidth ctx fid args) ch).1)) := by
+  simp [enterFramePickV, h, Choices.consumeAtE_eq]
 
 theorem enterFramePickV_of_ok {s : Store} {fid : FuncId} {args : List GoValue} {ch ch' : Choices}
-    {a : Func × LocalEnv × List Loc × Store × AccessTrace}
-    (h : enterFramePick ctx s fid args ch = .ok (.ok a, ch')) :
-    ∃ c, enterFramePickV ctx s fid args ch = .ok (.ok c, ch') ∧ c s = .ok a := by
-  rcases enterFramePick_cases h with ⟨func, frameEnv, resultLocs, s', tr, hr, henter, rfl⟩ | ⟨msg, hr, -, -⟩
+    {ps : List PickRecord} {a : Func × LocalEnv × List Loc × Store × AccessTrace}
+    (h : enterFramePick ctx s fid args ch = .ok (.ok a, ch', ps)) :
+    ∃ c, enterFramePickV ctx s fid args ch = .ok (.ok c, ch', ps) ∧ c s = .ok a := by
+  rcases enterFramePick_cases h with ⟨func, frameEnv, resultLocs, s', tr, hr, henter, rfl, rfl⟩ | ⟨msg, hr, -, -, -⟩
   · simp only [Result.ok.injEq] at hr
     subst hr
     obtain ⟨c, hpl, hcs⟩ := enterFrame_inv_ok henter
@@ -1045,9 +1047,9 @@ theorem enterFramePickV_of_ok {s : Store} {fid : FuncId} {args : List GoValue} {
   · cases hr
 
 theorem enterFramePickV_of_panic {s : Store} {fid : FuncId} {args : List GoValue} {ch ch' : Choices}
-    {msg : String} (h : enterFramePick ctx s fid args ch = .ok (.panic msg, ch')) :
-    enterFramePickV ctx s fid args ch = .ok (.panic msg, ch') := by
-  rcases enterFramePick_cases h with ⟨func, frameEnv, resultLocs, s', tr, hr, -, -⟩ | ⟨msg₀, hr, henter, rfl⟩
+    {ps : List PickRecord} {msg : String} (h : enterFramePick ctx s fid args ch = .ok (.panic msg, ch', ps)) :
+    enterFramePickV ctx s fid args ch = .ok (.panic msg, ch', ps) := by
+  rcases enterFramePick_cases h with ⟨func, frameEnv, resultLocs, s', tr, hr, -, -, -⟩ | ⟨msg₀, hr, henter, rfl, rfl⟩
   · cases hr
   · simp only [Result.panic.injEq] at hr
     subst hr
@@ -1057,7 +1059,7 @@ theorem enterFramePickV_of_panic {s : Store} {fid : FuncId} {args : List GoValue
 `enterFramePick_of_nopanic`. -/
 theorem enterFramePickV_of_nopanic {s : Store} {fid : FuncId} {args : List GoValue}
     (hnp : ∀ msg, enterFrame ctx s fid args ≠ .error (.panic msg)) (ch : Choices) :
-    enterFramePickV ctx s fid args ch = (toResult (enterFrame.plan ctx s fid args)).map (·, ch) := by
+    enterFramePickV ctx s fid args ch = (toResult (enterFrame.plan ctx s fid args)).map (·, ch, []) := by
   unfold enterFramePickV
   cases hx : toResult (enterFrame.plan ctx s fid args) with
   | error e => rfl
@@ -1074,7 +1076,7 @@ theorem enterFramePickV_of_nopanic {s : Store} {fid : FuncId} {args : List GoVal
 /-- Every non-append head's plan is the core's plan lifted beside the stream. -/
 theorem applyStmtOp_plan_eq_core {σ : Store} {ch : Choices} {op : StmtOp} {nt : Nat}
     {vs : List GoValue} (hop : ∀ e, op ≠ .appendSlice e) :
-    applyStmtOp.plan ctx σ ch op nt vs = (applyStmtOpCore.plan ctx σ op vs).map (Commit.withStream ch) := by
+    applyStmtOp.plan ctx σ ch op nt vs = (applyStmtOpCore.plan ctx σ op vs).map (Commit.withStream ch []) := by
   cases op <;>
     first
     | exact absurd rfl (hop _)
@@ -1246,7 +1248,7 @@ at the frame — `frameFall`/`frameFallTargets`/`frameDeferFall`/
 the frame — the `frameReturn*` twins), with the same successor. -/
 theorem stepFrameExit_sound {s : Store} {targets : List (TargetShape × List Expr)}
     {tenv : LocalEnv} {results : List Loc} {ds : List (GoValue × List GoValue)}
-    {k' : Cont} {w : Bool} {ch : Choices} {c' : Config} {s' : Store} {ch' : Choices} {tr : AccessTrace}
+    {k' : Cont} {w : Bool} {ch : Choices} {c' : Config} {s' : Store} {ch' : Choices} {tr : StepLabel}
     (h : stepFrameExit ctx s targets tenv results ds k' w ch = .ok (c', s', ch', tr)) :
     Step ctx (.next (.frame targets tenv results ds k' w)) s c' s' tr
       ∧ Step ctx (.signal .ret (.frame targets tenv results ds k' w)) s c' s' tr := by
@@ -1294,7 +1296,7 @@ pattern, which keeps the arms' internal splits out of `stepFn`'s
 positional case tags. -/
 
 theorem stepUnseqEnter_sound {s : Store} {g : UnseqGraph} {thenB : Stmt} {env : LocalEnv}
-    {k : Cont} {ch : Choices} {c' : Config} {s' : Store} {ch' : Choices} {tr : AccessTrace}
+    {k : Cont} {ch : Choices} {c' : Config} {s' : Store} {ch' : Choices} {tr : StepLabel}
     (h : stepUnseqEnter ctx s g thenB env k ch = .ok (c', s', ch', tr)) :
     Step ctx (.exec (.unseq g thenB) env k) s c' s' tr ∧ ch' = ch := by
   unfold stepUnseqEnter at h
@@ -1312,7 +1314,7 @@ theorem stepUnseqEnter_sound {s : Store} {g : UnseqGraph} {thenB : Stmt} {env : 
 
 theorem stepUnseqValue_sound {s : Store} {v : GoValue} {g : UnseqGraph} {thenB : Stmt}
     {st : List UnseqStatus} {tg : List (String × TargetRef)} {env : LocalEnv} {ph : UnseqPhase}
-    {k : Cont} {ch : Choices} {c' : Config} {s' : Store} {ch' : Choices} {tr : AccessTrace}
+    {k : Cont} {ch : Choices} {c' : Config} {s' : Store} {ch' : Choices} {tr : StepLabel}
     (h : stepUnseqValue ctx s v g thenB st tg env ph k ch = .ok (c', s', ch', tr)) :
     Step ctx (.retV v (.unseqK g thenB st tg env ph k)) s c' s' tr ∧ ch' = ch := by
   unfold stepUnseqValue at h
@@ -1330,7 +1332,7 @@ theorem stepUnseqValue_sound {s : Store} {v : GoValue} {g : UnseqGraph} {thenB :
 
 theorem stepUnseqNext_sound {s : Store} {g : UnseqGraph} {thenB : Stmt}
     {st : List UnseqStatus} {tg : List (String × TargetRef)} {env : LocalEnv} {ph : UnseqPhase}
-    {k : Cont} {ch : Choices} {c' : Config} {s' : Store} {ch' : Choices} {tr : AccessTrace}
+    {k : Cont} {ch : Choices} {c' : Config} {s' : Store} {ch' : Choices} {tr : StepLabel}
     (h : stepUnseqNext ctx s g thenB st tg env ph k ch = .ok (c', s', ch', tr)) :
     Step ctx (.next (.unseqK g thenB st tg env ph k)) s c' s' tr := by
   unfold stepUnseqNext at h
@@ -1348,7 +1350,8 @@ theorem stepUnseqNext_sound {s : Store} {g : UnseqGraph} {thenB : Stmt}
           obtain ⟨⟨refs, vals⟩, hplan, rfl, rfl, rfl, rfl⟩ := h
           exact Step.unseqComplete hdep hall hprod hplan
       · split at h
-        rename_i pick ch'' hpair
+        rename_i pick ch'' ps hpair
+        obtain ⟨rfl, -⟩ := Choices.consumeAtE_inv hpair
         split at h
         · rename_i i hi
           simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
@@ -1427,7 +1430,7 @@ theorem stepUnseqNext_sound {s : Store} {g : UnseqGraph} {thenB : Stmt}
 
 
 theorem stepUnseqEnter_stream {s : Store} {g : UnseqGraph} {thenB : Stmt} {env : LocalEnv}
-    {k : Cont} {ch : Choices} {c' : Config} {s' : Store} {ch' : Choices} {tr : AccessTrace}
+    {k : Cont} {ch : Choices} {c' : Config} {s' : Store} {ch' : Choices} {tr : StepLabel}
     (h : stepUnseqEnter ctx s g thenB env k ch = .ok (c', s', ch', tr)) :
     ch' = ch ∧ ∀ ch₂ : Choices, stepUnseqEnter ctx s g thenB env k ch₂ = .ok (c', s', ch₂, tr) := by
   unfold stepUnseqEnter at h
@@ -1445,7 +1448,7 @@ theorem stepUnseqEnter_stream {s : Store} {g : UnseqGraph} {thenB : Stmt} {env :
 
 theorem stepUnseqValue_stream {s : Store} {v : GoValue} {g : UnseqGraph} {thenB : Stmt}
     {st : List UnseqStatus} {tg : List (String × TargetRef)} {env : LocalEnv} {ph : UnseqPhase}
-    {k : Cont} {ch : Choices} {c' : Config} {s' : Store} {ch' : Choices} {tr : AccessTrace}
+    {k : Cont} {ch : Choices} {c' : Config} {s' : Store} {ch' : Choices} {tr : StepLabel}
     (h : stepUnseqValue ctx s v g thenB st tg env ph k ch = .ok (c', s', ch', tr)) :
     ch' = ch ∧ ∀ ch₂ : Choices, stepUnseqValue ctx s v g thenB st tg env ph k ch₂ = .ok (c', s', ch₂, tr) := by
   unfold stepUnseqValue at h
@@ -1465,7 +1468,7 @@ theorem stepUnseqValue_stream {s : Store} {v : GoValue} {g : UnseqGraph} {thenB 
 common tail of the two consumption lemmas). -/
 theorem stepUnseqNext_run_wait_stream {s : Store} {g : UnseqGraph} {thenB : Stmt}
     {st : List UnseqStatus} {tg : List (String × TargetRef)} {env : LocalEnv} {ph : UnseqPhase}
-    {k : Cont} {ch : Choices} {c' : Config} {s' : Store} {ch' : Choices} {tr : AccessTrace}
+    {k : Cont} {ch : Choices} {c' : Config} {s' : Store} {ch' : Choices} {tr : StepLabel}
     (hph : ph ≠ .pick)
     (h : stepUnseqNext ctx s g thenB st tg env ph k ch = .ok (c', s', ch', tr)) :
     ch' = ch ∧ ∀ ch₂ : Choices, stepUnseqNext ctx s g thenB st tg env ph k ch₂ = .ok (c', s', ch₂, tr) := by
@@ -1545,7 +1548,7 @@ a run/wait phase, a completion, or a pick over a ready set of size ≤ 1 (a
 bound-≤-1 consult is inert, G-U). -/
 theorem stepUnseqNext_consumption_none {σ : Store} {g : UnseqGraph} {thenB : Stmt}
     {st : List UnseqStatus} {tg : List (String × TargetRef)} {env : LocalEnv} {ph : UnseqPhase}
-    {k : Cont} {ch₀ : Choices} {c' : Config} {σ' : Store} {ch₀' : Choices} {tr : AccessTrace}
+    {k : Cont} {ch₀ : Choices} {c' : Config} {σ' : Store} {ch₀' : Choices} {tr : StepLabel}
     (hsc : seqConsumption ctx σ (.next (.unseqK g thenB st tg env ph k)) = none)
     (h : stepUnseqNext ctx σ g thenB st tg env ph k ch₀ = .ok (c', σ', ch₀', tr)) :
     ch₀' = ch₀ ∧ ∀ ch : Choices, stepUnseqNext ctx σ g thenB st tg env ph k ch = .ok (c', σ', ch, tr) := by
@@ -1575,18 +1578,18 @@ theorem stepUnseqNext_consumption_none {σ : Store} {g : UnseqGraph} {thenB : St
       · rename_i hall
         split at h'
         · rename_i i hi
-          rw [Choices.consumeAt_le_one hle] at hi h'
+          rw [Choices.consumeAtE_le_one hle] at hi h'
           simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h' hi
           obtain ⟨rfl, rfl, rfl, rfl⟩ := h'
           exact ⟨rfl, fun ch => by
-            simp [stepUnseqNext, hdep, hall, Choices.consumeAt_le_one hle, hi]⟩
+            simp [stepUnseqNext, hdep, hall, Choices.consumeAtE_le_one hle, hi]⟩
         · simp [throw, throwThe, MonadExceptOf.throw] at h'
 
 /-- The scheduler's pick DRAWS the `unseqNext` site at bound `|ready|` and
 depends on the stream only through that pick. -/
 theorem stepUnseqNext_consumption_some {σ : Store} {g : UnseqGraph} {thenB : Stmt}
     {st : List UnseqStatus} {tg : List (String × TargetRef)} {env : LocalEnv} {ph : UnseqPhase}
-    {k : Cont} {ch₀ : Choices} {c' : Config} {σ' : Store} {ch₀' : Choices} {tr : AccessTrace}
+    {k : Cont} {ch₀ : Choices} {c' : Config} {σ' : Store} {ch₀' : Choices} {tr : StepLabel}
     {site : ChoiceSite} {b : Nat}
     (hsc : seqConsumption ctx σ (.next (.unseqK g thenB st tg env ph k)) = some (site, b))
     (h : stepUnseqNext ctx σ g thenB st tg env ph k ch₀ = .ok (c', σ', ch₀', tr)) :
@@ -1617,6 +1620,7 @@ theorem stepUnseqNext_consumption_some {σ : Store} {g : UnseqGraph} {thenB : St
       · rename_i hall
         split at h'
         · rename_i i hi
+          rw [Choices.consumeAtE_eq] at hi h'
           obtain ⟨p, cs, hpc⟩ : ∃ p cs,
               Choices.consumeAt .unseqNext (g.ready st).length ch₀ = (p, cs) := ⟨_, _, rfl⟩
           rw [hpc] at hi h'
@@ -1629,7 +1633,7 @@ theorem stepUnseqNext_consumption_some {σ : Store} {g : UnseqGraph} {thenB : St
           rw [hpc₂] at hpk ⊢
           simp only at hpk
           subst hpk
-          simp [stepUnseqNext, hdep, hall, hpc₂, hi]
+          simp [stepUnseqNext, hdep, hall, hpc₂, hi, Choices.consumeAtE_eq]
         · simp [throw, throwThe, MonadExceptOf.throw] at h'
 
 /-! ### The two configuration-determined `stepFn`-path picks (route α, Stage D)
@@ -1679,7 +1683,7 @@ theorem seqConsumption_unseqPanic {σ : Store} {chain : List PanicEntry} {k : Co
 -- (an argument unused in one goal is load-bearing in another).
 set_option linter.unusedSimpArgs false in
 theorem stepFn_sound {s : Store} {c : Config} {ch : Choices}
-    {c' : Config} {s' : Store} {ch' : Choices} {tr : AccessTrace}
+    {c' : Config} {s' : Store} {ch' : Choices} {tr : StepLabel}
     (h : stepFn ctx s c ch = .ok (c', s', ch', tr)) : Step ctx c s c' s' tr := by
   fun_cases stepFn ctx s c ch
   all_goals
@@ -1710,12 +1714,19 @@ theorem stepFn_sound {s : Store} {c : Config} {ch : Choices}
   case case6 =>
     -- The unsequenced-operand probe's pick (E13 option (b)): slot 0 is
     -- `probeDefer`, every other slot `probeRaise`.
-    rename_i chain k' pick ch'' hx
+    rename_i chain k' pick ch'' ps hx
+    obtain ⟨rfl, hc⟩ := Choices.consumeAtE_inv hx
+    have hlt : pick < 2 := by
+      have h2 := congrArg Prod.fst hc
+      simp only at h2
+      rw [← h2]; exact Choices.consumeAt_fst_lt (by omega)
     simp only [stepFn, hx, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl, rfl, rfl⟩ := h
     split
-    · exact Step.probeDefer
-    · exact Step.probeRaise
+    · rename_i h0; subst h0; exact Step.probeDefer
+    · rename_i h0
+      obtain rfl : pick = 1 := by omega
+      exact Step.probeRaise
   case case1 =>
     simp_all only [stepFn, Except.ok.injEq, Prod.mk.injEq]
     obtain ⟨rfl, rfl, rfl, rfl⟩ := h
@@ -1873,6 +1884,7 @@ theorem stepFn_sound {s : Store} {c : Config} {ch : Choices}
       have hsz : 0 < cands.size := by
         simp only [Array.isEmpty_iff] at hemp
         exact Array.size_pos_iff.mpr hemp
+      rw [Choices.consumeAtE_eq] at h
       rcases hcons : Choices.consumeAt .mapIter (cands.size + (if mand then 0 else 1)) ch
         with ⟨idx, ch₂⟩
       rw [hcons] at h
@@ -1885,6 +1897,17 @@ theorem stepFn_sound {s : Store} {c : Config} {ch : Choices}
         · -- mand = false: a legal stop
           simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
           obtain ⟨rfl, rfl, rfl, rfl⟩ := h
+          have hb := Choices.consumeAt_fst_lt (site := .mapIter)
+            (ch := ch) (bound := cands.size + if false = true then 0 else 1)
+            (by simp)
+          rw [hcons] at hb
+          simp at hb
+          obtain rfl : idx = cands.size := by omega
+          have hrec : PickRecord.ofPick .mapIter (cands.size + if false = true then 0 else 1)
+              cands.size = [⟨.mapIter, cands.size + 1, cands.size⟩] := by
+            simp only [PickRecord.ofPick, Bool.false_eq_true, if_false]
+            rw [if_neg (by omega)]
+          rw [hrec]
           exact Step.mapIterStop hcands (by omega) hmand
         · -- mand = true: width = size, so idx < size — no stop slot
           exfalso
@@ -1905,6 +1928,7 @@ theorem stepFn_sound {s : Store} {c : Config} {ch : Choices}
         subst hi
         subst hk
         subst hv
+        subst hmand
         exact Step.mapIterNext hlt hcands hd
   case case151 =>
     deliverV_arm h Step.storeStep
@@ -2009,7 +2033,7 @@ stream (`ch`/`ch'`); realize under exactly it. -/
 macro "complete_entry " hpick:ident hdel:ident ch:term:max ch':term:max : tactic =>
   `(tactic| (
     (try simp only [List.append_assoc] at $hpick:ident)
-    rcases enterFramePick_cases $hpick:ident with ⟨func, frameEnv, resultLocs, s₂, tr₂, ha, hX, -⟩ | ⟨msg, ha, hX, -⟩
+    rcases enterFramePick_cases $hpick:ident with ⟨func, frameEnv, resultLocs, s₂, tr₂, ha, hX, -, -⟩ | ⟨msg, ha, hX, -, -⟩
     · subst ha
       simp only [deliver_ok, Prod.mk.injEq] at $hdel:ident
       obtain ⟨h1, h2, h3⟩ := $hdel:ident
@@ -2045,7 +2069,7 @@ the composed funnel's outcome reads back to the V funnel's (`enterFramePickV_of_
 macro "completeV_entry " hpick:ident hdel:ident ch:term:max ch':term:max : tactic =>
   `(tactic| (
     (try simp only [List.append_assoc] at $hpick:ident)
-    rcases enterFramePick_cases $hpick:ident with ⟨func, frameEnv, resultLocs, s₂, tr₂, ha, hX, -⟩ | ⟨msg, ha, hX, -⟩
+    rcases enterFramePick_cases $hpick:ident with ⟨func, frameEnv, resultLocs, s₂, tr₂, ha, hX, -, -⟩ | ⟨msg, ha, hX, -, -⟩
     · subst ha
       simp only [deliver_ok, Prod.mk.injEq] at $hdel:ident
       obtain ⟨h1, h2, h3⟩ := $hdel:ident
@@ -2064,7 +2088,7 @@ panic text family. -/
 macro "anyV_entry " hpick:ident ch:term:max : tactic =>
   `(tactic| (
     (try simp only [List.append_assoc] at $hpick:ident)
-    rcases enterFramePick_cases $hpick:ident with ⟨func, frameEnv, resultLocs, s₂, tr₂, -, hX, -⟩ | ⟨msg, -, hX, -⟩
+    rcases enterFramePick_cases $hpick:ident with ⟨func, frameEnv, resultLocs, s₂, tr₂, -, hX, -, -⟩ | ⟨msg, -, hX, -, -⟩
     · obtain ⟨c, hpl, hc⟩ := enterFrame_inv_ok hX
       simp [stepFn, stepFrameExit, enterFramePickV_of_plan_ok hpl $ch, runCommit_eq_ok.mpr hc,
         Functor.map, Except.map, Bind.bind, Except.bind]
@@ -2076,7 +2100,7 @@ set_option linter.unusedSimpArgs false in
 stream (deterministic rules under any stream; the two nondeterministic
 step classes — `mapIterNext`'s pick and `stmtOpApply`'s capacity choice —
 under the stream that encodes the rule's choice). -/
-theorem step_complete {c : Config} {s : Store} {c' : Config} {s' : Store} {tr : AccessTrace}
+theorem step_complete {c : Config} {s : Store} {c' : Config} {s' : Store} {tr : StepLabel}
     (h : Step ctx c s c' s' tr) :
     ∃ ch ch' : Choices, stepFn ctx s c ch = .ok (c', s', ch', tr) := by
   cases h
@@ -2175,8 +2199,8 @@ theorem step_complete {c : Config} {s : Store} {c' : Config} {s' : Store} {tr : 
   -- The frame-entry rules carry their own stream (BUG-087's text pick
   -- is drawn from it on the panic path): realize under exactly it.
   case callImmediate =>
-    rename_i targets fid args plans r env k ch₀ ch₁ hplan hargs hpick hdel
-    rcases enterFramePick_cases hpick with ⟨func, frameEnv, resultLocs, s₂, tr₂, rfl, hX, -⟩ | ⟨msg, rfl, hX, -⟩
+    rename_i targets fid args plans r env k ch₀ ch₁ ps hplan hargs hpick hdel
+    rcases enterFramePick_cases hpick with ⟨func, frameEnv, resultLocs, s₂, tr₂, rfl, hX, -, -⟩ | ⟨msg, rfl, hX, -, -⟩
     · simp only [deliver_ok, Prod.mk.injEq] at hdel
       obtain ⟨rfl, rfl, rfl⟩ := hdel
       obtain ⟨c, hV, hc⟩ := enterFramePickV_of_ok hpick
@@ -2185,22 +2209,22 @@ theorem step_complete {c : Config} {s : Store} {c' : Config} {s' : Store} {tr : 
       have hV := enterFramePickV_of_panic hpick
       exact ⟨ch₀, ch₁, by simp [stepFn, hplan, hargs, hV, Bind.bind, Except.bind]⟩
   case callArgsDoneEnter =>
-    rename_i v fid plans vals r env k ch₀ ch₁ hpick hdel
+    rename_i v fid plans vals r env k ch₀ ch₁ ps hpick hdel
     completeV_entry hpick hdel ch₀ ch₁
   case callValCalleeEnter =>
-    rename_i fid captured plans r env k ch₀ ch₁ hpick hdel
+    rename_i fid captured plans r env k ch₀ ch₁ ps hpick hdel
     completeV_entry hpick hdel ch₀ ch₁
   case callValArgsEnter =>
-    rename_i v fid captured plans vals r env k ch₀ ch₁ hpick hdel
+    rename_i v fid captured plans vals r env k ch₀ ch₁ ps hpick hdel
     completeV_entry hpick hdel ch₀ ch₁
   case frameDeferFall =>
-    rename_i targets tenv results fid captured args ds k w r ch₀ ch₁ hpick hdel
+    rename_i targets tenv results fid captured args ds k w r ch₀ ch₁ ps hpick hdel
     completeV_entry hpick hdel ch₀ ch₁
   case frameDeferReturn =>
-    rename_i targets tenv results fid captured args ds k w r ch₀ ch₁ hpick hdel
+    rename_i targets tenv results fid captured args ds k w r ch₀ ch₁ ps hpick hdel
     completeV_entry hpick hdel ch₀ ch₁
   case panicFrameDefer =>
-    rename_i chain targets tenv results fid captured args ds k w r ch₀ ch₁ hpick hdel
+    rename_i chain targets tenv results fid captured args ds k w r ch₀ ch₁ ps hpick hdel
     completeV_entry hpick hdel ch₀ ch₁
   case stmtOpShiftPlain =>
     rename_i op nt done v e rest env k hle
@@ -2213,7 +2237,7 @@ theorem step_complete {c : Config} {s : Store} {c' : Config} {s' : Store} {tr : 
     -- (`cases` moves the label-bearing premise after the others — the
     -- name order `hbind hcands`.)
     rename_i keyVar valVar keyTy valTy body base produced start cands idx
-      env env' k hidx hbind hcands
+      env env' k tr hidx hcands hbind
     -- The mandatory test is pure (B1 stamps); name its value.
     obtain ⟨mand, hmand⟩ : ∃ m, mapIterMandatoryRemains cands start = m := ⟨_, rfl⟩
     have hwidth : idx < cands.size + (if mand then 0 else 1) := by
@@ -2234,7 +2258,7 @@ theorem step_complete {c : Config} {s : Store} {c' : Config} {s' : Store} {tr : 
       simp only [Array.isEmpty_iff]
       rintro rfl
       simp at hidx)]
-    rw [hmand, hcons]
+    rw [hmand, Choices.consumeAtE_eq, hcons]
     dsimp only
     split
     · rename_i heq
@@ -2248,7 +2272,7 @@ theorem step_complete {c : Config} {s : Store} {c' : Config} {s' : Store} {tr : 
       rw [hi]
       simp [hbind, Bind.bind, Except.bind]
   case mapIterStop =>
-    rename_i keyVar valVar keyTy valTy body base produced start cands env k
+    rename_i keyVar valVar keyTy valTy body base produced start cands env k tr
       hne hmand hcands
     refine ⟨[cands.size], [], ?_⟩
     have hcons : Choices.consumeAt .mapIter (cands.size + 1) [cands.size]
@@ -2261,12 +2285,12 @@ theorem step_complete {c : Config} {s : Store} {c' : Config} {s' : Store} {tr : 
     rw [if_neg (by simp only [Array.isEmpty_iff, ← Array.size_eq_zero_iff]; exact hne)]
     have hred : (cands.size + if false = true then 0 else 1)
         = cands.size + 1 := by simp
-    rw [hmand, hred, hcons]
+    rw [hmand, hred, Choices.consumeAtE_eq, hcons]
     dsimp only
     split
     · rename_i heq
-      simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
-      try exact ⟨rfl, rfl, rfl, rfl⟩
+      have hsz : ¬ (cands.size + 1 ≤ 1) := by omega
+      simp [PickRecord.ofPick, hsz]
     · rename_i id' key' value' heq
       exfalso
       have := (Array.getElem?_eq_some_iff.mp heq).1
@@ -2334,10 +2358,12 @@ theorem step_complete {c : Config} {s : Store} {c' : Config} {s' : Store} {tr : 
     exact ⟨[], [], by simp [stepFn, hstep]⟩
   case probeDefer =>
     -- Slot 0 (the empty stream's pick) realizes DEFER.
-    exact ⟨[], [], by simp [stepFn, Choices.consumeAt, Choices.consume]⟩
+    exact ⟨[], [], by
+      simp [stepFn, Choices.consumeAtE_eq, PickRecord.ofPick, Choices.consumeAt, Choices.consume]⟩
   case probeRaise =>
     -- The singleton stream `[1]` realizes RAISE.
-    exact ⟨[1], [], by simp [stepFn, Choices.consumeAt, Choices.consume]⟩
+    exact ⟨[1], [], by
+      simp [stepFn, Choices.consumeAtE_eq, PickRecord.ofPick, Choices.consumeAt, Choices.consume]⟩
   -- The `unseq` construct (Stage B): the deterministic rules under the
   -- empty stream; the pick under the singleton stream `[j]` — at bound ≥ 2
   -- it draws slot `j`, at bound 1 the forced slot 0 (`consumeAt_fst_singleton`).
@@ -2356,7 +2382,7 @@ theorem step_complete {c : Config} {s : Store} {c' : Config} {s' : Store} {tr : 
       rw [hpc] at this
       exact this
     subst hp
-    exact ⟨[p], cs, by simp [stepFn, stepUnseqNext, hdep, hall, hpc, hj]⟩
+    exact ⟨[p], cs, by simp [stepFn, stepUnseqNext, hdep, hall, hpc, hj, Choices.consumeAtE_eq]⟩
   case unseqComplete =>
     rename_i g thenB st tg env k refs vals hdep hall hprod hplan
     exact ⟨[], [], by simp [stepFn, stepUnseqNext, hdep, hall, hprod, hplan, Bind.bind, Except.bind]⟩
@@ -2387,13 +2413,13 @@ theorem step_complete {c : Config} {s : Store} {c' : Config} {s' : Store} {tr : 
       have hpl := unseqLoad_inv_panic hX
       exact ⟨[], [], by simp [stepFn, stepUnseqNext, hget, hbody, hpl, Bind.bind, Except.bind]⟩
   case unseqRunTarget =>
-    rename_i g thenB st tg env k o bind lhs r i hget hbody hplan
+    rename_i g thenB st tg env k o bind lhs r tr i hget hbody hplan
     exact ⟨[], [], by simp [stepFn, stepUnseqNext, hget, hbody, hplan, Bind.bind, Except.bind]⟩
   case unseqRunGuard =>
-    rename_i g thenB st tg env k o test w out st' i hget hbody hg
+    rename_i g thenB st tg env k o test w out st' tr i hget hbody hg
     exact ⟨[], [], by simp [stepFn, stepUnseqNext, hget, hbody, hg, Bind.bind, Except.bind]⟩
   case unseqValue =>
-    rename_i g thenB st tg env k o bind head v loc i hget hbody hloc hst
+    rename_i g thenB st tg env k o bind head v loc tr i hget hbody hloc hst
     exact ⟨[], [], by simp [stepFn, stepUnseqValue, hget, hbody, hloc, hst, Bind.bind, Except.bind]⟩
   case unseqStmtDone =>
     rename_i g thenB st tg env k o binds callee args i hget hbody
@@ -2572,7 +2598,7 @@ driver (B4): no rule's source configuration is an unrecovered chain at
 (`panicPassthrough` refuses `.stop`) — so a reachable abort can never be
 discharged by "it still steps" in a progress hypothesis. -/
 theorem step_abort_elim {chain : List PanicEntry} {σ : Store} {c' : Config}
-    {σ' : Store} {tr : AccessTrace} : ¬ Step ctx (.panicking chain .stop) σ c' σ' tr := by
+    {σ' : Store} {tr : StepLabel} : ¬ Step ctx (.panicking chain .stop) σ c' σ' tr := by
   intro h
   cases h
   simp [panicPassthrough, Cont.isGlue, Cont.class] at *
@@ -2589,7 +2615,7 @@ driver does not even classify it (a signal at `.stop` is a refusal). -/
 
 @[inherit_doc step_abort_elim]
 theorem step_signal_stop_elim {sg : Signal} {σ : Store} {c' : Config}
-    {σ' : Store} {tr : AccessTrace} : ¬ Step ctx (.signal sg .stop) σ c' σ' tr := by
+    {σ' : Store} {tr : StepLabel} : ¬ Step ctx (.signal sg .stop) σ c' σ' tr := by
   intro h
   cases h
   simp_all
@@ -2599,7 +2625,7 @@ steps `.next .stop` — every `.next` rule matches a frame. This is the
 `val_stuck` obligation of the consumer interface for the one value
 `to_val ⟨.next, .stop⟩ = some ()` (`docs/2026-09-05_c-arc-b4-design.md`
 §6; `Config.isTerminal`/`Config.terminal` name the shape). -/
-theorem step_terminal_elim {σ : Store} {c' : Config} {σ' : Store} {tr : AccessTrace} :
+theorem step_terminal_elim {σ : Store} {c' : Config} {σ' : Store} {tr : StepLabel} :
     ¬ Step ctx (.next .stop) σ c' σ' tr := by
   intro h
   cases h
@@ -2614,7 +2640,7 @@ Progress still implies the run never deadlocks. -/
 
 @[inherit_doc step_abort_elim]
 theorem step_blockedSend_elim {chl : Option Loc} {v : GoValue} {k : Cont}
-    {σ : Store} {c' : Config} {σ' : Store} {tr : AccessTrace} :
+    {σ : Store} {c' : Config} {σ' : Store} {tr : StepLabel} :
     ¬ Step ctx (.blockedSend chl v k) σ c' σ' tr := by
   intro h
   cases h
@@ -2622,14 +2648,14 @@ theorem step_blockedSend_elim {chl : Option Loc} {v : GoValue} {k : Cont}
 @[inherit_doc step_abort_elim]
 theorem step_blockedRecv_elim {chl : Option Loc} {targets : List Assignee}
     {elem : Ty} {env : LocalEnv} {k : Cont} {σ : Store} {c' : Config}
-    {σ' : Store} {tr : AccessTrace} :
+    {σ' : Store} {tr : StepLabel} :
     ¬ Step ctx (.blockedRecv chl targets elem env k) σ c' σ' tr := by
   intro h
   cases h
 
 @[inherit_doc step_abort_elim]
 theorem step_blockedSelect_elim {clauses : List EvClause} {env : LocalEnv}
-    {k : Cont} {σ : Store} {c' : Config} {σ' : Store} {tr : AccessTrace} :
+    {k : Cont} {σ : Store} {c' : Config} {σ' : Store} {tr : StepLabel} :
     ¬ Step ctx (.blockedSelect clauses env k) σ c' σ' tr := by
   intro h
   cases h
@@ -2638,7 +2664,7 @@ theorem step_blockedSelect_elim {clauses : List EvClause} {env : LocalEnv}
 pool wakes it; the sequential driver classifies it as the deadlocked
 run. -/
 theorem step_blockedSync_elim {op : SyncOp} {loc : Loc} {env : LocalEnv}
-    {k : Cont} {σ : Store} {c' : Config} {σ' : Store} {tr : AccessTrace} :
+    {k : Cont} {σ : Store} {c' : Config} {σ' : Store} {tr : StepLabel} :
     ¬ Step ctx (.blockedSync op loc env k) σ c' σ' tr := by
   intro h
   cases h
@@ -2677,7 +2703,7 @@ is preserved by every rule, and the executable inherits it through
 
 @[inherit_doc step_preserves_wf]
 theorem Step.preserves_wf {c : Config} {σ : Store} {c' : Config}
-    {σ' : Store} {tr : AccessTrace} (h : Step ctx c σ c' σ' tr) (hwf : MachineWf ctx σ c) :
+    {σ' : Store} {tr : StepLabel} (h : Step ctx c σ c' σ' tr) (hwf : MachineWf ctx σ c) :
     MachineWf ctx σ' c' :=
   step_preserves_wf h hwf
 
@@ -2685,7 +2711,7 @@ theorem Step.preserves_wf {c : Config} {σ : Store} {c' : Config}
 machine well-formed (`stepFn_sound` + `step_preserves_wf`). This is the
 fact `execStmtLoop`-level inductions thread along a run. -/
 theorem stepFn_preserves_wf {s : Store} {c : Config} {ch : Choices}
-    {c' : Config} {s' : Store} {ch' : Choices} {tr : AccessTrace}
+    {c' : Config} {s' : Store} {ch' : Choices} {tr : StepLabel}
     (h : stepFn ctx s c ch = .ok (c', s', ch', tr)) (hwf : MachineWf ctx s c) :
     MachineWf ctx s' c' :=
   step_preserves_wf (stepFn_sound h) hwf
@@ -2699,9 +2725,9 @@ the non-`appendSlice` half of the ∀-choices kit, true by construction
 since the `applyStmtOpCore` refactor. -/
 theorem applyStmtOp_ok_any_ch_core {σ : Store} {ch : Choices}
     {op : StmtOp} {nt : Nat} {vs : List GoValue} {σ' : Store}
-    {ch' : Choices} {tr : AccessTrace} (hop : ∀ elem, op ≠ .appendSlice elem)
-    (h : applyStmtOp ctx σ ch op nt vs = .ok (σ', ch', tr)) :
-    ∀ ch₂ : Choices, applyStmtOp ctx σ ch₂ op nt vs = .ok (σ', ch₂, tr) := by
+    {ch' : Choices} {ps : List PickRecord} {tr : AccessTrace} (hop : ∀ elem, op ≠ .appendSlice elem)
+    (h : applyStmtOp ctx σ ch op nt vs = .ok (σ', ch', ps, tr)) :
+    ∀ ch₂ : Choices, applyStmtOp ctx σ ch₂ op nt vs = .ok (σ', ch₂, ps, tr) := by
   intro ch₂
   -- C1 S3: the non-append plan is the core's plan beside the stream; the
   -- commit runs on `σ` under either stream.
@@ -4087,7 +4113,7 @@ needs). The choice only sizes the fresh backing and the result slice's
 theorem applyStmtOp_appendSlice_congr {σ : Store} {elem : Ty} {nt : Nat}
     {vs : List GoValue} (hb : goValueListSup vs ≤ σ.nextAddr)
     (ch₁ ch₂ : Choices) :
-    exceptCong (fun _ _ : Store × Choices × AccessTrace => True)
+    exceptCong (fun _ _ : Store × Choices × List PickRecord × AccessTrace => True)
       (applyStmtOp ctx σ ch₁ (.appendSlice elem) nt vs)
       (applyStmtOp ctx σ ch₂ (.appendSlice elem) nt vs) := by
   match vs, hb with
@@ -4103,8 +4129,8 @@ theorem applyStmtOp_appendSlice_congr {σ : Store} {elem : Ty} {nt : Nat}
     -- congruence of the phases, then of the two commits AT `σ`.
     unfold applyStmtOp
     refine exceptCong.bind_congr
-      (R := fun c₁ c₂ : Commit (Store × Choices × AccessTrace) =>
-        exceptCong (fun _ _ : Store × Choices × AccessTrace => True) (c₁ σ) (c₂ σ))
+      (R := fun c₁ c₂ : Commit (Store × Choices × List PickRecord × AccessTrace) =>
+        exceptCong (fun _ _ : Store × Choices × List PickRecord × AccessTrace => True) (c₁ σ) (c₂ σ))
       ?_ (fun c₁ c₂ hc => hc)
     simp only [applyStmtOp.plan]
     refine exceptCong.bind_congr (R := Eq) (exceptCong.self fun _ => rfl)
@@ -4130,7 +4156,7 @@ theorem applyStmtOp_appendSlice_congr {σ : Store} {elem : Ty} {nt : Nat}
     subst heq
     refine exceptCong.ite_congr (fun _ => ?_) (fun hspill => ?_)
     · -- in-place: the same choice-free commit under either stream
-      show exceptCong _ ((Commit.withStream ch₁ _) σ) ((Commit.withStream ch₂ _) σ)
+      show exceptCong _ ((Commit.withStream ch₁ _ _) σ) ((Commit.withStream ch₂ _ _) σ)
       simp only [Commit.withStream]
       refine exceptCong.bind_congr (R := Eq) (exceptCong.self fun _ => rfl)
         fun p p' hp => ?_
@@ -4170,7 +4196,7 @@ theorem applyStmtOp_appendSlice_congr {σ : Store} {elem : Ty} {nt : Nat}
         -- The commits AT `σ`: both allocations succeed (the backings
         -- re-normalize to themselves) at the same fresh address; the pushed
         -- heaps agree at `tloc`'s root.
-        show exceptCong _ ((Commit.withStream _ _) σ) ((Commit.withStream _ _) σ)
+        show exceptCong _ ((Commit.withStream _ _ _) σ) ((Commit.withStream _ _ _) σ)
         simp only [Commit.withStream, Store.alloc, hn₁, hn₂, Bind.bind, Except.bind, pure,
           Except.pure, Store.allocCell]
         refine exceptCong.bind_congr (R := fun _ _ => True) (S := fun _ _ => True)
@@ -4190,7 +4216,7 @@ too). -/
 theorem applyStmtOp_congr_any_ch {σ : Store} {op : StmtOp} {nt : Nat}
     {vs : List GoValue} (hb : goValueListSup vs ≤ σ.nextAddr)
     (ch₁ ch₂ : Choices) :
-    exceptCong (fun _ _ : Store × Choices × AccessTrace => True)
+    exceptCong (fun _ _ : Store × Choices × List PickRecord × AccessTrace => True)
       (applyStmtOp ctx σ ch₁ op nt vs) (applyStmtOp ctx σ ch₂ op nt vs) := by
   cases op
   case appendSlice elem => exact applyStmtOp_appendSlice_congr hb ch₁ ch₂
@@ -4213,7 +4239,7 @@ stream succeeds under EVERY stream, given bounded operands (audit
 correction 2026-08-04: `StateWf` dropped — the operand bound is the whole
 requirement). -/
 theorem applyStmtOp_ok_any_ch_wf {σ : Store} {ch₀ : Choices}
-    {op : StmtOp} {nt : Nat} {vs : List GoValue} {r : Store × Choices × AccessTrace}
+    {op : StmtOp} {nt : Nat} {vs : List GoValue} {r : Store × Choices × List PickRecord × AccessTrace}
     (hb : goValueListSup vs ≤ σ.nextAddr)
     (h : applyStmtOp ctx σ ch₀ op nt vs = .ok r) :
     ∀ ch : Choices, ∃ r', applyStmtOp ctx σ ch op nt vs = .ok r' := by
@@ -4369,14 +4395,16 @@ theorem consumesTryLock_none {v : GoValue} {op : SyncOp} {done : List GoValue}
 success — the `applyStmtOp_eq_core` twin. -/
 theorem applySyncOp_core_ok {σ : Store} {ch₀ : Choices} {op : SyncOp}
     {vs : List GoValue} {env : LocalEnv} {k : Cont} {c' : Config}
-    {σ' : Store} {ch' : Choices} {tr : AccessTrace} (hop : op.tryTargets? = none)
-    (h : applySyncOp ctx σ ch₀ op vs env k = .ok (c', σ', ch', tr)) :
-    ch' = ch₀ ∧ ∀ ch : Choices, applySyncOp ctx σ ch op vs env k = .ok (c', σ', ch, tr) := by
+    {σ' : Store} {ch' : Choices} {ps : List PickRecord} {tr : AccessTrace}
+    (hop : op.tryTargets? = none)
+    (h : applySyncOp ctx σ ch₀ op vs env k = .ok (c', σ', ch', ps, tr)) :
+    ch' = ch₀ ∧ ps = [] ∧
+      ∀ ch : Choices, applySyncOp ctx σ ch op vs env k = .ok (c', σ', ch, [], tr) := by
   rw [applySyncOp.eq_def] at h
   rw [hop] at h
   simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-  obtain ⟨⟨c₀, σ₀, tr₀⟩, hcore, rfl, rfl, rfl, rfl⟩ := h
-  refine ⟨rfl, fun ch => ?_⟩
+  obtain ⟨⟨c₀, σ₀, tr₀⟩, hcore, rfl, rfl, rfl, rfl, rfl⟩ := h
+  refine ⟨rfl, rfl, fun ch => ?_⟩
   rw [applySyncOp.eq_def, hop]
   simp [hcore, Bind.bind, Except.bind]
 
@@ -4398,14 +4426,14 @@ theorem applySyncOp_core_error {σ : Store} {ch₀ : Choices} {op : SyncOp}
 never see the stream, the TRY heads by `applyTryLock_ok_any`. -/
 theorem applySyncOp_ok_any_ch {σ : Store} {ch₀ : Choices} {op : SyncOp}
     {vs : List GoValue} {env : LocalEnv} {k : Cont} {c' : Config}
-    {σ' : Store} {ch₁ : Choices} {tr₁ : AccessTrace}
-    (h : applySyncOp ctx σ ch₀ op vs env k = .ok (c', σ', ch₁, tr₁)) (ch : Choices) :
-    ∃ (c₂ : Config) (σ₂ : Store) (ch₂ : Choices) (tr₂ : AccessTrace),
-      applySyncOp ctx σ ch op vs env k = .ok (c₂, σ₂, ch₂, tr₂) := by
+    {σ' : Store} {ch₁ : Choices} {ps₁ : List PickRecord} {tr₁ : AccessTrace}
+    (h : applySyncOp ctx σ ch₀ op vs env k = .ok (c', σ', ch₁, ps₁, tr₁)) (ch : Choices) :
+    ∃ (c₂ : Config) (σ₂ : Store) (ch₂ : Choices) (ps₂ : List PickRecord) (tr₂ : AccessTrace),
+      applySyncOp ctx σ ch op vs env k = .ok (c₂, σ₂, ch₂, ps₂, tr₂) := by
   cases hop : op.tryTargets? with
   | none =>
-    obtain ⟨-, hall⟩ := applySyncOp_core_ok hop h
-    exact ⟨c', σ', ch, tr₁, hall ch⟩
+    obtain ⟨-, -, hall⟩ := applySyncOp_core_ok hop h
+    exact ⟨c', σ', ch, [], tr₁, hall ch⟩
   | some targets =>
     rw [applySyncOp.eq_def] at h ⊢
     rw [hop] at h ⊢
@@ -4415,8 +4443,10 @@ theorem applySyncOp_ok_any_ch {σ : Store} {ch₀ : Choices} {op : SyncOp}
       obtain ⟨loc, hloc, pre, hcell, ⟨c₀, σ₀, tr₀⟩, happ, -⟩ := h
       obtain ⟨⟨c₂, σ₂, tr₂⟩, happ₂⟩ := applyTryLock_ok_any happ
         ((Choices.consumeAt .tryLock (tryLockWidth op pre) ch).1 == 1)
-      refine ⟨c₂, σ₂, (Choices.consumeAt .tryLock (tryLockWidth op pre) ch).2, tr₂, ?_⟩
-      simp [hloc, hcell, happ₂, Bind.bind, Except.bind]
+      refine ⟨c₂, σ₂, (Choices.consumeAt .tryLock (tryLockWidth op pre) ch).2,
+        PickRecord.ofPick .tryLock (tryLockWidth op pre)
+          (Choices.consumeAt .tryLock (tryLockWidth op pre) ch).1, tr₂, ?_⟩
+      simp [hloc, hcell, happ₂, Bind.bind, Except.bind, Choices.consumeAtE_eq]
     · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
     · rename_i heq
       cases heq
@@ -4445,7 +4475,7 @@ theorem applySyncOp_panic_any_ch {σ : Store} {ch₀ : Choices} {op : SyncOp}
         | error e' => rw [hcell] at h; simpa using h
         | ok pre =>
           rw [hcell] at h
-          dsimp only at h ⊢
+          simp only [Choices.consumeAtE_eq] at h ⊢
           cases happ : applyTryLock ctx σ op loc pre
               ((Choices.consumeAt .tryLock (tryLockWidth op pre) ch₀).1 == 1) targets env k with
           | error e' =>
@@ -4587,6 +4617,7 @@ theorem applySelect_ok_or_panic_any_ch {σ : Store}
                 simp [throw, throwThe, MonadExceptOf.throw, Stop.internal,
                   Stop.panic] at h
           | cons b rest =>
+              simp only [Choices.consumeAtE_eq]
               rcases hcons : Choices.consumeAt .l2Entry (b :: rest).length ch
                 with ⟨idx, ch'⟩
               have hlt : idx < (b :: rest).length := by
@@ -4594,7 +4625,7 @@ theorem applySelect_ok_or_panic_any_ch {σ : Store}
                   (show 0 < (b :: rest).length by simp)
                 rw [hcons] at this
                 simpa using this
-              dsimp only
+              try dsimp only
               rw [List.getElem?_eq_getElem hlt]
               cases hb : (b :: rest)[idx] with
               | mk cl sr =>
@@ -4608,7 +4639,7 @@ on success AND on error. -/
 theorem applyStmtOp_eq_core {σ : Store} {ch : Choices} {op : StmtOp}
     {nt : Nat} {vs : List GoValue} (hop : ∀ e, op ≠ .appendSlice e) :
     applyStmtOp ctx σ ch op nt vs
-      = (fun p => (p.1, ch, p.2)) <$> applyStmtOpCore ctx σ op vs := by
+      = (fun p => (p.1, ch, [], p.2)) <$> applyStmtOpCore ctx σ op vs := by
   unfold applyStmtOp applyStmtOpCore
   rw [applyStmtOp_plan_eq_core hop]
   cases applyStmtOpCore.plan ctx σ op vs with
@@ -4660,7 +4691,7 @@ theorem stepFn_mapIter_ok_any {σ : Store} {kv vv : Option String}
   intro ch
   have hsnap := mapIterCandidates_normalized hcands
   simp only [stepFn, hcands, Bind.bind, Except.bind]
-  rw [hmand, if_neg hne]
+  rw [hmand, if_neg hne, Choices.consumeAtE_eq]
   rcases hcons : Choices.consumeAt .mapIter (cands.size + (if mand = true then 0 else 1)) ch
     with ⟨idx', rest'⟩
   dsimp only
@@ -4686,7 +4717,7 @@ set_option linter.unusedSimpArgs false in
 /-- `step_complete_any_wf`, ∃-packaged (the per-case scripts close a
 single existential over the whole result). -/
 theorem step_complete_any_wf_aux {c : Config} {σ : Store} {c' : Config}
-    {σ' : Store} {tr : AccessTrace} (h : Step ctx c σ c' σ' tr) (hwf : MachineWf ctx σ c) :
+    {σ' : Store} {tr : StepLabel} (h : Step ctx c σ c' σ' tr) (hwf : MachineWf ctx σ c) :
     ∀ ch : Choices, ∃ out, stepFn ctx σ c ch = .ok out := by
   obtain ⟨hs, hc⟩ := hwf
   intro ch
@@ -4737,15 +4768,15 @@ theorem step_complete_any_wf_aux {c : Config} {σ : Store} {c' : Config}
     rw [if_neg (Nat.not_lt.mpr hle)]
     exact ⟨_, rfl⟩
   case mapIterNext keyVar valVar keyTy valTy body base produced start cands
-      idx env env' k hidx hbind hcands =>
+      idx env env' k tr hidx hcands hbind =>
     exact stepFn_mapIter_ok_any hcands rfl
       (by simp only [Array.isEmpty_iff]; rintro rfl; simp at hidx) ch
   case mapIterStop keyVar valVar keyTy valTy body base produced start cands
-      env k hne hmand hcands =>
+      env k tr hne hmand hcands =>
     exact stepFn_mapIter_ok_any hcands hmand
       (by simp only [Array.isEmpty_iff, ← Array.size_eq_zero_iff]; exact hne) ch
   case mapIterDone keyVar valVar keyTy valTy body base produced start env k
-      hcands =>
+      tr hcands =>
     simp [stepFn, hcands, Bind.bind, Except.bind]
   case panicUnwind chain k k' hpass =>
     cases k <;> simp_all [stepFn, panicPassthrough, Cont.isGlue, Cont.class, Cont.tail]
@@ -4767,8 +4798,8 @@ theorem step_complete_any_wf_aux {c : Config} {σ : Store} {c' : Config}
   -- The sync apply is pick-independent in apply-SUCCESS and in its panic
   -- (Q-TRYLOCK; `applySyncOp_ok_any_ch`/`applySyncOp_panic_any_ch`).
   case syncStApply op done v r env k ch₀ hres hdel =>
-    rcases toResult_cases hres with ⟨⟨c₂, σ₂, ch₂, tr₂⟩, rfl, happly⟩ | ⟨msg, rfl, happly⟩
-    · obtain ⟨c₃, σ₃, ch₃, tr₃, hap⟩ := applySyncOp_ok_any_ch happly ch
+    rcases toResult_cases hres with ⟨⟨c₂, σ₂, ch₂, ps₂, tr₂⟩, rfl, happly⟩ | ⟨msg, rfl, happly⟩
+    · obtain ⟨c₃, σ₃, ch₃, ps₃, tr₃, hap⟩ := applySyncOp_ok_any_ch happly ch
       simp only [List.reverse_cons] at hap
       simp [stepFn, hap, List.reverse_cons, Bind.bind, Except.bind]
     · have hap := applySyncOp_panic_any_ch happly ch
@@ -4790,29 +4821,29 @@ theorem step_complete_any_wf_aux {c : Config} {σ : Store} {c' : Config}
     · simp [stepFn, hap, List.reverse_cons, Bind.bind, Except.bind]
   -- The frame-entry rules: the entry classifies under EVERY stream
   -- (`enterFramePick_any_ch`), and `deliverS` then delivers.
-  case callImmediate targets fid args plans r env k ch₀ ch₁ hplan hargs hpick hdel =>
-    rcases enterFramePick_cases hpick with ⟨func, frameEnv, resultLocs, s₂, tr₂, -, hX, -⟩ | ⟨msg, -, hX, -⟩
+  case callImmediate targets fid args plans r env k ch₀ ch₁ ps hplan hargs hpick hdel =>
+    rcases enterFramePick_cases hpick with ⟨func, frameEnv, resultLocs, s₂, tr₂, -, hX, -, -⟩ | ⟨msg, -, hX, -, -⟩
     · obtain ⟨c, hpl, hc⟩ := enterFrame_inv_ok hX
       simp [stepFn, hplan, hargs, enterFramePickV_of_plan_ok hpl ch, runCommit_eq_ok.mpr hc,
         Functor.map, Except.map, Bind.bind, Except.bind]
     · have hpl := enterFrame_inv_panic hX
       simp [stepFn, hplan, hargs, enterFramePickV_of_plan_panic hpl ch, Bind.bind, Except.bind]
-  case callArgsDoneEnter v fid plans vals r env k ch₀ ch₁ hpick hdel =>
+  case callArgsDoneEnter v fid plans vals r env k ch₀ ch₁ ps hpick hdel =>
     anyV_entry hpick ch
-  case callValCalleeEnter fid captured plans r env k ch₀ ch₁ hpick hdel =>
+  case callValCalleeEnter fid captured plans r env k ch₀ ch₁ ps hpick hdel =>
     anyV_entry hpick ch
-  case callValArgsEnter v fid captured plans vals r env k ch₀ ch₁ hpick hdel =>
+  case callValArgsEnter v fid captured plans vals r env k ch₀ ch₁ ps hpick hdel =>
     anyV_entry hpick ch
-  case frameDeferFall targets tenv results fid captured args ds k w r ch₀ ch₁ hpick hdel =>
+  case frameDeferFall targets tenv results fid captured args ds k w r ch₀ ch₁ ps hpick hdel =>
     anyV_entry hpick ch
-  case frameDeferReturn targets tenv results fid captured args ds k w r ch₀ ch₁ hpick hdel =>
+  case frameDeferReturn targets tenv results fid captured args ds k w r ch₀ ch₁ ps hpick hdel =>
     anyV_entry hpick ch
   -- B4: the signal statements and the table.
   case signalStmt stmt sg env k hsig =>
     cases stmt <;> simp_all [stepFn, Stmt.signal?]
   case signal sg k hstep =>
     simp [stepFn, hstep]
-  case panicFrameDefer chain targets tenv results fid captured args ds k w r ch₀ ch₁ hpick hdel =>
+  case panicFrameDefer chain targets tenv results fid captured args ds k w r ch₀ ch₁ ps hpick hdel =>
     anyV_entry hpick ch
   -- The `unseq` construct (Stage B): the deterministic rules under any
   -- stream; the pick's consult lands inside the ready list at every stream
@@ -4831,7 +4862,7 @@ theorem step_complete_any_wf_aux {c : Config} {σ : Store} {c' : Config}
       rw [hpc] at this
       exact this
     have hsome : (g.ready st)[p]? = some (g.ready st)[p] := List.getElem?_eq_getElem hp
-    simp [stepFn, stepUnseqNext, hdep, hall, hpc, hsome]
+    simp [stepFn, stepUnseqNext, hdep, hall, hpc, hsome, Choices.consumeAtE_eq]
   case unseqComplete g thenB st tg env k refs vals hdep hall hprod hplan =>
     simp [stepFn, stepUnseqNext, hdep, hall, hprod, hplan, Bind.bind, Except.bind]
   case unseqRunEval g thenB st tg env k o bind head i hget hbody =>
@@ -4857,11 +4888,11 @@ theorem step_complete_any_wf_aux {c : Config} {σ : Store} {c' : Config}
       simp [stepFn, hpl, runCommit_eq_ok.mpr hc, Functor.map, Except.map, Bind.bind, Except.bind]
     · have hpl := storeTarget_inv_panic hX
       simp [stepFn, hpl, Bind.bind, Except.bind]
-  case unseqRunTarget g thenB st tg env k o bind lhs r i hget hbody hplan =>
+  case unseqRunTarget g thenB st tg env k o bind lhs r tr i hget hbody hplan =>
     simp [stepFn, stepUnseqNext, hget, hbody, hplan, Bind.bind, Except.bind]
-  case unseqRunGuard g thenB st tg env k o test w out st' i hget hbody hg =>
+  case unseqRunGuard g thenB st tg env k o test w out st' tr i hget hbody hg =>
     simp [stepFn, stepUnseqNext, hget, hbody, hg, Bind.bind, Except.bind]
-  case unseqValue g thenB st tg env k o bind head v loc i hget hbody hloc hst =>
+  case unseqValue g thenB st tg env k o bind head v loc tr i hget hbody hloc hst =>
     simp [stepFn, stepUnseqValue, hget, hbody, hloc, hst, Bind.bind, Except.bind]
   case unseqStmtDone g thenB st tg env k o binds callee args i hget hbody =>
     simp [stepFn, stepUnseqNext, hget, hbody]
@@ -4877,8 +4908,8 @@ theorem step_complete_any_wf_aux {c : Config} {σ : Store} {c' : Config}
 configuration the relation can step from is one the executable steps
 from under EVERY choice stream, provided the machine is well-formed. -/
 theorem step_complete_any_wf {c : Config} {σ : Store} {c' : Config}
-    {σ' : Store} {tr : AccessTrace} (h : Step ctx c σ c' σ' tr) (hwf : MachineWf ctx σ c) :
-    ∀ ch : Choices, ∃ (c₂ : Config) (σ₂ : Store) (ch₂ : Choices) (tr₂ : AccessTrace),
+    {σ' : Store} {tr : StepLabel} (h : Step ctx c σ c' σ' tr) (hwf : MachineWf ctx σ c) :
+    ∀ ch : Choices, ∃ (c₂ : Config) (σ₂ : Store) (ch₂ : Choices) (tr₂ : StepLabel),
       stepFn ctx σ c ch = .ok (c₂, σ₂, ch₂, tr₂) := by
   intro ch
   obtain ⟨⟨c₂, σ₂, ch₂, tr₂⟩, hout⟩ := step_complete_any_wf_aux h hwf ch
@@ -4899,7 +4930,7 @@ concern (2026-08-04: unconstrained `.returned`/`.broke`/`.continued`
 completions silently accepted) has no shape left to arise in. -/
 theorem execStmtLoop_ok_or_fuelOut {σ₀ : Store} {c₀ : Config}
     (hprog : ∀ (c' : Config) (σ' : Store), Steps ctx c₀ σ₀ c' σ' →
-      c' = .next .stop ∨ ∃ (c'' : Config) (σ'' : Store) (tr : AccessTrace), Step ctx c' σ' c'' σ'' tr)
+      c' = .next .stop ∨ ∃ (c'' : Config) (σ'' : Store) (tr : StepLabel), Step ctx c' σ' c'' σ'' tr)
     (hwf : MachineWf ctx σ₀ c₀) :
     ∀ (fuel : Nat) (ch : Choices),
       (∃ (σf : Store) (ch' : Choices),
@@ -5096,7 +5127,7 @@ theorem applySelect_done_stream {σ : Store} {clauses : List (SelectClauseHead �
     {default? : Option Stmt} {vs : List GoValue} {env : LocalEnv} {k : Cont}
     {c₁ : Config} {s₁ : Store} {cl? : Option EvClause} {tr : AccessTrace}
     (h : applySelectCore ctx σ clauses default? vs env k = .ok (.done c₁ s₁ cl? tr)) (ch : Choices) :
-    applySelect ctx σ clauses default? vs env k ch = .ok (c₁, s₁, ch, cl?, tr) := by
+    applySelect ctx σ clauses default? vs env k ch = .ok (c₁, s₁, ch, [], cl?, tr) := by
   simp [applySelect, h, Bind.bind, Except.bind]
 
 /-- A multi-ready analysis: `applySelect`'s stream is the L2 pop, and the
@@ -5108,11 +5139,13 @@ theorem applySelect_picks_stream {σ : Store} {clauses : List (SelectClauseHead 
     applySelect ctx σ clauses default? vs env k ch =
       (match commits[(Choices.consumeAt .l2Entry commits.length ch).1]? with
        | some (cl, .inl (c', s', tr)) =>
-           .ok (c', s', (Choices.consumeAt .l2Entry commits.length ch).2, some cl, poll ++ tr)
+           .ok (c', s', (Choices.consumeAt .l2Entry commits.length ch).2,
+             PickRecord.ofPick .l2Entry commits.length (Choices.consumeAt .l2Entry commits.length ch).1, some cl, poll ++ tr)
        | some (cl, .inr msg) =>
-           .ok (.panicking [panicEntry msg] k, σ, (Choices.consumeAt .l2Entry commits.length ch).2, some cl, poll)
+           .ok (.panicking [panicEntry msg] k, σ, (Choices.consumeAt .l2Entry commits.length ch).2,
+             PickRecord.ofPick .l2Entry commits.length (Choices.consumeAt .l2Entry commits.length ch).1, some cl, poll)
        | none => .error (.internal "select ready-clause pick out of range")) := by
-  simp only [applySelect, h, Bind.bind, Except.bind]
+  simp only [applySelect, h, Bind.bind, Except.bind, Choices.consumeAtE_eq]
   rfl
 
 /-- An error of the analysis is an error of the apply. -/
@@ -5130,8 +5163,10 @@ theorem applySyncOp_try_stream {σ : Store} {op : SyncOp} {targets : List Assign
     applySyncOp ctx σ ch op [av] env k =
       (applyTryLock ctx σ op loc pre
         ((Choices.consumeAt .tryLock (tryLockWidth op pre) ch).1 == 1) targets env k).map
-        fun p => (p.1, p.2.1, (Choices.consumeAt .tryLock (tryLockWidth op pre) ch).2, p.2.2) := by
-  simp only [applySyncOp, ht, hl, hc, Bind.bind, Except.bind, Except.map]
+        fun p => (p.1, p.2.1, (Choices.consumeAt .tryLock (tryLockWidth op pre) ch).2,
+          PickRecord.ofPick .tryLock (tryLockWidth op pre)
+            (Choices.consumeAt .tryLock (tryLockWidth op pre) ch).1, p.2.2) := by
+  simp only [applySyncOp, ht, hl, hc, Bind.bind, Except.bind, Except.map, Choices.consumeAtE_eq]
   cases applyTryLock ctx σ op loc pre
       ((Choices.consumeAt .tryLock (tryLockWidth op pre) ch).1 == 1) targets env k <;> rfl
 
@@ -5143,9 +5178,9 @@ theorem applySyncOp_try_nopop {σ : Store} {op : SyncOp} {targets : List Assigne
     (ht : op.tryTargets? = some targets) (hl : valueAsLoc av = .ok loc)
     (hc : syncCell ctx σ loc = .ok pre) (hw : tryLockWidth op pre ≤ 1) (ch : Choices) :
     applySyncOp ctx σ ch op [av] env k =
-      (applyTryLock ctx σ op loc pre false targets env k).map fun p => (p.1, p.2.1, ch, p.2.2) := by
+      (applyTryLock ctx σ op loc pre false targets env k).map fun p => (p.1, p.2.1, ch, [], p.2.2) := by
   rw [applySyncOp_try_stream ht hl hc ch, Choices.consumeAt_le_one hw]
-  rfl
+  simp [PickRecord.ofPick, hw]
 
 /-- Three-bind form of `bind_pair_map` (C1 S1: the spill path allocates
 between the build and the store). -/
@@ -5218,7 +5253,7 @@ theorem bind_pair_map {α : Type} (T : Except Stop α)
 theorem applyStmtOp_plan_appendSlice_nospill {σ : Store} {elem : Ty} {nt : Nat}
     {vs : List GoValue} (hw : appendSpill? ctx σ elem vs = none) :
     ∃ r : Except Stop (Commit (Store × AccessTrace)), ∀ ch : Choices,
-      applyStmtOp.plan ctx σ ch (.appendSlice elem) nt vs = r.map (Commit.withStream ch) := by
+      applyStmtOp.plan ctx σ ch (.appendSlice elem) nt vs = r.map (Commit.withStream ch []) := by
   match vs, hw with
   | [], _ => exact ⟨.error (.stuck "malformed appendSlice operands"), fun _ => rfl⟩
   | [_], _ => exact ⟨.error (.stuck "malformed appendSlice operands"), fun _ => rfl⟩
@@ -5287,7 +5322,8 @@ theorem applyStmtOp_plan_appendSlice_spill {σ : Store} {elem : Ty} {nt : Nat}
       (∀ ch : Choices,
         applyStmtOp.plan ctx σ ch (.appendSlice elem) nt vs
           = (g (Choices.consumeAt .appendSpill w ch).1).map
-              (Commit.withStream (Choices.consumeAt .appendSpill w ch).2))
+              (Commit.withStream (Choices.consumeAt .appendSpill w ch).2
+                [⟨.appendSpill, w, (Choices.consumeAt .appendSpill w ch).1⟩]))
       ∧ (∀ pick, NoPanic (g pick)) := by
   match vs, hw with
   | [tv, sliceV, elemsV], hw =>
@@ -5343,7 +5379,9 @@ theorem applyStmtOp_plan_appendSlice_spill {σ : Store} {elem : Ty} {nt : Nat}
           let (s', trT) ← Mem.store ctx current tloc
             (.slice { base := some base, offset := 0, len := slice.len + elemValues.size, cap := newCap })
           pure (s', trE ++ trO ++ trT)
-    · rcases hc : Choices.consumeAt .appendSpill (appendSpillWidth slice.cap (slice.len + elemValues.size)) ch
+    · have hw1 := one_lt_appendSpillWidth slice.cap (slice.len + elemValues.size)
+      simp only [Choices.consumeAtE_eq, PickRecord.ofPick, if_neg (Nat.not_le_of_lt hw1)]
+      rcases hc : Choices.consumeAt .appendSpill (appendSpillWidth slice.cap (slice.len + elemValues.size)) ch
         with ⟨extra, rest⟩
       try dsimp only
       cases buildAppendBackingValue ctx elem oldValues elemValues _ <;> rfl
@@ -5354,7 +5392,7 @@ plan for every non-append head, the non-spilling / refusing append otherwise. -/
 theorem applyStmtOp_plan_of_stmtConsult?_none {σ : Store} {op : StmtOp} {nt : Nat}
     {vs : List GoValue} (h : stmtConsult? ctx σ op vs = none) :
     ∃ r : Except Stop (Commit (Store × AccessTrace)), ∀ ch : Choices,
-      applyStmtOp.plan ctx σ ch op nt vs = r.map (Commit.withStream ch) := by
+      applyStmtOp.plan ctx σ ch op nt vs = r.map (Commit.withStream ch []) := by
   by_cases hap : ∀ e, op ≠ .appendSlice e
   · exact ⟨applyStmtOpCore.plan ctx σ op vs, fun ch => applyStmtOp_plan_eq_core hap⟩
   · obtain ⟨e, rfl⟩ : ∃ e, op = .appendSlice e := by
@@ -5374,7 +5412,7 @@ theorem stepFn_mapIter_done {σ : Store} {kv vv : Option String}
     (hcands : mapIterCandidates ctx σ kt vt base produced = .ok (#[], tr)) :
     ∀ ch : Choices,
       stepFn ctx σ (.next (.mapIterK kv vv kt vt body base produced start env k)) ch
-        = .ok (.next k, σ, ch, tr) := by
+        = .ok (.next k, σ, ch, ⟨tr, [], []⟩) := by
   intro ch
   simp [stepFn, hcands, Bind.bind, Except.bind]
 
@@ -5401,9 +5439,9 @@ theorem stepFn_mapIter_pick {σ : Store} {kv vv : Option String}
           fun p => (.exec body p.1
             (.mapIterK kv vv kt vt body base (produced.push cands[idx].1)
               start env k),
-            p.2, tail, tr)) := by
+            p.2, tail, ⟨tr, PickRecord.ofPick .mapIter (cands.size + (if mand = true then 0 else 1)) idx, []⟩)) := by
   simp only [stepFn, hcands, Bind.bind, Except.bind]
-  rw [hmand, if_neg hne, hcons]
+  rw [hmand, if_neg hne, Choices.consumeAtE_eq, hcons]
   dsimp only
   split
   · rename_i heq
@@ -5435,13 +5473,18 @@ theorem stepFn_mapIter_stop {σ : Store} {kv vv : Option String}
     (hne : ¬ cands.isEmpty = true)
     (hcons : Choices.consumeAt .mapIter (cands.size + 1) ch = (cands.size, tail)) :
     stepFn ctx σ (.next (.mapIterK kv vv kt vt body base produced start env k)) ch
-      = .ok (.next k, σ, tail, tr) := by
+      = .ok (.next k, σ, tail, ⟨tr, [⟨.mapIter, cands.size + 1, cands.size⟩], []⟩) := by
   simp only [stepFn, hcands, Bind.bind, Except.bind]
   rw [hmand, if_neg hne]
   have hred : (cands.size + if false = true then 0 else 1)
       = cands.size + 1 := by simp
-  rw [hred, hcons]
-  dsimp only
+  rw [hred, Choices.consumeAtE_eq, hcons]
+  have hsz : ¬ (cands.size + 1 ≤ 1) := by
+    simp only [Array.isEmpty_iff] at hne
+    have := Array.size_pos_iff.mpr hne
+    omega
+  simp only [PickRecord.ofPick, if_neg hsz]
+  try dsimp only
   split
   · rfl
   · rename_i key value heq
@@ -5548,8 +5591,8 @@ theorem entryCallSite?_panicking {chain : List PanicEntry} {k : Cont} {p : FuncI
 commit lifted beside the stream; the commit reads no stream). -/
 theorem stepFn_stmtOp_oblivious {σ : Store} {op : StmtOp} {nt : Nat} {done : List GoValue}
     {v : GoValue} {env : LocalEnv} {k : Cont} {r : Except Stop (Commit (Store × AccessTrace))}
-    (hr : ∀ ch : Choices, applyStmtOp.plan ctx σ ch op nt (v :: done).reverse = r.map (Commit.withStream ch))
-    {ch₀ : Choices} {c' : Config} {σ' : Store} {ch₀' : Choices} {tr : AccessTrace}
+    (hr : ∀ ch : Choices, applyStmtOp.plan ctx σ ch op nt (v :: done).reverse = r.map (Commit.withStream ch []))
+    {ch₀ : Choices} {c' : Config} {σ' : Store} {ch₀' : Choices} {tr : StepLabel}
     (h : stepFn ctx σ (.retV v (.stmtOpK op nt done [] env k)) ch₀ = .ok (c', σ', ch₀', tr)) :
     ch₀' = ch₀ ∧ ∀ ch : Choices,
       stepFn ctx σ (.retV v (.stmtOpK op nt done [] env k)) ch = .ok (c', σ', ch, tr) := by
@@ -5591,9 +5634,10 @@ theorem stepFn_stmtOp_spill {σ : Store} {elem : Ty} {nt : Nat} {done : List GoV
     {g : Nat → Except Stop (Commit (Store × AccessTrace))}
     (hg : ∀ ch : Choices, applyStmtOp.plan ctx σ ch (.appendSlice elem) nt (v :: done).reverse
       = (g (Choices.consumeAt .appendSpill w ch).1).map
-          (Commit.withStream (Choices.consumeAt .appendSpill w ch).2))
+          (Commit.withStream (Choices.consumeAt .appendSpill w ch).2
+            [⟨.appendSpill, w, (Choices.consumeAt .appendSpill w ch).1⟩]))
     (hnp : ∀ pick, NoPanic (g pick))
-    {ch₀ : Choices} {c' : Config} {σ' : Store} {ch₀' : Choices} {tr : AccessTrace}
+    {ch₀ : Choices} {c' : Config} {σ' : Store} {ch₀' : Choices} {tr : StepLabel}
     (h : stepFn ctx σ (.retV v (.stmtOpK (.appendSlice elem) nt done [] env k)) ch₀
       = .ok (c', σ', ch₀', tr)) :
     ch₀' = (Choices.consumeAt .appendSpill w ch₀).2 ∧ ∀ ch : Choices,
@@ -5633,8 +5677,8 @@ stream passed through). -/
 theorem stepFn_syncApply_oblivious {σ : Store} {op : SyncOp} {done : List GoValue}
     {v : GoValue} {env : LocalEnv} {k : Cont} {r : Except Stop (Config × Store × AccessTrace)}
     (hr : ∀ ch : Choices, applySyncOp ctx σ ch op (v :: done).reverse env k
-      = r.map fun p => (p.1, p.2.1, ch, p.2.2))
-    {ch₀ : Choices} {c' : Config} {σ' : Store} {ch₀' : Choices} {tr : AccessTrace}
+      = r.map fun p => (p.1, p.2.1, ch, [], p.2.2))
+    {ch₀ : Choices} {c' : Config} {σ' : Store} {ch₀' : Choices} {tr : StepLabel}
     (h : stepFn ctx σ (.retV v (.syncStK op done [] env k)) ch₀ = .ok (c', σ', ch₀', tr)) :
     ch₀' = ch₀ ∧ ∀ ch : Choices,
       stepFn ctx σ (.retV v (.syncStK op done [] env k)) ch = .ok (c', σ', ch, tr) := by
@@ -5672,7 +5716,7 @@ there exactly as every entry does (`entryConsult?`): with the consult
 theorem stepFrameExit_consumption_none {σ : Store}
     {targets : List (TargetShape × List Expr)} {tenv : LocalEnv} {results : List Loc}
     {ds : List (GoValue × List GoValue)} {k' : Cont} {w : Bool} {c : Config}
-    {ch₀ : Choices} {c' : Config} {σ' : Store} {ch₀' : Choices} {tr : AccessTrace}
+    {ch₀ : Choices} {c' : Config} {σ' : Store} {ch₀' : Choices} {tr : StepLabel}
     (hc : c = .next (.frame targets tenv results ds k' w)
       ∨ c = .signal .ret (.frame targets tenv results ds k' w))
     (hsc : seqConsumption ctx σ c = none)
@@ -5745,7 +5789,7 @@ entries (B4). -/
 theorem stepFrameExit_consumption_some {σ : Store}
     {targets : List (TargetShape × List Expr)} {tenv : LocalEnv} {results : List Loc}
     {ds : List (GoValue × List GoValue)} {k' : Cont} {w : Bool} {c : Config}
-    {ch₀ : Choices} {c' : Config} {σ' : Store} {ch₀' : Choices} {tr : AccessTrace}
+    {ch₀ : Choices} {c' : Config} {σ' : Store} {ch₀' : Choices} {tr : StepLabel}
     {site : ChoiceSite} {b : Nat}
     (hc : c = .next (.frame targets tenv results ds k' w)
       ∨ c = .signal .ret (.frame targets tenv results ds k' w))
@@ -5783,7 +5827,7 @@ five consults at a non-popping instance (`applyStmtOp_of_stmtConsult?_none`,
 `stepFn_mapIter_done`, `entryConsult?_none`). A newly added
 stream-consuming arm breaks this proof loudly. -/
 theorem stepFn_consumption_none {σ : Store} {c : Config} {ch₀ : Choices}
-    {c' : Config} {σ' : Store} {ch₀' : Choices} {tr : AccessTrace}
+    {c' : Config} {σ' : Store} {ch₀' : Choices} {tr : StepLabel}
     (hsc : seqConsumption ctx σ c = none)
     (h : stepFn ctx σ c ch₀ = .ok (c', σ', ch₀', tr)) :
     ch₀' = ch₀ ∧ ∀ ch : Choices, stepFn ctx σ c ch = .ok (c', σ', ch, tr) := by
@@ -5876,8 +5920,8 @@ theorem stepFn_consumption_none {σ : Store} {c : Config} {ch₀ : Choices}
         exact stepFn_syncApply_oblivious (r := .error e)
           (fun ch => by rw [applySyncOp_core_error hop hap ch]; rfl) h
       | ok p =>
-        obtain ⟨c₂, σ₂, ch₂, tr₂⟩ := p
-        obtain ⟨rfl, hall⟩ := applySyncOp_core_ok hop hap
+        obtain ⟨c₂, σ₂, ch₂, ps₂, tr₂⟩ := p
+        obtain ⟨rfl, rfl, hall⟩ := applySyncOp_core_ok hop hap
         exact stepFn_syncApply_oblivious (r := .ok (c₂, σ₂, tr₂))
           (fun ch => by rw [hall ch]; rfl) h
     | some targets =>
@@ -6190,18 +6234,19 @@ theorem stepFn_consumption_some {σ : Store} {c : Config} {ch₀ : Choices}
   case case6 =>
     -- The `unseqPanic` pop (E13 option (b)): bound 2, the step depends on
     -- the stream only through the pick.
-    rename_i chain k' pick ch'' hx
+    rename_i chain k' pick ch'' ps hx
     simp only [seqConsumption, Option.some.injEq, Prod.mk.injEq] at hsc
     obtain ⟨rfl, rfl⟩ := hsc
+    obtain ⟨rfl, hx'⟩ := Choices.consumeAtE_inv hx
     simp only [stepFn, hx, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl, rfl, rfl⟩ := h
-    refine ⟨by rw [hx], fun ch hpk => ?_⟩
-    rw [hx] at hpk
+    refine ⟨by rw [hx'], fun ch hpk => ?_⟩
+    rw [hx'] at hpk
     obtain ⟨p, cs, hpc⟩ : ∃ p cs, Choices.consumeAt .unseqPanic 2 ch = (p, cs) := ⟨_, _, rfl⟩
     rw [hpc] at hpk ⊢
     simp only at hpk
     subst hpk
-    simp [stepFn, hpc]
+    simp [stepFn, hpc, Choices.consumeAtE_eq]
   -- The `unseq` scheduler's pick (Stage B): the `unseqNext` pop at bound
   -- `|ready|`, the step depending on the stream only through the pick.
   case case154 =>
@@ -6509,7 +6554,7 @@ successor and the stream returned untouched. Its consumers
 (`allStreamsOk`'s soundness, the pool-level `stepThread_oblivious`) are
 unchanged. -/
 theorem stepFn_oblivious {σ : Store} {c : Config} {ch₀ : Choices}
-    {c' : Config} {σ' : Store} {ch₀' : Choices} {tr : AccessTrace}
+    {c' : Config} {σ' : Store} {ch₀' : Choices} {tr : StepLabel}
     (hmi : ∀ (kv vv : Option String) (kt vt : Ty) (body : Stmt)
       (base : Option Loc) (produced start : Array Nat)
       (env : LocalEnv) (k : Cont),
@@ -6550,7 +6595,7 @@ theorem execStmtLoop_unfold (fuel : Nat) (σ : Store) (c : Config)
 terminal shape, so a successful step means the loop at `fuel + 1` is
 exactly the step followed by the loop at `fuel`. -/
 theorem execStmtLoop_step {fuel : Nat} {σ : Store} {c : Config}
-    {ch : Choices} {c₁ : Config} {σ₁ : Store} {ch₁ : Choices} {tr₁ : AccessTrace}
+    {ch : Choices} {c₁ : Config} {σ₁ : Store} {ch₁ : Choices} {tr₁ : StepLabel}
     (h : stepFn ctx σ c ch = .ok (c₁, σ₁, ch₁, tr₁)) :
     execStmtLoop ctx (fuel + 1) σ c ch = execStmtLoop ctx fuel σ₁ c₁ ch₁ := by
   rw [execStmtLoop_unfold (fuel + 1) σ c ch]
@@ -6601,7 +6646,7 @@ theorem execStmtLoop_ok_of_allStreamsOk :
         · rename_i c₁ σ₁ ch₁ tr₁ hprobe
           rw [stepFn_mapIter_done hcands [0]] at hprobe
           obtain ⟨rfl, rfl, rfl, rfl⟩ :
-              c₁ = .next k ∧ σ₁ = σ ∧ ch₁ = [0] ∧ tr₁ = trc := by
+              c₁ = .next k ∧ σ₁ = σ ∧ ch₁ = [0] ∧ tr₁ = ⟨trc, [], []⟩ := by
             have h1 := congrArg (fun r => match r with
               | Except.ok (c, _, _, _) => c | _ => c₁) hprobe
             have h2 := congrArg (fun r => match r with

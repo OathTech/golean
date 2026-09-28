@@ -292,10 +292,10 @@ def runCommit {α : Type} (c : Commit α) (s : Store) : Except Stop α :=
 `ch` — consumed, if at all, by the validate phase — rides beside the result.
 Names the fact the consumption theorems rest on: a commit never touches the
 stream (`applyStmtOp.plan`'s every arm returns one of these). -/
-def Commit.withStream (ch : Choices) (c : Commit (Store × AccessTrace)) :
-    Commit (Store × Choices × AccessTrace) := fun s => do
+def Commit.withStream (ch : Choices) (ps : List PickRecord) (c : Commit (Store × AccessTrace)) :
+    Commit (Store × Choices × List PickRecord × AccessTrace) := fun s => do
   let (s', tr) ← c s
-  return (s', ch, tr)
+  return (s', ch, ps, tr)
 
 /-- Store into a map element: normalize key and value at the map's
 types, insert-or-overwrite; a NIL map is the run-time panic. Shared
@@ -899,12 +899,12 @@ through here: the seven `stepFn` positions (`entryCallSite?`) and the
 `go`-statement spawn (`spawnStep`, Multi.lean); the relation's entry
 rules quantify the stream (`ch`/`ch'`, the `stmtOpApply` idiom). -/
 def enterFramePick (s : Store) (fid : FuncId) (args : List GoValue) (ch : Choices) :
-    Except Stop (Result (Func × LocalEnv × List Loc × Store × AccessTrace) × Choices) :=
+    Except Stop (Result (Func × LocalEnv × List Loc × Store × AccessTrace) × Choices × List PickRecord) :=
   match toResult (enterFrame ctx s fid args) with
-  | .ok (.ok r) => .ok (.ok r, ch)
+  | .ok (.ok r) => .ok (.ok r, ch, [])
   | .ok (.panic msg) =>
-      let (pick, ch') := Choices.consumeAt .nilValueMethodText (nilValueMethodWidth ctx fid args) ch
-      .ok (.panic (entryPanicText ctx fid args msg pick), ch')
+      let (pick, ch', ps) := Choices.consumeAtE .nilValueMethodText (nilValueMethodWidth ctx fid args) ch
+      .ok (.panic (entryPanicText ctx fid args msg pick), ch', ps)
   | .error e => .error e
 
 /-- `enterFramePick`'s VALIDATE half (C1 S3, cost B): the same classification
@@ -919,12 +919,12 @@ with `enterFramePick_of_V_ok`/`enterFramePick_of_V_panic` (below) and
 `enterFramePickV_ok`/`_panic`/`_error` this docstring used to name were
 never declared. -/
 def enterFramePickV (s : Store) (fid : FuncId) (args : List GoValue) (ch : Choices) :
-    Except Stop (Result (Commit (Func × LocalEnv × List Loc × Store × AccessTrace)) × Choices) :=
+    Except Stop (Result (Commit (Func × LocalEnv × List Loc × Store × AccessTrace)) × Choices × List PickRecord) :=
   match toResult (enterFrame.plan ctx s fid args) with
-  | .ok (.ok c) => .ok (.ok c, ch)
+  | .ok (.ok c) => .ok (.ok c, ch, [])
   | .ok (.panic msg) =>
-      let (pick, ch') := Choices.consumeAt .nilValueMethodText (nilValueMethodWidth ctx fid args) ch
-      .ok (.panic (entryPanicText ctx fid args msg pick), ch')
+      let (pick, ch', ps) := Choices.consumeAtE .nilValueMethodText (nilValueMethodWidth ctx fid args) ch
+      .ok (.panic (entryPanicText ctx fid args msg pick), ch', ps)
   | .error e => .error e
 
 variable {ctx}
@@ -933,7 +933,7 @@ theorem enterFramePick_ok {s : Store} {fid : FuncId} {args : List GoValue}
     {ch : Choices} {func : Func} {frameEnv : LocalEnv} {resultLocs : List Loc} {s' : Store}
     {tr : AccessTrace}
     (h : enterFrame ctx s fid args = .ok (func, frameEnv, resultLocs, s', tr)) :
-    enterFramePick ctx s fid args ch = .ok (.ok (func, frameEnv, resultLocs, s', tr), ch) := by
+    enterFramePick ctx s fid args ch = .ok (.ok (func, frameEnv, resultLocs, s', tr), ch, []) := by
   simp [enterFramePick, h]
 
 /-- The entry panic's text and the popped stream, on the panic path. -/
@@ -943,8 +943,9 @@ theorem enterFramePick_panic {s : Store} {fid : FuncId} {args : List GoValue}
     enterFramePick ctx s fid args ch =
       .ok (.panic (entryPanicText ctx fid args msg
             (Choices.consumeAt .nilValueMethodText (nilValueMethodWidth ctx fid args) ch).1),
-          (Choices.consumeAt .nilValueMethodText (nilValueMethodWidth ctx fid args) ch).2) := by
-  simp [enterFramePick, h]
+          (Choices.consumeAt .nilValueMethodText (nilValueMethodWidth ctx fid args) ch).2,
+          (PickRecord.ofPick .nilValueMethodText (nilValueMethodWidth ctx fid args) (Choices.consumeAt .nilValueMethodText (nilValueMethodWidth ctx fid args) ch).1)) := by
+  simp [enterFramePick, h, Choices.consumeAtE_eq]
 
 /-- Any other stop propagates. -/
 theorem enterFramePick_error {s : Store} {fid : FuncId} {args : List GoValue}
@@ -956,14 +957,15 @@ theorem enterFramePick_error {s : Store} {fid : FuncId} {args : List GoValue}
 an entered frame with the stream untouched, or the entry panic's text
 under the site's pick with the stream popped. -/
 theorem enterFramePick_cases {s : Store} {fid : FuncId} {args : List GoValue}
-    {ch ch' : Choices} {r : Result (Func × LocalEnv × List Loc × Store × AccessTrace)}
-    (h : enterFramePick ctx s fid args ch = .ok (r, ch')) :
+    {ch ch' : Choices} {ps : List PickRecord} {r : Result (Func × LocalEnv × List Loc × Store × AccessTrace)}
+    (h : enterFramePick ctx s fid args ch = .ok (r, ch', ps)) :
     (∃ func frameEnv resultLocs s' tr, r = .ok (func, frameEnv, resultLocs, s', tr)
-        ∧ enterFrame ctx s fid args = .ok (func, frameEnv, resultLocs, s', tr) ∧ ch' = ch)
+        ∧ enterFrame ctx s fid args = .ok (func, frameEnv, resultLocs, s', tr) ∧ ch' = ch ∧ ps = [])
     ∨ (∃ msg, r = .panic (entryPanicText ctx fid args msg
           (Choices.consumeAt .nilValueMethodText (nilValueMethodWidth ctx fid args) ch).1)
         ∧ enterFrame ctx s fid args = .error (.panic msg)
-        ∧ ch' = (Choices.consumeAt .nilValueMethodText (nilValueMethodWidth ctx fid args) ch).2) := by
+        ∧ ch' = (Choices.consumeAt .nilValueMethodText (nilValueMethodWidth ctx fid args) ch).2
+        ∧ ps = (PickRecord.ofPick .nilValueMethodText (nilValueMethodWidth ctx fid args) (Choices.consumeAt .nilValueMethodText (nilValueMethodWidth ctx fid args) ch).1)) := by
   unfold enterFramePick at h
   cases hx : toResult (enterFrame ctx s fid args) with
   | error e => rw [hx] at h; cases h
@@ -973,17 +975,17 @@ theorem enterFramePick_cases {s : Store} {fid : FuncId} {args : List GoValue}
     | ok a =>
       obtain ⟨func, frameEnv, resultLocs, s', tr⟩ := a
       simp only [Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
-      exact .inl ⟨func, frameEnv, resultLocs, s', tr, rfl, toResult_eq_ok_ok.mp hx, rfl⟩
+      obtain ⟨rfl, rfl, rfl⟩ := h
+      exact .inl ⟨func, frameEnv, resultLocs, s', tr, rfl, toResult_eq_ok_ok.mp hx, rfl, rfl⟩
     | panic msg =>
-      simp only [Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
-      exact .inr ⟨msg, rfl, toResult_eq_ok_panic.mp hx, rfl⟩
+      simp only [Choices.consumeAtE_eq, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl, rfl⟩ := h
+      exact .inr ⟨msg, rfl, toResult_eq_ok_panic.mp hx, rfl, rfl⟩
 
 /-- An entry that does NOT panic never touches the stream. -/
 theorem enterFramePick_of_nopanic {s : Store} {fid : FuncId} {args : List GoValue}
     (hnp : ∀ msg, enterFrame ctx s fid args ≠ .error (.panic msg)) (ch : Choices) :
-    enterFramePick ctx s fid args ch = (toResult (enterFrame ctx s fid args)).map (·, ch) := by
+    enterFramePick ctx s fid args ch = (toResult (enterFrame ctx s fid args)).map (·, ch, []) := by
   unfold enterFramePick
   cases hx : toResult (enterFrame ctx s fid args) with
   | error e => rfl
@@ -996,19 +998,19 @@ theorem enterFramePick_of_nopanic {s : Store} {fid : FuncId} {args : List GoValu
 stream (the classification is `enterFrame`'s, stream-free; only the
 panic TEXT and the popped tail depend on the stream). -/
 theorem enterFramePick_any_ch {s : Store} {fid : FuncId} {args : List GoValue}
-    {ch ch' : Choices} {r : Result (Func × LocalEnv × List Loc × Store × AccessTrace)}
-    (h : enterFramePick ctx s fid args ch = .ok (r, ch')) (ch₂ : Choices) :
-    ∃ r₂ ch₂', enterFramePick ctx s fid args ch₂ = .ok (r₂, ch₂') := by
+    {ch ch' : Choices} {ps : List PickRecord} {r : Result (Func × LocalEnv × List Loc × Store × AccessTrace)}
+    (h : enterFramePick ctx s fid args ch = .ok (r, ch', ps)) (ch₂ : Choices) :
+    ∃ r₂ ch₂' ps₂, enterFramePick ctx s fid args ch₂ = .ok (r₂, ch₂', ps₂) := by
   rcases enterFramePick_cases h with ⟨func, frameEnv, resultLocs, s', tr, -, hX, -⟩ | ⟨msg, -, hX, -⟩
-  · exact ⟨_, _, enterFramePick_ok hX⟩
-  · exact ⟨_, _, enterFramePick_panic hX⟩
+  · exact ⟨_, _, _, enterFramePick_ok hX⟩
+  · exact ⟨_, _, _, enterFramePick_panic hX⟩
 
 /-- Outside the wrapper family the entry is stream-oblivious: the
 panic-path consult is at bound 1 and pops nothing. -/
 theorem enterFramePick_of_isSome_false {fid : FuncId} {args : List GoValue}
     (hn : (nilValueMethodText? ctx fid args).isSome = false) :
     ∀ (s : Store) (ch : Choices),
-      enterFramePick ctx s fid args ch = (toResult (enterFrame ctx s fid args)).map (·, ch) := by
+      enterFramePick ctx s fid args ch = (toResult (enterFrame ctx s fid args)).map (·, ch, []) := by
   -- B7: the store is quantified AFTER the family test — the test reads the
   -- context only, so `s` can no longer be inferred from `hn`.
   intro s ch
@@ -1019,19 +1021,20 @@ theorem enterFramePick_of_isSome_false {fid : FuncId} {args : List GoValue}
     cases r with
     | ok a => rfl
     | panic msg =>
-      simp [nilValueMethodWidth_of_isSome_false hn, entryPanicText_of_isSome_false hn, Except.map]
+      simp [nilValueMethodWidth_of_isSome_false hn, entryPanicText_of_isSome_false hn, Except.map,
+        Choices.consumeAtE_eq, PickRecord.ofPick]
 
 /-- The family-free entry, ∀-stream form. -/
 theorem enterFramePick_oblivious_of_isSome_false {fid : FuncId}
     {args : List GoValue} (hn : (nilValueMethodText? ctx fid args).isSome = false)
     (s : Store) (ch : Choices) :
-    enterFramePick ctx s fid args ch = (toResult (enterFrame ctx s fid args)).map (·, ch) :=
+    enterFramePick ctx s fid args ch = (toResult (enterFrame ctx s fid args)).map (·, ch, []) :=
   enterFramePick_of_isSome_false hn s ch
 
 @[inherit_doc enterFramePick_of_isSome_false]
 theorem enterFramePick_of_none {s : Store} {fid : FuncId} {args : List GoValue}
     {ch : Choices} (hn : nilValueMethodText? ctx fid args = none) :
-    enterFramePick ctx s fid args ch = (toResult (enterFrame ctx s fid args)).map (·, ch) := by
+    enterFramePick ctx s fid args ch = (toResult (enterFrame ctx s fid args)).map (·, ch, []) := by
   unfold enterFramePick
   cases toResult (enterFrame ctx s fid args) with
   | error e => rfl
@@ -1039,7 +1042,8 @@ theorem enterFramePick_of_none {s : Store} {fid : FuncId} {args : List GoValue}
     cases r with
     | ok a => rfl
     | panic msg =>
-      simp [nilValueMethodWidth_of_none hn, entryPanicText_of_none hn, Except.map]
+      simp [nilValueMethodWidth_of_none hn, entryPanicText_of_none hn, Except.map,
+        Choices.consumeAtE_eq, PickRecord.ofPick]
 
 /-! ### The V funnel's bridge (C1 S3): `enterFramePickV` against `enterFramePick` -/
 
@@ -1062,13 +1066,15 @@ theorem plan_run_error {α : Type} {plan : Except Stop (Commit α)} {s : Store} 
 commit with the stream untouched, or the entry panic's text under the site's
 pick with the stream popped. -/
 theorem enterFramePickV_cases {s : Store} {fid : FuncId} {args : List GoValue}
-    {ch ch' : Choices} {r : Result (Commit (Func × LocalEnv × List Loc × Store × AccessTrace))}
-    (h : enterFramePickV ctx s fid args ch = .ok (r, ch')) :
-    (∃ c, r = .ok c ∧ enterFrame.plan ctx s fid args = .ok c ∧ ch' = ch)
+    {ch ch' : Choices} {ps : List PickRecord}
+    {r : Result (Commit (Func × LocalEnv × List Loc × Store × AccessTrace))}
+    (h : enterFramePickV ctx s fid args ch = .ok (r, ch', ps)) :
+    (∃ c, r = .ok c ∧ enterFrame.plan ctx s fid args = .ok c ∧ ch' = ch ∧ ps = [])
     ∨ (∃ msg, r = .panic (entryPanicText ctx fid args msg
           (Choices.consumeAt .nilValueMethodText (nilValueMethodWidth ctx fid args) ch).1)
         ∧ enterFrame.plan ctx s fid args = .error (.panic msg)
-        ∧ ch' = (Choices.consumeAt .nilValueMethodText (nilValueMethodWidth ctx fid args) ch).2) := by
+        ∧ ch' = (Choices.consumeAt .nilValueMethodText (nilValueMethodWidth ctx fid args) ch).2
+        ∧ ps = (PickRecord.ofPick .nilValueMethodText (nilValueMethodWidth ctx fid args) (Choices.consumeAt .nilValueMethodText (nilValueMethodWidth ctx fid args) ch).1)) := by
   unfold enterFramePickV at h
   cases hx : toResult (enterFrame.plan ctx s fid args) with
   | error e => rw [hx] at h; cases h
@@ -1077,19 +1083,19 @@ theorem enterFramePickV_cases {s : Store} {fid : FuncId} {args : List GoValue}
     cases r₀ with
     | ok c =>
       simp only [Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
-      exact .inl ⟨c, rfl, toResult_eq_ok_ok.mp hx, rfl⟩
+      obtain ⟨rfl, rfl, rfl⟩ := h
+      exact .inl ⟨c, rfl, toResult_eq_ok_ok.mp hx, rfl, rfl⟩
     | panic msg =>
-      simp only [Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
-      exact .inr ⟨msg, rfl, toResult_eq_ok_panic.mp hx, rfl⟩
+      simp only [Choices.consumeAtE_eq, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl, rfl⟩ := h
+      exact .inr ⟨msg, rfl, toResult_eq_ok_panic.mp hx, rfl, rfl⟩
 
 /-- Outside the wrapper family the V entry is stream-oblivious
 (`enterFramePick_of_isSome_false`'s twin). -/
 theorem enterFramePickV_of_isSome_false {fid : FuncId} {args : List GoValue}
     (hn : (nilValueMethodText? ctx fid args).isSome = false) :
     ∀ (s : Store) (ch : Choices),
-      enterFramePickV ctx s fid args ch = (toResult (enterFrame.plan ctx s fid args)).map (·, ch) := by
+      enterFramePickV ctx s fid args ch = (toResult (enterFrame.plan ctx s fid args)).map (·, ch, []) := by
   intro s ch
   unfold enterFramePickV
   cases toResult (enterFrame.plan ctx s fid args) with
@@ -1098,12 +1104,13 @@ theorem enterFramePickV_of_isSome_false {fid : FuncId} {args : List GoValue}
     cases r with
     | ok c => rfl
     | panic msg =>
-      simp [nilValueMethodWidth_of_isSome_false hn, entryPanicText_of_isSome_false hn, Except.map]
+      simp [nilValueMethodWidth_of_isSome_false hn, entryPanicText_of_isSome_false hn, Except.map,
+        Choices.consumeAtE_eq, PickRecord.ofPick]
 
 @[inherit_doc enterFramePickV_of_isSome_false]
 theorem enterFramePickV_of_none {s : Store} {fid : FuncId} {args : List GoValue}
     {ch : Choices} (hn : nilValueMethodText? ctx fid args = none) :
-    enterFramePickV ctx s fid args ch = (toResult (enterFrame.plan ctx s fid args)).map (·, ch) := by
+    enterFramePickV ctx s fid args ch = (toResult (enterFrame.plan ctx s fid args)).map (·, ch, []) := by
   unfold enterFramePickV
   cases toResult (enterFrame.plan ctx s fid args) with
   | error e => rfl
@@ -1111,29 +1118,31 @@ theorem enterFramePickV_of_none {s : Store} {fid : FuncId} {args : List GoValue}
     cases r with
     | ok c => rfl
     | panic msg =>
-      simp [nilValueMethodWidth_of_none hn, entryPanicText_of_none hn, Except.map]
+      simp [nilValueMethodWidth_of_none hn, entryPanicText_of_none hn, Except.map,
+        Choices.consumeAtE_eq, PickRecord.ofPick]
 
 /-- A V `.ok` whose commit runs IS the composed funnel's `.ok` entry (the stream
 untouched on this path). -/
 theorem enterFramePick_of_V_ok {s : Store} {fid : FuncId} {args : List GoValue}
-    {ch ch' : Choices} {c : Commit (Func × LocalEnv × List Loc × Store × AccessTrace)}
+    {ch ch' : Choices} {ps : List PickRecord}
+    {c : Commit (Func × LocalEnv × List Loc × Store × AccessTrace)}
     {a : Func × LocalEnv × List Loc × Store × AccessTrace}
-    (hv : enterFramePickV ctx s fid args ch = .ok (.ok c, ch')) (hc : c s = .ok a) :
-    enterFramePick ctx s fid args ch = .ok (.ok a, ch') ∧ ch' = ch := by
-  rcases enterFramePickV_cases hv with ⟨c', hce, hplan, rfl⟩ | ⟨msg, hr, -, -⟩
+    (hv : enterFramePickV ctx s fid args ch = .ok (.ok c, ch', ps)) (hc : c s = .ok a) :
+    enterFramePick ctx s fid args ch = .ok (.ok a, ch', ps) ∧ ch' = ch ∧ ps = [] := by
+  rcases enterFramePickV_cases hv with ⟨c', hce, hplan, rfl, rfl⟩ | ⟨msg, hr, -, -⟩
   · simp only [Result.ok.injEq] at hce
     subst hce
     have henter : enterFrame ctx s fid args = .ok a := by
       simp [enterFrame, hplan, Bind.bind, Except.bind, hc]
-    exact ⟨by simp [enterFramePick, henter], rfl⟩
+    exact ⟨by simp [enterFramePick, henter], rfl, rfl⟩
   · cases hr
 
 /-- A V `.panic` IS the composed funnel's `.panic` (same text, same popped stream). -/
 theorem enterFramePick_of_V_panic {s : Store} {fid : FuncId} {args : List GoValue}
-    {ch ch' : Choices} {msg : String}
-    (hv : enterFramePickV ctx s fid args ch = .ok (.panic msg, ch')) :
-    enterFramePick ctx s fid args ch = .ok (.panic msg, ch') := by
-  rcases enterFramePickV_cases hv with ⟨c, hce, -, -⟩ | ⟨msg₀, hr, hplan, rfl⟩
+    {ch ch' : Choices} {ps : List PickRecord} {msg : String}
+    (hv : enterFramePickV ctx s fid args ch = .ok (.panic msg, ch', ps)) :
+    enterFramePick ctx s fid args ch = .ok (.panic msg, ch', ps) := by
+  rcases enterFramePickV_cases hv with ⟨c, hce, -, -⟩ | ⟨msg₀, hr, hplan, rfl, rfl⟩
   · cases hce
   · simp only [Result.panic.injEq] at hr
     subst hr
@@ -1599,6 +1608,15 @@ theorem one_lt_appendSpillWidth (oldCap newLen : Nat) :
       = ch.consume (appendSpillWidth oldCap newLen) :=
   Choices.consumeAt_of_lt (one_lt_appendSpillWidth oldCap newLen)
 
+/-- The spill consult's record-emitting form: the raw pop plus its record. -/
+@[simp] theorem Choices.consumeAtE_appendSpill {oldCap newLen : Nat} {ch : Choices} :
+    Choices.consumeAtE .appendSpill (appendSpillWidth oldCap newLen) ch
+      = ((ch.consume (appendSpillWidth oldCap newLen)).1,
+         (ch.consume (appendSpillWidth oldCap newLen)).2,
+         [⟨.appendSpill, appendSpillWidth oldCap newLen,
+           (ch.consume (appendSpillWidth oldCap newLen)).1⟩]) :=
+  Choices.consumeAtE_of_lt (one_lt_appendSpillWidth oldCap newLen)
+
 variable (ctx)
 /-- Apply a wide statement's head to its evaluated operands (`nt` leading
 target addresses, then values). One state-update step. `appendSlice`'s
@@ -1611,7 +1629,7 @@ spill's capacity consult happens here, before the seam, so the commit is
 the fresh backing's allocation and the header write and consumes nothing.
 The composed `applyStmtOp` (below) is the relation's. -/
 def applyStmtOp.plan (s : Store) (choices : Choices) (op : StmtOp) (_nt : Nat)
-    (vs : List GoValue) : Except Stop (Commit (Store × Choices × AccessTrace)) := do
+    (vs : List GoValue) : Except Stop (Commit (Store × Choices × List PickRecord × AccessTrace)) := do
   match op with
   | .appendSlice elem =>
       match vs with
@@ -1629,7 +1647,7 @@ def applyStmtOp.plan (s : Store) (choices : Choices) (op : StmtOp) (_nt : Nat)
             -- (`Mem.storeRun`: a nil base admits only the empty run — the
             -- former «cannot append … into nil slice in place» refusal was
             -- unreachable under `validateSlice`, C1 S2a record.)
-            return Commit.withStream choices fun s => do
+            return Commit.withStream choices [] fun s => do
               let (current, trW) ← Mem.storeRun ctx s slice slice.len elemValues.toList
               let (s', trT) ← Mem.store ctx current tloc (.slice { slice with len := newLen })
               return (s', trE ++ trW ++ trT)
@@ -1669,11 +1687,11 @@ def applyStmtOp.plan (s : Store) (choices : Choices) (op : StmtOp) (_nt : Nat)
             -- strict lane's deterministic behavior is unchanged — while
             -- extra ranges bijectively over the whole envelope.
             let width := appendSpillWidth slice.cap newLen
-            let (extra, choices) := Choices.consumeAt .appendSpill width choices
+            let (extra, choices, ps) := Choices.consumeAtE .appendSpill width choices
             let newCap := newLen +
               ((appendGrowthCap slice.cap newLen - newLen + extra) % width)
             let backing ← buildAppendBackingValue ctx elem oldValues elemValues newCap
-            return Commit.withStream choices fun s => do
+            return Commit.withStream choices ps fun s => do
               let (base, current) ← Store.alloc ctx s backing (.array newCap elem)
               -- Spill: the old elements were read out above; the new backing
               -- is FRESH (no access — the malloc convention); the header write.
@@ -1683,11 +1701,11 @@ def applyStmtOp.plan (s : Store) (choices : Choices) (op : StmtOp) (_nt : Nat)
       | _ => stuck "malformed appendSlice operands"
   | op => do
       let c ← applyStmtOpCore.plan ctx s op vs
-      return Commit.withStream choices c
+      return Commit.withStream choices [] c
 
 @[inherit_doc applyStmtOp.plan]
 def applyStmtOp (s : Store) (choices : Choices) (op : StmtOp) (nt : Nat)
-    (vs : List GoValue) : Except Stop (Store × Choices × AccessTrace) := do
+    (vs : List GoValue) : Except Stop (Store × Choices × List PickRecord × AccessTrace) := do
   let c ← applyStmtOp.plan ctx s choices op nt vs
   c s
 
@@ -4061,9 +4079,11 @@ def Config.applyPos : Config → Option (ApplyHead × List GoValue × LocalEnv �
 /-- **The output event of a configuration** (stdlib slice 3; G-OUT): the
 bytes the step about to be taken writes to fd 2 — `some bytes` exactly at
 a `print`/`println` APPLY position whose operands render, `none`
-everywhere else. The pool layer (`stepThread`) attaches this to the
-step's `StepEvent.out`; the drivers fold the events in step order into
-the run's output (`execProgLoopOut`). Derived from the PRE-configuration
+everywhere else. Since the step-label reshape (2026-09-28) the STEP emits
+its output itself (`stmtOpOut`, in `stepFn`'s and `Step.stmtOpApply`'s
+label; `printOut?_toList` is the agreement) and the pool takes it from
+that label; this pre-configuration reading remains the init phase's
+refusal test (`initPrintRefusal?`). Derived from the PRE-configuration
 by the same `renderPrint` the apply step validates through: when the
 step succeeds the rendering succeeded, so the event carries the validated
 bytes; when the rendering refuses, the step itself refuses and no event
@@ -4075,6 +4095,29 @@ def printOut? : Config → Option GoString
       | .ok bytes => some bytes
       | .error _ => none
   | _ => none
+
+/-- **The OUTPUT a wide statement's apply writes** (step-label reshape,
+2026-09-28): a `print`/`println` apply's rendered bytes — the same
+`renderPrint` the apply validates through, so on a successful apply the
+element is exactly the validated rendering — and `[]` for every other
+head. The `out` channel of `stepFn`'s and `Step.stmtOpApply`'s label (on
+the apply's value path; a delivered panic writes nothing). -/
+def stmtOpOut : StmtOp → List GoValue → List GoString
+  | .print newline, vs =>
+      match renderPrint newline vs with
+      | .ok bytes => [bytes]
+      | .error _ => []
+  | _, _ => []
+
+/-- The step's own output agrees with the pre-configuration reading at an
+apply position. -/
+theorem printOut?_toList {v : GoValue} {op : StmtOp} {nt : Nat} {done : List GoValue}
+    {env : LocalEnv} {k : Cont} :
+    (printOut? (.retV v (.stmtOpK op nt done [] env k))).toList
+      = stmtOpOut op (v :: done).reverse := by
+  cases op <;> simp only [printOut?, stmtOpOut, Option.toList]
+  generalize renderPrint _ _ = r
+  cases r <;> rfl
 
 /-- The lowering contract at an `appendSlice` apply (audit fix F1): the
 frontend hoists EVERY append into a fresh local temp (`emit.go`, the
@@ -4095,35 +4138,44 @@ effects are discarded, exactly as every former `.error (.panic msg) ⇒
 .panicking …` conversion site did. `chain` is the suspended chain a
 PANIC-PATH deferred-call entry joins (audit F1+F5, 2026-08-05: the entry
 panic is the deferred invocation's panic and joins newest-last); every
-other site delivers under the empty chain. Shared verbatim by the
-relation's apply/entry rules, `stepFn` (through `deliverS`, which adds
-the executable's stream) and `spawnStep`. -/
-def deliver {α : Type} (s : Store) (k : Cont) (next : α → Config × Store × AccessTrace)
-    (r : Result α) (chain : List PanicEntry := []) : Config × Store × AccessTrace :=
+other site delivers under the empty chain. `panicPicks` are the tape
+consultations the apply KEPT on its way to the panic (the frame entry's
+`nilValueMethodText` text pick, drawn on the panic path only); every other
+site passes none. Shared verbatim by the relation's apply/entry rules,
+`stepFn` (through `deliverS`/`deliverV`, which add the executable's
+stream) and `spawnStep`. Since the step-label reshape (2026-09-28) the
+delivered value is the step's full `StepLabel`. -/
+def deliver {α : Type} (s : Store) (k : Cont) (next : α → Config × Store × StepLabel)
+    (r : Result α) (chain : List PanicEntry := []) (panicPicks : List PickRecord := []) :
+    Config × Store × StepLabel :=
   match r with
   | .ok a => next a
-  -- The delivered panic carries the EMPTY trace (C1 S2a): the apply's
-  -- effects are discarded, its accesses never happened — the detector's
-  -- standing convention («the step panicked: the access never happened»).
-  | .panic msg => (.panicking (chain ++ [panicEntry msg]) k, s, [])
+  -- The delivered panic carries the EMPTY trace and no output (C1 S2a):
+  -- the apply's effects are discarded, its accesses never happened — the
+  -- detector's standing convention («the step panicked: the access never
+  -- happened»); only the panic path's own kept consultations are recorded.
+  | .panic msg => (.panicking (chain ++ [panicEntry msg]) k, s, ⟨[], panicPicks, []⟩)
 
 variable {ctx}
 @[simp] theorem deliver_ok {α : Type} {s : Store} {k : Cont}
-    {next : α → Config × Store × AccessTrace}
-    {a : α} {chain : List PanicEntry} : deliver s k next (.ok a) chain = next a := rfl
+    {next : α → Config × Store × StepLabel}
+    {a : α} {chain : List PanicEntry} {ps : List PickRecord} :
+    deliver s k next (.ok a) chain ps = next a := rfl
 
 @[simp] theorem deliver_panic {α : Type} {s : Store} {k : Cont}
-    {next : α → Config × Store × AccessTrace}
-    {msg : String} {chain : List PanicEntry} :
-    deliver s k next (.panic msg) chain = (.panicking (chain ++ [panicEntry msg]) k, s, []) := rfl
+    {next : α → Config × Store × StepLabel}
+    {msg : String} {chain : List PanicEntry} {ps : List PickRecord} :
+    deliver s k next (.panic msg) chain ps
+      = (.panicking (chain ++ [panicEntry msg]) k, s, ⟨[], ps, []⟩) := rfl
 
 /-- A delivered panic is the unwinding configuration over the pre-state,
-with the empty trace. -/
+with the empty trace, no output and exactly the panic path's picks. -/
 theorem deliver_panic_eq {α : Type} {s : Store} {k : Cont}
-    {next : α → Config × Store × AccessTrace}
-    {msg : String} {chain : List PanicEntry} {c' : Config} {s' : Store} {tr : AccessTrace}
-    (h : deliver s k next (.panic msg) chain = (c', s', tr)) :
-    c' = .panicking (chain ++ [panicEntry msg]) k ∧ s = s' ∧ tr = [] := by
+    {next : α → Config × Store × StepLabel}
+    {msg : String} {chain : List PanicEntry} {ps : List PickRecord}
+    {c' : Config} {s' : Store} {l : StepLabel}
+    (h : deliver s k next (.panic msg) chain ps = (c', s', l)) :
+    c' = .panicking (chain ++ [panicEntry msg]) k ∧ s = s' ∧ l = ⟨[], ps, []⟩ := by
   simp only [deliver_panic, Prod.mk.injEq] at h
   exact ⟨h.1.symm, h.2.1, h.2.2.symm⟩
 
@@ -4733,18 +4785,19 @@ draw the `tryLock` site at `tryLockWidth` (bound 1 = no pop), and apply
 passed through untouched (`applySyncOp_eq_core`). Shared verbatim by
 rule `Step.syncStApply` and `stepFn`'s `syncStK` apply arm. -/
 def applySyncOp (s : Store) (ch : Choices) (op : SyncOp) (vs : List GoValue)
-    (env : LocalEnv) (k : Cont) : Except Stop (Config × Store × Choices × AccessTrace) := do
+    (env : LocalEnv) (k : Cont) :
+    Except Stop (Config × Store × Choices × List PickRecord × AccessTrace) := do
   match op.tryTargets?, vs with
   | some targets, [av] => do
       let loc ← valueAsLoc av
       let pre ← syncCell ctx s loc
-      let (pick, ch') := Choices.consumeAt .tryLock (tryLockWidth op pre) ch
+      let (pick, ch', ps) := Choices.consumeAtE .tryLock (tryLockWidth op pre) ch
       let (c', s', tr) ← applyTryLock ctx s op loc pre (pick == 1) targets env k
-      return (c', s', ch', tr)
+      return (c', s', ch', ps, tr)
   | some _, vs => stuck s!"malformed try-lock application: {repr op} on {vs.length} operand(s)"
   | none, _ => do
       let (c', s', tr) ← applySyncOpCore ctx s op vs env k
-      return (c', s', ch, tr)
+      return (c', s', ch, [], tr)
 
 /-- The optional store of an atomic op (`atomicCompute`'s `new?`): the
 normalized integer at the op's kind, or no store at all (`load`, a
@@ -4999,27 +5052,29 @@ def applySelectCore (s : Store)
 def applySelect (s : Store) (clauses : List (SelectClauseHead × Stmt))
     (default? : Option Stmt) (vs : List GoValue) (env : LocalEnv) (k : Cont)
     (ch : Choices) :
-    Except Stop (Config × Store × Choices × Option EvClause × AccessTrace) := do
-  -- The 4th component is Q2's emitted commit identity (`none` =
-  -- default taken or parked): the sequential `stepFn` arm PROJECTS it
-  -- away; the pool's select interception (`stepThread`) carries it
-  -- into the step event. The 5th is the apply's LABEL (C1 S2c): the
-  -- poll reads and the picked commit's actions.
+    Except Stop (Config × Store × Choices × List PickRecord × Option EvClause × AccessTrace) := do
+  -- The 4th component is the L2 consultation's record (`consumeAtE`;
+  -- step-label reshape 2026-09-28), the 5th Q2's emitted commit identity
+  -- (`none` = default taken or parked): the sequential `stepFn` arm
+  -- PROJECTS the identity away; the pool's select interception
+  -- (`stepThread`) carries it into the step event. The 6th is the
+  -- apply's memory trace (C1 S2c): the poll reads and the picked
+  -- commit's actions.
   match ← applySelectCore ctx s clauses default? vs env k with
-  | .done c' s' cl? tr => return (c', s', ch, cl?, tr)
+  | .done c' s' cl? tr => return (c', s', ch, [], cl?, tr)
   | .picks poll commits =>
       -- THE L2 CONSUMPTION (envelope statement in the docstring
       -- above): bound = the ready-clause count, ≥ 2 by construction
       -- (`.picks` arises only from a multi-ready analysis).
-      let (idx, ch') := Choices.consumeAt .l2Entry commits.length ch
+      let (idx, ch', ps) := Choices.consumeAtE .l2Entry commits.length ch
       match commits[idx]? with
-      | some (cl, .inl (c', s', tr)) => return (c', s', ch', some cl, poll ++ tr)
+      | some (cl, .inl (c', s', tr)) => return (c', s', ch', ps, some cl, poll ++ tr)
       | some (cl, .inr msg) =>
           -- Defensive arm (unreachable today — docstring above): the
           -- picked clause's panic becomes a `.panicking` configuration
           -- with the pick CONSUMED, exactly like the `.inl` route; the
           -- label is the poll alone (a panicking commit performs no action).
-          return (.panicking [panicEntry msg] k, s, ch', some cl, poll)
+          return (.panicking [panicEntry msg] k, s, ch', ps, some cl, poll)
       | none => throw (.internal "select ready-clause pick out of range")
 
 /-! ## The consumption projection (design-hygiene wave (iii), B8, 2026-09-04)
@@ -5300,11 +5355,15 @@ def projChainTarget (s : Store) : Cont → Loc → Loc
 
 /-! ## The step relation -/
 
-/-- One machine step over `(control, state)` pairs, LABELLED by its access
-trace (C1 S2a, D5: the fifth index is the step's `AccessTrace` — the
-memory-effects component of the labelled simulation; pure control steps
-carry `[]`, every helper-bearing rule carries what its operations
-emitted, a delivered panic `[]`). No rule applies to
+/-- One machine step over `(control, state)` pairs, LABELLED by its full
+event label (C1 S2a, D5; widened by the step-label reshape, 2026-09-28,
+`docs/2026-09-28_step-label.md`): the fifth index is the step's
+`StepLabel` — the memory-model `trace`, the kept tape consultations
+`picks` (bound > 1, as `Choices.consumeAtE` returns them; the rules that
+choose an index state them with `PickRecord.ofPick`), and the `print`
+bytes `out`. Pure control steps carry `⟨[], [], []⟩`, every
+helper-bearing rule carries what its operations emitted, a delivered
+panic no trace and no output. No rule applies to
 malformed or unmodeled configurations: they are stuck (fail closed). A
 panic step starts UNWINDING (`.panicking` carries the chain and the
 continuation): defers run on the panic path, `recover` in a panic-run
@@ -5312,7 +5371,7 @@ deferred call cancels the unwind, and an unrecovered chain reaching
 `.stop` is the abort — a configuration with NO rule (B4: `Config.abort?`;
 the drivers raise the `panic` terminal there). Nondeterministic steps (map
 iteration order, append capacity) arrive at S2 with their statements. -/
-inductive Step : Config → Store → Config → Store → AccessTrace → Prop where
+inductive Step : Config → Store → Config → Store → StepLabel → Prop where
   -- Every APPLY/ENTRY rule below is "apply, then deliver" (B2): the
   -- helper's outcome is classified once (`toResult` — a value or a
   -- recoverable panic; refusals and the unrecoverable terminals have no
@@ -5325,68 +5384,68 @@ inductive Step : Config → Store → Config → Store → AccessTrace → Prop 
       -- The variable read, recorded at the leaf its continuation projects
       -- (`projChainTarget`): the caller names the leaf, the module emits.
       Mem.loadBindingFor ctx s loc (projChainTarget ctx s k loc) = .ok (v, tr) →
-      Step (.evalE (.var id) env k) s (.retV v k) s tr
+      Step (.evalE (.var id) env k) s (.retV v k) s ⟨tr, [], []⟩
   | evalIntLit {value kind env k s} :
       Step (.evalE (.intLit value kind) env k) s
-        (.retV (.int (kind.normalize value) kind) k) s []
+        (.retV (.int (kind.normalize value) kind) k) s ⟨[], [], []⟩
   | evalBoolLit {value env k s} :
-      Step (.evalE (.boolLit value) env k) s (.retV (.bool value) k) s []
+      Step (.evalE (.boolLit value) env k) s (.retV (.bool value) k) s ⟨[], [], []⟩
   | evalStringLit {value env k s} :
-      Step (.evalE (.stringLit value) env k) s (.retV (.string value) k) s []
+      Step (.evalE (.stringLit value) env k) s (.retV (.string value) k) s ⟨[], [], []⟩
   | evalRef {id loc env k s} :
       LocalEnv.lookup env id = some loc →
-      Step (.evalE (.ref id) env k) s (.retV (.addr loc) k) s []
+      Step (.evalE (.ref id) env k) s (.retV (.addr loc) k) s ⟨[], [], []⟩
   /-- A global's address is its index, provided the cell exists (A4). -/
   | evalGlobal {gid env k s} :
       gid < s.heap.size →
-      Step (.evalE (.global gid) env k) s (.retV (.addr (.base ⟨gid⟩)) k) s []
+      Step (.evalE (.global gid) env k) s (.retV (.addr (.base ⟨gid⟩)) k) s ⟨[], [], []⟩
   /-- Enter a strict form with at least one operand: evaluate the first
   under the generic frame. -/
   | evalStrict {e op e₁ rest env k s} :
       strictPlan e = some (op, e₁ :: rest) →
-      Step (.evalE e env k) s (.evalE e₁ env (.strictK op [] rest env k)) s []
+      Step (.evalE e env k) s (.evalE e₁ env (.strictK op [] rest env k)) s ⟨[], [], []⟩
   /-- A nullary strict form applies immediately: apply, then deliver (a
   value is returned to `k`; a recoverable panic unwinds under `k`). -/
-  | evalStrictNullary {e op r env k s c' s' tr} :
+  | evalStrictNullary {e op r env k s c' s' l} :
       strictPlan e = some (op, []) →
       toResult (applyStrictOp ctx s (projChainTarget ctx s k) op []) = .ok r →
-      deliver s k (fun (v, s', tr) => (.retV v k, s', tr)) r = (c', s', tr) →
-      Step (.evalE e env k) s c' s' tr
+      deliver s k (fun (v, s', tr) => (.retV v k, s', ⟨tr, [], []⟩)) r = (c', s', l) →
+      Step (.evalE e env k) s c' s' l
   /-- `recover()`: the walk-and-mark is one deterministic function of the
   continuation (arc doc §A1); never stuck. -/
   | evalRecover {env k v k' s} :
       recoverResult k = (v, k') →
-      Step (.evalE .recoverCall env k) s (.retV v k') s []
+      Step (.evalE .recoverCall env k) s (.retV v k') s ⟨[], [], []⟩
   | evalAnd {l r env k s} :
-      Step (.evalE (.and l r) env k) s (.evalE l env (.andK r env k)) s []
+      Step (.evalE (.and l r) env k) s (.evalE l env (.andK r env k)) s ⟨[], [], []⟩
   | evalOr {l r env k s} :
-      Step (.evalE (.or l r) env k) s (.evalE l env (.orK r env k)) s []
+      Step (.evalE (.or l r) env k) s (.evalE l env (.orK r env k)) s ⟨[], [], []⟩
   -- Strict-operator frame
   | strictShift {op done e rest v env k s} :
       Step (.retV v (.strictK op done (e :: rest) env k)) s
-        (.evalE e env (.strictK op (v :: done) rest env k)) s []
-  | strictApply {op done v r env k s c' s' tr} :
+        (.evalE e env (.strictK op (v :: done) rest env k)) s ⟨[], [], []⟩
+  | strictApply {op done v r env k s c' s' l} :
       toResult (applyStrictOp ctx s (projChainTarget ctx s k) op (v :: done).reverse) = .ok r →
-      deliver s k (fun (out, s', tr) => (.retV out k, s', tr)) r = (c', s', tr) →
-      Step (.retV v (.strictK op done [] env k)) s c' s' tr
+      deliver s k (fun (out, s', tr) => (.retV out k, s', ⟨tr, [], []⟩)) r = (c', s', l) →
+      Step (.retV v (.strictK op done [] env k)) s c' s' l
   -- Short-circuit frames
   | andTrue {r env k s} :
-      Step (.retV (.bool true) (.andK r env k)) s (.evalE r env (.boolK k)) s []
+      Step (.retV (.bool true) (.andK r env k)) s (.evalE r env (.boolK k)) s ⟨[], [], []⟩
   | andFalse {r env k s} :
-      Step (.retV (.bool false) (.andK r env k)) s (.retV (.bool false) k) s []
+      Step (.retV (.bool false) (.andK r env k)) s (.retV (.bool false) k) s ⟨[], [], []⟩
   | orTrue {r env k s} :
-      Step (.retV (.bool true) (.orK r env k)) s (.retV (.bool true) k) s []
+      Step (.retV (.bool true) (.orK r env k)) s (.retV (.bool true) k) s ⟨[], [], []⟩
   | orFalse {r env k s} :
-      Step (.retV (.bool false) (.orK r env k)) s (.evalE r env (.boolK k)) s []
+      Step (.retV (.bool false) (.orK r env k)) s (.evalE r env (.boolK k)) s ⟨[], [], []⟩
   | boolCoerce {b k s} :
-      Step (.retV (.bool b) (.boolK k)) s (.retV (.bool b) k) s []
+      Step (.retV (.bool b) (.boolK k)) s (.retV (.bool b) k) s ⟨[], [], []⟩
   -- Sequencing (unchanged from the old relation)
   | seqn {ss env k s} :
-      Step (.exec (.seqn ss) env k) s (.next (seqCont ss.toList env k)) s []
+      Step (.exec (.seqn ss) env k) s (.next (seqCont ss.toList env k)) s ⟨[], [], []⟩
   | seqNext {t rest env k s} :
-      Step (.next (.seq (t :: rest) env k)) s (.exec t env (.seq rest env k)) s []
+      Step (.next (.seq (t :: rest) env k)) s (.exec t env (.seq rest env k)) s ⟨[], [], []⟩
   | seqDone {env k s} :
-      Step (.next (.seq [] env k)) s (.next k) s []
+      Step (.next (.seq [] env k)) s (.next k) s ⟨[], [], []⟩
   /-- **The signal rules** (B4): a control-transfer statement RAISES its
   signal (`Stmt.signal?`), and a signal in flight steps by the
   frame×signal table (`signalStep`) — pass, catch, or no rule. The one
@@ -5394,19 +5453,19 @@ inductive Step : Config → Store → Config → Store → AccessTrace → Prop 
   family below (`frameReturn*`, the `.next` exit rules' twins). -/
   | signalStmt {stmt sg env k s} :
       stmt.signal? = some sg →
-      Step (.exec stmt env k) s (.signal sg k) s []
+      Step (.exec stmt env k) s (.signal sg k) s ⟨[], [], []⟩
   | signal {sg k c' s} :
       signalStep sg k = some c' →
-      Step (.signal sg k) s c' s []
+      Step (.signal sg k) s c' s ⟨[], [], []⟩
   -- Blocks and declarations
   | block {decls ss env env' k s s'} :
       allocDecls ctx env.pushScope s decls.toList = .ok (env', s') →
-      Step (.exec (.block decls ss) env k) s (.next (.seq ss.toList env' k)) s' []
+      Step (.exec (.block decls ss) env k) s (.next (.seq ss.toList env' k)) s' ⟨[], [], []⟩
   | initialization {p v loc rest env k s s'} :
       defaultValue ctx p.typ = .ok v →
       Store.alloc ctx s v p.typ = .ok (loc, s') →
       Step (.exec (.initialization p) env (.seq rest env k)) s
-        (.next (.seq rest (env.declare p.id loc) k)) s' []
+        (.next (.seq rest (env.declare p.id loc) k)) s' ⟨[], [], []⟩
   -- Assignment (round 4, BUG-037): the SINGLE assignment rides the
   -- phase-split spine as a one-target multi-assign — the RHS is
   -- phase 1, the target chain's checks fire at the store (phase 2).
@@ -5414,31 +5473,31 @@ inductive Step : Config → Store → Config → Store → AccessTrace → Prop 
   -- siblings.
   -- Conditionals
   | ifStmt {c t e env k s} :
-      Step (.exec (.ifThenElse c t e) env k) s (.evalE c env (.ifK t e env k)) s []
+      Step (.exec (.ifThenElse c t e) env k) s (.evalE c env (.ifK t e env k)) s ⟨[], [], []⟩
   | ifTrue {t e env k s} :
-      Step (.retV (.bool true) (.ifK t e env k)) s (.exec t env k) s []
+      Step (.retV (.bool true) (.ifK t e env k)) s (.exec t env k) s ⟨[], [], []⟩
   | ifFalse {t e env k s} :
-      Step (.retV (.bool false) (.ifK t e env k)) s (.exec e env k) s []
+      Step (.retV (.bool false) (.ifK t e env k)) s (.exec e env k) s ⟨[], [], []⟩
   -- Loops
   | whileStmt {c b env k s} :
-      Step (.exec (.while c b) env k) s (.evalE c env (.whileK c b env k)) s []
+      Step (.exec (.while c b) env k) s (.evalE c env (.whileK c b env k)) s ⟨[], [], []⟩
   | whileTrue {c b env k s} :
       Step (.retV (.bool true) (.whileK c b env k)) s
-        (.exec b env (.loop c b env k)) s []
+        (.exec b env (.loop c b env k)) s ⟨[], [], []⟩
   | whileFalse {c b env k s} :
-      Step (.retV (.bool false) (.whileK c b env k)) s (.next k) s []
+      Step (.retV (.bool false) (.whileK c b env k)) s (.next k) s ⟨[], [], []⟩
   | loopNext {c b env k s} :
-      Step (.next (.loop c b env k)) s (.exec (.while c b) env k) s []
+      Step (.next (.loop c b env k)) s (.exec (.while c b) env k) s ⟨[], [], []⟩
   -- Breakable scopes (switch/select bodies): `break` exits the scope
   -- (the table's `breakableK` row), everything else unwinds past it.
   | breakableEnter {b env k s} :
-      Step (.exec (.breakable b) env k) s (.exec b env (.breakableK k)) s []
+      Step (.exec (.breakable b) env k) s (.exec b env (.breakableK k)) s ⟨[], [], []⟩
   | breakableDone {k s} :
-      Step (.next (.breakableK k)) s (.next k) s []
+      Step (.next (.breakableK k)) s (.next k) s ⟨[], [], []⟩
   -- (Control transfer — `return`/`break`/`continue`/`break L`/`continue L`
   -- — is the `signalStmt` rule; the per-frame handling is `signal`.)
   | inertLabel {name env k s} :
-      Step (.exec (.inertLabel name) env k) s (.next k) s []
+      Step (.exec (.inertLabel name) env k) s (.next k) s ⟨[], [], []⟩
   -- Labeled statements (control-flow slice,
   -- docs/2026-08-04_control-flow-design.md). The label scope's handling
   -- of every signal — catching `brkTo` at a match, passing the bare
@@ -5449,9 +5508,9 @@ inductive Step : Config → Store → Config → Store → AccessTrace → Prop 
   -- — the frontend's placement invariant), the table's `loop`/`mapIterK`
   -- rows.
   | labeledEnter {name b env k s} :
-      Step (.exec (.labeled name b) env k) s (.exec b env (.labelK name k)) s []
+      Step (.exec (.labeled name b) env k) s (.exec b env (.labelK name k)) s ⟨[], [], []⟩
   | labelDone {name k s} :
-      Step (.next (.labelK name k)) s (.next k) s []
+      Step (.next (.labelK name k)) s (.next k) s ⟨[], [], []⟩
   -- Calls (BUG-025 spine migration; ORDER pinned at the S1 audit,
   -- BUG-052): the CALL evaluates first — arguments left-to-right, then
   -- frame entry — and the caller-target PLANS ride the frame untouched.
@@ -5496,7 +5555,7 @@ inductive Step : Config → Store → Config → Store → AccessTrace → Prop 
       targetsPlan targets.toList = some plans →
       args.toList = a :: rest →
       Step (.exec (.call targets fid args) env k) s
-        (.evalE a env (.callArgsK fid plans [] rest env k)) s []
+        (.evalE a env (.callArgsK fid plans [] rest env k)) s ⟨[], [], []⟩
   -- Frame ENTRY rules (B2): `enterFramePick` classifies the entry
   -- (`enterFrame`'s recoverable panic — dynamic dispatch on a nil
   -- interface, the auto-deref of a nil pointer box — is an ordinary
@@ -5505,23 +5564,23 @@ inductive Step : Config → Store → Config → Store → AccessTrace → Prop 
   -- quantifies the stream (`ch`/`ch'`, the `stmtOpApply` idiom) and
   -- delivers: an entered frame runs the body, a panic unwinds under the
   -- caller's continuation.
-  | callImmediate {targets fid args plans r env k s ch ch' c' s' tr} :
+  | callImmediate {targets fid args plans r env k s ch ch' ps c' s' l} :
       targetsPlan targets.toList = some plans →
       args.toList = [] →
-      enterFramePick ctx s fid [] ch = .ok (r, ch') →
+      enterFramePick ctx s fid [] ch = .ok (r, ch', ps) →
       deliver s k (fun (func, frameEnv, resultLocs, s', tr) =>
-        (.exec func.body frameEnv (.frame plans env resultLocs [] k func.wrapper), s', tr)) r
-        = (c', s', tr) →
-      Step (.exec (.call targets fid args) env k) s c' s' tr
+        (.exec func.body frameEnv (.frame plans env resultLocs [] k func.wrapper), s', ⟨tr, [], []⟩)) r [] ps
+        = (c', s', l) →
+      Step (.exec (.call targets fid args) env k) s c' s' l
   | callArgNext {v fid plans vals a rest env k s} :
       Step (.retV v (.callArgsK fid plans vals (a :: rest) env k)) s
-        (.evalE a env (.callArgsK fid plans (vals ++ [v]) rest env k)) s []
-  | callArgsDoneEnter {v fid plans vals r env k s ch ch' c' s' tr} :
-      enterFramePick ctx s fid (vals ++ [v]) ch = .ok (r, ch') →
+        (.evalE a env (.callArgsK fid plans (vals ++ [v]) rest env k)) s ⟨[], [], []⟩
+  | callArgsDoneEnter {v fid plans vals r env k s ch ch' ps c' s' l} :
+      enterFramePick ctx s fid (vals ++ [v]) ch = .ok (r, ch', ps) →
       deliver s k (fun (func, frameEnv, resultLocs, s', tr) =>
-        (.exec func.body frameEnv (.frame plans env resultLocs [] k func.wrapper), s', tr)) r
-        = (c', s', tr) →
-      Step (.retV v (.callArgsK fid plans vals [] env k)) s c' s' tr
+        (.exec func.body frameEnv (.frame plans env resultLocs [] k func.wrapper), s', ⟨tr, [], []⟩)) r [] ps
+        = (c', s', l) →
+      Step (.retV v (.callArgsK fid plans vals [] env k)) s c' s' l
   -- Wide statements (S2): one generic operand-plan frame; targets are
   -- checked as their addresses arrive (interpreter order), and the final
   -- state update is one `applyStmtOp` step. The `ch`/`ch'` choice streams
@@ -5530,26 +5589,27 @@ inductive Step : Config → Store → Config → Store → AccessTrace → Prop 
   -- resolves via `Choices`).
   | stmtOpFirst {stmt op nt e rest env k s} :
       stmtPlan stmt = some (op, nt, e :: rest) →
-      Step (.exec stmt env k) s (.evalE e env (.stmtOpK op nt [] rest env k)) s []
-  | stmtOpShiftTarget {op nt done v r e rest env k s c' s' tr} :
+      Step (.exec stmt env k) s (.evalE e env (.stmtOpK op nt [] rest env k)) s ⟨[], [], []⟩
+  | stmtOpShiftTarget {op nt done v r e rest env k s c' s' l} :
       done.length < nt →
       toResult (valueAsLoc v) = .ok r →
-      deliver s k (fun _ => (.evalE e env (.stmtOpK op nt (v :: done) rest env k), s, [])) r
-        = (c', s', tr) →
-      Step (.retV v (.stmtOpK op nt done (e :: rest) env k)) s c' s' tr
+      deliver s k (fun _ => (.evalE e env (.stmtOpK op nt (v :: done) rest env k), s, ⟨[], [], []⟩)) r
+        = (c', s', l) →
+      Step (.retV v (.stmtOpK op nt done (e :: rest) env k)) s c' s' l
   | stmtOpShiftPlain {op nt done v e rest env k s} :
       nt ≤ done.length →
       Step (.retV v (.stmtOpK op nt done (e :: rest) env k)) s
-        (.evalE e env (.stmtOpK op nt (v :: done) rest env k)) s []
+        (.evalE e env (.stmtOpK op nt (v :: done) rest env k)) s ⟨[], [], []⟩
   -- (The target check is restricted to a nonempty pending list: at the
   -- apply position the same nil-target panic surfaces through
   -- `applyStmtOp`'s per-arm `valueAsLoc` checks, delivered by
   -- `stmtOpApply` — keeping the rules in one-to-one correspondence with
   -- `stepFn`'s arms.)
-  | stmtOpApply {op nt done v r env k s ch c' s' tr} :
+  | stmtOpApply {op nt done v r env k s ch c' s' l} :
       toResult (applyStmtOp ctx s ch op nt (v :: done).reverse) = .ok r →
-      deliver s k (fun (s', _, tr) => (.next k, s', tr)) r = (c', s', tr) →
-      Step (.retV v (.stmtOpK op nt done [] env k)) s c' s' tr
+      deliver s k (fun (s', _, ps, tr) =>
+        (.next k, s', ⟨tr, ps, stmtOpOut op (v :: done).reverse⟩)) r = (c', s', l) →
+      Step (.retV v (.stmtOpK op nt done [] env k)) s c' s' l
   -- Map iteration — LIVE (BUG-005 (L) surgery, ruled 2026-08-19; the
   -- snapshot rules are retired) over entry-identity stamps (B1): start
   -- records the base cell and the START-ID set; each pick LOADS the
@@ -5563,15 +5623,15 @@ inductive Step : Config → Store → Config → Store → AccessTrace → Prop 
   -- zero stream IS the canonical member, by definition.
   | mapRange {keyVar valVar mapExpr keyTy valTy body env k s} :
       Step (.exec (.mapRange keyVar valVar mapExpr keyTy valTy body) env k) s
-        (.evalE mapExpr env (.mapRangeK keyVar valVar keyTy valTy body env k)) s []
+        (.evalE mapExpr env (.mapRangeK keyVar valVar keyTy valTy body env k)) s ⟨[], [], []⟩
   | mapRangeStart {v base start tr keyVar valVar keyTy valTy body env k s} :
       mapRangeStartSets s v = .ok (base, start, tr) →
       Step (.retV v (.mapRangeK keyVar valVar keyTy valTy body env k)) s
-        (.next (.mapIterK keyVar valVar keyTy valTy body base #[] start env k)) s tr
+        (.next (.mapIterK keyVar valVar keyTy valTy body base #[] start env k)) s ⟨tr, [], []⟩
   | mapIterDone {keyVar valVar keyTy valTy body base produced start env k s tr} :
       mapIterCandidates ctx s keyTy valTy base produced = .ok (#[], tr) →
       Step (.next (.mapIterK keyVar valVar keyTy valTy body base produced start env k)) s
-        (.next k) s tr
+        (.next k) s ⟨tr, [], []⟩
   | mapIterNext {keyVar valVar keyTy valTy body base produced start cands idx env env' k s s' tr}
       (hidx : idx < cands.size) :
       mapIterCandidates ctx s keyTy valTy base produced = .ok (cands, tr) →
@@ -5581,13 +5641,15 @@ inductive Step : Config → Store → Config → Store → AccessTrace → Prop 
         cands[idx].2.1 cands[idx].2.2 = .ok (env', s') →
       Step (.next (.mapIterK keyVar valVar keyTy valTy body base produced start env k)) s
         (.exec body env' (.mapIterK keyVar valVar keyTy valTy body
-          base (produced.push cands[idx].1) start env k)) s' tr
+          base (produced.push cands[idx].1) start env k)) s'
+        ⟨tr, PickRecord.ofPick .mapIter
+          (cands.size + if mapIterMandatoryRemains cands start then 0 else 1) idx, []⟩
   | mapIterStop {keyVar valVar keyTy valTy body base produced start cands env k s tr} :
       mapIterCandidates ctx s keyTy valTy base produced = .ok (cands, tr) →
       cands.size ≠ 0 →
       mapIterMandatoryRemains cands start = false →
       Step (.next (.mapIterK keyVar valVar keyTy valTy body base produced start env k)) s
-        (.next k) s tr
+        (.next k) s ⟨tr, [⟨.mapIter, cands.size + 1, cands.size⟩], []⟩
   -- (`break`/`continue`/`return` at the range frame: the table's
   -- `mapIterK` row, rule `signal`.)
   -- Call through a function VALUE (§8): targets, then the callee, then the
@@ -5599,37 +5661,37 @@ inductive Step : Config → Store → Config → Store → AccessTrace → Prop 
   | callValueStart {targets callee args plans env k s} :
       targetsPlan targets.toList = some plans →
       Step (.exec (.callValue targets callee args) env k) s
-        (.evalE callee env (.callValCalleeK plans args.toList env k)) s []
+        (.evalE callee env (.callValCalleeK plans args.toList env k)) s ⟨[], [], []⟩
   /-- The callee value arrives (funcVal or nil); start the arguments. Go
   evaluates the callee and ALL arguments before the nil check fires. -/
   | callValCalleeArg {cv plans a rest env k s} :
       deferrableCallee cv = true →
       Step (.retV cv (.callValCalleeK plans (a :: rest) env k)) s
-        (.evalE a env (.callValArgsK cv plans [] rest env k)) s []
+        (.evalE a env (.callValArgsK cv plans [] rest env k)) s ⟨[], [], []⟩
   /-- Nullary call through a value: enter directly with the captures. -/
-  | callValCalleeEnter {fid captured plans r env k s ch ch' c' s' tr} :
-      enterFramePick ctx s fid captured ch = .ok (r, ch') →
+  | callValCalleeEnter {fid captured plans r env k s ch ch' ps c' s' l} :
+      enterFramePick ctx s fid captured ch = .ok (r, ch', ps) →
       deliver s k (fun (func, frameEnv, resultLocs, s', tr) =>
-        (.exec func.body frameEnv (.frame plans env resultLocs [] k func.wrapper), s', tr)) r
-        = (c', s', tr) →
-      Step (.retV (.funcVal fid captured) (.callValCalleeK plans [] env k)) s c' s' tr
+        (.exec func.body frameEnv (.frame plans env resultLocs [] k func.wrapper), s', ⟨tr, [], []⟩)) r [] ps
+        = (c', s', l) →
+      Step (.retV (.funcVal fid captured) (.callValCalleeK plans [] env k)) s c' s' l
   /-- Nullary call of a nil function value: nothing to evaluate, panic. -/
   | callValCalleeNil {plans env k s} :
       Step (.retV .nil (.callValCalleeK plans [] env k)) s
-        (.panicking [panicEntry nilDerefPanicText] k) s []
+        (.panicking [panicEntry nilDerefPanicText] k) s ⟨[], [], []⟩
   | callValArgNext {v cv plans vals a rest env k s} :
       Step (.retV v (.callValArgsK cv plans vals (a :: rest) env k)) s
-        (.evalE a env (.callValArgsK cv plans (vals ++ [v]) rest env k)) s []
-  | callValArgsEnter {v fid captured plans vals r env k s ch ch' c' s' tr} :
-      enterFramePick ctx s fid (captured ++ vals ++ [v]) ch = .ok (r, ch') →
+        (.evalE a env (.callValArgsK cv plans (vals ++ [v]) rest env k)) s ⟨[], [], []⟩
+  | callValArgsEnter {v fid captured plans vals r env k s ch ch' ps c' s' l} :
+      enterFramePick ctx s fid (captured ++ vals ++ [v]) ch = .ok (r, ch', ps) →
       deliver s k (fun (func, frameEnv, resultLocs, s', tr) =>
-        (.exec func.body frameEnv (.frame plans env resultLocs [] k func.wrapper), s', tr)) r
-        = (c', s', tr) →
-      Step (.retV v (.callValArgsK (.funcVal fid captured) plans vals [] env k)) s c' s' tr
+        (.exec func.body frameEnv (.frame plans env resultLocs [] k func.wrapper), s', ⟨tr, [], []⟩)) r [] ps
+        = (c', s', l) →
+      Step (.retV v (.callValArgsK (.funcVal fid captured) plans vals [] env k)) s c' s' l
   /-- All arguments evaluated, callee is nil: NOW the invocation panics. -/
   | callValArgsNil {v plans vals env k s} :
       Step (.retV v (.callValArgsK .nil plans vals [] env k)) s
-        (.panicking [panicEntry nilDerefPanicText] k) s []
+        (.panicking [panicEntry nilDerefPanicText] k) s ⟨[], [], []⟩
   -- Frame exit (BUG-025 spine migration; ORDER pinned per BUG-052):
   -- explicit return and fall-through perform the same pinned-location
   -- result read. A TARGETLESS frame resumes the caller in one step
@@ -5655,17 +5717,17 @@ inductive Step : Config → Store → Config → Store → AccessTrace → Prop 
   -- result-bearing calls, and the machine stays stuck-closed on the
   -- malformed shape as it always was.)
   | frameReturn {tenv k w s} :
-      Step (.signal .ret (.frame [] tenv [] [] k w)) s (.next k) s []
+      Step (.signal .ret (.frame [] tenv [] [] k w)) s (.next k) s ⟨[], [], []⟩
   | frameFall {tenv k w s} :
-      Step (.next (.frame [] tenv [] [] k w)) s (.next k) s []
+      Step (.next (.frame [] tenv [] [] k w)) s (.next k) s ⟨[], [], []⟩
   | frameReturnTargets {sh e ops rest tenv results k w s vs tr} :
       loadResults ctx s results = .ok (vs, tr) →
       Step (.signal .ret (.frame ((sh, e :: ops) :: rest) tenv results [] k w)) s
-        (.evalE e tenv (.tgtOpK sh [] ops [] rest .vals [] vs (.seqn #[]) tenv k)) s tr
+        (.evalE e tenv (.tgtOpK sh [] ops [] rest .vals [] vs (.seqn #[]) tenv k)) s ⟨tr, [], []⟩
   | frameFallTargets {sh e ops rest tenv results k w s vs tr} :
       loadResults ctx s results = .ok (vs, tr) →
       Step (.next (.frame ((sh, e :: ops) :: rest) tenv results [] k w)) s
-        (.evalE e tenv (.tgtOpK sh [] ops [] rest .vals [] vs (.seqn #[]) tenv k)) s tr
+        (.evalE e tenv (.tgtOpK sh [] ops [] rest .vals [] vs (.seqn #[]) tenv k)) s ⟨tr, [], []⟩
   -- Draining the defer chain: one deferred call per step, each in its own
   -- frame whose continuation is this frame with the rest of the chain, so
   -- both exit paths converge on the rules above once the chain is empty.
@@ -5676,65 +5738,65 @@ inductive Step : Config → Store → Config → Store → AccessTrace → Prop 
   -- `defer/deferred-dispatch-entry-panic/*`): on the normal drains it
   -- starts unwinding AT THIS FRAME with its remaining defers (the
   -- delivery continuation is the draining frame).
-  | frameDeferFall {targets tenv results fid captured args ds k w s r ch ch' c' s' tr} :
-      enterFramePick ctx s fid (captured ++ args) ch = .ok (r, ch') →
+  | frameDeferFall {targets tenv results fid captured args ds k w s r ch ch' ps c' s' l} :
+      enterFramePick ctx s fid (captured ++ args) ch = .ok (r, ch', ps) →
       deliver s (.frame targets tenv results ds k w) (fun (func, frameEnv, _, s', tr) =>
         (.exec func.body frameEnv
-          (.frame [] [] [] [] (.frame targets tenv results ds k w) func.wrapper), s', tr)) r
-        = (c', s', tr) →
-      Step (.next (.frame targets tenv results ((.funcVal fid captured, args) :: ds) k w)) s c' s' tr
-  | frameDeferReturn {targets tenv results fid captured args ds k w s r ch ch' c' s' tr} :
-      enterFramePick ctx s fid (captured ++ args) ch = .ok (r, ch') →
+          (.frame [] [] [] [] (.frame targets tenv results ds k w) func.wrapper), s', ⟨tr, [], []⟩)) r [] ps
+        = (c', s', l) →
+      Step (.next (.frame targets tenv results ((.funcVal fid captured, args) :: ds) k w)) s c' s' l
+  | frameDeferReturn {targets tenv results fid captured args ds k w s r ch ch' ps c' s' l} :
+      enterFramePick ctx s fid (captured ++ args) ch = .ok (r, ch', ps) →
       deliver s (.frame targets tenv results ds k w) (fun (func, frameEnv, _, s', tr) =>
         (.exec func.body frameEnv
-          (.frame [] [] [] [] (.frame targets tenv results ds k w) func.wrapper), s', tr)) r
-        = (c', s', tr) →
-      Step (.signal .ret (.frame targets tenv results ((.funcVal fid captured, args) :: ds) k w)) s c' s' tr
+          (.frame [] [] [] [] (.frame targets tenv results ds k w) func.wrapper), s', ⟨tr, [], []⟩)) r [] ps
+        = (c', s', l) →
+      Step (.signal .ret (.frame targets tenv results ((.funcVal fid captured, args) :: ds) k w)) s c' s' l
   /-- Invoking a nil deferred call panics at DRAIN time (Go: registration
   succeeded; the panic belongs to the invocation). The panic starts
   unwinding AT THIS FRAME with its remaining defers — which run, and may
   recover (`defer/defer-nil-function-recover-order` pins the order). -/
   | frameDeferNilFall {targets tenv results args ds k w s} :
       Step (.next (.frame targets tenv results ((.nil, args) :: ds) k w)) s
-        (.panicking [panicEntry nilDerefPanicText] (.frame targets tenv results ds k w)) s []
+        (.panicking [panicEntry nilDerefPanicText] (.frame targets tenv results ds k w)) s ⟨[], [], []⟩
   | frameDeferNilReturn {targets tenv results args ds k w s} :
       Step (.signal .ret (.frame targets tenv results ((.nil, args) :: ds) k w)) s
-        (.panicking [panicEntry nilDerefPanicText] (.frame targets tenv results ds k w)) s []
+        (.panicking [panicEntry nilDerefPanicText] (.frame targets tenv results ds k w)) s ⟨[], [], []⟩
   -- Registering a deferred call: callee, then arguments, evaluated NOW.
   | deferStmt {callee args env k s} :
       Step (.exec (.deferCall callee args) env k) s
-        (.evalE callee env (.deferCalleeK args.toList env k)) s []
+        (.evalE callee env (.deferCalleeK args.toList env k)) s ⟨[], [], []⟩
   | deferCalleeArg {cv a rest env k s} :
       deferrableCallee cv = true →
       Step (.retV cv (.deferCalleeK (a :: rest) env k)) s
-        (.evalE a env (.deferArgsK cv [] rest env k)) s []
+        (.evalE a env (.deferArgsK cv [] rest env k)) s ⟨[], [], []⟩
   | deferCalleeNoArgs {cv env k k' s} :
       deferrableCallee cv = true →
       pushDefer (cv, []) k = some k' →
-      Step (.retV cv (.deferCalleeK [] env k)) s (.next k') s []
+      Step (.retV cv (.deferCalleeK [] env k)) s (.next k') s ⟨[], [], []⟩
   | deferArgNext {v cv vals a rest env k s} :
       Step (.retV v (.deferArgsK cv vals (a :: rest) env k)) s
-        (.evalE a env (.deferArgsK cv (vals ++ [v]) rest env k)) s []
+        (.evalE a env (.deferArgsK cv (vals ++ [v]) rest env k)) s ⟨[], [], []⟩
   | deferArgsDone {v cv vals env k k' s} :
       pushDefer (cv, vals ++ [v]) k = some k' →
-      Step (.retV v (.deferArgsK cv vals [] env k)) s (.next k') s []
+      Step (.retV v (.deferArgsK cv vals [] env k)) s (.next k') s ⟨[], [], []⟩
   -- The unwinding arc (`docs/2026-07-25_unwinding-arc.md` §A1): panic as
   -- a travelling configuration.
   /-- `panic(v)`: evaluate the payload (already `any`-converted by the
   lowering), then start unwinding. -/
   | panicStmt {e env k s} :
-      Step (.exec (.panicStmt e) env k) s (.evalE e env (.panicArgK k)) s []
+      Step (.exec (.panicStmt e) env k) s (.evalE e env (.panicArgK k)) s ⟨[], [], []⟩
   | panicArgValue {v k s} :
-      Step (.retV v (.panicArgK k)) s (.panicking [⟨panicPayload v, false⟩] k) s []
+      Step (.retV v (.panicArgK k)) s (.panicking [⟨panicPayload v, false⟩] k) s ⟨[], [], []⟩
   /-- Unwinding strips every non-frame, non-marker continuation. -/
   | panicUnwind {chain k k' s} :
       panicPassthrough k = some k' →
-      Step (.panicking chain k) s (.panicking chain k') s []
+      Step (.panicking chain k) s (.panicking chain k') s ⟨[], [], []⟩
   /-- Unwinding past a frame with no (remaining) defers: results are NOT
   read — the call did not return. -/
   | panicFrameEmpty {chain targets tenv results k w s} :
       Step (.panicking chain (.frame targets tenv results [] k w)) s
-        (.panicking chain k) s []
+        (.panicking chain k) s ⟨[], [], []⟩
   /-- Defers RUN on the panic path: the deferred call executes above a
   `panicResumeK` carrying the suspended chain — the shape `recover`'s
   walk detects. Results discarded, as on the normal drain. An ENTRY panic
@@ -5743,28 +5805,28 @@ inductive Step : Config → Store → Config → Store → AccessTrace → Prop 
   entry, which `chainNewestRecovered` implements; the `during-panic` pin
   discriminates newest-vs-original by asserting the recovered value) and
   draining continues — the `.nil`-callee mirror below. -/
-  | panicFrameDefer {chain targets tenv results fid captured args ds k w s r ch ch' c' s' tr} :
-      enterFramePick ctx s fid (captured ++ args) ch = .ok (r, ch') →
+  | panicFrameDefer {chain targets tenv results fid captured args ds k w s r ch ch' ps c' s' l} :
+      enterFramePick ctx s fid (captured ++ args) ch = .ok (r, ch', ps) →
       deliver s (.frame targets tenv results ds k w) (fun (func, frameEnv, _, s', tr) =>
         (.exec func.body frameEnv
           (.frame [] [] [] [] (.panicResumeK chain (.frame targets tenv results ds k w))
-            func.wrapper), s', tr)) r chain
-        = (c', s', tr) →
+            func.wrapper), s', ⟨tr, [], []⟩)) r chain ps
+        = (c', s', l) →
       Step (.panicking chain (.frame targets tenv results ((.funcVal fid captured, args) :: ds) k w))
-        s c' s' tr
+        s c' s' l
   /-- A nil deferred callee invoked DURING unwinding: the invocation's
   nil-dereference panic joins the chain (newest last) and this frame's
   remaining defers keep draining. -/
   | panicFrameDeferNil {chain targets tenv results args ds k w s} :
       Step (.panicking chain (.frame targets tenv results ((.nil, args) :: ds) k w)) s
         (.panicking (chain ++ [panicEntry nilDerefPanicText])
-          (.frame targets tenv results ds k w)) s []
+          (.frame targets tenv results ds k w)) s ⟨[], [], []⟩
   /-- A NEW panic unwinding through a suspended chain's marker merges
   behind it — this single rule produces Go's chained abort output
   (`panic: first ⏎ panic: second`, `… [recovered] ⏎ …`). -/
   | panicResumeMerge {chain suspended k s} :
       Step (.panicking chain (.panicResumeK suspended k)) s
-        (.panicking (suspended ++ chain) k) s []
+        (.panicking (suspended ++ chain) k) s ⟨[], [], []⟩
   /-- A panic-path deferred call completed and the newest chain entry was
   recovered: the unwind is cancelled, the whole chain discarded, and the
   frame below resumes its NORMAL exit path (drain remaining defers, then
@@ -5772,11 +5834,11 @@ inductive Step : Config → Store → Config → Store → AccessTrace → Prop 
   normally"). -/
   | panicResumeRecovered {chain k s} :
       chainNewestRecovered chain = true →
-      Step (.next (.panicResumeK chain k)) s (.next k) s []
+      Step (.next (.panicResumeK chain k)) s (.next k) s ⟨[], [], []⟩
   /-- …not recovered: unwinding resumes below. -/
   | panicResumeContinue {chain k s} :
       chainNewestRecovered chain = false →
-      Step (.next (.panicResumeK chain k)) s (.panicking chain k) s []
+      Step (.next (.panicResumeK chain k)) s (.panicking chain k) s ⟨[], [], []⟩
   -- (An unrecovered chain at `.stop` — the abort — has NO rule since B4:
   -- `Config.abort?`; the sequential driver raises the `panic` terminal
   -- there and the pool records the goroutine's `aborted` tombstone, both
@@ -5801,17 +5863,17 @@ inductive Step : Config → Store → Config → Store → AccessTrace → Prop 
   and the sequential driver classifies them as the deadlocked run. -/
   | chanStFirst {stmt op e rest env k s} :
       chanPlan stmt = some (op, e :: rest) →
-      Step (.exec stmt env k) s (.evalE e env (.chanStK op [] rest env k)) s []
+      Step (.exec stmt env k) s (.evalE e env (.chanStK op [] rest env k)) s ⟨[], [], []⟩
   | chanStShift {op done v e rest env k s} :
       Step (.retV v (.chanStK op done (e :: rest) env k)) s
-        (.evalE e env (.chanStK op (v :: done) rest env k)) s []
-  | chanStApply {op done v r env k s c' s' tr} :
+        (.evalE e env (.chanStK op (v :: done) rest env k)) s ⟨[], [], []⟩
+  | chanStApply {op done v r env k s c' s' l} :
       toResult (applyChanOp ctx s op (v :: done).reverse env k) = .ok r →
       -- Channel traffic is SYNCHRONIZATION (no `.data` access); the label
       -- is the apply's own emission (C1 S2c): the channel-object read/write
       -- gc instruments and the slot / close actions.
-      deliver s k (fun (c', s', tr) => (c', s', tr)) r = (c', s', tr) →
-      Step (.retV v (.chanStK op done [] env k)) s c' s' tr
+      deliver s k (fun (c', s', tr) => (c', s', ⟨tr, [], []⟩)) r = (c', s', l) →
+      Step (.retV v (.chanStK op done [] env k)) s c' s' l
   -- `select` (spec's five steps): entry evaluates the clause operands in
   -- source order under `selectOpsK` (step 1); the apply step computes
   -- readiness and commits (steps 2-3, `applySelect` — one ready clause
@@ -5825,31 +5887,31 @@ inductive Step : Config → Store → Config → Store → AccessTrace → Prop 
   | selectFirst {clauses default? e rest env k s} :
       selectOperands clauses.toList = e :: rest →
       Step (.exec (.selectStmt clauses default?) env k) s
-        (.evalE e env (.selectOpsK clauses.toList default? [] rest env k)) s []
+        (.evalE e env (.selectOpsK clauses.toList default? [] rest env k)) s ⟨[], [], []⟩
   | selectNoClausesDefault {clauses d env k s} :
       selectOperands clauses.toList = [] →
-      Step (.exec (.selectStmt clauses (some d)) env k) s (.exec d env k) s []
+      Step (.exec (.selectStmt clauses (some d)) env k) s (.exec d env k) s ⟨[], [], []⟩
   /-- `select {}` (and the degenerate no-clause, no-default form): blocks
   forever (spec: "a select with ... no default case blocks forever"). -/
   | selectNoClausesBlock {clauses env k s} :
       selectOperands clauses.toList = [] →
       Step (.exec (.selectStmt clauses none) env k) s
-        (.blockedSelect [] env k) s []
+        (.blockedSelect [] env k) s ⟨[], [], []⟩
   | selectOpsShift {clauses default? done v e rest env k s} :
       Step (.retV v (.selectOpsK clauses default? done (e :: rest) env k)) s
-        (.evalE e env (.selectOpsK clauses default? (v :: done) rest env k)) s []
+        (.evalE e env (.selectOpsK clauses default? (v :: done) rest env k)) s ⟨[], [], []⟩
   -- The apply rules quantify the CHOICE STREAM (`stmtOpApply`'s idiom):
   -- multi-ready readiness draws the L2 clause pick from it (slice 4 —
   -- the envelope statement is `applySelect`'s docstring), so any
   -- ready clause's commit is a legal step.
-  | selectApply {clauses default? done v r env k s ch c' s' tr} :
+  | selectApply {clauses default? done v r env k s ch c' s' l} :
       -- The rule quantifies the stream; the apply's emitted commit
       -- identity (Q2's 4th component — instrumentation, not semantics)
       -- and its stream are projected away by the delivery: the
       -- successor configuration is what the rule relates.
       toResult (applySelect ctx s clauses default? (v :: done).reverse env k ch) = .ok r →
-      deliver s k (fun (c', s', _, _, tr) => (c', s', tr)) r = (c', s', tr) →
-      Step (.retV v (.selectOpsK clauses default? done [] env k)) s c' s' tr
+      deliver s k (fun (c', s', _, ps, _, tr) => (c', s', ⟨tr, ps, []⟩)) r = (c', s', l) →
+      Step (.retV v (.selectOpsK clauses default? done [] env k)) s c' s' l
   -- Receive delivery, phases SPLIT (convergence round, BUG-029): phase
   -- 1 (`tgtOpK`) evaluates every target's OPERANDS left-to-right,
   -- resolving each target to a store-ready `TargetRef` with its outer
@@ -5858,15 +5920,15 @@ inductive Step : Config → Store → Config → Store → AccessTrace → Prop 
   -- firing after earlier stores landed.
   | tgtOpShift {sh ops v e pending refs targets rop rhs vals body env k s} :
       Step (.retV v (.tgtOpK sh ops (e :: pending) refs targets rop rhs vals body env k)) s
-        (.evalE e env (.tgtOpK sh (v :: ops) pending refs targets rop rhs vals body env k)) s []
+        (.evalE e env (.tgtOpK sh (v :: ops) pending refs targets rop rhs vals body env k)) s ⟨[], [], []⟩
   | tgtOpNext {sh ops v r sh' e ops' targets refs rop rhs vals body env k s} :
       completeTargetRef sh (v :: ops).reverse = some r →
       Step (.retV v (.tgtOpK sh ops [] refs ((sh', e :: ops') :: targets) rop rhs vals body env k)) s
-        (.evalE e env (.tgtOpK sh' [] ops' (refs ++ [r]) targets rop rhs vals body env k)) s []
+        (.evalE e env (.tgtOpK sh' [] ops' (refs ++ [r]) targets rop rhs vals body env k)) s ⟨[], [], []⟩
   | tgtOpStores {sh ops v r refs rop vals body env k s} :
       completeTargetRef sh (v :: ops).reverse = some r →
       Step (.retV v (.tgtOpK sh ops [] refs [] rop [] vals body env k)) s
-        (.next (.storeK (refs ++ [r]) vals body env k)) s []
+        (.next (.storeK (refs ++ [r]) vals body env k)) s ⟨[], [], []⟩
   -- Spine-riding assignments (BUG-025; single form and comma-ok
   -- sources round 4, BUG-034/BUG-037): phase 1 resolves the targets,
   -- the RHS evaluates left-to-right (`rhsK`), the value source
@@ -5876,41 +5938,41 @@ inductive Step : Config → Store → Config → Store → AccessTrace → Prop 
   | tgtOpRhs {sh ops v r refs rop e rest vals body env k s} :
       completeTargetRef sh (v :: ops).reverse = some r →
       Step (.retV v (.tgtOpK sh ops [] refs [] rop (e :: rest) vals body env k)) s
-        (.evalE e env (.rhsK rop (refs ++ [r]) [] rest body env k)) s []
+        (.evalE e env (.rhsK rop (refs ++ [r]) [] rest body env k)) s ⟨[], [], []⟩
   | rhsShift {rop refs done v e rest body env k s} :
       Step (.retV v (.rhsK rop refs done (e :: rest) body env k)) s
-        (.evalE e env (.rhsK rop refs (v :: done) rest body env k)) s []
-  | rhsStores {rop refs done v r body env k s c' s' tr} :
+        (.evalE e env (.rhsK rop refs (v :: done) rest body env k)) s ⟨[], [], []⟩
+  | rhsStores {rop refs done v r body env k s c' s' l} :
       toResult (applyRhsOp ctx s rop (v :: done).reverse) = .ok r →
-      deliver s k (fun (vals, tr) => (.next (.storeK refs vals body env k), s, tr)) r
-        = (c', s', tr) →
-      Step (.retV v (.rhsK rop refs done [] body env k)) s c' s' tr
+      deliver s k (fun (vals, tr) => (.next (.storeK refs vals body env k), s, ⟨tr, [], []⟩)) r
+        = (c', s', l) →
+      Step (.retV v (.rhsK rop refs done [] body env k)) s c' s' l
   | assignManyFirst {left right sh e ops rest env k s} :
       left.size = right.size →
       targetsPlan left.toList = some ((sh, e :: ops) :: rest) →
       Step (.exec (.assignMany left right) env k) s
-        (.evalE e env (.tgtOpK sh [] ops [] rest .vals right.toList [] (.seqn #[]) env k)) s []
+        (.evalE e env (.tgtOpK sh [] ops [] rest .vals right.toList [] (.seqn #[]) env k)) s ⟨[], [], []⟩
   | assignFirst {lhs rhs sh e ops env k s} :
       targetPlan lhs = some (sh, e :: ops) →
       Step (.exec (.assign lhs rhs) env k) s
-        (.evalE e env (.tgtOpK sh [] ops [] [] .vals [rhs] [] (.seqn #[]) env k)) s []
+        (.evalE e env (.tgtOpK sh [] ops [] [] .vals [rhs] [] (.seqn #[]) env k)) s ⟨[], [], []⟩
   | mapLookupFirst {t okT base index keyTy valueTy sh e ops rest env k s} :
       targetsPlan [t, okT] = some ((sh, e :: ops) :: rest) →
       Step (.exec (.mapLookup t okT base index keyTy valueTy) env k) s
         (.evalE e env (.tgtOpK sh [] ops [] rest (.mapLookup keyTy valueTy)
-          [base, index] [] (.seqn #[]) env k)) s []
+          [base, index] [] (.seqn #[]) env k)) s ⟨[], [], []⟩
   | typeAssertFirst {t okT expr targetTy sh e ops rest env k s} :
       targetsPlan [t, okT] = some ((sh, e :: ops) :: rest) →
       Step (.exec (.typeAssert t okT expr targetTy) env k) s
         (.evalE e env (.tgtOpK sh [] ops [] rest (.typeAssert targetTy)
-          [expr] [] (.seqn #[]) env k)) s []
-  | storeStep {ref rs val vals r body env k s c' s' tr} :
+          [expr] [] (.seqn #[]) env k)) s ⟨[], [], []⟩
+  | storeStep {ref rs val vals r body env k s c' s' l} :
       toResult (storeTarget ctx s ref val) = .ok r →
-      deliver s k (fun (s', tr) => (.next (.storeK rs vals body env k), s', tr)) r
-        = (c', s', tr) →
-      Step (.next (.storeK (ref :: rs) (val :: vals) body env k)) s c' s' tr
+      deliver s k (fun (s', tr) => (.next (.storeK rs vals body env k), s', ⟨tr, [], []⟩)) r
+        = (c', s', l) →
+      Step (.next (.storeK (ref :: rs) (val :: vals) body env k)) s c' s' l
   | storeDone {body env k s} :
-      Step (.next (.storeK [] [] body env k)) s (.exec body env k) s []
+      Step (.next (.storeK [] [] body env k)) s (.exec body env k) s ⟨[], [], []⟩
   -- `go` statements (channels arc slice 2): callee then arguments,
   -- evaluated NOW in the spawning goroutine (spec §Go statements) — the
   -- defer registration's eval-now shape. The completed SPAWN position
@@ -5921,14 +5983,14 @@ inductive Step : Config → Store → Config → Store → AccessTrace → Prop 
   -- the spawn position, which keeps `go` in `$pkginit` refused.
   | goStmtEntry {callee args env k s} :
       Step (.exec (.goStmt callee args) env k) s
-        (.evalE callee env (.goCalleeK args.toList env k)) s []
+        (.evalE callee env (.goCalleeK args.toList env k)) s ⟨[], [], []⟩
   | goCalleeArg {cv a rest env k s} :
       deferrableCallee cv = true →
       Step (.retV cv (.goCalleeK (a :: rest) env k)) s
-        (.evalE a env (.goArgsK cv [] rest env k)) s []
+        (.evalE a env (.goArgsK cv [] rest env k)) s ⟨[], [], []⟩
   | goArgNext {v cv vals a rest env k s} :
       Step (.retV v (.goArgsK cv vals (a :: rest) env k)) s
-        (.evalE a env (.goArgsK cv (vals ++ [v]) rest env k)) s []
+        (.evalE a env (.goArgsK cv (vals ++ [v]) rest env k)) s ⟨[], [], []⟩
   -- Sync statements (spec-parity slice 2, design note §§4,6): the
   -- `chanStK` shape verbatim — operand entry/shift, then ONE apply
   -- step (`applySyncOp`: next / panicking / blocked / an onceBegin
@@ -5943,17 +6005,17 @@ inductive Step : Config → Store → Config → Store → AccessTrace → Prop 
   -- through untouched (`applySyncOpCore`'s envelope statement).
   | syncStFirst {stmt op e rest env k s} :
       syncPlan stmt = some (op, e :: rest) →
-      Step (.exec stmt env k) s (.evalE e env (.syncStK op [] rest env k)) s []
+      Step (.exec stmt env k) s (.evalE e env (.syncStK op [] rest env k)) s ⟨[], [], []⟩
   | syncStShift {op done v e rest env k s} :
       Step (.retV v (.syncStK op done (e :: rest) env k)) s
-        (.evalE e env (.syncStK op (v :: done) rest env k)) s []
-  | syncStApply {op done v r env k s ch c' s' tr} :
+        (.evalE e env (.syncStK op (v :: done) rest env k)) s ⟨[], [], []⟩
+  | syncStApply {op done v r env k s ch c' s' l} :
       toResult (applySyncOp ctx s ch op (v :: done).reverse env k) = .ok r →
       -- Sync traffic is the primitive's state transition (no `.data`
       -- access); the label is the apply's own emission (C1 S2c): the
       -- sync-word accesses and the acquire/release action.
-      deliver s k (fun (c', s', _, tr) => (c', s', tr)) r = (c', s', tr) →
-      Step (.retV v (.syncStK op done [] env k)) s c' s' tr
+      deliver s k (fun (c', s', _, ps, tr) => (c', s', ⟨tr, ps, []⟩)) r = (c', s', l) →
+      Step (.retV v (.syncStK op done [] env k)) s c' s' l
   -- (The completion marker's strip `opDoneStrip` LEFT this relation at
   -- C5: the boundary is a per-goroutine flag of the pool (`Thread`), and
   -- its clear is a POOL step (`StepM.strip`), never a `Config` step.)
@@ -5966,17 +6028,17 @@ inductive Step : Config → Store → Config → Store → AccessTrace → Prop 
   -- stable.
   | atomicStFirst {stmt op e rest env k s} :
       atomicPlan stmt = some (op, e :: rest) →
-      Step (.exec stmt env k) s (.evalE e env (.atomicStK op [] rest env k)) s []
+      Step (.exec stmt env k) s (.evalE e env (.atomicStK op [] rest env k)) s ⟨[], [], []⟩
   | atomicStShift {op done v e rest env k s} :
       Step (.retV v (.atomicStK op done (e :: rest) env k)) s
-        (.evalE e env (.atomicStK op (v :: done) rest env k)) s []
-  | atomicStApply {op done v r env k s c' s' tr} :
+        (.evalE e env (.atomicStK op (v :: done) rest env k)) s ⟨[], [], []⟩
+  | atomicStApply {op done v r env k s c' s' l} :
       toResult (applyAtomicOp ctx s op (v :: done).reverse env k) = .ok r →
       -- The atomic op's own access at the cell (its ATOMIC kind) and its
       -- clock action are the apply's emission (C1 S2c); no plain `.data`
       -- access here.
-      deliver s k (fun (c', s', tr) => (c', s', tr)) r = (c', s', tr) →
-      Step (.retV v (.atomicStK op done [] env k)) s c' s' tr
+      deliver s k (fun (c', s', tr) => (c', s', ⟨tr, [], []⟩)) r = (c', s', l) →
+      Step (.retV v (.atomicStK op done [] env k)) s c' s' l
   -- The unsequenced-operand probe (latitude E13 option (b), lane `e13-b`
   -- 2026-09-05, RULED [USER] relayed; envelope statement at
   -- `Stmt.unseqProbe`): evaluate the operand under the probe frame; a
@@ -6007,16 +6069,16 @@ inductive Step : Config → Store → Config → Store → AccessTrace → Prop 
   -- `stuck` naming `probeK` that does not exist) and restated over B4's
   -- `Signal` at the round-17 rebase ([AGENT]).
   | unseqProbe {e env k s} :
-      Step (.exec (.unseqProbe e) env k) s (.evalE e env (.probeK k)) s []
+      Step (.exec (.unseqProbe e) env k) s (.evalE e env (.probeK k)) s ⟨[], [], []⟩
   | probeValue {v k s} :
-      Step (.retV v (.probeK k)) s (.next k) s []
+      Step (.retV v (.probeK k)) s (.next k) s ⟨[], [], []⟩
   /-- DEFER (slot 0): the early panic is not raised here; the operand is
   re-evaluated at its residual position after the sibling events. -/
   | probeDefer {chain k s} :
-      Step (.panicking chain (.probeK k)) s (.next k) s []
+      Step (.panicking chain (.probeK k)) s (.next k) s ⟨[], [⟨.unseqPanic, 2, 0⟩], []⟩
   /-- RAISE (slot 1): the panic propagates now, ahead of the sibling events. -/
   | probeRaise {chain k s} :
-      Step (.panicking chain (.probeK k)) s (.panicking chain k) s []
+      Step (.panicking chain (.probeK k)) s (.panicking chain k) s ⟨[], [⟨.unseqPanic, 2, 1⟩], []⟩
   -- **The `unseq` construct** (evaluation-order model v2.1 §3.3; Stage B,
   -- lane `core/unseq-scheduler-b-0916`, 2026-09-16; the mechanism RULED
   -- [USER] Mike 2026-09-16 relayed — «the Cerberus model is the correct
@@ -6046,7 +6108,7 @@ inductive Step : Config → Store → Config → Store → AccessTrace → Prop 
       g.wellFormed? = none →
       allocDecls ctx env s g.cells = .ok (env', s') →
       Step (.exec (.unseq g thenB) env (.seq rest env k)) s
-        (.next (.unseqK g thenB g.initStatus [] env' .pick (.seq rest env' k))) s' []
+        (.next (.unseqK g thenB g.initStatus [] env' .pick (.seq rest env' k))) s' ⟨[], [], []⟩
   /-- Case (ii): the `j`-th READY occurrence (canonical rank order) runs
   next — the `ChoiceSite.unseqNext` pick; `j` is free (every ready
   occurrence is a legal choice). -/
@@ -6054,7 +6116,8 @@ inductive Step : Config → Store → Config → Store → AccessTrace → Prop 
       g.skippedDep? st = none →
       (g.ready st)[j]? = some i →
       Step (.next (.unseqK g thenB st tg env .pick k)) s
-        (.next (.unseqK g thenB st tg env (.run i) k)) s []
+        (.next (.unseqK g thenB st tg env (.run i) k)) s
+        ⟨[], PickRecord.ofPick .unseqNext (g.ready st).length j, []⟩
   /-- Case (i): nothing active → phase 2 (the stores, then `thenB`). Every
   binder the stores and `thenB` consume was PRODUCED (`unproducedConsumer?`;
   audit F1, 2026-09-16 — a skipped producer's cell is never consumed as a
@@ -6065,16 +6128,16 @@ inductive Step : Config → Store → Config → Store → AccessTrace → Prop 
       g.unproducedConsumer? st thenB = none →
       unseqStorePlan ctx s env tg g.stores = .ok (refs, vals) →
       Step (.next (.unseqK g thenB st tg env .pick k)) s
-        (.next (.storeK refs vals thenB env k)) s []
+        (.next (.storeK refs vals thenB env k)) s ⟨[], [], []⟩
   | unseqRunEval {g thenB st tg env k s o bind head} {i : Nat} :
       g.occs[i]? = some o → o.body = .eval bind head →
       Step (.next (.unseqK g thenB st tg env (.run i) k)) s
-        (.evalE head env (.unseqK g thenB st tg env (.wait i) k)) s []
+        (.evalE head env (.unseqK g thenB st tg env (.wait i) k)) s ⟨[], [], []⟩
   | unseqRunInvoke {g thenB st tg env k s o binds callee args} {i : Nat} :
       g.occs[i]? = some o → o.body = .invoke binds callee args →
       Step (.next (.unseqK g thenB st tg env (.run i) k)) s
         (.exec (unseqInvokeStmt binds callee args) env
-          (.unseqK g thenB st tg env (.wait i) k)) s []
+          (.unseqK g thenB st tg env (.wait i) k)) s ⟨[], [], []⟩
   /-- Stage E E3: a RECEIVE occurrence runs `chanRecv` with the binder cells
   as targets under the wait frame (its completion is `unseqRecvDone`); a
   receive that would block is the statement's own `blockedRecv`. -/
@@ -6082,7 +6145,7 @@ inductive Step : Config → Store → Config → Store → AccessTrace → Prop 
       g.occs[i]? = some o → o.body = .recv binds ch elem →
       Step (.next (.unseqK g thenB st tg env (.run i) k)) s
         (.exec (unseqRecvStmt binds ch elem) env
-          (.unseqK g thenB st tg env (.wait i) k)) s []
+          (.unseqK g thenB st tg env (.wait i) k)) s ⟨[], [], []⟩
   /-- Stage E E4: an ALLOCATION occurrence runs its hoisted statement with the
   binder cell as its target under the wait frame (its completion is
   `unseqAllocDone`); a `make` whose size is out of range panics as the
@@ -6091,7 +6154,7 @@ inductive Step : Config → Store → Config → Store → AccessTrace → Prop 
       g.occs[i]? = some o → o.body = .allocate bind spec →
       Step (.next (.unseqK g thenB st tg env (.run i) k)) s
         (.exec (unseqAllocStmt bind spec) env
-          (.unseqK g thenB st tg env (.wait i) k)) s []
+          (.unseqK g thenB st tg env (.wait i) k)) s ⟨[], [], []⟩
   /-- Stage E5 E5a: a WIDE built-in occurrence (`append`, `copy`) runs its
   hoisted statement with the binder cells as its targets under the wait frame
   (its completion is `unseqWideDone`); its own panics (an append past the
@@ -6100,26 +6163,26 @@ inductive Step : Config → Store → Config → Store → AccessTrace → Prop 
       g.occs[i]? = some o → o.body = .wide binds spec →
       Step (.next (.unseqK g thenB st tg env (.run i) k)) s
         (.exec (unseqWideStmt binds spec) env
-          (.unseqK g thenB st tg env (.wait i) k)) s []
+          (.unseqK g thenB st tg env (.wait i) k)) s ⟨[], [], []⟩
   /-- The checked access through a frozen plan: apply, then deliver — a
   bounds panic unwinds through the frame over the pre-state. -/
-  | unseqRunLoad {g thenB st tg env k s o bind tgt r c' s' tr} {i : Nat} :
+  | unseqRunLoad {g thenB st tg env k s o bind tgt r c' s' l} {i : Nat} :
       g.occs[i]? = some o → o.body = .load bind tgt →
       toResult (unseqLoad ctx s env tg bind tgt) = .ok r →
       deliver s (.unseqK g thenB st tg env .pick k)
-        (fun (s', tr) => (.next (.unseqK g thenB (st.set i .done) tg env .pick k), s', tr)) r
-        = (c', s', tr) →
-      Step (.next (.unseqK g thenB st tg env (.run i) k)) s c' s' tr
+        (fun (s', tr) => (.next (.unseqK g thenB (st.set i .done) tg env .pick k), s', ⟨tr, [], []⟩)) r
+        = (c', s', l) →
+      Step (.next (.unseqK g thenB st tg env (.run i) k)) s c' s' l
   | unseqRunTarget {g thenB st tg env k s o bind lhs r tr} {i : Nat} :
       g.occs[i]? = some o → o.body = .target bind lhs →
       unseqTargetPlan ctx s env lhs = .ok (r, tr) →
       Step (.next (.unseqK g thenB st tg env (.run i) k)) s
-        (.next (.unseqK g thenB (st.set i .done) (tg ++ [(bind, r)]) env .pick k)) s tr
+        (.next (.unseqK g thenB (st.set i .done) (tg ++ [(bind, r)]) env .pick k)) s ⟨tr, [], []⟩
   | unseqRunGuard {g thenB st tg env k s o test w out st' s' tr} {i : Nat} :
       g.occs[i]? = some o → o.body = .guard test w out →
       unseqGuard ctx s g env st i test w out = .ok (st', s', tr) →
       Step (.next (.unseqK g thenB st tg env (.run i) k)) s
-        (.next (.unseqK g thenB st' tg env .pick k)) s' tr
+        (.next (.unseqK g thenB st' tg env .pick k)) s' ⟨tr, [], []⟩
   /-- A value head's result is WRITTEN into its predeclared binder cell
   (normalized at the cell's declared type) and the occurrence is DONE. -/
   | unseqValue {g thenB st tg env k s o bind head v loc s' tr} {i : Nat} :
@@ -6127,31 +6190,31 @@ inductive Step : Config → Store → Config → Store → AccessTrace → Prop 
       unseqCellLoc env bind = .ok loc →
       Mem.store ctx s loc v = .ok (s', tr) →
       Step (.retV v (.unseqK g thenB st tg env (.wait i) k)) s
-        (.next (.unseqK g thenB (st.set i .done) tg env .pick k)) s' tr
+        (.next (.unseqK g thenB (st.set i .done) tg env .pick k)) s' ⟨tr, [], []⟩
   /-- An invocation's statement completed (its results already stored by
   the call's own phase-2 stores): the occurrence is DONE. -/
   | unseqStmtDone {g thenB st tg env k s o binds callee args} {i : Nat} :
       g.occs[i]? = some o → o.body = .invoke binds callee args →
       Step (.next (.unseqK g thenB st tg env (.wait i) k)) s
-        (.next (.unseqK g thenB (st.set i .done) tg env .pick k)) s []
+        (.next (.unseqK g thenB (st.set i .done) tg env .pick k)) s ⟨[], [], []⟩
   /-- Stage E E3: a receive's statement completed (its value already stored
   by the receive's own delivery): the occurrence is DONE. -/
   | unseqRecvDone {g thenB st tg env k s o binds ch elem} {i : Nat} :
       g.occs[i]? = some o → o.body = .recv binds ch elem →
       Step (.next (.unseqK g thenB st tg env (.wait i) k)) s
-        (.next (.unseqK g thenB (st.set i .done) tg env .pick k)) s []
+        (.next (.unseqK g thenB (st.set i .done) tg env .pick k)) s ⟨[], [], []⟩
   /-- Stage E E4: an allocation's statement completed (the fresh object already
   bound by the statement's own store): the occurrence is DONE. -/
   | unseqAllocDone {g thenB st tg env k s o bind spec} {i : Nat} :
       g.occs[i]? = some o → o.body = .allocate bind spec →
       Step (.next (.unseqK g thenB st tg env (.wait i) k)) s
-        (.next (.unseqK g thenB (st.set i .done) tg env .pick k)) s []
+        (.next (.unseqK g thenB (st.set i .done) tg env .pick k)) s ⟨[], [], []⟩
   /-- Stage E5 E5a: a wide built-in's statement completed (its results already
   stored by the statement's own phase-2 stores): the occurrence is DONE. -/
   | unseqWideDone {g thenB st tg env k s o binds spec} {i : Nat} :
       g.occs[i]? = some o → o.body = .wide binds spec →
       Step (.next (.unseqK g thenB st tg env (.wait i) k)) s
-        (.next (.unseqK g thenB (st.set i .done) tg env .pick k)) s []
+        (.next (.unseqK g thenB (st.set i .done) tg env .pick k)) s ⟨[], [], []⟩
 
 /-- Reflexive-transitive closure of `Step`. -/
 inductive Steps : Config → Store → Config → Store → Prop where
@@ -6160,7 +6223,7 @@ inductive Steps : Config → Store → Config → Store → Prop where
   | tail {a sa b sb c sc tr} : Steps a sa b sb → Step ctx b sb c sc tr → Steps a sa c sc
 
 variable {ctx}
-theorem Steps.single {a b : Config} {sa sb : Store} {tr : AccessTrace} (h : Step ctx a sa b sb tr) :
+theorem Steps.single {a b : Config} {sa sb : Store} {l : StepLabel} (h : Step ctx a sa b sb l) :
     Steps ctx a sa b sb :=
   .tail (.refl a sa) h
 

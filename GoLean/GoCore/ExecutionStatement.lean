@@ -10,9 +10,13 @@ packaging — RULED (2026-09-24)» and the execution-model ruling of 2026-09-27
 (`docs/2026-08-31_qrow-rulings.md`). The design note is
 `docs/2026-09-24_execution-statement.md`; every name below is charter §2's.
 
-THE DEVICE. The relations are stated over TODAY's interface: the 5-ary `Step` and the
-4-tuple `stepFn`, whose per-step label is an `AccessTrace`. Charter row 2 replaces that
-label by `StepLabel := { trace, picks, out }`; packet B re-states this file over it and
+THE DEVICE. The relations were first stated (packet A, 2026-09-27) over the 5-ary `Step`
+and the 4-tuple `stepFn` whose per-step label was an `AccessTrace`. The row-2 label
+reshape ([AGENT worker, lane core/step-label-0928], 2026-09-28; design note
+`docs/2026-09-28_step-label.md`) RE-STATED this file over the full event label
+`StepLabel := { trace, picks, out }` (`Ops.lean`): `Prefix`/`LRun`/the classification
+carry `List StepLabel`; `replays` is now replay BY RECORD over a label's `picks`; the
+silent projection is the per-field fold `StepLabel.fold`. Still statements only — packet B
 then PROVES each `<name>_stmt` as `<name>`. Every theorem here is a `def <name>_stmt :
 Prop` — it elaborates with no proof. The only proofs in this file are the boundary
 CONTROLS, each closed by `rfl`: three copied from the review witness
@@ -64,10 +68,10 @@ def ZeroCost (c : Config) : Prop :=
 tape threaded exactly as `stepFn` threads it. The labelled twin of `Trace`
 (`Trace.lean:15`); arbitrary endpoints, independent of termination. -/
 inductive Prefix (ctx : ProgramCtx) :
-    Nat → Store → Config → Choices → List AccessTrace → Store → Config → Choices → Prop where
+    Nat → Store → Config → Choices → List StepLabel → Store → Config → Choices → Prop where
   | done {s : Store} {c : Config} {ch : Choices} : Prefix ctx 0 s c ch [] s c ch
   | step {n : Nat} {s s₁ sf : Store} {c c₁ cf : Config} {ch ch₁ chf : Choices}
-      {l : AccessTrace} {ls : List AccessTrace} :
+      {l : StepLabel} {ls : List StepLabel} :
       stepFn ctx s c ch = .ok (c₁, s₁, ch₁, l) →
       Prefix ctx n s₁ c₁ ch₁ ls sf cf chf →
       Prefix ctx (n + 1) s c ch (l :: ls) sf cf chf
@@ -137,21 +141,22 @@ inductive Finish (ctx : ProgramCtx) :
 
 /-- A completed labelled run — DERIVED from `Prefix` and `Finish`, not the carrier. -/
 def LRun (ctx : ProgramCtx) (s : Store) (c : Config) (ch : Choices)
-    (ls : List AccessTrace) (rec : List PickRecord) (o : FinishOutcome) : Prop :=
+    (ls : List StepLabel) (rec : List PickRecord) (o : FinishOutcome) : Prop :=
   ∃ n sf cf chf cost, Prefix ctx n s c ch ls sf cf chf ∧ Finish ctx sf cf chf rec o cost
 
 /-! ## Replay by record (correction (4)) and the domain premise (correction (5)) -/
 
-/-- `ch₂` REPLAYS the one consultation `stepFn` makes at `(s, c)` under `ch`, leaving
-`ch₂'`: by the step's consumption projection `seqConsumption` (`Machine.lean:5190`) —
-no consultation: the tape is untouched; a consultation at `(site, b)`: the same pick
-record (at `b ≤ 1` both records are `[]` and nothing is popped). -/
-def replays (ctx : ProgramCtx) (s : Store) (c : Config) (ch ch₂ ch₂' : Choices) : Prop :=
-  match seqConsumption ctx s c with
-  | none => ch₂' = ch₂
-  | some (site, b) =>
-      (Choices.consumeAtE site b ch).2.2 = (Choices.consumeAtE site b ch₂).2.2 ∧
-        ch₂' = (Choices.consumeAtE site b ch₂).2.1
+/-- `ch₂` REPLAYS the pick records `ps` (a step's `StepLabel.picks`, in consultation order),
+leaving `ch₂'` — replay BY RECORD (correction (4); re-stated by the row-2 label reshape,
+2026-09-28): each record `⟨site, bound, pick⟩` is re-drawn on the remaining tape by the
+SAME record-emitting consultation `Choices.consumeAtE site bound`, which must return the
+recorded pick and emit exactly that record (so `bound > 1`: a bound-≤-1 consultation is
+never recorded and pops nothing); no records — the tape is untouched. The previous form
+(packet A) read the site and bound off `seqConsumption`; the label now carries them. -/
+def replays : List PickRecord → Choices → Choices → Prop
+  | [], ch₂, ch₂' => ch₂' = ch₂
+  | r :: rs, ch₂, ch₂' =>
+      ∃ mid, Choices.consumeAtE r.site r.bound ch₂ = (r.pick, mid, [r]) ∧ replays rs mid ch₂'
 
 /-- No `Prefix`-reachable NON-zero-cost configuration, on any initial tape, has a refusing
 `stepFn` call, and no reachable abort has a refusing renderer under the pick its consult
@@ -176,28 +181,28 @@ def prefix_refl_stmt : Prop :=
 /-- `Prefix` composes: lengths add, labels append. -/
 def prefix_comp_stmt : Prop :=
   ∀ (ctx : ProgramCtx) (n m : Nat) (s s₁ sf : Store) (c c₁ cf : Config)
-    (ch ch₁ chf : Choices) (ls ls' : List AccessTrace),
+    (ch ch₁ chf : Choices) (ls ls' : List StepLabel),
     Prefix ctx n s c ch ls s₁ c₁ ch₁ → Prefix ctx m s₁ c₁ ch₁ ls' sf cf chf →
     Prefix ctx (n + m) s c ch (ls ++ ls') sf cf chf
 
 /-- `Prefix` splits at every intermediate length. -/
 def prefix_split_stmt : Prop :=
   ∀ (ctx : ProgramCtx) (n m : Nat) (s sf : Store) (c cf : Config) (ch chf : Choices)
-    (ls : List AccessTrace),
+    (ls : List StepLabel),
     Prefix ctx (n + m) s c ch ls sf cf chf →
-    ∃ (ls₁ ls₂ : List AccessTrace) (s₁ : Store) (c₁ : Config) (ch₁ : Choices),
+    ∃ (ls₁ ls₂ : List StepLabel) (s₁ : Store) (c₁ : Config) (ch₁ : Choices),
       ls = ls₁ ++ ls₂ ∧ Prefix ctx n s c ch ls₁ s₁ c₁ ch₁ ∧ Prefix ctx m s₁ c₁ ch₁ ls₂ sf cf chf
 
 /-- Erasure to relational reachability `Steps` (`Machine.lean:6157`). -/
 def prefix_erase_steps_stmt : Prop :=
   ∀ (ctx : ProgramCtx) (n : Nat) (s sf : Store) (c cf : Config) (ch chf : Choices)
-    (ls : List AccessTrace),
+    (ls : List StepLabel),
     Prefix ctx n s c ch ls sf cf chf → Steps ctx c s cf sf
 
 /-- Erasure to the unlabelled counted `Trace` (`Trace.lean:15`). -/
 def prefix_erase_trace_stmt : Prop :=
   ∀ (ctx : ProgramCtx) (n : Nat) (s sf : Store) (c cf : Config) (ch chf : Choices)
-    (ls : List AccessTrace),
+    (ls : List StepLabel),
     Prefix ctx n s c ch ls sf cf chf → Trace ctx n s c ch sf cf chf
 
 /-- Exact agreement with the executable iterate `stepFnIter` (`StepFn.lean:1042`). -/
@@ -249,7 +254,7 @@ def run_ok_iff_stmt : Prop :=
 def run_panic_iff_stmt : Prop :=
   ∀ (ctx : ProgramCtx) (fuel : Nat) (s : Store) (c : Config) (ch : Choices) (t : String),
     execStmtLoop ctx fuel s c ch = .error (.terminal (.panic t)) ↔
-      ∃ (n : Nat) (ls : List AccessTrace) (sf : Store) (cf : Config) (chf ch'' : Choices)
+      ∃ (n : Nat) (ls : List StepLabel) (sf : Store) (cf : Config) (chf ch'' : Choices)
         (rec : List PickRecord),
         n + 1 ≤ fuel ∧ Prefix ctx n s c ch ls sf cf chf ∧
           Finish ctx sf cf chf rec (.aborted t sf ch'') 1
@@ -258,7 +263,7 @@ def run_panic_iff_stmt : Prop :=
 def run_deadlock_iff_stmt : Prop :=
   ∀ (ctx : ProgramCtx) (fuel : Nat) (s : Store) (c : Config) (ch : Choices),
     execStmtLoop ctx fuel s c ch = .error (.terminal .deadlock) ↔
-      ∃ n, n ≤ fuel ∧ ∃ (ls : List AccessTrace) (sf : Store) (cf : Config) (chf : Choices),
+      ∃ n, n ≤ fuel ∧ ∃ (ls : List StepLabel) (sf : Store) (cf : Config) (chf : Choices),
         Prefix ctx n s c ch ls sf cf chf ∧ Finish ctx sf cf chf [] (.deadlock sf chf) 0
 
 /-- Fuel-out: the fixed tape's ACTUAL prefix of length exactly `fuel`, ending at a
@@ -266,23 +271,30 @@ configuration that is NOT zero-cost (F2; an abort configuration is such a case).
 def run_fuelOut_iff_stmt : Prop :=
   ∀ (ctx : ProgramCtx) (fuel : Nat) (s : Store) (c : Config) (ch : Choices),
     execStmtLoop ctx fuel s c ch = .error .fuelOut ↔
-      ∃ (ls : List AccessTrace) (sf : Store) (cf : Config) (chf : Choices),
+      ∃ (ls : List StepLabel) (sf : Store) (cf : Config) (chf : Choices),
         Prefix ctx fuel s c ch ls sf cf chf ∧ ¬ ZeroCost cf
 
-/-- Consultation COVERAGE: no unrecorded consultation affects a step. Stated WITHOUT the
-`c.appendTargetLocal` premise `stepFn_consumption_some` carries (`MachineSound.lean:6175`;
-its `none` twin `:5785`): the proof already drops it — «`hloc` is no longer needed here
-(kept in the statement for its callers)», `MachineSound.lean:6243` (audit F4) — so the
-premise-free statement is expected TRUE (unproven here). -/
+/-- Consultation COVERAGE: no unrecorded consultation affects a step — a second tape that
+replays the step's recorded picks (`replays`, by record) takes the same step with the same
+label, leaving its own residual. Stated WITHOUT the `c.appendTargetLocal` premise
+`stepFn_consumption_some` carries (`MachineSound.lean`; its `none` twin): the proof already
+drops it — «`hloc` is no longer needed here (kept in the statement for its callers)»
+(audit F4) — so the premise-free statement is expected TRUE (unproven here). Row-2 note
+([AGENT worker, lane core/step-label-0928]): a delivered panic that RESTORES the pre-apply
+tape drops its consultation's record with the stream advance (the `appendSpill` arm's
+post-pop panic path, if reachable), so coverage there rests on the same fact — packet B's
+first question, flagged in `docs/2026-09-28_step-label-handoff.md`. -/
 def replay_coverage_stmt : Prop :=
-  ∀ (ctx : ProgramCtx) (s s' : Store) (c c' : Config) (ch ch' : Choices) (l : AccessTrace),
+  ∀ (ctx : ProgramCtx) (s s' : Store) (c c' : Config) (ch ch' : Choices) (l : StepLabel),
     stepFn ctx s c ch = .ok (c', s', ch', l) →
-    ∀ ch₂ ch₂', replays ctx s c ch ch₂ ch₂' → stepFn ctx s c ch₂ = .ok (c', s', ch₂', l)
+    ∀ ch₂ ch₂', replays l.picks ch₂ ch₂' → stepFn ctx s c ch₂ = .ok (c', s', ch₂', l)
 
-/-- A silent step (label `[]`) contributes nothing to the flattened observation. After the
-row-2 reshape the silent label is `⟨[], [], []⟩`, projecting to `[]` per channel. -/
+/-- A silent step (label `⟨[], [], []⟩`) contributes nothing to the observation — the
+per-field fold `StepLabel.fold` (`Ops.lean`; proved there as `StepLabel.fold_silent`, the
+statement kept here under its packet-A name). No `[emptyLabel]` element ever appears. -/
 def silent_projection_stmt : Prop :=
-  ∀ (ls₁ ls₂ : List AccessTrace), (ls₁ ++ [] :: ls₂).flatten = (ls₁ ++ ls₂).flatten
+  ∀ (ls₁ ls₂ : List StepLabel),
+    StepLabel.fold (ls₁ ++ ⟨[], [], []⟩ :: ls₂) = StepLabel.fold (ls₁ ++ ls₂)
 
 /-- The single-goroutine embedding: `execProgLoop_single` (`MultiSound.lean:666`) restated;
 the cost relation IS `seqOpCount` (`MultiSound.lean:640`), never «equal fuel». DEFINITIONAL
@@ -326,7 +338,7 @@ cost within the fuel. -/
 def ClassTerminal (ctx : ProgramCtx) (fuel : Nat) (s : Store) (c : Config) (ch : Choices) :
     Prop :=
   ∃ t, execStmtLoop ctx fuel s c ch = .error (.terminal t) ∧
-    ∃ (n : Nat) (ls : List AccessTrace) (sf : Store) (cf : Config) (chf : Choices)
+    ∃ (n : Nat) (ls : List StepLabel) (sf : Store) (cf : Config) (chf : Choices)
       (rec : List PickRecord) (o : FinishOutcome) (cost : Nat),
       n + cost ≤ fuel ∧ Prefix ctx n s c ch ls sf cf chf ∧ Finish ctx sf cf chf rec o cost ∧
         o.terminal? = some t
@@ -335,7 +347,7 @@ def ClassTerminal (ctx : ProgramCtx) (fuel : Nat) (s : Store) (c : Config) (ch :
 def ClassFuelOut (ctx : ProgramCtx) (fuel : Nat) (s : Store) (c : Config) (ch : Choices) :
     Prop :=
   execStmtLoop ctx fuel s c ch = .error .fuelOut ∧
-    ∃ (ls : List AccessTrace) (sf : Store) (cf : Config) (chf : Choices),
+    ∃ (ls : List StepLabel) (sf : Store) (cf : Config) (chf : Choices),
       Prefix ctx fuel s c ch ls sf cf chf ∧ ¬ ZeroCost cf
 
 /-- Case 4 — a refusal, REPORTED: a prefix to a configuration whose `stepFn` call refuses
@@ -343,7 +355,7 @@ def ClassFuelOut (ctx : ProgramCtx) (fuel : Nat) (s : Store) (c : Config) (ch : 
 def ClassRefusal (ctx : ProgramCtx) (fuel : Nat) (s : Store) (c : Config) (ch : Choices) :
     Prop :=
   ∃ r, execStmtLoop ctx fuel s c ch = .error (.refusal r) ∧
-    ∃ (n : Nat) (ls : List AccessTrace) (sf : Store) (cf : Config) (chf : Choices),
+    ∃ (n : Nat) (ls : List StepLabel) (sf : Store) (cf : Config) (chf : Choices),
       n + 1 ≤ fuel ∧ Prefix ctx n s c ch ls sf cf chf ∧
         (stepFn ctx sf cf chf = .error (.refusal r) ∨
           ∃ (rec : List PickRecord) (ch'' : Choices), Finish ctx sf cf chf rec (.refused r sf ch'') 1)

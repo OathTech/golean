@@ -52,6 +52,12 @@ def exports : List Name := [
     ``GoLean.Semantics.Pool.observation_iff,
     ``GoLean.Semantics.Pool.fuel_is_not_observation,
     ``GoLean.Semantics.Pool.refusal_is_not_observation,
+    -- the full step label (row-2 reshape, 2026-09-28): the silent projection and the
+    -- pool projection (a goroutine step's event label IS `stepFn`'s)
+    ``GoLean.GoCore.StepLabel.fold_silent,
+    ``GoLean.GoCore.Machine.stepThread_privateStep_label,
+    ``GoLean.GoCore.Machine.printOut?_toList,
+    ``GoLean.GoCore.Choices.consumeAtE_eq,
     -- the A3a admission checker (core `Admission`; the admission step audits the rest)
     ``GoLean.GoCore.Admission.checkBoolean_iff,
     ``GoLean.GoCore.Admission.admitted_index_bound,

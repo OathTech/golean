@@ -200,7 +200,7 @@ theorem applySelect_of_done {s : Store}
     {c' : Config} {s' : Store} {cl? : Option EvClause} {tr : AccessTrace}
     (h : applySelectCore ctx s clauses default? vs env k = .ok (.done c' s' cl? tr)) :
     ∀ ch : Choices,
-      applySelect ctx s clauses default? vs env k ch = .ok (c', s', ch, cl?, tr) := by
+      applySelect ctx s clauses default? vs env k ch = .ok (c', s', ch, [], cl?, tr) := by
   intro ch
   unfold applySelect
   simp only [h, Bind.bind, Except.bind]
@@ -217,7 +217,7 @@ theorem stepFn_select_done {s : Store} {v : GoValue}
       = .ok (.done c' s' cl? tr)) :
     ∀ ch : Choices,
       stepFn ctx s (.retV v (.selectOpsK clauses default? done [] env k)) ch
-        = .ok (c', s', ch, tr) := by
+        = .ok (c', s', ch, ⟨tr, [], []⟩) := by
   intro ch
   unfold stepFn
   simp only [applySelect_of_done h ch]
@@ -228,7 +228,7 @@ Stage D): at a live goroutine that is not blocked, not aborting, not
 spawning, whose arrival analysis is partnerless (`.cellPath`) and whose
 configuration is not a select apply, `stepThread` IS `stepFn`'s step
 wrapped in the pool's bookkeeping (the post-op boundary flag, the
-`privateStep` event with the pre-configuration's print bytes). Both the
+`privateStep` event carrying the step's own label). Both the
 oblivious (`stepThread_oblivious`) and the one-pick (`stepThread_pick_run`)
 determinizations of `stepFn`-path shapes read the pool step off this
 equation. -/
@@ -241,9 +241,9 @@ theorem stepThread_stepFn_path {s : Store} {ts : Array Thread} {i : Nat} {c : Co
     (hselp : selectApplyPlan c = none)
     (ch : Choices) :
     stepThread ctx s ts i ch =
-      (stepFn ctx s c ch >>= fun (c', s', ch₂, tr) =>
+      (stepFn ctx s c ch >>= fun (c', s', ch₂, l) =>
         pure (ts.setIfInBounds i (Thread.afterStepWith (c.boundaryFacts s) c'), s', ch₂,
-          ⟨i, .privateStep, [], (printOut? c).toList, tr⟩)) := by
+          ⟨i, .privateStep, ⟨l.trace, [] ++ l.picks, l.out⟩⟩)) := by
   unfold stepThread
   rw [hti]
   simp only [hblc, Bool.false_eq_true, reduceIte, hab, hsp, Bind.bind, Except.bind,
