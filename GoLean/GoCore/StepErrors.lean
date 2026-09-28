@@ -238,7 +238,6 @@ elab "errp_unfold" : tactic => do
       let r ← Lean.Meta.unfoldTarget g n
       let t' ← instantiateMVars (← r.getType)
       if (t'.find? (fun e => e.isConstOf n)).isSome then
-        logInfo m!"RECURSIVE {n}"
         throwError "errp_unfold: recursive {n}"
       replaceMainGoal [r]
     | _ => throwError "errp_unfold: no constant head"

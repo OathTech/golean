@@ -3,6 +3,8 @@ import Tests.PanicRendering
 import Tests.StringPanicMembers
 import GoLean.GoCore.PanicText
 import GoLean.GoCore.Admission
+import GoLean.GoCore.Prefix
+import GoLean.GoCore.BridgeSet
 import Lean
 
 /-! The core totality audit (2026-09-16, lane `park-lane/typed-profiles-0916`,
@@ -37,6 +39,8 @@ def requiredModules : List Name := [
     `GoLean.GoCore.ProgramTrace, `GoLean.GoCore.AbortObservation, `GoLean.GoCore.StringPanic,
     `GoLean.GoCore.PanicText, `GoLean.GoCore.AdmissionIndices, `GoLean.GoCore.AdmissionPolicy,
     `GoLean.GoCore.Admission, `GoLean.CLI, `GoLean.NativeToIR, `GoLean.ChoiceTrace,
+    `GoLean.GoCore.ExecutionStatement, `GoLean.GoCore.Prefix, `GoLean.GoCore.BridgeSet,
+    `GoLean.GoCore.PrefixFacts, `GoLean.GoCore.StepErrors,
     `Tests.GoCoreContract, `Tests.PanicRendering, `Tests.StringPanicMembers,
     `Tests.GoCoreAudit]
 
@@ -58,6 +62,25 @@ def exports : List Name := [
     ``GoLean.GoCore.Machine.stepThread_privateStep_label,
     ``GoLean.GoCore.Machine.printOut?_toList,
     ``GoLean.GoCore.Choices.consumeAtE_eq,
+    -- the execution bridges (window row 2b, packet B, 2026-09-28; packet B audit F6,
+    -- [AGENT] coordinator disposition): the 23 proved `_stmt` theorems and their supports
+    ``GoLean.GoCore.ExecutionStatement.prefix_refl, ``GoLean.GoCore.ExecutionStatement.prefix_comp,
+    ``GoLean.GoCore.ExecutionStatement.prefix_split, ``GoLean.GoCore.ExecutionStatement.prefix_erase_steps,
+    ``GoLean.GoCore.ExecutionStatement.prefix_erase_trace, ``GoLean.GoCore.ExecutionStatement.prefix_iter,
+    ``GoLean.GoCore.ExecutionStatement.finish_abort_step, ``GoLean.GoCore.ExecutionStatement.finish_refused_step,
+    ``GoLean.GoCore.ExecutionStatement.finish_replay, ``GoLean.GoCore.ExecutionStatement.run_ok_iff,
+    ``GoLean.GoCore.ExecutionStatement.run_panic_iff, ``GoLean.GoCore.ExecutionStatement.run_deadlock_iff,
+    ``GoLean.GoCore.ExecutionStatement.run_fuelOut_iff, ``GoLean.GoCore.ExecutionStatement.replay_coverage,
+    ``GoLean.GoCore.ExecutionStatement.silent_projection, ``GoLean.GoCore.ExecutionStatement.single_embedding,
+    ``GoLean.GoCore.ExecutionStatement.program_bridge, ``GoLean.GoCore.ExecutionStatement.classification,
+    ``GoLean.GoCore.ExecutionStatement.classification_wf, ``GoLean.GoCore.ExecutionStatement.boundary_abort_one,
+    ``GoLean.GoCore.ExecutionStatement.boundary_blocked_zero, ``GoLean.GoCore.ExecutionStatement.boundary_refused_one,
+    ``GoLean.GoCore.ExecutionStatement.boundary_refused_zero,
+    ``GoLean.GoCore.Machine.stepFn_strict, ``GoLean.GoCore.ExecutionStatement.stepFn_no_stray_panic,
+    ``GoLean.GoCore.ExecutionStatement.stepFn_error_cases,
+    ``GoLean.GoCore.ExecutionStatement.execStmtLoop_error,
+    ``GoLean.GoCore.ExecutionStatement.noRefusal_step,
+    ``GoLean.GoCore.Machine.stepFn_picks_none, ``GoLean.GoCore.Machine.stepFn_picks_some,
     -- the A3a admission checker (core `Admission`; the admission step audits the rest)
     ``GoLean.GoCore.Admission.checkBoolean_iff,
     ``GoLean.GoCore.Admission.admitted_index_bound,

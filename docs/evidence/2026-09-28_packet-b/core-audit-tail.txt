@@ -1,5 +1,5 @@
-Core totality audit: 50 GoLean modules in the closure (41 under GoLean.GoCore), all on disk; 55 required theorems present; 18171 declarations across all imported local modules; classical trio only
+Core totality audit: 50 GoLean modules in the closure (41 under GoLean.GoCore), all on disk; 85 required theorems present; 18171 declarations across all imported local modules; classical trio only
 Typed audit: core-audit: 5 compiled controls passed
-core-audit-audit PASS; scratch removed (9960247 owned bytes; dependencies symlinked)
+core-audit-audit PASS; scratch removed (10089986 owned bytes; dependencies symlinked)
 Core totality audit gate: PASS
 EXIT=0

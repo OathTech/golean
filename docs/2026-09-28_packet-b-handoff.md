@@ -3,7 +3,7 @@
 [AGENT packet B worker] 2026-09-28. Worktree `.claude/worktrees/packet-b`, branch `window/packet-b-bridges-0928`
 off `core/step-label-0928` @ `61bdc65d` (the label reshape; its audit `docs/2026-09-28_step-label-audit.md` on
 `review/step-label-0928` @ `05435724` is MERGE-CLEAN). Brief `docs/codex-briefs/2026-09-24_packet-B-bridges.md` as
-refreshed by the [AGENT] coordinator. Evidence `docs/evidence/2026-09-28_packet-b/`. Nothing merged, pushed or
+refreshed by the [AGENT] coordinator. Evidence `docs/evidence/2026-09-28_packet-b/`. Audit round: §8. Nothing merged, pushed or
 committed on `main`; the root `HANDOFF.md` untouched. This file doubles as the brief's §7 report.
 
 ## 1. State — BRANCH COMPLETE, nothing stopped
@@ -109,3 +109,32 @@ the label row points at it. Comments only: `ExecutionStatement.lean`, `Machine.l
 Nothing owed by this packet. For the combined landing: the audit ask (unconditional), the merge sign-off, the train's
 5a record (the certificate provenance is STALE by construction: compiled inputs changed), PENDING [USER] item 11
 (the CLAUDE.md owed-simulation sentence, posed at the combined landing).
+
+## 8. Audit round (packet B audit MERGE-CLEAN, `docs/2026-09-28_packet-b-audit.md` on `review/packet-b-bridges-0928` @ `801f8479`; [AGENT] coordinator dispositions, disclosed at the merge ask)
+
+Rebased first: `core/step-label-0928` onto `main` @ `fd1135ff` in its worktree (`61bdc65d` → `0a5a7999`), then this
+branch onto it (snapshots `refs/snapshots/packet-b-rebase/{step-label,packet-b}` = the old tips). New commit on top:
+
+- **F1**: BridgeSet rows 35–57 write each `_stmt`'s statement out (no longer pinned by name); `open
+  GoLean.GoCore.ExecutionStatement (…)` for the statement vocabulary.
+- **F2**: BridgeSet header count fixed («rows 35–64 … seven supporting facts»).
+- **F6** (authorized `Tests/` edit, gate strengthening only): `Tests/GoCoreAudit.lean` — required modules +
+  `ExecutionStatement`, `Prefix`, `BridgeSet`, `PrefixFacts`, `StepErrors` (the audit's module list is a list of
+  module names checked against the closure, so all five were added); required theorems + the 23 bridge theorems,
+  `stepFn_strict`, `stepFn_no_stray_panic`, `stepFn_error_cases`, `execStmtLoop_error`, `noRefusal_step`,
+  `stepFn_picks_none`, `stepFn_picks_some` (55 → 85). Fail-closed confirmed by a scratch mutation (`noRefusal_step`
+  renamed, its BridgeSet row dropped, reverted after): `check-core-audit` EXIT=1, «Unknown constant
+  `GoLean.GoCore.ExecutionStatement.noRefusal_step`» (`docs/evidence/2026-09-28_packet-b/core-audit-mutation.txt`).
+- **F7**: the leftover debug `logInfo` in `errp_unfold` removed.
+
+Recorded, NOT fixed (dispositions):
+
+- **F3**: fold `stepFn_consumption_some'` back into `MachineSound` (drop the unused `appendTargetLocal` premise there,
+  delete the copy) — a later core edit.
+- **F4**: `NoRefusal` is scoped to the SEQUENTIAL driver: `stepFn` refuses a `go` spawn position (spawning is a pool
+  step), so the premise fails on any program that reaches a `go` statement; `classification_wf` is a sequential-run
+  corollary only.
+- **F5**: owed before the re-pin offer — the single-goroutine OUTPUT agreement (the pool's `out` fold vs the
+  sequential labels' fold) and the sequential-to-pool TERMINAL projection.
+
+Gates of this round: `scripts/capped lake build` EXIT=0 (warning-free); `scripts/capped scripts/check-core-audit` EXIT=0 PASS (85 required theorems); `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff` (12:58–13:10 UTC, 738 s) EXIT=1, RED ON EXACTLY THE 5a PAIR (`certificate provenance` STALE; `imported-goose/channel/google-search` PASS → FAIL), 3768 = 3531 / 237, no other row moved, negative baseline 394 matched. The evidence dir's `ci-diff-tail.txt` and `core-audit-tail.txt` are this round's.

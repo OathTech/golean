@@ -27,7 +27,7 @@ projection theorem. Line numbers refreshed at the reshape tip.
 
 RE-PIN 2 — packet B, the execution bridges ([AGENT packet B worker], 2026-09-28; handoff
 `docs/2026-09-28_packet-b-handoff.md`): row 34 strengthened (label-reshape audit F1); rows
-35–63 ADDED — the 23 proved `_stmt` theorems and six supporting facts.
+35–64 ADDED — the 23 proved `_stmt` theorems (statements written out) and seven supporting facts.
 
 The set is RE-PINNED per window row; every change to this file is a changelog line
 (`docs/changelog/61958f2e-WINDOW.md`), so the file's diff between two pins IS the
@@ -43,6 +43,8 @@ with an unchanged type (that is the semantic-equation file's job, charter row 7)
 namespace GoLean.GoCore.BridgeSet
 
 open GoLean GoLean.GoCore GoLean.GoCore.Machine GoLean.Semantics GoLean.Semantics.Pool
+open GoLean.GoCore.ExecutionStatement (Prefix Finish FinishOutcome Blocked ZeroCost NoRefusal replays
+  ClassOk ClassTerminal ClassFuelOut ClassRefusal)
 
 -- 1. `MachineSound.lean:1685`
 example : ∀ {ctx : ProgramCtx} {s : Store} {c : Config} {ch : Choices} {c' : Config} {s' : Store}
@@ -227,100 +229,203 @@ example : ∀ {ctx : ProgramCtx} {s : Store} {threads : Array Thread} {i : Nat} 
 /-! ## Re-pin 2 additions — packet B, the execution bridges (rows 35–64)
 
 [AGENT packet B worker] 2026-09-28. Rows 35–57: every `<name>_stmt` of `ExecutionStatement.lean`
-discharged as `theorem <name>` in `Prefix.lean` (the statement's TYPE is the `_stmt` definition,
-pinned by name — a changed statement is a changed definition there, a changed proof target
-here). Rows 58–64: the supporting facts the bridges rest on, types written out. -/
+discharged as `theorem <name>` in `Prefix.lean`, its statement WRITTEN OUT (packet B audit F1,
+[AGENT] coordinator disposition: an edit to a `_stmt` body changes a line here, so this file's
+diff stays the interface diff). Rows 58–64: the supporting facts the bridges rest on, types written out. -/
 
--- 35. `Prefix.lean:70`
-example : GoLean.GoCore.ExecutionStatement.prefix_refl_stmt :=
+-- 35. `Prefix.lean:70` — `prefix_refl_stmt`, written out
+example :
+  ∀ (ctx : ProgramCtx) (s : Store) (c : Config) (ch : Choices), Prefix ctx 0 s c ch [] s c ch :=
   @GoLean.GoCore.ExecutionStatement.prefix_refl
 
--- 36. `Prefix.lean:72`
-example : GoLean.GoCore.ExecutionStatement.prefix_comp_stmt :=
+-- 36. `Prefix.lean:72` — `prefix_comp_stmt`, written out
+example :
+  ∀ (ctx : ProgramCtx) (n m : Nat) (s s₁ sf : Store) (c c₁ cf : Config)
+    (ch ch₁ chf : Choices) (ls ls' : List StepLabel),
+    Prefix ctx n s c ch ls s₁ c₁ ch₁ → Prefix ctx m s₁ c₁ ch₁ ls' sf cf chf →
+    Prefix ctx (n + m) s c ch (ls ++ ls') sf cf chf :=
   @GoLean.GoCore.ExecutionStatement.prefix_comp
 
--- 37. `Prefix.lean:80`
-example : GoLean.GoCore.ExecutionStatement.prefix_split_stmt :=
+-- 37. `Prefix.lean:80` — `prefix_split_stmt`, written out
+example :
+  ∀ (ctx : ProgramCtx) (n m : Nat) (s sf : Store) (c cf : Config) (ch chf : Choices)
+    (ls : List StepLabel),
+    Prefix ctx (n + m) s c ch ls sf cf chf →
+    ∃ (ls₁ ls₂ : List StepLabel) (s₁ : Store) (c₁ : Config) (ch₁ : Choices),
+      ls = ls₁ ++ ls₂ ∧ Prefix ctx n s c ch ls₁ s₁ c₁ ch₁ ∧ Prefix ctx m s₁ c₁ ch₁ ls₂ sf cf chf :=
   @GoLean.GoCore.ExecutionStatement.prefix_split
 
--- 38. `Prefix.lean:100`
-example : GoLean.GoCore.ExecutionStatement.prefix_erase_steps_stmt :=
+-- 38. `Prefix.lean:100` — `prefix_erase_steps_stmt`, written out
+example :
+  ∀ (ctx : ProgramCtx) (n : Nat) (s sf : Store) (c cf : Config) (ch chf : Choices)
+    (ls : List StepLabel),
+    Prefix ctx n s c ch ls sf cf chf → Steps ctx c s cf sf :=
   @GoLean.GoCore.ExecutionStatement.prefix_erase_steps
 
--- 39. `Prefix.lean:94`
-example : GoLean.GoCore.ExecutionStatement.prefix_erase_trace_stmt :=
+-- 39. `Prefix.lean:94` — `prefix_erase_trace_stmt`, written out
+example :
+  ∀ (ctx : ProgramCtx) (n : Nat) (s sf : Store) (c cf : Config) (ch chf : Choices)
+    (ls : List StepLabel),
+    Prefix ctx n s c ch ls sf cf chf → Trace ctx n s c ch sf cf chf :=
   @GoLean.GoCore.ExecutionStatement.prefix_erase_trace
 
--- 40. `Prefix.lean:113`
-example : GoLean.GoCore.ExecutionStatement.prefix_iter_stmt :=
+-- 40. `Prefix.lean:113` — `prefix_iter_stmt`, written out
+example :
+  ∀ (ctx : ProgramCtx) (n : Nat) (s sf : Store) (c cf : Config) (ch chf : Choices),
+    stepFnIter ctx n s c ch = .ok (cf, sf, chf) ↔ ∃ ls, Prefix ctx n s c ch ls sf cf chf :=
   @GoLean.GoCore.ExecutionStatement.prefix_iter
 
--- 41. `Prefix.lean:385`
-example : GoLean.GoCore.ExecutionStatement.finish_abort_step_stmt :=
+-- 41. `Prefix.lean:385` — `finish_abort_step_stmt`, written out
+example :
+  ∀ (ctx : ProgramCtx) (s : Store) (c : Config) (ch : Choices) (t : String),
+    (∃ (rec : List PickRecord) (ch'' : Choices), Finish ctx s c ch rec (.aborted t s ch'') 1) ↔
+      stepFn ctx s c ch = .error (.terminal (.panic t)) :=
   @GoLean.GoCore.ExecutionStatement.finish_abort_step
 
--- 42. `Prefix.lean:165`
-example : GoLean.GoCore.ExecutionStatement.finish_refused_step_stmt :=
+-- 42. `Prefix.lean:165` — `finish_refused_step_stmt`, written out
+example :
+  ∀ (ctx : ProgramCtx) (s : Store) (c : Config) (ch : Choices) (first : PanicEntry)
+    (rest : List PanicEntry) (r : Refusal),
+    c.abort? = some (first, rest) →
+    ((∃ (rec : List PickRecord) (ch'' : Choices), Finish ctx s c ch rec (.refused r s ch'') 1) ↔
+      stepFn ctx s c ch = .error (.refusal r)) :=
   @GoLean.GoCore.ExecutionStatement.finish_refused_step
 
--- 43. `Prefix.lean:250`
-example : GoLean.GoCore.ExecutionStatement.finish_replay_stmt :=
+-- 43. `Prefix.lean:250` — `finish_replay_stmt`, written out
+example :
+  ∀ (ctx : ProgramCtx) (s : Store) (c : Config) (ch ch₂ : Choices) (first : PanicEntry)
+    (rest : List PanicEntry) (rec : List PickRecord),
+    c.abort? = some (first, rest) →
+    (Choices.consumeAtE .repanicCollapse (repanicCollapseWidth first rest) ch₂).2.2 = rec →
+    (∀ (t : String) (ch'' : Choices), Finish ctx s c ch rec (.aborted t s ch'') 1 →
+      Finish ctx s c ch₂ rec
+        (.aborted t s (Choices.consumeAtE .repanicCollapse (repanicCollapseWidth first rest) ch₂).2.1)
+        1) ∧
+    (∀ (r : Refusal) (ch'' : Choices), Finish ctx s c ch rec (.refused r s ch'') 1 →
+      Finish ctx s c ch₂ rec
+        (.refused r s (Choices.consumeAtE .repanicCollapse (repanicCollapseWidth first rest) ch₂).2.1)
+        1) :=
   @GoLean.GoCore.ExecutionStatement.finish_replay
 
--- 44. `Prefix.lean:445`
-example : GoLean.GoCore.ExecutionStatement.run_ok_iff_stmt :=
+-- 44. `Prefix.lean:445` — `run_ok_iff_stmt`, written out
+example :
+  ∀ (ctx : ProgramCtx) (fuel : Nat) (s sf : Store) (c : Config) (ch chf : Choices),
+    execStmtLoop ctx fuel s c ch = .ok (sf, chf) ↔
+      ∃ n, n ≤ fuel ∧ ∃ ls, Prefix ctx n s c ch ls sf (.next .stop) chf :=
   @GoLean.GoCore.ExecutionStatement.run_ok_iff
 
--- 45. `Prefix.lean:454`
-example : GoLean.GoCore.ExecutionStatement.run_panic_iff_stmt :=
+-- 45. `Prefix.lean:454` — `run_panic_iff_stmt`, written out
+example :
+  ∀ (ctx : ProgramCtx) (fuel : Nat) (s : Store) (c : Config) (ch : Choices) (t : String),
+    execStmtLoop ctx fuel s c ch = .error (.terminal (.panic t)) ↔
+      ∃ (n : Nat) (ls : List StepLabel) (sf : Store) (cf : Config) (chf ch'' : Choices)
+        (rec : List PickRecord),
+        n + 1 ≤ fuel ∧ Prefix ctx n s c ch ls sf cf chf ∧
+          Finish ctx sf cf chf rec (.aborted t sf ch'') 1 :=
   @GoLean.GoCore.ExecutionStatement.run_panic_iff
 
--- 46. `Prefix.lean:478`
-example : GoLean.GoCore.ExecutionStatement.run_deadlock_iff_stmt :=
+-- 46. `Prefix.lean:478` — `run_deadlock_iff_stmt`, written out
+example :
+  ∀ (ctx : ProgramCtx) (fuel : Nat) (s : Store) (c : Config) (ch : Choices),
+    execStmtLoop ctx fuel s c ch = .error (.terminal .deadlock) ↔
+      ∃ n, n ≤ fuel ∧ ∃ (ls : List StepLabel) (sf : Store) (cf : Config) (chf : Choices),
+        Prefix ctx n s c ch ls sf cf chf ∧ Finish ctx sf cf chf [] (.deadlock sf chf) 0 :=
   @GoLean.GoCore.ExecutionStatement.run_deadlock_iff
 
--- 47. `Prefix.lean:492`
-example : GoLean.GoCore.ExecutionStatement.run_fuelOut_iff_stmt :=
+-- 47. `Prefix.lean:492` — `run_fuelOut_iff_stmt`, written out
+example :
+  ∀ (ctx : ProgramCtx) (fuel : Nat) (s : Store) (c : Config) (ch : Choices),
+    execStmtLoop ctx fuel s c ch = .error .fuelOut ↔
+      ∃ (ls : List StepLabel) (sf : Store) (cf : Config) (chf : Choices),
+        Prefix ctx fuel s c ch ls sf cf chf ∧ ¬ ZeroCost cf :=
   @GoLean.GoCore.ExecutionStatement.run_fuelOut_iff
 
--- 48. `Prefix.lean:309`
-example : GoLean.GoCore.ExecutionStatement.replay_coverage_stmt :=
+-- 48. `Prefix.lean:309` — `replay_coverage_stmt`, written out
+example :
+  ∀ (ctx : ProgramCtx) (s s' : Store) (c c' : Config) (ch ch' : Choices) (l : StepLabel),
+    stepFn ctx s c ch = .ok (c', s', ch', l) →
+    ∀ ch₂ ch₂', replays l.picks ch₂ ch₂' → stepFn ctx s c ch₂ = .ok (c', s', ch₂', l) :=
   @GoLean.GoCore.ExecutionStatement.replay_coverage
 
--- 49. `Prefix.lean:587`
-example : GoLean.GoCore.ExecutionStatement.silent_projection_stmt :=
+-- 49. `Prefix.lean:587` — `silent_projection_stmt`, written out
+example :
+  ∀ (ls₁ ls₂ : List StepLabel),
+    StepLabel.fold (ls₁ ++ ⟨[], [], []⟩ :: ls₂) = StepLabel.fold (ls₁ ++ ls₂) :=
   @GoLean.GoCore.ExecutionStatement.silent_projection
 
--- 50. `Prefix.lean:589`
-example : GoLean.GoCore.ExecutionStatement.single_embedding_stmt :=
+-- 50. `Prefix.lean:589` — `single_embedding_stmt`, written out
+example :
+  ∀ (ctx : ProgramCtx) (fuel : Nat) (σ : Store) (c : Config) (ch : Choices) (rs : RaceState)
+    (r : Except Stop (Store × Choices)),
+    execStmtLoop ctx fuel σ c ch = r → transferable r →
+    execProgLoop ctx (fuel + seqOpCount ctx fuel σ c ch) ⟨#[.running c none], σ, 0⟩ rs ch = r :=
   @GoLean.GoCore.ExecutionStatement.single_embedding
 
--- 51. `Prefix.lean:592`
-example : GoLean.GoCore.ExecutionStatement.program_bridge_stmt :=
+-- 51. `Prefix.lean:592` — `program_bridge_stmt`, written out
+example :
+  ∀ (fuel : Nat) (p : Program) (name : String) (args : Array GoValue) (ch : Choices)
+    (pctx : ProgramCtx) (c₀ : Config) (s₀ : Store) (locs : List Loc) (ch₁ : Choices),
+    runProgramSetupM fuel p name args ch = .ok (pctx, c₀, s₀, locs, ch₁) →
+    runProgramPoolOutM fuel p name args ch =
+      (match execProgLoopOut pctx fuel ⟨#[Thread.running c₀ none], s₀, 0⟩ {} ch₁
+          GoString.empty with
+        | (out, .error e) => .error (e, out)
+        | (out, .ok (sf, _)) =>
+            match loadMany pctx sf locs with
+            | .ok vs => .ok { values := vs.toArray, output := out }
+            | .error e => .error (e, out)) :=
   @GoLean.GoCore.ExecutionStatement.program_bridge
 
--- 52. `Prefix.lean:534`
-example : GoLean.GoCore.ExecutionStatement.classification_stmt :=
+-- 52. `Prefix.lean:534` — `classification_stmt`, written out
+example :
+  ∀ (ctx : ProgramCtx) (fuel : Nat) (s : Store) (c : Config) (ch : Choices),
+    ClassOk ctx fuel s c ch ∨ ClassTerminal ctx fuel s c ch ∨ ClassFuelOut ctx fuel s c ch ∨
+      ClassRefusal ctx fuel s c ch :=
   @GoLean.GoCore.ExecutionStatement.classification
 
--- 53. `Prefix.lean:544`
-example : GoLean.GoCore.ExecutionStatement.classification_wf_stmt :=
+-- 53. `Prefix.lean:544` — `classification_wf_stmt`, written out
+example :
+  ∀ (ctx : ProgramCtx) (fuel : Nat) (s : Store) (c : Config) (ch : Choices),
+    StateWf ctx s → NoRefusal ctx s c →
+      ClassOk ctx fuel s c ch ∨ ClassTerminal ctx fuel s c ch ∨ ClassFuelOut ctx fuel s c ch :=
   @GoLean.GoCore.ExecutionStatement.classification_wf
 
--- 54. `Prefix.lean:280`
-example : GoLean.GoCore.ExecutionStatement.boundary_abort_one_stmt :=
+-- 54. `Prefix.lean:280` — `boundary_abort_one_stmt`, written out
+example :
+  ∀ (ctx : ProgramCtx) (s : Store) (c : Config) (ch : Choices) (first : PanicEntry)
+    (rest : List PanicEntry) (t : String),
+    c.abort? = some (first, rest) →
+    abortMsg ctx first rest
+      (Choices.consumeAtE .repanicCollapse (repanicCollapseWidth first rest) ch).1 = .ok t →
+    execStmtLoop ctx 1 s c ch = .error (.terminal (.panic t)) :=
   @GoLean.GoCore.ExecutionStatement.boundary_abort_one
 
--- 55. `Prefix.lean:287`
-example : GoLean.GoCore.ExecutionStatement.boundary_blocked_zero_stmt :=
+-- 55. `Prefix.lean:287` — `boundary_blocked_zero_stmt`, written out
+example :
+  ∀ (ctx : ProgramCtx) (s : Store) (c : Config) (ch : Choices),
+    Blocked c → execStmtLoop ctx 0 s c ch = .error (.terminal .deadlock) :=
   @GoLean.GoCore.ExecutionStatement.boundary_blocked_zero
 
--- 56. `Prefix.lean:290`
-example : GoLean.GoCore.ExecutionStatement.boundary_refused_one_stmt :=
+-- 56. `Prefix.lean:290` — `boundary_refused_one_stmt`, written out
+example :
+  ∀ (ctx : ProgramCtx) (s : Store) (c : Config) (ch : Choices) (first : PanicEntry)
+    (rest : List PanicEntry) (r : Refusal),
+    c.abort? = some (first, rest) →
+    abortMsg ctx first rest
+      (Choices.consumeAtE .repanicCollapse (repanicCollapseWidth first rest) ch).1
+        = .error (.refusal r) →
+    execStmtLoop ctx 1 s c ch = .error (.refusal r) :=
   @GoLean.GoCore.ExecutionStatement.boundary_refused_one
 
--- 57. `Prefix.lean:297`
-example : GoLean.GoCore.ExecutionStatement.boundary_refused_zero_stmt :=
+-- 57. `Prefix.lean:297` — `boundary_refused_zero_stmt`, written out
+example :
+  ∀ (ctx : ProgramCtx) (s : Store) (c : Config) (ch : Choices) (first : PanicEntry)
+    (rest : List PanicEntry) (r : Refusal),
+    c.abort? = some (first, rest) →
+    abortMsg ctx first rest
+      (Choices.consumeAtE .repanicCollapse (repanicCollapseWidth first rest) ch).1
+        = .error (.refusal r) →
+    execStmtLoop ctx 0 s c ch = .error .fuelOut :=
   @GoLean.GoCore.ExecutionStatement.boundary_refused_zero
 
 -- 58. `Prefix.lean:373` — NO STRAY PANIC (audit F1, machine-checked)

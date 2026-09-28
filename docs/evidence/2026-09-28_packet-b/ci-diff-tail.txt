@@ -1,7 +1,3 @@
-
-── negative baseline diff
-no regression: 394 case(s) run in negative-latest.tsv match baselines/negative-full.tsv
-
 ── differential baseline diff (scripts/coverage-baseline-diff)
 DRIFT vs baselines/native-full.tsv (3768 case(s) run):
 imported-goose/channel/google-search	baseline[PASS/membership] -> now[FAIL/membership]
@@ -12,7 +8,7 @@ imported-goose/channel/google-search	baseline[PASS/membership] -> now[FAIL/membe
 
 ── executed library coverage (all named build receipts from this CI invocation)
 CI coverage timing: verify: seconds=0.015
-Executed library coverage: PASS; 9 libraries, 19 Tests modules, 8 named steps; timings: artifacts/ci-library-timings/2a32163e9c144dc487e494f4f17b8c18.json
+Executed library coverage: PASS; 9 libraries, 19 Tests modules, 8 named steps; timings: artifacts/ci-library-timings/062f99272f6746fd9b3f1b30969316da.json
 
 ══ scripts/ci summary ══
   ok   Tests/library ownership (no exceptions; executed builds checked at exit)
@@ -57,9 +53,9 @@ Executed library coverage: PASS; 9 libraries, 19 Tests modules, 8 named steps; t
   ok   executed library coverage (all declared libraries; all Tests modules)
 
 RESULT: FAIL
-Failed CI receipts retained: .tmp/ci-libraries-fzg9rlve
-CI coverage timing: close: seconds=0.016
-CI total wall seconds: 739
+Failed CI receipts retained: .tmp/ci-libraries-srnkwfff
+CI coverage timing: close: seconds=0.015
+CI total wall seconds: 738
 EXIT=1
-Mon Sep 28 12:27:02 PM UTC 2026
+Mon Sep 28 01:10:56 PM UTC 2026
 differential coverage summary: cases=3768 pass=3531 fail=237 export_status=0
