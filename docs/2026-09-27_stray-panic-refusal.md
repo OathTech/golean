@@ -71,3 +71,7 @@ rows run, 3531 PASS / 237 FAIL = the pin 3532 / 236 with the one 5a-class row re
 `observations_sha256` IDENTICAL; inputs differ in seven compiled modules (`GoLean.lean`, `BridgeSet`, `ExecutionStatement`,
 `Machine`, `Ops`, `StateWf`, `StepFn`) and the two call-site inventory files, plus the receipt (`50b446ce`, 134.868 s) —
 INSTALLED in this commit; a provenance refresh, not a re-pin.
+
+**Green re-run at the records commit `84f0a9e4`** ([AGENT] coordinator, 2026-09-28): `GOLEAN_MEM_MAX=48G scripts/capped
+scripts/ci --diff` → EXIT=0, `RESULT: PASS`, `baseline diff FULL (3768/3768, no regression)`, `certificate provenance` ok.
+Round 51 closed: the prompt-audit edits, the stray-panic refusal and window packet A (the contract) are on main.
