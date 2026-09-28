@@ -1074,3 +1074,4 @@ embedded-pointer-hop race footprint becomes gc's exact loads; `recoverThroughWra
 promoted dispatch (fuel only); wire schema v2 with the twin re-pinned under `--slow`; the plan S0–S3 at 4–5 sessions. (b) The
 documentation branches `docs/logic-reply-0928` (the note to the logic team, their reply, the legacy-triple changelog section)
 and `docs/gp-design-0928` land, the adversarial audit waived for documentation only.
+Landed on `main` by train r53 (documentation only): release-check no inputs changed; fast `scripts/ci` PASS; audit waived per the ruling above.
