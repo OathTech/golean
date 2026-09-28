@@ -64,13 +64,20 @@ ourselves supply». Qualifications: (1) includes the native lowering
 Go → GoCore, differentially validated and carrying NO correctness
 theorem — a consumer of a GoCore program inherits that trust
 assumption and the wire's provenance record. (2) is proved per step
-in both directions (`stepFn_sound`, `step_complete`) and for the
-drivers' traces, runs and observations; the single end-to-end
-labelled simulation (initialization, choice consumption, memory
-effects, output, terminal priority, the refusal/domain hypotheses) is
-an OWED proof obligation, kept in step with the interpreter (priority
-(c) of the 2026-09-11 ruling); a refusal or uncaught abort has no
-successful relation successor — a partial-correctness boundary. (3):
+in both directions (`stepFn_sound`, `step_complete`), for the drivers'
+traces, runs and observations, and end to end for the sequential
+driver over the labelled step (`GoLean/GoCore/Prefix.lean`: the
+counted, choice-threaded prefix closure; the finishing classification
+with its five endings; the fuel bridges; choice replay by record; the
+refusal-separate classification; statements pinned in
+`GoLean/GoCore/BridgeSet.lean`). Still OWED, kept in step with the
+interpreter (priority (c) of the 2026-09-11 ruling): the pool/registry
+half, the single-goroutine output agreement and the sequential-to-pool
+terminal projection. Limits: setup is a premise, init-time printing is
+refused, and the domain premise `NoRefusal` covers the sequential driver
+only (a `go` statement leaves it). A refusal has no relation
+successor: a partial-correctness boundary ([USER] approved this
+wording 2026-09-28, «D2: approved», relayed). (3):
 the typed-admission profile family, the `GoLean/Interface.lean`
 facade and the adapter spikes were PARKED 2026-09-16 ([USER] ruling;
 tag `typed-profiles/last-main-2026-09-16`,

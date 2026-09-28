@@ -1030,3 +1030,14 @@ comparison byte-identical); (2) `Finish.fatal` as the fifth ending, cost 1; (3) 
 `program_bridge_stmt` as a non-executing mention. Recorded for later lanes: the drivers' post-run result reads still use the
 old reader (stray-panic audit A1; unreachable); `scripts/check-mem-callsites` misses a one-line definition (packet A audit);
 a machine-checked «no stray panic at a non-abort configuration» lemma as packet B's first proof (re-verification suggestion).
+
+### Train r52 — the step label + the execution bridges, and the charter wording — RULED (2026-09-28)
+
+[USER] Mike, 2026-09-28, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «D1: approved, D2: approved. Go
+ahead». D1: land the label reshape (`core/step-label-0928`, audit MERGE-CLEAN) and window packet B (`window/packet-b-bridges-0928`,
+audit MERGE-CLEAN; the pre-landing round F1/F2/F6/F7 done), with the disclosed [AGENT] items: the pool event's pick list
+now includes picks previously unrecorded (no observation reads it); the core audit's required list strengthened (85 theorems,
+five modules). D2: `CLAUDE.md`'s item (2) of «What this repo provides» replaced by the approved wording — the sequential
+end-to-end statement proved, the pool/registry half and the two single-goroutine projections still OWED, the limits stated
+(charter decision 11, 2026-09-24). Owed before the re-pin offer: the single-goroutine output agreement and the
+sequential-to-pool terminal projection (packet B audit F5); folding `stepFn_consumption_some'` back into `MachineSound` (F3).
