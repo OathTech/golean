@@ -1,0 +1,39 @@
+Axioms EXIT=0
+Witnesses EXIT=0
+BridgeSetCtl EXIT=0
+BridgeSetMut1 EXIT=1
+BridgeSetMut2 EXIT=1
+BridgeSetMut3 EXIT=1
+core-audit EXIT=0
+== Mut1 diff vs GoLean/GoCore/BridgeSet.lean
+275c275
+< example : GoLean.GoCore.ExecutionStatement.run_panic_iff_stmt :=
+---
+> example : GoLean.GoCore.ExecutionStatement.run_deadlock_iff_stmt :=
+.tmp/BridgeSetMut1.lean:276:2: error: Type mismatch
+  ExecutionStatement.run_panic_iff
+has type
+  ExecutionStatement.run_panic_iff_stmt
+== Mut2 diff vs GoLean/GoCore/BridgeSet.lean
+328c328
+<     c.abort? = none → stepFn ctx s c ch ≠ .error (.terminal (.panic t)) :=
+---
+>     stepFn ctx s c ch ≠ .error (.terminal (.panic t)) :=
+.tmp/BridgeSetMut2.lean:329:2: error: Type mismatch
+  @ExecutionStatement.stepFn_no_stray_panic
+has type
+  ∀ {ctx : ProgramCtx} {s : Store} {c : Config} {ch : Choices} {t : String},
+== Mut3 diff vs GoLean/GoCore/BridgeSet.lean
+358c358
+<       stepFn ctx σ c ch = .ok (c', σ', (Choices.consumeAt site b ch).2, tr) :=
+---
+>       stepFn ctx σ c ch = .ok (c', σ', (Choices.consumeAt site b ch).2, tr) ∧ True :=
+.tmp/BridgeSetMut3.lean:359:2: error: Type mismatch
+  @stepFn_consumption_some'
+has type
+  ∀ {ctx : ProgramCtx} {σ : Store} {c : Config} {ch₀ : Choices} {c' : Config} {σ' : Store} {ch₀' : Choices}
+== core-audit tail
+Core totality audit: 50 GoLean modules in the closure (41 under GoLean.GoCore), all on disk; 55 required theorems present; 18171 declarations across all imported local modules; classical trio only
+Typed audit: core-audit: 5 compiled controls passed
+core-audit-audit PASS; scratch removed (9960283 owned bytes; dependencies symlinked)
+Core totality audit gate: PASS

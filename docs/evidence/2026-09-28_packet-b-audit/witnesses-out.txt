@@ -1,0 +1,10 @@
+.tmp/Witnesses.lean:13:22: warning: Variable name `t` is not explicitly referenced.
+
+The binding can be removed (if unused) or named `_` (if used implicitly).
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+"ok panicking (Go panic as a CONFIGURATION, unwinds)"
+"error refusal internal: binding cell is not a root location: GoLean.Loc.index (GoLean.Loc.base { id := 0 }) 5 (a variable, pinned result or unseq binder cell is always a fresh root cell; machine invariant breached)"
+"ERROR panic terminal: boom"
+"error fatal: sync: unlock of unlocked mutex"
+"error refusal internal: step on terminal configuration"
