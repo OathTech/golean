@@ -19,9 +19,10 @@ claim.
 Since the repo split (2026-08-31, [USER]-directed —
 `docs/2026-08-31_repo-split-plan.md`), the Iris proof layer (the
 designated theorem set, the judge/audit apparatus, program proofs)
-is NOT here: it is parked whole on branch
-`park/reasoning-2026-08-31`, pending migration to a separate repo
-that will consume this one as a pinned dependency. This repo makes
+is NOT here: the parked era is on branch `park/reasoning-2026-08-31`,
+and the live program logic is the separate repository
+`~/projects/golean-logic`, which consumes this one at a pinned
+commit. This repo makes
 NO verification claims about Go programs.
 
 The boundary, ruled 2026-09-05 ([USER], Mike, verbatim, relayed by
@@ -42,15 +43,14 @@ downstream. A thin customer adapter (an iris-lean `Language` instance
 + toy facts) may be built in-repo as a SPIKE, outside the default
 build and the gate's dependency graph, to validate the interface.
 
-Top-level goals ([USER], Mike, 2026-09-04, verbatim, relayed by the
-[AGENT] coordinator — cite as relayed): «(1) to be a highly accurate
-go semantics, and (2) to support reasoning about go using an
-iris-lean layer (which we won't build, that's a customer)».
-SUPERSEDED 2026-09-11 ([USER], Mike, verbatim, relayed): «We don't
-have as of now a customer. Our job is to make the Go seantics as good
-as we can make it. Nothing else. […] We *can* provide a relational
-definition along with it too. Everything else should be dropped»
-(`docs/2026-09-11_review-dispositions.md`).
+Top-level goal ([USER], Mike, verbatim, relayed by the [AGENT]
+coordinator — cite as relayed), 2026-09-11: «Our job is to make the Go
+seantics as good as we can make it. […] We *can* provide a relational
+definition along with it too» (`docs/2026-09-11_review-dispositions.md`);
+2026-09-22: «Our ultimate aim here is to support the GoLean logic that
+we're building in a different repo. That's our upstream customer.»
+The customer's review shaped the current plan
+(`docs/2026-09-23_batched-window-charter.md`).
 
 **What this repo provides, and does not** ([USER], Mike, 2026-09-16,
 verbatim, relayed; the qualifications are [AGENT], ratified by the
@@ -74,9 +74,9 @@ successful relation successor — a partial-correctness boundary. (3):
 the typed-admission profile family, the `GoLean/Interface.lean`
 facade and the adapter spikes were PARKED 2026-09-16 ([USER] ruling;
 tag `typed-profiles/last-main-2026-09-16`,
-`docs/2026-09-16_typed-profiles-parked.md`); their future home is the
-reasoning repository under gitignored `deps/`, consuming this repo at
-a pin. A consumer also inherits the Platform instance (gc, linux/amd64
+`docs/2026-09-16_typed-profiles-parked.md`), revivable from that tag
+by the logic repository (`~/projects/golean-logic`), which consumes
+this repo at a pin. A consumer also inherits the Platform instance (gc, linux/amd64
 — portability is a separate contract, latitude inventory §11) and the
 machine's concurrency granularity (the reduction to Go's access
 granularity is an explicit open obligation, not a theorem). This
@@ -197,9 +197,11 @@ Everything else is untrusted tooling.
 
 ## Pointers
 
-The master plan (the whole roadmap, dated, indexed by package —
-the plan of record; §7 = the review's dispositions and the revised
-wave): `docs/2026-09-05_master-plan.md` · The independent project
+The plan of record for the current phase: the batched-window charter
+`docs/2026-09-23_batched-window-charter.md` and its execution table
+`docs/2026-09-24_window-plan.md` · The earlier whole roadmap (dated,
+indexed by package; §7 = the review's dispositions):
+`docs/2026-09-05_master-plan.md` · The independent project
 gate audit (2026-09-05, verdict + F1–F13 + Gates A–D):
 `docs/2026-09-05_project-gate-audit.md` ·
 The split plan (this era's opening decision):

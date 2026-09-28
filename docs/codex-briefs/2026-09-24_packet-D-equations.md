@@ -1,11 +1,12 @@
 # Codex packet D — the semantic EQUATIONS, the rewrite set, the toy client, the gate
 
 STATUS: **DRAFT — launchable after C4 (charter row 6) lands on `main` (the FINAL shape); the coordinator REFRESHES §3 (the input commit,
-`stepFn`'s arm line numbers, the arm list after E6e/label/P/C3/B6/C4) and deletes this sentence.** [AGENT] planning writer 2026-09-24.
+`stepFn`'s arm line numbers, the arm list after label/P/C3/B6/C4) and deletes this sentence.** [AGENT] planning writer 2026-09-24.
 Rulings: decision 8 — the «independent in-repo consumer» is a TOY semantic-equation CLIENT, GoCore only, symbolic state/continuations, in the
 test/contract graph, NOT an Iris `Language` instance (typed profiles PARKED 2026-09-16, `docs/2026-09-16_typed-profiles-parked.md`; CLAUDE.md:
-«we DO NOT ship any higher level reasoning»); decision 6 — Codex for the equations. Executes charter row 7 (equations) + §3 (priority);
-plan `docs/2026-09-24_window-plan.md` row 7a. Provenance: **[AGENT Codex, packet D]**. Launched by the [USER].
+«we DO NOT ship any higher level reasoning»); decision 6, executed as an Opus 5.5 subagent dispatched by the coordinator ([USER] 2026-09-27).
+Executes charter row 7 (equations) + §3 (priority); plan `docs/2026-09-24_window-plan.md` row 7a.
+Provenance: **[AGENT packet D worker]**.
 **Ambiguity policy: if two readings of this brief differ materially, STOP, write both in the report, do not choose.**
 
 ## 1. Purpose

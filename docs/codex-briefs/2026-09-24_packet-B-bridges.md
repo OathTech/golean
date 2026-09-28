@@ -2,8 +2,9 @@
 
 STATUS: **DRAFT — launchable after the label reshape (charter row 2, first half) lands on its LANE TIP; the coordinator REFRESHES §3 (the
 input commit), §4 item 1 (the reshaped signatures) and the line numbers, then deletes this sentence.** [AGENT] planning writer 2026-09-24.
-Ruling: decision 6 («Codex for the statement/bridges lane … forking from the reshape», ledger 2026-09-24). Executes charter row 2 (second
-half), §2 and §3; plan `docs/2026-09-24_window-plan.md` row 2b. Provenance: **[AGENT Codex, packet B]**. Launched by the [USER].
+Ruling: decision 6 (ledger 2026-09-24), executed as an Opus 5.5 subagent dispatched by the coordinator ([USER] 2026-09-27, ledger «E6's
+shape, train r49 and the execution model»). Executes charter row 2 (second half), §2 and §3; plan `docs/2026-09-24_window-plan.md` row 2b.
+Provenance: **[AGENT packet B worker]**.
 Packets A and B share names: A STATES (`GoLean/GoCore/ExecutionStatement.lean`, every `<name>_stmt : Prop`), B PROVES (`theorem <name> : <name>_stmt`).
 **Ambiguity policy: if two readings of this brief differ materially, STOP, write both in the report, do not choose.**
 

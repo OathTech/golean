@@ -1,9 +1,9 @@
 # Codex packet A — the CONTRACT (stable-set file, execution statement, changelog draft)
 
-STATUS: **LAUNCHABLE NOW** against `main` @ `3fb4a0d1`. [AGENT] planning writer 2026-09-24, under «The window charter (rev. 2) and the
+STATUS: **EXECUTED** (2026-09-27, Opus 5.5 subagent; branch `window/packet-a-contract-0927`; audited). [AGENT] planning writer 2026-09-24, under «The window charter (rev. 2) and the
 Codex packaging — RULED (2026-09-24)» (`docs/2026-08-31_qrow-rulings.md`; decision 2: «the stable-set file + statement note + changelog
 draft as Codex packet A»). Executes charter row 0 (`docs/2026-09-23_batched-window-charter.md`); plan `docs/2026-09-24_window-plan.md` row 0b.
-Provenance on every logged choice: **[AGENT Codex, packet A]**. Launched by the [USER].
+Provenance on every logged choice: **[AGENT packet A worker]** (dispatched by the coordinator, [USER] 2026-09-27).
 **Ambiguity policy: if two readings of this brief differ materially, STOP, write both in the report, do not choose.**
 
 > **Input commit ([AGENT] coordinator, 2026-09-24):** every `3fb4a0d1` below means «`main` at `3fb4a0d1` or any later commit whose `GoLean/`, `tools/`, `scripts/`, `Corpus/`, `baselines/` trees are identical to it» — verify first with `git diff --stat 3fb4a0d1 main -- GoLean tools scripts Corpus baselines` (must print nothing) and record the commit you used in the report; if that diff is non-empty, STOP and report (the window has moved under you; the coordinator refreshes the brief).

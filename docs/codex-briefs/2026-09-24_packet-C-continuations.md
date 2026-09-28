@@ -1,14 +1,14 @@
 # Codex packet C — CONTINUATIONS: `Cont := List Frame`
 
 STATUS: **DRAFT — launchable in its window slot after P (charter row 3) lands on `main` AND the [USER] has passed the G-C3 design gate (a
-HARD STOP, `docs/2026-09-03_design-hygiene-arc.md`); the coordinator REFRESHES §3 (the input commit, the constructor count after E6e and P,
+HARD STOP, `docs/2026-09-03_design-hygiene-arc.md`); the coordinator REFRESHES §3 (the input commit, the constructor count after P,
 the line numbers) and deletes this sentence.** [AGENT] planning writer 2026-09-24. Ruling: the packaging of 2026-09-24 («C continuations
-`Cont := List Frame`», ledger). Executes charter row 4; plan `docs/2026-09-24_window-plan.md` row 4. Provenance: **[AGENT Codex, packet C]**.
-Launched by the [USER].
+`Cont := List Frame`», ledger), executed as an Opus 5.5 subagent dispatched by the coordinator ([USER] 2026-09-27). Executes charter row 4;
+plan `docs/2026-09-24_window-plan.md` row 4. Provenance: **[AGENT packet C worker]**.
 **Ambiguity policy: if two readings of this brief differ materially, STOP, write both in the report, do not choose.**
 
 ## 1. Purpose
-Replace the 33-constructor `inductive Cont` (`GoLean/GoCore/Machine.lean:3253` at `3fb4a0d1`; one fewer after E6e's `probeK` retirement and
+Replace the 33-constructor `inductive Cont` (`GoLean/GoCore/Machine.lean:3253` at `3fb4a0d1`; `probeK` SURVIVES — E6e is off the critical path, [USER] 2026-09-27 — and
 possibly a `frame` field fewer after P — the REFRESHED count is in §3) by `abbrev Cont := List Frame`, where `Frame` has one constructor per
 `Cont` constructor except `stop`, fields verbatim MINUS the trailing `k : Cont`; every constructor NAME survives as an `@[match_pattern] abbrev`
 (`Cont.stop : Cont := []`; `Cont.seq rest env k : Cont := Frame.seq rest env :: k`; …) so every existing pattern and term elaborates unchanged.
