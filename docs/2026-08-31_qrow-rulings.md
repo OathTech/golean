@@ -1109,3 +1109,5 @@ RULED ([USER] Mike, 2026-09-28, verbatim, relayed): «Agree on (1). Agree on lan
 callee's `FuncId` as a field, added in the P lane's S3 reshape in place of the deleted `wrapper` field, with entry/exit
 lemmas pinned; the `StepLabel` shape is unchanged (a call/return label channel NOT taken). This branch lands, documentation
 only, the adversarial audit waived.
+
+Landed on `main` by train r54 (documentation only): release-check no inputs changed; fast `scripts/ci` PASS; audit waived per the ruling above.
