@@ -8,7 +8,7 @@ model — RULED (2026-09-27)»). `61958f2e` is the customer's pin (train r39 clo
 `git diff --stat 3fb4a0d1 5946adfa -- GoLean/GoCore` is empty; r49 moved only the decoder and the frontend). The
 packet branch was rebased onto `main` @ `7d2a62e5` (r49 5a records + r50 docs: no `GoLean/` change), so every cell
 holds there too. It now sits on `core/stray-panic-refusal-0927` @ `05d0dbd4` (under audit), whose changes are the
-window line below, not the table (its `GoLean/GoCore` edits are line-for-line, so every line number holds).
+window line below, not the table (the table's line numbers are stated at `5946adfa` and hold there; the lane's edits shift later declarations in `GoLean/GoCore/Ops.lean` after line 1380 by 13–14 lines, e.g. `AccessTrace` 1841 → 1854 — packet A audit re-verification R1).
 
 Every cell is RESOLVED from `git diff 61958f2e 5946adfa -- GoLean/` and `git show 61958f2e:<path>`; `file:line` is
 at the commit named in its column (paths under `GoLean/GoCore/` unless given). `Tests/` is out of scope. Every

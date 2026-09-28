@@ -1016,3 +1016,17 @@ changed**: the Codex packets A–D are NOT launched as Codex lanes; the build ru
 this thread. Subagents use Opus 5.5 (the upgraded model) rather than legacy Fable. The packet briefs stand as the
 subagents' specifications; everything else in the window plan (serialization, gates, audits, the single re-pin) is
 unchanged.
+
+### Train r51 — the stray-panic fix, packet A and the prompt-audit edits — RULED (2026-09-28)
+
+[USER] Mike, verbatim, relayed by the [AGENT] coordinator — cite as relayed: 2026-09-28 «Great, go ahead with all of these»
+(the prompt-audit diff: seven edits to `CLAUDE.md` and the packet briefs; four low-confidence flags left unedited) and
+«great, go ahead with both» — the landing of the documentation branch `docs/prompt-audit-0928` (the adversarial audit
+WAIVED as proposed with the ask: documentation only) and of train r51's two audited branches: `core/stray-panic-refusal-0927`
+(audit MERGE-CLEAN) and `window/packet-a-contract-0927` (audit FIX-FIRST → re-verification MERGE-CLEAN, conditional on the
+stray-panic lane). Disclosed [AGENT] coordinator dispositions RATIFIED by the landing: (1) the six stray-panic sites become a
+named `.internal` refusal via one root-only reader (unreachable from real programs: no row moved; a 3724-row access-trace
+comparison byte-identical); (2) `Finish.fatal` as the fifth ending, cost 1; (3) the `loadMany` inventory row marking
+`program_bridge_stmt` as a non-executing mention. Recorded for later lanes: the drivers' post-run result reads still use the
+old reader (stray-panic audit A1; unreachable); `scripts/check-mem-callsites` misses a one-line definition (packet A audit);
+a machine-checked «no stray panic at a non-abort configuration» lemma as packet B's first proof (re-verification suggestion).
