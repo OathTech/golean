@@ -131,7 +131,7 @@ example : GoValue × List GoValue → Cont → Option Cont :=
 example : ProgramCtx → Nat → Store → Config → Choices → Except Stop (Store × Choices) :=
   @GoLean.GoCore.Machine.execStmtLoop
 
--- 18. `Machine.lean:6216`
+-- 18. `Machine.lean:6220`
 example : ProgramCtx → Config → Store → Config → Store → Prop :=
   @GoLean.GoCore.Machine.Steps
 
@@ -177,7 +177,7 @@ example : ∀ (ls₁ ls₂ : List StepLabel),
     StepLabel.fold (ls₁ ++ ⟨[], [], []⟩ :: ls₂) = StepLabel.fold (ls₁ ++ ls₂) :=
   @GoLean.GoCore.StepLabel.fold_silent
 
--- 28. `Machine.lean:5370` — the relation over the label
+-- 28. `Machine.lean:5374` — the relation over the label
 example : ProgramCtx → Config → Store → Config → Store → StepLabel → Prop :=
   @GoLean.GoCore.Machine.Step
 

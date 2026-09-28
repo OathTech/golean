@@ -1,0 +1,25 @@
+# whole-corpus choice trace, main 84f0a9e4's binary (sha256 c9f5822aa6c468bf…) vs the lane tip e61b4212's binary (sha256 076121441a27d3bd…) — row 2a label reshape, 2026-09-28. Same frontend (untouched). Each side: scripts/choice-trace-corpus --dump --jobs 6 --golean <bin> --exclude goroutines/send-then-spin --exclude strings/trimspace-repeat/repeat-bound-refused --out .tmp/ct-<side> (six default streams, fuel 10 000 000; the two STANDING exclusions).
+
+dump records (sorted, all dump-*.tsv): main 26313, lane 26313; sha256 main c3f14c50d27d93a453dc8f4eb589bcd246a72f56863935c6fafeb05df2606096
+                                                    lane c3f14c50d27d93a453dc8f4eb589bcd246a72f56863935c6fafeb05df2606096
+cmp EXIT=0 — BYTE-IDENTICAL consumption records.
+
+per-(row,stream) results (sorted results-*.tsv rows): main 22387, lane 22387; ONE differing line, the pre-existing ERROR row arrays/materialization-budget/over-budget, differing only in its artifact path (.tmp/ct-main/wire/… vs .tmp/ct-lane/wire/…). Status, consumed, wide, obsHash, driverAgreement identical for every row.
+alarms column: 0 on every lane row — the widened cross-check (c) (every step-level site's label record vs the tracer's, pool AND init phase) found no mismatch.
+summary.txt: identical modulo the output dir name.
+
+site census (lane dump; identical on main):
+   9695 l1Sched
+   4872 appendSpill
+   4645 postOp
+   2595 unseqNext
+   2403 backEdge
+   1307 mapIter
+    328 l5ExitWindow
+    126 repanicCollapse
+    101 tryLock
+     96 unseqPanic
+     90 nilValueMethodText
+     24 l2Entry
+     22 l4Waiter
+      3 l2Arrival
