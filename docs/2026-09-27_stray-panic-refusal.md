@@ -58,3 +58,16 @@ Q2 and probe; the `--diff` moved no row). This is fail-closed hardening of an un
 - 2026-09-27 core/stray-panic-refusal-0927: root-only reader `loadRoot` (+ `Mem.loadBinding`/`loadBindingFor`) at
   the six binding-cell reads; a non-root location refuses as `.internal «binding cell is not a root location»`
   instead of escaping `stepFn` as an unwound Go panic (audit F1); `Step.evalVar`'s premise follows; no row moved.
+
+## Merge train r51 — the 5a record ([AGENT] coordinator, 2026-09-28)
+
+Landed with the prompt-audit edits and packet A ([USER] Mike 2026-09-28 «great, go ahead with both», relayed; rulings ledger
+«Train r51»). Pre-merge main `7d2a62e5` → `refs/snapshots/r51/main`; train tip `50b446ce` fast-forwarded. Under the lock:
+`scripts/build-certified` EXIT=0 (binary `c9f5822a…`); `release-check` EXIT=2 (EXPECTED — «STALE certification: changed
+dependency build/files/GoLean.lean»); `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --slow` EXIT=1, 892 s — red on EXACTLY
+the 5a pair (`certificate provenance`; the one drift line `imported-goose/channel/google-search PASS→FAIL/membership`); 3768
+rows run, 3531 PASS / 237 FAIL = the pin 3532 / 236 with the one 5a-class row red; no other drift. Tail:
+`docs/evidence/2026-09-27_stray-panic-refusal/r51-ci-slow.tail.txt`. Candidate vs tracked record: `claim` and
+`observations_sha256` IDENTICAL; inputs differ in seven compiled modules (`GoLean.lean`, `BridgeSet`, `ExecutionStatement`,
+`Machine`, `Ops`, `StateWf`, `StepFn`) and the two call-site inventory files, plus the receipt (`50b446ce`, 134.868 s) —
+INSTALLED in this commit; a provenance refresh, not a re-pin.

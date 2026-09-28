@@ -30,7 +30,7 @@
   "inputs": {
     "build": {
       "files": {
-        "GoLean.lean": "5fcb08a568ef23756a890b0d9387eb3c84837f027527b9f8c7e15350a3fa1cf2",
+        "GoLean.lean": "24622ca975d1688e3238450e90437a5bcc290e815be39a75731119c5269f0fc3",
         "GoLean/CLI.lean": "6065f4edc79c41eec11b4e7329aac6d8d54744bf0d797ed29247cef3bf5d70c4",
         "GoLean/ChoiceTrace.lean": "f43720d39bbd8915bd319d9256d8e280e6f042257bf054af5e229fe750d04f55",
         "GoLean/DeclarationUnicode.lean": "7b567b3fa61a7f94c3bafe302b18f6cf7eaaea47266b12b9429550cce92fddc5",
@@ -40,12 +40,14 @@
         "GoLean/GoCore/Admission.lean": "2309256e38874bd99eadc5868d8b4c2e0e0111a94e374799eb8aa09ec0f08e7f",
         "GoLean/GoCore/AdmissionIndices.lean": "d4ff0cb7eadeb18e327cb03884e2a3974e6e4e3c16a097c45dab6d2c1a5753cf",
         "GoLean/GoCore/AdmissionPolicy.lean": "937cae3af268310a58843495397c96fbe52576427aadb26ec6f89466633b8946",
+        "GoLean/GoCore/BridgeSet.lean": "39ed709d7dde6fbd71fb5425578c32f9a8cef0e3c9f51960d102612acbcc1cad",
         "GoLean/GoCore/Declaration.lean": "c66e53248a3786c244049ebed2266f323b88f2deb8af628188b79c252c0fe5dd",
         "GoLean/GoCore/EnumDedupCheck.lean": "d37dd90aae0372ea83b23302c2f2ac13c4171928c9a4c900764dea69d61a4758",
         "GoLean/GoCore/EnumDedupSound.lean": "aeabf67dc9f2d4903f61236dbc98a085dc902876509399e7b29601ab454b24ab",
         "GoLean/GoCore/EnumSpec.lean": "9059391d461687d609a6e10a8b87fe7a5dc44cc46351877c4e8ca90a9795de86",
+        "GoLean/GoCore/ExecutionStatement.lean": "57d279bcd9585f18766ff061b5c5be2eedc282b16e5510894ec94e8880a4521f",
         "GoLean/GoCore/FloatBits.lean": "df821d36003f67e26343eb406b02fa8a24ab46c86eda959bc242c6da8dde91ed",
-        "GoLean/GoCore/Machine.lean": "6c8f2eb801bea00ad7cca9f27292816139b46ef25ee956563717be85d48cafac",
+        "GoLean/GoCore/Machine.lean": "32d21ba47c9a946136813b9d5f87e6846f61b2594b1d210604596a139d07e638",
         "GoLean/GoCore/MachineEqb.lean": "7b0d3de7dde6b8dd4e92bcdafab605c32148c041e958a6020a227a306eb2037a",
         "GoLean/GoCore/MachineSound.lean": "e6d87b315e754334f92c6a6ac11eea3effa49c835ca0edec82a059f6ff4ebbb7",
         "GoLean/GoCore/Multi.lean": "94757cd33fc918f5a74c42439c1b1081dbd3769e24b4fb299ed31d96833f614d",
@@ -53,7 +55,7 @@
         "GoLean/GoCore/MultiStreams.lean": "e76074d8c02227a7b2982d3e2fadd9234fbf8e6734e79b733e95e0676ad15334",
         "GoLean/GoCore/MultiWfSound.lean": "b55efbf84f8ddc2eadd21b7306a090c0b56df6aded1bb37551f5712018747777",
         "GoLean/GoCore/NPDRF.lean": "6120a5707655e45de4e1f71afcba9ec9510cd6637f4b6baa1e693866d6c3e83b",
-        "GoLean/GoCore/Ops.lean": "605ef4ac1e38eed50fba71f1a0a04c98660f22637c4de79e69ae0a6c6e4c171a",
+        "GoLean/GoCore/Ops.lean": "04ae8212672022ab2b49a6f19ff627b88ff07a45e178f12fb2f591f56a1dcbc5",
         "GoLean/GoCore/PanicText.lean": "561c150335ecdd76a2304634c0b11449ff11e4b3b0d8555c4934da473157edd5",
         "GoLean/GoCore/Platform.lean": "649d2ff30adeeeb96e5fe349e1cd8e42da1c8eb6c024b3e605aac39fa16acc20",
         "GoLean/GoCore/PoolTrace.lean": "b0b004ffe8aed6026f0c2781c796b1b1395684f3c493a64f4cc5fa9247e87c9a",
@@ -62,8 +64,8 @@
         "GoLean/GoCore/Race.lean": "3c97d5919824d20e4bb15a1575faf5c472c7290eee1df66431e2e74addd4dbba",
         "GoLean/GoCore/State.lean": "3f16af3e54775f59c659ded57a8fe537c9e7ebef82a400eb78d6e9e9a3fdd838",
         "GoLean/GoCore/StateEqb.lean": "8ff172a97aa464bafad3b8d7c4fc3c93392ea7776e42ba6bbed0c4ab5fa2cdd4",
-        "GoLean/GoCore/StateWf.lean": "99b183b8df509708f5d06be2d857ea365eaca0654129ccbdb042c469b1ba9f2c",
-        "GoLean/GoCore/StepFn.lean": "d97d794a818d40ea70ff9297d5212b34a8cd1559cbeb4f38795ee3d0c7127aa7",
+        "GoLean/GoCore/StateWf.lean": "45b022059f30b66b8d638c783b65bc37e416fb09fcb7f12b3a59a9fb86bb9760",
+        "GoLean/GoCore/StepFn.lean": "d6221ae9612cb659131b46bb01aa5d64c47159be36280bd1be0e2146aaa6c03d",
         "GoLean/GoCore/Store.lean": "5913f8b36160d2e7576eda8ca443cc92f8015b25fb3a6b52367215715f42ff74",
         "GoLean/GoCore/StringPanic.lean": "a8550931cf3cdbfa06ec1547a47080c6f3e6f3579196c70f2ad15200ed57c517",
         "GoLean/GoCore/Syntax.lean": "f99e25a655a74ad86b0571fe8762ef89eac3d8951bbf16519760cec79605b5ba",
@@ -109,7 +111,7 @@
       "scripts/check-evidence-size": "cf66dab4fd42f362e6610ff07fbf467d68e7ca5c7ce84880823e9f5e158af140",
       "scripts/check-frontend-pins": "b6b66f93a7322b4daab1649ee1b2b61ca0c46dae356990b55e551700741849d7",
       "scripts/check-imported-goose": "5e20ea57f3a2ea0671877ae5f7688397d7a936947a5dbe9217469c8406a6f566",
-      "scripts/check-mem-callsites": "f74e43381db617a72384fa02963eda6539284a3b68cd9a16a706ac51036ad017",
+      "scripts/check-mem-callsites": "e6f7200bfb693593f90ca26c73f49573701a09b0cb564c7f8e6e9a29109be82f",
       "scripts/check-method-identity": "6df9bc44ca18680ade5fb4144e5e3b56d2bd035baa3823b564c8b878037db81a",
       "scripts/check-spec-anchors": "0ea75982c91cf4434133f7b6811b53fd2f79d5573e8868f1aa79fe7e4e916559",
       "scripts/check-stdlib-register": "5fe5b97546ae8e06b9af19ca66d4093cca376b6aafb76b558dcc86cf51211cbe",
@@ -137,7 +139,7 @@
       "scripts/import-goose": "8d3352a6ebf813fe84c7b219167a71871b8337e64f310f32df9830ad73e9e54c",
       "scripts/lean-scan.sh": "9310d587a6afe19a9b6c042b0776d8c7861508aaeb488054014d8a35653f6c17",
       "scripts/lower-diagnose": "89fdc58da16866b1d52dc1e56a3642d9f57ca89354fbaf595bdfe00ea4f563d8",
-      "scripts/mem-callsites.tsv": "5801521324f16916ce4617dd38a7775157814253fc37316d82d7ce73f238b6fb",
+      "scripts/mem-callsites.tsv": "1400a90a108224100ece884bc0068f7b7a564cc8cdce7e2857108d8f4a7310fa",
       "scripts/membership-sampling": "f530cf673f7517a24309f4248c21ddc115ef147cb371b9708fe9e87ae7892605",
       "scripts/membership-sampling-sweep": "296e6feec095c57a9280e53ebbc1d626285198d0810eec1bb6fca5a802ffc8b8",
       "scripts/mine-spec-archaeology": "71a5d4f70d1da574d329b7790dee6962ef419ff7a57aa5673975f9ae0423b1c2",
@@ -281,7 +283,7 @@
   },
   "observations_sha256": "e40ba07d11827b48aa8c9246bd84d6c21849159983d46c47b793b5759cfbbfd8",
   "receipt": {
-    "binary_sha256": "ada4125e431647de3e1cfd1d4163a0c7afd99fcba4480c01ffb53c5846cd7017",
+    "binary_sha256": "c9f5822aa6c468bf0925f265ea5042d18255ea05127161a8ce36d4bcfa76dff5",
     "captured_exit": 0,
     "certifier": "tools/certification.py",
     "command": [
@@ -304,12 +306,12 @@
       "--engine",
       "dedup"
     ],
-    "finished_utc": "2026-09-27T15:22:03.316483+00:00",
+    "finished_utc": "2026-09-28T07:49:07.005458+00:00",
     "git_dirty": false,
-    "source_commit": "5946adfab2a86e24e321302f528065483b7dd865",
-    "started_utc": "2026-09-27T15:19:54.832026+00:00",
+    "source_commit": "50b446ce88a446e5d50d53e3b4244df2b9575759",
+    "started_utc": "2026-09-28T07:46:49.578063+00:00",
     "stats_sha256": "68f3d503a2249b48df1e7acd687ce8a694c633f25db743f92f450ca1eddbfc92",
-    "wall_seconds": 126.024
+    "wall_seconds": 134.868
   },
   "schema": "golean-certification-v1"
 }
