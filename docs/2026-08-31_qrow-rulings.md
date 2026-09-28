@@ -1060,3 +1060,17 @@ interim pin. (3) The requested record is the changelog section «The legacy eval
 BEHAVIOUR-identical to the pin `61958f2e`; the only changes are SHAPE (the `Step` label / `stepFn`'s fourth component,
 whose `picks` now records the `unseqPanic` consultation as `⟨.unseqPanic, 2, pick⟩`); the frontend emits fewer probes
 (E6a: corpus 58 → 47, twin 128 → 128), which changes which programs reach the triple, not what it does.
+
+### G-P (native method promotion) passed, and the documentation landing — RULED (2026-09-28)
+
+[USER] Mike, 2026-09-28, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «Go ahead and land, and approve the
+decisions as proposed». (a) The named design gate G-P is PASSED with all ten decisions of
+`docs/2026-09-28_gp-method-promotion-design.md` §6 as recommended: the core handles promotion only for interface dispatch,
+interface satisfaction and method expressions, static selectors unchanged (amending the literal 2026-09-04 G-P wording); the
+embedding path shipped as a `go/types` promotion record, checked by the decoder; the path walked at call start (in the child
+for `go`, at run time for `defer`, per call for interface method values); nil pointers in the path panic where gc's wrappers
+do, an embedded-interface tail re-dispatches as its own step; promoted method expressions call the record directly; the
+embedded-pointer-hop race footprint becomes gc's exact loads; `recoverThroughWrappers` → `recoverAtDeferred`; fewer steps per
+promoted dispatch (fuel only); wire schema v2 with the twin re-pinned under `--slow`; the plan S0–S3 at 4–5 sessions. (b) The
+documentation branches `docs/logic-reply-0928` (the note to the logic team, their reply, the legacy-triple changelog section)
+and `docs/gp-design-0928` land, the adversarial audit waived for documentation only.
