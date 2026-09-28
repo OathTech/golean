@@ -1,0 +1,12 @@
+# [AGENT auditor] theorem inventory, main 84f0a9e4 vs candidate 61bdc65d (GoLean/ + Tests/; git grep of theorem/lemma heads)
+names: main 1053, candidate 1059; REMOVED: none; ADDED:
+> Choices.consumeAtE_appendSpill
+> Choices.consumeAtE_eq
+> Choices.consumeAtE_inv
+> printOut?_toList
+> StepLabel.fold_silent
+> stepThread_privateStep_label
+
+statements (binder text up to ':='): 105 changed, 0 with a changed premise/arrow count; after normalizing the label retyping (AccessTrace->StepLabel, [] -> ⟨[], [], []⟩, the added PickRecord components) 51 residuals, each inspected: added record components (enterFramePick*/apply*/spawn families), a record list in a Commit.withStream argument, or a label field projection (tr.picks/tr.trace/l.trace) — none weakened
+residuals:
+enterFramePick_ok enterFramePick_panic enterFramePick_cases enterFramePick_of_nopanic enterFramePick_any_ch enterFramePick_of_isSome_false enterFramePick_oblivious_of_isSome_false enterFramePick_of_none enterFramePickV_cases enterFramePickV_of_isSome_false enterFramePickV_of_none enterFramePick_of_V_ok deliver_panic deliver_panic_eq Steps.single applyStmtOp_inv_ok enterFramePickV_of_plan_ok enterFramePickV_of_plan_panic enterFramePickV_of_nopanic applyStmtOp_plan_eq_core applyStmtOp_appendSlice_congr applyStmtOp_congr_any_ch applyStmtOp_ok_any_ch_wf applySyncOp_core_ok applySyncOp_ok_any_ch applyStmtOp_eq_core applySelect_done_stream applySelect_picks_stream applySyncOp_try_stream applySyncOp_try_nopop applyStmtOp_plan_appendSlice_nospill applyStmtOp_plan_appendSlice_spill applyStmtOp_plan_of_stmtConsult?_none stepFn_mapIter_done stepFn_mapIter_pick stepFn_mapIter_stop stepFn_stmtOp_oblivious stepFn_stmtOp_spill stepFn_syncApply_oblivious stepFn_selectApply_inv stepMulti_abort_single applySelect_of_done stepFn_select_done stepThread_stepFn_path step_preserves_wf_loc step_preserves_wf deliverS_deliver deliverV_panic choose_defer choose_raise both_relational_successors residual count 51 

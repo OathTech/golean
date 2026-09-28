@@ -1,0 +1,13 @@
+# [AGENT auditor] main 84f0a9e4 golean (sha256 c9f5822a…) vs lane 61bdc65d golean (sha256 07612144…), 2026-09-28
+# producer: .tmp/cmp/run.py (tracked here as compare-main-vs-lane.py), under scripts/capped GOLEAN_MEM_MAX=40G, 6 workers
+# own wire export per row (the gate's frontend invocation); both binaries under IDENTICAL argv; stdout+stderr+exit compared byte-for-byte
+rows sampled: 1816 distinct manifest ids — 1804 run on both binaries; 12 refused by the (unchanged) frontend at export, every one a baselined `FAIL … frontend-export` row, not run
+by lane: {'strict': 1442, 'confluent': 95, 'membership': 238, 'racy': 41}
+by feature stratum (id or features match; overlapping): {'append': 76, 'atomic': 58, 'chan': 390, 'defer': 147, 'goroutine': 228, 'init': 136, 'map': 244, 'panic': 468, 'print': 168, 'range': 121, 'recover': 241, 'select': 108, 'sync': 215, 'trylock': 20, 'unseq': 72}
+strict rows: native-json-run under 5 streams each: default(empty), 9,8,7,6,5,4,3,2,1,0 / 1,3,5,7,9,2,4,6,8,0 / 5x8 / 1x12
+non-strict rows (membership/confluent/racy, tier=slow excluded): coverage-observations with the row's lane params (+ native-json-run default)
+result counts: {('run', 'SAME'): 7524, ('export', 'EXPORT-REFUSED'): 12, ('enum', 'SAME'): 374}
+native-json-run exit codes (main side; identical on lane): {'0': 5763, '1': 1761}
+DIFF: 0   TIMEOUT: 0
+full per-run results (7910 lines, 625 KB, not tracked — over the file cap): sha256 d9bf5076c5fa0a8c0fee2d46c8cc488329d5b1931b7c6525e727130b7200a693
+export refusals: init/hidden-dep-refused init/quarantined-var-callee/sibling init/quarantined-var-impure/counter init/quarantined-var-panicking/sibling init/quarantined-var-syscall/sibling init/quarantined-var-writer/read init/stdlib-initializer-dependent init/stdlib-initializer-unregistered init/user-var-struct-field-unlowerable interfaces/comma-ok-into-interface/global-form spec-examples-decl/struct-tag-conversion complex/generic-type-set/equality

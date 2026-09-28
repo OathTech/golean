@@ -1,0 +1,23 @@
+# [AGENT auditor] scratch probes (never committed as tests; the candidate tree untouched — the BridgeSet file restored byte-for-byte after each mutation, git status clean)
+
+## 1. BridgeSet pins bite (scripts/capped lake env lean GoLean/GoCore/BridgeSet.lean)
+unmutated: EXIT=0
+row 34 mutated (ps₁ ++ l.picks -> l.picks ++ ps₁): EXIT=1 — GoLean/GoCore/BridgeSet.lean:218:2: error: Type mismatch
+row 15 mutated (enterFramePick's '× List PickRecord' dropped): EXIT=1 — GoLean/GoCore/BridgeSet.lean:123:2: error: Type mismatch
+
+## 2. pick records at one consulting site (stepFn at a TryLock apply, empty ProgramCtx) — .tmp/probe.lean
+def lab (σ : Store) (c : Config) (ch : Choices) : String :=
+  match stepFn ctx0 σ c ch with
+  | .ok (_, _, ch', l) => s!"picks={repr l.picks} residual={ch'} trace={l.trace.length} out={l.out.length}"
+  | .error _ => "error"
+#eval lab (mtx false) tl [3, 9]     -- modulo: 3 % 2 = 1, record pick 1 (not 3), residual [9]
+#eval lab (mtx false) tl []         -- empty tape: pick 0 recorded, residual []
+#eval lab (mtx true) tl [3, 9]      -- bound 1: no record, no pop
+#eval (Choices.consumeAtE .tryLock 2 [3, 9])
+#eval (Choices.consumeAtE .tryLock 2 ([] : Choices))
+-- output:
+"picks=[{ site := GoLean.GoCore.ChoiceSite.tryLock, bound := 2, pick := 1 }] residual=[9] trace=1 out=0"
+"picks=[{ site := GoLean.GoCore.ChoiceSite.tryLock, bound := 2, pick := 0 }] residual=[] trace=2 out=0"
+"picks=[] residual=[3, 9] trace=0 out=0"
+(1, [9], [{ site := GoLean.GoCore.ChoiceSite.tryLock, bound := 2, pick := 1 }])
+(0, [], [{ site := GoLean.GoCore.ChoiceSite.tryLock, bound := 2, pick := 0 }])

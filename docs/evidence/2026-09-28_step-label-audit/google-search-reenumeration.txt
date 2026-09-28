@@ -1,0 +1,12 @@
+# [AGENT auditor] the certified slow-tier row imported-goose/channel/google-search re-enumerated on BOTH binaries with the certified claim's argv (wire exported fresh: sha256 736f1730… = claim.wire_sha256)
+# argv: coverage-observations --input <wire> --function goleanGoogle --max-width 4 --max-sites 48 --cap 64 --work-cap 60000000 --expect-status ok --engine dedup
+== main: coverage-observations: observations=6 steps=6565663 probes=0 sites=6193933 leaves=0 maxdepth=0 width=4 engine=dedup nodes=6193933 edges=6565663 dedupHits=371731 certified=checkCert ; EXIT=0; 1:40.52 wall; maxRSS 7877380 kB
+== lane: coverage-observations: observations=6 steps=6565663 probes=0 sites=6193933 leaves=0 maxdepth=0 width=4 engine=dedup nodes=6193933 edges=6565663 dedupHits=371731 certified=checkCert ; EXIT=0; 1:42.09 wall; maxRSS 7876384 kB
+stdout main vs lane: cmp EXIT=0 (byte-identical, 6 lines); vs the certified set (baselines/certified/imported-goose__channel__google-search.certified.tsv, comments stripped): diff EXIT=0
+stdout:
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":123}]}
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":132}]}
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":213}]}
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":231}]}
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":312}]}
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":321}]}
