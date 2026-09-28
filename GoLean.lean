@@ -15,6 +15,7 @@ import GoLean.GoCore.StringPanic
 -- packet B proves them). Enrolled here = default-build membership.
 import GoLean.GoCore.BridgeSet
 import GoLean.GoCore.ExecutionStatement
+import GoLean.GoCore.Prefix
 import GoLean.NativeToIR
 import GoLean.CLI
 import GoLean.ChoiceTrace

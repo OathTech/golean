@@ -1,6 +1,7 @@
 import GoLean.GoCore.Trace
 import GoLean.GoCore.ProgramTrace
 import GoLean.GoCore.MultiSound
+import GoLean.GoCore.Prefix
 
 /-!
 # The stable bridge set — pinned statements (window charter row 0)
@@ -23,6 +24,10 @@ event label `StepLabel` (the step's label was `AccessTrace`; `enterFramePick` no
 returns its kept pick records); rows 25–34 ADDED — the label type, its fold and silent
 projection, the pool event over the same label, the record helper, and the pool
 projection theorem. Line numbers refreshed at the reshape tip.
+
+RE-PIN 2 — packet B, the execution bridges ([AGENT packet B worker], 2026-09-28; handoff
+`docs/2026-09-28_packet-b-handoff.md`): row 34 strengthened (label-reshape audit F1); rows
+35–63 ADDED — the 23 proved `_stmt` theorems and six supporting facts.
 
 The set is RE-PINNED per window row; every change to this file is a changelog line
 (`docs/changelog/61958f2e-WINDOW.md`), so the file's diff between two pins IS the
@@ -207,14 +212,166 @@ example : ∀ {v : GoValue} {op : StmtOp} {nt : Nat} {done : List GoValue} {env 
       = stmtOpOut op (v :: done).reverse :=
   @GoLean.GoCore.Machine.printOut?_toList
 
--- 34. `MultiSound.lean:1707` — the pool projection: a goroutine step's event label IS
+-- 34. `MultiSound.lean:1710` — RE-PIN 2 (packet B, label-reshape audit F1): `ps₁` are the
+-- arrival plan's picks, `ch₁` its residual, no select interception — the pool projection: a goroutine step's event label IS
 -- `stepFn`'s (trace and output verbatim; the pool's arrival picks, then the step's)
 example : ∀ {ctx : ProgramCtx} {s : Store} {threads : Array Thread} {i : Nat} {ch : Choices}
     {ts' : Array Thread} {s' : Store} {ch' : Choices} {ev : StepEvent},
     stepThread ctx s threads i ch = .ok (ts', s', ch', ev) → ev.action = .privateStep →
       ev.who = i ∧ ∃ c ch₁ ps₁ c' l, threads[i]? = some (.running c none) ∧
+        arrivalPlan ctx s threads i c ch = .ok (none, ch₁, ps₁) ∧ selectApplyPlan c = none ∧
         stepFn ctx s c ch₁ = .ok (c', s', ch', l) ∧
         ev.label = ⟨l.trace, ps₁ ++ l.picks, l.out⟩ :=
   @GoLean.GoCore.Machine.stepThread_privateStep_label
+
+/-! ## Re-pin 2 additions — packet B, the execution bridges (rows 35–64)
+
+[AGENT packet B worker] 2026-09-28. Rows 35–57: every `<name>_stmt` of `ExecutionStatement.lean`
+discharged as `theorem <name>` in `Prefix.lean` (the statement's TYPE is the `_stmt` definition,
+pinned by name — a changed statement is a changed definition there, a changed proof target
+here). Rows 58–64: the supporting facts the bridges rest on, types written out. -/
+
+-- 35. `Prefix.lean:70`
+example : GoLean.GoCore.ExecutionStatement.prefix_refl_stmt :=
+  @GoLean.GoCore.ExecutionStatement.prefix_refl
+
+-- 36. `Prefix.lean:72`
+example : GoLean.GoCore.ExecutionStatement.prefix_comp_stmt :=
+  @GoLean.GoCore.ExecutionStatement.prefix_comp
+
+-- 37. `Prefix.lean:80`
+example : GoLean.GoCore.ExecutionStatement.prefix_split_stmt :=
+  @GoLean.GoCore.ExecutionStatement.prefix_split
+
+-- 38. `Prefix.lean:100`
+example : GoLean.GoCore.ExecutionStatement.prefix_erase_steps_stmt :=
+  @GoLean.GoCore.ExecutionStatement.prefix_erase_steps
+
+-- 39. `Prefix.lean:94`
+example : GoLean.GoCore.ExecutionStatement.prefix_erase_trace_stmt :=
+  @GoLean.GoCore.ExecutionStatement.prefix_erase_trace
+
+-- 40. `Prefix.lean:113`
+example : GoLean.GoCore.ExecutionStatement.prefix_iter_stmt :=
+  @GoLean.GoCore.ExecutionStatement.prefix_iter
+
+-- 41. `Prefix.lean:385`
+example : GoLean.GoCore.ExecutionStatement.finish_abort_step_stmt :=
+  @GoLean.GoCore.ExecutionStatement.finish_abort_step
+
+-- 42. `Prefix.lean:165`
+example : GoLean.GoCore.ExecutionStatement.finish_refused_step_stmt :=
+  @GoLean.GoCore.ExecutionStatement.finish_refused_step
+
+-- 43. `Prefix.lean:250`
+example : GoLean.GoCore.ExecutionStatement.finish_replay_stmt :=
+  @GoLean.GoCore.ExecutionStatement.finish_replay
+
+-- 44. `Prefix.lean:445`
+example : GoLean.GoCore.ExecutionStatement.run_ok_iff_stmt :=
+  @GoLean.GoCore.ExecutionStatement.run_ok_iff
+
+-- 45. `Prefix.lean:454`
+example : GoLean.GoCore.ExecutionStatement.run_panic_iff_stmt :=
+  @GoLean.GoCore.ExecutionStatement.run_panic_iff
+
+-- 46. `Prefix.lean:478`
+example : GoLean.GoCore.ExecutionStatement.run_deadlock_iff_stmt :=
+  @GoLean.GoCore.ExecutionStatement.run_deadlock_iff
+
+-- 47. `Prefix.lean:492`
+example : GoLean.GoCore.ExecutionStatement.run_fuelOut_iff_stmt :=
+  @GoLean.GoCore.ExecutionStatement.run_fuelOut_iff
+
+-- 48. `Prefix.lean:309`
+example : GoLean.GoCore.ExecutionStatement.replay_coverage_stmt :=
+  @GoLean.GoCore.ExecutionStatement.replay_coverage
+
+-- 49. `Prefix.lean:587`
+example : GoLean.GoCore.ExecutionStatement.silent_projection_stmt :=
+  @GoLean.GoCore.ExecutionStatement.silent_projection
+
+-- 50. `Prefix.lean:589`
+example : GoLean.GoCore.ExecutionStatement.single_embedding_stmt :=
+  @GoLean.GoCore.ExecutionStatement.single_embedding
+
+-- 51. `Prefix.lean:592`
+example : GoLean.GoCore.ExecutionStatement.program_bridge_stmt :=
+  @GoLean.GoCore.ExecutionStatement.program_bridge
+
+-- 52. `Prefix.lean:534`
+example : GoLean.GoCore.ExecutionStatement.classification_stmt :=
+  @GoLean.GoCore.ExecutionStatement.classification
+
+-- 53. `Prefix.lean:544`
+example : GoLean.GoCore.ExecutionStatement.classification_wf_stmt :=
+  @GoLean.GoCore.ExecutionStatement.classification_wf
+
+-- 54. `Prefix.lean:280`
+example : GoLean.GoCore.ExecutionStatement.boundary_abort_one_stmt :=
+  @GoLean.GoCore.ExecutionStatement.boundary_abort_one
+
+-- 55. `Prefix.lean:287`
+example : GoLean.GoCore.ExecutionStatement.boundary_blocked_zero_stmt :=
+  @GoLean.GoCore.ExecutionStatement.boundary_blocked_zero
+
+-- 56. `Prefix.lean:290`
+example : GoLean.GoCore.ExecutionStatement.boundary_refused_one_stmt :=
+  @GoLean.GoCore.ExecutionStatement.boundary_refused_one
+
+-- 57. `Prefix.lean:297`
+example : GoLean.GoCore.ExecutionStatement.boundary_refused_zero_stmt :=
+  @GoLean.GoCore.ExecutionStatement.boundary_refused_zero
+
+-- 58. `Prefix.lean:373` — NO STRAY PANIC (audit F1, machine-checked)
+example : ∀ {ctx : ProgramCtx} {s : Store} {c : Config} {ch : Choices} {t : String},
+    c.abort? = none → stepFn ctx s c ch ≠ .error (.terminal (.panic t)) :=
+  @GoLean.GoCore.ExecutionStatement.stepFn_no_stray_panic
+
+-- 59. `StepErrors.lean` — what `stepFn` raises away from the abort and the blocked forms
+example : ∀ {ctx : ProgramCtx} {σ : Store} {c : Config} {ch : Choices},
+    c.abort? = none → c.blockedB = false → ErrP Stop.Strict (stepFn ctx σ c ch) :=
+  @GoLean.GoCore.Machine.stepFn_strict
+
+-- 60. `PrefixFacts.lean` — no record without a consultation
+example : ∀ {ctx : ProgramCtx} {σ : Store} {c : Config} {ch₀ : Choices},
+    seqConsumption ctx σ c = none →
+      OkP (fun r : Config × Store × Choices × StepLabel => r.2.2.2.picks = [])
+        (stepFn ctx σ c ch₀) :=
+  @GoLean.GoCore.Machine.stepFn_picks_none
+
+-- 61. `PrefixFacts.lean` — the record IS the consultation's
+example : ∀ {ctx : ProgramCtx} {σ : Store} {c : Config} {ch₀ : Choices} {site : ChoiceSite}
+    {b : Nat}, seqConsumption ctx σ c = some (site, b) →
+      OkP (fun r : Config × Store × Choices × StepLabel =>
+          r.2.2.2.picks = PickRecord.ofPick site b (Choices.consumeAt site b ch₀).1)
+        (stepFn ctx σ c ch₀) :=
+  @GoLean.GoCore.Machine.stepFn_picks_some
+
+-- 62. `PrefixFacts.lean` — the consumption theorem's `some` half WITHOUT `appendTargetLocal`
+example : ∀ {ctx : ProgramCtx} {σ : Store} {c : Config} {ch₀ : Choices} {c' : Config} {σ' : Store}
+    {ch₀' : Choices} {site : ChoiceSite} {b : Nat} {tr : StepLabel},
+    seqConsumption ctx σ c = some (site, b) →
+    stepFn ctx σ c ch₀ = .ok (c', σ', ch₀', tr) →
+    ch₀' = (Choices.consumeAt site b ch₀).2 ∧ ∀ ch : Choices,
+      (Choices.consumeAt site b ch).1 = (Choices.consumeAt site b ch₀).1 →
+      stepFn ctx σ c ch = .ok (c', σ', (Choices.consumeAt site b ch).2, tr) :=
+  @GoLean.GoCore.Machine.stepFn_consumption_some'
+
+-- 63. `Prefix.lean:398` — every loop error, located on the fixed tape's prefix
+example : ∀ {ctx : ProgramCtx} {fuel : Nat} {s : Store} {c : Config} {ch : Choices} {e : Stop},
+    execStmtLoop ctx fuel s c ch = .error e →
+    ∃ n ls sf cf chf, GoLean.GoCore.ExecutionStatement.Prefix ctx n s c ch ls sf cf chf ∧ n ≤ fuel ∧
+      ((GoLean.GoCore.ExecutionStatement.Blocked cf ∧ e = .terminal .deadlock) ∨
+       (n = fuel ∧ ¬ GoLean.GoCore.ExecutionStatement.ZeroCost cf ∧ e = .fuelOut) ∨
+       (n + 1 ≤ fuel ∧ ¬ GoLean.GoCore.ExecutionStatement.ZeroCost cf ∧
+          stepFn ctx sf cf chf = .error e)) :=
+  @GoLean.GoCore.ExecutionStatement.execStmtLoop_error
+
+-- 64. `Prefix.lean:578` — the domain premise's one-step preservation
+example : ∀ {ctx : ProgramCtx} {s s' : Store} {c c' : Config} {ch₀ ch₀' : Choices} {l : StepLabel},
+    GoLean.GoCore.ExecutionStatement.NoRefusal ctx s c → stepFn ctx s c ch₀ = .ok (c', s', ch₀', l) →
+      GoLean.GoCore.ExecutionStatement.NoRefusal ctx s' c' :=
+  @GoLean.GoCore.ExecutionStatement.noRefusal_step
 
 end GoLean.GoCore.BridgeSet

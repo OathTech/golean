@@ -1703,12 +1703,16 @@ step's — taken FROM the label (no double accounting). The abort's terminal eve
 the spawn's attribution is `StepE.spawn`'s label. -/
 
 /-- **A goroutine step's event label IS the sequential step's label** (the pool's
-arrival-plan picks prepended). -/
+arrival-plan picks prepended). Strengthened by packet B ([AGENT packet B worker] 2026-09-28,
+label-reshape audit F1, [AGENT] coordinator disposition): the prepended picks `ps₁` ARE the
+pool's own arrival-plan picks, the step's tape `ch₁` IS the arrival plan's residual of `ch`,
+and no select interception applies — so no pick is counted twice. -/
 theorem stepThread_privateStep_label {s : Store} {threads : Array Thread} {i : Nat}
     {ch : Choices} {ts' : Array Thread} {s' : Store} {ch' : Choices} {ev : StepEvent}
     (h : stepThread ctx s threads i ch = .ok (ts', s', ch', ev))
     (ha : ev.action = .privateStep) :
     ev.who = i ∧ ∃ c ch₁ ps₁ c' l, threads[i]? = some (.running c none) ∧
+      arrivalPlan ctx s threads i c ch = .ok (none, ch₁, ps₁) ∧ selectApplyPlan c = none ∧
       stepFn ctx s c ch₁ = .ok (c', s', ch', l) ∧
       ev.label = ⟨l.trace, ps₁ ++ l.picks, l.out⟩ := by
   unfold stepThread at h
@@ -1725,10 +1729,10 @@ theorem stepThread_privateStep_label {s : Store} {threads : Array Thread} {i : N
     | (simp only at ha; split at ha <;> cases ha; done)
     | skip
   -- The one remaining leaf: the goroutine's own `stepFn` step.
-  rename_i _ c hthr _ _ _ _ _ _ ch₁ ps₁ _ _ _ w hstep
+  rename_i _ c hthr _ _ _ _ _ _ ch₁ ps₁ harr _ hsel w hstep
   obtain ⟨c', s₁, ch₂, l⟩ := w
   simp only at ha2 ha3
   subst ha2; subst ha3
-  exact ⟨rfl, c, ch₁, ps₁, c', l, hthr, hstep, rfl⟩
+  exact ⟨rfl, c, ch₁, ps₁, c', l, hthr, harr, hsel, hstep, rfl⟩
 
 end GoLean.GoCore.Machine
