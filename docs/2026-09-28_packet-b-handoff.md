@@ -150,3 +150,7 @@ PASS→FAIL/membership`); 3768 rows run, 3531 PASS / 237 FAIL = the pin 3532 / 2
 drift. Tail: `docs/evidence/2026-09-28_packet-b/r52-ci-slow.tail.txt`. Candidate vs tracked record: `claim` and
 `observations_sha256` IDENTICAL; 20 compiled modules differ (the label reshape and the bridge modules), no tool file, plus the
 receipt (`d640a5ac`, 162.964 s) — INSTALLED in this commit; a provenance refresh, not a re-pin.
+
+**Green re-run at the records commit `a8adc03d`** ([AGENT] coordinator, 2026-09-28): `GOLEAN_MEM_MAX=48G scripts/capped
+scripts/ci --diff` → EXIT=0, `RESULT: PASS`, `baseline diff FULL (3768/3768, no regression)`, `certificate provenance` ok.
+Round 52 closed: the step label, the execution bridges and the approved `CLAUDE.md` wording are on main.
