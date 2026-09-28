@@ -21,12 +21,14 @@ then PROVES each `<name>_stmt` as `<name>`. Every theorem here is a `def <name>_
 Prop` — it elaborates with no proof. The only proofs in this file are the boundary
 CONTROLS, each closed by `rfl`: three copied from the review witness
 (`docs/evidence/2026-09-23_batched-window-review/FuelBoundary.lean`) and two for the fatal;
-plus one `NoRefusal` positive control (a short case analysis, audit F2).
+plus one `NoRefusal` positive control (a short case analysis, audit F2). PROVED: every
+`<name>_stmt` is discharged as `theorem <name>` in `Prefix.lean` ([AGENT packet B worker],
+2026-09-28), the statements unchanged.
 
 Coordinator dispositions ([AGENT] coordinator, 2026-09-27; disclosed at the merge ask):
 (1) Reading A for the classification — `Finish` gains a FIFTH constructor `fatal` for the
 UNRECOVERABLE terminal `.terminal (.fatal m)` that `stepFn` raises at a non-zero-cost
-configuration (`Machine.lean:4392`, `:4416`, `:4443`; propagated by `toResult`,
+configuration (`Machine.lean:4444`, `:4468`, `:4495`; propagated by `toResult`,
 `Value.lean:394`), finishing cost 1; `classification_stmt` / `classification_wf_stmt` are
 stated over the five constructors. (2) Reading A for `program_bridge_stmt` — stated; its
 `loadMany` mention is recorded in `scripts/mem-callsites.tsv` («NO EXECUTION»).
@@ -56,7 +58,7 @@ def Blocked (c : Config) : Prop :=
   (∃ clauses env k, c = .blockedSelect clauses env k) ∨
   (∃ op loc env k, c = .blockedSync op loc env k)
 
-/-- The five arms `execStmtLoop` (`StepFn.lean:1012`) matches BEFORE its `fuel` match:
+/-- The five arms `execStmtLoop` (`StepFn.lean:1018`) matches BEFORE its `fuel` match:
 classified at cost 0. The fuel-out statement uses the NEGATION of this predicate (F2),
 not the negation of `Finish` — an abort configuration has a `Finish` but costs 1. -/
 def ZeroCost (c : Config) : Prop :=
@@ -102,18 +104,18 @@ FINISHING COST (F2): 0 for the zero-cost arms, 1 for the abort and the fatal (ea
 
 `fatal` ([AGENT] coordinator disposition 2026-09-27, Reading A): a `stepFn` call at the
 endpoint raises the unrecoverable terminal `.terminal (.fatal m)` (the sync misuse throws,
-`Machine.lean:4392`, `:4416`, `:4443`, passed through by `toResult`, `Value.lean:394`); the
+`Machine.lean:4444`, `:4468`, `:4495`, passed through by `toResult`, `Value.lean:394`); the
 outcome carries the endpoint store and tape (correction (1)) and NO pick record — the
 executable raises without returning a tape, and no consultation precedes those throws
 (an [AGENT packet A worker] reading, flagged for packet B).
 
 `aborted` / `abortRefused` do exactly what `stepFn`'s `.panicking chain .stop` arm does
-(`StepFn.lean:368`–`387`): the `repanicCollapse` consult, then the fallible renderer
-`abortMsg` (`Machine.lean:3908`). The executable arm draws through `abortConsult first rest
+(`StepFn.lean:371`–`390`): the `repanicCollapse` consult, then the fallible renderer
+`abortMsg` (`Machine.lean:3926`). The executable arm draws through `abortConsult first rest
 ch = Choices.consumeAt .repanicCollapse (repanicCollapseWidth first rest) ch`
-(`Machine.lean:3203`); `Choices.consumeAtE_fst_snd` (`State.lean:475`) links it to the
+(`Machine.lean:3221`); `Choices.consumeAtE_fst_snd` (`State.lean:502`) links it to the
 record-emitting `consumeAtE` used here — cited, not proved in this file. `abortMsg`'s
-error is a refusal by construction (`.unsupported`, `Machine.lean:3912`), hence the
+error is a refusal by construction (`.unsupported`, `Machine.lean:3930`), hence the
 `.refusal r` pattern. -/
 inductive Finish (ctx : ProgramCtx) :
     Store → Config → Choices → List PickRecord → FinishOutcome → Nat → Prop where
@@ -162,7 +164,7 @@ def replays : List PickRecord → Choices → Choices → Prop
 `stepFn` call, and no reachable abort has a refusing renderer under the pick its consult
 draws. The zero-cost endpoints are excluded (audit F2, 2026-09-27; [AGENT] coordinator
 disposition): the driver never calls `stepFn` there, and `stepFn` REFUSES at `.next .stop`
-(`StepFn.lean:850`, `.internal "step on terminal configuration"`), so without the exclusion
+(`StepFn.lean:856`, `.internal "step on terminal configuration"`), so without the exclusion
 this premise failed on every normally completing run (the positive control below). -/
 def NoRefusal (ctx : ProgramCtx) (s : Store) (c : Config) : Prop :=
   ∀ n ch ls sf cf chf, Prefix ctx n s c ch ls sf cf chf →
@@ -193,7 +195,7 @@ def prefix_split_stmt : Prop :=
     ∃ (ls₁ ls₂ : List StepLabel) (s₁ : Store) (c₁ : Config) (ch₁ : Choices),
       ls = ls₁ ++ ls₂ ∧ Prefix ctx n s c ch ls₁ s₁ c₁ ch₁ ∧ Prefix ctx m s₁ c₁ ch₁ ls₂ sf cf chf
 
-/-- Erasure to relational reachability `Steps` (`Machine.lean:6157`). -/
+/-- Erasure to relational reachability `Steps` (`Machine.lean:6220`). -/
 def prefix_erase_steps_stmt : Prop :=
   ∀ (ctx : ProgramCtx) (n : Nat) (s sf : Store) (c cf : Config) (ch chf : Choices)
     (ls : List StepLabel),
@@ -205,7 +207,7 @@ def prefix_erase_trace_stmt : Prop :=
     (ls : List StepLabel),
     Prefix ctx n s c ch ls sf cf chf → Trace ctx n s c ch sf cf chf
 
-/-- Exact agreement with the executable iterate `stepFnIter` (`StepFn.lean:1042`). -/
+/-- Exact agreement with the executable iterate `stepFnIter` (`StepFn.lean:1048`). -/
 def prefix_iter_stmt : Prop :=
   ∀ (ctx : ProgramCtx) (n : Nat) (s sf : Store) (c cf : Config) (ch chf : Choices),
     stepFnIter ctx n s c ch = .ok (cf, sf, chf) ↔ ∃ ls, Prefix ctx n s c ch ls sf cf chf
@@ -308,7 +310,7 @@ def single_embedding_stmt : Prop :=
 /-- The program bridge under successful setup (setup's tape `ch → ch₁` INCLUDED): the
 driver is the pool fold from the setup seam's context, configuration, store and residual
 tape, with the `loadMany` readout. Init OUTPUT is empty BY REFUSAL (`initPrintRefusal?`,
-`StepFn.lean:1118`) — the named limitation is RETAINED. DEFINITIONAL (audit F5): it is
+`StepFn.lean:1131`) — the named limitation is RETAINED. DEFINITIONAL (audit F5): it is
 `runProgramPoolOutM`'s own equation unfolded under the setup premise; it pins the setup →
 pool-fold → readout seam and does NOT connect to `Prefix`/`LRun` — NOT counted as a bridge
 (the pool half waits, charter §2). -/
@@ -370,7 +372,7 @@ def classification_stmt : Prop :=
       ClassRefusal ctx fuel s c ch
 
 /-- The corollary under the domain premises: a well-formed store and no reachable refusal
-leave the first three cases only. `step_preserves_wf` (`StateWf.lean:8106`) is the
+leave the first three cases only. `step_preserves_wf` (`StateWf.lean:8107`) is the
 preservation fact to cite; it is stated over `MachineWf ctx σ c`, not `StateWf ctx σ` (an
 [AGENT packet A worker] flag for packet B). -/
 def classification_wf_stmt : Prop :=

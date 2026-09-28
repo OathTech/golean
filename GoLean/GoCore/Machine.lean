@@ -1553,10 +1553,10 @@ def applyStmtOpCore.plan (s : Store) (op : StmtOp)
             return (s', trR ++ trW ++ trT)
       | _ => stuck "malformed copySlice operands"
   | .print newline =>
-      -- VALIDATE only: every operand must be of a kind gc's print
-      -- renders without an address (refusals name the kind). The bytes
-      -- are the pool layer's event (`printOut?`); the state is untouched
-      -- (gc: the statement writes fd 2 and nothing else).
+      -- VALIDATE only (refusals name the kind). The bytes are the step
+      -- label's `out` (`stmtOpOut`, the same `renderPrint`), which the pool
+      -- event carries since the step-label reshape; the state is untouched
+      -- (gc: fd 2 only). [AGENT packet B worker] 2026-09-28, audit F3.
       let _ ← renderPrint newline vs
       return fun s => return (s, [])
   | .appendSlice _ =>

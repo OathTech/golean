@@ -1,0 +1,2 @@
+Memory-module raw call-site inventory: PASS (73 (file, declaration, raw-op) rows, all inventoried with reasons)
+EXIT=0
