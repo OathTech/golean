@@ -56,3 +56,8 @@ struct-tag-alias-field	raceStructTagAliasField	-	race	-	goroutines,channels,stru
 # path. Born PASS under the fix (BUG-111's Cases: line). sites=16: THREE
 # goroutines (the alias row's precedent).
 struct-tag-alias-array-field	raceStructTagAliasArrayField	-	race	-	goroutines,channels,structs,arrays,pointers,conversions,race	racy	-	width=4,sites=16
+# G-P S0 must-stay-racy guards for race/free/promoted-ptr-hop: a write to
+# the hop target field and to the embedded pointer field itself (gc -race
+# reports both); the S2 narrowing must keep refusing both.
+promoted-ptr-hop-target	racePromotedPtrHopTarget	-	race	-	goroutines,channels,interfaces,methods,embedding,pointers,race	racy	-	width=4,sites=8
+promoted-ptr-hop-field	racePromotedPtrHopField	-	race	-	goroutines,channels,interfaces,methods,embedding,pointers,race	racy	-	width=4,sites=8

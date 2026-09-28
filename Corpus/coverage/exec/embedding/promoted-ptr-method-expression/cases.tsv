@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+# G-P S0 born pins (design note §2 S7): born FAIL on main at the frontend refusal (ledger FR-3, deref adapter not modeled); the refusal retires for promoted entries at G-P S2.
+recover	pdDeferPtrMethodExprRecover	-	ok	-	embedding,methods,pointers,defer,recover,panic
+promoted-value	pdPtrMethodExprPromotedValue	-	ok	-	embedding,methods,pointers,evaluation_order

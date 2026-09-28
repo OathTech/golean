@@ -45,3 +45,9 @@ spawn-dispatch-free	freeSpawnDispatch	-	ok	-	goroutines,channels,interfaces,meth
 # BUG-111's must-stay-green guard (C1 S2c lane, 2026-09-18): the same alias,
 # DISJOINT fields — canonical keys keep the field name as the position.
 struct-tag-alias-disjoint-fields	freeStructTagAliasDisjointFields	-	ok	-	goroutines,channels,structs,pointers,conversions,race	confluent	join-ordered readout; BUG-111's guard — canonical-path keys must not over-refuse disjoint fields reached through a struct-tag-compatible alias	width=4,sites=8
+# G-P S0 born pin (docs/2026-09-28_gp-method-promotion-design.md §2 S8):
+# a promoted value-receiver dispatch through an embedded-POINTER hop from
+# a *T box beside a disjoint outer-field write — go run -race green. Born
+# FAIL on BUG-041's Cases: line (S3 addendum over-refusal: the whole-
+# pointee fallback); expected to flip at G-P S2 (exact path loads).
+promoted-ptr-hop	freePromotedPtrHop	-	ok	-	goroutines,channels,interfaces,methods,embedding,pointers,race	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4,sites=8

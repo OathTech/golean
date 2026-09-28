@@ -1,5 +1,5 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 3768 (3532 PASS / 236 FAIL)
+# cases: 3784 (3545 PASS / 239 FAIL)
 # re-pinned: 2026-09-20 [AGENT], core/unseq-stage-d-0920, STAGE D of the evaluation-order model v2.1 (route α —
 #   docs/2026-09-20_unseq-stage-d-design.md §2–§3; handoff docs/2026-09-20_unseq-stage-d-handoff.md): NO row added, NO
 #   result changed, ONE stage changed — spec-examples-stmt/continue-label PASS/- -> PASS/confluent, the strict depth=128
@@ -1780,6 +1780,23 @@
 #   + 1 born-FAIL-by-design = 2521 (2352 PASS / 169 FAIL).]
 # frontend: native (tools/nativefrontend)
 # Columns: result<TAB>id<TAB>stage (manifest order).
+# re-pinned: 2026-09-28 [AGENT], core/method-promotion-0928, G-P S0 — BORN PINS for native method promotion BEFORE any change
+#   (design note docs/2026-09-28_gp-method-promotion-design.md §5 S0, G-P PASSED [USER] 2026-09-28 «Go ahead and land, and approve the
+#   decisions as proposed», relayed; handoff docs/2026-09-28_method-promotion-handoff.md): 16 rows BORN, NO existing row moved — the
+#   dynamic promotion surface (interface dispatch / interface method values / method expressions over PROMOTED methods) in the shapes
+#   the corpus did not pin, each observed under go1.26.5 plain and -race before the row was written. BORN PASS (13):
+#   embedding/promoted-dynamic-surface/{go-nil-ptr-embed,go-nil-iface-embed} PASS/confluent (the path is walked in the CHILD: the
+#   parent's recover never fires, the program aborts with the nil-dereference text), {defer-nil-path (107: the path walked at the
+#   DRAIN), defer-box-mutated (2), defer-static-control (1), defer-ptr-hop-replaced (3), iface-method-value-late (25),
+#   iface-method-value-ptr-hop (4), defer-method-expr-recover (0), defer-method-expr-recover-status (ok 0),
+#   nil-box-ptr-method-value-embed (100: &nil.f panics)} PASS strict; race/negative/{promoted-ptr-hop-target,promoted-ptr-hop-field}
+#   PASS/racy (gc -race reports both). BORN FAIL BY DESIGN (3): race/free/promoted-ptr-hop FAIL/confluent on BUG-041's Cases: line
+#   (the S3 addendum's embedded-pointer-hop over-refusal: the whole-pointee read of *o vs the o.z write; gc -race green 5/5; expected
+#   to flip at G-P S2, decision 6); embedding/promoted-ptr-method-expression/{recover,promoted-value} FAIL/frontend-export on the
+#   ledger's FR-3 line (`(*S).M` over a PROMOTED value method: deref adapter not modeled; gc 0 and 2; the refusal retires for
+#   promoted entries at G-P S2, design §2 S7, decision 5). Measured by scripts/diff-one on the 16 rows at the S0 tree (main
+#   89792db1's frontend + binary — S0 changes no code); the full gate line is in the handoff. 3768 + 16 = 3784; 3532 + 13 = 3545;
+#   236 + 3 = 239. No PASS -> non-PASS flip.
 result	id	stage
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
@@ -2415,6 +2432,17 @@ PASS	embedding/embedded-method-promote	-
 PASS	embedding/embedded-pointer-field	-
 PASS	embedding/embedded-pointer-nil-panic	-
 PASS	embedding/promoted-ambiguous-not-satisfied	-
+PASS	embedding/promoted-dynamic-surface/defer-box-mutated	-
+PASS	embedding/promoted-dynamic-surface/defer-method-expr-recover	-
+PASS	embedding/promoted-dynamic-surface/defer-method-expr-recover-status	-
+PASS	embedding/promoted-dynamic-surface/defer-nil-path	-
+PASS	embedding/promoted-dynamic-surface/defer-ptr-hop-replaced	-
+PASS	embedding/promoted-dynamic-surface/defer-static-control	-
+PASS	embedding/promoted-dynamic-surface/go-nil-iface-embed	confluent
+PASS	embedding/promoted-dynamic-surface/go-nil-ptr-embed	confluent
+PASS	embedding/promoted-dynamic-surface/iface-method-value-late	-
+PASS	embedding/promoted-dynamic-surface/iface-method-value-ptr-hop	-
+PASS	embedding/promoted-dynamic-surface/nil-box-ptr-method-value-embed	-
 PASS	embedding/promoted-field-depth-shadow	-
 PASS	embedding/promoted-method-shadow	-
 PASS	embedding/promoted-method-value/live	-
@@ -2424,6 +2452,8 @@ PASS	embedding/promoted-nil-embedded-pointer/call	-
 PASS	embedding/promoted-nil-embedded-pointer/nil-panic	-
 PASS	embedding/promoted-pointer-receiver-method-set/pointer-box	-
 PASS	embedding/promoted-pointer-receiver-method-set/value-box	-
+FAIL	embedding/promoted-ptr-method-expression/promoted-value	frontend-export
+FAIL	embedding/promoted-ptr-method-expression/recover	frontend-export
 PASS	embedding/value-embedded-pointer-promotion/dynamic-dispatch	-
 PASS	embedding/value-embedded-pointer-promotion/static-call	-
 PASS	embedding/value-embedded-pointer-promotion/value-box-satisfies	-
@@ -4648,6 +4678,7 @@ PASS	race/free/field-disjoint	confluent
 PASS	race/free/field-read-write	confluent
 PASS	race/free/method-value-order	confluent
 PASS	race/free/promoted-ptr-box	confluent
+FAIL	race/free/promoted-ptr-hop	confluent
 PASS	race/free/ptr-field-read-write	confluent
 PASS	race/free/slice-disjoint	confluent
 PASS	race/free/spawn-dispatch-free	confluent
@@ -4685,6 +4716,8 @@ PASS	race/negative/map-range-iter	racy
 PASS	race/negative/map-rw	racy
 PASS	race/negative/method-value	racy
 PASS	race/negative/promoted-dispatch	racy
+PASS	race/negative/promoted-ptr-hop-field	racy
+PASS	race/negative/promoted-ptr-hop-target	racy
 PASS	race/negative/read-write	racy
 PASS	race/negative/slice-elem	racy
 PASS	race/negative/spawn-dispatch	racy

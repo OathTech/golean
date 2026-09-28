@@ -1007,7 +1007,7 @@ verbatim, gc realization version-tracked).
   conflicts with a same-element write and with a whole-array write).
   What REMAINS OPEN is the DYNAMIC-index residual below.
 - Pinned-by: differential
-- Cases: race/free/array-dyn-index-read-write
+- Cases: race/free/array-dyn-index-read-write, race/free/promoted-ptr-hop
 - Discovered: 2026-08-07 (S3 pre-merge audit, major finding 3 — the
   original record named only `evalVar` and shipped write/write-only
   free-lane guards, so the read/write direction that actually trips
@@ -1056,6 +1056,21 @@ verbatim, gc realization version-tracked).
   entry's over-refusal envelope (no corpus case constructs one yet —
   a future embedded-pointer-hop promotion case through a *T box would
   land red here, never silently wrong).
+- G-P S0 born pin (2026-09-28, [AGENT] worker, lane
+  `core/method-promotion-0928`; design note
+  `docs/2026-09-28_gp-method-promotion-design.md` §2 S8, decision 6
+  RULED [USER] 2026-09-28): the embedded-pointer-hop member the
+  addendum predicted now EXISTS — `race/free/promoted-ptr-hop` (a *T
+  box, a promoted value-receiver method through an embedded `*E` hop,
+  a concurrent write to a non-embedded outer field; `go run -race`
+  green 5/5) born FAIL/confluent on main: the whole-pointee fallback
+  read of `*o` conflicts with the `o.z` write on the default schedule
+  (a fail-closed over-refusal, not a wrong answer). Must-stay-racy
+  guards born PASS/racy: `race/negative/{promoted-ptr-hop-target,
+  promoted-ptr-hop-field}` (gc -race reports both). Expected to flip
+  FAIL→PASS at G-P S2, where the dispatch footprint becomes the
+  promotion path's own loads (gc's wrapper loads) — the one documented
+  access-trace change of P.
 
 ## BUG-040 — no POST-SPAWN reschedule point: a child can never run before a sync-free parent segment (L1 envelope too narrow; exit-no-sync races undetectable)
 

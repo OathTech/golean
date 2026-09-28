@@ -275,7 +275,54 @@ func raceArrayConstIndexWholeWrite() int {
 	return r
 }
 
+// G-P S0 must-stay-racy guards for race/free/promoted-ptr-hop: through
+// the embedded-POINTER hop the promoted value-receiver dispatch loads
+// the embedded pointer field and then the pointee, so a concurrent
+// write to the hop's TARGET field (o.promHopInner.x) or to the embedded
+// POINTER field itself (o.promHopInner) races (gc -race reports both).
+// The narrowing G-P S2 introduces must keep refusing both.
+type promHopInner struct {
+	x int
+}
+
+func (i promHopInner) Get() int {
+	return i.x
+}
+
+type promHopOuter struct {
+	*promHopInner
+	z int
+}
+
+func racePromotedPtrHopTarget() int {
+	o := &promHopOuter{promHopInner: &promHopInner{x: 1}}
+	var g dispGetter = o
+	done := make(chan int)
+	go func() {
+		o.promHopInner.x = 7
+		done <- 0
+	}()
+	r := g.Get()
+	<-done
+	return r
+}
+
+func racePromotedPtrHopField() int {
+	o := &promHopOuter{promHopInner: &promHopInner{x: 1}}
+	var g dispGetter = o
+	done := make(chan int)
+	go func() {
+		o.promHopInner = &promHopInner{x: 7}
+		done <- 0
+	}()
+	r := g.Get()
+	<-done
+	return r
+}
+
 func main() {
+	println(racePromotedPtrHopTarget())
+	println(racePromotedPtrHopField())
 	println(raceWriteWrite())
 	println(raceReadWrite())
 	println(raceIncrement())

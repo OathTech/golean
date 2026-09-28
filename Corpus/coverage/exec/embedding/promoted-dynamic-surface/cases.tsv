@@ -1,0 +1,13 @@
+# id	subject	args	expected_status	expected_reason	features
+# G-P S0 born pins (docs/2026-09-28_gp-method-promotion-design.md §5): the dynamic promotion surface before the wrappers become promotion records. Every expected value observed under go1.26.5, plain and -race.
+go-nil-ptr-embed	pdGoNilPtrEmbed	-	panic	runtime error: invalid memory address or nil pointer dereference	interfaces,embedding,methods,pointers,nil,panic,recover,goroutines,channels	confluent	the child panics copying the value receiver out of the nil embedded pointer while the parent waits forever on an unready channel; the parent recover never runs on any schedule	width=4,sites=8
+go-nil-iface-embed	pdGoNilIfaceEmbed	-	panic	runtime error: invalid memory address or nil pointer dereference	interfaces,embedding,methods,nil,panic,recover,goroutines,channels	confluent	the child panics re-dispatching on the nil embedded interface field while the parent waits forever; the parent recover never runs on any schedule	width=4,sites=8
+defer-nil-path	pdDeferNilPath	-	ok	-	interfaces,embedding,methods,pointers,nil,defer,panic,recover,evaluation_order
+defer-box-mutated	pdDeferBoxMutated	-	ok	-	interfaces,embedding,methods,pointers,defer,evaluation_order
+defer-static-control	pdDeferStaticControl	-	ok	-	embedding,methods,pointers,defer,evaluation_order
+defer-ptr-hop-replaced	pdDeferPtrHopReplaced	-	ok	-	interfaces,embedding,methods,pointers,defer,evaluation_order
+iface-method-value-late	pdIfaceMethodValueLate	-	ok	-	interfaces,embedding,methods,pointers,closures,evaluation_order
+iface-method-value-ptr-hop	pdIfaceMethodValuePtrHop	-	ok	-	interfaces,embedding,methods,pointers,closures,evaluation_order
+defer-method-expr-recover	pdDeferMethodExprRecover	-	ok	-	embedding,methods,defer,recover,panic
+defer-method-expr-recover-status	pdDeferMethodExprRecoverStatus	-	ok	-	embedding,methods,defer,recover,panic
+nil-box-ptr-method-value-embed	pdNilBoxPtrMethodValueEmbed	-	ok	-	interfaces,embedding,methods,pointers,nil,panic,recover

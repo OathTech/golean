@@ -258,7 +258,45 @@ func freeArrayDynIndexReadWrite(i int) int {
 	return r*10 + a[0]
 }
 
+// G-P S0 born pin (docs/2026-09-28_gp-method-promotion-design.md §2 S8):
+// a PROMOTED value-receiver method reached through an embedded-POINTER
+// hop from a *T interface box, beside a concurrent write to a
+// NON-embedded outer field. gc's synthesized (*fHopOuter).Get wrapper
+// loads the embedded pointer field, then copies the pointee: neither
+// load touches o.z, so the program is race-free (go run -race green).
+// Born FAIL (BUG-041's S3 addendum, over-refusal): the wrapper-body
+// recognizer does not narrow an embedded-pointer hop and the dispatch
+// falls back to the whole-pointee read of *o, which conflicts with the
+// o.z write. Expected to flip at G-P S2 (the footprint = the path's
+// own loads).
+type fHopInner struct {
+	x int
+}
+
+func (i fHopInner) Get() int {
+	return i.x
+}
+
+type fHopOuter struct {
+	*fHopInner
+	z int
+}
+
+func freePromotedPtrHop() int {
+	o := &fHopOuter{fHopInner: &fHopInner{x: 5}}
+	var g fGetter = o
+	done := make(chan int)
+	go func() {
+		o.z = 10
+		done <- 0
+	}()
+	r := g.Get()
+	<-done
+	return r + o.z
+}
+
 func main() {
+	println(freePromotedPtrHop())
 	println(freeSliceDisjoint())
 	println(freeFieldDisjoint())
 	println(freeFieldReadWrite())
