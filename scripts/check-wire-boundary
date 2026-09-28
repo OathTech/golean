@@ -22,6 +22,12 @@
 #   paired-surrogate     a VALID surrogate pair in an unread field → accepted (the parser is strict, not over-strict)
 #   over-depth           `buildTags` wrapped in 1100 nested arrays → refused by the wire nesting bound (1024)
 #
+# Plus the `unseq`-node controls (Stage C–E6a, below) and the PROMOTION-RECORD controls (G-P S1, 2026-09-28, the
+# section at the end: the REQUIRED `promotions` array — absent, a non-embedded hop, a wrong `ptr`, a wrong set
+# membership, a wrong adjustment, a target identity mismatch, `sig` without `unsupported`, a wrapper body that
+# disagrees with its record, a wrapper without a record, a duplicate record, a record naming a DECLARED method — each
+# refused by name through the real CLI; fixture Tests/wire-boundary-promotion/main.go).
+#
 # Fixture: Tests/wire-boundary/main.go (the review's discard-call probe).
 # Fail closed: a missing binary, a failed emit, a control that runs where
 # it must refuse, a refusal that does not name its cause, or a positive
@@ -327,4 +333,72 @@ out="$(run_cli_fn Tests/unseq-wire/native-e6arange.json e6arangekey)" || { echo 
 [[ "$out" == *'"status":"ok"'* && "$out" == *'"value":9'* ]] || { echo "check-wire-boundary: FAIL [unseq range-scope-key] — expected ok/9 (the outer string i after the loop): $out" >&2; exit 1; }
 echo "ok [unseq range-scope-key] runs, answers 9 (a range KEY variable does not leak past its loop — fix round 2)"
 expect_unseq_refusal unseq-local-range-var-after-loop mut-local-range-var-after-loop e6arangeafter 'has no declaration in the enclosing function'
-echo 'Wire boundary gate: PASS (11 byte-level controls + 56 unseq-node controls through the real CLI)'
+# PROMOTION RECORDS (G-P S1, 2026-09-28; design docs/2026-09-28_gp-method-promotion-design.md §2 S2 (b), §4, §5 S1 —
+# G-P PASSED [USER] 2026-09-28, relayed): the wire's REQUIRED `promotions` array — one record per promoted method-set
+# entry, validated by the decoder against the type/method tables and cross-checked against the synthesized wrapper's
+# body path. Fixture Tests/wire-boundary-promotion/main.go (every record shape: value/pointer embeds, two hops, an
+# embedded interface field, *T-only entries, the sync-primitive stubs; `probe` answers 42 through the wrappers). The
+# positive control runs; eleven one-edit mutants of the RECORDS (or of a wrapper's body, or the field's absence) must
+# refuse through the same CLI path naming the decoder's cause.
+GOCACHE="$ROOT/artifacts/go-build-cache" GO111MODULE=off \
+  go run ./tools/nativefrontend --dir Tests/wire-boundary-promotion --out "$gate_scratch/prom.json"
+python3 - "$gate_scratch" <<'PY'
+import json, sys
+from pathlib import Path
+scratch = Path(sys.argv[1])
+base = json.loads((scratch / 'prom.json').read_text('utf-8'))
+assert len(base['promotions']) == 12, f"fixture carries {len(base['promotions'])} promotion records, expected 12"
+assert sum(1 for m in base['methods'] if m.get('wrapper')) == 9, 'fixture wrapper count drifted'
+assert sum(1 for r in base['promotions'] if 'unsupported' in r) == 3, 'fixture stub-record count drifted'
+
+def fresh():
+    return json.loads(json.dumps(base))
+def write(name, data):
+    (scratch / f'{name}.json').write_text(json.dumps(data, separators=(',', ':')), 'utf-8')
+def rec(w, typ, member):
+    hits = [r for r in w['promotions'] if r['type'] == typ and r['member']['name'] == member]
+    assert len(hits) == 1, (typ, member, len(hits))
+    return hits[0]
+def method(w, recv, member):
+    hits = [m for m in w['methods'] if m['recvType'] == recv and m['id']['name'] == member]
+    assert len(hits) == 1, (recv, member, len(hits))
+    return hits[0]
+def find_nodes(v, pred):
+    out = []
+    if isinstance(v, dict):
+        if pred(v): out.append(v)
+        for c in v.values(): out += find_nodes(c, pred)
+    elif isinstance(v, list):
+        for c in v: out += find_nodes(c, pred)
+    return out
+
+m = fresh(); del m['promotions']; write('prom-absent', m)
+m = fresh(); rec(m, 'main.locked', 'Lock')['path'][0]['field'] = 'n'; write('prom-bad-hop', m)          # n is not embedded
+m = fresh(); rec(m, 'main.mid', 'val')['path'][0]['ptr'] = True; write('prom-wrong-ptr', m)              # base is a value field
+m = fresh(); rec(m, 'main.mid', 'val')['inPtrSetOnly'] = True; write('prom-wrong-set', m)                # value receiver: both sets
+m = fresh(); rec(m, 'main.mid', 'val')['adjust'] = 'deref'; write('prom-wrong-adjust', m)                # value field, value receiver: asIs
+m = fresh(); rec(m, 'main.mid', 'val')['target'] = dict(rec(m, 'main.mid', 'inc')['target']); write('prom-target-mismatch', m)
+m = fresh(); del rec(m, 'main.locked', 'Lock')['unsupported']; write('prom-sig-without-unsupported', m)
+m = fresh(); w = method(m, 'main.outer', 'val')
+nodes = find_nodes(w['body'], lambda d: d.get('expr') == 'field-get' and d.get('field') == 'base')
+assert len(nodes) == 1, 'outer.val wrapper body: expected one field-get of base'
+nodes[0]['field'] = 'n'; write('prom-path-disagree', m)                                                  # the wrapper walks mid.n, the record says mid.base
+m = fresh(); m['promotions'] = [r for r in m['promotions'] if not (r['type'] == 'main.mid' and r['member']['name'] == 'val')]; write('prom-wrapper-without-record', m)
+m = fresh(); m['promotions'].append(dict(rec(m, 'main.mid', 'val'))); write('prom-duplicate', m)
+m = fresh(); forged = dict(rec(m, 'main.solo', 'own')); forged['type'] = 'main.mid'; forged['path'] = [{'owner': 'main.mid', 'field': 'base', 'ptr': False}]
+m['promotions'].append(forged); write('prom-declared-conflict', m)                                       # mid.own is DECLARED (shadows base.own)
+print('promotion mutants written')
+PY
+expect_42 prom
+expect_refusal prom-absent                  'program.promotions is missing'
+expect_refusal prom-bad-hop                 'is not an embedded field'
+expect_refusal prom-wrong-ptr               'is an embedded value but ptr is true'
+expect_refusal prom-wrong-set               'inPtrSetOnly is true' 'spec#Struct_types gives false'
+expect_refusal prom-wrong-adjust            'adjust is' 'requires'
+expect_refusal prom-target-mismatch         'member identity' 'disagrees with the target'
+expect_refusal prom-sig-without-unsupported 'sig without unsupported'
+expect_refusal prom-path-disagree           'path/adjust denote'
+expect_refusal prom-wrapper-without-record  'has no promotion record'
+expect_refusal prom-duplicate               'duplicate promotion record'
+expect_refusal prom-declared-conflict       'is a DECLARED method of the carrier'
+echo 'Wire boundary gate: PASS (11 byte-level controls + 56 unseq-node controls + 12 promotion-record controls through the real CLI)'

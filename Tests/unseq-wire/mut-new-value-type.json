@@ -560,6 +560,7 @@
  "methodSets": [],
  "methods": [],
  "package": "main",
+ "promotions": [],
  "schema": "golean-native-v1",
  "types": []
 }

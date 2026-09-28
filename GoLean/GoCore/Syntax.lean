@@ -854,6 +854,85 @@ structure MethodSetRecord where
   coverage : MethodSetCoverage
   deriving Repr, BEq
 
+/-! ## Promotion records (G-P, native method promotion)
+
+Design note `docs/2026-09-28_gp-method-promotion-design.md` (G-P PASSED
+with its ten §6 decisions as recommended — [USER] Mike 2026-09-28, «Go
+ahead and land, and approve the decisions as proposed», relayed by the
+[AGENT] coordinator; cite as relayed). A promoted method-set entry of a
+struct type — a method reached through one or more EMBEDDED fields
+(spec#Selectors, spec#Struct_types) — is DATA: the carrier, the member,
+the embedded-hop path, the receiver adjustment at the end of the path,
+and the target (the declared method's callable target, or the embedded
+interface field's type). The path is the frontend's `go/types` selection
+(design §2 S2, option (b)); the decoder VALIDATES every record against
+the type table and the method table and fails closed by name
+(`NativeToIR.lean`).
+
+Slice S1 (design §5): the records are emitted and validated ALONGSIDE
+the synthesized promotion wrappers (`Func.wrapper`), and the decoder
+cross-checks each wrapper's body path against its record; the machine
+consumes nothing here yet. Slice S2 replaces the wrappers by these
+records (`resolveMethod?` / `receiverAt` / `callee?`, design §3). -/
+
+/-- The receiver adjustment a promotion applies at the END of its path,
+relative to the target's receiver kind (design §2 S2/§3 «pointer/value
+receiver adjustment»): `asIs` — the last hop's value IS the receiver (a
+value field for a value receiver, a pointer field for a pointer receiver,
+an interface field for an interface target); `deref` — a pointer field
+dereferenced for a value receiver; `addr` — a value field's address taken
+for a pointer receiver (legal exactly when the root is a pointer or an
+earlier hop is an embedded pointer — spec#Struct_types' membership rule
+guarantees it). -/
+inductive PromotionAdjust where
+  | asIs
+  | deref
+  | addr
+  deriving Repr, BEq, DecidableEq, Inhabited
+
+/-- One embedded hop of a promotion path: `owner` is the struct whose
+EMBEDDED field `field` is walked; `ptr` says whether that field is an
+embedded POINTER (`*T`) rather than a value (`T`). The first hop's owner
+is the carrier; each later hop's owner is the type the previous hop
+reached (through its pointer). -/
+structure PromotionHop where
+  owner : TypeId
+  field : String
+  ptr : Bool
+  deriving Repr, BEq, Inhabited
+
+/-- What a promotion path ends at: a DECLARED method (its callable
+target, `methodFuncId` of the declaring type and the member) or an
+embedded INTERFACE field (its type — dispatch re-enters on the field's
+value, design §2 S5). -/
+inductive PromotionTarget where
+  | method (f : FuncId)
+  | iface (i : TypeId)
+  deriving Repr, BEq, Inhabited
+
+/-- One promotion record (design §4, wire `program.promotions[i]`).
+`type` is the carrier struct; `member` the package-qualified member
+identity, equal to the target's; `inPtrSetOnly` says the entry is in
+`*type`'s method set only (spec#Struct_types: embedding `T` gives both
+sets `T`-receiver methods and only `*S` the `*T`-receiver ones; embedding
+`*T` gives both sets both — so `inPtrSetOnly` ⟺ pointer-receiver target
+with no pointer hop); `path` the embedded hops in order; `adjust` the
+adjustment at the last hop; `target` the callee. `unsupported` and `sig`
+are present exactly together (design §4): the entry is a declaration-only
+stub — a promoted sync-primitive method, or an FR-23 signature — whose
+signature (`sig`, receiver excluded, `sig.id = member`) answers
+satisfaction while a call refuses naming the cause. -/
+structure Promotion where
+  type : TypeId
+  member : Declaration.MemberId
+  inPtrSetOnly : Bool
+  path : Array PromotionHop
+  adjust : PromotionAdjust
+  target : PromotionTarget
+  unsupported : Option String := none
+  sig : Option MethodSig := none
+  deriving Repr, BEq, Inhabited
+
 /-- A package-level variable declaration (init slice,
 `docs/2026-08-05_init-design.md` §2): the driver seeds one heap cell per
 entry — zero value at the declared type — as the FIRST allocations, in
@@ -998,6 +1077,14 @@ structure Program where
   program that declares types renders the visible no-record marker for
   them unless it states their displays (fr19 × C2). -/
   typeDisplays : Array (TypeId × TypeDisplay) := TypeEnv.reservedDisplays
+  /-- The promotion records (G-P S1, design note
+  `docs/2026-09-28_gp-method-promotion-design.md` §4): REQUIRED on the
+  wire — the decoder refuses a wire without the field and validates every
+  record (§2 S2) — and defaulted `#[]` here, the hand-built-program
+  default that STATES no promotion (a machine consumer, S2, resolves a
+  promoted member only from a record, so an absent record refuses, never
+  answers). Data only in S1: the machine reads nothing from it yet. -/
+  promotions : Array Promotion := #[]
   deriving Repr, BEq
 
 def findFunctionIn? (funcs : Array Func) (id : FuncId) : Option Func :=

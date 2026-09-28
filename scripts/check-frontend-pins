@@ -276,6 +276,30 @@ cd "$ROOT"
 # op or a guard), so their sets are singletons on EVERY state — a structural
 # argument, reproduced by the E6a audit on main-unit replicas (its p5); the
 # twin driver under the machine was not re-run (40–65 min).
+# [AGENT] 2026-09-28, lane core/method-promotion-0928, G-P S1 — native method
+# promotion, the ADDITIVE records slice (design docs/2026-09-28_gp-method-promotion-design.md
+# §4/§5 S1; G-P PASSED with all ten §6 decisions as recommended: [USER] Mike 2026-09-28
+# «Go ahead and land, and approve the decisions as proposed», relayed by the [AGENT]
+# coordinator — cite as relayed): 1c4e7038… -> 7e8c06e6…. The wire gains ONE program-level
+# key, the REQUIRED `promotions` array — 56 records = the twin's 53 synthesized promotion
+# wrappers + 3 promoted sync-primitive stubs (raft.MemoryStorage.{Lock,TryLock,Unlock}), one
+# record per wrapper/stub in emission order: 6 carriers (raft.BasicStatus 13, raft.DefaultLogger
+# 13, raft.Ready 13, raft.Status 12, raft.MemoryStorage 3, tracker.ProgressTracker 2); 44 one-hop
+# and 12 two-hop paths; 50 `asIs` and 6 `addr` adjustments; 6 entries in *T's set only
+# (tracker.ProgressTracker.Clone, raft.Status.equal, raft.BasicStatus.equal, the 3 sync stubs);
+# 0 interface targets. EVERY OTHER top-level key is IDENTICAL (a key-by-key JSON comparison of
+# the old and the new wire at the re-pin: schema, package, buildContext, fileOrder 20, funcs 450,
+# methods 537 — the wrappers and stubs themselves are UNCHANGED in S1 —, methodSets 82, types 93,
+# globals 50; the added key is the only difference). The decoder validates each record against
+# the type/method tables and cross-checks it against its wrapper's body path
+# (GoLean/NativeToIR.lean `validatePromotion`; the twin decodes). One record's target is absent
+# from the wire by the standing stub policy — raft.DefaultLogger.output forwards to the
+# UNEXPORTED log.Logger.output, which the imported stub pass does not carry (contract note
+# docs/2026-08-10_method-set-record-contract.md §5) — and is accepted from its key alone, exactly
+# as today's wrapper calls that key. The twin driver under the machine was not re-run (40–65 min):
+# the machine reads nothing from the records in S1 (`Program.promotions` is data), so the twin's
+# observations are unchanged by construction. The schema string stays `golean-native-v1`; the
+# v2 move (wrappers retired, `wrapper` refused) is S2's re-pin.
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/check-frontend-pins.XXXXXX")"
 trap 'rm -rf "$WORK"' EXIT
 

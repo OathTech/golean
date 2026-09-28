@@ -42,6 +42,10 @@ def ProgramCtx.methods (ctx : ProgramCtx) : Array MethodInfo := ctx.program.meth
 /-- Method-set records (contract note `docs/2026-08-10_method-set-record-contract.md`):
 satisfaction and dispatch answer ONLY from these; `#[]` = refuse every carrier query. -/
 def ProgramCtx.methodSets (ctx : ProgramCtx) : Array MethodSetRecord := ctx.program.methodSets
+/-- Promotion records (G-P, `docs/2026-09-28_gp-method-promotion-design.md` §4): the
+decoder-validated embedded-hop paths of every promoted method-set entry. Data only in
+S1 (no machine consumer yet); `ofTables` leaves it `#[]`. -/
+def ProgramCtx.promotions (ctx : ProgramCtx) : Array Promotion := ctx.program.promotions
 /-- Display records (design note 2026-09-05 §3): gc's type string per `TypeId`, for
 panic-text RENDERING only; a missing record renders the visible marker, never the key. -/
 def ProgramCtx.typeDisplays (ctx : ProgramCtx) : Array (TypeId × TypeDisplay) :=

@@ -499960,6 +499960,1166 @@
   }
  ],
  "package": "main",
+ "promotions": [
+  {
+   "adjust": "addr",
+   "inPtrSetOnly": true,
+   "member": {
+    "name": "Clone",
+    "package": ""
+   },
+   "path": [
+    {
+     "field": "Config",
+     "owner": "tracker.ProgressTracker",
+     "ptr": false
+    }
+   ],
+   "target": {
+    "method": "$method$14:tracker.Config0:Clone"
+   },
+   "type": "tracker.ProgressTracker"
+  },
+  {
+   "adjust": "asIs",
+   "inPtrSetOnly": false,
+   "member": {
+    "name": "String",
+    "package": ""
+   },
+   "path": [
+    {
+     "field": "Config",
+     "owner": "tracker.ProgressTracker",
+     "ptr": false
+    }
+   ],
+   "target": {
+    "method": "$method$14:tracker.Config0:String"
+   },
+   "type": "tracker.ProgressTracker"
+  },
+  {
+   "adjust": "asIs",
+   "inPtrSetOnly": false,
+   "member": {
+    "name": "Fatalln",
+    "package": ""
+   },
+   "path": [
+    {
+     "field": "Logger",
+     "owner": "raft.DefaultLogger",
+     "ptr": true
+    }
+   ],
+   "target": {
+    "method": "$method$10:log.Logger0:Fatalln"
+   },
+   "type": "raft.DefaultLogger"
+  },
+  {
+   "adjust": "asIs",
+   "inPtrSetOnly": false,
+   "member": {
+    "name": "Flags",
+    "package": ""
+   },
+   "path": [
+    {
+     "field": "Logger",
+     "owner": "raft.DefaultLogger",
+     "ptr": true
+    }
+   ],
+   "target": {
+    "method": "$method$10:log.Logger0:Flags"
+   },
+   "type": "raft.DefaultLogger"
+  },
+  {
+   "adjust": "asIs",
+   "inPtrSetOnly": false,
+   "member": {
+    "name": "Output",
+    "package": ""
+   },
+   "path": [
+    {
+     "field": "Logger",
+     "owner": "raft.DefaultLogger",
+     "ptr": true
+    }
+   ],
+   "target": {
+    "method": "$method$10:log.Logger0:Output"
+   },
+   "type": "raft.DefaultLogger"
+  },
+  {
+   "adjust": "asIs",
+   "inPtrSetOnly": false,
+   "member": {
+    "name": "Panicln",
+    "package": ""
+   },
+   "path": [
+    {
+     "field": "Logger",
+     "owner": "raft.DefaultLogger",
+     "ptr": true
+    }
+   ],
+   "target": {
+    "method": "$method$10:log.Logger0:Panicln"
+   },
+   "type": "raft.DefaultLogger"
+  },
+  {
+   "adjust": "asIs",
+   "inPtrSetOnly": false,
+   "member": {
+    "name": "Prefix",
+    "package": ""
+   },
+   "path": [
+    {
+     "field": "Logger",
+     "owner": "raft.DefaultLogger",
+     "ptr": true
+    }
+   ],
+   "target": {
+    "method": "$method$10:log.Logger0:Prefix"
+   },
+   "type": "raft.DefaultLogger"
+  },
+  {
+   "adjust": "asIs",
+   "inPtrSetOnly": false,
+   "member": {
+    "name": "Print",
+    "package": ""
+   },
+   "path": [
+    {
+     "field": "Logger",
+     "owner": "raft.DefaultLogger",
+     "ptr": true
+    }
+   ],
+   "target": {
+    "method": "$method$10:log.Logger0:Print"
+   },
+   "type": "raft.DefaultLogger"
+  },
+  {
+   "adjust": "asIs",
+   "inPtrSetOnly": false,
+   "member": {
+    "name": "Printf",
+    "package": ""
+   },
+   "path": [
+    {
+     "field": "Logger",
+     "owner": "raft.DefaultLogger",
+     "ptr": true
+    }
+   ],
+   "target": {
+    "method": "$method$10:log.Logger0:Printf"
+   },
+   "type": "raft.DefaultLogger"
+  },
+  {
+   "adjust": "asIs",
+   "inPtrSetOnly": false,
+   "member": {
+    "name": "Println",
+    "package": ""
+   },
+   "path": [
+    {
+     "field": "Logger",
+     "owner": "raft.DefaultLogger",
+     "ptr": true
+    }
+   ],
+   "target": {
+    "method": "$method$10:log.Logger0:Println"
+   },
+   "type": "raft.DefaultLogger"
+  },
+  {
+   "adjust": "asIs",
+   "inPtrSetOnly": false,
+   "member": {
+    "name": "SetFlags",
+    "package": ""
+   },
+   "path": [
+    {
+     "field": "Logger",
+     "owner": "raft.DefaultLogger",
+     "ptr": true
+    }
+   ],
+   "target": {
+    "method": "$method$10:log.Logger0:SetFlags"
+   },
+   "type": "raft.DefaultLogger"
+  },
+  {
+   "adjust": "asIs",
+   "inPtrSetOnly": false,
+   "member": {
+    "name": "SetOutput",
+    "package": ""
+   },
+   "path": [
+    {
+     "field": "Logger",
+     "owner": "raft.DefaultLogger",
+     "ptr": true
+    }
+   ],
+   "target": {
+    "method": "$method$10:log.Logger0:SetOutput"
+   },
+   "type": "raft.DefaultLogger"
+  },
+  {
+   "adjust": "asIs",
+   "inPtrSetOnly": false,
+   "member": {
+    "name": "SetPrefix",
+    "package": ""
+   },
+   "path": [
+    {
+     "field": "Logger",
+     "owner": "raft.DefaultLogger",
+     "ptr": true
+    }
+   ],
+   "target": {
+    "method": "$method$10:log.Logger0:SetPrefix"
+   },
+   "type": "raft.DefaultLogger"
+  },
+  {
+   "adjust": "asIs",
+   "inPtrSetOnly": false,
+   "member": {
+    "name": "Writer",
+    "package": ""
+   },
+   "path": [
+    {
+     "field": "Logger",
+     "owner": "raft.DefaultLogger",
+     "ptr": true
+    }
+   ],
+   "target": {
+    "method": "$method$10:log.Logger0:Writer"
+   },
+   "type": "raft.DefaultLogger"
+  },
+  {
+   "adjust": "asIs",
+   "inPtrSetOnly": false,
+   "member": {
+    "name": "output",
+    "package": "log"
+   },
+   "path": [
+    {
+     "field": "Logger",
+     "owner": "raft.DefaultLogger",
+     "ptr": true
+    }
+   ],
+   "target": {
+    "method": "$method$10:log.Logger3:logoutput"
+   },
+   "type": "raft.DefaultLogger"
+  },
+  {
+   "adjust": "asIs",
+   "inPtrSetOnly": false,
+   "member": {
+    "name": "AppendMessage",
+    "package": ""
+   },
+   "path": [
+    {
+     "field": "HardState",
+     "owner": "raft.Ready",
+     "ptr": true
+    }
+   ],
+   "target": {
+    "method": "$method$16:raftpb.HardState0:AppendMessage"
+   },
+   "type": "raft.Ready"
+  },
+  {
+   "adjust": "asIs",
+   "inPtrSetOnly": false,
+   "member": {
+    "name": "CloneMessage",
+    "package": ""
+   },
+   "path": [
+    {
+     "field": "HardState",
+     "owner": "raft.Ready",
+     "ptr": true
+    }
+   ],
+   "target": {
+    "method": "$method$16:raftpb.HardState0:CloneMessage"
+   },
+   "type": "raft.Ready"
+  },
+  {
+   "adjust": "asIs",
+   "inPtrSetOnly": false,
+   "member": {
+    "name": "Descriptor",
+    "package": ""
+   },
+   "path": [
+    {
+     "field": "HardState",
+     "owner": "raft.Ready",
+     "ptr": true
+    }
+   ],
+   "target": {
+    "method": "$method$16:raftpb.HardState0:Descriptor"
+   },
+   "type": "raft.Ready"
+  },
+  {
+   "adjust": "asIs",
+   "inPtrSetOnly": false,
+   "member": {
+    "name": "EqualMessage",
+    "package": ""
+   },
+   "path": [
+    {
+     "field": "HardState",
+     "owner": "raft.Ready",
+     "ptr": true
+    }
+   ],
+   "target": {
+    "method": "$method$16:raftpb.HardState0:EqualMessage"
+   },
+   "type": "raft.Ready"
+  },
+  {
+   "adjust": "asIs",
+   "inPtrSetOnly": false,
+   "member": {
+    "name": "GetCommit",
+    "package": ""
+   },
+   "path": [
+    {
+     "field": "HardState",
+     "owner": "raft.Ready",
+     "ptr": true
+    }
+   ],
+   "target": {
+    "method": "$method$16:raftpb.HardState0:GetCommit"
+   },
+   "type": "raft.Ready"
+  },
+  {
+   "adjust": "asIs",
+   "inPtrSetOnly": false,
+   "member": {
+    "name": "GetTerm",
+    "package": ""
+   },
+   "path": [
+    {
+     "field": "HardState",
+     "owner": "raft.Ready",
+     "ptr": true
+    }
+   ],
+   "target": {
+    "method": "$method$16:raftpb.HardState0:GetTerm"
+   },
+   "type": "raft.Ready"
+  },
+  {
+   "adjust": "asIs",
+   "inPtrSetOnly": false,
+   "member": {
+    "name": "GetVote",
+    "package": ""
+   },
+   "path": [
+    {
+     "field": "HardState",
+     "owner": "raft.Ready",
+     "ptr": true
+    }
+   ],
+   "target": {
+    "method": "$method$16:raftpb.HardState0:GetVote"
+   },
+   "type": "raft.Ready"
+  },
+  {
+   "adjust": "asIs",
+   "inPtrSetOnly": false,
+   "member": {
+    "name": "ProtoMessage",
+    "package": ""
+   },
+   "path": [
+    {
+     "field": "HardState",
+     "owner": "raft.Ready",
+     "ptr": true
+    }
+   ],
+   "target": {
+    "method": "$method$16:raftpb.HardState0:ProtoMessage"
+   },
+   "type": "raft.Ready"
+  },
+  {
+   "adjust": "asIs",
+   "inPtrSetOnly": false,
+   "member": {
+    "name": "Reset",
+    "package": ""
+   },
+   "path": [
+    {
+     "field": "HardState",
+     "owner": "raft.Ready",
+     "ptr": true
+    }
+   ],
+   "target": {
+    "method": "$method$16:raftpb.HardState0:Reset"
+   },
+   "type": "raft.Ready"
+  },
+  {
+   "adjust": "asIs",
+   "inPtrSetOnly": false,
+   "member": {
+    "name": "SizeMessage",
+    "package": ""
+   },
+   "path": [
+    {
+     "field": "HardState",
+     "owner": "raft.Ready",
+     "ptr": true
+    }
+   ],
+   "target": {
+    "method": "$method$16:raftpb.HardState0:SizeMessage"
+   },
+   "type": "raft.Ready"
+  },
+  {
+   "adjust": "asIs",
+   "inPtrSetOnly": false,
+   "member": {
+    "name": "String",
+    "package": ""
+   },
+   "path": [
+    {
+     "field": "HardState",
+     "owner": "raft.Ready",
+     "ptr": true
+    }
+   ],
+   "target": {
+    "method": "$method$16:raftpb.HardState0:String"
+   },
+   "type": "raft.Ready"
+  },
+  {
+   "adjust": "asIs",
+   "inPtrSetOnly": false,
+   "member": {
+    "name": "UnmarshalMessage",
+    "package": ""
+   },
+   "path": [
+    {
+     "field": "HardState",
+     "owner": "raft.Ready",
+     "ptr": true
+    }
+   ],
+   "target": {
+    "method": "$method$16:raftpb.HardState0:UnmarshalMessage"
+   },
+   "type": "raft.Ready"
+  },
+  {
+   "adjust": "asIs",
+   "inPtrSetOnly": false,
+   "member": {
+    "name": "equal",
+    "package": "raft"
+   },
+   "path": [
+    {
+     "field": "SoftState",
+     "owner": "raft.Ready",
+     "ptr": true
+    }
+   ],
+   "target": {
+    "method": "$method$14:raft.SoftState4:raftequal"
+   },
+   "type": "raft.Ready"
+  },
+  {
+   "adjust": "asIs",
+   "inPtrSetOnly": false,
+   "member": {
+    "name": "AppendMessage",
+    "package": ""
+   },
+   "path": [
+    {
+     "field": "BasicStatus",
+     "owner": "raft.Status",
+     "ptr": false
+    },
+    {
+     "field": "HardState",
+     "owner": "raft.BasicStatus",
+     "ptr": true
+    }
+   ],
+   "target": {
+    "method": "$method$16:raftpb.HardState0:AppendMessage"
+   },
+   "type": "raft.Status"
+  },
+  {
+   "adjust": "asIs",
+   "inPtrSetOnly": false,
+   "member": {
+    "name": "CloneMessage",
+    "package": ""
+   },
+   "path": [
+    {
+     "field": "BasicStatus",
+     "owner": "raft.Status",
+     "ptr": false
+    },
+    {
+     "field": "HardState",
+     "owner": "raft.BasicStatus",
+     "ptr": true
+    }
+   ],
+   "target": {
+    "method": "$method$16:raftpb.HardState0:CloneMessage"
+   },
+   "type": "raft.Status"
+  },
+  {
+   "adjust": "asIs",
+   "inPtrSetOnly": false,
+   "member": {
+    "name": "Descriptor",
+    "package": ""
+   },
+   "path": [
+    {
+     "field": "BasicStatus",
+     "owner": "raft.Status",
+     "ptr": false
+    },
+    {
+     "field": "HardState",
+     "owner": "raft.BasicStatus",
+     "ptr": true
+    }
+   ],
+   "target": {
+    "method": "$method$16:raftpb.HardState0:Descriptor"
+   },
+   "type": "raft.Status"
+  },
+  {
+   "adjust": "asIs",
+   "inPtrSetOnly": false,
+   "member": {
+    "name": "EqualMessage",
+    "package": ""
+   },
+   "path": [
+    {
+     "field": "BasicStatus",
+     "owner": "raft.Status",
+     "ptr": false
+    },
+    {
+     "field": "HardState",
+     "owner": "raft.BasicStatus",
+     "ptr": true
+    }
+   ],
+   "target": {
+    "method": "$method$16:raftpb.HardState0:EqualMessage"
+   },
+   "type": "raft.Status"
+  },
+  {
+   "adjust": "asIs",
+   "inPtrSetOnly": false,
+   "member": {
+    "name": "GetCommit",
+    "package": ""
+   },
+   "path": [
+    {
+     "field": "BasicStatus",
+     "owner": "raft.Status",
+     "ptr": false
+    },
+    {
+     "field": "HardState",
+     "owner": "raft.BasicStatus",
+     "ptr": true
+    }
+   ],
+   "target": {
+    "method": "$method$16:raftpb.HardState0:GetCommit"
+   },
+   "type": "raft.Status"
+  },
+  {
+   "adjust": "asIs",
+   "inPtrSetOnly": false,
+   "member": {
+    "name": "GetTerm",
+    "package": ""
+   },
+   "path": [
+    {
+     "field": "BasicStatus",
+     "owner": "raft.Status",
+     "ptr": false
+    },
+    {
+     "field": "HardState",
+     "owner": "raft.BasicStatus",
+     "ptr": true
+    }
+   ],
+   "target": {
+    "method": "$method$16:raftpb.HardState0:GetTerm"
+   },
+   "type": "raft.Status"
+  },
+  {
+   "adjust": "asIs",
+   "inPtrSetOnly": false,
+   "member": {
+    "name": "GetVote",
+    "package": ""
+   },
+   "path": [
+    {
+     "field": "BasicStatus",
+     "owner": "raft.Status",
+     "ptr": false
+    },
+    {
+     "field": "HardState",
+     "owner": "raft.BasicStatus",
+     "ptr": true
+    }
+   ],
+   "target": {
+    "method": "$method$16:raftpb.HardState0:GetVote"
+   },
+   "type": "raft.Status"
+  },
+  {
+   "adjust": "asIs",
+   "inPtrSetOnly": false,
+   "member": {
+    "name": "ProtoMessage",
+    "package": ""
+   },
+   "path": [
+    {
+     "field": "BasicStatus",
+     "owner": "raft.Status",
+     "ptr": false
+    },
+    {
+     "field": "HardState",
+     "owner": "raft.BasicStatus",
+     "ptr": true
+    }
+   ],
+   "target": {
+    "method": "$method$16:raftpb.HardState0:ProtoMessage"
+   },
+   "type": "raft.Status"
+  },
+  {
+   "adjust": "asIs",
+   "inPtrSetOnly": false,
+   "member": {
+    "name": "Reset",
+    "package": ""
+   },
+   "path": [
+    {
+     "field": "BasicStatus",
+     "owner": "raft.Status",
+     "ptr": false
+    },
+    {
+     "field": "HardState",
+     "owner": "raft.BasicStatus",
+     "ptr": true
+    }
+   ],
+   "target": {
+    "method": "$method$16:raftpb.HardState0:Reset"
+   },
+   "type": "raft.Status"
+  },
+  {
+   "adjust": "asIs",
+   "inPtrSetOnly": false,
+   "member": {
+    "name": "SizeMessage",
+    "package": ""
+   },
+   "path": [
+    {
+     "field": "BasicStatus",
+     "owner": "raft.Status",
+     "ptr": false
+    },
+    {
+     "field": "HardState",
+     "owner": "raft.BasicStatus",
+     "ptr": true
+    }
+   ],
+   "target": {
+    "method": "$method$16:raftpb.HardState0:SizeMessage"
+   },
+   "type": "raft.Status"
+  },
+  {
+   "adjust": "asIs",
+   "inPtrSetOnly": false,
+   "member": {
+    "name": "UnmarshalMessage",
+    "package": ""
+   },
+   "path": [
+    {
+     "field": "BasicStatus",
+     "owner": "raft.Status",
+     "ptr": false
+    },
+    {
+     "field": "HardState",
+     "owner": "raft.BasicStatus",
+     "ptr": true
+    }
+   ],
+   "target": {
+    "method": "$method$16:raftpb.HardState0:UnmarshalMessage"
+   },
+   "type": "raft.Status"
+  },
+  {
+   "adjust": "addr",
+   "inPtrSetOnly": true,
+   "member": {
+    "name": "equal",
+    "package": "raft"
+   },
+   "path": [
+    {
+     "field": "BasicStatus",
+     "owner": "raft.Status",
+     "ptr": false
+    },
+    {
+     "field": "SoftState",
+     "owner": "raft.BasicStatus",
+     "ptr": false
+    }
+   ],
+   "target": {
+    "method": "$method$14:raft.SoftState4:raftequal"
+   },
+   "type": "raft.Status"
+  },
+  {
+   "adjust": "asIs",
+   "inPtrSetOnly": false,
+   "member": {
+    "name": "AppendMessage",
+    "package": ""
+   },
+   "path": [
+    {
+     "field": "HardState",
+     "owner": "raft.BasicStatus",
+     "ptr": true
+    }
+   ],
+   "target": {
+    "method": "$method$16:raftpb.HardState0:AppendMessage"
+   },
+   "type": "raft.BasicStatus"
+  },
+  {
+   "adjust": "asIs",
+   "inPtrSetOnly": false,
+   "member": {
+    "name": "CloneMessage",
+    "package": ""
+   },
+   "path": [
+    {
+     "field": "HardState",
+     "owner": "raft.BasicStatus",
+     "ptr": true
+    }
+   ],
+   "target": {
+    "method": "$method$16:raftpb.HardState0:CloneMessage"
+   },
+   "type": "raft.BasicStatus"
+  },
+  {
+   "adjust": "asIs",
+   "inPtrSetOnly": false,
+   "member": {
+    "name": "Descriptor",
+    "package": ""
+   },
+   "path": [
+    {
+     "field": "HardState",
+     "owner": "raft.BasicStatus",
+     "ptr": true
+    }
+   ],
+   "target": {
+    "method": "$method$16:raftpb.HardState0:Descriptor"
+   },
+   "type": "raft.BasicStatus"
+  },
+  {
+   "adjust": "asIs",
+   "inPtrSetOnly": false,
+   "member": {
+    "name": "EqualMessage",
+    "package": ""
+   },
+   "path": [
+    {
+     "field": "HardState",
+     "owner": "raft.BasicStatus",
+     "ptr": true
+    }
+   ],
+   "target": {
+    "method": "$method$16:raftpb.HardState0:EqualMessage"
+   },
+   "type": "raft.BasicStatus"
+  },
+  {
+   "adjust": "asIs",
+   "inPtrSetOnly": false,
+   "member": {
+    "name": "GetCommit",
+    "package": ""
+   },
+   "path": [
+    {
+     "field": "HardState",
+     "owner": "raft.BasicStatus",
+     "ptr": true
+    }
+   ],
+   "target": {
+    "method": "$method$16:raftpb.HardState0:GetCommit"
+   },
+   "type": "raft.BasicStatus"
+  },
+  {
+   "adjust": "asIs",
+   "inPtrSetOnly": false,
+   "member": {
+    "name": "GetTerm",
+    "package": ""
+   },
+   "path": [
+    {
+     "field": "HardState",
+     "owner": "raft.BasicStatus",
+     "ptr": true
+    }
+   ],
+   "target": {
+    "method": "$method$16:raftpb.HardState0:GetTerm"
+   },
+   "type": "raft.BasicStatus"
+  },
+  {
+   "adjust": "asIs",
+   "inPtrSetOnly": false,
+   "member": {
+    "name": "GetVote",
+    "package": ""
+   },
+   "path": [
+    {
+     "field": "HardState",
+     "owner": "raft.BasicStatus",
+     "ptr": true
+    }
+   ],
+   "target": {
+    "method": "$method$16:raftpb.HardState0:GetVote"
+   },
+   "type": "raft.BasicStatus"
+  },
+  {
+   "adjust": "asIs",
+   "inPtrSetOnly": false,
+   "member": {
+    "name": "ProtoMessage",
+    "package": ""
+   },
+   "path": [
+    {
+     "field": "HardState",
+     "owner": "raft.BasicStatus",
+     "ptr": true
+    }
+   ],
+   "target": {
+    "method": "$method$16:raftpb.HardState0:ProtoMessage"
+   },
+   "type": "raft.BasicStatus"
+  },
+  {
+   "adjust": "asIs",
+   "inPtrSetOnly": false,
+   "member": {
+    "name": "Reset",
+    "package": ""
+   },
+   "path": [
+    {
+     "field": "HardState",
+     "owner": "raft.BasicStatus",
+     "ptr": true
+    }
+   ],
+   "target": {
+    "method": "$method$16:raftpb.HardState0:Reset"
+   },
+   "type": "raft.BasicStatus"
+  },
+  {
+   "adjust": "asIs",
+   "inPtrSetOnly": false,
+   "member": {
+    "name": "SizeMessage",
+    "package": ""
+   },
+   "path": [
+    {
+     "field": "HardState",
+     "owner": "raft.BasicStatus",
+     "ptr": true
+    }
+   ],
+   "target": {
+    "method": "$method$16:raftpb.HardState0:SizeMessage"
+   },
+   "type": "raft.BasicStatus"
+  },
+  {
+   "adjust": "asIs",
+   "inPtrSetOnly": false,
+   "member": {
+    "name": "String",
+    "package": ""
+   },
+   "path": [
+    {
+     "field": "HardState",
+     "owner": "raft.BasicStatus",
+     "ptr": true
+    }
+   ],
+   "target": {
+    "method": "$method$16:raftpb.HardState0:String"
+   },
+   "type": "raft.BasicStatus"
+  },
+  {
+   "adjust": "asIs",
+   "inPtrSetOnly": false,
+   "member": {
+    "name": "UnmarshalMessage",
+    "package": ""
+   },
+   "path": [
+    {
+     "field": "HardState",
+     "owner": "raft.BasicStatus",
+     "ptr": true
+    }
+   ],
+   "target": {
+    "method": "$method$16:raftpb.HardState0:UnmarshalMessage"
+   },
+   "type": "raft.BasicStatus"
+  },
+  {
+   "adjust": "addr",
+   "inPtrSetOnly": true,
+   "member": {
+    "name": "equal",
+    "package": "raft"
+   },
+   "path": [
+    {
+     "field": "SoftState",
+     "owner": "raft.BasicStatus",
+     "ptr": false
+    }
+   ],
+   "target": {
+    "method": "$method$14:raft.SoftState4:raftequal"
+   },
+   "type": "raft.BasicStatus"
+  },
+  {
+   "adjust": "addr",
+   "inPtrSetOnly": true,
+   "member": {
+    "name": "Lock",
+    "package": ""
+   },
+   "path": [
+    {
+     "field": "Mutex",
+     "owner": "raft.MemoryStorage",
+     "ptr": false
+    }
+   ],
+   "sig": {
+    "id": {
+     "name": "Lock",
+     "package": ""
+    },
+    "params": [],
+    "results": [],
+    "variadic": false
+   },
+   "target": {
+    "method": "$method$10:sync.Mutex0:Lock"
+   },
+   "type": "raft.MemoryStorage",
+   "unsupported": "promoted sync-primitive method sync.Mutex.Lock reached through interface dispatch on the embedding type (statement/defer ops and method values adjust to the embedded primitive at their sites and lower; this method-table entry answers satisfaction, and DISPATCH through it fails closed — the embedded-hop forwarding body is not modeled)"
+  },
+  {
+   "adjust": "addr",
+   "inPtrSetOnly": true,
+   "member": {
+    "name": "TryLock",
+    "package": ""
+   },
+   "path": [
+    {
+     "field": "Mutex",
+     "owner": "raft.MemoryStorage",
+     "ptr": false
+    }
+   ],
+   "sig": {
+    "id": {
+     "name": "TryLock",
+     "package": ""
+    },
+    "params": [],
+    "results": [
+     {
+      "kind": "bool"
+     }
+    ],
+    "variadic": false
+   },
+   "target": {
+    "method": "$method$10:sync.Mutex0:TryLock"
+   },
+   "type": "raft.MemoryStorage",
+   "unsupported": "promoted sync-primitive method sync.Mutex.TryLock reached through interface dispatch on the embedding type (statement/defer ops and method values adjust to the embedded primitive at their sites and lower; this method-table entry answers satisfaction, and DISPATCH through it fails closed — the embedded-hop forwarding body is not modeled)"
+  },
+  {
+   "adjust": "addr",
+   "inPtrSetOnly": true,
+   "member": {
+    "name": "Unlock",
+    "package": ""
+   },
+   "path": [
+    {
+     "field": "Mutex",
+     "owner": "raft.MemoryStorage",
+     "ptr": false
+    }
+   ],
+   "sig": {
+    "id": {
+     "name": "Unlock",
+     "package": ""
+    },
+    "params": [],
+    "results": [],
+    "variadic": false
+   },
+   "target": {
+    "method": "$method$10:sync.Mutex0:Unlock"
+   },
+   "type": "raft.MemoryStorage",
+   "unsupported": "promoted sync-primitive method sync.Mutex.Unlock reached through interface dispatch on the embedding type (statement/defer ops and method values adjust to the embedded primitive at their sites and lower; this method-table entry answers satisfaction, and DISPATCH through it fails closed — the embedded-hop forwarding body is not modeled)"
+  }
+ ],
  "schema": "golean-native-v1",
  "types": [
   {
