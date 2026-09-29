@@ -369,4 +369,4 @@ Recorded 2026-09-04 [AGENT] (design-hygiene wave (iii), `hygiene-wave3`). Not a 
   (Multi.lean — the same pick; audit fix F1).
 ```
 
-The surviving statements (the BUG-087 envelope, the recover walk's gc rule, the wrapper-transparency argument) stay in situ on `enterFramePick`, `recoverResult` and `recoverThroughWrappers`.
+The surviving statements (the BUG-087 envelope, the recover walk's gc rule, the wrapper-transparency argument) stay in situ on `enterFramePick`, `recoverResult` and `recoverThroughWrappers`. [G-P S2, 2026-09-28: `recoverThroughWrappers` and the wrapper-transparency argument are DELETED with the wrappers; the recover walk's gc rule stays on `recoverResult` and the direct check is `recoverAtDeferred` (its docstring carries the history); the BUG-087 envelope statement on `nilValueMethodText?` reads «the resolution path is empty».]

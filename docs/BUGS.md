@@ -1046,9 +1046,11 @@ verbatim, gc realization version-tracked).
   SLICES, whose element reads are address-based and already precise.
   (The pre-fix "Fix shape" — provenance-carrying array values or
   frontend address-based element reads — is superseded by the ruling.)
-- S3 convergence addendum: the class gained a FRAME-ENTRY member and
+- S3 convergence addendum (HISTORY, 2026-08-07 → 2026-09-28 — the
+  mechanism it names was deleted at G-P S2, the paragraph after next):
+  the class gained a FRAME-ENTRY member and
   its narrowing — a needsDeref dispatch to a synthesized promotion
-  wrapper is narrowed to the wrapper's hop path
+  wrapper was narrowed to the wrapper's hop path
   (`race/free/promoted-ptr-box` green, `race/negative/
   {promoted-dispatch,iface-dispatch}` red guards); wrapper shapes the
   extractor does not recognize (embedded-POINTER hops, non-synthesized
@@ -1086,6 +1088,15 @@ verbatim, gc realization version-tracked).
   `race/free/promoted-ptr-box` PASS/confluent. A DECLARED value-receiver
   method dispatched through a pointer box keeps its whole-pointee read
   (gc copies the receiver: `race/negative/iface-dispatch`).
+  CURRENT MECHANISM (G-P S3 records, 2026-09-29): the dispatch footprint
+  of a promoted entry is stated by the equations `receiverAt_field` (a
+  value-embed hop from a pointer box reads exactly the field's cell),
+  `receiverAt_ptr` / `_ptr_deref` (an embedded-pointer hop reads the
+  pointer field, then — for a value receiver — the pointee),
+  `receiverAt_field_addr` (a pointer receiver via a value embed: the
+  address, no read) and `receiverAt_nil_path_deref` (the declared
+  `*T ⊇ T` arm's whole-pointee read) — `GoLean/GoCore/BridgeSet.lean`
+  rows 77, 80, 82–84.
 
 ## BUG-040 — no POST-SPAWN reschedule point: a child can never run before a sync-free parent segment (L1 envelope too narrow; exit-no-sync races undetectable)
 
@@ -2202,31 +2213,36 @@ boundary).
 
 ## BUG-015 — recover() inside a PROMOTED method reached via a synthesized wrapper returns nil (wrapper frame breaks the recover walk)
 
-- Status: fixed (2026-08-06, arc-final audit response F1 — the faithful
-  machine-level fix, gc's own rule: synthesized wrappers are marked on
-  the wire ("wrapper": true, a declared schema addition emitted only by
-  synthesizeWrapper), `Func.wrapper` threads the flag into the frame
-  continuation (`Cont.frame` gains a trailing `wrapper` marker,
-  defaulted false so every pre-existing construction is unchanged), and
-  the recover walk — and ONLY it — treats wrapper frames as transparent
-  (`recoverThroughWrappers`; "exactly one non-wrapper frame between
-  gopanic and gorecover"). Full lockstep: Step rules and stepFn carry
-  the flag through frame exit/drain/panic paths, StateWf gains
-  wrapper-aware recoverResult lemmas, MachineSound absorbed the arity
-  change, and the WP frame laws generalize over the marker; designated
-  statements untouched. All four divergence pins flip green; the four
-  controls — direct dispatch, concrete promoted call, method value,
-  chain-JOINING through the same wrapper — hold.)
-  G-P S2 (2026-09-29, lane `core/method-promotion-0928`, design
-  `docs/2026-09-28_gp-method-promotion-design.md` §2 S6, decision 7):
-  the mechanism this entry describes is DELETED — no synthesized wrapper
-  frame exists (a promoted entry is a promotion record resolved at
-  dispatch, the real method's frame IS the deferred frame), so
-  `Func.wrapper`, `Cont.frame`'s wrapper marker, `Cont.recoverTransparent`
-  and `recoverThroughWrappers` are gone; the recover walk is the DIRECT
-  `recoverAtDeferred` (the deferred frame sits directly on the unrecovered
-  `panicResumeK`). The four pins and the four controls hold unchanged
-  (the S3 prose move is owed; this note records the deletion only).
+- Status: fixed (2026-08-06, arc-final audit response F1; the MECHANISM
+  was replaced at G-P S2, 2026-09-29, lane `core/method-promotion-0928`,
+  design `docs/2026-09-28_gp-method-promotion-design.md` §2 S6, decision
+  7 — the DIRECT form, not the glue-skip fallback; records moved to this
+  form at S3). CURRENT MECHANISM: no synthesized frame exists — a
+  promoted entry is a promotion record resolved at dispatch, so the
+  promoted method's OWN frame is the deferred frame — and `recover()`
+  applies exactly when the deferred frame sits DIRECTLY on a
+  `panicResumeK` whose newest entry is unrecovered (`recoverAtDeferred`;
+  the walk `recoverResult` crosses glue only, `Cont.isGlue`). That is
+  gc's rule («exactly one non-wrapper frame between gopanic and
+  gorecover», runtime/panic.go `gorecover`) with every frame a non-wrapper
+  frame: `defer i.M()` and `defer S.M(s)` recover inside the promoted
+  `M` exactly where gc's wrapper-skipping walk does. Equations:
+  `recoverResult_eq` (the deferred frame on the marker), `_frame`,
+  `_glue` (`GoLean/GoCore/BridgeSet.lean` rows 87–89). The four divergence
+  pins and the four controls — direct dispatch, concrete promoted call,
+  method value, chain-JOINING — hold unchanged across both mechanisms.
+  HISTORY (2026-08-06 → 2026-09-28): the faithful machine-level fix of
+  the wrapper era — synthesized wrappers marked on the wire
+  (`"wrapper": true`, emitted only by `synthesizeWrapper`),
+  `Func.wrapper` threading the flag into the frame continuation
+  (`Cont.frame`'s trailing `wrapper` marker, defaulted false), and the
+  recover walk — and ONLY it — treating wrapper frames as transparent
+  (`recoverThroughWrappers` over `Cont.recoverTransparent`); Step rules
+  and stepFn carried the flag through frame exit/drain/panic paths,
+  StateWf had wrapper-aware recoverResult lemmas, the WP frame laws
+  generalized over the marker. All of it deleted at G-P S2; the frame's
+  last field is now the callee's `FuncId` ([USER] Mike 2026-09-28 «Agree
+  on (1)», relayed).
 - Pinned-by: differential
 - Cases: interfaces/recover-promoted-wrapper/silent-value-embed, interfaces/recover-promoted-wrapper/status-value-embed, interfaces/recover-promoted-wrapper/silent-pointer-embed, interfaces/recover-promoted-wrapper/silent-iface-embed
 - Discovered: 2026-08-06 (arc-final audit F1 — found by reading the
@@ -2576,28 +2592,46 @@ imported non-interface named types) lands.
 
 ## BUG-007 — method PROMOTION through embedded fields is unmodeled
 
-- Status: fixed (2026-08-05, general-coverage slice 2 — the recorded fix
-  direction landed: promotion is FLATTENED at emission
-  (docs/2026-08-05_embedding-interfaces-design.md D1). Field promotion:
-  Selection.Index() paths become field-get/deref chains (reads) and
-  field-addr chains (writes/addresses). Method promotion: call sites and
-  method values adjust the receiver through the hop path AT THAT MOMENT
-  (evaluation order and capture moment pinned by
-  embedding/promoted-nil-embedded-pointer/before-args and
-  embedding/promoted-method-value/{snapshot,live}); dynamic dispatch and
-  satisfaction went through synthesized forwarding WRAPPERS
-  (synthesizePromotionWrappers, one per promoted method-set entry,
-  receiver T or *T per Go's method-set asymmetry — mirroring gc's
-  wrappers) UNTIL G-P S2 (2026-09-29, lane `core/method-promotion-0928`,
-  design `docs/2026-09-28_gp-method-promotion-design.md`): since S2 a
-  promoted entry is a promotion RECORD (`program.promotions`) the machine
-  resolves at dispatch (`resolveMethod?`/`receiverAt`, Ops.lean) — the
-  wrapper emitters are deleted; the S3 prose move is owed. Either way
-  GoCore's method set stays COMPLETE (declared ∪ records). The
-  machine's over-approximate embedded-fields satisfaction fail-closure is
-  retired under that wire contract (D2), with the definite-FALSE polarity
-  pinned by embedding/promoted-ambiguous-not-satisfied and
-  embedding/promoted-pointer-receiver-method-set/value-box.)
+- Status: fixed (2026-08-05, general-coverage slice 2 — promotion is
+  FLATTENED at emission, docs/2026-08-05_embedding-interfaces-design.md
+  D1; the dynamic-surface MECHANISM was replaced at G-P S2, 2026-09-29,
+  lane `core/method-promotion-0928`, design
+  `docs/2026-09-28_gp-method-promotion-design.md`, records moved to this
+  form at S3). CURRENT MECHANISM. The STATIC surface — a direct call
+  `x.M()`, a method value `x.M`, a type-parameter call — lowers to a
+  field-projection / deref / address chain over `Selection.Index()` plus
+  an ordinary call to the DECLARED method, the receiver adjusted through
+  the hop path AT THAT MOMENT (evaluation order and capture moment pinned
+  by embedding/promoted-nil-embedded-pointer/before-args and
+  embedding/promoted-method-value/{snapshot,live}; design §2 S1, decision
+  1). The DYNAMIC surface — interface dispatch, interface satisfaction,
+  method expressions `S.M` / `(*S).M` — is a promotion RECORD
+  (`program.promotions`, one per promoted method-set entry of every
+  declared struct: carrier, member identity, embedded-hop path, receiver
+  adjustment, target = a declared method or an embedded interface field;
+  go/types' selection, decoder-validated, design §2 S2, decision 2) that
+  the machine resolves at the dispatched call's ENTRY and whose path it
+  walks over the store then (`resolveMethod?` / `receiverAt` /
+  `dynamicDispatch?`, Ops.lean; `callee?` / `promotedCallee`,
+  Machine.lean; decisions 3–5). The equations a client uses:
+  `resolveMethod?_promoted` / `_promotedPtr`, `receiverAt_field` /
+  `_ptr` / `_nil_panic` (`GoLean/GoCore/BridgeSet.lean` rows 74–86). GoCore's
+  method set is COMPLETE under the wire contract: a `full`
+  `MethodSetRecord` = DECLARED methods ∪ PROMOTION RECORDS (D2,
+  `docs/2026-08-10_method-set-record-contract.md` §3). The machine's
+  over-approximate embedded-fields satisfaction fail-closure (below) is
+  retired under that contract, with the definite-FALSE polarity pinned by
+  embedding/promoted-ambiguous-not-satisfied and
+  embedding/promoted-pointer-receiver-method-set/value-box.
+  HISTORY (2026-08-05 → 2026-09-28): the dynamic surface went through
+  synthesized forwarding WRAPPERS — `synthesizePromotionWrappers`
+  (`tools/nativefrontend/emit.go`) emitted one `Func` per promoted
+  method-set entry, receiver T or *T per Go's method-set asymmetry,
+  marked `"wrapper": true` (`Func.wrapper`), mirroring gc's wrappers —
+  reached by dispatch, satisfaction and method expressions. Deleted at
+  G-P S2 with every consumer (`Func.wrapper`, the frame marker,
+  `recoverThroughWrappers`, `dispatchLeaf`; the changelog
+  `docs/changelog/61958f2e-WINDOW.md` row 3 has the migration table).
 - Pinned-by: differential
 - Cases: interfaces/embedded-interface-shadowing/interface-field-dispatch, interfaces/embedded-interface-shadowing/interface-field-nil-panic, interfaces/embedded-interface-shadowing/nil-pointer-method-promoted, interfaces/embedded-interface-shadowing/pointer-method-promoted, interfaces/error-idioms/promoted-method, interfaces/promoted-method-assert-ok, methods/embedded-interface-satisfaction, embedding/deep-promoted-method, embedding/embedded-method-promote, embedding/promoted-ambiguous-not-satisfied, embedding/promoted-method-value/live, embedding/promoted-method-value/snapshot, embedding/promoted-nil-embedded-pointer/before-args, embedding/promoted-nil-embedded-pointer/call, embedding/promoted-nil-embedded-pointer/nil-panic, embedding/promoted-pointer-receiver-method-set/pointer-box, embedding/promoted-pointer-receiver-method-set/value-box
 - Discovered: 2026-07-30 (interfaces campaign — these cases were
@@ -5369,13 +5403,25 @@ member the strict lane compares — was wrong.
 
 ## BUG-087 — a VALUE-receiver method on a nil `*T` reached through gc's autogenerated `(*T).M` wrapper panics with gc's `panicwrap` text (`value method main.T.M called using nil *T pointer`, a `runtime.Error` WITHOUT the "runtime error: " prefix); the machine raises the generic nil-dereference text — gc's own text is OPTIMIZER-DEPENDENT on one source (latitude, not a forced point)
 
-- Status: fixed (G-P S2, 2026-09-29, lane `core/method-promotion-0928`,
-  design §2 S9: the family test's «target is not a synthesized promotion
-  wrapper» — which read `Func.wrapper`, now deleted — is «the resolution
-  path is empty» (`nilValueMethodText?`, `ChoiceTrace.nilTextFacts`: a
-  PROMOTED entry resolves through a record's non-empty path and is outside
-  the family); the site's consumption is identical — the S3 prose move is
-  owed)
+- Status: fixed (2026-09-03, lane `bug087-paniktext`: the two-member
+  envelope `ChoiceSite.nilValueMethodText`, below; the family TEST's
+  mechanism was replaced at G-P S2, 2026-09-29, lane
+  `core/method-promotion-0928`, design
+  `docs/2026-09-28_gp-method-promotion-design.md` §2 S9, decision 9 —
+  records moved to this form at S3). CURRENT MECHANISM: the family is
+  «the anchor is an interface-receiver method, the receiver argument is
+  an interface box holding a NIL pointer, and the dynamic type resolves
+  on the `*T ⊇ T` arm — `resolveMethod?` answers the EMPTY path with the
+  `deref` adjustment (`resolveMethod?_ptrDeclared`: a value-receiver
+  method DECLARED on exactly the pointee) — and the target is found»
+  (`nilValueMethodText?`, Ops.lean; `ChoiceTrace.nilTextFacts` mirrors
+  it). A PROMOTED entry resolves through a record's NON-EMPTY path
+  (`resolveMethod?_promotedPtr`) and is outside the family — gc's
+  wrappee is the embedded type, never identical to the pointee, so gc
+  dereferences and gives the ordinary nil-deref text (probed at the pin).
+  The site's width and consumption are identical to the wrapper era
+  (the S2 whole-corpus choice trace: byte-identical
+  `nilValueMethodText` consumptions).
 - Pinned-by: differential
 - Cases: noodler/ifaces/mv-iface-nil-call, noodler/ifaces/iface-param-value-nil, noodler/ifaces/global-iface-value-nil, noodler/ifaces/mk-helper-value-nil, noodler/ifaces/iface-dispatch-value-nil, noodler/ifaces/spawn-iface-value-nil, noodler/ifaces/spawn-iface-value-nil-devirt, noodler/ifaces/spawn-helper-value-nil, multipkg/nil-value-method-text
 - Discovered: 2026-09-03 (the noodler lane — `docs/2026-09-03_noodler-report.md`
@@ -5487,7 +5533,12 @@ wrapper (`Func.wrapper` — gc's `types.Identical(wrapper.Elem(),
 wrappee)` with `wrappee := method.Type.Recv().Type`, so promoted
 methods are outside the family; probed at the pin for value-embedding,
 pointer-embedding and the value box: all nil-deref, `docs/evidence/
-2026-09-03_bug087-paniktext/transcripts/shapes.txt`). Member 1 renders
+2026-09-03_bug087-paniktext/transcripts/shapes.txt`). [HISTORY: this
+paragraph's `concreteMethodForDynamic?`/`needsDeref`/`Func.wrapper`
+wording is the wrapper era's (2026-09-03 → 2026-09-28); since G-P S2 the
+same test reads `resolveMethod?`'s empty path with `deref` — the Status
+line above — and neither `concreteMethodForDynamic?` nor `Func.wrapper`
+exists.] Member 1 renders
 `value method <key>.<M> called using nil *<T> pointer` from the
 receiver's path-qualified `TypeId.key` — gc's `panicwrap` derives `pkg`
 from the wrapper SYMBOL, i.e. the import PATH (`probe087/sub.T.Val …

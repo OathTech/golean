@@ -902,6 +902,103 @@ def promotion? (carrier : TypeId) (member : Declaration.MemberId) : Option Promo
       | none => if p.type == carrier && p.member == member then some p else none)
     none
 
+/-! ### The lookups' equations (G-P S3, 2026-09-29; design §3 «expose
+declaration lookup») -/
+
+variable {ctx}
+private theorem methodDecl?_foldl_aux (dynTy : Ty) (member : Declaration.MemberId) :
+    ∀ (l : List MethodInfo) (acc : Option MethodInfo),
+      l.foldl (fun found method =>
+          match found with
+          | some _ => found
+          | none =>
+              if method.id == member && methodRecvDynamicTy? method == some dynTy then
+                some method
+              else none) acc
+        = (match acc with
+           | some m => some m
+           | none => l.find? (fun method =>
+               method.id == member && methodRecvDynamicTy? method == some dynTy))
+  | [], acc => by cases acc <;> rfl
+  | m :: ms, acc => by
+      cases acc with
+      | some g => exact methodDecl?_foldl_aux dynTy member ms (some g)
+      | none =>
+          rw [List.foldl_cons, List.find?_cons]
+          cases hm : (m.id == member && methodRecvDynamicTy? m == some dynTy)
+          · simp only [Bool.false_eq_true, ↓reduceIte]
+            exact methodDecl?_foldl_aux dynTy member ms none
+          · simp only [↓reduceIte]
+            exact methodDecl?_foldl_aux dynTy member ms (some m)
+
+/-- `methodDecl?` IS the first-match search of the method table for the
+member declared on exactly `dynTy`. -/
+theorem methodDecl?_eq_find? (dynTy : Ty) (member : Declaration.MemberId) :
+    methodDecl? ctx dynTy member =
+      ctx.methods.toList.find? (fun method =>
+        method.id == member && methodRecvDynamicTy? method == some dynTy) := by
+  unfold methodDecl?
+  rw [← Array.foldl_toList]
+  exact methodDecl?_foldl_aux dynTy member ctx.methods.toList none
+
+/-- **A declaration lookup answers a declared method of exactly the dynamic
+type** (design §3): the found `MethodInfo` carries the member identity it
+was looked up by, its receiver IS `dynTy` (a concrete receiver — never an
+interface anchor, `methodRecvDynamicTy?`), and it is a row of the table.
+Stated over the table's `==` (the machine's own identity test). -/
+theorem methodDecl?_some {dynTy : Ty} {member : Declaration.MemberId} {info : MethodInfo}
+    (h : methodDecl? ctx dynTy member = some info) :
+    (info.id == member) = true ∧ (methodRecvDynamicTy? info == some dynTy) = true ∧
+      info ∈ ctx.methods := by
+  rw [methodDecl?_eq_find?] at h
+  have h1 := List.find?_some h
+  have h2 := List.mem_of_find?_eq_some h
+  simp only [Bool.and_eq_true] at h1
+  exact ⟨h1.1, h1.2, by simpa using h2⟩
+
+private theorem promotion?_foldl_aux (carrier : TypeId) (member : Declaration.MemberId) :
+    ∀ (l : List Promotion) (acc : Option Promotion),
+      l.foldl (fun found p =>
+          match found with
+          | some _ => found
+          | none => if p.type == carrier && p.member == member then some p else none) acc
+        = (match acc with
+           | some q => some q
+           | none => l.find? (fun p => p.type == carrier && p.member == member))
+  | [], acc => by cases acc <;> rfl
+  | q :: qs, acc => by
+      cases acc with
+      | some g => exact promotion?_foldl_aux carrier member qs (some g)
+      | none =>
+          rw [List.foldl_cons, List.find?_cons]
+          cases hq : (q.type == carrier && q.member == member)
+          · simp only [Bool.false_eq_true, ↓reduceIte]
+            exact promotion?_foldl_aux carrier member qs none
+          · simp only [↓reduceIte]
+            exact promotion?_foldl_aux carrier member qs (some q)
+
+/-- `promotion?` IS the first-match search of the promotion records for the
+carrier's member. -/
+theorem promotion?_eq_find? (carrier : TypeId) (member : Declaration.MemberId) :
+    promotion? ctx carrier member =
+      ctx.promotions.toList.find? (fun p => p.type == carrier && p.member == member) := by
+  unfold promotion?
+  rw [← Array.foldl_toList]
+  exact promotion?_foldl_aux carrier member ctx.promotions.toList none
+
+/-- **A record lookup answers the carrier's own record for the member**: the
+found `Promotion` is keyed on this carrier and this member, and is one of the
+program's records (decoder-validated on a wire, design §2 S2). -/
+theorem promotion?_some {carrier : TypeId} {member : Declaration.MemberId} {p : Promotion}
+    (h : promotion? ctx carrier member = some p) :
+    p.type = carrier ∧ (p.member == member) = true ∧ p ∈ ctx.promotions := by
+  rw [promotion?_eq_find?] at h
+  have h1 := List.find?_some h
+  have h2 := List.mem_of_find?_eq_some h
+  simp only [Bool.and_eq_true, beq_iff_eq] at h1
+  exact ⟨h1.1, h1.2, by simpa using h2⟩
+variable (ctx)
+
 /-- The resolution of a method-set entry of a dynamic type (design §3
 `resolveMethod?`, replacing `concreteMethodForDynamic?`'s
 `MethodInfo × Bool`): the embedded-hop `path` (EMPTY for a declared
@@ -975,6 +1072,63 @@ def resolveMethod? (dynTy : Ty) (member : Declaration.MemberId) : Option MethodR
         | some info => some (.declared .deref info)
         | none => resolvePromoted? ctx elem true member
     | _ => resolvePromoted? ctx dynTy false member
+
+/-! ### `resolveMethod?` — the resolution equations (G-P S3, design §3) -/
+
+variable {ctx}
+/-- **A declared method of exactly the dynamic type resolves directly**
+(design §3 `resolveMethod?_declared`): the EMPTY path, the receiver `asIs`,
+the target its own `FuncId`. No record is consulted. -/
+theorem resolveMethod?_declared {dynTy : Ty} {member : Declaration.MemberId} {info : MethodInfo}
+    (h : methodDecl? ctx dynTy member = some info) :
+    resolveMethod? ctx dynTy member =
+      some { path := #[], adjust := .asIs, target := .method info.funcId } := by
+  unfold resolveMethod?
+  simp [h, MethodResolution.declared]
+
+/-- **The `*T ⊇ T` arm** (design §3 `resolveMethod?_ptrDeclared`): a pointer
+dynamic type `*elem` that declares no method of its own for the member, over
+a method DECLARED on the pointee `elem` — a defined non-pointer non-interface
+type (`**T` and `*I` have empty method sets) — resolves with the EMPTY path
+and the `deref` adjustment: the retired `needsDeref`; the receiver is copied
+out of the pointee at dispatch (`receiverAt_nil_path_deref`). -/
+theorem resolveMethod?_ptrDeclared {elem : Ty} {member : Declaration.MemberId} {info : MethodInfo}
+    (hptr : methodDecl? ctx (.pointer elem) member = none)
+    (hnotPtr : ∀ t, elem ≠ .pointer t) (hnotIface : ∀ i, elem ≠ .interface i)
+    (h : methodDecl? ctx elem member = some info) :
+    resolveMethod? ctx (.pointer elem) member =
+      some { path := #[], adjust := .deref, target := .method info.funcId } := by
+  unfold resolveMethod?
+  cases elem <;> simp_all [MethodResolution.declared]
+
+/-- **A promoted entry resolves to its record** — the VALUE box (design §3
+`resolveMethod?_promoted`): a defined type `idx` named `carrier`, declaring
+no method for the member, whose record for the member is `p` and whose entry
+spec#Struct_types puts in the value set (`p.inPtrSetOnly = false`), resolves
+to the record's own path, adjustment and target (`MethodResolution.ofPromotion`). -/
+theorem resolveMethod?_promoted {idx : TypeIdx} {member : Declaration.MemberId} {carrier : TypeId}
+    {p : Promotion}
+    (hdecl : methodDecl? ctx (.defined idx) member = none)
+    (hname : ctx.types.nameOf? idx = some carrier)
+    (hp : promotion? ctx carrier member = some p)
+    (hset : p.inPtrSetOnly = false) :
+    resolveMethod? ctx (.defined idx) member = some (.ofPromotion p) := by
+  unfold resolveMethod? resolvePromoted?
+  simp [hdecl, hname, hp, hset]
+
+/-- **A promoted entry resolves to its record** — the POINTER box: `*idx`
+declares no method for the member, nor does `idx`; the carrier's record is
+`p` (every record is in `*T`'s set, `inPtrSetOnly` or not). -/
+theorem resolveMethod?_promotedPtr {idx : TypeIdx} {member : Declaration.MemberId} {carrier : TypeId}
+    {p : Promotion}
+    (hdecl : methodDecl? ctx (.pointer (.defined idx)) member = none)
+    (hdeclElem : methodDecl? ctx (.defined idx) member = none)
+    (hname : ctx.types.nameOf? idx = some carrier)
+    (hp : promotion? ctx carrier member = some p) :
+    resolveMethod? ctx (.pointer (.defined idx)) member = some (.ofPromotion p) := by
+  unfold resolveMethod? resolvePromoted?
+  simp [hdecl, hdeclElem, hname, hp]
+variable (ctx)
 
 def hasConcreteMethod (dynTy : Ty) (member : Declaration.MemberId) : Bool :=
   (resolveMethod? ctx dynTy member).isSome
@@ -1719,7 +1873,9 @@ standing convention). `loadFor root leaf` is the narrowed read (gc
 compiles `p.a` / `a[1]` to ONE leaf load — mem#restrictions' per-sub-value
 license, latitude C10): the machine loads the ROOT value, the access is
 at the LEAF the caller names from the continuation (`projChainTarget`,
-Machine.lean) or the dispatch target's shape (`dispatchLeaf` below). -/
+Machine.lean); a promoted dispatch's footprint is the promotion path's own
+loads (`receiverAt` below — G-P S2; the retired `dispatchLeaf` recognized a
+synthesized wrapper's body shape instead). -/
 
 /-! ## Loc-path overlap
 
@@ -2071,9 +2227,11 @@ instrument; BUG-056).
 
 The one recorded OVER-approximation that survives in the emitted trace: O1 — a
 value-path composite read is whole-cell unless narrowed by an immediate projection
-chain (`Mem.loadFor` at `projChainTarget`'s leaf; the dispatch read at
-`dispatchLeaf`); the DYNAMIC-index element read stays whole-cell (BUG-041, ledger
-[DL-1]). -/
+chain (`Mem.loadFor` at `projChainTarget`'s leaf; a promoted dispatch reads the
+promotion path's cells, `receiverAt` — G-P S2, decision 6 —, while a DECLARED
+value-receiver method dispatched through a pointer box copies the whole pointee,
+`race/negative/iface-dispatch`); the DYNAMIC-index element read stays whole-cell
+(BUG-041, ledger [DL-1]). -/
 
 
 /-- The emitting READ of a whole cell path. -/
@@ -3410,6 +3568,133 @@ def receiverAt (state : Store) (root : GoValue) (path : Array PromotionHop)
   | .addr, .cell l => return (.addr l, tr)
   | .addr, .val _ =>
       stuck "addr adjustment without an addressable receiver (the entry is not in the value method set)"
+
+/-! ### `receiverAt` — the path-walk equations (G-P S3, design §3; §2 S3, S4, S8)
+
+Each lemma is one shape a client meets, stated without unfolding the walk:
+the EMPTY path (the direct dispatch, today's behaviour), ONE hop through a
+value field or an embedded pointer with the loads it emits, and the nil
+points of decision 4. Longer paths compose through `promotionWalk`. -/
+
+variable {ctx}
+/-- A hop from a nil pointer in hand is a field of nil: the nil-dereference
+panic (S4, spec#Selectors). -/
+theorem promotionHop_nil (state : Store) (h : PromotionHop) :
+    promotionHop ctx state (.val .nil) h = .error (.panic nilDerefPanicText) := rfl
+
+/-- A walk with a hop left, from nil: the nil-dereference panic. -/
+theorem promotionWalk_nil (state : Store) (h : PromotionHop) (hs : List PromotionHop) :
+    promotionWalk ctx state (.val .nil) (h :: hs) = .error (.panic nilDerefPanicText) := rfl
+
+/-- **The direct path is the identity** (design §3 `receiverAt_nil_path`, the
+`asIs` half): a declared method's dispatch — the EMPTY path, no adjustment —
+takes the boxed receiver as it is and reads nothing. Today's behaviour. -/
+theorem receiverAt_nil_path (state : Store) (root : GoValue) :
+    receiverAt ctx state root #[] .asIs = .ok (root, []) := rfl
+
+/-- **The direct path is the single deref** (design §3 `receiverAt_nil_path`,
+the `deref` half — the `*T ⊇ T` arm): a pointer box dispatching to a
+value-receiver method of exactly the pointee copies the receiver out of the
+pointee with ONE read of that cell — exactly `Mem.load`, the whole pointee
+(gc copies the receiver: `race/negative/iface-dispatch`). Today's behaviour. -/
+theorem receiverAt_nil_path_deref (state : Store) (l : Loc) :
+    receiverAt ctx state (.addr l) #[] .deref = Mem.load ctx state l := by
+  unfold receiverAt
+  cases h : Mem.load ctx state l <;>
+    simp [promotionWalk, Bind.bind, Except.bind, pure, Except.pure, h]
+
+/-- The `*T ⊇ T` arm on a NIL pointer box: the nil-dereference panic — member
+0 of BUG-087's two-member set (the frame-entry funnel may substitute member 1
+on the family; this arm itself is stream-free). -/
+theorem receiverAt_nil_path_deref_nil (state : Store) :
+    receiverAt ctx state .nil #[] .deref = .error (.panic nilDerefPanicText) := rfl
+
+/-- **Projection through nil panics** (design §3 `receiverAt_nil_panic`, S4):
+a non-empty path walked from a nil pointer box panics with the
+nil-dereference text at its first hop, whatever the adjustment. -/
+theorem receiverAt_nil_panic (state : Store) {path : Array PromotionHop} {h : PromotionHop}
+    {hs : List PromotionHop} (hpath : path.toList = h :: hs) (adjust : PromotionAdjust) :
+    receiverAt ctx state .nil path adjust = .error (.panic nilDerefPanicText) := by
+  unfold receiverAt
+  rw [hpath, promotionWalk_nil]
+  rfl
+
+/-- **One hop through a value field, the receiver in a cell** (design §3
+`receiverAt_field`; S8): from a pointer box `&l`, a value-embed hop reaches the
+field's cell and a value receiver at its end is READ out of exactly that cell
+— `Mem.load` of `Loc.field l owner field`, the path's cell, never the whole
+pointee (this is the S8 footprint; before G-P S2 `dispatchLeaf` narrowed the
+same shape). -/
+theorem receiverAt_field (state : Store) {l : Loc} {h : PromotionHop} (hval : h.ptr = false) :
+    receiverAt ctx state (.addr l) #[h] .asIs = Mem.load ctx state (Loc.field l h.owner h.field) := by
+  unfold receiverAt
+  cases hl : Mem.load ctx state (Loc.field l h.owner h.field) <;>
+    simp [promotionWalk, promotionHop, hval, hl, Bind.bind, Except.bind, pure, Except.pure]
+
+/-- One hop from a struct VALUE in hand (a value box): the field is projected
+out of the value already held — no read (the box's contents were read when
+the box was built). Holds for a value and for a pointer-typed embedded field
+alike: the projection yields whatever the field holds. -/
+theorem receiverAt_field_proj (state : Store) {tid : TypeId} {fields : Array (String × GoValue)}
+    {h : PromotionHop} {v : GoValue}
+    (hf : structFieldValue ctx (.struct tid fields) h.owner h.field = .ok v) :
+    receiverAt ctx state (.struct tid fields) #[h] .asIs = .ok (v, []) := by
+  unfold receiverAt
+  simp [promotionWalk, promotionHop, hf, Bind.bind, Except.bind, pure, Except.pure]
+
+/-- One value-embed hop to a POINTER-receiver target (`addr`): the receiver is
+the address of the reached field cell — no read (`&p.f` on a non-nil `p`;
+`&nil.f` panicked at the hop, `receiverAt_nil_panic`). -/
+theorem receiverAt_field_addr (state : Store) {l : Loc} {h : PromotionHop} (hval : h.ptr = false) :
+    receiverAt ctx state (.addr l) #[h] .addr = .ok (.addr (Loc.field l h.owner h.field), []) := by
+  unfold receiverAt
+  simp [promotionWalk, promotionHop, hval, Bind.bind, Except.bind, pure, Except.pure]
+
+/-- **One hop through an embedded pointer** (design §3 `receiverAt_ptr`; S8):
+from a pointer box `&l`, an embedded-POINTER hop READS the pointer field
+(`Mem.load` of `Loc.field l owner field` — gc's wrapper load) and a
+pointer-receiver target takes the pointer read, `asIs`. -/
+theorem receiverAt_ptr (state : Store) {l : Loc} {h : PromotionHop} (hptr : h.ptr = true)
+    {pv : GoValue} {tr : AccessTrace}
+    (hload : Mem.load ctx state (Loc.field l h.owner h.field) = .ok (pv, tr)) :
+    receiverAt ctx state (.addr l) #[h] .asIs = .ok (pv, tr) := by
+  unfold receiverAt
+  simp [promotionWalk, promotionHop, hptr, hload, Bind.bind, Except.bind, pure, Except.pure]
+
+/-- An embedded-pointer hop to a VALUE-receiver target (`deref`): TWO loads —
+the pointer field, then the pointee it points to — and their traces in that
+order. THE one documented access-trace change of G-P (decision 6;
+`race/free/promoted-ptr-hop`): before S2 this shape fell back to the whole
+pointee of the box. -/
+theorem receiverAt_ptr_deref (state : Store) {l l' : Loc} {h : PromotionHop} (hptr : h.ptr = true)
+    {tr : AccessTrace}
+    (hload : Mem.load ctx state (Loc.field l h.owner h.field) = .ok (.addr l', tr))
+    {v : GoValue} {tr' : AccessTrace} (hload' : Mem.load ctx state l' = .ok (v, tr')) :
+    receiverAt ctx state (.addr l) #[h] .deref = .ok (v, tr ++ tr') := by
+  unfold receiverAt
+  simp [promotionWalk, promotionHop, hptr, hload, hload', Bind.bind, Except.bind, pure, Except.pure]
+
+/-- **A final pointer receiver through a nil embedded `*E` receives nil, no
+panic** (S4, decision 4): the hop reads the nil pointer field and a
+pointer-receiver target takes it `asIs`. -/
+theorem receiverAt_ptr_nil (state : Store) {l : Loc} {h : PromotionHop} (hptr : h.ptr = true)
+    {tr : AccessTrace}
+    (hload : Mem.load ctx state (Loc.field l h.owner h.field) = .ok (.nil, tr)) :
+    receiverAt ctx state (.addr l) #[h] .asIs = .ok (.nil, tr) := by
+  unfold receiverAt
+  simp [promotionWalk, promotionHop, hptr, hload, Bind.bind, Except.bind, pure, Except.pure]
+
+/-- **A value receiver copied out of a nil embedded `*E` panics** (S4): the
+hop reads the nil pointer field, the `deref` adjustment raises the
+nil-dereference text. -/
+theorem receiverAt_ptr_nil_deref (state : Store) {l : Loc} {h : PromotionHop} (hptr : h.ptr = true)
+    {tr : AccessTrace}
+    (hload : Mem.load ctx state (Loc.field l h.owner h.field) = .ok (.nil, tr)) :
+    receiverAt ctx state (.addr l) #[h] .deref = .error (.panic nilDerefPanicText) := by
+  unfold receiverAt
+  simp [promotionWalk, promotionHop, hptr, hload, Bind.bind, Except.bind, pure, Except.pure]
+  rfl
+variable (ctx)
 
 /-- What resolving the callee position of a frame entry yields (G-P S2):
 the DECLARED `Func` to run with its receiver-adjusted arguments, or — a

@@ -242,7 +242,8 @@ In the machine the same information is already first-class data:
   `TypeId.unqualified` projection exists, `:518`).
 - **Predicates.** `dynamicImplementsInterface` (`Ops.lean:908`),
   `firstUnsatisfiedMethod?` (`:869`), `satisfiesMethodSig` (`:759`),
-  `concreteMethodForDynamic?` (`:704`) — interface satisfaction against
+  `resolveMethod?` (`concreteMethodForDynamic?` (`:704`) until G-P S2,
+  2026-09-28) — interface satisfaction against
   the recorded method set, failing closed on `exported`-only coverage;
   `Ty.eqb` (`Value.lean:615`); `defaultValue` (`Ops.lean:1400`, the zero
   value at a type = `reflect.Zero`/`New`'s content); `mapIterCandidates`

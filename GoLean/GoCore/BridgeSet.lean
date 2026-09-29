@@ -42,6 +42,16 @@ was DELETED and the frame's callee `FuncId` ADDED in its place ([USER] Mike 2026
 resolved callee), `frame_exit_returns` (a frame exit reads «`fid` returned `vs`») and
 `enterFrame_declared` (a declared callee's entry IS the function-call rule: design §3, charter row 3).
 
+RE-PIN 4 — G-P S3, the equation lemmas ([AGENT] S3 sub-worker, lane core/method-promotion-0928,
+2026-09-29; design note §3 «the named set below, delivered with P»; handoff §1 S3): rows 68–89 ADDED,
+nothing re-pinned — the lookup characterizations (`methodDecl?_some`, `promotion?_some`), the
+resolution equations (`resolveMethod?_declared` / `_ptrDeclared` / `_promoted` / `_promotedPtr`),
+the path-walk equations (`receiverAt_nil_path` and its `deref` half, `receiverAt_nil_panic`,
+`receiverAt_field` and its projection/`addr` forms, `receiverAt_ptr` and its `deref`/nil forms), the
+recover rule (`recoverResult_eq`, `_frame`, `_glue`) and the domain-narrowing bridge for a client's
+`findFunctionIn?` premise (`findFunctionIn?_filter`, `_filter_none` — the logic team's request 5 of
+2026-09-28, relayed; [AGENT] coordinator disposition). Row 67 (`enterFrame_declared`) confirmed.
+
 The set is RE-PINNED per window row; every change to this file is a changelog line
 (`docs/changelog/61958f2e-WINDOW.md`), so the file's diff between two pins IS the
 interface diff.
@@ -523,5 +533,167 @@ example : ∀ {ctx : ProgramCtx} {s : Store} {fid : FuncId} {argVals : List GoVa
       let resultLocs ← pinResultLocs frameEnv func.results.toList
       return (.run func frameEnv resultLocs, s₂, [])) :=
   @GoLean.GoCore.Machine.enterFrame_declared
+
+-- 68. `Syntax.lean` — narrowing `findFunctionIn?`'s domain leaves a found function unchanged
+-- (RE-PIN 4; the logic team's request 5, 2026-09-28, relayed: the bridge from the pin's table —
+-- declared functions + synthesized wrappers — to the post-P table, declared functions only)
+example : ∀ {funcs : Array Func} {id : FuncId} {f : Func} {p : Func → Bool},
+    findFunctionIn? funcs id = some f → p f = true →
+    findFunctionIn? (funcs.filter p) id = some f :=
+  @GoLean.GoCore.findFunctionIn?_filter
+
+-- 69. `Syntax.lean` — the `none` direction (RE-PIN 4)
+example : ∀ {funcs : Array Func} {id : FuncId} {p : Func → Bool},
+    findFunctionIn? funcs id = none → findFunctionIn? (funcs.filter p) id = none :=
+  @GoLean.GoCore.findFunctionIn?_filter_none
+
+-- 70. `Ops.lean` — a declaration lookup answers a declared method of exactly the dynamic type
+-- (RE-PIN 4; design §3 `methodDecl?`)
+example : ∀ {ctx : ProgramCtx} {dynTy : Ty} {member : Declaration.MemberId} {info : MethodInfo},
+    methodDecl? ctx dynTy member = some info →
+    (info.id == member) = true ∧ (methodRecvDynamicTy? info == some dynTy) = true ∧
+      info ∈ ctx.methods :=
+  @GoLean.GoCore.methodDecl?_some
+
+-- 71. `Ops.lean` — a record lookup answers the carrier's own record (RE-PIN 4; design §3 `promotion?`)
+example : ∀ {ctx : ProgramCtx} {carrier : TypeId} {member : Declaration.MemberId} {p : Promotion},
+    promotion? ctx carrier member = some p →
+    p.type = carrier ∧ (p.member == member) = true ∧ p ∈ ctx.promotions :=
+  @GoLean.GoCore.promotion?_some
+
+-- 72. `Ops.lean` — a declared method resolves directly: empty path, `asIs`, its own target
+-- (RE-PIN 4; design §3 `resolveMethod?_declared`)
+example : ∀ {ctx : ProgramCtx} {dynTy : Ty} {member : Declaration.MemberId} {info : MethodInfo},
+    methodDecl? ctx dynTy member = some info →
+    resolveMethod? ctx dynTy member =
+      some { path := #[], adjust := .asIs, target := .method info.funcId } :=
+  @GoLean.GoCore.resolveMethod?_declared
+
+-- 73. `Ops.lean` — the `*T ⊇ T` arm: empty path, `deref` (RE-PIN 4; design §3 `resolveMethod?_ptrDeclared`)
+example : ∀ {ctx : ProgramCtx} {elem : Ty} {member : Declaration.MemberId} {info : MethodInfo},
+    methodDecl? ctx (.pointer elem) member = none →
+    (∀ t, elem ≠ .pointer t) → (∀ i, elem ≠ .interface i) →
+    methodDecl? ctx elem member = some info →
+    resolveMethod? ctx (.pointer elem) member =
+      some { path := #[], adjust := .deref, target := .method info.funcId } :=
+  @GoLean.GoCore.resolveMethod?_ptrDeclared
+
+-- 74. `Ops.lean` — a promoted entry resolves to its record, value box (RE-PIN 4; design §3
+-- `resolveMethod?_promoted`)
+example : ∀ {ctx : ProgramCtx} {idx : TypeIdx} {member : Declaration.MemberId} {carrier : TypeId}
+    {p : Promotion},
+    methodDecl? ctx (.defined idx) member = none →
+    ctx.types.nameOf? idx = some carrier →
+    promotion? ctx carrier member = some p →
+    p.inPtrSetOnly = false →
+    resolveMethod? ctx (.defined idx) member = some (.ofPromotion p) :=
+  @GoLean.GoCore.resolveMethod?_promoted
+
+-- 75. `Ops.lean` — a promoted entry resolves to its record, pointer box (RE-PIN 4)
+example : ∀ {ctx : ProgramCtx} {idx : TypeIdx} {member : Declaration.MemberId} {carrier : TypeId}
+    {p : Promotion},
+    methodDecl? ctx (.pointer (.defined idx)) member = none →
+    methodDecl? ctx (.defined idx) member = none →
+    ctx.types.nameOf? idx = some carrier →
+    promotion? ctx carrier member = some p →
+    resolveMethod? ctx (.pointer (.defined idx)) member = some (.ofPromotion p) :=
+  @GoLean.GoCore.resolveMethod?_promotedPtr
+
+-- 76. `Ops.lean` — the direct path is the identity (RE-PIN 4; design §3 `receiverAt_nil_path`)
+example : ∀ {ctx : ProgramCtx} (state : Store) (root : GoValue),
+    receiverAt ctx state root #[] .asIs = .ok (root, []) :=
+  @GoLean.GoCore.receiverAt_nil_path
+
+-- 77. `Ops.lean` — the direct path is the single deref: the `*T ⊇ T` arm's one read (RE-PIN 4)
+example : ∀ {ctx : ProgramCtx} (state : Store) (l : Loc),
+    receiverAt ctx state (.addr l) #[] .deref = Mem.load ctx state l :=
+  @GoLean.GoCore.receiverAt_nil_path_deref
+
+-- 78. `Ops.lean` — the `*T ⊇ T` arm on a nil box: the nil-dereference panic (RE-PIN 4; BUG-087 member 0)
+example : ∀ {ctx : ProgramCtx} (state : Store),
+    receiverAt ctx state .nil #[] .deref = .error (.panic nilDerefPanicText) :=
+  @GoLean.GoCore.receiverAt_nil_path_deref_nil
+
+-- 79. `Ops.lean` — projection through nil panics (RE-PIN 4; design §3 `receiverAt_nil_panic`, S4)
+example : ∀ {ctx : ProgramCtx} (state : Store) {path : Array PromotionHop} {h : PromotionHop}
+    {hs : List PromotionHop},
+    path.toList = h :: hs → ∀ (adjust : PromotionAdjust),
+    receiverAt ctx state .nil path adjust = .error (.panic nilDerefPanicText) :=
+  @GoLean.GoCore.receiverAt_nil_panic
+
+-- 80. `Ops.lean` — one hop through a value field: the receiver read out of the field's cell
+-- (RE-PIN 4; design §3 `receiverAt_field`, S8)
+example : ∀ {ctx : ProgramCtx} (state : Store) {l : Loc} {h : PromotionHop},
+    h.ptr = false →
+    receiverAt ctx state (.addr l) #[h] .asIs = Mem.load ctx state (Loc.field l h.owner h.field) :=
+  @GoLean.GoCore.receiverAt_field
+
+-- 81. `Ops.lean` — one hop from a struct value in hand: a projection, no read (RE-PIN 4)
+example : ∀ {ctx : ProgramCtx} (state : Store) {tid : TypeId} {fields : Array (String × GoValue)}
+    {h : PromotionHop} {v : GoValue},
+    structFieldValue ctx (.struct tid fields) h.owner h.field = .ok v →
+    receiverAt ctx state (.struct tid fields) #[h] .asIs = .ok (v, []) :=
+  @GoLean.GoCore.receiverAt_field_proj
+
+-- 82. `Ops.lean` — one value hop to a pointer receiver: the field's address, no read (RE-PIN 4)
+example : ∀ {ctx : ProgramCtx} (state : Store) {l : Loc} {h : PromotionHop},
+    h.ptr = false →
+    receiverAt ctx state (.addr l) #[h] .addr = .ok (.addr (Loc.field l h.owner h.field), []) :=
+  @GoLean.GoCore.receiverAt_field_addr
+
+-- 83. `Ops.lean` — one hop through an embedded pointer: the pointer field read (RE-PIN 4; design §3
+-- `receiverAt_ptr`, S8)
+example : ∀ {ctx : ProgramCtx} (state : Store) {l : Loc} {h : PromotionHop},
+    h.ptr = true → ∀ {pv : GoValue} {tr : AccessTrace},
+    Mem.load ctx state (Loc.field l h.owner h.field) = .ok (pv, tr) →
+    receiverAt ctx state (.addr l) #[h] .asIs = .ok (pv, tr) :=
+  @GoLean.GoCore.receiverAt_ptr
+
+-- 84. `Ops.lean` — an embedded-pointer hop to a value receiver: the pointer field, then the pointee
+-- (RE-PIN 4; decision 6 — THE documented access-trace change)
+example : ∀ {ctx : ProgramCtx} (state : Store) {l l' : Loc} {h : PromotionHop},
+    h.ptr = true → ∀ {tr : AccessTrace},
+    Mem.load ctx state (Loc.field l h.owner h.field) = .ok (.addr l', tr) →
+    ∀ {v : GoValue} {tr' : AccessTrace}, Mem.load ctx state l' = .ok (v, tr') →
+    receiverAt ctx state (.addr l) #[h] .deref = .ok (v, tr ++ tr') :=
+  @GoLean.GoCore.receiverAt_ptr_deref
+
+-- 85. `Ops.lean` — a final pointer receiver through a nil embedded `*E` receives nil (RE-PIN 4; S4)
+example : ∀ {ctx : ProgramCtx} (state : Store) {l : Loc} {h : PromotionHop},
+    h.ptr = true → ∀ {tr : AccessTrace},
+    Mem.load ctx state (Loc.field l h.owner h.field) = .ok (.nil, tr) →
+    receiverAt ctx state (.addr l) #[h] .asIs = .ok (.nil, tr) :=
+  @GoLean.GoCore.receiverAt_ptr_nil
+
+-- 86. `Ops.lean` — a value receiver copied out of a nil embedded `*E` panics (RE-PIN 4; S4)
+example : ∀ {ctx : ProgramCtx} (state : Store) {l : Loc} {h : PromotionHop},
+    h.ptr = true → ∀ {tr : AccessTrace},
+    Mem.load ctx state (Loc.field l h.owner h.field) = .ok (.nil, tr) →
+    receiverAt ctx state (.addr l) #[h] .deref = .error (.panic nilDerefPanicText) :=
+  @GoLean.GoCore.receiverAt_ptr_nil_deref
+
+-- 87. `Machine.lean` — the recover rule: the deferred frame directly on the marker (RE-PIN 4;
+-- design §3 `recoverResult_eq`, decision 7)
+example : ∀ {t : List (TargetShape × List Expr)} {te : LocalEnv} {r : List Loc}
+    {ds : List (GoValue × List GoValue)} {chain : List PanicEntry} {k : Cont} {f : FuncId},
+    recoverResult (.frame t te r ds (.panicResumeK chain k) f) =
+      match markNewestRecovered chain with
+      | some (v, chain') => (v, .frame t te r ds (.panicResumeK chain' k) f)
+      | none => (.nil, .frame t te r ds (.panicResumeK chain k) f) :=
+  @GoLean.GoCore.Machine.recoverResult_eq
+
+-- 88. `Machine.lean` — `recover` at a call frame: `recoverAtDeferred` on its tail decides (RE-PIN 4)
+example : ∀ {t : List (TargetShape × List Expr)} {te : LocalEnv} {r : List Loc}
+    {ds : List (GoValue × List GoValue)} {k' : Cont} {f : FuncId},
+    recoverResult (.frame t te r ds k' f) =
+      match recoverAtDeferred k' with
+      | some (v, k'') => (v, .frame t te r ds k'' f)
+      | none => (.nil, .frame t te r ds k' f) :=
+  @GoLean.GoCore.Machine.recoverResult_frame
+
+-- 89. `Machine.lean` — `recover` through glue: the tail's answer under the rebuilt glue (RE-PIN 4)
+example : ∀ {k k' : Cont}, k.isGlue = true → k.tail = some k' →
+    recoverResult k = ((recoverResult k').1, k.withTail (recoverResult k').2) :=
+  @GoLean.GoCore.Machine.recoverResult_glue
 
 end GoLean.GoCore.BridgeSet

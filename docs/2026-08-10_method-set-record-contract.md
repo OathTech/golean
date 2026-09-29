@@ -195,7 +195,10 @@ inversion of the old blanket `true`).
   header records the regeneration consequence).
 - [superseded by §6, 2026-09-09 — the identity repair landed on `fix/package-method-identity`; the coverage boundary below still holds] **Promoted unexported methods from imported embedded types are
   re-keyed to the local type under `full` coverage** (audit note,
-  latent): `synthesizePromotionWrappers` emits promotion wrappers for
+  latent): `synthesizePromotionWrappers` (the wrapper emitter until G-P
+  S2, 2026-09-28; since S2 `promotionRecords` emits a promotion RECORD for
+  the same entry, whose target `Func` is then absent from the wire and
+  whose CALL refuses by name — §6) emitted promotion wrappers for
   UNEXPORTED methods inherited from an imported embedded type keyed on
   the LOCAL type, while the stub passes deliberately skip unexported
   imported methods (cross-package unexported identity is inexpressible

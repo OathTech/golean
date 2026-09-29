@@ -86,6 +86,21 @@ def exports : List Name := [
     -- function-call rule
     ``GoLean.GoCore.Machine.Entry.callConfig_run, ``GoLean.GoCore.Machine.frame_exit_returns,
     ``GoLean.GoCore.Machine.enterFrame_declared,
+    -- G-P S3 (2026-09-29): the §3 equation lemmas — the lookups, the resolution, the path
+    -- walk, the recover rule — and the `findFunctionIn?` domain-narrowing bridge (the logic
+    -- team's request 5, relayed; [AGENT] coordinator disposition); BridgeSet rows 68–89
+    ``GoLean.GoCore.findFunctionIn?_filter, ``GoLean.GoCore.findFunctionIn?_filter_none,
+    ``GoLean.GoCore.methodDecl?_some, ``GoLean.GoCore.promotion?_some,
+    ``GoLean.GoCore.resolveMethod?_declared, ``GoLean.GoCore.resolveMethod?_ptrDeclared,
+    ``GoLean.GoCore.resolveMethod?_promoted, ``GoLean.GoCore.resolveMethod?_promotedPtr,
+    ``GoLean.GoCore.receiverAt_nil_path, ``GoLean.GoCore.receiverAt_nil_path_deref,
+    ``GoLean.GoCore.receiverAt_nil_path_deref_nil, ``GoLean.GoCore.receiverAt_nil_panic,
+    ``GoLean.GoCore.receiverAt_field, ``GoLean.GoCore.receiverAt_field_proj,
+    ``GoLean.GoCore.receiverAt_field_addr,
+    ``GoLean.GoCore.receiverAt_ptr, ``GoLean.GoCore.receiverAt_ptr_deref,
+    ``GoLean.GoCore.receiverAt_ptr_nil, ``GoLean.GoCore.receiverAt_ptr_nil_deref,
+    ``GoLean.GoCore.Machine.recoverResult_eq, ``GoLean.GoCore.Machine.recoverResult_frame,
+    ``GoLean.GoCore.Machine.recoverResult_glue,
     -- the A3a admission checker (core `Admission`; the admission step audits the rest)
     ``GoLean.GoCore.Admission.checkBoolean_iff,
     ``GoLean.GoCore.Admission.admitted_index_bound,

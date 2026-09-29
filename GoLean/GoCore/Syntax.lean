@@ -1096,6 +1096,91 @@ def findFunctionIn? (funcs : Array Func) (id : FuncId) : Option Func :=
       | none => if func.id == id then some func else none)
     none
 
+/-! ### `findFunctionIn?` — the lookup equations (G-P S3, 2026-09-29)
+
+`findFunctionIn?` keeps its signature across G-P (design note
+`docs/2026-09-28_gp-method-promotion-design.md` §3); its DOMAIN changed: the
+pin's function table held the declared functions AND the frontend's
+synthesized promotion wrappers (`Func.wrapper = true`), the post-P table
+holds declared functions only (a promoted entry is a record in
+`Program.promotions`). The lemmas below are the bridge a client's
+`findFunctionIn? ctx.functions fid = some f` premise crosses: the lookup is
+the FIRST function with the id, so narrowing the table to a sub-table that
+keeps `f` (any filter `p` with `p f = true` — for the migration, «not a
+wrapper») finds the SAME `f`, and a lookup that found nothing still finds
+nothing. Every declared function a premise names is found unchanged. -/
+
+private theorem findFunctionIn?_foldl_aux (id : FuncId) :
+    ∀ (l : List Func) (acc : Option Func),
+      l.foldl (fun found func =>
+          match found with
+          | some f => some f
+          | none => if func.id == id then some func else none) acc
+        = (match acc with
+           | some f => some f
+           | none => l.find? (fun func => func.id == id))
+  | [], acc => by cases acc <;> rfl
+  | f :: fs, acc => by
+      cases acc with
+      | some g => exact findFunctionIn?_foldl_aux id fs (some g)
+      | none =>
+          rw [List.foldl_cons, List.find?_cons]
+          cases hf : (f.id == id)
+          · simp only [Bool.false_eq_true, ↓reduceIte]
+            exact findFunctionIn?_foldl_aux id fs none
+          · simp only [↓reduceIte]
+            exact findFunctionIn?_foldl_aux id fs (some f)
+
+/-- `findFunctionIn?` IS the first-match search over the table's list: the
+characterization every lemma below reads off. -/
+theorem findFunctionIn?_eq_find? (funcs : Array Func) (id : FuncId) :
+    findFunctionIn? funcs id = funcs.toList.find? (fun func => func.id == id) := by
+  unfold findFunctionIn?
+  rw [← Array.foldl_toList]
+  exact findFunctionIn?_foldl_aux id funcs.toList none
+
+/-- **Narrowing the domain leaves a found function unchanged** (G-P S3; the
+logic team's request 5 of 2026-09-28, relayed — four of their consumer
+theorems carry `findFunctionIn?` as a premise): if `id` finds `f` in `funcs`
+and `f` survives the filter `p`, then `id` finds the SAME `f` in
+`funcs.filter p`. The migration instance: `funcs` = the pin's table
+(declared functions + synthesized wrappers), `p` = «declared» (the retired
+`¬ Func.wrapper`), `funcs.filter p` = the post-P table — every declared
+function the client's premise names is found unchanged; no wrapper `Func`
+was ever a declared function. -/
+theorem findFunctionIn?_filter {funcs : Array Func} {id : FuncId} {f : Func} {p : Func → Bool}
+    (h : findFunctionIn? funcs id = some f) (hp : p f = true) :
+    findFunctionIn? (funcs.filter p) id = some f := by
+  rw [findFunctionIn?_eq_find?] at h ⊢
+  rw [Array.toList_filter, List.find?_filter]
+  rw [List.find?_eq_some_iff_append] at h ⊢
+  obtain ⟨hf, as, bs, hl, hrest⟩ := h
+  refine ⟨by simp [hp, hf], as, bs, hl, fun a ha => ?_⟩
+  have := hrest a ha
+  simp_all
+
+/-- The `none` direction: an id the table does not carry is not carried by
+any sub-table either (a refusal «function not found» survives narrowing). -/
+theorem findFunctionIn?_filter_none {funcs : Array Func} {id : FuncId} {p : Func → Bool}
+    (h : findFunctionIn? funcs id = none) :
+    findFunctionIn? (funcs.filter p) id = none := by
+  rw [findFunctionIn?_eq_find?] at h ⊢
+  rw [Array.toList_filter, List.find?_filter]
+  rw [List.find?_eq_none] at h ⊢
+  intro x hx
+  have := h x hx
+  simp_all
+
+/-- What a successful lookup says about its answer: the found function
+carries the id it was found by (the table's `==`) and is a member of the
+table. -/
+theorem findFunctionIn?_some {funcs : Array Func} {id : FuncId} {f : Func}
+    (h : findFunctionIn? funcs id = some f) : (f.id == id) = true ∧ f ∈ funcs := by
+  rw [findFunctionIn?_eq_find?] at h
+  have h1 := List.find?_some h
+  have h2 := List.mem_of_find?_eq_some h
+  exact ⟨by simpa using h1, by simpa using h2⟩
+
 /-- The reserved id of the synthesized package-initialization function
 (init slice, `docs/2026-08-05_init-design.md`): the frontend emits it —
 package-level variable initializers in `go/types`' `InitOrder`, then the

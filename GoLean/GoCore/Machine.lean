@@ -3784,6 +3784,34 @@ theorem Cont.rebuild_stop {β : Type} {descend : Cont → Bool} {act : Cont → 
     Cont.rebuild descend act .stop = act .stop := by
   rw [Cont.rebuild]; split <;> simp [Cont.tail]
 
+/-- A walk whose action always answers, answers (G-P S3): the `getD` on
+such a walk's result is totality plumbing only. -/
+theorem Cont.rebuild_isSome {β : Type} {descend : Cont → Bool} {act : Cont → Option (β × Cont)}
+    (hact : ∀ k, (act k).isSome) (k : Cont) : (Cont.rebuild descend act k).isSome := by
+  rw [Cont.rebuild]
+  split
+  · split
+    · rename_i k' hk'
+      have := Cont.rebuild_isSome (descend := descend) hact k'
+      simpa [Option.isSome_map] using this
+    · exact hact k
+  · exact hact k
+termination_by sizeOf k
+decreasing_by exact Cont.sizeOf_tail_lt (by assumption)
+
+/-- Descent through an admitted frame, read at the answer: the walk's result
+at `k` is its result at the tail, with the spine above rebuilt (`withTail`)
+— for a walk whose action always answers. -/
+theorem Cont.rebuild_getD_glue {β : Type} {descend : Cont → Bool} {act : Cont → Option (β × Cont)}
+    (hact : ∀ k, (act k).isSome) {k k' : Cont} (hd : descend k = true) (hk : k.tail = some k')
+    (d d' : β × Cont) :
+    (Cont.rebuild descend act k).getD d =
+      (((Cont.rebuild descend act k').getD d').1,
+        k.withTail ((Cont.rebuild descend act k').getD d').2) := by
+  rw [Cont.rebuild_descend hd, hk]
+  obtain ⟨⟨v, k''⟩, h⟩ := Option.isSome_iff_exists.mp (Cont.rebuild_isSome (descend := descend) hact k')
+  simp [h]
+
 variable (ctx)
 /-- The continuation for entering a `.seqn`: under a same-env governing
 sequence, SPLICE the statements into it (D1) — Go statement lists splice
@@ -3865,6 +3893,76 @@ def recoverResult (k : Cont) : GoValue × Cont :=
             | some (v, k'') => (v, .frame t te r ds k'' f)
             | none => (.nil, .frame t te r ds k' f))
       | k => some (.nil, k)) k).getD (.nil, k)
+
+/-! ### The recover rule's equations (G-P S3, design §3 `recoverResult_eq`; §2 S6, decision 7)
+
+What S2 shipped, stated for a client: `recover()` walks the continuation
+through glue to the first call frame; it recovers exactly when that frame
+sits DIRECTLY on a `panicResumeK` whose newest entry is unrecovered. No
+frame is transparent (every frame is a non-wrapper frame since G-P S2). -/
+
+variable {ctx}
+/-- `recoverAtDeferred` at the marker: the newest unrecovered entry is marked
+and its payload returned (`markNewestRecovered`); `none` when every entry is
+already recovered. Definitional. -/
+theorem recoverAtDeferred_marker (chain : List PanicEntry) (k : Cont) :
+    recoverAtDeferred (.panicResumeK chain k) =
+      (markNewestRecovered chain).map fun (v, chain') => (v, .panicResumeK chain' k) := rfl
+
+/-- `recoverAtDeferred` below anything but the marker: nothing to recover —
+a deferred frame not sitting directly on the marker sees no panic. -/
+theorem recoverAtDeferred_none {c : Cont} (h : ∀ chain k, c ≠ .panicResumeK chain k) :
+    recoverAtDeferred c = none := by
+  cases c <;> first | rfl | exact absurd rfl (h _ _)
+
+/-- **`recover` at a call frame** (the frame rule): the walk acts at the
+first call frame — `recoverAtDeferred` on its tail decides; a hit returns the
+payload with the marker's entry marked, a miss returns `.nil` and the frame
+unchanged. The frame's `fid` rides along untouched. -/
+theorem recoverResult_frame {t : List (TargetShape × List Expr)} {te : LocalEnv} {r : List Loc}
+    {ds : List (GoValue × List GoValue)} {k' : Cont} {f : FuncId} :
+    recoverResult (.frame t te r ds k' f) =
+      match recoverAtDeferred k' with
+      | some (v, k'') => (v, .frame t te r ds k'' f)
+      | none => (.nil, .frame t te r ds k' f) := by
+  unfold recoverResult
+  rw [Cont.rebuild_act (by rfl)]
+  rfl
+
+/-- **The recover rule** (design §3 `recoverResult_eq`): the deferred frame
+directly on the marker — the shape the panic-drain rule builds
+(`panicFrameDefer`; a promoted deferred call re-queued through its embedded
+interface field, `Entry.again`, re-enters on the same marker) — recovers the
+newest unrecovered entry's payload and marks it; with every entry already
+recovered it answers `.nil` (a second `recover` in the same deferred call). -/
+theorem recoverResult_eq {t : List (TargetShape × List Expr)} {te : LocalEnv} {r : List Loc}
+    {ds : List (GoValue × List GoValue)} {chain : List PanicEntry} {k : Cont} {f : FuncId} :
+    recoverResult (.frame t te r ds (.panicResumeK chain k) f) =
+      match markNewestRecovered chain with
+      | some (v, chain') => (v, .frame t te r ds (.panicResumeK chain' k) f)
+      | none => (.nil, .frame t te r ds (.panicResumeK chain k) f) := by
+  rw [recoverResult_frame, recoverAtDeferred_marker]
+  cases hm : markNewestRecovered chain with
+  | none => rfl
+  | some vc => obtain ⟨v, chain'⟩ := vc; rfl
+
+/-- A call frame NOT directly on the marker: `recover()` is the no-op `.nil`
+(Go: recover outside a panic-run deferred function). -/
+theorem recoverResult_frame_none {t : List (TargetShape × List Expr)} {te : LocalEnv} {r : List Loc}
+    {ds : List (GoValue × List GoValue)} {k' : Cont} {f : FuncId}
+    (h : ∀ chain k, k' ≠ .panicResumeK chain k) :
+    recoverResult (.frame t te r ds k' f) = (.nil, .frame t te r ds k' f) := by
+  rw [recoverResult_frame, recoverAtDeferred_none h]
+
+/-- **`recover` through glue** (`Cont.isGlue`: statement or expression glue):
+the answer is the tail's, with the glue frame rebuilt above the tail's
+answer. Glue is the ONLY thing the walk crosses. -/
+theorem recoverResult_glue {k k' : Cont} (hg : k.isGlue = true) (hk : k.tail = some k') :
+    recoverResult k = ((recoverResult k').1, k.withTail (recoverResult k').2) := by
+  unfold recoverResult
+  refine Cont.rebuild_getD_glue ?_ hg hk _ _
+  intro k; cases k <;> rfl
+variable (ctx)
 
 /-- **The non-local control signals** (design-hygiene B4, review Q6):
 what `break`, `continue`, `return`, `break L` and `continue L` put in

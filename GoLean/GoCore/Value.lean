@@ -595,7 +595,7 @@ inductive Ty where
 for nested inductives Lean's `deriving BEq` emits an **opaque** equality
 function — no equation lemmas, no `unfold`, no `decide`, not even `rfl` on
 two syntactically identical closed types. Dynamic-type identity is decided
-by `==` on `Ty` (`concreteMethodForDynamic?`, `typeAssert`, boxing,
+by `==` on `Ty` (`resolveMethod?` — `concreteMethodForDynamic?` until G-P S2 —, `typeAssert`, boxing,
 interface satisfaction), so with the derived instance **no dispatch fact
 was kernel-provable at all** — every interface WP law would have had an
 undischargeable premise. (It is also a `partial`-flavoured definition

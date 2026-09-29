@@ -142,6 +142,22 @@ Mechanics:
    wrapper frames (`recoverThroughWrappers`). Pinned by
    `interfaces/recover-promoted-wrapper/*`: all three wrapper paths
    plus four agreeing controls.
+   ADDENDUM (G-P S2/S3, 2026-09-28/29, lane `core/method-promotion-0928`,
+   design `docs/2026-09-28_gp-method-promotion-design.md`, all ten §6
+   decisions [USER]-ruled 2026-09-28, relayed): D1.3's dynamic-surface
+   mechanism — the synthesized wrappers, `"wrapper": true`, `Func.wrapper`,
+   the frame marker, `recoverThroughWrappers` — is DELETED. A promoted
+   method-set entry is a promotion RECORD (`program.promotions`: carrier,
+   member, embedded-hop path, receiver adjustment, target) the machine
+   resolves at the dispatched call's entry (`resolveMethod?`, `receiverAt`,
+   `callee?`); the wire is `golean-native-v2` (a `wrapper` key is refused by
+   name); `recover()` applies exactly when the deferred frame sits directly
+   on the unrecovered marker (`recoverAtDeferred`) — the promoted method's
+   own frame IS the deferred frame. D1.1/D1.2 (the static surface: field and
+   method promotion flattened at emission) and D2 (the complete method set
+   — now DECLARED ∪ RECORDS) stand. The pins above hold unchanged; BUG-007 /
+   BUG-015 carry the record-form statements; the migration table is
+   `docs/changelog/61958f2e-WINDOW.md` row 3.
 4. **Embedded-interface dispatch at static call sites**
    (`emitMethodCall`'s deferred branch): the receiver expression walks
    to the interface FIELD value, then dispatches `Iface.M` — same shape

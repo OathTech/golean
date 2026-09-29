@@ -158,6 +158,13 @@ needed no new cases beyond the two probes already recorded.
   needsDeref) — direct receiver match first, else pointer-box →
   value-receiver method with auto-deref at dispatch (nil pointer →
   Go's nil-deref panic). Value box never satisfies pointer-receiver.
+  [Since G-P S2 (2026-09-28) the lookup is `resolveMethod?`, answering a
+  `MethodResolution`: the direct match is the EMPTY path with `asIs`
+  (`resolveMethod?_declared`), the `*T ⊇ T` arm the empty path with
+  `deref` — the former `needsDeref` (`resolveMethod?_ptrDeclared`), and a
+  promoted entry its record's path (`resolveMethod?_promoted`); the
+  auto-deref is `receiverAt_nil_path_deref`, the nil panic
+  `receiverAt_nil_path_deref_nil`. The Q3 answer is unchanged.]
 - Dispatch protocol: interface methods ride the wire as body-less
   method entries (`"interface": true`); the decoder synthesizes a
   signature-only anchor Func ("I.M") whose stub body is a call to a

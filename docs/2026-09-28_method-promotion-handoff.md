@@ -13,7 +13,7 @@ posed in §3 below, that item STOPPED.
 | S0 born pins | (this commit) | `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff` RESULT: PASS, 788 s, 3784/3784 FULL no regression (dirty-tree note: the run preceded the commit; the committed tree differs from the gated tree by one ledger citation re-spelling, see §4) | 16 born (13 PASS, 3 FAIL by design); 0 moved | DONE |
 | S1 records + cross-check | (this commit) | individual gates all EXIT=0 (`check-wire-boundary` 3 s incl. the 12 new controls, `check-frontend-pins` 2 s after the twin re-pin, `check-unseq-wire` 6 s, `check-method-identity` 46 s, `check-mem-callsites` 1 s, `check-unseq-scheduler` 92 s, `check-core-audit` 20 s, `gocore-eval-tests` 296 ok / 0 fail, `go test ./tools/nativefrontend ./tools/lowerdiag` ok); `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --slow` RESULT: FAIL, 1132 s, by EXACTLY the expected merge-protocol 5a pair and nothing else — `certificate provenance` STALE (changed compiled inputs: `GoLean/GoCore/{Syntax,ProgramCtx}.lean`, `GoLean/NativeToIR.lean`) + ONE row `imported-goose/channel/google-search` PASS/membership → FAIL/membership («certified record wire-sha256 … STALE»: the row's wire gained `promotions`, 736f1730… → 8fe3c739…); 3784 = 3544 / 240 vs baseline 3545 / 239, every other step ok, negative 394 match, re-pin guard 0 flips; `baselines/certified/` NOT re-pinned (the train's 5a step) | 0 born; 0 moved (the machine is unchanged; the whole-corpus choice trace is byte-identical to the S0 reference — §1 S1) | DONE (S1 tree) |
 | S2 the switch | (this commit) | individual gates all EXIT=0 (`check-core-audit` 13 s — 88 required theorems, `check-mem-callsites` 1 s, `check-unseq-scheduler` 96 s, `check-wire-boundary` 3 s incl. the 12 promotion-record controls (3 new), `check-unseq-wire` 6 s (140 fixtures regenerated), `check-frontend-pins` after the twin re-pin, `check-method-identity`, `gocore-eval-tests` 298 ok / 0 fail (incl. the two new v2 refusal pins), `go test ./tools/nativefrontend ./tools/lowerdiag` ok); `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --slow` RESULT: FAIL, 1006 s, by EXACTLY the expected merge-protocol 5a pair and nothing else — `certificate provenance` STALE (C9: the first changed compiled input, `GoLean/CLI.lean`) + the ONE drifted row `imported-goose/channel/google-search` PASS/membership → FAIL/membership (its certified record STALE since S1); 3784 = 3548 / 236 vs the re-pinned baseline 3549 / 235, every other step ok (core build warning-free, 88 required theorems, eval 298 ok, negative 394 match), re-pin guard 0 PASS→non-PASS flips / 4 GREENED; `baselines/certified/` NOT re-pinned (the train's 5a step) | 0 born; 4 moved, all FAIL → PASS: the design's three predicted flips — `race/free/promoted-ptr-hop` (decision 6), `embedding/promoted-ptr-method-expression/{recover,promoted-value}` (decision 5) — PLUS `noodler/frontier/promoted-method-expression-ptr` (FR-3's noodler re-hit, the same `(*T).M`-over-promoted class the design did not enumerate; attributable to decision 5; found by the choice trace, confirmed by `diff-one`, reported for the audit); 3784 = 3549 / 235; the whole-corpus choice trace vs the S0 reference: BYTE-IDENTICAL dumps and results EXCEPT the rows of the four flipped ids (`race` → `ok`; `unsupported` → `ok` ×3) and the known absolute-path row (§1 S2); detector-soundness HOLE 0 / possible-HOLE 0, `promoted-ptr-hop` agree-DRF (was over-refusal) | DONE (S2 tree) |
-| S3 equations + records | — | — | — | — |
+| S3 equations + records | (this commit) | individual gates all EXIT=0 (`check-core-audit` 16 s — **110 required theorems** (88 + 22), `check-mem-callsites` 0 s, `check-unseq-scheduler` 96 s, `check-wire-boundary` 27 s, `check-unseq-wire` 5 s, `check-frontend-pins` 1 s, `go test ./tools/nativefrontend ./tools/lowerdiag` ok under ci's `GO111MODULE=off`); `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff` under the lock RESULT: FAIL, 1035 s, by EXACTLY the expected merge-protocol 5a pair and nothing else — `certificate provenance` STALE (the reconciler's C9 names the first changed compiled input, `GoLean/CLI.lean`; the certification controls all PASS) + the ONE drifted row `imported-goose/channel/google-search` PASS/membership → FAIL/membership (its certified record STALE since S1); 3784 = 3548 / 236 vs the S2-pinned baseline 3549 / 235 — IDENTICAL to S2's count, that one row the whole difference; every other step ok (core build warning-free, eval 298 ok, negative 394 match), re-pin guard 0 flips (the 4 GREENED notes are S2's re-pin, HEAD vs HEAD~1); `baselines/` untouched | 0 born; 0 moved (S3 changes no definition: every row in its S2 lane) | DONE (S3 tree) |
 
 ### S0 — the born pins
 
@@ -328,7 +328,123 @@ a byte-identical results file — the one refusal-text change, attributed below)
 trailing defaulted `promotions`; (viii) `reachability.py` resolves a record label to its target (S7's reading of a
 record as a callee).
 
+### S3 — the equation lemmas and the records (no definition changed)
+
+Design §5 S3, §3 (the exposed set) — all ten §6 decisions as recommended ([USER] 2026-09-28 relayed); PLUS the
+coordinator's addition (the logic team's note of 2026-09-28, request 5, relayed by the [USER]; [AGENT] coordinator
+disposition): pin `enterFrame_declared` (row 67 — CONFIRMED present and unchanged), `receiverAt_nil_path` and
+`resolveMethod?_declared` in `BridgeSet.lean` and the required list; state and prove the `findFunctionIn?`
+domain-narrowing bridge. No deviation from any ruled decision; no definition in `GoLean/GoCore/` changed (no
+restatement was needed: every lemma is proved over the S2 definitions by `rfl`/`simp`/`cases`, no `decide`); the
+`#eval`-before-`decide` rule had no occasion.
+
+**The lemmas landed** (docstrings cite the design; `variable {ctx}` blocks beside their definitions):
+
+- `GoLean/GoCore/Syntax.lean`, after `findFunctionIn?`: `findFunctionIn?_eq_find?` (the lookup IS `List.find?` over
+  the table), **`findFunctionIn?_filter`** — exact statement
+  `findFunctionIn? funcs id = some f → p f = true → findFunctionIn? (funcs.filter p) id = some f` —,
+  `findFunctionIn?_filter_none` (the `none` direction), `findFunctionIn?_some` (the answer carries the id — over the
+  table's `==` — and is a table row). The docstring states the migration reading: the pin's table = declared
+  functions + synthesized wrappers, the post-P table = that table filtered by «declared» (the retired
+  `¬ Func.wrapper`), so every declared function a client's premise names is found unchanged.
+- `GoLean/GoCore/Ops.lean`, after `promotion?`: `methodDecl?_eq_find?`, **`methodDecl?_some`** (a declared method of
+  exactly the dynamic type: `(info.id == member) = true ∧ (methodRecvDynamicTy? info == some dynTy) = true ∧ info ∈
+  ctx.methods`), `promotion?_eq_find?`, **`promotion?_some`**. After `resolveMethod?`: **`resolveMethod?_declared`**
+  (empty path, `asIs`, target `.method info.funcId`), **`resolveMethod?_ptrDeclared`** (the `*T ⊇ T` arm: `*elem`
+  declares nothing for the member, `elem` neither a pointer nor an interface, `elem` declares it → empty path,
+  `deref`), **`resolveMethod?_promoted`** (value box `.defined idx` named `carrier`, no declaration, record `p`,
+  `p.inPtrSetOnly = false` → `some (.ofPromotion p)`) and **`resolveMethod?_promotedPtr`** (the pointer box; no
+  membership premise). After `receiverAt`: `promotionHop_nil`, `promotionWalk_nil`, **`receiverAt_nil_path`**
+  (`receiverAt ctx state root #[] .asIs = .ok (root, [])` — the identity), **`receiverAt_nil_path_deref`**
+  (`receiverAt ctx state (.addr l) #[] .deref = Mem.load ctx state l` — the single pointee read),
+  `receiverAt_nil_path_deref_nil` (the nil box: the nil-dereference panic, BUG-087 member 0),
+  **`receiverAt_nil_panic`** (`path.toList = h :: hs → receiverAt ctx state .nil path adjust = .error (.panic
+  nilDerefPanicText)`), **`receiverAt_field`** (`h.ptr = false → receiverAt ctx state (.addr l) #[h] .asIs = Mem.load
+  ctx state (Loc.field l h.owner h.field)` — exactly the field cell's read), `receiverAt_field_proj` (from a struct
+  value in hand: the projection, no read), `receiverAt_field_addr` (a pointer receiver via a value embed: the field's
+  address, no read), **`receiverAt_ptr`** (`h.ptr = true`, the pointer field's `Mem.load` = `.ok (pv, tr)` →
+  `.ok (pv, tr)`), `receiverAt_ptr_deref` (then the pointee: `.ok (v, tr ++ tr')` — decision 6's two loads),
+  `receiverAt_ptr_nil` (a nil embedded `*E` to a pointer receiver: `.ok (.nil, tr)`, no panic — S4),
+  `receiverAt_ptr_nil_deref` (a value receiver out of it: the panic).
+- `GoLean/GoCore/Machine.lean`, after `Cont.rebuild_stop`: `Cont.rebuild_isSome`, `Cont.rebuild_getD_glue`; after
+  `recoverResult`: `recoverAtDeferred_marker` (definitional), `recoverAtDeferred_none`, `recoverResult_frame` (the
+  frame rule: `recoverAtDeferred` on the frame's tail decides), **`recoverResult_eq`** (the deferred frame directly on
+  `panicResumeK chain k`: `markNewestRecovered chain` decides — payload + marked marker, or `.nil` unchanged),
+  `recoverResult_frame_none`, `recoverResult_glue` (through `Cont.isGlue`: the tail's answer under the rebuilt glue).
+
+**Names vs the design's §3** ([AGENT], the brief's «adjust names to what fits»): `resolveMethod?_promoted` is TWO
+lemmas — `_promoted` (value box, with the `inPtrSetOnly` membership premise) and `_promotedPtr` (pointer box, none);
+`receiverAt_nil_path` is stated as the design asked («the identity or the single deref — state both») as `_nil_path`
+(identity) + `_nil_path_deref` (the read) + `_nil_path_deref_nil` (the panic); `receiverAt_field` / `receiverAt_ptr`
+each come with their projection/`addr`/`deref`/nil companions so that every S4 nil point (decision 4) and both S8
+load shapes (decision 6) are a stated equation; `recoverResult_eq` comes with `_frame`, `_frame_none`, `_glue`. The
+design's five headline names all exist under their own names.
+
+**[AGENT] choices**, recorded for the audit: (i) the lookup characterizations (`methodDecl?_some`, `promotion?_some`,
+`findFunctionIn?_some`) are stated over the table's `==` (`(info.id == member) = true`), NOT over `=`: `FuncId` and
+`Declaration.MemberId` derive `BEq` and `DecidableEq` separately and carry no `LawfulBEq` instance — no instance was
+invented, the statement is the machine's own identity test; `promotion?_some`'s `p.type = carrier` IS propositional
+(`TypeId` has `LawfulBEq`). (ii) The whole §3 set is PINNED (BridgeSet RE-PIN 4, rows 68–89: 22 rows, nothing
+re-pinned) and REQUIRED (`Tests/GoCoreAudit.lean` 88 → 110), not only the brief's three plus the bridge: the set IS
+the interface the window delivers (charter row 3, «equation-lemma style»); the supporting facts (`_eq_find?`,
+`_some` of `findFunctionIn?`, `promotionHop_nil`/`promotionWalk_nil`, `recoverAtDeferred_*`,
+`recoverResult_frame_none`, `Cont.rebuild_isSome`/`_getD_glue`) are unpinned but named in the changelog. (iii)
+`resolveMethod?_ptrDeclared`'s pointee side condition is two negative premises (`∀ t, elem ≠ .pointer t`,
+`∀ i, elem ≠ .interface i`), read straight off `resolveMethod?`'s match — no new predicate. (iv)
+`receiverAt_field_proj` needs NO `h.ptr` premise (a struct value in hand is projected whatever the field's kind — the
+lemma says so). (v) `Cont.rebuild_isSome` is proved by well-founded recursion on `sizeOf k` (the file's own
+`Cont.sizeOf_tail_lt`), not by `Cont.rebuild.induct`.
+
+**Records moved to the record form** (the mechanisms named as CURRENT are gone; history kept dated; no ruling or
+quote rewritten): `docs/BUGS.md` — BUG-007 (Status: current mechanism = static projection chains + promotion records,
+the equations by row; HISTORY paragraph = the wrapper era), BUG-015 (Status: `recoverAtDeferred`, the gc rule with
+every frame a non-wrapper frame, rows 87–89; HISTORY = the marker/`recoverThroughWrappers` fix), BUG-041 (the «S3
+convergence addendum» framed HISTORY; a CURRENT MECHANISM paragraph naming the footprint equations by row), BUG-087
+(Status: the family test over `resolveMethod?`'s empty path with `deref`, a promoted entry outside the family; a
+HISTORY bracket on the 2026-09-03 FIXED paragraph's `concreteMethodForDynamic?`/`Func.wrapper` wording);
+`docs/2026-08-10_method-set-record-contract.md` §5 (the superseded bullet's `synthesizePromotionWrappers` dated, the
+record consequence stated; §3 and §6 were already in the record form since S2); living design/contract notes with a
+current-tense wrapper statement: `docs/2026-08-05_embedding-interfaces-design.md` (a dated ADDENDUM after the BUG-015
+addendum: D1.3's dynamic mechanism deleted, D1.1/D1.2/D2 stand), `docs/2026-07-30_interfaces-campaign-design.md` (Q3
+bracket: `resolveMethod?`'s three arms), `docs/2026-09-04_core-docstring-ledger.md` (the «surviving statements»
+sentence), `docs/2026-09-05_e13-b-design.md` (`recoverTransparent` → the recover walk descends `Cont.isGlue`),
+`docs/2026-09-04_g6-reflect-design.md` (the predicate list), `docs/2026-08-06_channels-arc-design.md` (a dated bracket
+before the `wrapperForwardArg` description), `docs/language-coverage-ledger.md` FR-23 row (the emitter cell:
+`promotionRecords`/`promotionStubRecord`). LEFT ALONE as dated records: the evidence bundles, the codex briefs, the
+plans/reviews/audits/handoffs/logs of 2026-08-06 → 2026-09-24 that describe the wrapper era as their present
+(`reasoning-surface-plan`, `master-plan*`, `grumpy-professor-review`, `hygiene-wave3-design`,
+`semantics-design-audit*`, `c1-memory-module-*`, `b7-context-store-handoff`, `hygiene-slice-log`,
+`roadmap-customer-alignment`, `proposal-to-logic-team`, `qrow-rulings`, the window charter/plan rows that SAY P
+deletes `Func.wrapper`). Code comments (comments only, no behaviour): `GoLean/GoCore/Value.lean` (the `Ty` BEq
+docstring's `concreteMethodForDynamic?`), `GoLean/GoCore/Ops.lean` (the `AccessTrace` docstring's «dispatch target's
+shape (`dispatchLeaf` below)» and the O1 over-approximation paragraph's «dispatch read at `dispatchLeaf`»). The
+remaining code mentions (`Ops.lean`: the `methodDecl?` and `resolveMethod?` docstrings, the path-walk section header;
+`Machine.lean`: the `Cont` algebra header, the `recoverAtDeferred` docstring; `Syntax.lean`: the `Func.wrapper`
+tombstone in `Func`; `StateWf.lean`: the B7 tombstone records and `recoverAtDeferred_locSup`'s docstring;
+`Tests/GoCoreContract.lean`'s header; `emit.go`'s `promotionRecords` comment; `promotion_test.go`) are dated
+«retired / DELETED / before G-P S2» tombstones and stay.
+
+**Changelog** (`docs/changelog/61958f2e-WINDOW.md` row 3): the migration table gained the `findFunctionIn?` DOMAIN
+row (unchanged signature; the bridge `findFunctionIn?_filter` and its companions), the «§3 equation lemmas» row
+(every name, what each states), the BridgeSet row's RE-PIN 4 and the required-list counts (85 → 88 → 110); the
+section header says the table is COMPLETE; the window's P line gained its S3 sentence (and names the fourth flipped
+row, `noodler/frontier/promoted-method-expression-ptr`, beside the design's enumerated two).
+
+**The gates** (S3 tree; logs `.tmp/gate-s3-*.log`, `.tmp/gates-s3-summary.log`, `.tmp/gate-s3-ci-diff.log`): the
+explicit-target build `lake build GoLean GoCoreAuditTests` (58 jobs, warning-free — `Syntax.lean` is interface-hot,
+so the whole library rebuilt); the individual gates and the full `ci --diff` as in the §1 row. The `ci --diff`
+differential count 3548 / 236 EQUALS S2's — S3 moved no row; the two FAIL steps are the merge-protocol 5a pair
+(`certificate provenance` STALE on compiled inputs; the drifted `google-search` row), exactly as at S1 and S2;
+`baselines/certified/` NOT re-pinned (the train's 5a step). The `LEAN_TIMEOUT_SECONDS=1 … TIMED OUT` lines and the
+`control FAILED; scratch retained` line in the log are the gate's own negative controls (the same 7 + 1 lines in
+S2's log). The S3 records (this file, the changelog's landing words) were written after the runs they report; the
+committed tree differs from the gated tree by these records files only (§4).
+
 ## 2. Changelog lines owed (`docs/changelog/61958f2e-WINDOW.md`)
+
+LANDED at S3 (2026-09-29): the `findFunctionIn?` domain row, the «§3 equation lemmas» row, the BridgeSet RE-PIN 4
+cell, the P line's S3 sentence — all in the row-3 section (above). Nothing owed by this lane after S3.
+
 
 LANDED at S2 (2026-09-29): the row-3 section «P, native method promotion (G-P S2, the switch)» — the MIGRATION TABLE
 of named replacements (`Func.wrapper`; `Cont.frame`'s last field `Bool` → `FuncId`; `enterFrame`'s `Entry`; the
@@ -365,10 +481,34 @@ Owed by S1 (drafted here at S1, [AGENT]; FOLDED into the row-3 section at S2):
 
 ## 3. PENDING [USER] items
 
-None posed at S2. (The coordinator's [USER]-ruled addition — the frame's `FuncId` field — is quoted verbatim in §1 S2
-and DONE there; its three lemmas are pinned and required.) Two [AGENT] readings the audit may want to see, neither a
-deviation: the frame's `fid` for the spawn's re-dispatch barrier frame is the anchor the `go` statement re-dispatches
-through (§1 S2, [AGENT] choice ii); the FR-23 stub record's cause text was re-worded (choice vi).
+**None posed at S0, S1, S2 or S3.** Every ruled decision (design §6, 1–10) was followed as recommended; the
+coordinator's two [USER]-ruled additions (the frame's `FuncId` field, S2; the pins + the `findFunctionIn?` bridge, S3)
+are DONE where quoted. What the lane leaves for the [USER] is the merge sign-off after the audit — nothing else.
+[AGENT] readings the audit should see, none a deviation: S1 — the ONE acceptance rule beyond the design's letter for a
+record whose `method` target has no declaration on the wire (accepted iff the reached type is imported/opaque and the
+key is exactly `methodFuncId reached member`; the call then refuses by name — the twin's `raft.DefaultLogger.output`);
+S2 — choices (i)–(viii) in §1 S2 (the `Entry` shapes; the frame's `fid` = the entered function, and the anchor for the
+spawn's re-dispatch barrier; the stub record's nil-first order; the declared arm's «target before receiver» order;
+the decoder-added `frontend-quarantined: ` marker; the FR-23 cause re-wording; `ProgramCtx.ofTables`' trailing
+default; `reachability.py`'s label resolution), and the fourth flipped row
+`noodler/frontier/promoted-method-expression-ptr` — the `(*T).M`-over-promoted class the design's §5 did not enumerate,
+attributed to decision 5; S3 — choices (i)–(v) in §1 S3 (the `==`-form characterizations; pinning the whole set; the
+side-condition form; the premise-free projection lemma; the WF proof).
+
+**Audit ask (for the coordinator — the pre-merge adversarial audit is owed, never skipped; scope and waiver are the
+[USER]'s).** Suggested scope: aim it at the design's §2 claims and the ZERO-BEHAVIOUR-CHANGE criterion (§5), not at
+the gate. Look hardest at: (1) the [AGENT] choices logged in S1 and S2 (§1 S1 «one rule beyond the design's letter»;
+§1 S2 choices (i)–(viii)); (2) the one acceptance rule for absent imported targets — that its refusal-by-name at the
+call is the only observable consequence and that no locally declared type can slip through it; (3)
+`noodler/frontier/promoted-method-expression-ptr`'s flip OUTSIDE the design's enumerated list (decision-5 class) — that
+its new PASS is a right answer, not a coincidence of the deref adapter's retirement; (4) the spawn re-dispatch
+barrier frame's `fid` (the anchor, not a body-bearing function) — whether a client observing «f returned v» at that
+frame's exit is misled; (5) the FR-23 stub cause text (choice vi) — that the re-worded cause is truthful for every
+FR-23 shape and the results file stayed byte-identical; (6) the S2 stub-order choice (iii): the retired entry's
+nil-first auto-deref check kept, its whole-pointee READ dropped — that dropping the read changes no race verdict (the
+run refuses either way, but the access trace before the refusal is shorter); (7) S3's equation statements against
+the S2 definitions — that each lemma says what its docstring claims (in particular `receiverAt_nil_path_deref` = the
+WHOLE pointee, `receiverAt_field` = ONLY the field cell), and that pinning them does not restate any definition.
 
 ## 4. Operational notes
 
@@ -417,3 +557,19 @@ through (§1 S2, [AGENT] choice ii); the FR-23 stub record's cause text was re-w
 - `git status` at the S2 tree: 44 tracked files edited + the 140 regenerated `Tests/unseq-wire/*.json`; no new tracked
   file. The box's `app.slice` holds ≈ 2 800 leftover `capped-*` cgroup directories (box-wide litter, not this lane's to
   clean; noted for `docs/operational-lessons.md`'s owner).
+- S3 ([AGENT] sub-worker, 2026-09-29): every lemma was developed in ONE scratch file against the built S2 `.olean`s
+  (`.tmp/scratch/s3lemmas.lean`, `scripts/capped lake env lean`, ≈ 20 s a turn; four turns to a clean exit 0), then
+  pasted beside its definition; `lake build GoLean.GoCore.Machine` (12 jobs) then `lake build GoLean GoCoreAuditTests`
+  (58 jobs, `Syntax.lean` being interface-hot), both under `GOLEAN_MEM_MAX=40G LEAN_NUM_THREADS=6 scripts/capped`,
+  lock-exempt, both warning-free. Lessons: a `match` inside a `theorem` statement elaborates to its OWN matcher constant,
+  so `rw` with a fold-characterization lemma fails to find the pattern while `exact` (defeq) succeeds — the `_foldl_aux`
+  lemmas are applied by `exact`; `simp` (default set) rewrites `&&` to `∧` INSIDE the fold's lambda and breaks the
+  induction — use `simp only [Bool.false_eq_true, ↓reduceIte]` after `cases hm : (…)` (the `cases` already substitutes
+  the scrutinee, so `hm` itself is unused); a `decreasing_by` cannot see a `rename_i` name — `(by assumption)` finds the
+  tail hypothesis; `Cont.rebuild.induct`'s explicit arguments are `descend` and `motive` (`act` is inferred), which is
+  why the WF form was used instead. The individual gates ran from `.tmp/run-gates-s3.sh` (per-gate logs, exit codes in
+  `.tmp/gates-s3-summary.log`); the first `go test` attempt failed in 0 s for want of `GO111MODULE=off` (the script
+  ran it bare; the go code is untouched by S3) and was re-run in ci's environment — both lines are in the summary log.
+  The full gate ran under the lock (`.tmp/locked-gate.sh .tmp/gate-s3-ci-diff.log env GOLEAN_MEM_MAX=48G scripts/capped
+  scripts/ci --diff`, 1035 s); no tracked file was edited while it read the tree. Post-gate edit disclosed: this
+  handoff's S3 row/section and §2/§3 were written after the runs they report (records only).

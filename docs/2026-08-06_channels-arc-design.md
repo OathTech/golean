@@ -1155,7 +1155,11 @@ of current correctness per the verifier's own probes):
   only the EMBEDDED field — a concurrent write to a non-embedded outer
   field is `-race`-green and was refused deterministically (the
   verifier's p1/p2/p3 causal isolation; a mainstream embedding+
-  interface idiom). Fixed by the coordinator's preference (a): when
+  interface idiom). Fixed by the coordinator's preference (a) [the
+  mechanism described next was DELETED at G-P S2, 2026-09-28: the
+  footprint of a promoted dispatch is the promotion path's own loads,
+  `receiverAt` — BUG-041's S2 paragraph; the equations `receiverAt_field`
+  / `receiverAt_ptr`]: when
   the dispatch target has `Func.wrapper`, the read is recorded at the
   wrapper's promotion HOP PATH, recovered from the wrapper's OWN
   synthesized body (`wrapperForwardArg` — a deliberately shallow
