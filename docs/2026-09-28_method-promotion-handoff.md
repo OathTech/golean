@@ -14,6 +14,7 @@ posed in §3 below, that item STOPPED.
 | S1 records + cross-check | (this commit) | individual gates all EXIT=0 (`check-wire-boundary` 3 s incl. the 12 new controls, `check-frontend-pins` 2 s after the twin re-pin, `check-unseq-wire` 6 s, `check-method-identity` 46 s, `check-mem-callsites` 1 s, `check-unseq-scheduler` 92 s, `check-core-audit` 20 s, `gocore-eval-tests` 296 ok / 0 fail, `go test ./tools/nativefrontend ./tools/lowerdiag` ok); `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --slow` RESULT: FAIL, 1132 s, by EXACTLY the expected merge-protocol 5a pair and nothing else — `certificate provenance` STALE (changed compiled inputs: `GoLean/GoCore/{Syntax,ProgramCtx}.lean`, `GoLean/NativeToIR.lean`) + ONE row `imported-goose/channel/google-search` PASS/membership → FAIL/membership («certified record wire-sha256 … STALE»: the row's wire gained `promotions`, 736f1730… → 8fe3c739…); 3784 = 3544 / 240 vs baseline 3545 / 239, every other step ok, negative 394 match, re-pin guard 0 flips; `baselines/certified/` NOT re-pinned (the train's 5a step) | 0 born; 0 moved (the machine is unchanged; the whole-corpus choice trace is byte-identical to the S0 reference — §1 S1) | DONE (S1 tree) |
 | S2 the switch | (this commit) | individual gates all EXIT=0 (`check-core-audit` 13 s — 88 required theorems, `check-mem-callsites` 1 s, `check-unseq-scheduler` 96 s, `check-wire-boundary` 3 s incl. the 12 promotion-record controls (3 new), `check-unseq-wire` 6 s (140 fixtures regenerated), `check-frontend-pins` after the twin re-pin, `check-method-identity`, `gocore-eval-tests` 298 ok / 0 fail (incl. the two new v2 refusal pins), `go test ./tools/nativefrontend ./tools/lowerdiag` ok); `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --slow` RESULT: FAIL, 1006 s, by EXACTLY the expected merge-protocol 5a pair and nothing else — `certificate provenance` STALE (C9: the first changed compiled input, `GoLean/CLI.lean`) + the ONE drifted row `imported-goose/channel/google-search` PASS/membership → FAIL/membership (its certified record STALE since S1); 3784 = 3548 / 236 vs the re-pinned baseline 3549 / 235, every other step ok (core build warning-free, 88 required theorems, eval 298 ok, negative 394 match), re-pin guard 0 PASS→non-PASS flips / 4 GREENED; `baselines/certified/` NOT re-pinned (the train's 5a step) | 0 born; 4 moved, all FAIL → PASS: the design's three predicted flips — `race/free/promoted-ptr-hop` (decision 6), `embedding/promoted-ptr-method-expression/{recover,promoted-value}` (decision 5) — PLUS `noodler/frontier/promoted-method-expression-ptr` (FR-3's noodler re-hit, the same `(*T).M`-over-promoted class the design did not enumerate; attributable to decision 5; found by the choice trace, confirmed by `diff-one`, reported for the audit); 3784 = 3549 / 235; the whole-corpus choice trace vs the S0 reference: BYTE-IDENTICAL dumps and results EXCEPT the rows of the four flipped ids (`race` → `ok`; `unsupported` → `ok` ×3) and the known absolute-path row (§1 S2); detector-soundness HOLE 0 / possible-HOLE 0, `promoted-ptr-hop` agree-DRF (was over-refusal) | DONE (S2 tree) |
 | S3 equations + records | (this commit) | individual gates all EXIT=0 (`check-core-audit` 16 s — **110 required theorems** (88 + 22), `check-mem-callsites` 0 s, `check-unseq-scheduler` 96 s, `check-wire-boundary` 27 s, `check-unseq-wire` 5 s, `check-frontend-pins` 1 s, `go test ./tools/nativefrontend ./tools/lowerdiag` ok under ci's `GO111MODULE=off`); `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff` under the lock RESULT: FAIL, 1035 s, by EXACTLY the expected merge-protocol 5a pair and nothing else — `certificate provenance` STALE (the reconciler's C9 names the first changed compiled input, `GoLean/CLI.lean`; the certification controls all PASS) + the ONE drifted row `imported-goose/channel/google-search` PASS/membership → FAIL/membership (its certified record STALE since S1); 3784 = 3548 / 236 vs the S2-pinned baseline 3549 / 235 — IDENTICAL to S2's count, that one row the whole difference; every other step ok (core build warning-free, eval 298 ok, negative 394 match), re-pin guard 0 flips (the 4 GREENED notes are S2's re-pin, HEAD vs HEAD~1); `baselines/` untouched | 0 born; 0 moved (S3 changes no definition: every row in its S2 lane) | DONE (S3 tree) |
+| audit fix round | (this and the next commit; rebased onto main `4e7272b3`) | individual gates all EXIT=0; `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff` under the lock RESULT: FAIL, 802 s, by EXACTLY the 5a pair (`certificate provenance` STALE, C9 `GoLean/CLI.lean`; the ONE drifted row `imported-goose/channel/google-search`); 3790 = 3552 / 238 vs the re-pinned baseline 3553 / 237 (§5) | 6 born (4 PASS, 2 FAIL by design on FR-35); 0 moved | DONE — FIX-FIRST dispositions F1–F7 executed (§5) |
 
 ### S0 — the born pins
 
@@ -500,6 +501,16 @@ default; `reachability.py`'s label resolution), and the fourth flipped row
 attributed to decision 5; S3 — choices (i)–(v) in §1 S3 (the `==`-form characterizations; pinning the whole set; the
 side-condition form; the premise-free projection lemma; the WF proof).
 
+**PENDING [USER] acknowledgement at sign-off (audit F4, recorded at the audit fix round 2026-09-29, [AGENT]).**
+`noodler/frontier/promoted-method-expression-ptr` flipped FAIL → PASS. That is decision 5's class: `(*Out).Get` over a
+promoted value method, the same shape as the born `embedding/promoted-ptr-method-expression/promoted-value`. The tip
+returns 4, as gc does; main refused at the frontend (FR-3). Design §5's criterion listed only S8 and step counts, and it
+says an unlisted movement «stops the slice». The lane re-pinned with a written reason and continued. The audit's
+[AGENT] view: decision 5 covers it in substance, and no separate ruling is needed. It is listed here so that the
+[USER] acknowledges it at the merge sign-off; it is not self-adjudicated. The same goes for the fix round's two newly
+recorded movements (§5 F1, F5), both toward gc. The audit's [AGENT] view is that F1 needs only the record, because it
+fixes an over-wide envelope that no ruling covers. F5 is decision 6's class.
+
 **Audit ask (for the coordinator — the pre-merge adversarial audit is owed, never skipped; scope and waiver are the
 [USER]'s).** Suggested scope: aim it at the design's §2 claims and the ZERO-BEHAVIOUR-CHANGE criterion (§5), not at
 the gate. Look hardest at: (1) the [AGENT] choices logged in S1 and S2 (§1 S1 «one rule beyond the design's letter»;
@@ -578,3 +589,116 @@ WHOLE pointee, `receiverAt_field` = ONLY the field cell), and that pinning them 
   The full gate ran under the lock (`.tmp/locked-gate.sh .tmp/gate-s3-ci-diff.log env GOLEAN_MEM_MAX=48G scripts/capped
   scripts/ci --diff`, 1035 s); no tracked file was edited while it read the tree. Post-gate edit disclosed: this
   handoff's S3 row/section and §2/§3 were written after the runs they report (records only).
+
+## 5. The audit fix round (2026-09-29)
+
+The audit is `docs/2026-09-29_method-promotion-audit.md` on `review/method-promotion-0928` @ `fb24d243`. Its verdict was
+FIX-FIRST, records-class, with no wrong answer found. [AGENT] fix-round worker. The dispositions are the [AGENT]
+coordinator's and are disclosed at the merge ask; none is a [USER] ruling. Snapshot `refs/snapshots/method-promotion-fix/
+pre-rebase` = `a8741c9d`. Before and after for each finding:
+
+- **F7, the rebase.** Before: off `89792db1`, 3 records commits behind main. After: rebased onto main `4e7272b3` (r54,
+  records only), with no conflict: S0–S3 became `0e299822`, `2cde2b37`, `5ce4d407`, `6b6352b5`. The changelog's P section
+  now covers r54's «Scope of this changelog» paragraph. The wire schema moved v1 → v2: v1 is refused by name, `promotions`
+  is required and `wrapper` is refused. `decodeProgram`'s signature is unchanged; its input is v2 and `Program` gained the
+  defaulted `promotions`. The frontend flags, the manifest schema, `RunResult`, the toolchain and the `deps/go` pin are
+  unchanged, each checked by diff against main.
+- **F1 (MEDIUM), a nil box to a promoted declaration-only stub.** Before: unrecorded, and this handoff claimed «the
+  `nilValueMethodText` consumption count is unchanged» without scope. After, the rows:
+  - `embedding/promoted-stub-dispatch/{nil-box-sync-stub, nil-box-sync-stub-itab}` BORN PASS/confluent: the singleton
+    nil-deref set, which is gc's text 20/20 plain, 5/5 `-race`, and the same under `-gcflags=-l` and `-N -l`. Both rows
+    are RED on main's binary («enumerated observation set has 2 member(s)»).
+  - `…/{box-sync-stub, box-sync-stub-race}` BORN FAIL by design on the NEW ledger row FR-35, with queue slot 35. A
+    non-nil box refuses by name, on main and the tip alike. The second row's gc `-race` race is 5/5. The retired entry's
+    pointee read, dropped at S2, shows only as main's `race` answer under `--choices 1`; the tip refuses.
+
+  After, the records:
+  - BUG-087 gained the paragraph «OVER-WIDE ENVELOPE on promoted declaration-only stubs — FIXED by G-P S2», a Status
+    clause, and the two nil rows on its Cases line.
+  - The FR-23 nil-box shape could not be rowed: its caller refuses at FR-23 before any dispatch, on both sides. This is
+    stated in the paragraph.
+  - The §1 S2 claim is corrected in place to «over the CORPUS».
+  - Changelog: the fix-round paragraph under the migration table, and the P line.
+  - Evidence: `docs/evidence/2026-09-29_method-promotion-fix/red-first.txt`. [AGENT] method: main's rows ran under main
+    `4e7272b3`'s own `scripts/diff-one` in a scratch tree, with main's frontend (built from `4e7272b3`) and the primary
+    checkout's `golean`. That binary's main provenance is INFERRED, because it reproduces the audit's main answers
+    exactly. A PATH shim skipped the harness's `lake build`. All of this is disclosed in the evidence header.
+- **F2 (LOW), `Cont.frame`'s `fid` at the spawn's `again` barrier.** Before: the docstring and changelog said «never an
+  interface anchor or a record», and this handoff named «the anchor the go statement re-dispatches through». After:
+  representation left as it is, with no definition changed. The target is NOT known when that barrier is built: the
+  re-dispatch resolves it on the embedded field's dynamic value at the child's first step. So the truth is stated rather
+  than changed:
+  - `Cont.frame`'s docstring (`Machine.lean`) states THE ONE EXCEPTION. That barrier carries the `go` statement's OWN
+    callee id: the interface anchor for `go i.M()`, or the record key `methodFuncId S M`, which names no `Func`, for
+    `go S.M(s)`. It runs no body. The target's own frame, which names `func.id`, is pushed on top when the pending call
+    drains. So «`fid` returned `vs`» at that exit reads «the goroutine's call to the `go` callee finished, results
+    discarded».
+  - The same statement is in the `spawnStep` comment (`Multi.lean`), the changelog's `Cont.frame` row, and this
+    handoff's §1 S2 choice (ii) and §3, corrected in place.
+  - The entry/exit lemmas (`Entry.callConfig_run`, `Entry.drainConfig_run`, `frame_exit_returns`,
+    `enterFrame_declared`) are untouched and still true: the core audit reports 110 required theorems. There is no new
+    premise.
+- **F3 (LOW), the `findFunctionIn?_filter` wording.** Before: «the post-P table = the pin's table filtered by ¬
+  `Func.wrapper`». After: the docstring (`Syntax.lean`) and the changelog's `findFunctionIn?` row say that the filter
+  removes the 53 wrappers AND the 3 promoted stubs, and keeps the order: the twin's method list 537 → 481, re-measured
+  by a key-by-key comparison of the pin at `5749ed35~1` against the current pin, with the function list 450 = 450. They
+  also say that a client crossing the pin crosses the `Func` shape change. The lemma itself is unchanged.
+- **F4 (LOW, procedural).** Recorded in §3: `noodler/frontier/promoted-method-expression-ptr` FAIL → PASS is decision 5's
+  class, PENDING the [USER]'s acknowledgement at sign-off.
+- **F5 (INFO), `go i.M()` walks the path at the spawn step.** New rows:
+  - `race/free/promoted-spawn-disjoint` BORN PASS/confluent: ok 5, gc `-race` green 5/5. It is RED on main's binary: the
+    enumerator's member at pick `[0]` is a race, from the retired wrapper's whole-pointee read. This is decision 6's
+    class, a spawn instance.
+  - `race/negative/promoted-spawn-ptr-field` BORN PASS/racy: gc `-race` 5/5, and PASS on main's binary too. It is the
+    must-stay-racy guard.
+
+  Recorded here, in the changelog, and in the ledger's §8ap. The racy row shows the nuance: gc's plain run prints 6,
+  because the child walks after the parent's write, and a spawn-step walk cannot produce that value. The program is
+  racy, so the machine's race verdict is the observation, and it agrees.
+- **F6 (INFO), the decoder trusts a stub record's `sig`.** Only `sig.id = member` is checked; mutant `a9b` is accepted.
+  Recorded only, in the changelog's fix-round paragraph. It is the same trust the retired stub `Func`'s own signature
+  carried: calls through it refuse by name, and satisfaction reads the `sig`. The optional hardening is not taken.
+
+**Rows born: 6. The baseline:** 3784 = 3549 / 235 → 3790 = 3553 / 237. The re-pin reason is in the header. No row moved,
+and there is no PASS → non-PASS flip. **The ledger:** FR-35 row, queue slot 35, §8 tally, and the reds table frontier
+128 → 130 (FR-1…FR-35). Check: 130 + 9 + (24 + 1) + 8 + 65 = 237. Movement §8ap.
+
+**Gates** (logs under `.tmp/fix/`):
+- Individual gates (`.tmp/fix/run-gates.sh`, summary `.tmp/fix/gates-summary.log`), all EXIT=0:
+  - `check-core-audit` 12 s (110 required theorems, classical trio only)
+  - `check-mem-callsites` 0 s
+  - `check-unseq-scheduler` 87 s
+  - `check-wire-boundary` 2 s (the 12 promotion-record controls)
+  - `check-unseq-wire` 5 s
+  - `check-frontend-pins` 1 s
+  - `go test ./tools/nativefrontend ./tools/lowerdiag` (`GO111MODULE=off`) 3 s
+  - `lake exe gocore-eval-tests` 298 ok, 164 s
+  - `check-bugs.sh` ok
+  - `check-evidence-size` ok
+- The build: `lake build GoLean golean GoCoreAuditTests`, 112 jobs, warning-free (`Syntax.lean` is interface-hot).
+- **The full gate:** `.tmp/fix/locked.sh .tmp/fix/ci-diff.log env GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff`,
+  under the box-wide lock, at commit `17416d2c`. RESULT: FAIL, EXIT 1, 802 s, red on EXACTLY the 5a pair:
+  - `certificate provenance` STALE (C9: `GoLean/CLI.lean`);
+  - the baseline drift `imported-goose/channel/google-search` PASS/membership → FAIL/membership, its certified record
+    STALE since S1.
+
+  The differential was 3790 = 3552 / 238 against the baseline's 3553 / 237; that one row is the whole difference. The
+  re-pin guard reported 0 PASS → non-PASS flips, the negative corpus matched 394, and every other step was ok. The
+  reconciler: C9 and C13 (pre-existing), plus a C5 on two backticked non-citations in the new FR-35 cell (`-race`,
+  `p.Mutex`). The backticks were removed after the gate, a records-only edit; the reconciler re-run is clean of C5.
+- **The choice trace:** `scripts/choice-trace-corpus --dump --jobs 6 --golean .tmp/fix/golean-fix` (the gated binary,
+  `cmp`-identical), with the reference's exclusions, under the lock, 453 s. It was compared with the lane's S2 reference
+  run (`.tmp/ct-s2`). The reference is the pre-fix behaviour: S3 changed no definition and this round changes docstrings
+  only. The a8741c9d binary itself was not re-traced.
+  - The sorted DUMPS are byte-identical except 40 rows ADDED for born ids only: `box-sync-stub-race` 9,
+    `promoted-spawn-disjoint` 22, `promoted-spawn-ptr-field` 9.
+  - The normalized RESULTS: every reference row is identical, plus 36 rows for the 6 born ids.
+  - The same 34 export refusals. The `nilValueMethodText` consumption rows are 90 = 90.
+  - Evidence: `docs/evidence/2026-09-29_method-promotion-fix/choice-trace-compare.txt`.
+
+  F2 changed no frame field VALUE, only docstrings, so the trace needs no representation exception.
+
+Post-gate edit disclosed: the FR-35 cell's two backtick removals, this §5, the §1 row, and the evidence file
+`choice-trace-compare.txt` were written after the gate. They are records only, in the next commit, and no tracked file
+was edited while the gate read the tree. The scratch (`.tmp/fix/`: binaries, the main-root copy, the traces) is deleted
+at the end of the round, except the logs the lines above cite.

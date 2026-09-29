@@ -1,0 +1,102 @@
+# G-P audit fix round (2026-09-29, [AGENT] worker): whole-corpus choice trace at the fix tree vs the lane's pre-fix reference.
+# fix: scripts/choice-trace-corpus --dump --jobs 6 --golean <fix binary> --exclude goroutines/send-then-spin --exclude strings/trimspace-repeat/repeat-bound-refused (under the box-wide lock; 453 s; exit 1 = the summarizer's standing findings)
+# reference: the S2 run (.tmp/ct-s2 of the lane worktree; same command, the S2 binary). S3 changed no definition and the fix round changes docstrings only,
+#   so the S2 run is the pre-fix tip's behaviour; this comparison did NOT re-run the a8741c9d binary itself.
+# normalization: dumps = every dump-*.tsv row minus the per-chunk header, LC_ALL=C sort; results = every results-*.tsv row, LC_ALL=C sort, the run's --out path -> OUT/.
+# fix: 3754 wires exported (3748 + the 6 born rows), the same 34 frontend refusals, the same 2 exclusions.
+dump rows: reference 26377 (incl. 6 chunk-header lines) / fix 26411 (headers stripped): 26371 identical data rows; ADDED only for born ids: box-sync-stub-race 9, race/free/promoted-spawn-disjoint 22, race/negative/promoted-spawn-ptr-field 9
+result rows: reference 22489 / fix 22525: every reference row identical; ADDED only the 6 born ids x 6 streams (36)
+nilValueMethodText consumption rows: 90 = 90 (the born nil-box rows consume NOTHING — audit F1's point: main consumed one pick there)
+
+## diff of sorted dumps (< reference, > fix)
+1544a1545,1553
+> embedding/promoted-stub-dispatch/box-sync-stub-race	1,3,5,7,9,2,4,6,8,0	0	pool	l1Sched	2	1	1
+> embedding/promoted-stub-dispatch/box-sync-stub-race	1,3,5,7,9,2,4,6,8,0	1	pool	l1Sched	2	3	1
+> embedding/promoted-stub-dispatch/box-sync-stub-race	5,5,5,5,5,5,5,5	0	pool	l1Sched	2	5	1
+> embedding/promoted-stub-dispatch/box-sync-stub-race	5,5,5,5,5,5,5,5	1	pool	l1Sched	2	5	1
+> embedding/promoted-stub-dispatch/box-sync-stub-race	9,8,7,6,5,4,3,2,1,0	0	pool	l1Sched	2	9	1
+> embedding/promoted-stub-dispatch/box-sync-stub-race	9,8,7,6,5,4,3,2,1,0	1	pool	l1Sched	2	8	0
+> embedding/promoted-stub-dispatch/box-sync-stub-race	default	0	pool	l1Sched	2	-	0
+> embedding/promoted-stub-dispatch/box-sync-stub-race	rand:1:4096	0	pool	l1Sched	2	47062	0
+> embedding/promoted-stub-dispatch/box-sync-stub-race	rand:2:4096	0	pool	l1Sched	2	45548	0
+7106,7111d7114
+< id	stream	idx	phase	site	bound	streamValue	pick
+< id	stream	idx	phase	site	bound	streamValue	pick
+< id	stream	idx	phase	site	bound	streamValue	pick
+< id	stream	idx	phase	site	bound	streamValue	pick
+< id	stream	idx	phase	site	bound	streamValue	pick
+< id	stream	idx	phase	site	bound	streamValue	pick
+18090a18094,18115
+> race/free/promoted-spawn-disjoint	1,3,5,7,9,2,4,6,8,0	0	pool	l1Sched	2	1	1
+> race/free/promoted-spawn-disjoint	1,3,5,7,9,2,4,6,8,0	1	pool	l1Sched	2	3	1
+> race/free/promoted-spawn-disjoint	1,3,5,7,9,2,4,6,8,0	2	pool	postOp	2	5	1
+> race/free/promoted-spawn-disjoint	5,5,5,5,5,5,5,5	0	pool	l1Sched	2	5	1
+> race/free/promoted-spawn-disjoint	5,5,5,5,5,5,5,5	1	pool	l1Sched	2	5	1
+> race/free/promoted-spawn-disjoint	5,5,5,5,5,5,5,5	2	pool	postOp	2	5	1
+> race/free/promoted-spawn-disjoint	9,8,7,6,5,4,3,2,1,0	0	pool	l1Sched	2	9	1
+> race/free/promoted-spawn-disjoint	9,8,7,6,5,4,3,2,1,0	1	pool	l1Sched	2	8	0
+> race/free/promoted-spawn-disjoint	9,8,7,6,5,4,3,2,1,0	2	pool	l1Sched	2	7	1
+> race/free/promoted-spawn-disjoint	9,8,7,6,5,4,3,2,1,0	3	pool	postOp	2	6	0
+> race/free/promoted-spawn-disjoint	9,8,7,6,5,4,3,2,1,0	4	exit	l5ExitWindow	2	5	1
+> race/free/promoted-spawn-disjoint	9,8,7,6,5,4,3,2,1,0	5	exit	l5ExitWindow	2	4	0
+> race/free/promoted-spawn-disjoint	default	0	pool	l1Sched	2	-	0
+> race/free/promoted-spawn-disjoint	default	1	pool	l1Sched	2	-	0
+> race/free/promoted-spawn-disjoint	default	2	pool	postOp	2	-	0
+> race/free/promoted-spawn-disjoint	rand:1:4096	0	pool	l1Sched	2	47062	0
+> race/free/promoted-spawn-disjoint	rand:1:4096	1	pool	l1Sched	2	17241	1
+> race/free/promoted-spawn-disjoint	rand:1:4096	2	pool	l1Sched	2	28876	0
+> race/free/promoted-spawn-disjoint	rand:1:4096	3	pool	postOp	2	43750	0
+> race/free/promoted-spawn-disjoint	rand:2:4096	0	pool	l1Sched	2	45548	0
+> race/free/promoted-spawn-disjoint	rand:2:4096	1	pool	l1Sched	2	4010	0
+> race/free/promoted-spawn-disjoint	rand:2:4096	2	pool	postOp	2	42376	0
+18985a19011,19019
+> race/negative/promoted-spawn-ptr-field	1,3,5,7,9,2,4,6,8,0	0	pool	l1Sched	2	1	1
+> race/negative/promoted-spawn-ptr-field	1,3,5,7,9,2,4,6,8,0	1	pool	l1Sched	2	3	1
+> race/negative/promoted-spawn-ptr-field	5,5,5,5,5,5,5,5	0	pool	l1Sched	2	5	1
+> race/negative/promoted-spawn-ptr-field	5,5,5,5,5,5,5,5	1	pool	l1Sched	2	5	1
+> race/negative/promoted-spawn-ptr-field	9,8,7,6,5,4,3,2,1,0	0	pool	l1Sched	2	9	1
+> race/negative/promoted-spawn-ptr-field	9,8,7,6,5,4,3,2,1,0	1	pool	l1Sched	2	8	0
+> race/negative/promoted-spawn-ptr-field	default	0	pool	l1Sched	2	-	0
+> race/negative/promoted-spawn-ptr-field	rand:1:4096	0	pool	l1Sched	2	47062	0
+> race/negative/promoted-spawn-ptr-field	rand:2:4096	0	pool	l1Sched	2	45548	0
+
+## diff of normalized results
+3787a3788,3811
+> embedding/promoted-stub-dispatch/box-sync-stub	1,3,5,7,9,2,4,6,8,0	unsupported	0	0	-	0	-	0	0	-	0	-	13766448456727282408	ok
+> embedding/promoted-stub-dispatch/box-sync-stub	5,5,5,5,5,5,5,5	unsupported	0	0	-	0	-	0	0	-	0	-	13766448456727282408	ok
+> embedding/promoted-stub-dispatch/box-sync-stub	9,8,7,6,5,4,3,2,1,0	unsupported	0	0	-	0	-	0	0	-	0	-	13766448456727282408	ok
+> embedding/promoted-stub-dispatch/box-sync-stub	default	unsupported	0	0	-	0	-	0	0	-	0	-	13766448456727282408	ok
+> embedding/promoted-stub-dispatch/box-sync-stub	rand:1:4096	unsupported	0	0	-	0	-	0	0	-	0	-	13766448456727282408	ok
+> embedding/promoted-stub-dispatch/box-sync-stub	rand:2:4096	unsupported	0	0	-	0	-	0	0	-	0	-	13766448456727282408	ok
+> embedding/promoted-stub-dispatch/box-sync-stub-race	1,3,5,7,9,2,4,6,8,0	unsupported	2	2	-	0	l1Sched=2	2	0	-	0	-	13766448456727282408	ok
+> embedding/promoted-stub-dispatch/box-sync-stub-race	5,5,5,5,5,5,5,5	unsupported	2	2	-	0	l1Sched=2	2	0	-	0	-	13766448456727282408	ok
+> embedding/promoted-stub-dispatch/box-sync-stub-race	9,8,7,6,5,4,3,2,1,0	unsupported	2	2	-	0	l1Sched=2	2	0	-	0	-	13766448456727282408	ok
+> embedding/promoted-stub-dispatch/box-sync-stub-race	default	unsupported	1	1	0	1	l1Sched=1	2	0	-	0	-	13766448456727282408	ok
+> embedding/promoted-stub-dispatch/box-sync-stub-race	rand:1:4096	unsupported	1	1	-	0	l1Sched=1	2	0	-	0	-	13766448456727282408	ok
+> embedding/promoted-stub-dispatch/box-sync-stub-race	rand:2:4096	unsupported	1	1	-	0	l1Sched=1	2	0	-	0	-	13766448456727282408	ok
+> embedding/promoted-stub-dispatch/nil-box-sync-stub	1,3,5,7,9,2,4,6,8,0	panic	0	0	-	0	-	0	0	-	0	-	6492132488365523923	ok
+> embedding/promoted-stub-dispatch/nil-box-sync-stub	5,5,5,5,5,5,5,5	panic	0	0	-	0	-	0	0	-	0	-	6492132488365523923	ok
+> embedding/promoted-stub-dispatch/nil-box-sync-stub	9,8,7,6,5,4,3,2,1,0	panic	0	0	-	0	-	0	0	-	0	-	6492132488365523923	ok
+> embedding/promoted-stub-dispatch/nil-box-sync-stub	default	panic	0	0	-	0	-	0	0	-	0	-	6492132488365523923	ok
+> embedding/promoted-stub-dispatch/nil-box-sync-stub	rand:1:4096	panic	0	0	-	0	-	0	0	-	0	-	6492132488365523923	ok
+> embedding/promoted-stub-dispatch/nil-box-sync-stub	rand:2:4096	panic	0	0	-	0	-	0	0	-	0	-	6492132488365523923	ok
+> embedding/promoted-stub-dispatch/nil-box-sync-stub-itab	1,3,5,7,9,2,4,6,8,0	panic	0	0	-	0	-	0	0	-	0	-	6492132488365523923	ok
+> embedding/promoted-stub-dispatch/nil-box-sync-stub-itab	5,5,5,5,5,5,5,5	panic	0	0	-	0	-	0	0	-	0	-	6492132488365523923	ok
+> embedding/promoted-stub-dispatch/nil-box-sync-stub-itab	9,8,7,6,5,4,3,2,1,0	panic	0	0	-	0	-	0	0	-	0	-	6492132488365523923	ok
+> embedding/promoted-stub-dispatch/nil-box-sync-stub-itab	default	panic	0	0	-	0	-	0	0	-	0	-	6492132488365523923	ok
+> embedding/promoted-stub-dispatch/nil-box-sync-stub-itab	rand:1:4096	panic	0	0	-	0	-	0	0	-	0	-	6492132488365523923	ok
+> embedding/promoted-stub-dispatch/nil-box-sync-stub-itab	rand:2:4096	panic	0	0	-	0	-	0	0	-	0	-	6492132488365523923	ok
+17035a17060,17065
+> race/free/promoted-spawn-disjoint	1,3,5,7,9,2,4,6,8,0	ok	3	3	-	0	l1Sched=2;postOp=1	2	0	-	0	-	5223163839491811681	ok
+> race/free/promoted-spawn-disjoint	5,5,5,5,5,5,5,5	ok	3	3	-	0	l1Sched=2;postOp=1	2	0	-	0	-	5223163839491811681	ok
+> race/free/promoted-spawn-disjoint	9,8,7,6,5,4,3,2,1,0	ok	6	6	-	0	l1Sched=3;l5ExitWindow=2;postOp=1	2	0	-	0	-	5223163839491811681	ok
+> race/free/promoted-spawn-disjoint	default	ok	3	3	0	3	l1Sched=2;postOp=1	2	0	-	0	-	5223163839491811681	ok
+> race/free/promoted-spawn-disjoint	rand:1:4096	ok	4	4	-	0	l1Sched=3;postOp=1	2	0	-	0	-	5223163839491811681	ok
+> race/free/promoted-spawn-disjoint	rand:2:4096	ok	3	3	-	0	l1Sched=2;postOp=1	2	0	-	0	-	5223163839491811681	ok
+17269a17300,17305
+> race/negative/promoted-spawn-ptr-field	1,3,5,7,9,2,4,6,8,0	race	2	2	-	0	l1Sched=2	2	0	-	0	-	7767644932088467181	ok
+> race/negative/promoted-spawn-ptr-field	5,5,5,5,5,5,5,5	race	2	2	-	0	l1Sched=2	2	0	-	0	-	7767644932088467181	ok
+> race/negative/promoted-spawn-ptr-field	9,8,7,6,5,4,3,2,1,0	race	2	2	-	0	l1Sched=2	2	0	-	0	-	7767644932088467181	ok
+> race/negative/promoted-spawn-ptr-field	default	race	1	1	0	1	l1Sched=1	2	0	-	0	-	7767644932088467181	ok
+> race/negative/promoted-spawn-ptr-field	rand:1:4096	race	1	1	-	0	l1Sched=1	2	0	-	0	-	7767644932088467181	ok
+> race/negative/promoted-spawn-ptr-field	rand:2:4096	race	1	1	-	0	l1Sched=1	2	0	-	0	-	7767644932088467181	ok
