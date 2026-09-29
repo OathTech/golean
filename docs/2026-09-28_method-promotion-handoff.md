@@ -755,3 +755,7 @@ diff of the fixture lowered by the pre-promotion frontend (74f5bada) vs the land
 3554 / 237 with the one 5a-class row red; fresh re-enumeration: `observations_sha256` IDENTICAL, the claim differs only in
 `wire_sha256` — the candidate (receipt `f2c157ab`, 91.28 s) is INSTALLED in this commit; a provenance refresh, not a re-pin.
 Tail: `docs/evidence/2026-09-29_method-promotion-fix/r55-ci-slow.tail.txt`.
+
+**Green re-run at the records commit `205c6cf7`** ([AGENT] coordinator, 2026-09-29): `GOLEAN_MEM_MAX=48G scripts/capped
+scripts/ci --diff` → EXIT=0 in 799 s, `RESULT: PASS`, `baseline diff FULL (3791/3791, no regression)`, `certificate provenance`
+ok. Round 55 closed: native method promotion is on main.
