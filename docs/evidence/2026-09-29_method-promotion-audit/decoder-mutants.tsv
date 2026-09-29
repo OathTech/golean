@@ -1,0 +1,17 @@
+# Decoder/dispatch mutants over Tests/wire-boundary-promotion (tip frontend a8741c9d), run: golean native-json-run --function probe
+# id	mutation	result (first 200 chars)
+a1-wrong-path-short	{"message":"a1-wrong-path-short.json: native lowering: program.promotions[4] (main.outer.val): the last hop reaches GoLean.GoCore.Ty.defined 3, which is not the target's receiver base GoLean.GoCore.Ty
+a2-cycle-owner	{"message":"a2-cycle-owner.json: native lowering: program.promotions[4] (main.outer.val): path[1].owner is main.outer, but the path has reached main.mid","schema":"golean-observation-v1","status":"err
+a3-shadowed-target	{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":42}]}
+a4-absent-local-target	{"message":"a4-absent-local-target.json: native lowering: program.promotions[1] (main.mid.val): target method main.base.nosuch is not on the wire, yet the last hop reaches the locally declared main.ba
+a5-nonpromoted-member	{"message":"a5-nonpromoted-member.json: native lowering: program.promotions[12] (main.wrapI.inc): main.valuer does not declare the member main:inc","schema":"golean-observation-v1","status":"error"}
+a6-missing-wrapI	{"message":"dynamic type main.wrapI has no method val","output":"","schema":"golean-observation-v1","status":"stuck"}
+a7-missing-midinc	{"message":"dynamic type *main.mid has no method inc","output":"","schema":"golean-observation-v1","status":"stuck"}
+a8-unsupported-without-sig	{"message":"a8-unsupported-without-sig.json: native lowering: program.promotions[9]: unsupported without sig — a stub record carries its signature; the two keys are present exactly together (design 
+a9-forged-stub	{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":42}]}
+a9b-forged-stub-wrongsig	{"message":"frontend-quarantined: forged","output":"","schema":"golean-observation-v1","status":"unsupported"}
+a10-stub-sig-id	{"message":"a10-stub-sig-id.json: native lowering: program.promotions[9] (main.locked.Lock): sig.id :Unlock disagrees with member :Lock","schema":"golean-observation-v1","status":"error"}
+a11-forged-imported	{"message":"a11-forged-imported.json: native lowering: program.promotions[12] (main.locked.Frob): target method $method$10:sync.Mutex0:Frob is not on the wire and the last hop reaches GoLean.GoCore.Ty
+a12-iface-adjust	{"message":"a12-iface-adjust.json: native lowering: program.promotions[8] (main.wrapI.val): adjust is GoLean.GoCore.PromotionAdjust.deref; a value last hop against the target's value receiver requires
+a13-hop-extra-key	{"message":"a13-hop-extra-key.json: native lowering: unknown key 'extra' at program.promotions[1].path[0] — the emitter never produces it for this node kind (exact-key discipline, fail closed)","sch
+a14-empty-path	{"message":"a14-empty-path.json: native lowering: program.promotions[1] (main.mid.val): empty path (a promotion has at least one embedded hop)","schema":"golean-observation-v1","status":"error"}

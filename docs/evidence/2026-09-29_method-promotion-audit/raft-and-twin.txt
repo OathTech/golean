@@ -1,0 +1,9 @@
+# Raft subject smoke probes (tools/raftsubject/runprobe.py), main 4e7272b3 vs tip a8741c9d, same binaries as probe-results.tsv
+rawnode-probe-main.go (default)        main: go side panics (nil log.Logger under DefaultLogger.Infof) — machine not compared   tip: identical
+logger-teeth --expect-stop DefaultLogger.Infof  main: machine first stop "frontend-quarantined: imported method log.Logger.Output (declaration-only stub ...)" (probe's expected text stale — pre-existing)   tip: identical stop text
+logger-installed-probe-main.go         main: PASS go=1111035 machine=1111035   tip: PASS go=1111035 machine=1111035
+twin-single-main.go + twin-lib.go      tip: PASS go=111035 machine=111035 (fuel 8e9)   [main not run]
+NOT RUN: the chdriver twin (probeTwinChoice) and the elect group under the machine (40-65 min each).
+# Twin wire (baselines/pins/twin-chdriver.wire.json): main 1c4e7038... (v1) vs tip 0b58402a7699e7bb... (v2), key-by-key:
+#   funcs 450 = 450 (identical); methods 537 -> 481 = main's minus 53 wrapper entries minus 3 promoted sync stubs
+#   (raft.MemoryStorage.{Lock,TryLock,Unlock}, NOT wrapper-marked on main), order-preserving; promotions 56 added; schema v1 -> v2; all other keys identical.

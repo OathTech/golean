@@ -1,0 +1,65 @@
+# Independent choice-trace comparison, main 4e7272b3 (git archive, its own frontend + golean) vs tip a8741c9d (worktree frontend + golean).
+# scripts/choice-trace-corpus --dump --jobs 6 (default 6 streams, default fuel), same 878 manifest ids on both sides (both under the box lock).
+# id selection: every id under embedding/ interfaces/ methods/ race/ goroutines/ defer*/ recover*/ panics/ sync/ imported-goose/{channel,interface}/ noodler/{ifaces,methods,frontier,frontier2,defers,gostmt,typeswitch}/
+# (goroutines/send-then-spin and strings/trimspace-repeat excluded as in the lane's run), plus 250 others sampled (shuf, fixed seed); minus the 16 S0-born ids absent on main.
+# composition by top dir:
+#   noodler 157
+#   interfaces 155
+#   sync 90
+#   race 79
+#   goroutines 63
+#   methods 57
+#   builtins 48
+#   spec-examples-decl 25
+#   examples 21
+#   embedding 19
+#   defer 19
+#   imported-goose 16
+#   generics 14
+#   bools 11
+#   maps 9
+#   evalorder 9
+#   channels 9
+#   slices 8
+#   multipkg 8
+#   atomics 7
+#   arrays 7
+#   control-flow 6
+#   range 5
+#   multi-assign 5
+#   panic-recover 4
+#   stdlib-source 3
+#   source-selection 3
+#   returns 3
+#   scoping 2
+#   new 2
+#   init 2
+#   errors 2
+#   binary 2
+#   ints 1
+#   if 1
+#   floats 1
+#   constants 1
+#   complex 1
+#   comparisons 1
+#   bytes 1
+#   assign-order 1
+# promoted/embedding-named ids: 84; race+goroutines ids: 142
+dump rows (LC_ALL=C sorted): main 8107 tip 8107; sha256 main 6a2e474e2e95a26c tip 6a2e474e2e95a26c -> BYTE-IDENTICAL
+result rows (sorted, --out path normalized): main 5251 tip 5251; differing rows below (diff main tip):
+3266,3271c3266,3271
+< noodler/frontier/promoted-method-expression-ptr	1,3,5,7,9,2,4,6,8,0	unsupported	0	0	-	0	-	0	0	-	0	-	16513548357912538511	ok
+< noodler/frontier/promoted-method-expression-ptr	5,5,5,5,5,5,5,5	unsupported	0	0	-	0	-	0	0	-	0	-	16513548357912538511	ok
+< noodler/frontier/promoted-method-expression-ptr	9,8,7,6,5,4,3,2,1,0	unsupported	0	0	-	0	-	0	0	-	0	-	16513548357912538511	ok
+< noodler/frontier/promoted-method-expression-ptr	default	unsupported	0	0	-	0	-	0	0	-	0	-	16513548357912538511	ok
+< noodler/frontier/promoted-method-expression-ptr	rand:1:4096	unsupported	0	0	-	0	-	0	0	-	0	-	16513548357912538511	ok
+< noodler/frontier/promoted-method-expression-ptr	rand:2:4096	unsupported	0	0	-	0	-	0	0	-	0	-	16513548357912538511	ok
+---
+> noodler/frontier/promoted-method-expression-ptr	1,3,5,7,9,2,4,6,8,0	ok	0	0	-	0	-	0	0	-	0	-	5512632218589617086	ok
+> noodler/frontier/promoted-method-expression-ptr	5,5,5,5,5,5,5,5	ok	0	0	-	0	-	0	0	-	0	-	5512632218589617086	ok
+> noodler/frontier/promoted-method-expression-ptr	9,8,7,6,5,4,3,2,1,0	ok	0	0	-	0	-	0	0	-	0	-	5512632218589617086	ok
+> noodler/frontier/promoted-method-expression-ptr	default	ok	0	0	-	0	-	0	0	-	0	-	5512632218589617086	ok
+> noodler/frontier/promoted-method-expression-ptr	rand:1:4096	ok	0	0	-	0	-	0	0	-	0	-	5512632218589617086	ok
+> noodler/frontier/promoted-method-expression-ptr	rand:2:4096	ok	0	0	-	0	-	0	0	-	0	-	5512632218589617086	ok
+export refusals: identical id sets on both sides (3 ids)
+# both runs exit 1 'FINDINGS present' (the summarizer's standing findings); the evidence is the byte identity.

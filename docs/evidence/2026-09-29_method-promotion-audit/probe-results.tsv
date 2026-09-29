@@ -1,0 +1,28 @@
+# Probe results: gc = go1.26.5 (go run; the nil-stub row 20 draws; spawn rows go run -race x5); main = golean built from main 4e7272b3 (git archive + lake build); tip = golean at a8741c9d. Sources: probe-*.go beside this file.
+# probe	gc	main	tip
+recover/p1	ok 0	ok 0	ok 0
+recover/p2	ok 0	ok 0	ok 0
+recover/p3	ok 0	ok 0	ok 0
+recover/p4	ok 0	ok 0	ok 0
+recover/p5	ok 0	unsupported: frontend-quarantined: method expression (*main.SP).rw over a value-receiver method (deref 	ok 0
+recover/p6	ok 100	ok 100	ok 100
+recover/p7	ok 100	ok 100	ok 100
+recover/p9	ok true	ok true	ok true
+recover/p10	ok true	ok true	ok true
+recover/p11	ok 0	ok 0	ok 0
+recover/p12	ok 0	ok 0	ok 0
+nilpath/q8	ok 2	ok 2	ok 2
+nilpath/q13	panic: first + chained nil-deref (golean reports the first entry)	panic: first	panic: first
+nilpath/q14	ok -1	ok -1	ok -1
+nilpath/q15	ok 99	ok 99	ok 99
+nilpath/q16	ok 99	ok 99	ok 99
+nilpath/q17	ok -1	ok -1	ok -1
+nilpath/q18	ok 99	ok 99	ok 99
+nilpath/q19	ok 99	unsupported: frontend-quarantined: method expression (*main.WP).val over a value-receiver method (deref	ok 99
+nilpath/q20	child panic: nil-deref	panic: runtime error: invalid memory address or nil pointer dereference	panic: runtime error: invalid memory address or nil pointer dereference
+nil-stub/nilBoxStubPanic choices=0	panic: nil-deref (20/20)	panic: runtime error: invalid memory address or nil pointer dereference	panic: runtime error: invalid memory address or nil pointer dereference
+nil-stub/nilBoxStubPanic choices=1	panic: nil-deref (20/20)	panic: value method main.S.Lock called using nil *S pointer	panic: runtime error: invalid memory address or nil pointer dereference
+nil-stub/choice-trace (status consumed perSite)	-	panic 1 nilValueMethodText=1	panic 0 -
+spawn/spawnPromotedPtrRace (enumerated, width=4 sites=8)	race (5/5)	race 	race 
+spawn/spawnPromotedPteeRace (enumerated, width=4 sites=8)	race (5/5)	race 	race 
+spawn/spawnPromotedFree (enumerated, width=4 sites=8)	ok 5 (-race clean 5/5)	race 	ok 5

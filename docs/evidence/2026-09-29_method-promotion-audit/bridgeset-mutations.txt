@@ -1,0 +1,10 @@
+# BridgeSet teeth: one-edit mutants of GoLean/GoCore/BridgeSet.lean (tip a8741c9d), each elaborated as a copy
+# with GOLEAN_MEM_MAX=16G scripts/capped lake env lean <copy> against the tip build.
+# id   row  mutation                                                              exit  first error
+ctl    -    (unmutated copy)                                                      0     -
+m67    67   enterFrame_declared: result store s₂ -> s₁                             1     Type mismatch
+m68    68   findFunctionIn?_filter: filter p -> filter (!p ·)                      1     Type mismatch
+m76    76   receiverAt_nil_path: .ok (root, []) -> .ok (.nil, [])                  1     Type mismatch
+m80    80   receiverAt_field: load of Loc.field l owner field -> load of l (whole) 1     Type mismatch
+m84    84   receiverAt_ptr_deref: trace tr ++ tr' -> tr' ++ tr                     1     Type mismatch
+# (a first m76 attempt, .ok (root, [[]].head!), elaborated: [[]].head! reduces to [] — a defeq no-op, not a mutation.)
