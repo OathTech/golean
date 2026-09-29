@@ -182,3 +182,80 @@ reconciler has 2 report-only findings: C9, and C13, which predates this lane. Ta
 - Detector-soundness was not re-run.
 - The lane's per-row step counts were not re-derived.
 - The 5a re-certification is the train's job.
+
+## Re-verification (`ddf62818`, 2026-09-29)
+
+[AGENT] auditor, at the coordinator's request (relayed). The fix round is on `core/method-promotion-0928` at
+`ddf62818`, rebased onto main `4e7272b3`: the four slices, then `17416d2c` (fixes) and `ddf62818` (records). The
+pre-rebase tip is `refs/snapshots/method-promotion-fix/pre-rebase` = `a8741c9d`. This branch was rebased onto
+`ddf62818`. Evidence: `docs/evidence/2026-09-29_method-promotion-audit/reverify-*`.
+
+**REVISED VERDICT: FIX-FIRST, one small records item (R1). Every other claim is verified; F1–F3, F5 and F7 are
+closed, F4 awaits the [USER]'s acknowledgement as posed, and F6 is recorded.**
+
+- **Rebase:** `git range-diff 89792db1..a8741c9d 4e7272b3..6b6352b5` shows all four slices `=`, so the
+  rebased patches are identical. The fix commits' `GoLean/` changes are docstrings and comments only, in
+  `Machine.lean`, `Multi.lean` and `Syntax.lean`.
+- **F1 closed.** The born rows behave as claimed:
+  - `embedding/promoted-stub-dispatch/{nil-box-sync-stub,nil-box-sync-stub-itab}` PASS/confluent at the tip.
+  - The same rows FAIL on main («enumerated observation set has 2 member(s)»).
+  - gc gives nil-deref 5/5 under each of plain, `-race`, `-gcflags=-l` and `-gcflags=-N -l`, in both shapes.
+  - The BUG-087 paragraph, its Status clause and its Cases line are present and accurate.
+  - The handoff's §1 S2 claim now reads «over the CORPUS».
+
+  **FR-35 is a pre-existing gap, correctly rowed.** Interface dispatch to a promoted sync primitive has refused by
+  name since that earlier arc's audit-fix-round F4 stub, on main and the tip alike. Decision 9 / design §4 keep
+  the sync stubs as `unsupported` records, so modelling the dispatch was outside P's ruled scope.
+  `box-sync-stub` is FAIL on both sides. `box-sync-stub-race` answers `race` on main on 3 of 6 streams, via the
+  retired whole-pointee read, and `unsupported` at the tip: the dropped read, fail-closed, as recorded.
+- **R1 (LOW, new): the «FR-23 nil-box variant cannot be rowed» claim is false.** The claim sits in the BUG-087
+  paragraph and the handoff. A method whose opaque type appears only as a PARAMETER is callable with `nil`, and
+  the caller lowers:
+  - The probe `reverify-probe-fr23.go`, subject `takeNil`, is `var t T = (*S)(nil); t.Take(nil)`, where `Take`
+    takes an `iter.Seq[int]` and is promoted through `*In`.
+  - gc gives nil-deref 5/5 under all four flags.
+  - Main admits {nil-deref, «value method main.S.Take called using nil *S pointer»} and consumes one
+    `nilValueMethodText` pick.
+  - The tip gives nil-deref only, with no pick.
+
+  So the tip is right, and this is the FR-23 half of F1's class. Fix: correct the sentence and birth the row. It
+  is PASS at the tip and red on main.
+- **F2 closed.** The `Cont.frame` docstring, the `spawnStep` comment and the changelog now state the exception
+  exactly. The spawn's `Entry.again` barrier frame runs no body and carries the `go` statement's own callee id: the
+  anchor, or the record key, which names no `Func`. The target's frame (`func.id`) is pushed on top when the
+  pending call drains. The timing claim is confirmed in `spawnStep`:
+  - `enterFramePickV` at the spawn walks the path up to the embedded interface field.
+  - It returns `Entry.again anchor [fieldValue, …]`.
+  - `drainConfig` builds `.frame [] [] [] [(cv, [])] .stop fid`.
+  - The concrete target is resolved only when the child's first step enters the anchor through
+    `frameDeferFall`.
+
+  One precision note: the field's value (the box) is already in hand at the spawn, but resolving it to a target
+  happens later. «not known» means «not yet resolved», which is accurate enough.
+- **F3 closed.** The docstring and changelog now say 53 wrappers plus 3 stubs removed, order kept; twin `methods`
+  537 → 481 and `funcs` 450 unchanged. This matches this audit's measurement.
+- **F5 closed.**
+  - `race/free/promoted-spawn-disjoint` is PASS/confluent at the tip. On main it FAILs with a machine-side status
+    divergence (race).
+  - `race/negative/promoted-spawn-ptr-field` is PASS/racy on both sides.
+  - gc agrees, per the round-1 probes of the same shapes: `-race` clean 5/5, and race 5/5.
+- **F7 closed.** The rebase is clean. The changelog's tool-interface scope was spot-checked by diff:
+  - `decodeProgram : Json → Except String Program` has the same signature, now at `NativeToIR.lean:3263`.
+  - The only change to `tools/nativefrontend/main.go` is the schema name in a comment.
+  - `lean-toolchain`, `lake-manifest.json`, `scripts/diff-coverage` and `scripts/coverage-manifest` are
+    untouched.
+- **Baseline:** the header reads 3790 = 3553 / 237, and the ledger tally 130 + 9 + 25 + 8 + 65 = 237 matches it.
+  **Gate:** under the lock, `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff` at `ddf62818` gave RESULT
+  FAIL, EXIT 1, in 1391 s. It is red on EXACTLY the 5a pair: `certificate provenance` STALE and
+  `imported-goose/channel/google-search` PASS → FAIL. The differential is 3790 = 3552 / 238, with no other drift;
+  110 required theorems, eval 298 ok (`reverify-gate-ci-diff-tail.txt`).
+- **Choice trace, the worker's caveats closed.** Main `4e7272b3` was archive-built: `lake build golean` replayed
+  106 jobs from a trace-verified warm cache, and nothing came from the primary checkout. The run covered the 878
+  round-1 ids plus the 6 born ids. Dumps and results are byte-identical except for:
+  - the born ids: main's `nilValueMethodText` consumptions on the two nil rows; the tip's post-refusal pool
+    picks on `promoted-spawn-disjoint`; `box-sync-stub-race` race → unsupported;
+  - the noodler row.
+
+  The export refusals are identical (`reverify-choice-trace.txt`).
+- **Not verified:** the chdriver twin and the elect group under the machine (unchanged from round 1). Only 884
+  ids were re-traced, not the whole corpus.

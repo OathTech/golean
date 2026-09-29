@@ -1,0 +1,18 @@
+# Re-verification choice trace: main 4e7272b3 (archive-built frontend + golean) vs tip ddf62818, scripts/choice-trace-corpus --dump --jobs 6, default streams;
+# ids = choice-trace-ids.txt (878) + the 6 born ids = 884.
+dump rows: main 8146 tip 8147; differing dump rows by id:
+        6 < embedding/promoted-stub-dispatch/nil-box-sync-stub
+        6 < embedding/promoted-stub-dispatch/nil-box-sync-stub-itab
+       13 > race/free/promoted-spawn-disjoint
+result rows: main 5287 tip 5287; differing result rows by (side id status):
+        3 < embedding/promoted-stub-dispatch/box-sync-stub-race	race
+        3 > embedding/promoted-stub-dispatch/box-sync-stub-race	unsupported
+        6 < embedding/promoted-stub-dispatch/nil-box-sync-stub-itab	panic
+        6 > embedding/promoted-stub-dispatch/nil-box-sync-stub-itab	panic
+        6 < embedding/promoted-stub-dispatch/nil-box-sync-stub	panic
+        6 > embedding/promoted-stub-dispatch/nil-box-sync-stub	panic
+        6 > noodler/frontier/promoted-method-expression-ptr	ok
+        6 < noodler/frontier/promoted-method-expression-ptr	unsupported
+        6 > race/free/promoted-spawn-disjoint	ok
+        6 < race/free/promoted-spawn-disjoint	race
+every other id: dump and result rows byte-identical; export refusals identical.

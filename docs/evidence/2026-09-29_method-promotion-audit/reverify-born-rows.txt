@@ -1,0 +1,24 @@
+# Born rows via scripts/diff-one: tip ddf62818 (its own tree) vs main 4e7272b3 (git archive + lake build from a verified warm cache; the tip's fixtures copied in, race dirs add rows only).
+## tip
+FAIL	embedding/promoted-stub-dispatch/box-sync-stub	stage=frontend-export	detail={"message":"frontend-quarantined: promoted sync-primitive method sync.Mutex.Lock reached through interface dispatch on the embedding type (stat
+PASS	embedding/promoted-stub-dispatch/nil-box-sync-stub	stage=confluent	detail=|set|=1 certified over all schedules; coverage-observations: observations=1 steps=27 probes=0 sites=0 leaves=1 maxdepth=0 width=4
+PASS	race/free/promoted-spawn-disjoint	stage=confluent	detail=|set|=1 certified over all schedules; coverage-observations: observations=1 steps=475 probes=78 sites=26 leaves=27 maxdepth=7 width=4
+PASS	embedding/promoted-stub-dispatch/nil-box-sync-stub-itab	stage=confluent	detail=|set|=1 certified over all schedules; coverage-observations: observations=1 steps=21 probes=0 sites=0 leaves=1 maxdepth=0 width=4
+FAIL	embedding/promoted-stub-dispatch/box-sync-stub-race	stage=frontend-export	detail={"message":"frontend-quarantined: promoted sync-primitive method sync.Mutex.Lock reached through interface dispatch on the embedding type (stat
+PASS	race/negative/promoted-spawn-ptr-field	stage=racy	detail=every enumerated path refuses: coverage-observations: observations=1 steps=181 probes=6 sites=2 leaves=3 maxdepth=2 width=4
+## main
+FAIL	embedding/promoted-stub-dispatch/nil-box-sync-stub	stage=confluent	detail=enumerated observation set has 2 member(s) — the observable is NOT schedule-confluent (declare membership with the admitted set, or fix the mac
+FAIL	race/free/promoted-spawn-disjoint	stage=confluent	detail=enumerator failed (exit 1; schedule-confluence not certified): coverage-observations: machine-side status divergence: member under pick assignm
+FAIL	embedding/promoted-stub-dispatch/box-sync-stub	stage=frontend-export	detail={"message":"frontend-quarantined: promoted sync-primitive method sync.Mutex.Lock reached through interface dispatch on the embedding type (stat
+FAIL	embedding/promoted-stub-dispatch/nil-box-sync-stub-itab	stage=confluent	detail=enumerated observation set has 2 member(s) — the observable is NOT schedule-confluent (declare membership with the admitted set, or fix the mac
+FAIL	embedding/promoted-stub-dispatch/box-sync-stub-race	stage=frontend-export	detail={"message":"frontend-quarantined: promoted sync-primitive method sync.Mutex.Lock reached through interface dispatch on the embedding type (stat
+PASS	race/negative/promoted-spawn-ptr-field	stage=racy	detail=every enumerated path refuses: coverage-observations: observations=1 steps=192 probes=6 sites=2 leaves=3 maxdepth=2 width=4
+## gc go1.26.5 (this audit, 5 draws per flag): nil-box-sync-stub, nil-box-sync-stub-itab: nil-deref 5/5 each under plain, -race, -gcflags=-l, -gcflags=-N -l; box-sync-stub: 1 (5/5 each flag); box-sync-stub-race: -race DATA RACE 5/5
+## FR-23 nil-box probe (reverify-probe-fr23.go, subject takeNil: t.Take(nil) through an interface whose method's PARAMETER is iter.Seq[int]); the caller lowers (not quarantined)
+gc: nil-deref 5/5 each under plain, -race, -gcflags=-l, -gcflags=-N -l
+main --choices 0: panic runtime error: invalid memory address or nil pointer dereference
+main --choices 1: panic value method main.S.Take called using nil *S pointer
+main choice-trace (status consumed perSite): panic 1 nilValueMethodText=1
+tip --choices 0: panic runtime error: invalid memory address or nil pointer dereference
+tip --choices 1: panic runtime error: invalid memory address or nil pointer dereference
+tip choice-trace (status consumed perSite): panic 0 -
