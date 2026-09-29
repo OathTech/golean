@@ -1,0 +1,22 @@
+# Audit re-verification R1 (2026-09-29, [AGENT] fix-round worker): the FR-23 nil-box row embedding/promoted-stub-dispatch/nil-box-sig-stub.
+# main = 4e7272b3 via git archive, lake build golean in the archive (106 jobs replayed from a trace-verified warm cache; binary sha256 476cd29fd990a780…), run by the archive's own scripts/diff-one over the fixture.
+# tip = the lane tree (ddf62818 + this fixture), scripts/diff-one. gc = go1.26.5.
+## gc draws (psNilBoxSigStub, recovered text)
+plain 5/5, -race 5/5, -gcflags=-l 5/5, -gcflags='-N -l' 5/5: runtime error: invalid memory address or nil pointer dereference
+## scripts/diff-one — main (the fixture's 5 rows: 0 PASS / 5 FAIL)
+FAIL	embedding/promoted-stub-dispatch/box-sync-stub-race	stage=frontend-export	detail={"message":"frontend-quarantined: promoted sync-primitive method sync.Mutex.Lock reached through interface dispatch on the embedding type (statement/defer ops and method values adjust to the em
+FAIL	embedding/promoted-stub-dispatch/box-sync-stub	stage=frontend-export	detail={"message":"frontend-quarantined: promoted sync-primitive method sync.Mutex.Lock reached through interface dispatch on the embedding type (statement/defer ops and method values adjust to the em
+FAIL	embedding/promoted-stub-dispatch/nil-box-sig-stub	stage=confluent	detail=enumerated observation set has 2 member(s) — the observable is NOT schedule-confluent (declare membership with the admitted set, or fix the machine)
+FAIL	embedding/promoted-stub-dispatch/nil-box-sync-stub-itab	stage=confluent	detail=enumerated observation set has 2 member(s) — the observable is NOT schedule-confluent (declare membership with the admitted set, or fix the machine)
+FAIL	embedding/promoted-stub-dispatch/nil-box-sync-stub	stage=confluent	detail=enumerated observation set has 2 member(s) — the observable is NOT schedule-confluent (declare membership with the admitted set, or fix the machine)
+## scripts/diff-one — tip (3 PASS / 2 FAIL)
+FAIL	embedding/promoted-stub-dispatch/box-sync-stub-race	stage=frontend-export	detail={"message":"frontend-quarantined: promoted sync-primitive method sync.Mutex.Lock reached through interface dispatch on the embedding type (statement/defer ops and method values adjust to the em
+FAIL	embedding/promoted-stub-dispatch/box-sync-stub	stage=frontend-export	detail={"message":"frontend-quarantined: promoted sync-primitive method sync.Mutex.Lock reached through interface dispatch on the embedding type (statement/defer ops and method values adjust to the em
+PASS	embedding/promoted-stub-dispatch/nil-box-sig-stub	stage=confluent	detail=|set|=1 certified over all schedules; coverage-observations: observations=1 steps=33 probes=0 sites=0 leaves=1 maxdepth=0 width=4
+PASS	embedding/promoted-stub-dispatch/nil-box-sync-stub-itab	stage=confluent	detail=|set|=1 certified over all schedules; coverage-observations: observations=1 steps=21 probes=0 sites=0 leaves=1 maxdepth=0 width=4
+PASS	embedding/promoted-stub-dispatch/nil-box-sync-stub	stage=confluent	detail=|set|=1 certified over all schedules; coverage-observations: observations=1 steps=27 probes=0 sites=0 leaves=1 maxdepth=0 width=4
+## native-json-run on the rows' own wires (the admitted texts)
+main --choices 0: panic runtime error: invalid memory address or nil pointer dereference
+main --choices 1: panic value method main.psSigCarrier.Take called using nil *psSigCarrier pointer
+tip --choices 0: panic runtime error: invalid memory address or nil pointer dereference
+tip --choices 1: panic runtime error: invalid memory address or nil pointer dereference

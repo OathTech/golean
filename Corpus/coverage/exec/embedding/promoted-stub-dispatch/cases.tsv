@@ -5,3 +5,4 @@ nil-box-sync-stub	psNilBoxSyncStub	-	panic	runtime error: invalid memory address
 nil-box-sync-stub-itab	psNilBoxSyncStubItab	-	panic	runtime error: invalid memory address or nil pointer dereference	interfaces,embedding,methods,pointers,nil,panic,sync,calls	confluent	no goroutine: the certified singleton is the whole admitted set — a second panic text (BUG-087's panicwrap member) would break it	width=4,sites=8
 box-sync-stub	psBoxSyncStub	-	ok	-	interfaces,embedding,methods,pointers,sync
 box-sync-stub-race	psBoxSyncStubRace	-	race	-	interfaces,embedding,methods,pointers,sync,goroutines,channels,race	racy	-	width=4,sites=8
+nil-box-sig-stub	psNilBoxSigStub	-	panic	runtime error: invalid memory address or nil pointer dereference	interfaces,embedding,methods,pointers,nil,panic,generics,imports	confluent	no goroutine: the certified singleton is the whole admitted set — a second panic text (BUG-087's panicwrap member) would break it	width=4,sites=8

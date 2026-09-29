@@ -615,8 +615,11 @@ pre-rebase` = `a8741c9d`. Before and after for each finding:
   After, the records:
   - BUG-087 gained the paragraph «OVER-WIDE ENVELOPE on promoted declaration-only stubs — FIXED by G-P S2», a Status
     clause, and the two nil rows on its Cases line.
-  - The FR-23 nil-box shape could not be rowed: its caller refuses at FR-23 before any dispatch, on both sides. This is
-    stated in the paragraph.
+  - The FR-23 nil-box shape IS rowable. [CORRECTED at the audit's re-verification R1, 2026-09-29: this line first said it
+    could not be rowed, which holds only when the opaque type is a RESULT.] With the type as a PARAMETER only,
+    `t.Take(nil)` lowers. `embedding/promoted-stub-dispatch/nil-box-sig-stub` is BORN PASS/confluent: gc's nil-deref text
+    5/5 under plain, `-race`, `-l` and `-N -l`. It is RED on main built from `git archive` (2 members). It sits on
+    BUG-087's Cases line, and the BUG-087 paragraph is corrected. See §6.
   - The §1 S2 claim is corrected in place to «over the CORPUS».
   - Changelog: the fix-round paragraph under the migration table, and the P line.
   - Evidence: `docs/evidence/2026-09-29_method-promotion-fix/red-first.txt`. [AGENT] method: main's rows ran under main

@@ -1,5 +1,5 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 3790 (3553 PASS / 237 FAIL)
+# cases: 3791 (3554 PASS / 237 FAIL)
 # re-pinned: 2026-09-20 [AGENT], core/unseq-stage-d-0920, STAGE D of the evaluation-order model v2.1 (route α —
 #   docs/2026-09-20_unseq-stage-d-design.md §2–§3; handoff docs/2026-09-20_unseq-stage-d-handoff.md): NO row added, NO
 #   result changed, ONE stage changed — spec-examples-stmt/continue-label PASS/- -> PASS/confluent, the strict depth=128
@@ -1837,6 +1837,17 @@
 #   scripts/diff-one on the 6 rows at the fix tree (tip 4 PASS / 2 FAIL) and on main 4e7272b3's frontend + binary over the same
 #   fixture (main 1 PASS / 5 FAIL — the red-first record); the full gate line in the handoff. 3784 + 6 = 3790; 3549 + 4 = 3553;
 #   235 + 2 = 237. No PASS -> non-PASS flip.
+# re-pinned: 2026-09-29 [AGENT], core/method-promotion-0928, G-P AUDIT RE-VERIFICATION R1 — ONE row born (the audit's
+#   re-verification section of docs/2026-09-29_method-promotion-audit.md on review/method-promotion-0928 @ 0b5bd524; the
+#   [AGENT] coordinator's disposition, relayed). WHY: the fix round's claim that the FR-23 half of audit F1 could not be rowed
+#   was false; it holds only when the opaque type is a result. With iter.Seq[int] only as a PARAMETER, `t.Take(nil)` lowers
+#   in the caller. BORN PASS (1): embedding/promoted-stub-dispatch/nil-box-sig-stub PASS/confluent: a nil *S box dispatching
+#   to a promoted FR-23 declaration-only stub gives the nil-deref singleton, gc's text 5/5 under plain, -race, -gcflags=-l and
+#   -gcflags='-N -l'. It is RED on main 4e7272b3 built from git archive: 2 members {nil-deref, panicwrap}, BUG-087's over-wide
+#   envelope fixed by G-P S2, and the row is on BUG-087's Cases line. Adding the subject changes the
+#   embedding/promoted-stub-dispatch package's wire; its other four rows are unmoved (diff-one: 3 PASS / 2 FAIL as pinned).
+#   Measured by scripts/diff-one at the tree and on the archive build; the full gate line is in the handoff §6.
+#   3790 + 1 = 3791; 3553 + 1 = 3554; 237 FAIL unchanged. No PASS -> non-PASS flip.
 result	id	stage
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
@@ -2496,6 +2507,7 @@ PASS	embedding/promoted-ptr-method-expression/promoted-value	-
 PASS	embedding/promoted-ptr-method-expression/recover	-
 FAIL	embedding/promoted-stub-dispatch/box-sync-stub	frontend-export
 FAIL	embedding/promoted-stub-dispatch/box-sync-stub-race	frontend-export
+PASS	embedding/promoted-stub-dispatch/nil-box-sig-stub	confluent
 PASS	embedding/promoted-stub-dispatch/nil-box-sync-stub	confluent
 PASS	embedding/promoted-stub-dispatch/nil-box-sync-stub-itab	confluent
 PASS	embedding/value-embedded-pointer-promotion/dynamic-dispatch	-

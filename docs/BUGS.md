@@ -5429,7 +5429,7 @@ member the strict lane compares — was wrong.
   «OVER-WIDE ENVELOPE on promoted declaration-only stubs» at the end of
   this entry (audit F1, recorded 2026-09-29).
 - Pinned-by: differential
-- Cases: noodler/ifaces/mv-iface-nil-call, noodler/ifaces/iface-param-value-nil, noodler/ifaces/global-iface-value-nil, noodler/ifaces/mk-helper-value-nil, noodler/ifaces/iface-dispatch-value-nil, noodler/ifaces/spawn-iface-value-nil, noodler/ifaces/spawn-iface-value-nil-devirt, noodler/ifaces/spawn-helper-value-nil, multipkg/nil-value-method-text, embedding/promoted-stub-dispatch/nil-box-sync-stub, embedding/promoted-stub-dispatch/nil-box-sync-stub-itab
+- Cases: noodler/ifaces/mv-iface-nil-call, noodler/ifaces/iface-param-value-nil, noodler/ifaces/global-iface-value-nil, noodler/ifaces/mk-helper-value-nil, noodler/ifaces/iface-dispatch-value-nil, noodler/ifaces/spawn-iface-value-nil, noodler/ifaces/spawn-iface-value-nil-devirt, noodler/ifaces/spawn-helper-value-nil, multipkg/nil-value-method-text, embedding/promoted-stub-dispatch/nil-box-sync-stub, embedding/promoted-stub-dispatch/nil-box-sync-stub-itab, embedding/promoted-stub-dispatch/nil-box-sig-stub
 - Discovered: 2026-09-03 (the noodler lane — `docs/2026-09-03_noodler-report.md`
   finding F1; probe records `docs/evidence/2026-09-03_noodler/probes/
   gc-wrapper-text/` (seven call shapes) and, the decisive one,
@@ -5611,9 +5611,17 @@ nil-box-sync-stub-itab}` PASS/confluent at the fix tree (the singleton
 set). The same rows are RED on main `4e7272b3`'s frontend + binary
 («enumerated observation set has 2 member(s)») — the red-first record,
 `docs/evidence/2026-09-29_method-promotion-fix/red-first.txt`. The FR-23
-stub's nil-box shape cannot be rowed: any call through it mentions a value
-of the imported generic type, and the CALLER refuses by name (FR-23) on
-main and the tip alike before any dispatch. The measured consequence for
+stub's nil-box shape IS rowable. [CORRECTED 2026-09-29 at the audit's
+re-verification R1: this sentence first said it could not be rowed. That
+holds only when the opaque type is a RESULT, where the caller must build a
+value of it and refuses at FR-23.] When the imported generic type appears
+only as a PARAMETER, `t.Take(nil)` lowers in the caller. The row is
+`embedding/promoted-stub-dispatch/nil-box-sig-stub`: PASS/confluent at the
+fix tree, the nil-deref singleton, which is gc's text 5/5 under plain,
+`-race`, `-gcflags=-l` and `-gcflags=-N -l`. It is RED on main `4e7272b3`
+built from `git archive`: 2 members, «value method main.psSigCarrier.Take
+called using nil *psSigCarrier pointer» among them. The record is
+`docs/evidence/2026-09-29_method-promotion-fix/red-first-fr23.txt`. The measured consequence for
 the S2 choice trace: the `nilValueMethodText` consumption count was
 unchanged over the CORPUS only, because no corpus row had this shape
 before these rows were born. At the non-nil box the same stub entry also

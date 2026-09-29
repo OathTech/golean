@@ -1,6 +1,9 @@
 package main
 
-import "sync"
+import (
+	"iter"
+	"sync"
+)
 
 // Born pins for the G-P audit's F1 (docs/2026-09-29_method-promotion-audit.md;
 // fix round 2026-09-29, lane core/method-promotion-0928): interface DISPATCH
@@ -70,6 +73,32 @@ func psBoxSyncStubRace() int {
 	}()
 	l.Lock()
 	return <-done
+}
+
+// The FR-23 half (audit re-verification R1, 2026-09-29): a promoted method
+// whose signature mentions an imported generic instantiation (iter.Seq[int])
+// is a declaration-only STUB record (promotionStubRecord's FR-23 arm). With
+// the opaque type only in a PARAMETER position the caller lowers (nil is the
+// argument; no value of the type is built), so the nil-box dispatch is
+// observable: gc's wrappee is the embedded *psIn, not psSigCarrier, so gc
+// dereferences — the nil-deref text only. Main's binary admitted BUG-087's
+// panicwrap text too (one nilValueMethodText pick); since G-P S2, nil-deref
+// only, no pick.
+type psIn struct{ n int }
+
+func (i psIn) Take(s iter.Seq[int]) int { return i.n }
+
+type psTaker interface{ Take(iter.Seq[int]) int }
+
+type psSigCarrier struct {
+	*psIn
+	z int
+}
+
+func psNilBoxSigStub() int {
+	var p *psSigCarrier
+	var t psTaker = p
+	return t.Take(nil)
 }
 
 func main() {}
