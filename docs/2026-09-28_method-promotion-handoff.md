@@ -705,3 +705,40 @@ Post-gate edit disclosed: the FR-35 cell's two backtick removals, this §5, the 
 `choice-trace-compare.txt` were written after the gate. They are records only, in the next commit, and no tracked file
 was edited while the gate read the tree. The scratch (`.tmp/fix/`: binaries, the main-root copy, the traces) is deleted
 at the end of the round, except the logs the lines above cite.
+
+## 6. The audit re-verification R1 (2026-09-29)
+
+This follows the audit's «Re-verification (`ddf62818`)» section (`review/method-promotion-0928` @ `0b5bd524`). Its verdict
+was FIX-FIRST on one small records item, R1; F1–F3, F5 and F7 were verified closed. The disposition is the [AGENT]
+coordinator's, relayed; [AGENT] fix-round worker.
+
+- **R1: the FR-23 nil-box shape is rowable.** Before: §5 and the BUG-087 paragraph said it «cannot be rowed». After: both
+  are corrected in place.
+- **The row.** `embedding/promoted-stub-dispatch/nil-box-sig-stub` is BORN PASS/confluent. It is
+  `var t psTaker = (*psSigCarrier)(nil); t.Take(nil)`, where `Take(iter.Seq[int])` is promoted through `*psIn`, so the
+  opaque type appears only as a parameter.
+  - gc: the nil-deref text 5/5 under each of plain, `-race`, `-gcflags=-l` and `-gcflags=-N -l`.
+  - Main `4e7272b3`: RED, 2 members, the panicwrap text «value method main.psSigCarrier.Take called using nil
+    *psSigCarrier pointer» among them. That binary was built from `git archive` in scratch: `lake build golean`, 106 jobs
+    replayed from a trace-verified warm copy of the primary's cache, so the primary binary's provenance question from §5 is
+    now settled. It was run by the archive's own `scripts/diff-one`.
+  - The tip: the singleton.
+  - The row is on BUG-087's Cases line. Evidence: `docs/evidence/2026-09-29_method-promotion-fix/red-first-fr23.txt`.
+- **The fixture's other four rows** are unmoved (diff-one at the tree: 3 PASS / 2 FAIL as pinned; on main: 0 PASS / 5 FAIL).
+- **Baseline:** 3790 = 3553 / 237 → 3791 = 3554 / 237, with the written reason in the header. **Ledger:** the §8 tally, §8aq,
+  and the FR-35 row's green-row list. No bucket moved; the check is 130 + 9 + (24 + 1) + 8 + 65 = 237. **Changelog:** the
+  fix-round paragraph and the P line.
+
+**Gates:**
+- Individual gates (`.tmp/fix/gates-summary-r1.log`), all EXIT=0: `check-core-audit` (110 required theorems),
+  `check-mem-callsites`, `check-unseq-scheduler`, `check-wire-boundary`, `check-unseq-wire`, `check-frontend-pins`, the go
+  tests, eval tests (298 ok), `check-bugs`, `check-evidence-size`. The reconciler reports C9 and C13 only.
+- `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff`, under the box-wide lock at `0e7d6c80`: RESULT FAIL, EXIT 1, 762 s.
+  It is red on EXACTLY the 5a pair:
+  - `certificate provenance` STALE (C9: `GoLean/CLI.lean`);
+  - `imported-goose/channel/google-search` PASS/membership → FAIL/membership.
+
+  The differential was 3791 = 3553 / 238 against the baseline's 3554 / 237; that one row is the whole difference. The
+  re-pin guard reported 0 flips, the negative corpus matched 394, and every other step was ok.
+
+This section was written after that gate, records only, in the next commit.
