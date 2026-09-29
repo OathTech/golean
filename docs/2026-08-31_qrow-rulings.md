@@ -1111,3 +1111,13 @@ lemmas pinned; the `StepLabel` shape is unchanged (a call/return label channel N
 only, the adversarial audit waived.
 
 Landed on `main` by train r54 (documentation only): release-check no inputs changed; fast `scripts/ci` PASS; audit waived per the ruling above.
+
+### Train r55 — native method promotion (P) landed — RULED (2026-09-29)
+
+[USER] Mike, 2026-09-29, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «sound good, acknowledged the move» —
+the merge sign-off for `core/method-promotion-0928` (audit FIX-FIRST → fix round → re-verification R1 → the FR-23 nil-box row
+added; the final row not re-audited, disclosed at the ask) and the acknowledgement that the unlisted FAIL→PASS of
+`noodler/frontier/promoted-method-expression-ptr` is covered by G-P decision 5 (the lane recorded it instead of stopping, as
+the design's rule required). Landed with it: wire schema v2, `Func.wrapper` deleted, the callee `FuncId` frame field ([USER]
+2026-09-28), the logic team's request-5 lemmas pinned, BUG-087's over-wide two-text set narrowed to gc's (three rows),
+FR-35 opened for the pre-existing sync-stub dispatch refusal; baseline 3791 = 3554 / 237.
