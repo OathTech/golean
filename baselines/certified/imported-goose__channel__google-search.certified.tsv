@@ -6,6 +6,11 @@
 # deliberately, in its own commit, with the reason — never auto-written.
 # certified: 2026-09-09T22:57:32.195148+00:00  commit: 7d60c8bf12ef5d34d1ef9901c213cd724926d78f (F8; clean-source scripts/ci --slow PASS; complete claim, inputs and producer receipt in adjacent .certified.json)
 # re-certification reason [AGENT] 2026-09-09: F8 binds the unchanged six-member set to the full claim, semantic/build inputs and captured checker run; no observation, parameter or wire re-pin.
+# wire-sha256 moved [AGENT] 2026-09-29 (train r55, native method promotion G-P S2, wire schema v2): 736f1730… -> dc232a8c… — the only
+#   wire differences are `schema` golean-native-v1 -> golean-native-v2 and a new top-level `promotions` array, EMPTY for this fixture
+#   (lowered with the pre-promotion frontend at 74f5bada and the landed one, JSON diffed); every other wire key is unchanged; the
+#   six-member set is re-enumerated fresh by the train's scripts/ci --slow and its candidate installed as the adjacent
+#   .certified.json (a changed set would be a finding, never a re-pin). Precedent: the 2026-09-12 BUG-108 move below.
 # wire-sha256 moved [AGENT] 2026-09-12 (lane fix/review-boundary-0911, S1b, BUG-108): 2f1d639f… -> 736f1730… — the wire gains the program-level `buildContext` record (the go/build file-selection target); the fixture's
 #   file set and every other wire key are unchanged; the six-member set is re-enumerated fresh by this stage's scripts/ci --slow
 #   and its candidate installed as the adjacent .certified.json (a changed set would be a finding, never a re-pin).
@@ -383,7 +388,7 @@
 #   `work=` still bounds the dedup run (it fails loud on breach).
 #   Standard: docs/2026-08-21_w32-por-design.md §1/§3/§4.
 # params: width=4,sites=48,work=60000000,members=6,engine=dedup,tier=slow
-# wire-sha256: 736f1730765d90098f37ff2ccecacd073c8f5e385a0c949ba8af4b05410238b8
+# wire-sha256: dc232a8c2075ba658597182a7fef491f504ba95d54cdf26298eee203cc02f1be
 # enum-stats: observations=6 steps=6565663 probes=0 sites=6193933 leaves=0 maxdepth=0 width=4 engine=dedup nodes=6193933 edges=6565663 dedupHits=371731 certified=checkCert
 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":123}]}
 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":132}]}
