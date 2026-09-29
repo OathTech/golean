@@ -742,3 +742,16 @@ coordinator's, relayed; [AGENT] fix-round worker.
   re-pin guard reported 0 flips, the negative corpus matched 394, and every other step was ok.
 
 This section was written after that gate, records only, in the next commit.
+
+## Merge train r55 — the 5a record ([AGENT] coordinator, 2026-09-29)
+
+[USER] Mike 2026-09-29 «sound good, acknowledged the move» (relayed; rulings ledger «Train r55»). Pre-merge main `4e7272b3` →
+`refs/snapshots/r55/main`; train tip `fb93f822` fast-forwarded. `release-check` EXIT=2 (EXPECTED — STALE,
+`build/files/GoLean/CLI.lean`). The first `ci --slow` (1033 s) was red on the 5a pair, but the slow-tier row refused BEFORE
+re-certifying: «certified record wire-sha256 missing, duplicated or STALE» — P's wire schema v2 changed the fixture's wire. JSON
+diff of the fixture lowered by the pre-promotion frontend (74f5bada) vs the landed one: only `schema` v1 → v2 and an EMPTY
+`promotions` array. The record's `wire-sha256` moved 736f1730… → dc232a8c… with that reason (commit `f2c157ab`; precedent
+2026-09-12 BUG-108). The re-run `ci --slow` (985 s) is red on exactly the 5a pair; 3791 rows, 3553 PASS / 238 FAIL = the pin
+3554 / 237 with the one 5a-class row red; fresh re-enumeration: `observations_sha256` IDENTICAL, the claim differs only in
+`wire_sha256` — the candidate (receipt `f2c157ab`, 91.28 s) is INSTALLED in this commit; a provenance refresh, not a re-pin.
+Tail: `docs/evidence/2026-09-29_method-promotion-fix/r55-ci-slow.tail.txt`.
