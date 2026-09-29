@@ -51,3 +51,10 @@ struct-tag-alias-disjoint-fields	freeStructTagAliasDisjointFields	-	ok	-	gorouti
 # FAIL on BUG-041's Cases: line (S3 addendum over-refusal: the whole-
 # pointee fallback); expected to flip at G-P S2 (exact path loads).
 promoted-ptr-hop	freePromotedPtrHop	-	ok	-	goroutines,channels,interfaces,methods,embedding,pointers,race	confluent	join-ordered readout; a granularity false positive on any schedule would break the certified singleton	width=4,sites=8
+# G-P audit F5 born pin (fix round 2026-09-29): `go g.Send(ch)` through a
+# promoted value method over an embedded-POINTER hop beside a DISJOINT
+# outer-field write — go run -race green 5/5. The machine walks the path at
+# the spawn step (reads attributed to the child); the footprint is the
+# path's cells (decision 6). Red on main's binary (race: the retired
+# wrapper's whole-pointee read) — decision 6's class, a spawn instance.
+promoted-spawn-disjoint	freePromotedSpawnDisjoint	-	ok	-	goroutines,channels,interfaces,methods,embedding,pointers,race	confluent	the child's send is the only value main receives; a granularity false positive on any schedule would break the certified singleton	width=4,sites=8

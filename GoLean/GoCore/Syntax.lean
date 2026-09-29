@@ -1147,7 +1147,23 @@ and `f` survives the filter `p`, then `id` finds the SAME `f` in
 (declared functions + synthesized wrappers), `p` = «declared» (the retired
 `¬ Func.wrapper`), `funcs.filter p` = the post-P table — every declared
 function the client's premise names is found unchanged; no wrapper `Func`
-was ever a declared function. -/
+was ever a declared function.
+CORRECTED (audit F3, 2026-09-29, [AGENT] fix round): the migration instance
+is `funcs` = the pin's table (declared functions + synthesized wrappers +
+the promoted DECLARATION-ONLY stubs — the promoted sync-primitive stubs and
+the FR-23 promoted-signature stubs, which were ordinary non-wrapper `Func`s
+before G-P S2), `p` = «neither a synthesized wrapper nor a promoted stub»
+(both left the table at S2 and became promotion records, `Program.promotions`),
+`funcs.filter p` = the post-P table, order kept. Measured on the raft twin
+pin: the function list 450 → 450 identical, the method list 537 → 481 =
+the pin's minus the 53 wrappers minus the 3 promoted sync stubs
+(`raft.MemoryStorage.{Lock,TryLock,Unlock}`), every remaining entry
+byte-identical and in the same order. So the filter is NOT «¬ wrapper»
+alone. A client crossing the pin also crosses a `Func` SHAPE change (the
+`wrapper` field was removed): the lemma is stated over one `Func` type, and
+the migration reading applies it to the pin's surviving rows as projected to
+the new shape (the projection drops only the removed field). The lemma is
+true for every `p`. -/
 theorem findFunctionIn?_filter {funcs : Array Func} {id : FuncId} {f : Func} {p : Func → Bool}
     (h : findFunctionIn? funcs id = some f) (hp : p f = true) :
     findFunctionIn? (funcs.filter p) id = some f := by

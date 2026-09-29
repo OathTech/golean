@@ -1,0 +1,42 @@
+# G-P audit fix round (2026-09-29, [AGENT] worker, lane core/method-promotion-0928): red-first record for the born rows of audit F1 and F5.
+# main = frontend built from 4e7272b3 tools/nativefrontend + the primary checkout's golean binary (its provenance as main's build is INFERRED, not proved: it reproduces the audit's main
+#   answers for the nil-stub probe exactly — the two texts, one pick; sha256 476cd29fd990a780…),
+#   run by main 4e7272b3's scripts/diff-one in a scratch tree over the NEW fixtures (a PATH shim skipped its lake build — the binary was prebuilt).
+# tip = this lane's fix tree (frontend + golean built from it), scripts/diff-one.
+# gc = go1.26.5 go run / go run -race (and -gcflags=-l, -N -l for the nil rows).
+
+## gc draws
+nil-box-sync-stub / nil-box-sync-stub-itab: panic 'runtime error: invalid memory address or nil pointer dereference' — 20/20 plain, 5/5 -race, 1/1 -gcflags=-l, 1/1 -gcflags='-N -l' (each shape)
+box-sync-stub: ok 1 — 20/20 plain, 5/5 -race
+box-sync-stub-race: -race reports DATA RACE 5/5 (write p.Mutex in the child vs the wrapper's read in main); plain 1 5/5
+race/free/promoted-spawn-disjoint: plain 5 5/5; -race 0 warnings 5/5
+race/negative/promoted-spawn-ptr-field: plain 6 5/5 (the child walks the path after the parent's write); -race 2 warnings 5/5
+
+## scripts/diff-one — main (1 PASS / 5 FAIL)
+FAIL	embedding/promoted-stub-dispatch/box-sync-stub-race	stage=frontend-export	detail={"message":"frontend-quarantined: promoted sync-primitive method sync.Mutex.Lock reached through interface dispatch on the embedding type (statement/defer ops and method values adjust to the embedded primitive at their site
+FAIL	embedding/promoted-stub-dispatch/box-sync-stub	stage=frontend-export	detail={"message":"frontend-quarantined: promoted sync-primitive method sync.Mutex.Lock reached through interface dispatch on the embedding type (statement/defer ops and method values adjust to the embedded primitive at their site
+FAIL	embedding/promoted-stub-dispatch/nil-box-sync-stub-itab	stage=confluent	detail=enumerated observation set has 2 member(s) — the observable is NOT schedule-confluent (declare membership with the admitted set, or fix the machine)
+FAIL	embedding/promoted-stub-dispatch/nil-box-sync-stub	stage=confluent	detail=enumerated observation set has 2 member(s) — the observable is NOT schedule-confluent (declare membership with the admitted set, or fix the machine)
+FAIL	race/free/promoted-spawn-disjoint	stage=confluent	detail=enumerator failed (exit 1; schedule-confluence not certified): coverage-observations: machine-side status divergence: member under pick assignment [0] has status race, outside the case's declared status set [ok] — a member 
+PASS	race/negative/promoted-spawn-ptr-field	stage=racy	detail=every enumerated path refuses: coverage-observations: observations=1 steps=192 probes=6 sites=2 leaves=3 maxdepth=2 width=4
+
+## scripts/diff-one — tip (4 PASS / 2 FAIL)
+FAIL	embedding/promoted-stub-dispatch/box-sync-stub-race	stage=frontend-export	detail={"message":"frontend-quarantined: promoted sync-primitive method sync.Mutex.Lock reached through interface dispatch on the embedding type (statement/defer ops and method values adjust to the embedded primitive at their site
+FAIL	embedding/promoted-stub-dispatch/box-sync-stub	stage=frontend-export	detail={"message":"frontend-quarantined: promoted sync-primitive method sync.Mutex.Lock reached through interface dispatch on the embedding type (statement/defer ops and method values adjust to the embedded primitive at their site
+PASS	embedding/promoted-stub-dispatch/nil-box-sync-stub-itab	stage=confluent	detail=|set|=1 certified over all schedules; coverage-observations: observations=1 steps=21 probes=0 sites=0 leaves=1 maxdepth=0 width=4
+PASS	embedding/promoted-stub-dispatch/nil-box-sync-stub	stage=confluent	detail=|set|=1 certified over all schedules; coverage-observations: observations=1 steps=27 probes=0 sites=0 leaves=1 maxdepth=0 width=4
+PASS	race/free/promoted-spawn-disjoint	stage=confluent	detail=|set|=1 certified over all schedules; coverage-observations: observations=1 steps=475 probes=78 sites=26 leaves=27 maxdepth=7 width=4
+PASS	race/negative/promoted-spawn-ptr-field	stage=racy	detail=every enumerated path refuses: coverage-observations: observations=1 steps=181 probes=6 sites=2 leaves=3 maxdepth=2 width=4
+
+# the native-json-run lines below ran on a scratch probe package carrying the same subject bodies (psNilBoxSyncStub, psBoxSyncStubRace).
+## the dropped pointee read (BUG-087 paragraph; handoff choice (iii)) — native-json-run on psBoxSyncStubRace
+main --choices 0: unsupported frontend-quarantined: promoted sync-primitive method sync.Mutex.Lock reached through inter
+main --choices 1: race data race detected
+tip --choices 0: unsupported frontend-quarantined: promoted sync-primitive method sync.Mutex.Lock reached through inter
+tip --choices 1: unsupported frontend-quarantined: promoted sync-primitive method sync.Mutex.Lock reached through inter
+
+## the nil box on main's binary: the two admitted texts (psNilBoxSyncStub)
+main --choices 0: panic runtime error: invalid memory address or nil pointer dereference
+main --choices 1: panic value method main.psPtrEmbed.Lock called using nil *psPtrEmbed pointer
+tip --choices 0: panic runtime error: invalid memory address or nil pointer dereference
+tip --choices 1: panic runtime error: invalid memory address or nil pointer dereference

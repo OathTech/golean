@@ -174,6 +174,9 @@ shape before → after, what a re-pin touches).» — DONE in S2 (below). No dev
   or a record (for a promoted dispatch the anchor is not a function with a body; the record is not a function); the
   drivers' barrier frames name the entry point / `pkgInitFuncId`; the spawn's `again` barrier frame names the anchor
   the `go` statement re-dispatches through (that frame belongs to the goroutine's call, whose callee is that anchor).
+  [CORRECTED at the audit fix round, audit F2: that frame carries the `go` statement's OWN callee id. For `go i.M()` that is
+  the interface anchor; for `go S.M(s)` it is the promotion record's key `methodFuncId S M`, which names no `Func`. It is NOT
+  the re-dispatch anchor, which is the pending call's function value (`Entry.again`'s id). The frame runs no body; §5 F2.]
   Position: the LAST field, where the wrapper marker stood, so every `.frame t e r ds k w` pattern keeps its arity
   (the universally quantified `w` became `fr : FuncId` in the rules — no rule reads it). Lemmas: `Entry.callConfig_run`
   (the frame a call position pushes names the resolved callee — definitional), `frame_exit_returns` (a frame exit
@@ -283,8 +286,10 @@ dump rows exist for them on either side — a method expression's call consults 
 `arrays/materialization-budget/over-budget`: the decoder's refusal text names its input file under the run's `--out`
 directory (S1's known row). Dumps 26 367 → 26 377 rows (the 10 above), results 22 489 = 22 489 rows; the `unseqPanic`,
 `nilValueMethodText`, `mapIter`, `appendSpill`, `tryLock`, `l2Entry`, `l4Waiter` consumptions of EVERY other row are
-byte-identical — the `nilValueMethodText` consumption count is unchanged (S9). Nothing outside the documented items
-moved.
+byte-identical — the `nilValueMethodText` consumption count is unchanged (S9) OVER THE CORPUS. [CORRECTED at the audit fix
+round, 2026-09-29, audit F1: outside the corpus one shape moved. A nil `*S` box dispatching to a promoted declaration-only
+STUB consumed one pick on main and consumes none since S2. No corpus row had that shape, so this trace could not see it. It
+is now rowed and recorded in §5.] Nothing outside the documented items moved over the corpus.
 
 **Detector-soundness** (`scripts/detector-soundness --out .tmp/detector-soundness-s2`, defaults `--runs 5 --procs 1,8
 --jobs 6 --select in-scope`, under the lock, 2026-09-29T01:13→01:45Z): 749 in-scope rows; cells agree-DRF 605,
@@ -487,8 +492,8 @@ are DONE where quoted. What the lane leaves for the [USER] is the merge sign-off
 [AGENT] readings the audit should see, none a deviation: S1 — the ONE acceptance rule beyond the design's letter for a
 record whose `method` target has no declaration on the wire (accepted iff the reached type is imported/opaque and the
 key is exactly `methodFuncId reached member`; the call then refuses by name — the twin's `raft.DefaultLogger.output`);
-S2 — choices (i)–(viii) in §1 S2 (the `Entry` shapes; the frame's `fid` = the entered function, and the anchor for the
-spawn's re-dispatch barrier; the stub record's nil-first order; the declared arm's «target before receiver» order;
+S2 — choices (i)–(viii) in §1 S2 (the `Entry` shapes; the frame's `fid` = the entered function, and the `go`
+statement's own callee id at the spawn's re-dispatch barrier (wording corrected, §5 F2); the stub record's nil-first order; the declared arm's «target before receiver» order;
 the decoder-added `frontend-quarantined: ` marker; the FR-23 cause re-wording; `ProgramCtx.ofTables`' trailing
 default; `reachability.py`'s label resolution), and the fourth flipped row
 `noodler/frontier/promoted-method-expression-ptr` — the `(*T).M`-over-promoted class the design's §5 did not enumerate,

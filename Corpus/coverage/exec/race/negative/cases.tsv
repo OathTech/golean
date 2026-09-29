@@ -61,3 +61,8 @@ struct-tag-alias-array-field	raceStructTagAliasArrayField	-	race	-	goroutines,ch
 # reports both); the S2 narrowing must keep refusing both.
 promoted-ptr-hop-target	racePromotedPtrHopTarget	-	race	-	goroutines,channels,interfaces,methods,embedding,pointers,race	racy	-	width=4,sites=8
 promoted-ptr-hop-field	racePromotedPtrHopField	-	race	-	goroutines,channels,interfaces,methods,embedding,pointers,race	racy	-	width=4,sites=8
+# G-P audit F5 must-stay-racy guard (fix round 2026-09-29) for
+# race/free/promoted-spawn-disjoint: the parent overwrites the embedded
+# pointer field after `go g.Send(ch)` — gc -race reports it 5/5; racy on
+# main's binary and on the tip (the spawn-step walk keeps the verdict).
+promoted-spawn-ptr-field	racePromotedSpawnPtrField	-	race	-	goroutines,channels,interfaces,methods,embedding,pointers,race	racy	-	width=4,sites=8

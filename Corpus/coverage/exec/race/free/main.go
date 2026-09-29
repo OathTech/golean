@@ -296,6 +296,7 @@ func freePromotedPtrHop() int {
 }
 
 func main() {
+	println(freePromotedSpawnDisjoint())
 	println(freePromotedPtrHop())
 	println(freeSliceDisjoint())
 	println(freeFieldDisjoint())
@@ -332,4 +333,34 @@ func freeStructTagAliasDisjointFields() int {
 	c.f = 1
 	<-done
 	return c.f*10 + q.g
+}
+
+// G-P audit F5 born pin (fix round 2026-09-29, lane core/method-promotion-0928):
+// `go g.Send(ch)` through a promoted value method reached over an embedded
+// POINTER hop, beside a write to a DISJOINT outer field. gc's wrapper walks
+// the path (reads p.spE, copies *p.spE) in the CHILD; since G-P S2 the
+// machine walks it at the SPAWN step against the spawner's store (the
+// pre-existing spawn-entry model, the reads attributed to the child). The
+// walk's footprint is the path's own cells (decision 6), so the p.z write
+// does not conflict: go run -race green 5/5. Main's binary (the retired
+// wrapper's whole-pointee read) refused it as a race — decision 6's class,
+// a spawn instance.
+type freeSpSender interface{ Send(ch chan int) }
+
+type freeSpE struct{ v int }
+
+func (e freeSpE) Send(ch chan int) { ch <- e.v }
+
+type freeSpS struct {
+	*freeSpE
+	z int
+}
+
+func freePromotedSpawnDisjoint() int {
+	p := &freeSpS{freeSpE: &freeSpE{5}}
+	var g freeSpSender = p
+	ch := make(chan int)
+	go g.Send(ch)
+	p.z = 1
+	return <-ch
 }

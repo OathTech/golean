@@ -5421,9 +5421,15 @@ member the strict lane compares — was wrong.
   dereferences and gives the ordinary nil-deref text (probed at the pin).
   The site's width and consumption are identical to the wrapper era
   (the S2 whole-corpus choice trace: byte-identical
-  `nilValueMethodText` consumptions).
+  `nilValueMethodText` consumptions — over the CORPUS: outside it, one
+  shape moved, below). The over-wide envelope on promoted
+  DECLARATION-ONLY STUBS (a nil `*S` box dispatching to a promoted
+  sync-primitive or FR-23 stub was in the family on main, two texts
+  admitted where gc has one) is also fixed by G-P S2: see the paragraph
+  «OVER-WIDE ENVELOPE on promoted declaration-only stubs» at the end of
+  this entry (audit F1, recorded 2026-09-29).
 - Pinned-by: differential
-- Cases: noodler/ifaces/mv-iface-nil-call, noodler/ifaces/iface-param-value-nil, noodler/ifaces/global-iface-value-nil, noodler/ifaces/mk-helper-value-nil, noodler/ifaces/iface-dispatch-value-nil, noodler/ifaces/spawn-iface-value-nil, noodler/ifaces/spawn-iface-value-nil-devirt, noodler/ifaces/spawn-helper-value-nil, multipkg/nil-value-method-text
+- Cases: noodler/ifaces/mv-iface-nil-call, noodler/ifaces/iface-param-value-nil, noodler/ifaces/global-iface-value-nil, noodler/ifaces/mk-helper-value-nil, noodler/ifaces/iface-dispatch-value-nil, noodler/ifaces/spawn-iface-value-nil, noodler/ifaces/spawn-iface-value-nil-devirt, noodler/ifaces/spawn-helper-value-nil, multipkg/nil-value-method-text, embedding/promoted-stub-dispatch/nil-box-sync-stub, embedding/promoted-stub-dispatch/nil-box-sync-stub-itab
 - Discovered: 2026-09-03 (the noodler lane — `docs/2026-09-03_noodler-report.md`
   finding F1; probe records `docs/evidence/2026-09-03_noodler/probes/
   gc-wrapper-text/` (seven call shapes) and, the decisive one,
@@ -5573,6 +5579,54 @@ main) dropped from every row. Audit finding recorded: the two re-laned
 strict rows fail the pre-existing strict invariance check (stage
 `nondet`, default = {nil-deref}, variant = {panicwrap}), so re-laning was
 necessary.
+
+**OVER-WIDE ENVELOPE on promoted declaration-only stubs — FIXED by G-P S2
+(2026-09-29, lane `core/method-promotion-0928`; recorded at the G-P audit
+fix round, [AGENT]; the audit `docs/2026-09-29_method-promotion-audit.md`
+F1 on `review/method-promotion-0928` @ `fb24d243`).** From 2026-09-03 to
+G-P S2 the family test excluded only `Func.wrapper` targets. Two kinds of
+promoted method-set entry were emitted as ordinary NON-wrapper `Func`s:
+the promoted SYNC-PRIMITIVE stub (`syncPromotedStub`, e.g.
+`sync.Mutex.Lock` promoted through an embedded `*sync.Mutex`) and the
+FR-23 promoted-signature stub (`promotedSigStub`). Each stub was keyed
+under the carrier `S` with a value receiver `S`, so a NIL `*S` box
+dispatching through an interface to one of them passed every clause of
+the test. The machine then admitted TWO texts through one
+`nilValueMethodText` pick: {nil-deref, `value method main.S.Lock called
+using nil *S pointer`}. gc's `panicwrap` test is `types.Identical(
+wrapper.Elem(), wrappee)`, and the wrappee of a promoted entry is the
+EMBEDDED type (`*sync.Mutex` here), never `S`. So gc dereferences and
+gives the nil-deref text only: 20/20 plain, 5/5 `-race`, and the same
+under `-gcflags=-l` and `-gcflags=-N -l`, for the devirtualized shape and
+for the itab shape (an opaque `//go:noinline` callee). Main's set was a
+SUPERSET of gc's, so no wrong answer was ever observable. But the set
+was wider than this entry's own stated family («promoted / embedded
+shapes are NOT in the family»), and a second pick was consumed where gc
+has one text. Since G-P S2 both stubs are promotion RECORDS (`unsupported`
++ `sig`). A record resolves through a NON-empty path, so it is outside
+the family. The stub record's nil-first check (`dynamicDispatch?`, the
+check the retired stub entry made) raises the nil-deref text alone, with
+no pick. Rows: `embedding/promoted-stub-dispatch/{nil-box-sync-stub,
+nil-box-sync-stub-itab}` PASS/confluent at the fix tree (the singleton
+set). The same rows are RED on main `4e7272b3`'s frontend + binary
+(«enumerated observation set has 2 member(s)») — the red-first record,
+`docs/evidence/2026-09-29_method-promotion-fix/red-first.txt`. The FR-23
+stub's nil-box shape cannot be rowed: any call through it mentions a value
+of the imported generic type, and the CALLER refuses by name (FR-23) on
+main and the tip alike before any dispatch. The measured consequence for
+the S2 choice trace: the `nilValueMethodText` consumption count was
+unchanged over the CORPUS only, because no corpus row had this shape
+before these rows were born. At the non-nil box the same stub entry also
+READ the whole pointee before refusing (the retired auto-deref); the
+record does not. The run refuses by name either way (the stub's cause).
+The dropped read is observable only on a racy program:
+`embedding/promoted-stub-dispatch/box-sync-stub-race`. Under
+`native-json-run --choices 1` main's binary answers `race` (the pointee
+read against the child's write of `p.Mutex`) and the tip answers the
+refusal; gc `-race` reports the race 5/5. That shortens the access trace
+before a refusal and never changes the refusal; it fails closed. The
+non-nil rows are born FAIL by design on the ledger's FR-35 line, not
+here.
 
 ## BUG-089 — `strconv.ParseUint` retired pending the slice-2 overlay (D-002 exception denied [USER] 2026-09-03): every ParseUint ERROR path refuses by name at `internal/stringslite.Clone` (`unsafe.String`) — [USER]-DIRECTED designed reds [frontend; stdlib source-through slice 1]
 

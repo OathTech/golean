@@ -3377,7 +3377,25 @@ inductive Cont where
   dispatch the declared TARGET method actually entered, never an interface
   anchor or a record), set by every entry site from `Entry.run`'s `Func`
   (`Entry.callConfig`/`Entry.drainConfig`); the drivers' entry frames name
-  the entry point / `pkgInitFuncId`. A REPRESENTATION field only: no rule
+  the entry point / `pkgInitFuncId`. THE ONE EXCEPTION (audit F2,
+  2026-09-29, [AGENT] fix round): the `go` spawn's barrier frame on an
+  `Entry.again` (`spawnStep`, Multi.lean — a promoted `go` callee whose
+  path ends in an embedded INTERFACE field) runs NO body. It holds the
+  re-dispatch as its one pending call and carries the `go` statement's
+  OWN callee id: the interface anchor `methodFuncId iface M` for
+  `go i.M()`, or the promotion record's key `methodFuncId S M` for
+  `go S.M(s)` / `go (*S).M(p)`, a key that names no `Func`. It carries
+  neither the re-dispatch anchor (that is the pending call's function
+  value, `Entry.again`'s own id) nor the target. The target is NOT KNOWN
+  when that frame is built: the re-dispatch resolves it on the embedded
+  field's dynamic value at the child's first step (design §2 S3/S5: the
+  path's tail belongs to the child). The target's own frame, which names
+  the target's `func.id`, is pushed ON TOP of the barrier when the
+  pending call drains. The barrier frame exits last, with no results. A
+  client reading «`fid` returned `vs`» at that exit reads «the
+  goroutine's call to the `go` statement's callee finished, results
+  discarded». It does not read «a function with that id ran a body».
+  A REPRESENTATION field only: no rule
   reads it, so a client can observe «`fid` returned `vs`» from the
   configuration at frame exit (`frame_exit_returns`) while the step label
   and every behaviour stay as they were (`Entry.callConfig_run`,

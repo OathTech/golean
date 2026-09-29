@@ -651,7 +651,13 @@ def spawnStep (s : Store) (cv : GoValue) (args : List GoValue) (k : Cont)
           -- whose path ends in an embedded interface field (`Entry.again`,
           -- G-P S2 S5) is the child's PENDING call on that barrier frame,
           -- entered at the child's first step — the walk and its panic
-          -- stay the child's (design §2 S3).
+          -- stay the child's (design §2 S3). That barrier frame's `fid` is the
+          -- `go` statement's OWN callee id (the interface anchor for
+          -- `go i.M()`, the record key for `go S.M(s)`), not a body-bearing
+          -- function: the target is resolved only when the pending call
+          -- drains, and ITS frame (naming `func.id`) is pushed on top of the
+          -- barrier then (`Cont.frame`'s docstring, the one exception; audit
+          -- F2, 2026-09-29).
           return (.next k, e.drainConfig .stop (fun cv => .next (.frame [] [] [] [(cv, [])] .stop fid)),
             s', ch', ps, tr)
       | .panic msg =>

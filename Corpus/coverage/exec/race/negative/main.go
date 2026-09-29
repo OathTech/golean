@@ -321,6 +321,7 @@ func racePromotedPtrHopField() int {
 }
 
 func main() {
+	println(racePromotedSpawnPtrField())
 	println(racePromotedPtrHopTarget())
 	println(racePromotedPtrHopField())
 	println(raceWriteWrite())
@@ -402,4 +403,32 @@ func raceStructTagAliasArrayField() int {
 	<-done
 	<-done
 	return s.arr[1]
+}
+
+// G-P audit F5 born pin (fix round 2026-09-29, lane core/method-promotion-0928):
+// `go g.Send(ch)` through a promoted value method over an embedded POINTER
+// hop, and the parent overwrites the embedded pointer field right after
+// the go statement. gc's wrapper reads p.negSpE in the CHILD, unordered
+// with the parent's write: go run -race reports it (5/5). The machine walks
+// the path at the SPAWN step (G-P S2; the reads attributed to the child),
+// and the race verdict is preserved: the must-stay-racy guard for the DRF
+// control race/free/promoted-spawn-disjoint.
+type negSpSender interface{ Send(ch chan int) }
+
+type negSpE struct{ v int }
+
+func (e negSpE) Send(ch chan int) { ch <- e.v }
+
+type negSpS struct {
+	*negSpE
+	z int
+}
+
+func racePromotedSpawnPtrField() int {
+	p := &negSpS{negSpE: &negSpE{5}}
+	var g negSpSender = p
+	ch := make(chan int)
+	go g.Send(ch)
+	p.negSpE = &negSpE{6}
+	return <-ch
 }

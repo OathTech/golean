@@ -1,5 +1,5 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 3784 (3549 PASS / 235 FAIL)
+# cases: 3790 (3553 PASS / 237 FAIL)
 # re-pinned: 2026-09-20 [AGENT], core/unseq-stage-d-0920, STAGE D of the evaluation-order model v2.1 (route α —
 #   docs/2026-09-20_unseq-stage-d-design.md §2–§3; handoff docs/2026-09-20_unseq-stage-d-handoff.md): NO row added, NO
 #   result changed, ONE stage changed — spec-examples-stmt/continue-label PASS/- -> PASS/confluent, the strict depth=128
@@ -1817,6 +1817,26 @@
 #   imported-goose/channel/google-search, whose wire changed bytes at S1 already, is the train's — not re-pinned here). Measured by
 #   scripts/diff-one on the 8 named rows, then the full gate `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --slow` (its RESULT line
 #   in the handoff). 3545 + 4 = 3549; 239 - 4 = 235.
+# re-pinned: 2026-09-29 [AGENT], core/method-promotion-0928, G-P AUDIT FIX ROUND — born rows for the audit's F1 and F5
+#   (the audit docs/2026-09-29_method-promotion-audit.md on review/method-promotion-0928 @ fb24d243, FIX-FIRST, records only; the
+#   dispositions the [AGENT] coordinator's, disclosed at the merge ask; handoff docs/2026-09-28_method-promotion-handoff.md §5).
+#   WHY: F1 found one behaviour change of G-P S2 no row covered, a narrowing toward gc: a NIL *S box dispatching through an
+#   interface to a PROMOTED DECLARATION-ONLY STUB (a promoted sync-primitive or FR-23 stub, an ordinary non-wrapper Func before S2)
+#   fell into BUG-087's panicwrap family on main, so main admitted {nil-deref, panicwrap} through one nilValueMethodText pick; since
+#   S2 the stub is a record outside the family and the tip admits the nil-deref text only, which is gc's text (20/20 plain, 5/5
+#   -race, the same under -gcflags=-l and -N -l). F5: `go i.M()` walks the promotion path at the SPAWN step; its data-race-free
+#   control flips race -> ok (decision 6's class). 6 rows BORN, NO existing row moved. BORN PASS (4):
+#   embedding/promoted-stub-dispatch/{nil-box-sync-stub,nil-box-sync-stub-itab} PASS/confluent (the singleton nil-deref set; RED on
+#   main's binary — a 2-member set — BUG-087's Cases: line, the over-wide envelope Status: fixed by G-P S2);
+#   race/free/promoted-spawn-disjoint PASS/confluent (ok 5, gc -race green 5/5; RED on main's binary — the enumerator's member at
+#   pick assignment [0] is a race, the retired wrapper's whole-pointee read); race/negative/promoted-spawn-ptr-field PASS/racy (gc -race 5/5; PASS on
+#   main's binary too — the must-stay-racy guard). BORN FAIL BY DESIGN (2): embedding/promoted-stub-dispatch/{box-sync-stub,
+#   box-sync-stub-race} FAIL/frontend-export on the ledger's new FR-35 line (a NON-nil box: the stub record refuses the dispatch by
+#   name, main and tip alike — gc 1, and gc -race reports the race of the second 5/5; the retired stub entry's whole-pointee read
+#   before the refusal, dropped at S2, is observable only on the second's racy schedules and never changes the refusal). Measured by
+#   scripts/diff-one on the 6 rows at the fix tree (tip 4 PASS / 2 FAIL) and on main 4e7272b3's frontend + binary over the same
+#   fixture (main 1 PASS / 5 FAIL — the red-first record); the full gate line in the handoff. 3784 + 6 = 3790; 3549 + 4 = 3553;
+#   235 + 2 = 237. No PASS -> non-PASS flip.
 result	id	stage
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
@@ -2474,6 +2494,10 @@ PASS	embedding/promoted-pointer-receiver-method-set/pointer-box	-
 PASS	embedding/promoted-pointer-receiver-method-set/value-box	-
 PASS	embedding/promoted-ptr-method-expression/promoted-value	-
 PASS	embedding/promoted-ptr-method-expression/recover	-
+FAIL	embedding/promoted-stub-dispatch/box-sync-stub	frontend-export
+FAIL	embedding/promoted-stub-dispatch/box-sync-stub-race	frontend-export
+PASS	embedding/promoted-stub-dispatch/nil-box-sync-stub	confluent
+PASS	embedding/promoted-stub-dispatch/nil-box-sync-stub-itab	confluent
 PASS	embedding/value-embedded-pointer-promotion/dynamic-dispatch	-
 PASS	embedding/value-embedded-pointer-promotion/static-call	-
 PASS	embedding/value-embedded-pointer-promotion/value-box-satisfies	-
@@ -4699,6 +4723,7 @@ PASS	race/free/field-read-write	confluent
 PASS	race/free/method-value-order	confluent
 PASS	race/free/promoted-ptr-box	confluent
 PASS	race/free/promoted-ptr-hop	confluent
+PASS	race/free/promoted-spawn-disjoint	confluent
 PASS	race/free/ptr-field-read-write	confluent
 PASS	race/free/slice-disjoint	confluent
 PASS	race/free/spawn-dispatch-free	confluent
@@ -4738,6 +4763,7 @@ PASS	race/negative/method-value	racy
 PASS	race/negative/promoted-dispatch	racy
 PASS	race/negative/promoted-ptr-hop-field	racy
 PASS	race/negative/promoted-ptr-hop-target	racy
+PASS	race/negative/promoted-spawn-ptr-field	racy
 PASS	race/negative/read-write	racy
 PASS	race/negative/slice-elem	racy
 PASS	race/negative/spawn-dispatch	racy
