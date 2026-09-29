@@ -25,7 +25,7 @@ private def method (id : Json) : Json :=
     ("unsupported", .str "identity-only test stub")]
 
 private def program (requirements methods : Array Json) : Json :=
-  Json.mkObj [("schema", .str "golean-native-v1"), ("funcs", .arr #[]),
+  Json.mkObj [("schema", .str "golean-native-v2"), ("funcs", .arr #[]),
     ("buildContext", Json.mkObj [("goos", .str "linux"), ("goarch", .str "amd64"),
       ("compiler", .str "gc"), ("cgoEnabled", .bool true), ("buildTags", .arr #[])]),
     ("methods", .arr methods), ("methodSets", .arr #[]), ("promotions", .arr #[]),
@@ -88,31 +88,43 @@ theorem variadic_is_part_of_signature :
       (.defined 2) (signature ⟨"m", "p"⟩ #[.slice (.int .int)] false) = false := by decide +kernel
 
 -- [AGENT] Audit R1: the independent nil-text validator must not borrow
--- another package's wrapper bit, or invent a target from its bare spelling.
-private def nilTextState (members : Array MethodInfo) : ProgramCtx :=
-  let target := fun (id : String) (recv : Ty) (wrapper : Bool) =>
+-- another package's declaration, or invent a target from its bare spelling.
+-- G-P S2 (2026-09-28): the retired «not a synthesized wrapper» invariant is
+-- «the resolution path is empty» — a PROMOTED entry (a record, no
+-- declaration on the pointee) is outside the BUG-087 family.
+private def nilTextState (members : Array MethodInfo) (promotions : Array Promotion := #[]) :
+    ProgramCtx :=
+  let target := fun (id : String) (recv : Ty) =>
     ({ id := ⟨id⟩, args := #[{ id := "$recv", typ := recv }], results := #[],
-       body := .unsupported "validator-only control", wrapper } : Func)
+       body := .unsupported "validator-only control" } : Func)
   ProgramCtx.ofTables
-    (types := TypeEnv.reserved ++ #[(⟨"main.T"⟩, .struct #[])])
-    (functions := #[target "anchor" (.interface ⟨"main.I"⟩) false,
-      target "plain" (.defined 2) false, target "wrapper" (.defined 2) true])
+    (types := TypeEnv.reserved ++ #[(⟨"main.T"⟩, .struct #[{ name := "e", typ := .defined 2, embedded := true }])])
+    (functions := #[target "anchor" (.interface ⟨"main.I"⟩),
+      target "plain" (.defined 2), target "other" (.defined 2)])
     (methods := #[{ id := privateP.id, funcId := ⟨"anchor"⟩, recv := .interface ⟨"main.I"⟩ }] ++ members)
+    (promotions := promotions)
 
-private def nilTextChecks (members : Array MethodInfo) : List Bool :=
-  (ChoiceTrace.nilTextFacts (nilTextState members) ⟨"anchor"⟩
+private def nilTextChecks (members : Array MethodInfo) (promotions : Array Promotion := #[]) :
+    List Bool :=
+  (ChoiceTrace.nilTextFacts (nilTextState members promotions) ⟨"anchor"⟩
     [.interface (.pointer (.defined 2)) .nil]).invariants.map Prod.snd
 
 private def nilTarget (id : Declaration.MemberId) (body : String) : MethodInfo :=
   { id, funcId := ⟨body⟩, recv := .defined 2 }
 
-theorem nil_text_ignores_foreign_wrapper :
-    nilTextChecks #[nilTarget privateQ.id "wrapper", nilTarget privateP.id "plain"] =
+/-- A PROMOTED `privateP` on `main.T` (one value hop, targeting `plain`). -/
+private def promotedP : Promotion :=
+  { type := ⟨"main.T"⟩, member := privateP.id, inPtrSetOnly := false,
+    path := #[{ owner := ⟨"main.T"⟩, field := "e", ptr := false }], adjust := .asIs,
+    target := .method ⟨"plain"⟩ }
+
+theorem nil_text_ignores_foreign_declaration :
+    nilTextChecks #[nilTarget privateQ.id "other", nilTarget privateP.id "plain"] =
       [true, true, true, true] := by decide +kernel
 
-theorem nil_text_does_not_borrow_foreign_body :
-    nilTextChecks #[nilTarget privateQ.id "plain", nilTarget privateP.id "wrapper"] =
-      [true, true, true, false] := by decide +kernel
+theorem nil_text_promoted_entry_outside_family :
+    nilTextChecks #[nilTarget privateQ.id "plain"] #[promotedP] =
+      [true, true, false, false] := by decide +kernel
 
 theorem nil_text_requires_matching_package :
     nilTextChecks #[nilTarget privateQ.id "plain"] =
@@ -201,11 +213,19 @@ def main (args : List String) : IO Unit := do
   let [fixture] := args | throw (IO.userError "expected fresh executable member fixture")
   let p ← IO.ofExcept (NativeToIR.decodeProgram (← IO.ofExcept
     (StrictJson.parseBytes (← IO.FS.readBinFile fixture))))
-  for recv in ["main.T", "main.S", "main.I"] do
+  for recv in ["main.T", "main.I"] do
     for (name, pkg) in [("m", "main"), ("M", ""), ("é", "main"), ("É", ""),
         ("ǅ", "main"), ("𐐀", "")] do
       check (p.methods.any fun m => m.funcId == methodFuncId recv ⟨name, pkg⟩ &&
         m.id == Declaration.MemberId.mk name pkg) s!"lost checked identity {recv}.{pkg}:{name}"
+  -- main.S's entries are PROMOTED (G-P S2): promotion records on the same
+  -- checked identity, each resolving to main.T's declared method.
+  for (name, pkg) in [("m", "main"), ("M", ""), ("é", "main"), ("É", ""),
+      ("ǅ", "main"), ("𐐀", "")] do
+    check (p.promotions.any fun r => r.type == ⟨"main.S"⟩ &&
+      r.member == Declaration.MemberId.mk name pkg &&
+      r.target == .method (methodFuncId "main.T" ⟨name, pkg⟩))
+      s!"lost checked promoted identity main.S.{pkg}:{name}"
   for (name, pkg) in [("M", ""), ("É", ""), ("Σ", ""), ("𐐀", ""),
       ("m", "red/inner"), ("é", "blue/inner"), ("ǅ", "main")] do
     let id := member name pkg

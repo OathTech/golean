@@ -431,13 +431,13 @@ def Cont.eqbF : Nat → Cont → Cont → Bool
     | .loop c1 b1 e1 k1, .loop c2 b2 e2 k2 =>
         Expr.eqbF f c1 c2 && Stmt.eqbF f b1 b2 && e1 == e2
           && Cont.eqbF f k1 k2
-    | .frame t1 te1 r1 d1 k1 w1, .frame t2 te2 r2 d2 k2 w2 =>
+    | .frame t1 te1 r1 d1 k1 f1, .frame t2 te2 r2 d2 k2 f2 =>
         eqbListP (eqbProdP TargetShape.eqb (eqbListP (Expr.eqbF f))) t1 t2
           && te1 == te2
           && eqbListP (· == ·) r1 r2
           && eqbListP (eqbProdP GoValue.eqb (eqbListP GoValue.eqb)) d1 d2
           && Cont.eqbF f k1 k2
-          && w1 == w2
+          && f1 == f2
     | .deferCalleeK a1 e1 k1, .deferCalleeK a2 e2 k2 =>
         eqbListP (Expr.eqbF f) a1 a2 && e1 == e2 && Cont.eqbF f k1 k2
     | .deferArgsK c1 v1 p1 e1 k1, .deferArgsK c2 v2 p2 e2 k2 =>
@@ -570,7 +570,7 @@ theorem Cont.eqbF_sound : ∀ f (a b : Cont), Cont.eqbF f a b = true → a = b :
       obtain ⟨h1, h2, h3, h4⟩ := andSplit4 h
       cases Expr.eqbF_sound _ _ _ h1; cases Stmt.eqbF_sound _ _ _ h2
       cases eq_of_beq h3; cases ih _ _ h4; rfl
-    case frame.frame t1 te1 r1 d1 k1 w1 t2 te2 r2 d2 k2 w2 =>
+    case frame.frame t1 te1 r1 d1 k1 f1 t2 te2 r2 d2 k2 f2 =>
       obtain ⟨h1, h2, h3, h4, h5, h6⟩ := andSplit6 h
       cases targetPlans_sound f h1
       cases eq_of_beq h2
@@ -579,7 +579,7 @@ theorem Cont.eqbF_sound : ∀ f (a b : Cont), Cont.eqbF f a b = true → a = b :
         (fun _ _ hh =>
           eqbProdP_sound (fun _ _ k => GoValue.eqb_sound k)
             (fun _ _ k => goValues_sound k) hh) h4
-      cases ih _ _ h5; cases eq_of_beq h6; rfl
+      cases ih _ _ h5; cases GoCore.FuncId.beq_sound h6; rfl
     case deferCalleeK.deferCalleeK a1 e1 k1 a2 e2 k2 =>
       obtain ⟨h1, h2, h3⟩ := andSplit3 h
       cases exprs_sound f h1; cases eq_of_beq h2; cases ih _ _ h3; rfl

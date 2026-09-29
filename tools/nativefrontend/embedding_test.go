@@ -11,7 +11,7 @@ import (
 // embeddingSrc dispatches the EMBEDDED interface's method (foo, declared in
 // I) through the EMBEDDING interface J in every shape the emitter registers
 // an interface from at a dispatch site: a call, a method value, a method
-// expression, and a promotion wrapper over an embedded J field.
+// expression, and a promotion record over an embedded J field.
 const embeddingSrc = `package main
 
 type I interface{ foo() int }
@@ -123,8 +123,9 @@ func main() { println(viaExpr()) }
 // 2026-09-05): the method-expression arm took its INTERFACE branch on the
 // method's DECLARING receiver alone, so `S.foo` (operand a struct, method
 // declared in the embedded interface I) was quarantined as `main.S: static
-// type is not a value interface`. The func value is S's promotion wrapper
-// `methodFuncKey(main.S, main.foo)`; the body must lower with no `unsupported` marker.
+// type is not a value interface`. The func value names S's promotion RECORD
+// `methodFuncKey(main.S, main.foo)` (G-P S2; the wrapper of that id is retired);
+// the body must lower with no `unsupported` marker.
 func TestPromotedMethodExpressionLowers(t *testing.T) {
 	program, err := emitSource(t, promotedMethodExprSrc)
 	if err != nil {
@@ -141,7 +142,7 @@ func TestPromotedMethodExpressionLowers(t *testing.T) {
 			t.Fatalf("viaExpr quarantined: %v", reason)
 		}
 		if !strings.Contains(fmtJSON(m["body"]), fmtJSON(methodFuncKey("main.S", memberID{Name: "foo", Package: "main"}))) {
-			t.Fatalf("viaExpr body does not reference the promotion wrapper for main.S/main.foo: %s", fmtJSON(m["body"]))
+			t.Fatalf("viaExpr body does not reference the promotion record key for main.S/main.foo: %s", fmtJSON(m["body"]))
 		}
 	}
 	if !found {

@@ -12,7 +12,7 @@ posed in §3 below, that item STOPPED.
 |---|---|---|---|---|
 | S0 born pins | (this commit) | `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff` RESULT: PASS, 788 s, 3784/3784 FULL no regression (dirty-tree note: the run preceded the commit; the committed tree differs from the gated tree by one ledger citation re-spelling, see §4) | 16 born (13 PASS, 3 FAIL by design); 0 moved | DONE |
 | S1 records + cross-check | (this commit) | individual gates all EXIT=0 (`check-wire-boundary` 3 s incl. the 12 new controls, `check-frontend-pins` 2 s after the twin re-pin, `check-unseq-wire` 6 s, `check-method-identity` 46 s, `check-mem-callsites` 1 s, `check-unseq-scheduler` 92 s, `check-core-audit` 20 s, `gocore-eval-tests` 296 ok / 0 fail, `go test ./tools/nativefrontend ./tools/lowerdiag` ok); `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --slow` RESULT: FAIL, 1132 s, by EXACTLY the expected merge-protocol 5a pair and nothing else — `certificate provenance` STALE (changed compiled inputs: `GoLean/GoCore/{Syntax,ProgramCtx}.lean`, `GoLean/NativeToIR.lean`) + ONE row `imported-goose/channel/google-search` PASS/membership → FAIL/membership («certified record wire-sha256 … STALE»: the row's wire gained `promotions`, 736f1730… → 8fe3c739…); 3784 = 3544 / 240 vs baseline 3545 / 239, every other step ok, negative 394 match, re-pin guard 0 flips; `baselines/certified/` NOT re-pinned (the train's 5a step) | 0 born; 0 moved (the machine is unchanged; the whole-corpus choice trace is byte-identical to the S0 reference — §1 S1) | DONE (S1 tree) |
-| S2 the switch | — | — | — | — |
+| S2 the switch | (this commit) | individual gates all EXIT=0 (`check-core-audit` 13 s — 88 required theorems, `check-mem-callsites` 1 s, `check-unseq-scheduler` 96 s, `check-wire-boundary` 3 s incl. the 12 promotion-record controls (3 new), `check-unseq-wire` 6 s (140 fixtures regenerated), `check-frontend-pins` after the twin re-pin, `check-method-identity`, `gocore-eval-tests` 298 ok / 0 fail (incl. the two new v2 refusal pins), `go test ./tools/nativefrontend ./tools/lowerdiag` ok); `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --slow` RESULT: FAIL, 1006 s, by EXACTLY the expected merge-protocol 5a pair and nothing else — `certificate provenance` STALE (C9: the first changed compiled input, `GoLean/CLI.lean`) + the ONE drifted row `imported-goose/channel/google-search` PASS/membership → FAIL/membership (its certified record STALE since S1); 3784 = 3548 / 236 vs the re-pinned baseline 3549 / 235, every other step ok (core build warning-free, 88 required theorems, eval 298 ok, negative 394 match), re-pin guard 0 PASS→non-PASS flips / 4 GREENED; `baselines/certified/` NOT re-pinned (the train's 5a step) | 0 born; 4 moved, all FAIL → PASS: the design's three predicted flips — `race/free/promoted-ptr-hop` (decision 6), `embedding/promoted-ptr-method-expression/{recover,promoted-value}` (decision 5) — PLUS `noodler/frontier/promoted-method-expression-ptr` (FR-3's noodler re-hit, the same `(*T).M`-over-promoted class the design did not enumerate; attributable to decision 5; found by the choice trace, confirmed by `diff-one`, reported for the audit); 3784 = 3549 / 235; the whole-corpus choice trace vs the S0 reference: BYTE-IDENTICAL dumps and results EXCEPT the rows of the four flipped ids (`race` → `ok`; `unsupported` → `ok` ×3) and the known absolute-path row (§1 S2); detector-soundness HOLE 0 / possible-HOLE 0, `promoted-ptr-hop` agree-DRF (was over-refusal) | DONE (S2 tree) |
 | S3 equations + records | — | — | — | — |
 
 ### S0 — the born pins
@@ -117,10 +117,229 @@ Design §5 S1, §4 (the wire), §2 S2 (b) (the validation). Every ruled decision
   versions, report-only, not this lane's). The S1 tree is committed after the gate; the committed tree differs from the
   gated tree by THIS records file only (§4).
 
+### S2 — the switch (the machine consumes the records; the wrappers are gone)
+
+Design §5 S2, §2 S1–S10, §3, §4 (decisions 1–10 as recommended, [USER] 2026-09-28 relayed); PLUS the coordinator's
+[USER]-ruled addition, quoted verbatim as relayed to this worker ([AGENT] lane worker → [AGENT] S2 sub-worker,
+2026-09-28): «Coordinator addition, [USER]-RULED ([USER] Mike 2026-09-28, verbatim, relayed: «Agree on (1)» — the logic
+team's request 6, option 1): frames record which function they belong to. In the same reshape where you delete
+`Cont.frame`'s `wrapper` field, add a field carrying the callee's `FuncId` (set by `enterFrame` from the `fid` it
+resolves), so a client can observe "f returned v" from the configuration at frame exit. It is a representation field
+only: no behaviour change, the `StepLabel` shape unchanged (option 2, a call/return label channel, was NOT taken).
+Expose a lemma stating the field at frame entry (e.g. via `enterFrame_declared`) and one at exit, pin both in
+`BridgeSet.lean`, add them to the core audit's required list, and record the field in the changelog (constructor
+shape before → after, what a re-pin touches).» — DONE in S2 (below). No deviation from any ruled decision; the
+[AGENT] choices the design left open are listed.
+
+**What shipped** (the migration table is the changelog's row-3 section; every replacement NAMED, no alias):
+
+- **Core resolution** (`GoLean/GoCore/Ops.lean`): `methodDecl?` (depth-0 declaration lookup, the former `direct`
+  fold), `promotion?` (the record lookup), `resolveMethod?` (replaces `concreteMethodForDynamic?`; answers a
+  `MethodResolution {path, adjust, target, inPtrSetOnly, unsupported, sig}` — declared = empty path with `asIs`, or
+  `deref` on the `*T ⊇ T` arm; promoted = the record's, admitted into the value set only when `¬inPtrSetOnly`
+  (spec#Struct_types); the arms are disjoint because the decoder refuses a record naming a declared method),
+  `resolvedSignature?` (+ `funcSignature?`, replacing `concreteMethodSignature?`) under `satisfiesMethodSig` and
+  `hasNoArgStringMethod` (S9: a stub record's `sig`, a declared target's `Func`, an embedded interface target's
+  `MethodSig`). `nilValueMethodText?` and `ChoiceTrace.nilTextFacts`: the family test is «the resolution path is
+  empty» (S9); the site's width and consumption are identical (the trace comparison below).
+- **The path walk** (`Ops.lean`): `WalkCursor` (`val v | cell l`), `structFieldValue`, `promotionHop`,
+  `promotionWalk`, `receiverAt root path adjust` — the receiver the target takes and the walk's LOADS (S3/S4/S8):
+  a value hop projects (no read), an embedded-POINTER hop reads the pointer field, a value receiver at the end of
+  the path reads its cell, `deref` copies the pointee out, `addr` takes the reached cell's address; a hop through
+  `nil` and a value receiver out of `nil` panic with the nil-dereference text, a final pointer receiver through a
+  nil embedded `*E` receives `nil`. The EMPTY path is the direct dispatch (`asIs` = identity, `deref` = the one
+  pointee read — today's `*T ⊇ T` arm, unchanged). `dispatchLeaf`, `wrapperForwardArg`, `recvFieldChain` DELETED.
+- **Dispatch** (`dynamicDispatch?`, `Ops.lean`) answers `Dispatched.target func args | again fid args` (S5): a
+  path ending in an embedded interface field re-dispatches on the field's value through the interface's anchor
+  `methodFuncId iface member` as the NEXT step. A stub record (`unsupported`) refuses BY NAME with the frontend's
+  cause (`frontend-quarantined: …`, the decoder adds the marker exactly as the retired stub body carried it) — after
+  the ONE check the retired stub's entry made before its body: a `.nil` pointer box to a value-set entry panics
+  first (the retired auto-deref; `inPtrSetOnly` entries refuse). A promoted target with NO `Func` on the wire (the
+  twin's `raft.DefaultLogger.output` → unexported `log.output`) refuses BY NAME (`unsupported`: «has no declaration
+  on the wire … refusing rather than dispatching from no body») where the retired wrapper went stuck (S1's note).
+  The declared arm looks the target up BEFORE the receiver read (the order `nilValueMethodText?` mirrors); the
+  promoted arm walks first, then finds the target (the retired wrapper's order).
+- **Entry** (`Machine.lean`): `Callee (func | promotion)` and `callee?` (S7: `S.M`/`(*S).M` over a promoted entry
+  name the record; `promotedCallee` applies the path to argument 0, whatever its form — value or pointer — so the
+  `(*S).M` deref-adapter refusal retires for promoted entries), `Entry (run func frameEnv resultLocs | again fid
+  args)`, `enterFrame.plan : … → Except Stop (Commit (Entry × Store × AccessTrace))`, `Entry.callConfig plans env k`
+  (the CALL positions: `run` → the frame; `again` → `.retV (.funcVal fid args) (.callValCalleeK plans [] env k)`,
+  the same position re-entered next step) and `Entry.drainConfig barrier requeue` (the DEFER drains: `run` → the
+  barrier frame; `again` → the draining frame with `(.funcVal fid args, [])` at the head of its chain; the SPAWN
+  child: `.next (.frame [] [] [] [(cv, [])] .stop fid)`). All 6 `Step` entry rules, the 6 `stepFn` arms and
+  `spawnStep` deliver through these two functions.
+- **`Cont.frame targets tenv results defers k (fid : FuncId)`**: the wrapper `Bool` DELETED, the callee's `FuncId`
+  ADDED in its place (the coordinator's addition). [AGENT] choice: the field is the id of the function WHOSE BODY THE
+  FRAME RUNS — the declared target `enterFrame` actually enters (`Entry.run`'s `func.id`), never an interface anchor
+  or a record (for a promoted dispatch the anchor is not a function with a body; the record is not a function); the
+  drivers' barrier frames name the entry point / `pkgInitFuncId`; the spawn's `again` barrier frame names the anchor
+  the `go` statement re-dispatches through (that frame belongs to the goroutine's call, whose callee is that anchor).
+  Position: the LAST field, where the wrapper marker stood, so every `.frame t e r ds k w` pattern keeps its arity
+  (the universally quantified `w` became `fr : FuncId` in the rules — no rule reads it). Lemmas: `Entry.callConfig_run`
+  (the frame a call position pushes names the resolved callee — definitional), `frame_exit_returns` (a frame exit
+  from `.frame … fid` reads its pinned results as `vs` and resumes the caller on its targets, both entries:
+  «`fid` returned `vs`»), `enterFrame_declared` (design §3: a declared, non-anchor callee's entry IS bind/declare/pin
+  into a frame naming `func.id`, no dispatch, no memory access — the `MaybeUpdate` shape) — pinned as BridgeSet rows
+  65–67 (RE-PIN 3, with rows 11/13/15 re-pinned over `Entry`/`FuncId`), added to `Tests/GoCoreAudit.lean`'s required
+  list (85 → 88).
+- **Recover** (S6, decision 7 — the DIRECT form shipped, not the glue-skip fallback): `recoverAtDeferred` (the
+  deferred frame sits directly on the unrecovered `panicResumeK`) replaces `recoverThroughWrappers`;
+  `Cont.recoverTransparent` deleted; `recoverResult` descends `Cont.isGlue`. The well-formedness lemma
+  (`recoverAtDeferred_locSup`, `recoverResult_locSup`) was NOT costly. `interfaces/recover-promoted-wrapper/*` (8
+  rows) hold.
+- **`Func.wrapper` DELETED** with every consumer: `SyntaxEqb.Func.eqbF` (6 → 5 conjuncts), `Admission.BooleanSyntax`
+  (the conjunct gone; `admitted_all_bodies`' projection), `MachineEqb` (the frame's `FuncId` compared),
+  `EnumDedup.contDepth`, the decoder. Proofs repaired: `StateWf` (`dynamicDispatch?_locSup` over `Dispatched`,
+  `promotedCallee_locSup`, `receiverAt_locSup`/`promotionWalk_locSup`/`promotionHop_locSup`/`structFieldValue_locSup`,
+  `enterFrame_wf` over `Entry.locSup` with the arm macros `enterFrame_run_arm`/`enterFrame_again_arm`,
+  `Entry.callConfig_bounded`/`drainConfig_bounded`, the seven entry cases of `step_preserves_wf_loc`),
+  `MachineSound` (the entry destructurings and the `stepFrameExit` binder), `MultiWfSound.spawnStep_wf`,
+  `Multi.spawnStep_oblivious`, `PrefixFacts`, `StepErrors` (`promotionWalk_tame` leaf, `runCommit_of_entry`),
+  `Tests/GoCoreContract.lean` (`recover_bare`/`recover_handler` by `rfl` over `recoverAtDeferred`; the audit frames
+  name `auditFid`), `Tests/MethodIdentity.lean` (`nil_text_ignores_foreign_wrapper` →
+  `nil_text_ignores_foreign_declaration`, `nil_text_does_not_borrow_foreign_body` →
+  `nil_text_promoted_entry_outside_family` — a promotion record is outside BUG-087's family; `Tests/MethodIdentityAudit.lean`
+  follows). `stepFn_sound`/`step_complete` in the same tree. No `sorry`/axiom/`native_decide` in `GoLean/`, no
+  `partial` in `GoLean/GoCore/`; the core build is warning-free.
+- **Frontend + wire v2** (`tools/nativefrontend/emit.go`): schema `golean-native-v2`; `promotionRecords()` (one
+  record emitter) replaces `synthesizePromotionWrappers`/`synthesizeWrapper`/`syncPromotedStub`/`promotedSigStub`
+  (and `valueRootedFieldAddr`, used only by the wrapper); the promoted sync-primitive and FR-23 stubs are
+  `unsupported` + `sig` RECORDS (`promotionStubRecord`); the signature is still EMITTED per entry
+  (`promotionSignature` — the retired wrapper's own emission of receiver/params/results — so every type the
+  signature mentions is registered as before and its `unsupported` refusal is the FR-23 probe); an embedded-interface
+  target registers the interface's own method set and the anchor (`noteInterface`/`noteCalledIfaceMethod`, the
+  retired forwarding call's registrations, BUG-095's static-interface rule kept). The FR-23 stub cause reads
+  «promoted method T.M (promoted signature does not lower: …» (was «forwarding wrapper not synthesized: …») — the
+  one refusal TEXT change; `perdecl_kill_test` asserts the cause substrings. The `(*S).M` deref-adapter refusal
+  (`emitMethodExpr`) is reached only for DECLARED value methods. Decoder (`GoLean/NativeToIR.lean`): a v1 wire
+  refuses by name («schema golean-native-v1 predates G-P S2 … re-export»), `wrapper` left `decodeMethod`'s allowed
+  keys AND is refused by name («retired at G-P S2»), the S1 cross-check (`forwardingCalls`/`promotionRecvChain`)
+  retired, every S1 record validation kept (the declared-conflict rule now reads the carrier's method table:
+  `methods.any (·.funcId == methodFuncId type member)`), `promotions` required; the stub cause stored with the
+  `frontend-quarantined: ` marker. `tools/lowerdiag/main.go` lists stub RECORDS as `promoted` rows (the wrapper skip
+  gone). `tools/raftsubject/reachability.py`: `promoted_labels`/`promotion_target_key` — a record's display label
+  resolves to its target as a graph entry (two records under one label are ambiguous, as two declarations were).
+- **Controls**: `scripts/check-wire-boundary` — 12 promotion-record controls: the 9 record mutants kept, the two
+  wrapper mutants (`prom-path-disagree`, `prom-wrapper-without-record`) retired, three ADDED — `prom-wire-v1` (a v1
+  schema string), `prom-wrapper-key` (`wrapper` on a declared method), `prom-record-removed` (`outer.val`'s record
+  deleted: the run-time dispatch refuses «dynamic type main.outer has no method val» — no wrapper stands in); the
+  fixture's `probe` answers 42 through the records (`wrapI.val` re-dispatched as its own step). `Tests/GoCoreEval.lean`:
+  in-process pins for the v1 and `wrapper`-key refusals; the 11 hand-built wires and `Tests/MethodIdentity.lean`'s at
+  `golean-native-v2`; `Tests/unseq-wire/*.json` (140) REGENERATED by `build.py --frontend <S2 frontend>`
+  (each: the schema string). `tools/method-identity-dispatch.py`: the graph control reads the two `main.Mix.m`
+  records' targets; the `collide-wrappers` mutation site (`key := methodFuncKey(tName, member)`) survives in
+  `promotionRecords` and rejects with the same `stuck` text. `tools/lowerdiag/unclassified-formats.txt`: the
+  unclassified set is unchanged (the header's counts were already stale).
+- **The twin pin** (`baselines/pins/twin-chdriver.wire.json`): 7e8c06e6… → 0b58402a…; `methods` 537 → 481 (the 53
+  wrappers and 3 promoted stubs gone; every remaining entry byte-identical, same order); the 56 records UNCHANGED
+  from S1; every other top-level key IDENTICAL (a key-by-key JSON comparison); the twin decodes under the v2
+  decoder (probed: a nonexistent-function stuck AFTER decoding), the S1 pin is refused by name; written reason in
+  `scripts/check-frontend-pins`' header. Not re-run under the machine (40–65 min).
+
+**The race footprint (S8, decision 6 — THE documented access-trace change).** Every row whose access trace changes
+is a row with a VALUE-receiver dispatch through a `*S` box whose promotion path has a `deref`/`addr` adjustment or an
+embedded-POINTER hop — the shapes `dispatchLeaf` fell back to the whole pointee for (BUG-041's S3 addendum); the
+footprint is now the path's cells (the pointer field, then the pointee). Measured: `scripts/diff-one` on the 8 named
+rows (all PASS) and the full gate over the 3784 rows — EXACTLY ONE race verdict moved: `race/free/promoted-ptr-hop`
+FAIL/confluent → PASS/confluent (|set|=1 certified over all schedules, steps 582); `race/negative/{promoted-ptr-hop-
+target,promoted-ptr-hop-field,promoted-dispatch,iface-dispatch}` stay PASS/racy (steps 198/222/174/172) and
+`race/free/promoted-ptr-box` PASS/confluent (steps 581). No other row of the `race/` lane or the corpus moved (the ci
+result below). Removed from BUG-041's Cases: line; BUG-041's S3 addendum gained the retirement paragraph; the ledger's
+Q-RACEPATH row 2 → 1 reds, the reds table Q-* 10 → 9.
+
+**Step/fuel accounting (design §5 (ii), decision 8).** A promoted dispatch no longer runs the wrapper's frame entry,
+its argument evaluation, its forwarding call and its return; a path ending in an embedded interface field costs
+ONE extra step (the re-dispatch, S5) instead of the wrapper's several. No tracked record, test or baseline row
+carries an exact step count over a promoted dispatch: the differential baseline records stage only,
+`Tests/GoCoreEval.lean` asserts no step count on a promoted call, and the one certified record
+(`baselines/certified/imported-goose__channel__google-search.certified.json`) carries an `observations_sha256` and
+no step count (it is STALE by wire hash and compiled inputs — the train's 5a re-certification; a changed certified
+SET there would be a finding). MEASURED instead (`.tmp/steps-compare.tsv`): the enumerator's `steps=` for every
+enumerating-lane row (141 confluent/racy manifest rows), the S1 binary on the S1 wire vs the S2 binary on the S2
+wire under `scripts/diff-coverage`'s parameters — 7 rows moved, ALL promoted-dispatch rows, and every other row's
+count is identical: `embedding/promoted-dynamic-surface/go-nil-iface-embed` 109 → 76, `…/go-nil-ptr-embed` 115 → 70,
+`race/free/promoted-ptr-box` 674 → 581, `race/negative/promoted-dispatch` 205 → 174,
+`race/negative/promoted-ptr-hop-field` 255 → 222, `race/negative/promoted-ptr-hop-target` 255 → 198,
+`race/free/promoted-ptr-hop` (S1: the enumeration refused at the false race; S2: 582). One row,
+`goroutines/worker-pool/sum`, refused IDENTICALLY on both sides under this script's parameter reproduction
+(`backEdge scheduling site of bound 2 …` — its `cases.tsv` params are not fully mirrored by the script; the gate
+itself runs it green) — not a move. No pool scheduling point is lost (boundaries arise at spawns and registry ops
+only): the `l1Sched`/`postOp` consumption dumps are byte-identical for every row but the un-refused
+`promoted-ptr-hop`.
+
+**Zero behaviour change — the whole-corpus choice trace** (`scripts/choice-trace-corpus --dump --jobs 6 --golean
+.tmp/golean-s2 --exclude goroutines/send-then-spin --exclude strings/trimspace-repeat/repeat-bound-refused --out
+.tmp/ct-s2` under the lock — 3748 wires exported, the SAME 34 frontend refusals and 2 exclusions as the reference; the
+S0 reference's sorted dumps/results as S1 left them, `.tmp/ct-ref-dump.sorted`, `.tmp/ct-ref-results.norm`; both runs
+exit 1 «FINDINGS present», the summarizer's standing findings): every per-consumption DUMP row (`LC_ALL=C sort`ed,
+`cmp`ed) and every RESULT row is BYTE-IDENTICAL to the reference EXCEPT the rows of the FOUR flipped ids and the
+absolute-path row — precisely: (i) `race/free/promoted-ptr-hop`: `race` → `ok` on all 6 streams (the run no longer
+refuses at the false race; the 10 dump rows the S2 run has and the reference has not are this id's pool
+consultations AFTER the point where the reference refused — `l1Sched`/`postOp`/`l5ExitWindow` picks of the remaining
+schedule; the reference's own consumptions up to the refusal are unchanged); (ii)
+`embedding/promoted-ptr-method-expression/{promoted-value,recover}` and (iii) `noodler/frontier/
+promoted-method-expression-ptr`: `unsupported` → `ok` on all 6 streams, `consumed=0` on both sides (no consumption
+dump rows exist for them on either side — a method expression's call consults nothing); (iv)
+`arrays/materialization-budget/over-budget`: the decoder's refusal text names its input file under the run's `--out`
+directory (S1's known row). Dumps 26 367 → 26 377 rows (the 10 above), results 22 489 = 22 489 rows; the `unseqPanic`,
+`nilValueMethodText`, `mapIter`, `appendSpill`, `tryLock`, `l2Entry`, `l4Waiter` consumptions of EVERY other row are
+byte-identical — the `nilValueMethodText` consumption count is unchanged (S9). Nothing outside the documented items
+moved.
+
+**Detector-soundness** (`scripts/detector-soundness --out .tmp/detector-soundness-s2`, defaults `--runs 5 --procs 1,8
+--jobs 6 --select in-scope`, under the lock, 2026-09-29T01:13→01:45Z): 749 in-scope rows; cells agree-DRF 605,
+agree-race 43, over-refusal 6, refused 9, uncertified 86; **HOLE 0, possible-HOLE 0**; EXIT=2 = «INCOMPLETE matrix —
+refused 9»: the nine refused rows are the pre-existing membership-lane `sync/{trylock/*,out-of-scope-trylock/
+trylock-uncontended,promoted-mutex/trylock-expr}` whose `cases.tsv` params (`width=2,members=2`) omit `sites=` —
+the runner refuses to invent a bound; not this lane's rows, unchanged by it. The 6 over-refusals are the standing
+ones: `race/free/array-dyn-index-read-write` (the O1 dynamic-index residual, BUG-041, by design) and 5
+`race/gomem-only/*` (BUG-084's designed divergence, refused by [USER] ruling Q-U4RESIDUAL (A)). THE S2 CHANGE:
+`race/free/promoted-ptr-hop` is `agree-DRF` (gc DRF-in-5 at procs 1 and 8, machine DRF) — at S0 it sat in
+over-refusal; every promoted row agrees (`race/free/promoted-ptr-box` agree-DRF, `race/negative/{promoted-dispatch,
+promoted-ptr-hop-target,promoted-ptr-hop-field}` agree-race, `embedding/promoted-dynamic-surface/{go-nil-ptr-embed,
+go-nil-iface-embed}` agree-DRF, `sync/promoted-mutex/{stmt,defer-unlock,value-var,counter}` and `sync/escapes/
+{promoted,promoted-method-value}` agree-DRF). BUG-080's two rows (`race/negative-sync/{wg-overwrite,mutex-copy}`,
+the HOLEs of the 2026-09-02 record) are agree-race today. Artifacts under `.tmp/detector-soundness-s2/`
+(`summary.txt`, `matrix.tsv`); nothing written under `artifacts/` or `docs/evidence/`.
+
+**The full gate** (`GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --slow`, under the lock; log `.tmp/gate-s2-ci-slow.log`):
+RESULT: FAIL, 1006 s wall, by exactly the expected merge-protocol 5a pair: `certificate provenance` STALE (the
+reconciler's C9 names the first changed compiled input, `GoLean/CLI.lean`; the certification controls all PASS) and
+the ONE drifted row `imported-goose/channel/google-search` PASS/membership → FAIL/membership (its certified record's
+`wire-sha256` has been STALE since S1's `promotions` key; the wire changed bytes again at S2). The differential:
+3784 rows, pass=3548 fail=236 against the re-pinned baseline 3549 / 235 — that one row is the whole difference; the
+baseline-diff step names it alone; the re-pin guard: 0 PASS→non-PASS flips, the 4 GREENED rows listed (the three
+predicted + the noodler re-hit); the negative corpus 394 match; every other step ok — core build WARNING-free, core
+totality audit (88 required theorems present), admission proofs, declaration boundary, wire boundary, method
+identity, unseq scheduler/wire, frontend pins (twin = pinned bytes), import-goose, frontend unit tests, lowering
+tables, harness tests, eval tests 298 ok, lane validation, derived oracle artifacts. `baselines/certified/` untouched
+here (design §4: «train step 5a re-certifies … a provenance refresh, not a claim change»). The reconciler's
+report-only findings: C9 (above), C13 (pre-existing doc-site Go versions, not this lane's), C5 (this lane's FR-3
+cell — fixed post-gate, §4).
+
+**[AGENT] choices** (the design left them to the implementer): (i) the `Entry` inductive as the entry outcome and the
+re-dispatch shapes above (a re-entered call position for calls; a re-queued pending call for the drains and the spawn
+— no new `Cont`/`Config` constructor); (ii) the frame's `fid` = the entered function's id, last field; (iii) the stub
+record's nil-first order (the retired entry's auto-deref check kept, its whole-pointee read dropped — the run refuses
+either way); (iv) the declared arm keeps «target found before the receiver read» (the BUG-087 mirror), the promoted
+arm walks then looks the target up (the wrapper's order); (v) the `frontend-quarantined: ` marker added by the
+DECODER to a stub record's cause (the core stays marker-free); (vi) the FR-23 stub cause re-worded (truthful text over
+a byte-identical results file — the one refusal-text change, attributed below); (vii) `ProgramCtx.ofTables` gained a
+trailing defaulted `promotions`; (viii) `reachability.py` resolves a record label to its target (S7's reading of a
+record as a callee).
+
 ## 2. Changelog lines owed (`docs/changelog/61958f2e-WINDOW.md`)
 
-None at S0 (no code). The migration table and the S2/S3 entries land with S2/S3. Owed by S1 (drafted here, [AGENT];
-to be landed in the changelog's P row with S2 — S1 alone changes no exposed semantics):
+LANDED at S2 (2026-09-29): the row-3 section «P, native method promotion (G-P S2, the switch)» — the MIGRATION TABLE
+of named replacements (`Func.wrapper`; `Cont.frame`'s last field `Bool` → `FuncId`; `enterFrame`'s `Entry`; the
+delivered entry configurations; `concreteMethodForDynamic?` → `resolveMethod?`; `concreteMethodSignature?` →
+`funcSignature?`/`resolvedSignature?`; `dynamicDispatch?`'s `Dispatched`; `dispatchLeaf`/`wrapperForwardArg`/
+`recvFieldChain` deleted; the callee lookup → `callee?`; `Cont.recoverTransparent`/`recoverThroughWrappers` →
+`recoverAtDeferred`; `Program.promotions` consumed; `ProgramCtx.ofTables`; the `Tests/MethodIdentity.lean` controls;
+the wire; BridgeSet RE-PIN 3) and the window's P line. S3 adds the equation lemmas' line. The S1 lines below were
+folded into that section.
+
+Owed by S1 (drafted here at S1, [AGENT]; FOLDED into the row-3 section at S2):
 
 - `Program.promotions : Array Promotion := #[]` ADDED (`GoLean/GoCore/Syntax.lean`, with `PromotionAdjust` /
   `PromotionHop` / `PromotionTarget` / `Promotion`; `ProgramCtx.promotions`). Data only in S1 — no machine consumer;
@@ -146,7 +365,10 @@ to be landed in the changelog's P row with S2 — S1 alone changes no exposed se
 
 ## 3. PENDING [USER] items
 
-None posed so far.
+None posed at S2. (The coordinator's [USER]-ruled addition — the frame's `FuncId` field — is quoted verbatim in §1 S2
+and DONE there; its three lemmas are pinned and required.) Two [AGENT] readings the audit may want to see, neither a
+deviation: the frame's `fid` for the spawn's re-dispatch barrier frame is the anchor the `go` statement re-dispatches
+through (§1 S2, [AGENT] choice ii); the FR-23 stub record's cause text was re-worded (choice vi).
 
 ## 4. Operational notes
 
@@ -168,3 +390,30 @@ None posed so far.
   `.tmp/ct-ref/wire` (every top-level key compared; not tracked — re-derivable from the two exports).
 - Post-gate edit disclosed (S1): the S1 row's gate/trace RESULT lines and this note were written after the runs they
   report; the committed tree differs from the `ci --slow`-gated tree by this records file only.
+- S2 ([AGENT] sub-worker, 2026-09-28/29): interface-hot edits (`Syntax.lean`, `Ops.lean`, `Machine.lean`) were warmed
+  SEQUENTIALLY by explicit targets (`lake build GoLean.GoCore.Ops`, then `…Machine` ≈ 3 min, then `…StateWf` ≈ 1 min per
+  attempt, then the proof modules in one background `lake build` of named targets), all under
+  `GOLEAN_MEM_MAX=40G LEAN_NUM_THREADS=6 scripts/capped`, lock-exempt; the three heaviest proofs
+  (`dynamicDispatch?_locSup`, `promotedCallee_locSup`, `enterFrame_wf`; `enterFrame_declared`) were developed in scratch
+  files under `.tmp/scratch/` against the built `.olean`s (`scripts/capped lake env lean <file>`, ≈ 20 s a turn) with the
+  StateWf statements temporarily stubbed `sorry` — the stubs were replaced before any full build, and the final build is
+  `sorry`-free and warning-free (`.tmp/build-s2-full3.log`). `StepErrors.lean` is the slow module (`stepFn_strict`,
+  ≈ 5–6 min per elaboration) — an `errp` leaf for the new structural recursion (`promotionWalk_tame`) was the one addition
+  it needed. Macro hygiene lesson: an `rcases`/`obtain` `rfl` pattern inside a `macro` quotation is a hygienic name, not
+  the `rfl` pattern — it BINDS a hypothesis named `rfl✝` and substitutes nothing (the existing `entryV_arm` macros use
+  `obtain ⟨h1, …⟩ … subst h1` for that reason; `enterFrame_run_arm`/`enterFrame_again_arm` do too).
+- The whole-corpus choice trace ran under the lock (`.tmp/locked-gate.sh .tmp/ct-s2.log …`, the binary COPIED to
+  `.tmp/golean-s2`; export ≈ 8 min, tracing ≈ 3 min); the individual gates ran sequentially from `.tmp/run-gates-s2.sh`
+  (per-gate logs `.tmp/gate-s2-*.log`, exit codes in `.tmp/gates-s2-summary.log`), concurrently with the trace (they are
+  lock-exempt). A FIRST `ci --slow` was started before the trace's diff had been read; the trace showed the fourth flip
+  (`noodler/frontier/promoted-method-expression-ptr`), so that run was stopped by its own process group (`kill -TERM --
+  -<pgid>` — PIDs only, never a pattern; the lock's owner file was checked released) ≈ 3 min in, the row was re-pinned
+  with its reason, and the gate was restarted; only the restarted run is reported.
+- Post-gate edit disclosed (S2): after the `ci --slow` run the reconciler's report-only C5 named the ledger's FR-3 cell
+  (a backticked doc path read as a case citation — S0's lesson again); the backticks were removed — a records-only
+  one-token change, reconciler re-run clean of C5; not re-gated. The S2 row's RESULT lines and this note were written
+  after the runs they report; the committed tree differs from the gated tree by the records files only (this handoff,
+  the ledger cell, the changelog's landing words).
+- `git status` at the S2 tree: 44 tracked files edited + the 140 regenerated `Tests/unseq-wire/*.json`; no new tracked
+  file. The box's `app.slice` holds ≈ 2 800 leftover `capped-*` cgroup directories (box-wide litter, not this lane's to
+  clean; noted for `docs/operational-lessons.md`'s owner).

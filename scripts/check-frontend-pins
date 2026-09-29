@@ -300,6 +300,21 @@ cd "$ROOT"
 # the machine reads nothing from the records in S1 (`Program.promotions` is data), so the twin's
 # observations are unchanged by construction. The schema string stays `golean-native-v1`; the
 # v2 move (wrappers retired, `wrapper` refused) is S2's re-pin.
+# [AGENT] 2026-09-28, lane core/method-promotion-0928, G-P S2 — native method promotion, THE
+# SWITCH (design docs/2026-09-28_gp-method-promotion-design.md §4/§5 S2, decisions 4–9 ruled
+# [USER] Mike 2026-09-28 «Go ahead and land, and approve the decisions as proposed», relayed by the
+# [AGENT] coordinator — cite as relayed): 7e8c06e6… -> 0b58402a…. The schema string moves to
+# `golean-native-v2`; the 53 synthesized promotion WRAPPERS and the 3 promoted sync-primitive
+# STUBS leave `methods` (537 -> 481 entries: every remaining entry is byte-identical to the S1
+# wire's, in the same order — a key-by-key JSON comparison at the re-pin); the 56 promotion
+# RECORDS are UNCHANGED from S1 and are now the machine's only source for a promoted entry
+# (`resolveMethod?`/`receiverAt`/`callee?`; a record whose target has no Func on the wire —
+# raft.DefaultLogger.output -> unexported log.Logger.output — makes a CALL refuse BY NAME, where
+# the retired wrapper went stuck). EVERY other top-level key is IDENTICAL (buildContext,
+# fileOrder, funcs 450, methodSets 82, types 93, globals 50, promotions 56). The twin decodes
+# under the v2 decoder (probed through the CLI). The twin driver under the machine was not
+# re-run (40–65 min): the corpus differential and the whole-corpus choice trace are the
+# zero-behaviour-change evidence (handoff docs/2026-09-28_method-promotion-handoff.md §1 S2).
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/check-frontend-pins.XXXXXX")"
 trap 'rm -rf "$WORK"' EXIT
 

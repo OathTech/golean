@@ -136,14 +136,14 @@ performs a method/interface operation or observes a type display. -/
 def BooleanSyntax (p : Program) : Prop :=
   p.globals.size = 0 ∧ p.methods.size = 0 ∧
   ∀ f ∈ p.funcs.toList,
-    f.id ≠ pkgInitFuncId ∧ f.variadic = false ∧ f.wrapper = false ∧
+    f.id ≠ pkgInitFuncId ∧ f.variadic = false ∧
     BoolParams f.args ∧ BoolParams f.results ∧ BoolStmt f.body
 
 instance (p : Program) : Decidable (BooleanSyntax p) :=
   inferInstanceAs (Decidable (
     p.globals.size = 0 ∧ p.methods.size = 0 ∧
     ∀ f ∈ p.funcs.toList,
-      f.id ≠ pkgInitFuncId ∧ f.variadic = false ∧ f.wrapper = false ∧
+      f.id ≠ pkgInitFuncId ∧ f.variadic = false ∧
       BoolParams f.args ∧ BoolParams f.results ∧ BoolStmt f.body))
 
 end GoLean.GoCore.Admission

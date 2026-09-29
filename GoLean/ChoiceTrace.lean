@@ -402,9 +402,12 @@ def spillFacts (s : Store) (c : Config) : MenuFacts :=
 2 on the wrapper family and the site is consulted only there; the
 structural invariants recompute the family's shape from the pre-state by
 a second, simpler derivation — the receiver argument is an interface box
-holding a nil POINTER, the anchor is an interface-receiver method, and
-the resolved target is a value-receiver method of exactly the pointee
-that is not a synthesized promotion wrapper. -/
+holding a nil POINTER, the anchor is an interface-receiver method, the
+resolved target is a value-receiver method DECLARED on exactly the pointee
+(`methodDecl?`), and the machine's own resolution has the EMPTY path (G-P
+S2: a PROMOTED entry resolves through a record's non-empty path and is
+outside the family — the retired «not a synthesized promotion wrapper»
+test). -/
 def nilTextFacts (fid : FuncId) (args : List GoValue) : MenuFacts :=
   let bad := fun (why : String) =>
     ({ specWidth := none, invariants := [(why, false)], pickCheck := fun _ => [] } : MenuFacts)
@@ -424,15 +427,18 @@ def nilTextFacts (fid : FuncId) (args : List GoValue) : MenuFacts :=
       let target := ctx.methods.find? fun m =>
         m.id == method.id && (pointee.map fun e => methodRecvDynamicTy? m == some e).getD false
       let valueRecvOfPointee := target.isSome
-      let notWrapper := match target >>= fun m => findFunctionIn? ctx.functions m.funcId with
-        | some f => !f.wrapper
-        | none => false
+      let emptyPath := match args.head? with
+        | some (.interface dynTy _) =>
+            match resolveMethod? ctx dynTy method.id with
+            | some r => r.path.isEmpty && (r.target matches .method _)
+            | none => false
+        | _ => false
       { specWidth := some 2
         invariants :=
           [ ("anchor is an interface-receiver method", anchorIsIface),
             ("receiver argument is an interface box holding a nil pointer", nilPtrBox),
             ("target is a value-receiver method of exactly the pointee", valueRecvOfPointee),
-            ("target is not a synthesized promotion wrapper", notWrapper) ]
+            ("the resolution path is empty (a declared method, not a promoted entry)", emptyPath) ]
         pickCheck := fun p => if p < 2 then [] else [s!"pick {p} outside the two texts"] }
 
 /-- The `unseqPanic` site's menu facts (latitude E13 option (b), lane
@@ -769,7 +775,7 @@ def traceProgram (ep : CLI.EnumProgram) (fuel : Nat) (stream : List Nat) :
     match ep.initBody? with
     | none => pure (ep.σ₀, a₀)
     | some body =>
-        match ← initLoop ep.ctx fuel ep.σ₀ (.exec body [] (.frame [] [] [] [] .stop)) a₀ with
+        match ← initLoop ep.ctx fuel ep.σ₀ (.exec body [] (.frame [] [] [] [] .stop pkgInitFuncId)) a₀ with
         | .inl r => pure r
         | .inr out => return out
   let a₁ := { a₁ with phase := "pool" }
@@ -779,7 +785,7 @@ def traceProgram (ep : CLI.EnumProgram) (fuel : Nat) (stream : List Nat) :
     match allocDecls ep.ctx env s₂ ep.func.results.toList with
     | .error e => return { status := e.status, acc := a₁ }
     | .ok (frameEnv, s₃) =>
-      poolLoop ep.ctx fuel ⟨#[.running (.exec ep.func.body frameEnv (.frame [] [] [] [] .stop)) none], s₃, 0⟩ {} a₁
+      poolLoop ep.ctx fuel ⟨#[.running (.exec ep.func.body frameEnv (.frame [] [] [] [] .stop ep.func.id)) none], s₃, 0⟩ {} a₁
 
 /-! ## Streams -/
 

@@ -3394,14 +3394,128 @@ theorem goValueListSup_getElem? {arr : Array GoValue} {i : Nat} {x : GoValue}
   rw [goValueListSup_eq]
   exact supBy_mem (List.mem_of_getElem? (by rw [Array.getElem?_toList]; exact h))
 
+theorem structFieldValue_locSup {v : GoValue} {tid : TypeId} {f : String} {w : GoValue}
+    (h : structFieldValue ctx v tid f = .ok w) : GoValue.locSup w ≤ GoValue.locSup v := by
+  unfold structFieldValue at h
+  split at h
+  · rename_i actualType fields
+    split at h
+    · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
+    · split at h
+      · rename_i value hv
+        simp only [pure, Except.pure, Except.ok.injEq] at h
+        subst h
+        simpa [GoValue.locSup] using StructFields.lookup_locSup hv
+      · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
+  · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
+
+/-- The walk cursor's loc bound: the value in hand, or the cell's root. -/
+def WalkCursor.locSup : WalkCursor → Nat
+  | .val v => GoValue.locSup v
+  | .cell l => Loc.locSup l
+
+/-- One promotion hop stays within the cursor's bound and the heap's (G-P
+S2, `receiverAt`): a projection keeps the root, a pointer-field read is a
+heap value. -/
+theorem promotionHop_locSup {σ : Store} {cur : WalkCursor} {hop : PromotionHop}
+    {cur' : WalkCursor} {tr : AccessTrace}
+    (h : promotionHop ctx σ cur hop = .ok (cur', tr)) :
+    WalkCursor.locSup cur' ≤ max (WalkCursor.locSup cur) (Heap.locSup σ.heap) := by
+  unfold promotionHop at h
+  simp only at h
+  split at h
+  · -- the struct in hand
+    rename_i tid fields
+    simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨w, hw, rfl, rfl⟩ := h
+    have := structFieldValue_locSup hw
+    simp only [WalkCursor.locSup] at this ⊢
+    omega
+  all_goals try (simp [stuck, throw, throwThe, MonadExceptOf.throw] at h; done)
+  all_goals
+    -- `.val (.addr loc)` / `.cell loc`: the field under `loc`
+    rename_i loc
+    split at h
+    · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨⟨pv, trv⟩, hload, h⟩ := h
+      simp only [Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      have := loadLoc_locSup (Mem.load_eq hload).1
+      simp only [WalkCursor.locSup]
+      omega
+    · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      simp only [WalkCursor.locSup, GoValue.locSup, Loc.locSup_field]
+      omega
+
+theorem promotionWalk_locSup {σ : Store} :
+    ∀ {cur : WalkCursor} {hops : List PromotionHop} {cur' : WalkCursor} {tr : AccessTrace},
+      promotionWalk ctx σ cur hops = .ok (cur', tr) →
+      WalkCursor.locSup cur' ≤ max (WalkCursor.locSup cur) (Heap.locSup σ.heap)
+  | cur, [], cur', tr, h => by
+      simp only [promotionWalk, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      exact Nat.le_max_left _ _
+  | cur, hop :: hops, cur', tr, h => by
+      simp only [promotionWalk, bind_eq_ok] at h
+      obtain ⟨⟨c₁, t₁⟩, h1, ⟨c₂, t₂⟩, h2, h3⟩ := h
+      (try dsimp only at h1); (try dsimp only at h2)
+      simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h3
+      obtain ⟨rfl, rfl⟩ := h3
+      have a := promotionHop_locSup h1
+      have b := promotionWalk_locSup h2
+      omega
+
+/-- The receiver at the end of a path is bounded by the root and the heap
+(G-P S2): every value it can be is the root, a projection of it, or a
+heap read. -/
+theorem receiverAt_locSup {σ : Store} {root : GoValue} {path : Array PromotionHop}
+    {adjust : PromotionAdjust} {v : GoValue} {tr : AccessTrace}
+    (h : receiverAt ctx σ root path adjust = .ok (v, tr)) :
+    GoValue.locSup v ≤ max (GoValue.locSup root) (Heap.locSup σ.heap) := by
+  unfold receiverAt at h
+  simp only [bind_eq_ok] at h
+  obtain ⟨⟨cur, tr₀⟩, hwalk, h⟩ := h
+  (try dsimp only at h)
+  have hw := promotionWalk_locSup hwalk
+  simp only [WalkCursor.locSup] at hw
+  split at h
+  all_goals try (simp [stuck, throw, throwThe, MonadExceptOf.throw] at h; done)
+  · -- asIs, the value in hand
+    simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    simpa [WalkCursor.locSup] using hw
+  · -- asIs, the cell read
+    simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨⟨v', tr'⟩, hload, h⟩ := h
+    simp only [Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    have := loadLoc_locSup (Mem.load_eq hload).1
+    omega
+  · -- deref, the pointee read
+    simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨⟨v', tr'⟩, hload, h⟩ := h
+    simp only [Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    have := loadLoc_locSup (Mem.load_eq hload).1
+    omega
+  · -- addr, the cell's address
+    simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    simpa [WalkCursor.locSup, GoValue.locSup] using hw
+
+/-- A dispatch's arguments are bounded by the entry's and the heap, and a
+`.target`'s `Func` is one of the program's (G-P S2: the receiver is
+`receiverAt`'s, the other arguments the entry's). -/
 theorem dynamicDispatch?_locSup {σ : Store} {func : Func}
-    {args : Array GoValue} {out : Option (Func × Array GoValue)} {tr : AccessTrace}
+    {args : Array GoValue} {out : Option Dispatched} {tr : AccessTrace}
     (h : dynamicDispatch? ctx σ func args = .ok (out, tr)) :
-    ∀ {tf : Func} {args' : Array GoValue}, out = some (tf, args') →
-      Func.locSup tf ≤ funcListSup ctx.functions.toList
-        ∧ goValueListSup args'.toList
-            ≤ max (goValueListSup args.toList) (Heap.locSup σ.heap) := by
-  intro tf args' hout
+    ∀ {d : Dispatched}, out = some d →
+      goValueListSup d.args.toList
+          ≤ max (goValueListSup args.toList) (Heap.locSup σ.heap)
+        ∧ ∀ {tf : Func} {a : Array GoValue}, d = .target tf a →
+            Func.locSup tf ≤ funcListSup ctx.functions.toList := by
+  intro d hout
   subst hout
   unfold dynamicDispatch? at h
   simp only [Bind.bind, Except.bind, pure, Except.pure, GoCore.stuck,
@@ -3412,48 +3526,130 @@ theorem dynamicDispatch?_locSup {σ : Store} {func : Func}
     · simp at h
     · split at h
       · rename_i dynTy inner heq
+        have hinner : GoValue.locSup inner ≤ goValueListSup args.toList := by
+          have := goValueListSup_getElem? heq
+          simpa [GoValue.locSup] using this
         split at h
-        · rename_i concrete needsDeref hconc
+        · rename_i r hr
           split at h
-          · rename_i f' hf'
-            have htfb : Func.locSup f' ≤ funcListSup ctx.functions.toList :=
-              findFunctionIn?_locSup hf'
-            have hinner : GoValue.locSup inner ≤ goValueListSup args.toList := by
-              have := goValueListSup_getElem? heq
-              simpa [GoValue.locSup] using this
-            split at h
-            · -- needsDeref
-              split at h
-              · -- .addr loc: the narrowed receiver read
-                rename_i loc
+          · split at h <;> (try split at h) <;> simp at h
+          · split at h
+            · split at h
+              · rename_i f
                 split at h
+                · rename_i tf htf
+                  split at h
+                  · simp at h
+                  · rename_i p hp
+                    obtain ⟨rv, tr'⟩ := p
+                    simp only [Except.ok.injEq, Option.some.injEq, Prod.mk.injEq] at h
+                    obtain ⟨⟨rfl, rfl⟩, rfl⟩ := h
+                    refine ⟨?_, ?_⟩
+                    · simp only [Dispatched.args]
+                      try rw [Array.set!]
+                      refine Nat.le_trans goValueListSup_setIfInBounds ?_
+                      have := receiverAt_locSup hp
+                      omega
+                    · intro tf' a' hd
+                      simp only [Dispatched.target.injEq] at hd
+                      obtain ⟨rfl, rfl⟩ := hd
+                      exact findFunctionIn?_locSup htf
                 · simp at h
-                · rename_i p hp
-                  obtain ⟨rv, tr'⟩ := p
-                  simp only [Except.ok.injEq, Option.some.injEq,
-                    Prod.mk.injEq] at h
+              · simp at h
+            · split at h
+              · simp at h
+              · rename_i p hp
+                obtain ⟨rv, tr'⟩ := p
+                have hrv := receiverAt_locSup hp
+                split at h
+                · rename_i f
+                  split at h
+                  · rename_i tf htf
+                    simp only [Except.ok.injEq, Option.some.injEq, Prod.mk.injEq] at h
+                    obtain ⟨⟨rfl, rfl⟩, rfl⟩ := h
+                    refine ⟨?_, ?_⟩
+                    · simp only [Dispatched.args]
+                      try rw [Array.set!]
+                      refine Nat.le_trans goValueListSup_setIfInBounds ?_
+                      omega
+                    · intro tf' a' hd
+                      simp only [Dispatched.target.injEq] at hd
+                      obtain ⟨rfl, rfl⟩ := hd
+                      exact findFunctionIn?_locSup htf
+                  · simp at h
+                · rename_i i
+                  simp only [Except.ok.injEq, Option.some.injEq, Prod.mk.injEq] at h
                   obtain ⟨⟨rfl, rfl⟩, rfl⟩ := h
-                  refine ⟨htfb, ?_⟩
-                  try rw [Array.set!]
-                  refine Nat.le_trans goValueListSup_setIfInBounds ?_
-                  have := loadLoc_locSup (Mem.loadFor_eq hp).1
-                  omega
-              · simp at h
-              · simp at h
-            · -- no deref: receiver is the boxed value
-              simp only [Except.ok.injEq, Option.some.injEq, Prod.mk.injEq] at h
-              obtain ⟨⟨rfl, rfl⟩, rfl⟩ := h
-              refine ⟨htfb, ?_⟩
-              try rw [Array.set!]
-              refine Nat.le_trans goValueListSup_setIfInBounds ?_
-              omega
-          · -- no concrete method: stuck (recorded set) or the BUG-053
-            -- class refusal (no record) — one throw over a conditional
-            -- payload, an error either way.
-            simp at h
+                  refine ⟨?_, ?_⟩
+                  · simp only [Dispatched.args]
+                    try rw [Array.set!]
+                    refine Nat.le_trans goValueListSup_setIfInBounds ?_
+                    omega
+                  · intro tf' a' hd
+                    cases hd
         · simp at h
       · simp at h
       · simp at h
+
+
+/-- A promoted method expression's callee (S7) is bounded like a dispatch. -/
+theorem promotedCallee_locSup {σ : Store} {fid : FuncId} {p : Promotion}
+    {argVals : List GoValue} {d : Dispatched} {tr : AccessTrace}
+    (h : promotedCallee ctx σ fid p argVals = .ok (d, tr)) :
+    goValueListSup d.args.toList ≤ max (goValueListSup argVals) (Heap.locSup σ.heap)
+      ∧ ∀ {tf : Func} {a : Array GoValue}, d = .target tf a →
+          Func.locSup tf ≤ funcListSup ctx.functions.toList := by
+  unfold promotedCallee at h
+  simp only [Bind.bind, Except.bind, pure, Except.pure, GoCore.stuck,
+    throw, throwThe, MonadExceptOf.throw] at h
+  split at h
+  · simp at h
+  · split at h
+    · rename_i f
+      split at h
+      · simp at h
+      · rename_i tf htf
+        split at h
+        · simp at h
+        · split at h
+          · simp at h
+          · rename_i root rest
+            split at h
+            · simp at h
+            · rename_i q hq
+              obtain ⟨rv, tr'⟩ := q
+              simp only [Except.ok.injEq, Prod.mk.injEq] at h
+              obtain ⟨rfl, rfl⟩ := h
+              have hrv := receiverAt_locSup hq
+              refine ⟨?_, ?_⟩
+              · simp only [Dispatched.args, List.toList_toArray, goValueListSup]
+                omega
+              · intro tf' a' hd
+                simp only [Dispatched.target.injEq] at hd
+                obtain ⟨rfl, rfl⟩ := hd
+                exact findFunctionIn?_locSup htf
+    · rename_i i
+      split at h
+      · simp at h
+      · rename_i anchor hanchor
+        split at h
+        · simp at h
+        · split at h
+          · simp at h
+          · rename_i root rest
+            split at h
+            · simp at h
+            · rename_i q hq
+              obtain ⟨rv, tr'⟩ := q
+              simp only [Except.ok.injEq, Prod.mk.injEq] at h
+              obtain ⟨rfl, rfl⟩ := h
+              have hrv := receiverAt_locSup hq
+              refine ⟨?_, ?_⟩
+              · simp only [Dispatched.args, List.toList_toArray, goValueListSup]
+                omega
+              · intro tf' a' hd
+                cases hd
+
 
 theorem enterFrame_tail {σ : Store} {func₁ : Func} {argVals₁ : List GoValue}
     {argsEnv : LocalEnv} {s₁ : Store} {frameEnv₁ : LocalEnv} {s₂ : Store}
@@ -3476,80 +3672,124 @@ theorem enterFrame_tail {σ : Store} {func₁ : Func} {argVals₁ : List GoValue
   have hbody : Stmt.locSup func₁.body = 0 := Stmt.locSup_eq_zero _
   exact ⟨c1, by omega, by omega, c6, by omega⟩
 
+/-- What a frame entry delivers, loc-wise (G-P S2): a RUN's body, frame
+environment and pinned result cells, or a RE-DISPATCH's arguments. -/
+def Entry.locSup : Entry → Nat
+  | .run func frameEnv resultLocs =>
+      max (Stmt.locSup func.body) (max (LocalEnv.locSup frameEnv) (locListSup resultLocs))
+  | .again _ args => goValueListSup args
+
+/-- Close an `enterFrame_wf` arm whose plan is the RUN commit (G-P S2): the
+commit's bind/declare/pin run on the entry store (`h`), bounded by
+`enterFrame_tail`. Expects `hplan : Except.ok (fun s => …) = Except.ok c`
+and `h : c σ = .ok (e, σ', tr)`; `func`/`args` are the callee and its
+arguments as they appear in the commit. -/
+macro "enterFrame_run_arm " hplan:ident h:ident hw:term:max hargs:term:max σ:term:max func:term:max args:term:max : tactic =>
+  `(tactic| (
+    simp only [Except.ok.injEq] at $hplan:ident
+    subst $hplan:ident
+    (try simp only [Bind.bind, Except.bind, pure, Except.pure] at $h:ident)
+    cases hbp : bindParams ctx [] $σ ($func).args.toList $args with
+    | error e => rw [hbp] at $h:ident; simp at $h:ident
+    | ok p₁ =>
+    rw [hbp] at $h:ident
+    obtain ⟨argsEnv, s₁⟩ := p₁
+    try dsimp only at $h:ident
+    cases had : allocDecls ctx argsEnv s₁ ($func).results.toList with
+    | error e => rw [had] at $h:ident; simp at $h:ident
+    | ok p₂ =>
+    rw [had] at $h:ident
+    obtain ⟨frameEnv₁, s₂⟩ := p₂
+    try dsimp only at $h:ident
+    cases hpin : pinResultLocs frameEnv₁ ($func).results.toList with
+    | error e => rw [hpin] at $h:ident; simp at $h:ident
+    | ok locs =>
+    rw [hpin] at $h:ident
+    simp only [pure, Except.pure, Except.ok.injEq, Prod.mk.injEq] at $h:ident
+    obtain ⟨h1, h2, h3⟩ := $h:ident
+    subst h1; subst h2; subst h3
+    obtain ⟨t1, t2, t3, t4, t5⟩ := enterFrame_tail $hw $hargs hbp had hpin
+    refine ⟨t1, t2, ?_⟩
+    simp only [Entry.locSup, Nat.max_le]
+    omega))
+
+/-- Close an `enterFrame_wf` arm whose plan is the RE-DISPATCH (nothing
+committed). Expects `hplan : Except.ok (fun s => Except.ok (.again …, s, tr₀)) = Except.ok c`,
+`h : c σ = .ok (e, σ', tr)`, `hd1 : goValueListSup (Dispatched.again fid' args').args.toList ≤ …`. -/
+macro "enterFrame_again_arm " hplan:ident h:ident hw:term:max hd1:ident : tactic =>
+  `(tactic| (
+    simp only [Except.ok.injEq] at $hplan:ident
+    subst $hplan:ident
+    simp only [Except.ok.injEq, Prod.mk.injEq] at $h:ident
+    obtain ⟨h1, h2, h3⟩ := $h:ident
+    subst h1; subst h2; subst h3
+    refine ⟨$hw, Nat.le_refl _, ?_⟩
+    simp only [Dispatched.args] at $hd1:ident
+    simp only [Entry.locSup]
+    omega))
+
 theorem enterFrame_wf {σ : Store} {fid : FuncId} {argVals : List GoValue}
-    {func : Func} {frameEnv : LocalEnv} {resultLocs : List Loc} {σ' : Store}
-    {tr : AccessTrace}
+    {e : Entry} {σ' : Store} {tr : AccessTrace}
     (hw : StateWf ctx σ) (hargs : goValueListSup argVals ≤ σ.nextAddr)
-    (h : enterFrame ctx σ fid argVals = .ok (func, frameEnv, resultLocs, σ', tr)) :
-    StateWf ctx σ' ∧ σ.nextAddr ≤ σ'.nextAddr
-      ∧ Stmt.locSup func.body ≤ σ'.nextAddr
-      ∧ LocalEnv.locSup frameEnv ≤ σ'.nextAddr
-      ∧ locListSup resultLocs ≤ σ'.nextAddr := by
-  -- C1 S3: the VALIDATE phase (lookup, arity, dispatch — `hplan`) yields the
-  -- COMMIT (`bindParams`/`allocDecls`/`pinResultLocs`), which runs on `σ` (`h`).
+    (h : enterFrame ctx σ fid argVals = .ok (e, σ', tr)) :
+    StateWf ctx σ' ∧ σ.nextAddr ≤ σ'.nextAddr ∧ Entry.locSup e ≤ σ'.nextAddr := by
   unfold enterFrame at h
   simp only [bind_eq_ok] at h
   obtain ⟨c, hplan, h⟩ := h
   unfold enterFrame.plan at hplan
   simp only [Bind.bind, Except.bind, pure, Except.pure, GoCore.stuck,
     throw, throwThe, MonadExceptOf.throw] at hplan
+  have hh := hw.heap_le
+  have harr : goValueListSup argVals.toArray.toList = goValueListSup argVals := by simp
   split at hplan
-  all_goals try (simp at hplan; done)
-  rename_i func₀ hfunc₀
-  split at hplan
-  all_goals try (simp at hplan; done)
-  split at hplan
-  all_goals try (simp at hplan; done)
-  rename_i dOut hdd
-  split at hplan
-  · -- dispatch hit
-    rename_i tf ta
-    obtain ⟨h1, h2⟩ := dynamicDispatch?_locSup hdd rfl
+  · simp at hplan
+  · -- a declared callee: arity, then dispatch
+    rename_i func₀ hfunc₀
     split at hplan
-    all_goals try (simp at hplan; done)
-    simp only [Except.ok.injEq] at hplan
-    subst hplan
-    simp only [Bind.bind, Except.bind, pure, Except.pure] at h
-    split at h
-    all_goals try (simp at h; done)
-    rename_i p₁ hbp
-    obtain ⟨argsEnv, s₁⟩ := p₁
-    try dsimp only at h
-    split at h
-    all_goals try (simp at h; done)
-    rename_i p₂ had
-    obtain ⟨frameEnv₁, s₂⟩ := p₂
-    try dsimp only at h
-    split at h
-    all_goals try (simp at h; done)
-    rename_i locs hpin
-    simp only [Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl, rfl, rfl, rfl⟩ := h
-    refine enterFrame_tail hw ?_ hbp had hpin
-    have harr : goValueListSup argVals.toArray.toList
-        = goValueListSup argVals := by simp
-    have hh := hw.heap_le
-    omega
-  · -- no dispatch (the second arity check shares the first's condition, already split)
-    simp only [Except.ok.injEq] at hplan
-    subst hplan
-    simp only [Bind.bind, Except.bind, pure, Except.pure] at h
-    split at h
-    all_goals try (simp at h; done)
-    rename_i p₁ hbp
-    obtain ⟨argsEnv, s₁⟩ := p₁
-    try dsimp only at h
-    split at h
-    all_goals try (simp at h; done)
-    rename_i p₂ had
-    obtain ⟨frameEnv₁, s₂⟩ := p₂
-    try dsimp only at h
-    split at h
-    all_goals try (simp at h; done)
-    rename_i locs hpin
-    simp only [Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl, rfl, rfl, rfl⟩ := h
-    exact enterFrame_tail hw hargs hbp had hpin
+    · simp at hplan
+    · split at hplan
+      · simp at hplan
+      · rename_i q hdd
+        obtain ⟨dOut, tr₀⟩ := q
+        (try dsimp only at hplan)
+        split at hplan
+        · rename_i d tr₁ hdq
+          simp only [Prod.mk.injEq] at hdq
+          obtain ⟨rfl, rfl⟩ := hdq
+          (try dsimp only at hplan)
+          obtain ⟨hd1, hd2⟩ := dynamicDispatch?_locSup hdd rfl
+          split at hplan
+          · enterFrame_again_arm hplan h hw hd1
+          · rename_i func args
+            split at hplan
+            · simp at hplan
+            · have hargs' : goValueListSup args.toList ≤ σ.nextAddr := by
+                simp only [Dispatched.args] at hd1
+                omega
+              enterFrame_run_arm hplan h hw hargs' σ func args.toList
+        · (try dsimp only at hplan)
+          split at hplan
+          · simp at hplan
+          · have hargs' : goValueListSup argVals.toArray.toList ≤ σ.nextAddr := by omega
+            enterFrame_run_arm hplan h hw hargs' σ func₀ argVals.toArray.toList
+  · -- a promotion record callee (a method expression, S7)
+    rename_i p hp
+    split at hplan
+    · simp at hplan
+    · rename_i q hpc
+      obtain ⟨d, tr₀⟩ := q
+      (try dsimp only at hplan)
+      obtain ⟨hd1, hd2⟩ := promotedCallee_locSup hpc
+      split at hplan
+      · enterFrame_again_arm hplan h hw hd1
+      · rename_i func args
+        split at hplan
+        · simp at hplan
+        · have hargs' : goValueListSup args.toList ≤ σ.nextAddr := by
+            simp only [Dispatched.args] at hd1
+            omega
+          enterFrame_run_arm hplan h hw hargs' σ func args.toList
+
 
 theorem bindIterVars_wf {env : LocalEnv} {σ : Store}
     {kv vv : Option String} {kt vt : Ty} {key value : GoValue}
@@ -5708,32 +5948,27 @@ theorem markNewestRecovered_locSup :
       simp only [panicChainSup] at ih1 ih2 ⊢
       omega
 
-/-- Companion to `recoverResult_locSup` for the below-the-frame walk
-(wrapper transparency, arc-final audit F1) — an instance of the one walk
-bound (B3). -/
-theorem recoverThroughWrappers_locSup :
-    ∀ {k : Cont} {v : GoValue} {k' : Cont}, recoverThroughWrappers k = some (v, k') →
-      GoValue.locSup v ≤ Cont.locSup k ∧ Cont.locSup k' ≤ Cont.locSup k := by
-  intro k v k' h
-  have := Cont.rebuild_locSup (μ := GoValue.locSup) (bound := 0) ?_ k v k' h
-  · simpa using this
-  intro k b k' ha
-  split at ha
-  · rename_i chain k₀
-    simp only [Option.map_eq_some_iff] at ha
-    obtain ⟨⟨v₀, chain'⟩, hmark, heq⟩ := ha
-    simp only [Prod.mk.injEq] at heq
-    obtain ⟨rfl, rfl⟩ := heq
-    obtain ⟨m1, m2⟩ := markNewestRecovered_locSup hmark
-    constructor <;> (simp only [Cont.locSup, Nat.max_le] at m1 m2 ⊢; omega)
-  · cases ha
+/-- Below the deferred frame (G-P S2 `recoverAtDeferred`, replacing
+`recoverThroughWrappers_locSup`): the payload and the marked marker are
+bounded by the marker. -/
+theorem recoverAtDeferred_locSup {k : Cont} {v : GoValue} {k' : Cont}
+    (h : recoverAtDeferred k = some (v, k')) :
+    GoValue.locSup v ≤ Cont.locSup k ∧ Cont.locSup k' ≤ Cont.locSup k := by
+  cases k <;> try (simp [recoverAtDeferred] at h; done)
+  rename_i chain k₀
+  simp only [recoverAtDeferred, Option.map_eq_some_iff] at h
+  obtain ⟨⟨v₀, chain'⟩, hmark, heq⟩ := h
+  simp only [Prod.mk.injEq] at heq
+  obtain ⟨rfl, rfl⟩ := heq
+  obtain ⟨m1, m2⟩ := markNewestRecovered_locSup hmark
+  constructor <;> (simp only [Cont.locSup, Nat.max_le] at m1 m2 ⊢; omega)
 
 theorem recoverResult_locSup :
     ∀ {k : Cont} {v : GoValue} {k' : Cont}, recoverResult k = (v, k') →
       GoValue.locSup v ≤ Cont.locSup k ∧ Cont.locSup k' ≤ Cont.locSup k := by
   intro k v k' h
   unfold recoverResult at h
-  cases hr : Cont.rebuild Cont.recoverTransparent _ k with
+  cases hr : Cont.rebuild Cont.isGlue _ k with
   | none =>
     rw [hr] at h
     simp only [Option.getD_none, Prod.mk.injEq] at h
@@ -5748,9 +5983,9 @@ theorem recoverResult_locSup :
     · simpa using this
     intro k b k' ha
     split at ha
-    · rename_i t te r ds k₀
+    · rename_i t te r ds k₀ f
       simp only [Option.some.injEq] at ha
-      cases hin : recoverThroughWrappers k₀ with
+      cases hin : recoverAtDeferred k₀ with
       | none =>
         rw [hin] at ha
         simp only [Prod.mk.injEq] at ha
@@ -5761,12 +5996,45 @@ theorem recoverResult_locSup :
         rw [hin] at ha
         simp only [Prod.mk.injEq] at ha
         obtain ⟨rfl, rfl⟩ := ha
-        obtain ⟨m1, m2⟩ := recoverThroughWrappers_locSup hin
+        obtain ⟨m1, m2⟩ := recoverAtDeferred_locSup hin
         constructor <;> (simp only [Cont.locSup, Nat.max_le] at m1 m2 ⊢; omega)
     · simp only [Option.some.injEq, Prod.mk.injEq] at ha
       obtain ⟨rfl, rfl⟩ := ha
       simp [GoValue.locSup]
 
+/-- The configuration a CALL position delivers is bounded by its entry, the
+plans, the environment and the continuation (G-P S2, both `Entry` arms). -/
+theorem Entry.callConfig_bounded {plans : List (TargetShape × List Expr)} {env : LocalEnv}
+    {k : Cont} {e : Entry} {bound : Nat}
+    (he : Entry.locSup e ≤ bound) (hp : targetPlansSup plans ≤ bound)
+    (henv : LocalEnv.locSup env ≤ bound) (hk : Cont.locSup k ≤ bound) :
+    Config.locSup (e.callConfig plans env k) ≤ bound := by
+  cases e with
+  | run func frameEnv resultLocs =>
+    simp only [Entry.locSup, Nat.max_le] at he
+    simp only [Entry.callConfig, Config.locSup, Cont.locSup, deferListSup, Nat.max_le]
+    omega
+  | again fid args =>
+    simp only [Entry.locSup] at he
+    simp only [Entry.callConfig, Config.locSup, Cont.locSup, GoValue.locSup, exprListSup, Nat.max_le]
+    omega
+
+/-- The configuration a DRAIN (or the spawn) delivers is bounded by its
+entry, the barrier and the re-queue's bound (G-P S2, both `Entry` arms). -/
+theorem Entry.drainConfig_bounded {barrier : Cont} {requeue : GoValue → Config} {e : Entry}
+    {bound : Nat}
+    (he : Entry.locSup e ≤ bound) (hb : Cont.locSup barrier ≤ bound)
+    (hreq : ∀ cv, GoValue.locSup cv ≤ bound → Config.locSup (requeue cv) ≤ bound) :
+    Config.locSup (e.drainConfig barrier requeue) ≤ bound := by
+  cases e with
+  | run func frameEnv resultLocs =>
+    simp only [Entry.locSup, Nat.max_le] at he
+    simp only [Entry.drainConfig, Config.locSup, Cont.locSup, deferListSup, locListSup,
+      targetPlansSup, LocalEnv.locSup, Scope.locSup, Nat.max_le]
+    omega
+  | again fid args =>
+    simp only [Entry.locSup] at he
+    exact hreq (.funcVal fid args) (by simpa [GoValue.locSup] using he)
 
 /-! ## Small append/list bridges for the preservation closers -/
 
@@ -7349,15 +7617,15 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
       Nat.max_le] at hc h1 h2 ⊢
     omega
   case callImmediate targets fid args plans r env k ch ch' ps hplan hargs hres hdel =>
-    rcases enterFramePick_cases hres with ⟨func, frameEnv, resultLocs, s₂, tr₂, rfl, henter, rfl, rfl⟩ | ⟨msg, rfl, -, rfl, rfl⟩
+    rcases enterFramePick_cases hres with ⟨e, s₂, tr₂, rfl, henter, rfl, rfl⟩ | ⟨msg, rfl, -, rfl, rfl⟩
     · simp only [deliver_ok, Prod.mk.injEq] at hdel
       obtain ⟨rfl, rfl, rfl⟩ := hdel
-
       have h1 := targetsPlan_locSup hplan
-      obtain ⟨w1, w2, w6, w7, w8⟩ := enterFrame_wf hs
+      obtain ⟨w1, w2, w6⟩ := enterFrame_wf hs
         (by simp [goValueListSup]) henter
       refine ⟨w1, ?_, w2⟩
-      simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
+      refine Entry.callConfig_bounded w6 ?_ ?_ ?_ <;>
+        (simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
         GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
         stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
         goValueListSup_append, exprListSup_append, stmtListSup_append,
@@ -7365,16 +7633,14 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
         targetRefListSup, targetPlansSup, targetRefListSup_append,
         LocalEnv.locSup, Scope.locSup,
         runtimeErrorValue_locSup, panicEntry_locSup, panicPayload, LocalEnv.pushScope_locSup,
-        Nat.max_le] at hc h1 ⊢
-      omega
+        Nat.max_le] at hc h1 ⊢; omega)
     · wf_loc_panic hs hc hdel
   case callArgsDoneEnter v fid plans vals r env k ch ch' ps hres hdel =>
-    rcases enterFramePick_cases hres with ⟨func, frameEnv, resultLocs, s₂, tr₂, rfl, henter, rfl, rfl⟩ | ⟨msg, rfl, -, rfl, rfl⟩
+    rcases enterFramePick_cases hres with ⟨e, s₂, tr₂, rfl, henter, rfl, rfl⟩ | ⟨msg, rfl, -, rfl, rfl⟩
     · simp only [deliver_ok, Prod.mk.injEq] at hdel
       obtain ⟨rfl, rfl, rfl⟩ := hdel
-
       have hargb : goValueListSup (vals ++ [v]) ≤ σ.nextAddr := by
-        rw [goValueListSup_append]
+        (try rw [goValueListSup_append]); (try rw [goValueListSup_append])
         simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
         GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
         stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
@@ -7384,11 +7650,12 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
         LocalEnv.locSup, Scope.locSup,
         runtimeErrorValue_locSup, panicEntry_locSup, panicPayload, LocalEnv.pushScope_locSup,
         Nat.max_le] at hc
-        simp only [goValueListSup]
+        (try simp only [goValueListSup])
         omega
-      obtain ⟨w1, w2, w6, w7, w8⟩ := enterFrame_wf hs hargb henter
+      obtain ⟨w1, w2, w6⟩ := enterFrame_wf hs hargb henter
       refine ⟨w1, ?_, w2⟩
-      simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
+      refine Entry.callConfig_bounded w6 ?_ ?_ ?_ <;>
+        (simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
         GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
         stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
         goValueListSup_append, exprListSup_append, stmtListSup_append,
@@ -7396,8 +7663,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
         targetRefListSup, targetPlansSup, targetRefListSup_append,
         LocalEnv.locSup, Scope.locSup,
         runtimeErrorValue_locSup, panicEntry_locSup, panicPayload, LocalEnv.pushScope_locSup,
-        Nat.max_le] at hc ⊢
-      omega
+        Nat.max_le] at hc ⊢; omega)
     · wf_loc_panic hs hc hdel
   case stmtOpFirst stmt op nt e rest env k hplan =>
     refine ⟨hs, ?_, Nat.le_refl _⟩
@@ -7522,11 +7788,11 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
       Nat.max_le] at hc h1 ⊢
     omega
   case callValCalleeEnter fid captured plans r env k ch ch' ps hres hdel =>
-    rcases enterFramePick_cases hres with ⟨func, frameEnv, resultLocs, s₂, tr₂, rfl, henter, rfl, rfl⟩ | ⟨msg, rfl, -, rfl, rfl⟩
+    rcases enterFramePick_cases hres with ⟨e, s₂, tr₂, rfl, henter, rfl, rfl⟩ | ⟨msg, rfl, -, rfl, rfl⟩
     · simp only [deliver_ok, Prod.mk.injEq] at hdel
       obtain ⟨rfl, rfl, rfl⟩ := hdel
-
       have hargb : goValueListSup captured ≤ σ.nextAddr := by
+        (try rw [goValueListSup_append]); (try rw [goValueListSup_append])
         simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
         GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
         stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
@@ -7536,10 +7802,12 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
         LocalEnv.locSup, Scope.locSup,
         runtimeErrorValue_locSup, panicEntry_locSup, panicPayload, LocalEnv.pushScope_locSup,
         Nat.max_le] at hc
+        (try simp only [goValueListSup])
         omega
-      obtain ⟨w1, w2, w6, w7, w8⟩ := enterFrame_wf hs hargb henter
+      obtain ⟨w1, w2, w6⟩ := enterFrame_wf hs hargb henter
       refine ⟨w1, ?_, w2⟩
-      simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
+      refine Entry.callConfig_bounded w6 ?_ ?_ ?_ <;>
+        (simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
         GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
         stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
         goValueListSup_append, exprListSup_append, stmtListSup_append,
@@ -7547,16 +7815,14 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
         targetRefListSup, targetPlansSup, targetRefListSup_append,
         LocalEnv.locSup, Scope.locSup,
         runtimeErrorValue_locSup, panicEntry_locSup, panicPayload, LocalEnv.pushScope_locSup,
-        Nat.max_le] at hc ⊢
-      omega
+        Nat.max_le] at hc ⊢; omega)
     · wf_loc_panic hs hc hdel
   case callValArgsEnter v fid captured plans vals r env k ch ch' ps hres hdel =>
-    rcases enterFramePick_cases hres with ⟨func, frameEnv, resultLocs, s₂, tr₂, rfl, henter, rfl, rfl⟩ | ⟨msg, rfl, -, rfl, rfl⟩
+    rcases enterFramePick_cases hres with ⟨e, s₂, tr₂, rfl, henter, rfl, rfl⟩ | ⟨msg, rfl, -, rfl, rfl⟩
     · simp only [deliver_ok, Prod.mk.injEq] at hdel
       obtain ⟨rfl, rfl, rfl⟩ := hdel
-
       have hargb : goValueListSup (captured ++ vals ++ [v]) ≤ σ.nextAddr := by
-        rw [goValueListSup_append, goValueListSup_append]
+        (try rw [goValueListSup_append]); (try rw [goValueListSup_append])
         simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
         GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
         stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
@@ -7566,11 +7832,12 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
         LocalEnv.locSup, Scope.locSup,
         runtimeErrorValue_locSup, panicEntry_locSup, panicPayload, LocalEnv.pushScope_locSup,
         Nat.max_le] at hc
-        simp only [goValueListSup]
+        (try simp only [goValueListSup])
         omega
-      obtain ⟨w1, w2, w6, w7, w8⟩ := enterFrame_wf hs hargb henter
+      obtain ⟨w1, w2, w6⟩ := enterFrame_wf hs hargb henter
       refine ⟨w1, ?_, w2⟩
-      simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
+      refine Entry.callConfig_bounded w6 ?_ ?_ ?_ <;>
+        (simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
         GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
         stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
         goValueListSup_append, exprListSup_append, stmtListSup_append,
@@ -7578,8 +7845,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
         targetRefListSup, targetPlansSup, targetRefListSup_append,
         LocalEnv.locSup, Scope.locSup,
         runtimeErrorValue_locSup, panicEntry_locSup, panicPayload, LocalEnv.pushScope_locSup,
-        Nat.max_le] at hc ⊢
-      omega
+        Nat.max_le] at hc ⊢; omega)
     · wf_loc_panic hs hc hdel
   case frameReturnTargets sh e ops rest tenv results k w vs hload =>
     have h1 := loadResults_locSup hload
@@ -7608,12 +7874,11 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
       Nat.max_le, LocalEnv.locSup] at hc h1 ⊢
     omega
   case frameDeferFall targets tenv results fid captured args ds k w r ch ch' ps hres hdel =>
-    rcases enterFramePick_cases hres with ⟨func, frameEnv, resultLocs, s₂, tr₂, rfl, henter, rfl, rfl⟩ | ⟨msg, rfl, -, rfl, rfl⟩
+    rcases enterFramePick_cases hres with ⟨e, s₂, tr₂, rfl, henter, rfl, rfl⟩ | ⟨msg, rfl, -, rfl, rfl⟩
     · simp only [deliver_ok, Prod.mk.injEq] at hdel
       obtain ⟨rfl, rfl, rfl⟩ := hdel
-
       have hargb : goValueListSup (captured ++ args) ≤ σ.nextAddr := by
-        rw [goValueListSup_append]
+        (try rw [goValueListSup_append]); (try rw [goValueListSup_append])
         simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
         GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
         stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
@@ -7623,10 +7888,12 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
         LocalEnv.locSup, Scope.locSup,
         runtimeErrorValue_locSup, panicEntry_locSup, panicPayload, LocalEnv.pushScope_locSup,
         Nat.max_le] at hc
+        (try simp only [goValueListSup])
         omega
-      obtain ⟨w1, w2, w6, w7, w8⟩ := enterFrame_wf hs hargb henter
+      obtain ⟨w1, w2, w6⟩ := enterFrame_wf hs hargb henter
       refine ⟨w1, ?_, w2⟩
-      simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
+      refine Entry.drainConfig_bounded w6 ?_ ?_
+      · simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
         GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
         stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
         goValueListSup_append, exprListSup_append, stmtListSup_append,
@@ -7635,15 +7902,25 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
         LocalEnv.locSup, Scope.locSup,
         runtimeErrorValue_locSup, panicEntry_locSup, panicPayload, LocalEnv.pushScope_locSup,
         Nat.max_le] at hc ⊢
-      omega
+        omega
+      · intro cv hcv
+        simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
+        GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
+        stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
+        goValueListSup_append, exprListSup_append, stmtListSup_append,
+        locListSup_append, panicChainSup_append, goValueListSup_reverse,
+        targetRefListSup, targetPlansSup, targetRefListSup_append,
+        LocalEnv.locSup, Scope.locSup,
+        runtimeErrorValue_locSup, panicEntry_locSup, panicPayload, LocalEnv.pushScope_locSup,
+        Nat.max_le] at hc ⊢
+        omega
     · wf_loc_panic hs hc hdel
   case frameDeferReturn targets tenv results fid captured args ds k w r ch ch' ps hres hdel =>
-    rcases enterFramePick_cases hres with ⟨func, frameEnv, resultLocs, s₂, tr₂, rfl, henter, rfl, rfl⟩ | ⟨msg, rfl, -, rfl, rfl⟩
+    rcases enterFramePick_cases hres with ⟨e, s₂, tr₂, rfl, henter, rfl, rfl⟩ | ⟨msg, rfl, -, rfl, rfl⟩
     · simp only [deliver_ok, Prod.mk.injEq] at hdel
       obtain ⟨rfl, rfl, rfl⟩ := hdel
-
       have hargb : goValueListSup (captured ++ args) ≤ σ.nextAddr := by
-        rw [goValueListSup_append]
+        (try rw [goValueListSup_append]); (try rw [goValueListSup_append])
         simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
         GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
         stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
@@ -7653,10 +7930,12 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
         LocalEnv.locSup, Scope.locSup,
         runtimeErrorValue_locSup, panicEntry_locSup, panicPayload, LocalEnv.pushScope_locSup,
         Nat.max_le] at hc
+        (try simp only [goValueListSup])
         omega
-      obtain ⟨w1, w2, w6, w7, w8⟩ := enterFrame_wf hs hargb henter
+      obtain ⟨w1, w2, w6⟩ := enterFrame_wf hs hargb henter
       refine ⟨w1, ?_, w2⟩
-      simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
+      refine Entry.drainConfig_bounded w6 ?_ ?_
+      · simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
         GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
         stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
         goValueListSup_append, exprListSup_append, stmtListSup_append,
@@ -7665,7 +7944,18 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
         LocalEnv.locSup, Scope.locSup,
         runtimeErrorValue_locSup, panicEntry_locSup, panicPayload, LocalEnv.pushScope_locSup,
         Nat.max_le] at hc ⊢
-      omega
+        omega
+      · intro cv hcv
+        simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
+        GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
+        stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
+        goValueListSup_append, exprListSup_append, stmtListSup_append,
+        locListSup_append, panicChainSup_append, goValueListSup_reverse,
+        targetRefListSup, targetPlansSup, targetRefListSup_append,
+        LocalEnv.locSup, Scope.locSup,
+        runtimeErrorValue_locSup, panicEntry_locSup, panicPayload, LocalEnv.pushScope_locSup,
+        Nat.max_le] at hc ⊢
+        omega
     · wf_loc_panic hs hc hdel
   case deferCalleeNoArgs cv env k k' hdc hpush =>
     refine ⟨hs, ?_, Nat.le_refl _⟩
@@ -7710,12 +8000,11 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
       Nat.max_le] at hc ⊢
     omega
   case panicFrameDefer chain targets tenv results fid captured args ds k w r ch ch' ps hres hdel =>
-    rcases enterFramePick_cases hres with ⟨func, frameEnv, resultLocs, s₂, tr₂, rfl, henter, rfl, rfl⟩ | ⟨msg, rfl, -, rfl, rfl⟩
+    rcases enterFramePick_cases hres with ⟨e, s₂, tr₂, rfl, henter, rfl, rfl⟩ | ⟨msg, rfl, -, rfl, rfl⟩
     · simp only [deliver_ok, Prod.mk.injEq] at hdel
       obtain ⟨rfl, rfl, rfl⟩ := hdel
-
       have hargb : goValueListSup (captured ++ args) ≤ σ.nextAddr := by
-        rw [goValueListSup_append]
+        (try rw [goValueListSup_append]); (try rw [goValueListSup_append])
         simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
         GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
         stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
@@ -7725,10 +8014,12 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
         LocalEnv.locSup, Scope.locSup,
         runtimeErrorValue_locSup, panicEntry_locSup, panicPayload, LocalEnv.pushScope_locSup,
         Nat.max_le] at hc
+        (try simp only [goValueListSup])
         omega
-      obtain ⟨w1, w2, w6, w7, w8⟩ := enterFrame_wf hs hargb henter
+      obtain ⟨w1, w2, w6⟩ := enterFrame_wf hs hargb henter
       refine ⟨w1, ?_, w2⟩
-      simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
+      refine Entry.drainConfig_bounded w6 ?_ ?_
+      · simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
         GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
         stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
         goValueListSup_append, exprListSup_append, stmtListSup_append,
@@ -7737,8 +8028,18 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
         LocalEnv.locSup, Scope.locSup,
         runtimeErrorValue_locSup, panicEntry_locSup, panicPayload, LocalEnv.pushScope_locSup,
         Nat.max_le] at hc ⊢
-      omega
-    -- Channel statements (channels arc slice 1).
+        omega
+      · intro cv hcv
+        simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
+        GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
+        stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
+        goValueListSup_append, exprListSup_append, stmtListSup_append,
+        locListSup_append, panicChainSup_append, goValueListSup_reverse,
+        targetRefListSup, targetPlansSup, targetRefListSup_append,
+        LocalEnv.locSup, Scope.locSup,
+        runtimeErrorValue_locSup, panicEntry_locSup, panicPayload, LocalEnv.pushScope_locSup,
+        Nat.max_le] at hc ⊢
+        omega
     · wf_loc_panic hs hc hdel
   case chanStFirst stmt op e rest env k hplan =>
     refine ⟨hs, ?_, Nat.le_refl _⟩

@@ -13,8 +13,8 @@ def MethodIdentityAudit.run : CoreM Unit := do
       ``GoLean.MethodIdentityTests.variadic_is_part_of_signature,
       ``GoLean.MethodIdentityTests.private_targets_are_distinct,
       ``GoLean.MethodIdentityTests.utf8_target_vector,
-      ``GoLean.MethodIdentityTests.nil_text_ignores_foreign_wrapper,
-      ``GoLean.MethodIdentityTests.nil_text_does_not_borrow_foreign_body,
+      ``GoLean.MethodIdentityTests.nil_text_ignores_foreign_declaration,
+      ``GoLean.MethodIdentityTests.nil_text_promoted_entry_outside_family,
       ``GoLean.MethodIdentityTests.nil_text_requires_matching_package] do
     let some (.thmInfo _) := env.find? required
       | throwError "Method identity audit: missing theorem {required}"

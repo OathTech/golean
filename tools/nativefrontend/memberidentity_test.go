@@ -54,7 +54,7 @@ func TestExecutableMemberIdentityFixture(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, recv := range []string{"main.T", "main.S", "main.I"} {
+	for _, recv := range []string{"main.T", "main.I"} {
 		for _, name := range []string{"m", "M", "é", "É", "ǅ", "𐐀"} {
 			record := findMethod(program, recv, name)
 			if record == nil {
@@ -70,6 +70,28 @@ func TestExecutableMemberIdentityFixture(t *testing.T) {
 			if _, legacy := record["name"]; legacy {
 				t.Fatal("parallel bare method identity survived")
 			}
+		}
+	}
+	// main.S's entries are PROMOTED (G-P S2): promotion RECORDS keyed on the
+	// same checked member identity, each targeting main.T's declared method.
+	for _, name := range []string{"m", "M", "é", "É", "ǅ", "𐐀"} {
+		wantPkg := "main"
+		if token.IsExported(name) {
+			wantPkg = ""
+		}
+		want := memberID{Name: name, Package: wantPkg}
+		var record map[string]any
+		for _, r := range program["promotions"].([]any) {
+			rm := r.(map[string]any)
+			if rm["type"] == "main.S" && rm["member"] == want {
+				record = rm
+			}
+		}
+		if record == nil {
+			t.Fatalf("missing promotion record main.S.%s", name)
+		}
+		if record["target"].(map[string]any)["method"] != methodFuncKey("main.T", want) {
+			t.Fatalf("main.S.%s: wrong target %v", name, record["target"])
 		}
 	}
 	if path := os.Getenv("GOLEAN_METHOD_IDENTITY_FIXTURE"); path != "" {

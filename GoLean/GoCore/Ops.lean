@@ -868,63 +868,147 @@ def interfaceDeclaredMethods? (id : TypeId) : Option (Array MethodSig) :=
   | some (_, .interfaceDef methods) => some methods
   | _ => none
 
-/-- Go's method-set rule: the method set of `*T` includes `T`'s value-
-receiver methods (the reverse is FALSE — a value box never satisfies a
-pointer-receiver method; probed 2026-07-30, design note Q3). The method set
-of `*T` exists only when `T` is a defined non-pointer, non-interface type —
-`**T` has an EMPTY method set, so the fallback declines a pointer pointee
-(pre-merge audit 2026-07-31, finding 4). Lookup keys on I1 member identity,
-including the original declaring package of a private method. The lookup result records whether
-the receiver must be auto-dereferenced (a pointer box dispatching to a
-value-receiver method). -/
-def concreteMethodForDynamic? (dynTy : Ty) (member : Declaration.MemberId) :
-    Option (MethodInfo × Bool) :=
-  let direct := ctx.methods.foldl
+/-- Declaration lookup at depth 0 (design note
+`docs/2026-09-28_gp-method-promotion-design.md` §3 `methodDecl?` — the
+`direct` fold of the retired `concreteMethodForDynamic?`, G-P S2): the
+DECLARED method of `dynTy` with this member identity — receiver type
+EXACTLY `dynTy` — or `none`. Lookup keys on I1 member identity, including
+the original declaring package of a private method. Interface receivers
+are requirements, not implementations (`methodRecvDynamicTy?`). -/
+def methodDecl? (dynTy : Ty) (member : Declaration.MemberId) : Option MethodInfo :=
+  ctx.methods.foldl
     (fun found method =>
       match found with
       | some _ => found
       | none =>
           if method.id == member &&
               methodRecvDynamicTy? method == some dynTy then
-            some (method, false)
+            some method
           else none)
     none
-  match direct, dynTy with
-  | some hit, _ => some hit
-  -- `*T` inherits `T`'s value-receiver methods — but ONLY when `T` is a
-  -- defined non-pointer, non-interface type. `**T`'s method set is empty.
-  | none, .pointer (.pointer _) => none
-  | none, .pointer (.interface _) => none
-  | none, .pointer elem =>
-      ctx.methods.foldl
-        (fun found method =>
-          match found with
-          | some _ => found
-          | none =>
-              if method.id == member &&
-                  methodRecvDynamicTy? method == some elem then
-                some (method, true)
-              else none)
-        none
-  | none, _ => none
+
+/-- The promotion RECORD of `carrier`'s promoted member (design §3
+`promotion?`): the decoder-validated `Promotion` the frontend recorded from
+`go/types`' selection — spec#Selectors' depth and ambiguity answer is the
+frontend's trusted answer (design §2 S2, option (b)) — or `none`. An absent
+record is NO promotion: a hand-built program states none, and a decoded
+wire carries every promoted entry of every declared struct (the D2
+contract, `docs/2026-08-10_method-set-record-contract.md` §3). -/
+def promotion? (carrier : TypeId) (member : Declaration.MemberId) : Option Promotion :=
+  ctx.promotions.foldl
+    (fun found p =>
+      match found with
+      | some _ => found
+      | none => if p.type == carrier && p.member == member then some p else none)
+    none
+
+/-- The resolution of a method-set entry of a dynamic type (design §3
+`resolveMethod?`, replacing `concreteMethodForDynamic?`'s
+`MethodInfo × Bool`): the embedded-hop `path` (EMPTY for a declared
+method), the receiver `adjust`ment at the end of the path — for a declared
+method `asIs`, or `deref` on the `*T ⊇ T` arm (a pointer box dispatching to
+a value-receiver method of exactly the pointee; the retired `needsDeref`) —
+the `target` (a declared method's callable target, or the embedded
+interface field's type: the dispatch RE-ENTERS on the field's value,
+design §2 S5), the record's set membership, and — for a declaration-only
+stub record (a promoted sync-primitive method, an FR-23 signature) — its
+`unsupported` cause and the signature satisfaction reads. -/
+structure MethodResolution where
+  path : Array PromotionHop
+  adjust : PromotionAdjust
+  target : PromotionTarget
+  inPtrSetOnly : Bool := false
+  unsupported : Option String := none
+  sig : Option MethodSig := none
+  deriving Repr, BEq
+
+/-- A declared method's resolution: the empty path, its callable target. -/
+def MethodResolution.declared (adjust : PromotionAdjust) (info : MethodInfo) :
+    MethodResolution :=
+  { path := #[], adjust, target := .method info.funcId }
+
+/-- A promotion record's resolution: the record's own path, adjustment
+and target. -/
+def MethodResolution.ofPromotion (p : Promotion) : MethodResolution :=
+  { path := p.path, adjust := p.adjust, target := p.target, inPtrSetOnly := p.inPtrSetOnly,
+    unsupported := p.unsupported, sig := p.sig }
+
+/-- The promotion arm of `resolveMethod?`: the carrier's record for the
+member, admitted into the VALUE method set only when spec#Struct_types
+puts it there — an `inPtrSetOnly` record (a pointer-receiver target
+reached through value embeds alone) belongs to `*T` alone, so a `T` box
+does not carry it. `base` is the defined type itself; `ptrRoot` says the
+dynamic type is `*base`. -/
+def resolvePromoted? (base : Ty) (ptrRoot : Bool) (member : Declaration.MemberId) :
+    Option MethodResolution :=
+  match base with
+  | .defined idx =>
+      match ctx.types.nameOf? idx with
+      | some carrier =>
+          match promotion? ctx carrier member with
+          | some p => if p.inPtrSetOnly && !ptrRoot then none else some (.ofPromotion p)
+          | none => none
+      | none => none
+  | _ => none
+
+/-- Go's method-set rule (design §3 `resolveMethod?`): a DECLARED method of
+`dynTy` itself; else, for `*T`, `T`'s value-receiver methods with the
+receiver auto-dereferenced (the reverse is FALSE — a value box never
+satisfies a pointer-receiver method; probed 2026-07-30, design note Q3),
+and ONLY when `T` is a defined non-pointer, non-interface type — `**T` has
+an EMPTY method set (pre-merge audit 2026-07-31, finding 4); else the
+PROMOTED entry the carrier's record states (spec#Struct_types' membership
+through `resolvePromoted?`). A carrier cannot both declare and promote one
+member (the decoder refuses a record naming a declared method), so the
+arms are disjoint. -/
+def resolveMethod? (dynTy : Ty) (member : Declaration.MemberId) : Option MethodResolution :=
+  match methodDecl? ctx dynTy member with
+  | some info => some (.declared .asIs info)
+  | none =>
+    match dynTy with
+    -- `*T` inherits `T`'s value-receiver methods — but ONLY when `T` is a
+    -- defined non-pointer, non-interface type. `**T`'s method set is empty.
+    | .pointer (.pointer _) => none
+    | .pointer (.interface _) => none
+    | .pointer elem =>
+        match methodDecl? ctx elem member with
+        | some info => some (.declared .deref info)
+        | none => resolvePromoted? ctx elem true member
+    | _ => resolvePromoted? ctx dynTy false member
 
 def hasConcreteMethod (dynTy : Ty) (member : Declaration.MemberId) : Bool :=
-  (concreteMethodForDynamic? ctx dynTy member).isSome
+  (resolveMethod? ctx dynTy member).isSome
 
-/-- A concrete method's declared signature: its executable `Func`'s
+/-- A declared method's signature from its executable `Func`: its
 parameters MINUS the receiver, its results (both canonicalized), and its
 VARIADIC marker. A quarantined `Func` still records its real signature and
 can establish satisfaction; calls refuse at its body. `none` means the
-target Func is missing — a failure to match, never a silent pass. Interface
-anchors are excluded by the concrete receiver lookup. -/
-def concreteMethodSignature? (info : MethodInfo) :
-    Option (Array Ty × Array Ty × Bool) :=
-  match findFunctionIn? ctx.functions info.funcId with
-  | some f =>
-      some ((f.args.extract 1 f.args.size).map (fun p => p.typ),
-            f.results.map (fun p => p.typ),
-            f.variadic)
+target Func is missing — a failure to match, never a silent pass. -/
+def funcSignature? (f : FuncId) : Option (Array Ty × Array Ty × Bool) :=
+  match findFunctionIn? ctx.functions f with
+  | some fn =>
+      some ((fn.args.extract 1 fn.args.size).map (fun p => p.typ),
+            fn.results.map (fun p => p.typ),
+            fn.variadic)
   | none => none
+
+/-- The signature a resolution answers satisfaction with (design §2 S9):
+a stub record's own `sig`; a declared target's `Func` signature
+(`funcSignature?` — an absent target fails to match); an embedded
+interface target's declared `MethodSig` for the member. -/
+def resolvedSignature? (member : Declaration.MemberId) (r : MethodResolution) :
+    Option (Array Ty × Array Ty × Bool) :=
+  match r.sig with
+  | some sg => some (sg.params, sg.results, sg.variadic)
+  | none =>
+    match r.target with
+    | .method f => funcSignature? ctx f
+    | .iface i =>
+        match interfaceDeclaredMethods? ctx i with
+        | some reqs =>
+            (reqs.find? (fun sg => sg.id == member)).map
+              fun sg => (sg.params, sg.results, sg.variadic)
+        | none => none
 
 /-- Does `dynTy` carry a method matching this REQUIREMENT — package/name identity
 AND full signature? Comparing names alone accepted a differently typed method
@@ -932,11 +1016,13 @@ AND full signature? Comparing names alone accepted a differently typed method
 TYPES accepted `M(xs []int)` for a required `M(xs ...int)` and vice versa,
 since both render the param as `[]int` — Go treats them as different
 methods, so the machine ran a dispatch on a program Go aborts (pre-merge
-audit 2026-07-31, finding 0). -/
+audit 2026-07-31, finding 0). Since G-P S2 the signature is the RESOLUTION's
+(`resolvedSignature?`): a promoted entry compares against its record's
+target, never against a synthesized wrapper. -/
 def satisfiesMethodSig (dynTy : Ty) (req : MethodSig) : Bool :=
-  match concreteMethodForDynamic? ctx dynTy req.id with
-  | some (info, _) =>
-      match concreteMethodSignature? ctx info with
+  match resolveMethod? ctx dynTy req.id with
+  | some r =>
+      match resolvedSignature? ctx req.id r with
       | some (params, results, variadic) =>
           params == req.params && results == req.results && variadic == req.variadic
       | none => false
@@ -1039,10 +1125,11 @@ satisfaction found is still sound, since a recorded matching method really
 is in the method set. A third guard — types with EMBEDDED fields, whose
 method set unmodeled promotion could extend (BUG-007) — was retired
 2026-08-05 (general-coverage slice 2, design note D2): the wire contract
-now requires the emitted method table to carry the FULL method set of
-every declared named type, promoted methods included (the frontend
-synthesizes forwarding wrappers), so a missing method on an
-embedded-field type is real information. -/
+now requires the wire to carry the FULL method set of every declared
+named type, promoted methods included (since G-P S2 as promotion RECORDS
+resolved by `resolveMethod?`, before that as synthesized forwarding
+wrappers), so a missing method on an embedded-field type is real
+information. -/
 def firstUnsatisfiedMethod? (dynTy : Ty) (interfaceName : TypeId) :
     Except Stop (Option String) := do
   if isEmptyInterfaceName interfaceName then
@@ -3167,29 +3254,30 @@ def symbolKeyForMessage (typ : Ty) : String :=
 /-- **The BUG-087 envelope statement** (latitude inventory R9a; [USER]
 ruling 2026-09-03 «demonic choice so both are admitted», relayed —
 record in `docs/2026-08-31_qrow-rulings.md`): `some text` exactly when
-a frame entry `fid args` would reach `dynamicDispatch?`'s `.nil` arm
-below through gc's "simple `*T` wrapper around a `T` method" family
+a frame entry `fid args` would reach `dynamicDispatch?`'s nil-pointer
+arm below through gc's "simple `*T` wrapper around a `T` method" family
 (`cmd/compile/internal/noder/reader.go` `methodWrapper`: `wrapper.IsPtr()
 && types.Identical(wrapper.Elem(), wrappee)`, `wrappee := method.Type.
 Recv().Type`) — the anchor `fid` is an interface-receiver method, the
 receiver argument is an interface box holding a NIL pointer, the
-dispatch resolves with `needsDeref = true` (a value-receiver method
-whose receiver type is EXACTLY the pointee — `concreteMethodForDynamic?`'s
-pointer arm), and the target is a user-declared method, NOT a
-synthesized promotion wrapper (`Func.wrapper` — a promoted method's
-wrappee is the EMBEDDED type, never identical to the pointee, so gc
-dereferences and gives the ordinary nil-dereference text; probed at the
-pin for value-embedding, pointer-embedding and the value box: all
-nil-deref). The text is member 1 of the two-member set the machine
-admits at `ChoiceSite.nilValueMethodText`; member 0 is the nil-deref
-text the arm below raises. Everything the predicate mirrors is checked
-in the same order `enterFrame`/`dynamicDispatch?` check it (function
-found, arity, anchor, box, resolution, target found), so `some` implies
-the entry panics with the nil-deref text and `none` implies the entry
-is not in the family — a `none` shape consumes nothing at the site.
-The `go`-statement twin of the entry (`spawnStep`, Multi.lean) draws the
-same pick (audit fix F1, 2026-09-03: `go v.M()` on a nil `*T` box gives
-gc's panicwrap text under default/`-l`/`-N -l`). -/
+dispatch resolves on the `*T ⊇ T` arm (a value-receiver method DECLARED
+on exactly the pointee: `resolveMethod?` answers the EMPTY path with the
+`deref` adjustment — since G-P S2 the family test «not a synthesized
+promotion wrapper» is «the resolution path is empty»: a PROMOTED entry's
+path is non-empty, its wrappee is the EMBEDDED type, never identical to
+the pointee, so gc dereferences and gives the ordinary nil-dereference
+text; probed at the pin for value-embedding, pointer-embedding and the
+value box: all nil-deref), and the target is found. The text is member 1
+of the two-member set the machine admits at
+`ChoiceSite.nilValueMethodText`; member 0 is the nil-deref text the arm
+below raises. Everything the predicate mirrors is checked in the same
+order `enterFrame`/`dynamicDispatch?` check it (function found, arity,
+anchor, box, resolution, target found), so `some` implies the entry
+panics with the nil-deref text and `none` implies the entry is not in the
+family — a `none` shape consumes nothing at the site. The `go`-statement
+twin of the entry (`spawnStep`, Multi.lean) draws the same pick (audit
+fix F1, 2026-09-03: `go v.M()` on a nil `*T` box gives gc's panicwrap
+text under default/`-l`/`-N -l`). -/
 def nilValueMethodText? (fid : FuncId) (args : List GoValue) :
     Option String :=
   match findFunctionIn? ctx.functions fid with
@@ -3204,86 +3292,144 @@ def nilValueMethodText? (fid : FuncId) (args : List GoValue) :
           | none => none
           | some _ =>
               match args.head? with
-              | some (GoValue.interface dynTy .nil) =>
-                  match concreteMethodForDynamic? ctx dynTy method.id with
-                  | some (concrete, true) =>
-                      match findFunctionIn? ctx.functions concrete.funcId with
-                      | some target =>
-                          if target.wrapper then none
-                          else some (panicwrapText
-                            (symbolKeyForMessage ctx concrete.recv) concrete.name)
-                      | none => none
-                  | _ => none
+              | some (GoValue.interface (.pointer elem) .nil) =>
+                  match resolveMethod? ctx (.pointer elem) method.id with
+                  | some r =>
+                      if r.path.isEmpty && r.adjust == .deref then
+                        match r.target with
+                        | .method f =>
+                            match findFunctionIn? ctx.functions f with
+                            | some _ => some (panicwrapText
+                                (symbolKeyForMessage ctx elem) method.name)
+                            | none => none
+                        | .iface _ => none
+                      else none
+                  | none => none
               | _ => none
 
-/-- Peel a pure `fieldGet` chain over a synthesized wrapper's RECEIVER
-parameter: `some hops`, outermost projection LAST. `none` on any other
-shape (mid-chain derefs from embedded-pointer hops, address-formers,
-non-receiver anchors) — the caller then falls back to the whole-pointee
-read (over-refusal, the fail-closed direction; recorded in O1).
+/-! ### The promotion path walk (G-P S2, design §3 `receiverAt`)
 
-The receiver is identified by its PARAMETER NAME taken from the target
-`Func`'s own first parameter (`recvId` — `dispatchLeaf` passes
-`target.args[0]`), never by a frontend string literal (arc-final audit
-F7, 2026-08-08: this arm previously matched the frontend-chosen name
-`"$recv"` verbatim — GoCore's only raw frontend string outside its own
-reserved ids, violating "semantic identity is TypeId/FuncId, never raw
-frontend strings"; the verifier showed a semantics-preserving frontend
-rename flipping race/free/promoted-ptr-box from ok to a spurious
-raceDetected). RESIDUAL COUPLING, recorded honestly: the BODY-shape
-half remains — `wrapperForwardArg` recognizes exactly the decoder's
-synthesized two-level wrapper block, and any other emission shape
-falls back to the whole-pointee read (fail-closed over-refusal, pinned
-by the `race/free/promoted-ptr-box` strict row going red on drift,
-per O1). Moved from `Race.lean` (C1 S2a): the narrowing is the dispatch
-OPERATION's, emitted where the receiver is read. -/
-def recvFieldChain (recvId : String) : Expr → Option (List (TypeId × String))
-  | .var v => if v == recvId then some [] else none
-  | .fieldGet recv tid f => (recvFieldChain recvId recv).map (· ++ [(tid, f)])
-  | _ => none
+DELETED here (G-P S2, 2026-09-28; design §1): `recvFieldChain`,
+`wrapperForwardArg`, `dispatchLeaf` — the race narrowing that recognized
+a synthesized wrapper's BODY SHAPE (BUG-041's S3 addendum). The footprint
+of a promoted dispatch is now the path's own loads (`receiverAt`, design
+§2 S8, decision 6), and a declared value-receiver dispatch through a
+pointer box keeps its whole-pointee read (gc copies the receiver:
+`race/negative/iface-dispatch`). -/
 
-/-- The forwarding call's RECEIVER argument in a synthesized promotion
-wrapper's body (`synthesizePromotionWrappers`: one block of
-[forwarding call, return]). Deliberately shallow — one statement-list
-level — so it recognizes EXACTLY the synthesized shape and fails
-closed (whole-pointee fallback) on anything else. -/
-def wrapperForwardArg (body : Stmt) : Option Expr :=
-  -- Two flattening levels, deliberately bounded: the decoder emits the
-  -- wrapper as `.block #[] #[.seqn [init, call], .seqn [assign, ret]]`.
-  let flat : Stmt → List Stmt := fun s =>
-    match s with
-    | .seqn ss => ss.toList
-    | .block _ ss => ss.toList
-    | s => [s]
-  ((flat body).flatMap flat).findSome? fun s =>
-    match s with
-    | .call _ _ args => args[0]?
-    | .callValue _ _ args => args[0]?
-    | _ => none
+/-- The walk's cursor: the receiver VALUE in hand (the struct a value box
+holds, or the pointer an embedded-pointer hop yielded), or the CELL the
+receiver lives in (a value field reached through a pointer, whose value
+is read only if the target takes it by value). -/
+inductive WalkCursor where
+  | val (v : GoValue)
+  | cell (l : Loc)
+  deriving Repr
 
-/-- The LEAF a value-receiver dispatch's receiver read is recorded at
-(S3 convergence, major; formerly `dispatchAccesses`, Race.lean): when the
-dispatch target is a SYNTHESIZED PROMOTION WRAPPER (`Func.wrapper`), gc's
-autogenerated `(*T).M` loads only the promotion hop path (the embedded
-field), not the whole outer struct — the hop path recovered from the
-wrapper's own body (`wrapperForwardArg`/`recvFieldChain`; unrecognized
-wrapper shapes — e.g. embedded-POINTER hops, whose mid-chain deref reads
-another cell — fall back to the whole pointee, over-refusal per O1).
-Non-wrapper value-receiver dispatch really does copy the whole pointee
-in gc (probed `-race`-red on a disjoint-field write:
-`race/negative/iface-dispatch`) and keeps the whole cell. -/
-def dispatchLeaf (target : Func) (loc : Loc) : Loc :=
-  if target.wrapper then
-    match target.args[0]? with
-    | some recvParam =>
-        match wrapperForwardArg target.body >>= recvFieldChain recvParam.id with
-        | some hops => hops.foldl (fun l (h : TypeId × String) => Loc.field l h.1 h.2) loc
-        | none => loc
-    | none => loc
-  else loc
+/-- A struct VALUE's field (the `fieldGet` projection of a value in
+hand): tag-convertible mint tags are accepted (triage L7), anything but
+a struct is a malformed walk, refused by name. -/
+def structFieldValue (v : GoValue) (typeId : TypeId) (fieldName : String) :
+    Except Stop GoValue :=
+  match v with
+  | .struct actualType fields =>
+      if actualType != typeId && !structTagCompatible ctx actualType typeId then
+        stuck s!"expected struct {typeId.key}, got struct {actualType.key}"
+      else
+        match StructFields.lookup fields fieldName with
+        | some value => return value
+        | none => stuck s!"unknown GoCore struct field: {fieldName}"
+  | other => stuck s!"expected struct value for field access, got {repr other}"
+
+/-- ONE embedded hop of a promotion path over the store (design §2 S3/S4/
+S8). From the struct in hand, the embedded field is projected (no read: a
+value box holds its struct). From a pointer to the struct — the root box's
+pointer, or the pointer a previous embedded-pointer hop yielded — or from
+the receiver's cell, the field is `Loc.field` under it: an embedded VALUE
+hop is a projection (no read yet), an embedded POINTER hop READS the
+pointer field — gc's wrapper load (S8). A hop through `nil` is a field of
+nil: the nil-dereference panic (S4, spec#Selectors). -/
+def promotionHop (state : Store) (cur : WalkCursor) (h : PromotionHop) :
+    Except Stop (WalkCursor × AccessTrace) :=
+  let atCell (loc : Loc) : Except Stop (WalkCursor × AccessTrace) := do
+    let fl := Loc.field loc h.owner h.field
+    if h.ptr then
+      let (pv, tr) ← Mem.load ctx state fl
+      return (.val pv, tr)
+    else
+      return (.cell fl, [])
+  match cur with
+  | .val (.struct tid fields) => do
+      return (.val (← structFieldValue ctx (.struct tid fields) h.owner h.field), [])
+  | .val (.addr loc) => atCell loc
+  | .cell loc => atCell loc
+  | .val .nil => throw (.panic nilDerefPanicText)
+  | .val other =>
+      stuck s!"promotion hop {h.owner.key}.{h.field}: the receiver is neither a struct nor a pointer to one: {repr other}"
+
+/-- The path's hops in order, their loads concatenated. Structural on the
+hop list. -/
+def promotionWalk (state : Store) : WalkCursor → List PromotionHop →
+    Except Stop (WalkCursor × AccessTrace)
+  | cur, [] => return (cur, [])
+  | cur, h :: hs => do
+      let (cur', tr) ← promotionHop ctx state cur h
+      let (cur'', tr') ← promotionWalk state cur' hs
+      return (cur'', tr ++ tr')
+
+/-- **The receiver at the end of a resolution's path** (design §3
+`receiverAt`; §2 S3, S4, S8): walk `path` from the dispatched receiver
+`root` over the store and apply the record's adjustment, returning the
+receiver the target takes and the walk's LOADS — the access trace of the
+dispatch, exactly gc's wrapper loads (S8, decision 6): a value receiver
+at the end of the path is READ out of its cell (the path's cells, not the
+whole pointee); a pointer receiver at an embedded pointer field IS the
+pointer the hop read; `deref` copies the pointee out (`nil` panics: a
+value receiver copied out of nil, S4); `addr` takes the reached cell's
+address (no read; `&nil.f` panicked at the hop). A final POINTER receiver
+reached through a nil embedded `*E` receives `nil` with no panic (S4). The
+EMPTY path is the direct dispatch: `asIs` is the identity, `deref` the
+single pointee read of the `*T ⊇ T` arm (a nil pointer box panics with
+the nil-dereference text — member 0 of BUG-087's set) — today's behaviour
+unchanged (design §3 `receiverAt_nil_path`). Nothing here consults the
+choice stream. -/
+def receiverAt (state : Store) (root : GoValue) (path : Array PromotionHop)
+    (adjust : PromotionAdjust) : Except Stop (GoValue × AccessTrace) := do
+  let (cur, tr) ← promotionWalk ctx state (.val root) path.toList
+  match adjust, cur with
+  | .asIs, .val v => return (v, tr)
+  | .asIs, .cell l => do
+      let (v, tr') ← Mem.load ctx state l
+      return (v, tr ++ tr')
+  | .deref, .val (.addr l) => do
+      let (v, tr') ← Mem.load ctx state l
+      return (v, tr ++ tr')
+  | .deref, .val .nil => throw (.panic nilDerefPanicText)
+  | .deref, .val other => stuck s!"pointer-box receiver expected address, got {repr other}"
+  | .deref, .cell _ => stuck "deref adjustment at a value field (the record is malformed)"
+  | .addr, .cell l => return (.addr l, tr)
+  | .addr, .val _ =>
+      stuck "addr adjustment without an addressable receiver (the entry is not in the value method set)"
+
+/-- What resolving the callee position of a frame entry yields (G-P S2):
+the DECLARED `Func` to run with its receiver-adjusted arguments, or — a
+promotion path that ended in an embedded INTERFACE field (design §2 S5)
+— the interface's dispatch anchor to RE-ENTER on the field's value, as a
+SEPARATE machine step (`Entry.again`, Machine.lean: no frame is pushed and
+`stepFn` stays structurally total; a self-embedding cycle steps to
+fuel-out). -/
+inductive Dispatched where
+  | target (func : Func) (args : Array GoValue)
+  | again (fid : FuncId) (args : Array GoValue)
+  deriving Repr
+
+/-- The arguments a dispatch resolves to (either arm). -/
+def Dispatched.args : Dispatched → Array GoValue
+  | .target _ a => a
+  | .again _ a => a
 
 def dynamicDispatch? (state : Store) (func : Func) (argValues : Array GoValue) :
-    Except Stop (Option (Func × Array GoValue) × AccessTrace) := do
+    Except Stop (Option Dispatched × AccessTrace) := do
   match methodInfoByFuncId? ctx func.id with
   | none => return (none, [])
   | some method =>
@@ -3292,39 +3438,80 @@ def dynamicDispatch? (state : Store) (func : Func) (argValues : Array GoValue) :
       | some _ =>
           match argValues[0]? with
           | some (GoValue.interface dynTy inner) =>
-              match concreteMethodForDynamic? ctx dynTy method.id with
-              | some (concrete, needsDeref) =>
-                  let targetFunc ←
-                    match findFunctionIn? ctx.functions concrete.funcId with
-                    | some func => pure func
-                    | none => stuck s!"GoCore dynamic method target not found: {concrete.funcId.key}"
-                  -- A pointer box dispatching to a value-receiver method
-                  -- auto-dereferences the receiver (Go's *T ⊇ T method
-                  -- set; nil pointer panics as a nil dereference). The
-                  -- TEXT raised here is member 0 of BUG-087's two-member
-                  -- set; on the wrapper family (`nilValueMethodText?`
-                  -- above — the envelope statement) the frame-entry
-                  -- funnel (`enterFramePick`, Machine.lean) draws the
-                  -- `nilValueMethodText` pick and may substitute member
-                  -- 1, gc's `panicwrap` text. This arm itself stays
-                  -- stream-free (no `Choices` reach `Except`-land).
-                  -- THE FRAME-ENTRY READ (S3 audit major; the former
-                  -- `dispatchAccesses` arm): the receiver copied out of the
-                  -- pointee, recorded at the dispatch target's leaf
-                  -- (`dispatchLeaf` — the promotion hop for a synthesized
-                  -- wrapper, the whole pointee otherwise). A nil box panics
-                  -- before any read.
-                  let (recvValue, tr) ←
-                    if needsDeref then
-                      match inner with
-                      | .addr loc => Mem.loadFor ctx state loc (dispatchLeaf targetFunc loc)
-                      | .nil => throw (.panic nilDerefPanicText)
-                      | other => stuck s!"pointer-box receiver expected address, got {repr other}"
-                    else
-                      pure (inner, [])
-                  return (some (targetFunc, argValues.set! 0 recvValue), tr)
+              match resolveMethod? ctx dynTy method.id with
+              | some r =>
+                  match r.unsupported with
+                  | some cause =>
+                      -- A declaration-only STUB record (a promoted
+                      -- sync-primitive method, an FR-23 signature): the
+                      -- call refuses BY NAME with the frontend's cause,
+                      -- as the retired stub's body did — after the one
+                      -- check the stub's ENTRY made before its body:
+                      -- a pointer box to a value-set entry auto-
+                      -- dereferenced its receiver, so a nil box panicked
+                      -- (the nil-dereference text) before the refusal.
+                      match dynTy, inner with
+                      | .pointer _, .nil =>
+                          if r.inPtrSetOnly then throw (.unsupported cause)
+                          else throw (.panic nilDerefPanicText)
+                      | _, _ => throw (.unsupported cause)
+                  | none =>
+                    if r.path.isEmpty then
+                      -- A DECLARED method (the direct dispatch): the
+                      -- target is looked up FIRST (the order
+                      -- `nilValueMethodText?` mirrors), then the receiver
+                      -- — a pointer box dispatching to a value-receiver
+                      -- method auto-dereferences (Go's *T ⊇ T method set;
+                      -- a nil pointer panics as a nil dereference, member
+                      -- 0 of BUG-087's set; on the family the frame-entry
+                      -- funnel `enterFramePick` may substitute member 1,
+                      -- gc's `panicwrap` text — this arm itself stays
+                      -- stream-free). THE FRAME-ENTRY READ: the receiver
+                      -- copied out of the pointee, the whole cell (gc
+                      -- copies the receiver: `race/negative/iface-dispatch`).
+                      match r.target with
+                      | .method f =>
+                          match findFunctionIn? ctx.functions f with
+                          | some targetFunc => do
+                              let (recvValue, tr) ← receiverAt ctx state inner r.path r.adjust
+                              return (some (.target targetFunc (argValues.set! 0 recvValue)), tr)
+                          | none => stuck s!"GoCore dynamic method target not found: {f.key}"
+                      | .iface i =>
+                          stuck s!"declared method resolves to an interface anchor {i.key} (malformed resolution)"
+                    else do
+                      -- A PROMOTED entry (design §2 S3): the record's path
+                      -- is walked NOW, at the dispatched call's entry — in
+                      -- the child for `go`, at the drain for `defer`, at
+                      -- each call of an interface method value — and its
+                      -- loads are the dispatch's footprint (S8).
+                      let (recvValue, tr) ← receiverAt ctx state inner r.path r.adjust
+                      match r.target with
+                      | .method f =>
+                          match findFunctionIn? ctx.functions f with
+                          | some targetFunc =>
+                              return (some (.target targetFunc (argValues.set! 0 recvValue)), tr)
+                          | none =>
+                              -- The record's target has NO `Func` on the
+                              -- wire: an imported type's UNEXPORTED method
+                              -- (the stub pass carries exported members
+                              -- only — contract note §5; the raft twin's
+                              -- `raft.DefaultLogger.output` → `log.output`).
+                              -- Refuse by name, never a silent answer (the
+                              -- retired wrapper went STUCK here).
+                              throw (.unsupported s!"promoted method {method.name} of \
+{goTypeNameForMessage ctx dynTy}: its target {f.key} has no declaration on the wire (an \
+imported type's unexported method is not carried by the imported stub pass, \
+docs/2026-08-10_method-set-record-contract.md §5) — refusing rather than dispatching from no body")
+                      | .iface i =>
+                          -- The path ends in an embedded INTERFACE field
+                          -- (S5): re-dispatch on the field's value through
+                          -- the interface's own anchor, as the NEXT step
+                          -- (a nil field then panics there with the
+                          -- nil-interface dispatch text, S4).
+                          return (some (.again (methodFuncId i.key method.id)
+                            (argValues.set! 0 recvValue)), tr)
               | none =>
-                  -- No concrete method found. With a RECORD, that is a
+                  -- No method resolves. With a RECORD, that is a
                   -- machine invariant break (satisfaction should have
                   -- refused the box's construction path or the frontend
                   -- lied) — fail stuck. WITHOUT a record it is the

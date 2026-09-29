@@ -74,15 +74,37 @@ def declaration_labels(wire):
     return labels
 
 
+def promotion_target_key(record):
+    """The callable a promotion record resolves to (G-P S2, golean-native-v2): the
+    declared target method's key, or the embedded interface's dispatch anchor."""
+    target = record["target"]
+    if "method" in target:
+        return target["method"]
+    return method_key({"recvType": target["iface"], "id": record["member"]})
+
+
+def promoted_labels(wire):
+    """Display label of every promotion record -> the target keys it resolves to.
+    A promoted entry is DATA (no body of its own): as a graph entry it stands for
+    its target; two records under one label (distinct private members promoted
+    into one carrier) make the label ambiguous, exactly as two declarations do."""
+    labels = {}
+    for r in wire.get("promotions", []):
+        labels.setdefault(r["type"] + "." + r["member"]["name"], []).append(promotion_target_key(r))
+    return labels
+
+
 def resolve_entries(wire, entries):
     """Resolve display conveniences from records, refusing ambiguous labels."""
     labels = declaration_labels(wire)
+    promoted = promoted_labels(wire)
     resolved = []
     for entry in entries:
         if entry in labels:
             resolved.append(entry)
             continue
         matches = [key for key, label in labels.items() if label == entry]
+        matches += promoted.get(entry, [])
         if len(matches) > 1:
             raise ValueError("ambiguous method entry " + entry + "; use a full target id")
         if not matches:

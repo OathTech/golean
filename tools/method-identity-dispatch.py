@@ -51,8 +51,8 @@ def main():
                 raise RuntimeError(f'{subject}: wrong clean observation {observation}')
         print('Method dispatch: eight clean subjects match pinned-Go sentinels', flush=True)
         # Method table order carries no dispatch semantics. Exercise both
-        # source order and its reversal: the old bare-name validator borrows
-        # a foreign wrapper bit on the reversed, otherwise identical wire.
+        # source order and its reversal: the old bare-name validator borrowed
+        # a foreign declaration on the reversed, otherwise identical wire.
         reordered = work / 'method-order-reversed.json'
         reordered_program = json.loads(wire.read_text())
         reordered_program['methods'].reverse()
@@ -79,13 +79,17 @@ def main():
                           m['recvType'] == package + '.' + iface and m['id']['name'] == 'm')
             anchor_key = reachability.method_key(anchor)
             caller = package + '.Read'
-            target = next(m for m in program['methods'] if m['recvType'] == 'main.Mix'
-                          and m['id'] == {'name': 'm', 'package': package})
-            wrong = next(m for m in program['methods'] if m['recvType'] == 'main.Mix'
-                         and m['id']['name'] == 'm' and m['id']['package'] != package)
+            # G-P S2: main.Mix's promoted private `m`s are promotion RECORDS (no
+            # wrapper body); each resolves to its own package's declared target,
+            # which the interface expansion must reach — and the other package's
+            # target it must not.
+            target = next(r for r in program['promotions'] if r['type'] == 'main.Mix'
+                          and r['member'] == {'name': 'm', 'package': package})
+            wrong = next(r for r in program['promotions'] if r['type'] == 'main.Mix'
+                         and r['member']['name'] == 'm' and r['member']['package'] != package)
             if (anchor_key not in bodies[caller]
-                    or reachability.method_key(target) not in bodies[caller]
-                    or reachability.method_key(wrong) in bodies[caller]):
+                    or reachability.promotion_target_key(target) not in bodies[caller]
+                    or reachability.promotion_target_key(wrong) in bodies[caller]):
                 raise RuntimeError('wire call graph fused private interface dispatch: ' + caller)
         try:
             reachability.resolve_entries(program, ['main.Mix.m'])

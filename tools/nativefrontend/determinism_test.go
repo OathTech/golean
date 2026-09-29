@@ -48,7 +48,7 @@ func main() { println(f(5)) }
 // export, making the case one constant string 20× — vacuous): opaque
 // generic stubs, an interface with an opaque requirement, poisoned
 // package-level vars (`$poisoned` cells), imported method-set stubs,
-// promotion wrappers — every table the emitter sorts or should sort
+// promotion records — every table the emitter sorts or should sort
 // (70 stubs + 5 `$poisoned` cells on the current emitter).
 const detMultiSrc = `package main
 

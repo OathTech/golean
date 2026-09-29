@@ -2347,7 +2347,7 @@ private def isRootRefusal {α : Type} : Except Stop α → Bool
 
 /-- A frame exit (`return`) with one caller target and one pinned result cell. -/
 private def strayFrameExit (r : Loc) : GoCore.Machine.Config :=
-  .signal .ret (.frame [(.chain [], [.var "t"])] [[("t", .base ⟨0⟩)]] [r] [] .stop false)
+  .signal .ret (.frame [(.chain [], [.var "t"])] [[("t", .base ⟨0⟩)]] [r] [] .stop ⟨"stray.subject"⟩)
 
 /-! ### The step-label controls (row-2 label reshape, 2026-09-28)
 
@@ -2444,10 +2444,10 @@ private def strayPanicRefusalFacts : IO Bool := do
   -- S1: the targetless frame exit with results (refused either way; the root case keeps its old refusal).
   passed := passed && (← expectTrue "STRAY S1: a targetless frame exit whose result cell is non-root is the named .internal refusal"
     (isRootRefusal (GoCore.Machine.stepFn emptyCtx strayArrStore
-      (.signal .ret (.frame [] [] [strayBadLoc] [] .stop false)) [])))
+      (.signal .ret (.frame [] [] [strayBadLoc] [] .stop ⟨"stray.subject"⟩)) [])))
   passed := passed && (← expectTrue "STRAY S1 positive: with a root result cell the targetless exit keeps its old stuck refusal"
     (match GoCore.Machine.stepFn emptyCtx strayIntStore
-        (.signal .ret (.frame [] [] [.base ⟨0⟩] [] .stop false)) [] with
+        (.signal .ret (.frame [] [] [.base ⟨0⟩] [] .stop ⟨"stray.subject"⟩)) [] with
      | .error (.refusal (.stuck m)) => m == "extra GoCore assignment value"
      | _ => false))
   -- S4/S3/S5: the unseq helpers `stepFn` binds (target atoms, phase-2 binder values, the guard test).
@@ -3141,7 +3141,7 @@ def main : IO UInt32 := do
   -- else). These are the pins that make a re-introduction of the
   -- class visible forever.
   passed := passed && (← expectTrue "MS: decode refuses a wire without methodSets (required field)"
-    (match Lean.Json.parse "{\"schema\":\"golean-native-v1\",\"buildContext\":{\"goos\":\"linux\",\"goarch\":\"amd64\",\"compiler\":\"gc\",\"cgoEnabled\":true,\"buildTags\":[]},\"funcs\":[],\"types\":[],\"methods\":[]}" with
+    (match Lean.Json.parse "{\"schema\":\"golean-native-v2\",\"buildContext\":{\"goos\":\"linux\",\"goarch\":\"amd64\",\"compiler\":\"gc\",\"cgoEnabled\":true,\"buildTags\":[]},\"funcs\":[],\"types\":[],\"methods\":[]}" with
      | .error _ => false
      | .ok j => !(GoLean.NativeToIR.decodeProgram j).isOk))
   -- G-P S1 (docs/2026-09-28_gp-method-promotion-design.md §4): the
@@ -3149,18 +3149,34 @@ def main : IO UInt32 := do
   -- NAME (the same discipline as methodSets; the byte-level mutants through
   -- the real CLI are scripts/check-wire-boundary's).
   passed := passed && (← expectTrue "G-P S1: decode REFUSES a wire without promotions, naming the field"
-    (match Lean.Json.parse "{\"schema\":\"golean-native-v1\",\"buildContext\":{\"goos\":\"linux\",\"goarch\":\"amd64\",\"compiler\":\"gc\",\"cgoEnabled\":true,\"buildTags\":[]},\"funcs\":[],\"types\":[],\"methods\":[],\"methodSets\":[]}" with
+    (match Lean.Json.parse "{\"schema\":\"golean-native-v2\",\"buildContext\":{\"goos\":\"linux\",\"goarch\":\"amd64\",\"compiler\":\"gc\",\"cgoEnabled\":true,\"buildTags\":[]},\"funcs\":[],\"types\":[],\"methods\":[],\"methodSets\":[]}" with
      | .error _ => false
      | .ok j => match GoLean.NativeToIR.decodeProgram j with
        | .ok _ => false
        | .error e => (e.splitOn "program.promotions is missing").length > 1))
+  -- G-P S2 (design §4, decision 9): the schema is golean-native-v2 — a v1
+  -- wire (the wrappers era) refuses BY NAME, and a method carrying the retired
+  -- `wrapper` key refuses BY NAME (the byte-level controls through the real
+  -- CLI are scripts/check-wire-boundary's `prom-wire-v1`/`prom-wrapper-key`).
+  passed := passed && (← expectTrue "G-P S2: decode REFUSES a golean-native-v1 wire, naming the schema move"
+    (match Lean.Json.parse "{\"schema\":\"golean-native-v1\",\"buildContext\":{\"goos\":\"linux\",\"goarch\":\"amd64\",\"compiler\":\"gc\",\"cgoEnabled\":true,\"buildTags\":[]},\"funcs\":[],\"types\":[],\"methods\":[],\"methodSets\":[],\"promotions\":[]}" with
+     | .error _ => false
+     | .ok j => match GoLean.NativeToIR.decodeProgram j with
+       | .ok _ => false
+       | .error e => (e.splitOn "golean-native-v1 predates G-P S2").length > 1))
+  passed := passed && (← expectTrue "G-P S2: decode REFUSES a method carrying the retired wrapper key, naming it"
+    (match Lean.Json.parse "{\"schema\":\"golean-native-v2\",\"buildContext\":{\"goos\":\"linux\",\"goarch\":\"amd64\",\"compiler\":\"gc\",\"cgoEnabled\":true,\"buildTags\":[]},\"funcs\":[],\"types\":[{\"name\":\"main.T\",\"display\":\"T\",\"pkg\":\"main\",\"def\":{\"kind\":\"struct\",\"fields\":[]}}],\"methods\":[{\"id\":{\"name\":\"M\",\"package\":\"\"},\"recvType\":\"main.T\",\"recv\":{\"id\":\"$recv\",\"type\":{\"kind\":\"named\",\"name\":\"main.T\"}},\"params\":[],\"results\":[],\"variadic\":false,\"wrapper\":true,\"body\":{\"stmt\":\"block\",\"body\":[]}}],\"methodSets\":[{\"type\":\"main.T\",\"coverage\":\"full\"}],\"promotions\":[]}" with
+     | .error _ => false
+     | .ok j => match GoLean.NativeToIR.decodeProgram j with
+       | .ok _ => false
+       | .error e => (e.splitOn "wrapper").length > 1 && (e.splitOn "retired at G-P S2").length > 1))
   -- BUG-108 (lane fix/review-boundary-0911): the wire's file-selection
   -- target is REQUIRED and must equal this machine's pin — a wire
   -- without it predates the go/build-pinned selection (its file set is
   -- not known to be gc's); a wire lowered for another target selects a
   -- different program from the same directory. Both refuse BY NAME.
   let bcWire (bc : String) : String :=
-    "{\"schema\":\"golean-native-v1\"," ++ bc ++ "\"funcs\":[],\"types\":[],\"methods\":[],\"methodSets\":[],\"promotions\":[]}"
+    "{\"schema\":\"golean-native-v2\"," ++ bc ++ "\"funcs\":[],\"types\":[],\"methods\":[],\"methodSets\":[],\"promotions\":[]}"
   passed := passed && (← expectTrue "BUG-108: decode REFUSES a wire without buildContext, naming the field"
     (match Lean.Json.parse (bcWire "") with
      | .error _ => false
@@ -3188,7 +3204,7 @@ def main : IO UInt32 := do
   -- frontend now emits). A `clear-slice` of the same shape still decodes,
   -- so the refusal is the node's, not the shape's.
   let sortSliceWire (tag : String) : String :=
-    "{\"schema\":\"golean-native-v1\",\"buildContext\":{\"goos\":\"linux\",\"goarch\":\"amd64\",\"compiler\":\"gc\",\"cgoEnabled\":true,\"buildTags\":[]},\"types\":[],\"methods\":[],\"methodSets\":[],\"promotions\":[],\"globals\":[],\"funcs\":[{\"name\":\"f\",\"params\":[],\"results\":[],\"variadic\":false,\"body\":{\"stmt\":\"block\",\"body\":[{\"stmt\":\"" ++ tag ++ "\",\"base\":{\"expr\":\"nil\"},\"elem\":{\"kind\":\"int\",\"int\":\"int\"}}]}}]}"
+    "{\"schema\":\"golean-native-v2\",\"buildContext\":{\"goos\":\"linux\",\"goarch\":\"amd64\",\"compiler\":\"gc\",\"cgoEnabled\":true,\"buildTags\":[]},\"types\":[],\"methods\":[],\"methodSets\":[],\"promotions\":[],\"globals\":[],\"funcs\":[{\"name\":\"f\",\"params\":[],\"results\":[],\"variadic\":false,\"body\":{\"stmt\":\"block\",\"body\":[{\"stmt\":\"" ++ tag ++ "\",\"base\":{\"expr\":\"nil\"},\"elem\":{\"kind\":\"int\",\"int\":\"int\"}}]}}]}"
   passed := passed && (← expectTrue "row M: decode refuses the retired sort-slice statement by name"
     (match Lean.Json.parse (sortSliceWire "sort-slice") with
      | .error _ => false
@@ -3209,7 +3225,7 @@ def main : IO UInt32 := do
   -- refusal — a hand-edited wire that violates the contract must refuse
   -- BY NAME, never decode into a table a fuel walk would have absorbed.
   let c2Wire (types : String) : String :=
-    "{\"schema\":\"golean-native-v1\",\"buildContext\":{\"goos\":\"linux\",\"goarch\":\"amd64\",\"compiler\":\"gc\",\"cgoEnabled\":true,\"buildTags\":[]},\"funcs\":[],\"methods\":[],\"methodSets\":[],\"promotions\":[],\"types\":[" ++ types ++ "]}"
+    "{\"schema\":\"golean-native-v2\",\"buildContext\":{\"goos\":\"linux\",\"goarch\":\"amd64\",\"compiler\":\"gc\",\"cgoEnabled\":true,\"buildTags\":[]},\"funcs\":[],\"methods\":[],\"methodSets\":[],\"promotions\":[],\"types\":[" ++ types ++ "]}"
   -- (Every wire TypeDef carries its `display`/`pkg` record — REQUIRED
   -- since the identity/display split, design note 2026-09-05 §3.1.)
   let c2Struct (name : String) (fieldTy : String) : String :=
@@ -3353,11 +3369,11 @@ def main : IO UInt32 := do
   passed := passed && (← expectIntResult "C2/R2: the same function runs through runProgramM once the table leads with the prefix (control)"
     (GoCore.Machine.runProgramM 1000 { r2Prog with typeDefs := GoCore.TypeEnv.reserved ++ #[(⟨"main.T"⟩, .defined (.int .int))] } "r2_F" #[]) 3)
   passed := passed && (← expectTrue "MS: decode refuses an unknown coverage token"
-    (match Lean.Json.parse "{\"schema\":\"golean-native-v1\",\"buildContext\":{\"goos\":\"linux\",\"goarch\":\"amd64\",\"compiler\":\"gc\",\"cgoEnabled\":true,\"buildTags\":[]},\"funcs\":[],\"types\":[],\"methods\":[],\"methodSets\":[{\"type\":\"main.T\",\"coverage\":\"partial\"}],\"promotions\":[]}" with
+    (match Lean.Json.parse "{\"schema\":\"golean-native-v2\",\"buildContext\":{\"goos\":\"linux\",\"goarch\":\"amd64\",\"compiler\":\"gc\",\"cgoEnabled\":true,\"buildTags\":[]},\"funcs\":[],\"types\":[],\"methods\":[],\"methodSets\":[{\"type\":\"main.T\",\"coverage\":\"partial\"}],\"promotions\":[]}" with
      | .error _ => false
      | .ok j => !(GoLean.NativeToIR.decodeProgram j).isOk))
   passed := passed && (← expectTrue "MS: decode refuses a duplicate method-set record"
-    (match Lean.Json.parse "{\"schema\":\"golean-native-v1\",\"buildContext\":{\"goos\":\"linux\",\"goarch\":\"amd64\",\"compiler\":\"gc\",\"cgoEnabled\":true,\"buildTags\":[]},\"funcs\":[],\"types\":[],\"methods\":[],\"methodSets\":[{\"type\":\"main.T\",\"coverage\":\"full\"},{\"type\":\"main.T\",\"coverage\":\"full\"}],\"promotions\":[]}" with
+    (match Lean.Json.parse "{\"schema\":\"golean-native-v2\",\"buildContext\":{\"goos\":\"linux\",\"goarch\":\"amd64\",\"compiler\":\"gc\",\"cgoEnabled\":true,\"buildTags\":[]},\"funcs\":[],\"types\":[],\"methods\":[],\"methodSets\":[{\"type\":\"main.T\",\"coverage\":\"full\"},{\"type\":\"main.T\",\"coverage\":\"full\"}],\"promotions\":[]}" with
      | .error _ => false
      | .ok j => !(GoLean.NativeToIR.decodeProgram j).isOk))
   -- TD (design note 2026-09-05 §3.1; audit fix round R6/R7): every
@@ -3366,7 +3382,7 @@ def main : IO UInt32 := do
   -- empty string is a legal `pkg` (unnamed/universe/synthetic types) and
   -- a duplicate TypeId refuses like the globals/funcs/methodSets siblings.
   let typesWire (entries : String) : String :=
-    "{\"schema\":\"golean-native-v1\",\"buildContext\":{\"goos\":\"linux\",\"goarch\":\"amd64\",\"compiler\":\"gc\",\"cgoEnabled\":true,\"buildTags\":[]},\"funcs\":[],\"methods\":[],\"methodSets\":[],\"promotions\":[],\"types\":[" ++ entries ++ "]}"
+    "{\"schema\":\"golean-native-v2\",\"buildContext\":{\"goos\":\"linux\",\"goarch\":\"amd64\",\"compiler\":\"gc\",\"cgoEnabled\":true,\"buildTags\":[]},\"funcs\":[],\"methods\":[],\"methodSets\":[],\"promotions\":[],\"types\":[" ++ entries ++ "]}"
   let tdEntry (name : String) (extra : String) : String :=
     "{\"name\":\"" ++ name ++ "\",\"def\":{\"kind\":\"defined\",\"target\":{\"kind\":\"int\",\"int\":\"int\"}}" ++ extra ++ "}"
   let decodeTypes (entries : String) : Except String Unit :=
@@ -3401,7 +3417,7 @@ def main : IO UInt32 := do
   -- refused "return arity 1 does not match 2 results"). The decoder
   -- must refuse BY NAME; the message pin is the arity text itself.
   let retWire (results : String) : String :=
-    "{\"schema\":\"golean-native-v1\",\"buildContext\":{\"goos\":\"linux\",\"goarch\":\"amd64\",\"compiler\":\"gc\",\"cgoEnabled\":true,\"buildTags\":[]},\"types\":[],\"methods\":[],\"methodSets\":[],\"promotions\":[]," ++
+    "{\"schema\":\"golean-native-v2\",\"buildContext\":{\"goos\":\"linux\",\"goarch\":\"amd64\",\"compiler\":\"gc\",\"cgoEnabled\":true,\"buildTags\":[]},\"types\":[],\"methods\":[],\"methodSets\":[],\"promotions\":[]," ++
     "\"funcs\":[{\"name\":\"pair\",\"params\":[],\"variadic\":false," ++
     "\"results\":[{\"id\":\"$res0\",\"type\":{\"kind\":\"int\",\"int\":\"int\"}},{\"id\":\"$res1\",\"type\":{\"kind\":\"int\",\"int\":\"int\"}}]," ++
     "\"body\":{\"stmt\":\"block\",\"body\":[{\"stmt\":\"return\",\"results\":[" ++ results ++ "]}]}}]}"
@@ -3425,7 +3441,7 @@ def main : IO UInt32 := do
   -- carries only the TYPE (a global of that type), so the pin is on
   -- the decoder's bound, not on any materialization.
   let arrWire (len : Nat) : String :=
-    "{\"schema\":\"golean-native-v1\",\"buildContext\":{\"goos\":\"linux\",\"goarch\":\"amd64\",\"compiler\":\"gc\",\"cgoEnabled\":true,\"buildTags\":[]},\"funcs\":[],\"types\":[],\"methods\":[],\"methodSets\":[],\"promotions\":[]," ++
+    "{\"schema\":\"golean-native-v2\",\"buildContext\":{\"goos\":\"linux\",\"goarch\":\"amd64\",\"compiler\":\"gc\",\"cgoEnabled\":true,\"buildTags\":[]},\"funcs\":[],\"types\":[],\"methods\":[],\"methodSets\":[],\"promotions\":[]," ++
     "\"globals\":[{\"name\":\"main.big\",\"type\":{\"kind\":\"array\",\"len\":" ++ toString len ++ ",\"elem\":{\"kind\":\"int\",\"int\":\"uint8\"}}}]}"
   passed := passed && (← expectTrue "BUG-078: decode admits an array type AT the materialization budget"
     (decodeMsg (arrWire GoLean.NativeToIR.arrayLenBudget)).isOk)
@@ -3437,7 +3453,7 @@ def main : IO UInt32 := do
   -- guard's presence key) but NO method-set record — satisfaction must
   -- refuse `unsupported`, proving the guard keys on the RECORD.
   let msWire (records : String) : String :=
-    "{\"schema\":\"golean-native-v1\",\"buildContext\":{\"goos\":\"linux\",\"goarch\":\"amd64\",\"compiler\":\"gc\",\"cgoEnabled\":true,\"buildTags\":[]},\"funcs\":[],\"methods\":[]," ++
+    "{\"schema\":\"golean-native-v2\",\"buildContext\":{\"goos\":\"linux\",\"goarch\":\"amd64\",\"compiler\":\"gc\",\"cgoEnabled\":true,\"buildTags\":[]},\"funcs\":[],\"methods\":[]," ++
     "\"types\":[{\"name\":\"main.T\",\"display\":\"main.T\",\"pkg\":\"main\",\"def\":{\"kind\":\"defined\",\"target\":{\"kind\":\"int\",\"int\":\"int\"}}}," ++
     "{\"name\":\"main.locker\",\"display\":\"main.locker\",\"pkg\":\"main\",\"def\":{\"kind\":\"interface\",\"methods\":[{\"id\":{\"name\":\"Lock\",\"package\":\"\"},\"params\":[],\"results\":[],\"variadic\":false}]}}]," ++
     "\"methodSets\":[" ++ records ++ "],\"promotions\":[]}"

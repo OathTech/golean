@@ -1,5 +1,5 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 3784 (3545 PASS / 239 FAIL)
+# cases: 3784 (3549 PASS / 235 FAIL)
 # re-pinned: 2026-09-20 [AGENT], core/unseq-stage-d-0920, STAGE D of the evaluation-order model v2.1 (route α —
 #   docs/2026-09-20_unseq-stage-d-design.md §2–§3; handoff docs/2026-09-20_unseq-stage-d-handoff.md): NO row added, NO
 #   result changed, ONE stage changed — spec-examples-stmt/continue-label PASS/- -> PASS/confluent, the strict depth=128
@@ -1797,6 +1797,26 @@
 #   promoted entries at G-P S2, design §2 S7, decision 5). Measured by scripts/diff-one on the 16 rows at the S0 tree (main
 #   89792db1's frontend + binary — S0 changes no code); the full gate line is in the handoff. 3768 + 16 = 3784; 3532 + 13 = 3545;
 #   236 + 3 = 239. No PASS -> non-PASS flip.
+# re-pinned: 2026-09-29 [AGENT], core/method-promotion-0928, G-P S2 — native method promotion, THE SWITCH (design note
+#   docs/2026-09-28_gp-method-promotion-design.md §5 S2, decisions 1–10 as recommended — G-P PASSED [USER] Mike 2026-09-28 «Go
+#   ahead and land, and approve the decisions as proposed», relayed by the [AGENT] coordinator; handoff
+#   docs/2026-09-28_method-promotion-handoff.md §1 S2): a promoted method-set entry is a promotion RECORD resolved by the machine
+#   at dispatch (resolveMethod?/receiverAt/callee?), the synthesized forwarding wrappers and `Func.wrapper` are DELETED, the wire
+#   is golean-native-v2. NO row born, NO PASS -> non-PASS flip; FOUR FAIL -> PASS flips — the three the design predicted (each a red
+#   born by design at S0 with this ruled exit) plus ONE pre-existing row of the same ruled class the design did not enumerate
+#   (noodler/frontier/promoted-method-expression-ptr, FR-3's noodler re-hit of 2026-09-03: `(*T).M` over a value method reached by
+#   promotion — FAIL/frontend-export -> PASS by decision 5 exactly as the S0 pair; attributable, reported in the handoff §1 S2 for
+#   the audit, not a wrong answer): race/free/promoted-ptr-hop FAIL/confluent -> PASS/confluent (decision 6,
+#   S8: the footprint of a value-receiver dispatch through an embedded-POINTER hop is the path's own loads — the pointer field,
+#   then the pointee's cell — not the whole pointee; |set|=1 certified over all schedules; off BUG-041's Cases: line; the four
+#   guards race/negative/{promoted-ptr-hop-target,promoted-ptr-hop-field,promoted-dispatch,iface-dispatch} stay PASS/racy and
+#   race/free/promoted-ptr-box PASS/confluent); embedding/promoted-ptr-method-expression/{recover,promoted-value}
+#   FAIL/frontend-export -> PASS strict (decision 5, S7: `(*S).M` over a PROMOTED value method names the record, whose adjustment
+#   dereferences — the FR-3 deref-adapter refusal retires for promoted entries; declared value methods stay on FR-3; gc 0 and 2).
+#   Every other row in its lane (the certified set aside: the merge protocol's 5a re-certification of the ONE stale certification
+#   imported-goose/channel/google-search, whose wire changed bytes at S1 already, is the train's — not re-pinned here). Measured by
+#   scripts/diff-one on the 8 named rows, then the full gate `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --slow` (its RESULT line
+#   in the handoff). 3545 + 4 = 3549; 239 - 4 = 235.
 result	id	stage
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
@@ -2452,8 +2472,8 @@ PASS	embedding/promoted-nil-embedded-pointer/call	-
 PASS	embedding/promoted-nil-embedded-pointer/nil-panic	-
 PASS	embedding/promoted-pointer-receiver-method-set/pointer-box	-
 PASS	embedding/promoted-pointer-receiver-method-set/value-box	-
-FAIL	embedding/promoted-ptr-method-expression/promoted-value	frontend-export
-FAIL	embedding/promoted-ptr-method-expression/recover	frontend-export
+PASS	embedding/promoted-ptr-method-expression/promoted-value	-
+PASS	embedding/promoted-ptr-method-expression/recover	-
 PASS	embedding/value-embedded-pointer-promotion/dynamic-dispatch	-
 PASS	embedding/value-embedded-pointer-promotion/static-call	-
 PASS	embedding/value-embedded-pointer-promotion/value-box-satisfies	-
@@ -4079,7 +4099,7 @@ FAIL	noodler/frontier/named-result-shadow-range	frontend-export
 FAIL	noodler/frontier/named-result-shadow-typeswitch	frontend-export
 PASS	noodler/frontier/pointer-to-pointer-chains	-
 PASS	noodler/frontier/promoted-method-expression	-
-FAIL	noodler/frontier/promoted-method-expression-ptr	frontend-export
+PASS	noodler/frontier/promoted-method-expression-ptr	-
 PASS	noodler/frontier/promoted-ptr-method-addressable	-
 PASS	noodler/frontier/promoted-through-pointer-nonstruct	-
 FAIL	noodler/frontier/self-shadow-define	frontend-export
@@ -4678,7 +4698,7 @@ PASS	race/free/field-disjoint	confluent
 PASS	race/free/field-read-write	confluent
 PASS	race/free/method-value-order	confluent
 PASS	race/free/promoted-ptr-box	confluent
-FAIL	race/free/promoted-ptr-hop	confluent
+PASS	race/free/promoted-ptr-hop	confluent
 PASS	race/free/ptr-field-read-write	confluent
 PASS	race/free/slice-disjoint	confluent
 PASS	race/free/spawn-dispatch-free	confluent

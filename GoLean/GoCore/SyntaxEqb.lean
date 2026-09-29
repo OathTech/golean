@@ -868,18 +868,17 @@ def Func.eqbF (fuel : Nat) (a b : Func) : Bool :=
     && eqbArrayP Param.eqb a.results b.results
     && Stmt.eqbF fuel a.body b.body
     && a.variadic == b.variadic
-    && a.wrapper == b.wrapper
 
 theorem Func.eqbF_sound :
     ∀ f (a b : Func), Func.eqbF f a b = true → a = b := by
   intro f a b h
-  obtain ⟨i1, ar1, re1, bo1, v1, w1⟩ := a
-  obtain ⟨i2, ar2, re2, bo2, v2, w2⟩ := b
-  obtain ⟨h1, h2, h3, h4, h5, h6⟩ := andSplit6 h
+  obtain ⟨i1, ar1, re1, bo1, v1⟩ := a
+  obtain ⟨i2, ar2, re2, bo2, v2⟩ := b
+  obtain ⟨h1, h2, h3, h4, h5⟩ := andSplit5 h
   cases FuncId.beq_sound h1
   cases eqbArrayP_sound Param.eqb_sound h2
   cases eqbArrayP_sound Param.eqb_sound h3
   cases Stmt.eqbF_sound _ _ _ h4
-  cases eq_of_beq h5; cases eq_of_beq h6; rfl
+  cases eq_of_beq h5; rfl
 
 end GoLean.GoCore

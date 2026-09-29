@@ -155,7 +155,7 @@ result read (the frontend always supplies targets for result-bearing
 calls; the pre-BUG-025 `storeMany [] (v::vs)` refusal). -/
 def stepFrameExit (s : Store) (targets : List (TargetShape × List Expr))
     (tenv : LocalEnv) (results : List Loc) (ds : List (GoValue × List GoValue))
-    (k' : Cont) (w : Bool) (choices : Choices) :
+    (k' : Cont) (fr : FuncId) (choices : Choices) :
     Except Stop (Config × Store × Choices × StepLabel) := do
   match targets, results, ds with
   | [], [], [] => return (.next k', s, choices, ⟨[], [], []⟩)
@@ -173,14 +173,14 @@ def stepFrameExit (s : Store) (targets : List (TargetShape × List Expr))
       match cv with
       | .funcVal fid captured => do
           let (r, ch', ps) ← enterFramePickV ctx s fid (captured ++ args) choices
-          deliverV s (.frame targets tenv results ds k' w) ch'
-            (fun (func, frameEnv, _, s', tr) =>
-              (.exec func.body frameEnv
-                (.frame [] [] [] [] (.frame targets tenv results ds k' w) func.wrapper),
+          deliverV s (.frame targets tenv results ds k' fr) ch'
+            (fun (e, s', tr) =>
+              (e.drainConfig (.frame targets tenv results ds k' fr)
+                (fun cv => .next (.frame targets tenv results ((cv, []) :: ds) k' fr)),
                 s', ch', ⟨tr, [], []⟩)) r [] ps
       | .nil =>
           return (.panicking [panicEntry nilDerefPanicText]
-            (.frame targets tenv results ds k' w), s, choices, ⟨[], [], []⟩)
+            (.frame targets tenv results ds k' fr), s, choices, ⟨[], [], []⟩)
       | other => throw (.stuck s!"deferred callee is not a function value: {repr other}")
 
 /-- **The `unseq` sweep's ENTER** (Stage B, 2026-09-16; rule `unseqEnter`;
@@ -332,24 +332,26 @@ def stepFn (s : Store) (c : Config) (choices : Choices) :
   | .panicking chain k =>
       match k with
       | .frame _targets _tenv _results [] k' _ => return (.panicking chain k', s, choices, ⟨[], [], []⟩)
-      | .frame targets tenv results ((cv, args) :: ds) k' w =>
+      | .frame targets tenv results ((cv, args) :: ds) k' fr =>
           match cv with
           | .funcVal fid captured => do
               -- Defers run on the panic path, above the suspended chain's
               -- marker (the shape `recover`'s walk detects). An ENTRY
               -- panic joins the chain (audit F1+F5; `deliverS`'s `chain`).
-              -- The deferred callee's frame carries ITS wrapper flag (BUG-015).
+              -- A promoted deferred call through an embedded interface
+              -- field is RE-QUEUED on this frame's chain (`Entry.again`,
+              -- G-P S2 S5) and enters on the same marker next step.
               let (r, ch', ps) ← enterFramePickV ctx s fid (captured ++ args) choices
-              deliverV s (.frame targets tenv results ds k' w) ch'
-                (fun (func, frameEnv, _, s', tr) =>
-                  (.exec func.body frameEnv
-                    (.frame [] [] [] [] (.panicResumeK chain
-                      (.frame targets tenv results ds k' w)) func.wrapper), s', ch', ⟨tr, [], []⟩)) r chain ps
+              deliverV s (.frame targets tenv results ds k' fr) ch'
+                (fun (e, s', tr) =>
+                  (e.drainConfig (.panicResumeK chain (.frame targets tenv results ds k' fr))
+                    (fun cv => .panicking chain (.frame targets tenv results ((cv, []) :: ds) k' fr)),
+                    s', ch', ⟨tr, [], []⟩)) r chain ps
           | .nil =>
               -- The nil invocation's panic joins the chain; remaining
               -- defers keep draining.
               return (.panicking (chain ++ [panicEntry nilDerefPanicText])
-                (.frame targets tenv results ds k' w), s, choices, ⟨[], [], []⟩)
+                (.frame targets tenv results ds k' fr), s, choices, ⟨[], [], []⟩)
           | other => throw (.stuck s!"deferred callee is not a function value: {repr other}")
       | .panicResumeK suspended k' =>
           return (.panicking (suspended ++ chain) k', s, choices, ⟨[], [], []⟩)
@@ -455,9 +457,8 @@ def stepFn (s : Store) (c : Config) (choices : Choices) :
                   return (.evalE a env (.callArgsK fid plans [] rest env k), s, choices, ⟨[], [], []⟩)
               | [] => do
                   let (r, ch', ps) ← enterFramePickV ctx s fid [] choices
-                  deliverV s k ch' (fun (func, frameEnv, resultLocs, s', tr) =>
-                    (.exec func.body frameEnv (.frame plans env resultLocs [] k func.wrapper),
-                      s', ch', ⟨tr, [], []⟩)) r [] ps
+                  deliverV s k ch' (fun (e, s', tr) =>
+                    (e.callConfig plans env k, s', ch', ⟨tr, [], []⟩)) r [] ps
           | none => throw (.unsupported "unsupported call target assignee")
       | .mapRange keyVar valVar mapExpr keyTy valTy body =>
           return (.evalE mapExpr env
@@ -651,9 +652,8 @@ def stepFn (s : Store) (c : Config) (choices : Choices) :
                 (.callArgsK fid plans (vals ++ [v]) rest env k'), s, choices, ⟨[], [], []⟩)
           | [] => do
               let (r, ch', ps) ← enterFramePickV ctx s fid (vals ++ [v]) choices
-              deliverV s k' ch' (fun (func, frameEnv, resultLocs, s', tr) =>
-                (.exec func.body frameEnv (.frame plans env resultLocs [] k' func.wrapper),
-                  s', ch', ⟨tr, [], []⟩)) r [] ps
+              deliverV s k' ch' (fun (e, s', tr) =>
+                (e.callConfig plans env k', s', ch', ⟨tr, [], []⟩)) r [] ps
       | .stmtOpK op nt done pending env k' =>
           -- Target addresses are checked as they arrive ONLY when more
           -- operands follow (interpreter panic timing); at the apply
@@ -675,9 +675,8 @@ def stepFn (s : Store) (c : Config) (choices : Choices) :
           match v, args with
           | .funcVal fid captured, [] => do
               let (r, ch', ps) ← enterFramePickV ctx s fid captured choices
-              deliverV s k' ch' (fun (func, frameEnv, resultLocs, s', tr) =>
-                (.exec func.body frameEnv (.frame plans env resultLocs [] k' func.wrapper),
-                  s', ch', ⟨tr, [], []⟩)) r [] ps
+              deliverV s k' ch' (fun (e, s', tr) =>
+                (e.callConfig plans env k', s', ch', ⟨tr, [], []⟩)) r [] ps
           | .nil, [] =>
               return (.panicking [panicEntry nilDerefPanicText] k', s, choices, ⟨[], [], []⟩)
           | cv, a :: rest =>
@@ -696,9 +695,8 @@ def stepFn (s : Store) (c : Config) (choices : Choices) :
               match cv with
               | .funcVal fid captured => do
                   let (r, ch', ps) ← enterFramePickV ctx s fid (captured ++ vals ++ [v]) choices
-                  deliverV s k' ch' (fun (func, frameEnv, resultLocs, s', tr) =>
-                    (.exec func.body frameEnv (.frame plans env resultLocs [] k' func.wrapper),
-                      s', ch', ⟨tr, [], []⟩)) r [] ps
+                  deliverV s k' ch' (fun (e, s', tr) =>
+                    (e.callConfig plans env k', s', ch', ⟨tr, [], []⟩)) r [] ps
               | .nil =>
                   return (.panicking [panicEntry nilDerefPanicText] k', s, choices, ⟨[], [], []⟩)
               | other => throw (.stuck s!"expected function value, got {repr other}")
@@ -860,8 +858,8 @@ def stepFn (s : Store) (c : Config) (choices : Choices) :
       -- The body fell off its end at its call frame: frame EXIT
       -- (`stepFrameExit` — the same function a `return` at the frame
       -- takes, B4).
-      | .frame targets tenv results ds k' w =>
-          stepFrameExit ctx s targets tenv results ds k' w choices
+      | .frame targets tenv results ds k' fr =>
+          stepFrameExit ctx s targets tenv results ds k' fr choices
       | .panicResumeK chain k' =>
           if chainNewestRecovered chain then
             -- Recovered: the unwind is cancelled; the frame below resumes
@@ -927,8 +925,8 @@ def stepFn (s : Store) (c : Config) (choices : Choices) :
       | some c' => return (c', s, choices, ⟨[], [], []⟩)
       | none =>
           match sg, k with
-          | .ret, .frame targets tenv results ds k' w =>
-              stepFrameExit ctx s targets tenv results ds k' w choices
+          | .ret, .frame targets tenv results ds k' fr =>
+              stepFrameExit ctx s targets tenv results ds k' fr choices
           -- covers `.probeK` too (unreachable: no statement runs under a probe — Machine.lean's
           -- reachability invariant; e13-b R12/R1'-6): `signalRefusal`'s expression-frame arm names
           -- the cause ("… delivered to expression continuation"), never a silent default.
@@ -998,7 +996,7 @@ def runFunctionWithContextM (fuel : Nat) (types : TypeEnv) (functions : Array Fu
   -- The entry frame is a pure barrier (`[] []`): the big-step entry never
   -- stored results anywhere — the driver reads the pinned locations from
   -- the terminal state below.
-  let c₀ : Config := .exec func.body frameEnv (.frame [] [] [] [] .stop)
+  let c₀ : Config := .exec func.body frameEnv (.frame [] [] [] [] .stop func.id)
   let (sF, _) ← runConfig pctx fuel s₂ c₀ choices
   return { values := (← loadMany pctx sF resultLocs).toArray }
 
@@ -1166,7 +1164,7 @@ def runPkgInitM (fuel : Nat) (state : Store) (choices : Choices) :
   | some initF =>
       if initF.args.size != 0 || initF.results.size != 0 then
         throw (.stuck s!"malformed {pkgInitFuncId.key}: expected no parameters and no results")
-      match runInitConfig ctx fuel state (.exec initF.body [] (.frame [] [] [] [] .stop)) choices with
+      match runInitConfig ctx fuel state (.exec initF.body [] (.frame [] [] [] [] .stop initF.id)) choices with
       | .ok r => pure r
       | .error e => throw (markInitPhase e)
 
@@ -1217,7 +1215,7 @@ def runProgramSetupM (fuel : Nat) (program : Program) (name : String)
   let (env, s₂) ← bindParams pctx [] s₁ func.args.toList args.toList
   let (frameEnv, s₃) ← allocDecls pctx env s₂ func.results.toList
   let resultLocs ← pinResultLocs frameEnv func.results.toList
-  let c₀ : Config := .exec func.body frameEnv (.frame [] [] [] [] .stop)
+  let c₀ : Config := .exec func.body frameEnv (.frame [] [] [] [] .stop func.id)
   return (pctx, c₀, s₃, resultLocs, choices₁)
 
 @[inherit_doc runProgramSetupM]

@@ -1,15 +1,17 @@
 package main
 
-// Promotion records (G-P S1; design note
+// Promotion records (G-P S1/S2; design note
 // docs/2026-09-28_gp-method-promotion-design.md §4/§5; G-P PASSED [USER]
 // 2026-09-28, relayed): the emitter writes one `promotions` record per
-// promoted method-set entry — beside the synthesized wrapper or the
-// declaration-only stub it emits today — from the same go/types selection.
-// These tests pin the record shapes for every embedding form the design
-// distinguishes (value embed, pointer embed, multi-hop, an embedded
-// interface field, a *T-only entry, the sync-primitive stub, an FR-23
-// signature stub, a generic instantiation) and the one-to-one pairing
-// with the wrappers/stubs the decoder cross-checks.
+// promoted method-set entry from the go/types selection — since S2 the
+// ONLY form of a promoted entry on the wire (the synthesized wrappers and
+// the promoted declaration-only stubs are retired; `methods` carries
+// declared methods, anchors and imported stubs). These tests pin the
+// record shapes for every embedding form the design distinguishes (value
+// embed, pointer embed, multi-hop, an embedded interface field, a *T-only
+// entry, the sync-primitive stub record, an FR-23 signature stub record,
+// a generic instantiation) and that no wrapper or promoted method stub
+// remains in `methods`.
 
 import (
 	"encoding/json"
@@ -36,19 +38,6 @@ func promotionRecords(t *testing.T, program map[string]any) map[string]map[strin
 		out[key] = m
 	}
 	return out
-}
-
-// wrapperCallee returns the FuncId a synthesized wrapper's body forwards to.
-func wrapperCallee(t *testing.T, w map[string]any) string {
-	t.Helper()
-	first := w["body"].(map[string]any)["body"].([]any)[0].(map[string]any)
-	var call map[string]any
-	if first["stmt"] == "expr" {
-		call = first["expr"].(map[string]any)
-	} else {
-		call = first["rhs"].([]any)[0].(map[string]any)
-	}
-	return call["func"].(string)
 }
 
 func expectRecord(t *testing.T, recs map[string]map[string]any, key string, inPtrSetOnly bool, path []map[string]any, adjust string, target map[string]any) map[string]any {
@@ -93,62 +82,34 @@ func methodTarget(recv, name, pkg string) map[string]any {
 	return map[string]any{"method": methodFuncKey(recv, memberID{Name: name, Package: pkg})}
 }
 
-// checkPairing — every wrapper and every promoted stub has exactly one
-// record with the same carrier and member, the record's set membership
-// matches the wrapper's receiver kind, a wrapper's callee is the record's
-// target, and a stub's cause/signature are the record's. The count of
-// records equals wrappers + promoted stubs.
-func checkPairing(t *testing.T, program map[string]any, recs map[string]map[string]any) {
+// checkRecordsOnly — G-P S2: `methods` carries NO synthesized promotion
+// wrapper and NO promoted declaration-only stub (both are records now); a
+// record's `unsupported` and `sig` are present exactly together, and every
+// record's carrier is a declared struct on the wire.
+func checkRecordsOnly(t *testing.T, program map[string]any, recs map[string]map[string]any) {
 	t.Helper()
-	paired := 0
 	for _, m := range program["methods"].([]any) {
 		mm := m.(map[string]any)
-		isWrapper := mm["wrapper"] == true
-		reason, _ := mm["unsupported"].(string)
-		isPromotedStub := strings.HasPrefix(reason, "promoted ")
-		if !isWrapper && !isPromotedStub {
-			continue
+		if _, has := mm["wrapper"]; has {
+			t.Errorf("method %s.%s carries the retired `wrapper` key", mm["recvType"], mm["id"].(memberID).Name)
 		}
-		paired++
-		key := mm["recvType"].(string) + "." + mm["id"].(memberID).Name
-		r, ok := recs[key]
-		if !ok {
-			t.Errorf("wrapper/stub %s has no promotion record", key)
-			continue
-		}
-		recvIsPtr := mm["recv"].(map[string]any)["type"].(map[string]any)["kind"] == "pointer"
-		if r["inPtrSetOnly"] != recvIsPtr {
-			t.Errorf("%s: record inPtrSetOnly=%v but the wrapper/stub receiver pointer=%v", key, r["inPtrSetOnly"], recvIsPtr)
-		}
-		if isWrapper {
-			if _, stub := r["unsupported"]; stub {
-				t.Errorf("%s: a wrapper's record carries unsupported", key)
-			}
-			callee := wrapperCallee(t, mm)
-			tgt := r["target"].(map[string]any)
-			want, isMethod := tgt["method"].(string)
-			if !isMethod {
-				want = methodFuncKey(tgt["iface"].(string), mm["id"].(memberID))
-			}
-			if callee != want {
-				t.Errorf("%s: wrapper forwards to %s, record target is %s", key, callee, want)
-			}
-		} else {
-			if r["unsupported"] != reason {
-				t.Errorf("%s: stub cause differs from the record's", key)
-			}
-			sig, ok := r["sig"].(map[string]any)
-			if !ok {
-				t.Errorf("%s: stub record without sig", key)
-				continue
-			}
-			if fmtJSON(sig["params"]) != fmtJSON(paramTypes(mm["params"])) || fmtJSON(sig["results"]) != fmtJSON(paramTypes(mm["results"])) || sig["variadic"] != mm["variadic"] {
-				t.Errorf("%s: record sig %s differs from the stub's signature", key, fmtJSON(sig))
-			}
+		if reason, _ := mm["unsupported"].(string); strings.HasPrefix(reason, "promoted ") {
+			t.Errorf("method %s.%s is a promoted stub in `methods`; promoted entries are records: %q", mm["recvType"], mm["id"].(memberID).Name, reason)
 		}
 	}
-	if paired != len(recs) {
-		t.Errorf("%d records for %d wrappers+stubs", len(recs), paired)
+	declared := map[string]bool{}
+	for _, ty := range program["types"].([]any) {
+		declared[ty.(map[string]any)["name"].(string)] = true
+	}
+	for key, r := range recs {
+		_, stub := r["unsupported"]
+		_, sig := r["sig"]
+		if stub != sig {
+			t.Errorf("%s: unsupported (%v) and sig (%v) are not present together", key, stub, sig)
+		}
+		if !declared[r["type"].(string)] {
+			t.Errorf("%s: carrier %s has no TypeDef on the wire", key, r["type"])
+		}
 	}
 }
 
@@ -220,7 +181,7 @@ func TestPromotionRecordShapes(t *testing.T) {
 			t.Errorf("%s.%s: no sig expected", r["type"], r["member"].(memberID).Name)
 		}
 	}
-	checkPairing(t, program, recs)
+	checkRecordsOnly(t, program, recs)
 }
 
 const promotionSyncSrc = `package main
@@ -244,9 +205,9 @@ func main() {
 `
 
 // TestPromotionRecordSyncStub — the promoted sync-primitive methods are
-// declaration-only stubs (syncPromotedStub); their records carry the
-// stub's cause and signature, present together, and target the primitive's
-// method entry.
+// declaration-only STUB RECORDS (G-P S2: the retired syncPromotedStub as a
+// record): the cause and the signature, present together, targeting the
+// primitive's method entry.
 func TestPromotionRecordSyncStub(t *testing.T) {
 	program, err := emitSource(t, promotionSyncSrc)
 	if err != nil {
@@ -278,7 +239,7 @@ func TestPromotionRecordSyncStub(t *testing.T) {
 	if len(recs) != 3 {
 		t.Errorf("records = %v, want the three Mutex methods", recordKeys(recs))
 	}
-	checkPairing(t, program, recs)
+	checkRecordsOnly(t, program, recs)
 }
 
 const promotionFR23Src = `package main
@@ -307,9 +268,9 @@ func main() {
 `
 
 // TestPromotionRecordFR23Stub — a promoted method whose signature
-// instantiates an imported generic (FR-23) is a signature-carrying stub
-// (promotedSigStub); its record is the stub's cause and opaque-mode
-// signature, targeting the declared method.
+// instantiates an imported generic (FR-23) is a signature-carrying STUB
+// RECORD (G-P S2: the retired promotedSigStub as a record): the cause and
+// the opaque-mode signature, targeting the declared method.
 func TestPromotionRecordFR23Stub(t *testing.T) {
 	program, err := emitSource(t, promotionFR23Src)
 	if err != nil {
@@ -325,7 +286,7 @@ func TestPromotionRecordFR23Stub(t *testing.T) {
 	if len(sig["results"].([]any)) != 1 || fmtJSON(sig["results"].([]any)[0]) != `{"kind":"named","name":"iter.Seq[int]"}` {
 		t.Errorf("Outer.All: sig results = %s", fmtJSON(sig["results"]))
 	}
-	checkPairing(t, program, recs)
+	checkRecordsOnly(t, program, recs)
 }
 
 const promotionGenericSrc = `package main
@@ -344,8 +305,8 @@ func main() {
 `
 
 // TestPromotionRecordGenericInstantiation — an instantiated struct's
-// records come from the instantiated method set in the same pass as its
-// wrapper (design §2 S10): holder.get targets the box[int] stencil's method.
+// records come from the instantiated method set (design §2 S10): holder.get
+// targets the box[int] stencil's method.
 func TestPromotionRecordGenericInstantiation(t *testing.T) {
 	program, err := emitSource(t, promotionGenericSrc)
 	if err != nil {
@@ -369,8 +330,8 @@ func TestPromotionRecordGenericInstantiation(t *testing.T) {
 		mm := m.(map[string]any)
 		if methodFuncKey(mm["recvType"].(string), mm["id"].(memberID)) == target {
 			found = true
-			if mm["recvType"] == "main.holder" || mm["id"].(memberID).Name != "get" || mm["wrapper"] == true {
-				t.Errorf("holder.get target %s resolves to %s.%s (wrapper=%v)", target, mm["recvType"], mm["id"].(memberID).Name, mm["wrapper"])
+			if mm["recvType"] == "main.holder" || mm["id"].(memberID).Name != "get" {
+				t.Errorf("holder.get target %s resolves to %s.%s", target, mm["recvType"], mm["id"].(memberID).Name)
 			}
 			if !strings.Contains(mm["recvType"].(string), "box") {
 				t.Errorf("holder.get target recvType %s does not name the box stencil", mm["recvType"])
@@ -380,7 +341,7 @@ func TestPromotionRecordGenericInstantiation(t *testing.T) {
 	if !found {
 		t.Errorf("holder.get target %s is not a method on the wire", target)
 	}
-	checkPairing(t, program, recs)
+	checkRecordsOnly(t, program, recs)
 }
 
 // TestPromotionRecordsEmptyWhenNonePromoted — a package with no promoted

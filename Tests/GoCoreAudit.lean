@@ -81,6 +81,11 @@ def exports : List Name := [
     ``GoLean.GoCore.ExecutionStatement.execStmtLoop_error,
     ``GoLean.GoCore.ExecutionStatement.noRefusal_step,
     ``GoLean.GoCore.Machine.stepFn_picks_none, ``GoLean.GoCore.Machine.stepFn_picks_some,
+    -- native method promotion (window row 3, G-P S2, 2026-09-28; [USER] «Agree on (1)», relayed):
+    -- the frame names the function it runs at entry and at exit, and the direct path is the
+    -- function-call rule
+    ``GoLean.GoCore.Machine.Entry.callConfig_run, ``GoLean.GoCore.Machine.frame_exit_returns,
+    ``GoLean.GoCore.Machine.enterFrame_declared,
     -- the A3a admission checker (core `Admission`; the admission step audits the rest)
     ``GoLean.GoCore.Admission.checkBoolean_iff,
     ``GoLean.GoCore.Admission.admitted_index_bound,

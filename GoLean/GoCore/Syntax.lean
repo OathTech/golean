@@ -805,14 +805,12 @@ structure Func where
   Defaults to `false` so hand-built GoCore programs (tests, proofs) stay
   non-variadic; the wire always carries it explicitly. -/
   variadic : Bool := false
-  /-- A compiler-SYNTHESIZED promotion wrapper (wire `"wrapper": true`,
-  design note 2026-08-05 D1.3): the frame it enters is marked so the
-  recover walk treats it as transparent, exactly gc's
-  `abi.FuncIDWrapper` (BUG-015, arc-final audit F1, 2026-08-06).
-  Defaults to `false` — hand-built programs and every user-declared
-  function are non-wrappers; only the frontend's synthesized promotion
-  wrappers set it. -/
-  wrapper : Bool := false
+  -- DELETED (G-P S2, 2026-09-28): `wrapper : Bool` — the compiler-synthesized
+  -- promotion-wrapper marker (wire `"wrapper": true`, 2026-08-05 D1.3 /
+  -- BUG-015). A promoted method-set entry is a `Promotion` RECORD (below),
+  -- resolved by the machine at dispatch; no synthesized `Func` exists, so
+  -- there is nothing to mark (design note
+  -- `docs/2026-09-28_gp-method-promotion-design.md` §1, §5 S2).
   deriving Repr, BEq
 
 /-- Internal callable target, derived from a receiver key and I1 member.
@@ -869,11 +867,14 @@ interface field's type). The path is the frontend's `go/types` selection
 the type table and the method table and fails closed by name
 (`NativeToIR.lean`).
 
-Slice S1 (design §5): the records are emitted and validated ALONGSIDE
-the synthesized promotion wrappers (`Func.wrapper`), and the decoder
-cross-checks each wrapper's body path against its record; the machine
-consumes nothing here yet. Slice S2 replaces the wrappers by these
-records (`resolveMethod?` / `receiverAt` / `callee?`, design §3). -/
+Slice S1 (design §5) emitted and validated the records ALONGSIDE the
+synthesized promotion wrappers and cross-checked each wrapper's body path
+against its record. Slice S2 (2026-09-28) RETIRED the wrappers: these
+records are the machine's ONLY source for a promoted entry —
+`resolveMethod?` (the resolution: declared, the `*T ⊇ T` arm, or a
+record), `receiverAt` (the path walk over the store, its loads the access
+trace) and `callee?` (a method expression over a promoted entry names the
+record) in `Ops.lean`/`Machine.lean` (design §3). -/
 
 /-- The receiver adjustment a promotion applies at the END of its path,
 relative to the target's receiver kind (design §2 S2/§3 «pointer/value
@@ -1083,7 +1084,7 @@ structure Program where
   record (§2 S2) — and defaulted `#[]` here, the hand-built-program
   default that STATES no promotion (a machine consumer, S2, resolves a
   promoted member only from a record, so an absent record refuses, never
-  answers). Data only in S1: the machine reads nothing from it yet. -/
+  answers). Consumed since S2 by `resolveMethod?`/`callee?`. -/
   promotions : Array Promotion := #[]
   deriving Repr, BEq
 

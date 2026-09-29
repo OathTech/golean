@@ -645,8 +645,14 @@ def spawnStep (s : Store) (cv : GoValue) (args : List GoValue) (k : Cont)
       -- used to name.
       match r with
       | .ok c => do
-          let (func, frameEnv, _, s', tr) ← runCommit c s
-          return (.next k, .exec func.body frameEnv (.frame [] [] [] [] .stop func.wrapper),
+          let (e, s', tr) ← runCommit c s
+          -- The child runs the callee's body under a targetless, resultless
+          -- barrier frame (results are discarded); a promoted `go i.M()`
+          -- whose path ends in an embedded interface field (`Entry.again`,
+          -- G-P S2 S5) is the child's PENDING call on that barrier frame,
+          -- entered at the child's first step — the walk and its panic
+          -- stay the child's (design §2 S3).
+          return (.next k, e.drainConfig .stop (fun cv => .next (.frame [] [] [] [(cv, [])] .stop fid)),
             s', ch', ps, tr)
       | .panic msg =>
           -- The entry pick drawn on the panic path is KEPT (the child
@@ -706,7 +712,7 @@ theorem spawnStep_oblivious {s : Store} {cv : GoValue} {args : List GoValue}
         cases hrc : runCommit c s with
         | error e => simp [hrc] at h
         | ok v =>
-          obtain ⟨func, frameEnv, locs, s₂, tr₂⟩ := v
+          obtain ⟨e, s₂, tr₂⟩ := v
           simp only [hrc, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
           obtain ⟨rfl, rfl, rfl, rfl, rfl, rfl⟩ := h
           exact ⟨rfl, fun ch => by simp⟩

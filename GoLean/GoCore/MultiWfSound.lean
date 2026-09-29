@@ -103,19 +103,22 @@ theorem spawnStep_wf {s : Store} {cv : GoValue} {args : List GoValue}
     rcases enterFramePickV_cases hpick with ⟨c, rfl, hplan, rfl, rfl⟩ | ⟨msg, rfl, hplan, rfl, rfl⟩
     · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
       obtain ⟨w, hrun, h⟩ := h
-      obtain ⟨func, frameEnv, resultLocs, s₂, tr₂⟩ := w
+      obtain ⟨e, s₂, tr₂⟩ := w
       try dsimp only at h
       try simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl, rfl, rfl, rfl, rfl⟩ := h
-      have henter : enterFrame ctx s fid (captured ++ args)
-          = .ok (func, frameEnv, resultLocs, s₂, tr₂) := by
+      have henter : enterFrame ctx s fid (captured ++ args) = .ok (e, s₂, tr₂) := by
         simp [enterFrame, hplan, Bind.bind, Except.bind, runCommit_eq_ok.mp hrun]
-      obtain ⟨w1, w2, w6, w7, w8⟩ := enterFrame_wf hw
+      obtain ⟨w1, w2, w6⟩ := enterFrame_wf hw
         (by rw [goValueListSup_append]; omega) henter
       refine ⟨w1, ?_, ?_, w2⟩
       · simpa [Config.locSup] using Nat.le_trans hk w2
-      · simp only [Config.locSup, Cont.locSup, locListSup, deferListSup,
-          targetPlansSup, LocalEnv.locSup, Nat.max_le]
+      · -- G-P S2: the child runs the body under the barrier frame, or holds the
+        -- re-dispatch as the barrier frame's pending call (`Entry.drainConfig`).
+        refine Entry.drainConfig_bounded w6 (by simp [Cont.locSup]) ?_
+        intro cv hcv
+        simp only [Config.locSup, Cont.locSup, locListSup, deferListSup, goValueListSup,
+          targetPlansSup, LocalEnv.locSup, Scope.locSup, Nat.max_le]
         omega
     · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl, rfl, rfl, rfl, rfl⟩ := h

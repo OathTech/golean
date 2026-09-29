@@ -1005,7 +1005,7 @@ theorem unseqLoad_inv_panic {s : Store} {env : LocalEnv} {tg : List (String × T
   · exact absurd hcs (unseqLoad_commit_noPanic _ _ _ _ _ c hc s msg)
 
 theorem enterFrame_inv_ok {s : Store} {fid : FuncId} {args : List GoValue}
-    {a : Func × LocalEnv × List Loc × Store × AccessTrace} (h : enterFrame ctx s fid args = .ok a) :
+    {a : Entry × Store × AccessTrace} (h : enterFrame ctx s fid args = .ok a) :
     ∃ c, enterFrame.plan ctx s fid args = .ok c ∧ c s = .ok a := by
   unfold enterFrame at h
   exact bind_eq_ok.mp h
@@ -1021,7 +1021,7 @@ theorem enterFrame_inv_panic {s : Store} {fid : FuncId} {args : List GoValue} {m
 /-! #### The V entry funnel against the composed one -/
 
 theorem enterFramePickV_of_plan_ok {s : Store} {fid : FuncId} {args : List GoValue}
-    {c : Commit (Func × LocalEnv × List Loc × Store × AccessTrace)}
+    {c : Commit (Entry × Store × AccessTrace)}
     (h : enterFrame.plan ctx s fid args = .ok c) (ch : Choices) :
     enterFramePickV ctx s fid args ch = .ok (.ok c, ch, []) := by
   simp [enterFramePickV, h]
@@ -1036,10 +1036,10 @@ theorem enterFramePickV_of_plan_panic {s : Store} {fid : FuncId} {args : List Go
   simp [enterFramePickV, h, Choices.consumeAtE_eq]
 
 theorem enterFramePickV_of_ok {s : Store} {fid : FuncId} {args : List GoValue} {ch ch' : Choices}
-    {ps : List PickRecord} {a : Func × LocalEnv × List Loc × Store × AccessTrace}
+    {ps : List PickRecord} {a : Entry × Store × AccessTrace}
     (h : enterFramePick ctx s fid args ch = .ok (.ok a, ch', ps)) :
     ∃ c, enterFramePickV ctx s fid args ch = .ok (.ok c, ch', ps) ∧ c s = .ok a := by
-  rcases enterFramePick_cases h with ⟨func, frameEnv, resultLocs, s', tr, hr, henter, rfl, rfl⟩ | ⟨msg, hr, -, -, -⟩
+  rcases enterFramePick_cases h with ⟨e, s', tr, hr, henter, rfl, rfl⟩ | ⟨msg, hr, -, -, -⟩
   · simp only [Result.ok.injEq] at hr
     subst hr
     obtain ⟨c, hpl, hcs⟩ := enterFrame_inv_ok henter
@@ -1049,7 +1049,7 @@ theorem enterFramePickV_of_ok {s : Store} {fid : FuncId} {args : List GoValue} {
 theorem enterFramePickV_of_panic {s : Store} {fid : FuncId} {args : List GoValue} {ch ch' : Choices}
     {ps : List PickRecord} {msg : String} (h : enterFramePick ctx s fid args ch = .ok (.panic msg, ch', ps)) :
     enterFramePickV ctx s fid args ch = .ok (.panic msg, ch', ps) := by
-  rcases enterFramePick_cases h with ⟨func, frameEnv, resultLocs, s', tr, hr, -, -, -⟩ | ⟨msg₀, hr, henter, rfl, rfl⟩
+  rcases enterFramePick_cases h with ⟨e, s', tr, hr, -, -, -⟩ | ⟨msg₀, hr, henter, rfl, rfl⟩
   · cases hr
   · simp only [Result.panic.injEq] at hr
     subst hr
@@ -1248,11 +1248,11 @@ at the frame — `frameFall`/`frameFallTargets`/`frameDeferFall`/
 the frame — the `frameReturn*` twins), with the same successor. -/
 theorem stepFrameExit_sound {s : Store} {targets : List (TargetShape × List Expr)}
     {tenv : LocalEnv} {results : List Loc} {ds : List (GoValue × List GoValue)}
-    {k' : Cont} {w : Bool} {ch : Choices} {c' : Config} {s' : Store} {ch' : Choices} {tr : StepLabel}
-    (h : stepFrameExit ctx s targets tenv results ds k' w ch = .ok (c', s', ch', tr)) :
-    Step ctx (.next (.frame targets tenv results ds k' w)) s c' s' tr
-      ∧ Step ctx (.signal .ret (.frame targets tenv results ds k' w)) s c' s' tr := by
-  fun_cases stepFrameExit ctx s targets tenv results ds k' w ch
+    {k' : Cont} {fr : FuncId} {ch : Choices} {c' : Config} {s' : Store} {ch' : Choices} {tr : StepLabel}
+    (h : stepFrameExit ctx s targets tenv results ds k' fr ch = .ok (c', s', ch', tr)) :
+    Step ctx (.next (.frame targets tenv results ds k' fr)) s c' s' tr
+      ∧ Step ctx (.signal .ret (.frame targets tenv results ds k' fr)) s c' s' tr := by
+  fun_cases stepFrameExit ctx s targets tenv results ds k' fr ch
   · simp only [stepFrameExit, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl, rfl, rfl⟩ := h
     exact ⟨Step.frameFall, Step.frameReturn⟩
@@ -2033,7 +2033,7 @@ stream (`ch`/`ch'`); realize under exactly it. -/
 macro "complete_entry " hpick:ident hdel:ident ch:term:max ch':term:max : tactic =>
   `(tactic| (
     (try simp only [List.append_assoc] at $hpick:ident)
-    rcases enterFramePick_cases $hpick:ident with ⟨func, frameEnv, resultLocs, s₂, tr₂, ha, hX, -, -⟩ | ⟨msg, ha, hX, -, -⟩
+    rcases enterFramePick_cases $hpick:ident with ⟨e, s₂, tr₂, ha, hX, -, -⟩ | ⟨msg, ha, hX, -, -⟩
     · subst ha
       simp only [deliver_ok, Prod.mk.injEq] at $hdel:ident
       obtain ⟨h1, h2, h3⟩ := $hdel:ident
@@ -2069,7 +2069,7 @@ the composed funnel's outcome reads back to the V funnel's (`enterFramePickV_of_
 macro "completeV_entry " hpick:ident hdel:ident ch:term:max ch':term:max : tactic =>
   `(tactic| (
     (try simp only [List.append_assoc] at $hpick:ident)
-    rcases enterFramePick_cases $hpick:ident with ⟨func, frameEnv, resultLocs, s₂, tr₂, ha, hX, -, -⟩ | ⟨msg, ha, hX, -, -⟩
+    rcases enterFramePick_cases $hpick:ident with ⟨e, s₂, tr₂, ha, hX, -, -⟩ | ⟨msg, ha, hX, -, -⟩
     · subst ha
       simp only [deliver_ok, Prod.mk.injEq] at $hdel:ident
       obtain ⟨h1, h2, h3⟩ := $hdel:ident
@@ -2088,7 +2088,7 @@ panic text family. -/
 macro "anyV_entry " hpick:ident ch:term:max : tactic =>
   `(tactic| (
     (try simp only [List.append_assoc] at $hpick:ident)
-    rcases enterFramePick_cases $hpick:ident with ⟨func, frameEnv, resultLocs, s₂, tr₂, -, hX, -, -⟩ | ⟨msg, -, hX, -, -⟩
+    rcases enterFramePick_cases $hpick:ident with ⟨e, s₂, tr₂, -, hX, -, -⟩ | ⟨msg, -, hX, -, -⟩
     · obtain ⟨c, hpl, hc⟩ := enterFrame_inv_ok hX
       simp [stepFn, stepFrameExit, enterFramePickV_of_plan_ok hpl $ch, runCommit_eq_ok.mpr hc,
         Functor.map, Except.map, Bind.bind, Except.bind]
@@ -2200,7 +2200,7 @@ theorem step_complete {c : Config} {s : Store} {c' : Config} {s' : Store} {tr : 
   -- is drawn from it on the panic path): realize under exactly it.
   case callImmediate =>
     rename_i targets fid args plans r env k ch₀ ch₁ ps hplan hargs hpick hdel
-    rcases enterFramePick_cases hpick with ⟨func, frameEnv, resultLocs, s₂, tr₂, rfl, hX, -, -⟩ | ⟨msg, rfl, hX, -, -⟩
+    rcases enterFramePick_cases hpick with ⟨e, s₂, tr₂, rfl, hX, -, -⟩ | ⟨msg, rfl, hX, -, -⟩
     · simp only [deliver_ok, Prod.mk.injEq] at hdel
       obtain ⟨rfl, rfl, rfl⟩ := hdel
       obtain ⟨c, hV, hc⟩ := enterFramePickV_of_ok hpick
@@ -4822,7 +4822,7 @@ theorem step_complete_any_wf_aux {c : Config} {σ : Store} {c' : Config}
   -- The frame-entry rules: the entry classifies under EVERY stream
   -- (`enterFramePick_any_ch`), and `deliverS` then delivers.
   case callImmediate targets fid args plans r env k ch₀ ch₁ ps hplan hargs hpick hdel =>
-    rcases enterFramePick_cases hpick with ⟨func, frameEnv, resultLocs, s₂, tr₂, -, hX, -, -⟩ | ⟨msg, -, hX, -, -⟩
+    rcases enterFramePick_cases hpick with ⟨e, s₂, tr₂, -, hX, -, -⟩ | ⟨msg, -, hX, -, -⟩
     · obtain ⟨c, hpl, hc⟩ := enterFrame_inv_ok hX
       simp [stepFn, hplan, hargs, enterFramePickV_of_plan_ok hpl ch, runCommit_eq_ok.mpr hc,
         Functor.map, Except.map, Bind.bind, Except.bind]
@@ -5715,15 +5715,15 @@ there exactly as every entry does (`entryConsult?`): with the consult
 `none` the exit is stream-oblivious — on BOTH its entries (B4). -/
 theorem stepFrameExit_consumption_none {σ : Store}
     {targets : List (TargetShape × List Expr)} {tenv : LocalEnv} {results : List Loc}
-    {ds : List (GoValue × List GoValue)} {k' : Cont} {w : Bool} {c : Config}
+    {ds : List (GoValue × List GoValue)} {k' : Cont} {fr : FuncId} {c : Config}
     {ch₀ : Choices} {c' : Config} {σ' : Store} {ch₀' : Choices} {tr : StepLabel}
-    (hc : c = .next (.frame targets tenv results ds k' w)
-      ∨ c = .signal .ret (.frame targets tenv results ds k' w))
+    (hc : c = .next (.frame targets tenv results ds k' fr)
+      ∨ c = .signal .ret (.frame targets tenv results ds k' fr))
     (hsc : seqConsumption ctx σ c = none)
-    (h : stepFrameExit ctx σ targets tenv results ds k' w ch₀ = .ok (c', σ', ch₀', tr)) :
+    (h : stepFrameExit ctx σ targets tenv results ds k' fr ch₀ = .ok (c', σ', ch₀', tr)) :
     ch₀' = ch₀ ∧ ∀ ch : Choices,
-      stepFrameExit ctx σ targets tenv results ds k' w ch = .ok (c', σ', ch, tr) := by
-  fun_cases stepFrameExit ctx σ targets tenv results ds k' w ch₀
+      stepFrameExit ctx σ targets tenv results ds k' fr ch = .ok (c', σ', ch, tr) := by
+  fun_cases stepFrameExit ctx σ targets tenv results ds k' fr ch₀
   · simp only [stepFrameExit, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl, rfl, rfl⟩ := h
     exact ⟨rfl, fun ch => by simp [stepFrameExit]⟩
@@ -5788,18 +5788,18 @@ the panic path (`entryConsult?_some`, `enterFramePick_panic`), on both
 entries (B4). -/
 theorem stepFrameExit_consumption_some {σ : Store}
     {targets : List (TargetShape × List Expr)} {tenv : LocalEnv} {results : List Loc}
-    {ds : List (GoValue × List GoValue)} {k' : Cont} {w : Bool} {c : Config}
+    {ds : List (GoValue × List GoValue)} {k' : Cont} {fr : FuncId} {c : Config}
     {ch₀ : Choices} {c' : Config} {σ' : Store} {ch₀' : Choices} {tr : StepLabel}
     {site : ChoiceSite} {b : Nat}
-    (hc : c = .next (.frame targets tenv results ds k' w)
-      ∨ c = .signal .ret (.frame targets tenv results ds k' w))
+    (hc : c = .next (.frame targets tenv results ds k' fr)
+      ∨ c = .signal .ret (.frame targets tenv results ds k' fr))
     (hsc : seqConsumption ctx σ c = some (site, b))
-    (h : stepFrameExit ctx σ targets tenv results ds k' w ch₀ = .ok (c', σ', ch₀', tr)) :
+    (h : stepFrameExit ctx σ targets tenv results ds k' fr ch₀ = .ok (c', σ', ch₀', tr)) :
     ch₀' = (Choices.consumeAt site b ch₀).2 ∧ ∀ ch : Choices,
       (Choices.consumeAt site b ch).1 = (Choices.consumeAt site b ch₀).1 →
-      stepFrameExit ctx σ targets tenv results ds k' w ch
+      stepFrameExit ctx σ targets tenv results ds k' fr ch
         = .ok (c', σ', (Choices.consumeAt site b ch).2, tr) := by
-  fun_cases stepFrameExit ctx σ targets tenv results ds k' w ch₀
+  fun_cases stepFrameExit ctx σ targets tenv results ds k' fr ch₀
   all_goals try (rcases hc with rfl | rfl <;>
     simp [seqConsumption, Config.applyPos, entryCallSite?] at hsc; done)
   all_goals try (simp [stepFrameExit, throw, throwThe, MonadExceptOf.throw] at h; done)

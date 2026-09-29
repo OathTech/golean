@@ -104,7 +104,7 @@ def seqPicks (ctx : ProgramCtx) (σ : Store) (c : Config) (ch : Choices) : List 
 
 /-- An entry whose consult is `none` keeps no record, on either path. -/
 theorem entry_ps_nil {σ : Store} {fid : FuncId} {args : List GoValue} {ch ch' : Choices}
-    {r : Result (Commit (Func × LocalEnv × List Loc × Store × AccessTrace))}
+    {r : Result (Commit (Entry × Store × AccessTrace))}
     {ps : List PickRecord} (hsc : entryConsult? ctx σ fid args = none)
     (hx : enterFramePickV ctx σ fid args ch = .ok (r, ch', ps)) : ps = [] := by
   rcases enterFramePickV_cases hx with ⟨_, _, _, _, rfl⟩ | ⟨msg, _, hplan, _, rfl⟩
@@ -122,7 +122,7 @@ theorem consumeAtE_ps_nil {site : ChoiceSite} {b : Nat} {ch ch' : Choices} {p : 
 
 /-- An entry whose consult is `some` took the panic path, keeping the consultation's record. -/
 theorem entry_some_panic {σ : Store} {fid : FuncId} {args : List GoValue} {ch ch' : Choices}
-    {r : Result (Commit (Func × LocalEnv × List Loc × Store × AccessTrace))}
+    {r : Result (Commit (Entry × Store × AccessTrace))}
     {ps : List PickRecord} {site : ChoiceSite} {b : Nat}
     (hsc : entryConsult? ctx σ fid args = some (site, b))
     (hx : enterFramePickV ctx σ fid args ch = .ok (r, ch', ps)) :

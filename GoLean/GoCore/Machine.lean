@@ -790,39 +790,122 @@ def loadResults (s : Store) : List Loc → Except Stop (List GoValue × AccessTr
 -- `HeapNormal.of_storeMany`, `storeMany_shape`, `storeMany_pres` (StateWf)
 -- left with it. Tombstone: `docs/2026-09-19_c1-memory-module-s3-handoff.md`.
 
-/-- Function lookup, arity check, dynamic method dispatch, parameter
+/-- The callee a frame entry names (design note
+`docs/2026-09-28_gp-method-promotion-design.md` §3 `callee?` — G-P S2
+replaces the callee half of `findFunctionIn?` in `enterFrame`): a declared
+`Func`, or — a method expression `S.M` / `(*S).M` over a PROMOTED
+method-set entry (design §2 S7, decision 5) — the promotion RECORD whose
+carrier and member the id spells (`methodFuncId S M`; the retired
+synthesized wrapper carried that id). `findFunctionIn?` itself keeps its
+signature; its domain lost the wrapper `Func`s. -/
+inductive Callee where
+  | func (f : Func)
+  | promotion (p : Promotion)
+
+def callee? (fid : FuncId) : Option Callee :=
+  match findFunctionIn? ctx.functions fid with
+  | some f => some (.func f)
+  | none =>
+      match ctx.promotions.find? (fun p => methodFuncId p.type.key p.member == fid) with
+      | some p => some (.promotion p)
+      | none => none
+
+/-- What a frame entry commits to (G-P S2): RUN the resolved declared
+`Func`'s body in a fresh frame (its parameter and result cells bound and
+pinned), or — a promotion path that ended in an embedded INTERFACE field
+(design §2 S5, decision 4) — RE-DISPATCH the same call on the field's
+value through the interface's anchor `fid` with the receiver-adjusted
+arguments, as the NEXT machine step: no frame is pushed, `stepFn` stays
+structurally total, a self-embedding cycle steps to fuel-out. The entry's
+own loads (the path walk, S8) ride in the delivered trace either way. -/
+inductive Entry where
+  | run (func : Func) (frameEnv : LocalEnv) (resultLocs : List Loc)
+  | again (fid : FuncId) (args : List GoValue)
+  deriving Repr
+
+/-- A method expression over a promoted entry, CALLED (design §2 S7): the
+record is the callee; argument 0 is the receiver the expression's first
+parameter takes — the carrier value for `S.M`, a pointer (possibly nil)
+for `(*S).M` — and the record's path applies to it exactly as at a
+dispatch (`receiverAt`), so the retired `(*S).M` deref-adapter refusal is
+not needed for promoted entries: the record's adjustment dereferences.
+The target is entered directly (a declared `Func`), or the embedded
+interface's anchor is re-entered on the field's value (S5). A stub record
+refuses by name with its cause; a target with no `Func` on the wire
+refuses by name (never a silent answer). -/
+def promotedCallee (s : Store) (fid : FuncId) (p : Promotion) (argVals : List GoValue) :
+    Except Stop (Dispatched × AccessTrace) := do
+  match p.unsupported with
+  | some cause => throw (.unsupported cause)
+  | none =>
+  match p.target with
+  | .method f =>
+      match findFunctionIn? ctx.functions f with
+      | none =>
+          throw (.unsupported s!"promoted method expression {fid.key}: its target {f.key} has no \
+declaration on the wire (an imported type's unexported method is not carried by the imported stub \
+pass, docs/2026-08-10_method-set-record-contract.md §5) — refusing rather than calling from no body")
+      | some tf =>
+          if tf.args.size != argVals.length then
+            stuck s!"function {fid.key} expected {tf.args.size} argument(s), got {argVals.length}"
+          match argVals with
+          | [] => stuck s!"promoted method expression {fid.key} called without a receiver argument"
+          | root :: rest => do
+              let (recv, tr) ← receiverAt ctx s root p.path p.adjust
+              return (.target tf (recv :: rest).toArray, tr)
+  | .iface i =>
+      let anchorId := methodFuncId i.key p.member
+      match findFunctionIn? ctx.functions anchorId with
+      | none => stuck s!"GoCore function not found: {anchorId.key}"
+      | some anchor =>
+          if anchor.args.size != argVals.length then
+            stuck s!"function {fid.key} expected {anchor.args.size} argument(s), got {argVals.length}"
+          match argVals with
+          | [] => stuck s!"promoted method expression {fid.key} called without a receiver argument"
+          | root :: rest => do
+              let (recv, tr) ← receiverAt ctx s root p.path p.adjust
+              return (.again anchorId (recv :: rest).toArray, tr)
+
+/-- Callee lookup (`callee?`), arity check, dynamic method dispatch
+(`dynamicDispatch?` — the resolution and the path walk), parameter
 binding, result declaration, and result-location pinning — everything
 between "arguments are values" and "executing the callee body". One step in
 the machine (frame entry). The two arity checks mirror the interpreter's
 (pre-dispatch in `execFunctionCallWithLocs`, post-dispatch in
-`execFunctionWithValues`). -/
+`execFunctionWithValues`); a record callee checks against its target. -/
 def enterFrame.plan (s : Store) (fid : FuncId) (argVals : List GoValue) :
-    Except Stop (Commit (Func × LocalEnv × List Loc × Store × AccessTrace)) := do
-  let func ←
-    match findFunctionIn? ctx.functions fid with
-    | some func => pure func
+    Except Stop (Commit (Entry × Store × AccessTrace)) := do
+  -- The entry's ONE possible user-memory access: the dispatch's receiver
+  -- read (`dynamicDispatch?` — the pointee of the `*T ⊇ T` arm, or the
+  -- promotion path's own loads). Binding and result declaration allocate
+  -- fresh cells only.
+  let (d, tr) ←
+    match callee? ctx fid with
     | none => stuck s!"GoCore function not found: {fid.key}"
-  if func.args.size != argVals.length then
-    stuck s!"function {fid.key} expected {func.args.size} argument(s), got {argVals.length}"
-  -- The entry's ONE possible user-memory access: the value-receiver
-  -- dispatch's pointee read (`dynamicDispatch?` emits it at the target's
-  -- leaf). Binding and result declaration allocate fresh cells only.
-  let (func, argVals, tr) ←
-    match ← dynamicDispatch? ctx s func argVals.toArray with
-    | (some (targetFunc, targetArgs), tr) => pure (targetFunc, targetArgs.toList, tr)
-    | (none, tr) => pure (func, argVals, tr)
-  if func.args.size != argVals.length then
-    stuck s!"function {func.id.key} expected {func.args.size} argument(s), got {argVals.length}"
-  -- THE COMMIT (S3): binding and result declaration allocate fresh cells only.
-  return fun s => do
-    let (argsEnv, s₁) ← bindParams ctx [] s func.args.toList argVals
-    let (frameEnv, s₂) ← allocDecls ctx argsEnv s₁ func.results.toList
-    let resultLocs ← pinResultLocs frameEnv func.results.toList
-    return (func, frameEnv, resultLocs, s₂, tr)
+    | some (.func func) => do
+        if func.args.size != argVals.length then
+          stuck s!"function {fid.key} expected {func.args.size} argument(s), got {argVals.length}"
+        match ← dynamicDispatch? ctx s func argVals.toArray with
+        | (some d, tr) => pure (d, tr)
+        | (none, tr) => pure (Dispatched.target func argVals.toArray, tr)
+    | some (.promotion p) => promotedCallee ctx s fid p argVals
+  match d with
+  | .again fid' args' =>
+      -- S5: the re-dispatch is the next step's entry; nothing to commit.
+      return fun s => return (.again fid' args'.toList, s, tr)
+  | .target func args =>
+      if func.args.size != args.size then
+        stuck s!"function {func.id.key} expected {func.args.size} argument(s), got {args.size}"
+      -- THE COMMIT (S3): binding and result declaration allocate fresh cells only.
+      return fun s => do
+        let (argsEnv, s₁) ← bindParams ctx [] s func.args.toList args.toList
+        let (frameEnv, s₂) ← allocDecls ctx argsEnv s₁ func.results.toList
+        let resultLocs ← pinResultLocs frameEnv func.results.toList
+        return (.run func frameEnv resultLocs, s₂, tr)
 
 @[inherit_doc enterFrame.plan]
 def enterFrame (s : Store) (fid : FuncId) (argVals : List GoValue) :
-    Except Stop (Func × LocalEnv × List Loc × Store × AccessTrace) := do
+    Except Stop (Entry × Store × AccessTrace) := do
   let c ← enterFrame.plan ctx s fid argVals
   c s
 
@@ -899,7 +982,7 @@ through here: the seven `stepFn` positions (`entryCallSite?`) and the
 `go`-statement spawn (`spawnStep`, Multi.lean); the relation's entry
 rules quantify the stream (`ch`/`ch'`, the `stmtOpApply` idiom). -/
 def enterFramePick (s : Store) (fid : FuncId) (args : List GoValue) (ch : Choices) :
-    Except Stop (Result (Func × LocalEnv × List Loc × Store × AccessTrace) × Choices × List PickRecord) :=
+    Except Stop (Result (Entry × Store × AccessTrace) × Choices × List PickRecord) :=
   match toResult (enterFrame ctx s fid args) with
   | .ok (.ok r) => .ok (.ok r, ch, [])
   | .ok (.panic msg) =>
@@ -919,7 +1002,7 @@ with `enterFramePick_of_V_ok`/`enterFramePick_of_V_panic` (below) and
 `enterFramePickV_ok`/`_panic`/`_error` this docstring used to name were
 never declared. -/
 def enterFramePickV (s : Store) (fid : FuncId) (args : List GoValue) (ch : Choices) :
-    Except Stop (Result (Commit (Func × LocalEnv × List Loc × Store × AccessTrace)) × Choices × List PickRecord) :=
+    Except Stop (Result (Commit (Entry × Store × AccessTrace)) × Choices × List PickRecord) :=
   match toResult (enterFrame.plan ctx s fid args) with
   | .ok (.ok c) => .ok (.ok c, ch, [])
   | .ok (.panic msg) =>
@@ -930,10 +1013,9 @@ def enterFramePickV (s : Store) (fid : FuncId) (args : List GoValue) (ch : Choic
 variable {ctx}
 /-- A successful entry never touches the stream. -/
 theorem enterFramePick_ok {s : Store} {fid : FuncId} {args : List GoValue}
-    {ch : Choices} {func : Func} {frameEnv : LocalEnv} {resultLocs : List Loc} {s' : Store}
-    {tr : AccessTrace}
-    (h : enterFrame ctx s fid args = .ok (func, frameEnv, resultLocs, s', tr)) :
-    enterFramePick ctx s fid args ch = .ok (.ok (func, frameEnv, resultLocs, s', tr), ch, []) := by
+    {ch : Choices} {e : Entry} {s' : Store} {tr : AccessTrace}
+    (h : enterFrame ctx s fid args = .ok (e, s', tr)) :
+    enterFramePick ctx s fid args ch = .ok (.ok (e, s', tr), ch, []) := by
   simp [enterFramePick, h]
 
 /-- The entry panic's text and the popped stream, on the panic path. -/
@@ -957,10 +1039,10 @@ theorem enterFramePick_error {s : Store} {fid : FuncId} {args : List GoValue}
 an entered frame with the stream untouched, or the entry panic's text
 under the site's pick with the stream popped. -/
 theorem enterFramePick_cases {s : Store} {fid : FuncId} {args : List GoValue}
-    {ch ch' : Choices} {ps : List PickRecord} {r : Result (Func × LocalEnv × List Loc × Store × AccessTrace)}
+    {ch ch' : Choices} {ps : List PickRecord} {r : Result (Entry × Store × AccessTrace)}
     (h : enterFramePick ctx s fid args ch = .ok (r, ch', ps)) :
-    (∃ func frameEnv resultLocs s' tr, r = .ok (func, frameEnv, resultLocs, s', tr)
-        ∧ enterFrame ctx s fid args = .ok (func, frameEnv, resultLocs, s', tr) ∧ ch' = ch ∧ ps = [])
+    (∃ e s' tr, r = .ok (e, s', tr)
+        ∧ enterFrame ctx s fid args = .ok (e, s', tr) ∧ ch' = ch ∧ ps = [])
     ∨ (∃ msg, r = .panic (entryPanicText ctx fid args msg
           (Choices.consumeAt .nilValueMethodText (nilValueMethodWidth ctx fid args) ch).1)
         ∧ enterFrame ctx s fid args = .error (.panic msg)
@@ -973,10 +1055,10 @@ theorem enterFramePick_cases {s : Store} {fid : FuncId} {args : List GoValue}
     rw [hx] at h
     cases r₀ with
     | ok a =>
-      obtain ⟨func, frameEnv, resultLocs, s', tr⟩ := a
+      obtain ⟨e, s', tr⟩ := a
       simp only [Except.ok.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl, rfl⟩ := h
-      exact .inl ⟨func, frameEnv, resultLocs, s', tr, rfl, toResult_eq_ok_ok.mp hx, rfl, rfl⟩
+      exact .inl ⟨e, s', tr, rfl, toResult_eq_ok_ok.mp hx, rfl, rfl⟩
     | panic msg =>
       simp only [Choices.consumeAtE_eq, Except.ok.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl, rfl⟩ := h
@@ -998,10 +1080,10 @@ theorem enterFramePick_of_nopanic {s : Store} {fid : FuncId} {args : List GoValu
 stream (the classification is `enterFrame`'s, stream-free; only the
 panic TEXT and the popped tail depend on the stream). -/
 theorem enterFramePick_any_ch {s : Store} {fid : FuncId} {args : List GoValue}
-    {ch ch' : Choices} {ps : List PickRecord} {r : Result (Func × LocalEnv × List Loc × Store × AccessTrace)}
+    {ch ch' : Choices} {ps : List PickRecord} {r : Result (Entry × Store × AccessTrace)}
     (h : enterFramePick ctx s fid args ch = .ok (r, ch', ps)) (ch₂ : Choices) :
     ∃ r₂ ch₂' ps₂, enterFramePick ctx s fid args ch₂ = .ok (r₂, ch₂', ps₂) := by
-  rcases enterFramePick_cases h with ⟨func, frameEnv, resultLocs, s', tr, -, hX, -⟩ | ⟨msg, -, hX, -⟩
+  rcases enterFramePick_cases h with ⟨e, s', tr, -, hX, -⟩ | ⟨msg, -, hX, -⟩
   · exact ⟨_, _, _, enterFramePick_ok hX⟩
   · exact ⟨_, _, _, enterFramePick_panic hX⟩
 
@@ -1067,7 +1149,7 @@ commit with the stream untouched, or the entry panic's text under the site's
 pick with the stream popped. -/
 theorem enterFramePickV_cases {s : Store} {fid : FuncId} {args : List GoValue}
     {ch ch' : Choices} {ps : List PickRecord}
-    {r : Result (Commit (Func × LocalEnv × List Loc × Store × AccessTrace))}
+    {r : Result (Commit (Entry × Store × AccessTrace))}
     (h : enterFramePickV ctx s fid args ch = .ok (r, ch', ps)) :
     (∃ c, r = .ok c ∧ enterFrame.plan ctx s fid args = .ok c ∧ ch' = ch ∧ ps = [])
     ∨ (∃ msg, r = .panic (entryPanicText ctx fid args msg
@@ -1125,8 +1207,8 @@ theorem enterFramePickV_of_none {s : Store} {fid : FuncId} {args : List GoValue}
 untouched on this path). -/
 theorem enterFramePick_of_V_ok {s : Store} {fid : FuncId} {args : List GoValue}
     {ch ch' : Choices} {ps : List PickRecord}
-    {c : Commit (Func × LocalEnv × List Loc × Store × AccessTrace)}
-    {a : Func × LocalEnv × List Loc × Store × AccessTrace}
+    {c : Commit (Entry × Store × AccessTrace)}
+    {a : Entry × Store × AccessTrace}
     (hv : enterFramePickV ctx s fid args ch = .ok (.ok c, ch', ps)) (hc : c s = .ok a) :
     enterFramePick ctx s fid args ch = .ok (.ok a, ch', ps) ∧ ch' = ch ∧ ps = [] := by
   rcases enterFramePickV_cases hv with ⟨c', hce, hplan, rfl, rfl⟩ | ⟨msg, hr, -, -⟩
@@ -3091,9 +3173,9 @@ through a wire interface declaration: those two interfaces are built into
 the runtime, so the rewrite applies whether or not the program ever
 mentions `error`/`fmt.Stringer`. -/
 def hasNoArgStringMethod (dynTy : Ty) (member : Declaration.MemberId) : Bool :=
-  match concreteMethodForDynamic? ctx dynTy member with
-  | some (info, _) =>
-      match concreteMethodSignature? ctx info with
+  match resolveMethod? ctx dynTy member with
+  | some r =>
+      match resolvedSignature? ctx member r with
       | some (params, results, variadic) =>
           params.isEmpty && results == #[Ty.string] && !variadic
       | none => false
@@ -3280,20 +3362,29 @@ inductive Cont where
   `results` (call-time-pinned frame cell locations) and store into
   `targets`. Running defers before the read is what makes a deferred call's
   mutation of a named result observable (W3 §9).
-  `wrapper` marks a frame entered through a
-  compiler-SYNTHESIZED promotion wrapper (wire flag `"wrapper": true`,
-  design note 2026-08-05 D1.3): gc marks the same frames
-  `abi.FuncIDWrapper`, and its recover walk skips them ("there must be
-  exactly one non-wrapper frame between gopanic and gorecover",
-  runtime/panic.go) — `recoverResult` is the ONLY consumer; every other
-  rule treats a wrapper frame as an ordinary frame (BUG-015, arc-final
-  audit F1, 2026-08-06). Defaults to `false` so hand-built programs and
-  user-code frames are unmarked; call entries pass the resolved
-  callee's flag. Positioned after `k` so the default applies at every
-  pre-existing construction site. -/
+  DELETED (G-P S2, 2026-09-28): the trailing `wrapper : Bool` marker of a
+  frame entered through a compiler-synthesized promotion wrapper (BUG-015,
+  2026-08-06; gc's `abi.FuncIDWrapper`, skipped by the recover walk). No
+  synthesized frame exists any more — a promoted method-set entry is a
+  promotion RECORD resolved at dispatch (`resolveMethod?`/`receiverAt`,
+  Ops.lean) and the target's own frame is the deferred frame (design note
+  `docs/2026-09-28_gp-method-promotion-design.md` §2 S6) — so every frame
+  is an ordinary frame and `recoverResult` needs no transparency.
+  ADDED in the same reshape ([USER] Mike 2026-09-28 «Agree on (1)» — the
+  logic team's request 6, option 1; relayed by the [AGENT] coordinator,
+  cite as relayed): `fid`, the id of the FUNCTION WHOSE BODY THIS FRAME
+  RUNS — the callee `enterFrame` resolves and enters (for a promoted
+  dispatch the declared TARGET method actually entered, never an interface
+  anchor or a record), set by every entry site from `Entry.run`'s `Func`
+  (`Entry.callConfig`/`Entry.drainConfig`); the drivers' entry frames name
+  the entry point / `pkgInitFuncId`. A REPRESENTATION field only: no rule
+  reads it, so a client can observe «`fid` returned `vs`» from the
+  configuration at frame exit (`frame_exit_returns`) while the step label
+  and every behaviour stay as they were (`Entry.callConfig_run`,
+  `enterFrame_declared`). -/
   | frame (targets : List (TargetShape × List Expr)) (tenv : LocalEnv)
       (results : List Loc)
-      (defers : List (GoValue × List GoValue)) (k : Cont) (wrapper : Bool := false)
+      (defers : List (GoValue × List GoValue)) (k : Cont) (fid : FuncId)
   /-- Awaiting a deferred call's callee value. -/
   | deferCalleeK (args : List Expr) (env : LocalEnv) (k : Cont)
   /-- Awaiting a deferred call's arguments; they are evaluated AT DEFER
@@ -3558,8 +3649,8 @@ Every frame but `.stop` has exactly ONE tail — the continuation it
 forwards to. The type says so through `Cont.tail`/`Cont.withTail`, and
 the frame CLASSES say which frames are glue (forward every walk to their
 tail) and which are load-bearing (`frame`, `panicResumeK`, `stop`). The
-three continuation walks (`pushDefer`, `recoverThroughWrappers`,
-`recoverResult`) are instances of ONE well-founded combinator,
+continuation walks (`pushDefer`, `recoverResult`; before G-P S2 also
+`recoverThroughWrappers`) are instances of ONE well-founded combinator,
 `Cont.rebuild`: descend through the frames a predicate admits, act at
 the first it does not, and rebuild the spine above the action. Adding a
 frame is one `tail`/`withTail` arm plus a class — not a new arm in every
@@ -3586,7 +3677,7 @@ def Cont.withTail : Cont → Cont → Cont
   | .stop, _ => .stop
   | .seq a b _, t => .seq a b t
   | .loop a b c _, t => .loop a b c t
-  | .frame a b c d _ w, t => .frame a b c d t w
+  | .frame a b c d _ f, t => .frame a b c d t f
   | .deferCalleeK a b _, t => .deferCalleeK a b t
   | .deferArgsK a b c d _, t => .deferArgsK a b c d t
   | .breakableK _, t => .breakableK t
@@ -3725,7 +3816,7 @@ contain a statement) finds nothing — fail closed. -/
 def pushDefer (d : GoValue × List GoValue) (k : Cont) : Option Cont :=
   (Cont.rebuild (fun k => k.class = .stmtGlue)
     (fun k => match k with
-      | .frame t te r ds k w => some ((), .frame t te r (d :: ds) k w)
+      | .frame t te r ds k f => some ((), .frame t te r (d :: ds) k f)
       | _ => none) k).map (·.2)
 
 /-- One unwinding step through a continuation frame: GLUE of either kind
@@ -3736,55 +3827,43 @@ frames (a panic can surface mid-expression, unlike `break`/`continue`/
 def panicPassthrough (k : Cont) : Option Cont :=
   if k.isGlue then k.tail else none
 
-/-- Glue for the RECOVER walks: statement/expression glue AND wrapper
-frames (compiler-synthesized promotion wrappers, `frame … true`) are
-transparent; a non-wrapper frame, the marker and `.stop` are not. -/
-def Cont.recoverTransparent : Cont → Bool
-  | .frame _ _ _ _ _ w => w
-  | k => k.isGlue
+/-- Below the deferred function's frame (design note
+`docs/2026-09-28_gp-method-promotion-design.md` §3 `recoverAtDeferred`,
+§2 S6 — G-P S2 replaces `recoverThroughWrappers`, whose glue-and-wrapper
+skip existed only for a synthesized wrapper's body glue between the
+promoted method's frame and the wrapper's; `Cont.recoverTransparent` left
+with it): `recover` applies exactly when the deferred frame sits DIRECTLY
+on a `panicResumeK` whose newest entry is unrecovered — the shape the
+panic-drain rule builds (`panicFrameDefer` constructs the deferred frame on
+the marker; a promoted deferred call re-queued through its embedded
+interface field, `Entry.again`, re-enters on the same marker; nothing
+inserts glue below an entered frame). Returns the payload and the marker
+with the entry marked; `none` = no recoverable panic here. -/
+def recoverAtDeferred : Cont → Option (GoValue × Cont)
+  | .panicResumeK chain k =>
+      (markNewestRecovered chain).map fun (v, chain') => (v, .panicResumeK chain' k)
+  | _ => none
 
-/-- Below the ONE non-wrapper frame of the recover walk: statement glue
-and WRAPPER frames are transparent on the way down to the
-suspended-chain marker (`recoverResult`'s docstring has the rule). A
-non-wrapper frame or `.stop` refutes; `.panicResumeK` resolves. Returns
-the payload and the rebuilt continuation with the newest entry marked.
-Glue must be skipped here because a wrapper's BODY glue sits between the
-promoted method's frame and the wrapper's frame; for wrapper-free
-continuations this arm is only ever reached with the marker DIRECTLY
-below (the panic-drain rule constructs the deferred frame on the marker,
-and nothing inserts glue below an entered frame), so behavior on
-wrapper-free programs is unchanged. -/
-def recoverThroughWrappers (k : Cont) : Option (GoValue × Cont) :=
-  Cont.rebuild Cont.recoverTransparent
-    (fun k => match k with
-      | .panicResumeK chain k =>
-          (markNewestRecovered chain).map fun (v, chain') => (v, .panicResumeK chain' k)
-      | _ => none) k
-
-/-- The `recover()` builtin (arc doc §A1; wrapper transparency added at
-the arc-final audit F1/BUG-015, 2026-08-06): walk the continuation to the
-first NON-WRAPPER call frame — gc's rule, verbatim from runtime/panic.go
-(`gorecover`): "there must be exactly one non-wrapper frame between
-gopanic and gorecover", with compiler-synthesized wrapper frames
-(`abi.FuncIDWrapper`; our wire's `"wrapper": true` promotion wrappers)
-skipped. Recover applies exactly when that frame sits on a `panicResumeK`
-whose newest entry is not yet recovered, with only glue and wrapper
-frames between — the shape the panic-drain rule builds (directly, or
-through the wrapper's forwarding call). Returns the recovered payload and
-the continuation with the entry marked, or `.nil` and the continuation
-unchanged (never stuck: `recover` outside a panic-run deferred function
-is a defined no-op in Go). A wrapper frame ABOVE the walk's start cannot
-occur from lowered Go (`recover()` never appears textually inside a
-synthesized wrapper); for totality it is transparent there too. The
-action always answers (`.nil` where the walk finds no frame), so the
-`getD` is totality plumbing only. -/
+/-- The `recover()` builtin (arc doc §A1): walk the continuation through
+statement/expression GLUE to the first call frame — gc's rule, verbatim
+from runtime/panic.go (`gorecover`): "there must be exactly one non-wrapper
+frame between gopanic and gorecover" (since G-P S2 every frame is a
+non-wrapper frame: a promoted method's own frame IS the deferred frame,
+`defer i.M()` / `defer S.M(s)` recover inside the promoted `M` exactly as
+gc's wrapper-skipping walk does). Recover applies exactly when that frame
+sits directly on a `panicResumeK` whose newest entry is not yet recovered
+(`recoverAtDeferred`). Returns the recovered payload and the continuation
+with the entry marked, or `.nil` and the continuation unchanged (never
+stuck: `recover` outside a panic-run deferred function is a defined no-op
+in Go). The action always answers (`.nil` where the walk finds no frame),
+so the `getD` is totality plumbing only. -/
 def recoverResult (k : Cont) : GoValue × Cont :=
-  (Cont.rebuild Cont.recoverTransparent
+  (Cont.rebuild Cont.isGlue
     (fun k => match k with
-      | .frame t te r ds k' false =>
-          some (match recoverThroughWrappers k' with
-            | some (v, k'') => (v, .frame t te r ds k'' false)
-            | none => (.nil, .frame t te r ds k' false))
+      | .frame t te r ds k' f =>
+          some (match recoverAtDeferred k' with
+            | some (v, k'') => (v, .frame t te r ds k'' f)
+            | none => (.nil, .frame t te r ds k' f))
       | k => some (.nil, k)) k).getD (.nil, k)
 
 /-- **The non-local control signals** (design-hygiene B4, review Q6):
@@ -3872,6 +3951,49 @@ inductive Config where
   the apply). Appended at the END so positional case tags stay
   stable. -/
   | blockedSync (op : SyncOp) (loc : Loc) (env : LocalEnv) (k : Cont)
+
+/-- The configuration a CALL position's frame entry delivers (G-P S2):
+RUN the callee's body in a fresh frame — the caller's target plans and
+environment ride to frame exit, the frame names the function it runs
+(`func.id`) — or, on `Entry.again`, RE-ENTER the same call position on the
+interface's anchor with the receiver-adjusted arguments: a nullary value
+call carrying every argument as a capture (`callValCalleeK`), so the NEXT
+step is that anchor's ordinary entry under the same targets, environment
+and continuation (design §2 S5: one machine step, no frame pushed). -/
+def Entry.callConfig (plans : List (TargetShape × List Expr)) (env : LocalEnv) (k : Cont) :
+    Entry → Config
+  | .run func frameEnv resultLocs =>
+      .exec func.body frameEnv (.frame plans env resultLocs [] k func.id)
+  | .again fid args => .retV (.funcVal fid args) (.callValCalleeK plans [] env k)
+
+/-- The configuration a DEFERRED call's drain — or the `go` spawn — delivers
+(G-P S2): RUN the callee's body in a targetless, resultless frame on
+`barrier` (a deferred call's results are discarded; the frame names the
+function it runs), or, on `Entry.again`, RE-QUEUE the re-dispatch — the
+anchor with the receiver-adjusted arguments as a function value — as the
+pending call the draining frame enters at its NEXT step (`requeue`: the
+drain's own configuration over the frame with the call at the head of its
+chain; the spawn's child, a barrier frame holding the call). -/
+def Entry.drainConfig (barrier : Cont) (requeue : GoValue → Config) : Entry → Config
+  | .run func frameEnv _ => .exec func.body frameEnv (.frame [] [] [] [] barrier func.id)
+  | .again fid args => requeue (.funcVal fid args)
+
+variable {ctx}
+/-- The frame a CALL position pushes on a RUN entry names the resolved
+callee (the `fid` field, [USER] 2026-09-28 «Agree on (1)», relayed):
+definitional. -/
+theorem Entry.callConfig_run {plans : List (TargetShape × List Expr)} {env : LocalEnv} {k : Cont}
+    {func : Func} {frameEnv : LocalEnv} {resultLocs : List Loc} :
+    Entry.callConfig plans env k (.run func frameEnv resultLocs)
+      = .exec func.body frameEnv (.frame plans env resultLocs [] k func.id) := rfl
+
+/-- The frame a DRAIN (or the spawn) pushes on a RUN entry names the
+resolved callee: definitional. -/
+theorem Entry.drainConfig_run {barrier : Cont} {requeue : GoValue → Config}
+    {func : Func} {frameEnv : LocalEnv} {resultLocs : List Loc} :
+    Entry.drainConfig barrier requeue (.run func frameEnv resultLocs)
+      = .exec func.body frameEnv (.frame [] [] [] [] barrier func.id) := rfl
+variable (ctx)
 
 /-- **The terminal shape, named once** (B3; ONE since B4): a goroutine
 with nothing left to do is `.next .stop`. A signal at `.stop` is NOT a
@@ -3998,8 +4120,8 @@ frame-exit rules — and refuses every other signal) and no `.stop` row (a
 signal at the empty continuation is relation-terminal). -/
 @[simp] theorem signalStep_frame {sg : Signal} {targets : List (TargetShape × List Expr)}
     {tenv : LocalEnv} {results : List Loc} {ds : List (GoValue × List GoValue)}
-    {k : Cont} {w : Bool} :
-    signalStep sg (.frame targets tenv results ds k w) = none := rfl
+    {k : Cont} {fr : FuncId} :
+    signalStep sg (.frame targets tenv results ds k fr) = none := rfl
 
 @[simp] theorem signalStep_stop {sg : Signal} : signalStep sg .stop = none := rfl
 
@@ -5568,8 +5690,7 @@ inductive Step : Config → Store → Config → Store → StepLabel → Prop wh
       targetsPlan targets.toList = some plans →
       args.toList = [] →
       enterFramePick ctx s fid [] ch = .ok (r, ch', ps) →
-      deliver s k (fun (func, frameEnv, resultLocs, s', tr) =>
-        (.exec func.body frameEnv (.frame plans env resultLocs [] k func.wrapper), s', ⟨tr, [], []⟩)) r [] ps
+      deliver s k (fun (e, s', tr) => (e.callConfig plans env k, s', ⟨tr, [], []⟩)) r [] ps
         = (c', s', l) →
       Step (.exec (.call targets fid args) env k) s c' s' l
   | callArgNext {v fid plans vals a rest env k s} :
@@ -5577,8 +5698,7 @@ inductive Step : Config → Store → Config → Store → StepLabel → Prop wh
         (.evalE a env (.callArgsK fid plans (vals ++ [v]) rest env k)) s ⟨[], [], []⟩
   | callArgsDoneEnter {v fid plans vals r env k s ch ch' ps c' s' l} :
       enterFramePick ctx s fid (vals ++ [v]) ch = .ok (r, ch', ps) →
-      deliver s k (fun (func, frameEnv, resultLocs, s', tr) =>
-        (.exec func.body frameEnv (.frame plans env resultLocs [] k func.wrapper), s', ⟨tr, [], []⟩)) r [] ps
+      deliver s k (fun (e, s', tr) => (e.callConfig plans env k, s', ⟨tr, [], []⟩)) r [] ps
         = (c', s', l) →
       Step (.retV v (.callArgsK fid plans vals [] env k)) s c' s' l
   -- Wide statements (S2): one generic operand-plan frame; targets are
@@ -5671,8 +5791,7 @@ inductive Step : Config → Store → Config → Store → StepLabel → Prop wh
   /-- Nullary call through a value: enter directly with the captures. -/
   | callValCalleeEnter {fid captured plans r env k s ch ch' ps c' s' l} :
       enterFramePick ctx s fid captured ch = .ok (r, ch', ps) →
-      deliver s k (fun (func, frameEnv, resultLocs, s', tr) =>
-        (.exec func.body frameEnv (.frame plans env resultLocs [] k func.wrapper), s', ⟨tr, [], []⟩)) r [] ps
+      deliver s k (fun (e, s', tr) => (e.callConfig plans env k, s', ⟨tr, [], []⟩)) r [] ps
         = (c', s', l) →
       Step (.retV (.funcVal fid captured) (.callValCalleeK plans [] env k)) s c' s' l
   /-- Nullary call of a nil function value: nothing to evaluate, panic. -/
@@ -5684,8 +5803,7 @@ inductive Step : Config → Store → Config → Store → StepLabel → Prop wh
         (.evalE a env (.callValArgsK cv plans (vals ++ [v]) rest env k)) s ⟨[], [], []⟩
   | callValArgsEnter {v fid captured plans vals r env k s ch ch' ps c' s' l} :
       enterFramePick ctx s fid (captured ++ vals ++ [v]) ch = .ok (r, ch', ps) →
-      deliver s k (fun (func, frameEnv, resultLocs, s', tr) =>
-        (.exec func.body frameEnv (.frame plans env resultLocs [] k func.wrapper), s', ⟨tr, [], []⟩)) r [] ps
+      deliver s k (fun (e, s', tr) => (e.callConfig plans env k, s', ⟨tr, [], []⟩)) r [] ps
         = (c', s', l) →
       Step (.retV v (.callValArgsK (.funcVal fid captured) plans vals [] env k)) s c' s' l
   /-- All arguments evaluated, callee is nil: NOW the invocation panics. -/
@@ -5716,17 +5834,17 @@ inductive Step : Config → Store → Config → Store → StepLabel → Prop wh
   -- always supplies targets — `$callres` temps or blank discards — for
   -- result-bearing calls, and the machine stays stuck-closed on the
   -- malformed shape as it always was.)
-  | frameReturn {tenv k w s} :
-      Step (.signal .ret (.frame [] tenv [] [] k w)) s (.next k) s ⟨[], [], []⟩
-  | frameFall {tenv k w s} :
-      Step (.next (.frame [] tenv [] [] k w)) s (.next k) s ⟨[], [], []⟩
-  | frameReturnTargets {sh e ops rest tenv results k w s vs tr} :
+  | frameReturn {tenv k fr s} :
+      Step (.signal .ret (.frame [] tenv [] [] k fr)) s (.next k) s ⟨[], [], []⟩
+  | frameFall {tenv k fr s} :
+      Step (.next (.frame [] tenv [] [] k fr)) s (.next k) s ⟨[], [], []⟩
+  | frameReturnTargets {sh e ops rest tenv results k fr s vs tr} :
       loadResults ctx s results = .ok (vs, tr) →
-      Step (.signal .ret (.frame ((sh, e :: ops) :: rest) tenv results [] k w)) s
+      Step (.signal .ret (.frame ((sh, e :: ops) :: rest) tenv results [] k fr)) s
         (.evalE e tenv (.tgtOpK sh [] ops [] rest .vals [] vs (.seqn #[]) tenv k)) s ⟨tr, [], []⟩
-  | frameFallTargets {sh e ops rest tenv results k w s vs tr} :
+  | frameFallTargets {sh e ops rest tenv results k fr s vs tr} :
       loadResults ctx s results = .ok (vs, tr) →
-      Step (.next (.frame ((sh, e :: ops) :: rest) tenv results [] k w)) s
+      Step (.next (.frame ((sh, e :: ops) :: rest) tenv results [] k fr)) s
         (.evalE e tenv (.tgtOpK sh [] ops [] rest .vals [] vs (.seqn #[]) tenv k)) s ⟨tr, [], []⟩
   -- Draining the defer chain: one deferred call per step, each in its own
   -- frame whose continuation is this frame with the rest of the chain, so
@@ -5738,30 +5856,30 @@ inductive Step : Config → Store → Config → Store → StepLabel → Prop wh
   -- `defer/deferred-dispatch-entry-panic/*`): on the normal drains it
   -- starts unwinding AT THIS FRAME with its remaining defers (the
   -- delivery continuation is the draining frame).
-  | frameDeferFall {targets tenv results fid captured args ds k w s r ch ch' ps c' s' l} :
+  | frameDeferFall {targets tenv results fid captured args ds k fr s r ch ch' ps c' s' l} :
       enterFramePick ctx s fid (captured ++ args) ch = .ok (r, ch', ps) →
-      deliver s (.frame targets tenv results ds k w) (fun (func, frameEnv, _, s', tr) =>
-        (.exec func.body frameEnv
-          (.frame [] [] [] [] (.frame targets tenv results ds k w) func.wrapper), s', ⟨tr, [], []⟩)) r [] ps
+      deliver s (.frame targets tenv results ds k fr) (fun (e, s', tr) =>
+        (e.drainConfig (.frame targets tenv results ds k fr)
+          (fun cv => .next (.frame targets tenv results ((cv, []) :: ds) k fr)), s', ⟨tr, [], []⟩)) r [] ps
         = (c', s', l) →
-      Step (.next (.frame targets tenv results ((.funcVal fid captured, args) :: ds) k w)) s c' s' l
-  | frameDeferReturn {targets tenv results fid captured args ds k w s r ch ch' ps c' s' l} :
+      Step (.next (.frame targets tenv results ((.funcVal fid captured, args) :: ds) k fr)) s c' s' l
+  | frameDeferReturn {targets tenv results fid captured args ds k fr s r ch ch' ps c' s' l} :
       enterFramePick ctx s fid (captured ++ args) ch = .ok (r, ch', ps) →
-      deliver s (.frame targets tenv results ds k w) (fun (func, frameEnv, _, s', tr) =>
-        (.exec func.body frameEnv
-          (.frame [] [] [] [] (.frame targets tenv results ds k w) func.wrapper), s', ⟨tr, [], []⟩)) r [] ps
+      deliver s (.frame targets tenv results ds k fr) (fun (e, s', tr) =>
+        (e.drainConfig (.frame targets tenv results ds k fr)
+          (fun cv => .next (.frame targets tenv results ((cv, []) :: ds) k fr)), s', ⟨tr, [], []⟩)) r [] ps
         = (c', s', l) →
-      Step (.signal .ret (.frame targets tenv results ((.funcVal fid captured, args) :: ds) k w)) s c' s' l
+      Step (.signal .ret (.frame targets tenv results ((.funcVal fid captured, args) :: ds) k fr)) s c' s' l
   /-- Invoking a nil deferred call panics at DRAIN time (Go: registration
   succeeded; the panic belongs to the invocation). The panic starts
   unwinding AT THIS FRAME with its remaining defers — which run, and may
   recover (`defer/defer-nil-function-recover-order` pins the order). -/
-  | frameDeferNilFall {targets tenv results args ds k w s} :
-      Step (.next (.frame targets tenv results ((.nil, args) :: ds) k w)) s
-        (.panicking [panicEntry nilDerefPanicText] (.frame targets tenv results ds k w)) s ⟨[], [], []⟩
-  | frameDeferNilReturn {targets tenv results args ds k w s} :
-      Step (.signal .ret (.frame targets tenv results ((.nil, args) :: ds) k w)) s
-        (.panicking [panicEntry nilDerefPanicText] (.frame targets tenv results ds k w)) s ⟨[], [], []⟩
+  | frameDeferNilFall {targets tenv results args ds k fr s} :
+      Step (.next (.frame targets tenv results ((.nil, args) :: ds) k fr)) s
+        (.panicking [panicEntry nilDerefPanicText] (.frame targets tenv results ds k fr)) s ⟨[], [], []⟩
+  | frameDeferNilReturn {targets tenv results args ds k fr s} :
+      Step (.signal .ret (.frame targets tenv results ((.nil, args) :: ds) k fr)) s
+        (.panicking [panicEntry nilDerefPanicText] (.frame targets tenv results ds k fr)) s ⟨[], [], []⟩
   -- Registering a deferred call: callee, then arguments, evaluated NOW.
   | deferStmt {callee args env k s} :
       Step (.exec (.deferCall callee args) env k) s
@@ -5794,8 +5912,8 @@ inductive Step : Config → Store → Config → Store → StepLabel → Prop wh
       Step (.panicking chain k) s (.panicking chain k') s ⟨[], [], []⟩
   /-- Unwinding past a frame with no (remaining) defers: results are NOT
   read — the call did not return. -/
-  | panicFrameEmpty {chain targets tenv results k w s} :
-      Step (.panicking chain (.frame targets tenv results [] k w)) s
+  | panicFrameEmpty {chain targets tenv results k fr s} :
+      Step (.panicking chain (.frame targets tenv results [] k fr)) s
         (.panicking chain k) s ⟨[], [], []⟩
   /-- Defers RUN on the panic path: the deferred call executes above a
   `panicResumeK` carrying the suspended chain — the shape `recover`'s
@@ -5805,22 +5923,22 @@ inductive Step : Config → Store → Config → Store → StepLabel → Prop wh
   entry, which `chainNewestRecovered` implements; the `during-panic` pin
   discriminates newest-vs-original by asserting the recovered value) and
   draining continues — the `.nil`-callee mirror below. -/
-  | panicFrameDefer {chain targets tenv results fid captured args ds k w s r ch ch' ps c' s' l} :
+  | panicFrameDefer {chain targets tenv results fid captured args ds k fr s r ch ch' ps c' s' l} :
       enterFramePick ctx s fid (captured ++ args) ch = .ok (r, ch', ps) →
-      deliver s (.frame targets tenv results ds k w) (fun (func, frameEnv, _, s', tr) =>
-        (.exec func.body frameEnv
-          (.frame [] [] [] [] (.panicResumeK chain (.frame targets tenv results ds k w))
-            func.wrapper), s', ⟨tr, [], []⟩)) r chain ps
+      deliver s (.frame targets tenv results ds k fr) (fun (e, s', tr) =>
+        (e.drainConfig (.panicResumeK chain (.frame targets tenv results ds k fr))
+          (fun cv => .panicking chain (.frame targets tenv results ((cv, []) :: ds) k fr)),
+          s', ⟨tr, [], []⟩)) r chain ps
         = (c', s', l) →
-      Step (.panicking chain (.frame targets tenv results ((.funcVal fid captured, args) :: ds) k w))
+      Step (.panicking chain (.frame targets tenv results ((.funcVal fid captured, args) :: ds) k fr))
         s c' s' l
   /-- A nil deferred callee invoked DURING unwinding: the invocation's
   nil-dereference panic joins the chain (newest last) and this frame's
   remaining defers keep draining. -/
-  | panicFrameDeferNil {chain targets tenv results args ds k w s} :
-      Step (.panicking chain (.frame targets tenv results ((.nil, args) :: ds) k w)) s
+  | panicFrameDeferNil {chain targets tenv results args ds k fr s} :
+      Step (.panicking chain (.frame targets tenv results ((.nil, args) :: ds) k fr)) s
         (.panicking (chain ++ [panicEntry nilDerefPanicText])
-          (.frame targets tenv results ds k w)) s ⟨[], [], []⟩
+          (.frame targets tenv results ds k fr)) s ⟨[], [], []⟩
   /-- A NEW panic unwinding through a suspended chain's marker merges
   behind it — this single rule produces Go's chained abort output
   (`panic: first ⏎ panic: second`, `… [recovered] ⏎ …`). -/
@@ -6246,5 +6364,52 @@ predicate would be the wrong edit. Its only current consumer is the
 def Config.terminal : Config → Prop
   | .next .stop => True
   | _ => False
+
+variable {ctx}
+/-- **The direct path is unchanged** (design note
+`docs/2026-09-28_gp-method-promotion-design.md` §3 `enterFrame_declared`;
+window charter row 3 — the logic team's `MaybeUpdate` pilot uses ordinary
+call rules): for a callee that is a DECLARED `Func` and not an interface
+anchor (every plain function and every concrete method — `methodInfoByFuncId?`
+answers `none` or a non-interface receiver), whose arity the call meets, the
+entry IS the function-call rule: bind the parameters, declare the results,
+pin their cells, run `func`'s body in a frame naming `func.id`; no memory
+access. No promotion record, no dispatch is consulted. -/
+theorem enterFrame_declared {s : Store} {fid : FuncId} {argVals : List GoValue} {func : Func}
+    (hf : findFunctionIn? ctx.functions fid = some func)
+    (hanchor : ∀ m, methodInfoByFuncId? ctx func.id = some m → methodRecvInterfaceName? m = none)
+    (harity : func.args.size = argVals.length) :
+    enterFrame ctx s fid argVals = (do
+      let (argsEnv, s₁) ← bindParams ctx [] s func.args.toList argVals
+      let (frameEnv, s₂) ← allocDecls ctx argsEnv s₁ func.results.toList
+      let resultLocs ← pinResultLocs frameEnv func.results.toList
+      return (.run func frameEnv resultLocs, s₂, [])) := by
+  have hdd : dynamicDispatch? ctx s func argVals.toArray = .ok (none, []) := by
+    unfold dynamicDispatch?
+    cases hm : methodInfoByFuncId? ctx func.id with
+    | none => rfl
+    | some m => simp [hanchor m hm, pure, Except.pure]
+  unfold enterFrame enterFrame.plan callee?
+  simp [hf, hdd, harity, Bind.bind, Except.bind, pure, Except.pure]
+
+/-- **A frame exit reads «`fid` returned `vs`»** ([USER] Mike 2026-09-28 «Agree
+on (1)» — the logic team's request 6, option 1; relayed by the [AGENT]
+coordinator, cite as relayed): the frame running `fid`'s body, at its exit —
+whether the body FELL OFF ITS END or RETURNED — reads its pinned result cells
+as `vs` and resumes the caller on its target plans with exactly those values
+(`frameFallTargets`/`frameReturnTargets`; the frame's `fid` field is
+representation only: no rule reads it, the label is the result read's). A
+targetless, resultless frame resumes the caller directly (`frameFall`/
+`frameReturn`). -/
+theorem frame_exit_returns {sh : TargetShape} {e : Expr} {ops : List Expr}
+    {rest : List (TargetShape × List Expr)} {tenv : LocalEnv} {results : List Loc} {k : Cont}
+    {fid : FuncId} {s : Store} {vs : List GoValue} {tr : AccessTrace}
+    (hload : loadResults ctx s results = .ok (vs, tr)) :
+    Step ctx (.next (.frame ((sh, e :: ops) :: rest) tenv results [] k fid)) s
+        (.evalE e tenv (.tgtOpK sh [] ops [] rest .vals [] vs (.seqn #[]) tenv k)) s ⟨tr, [], []⟩
+      ∧ Step ctx (.signal .ret (.frame ((sh, e :: ops) :: rest) tenv results [] k fid)) s
+        (.evalE e tenv (.tgtOpK sh [] ops [] rest .vals [] vs (.seqn #[]) tenv k)) s ⟨tr, [], []⟩ :=
+  ⟨.frameFallTargets hload, .frameReturnTargets hload⟩
+variable (ctx)
 
 end GoLean.GoCore.Machine

@@ -159,14 +159,20 @@ func TestOpaqueInterfaceRequirementMintsSameKey(t *testing.T) {
 	if len(results) != 1 || namedTypeName(results[0]) != "iter.Seq[int]" {
 		t.Fatalf("Iterable.All requirement result = %v, want the SAME opaque key iter.Seq[int] the stub carries (satisfaction identity)", results)
 	}
-	// The promoted All on Outer is a stub too (the wrapper cannot type
-	// its forwarding body), never dropped.
-	prom := findMethod(program, "main.Outer", "All")
+	// The promoted All on Outer is a STUB RECORD (G-P S2: its promoted
+	// signature does not lower), never dropped.
+	var prom map[string]any
+	for _, r := range program["promotions"].([]any) {
+		rm := r.(map[string]any)
+		if rm["type"] == "main.Outer" && rm["member"].(memberID).Name == "All" {
+			prom = rm
+		}
+	}
 	if prom == nil {
 		t.Fatalf("promoted Outer.All dropped (D2: satisfaction would answer a false no)")
 	}
 	if r, _ := prom["unsupported"].(string); !strings.Contains(r, "promoted method") || !strings.Contains(r, "iter.Seq[int]") {
-		t.Fatalf("promoted stub reason does not name the cause: %q", r)
+		t.Fatalf("promoted stub record reason does not name the cause: %q", r)
 	}
 }
 

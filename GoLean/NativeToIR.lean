@@ -6,7 +6,8 @@ import GoLean.GoCore.Unseq
 /-!
 # Native frontend lowering
 
-Decodes the native wire schema (`golean-native-v1`, emitted by
+Decodes the native wire schema (`golean-native-v2` since G-P S2, 2026-09-28 — a
+`golean-native-v1` wire refuses by name; emitted by
 `tools/nativefrontend`) directly into a clean `GoCore.Program`, failing closed
 on anything not yet modeled. This is the native analogue of `GobraToIR`, but
 because `go/types` resolved names and types up front, the lowering is a direct
@@ -2927,12 +2928,18 @@ private def methodReceiverAgrees (ctx : LowerCtx) (key : String) : Ty → Bool
 as the first parameter) plus a `MethodInfo` dispatch-table entry. -/
 private def decodeMethod (path : String) (json : Json) : LowerM (Func × MethodInfo) := do
   let obj ← StrictJson.obj path json
-  -- Union of the four emitter method shapes (declared / promotion
-  -- wrapper / interface anchor / declaration-only stub) — anchors and
-  -- stubs carry no body, which the arms below handle.
+  -- Union of the three emitter method shapes (declared / interface anchor /
+  -- declaration-only stub) — anchors and stubs carry no body, which the
+  -- arms below handle. G-P S2 (2026-09-28, design note
+  -- `docs/2026-09-28_gp-method-promotion-design.md` §4): the synthesized
+  -- promotion WRAPPERS are gone — a promoted method-set entry is a record
+  -- in `program.promotions` — so the `wrapper` marker left the allowed-key
+  -- set and a wire carrying it is refused BY NAME (below), never read.
+  if obj.contains "wrapper" then
+    fail s!"{path}.wrapper: the synthesized-promotion-wrapper marker was retired at G-P S2 (2026-09-28) — a promoted method-set entry is a record in program.promotions, and `methods` carries declared methods, interface anchors and imported stubs only; a wire carrying `wrapper` predates the v2 schema and is refused"
   checkAllowedKeys path obj
     ["id", "recvType", "recv", "params", "results", "variadic",
-     "wrapper", "interface", "unsupported", "body"]
+     "interface", "unsupported", "body"]
   let id ← NativeDeclaration.decodeMemberId s!"{path}.id" (← StrictJson.field path obj "id")
   let recvType ← StrictJson.string s!"{path}.recvType" (← StrictJson.field path obj "recvType")
   let recv ← decodeParam s!"{path}.recv" (← StrictJson.field path obj "recv")
@@ -2945,12 +2952,6 @@ private def decodeMethod (path : String) (json : Json) : LowerM (Func × MethodI
   let res ← results.mapIdxM (fun i p => decodeParam s!"{path}.results[{i}]" p)
   let funcId := methodFuncId recvType id
   let info : MethodInfo := { id, funcId, recv := recv.typ }
-  -- Declared schema addition (arc-final audit F1 / BUG-015): the
-  -- synthesized-promotion-wrapper marker. Decoded STRICTLY when present
-  -- (bool or refuse); absent means a concrete non-wrapper method.
-  let wrapper ← match obj.get? "wrapper" with
-    | some flag => StrictJson.bool s!"{path}.wrapper" flag
-    | none => pure false
   -- A declaration-only STUB (imported named types, design note D5): the
   -- REAL signature — `satisfiesMethodSig` compares it — over a fail-closed
   -- body, so satisfaction answers while a CALL refuses with the reason.
@@ -2959,7 +2960,7 @@ private def decodeMethod (path : String) (json : Json) : LowerM (Func × MethodI
       let reason ← StrictJson.string s!"{path}.unsupported" r
       pure ({ id := funcId, args := #[recv] ++ args, results := res,
               body := .unsupported s!"frontend-quarantined: {reason}",
-              variadic, wrapper }, info)
+              variadic }, info)
   | none =>
   -- A present `interface` key is decoded STRICTLY (delta-review R2,
   -- 2026-08-05 — same class as the F7 `runtimeError` fix; this presence-only
@@ -2976,7 +2977,7 @@ private def decodeMethod (path : String) (json : Json) : LowerM (Func × MethodI
       -- if a dispatch bug ever reaches it — never a silent zero return.
       let stub : Stmt := .call #[] ⟨"$interface-method-unreachable"⟩ #[]
       pure ({ id := funcId, args := #[recv] ++ args, results := res, body := stub,
-              variadic, wrapper }, info)
+              variadic }, info)
   else
       let bodyJ ← StrictJson.field path obj "body"
       -- Stage E6a R1: the receiver, params and results open the environment; the body's `block`
@@ -2984,9 +2985,9 @@ private def decodeMethod (path : String) (json : Json) : LowerM (Func × MethodI
       let locals := #[recv] ++ args ++ res
       let body ← withReader (fun ctx => { ctx with locals }) (decodeStmt res s!"{path}.body" bodyJ)
       pure ({ id := funcId, args := #[recv] ++ args, results := res, body,
-              variadic, wrapper }, info)
+              variadic }, info)
 
-/-! ## Promotion records (G-P S1)
+/-! ## Promotion records (G-P S1 — validated; G-P S2 — the machine's only source)
 
 Design note `docs/2026-09-28_gp-method-promotion-design.md` §2 S2 (option (b): the
 frontend records the `go/types` selection, the decoder VALIDATES it and fails closed) and
@@ -3009,16 +3010,15 @@ the method table:
   embedded pointer);
 - `adjust` is the one the hop kinds and the target's receiver require;
 - no duplicate `(type, member)`; a record's `(type, member)` is not a DECLARED method of
-  the carrier.
+  the carrier (the carrier's method table has no entry of that id — a carrier cannot both
+  declare and promote one member, which keeps `resolveMethod?`'s arms disjoint).
 
-**The S1 cross-check** (design §5 S1): the wrappers and stubs are still emitted, so the
-carrier's method `methodFuncId type member` must be the record's synthesized wrapper —
-whose body's single forwarding call targets the record's callee and whose receiver
-argument is EXACTLY the field-get / deref / field-addr chain over `$recv` that the
-record's path and adjustment denote (`promotionRecvChain`) — or, for an `unsupported`
-record, the declaration-only stub carrying the same cause and the record's `sig`; and
-every synthesized wrapper has exactly one record. Any disagreement refuses by name. The
-machine consumes nothing of this in S1; S2 replaces the wrappers by the records. -/
+The S1 cross-check against the synthesized wrappers RETIRED with the wrappers at G-P S2
+(2026-09-28; design §5 S2): the records are now the machine's ONLY source for a promoted
+entry (`resolveMethod?` / `receiverAt` / `callee?`, `GoLean/GoCore/Ops.lean` and
+`Machine.lean`). A stub record's `unsupported` cause is stored with the machine's
+`frontend-quarantined: ` marker, exactly as the retired stub body carried it, so a call
+through the record refuses with the same text the differential classifies today. -/
 
 private def decodePromotionHop (path : String) (json : Json) : LowerM PromotionHop := do
   let obj ← StrictJson.obj path json
@@ -3053,8 +3053,11 @@ private def decodePromotion (path : String) (json : Json) : LowerM Promotion := 
         checkAllowedKeys s!"{path}.target" tobj ["iface"]
         pure (PromotionTarget.iface ⟨← StrictJson.string s!"{path}.target.iface" i⟩)
     | _, _ => fail s!"{path}.target must carry exactly one of method|iface"
+  -- The stub record's cause carries the machine's frontend-quarantine marker
+  -- (the retired stub BODY carried `frontend-quarantined: <reason>`; a call
+  -- through the record refuses with that same text — G-P S2).
   let unsupported ← match obj.get? "unsupported" with
-    | some u => pure (some (← StrictJson.string s!"{path}.unsupported" u))
+    | some u => pure (some s!"frontend-quarantined: {← StrictJson.string s!"{path}.unsupported" u}")
     | none => pure none
   let sig ← match obj.get? "sig" with
     | some sg => pure (some (← decodeMethodSig s!"{path}.sig" sg))
@@ -3067,78 +3070,18 @@ private def decodePromotion (path : String) (json : Json) : LowerM Promotion := 
   | _, _ => pure ()
   pure { type := ⟨type⟩, member, inPtrSetOnly, path := hops, adjust, target, unsupported, sig }
 
-/-- The forwarding calls of a synthesized wrapper's body: the decoder emits the wrapper
-as `.block #[] #[.seqn [init…, call], .seqn [assign…, return]]` (a result-less wrapper's
-`expr` statement lowers the call likewise), so two flattening levels over
-`block`/`seqn` reach the ONE `.call`. Anything else (a `callValue`, control flow) is
-not a wrapper body and yields no call, which the cross-check refuses. -/
-private partial def forwardingCalls : Stmt → List (FuncId × Array Expr)
-  | .block _ ss => ss.toList.flatMap forwardingCalls
-  | .seqn ss => ss.toList.flatMap forwardingCalls
-  | .call _ f args => [(f, args)]
-  | _ => []
-
 private def tyBase : Ty → Ty
   | .pointer t => t
   | t => t
 
-/-- The receiver argument the wrapper for record `p` walks, derived from the record
-alone (the decoded form of `synthesizeWrapper`'s emission, emit.go): a VALUE walk
-(`fieldPathValue`) is a `field-get` per hop with a `deref` of the owner before it when
-the incoming value is a pointer (the `*T` root, or the previous hop an embedded
-pointer); `deref` appends the dereference of the reached pointer for a value receiver;
-`addr` from a pointer root is a `field-addr` per hop (`fieldPathAddrFrom`: a mid-chain
-embedded-pointer hop loads the pointer), and from a value root a value walk up to and
-including the FIRST embedded-pointer hop followed by the address walk over the rest
-(`valueRootedFieldAddr`). `lastTy` is the type the last hop reaches through `ptr`. -/
-private def promotionRecvChain (typeIdx : Std.HashMap String TypeIdx) (p : Promotion)
-    (lastTy : Ty) : Except String Expr := do
-  let root : Expr := .var "$recv"
-  let definedOf (id : TypeId) : Except String Ty :=
-    match typeIdx[id.key]? with
-    | some i => pure (.defined i)
-    | none => throw s!"owner {id.key} has no type-table index"
-  let valueWalk (hops : Array PromotionHop) (rootIsPtr : Bool) : Except String Expr := do
-    let mut node := root
-    let mut incomingPtr := rootIsPtr
-    for h in hops do
-      if incomingPtr then
-        node := .deref node (← definedOf h.owner)
-      node := .fieldGet node h.owner h.field
-      incomingPtr := h.ptr
-    pure node
-  let addrWalk (node0 : Expr) (hops : Array PromotionHop) : Except String Expr := do
-    let mut node := node0
-    for k in [:hops.size] do
-      let h := hops[k]!
-      node := .fieldAddr node h.owner h.field
-      if h.ptr && k + 1 < hops.size then
-        node := .deref node (.pointer (← definedOf hops[k + 1]!.owner))
-    pure node
-  match p.target, p.adjust with
-  | .iface _, .asIs => valueWalk p.path p.inPtrSetOnly
-  | .iface _, _ => throw "an interface target takes the field's value as is"
-  | .method _, .asIs => valueWalk p.path p.inPtrSetOnly
-  | .method _, .deref => do pure (.deref (← valueWalk p.path p.inPtrSetOnly) lastTy)
-  | .method _, .addr =>
-      if p.inPtrSetOnly then addrWalk root p.path
-      else
-        match p.path.findIdx? (·.ptr) with
-        | none => throw "addr adjustment from a value root without an embedded-pointer hop (not in the value method set)"
-        | some i => do
-            let node ← valueWalk (p.path.extract 0 (i + 1)) false
-            addrWalk node (p.path.extract (i + 1) p.path.size)
-
 private def promRefuse {α} (i : Nat) (p : Promotion) (msg : String) : Except String α :=
   throw s!"native lowering: program.promotions[{i}] ({p.type.key}.{p.member.name}): {msg}"
 
-/-- Validate one promotion record (design §2 S2 (b)) against the type and method tables,
-then cross-check it against the carrier's own method of that identity — the record's
-synthesized wrapper (its forwarding call's callee and receiver chain) or, for an
-`unsupported` record, its declaration-only stub (cause and signature). Every refusal
-names the record, the hop and the fact that disagrees. -/
-private def validatePromotion (types : TypeEnv) (typeIdx : Std.HashMap String TypeIdx)
-    (funcs : Array Func) (methods : Array MethodInfo) (i : Nat) (p : Promotion) :
+/-- Validate one promotion record (design §2 S2 (b)) against the type and method tables.
+Every refusal names the record, the hop and the fact that disagrees. (The S1 cross-check
+against the record's synthesized wrapper retired with the wrappers at S2.) -/
+private def validatePromotion (types : TypeEnv) (funcs : Array Func)
+    (methods : Array MethodInfo) (i : Nat) (p : Promotion) :
     Except String Unit := do
   let refuse {α} (msg : String) : Except String α := promRefuse i p msg
   -- The carrier: a struct declared on the wire.
@@ -3183,8 +3126,10 @@ private def validatePromotion (types : TypeEnv) (typeIdx : Std.HashMap String Ty
           | none => refuse s!"path[{k}] reaches type index {j}, which the table does not have"
       | _ => refuse s!"path[{k}] reaches a non-struct type ({repr inner}), yet the path continues"
   let lastPtr := (p.path.back?.map (·.ptr)).getD false
-  -- The target, and its receiver kind.
-  let (calleeId, targetIsPtr) ← match p.target with
+  -- The target, and its receiver kind (the callee id the S1 cross-check
+  -- compared against the wrapper is no longer needed: the machine reads the
+  -- record itself).
+  let (_, targetIsPtr) ← match p.target with
     | .method f =>
         match methods.find? (·.funcId == f) with
         | some info =>
@@ -3196,9 +3141,7 @@ private def validatePromotion (types : TypeEnv) (typeIdx : Std.HashMap String Ty
             if tyBase info.recv != reached then
               refuse s!"the last hop reaches {repr reached}, which is not the target's receiver base {repr (tyBase info.recv)}"
             match findFunctionIn? funcs f with
-            | some tf =>
-                if tf.wrapper then
-                  refuse s!"target {f.key} is itself a synthesized promotion wrapper; a record's target is a DECLARED method"
+            | some _ => pure ()
             | none => refuse s!"target {f.key} has no Func on the wire"
             pure (f, match info.recv with | .pointer _ => true | _ => false)
         | none =>
@@ -3208,15 +3151,15 @@ private def validatePromotion (types : TypeEnv) (typeIdx : Std.HashMap String Ty
             -- `docs/2026-08-10_method-set-record-contract.md` §5), while go/types
             -- promotes the unexported member too (the raft twin's
             -- `raft.DefaultLogger` over `*log.Logger` promotes `log.output`; design
-            -- §3 «twin log.output stays (log, output)»). Today's wrapper forwards to
-            -- the same absent key (a call would go stuck), so the record is not
-            -- refused for the wire's incompleteness; the key itself pins the
-            -- receiver base AND the member (`methodFuncId` is injective in both),
+            -- §3 «twin log.output stays (log, output)»). The retired wrapper forwarded
+            -- to the same absent key (a call went STUCK); since S2 a CALL through the
+            -- record REFUSES BY NAME (`dynamicDispatch?`/`promotedCallee`), so the
+            -- record is not refused for the wire's incompleteness; the key itself pins
+            -- the receiver base AND the member (`methodFuncId` is injective in both),
             -- so both facts are decided from the key, and the receiver KIND is read
-            -- back from the record's own adjustment — the wrapper cross-check below
-            -- then decides whether that is the code's answer. A locally declared
-            -- reached type has its FULL method table on the wire (D2), so an absent
-            -- target there is a frontend fault and refuses.
+            -- back from the record's own adjustment. A locally declared reached type
+            -- has its FULL method table on the wire (D2), so an absent target there is
+            -- a frontend fault and refuses.
             let reachedKey ← match reached with
               | .defined j =>
                   match types[j]? with
@@ -3262,50 +3205,14 @@ private def validatePromotion (types : TypeEnv) (typeIdx : Std.HashMap String Ty
       if sg.id != p.member then
         refuse s!"sig.id {sg.id.package}:{sg.id.name} disagrees with member {p.member.package}:{p.member.name}"
   | none => pure ()
-  -- The S1 cross-check against the carrier's own method of this identity.
+  -- A carrier cannot both DECLARE and promote one member: a record whose
+  -- `(type, member)` is a method of the carrier's own table refuses (the S1
+  -- cross-check's declared-conflict rule, kept; `resolveMethod?`'s arms stay
+  -- disjoint). The carrier's method of that identity is exactly
+  -- `methodFuncId type member`.
   let wid := methodFuncId p.type.key p.member
-  let wf ← match findFunctionIn? funcs wid with
-    | some wf => pure wf
-    | none =>
-        refuse s!"the carrier has no method {wid.key} — S1 emits a forwarding wrapper or a declaration-only stub for every record"
-  let expectRecvTy : Ty := if p.inPtrSetOnly then .pointer (.defined cidx) else .defined cidx
-  match wf.args[0]? with
-  | some r =>
-      if r.typ != expectRecvTy then
-        refuse s!"the carrier method's receiver is {repr r.typ}; inPtrSetOnly = {p.inPtrSetOnly} requires {repr expectRecvTy}"
-  | none => refuse "the carrier method has no receiver parameter"
-  match p.unsupported with
-  | none =>
-      if !wf.wrapper then
-        refuse s!"{p.type.key}.{p.member.name} is a DECLARED method of the carrier (not a synthesized wrapper), so it is not promoted"
-      match forwardingCalls wf.body with
-      | [(callee, args)] =>
-          if callee != calleeId then
-            refuse s!"the wrapper forwards to {callee.key}; the record's target is {calleeId.key}"
-          let expected ← match promotionRecvChain typeIdx p reached with
-            | .ok e => pure e
-            | .error m => refuse s!"the record denotes no receiver chain: {m}"
-          match args[0]? with
-          | some got =>
-              if got != expected then
-                refuse s!"the wrapper's body walks {repr got}; the record's path/adjust denote {repr expected}"
-          | none => refuse "the wrapper's forwarding call has no receiver argument"
-          if args.size != wf.args.size then
-            refuse s!"the wrapper forwards {args.size} argument(s) for {wf.args.size} parameter(s)"
-      | calls =>
-          refuse s!"the wrapper body has {calls.length} forwarding call(s); a synthesized wrapper has exactly one"
-  | some reason =>
-      if wf.wrapper then
-        refuse "the record is a stub (unsupported) but the carrier method is a forwarding wrapper"
-      if wf.body != .unsupported s!"frontend-quarantined: {reason}" then
-        refuse "the record's unsupported cause is not the carrier stub's (or the carrier method has a body)"
-      match p.sig with
-      | none => refuse "stub record without sig"
-      | some sg =>
-          let stubParams := (wf.args.extract 1 wf.args.size).map (·.typ)
-          let stubResults := wf.results.map (·.typ)
-          if sg.params != stubParams || sg.results != stubResults || sg.variadic != wf.variadic then
-            refuse "sig disagrees with the stub's signature (params / results / variadic)"
+  if methods.any (·.funcId == wid) || (findFunctionIn? funcs wid).isSome then
+    refuse s!"{p.type.key}.{p.member.name} is a DECLARED method of the carrier ({wid.key} is on the wire), so it is not promoted"
 
 /-- The file-selection target this machine realizes — gc on linux/amd64
 with cgo enabled and no build tags: the identity half of the pin whose
@@ -3371,7 +3278,13 @@ partial def decodeProgram (json : Json) : Except String Program := do
     ["schema", "package", "types", "funcs", "methods", "methodSets", "globals",
      "fileOrder", "buildContext", "promotions"]).run noCtx
   let schema ← StrictJson.string "program.schema" (← StrictJson.field "program" obj "schema")
-  if schema != "golean-native-v1" then
+  -- G-P S2 (2026-09-28): the schema moved to v2 — promotion wrappers retired,
+  -- `program.promotions` consumed, `wrapper` refused. A v1 wire is refused BY
+  -- NAME: its promoted entries are synthesized `Func`s this decoder no longer
+  -- accepts, so re-export with the current frontend.
+  if schema == "golean-native-v1" then
+    throw "native lowering: schema golean-native-v1 predates G-P S2 (2026-09-28: promotion wrappers retired, promotion records consumed — docs/2026-09-28_gp-method-promotion-design.md §4); this decoder reads golean-native-v2 — re-export the package with the current frontend"
+  if schema != "golean-native-v2" then
     throw s!"native lowering: unexpected schema {schema}"
   -- `buildContext` (BUG-108): the file-selection target, REQUIRED and
   -- checked against this machine's pin — unlike `fileOrder` it has a
@@ -3502,35 +3415,28 @@ must be full|exported, got {other}"
     if seenRecords.contains r.key then
       throw s!"native lowering: duplicate method-set record for {r.key} in program"
     seenRecords := seenRecords.insert r.key
-  -- Promotion records (G-P S1, design note
+  -- Promotion records (G-P S1/S2, design note
   -- `docs/2026-09-28_gp-method-promotion-design.md` §4/§5; the validation
-  -- and the S1 cross-check are `validatePromotion` above): REQUIRED — a
-  -- wire without the field refuses by name; each record decodes strictly
-  -- under the type-index context (`sig` types resolve through it), is
-  -- validated against the tables, and is cross-checked against its wrapper
-  -- or stub; duplicates refuse; every synthesized wrapper must have its
-  -- record (the reverse direction of the cross-check).
+  -- is `validatePromotion` above): REQUIRED — a wire without the field
+  -- refuses by name; each record decodes strictly under the type-index
+  -- context (`sig` types resolve through it) and is validated against the
+  -- tables; duplicates refuse. Since S2 the records are the machine's only
+  -- source for a promoted method-set entry (`resolveMethod?`).
   let promJson ← match obj.get? "promotions" with
     | some j => StrictJson.array "program.promotions" j
     | none =>
-        throw "native lowering: program.promotions is missing — the frontend records every promoted method-set entry as data beside its wrapper (G-P S1, docs/2026-09-28_gp-method-promotion-design.md §4); a wire without the field predates the records and is refused"
+        throw "native lowering: program.promotions is missing — the frontend records every promoted method-set entry as data (G-P, docs/2026-09-28_gp-method-promotion-design.md §4); a wire without the field predates the records and is refused"
   let promotions ← promJson.mapIdxM
     (fun i pj => (decodePromotion s!"program.promotions[{i}]" pj).run ctx)
   let methods := methodPairs.map Prod.snd
   let mut seenPromotions : Std.HashSet String := {}
-  let mut recordedWrappers : Std.HashSet String := {}
   for i in [:promotions.size] do
     let p := promotions[i]!
     let k := (methodFuncId p.type.key p.member).key
     if seenPromotions.contains k then
       throw s!"native lowering: program.promotions[{i}]: duplicate promotion record for {p.type.key}.{p.member.package}:{p.member.name}"
     seenPromotions := seenPromotions.insert k
-    validatePromotion typeDefs typeIdx allFuncs methods i p
-    if p.unsupported.isNone then
-      recordedWrappers := recordedWrappers.insert k
-  for f in allFuncs do
-    if f.wrapper && !recordedWrappers.contains f.id.key then
-      throw s!"native lowering: synthesized promotion wrapper {f.id.key} has no promotion record (G-P S1: every wrapper has exactly one record in program.promotions)"
+    validatePromotion typeDefs allFuncs methods i p
   pure { typeDefs, funcs := allFuncs, methods, globals,
          methodSets, typeDisplays, promotions }
 

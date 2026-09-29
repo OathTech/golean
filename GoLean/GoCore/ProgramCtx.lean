@@ -59,8 +59,10 @@ empty — NOT `Program`'s decoded-wire defaults `TypeEnv.reserved`/
 itself, as it did before B7. -/
 def ProgramCtx.ofTables (types : TypeEnv := #[]) (functions : Array Func := #[])
     (methods : Array MethodInfo := #[]) (methodSets : Array MethodSetRecord := #[])
-    (typeDisplays : Array (TypeId × TypeDisplay) := #[]) : ProgramCtx :=
-  ⟨{ typeDefs := types, funcs := functions, methods, globals := #[], methodSets, typeDisplays }⟩
+    (typeDisplays : Array (TypeId × TypeDisplay) := #[])
+    (promotions : Array Promotion := #[]) : ProgramCtx :=
+  ⟨{ typeDefs := types, funcs := functions, methods, globals := #[], methodSets, typeDisplays,
+     promotions }⟩
 
 @[simp] theorem ProgramCtx.ofTables_types (types : TypeEnv) (functions : Array Func)
     (methods : Array MethodInfo) (methodSets : Array MethodSetRecord)

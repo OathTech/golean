@@ -701,6 +701,22 @@ theorem unseqLoad_plan_commitOk {s : Store} {env : LocalEnv} {tg : List (String 
   okp
   all_goals (try (intro s; (try dsimp only); errp))
 
+/-- The promotion path walk (G-P S2, `receiverAt`'s spine): a refusal or the
+nil-dereference panic — never a stray error class. -/
+theorem promotionHop_tame {s : Store} {cur : WalkCursor} {hop : PromotionHop} :
+    ErrP Stop.Tame (promotionHop ctx s cur hop) := by
+  unfold promotionHop
+  (try dsimp only)
+  errp
+theorem promotionWalk_tame {s : Store} :
+    ∀ {cur : WalkCursor} {hops : List PromotionHop}, ErrP Stop.Tame (promotionWalk ctx s cur hops)
+  | cur, [] => by unfold promotionWalk; errp
+  | cur, h :: hs => by
+    have ih := fun cur => @promotionWalk_tame s cur hs
+    have hh := promotionHop_tame (ctx := ctx) (s := s) (cur := cur) (hop := h)
+    unfold promotionWalk; errp
+macro_rules | `(tactic| errp_leaf) => `(tactic| with_reducible exact promotionWalk_tame)
+
 set_option maxHeartbeats 4000000 in
 theorem enterFrame_plan_tame {s : Store} {fid : FuncId} {args : List GoValue} :
     ErrP Stop.Tame (enterFrame.plan ctx s fid args) := by
@@ -736,8 +752,8 @@ theorem runCommit_of_toResult {α : Type} {plan : Except Stop (Commit α)} {c : 
   runCommit_strict (hc.run (toResult_eq_ok_ok.mp h) s)
 
 theorem runCommit_of_entry {σ : Store} {fid : FuncId} {args : List GoValue} {ch : Choices}
-    {x : Result (Commit (Func × LocalEnv × List Loc × Store × AccessTrace)) × Choices × List PickRecord}
-    {c : Commit (Func × LocalEnv × List Loc × Store × AccessTrace)}
+    {x : Result (Commit (Entry × Store × AccessTrace)) × Choices × List PickRecord}
+    {c : Commit (Entry × Store × AccessTrace)}
     (hx : enterFramePickV ctx σ fid args ch = .ok x) (h1 : x.1 = .ok c) (s : Store) :
     ErrP Stop.Strict (runCommit c s) := by
   obtain ⟨r, ch', ps⟩ := x

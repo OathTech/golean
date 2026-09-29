@@ -77,10 +77,17 @@ inversion of the old blanket `true`).
    carrier kind, argued:
    - locally declared named types (mono-stenciled included): one record
      per non-interface TypeDef, `coverage: full` — the wire contract
-     already requires the FULL method table for every declared named
-     type, promoted methods included (D2, 2026-08-05); a method whose
-     body cannot lower still lands as a signature-carrying quarantined
-     stub, so the SET is complete even when calls refuse;
+     already requires the FULL method set for every declared named
+     type, promoted methods included (D2, 2026-08-05): since G-P S2
+     (2026-09-28, `docs/2026-09-28_gp-method-promotion-design.md` §4) a
+     `full` record means DECLARED methods (`methods`) ∪ PROMOTION RECORDS
+     (`program.promotions` — one per promoted method-set entry, resolved by
+     the machine's `resolveMethod?`; before S2 the promoted entries were
+     synthesized forwarding wrappers in `methods`); a method whose body
+     cannot lower still lands as a signature-carrying quarantined stub,
+     and a promoted entry whose signature does not lower (or a promoted
+     sync-primitive method) as a stub RECORD carrying `unsupported` + `sig`,
+     so the SET is complete even when calls refuse;
    - D5 imported marker types: `coverage: exported` per marker TypeDef
      (the wire cannot express cross-package unexported method identity — superseded by §6, 2026-09-09: it now can);
    - sync primitives: `coverage: exported` per type reaching the wire
@@ -224,5 +231,9 @@ even though the wire can express the member identity exactly. No new
 imported private-method implementation or full-coverage claim follows from
 this change. The old bullets above describe the pre-FR-31 name-keyed wire;
 this addendum supersedes their proposed identity repair, not their coverage
-boundary or the downstream proof-seed obligations. G-P may replace frontend
-promotion wrappers while retaining this member/coverage contract.
+boundary or the downstream proof-seed obligations. G-P S2 (2026-09-28) replaced
+the frontend promotion wrappers by promotion records while retaining this
+member/coverage contract (§3's D2 bullet states the record form; the
+`raft.DefaultLogger.output` → unexported `log.output` case of §5 is a record
+whose target has no `Func` on the wire — a CALL through it refuses by name at
+the machine, never a silent answer).

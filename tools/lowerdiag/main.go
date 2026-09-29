@@ -14,7 +14,7 @@
 //	    --frontend-stderr is given, the DYNAMIC pass's first refusal classified
 //	    by the same causes.tsv; then the full histogram / projection / distance.
 //	lowerdiag wire <wire.json>
-//	    per-declaration classification of a golean-native-v1 wire's quarantine
+//	    per-declaration classification of a golean-native-v2 wire's quarantine
 //	    stubs (the census's decls.tsv): pkg kind name status cause class key
 //	lowerdiag classify
 //	    stdin refusal lines -> class TAB key (class = FR/cause-id)
@@ -258,9 +258,6 @@ func wire(path string) error {
 		row("func", str(f["name"]), f["unsupported"])
 	}
 	for _, m := range asList(prog["methods"]) {
-		if w, _ := m["wrapper"].(bool); w {
-			continue // synthesized promotion wrappers are not source declarations
-		}
 		if _, isIface := m["interface"]; isIface {
 			continue // interface method anchors
 		}
@@ -269,6 +266,21 @@ func wire(path string) error {
 			return fmt.Errorf("method %v has no member identity", m["recvType"])
 		}
 		row("method", str(m["recvType"])+"."+str(id["name"]), m["unsupported"])
+	}
+	// Promotion RECORDS (G-P S2, golean-native-v2): a promoted method-set
+	// entry is data, not a source declaration; only the STUB records — the
+	// promoted sync-primitive methods and the FR-23 signatures, whose
+	// `unsupported` names the cause a call refuses with — are quarantines
+	// worth a row (the retired wrapper pass emitted them as method stubs).
+	for _, r := range asList(prog["promotions"]) {
+		if _, quarantined := r["unsupported"]; !quarantined {
+			continue
+		}
+		member, ok := r["member"].(map[string]any)
+		if !ok || str(member["name"]) == "" {
+			return fmt.Errorf("promotion record %v has no member identity", r["type"])
+		}
+		row("promoted", str(r["type"])+"."+str(member["name"]), r["unsupported"])
 	}
 	for _, t := range asList(prog["types"]) {
 		def, _ := t["def"].(map[string]any)

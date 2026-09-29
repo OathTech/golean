@@ -141,7 +141,7 @@ theorem admitted_index_bound {p : Program} {name : String} {args : Array GoValue
 
 theorem admitted_all_bodies {p : Program} {name : String} {args : Array GoValue}
     (h : BooleanAdmission p name args) {f : Func} (hf : f ∈ p.funcs.toList) :
-    BoolStmt f.body := (h.2.2.2.2 f hf).2.2.2.2.2
+    BoolStmt f.body := (h.2.2.2.2 f hf).2.2.2.2
 
 theorem admitted_no_initializer {p : Program} {name : String} {args : Array GoValue}
     (h : BooleanAdmission p name args) {f : Func} (hf : f ∈ p.funcs.toList) :

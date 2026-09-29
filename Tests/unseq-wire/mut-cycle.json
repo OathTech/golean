@@ -302,6 +302,6 @@
  "methods": [],
  "package": "main",
  "promotions": [],
- "schema": "golean-native-v1",
+ "schema": "golean-native-v2",
  "types": []
 }

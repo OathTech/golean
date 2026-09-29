@@ -29,6 +29,19 @@ RE-PIN 2 — packet B, the execution bridges ([AGENT packet B worker], 2026-09-2
 `docs/2026-09-28_packet-b-handoff.md`): row 34 strengthened (label-reshape audit F1); rows
 35–64 ADDED — the 23 proved `_stmt` theorems (statements written out) and seven supporting facts.
 
+RE-PIN 3 — G-P S2, native method promotion ([AGENT worker, lane core/method-promotion-0928],
+2026-09-28; design note `docs/2026-09-28_gp-method-promotion-design.md` §5 S2 — decisions 4 and 9
+ruled [USER] 2026-09-28, relayed; handoff `docs/2026-09-28_method-promotion-handoff.md`): rows 11
+and 15 re-pinned over the entry OUTCOME `Entry` (`run func frameEnv resultLocs | again fid args`
+— a promotion path ending in an embedded interface field re-dispatches as a SEPARATE step, design
+§2 S5; the five-tuple `Func × LocalEnv × List Loc × Store × AccessTrace` became
+`Entry × Store × AccessTrace`); row 13 re-pinned: `Cont.frame`'s trailing `wrapper : Bool` field
+was DELETED and the frame's callee `FuncId` ADDED in its place ([USER] Mike 2026-09-28 «Agree on
+(1)», the logic team's request 6 option 1, relayed), so `stepFrameExit`'s `Bool` binder is a
+`FuncId`. Rows 65–67 ADDED — `Entry.callConfig_run` (the frame a call position pushes names the
+resolved callee), `frame_exit_returns` (a frame exit reads «`fid` returned `vs`») and
+`enterFrame_declared` (a declared callee's entry IS the function-call rule: design §3, charter row 3).
+
 The set is RE-PINNED per window row; every change to this file is a changelog line
 (`docs/changelog/61958f2e-WINDOW.md`), so the file's diff between two pins IS the
 interface diff.
@@ -105,18 +118,18 @@ example : Nat → Program → String → Array GoValue → optParam Choices [] �
 example : ProgramCtx → Store → List Loc → Except Stop (List GoValue) :=
   @GoLean.GoCore.Machine.loadMany
 
--- 11. `Machine.lean:824`
+-- 11. `Machine.lean` `enterFrame` (RE-PIN 3: the outcome is `Entry`)
 example : ProgramCtx → Store → FuncId → List GoValue →
-    Except Stop (Func × LocalEnv × List Loc × Store × AccessTrace) :=
+    Except Stop (Entry × Store × AccessTrace) :=
   @GoLean.GoCore.Machine.enterFrame
 
 -- 12. `Machine.lean:3700`
 example : List Stmt → LocalEnv → Cont → Cont :=
   @GoLean.GoCore.Machine.seqCont
 
--- 13. `StepFn.lean:156`
+-- 13. `StepFn.lean` `stepFrameExit` (RE-PIN 3: the frame's `FuncId`, not a wrapper `Bool`)
 example : ProgramCtx → Store → List (TargetShape × List Expr) → LocalEnv → List Loc →
-    List (GoValue × List GoValue) → Cont → Bool → Choices →
+    List (GoValue × List GoValue) → Cont → FuncId → Choices →
     Except Stop (Config × Store × Choices × StepLabel) :=
   @GoLean.GoCore.Machine.stepFrameExit
 
@@ -124,9 +137,9 @@ example : ProgramCtx → Store → List (TargetShape × List Expr) → LocalEnv 
 example : Cont → GoValue × Cont :=
   @GoLean.GoCore.Machine.recoverResult
 
--- 15. `Machine.lean:901`
+-- 15. `Machine.lean` `enterFramePick` (RE-PIN 3: the outcome is `Entry`)
 example : ProgramCtx → Store → FuncId → List GoValue → Choices →
-    Except Stop (Result (Func × LocalEnv × List Loc × Store × AccessTrace) × Choices ×
+    Except Stop (Result (Entry × Store × AccessTrace) × Choices ×
       List PickRecord) :=
   @GoLean.GoCore.Machine.enterFramePick
 
@@ -478,5 +491,37 @@ example : ∀ {ctx : ProgramCtx} {s s' : Store} {c c' : Config} {ch₀ ch₀' : 
     GoLean.GoCore.ExecutionStatement.NoRefusal ctx s c → stepFn ctx s c ch₀ = .ok (c', s', ch₀', l) →
       GoLean.GoCore.ExecutionStatement.NoRefusal ctx s' c' :=
   @GoLean.GoCore.ExecutionStatement.noRefusal_step
+
+-- 65. `Machine.lean` — the frame a CALL position pushes names the resolved callee (RE-PIN 3;
+-- [USER] 2026-09-28 «Agree on (1)», relayed)
+example : ∀ {plans : List (TargetShape × List Expr)} {env : LocalEnv} {k : Cont}
+    {func : Func} {frameEnv : LocalEnv} {resultLocs : List Loc},
+    Entry.callConfig plans env k (.run func frameEnv resultLocs)
+      = .exec func.body frameEnv (.frame plans env resultLocs [] k func.id) :=
+  @GoLean.GoCore.Machine.Entry.callConfig_run
+
+-- 66. `Machine.lean` — a frame exit reads «`fid` returned `vs`» (RE-PIN 3)
+example : ∀ {ctx : ProgramCtx} {sh : TargetShape} {e : Expr} {ops : List Expr}
+    {rest : List (TargetShape × List Expr)} {tenv : LocalEnv} {results : List Loc} {k : Cont}
+    {fid : FuncId} {s : Store} {vs : List GoValue} {tr : AccessTrace},
+    loadResults ctx s results = .ok (vs, tr) →
+    Step ctx (.next (.frame ((sh, e :: ops) :: rest) tenv results [] k fid)) s
+        (.evalE e tenv (.tgtOpK sh [] ops [] rest .vals [] vs (.seqn #[]) tenv k)) s ⟨tr, [], []⟩
+      ∧ Step ctx (.signal .ret (.frame ((sh, e :: ops) :: rest) tenv results [] k fid)) s
+        (.evalE e tenv (.tgtOpK sh [] ops [] rest .vals [] vs (.seqn #[]) tenv k)) s ⟨tr, [], []⟩ :=
+  @GoLean.GoCore.Machine.frame_exit_returns
+
+-- 67. `Machine.lean` — the direct path is the function-call rule (RE-PIN 3; design §3
+-- `enterFrame_declared`, charter row 3: the logic team's `MaybeUpdate` pilot uses ordinary call rules)
+example : ∀ {ctx : ProgramCtx} {s : Store} {fid : FuncId} {argVals : List GoValue} {func : Func},
+    findFunctionIn? ctx.functions fid = some func →
+    (∀ m, methodInfoByFuncId? ctx func.id = some m → methodRecvInterfaceName? m = none) →
+    func.args.size = argVals.length →
+    enterFrame ctx s fid argVals = (do
+      let (argsEnv, s₁) ← bindParams ctx [] s func.args.toList argVals
+      let (frameEnv, s₂) ← allocDecls ctx argsEnv s₁ func.results.toList
+      let resultLocs ← pinResultLocs frameEnv func.results.toList
+      return (.run func frameEnv resultLocs, s₂, [])) :=
+  @GoLean.GoCore.Machine.enterFrame_declared
 
 end GoLean.GoCore.BridgeSet

@@ -15,8 +15,9 @@
 //	locked.{Lock,TryLock,Unlock}  embedded sync.Mutex  declaration-only STUBS: unsupported + sig
 //
 // `probe` answers 42 through the real machine (the positive control): the
-// dynamic calls above dispatch through the synthesized wrappers whose body
-// paths the decoder cross-checks against these records.
+// dynamic calls above dispatch through these records — the machine resolves
+// each entry from its record and walks the path itself (G-P S2; `wrapI.val`
+// re-dispatches on the embedded interface field's value as its own step).
 package main
 
 import "sync"

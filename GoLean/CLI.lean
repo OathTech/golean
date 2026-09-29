@@ -973,7 +973,7 @@ def enumRunProgram (ep : EnumProgram) (runFuel : Nat)
         -- mirroring `runPkgInitM` (audit response 2026-08-05, C6); the
         -- panic member's message stays unmarked (Go-observable).
         match enumInitRun ep.ctx runFuel ep.σ₀
-            (.exec body [] (.frame [] [] [] [] .stop)) stream with
+            (.exec body [] (.frame [] [] [] [] .stop GoCore.pkgInitFuncId)) stream with
         | .error e => throw (GoCore.Machine.markInitPhase e, GoString.empty)
         | .ok (.inl r) => pure r
         | .ok (.inr (msg, leftover)) => return ("panic", errorJson (.panic msg), leftover)
@@ -984,7 +984,7 @@ def enumRunProgram (ep : EnumProgram) (runFuel : Nat)
   -- a fresh one-thread pool over the initialized state, race detector
   -- armed from empty.
   enumPoolRun ep.ctx resultLocs runFuel
-    ⟨#[.running (.exec ep.func.body frameEnv (.frame [] [] [] [] .stop)) none], s₃, 0⟩ {}
+    ⟨#[.running (.exec ep.func.body frameEnv (.frame [] [] [] [] .stop ep.func.id)) none], s₃, 0⟩ {}
     choices₁ GoString.empty
 
 /-- The observation `native-json-run` prints for a driver result — public
@@ -1401,7 +1401,7 @@ partial def subjectEntry (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
       | .error e => .error s!"subject entry failed: {renderStop e}"
       | .ok resultLocs =>
           poolDFS ctx out path resultLocs ctx.runFuel
-            ⟨#[.running (.exec ctx.ep.func.body frameEnv (.frame [] [] [] [] .stop)) none], s₃, 0⟩
+            ⟨#[.running (.exec ctx.ep.func.body frameEnv (.frame [] [] [] [] .stop ctx.ep.func.id)) none], s₃, 0⟩
             {} GoString.empty
 
 /-- DFS over the `$pkginit` phase (sequential, one pick per step at
@@ -1484,7 +1484,7 @@ def explore (ep : EnumProgram) (runFuel width sites cap workCap : Nat)
     | none => subjectEntry ctx {} [] ep.σ₀
     | some body =>
         initDFS ctx {} [] runFuel ep.σ₀
-          (.exec body [] (.frame [] [] [] [] .stop))
+          (.exec body [] (.frame [] [] [] [] .stop GoCore.pkgInitFuncId))
   -- THE CERTIFICATION CHECK: probe observations ⊆ enumerated set.
   for pobs in out.probeObservations do
     if !out.observations.contains pobs then
@@ -1503,7 +1503,7 @@ def dedupSeed (ep : EnumProgram) :
   let (frameEnv, s₃) ← GoCore.Machine.allocDecls ep.ctx env s₂ ep.func.results.toList
   let resultLocs ← GoCore.Machine.pinResultLocs frameEnv ep.func.results.toList
   return (resultLocs,
-    ⟨#[.running (.exec ep.func.body frameEnv (.frame [] [] [] [] .stop)) none], s₃, 0⟩,
+    ⟨#[.running (.exec ep.func.body frameEnv (.frame [] [] [] [] .stop ep.func.id)) none], s₃, 0⟩,
     ({} : GoCore.Machine.RaceState))
 
 /-- The dedup-engine path (POR slice, `docs/2026-08-21_w32-por-design.md`):

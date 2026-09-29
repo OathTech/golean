@@ -374,18 +374,21 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 		return nil, err
 	}
 
-	// Promotion wrappers (design note 2026-08-05 D1.3): one synthesized
-	// forwarding method per PROMOTED method-set entry of every declared
-	// named struct type, so the machine's flat method table is COMPLETE
-	// (the D2 wire contract). Runs BEFORE the interface-anchor pass below:
-	// a wrapper forwarding to an embedded interface field records its
-	// dispatch target in calledIfaceMethods.
-	wrappers, promotions, err := e.synthesizePromotionWrappers()
+	// Promotion RECORDS (G-P S2, design note
+	// docs/2026-09-28_gp-method-promotion-design.md §4; G-P PASSED [USER]
+	// 2026-09-28, relayed): one record per PROMOTED method-set entry of
+	// every declared named struct type — the D2 wire contract's "full
+	// method set" is declared methods ∪ promotion records; the machine
+	// resolves a promoted entry from its record (`resolveMethod?`), no
+	// forwarding wrapper is synthesized any more (design note 2026-08-05
+	// D1.3 retired). Runs BEFORE the interface-anchor pass below: a record
+	// targeting an embedded interface field registers its dispatch anchor
+	// in calledIfaceMethods, exactly as the retired wrapper's call did.
+	promotions, err := e.promotionRecords()
 	if err != nil {
 		return nil, err
 	}
-	methods = append(methods, wrappers...)
-	// Wrapper signatures can mention instantiated types: drain again.
+	// Record signatures can mention instantiated types: drain again.
 	// (An instantiated STRUCT first appearing here would miss its own
 	// wrapper pass. CORRECTED, arc-final audit F13 2026-08-06: the old
 	// claim that this "can only make a promoted method visibly MISSING,
@@ -398,8 +401,9 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 	// mentioned by the corresponding method stencil, which the FIRST
 	// drain's fixpoint flushes, and imported generic instantiation is
 	// refused. If late-registered structs ever become reachable here,
-	// the wrapper pass must move inside the drain fixpoint — do not
-	// lean on the old safety claim.)
+	// the record pass must move inside the drain fixpoint — do not
+	// lean on the old safety claim. Design §2 S10: this second drain
+	// STAYS at G-P S2.)
 	funcs, typeDefs, methods, err = e.drainMono(funcs, typeDefs, methods)
 	if err != nil {
 		return nil, err
@@ -793,19 +797,19 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 	}
 
 	program := map[string]any{
-		"schema":     "golean-native-v1",
+		"schema":     "golean-native-v2",
 		"package":    e.pkg.Name(),
 		"types":      typeDefs,
 		"funcs":      funcs,
 		"methods":    methods,
 		"methodSets": methodSets,
-		// Promotion records (G-P S1, design note
+		// Promotion records (G-P S1/S2, design note
 		// docs/2026-09-28_gp-method-promotion-design.md §4): REQUIRED —
 		// always present, `[]` when the package has no promoted
-		// method-set entry; one record per wrapper/stub emitted above, in
-		// emission order. The decoder validates each and refuses a wire
-		// without the field. The schema string is unchanged in S1 (the
-		// v2 move, with the wrappers' retirement, is S2).
+		// method-set entry; one record per promoted entry, in method-set
+		// order. The decoder validates each and refuses a wire without
+		// the field. Schema `golean-native-v2` since S2 (the wrappers
+		// retired; a `wrapper` key is refused).
 		"promotions": promotions,
 	}
 	// fileOrder — the E8 wire-level record (latitude inventory §E8;
@@ -1996,7 +2000,8 @@ func (e *emitter) emitGenDeclTypes(d *ast.GenDecl) ([]any, []any, error) {
 // whole raft subject export while the two unsupported plain functions beside
 // them quarantined cleanly). Same contract as a quarantined plain function —
 // refuse when CALLED, never when merely declared — in the wire shape
-// `importedMethodStubs`/`syncPromotedStub` already use.
+// `importedMethodStubs` already uses (the promoted sync-primitive stubs are
+// promotion RECORDS since G-P S2, `promotionRecords`).
 //
 // Why a method's stub carries its REAL SIGNATURE where a function's carries
 // only its arity: a method-table entry is what INTERFACE SATISFACTION reads.
@@ -2144,53 +2149,6 @@ func (e *emitter) opaqueMarkerTypeDefs() []any {
 		})
 	}
 	return out
-}
-
-// promotedSigStub is the declaration-only stub for a PROMOTED method whose
-// forwarding wrapper cannot be synthesized with an `unsupported` cause
-// (FR-23, 2026-09-04: the promoted method's signature instantiates an
-// imported generic; before this the wrapper's emitType refused the WHOLE
-// export). Same contract as syncPromotedStub and quarantinedMethodStub —
-// the method-set entry is never dropped (D2: a missing wrapper makes
-// satisfaction answer a false "no"), the real signature is carried
-// (opaque mode), and a CALL through it fails closed naming the cause.
-func (e *emitter) promotedSigStub(named *types.Named, tName string, mfn *types.Func, recvIsPtr bool, cause unsupported) (map[string]any, error) {
-	sig := mfn.Type().(*types.Signature)
-	var valueTy any
-	var params, results []any
-	opaque, basics, err := e.withOpaqueSigs(func() error {
-		var err error
-		if valueTy, err = e.emitType(named); err != nil {
-			return err
-		}
-		if params, err = e.emitParams(sig.Params()); err != nil {
-			return err
-		}
-		results, err = e.emitResults(sig.Results())
-		return err
-	})
-	if err != nil {
-		return nil, unsup("promoted method %s.%s cannot be forwarded (%s) and its own SIGNATURE does not lower either (%v): no signature-carrying stub exists, so the export refuses rather than record an incomplete method set",
-			tName, mfn.Name(), cause.what, err)
-	}
-	recvTy := valueTy
-	if recvIsPtr {
-		recvTy = map[string]any{"kind": "pointer", "elem": valueTy}
-	}
-	reason := "promoted method " + tName + "." + mfn.Name() + " (forwarding wrapper not synthesized: " + cause.what + e.opaqueSigClauses(opaque, basics)
-	id, err := declarationObjectName(mfn)
-	if err != nil {
-		return nil, err
-	}
-	return map[string]any{
-		"id":          id,
-		"recvType":    tName,
-		"recv":        map[string]any{"id": "$recv", "type": recvTy},
-		"params":      params,
-		"results":     results,
-		"variadic":    sig.Variadic(),
-		"unsupported": reason + "; satisfaction answers, calls fail closed)",
-	}, nil
 }
 
 func (e *emitter) emitFuncDecl(d *ast.FuncDecl) (map[string]any, error) {
@@ -6013,28 +5971,36 @@ func (e *emitter) promotedFieldIndex(sel *ast.SelectorExpr) []int {
 	return nil
 }
 
-// synthesizePromotionWrappers builds one forwarding method per PROMOTED
-// method-set entry (multi-hop Selection.Index) of every declared named
-// struct type: receiver `T` when the method is in T's own method set
-// (value promotion), `*T` when it is only in *T's (pointer-receiver
-// promotion through value embedding — Go's method-set asymmetry). The
-// machine's method table is flat; these wrappers are what make it
-// COMPLETE, which is the wire contract that lets interface satisfaction
-// answer a definite "no" on embedded-field types (design note D2 — the
-// retired BUG-007 fail-closure). A wrapper that cannot be emitted fails
-// the whole export, the standing policy for methods.
+// promotionRecords emits one PROMOTION RECORD per PROMOTED method-set
+// entry (multi-hop Selection.Index) of every declared named struct type
+// (G-P S2, design note docs/2026-09-28_gp-method-promotion-design.md
+// §2 S2 (b), §4, §5 S2; G-P PASSED [USER] 2026-09-28, relayed). It
+// replaces synthesizePromotionWrappers / synthesizeWrapper /
+// syncPromotedStub / promotedSigStub: the entry is DATA — carrier,
+// member, the embedded-hop path, the receiver adjustment, the target —
+// built from the same `types.NewMethodSet` selection the retired wrapper
+// was, in the same order (instantiated structs included, design §2 S10).
+// The machine resolves a dispatched promoted entry from its record and
+// walks the path itself (`resolveMethod?` / `receiverAt`), so the flat
+// method table is COMPLETE as declared methods ∪ records (the D2 wire
+// contract, docs/2026-08-10_method-set-record-contract.md §3).
 //
-// G-P S1 (design note docs/2026-09-28_gp-method-promotion-design.md §4/§5;
-// G-P PASSED [USER] 2026-09-28, relayed): the SAME pass also returns one
-// PROMOTION RECORD per entry — the entry as data (carrier, member, the
-// embedded-hop path, the receiver adjustment, the target), built from the
-// same `types.NewMethodSet` selection the wrapper/stub is built from, in
-// the same order. The decoder validates every record against the type and
-// method tables and cross-checks it against its wrapper's body path
-// (S1's independent evidence that the data equals the code it replaces at
-// S2). Emitted ALONGSIDE the wrappers/stubs, which are unchanged in S1.
-func (e *emitter) synthesizePromotionWrappers() (wrappers []any, promotions []any, err error) {
-	out := []any{}
+// Two entry classes are DECLARATION-ONLY STUB records (`unsupported` +
+// `sig`, present together — design §4): a promoted SYNC-PRIMITIVE method
+// (the record answers satisfaction; a dispatch through it refuses by name
+// — audit fix round F4's stub, as a record) and a promoted method whose
+// signature does not lower (FR-23: an imported generic instantiation in
+// the signature; the signature is carried in opaque mode so satisfaction
+// still compares, and a call refuses naming the cause). The signature is
+// EMITTED for every entry exactly as the retired wrapper's was (its
+// receiver type, parameters and results): the emission is what registers
+// the types the signature mentions, so the wire's tables are unchanged by
+// the wrappers' retirement, and its refusal is the FR-23 probe. A record
+// targeting an embedded INTERFACE field registers the interface's own
+// method set and the dispatch anchor the machine re-enters on
+// (`noteInterface` / `noteCalledIfaceMethod` — what the wrapper's
+// forwarding call registered; BUG-095's STATIC-interface rule kept).
+func (e *emitter) promotionRecords() (promotions []any, err error) {
 	records := []any{}
 	seen := map[string]bool{}
 	for _, named := range e.namedStructTypes {
@@ -6053,11 +6019,11 @@ func (e *emitter) synthesizePromotionWrappers() (wrappers []any, promotions []an
 			}
 			mfn, ok := msel.Obj().(*types.Func)
 			if !ok {
-				return nil, nil, unsup("promoted method-set entry %s is not a func", msel.Obj().Name())
+				return nil, unsup("promoted method-set entry %s is not a func", msel.Obj().Name())
 			}
 			member, err := declarationObjectName(mfn)
 			if err != nil {
-				return nil, nil, err
+				return nil, err
 			}
 			key := methodFuncKey(tName, member)
 			if seen[key] {
@@ -6070,56 +6036,103 @@ func (e *emitter) synthesizePromotionWrappers() (wrappers []any, promotions []an
 				useSel = vs
 				recvIsPtr = false
 			}
-			// The record head (G-P S1): the same selection, the same
-			// receiver-set answer. Built BEFORE the wrapper/stub branch so
-			// every entry — wrapper or stub — has exactly one record.
+			// The record head: the same selection, the same receiver-set
+			// answer (built BEFORE the stub branches, so every entry —
+			// callable or stub — has exactly one record).
 			record, err := e.promotionRecord(named, tName, useSel, recvIsPtr, member)
 			if err != nil {
-				return nil, nil, err
+				return nil, err
 			}
-			// Promoted SYNC-PRIMITIVE methods get a declaration-only
-			// quarantined stub, not a forwarding wrapper (audit fix
-			// round F4): the wrapper's body would call the nonexistent
-			// `sync.X.Y` — an inert dangling placeholder — while
-			// dropping the entry would make interface satisfaction
-			// answer a false "no" on embedding types. The stub keeps
-			// the method table complete (satisfaction answers) and a
-			// CALL through it fails closed as frontend-quarantined
-			// (the importedMethodStubs precedent).
-			if prim := e.syncPrimName(mfn.Type().(*types.Signature).Recv().Type()); prim != "" {
-				stub, err := e.syncPromotedStub(named, tName, mfn, recvIsPtr, prim)
+			sig := mfn.Type().(*types.Signature)
+			// A promoted SYNC-PRIMITIVE method (audit fix round F4): a
+			// stub record — the entry stays (D2: dropping it would make
+			// satisfaction answer a false "no"), a dispatch through it
+			// fails closed by name.
+			if prim := e.syncPrimName(sig.Recv().Type()); prim != "" {
+				params, results, err := e.promotionSignature(named, sig)
 				if err != nil {
-					return nil, nil, err
+					return nil, err
 				}
-				out = append(out, stub)
-				records = append(records, promotionStubRecord(record, stub, member))
+				records = append(records, promotionStubRecord(record, member,
+					"promoted sync-primitive method sync."+prim+"."+mfn.Name()+
+						" reached through interface dispatch on the embedding type (statement/defer ops and method values adjust to the embedded primitive at their sites and lower; this method-table entry answers satisfaction, and DISPATCH through it fails closed — the embedded-hop forwarding body is not modeled)",
+					params, results, sig.Variadic()))
 				continue
 			}
-			w, err := e.synthesizeWrapper(named, tName, useSel, recvIsPtr)
-			if err != nil {
-				// An UNSUPPORTED wrapper (FR-23, 2026-09-04: the
-				// promoted method's signature instantiates an imported
-				// generic, so its forwarding body cannot even be typed)
-				// becomes a declaration-only stub — the method-set
-				// entry stays (D2), the call fails closed by name.
-				// Every other error still refuses the export.
+			// An embedded INTERFACE field target: the machine re-enters on
+			// the interface's anchor with the field's value (design §2 S5),
+			// so the anchor and the STATIC interface's own method set are
+			// registered here (the retired wrapper's forwarding call did;
+			// BUG-095: never the method's DECLARING interface).
+			if _, isIface := sig.Recv().Type().Underlying().(*types.Interface); isIface {
+				var rootT types.Type = named
+				if recvIsPtr {
+					rootT = types.NewPointer(named)
+				}
+				ft, err := hopFinalType(rootT, useSel.Index()[:len(useSel.Index())-1])
+				if err != nil {
+					return nil, err
+				}
+				ifaceName, ok := e.namedTypeName(ft)
+				if !ok {
+					return nil, unsup("promotion from anonymous interface field in %s", tName)
+				}
+				staticIface, ok := e.staticIfaceOf(ft)
+				if !ok {
+					return nil, unsup("promotion from embedded field %s of %s: static type is not a value interface", ifaceName, tName)
+				}
+				e.noteInterface(ifaceName, staticIface)
+				e.noteCalledIfaceMethod(methodFuncKey(ifaceName, member), calledIfaceMethod{
+					ifaceName: ifaceName, method: mfn, sig: sig,
+					subst: e.curSubst,
+				})
+			}
+			// The signature probe (the retired wrapper's own emission of its
+			// receiver, parameters and results): registers what the signature
+			// mentions; an `unsupported` refusal is FR-23 — the entry becomes a
+			// signature-carrying stub record (opaque mode) whose call fails
+			// closed naming the cause. Every other error refuses the export
+			// (the standing policy for methods).
+			if _, _, err := e.promotionSignature(named, sig); err != nil {
 				var u unsupported
 				if !errors.As(err, &u) {
-					return nil, nil, err
+					return nil, err
 				}
-				stub, serr := e.promotedSigStub(named, tName, mfn, recvIsPtr, u)
-				if serr != nil {
-					return nil, nil, serr
+				var params, results []any
+				opaque, basics, oerr := e.withOpaqueSigs(func() error {
+					var err error
+					params, results, err = e.promotionSignature(named, sig)
+					return err
+				})
+				if oerr != nil {
+					return nil, unsup("promoted method %s.%s cannot be resolved (%s) and its own SIGNATURE does not lower either (%v): no signature-carrying stub record exists, so the export refuses rather than record an incomplete method set",
+						tName, mfn.Name(), u.what, oerr)
 				}
-				out = append(out, stub)
-				records = append(records, promotionStubRecord(record, stub, member))
+				records = append(records, promotionStubRecord(record, member,
+					"promoted method "+tName+"."+mfn.Name()+" (promoted signature does not lower: "+u.what+e.opaqueSigClauses(opaque, basics)+"; satisfaction answers, calls fail closed)",
+					params, results, sig.Variadic()))
 				continue
 			}
-			out = append(out, w)
 			records = append(records, record)
 		}
 	}
-	return out, records, nil
+	return records, nil
+}
+
+// promotionSignature emits a promoted method's receiver type, parameters
+// and results — the retired wrapper's own signature emission, kept as the
+// registration of what the signature mentions and as the FR-23 probe.
+func (e *emitter) promotionSignature(named *types.Named, sig *types.Signature) (params, results []any, err error) {
+	if _, err := e.emitType(named); err != nil {
+		return nil, nil, err
+	}
+	if params, err = e.emitParams(sig.Params()); err != nil {
+		return nil, nil, err
+	}
+	if results, err = e.emitResults(sig.Results()); err != nil {
+		return nil, nil, err
+	}
+	return params, results, nil
 }
 
 // promotionRecord builds the DATA form of one promoted method-set entry
@@ -6132,7 +6145,7 @@ func (e *emitter) synthesizePromotionWrappers() (wrappers []any, promotions []an
 // final method index — each hop's OWNER struct, the embedded field's name
 // and whether it is an embedded POINTER; `adjust` is the receiver
 // adjustment at the last hop against the target's receiver kind (the
-// table promotedReceiverArg / synthesizeWrapper realize: pointer target
+// table promotedReceiverArg realizes and the machine's `receiverAt` walks: pointer target
 // at a pointer field → asIs, at a value field → addr; value target at a
 // pointer field → deref, at a value field → asIs; an interface target →
 // asIs); `target` is the DECLARED method's callable key or the embedded
@@ -6238,17 +6251,15 @@ func (e *emitter) promotionRecord(named *types.Named, tName string, msel *types.
 }
 
 // promotionStubRecord completes a promotion record for an entry that is a
-// DECLARATION-ONLY STUB rather than a forwarding wrapper (the promoted
-// sync-primitive methods, syncPromotedStub; the FR-23 signatures,
-// promotedSigStub): the record carries the stub's refusal cause as
-// `unsupported` and its signature as `sig` — receiver excluded, the
-// MethodSig shape interface requirements use — present exactly together
-// (design §4). Both are read off the stub map itself, so the record's
-// signature equals the stub's by construction; the decoder re-checks.
-func promotionStubRecord(record, stub map[string]any, member memberID) map[string]any {
-	types := func(params []any) []any {
+// DECLARATION-ONLY STUB (a promoted sync-primitive method; an FR-23
+// signature): the record carries the refusal cause as `unsupported` and
+// its signature as `sig` — receiver excluded, the MethodSig shape
+// interface requirements use — present exactly together (design §4). The
+// decoder re-checks the pairing and `sig.id = member`.
+func promotionStubRecord(record map[string]any, member memberID, cause string, params, results []any, variadic bool) map[string]any {
+	types := func(ps []any) []any {
 		out := []any{}
-		for _, p := range params {
+		for _, p := range ps {
 			out = append(out, p.(map[string]any)["type"])
 		}
 		return out
@@ -6257,221 +6268,14 @@ func promotionStubRecord(record, stub map[string]any, member memberID) map[strin
 	for k, v := range record {
 		rec[k] = v
 	}
-	rec["unsupported"] = stub["unsupported"]
+	rec["unsupported"] = cause
 	rec["sig"] = map[string]any{
 		"id":       member,
-		"params":   types(stub["params"].([]any)),
-		"results":  types(stub["results"].([]any)),
-		"variadic": stub["variadic"],
+		"params":   types(params),
+		"results":  types(results),
+		"variadic": variadic,
 	}
 	return rec
-}
-
-// syncPromotedStub emits the declaration-only stub for a promoted
-// sync-primitive method (audit fix round F4; see the call site above).
-func (e *emitter) syncPromotedStub(named *types.Named, tName string, mfn *types.Func, recvIsPtr bool, prim string) (map[string]any, error) {
-	sig := mfn.Type().(*types.Signature)
-	valueTy, err := e.emitType(named)
-	if err != nil {
-		return nil, err
-	}
-	recvTy := valueTy
-	if recvIsPtr {
-		recvTy = map[string]any{"kind": "pointer", "elem": valueTy}
-	}
-	params, err := e.emitParams(sig.Params())
-	if err != nil {
-		return nil, err
-	}
-	results, err := e.emitResults(sig.Results())
-	if err != nil {
-		return nil, err
-	}
-	id, err := declarationObjectName(mfn)
-	if err != nil {
-		return nil, err
-	}
-	return map[string]any{
-		"id":       id,
-		"recvType": tName,
-		"recv":     map[string]any{"id": "$recv", "type": recvTy},
-		"params":   params,
-		"results":  results,
-		"variadic": sig.Variadic(),
-		"unsupported": "promoted sync-primitive method sync." + prim + "." + mfn.Name() +
-			" reached through interface dispatch on the embedding type (statement/defer ops and method values adjust to the embedded primitive at their sites and lower; this method-table entry answers satisfaction, and DISPATCH through it fails closed — the embedded-hop forwarding body is not modeled)",
-	}, nil
-}
-
-// synthesizeWrapper emits one forwarding wrapper method: body = walk the
-// embedded hops from $recv, call the original method (or dispatch on the
-// embedded interface field's value), return its results.
-func (e *emitter) synthesizeWrapper(named *types.Named, tName string, msel *types.Selection, recvIsPtr bool) (map[string]any, error) {
-	mfn := msel.Obj().(*types.Func)
-	id, err := declarationObjectName(mfn)
-	if err != nil {
-		return nil, err
-	}
-	sig := mfn.Type().(*types.Signature)
-	index := msel.Index()
-	hops := index[:len(index)-1]
-
-	valueTy, err := e.emitType(named)
-	if err != nil {
-		return nil, err
-	}
-	recvTy := valueTy
-	var rootT types.Type = named
-	if recvIsPtr {
-		recvTy = map[string]any{"kind": "pointer", "elem": valueTy}
-		rootT = types.NewPointer(named)
-	}
-	recvIdent := map[string]any{"expr": "ident", "name": "$recv", "type": recvTy}
-
-	params := []any{}
-	argIdents := []any{}
-	for i := 0; i < sig.Params().Len(); i++ {
-		pt, err := e.emitType(sig.Params().At(i).Type())
-		if err != nil {
-			return nil, err
-		}
-		id := "$p" + itoa(i)
-		params = append(params, map[string]any{"id": id, "type": pt})
-		argIdents = append(argIdents, map[string]any{"expr": "ident", "name": id, "type": pt})
-	}
-	results := []any{}
-	resultTypes := []any{}
-	for i := 0; i < sig.Results().Len(); i++ {
-		rt, err := e.emitType(sig.Results().At(i).Type())
-		if err != nil {
-			return nil, err
-		}
-		results = append(results, map[string]any{"id": syntheticResult(i), "type": rt})
-		resultTypes = append(resultTypes, rt)
-	}
-
-	origRecv := sig.Recv().Type()
-	var innerFunc string
-	var innerRecvArg any
-	if _, isIface := origRecv.Underlying().(*types.Interface); isIface {
-		// Promoted from an embedded INTERFACE field: forward as dynamic
-		// dispatch on the field value (nil field panics at dispatch — Go's
-		// nil-interface method call).
-		node, ft, err := e.fieldPathValue(recvIdent, rootT, hops)
-		if err != nil {
-			return nil, err
-		}
-		ifaceName, ok := e.namedTypeName(ft)
-		if !ok {
-			return nil, unsup("promotion from anonymous interface field in %s", tName)
-		}
-		// BUG-095: register the STATIC interface's OWN method set under its
-		// wire name, never the method's DECLARING interface (for a method
-		// reached through an EMBEDDED interface that is the embedded one, and
-		// noteInterface is keyed by name — registering it here collapsed the
-		// embedding interface's requirement list to the embedded subset).
-		staticIface, ok := e.staticIfaceOf(ft)
-		if !ok {
-			return nil, unsup("promotion from embedded field %s of %s: static type is not a value interface", ifaceName, tName)
-		}
-		e.noteInterface(ifaceName, staticIface)
-		e.noteCalledIfaceMethod(methodFuncKey(ifaceName, id), calledIfaceMethod{
-			ifaceName: ifaceName, method: mfn, sig: sig,
-			subst: e.curSubst,
-		})
-		innerFunc = methodFuncKey(ifaceName, id)
-		innerRecvArg = node
-	} else {
-		defType := origRecv
-		innerPtr := false
-		if ptr, ok := origRecv.(*types.Pointer); ok {
-			defType = ptr.Elem()
-			innerPtr = true
-		}
-		defName, ok := e.namedTypeName(defType)
-		if !ok {
-			return nil, e.anonymousTypeRefusal("promoted method", defType)
-		}
-		innerFunc = methodFuncKey(defName, id)
-		ft, err := hopFinalType(rootT, hops)
-		if err != nil {
-			return nil, err
-		}
-		ftPtr, ftIsPtr := ft.Underlying().(*types.Pointer)
-		if innerPtr && !ftIsPtr {
-			// The field's ADDRESS. Two legal sources (audit F2, 2026-08-05
-			// — the first cut wrongly claimed only *T's method set can hold
-			// this shape and refused, killing whole exports): a POINTER
-			// wrapper receiver supplies the root address; or the hop chain
-			// crosses an embedded POINTER field, which puts the method in
-			// the VALUE method set too (spec: embedding *T contributes
-			// both receiver kinds) and whose pointer VALUE supplies the
-			// address mid-chain.
-			if recvIsPtr {
-				node, _, err := e.fieldPathAddrFrom(recvIdent, named, hops)
-				if err != nil {
-					return nil, err
-				}
-				innerRecvArg = node
-			} else {
-				node, err := e.valueRootedFieldAddr(recvIdent, named, hops)
-				if err != nil {
-					return nil, err
-				}
-				innerRecvArg = node
-			}
-		} else {
-			node, _, err := e.fieldPathValue(recvIdent, rootT, hops)
-			if err != nil {
-				return nil, err
-			}
-			if !innerPtr && ftIsPtr {
-				elemTy, err := e.emitType(ftPtr.Elem())
-				if err != nil {
-					return nil, err
-				}
-				node = map[string]any{"expr": "deref", "ptr": node, "type": elemTy}
-			}
-			innerRecvArg = node
-		}
-	}
-
-	callNode := map[string]any{"expr": "call", "func": innerFunc,
-		"args": append([]any{innerRecvArg}, argIdents...), "resultTypes": resultTypes}
-	bodyStmts := []any{}
-	if len(results) == 0 {
-		bodyStmts = append(bodyStmts,
-			map[string]any{"stmt": "expr", "expr": callNode},
-			map[string]any{"stmt": "return", "results": []any{}})
-	} else {
-		lhs := []any{}
-		rets := []any{}
-		for i := range results {
-			id := "$w" + itoa(i)
-			rm := results[i].(map[string]any)
-			lhs = append(lhs, map[string]any{"target": "declare", "id": id, "type": rm["type"]})
-			rets = append(rets, map[string]any{"expr": "ident", "name": id, "type": rm["type"]})
-		}
-		bodyStmts = append(bodyStmts,
-			map[string]any{"stmt": "assign", "define": true, "lhs": lhs, "rhs": []any{callNode}},
-			map[string]any{"stmt": "return", "results": rets})
-	}
-	return map[string]any{
-		"id":       id,
-		"recvType": tName,
-		"recv":     map[string]any{"id": "$recv", "type": recvTy},
-		"params":   params,
-		"results":  results,
-		"variadic": sig.Variadic(),
-		// Declared schema addition (arc-final audit F1 / BUG-015,
-		// 2026-08-06): a SYNTHESIZED promotion wrapper is marked so the
-		// machine's recover walk can treat its frame as transparent —
-		// gc's abi.FuncIDWrapper, verbatim ("there must be exactly one
-		// non-wrapper frame between gopanic and gorecover",
-		// runtime/panic.go). Only this constructor emits it.
-		"wrapper": true,
-		"body":    map[string]any{"stmt": "block", "body": bodyStmts},
-	}, nil
 }
 
 // ifaceWireName returns the wire TypeId for an interface-typed static
@@ -6506,35 +6310,6 @@ func (e *emitter) ifaceWireName(t types.Type) (string, bool) {
 		return name, true
 	}
 	return "", false
-}
-
-// valueRootedFieldAddr emits the ADDRESS of the field at `hops` starting
-// from a VALUE node of (non-pointer) type t — legal exactly when the
-// chain crosses an embedded POINTER hop, whose pointer VALUE is a heap
-// address the rest of the chain roots at (Go's method-set rule: embedding
-// *T contributes pointer-receiver methods to the VALUE method set, audit
-// F2). Value-mode field-gets to the first pointer hop, address-mode
-// beyond it; copying the value prefix is unobservable — it is only read
-// to reach the pointer, and the address obtained is the shared heap cell.
-func (e *emitter) valueRootedFieldAddr(node any, t types.Type, hops []int) (any, error) {
-	for i, idx := range hops {
-		st, ok := t.Underlying().(*types.Struct)
-		if !ok {
-			return nil, unsup("promoted field path through non-struct type %s", t)
-		}
-		name, ok := e.namedTypeName(t)
-		if !ok {
-			return nil, unsup("field selector on anonymous struct type %s", t)
-		}
-		f := st.Field(idx)
-		node = map[string]any{"expr": "field-get", "recv": node, "typeId": name, "field": f.Name()}
-		t = f.Type()
-		if ptr, isPtr := t.Underlying().(*types.Pointer); isPtr {
-			addr, _, err := e.fieldPathAddrFrom(node, ptr.Elem(), hops[i+1:])
-			return addr, err
-		}
-	}
-	return nil, unsup("pointer-receiver promotion from a value receiver without a pointer hop (not in the value method set)")
 }
 
 // hopFinalType statically walks the embedded-hop types (no emission): the
@@ -7360,16 +7135,21 @@ func (e *emitter) emitSelector(sel *ast.SelectorExpr) (any, error) {
 				return map[string]any{"expr": "func-value",
 					"func": methodFuncKey(ifaceName, member), "captured": []any{}}, nil
 			}
-			// Concrete receiver: the wire Func's receiver form must match
-			// the expression's first parameter. Declared methods carry
-			// their declaration receiver; a promoted entry's wrapper takes
-			// T when the method is in T's own set, else *T. The one
-			// mismatching shape — `(*T).M` over a method whose wire Func
-			// takes T by value — needs a deref adapter; refuse precisely.
-			// Unalias throughout (delta-review R3): under gotypesalias=1
-			// a method expression named through an alias (`wrapAlias.Get`)
-			// reaches here as a *types.Alias, and the raw Pointer/Named
-			// assertions below mis-refused it (pinned by
+			// Concrete receiver: a DECLARED method's wire Func carries its
+			// declaration receiver, so the expression's first parameter
+			// must match it — the one mismatching shape, `(*T).M` over a
+			// method whose wire Func takes T by value, needs a deref
+			// adapter; refuse precisely (ledger FR-3). A PROMOTED entry
+			// (`len(seln.Index()) > 1`) names its promotion RECORD (G-P
+			// S2, design §2 S7, decision 5): the machine applies the
+			// record's path and adjustment to argument 0 whether it is
+			// the carrier value or a pointer to it, so `(*S).M` over a
+			// promoted value method lowers — the deref-adapter refusal
+			// RETIRES for promoted entries (embedding/promoted-ptr-method-
+			// expression/*). Unalias throughout (delta-review R3): under
+			// gotypesalias=1 a method expression named through an alias
+			// (`wrapAlias.Get`) reaches here as a *types.Alias, and the raw
+			// Pointer/Named assertions below mis-refused it (pinned by
 			// methods/alias-promoted-method-expression).
 			exprRecv := types.Unalias(e.goTypeOf(sel.X))
 			baseT := exprRecv
@@ -7381,19 +7161,18 @@ func (e *emitter) emitSelector(sel *ast.SelectorExpr) (any, error) {
 			if !ok {
 				return nil, e.anonymousTypeRefusal("method expression", baseT)
 			}
-			wireRecvPtr := false
-			if _, isPtr := recvType.(*types.Pointer); isPtr {
-				wireRecvPtr = true
-			}
 			if len(seln.Index()) > 1 {
-				named, isNamed := baseT.(*types.Named)
-				if !isNamed {
+				if _, isNamed := baseT.(*types.Named); !isNamed {
 					return nil, unsup("promoted method expression on non-named type %s", baseT)
 				}
-				wireRecvPtr = types.NewMethodSet(named).Lookup(fn.Pkg(), fn.Name()) == nil
-			}
-			if exprPtr && !wireRecvPtr {
-				return nil, unsup("method expression (*%s).%s over a value-receiver method (deref adapter not modeled)", name, fn.Name())
+			} else {
+				wireRecvPtr := false
+				if _, isPtr := recvType.(*types.Pointer); isPtr {
+					wireRecvPtr = true
+				}
+				if exprPtr && !wireRecvPtr {
+					return nil, unsup("method expression (*%s).%s over a value-receiver method (deref adapter not modeled)", name, fn.Name())
+				}
 			}
 			return map[string]any{"expr": "func-value",
 				"func": methodFuncKey(name, member), "captured": []any{}}, nil

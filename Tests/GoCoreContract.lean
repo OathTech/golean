@@ -8,7 +8,7 @@ and its facade `GoLean/Interface.lean` were parked.
 §A — origin `Tests/InterfaceContract.lean` at main `62fc8073` (landed `a6a068ce`, chunk
 L3): the proofs are byte-identical; only the imports (the deleted facade → the two core
 trace modules), the namespace (`GoLean.GateA1` → `GoLean.GoCore.ContractTests`) and this
-header changed. Every fact is about the CORE: `recoverResult`/`recoverThroughWrappers` on
+header changed. Every fact is about the CORE: `recoverResult`/`recoverAtDeferred` (G-P S2) on
 frames, `stepFn` at the `probeK` choice site, `Step`/`Steps`/`Trace`, `StateWf`, the
 `run_ok_iff` / `Pool.run_iff` / `Pool.program_run_iff` bridges, `execProgLoopOut` and
 `runProgramPoolOutM`. §B — interpreter facts moved out of the deleted typed test
@@ -23,26 +23,21 @@ open GoCore GoCore.Machine Semantics
 -- the concrete runs use `exampleCtx` (the old `{ types := TypeEnv.reserved }`).
 variable {ctx : ProgramCtx}
 
-def bareFrame : Cont := .frame [] [] [] [] .stop false
-def panicFrame : Cont := .frame [] [] [] [] (.panicResumeK [panicEntry "audit"] .stop) false
+-- G-P S2 (2026-09-28): `Cont.frame`'s trailing wrapper `Bool` became the frame's callee
+-- `FuncId` (the audit frame names its subject); `recoverThroughWrappers` became the direct
+-- `recoverAtDeferred` (design §2 S6), so the two recover facts unfold that.
+def auditFid : FuncId := ⟨"audit.subject"⟩
+def bareFrame : Cont := .frame [] [] [] [] .stop auditFid
+def panicFrame : Cont := .frame [] [] [] [] (.panicResumeK [panicEntry "audit"] .stop) auditFid
 
 theorem recover_bare : recoverResult bareFrame = (.nil, bareFrame) := by
   unfold recoverResult
   rw [Cont.rebuild_act (by rfl)]
-  change (match recoverThroughWrappers .stop with
-    | some (v, k) => (v, Cont.frame [] [] [] [] k false)
-    | none => (.nil, bareFrame)) = _
-  unfold recoverThroughWrappers
-  rw [Cont.rebuild_stop]
+  rfl
 def recoveredFrame : Cont := .frame [] [] [] []
-  (.panicResumeK [{ panicEntry "audit" with recovered := true }] .stop) false
+  (.panicResumeK [{ panicEntry "audit" with recovered := true }] .stop) auditFid
 theorem recover_handler : recoverResult panicFrame = ((panicEntry "audit").value, recoveredFrame) := by
   unfold recoverResult
-  rw [Cont.rebuild_act (by rfl)]
-  change (match recoverThroughWrappers (.panicResumeK [panicEntry "audit"] .stop) with
-    | some (v, k) => (v, Cont.frame [] [] [] [] k false)
-    | none => (.nil, panicFrame)) = _
-  unfold recoverThroughWrappers
   rw [Cont.rebuild_act (by rfl)]
   rfl
 theorem recover_changes_value : (recoverResult bareFrame).1 ≠ (recoverResult panicFrame).1 := by
@@ -292,7 +287,7 @@ theorem duplicate_readout_preserves_alias (b : Bool) :
       .ok [.bool b, .bool b] := by rfl
 
 -- Origin `Tests/BooleanInvariant.lean` (`actual_scope_restoration`, `actual_new_local_zero`).
-def barrier : Cont := .frame [] [] [] [] .stop
+def barrier : Cont := .frame [] [] [] [] .stop auditFid
 /-- B7: the old `({} : ExecState)` — an empty context beside the empty store. -/
 def emptyCtx : ProgramCtx := ProgramCtx.ofTables (types := #[])
 def fresh : Store := {}
@@ -324,11 +319,11 @@ theorem actual_new_local_zero (b : Bool) :
 copy its captured pointees. This equation holds for arbitrary closures. -/
 theorem registration_is_lifo (first second : GoValue × List GoValue)
     (plans : List (TargetShape × List Expr)) (env : LocalEnv) (roots : List Loc)
-    (ds : List (GoValue × List GoValue)) (k : Cont) :
-    pushDefer first (.frame plans env roots ds k false) =
-      some (.frame plans env roots (first :: ds) k false) ∧
-    pushDefer second (.frame plans env roots (first :: ds) k false) =
-      some (.frame plans env roots (second :: first :: ds) k false) := by
+    (ds : List (GoValue × List GoValue)) (k : Cont) (fid : FuncId) :
+    pushDefer first (.frame plans env roots ds k fid) =
+      some (.frame plans env roots (first :: ds) k fid) ∧
+    pushDefer second (.frame plans env roots (first :: ds) k fid) =
+      some (.frame plans env roots (second :: first :: ds) k fid) := by
   constructor <;> unfold pushDefer <;> rw [Cont.rebuild_act (by rfl)] <;> rfl
 
 /-- Equal re-panic payloads are distinct chain entries. Recovery marks the
@@ -402,7 +397,7 @@ theorem nonstring_tail_rejected :
       [⟨.interface .string (.string text), false⟩, ⟨.interface .bool (.bool true), false⟩] .stop) = none := by rfl
 
 theorem recovered_transient_rejected :
-    abortRecord? (.panicking entries (.frame [] [] [] [] .stop false)) = none := by rfl
+    abortRecord? (.panicking entries (.frame [] [] [] [] .stop auditFid)) = none := by rfl
 
 theorem stringPanicEntries?_map_entry (tail : List AbortHead) :
     stringPanicEntries? (tail.map AbortHead.entry) = some tail := by
