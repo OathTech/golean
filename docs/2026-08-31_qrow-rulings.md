@@ -1121,3 +1121,18 @@ added; the final row not re-audited, disclosed at the ask) and the acknowledgeme
 the design's rule required). Landed with it: wire schema v2, `Func.wrapper` deleted, the callee `FuncId` frame field ([USER]
 2026-09-28), the logic team's request-5 lemmas pinned, BUG-087's over-wide two-text set narrowed to gc's (three rows),
 FR-35 opened for the pre-existing sync-stub dispatch refusal; baseline 3791 = 3554 / 237.
+
+### G-C3 (continuations) passed — RULED (2026-09-29)
+
+[USER] Mike, 2026-09-29, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «Agree with 1-4». The named design
+gate G-C3 is PASSED with the four decisions of `docs/2026-09-29_gc3-continuations-design.md` §5 as recommended:
+(1) G-C3 is `Cont := List Frame` ONLY — the 2026-09-04 ruled text's `Config := Mode × Cont` and «`fill` is append» are
+dropped (no context-fill law, no `recover` commutation claim); (2) the logic team's request-7 unwinding equations stay in
+packet D, stated after C4; (3) the routine choices D3–D6 — a separate `Frame` inductive with `Cont` an `abbrev` of
+`List Frame`, the old constructor names kept as `@[match_pattern]` abbreviations in the CURRENT argument order (`frame`:
+`targets tenv results defers k fid`, `k` before `fid`), `.stop` as `[]`, fuel and hashing behaviour preserved exactly, packet
+C re-pins `BridgeSet.lean`, the list laws added to the core audit's required list, and the packet C brief refreshed to match;
+(4) the stop rule — elaboration measured (profiler + wall time per hot module) before and after; any module slower than
+1.5×, or any new or raised `maxHeartbeats`, is reported and the lane STOPS.
+Executing: lane `core/continuations-0929` ([AGENT packet C worker]), forked from `main` @ `883ebc36`; the design note
+(`060ad4e4`) cherry-picked as the lane's first commit; brief `docs/codex-briefs/2026-09-24_packet-C-continuations.md` refreshed.
