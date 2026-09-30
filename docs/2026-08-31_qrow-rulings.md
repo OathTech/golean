@@ -1245,3 +1245,11 @@ after all defers, before the terminal classification; `Finish` stays a cost-1 te
 «panic while printing panic value» text exact for string and user-defined payloads, runtime-error payloads refused by name
 (BUG-099); owners Fable for S1–S2 and Opus for S3, with G-C3's elaboration stop rule. Option (ii) (literal-returning methods
 only) NOT taken.
+
+### Train r57 — numeric locals (B6) and the BUG-004 item 4 design landed — RULED (2026-09-30)
+
+[USER] Mike, 2026-09-30, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «land it» — the merge sign-off for
+`core/numeric-locals-0930` (D1–D6 ratified; audit MERGE-CLEAN after the fix round: the name table checked in both directions,
+`unseqEntryCheck?` at `unseq` ENTER; core audit 158; wire schema v3; twin `8a158eff…`) and `docs/bug004-item4-design-0930`
+(the design note, the logic side's route-A reply and its dispositions, unit 6b ruled inside the window). The certified row's
+`wire-sha256` moves dc232a8c… → f448d579… (B6 fields only), recorded before the gate.

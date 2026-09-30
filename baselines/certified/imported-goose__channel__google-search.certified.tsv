@@ -6,6 +6,10 @@
 # deliberately, in its own commit, with the reason — never auto-written.
 # certified: 2026-09-09T22:57:32.195148+00:00  commit: 7d60c8bf12ef5d34d1ef9901c213cd724926d78f (F8; clean-source scripts/ci --slow PASS; complete claim, inputs and producer receipt in adjacent .certified.json)
 # re-certification reason [AGENT] 2026-09-09: F8 binds the unchanged six-member set to the full claim, semantic/build inputs and captured checker run; no observation, parameter or wire re-pin.
+# wire-sha256 moved [AGENT] 2026-09-30 (train r57, B6 numeric locals, wire schema v3): dc232a8c… -> f448d579… — the only wire
+#   differences are the B6 fields (`local`/`keyLocal`/`valLocal` beside spellings, a `locals` table per function, schema v2 -> v3);
+#   zero residual diff (docs/evidence/2026-09-30_numeric-locals/google-search-wire-diff.txt); the set is re-enumerated fresh by the
+#   train's scripts/ci --slow and its candidate installed (a changed set would be a finding). Precedent: the r55 move below.
 # wire-sha256 moved [AGENT] 2026-09-29 (train r55, native method promotion G-P S2, wire schema v2): 736f1730… -> dc232a8c… — the only
 #   wire differences are `schema` golean-native-v1 -> golean-native-v2 and a new top-level `promotions` array, EMPTY for this fixture
 #   (lowered with the pre-promotion frontend at 74f5bada and the landed one, JSON diffed); every other wire key is unchanged; the
@@ -388,7 +392,7 @@
 #   `work=` still bounds the dedup run (it fails loud on breach).
 #   Standard: docs/2026-08-21_w32-por-design.md §1/§3/§4.
 # params: width=4,sites=48,work=60000000,members=6,engine=dedup,tier=slow
-# wire-sha256: dc232a8c2075ba658597182a7fef491f504ba95d54cdf26298eee203cc02f1be
+# wire-sha256: f448d579dfdbaadbbeceabe9f3872638552ae7331aa4c1740db5a5333d98f5d2
 # enum-stats: observations=6 steps=6565663 probes=0 sites=6193933 leaves=0 maxdepth=0 width=4 engine=dedup nodes=6193933 edges=6565663 dedupHits=371731 certified=checkCert
 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":123}]}
 {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":132}]}
