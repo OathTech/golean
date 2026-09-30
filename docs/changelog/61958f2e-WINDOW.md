@@ -240,3 +240,5 @@ LIVE through the window; FROZEN at the offer commit (charter row 7).
 ## Scope of this changelog (logic team request 8, 2026-09-28)
 
 Besides the semantics, every re-pin entry lists changes to the tool interfaces the logic team's gate calls: `tools/nativefrontend` flags; the `scripts/diff-coverage` manifest schema; `NativeToIR.decodeProgram`'s signature; `runProgramM`'s `RunResult`; the Lean toolchain; the `deps/go` pin. Rows for these are added as each lane lands and checked at the offer.
+
+**Row 4 addendum (continuations audit F1, 2026-09-30).** In `fun_cases stepFn`, the `frame` arm's binders now come in the order `… fid, k'` (the `@[match_pattern]` view unfolds to `Frame.frame … fid :: k`), not `… k', fid`; a client proof that names `fun_cases` binders positionally for that arm re-orders them. Patterns written with the constructor name (`.frame t te r ds k fid`) are unaffected.

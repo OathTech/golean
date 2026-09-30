@@ -1175,3 +1175,12 @@ relayed: «Yes, I also prefer A, as long as it could be made faithful».
    the window — YES (queued: `docs/2026-09-24_window-plan.md` §4).
 Also recorded: `difftest.py` section 7 (the W4.1 «OWED with command» codec differential vs the real protobuf runtime) runs
 offline from the module cache and PASSES (72 values, nine types) — a dated discharge note at JC-15 in `docs/raft-w41-log.md`.
+
+### Train r56 — continuations and the raft-delta records landed — RULED (2026-09-30)
+
+[USER] Mike, 2026-09-30, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «Great, land both» — the merge
+sign-off for `core/continuations-0929` (G-C3, audit MERGE-CLEAN, `Cont := List Frame`, zero behaviour change, core audit 144)
+and `records/raft-deltas-0930` (the raft-proofs note, U-1–U-3 recorded, the `plain_codec` comment corrected — twin wire
+unchanged — the native `Intn` pick site placed as window unit 5b between B6 and C4, route A found FAITHFUL-FEASIBLE with its
+conditions; route A's dispatch stays PENDING [USER] after the window). The audit's F1 changelog clause and the F2/F4 notes for
+packet D are added in this records commit.

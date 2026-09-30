@@ -83,3 +83,5 @@ Tip; the arm inventory — per arm: proved / stated-only / reported-not-expressi
 facts; every acceptance command with EXIT code + tail, the self-tests' output; every `[AGENT Codex, packet D] INTERPRETED: …` (flagged, not
 decided); every equation found FALSE (goal verbatim). End state: branch complete, clean, nothing merged or pushed.
 Commit: `[AGENT Codex, packet D] equations: per-arm stepFn lemmas, stepFn_eqns, the toy client, scripts/check-equations`.
+
+**Coordinator addenda (2026-09-30).** From the continuations audit: (F4) state the real FRAME-EXIT equations here (`stepFrameExit` with named results, defers pending, result readback) — packet C's `stepFrameExit_nil` covers only the all-empty frame; (F2) when re-touching `stepFn_sound`/`stepFn_consumption_none`, close the `.retV`/`.next` catch-alls by the arm's shape, not the positional `case140`/`case155` tags. From the logic team's 2026-09-28 note: requests 1, 2 and 7 (premises bottoming out in the memory laws with their `.retV` filing correction; the pinned no-globals setup equation; the unwinding equations).
