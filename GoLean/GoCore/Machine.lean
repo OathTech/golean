@@ -2088,6 +2088,25 @@ def unseqAtom (env : LocalEnv) (s : Store) : Expr → Except Stop (GoValue × Ac
   | .stringLit v => return (.string v, [])   -- Stage E E2: a string map key
   | other => stuck s!"unseq: target operand is not an atom (a slot, an admitted local, the address of a local, or an int/bool/string constant): {repr other}"
 
+/-- **The sweep's entry check over ids** (B6 fix round F3, 2026-09-30; the audit-F3
+intent restored at the machine, without spellings). Before any cell exists: (i) no binder
+— cell or target binder — is already BOUND in the enclosing environment: a binder is a fresh
+slot of this sweep; one that names a local in scope would shadow it for the rest of the
+block (the frontend's `$` reservation, which the decoder checks on spellings, restated
+here over ids so a hand-built graph cannot bypass it); (ii) every slot an occurrence
+mentions is either a cell of this graph or a local bound in scope — an unknown slot is
+refused HERE, statically, before any occurrence runs its effects. Unreachable for a decoded
+program (its binders are `$`-temporaries interned past the function's source ids, unique
+per function; its source atoms are locals in scope — the decoder's c3). -/
+def unseqEntryCheck? (g : UnseqGraph) (env : LocalEnv) : Option String :=
+  match (g.cellNames ++ g.targetBinders).find? (fun b => (env.lookup b).isSome) with
+  | some b =>
+      some s!"binder {b} is already bound in the enclosing scope — a binder cell or target binder is a fresh slot of this sweep, never a local already in scope (it would shadow it for the rest of the block; the frontend's `$` reservation, over ids)"
+  | none =>
+      g.occs.findSome? fun o =>
+        (o.body.mentions.find? (fun v => !g.isCell v && (env.lookup v).isNone)).map fun v =>
+          s!"occurrence '{o.name}' mentions slot {v}, which is neither a binder cell of this graph nor a local bound in scope (an unknown slot)"
+
 /-- A binder cell's location: declared in the sweep's scope at ENTER. -/
 def unseqCellLoc (env : LocalEnv) (bind : VarId) : Except Stop Loc :=
   match env.lookup bind with
@@ -6561,6 +6580,7 @@ inductive Step : Config → Store → Config → Store → StepLabel → Prop wh
   -- prefix so far. Appended at the END so positional case tags stay stable.
   | unseqEnter {g thenB rest env env' k s s'} :
       g.wellFormed? = none →
+      unseqEntryCheck? g env = none →
       allocDecls ctx env s g.cells = .ok (env', s') →
       Step (.exec (.unseq g thenB) env (.seq rest env k)) s
         (.next (.unseqK g thenB g.initStatus [] env' .pick (.seq rest env' k))) s' ⟨[], [], []⟩

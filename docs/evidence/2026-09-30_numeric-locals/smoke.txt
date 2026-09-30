@@ -6,3 +6,6 @@ DECODE-REFUSED Corpus/coverage/exec/arrays/materialization-budget :: native lowe
     394 Corpus/coverage/negative
      25 Corpus/coverage/exec
       9 Corpus/challenges/cedar-go
+# fix round: frontend+decode smoke over every Corpus/**/main.go with the strengthened decoder (table checked both ways; entry check), 2026-09-30
+fixtures: 1782  OK: 1353  FRONTEND-FAIL: 428  DECODE-REFUSED: 1 (the BUG-078 row)
+unseq ENTRY-check scan (every decoded wire's main run, grep 'malformed graph at entry'): wires=1354 entry-refusals=0

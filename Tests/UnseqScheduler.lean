@@ -702,7 +702,8 @@ def arrProg : Program := { funcs := #[
      .unseq arrGraph (println [str "arr", .indexGet (.var (vid "arr")) (.intLit 0), .indexGet (.var (vid "arr")) (.intLit 1)])],
   pr "one" "one" 1] }
 
-/-! ### F3 — a binder without the `$` reservation is refused (it would shadow a source local) -/
+/-! ### F3 — a binder that names a source local in scope is refused at ENTER (it would shadow it);
+B6: over ids — the cell `a` of `b4g` and the target binder `x` of `mBareTarget` are the bound locals -/
 
 def b4g : UnseqGraph := { cells := [intP "a"], occs := [occ "K" (.eval (vid "a") (.intLit 42))] }
 def b4 : Program := { funcs := #[
@@ -711,8 +712,8 @@ def b4 : Program := { funcs := #[
     println [str "after a", .var (vid "a")]]] }
 def mBareTarget : UnseqGraph := {
   cells := [intP "$a"],
-  occs := [occ "A" (.eval (vid "$a") (.intLit 0)), occ "T" (.target (vid "t") (.var (vid "x")))],
-  stores := [(vid "t", vid "$a")] }
+  occs := [occ "A" (.eval (vid "$a") (.intLit 0)), occ "T" (.target (vid "x") (.addr (.intLit 0)))],
+  stores := [(vid "x", vid "$a")] }
 
 /-! ### N3 — a guard's test/completion cell must be a bool cell (refused at ENTER by name) -/
 
@@ -730,11 +731,16 @@ def k4 (testTy outTy : Ty) : Program := { funcs := #[
 /-! ### R5 — the headline lowering `x := a + f()` ↦ `thenB = .initialization x; x = $op` -/
 
 def fv1 : Func := { id := ⟨"fv1"⟩, args := #[], results := #[intP "r"], body := ret "r" (.intLit 2) }
-def kGraph : UnseqGraph := {
-  cells := [intP "$a", intP "$f", intP "$op"],
-  occs := [occ "R_a" (.eval (vid "$a") (.var (vid "a"))), occ "E_f" (.invoke [vid "$f"] (.var (vid "fv")) []),
-           occ "Op" (.eval (vid "$op") (.add (.var (vid "$a")) (.var (vid "$f"))))] }
-def thenDecl (x : String) : Stmt := .seqn #[.initialization (intP x), .assign (.var (vid x)) (.var (vid "$op"))]
+/-- The K graph over binders suffixed `sfx` — two sweeps in ONE block must use distinct binders (B6 fix round F3:
+the id-level entry check refuses a cell already bound in the enclosing scope; a decoded program's binders are unique
+per function, `tmpSeq`), so K2's second sweep takes suffix `2`. -/
+def kGraphS (sfx : String) : UnseqGraph := {
+  cells := [intP s!"$a{sfx}", intP s!"$f{sfx}", intP s!"$op{sfx}"],
+  occs := [occ "R_a" (.eval (vid s!"$a{sfx}") (.var (vid "a"))), occ "E_f" (.invoke [vid s!"$f{sfx}"] (.var (vid "fv")) []),
+           occ "Op" (.eval (vid s!"$op{sfx}") (.add (.var (vid s!"$a{sfx}")) (.var (vid s!"$f{sfx}"))))] }
+def kGraph : UnseqGraph := kGraphS ""
+def thenDeclS (x sfx : String) : Stmt := .seqn #[.initialization (intP x), .assign (.var (vid x)) (.var (vid s!"$op{sfx}"))]
+def thenDecl (x : String) : Stmt := thenDeclS x ""
 /-- K2: the sweep in the MIDDLE of a block; `x` declared by `thenB` survives for the rest. -/
 def k2 : Program := { funcs := #[
   mainUnit [intP "a", ⟨vid "fv", fnTy [] [.int]⟩]
@@ -742,7 +748,7 @@ def k2 : Program := { funcs := #[
      .unseq kGraph (thenDecl "x"),
      println [str "x", .var (vid "x")],
      .assign (.var (vid "a")) (.intLit 10),
-     .unseq kGraph (thenDecl "y"),
+     .unseq (kGraphS "2") (thenDeclS "y" "2"),
      println [str "x y", .var (vid "x"), .var (vid "y")]],
   fv1] }
 /-- K3: the same inside a 2-iteration loop body (a fresh `x` per iteration). -/
@@ -858,9 +864,10 @@ def main (_args : List String) : IO Unit := do
     expectTape "C2 singleton picks: the tape is untouched" c2 "main" [7] (okZ 3) (some [7]),
     -- Malformed graphs by name
     -- B6 (2026-09-30): the «unknown slot» SPELLING check moved to the decoder (`NativeToIR`,
-    -- `unseqCheckLocalAtoms`; wire mutant `mut-unknown-slot`); a hand-built graph mentioning an
-    -- undeclared slot is the machine's own `stuck` at the read (fail closed at the point of failure).
-    expectRefusal "malformed: unknown slot (a hand-built graph: the machine's unbound read)" (malformed mUnknownSlot) "main" "unbound GoCore variable address",
+    -- `unseqCheckLocalAtoms`; wire mutant `mut-unknown-slot`); at the machine the id-level ENTRY
+    -- check (`unseqEntryCheck?`, fix round F3) refuses a mention that is neither a cell nor a bound
+    -- local BEFORE any occurrence runs.
+    expectRefusal "malformed: unknown slot (the machine's id-level entry check)" (malformed mUnknownSlot) "main" "neither a binder cell of this graph nor a local bound in scope",
     expectRefusal "malformed: duplicate result" (malformed mDupResult) "main" "duplicate result",
     expectRefusal "malformed: load through a VALUE binder (sort mismatch)" (malformed mSortLoad) "main" "sort mismatch",
     expectRefusal "malformed: TARGET binder used as a value (sort mismatch)" (malformed mSortTargetAsValue) "main" "sort mismatch",
@@ -887,9 +894,11 @@ def main (_args : List String) : IO Unit := do
     expectSet "F2 an ARRAY variable's address is a stable anchor: accepted" arrProg "main" [okOut "one\narr 11 20\n"],
     -- F3
     -- B6 (2026-09-30): the F3 reservation («a bare, non-`$` binder would shadow a source local»)
-    -- is a SPELLING test; ids have none. It lives at the decoder (`NativeToIR.binder`; wire mutant
-    -- `mut-nondollar`), where the spellings are. The two hand-built rows it had here (`b4`,
-    -- `mBareTarget`) are retired — design note docs/2026-09-30_numeric-locals-design.md D6.
+    -- is a SPELLING test at the decoder (`NativeToIR.binder`; wire mutant `mut-nondollar`); at the
+    -- machine it is the id-level ENTRY check (`unseqEntryCheck?`, fix round F3): a binder cell or
+    -- target binder already BOUND in the enclosing scope is refused before any cell exists.
+    expectRefusal "F3/B4 a cell that names a source local in scope: refused at entry" b4 "main" "already bound in the enclosing scope",
+    expectRefusal "F3 a target binder that names a source local in scope: refused at entry" (malformed mBareTarget) "main" "already bound in the enclosing scope",
     -- N3
     expectRefusal "N3/K4 guard completion cell typed int: refused by name at ENTER" (k4 .bool .int) "main" "not a bool cell",
     expectRefusal "N3 guard test cell typed int: refused by name at ENTER" (k4 .int .bool) "main" "not a bool cell",

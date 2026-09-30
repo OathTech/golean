@@ -508,6 +508,28 @@ private def decodeLocalsTable (path : String) (obj : StrictJson.Obj) : LowerM (A
       fail s!"{ep}.name: the source local name '{name}' starts with `$`, the temporaries' reservation — a frontend temporary is interned by the decoder, never a table entry (B6 c2); refused by name"
     if wire.startsWith "$" then
       fail s!"{ep}.wire: the lowering spelling '{wire}' starts with `$`, the temporaries' reservation (B6 c2); refused by name"
+    -- B6 fix round F1 (a) (the audit's M13): a lowering spelling RENAMES the entry's Go identifier
+    -- (`x$cap`, `x$shadowN`) — its base, the spelling before the first `$`, must be `name` (a Go
+    -- identifier never contains `$`), and it must differ from `name` (else it is omitted).
+    unless wire.isEmpty do
+      let base := (wire.takeWhile (· != '$'))
+      if base != name then
+        fail s!"{ep}.wire: the lowering spelling '{wire}' does not rename this entry's identifier '{name}' — its base spelling (before the first `$`) is '{base}' (B6 F1a, the table's per-object story); refused by name"
+      if wire == name then
+        fail s!"{ep}.wire: the lowering spelling equals the identifier '{name}' — `wire` is carried only when the lowering renamed the local (B6 F1a); refused by name"
+    -- B6 fix round (the audit's M14): `pos` is `basename.go:line:col` or empty. Its FORMAT is checked
+    -- here; its CONTENT (that the identifier really is declared there) is unverifiable at the wire
+    -- boundary — no source is present — and is recorded as such (design note D3/D5).
+    unless pos.isEmpty do
+      match pos.splitOn ":" with
+      | [file, line, col] =>
+          if file.isEmpty || file.any (· == '/') || !file.endsWith ".go" then
+            fail s!"{ep}.pos: '{pos}' — the file part must be a bare `.go` basename (B6 F1, pos format); refused by name"
+          if line.isEmpty || !line.all Char.isDigit || line.toNat! == 0 then
+            fail s!"{ep}.pos: '{pos}' — the line must be a positive decimal (B6 F1, pos format); refused by name"
+          if col.isEmpty || !col.all Char.isDigit || col.toNat! == 0 then
+            fail s!"{ep}.pos: '{pos}' — the column must be a positive decimal (B6 F1, pos format); refused by name"
+      | _ => fail s!"{ep}.pos: '{pos}' is not `basename.go:line:col` (B6 F1, pos format); refused by name"
     pure { name, kind, pos, wire }
 
 /-- B6: open a function's interning state — temporaries are numbered after the wire
@@ -552,7 +574,37 @@ is refused here, so `localsOk f = true` holds of every function `decodeProgram`
 returns (the customer's `decide`-able premise for `localsOk_covers`). -/
 private def checkLocalsOk (path : String) (f : Func) : LowerM Unit := do
   unless f.localsOk do
-    fail s!"{path}: the decoded function names a local outside its name table ({f.locals.size} entries) or binds a signature id twice — `Func.localsOk` is false (B6 c5); refused by name"
+    -- name the failing part (each conjunct of `Func.localsOk`, in its order)
+    let kindStr (id : VarId) : String := match f.kindOf? id with
+      | some k => reprStr k
+      | none => "(no entry)"
+    if !f.tableCovers then
+      match f.ids.find? (fun id => !(id < f.locals.size)) with
+      | some id => fail s!"{path}: the decoded function names local {id}, outside its name table ({f.locals.size} entries) — `Func.tableCovers` is false (B6 c5); refused by name"
+      | none => pure ()
+    if !f.tableNamed then
+      match (List.range f.locals.size).find? (fun i => !f.ids.contains i) with
+      | some i =>
+          let nm := match f.locals[i]? with | some e => e.name | none => "?"
+          fail s!"{path}: name-table entry {i} ('{nm}') is declared or referenced nowhere in the function — an unused entry (B6 fix round F1 (b), `Func.tableNamed`); refused by name"
+      | none => pure ()
+    if !f.sigDistinct then
+      fail s!"{path}: the signature binds a declaration id twice ({f.sigIds}) — `Func.sigDistinct` is false (B6 c5); refused by name"
+    if !f.argKinds then
+      match f.args.toList.find? (fun p => match f.kindOf? p.id with | some .recv | some .param | some .capture | some .temp => false | _ => true) with
+      | some p => fail s!"{path}: parameter (declaration {p.id}) is recorded with kind {kindStr p.id} in the name table (expected recv | param | capture | temp) — `Func.argKinds` is false (B6 F1 (c)); refused by name"
+      | none => pure ()
+    if !f.resultKinds then
+      match f.results.toList.find? (fun p => match f.kindOf? p.id with | some .result | some .temp => false | _ => true) with
+      | some p => fail s!"{path}: result (declaration {p.id}) is recorded with kind {kindStr p.id} in the name table (expected result | temp) — `Func.resultKinds` is false (B6 F1 (c)); refused by name"
+      | none => pure ()
+    if !f.recvFirst then
+      fail s!"{path}: a parameter past the first is recorded with kind recv — `Func.recvFirst` is false (B6 F1 (c)); refused by name"
+    if !f.bodyKinds then
+      match f.body.declIds.find? (fun id => match f.kindOf? id with | some .local | some .temp => false | _ => true) with
+      | some id => fail s!"{path}: body-declared local {id} is recorded with kind {kindStr id} in the name table (expected local | temp; a body local cannot claim recv/param/capture/result) — `Func.bodyKinds` is false (B6 F1 (c)); refused by name"
+      | none => pure ()
+    fail s!"{path}: `Func.localsOk` is false (B6 c5); refused by name"
 
 private def decodeParam (path : String) (json : Json) : LowerM LocalDecl := do
   let obj ← StrictJson.obj path json
@@ -876,10 +928,10 @@ private def targetAssignee (t : Target) : LowerM Assignee := pure t.assignee
 
 /-- The expression that reads a declared local target (used to index into a
 freshly-built slice/map temp). -/
-private def targetBaseExpr (t : Target) (lit : VarId) : Expr :=
+private def targetBaseExpr (t : Target) : LowerM Expr :=
   match t.assignee with
-  | .var id => .var id
-  | _ => .var lit
+  | .var id => pure (.var id)
+  | _ => do pure (.var (← tmp "$lit"))  -- interned only when the fallback is taken (F1 (b): no dead entry)
 
 private def declaresOf (targets : Array Target) : LowerM (Array Stmt) := do
   pure (targets.filterMap (fun t => t.declare.map Stmt.initialization))
@@ -2037,7 +2089,7 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
             checkAllowedKeys s!"{path}.elems[{i}]" eo ["index", "value"]
             let index ← StrictJson.int s!"{path}.elems[{i}].index" (← StrictJson.field s!"{path}.elems[{i}]" eo "index")
             let value ← decodeExpr s!"{path}.elems[{i}].value" (← StrictJson.field s!"{path}.elems[{i}]" eo "value")
-            stmts := stmts.push (.assign (.addr (.indexAddr (targetBaseExpr t (← tmp "$lit")) (.intLit index .int))) value)
+            stmts := stmts.push (.assign (.addr (.indexAddr (← targetBaseExpr t) (.intLit index .int))) value)
         | none => pure ()
       pure (.seqn stmts)
   | "map-lit" =>

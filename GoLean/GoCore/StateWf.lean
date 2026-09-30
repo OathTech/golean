@@ -8247,7 +8247,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
   -- completion statement, its target table, its scope and its tail; the
   -- state changes only through `allocDecls` (ENTER), `storeLoc` (a value
   -- delivered into a cell; a guard's completion constant) and `unseqLoad`.
-  case unseqEnter g thenB rest env env' k hwf hdecls =>
+  case unseqEnter g thenB rest env env' k hwf hentry hdecls =>
     have hc' := hc
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Nat.max_le] at hc'
     obtain ⟨w1, w2, w6⟩ := allocDecls_wf hdecls hs (by omega)

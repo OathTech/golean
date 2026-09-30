@@ -199,7 +199,9 @@ statement-sequence position `.initialization` requires — the enclosing
 `thenB`'s source declarations survive the sweep and the cells fall out of
 scope with the enclosing block; every status starts ACTIVE, the target
 table empty. The graph's static shape is refused BY NAME
-(`UnseqGraph.wellFormed?`) before any cell exists. -/
+(`UnseqGraph.wellFormed?`) before any cell exists, then its binders' freshness and
+its slots' knownness against the enclosing environment (`unseqEntryCheck?`, B6 fix
+round F3). -/
 def stepUnseqEnter (s : Store) (g : UnseqGraph) (thenB : Stmt) (env : LocalEnv)
     (k : Cont) (choices : Choices) : Except Stop (Config × Store × Choices × StepLabel) :=
   match k with
@@ -207,6 +209,10 @@ def stepUnseqEnter (s : Store) (g : UnseqGraph) (thenB : Stmt) (env : LocalEnv)
       if kenv = env then
         match g.wellFormed? with
         | some msg => throw (.stuck s!"unseq: malformed graph — {msg}")
+        | none =>
+        -- B6 fix round F3: the id-level entry check (fresh binders; known slots).
+        match unseqEntryCheck? g env with
+        | some msg => throw (.stuck s!"unseq: malformed graph at entry — {msg}")
         | none => do
             let (env', s') ← allocDecls ctx env s g.cells
             return (.next (.unseqK g thenB g.initStatus [] env' .pick (.seq rest env' k')),

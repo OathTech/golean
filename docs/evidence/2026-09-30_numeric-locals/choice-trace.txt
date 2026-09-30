@@ -1,3 +1,5 @@
 tsv files identical (modulo the --out path): 30; differing: 0
 pre: 6 dump files, 26417 rows; sha256 of concatenated dumps: 1d621c3a099e525d
 post: 6 dump files, 26417 rows; sha256 of concatenated dumps: 1d621c3a099e525d
+
+# fix round POST re-run (fix-round binary): 6 dump files, 26417 rows, concatenated sha256 1d621c3a099e525d = the first round's pre AND post digest; 3755 rows exported, 34 frontend refusals, 2 exclusions (digest comparison — the first round's pre/post scratch outputs were deleted at its end)

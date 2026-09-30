@@ -38,7 +38,7 @@ interns `$`-temporaries densely after the table (`tmp`); `declLocal` (c1/c2 at a
 
 ## 2. Acceptance (evidence: `docs/evidence/2026-09-30_numeric-locals/`, README has the commands)
 
-1. `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --slow` at the runtime commit `0fb43dcd`: EXIT 1 on exactly the 5a
+1. `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --slow` at the first runtime commit (`0fb43dcd`, now `79b48a2e` after the rebase): EXIT 1 on exactly the 5a
    pair — `certificate provenance` STALE (changed dependency files; the train's 5a business) and the ONE drift line
    `imported-goose/channel/google-search PASS/membership → FAIL/membership` (the certified slow-tier row — the same
    line packet C and r55 reported). `cases=3791 pass=3553 fail=238` = the pin's 3554 / 237 with that row; every
@@ -65,7 +65,7 @@ interns `$`-temporaries densely after the table (`tmp`); `declLocal` (c1/c2 at a
    14.88 → 14.62, MachineSound 59.79 → 60.27 (1.01×), StepErrors 202.82 → 203.78 (1.00×). The C3 1.5× stop rule is NOT
    triggered; `maxHeartbeats`/`maxRecDepth` settings: the same count pre and post, none new or raised.
 
-## 3. PENDING [USER] ratification at the merge ask ([AGENT] choices; design note D1–D6)
+## 3. D1–D6 — RATIFIED ([USER] Mike 2026-09-30, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «Agree, go ahead and fix, agree on all 6»); the items as they were posed, for the record
 
 - D1 per-object declaration ids from the frontend, cross-checked by the decoder (alternatives: decoder-only
   per-spelling interning; decoder-only per-declaration split).
@@ -77,6 +77,45 @@ interns `$`-temporaries densely after the table (`tmp`); `declLocal` (c1/c2 at a
   retargeted/retired (`mUnknownSlot` → the machine's unbound-read refusal; `b4`, `mBareTarget` retired), the
   wire mutants `mut-nondollar`/`mut-unknown-slot` keep their named refusals at the decoder.
 - Unnamed parameters/receivers respelled `""` → `$p{i}`/`$recv` (an env key only; never referenced).
+
+## 3a. The fix round (2026-09-30; audit `docs/2026-09-30_numeric-locals-audit.md`, MERGE-CLEAN; [AGENT]
+coordinator dispositions; the [USER]'s «go ahead and fix»)
+
+- **F1** — the table is now checked in BOTH directions: (a) `decodeLocalsTable` refuses a `wire` whose base spelling
+  (before the first `$`) is not `name`, or that equals `name`; `pos` must be `basename.go:line:col` (FORMAT — its
+  content is unverifiable at the boundary and is recorded so); (b) `Func.tableNamed`: every table entry is declared
+  or referenced (an unused entry refuses by name — the decoder's `$lit` interning became lazy so no dead temporary
+  is minted; `Tests/unseq-wire/build.py` prunes and renumbers the entries its replaced statements orphaned); (c)
+  `Func.localsOk := tableCovers && tableNamed && sigDistinct && argKinds && resultKinds && recvFirst && bodyKinds`,
+  refused part by part (`checkLocalsOk` names the failing conjunct, index and kind). New lemmas `localsOk_named`,
+  `localsOk_argKind`, `localsOk_resultKind`, `localsOk_recvFirst`, `localsOk_bodyKind` (+ `localsOk_parts`,
+  `Func.kindOf?`); BridgeSet row 116 re-pinned, rows 126–132 added; the core audit's required list 153 → 158.
+  Gate controls added: `b6-decl-reuses-outer-id` (M1/M12: caught as the orphaned inner entry), `b6-body-kind-recv`
+  (M6), `b6-wire-base-mismatch` (M13), `b6-pos-malformed` (M14, format), `b6-unused-entry` (M16). M14 with a
+  well-formed forged position still decodes — unverifiable, recorded.
+- **F2** — D6's sentence corrected: for SOURCE locals the unbound cases are unreachable; an undeclared
+  `$`-temporary (M15) decodes and is the machine's `stuck "unbound GoCore variable address: <n>"`, as on `main`.
+- **F3** — `unseqEntryCheck? : UnseqGraph → LocalEnv → Option String` (`Machine.lean`), the second premise of
+  `Step.unseqEnter`, consulted by `stepFn` at ENTER: no cell or target binder already bound in the enclosing
+  environment; every mentioned slot a cell or a bound local. `stepUnseqEnter_sound`/`_stream`, `step_complete`,
+  `StateWf`'s case re-proved with the premise. `b4` and `mBareTarget` (its target binder now `x`, the source local)
+  are refused «already bound in the enclosing scope»; `mUnknownSlot` «neither a binder cell of this graph nor a
+  local bound in scope» — all three at ENTER, before any occurrence runs.
+- **F4** — the changelog's D6 row names every binder-quoting `wellFormed?` message and the two `Machine.lean` texts.
+- **F5** — `Tests/GoCoreEval.lean`'s stray-read positive check gained the conjunct `v == vid "t"` (the read
+  variable's id is asserted) — a test strengthening, recorded here.
+- Rebased onto `main` @ `90df0fe1` (records-only since `131a7313`; snapshot `refs/snapshots/b6-fix/pre-rebase`).
+- **Gates of the fix round** (evidence README items 7–9): standalone — core audit PASS (158 required), wire boundary PASS
+  (16 B6 controls), unseq wire PASS (56 mutants; 141 fixtures byte-identical to the generator), unseq scheduler PASS
+  (the three re-pointed rows refused at ENTER by name), frontend pins ok (twin unchanged), eval 298, `go test` ok;
+  then under the lock `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff`: EXIT 1 on exactly the 5a pair
+  (certificate provenance STALE; the one `google-search` drift line), `cases=3791 pass=3553 fail=238` = the pin with
+  that row, `baselines/native-full.tsv` unchanged, wall 890 s (`ci-diff-fix-tail.txt`). Trace: the POST run with the
+  fix-round binary reproduces the first round's digest exactly — 26417 dump rows, concatenated sha256
+  `1d621c3a099e525d…` (a digest comparison: the first round's scratch outputs were deleted at its end). Smoke: 1353 OK /
+  428 frontend refusals / 1 BUG-078 row — unchanged; the id-level ENTRY check fires on 0 of 1354 decoded wires.
+- Hand-built graphs: two sweeps in ONE block must now use distinct binders (K2's second sweep took suffix `2`) — a
+  domain narrowing for hand-built graphs only; a decoded program's binders are unique per function (`tmpSeq`).
 
 ## 4. Changelog lines (for `docs/changelog/61958f2e-WINDOW.md`)
 

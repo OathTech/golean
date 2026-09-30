@@ -1335,6 +1335,31 @@ def _number_stmt(st, env, table):
             _number_target(group, env, table)
 
 
+def _used_locals(node, acc):
+    if isinstance(node, dict):
+        for k in ("local", "keyLocal", "valLocal"):
+            if isinstance(node.get(k), int):
+                acc.add(node[k])
+        for v in node.values():
+            _used_locals(v, acc)
+    elif isinstance(node, list):
+        for v in node:
+            _used_locals(v, acc)
+    return acc
+
+
+def _remap_locals(node, remap):
+    if isinstance(node, dict):
+        for k in ("local", "keyLocal", "valLocal"):
+            if isinstance(node.get(k), int):
+                node[k] = remap[node[k]]
+        for v in node.values():
+            _remap_locals(v, remap)
+    elif isinstance(node, list):
+        for v in node:
+            _remap_locals(v, remap)
+
+
 def number_locals(wire):
     for f in list(wire.get("funcs") or []) + list(wire.get("methods") or []):
         if "body" not in f:
@@ -1345,6 +1370,15 @@ def number_locals(wire):
             if isinstance(slot, dict) and "local" in slot:
                 env[0][slot["id"]] = slot["local"]
         _number_stmt(f["body"], env, table)
+        # B6 fix round F1 (b): the decoder refuses a table entry nothing names (`Func.tableNamed`).
+        # A statement the script REPLACED may have been the only user of an envelope entry; prune
+        # the unused entries and renumber densely (every index in the function follows).
+        used = _used_locals(f, set())
+        keep = [i for i in range(len(table)) if i in used]
+        if len(keep) != len(table):
+            remap = {old: new for new, old in enumerate(keep)}
+            f["locals"] = [table[i] for i in keep]
+            _remap_locals(f, remap)
     return wire
 
 

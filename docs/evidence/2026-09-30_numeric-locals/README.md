@@ -48,3 +48,17 @@ coordinator released it; never taken over; released at the lane's end).
 A/B interleaved on the same box (pre = `.tmp/pre-b6`, post = the lane tree), `lake env lean -Dprofiler=true
 -Dprofiler.threshold=100` wall/cpu per module (StepFn, Machine, MachineEqb, BridgeSet, StateWf, MachineSound,
 StepErrors): `elaboration.txt`; the verdict is in the handoff §2.6.
+
+## Fix round (2026-09-30; the audit's F1–F5; runtime commit = the fix-round commit on top of `79b48a2e`, rebased onto `main` @ `90df0fe1`)
+
+7. **Gate.** `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff` on the fix-round tree: EXIT 1, `RESULT: FAIL` on
+   exactly the 5a pair (certificate provenance STALE; the one `google-search` drift line), `cases=3791 pass=3553
+   fail=238` = the pin with that row; every other step ok — wire boundary now 16 B6 controls (M1/M6/M13/M14-format/M16
+   added), unseq scheduler (the three re-pointed rows refused at ENTER by name), unseq wire (56 mutants; 141 fixtures
+   byte-identical to the generator after the prune pass — nothing was orphaned), core audit (158 required), frontend
+   pins (twin unchanged), eval 298, Go tests. Wall 890 s. Tail: `ci-diff-fix-tail.txt`.
+8. **Trace.** POST re-run with the fix-round binary; compared against the FIRST round's recorded digest (its pre and
+   post were identical: 26417 dump rows, concatenated sha256 `1d621c3a…`; those scratch outputs were deleted at the
+   first round's end, so this is a digest comparison, not a file diff): IDENTICAL — 6 dump files, 26417 rows, concatenated sha256 `1d621c3a099e525d…`; the same 3755 rows exported, the same 34 frontend refusals, 2 exclusions. `choice-trace.txt`..
+9. **Smoke.** 1782 fixtures with the strengthened decoder: 1353 OK, 428 frontend refusals (unchanged), 1 BUG-078
+   row; the id-level ENTRY check fires on 0 of 1354 decoded wires (`smoke.txt`).

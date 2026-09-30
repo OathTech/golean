@@ -472,6 +472,20 @@ m = fresh(); func(m, 'shadow')['locals'][1]['kind'] = 'temp'; write('b6-table-te
 m = fresh(); func(m, 'shadow')['locals'][0]['kind'] = 'result'; write('b6-table-kind', m)
 m = fresh(); nm = func(m, 'named'); nm['results'][1]['local'] = nm['results'][0]['local']; nm['results'][1]['id'] = 'r'; write('b6-sig-dup', m)
 m = fresh(); del func(m, 'shadow')['locals']; write('b6-table-absent', m)
+# ---- fix round (the audit's M1/M6/M13/M14/M16; F1 a/b/c) ----
+# M1/M12: the inner `x` DECLARE re-pointed at the OUTER x's id, its references following — entry 2 is then unused (F1 b)
+m = fresh()
+for n in find_nodes(func(m, 'shadow')['body'], lambda n: (n.get('target') in ('declare', 'var') and n.get('id') == 'x' and n.get('local') == inner_x) or (n.get('expr') == 'ident' and n.get('name') == 'x' and n.get('local') == inner_x)):
+    n['local'] = outer_x
+write('b6-decl-reuses-outer-id', m)
+# M6: a body local's kind forged to recv (F1 c)
+m = fresh(); func(m, 'shadow')['locals'][1]['kind'] = 'recv'; write('b6-body-kind-recv', m)
+# M13: the identifier behind a `wire` renaming forged (F1 a)
+m = fresh(); func(m, 'capture$lit0')['locals'][0]['name'] = 'q'; write('b6-wire-base-mismatch', m)
+# M14: `pos` malformed (format only — content is unverifiable at the boundary)
+m = fresh(); func(m, 'shadow')['locals'][0]['pos'] = '/abs/main.go:22'; write('b6-pos-malformed', m)
+# M16: an unused table entry (F1 b)
+m = fresh(); func(m, 'shadow')['locals'].append({'kind': 'local', 'name': 'ghost'}); write('b6-unused-entry', m)
 print('B6 mutants written')
 PY
 run_shadow() { "$GOLEAN" native-json-run --input "$1" --function shadow --arg-int 2 2>&1; }
@@ -491,4 +505,9 @@ expect_refusal b6-table-temp      'is the decoder' 'kind'
 expect_refusal b6-table-kind      'is recorded with kind' 'expected recv | param | capture'
 expect_refusal b6-sig-dup         'binds a declaration id twice'
 expect_refusal b6-table-absent    'locals'
-echo 'Wire boundary gate: PASS (11 byte-level controls + 56 unseq-node controls + 13 promotion-record controls + 11 B6 numeric-locals controls through the real CLI)'
+expect_refusal b6-decl-reuses-outer-id 'declared or referenced nowhere in the function' 'unused entry'
+expect_refusal b6-body-kind-recv  'body-declared local' 'recorded with kind' 'cannot claim'
+expect_refusal b6-wire-base-mismatch 'does not rename this entry' 'base spelling'
+expect_refusal b6-pos-malformed   'pos format'
+expect_refusal b6-unused-entry    'declared or referenced nowhere in the function' 'unused entry'
+echo 'Wire boundary gate: PASS (11 byte-level controls + 56 unseq-node controls + 13 promotion-record controls + 16 B6 numeric-locals controls through the real CLI)'

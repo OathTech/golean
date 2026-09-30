@@ -49,6 +49,9 @@ re-homed regressions). Each must exist as a theorem. -/
 def exports : List Name := [
     -- B6, numeric locals (2026-09-30): the name-table interface (the logic team's request 3)
     ``GoLean.GoCore.Func.localsOk_covers, ``GoLean.GoCore.Func.localsOk_sigDistinct,
+    ``GoLean.GoCore.Func.localsOk_named, ``GoLean.GoCore.Func.localsOk_argKind,
+    ``GoLean.GoCore.Func.localsOk_resultKind, ``GoLean.GoCore.Func.localsOk_recvFirst,
+    ``GoLean.GoCore.Func.localsOk_bodyKind,
     ``GoLean.GoCore.LocalEnv.lookup_declare_self, ``GoLean.GoCore.LocalEnv.lookup_declare_ne,
     ``GoLean.GoCore.LocalEnv.lookup_pushScope,
     ``GoLean.GoCore.Machine.bindParams_lookup, ``GoLean.GoCore.Machine.allocDecls_lookup,

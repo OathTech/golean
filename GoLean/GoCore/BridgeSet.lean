@@ -80,7 +80,12 @@ their local positions are now `VarId := Nat`); rows 108–125 ADDED — the loca
 positions that became numeric (`Param.id`, `Expr.var`/`ref`, `Assignee.var`, `Scope`), the name table
 (`LocalKind`, `LocalName`, `Func.locals`, `Func.localName?`), the decoder's checked predicate
 `Func.localsOk` with its two lemmas, the env-lookup laws, and the activation-slot lemmas
-(`bindParams_lookup`, `allocDecls_lookup`, `enterFrame_lookup_arg`/`_result`).
+(`bindParams_lookup`, `allocDecls_lookup`, `enterFrame_lookup_arg`/`_result`). FIX ROUND
+(2026-09-30, the audit's F1/F3; [USER] Mike «Agree, go ahead and fix, agree on all 6», relayed):
+row 116 re-pinned over the two-way check (`tableCovers && tableNamed && sigDistinct && argKinds &&
+resultKinds && recvFirst && bodyKinds`) with its three part equations; rows 126–132 ADDED — table ⊆
+tree, the kind lookup, the four kind lemmas, and the `unseqEnter` rule with its id-level entry
+premise (`unseqEntryCheck?`).
 -/
 
 namespace GoLean.GoCore.BridgeSet
@@ -846,10 +851,14 @@ example : ∀ (f : Func) (id : VarId), f.localName? id = f.locals[id]? := fun _ 
 example : ∀ (f : Func), f.ids = (f.args ++ f.results).toList.map (·.id) ++ f.body.declIds ++ f.body.names :=
   fun _ => rfl
 
--- 116. `Locals.lean` — the decoder's final check (c5): the table covers every named id and the
--- signature's ids are pairwise distinct
-example : ∀ (f : Func), f.localsOk = (f.ids.all (· < f.locals.size)
-    && namesDistinct ((f.args ++ f.results).toList.map (·.id))) := fun _ => rfl
+-- 116. `Locals.lean` — the decoder's final check (c5), in BOTH directions since the fix round
+-- (2026-09-30, the audit's F1): tree ⊆ table, table ⊆ tree, the signature's ids pairwise distinct,
+-- the kinds where the ids occur (RE-PIN 6 fix round: was the first and third conjunct only)
+example : ∀ (f : Func), f.localsOk = (f.tableCovers && f.tableNamed && f.sigDistinct && f.argKinds
+    && f.resultKinds && f.recvFirst && f.bodyKinds) := fun _ => rfl
+example : ∀ (f : Func), f.tableCovers = f.ids.all (· < f.locals.size) := fun _ => rfl
+example : ∀ (f : Func), f.tableNamed = (List.range f.locals.size).all (f.ids.contains ·) := fun _ => rfl
+example : ∀ (f : Func), f.sigDistinct = namesDistinct ((f.args ++ f.results).toList.map (·.id)) := fun _ => rfl
 
 -- 117. `Locals.lean` — «source spellings are retained»: under `localsOk`, every id the function
 -- names has a table entry
@@ -911,5 +920,47 @@ example : ∀ {ctx : ProgramCtx} {s : Store} {fid : FuncId} {argVals : List GoVa
     ∀ (j : Nat) (hj : j < func.results.size),
       LocalEnv.lookup frameEnv func.results[j].id = some (.base ⟨s.heap.size + func.args.size + j⟩) :=
   @GoLean.GoCore.Machine.enterFrame_lookup_result
+
+-- ---- RE-PIN 6, the fix round (B6 audit F1, 2026-09-30) ----
+
+-- 126. `Locals.lean` — table ⊆ tree: under `localsOk`, every table entry is named by the function
+example : ∀ {f : Func}, f.localsOk = true → ∀ {i : Nat}, i < f.locals.size → i ∈ f.ids :=
+  @GoLean.GoCore.Func.localsOk_named
+
+-- 127. `Locals.lean` — the kind the table records for an id
+example : ∀ (f : Func) (id : VarId), f.kindOf? id = (f.locals[id]?).map (·.kind) := fun _ _ => rfl
+
+-- 128. `Locals.lean` — a parameter's kind is receiver, parameter, capture or temporary
+example : ∀ {f : Func}, f.localsOk = true → ∀ {p : Param}, p ∈ f.args.toList →
+    f.kindOf? p.id = some .recv ∨ f.kindOf? p.id = some .param
+      ∨ f.kindOf? p.id = some .capture ∨ f.kindOf? p.id = some .temp :=
+  @GoLean.GoCore.Func.localsOk_argKind
+
+-- 129. `Locals.lean` — a result's kind is result or temporary
+example : ∀ {f : Func}, f.localsOk = true → ∀ {p : Param}, p ∈ f.results.toList →
+    f.kindOf? p.id = some .result ∨ f.kindOf? p.id = some .temp :=
+  @GoLean.GoCore.Func.localsOk_resultKind
+
+-- 130. `Locals.lean` — only the first parameter may be the receiver
+example : ∀ {f : Func}, f.localsOk = true → ∀ {p : Param}, p ∈ f.args.toList.drop 1 →
+    f.kindOf? p.id ≠ some .recv :=
+  @GoLean.GoCore.Func.localsOk_recvFirst
+
+-- 131. `Locals.lean` — a body-declared local's kind is local or temporary (it cannot claim recv/param/
+-- capture/result)
+example : ∀ {f : Func}, f.localsOk = true → ∀ {id : VarId}, id ∈ f.body.declIds →
+    f.kindOf? id = some .local ∨ f.kindOf? id = some .temp :=
+  @GoLean.GoCore.Func.localsOk_bodyKind
+
+-- 132. `Machine.lean` — the sweep's id-level entry check (fix round F3): the `unseqEnter` rule's
+-- second premise — every binder fresh in the enclosing environment, every mentioned slot a cell
+-- or a bound local
+example : ∀ {ctx : ProgramCtx} {g : UnseqGraph} {thenB : Stmt} {rest : List Stmt} {env env' : LocalEnv}
+    {k : Cont} {s s' : Store},
+    g.wellFormed? = none → unseqEntryCheck? g env = none →
+    allocDecls ctx env s g.cells = .ok (env', s') →
+    Step ctx (.exec (.unseq g thenB) env (.seq rest env k)) s
+      (.next (.unseqK g thenB g.initStatus [] env' .pick (.seq rest env' k))) s' ⟨[], [], []⟩ :=
+  @GoLean.GoCore.Machine.Step.unseqEnter
 
 end GoLean.GoCore.BridgeSet

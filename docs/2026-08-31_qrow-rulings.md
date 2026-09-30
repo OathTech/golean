@@ -72,6 +72,19 @@ sign-off («sounds good merge it», relayed — see the appendix).
   Row 9 (Q-U4RESIDUAL, added 2026-09-02) RULED [USER] the same day
   (option (A)) — nothing on this sheet awaits the [USER].
 
+### B6 numeric locals — D1–D6 ratified, fix round (2026-09-30)
+
+[USER] Mike 2026-09-30, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «Agree, go ahead and fix, agree on all 6» — on the B6 audit
+(`docs/2026-09-30_numeric-locals-audit.md`, MERGE-CLEAN, three LOW + two TRIVIAL) and the six [AGENT] choices of
+`docs/2026-09-30_numeric-locals-design.md`: D1 per-object declaration ids from the frontend cross-checked by the decoder's
+lexical walk; D2 `$`-temporaries interned by the decoder per spelling per function; D3 `Func.locals : Array LocalName`
+with `pos`; D4 wire `golean-native-v3` + the twin re-pin; D5 the decoder's checks c1–c5; D6 refusal texts print the
+number, the two spelling checks at the decoder. RATIFIED as made. The fix round before landing ([AGENT] coordinator
+dispositions of the audit's findings): F1 the table checked in BOTH directions (`wire` base spelling, table ⊆ tree,
+kinds in `Func.localsOk`, `pos` format — content recorded unverifiable), F2 D6's wording (undeclared `$`-temporaries
+are reachable and refuse as on `main`), F3 the id-level machine check at `unseq` ENTER (`unseqEntryCheck?`), F4/F5
+records. Lane `core/numeric-locals-0930`, rebased onto `90df0fe1`.
+
 ## Appendix — the coordinator's row-by-row currency table
 
 [AGENT] reconstruction of the table presented in-session (auditor

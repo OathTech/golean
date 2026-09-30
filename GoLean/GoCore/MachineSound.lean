@@ -1304,11 +1304,13 @@ theorem stepUnseqEnter_sound {s : Store} {g : UnseqGraph} {thenB : Stmt} {env : 
   · split at h
     · split at h
       · simp [throw, throwThe, MonadExceptOf.throw] at h
-      · rename_i heq _ hwf
-        subst heq
-        simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-        obtain ⟨⟨env', s₁⟩, hd, rfl, rfl, rfl, rfl⟩ := h
-        exact ⟨Step.unseqEnter hwf hd, rfl⟩
+      · split at h
+        · simp [throw, throwThe, MonadExceptOf.throw] at h
+        · rename_i heq _ hwf _ hentry
+          subst heq
+          simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+          obtain ⟨⟨env', s₁⟩, hd, rfl, rfl, rfl, rfl⟩ := h
+          exact ⟨Step.unseqEnter hwf hentry hd, rfl⟩
     · simp [throw, throwThe, MonadExceptOf.throw] at h
   · simp [throw, throwThe, MonadExceptOf.throw] at h
 
@@ -1438,11 +1440,13 @@ theorem stepUnseqEnter_stream {s : Store} {g : UnseqGraph} {thenB : Stmt} {env :
   · split at h
     · split at h
       · simp [throw, throwThe, MonadExceptOf.throw] at h
-      · rename_i heq _ hwf
-        subst heq
-        simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-        obtain ⟨⟨env', s₁⟩, hd, rfl, rfl, rfl, rfl⟩ := h
-        exact ⟨rfl, fun ch₂ => by simp [stepUnseqEnter, hwf, hd, Bind.bind, Except.bind]⟩
+      · split at h
+        · simp [throw, throwThe, MonadExceptOf.throw] at h
+        · rename_i heq _ hwf _ hentry
+          subst heq
+          simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+          obtain ⟨⟨env', s₁⟩, hd, rfl, rfl, rfl, rfl⟩ := h
+          exact ⟨rfl, fun ch₂ => by simp [stepUnseqEnter, hwf, hentry, hd, Bind.bind, Except.bind]⟩
     · simp [throw, throwThe, MonadExceptOf.throw] at h
   · simp [throw, throwThe, MonadExceptOf.throw] at h
 
@@ -2375,8 +2379,8 @@ theorem step_complete {c : Config} {s : Store} {c' : Config} {s' : Store} {tr : 
   -- empty stream; the pick under the singleton stream `[j]` — at bound ≥ 2
   -- it draws slot `j`, at bound 1 the forced slot 0 (`consumeAt_fst_singleton`).
   case unseqEnter =>
-    rename_i g thenB rest env env' k hwf hdecls
-    exact ⟨[], [], by simp [stepFn, stepUnseqEnter, hwf, hdecls, Bind.bind, Except.bind]⟩
+    rename_i g thenB rest env env' k hwf hentry hdecls
+    exact ⟨[], [], by simp [stepFn, stepUnseqEnter, hwf, hentry, hdecls, Bind.bind, Except.bind]⟩
   case unseqPick =>
     rename_i g thenB st tg env k j i hdep hj
     obtain ⟨hlt, hact⟩ := UnseqGraph.ready_active hj
@@ -4855,8 +4859,8 @@ theorem step_complete_any_wf_aux {c : Config} {σ : Store} {c' : Config}
   -- The `unseq` construct (Stage B): the deterministic rules under any
   -- stream; the pick's consult lands inside the ready list at every stream
   -- (`consumeAt_fst_lt`), so some occurrence is picked.
-  case unseqEnter g thenB rest env env' k hwf hdecls =>
-    simp [stepFn, stepUnseqEnter, hwf, hdecls, Bind.bind, Except.bind]
+  case unseqEnter g thenB rest env env' k hwf hentry hdecls =>
+    simp [stepFn, stepUnseqEnter, hwf, hentry, hdecls, Bind.bind, Except.bind]
   case unseqPick g thenB st tg env k j i hdep hj =>
     obtain ⟨hlt, hact⟩ := UnseqGraph.ready_active hj
     have hall : g.allSettled st = false := UnseqGraph.allSettled_false hlt hact
