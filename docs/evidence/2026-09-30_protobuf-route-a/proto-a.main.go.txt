@@ -1,0 +1,593 @@
+// SCRATCH PROTOTYPE — route A feasibility probe (2026-09-30). NOT a lowering,
+// NOT a subject change. A stdlib-only, reflection-free "generated-style"
+// codec for raft's ConfChange / ConfChangeSingle / ConfChangeV2 that
+// reproduces protobuf-go v1.36.11's observable decode behaviour:
+//   * unknown fields RETAINED (canonical tag + raw value bytes), re-emitted
+//     after the known fields by Marshal, counted by Size, deep-copied by Clone;
+//   * groups (wire types 3/4) SKIPPED with nesting + end-tag matching;
+//   * wrong-wire-type known fields become unknown fields;
+//   * ONE error value for every malformed input — the prefixError shape
+//     (text "cannot parse invalid wire-format data", Unwrap = the sentinel);
+//   * the per-binary prefix spacing (detrand) as a package-init CHOICE over
+//     the two spellings (the D-11 map-range idiom).
+// Driven over the raft-proofs frozen malformed-bytes corpus (26 entries).
+package main
+
+import "errors"
+
+// ---- the protobuf-go error shape ----
+
+// Error is the sentinel every codec error unwraps to (protobuf-go's
+// internal/errors.Error, "protobuf error").
+var Error = errors.New("protobuf error")
+
+type prefixError struct{ s string }
+
+func (e *prefixError) Error() string { return protoPrefix + e.s }
+func (e *prefixError) Unwrap() error { return Error }
+
+// protoPrefix models internal/errors.prefix: detrand.Bool() picks, once per
+// binary, between "proto: " (U+00A0) and "proto: " (U+0020). Here the pick is
+// a map-range choice made once at package init — the machine enumerates both
+// members; a gc binary realizes one.
+var protoPrefix = pickPrefix()
+
+func pickPrefix() string {
+	cands := map[int]string{0: "proto: ", 1: "proto: "}
+	for _, s := range cands {
+		return s
+	}
+	return "proto: "
+}
+
+var errDecode = &prefixError{s: "cannot parse invalid wire-format data"}
+
+// ---- protowire ----
+
+const maxValidNumber = 1<<29 - 1
+
+// consumeVarint: protobuf-go bounds (<= 10 bytes, 10th byte <= 1).
+func consumeVarint(b []byte) (uint64, int) {
+	var v uint64
+	for k := 0; k < 10; k++ {
+		if k >= len(b) {
+			return 0, -1
+		}
+		c := b[k]
+		if k == 9 && c > 1 {
+			return 0, -1
+		}
+		v |= uint64(c&0x7f) << (7 * k)
+		if c < 0x80 {
+			return v, k + 1
+		}
+	}
+	return 0, -1
+}
+
+func appendVarint(b []byte, v uint64) []byte {
+	for v >= 0x80 {
+		b = append(b, byte(v)|0x80)
+		v >>= 7
+	}
+	return append(b, byte(v))
+}
+
+func sizeVarint(v uint64) int {
+	n := 1
+	for v >= 0x80 {
+		v >>= 7
+		n++
+	}
+	return n
+}
+
+// consumeFieldValue: protowire.ConsumeFieldValue with the depth limit;
+// returns the value length or -1 on any error (the caller maps to errDecode,
+// exactly as impl.unmarshalPointerEager discards the error code).
+func consumeFieldValue(num uint64, typ uint64, b []byte, depth int) int {
+	switch typ {
+	case 0:
+		_, n := consumeVarint(b)
+		return n
+	case 5:
+		if len(b) < 4 {
+			return -1
+		}
+		return 4
+	case 1:
+		if len(b) < 8 {
+			return -1
+		}
+		return 8
+	case 2:
+		m, n := consumeVarint(b)
+		if n < 0 || uint64(len(b)-n) < m {
+			return -1
+		}
+		return n + int(m)
+	case 3:
+		if depth < 0 {
+			return -1
+		}
+		n0 := len(b)
+		for {
+			tag, n := consumeVarint(b)
+			if n < 0 {
+				return -1
+			}
+			num2 := tag >> 3
+			typ2 := tag & 7
+			if num2 < 1 || num2 > maxValidNumber {
+				return -1
+			}
+			b = b[n:]
+			if typ2 == 4 {
+				if num != num2 {
+					return -1
+				}
+				return n0 - len(b)
+			}
+			n = consumeFieldValue(num2, typ2, b, depth-1)
+			if n < 0 {
+				return -1
+			}
+			b = b[n:]
+		}
+	}
+	return -1 // wire types 4 (stray end group), 6, 7
+}
+
+// ---- ConfChangeSingle ----
+
+type ConfChangeSingle struct {
+	Type          *int32
+	NodeId        *uint64
+	unknownFields []byte
+}
+
+func (x *ConfChangeSingle) Unmarshal(b []byte) error {
+	for len(b) > 0 {
+		tag, n := consumeVarint(b)
+		if n < 0 {
+			return errDecode
+		}
+		num := tag >> 3
+		if num < 1 || num > maxValidNumber {
+			return errDecode
+		}
+		wtyp := tag & 7
+		if wtyp == 4 {
+			return errDecode // end group at top level: num != groupTag(0)
+		}
+		b = b[n:]
+		known := false
+		switch {
+		case num == 1 && wtyp == 0:
+			v, m := consumeVarint(b)
+			if m < 0 {
+				return errDecode
+			}
+			e := int32(uint32(v))
+			x.Type = &e
+			n = m
+			known = true
+		case num == 2 && wtyp == 0:
+			v, m := consumeVarint(b)
+			if m < 0 {
+				return errDecode
+			}
+			x.NodeId = &v
+			n = m
+			known = true
+		}
+		if !known {
+			n = consumeFieldValue(num, wtyp, b, 10000)
+			if n < 0 {
+				return errDecode
+			}
+			x.unknownFields = appendVarint(x.unknownFields, num<<3|wtyp)
+			x.unknownFields = append(x.unknownFields, b[:n]...)
+		}
+		b = b[n:]
+	}
+	return nil
+}
+
+func (x *ConfChangeSingle) Append(b []byte) []byte {
+	if x.Type != nil {
+		b = appendVarint(b, 1<<3|0)
+		b = appendVarint(b, uint64(uint32(*x.Type)))
+	}
+	if x.NodeId != nil {
+		b = appendVarint(b, 2<<3|0)
+		b = appendVarint(b, *x.NodeId)
+	}
+	return append(b, x.unknownFields...)
+}
+
+func (x *ConfChangeSingle) Size() int {
+	n := 0
+	if x.Type != nil {
+		n += 1 + sizeVarint(uint64(uint32(*x.Type)))
+	}
+	if x.NodeId != nil {
+		n += 1 + sizeVarint(*x.NodeId)
+	}
+	return n + len(x.unknownFields)
+}
+
+// ---- ConfChangeV2 ----
+
+type ConfChangeV2 struct {
+	Transition    *int32
+	Changes       []*ConfChangeSingle
+	Context       []byte
+	unknownFields []byte
+}
+
+func (x *ConfChangeV2) Unmarshal(b []byte) error {
+	for len(b) > 0 {
+		tag, n := consumeVarint(b)
+		if n < 0 {
+			return errDecode
+		}
+		num := tag >> 3
+		if num < 1 || num > maxValidNumber {
+			return errDecode
+		}
+		wtyp := tag & 7
+		if wtyp == 4 {
+			return errDecode
+		}
+		b = b[n:]
+		known := false
+		switch {
+		case num == 1 && wtyp == 0:
+			v, m := consumeVarint(b)
+			if m < 0 {
+				return errDecode
+			}
+			e := int32(uint32(v))
+			x.Transition = &e
+			n = m
+			known = true
+		case num == 2 && wtyp == 2:
+			l, m := consumeVarint(b)
+			if m < 0 || uint64(len(b)-m) < l {
+				return errDecode
+			}
+			c := &ConfChangeSingle{}
+			if err := c.Unmarshal(b[m : m+int(l)]); err != nil {
+				return err
+			}
+			x.Changes = append(x.Changes, c)
+			n = m + int(l)
+			known = true
+		case num == 3 && wtyp == 2:
+			l, m := consumeVarint(b)
+			if m < 0 || uint64(len(b)-m) < l {
+				return errDecode
+			}
+			s := make([]byte, l)
+			copy(s, b[m:m+int(l)])
+			x.Context = s
+			n = m + int(l)
+			known = true
+		}
+		if !known {
+			n = consumeFieldValue(num, wtyp, b, 10000)
+			if n < 0 {
+				return errDecode
+			}
+			x.unknownFields = appendVarint(x.unknownFields, num<<3|wtyp)
+			x.unknownFields = append(x.unknownFields, b[:n]...)
+		}
+		b = b[n:]
+	}
+	return nil
+}
+
+func (x *ConfChangeV2) Append(b []byte) []byte {
+	if x.Transition != nil {
+		b = appendVarint(b, 1<<3|0)
+		b = appendVarint(b, uint64(uint32(*x.Transition)))
+	}
+	for _, c := range x.Changes {
+		b = appendVarint(b, 2<<3|2)
+		b = appendVarint(b, uint64(c.Size()))
+		b = c.Append(b)
+	}
+	if x.Context != nil {
+		b = appendVarint(b, 3<<3|2)
+		b = appendVarint(b, uint64(len(x.Context)))
+		b = append(b, x.Context...)
+	}
+	return append(b, x.unknownFields...)
+}
+
+func (x *ConfChangeV2) Size() int {
+	n := 0
+	if x.Transition != nil {
+		n += 1 + sizeVarint(uint64(uint32(*x.Transition)))
+	}
+	for _, c := range x.Changes {
+		s := c.Size()
+		n += 1 + sizeVarint(uint64(s)) + s
+	}
+	if x.Context != nil {
+		n += 1 + sizeVarint(uint64(len(x.Context))) + len(x.Context)
+	}
+	return n + len(x.unknownFields)
+}
+
+// ---- ConfChange (v1) ----
+
+type ConfChange struct {
+	Type          *int32
+	NodeId        *uint64
+	Context       []byte
+	Id            *uint64
+	unknownFields []byte
+}
+
+func (x *ConfChange) Unmarshal(b []byte) error {
+	for len(b) > 0 {
+		tag, n := consumeVarint(b)
+		if n < 0 {
+			return errDecode
+		}
+		num := tag >> 3
+		if num < 1 || num > maxValidNumber {
+			return errDecode
+		}
+		wtyp := tag & 7
+		if wtyp == 4 {
+			return errDecode
+		}
+		b = b[n:]
+		known := false
+		switch {
+		case num == 1 && wtyp == 0:
+			v, m := consumeVarint(b)
+			if m < 0 {
+				return errDecode
+			}
+			x.Id = &v
+			n = m
+			known = true
+		case num == 2 && wtyp == 0:
+			v, m := consumeVarint(b)
+			if m < 0 {
+				return errDecode
+			}
+			e := int32(uint32(v))
+			x.Type = &e
+			n = m
+			known = true
+		case num == 3 && wtyp == 0:
+			v, m := consumeVarint(b)
+			if m < 0 {
+				return errDecode
+			}
+			x.NodeId = &v
+			n = m
+			known = true
+		case num == 4 && wtyp == 2:
+			l, m := consumeVarint(b)
+			if m < 0 || uint64(len(b)-m) < l {
+				return errDecode
+			}
+			s := make([]byte, l)
+			copy(s, b[m:m+int(l)])
+			x.Context = s
+			n = m + int(l)
+			known = true
+		}
+		if !known {
+			n = consumeFieldValue(num, wtyp, b, 10000)
+			if n < 0 {
+				return errDecode
+			}
+			x.unknownFields = appendVarint(x.unknownFields, num<<3|wtyp)
+			x.unknownFields = append(x.unknownFields, b[:n]...)
+		}
+		b = b[n:]
+	}
+	return nil
+}
+
+func (x *ConfChange) Append(b []byte) []byte {
+	if x.Id != nil {
+		b = appendVarint(b, 1<<3|0)
+		b = appendVarint(b, *x.Id)
+	}
+	if x.Type != nil {
+		b = appendVarint(b, 2<<3|0)
+		b = appendVarint(b, uint64(uint32(*x.Type)))
+	}
+	if x.NodeId != nil {
+		b = appendVarint(b, 3<<3|0)
+		b = appendVarint(b, *x.NodeId)
+	}
+	if x.Context != nil {
+		b = appendVarint(b, 4<<3|2)
+		b = appendVarint(b, uint64(len(x.Context)))
+		b = append(b, x.Context...)
+	}
+	return append(b, x.unknownFields...)
+}
+
+func (x *ConfChange) Size() int {
+	n := 0
+	if x.Id != nil {
+		n += 1 + sizeVarint(*x.Id)
+	}
+	if x.Type != nil {
+		n += 1 + sizeVarint(uint64(uint32(*x.Type)))
+	}
+	if x.NodeId != nil {
+		n += 1 + sizeVarint(*x.NodeId)
+	}
+	if x.Context != nil {
+		n += 1 + sizeVarint(uint64(len(x.Context))) + len(x.Context)
+	}
+	return n + len(x.unknownFields)
+}
+
+// ---- the corpus ----
+
+type entry struct {
+	name string
+	v2   bool
+	data []byte
+}
+
+func hexOf(b []byte) string {
+	const d = "0123456789abcdef"
+	out := make([]byte, 0, 2*len(b))
+	for _, c := range b {
+		out = append(out, d[c>>4], d[c&15])
+	}
+	return string(out)
+}
+
+func unhex(s string) []byte {
+	out := make([]byte, 0, len(s)/2)
+	for i := 0; i+1 < len(s); i += 2 {
+		out = append(out, nib(s[i])<<4|nib(s[i+1]))
+	}
+	return out
+}
+
+func nib(c byte) byte {
+	if c >= 'a' {
+		return c - 'a' + 10
+	}
+	return c - '0'
+}
+
+// expected verdicts from the REFERENCE leg (real protobuf-go v1.36.11 over
+// upstream raftpb, .tmp/protoref): 1 = decode error, else Size+1 (0 = size 0).
+var expected = []int{1, 1, 1, 12, 4, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 32, 7, 1, 1, 0, 0, 0, 0}
+
+func corpus() []entry {
+	return []entry{
+		{"v1-varint-overflow-value", false, unhex("08ffffffffffffffffff02")},
+		{"v2-varint-overflow-tag", true, unhex("ffffffffffffffffffff01")},
+		{"v1-varint-unterminated", false, unhex("08ffff")},
+		{"v1-varint-ten-bytes-max", false, unhex("08ffffffffffffffffff01")},
+		{"v1-type-as-bytes", false, unhex("120100")},
+		{"v2-changes-as-varint", true, unhex("1005")},
+		{"v1-wire-type-6", false, unhex("0e00")},
+		{"v2-wire-type-7", true, unhex("0f")},
+		{"v1-end-group-unmatched", false, unhex("0c")},
+		{"v2-group-end-mismatch", true, unhex("2b34")},
+		{"v1-tag-only", false, unhex("10")},
+		{"v1-truncated-bytes", false, unhex("22056162")},
+		{"v1-truncated-fixed64", false, unhex("29010203")},
+		{"v2-truncated-fixed32", true, unhex("6d0102")},
+		{"v2-truncated-group", true, unhex("2b")},
+		{"v2-truncated-nested-change", true, unhex("12020880")},
+		{"v2-length-overflow", true, unhex("1affffffff0f")},
+		{"v1-unknown-varint", false, unhex("2801")},
+		{"v2-unknown-all-wire-types", true, unhex("48015101020304050607085a0161630802646d0a0b0c0d1206080110021801")},
+		{"v1-unknown-field-number-max", false, unhex("f8ffffff0f01")},
+		{"v2-field-number-too-large", true, unhex("808080801000")},
+		{"v1-field-number-zero", false, unhex("0001")},
+		{"v1-nil", false, nil},
+		{"v1-empty", false, []byte{}},
+		{"v2-nil", true, nil},
+		{"v2-empty", true, []byte{}},
+	}
+}
+
+// routeAProbe returns 0 when every corpus entry matches the reference leg's
+// verdict and size and re-encodes to Size bytes; else the 1-based index of the
+// first mismatch (100+ for a Size/len disagreement).
+func routeAProbe() int {
+	for i, e := range corpus() {
+		var err error
+		var size int
+		var re []byte
+		if e.v2 {
+			m := &ConfChangeV2{}
+			err = m.Unmarshal(e.data)
+			size = m.Size()
+			re = m.Append(nil)
+		} else {
+			m := &ConfChange{}
+			err = m.Unmarshal(e.data)
+			size = m.Size()
+			re = m.Append(nil)
+		}
+		got := 0
+		if err != nil {
+			got = 1
+		} else if size > 0 {
+			got = size + 1
+		}
+		if got != expected[i] {
+			return i + 1
+		}
+		if err == nil && len(re) != size {
+			return 100 + i + 1
+		}
+	}
+	return 0
+}
+
+// routeAPrefixLen: 7 for the U+0020 spelling, 8 for U+00A0 (the init-time pick).
+func routeAPrefixLen() int {
+	return len(protoPrefix)
+}
+
+// routeAErrText: the error text's byte length (44 or 45) and the sentinel
+// identity, folded: length*2 + is-sentinel.
+func routeAErrText() int {
+	m := &ConfChange{}
+	err := m.Unmarshal(unhex("0c"))
+	if err == nil {
+		return -1
+	}
+	v := len(err.Error()) * 2
+	if errors.Is(err, Error) {
+		v++
+	}
+	return v
+}
+
+// routeAPanic: the U-1 shape — raft.go:1334 panics with the error VALUE.
+func routeAPanic() int {
+	m := &ConfChange{}
+	if err := m.Unmarshal(unhex("0c")); err != nil {
+		panic(err)
+	}
+	return 0
+}
+
+func main() {
+	println("probe", routeAProbe(), "prefixlen", routeAPrefixLen(), "errtext", routeAErrText())
+	routeAPanic()
+}
+
+func boolStr(b bool) string {
+	if b {
+		return "true"
+	}
+	return "false"
+}
+
+func itoa(n int) string {
+	if n == 0 {
+		return "0"
+	}
+	var buf [20]byte
+	i := len(buf)
+	for n > 0 {
+		i--
+		buf[i] = byte('0' + n%10)
+		n /= 10
+	}
+	return string(buf[i:])
+}

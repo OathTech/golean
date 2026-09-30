@@ -35,14 +35,16 @@ change made to a `verbatim` file.
 
 ## What is NOT upstream
 
-Three things, each argued and itemised in `docs/raft-w2-log.md`'s
-subject-delta ledger and in the header comment of the file itself:
+Four things, each argued and itemised in `docs/raft-w2-log.md`'s
+subject-delta ledger (continued in the W3, W4.1 and W4.2 logs) and in the
+header comment of the file itself:
 
 1. **`raftpb/raft.pb.go`** — mechanically stripped: wire types, field
    numbers, enums and every getter KEPT; `Marshal`/`Unmarshal`/`Size` absent
-   entirely (marshal-avoidance); `String`/`Descriptor`/`EnumDescriptor`/
-   `UnmarshalJSON` are fail-closed panics; the file-descriptor machinery and
-   `ProtoReflect` are gone.
+   from the file (the generated codec of item 4 stands in since W4.1);
+   `String`/`Descriptor`/`EnumDescriptor`/`UnmarshalJSON` are fail-closed
+   panics; the file-descriptor machinery, `ProtoReflect` and the
+   `unknownFields` store are gone.
 2. **`raftpb/plain_clone.go`** — GENERATED, not upstream: plain-Go
    `CloneMessage`/`EqualMessage` standing in for `proto.Clone`/`proto.Equal`,
    which raft calls on its normal paths. Differentially validated against the
@@ -51,6 +53,15 @@ subject-delta ledger and in the header comment of the file itself:
    digests pinned in the derivation, so a pin move fails loud).
    `raft/logger.go` is NOT an overlay since W4.2: it is upstream verbatim
    plus the recorded D-12 initializer patch (`docs/raft-w42-log.md`).
+4. **`raftpb/plain_codec.go` + `proto/proto.go`** — GENERATED wire codec
+   and dispatch (W4.1, `docs/raft-w41-log.md` item 1), differentially
+   validated against the real protobuf runtime by `difftest.py` section 7.
+   Three recorded behaviour deltas vs protobuf-go, found by the raft-proofs
+   team 2026-09-30: U-1 the decode error VALUE (raft panics with it,
+   `raft/raft.go:1334/1340`), U-2 unknown groups rejected where protobuf-go
+   skips them, U-3 unknown fields dropped where protobuf-go retains them —
+   `docs/raft-w42-log.md` (the 2026-09-30 ledger continuation); all three
+   resolved by protobuf route A (`docs/2026-09-30_protobuf-route-a.md`).
 
 Everything else — including the parts the frontend cannot lower yet
 (statement-position `copy`, `panic(fmt.Sprintf(...))`, the `String`/`Describe`

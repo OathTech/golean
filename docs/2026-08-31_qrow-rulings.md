@@ -1136,3 +1136,42 @@ C re-pins `BridgeSet.lean`, the list laws added to the core audit's required lis
 1.5×, or any new or raised `maxHeartbeats`, is reported and the lane STOPS.
 Executing: lane `core/continuations-0929` ([AGENT packet C worker]), forked from `main` @ `883ebc36`; the design note
 (`060ad4e4`) cherry-picked as the lane's first commit; brief `docs/codex-briefs/2026-09-24_packet-C-continuations.md` refreshed.
+### The raft-proofs team's subject-delta note (2026-09-30) — RULED
+
+Source: `docs/2026-09-30_note-from-raft-proofs.md` (verbatim copy of raft-proofs `docs/2026-09-30_note-to-golean-subject-deltas.md`,
+branch `docs/golean-response-0930` @ `f3d857f`, sha256 `65d939359cf7a32e94dd82c7c9ae66b08fd5653a85bf36669d9ef3cd4f4d6920`; relayed by
+the [USER] Mike 2026-09-30). Their mechanical diff of `raftsubject/` (our `883ebc36`) against upstream `56e32004` lists the ledger
+deltas D-1…D-12 with routes back to upstream, and three behaviour differences absent from our ledger: U-1 the Unmarshal error VALUE
+(`raft.go:1334/1340` panics with it, so the codec header's «raft observes only the nil-ness» was false — coordinator-verified), U-2
+unknown groups rejected where protobuf-go skips them, U-3 unknown fields dropped where protobuf-go retains, re-encodes and counts
+them. Their proposals: a native `Intn` pick site replacing D-11; a protobuf route — (1) a lowered Go codec exactly faithful to
+protobuf-go, or (2) a GoLean-native executable definition (the logic team's preference for its proofs); the smaller items as
+convenient; their 26-entry malformed-bytes corpus and Lean mirror as reference evidence; any delta that must stay recorded with its
+justification as an explicit premise (their §4).
+
+The [AGENT] coordinator posed four items. RULED [USER] Mike, 2026-09-30, verbatim, relayed by the [AGENT] coordinator — cite as
+relayed: «Yes, I also prefer A, as long as it could be made faithful».
+1. Record U-1/U-2/U-3 and correct the codec comment — YES. Landed on branch `records/raft-deltas-0930`: the 2026-09-30 ledger
+   continuation in `docs/raft-w42-log.md` (each with upstream behaviour, subject behaviour, the observable difference through
+   RawNode, plan = route A; why no corpus row can witness them today), the dated JC-14 correction in `docs/raft-w41-log.md`,
+   `derive.py`'s `CODEC_HEADER` regenerated into `raftsubject/raftpb/plain_codec.go` (twin wire pin UNCHANGED `0b58402a…`;
+   `derive.py --check` clean), `raftsubject/README.md` item 4. Consequence for the train: `tools/raftsubject/derive.py` is in the
+   certification's `tools/` inventory, so `release-check` at this landing reports a changed dependency (reconciler C9 STALE on the
+   branch — expected, named) and step 5a is a provenance refresh under `scripts/ci --slow` (precedent: train r55), not a re-pin —
+   the observations are untouched (comments do not reach the wire).
+2. A native `Intn`-style pick site — GENERAL (a value in `[0, n)`, panic if `n ≤ 0`; not raft-specific) — inside the current
+   window, before the single re-pin — YES. Execution table: `docs/2026-09-24_window-plan.md` §4, unit 5b, recommended between B6
+   and C4 with the reason ([AGENT] placement, overturnable before dispatch).
+3. Protobuf route A — a faithful protobuf codec written in Go inside `raftsubject/`, checked differentially against real
+   protobuf-go, no change to GoLean's core or trusted surface — PREFERRED, CONDITIONAL on it being makeable faithful; route B
+   (native protobuf definitions in the core) not taken unless A proves impossible. The condition is DISCHARGED the same day:
+   `docs/2026-09-30_protobuf-route-a.md`, verdict FAITHFUL-FEASIBLE with conditions C1–C5 — a stdlib-only prototype codec matches
+   protobuf-go v1.36.11 on all 26 corpus entries (verdicts, sizes, re-encoded bytes, sentinel), the per-binary prefix spacing is a
+   package-init `mapIter` choice compared by membership, and the machine's abort line for `panic(err)` stays BUG-004 item 4's
+   refusal (a machine limit, not a subject delta). A post-window lane (it re-pins the twin wire); its go-ahead is a separate
+   [USER] decision at dispatch — PENDING. The draft question to the logic team (whether proving against a lowered codec is
+   workable for them) is the note's §7, for the [USER] to relay.
+4. The smaller deltas — module-path mapping D-6/7, `%+#v` D-3, the default logger D-12/H-20 — as ordinary fidelity lanes after
+   the window — YES (queued: `docs/2026-09-24_window-plan.md` §4).
+Also recorded: `difftest.py` section 7 (the W4.1 «OWED with command» codec differential vs the real protobuf runtime) runs
+offline from the module cache and PASSES (72 values, nine types) — a dated discharge note at JC-15 in `docs/raft-w41-log.md`.

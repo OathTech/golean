@@ -782,6 +782,23 @@ about the walk plan and is untouched.
   wire types 3/4 (groups) REFUSE — no group exists in any of the 9 schemas.
   Wrong-wire-type known fields are skipped as unknown (protobuf-go's own
   treatment). Varint bounds are protobuf-go's (≤10 bytes, 10th ≤ 1).
+
+  > **Corrected 2026-09-30** (the raft-proofs team's U-2/U-3,
+  > `docs/2026-09-30_note-from-raft-proofs.md`; ledger continuation in
+  > `docs/raft-w42-log.md`). Two claims above were wrong. (i) «wire types
+  > 3/4 (groups) REFUSE — no group exists in any of the 9 schemas»: the wire
+  > format makes an unknown group a valid unknown field of ANY message and
+  > protobuf-go skips it (`protowire.ConsumeFieldValue`), so a proposal
+  > carrying one is accepted upstream and aborts the subject — U-2. (ii)
+  > «unobservable inside the twin, where every byte parsed was produced by
+  > this codec or the differential's generator»: ConfChange data is
+  > APPLICATION bytes (`raft.go:1334/1340` decodes what a proposer sent), so
+  > the closed-world argument holds for the twin's own schedules only, not
+  > for RawNode — U-3 (retention is observable to a raftpb client; U-1, the
+  > error VALUE, is the abort line). (iii) «wrong-wire-type known fields are
+  > skipped as unknown (protobuf-go's own treatment)» is half right:
+  > protobuf-go treats them as unknown AND RETAINS them. All resolved by
+  > protobuf route A (`docs/2026-09-30_protobuf-route-a.md`).
 - **JC-15: the byte-fidelity bar and where each half is validated.**
   Marshal emits fields in FIELD-NUMBER order (protobuf-go's table-driven
   marshaler order; maps — the one Deterministic-flag concern — do not occur
@@ -799,3 +816,14 @@ about the walk plan and is untouched.
   round-trips (Unmarshal∘Marshal = id via EqualMessage), Size = len∘Marshal,
   and HAND-VERIFIED golden byte sequences (computed from the wire-format
   spec by hand, written into the battery).
+
+  > **Discharged offline 2026-09-30** (lane `records/raft-deltas-0930`).
+  > `difftest.py` section 7 runs from the Go module cache without network —
+  > `TMPDIR=$PWD/.tmp GOPROXY=off GOSUMDB=off GOFLAGS=-mod=mod python3
+  > tools/raftsubject/difftest.py` (the cache holds protobuf v1.36.11, the
+  > version `deps/raft/go.mod` pins) — and reports `PASS plainpb agrees with
+  > upstream raftpb on every probed value` («72 values: bytes, Size, and both
+  > cross-unmarshals across all 9 message types»). It remains an instrument,
+  > not a gate, and probes WELL-FORMED shapes only: the malformed / unknown-
+  > field / group battery that would see U-1–U-3 is route A's section 8
+  > (`docs/raft-w42-log.md`, the 2026-09-30 ledger continuation).

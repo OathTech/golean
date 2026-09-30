@@ -1,0 +1,86 @@
+// SCRATCH — the REFERENCE leg: real protobuf-go v1.36.11 over upstream raftpb,
+// decoding the raft-proofs frozen malformed-bytes corpus. Prints, per entry,
+// the error text (NBSP shown as <A0>), errors.Is against proto.Error,
+// proto.Size and the re-Marshal hex.
+package main
+
+import (
+	"encoding/hex"
+	"errors"
+	"fmt"
+	"strings"
+
+	"go.etcd.io/raft/v3/raftpb"
+	"google.golang.org/protobuf/proto"
+)
+
+type entry struct {
+	name string
+	v2   bool
+	data string
+	nilD bool
+}
+
+func main() {
+	corpus := []entry{
+		{"v1-varint-overflow-value", false, "08ffffffffffffffffff02", false},
+		{"v2-varint-overflow-tag", true, "ffffffffffffffffffff01", false},
+		{"v1-varint-unterminated", false, "08ffff", false},
+		{"v1-varint-ten-bytes-max", false, "08ffffffffffffffffff01", false},
+		{"v1-type-as-bytes", false, "120100", false},
+		{"v2-changes-as-varint", true, "1005", false},
+		{"v1-wire-type-6", false, "0e00", false},
+		{"v2-wire-type-7", true, "0f", false},
+		{"v1-end-group-unmatched", false, "0c", false},
+		{"v2-group-end-mismatch", true, "2b34", false},
+		{"v1-tag-only", false, "10", false},
+		{"v1-truncated-bytes", false, "22056162", false},
+		{"v1-truncated-fixed64", false, "29010203", false},
+		{"v2-truncated-fixed32", true, "6d0102", false},
+		{"v2-truncated-group", true, "2b", false},
+		{"v2-truncated-nested-change", true, "12020880", false},
+		{"v2-length-overflow", true, "1affffffff0f", false},
+		{"v1-unknown-varint", false, "2801", false},
+		{"v2-unknown-all-wire-types", true, "48015101020304050607085a0161630802646d0a0b0c0d1206080110021801", false},
+		{"v1-unknown-field-number-max", false, "f8ffffff0f01", false},
+		{"v2-field-number-too-large", true, "808080801000", false},
+		{"v1-field-number-zero", false, "0001", false},
+		{"v1-nil", false, "", true},
+		{"v1-empty", false, "", false},
+		{"v2-nil", true, "", true},
+		{"v2-empty", true, "", false},
+	}
+	var first error
+	for _, e := range corpus {
+		var data []byte
+		if !e.nilD {
+			data, _ = hex.DecodeString(e.data)
+			if data == nil {
+				data = []byte{}
+			}
+		}
+		var m proto.Message
+		if e.v2 {
+			m = &raftpb.ConfChangeV2{}
+		} else {
+			m = &raftpb.ConfChange{}
+		}
+		err := proto.Unmarshal(data, m)
+		if err != nil {
+			txt := strings.ReplaceAll(err.Error(), " ", "<A0>")
+			fmt.Printf("%s ERR is-sentinel=%v len=%d text=%q type=%T\n", e.name, errors.Is(err, proto.Error), len(err.Error()), txt, err)
+			if first == nil {
+				first = err
+			}
+		} else {
+			re, _ := proto.Marshal(m)
+			fmt.Printf("%s OK size=%d len=%d re=%s\n", e.name, proto.Size(m), len(re), hex.EncodeToString(re))
+			// Clone/Equal carry the unknowns too.
+			c := proto.Clone(m)
+			if !proto.Equal(c, m) || proto.Size(c) != proto.Size(m) {
+				fmt.Printf("  CLONE/EQUAL DIVERGE\n")
+			}
+		}
+	}
+	panic(first)
+}

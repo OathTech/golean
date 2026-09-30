@@ -73,3 +73,30 @@ STOPS and poses it (`CLAUDE.md`: «Named design gates are HARD STOPS»). Every L
    `c.appendTargetLocal` premise as packet B's first question rather than baking it into the statement.
 
 **Execution model changed ([USER] 2026-09-27).** Every «Codex packet» row runs as an Opus 5.5 SUBAGENT dispatched by the coordinator against the same brief; no [USER] launch step. Rows 1b–1e (E6b–E6e) are OFF the critical path (legacy triple survives into the re-pin).
+
+## 4. Additions of 2026-09-30 ([AGENT] worker, lane `records/raft-deltas-0930`; the ruling: `docs/2026-08-31_qrow-rulings.md`, «The raft-proofs team's subject-delta note (2026-09-30) — RULED»)
+
+**A new window unit — the native `Intn`-style pick site ([USER] item 2: YES, inside the window, before the re-pin).**
+
+| # | Unit | Owner | Executes | Prerequisites (landed on `main`) | Gate | Audit | [USER] touchpoints | Sessions |
+|---|---|---|---|---|---|---|---|---|
+| 5b | INTN PICK SITE — a GENERAL native choice site «a value in `[0, n)`, panic if `n ≤ 0`» (not raft-specific): a `ChoiceSite` constructor (`State.lean`) with its canonical slot-0 member and width `n`; a `Step` rule + `stepFn` arm consuming ONE pick, the pick in the label's `picks`; a frontend machine-op bound to the stdlib callees with exactly that contract (`math/rand.Intn`, `(*math/rand.Rand).Intn`, `math/rand/v2.IntN`; the stdlib register gains the rows); coherence re-proved (`stepFn_sound`, `step_complete`); changelog lines; `BridgeSet.lean` re-pinned if a pinned statement moves. THEN the subject: the D-11 derivation patch is RE-KEYED so `(*lockedRand).Intn`'s body is one call into the pick site (a first-class pick the logic team can name — «one step rule», as they asked) instead of the map-range idiom. Retiring D-11 to upstream's VERBATIM body — `rand.Int(rand.Reader, big.NewInt(int64(n)))` + `v.Int64()` — additionally needs `crypto/rand.Int` as an environment contract over `*big.Int` (panic «crypto/rand: argument to Int is <= 0» on `max ≤ 0`) plus `math/big.NewInt`/`(*big.Int).Int64` lowering (source-through candidates); the lane MEASURES that with `lower-diagnose` and POSES it as its one decision if it costs more than a session — the re-keyed patch is the interim either way (a smaller D-11, recorded, not a silent default) | Fable (design) + Opus (build) | ruling item 2 | 4 (packet C) and 5 (B6) | `--diff` + `--slow` (the twin wire moves: D-11's body changes) with the written reason | ask | merge sign-off; the `crypto/rand`/`math/big` question if posed | 1–2 |
+
+Placement, with the reason ([AGENT] recommendation, overturnable by the coordinator or the [USER] before dispatch): **between B6 (5)
+and C4 (6), a standalone lane** — not folded into B6, not into packet C. (i) After packet C so the new `Step`/`stepFn` arm is
+written once over the `Cont := List Frame` shape; C's acceptance is ZERO behaviour change with the baseline unchanged, and a new
+choice site must not ride in it. (ii) After B6 so the frontend machine-op and the wire land on the final schema once (B6 may move
+the schema). (iii) Before C4, so the G-C4 escape audit and C4's own `--slow` twin re-pin read the FINAL subject text and choice-site
+set; and before packet D (7a), so its per-arm equations enumerate the final arms — a pick site added after D would re-open the
+equation file before the offer. (iv) Not folded into B6: B6's acceptance is a pure renaming («IDs stable across source edits are NOT
+an API promise»); a new choice site changes the label and the choice-width accounting, which would blur B6's zero-semantic-change
+claim. Cost: C4 slips by the unit's 1–2 sessions; the window total ≈ +1–2. The serial core order becomes 4 → 5 → **5b** → 6 → 7a.
+
+**Post-window fidelity queue ([USER] items 3 and 4; none moves the window's pin; each an ordinary lane with its own gate and audit):**
+
+| lane | what | why after the window | gate |
+|---|---|---|---|
+| `subject/protobuf-route-a` | the faithful Go codec — design and estimate `docs/2026-09-30_protobuf-route-a.md` §6 (2–3 sessions): the D-1 strip keeps `unknownFields []byte`; retention, group skipping, the prefixError-shaped value with the package-init spelling pick; `difftest.py` section 8 over the raft-proofs corpus plus an adversarial battery; a recovering twin row; U-1/U-2/U-3 RETIRED in the ledger. Go-ahead PENDING [USER] at dispatch (the 2026-09-30 preference is conditional; the note discharges the condition) | changes the pinned twin wire (`--slow`) and no core; a subject change must not move the window's pin | `--diff` + `--slow` |
+| `frontend/module-path-mapping` (D-6/7) | `go.etcd.io/raft/v3/X` → `X` as a frontend module-path mapping so the subject keeps upstream's import lines; the constraint is `docs/2026-08-18_multipackage-identity.md` §4 (path == name for exact rendering) — the mapping must preserve it | frontend only; re-pins the twin wire | `--diff` + `--slow` |
+| `fmt/percent-plus-sharp-v` (D-3) | `%+#v` over the ConfState structs — the `raftpb/confstate.go` overlay's fixed errors back to upstream's `fmt.Errorf` dumps; AFTER route A, since the struct shape (`unknownFields`) is what `%+#v` prints | depends on route A's struct shape | `--diff` (+ `--slow` if the overlay retires) |
+| `frontend/writer-typed-globals` (D-12 / H-20) | the isolation/effect story for writer-typed package-level globals (`docs/raft-w42-log.md`, H-20 — the honest alternative, «D-12 is cheap and may as well be permanent», stays on the table); until then the raft-proofs note's «Logger installed» premise | frontend-lane work, «not small» (W4.2) | `--diff` + `--slow` |

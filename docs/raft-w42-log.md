@@ -766,3 +766,63 @@ From reviewer A: the two latent mirror divergences and the strictness
 inversion recorded at their sites in `replayenv.go` and in item 3, and
 the tier-strength bound written into the handoff. Ride-along:
 `docs/raft-w41-log.md` gains the dated 15→14 correction.
+
+---
+
+## Subject-delta ledger continuation (2026-09-30): U-1, U-2, U-3 — the raft-proofs team's findings
+
+[AGENT] worker, lane `records/raft-deltas-0930` (worktree `.claude/worktrees/raft-deltas`, off `main` @ `883ebc36`).
+Continuing D-1…D-12 (W2 §4, W3 §1, W4.1, this log's D-12 above). Source: the raft-proofs team's note
+`docs/2026-09-30_note-from-raft-proofs.md` (verbatim copy), whose §1 lists three behaviour differences absent from this
+ledger. RULED [USER] Mike 2026-09-30, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «Yes, I also prefer A,
+as long as it could be made faithful» (`docs/2026-08-31_qrow-rulings.md`, «The raft-proofs team's subject-delta note
+(2026-09-30) — RULED»): record them, correct the codec comment, resolve all three by protobuf route A
+(`docs/2026-09-30_protobuf-route-a.md`, verdict FAITHFUL-FEASIBLE). They are sub-deltas of D-1/D-2/D-9 (the strip, the
+generated clone/equality, the generated `proto` dispatch) under JC-14's decoding contract, which the dated correction in
+`docs/raft-w41-log.md` amends; the ids are the raft-proofs team's, kept so both ledgers cite one name.
+
+**U-1 the Unmarshal error VALUE (`raftpb/plain_codec.go` `errPlainpbMalformed`; `proto/proto.go` `Unmarshal`).**
+Upstream: `proto.Unmarshal` returns, for every malformation of the nine schemas, the one value `impl.errDecode` — a
+`*errors.prefixError` whose text is `proto: cannot parse invalid wire-format data`, its prefix spacing U+00A0 or U+0020
+chosen once per BINARY (`internal/detrand`: FNV-64 over the executable's size and eight samples), `Unwrap()` the `proto.Error`
+sentinel. Subject: one `*errors.errorString`, text `plainpb: malformed wire input`. **Observable through RawNode:**
+`raft/raft.go:1334/1340` (upstream `1315/1321`) `panic(err)` — the text IS the abort line; `raft/util.go:225/232` also puts
+`err.Error()` into `DescribeEntry`'s string. Coordinator-verified 2026-09-30. The codec header's claim «raft observes only
+the nil-ness of an Unmarshal error (never its text or identity …)» was FALSE: corrected in `tools/raftsubject/derive.py`'s
+`CODEC_HEADER` and regenerated into `plain_codec.go` (`derive.py --check` clean; the twin wire pin UNCHANGED at
+`0b58402a…` — comments do not reach the wire; the hidden-dep-order and stdlib pins reproduced unchanged). **Plan:** route A —
+the generated codec returns a subject-local prefixError-shaped value carrying the sentinel, the two-spelling prefix picked once
+at package init (a `mapIter` choice; the differential compares by membership over both spellings).
+
+**U-2 unknown groups REJECTED (`plainpbSkipField`, wire types 3/4).** Upstream: `protowire.ConsumeFieldValue` skips a
+group — nested, end-tag number-matched, depth-limited — and the codec retains it as one unknown field; a proposal whose
+ConfChange data carries an unknown group is ACCEPTED at `raft.go:1334` and enters the log. Subject: the same bytes are a
+decode error, i.e. the U-1 panic. **Observable through RawNode:** accept (Ready carries the entry) vs abort. JC-14's «no
+group exists in any of the 9 schemas» was the justification; the wire format makes an unknown group a valid unknown field of
+ANY message, so the justification was wrong (corrected at JC-14, and in the regenerated `plainpbSkipField` comment).
+**Plan:** route A restores the skip (the prototype's `consumeFieldValue`, depth 10000).
+
+**U-3 unknown fields DROPPED (every `UnmarshalMessage`; the D-1 strip removed `unknownFields`).** Upstream: an unknown field
+— and a known field at the wrong wire type — is retained as the canonical tag plus the raw value bytes in arrival order;
+`Marshal` re-emits them after the known fields, `Size` counts them, `Clone`/`Merge` copies them, `Equal` compares them.
+Subject: skipped. **Observable — an [AGENT] qualification of the note's «visible through RawNode», offered as a
+correction:** on RawNode's own paths no decoded message is re-marshalled, sized, cloned or compared (`raft.go:1334` reads
+`cc.AsV2().Changes`; `Size`/`Clone`/`Marshal` run on constructed entries, snapshots and fresh ConfChanges — `util.go:277/290`,
+`raft.go:836`, `bootstrap.go:56`, `raft.go:767`), so retention is observable to a raftpb CLIENT decoding entry data (the
+application, a harness) and through prototext renderings (`String()`, D-1's fail-closed residue) — not in RawNode's outputs.
+**Plan:** route A restores retention (an `unknownFields []byte` per struct, kept by the strip), re-encoding, `Size`, `Clone`,
+`Equal` — validated by `difftest.py`.
+
+**Witness rows («every detected gap is rowed»).** A corpus differential row CANNOT witness U-1/U-2/U-3 today: both of the
+differential's legs execute the SUBJECT codec and agree with each other — fixtures run `GO111MODULE=off`, stdlib only, so
+protobuf-go cannot be an oracle inside `Corpus/`. The subject-vs-upstream instrument is `tools/raftsubject/difftest.py` (both
+under `go run`), whose section 7 — the W4.1 «OWED with command» obligation — RUNS OFFLINE now:
+`TMPDIR=$PWD/.tmp GOPROXY=off GOSUMDB=off GOFLAGS=-mod=mod python3 tools/raftsubject/difftest.py --out .tmp/difftest --keep`
+→ `PASS plainpb agrees with upstream raftpb on every probed value` (72 values, all nine types; the module cache holds protobuf
+v1.36.11; 2026-09-30, this lane, scratch deleted). Section 7 probes well-formed shapes, so it is blind to U-1–U-3; route A's S2
+adds section 8 (the raft-proofs 26-entry corpus plus an adversarial battery) as the RED-FIRST witness — against today's codec
+it fails 16 entries on the error text and 10 on groups/unknowns (measured by the prototype's reference leg,
+`docs/2026-09-30_protobuf-route-a.md` §2). Through RawNode, the machine's abort line for `panic(err)` is BUG-004 item 4's
+refusal (a category-(c) pin), so a twin row on a malformed proposal is red on the machine whatever the codec; the passing
+witness is a recovering driver variant (the R-1 forced-half pattern) as a membership row over the two spellings — route A's
+S3. No BUGS.md entry: these are subject deltas (the subject vs upstream), not machine-vs-gc fidelity bugs.
