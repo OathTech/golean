@@ -1,0 +1,8 @@
+# frontend+decode smoke over every Corpus/**/main.go (new frontend .tmp/b6/nativefrontend, new decoder via the lane's golean), 2026-09-30
+fixtures: 1782  OK: 1353  FRONTEND-FAIL: 428  DECODE-REFUSED: 1
+# the one decoder refusal:
+DECODE-REFUSED Corpus/coverage/exec/arrays/materialization-budget :: native lowering: array type of 2097152 elements exceeds the interpreter's materialization budget (65536 elements; BUG-078 idealization boundary) at program.globals[0].type
+# frontend refusal classes (path prefix counts):
+    394 Corpus/coverage/negative
+     25 Corpus/coverage/exec
+      9 Corpus/challenges/cedar-go

@@ -1,0 +1,6 @@
+# imported-goose/channel/google-search — the certified slow-tier row's wire, lowered by main's frontend (131a7313) and the lane's (0fb43dcd)
+sha256 old (v2): dc232a8c2075ba658597182a7fef491f504ba95d54cdf26298eee203cc02f1be
+sha256 new (v3): f448d579dfdbaadbbeceabe9f3872638552ae7331aa4c1740db5a5333d98f5d2
+schema: golean-native-v2 -> golean-native-v3
+residual key-by-key diffs after removing the B6 additions (local/keyLocal/valLocal/locals): 0
+added: local 51 keyLocal 0 valLocal 1 locals tables 8 entries 18

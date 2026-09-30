@@ -1,0 +1,16 @@
+# per-module elaboration, A/B interleaved on the same box (pre = .tmp/pre-b6 @ 131a7313, post = lane tree @ 0fb43dcd), capped, locked; lake env lean -Dprofiler=true -Dprofiler.threshold=100
+StepFn pre rep=1 rc=0 wall=0.93 cpu=1.17 load=0.48
+StepFn post rep=1 rc=0 wall=0.86 cpu=1.09 load=0.48
+Machine pre rep=1 rc=0 wall=3.49 cpu=6.14 load=0.48
+Machine post rep=1 rc=0 wall=3.65 cpu=6.84 load=0.68
+MachineEqb pre rep=1 rc=0 wall=4.41 cpu=7.42 load=0.79
+MachineEqb post rep=1 rc=0 wall=4.42 cpu=7.46 load=0.81
+BridgeSet pre rep=1 rc=0 wall=0.80 cpu=.85 load=0.82
+BridgeSet post rep=1 rc=0 wall=0.85 cpu=.90 load=0.82
+StateWf pre rep=1 rc=0 wall=14.88 cpu=54.46 load=0.82
+StateWf post rep=1 rc=0 wall=14.62 cpu=54.04 load=1.17
+MachineSound pre rep=1 rc=0 wall=59.79 cpu=91.77 load=1.35
+MachineSound post rep=1 rc=0 wall=60.27 cpu=92.56 load=1.84
+StepErrors pre rep=1 rc=0 wall=202.82 cpu=240.46 load=1.97
+StepErrors post rep=1 rc=0 wall=203.78 cpu=242.19 load=3.69
+heartbeat/recdepth settings: pre=52 post=52

@@ -1,0 +1,3 @@
+tsv files identical (modulo the --out path): 30; differing: 0
+pre: 6 dump files, 26417 rows; sha256 of concatenated dumps: 1d621c3a099e525d
+post: 6 dump files, 26417 rows; sha256 of concatenated dumps: 1d621c3a099e525d
