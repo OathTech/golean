@@ -78,3 +78,13 @@ setting; and the new `stepFn_next_frame`'s `simp only [stepFn]` (+1.7 s in StepF
   the `cases_cont` tactic in the core; the list laws' exact names beyond the design's four (`pushDefer_some`,
   `seqCont_seq_ne`, `recoverResult_cons_glue`, `stepFn_next_frame`, …); proving via `case140`/`case155` positional tags.
 - The adversarial audit ask is the coordinator's to pose; the 5a certification refresh is the train's.
+
+## Merge train r56 — the 5a record ([AGENT] coordinator, 2026-09-30)
+
+Continuations + the raft-delta records ([USER] Mike 2026-09-30 «Great, land both», relayed). Pre-merge main `883ebc36` →
+`refs/snapshots/r56/main`; train tip `20049982` fast-forwarded. `release-check` EXIT=2 (EXPECTED — STALE,
+`build/files/GoLean/GoCore/BridgeSet.lean`); `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --slow` EXIT=1, 1086 s — red on
+EXACTLY the 5a pair; 3791 rows, 3553 PASS / 238 FAIL = the pin 3554 / 237 with the one 5a-class row red. Candidate: `claim`
+and `observations_sha256` IDENTICAL; seven compiled modules and `tools/raftsubject/derive.py` (the comment fix) differ, plus
+the receipt (`20049982`, 94.906 s) — INSTALLED; a provenance refresh, not a re-pin. Tail:
+`docs/evidence/2026-09-30_packet-c/r56-ci-slow.tail.txt`.
