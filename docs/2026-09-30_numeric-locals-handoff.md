@@ -140,3 +140,5 @@ moved dc232a8c… → f448d579… BEFORE the gate). `release-check` EXIT=2 (EXPE
 FAIL = the pin 3554 / 237 with the one 5a-class row red; the slow tier re-enumerated in the same run (the pre-recorded hash):
 `observations_sha256` IDENTICAL, the claim differs only in `wire_sha256` — candidate (receipt `bc91aa39`, 121.133 s)
 INSTALLED; a provenance refresh, not a re-pin. Tail: `docs/evidence/2026-09-30_numeric-locals/r57-ci-slow.tail.txt`.
+
+**Green re-run at the records commit `553156e8`** ([AGENT] coordinator, 2026-09-30): `ci --diff` EXIT=0, `RESULT: PASS`, baseline diff FULL 3791/3791, certificate provenance ok. Round 57 closed: numeric locals landed.
