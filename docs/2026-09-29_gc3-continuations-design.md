@@ -1,7 +1,9 @@
 # G-C3 design note — `Cont := List Frame` (window row 4, packet C)
 
-STATUS: **PROPOSED — HARD-STOP design gate. The [USER] passes or amends it. Nothing here is decided until the [USER] rules
-(§5).** [AGENT] design writer, 2026-09-29, branch `docs/gc3-design-0929` forked from `train/r55` @ `fb93f822`, with P landed.
+STATUS: **RULED — G-C3 PASSED with the four §5 decisions as recommended ([USER] Mike 2026-09-29 «Agree with 1-4»,
+relayed by the [AGENT] coordinator; ledger `docs/2026-08-31_qrow-rulings.md` «G-C3 (continuations) passed — RULED
+(2026-09-29)»). Executed by lane `core/continuations-0929` (handoff `docs/2026-09-29_continuations-handoff.md`).** Was:
+PROPOSED — HARD-STOP design gate. [AGENT] design writer, 2026-09-29, branch `docs/gc3-design-0929` forked from `train/r55` @ `fb93f822`, with P landed.
 Inputs: `docs/2026-09-03_design-hygiene-arc.md` (C3; G-C3 RULED in principle [USER] 2026-09-04, relayed);
 `docs/2026-09-04_reasoning-surface-plan.md` §3.C3, §5.4; charter row 4; window plan row 4; packet C brief
 `docs/codex-briefs/2026-09-24_packet-C-continuations.md`; logic team response §4/§Recommendation and note 2026-09-28

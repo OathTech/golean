@@ -1,0 +1,46 @@
+# per-module elaboration, A/B interleaved on the same box (pre = .tmp/pre-c3 @ 883ebc36, post = lane tree), capped, locked; lake env lean -Dprofiler=true -Dprofiler.threshold=100
+StepFn pre rep=1 rc=0 wall=1.03 cpu=1.33 load=5.62
+StepFn post rep=1 rc=0 wall=1.04 cpu=1.34 load=5.62
+Machine pre rep=1 rc=0 wall=4.23 cpu=7.36 load=5.57
+Machine post rep=1 rc=0 wall=4.09 cpu=7.32 load=5.53
+MachineEqb pre rep=1 rc=0 wall=4.74 cpu=7.88 load=5.41
+MachineEqb post rep=1 rc=0 wall=4.85 cpu=8.23 load=5.45
+BridgeSet pre rep=1 rc=0 wall=0.86 cpu=.91 load=5.45
+BridgeSet post rep=1 rc=0 wall=0.89 cpu=.95 load=5.45
+StateWf pre rep=1 rc=0 wall=17.49 cpu=60.60 load=5.47
+StateWf post rep=1 rc=0 wall=17.37 cpu=61.57 load=5.21
+MachineSound pre rep=1 rc=0 wall=67.52 cpu=104.08 load=4.43
+MachineSound post rep=1 rc=0 wall=71.97 cpu=111.30 load=7.31
+StepErrors pre rep=1 rc=0 wall=229.38 cpu=272.36 load=7.00
+StepErrors post rep=1 rc=0 wall=217.94 cpu=257.28 load=4.74
+fullbuild /home/dev/projects/golean/.claude/worktrees/continuations rc=0 wall=384.360098439
+fullbuild /home/dev/projects/golean/.claude/worktrees/continuations/.tmp/pre-c3 rc=0 wall=467.979910229
+# first (non-interleaved) single-side runs, box load 5-16, superseded by the interleaved runs above:
+before: Machine rc=0 wall=4.194501476
+before: StepFn rc=0 wall=.932957851
+before: MachineSound rc=0 wall=66.338749404
+before: StateWf rc=0 wall=17.632565659
+before: MachineEqb rc=0 wall=5.069602119
+before: StepErrors rc=0 wall=214.353316330
+before: BridgeSet rc=0 wall=.863454518
+fullbuild /home/dev/projects/golean/.claude/worktrees/continuations/.tmp/pre-c3 rc=0 wall=369.289291076
+after(pre-fix, loaded): Machine rc=0 wall=4.447004883
+after(pre-fix, loaded): StepFn rc=0 wall=1.863536823
+after(pre-fix, loaded): MachineSound rc=0 wall=108.969797075
+after(pre-fix, loaded): StateWf rc=0 wall=48.394701216
+after(pre-fix, loaded): MachineEqb rc=0 wall=9.762055382
+after(pre-fix, loaded): StepErrors rc=0 wall=467.698722595
+after(pre-fix, loaded): BridgeSet rc=0 wall=1.576382859
+# interleaved rep 1 (box load 7-15; StepFn post before the stepFn_next_frame rfl fix):
+StepFn pre rep=1 rc=0 wall=1.33 cpu=1.74 load=14.67
+StepFn post rep=1 rc=0 wall=2.87 cpu=4.82 load=14.67
+Machine pre rep=1 rc=0 wall=7.69 cpu=13.67 load=14.72
+Machine post rep=1 rc=0 wall=6.66 cpu=12.07 load=14.75
+MachineEqb pre rep=1 rc=0 wall=7.63 cpu=12.74 load=14.63
+MachineEqb post rep=1 rc=0 wall=7.61 cpu=13.13 load=14.50
+BridgeSet pre rep=1 rc=0 wall=1.30 cpu=1.34 load=14.50
+BridgeSet post rep=1 rc=0 wall=1.39 cpu=1.45 load=14.30
+StateWf pre rep=1 rc=0 wall=25.19 cpu=84.34 load=13.54
+StateWf post rep=1 rc=0 wall=26.85 cpu=81.47 load=12.50
+MachineSound pre rep=1 rc=0 wall=96.12 cpu=145.91 load=9.25
+MachineSound post rep=1 rc=0 wall=79.75 cpu=119.79 load=7.60

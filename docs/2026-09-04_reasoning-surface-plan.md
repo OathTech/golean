@@ -1752,7 +1752,12 @@ G6-5 as recommended (`docs/2026-09-04_g6-reflect-design.md` §6).
 - **G-C3.** «`Cont := List Frame` with `@[match_pattern]` views for the
   31 constructor names; `Config := Mode × Cont`; `fill` is append; done
   before the pin, never after.» Rec: YES, after B4 and P. RULED [USER]
-  2026-09-04 — as recommended (relayed).
+  2026-09-04 — as recommended (relayed). AMENDED [USER] 2026-09-29 «Agree
+  with 1-4» (relayed; `docs/2026-09-29_gc3-continuations-design.md` §5,
+  ledger «G-C3 (continuations) passed — RULED (2026-09-29)»): G-C3 is
+  `Cont := List Frame` ONLY — `Config := Mode × Cont` and «`fill` is
+  append» are dropped (no context-fill law, no `recover` commutation
+  claim); the views are for the 33 names at P's tip.
 - **G-C4.** «Block-scoped allocation: `Stmt.initialization` deleted,
   locals allocated at block entry; PRESERVING UP TO HEAP ISOMORPHISM
   ONLY — observations unchanged (gate), `Loc` trajectories and

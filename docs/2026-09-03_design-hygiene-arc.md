@@ -212,7 +212,9 @@ cost and touches the fewest positional `fun_cases` proofs.
     with an access trace; C2 well-founded `TypeEnv` (the fuel towers
     become structural); C3 `Cont` as `List Frame` (pre-pin only —
     after the downstream repo pins the `Cont` shape it is a breaking
-    change for them); C4 block-scoped allocation — carries the
+    change for them; G-C3 AMENDED [USER] 2026-09-29 «Agree with 1-4»,
+    relayed: `Cont := List Frame` ONLY, no `Config := Mode × Cont`, no
+    `fill` — `docs/2026-09-29_gc3-continuations-design.md` §5); C4 block-scoped allocation — carries the
     review's PRESERVATION CAVEAT explicitly: semantics-preserving
     only UP TO HEAP ISOMORPHISM (allocation order changes `Loc.base`
     ids; observations are address-free, but dedup certificates and
