@@ -1,0 +1,23 @@
+# Enumeration lanes through both binaries (coverage-observations with scripts/diff-coverage's argument construction: parse_lane_params → --max-width/--max-sites/--cap/--work-cap/--expect-status/--backedge/--engine/--allow-nonterm/--arg-int; wires = the trace run's export; observations = stdout, enum-stats = stderr, exit captured; timeout 300 s fast tier)
+## fast tier (every membership/confluent/racy manifest row except tier=slow and the lane's standing exclusion goroutines/send-then-spin)
+rows run: 384 (by lane:     102 confluent     237 membership      45 racy ) wall=68s
+rows without an exported wire: 1
+--- comparison ---
+differing observation files: 0
+differing stats files: 0
+differing rc files: 0
+rc histogram pre:     382 EXIT=0       2 EXIT=1 
+rc histogram post:     382 EXIT=0       2 EXIT=1 
+EXIT=0
+the two EXIT=1 rows are the baseline's FAIL rows goroutines/worker-pool/sum (FAIL/confluent) and embedding/promoted-stub-dispatch/box-sync-stub-race (FAIL/frontend-export, FR-35) — identical text both sides
+
+## slow tier (imported-goose/channel/google-search, the certified membership row; timeout 3600 s; both binaries concurrently under box load ~20)
+rows run: 1 (by lane:       1 membership ) wall=321s
+--- comparison ---
+differing observation files: 0
+differing stats files: 0
+differing rc files: 0
+rc histogram pre:       1 EXIT=0 
+rc histogram post:       1 EXIT=0 
+EXIT=0
+observation set: 6 members both sides; observations_sha256 e40ba07d11827b48… == baselines/certified/…certified.json; enum-stats sha256 68f3d503a2249b48… == the record's receipt.stats_sha256 (nodes=6193933 edges=6565663 dedupHits=371731 certified=checkCert) — the dedup state hashing (contDepth) and the enumeration statistics are unchanged

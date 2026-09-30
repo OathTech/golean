@@ -1,0 +1,43 @@
+--- dumps ---
+dump-0 IDENTICAL (1443 rows)
+dump-1 IDENTICAL (1021 rows)
+dump-2 IDENTICAL (5201 rows)
+dump-3 IDENTICAL (636 rows)
+dump-4 IDENTICAL (6654 rows)
+dump-5 IDENTICAL (2152 rows)
+dump-6 IDENTICAL (2683 rows)
+dump-7 IDENTICAL (6629 rows)
+dump rows total: 26419; sha256 of the concatenation pre 0005fc71205d4863… post 0005fc71205d4863…
+--- results ---
+results-0 DIFFERS:
+92c92
+< arrays/materialization-budget/over-budget	-	ERROR	-	-	-	-	-	-	0	/home/dev/projects/golean/.claude/worktrees/audit-continuations/.tmp/ct/pre/wire/arrays__materialization-budget__over-budget.json: native lowering: array type of 2097152 elements exceeds the int
+---
+> arrays/materialization-budget/over-budget	-	ERROR	-	-	-	-	-	-	0	/home/dev/projects/golean/.claude/worktrees/audit-continuations/.tmp/ct/post/wire/arrays__materialization-budget__over-budget.json: native lowering: array type of 2097152 elements exceeds the in
+  → identical after normalizing the --out path (.tmp/ct/<side>/)
+results-1 IDENTICAL (2821 rows)
+results-2 IDENTICAL (2821 rows)
+results-3 IDENTICAL (2821 rows)
+results-4 IDENTICAL (2821 rows)
+results-5 IDENTICAL (2821 rows)
+results-6 IDENTICAL (2821 rows)
+results-7 IDENTICAL (2791 rows)
+--- summary / exhausted / export / wire / exit ---
+summary differs:
+14c14
+<     ERROR arrays/materialization-budget/over-budget (baseline: FAIL/lean-observation): /home/dev/projects/golean/.claude/worktrees/audit-continuations/.tmp/ct/pre/wire/arrays__materialization-budget
+---
+>     ERROR arrays/materialization-budget/over-budget (baseline: FAIL/lean-observation): /home/dev/projects/golean/.claude/worktrees/audit-continuations/.tmp/ct/post/wire/arrays__materialization-budge
+exhausted-confluent.tsv identical modulo out-dir (94 rows)
+exhausted-strict.tsv identical modulo out-dir (100 rows)
+export-fail.tsv identical modulo out-dir (34 rows)
+excluded.tsv identical modulo out-dir (2 rows)
+batch.tsv identical modulo out-dir (3755 rows)
+wire dirs: 0 differing files of 3755
+== pre EXIT=1 02:49:08
+== post EXIT=1 02:57:08
+pre stderr tail: choice-trace-corpus: FINDINGS present (see above)
+post stderr tail: choice-trace-corpus: FINDINGS present (see above)
+    ERROR arrays/materialization-budget/over-budget (baseline: FAIL/lean-observation): /home/dev/projects/golean/.claude/worktrees/audit-continuations/.tmp/ct/p
+
+NOTE: the summary.txt difference above is the ONLY residual: the summarizer truncates the refusal message at a fixed width, and the embedded --out path differs by one character (pre/post); the underlying results-0.tsv row is identical after normalizing that path (shown). Chunking: 8 jobs here (the lane used 6), hence 26419 dump rows incl. 8 chunk headers vs the lane's 26417 with 6.

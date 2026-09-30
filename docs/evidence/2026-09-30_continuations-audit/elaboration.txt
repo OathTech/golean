@@ -1,0 +1,47 @@
+# Elaboration A/B, interleaved pre→post per module, back to back, capped (16G), under the box lock; pre = git-archive tree of main @ 883ebc36 (its own warm .lake), post = the audit worktree at fffa3212 (Lean sources = 3be9a643). lake env lean GoLean/GoCore/<M>.lean; wall seconds; 1-min load average at start. Shared box: other projects' jobs ran during rep 1 (load 6–23); rep 2 at load 5–6 (the lane measured at ~5).
+StepFn pre rep=1 rc=0 wall=4.34 load=20.09
+StepFn post rep=1 rc=0 wall=2.93 load=20.09
+Machine pre rep=1 rc=0 wall=13.55 load=20.32
+Machine post rep=1 rc=0 wall=18.04 load=21.39
+MachineEqb pre rep=1 rc=0 wall=15.44 load=21.83
+MachineEqb post rep=1 rc=0 wall=11.70 load=22.68
+BridgeSet pre rep=1 rc=0 wall=0.90 load=22.66
+BridgeSet post rep=1 rc=0 wall=0.88 load=22.66
+StateWf pre rep=1 rc=0 wall=17.63 load=22.66
+StateWf post rep=1 rc=0 wall=17.95 load=18.27
+MachineSound pre rep=1 rc=0 wall=68.62 load=15.77
+MachineSound post rep=1 rc=0 wall=66.75 load=9.36
+StepErrors pre rep=1 rc=0 wall=213.86 load=7.28
+StepErrors post rep=1 rc=0 wall=220.60 load=5.86
+StepFn pre rep=2 rc=0 wall=0.97 load=5.97
+StepFn post rep=2 rc=0 wall=1.00 load=5.97
+Machine pre rep=2 rc=0 wall=4.34 load=6.05
+Machine post rep=2 rc=0 wall=4.16 load=6.05
+MachineEqb pre rep=2 rc=0 wall=4.89 load=6.13
+MachineEqb post rep=2 rc=0 wall=4.89 load=6.20
+BridgeSet pre rep=2 rc=0 wall=0.86 load=6.34
+BridgeSet post rep=2 rc=0 wall=0.93 load=6.34
+StateWf pre rep=2 rc=0 wall=17.29 load=6.40
+StateWf post rep=2 rc=0 wall=17.19 load=6.23
+MachineSound pre rep=2 rc=0 wall=64.99 load=6.18
+MachineSound post rep=2 rc=0 wall=64.15 load=5.15
+StepErrors pre rep=2 rc=0 wall=220.84 load=4.98
+StepErrors post rep=2 rc=0 wall=220.25 load=5.37
+
+## ratios post/pre
+module rep pre post ratio (loads) rc
+BridgeSet rep1 0.90 0.88 0.98x (load 22.66→22.66) rc 0/0
+Machine rep1 13.55 18.04 1.33x (load 20.32→21.39) rc 0/0
+MachineEqb rep1 15.44 11.70 0.76x (load 21.83→22.68) rc 0/0
+MachineSound rep1 68.62 66.75 0.97x (load 15.77→9.36) rc 0/0
+StateWf rep1 17.63 17.95 1.02x (load 22.66→18.27) rc 0/0
+StepErrors rep1 213.86 220.60 1.03x (load 7.28→5.86) rc 0/0
+StepFn rep1 4.34 2.93 0.68x (load 20.09→20.09) rc 0/0
+BridgeSet rep2 0.86 0.93 1.08x (load 6.34→6.34) rc 0/0
+Machine rep2 4.34 4.16 0.96x (load 6.05→6.05) rc 0/0
+MachineEqb rep2 4.89 4.89 1.00x (load 6.13→6.20) rc 0/0
+MachineSound rep2 64.99 64.15 0.99x (load 6.18→5.15) rc 0/0
+StateWf rep2 17.29 17.19 0.99x (load 6.40→6.23) rc 0/0
+StepErrors rep2 220.84 220.25 1.00x (load 4.98→5.37) rc 0/0
+StepFn rep2 0.97 1.00 1.03x (load 5.97→5.97) rc 0/0
+rep 2 (comparable load) worst ratio: 1.08x — threshold 1.5x NOT reached; set_option maxHeartbeats/maxRecDepth: 59 lines at both commits, identical values

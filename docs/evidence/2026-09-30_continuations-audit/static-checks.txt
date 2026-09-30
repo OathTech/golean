@@ -1,0 +1,40 @@
+# Static checks — review/continuations-0929 auditor, 2026-09-30 (candidate 3be9a643/fffa3212 vs main 883ebc36)
+
+## main binary, independent build from git archive 883ebc36 (.tmp/main-883ebc36, scripts/capped lake build golean, under the box lock)
+Build completed successfully (106 jobs).
+EXIT=0
+697001fc93e7c2b42c1b676738e9ba3b449fcb7927195995e340e62e84feb52c  .tmp/main-883ebc36/.lake/build/bin/golean
+candidate binary (lane .lake, sources verified identical to the audit worktree): 8e042f190104172cd3649afbac66cd18809aa29dcec0b95eb0eb102bdaf3b5f4
+
+## Step constructors (from the environment, run_meta over InductiveVal.ctors)
+pre:  STEP_CTORS 128   post: STEP_CTORS 128   ctor lists in order: IDENTICAL
+Cont kind: pre induct → post defn
+
+## fun_cases stepFn (scratch: case162 must exist, case163 must not; case140/case155 traced)
+pre:  Case tag `case163` not found ; case140 hyp: h : stepFn ctx s (Config.retV v✝ k✝) ch = Except.ok r ; case155 hyp: h : stepFn ctx s (Config.next k✝) ch = Except.ok r
+post: Case tag `case163` not found ; case140 hyp: h : stepFn ctx s (Config.retV v✝ k✝) ch = Except.ok r ; case155 hyp: h : stepFn ctx s (Config.next k✝) ch = Except.ok r
+overlap hypotheses (→ False) in the two traced goals: pre 37, post 37
+
+## Theorem statements (every GoLean.* theorem, pretty-printed type, pre vs post)
+theorem count: pre 4153, post 4110
+only-in-pre: 316 (human-written: []) — all auto-generated (Cont.<ctor>.inj/injEq/sizeOf_spec, Cont.class/tail/withTail.eq_N, stepFn.match_N.congr_eq_N)
+only-in-post: 273; human-written (27): Cont.class_cons Cont.class_nil Cont.locSup_cons Cont.locSup_nil Cont.ownSup_cons Cont.rebuild_cons Cont.rebuild_nil Cont.tail_cons Cont.tail_nil Cont.withTail_cons Cont.withTail_nil panicPassthrough_eq panicPassthrough_nil pushDefer_eq pushDefer_frame pushDefer_glue pushDefer_nil pushDefer_other pushDefer_some recoverAtDeferred_nil recoverResult_cons_glue recoverResult_nil seqCont_eq seqCont_seq seqCont_seq_ne stepFn_next_frame stepFrameExit_nil
+common: 3837; elaborated statement differs: 221; of these human-written: ['Machine.execStmtLoop_unfold']
+  the differing ones are equation/unfolding/induction principles whose compiled patterns now print `[]` for `.stop` and `Frame.frame … fid :: k'` for the frame view;
+  the one human-written theorem among them is MachineSound.execStmtLoop_unfold, whose statement is a `match` (pattern `.next .stop` prints `.next []`); its source text is unchanged.
+
+## Axiom sweep (collectAxioms over every theorem of Machine, MachineEqb, MachineSound, StateWf, StepFn, UnseqSound, BridgeSet)
+pre:  AXIOM_SWEEP theorems=2238 with_extra_axioms=0
+post: AXIOM_SWEEP theorems=2195 with_extra_axioms=0
+
+## set_option maxHeartbeats/maxRecDepth lines (GoLean+Tests)
+pre 59, post 59; sorted listing identical modulo line offsets (no value raised, none added)
+
+## BridgeSet mutation controls (scratch copies, lake env lean)
+row 93 (pushDefer_eq RHS `(d :: ds)` → `ds`): EXIT 1 —  error: Type mismatch
+row 101 (panicPassthrough_eq branches swapped): EXIT 1 —  error: Type mismatch
+unmutated BridgeSet.lean: EXIT 0, no output
+BridgeSet diff 883ebc36→3be9a643: exactly 2 hunks (header note; rows 90–107 appended); rows 1–89 byte-identical
+
+## Definition texts (awk block extraction at both commits): IDENTICAL for Cont.locSup, Cont.ownSup, Cont.isGlue, pushDefer, seqCont, panicPassthrough, recoverAtDeferred, recoverResult, signalStep, seqConsumption, stepFrameExit, stepFn (627 lines), execStmtLoop; Frame.class (post) = Cont.class (pre) minus the `.stop` arm, no default arm; EnumDedup.contDepth unchanged (views), Cont.eqbF text unchanged (one fuel unit per frame)
+no deriving on Cont (pre) or Frame (post); no Repr/BEq/Hashable/Inhabited instance for Cont either side; no sizeOf use outside proofs; escape-hatch grep over the added lines: none

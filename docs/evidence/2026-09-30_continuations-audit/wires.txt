@@ -1,0 +1,8 @@
+# Per-wire native-json-run, main (697001fc…) vs candidate (8e042f19…) — 3755 exported wires (the trace run's export; 34 frontend refusals + 2 standing exclusions, as the lane), default stream, gate flags (--input/--function/--arg-int), 8 in parallel, order alternated per row
+rows=3755 wall=26s
+--- comparison (stdout+exit) ---
+differing stdout/exit files: 0
+differing stderr files: 0
+exit code histogram (pre):    3084 EXIT=0     671 EXIT=1 
+exit code histogram (post):    3084 EXIT=0     671 EXIT=1 
+EXIT=0
