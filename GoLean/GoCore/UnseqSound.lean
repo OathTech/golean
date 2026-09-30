@@ -77,7 +77,7 @@ theorem unseq_panic_drops_frame {chain : List PanicEntry} {g : UnseqGraph} {then
     c' = .panicking chain k ∧ s' = s := by
   cases h with
   | panicUnwind hpass =>
-      simp [panicPassthrough, Cont.isGlue, Cont.class, Cont.tail] at hpass
+      simp [panicPassthrough, Cont.isGlue, Cont.class, Frame.class, Cont.tail] at hpass
       subst hpass
       exact ⟨rfl, rfl⟩
 

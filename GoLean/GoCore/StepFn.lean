@@ -183,6 +183,14 @@ def stepFrameExit (s : Store) (targets : List (TargetShape × List Expr))
             (.frame targets tenv results ds k' fr), s, choices, ⟨[], [], []⟩)
       | other => throw (.stuck s!"deferred callee is not a function value: {repr other}")
 
+variable {ctx} in
+/-- Frame exit as a LIST law (G-C3, packet C): a frame with no targets,
+no pinned results and an empty defer chain pops itself — the step's
+successor is `.next` of the list's rest. -/
+theorem stepFrameExit_nil (s : Store) (tenv : LocalEnv) (k' : Cont) (fr : FuncId)
+    (choices : Choices) :
+    stepFrameExit ctx s [] tenv [] [] k' fr choices = .ok (.next k', s, choices, ⟨[], [], []⟩) := rfl
+
 /-- **The `unseq` sweep's ENTER** (Stage B, 2026-09-16; rule `unseqEnter`;
 design `docs/2026-09-16_evaluation-order-model-v2.md` §3.3): the
 statement-sequence position `.initialization` requires — the enclosing
@@ -1033,6 +1041,16 @@ def execStmtLoop : Nat → Store → Config → Choices →
 def execStmt (fuel : Nat) (env : LocalEnv) (σ : Store) (choices : Choices)
     (prog : Stmt) : Except Stop (Store × Choices) :=
   execStmtLoop ctx fuel σ (.exec prog env .stop) choices
+
+variable {ctx} in
+/-- Frame exit at `.next`, as a LIST law (G-C3, packet C): a body that fell
+off its end at the call frame `Frame.frame … :: k'` takes `stepFrameExit`
+over the list's rest `k'` (the same function a `return` takes). -/
+theorem stepFn_next_frame (s : Store) (targets : List (TargetShape × List Expr))
+    (tenv : LocalEnv) (results : List Loc) (ds : List (GoValue × List GoValue))
+    (fr : FuncId) (k' : Cont) (choices : Choices) :
+    stepFn ctx s (.next (Frame.frame targets tenv results ds fr :: k')) choices
+      = stepFrameExit ctx s targets tenv results ds k' fr choices := rfl
 
 /-- Raw `n`-fold iteration of `stepFn` — NO terminal check and no outcome
 classification (sem-adequacy arc slice 4, 2026-08-04). `stepFn` itself

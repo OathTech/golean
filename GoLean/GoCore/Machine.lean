@@ -3345,19 +3345,22 @@ def chainNewestRecovered (chain : List PanicEntry) : Bool :=
 
 /-! ## Continuations and configurations -/
 
-/-- Continuations. The statement frames (`seq`/`loop`/`frame`) are exactly
+/-- Continuation FRAMES (G-C3, packet C, 2026-09-29: `Cont := List Frame`;
+each constructor is the pre-C3 `Cont` constructor of the same name with
+its fields verbatim MINUS the tail `k : Cont`, which is now the list's
+rest; `k`-only frames are nullary). The statement frames (`seq`/`loop`/`frame`) are exactly
 the old relation's (env-in-control CEK, scope = continuation extent, frame
 exit reads call-time-pinned result locations). The expression and
 statement-glue frames are new: each names the context awaiting a `retV`
-value. Wide-statement frames arrive at S2. -/
-inductive Cont where
-  | stop
+value. Wide-statement frames arrive at S2. (The per-constructor notes below
+still say «`k`» for the frame's tail — the list rest.) -/
+inductive Frame where
   /-- Remaining statements of a sequence, with the environment active for
   them. Exhausting the sequence discards this `env` (scope exit). -/
-  | seq (rest : List Stmt) (env : LocalEnv) (k : Cont)
+  | seq (rest : List Stmt) (env : LocalEnv)
   /-- Loop context: normal completion and `continue` retest the condition,
   `break` resumes after the loop, `return` keeps unwinding. -/
-  | loop (cond : Expr) (body : Stmt) (env : LocalEnv) (k : Cont)
+  | loop (cond : Expr) (body : Stmt) (env : LocalEnv)
   /-- Call frame: at frame exit, run the `defers` chain (LIFO), THEN read
   `results` (call-time-pinned frame cell locations) and store into
   `targets`. Running defers before the read is what makes a deferred call's
@@ -3402,54 +3405,54 @@ inductive Cont where
   `enterFrame_declared`). -/
   | frame (targets : List (TargetShape × List Expr)) (tenv : LocalEnv)
       (results : List Loc)
-      (defers : List (GoValue × List GoValue)) (k : Cont) (fid : FuncId)
+      (defers : List (GoValue × List GoValue)) (fid : FuncId)
   /-- Awaiting a deferred call's callee value. -/
-  | deferCalleeK (args : List Expr) (env : LocalEnv) (k : Cont)
+  | deferCalleeK (args : List Expr) (env : LocalEnv)
   /-- Awaiting a deferred call's arguments; they are evaluated AT DEFER
   TIME (Go), then the pending call — the callee VALUE plus argument
   values — is prepended to the innermost frame's chain. A nil callee
   REGISTERS fine and panics only at invocation (pre-merge audit
   2026-07-25; Go's rule). -/
   | deferArgsK (callee : GoValue) (vals : List GoValue)
-      (pending : List Expr) (env : LocalEnv) (k : Cont)
+      (pending : List Expr) (env : LocalEnv)
   /-- Breakable scope (`Stmt.breakable`): catches the `brk` signal, passes
   every other through (the `signalStep` table's `breakableK` row). -/
-  | breakableK (k : Cont)
+  | breakableK
   /-- Label scope (`Stmt.labeled`, control-flow slice): catches `brkTo`
   at a matching label; a `loop`/`mapIterK` whose IMMEDIATE continuation
   is a matching `labelK` is the labeled loop `contTo` targets
   (`contHeadLabel`). The bare signals pass through — a bare break
   targets the innermost for/switch regardless of labels (the
   `signalStep` table's `labelK` row). -/
-  | labelK (label : String) (k : Cont)
+  | labelK (label : String)
   /-- Awaiting the CALLEE value of a value call (a `funcVal`, or `nil`
   → panic). Carries the caller-target PLANS untouched (BUG-052 — the
   spec leaves the call/target-operand order UNSPECIFIED and gc realizes
   CALL-FIRST, so target operands evaluate only at frame exit, through
   the tgtOpK spine). -/
   | callValCalleeK (targets : List (TargetShape × List Expr))
-      (args : List Expr) (env : LocalEnv) (k : Cont)
+      (args : List Expr) (env : LocalEnv)
   /-- Awaiting an argument of a value call. Carries the callee VALUE: a
   funcVal's captures are prepended at frame entry; a nil callee evaluates
   every argument first and panics at the invocation step (Go's order —
   pre-merge audit 2026-07-25). -/
   | callValArgsK (callee : GoValue) (targets : List (TargetShape × List Expr))
-      (vals : List GoValue) (pending : List Expr) (env : LocalEnv) (k : Cont)
+      (vals : List GoValue) (pending : List Expr) (env : LocalEnv)
   /-- Strict-operator evaluation: `done` holds evaluated operands (most
   recent first), `pending` the rest, in evaluation order. -/
   | strictK (op : StrictOp) (done : List GoValue) (pending : List Expr)
-      (env : LocalEnv) (k : Cont)
+      (env : LocalEnv)
   /-- Awaiting the left operand of `&&`. -/
-  | andK (right : Expr) (env : LocalEnv) (k : Cont)
+  | andK (right : Expr) (env : LocalEnv)
   /-- Awaiting the left operand of `||`. -/
-  | orK (right : Expr) (env : LocalEnv) (k : Cont)
+  | orK (right : Expr) (env : LocalEnv)
   /-- Coerce a short-circuit right-operand result to bool (fail-closed on
   non-bool, as the interpreter's `valueAsBool` is). -/
-  | boolK (k : Cont)
+  | boolK
   /-- Awaiting an `if` condition value. -/
-  | ifK (thenBranch elseBranch : Stmt) (env : LocalEnv) (k : Cont)
+  | ifK (thenBranch elseBranch : Stmt) (env : LocalEnv)
   /-- Awaiting a `while` condition value. -/
-  | whileK (cond : Expr) (body : Stmt) (env : LocalEnv) (k : Cont)
+  | whileK (cond : Expr) (body : Stmt) (env : LocalEnv)
   /-- Awaiting a call argument value; then remaining arguments, then
   frame entry. Carries the caller-target PLANS untouched (BUG-052): NO
   target operand evaluates before the call — spec §Order of evaluation
@@ -3460,16 +3463,16 @@ inductive Cont where
   identity, hidden-dep init order). Target operands evaluate at frame
   EXIT through the tgtOpK spine, then the stores. -/
   | callArgsK (fid : FuncId) (targets : List (TargetShape × List Expr))
-      (vals : List GoValue) (pending : List Expr) (env : LocalEnv) (k : Cont)
+      (vals : List GoValue) (pending : List Expr) (env : LocalEnv)
   /-- Wide-statement operand evaluation: the leading `ntargets` operands are
   target addresses (checked as they arrive); `done` holds evaluated
   operands most recent first. Ends in one `applyStmtOp` step. -/
   | stmtOpK (op : StmtOp) (ntargets : Nat) (done : List GoValue)
-      (pending : List Expr) (env : LocalEnv) (k : Cont)
+      (pending : List Expr) (env : LocalEnv)
   /-- Awaiting the `mapRange` map value; the start step (base loc +
   start-key set — the BUG-005 (L) surgery, ruled 2026-08-19) follows. -/
   | mapRangeK (keyVar valVar : Option String) (keyTy valTy : Ty)
-      (body : Stmt) (env : LocalEnv) (k : Cont)
+      (body : Stmt) (env : LocalEnv)
   /-- `mapRange` iteration context — LIVE iteration over ENTRY-IDENTITY
   STAMPS (BUG-005 (L), ruled 2026-08-19; B1, 2026-09-03 — the retired
   snapshot and key-set designs: ledger [DL-13]). The frame carries the ranged map's `base` cell
@@ -3535,9 +3538,9 @@ inductive Cont where
   (`maps/nan-key-range`, BUG-088). -/
   | mapIterK (keyVar valVar : Option String) (keyTy valTy : Ty) (body : Stmt)
       (base : Option Loc) (produced : Array Nat)
-      (start : Array Nat) (env : LocalEnv) (k : Cont)
+      (start : Array Nat) (env : LocalEnv)
   /-- Awaiting a `panic` payload value. -/
-  | panicArgK (k : Cont)
+  | panicArgK
   /-- The suspended panic chain while a panic-path deferred call runs
   above it (arc doc §A1). Built ONLY by the panic-drain rule, directly
   under the deferred call's frame — which is what makes the `recover`
@@ -3547,7 +3550,7 @@ inductive Cont where
   frame below resumes its normal exit path; otherwise unwinding resumes.
   A NEW panic unwinding through the marker merges behind the suspended
   chain. -/
-  | panicResumeK (chain : List PanicEntry) (k : Cont)
+  | panicResumeK (chain : List PanicEntry)
   /-- Channel-statement operand evaluation (channels arc slice 1): the
   pre-communication operands (send: channel then value; receive: the
   channel; close: the channel), ending in one `applyChanOp` step whose
@@ -3557,11 +3560,11 @@ inductive Cont where
   END of the inductive (with its select/delivery siblings) so
   positional case tags in the correspondence proofs stay stable. -/
   | chanStK (op : ChanStOp) (done : List GoValue)
-      (pending : List Expr) (env : LocalEnv) (k : Cont)
+      (pending : List Expr) (env : LocalEnv)
   /-- `select` entry-time operand evaluation (spec step 1, source order);
   ends in one `applySelect` readiness/commit step. -/
   | selectOpsK (clauses : List (SelectClauseHead × Stmt)) (default? : Option Stmt)
-      (done : List GoValue) (pending : List Expr) (env : LocalEnv) (k : Cont)
+      (done : List GoValue) (pending : List Expr) (env : LocalEnv)
   /-- Receive delivery, PHASE 1 (convergence round, BUG-029; spec
   §Assignments' two phases split — targets evaluate only AFTER the
   communication, spec §Select step 4 / BUG-022): awaiting one operand
@@ -3577,7 +3580,7 @@ inductive Cont where
   | tgtOpK (sh : TargetShape) (ops : List GoValue) (pending : List Expr)
       (refs : List TargetRef) (targets : List (TargetShape × List Expr))
       (rop : RhsOp) (rhs : List Expr) (vals : List GoValue) (body : Stmt)
-      (env : LocalEnv) (k : Cont)
+      (env : LocalEnv)
   /-- The RHS evaluation of a spine-riding assignment (BUG-025;
   comma-ok sources round 4, BUG-034): after phase 1 resolved every
   target (`rop`/`rhs` carried through `tgtOpK`), the right-hand
@@ -3587,7 +3590,7 @@ inductive Cont where
   The receive path never uses this frame (its delivery values are
   already known). -/
   | rhsK (rop : RhsOp) (refs : List TargetRef) (done : List GoValue)
-      (pending : List Expr) (body : Stmt) (env : LocalEnv) (k : Cont)
+      (pending : List Expr) (body : Stmt) (env : LocalEnv)
   /-- Receive delivery, PHASE 2 (`.next`-driven, one store per step,
   LEFT-TO-RIGHT — an earlier target's store is observable before a
   later target's store-time panic; pinned by
@@ -3595,7 +3598,7 @@ inductive Cont where
   field/oob-second-target-stores-first discriminators). The last store
   enters `body` (the clause body; `.seqn #[]` for the statement form). -/
   | storeK (refs : List TargetRef) (vals : List GoValue)
-      (body : Stmt) (env : LocalEnv) (k : Cont)
+      (body : Stmt) (env : LocalEnv)
   /-- Awaiting a `go` statement's callee value (channels arc slice 2):
   the spawn's callee and arguments evaluate NOW, in the spawning
   goroutine (spec §Go statements) — the `deferCalleeK` shape. The
@@ -3605,28 +3608,28 @@ inductive Cont where
   during `$pkginit` — the init phase is sequential this slice).
   Appended at the END of the inductive so positional case tags in the
   correspondence proofs stay stable. -/
-  | goCalleeK (args : List Expr) (env : LocalEnv) (k : Cont)
+  | goCalleeK (args : List Expr) (env : LocalEnv)
   /-- Awaiting a `go` statement's argument values (evaluated at the go
   statement, in the spawning goroutine). Carries the callee VALUE; a
   nil callee is gc's "go of nil func value" fatal at the SPAWN
   (probed 2026-08-07) — refused fail-closed at the pool's spawn step,
   not during the argument walk (gc evaluates the arguments first). -/
   | goArgsK (callee : GoValue) (vals : List GoValue)
-      (pending : List Expr) (env : LocalEnv) (k : Cont)
+      (pending : List Expr) (env : LocalEnv)
   /-- Sync-statement operand evaluation (spec-parity slice 2): the
   receiver address (plus `wgAdd`'s delta), ending in one `applySyncOp`
   step whose outcome may be next / panicking / blocked / fatal / an
   `onceBegin` delivery entry. Appended at the END of the inductive so
   positional case tags stay stable. -/
   | syncStK (op : SyncOp) (done : List GoValue)
-      (pending : List Expr) (env : LocalEnv) (k : Cont)
+      (pending : List Expr) (env : LocalEnv)
   /-- Atomic-statement operand evaluation (atomics arc wave 1): the
   address (arg 0) then the value operands, ending in ONE
   `applyAtomicOp` step whose outcome is next / a result delivery entry
   / panicking (nil address). Appended at the END of the inductive so
   positional case tags stay stable. -/
   | atomicStK (op : AtomicOp) (done : List GoValue)
-      (pending : List Expr) (env : LocalEnv) (k : Cont)
+      (pending : List Expr) (env : LocalEnv)
   /-- **The unsequenced-operand probe frame** (latitude E13 option (b),
   `e13-b` 2026-09-05; `Stmt.unseqProbe` is the envelope statement): the
   probed operand is being evaluated above `k`. A VALUE arriving here is
@@ -3636,7 +3639,7 @@ inductive Cont where
   chain k`). Its own `FrameClass` (`.probe`): NOT glue — `panicPassthrough`
   must not strip it, `break`/`continue`/`return` have no rule at it
   (unreachable: only expression evaluation happens under a probe). -/
-  | probeK (k : Cont)
+  | probeK
   /-- **The `unseq` sweep frame** (evaluation-order model v2.1 §3.3; Stage B,
   lane `core/unseq-scheduler-b-0916`, 2026-09-16): the RUNTIME RECORD of one
   dynamic sweep — the static graph `g` (shared, never copied per pick) and
@@ -3659,7 +3662,121 @@ inductive Cont where
   names the shape). Appended at the END so positional case tags stay
   stable. -/
   | unseqK (g : UnseqGraph) (thenB : Stmt) (status : List UnseqStatus)
-      (targets : List (String × TargetRef)) (env : LocalEnv) (phase : UnseqPhase) (k : Cont)
+      (targets : List (String × TargetRef)) (env : LocalEnv) (phase : UnseqPhase)
+
+/-- The continuation: a stack of frames, innermost first (G-C3, packet C,
+[USER] 2026-09-29 «Agree with 1-4», relayed; design note
+`docs/2026-09-29_gc3-continuations-design.md`). `[]` is the end (`Cont.stop`).
+Every former constructor name survives as an `@[match_pattern]` view below,
+in its pre-C3 argument order, so patterns and terms elaborate unchanged. -/
+abbrev Cont := List Frame
+
+/-- The end of the continuation (the pre-C3 `Cont.stop`). -/
+@[match_pattern] abbrev Cont.stop : Cont := []
+
+@[match_pattern] abbrev Cont.seq (rest : List Stmt) (env : LocalEnv) (k : Cont) : Cont :=
+  Frame.seq rest env :: k
+
+@[match_pattern] abbrev Cont.loop (cond : Expr) (body : Stmt) (env : LocalEnv) (k : Cont) : Cont :=
+  Frame.loop cond body env :: k
+
+@[match_pattern] abbrev Cont.frame (targets : List (TargetShape × List Expr)) (tenv : LocalEnv) (results : List Loc) (defers : List (GoValue × List GoValue)) (k : Cont) (fid : FuncId) : Cont :=
+  Frame.frame targets tenv results defers fid :: k
+
+@[match_pattern] abbrev Cont.deferCalleeK (args : List Expr) (env : LocalEnv) (k : Cont) : Cont :=
+  Frame.deferCalleeK args env :: k
+
+@[match_pattern] abbrev Cont.deferArgsK (callee : GoValue) (vals : List GoValue) (pending : List Expr) (env : LocalEnv) (k : Cont) : Cont :=
+  Frame.deferArgsK callee vals pending env :: k
+
+@[match_pattern] abbrev Cont.breakableK (k : Cont) : Cont :=
+  Frame.breakableK :: k
+
+@[match_pattern] abbrev Cont.labelK (label : String) (k : Cont) : Cont :=
+  Frame.labelK label :: k
+
+@[match_pattern] abbrev Cont.callValCalleeK (targets : List (TargetShape × List Expr)) (args : List Expr) (env : LocalEnv) (k : Cont) : Cont :=
+  Frame.callValCalleeK targets args env :: k
+
+@[match_pattern] abbrev Cont.callValArgsK (callee : GoValue) (targets : List (TargetShape × List Expr)) (vals : List GoValue) (pending : List Expr) (env : LocalEnv) (k : Cont) : Cont :=
+  Frame.callValArgsK callee targets vals pending env :: k
+
+@[match_pattern] abbrev Cont.strictK (op : StrictOp) (done : List GoValue) (pending : List Expr) (env : LocalEnv) (k : Cont) : Cont :=
+  Frame.strictK op done pending env :: k
+
+@[match_pattern] abbrev Cont.andK (right : Expr) (env : LocalEnv) (k : Cont) : Cont :=
+  Frame.andK right env :: k
+
+@[match_pattern] abbrev Cont.orK (right : Expr) (env : LocalEnv) (k : Cont) : Cont :=
+  Frame.orK right env :: k
+
+@[match_pattern] abbrev Cont.boolK (k : Cont) : Cont :=
+  Frame.boolK :: k
+
+@[match_pattern] abbrev Cont.ifK (thenBranch : Stmt) (elseBranch : Stmt) (env : LocalEnv) (k : Cont) : Cont :=
+  Frame.ifK thenBranch elseBranch env :: k
+
+@[match_pattern] abbrev Cont.whileK (cond : Expr) (body : Stmt) (env : LocalEnv) (k : Cont) : Cont :=
+  Frame.whileK cond body env :: k
+
+@[match_pattern] abbrev Cont.callArgsK (fid : FuncId) (targets : List (TargetShape × List Expr)) (vals : List GoValue) (pending : List Expr) (env : LocalEnv) (k : Cont) : Cont :=
+  Frame.callArgsK fid targets vals pending env :: k
+
+@[match_pattern] abbrev Cont.stmtOpK (op : StmtOp) (ntargets : Nat) (done : List GoValue) (pending : List Expr) (env : LocalEnv) (k : Cont) : Cont :=
+  Frame.stmtOpK op ntargets done pending env :: k
+
+@[match_pattern] abbrev Cont.mapRangeK (keyVar : Option String) (valVar : Option String) (keyTy : Ty) (valTy : Ty) (body : Stmt) (env : LocalEnv) (k : Cont) : Cont :=
+  Frame.mapRangeK keyVar valVar keyTy valTy body env :: k
+
+@[match_pattern] abbrev Cont.mapIterK (keyVar : Option String) (valVar : Option String) (keyTy : Ty) (valTy : Ty) (body : Stmt) (base : Option Loc) (produced : Array Nat) (start : Array Nat) (env : LocalEnv) (k : Cont) : Cont :=
+  Frame.mapIterK keyVar valVar keyTy valTy body base produced start env :: k
+
+@[match_pattern] abbrev Cont.panicArgK (k : Cont) : Cont :=
+  Frame.panicArgK :: k
+
+@[match_pattern] abbrev Cont.panicResumeK (chain : List PanicEntry) (k : Cont) : Cont :=
+  Frame.panicResumeK chain :: k
+
+@[match_pattern] abbrev Cont.chanStK (op : ChanStOp) (done : List GoValue) (pending : List Expr) (env : LocalEnv) (k : Cont) : Cont :=
+  Frame.chanStK op done pending env :: k
+
+@[match_pattern] abbrev Cont.selectOpsK (clauses : List (SelectClauseHead × Stmt)) (default? : Option Stmt) (done : List GoValue) (pending : List Expr) (env : LocalEnv) (k : Cont) : Cont :=
+  Frame.selectOpsK clauses default? done pending env :: k
+
+@[match_pattern] abbrev Cont.tgtOpK (sh : TargetShape) (ops : List GoValue) (pending : List Expr) (refs : List TargetRef) (targets : List (TargetShape × List Expr)) (rop : RhsOp) (rhs : List Expr) (vals : List GoValue) (body : Stmt) (env : LocalEnv) (k : Cont) : Cont :=
+  Frame.tgtOpK sh ops pending refs targets rop rhs vals body env :: k
+
+@[match_pattern] abbrev Cont.rhsK (rop : RhsOp) (refs : List TargetRef) (done : List GoValue) (pending : List Expr) (body : Stmt) (env : LocalEnv) (k : Cont) : Cont :=
+  Frame.rhsK rop refs done pending body env :: k
+
+@[match_pattern] abbrev Cont.storeK (refs : List TargetRef) (vals : List GoValue) (body : Stmt) (env : LocalEnv) (k : Cont) : Cont :=
+  Frame.storeK refs vals body env :: k
+
+@[match_pattern] abbrev Cont.goCalleeK (args : List Expr) (env : LocalEnv) (k : Cont) : Cont :=
+  Frame.goCalleeK args env :: k
+
+@[match_pattern] abbrev Cont.goArgsK (callee : GoValue) (vals : List GoValue) (pending : List Expr) (env : LocalEnv) (k : Cont) : Cont :=
+  Frame.goArgsK callee vals pending env :: k
+
+@[match_pattern] abbrev Cont.syncStK (op : SyncOp) (done : List GoValue) (pending : List Expr) (env : LocalEnv) (k : Cont) : Cont :=
+  Frame.syncStK op done pending env :: k
+
+@[match_pattern] abbrev Cont.atomicStK (op : AtomicOp) (done : List GoValue) (pending : List Expr) (env : LocalEnv) (k : Cont) : Cont :=
+  Frame.atomicStK op done pending env :: k
+
+@[match_pattern] abbrev Cont.probeK (k : Cont) : Cont :=
+  Frame.probeK :: k
+
+@[match_pattern] abbrev Cont.unseqK (g : UnseqGraph) (thenB : Stmt) (status : List UnseqStatus) (targets : List (String × TargetRef)) (env : LocalEnv) (phase : UnseqPhase) (k : Cont) : Cont :=
+  Frame.unseqK g thenB status targets env phase :: k
+
+/-- Split a continuation into `.stop` and its 32 frame views — the pre-C3
+`cases k` (G-C3): list `cases`, then `cases` on the head frame. The goals
+read `Frame.x … :: k`, which is the view `Cont.x … k` by `rfl`. -/
+syntax (name := casesCont) "cases_cont " term : tactic
+macro_rules (kind := casesCont)
+  | `(tactic| cases_cont $k:term) =>
+    `(tactic| (rcases $k:term with _ | ⟨f, _⟩ <;> try cases f))
 
 /-! ## The `Cont` algebra (design-hygiene wave (iii), B3, 2026-09-04)
 
@@ -3676,55 +3793,17 @@ walk. `panicPassthrough` is "glue → tail". Preservation: each instance was
 proved EQUAL to the retired 30-arm definition before the swap
 (`docs/evidence/2026-09-04_hygiene-wave3/b3-prototype/Proto.lean`). -/
 
-/-- The tail (immediate continuation) of a frame; `.stop` has none. -/
+/-- The tail (immediate continuation) of a frame; `.stop` has none.
+(G-C3: the list's `tail?` — one arm per list constructor, no frame case.) -/
 def Cont.tail : Cont → Option Cont
-  | .stop => none
-  | .seq _ _ k | .loop _ _ _ k | .frame _ _ _ _ k _ | .deferCalleeK _ _ k
-  | .deferArgsK _ _ _ _ k | .breakableK k | .labelK _ k | .callValCalleeK _ _ _ k
-  | .callValArgsK _ _ _ _ _ k | .strictK _ _ _ _ k | .andK _ _ k | .orK _ _ k
-  | .boolK k | .ifK _ _ _ k | .whileK _ _ _ k | .callArgsK _ _ _ _ _ k
-  | .stmtOpK _ _ _ _ _ k | .mapRangeK _ _ _ _ _ _ k | .mapIterK _ _ _ _ _ _ _ _ _ k
-  | .panicArgK k | .panicResumeK _ k | .chanStK _ _ _ _ k | .selectOpsK _ _ _ _ _ k
-  | .tgtOpK _ _ _ _ _ _ _ _ _ _ k | .rhsK _ _ _ _ _ _ k | .storeK _ _ _ _ k
-  | .goCalleeK _ _ k | .goArgsK _ _ _ _ k | .syncStK _ _ _ _ k | .atomicStK _ _ _ _ k
-  | .probeK k
-  | .unseqK _ _ _ _ _ _ k => some k
+  | [] => none
+  | _ :: k => some k
 
-/-- Replace the tail, keeping the frame's own payload. `.stop` is unchanged. -/
+/-- Replace the tail, keeping the frame's own payload. `.stop` is unchanged.
+(G-C3: replace the list's rest under the head.) -/
 def Cont.withTail : Cont → Cont → Cont
-  | .stop, _ => .stop
-  | .seq a b _, t => .seq a b t
-  | .loop a b c _, t => .loop a b c t
-  | .frame a b c d _ f, t => .frame a b c d t f
-  | .deferCalleeK a b _, t => .deferCalleeK a b t
-  | .deferArgsK a b c d _, t => .deferArgsK a b c d t
-  | .breakableK _, t => .breakableK t
-  | .labelK a _, t => .labelK a t
-  | .callValCalleeK a b c _, t => .callValCalleeK a b c t
-  | .callValArgsK a b c d e _, t => .callValArgsK a b c d e t
-  | .strictK a b c d _, t => .strictK a b c d t
-  | .andK a b _, t => .andK a b t
-  | .orK a b _, t => .orK a b t
-  | .boolK _, t => .boolK t
-  | .ifK a b c _, t => .ifK a b c t
-  | .whileK a b c _, t => .whileK a b c t
-  | .callArgsK a b c d e _, t => .callArgsK a b c d e t
-  | .stmtOpK a b c d e _, t => .stmtOpK a b c d e t
-  | .mapRangeK a b c d e f _, t => .mapRangeK a b c d e f t
-  | .mapIterK a b c d e f g h i _, t => .mapIterK a b c d e f g h i t
-  | .panicArgK _, t => .panicArgK t
-  | .panicResumeK a _, t => .panicResumeK a t
-  | .chanStK a b c d _, t => .chanStK a b c d t
-  | .selectOpsK a b c d e _, t => .selectOpsK a b c d e t
-  | .tgtOpK a b c d e f g h i j _, t => .tgtOpK a b c d e f g h i j t
-  | .rhsK a b c d e f _, t => .rhsK a b c d e f t
-  | .storeK a b c d _, t => .storeK a b c d t
-  | .goCalleeK a b _, t => .goCalleeK a b t
-  | .goArgsK a b c d _, t => .goArgsK a b c d t
-  | .syncStK a b c d _, t => .syncStK a b c d t
-  | .atomicStK a b c d _, t => .atomicStK a b c d t
-  | .probeK _, t => .probeK t
-  | .unseqK a b c d e f _, t => .unseqK a b c d e f t
+  | [], _ => []
+  | f :: _, t => f :: t
 
 variable {ctx}
 theorem Cont.sizeOf_tail_lt {k k' : Cont} (h : k.tail = some k') : sizeOf k' < sizeOf k := by
@@ -3752,8 +3831,7 @@ inductive FrameClass where
   | probe
   deriving DecidableEq, Repr
 
-def Cont.class : Cont → FrameClass
-  | .stop => .stop
+def Frame.class : Frame → FrameClass
   | .frame .. => .callFrame
   | .panicResumeK .. => .resumeMarker
   | .probeK .. => .probe
@@ -3768,6 +3846,12 @@ def Cont.class : Cont → FrameClass
   -- first failure; nothing else crosses it.
   | .unseqK .. => .exprGlue
 
+
+/-- The head frame's class; `.stop` (`[]`) is `.stop` (G-C3). -/
+def Cont.class : Cont → FrameClass
+  | [] => .stop
+  | f :: _ => f.class
+
 /-- Is the frame glue of either kind (forwards every walk to its tail)? -/
 def Cont.isGlue (k : Cont) : Bool := k.class = .stmtGlue || k.class = .exprGlue
 
@@ -3775,15 +3859,12 @@ def Cont.isGlue (k : Cont) : Bool := k.class = .stmtGlue || k.class = .exprGlue
 admits (a frame whose tail is `none` — `.stop` — is acted on), ACT at
 the first frame it does not, and rebuild the spine above the action
 (`withTail`). `none` = the action refused (the walk found nothing to do). -/
-def Cont.rebuild {β : Type} (descend : Cont → Bool) (act : Cont → Option (β × Cont)) (k : Cont) :
-    Option (β × Cont) :=
-  if descend k then
-    match _h : k.tail with
-    | some k' => (Cont.rebuild descend act k').map fun (b, k'') => (b, k.withTail k'')
-    | none => act k
-  else act k
-termination_by sizeOf k
-decreasing_by exact Cont.sizeOf_tail_lt _h
+def Cont.rebuild {β : Type} (descend : Cont → Bool) (act : Cont → Option (β × Cont)) :
+    Cont → Option (β × Cont)
+  | [] => act []
+  | f :: k =>
+    if descend (f :: k) then (Cont.rebuild descend act k).map fun (b, k'') => (b, f :: k'')
+    else act (f :: k)
 
 variable {ctx}
 theorem Cont.rebuild_descend {β : Type} {descend : Cont → Bool} {act : Cont → Option (β × Cont)}
@@ -3792,30 +3873,42 @@ theorem Cont.rebuild_descend {β : Type} {descend : Cont → Bool} {act : Cont �
       match k.tail with
       | some k' => (Cont.rebuild descend act k').map fun (b, k'') => (b, k.withTail k'')
       | none => act k := by
-  rw [Cont.rebuild]; simp only [hd, ↓reduceIte]; split <;> simp_all
+  cases k with
+  | nil => rfl
+  | cons f k => simp [Cont.rebuild, hd, Cont.tail, Cont.withTail]
 
 theorem Cont.rebuild_act {β : Type} {descend : Cont → Bool} {act : Cont → Option (β × Cont)}
     {k : Cont} (hd : descend k = false) : Cont.rebuild descend act k = act k := by
-  rw [Cont.rebuild]; simp [hd]
+  cases k with
+  | nil => rfl
+  | cons f k => simp [Cont.rebuild, hd]
 
 theorem Cont.rebuild_stop {β : Type} {descend : Cont → Bool} {act : Cont → Option (β × Cont)} :
-    Cont.rebuild descend act .stop = act .stop := by
-  rw [Cont.rebuild]; split <;> simp [Cont.tail]
+    Cont.rebuild descend act .stop = act .stop := rfl
+
+/-- The list law of the walk (G-C3, D6): at a frame `f` on top of `k`, the
+walk either descends — the answer is `k`'s with `f` consed back on — or acts
+on `f :: k`. List recursion; one `cons` case. -/
+theorem Cont.rebuild_cons {β : Type} {descend : Cont → Bool} {act : Cont → Option (β × Cont)}
+    (f : Frame) (k : Cont) :
+    Cont.rebuild descend act (f :: k) =
+      if descend (f :: k) then (Cont.rebuild descend act k).map fun (b, k'') => (b, f :: k'')
+      else act (f :: k) := rfl
+
+theorem Cont.rebuild_nil {β : Type} {descend : Cont → Bool} {act : Cont → Option (β × Cont)} :
+    Cont.rebuild descend act [] = act [] := rfl
 
 /-- A walk whose action always answers, answers (G-P S3): the `getD` on
 such a walk's result is totality plumbing only. -/
 theorem Cont.rebuild_isSome {β : Type} {descend : Cont → Bool} {act : Cont → Option (β × Cont)}
     (hact : ∀ k, (act k).isSome) (k : Cont) : (Cont.rebuild descend act k).isSome := by
-  rw [Cont.rebuild]
-  split
-  · split
-    · rename_i k' hk'
-      have := Cont.rebuild_isSome (descend := descend) hact k'
-      simpa [Option.isSome_map] using this
-    · exact hact k
-  · exact hact k
-termination_by sizeOf k
-decreasing_by exact Cont.sizeOf_tail_lt (by assumption)
+  induction k with
+  | nil => exact hact _
+  | cons f k ih =>
+    rw [Cont.rebuild_cons]
+    split
+    · simpa [Option.isSome_map] using ih
+    · exact hact _
 
 /-- Descent through an admitted frame, read at the answer: the walk's result
 at `k` is its result at the tail, with the spine above rebuilt (`withTail`)
@@ -3931,7 +4024,7 @@ theorem recoverAtDeferred_marker (chain : List PanicEntry) (k : Cont) :
 a deferred frame not sitting directly on the marker sees no panic. -/
 theorem recoverAtDeferred_none {c : Cont} (h : ∀ chain k, c ≠ .panicResumeK chain k) :
     recoverAtDeferred c = none := by
-  cases c <;> first | rfl | exact absurd rfl (h _ _)
+  cases_cont c <;> first | rfl | exact absurd rfl (h _ _)
 
 /-- **`recover` at a call frame** (the frame rule): the walk acts at the
 first call frame — `recoverAtDeferred` on its tail decides; a hit returns the
@@ -3979,7 +4072,135 @@ theorem recoverResult_glue {k k' : Cont} (hg : k.isGlue = true) (hk : k.tail = s
     recoverResult k = ((recoverResult k').1, k.withTail (recoverResult k').2) := by
   unfold recoverResult
   refine Cont.rebuild_getD_glue ?_ hg hk _ _
-  intro k; cases k <;> rfl
+  intro k; cases_cont k <;> rfl
+
+/-! ### The continuation walks as LIST laws (G-C3, packet C, design D6)
+
+`Cont := List Frame`: each walk is list recursion — one `[]` case and one
+`f :: k` case, the head frame judged by `Frame.class`. These restate the
+walks' pre-C3 equations over the list (`Cont.x … k` IS `Frame.x … :: k`,
+definitionally). No context-fill law is stated: `k ++ K` exists because
+`Cont` is a list, and nothing here claims it commutes with a step (G-C3
+decision 1, [USER] 2026-09-29, relayed). -/
+
+theorem Cont.tail_nil : Cont.tail [] = none := rfl
+theorem Cont.tail_cons (f : Frame) (k : Cont) : Cont.tail (f :: k) = some k := rfl
+theorem Cont.withTail_nil (t : Cont) : Cont.withTail [] t = [] := rfl
+theorem Cont.withTail_cons (f : Frame) (k t : Cont) : Cont.withTail (f :: k) t = f :: t := rfl
+theorem Cont.class_nil : Cont.class [] = .stop := rfl
+theorem Cont.class_cons (f : Frame) (k : Cont) : Cont.class (f :: k) = f.class := rfl
+
+/-- `pushDefer` at the empty continuation: no frame, fail closed. -/
+theorem pushDefer_nil (d : GoValue × List GoValue) : pushDefer d [] = none := rfl
+
+/-- `pushDefer` at a call frame: the pending call is prepended to its chain. -/
+theorem pushDefer_frame (d : GoValue × List GoValue) (t : List (TargetShape × List Expr))
+    (te : LocalEnv) (r : List Loc) (ds : List (GoValue × List GoValue)) (f : FuncId) (k : Cont) :
+    pushDefer d (Frame.frame t te r ds f :: k) = some (Frame.frame t te r (d :: ds) f :: k) := rfl
+
+/-- `pushDefer` through statement glue: the answer is the tail's, the glue
+frame consed back on. -/
+theorem pushDefer_glue (d : GoValue × List GoValue) {g : Frame} (k : Cont)
+    (hg : g.class = .stmtGlue) : pushDefer d (g :: k) = (pushDefer d k).map (g :: ·) := by
+  unfold pushDefer
+  rw [Cont.rebuild_cons]
+  simp only [Cont.class_cons, hg, decide_true, ↓reduceIte, Option.map_map]
+  rfl
+
+/-- `pushDefer` at any other head (expression glue, the marker, the probe):
+nothing to push onto — fail closed. -/
+theorem pushDefer_other (d : GoValue × List GoValue) {g : Frame} (k : Cont)
+    (hg : g.class ≠ .stmtGlue) (hc : g.class ≠ .callFrame) : pushDefer d (g :: k) = none := by
+  cases g <;> first | rfl | exact absurd rfl hg | exact absurd rfl hc
+
+/-- **`pushDefer` maps at the first call frame** (the logic team's reading,
+now a list law): under a statement-glue prefix `pre`, the call frame's
+chain gains the pending call and nothing else changes. -/
+theorem pushDefer_eq (d : GoValue × List GoValue) (pre : List Frame)
+    (t : List (TargetShape × List Expr)) (te : LocalEnv) (r : List Loc)
+    (ds : List (GoValue × List GoValue)) (f : FuncId) (k : Cont)
+    (hpre : ∀ g ∈ pre, g.class = .stmtGlue) :
+    pushDefer d (pre ++ Frame.frame t te r ds f :: k)
+      = some (pre ++ Frame.frame t te r (d :: ds) f :: k) := by
+  induction pre with
+  | nil => rfl
+  | cons g pre ih =>
+    rw [List.cons_append, pushDefer_glue d _ (hpre g (List.mem_cons_self ..)),
+      ih (fun g' hg' => hpre g' (List.mem_cons_of_mem _ hg'))]
+    rfl
+
+/-- The converse of `pushDefer_eq`: every successful push has that shape. -/
+theorem pushDefer_some {d : GoValue × List GoValue} :
+    ∀ {k k' : Cont}, pushDefer d k = some k' →
+      ∃ pre t te r ds f rest, (∀ g ∈ pre, g.class = .stmtGlue)
+        ∧ k = pre ++ Frame.frame t te r ds f :: rest
+        ∧ k' = pre ++ Frame.frame t te r (d :: ds) f :: rest := by
+  intro k
+  induction k with
+  | nil => intro k' h; simp [pushDefer_nil] at h
+  | cons g k ih =>
+    intro k' h
+    by_cases hg : g.class = .stmtGlue
+    · rw [pushDefer_glue d k hg, Option.map_eq_some_iff] at h
+      obtain ⟨k₁, h₁, rfl⟩ := h
+      obtain ⟨pre, t, te, r, ds, f, rest, hpre, rfl, rfl⟩ := ih h₁
+      refine ⟨g :: pre, t, te, r, ds, f, rest, ?_, rfl, rfl⟩
+      intro g' hg'
+      rcases List.mem_cons.mp hg' with rfl | hm
+      · exact hg
+      · exact hpre g' hm
+    · by_cases hc : g.class = .callFrame
+      · cases g <;> simp [Frame.class] at hc
+        rename_i t te r ds f
+        rw [pushDefer_frame] at h
+        cases h
+        exact ⟨[], t, te, r, ds, f, k, by simp, rfl, rfl⟩
+      · rw [pushDefer_other d k hg hc] at h; cases h
+
+/-- `seqCont` on a same-environment governing sequence: SPLICE. -/
+theorem seqCont_seq (ss rest : List Stmt) (env : LocalEnv) (k : Cont) :
+    seqCont ss env (Frame.seq rest env :: k) = Frame.seq (ss ++ rest) env :: k := by
+  simp [seqCont]
+
+/-- `seqCont` on a foreign-environment sequence: a fresh `seq` frame on top. -/
+theorem seqCont_seq_ne (ss rest : List Stmt) {env env' : LocalEnv} (k : Cont) (h : env' ≠ env) :
+    seqCont ss env (Frame.seq rest env' :: k) = Frame.seq ss env :: Frame.seq rest env' :: k := by
+  simp [seqCont, h]
+
+/-- **`seqCont`** as a list law (the pre-C3 equation): any head that is not
+a `seq` frame — or the empty continuation — gets a fresh `seq` frame. -/
+theorem seqCont_eq (ss : List Stmt) (env : LocalEnv) (k : Cont)
+    (h : ∀ rest env' k', k ≠ Frame.seq rest env' :: k') :
+    seqCont ss env k = Frame.seq ss env :: k := by
+  cases_cont k <;> first | rfl | exact absurd rfl (h _ _ _)
+
+/-- `panicPassthrough` at the empty continuation: no unwinding step (the
+abort is the `.stop` arm's business). -/
+theorem panicPassthrough_nil : panicPassthrough [] = none := rfl
+
+/-- **`panicPassthrough`** as a list law: glue of either kind is stripped
+(the tail is the answer); any other head has its own unwinding rule. -/
+theorem panicPassthrough_eq (g : Frame) (k : Cont) :
+    panicPassthrough (g :: k)
+      = if g.class = .stmtGlue ∨ g.class = .exprGlue then some k else none := by
+  unfold panicPassthrough Cont.isGlue
+  by_cases h1 : g.class = .stmtGlue <;> by_cases h2 : g.class = .exprGlue <;>
+    simp [Cont.class_cons, Cont.tail_cons, h1, h2]
+
+/-- `recoverAtDeferred` at the empty continuation: nothing to recover. -/
+theorem recoverAtDeferred_nil : recoverAtDeferred [] = none := rfl
+
+/-- `recover()` at the empty continuation: the no-op `.nil`. -/
+theorem recoverResult_nil : recoverResult [] = (.nil, []) := rfl
+
+/-- `recover()` through a glue frame, as a list law: the tail's answer
+with the glue frame consed back on. -/
+theorem recoverResult_cons_glue {g : Frame} (k : Cont)
+    (hg : g.class = .stmtGlue ∨ g.class = .exprGlue) :
+    recoverResult (g :: k) = ((recoverResult k).1, g :: (recoverResult k).2) := by
+  refine recoverResult_glue ?_ (Cont.tail_cons g k)
+  unfold Cont.isGlue
+  rcases hg with h | h <;> simp [Cont.class_cons, h]
 variable (ctx)
 
 /-- **The non-local control signals** (design-hygiene B4, review Q6):

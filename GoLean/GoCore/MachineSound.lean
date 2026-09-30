@@ -1686,6 +1686,13 @@ theorem stepFn_sound {s : Store} {c : Config} {ch : Choices}
     {c' : Config} {s' : Store} {ch' : Choices} {tr : StepLabel}
     (h : stepFn ctx s c ch = .ok (c', s', ch', tr)) : Step ctx c s c' s' tr := by
   fun_cases stepFn ctx s c ch
+  -- G-C3 (packet C, `Cont := List Frame`): the `.retV`/`.next` catch-all
+  -- refusals are closed directly — `simp only [stepFn]` discharges the
+  -- overlap premises and leaves the `throw`. The generic `simp_all [stepFn]`
+  -- below costs ~9 s on the `.retV` arm's 26 list-shaped overlap hypotheses
+  -- (0.5 s before C3) and took the theorem past its heartbeat budget.
+  case case140 => simp only [stepFn] at h; simp [throw, throwThe, MonadExceptOf.throw] at h
+  case case155 => simp only [stepFn] at h; simp [throw, throwThe, MonadExceptOf.throw] at h
   all_goals
     (first
       | (simp_all [stepFn]; done)
@@ -2298,7 +2305,7 @@ theorem step_complete {c : Config} {s : Store} {c' : Config} {s' : Store} {tr : 
   case panicUnwind =>
     rename_i chain k k' hpass
     refine ⟨[], [], ?_⟩
-    cases k <;> simp_all [stepFn, panicPassthrough, Cont.isGlue, Cont.class, Cont.tail]
+    cases_cont k <;> simp_all [stepFn, panicPassthrough, Cont.isGlue, Cont.class, Frame.class, Cont.tail]
   -- Channel statements (channels arc slice 1): entry holds the statement
   -- abstract behind its plan (case on it, like stmtOpFirst); the plain
   -- shift needs its `if_neg`, like stmtOpShiftPlain.
@@ -4779,7 +4786,7 @@ theorem step_complete_any_wf_aux {c : Config} {σ : Store} {c' : Config}
       tr hcands =>
     simp [stepFn, hcands, Bind.bind, Except.bind]
   case panicUnwind chain k k' hpass =>
-    cases k <;> simp_all [stepFn, panicPassthrough, Cont.isGlue, Cont.class, Cont.tail]
+    cases_cont k <;> simp_all [stepFn, panicPassthrough, Cont.isGlue, Cont.class, Frame.class, Cont.tail]
   case chanStFirst stmt op e rest env k hplan =>
     cases stmt <;>
       first
@@ -5578,8 +5585,8 @@ theorem entryCallSite?_panicking {chain : List PanicEntry} {k : Cont} {p : FuncI
     (h : entryCallSite? (.panicking chain k) = some p) :
     ∃ t te r fid captured args ds k' w,
       k = .frame t te r ((.funcVal fid captured, args) :: ds) k' w := by
-  cases k <;> simp [entryCallSite?] at h
-  rename_i t te r ds k' w
+  cases_cont k <;> simp [entryCallSite?] at h
+  rename_i k' t te r ds w
   cases ds with
   | nil => simp [entryCallSite?] at h
   | cons d ds =>
@@ -5781,7 +5788,7 @@ theorem stepFrameExit_consumption_none {σ : Store}
 ENTRY (the consumption projection sees `none` there). -/
 theorem entryCallSite?_of_signalStep {sg : Signal} {k : Cont} {c' : Config}
     (h : signalStep sg k = some c') : entryCallSite? (.signal sg k) = none := by
-  cases k <;> simp_all [entryCallSite?]
+  cases_cont k <;> simp_all [entryCallSite?]
 
 /-- The `some` half for frame exit: the deferred entry's width-2 pop on
 the panic path (`entryConsult?_some`, `enterFramePick_panic`), on both
@@ -5832,6 +5839,10 @@ theorem stepFn_consumption_none {σ : Store} {c : Config} {ch₀ : Choices}
     (h : stepFn ctx σ c ch₀ = .ok (c', σ', ch₀', tr)) :
     ch₀' = ch₀ ∧ ∀ ch : Choices, stepFn ctx σ c ch = .ok (c', σ', ch, tr) := by
   fun_cases stepFn ctx σ c ch₀
+  -- G-C3 (packet C): the `.retV`/`.next` catch-all refusals closed directly,
+  -- as in `stepFn_sound` (the generic `simp_all [stepFn]` is ~9 s there).
+  case case140 => simp only [stepFn] at h; simp [throw, throwThe, MonadExceptOf.throw] at h
+  case case155 => simp only [stepFn] at h; simp [throw, throwThe, MonadExceptOf.throw] at h
   all_goals first
     | (refine ⟨?_, fun ch => ?_⟩ <;> (simp_all [stepFn]; done))
     | skip

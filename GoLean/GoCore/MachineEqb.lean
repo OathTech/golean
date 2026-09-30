@@ -560,17 +560,21 @@ theorem Cont.eqbF_sound : ∀ f (a b : Cont), Cont.eqbF f a b = true → a = b :
   | zero => intro a b h; exact Bool.noConfusion h
   | succ f ih =>
     intro a b h
+    -- G-C3 (packet C): `Cont := List Frame` — split each side into `[]` /
+    -- `f :: k`, then the head frames; the tails are named `k1`/`k2`.
     cases a <;> cases b <;> (try exact Bool.noConfusion h)
-    case stop.stop => rfl
-    case seq.seq r1 e1 k1 r2 e2 k2 =>
+    case nil.nil => rfl
+    case cons.nil => rename_i fa k1; cases fa <;> exact Bool.noConfusion h
+    all_goals (try (rename_i fa k1 fb k2; cases fa <;> cases fb <;> (try exact Bool.noConfusion h)))
+    case seq.seq r1 e1 r2 e2 =>
       obtain ⟨h1, h2, h3⟩ := andSplit3 h
       cases eqbListP_sound (Stmt.eqbF_sound f) h1
       cases eq_of_beq h2; cases ih _ _ h3; rfl
-    case loop.loop c1 b1 e1 k1 c2 b2 e2 k2 =>
+    case loop.loop c1 b1 e1 c2 b2 e2 =>
       obtain ⟨h1, h2, h3, h4⟩ := andSplit4 h
       cases Expr.eqbF_sound _ _ _ h1; cases Stmt.eqbF_sound _ _ _ h2
       cases eq_of_beq h3; cases ih _ _ h4; rfl
-    case frame.frame t1 te1 r1 d1 k1 f1 t2 te2 r2 d2 k2 f2 =>
+    case frame.frame t1 te1 r1 d1 f1 t2 te2 r2 d2 f2 =>
       obtain ⟨h1, h2, h3, h4, h5, h6⟩ := andSplit6 h
       cases targetPlans_sound f h1
       cases eq_of_beq h2
@@ -580,70 +584,70 @@ theorem Cont.eqbF_sound : ∀ f (a b : Cont), Cont.eqbF f a b = true → a = b :
           eqbProdP_sound (fun _ _ k => GoValue.eqb_sound k)
             (fun _ _ k => goValues_sound k) hh) h4
       cases ih _ _ h5; cases GoCore.FuncId.beq_sound h6; rfl
-    case deferCalleeK.deferCalleeK a1 e1 k1 a2 e2 k2 =>
+    case deferCalleeK.deferCalleeK a1 e1 a2 e2 =>
       obtain ⟨h1, h2, h3⟩ := andSplit3 h
       cases exprs_sound f h1; cases eq_of_beq h2; cases ih _ _ h3; rfl
-    case deferArgsK.deferArgsK c1 v1 p1 e1 k1 c2 v2 p2 e2 k2 =>
+    case deferArgsK.deferArgsK c1 v1 p1 e1 c2 v2 p2 e2 =>
       obtain ⟨h1, h2, h3, h4, h5⟩ := andSplit5 h
       cases GoValue.eqb_sound h1; cases goValues_sound h2
       cases exprs_sound f h3; cases eq_of_beq h4; cases ih _ _ h5; rfl
-    case breakableK.breakableK k1 k2 => cases ih _ _ h; rfl
-    case probeK.probeK k1 k2 => cases ih _ _ h; rfl
-    case unseqK.unseqK g1 t1 st1 tg1 e1 p1 k1 g2 t2 st2 tg2 e2 p2 k2 =>
+    case breakableK.breakableK => cases ih _ _ h; rfl
+    case probeK.probeK => cases ih _ _ h; rfl
+    case unseqK.unseqK g1 t1 st1 tg1 e1 p1 g2 t2 st2 tg2 e2 p2 =>
       obtain ⟨h1, h2, h3, h4, h5, h6, h7⟩ := andSplit7 h
       cases UnseqGraph.eqbF_sound _ _ _ h1; cases Stmt.eqbF_sound _ _ _ h2; cases eq_of_beq h3
       cases eqbListP_sound
         (fun _ _ hh => eqbProdP_sound (fun _ _ k => eq_of_beq k) (fun _ _ k => TargetRef.eqb_sound _ _ k) hh) h4
       cases eq_of_beq h5; cases eq_of_beq h6; cases ih _ _ h7; rfl
-    case labelK.labelK l1 k1 l2 k2 =>
+    case labelK.labelK l1 l2 =>
       obtain ⟨h1, h2⟩ := andSplit2 h
       cases eq_of_beq h1; cases ih _ _ h2; rfl
-    case callValCalleeK.callValCalleeK t1 a1 e1 k1 t2 a2 e2 k2 =>
+    case callValCalleeK.callValCalleeK t1 a1 e1 t2 a2 e2 =>
       obtain ⟨h1, h2, h3, h4⟩ := andSplit4 h
       cases targetPlans_sound f h1; cases exprs_sound f h2
       cases eq_of_beq h3; cases ih _ _ h4; rfl
-    case callValArgsK.callValArgsK c1 t1 v1 p1 e1 k1 c2 t2 v2 p2 e2 k2 =>
+    case callValArgsK.callValArgsK c1 t1 v1 p1 e1 c2 t2 v2 p2 e2 =>
       obtain ⟨h1, h2, h3, h4, h5, h6⟩ := andSplit6 h
       cases GoValue.eqb_sound h1; cases targetPlans_sound f h2
       cases goValues_sound h3; cases exprs_sound f h4
       cases eq_of_beq h5; cases ih _ _ h6; rfl
-    case strictK.strictK o1 d1 p1 e1 k1 o2 d2 p2 e2 k2 =>
+    case strictK.strictK o1 d1 p1 e1 o2 d2 p2 e2 =>
       obtain ⟨h1, h2, h3, h4, h5⟩ := andSplit5 h
       cases StrictOp.eqb_sound _ _ h1; cases goValues_sound h2
       cases exprs_sound f h3; cases eq_of_beq h4; cases ih _ _ h5; rfl
-    case andK.andK r1 e1 k1 r2 e2 k2 =>
+    case andK.andK r1 e1 r2 e2 =>
       obtain ⟨h1, h2, h3⟩ := andSplit3 h
       cases Expr.eqbF_sound _ _ _ h1; cases eq_of_beq h2; cases ih _ _ h3; rfl
-    case orK.orK r1 e1 k1 r2 e2 k2 =>
+    case orK.orK r1 e1 r2 e2 =>
       obtain ⟨h1, h2, h3⟩ := andSplit3 h
       cases Expr.eqbF_sound _ _ _ h1; cases eq_of_beq h2; cases ih _ _ h3; rfl
-    case boolK.boolK k1 k2 => cases ih _ _ h; rfl
-    case ifK.ifK t1 el1 e1 k1 t2 el2 e2 k2 =>
+    case boolK.boolK => cases ih _ _ h; rfl
+    case ifK.ifK t1 el1 e1 t2 el2 e2 =>
       obtain ⟨h1, h2, h3, h4⟩ := andSplit4 h
       cases Stmt.eqbF_sound _ _ _ h1; cases Stmt.eqbF_sound _ _ _ h2
       cases eq_of_beq h3; cases ih _ _ h4; rfl
-    case whileK.whileK c1 b1 e1 k1 c2 b2 e2 k2 =>
+    case whileK.whileK c1 b1 e1 c2 b2 e2 =>
       obtain ⟨h1, h2, h3, h4⟩ := andSplit4 h
       cases Expr.eqbF_sound _ _ _ h1; cases Stmt.eqbF_sound _ _ _ h2
       cases eq_of_beq h3; cases ih _ _ h4; rfl
-    case callArgsK.callArgsK i1 t1 v1 p1 e1 k1 i2 t2 v2 p2 e2 k2 =>
+    case callArgsK.callArgsK i1 t1 v1 p1 e1 i2 t2 v2 p2 e2 =>
       obtain ⟨h1, h2, h3, h4, h5, h6⟩ := andSplit6 h
       cases FuncId.beq_sound h1; cases targetPlans_sound f h2
       cases goValues_sound h3; cases exprs_sound f h4
       cases eq_of_beq h5; cases ih _ _ h6; rfl
-    case stmtOpK.stmtOpK o1 n1 d1 p1 e1 k1 o2 n2 d2 p2 e2 k2 =>
+    case stmtOpK.stmtOpK o1 n1 d1 p1 e1 o2 n2 d2 p2 e2 =>
       obtain ⟨h1, h2, h3, h4, h5, h6⟩ := andSplit6 h
       cases StmtOp.eqb_sound _ _ h1; cases eq_of_beq h2
       cases goValues_sound h3; cases exprs_sound f h4
       cases eq_of_beq h5; cases ih _ _ h6; rfl
-    case mapRangeK.mapRangeK kv1 vv1 kt1 vt1 b1 e1 k1 kv2 vv2 kt2 vt2 b2 e2 k2 =>
+    case mapRangeK.mapRangeK kv1 vv1 kt1 vt1 b1 e1 kv2 vv2 kt2 vt2 b2 e2 =>
       obtain ⟨h1, h2, h3, h4, h5, h6, h7⟩ := andSplit7 h
       cases eqbOptionP_sound (fun _ _ hh => eq_of_beq hh) h1
       cases eqbOptionP_sound (fun _ _ hh => eq_of_beq hh) h2
       cases Ty.eqb_sound h3; cases Ty.eqb_sound h4
       cases Stmt.eqbF_sound _ _ _ h5; cases eq_of_beq h6; cases ih _ _ h7; rfl
-    case mapIterK.mapIterK kv1 vv1 kt1 vt1 b1 ba1 pr1 st1 e1 k1
-        kv2 vv2 kt2 vt2 b2 ba2 pr2 st2 e2 k2 =>
+    case mapIterK.mapIterK kv1 vv1 kt1 vt1 b1 ba1 pr1 st1 e1
+        kv2 vv2 kt2 vt2 b2 ba2 pr2 st2 e2 =>
       obtain ⟨h1, h2, h3, h4, h5, h6, h7, h8, h9, h10⟩ := andSplit10 h
       cases eqbOptionP_sound (fun _ _ hh => eq_of_beq hh) h1
       cases eqbOptionP_sound (fun _ _ hh => eq_of_beq hh) h2
@@ -653,16 +657,16 @@ theorem Cont.eqbF_sound : ∀ f (a b : Cont), Cont.eqbF f a b = true → a = b :
       cases eqbArrayP_sound (fun _ _ hh => eq_of_beq hh) h7
       cases eqbArrayP_sound (fun _ _ hh => eq_of_beq hh) h8
       cases eq_of_beq h9; cases ih _ _ h10; rfl
-    case panicArgK.panicArgK k1 k2 => cases ih _ _ h; rfl
-    case panicResumeK.panicResumeK c1 k1 c2 k2 =>
+    case panicArgK.panicArgK => cases ih _ _ h; rfl
+    case panicResumeK.panicResumeK c1 c2 =>
       obtain ⟨h1, h2⟩ := andSplit2 h
       cases eqbListP_sound PanicEntry.eqb_sound h1
       cases ih _ _ h2; rfl
-    case chanStK.chanStK o1 d1 p1 e1 k1 o2 d2 p2 e2 k2 =>
+    case chanStK.chanStK o1 d1 p1 e1 o2 d2 p2 e2 =>
       obtain ⟨h1, h2, h3, h4, h5⟩ := andSplit5 h
       cases ChanStOp.eqbF_sound _ _ _ h1; cases goValues_sound h2
       cases exprs_sound f h3; cases eq_of_beq h4; cases ih _ _ h5; rfl
-    case selectOpsK.selectOpsK c1 df1 d1 p1 e1 k1 c2 df2 d2 p2 e2 k2 =>
+    case selectOpsK.selectOpsK c1 df1 d1 p1 e1 c2 df2 d2 p2 e2 =>
       obtain ⟨h1, h2, h3, h4, h5, h6⟩ := andSplit6 h
       cases eqbListP_sound
         (fun _ _ hh =>
@@ -671,8 +675,8 @@ theorem Cont.eqbF_sound : ∀ f (a b : Cont), Cont.eqbF f a b = true → a = b :
       cases eqbOptionP_sound (Stmt.eqbF_sound f) h2
       cases goValues_sound h3; cases exprs_sound f h4
       cases eq_of_beq h5; cases ih _ _ h6; rfl
-    case tgtOpK.tgtOpK sh1 op1 p1 rf1 t1 ro1 rh1 v1 b1 e1 k1
-        sh2 op2 p2 rf2 t2 ro2 rh2 v2 b2 e2 k2 =>
+    case tgtOpK.tgtOpK sh1 op1 p1 rf1 t1 ro1 rh1 v1 b1 e1
+        sh2 op2 p2 rf2 t2 ro2 rh2 v2 b2 e2 =>
       obtain ⟨h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11⟩ := andSplit11 h
       cases TargetShape.eqb_sound _ _ h1; cases goValues_sound h2
       cases exprs_sound f h3
@@ -681,29 +685,29 @@ theorem Cont.eqbF_sound : ∀ f (a b : Cont), Cont.eqbF f a b = true → a = b :
       cases RhsOp.eqb_sound _ _ h6
       cases exprs_sound f h7; cases goValues_sound h8
       cases Stmt.eqbF_sound _ _ _ h9; cases eq_of_beq h10; cases ih _ _ h11; rfl
-    case rhsK.rhsK ro1 rf1 d1 p1 b1 e1 k1 ro2 rf2 d2 p2 b2 e2 k2 =>
+    case rhsK.rhsK ro1 rf1 d1 p1 b1 e1 ro2 rf2 d2 p2 b2 e2 =>
       obtain ⟨h1, h2, h3, h4, h5, h6, h7⟩ := andSplit7 h
       cases RhsOp.eqb_sound _ _ h1
       cases eqbListP_sound TargetRef.eqb_sound h2
       cases goValues_sound h3; cases exprs_sound f h4
       cases Stmt.eqbF_sound _ _ _ h5; cases eq_of_beq h6; cases ih _ _ h7; rfl
-    case storeK.storeK rf1 v1 b1 e1 k1 rf2 v2 b2 e2 k2 =>
+    case storeK.storeK rf1 v1 b1 e1 rf2 v2 b2 e2 =>
       obtain ⟨h1, h2, h3, h4, h5⟩ := andSplit5 h
       cases eqbListP_sound TargetRef.eqb_sound h1
       cases goValues_sound h2; cases Stmt.eqbF_sound _ _ _ h3
       cases eq_of_beq h4; cases ih _ _ h5; rfl
-    case goCalleeK.goCalleeK a1 e1 k1 a2 e2 k2 =>
+    case goCalleeK.goCalleeK a1 e1 a2 e2 =>
       obtain ⟨h1, h2, h3⟩ := andSplit3 h
       cases exprs_sound f h1; cases eq_of_beq h2; cases ih _ _ h3; rfl
-    case goArgsK.goArgsK c1 v1 p1 e1 k1 c2 v2 p2 e2 k2 =>
+    case goArgsK.goArgsK c1 v1 p1 e1 c2 v2 p2 e2 =>
       obtain ⟨h1, h2, h3, h4, h5⟩ := andSplit5 h
       cases GoValue.eqb_sound h1; cases goValues_sound h2
       cases exprs_sound f h3; cases eq_of_beq h4; cases ih _ _ h5; rfl
-    case syncStK.syncStK o1 d1 p1 e1 k1 o2 d2 p2 e2 k2 =>
+    case syncStK.syncStK o1 d1 p1 e1 o2 d2 p2 e2 =>
       obtain ⟨h1, h2, h3, h4, h5⟩ := andSplit5 h
       cases SyncOp.eqbF_sound _ _ _ h1; cases goValues_sound h2
       cases exprs_sound f h3; cases eq_of_beq h4; cases ih _ _ h5; rfl
-    case atomicStK.atomicStK o1 d1 p1 e1 k1 o2 d2 p2 e2 k2 =>
+    case atomicStK.atomicStK o1 d1 p1 e1 o2 d2 p2 e2 =>
       obtain ⟨h1, h2, h3, h4, h5⟩ := andSplit5 h
       cases AtomicOp.eqbF_sound _ _ _ h1; cases goValues_sound h2
       cases exprs_sound f h3; cases eq_of_beq h4; cases ih _ _ h5; rfl

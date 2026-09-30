@@ -585,13 +585,23 @@ def Cont.ownSup (k : Cont) : Nat := Cont.locSup (k.withTail .stop)
 
 theorem Cont.locSup_withTail {k k₀ t : Cont} (h : k.tail = some k₀) :
     Cont.locSup (k.withTail t) = max (Cont.ownSup k) (Cont.locSup t) := by
-  cases k <;> simp [Cont.tail] at h <;> simp [Cont.withTail, Cont.ownSup, Cont.locSup] <;> omega
+  cases_cont k <;> simp [Cont.tail] at h <;> simp [Cont.withTail, Cont.ownSup, Cont.locSup] <;> omega
 
 theorem Cont.locSup_eq_own_tail {k k₀ : Cont} (h : k.tail = some k₀) :
     Cont.locSup k = max (Cont.ownSup k) (Cont.locSup k₀) := by
   have := Cont.locSup_withTail (t := k₀) h
   rw [← this]; congr 1
   cases k <;> simp_all [Cont.tail, Cont.withTail]
+
+/-- The sup as a LIST law (G-C3, packet C): the head frame's own payload
+(`Cont.ownSup`, the frame over `[]`) joined with the tail's. -/
+theorem Cont.locSup_cons (f : Frame) (k : Cont) :
+    Cont.locSup (f :: k) = max (Cont.locSup [f]) (Cont.locSup k) :=
+  Cont.locSup_eq_own_tail (k := f :: k) rfl
+
+theorem Cont.locSup_nil : Cont.locSup [] = 0 := rfl
+
+theorem Cont.ownSup_cons (f : Frame) (k : Cont) : Cont.ownSup (f :: k) = Cont.locSup [f] := rfl
 
 theorem Cont.tail_locSup_le {k k₀ : Cont} (h : k.tail = some k₀) :
     Cont.locSup k₀ ≤ Cont.locSup k := by
@@ -663,7 +673,7 @@ def Config.locSup : Config → Nat
 is built from the frame's own payload (B4). -/
 theorem signalStep_locSup {sg : Signal} {k : Cont} {c' : Config}
     (h : signalStep sg k = some c') : Config.locSup c' ≤ Cont.locSup k := by
-  cases k <;> simp only [signalStep, Option.some.injEq, reduceCtorEq] at h
+  cases_cont k <;> simp only [signalStep, Option.some.injEq, reduceCtorEq] at h
   all_goals try (subst h; simp only [Config.locSup, Cont.locSup]; omega)
   all_goals cases sg <;> simp only [Option.some.injEq, reduceCtorEq] at h
   all_goals try (subst h; simp only [Config.locSup, Cont.locSup, Stmt.locSup]; omega)
@@ -5890,7 +5900,7 @@ theorem stmtListSup_append {a b : List Stmt} :
 theorem seqCont_locSup {ss : List Stmt} {env : LocalEnv} {k : Cont} :
     Cont.locSup (seqCont ss env k)
       ≤ max (stmtListSup ss) (max (LocalEnv.locSup env) (Cont.locSup k)) := by
-  cases k <;>
+  cases_cont k <;>
     simp [seqCont, Cont.locSup, stmtListSup_append, Nat.max_le] <;>
     first
       | omega
@@ -5954,8 +5964,8 @@ bounded by the marker. -/
 theorem recoverAtDeferred_locSup {k : Cont} {v : GoValue} {k' : Cont}
     (h : recoverAtDeferred k = some (v, k')) :
     GoValue.locSup v ≤ Cont.locSup k ∧ Cont.locSup k' ≤ Cont.locSup k := by
-  cases k <;> try (simp [recoverAtDeferred] at h; done)
-  rename_i chain k₀
+  cases_cont k <;> try (simp [recoverAtDeferred] at h; done)
+  rename_i k₀ chain
   simp only [recoverAtDeferred, Option.map_eq_some_iff] at h
   obtain ⟨⟨v₀, chain'⟩, hmark, heq⟩ := h
   simp only [Prod.mk.injEq] at heq
@@ -5983,7 +5993,7 @@ theorem recoverResult_locSup :
     · simpa using this
     intro k b k' ha
     split at ha
-    · rename_i t te r ds k₀ f
+    · rename_i t te r ds f k₀
       simp only [Option.some.injEq] at ha
       cases hin : recoverAtDeferred k₀ with
       | none =>

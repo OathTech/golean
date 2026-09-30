@@ -52,6 +52,16 @@ recover rule (`recoverResult_eq`, `_frame`, `_glue`) and the domain-narrowing br
 `findFunctionIn?` premise (`findFunctionIn?_filter`, `_filter_none` — the logic team's request 5 of
 2026-09-28, relayed; [AGENT] coordinator disposition). Row 67 (`enterFrame_declared`) confirmed.
 
+RE-PIN 5 — G-C3, `Cont := List Frame` ([AGENT packet C worker], lane core/continuations-0929,
+2026-09-29; G-C3 passed [USER] Mike 2026-09-29 «Agree with 1-4», relayed; design note
+`docs/2026-09-29_gc3-continuations-design.md` D5/D6): rows 1–89 elaborate BYTE-IDENTICAL — every
+pinned statement mentions `Cont` and its constructors only through the type name and the
+`@[match_pattern]` views (`.stop`, `.frame …`, `.panicResumeK …`), which keep their names and
+argument order, so no row was re-pinned. Rows 90–107 ADDED: the shape (`Cont = List Frame`) and the
+walks as list laws — `Cont.rebuild` (cons/nil), `pushDefer` («map at the first call frame» and its
+converse, plus the per-head cases), `seqCont`, `panicPassthrough`, `recoverResult` over `[]` and a
+glue head, frame exit at `.next` and at an empty frame, and the sup's cons law.
+
 The set is RE-PINNED per window row; every change to this file is a changelog line
 (`docs/changelog/61958f2e-WINDOW.md`), so the file's diff between two pins IS the
 interface diff.
@@ -695,5 +705,104 @@ example : ∀ {t : List (TargetShape × List Expr)} {te : LocalEnv} {r : List Lo
 example : ∀ {k k' : Cont}, k.isGlue = true → k.tail = some k' →
     recoverResult k = ((recoverResult k').1, k.withTail (recoverResult k').2) :=
   @GoLean.GoCore.Machine.recoverResult_glue
+
+-- 90. `Machine.lean` — the continuation IS a list of frames (RE-PIN 5; G-C3 decision 1: this and
+-- nothing more — no `Config` reshape, no context-fill law)
+example : Cont = List Frame := rfl
+
+-- 91. `Machine.lean` — the one walk at a frame: descend (the tail's answer, the frame consed back)
+-- or act (RE-PIN 5; D6)
+example : ∀ {β : Type} {descend : Cont → Bool} {act : Cont → Option (β × Cont)} (f : Frame) (k : Cont),
+    Cont.rebuild descend act (f :: k) =
+      if descend (f :: k) = true then
+        (Cont.rebuild descend act k).map fun (b, k'') => (b, f :: k'')
+      else act (f :: k) :=
+  @GoLean.GoCore.Machine.Cont.rebuild_cons
+
+-- 92. `Machine.lean` — the one walk at the empty continuation acts (RE-PIN 5)
+example : ∀ {β : Type} {descend : Cont → Bool} {act : Cont → Option (β × Cont)},
+    Cont.rebuild descend act [] = act [] :=
+  @GoLean.GoCore.Machine.Cont.rebuild_nil
+
+-- 93. `Machine.lean` — `pushDefer` maps at the first call frame under a statement-glue prefix
+-- (RE-PIN 5; D6 `pushDefer_eq`)
+example : ∀ (d : GoValue × List GoValue) (pre : List Frame) (t : List (TargetShape × List Expr))
+    (te : LocalEnv) (r : List Loc) (ds : List (GoValue × List GoValue)) (f : FuncId) (k : Cont),
+    (∀ g ∈ pre, g.class = .stmtGlue) →
+    pushDefer d (pre ++ Frame.frame t te r ds f :: k) = some (pre ++ Frame.frame t te r (d :: ds) f :: k) :=
+  @GoLean.GoCore.Machine.pushDefer_eq
+
+-- 94. `Machine.lean` — every successful `pushDefer` has that shape (RE-PIN 5)
+example : ∀ {d : GoValue × List GoValue} {k k' : Cont}, pushDefer d k = some k' →
+    ∃ pre t te r ds f rest, (∀ g ∈ pre, g.class = .stmtGlue)
+      ∧ k = pre ++ Frame.frame t te r ds f :: rest
+      ∧ k' = pre ++ Frame.frame t te r (d :: ds) f :: rest :=
+  @GoLean.GoCore.Machine.pushDefer_some
+
+-- 95. `Machine.lean` — `pushDefer` at a call frame (RE-PIN 5)
+example : ∀ (d : GoValue × List GoValue) (t : List (TargetShape × List Expr)) (te : LocalEnv)
+    (r : List Loc) (ds : List (GoValue × List GoValue)) (f : FuncId) (k : Cont),
+    pushDefer d (Frame.frame t te r ds f :: k) = some (Frame.frame t te r (d :: ds) f :: k) :=
+  @GoLean.GoCore.Machine.pushDefer_frame
+
+-- 96. `Machine.lean` — `pushDefer` through statement glue (RE-PIN 5)
+example : ∀ (d : GoValue × List GoValue) {g : Frame} (k : Cont), g.class = .stmtGlue →
+    pushDefer d (g :: k) = (pushDefer d k).map (g :: ·) :=
+  @GoLean.GoCore.Machine.pushDefer_glue
+
+-- 97. `Machine.lean` — `pushDefer` at any other head fails closed (RE-PIN 5)
+example : ∀ (d : GoValue × List GoValue) {g : Frame} (k : Cont), g.class ≠ .stmtGlue →
+    g.class ≠ .callFrame → pushDefer d (g :: k) = none :=
+  @GoLean.GoCore.Machine.pushDefer_other
+
+-- 98. `Machine.lean` — `seqCont` splices into a same-environment sequence (RE-PIN 5; D6)
+example : ∀ (ss rest : List Stmt) (env : LocalEnv) (k : Cont),
+    seqCont ss env (Frame.seq rest env :: k) = Frame.seq (ss ++ rest) env :: k :=
+  @GoLean.GoCore.Machine.seqCont_seq
+
+-- 99. `Machine.lean` — `seqCont` over a foreign-environment sequence (RE-PIN 5)
+example : ∀ (ss rest : List Stmt) {env env' : LocalEnv} (k : Cont), env' ≠ env →
+    seqCont ss env (Frame.seq rest env' :: k) = Frame.seq ss env :: Frame.seq rest env' :: k :=
+  @GoLean.GoCore.Machine.seqCont_seq_ne
+
+-- 100. `Machine.lean` — `seqCont` at any other head (RE-PIN 5; D6 `seqCont_eq`)
+example : ∀ (ss : List Stmt) (env : LocalEnv) (k : Cont),
+    (∀ rest env' k', k ≠ Frame.seq rest env' :: k') → seqCont ss env k = Frame.seq ss env :: k :=
+  @GoLean.GoCore.Machine.seqCont_eq
+
+-- 101. `Machine.lean` — one unwinding step strips a glue head, of either kind (RE-PIN 5; D6
+-- `panicPassthrough_eq`)
+example : ∀ (g : Frame) (k : Cont),
+    panicPassthrough (g :: k) = if g.class = .stmtGlue ∨ g.class = .exprGlue then some k else none :=
+  @GoLean.GoCore.Machine.panicPassthrough_eq
+
+-- 102. `Machine.lean` — no unwinding step at the empty continuation (RE-PIN 5)
+example : panicPassthrough [] = none := @GoLean.GoCore.Machine.panicPassthrough_nil
+
+-- 103. `Machine.lean` — `recover` through a glue head, as a list law (RE-PIN 5)
+example : ∀ {g : Frame} (k : Cont), g.class = .stmtGlue ∨ g.class = .exprGlue →
+    recoverResult (g :: k) = ((recoverResult k).1, g :: (recoverResult k).2) :=
+  @GoLean.GoCore.Machine.recoverResult_cons_glue
+
+-- 104. `Machine.lean` — `recover` at the empty continuation is the no-op `.nil` (RE-PIN 5)
+example : recoverResult [] = (.nil, []) := @GoLean.GoCore.Machine.recoverResult_nil
+
+-- 105. `StepFn.lean` — a body that falls off its end at a call frame takes frame exit over the
+-- list's rest (RE-PIN 5; D6 frame exit)
+example : ∀ {ctx : ProgramCtx} (s : Store) (targets : List (TargetShape × List Expr)) (tenv : LocalEnv)
+    (results : List Loc) (ds : List (GoValue × List GoValue)) (fr : FuncId) (k' : Cont) (choices : Choices),
+    stepFn ctx s (.next (Frame.frame targets tenv results ds fr :: k')) choices
+      = stepFrameExit ctx s targets tenv results ds k' fr choices :=
+  @GoLean.GoCore.Machine.stepFn_next_frame
+
+-- 106. `StepFn.lean` — an empty frame (no targets, results or defers) pops itself (RE-PIN 5)
+example : ∀ {ctx : ProgramCtx} (s : Store) (tenv : LocalEnv) (k' : Cont) (fr : FuncId) (choices : Choices),
+    stepFrameExit ctx s [] tenv [] [] k' fr choices = .ok (.next k', s, choices, ⟨[], [], []⟩) :=
+  @GoLean.GoCore.Machine.stepFrameExit_nil
+
+-- 107. `StateWf.lean` — the sup of a frame stack: the head's own payload joined with the tail's
+-- (RE-PIN 5)
+example : ∀ (f : Frame) (k : Cont), Cont.locSup (f :: k) = max (Cont.locSup [f]) (Cont.locSup k) :=
+  @GoLean.GoCore.Machine.Cont.locSup_cons
 
 end GoLean.GoCore.BridgeSet
