@@ -1197,3 +1197,39 @@ and `records/raft-deltas-0930` (the raft-proofs note, U-1–U-3 recorded, the `p
 unchanged — the native `Intn` pick site placed as window unit 5b between B6 and C4, route A found FAITHFUL-FEASIBLE with its
 conditions; route A's dispatch stays PENDING [USER] after the window). The audit's F1 changelog clause and the F2/F4 notes for
 packet D are added in this records commit.
+
+### The logic team's route-A reply (2026-09-30) — dispositions
+
+Source: `docs/2026-09-30_note-from-logic-team-route-a.md` (verbatim copy of golean-logic `docs/2026-09-30_note-to-golean-route-a.md`,
+branch `docs/golean-route-a-0930` @ `7866af1`, sha256 `367de8e3e39160873b0fce39580907e97eb71d4737314f8d12080e593ef3101d`; relayed by
+the [USER] Mike 2026-09-30; recorded by the [AGENT] design writer, lane `docs/bug004-item4-design-0930`). It answers
+`docs/2026-09-30_protobuf-route-a.md` §7: proving raft's ConfChange paths against a LOWERED Go `Unmarshal` is workable for them (contracts
+discharged once against the lowered body, refining raft-proofs' functional decoder); their «route B is likely cheaper» view is withdrawn
+(their `cluster3` census shows raft itself needs loops, slices, integer kinds/shifts, recursion, error interfaces and initialized globals,
+so route A adds only codec-specific invariants — their estimate 3–6 sessions); they now PREFER route A.
+
+The [USER]'s clarification, 2026-09-30, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «btw, I'm the user for all three
+teams so this is more a design tradeoff question than a user negotiation question». The three teams' notes are DESIGN INPUT to one
+user's tradeoff, not positions to negotiate; this record and the design note below are written in that light.
+
+Dispositions ([AGENT] design writer, inside the standing ruling; nothing here re-decides it):
+1. Route A is CONFIRMED. The [USER]'s condition — «Yes, I also prefer A, as long as it could be made faithful» (2026-09-30, relayed;
+   the previous record, item 3) — is met by `docs/2026-09-30_protobuf-route-a.md`'s FAITHFUL-FEASIBLE verdict (landed with train r56 @
+   `20049982`), and the logic side now prefers A. Its lane stays POST-window (`docs/2026-09-24_window-plan.md` §4, `subject/protobuf-route-a`);
+   its go-ahead at dispatch remains the separate [USER] decision the previous record names.
+2. The lane's brief CARRIES the logic side's requirements (their §5): (a) a named `FuncId` list for the codec; (b) deterministic,
+   hash-pinned generator output (`derive.py`'s `gen_codec`, so regeneration does not churn their proofs); (c) generated code restricted to
+   plain indexed loops, `break`/`continue` only, recursion bounded by a depth counter, no reflection — the prototype already keeps to
+   these (`docs/2026-09-30_protobuf-route-a.md` §2); (d) the init-time spelling pick in ONE fixed `mapIter` shape, an ordinary choice
+   consumed before `main`, so one lemma covers it (this depends on their globals/initialization stage, as they say); (e) NOT needed: a
+   pinned equation set for the codec's functions (packet D's general per-arm equations are what matter to them) and a trusted purity
+   statement — a DOCUMENTED footprint helps their planning and is written into the lane's deliverables.
+3. Their §4 caveat — BUG-004 item 4 (the machine refuses the abort line of `panic(err)`; in their logic a refusal is a fault on every
+   tape, so a program that can reach `panic(err)` gets no outcome theorem unless the panic is proved unreachable) — is answered by the
+   DESIGN NOTE on this branch, `docs/2026-09-30_bug004-item4-design.md`: gc's exact behaviour from the runtime source and 25 probes, the
+   options, the recommended preprint phase, the blast radius, and the size. Its WINDOW PLACEMENT is a tradeoff POSED with the note
+   (its §4–§5), PENDING [USER]: inside the window (one re-pin, +3.5–5 sessions) or after it (the logic side excludes error-payload panics
+   by precondition meanwhile; a second re-pin of the abort surface when it lands). The rendering equations they ask for on landing (error
+   payloads, «like the existing `StringPanic` lemmas») are in the note's blast radius as the lane's deliverable.
+4. Their C4/C2 readings are recorded as agreement: the subject-local error type is invisible to their proofs (nothing recorded); the
+   prefix spelling is an outcome theorem quantified over both spellings — the membership view of route A's C2.
