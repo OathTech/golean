@@ -1233,3 +1233,15 @@ Dispositions ([AGENT] design writer, inside the standing ruling; nothing here re
    payloads, «like the existing `StringPanic` lemmas») are in the note's blast radius as the lane's deliverable.
 4. Their C4/C2 readings are recorded as agreement: the subject-local error type is invisible to their proofs (nothing recorded); the
    prefix spelling is an outcome theorem quantified over both spellings — the membership view of route A's C2.
+
+### BUG-004 item 4 (error/Stringer panic payloads) — placement and design RULED (2026-09-30)
+
+[USER] Mike, 2026-09-30, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «Yes, agree, do the fix inside this
+window» — answering the coordinator's recommendation on `docs/2026-09-30_bug004-item4-design.md`: the fix lands INSIDE the
+batched window as unit 6b (after C4, before packet D), so the logic side takes one re-pin and `panic(err)` renders before the
+offer; with the note's decisions as recommended — design (i), the preprint phase (payload methods run as ordinary machine steps
+after all defers, before the terminal classification; `Finish` stays a cost-1 terminal); the two-field `PanicEntry` encoding
+(`rewrite`, `repanicked`); the per-pair identity consult in the phase (the existing `repanicCollapse` site, bound 2); the fatal
+«panic while printing panic value» text exact for string and user-defined payloads, runtime-error payloads refused by name
+(BUG-099); owners Fable for S1–S2 and Opus for S3, with G-C3's elaboration stop rule. Option (ii) (literal-returning methods
+only) NOT taken.
