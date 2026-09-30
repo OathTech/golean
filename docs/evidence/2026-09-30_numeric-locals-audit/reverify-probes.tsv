@@ -1,0 +1,45 @@
+# Re-verification at f11dad1f (fix round) — the logic team's conditions + F1(b)/F3 attack probes, 2026-09-30
+# main = 131a7313 frontend (built from git archive) + the primary's binary (sources = 131a7313, sha256 8e042f19…); fix = f11dad1f frontend (tools/ unchanged since 79b48a2e) + the lane worktree's lake-verified binary (sha256 ce232262…)
+# IDENTICAL = observation + exit code byte-identical across sides; go = the oracle's stdout
+## first-round probes (21) re-run
+decl-forms	IDENTICAL	rc=0	lean=ok 132	go=132 
+defer-recover-shadow	IDENTICAL	rc=0	lean=ok 42	go=recovered shadow 42 
+embedded-promotion	IDENTICAL	rc=0	lean=ok 14	go=outer v 5 14 
+generics-methodvalue	IDENTICAL	rc=0	lean=ok 17	go=17 
+goroutine-capture	IDENTICAL	rc=1	lean=race data race detected	go=1 
+goto-hoist-shadow	IDENTICAL	rc=0	lean=ok 1006	go=1006 
+labels-vs-vars	IDENTICAL	rc=0	lean=ok 5	go=5 
+loopvar-closures	IDENTICAL	rc=0	lean=ok 6	go=body 0 body 10 body 20 rangeint 100 rang
+maprange-shadow	IDENTICAL	rc=0	lean=ok 100	go=a! 1 assign a after a 100 100 
+nested-closures	IDENTICAL	rc=0	lean=ok 33	go=x 1 y 4 r 28 33 
+params-blank-unnamed	IDENTICAL	rc=0	lean=ok 37	go=37 
+range-closure-capture	IDENTICAL	rc=0	lean=ok 36	go=36 
+recursion-blocks	IDENTICAL	rc=0	lean=ok 5	go=depth 2 1 depth 3 2 depth 2 1 depth 2 1 
+recv-result-shadow	IDENTICAL	rc=0	lean=ok 18	go=shadow 7 7 18 
+redecl-reuse	IDENTICAL	rc=0	lean=ok 17	go=inner 3 true outer 1 7 9 true 17 
+shadow-goto	IDENTICAL	rc=0	lean=ok 1	go=label 0 11 label 1 11 after 1 1 
+shadow-if-init	IDENTICAL	rc=0	lean=ok 1	go=inner 12 after 1 1 
+shadow-select	IDENTICAL	rc=0	lean=ok 1	go=recv 18 default2 1 after 1 1 
+shadow-switch	IDENTICAL	rc=0	lean=ok 1	go=case2 5 after 1 1 
+shadow-typeswitch	IDENTICAL	rc=0	lean=ok 100	go=int 4 multi true after 100 100 
+unseq-shadow	IDENTICAL	rc=0	lean=ok 12	go=inner 5 outer 12 2321 12 
+## fix-round attack probes: F3 (re-entered / adjacent sweeps: two sweeps in one block, a sweep at goto-label level re-executed, a goto decl-region, sweeps in for cond/post/body with continue, in a closure re-capturing the same names, in a select loop, in a deferred closure + recursion, switch/fallthrough/labelled continue, range sweeps) and F1(b) (every ADMITTED sync/atomic type's stubs; a type-switch binder used in one clause of three and an unbound type switch; locals used only inside closures; unused named params/results/receivers, blank receivers, only-assigned params; generic stencils incl. a bound generic method value; fmt lifts, Fprintf into a strings.Builder, a method value, a deferred closure with an argument; goto hoists; shadow renames captured by closures; write-only locals)
+f1-closure-only-use	IDENTICAL	rc=0	lean=ok 7	go=7 
+f1-fmt-defer-methodvalue	IDENTICAL	rc=0	lean=ok 30	go=30 (42 funcs + 15 methods, 56 tables / 188 entries incl. the fmt shim lifts' capture tables)
+f1-generics-methods	IDENTICAL	rc=0	lean=ok 22	go=22 
+f1-labels-goto-unused	IDENTICAL	rc=0	lean=ok 6	go=6 
+f1-shadow-renames	IDENTICAL	rc=0	lean=ok 1	go=1 
+f1-sync-all	IDENTICAL	rc=0	lean=ok 21	go=21 
+f1-sync-unadmitted	FE-REFUSED(main=1 fix=1) SAME-REFUSAL-TEXT	nativefrontend: native frontend unsupported: sync/atomic.Bool: atomic.Bool is a uint32-backed wrapper with a b
+f1-typeswitch-partial-use	IDENTICAL	rc=0	lean=ok 10	go=10 
+f1-unused-sig	IDENTICAL	rc=0	lean=ok 11	go=11 
+f1-writeonly-and-goto-locals	IDENTICAL	rc=0	lean=ok 9	go=9
+f3-closure-same-names	IDENTICAL	rc=0	lean=ok 1212341257	go=1212341257 
+f3-defer-recursion	IDENTICAL	rc=0	lean=ok 3210101312824660	go=3210101312824660 
+f3-for-cond-post	IDENTICAL	rc=0	lean=ok 5319135094507094256	go=5319135094507094256 
+f3-goto-decl-region	IDENTICAL	rc=0	lean=ok 1122406	go=1122406 
+f3-goto-label-level	IDENTICAL	rc=0	lean=ok 11232	go=11232 
+f3-range-sweeps	IDENTICAL	rc=0	lean=ok 21136628795984	go=21136628795984 
+f3-select-loop	IDENTICAL	rc=0	lean=ok 122349	go=122349 
+f3-switch-fallthrough-labels	IDENTICAL	rc=0	lean=ok 11235111238192534	go=11235111238192534 
+f3-two-sweeps-one-block	IDENTICAL	rc=0	lean=ok 133597	go=133597 

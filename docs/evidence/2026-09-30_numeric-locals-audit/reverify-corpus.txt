@@ -1,0 +1,13 @@
+# Re-verification at f11dad1f — corpus A/B (auditor's frontends/binaries; main = 131a7313 frontend + the primary's binary; fix = f11dad1f frontend + binary), 2026-09-30
+## Lowering: every unique fixture dir of the 3791-row manifest (1368 dirs); frontend exit codes identical: yes; nonzero exits both sides: 24 dirs (the pre-existing refusals)
+## Runs: every manifest row via native-json-run, both sides: differing files 1 — arrays__materialization-budget__over-budget.out (the BUG-078 refusal's wire PATH); byte-identical otherwise
+exit-code histogram (fix): 3084×rc0 672×rc1 1×rc134 34×rc99  (rc99 = no wire: the 34 frontend-refused rows)
+status histogram (fix): 27 "deadlock"; 1 "error"; 9 "fatal"; 3084 "ok"; 401 "panic"; 50 "race"; 5 "stuck"; 178 "unsupported"; 
+run outputs mentioning a B6/F1/F3 refusal text (tableNamed, unused entry, localsOk, already bound in the enclosing scope, neither a binder cell): 0 of 3791
+## Standing checks at f11dad1f
+scripts/check-core-audit: PASS (158 required theorems — see ci tail); no sorry/native_decide/axiom under GoLean/; no partial under GoLean/GoCore/; BridgeSet: 132 rows, rows 1–107 byte-identical to 131a7313; mutating row 126 (i ∈ f.ids → i ∉ f.ids) AND row 132 (the unseqEntryCheck? premise dropped) fails lake build GoLean.GoCore.BridgeSet with two type mismatches (lines 928, 964); restored, rebuild ok
+tools/nativefrontend unchanged 79b48a2e..f11dad1f (the twin pin and the certified row's wire are the first round's: 8a158eff… / f448d579…)
+## Enumeration A/B (all 386 non-strict rows with their own lane params; the certified row at its claim's argv)
+rows per side: 386; differing files across sides (observations / stats / exit code): 0
+exit-code histogram (identical on both sides): 384×rc0 2×rc1; total enumerated observation lines: fix 1289 / main 1289
+certified row imported-goose/channel/google-search: 6 members, observations sha256 e40ba07d11827b48aa8c9246bd84d6c21849159983d46c47b793b5759cfbbfd8 (= the certified record's e40ba07d…); stats: coverage-observations: observations=6 steps=6565663 probes=0 sites=6193933 leaves=0 maxdepth=0 width=4 engine=dedup nodes=6193933 edges=6565663 dedupHits=371731 certified=checkCert

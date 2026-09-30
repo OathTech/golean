@@ -1,0 +1,41 @@
+# Re-verification at f11dad1f — the first round's 24 decoder mutants + 13 new ones on the fix-round binary (fixture: Tests/wire-boundary-locals lowered fresh; the shadow-if-init probe wire), 2026-09-30
+# [expect] = the auditor's prediction; the first round's PASS? rows (M1/M12/M6/M13/M16) were the F1 witnesses — now refused by name; M14 (a well-formed forged pos) still decodes: content unverifiable, recorded by the lane
+M1-declare-reuses-in-scope-id	[PASS?]	rc=1	"error"	native lowering: program.funcs[0]: name-table entry 2 ('x') is declared or referenced nowhere in the function — an unused entry (B6 fix round F1 (b)
+M2-sibling-binder-ids-swapped	[PASS?]	rc=1	"unsupported"	len for non-array/slice/map value GoLean.GoValue.int 3 (GoLean.GoCore.IntKind.int)
+M3-result-slot-is-the-param	[REFUSE]	rc=1	"error"	native lowering: program.funcs[3]: result 'a' (declaration 0) is recorded with kind GoLean.GoCore.LocalKind.param in the function's name table (expect
+M4-capture-ref-forged-id	[REFUSE]	rc=1	"error"	native lowering: program.funcs[2].body.body[1].results[0].captured[0]: the source local 'x' resolves to declaration 0 by lexical scope (the innermost 
+M4b-capture-param-wrong-index	[REFUSE]	rc=1	"error"	native lowering: program.funcs[1].params[0]: local index 1 names 'y$cap' in the function's name table, but the node spells 'x$cap' (B6 c1, spelling ag
+M5-table-wire-dollar	[REFUSE]	rc=1	"error"	native lowering: program.funcs[0].locals[1].wire: the lowering spelling '$c0' starts with `$`, the temporaries' reservation (B6 c2); refused by name
+M5b-ident-temp-spelling-with-index	[REFUSE]	rc=1	"error"	native lowering: program.funcs[0].body.body[1].then.body[0].rhs[0].x: the `$`-temporary '$c0' carries a `local` index — temporaries are interned by 
+M6-body-local-kind-recv	[PASS?]	rc=1	"error"	native lowering: program.funcs[0]: body-declared local 1 is recorded with kind GoLean.GoCore.LocalKind.recv in the name table (expected local | temp; 
+M7-table-truncated	[REFUSE]	rc=1	"error"	native lowering: program.funcs[0].body.body[1].then.body[1].lhs[0]: local index 2 for 'x' is past the function's name table (2 entries) (B6 c1); refus
+M8a-v3-wire-labelled-v2	[REFUSE]	rc=1	"error"	native lowering: schema golean-native-v2 predates B6 (2026-09-30: numeric locals — `local` declaration indices and per-function `locals` name tables
+M8b-stripped-v2-wire	[REFUSE]	rc=1	"error"	native lowering: schema golean-native-v2 predates B6 (2026-09-30: numeric locals — `local` declaration indices and per-function `locals` name tables
+M8c-stripped-but-v3	[REFUSE]	rc=1	"error"	program.funcs[0]: missing field 'locals'
+M9-range-locals-swapped	[REFUSE]	rc=1	"error"	native lowering: program.funcs[4].body.body[1].keyLocal: local index 4 names 'x' in the function's name table, but the node spells 'i' (B6 c1, spellin
+M10-index-neg	[REFUSE]	rc=1	"error"	program.funcs[0].body.body[1].then.body[0].rhs[0].x.local: Natural number expected
+M10-index-str	[REFUSE]	rc=1	"error"	program.funcs[0].body.body[1].then.body[0].rhs[0].x.local: Natural number expected
+M10-index-float	[REFUSE]	rc=1	"error"	program.funcs[0].body.body[1].then.body[0].rhs[0].x.local: Natural number expected
+M10-index-null	[REFUSE]	rc=1	"error"	program.funcs[0].body.body[1].then.body[0].rhs[0].x.local: Natural number expected
+M10-index-bool	[REFUSE]	rc=1	"error"	program.funcs[0].body.body[1].then.body[0].rhs[0].x.local: Natural number expected
+M11-outer-ref-to-inner-decl	[REFUSE]	rc=1	"error"	native lowering: program.funcs[0].body.body[2].results[0]: the source local 'x' resolves to declaration 1 by lexical scope (the innermost in-scope dec
+M12-probe-init-x-reuses-outer-id	[PASS?]	rc=1	"error"	native lowering: program.funcs[0]: name-table entry 1 ('x') is declared or referenced nowhere in the function — an unused entry (B6 fix round F1 (b)
+M13-table-name-forged-behind-wire	[PASS?]	rc=1	"error"	native lowering: program.funcs[0].locals[1].wire: the lowering spelling 'x' does not rename this entry's identifier 'somethingElse' — its base spell
+M14-pos-forged	[PASS?]	rc=0	"ok"	
+M15-undeclared-temp-reference	[?]	rc=1	"stuck"	unbound GoCore variable address: 5
+M16-unused-table-entry	[PASS?]	rc=1	"error"	native lowering: program.funcs[0]: name-table entry 3 ('unused') is declared or referenced nowhere in the function — an unused entry (B6 fix round F
+P-pos-col0	[REFUSE]	rc=1	"error"	native lowering: program.funcs[0].locals[1].pos: 'main.go:4:0' — the column must be a positive decimal (B6 F1, pos format); refused by name
+P-pos-line0	[REFUSE]	rc=1	"error"	native lowering: program.funcs[0].locals[1].pos: 'main.go:0:4' — the line must be a positive decimal (B6 F1, pos format); refused by name
+P-pos-twoparts	[REFUSE]	rc=1	"error"	native lowering: program.funcs[0].locals[1].pos: 'main.go:4' is not `basename.go:line:col` (B6 F1, pos format); refused by name
+P-pos-abs	[REFUSE]	rc=1	"error"	native lowering: program.funcs[0].locals[1].pos: '/x/main.go:4:2' — the file part must be a bare `.go` basename (B6 F1, pos format); refused by name
+P-pos-notgo	[REFUSE]	rc=1	"error"	native lowering: program.funcs[0].locals[1].pos: 'main.txt:4:2' — the file part must be a bare `.go` basename (B6 F1, pos format); refused by name
+P-pos-ok-other	[PASS?]	rc=0	"ok"	
+P-wire-equals-name	[REFUSE]	rc=1	"error"	native lowering: program.funcs[0].locals[1].wire: the lowering spelling equals the identifier 'x' — `wire` is carried only when the lowering renamed
+P-wire-renamed-but-nodes-spell-x	[REFUSE]	rc=1	"error"	native lowering: program.funcs[0].body.body[0].lhs[0]: local index 1 names 'x$shadow9' in the function's name table, but the node spells 'x' (B6 c1, s
+P-wire-base-mismatch	[REFUSE]	rc=1	"error"	native lowering: program.funcs[1].locals[0].wire: the lowering spelling 'x$cap' does not rename this entry's identifier 'q' — its base spelling (bef
+P-result-kind-capture	[REFUSE]	rc=1	"error"	native lowering: program.funcs[3]: result 'r' (declaration 1) is recorded with kind GoLean.GoCore.LocalKind.capture in the function's name table (expe
+P-param-kind-local	[REFUSE]	rc=1	"error"	native lowering: program.funcs[0]: parameter 'n' (declaration 0) is recorded with kind GoLean.GoCore.LocalKind.local in the function's name table (exp
+P-plain-func-param-as-recv	[PASS?]	rc=0	"ok"	"output":""
+P-capture-param-as-param	[PASS?]	rc=0	"ok"	"output":""
+
+# residual unchecked (assessment, not defects): P-plain-func-param-as-recv — a plain function's first parameter may carry kind recv (Func has no is-method bit; argKinds admits recv|param|capture|temp for any argument, recvFirst constrains position only); P-capture-param-as-param — a capture pointer's entry may claim param (same set); M14 / P-pos-ok-other — a well-formed but false pos decodes (unverifiable at the boundary, stated in the design).

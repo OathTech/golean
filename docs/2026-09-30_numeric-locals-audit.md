@@ -186,3 +186,94 @@ C9 STALE line above and the pre-existing C13 doc-version note.
 - No attempt was made to construct a Go program on which the machine's runtime scoping differs from Go's
   lexical scoping (the only way the id walk and the spelling walk could diverge); the corpus and the 21
   probes found none.
+
+## Re-verification (`f11dad1f`, 2026-09-30)
+
+[AGENT auditor] The fix round landed on `core/numeric-locals-0930` at `f11dad1f` (rebased onto `main` `90df0fe1`;
+the first round's commits are now `79b48a2e`/`8a383bae`; snapshot `refs/snapshots/b6-fix/pre-rebase` = `a6df705f`).
+D1–D6 RATIFIED ([USER] Mike 2026-09-30, verbatim, relayed: «Agree, go ahead and fix, agree on all 6»). This
+branch was rebased onto `f11dad1f` (snapshot `refs/snapshots/audit-b6/pre-rebase`); `.lake` warmed from the lane
+worktree after a `diff -r` of the Lean sources (identical; binary sha256 `ce232262…`, lake-verified).
+`tools/nativefrontend` is unchanged since `79b48a2e`, so the twin pin and the certified row's wire are the first
+round's. Evidence: `reverify-probes.tsv`, `reverify-mutants.tsv`, `reverify-corpus.txt`, `reverify-ci-diff-tail.txt`.
+
+### REVISED VERDICT: MERGE-CLEAN
+
+Every fix-round claim re-derived; the two attacks the coordinator asked for (F1(b) refusing a legal program; F3
+refusing a legal decoded program the corpus lacks) produced no witness through the real frontend; the corpus
+A/B and the enumeration A/B against `main` are identical again. Residual notes are TRIVIAL (assessment only).
+
+### The claims, one by one
+
+- **F1 (a) `wire` base spelling.** `decodeLocalsTable` refuses a `wire` whose base (before the first `$`) is not
+  `name`, or that equals `name` — my M13 and two new variants (`P-wire-base-mismatch`, `P-wire-equals-name`)
+  refuse by name; a `wire` renamed while the nodes still spell the base falls to c1 (`P-wire-renamed-but-nodes-
+  spell-x`). Every frontend `wire` is `x$cap` / `x$shadowN` (base = `obj.Name()`), so no legal wire trips it:
+  the corpus A/B below.
+- **F1 (b) table ⊆ tree (`Func.tableNamed`).** My M1/M12 (a declare re-pointed at an in-scope same-spelling
+  id — caught as the orphaned inner entry) and M16 refuse by name. **The attack**: does it refuse a legal
+  program? Go itself refuses an unused local (`declared and not used`), so the candidates are the objects the
+  frontend numbers without a surviving node: unused named parameters/results/receivers, blank `_`
+  parameters/receivers, only-assigned parameters, locals used only inside a closure, type-switch binders used
+  in one clause of three (and an unbound type switch), write-only locals (`w = n; _ = w`), goto-hoisted
+  locals, generic stencils incl. a bound generic method value, every ADMITTED sync/atomic type's stubs
+  (`Mutex`/`RWMutex`/`WaitGroup`/`Once`, `atomic.Int32/Int64/Uint32/Uint64/Uintptr` — the `forceParamID`
+  path that drops a parameter's index), the `fmt` shim lifts (capture tables from `golean-stdlib-shims.go`),
+  method values and a deferred closure with an argument — 11 probes (`reverify-probes.tsv`): every one decodes
+  and runs IDENTICALLY to `main` and equals `go run`; the one frontend refusal (`atomic.Bool`/`Pointer`) is the
+  same text on both sides. Corpus: 3791 rows re-lowered and re-run, zero B6/F1/F3 refusal texts, one differing
+  byte string (the BUG-078 wire path). Signature ids are in `Func.ids` by construction, so unused
+  params/results/receivers can never trip it; the only frontend path that mints an entry and then drops its
+  node (`syncStubBody`'s forced `$a{i}`) empties the table when no parameter keeps an index — the probe covers
+  it. `$lit` interning is now lazy (`targetBaseExpr` in `LowerM`); `build.py` prunes and renumbers orphaned
+  envelope entries (none were, per the lane; the 141 fixtures rebuild byte-identical in the gate).
+- **F1 (c) kinds in the core predicate.** `localsOk := tableCovers && tableNamed && sigDistinct && argKinds &&
+  resultKinds && recvFirst && bodyKinds`, refused part by part with the index and kind named; M6 (a body local
+  as `recv`), `P-result-kind-capture`, `P-param-kind-local` refuse. Lemmas `localsOk_named`, `_argKind`,
+  `_resultKind`, `_recvFirst`, `_bodyKind` (+ `localsOk_parts`, `kindOf?`); BridgeSet row 116 re-pinned with
+  three part equations, rows 126–132 added (132 = the `unseqEnter` rule with its new premise); rows 1–107
+  byte-identical to `131a7313`; mutating rows 126 and 132 fails the build with two type mismatches; the core
+  audit's required list 153 → 158 (`check-core-audit` PASS).
+- **F1 `pos`.** FORMAT checked (`basename.go:line:col`, positive decimals, bare `.go` basename): five malformed
+  variants refuse by name (`P-pos-*`); a well-formed forged position decodes (M14, `P-pos-ok-other`) — content
+  unverifiable at the boundary, stated in D3/D5 as such. Accurate.
+- **F2.** D6's wording now says «for SOURCE locals»; M15 (an undeclared `$`-temporary) decodes and refuses at the
+  machine (`unbound GoCore variable address: 5`), as on `main`. Accurate.
+- **F3 `unseqEntryCheck?`.** A second premise of `Step.unseqEnter` (no binder cell or target binder already
+  bound in the enclosing environment; every mentioned slot a cell or a bound local), consulted by
+  `stepUnseqEnter` before `allocDecls`; `stepUnseqEnter_sound`/`_stream`, `step_complete`,
+  `step_complete_any_wf_aux` and `StateWf`'s case re-proved with the premise; `b4`, `mBareTarget` (its target
+  binder now the source local `x`) and `mUnknownSlot` refused at ENTER by name. **The attack**: a legal decoded
+  program the premise refuses would need a binder still bound when the sweep is entered — a sweep re-executed
+  in the SAME scope — or a mentioned slot unbound at entry. Probes through the real frontend: two sweeps in one
+  block (binders are `$u{tmpSeq}`/`$t{tmpSeq}` from a program-wide monotonic counter, so distinct), a sweep at
+  goto-label level re-executed three times and a goto decl-region (the goto lowering's segments are blocks: a
+  fresh scope per pass), sweeps in a `for` cond/post/body with `continue`, in a `select` loop, in
+  `switch`/`fallthrough`/labelled `continue`, in range loops, in a closure re-capturing the same names, in a
+  deferred closure with recursion — 9 probes, all IDENTICAL to `main` and equal to `go run`; the corpus A/B
+  runs 3791 rows with zero entry-check refusals (the lane's «0 of 1354 decoded wires» reproduced by a different
+  instrument). The domain narrowing is real but confined to HAND-BUILT graphs (K2's second sweep took suffix
+  `2`) and is recorded in the handoff. Nested graphs are the decoder's Stage C refusal on both sides.
+- **F4/F5.** The changelog's D6 row names the binder-quoting family and the two `Machine.lean` texts; F5 is
+  recorded in the handoff. Accurate.
+- **Gates.** `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff` at `f11dad1f`, under the box-wide lock
+  (atomic `mkdir`, owner file, trap-released, never taken over), with this audit's untracked/modified records
+  in the tree (the gate's `git_dirty` note; no runtime file differs from the tip): **EXIT 1, `RESULT: FAIL` on
+  exactly the 5a pair** — `certificate provenance` STALE and the ONE drift line `imported-goose/channel/
+  google-search baseline[PASS/membership] -> now[FAIL/membership]` — `cases=3791 pass=3553 fail=238` = the pin
+  with that row; `baselines/native-full.tsv` unchanged; every other step ok: core totality audit **158**
+  required theorems, wire boundary **16 B6 controls**, unseq scheduler (the three re-pointed rows at ENTER)
+  and unseq wire (56 mutants; fixture re-derivation), frontend pins (twin = `8a158eff…`), eval tests 298,
+  negative baseline 394, escape hatches, engine isolation, evidence size. Wall 857 s. Tail:
+  `reverify-ci-diff-tail.txt`. Enumeration A/B against `main` on the fix-round binary: all 386 non-strict rows
+  with their own lane params identical (1289 observation lines per side; the certified row's 6 members hash
+  to the record's `e40ba07d…`); corpus A/B: `reverify-corpus.txt`.
+
+### Residual (TRIVIAL, assessment — no action required)
+
+- `argKinds` admits `recv | param | capture | temp` for ANY argument and `recvFirst` constrains position only:
+  a plain function's first parameter may carry kind `recv` (`P-plain-func-param-as-recv` decodes; `Func` has no
+  is-method bit) and a capture pointer's entry may claim `param` (`P-capture-param-as-param` decodes). A
+  consumer reading kinds gets «one of these», not the exact role — the honest reading of rows 128–130.
+- The scripts `.tmp/ab-*.sh`, `.tmp/probe3.sh`, `.tmp/mutants/make.py`, `.tmp/wirediff.py` and the probe
+  sources are the audit's reproducible instruments; they stay under the ignored `.tmp/` (312 K), not tracked.
