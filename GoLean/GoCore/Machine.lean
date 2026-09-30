@@ -1890,7 +1890,7 @@ def mapIterMandatoryRemains (candidates : Array (Nat × GoValue × GoValue))
 /-- Declare a `mapRange` iteration's key/value variables in a fresh scope
 (normalized at the range types), mirroring the interpreter's per-iteration
 `declareLocal`s. -/
-def bindIterVars (env : LocalEnv) (s : Store) (keyVar valVar : Option String)
+def bindIterVars (env : LocalEnv) (s : Store) (keyVar valVar : Option VarId)
     (keyTy valTy : Ty) (key value : GoValue) :
     Except Stop (LocalEnv × Store) := do
   let (env, s) ←
@@ -2089,13 +2089,13 @@ def unseqAtom (env : LocalEnv) (s : Store) : Expr → Except Stop (GoValue × Ac
   | other => stuck s!"unseq: target operand is not an atom (a slot, an admitted local, the address of a local, or an int/bool/string constant): {repr other}"
 
 /-- A binder cell's location: declared in the sweep's scope at ENTER. -/
-def unseqCellLoc (env : LocalEnv) (bind : String) : Except Stop Loc :=
+def unseqCellLoc (env : LocalEnv) (bind : VarId) : Except Stop Loc :=
   match env.lookup bind with
   | some loc => return loc
   | none => stuck s!"unseq: binder cell '{bind}' is not declared in the sweep's scope"
 
 /-- The frozen target plan bound to `tgt` in the continuation's table. -/
-def unseqLookupTarget : List (String × TargetRef) → String → Except Stop TargetRef
+def unseqLookupTarget : List (VarId × TargetRef) → VarId → Except Stop TargetRef
   | [], tgt => stuck s!"unseq: target binder '{tgt}' has not been produced"
   | (n, r) :: rest, tgt => if n == tgt then return r else unseqLookupTarget rest tgt
 
@@ -2120,8 +2120,8 @@ def unseqReadTarget (s : Store) : TargetRef → Except Stop (GoValue × AccessTr
 /-- The `load` body: read through the target, then write the binder cell.
 The read's panic precedes the store, so a failing load leaves the state as
 it was (the sweep's first failure over the pre-state). -/
-def unseqLoad.plan (s : Store) (env : LocalEnv) (targets : List (String × TargetRef))
-    (bind tgt : String) : Except Stop (Commit (Store × AccessTrace)) := do
+def unseqLoad.plan (s : Store) (env : LocalEnv) (targets : List (VarId × TargetRef))
+    (bind tgt : VarId) : Except Stop (Commit (Store × AccessTrace)) := do
   let r ← unseqLookupTarget targets tgt
   let (v, t₁) ← unseqReadTarget ctx s r
   let loc ← unseqCellLoc env bind
@@ -2131,8 +2131,8 @@ def unseqLoad.plan (s : Store) (env : LocalEnv) (targets : List (String × Targe
     return (s', t₁ ++ t₂)
 
 @[inherit_doc unseqLoad.plan]
-def unseqLoad (s : Store) (env : LocalEnv) (targets : List (String × TargetRef))
-    (bind tgt : String) : Except Stop (Store × AccessTrace) := do
+def unseqLoad (s : Store) (env : LocalEnv) (targets : List (VarId × TargetRef))
+    (bind tgt : VarId) : Except Stop (Store × AccessTrace) := do
   let c ← unseqLoad.plan ctx s env targets bind tgt
   c s
 
@@ -2212,7 +2212,7 @@ region is SKIPPED (`UnseqGraph.skipRegion`), the completion binder is set to
 the short-circuit constant `!when` and its occurrence marked DONE (the only
 join), and the guard is DONE. -/
 def unseqGuard (s : Store) (g : UnseqGraph) (env : LocalEnv) (st : List UnseqStatus)
-    (i : Nat) (test : String) (w : Bool) (out : String) :
+    (i : Nat) (test : VarId) (w : Bool) (out : VarId) :
     Except Stop (List UnseqStatus × Store × AccessTrace) := do
   let (tv, t₁) ← Mem.loadBinding ctx s (← unseqCellLoc env test)
   let b ← valueAsBool tv
@@ -2229,8 +2229,8 @@ def unseqGuard (s : Store) (g : UnseqGraph) (env : LocalEnv) (st : List UnseqSta
 store order (left to right) — handed to the existing phase-2 spine
 (`Cont.storeK`: one store per step, each store's own check at the store,
 spec#Assignment_statements). -/
-def unseqStorePlan (s : Store) (env : LocalEnv) (targets : List (String × TargetRef)) :
-    List (String × String) → Except Stop (List TargetRef × List GoValue)
+def unseqStorePlan (s : Store) (env : LocalEnv) (targets : List (VarId × TargetRef)) :
+    List (VarId × VarId) → Except Stop (List TargetRef × List GoValue)
   | [] => return ([], [])
   | (t, v) :: rest => do
       let r ← unseqLookupTarget targets t
@@ -2241,20 +2241,20 @@ def unseqStorePlan (s : Store) (env : LocalEnv) (targets : List (String × Targe
 /-- The `invoke` body's statement: a value call whose targets are the
 predeclared binder cells (the results are WRITTEN there by the call's own
 phase-2 stores — never declared; v2.1 §3.3). -/
-def unseqInvokeStmt (binds : List String) (callee : Expr) (args : List Expr) : Stmt :=
+def unseqInvokeStmt (binds : List VarId) (callee : Expr) (args : List Expr) : Stmt :=
   .callValue (binds.map Assignee.var).toArray callee args.toArray
 
 /-- The `recv` body's statement (Stage E E3): a channel receive whose targets
 are the predeclared binder cells — the value (and the comma-ok flag) are
 WRITTEN there by the receive's own delivery, never declared. -/
-def unseqRecvStmt (binds : List String) (ch : Expr) (elem : Ty) : Stmt :=
+def unseqRecvStmt (binds : List VarId) (ch : Expr) (elem : Ty) : Stmt :=
   .chanRecv (binds.map Assignee.var).toArray ch elem
 
 /-- The `alloc` body's statement (Stage E E4): the hoisted allocation with the
 binder cell as its target — `new` (`&T{…}`, `new(T)`), `make`, or a slice
 literal's `makeSlice` followed by its element stores (the decoder's own
 `slice-lit` shape, `NativeToIR`). -/
-def unseqAllocStmt (bind : String) : AllocSpec → Stmt
+def unseqAllocStmt (bind : VarId) : AllocSpec → Stmt
   | .new v ty => .allocNew (.var bind) v ty
   | .makeSlice elem len cap => .makeSlice (.var bind) elem len cap
   | .makeMap k v hint => .makeMap (.var bind) k v hint
@@ -2275,7 +2275,7 @@ the base slice and the packed / spread elements, already evaluated) and `copy`
 (`Stmt.copySlice`), each writing its ONE result cell. The arity is checked
 statically (`UnseqGraph.wellFormed?`); a binder list of another length reaches
 the machine's own `unsupported` refusal by name, never a silent store. -/
-def unseqWideStmt (binds : List String) : WideSpec → Stmt
+def unseqWideStmt (binds : List VarId) : WideSpec → Stmt
   | .append elem slice elems =>
       match binds with
       | [b] => .appendSlice (.var b) elem slice elems
@@ -3471,7 +3471,7 @@ inductive Frame where
       (pending : List Expr) (env : LocalEnv)
   /-- Awaiting the `mapRange` map value; the start step (base loc +
   start-key set — the BUG-005 (L) surgery, ruled 2026-08-19) follows. -/
-  | mapRangeK (keyVar valVar : Option String) (keyTy valTy : Ty)
+  | mapRangeK (keyVar valVar : Option VarId) (keyTy valTy : Ty)
       (body : Stmt) (env : LocalEnv)
   /-- `mapRange` iteration context — LIVE iteration over ENTRY-IDENTITY
   STAMPS (BUG-005 (L), ruled 2026-08-19; B1, 2026-09-03 — the retired
@@ -3536,7 +3536,7 @@ inductive Frame where
   holding one) are ordinary stamped entries here — each produced once
   — where the retired key-set frame could never mark them produced
   (`maps/nan-key-range`, BUG-088). -/
-  | mapIterK (keyVar valVar : Option String) (keyTy valTy : Ty) (body : Stmt)
+  | mapIterK (keyVar valVar : Option VarId) (keyTy valTy : Ty) (body : Stmt)
       (base : Option Loc) (produced : Array Nat)
       (start : Array Nat) (env : LocalEnv)
   /-- Awaiting a `panic` payload value. -/
@@ -3662,7 +3662,7 @@ inductive Frame where
   names the shape). Appended at the END so positional case tags stay
   stable. -/
   | unseqK (g : UnseqGraph) (thenB : Stmt) (status : List UnseqStatus)
-      (targets : List (String × TargetRef)) (env : LocalEnv) (phase : UnseqPhase)
+      (targets : List (VarId × TargetRef)) (env : LocalEnv) (phase : UnseqPhase)
 
 /-- The continuation: a stack of frames, innermost first (G-C3, packet C,
 [USER] 2026-09-29 «Agree with 1-4», relayed; design note
@@ -3725,10 +3725,10 @@ abbrev Cont := List Frame
 @[match_pattern] abbrev Cont.stmtOpK (op : StmtOp) (ntargets : Nat) (done : List GoValue) (pending : List Expr) (env : LocalEnv) (k : Cont) : Cont :=
   Frame.stmtOpK op ntargets done pending env :: k
 
-@[match_pattern] abbrev Cont.mapRangeK (keyVar : Option String) (valVar : Option String) (keyTy : Ty) (valTy : Ty) (body : Stmt) (env : LocalEnv) (k : Cont) : Cont :=
+@[match_pattern] abbrev Cont.mapRangeK (keyVar : Option VarId) (valVar : Option VarId) (keyTy : Ty) (valTy : Ty) (body : Stmt) (env : LocalEnv) (k : Cont) : Cont :=
   Frame.mapRangeK keyVar valVar keyTy valTy body env :: k
 
-@[match_pattern] abbrev Cont.mapIterK (keyVar : Option String) (valVar : Option String) (keyTy : Ty) (valTy : Ty) (body : Stmt) (base : Option Loc) (produced : Array Nat) (start : Array Nat) (env : LocalEnv) (k : Cont) : Cont :=
+@[match_pattern] abbrev Cont.mapIterK (keyVar : Option VarId) (valVar : Option VarId) (keyTy : Ty) (valTy : Ty) (body : Stmt) (base : Option Loc) (produced : Array Nat) (start : Array Nat) (env : LocalEnv) (k : Cont) : Cont :=
   Frame.mapIterK keyVar valVar keyTy valTy body base produced start env :: k
 
 @[match_pattern] abbrev Cont.panicArgK (k : Cont) : Cont :=
@@ -3767,7 +3767,7 @@ abbrev Cont := List Frame
 @[match_pattern] abbrev Cont.probeK (k : Cont) : Cont :=
   Frame.probeK :: k
 
-@[match_pattern] abbrev Cont.unseqK (g : UnseqGraph) (thenB : Stmt) (status : List UnseqStatus) (targets : List (String × TargetRef)) (env : LocalEnv) (phase : UnseqPhase) (k : Cont) : Cont :=
+@[match_pattern] abbrev Cont.unseqK (g : UnseqGraph) (thenB : Stmt) (status : List UnseqStatus) (targets : List (VarId × TargetRef)) (env : LocalEnv) (phase : UnseqPhase) (k : Cont) : Cont :=
   Frame.unseqK g thenB status targets env phase :: k
 
 /-- Split a continuation into `.stop` and its 32 frame views — the pre-C3
@@ -6747,6 +6747,251 @@ theorem frame_exit_returns {sh : TargetShape} {e : Expr} {ops : List Expr}
       ∧ Step ctx (.signal .ret (.frame ((sh, e :: ops) :: rest) tenv results [] k fid)) s
         (.evalE e tenv (.tgtOpK sh [] ops [] rest .vals [] vs (.seqn #[]) tenv k)) s ⟨tr, [], []⟩ :=
   ⟨.frameFallTargets hload, .frameReturnTargets hload⟩
+
+/-! ## B6 — the activation's slots (numeric locals, 2026-09-30; the logic team's request 3)
+
+«Table lookup agrees with the activation's runtime slot»: frame entry binds the
+`i`-th parameter id to the `i`-th cell allocated from the entry store and the `j`-th
+result id to the cell after all the parameters — under the signature's ids being
+pairwise distinct (`Func.localsOk_sigDistinct`, `Locals.lean`; the decoder's c2/c5). -/
+
+/-- `Store.alloc` appends: the new cell is `.base ⟨s.heap.size⟩` and the heap grows by one. -/
+theorem Store.alloc_shape {s s' : Store} {v : GoValue} {ty : Ty} {l : Loc}
+    (h : Store.alloc ctx s v ty = .ok (l, s')) :
+    l = .base ⟨s.heap.size⟩ ∧ s'.heap.size = s.heap.size + 1 := by
+  unfold Store.alloc at h
+  cases hn : normalizeValueForTy ctx ty v with
+  | error e => simp [hn, Bind.bind, Except.bind] at h
+  | ok v' =>
+      simp only [hn, Bind.bind, Except.bind, pure, Except.pure, Store.allocCell, Except.ok.injEq,
+        Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      simp
+
+theorem bindParams_heap_size : ∀ (env : LocalEnv) (s : Store) (ps : List Param) (vs : List GoValue)
+    {env' : LocalEnv} {s' : Store}, bindParams ctx env s ps vs = .ok (env', s') →
+    s'.heap.size = s.heap.size + ps.length
+  | _, _, [], [], _, _, h => by
+      simp only [bindParams, pure, Except.pure, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨-, rfl⟩ := h; simp
+  | _, _, [], _ :: _, _, _, h => by simp [bindParams, stuck] at h
+  | _, _, _ :: _, [], _, _, h => by simp [bindParams, stuck] at h
+  | env, s, p :: ps, v :: vs, env', s', h => by
+      simp only [bindParams, Bind.bind, Except.bind] at h
+      cases hn : normalizeValueForTy ctx p.typ v with
+      | error e => simp [hn] at h
+      | ok v' =>
+        simp only [hn] at h
+        cases ha : Store.alloc ctx s v' p.typ with
+        | error e => simp [ha] at h
+        | ok ls =>
+          obtain ⟨l, s₁⟩ := ls
+          simp only [ha] at h
+          have ih := bindParams_heap_size _ _ ps vs h
+          have hs := (Store.alloc_shape ha).2
+          simp only [List.length_cons]; omega
+
+theorem bindParams_lookup_preserve : ∀ (env : LocalEnv) (s : Store) (ps : List Param) (vs : List GoValue)
+    {env' : LocalEnv} {s' : Store} {id : VarId}, bindParams ctx env s ps vs = .ok (env', s') →
+    id ∉ ps.map (·.id) → LocalEnv.lookup env' id = LocalEnv.lookup env id
+  | _, _, [], [], _, _, _, h, _ => by
+      simp only [bindParams, pure, Except.pure, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, -⟩ := h; rfl
+  | _, _, [], _ :: _, _, _, _, h, _ => by simp [bindParams, stuck] at h
+  | _, _, _ :: _, [], _, _, _, h, _ => by simp [bindParams, stuck] at h
+  | env, s, p :: ps, v :: vs, env', s', id, h, hid => by
+      simp only [bindParams, Bind.bind, Except.bind] at h
+      cases hn : normalizeValueForTy ctx p.typ v with
+      | error e => simp [hn] at h
+      | ok v' =>
+        simp only [hn] at h
+        cases ha : Store.alloc ctx s v' p.typ with
+        | error e => simp [ha] at h
+        | ok ls =>
+          obtain ⟨l, s₁⟩ := ls
+          simp only [ha] at h
+          have hne : id ≠ p.id := fun heq => hid (by simp [heq])
+          have hrest : id ∉ ps.map (·.id) := fun hm => hid (by simp [hm])
+          rw [bindParams_lookup_preserve _ _ ps vs h hrest, LocalEnv.lookup_declare_ne _ hne]
+
+/-- Arguments bind in order: parameter `i` is bound to `.base ⟨s.heap.size + i⟩`. -/
+theorem bindParams_lookup : ∀ (env : LocalEnv) (s : Store) (ps : List Param) (vs : List GoValue)
+    {env' : LocalEnv} {s' : Store}, bindParams ctx env s ps vs = .ok (env', s') →
+    namesDistinct (ps.map (·.id)) = true →
+    ∀ (i : Nat) (hi : i < ps.length), LocalEnv.lookup env' ps[i].id = some (.base ⟨s.heap.size + i⟩)
+  | _, _, [], [], _, _, _, _, i, hi => absurd hi (Nat.not_lt_zero i)
+  | _, _, [], _ :: _, _, _, h, _, _, _ => by simp [bindParams, stuck] at h
+  | _, _, _ :: _, [], _, _, h, _, _, _ => by simp [bindParams, stuck] at h
+  | env, s, p :: ps, v :: vs, env', s', h, hd, i, hi => by
+      simp only [bindParams, Bind.bind, Except.bind] at h
+      cases hn : normalizeValueForTy ctx p.typ v with
+      | error e => simp [hn] at h
+      | ok v' =>
+        simp only [hn] at h
+        cases ha : Store.alloc ctx s v' p.typ with
+        | error e => simp [ha] at h
+        | ok ls =>
+          obtain ⟨l, s₁⟩ := ls
+          simp only [ha] at h
+          obtain ⟨hl, hs⟩ := Store.alloc_shape ha
+          have hd' := namesDistinct_cons (by simpa using hd)
+          cases i with
+          | zero =>
+              simp only [List.getElem_cons_zero, Nat.add_zero]
+              rw [bindParams_lookup_preserve _ _ ps vs h hd'.1, LocalEnv.lookup_declare_self, hl]
+          | succ j =>
+              have hj : j < ps.length := Nat.lt_of_succ_lt_succ hi
+              have := bindParams_lookup _ _ ps vs h hd'.2 j hj
+              simp only [List.getElem_cons_succ]
+              rw [this, hs, Nat.add_assoc, Nat.add_comm 1]
+
+theorem allocDecls_heap_size : ∀ (env : LocalEnv) (s : Store) (ps : List Param)
+    {env' : LocalEnv} {s' : Store}, allocDecls ctx env s ps = .ok (env', s') →
+    s'.heap.size = s.heap.size + ps.length
+  | _, _, [], _, _, h => by
+      simp only [allocDecls, pure, Except.pure, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨-, rfl⟩ := h; simp
+  | env, s, p :: ps, env', s', h => by
+      simp only [allocDecls, Bind.bind, Except.bind] at h
+      cases hn : defaultValue ctx p.typ with
+      | error e => simp [hn] at h
+      | ok v =>
+        simp only [hn] at h
+        cases ha : Store.alloc ctx s v p.typ with
+        | error e => simp [ha] at h
+        | ok ls =>
+          obtain ⟨l, s₁⟩ := ls
+          simp only [ha] at h
+          have ih := allocDecls_heap_size _ _ ps h
+          have hs := (Store.alloc_shape ha).2
+          simp only [List.length_cons]; omega
+
+theorem allocDecls_lookup_preserve : ∀ (env : LocalEnv) (s : Store) (ps : List Param)
+    {env' : LocalEnv} {s' : Store} {id : VarId}, allocDecls ctx env s ps = .ok (env', s') →
+    id ∉ ps.map (·.id) → LocalEnv.lookup env' id = LocalEnv.lookup env id
+  | _, _, [], _, _, _, h, _ => by
+      simp only [allocDecls, pure, Except.pure, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, -⟩ := h; rfl
+  | env, s, p :: ps, env', s', id, h, hid => by
+      simp only [allocDecls, Bind.bind, Except.bind] at h
+      cases hn : defaultValue ctx p.typ with
+      | error e => simp [hn] at h
+      | ok v =>
+        simp only [hn] at h
+        cases ha : Store.alloc ctx s v p.typ with
+        | error e => simp [ha] at h
+        | ok ls =>
+          obtain ⟨l, s₁⟩ := ls
+          simp only [ha] at h
+          have hne : id ≠ p.id := fun heq => hid (by simp [heq])
+          have hrest : id ∉ ps.map (·.id) := fun hm => hid (by simp [hm])
+          rw [allocDecls_lookup_preserve _ _ ps h hrest, LocalEnv.lookup_declare_ne _ hne]
+
+/-- Declared locals (a frame's results, a block's declarations) allocate in order:
+declaration `j` is bound to `.base ⟨s.heap.size + j⟩`. -/
+theorem allocDecls_lookup : ∀ (env : LocalEnv) (s : Store) (ps : List Param)
+    {env' : LocalEnv} {s' : Store}, allocDecls ctx env s ps = .ok (env', s') →
+    namesDistinct (ps.map (·.id)) = true →
+    ∀ (j : Nat) (hj : j < ps.length), LocalEnv.lookup env' ps[j].id = some (.base ⟨s.heap.size + j⟩)
+  | _, _, [], _, _, _, _, j, hj => absurd hj (Nat.not_lt_zero j)
+  | env, s, p :: ps, env', s', h, hd, j, hj => by
+      simp only [allocDecls, Bind.bind, Except.bind] at h
+      cases hn : defaultValue ctx p.typ with
+      | error e => simp [hn] at h
+      | ok v =>
+        simp only [hn] at h
+        cases ha : Store.alloc ctx s v p.typ with
+        | error e => simp [ha] at h
+        | ok ls =>
+          obtain ⟨l, s₁⟩ := ls
+          simp only [ha] at h
+          obtain ⟨hl, hs⟩ := Store.alloc_shape ha
+          have hd' := namesDistinct_cons (by simpa using hd)
+          cases j with
+          | zero =>
+              simp only [List.getElem_cons_zero, Nat.add_zero]
+              rw [allocDecls_lookup_preserve _ _ ps h hd'.1, LocalEnv.lookup_declare_self, hl]
+          | succ i =>
+              have hi : i < ps.length := Nat.lt_of_succ_lt_succ hj
+              have := allocDecls_lookup _ _ ps h hd'.2 i hi
+              simp only [List.getElem_cons_succ]
+              rw [this, hs, Nat.add_assoc, Nat.add_comm 1]
+
+/-- **The activation's slots** (request 3): a declared, non-anchor function entered with
+`argVals` runs its body in a frame environment binding parameter `i` to the `i`-th cell
+allocated from the entry store and result `j` to the cell after all the parameters — the
+premise being the signature's ids pairwise distinct (`Func.localsOk_sigDistinct`). -/
+theorem enterFrame_lookup {s : Store} {fid : FuncId} {argVals : List GoValue} {func : Func}
+    (hf : findFunctionIn? ctx.functions fid = some func)
+    (hanchor : ∀ m, methodInfoByFuncId? ctx func.id = some m → methodRecvInterfaceName? m = none)
+    (harity : func.args.size = argVals.length)
+    (hdistinct : namesDistinct ((func.args ++ func.results).toList.map (·.id)) = true)
+    {r : Entry} {s' : Store} {tr : AccessTrace}
+    (h : enterFrame ctx s fid argVals = .ok (r, s', tr)) :
+    ∃ frameEnv resultLocs, r = .run func frameEnv resultLocs
+      ∧ (∀ (i : Nat) (hi : i < func.args.size),
+          LocalEnv.lookup frameEnv func.args[i].id = some (.base ⟨s.heap.size + i⟩))
+      ∧ (∀ (j : Nat) (hj : j < func.results.size),
+          LocalEnv.lookup frameEnv func.results[j].id = some (.base ⟨s.heap.size + func.args.size + j⟩)) := by
+  rw [enterFrame_declared hf hanchor harity] at h
+  simp only [Bind.bind, Except.bind] at h
+  cases hb : bindParams ctx [] s func.args.toList argVals with
+  | error e => simp [hb] at h
+  | ok as =>
+    obtain ⟨argsEnv, s₁⟩ := as
+    simp only [hb] at h
+    cases ha : allocDecls ctx argsEnv s₁ func.results.toList with
+    | error e => simp [ha] at h
+    | ok fs =>
+      obtain ⟨frameEnv, s₂⟩ := fs
+      simp only [ha] at h
+      cases hp : pinResultLocs frameEnv func.results.toList with
+      | error e => simp [hp] at h
+      | ok resultLocs =>
+        simp only [hp, pure, Except.pure, Except.ok.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl, rfl⟩ := h
+        have hd : namesDistinct (func.args.toList.map (·.id) ++ func.results.toList.map (·.id)) = true := by
+          simpa [Array.toList_append, List.map_append] using hdistinct
+        obtain ⟨hda, hdr, hdisj⟩ := namesDistinct_append hd
+        have hsize := bindParams_heap_size _ _ _ _ hb
+        refine ⟨frameEnv, resultLocs, rfl, ?_, ?_⟩
+        · intro i hi
+          have hi' : i < func.args.toList.length := by simpa using hi
+          have hmem : func.args.toList[i].id ∈ func.args.toList.map (·.id) :=
+            List.mem_map.mpr ⟨_, List.getElem_mem hi', rfl⟩
+          rw [← Array.getElem_toList (h := hi'),
+            allocDecls_lookup_preserve _ _ _ ha (hdisj _ hmem)]
+          exact bindParams_lookup _ _ _ _ hb hda i hi'
+        · intro j hj
+          have hj' : j < func.results.toList.length := by simpa using hj
+          rw [← Array.getElem_toList (h := hj'), allocDecls_lookup _ _ _ ha hdr j hj', hsize]
+          simp
+
+theorem enterFrame_lookup_arg {s : Store} {fid : FuncId} {argVals : List GoValue} {func : Func}
+    (hf : findFunctionIn? ctx.functions fid = some func)
+    (hanchor : ∀ m, methodInfoByFuncId? ctx func.id = some m → methodRecvInterfaceName? m = none)
+    (harity : func.args.size = argVals.length)
+    (hdistinct : namesDistinct ((func.args ++ func.results).toList.map (·.id)) = true)
+    {frameEnv : LocalEnv} {resultLocs : List Loc} {s' : Store} {tr : AccessTrace}
+    (h : enterFrame ctx s fid argVals = .ok (.run func frameEnv resultLocs, s', tr))
+    (i : Nat) (hi : i < func.args.size) :
+    LocalEnv.lookup frameEnv func.args[i].id = some (.base ⟨s.heap.size + i⟩) := by
+  obtain ⟨env', locs', heq, hargs, -⟩ := enterFrame_lookup hf hanchor harity hdistinct h
+  cases heq
+  exact hargs i hi
+
+theorem enterFrame_lookup_result {s : Store} {fid : FuncId} {argVals : List GoValue} {func : Func}
+    (hf : findFunctionIn? ctx.functions fid = some func)
+    (hanchor : ∀ m, methodInfoByFuncId? ctx func.id = some m → methodRecvInterfaceName? m = none)
+    (harity : func.args.size = argVals.length)
+    (hdistinct : namesDistinct ((func.args ++ func.results).toList.map (·.id)) = true)
+    {frameEnv : LocalEnv} {resultLocs : List Loc} {s' : Store} {tr : AccessTrace}
+    (h : enterFrame ctx s fid argVals = .ok (.run func frameEnv resultLocs, s', tr))
+    (j : Nat) (hj : j < func.results.size) :
+    LocalEnv.lookup frameEnv func.results[j].id = some (.base ⟨s.heap.size + func.args.size + j⟩) := by
+  obtain ⟨env', locs', heq, -, hres⟩ := enterFrame_lookup hf hanchor harity hdistinct h
+  cases heq
+  exact hres j hj
 variable (ctx)
 
 end GoLean.GoCore.Machine

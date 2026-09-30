@@ -53,7 +53,7 @@ variable {ctx : ProgramCtx}
 open GoLean
 
 theorem unseq_pick_ready {g : UnseqGraph} {thenB : Stmt} {st : List UnseqStatus}
-    {tg : List (String × TargetRef)} {env : LocalEnv} {k : Cont} {s : Store} {i : Nat}
+    {tg : List (VarId × TargetRef)} {env : LocalEnv} {k : Cont} {s : Store} {i : Nat}
     {tr : StepLabel}
     (h : Step ctx (.next (.unseqK g thenB st tg env .pick k)) s
       (.next (.unseqK g thenB st tg env (.run i) k)) s tr) :
@@ -62,7 +62,7 @@ theorem unseq_pick_ready {g : UnseqGraph} {thenB : Stmt} {st : List UnseqStatus}
   | unseqPick hdep hj => exact List.mem_of_getElem? hj
 
 theorem unseq_pick_active {g : UnseqGraph} {thenB : Stmt} {st : List UnseqStatus}
-    {tg : List (String × TargetRef)} {env : LocalEnv} {k : Cont} {s : Store} {i : Nat}
+    {tg : List (VarId × TargetRef)} {env : LocalEnv} {k : Cont} {s : Store} {i : Nat}
     {tr : StepLabel}
     (h : Step ctx (.next (.unseqK g thenB st tg env .pick k)) s
       (.next (.unseqK g thenB st tg env (.run i) k)) s tr) :
@@ -71,7 +71,7 @@ theorem unseq_pick_active {g : UnseqGraph} {thenB : Stmt} {st : List UnseqStatus
   | unseqPick hdep hj => exact UnseqGraph.ready_active hj
 
 theorem unseq_panic_drops_frame {chain : List PanicEntry} {g : UnseqGraph} {thenB : Stmt}
-    {st : List UnseqStatus} {tg : List (String × TargetRef)} {env : LocalEnv} {ph : UnseqPhase}
+    {st : List UnseqStatus} {tg : List (VarId × TargetRef)} {env : LocalEnv} {ph : UnseqPhase}
     {k : Cont} {s : Store} {c' : Config} {s' : Store} {tr : StepLabel}
     (h : Step ctx (.panicking chain (.unseqK g thenB st tg env ph k)) s c' s' tr) :
     c' = .panicking chain k ∧ s' = s := by
@@ -82,7 +82,7 @@ theorem unseq_panic_drops_frame {chain : List PanicEntry} {g : UnseqGraph} {then
       exact ⟨rfl, rfl⟩
 
 theorem unseq_complete_settled {g : UnseqGraph} {thenB : Stmt} {st : List UnseqStatus}
-    {tg : List (String × TargetRef)} {env : LocalEnv} {k : Cont} {s : Store}
+    {tg : List (VarId × TargetRef)} {env : LocalEnv} {k : Cont} {s : Store}
     {refs : List TargetRef} {vals : List GoValue} {thenB' : Stmt} {env' : LocalEnv} {k' : Cont}
     {s' : Store} {tr : StepLabel}
     (h : Step ctx (.next (.unseqK g thenB st tg env .pick k)) s
@@ -94,7 +94,7 @@ theorem unseq_complete_settled {g : UnseqGraph} {thenB : Stmt} {st : List UnseqS
   | unseqComplete hdep hall hprod hplan => exact ⟨hall, hprod, hplan, rfl, rfl, rfl, rfl⟩
 
 theorem unseq_record_stable {g g' : UnseqGraph} {thenB thenB' : Stmt} {st st' : List UnseqStatus}
-    {tg tg' : List (String × TargetRef)} {env env' : LocalEnv} {ph ph' : UnseqPhase} {k k' : Cont}
+    {tg tg' : List (VarId × TargetRef)} {env env' : LocalEnv} {ph ph' : UnseqPhase} {k k' : Cont}
     {s s' : Store} {tr : StepLabel}
     (h : Step ctx (.next (.unseqK g thenB st tg env ph k)) s
       (.next (.unseqK g' thenB' st' tg' env' ph' k')) s' tr) :
@@ -159,7 +159,7 @@ theorem UnseqGraph.skipRegion_length {g : UnseqGraph} {st : List UnseqStatus} {g
       exact ih _ UnseqGraph.skipOnce_length
 
 theorem unseq_done_permanent {g : UnseqGraph} {thenB : Stmt} {st st' : List UnseqStatus}
-    {tg tg' : List (String × TargetRef)} {env : LocalEnv} {ph ph' : UnseqPhase} {k : Cont}
+    {tg tg' : List (VarId × TargetRef)} {env : LocalEnv} {ph ph' : UnseqPhase} {k : Cont}
     {s s' : Store} {i : Nat} {tr : StepLabel}
     (hlen : st.length = g.occs.length)
     (h : Step ctx (.next (.unseqK g thenB st tg env ph k)) s

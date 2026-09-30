@@ -37,6 +37,7 @@
        },
        {
         "expr": "ident",
+        "local": 0,
         "name": "b",
         "type": {
          "kind": "bool"
@@ -44,6 +45,7 @@
        },
        {
         "expr": "ident",
+        "local": 1,
         "name": "n",
         "type": {
          "int": "int",
@@ -57,16 +59,30 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "param",
+     "name": "b",
+     "pos": "main.go:5:12"
+    },
+    {
+     "kind": "param",
+     "name": "n",
+     "pos": "main.go:5:20"
+    }
+   ],
    "name": "sinkL",
    "params": [
     {
      "id": "b",
+     "local": 0,
      "type": {
       "kind": "bool"
      }
     },
     {
      "id": "n",
+     "local": 1,
      "type": {
       "int": "int",
       "kind": "int"
@@ -85,6 +101,7 @@
        {
         "expr": {
          "expr": "ident",
+         "local": 0,
          "name": "b$cap"
         },
         "target": "addr"
@@ -117,10 +134,19 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "capture",
+     "name": "b",
+     "pos": "main.go:9:2",
+     "wire": "b$cap"
+    }
+   ],
    "name": "r2b$lit0",
    "params": [
     {
      "id": "b$cap",
+     "local": 0,
      "type": {
       "elem": {
        "kind": "bool"
@@ -148,6 +174,7 @@
       "lhs": [
        {
         "id": "left",
+        "local": 0,
         "target": "declare",
         "type": {
          "kind": "bool"
@@ -170,6 +197,7 @@
       "lhs": [
        {
         "id": "b",
+        "local": 1,
         "target": "declare",
         "type": {
          "kind": "bool"
@@ -192,6 +220,7 @@
       "lhs": [
        {
         "id": "change",
+        "local": 2,
         "target": "declare",
         "type": {
          "kind": "func",
@@ -211,7 +240,8 @@
         "captured": [
          {
           "expr": "ref",
-          "id": "b"
+          "id": "b",
+          "local": 1
          }
         ],
         "expr": "func-value",
@@ -264,6 +294,7 @@
         "bind": "$u0",
         "head": {
          "expr": "ident",
+         "local": 0,
          "name": "left",
          "type": {
           "kind": "bool"
@@ -283,6 +314,7 @@
         "bind": "$u2",
         "head": {
          "expr": "ident",
+         "local": 1,
          "name": "b",
          "type": {
           "kind": "bool"
@@ -315,6 +347,7 @@
         ],
         "callee": {
          "expr": "ident",
+         "local": 2,
          "name": "change",
          "type": {
           "kind": "func",
@@ -379,6 +412,23 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "local",
+     "name": "left",
+     "pos": "main.go:8:2"
+    },
+    {
+     "kind": "local",
+     "name": "b",
+     "pos": "main.go:9:2"
+    },
+    {
+     "kind": "local",
+     "name": "change",
+     "pos": "main.go:10:2"
+    }
+   ],
    "name": "r2b",
    "params": [],
    "results": [],
@@ -389,6 +439,6 @@
  "methods": [],
  "package": "main",
  "promotions": [],
- "schema": "golean-native-v2",
+ "schema": "golean-native-v3",
  "types": []
 }

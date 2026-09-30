@@ -34,6 +34,7 @@
     ],
     "stmt": "block"
    },
+   "locals": [],
    "name": "f",
    "params": [],
    "results": [
@@ -69,6 +70,7 @@
          "expr": "deref",
          "ptr": {
           "expr": "ident",
+          "local": 0,
           "name": "ch$cap"
          },
          "type": {
@@ -100,10 +102,19 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "capture",
+     "name": "ch",
+     "pos": "main.go:14:2",
+     "wire": "ch$cap"
+    }
+   ],
    "name": "e3recv$lit0",
    "params": [
     {
      "id": "ch$cap",
+     "local": 0,
      "type": {
       "elem": {
        "dir": "both",
@@ -155,6 +166,7 @@
       "lhs": [
        {
         "id": "ch",
+        "local": 0,
         "target": "declare",
         "type": {
          "dir": "both",
@@ -188,7 +200,8 @@
        "captured": [
         {
          "expr": "ref",
-         "id": "ch"
+         "id": "ch",
+         "local": 0
         }
        ],
        "expr": "func-value",
@@ -205,6 +218,7 @@
      {
       "ch": {
        "expr": "ident",
+       "local": 0,
        "name": "ch",
        "type": {
         "dir": "both",
@@ -260,6 +274,7 @@
       "lhs": [
        {
         "id": "x",
+        "local": 1,
         "target": "declare",
         "type": {
          "elem": {
@@ -381,6 +396,7 @@
          "expr": {
           "base": {
            "expr": "ident",
+           "local": 1,
            "name": "x",
            "type": {
             "elem": {
@@ -457,6 +473,7 @@
        {
         "base": {
          "expr": "ident",
+         "local": 1,
          "name": "x",
          "type": {
           "elem": {
@@ -486,6 +503,18 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "local",
+     "name": "ch",
+     "pos": "main.go:14:2"
+    },
+    {
+     "kind": "local",
+     "name": "x",
+     "pos": "main.go:17:2"
+    }
+   ],
    "name": "e3recv",
    "params": [],
    "results": [
@@ -504,6 +533,6 @@
  "methods": [],
  "package": "main",
  "promotions": [],
- "schema": "golean-native-v2",
+ "schema": "golean-native-v3",
  "types": []
 }

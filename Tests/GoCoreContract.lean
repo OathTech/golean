@@ -18,6 +18,8 @@ The 14 theorems named in `tools/core-audit.py`'s required list are required expo
 
 namespace GoLean.GoCore.ContractTests
 open GoCore GoCore.Machine Semantics
+/-- B6 (2026-09-30): a spelling interned injectively into a `VarId` (test-local). -/
+def vid (s : String) : GoLean.GoCore.VarId := s.toUTF8.foldl (fun n b => n * 256 + b.toNat) 0
 
 -- B7 (2026-09-17): the ∀-state facts take the program context implicitly;
 -- the concrete runs use `exampleCtx` (the old `{ types := TypeEnv.reserved }`).
@@ -291,12 +293,12 @@ def barrier : Cont := .frame [] [] [] [] .stop auditFid
 /-- B7: the old `({} : ExecState)` — an empty context beside the empty store. -/
 def emptyCtx : ProgramCtx := ProgramCtx.ofTables (types := #[])
 def fresh : Store := {}
-def scopeEnv : LocalEnv := [[("result", .base ⟨0⟩), ("x", .base ⟨1⟩)]]
+def scopeEnv : LocalEnv := [[(vid "result", .base ⟨0⟩), (vid "x", .base ⟨1⟩)]]
 def scopeState (b : Bool) : Store :=
   {fresh with heap := #[.value .bool (.bool false), .value .bool (.bool b)]}
 def scopeBody : Stmt := .seqn #[
-  .block #[⟨"x", .bool⟩] #[.assign (.var "x") (.not (.var "x"))],
-  .assign (.var "result") (.var "x"), .returnStmt]
+  .block #[⟨vid "x", .bool⟩] #[.assign (.var (vid "x")) (.not (.var (vid "x")))],
+  .assign (.var (vid "result")) (.var (vid "x")), .returnStmt]
 
 /-- The inner zero-initialized shadow is changed to true; after its block,
 the read resolves the outer input. Both inputs distinguish different errors. -/
@@ -305,8 +307,8 @@ theorem actual_scope_restoration (b : Bool) :
         loadMany emptyCtx s [.base ⟨0⟩]) = .ok [.bool b] := by
   cases b <;> with_unfolding_all rfl
 
-def zeroBody : Stmt := .seqn #[.initialization ⟨"zero", .bool⟩,
-  .assign (.var "result") (.var "zero"), .returnStmt]
+def zeroBody : Stmt := .seqn #[.initialization ⟨vid "zero", .bool⟩,
+  .assign (.var (vid "result")) (.var (vid "zero")), .returnStmt]
 
 theorem actual_new_local_zero (b : Bool) :
     (do let (s, _) ← runConfig emptyCtx 30 (scopeState b) (.exec zeroBody scopeEnv barrier) []
@@ -336,14 +338,14 @@ theorem equal_repanic_keeps_history (bytes : GoString) :
           ⟨.interface .string (.string bytes), true⟩]) := rfl
 
 def scopedFunction : Func := {
-  id := ⟨"scoped"⟩, args := #[⟨"x", .bool⟩], results := #[⟨"result", .bool⟩]
-  body := .block #[⟨"zero", .bool⟩] #[
-    .block #[⟨"x", .interface ⟨"any"⟩⟩] #[
-      .assign (.var "x") (.toInterface (.interface ⟨"any"⟩) .string
+  id := ⟨"scoped"⟩, args := #[⟨vid "x", .bool⟩], results := #[⟨vid "result", .bool⟩]
+  body := .block #[⟨vid "zero", .bool⟩] #[
+    .block #[⟨vid "x", .interface ⟨"any"⟩⟩] #[
+      .assign (.var (vid "x")) (.toInterface (.interface ⟨"any"⟩) .string
         (.stringLit (.fromLeanString "shadow")))],
-    .seqn #[.initialization ⟨"payload", .interface ⟨"any"⟩⟩],
-    .assign (.var "payload") (.nil none),
-    .assign (.var "result") (.and (.var "x") (.not (.var "zero"))), .returnStmt]
+    .seqn #[.initialization ⟨vid "payload", .interface ⟨"any"⟩⟩],
+    .assign (.var (vid "payload")) (.nil none),
+    .assign (.var (vid "result")) (.and (.var (vid "x")) (.not (.var (vid "zero")))), .returnStmt]
 }
 def scopedProgram : Program := { typeDefs := TypeEnv.reserved, funcs := #[scopedFunction] }
 

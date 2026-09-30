@@ -37,7 +37,7 @@ instance (v : GoValue) : Decidable (InitialValueHasType v .bool) :=
   decidable_of_iff (isBoolValue v = true) (isBoolValue_iff v)
 
 inductive BoolExpr : Expr → Prop
-  | var (x : String) : BoolExpr (.var x)
+  | var (x : VarId) : BoolExpr (.var x)
   | literal (b : Bool) : BoolExpr (.boolLit b)
   | not {e} : BoolExpr e → BoolExpr (.not e)
   | and {l r} : BoolExpr l → BoolExpr r → BoolExpr (.and l r)

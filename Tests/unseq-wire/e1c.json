@@ -57,6 +57,7 @@
     ],
     "stmt": "block"
    },
+   "locals": [],
    "name": "f",
    "params": [],
    "results": [
@@ -208,6 +209,7 @@
     ],
     "stmt": "block"
    },
+   "locals": [],
    "name": "e1c",
    "params": [],
    "results": [
@@ -250,6 +252,7 @@
     ],
     "stmt": "block"
    },
+   "locals": [],
    "name": "$pkginit",
    "params": [],
    "results": [],
@@ -269,6 +272,6 @@
  "methods": [],
  "package": "main",
  "promotions": [],
- "schema": "golean-native-v2",
+ "schema": "golean-native-v3",
  "types": []
 }

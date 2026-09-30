@@ -22,6 +22,7 @@
       "decls": [
        {
         "id": "a",
+        "local": 0,
         "type": {
          "elem": {
           "int": "int",
@@ -32,6 +33,7 @@
        },
        {
         "id": "b",
+        "local": 1,
         "type": {
          "elem": {
           "int": "int",
@@ -73,6 +75,7 @@
         "head": {
          "base": {
           "expr": "ident",
+          "local": 0,
           "name": "a",
           "type": {
            "elem": {
@@ -104,6 +107,7 @@
         "head": {
          "base": {
           "expr": "ident",
+          "local": 1,
           "name": "b",
           "type": {
            "elem": {
@@ -170,6 +174,18 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "local",
+     "name": "a",
+     "pos": "main.go:6:6"
+    },
+    {
+     "kind": "local",
+     "name": "b",
+     "pos": "main.go:6:9"
+    }
+   ],
    "name": "w4",
    "params": [],
    "results": [],
@@ -180,6 +196,6 @@
  "methods": [],
  "package": "main",
  "promotions": [],
- "schema": "golean-native-v2",
+ "schema": "golean-native-v3",
  "types": []
 }

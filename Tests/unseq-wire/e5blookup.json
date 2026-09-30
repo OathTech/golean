@@ -23,6 +23,7 @@
        "expr": "deref",
        "ptr": {
         "expr": "ident",
+        "local": 0,
         "name": "m$cap"
        },
        "type": {
@@ -67,10 +68,19 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "capture",
+     "name": "m",
+     "pos": "main.go:11:2",
+     "wire": "m$cap"
+    }
+   ],
    "name": "e5blookup$lit0",
    "params": [
     {
      "id": "m$cap",
+     "local": 0,
      "type": {
       "elem": {
        "key": {
@@ -152,6 +162,7 @@
       "lhs": [
        {
         "id": "m",
+        "local": 0,
         "target": "declare",
         "type": {
          "key": {
@@ -233,6 +244,7 @@
       "lhs": [
        {
         "id": "xs",
+        "local": 1,
         "target": "declare",
         "type": {
          "elem": {
@@ -263,6 +275,7 @@
       "lhs": [
        {
         "id": "f",
+        "local": 2,
         "target": "declare",
         "type": {
          "kind": "func",
@@ -282,7 +295,8 @@
         "captured": [
          {
           "expr": "ref",
-          "id": "m"
+          "id": "m",
+          "local": 0
          }
         ],
         "expr": "func-value",
@@ -306,6 +320,7 @@
       "decls": [
        {
         "id": "ok",
+        "local": 3,
         "type": {
          "kind": "bool"
         }
@@ -358,6 +373,7 @@
         ],
         "callee": {
          "expr": "ident",
+         "local": 2,
          "name": "f"
         },
         "kind": "invoke",
@@ -373,6 +389,7 @@
         "bind": "$u1",
         "head": {
          "expr": "ident",
+         "local": 0,
          "name": "m",
          "type": {
           "key": {
@@ -438,6 +455,7 @@
          "expr": {
           "base": {
            "expr": "ident",
+           "local": 1,
            "name": "xs",
            "type": {
             "elem": {
@@ -466,6 +484,7 @@
         "kind": "target",
         "lhs": {
          "id": "ok",
+         "local": 3,
          "target": "var"
         },
         "name": "target4"
@@ -490,6 +509,7 @@
      {
       "cond": {
        "expr": "ident",
+       "local": 3,
        "name": "ok",
        "type": {
         "kind": "bool"
@@ -510,6 +530,7 @@
            "x": {
             "base": {
              "expr": "ident",
+             "local": 1,
              "name": "xs",
              "type": {
               "elem": {
@@ -554,6 +575,7 @@
        {
         "base": {
          "expr": "ident",
+         "local": 1,
          "name": "xs",
          "type": {
           "elem": {
@@ -583,6 +605,28 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "local",
+     "name": "m",
+     "pos": "main.go:11:2"
+    },
+    {
+     "kind": "local",
+     "name": "xs",
+     "pos": "main.go:12:2"
+    },
+    {
+     "kind": "local",
+     "name": "f",
+     "pos": "main.go:13:2"
+    },
+    {
+     "kind": "local",
+     "name": "ok",
+     "pos": "main.go:14:6"
+    }
+   ],
    "name": "e5blookup",
    "params": [],
    "results": [
@@ -601,6 +645,6 @@
  "methods": [],
  "package": "main",
  "promotions": [],
- "schema": "golean-native-v2",
+ "schema": "golean-native-v3",
  "types": []
 }

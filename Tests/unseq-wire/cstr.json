@@ -49,6 +49,7 @@
     ],
     "stmt": "block"
    },
+   "locals": [],
    "name": "cstr$lit0",
    "params": [],
    "results": [
@@ -113,6 +114,7 @@
       "lhs": [
        {
         "id": "a",
+        "local": 0,
         "target": "declare",
         "type": {
          "elem": {
@@ -141,6 +143,7 @@
       "lhs": [
        {
         "id": "f",
+        "local": 1,
         "target": "declare",
         "type": {
          "kind": "func",
@@ -199,6 +202,7 @@
         ],
         "callee": {
          "expr": "ident",
+         "local": 1,
          "name": "f"
         },
         "kind": "invoke",
@@ -217,6 +221,7 @@
          "expr": {
           "base": {
            "expr": "ident",
+           "local": 0,
            "name": "a",
            "type": {
             "elem": {
@@ -285,6 +290,7 @@
         "x": {
          "base": {
           "expr": "ident",
+          "local": 0,
           "name": "a",
           "type": {
            "elem": {
@@ -309,6 +315,7 @@
         "y": {
          "base": {
           "expr": "ident",
+          "local": 0,
           "name": "a",
           "type": {
            "elem": {
@@ -378,6 +385,18 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "local",
+     "name": "a",
+     "pos": "main.go:9:2"
+    },
+    {
+     "kind": "local",
+     "name": "f",
+     "pos": "main.go:10:2"
+    }
+   ],
    "name": "cstr",
    "params": [],
    "results": [
@@ -396,6 +415,6 @@
  "methods": [],
  "package": "main",
  "promotions": [],
- "schema": "golean-native-v2",
+ "schema": "golean-native-v3",
  "types": []
 }

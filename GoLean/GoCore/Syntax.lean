@@ -7,8 +7,44 @@ namespace GoLean.GoCore
 -- so `GoValue.interface` can carry its dynamic type structurally. Both are
 -- re-exported by this module's namespace.
 
+/-- A LOCAL's identity inside ONE function (B6 — numeric locals, window row 5,
+2026-09-30; design note `docs/2026-09-30_numeric-locals-design.md`): an index
+into that function's name table (`Func.locals`). Ids are DECLARATION ids — the
+frontend allots one per go/types object a function declares or uses as a local
+(params, results, receiver, capture pointers, `:=`/`var`/range/select/type-switch
+binders), and the decoder interns every `$`-temporary (the frontend's and its
+own) per spelling after them. A lexical id is NOT an activation's heap location:
+the machine binds an id to a FRESH cell each time its declaration executes
+(recursion, re-entered blocks, per-iteration loop variables, escaping captures),
+and `LocalEnv.lookup` walks the scope stack inner→outer exactly as it did over
+spellings. Numeric ids stable across source edits are NOT an API promise: an
+edit renumbers; a consumer reconstructs a binding from the CHECKED table
+(`LocalName`: the Go identifier, its kind and declaring position). -/
+abbrev VarId := Nat
+
+/-- What a table entry declares (`LocalName.kind`): the receiver, an ordinary
+parameter, a named/synthesized result, a capture pointer of a lifted literal,
+a body local, or a `$`-temporary of the lowering. -/
+inductive LocalKind where
+  | recv | param | result | capture | local | temp
+  deriving Repr, BEq, DecidableEq, Inhabited
+
+/-- One entry of a function's name table (`Func.locals`, indexed by `VarId`):
+`name` is Go's identifier for the local (`obj.Name()`; a temporary's
+`$`-spelling), `pos` the declaring identifier's `basename.go:line:col` (empty
+for temporaries and synthesized locals), and `wire` the lowering's spelling when
+it differs from `name` (a shadow rename `x$shadow1`, a capture pointer `x$cap`;
+empty otherwise). Source spellings are RETAINED here verbatim; the machine never
+reads this table (it is carried, checked data, like `Program.typeDisplays`). -/
+structure LocalName where
+  name : String
+  kind : LocalKind
+  pos : String := ""
+  wire : String := ""
+  deriving Repr, BEq, Inhabited
+
 structure Param where
-  id : String
+  id : VarId
   typ : Ty
   deriving Repr, BEq
 
@@ -191,7 +227,7 @@ def FloatBitsOp.name : FloatBitsOp → String
   | .f32frombits => "math.Float32frombits"
 
 inductive Expr where
-  | var (id : String)
+  | var (id : VarId)
   | nil (typ : Option Ty)
   | intLit (value : Int) (kind : IntKind := .unbounded "integer")
   /-- A float constant as its EXACT RATIONAL (floats slice, design note
@@ -234,7 +270,7 @@ inductive Expr where
   | and (left right : Expr)
   | or (left right : Expr)
   | not (operand : Expr)
-  | ref (id : String)
+  | ref (id : VarId)
   /-- Build a **function value**: the lifted callee's identity plus the
   expressions producing its captured values (addresses — Go captures by
   reference; §8 of the coverage-scoping note). Operands evaluate left to
@@ -308,7 +344,7 @@ inductive Expr where
   deriving Repr, BEq, Inhabited
 
 inductive Assignee where
-  | var (id : String)
+  | var (id : VarId)
   | addr (loc : Expr)
   /-- A MAP-element target `m[k] = v` (convergence round, BUG-030): maps
   are not addressable, so a map-element assignment target cannot be an
@@ -480,17 +516,17 @@ inductive UnseqBody where
   /-- READ (one evaluation of a mutable location at this instant) or PURE
   OP on slot values: evaluate `head`; ONE result into the VALUE binder
   `bind`. May fail on its own account (bounds, nil, division …). -/
-  | eval (bind : String) (head : Expr)
+  | eval (bind : VarId) (head : Expr)
   /-- READ THROUGH A FROZEN TARGET PLAN: ONE checked access through the
   TARGET binder `tgt` (review R6 — base/header and index are PRODUCERS,
   this is the one checked access on those values); one result. -/
-  | load (bind : String) (tgt : String)
+  | load (bind : VarId) (tgt : VarId)
   /-- INVOCATION of a function value with already-evaluated operands
   (callee and arguments are slot references / constants / admitted
   reads); zero, one or two results routed to the predeclared binders
   `binds` — the body WRITES predeclared destinations (`Stmt.callValue`'s
   targets), never declares. The callee's effects happen once. -/
-  | invoke (binds : List String) (callee : Expr) (args : List Expr)
+  | invoke (binds : List VarId) (callee : Expr) (args : List Expr)
   /-- RECEIVE (Stage E E3, 2026-09-21): one communication on the channel
   VALUE `ch` (an atom), the received value (and, for the comma-ok form, the
   ok flag) routed to the predeclared binders `binds` — the body runs
@@ -499,7 +535,7 @@ inductive UnseqBody where
   among the calls (E1 `after` edges); a receive that would block is the
   machine's `blockedRecv` — a refusal apart from the sweep's members in the
   sequential domain (v2.1 §1), a wait in the pool. -/
-  | recv (binds : List String) (ch : Expr) (elem : Ty)
+  | recv (binds : List VarId) (ch : Expr) (elem : Ty)
   /-- ALLOCATION (Stage E E4, 2026-09-21): ONE fresh object — `&T{…}`, `new(T)`,
   `make(…)`, a slice literal — bound into the predeclared binder `bind`; the
   body runs the hoisted allocation statement with the cell as its target, like
@@ -507,7 +543,7 @@ inductive UnseqBody where
   its payload reads are the occurrences); `make`/`new` are function calls
   (spec#Built-in_functions «called like any other function») and carry E1
   `after` edges like `len`/`cap`. -/
-  | allocate (bind : String) (spec : AllocSpec)
+  | allocate (bind : VarId) (spec : AllocSpec)
   /-- WIDE built-in (Stage E5 E5a, 2026-09-22): ONE built-in operation the
   machine models as a wide statement — `append`, `copy` (E5b: the comma-ok
   lookup and assertion) — its results routed to the predeclared binders
@@ -517,19 +553,19 @@ inductive UnseqBody where
   effectful ones (`append`, `copy`) count toward the trigger like a call.
   [AGENT] choice, PENDING [USER] ratification at the merge ask (design
   `docs/2026-09-22_unseq-stage-e5-design.md` §E5a — alternatives named there). -/
-  | wide (binds : List String) (spec : WideSpec)
+  | wide (binds : List VarId) (spec : WideSpec)
   /-- TARGET PLAN: a target's identity from FROZEN operand values — the
   assignee's operands are atoms (slots, `&local`, constants) resolved in
   one step through the machine's own `targetPlan`/`completeTargetRef`;
   checks NOTHING (the store's checks stay in phase 2). Result of sort
   TARGET named `bind`, kept in the continuation's target table. -/
-  | target (bind : String) (lhs : Assignee)
+  | target (bind : VarId) (lhs : Assignee)
   /-- GUARD ENTRY of `&&`/`||`: tests the VALUE binder `test` against
   `when`; equal → the region (the occurrences whose `region` is this
   guard) ACTIVATES; else the region is SKIPPED (its order edges
   discharged, no value produced) and the COMPLETION binder `out` is set
   to the short-circuit constant `!when` at once, DONE (the only join). -/
-  | guard (test : String) (when : Bool) (out : String)
+  | guard (test : VarId) (when : Bool) (out : VarId)
   deriving Repr, BEq, Inhabited
 
 /-- One evaluation occurrence: its name (for `after`/`region` references
@@ -555,7 +591,7 @@ store — `storeTarget`). -/
 structure UnseqGraph where
   cells : List Param
   occs : List UnseqOcc
-  stores : List (String × String) := []
+  stores : List (VarId × VarId) := []
   deriving Repr, BEq, Inhabited
 
 inductive Stmt where
@@ -613,7 +649,7 @@ inductive Stmt where
   Index-able ranges (slice/array/string/int) desugar to `while` and are not
   represented here. See `docs/nondeterminism-design.md`. `keyVar`/`valVar` are
   `none` for blank or absent range variables. -/
-  | mapRange (keyVar valVar : Option String) (mapExpr : Expr) (keyTy valTy : Ty) (body : Stmt)
+  | mapRange (keyVar valVar : Option VarId) (mapExpr : Expr) (keyTy valTy : Ty) (body : Stmt)
   | returnStmt
   | breakStmt
   | continueStmt
@@ -811,7 +847,19 @@ structure Func where
   -- resolved by the machine at dispatch; no synthesized `Func` exists, so
   -- there is nothing to mark (design note
   -- `docs/2026-09-28_gp-method-promotion-design.md` §1, §5 S2).
+  /-- The function's NAME TABLE (B6, 2026-09-30): entry `i` describes the local
+  whose `VarId` is `i` — the source entries first (the frontend's, in
+  allotment order: receiver/captures/params, results, body locals), then the
+  `$`-temporaries the decoder interned. Checked by the decoder (`NativeToIR`:
+  index in range, spelling agreement, scope, kind) and by the total core
+  predicate `Func.localsOk` (`Locals.lean`); never read by the machine.
+  Defaults to `#[]` so hand-built programs (tests, proofs) need none. -/
+  locals : Array LocalName := #[]
   deriving Repr, BEq
+
+/-- The name-table lookup (the logic team's request 3, 2026-09-28): the
+`LocalName` a function's table records for `id`, `none` past the table. -/
+def Func.localName? (f : Func) (id : VarId) : Option LocalName := f.locals[id]?
 
 /-- Internal callable target, derived from a receiver key and I1 member.
 UTF-8 byte lengths make the two leading fields independently recoverable;

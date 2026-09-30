@@ -136,7 +136,7 @@ def poolThreadOblivious (s : Store) (ts : Array Thread) (i : Nat) : Bool :=
 variable {ctx}
 /-- The `mapIterK` exclusion in the shape `stepFn_oblivious` consumes. -/
 theorem isMapIterNext_false_elim {c : Config} (h : isMapIterNext c = false) :
-    ∀ (kv vv : Option String) (kt vt : Ty) (body : Stmt)
+    ∀ (kv vv : Option VarId) (kt vt : Ty) (body : Stmt)
       (base : Option Loc) (produced start : Array Nat)
       (env : LocalEnv) (k : Cont),
       c ≠ .next (.mapIterK kv vv kt vt body base produced start env k) := by

@@ -33,6 +33,7 @@
        },
        {
         "expr": "ident",
+        "local": 0,
         "name": "x",
         "type": {
          "int": "int",
@@ -47,6 +48,7 @@
       "results": [
        {
         "expr": "ident",
+        "local": 0,
         "name": "x",
         "type": {
          "int": "int",
@@ -59,10 +61,18 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "param",
+     "name": "x",
+     "pos": "main.go:12:10"
+    }
+   ],
    "name": "wit",
    "params": [
     {
      "id": "x",
+     "local": 0,
      "type": {
       "int": "int",
       "kind": "int"
@@ -88,6 +98,7 @@
       "lhs": [
        {
         "id": "x",
+        "local": 0,
         "target": "declare",
         "type": {
          "int": "int",
@@ -144,6 +155,7 @@
       "lhs": [
        {
         "id": "s",
+        "local": 1,
         "target": "declare",
         "type": {
          "elem": {
@@ -227,6 +239,7 @@
         "head": {
          "base": {
           "expr": "ident",
+          "local": 1,
           "name": "s",
           "type": {
            "elem": {
@@ -239,6 +252,7 @@
          "expr": "index-get",
          "index": {
           "expr": "ident",
+          "local": 0,
           "name": "x",
           "type": {
            "int": "int",
@@ -290,6 +304,7 @@
        "lhs": [
         {
          "id": "r",
+         "local": 2,
          "target": "declare",
          "type": {
           "int": "int",
@@ -317,6 +332,7 @@
         "lhs": [
          {
           "id": "x",
+          "local": 3,
           "target": "declare",
           "type": {
            "kind": "string"
@@ -409,6 +425,7 @@
           "head": {
            "base": {
             "expr": "ident",
+            "local": 3,
             "name": "x",
             "type": {
              "kind": "string"
@@ -495,6 +512,7 @@
            },
            "x": {
             "expr": "ident",
+            "local": 2,
             "name": "r",
             "type": {
              "int": "int",
@@ -521,6 +539,7 @@
          "lhs": [
           {
            "id": "r",
+           "local": 2,
            "target": "var"
           }
          ],
@@ -545,6 +564,7 @@
       "lhs": [
        {
         "id": "z",
+        "local": 4,
         "target": "declare",
         "type": {
          "int": "int",
@@ -575,6 +595,7 @@
         },
         "x": {
          "expr": "ident",
+         "local": 2,
          "name": "r",
          "type": {
           "int": "int",
@@ -583,6 +604,7 @@
         },
         "y": {
          "expr": "ident",
+         "local": 4,
          "name": "z",
          "type": {
           "int": "int",
@@ -596,6 +618,33 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "local",
+     "name": "x",
+     "pos": "main.go:15:2"
+    },
+    {
+     "kind": "local",
+     "name": "s",
+     "pos": "main.go:16:2"
+    },
+    {
+     "kind": "local",
+     "name": "r",
+     "pos": "main.go:17:2"
+    },
+    {
+     "kind": "local",
+     "name": "x",
+     "pos": "main.go:19:3"
+    },
+    {
+     "kind": "local",
+     "name": "z",
+     "pos": "main.go:22:2"
+    }
+   ],
    "name": "e6ashadow",
    "params": [],
    "results": [
@@ -614,6 +663,6 @@
  "methods": [],
  "package": "main",
  "promotions": [],
- "schema": "golean-native-v2",
+ "schema": "golean-native-v3",
  "types": []
 }

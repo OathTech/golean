@@ -33,6 +33,7 @@
        },
        {
         "expr": "ident",
+        "local": 0,
         "name": "x",
         "type": {
          "int": "int",
@@ -47,6 +48,7 @@
       "results": [
        {
         "expr": "ident",
+        "local": 0,
         "name": "x",
         "type": {
          "int": "int",
@@ -59,10 +61,18 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "param",
+     "name": "x",
+     "pos": "main.go:20:10"
+    }
+   ],
    "name": "wit",
    "params": [
     {
      "id": "x",
+     "local": 0,
      "type": {
       "int": "int",
       "kind": "int"
@@ -88,6 +98,7 @@
       "lhs": [
        {
         "id": "k",
+        "local": 0,
         "target": "declare",
         "type": {
          "kind": "string"
@@ -156,6 +167,7 @@
       "lhs": [
        {
         "id": "s",
+        "local": 1,
         "target": "declare",
         "type": {
          "elem": {
@@ -186,6 +198,7 @@
       "lhs": [
        {
         "id": "r",
+        "local": 2,
         "target": "declare",
         "type": {
          "int": "int",
@@ -212,6 +225,7 @@
          "op": "+",
          "read": {
           "expr": "ident",
+          "local": 2,
           "name": "r",
           "type": {
            "int": "int",
@@ -220,6 +234,7 @@
          },
          "rhs": {
           "expr": "ident",
+          "local": 3,
           "name": "k",
           "type": {
            "int": "int",
@@ -229,6 +244,7 @@
          "stmt": "compound-assign",
          "target": {
           "id": "r",
+          "local": 2,
           "target": "var"
          }
         }
@@ -237,6 +253,7 @@
       },
       "collection": {
        "expr": "ident",
+       "local": 1,
        "name": "s",
        "type": {
         "elem": {
@@ -253,6 +270,7 @@
       "keyVar": null,
       "kind": "slice",
       "stmt": "range",
+      "valLocal": 3,
       "valVar": "k"
      },
      {
@@ -307,6 +325,7 @@
          "expr": "builtin-len",
          "operand": {
           "expr": "ident",
+          "local": 0,
           "name": "k",
           "type": {
            "kind": "string"
@@ -388,6 +407,7 @@
         "head": {
          "base": {
           "expr": "ident",
+          "local": 1,
           "name": "s",
           "type": {
            "elem": {
@@ -462,6 +482,7 @@
          },
          "y": {
           "expr": "ident",
+          "local": 2,
           "name": "r",
           "type": {
            "int": "int",
@@ -492,6 +513,28 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "local",
+     "name": "k",
+     "pos": "main.go:23:2"
+    },
+    {
+     "kind": "local",
+     "name": "s",
+     "pos": "main.go:24:2"
+    },
+    {
+     "kind": "local",
+     "name": "r",
+     "pos": "main.go:25:2"
+    },
+    {
+     "kind": "local",
+     "name": "k",
+     "pos": "main.go:26:9"
+    }
+   ],
    "name": "e6arange",
    "params": [],
    "results": [
@@ -513,6 +556,7 @@
       "lhs": [
        {
         "id": "i",
+        "local": 0,
         "target": "declare",
         "type": {
          "kind": "string"
@@ -581,6 +625,7 @@
       "lhs": [
        {
         "id": "s",
+        "local": 1,
         "target": "declare",
         "type": {
          "elem": {
@@ -611,6 +656,7 @@
       "lhs": [
        {
         "id": "r",
+        "local": 2,
         "target": "declare",
         "type": {
          "int": "int",
@@ -637,6 +683,7 @@
          "op": "+",
          "read": {
           "expr": "ident",
+          "local": 2,
           "name": "r",
           "type": {
            "int": "int",
@@ -645,6 +692,7 @@
          },
          "rhs": {
           "expr": "ident",
+          "local": 3,
           "name": "i",
           "type": {
            "int": "int",
@@ -654,6 +702,7 @@
          "stmt": "compound-assign",
          "target": {
           "id": "r",
+          "local": 2,
           "target": "var"
          }
         }
@@ -662,6 +711,7 @@
       },
       "collection": {
        "expr": "ident",
+       "local": 1,
        "name": "s",
        "type": {
         "elem": {
@@ -675,6 +725,7 @@
        "int": "int",
        "kind": "int"
       },
+      "keyLocal": 3,
       "keyVar": "i",
       "kind": "slice",
       "stmt": "range",
@@ -732,6 +783,7 @@
          "expr": "builtin-len",
          "operand": {
           "expr": "ident",
+          "local": 0,
           "name": "i",
           "type": {
            "kind": "string"
@@ -813,6 +865,7 @@
         "head": {
          "base": {
           "expr": "ident",
+          "local": 1,
           "name": "s",
           "type": {
            "elem": {
@@ -887,6 +940,7 @@
          },
          "y": {
           "expr": "ident",
+          "local": 2,
           "name": "r",
           "type": {
            "int": "int",
@@ -917,6 +971,28 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "local",
+     "name": "i",
+     "pos": "main.go:33:2"
+    },
+    {
+     "kind": "local",
+     "name": "s",
+     "pos": "main.go:34:2"
+    },
+    {
+     "kind": "local",
+     "name": "r",
+     "pos": "main.go:35:2"
+    },
+    {
+     "kind": "local",
+     "name": "i",
+     "pos": "main.go:36:6"
+    }
+   ],
    "name": "e6arangekey",
    "params": [],
    "results": [
@@ -970,6 +1046,7 @@
       "lhs": [
        {
         "id": "s",
+        "local": 0,
         "target": "declare",
         "type": {
          "elem": {
@@ -1000,6 +1077,7 @@
       "lhs": [
        {
         "id": "r",
+        "local": 1,
         "target": "declare",
         "type": {
          "int": "int",
@@ -1026,6 +1104,7 @@
          "op": "+",
          "read": {
           "expr": "ident",
+          "local": 1,
           "name": "r",
           "type": {
            "int": "int",
@@ -1034,6 +1113,7 @@
          },
          "rhs": {
           "expr": "ident",
+          "local": 2,
           "name": "k",
           "type": {
            "int": "int",
@@ -1043,6 +1123,7 @@
          "stmt": "compound-assign",
          "target": {
           "id": "r",
+          "local": 1,
           "target": "var"
          }
         }
@@ -1051,6 +1132,7 @@
       },
       "collection": {
        "expr": "ident",
+       "local": 0,
        "name": "s",
        "type": {
         "elem": {
@@ -1067,6 +1149,7 @@
       "keyVar": null,
       "kind": "slice",
       "stmt": "range",
+      "valLocal": 2,
       "valVar": "k"
      },
      {
@@ -1140,6 +1223,7 @@
          },
          "x": {
           "expr": "ident",
+          "local": 1,
           "name": "k",
           "type": {
            "int": "int",
@@ -1163,6 +1247,7 @@
         "head": {
          "base": {
           "expr": "ident",
+          "local": 0,
           "name": "s",
           "type": {
            "elem": {
@@ -1238,6 +1323,23 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "local",
+     "name": "s",
+     "pos": "main.go:43:2"
+    },
+    {
+     "kind": "local",
+     "name": "r",
+     "pos": "main.go:44:2"
+    },
+    {
+     "kind": "local",
+     "name": "k",
+     "pos": "main.go:45:9"
+    }
+   ],
    "name": "e6arangeafter",
    "params": [],
    "results": [
@@ -1256,6 +1358,6 @@
  "methods": [],
  "package": "main",
  "promotions": [],
- "schema": "golean-native-v2",
+ "schema": "golean-native-v3",
  "types": []
 }

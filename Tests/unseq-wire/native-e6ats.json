@@ -33,6 +33,7 @@
        },
        {
         "expr": "ident",
+        "local": 0,
         "name": "x",
         "type": {
          "int": "int",
@@ -47,6 +48,7 @@
       "results": [
        {
         "expr": "ident",
+        "local": 0,
         "name": "x",
         "type": {
          "int": "int",
@@ -59,10 +61,18 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "param",
+     "name": "x",
+     "pos": "main.go:13:10"
+    }
+   ],
    "name": "wit",
    "params": [
     {
      "id": "x",
+     "local": 0,
      "type": {
       "int": "int",
       "kind": "int"
@@ -147,6 +157,7 @@
           "name": "any"
          }
         },
+        "local": 0,
         "type": {
          "kind": "interface",
          "name": "any"
@@ -160,6 +171,7 @@
       "lhs": [
        {
         "id": "r",
+        "local": 1,
         "target": "declare",
         "type": {
          "int": "int",
@@ -197,6 +209,7 @@
          "rhs": [
           {
            "expr": "ident",
+           "local": 0,
            "name": "iv",
            "type": {
             "kind": "interface",
@@ -320,6 +333,7 @@
                  "lhs": [
                   {
                    "id": "v",
+                   "local": 2,
                    "target": "declare",
                    "type": {
                     "key": {
@@ -409,6 +423,7 @@
                    "head": {
                     "base": {
                      "expr": "ident",
+                     "local": 2,
                      "name": "v",
                      "type": {
                       "key": {
@@ -480,6 +495,7 @@
                   "lhs": [
                    {
                     "id": "r",
+                    "local": 1,
                     "target": "var"
                    }
                   ],
@@ -511,6 +527,7 @@
               "lhs": [
                {
                 "id": "v",
+                "local": 3,
                 "target": "declare",
                 "type": {
                  "key": {
@@ -602,6 +619,7 @@
                 "head": {
                  "base": {
                   "expr": "ident",
+                  "local": 3,
                   "name": "v",
                   "type": {
                    "key": {
@@ -677,6 +695,7 @@
                "lhs": [
                 {
                  "id": "r",
+                 "local": 1,
                  "target": "var"
                 }
                ],
@@ -709,6 +728,7 @@
       "results": [
        {
         "expr": "ident",
+        "local": 1,
         "name": "r",
         "type": {
          "int": "int",
@@ -721,6 +741,28 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "local",
+     "name": "iv",
+     "pos": "main.go:16:6"
+    },
+    {
+     "kind": "local",
+     "name": "r",
+     "pos": "main.go:17:2"
+    },
+    {
+     "kind": "local",
+     "name": "v",
+     "pos": "main.go:18:9"
+    },
+    {
+     "kind": "local",
+     "name": "v",
+     "pos": "main.go:18:9"
+    }
+   ],
    "name": "e6ats",
    "params": [],
    "results": [
@@ -739,6 +781,6 @@
  "methods": [],
  "package": "main",
  "promotions": [],
- "schema": "golean-native-v2",
+ "schema": "golean-native-v3",
  "types": []
 }

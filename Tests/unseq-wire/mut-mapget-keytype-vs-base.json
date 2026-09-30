@@ -24,6 +24,7 @@
        {
         "expr": {
          "expr": "ident",
+         "local": 0,
          "name": "x$cap"
         },
         "target": "addr"
@@ -57,10 +58,19 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "capture",
+     "name": "x",
+     "pos": "main.go:9:2",
+     "wire": "x$cap"
+    }
+   ],
    "name": "e5cmaplit$lit0",
    "params": [
     {
      "id": "x$cap",
+     "local": 0,
      "type": {
       "elem": {
        "int": "int",
@@ -89,6 +99,7 @@
       "lhs": [
        {
         "id": "x",
+        "local": 0,
         "target": "declare",
         "type": {
          "int": "int",
@@ -113,6 +124,7 @@
       "lhs": [
        {
         "id": "m",
+        "local": 1,
         "target": "declare",
         "type": {
          "kind": "func",
@@ -132,7 +144,8 @@
         "captured": [
          {
           "expr": "ref",
-          "id": "x"
+          "id": "x",
+          "local": 0
          }
         ],
         "expr": "func-value",
@@ -205,6 +218,7 @@
         ],
         "callee": {
          "expr": "ident",
+         "local": 1,
          "name": "m"
         },
         "kind": "invoke",
@@ -220,6 +234,7 @@
         "bind": "$u1",
         "head": {
          "expr": "ident",
+         "local": 0,
          "name": "x",
          "type": {
           "int": "int",
@@ -356,6 +371,18 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "local",
+     "name": "x",
+     "pos": "main.go:9:2"
+    },
+    {
+     "kind": "local",
+     "name": "m",
+     "pos": "main.go:10:2"
+    }
+   ],
    "name": "e5cmaplit",
    "params": [],
    "results": [
@@ -374,6 +401,6 @@
  "methods": [],
  "package": "main",
  "promotions": [],
- "schema": "golean-native-v2",
+ "schema": "golean-native-v3",
  "types": []
 }

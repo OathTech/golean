@@ -70,6 +70,10 @@ type emitter struct {
 	curFuncID    string // Internal target; prefixes all generated child ids.
 	curFuncName  string // Display from the declaration record; diagnostics only.
 	captureParam map[types.Object]string
+	// B6 (2026-09-30): the current function's name table (locals.go) — the
+	// declaration index of every local object and the table entries in order.
+	localIDs   map[types.Object]int
+	localTable []any
 	// The enclosing function's result tuple, for the return-site
 	// interface-conversion wrap.
 	curResults *types.Tuple

@@ -466,6 +466,7 @@ func (e *emitter) emitFmtCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, bool
 			"params":   params,
 			"results":  []any{map[string]any{"id": "$res0", "type": strTy}},
 			"variadic": false,
+			"locals":   []any{},
 			"body":     map[string]any{"stmt": "block", "body": stmts},
 		})
 		formatted = map[string]any{"expr": "call", "func": liftName,

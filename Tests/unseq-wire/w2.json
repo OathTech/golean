@@ -27,6 +27,7 @@
           "expr": "deref",
           "ptr": {
            "expr": "ident",
+           "local": 0,
            "name": "a$cap"
           },
           "type": {
@@ -71,6 +72,7 @@
           "expr": "deref",
           "ptr": {
            "expr": "ident",
+           "local": 0,
            "name": "a$cap"
           },
           "type": {
@@ -115,6 +117,7 @@
           "expr": "deref",
           "ptr": {
            "expr": "ident",
+           "local": 1,
            "name": "b$cap"
           },
           "type": {
@@ -166,10 +169,25 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "capture",
+     "name": "a",
+     "pos": "main.go:5:2",
+     "wire": "a$cap"
+    },
+    {
+     "kind": "capture",
+     "name": "b",
+     "pos": "main.go:6:2",
+     "wire": "b$cap"
+    }
+   ],
    "name": "w2$lit0",
    "params": [
     {
      "id": "a$cap",
+     "local": 0,
      "type": {
       "elem": {
        "elem": {
@@ -183,6 +201,7 @@
     },
     {
      "id": "b$cap",
+     "local": 1,
      "type": {
       "elem": {
        "elem": {
@@ -240,6 +259,7 @@
       "lhs": [
        {
         "id": "a",
+        "local": 0,
         "target": "declare",
         "type": {
          "elem": {
@@ -296,6 +316,7 @@
       "lhs": [
        {
         "id": "b",
+        "local": 1,
         "target": "declare",
         "type": {
          "elem": {
@@ -328,6 +349,7 @@
         "expr": {
          "base": {
           "expr": "ident",
+          "local": 0,
           "name": "a",
           "type": {
            "elem": {
@@ -369,6 +391,7 @@
         "expr": {
          "base": {
           "expr": "ident",
+          "local": 0,
           "name": "a",
           "type": {
            "elem": {
@@ -410,6 +433,7 @@
         "expr": {
          "base": {
           "expr": "ident",
+          "local": 1,
           "name": "b",
           "type": {
            "elem": {
@@ -449,6 +473,7 @@
       "lhs": [
        {
         "id": "mut",
+        "local": 2,
         "target": "declare",
         "type": {
          "kind": "func",
@@ -468,11 +493,13 @@
         "captured": [
          {
           "expr": "ref",
-          "id": "a"
+          "id": "a",
+          "local": 0
          },
          {
           "expr": "ref",
-          "id": "b"
+          "id": "b",
+          "local": 1
          }
         ],
         "expr": "func-value",
@@ -548,6 +575,7 @@
         "bind": "$u0",
         "head": {
          "expr": "ident",
+         "local": 0,
          "name": "a",
          "type": {
           "elem": {
@@ -564,6 +592,7 @@
         "bind": "$u1",
         "head": {
          "expr": "ident",
+         "local": 1,
          "name": "b",
          "type": {
           "elem": {
@@ -645,6 +674,7 @@
         ],
         "callee": {
          "expr": "ident",
+         "local": 2,
          "name": "mut"
         },
         "kind": "invoke",
@@ -693,6 +723,7 @@
        "lhs": [
         {
          "id": "v",
+         "local": 3,
          "target": "declare",
          "type": {
           "int": "int",
@@ -717,6 +748,7 @@
       "results": [
        {
         "expr": "ident",
+        "local": 3,
         "name": "v",
         "type": {
          "int": "int",
@@ -729,6 +761,28 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "local",
+     "name": "a",
+     "pos": "main.go:5:2"
+    },
+    {
+     "kind": "local",
+     "name": "b",
+     "pos": "main.go:6:2"
+    },
+    {
+     "kind": "local",
+     "name": "mut",
+     "pos": "main.go:10:2"
+    },
+    {
+     "kind": "local",
+     "name": "v",
+     "pos": "main.go:11:2"
+    }
+   ],
    "name": "w2",
    "params": [],
    "results": [
@@ -747,6 +801,6 @@
  "methods": [],
  "package": "main",
  "promotions": [],
- "schema": "golean-native-v2",
+ "schema": "golean-native-v3",
  "types": []
 }

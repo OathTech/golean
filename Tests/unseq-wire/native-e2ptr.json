@@ -24,6 +24,7 @@
        {
         "expr": {
          "expr": "ident",
+         "local": 0,
          "name": "p$cap"
         },
         "target": "addr"
@@ -32,6 +33,7 @@
       "rhs": [
        {
         "expr": "ident",
+        "local": 1,
         "name": "y$cap",
         "type": {
          "elem": {
@@ -60,10 +62,25 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "capture",
+     "name": "p",
+     "pos": "main.go:11:2",
+     "wire": "p$cap"
+    },
+    {
+     "kind": "capture",
+     "name": "y",
+     "pos": "main.go:10:5",
+     "wire": "y$cap"
+    }
+   ],
    "name": "e2ptr$lit0",
    "params": [
     {
      "id": "p$cap",
+     "local": 0,
      "type": {
       "elem": {
        "elem": {
@@ -77,6 +94,7 @@
     },
     {
      "id": "y$cap",
+     "local": 1,
      "type": {
       "elem": {
        "int": "int",
@@ -105,6 +123,7 @@
       "lhs": [
        {
         "id": "x",
+        "local": 0,
         "target": "declare",
         "type": {
          "int": "int",
@@ -113,6 +132,7 @@
        },
        {
         "id": "y",
+        "local": 1,
         "target": "declare",
         "type": {
          "int": "int",
@@ -145,6 +165,7 @@
       "lhs": [
        {
         "id": "p",
+        "local": 2,
         "target": "declare",
         "type": {
          "elem": {
@@ -159,6 +180,7 @@
        {
         "expr": "ref",
         "id": "x",
+        "local": 0,
         "type": {
          "elem": {
           "int": "int",
@@ -175,6 +197,7 @@
       "lhs": [
        {
         "id": "mut",
+        "local": 3,
         "target": "declare",
         "type": {
          "kind": "func",
@@ -194,11 +217,13 @@
         "captured": [
          {
           "expr": "ref",
-          "id": "p"
+          "id": "p",
+          "local": 2
          },
          {
           "expr": "ref",
-          "id": "y"
+          "id": "y",
+          "local": 1
          }
         ],
         "expr": "func-value",
@@ -260,6 +285,7 @@
         ],
         "callee": {
          "expr": "ident",
+         "local": 3,
          "name": "mut",
          "type": {
           "kind": "func",
@@ -286,6 +312,7 @@
         "bind": "$u0",
         "head": {
          "expr": "ident",
+         "local": 2,
          "name": "p",
          "type": {
           "elem": {
@@ -383,6 +410,7 @@
          },
          "x": {
           "expr": "ident",
+          "local": 0,
           "name": "x",
           "type": {
            "int": "int",
@@ -400,6 +428,7 @@
         },
         "y": {
          "expr": "ident",
+         "local": 1,
          "name": "y",
          "type": {
           "int": "int",
@@ -413,6 +442,28 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "local",
+     "name": "x",
+     "pos": "main.go:10:2"
+    },
+    {
+     "kind": "local",
+     "name": "y",
+     "pos": "main.go:10:5"
+    },
+    {
+     "kind": "local",
+     "name": "p",
+     "pos": "main.go:11:2"
+    },
+    {
+     "kind": "local",
+     "name": "mut",
+     "pos": "main.go:12:2"
+    }
+   ],
    "name": "e2ptr",
    "params": [],
    "results": [
@@ -431,6 +482,6 @@
  "methods": [],
  "package": "main",
  "promotions": [],
- "schema": "golean-native-v2",
+ "schema": "golean-native-v3",
  "types": []
 }

@@ -24,6 +24,7 @@
        {
         "expr": {
          "expr": "ident",
+         "local": 0,
          "name": "a$cap"
         },
         "target": "addr"
@@ -59,10 +60,19 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "capture",
+     "name": "a",
+     "pos": "main.go:6:2",
+     "wire": "a$cap"
+    }
+   ],
    "name": "w5$lit0",
    "params": [
     {
      "id": "a$cap",
+     "local": 0,
      "type": {
       "elem": {
        "elem": {
@@ -120,6 +130,7 @@
       "lhs": [
        {
         "id": "a",
+        "local": 0,
         "target": "declare",
         "type": {
          "elem": {
@@ -152,6 +163,7 @@
         "expr": {
          "base": {
           "expr": "ident",
+          "local": 0,
           "name": "a",
           "type": {
            "elem": {
@@ -191,6 +203,7 @@
       "lhs": [
        {
         "id": "mut",
+        "local": 1,
         "target": "declare",
         "type": {
          "kind": "func",
@@ -210,7 +223,8 @@
         "captured": [
          {
           "expr": "ref",
-          "id": "a"
+          "id": "a",
+          "local": 0
          }
         ],
         "expr": "func-value",
@@ -235,6 +249,7 @@
       "lhs": [
        {
         "id": "n",
+        "local": 2,
         "target": "declare",
         "type": {
          "int": "int",
@@ -296,6 +311,7 @@
            "bind": "$u0",
            "head": {
             "expr": "ident",
+            "local": 0,
             "name": "a",
             "type": {
              "elem": {
@@ -346,6 +362,7 @@
            ],
            "callee": {
             "expr": "ident",
+            "local": 1,
             "name": "mut"
            },
            "kind": "invoke",
@@ -408,6 +425,7 @@
          "op": "+",
          "read": {
           "expr": "ident",
+          "local": 2,
           "name": "n",
           "type": {
            "int": "int",
@@ -417,6 +435,7 @@
          "stmt": "incdec",
          "target": {
           "id": "n",
+          "local": 2,
           "target": "var"
          },
          "type": {
@@ -439,6 +458,7 @@
        },
        "x": {
         "expr": "ident",
+        "local": 2,
         "name": "n",
         "type": {
          "int": "int",
@@ -459,6 +479,23 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "local",
+     "name": "a",
+     "pos": "main.go:6:2"
+    },
+    {
+     "kind": "local",
+     "name": "mut",
+     "pos": "main.go:8:2"
+    },
+    {
+     "kind": "local",
+     "name": "n",
+     "pos": "main.go:9:2"
+    }
+   ],
    "name": "w5",
    "params": [],
    "results": [],
@@ -469,6 +506,6 @@
  "methods": [],
  "package": "main",
  "promotions": [],
- "schema": "golean-native-v2",
+ "schema": "golean-native-v3",
  "types": []
 }

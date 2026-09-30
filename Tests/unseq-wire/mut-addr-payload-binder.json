@@ -24,6 +24,7 @@
        {
         "expr": {
          "expr": "ident",
+         "local": 0,
          "name": "x$cap"
         },
         "target": "addr"
@@ -57,10 +58,19 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "capture",
+     "name": "x",
+     "pos": "main.go:12:2",
+     "wire": "x$cap"
+    }
+   ],
    "name": "e5dlit$lit0",
    "params": [
     {
      "id": "x$cap",
+     "local": 0,
      "type": {
       "elem": {
        "int": "int",
@@ -89,6 +99,7 @@
       "lhs": [
        {
         "id": "x",
+        "local": 0,
         "target": "declare",
         "type": {
          "int": "int",
@@ -113,6 +124,7 @@
       "lhs": [
        {
         "id": "m",
+        "local": 1,
         "target": "declare",
         "type": {
          "kind": "func",
@@ -132,7 +144,8 @@
         "captured": [
          {
           "expr": "ref",
-          "id": "x"
+          "id": "x",
+          "local": 0
          }
         ],
         "expr": "func-value",
@@ -204,6 +217,7 @@
         ],
         "callee": {
          "expr": "ident",
+         "local": 1,
          "name": "m"
         },
         "kind": "invoke",
@@ -347,6 +361,18 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "local",
+     "name": "x",
+     "pos": "main.go:12:2"
+    },
+    {
+     "kind": "local",
+     "name": "m",
+     "pos": "main.go:13:2"
+    }
+   ],
    "name": "e5dlit",
    "params": [],
    "results": [
@@ -370,7 +396,7 @@
  "methods": [],
  "package": "main",
  "promotions": [],
- "schema": "golean-native-v2",
+ "schema": "golean-native-v3",
  "types": [
   {
    "def": {

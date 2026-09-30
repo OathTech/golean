@@ -37,6 +37,7 @@
          "expr": "deref",
          "ptr": {
           "expr": "ident",
+          "local": 0,
           "name": "ch$cap"
          },
          "type": {
@@ -68,10 +69,19 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "capture",
+     "name": "ch",
+     "pos": "main.go:9:2",
+     "wire": "ch$cap"
+    }
+   ],
    "name": "e5brecv2$lit0",
    "params": [
     {
      "id": "ch$cap",
+     "local": 0,
      "type": {
       "elem": {
        "dir": "both",
@@ -123,6 +133,7 @@
       "lhs": [
        {
         "id": "ch",
+        "local": 0,
         "target": "declare",
         "type": {
          "dir": "both",
@@ -153,6 +164,7 @@
      {
       "ch": {
        "expr": "ident",
+       "local": 0,
        "name": "ch",
        "type": {
         "dir": "both",
@@ -214,6 +226,7 @@
       "lhs": [
        {
         "id": "xs",
+        "local": 1,
         "target": "declare",
         "type": {
          "elem": {
@@ -276,6 +289,7 @@
       "lhs": [
        {
         "id": "a",
+        "local": 2,
         "target": "declare",
         "type": {
          "elem": {
@@ -307,7 +321,8 @@
        "captured": [
         {
          "expr": "ref",
-         "id": "ch"
+         "id": "ch",
+         "local": 0
         }
        ],
        "expr": "func-value",
@@ -325,6 +340,7 @@
       "decls": [
        {
         "id": "ok",
+        "local": 3,
         "type": {
          "kind": "bool"
         }
@@ -364,6 +380,7 @@
         ],
         "ch": {
          "expr": "ident",
+         "local": 0,
          "name": "ch",
          "type": {
           "dir": "both",
@@ -386,6 +403,7 @@
         "head": {
          "base": {
           "expr": "ident",
+          "local": 2,
           "name": "a",
           "type": {
            "elem": {
@@ -419,6 +437,7 @@
          "expr": {
           "base": {
            "expr": "ident",
+           "local": 1,
            "name": "xs",
            "type": {
             "elem": {
@@ -447,6 +466,7 @@
         "kind": "target",
         "lhs": {
          "id": "ok",
+         "local": 3,
          "target": "var"
         },
         "name": "target3"
@@ -478,6 +498,7 @@
       "rhs": [
        {
         "expr": "ident",
+        "local": 3,
         "name": "ok",
         "type": {
          "kind": "bool"
@@ -491,6 +512,7 @@
        {
         "base": {
          "expr": "ident",
+         "local": 1,
          "name": "xs",
          "type": {
           "elem": {
@@ -520,6 +542,28 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "local",
+     "name": "ch",
+     "pos": "main.go:9:2"
+    },
+    {
+     "kind": "local",
+     "name": "xs",
+     "pos": "main.go:11:2"
+    },
+    {
+     "kind": "local",
+     "name": "a",
+     "pos": "main.go:12:2"
+    },
+    {
+     "kind": "local",
+     "name": "ok",
+     "pos": "main.go:14:6"
+    }
+   ],
    "name": "e5brecv2",
    "params": [],
    "results": [
@@ -538,6 +582,6 @@
  "methods": [],
  "package": "main",
  "promotions": [],
- "schema": "golean-native-v2",
+ "schema": "golean-native-v3",
  "types": []
 }

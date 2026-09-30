@@ -885,8 +885,8 @@ theorem enterFrame_commit_noPanic (s : Store) (fid : FuncId) (argVals : List GoV
   unfold enterFrame.plan
   plan_no_panic
 
-theorem unseqLoad_commit_noPanic (s : Store) (env : LocalEnv) (tg : List (String × TargetRef))
-    (bind tgt : String) : PlanNoPanic (unseqLoad.plan ctx s env tg bind tgt) := by
+theorem unseqLoad_commit_noPanic (s : Store) (env : LocalEnv) (tg : List (VarId × TargetRef))
+    (bind tgt : VarId) : PlanNoPanic (unseqLoad.plan ctx s env tg bind tgt) := by
   unfold unseqLoad.plan
   plan_no_panic
 
@@ -990,14 +990,14 @@ theorem storeTarget_inv_panic {s : Store} {r : TargetRef} {v : GoValue} {msg : S
   · exact hp
   · exact absurd hcs (storeTarget_commit_noPanic _ _ _ c hc s msg)
 
-theorem unseqLoad_inv_ok {s : Store} {env : LocalEnv} {tg : List (String × TargetRef)}
-    {bind tgt : String} {a : Store × AccessTrace} (h : unseqLoad ctx s env tg bind tgt = .ok a) :
+theorem unseqLoad_inv_ok {s : Store} {env : LocalEnv} {tg : List (VarId × TargetRef)}
+    {bind tgt : VarId} {a : Store × AccessTrace} (h : unseqLoad ctx s env tg bind tgt = .ok a) :
     ∃ c, unseqLoad.plan ctx s env tg bind tgt = .ok c ∧ c s = .ok a := by
   unfold unseqLoad at h
   exact bind_eq_ok.mp h
 
-theorem unseqLoad_inv_panic {s : Store} {env : LocalEnv} {tg : List (String × TargetRef)}
-    {bind tgt : String} {msg : String} (h : unseqLoad ctx s env tg bind tgt = .error (.panic msg)) :
+theorem unseqLoad_inv_panic {s : Store} {env : LocalEnv} {tg : List (VarId × TargetRef)}
+    {bind tgt : VarId} {msg : String} (h : unseqLoad ctx s env tg bind tgt = .error (.panic msg)) :
     unseqLoad.plan ctx s env tg bind tgt = .error (.panic msg) := by
   unfold unseqLoad at h
   rcases plan_run_error h with hp | ⟨c, hc, hcs⟩
@@ -1313,7 +1313,7 @@ theorem stepUnseqEnter_sound {s : Store} {g : UnseqGraph} {thenB : Stmt} {env : 
   · simp [throw, throwThe, MonadExceptOf.throw] at h
 
 theorem stepUnseqValue_sound {s : Store} {v : GoValue} {g : UnseqGraph} {thenB : Stmt}
-    {st : List UnseqStatus} {tg : List (String × TargetRef)} {env : LocalEnv} {ph : UnseqPhase}
+    {st : List UnseqStatus} {tg : List (VarId × TargetRef)} {env : LocalEnv} {ph : UnseqPhase}
     {k : Cont} {ch : Choices} {c' : Config} {s' : Store} {ch' : Choices} {tr : StepLabel}
     (h : stepUnseqValue ctx s v g thenB st tg env ph k ch = .ok (c', s', ch', tr)) :
     Step ctx (.retV v (.unseqK g thenB st tg env ph k)) s c' s' tr ∧ ch' = ch := by
@@ -1331,7 +1331,7 @@ theorem stepUnseqValue_sound {s : Store} {v : GoValue} {g : UnseqGraph} {thenB :
   · simp [throw, throwThe, MonadExceptOf.throw] at h
 
 theorem stepUnseqNext_sound {s : Store} {g : UnseqGraph} {thenB : Stmt}
-    {st : List UnseqStatus} {tg : List (String × TargetRef)} {env : LocalEnv} {ph : UnseqPhase}
+    {st : List UnseqStatus} {tg : List (VarId × TargetRef)} {env : LocalEnv} {ph : UnseqPhase}
     {k : Cont} {ch : Choices} {c' : Config} {s' : Store} {ch' : Choices} {tr : StepLabel}
     (h : stepUnseqNext ctx s g thenB st tg env ph k ch = .ok (c', s', ch', tr)) :
     Step ctx (.next (.unseqK g thenB st tg env ph k)) s c' s' tr := by
@@ -1447,7 +1447,7 @@ theorem stepUnseqEnter_stream {s : Store} {g : UnseqGraph} {thenB : Stmt} {env :
   · simp [throw, throwThe, MonadExceptOf.throw] at h
 
 theorem stepUnseqValue_stream {s : Store} {v : GoValue} {g : UnseqGraph} {thenB : Stmt}
-    {st : List UnseqStatus} {tg : List (String × TargetRef)} {env : LocalEnv} {ph : UnseqPhase}
+    {st : List UnseqStatus} {tg : List (VarId × TargetRef)} {env : LocalEnv} {ph : UnseqPhase}
     {k : Cont} {ch : Choices} {c' : Config} {s' : Store} {ch' : Choices} {tr : StepLabel}
     (h : stepUnseqValue ctx s v g thenB st tg env ph k ch = .ok (c', s', ch', tr)) :
     ch' = ch ∧ ∀ ch₂ : Choices, stepUnseqValue ctx s v g thenB st tg env ph k ch₂ = .ok (c', s', ch₂, tr) := by
@@ -1467,7 +1467,7 @@ theorem stepUnseqValue_stream {s : Store} {v : GoValue} {g : UnseqGraph} {thenB 
 /-- The run/wait phases of the sweep frame never touch the stream (the
 common tail of the two consumption lemmas). -/
 theorem stepUnseqNext_run_wait_stream {s : Store} {g : UnseqGraph} {thenB : Stmt}
-    {st : List UnseqStatus} {tg : List (String × TargetRef)} {env : LocalEnv} {ph : UnseqPhase}
+    {st : List UnseqStatus} {tg : List (VarId × TargetRef)} {env : LocalEnv} {ph : UnseqPhase}
     {k : Cont} {ch : Choices} {c' : Config} {s' : Store} {ch' : Choices} {tr : StepLabel}
     (hph : ph ≠ .pick)
     (h : stepUnseqNext ctx s g thenB st tg env ph k ch = .ok (c', s', ch', tr)) :
@@ -1547,7 +1547,7 @@ theorem stepUnseqNext_run_wait_stream {s : Store} {g : UnseqGraph} {thenB : Stmt
 a run/wait phase, a completion, or a pick over a ready set of size ≤ 1 (a
 bound-≤-1 consult is inert, G-U). -/
 theorem stepUnseqNext_consumption_none {σ : Store} {g : UnseqGraph} {thenB : Stmt}
-    {st : List UnseqStatus} {tg : List (String × TargetRef)} {env : LocalEnv} {ph : UnseqPhase}
+    {st : List UnseqStatus} {tg : List (VarId × TargetRef)} {env : LocalEnv} {ph : UnseqPhase}
     {k : Cont} {ch₀ : Choices} {c' : Config} {σ' : Store} {ch₀' : Choices} {tr : StepLabel}
     (hsc : seqConsumption ctx σ (.next (.unseqK g thenB st tg env ph k)) = none)
     (h : stepUnseqNext ctx σ g thenB st tg env ph k ch₀ = .ok (c', σ', ch₀', tr)) :
@@ -1588,7 +1588,7 @@ theorem stepUnseqNext_consumption_none {σ : Store} {g : UnseqGraph} {thenB : St
 /-- The scheduler's pick DRAWS the `unseqNext` site at bound `|ready|` and
 depends on the stream only through that pick. -/
 theorem stepUnseqNext_consumption_some {σ : Store} {g : UnseqGraph} {thenB : Stmt}
-    {st : List UnseqStatus} {tg : List (String × TargetRef)} {env : LocalEnv} {ph : UnseqPhase}
+    {st : List UnseqStatus} {tg : List (VarId × TargetRef)} {env : LocalEnv} {ph : UnseqPhase}
     {k : Cont} {ch₀ : Choices} {c' : Config} {σ' : Store} {ch₀' : Choices} {tr : StepLabel}
     {site : ChoiceSite} {b : Nat}
     (hsc : seqConsumption ctx σ (.next (.unseqK g thenB st tg env ph k)) = some (site, b))
@@ -1662,14 +1662,14 @@ theorem consumesUnseqPanic_shape {c : Config} (h : consumesUnseqPanic c = true) 
   · cases h
 
 @[simp] theorem unseqNextBound_pick {g : UnseqGraph} {thenB : Stmt} {st : List UnseqStatus}
-    {tg : List (String × TargetRef)} {env : LocalEnv} {k : Cont} :
+    {tg : List (VarId × TargetRef)} {env : LocalEnv} {k : Cont} :
     unseqNextBound (.next (.unseqK g thenB st tg env .pick k)) = (g.ready st).length := rfl
 
 /-- The accountant at a pick position reports the `unseqNext` site at EXACTLY
 `unseqNextBound` when that is ≥ 2, and nothing otherwise (G-U) — the same
 number the checker enumerates, read off the same frame, for every store. -/
 theorem seqConsumption_unseqNext {σ : Store} {g : UnseqGraph} {thenB : Stmt}
-    {st : List UnseqStatus} {tg : List (String × TargetRef)} {env : LocalEnv} {k : Cont} :
+    {st : List UnseqStatus} {tg : List (VarId × TargetRef)} {env : LocalEnv} {k : Cont} :
     seqConsumption ctx σ (.next (.unseqK g thenB st tg env .pick k))
       = if 2 ≤ (g.ready st).length then some (.unseqNext, (g.ready st).length) else none := by
   simp only [seqConsumption]
@@ -4499,7 +4499,7 @@ theorem applySyncOp_panic_any_ch {σ : Store} {ch₀ : Choices} {op : SyncOp}
 bind: the keys/values are self-normalized, so `bindIterVars`' per-pick
 normalization succeeds (returning them unchanged) at every pick. -/
 theorem bindIterVars_ok_of_normal {env : LocalEnv} {σ : Store}
-    {kv vv : Option String} {kt vt : Ty} {key value : GoValue}
+    {kv vv : Option VarId} {kt vt : Ty} {key value : GoValue}
     (hk : isNormalForTy ctx.types kt key = true)
     (hv : isNormalForTy ctx.types vt value = true) :
     ∃ env' σ', bindIterVars ctx env σ kv vv kt vt key value = .ok (env', σ') := by
@@ -4685,7 +4685,7 @@ slot is a pure return, and every candidate pick binds — the
 candidates' self-normalization (validated inside `mapIterCandidates`)
 makes `bindIterVars` succeed at every index. The (L) surgery's
 choices-independence core (the COUPLING note's re-run demand). -/
-theorem stepFn_mapIter_ok_any {σ : Store} {kv vv : Option String}
+theorem stepFn_mapIter_ok_any {σ : Store} {kv vv : Option VarId}
     {kt vt : Ty} {body : Stmt} {base : Option Loc}
     {produced start : Array Nat} {env : LocalEnv} {k : Cont}
     {cands : Array (Nat × GoValue × GoValue)} {mand : Bool} {tr : AccessTrace}
@@ -5413,7 +5413,7 @@ theorem applyStmtOp_plan_of_stmtConsult?_none {σ : Store} {op : StmtOp} {nt : N
 /-- The done-check `mapIterK` step is oblivious: with no candidate
 left it pops the continuation at every stream (BUG-005 (L): "no
 candidate" is a STATE fact — the live cell minus the produced set). -/
-theorem stepFn_mapIter_done {σ : Store} {kv vv : Option String}
+theorem stepFn_mapIter_done {σ : Store} {kv vv : Option VarId}
     {kt vt : Ty} {body : Stmt} {base : Option Loc}
     {produced start : Array Nat} {env : LocalEnv} {k : Cont} {tr : AccessTrace}
     (hcands : mapIterCandidates ctx σ kt vt base produced = .ok (#[], tr)) :
@@ -5429,7 +5429,7 @@ consumed choice: the successor is a function of the pick index alone
 (`bindIterVars` never sees the stream), and the stream moves to the
 consume's tail. One probe per index covers every stream whose choice
 reduces to that index. -/
-theorem stepFn_mapIter_pick {σ : Store} {kv vv : Option String}
+theorem stepFn_mapIter_pick {σ : Store} {kv vv : Option VarId}
     {kt vt : Ty} {body : Stmt} {base : Option Loc}
     {produced start : Array Nat} {env : LocalEnv} {k : Cont}
     {cands : Array (Nat × GoValue × GoValue)} {mand : Bool} {tr : AccessTrace}
@@ -5470,7 +5470,7 @@ theorem stepFn_mapIter_pick {σ : Store} {kv vv : Option String}
 /-- The nonempty `mapIterK` step at the STOP slot (index = candidate
 count; the slot exists only when no mandatory start key remains): the
 iteration ends at every stream whose choice lands there. -/
-theorem stepFn_mapIter_stop {σ : Store} {kv vv : Option String}
+theorem stepFn_mapIter_stop {σ : Store} {kv vv : Option VarId}
     {kt vt : Ty} {body : Stmt} {base : Option Loc}
     {produced start : Array Nat} {env : LocalEnv} {k : Cont}
     {cands : Array (Nat × GoValue × GoValue)} {tr : AccessTrace}
@@ -6506,7 +6506,7 @@ theorem applyPos_sync {c : Config} {op : SyncOp} {vs : List GoValue}
 seventh, `hnr`, is the abort's `repanicCollapse` consult — landing chunk
 L3). -/
 theorem seqConsumption_none_of_flags {σ : Store} {c : Config}
-    (hmi : ∀ (kv vv : Option String) (kt vt : Ty) (body : Stmt)
+    (hmi : ∀ (kv vv : Option VarId) (kt vt : Ty) (body : Stmt)
       (base : Option Loc) (produced start : Array Nat)
       (env : LocalEnv) (k : Cont),
       c ≠ .next (.mapIterK kv vv kt vt body base produced start env k))
@@ -6566,7 +6566,7 @@ successor and the stream returned untouched. Its consumers
 unchanged. -/
 theorem stepFn_oblivious {σ : Store} {c : Config} {ch₀ : Choices}
     {c' : Config} {σ' : Store} {ch₀' : Choices} {tr : StepLabel}
-    (hmi : ∀ (kv vv : Option String) (kt vt : Ty) (body : Stmt)
+    (hmi : ∀ (kv vv : Option VarId) (kt vt : Ty) (body : Stmt)
       (base : Option Loc) (produced start : Array Nat)
       (env : LocalEnv) (k : Cont),
       c ≠ .next (.mapIterK kv vv kt vt body base produced start env k))

@@ -57,6 +57,7 @@
     ],
     "stmt": "block"
    },
+   "locals": [],
    "name": "e1$lit0",
    "params": [],
    "results": [
@@ -78,6 +79,7 @@
       "lhs": [
        {
         "id": "mut",
+        "local": 0,
         "target": "declare",
         "type": {
          "kind": "func",
@@ -144,6 +146,7 @@
         ],
         "callee": {
          "expr": "ident",
+         "local": 0,
          "name": "mut",
          "type": {
           "kind": "func",
@@ -219,6 +222,7 @@
        "lhs": [
         {
          "id": "v",
+         "local": 1,
          "target": "declare",
          "type": {
           "int": "int",
@@ -243,6 +247,7 @@
       "results": [
        {
         "expr": "ident",
+        "local": 1,
         "name": "v",
         "type": {
          "int": "int",
@@ -255,6 +260,18 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "local",
+     "name": "mut",
+     "pos": "main.go:11:2"
+    },
+    {
+     "kind": "local",
+     "name": "v",
+     "pos": "main.go:12:2"
+    }
+   ],
    "name": "e1",
    "params": [],
    "results": [
@@ -297,6 +314,7 @@
     ],
     "stmt": "block"
    },
+   "locals": [],
    "name": "$pkginit",
    "params": [],
    "results": [],
@@ -316,6 +334,6 @@
  "methods": [],
  "package": "main",
  "promotions": [],
- "schema": "golean-native-v2",
+ "schema": "golean-native-v3",
  "types": []
 }

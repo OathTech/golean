@@ -66,6 +66,7 @@
       "lhs": [
        {
         "id": "d",
+        "local": 0,
         "target": "declare",
         "type": {
          "elem": {
@@ -139,6 +140,7 @@
       "lhs": [
        {
         "id": "s",
+        "local": 1,
         "target": "declare",
         "type": {
          "elem": {
@@ -198,6 +200,7 @@
         "wide": {
          "dst": {
           "expr": "ident",
+          "local": 0,
           "name": "d",
           "type": {
            "elem": {
@@ -209,6 +212,7 @@
          },
          "src": {
           "expr": "ident",
+          "local": 1,
           "name": "s",
           "type": {
            "elem": {
@@ -226,6 +230,7 @@
         "head": {
          "base": {
           "expr": "ident",
+          "local": 0,
           "name": "d",
           "type": {
            "elem": {
@@ -301,6 +306,18 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "local",
+     "name": "d",
+     "pos": "main.go:8:2"
+    },
+    {
+     "kind": "local",
+     "name": "s",
+     "pos": "main.go:9:2"
+    }
+   ],
    "name": "e5copy",
    "params": [],
    "results": [
@@ -319,6 +336,6 @@
  "methods": [],
  "package": "main",
  "promotions": [],
- "schema": "golean-native-v2",
+ "schema": "golean-native-v3",
  "types": []
 }

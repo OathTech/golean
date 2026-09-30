@@ -6,6 +6,8 @@ import GoLean.GoCore.SyntaxEqb
 open Lean GoLean GoLean.GoCore
 
 namespace GoLean.MethodIdentityTests
+/-- B6 (2026-09-30): a spelling interned injectively into a `VarId` (test-local). -/
+def vid (s : String) : GoLean.GoCore.VarId := s.toUTF8.foldl (fun n b => n * 256 + b.toNat) 0
 
 private def check (b : Bool) (message : String) : IO Unit :=
   unless b do throw (IO.userError message)
@@ -21,11 +23,11 @@ private def method (id : Json) : Json :=
   Json.mkObj [("id", id), ("recvType", .str "main.T"),
     ("recv", Json.mkObj [("id", .str "$recv"),
       ("type", Json.mkObj [("kind", .str "named"), ("name", .str "main.T")])]),
-    ("params", .arr #[]), ("results", .arr #[]), ("variadic", .bool false),
+    ("params", .arr #[]), ("results", .arr #[]), ("variadic", .bool false), ("locals", .arr #[]),
     ("unsupported", .str "identity-only test stub")]
 
 private def program (requirements methods : Array Json) : Json :=
-  Json.mkObj [("schema", .str "golean-native-v2"), ("funcs", .arr #[]),
+  Json.mkObj [("schema", .str "golean-native-v3"), ("funcs", .arr #[]),
     ("buildContext", Json.mkObj [("goos", .str "linux"), ("goarch", .str "amd64"),
       ("compiler", .str "gc"), ("cgoEnabled", .bool true), ("buildTags", .arr #[])]),
     ("methods", .arr methods), ("methodSets", .arr #[]), ("promotions", .arr #[]),
@@ -58,8 +60,8 @@ private def signature (id : Declaration.MemberId) (params : Array Ty := #[]) (va
 private def implementing (req : MethodSig) (recv : Ty := .defined 2) : ProgramCtx :=
   let target : Func :=
     { id := ⟨"body"⟩,
-      args := #[{ id := "$recv", typ := recv }] ++ req.params.map (fun t => { id := "arg", typ := t }),
-      results := req.results.map (fun t => { id := "result", typ := t }),
+      args := #[{ id := vid "$recv", typ := recv }] ++ req.params.map (fun t => { id := vid "arg", typ := t }),
+      results := req.results.map (fun t => { id := vid "result", typ := t }),
       variadic := req.variadic, body := .unsupported "signature-only control" }
   ProgramCtx.ofTables
     (types := TypeEnv.reserved ++ #[(⟨"main.T"⟩, .struct #[])])
@@ -95,7 +97,7 @@ theorem variadic_is_part_of_signature :
 private def nilTextState (members : Array MethodInfo) (promotions : Array Promotion := #[]) :
     ProgramCtx :=
   let target := fun (id : String) (recv : Ty) =>
-    ({ id := ⟨id⟩, args := #[{ id := "$recv", typ := recv }], results := #[],
+    ({ id := ⟨id⟩, args := #[{ id := vid "$recv", typ := recv }], results := #[],
        body := .unsupported "validator-only control" } : Func)
   ProgramCtx.ofTables
     (types := TypeEnv.reserved ++ #[(⟨"main.T"⟩, .struct #[{ name := "e", typ := .defined 2, embedded := true }])])

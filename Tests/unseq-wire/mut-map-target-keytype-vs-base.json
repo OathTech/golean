@@ -24,6 +24,7 @@
        {
         "expr": {
          "expr": "ident",
+         "local": 0,
          "name": "m$cap"
         },
         "target": "addr"
@@ -34,6 +35,7 @@
         "expr": "deref",
         "ptr": {
          "expr": "ident",
+         "local": 1,
          "name": "m2$cap"
         },
         "type": {
@@ -67,10 +69,25 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "capture",
+     "name": "m",
+     "pos": "main.go:9:2",
+     "wire": "m$cap"
+    },
+    {
+     "kind": "capture",
+     "name": "m2",
+     "pos": "main.go:10:2",
+     "wire": "m2$cap"
+    }
+   ],
    "name": "e2map$lit0",
    "params": [
     {
      "id": "m$cap",
+     "local": 0,
      "type": {
       "elem": {
        "key": {
@@ -88,6 +105,7 @@
     },
     {
      "id": "m2$cap",
+     "local": 1,
      "type": {
       "elem": {
        "key": {
@@ -169,6 +187,7 @@
       "lhs": [
        {
         "id": "m",
+        "local": 0,
         "target": "declare",
         "type": {
          "key": {
@@ -253,6 +272,7 @@
       "lhs": [
        {
         "id": "m2",
+        "local": 1,
         "target": "declare",
         "type": {
          "key": {
@@ -291,6 +311,7 @@
       "lhs": [
        {
         "id": "old",
+        "local": 2,
         "target": "declare",
         "type": {
          "key": {
@@ -308,6 +329,7 @@
       "rhs": [
        {
         "expr": "ident",
+        "local": 0,
         "name": "m",
         "type": {
          "key": {
@@ -329,6 +351,7 @@
       "lhs": [
        {
         "id": "mut",
+        "local": 3,
         "target": "declare",
         "type": {
          "kind": "func",
@@ -348,11 +371,13 @@
         "captured": [
          {
           "expr": "ref",
-          "id": "m"
+          "id": "m",
+          "local": 0
          },
          {
           "expr": "ref",
-          "id": "m2"
+          "id": "m2",
+          "local": 1
          }
         ],
         "expr": "func-value",
@@ -418,6 +443,7 @@
         ],
         "callee": {
          "expr": "ident",
+         "local": 3,
          "name": "mut"
         },
         "kind": "invoke",
@@ -433,6 +459,7 @@
         "bind": "$u0",
         "head": {
          "expr": "ident",
+         "local": 0,
          "name": "m",
          "type": {
           "key": {
@@ -554,6 +581,7 @@
          "x": {
           "base": {
            "expr": "ident",
+           "local": 2,
            "name": "old",
            "type": {
             "key": {
@@ -601,6 +629,7 @@
         "y": {
          "base": {
           "expr": "ident",
+          "local": 0,
           "name": "m",
           "type": {
            "key": {
@@ -643,6 +672,28 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "local",
+     "name": "m",
+     "pos": "main.go:9:2"
+    },
+    {
+     "kind": "local",
+     "name": "m2",
+     "pos": "main.go:10:2"
+    },
+    {
+     "kind": "local",
+     "name": "old",
+     "pos": "main.go:11:2"
+    },
+    {
+     "kind": "local",
+     "name": "mut",
+     "pos": "main.go:12:2"
+    }
+   ],
    "name": "e2map",
    "params": [],
    "results": [
@@ -661,6 +712,6 @@
  "methods": [],
  "package": "main",
  "promotions": [],
- "schema": "golean-native-v2",
+ "schema": "golean-native-v3",
  "types": []
 }

@@ -24,6 +24,7 @@
        {
         "expr": {
          "expr": "ident",
+         "local": 0,
          "name": "a$cap"
         },
         "target": "addr"
@@ -56,10 +57,19 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "capture",
+     "name": "a",
+     "pos": "main.go:7:2",
+     "wire": "a$cap"
+    }
+   ],
    "name": "cguard$lit0",
    "params": [
     {
      "id": "a$cap",
+     "local": 0,
      "type": {
       "elem": {
        "int": "int",
@@ -87,6 +97,7 @@
       "lhs": [
        {
         "id": "a",
+        "local": 0,
         "target": "declare",
         "type": {
          "int": "int",
@@ -111,6 +122,7 @@
       "lhs": [
        {
         "id": "f",
+        "local": 1,
         "target": "declare",
         "type": {
          "kind": "func",
@@ -129,7 +141,8 @@
         "captured": [
          {
           "expr": "ref",
-          "id": "a"
+          "id": "a",
+          "local": 0
          }
         ],
         "expr": "func-value",
@@ -196,6 +209,7 @@
         ],
         "callee": {
          "expr": "ident",
+         "local": 1,
          "name": "f"
         },
         "kind": "invoke",
@@ -228,6 +242,7 @@
        "lhs": [
         {
          "id": "ok",
+         "local": 2,
          "target": "declare",
          "type": {
           "kind": "bool"
@@ -249,6 +264,7 @@
      {
       "cond": {
        "expr": "ident",
+       "local": 2,
        "name": "ok",
        "type": {
         "kind": "bool"
@@ -261,6 +277,7 @@
          "results": [
           {
            "expr": "ident",
+           "local": 0,
            "name": "a",
            "type": {
             "int": "int",
@@ -290,6 +307,23 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "local",
+     "name": "a",
+     "pos": "main.go:7:2"
+    },
+    {
+     "kind": "local",
+     "name": "f",
+     "pos": "main.go:8:2"
+    },
+    {
+     "kind": "local",
+     "name": "ok",
+     "pos": "main.go:9:2"
+    }
+   ],
    "name": "cguard",
    "params": [],
    "results": [
@@ -308,6 +342,6 @@
  "methods": [],
  "package": "main",
  "promotions": [],
- "schema": "golean-native-v2",
+ "schema": "golean-native-v3",
  "types": []
 }

@@ -24,6 +24,7 @@
        {
         "expr": {
          "expr": "ident",
+         "local": 0,
          "name": "x$cap"
         },
         "target": "addr"
@@ -57,10 +58,19 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "capture",
+     "name": "x",
+     "pos": "main.go:10:2",
+     "wire": "x$cap"
+    }
+   ],
    "name": "e4make$lit0",
    "params": [
     {
      "id": "x$cap",
+     "local": 0,
      "type": {
       "elem": {
        "int": "int",
@@ -89,6 +99,7 @@
       "lhs": [
        {
         "id": "n",
+        "local": 0,
         "target": "declare",
         "type": {
          "int": "int",
@@ -113,6 +124,7 @@
       "lhs": [
        {
         "id": "x",
+        "local": 1,
         "target": "declare",
         "type": {
          "int": "int",
@@ -137,6 +149,7 @@
       "lhs": [
        {
         "id": "h",
+        "local": 2,
         "target": "declare",
         "type": {
          "kind": "func",
@@ -156,7 +169,8 @@
         "captured": [
          {
           "expr": "ref",
-          "id": "x"
+          "id": "x",
+          "local": 1
          }
         ],
         "expr": "func-value",
@@ -233,6 +247,7 @@
          },
          "len": {
           "expr": "ident",
+          "local": 0,
           "name": "n",
           "type": {
            "int": "int",
@@ -288,6 +303,7 @@
         ],
         "callee": {
          "expr": "ident",
+         "local": 2,
          "name": "h",
          "type": {
           "kind": "func",
@@ -314,6 +330,7 @@
         "bind": "$u2",
         "head": {
          "expr": "ident",
+         "local": 1,
          "name": "x",
          "type": {
           "int": "int",
@@ -401,6 +418,23 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "local",
+     "name": "n",
+     "pos": "main.go:9:2"
+    },
+    {
+     "kind": "local",
+     "name": "x",
+     "pos": "main.go:10:2"
+    },
+    {
+     "kind": "local",
+     "name": "h",
+     "pos": "main.go:11:2"
+    }
+   ],
    "name": "e4make",
    "params": [],
    "results": [
@@ -419,6 +453,6 @@
  "methods": [],
  "package": "main",
  "promotions": [],
- "schema": "golean-native-v2",
+ "schema": "golean-native-v3",
  "types": []
 }

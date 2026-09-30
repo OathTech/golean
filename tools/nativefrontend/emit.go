@@ -134,208 +134,208 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 	for _, unit := range e.units {
 		e.setUnit(unit)
 		for _, f := range unit.files {
-		for _, decl := range f.Decls {
-			switch d := decl.(type) {
-			case *ast.FuncDecl:
-				// main is the standalone entry point (it prints observations for
-				// `go run`); GoCore runs the named subject, never main. Skip it,
-				// matching the coverage harness. MAIN UNIT ONLY: in an
-				// imported package, `main` is an ordinary function.
-				if d.Recv == nil && d.Name.Name == "main" && e.isMainPackage(unit.pkg) {
-					continue
-				}
-				// init() functions (init slice): exported under reserved
-				// mangled ids `$initN` (source order, files in lexical
-				// filename order — the spec's presentation order; non-main
-				// units prefix their import path), called by the
-				// synthesized $pkginit after the unit's variable
-				// initializers. go/types enforces the declaration rules
-				// (no params/results, not callable, not referenceable).
-				// NO per-decl quarantine: init runs before every subject,
-				// so an unsupported init body refuses the whole export
-				// (design note §2).
-				if d.Recv == nil && d.Name.Name == "init" {
-					mangled := e.initFuncWireName(unit, len(unit.initNames))
-					unit.initNames = append(unit.initNames, mangled)
-					e.curFuncID, e.curFuncName = mangled, mangled
-					e.liftSeq = 0
-					fn, err := e.emitFuncDecl(d)
-					if err != nil {
-						return nil, err
-					}
-					fn["name"] = mangled
-					funcs = append(funcs, e.lifted...)
-					e.lifted = nil
-					funcs = append(funcs, fn)
-					continue
-				}
-				// Stdlib source-through pruning (stdlibreach.go): a
-				// library declaration the program does not reach is not
-				// on the wire (init() was handled above — always emitted).
-				if unit.reached != nil && !unit.reached.funcs[d] {
-					continue
-				}
-				// Generic declarations are never emitted uninstantiated
-				// (spec: a generic function/type must be instantiated
-				// before use — no runtime artifact exists for the
-				// uninstantiated form). Function stencils are emitted from
-				// the instantiation worklist (mono.go); generic METHODS
-				// stencil with their receiver instantiation (G3).
-				// Registration happened in registerGenericDecls (before
-				// the H-11 pre-pass); here they are only skipped.
-				if fsig, isSig := e.info.Defs[d.Name].Type().(*types.Signature); isSig {
-					if fsig.TypeParams().Len() > 0 || fsig.RecvTypeParams().Len() > 0 {
+			for _, decl := range f.Decls {
+				switch d := decl.(type) {
+				case *ast.FuncDecl:
+					// main is the standalone entry point (it prints observations for
+					// `go run`); GoCore runs the named subject, never main. Skip it,
+					// matching the coverage harness. MAIN UNIT ONLY: in an
+					// imported package, `main` is an ordinary function.
+					if d.Recv == nil && d.Name.Name == "main" && e.isMainPackage(unit.pkg) {
 						continue
 					}
-				}
-				// Lifted-literal names must be unique program-wide: methods
-				// qualify by receiver and full member identity (the
-				// pre-merge audit found same-named methods colliding and the
-				// wrong body executing), plain functions by their package's
-				// import path (funcWireName; main stays bare). The decoder
-				// collision-checks too.
-				var declObj *types.Func
-				if fo, isFn := e.info.Defs[d.Name].(*types.Func); isFn {
-					declObj = fo
-				}
-				e.curFuncID, e.curFuncName = d.Name.Name, d.Name.Name
-				if d.Recv == nil && declObj != nil {
-					e.curFuncID, e.curFuncName = e.funcWireName(declObj), e.funcWireName(declObj)
-				}
-				if d.Recv != nil && len(d.Recv.List) > 0 {
-					rt := e.info.Defs[d.Name].Type().(*types.Signature).Recv().Type()
-					if ptr, ok := rt.(*types.Pointer); ok {
-						rt = ptr.Elem()
-					}
-					if rn, ok := e.namedTypeName(rt); ok {
-						member, err := declarationObjectName(declObj)
+					// init() functions (init slice): exported under reserved
+					// mangled ids `$initN` (source order, files in lexical
+					// filename order — the spec's presentation order; non-main
+					// units prefix their import path), called by the
+					// synthesized $pkginit after the unit's variable
+					// initializers. go/types enforces the declaration rules
+					// (no params/results, not callable, not referenceable).
+					// NO per-decl quarantine: init runs before every subject,
+					// so an unsupported init body refuses the whole export
+					// (design note §2).
+					if d.Recv == nil && d.Name.Name == "init" {
+						mangled := e.initFuncWireName(unit, len(unit.initNames))
+						unit.initNames = append(unit.initNames, mangled)
+						e.curFuncID, e.curFuncName = mangled, mangled
+						e.liftSeq = 0
+						fn, err := e.emitFuncDecl(d)
 						if err != nil {
 							return nil, err
 						}
-						e.curFuncID, e.curFuncName = methodFuncKey(rn, member), rn+"."+member.Name
-					}
-				}
-				e.liftSeq = 0
-				localTypesMark := len(e.localTypeDefs)
-				localIfaceMark := len(e.localIfaceMethods)
-				namedStructMark := len(e.namedStructTypes)
-				// The $deferRecoverNoop registration rides e.lifted, so it
-				// must roll back WITH it (BUG-031: a sticky flag left later
-				// `defer recover()`s referencing a never-emitted function).
-				deferNoopMark := e.deferNoopEmitted
-				monoMark := e.markMono()
-				var fn map[string]any
-				var err error
-				if reason, forced := e.forcedQuarantine[d]; forced {
-					// Condemned by the library unsafe-layout pre-scan
-					// (checkUnsafeLayoutOpsLibrary): stub, never emit.
-					err = unsup("%s", reason)
-				} else {
-					fn, err = e.emitFuncDecl(d)
-				}
-				if err != nil {
-					// Per-decl quarantine: an UNSUPPORTED declaration
-					// becomes a stub that fails closed when CALLED, so one
-					// generic/float/fmt helper no longer poisons every
-					// other subject in its package. A plain function
-					// carries its ARITY (params typed unsupported carry
-					// the reason); a METHOD carries its REAL SIGNATURE
-					// (H-3, 2026-08-19 — see quarantinedMethodStub for
-					// why the two shapes differ). Non-unsupported errors
-					// still fail the whole export.
-					var u unsupported
-					if errors.As(err, &u) {
-						// A LIBRARY unit's quarantine reason names its
-						// SITE (audit fix round F5): `goto target label…`
-						// or `basic type unsafe.Pointer` alone does not
-						// say which upstream declaration refused.
-						if unit.library {
-							u = unsupported{what: e.libraryDeclLabel(unit, d) + ": " + u.what}
-						}
+						fn["name"] = mangled
+						funcs = append(funcs, e.lifted...)
 						e.lifted = nil
-						e.deferNoopEmitted = deferNoopMark
-						// Drop any local type defs the quarantined body
-						// half-registered (a leak could spuriously collide
-						// with another function's local type).
-						e.localTypeDefs = e.localTypeDefs[:localTypesMark]
-						e.localIfaceMethods = e.localIfaceMethods[:localIfaceMark]
-						// A wrapper for a rolled-back local type would
-						// reference a TypeDef that never ships.
-						e.namedStructTypes = e.namedStructTypes[:namedStructMark]
-						// Instantiations the refused body registered roll
-						// back too (audit response m5): a surviving TYPE
-						// stencil has no quarantine of its own and would
-						// refuse the WHOLE export from a body that was
-						// already stubbed out (pinned by
-						// generics/quarantined-instantiation).
-						e.rollbackMono(monoMark)
-						if d.Recv != nil {
-							stub, serr := e.quarantinedMethodStub(d, u)
-							if serr != nil {
-								return nil, serr
-							}
-							methods = append(methods, stub)
+						funcs = append(funcs, fn)
+						continue
+					}
+					// Stdlib source-through pruning (stdlibreach.go): a
+					// library declaration the program does not reach is not
+					// on the wire (init() was handled above — always emitted).
+					if unit.reached != nil && !unit.reached.funcs[d] {
+						continue
+					}
+					// Generic declarations are never emitted uninstantiated
+					// (spec: a generic function/type must be instantiated
+					// before use — no runtime artifact exists for the
+					// uninstantiated form). Function stencils are emitted from
+					// the instantiation worklist (mono.go); generic METHODS
+					// stencil with their receiver instantiation (G3).
+					// Registration happened in registerGenericDecls (before
+					// the H-11 pre-pass); here they are only skipped.
+					if fsig, isSig := e.info.Defs[d.Name].Type().(*types.Signature); isSig {
+						if fsig.TypeParams().Len() > 0 || fsig.RecvTypeParams().Len() > 0 {
 							continue
 						}
-						arity := 0
-						if d.Type.Params != nil {
-							for _, f := range d.Type.Params.List {
-								n := len(f.Names)
-								if n == 0 {
-									n = 1
+					}
+					// Lifted-literal names must be unique program-wide: methods
+					// qualify by receiver and full member identity (the
+					// pre-merge audit found same-named methods colliding and the
+					// wrong body executing), plain functions by their package's
+					// import path (funcWireName; main stays bare). The decoder
+					// collision-checks too.
+					var declObj *types.Func
+					if fo, isFn := e.info.Defs[d.Name].(*types.Func); isFn {
+						declObj = fo
+					}
+					e.curFuncID, e.curFuncName = d.Name.Name, d.Name.Name
+					if d.Recv == nil && declObj != nil {
+						e.curFuncID, e.curFuncName = e.funcWireName(declObj), e.funcWireName(declObj)
+					}
+					if d.Recv != nil && len(d.Recv.List) > 0 {
+						rt := e.info.Defs[d.Name].Type().(*types.Signature).Recv().Type()
+						if ptr, ok := rt.(*types.Pointer); ok {
+							rt = ptr.Elem()
+						}
+						if rn, ok := e.namedTypeName(rt); ok {
+							member, err := declarationObjectName(declObj)
+							if err != nil {
+								return nil, err
+							}
+							e.curFuncID, e.curFuncName = methodFuncKey(rn, member), rn+"."+member.Name
+						}
+					}
+					e.liftSeq = 0
+					localTypesMark := len(e.localTypeDefs)
+					localIfaceMark := len(e.localIfaceMethods)
+					namedStructMark := len(e.namedStructTypes)
+					// The $deferRecoverNoop registration rides e.lifted, so it
+					// must roll back WITH it (BUG-031: a sticky flag left later
+					// `defer recover()`s referencing a never-emitted function).
+					deferNoopMark := e.deferNoopEmitted
+					monoMark := e.markMono()
+					var fn map[string]any
+					var err error
+					if reason, forced := e.forcedQuarantine[d]; forced {
+						// Condemned by the library unsafe-layout pre-scan
+						// (checkUnsafeLayoutOpsLibrary): stub, never emit.
+						err = unsup("%s", reason)
+					} else {
+						fn, err = e.emitFuncDecl(d)
+					}
+					if err != nil {
+						// Per-decl quarantine: an UNSUPPORTED declaration
+						// becomes a stub that fails closed when CALLED, so one
+						// generic/float/fmt helper no longer poisons every
+						// other subject in its package. A plain function
+						// carries its ARITY (params typed unsupported carry
+						// the reason); a METHOD carries its REAL SIGNATURE
+						// (H-3, 2026-08-19 — see quarantinedMethodStub for
+						// why the two shapes differ). Non-unsupported errors
+						// still fail the whole export.
+						var u unsupported
+						if errors.As(err, &u) {
+							// A LIBRARY unit's quarantine reason names its
+							// SITE (audit fix round F5): `goto target label…`
+							// or `basic type unsafe.Pointer` alone does not
+							// say which upstream declaration refused.
+							if unit.library {
+								u = unsupported{what: e.libraryDeclLabel(unit, d) + ": " + u.what}
+							}
+							e.lifted = nil
+							e.deferNoopEmitted = deferNoopMark
+							// Drop any local type defs the quarantined body
+							// half-registered (a leak could spuriously collide
+							// with another function's local type).
+							e.localTypeDefs = e.localTypeDefs[:localTypesMark]
+							e.localIfaceMethods = e.localIfaceMethods[:localIfaceMark]
+							// A wrapper for a rolled-back local type would
+							// reference a TypeDef that never ships.
+							e.namedStructTypes = e.namedStructTypes[:namedStructMark]
+							// Instantiations the refused body registered roll
+							// back too (audit response m5): a surviving TYPE
+							// stencil has no quarantine of its own and would
+							// refuse the WHOLE export from a body that was
+							// already stubbed out (pinned by
+							// generics/quarantined-instantiation).
+							e.rollbackMono(monoMark)
+							if d.Recv != nil {
+								stub, serr := e.quarantinedMethodStub(d, u)
+								if serr != nil {
+									return nil, serr
 								}
-								arity += n
+								methods = append(methods, stub)
+								continue
+							}
+							arity := 0
+							if d.Type.Params != nil {
+								for _, f := range d.Type.Params.List {
+									n := len(f.Names)
+									if n == 0 {
+										n = 1
+									}
+									arity += n
+								}
+							}
+							quarantineName := d.Name.Name
+							if declObj != nil {
+								quarantineName = e.funcWireName(declObj)
+							}
+							funcs = append(funcs, map[string]any{
+								"name": quarantineName, "unsupported": u.what, "arity": arity})
+							continue
+						}
+						return nil, err
+					}
+					funcs = append(funcs, e.lifted...)
+					e.lifted = nil
+					if d.Recv != nil {
+						methods = append(methods, fn)
+					} else {
+						// The wire FuncId: qualified for non-main units
+						// (emitFuncDecl records the bare declared name).
+						if declObj != nil {
+							fn["name"] = e.funcWireName(declObj)
+						}
+						funcs = append(funcs, fn)
+					}
+				case *ast.GenDecl:
+					gd := d
+					if unit.reached != nil && d.Tok == token.TYPE {
+						// Stdlib source-through pruning: only the REACHED type
+						// specs of a library unit declare (a shallow copy of
+						// the GenDecl with the spec list filtered).
+						kept := make([]ast.Spec, 0, len(d.Specs))
+						for _, spec := range d.Specs {
+							if ts, isType := spec.(*ast.TypeSpec); isType && unit.reached.types[ts] {
+								kept = append(kept, spec)
 							}
 						}
-						quarantineName := d.Name.Name
-						if declObj != nil {
-							quarantineName = e.funcWireName(declObj)
+						if len(kept) == 0 {
+							continue
 						}
-						funcs = append(funcs, map[string]any{
-							"name": quarantineName, "unsupported": u.what, "arity": arity})
-						continue
+						copied := *d
+						copied.Specs = kept
+						gd = &copied
 					}
-					return nil, err
-				}
-				funcs = append(funcs, e.lifted...)
-				e.lifted = nil
-				if d.Recv != nil {
-					methods = append(methods, fn)
-				} else {
-					// The wire FuncId: qualified for non-main units
-					// (emitFuncDecl records the bare declared name).
-					if declObj != nil {
-						fn["name"] = e.funcWireName(declObj)
+					tds, ims, err := e.emitGenDeclTypes(gd)
+					if err != nil {
+						return nil, err
 					}
-					funcs = append(funcs, fn)
+					typeDefs = append(typeDefs, tds...)
+					methods = append(methods, ims...)
 				}
-			case *ast.GenDecl:
-				gd := d
-				if unit.reached != nil && d.Tok == token.TYPE {
-					// Stdlib source-through pruning: only the REACHED type
-					// specs of a library unit declare (a shallow copy of
-					// the GenDecl with the spec list filtered).
-					kept := make([]ast.Spec, 0, len(d.Specs))
-					for _, spec := range d.Specs {
-						if ts, isType := spec.(*ast.TypeSpec); isType && unit.reached.types[ts] {
-							kept = append(kept, spec)
-						}
-					}
-					if len(kept) == 0 {
-						continue
-					}
-					copied := *d
-					copied.Specs = kept
-					gd = &copied
-				}
-				tds, ims, err := e.emitGenDeclTypes(gd)
-				if err != nil {
-					return nil, err
-				}
-				typeDefs = append(typeDefs, tds...)
-				methods = append(methods, ims...)
 			}
-		}
 		}
 	}
 	// Body emission below (worklists, anchors, $pkginit) runs with the
@@ -438,6 +438,7 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 		savedTargs, savedDecl := e.curTargs, e.curInstDecl
 		e.curSubst, e.curFuncID, e.curFuncName, e.substErr = cm.subst, k, cm.ifaceName+"."+cm.method.Name(), nil
 		e.curTargs, e.curInstDecl = nil, nil
+		restoreLocals := e.freshLocals()
 		params, err := e.emitParams(cm.sig.Params())
 		if err == nil {
 			var rerr error
@@ -463,7 +464,9 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 			"results":   results,
 			"variadic":  cm.sig.Variadic(),
 			"interface": true,
+			"locals":    e.localsTable(),
 		})
+		restoreLocals()
 	}
 
 	// Imported-type method-set declarations (design note D5, BUG-009's
@@ -569,65 +572,65 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 	// fail-closed check that nothing was left dangling.
 	ifaceDefs := map[string]any{}
 	for {
-	for {
-		funcs, typeDefs, methods, err = e.drainMono(funcs, typeDefs, methods)
-		if err != nil {
-			return nil, err
-		}
-		// One wire name, one method set (BUG-095's mechanism, now a refusal):
-		// a name registered with two non-identical interfaces would put on
-		// the wire whichever registration came LAST, making the machine's
-		// satisfaction answers emission-order-dependent. Fail the export by
-		// name instead.
-		if err := e.ifaceConflictRefusal(); err != nil {
-			return nil, err
-		}
-		pending := []string{}
-		for k := range e.seenInterfaces {
-			if _, done := ifaceDefs[k]; !done {
-				pending = append(pending, k)
+		for {
+			funcs, typeDefs, methods, err = e.drainMono(funcs, typeDefs, methods)
+			if err != nil {
+				return nil, err
 			}
-		}
-		if len(pending) == 0 {
-			break
-		}
-		sort.Strings(pending)
-		for _, name := range pending {
-			iface := e.seenInterfaces[name]
-			sigs := []any{}
-			for i := 0; i < iface.NumMethods(); i++ {
-				m := iface.Method(i)
-				sig := m.Type().(*types.Signature)
-				// SIGNATURE-OPAQUE (FR-23): the requirement list is a
-				// signature; an imported generic instantiation in it is
-				// the opaque marker, as in emitGenDeclTypes above.
-				var params, results []any
-				if _, _, err := e.withOpaqueSigs(func() error {
-					var err error
-					if params, err = e.emitTupleTypes(sig.Params()); err != nil {
+			// One wire name, one method set (BUG-095's mechanism, now a refusal):
+			// a name registered with two non-identical interfaces would put on
+			// the wire whichever registration came LAST, making the machine's
+			// satisfaction answers emission-order-dependent. Fail the export by
+			// name instead.
+			if err := e.ifaceConflictRefusal(); err != nil {
+				return nil, err
+			}
+			pending := []string{}
+			for k := range e.seenInterfaces {
+				if _, done := ifaceDefs[k]; !done {
+					pending = append(pending, k)
+				}
+			}
+			if len(pending) == 0 {
+				break
+			}
+			sort.Strings(pending)
+			for _, name := range pending {
+				iface := e.seenInterfaces[name]
+				sigs := []any{}
+				for i := 0; i < iface.NumMethods(); i++ {
+					m := iface.Method(i)
+					sig := m.Type().(*types.Signature)
+					// SIGNATURE-OPAQUE (FR-23): the requirement list is a
+					// signature; an imported generic instantiation in it is
+					// the opaque marker, as in emitGenDeclTypes above.
+					var params, results []any
+					if _, _, err := e.withOpaqueSigs(func() error {
+						var err error
+						if params, err = e.emitTupleTypes(sig.Params()); err != nil {
+							return err
+						}
+						results, err = e.emitTupleTypes(sig.Results())
 						return err
+					}); err != nil {
+						return nil, err
 					}
-					results, err = e.emitTupleTypes(sig.Results())
-					return err
-				}); err != nil {
-					return nil, err
+					// `variadic` is part of the SIGNATURE Go compares for
+					// method-set membership: `M(xs ...int)` and `M(xs []int)`
+					// are different methods (pre-merge audit 2026-07-31,
+					// finding 0). Carried on both sides — here for the
+					// requirement, on the `Func` for the implementation.
+					id, err := declarationObjectName(m)
+					if err != nil {
+						return nil, err
+					}
+					sigs = append(sigs, map[string]any{
+						"id": id, "params": params, "results": results,
+						"variadic": sig.Variadic()})
 				}
-				// `variadic` is part of the SIGNATURE Go compares for
-				// method-set membership: `M(xs ...int)` and `M(xs []int)`
-				// are different methods (pre-merge audit 2026-07-31,
-				// finding 0). Carried on both sides — here for the
-				// requirement, on the `Func` for the implementation.
-				id, err := declarationObjectName(m)
-				if err != nil {
-					return nil, err
-				}
-				sigs = append(sigs, map[string]any{
-					"id": id, "params": params, "results": results,
-					"variadic": sig.Variadic()})
+				ifaceDefs[name] = map[string]any{"kind": "interface", "methods": sigs}
 			}
-			ifaceDefs[name] = map[string]any{"kind": "interface", "methods": sigs}
 		}
-	}
 		lateDefs, lateStubs := e.importedTypeDecls()
 		if len(lateDefs) == 0 && len(lateStubs) == 0 {
 			break
@@ -797,7 +800,7 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 	}
 
 	program := map[string]any{
-		"schema":     "golean-native-v2",
+		"schema":     "golean-native-v3",
 		"package":    e.pkg.Name(),
 		"types":      typeDefs,
 		"funcs":      funcs,
@@ -1848,6 +1851,7 @@ func (e *emitter) synthesizePkgInit() (map[string]any, error) {
 		"params":   []any{},
 		"results":  []any{},
 		"variadic": false,
+		"locals":   []any{},
 		"body":     map[string]any{"stmt": "block", "body": body},
 	}, nil
 }
@@ -1946,6 +1950,7 @@ func (e *emitter) emitGenDeclTypes(d *ast.GenDecl) ([]any, []any, error) {
 				// satisfaction exact and the export alive. The same
 				// key is minted for the implementing method's stub.
 				var params, results []any
+				restoreLocals := e.freshLocals()
 				if _, _, err := e.withOpaqueSigs(func() error {
 					var err error
 					if params, err = e.emitParams(sig.Params()); err != nil {
@@ -1954,10 +1959,12 @@ func (e *emitter) emitGenDeclTypes(d *ast.GenDecl) ([]any, []any, error) {
 					results, err = e.emitResults(sig.Results())
 					return err
 				}); err != nil {
+					restoreLocals()
 					return nil, nil, err
 				}
 				id, err := declarationObjectName(m)
 				if err != nil {
+					restoreLocals()
 					return nil, nil, err
 				}
 				ifaceMethods = append(ifaceMethods, map[string]any{
@@ -1968,7 +1975,9 @@ func (e *emitter) emitGenDeclTypes(d *ast.GenDecl) ([]any, []any, error) {
 					"results":   results,
 					"variadic":  sig.Variadic(),
 					"interface": true,
+					"locals":    e.localsTable(),
 				})
+				restoreLocals()
 			}
 			continue
 		}
@@ -2051,6 +2060,8 @@ func (e *emitter) quarantinedMethodStub(d *ast.FuncDecl, u unsupported) (map[str
 	// Anything ELSE the signature cannot express still refuses whole.
 	var recvTy any
 	var params, results []any
+	restoreLocals := e.freshLocals()
+	defer restoreLocals()
 	opaque, basics, err := e.withOpaqueSigs(func() error {
 		var err error
 		if recvTy, err = e.emitType(recv.Type()); err != nil {
@@ -2078,6 +2089,7 @@ func (e *emitter) quarantinedMethodStub(d *ast.FuncDecl, u unsupported) (map[str
 		"results":     results,
 		"variadic":    sig.Variadic(),
 		"unsupported": reason + "; satisfaction answers, calls fail closed)",
+		"locals":      e.localsTable(),
 	}, nil
 }
 
@@ -2168,6 +2180,9 @@ func (e *emitter) emitFuncDecl(d *ast.FuncDecl) (map[string]any, error) {
 	}
 	sig := e.info.Defs[d.Name].Type().(*types.Signature)
 	e.curResults = sig.Results()
+	// B6: one name table per declaration (receiver, params, results, body locals).
+	restoreLocals := e.freshLocals()
+	defer restoreLocals()
 	// Named-result shadow renaming (resultshadow.go): rebuilt per body.
 	if err := e.resultShadowScan(d.Body); err != nil {
 		return nil, err
@@ -2214,7 +2229,13 @@ func (e *emitter) emitFuncDecl(d *ast.FuncDecl) (map[string]any, error) {
 		}
 		delete(fn, "name")
 		fn["id"] = id
-		fn["recv"] = map[string]any{"id": localName(recv), "type": rty}
+		// B6: a named receiver is a declaration site; an unnamed one (`func (T) M()`)
+		// is a `$`-temporary (never referenced).
+		if rn := localName(recv); rn == "" {
+			fn["recv"] = map[string]any{"id": "$recv", "type": rty}
+		} else {
+			fn["recv"] = map[string]any{"id": rn, "type": rty, "local": e.localID(recv, "recv", "")}
+		}
 		fn["recvType"] = name
 	}
 
@@ -2263,6 +2284,7 @@ func (e *emitter) emitFuncDecl(d *ast.FuncDecl) (map[string]any, error) {
 		return nil, berr
 	}
 	fn["body"] = body
+	fn["locals"] = e.localsTable()
 	return fn, nil
 }
 
@@ -2362,7 +2384,7 @@ func degradeGotoTarget(t any) any {
 	}
 	if m["target"] == "declare" {
 		if id, ok := m["id"].(string); ok && !strings.HasPrefix(id, "$") {
-			return map[string]any{"target": "var", "id": id}
+			return map[string]any{"target": "var", "id": id, "local": m["local"]}
 		}
 	}
 	return t
@@ -2411,8 +2433,12 @@ func degradeGotoDeclares(stmts []any) []any {
 					// a fresh variable).
 					rhs = map[string]any{"expr": "default", "type": dm["type"]}
 				}
+				lhsVar := map[string]any{"target": "var", "id": id}
+				if l, ok := dm["local"]; ok {
+					lhsVar["local"] = l
+				}
 				conv = append(conv, map[string]any{"stmt": "assign",
-					"lhs": []any{map[string]any{"target": "var", "id": id}},
+					"lhs": []any{lhsVar},
 					"rhs": []any{rhs}})
 			}
 			out = append(out, map[string]any{"stmt": "block", "body": conv})
@@ -2772,7 +2798,7 @@ func (e *emitter) emitGotoBody(b *ast.BlockStmt) (map[string]any, error) {
 			return nil, err
 		}
 		outer = append(outer, map[string]any{"stmt": "var",
-			"decls": []any{map[string]any{"id": hv.name, "type": ty}}})
+			"decls": []any{map[string]any{"id": hv.name, "type": ty, "local": e.localID(hv.obj, "local", hv.name)}}})
 	}
 	intTy := map[string]any{"kind": "int", "int": "int"}
 	outer = append(outer, map[string]any{"stmt": "assign", "define": true,
@@ -2819,7 +2845,15 @@ func (e *emitter) emitParams(t *types.Tuple) ([]any, error) {
 		if err != nil {
 			return nil, err
 		}
-		out = append(out, map[string]any{"id": localName(v), "type": ty})
+		// B6: a named parameter is a declaration site — its index beside the
+		// spelling; an UNNAMED parameter (`func(int)`) has no identifier and is
+		// a `$`-temporary the decoder interns (its cell is never referenced).
+		id := localName(v)
+		if id == "" {
+			out = append(out, map[string]any{"id": "$p" + itoa(i), "type": ty})
+			continue
+		}
+		out = append(out, map[string]any{"id": id, "type": ty, "local": e.localID(v, "param", "")})
 	}
 	return out, nil
 }
@@ -2837,8 +2871,11 @@ func (e *emitter) emitResults(t *types.Tuple) ([]any, error) {
 		id := localName(v)
 		if id == "" || id == "_" {
 			id = syntheticResult(i)
+			out = append(out, map[string]any{"id": id, "type": ty})
+			continue
 		}
-		out = append(out, map[string]any{"id": id, "type": ty})
+		// B6: a named result is a declaration site.
+		out = append(out, map[string]any{"id": id, "type": ty, "local": e.localID(v, "result", "")})
 	}
 	return out, nil
 }
@@ -3747,7 +3784,7 @@ func (e *emitter) emitAssign(st *ast.AssignStmt) (any, error) {
 func (e *emitter) emitAssignTargetPhase1(l ast.Expr, define bool) (any, error) {
 	if pname, ok := e.capturedPtr(l); ok {
 		return map[string]any{"target": "addr",
-			"expr": map[string]any{"expr": "ident", "name": pname}}, nil
+			"expr": map[string]any{"expr": "ident", "name": pname, "local": e.localID(e.info.Uses[l.(*ast.Ident)], "capture", pname)}}, nil
 	}
 	if id, ok := l.(*ast.Ident); ok {
 		if id.Name == "_" {
@@ -3760,7 +3797,7 @@ func (e *emitter) emitAssignTargetPhase1(l ast.Expr, define bool) (any, error) {
 					return nil, err
 				}
 				return map[string]any{"target": "declare",
-					"id": e.localRename(obj, id.Name), "type": ty}, nil
+					"id": e.localRename(obj, id.Name), "type": ty, "local": e.localID(obj, "local", e.localRename(obj, id.Name))}, nil
 			}
 		}
 		// A package-level variable writes through its statically resolved
@@ -3782,7 +3819,7 @@ func (e *emitter) emitAssignTargetPhase1(l ast.Expr, define bool) (any, error) {
 			return map[string]any{"target": "addr", "expr": ga}, nil
 		}
 		return map[string]any{"target": "var",
-			"id": e.localRename(obj, id.Name)}, nil
+			"id": e.localRename(obj, id.Name), "local": e.localID(obj, "local", e.localRename(obj, id.Name))}, nil
 	}
 	// A QUALIFIED package-level variable (`base.Seed = ...` — W1.1)
 	// writes through its seeded cell exactly like a local global; it is
@@ -3886,7 +3923,7 @@ func (e *emitter) emitDeclStmt(st *ast.DeclStmt) (any, error) {
 			if err != nil {
 				return nil, err
 			}
-			d := map[string]any{"id": e.localRename(obj, name.Name), "type": ty}
+			d := map[string]any{"id": e.localRename(obj, name.Name), "type": ty, "local": e.localID(obj, "local", e.localRename(obj, name.Name))}
 			if i < len(vs.Values) {
 				init, err := e.emitExpr(vs.Values[i])
 				if err != nil {
@@ -4290,6 +4327,7 @@ func (e *emitter) emitForPerIteration(st *ast.ForStmt, vars []*ast.Ident) (any, 
 	type loopVar struct {
 		name, ptr string
 		ty, ptrTy any
+		obj       types.Object
 	}
 	lvs := []loopVar{}
 	for j, id := range vars {
@@ -4307,12 +4345,12 @@ func (e *emitter) emitForPerIteration(st *ast.ForStmt, vars []*ast.Ident) (any, 
 		// would alias the named result the shadow was renamed away from
 		// (guardrail row scoping/named-result-shadow/loopvar-capture).
 		name := e.localRename(obj, id.Name)
-		lvs = append(lvs, loopVar{name: name, ptr: ptr, ty: ty, ptrTy: ptrTy})
+		lvs = append(lvs, loopVar{name: name, ptr: ptr, ty: ty, ptrTy: ptrTy, obj: obj})
 		outer = append(outer, map[string]any{
 			"stmt":   "assign",
 			"define": true,
 			"lhs":    []any{map[string]any{"target": "declare", "id": ptr, "type": ptrTy}},
-			"rhs":    []any{map[string]any{"expr": "ref", "id": name}},
+			"rhs":    []any{map[string]any{"expr": "ref", "id": name, "local": e.localID(obj, "local", name)}},
 		})
 	}
 	firstVar := "$lvf" + itoa(seq)
@@ -4331,7 +4369,7 @@ func (e *emitter) emitForPerIteration(st *ast.ForStmt, vars []*ast.Ident) (any, 
 		iter = append(iter, map[string]any{
 			"stmt":   "assign",
 			"define": true,
-			"lhs":    []any{map[string]any{"target": "declare", "id": v.name, "type": v.ty}},
+			"lhs":    []any{map[string]any{"target": "declare", "id": v.name, "type": v.ty, "local": e.localID(v.obj, "local", v.name)}},
 			"rhs": []any{map[string]any{"expr": "deref",
 				"ptr":  map[string]any{"expr": "ident", "name": v.ptr, "type": v.ptrTy},
 				"type": v.ty}},
@@ -4339,7 +4377,7 @@ func (e *emitter) emitForPerIteration(st *ast.ForStmt, vars []*ast.Ident) (any, 
 		iter = append(iter, map[string]any{
 			"stmt": "assign",
 			"lhs":  []any{map[string]any{"target": "var", "id": v.ptr}},
-			"rhs":  []any{map[string]any{"expr": "ref", "id": v.name}},
+			"rhs":  []any{map[string]any{"expr": "ref", "id": v.name, "local": e.localID(v.obj, "local", v.name)}},
 		})
 	}
 	if st.Post != nil {
@@ -4684,6 +4722,24 @@ func (e *emitter) emitRange(rs *ast.RangeStmt) (any, error) {
 		"collection": coll,
 		"body":       body,
 	}
+	// B6: a `:=` range's key / value identifiers are declaration sites of the
+	// enclosing function (an `=` range binds `$rangeKey`/`$rangeVal` temporaries).
+	if rs.Tok != token.ASSIGN {
+		if keyName != "" {
+			if id, ok := rs.Key.(*ast.Ident); ok {
+				if obj := e.info.Defs[id]; obj != nil {
+					node["keyLocal"] = e.localID(obj, "local", keyName)
+				}
+			}
+		}
+		if valName != "" {
+			if id, ok := rs.Value.(*ast.Ident); ok {
+				if obj := e.info.Defs[id]; obj != nil {
+					node["valLocal"] = e.localID(obj, "local", valName)
+				}
+			}
+		}
+	}
 	for k, v := range kindFields {
 		node[k] = v
 	}
@@ -4920,8 +4976,8 @@ func (e *emitter) emitTypeSwitch(st *ast.TypeSwitchStmt) (any, error) {
 	body = append(body, hoists...)
 	body = append(body, map[string]any{
 		"stmt": "assign", "define": true,
-		"lhs":  []any{map[string]any{"target": "declare", "id": tsVar, "type": gty}},
-		"rhs":  []any{guardW},
+		"lhs": []any{map[string]any{"target": "declare", "id": tsVar, "type": gty}},
+		"rhs": []any{guardW},
 	})
 	tsRef := map[string]any{"expr": "ident", "name": tsVar, "type": gty}
 
@@ -5042,8 +5098,8 @@ func (e *emitter) typeSwitchClauseBody(cc *ast.CaseClause, boundVal any) (any, e
 			}
 			stmts = append(stmts, map[string]any{
 				"stmt": "assign", "define": true,
-				"lhs":  []any{map[string]any{"target": "declare", "id": v.Name(), "type": vty}},
-				"rhs":  []any{boundVal},
+				"lhs": []any{map[string]any{"target": "declare", "id": v.Name(), "type": vty, "local": e.localID(v, "local", v.Name())}},
+				"rhs": []any{boundVal},
 			})
 		}
 	}
@@ -6334,10 +6390,10 @@ func hopFinalType(t types.Type, hops []int) (types.Type, error) {
 // embedded path AT THIS MOMENT (design note D1.2 — the faithful evaluation
 // order for calls, and the faithful capture moment for method values):
 //
-//   pointer receiver reached at a pointer field  -> the field's VALUE
-//   pointer receiver reached at a value field    -> the field's ADDRESS
-//   value receiver reached at a pointer field    -> deref of the VALUE
-//   value receiver reached at a value field      -> the field's VALUE
+//	pointer receiver reached at a pointer field  -> the field's VALUE
+//	pointer receiver reached at a value field    -> the field's ADDRESS
+//	value receiver reached at a pointer field    -> deref of the VALUE
+//	value receiver reached at a value field      -> the field's VALUE
 func (e *emitter) promotedReceiverArg(sel *ast.SelectorExpr, hops []int, pointerRecv bool) (any, error) {
 	if len(hops) == 0 {
 		return e.methodReceiverArg(sel, pointerRecv)
@@ -6487,6 +6543,7 @@ func (e *emitter) importedMethodStubs(qname string, named *types.Named) ([]any, 
 		// noted into the fixpoint. Anything else still skips whole (below).
 		var valueTy any
 		var params, results []any
+		restoreLocals := e.freshLocals()
 		insts, basics, err := e.withOpaqueSigs(func() error {
 			var err error
 			if valueTy, err = e.emitType(named); err != nil {
@@ -6499,6 +6556,7 @@ func (e *emitter) importedMethodStubs(qname string, named *types.Named) ([]any, 
 			return err
 		})
 		if err != nil {
+			restoreLocals()
 			return nil, false
 		}
 		recvTy := any(valueTy)
@@ -6522,7 +6580,9 @@ func (e *emitter) importedMethodStubs(qname string, named *types.Named) ([]any, 
 			"results":     results,
 			"variadic":    sig.Variadic(),
 			"unsupported": refusal,
+			"locals":      e.localsTable(),
 		})
+		restoreLocals()
 	}
 	return out, true
 }
@@ -6572,6 +6632,7 @@ func syncOnceDoneFunc() map[string]any {
 		"params":   []any{map[string]any{"id": "$once", "type": oncePtrTyW}},
 		"results":  []any{},
 		"variadic": false,
+		"locals":   []any{},
 		"body": map[string]any{"stmt": "block", "body": []any{
 			map[string]any{"stmt": "sync-op", "op": "onceComplete",
 				"args": []any{map[string]any{"expr": "ident", "name": "$once", "type": oncePtrTyW}}},
@@ -6648,16 +6709,20 @@ func (e *emitter) syncMethodStubs() ([]any, []any, error) {
 			if recvIsPtr {
 				recvTy = map[string]any{"kind": "pointer", "elem": valueTy}
 			}
+			restoreLocals := e.freshLocals()
 			params, err := e.emitParams(sig.Params())
 			if err != nil {
+				restoreLocals()
 				return nil, nil, err
 			}
 			results, err := e.emitResults(sig.Results())
 			if err != nil {
+				restoreLocals()
 				return nil, nil, err
 			}
 			id, err := declarationObjectName(mfn)
 			if err != nil {
+				restoreLocals()
 				return nil, nil, err
 			}
 			stub := map[string]any{
@@ -6667,13 +6732,28 @@ func (e *emitter) syncMethodStubs() ([]any, []any, error) {
 				"params":   params,
 				"results":  results,
 				"variadic": sig.Variadic(),
+				"locals":   e.localsTable(),
 			}
+			restoreLocals()
 			body, needOnceDone, err := e.syncStubBody(name, mfn.Name(), recvTy, recvIsPtr, sig, params)
 			if err != nil {
 				return nil, nil, err
 			}
 			if body != nil {
 				stub["body"] = body
+				// B6: the modeled body forced its parameters to `$a{i}` temporaries;
+				// when none keeps a source index, the stub's name table is empty.
+				anyLocal := false
+				for _, p := range params {
+					if pm, ok := p.(map[string]any); ok {
+						if _, has := pm["local"]; has {
+							anyLocal = true
+						}
+					}
+				}
+				if !anyLocal {
+					stub["locals"] = []any{}
+				}
 				bodied[name+"."+mfn.Name()] = true
 				if needOnceDone && !onceDoneEmitted {
 					extraFuncs = append(extraFuncs, syncOnceDoneFunc())
@@ -6746,7 +6826,10 @@ func (e *emitter) syncStubBody(prim, method string, recvTy any, recvIsPtr bool, 
 		if !ok {
 			return nil, false
 		}
+		// B6: the forced id is a `$`-temporary (interned by the decoder) — the
+		// parameter's source index, if `emitParams` allotted one, is dropped.
 		p["id"] = id
+		delete(p, "local")
 		return map[string]any{"expr": "ident", "name": id, "type": p["type"]}, true
 	}
 	if op := syncOpFor(prim, method); op != "" {
@@ -7244,7 +7327,7 @@ func (e *emitter) emitStar(st *ast.StarExpr) (any, error) {
 // emitAddressOf handles &x forms.
 func (e *emitter) emitAddressOf(x ast.Expr) (any, error) {
 	if pname, ok := e.capturedPtr(x); ok {
-		return map[string]any{"expr": "ident", "name": pname}, nil
+		return map[string]any{"expr": "ident", "name": pname, "local": e.localID(e.info.Uses[x.(*ast.Ident)], "capture", pname)}, nil
 	}
 	switch ex := x.(type) {
 	case *ast.Ident:
@@ -7263,7 +7346,7 @@ func (e *emitter) emitAddressOf(x ast.Expr) (any, error) {
 			return ga, nil
 		}
 		return map[string]any{"expr": "ref",
-			"id": e.localRename(e.info.Uses[ex], ex.Name)}, nil
+			"id": e.localRename(e.info.Uses[ex], ex.Name), "local": e.localID(e.info.Uses[ex], "local", e.localRename(e.info.Uses[ex], ex.Name))}, nil
 	case *ast.SelectorExpr:
 		// &pkg.V on a QUALIFIED package-level variable (W1.1): the
 		// seeded cell address, exactly like &global above — name
@@ -7389,7 +7472,7 @@ func (e *emitter) emitAddressOf(x ast.Expr) (any, error) {
 func (e *emitter) emitLValuePhase1(x ast.Expr) (any, error) {
 	if pname, ok := e.capturedPtr(x); ok {
 		return map[string]any{"target": "addr",
-			"expr": map[string]any{"expr": "ident", "name": pname}}, nil
+			"expr": map[string]any{"expr": "ident", "name": pname, "local": e.localID(e.info.Uses[x.(*ast.Ident)], "capture", pname)}}, nil
 	}
 	if id, ok := x.(*ast.Ident); ok {
 		if id.Name == "_" {
@@ -7408,7 +7491,7 @@ func (e *emitter) emitLValuePhase1(x ast.Expr) (any, error) {
 			return map[string]any{"target": "addr", "expr": ga}, nil
 		}
 		return map[string]any{"target": "var",
-			"id": e.localRename(e.info.Uses[id], id.Name)}, nil
+			"id": e.localRename(e.info.Uses[id], id.Name), "local": e.localID(e.info.Uses[id], "local", e.localRename(e.info.Uses[id], id.Name))}, nil
 	}
 	// A map element is not addressable — outside the dedicated
 	// single-assign fast path (mapAssign) it has no address to take, and
@@ -7876,6 +7959,24 @@ func (e *emitter) emitFuncLit(lit *ast.FuncLit) (any, error) {
 	for k, v := range e.captureParam {
 		newCapture[k] = v // a nested literal still reaches outer captures
 	}
+	// The captured ADDRESSES are the ENCLOSING function's references (its name
+	// table); the lifted function's own table opens after them (B6).
+	for _, v := range captures {
+		if outer, ok := e.captureParam[v]; ok {
+			// itself the outer pointer parameter when re-capturing
+			capturedArgs = append(capturedArgs,
+				map[string]any{"expr": "ident", "name": outer, "local": e.localID(v, "capture", outer)})
+		} else {
+			// Through the shadow rename (resultshadow.go): a captured
+			// local that was renamed must be captured under its RENAMED
+			// cell, never the result slot it shadows (audit R1-C1;
+			// guardrail rows scoping/named-result-shadow/closure-{write,read}).
+			capturedArgs = append(capturedArgs,
+				map[string]any{"expr": "ref", "id": e.localRename(v, v.Name()), "local": e.localID(v, "local", e.localRename(v, v.Name()))})
+		}
+	}
+	restoreLocals := e.freshLocals()
+	defer restoreLocals()
 	for _, v := range captures {
 		pname := v.Name() + "$cap"
 		pty, err := e.emitType(v.Type())
@@ -7883,20 +7984,8 @@ func (e *emitter) emitFuncLit(lit *ast.FuncLit) (any, error) {
 			return nil, err
 		}
 		params = append(params, map[string]any{"id": pname,
-			"type": map[string]any{"kind": "pointer", "elem": pty}})
-		// The captured ADDRESS at the creation site — itself a deref-free
-		// reference, or the outer pointer parameter when re-capturing.
-		if outer, ok := e.captureParam[v]; ok {
-			capturedArgs = append(capturedArgs,
-				map[string]any{"expr": "ident", "name": outer})
-		} else {
-			// Through the shadow rename (resultshadow.go): a captured
-			// local that was renamed must be captured under its RENAMED
-			// cell, never the result slot it shadows (audit R1-C1;
-			// guardrail rows scoping/named-result-shadow/closure-{write,read}).
-			capturedArgs = append(capturedArgs,
-				map[string]any{"expr": "ref", "id": e.localRename(v, v.Name())})
-		}
+			"type":  map[string]any{"kind": "pointer", "elem": pty},
+			"local": e.localID(v, "capture", pname)})
 		newCapture[v] = pname
 	}
 	own, err := e.emitParams(sig.Params())
@@ -7971,6 +8060,7 @@ func (e *emitter) emitFuncLit(lit *ast.FuncLit) (any, error) {
 		// A lifted literal's own signature keeps its variadic marker; the
 		// prepended capture pointers are never variadic.
 		"variadic": sig.Variadic(),
+		"locals":   e.localsTable(),
 	})
 	return map[string]any{"expr": "func-value", "func": name,
 		"captured": capturedArgs}, nil
@@ -8038,7 +8128,7 @@ func (e *emitter) emitIdent(id *ast.Ident) (any, error) {
 				return nil, err
 			}
 			return map[string]any{"expr": "deref",
-				"ptr":  map[string]any{"expr": "ident", "name": pname},
+				"ptr":  map[string]any{"expr": "ident", "name": pname, "local": e.localID(obj, "capture", pname)},
 				"type": ty}, nil
 		}
 		// A package-level VARIABLE reads as a typed load from its
@@ -8059,8 +8149,9 @@ func (e *emitter) emitIdent(id *ast.Ident) (any, error) {
 			}
 			return map[string]any{"expr": "deref", "ptr": ga, "type": ty}, nil
 		}
-		// Named-result shadow rename (resultshadow.go), object-keyed.
-		return map[string]any{"expr": "ident", "name": e.localRename(obj, id.Name)}, nil
+		// Named-result shadow rename (resultshadow.go), object-keyed; B6: with
+		// the object's declaration index.
+		return e.localIdent(obj, e.localRename(obj, id.Name)), nil
 	}
 	return map[string]any{"expr": "ident", "name": id.Name}, nil
 }
@@ -8207,8 +8298,8 @@ func (e *emitter) emitBinary(b *ast.BinaryExpr) (any, error) {
 			e.tmpSeq++
 			e.pushHoist(map[string]any{
 				"stmt": "assign", "define": true,
-				"lhs":  []any{map[string]any{"target": "declare", "id": name, "type": ty}},
-				"rhs":  []any{x},
+				"lhs": []any{map[string]any{"target": "declare", "id": name, "type": ty}},
+				"rhs": []any{x},
 			})
 			ref := map[string]any{"expr": "ident", "name": name, "type": ty}
 			cond := any(ref)
@@ -8217,8 +8308,8 @@ func (e *emitter) emitBinary(b *ast.BinaryExpr) (any, error) {
 			}
 			body := append(append([]any{}, rhsHoists...), map[string]any{
 				"stmt": "assign", "define": false,
-				"lhs":  []any{map[string]any{"target": "var", "id": name}},
-				"rhs":  []any{y},
+				"lhs": []any{map[string]any{"target": "var", "id": name}},
+				"rhs": []any{y},
 			})
 			e.pushHoist(map[string]any{
 				"stmt": "if", "cond": cond,
@@ -9816,6 +9907,7 @@ func (e *emitter) emitDeferNoop() any {
 		e.lifted = append(e.lifted, map[string]any{
 			"name": deferNoopName, "params": []any{}, "results": []any{},
 			"variadic": false,
+			"locals":   []any{},
 			"body":     map[string]any{"stmt": "block", "body": []any{}},
 		})
 	}
@@ -9848,10 +9940,11 @@ func (e *emitter) emitDeferClose(c *ast.CallExpr) (any, error) {
 	name := e.curFuncID + "$deferClose" + itoa(e.liftSeq)
 	e.liftSeq++
 	e.lifted = append(e.lifted, map[string]any{
-		"name": name,
-		"params": []any{map[string]any{"id": "$ch", "type": chTy}},
+		"name":     name,
+		"params":   []any{map[string]any{"id": "$ch", "type": chTy}},
 		"results":  []any{},
 		"variadic": false,
+		"locals":   []any{},
 		"body": map[string]any{"stmt": "block", "body": []any{
 			map[string]any{"stmt": "chan-close",
 				"ch": map[string]any{"expr": "ident", "name": "$ch", "type": chTy}},
@@ -10131,6 +10224,7 @@ func (e *emitter) emitOnceDo(call *ast.CallExpr, recvW any) (any, bool, error) {
 		"params":   []any{map[string]any{"id": "$once", "type": oncePtrTyW}},
 		"results":  []any{},
 		"variadic": false,
+		"locals":   []any{},
 		"body": map[string]any{"stmt": "block", "body": []any{
 			map[string]any{"stmt": "sync-op", "op": "onceComplete",
 				"args": []any{onceParam}},
@@ -10144,6 +10238,7 @@ func (e *emitter) emitOnceDo(call *ast.CallExpr, recvW any) (any, bool, error) {
 		},
 		"results":  []any{},
 		"variadic": false,
+		"locals":   []any{},
 		"body": map[string]any{"stmt": "block", "body": []any{
 			map[string]any{"stmt": "sync-op", "op": "onceBegin", "args": []any{onceParam},
 				"target": map[string]any{"target": "declare", "id": "$onceStarted", "type": boolTyW}},
@@ -10231,6 +10326,7 @@ func (e *emitter) emitDeferSyncOp(call *ast.CallExpr) (any, bool, error) {
 		"params":   []any{map[string]any{"id": "$sync", "type": ptrTyW}},
 		"results":  []any{},
 		"variadic": false,
+		"locals":   []any{},
 		"body": map[string]any{"stmt": "block", "body": []any{
 			map[string]any{"stmt": "sync-op", "op": op, "args": opArgs},
 		}},

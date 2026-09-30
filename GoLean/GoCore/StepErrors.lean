@@ -422,7 +422,7 @@ theorem unseqAtoms_strict {env : LocalEnv} {s : Store} :
     unfold unseqAtoms; errp
 macro_rules | `(tactic| errp_leaf) => `(tactic| with_reducible exact unseqAtoms_strict)
 
-theorem unseqLookupTarget_strict : ∀ {tg : List (String × TargetRef)} {t : String},
+theorem unseqLookupTarget_strict : ∀ {tg : List (VarId × TargetRef)} {t : VarId},
     ErrP Stop.Strict (unseqLookupTarget tg t)
   | [], t => by unfold unseqLookupTarget; errp
   | (n, r) :: rest, t => by
@@ -430,8 +430,8 @@ theorem unseqLookupTarget_strict : ∀ {tg : List (String × TargetRef)} {t : St
     unfold unseqLookupTarget; errp
 macro_rules | `(tactic| errp_leaf) => `(tactic| with_reducible exact unseqLookupTarget_strict)
 
-theorem unseqStorePlan_strict {s : Store} {env : LocalEnv} {tg : List (String × TargetRef)} :
-    ∀ {sts : List (String × String)}, ErrP Stop.Strict (unseqStorePlan ctx s env tg sts)
+theorem unseqStorePlan_strict {s : Store} {env : LocalEnv} {tg : List (VarId × TargetRef)} :
+    ∀ {sts : List (VarId × VarId)}, ErrP Stop.Strict (unseqStorePlan ctx s env tg sts)
   | [] => by unfold unseqStorePlan; errp
   | (t, v) :: rest => by
     have ih := @unseqStorePlan_strict s env tg rest
@@ -689,14 +689,14 @@ theorem storeTarget_plan_commitOk {s : Store} {r : TargetRef} {v : GoValue} :
   · exact mapAssignValue_plan_commitOk
 
 set_option maxHeartbeats 4000000 in
-theorem unseqLoad_plan_tame {s : Store} {env : LocalEnv} {tg : List (String × TargetRef)}
-    {b t : String} : ErrP Stop.Tame (unseqLoad.plan ctx s env tg b t) := by
+theorem unseqLoad_plan_tame {s : Store} {env : LocalEnv} {tg : List (VarId × TargetRef)}
+    {b t : VarId} : ErrP Stop.Tame (unseqLoad.plan ctx s env tg b t) := by
   unfold unseqLoad.plan; errp
 macro_rules | `(tactic| errp_leaf) => `(tactic| with_reducible exact unseqLoad_plan_tame)
 
 set_option maxHeartbeats 4000000 in
-theorem unseqLoad_plan_commitOk {s : Store} {env : LocalEnv} {tg : List (String × TargetRef)}
-    {b t : String} : CommitOk (unseqLoad.plan ctx s env tg b t) := by
+theorem unseqLoad_plan_commitOk {s : Store} {env : LocalEnv} {tg : List (VarId × TargetRef)}
+    {b t : VarId} : CommitOk (unseqLoad.plan ctx s env tg b t) := by
   unfold CommitOk unseqLoad.plan
   okp
   all_goals (try (intro s; (try dsimp only); errp))

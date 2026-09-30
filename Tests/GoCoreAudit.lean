@@ -40,13 +40,19 @@ def requiredModules : List Name := [
     `GoLean.GoCore.PanicText, `GoLean.GoCore.AdmissionIndices, `GoLean.GoCore.AdmissionPolicy,
     `GoLean.GoCore.Admission, `GoLean.CLI, `GoLean.NativeToIR, `GoLean.ChoiceTrace,
     `GoLean.GoCore.ExecutionStatement, `GoLean.GoCore.Prefix, `GoLean.GoCore.BridgeSet,
-    `GoLean.GoCore.PrefixFacts, `GoLean.GoCore.StepErrors,
+    `GoLean.GoCore.PrefixFacts, `GoLean.GoCore.StepErrors, `GoLean.GoCore.Locals,
     `Tests.GoCoreContract, `Tests.PanicRendering, `Tests.StringPanicMembers,
     `Tests.GoCoreAudit]
 
 /-- Required core theorems (the `semantic interface` audit's CORE exports, plus the
 re-homed regressions). Each must exist as a theorem. -/
 def exports : List Name := [
+    -- B6, numeric locals (2026-09-30): the name-table interface (the logic team's request 3)
+    ``GoLean.GoCore.Func.localsOk_covers, ``GoLean.GoCore.Func.localsOk_sigDistinct,
+    ``GoLean.GoCore.LocalEnv.lookup_declare_self, ``GoLean.GoCore.LocalEnv.lookup_declare_ne,
+    ``GoLean.GoCore.LocalEnv.lookup_pushScope,
+    ``GoLean.GoCore.Machine.bindParams_lookup, ``GoLean.GoCore.Machine.allocDecls_lookup,
+    ``GoLean.GoCore.Machine.enterFrame_lookup_arg, ``GoLean.GoCore.Machine.enterFrame_lookup_result,
     -- the trace/run correspondence (`Trace`, `PoolTrace`, `ProgramTrace`)
     ``GoLean.Semantics.iter_iff_trace, ``GoLean.Semantics.Trace.erase,
     ``GoLean.Semantics.run_ok_iff, ``GoLean.Semantics.exists_run_ok_iff,

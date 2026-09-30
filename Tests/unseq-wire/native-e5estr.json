@@ -24,6 +24,7 @@
        {
         "expr": {
          "expr": "ident",
+         "local": 0,
          "name": "i$cap"
         },
         "target": "addr"
@@ -57,10 +58,19 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "capture",
+     "name": "i",
+     "pos": "main.go:10:2",
+     "wire": "i$cap"
+    }
+   ],
    "name": "e5estr$lit0",
    "params": [
     {
      "id": "i$cap",
+     "local": 0,
      "type": {
       "elem": {
        "int": "int",
@@ -89,6 +99,7 @@
       "lhs": [
        {
         "id": "s",
+        "local": 0,
         "target": "declare",
         "type": {
          "kind": "string"
@@ -114,6 +125,7 @@
       "lhs": [
        {
         "id": "i",
+        "local": 1,
         "target": "declare",
         "type": {
          "int": "int",
@@ -138,6 +150,7 @@
       "lhs": [
        {
         "id": "m",
+        "local": 2,
         "target": "declare",
         "type": {
          "kind": "func",
@@ -157,7 +170,8 @@
         "captured": [
          {
           "expr": "ref",
-          "id": "i"
+          "id": "i",
+          "local": 1
          }
         ],
         "expr": "func-value",
@@ -229,6 +243,7 @@
         ],
         "callee": {
          "expr": "ident",
+         "local": 2,
          "name": "m",
          "type": {
           "kind": "func",
@@ -255,6 +270,7 @@
         "bind": "$u0",
         "head": {
          "expr": "ident",
+         "local": 1,
          "name": "i",
          "type": {
           "int": "int",
@@ -269,6 +285,7 @@
         "head": {
          "base": {
           "expr": "ident",
+          "local": 0,
           "name": "s",
           "type": {
            "kind": "string"
@@ -279,6 +296,7 @@
           "expr": "builtin-len",
           "operand": {
            "expr": "ident",
+           "local": 0,
            "name": "s",
            "type": {
             "kind": "string"
@@ -403,6 +421,23 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "local",
+     "name": "s",
+     "pos": "main.go:9:2"
+    },
+    {
+     "kind": "local",
+     "name": "i",
+     "pos": "main.go:10:2"
+    },
+    {
+     "kind": "local",
+     "name": "m",
+     "pos": "main.go:11:2"
+    }
+   ],
    "name": "e5estr",
    "params": [],
    "results": [
@@ -421,6 +456,6 @@
  "methods": [],
  "package": "main",
  "promotions": [],
- "schema": "golean-native-v2",
+ "schema": "golean-native-v3",
  "types": []
 }

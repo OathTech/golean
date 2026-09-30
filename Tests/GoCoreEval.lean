@@ -10,6 +10,10 @@ import GoLean.EnumDedup
 import Tests.FloatVectors
 
 namespace Tests.GoCoreEval
+/-- B6 (2026-09-30): hand-built programs name their locals by SPELLING; `vid`
+interns a spelling injectively into a `VarId` (its UTF-8 bytes as a base-256
+numeral) so a declaration and its uses agree without a name table. -/
+def vid (s : String) : GoLean.GoCore.VarId := s.toUTF8.foldl (fun n b => n * 256 + b.toNat) 0
 
 /-- The old `({} : ExecState)` of the hand-built fixtures, as a context (B7):
 every table empty — fail closed on every carrier query, the marker on every
@@ -19,13 +23,13 @@ def emptyCtx : GoLean.GoCore.ProgramCtx := GoLean.GoCore.ProgramCtx.ofTables (ty
 open GoLean
 
 private def coreParam (id : String) : GoCore.Param :=
-  { id, typ := .int }
+  { id := vid id, typ := .int }
 
 private def coreBoolParam (id : String) : GoCore.Param :=
-  { id, typ := .bool }
+  { id := vid id, typ := .bool }
 
 private def coreAddExpr : GoCore.Expr :=
-  .add (.var "x") (.var "y")
+  .add (.var (vid "x")) (.var (vid "y"))
 
 private def coreStringLit (value : String) : GoCore.Expr :=
   .stringLit (GoString.fromLeanString value)
@@ -37,7 +41,7 @@ private def coreAddFunction : GoCore.Func := {
   id := ⟨"add_F"⟩,
   args := #[coreParam "x", coreParam "y"],
   results := #[coreParam "z"],
-  body := .assign (.var "z") coreAddExpr
+  body := .assign (.var (vid "z")) coreAddExpr
 }
 
 private def corePointerIdentityFunction : GoCore.Func := {
@@ -46,19 +50,19 @@ private def corePointerIdentityFunction : GoCore.Func := {
   results := #[coreBoolParam "same"],
   body := .block
     #[
-      { id := "v", typ := .int },
-      { id := "ar", typ := .pointer .int },
-      { id := "br", typ := .pointer .int },
-      { id := "arr", typ := .pointer (.pointer .int) },
-      { id := "brr", typ := .pointer (.pointer .int) }
+      { id := vid "v", typ := .int },
+      { id := vid "ar", typ := .pointer .int },
+      { id := vid "br", typ := .pointer .int },
+      { id := vid "arr", typ := .pointer (.pointer .int) },
+      { id := vid "brr", typ := .pointer (.pointer .int) }
     ]
     #[
-      .assign (.var "v") (.intLit 42),
-      .assign (.var "ar") (.ref "v"),
-      .assign (.var "br") (.ref "v"),
-      .assign (.var "arr") (.ref "ar"),
-      .assign (.var "brr") (.ref "br"),
-      .assign (.var "same") (.eqCmp (.pointer (.pointer .int)) (.var "arr") (.var "brr"))
+      .assign (.var (vid "v")) (.intLit 42),
+      .assign (.var (vid "ar")) (.ref (vid "v")),
+      .assign (.var (vid "br")) (.ref (vid "v")),
+      .assign (.var (vid "arr")) (.ref (vid "ar")),
+      .assign (.var (vid "brr")) (.ref (vid "br")),
+      .assign (.var (vid "same")) (.eqCmp (.pointer (.pointer .int)) (.var (vid "arr")) (.var (vid "brr")))
     ]
 }
 
@@ -72,24 +76,24 @@ private def coreStructFunction : GoCore.Func := {
   args := #[],
   results := #[coreParam "z"],
   body := .block
-    #[{ id := "x", typ := .defined 0 }]
+    #[{ id := vid "x", typ := .defined 0 }]
     #[
-      .assign (.var "x") (.structLit (.defined 0) #[.intLit 42]),
-      .assign (.addr (.fieldAddr (.ref "x") ⟨"cell"⟩ "valA")) (.intLit 17),
-      .assign (.var "z") (.fieldGet (.deref (.ref "x") (.defined 0)) ⟨"cell"⟩ "valA")
+      .assign (.var (vid "x")) (.structLit (.defined 0) #[.intLit 42]),
+      .assign (.addr (.fieldAddr (.ref (vid "x")) ⟨"cell"⟩ "valA")) (.intLit 17),
+      .assign (.var (vid "z")) (.fieldGet (.deref (.ref (vid "x")) (.defined 0)) ⟨"cell"⟩ "valA")
     ]
 }
 
 private def coreSetCellFunction : GoCore.Func := {
   id := ⟨"setCell_F"⟩,
   args := #[
-    { id := "p", typ := .pointer (.defined 0) },
-    { id := "v", typ := .int }
+    { id := vid "p", typ := .pointer (.defined 0) },
+    { id := vid "v", typ := .int }
   ],
   results := #[],
   body := .assign
-    (.addr (.fieldAddr (.var "p") ⟨"cell"⟩ "valA"))
-    (.var "v")
+    (.addr (.fieldAddr (.var (vid "p")) ⟨"cell"⟩ "valA"))
+    (.var (vid "v"))
 }
 
 private def coreCallFunction : GoCore.Func := {
@@ -97,11 +101,11 @@ private def coreCallFunction : GoCore.Func := {
   args := #[],
   results := #[coreParam "z"],
   body := .block
-    #[{ id := "x", typ := .defined 0 }]
+    #[{ id := vid "x", typ := .defined 0 }]
     #[
-      .assign (.var "x") (.structLit (.defined 0) #[.intLit 42]),
-      .call #[] ⟨"setCell_F"⟩ #[.ref "x", .intLit 9],
-      .assign (.var "z") (.fieldGet (.var "x") ⟨"cell"⟩ "valA")
+      .assign (.var (vid "x")) (.structLit (.defined 0) #[.intLit 42]),
+      .call #[] ⟨"setCell_F"⟩ #[.ref (vid "x"), .intLit 9],
+      .assign (.var (vid "z")) (.fieldGet (.var (vid "x")) ⟨"cell"⟩ "valA")
     ]
 }
 
@@ -110,7 +114,7 @@ private def coreScalarFunction : GoCore.Func := {
   args := #[coreParam "x", coreParam "y"],
   results := #[coreParam "z"],
   body := .seqn #[
-      .assign (.var "z") (.sub (.var "x") (.var "y"))
+      .assign (.var (vid "z")) (.sub (.var (vid "x")) (.var (vid "y")))
     ]
 }
 
@@ -119,11 +123,11 @@ private def coreInt8WrapFunction : GoCore.Func := {
   args := #[],
   results := #[coreParam "z"],
   body := .block
-    #[{ id := "x", typ := .int .int8 }]
+    #[{ id := vid "x", typ := .int .int8 }]
     #[
-      .assign (.var "x") (.intLit 127),
-      .assign (.var "x") (.add (.var "x") (.intLit 1)),
-      .assign (.var "z") (.var "x")
+      .assign (.var (vid "x")) (.intLit 127),
+      .assign (.var (vid "x")) (.add (.var (vid "x")) (.intLit 1)),
+      .assign (.var (vid "z")) (.var (vid "x"))
     ]
 }
 
@@ -132,19 +136,19 @@ private def coreByteConversionFunction : GoCore.Func := {
   args := #[],
   results := #[coreParam "z"],
   body := .block
-    #[{ id := "big", typ := .int .int32 }, { id := "b", typ := .int .uint8 }]
+    #[{ id := vid "big", typ := .int .int32 }, { id := vid "b", typ := .int .uint8 }]
     #[
-      .assign (.var "big") (.intLit 300),
-      .assign (.var "b") (.convert (.int .uint8) (.var "big")),
-      .assign (.var "z") (.var "b")
+      .assign (.var (vid "big")) (.intLit 300),
+      .assign (.var (vid "b")) (.convert (.int .uint8) (.var (vid "big"))),
+      .assign (.var (vid "z")) (.var (vid "b"))
     ]
 }
 
 private def coreUnsupportedConversionFunction : GoCore.Func := {
   id := ⟨"unsupported_conversion_F"⟩,
   args := #[],
-  results := #[{ id := "z", typ := .string }],
-  body := .assign (.var "z") (.convert .string (.intLit 65))
+  results := #[{ id := vid "z", typ := .string }],
+  body := .assign (.var (vid "z")) (.convert .string (.intLit 65))
 }
 
 private def coreShiftFunction : GoCore.Func := {
@@ -152,13 +156,13 @@ private def coreShiftFunction : GoCore.Func := {
   args := #[],
   results := #[coreParam "z"],
   body := .block
-    #[{ id := "x", typ := .int .uint8 }, { id := "y", typ := .int .int8 }]
+    #[{ id := vid "x", typ := .int .uint8 }, { id := vid "y", typ := .int .int8 }]
     #[
-      .assign (.var "x") (.intLit 1),
-      .assign (.var "x") (.shiftLeft (.var "x") (.intLit 8)),
-      .assign (.var "y") (.intLit (-3)),
-      .assign (.var "y") (.shiftRight (.var "y") (.intLit 1)),
-      .assign (.var "z") (.add (.mul (.convert .int (.var "x")) (.intLit 10)) (.convert .int (.var "y")))
+      .assign (.var (vid "x")) (.intLit 1),
+      .assign (.var (vid "x")) (.shiftLeft (.var (vid "x")) (.intLit 8)),
+      .assign (.var (vid "y")) (.intLit (-3)),
+      .assign (.var (vid "y")) (.shiftRight (.var (vid "y")) (.intLit 1)),
+      .assign (.var (vid "z")) (.add (.mul (.convert .int (.var (vid "x"))) (.intLit 10)) (.convert .int (.var (vid "y"))))
     ]
 }
 
@@ -166,38 +170,38 @@ private def coreNegativeShiftFunction : GoCore.Func := {
   id := ⟨"negative_shift_F"⟩,
   args := #[],
   results := #[coreParam "z"],
-  body := .assign (.var "z") (.shiftLeft (.intLit 1) (.intLit (-1)))
+  body := .assign (.var (vid "z")) (.shiftLeft (.intLit 1) (.intLit (-1)))
 }
 
 private def coreBitwiseFunction : GoCore.Func := {
   id := ⟨"bitwise_F"⟩,
   args := #[],
   results := #[
-    { id := "a", typ := .int .uint8 },
-    { id := "b", typ := .int .uint8 },
-    { id := "c", typ := .int .uint8 },
-    { id := "d", typ := .int .uint8 },
-    { id := "e", typ := .int .uint8 },
-    { id := "f", typ := .int .int8 }
+    { id := vid "a", typ := .int .uint8 },
+    { id := vid "b", typ := .int .uint8 },
+    { id := vid "c", typ := .int .uint8 },
+    { id := vid "d", typ := .int .uint8 },
+    { id := vid "e", typ := .int .uint8 },
+    { id := vid "f", typ := .int .int8 }
   ],
   body := .block
     #[
-      { id := "x", typ := .int .uint8 },
-      { id := "y", typ := .int .uint8 },
-      { id := "zero", typ := .int .uint8 },
-      { id := "signedZero", typ := .int .int8 }
+      { id := vid "x", typ := .int .uint8 },
+      { id := vid "y", typ := .int .uint8 },
+      { id := vid "zero", typ := .int .uint8 },
+      { id := vid "signedZero", typ := .int .int8 }
     ]
     #[
-      .assign (.var "x") (.intLit 15),
-      .assign (.var "y") (.intLit 5),
-      .assign (.var "zero") (.intLit 0),
-      .assign (.var "signedZero") (.intLit 0),
-      .assign (.var "a") (.bitAnd (.var "x") (.var "y")),
-      .assign (.var "b") (.bitOr (.var "x") (.var "y")),
-      .assign (.var "c") (.bitXor (.var "x") (.var "y")),
-      .assign (.var "d") (.bitClear (.var "x") (.var "y")),
-      .assign (.var "e") (.bitNeg (.var "zero")),
-      .assign (.var "f") (.bitNeg (.var "signedZero"))
+      .assign (.var (vid "x")) (.intLit 15),
+      .assign (.var (vid "y")) (.intLit 5),
+      .assign (.var (vid "zero")) (.intLit 0),
+      .assign (.var (vid "signedZero")) (.intLit 0),
+      .assign (.var (vid "a")) (.bitAnd (.var (vid "x")) (.var (vid "y"))),
+      .assign (.var (vid "b")) (.bitOr (.var (vid "x")) (.var (vid "y"))),
+      .assign (.var (vid "c")) (.bitXor (.var (vid "x")) (.var (vid "y"))),
+      .assign (.var (vid "d")) (.bitClear (.var (vid "x")) (.var (vid "y"))),
+      .assign (.var (vid "e")) (.bitNeg (.var (vid "zero"))),
+      .assign (.var (vid "f")) (.bitNeg (.var (vid "signedZero")))
     ]
 }
 
@@ -206,12 +210,12 @@ private def coreArrayFunction : GoCore.Func := {
   args := #[],
   results := #[coreParam "z"],
   body := .block
-    #[{ id := "a", typ := .array 3 .int }]
+    #[{ id := vid "a", typ := .array 3 .int }]
     #[
-      .assign (.var "a") (.arrayLit 3 .int #[(0, .intLit 1), (1, .intLit 2), (2, .intLit 3)]),
-      .assign (.var "z") (.add (.indexGet (.var "a") (.intLit 0)) (.indexGet (.var "a") (.intLit 2))),
-      .assign (.addr (.indexAddr (.ref "a") (.intLit 1))) (.intLit 7),
-      .assign (.var "z") (.add (.var "z") (.indexGet (.var "a") (.intLit 1)))
+      .assign (.var (vid "a")) (.arrayLit 3 .int #[(0, .intLit 1), (1, .intLit 2), (2, .intLit 3)]),
+      .assign (.var (vid "z")) (.add (.indexGet (.var (vid "a")) (.intLit 0)) (.indexGet (.var (vid "a")) (.intLit 2))),
+      .assign (.addr (.indexAddr (.ref (vid "a")) (.intLit 1))) (.intLit 7),
+      .assign (.var (vid "z")) (.add (.var (vid "z")) (.indexGet (.var (vid "a")) (.intLit 1)))
     ]
 }
 
@@ -220,10 +224,10 @@ private def coreArrayLenCapFunction : GoCore.Func := {
   args := #[],
   results := #[coreParam "z"],
   body := .block
-    #[{ id := "a", typ := .array 3 .int }]
+    #[{ id := vid "a", typ := .array 3 .int }]
     #[
-      .assign (.var "a") (.arrayLit 3 .int #[(0, .intLit 1), (1, .intLit 2), (2, .intLit 3)]),
-      .assign (.var "z") (.add (.length (.var "a")) (.capacity (.var "a")))
+      .assign (.var (vid "a")) (.arrayLit 3 .int #[(0, .intLit 1), (1, .intLit 2), (2, .intLit 3)]),
+      .assign (.var (vid "z")) (.add (.length (.var (vid "a"))) (.capacity (.var (vid "a"))))
     ]
 }
 
@@ -232,10 +236,10 @@ private def coreArrayDefaultFunction : GoCore.Func := {
   args := #[],
   results := #[coreParam "z"],
   body := .block
-    #[{ id := "a", typ := .array 2 .int }]
+    #[{ id := vid "a", typ := .array 2 .int }]
     #[
-      .assign (.var "a") (.defaultValue (.array 2 .int)),
-      .assign (.var "z") (.add (.indexGet (.var "a") (.intLit 0)) (.indexGet (.var "a") (.intLit 1)))
+      .assign (.var (vid "a")) (.defaultValue (.array 2 .int)),
+      .assign (.var (vid "z")) (.add (.indexGet (.var (vid "a")) (.intLit 0)) (.indexGet (.var (vid "a")) (.intLit 1)))
     ]
 }
 
@@ -245,15 +249,15 @@ private def corePointerArrayFunction : GoCore.Func := {
   results := #[coreParam "z"],
   body := .block
     #[
-      { id := "a", typ := .array 2 .int },
-      { id := "p", typ := .pointer (.array 2 .int) }
+      { id := vid "a", typ := .array 2 .int },
+      { id := vid "p", typ := .pointer (.array 2 .int) }
     ]
     #[
-      .assign (.var "a") (.arrayLit 2 .int #[(0, .intLit 4), (1, .intLit 5)]),
-      .assign (.var "p") (.ref "a"),
-      .assign (.var "z") (.indexGet (.deref (.var "p") (.array 2 .int)) (.intLit 1)),
-      .assign (.addr (.indexAddr (.var "p") (.intLit 0))) (.intLit 9),
-      .assign (.var "z") (.add (.var "z") (.indexGet (.var "a") (.intLit 0)))
+      .assign (.var (vid "a")) (.arrayLit 2 .int #[(0, .intLit 4), (1, .intLit 5)]),
+      .assign (.var (vid "p")) (.ref (vid "a")),
+      .assign (.var (vid "z")) (.indexGet (.deref (.var (vid "p")) (.array 2 .int)) (.intLit 1)),
+      .assign (.addr (.indexAddr (.var (vid "p")) (.intLit 0))) (.intLit 9),
+      .assign (.var (vid "z")) (.add (.var (vid "z")) (.indexGet (.var (vid "a")) (.intLit 0)))
     ]
 }
 
@@ -262,9 +266,9 @@ private def coreNilSliceLenCapFunction : GoCore.Func := {
   args := #[],
   results := #[coreParam "z"],
   body := .block
-    #[{ id := "s", typ := .slice .int }]
+    #[{ id := vid "s", typ := .slice .int }]
     #[
-      .assign (.var "z") (.add (.length (.var "s")) (.capacity (.var "s")))
+      .assign (.var (vid "z")) (.add (.length (.var (vid "s"))) (.capacity (.var (vid "s"))))
     ]
 }
 
@@ -274,18 +278,18 @@ private def coreArraySliceAliasFunction : GoCore.Func := {
   results := #[coreParam "z"],
   body := .block
     #[
-      { id := "a", typ := .array 3 .int },
-      { id := "s", typ := .slice .int }
+      { id := vid "a", typ := .array 3 .int },
+      { id := vid "s", typ := .slice .int }
     ]
     #[
-      .assign (.var "a") (.arrayLit 3 .int #[(0, .intLit 1), (1, .intLit 2), (2, .intLit 3)]),
-      .assign (.var "s") (.slice (.ref "a") (.intLit 1) (.intLit 3) none),
-      .assign (.addr (.indexAddr (.var "s") (.intLit 0))) (.intLit 9),
-      .assign (.var "z")
+      .assign (.var (vid "a")) (.arrayLit 3 .int #[(0, .intLit 1), (1, .intLit 2), (2, .intLit 3)]),
+      .assign (.var (vid "s")) (.slice (.ref (vid "a")) (.intLit 1) (.intLit 3) none),
+      .assign (.addr (.indexAddr (.var (vid "s")) (.intLit 0))) (.intLit 9),
+      .assign (.var (vid "z"))
         (.add
-          (.add (.indexGet (.var "a") (.intLit 1))
-            (.mul (.length (.var "s")) (.intLit 10)))
-          (.mul (.capacity (.var "s")) (.intLit 100)))
+          (.add (.indexGet (.var (vid "a")) (.intLit 1))
+            (.mul (.length (.var (vid "s"))) (.intLit 10)))
+          (.mul (.capacity (.var (vid "s"))) (.intLit 100)))
     ]
 }
 
@@ -295,21 +299,21 @@ private def coreSliceResliceFunction : GoCore.Func := {
   results := #[coreParam "z"],
   body := .block
     #[
-      { id := "a", typ := .array 4 .int },
-      { id := "s", typ := .slice .int },
-      { id := "t", typ := .slice .int }
+      { id := vid "a", typ := .array 4 .int },
+      { id := vid "s", typ := .slice .int },
+      { id := vid "t", typ := .slice .int }
     ]
     #[
-      .assign (.var "a") (.arrayLit 4 .int #[
+      .assign (.var (vid "a")) (.arrayLit 4 .int #[
         (0, .intLit 1), (1, .intLit 2), (2, .intLit 3), (3, .intLit 4)
       ]),
-      .assign (.var "s") (.slice (.ref "a") (.intLit 1) (.intLit 4) none),
-      .assign (.var "t") (.slice (.var "s") (.intLit 1) (.intLit 2) none),
-      .assign (.var "z")
+      .assign (.var (vid "s")) (.slice (.ref (vid "a")) (.intLit 1) (.intLit 4) none),
+      .assign (.var (vid "t")) (.slice (.var (vid "s")) (.intLit 1) (.intLit 2) none),
+      .assign (.var (vid "z"))
         (.add
-          (.add (.indexGet (.var "t") (.intLit 0))
-            (.mul (.length (.var "t")) (.intLit 10)))
-          (.mul (.capacity (.var "t")) (.intLit 100)))
+          (.add (.indexGet (.var (vid "t")) (.intLit 0))
+            (.mul (.length (.var (vid "t"))) (.intLit 10)))
+          (.mul (.capacity (.var (vid "t"))) (.intLit 100)))
     ]
 }
 
@@ -319,20 +323,20 @@ private def coreSliceExtendToCapacityFunction : GoCore.Func := {
   results := #[coreParam "z"],
   body := .block
     #[
-      { id := "s", typ := .slice .int },
-      { id := "t", typ := .slice .int }
+      { id := vid "s", typ := .slice .int },
+      { id := vid "t", typ := .slice .int }
     ]
     #[
-      .makeSlice (.var "s") .int (.intLit 3) (some (.intLit 4)),
-      .assign (.var "t") (.slice (.var "s") (.intLit 0) (.intLit 4) none),
-      .assign (.var "z")
+      .makeSlice (.var (vid "s")) .int (.intLit 3) (some (.intLit 4)),
+      .assign (.var (vid "t")) (.slice (.var (vid "s")) (.intLit 0) (.intLit 4) none),
+      .assign (.var (vid "z"))
         (.add
           (.add
-            (.mul (.length (.var "s")) (.intLit 1000))
-            (.mul (.capacity (.var "s")) (.intLit 100)))
+            (.mul (.length (.var (vid "s"))) (.intLit 1000))
+            (.mul (.capacity (.var (vid "s"))) (.intLit 100)))
           (.add
-            (.mul (.length (.var "t")) (.intLit 10))
-            (.capacity (.var "t"))))
+            (.mul (.length (.var (vid "t"))) (.intLit 10))
+            (.capacity (.var (vid "t")))))
     ]
 }
 
@@ -342,15 +346,15 @@ private def coreFullSliceFunction : GoCore.Func := {
   results := #[coreParam "z"],
   body := .block
     #[
-      { id := "a", typ := .array 4 .int },
-      { id := "s", typ := .slice .int }
+      { id := vid "a", typ := .array 4 .int },
+      { id := vid "s", typ := .slice .int }
     ]
     #[
-      .assign (.var "a") (.arrayLit 4 .int #[
+      .assign (.var (vid "a")) (.arrayLit 4 .int #[
         (0, .intLit 1), (1, .intLit 2), (2, .intLit 3), (3, .intLit 4)
       ]),
-      .assign (.var "s") (.slice (.ref "a") (.intLit 1) (.intLit 3) (some (.intLit 4))),
-      .assign (.var "z") (.add (.length (.var "s")) (.capacity (.var "s")))
+      .assign (.var (vid "s")) (.slice (.ref (vid "a")) (.intLit 1) (.intLit 3) (some (.intLit 4))),
+      .assign (.var (vid "z")) (.add (.length (.var (vid "s"))) (.capacity (.var (vid "s"))))
     ]
 }
 
@@ -359,15 +363,15 @@ private def coreMakeSliceFunction : GoCore.Func := {
   args := #[],
   results := #[coreParam "z"],
   body := .block
-    #[{ id := "s", typ := .slice .int }]
+    #[{ id := vid "s", typ := .slice .int }]
     #[
-      .makeSlice (.var "s") .int (.intLit 3) (some (.intLit 5)),
-      .assign (.addr (.indexAddr (.var "s") (.intLit 0))) (.intLit 7),
-      .assign (.var "z")
+      .makeSlice (.var (vid "s")) .int (.intLit 3) (some (.intLit 5)),
+      .assign (.addr (.indexAddr (.var (vid "s")) (.intLit 0))) (.intLit 7),
+      .assign (.var (vid "z"))
         (.add
-          (.add (.indexGet (.var "s") (.intLit 0))
-            (.mul (.length (.var "s")) (.intLit 10)))
-          (.mul (.capacity (.var "s")) (.intLit 100)))
+          (.add (.indexGet (.var (vid "s")) (.intLit 0))
+            (.mul (.length (.var (vid "s"))) (.intLit 10)))
+          (.mul (.capacity (.var (vid "s"))) (.intLit 100)))
     ]
 }
 
@@ -381,31 +385,31 @@ private def coreChanBasicFunction : GoCore.Func := {
   results := #[coreParam "z"],
   body := .block
     #[
-      { id := "chv", typ := .chan .both .int },
-      { id := "a", typ := .int },
-      { id := "b", typ := .int },
-      { id := "okv", typ := .bool },
-      { id := "score", typ := .int }
+      { id := vid "chv", typ := .chan .both .int },
+      { id := vid "a", typ := .int },
+      { id := vid "b", typ := .int },
+      { id := vid "okv", typ := .bool },
+      { id := vid "score", typ := .int }
     ]
     #[
-      .makeChan (.var "chv") .int (some (.intLit 2)),
-      .chanSend (.var "chv") (.intLit 7) .int,
-      .chanSend (.var "chv") (.intLit 8) .int,
+      .makeChan (.var (vid "chv")) .int (some (.intLit 2)),
+      .chanSend (.var (vid "chv")) (.intLit 7) .int,
+      .chanSend (.var (vid "chv")) (.intLit 8) .int,
       -- len 2, cap 2 while queued
-      .assign (.var "score")
-        (.add (.mul (.length (.var "chv") (some (.chan .both .int))) (.intLit 10))
-          (.capacity (.var "chv") (some (.chan .both .int)))),
-      .chanRecv #[.var "a", .var "okv"] (.var "chv") .int,
-      .closeChan (.var "chv"),
+      .assign (.var (vid "score"))
+        (.add (.mul (.length (.var (vid "chv")) (some (.chan .both .int))) (.intLit 10))
+          (.capacity (.var (vid "chv")) (some (.chan .both .int)))),
+      .chanRecv #[.var (vid "a"), .var (vid "okv")] (.var (vid "chv")) .int,
+      .closeChan (.var (vid "chv")),
       -- close does not drain: the queued 8 still arrives, FIFO
-      .chanRecv #[.var "b"] (.var "chv") .int,
+      .chanRecv #[.var (vid "b")] (.var (vid "chv")) .int,
       -- closed-and-drained: zero value, ok = false
-      .chanRecv #[.var "z", .var "okv"] (.var "chv") .int,
-      .ifThenElse (.var "okv")
-        (.assign (.var "z") (.intLit 999))
-        (.assign (.var "z")
-          (.add (.mul (.var "score") (.intLit 100))
-            (.add (.mul (.var "a") (.intLit 10)) (.var "b"))))
+      .chanRecv #[.var (vid "z"), .var (vid "okv")] (.var (vid "chv")) .int,
+      .ifThenElse (.var (vid "okv"))
+        (.assign (.var (vid "z")) (.intLit 999))
+        (.assign (.var (vid "z"))
+          (.add (.mul (.var (vid "score")) (.intLit 100))
+            (.add (.mul (.var (vid "a")) (.intLit 10)) (.var (vid "b")))))
     ]
 }
 
@@ -414,12 +418,12 @@ private def coreChanDeadlockFunction : GoCore.Func := {
   args := #[],
   results := #[coreParam "z"],
   body := .block
-    #[{ id := "chv", typ := .chan .both .int }]
+    #[{ id := vid "chv", typ := .chan .both .int }]
     #[
-      .makeChan (.var "chv") .int none,
+      .makeChan (.var (vid "chv")) .int none,
       -- unbuffered self-send: blocks; the sequential driver classifies
       -- the blocked configuration as the deadlocked run
-      .chanSend (.var "chv") (.intLit 1) .int
+      .chanSend (.var (vid "chv")) (.intLit 1) .int
     ]
 }
 
@@ -428,8 +432,8 @@ private def coreChanCloseNilFunction : GoCore.Func := {
   args := #[],
   results := #[coreParam "z"],
   body := .block
-    #[{ id := "chv", typ := .chan .both .int }]
-    #[.closeChan (.var "chv")]
+    #[{ id := vid "chv", typ := .chan .both .int }]
+    #[.closeChan (.var (vid "chv"))]
 }
 
 private def coreChanSelectFunction : GoCore.Func := {
@@ -438,19 +442,19 @@ private def coreChanSelectFunction : GoCore.Func := {
   results := #[coreParam "z"],
   body := .block
     #[
-      { id := "chv", typ := .chan .both .int },
-      { id := "nilv", typ := .chan .both .int },
-      { id := "rv", typ := .int },
-      { id := "okv", typ := .bool }
+      { id := vid "chv", typ := .chan .both .int },
+      { id := vid "nilv", typ := .chan .both .int },
+      { id := vid "rv", typ := .int },
+      { id := vid "okv", typ := .bool }
     ]
     #[
-      .makeChan (.var "chv") .int (some (.intLit 1)),
-      .chanSend (.var "chv") (.intLit 5) .int,
+      .makeChan (.var (vid "chv")) .int (some (.intLit 1)),
+      .chanSend (.var (vid "chv")) (.intLit 5) .int,
       .selectStmt #[
-        (.recv #[.var "rv", .var "okv"] (.var "nilv") .int,
-          .assign (.var "z") (.intLit 111)),
-        (.recv #[.var "rv", .var "okv"] (.var "chv") .int,
-          .assign (.var "z") (.mul (.var "rv") (.intLit 3)))
+        (.recv #[.var (vid "rv"), .var (vid "okv")] (.var (vid "nilv")) .int,
+          .assign (.var (vid "z")) (.intLit 111)),
+        (.recv #[.var (vid "rv"), .var (vid "okv")] (.var (vid "chv")) .int,
+          .assign (.var (vid "z")) (.mul (.var (vid "rv")) (.intLit 3)))
       ] none
     ]
 }
@@ -461,15 +465,15 @@ private def coreChanSelectDefaultFunction : GoCore.Func := {
   results := #[coreParam "z"],
   body := .block
     #[
-      { id := "chv", typ := .chan .both .int },
-      { id := "rv", typ := .int }
+      { id := vid "chv", typ := .chan .both .int },
+      { id := vid "rv", typ := .int }
     ]
     #[
-      .makeChan (.var "chv") .int (some (.intLit 1)),
+      .makeChan (.var (vid "chv")) .int (some (.intLit 1)),
       .selectStmt #[
-        (.recv #[.var "rv"] (.var "chv") .int,
-          .assign (.var "z") (.intLit 333))
-      ] (some (.assign (.var "z") (.intLit 444)))
+        (.recv #[.var (vid "rv")] (.var (vid "chv")) .int,
+          .assign (.var (vid "z")) (.intLit 333))
+      ] (some (.assign (.var (vid "z")) (.intLit 444)))
     ]
 }
 
@@ -480,9 +484,9 @@ pool driver (`runProgramPoolM`). -/
 
 private def poolWorkerSendFunction : GoCore.Func := {
   id := ⟨"poolWorkerSend_F"⟩,
-  args := #[{ id := "ch", typ := .chan .both .int }],
+  args := #[{ id := vid "ch", typ := .chan .both .int }],
   results := #[],
-  body := .seqn #[.chanSend (.var "ch") (.intLit 42) .int]
+  body := .seqn #[.chanSend (.var (vid "ch")) (.intLit 42) .int]
 }
 
 private def poolSpawnMainFunction : GoCore.Func := {
@@ -490,20 +494,20 @@ private def poolSpawnMainFunction : GoCore.Func := {
   args := #[],
   results := #[coreParam "z"],
   body := .block
-    #[{ id := "chv", typ := .chan .both .int }]
+    #[{ id := vid "chv", typ := .chan .both .int }]
     #[
-      .makeChan (.var "chv") .int none,
-      .goStmt (.funcVal ⟨"poolWorkerSend_F"⟩ #[]) #[.var "chv"],
+      .makeChan (.var (vid "chv")) .int none,
+      .goStmt (.funcVal ⟨"poolWorkerSend_F"⟩ #[]) #[.var (vid "chv")],
       -- main parks; the worker's arriving send pairs with it (rendezvous)
-      .chanRecv #[.var "z"] (.var "chv") .int
+      .chanRecv #[.var (vid "z")] (.var (vid "chv")) .int
     ]
 }
 
 private def poolWorkerRecvFunction : GoCore.Func := {
   id := ⟨"poolWorkerRecv_F"⟩,
-  args := #[{ id := "ch", typ := .chan .both .int }],
+  args := #[{ id := vid "ch", typ := .chan .both .int }],
   results := #[],
-  body := .seqn #[.chanRecv #[] (.var "ch") .int]
+  body := .seqn #[.chanRecv #[] (.var (vid "ch")) .int]
 }
 
 private def poolDeadlockMainFunction : GoCore.Func := {
@@ -511,14 +515,14 @@ private def poolDeadlockMainFunction : GoCore.Func := {
   args := #[],
   results := #[coreParam "z"],
   body := .block
-    #[{ id := "av", typ := .chan .both .int },
-      { id := "bv", typ := .chan .both .int }]
+    #[{ id := vid "av", typ := .chan .both .int },
+      { id := vid "bv", typ := .chan .both .int }]
     #[
-      .makeChan (.var "av") .int none,
-      .makeChan (.var "bv") .int none,
-      .goStmt (.funcVal ⟨"poolWorkerRecv_F"⟩ #[]) #[.var "av"],
+      .makeChan (.var (vid "av")) .int none,
+      .makeChan (.var (vid "bv")) .int none,
+      .goStmt (.funcVal ⟨"poolWorkerRecv_F"⟩ #[]) #[.var (vid "av")],
       -- worker parks on a, main parks on b: ALL goroutines asleep
-      .chanRecv #[.var "z"] (.var "bv") .int
+      .chanRecv #[.var (vid "z")] (.var (vid "bv")) .int
     ]
 }
 
@@ -527,28 +531,28 @@ private def poolMainExitFunction : GoCore.Func := {
   args := #[],
   results := #[coreParam "z"],
   body := .block
-    #[{ id := "chv", typ := .chan .both .int }]
+    #[{ id := vid "chv", typ := .chan .both .int }]
     #[
-      .makeChan (.var "chv") .int none,
-      .goStmt (.funcVal ⟨"poolWorkerRecv_F"⟩ #[]) #[.var "chv"],
+      .makeChan (.var (vid "chv")) .int none,
+      .goStmt (.funcVal ⟨"poolWorkerRecv_F"⟩ #[]) #[.var (vid "chv")],
       -- main returns with the worker parked forever: program exits with
       -- main's outcome (D6), the leaked goroutine unobserved
-      .assign (.var "z") (.intLit 7)
+      .assign (.var (vid "z")) (.intLit 7)
     ]
 }
 
 private def poolCloseWakeWorkerFunction : GoCore.Func := {
   id := ⟨"poolCloseWakeWorker_F"⟩,
-  args := #[{ id := "ch", typ := .chan .both .int },
-            { id := "done", typ := .chan .both .int }],
+  args := #[{ id := vid "ch", typ := .chan .both .int },
+            { id := vid "done", typ := .chan .both .int }],
   results := #[],
   body := .block
-    #[{ id := "v", typ := .int }, { id := "okv", typ := .bool }]
+    #[{ id := vid "v", typ := .int }, { id := vid "okv", typ := .bool }]
     #[
-      .chanRecv #[.var "v", .var "okv"] (.var "ch") .int,
-      .ifThenElse (.var "okv")
-        (.chanSend (.var "done") (.intLit 999) .int)
-        (.chanSend (.var "done") (.intLit 55) .int)
+      .chanRecv #[.var (vid "v"), .var (vid "okv")] (.var (vid "ch")) .int,
+      .ifThenElse (.var (vid "okv"))
+        (.chanSend (.var (vid "done")) (.intLit 999) .int)
+        (.chanSend (.var (vid "done")) (.intLit 55) .int)
     ]
 }
 
@@ -557,15 +561,15 @@ private def poolCloseWakeMainFunction : GoCore.Func := {
   args := #[],
   results := #[coreParam "z"],
   body := .block
-    #[{ id := "chv", typ := .chan .both .int },
-      { id := "donev", typ := .chan .both .int }]
+    #[{ id := vid "chv", typ := .chan .both .int },
+      { id := vid "donev", typ := .chan .both .int }]
     #[
-      .makeChan (.var "chv") .int none,
-      .makeChan (.var "donev") .int none,
-      .goStmt (.funcVal ⟨"poolCloseWakeWorker_F"⟩ #[]) #[.var "chv", .var "donev"],
+      .makeChan (.var (vid "chv")) .int none,
+      .makeChan (.var (vid "donev")) .int none,
+      .goStmt (.funcVal ⟨"poolCloseWakeWorker_F"⟩ #[]) #[.var (vid "chv"), .var (vid "donev")],
       -- close wakes the parked receiver into the drained zero (ok=false)
-      .closeChan (.var "chv"),
-      .chanRecv #[.var "z"] (.var "donev") .int
+      .closeChan (.var (vid "chv")),
+      .chanRecv #[.var (vid "z")] (.var (vid "donev")) .int
     ]
 }
 
@@ -603,17 +607,17 @@ completes, the longer one exhausts the same fuel. -/
 
 private def pollerSendOneFunction : GoCore.Func := {
   id := ⟨"pollerSendOne_F"⟩,
-  args := #[{ id := "ch", typ := .chan .both .int }],
+  args := #[{ id := vid "ch", typ := .chan .both .int }],
   results := #[],
-  body := .seqn #[.chanSend (.var "ch") (.intLit 42) .int]
+  body := .seqn #[.chanSend (.var (vid "ch")) (.intLit 42) .int]
 }
 
 private def pollerLoopFunction : GoCore.Func := {
   id := ⟨"pollerLoop_F"⟩,
-  args := #[{ id := "poll", typ := .chan .both .int }],
+  args := #[{ id := vid "poll", typ := .chan .both .int }],
   results := #[],
   body := .while (.boolLit true)
-    (.selectStmt #[(.recv #[] (.var "poll") .int, .seqn #[])]
+    (.selectStmt #[(.recv #[] (.var (vid "poll")) .int, .seqn #[])]
       (some (.seqn #[])))
 }
 
@@ -622,14 +626,14 @@ private def pollerMainFunction : GoCore.Func := {
   args := #[],
   results := #[coreParam "z"],
   body := .block
-    #[{ id := "pollv", typ := .chan .both .int },
-      { id := "donev", typ := .chan .both .int }]
+    #[{ id := vid "pollv", typ := .chan .both .int },
+      { id := vid "donev", typ := .chan .both .int }]
     #[
-      .makeChan (.var "pollv") .int none,
-      .makeChan (.var "donev") .int none,
-      .goStmt (.funcVal ⟨"pollerSendOne_F"⟩ #[]) #[.var "donev"],
-      .goStmt (.funcVal ⟨"pollerLoop_F"⟩ #[]) #[.var "pollv"],
-      .chanRecv #[.var "z"] (.var "donev") .int
+      .makeChan (.var (vid "pollv")) .int none,
+      .makeChan (.var (vid "donev")) .int none,
+      .goStmt (.funcVal ⟨"pollerSendOne_F"⟩ #[]) #[.var (vid "donev")],
+      .goStmt (.funcVal ⟨"pollerLoop_F"⟩ #[]) #[.var (vid "pollv")],
+      .chanRecv #[.var (vid "z")] (.var (vid "donev")) .int
     ]
 }
 
@@ -647,14 +651,14 @@ decision point. -/
 
 private def prioRecvOutWorkerFunction : GoCore.Func := {
   id := ⟨"prioRecvOutWorker_F"⟩,
-  args := #[{ id := "ch", typ := .chan .both .int },
-            { id := "out", typ := .chan .both .int }],
+  args := #[{ id := vid "ch", typ := .chan .both .int },
+            { id := vid "out", typ := .chan .both .int }],
   results := #[],
   body := .block
-    #[{ id := "v", typ := .int }]
+    #[{ id := vid "v", typ := .int }]
     #[
-      .chanRecv #[.var "v"] (.var "ch") .int,
-      .chanSend (.var "out") (.var "v") .int
+      .chanRecv #[.var (vid "v")] (.var (vid "ch")) .int,
+      .chanSend (.var (vid "out")) (.var (vid "v")) .int
     ]
 }
 
@@ -666,30 +670,30 @@ private def prioSendHandoffMainFunction : GoCore.Func := {
   args := #[],
   results := #[coreParam "z"],
   body := .block
-    #[{ id := "chv", typ := .chan .both .int },
-      { id := "outv", typ := .chan .both .int },
-      { id := "l", typ := .int },
-      { id := "r", typ := .int }]
+    #[{ id := vid "chv", typ := .chan .both .int },
+      { id := vid "outv", typ := .chan .both .int },
+      { id := vid "l", typ := .int },
+      { id := vid "r", typ := .int }]
     #[
-      .makeChan (.var "chv") .int (some (.intLit 2)),
-      .makeChan (.var "outv") .int (some (.intLit 1)),
-      .goStmt (.funcVal ⟨"prioRecvOutWorker_F"⟩ #[]) #[.var "chv", .var "outv"],
-      .chanSend (.var "chv") (.intLit 1) .int,
-      .assign (.var "l") (.length (.var "chv") (some (.chan .both .int))),
-      .chanRecv #[.var "r"] (.var "outv") .int,
-      .assign (.var "z")
-        (.add (.mul (.var "r") (.intLit 100)) (.mul (.var "l") (.intLit 10)))
+      .makeChan (.var (vid "chv")) .int (some (.intLit 2)),
+      .makeChan (.var (vid "outv")) .int (some (.intLit 1)),
+      .goStmt (.funcVal ⟨"prioRecvOutWorker_F"⟩ #[]) #[.var (vid "chv"), .var (vid "outv")],
+      .chanSend (.var (vid "chv")) (.intLit 1) .int,
+      .assign (.var (vid "l")) (.length (.var (vid "chv")) (some (.chan .both .int))),
+      .chanRecv #[.var (vid "r")] (.var (vid "outv")) .int,
+      .assign (.var (vid "z"))
+        (.add (.mul (.var (vid "r")) (.intLit 100)) (.mul (.var (vid "l")) (.intLit 10)))
     ]
 }
 
 private def prioSendSendWorkerFunction : GoCore.Func := {
   id := ⟨"prioSendSendWorker_F"⟩,
-  args := #[{ id := "ch", typ := .chan .both .int },
-            { id := "out", typ := .chan .both .int }],
+  args := #[{ id := vid "ch", typ := .chan .both .int },
+            { id := vid "out", typ := .chan .both .int }],
   results := #[],
   body := .seqn #[
-    .chanSend (.var "ch") (.intLit 9) .int,
-    .chanSend (.var "out") (.intLit 1) .int
+    .chanSend (.var (vid "ch")) (.intLit 9) .int,
+    .chanSend (.var (vid "out")) (.intLit 1) .int
   ]
 }
 
@@ -702,33 +706,33 @@ private def prioRecvRefillMainFunction : GoCore.Func := {
   args := #[],
   results := #[coreParam "z"],
   body := .block
-    #[{ id := "chv", typ := .chan .both .int },
-      { id := "outv", typ := .chan .both .int },
-      { id := "l", typ := .int },
-      { id := "r", typ := .int },
-      { id := "r2", typ := .int },
-      { id := "o", typ := .int }]
+    #[{ id := vid "chv", typ := .chan .both .int },
+      { id := vid "outv", typ := .chan .both .int },
+      { id := vid "l", typ := .int },
+      { id := vid "r", typ := .int },
+      { id := vid "r2", typ := .int },
+      { id := vid "o", typ := .int }]
     #[
-      .makeChan (.var "chv") .int (some (.intLit 1)),
-      .makeChan (.var "outv") .int (some (.intLit 1)),
-      .chanSend (.var "chv") (.intLit 5) .int,
-      .goStmt (.funcVal ⟨"prioSendSendWorker_F"⟩ #[]) #[.var "chv", .var "outv"],
-      .chanRecv #[.var "r"] (.var "chv") .int,
-      .assign (.var "l") (.length (.var "chv") (some (.chan .both .int))),
-      .chanRecv #[.var "r2"] (.var "chv") .int,
-      .chanRecv #[.var "o"] (.var "outv") .int,
-      .assign (.var "z")
-        (.add (.mul (.var "r") (.intLit 1000))
-          (.add (.mul (.var "l") (.intLit 100))
-            (.add (.mul (.var "r2") (.intLit 10)) (.var "o"))))
+      .makeChan (.var (vid "chv")) .int (some (.intLit 1)),
+      .makeChan (.var (vid "outv")) .int (some (.intLit 1)),
+      .chanSend (.var (vid "chv")) (.intLit 5) .int,
+      .goStmt (.funcVal ⟨"prioSendSendWorker_F"⟩ #[]) #[.var (vid "chv"), .var (vid "outv")],
+      .chanRecv #[.var (vid "r")] (.var (vid "chv")) .int,
+      .assign (.var (vid "l")) (.length (.var (vid "chv")) (some (.chan .both .int))),
+      .chanRecv #[.var (vid "r2")] (.var (vid "chv")) .int,
+      .chanRecv #[.var (vid "o")] (.var (vid "outv")) .int,
+      .assign (.var (vid "z"))
+        (.add (.mul (.var (vid "r")) (.intLit 1000))
+          (.add (.mul (.var (vid "l")) (.intLit 100))
+            (.add (.mul (.var (vid "r2")) (.intLit 10)) (.var (vid "o")))))
     ]
 }
 
 private def prioSendSevenWorkerFunction : GoCore.Func := {
   id := ⟨"prioSendSevenWorker_F"⟩,
-  args := #[{ id := "ch", typ := .chan .both .int }],
+  args := #[{ id := vid "ch", typ := .chan .both .int }],
   results := #[],
-  body := .seqn #[.chanSend (.var "ch") (.intLit 7) .int]
+  body := .seqn #[.chanSend (.var (vid "ch")) (.intLit 7) .int]
 }
 
 -- go oracle: a select WITH default sees a parked sender (selectgo
@@ -739,26 +743,26 @@ private def prioSelectDefaultRecvMainFunction : GoCore.Func := {
   args := #[],
   results := #[coreParam "z"],
   body := .block
-    #[{ id := "chv", typ := .chan .both .int }]
+    #[{ id := vid "chv", typ := .chan .both .int }]
     #[
-      .makeChan (.var "chv") .int none,
-      .goStmt (.funcVal ⟨"prioSendSevenWorker_F"⟩ #[]) #[.var "chv"],
+      .makeChan (.var (vid "chv")) .int none,
+      .goStmt (.funcVal ⟨"prioSendSevenWorker_F"⟩ #[]) #[.var (vid "chv")],
       .selectStmt #[
-        (.recv #[.var "z"] (.var "chv") .int, .seqn #[])
-      ] (some (.assign (.var "z") (.intLit 99)))
+        (.recv #[.var (vid "z")] (.var (vid "chv")) .int, .seqn #[])
+      ] (some (.assign (.var (vid "z")) (.intLit 99)))
     ]
 }
 
 private def prioRecvForwardWorkerFunction : GoCore.Func := {
   id := ⟨"prioRecvForwardWorker_F"⟩,
-  args := #[{ id := "ch", typ := .chan .both .int },
-            { id := "out", typ := .chan .both .int }],
+  args := #[{ id := vid "ch", typ := .chan .both .int },
+            { id := vid "out", typ := .chan .both .int }],
   results := #[],
   body := .block
-    #[{ id := "v", typ := .int }]
+    #[{ id := vid "v", typ := .int }]
     #[
-      .chanRecv #[.var "v"] (.var "ch") .int,
-      .chanSend (.var "out") (.var "v") .int
+      .chanRecv #[.var (vid "v")] (.var (vid "ch")) .int,
+      .chanSend (.var (vid "out")) (.var (vid "v")) .int
     ]
 }
 
@@ -770,20 +774,20 @@ private def prioSelectDefaultSendMainFunction : GoCore.Func := {
   args := #[],
   results := #[coreParam "z"],
   body := .block
-    #[{ id := "chv", typ := .chan .both .int },
-      { id := "outv", typ := .chan .both .int },
-      { id := "o", typ := .int }]
+    #[{ id := vid "chv", typ := .chan .both .int },
+      { id := vid "outv", typ := .chan .both .int },
+      { id := vid "o", typ := .int }]
     #[
-      .makeChan (.var "chv") .int none,
-      .makeChan (.var "outv") .int (some (.intLit 1)),
-      .goStmt (.funcVal ⟨"prioRecvForwardWorker_F"⟩ #[]) #[.var "chv", .var "outv"],
+      .makeChan (.var (vid "chv")) .int none,
+      .makeChan (.var (vid "outv")) .int (some (.intLit 1)),
+      .goStmt (.funcVal ⟨"prioRecvForwardWorker_F"⟩ #[]) #[.var (vid "chv"), .var (vid "outv")],
       .selectStmt #[
-        (.send (.var "chv") (.intLit 3) .int,
+        (.send (.var (vid "chv")) (.intLit 3) .int,
           .seqn #[
-            .chanRecv #[.var "o"] (.var "outv") .int,
-            .assign (.var "z") (.add (.intLit 10) (.var "o"))
+            .chanRecv #[.var (vid "o")] (.var (vid "outv")) .int,
+            .assign (.var (vid "z")) (.add (.intLit 10) (.var (vid "o")))
           ])
-      ] (some (.assign (.var "z") (.intLit 99)))
+      ] (some (.assign (.var (vid "z")) (.intLit 99)))
     ]
 }
 
@@ -794,11 +798,11 @@ private def prioSelectDefaultSendMainFunction : GoCore.Func := {
 
 private def closedRecvWorkerFunction : GoCore.Func := {
   id := ⟨"closedRecvWorker_F"⟩,
-  args := #[{ id := "ch", typ := .chan .both .int }],
+  args := #[{ id := vid "ch", typ := .chan .both .int }],
   results := #[],
   body := .block
-    #[{ id := "v", typ := .int }, { id := "okv", typ := .bool }]
-    #[.chanRecv #[.var "v", .var "okv"] (.var "ch") .int]
+    #[{ id := vid "v", typ := .int }, { id := vid "okv", typ := .bool }]
+    #[.chanRecv #[.var (vid "v"), .var (vid "okv")] (.var (vid "ch")) .int]
 }
 
 -- go oracle: close precedes the select in program order => the send
@@ -810,23 +814,23 @@ private def closedSelSendMainFunction : GoCore.Func := {
   args := #[],
   results := #[coreParam "z"],
   body := .block
-    #[{ id := "chv", typ := .chan .both .int }]
+    #[{ id := vid "chv", typ := .chan .both .int }]
     #[
-      .makeChan (.var "chv") .int none,
-      .goStmt (.funcVal ⟨"closedRecvWorker_F"⟩ #[]) #[.var "chv"],
-      .closeChan (.var "chv"),
+      .makeChan (.var (vid "chv")) .int none,
+      .goStmt (.funcVal ⟨"closedRecvWorker_F"⟩ #[]) #[.var (vid "chv")],
+      .closeChan (.var (vid "chv")),
       .selectStmt #[
-        (.send (.var "chv") (.intLit 3) .int,
-          .assign (.var "z") (.intLit 103))
-      ] (some (.assign (.var "z") (.intLit 99)))
+        (.send (.var (vid "chv")) (.intLit 3) .int,
+          .assign (.var (vid "z")) (.intLit 103))
+      ] (some (.assign (.var (vid "z")) (.intLit 99)))
     ]
 }
 
 private def closedSendWorkerFunction : GoCore.Func := {
   id := ⟨"closedSendWorker_F"⟩,
-  args := #[{ id := "ch", typ := .chan .both .int }],
+  args := #[{ id := vid "ch", typ := .chan .both .int }],
   results := #[],
-  body := .seqn #[.chanSend (.var "ch") (.intLit 7) .int]
+  body := .seqn #[.chanSend (.var (vid "ch")) (.intLit 7) .int]
 }
 
 -- go oracle: the recv clause on a closed channel is the drained zero
@@ -847,10 +851,10 @@ private def closedSendWorkerFunction : GoCore.Func := {
 -- plus a close race-free via the op-x-select pairing order.
 private def closedSelSendWorkerFunction : GoCore.Func := {
   id := ⟨"closedSelSendWorker_F"⟩,
-  args := #[{ id := "ch", typ := .chan .both .int }],
+  args := #[{ id := vid "ch", typ := .chan .both .int }],
   results := #[],
   body := .seqn #[.selectStmt #[
-    (.send (.var "ch") (.intLit 7) .int, .seqn #[])] none]
+    (.send (.var (vid "ch")) (.intLit 7) .int, .seqn #[])] none]
 }
 
 private def closedSelRecvMainFunction : GoCore.Func := {
@@ -858,19 +862,19 @@ private def closedSelRecvMainFunction : GoCore.Func := {
   args := #[],
   results := #[coreParam "z"],
   body := .block
-    #[{ id := "chv", typ := .chan .both .int },
-      { id := "v", typ := .int }, { id := "okv", typ := .bool }]
+    #[{ id := vid "chv", typ := .chan .both .int },
+      { id := vid "v", typ := .int }, { id := vid "okv", typ := .bool }]
     #[
-      .makeChan (.var "chv") .int none,
-      .goStmt (.funcVal ⟨"closedSendWorker_F"⟩ #[]) #[.var "chv"],
-      .closeChan (.var "chv"),
+      .makeChan (.var (vid "chv")) .int none,
+      .goStmt (.funcVal ⟨"closedSendWorker_F"⟩ #[]) #[.var (vid "chv")],
+      .closeChan (.var (vid "chv")),
       .selectStmt #[
-        (.recv #[.var "v", .var "okv"] (.var "chv") .int,
-          .ifThenElse (.var "okv")
-            (.assign (.var "z")
-              (.add (.mul (.var "v") (.intLit 1000)) (.intLit 100)))
-            (.assign (.var "z")
-              (.add (.mul (.var "v") (.intLit 1000)) (.intLit 5))))
+        (.recv #[.var (vid "v"), .var (vid "okv")] (.var (vid "chv")) .int,
+          .ifThenElse (.var (vid "okv"))
+            (.assign (.var (vid "z"))
+              (.add (.mul (.var (vid "v")) (.intLit 1000)) (.intLit 100)))
+            (.assign (.var (vid "z"))
+              (.add (.mul (.var (vid "v")) (.intLit 1000)) (.intLit 5))))
       ] none
     ]
 }
@@ -882,19 +886,19 @@ private def closedSelRecvSelWaiterMainFunction : GoCore.Func := {
   args := #[],
   results := #[coreParam "z"],
   body := .block
-    #[{ id := "chv", typ := .chan .both .int },
-      { id := "v", typ := .int }, { id := "okv", typ := .bool }]
+    #[{ id := vid "chv", typ := .chan .both .int },
+      { id := vid "v", typ := .int }, { id := vid "okv", typ := .bool }]
     #[
-      .makeChan (.var "chv") .int none,
-      .goStmt (.funcVal ⟨"closedSelSendWorker_F"⟩ #[]) #[.var "chv"],
-      .closeChan (.var "chv"),
+      .makeChan (.var (vid "chv")) .int none,
+      .goStmt (.funcVal ⟨"closedSelSendWorker_F"⟩ #[]) #[.var (vid "chv")],
+      .closeChan (.var (vid "chv")),
       .selectStmt #[
-        (.recv #[.var "v", .var "okv"] (.var "chv") .int,
-          .ifThenElse (.var "okv")
-            (.assign (.var "z")
-              (.add (.mul (.var "v") (.intLit 1000)) (.intLit 100)))
-            (.assign (.var "z")
-              (.add (.mul (.var "v") (.intLit 1000)) (.intLit 5))))
+        (.recv #[.var (vid "v"), .var (vid "okv")] (.var (vid "chv")) .int,
+          .ifThenElse (.var (vid "okv"))
+            (.assign (.var (vid "z"))
+              (.add (.mul (.var (vid "v")) (.intLit 1000)) (.intLit 100)))
+            (.assign (.var (vid "z"))
+              (.add (.mul (.var (vid "v")) (.intLit 1000)) (.intLit 5))))
       ] none
     ]
 }
@@ -908,12 +912,12 @@ private def selSendPairedCloseMainFunction : GoCore.Func := {
   args := #[],
   results := #[coreParam "z"],
   body := .block
-    #[{ id := "chv", typ := .chan .both .int }]
+    #[{ id := vid "chv", typ := .chan .both .int }]
     #[
-      .makeChan (.var "chv") .int none,
-      .goStmt (.funcVal ⟨"closedSelSendWorker_F"⟩ #[]) #[.var "chv"],
-      .chanRecv #[.var "z"] (.var "chv") .int,
-      .closeChan (.var "chv")
+      .makeChan (.var (vid "chv")) .int none,
+      .goStmt (.funcVal ⟨"closedSelSendWorker_F"⟩ #[]) #[.var (vid "chv")],
+      .chanRecv #[.var (vid "z")] (.var (vid "chv")) .int,
+      .closeChan (.var (vid "chv"))
     ]
 }
 
@@ -947,10 +951,10 @@ note). -/
 -- discriminator.
 private def wakeMultiWorkerFunction : GoCore.Func := {
   id := ⟨"wakeMultiWorker_F"⟩,
-  args := #[{ id := "a", typ := .chan .both .int },
-            { id := "b", typ := .chan .both .int }],
+  args := #[{ id := vid "a", typ := .chan .both .int },
+            { id := vid "b", typ := .chan .both .int }],
   results := #[],
-  body := .seqn #[.closeChan (.var "a"), .closeChan (.var "b")]
+  body := .seqn #[.closeChan (.var (vid "a")), .closeChan (.var (vid "b"))]
 }
 
 private def wakeMultiMainFunction : GoCore.Func := {
@@ -958,27 +962,27 @@ private def wakeMultiMainFunction : GoCore.Func := {
   args := #[],
   results := #[coreParam "z"],
   body := .block
-    #[{ id := "av", typ := .chan .both .int },
-      { id := "bv", typ := .chan .both .int }]
+    #[{ id := vid "av", typ := .chan .both .int },
+      { id := vid "bv", typ := .chan .both .int }]
     #[
-      .makeChan (.var "av") .int (some (.intLit 1)),
-      .makeChan (.var "bv") .int (some (.intLit 1)),
-      .goStmt (.funcVal ⟨"wakeMultiWorker_F"⟩ #[]) #[.var "av", .var "bv"],
+      .makeChan (.var (vid "av")) .int (some (.intLit 1)),
+      .makeChan (.var (vid "bv")) .int (some (.intLit 1)),
+      .goStmt (.funcVal ⟨"wakeMultiWorker_F"⟩ #[]) #[.var (vid "av"), .var (vid "bv")],
       .selectStmt #[
-        (.recv #[] (.var "bv") .int, .assign (.var "z") (.intLit 2)),
-        (.recv #[] (.var "av") .int, .assign (.var "z") (.intLit 1))
+        (.recv #[] (.var (vid "bv")) .int, .assign (.var (vid "z")) (.intLit 2)),
+        (.recv #[] (.var (vid "av")) .int, .assign (.var (vid "z")) (.intLit 1))
       ] none
     ]
 }
 
 private def raceStoreWorkerFunction : GoCore.Func := {
   id := ⟨"raceStoreWorker_F"⟩,
-  args := #[{ id := "p", typ := .pointer .int },
-            { id := "done", typ := .chan .both .int }],
+  args := #[{ id := vid "p", typ := .pointer .int },
+            { id := vid "done", typ := .chan .both .int }],
   results := #[],
   body := .seqn #[
-    .assign (.addr (.var "p")) (.intLit 1),
-    .chanSend (.var "done") (.intLit 0) .int
+    .assign (.addr (.var (vid "p"))) (.intLit 1),
+    .chanSend (.var (vid "done")) (.intLit 0) .int
   ]
 }
 
@@ -990,22 +994,22 @@ private def raceWriteWriteMainFunction : GoCore.Func := {
   args := #[],
   results := #[coreParam "z"],
   body := .block
-    #[{ id := "x", typ := .int },
-      { id := "donev", typ := .chan .both .int }]
+    #[{ id := vid "x", typ := .int },
+      { id := vid "donev", typ := .chan .both .int }]
     #[
-      .makeChan (.var "donev") .int none,
-      .goStmt (.funcVal ⟨"raceStoreWorker_F"⟩ #[]) #[.ref "x", .var "donev"],
-      .assign (.var "x") (.intLit 2),
-      .chanRecv #[] (.var "donev") .int,
-      .assign (.var "z") (.var "x")
+      .makeChan (.var (vid "donev")) .int none,
+      .goStmt (.funcVal ⟨"raceStoreWorker_F"⟩ #[]) #[.ref (vid "x"), .var (vid "donev")],
+      .assign (.var (vid "x")) (.intLit 2),
+      .chanRecv #[] (.var (vid "donev")) .int,
+      .assign (.var (vid "z")) (.var (vid "x"))
     ]
 }
 
 private def raceStoreOnlyWorkerFunction : GoCore.Func := {
   id := ⟨"raceStoreOnlyWorker_F"⟩,
-  args := #[{ id := "p", typ := .pointer .int }],
+  args := #[{ id := vid "p", typ := .pointer .int }],
   results := #[],
-  body := .seqn #[.assign (.addr (.var "p")) (.intLit 7)]
+  body := .seqn #[.assign (.addr (.var (vid "p"))) (.intLit 7)]
 }
 
 -- Exit-no-sync: goroutine exit is NOT synchronized-before anything
@@ -1018,10 +1022,10 @@ private def raceExitNoSyncMainFunction : GoCore.Func := {
   args := #[],
   results := #[coreParam "z"],
   body := .block
-    #[{ id := "x", typ := .int }]
+    #[{ id := vid "x", typ := .int }]
     #[
-      .goStmt (.funcVal ⟨"raceStoreOnlyWorker_F"⟩ #[]) #[.ref "x"],
-      .assign (.var "z") (.var "x")
+      .goStmt (.funcVal ⟨"raceStoreOnlyWorker_F"⟩ #[]) #[.ref (vid "x")],
+      .assign (.var (vid "z")) (.var (vid "x"))
     ]
 }
 
@@ -1030,12 +1034,12 @@ private def raceExitNoSyncMainFunction : GoCore.Func := {
 -- on every stream (the corpus litmus lane pins the other edges).
 private def raceHbWorkerFunction : GoCore.Func := {
   id := ⟨"raceHbWorker_F"⟩,
-  args := #[{ id := "p", typ := .pointer .int },
-            { id := "done", typ := .chan .both .int }],
+  args := #[{ id := vid "p", typ := .pointer .int },
+            { id := vid "done", typ := .chan .both .int }],
   results := #[],
   body := .seqn #[
-    .assign (.addr (.var "p")) (.intLit 9),
-    .chanSend (.var "done") (.intLit 0) .int
+    .assign (.addr (.var (vid "p"))) (.intLit 9),
+    .chanSend (.var (vid "done")) (.intLit 0) .int
   ]
 }
 
@@ -1044,13 +1048,13 @@ private def raceHbGreenMainFunction : GoCore.Func := {
   args := #[],
   results := #[coreParam "z"],
   body := .block
-    #[{ id := "x", typ := .int },
-      { id := "donev", typ := .chan .both .int }]
+    #[{ id := vid "x", typ := .int },
+      { id := vid "donev", typ := .chan .both .int }]
     #[
-      .makeChan (.var "donev") .int none,
-      .goStmt (.funcVal ⟨"raceHbWorker_F"⟩ #[]) #[.ref "x", .var "donev"],
-      .chanRecv #[] (.var "donev") .int,
-      .assign (.var "z") (.var "x")
+      .makeChan (.var (vid "donev")) .int none,
+      .goStmt (.funcVal ⟨"raceHbWorker_F"⟩ #[]) #[.ref (vid "x"), .var (vid "donev")],
+      .chanRecv #[] (.var (vid "donev")) .int,
+      .assign (.var (vid "z")) (.var (vid "x"))
     ]
 }
 
@@ -1069,9 +1073,9 @@ no corpus lane can express (the schedule-pinned classes). -/
 
 private def syncWgWaiterFunction : GoCore.Func := {
   id := ⟨"syncWgWaiter_F"⟩,
-  args := #[{ id := "wgp", typ := .pointer (.sync .waitGroup) }],
+  args := #[{ id := vid "wgp", typ := .pointer (.sync .waitGroup) }],
   results := #[],
-  body := .seqn #[.syncStmt .wgWait #[.var "wgp"] #[]]
+  body := .seqn #[.syncStmt .wgWait #[.var (vid "wgp")] #[]]
 }
 
 private def syncWgMisuseMainFunction : GoCore.Func := {
@@ -1079,25 +1083,25 @@ private def syncWgMisuseMainFunction : GoCore.Func := {
   args := #[],
   results := #[coreParam "z"],
   body := .block
-    #[{ id := "wg", typ := .sync .waitGroup }]
+    #[{ id := vid "wg", typ := .sync .waitGroup }]
     #[
-      .syncStmt .wgAdd #[.ref "wg", .intLit 1] #[],
-      .goStmt (.funcVal ⟨"syncWgWaiter_F"⟩ #[]) #[.ref "wg"],
-      .syncStmt .wgAdd #[.ref "wg", .intLit (-1)] #[],
-      .syncStmt .wgAdd #[.ref "wg", .intLit 1] #[],
-      .assign (.var "z") (.intLit 1)
+      .syncStmt .wgAdd #[.ref (vid "wg"), .intLit 1] #[],
+      .goStmt (.funcVal ⟨"syncWgWaiter_F"⟩ #[]) #[.ref (vid "wg")],
+      .syncStmt .wgAdd #[.ref (vid "wg"), .intLit (-1)] #[],
+      .syncStmt .wgAdd #[.ref (vid "wg"), .intLit 1] #[],
+      .assign (.var (vid "z")) (.intLit 1)
     ]
 }
 
 private def syncMuWorkerFunction : GoCore.Func := {
   id := ⟨"syncMuWorker_F"⟩,
-  args := #[{ id := "mp", typ := .pointer (.sync .mutex) },
-            { id := "done", typ := .chan .both .int }],
+  args := #[{ id := vid "mp", typ := .pointer (.sync .mutex) },
+            { id := vid "done", typ := .chan .both .int }],
   results := #[],
   body := .seqn #[
-    .syncStmt .lock #[.var "mp"] #[],
-    .syncStmt .unlock #[.var "mp"] #[],
-    .chanSend (.var "done") (.intLit 5) .int]
+    .syncStmt .lock #[.var (vid "mp")] #[],
+    .syncStmt .unlock #[.var (vid "mp")] #[],
+    .chanSend (.var (vid "done")) (.intLit 5) .int]
 }
 
 private def syncMuWakeMainFunction : GoCore.Func := {
@@ -1105,25 +1109,25 @@ private def syncMuWakeMainFunction : GoCore.Func := {
   args := #[],
   results := #[coreParam "z"],
   body := .block
-    #[{ id := "mu", typ := .sync .mutex },
-      { id := "donev", typ := .chan .both .int }]
+    #[{ id := vid "mu", typ := .sync .mutex },
+      { id := vid "donev", typ := .chan .both .int }]
     #[
-      .makeChan (.var "donev") .int none,
-      .syncStmt .lock #[.ref "mu"] #[],
-      .goStmt (.funcVal ⟨"syncMuWorker_F"⟩ #[]) #[.ref "mu", .var "donev"],
-      .syncStmt .unlock #[.ref "mu"] #[],
-      .chanRecv #[.var "z"] (.var "donev") .int
+      .makeChan (.var (vid "donev")) .int none,
+      .syncStmt .lock #[.ref (vid "mu")] #[],
+      .goStmt (.funcVal ⟨"syncMuWorker_F"⟩ #[]) #[.ref (vid "mu"), .var (vid "donev")],
+      .syncStmt .unlock #[.ref (vid "mu")] #[],
+      .chanRecv #[.var (vid "z")] (.var (vid "donev")) .int
     ]
 }
 
 private def syncWgWaiterSendFunction : GoCore.Func := {
   id := ⟨"syncWgWaiterSend_F"⟩,
-  args := #[{ id := "wgp", typ := .pointer (.sync .waitGroup) },
-            { id := "ch", typ := .chan .both .int }],
+  args := #[{ id := vid "wgp", typ := .pointer (.sync .waitGroup) },
+            { id := vid "ch", typ := .chan .both .int }],
   results := #[],
   body := .seqn #[
-    .syncStmt .wgWait #[.var "wgp"] #[],
-    .chanSend (.var "ch") (.intLit 1) .int]
+    .syncStmt .wgWait #[.var (vid "wgp")] #[],
+    .chanSend (.var (vid "ch")) (.intLit 1) .int]
 }
 
 /-- The REUSE-WINDOW discriminator (audit fix round 2026-08-10, the
@@ -1149,36 +1153,36 @@ private def syncWgReuseMainFunction : GoCore.Func := {
   args := #[],
   results := #[coreParam "z"],
   body := .block
-    #[{ id := "wg", typ := .sync .waitGroup },
-      { id := "chv", typ := .chan .both .int }]
+    #[{ id := vid "wg", typ := .sync .waitGroup },
+      { id := vid "chv", typ := .chan .both .int }]
     #[
-      .makeChan (.var "chv") .int none,
-      .syncStmt .wgAdd #[.ref "wg", .intLit 1] #[],
-      .goStmt (.funcVal ⟨"syncWgWaiterSend_F"⟩ #[]) #[.ref "wg", .var "chv"],
-      .goStmt (.funcVal ⟨"syncWgWaiter_F"⟩ #[]) #[.ref "wg"],
-      .syncStmt .wgAdd #[.ref "wg", .intLit (-1)] #[],
-      .chanRecv #[.var "z"] (.var "chv") .int,
-      .syncStmt .wgAdd #[.ref "wg", .intLit 1] #[],
-      .syncStmt .wgAdd #[.ref "wg", .intLit (-1)] #[]
+      .makeChan (.var (vid "chv")) .int none,
+      .syncStmt .wgAdd #[.ref (vid "wg"), .intLit 1] #[],
+      .goStmt (.funcVal ⟨"syncWgWaiterSend_F"⟩ #[]) #[.ref (vid "wg"), .var (vid "chv")],
+      .goStmt (.funcVal ⟨"syncWgWaiter_F"⟩ #[]) #[.ref (vid "wg")],
+      .syncStmt .wgAdd #[.ref (vid "wg"), .intLit (-1)] #[],
+      .chanRecv #[.var (vid "z")] (.var (vid "chv")) .int,
+      .syncStmt .wgAdd #[.ref (vid "wg"), .intLit 1] #[],
+      .syncStmt .wgAdd #[.ref (vid "wg"), .intLit (-1)] #[]
     ]
 }
 
 private def syncXUnlockW1Function : GoCore.Func := {
   id := ⟨"syncXUnlockW1_F"⟩,
-  args := #[{ id := "mp", typ := .pointer (.sync .mutex) }],
+  args := #[{ id := vid "mp", typ := .pointer (.sync .mutex) }],
   results := #[],
-  body := .seqn #[.syncStmt .unlock #[.var "mp"] #[]]
+  body := .seqn #[.syncStmt .unlock #[.var (vid "mp")] #[]]
 }
 
 private def syncXUnlockW2Function : GoCore.Func := {
   id := ⟨"syncXUnlockW2_F"⟩,
-  args := #[{ id := "mp", typ := .pointer (.sync .mutex) },
-            { id := "gp", typ := .pointer .int },
-            { id := "ch", typ := .chan .both .int }],
+  args := #[{ id := vid "mp", typ := .pointer (.sync .mutex) },
+            { id := vid "gp", typ := .pointer .int },
+            { id := vid "ch", typ := .chan .both .int }],
   results := #[],
   body := .seqn #[
-    .syncStmt .lock #[.var "mp"] #[],
-    .chanSend (.var "ch") (.deref (.var "gp") .int) .int]
+    .syncStmt .lock #[.var (vid "mp")] #[],
+    .chanSend (.var (vid "ch")) (.deref (.var (vid "gp")) .int) .int]
 }
 
 /-- The U5 divergence pin (RE-ENCODED at delta-review round 2,
@@ -1205,18 +1209,18 @@ private def syncXUnlockMainFunction : GoCore.Func := {
   args := #[],
   results := #[coreParam "z"],
   body := .block
-    #[{ id := "mu", typ := .sync .mutex },
-      { id := "g", typ := .int },
-      { id := "chv", typ := .chan .both .int }]
+    #[{ id := vid "mu", typ := .sync .mutex },
+      { id := vid "g", typ := .int },
+      { id := vid "chv", typ := .chan .both .int }]
     #[
-      .makeChan (.var "chv") .int none,
-      .syncStmt .lock #[.ref "mu"] #[],
-      .goStmt (.funcVal ⟨"syncXUnlockW1_F"⟩ #[]) #[.ref "mu"],
-      .goStmt (.funcVal ⟨"syncXUnlockW2_F"⟩ #[]) #[.ref "mu", .ref "g", .var "chv"],
-      .assign (.var "g") (.intLit 1),
-      .syncStmt .unlock #[.ref "mu"] #[],
-      .syncStmt .lock #[.ref "mu"] #[],
-      .chanRecv #[.var "z"] (.var "chv") .int
+      .makeChan (.var (vid "chv")) .int none,
+      .syncStmt .lock #[.ref (vid "mu")] #[],
+      .goStmt (.funcVal ⟨"syncXUnlockW1_F"⟩ #[]) #[.ref (vid "mu")],
+      .goStmt (.funcVal ⟨"syncXUnlockW2_F"⟩ #[]) #[.ref (vid "mu"), .ref (vid "g"), .var (vid "chv")],
+      .assign (.var (vid "g")) (.intLit 1),
+      .syncStmt .unlock #[.ref (vid "mu")] #[],
+      .syncStmt .lock #[.ref (vid "mu")] #[],
+      .chanRecv #[.var (vid "z")] (.var (vid "chv")) .int
     ]
 }
 
@@ -1234,26 +1238,26 @@ private def coreMapBasicFunction : GoCore.Func := {
   results := #[coreParam "z"],
   body := .block
     #[
-      { id := "nilMap", typ := .map .int .int },
-      { id := "m", typ := .map .int .int },
-      { id := "alias", typ := .map .int .int },
-      { id := "v", typ := .int },
-      { id := "ok", typ := .bool }
+      { id := vid "nilMap", typ := .map .int .int },
+      { id := vid "m", typ := .map .int .int },
+      { id := vid "alias", typ := .map .int .int },
+      { id := vid "v", typ := .int },
+      { id := vid "ok", typ := .bool }
     ]
     #[
-      .makeMap (.var "m") .int .int (some (.intLit 2)),
-      .assign (.var "alias") (.var "m"),
-      .mapAssign (.var "m") (.intLit 3) (.intLit 10) .int .int,
-      .mapAssign (.var "alias") (.intLit 3) (.intLit 7) .int .int,
-      .mapLookup (.var "v") (.var "ok") (.var "m") (.intLit 3) .int .int,
-      .assign (.var "z")
+      .makeMap (.var (vid "m")) .int .int (some (.intLit 2)),
+      .assign (.var (vid "alias")) (.var (vid "m")),
+      .mapAssign (.var (vid "m")) (.intLit 3) (.intLit 10) .int .int,
+      .mapAssign (.var (vid "alias")) (.intLit 3) (.intLit 7) .int .int,
+      .mapLookup (.var (vid "v")) (.var (vid "ok")) (.var (vid "m")) (.intLit 3) .int .int,
+      .assign (.var (vid "z"))
         (.add
           (.add
             (.add
-              (.mul (.length (.var "m")) (.intLit 1000))
-              (.mul (.mapGet (.var "nilMap") (.intLit 9) .int .int) (.intLit 100)))
-            (.mul (.var "v") (.intLit 10)))
-          (.mapGet (.var "m") (.intLit 4) .int .int)
+              (.mul (.length (.var (vid "m"))) (.intLit 1000))
+              (.mul (.mapGet (.var (vid "nilMap")) (.intLit 9) .int .int) (.intLit 100)))
+            (.mul (.var (vid "v")) (.intLit 10)))
+          (.mapGet (.var (vid "m")) (.intLit 4) .int .int)
         )
     ]
 }
@@ -1264,22 +1268,22 @@ private def coreStringFunction : GoCore.Func := {
   results := #[coreParam "z"],
   body := .block
     #[
-      { id := "empty", typ := .string },
-      { id := "s", typ := .string },
-      { id := "t", typ := .string },
-      { id := "p", typ := .pointer .string }
+      { id := vid "empty", typ := .string },
+      { id := vid "s", typ := .string },
+      { id := vid "t", typ := .string },
+      { id := vid "p", typ := .pointer .string }
     ]
     #[
-      .assign (.var "s") (coreStringLit "hi"),
-      .assign (.var "t") (.add (.var "s") (coreStringLit "!")),
-      .assign (.var "p") (.ref "t"),
-      .assign (.addr (.var "p")) (coreStringLit "go"),
-      .assign (.var "z")
+      .assign (.var (vid "s")) (coreStringLit "hi"),
+      .assign (.var (vid "t")) (.add (.var (vid "s")) (coreStringLit "!")),
+      .assign (.var (vid "p")) (.ref (vid "t")),
+      .assign (.addr (.var (vid "p"))) (coreStringLit "go"),
+      .assign (.var (vid "z"))
         (.add
           (.add
-            (.mul (.length (.var "empty")) (.intLit 100))
-            (.mul (.length (.var "s")) (.intLit 10)))
-          (.length (.deref (.var "p") .string)))
+            (.mul (.length (.var (vid "empty"))) (.intLit 100))
+            (.mul (.length (.var (vid "s"))) (.intLit 10)))
+          (.length (.deref (.var (vid "p")) .string)))
     ]
 }
 
@@ -1287,19 +1291,19 @@ private def coreStringByteLenFunction : GoCore.Func := {
   id := ⟨"string_byte_len_F"⟩,
   args := #[],
   results := #[coreParam "z"],
-  body := .assign (.var "z") (.length (coreStringLit "h\u00e9llo"))
+  body := .assign (.var (vid "z")) (.length (coreStringLit "h\u00e9llo"))
 }
 
 private def coreStringIndexFunction : GoCore.Func := {
   id := ⟨"string_index_F"⟩,
   args := #[],
-  results := #[{ id := "a", typ := .int .uint8 }, { id := "b", typ := .int .uint8 }],
+  results := #[{ id := vid "a", typ := .int .uint8 }, { id := vid "b", typ := .int .uint8 }],
   body := .block
-    #[{ id := "s", typ := .string }]
+    #[{ id := vid "s", typ := .string }]
     #[
-      .assign (.var "s") (coreStringLit "h\u00e9"),
-      .assign (.var "a") (.indexGet (.var "s") (.intLit 1)),
-      .assign (.var "b") (.indexGet (.var "s") (.intLit 2))
+      .assign (.var (vid "s")) (coreStringLit "h\u00e9"),
+      .assign (.var (vid "a")) (.indexGet (.var (vid "s")) (.intLit 1)),
+      .assign (.var (vid "b")) (.indexGet (.var (vid "s")) (.intLit 2))
     ]
 }
 
@@ -1308,14 +1312,14 @@ private def coreStringSliceFunction : GoCore.Func := {
   args := #[],
   results := #[coreParam "z"],
   body := .block
-    #[{ id := "s", typ := .string }, { id := "t", typ := .string }]
+    #[{ id := vid "s", typ := .string }, { id := vid "t", typ := .string }]
     #[
-      .assign (.var "s") (coreStringLit "h\u00e9"),
-      .assign (.var "t") (.slice (.var "s") (.intLit 1) (.intLit 2) none),
-      .assign (.var "z")
+      .assign (.var (vid "s")) (coreStringLit "h\u00e9"),
+      .assign (.var (vid "t")) (.slice (.var (vid "s")) (.intLit 1) (.intLit 2) none),
+      .assign (.var (vid "z"))
         (.add
-          (.mul (.length (.var "t")) (.intLit 100))
-          (.convert .int (.indexGet (.var "t") (.intLit 0))))
+          (.mul (.length (.var (vid "t"))) (.intLit 100))
+          (.convert .int (.indexGet (.var (vid "t")) (.intLit 0))))
     ]
 }
 
@@ -1325,23 +1329,23 @@ private def coreStringByteConversionFunction : GoCore.Func := {
   results := #[coreParam "z"],
   body := .block
     #[
-      { id := "s", typ := .string },
-      { id := "bs", typ := .slice (.int .uint8) },
-      { id := "t", typ := .string }
+      { id := vid "s", typ := .string },
+      { id := vid "bs", typ := .slice (.int .uint8) },
+      { id := vid "t", typ := .string }
     ]
     #[
-      .assign (.var "s") (coreStringByteLit #[65, 255, 10, 195, 169]),
-      .assign (.var "bs") (.bytesFromString (.var "s")),
-      .assign (.addr (.indexAddr (.var "bs") (.intLit 0))) (.intLit 66),
-      .assign (.var "t") (.stringFromByteSlice (.var "bs")),
-      .assign (.var "z")
+      .assign (.var (vid "s")) (coreStringByteLit #[65, 255, 10, 195, 169]),
+      .assign (.var (vid "bs")) (.bytesFromString (.var (vid "s"))),
+      .assign (.addr (.indexAddr (.var (vid "bs")) (.intLit 0))) (.intLit 66),
+      .assign (.var (vid "t")) (.stringFromByteSlice (.var (vid "bs"))),
+      .assign (.var (vid "z"))
         (.add
           (.add
-            (.mul (.length (.var "bs")) (.intLit 1000000))
-            (.mul (.convert .int (.indexGet (.var "s") (.intLit 0))) (.intLit 10000)))
+            (.mul (.length (.var (vid "bs"))) (.intLit 1000000))
+            (.mul (.convert .int (.indexGet (.var (vid "s")) (.intLit 0))) (.intLit 10000)))
           (.add
-            (.mul (.convert .int (.indexGet (.var "t") (.intLit 0))) (.intLit 100))
-            (.convert .int (.indexGet (.var "t") (.intLit 1)))))
+            (.mul (.convert .int (.indexGet (.var (vid "t")) (.intLit 0))) (.intLit 100))
+            (.convert .int (.indexGet (.var (vid "t")) (.intLit 1)))))
     ]
 }
 
@@ -1351,24 +1355,24 @@ private def coreStringRuneConversionFunction : GoCore.Func := {
   results := #[coreParam "z"],
   body := .block
     #[
-      { id := "s", typ := .string },
-      { id := "t", typ := .string },
-      { id := "bad", typ := .string }
+      { id := vid "s", typ := .string },
+      { id := vid "t", typ := .string },
+      { id := vid "bad", typ := .string }
     ]
     #[
-      .assign (.var "s") (.stringFromRune (.intLit 65)),
-      .assign (.var "t") (.stringFromRune (.intLit 255 (.uint8))),
-      .assign (.var "bad") (.stringFromRune (.intLit (-1))),
-      .assign (.var "z")
+      .assign (.var (vid "s")) (.stringFromRune (.intLit 65)),
+      .assign (.var (vid "t")) (.stringFromRune (.intLit 255 (.uint8))),
+      .assign (.var (vid "bad")) (.stringFromRune (.intLit (-1))),
+      .assign (.var (vid "z"))
         (.add
           (.add
-            (.mul (.length (.var "s")) (.intLit 1000000))
-            (.mul (.convert .int (.indexGet (.var "s") (.intLit 0))) (.intLit 10000)))
+            (.mul (.length (.var (vid "s"))) (.intLit 1000000))
+            (.mul (.convert .int (.indexGet (.var (vid "s")) (.intLit 0))) (.intLit 10000)))
           (.add
             (.add
-              (.mul (.length (.var "t")) (.intLit 1000))
-              (.mul (.convert .int (.indexGet (.var "t") (.intLit 0))) (.intLit 10)))
-            (.length (.var "bad"))))
+              (.mul (.length (.var (vid "t"))) (.intLit 1000))
+              (.mul (.convert .int (.indexGet (.var (vid "t")) (.intLit 0))) (.intLit 10)))
+            (.length (.var (vid "bad")))))
     ]
 }
 
@@ -1378,17 +1382,17 @@ private def coreNewFunction : GoCore.Func := {
   results := #[coreParam "z"],
   body := .block
     #[
-      { id := "p", typ := .pointer .int },
-      { id := "s", typ := .pointer (.slice .int) }
+      { id := vid "p", typ := .pointer .int },
+      { id := vid "s", typ := .pointer (.slice .int) }
     ]
     #[
-      .allocNew (.var "p") (.defaultValue .int) .int,
-      .assign (.addr (.var "p")) (.intLit 7),
-      .allocNew (.var "s") (.defaultValue (.slice .int)) (.slice .int),
-      .assign (.var "z")
+      .allocNew (.var (vid "p")) (.defaultValue .int) .int,
+      .assign (.addr (.var (vid "p"))) (.intLit 7),
+      .allocNew (.var (vid "s")) (.defaultValue (.slice .int)) (.slice .int),
+      .assign (.var (vid "z"))
         (.add
-          (.mul (.deref (.var "p") .int) (.intLit 10))
-          (.length (.deref (.var "s") (.slice .int))))
+          (.mul (.deref (.var (vid "p")) .int) (.intLit 10))
+          (.length (.deref (.var (vid "s")) (.slice .int))))
     ]
 }
 
@@ -1397,9 +1401,9 @@ private def coreNilMapAssignFunction : GoCore.Func := {
   args := #[],
   results := #[],
   body := .block
-    #[{ id := "m", typ := .map .int .int }]
+    #[{ id := vid "m", typ := .map .int .int }]
     #[
-      .mapAssign (.var "m") (.intLit 1) (.intLit 2) .int .int
+      .mapAssign (.var (vid "m")) (.intLit 1) (.intLit 2) .int .int
     ]
 }
 
@@ -1408,10 +1412,10 @@ private def coreSliceBoundsFunction : GoCore.Func := {
   args := #[],
   results := #[],
   body := .block
-    #[{ id := "a", typ := .array 2 .int }]
+    #[{ id := vid "a", typ := .array 2 .int }]
     #[
-      .assign (.var "a") (.arrayLit 2 .int #[(0, .intLit 1), (1, .intLit 2)]),
-      .assign (.var "a") (.slice (.ref "a") (.intLit 0) (.intLit 3) none)
+      .assign (.var (vid "a")) (.arrayLit 2 .int #[(0, .intLit 1), (1, .intLit 2)]),
+      .assign (.var (vid "a")) (.slice (.ref (vid "a")) (.intLit 0) (.intLit 3) none)
     ]
 }
 
@@ -1420,9 +1424,9 @@ private def coreNilDerefFunction : GoCore.Func := {
   args := #[],
   results := #[coreParam "z"],
   body := .block
-    #[{ id := "p", typ := .pointer .int }]
+    #[{ id := vid "p", typ := .pointer .int }]
     #[
-      .assign (.var "z") (.deref (.var "p") .int)
+      .assign (.var (vid "z")) (.deref (.var (vid "p")) .int)
     ]
 }
 
@@ -1430,7 +1434,7 @@ private def coreDivideByZeroFunction : GoCore.Func := {
   id := ⟨"divide_by_zero_F"⟩,
   args := #[],
   results := #[coreParam "z"],
-  body := .assign (.var "z") (.div (.intLit 1) (.intLit 0))
+  body := .assign (.var (vid "z")) (.div (.intLit 1) (.intLit 0))
 }
 
 private def coreIndexAddrBoundsFunction : GoCore.Func := {
@@ -1438,9 +1442,9 @@ private def coreIndexAddrBoundsFunction : GoCore.Func := {
   args := #[],
   results := #[],
   body := .block
-    #[{ id := "a", typ := .array 2 .int }]
+    #[{ id := vid "a", typ := .array 2 .int }]
     #[
-      .assign (.addr (.indexAddr (.ref "a") (.intLit 2))) (.intLit 7)
+      .assign (.addr (.indexAddr (.ref (vid "a")) (.intLit 2))) (.intLit 7)
     ]
 }
 
@@ -1448,16 +1452,16 @@ private def coreMismatchedEqualityFunction : GoCore.Func := {
   id := ⟨"mismatched_equality_F"⟩,
   args := #[],
   results := #[coreBoolParam "ok"],
-  body := .assign (.var "ok") (.eqCmp .int (.intLit 0) (.boolLit false))
+  body := .assign (.var (vid "ok")) (.eqCmp .int (.intLit 0) (.boolLit false))
 }
 
 private def coreShiftIndexFunction : GoCore.Func := {
   id := ⟨"shiftIndex_F"⟩,
-  args := #[{ id := "p", typ := .pointer .int }],
+  args := #[{ id := vid "p", typ := .pointer .int }],
   results := #[coreParam "z"],
   body := .seqn #[
-    .assign (.addr (.var "p")) (.intLit 1),
-    .assign (.var "z") (.intLit 9)
+    .assign (.addr (.var (vid "p"))) (.intLit 1),
+    .assign (.var (vid "z")) (.intLit 9)
   ]
 }
 
@@ -1467,19 +1471,19 @@ private def coreCallTargetSequencingFunction : GoCore.Func := {
   results := #[coreParam "z"],
   body := .block
     #[
-      { id := "i", typ := .int },
-      { id := "a", typ := .array 2 .int }
+      { id := vid "i", typ := .int },
+      { id := vid "a", typ := .array 2 .int }
     ]
     #[
-      .assign (.var "i") (.intLit 0),
-      .assign (.var "a") (.arrayLit 2 .int #[(0, .intLit 0), (1, .intLit 0)]),
-      .call #[.addr (.indexAddr (.ref "a") (.var "i"))] ⟨"shiftIndex_F"⟩ #[.ref "i"],
-      .assign (.var "z")
+      .assign (.var (vid "i")) (.intLit 0),
+      .assign (.var (vid "a")) (.arrayLit 2 .int #[(0, .intLit 0), (1, .intLit 0)]),
+      .call #[.addr (.indexAddr (.ref (vid "a")) (.var (vid "i")))] ⟨"shiftIndex_F"⟩ #[.ref (vid "i")],
+      .assign (.var (vid "z"))
         (.add
           (.add
-            (.mul (.indexGet (.var "a") (.intLit 0)) (.intLit 100))
-            (.mul (.indexGet (.var "a") (.intLit 1)) (.intLit 10)))
-          (.var "i"))
+            (.mul (.indexGet (.var (vid "a")) (.intLit 0)) (.intLit 100))
+            (.mul (.indexGet (.var (vid "a")) (.intLit 1)) (.intLit 10)))
+          (.var (vid "i")))
     ]
 }
 
@@ -1489,25 +1493,25 @@ private def coreAssignManySequencingFunction : GoCore.Func := {
   results := #[coreParam "z"],
   body := .block
     #[
-      { id := "a", typ := .array 3 .int },
-      { id := "s", typ := .slice .int },
-      { id := "i", typ := .int }
+      { id := vid "a", typ := .array 3 .int },
+      { id := vid "s", typ := .slice .int },
+      { id := vid "i", typ := .int }
     ]
     #[
-      .assign (.var "a") (.arrayLit 3 .int #[(0, .intLit 0), (1, .intLit 0), (2, .intLit 0)]),
-      .assign (.var "s") (.slice (.ref "a") (.intLit 0) (.intLit 3) none),
-      .assign (.var "i") (.intLit 0),
+      .assign (.var (vid "a")) (.arrayLit 3 .int #[(0, .intLit 0), (1, .intLit 0), (2, .intLit 0)]),
+      .assign (.var (vid "s")) (.slice (.ref (vid "a")) (.intLit 0) (.intLit 3) none),
+      .assign (.var (vid "i")) (.intLit 0),
       .assignMany
-        #[.var "i", .addr (.indexAddr (.var "s") (.var "i"))]
+        #[.var (vid "i"), .addr (.indexAddr (.var (vid "s")) (.var (vid "i")))]
         #[.intLit 1, .intLit 2],
-      .assign (.var "z")
+      .assign (.var (vid "z"))
         (.add
-          (.mul (.var "i") (.intLit 1000))
+          (.mul (.var (vid "i")) (.intLit 1000))
           (.add
-            (.mul (.indexGet (.var "s") (.intLit 0)) (.intLit 100))
+            (.mul (.indexGet (.var (vid "s")) (.intLit 0)) (.intLit 100))
             (.add
-              (.mul (.indexGet (.var "s") (.intLit 1)) (.intLit 10))
-              (.indexGet (.var "s") (.intLit 2)))))
+              (.mul (.indexGet (.var (vid "s")) (.intLit 1)) (.intLit 10))
+              (.indexGet (.var (vid "s")) (.intLit 2)))))
     ]
 }
 
@@ -1516,14 +1520,14 @@ private def coreIfReturnFunction : GoCore.Func := {
   args := #[coreParam "x"],
   results := #[coreParam "z"],
   body := .seqn #[
-    .assign (.var "z") (.intLit 100),
-    .ifThenElse (.greaterCmp (.var "x") (.intLit 0))
+    .assign (.var (vid "z")) (.intLit 100),
+    .ifThenElse (.greaterCmp (.var (vid "x")) (.intLit 0))
       (.seqn #[
-        .assign (.var "z") (.var "x"),
+        .assign (.var (vid "z")) (.var (vid "x")),
         .returnStmt
       ])
-      (.assign (.var "z") (.sub (.intLit 0) (.var "x"))),
-    .assign (.var "z") (.add (.var "z") (.intLit 100))
+      (.assign (.var (vid "z")) (.sub (.intLit 0) (.var (vid "x")))),
+    .assign (.var (vid "z")) (.add (.var (vid "z")) (.intLit 100))
   ]
 }
 
@@ -1532,18 +1536,18 @@ private def coreBreakContinueFunction : GoCore.Func := {
   args := #[],
   results := #[coreParam "z"],
   body := .block
-    #[{ id := "i", typ := .int }]
+    #[{ id := vid "i", typ := .int }]
     #[
-      .assign (.var "i") (.intLit 0),
-      .assign (.var "z") (.intLit 0),
-      .while (.lessCmp (.var "i") (.intLit 5))
+      .assign (.var (vid "i")) (.intLit 0),
+      .assign (.var (vid "z")) (.intLit 0),
+      .while (.lessCmp (.var (vid "i")) (.intLit 5))
         (.seqn #[
-          .assign (.var "i") (.add (.var "i") (.intLit 1)),
-          .ifThenElse (.eqCmp .int (.var "i") (.intLit 2))
+          .assign (.var (vid "i")) (.add (.var (vid "i")) (.intLit 1)),
+          .ifThenElse (.eqCmp .int (.var (vid "i")) (.intLit 2))
             .continueStmt
             (.seqn #[]),
-          .assign (.var "z") (.add (.var "z") (.var "i")),
-          .ifThenElse (.eqCmp .int (.var "i") (.intLit 4))
+          .assign (.var (vid "z")) (.add (.var (vid "z")) (.var (vid "i"))),
+          .ifThenElse (.eqCmp .int (.var (vid "i")) (.intLit 4))
             .breakStmt
             (.seqn #[])
         ])
@@ -1628,11 +1632,11 @@ private def expectOk (name : String) (result : Except Stop GoLean.GoCore.Readout
 parameters, so the closure and its creator share the cell. -/
 def coreClosureBodyFunction : GoCore.Func := {
   id := ⟨"main$lit0"⟩
-  args := #[⟨"x$ptr", .pointer (.int .int)⟩]
+  args := #[⟨vid "x$ptr", .pointer (.int .int)⟩]
   results := #[]
   body := .seqn #[
-    .assign (.addr (.var "x$ptr"))
-      (.add (.deref (.var "x$ptr") (.int .int)) (.intLit 1 .int))]
+    .assign (.addr (.var (vid "x$ptr")))
+      (.add (.deref (.var (vid "x$ptr")) (.int .int)) (.intLit 1 .int))]
 }
 
 /-- `x := 0; f := func(){ x++ }; f(); f(); return x` — the machine half of
@@ -1641,14 +1645,14 @@ SAME captured cell, which is what capture-by-reference means. -/
 def coreClosureShareFunction : GoCore.Func := {
   id := ⟨"closureShare"⟩
   args := #[]
-  results := #[⟨"r", .int .int⟩]
+  results := #[⟨vid "r", .int .int⟩]
   body := .seqn #[
-    .initialization ⟨"x", .int .int⟩,
-    .initialization ⟨"f", .funcType [] [] false⟩,
-    .assign (.var "f") (.funcVal ⟨"main$lit0"⟩ #[.ref "x"]),
-    .callValue #[] (.var "f") #[],
-    .callValue #[] (.var "f") #[],
-    .assign (.var "r") (.var "x"),
+    .initialization ⟨vid "x", .int .int⟩,
+    .initialization ⟨vid "f", .funcType [] [] false⟩,
+    .assign (.var (vid "f")) (.funcVal ⟨"main$lit0"⟩ #[.ref (vid "x")]),
+    .callValue #[] (.var (vid "f")) #[],
+    .callValue #[] (.var (vid "f")) #[],
+    .assign (.var (vid "r")) (.var (vid "x")),
     .returnStmt]
 }
 
@@ -1656,12 +1660,12 @@ def coreClosureShareFunction : GoCore.Func := {
 the canonical recover-er, receiving the captured address of a result cell. -/
 def coreRecoverBodyFunction : GoCore.Func := {
   id := ⟨"main$rec0"⟩
-  args := #[⟨"rp", .pointer (.int .int)⟩]
+  args := #[⟨vid "rp", .pointer (.int .int)⟩]
   results := #[]
   body := .seqn #[
     .ifThenElse
       (.neqCmp (.interface ⟨"empty_interface"⟩) .recoverCall (.nil none))
-      (.assign (.addr (.var "rp")) (.intLit 7))
+      (.assign (.addr (.var (vid "rp"))) (.intLit 7))
       (.seqn #[]),
     .returnStmt]
 }
@@ -1672,9 +1676,9 @@ normally with the named result the recover-er wrote (the unwinding arc). -/
 def coreRecoverCatchFunction : GoCore.Func := {
   id := ⟨"recoverCatch"⟩
   args := #[]
-  results := #[⟨"r", .int .int⟩]
+  results := #[⟨vid "r", .int .int⟩]
   body := .seqn #[
-    .deferCall (.funcVal ⟨"main$rec0"⟩ #[.ref "r"]) #[],
+    .deferCall (.funcVal ⟨"main$rec0"⟩ #[.ref (vid "r")]) #[],
     .panicStmt (.toInterface (.interface ⟨"empty_interface"⟩) .string (.stringLit (GoString.fromLeanString "boom"))),
     .returnStmt]
 }
@@ -1684,10 +1688,10 @@ def coreRecoverCatchFunction : GoCore.Func := {
 def coreRecoverNormalNilFunction : GoCore.Func := {
   id := ⟨"recoverNormalNil"⟩
   args := #[]
-  results := #[⟨"r", .int .int⟩]
+  results := #[⟨vid "r", .int .int⟩]
   body := .seqn #[
-    .deferCall (.funcVal ⟨"main$rec0"⟩ #[.ref "r"]) #[],
-    .assign (.var "r") (.intLit 5),
+    .deferCall (.funcVal ⟨"main$rec0"⟩ #[.ref (vid "r")]) #[],
+    .assign (.var (vid "r")) (.intLit 5),
     .returnStmt]
 }
 
@@ -1696,7 +1700,7 @@ aborts with panic status (message pinned by the differential). -/
 def corePanicAbortFunction : GoCore.Func := {
   id := ⟨"panicAbort"⟩
   args := #[]
-  results := #[⟨"r", .int .int⟩]
+  results := #[⟨vid "r", .int .int⟩]
   body := .seqn #[
     .panicStmt (.toInterface (.interface ⟨"empty_interface"⟩) (.int .int) (.intLit 4 .int)),
     .returnStmt]
@@ -1741,17 +1745,17 @@ private def coreEnumCapPanicFunction : GoCore.Func := {
   results := #[coreParam "z"],
   body := .block
     #[
-      { id := "s", typ := .slice .int },
-      { id := "e", typ := .slice .int }
+      { id := vid "s", typ := .slice .int },
+      { id := vid "e", typ := .slice .int }
     ]
     #[
-      .makeSlice (.var "s") .int (.intLit 0) (some (.intLit 0)),
-      .makeSlice (.var "e") .int (.intLit 1) none,
-      .appendSlice (.var "s") .int (.var "s") (.var "e"),
-      .ifThenElse (.eqCmp .int (.capacity (.var "s")) (.intLit 7))
+      .makeSlice (.var (vid "s")) .int (.intLit 0) (some (.intLit 0)),
+      .makeSlice (.var (vid "e")) .int (.intLit 1) none,
+      .appendSlice (.var (vid "s")) .int (.var (vid "s")) (.var (vid "e")),
+      .ifThenElse (.eqCmp .int (.capacity (.var (vid "s"))) (.intLit 7))
         (.panicStmt (.toInterface (.interface ⟨"empty_interface"⟩) (.int .int) (.intLit 7 .int)))
         (.seqn #[]),
-      .assign (.var "z") (.capacity (.var "s"))
+      .assign (.var (vid "z")) (.capacity (.var (vid "s")))
     ]
 }
 
@@ -1761,20 +1765,20 @@ private def coreEnumFirstKeyFunction : GoCore.Func := {
   results := #[coreParam "z"],
   body := .block
     #[
-      { id := "m", typ := .map .int .int },
-      { id := "first", typ := .int }
+      { id := vid "m", typ := .map .int .int },
+      { id := vid "first", typ := .int }
     ]
     #[
-      .makeMap (.var "m") .int .int none,
-      .mapAssign (.var "m") (.intLit 1) (.intLit 10) .int .int,
-      .mapAssign (.var "m") (.intLit 2) (.intLit 20) .int .int,
-      .mapAssign (.var "m") (.intLit 3) (.intLit 30) .int .int,
-      .assign (.var "first") (.intLit (-1)),
-      .mapRange (some "k") none (.var "m") .int .int
-        (.ifThenElse (.lessCmp (.var "first") (.intLit 0))
-          (.assign (.var "first") (.var "k"))
+      .makeMap (.var (vid "m")) .int .int none,
+      .mapAssign (.var (vid "m")) (.intLit 1) (.intLit 10) .int .int,
+      .mapAssign (.var (vid "m")) (.intLit 2) (.intLit 20) .int .int,
+      .mapAssign (.var (vid "m")) (.intLit 3) (.intLit 30) .int .int,
+      .assign (.var (vid "first")) (.intLit (-1)),
+      .mapRange (some (vid "k")) none (.var (vid "m")) .int .int
+        (.ifThenElse (.lessCmp (.var (vid "first")) (.intLit 0))
+          (.assign (.var (vid "first")) (.var (vid "k")))
           (.seqn #[])),
-      .assign (.var "z") (.var "first")
+      .assign (.var (vid "z")) (.var (vid "first"))
     ]
 }
 
@@ -1792,20 +1796,20 @@ private def coreEnumInitPickInit : GoCore.Func := {
   results := #[],
   body := .block
     #[
-      { id := "m", typ := .map .int .int },
-      { id := "first", typ := .int }
+      { id := vid "m", typ := .map .int .int },
+      { id := vid "first", typ := .int }
     ]
     #[
-      .makeMap (.var "m") .int .int none,
-      .mapAssign (.var "m") (.intLit 1) (.intLit 10) .int .int,
-      .mapAssign (.var "m") (.intLit 2) (.intLit 20) .int .int,
-      .mapAssign (.var "m") (.intLit 3) (.intLit 30) .int .int,
-      .assign (.var "first") (.intLit (-1)),
-      .mapRange (some "k") none (.var "m") .int .int
-        (.ifThenElse (.lessCmp (.var "first") (.intLit 0))
-          (.assign (.var "first") (.var "k"))
+      .makeMap (.var (vid "m")) .int .int none,
+      .mapAssign (.var (vid "m")) (.intLit 1) (.intLit 10) .int .int,
+      .mapAssign (.var (vid "m")) (.intLit 2) (.intLit 20) .int .int,
+      .mapAssign (.var (vid "m")) (.intLit 3) (.intLit 30) .int .int,
+      .assign (.var (vid "first")) (.intLit (-1)),
+      .mapRange (some (vid "k")) none (.var (vid "m")) .int .int
+        (.ifThenElse (.lessCmp (.var (vid "first")) (.intLit 0))
+          (.assign (.var (vid "first")) (.var (vid "k")))
           (.seqn #[])),
-      .assign (.addr (.global 0)) (.var "first")
+      .assign (.addr (.global 0)) (.var (vid "first"))
     ]
 }
 
@@ -1813,7 +1817,7 @@ private def coreEnumInitReadFunction : GoCore.Func := {
   id := ⟨"enum_init_read_F"⟩,
   args := #[],
   results := #[coreParam "z"],
-  body := .assign (.var "z") (.deref (.global 0) .int)
+  body := .assign (.var (vid "z")) (.deref (.global 0) .int)
 }
 
 private def enumInitPickProgram : GoCore.Program := {
@@ -2071,30 +2075,30 @@ private def coreFloatArithFunction : GoCore.Func := {
   results := #[coreParam "z"],
   body := .block
     #[
-      { id := "a", typ := floatTy }, { id := "b", typ := floatTy },
-      { id := "c", typ := floatTy }, { id := "zero", typ := floatTy },
-      { id := "nan", typ := floatTy }, { id := "negz", typ := floatTy },
-      { id := "d", typ := floatTy }
+      { id := vid "a", typ := floatTy }, { id := vid "b", typ := floatTy },
+      { id := vid "c", typ := floatTy }, { id := vid "zero", typ := floatTy },
+      { id := vid "nan", typ := floatTy }, { id := vid "negz", typ := floatTy },
+      { id := vid "d", typ := floatTy }
     ]
     #[
-      .assign (.var "a") (f64Lit 1),
-      .assign (.var "b") (f64Lit 3),
-      .assign (.var "c") (.div (.var "a") (.var "b")),
-      .ifThenElse (.lessCmp (.var "c") (f64Lit 1 2))
-        (.assign (.var "z") (.add (.var "z") (.intLit 1))) (.seqn #[]),
-      .assign (.var "zero") (.sub (.var "a") (.var "a")),
+      .assign (.var (vid "a")) (f64Lit 1),
+      .assign (.var (vid "b")) (f64Lit 3),
+      .assign (.var (vid "c")) (.div (.var (vid "a")) (.var (vid "b"))),
+      .ifThenElse (.lessCmp (.var (vid "c")) (f64Lit 1 2))
+        (.assign (.var (vid "z")) (.add (.var (vid "z")) (.intLit 1))) (.seqn #[]),
+      .assign (.var (vid "zero")) (.sub (.var (vid "a")) (.var (vid "a"))),
       -- 0.0/0.0: NaN, never a panic (design note §3.2)
-      .assign (.var "nan") (.div (.var "zero") (.var "zero")),
-      .ifThenElse (.neqCmp floatTy (.var "nan") (.var "nan"))
-        (.assign (.var "z") (.add (.var "z") (.intLit 10))) (.seqn #[]),
+      .assign (.var (vid "nan")) (.div (.var (vid "zero")) (.var (vid "zero"))),
+      .ifThenElse (.neqCmp floatTy (.var (vid "nan")) (.var (vid "nan")))
+        (.assign (.var (vid "z")) (.add (.var (vid "z")) (.intLit 10))) (.seqn #[]),
       -- proper negation: -(+0) = -0; +0 == -0 under Go ==
-      .assign (.var "negz") (.neg (.var "zero")),
-      .ifThenElse (.eqCmp floatTy (.var "negz") (.var "zero"))
-        (.assign (.var "z") (.add (.var "z") (.intLit 100))) (.seqn #[]),
+      .assign (.var (vid "negz")) (.neg (.var (vid "zero"))),
+      .ifThenElse (.eqCmp floatTy (.var (vid "negz")) (.var (vid "zero")))
+        (.assign (.var (vid "z")) (.add (.var (vid "z")) (.intLit 100))) (.seqn #[]),
       -- 1 / -0 = -Inf < 0
-      .assign (.var "d") (.div (.var "a") (.var "negz")),
-      .ifThenElse (.lessCmp (.var "d") (f64Lit 0))
-        (.assign (.var "z") (.add (.var "z") (.intLit 1000))) (.seqn #[])
+      .assign (.var (vid "d")) (.div (.var (vid "a")) (.var (vid "negz"))),
+      .ifThenElse (.lessCmp (.var (vid "d")) (f64Lit 0))
+        (.assign (.var (vid "z")) (.add (.var (vid "z")) (.intLit 1000))) (.seqn #[])
     ]
 }
 
@@ -2104,26 +2108,26 @@ private def coreFloatConvertFunction : GoCore.Func := {
   results := #[coreParam "z"],
   body := .block
     #[
-      { id := "big", typ := floatTy }, { id := "f32", typ := float32Ty },
-      { id := "u", typ := .int .uint8 },
-      { id := "g", typ := float32Ty }, { id := "h", typ := float32Ty }
+      { id := vid "big", typ := floatTy }, { id := vid "f32", typ := float32Ty },
+      { id := vid "u", typ := .int .uint8 },
+      { id := vid "g", typ := float32Ty }, { id := vid "h", typ := float32Ty }
     ]
     #[
       -- f64→f32 conversion rounding: 16777217.0 → 16777216.0f
-      .assign (.var "big") (f64Lit 16777217),
-      .assign (.var "f32") (.convert float32Ty (.var "big")),
-      .ifThenElse (.eqCmp float32Ty (.var "f32") (.floatLit 16777216 1 .float32))
-        (.assign (.var "z") (.add (.var "z") (.intLit 1))) (.seqn #[]),
+      .assign (.var (vid "big")) (f64Lit 16777217),
+      .assign (.var (vid "f32")) (.convert float32Ty (.var (vid "big"))),
+      .ifThenElse (.eqCmp float32Ty (.var (vid "f32")) (.floatLit 16777216 1 .float32))
+        (.assign (.var (vid "z")) (.add (.var (vid "z")) (.intLit 1))) (.seqn #[]),
       -- in-range float→int truncates toward zero: 253.5 → 253 at uint8
-      .assign (.var "u") (.convert (.int .uint8) (f64Lit 507 2)),
-      .ifThenElse (.eqCmp (.int .uint8) (.var "u") (.intLit 253 .uint8))
-        (.assign (.var "z") (.add (.var "z") (.intLit 10))) (.seqn #[]),
+      .assign (.var (vid "u")) (.convert (.int .uint8) (f64Lit 507 2)),
+      .ifThenElse (.eqCmp (.int .uint8) (.var (vid "u")) (.intLit 253 .uint8))
+        (.assign (.var (vid "z")) (.add (.var (vid "z")) (.intLit 10))) (.seqn #[]),
       -- int64→float32 single rounding (the probed discriminator):
       -- 9007199791611905 → 0x5A000001 ≠ float32(2^53)
-      .assign (.var "g") (.convert float32Ty (.intLit 9007199791611905 .int64)),
-      .assign (.var "h") (.convert float32Ty (.intLit 9007199254740992 .int64)),
-      .ifThenElse (.neqCmp float32Ty (.var "g") (.var "h"))
-        (.assign (.var "z") (.add (.var "z") (.intLit 100))) (.seqn #[])
+      .assign (.var (vid "g")) (.convert float32Ty (.intLit 9007199791611905 .int64)),
+      .assign (.var (vid "h")) (.convert float32Ty (.intLit 9007199254740992 .int64)),
+      .ifThenElse (.neqCmp float32Ty (.var (vid "g")) (.var (vid "h")))
+        (.assign (.var (vid "z")) (.add (.var (vid "z")) (.intLit 100))) (.seqn #[])
     ]
 }
 
@@ -2134,10 +2138,10 @@ private def coreFloatToIntRefusalFunction : GoCore.Func := {
   args := #[],
   results := #[coreParam "z"],
   body := .block
-    #[{ id := "big", typ := floatTy }]
+    #[{ id := vid "big", typ := floatTy }]
     #[
-      .assign (.var "big") (f64Lit 1000000000000000000000),  -- 1e21
-      .assign (.var "z") (.convert (.int .int64) (.var "big"))
+      .assign (.var (vid "big")) (f64Lit 1000000000000000000000),  -- 1e21
+      .assign (.var (vid "z")) (.convert (.int .int64) (.var (vid "big")))
     ]
 }
 
@@ -2149,16 +2153,16 @@ private def coreFloatNaNMapFunction : GoCore.Func := {
   results := #[coreParam "z"],
   body := .block
     #[
-      { id := "m", typ := .map floatTy .int },
-      { id := "zero", typ := floatTy }, { id := "nan", typ := floatTy }
+      { id := vid "m", typ := .map floatTy .int },
+      { id := vid "zero", typ := floatTy }, { id := vid "nan", typ := floatTy }
     ]
     #[
-      .makeMap (.var "m") floatTy .int none,
-      .assign (.var "zero") (f64Lit 0),
-      .assign (.var "nan") (.div (.var "zero") (.var "zero")),
-      .mapAssign (.var "m") (.var "nan") (.intLit 1) floatTy .int,
-      .mapAssign (.var "m") (.var "nan") (.intLit 2) floatTy .int,
-      .assign (.var "z") (.length (.var "m") none)
+      .makeMap (.var (vid "m")) floatTy .int none,
+      .assign (.var (vid "zero")) (f64Lit 0),
+      .assign (.var (vid "nan")) (.div (.var (vid "zero")) (.var (vid "zero"))),
+      .mapAssign (.var (vid "m")) (.var (vid "nan")) (.intLit 1) floatTy .int,
+      .mapAssign (.var (vid "m")) (.var (vid "nan")) (.intLit 2) floatTy .int,
+      .assign (.var (vid "z")) (.length (.var (vid "m")) none)
     ]
 }
 
@@ -2216,7 +2220,7 @@ private def labelCells : GoCore.Store :=
     .value .bool (.bool false),
     .value (.sync .rwmutex) (.syncData (.rwmutex false 1 0)), .value (.sync .rwmutex) (.syncData (.rwmutex true 0 0))]
   cellsOf.foldl (fun s c => (s.allocCell c).2) ({} : GoCore.Store)
-private def labelEnvB : GoCore.LocalEnv := GoCore.LocalEnv.declare [] "b" (labelLoc 13)
+private def labelEnvB : GoCore.LocalEnv := GoCore.LocalEnv.declare [] (vid "b") (labelLoc 13)
 /-- The label of an apply / wake result (`none` on a refusal, so a refusing arm fails the fact). -/
 private def labelOf (r : Except Stop (GoCore.Machine.Config × GoCore.Store × GoCore.AccessTrace)) :
     Option GoCore.AccessTrace :=
@@ -2237,9 +2241,9 @@ private def spawnTypes : GoCore.TypeEnv :=
   GoCore.TypeEnv.reserved ++ #[(⟨"main.Q"⟩, .struct #[{ name := "v", typ := .int }])]
 private def spawnCtx : GoCore.ProgramCtx := GoCore.ProgramCtx.ofTables (types := spawnTypes)
   (functions := #[{ id := ⟨"main.f"⟩, args := #[], results := #[], body := .seqn #[] },
-                  { id := ⟨"main.I.M"⟩, args := #[{ id := "recv", typ := .interface ⟨"main.I"⟩ }],
+                  { id := ⟨"main.I.M"⟩, args := #[{ id := vid "recv", typ := .interface ⟨"main.I"⟩ }],
                     results := #[], body := .seqn #[] },
-                  { id := ⟨"main.Q.M"⟩, args := #[{ id := "q", typ := .defined 2 }], results := #[],
+                  { id := ⟨"main.Q.M"⟩, args := #[{ id := vid "q", typ := .defined 2 }], results := #[],
                     body := .seqn #[] }])
   (methods := #[{ id := ⟨"M", ""⟩, funcId := ⟨"main.I.M"⟩, recv := .interface ⟨"main.I"⟩ },
                 { id := ⟨"M", ""⟩, funcId := ⟨"main.Q.M"⟩, recv := .defined 2 }])
@@ -2271,20 +2275,20 @@ private def dedupAlphaFacts : IO Bool := do
   -- graph — ONE width-2 `unseqNext` pick, two members {1, 2}. The seeded pool
   -- is the CLI's own (`CLI.dedupSeed`).
   let w1mut : GoCore.Func := {
-    id := ⟨"w1mut"⟩, args := #[⟨"pa", .pointer .int⟩], results := #[⟨"r", .int⟩],
-    body := .seqn #[.assign (.addr (.var "pa")) (.intLit 2), .assign (.var "r") (.intLit 0)] }
+    id := ⟨"w1mut"⟩, args := #[⟨vid "pa", .pointer .int⟩], results := #[⟨vid "r", .int⟩],
+    body := .seqn #[.assign (.addr (.var (vid "pa"))) (.intLit 2), .assign (.var (vid "r")) (.intLit 0)] }
   let w1graph : GoCore.UnseqGraph := {
-    cells := [⟨"$m", .int⟩, ⟨"$a", .int⟩, ⟨"$op", .int⟩],
-    occs := [⟨"E_mut", .invoke ["$m"] (.var "mutv") [], [], none⟩,
-             ⟨"R_a", .eval "$a" (.var "a"), [], none⟩,
-             ⟨"Op", .eval "$op" (.add (.var "$m") (.var "$a")), [], none⟩,
-             ⟨"T_z", .target "$t" (.var "z"), [], none⟩],
-    stores := [("$t", "$op")] }
+    cells := [⟨vid "$m", .int⟩, ⟨vid "$a", .int⟩, ⟨vid "$op", .int⟩],
+    occs := [⟨"E_mut", .invoke [vid "$m"] (.var (vid "mutv")) [], [], none⟩,
+             ⟨"R_a", .eval (vid "$a") (.var (vid "a")), [], none⟩,
+             ⟨"Op", .eval (vid "$op") (.add (.var (vid "$m")) (.var (vid "$a"))), [], none⟩,
+             ⟨"T_z", .target (vid "$t") (.var (vid "z")), [], none⟩],
+    stores := [(vid "$t", vid "$op")] }
   let w1prog : GoCore.Program := { funcs := #[
-    { id := ⟨"main"⟩, args := #[], results := #[⟨"z", .int⟩],
-      body := .block #[⟨"a", .int⟩, ⟨"mutv", .funcType [.pointer .int] [.int] false⟩]
-        #[.assign (.var "a") (.intLit 1),
-          .assign (.var "mutv") (.funcVal ⟨"w1mut"⟩ #[.ref "a"]),
+    { id := ⟨"main"⟩, args := #[], results := #[⟨vid "z", .int⟩],
+      body := .block #[⟨vid "a", .int⟩, ⟨vid "mutv", .funcType [.pointer .int] [.int] false⟩]
+        #[.assign (.var (vid "a")) (.intLit 1),
+          .assign (.var (vid "mutv")) (.funcVal ⟨"w1mut"⟩ #[.ref (vid "a")]),
           .unseq w1graph (.seqn #[])] },
     w1mut] }
   match CLI.enumSetup w1prog "main" #[] with
@@ -2347,7 +2351,7 @@ private def isRootRefusal {α : Type} : Except Stop α → Bool
 
 /-- A frame exit (`return`) with one caller target and one pinned result cell. -/
 private def strayFrameExit (r : Loc) : GoCore.Machine.Config :=
-  .signal .ret (.frame [(.chain [], [.var "t"])] [[("t", .base ⟨0⟩)]] [r] [] .stop ⟨"stray.subject"⟩)
+  .signal .ret (.frame [(.chain [], [.var (vid "t")])] [[(vid "t", .base ⟨0⟩)]] [r] [] .stop ⟨"stray.subject"⟩)
 
 /-! ### The step-label controls (row-2 label reshape, 2026-09-28)
 
@@ -2427,10 +2431,10 @@ private def strayPanicRefusalFacts : IO Bool := do
   -- S6, the audit F1 witness: `x` bound to element 5 of a zero-length array.
   passed := passed && (← expectTrue "STRAY S6: the F1 witness (variable bound to a non-root out-of-range element) is the named .internal refusal, not a Go panic terminal"
     (isRootRefusal (GoCore.Machine.stepFn emptyCtx strayArrStore
-      (.evalE (.var "x") [[("x", strayBadLoc)]] .stop) [])))
+      (.evalE (.var (vid "x")) [[(vid "x", strayBadLoc)]] .stop) [])))
   passed := passed && (← expectTrue "STRAY S6 positive: an ordinary variable read is unchanged (value 7, one read at the root)"
     (match GoCore.Machine.stepFn emptyCtx strayIntStore
-        (.evalE (.var "x") [[("x", .base ⟨0⟩)]] .stop) [] with
+        (.evalE (.var (vid "x")) [[(vid "x", .base ⟨0⟩)]] .stop) [] with
      | .ok (.retV v .stop, _, [], l) => v == .int 7 .int && l.trace == strayReadLabel && l.picks.isEmpty && l.out.isEmpty
      | _ => false))
   -- S2: the frame-exit result readout (`loadResults`).
@@ -2438,8 +2442,8 @@ private def strayPanicRefusalFacts : IO Bool := do
     (isRootRefusal (GoCore.Machine.stepFn emptyCtx strayArrStore (strayFrameExit strayBadLoc) [])))
   passed := passed && (← expectTrue "STRAY S2 positive: the frame-exit readout of a root result cell is unchanged (values [7], one read at the root)"
     (match GoCore.Machine.stepFn emptyCtx strayIntStore (strayFrameExit (.base ⟨0⟩)) [] with
-     | .ok (.evalE (.var "t") _ (.tgtOpK _ _ _ _ _ _ _ vs _ _ _), _, [], tr) =>
-         vs == [.int 7 .int] && tr.trace == strayReadLabel && tr.picks.isEmpty && tr.out.isEmpty
+     | .ok (.evalE (.var v) _ (.tgtOpK _ _ _ _ _ _ _ vs _ _ _), _, [], tr) =>
+         v == vid "t" && vs == [.int 7 .int] && tr.trace == strayReadLabel && tr.picks.isEmpty && tr.out.isEmpty
      | _ => false))
   -- S1: the targetless frame exit with results (refused either way; the root case keeps its old refusal).
   passed := passed && (← expectTrue "STRAY S1: a targetless frame exit whose result cell is non-root is the named .internal refusal"
@@ -2452,21 +2456,21 @@ private def strayPanicRefusalFacts : IO Bool := do
      | _ => false))
   -- S4/S3/S5: the unseq helpers `stepFn` binds (target atoms, phase-2 binder values, the guard test).
   passed := passed && (← expectTrue "STRAY S4: an unseq target atom bound to a non-root location is the named .internal refusal"
-    (isRootRefusal (GoCore.Machine.unseqAtom emptyCtx [[("x", strayBadLoc)]] strayArrStore (.var "x"))))
+    (isRootRefusal (GoCore.Machine.unseqAtom emptyCtx [[(vid "x", strayBadLoc)]] strayArrStore (.var (vid "x")))))
   passed := passed && (← expectTrue "STRAY S4 positive: a root target atom reads 7 with one read at the root"
-    (match GoCore.Machine.unseqAtom emptyCtx [[("x", .base ⟨0⟩)]] strayIntStore (.var "x") with
+    (match GoCore.Machine.unseqAtom emptyCtx [[(vid "x", .base ⟨0⟩)]] strayIntStore (.var (vid "x")) with
      | .ok (v, tr) => v == .int 7 .int && tr == strayReadLabel
      | _ => false))
   passed := passed && (← expectTrue "STRAY S3: an unseq binder cell at a non-root location is the named .internal refusal at the phase-2 plan"
-    (isRootRefusal (GoCore.Machine.unseqStorePlan emptyCtx strayArrStore [[("v", strayBadLoc)]]
-      [("t", .chain (.int 0 .int) [] [])] [("t", "v")])))
+    (isRootRefusal (GoCore.Machine.unseqStorePlan emptyCtx strayArrStore [[(vid "v", strayBadLoc)]]
+      [(vid "t", .chain (.int 0 .int) [] [])] [(vid "t", vid "v")])))
   passed := passed && (← expectTrue "STRAY S3 positive: a root binder cell's value is planned unchanged"
-    (match GoCore.Machine.unseqStorePlan emptyCtx strayIntStore [[("v", .base ⟨0⟩)]]
-        [("t", .chain (.int 0 .int) [] [])] [("t", "v")] with
+    (match GoCore.Machine.unseqStorePlan emptyCtx strayIntStore [[(vid "v", .base ⟨0⟩)]]
+        [(vid "t", .chain (.int 0 .int) [] [])] [(vid "t", vid "v")] with
      | .ok (_, vals) => vals == [.int 7 .int]
      | _ => false))
   passed := passed && (← expectTrue "STRAY S5: an unseq guard test binder at a non-root location is the named .internal refusal"
-    (isRootRefusal (GoCore.Machine.unseqGuard emptyCtx strayArrStore default [[("b", strayBadLoc)]] [] 0 "b" true "o")))
+    (isRootRefusal (GoCore.Machine.unseqGuard emptyCtx strayArrStore default [[(vid "b", strayBadLoc)]] [] 0 (vid "b") true (vid "o"))))
   return passed
 
 set_option maxRecDepth 4096 in
@@ -2570,13 +2574,13 @@ private def labelShapeFacts : IO Bool := do
     [evAcc .write (wd 8 .waitGroup .sema), evAcc .atomicRead (wd 8 .waitGroup .state)])
   -- Once.
   passed := passed && (← expectLabel "Once fresh Do: [atomicWrite m]"
-    (GoCore.Machine.applySyncOpCore emptyCtx labelCells (.onceBegin [.var "b"]) [.addr (labelLoc 9)] labelEnvB .stop)
+    (GoCore.Machine.applySyncOpCore emptyCtx labelCells (.onceBegin [.var (vid "b")]) [.addr (labelLoc 9)] labelEnvB .stop)
     [evAcc .atomicWrite (wd 9 .once .m)])
   passed := passed && (← expectLabel "Once observe: [atomicRead done, acquire] (F5: recorded before the acquire — pre-existing, recorded)"
-    (GoCore.Machine.applySyncOpCore emptyCtx labelCells (.onceBegin [.var "b"]) [.addr (labelLoc 10)] labelEnvB .stop)
+    (GoCore.Machine.applySyncOpCore emptyCtx labelCells (.onceBegin [.var (vid "b")]) [.addr (labelLoc 10)] labelEnvB .stop)
     [evAcc .atomicRead (wd 10 .once .done), evHb (.syncAcquire (labelLoc 10) false)])
   passed := passed && (← expectLabel "Once park: [atomicWrite m]"
-    (GoCore.Machine.applySyncOpCore emptyCtx labelCells (.onceBegin [.var "b"]) [.addr (labelLoc 12)] labelEnvB .stop)
+    (GoCore.Machine.applySyncOpCore emptyCtx labelCells (.onceBegin [.var (vid "b")]) [.addr (labelLoc 12)] labelEnvB .stop)
     [evAcc .atomicWrite (wd 12 .once .m)])
   passed := passed && (← expectLabel "Once complete: [atomicWrite done, release, atomicWrite m]"
     (GoCore.Machine.applySyncOpCore emptyCtx labelCells .onceComplete [.addr (labelLoc 12)] [] .stop)
@@ -2632,7 +2636,7 @@ private def labelShapeFacts : IO Bool := do
     (GoCore.Machine.resumeThread emptyCtx labelCells (.blockedSync .wgWait (labelLoc 7) [] .stop))
     [evHb (.syncAcquire (labelLoc 7) false)])
   passed := passed && (← expectLabel "wake blocked Once.Do: [acquire]"
-    (GoCore.Machine.resumeThread emptyCtx labelCells (.blockedSync (.onceBegin [.var "b"]) (labelLoc 10) labelEnvB .stop))
+    (GoCore.Machine.resumeThread emptyCtx labelCells (.blockedSync (.onceBegin [.var (vid "b")]) (labelLoc 10) labelEnvB .stop))
     [evHb (.syncAcquire (labelLoc 10) false)])
   -- Pairing tables (the partner's action attributed to it).
   passed := passed && (← expectTrue "LABEL pairing arriving send, cap 0: [rendezvous j]"
@@ -3141,7 +3145,7 @@ def main : IO UInt32 := do
   -- else). These are the pins that make a re-introduction of the
   -- class visible forever.
   passed := passed && (← expectTrue "MS: decode refuses a wire without methodSets (required field)"
-    (match Lean.Json.parse "{\"schema\":\"golean-native-v2\",\"buildContext\":{\"goos\":\"linux\",\"goarch\":\"amd64\",\"compiler\":\"gc\",\"cgoEnabled\":true,\"buildTags\":[]},\"funcs\":[],\"types\":[],\"methods\":[]}" with
+    (match Lean.Json.parse "{\"schema\":\"golean-native-v3\",\"buildContext\":{\"goos\":\"linux\",\"goarch\":\"amd64\",\"compiler\":\"gc\",\"cgoEnabled\":true,\"buildTags\":[]},\"funcs\":[],\"types\":[],\"methods\":[]}" with
      | .error _ => false
      | .ok j => !(GoLean.NativeToIR.decodeProgram j).isOk))
   -- G-P S1 (docs/2026-09-28_gp-method-promotion-design.md §4): the
@@ -3149,12 +3153,12 @@ def main : IO UInt32 := do
   -- NAME (the same discipline as methodSets; the byte-level mutants through
   -- the real CLI are scripts/check-wire-boundary's).
   passed := passed && (← expectTrue "G-P S1: decode REFUSES a wire without promotions, naming the field"
-    (match Lean.Json.parse "{\"schema\":\"golean-native-v2\",\"buildContext\":{\"goos\":\"linux\",\"goarch\":\"amd64\",\"compiler\":\"gc\",\"cgoEnabled\":true,\"buildTags\":[]},\"funcs\":[],\"types\":[],\"methods\":[],\"methodSets\":[]}" with
+    (match Lean.Json.parse "{\"schema\":\"golean-native-v3\",\"buildContext\":{\"goos\":\"linux\",\"goarch\":\"amd64\",\"compiler\":\"gc\",\"cgoEnabled\":true,\"buildTags\":[]},\"funcs\":[],\"types\":[],\"methods\":[],\"methodSets\":[]}" with
      | .error _ => false
      | .ok j => match GoLean.NativeToIR.decodeProgram j with
        | .ok _ => false
        | .error e => (e.splitOn "program.promotions is missing").length > 1))
-  -- G-P S2 (design §4, decision 9): the schema is golean-native-v2 — a v1
+  -- G-P S2 (design §4, decision 9): the schema is golean-native-v3 — a v1
   -- wire (the wrappers era) refuses BY NAME, and a method carrying the retired
   -- `wrapper` key refuses BY NAME (the byte-level controls through the real
   -- CLI are scripts/check-wire-boundary's `prom-wire-v1`/`prom-wrapper-key`).
@@ -3165,7 +3169,7 @@ def main : IO UInt32 := do
        | .ok _ => false
        | .error e => (e.splitOn "golean-native-v1 predates G-P S2").length > 1))
   passed := passed && (← expectTrue "G-P S2: decode REFUSES a method carrying the retired wrapper key, naming it"
-    (match Lean.Json.parse "{\"schema\":\"golean-native-v2\",\"buildContext\":{\"goos\":\"linux\",\"goarch\":\"amd64\",\"compiler\":\"gc\",\"cgoEnabled\":true,\"buildTags\":[]},\"funcs\":[],\"types\":[{\"name\":\"main.T\",\"display\":\"T\",\"pkg\":\"main\",\"def\":{\"kind\":\"struct\",\"fields\":[]}}],\"methods\":[{\"id\":{\"name\":\"M\",\"package\":\"\"},\"recvType\":\"main.T\",\"recv\":{\"id\":\"$recv\",\"type\":{\"kind\":\"named\",\"name\":\"main.T\"}},\"params\":[],\"results\":[],\"variadic\":false,\"wrapper\":true,\"body\":{\"stmt\":\"block\",\"body\":[]}}],\"methodSets\":[{\"type\":\"main.T\",\"coverage\":\"full\"}],\"promotions\":[]}" with
+    (match Lean.Json.parse "{\"schema\":\"golean-native-v3\",\"buildContext\":{\"goos\":\"linux\",\"goarch\":\"amd64\",\"compiler\":\"gc\",\"cgoEnabled\":true,\"buildTags\":[]},\"funcs\":[],\"types\":[{\"name\":\"main.T\",\"display\":\"T\",\"pkg\":\"main\",\"def\":{\"kind\":\"struct\",\"fields\":[]}}],\"methods\":[{\"id\":{\"name\":\"M\",\"package\":\"\"},\"recvType\":\"main.T\",\"recv\":{\"id\":\"$recv\",\"type\":{\"kind\":\"named\",\"name\":\"main.T\"}},\"params\":[],\"results\":[],\"variadic\":false,\"locals\":[],\"wrapper\":true,\"body\":{\"stmt\":\"block\",\"body\":[]}}],\"methodSets\":[{\"type\":\"main.T\",\"coverage\":\"full\"}],\"promotions\":[]}" with
      | .error _ => false
      | .ok j => match GoLean.NativeToIR.decodeProgram j with
        | .ok _ => false
@@ -3176,7 +3180,7 @@ def main : IO UInt32 := do
   -- not known to be gc's); a wire lowered for another target selects a
   -- different program from the same directory. Both refuse BY NAME.
   let bcWire (bc : String) : String :=
-    "{\"schema\":\"golean-native-v2\"," ++ bc ++ "\"funcs\":[],\"types\":[],\"methods\":[],\"methodSets\":[],\"promotions\":[]}"
+    "{\"schema\":\"golean-native-v3\"," ++ bc ++ "\"funcs\":[],\"types\":[],\"methods\":[],\"methodSets\":[],\"promotions\":[]}"
   passed := passed && (← expectTrue "BUG-108: decode REFUSES a wire without buildContext, naming the field"
     (match Lean.Json.parse (bcWire "") with
      | .error _ => false
@@ -3204,7 +3208,7 @@ def main : IO UInt32 := do
   -- frontend now emits). A `clear-slice` of the same shape still decodes,
   -- so the refusal is the node's, not the shape's.
   let sortSliceWire (tag : String) : String :=
-    "{\"schema\":\"golean-native-v2\",\"buildContext\":{\"goos\":\"linux\",\"goarch\":\"amd64\",\"compiler\":\"gc\",\"cgoEnabled\":true,\"buildTags\":[]},\"types\":[],\"methods\":[],\"methodSets\":[],\"promotions\":[],\"globals\":[],\"funcs\":[{\"name\":\"f\",\"params\":[],\"results\":[],\"variadic\":false,\"body\":{\"stmt\":\"block\",\"body\":[{\"stmt\":\"" ++ tag ++ "\",\"base\":{\"expr\":\"nil\"},\"elem\":{\"kind\":\"int\",\"int\":\"int\"}}]}}]}"
+    "{\"schema\":\"golean-native-v3\",\"buildContext\":{\"goos\":\"linux\",\"goarch\":\"amd64\",\"compiler\":\"gc\",\"cgoEnabled\":true,\"buildTags\":[]},\"types\":[],\"methods\":[],\"methodSets\":[],\"promotions\":[],\"globals\":[],\"funcs\":[{\"name\":\"f\",\"params\":[],\"results\":[],\"variadic\":false,\"locals\":[],\"body\":{\"stmt\":\"block\",\"body\":[{\"stmt\":\"" ++ tag ++ "\",\"base\":{\"expr\":\"nil\"},\"elem\":{\"kind\":\"int\",\"int\":\"int\"}}]}}]}"
   passed := passed && (← expectTrue "row M: decode refuses the retired sort-slice statement by name"
     (match Lean.Json.parse (sortSliceWire "sort-slice") with
      | .error _ => false
@@ -3225,7 +3229,7 @@ def main : IO UInt32 := do
   -- refusal — a hand-edited wire that violates the contract must refuse
   -- BY NAME, never decode into a table a fuel walk would have absorbed.
   let c2Wire (types : String) : String :=
-    "{\"schema\":\"golean-native-v2\",\"buildContext\":{\"goos\":\"linux\",\"goarch\":\"amd64\",\"compiler\":\"gc\",\"cgoEnabled\":true,\"buildTags\":[]},\"funcs\":[],\"methods\":[],\"methodSets\":[],\"promotions\":[],\"types\":[" ++ types ++ "]}"
+    "{\"schema\":\"golean-native-v3\",\"buildContext\":{\"goos\":\"linux\",\"goarch\":\"amd64\",\"compiler\":\"gc\",\"cgoEnabled\":true,\"buildTags\":[]},\"funcs\":[],\"methods\":[],\"methodSets\":[],\"promotions\":[],\"types\":[" ++ types ++ "]}"
   -- (Every wire TypeDef carries its `display`/`pkg` record — REQUIRED
   -- since the identity/display split, design note 2026-09-05 §3.1.)
   let c2Struct (name : String) (fieldTy : String) : String :=
@@ -3350,7 +3354,7 @@ def main : IO UInt32 := do
   -- otherwise render as the runtime-error payload); the `Program` default
   -- is the bare prefix, so a declaration-free hand-built program passes.
   let r2Func : GoCore.Func :=
-    { id := ⟨"r2_F"⟩, args := #[], results := #[coreParam "z"], body := .assign (.var "z") (.intLit 3) }
+    { id := ⟨"r2_F"⟩, args := #[], results := #[coreParam "z"], body := .assign (.var (vid "z")) (.intLit 3) }
   let r2Prog : GoCore.Program :=
     { typeDefs := #[(GoCore.emptyStructTypeId, .struct #[]), (⟨"main.T"⟩, .defined (.int .int))],
       funcs := #[r2Func] }
@@ -3369,11 +3373,11 @@ def main : IO UInt32 := do
   passed := passed && (← expectIntResult "C2/R2: the same function runs through runProgramM once the table leads with the prefix (control)"
     (GoCore.Machine.runProgramM 1000 { r2Prog with typeDefs := GoCore.TypeEnv.reserved ++ #[(⟨"main.T"⟩, .defined (.int .int))] } "r2_F" #[]) 3)
   passed := passed && (← expectTrue "MS: decode refuses an unknown coverage token"
-    (match Lean.Json.parse "{\"schema\":\"golean-native-v2\",\"buildContext\":{\"goos\":\"linux\",\"goarch\":\"amd64\",\"compiler\":\"gc\",\"cgoEnabled\":true,\"buildTags\":[]},\"funcs\":[],\"types\":[],\"methods\":[],\"methodSets\":[{\"type\":\"main.T\",\"coverage\":\"partial\"}],\"promotions\":[]}" with
+    (match Lean.Json.parse "{\"schema\":\"golean-native-v3\",\"buildContext\":{\"goos\":\"linux\",\"goarch\":\"amd64\",\"compiler\":\"gc\",\"cgoEnabled\":true,\"buildTags\":[]},\"funcs\":[],\"types\":[],\"methods\":[],\"methodSets\":[{\"type\":\"main.T\",\"coverage\":\"partial\"}],\"promotions\":[]}" with
      | .error _ => false
      | .ok j => !(GoLean.NativeToIR.decodeProgram j).isOk))
   passed := passed && (← expectTrue "MS: decode refuses a duplicate method-set record"
-    (match Lean.Json.parse "{\"schema\":\"golean-native-v2\",\"buildContext\":{\"goos\":\"linux\",\"goarch\":\"amd64\",\"compiler\":\"gc\",\"cgoEnabled\":true,\"buildTags\":[]},\"funcs\":[],\"types\":[],\"methods\":[],\"methodSets\":[{\"type\":\"main.T\",\"coverage\":\"full\"},{\"type\":\"main.T\",\"coverage\":\"full\"}],\"promotions\":[]}" with
+    (match Lean.Json.parse "{\"schema\":\"golean-native-v3\",\"buildContext\":{\"goos\":\"linux\",\"goarch\":\"amd64\",\"compiler\":\"gc\",\"cgoEnabled\":true,\"buildTags\":[]},\"funcs\":[],\"types\":[],\"methods\":[],\"methodSets\":[{\"type\":\"main.T\",\"coverage\":\"full\"},{\"type\":\"main.T\",\"coverage\":\"full\"}],\"promotions\":[]}" with
      | .error _ => false
      | .ok j => !(GoLean.NativeToIR.decodeProgram j).isOk))
   -- TD (design note 2026-09-05 §3.1; audit fix round R6/R7): every
@@ -3382,7 +3386,7 @@ def main : IO UInt32 := do
   -- empty string is a legal `pkg` (unnamed/universe/synthetic types) and
   -- a duplicate TypeId refuses like the globals/funcs/methodSets siblings.
   let typesWire (entries : String) : String :=
-    "{\"schema\":\"golean-native-v2\",\"buildContext\":{\"goos\":\"linux\",\"goarch\":\"amd64\",\"compiler\":\"gc\",\"cgoEnabled\":true,\"buildTags\":[]},\"funcs\":[],\"methods\":[],\"methodSets\":[],\"promotions\":[],\"types\":[" ++ entries ++ "]}"
+    "{\"schema\":\"golean-native-v3\",\"buildContext\":{\"goos\":\"linux\",\"goarch\":\"amd64\",\"compiler\":\"gc\",\"cgoEnabled\":true,\"buildTags\":[]},\"funcs\":[],\"methods\":[],\"methodSets\":[],\"promotions\":[],\"types\":[" ++ entries ++ "]}"
   let tdEntry (name : String) (extra : String) : String :=
     "{\"name\":\"" ++ name ++ "\",\"def\":{\"kind\":\"defined\",\"target\":{\"kind\":\"int\",\"int\":\"int\"}}" ++ extra ++ "}"
   let decodeTypes (entries : String) : Except String Unit :=
@@ -3417,8 +3421,8 @@ def main : IO UInt32 := do
   -- refused "return arity 1 does not match 2 results"). The decoder
   -- must refuse BY NAME; the message pin is the arity text itself.
   let retWire (results : String) : String :=
-    "{\"schema\":\"golean-native-v2\",\"buildContext\":{\"goos\":\"linux\",\"goarch\":\"amd64\",\"compiler\":\"gc\",\"cgoEnabled\":true,\"buildTags\":[]},\"types\":[],\"methods\":[],\"methodSets\":[],\"promotions\":[]," ++
-    "\"funcs\":[{\"name\":\"pair\",\"params\":[],\"variadic\":false," ++
+    "{\"schema\":\"golean-native-v3\",\"buildContext\":{\"goos\":\"linux\",\"goarch\":\"amd64\",\"compiler\":\"gc\",\"cgoEnabled\":true,\"buildTags\":[]},\"types\":[],\"methods\":[],\"methodSets\":[],\"promotions\":[]," ++
+    "\"funcs\":[{\"name\":\"pair\",\"params\":[],\"variadic\":false,\"locals\":[]," ++
     "\"results\":[{\"id\":\"$res0\",\"type\":{\"kind\":\"int\",\"int\":\"int\"}},{\"id\":\"$res1\",\"type\":{\"kind\":\"int\",\"int\":\"int\"}}]," ++
     "\"body\":{\"stmt\":\"block\",\"body\":[{\"stmt\":\"return\",\"results\":[" ++ results ++ "]}]}}]}"
   let intLit (v : String) : String := "{\"expr\":\"int\",\"value\":\"" ++ v ++ "\",\"type\":{\"kind\":\"int\",\"int\":\"int\"}}"
@@ -3441,7 +3445,7 @@ def main : IO UInt32 := do
   -- carries only the TYPE (a global of that type), so the pin is on
   -- the decoder's bound, not on any materialization.
   let arrWire (len : Nat) : String :=
-    "{\"schema\":\"golean-native-v2\",\"buildContext\":{\"goos\":\"linux\",\"goarch\":\"amd64\",\"compiler\":\"gc\",\"cgoEnabled\":true,\"buildTags\":[]},\"funcs\":[],\"types\":[],\"methods\":[],\"methodSets\":[],\"promotions\":[]," ++
+    "{\"schema\":\"golean-native-v3\",\"buildContext\":{\"goos\":\"linux\",\"goarch\":\"amd64\",\"compiler\":\"gc\",\"cgoEnabled\":true,\"buildTags\":[]},\"funcs\":[],\"types\":[],\"methods\":[],\"methodSets\":[],\"promotions\":[]," ++
     "\"globals\":[{\"name\":\"main.big\",\"type\":{\"kind\":\"array\",\"len\":" ++ toString len ++ ",\"elem\":{\"kind\":\"int\",\"int\":\"uint8\"}}}]}"
   passed := passed && (← expectTrue "BUG-078: decode admits an array type AT the materialization budget"
     (decodeMsg (arrWire GoLean.NativeToIR.arrayLenBudget)).isOk)
@@ -3453,7 +3457,7 @@ def main : IO UInt32 := do
   -- guard's presence key) but NO method-set record — satisfaction must
   -- refuse `unsupported`, proving the guard keys on the RECORD.
   let msWire (records : String) : String :=
-    "{\"schema\":\"golean-native-v2\",\"buildContext\":{\"goos\":\"linux\",\"goarch\":\"amd64\",\"compiler\":\"gc\",\"cgoEnabled\":true,\"buildTags\":[]},\"funcs\":[],\"methods\":[]," ++
+    "{\"schema\":\"golean-native-v3\",\"buildContext\":{\"goos\":\"linux\",\"goarch\":\"amd64\",\"compiler\":\"gc\",\"cgoEnabled\":true,\"buildTags\":[]},\"funcs\":[],\"methods\":[]," ++
     "\"types\":[{\"name\":\"main.T\",\"display\":\"main.T\",\"pkg\":\"main\",\"def\":{\"kind\":\"defined\",\"target\":{\"kind\":\"int\",\"int\":\"int\"}}}," ++
     "{\"name\":\"main.locker\",\"display\":\"main.locker\",\"pkg\":\"main\",\"def\":{\"kind\":\"interface\",\"methods\":[{\"id\":{\"name\":\"Lock\",\"package\":\"\"},\"params\":[],\"results\":[],\"variadic\":false}]}}]," ++
     "\"methodSets\":[" ++ records ++ "],\"promotions\":[]}"
@@ -3489,7 +3493,7 @@ def main : IO UInt32 := do
     #[(⟨"main.locker"⟩, .interfaceDef #[{ id := ⟨"Lock", ""⟩, params := #[], results := #[] }])]
   let syncStubFunc : GoCore.Func :=
     { id := ⟨"sync.Mutex.Lock"⟩,
-      args := #[{ id := "$recv", typ := .pointer (.sync .mutex) }],
+      args := #[{ id := vid "$recv", typ := .pointer (.sync .mutex) }],
       results := #[],
       body := .unsupported "test stub" }
   let syncNoRecord : GoCore.ProgramCtx := GoCore.ProgramCtx.ofTables
@@ -3527,7 +3531,7 @@ def main : IO UInt32 := do
       (⟨"main.T"⟩, .defined (.int .int))]
   let speakIfaceFunc : GoCore.Func :=
     { id := ⟨"main.speaker.Speak"⟩,
-      args := #[{ id := "$recv", typ := .interface ⟨"main.speaker"⟩ }],
+      args := #[{ id := vid "$recv", typ := .interface ⟨"main.speaker"⟩ }],
       results := #[],
       body := .unsupported "test iface requirement stub" }
   let dispBox : GoValue := .interface (.defined 3) (.int 7 .int)

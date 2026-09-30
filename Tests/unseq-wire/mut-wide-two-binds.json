@@ -41,6 +41,7 @@
           "name": "any"
          }
         },
+        "local": 0,
         "type": {
          "kind": "interface",
          "name": "any"
@@ -53,6 +54,7 @@
       "decls": [
        {
         "id": "v",
+        "local": 1,
         "type": {
          "int": "int",
          "kind": "int"
@@ -65,6 +67,7 @@
       "decls": [
        {
         "id": "ok",
+        "local": 2,
         "type": {
          "kind": "bool"
         }
@@ -98,6 +101,7 @@
         "wide": {
          "operand": {
           "expr": "ident",
+          "local": 0,
           "name": "iv"
          },
          "stmt": "type-assert",
@@ -112,6 +116,7 @@
         "kind": "target",
         "lhs": {
          "id": "v",
+         "local": 1,
          "target": "var"
         },
         "name": "target1"
@@ -121,6 +126,7 @@
         "kind": "target",
         "lhs": {
          "id": "ok",
+         "local": 2,
          "target": "var"
         },
         "name": "target2"
@@ -145,6 +151,7 @@
      {
       "cond": {
        "expr": "ident",
+       "local": 2,
        "name": "ok",
        "type": {
         "kind": "bool"
@@ -157,6 +164,7 @@
          "results": [
           {
            "expr": "ident",
+           "local": 1,
            "name": "v",
            "type": {
             "int": "int",
@@ -186,6 +194,23 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "local",
+     "name": "iv",
+     "pos": "main.go:8:6"
+    },
+    {
+     "kind": "local",
+     "name": "v",
+     "pos": "main.go:9:6"
+    },
+    {
+     "kind": "local",
+     "name": "ok",
+     "pos": "main.go:10:6"
+    }
+   ],
    "name": "e5bassert",
    "params": [],
    "results": [
@@ -204,6 +229,6 @@
  "methods": [],
  "package": "main",
  "promotions": [],
- "schema": "golean-native-v2",
+ "schema": "golean-native-v3",
  "types": []
 }

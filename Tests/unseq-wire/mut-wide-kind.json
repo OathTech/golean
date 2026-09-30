@@ -27,6 +27,7 @@
           "expr": "deref",
           "ptr": {
            "expr": "ident",
+           "local": 0,
            "name": "s$cap"
           },
           "type": {
@@ -78,10 +79,19 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "capture",
+     "name": "s",
+     "pos": "main.go:10:2",
+     "wire": "s$cap"
+    }
+   ],
    "name": "e5append$lit0",
    "params": [
     {
      "id": "s$cap",
+     "local": 0,
      "type": {
       "elem": {
        "elem": {
@@ -147,6 +157,7 @@
       "lhs": [
        {
         "id": "s",
+        "local": 0,
         "target": "declare",
         "type": {
          "elem": {
@@ -179,6 +190,7 @@
         "expr": {
          "base": {
           "expr": "ident",
+          "local": 0,
           "name": "s",
           "type": {
            "elem": {
@@ -220,6 +232,7 @@
         "expr": {
          "base": {
           "expr": "ident",
+          "local": 0,
           "name": "s",
           "type": {
            "elem": {
@@ -259,6 +272,7 @@
       "lhs": [
        {
         "id": "m",
+        "local": 1,
         "target": "declare",
         "type": {
          "kind": "func",
@@ -278,7 +292,8 @@
         "captured": [
          {
           "expr": "ref",
-          "id": "s"
+          "id": "s",
+          "local": 0
          }
         ],
         "expr": "func-value",
@@ -357,6 +372,7 @@
         "bind": "$u0",
         "head": {
          "expr": "ident",
+         "local": 0,
          "name": "s",
          "type": {
           "elem": {
@@ -441,6 +457,7 @@
         ],
         "callee": {
          "expr": "ident",
+         "local": 1,
          "name": "m"
         },
         "kind": "invoke",
@@ -532,6 +549,18 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "local",
+     "name": "s",
+     "pos": "main.go:10:2"
+    },
+    {
+     "kind": "local",
+     "name": "m",
+     "pos": "main.go:13:2"
+    }
+   ],
    "name": "e5append",
    "params": [],
    "results": [
@@ -550,6 +579,6 @@
  "methods": [],
  "package": "main",
  "promotions": [],
- "schema": "golean-native-v2",
+ "schema": "golean-native-v3",
  "types": []
 }

@@ -15,7 +15,7 @@ theorem native_admission : BooleanAdmission fixture "Negate" #[.bool true] :=
 theorem bool_argument_typed : InitialValueHasType (.bool true) .bool := .boolean true
 
 def simple (body : Stmt) : Program := {
-  funcs := #[{ id := ⟨"F"⟩, args := #[], results := #[⟨"result", .bool⟩], body }]
+  funcs := #[{ id := ⟨"F"⟩, args := #[], results := #[⟨vid "result", .bool⟩], body }]
 }
 def withType (body : TypeDef) : Program := {
   fixture with typeDefs := TypeEnv.reserved ++ #[(⟨"test.T"⟩, body)]
@@ -50,7 +50,7 @@ theorem duplicate_function_rejected :
       .error .duplicateFunctionKey := by with_unfolding_all rfl
 theorem dangling_body_type_rejected :
     checkIndices (simple (.ifThenElse (.boolLit true) .returnStmt
-      (.assign (.var "result") (.convert (.pointer (.defined 2)) (.nil none))))) =
+      (.assign (.var (vid "result")) (.convert (.pointer (.defined 2)) (.nil none))))) =
       .error .typeIndexBounds := by with_unfolding_all rfl
 theorem dangling_select_type_rejected :
     checkIndices (simple (.selectStmt #[
@@ -72,7 +72,7 @@ theorem wrong_initial_value_rejected :
 theorem pointer_argument_rejected :
     checkBoolean fixture "Negate" #[.addr (.base ⟨0⟩)] = .error .initialArgumentTypes := by with_unfolding_all rfl
 theorem wrong_parameter_type_rejected :
-    checkEntry { funcs := #[{id := ⟨"F"⟩, args := #[⟨"b", .int .int⟩], results := #[], body := .returnStmt}] }
+    checkEntry { funcs := #[{id := ⟨"F"⟩, args := #[⟨vid "b", .int .int⟩], results := #[], body := .returnStmt}] }
       "F" #[.bool true] = .error .entryParameterTypes := by with_unfolding_all rfl
 theorem initializer_rejected :
     checkBoolean { fixture with funcs := (fixture.funcs.push
@@ -98,7 +98,7 @@ theorem unchecked_metadata_accepted :
       methodSets := #[{key := "no such carrier", coverage := .exported}]
       typeDisplays := #[] } "Constant" #[] = .ok () := by with_unfolding_all rfl
 
-def unbound : Program := simple (.assign (.var "result") (.var "missing"))
+def unbound : Program := simple (.assign (.var (vid "result")) (.var (vid "missing")))
 theorem unbound_accepted : checkBoolean unbound "F" #[] = .ok () := by with_unfolding_all rfl
 
 set_option maxRecDepth 4096 in
@@ -106,7 +106,7 @@ set_option maxRecDepth 4096 in
 actually refuses in the current executable driver. -/
 theorem unbound_refuses :
     runProgramM 20 unbound "F" #[] [] =
-      .error (.stuck "unbound GoCore variable address: missing") := by
+      .error (.stuck s!"unbound GoCore variable address: {vid "missing"}") := by
   with_unfolding_all rfl
 
 end GoLean.GoCore.Admission.Tests

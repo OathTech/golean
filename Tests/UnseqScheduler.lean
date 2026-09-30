@@ -19,34 +19,39 @@ open GoLean GoCore GoCore.Machine
 
 /-! ## Builders -/
 
-def intP (id : String) : Param := ⟨id, .int⟩
-def boolP (id : String) : Param := ⟨id, .bool⟩
-def sliceP (id : String) : Param := ⟨id, .slice .int⟩
+/-- B6 (2026-09-30): hand-built graphs name their binders by SPELLING; `vid`
+interns a spelling injectively into a `VarId` (its UTF-8 bytes as a base-256
+numeral). Occurrence names (`occ "A"`, `after`, `region`) stay strings. -/
+def vid (s : String) : VarId := s.toUTF8.foldl (fun n b => n * 256 + b.toNat) 0
+
+def intP (id : String) : Param := ⟨vid id, .int⟩
+def boolP (id : String) : Param := ⟨vid id, .bool⟩
+def sliceP (id : String) : Param := ⟨vid id, .slice .int⟩
 def fnTy (params : List Ty) (results : List Ty) : Ty := .funcType params results false
 def pInt : Ty := .pointer .int
 def pSlice : Ty := .pointer (.slice .int)
 
 /-- `*p` for a captured pointer parameter. -/
-def derefI (p : String) : Expr := .deref (.var p) .int
-def derefS (p : String) : Expr := .deref (.var p) (.slice .int)
+def derefI (p : String) : Expr := .deref (.var (vid p)) .int
+def derefS (p : String) : Expr := .deref (.var (vid p)) (.slice .int)
 /-- `*p = e` -/
-def storeP (p : String) (e : Expr) : Stmt := .assign (.addr (.var p)) e
+def storeP (p : String) (e : Expr) : Stmt := .assign (.addr (.var (vid p))) e
 /-- `(*ps)[i] = e` -/
 def storeElem (ps : String) (i : Expr) (e : Expr) : Stmt :=
   .assign (.addr (.indexAddr (derefS ps) i)) e
-def ret (r : String) (e : Expr) : Stmt := .assign (.var r) e
+def ret (r : String) (e : Expr) : Stmt := .assign (.var (vid r)) e
 def println (args : List Expr) : Stmt := .print true args.toArray
 def str (s : String) : Expr := .stringLit (GoString.fromLeanString s)
 
 /-- A closure value: the lifted function plus the ADDRESSES it captures. -/
 def clos (fid : String) (captures : List String) : Expr :=
-  .funcVal ⟨fid⟩ (captures.map Expr.ref).toArray
+  .funcVal ⟨fid⟩ (captures.map (fun c => Expr.ref (vid c))).toArray
 
 /-- `make([]int, n)` then element stores. -/
 def makeSlice (id : String) (elems : List Int) : List Stmt :=
-  [.makeSlice (.var id) .int (.intLit elems.length) none] ++
+  [.makeSlice (.var (vid id)) .int (.intLit elems.length) none] ++
   (elems.zipIdx.map fun (v, i) =>
-    .assign (.addr (.indexAddr (.var id) (.intLit i))) (.intLit v))
+    .assign (.addr (.indexAddr (.var (vid id)) (.intLit i))) (.intLit v))
 
 def occ (name : String) (body : UnseqBody) (after : List String := [])
     (region : Option String := none) : UnseqOcc := ⟨name, body, after, region⟩
@@ -60,106 +65,106 @@ def mainUnit (decls : List Param) (body : List Stmt) : Func :=
 /-! ## W1  `v := mut() + a`  → {1, 2} -/
 
 def w1mut : Func := {
-  id := ⟨"w1mut"⟩, args := #[⟨"pa", pInt⟩], results := #[intP "r"],
+  id := ⟨"w1mut"⟩, args := #[⟨vid "pa", pInt⟩], results := #[intP "r"],
   body := .seqn #[storeP "pa" (.intLit 2), ret "r" (.intLit 0)] }
 def w1graph : UnseqGraph := {
   cells := [intP "$m", intP "$a", intP "$op"],
-  occs := [occ "E_mut" (.invoke ["$m"] (.var "mutv") []),
-           occ "R_a" (.eval "$a" (.var "a")),
-           occ "Op" (.eval "$op" (.add (.var "$m") (.var "$a"))),
-           occ "T_z" (.target "$t" (.var "z"))],
-  stores := [("$t", "$op")] }
+  occs := [occ "E_mut" (.invoke [vid "$m"] (.var (vid "mutv")) []),
+           occ "R_a" (.eval (vid "$a") (.var (vid "a"))),
+           occ "Op" (.eval (vid "$op") (.add (.var (vid "$m")) (.var (vid "$a")))),
+           occ "T_z" (.target (vid "$t") (.var (vid "z")))],
+  stores := [(vid "$t", vid "$op")] }
 def w1 : Program := { funcs := #[
-  mainInt [intP "a", ⟨"mutv", fnTy [pInt] [.int]⟩]
-    [.assign (.var "a") (.intLit 1), .assign (.var "mutv") (clos "w1mut" ["a"]),
+  mainInt [intP "a", ⟨vid "mutv", fnTy [pInt] [.int]⟩]
+    [.assign (.var (vid "a")) (.intLit 1), .assign (.var (vid "mutv")) (clos "w1mut" ["a"]),
      .unseq w1graph (.seqn #[])],
   w1mut] }
 
 /-! ## W2  `v := a[b[0]] + mut()`  → {10, 30, 40} -/
 
 def w2mut : Func := {
-  id := ⟨"w2mut"⟩, args := #[⟨"pa", pSlice⟩, ⟨"pb", pSlice⟩], results := #[intP "r"],
+  id := ⟨"w2mut"⟩, args := #[⟨vid "pa", pSlice⟩, ⟨vid "pb", pSlice⟩], results := #[intP "r"],
   body := .seqn #[storeElem "pa" (.intLit 0) (.intLit 30), storeElem "pa" (.intLit 1) (.intLit 40),
                   storeElem "pb" (.intLit 0) (.intLit 1), ret "r" (.intLit 0)] }
 def w2graph : UnseqGraph := {
   cells := [intP "$b0", intP "$ai", intP "$m", intP "$op"],
-  occs := [occ "R_b0" (.eval "$b0" (.indexGet (.var "b") (.intLit 0))),
-           occ "R_ai" (.eval "$ai" (.indexGet (.var "a") (.var "$b0"))),
-           occ "E_mut" (.invoke ["$m"] (.var "mutv") []),
-           occ "Op" (.eval "$op" (.add (.var "$ai") (.var "$m"))),
-           occ "T_z" (.target "$t" (.var "z"))],
-  stores := [("$t", "$op")] }
+  occs := [occ "R_b0" (.eval (vid "$b0") (.indexGet (.var (vid "b")) (.intLit 0))),
+           occ "R_ai" (.eval (vid "$ai") (.indexGet (.var (vid "a")) (.var (vid "$b0")))),
+           occ "E_mut" (.invoke [vid "$m"] (.var (vid "mutv")) []),
+           occ "Op" (.eval (vid "$op") (.add (.var (vid "$ai")) (.var (vid "$m")))),
+           occ "T_z" (.target (vid "$t") (.var (vid "z")))],
+  stores := [(vid "$t", vid "$op")] }
 def w2 : Program := { funcs := #[
-  mainInt [sliceP "a", sliceP "b", ⟨"mutv", fnTy [pSlice, pSlice] [.int]⟩]
+  mainInt [sliceP "a", sliceP "b", ⟨vid "mutv", fnTy [pSlice, pSlice] [.int]⟩]
     (makeSlice "a" [10, 20] ++ makeSlice "b" [0] ++
-     [.assign (.var "mutv") (clos "w2mut" ["a", "b"]), .unseq w2graph (.seqn #[])]),
+     [.assign (.var (vid "mutv")) (clos "w2mut" ["a", "b"]), .unseq w2graph (.seqn #[])]),
   w2mut] }
 
 /-! ## W3  `a[i] += mut()`  (mut: i = 1, returns 1) → {[11 20], [10 21]}; [10 11] forbidden -/
 
 def w3mut : Func := {
-  id := ⟨"w3mut"⟩, args := #[⟨"pi", pInt⟩], results := #[intP "r"],
+  id := ⟨"w3mut"⟩, args := #[⟨vid "pi", pInt⟩], results := #[intP "r"],
   body := .seqn #[storeP "pi" (.intLit 1), ret "r" (.intLit 1)] }
 def w3graph : UnseqGraph := {
   cells := [sliceP "$hdr", intP "$i", intP "$rd", intP "$m", intP "$op"],
-  occs := [occ "R_a" (.eval "$hdr" (.var "a")),
-           occ "R_i" (.eval "$i" (.var "i")),
-           occ "L" (.target "$t" (.addr (.indexAddr (.var "$hdr") (.var "$i")))),
-           occ "Rd" (.load "$rd" "$t"),
-           occ "E_mut" (.invoke ["$m"] (.var "mutv") []),
-           occ "Op" (.eval "$op" (.add (.var "$rd") (.var "$m")))],
-  stores := [("$t", "$op")] }
+  occs := [occ "R_a" (.eval (vid "$hdr") (.var (vid "a"))),
+           occ "R_i" (.eval (vid "$i") (.var (vid "i"))),
+           occ "L" (.target (vid "$t") (.addr (.indexAddr (.var (vid "$hdr")) (.var (vid "$i"))))),
+           occ "Rd" (.load (vid "$rd") (vid "$t")),
+           occ "E_mut" (.invoke [vid "$m"] (.var (vid "mutv")) []),
+           occ "Op" (.eval (vid "$op") (.add (.var (vid "$rd")) (.var (vid "$m"))))],
+  stores := [(vid "$t", vid "$op")] }
 def w3 : Program := { funcs := #[
-  mainUnit [sliceP "a", intP "i", ⟨"mutv", fnTy [pInt] [.int]⟩]
+  mainUnit [sliceP "a", intP "i", ⟨vid "mutv", fnTy [pInt] [.int]⟩]
     (makeSlice "a" [10, 20] ++
-     [.assign (.var "i") (.intLit 0), .assign (.var "mutv") (clos "w3mut" ["i"]),
-      .unseq w3graph (println [str "w3", .indexGet (.var "a") (.intLit 0), .indexGet (.var "a") (.intLit 1)])]),
+     [.assign (.var (vid "i")) (.intLit 0), .assign (.var (vid "mutv")) (clos "w3mut" ["i"]),
+      .unseq w3graph (println [str "w3", .indexGet (.var (vid "a")) (.intLit 0), .indexGet (.var (vid "a")) (.intLit 1)])]),
   w3mut] }
 
 /-! ## W4  `_ = a[1] + b[2]`, both nil → two panics -/
 
 def w4graph : UnseqGraph := {
   cells := [intP "$x", intP "$y", intP "$op"],
-  occs := [occ "R_a1" (.eval "$x" (.indexGet (.var "a") (.intLit 1))),
-           occ "R_b2" (.eval "$y" (.indexGet (.var "b") (.intLit 2))),
-           occ "Op" (.eval "$op" (.add (.var "$x") (.var "$y")))] }
+  occs := [occ "R_a1" (.eval (vid "$x") (.indexGet (.var (vid "a")) (.intLit 1))),
+           occ "R_b2" (.eval (vid "$y") (.indexGet (.var (vid "b")) (.intLit 2))),
+           occ "Op" (.eval (vid "$op") (.add (.var (vid "$x")) (.var (vid "$y"))))] }
 def w4 : Program := { funcs := #[mainUnit [sliceP "a", sliceP "b"] [.unseq w4graph (.seqn #[])]] }
 
 /-! ## W5  loop ×2: `println(a[0] + mut())`, mut: a = nil → {panic; "7" then panic} -/
 
 def w5mut : Func := {
-  id := ⟨"w5mut"⟩, args := #[⟨"pa", pSlice⟩], results := #[intP "r"],
+  id := ⟨"w5mut"⟩, args := #[⟨vid "pa", pSlice⟩], results := #[intP "r"],
   body := .seqn #[storeP "pa" (.nil (some (.slice .int))), ret "r" (.intLit 0)] }
 def w5graph : UnseqGraph := {
   cells := [intP "$x", intP "$m", intP "$op"],
-  occs := [occ "R_a0" (.eval "$x" (.indexGet (.var "a") (.intLit 0))),
-           occ "E_mut" (.invoke ["$m"] (.var "mutv") []),
-           occ "Op" (.eval "$op" (.add (.var "$x") (.var "$m")))] }
+  occs := [occ "R_a0" (.eval (vid "$x") (.indexGet (.var (vid "a")) (.intLit 0))),
+           occ "E_mut" (.invoke [vid "$m"] (.var (vid "mutv")) []),
+           occ "Op" (.eval (vid "$op") (.add (.var (vid "$x")) (.var (vid "$m"))))] }
 def w5 : Program := { funcs := #[
-  mainUnit [sliceP "a", intP "n", ⟨"mutv", fnTy [pSlice] [.int]⟩]
+  mainUnit [sliceP "a", intP "n", ⟨vid "mutv", fnTy [pSlice] [.int]⟩]
     (makeSlice "a" [7] ++
-     [.assign (.var "mutv") (clos "w5mut" ["a"]), .assign (.var "n") (.intLit 0),
-      .while (.lessCmp (.var "n") (.intLit 2))
-        (.seqn #[.unseq w5graph (println [.var "$op"]),
-                 .assign (.var "n") (.add (.var "n") (.intLit 1))])]),
+     [.assign (.var (vid "mutv")) (clos "w5mut" ["a"]), .assign (.var (vid "n")) (.intLit 0),
+      .while (.lessCmp (.var (vid "n")) (.intLit 2))
+        (.seqn #[.unseq w5graph (println [.var (vid "$op")]),
+                 .assign (.var (vid "n")) (.add (.var (vid "n")) (.intLit 1))])]),
   w5mut] }
 
 /-! ## W6  `v := x + inc() + inc()` → {0, 1, 2} -/
 
 def w6inc : Func := {
-  id := ⟨"w6inc"⟩, args := #[⟨"px", pInt⟩], results := #[intP "r"],
+  id := ⟨"w6inc"⟩, args := #[⟨vid "px", pInt⟩], results := #[intP "r"],
   body := .seqn #[storeP "px" (.add (derefI "px") (.intLit 1)), ret "r" (.intLit 0)] }
 def w6graph : UnseqGraph := {
   cells := [intP "$x", intP "$i1", intP "$i2", intP "$op"],
-  occs := [occ "R_x" (.eval "$x" (.var "x")),
-           occ "E1" (.invoke ["$i1"] (.var "incv") []),
-           occ "E2" (.invoke ["$i2"] (.var "incv") []) ["E1"],
-           occ "Op" (.eval "$op" (.add (.add (.var "$x") (.var "$i1")) (.var "$i2"))),
-           occ "T_z" (.target "$t" (.var "z"))],
-  stores := [("$t", "$op")] }
+  occs := [occ "R_x" (.eval (vid "$x") (.var (vid "x"))),
+           occ "E1" (.invoke [vid "$i1"] (.var (vid "incv")) []),
+           occ "E2" (.invoke [vid "$i2"] (.var (vid "incv")) []) ["E1"],
+           occ "Op" (.eval (vid "$op") (.add (.add (.var (vid "$x")) (.var (vid "$i1"))) (.var (vid "$i2")))),
+           occ "T_z" (.target (vid "$t") (.var (vid "z")))],
+  stores := [(vid "$t", vid "$op")] }
 def w6 : Program := { funcs := #[
-  mainInt [intP "x", ⟨"incv", fnTy [pInt] [.int]⟩]
-    [.assign (.var "x") (.intLit 0), .assign (.var "incv") (clos "w6inc" ["x"]),
+  mainInt [intP "x", ⟨vid "incv", fnTy [pInt] [.int]⟩]
+    [.assign (.var (vid "x")) (.intLit 0), .assign (.var (vid "incv")) (clos "w6inc" ["x"]),
      .unseq w6graph (.seqn #[])],
   w6inc] }
 
@@ -167,41 +172,41 @@ def w6 : Program := { funcs := #[
 
 def x1graph : UnseqGraph := {
   cells := [sliceP "$xs", intP "$y9", intP "$z7", intP "$two"],
-  occs := [occ "R_xs" (.eval "$xs" (.var "xs")),
-           occ "R_ys9" (.eval "$y9" (.indexGet (.var "ys") (.intLit 9))),
-           occ "L1" (.target "$t1" (.addr (.indexAddr (.var "$xs") (.var "$y9")))),
-           occ "R_zs7" (.eval "$z7" (.indexGet (.var "zs") (.intLit 7))),
-           occ "K2" (.eval "$two" (.intLit 2)),
-           occ "T_b" (.target "$tb" (.var "b"))],
-  stores := [("$t1", "$z7"), ("$tb", "$two")] }
+  occs := [occ "R_xs" (.eval (vid "$xs") (.var (vid "xs"))),
+           occ "R_ys9" (.eval (vid "$y9") (.indexGet (.var (vid "ys")) (.intLit 9))),
+           occ "L1" (.target (vid "$t1") (.addr (.indexAddr (.var (vid "$xs")) (.var (vid "$y9"))))),
+           occ "R_zs7" (.eval (vid "$z7") (.indexGet (.var (vid "zs")) (.intLit 7))),
+           occ "K2" (.eval (vid "$two") (.intLit 2)),
+           occ "T_b" (.target (vid "$tb") (.var (vid "b")))],
+  stores := [(vid "$t1", vid "$z7"), (vid "$tb", vid "$two")] }
 def x1 : Program := { funcs := #[
   mainUnit [sliceP "xs", sliceP "ys", sliceP "zs", intP "b"]
     (makeSlice "xs" [0, 0, 0] ++ makeSlice "ys" [0, 0, 0] ++ makeSlice "zs" [0, 0, 0] ++
-     [.unseq x1graph (println [str "x1 ok", .var "b"])])] }
+     [.unseq x1graph (println [str "x1 ok", .var (vid "b")])])] }
 
 /-! ## X2  `v := b2i(z || h()) + x` — the event consumes the JOIN -/
 
 def x2h : Func := {
-  id := ⟨"x2h"⟩, args := #[⟨"px", pInt⟩], results := #[boolP "r"],
+  id := ⟨"x2h"⟩, args := #[⟨vid "px", pInt⟩], results := #[boolP "r"],
   body := .seqn #[storeP "px" (.intLit 2), ret "r" (.boolLit true)] }
 def b2i : Func := {
   id := ⟨"b2i"⟩, args := #[boolP "b"], results := #[intP "r"],
-  body := .ifThenElse (.var "b") (ret "r" (.intLit 1)) (ret "r" (.intLit 0)) }
+  body := .ifThenElse (.var (vid "b")) (ret "r" (.intLit 1)) (ret "r" (.intLit 0)) }
 def x2graph : UnseqGraph := {
   cells := [boolP "$z", boolP "$h", boolP "$cor", intP "$b", intP "$x", intP "$op"],
-  occs := [occ "R_z" (.eval "$z" (.var "zz")),
-           occ "G" (.guard "$z" false "$cor"),
-           occ "E_h" (.invoke ["$h"] (.var "hv") []) [] (some "G"),
-           occ "C_or" (.eval "$cor" (.var "$h")) [] (some "G"),
-           occ "E_b2i" (.invoke ["$b"] (.var "b2iv") [.var "$cor"]),
-           occ "R_x" (.eval "$x" (.var "x")),
-           occ "Op" (.eval "$op" (.add (.var "$b") (.var "$x"))),
-           occ "T_z" (.target "$t" (.var "z"))],
-  stores := [("$t", "$op")] }
+  occs := [occ "R_z" (.eval (vid "$z") (.var (vid "zz"))),
+           occ "G" (.guard (vid "$z") false (vid "$cor")),
+           occ "E_h" (.invoke [vid "$h"] (.var (vid "hv")) []) [] (some "G"),
+           occ "C_or" (.eval (vid "$cor") (.var (vid "$h"))) [] (some "G"),
+           occ "E_b2i" (.invoke [vid "$b"] (.var (vid "b2iv")) [.var (vid "$cor")]),
+           occ "R_x" (.eval (vid "$x") (.var (vid "x"))),
+           occ "Op" (.eval (vid "$op") (.add (.var (vid "$b")) (.var (vid "$x")))),
+           occ "T_z" (.target (vid "$t") (.var (vid "z")))],
+  stores := [(vid "$t", vid "$op")] }
 def x2 (z : Bool) : Program := { funcs := #[
-  mainInt [intP "x", boolP "zz", ⟨"hv", fnTy [pInt] [.bool]⟩, ⟨"b2iv", fnTy [.bool] [.int]⟩]
-    [.assign (.var "x") (.intLit 1), .assign (.var "zz") (.boolLit z),
-     .assign (.var "hv") (clos "x2h" ["x"]), .assign (.var "b2iv") (clos "b2i" []),
+  mainInt [intP "x", boolP "zz", ⟨vid "hv", fnTy [pInt] [.bool]⟩, ⟨vid "b2iv", fnTy [.bool] [.int]⟩]
+    [.assign (.var (vid "x")) (.intLit 1), .assign (.var (vid "zz")) (.boolLit z),
+     .assign (.var (vid "hv")) (clos "x2h" ["x"]), .assign (.var (vid "b2iv")) (clos "b2i" []),
      .unseq x2graph (.seqn #[])],
   x2h, b2i] }
 
@@ -212,53 +217,53 @@ that runs on the panic path (the reference records `len(ch)` beside the panic). 
 def x3f : Func := {
   id := ⟨"x3f"⟩, args := #[], results := #[intP "r"], body := ret "r" (.intLit 9) }
 def x3recv : Func := {
-  id := ⟨"x3recv"⟩, args := #[⟨"pc", .pointer (.chan .both .int)⟩], results := #[intP "r"],
-  body := .chanRecv #[.var "r"] (.deref (.var "pc") (.chan .both .int)) .int }
+  id := ⟨"x3recv"⟩, args := #[⟨vid "pc", .pointer (.chan .both .int)⟩], results := #[intP "r"],
+  body := .chanRecv #[.var (vid "r")] (.deref (.var (vid "pc")) (.chan .both .int)) .int }
 def x3defer : Func := {
-  id := ⟨"x3defer"⟩, args := #[⟨"pc", .pointer (.chan .both .int)⟩], results := #[],
-  body := println [str "len", .length (.deref (.var "pc") (.chan .both .int)) (some (.chan .both .int))] }
+  id := ⟨"x3defer"⟩, args := #[⟨vid "pc", .pointer (.chan .both .int)⟩], results := #[],
+  body := println [str "len", .length (.deref (.var (vid "pc")) (.chan .both .int)) (some (.chan .both .int))] }
 def x3graph : UnseqGraph := {
   cells := [intP "$f", sliceP "$hdr", intP "$rd", intP "$rc", intP "$op"],
-  occs := [occ "E_f" (.invoke ["$f"] (.var "fv") []),
-           occ "R_x" (.eval "$hdr" (.var "x")),
-           occ "L" (.target "$t" (.addr (.indexAddr (.var "$hdr") (.var "$f")))),
-           occ "Rd" (.load "$rd" "$t"),
-           occ "E_recv" (.invoke ["$rc"] (.var "recvv") []) ["E_f"],
-           occ "Op" (.eval "$op" (.add (.var "$rd") (.var "$rc")))],
-  stores := [("$t", "$op")] }
+  occs := [occ "E_f" (.invoke [vid "$f"] (.var (vid "fv")) []),
+           occ "R_x" (.eval (vid "$hdr") (.var (vid "x"))),
+           occ "L" (.target (vid "$t") (.addr (.indexAddr (.var (vid "$hdr")) (.var (vid "$f"))))),
+           occ "Rd" (.load (vid "$rd") (vid "$t")),
+           occ "E_recv" (.invoke [vid "$rc"] (.var (vid "recvv")) []) ["E_f"],
+           occ "Op" (.eval (vid "$op") (.add (.var (vid "$rd")) (.var (vid "$rc"))))],
+  stores := [(vid "$t", vid "$op")] }
 /-- Stage E E3 (2026-09-21): the SAME sweep with the receive as a `recv` BODY on the
 channel value (the machine's own `chanRecv` under the wait frame) instead of Stage B's
 closure-invocation stand-in — the same set, the same refusal on the empty channel. -/
 def x3graphRecv : UnseqGraph := {
   cells := [intP "$f", sliceP "$hdr", intP "$rd", intP "$rc", intP "$op"],
-  occs := [occ "E_f" (.invoke ["$f"] (.var "fv") []),
-           occ "R_x" (.eval "$hdr" (.var "x")),
-           occ "L" (.target "$t" (.addr (.indexAddr (.var "$hdr") (.var "$f")))),
-           occ "Rd" (.load "$rd" "$t"),
-           occ "E_recv" (.recv ["$rc"] (.var "ch") .int) ["E_f"],
-           occ "Op" (.eval "$op" (.add (.var "$rd") (.var "$rc")))],
-  stores := [("$t", "$op")] }
+  occs := [occ "E_f" (.invoke [vid "$f"] (.var (vid "fv")) []),
+           occ "R_x" (.eval (vid "$hdr") (.var (vid "x"))),
+           occ "L" (.target (vid "$t") (.addr (.indexAddr (.var (vid "$hdr")) (.var (vid "$f"))))),
+           occ "Rd" (.load (vid "$rd") (vid "$t")),
+           occ "E_recv" (.recv [vid "$rc"] (.var (vid "ch")) .int) ["E_f"],
+           occ "Op" (.eval (vid "$op") (.add (.var (vid "$rd")) (.var (vid "$rc"))))],
+  stores := [(vid "$t", vid "$op")] }
 def x3 (buffered : Bool) : Program := { funcs := #[
-  mainUnit [sliceP "x", ⟨"ch", .chan .both .int⟩, ⟨"fv", fnTy [] [.int]⟩,
-            ⟨"recvv", fnTy [.pointer (.chan .both .int)] [.int]⟩,
-            ⟨"dv", fnTy [.pointer (.chan .both .int)] []⟩]
+  mainUnit [sliceP "x", ⟨vid "ch", .chan .both .int⟩, ⟨vid "fv", fnTy [] [.int]⟩,
+            ⟨vid "recvv", fnTy [.pointer (.chan .both .int)] [.int]⟩,
+            ⟨vid "dv", fnTy [.pointer (.chan .both .int)] []⟩]
     (makeSlice "x" [1] ++
-     [.makeChan (.var "ch") .int (some (.intLit 1))] ++
-     (if buffered then [.chanSend (.var "ch") (.intLit 5) .int] else []) ++
-     [.assign (.var "fv") (clos "x3f" []), .assign (.var "recvv") (clos "x3recv" ["ch"]),
-      .assign (.var "dv") (clos "x3defer" ["ch"]),
-      .deferCall (.var "dv") #[],
+     [.makeChan (.var (vid "ch")) .int (some (.intLit 1))] ++
+     (if buffered then [.chanSend (.var (vid "ch")) (.intLit 5) .int] else []) ++
+     [.assign (.var (vid "fv")) (clos "x3f" []), .assign (.var (vid "recvv")) (clos "x3recv" ["ch"]),
+      .assign (.var (vid "dv")) (clos "x3defer" ["ch"]),
+      .deferCall (.var (vid "dv")) #[],
       .unseq x3graph (.seqn #[])]),
   x3f, x3recv, x3defer] }
 def x3r (buffered : Bool) : Program := { funcs := #[
-  mainUnit [sliceP "x", ⟨"ch", .chan .both .int⟩, ⟨"fv", fnTy [] [.int]⟩,
-            ⟨"dv", fnTy [.pointer (.chan .both .int)] []⟩]
+  mainUnit [sliceP "x", ⟨vid "ch", .chan .both .int⟩, ⟨vid "fv", fnTy [] [.int]⟩,
+            ⟨vid "dv", fnTy [.pointer (.chan .both .int)] []⟩]
     (makeSlice "x" [1] ++
-     [.makeChan (.var "ch") .int (some (.intLit 1))] ++
-     (if buffered then [.chanSend (.var "ch") (.intLit 5) .int] else []) ++
-     [.assign (.var "fv") (clos "x3f" []),
-      .assign (.var "dv") (clos "x3defer" ["ch"]),
-      .deferCall (.var "dv") #[],
+     [.makeChan (.var (vid "ch")) .int (some (.intLit 1))] ++
+     (if buffered then [.chanSend (.var (vid "ch")) (.intLit 5) .int] else []) ++
+     [.assign (.var (vid "fv")) (clos "x3f" []),
+      .assign (.var (vid "dv")) (clos "x3defer" ["ch"]),
+      .deferCall (.var (vid "dv")) #[],
       .unseq x3graphRecv (.seqn #[])]),
   x3f, x3defer] }
 
@@ -273,17 +278,17 @@ def xaWit : Func := {
   body := .seqn #[println [str "wit", .intLit 5 .int], ret "r" (.intLit 5)] }
 def xaGraph : UnseqGraph := {
   cells := [intP "$si", sliceP "$lit", intP "$e0", intP "$w", intP "$op"],
-  occs := [occ "R_si" (.eval "$si" (.indexGet (.var "s") (.var "i"))),
-           occ "A" (.allocate "$lit" (.sliceLit .int 1 [(0, .var "$si")])),
-           occ "Rd" (.eval "$e0" (.indexGet (.var "$lit") (.intLit 0))),
-           occ "E_wit" (.invoke ["$w"] (.var "wv") []),
-           occ "Op" (.eval "$op" (.add (.var "$e0") (.var "$w"))),
-           occ "T_z" (.target "$t" (.var "z"))],
-  stores := [("$t", "$op")] }
+  occs := [occ "R_si" (.eval (vid "$si") (.indexGet (.var (vid "s")) (.var (vid "i")))),
+           occ "A" (.allocate (vid "$lit") (.sliceLit .int 1 [(0, .var (vid "$si"))])),
+           occ "Rd" (.eval (vid "$e0") (.indexGet (.var (vid "$lit")) (.intLit 0))),
+           occ "E_wit" (.invoke [vid "$w"] (.var (vid "wv")) []),
+           occ "Op" (.eval (vid "$op") (.add (.var (vid "$e0")) (.var (vid "$w")))),
+           occ "T_z" (.target (vid "$t") (.var (vid "z")))],
+  stores := [(vid "$t", vid "$op")] }
 def xa : Program := { funcs := #[
-  mainInt [sliceP "s", intP "i", ⟨"wv", fnTy [] [.int]⟩]
+  mainInt [sliceP "s", intP "i", ⟨vid "wv", fnTy [] [.int]⟩]
     (makeSlice "s" [7] ++
-     [.assign (.var "i") (.intLit 9), .assign (.var "wv") (clos "xaWit" []),
+     [.assign (.var (vid "i")) (.intLit 9), .assign (.var (vid "wv")) (clos "xaWit" []),
       .unseq xaGraph (.seqn #[])]),
   xaWit] }
 
@@ -293,44 +298,44 @@ before m (the in-place element store, the fresh header aliasing s's array); the 
 `allocate` inside append's window; the result's [0] read unordered against m. → {6, 15} -/
 
 def e5aM : Func := {
-  id := ⟨"e5aM"⟩, args := #[⟨"ps", pSlice⟩], results := #[intP "r"],
+  id := ⟨"e5aM"⟩, args := #[⟨vid "ps", pSlice⟩], results := #[intP "r"],
   body := .seqn #[storeElem "ps" (.intLit 0) (.intLit 10), ret "r" (.intLit 5)] }
 def e5aGraph : UnseqGraph := {
   cells := [sliceP "$s", sliceP "$pack", sliceP "$app", intP "$m", intP "$e0", intP "$op"],
-  occs := [occ "R_s" (.eval "$s" (.var "s")),
-           occ "Pack" (.allocate "$pack" (.sliceLit .int 1 [(0, .intLit 3)])),
-           occ "E_app" (.wide ["$app"] (.append .int (.var "$s") (.var "$pack"))),
-           occ "E_m" (.invoke ["$m"] (.var "mv") []) (after := ["E_app"]),
-           occ "Rd" (.eval "$e0" (.indexGet (.var "$app") (.intLit 0))),
-           occ "Op" (.eval "$op" (.add (.var "$e0") (.var "$m"))),
-           occ "T_z" (.target "$t" (.var "z"))],
-  stores := [("$t", "$op")] }
+  occs := [occ "R_s" (.eval (vid "$s") (.var (vid "s"))),
+           occ "Pack" (.allocate (vid "$pack") (.sliceLit .int 1 [(0, .intLit 3)])),
+           occ "E_app" (.wide [vid "$app"] (.append .int (.var (vid "$s")) (.var (vid "$pack")))),
+           occ "E_m" (.invoke [vid "$m"] (.var (vid "mv")) []) (after := ["E_app"]),
+           occ "Rd" (.eval (vid "$e0") (.indexGet (.var (vid "$app")) (.intLit 0))),
+           occ "Op" (.eval (vid "$op") (.add (.var (vid "$e0")) (.var (vid "$m")))),
+           occ "T_z" (.target (vid "$t") (.var (vid "z")))],
+  stores := [(vid "$t", vid "$op")] }
 def e5a : Program := { funcs := #[
-  mainInt [sliceP "s", ⟨"mv", fnTy [] [.int]⟩]
-    [.makeSlice (.var "s") .int (.intLit 2) (some (.intLit 4)),
-     .assign (.addr (.indexAddr (.var "s") (.intLit 0))) (.intLit 1),
-     .assign (.addr (.indexAddr (.var "s") (.intLit 1))) (.intLit 2),
-     .assign (.var "mv") (clos "e5aM" ["s"]),
+  mainInt [sliceP "s", ⟨vid "mv", fnTy [] [.int]⟩]
+    [.makeSlice (.var (vid "s")) .int (.intLit 2) (some (.intLit 4)),
+     .assign (.addr (.indexAddr (.var (vid "s")) (.intLit 0))) (.intLit 1),
+     .assign (.addr (.indexAddr (.var (vid "s")) (.intLit 1))) (.intLit 2),
+     .assign (.var (vid "mv")) (clos "e5aM" ["s"]),
      .unseq e5aGraph (.seqn #[])],
   e5aM] }
 
 /-! ## R1  `v := x + y + mut()` — unreduced {0,1,2,3}; the REFUTED reduction {0,2,3} -/
 
 def r1mut : Func := {
-  id := ⟨"r1mut"⟩, args := #[⟨"px", pInt⟩, ⟨"py", pInt⟩], results := #[intP "r"],
+  id := ⟨"r1mut"⟩, args := #[⟨vid "px", pInt⟩, ⟨vid "py", pInt⟩], results := #[intP "r"],
   body := .seqn #[storeP "px" (.intLit 1), storeP "py" (.intLit 2), ret "r" (.intLit 0)] }
 def r1graph (reduced : Bool) : UnseqGraph := {
   cells := [intP "$x", intP "$y", intP "$m", intP "$op"],
-  occs := [occ "R_x" (.eval "$x" (.var "x")),
-           occ "R_y" (.eval "$y" (.var "y")) (if reduced then ["R_x"] else []),
-           occ "E_mut" (.invoke ["$m"] (.var "mutv") []),
-           occ "Op" (.eval "$op" (.add (.add (.var "$x") (.var "$y")) (.var "$m"))),
-           occ "T_z" (.target "$t" (.var "z"))],
-  stores := [("$t", "$op")] }
+  occs := [occ "R_x" (.eval (vid "$x") (.var (vid "x"))),
+           occ "R_y" (.eval (vid "$y") (.var (vid "y"))) (if reduced then ["R_x"] else []),
+           occ "E_mut" (.invoke [vid "$m"] (.var (vid "mutv")) []),
+           occ "Op" (.eval (vid "$op") (.add (.add (.var (vid "$x")) (.var (vid "$y"))) (.var (vid "$m")))),
+           occ "T_z" (.target (vid "$t") (.var (vid "z")))],
+  stores := [(vid "$t", vid "$op")] }
 def r1 (reduced : Bool) : Program := { funcs := #[
-  mainInt [intP "x", intP "y", ⟨"mutv", fnTy [pInt, pInt] [.int]⟩]
-    [.assign (.var "x") (.intLit 0), .assign (.var "y") (.intLit 0),
-     .assign (.var "mutv") (clos "r1mut" ["x", "y"]), .unseq (r1graph reduced) (.seqn #[])],
+  mainInt [intP "x", intP "y", ⟨vid "mutv", fnTy [pInt, pInt] [.int]⟩]
+    [.assign (.var (vid "x")) (.intLit 0), .assign (.var (vid "y")) (.intLit 0),
+     .assign (.var (vid "mutv")) (clos "r1mut" ["x", "y"]), .unseq (r1graph reduced) (.seqn #[])],
   r1mut] }
 
 /-! ## R2a  `sink(z || h(), k())` — a skipped event discharges E1; the INVALID join refuses -/
@@ -343,223 +348,223 @@ def r2ah : Func := prB "r2ah" "guard h" true
 def r2ak : Func := pr "r2ak" "guard k" 7
 def r2aSink : Func := {
   id := ⟨"r2aSink"⟩, args := #[boolP "b", intP "n"], results := #[],
-  body := println [str "guard result", .var "b", .var "n"] }
+  body := println [str "guard result", .var (vid "b"), .var (vid "n")] }
 def r2aKArg : Func := {
   id := ⟨"r2aKArg"⟩, args := #[boolP "b"], results := #[intP "r"],
   body := .seqn #[println [str "guard k"], ret "r" (.intLit 7)] }
 def r2aGraph (valid : Bool) : UnseqGraph := {
   cells := [boolP "$z", boolP "$h", boolP "$cor", intP "$k"],
-  occs := [occ "R_z" (.eval "$z" (.var "z")),
-           occ "G" (.guard "$z" false "$cor"),
-           occ "E_h" (.invoke ["$h"] (.var "hv") []) [] (some "G"),
-           occ "C_or" (.eval "$cor" (.var "$h")) [] (some "G"),
-           (if valid then occ "E_k" (.invoke ["$k"] (.var "kv") []) ["C_or"]
-            else occ "E_k" (.invoke ["$k"] (.var "kargv") [.var "$h"])),
-           occ "E_sink" (.invoke [] (.var "sinkv") [.var "$cor", .var "$k"])] }
+  occs := [occ "R_z" (.eval (vid "$z") (.var (vid "z"))),
+           occ "G" (.guard (vid "$z") false (vid "$cor")),
+           occ "E_h" (.invoke [vid "$h"] (.var (vid "hv")) []) [] (some "G"),
+           occ "C_or" (.eval (vid "$cor") (.var (vid "$h"))) [] (some "G"),
+           (if valid then occ "E_k" (.invoke [vid "$k"] (.var (vid "kv")) []) ["C_or"]
+            else occ "E_k" (.invoke [vid "$k"] (.var (vid "kargv")) [.var (vid "$h")])),
+           occ "E_sink" (.invoke [] (.var (vid "sinkv")) [.var (vid "$cor"), .var (vid "$k")])] }
 def r2a (z : Bool) (valid : Bool) : Program := { funcs := #[
-  mainUnit [boolP "z", ⟨"hv", fnTy [] [.bool]⟩, ⟨"kv", fnTy [] [.int]⟩,
-            ⟨"kargv", fnTy [.bool] [.int]⟩, ⟨"sinkv", fnTy [.bool, .int] []⟩]
-    [.assign (.var "z") (.boolLit z), .assign (.var "hv") (clos "r2ah" []),
-     .assign (.var "kv") (clos "r2ak" []), .assign (.var "kargv") (clos "r2aKArg" []),
-     .assign (.var "sinkv") (clos "r2aSink" []), .unseq (r2aGraph valid) (.seqn #[])],
+  mainUnit [boolP "z", ⟨vid "hv", fnTy [] [.bool]⟩, ⟨vid "kv", fnTy [] [.int]⟩,
+            ⟨vid "kargv", fnTy [.bool] [.int]⟩, ⟨vid "sinkv", fnTy [.bool, .int] []⟩]
+    [.assign (.var (vid "z")) (.boolLit z), .assign (.var (vid "hv")) (clos "r2ah" []),
+     .assign (.var (vid "kv")) (clos "r2ak" []), .assign (.var (vid "kargv")) (clos "r2aKArg" []),
+     .assign (.var (vid "sinkv")) (clos "r2aSink" []), .unseq (r2aGraph valid) (.seqn #[])],
   r2ah, r2ak, r2aKArg, r2aSink] }
 
 /-! ## R2b  `sink(left || b, change())` — E1 anchored at the COMPLETION (vs the refuted ENTRY) -/
 
 def r2bChange : Func := {
-  id := ⟨"r2bChange"⟩, args := #[⟨"pb", .pointer .bool⟩], results := #[intP "r"],
+  id := ⟨"r2bChange"⟩, args := #[⟨vid "pb", .pointer .bool⟩], results := #[intP "r"],
   body := .seqn #[storeP "pb" (.boolLit true), ret "r" (.intLit 0)] }
 def r2bSink : Func := {
   id := ⟨"r2bSink"⟩, args := #[boolP "b", intP "n"], results := #[],
-  body := println [str "logical", .var "b", .var "n"] }
+  body := println [str "logical", .var (vid "b"), .var (vid "n")] }
 def r2bGraph (anchor : String) : UnseqGraph := {
   cells := [boolP "$l", boolP "$b", boolP "$cor", intP "$c"],
-  occs := [occ "R_left" (.eval "$l" (.var "left")),
-           occ "G" (.guard "$l" false "$cor"),
-           occ "R_b" (.eval "$b" (.var "b")) [] (some "G"),
-           occ "C_or" (.eval "$cor" (.var "$b")) [] (some "G"),
-           occ "E_change" (.invoke ["$c"] (.var "changev") []) [anchor],
-           occ "E_sink" (.invoke [] (.var "sinkv") [.var "$cor", .var "$c"])] }
+  occs := [occ "R_left" (.eval (vid "$l") (.var (vid "left"))),
+           occ "G" (.guard (vid "$l") false (vid "$cor")),
+           occ "R_b" (.eval (vid "$b") (.var (vid "b"))) [] (some "G"),
+           occ "C_or" (.eval (vid "$cor") (.var (vid "$b"))) [] (some "G"),
+           occ "E_change" (.invoke [vid "$c"] (.var (vid "changev")) []) [anchor],
+           occ "E_sink" (.invoke [] (.var (vid "sinkv")) [.var (vid "$cor"), .var (vid "$c")])] }
 def r2b (anchor : String) : Program := { funcs := #[
-  mainUnit [boolP "left", boolP "b", ⟨"changev", fnTy [.pointer .bool] [.int]⟩, ⟨"sinkv", fnTy [.bool, .int] []⟩]
-    [.assign (.var "left") (.boolLit false), .assign (.var "b") (.boolLit false),
-     .assign (.var "changev") (clos "r2bChange" ["b"]), .assign (.var "sinkv") (clos "r2bSink" []),
+  mainUnit [boolP "left", boolP "b", ⟨vid "changev", fnTy [.pointer .bool] [.int]⟩, ⟨vid "sinkv", fnTy [.bool, .int] []⟩]
+    [.assign (.var (vid "left")) (.boolLit false), .assign (.var (vid "b")) (.boolLit false),
+     .assign (.var (vid "changev")) (clos "r2bChange" ["b"]), .assign (.var (vid "sinkv")) (clos "r2bSink" []),
      .unseq (r2bGraph anchor) (.seqn #[])],
   r2bChange, r2bSink] }
 
 /-! ## R2c  `sink(g(), a || (b && h()), k())` — nested guards, an earlier call -/
 
 def r2cG : Func := {
-  id := ⟨"r2cG"⟩, args := #[⟨"pa", .pointer .bool⟩], results := #[intP "r"],
+  id := ⟨"r2cG"⟩, args := #[⟨vid "pa", .pointer .bool⟩], results := #[intP "r"],
   body := .seqn #[println [str "g"], storeP "pa" (.boolLit true), ret "r" (.intLit 1)] }
 def r2cH : Func := prB "r2cH" "h" true
 def r2cK : Func := pr "r2cK" "k" 7
 def r2cSink : Func := {
   id := ⟨"r2cSink"⟩, args := #[intP "g", boolP "c", intP "k"], results := #[],
-  body := println [str "sink", .var "g", .var "c", .var "k"] }
+  body := println [str "sink", .var (vid "g"), .var (vid "c"), .var (vid "k")] }
 def r2cGraph : UnseqGraph := {
   cells := [intP "$g", boolP "$a", boolP "$b", boolP "$h", boolP "$cand", boolP "$cor", intP "$k"],
-  occs := [occ "E_g" (.invoke ["$g"] (.var "gv") []),
-           occ "R_a" (.eval "$a" (.var "a")),
-           occ "G1" (.guard "$a" false "$cor") ["E_g"],
-           occ "R_b" (.eval "$b" (.var "b")) [] (some "G1"),
-           occ "G2" (.guard "$b" true "$cand") [] (some "G1"),
-           occ "E_h" (.invoke ["$h"] (.var "hv") []) [] (some "G2"),
-           occ "C_and" (.eval "$cand" (.var "$h")) [] (some "G2"),
-           occ "C_or" (.eval "$cor" (.var "$cand")) [] (some "G1"),
-           occ "E_k" (.invoke ["$k"] (.var "kv") []) ["C_or"],
-           occ "E_sink" (.invoke [] (.var "sinkv") [.var "$g", .var "$cor", .var "$k"])] }
+  occs := [occ "E_g" (.invoke [vid "$g"] (.var (vid "gv")) []),
+           occ "R_a" (.eval (vid "$a") (.var (vid "a"))),
+           occ "G1" (.guard (vid "$a") false (vid "$cor")) ["E_g"],
+           occ "R_b" (.eval (vid "$b") (.var (vid "b"))) [] (some "G1"),
+           occ "G2" (.guard (vid "$b") true (vid "$cand")) [] (some "G1"),
+           occ "E_h" (.invoke [vid "$h"] (.var (vid "hv")) []) [] (some "G2"),
+           occ "C_and" (.eval (vid "$cand") (.var (vid "$h"))) [] (some "G2"),
+           occ "C_or" (.eval (vid "$cor") (.var (vid "$cand"))) [] (some "G1"),
+           occ "E_k" (.invoke [vid "$k"] (.var (vid "kv")) []) ["C_or"],
+           occ "E_sink" (.invoke [] (.var (vid "sinkv")) [.var (vid "$g"), .var (vid "$cor"), .var (vid "$k")])] }
 def r2c (b : Bool) : Program := { funcs := #[
-  mainUnit [boolP "a", boolP "b", ⟨"gv", fnTy [.pointer .bool] [.int]⟩, ⟨"hv", fnTy [] [.bool]⟩,
-            ⟨"kv", fnTy [] [.int]⟩, ⟨"sinkv", fnTy [.int, .bool, .int] []⟩]
-    [.assign (.var "a") (.boolLit false), .assign (.var "b") (.boolLit b),
-     .assign (.var "gv") (clos "r2cG" ["a"]), .assign (.var "hv") (clos "r2cH" []),
-     .assign (.var "kv") (clos "r2cK" []), .assign (.var "sinkv") (clos "r2cSink" []),
+  mainUnit [boolP "a", boolP "b", ⟨vid "gv", fnTy [.pointer .bool] [.int]⟩, ⟨vid "hv", fnTy [] [.bool]⟩,
+            ⟨vid "kv", fnTy [] [.int]⟩, ⟨vid "sinkv", fnTy [.int, .bool, .int] []⟩]
+    [.assign (.var (vid "a")) (.boolLit false), .assign (.var (vid "b")) (.boolLit b),
+     .assign (.var (vid "gv")) (clos "r2cG" ["a"]), .assign (.var (vid "hv")) (clos "r2cH" []),
+     .assign (.var (vid "kv")) (clos "r2cK" []), .assign (.var (vid "sinkv")) (clos "r2cSink" []),
      .unseq r2cGraph (.seqn #[])],
   r2cG, r2cH, r2cK, r2cSink] }
 
 /-! ## R4  `old := a; a[0] += mut()` — mut REBINDS a; the frozen header keeps identity -/
 
 def r4mut : Func := {
-  id := ⟨"r4mut"⟩, args := #[⟨"pa", pSlice⟩, ⟨"pb", pSlice⟩], results := #[intP "r"],
+  id := ⟨"r4mut"⟩, args := #[⟨vid "pa", pSlice⟩, ⟨vid "pb", pSlice⟩], results := #[intP "r"],
   body := .seqn #[storeP "pa" (derefS "pb"), ret "r" (.intLit 1)] }
 def r4graph : UnseqGraph := {
   cells := [sliceP "$hdr", intP "$rd", intP "$m", intP "$op"],
-  occs := [occ "R_a" (.eval "$hdr" (.var "a")),
-           occ "L" (.target "$t" (.addr (.indexAddr (.var "$hdr") (.intLit 0)))),
-           occ "Rd" (.load "$rd" "$t"),
-           occ "E_mut" (.invoke ["$m"] (.var "mutv") []),
-           occ "Op" (.eval "$op" (.add (.var "$rd") (.var "$m")))],
-  stores := [("$t", "$op")] }
+  occs := [occ "R_a" (.eval (vid "$hdr") (.var (vid "a"))),
+           occ "L" (.target (vid "$t") (.addr (.indexAddr (.var (vid "$hdr")) (.intLit 0)))),
+           occ "Rd" (.load (vid "$rd") (vid "$t")),
+           occ "E_mut" (.invoke [vid "$m"] (.var (vid "mutv")) []),
+           occ "Op" (.eval (vid "$op") (.add (.var (vid "$rd")) (.var (vid "$m"))))],
+  stores := [(vid "$t", vid "$op")] }
 def r4 : Program := { funcs := #[
-  mainUnit [sliceP "a", sliceP "b", sliceP "old", ⟨"mutv", fnTy [pSlice, pSlice] [.int]⟩]
+  mainUnit [sliceP "a", sliceP "b", sliceP "old", ⟨vid "mutv", fnTy [pSlice, pSlice] [.int]⟩]
     (makeSlice "a" [10, 20] ++ makeSlice "b" [100, 200] ++
-     [.assign (.var "old") (.var "a"), .assign (.var "mutv") (clos "r4mut" ["a", "b"]),
+     [.assign (.var (vid "old")) (.var (vid "a")), .assign (.var (vid "mutv")) (clos "r4mut" ["a", "b"]),
       .unseq r4graph (.seqn #[
-        println [str "old", .indexGet (.var "old") (.intLit 0), .indexGet (.var "old") (.intLit 1)],
-        println [str "a", .indexGet (.var "a") (.intLit 0), .indexGet (.var "a") (.intLit 1)]])]),
+        println [str "old", .indexGet (.var (vid "old")) (.intLit 0), .indexGet (.var (vid "old")) (.intLit 1)],
+        println [str "a", .indexGet (.var (vid "a")) (.intLit 0), .indexGet (.var (vid "a")) (.intLit 1)]])]),
   r4mut] }
 -- (`r4with`, below in the audit fix-round section, is the same program around any target graph.)
 
 /-! ## R6  `v := a[f()]` — SPLIT header producer + checked access {10, 20} vs FUSED {20} -/
 
 def r6f : Func := {
-  id := ⟨"r6f"⟩, args := #[⟨"pa", pSlice⟩, ⟨"pb", pSlice⟩], results := #[intP "r"],
+  id := ⟨"r6f"⟩, args := #[⟨vid "pa", pSlice⟩, ⟨vid "pb", pSlice⟩], results := #[intP "r"],
   body := .seqn #[storeP "pa" (derefS "pb"), ret "r" (.intLit 0)] }
 def r6graph (split : Bool) : UnseqGraph :=
   if split then {
     cells := [sliceP "$hdr", intP "$f", intP "$rd"],
-    occs := [occ "R_a" (.eval "$hdr" (.var "a")),
-             occ "E_f" (.invoke ["$f"] (.var "fv") []),
-             occ "Rd" (.eval "$rd" (.indexGet (.var "$hdr") (.var "$f"))),
-             occ "T_z" (.target "$t" (.var "z"))],
-    stores := [("$t", "$rd")] }
+    occs := [occ "R_a" (.eval (vid "$hdr") (.var (vid "a"))),
+             occ "E_f" (.invoke [vid "$f"] (.var (vid "fv")) []),
+             occ "Rd" (.eval (vid "$rd") (.indexGet (.var (vid "$hdr")) (.var (vid "$f")))),
+             occ "T_z" (.target (vid "$t") (.var (vid "z")))],
+    stores := [(vid "$t", vid "$rd")] }
   else {
     cells := [intP "$f", intP "$rd"],
-    occs := [occ "E_f" (.invoke ["$f"] (.var "fv") []),
-             occ "Rd" (.eval "$rd" (.indexGet (.var "a") (.var "$f"))),
-             occ "T_z" (.target "$t" (.var "z"))],
-    stores := [("$t", "$rd")] }
+    occs := [occ "E_f" (.invoke [vid "$f"] (.var (vid "fv")) []),
+             occ "Rd" (.eval (vid "$rd") (.indexGet (.var (vid "a")) (.var (vid "$f")))),
+             occ "T_z" (.target (vid "$t") (.var (vid "z")))],
+    stores := [(vid "$t", vid "$rd")] }
 def r6 (split : Bool) : Program := { funcs := #[
-  mainInt [sliceP "a", sliceP "b", ⟨"fv", fnTy [pSlice, pSlice] [.int]⟩]
+  mainInt [sliceP "a", sliceP "b", ⟨vid "fv", fnTy [pSlice, pSlice] [.int]⟩]
     (makeSlice "a" [10] ++ makeSlice "b" [20] ++
-     [.assign (.var "fv") (clos "r6f" ["a", "b"]), .unseq (r6graph split) (.seqn #[])]),
+     [.assign (.var (vid "fv")) (clos "r6f" ["a", "b"]), .unseq (r6graph split) (.seqn #[])]),
   r6f] }
 
 /-! ## Controls C1–C4 -/
 
 def c1g : Func := {
-  id := ⟨"c1g"⟩, args := #[⟨"pt", pInt⟩], results := #[intP "r"],
+  id := ⟨"c1g"⟩, args := #[⟨vid "pt", pInt⟩], results := #[intP "r"],
   body := .seqn #[storeP "pt" (.intLit 7), ret "r" (.intLit 1)] }
 def c1f : Func := {
-  id := ⟨"c1f"⟩, args := #[⟨"pt", pInt⟩, intP "x"], results := #[intP "r"],
-  body := ret "r" (.add (.var "x") (derefI "pt")) }
+  id := ⟨"c1f"⟩, args := #[⟨vid "pt", pInt⟩, intP "x"], results := #[intP "r"],
+  body := ret "r" (.add (.var (vid "x")) (derefI "pt")) }
 def c1graph : UnseqGraph := {
   cells := [intP "$g", intP "$f"],
-  occs := [occ "E_g" (.invoke ["$g"] (.var "gv") []),
-           occ "E_f" (.invoke ["$f"] (.var "fv") [.var "$g"])] }
+  occs := [occ "E_g" (.invoke [vid "$g"] (.var (vid "gv")) []),
+           occ "E_f" (.invoke [vid "$f"] (.var (vid "fv")) [.var (vid "$g")])] }
 def c1 : Program := { funcs := #[
-  mainInt [intP "t", ⟨"gv", fnTy [pInt] [.int]⟩, ⟨"fv", fnTy [pInt, .int] [.int]⟩]
-    [.assign (.var "t") (.intLit 0), .assign (.var "gv") (clos "c1g" ["t"]),
-     .assign (.var "fv") (clos "c1f" ["t"]), .unseq c1graph (ret "z" (.var "$f"))],
+  mainInt [intP "t", ⟨vid "gv", fnTy [pInt] [.int]⟩, ⟨vid "fv", fnTy [pInt, .int] [.int]⟩]
+    [.assign (.var (vid "t")) (.intLit 0), .assign (.var (vid "gv")) (clos "c1g" ["t"]),
+     .assign (.var (vid "fv")) (clos "c1f" ["t"]), .unseq c1graph (ret "z" (.var (vid "$f")))],
   c1g, c1f] }
 
 def sinkId : Func := {
-  id := ⟨"sinkId"⟩, args := #[intP "x"], results := #[intP "r"], body := ret "r" (.var "x") }
+  id := ⟨"sinkId"⟩, args := #[intP "x"], results := #[intP "r"], body := ret "r" (.var (vid "x")) }
 def sink2 : Func := {
-  id := ⟨"sink2"⟩, args := #[intP "x", intP "y"], results := #[intP "r"], body := ret "r" (.var "x") }
+  id := ⟨"sink2"⟩, args := #[intP "x", intP "y"], results := #[intP "r"], body := ret "r" (.var (vid "x")) }
 def c2graph : UnseqGraph := {
   cells := [intP "$a", intP "$s"],
-  occs := [occ "R_a" (.eval "$a" (.var "a")), occ "E_sink" (.invoke ["$s"] (.var "sinkv") [.var "$a"])] }
+  occs := [occ "R_a" (.eval (vid "$a") (.var (vid "a"))), occ "E_sink" (.invoke [vid "$s"] (.var (vid "sinkv")) [.var (vid "$a")])] }
 def c2 : Program := { funcs := #[
-  mainInt [intP "a", ⟨"sinkv", fnTy [.int] [.int]⟩]
-    [.assign (.var "a") (.intLit 3), .assign (.var "sinkv") (clos "sinkId" []),
-     .unseq c2graph (ret "z" (.var "$s"))],
+  mainInt [intP "a", ⟨vid "sinkv", fnTy [.int] [.int]⟩]
+    [.assign (.var (vid "a")) (.intLit 3), .assign (.var (vid "sinkv")) (clos "sinkId" []),
+     .unseq c2graph (ret "z" (.var (vid "$s")))],
   sinkId] }
 def c3mut : Func := {
-  id := ⟨"c3mut"⟩, args := #[⟨"pa", pInt⟩], results := #[intP "r"],
+  id := ⟨"c3mut"⟩, args := #[⟨vid "pa", pInt⟩], results := #[intP "r"],
   body := .seqn #[storeP "pa" (.intLit 2), ret "r" (.intLit 0)] }
 def c3graph : UnseqGraph := {
   cells := [intP "$a", intP "$m", intP "$s"],
-  occs := [occ "R_a" (.eval "$a" (.var "a")), occ "E_mut" (.invoke ["$m"] (.var "mutv") []),
-           occ "E_sink" (.invoke ["$s"] (.var "sinkv") [.var "$a", .var "$m"]),
-           occ "T_z" (.target "$t" (.var "z"))],
-  stores := [("$t", "$s")] }
+  occs := [occ "R_a" (.eval (vid "$a") (.var (vid "a"))), occ "E_mut" (.invoke [vid "$m"] (.var (vid "mutv")) []),
+           occ "E_sink" (.invoke [vid "$s"] (.var (vid "sinkv")) [.var (vid "$a"), .var (vid "$m")]),
+           occ "T_z" (.target (vid "$t") (.var (vid "z")))],
+  stores := [(vid "$t", vid "$s")] }
 def c3 : Program := { funcs := #[
-  mainInt [intP "a", ⟨"mutv", fnTy [pInt] [.int]⟩, ⟨"sinkv", fnTy [.int, .int] [.int]⟩]
-    [.assign (.var "a") (.intLit 1), .assign (.var "mutv") (clos "c3mut" ["a"]),
-     .assign (.var "sinkv") (clos "sink2" []), .unseq c3graph (.seqn #[])],
+  mainInt [intP "a", ⟨vid "mutv", fnTy [pInt] [.int]⟩, ⟨vid "sinkv", fnTy [.int, .int] [.int]⟩]
+    [.assign (.var (vid "a")) (.intLit 1), .assign (.var (vid "mutv")) (clos "c3mut" ["a"]),
+     .assign (.var (vid "sinkv")) (clos "sink2" []), .unseq c3graph (.seqn #[])],
   c3mut, sink2] }
 def c4graph : UnseqGraph := {
   cells := [intP "$a", intP "$b"],
-  occs := [occ "A" (.eval "$a" (.intLit 0)) ["B"], occ "B" (.eval "$b" (.intLit 0)) ["A"]] }
+  occs := [occ "A" (.eval (vid "$a") (.intLit 0)) ["B"], occ "B" (.eval (vid "$b") (.intLit 0)) ["A"]] }
 def c4 : Program := { funcs := #[mainUnit [] [.unseq c4graph (.seqn #[])]] }
 
 /-! ## Malformed graphs (static, refused BY NAME at ENTER) -/
 
 def malformed (g : UnseqGraph) : Program := { funcs := #[mainUnit [intP "x"] [.unseq g (.seqn #[])]] }
-def mUnknownSlot : UnseqGraph := { cells := [intP "$a"], occs := [occ "A" (.eval "$a" (.var "$zz"))] }
+def mUnknownSlot : UnseqGraph := { cells := [intP "$a"], occs := [occ "A" (.eval (vid "$a") (.var (vid "$zz")))] }
 def mDupResult : UnseqGraph := {
   cells := [intP "$a"],
-  occs := [occ "A" (.eval "$a" (.intLit 0)), occ "B" (.eval "$a" (.intLit 1))] }
+  occs := [occ "A" (.eval (vid "$a") (.intLit 0)), occ "B" (.eval (vid "$a") (.intLit 1))] }
 def mSortLoad : UnseqGraph := {
   cells := [intP "$a", intP "$b"],
-  occs := [occ "A" (.eval "$a" (.intLit 0)), occ "B" (.load "$b" "$a")] }
+  occs := [occ "A" (.eval (vid "$a") (.intLit 0)), occ "B" (.load (vid "$b") (vid "$a"))] }
 def mSortTargetAsValue : UnseqGraph := {
   cells := [intP "$a"],
-  occs := [occ "T" (.target "$t" (.var "x")), occ "A" (.eval "$a" (.var "$t"))] }
-def mUnknownAfter : UnseqGraph := { cells := [intP "$a"], occs := [occ "A" (.eval "$a" (.intLit 0)) ["Q"]] }
-def mUnproduced : UnseqGraph := { cells := [intP "$a", intP "$b"], occs := [occ "A" (.eval "$a" (.intLit 0))] }
+  occs := [occ "T" (.target (vid "$t") (.var (vid "x"))), occ "A" (.eval (vid "$a") (.var (vid "$t")))] }
+def mUnknownAfter : UnseqGraph := { cells := [intP "$a"], occs := [occ "A" (.eval (vid "$a") (.intLit 0)) ["Q"]] }
+def mUnproduced : UnseqGraph := { cells := [intP "$a", intP "$b"], occs := [occ "A" (.eval (vid "$a") (.intLit 0))] }
 
 /-! ## Target identity (§3.4): pointer redirection, cell mutation at a stable address, map (Stage E E2: the frozen map VALUE) -/
 
 def ptrMut : Func := {
-  id := ⟨"ptrMut"⟩, args := #[⟨"pp", .pointer pInt⟩, ⟨"py", pInt⟩], results := #[intP "r"],
-  body := .seqn #[storeP "pp" (.var "py"), ret "r" (.intLit 1)] }
+  id := ⟨"ptrMut"⟩, args := #[⟨vid "pp", .pointer pInt⟩, ⟨vid "py", pInt⟩], results := #[intP "r"],
+  body := .seqn #[storeP "pp" (.var (vid "py")), ret "r" (.intLit 1)] }
 def ptrGraph : UnseqGraph := {
-  cells := [⟨"$p", pInt⟩, intP "$rd", intP "$m", intP "$op"],
-  occs := [occ "R_p" (.eval "$p" (.var "p")),
-           occ "L" (.target "$t" (.addr (.var "$p"))),
-           occ "Rd" (.load "$rd" "$t"),
-           occ "E_mut" (.invoke ["$m"] (.var "mutv") []),
-           occ "Op" (.eval "$op" (.add (.var "$rd") (.var "$m")))],
-  stores := [("$t", "$op")] }
+  cells := [⟨vid "$p", pInt⟩, intP "$rd", intP "$m", intP "$op"],
+  occs := [occ "R_p" (.eval (vid "$p") (.var (vid "p"))),
+           occ "L" (.target (vid "$t") (.addr (.var (vid "$p")))),
+           occ "Rd" (.load (vid "$rd") (vid "$t")),
+           occ "E_mut" (.invoke [vid "$m"] (.var (vid "mutv")) []),
+           occ "Op" (.eval (vid "$op") (.add (.var (vid "$rd")) (.var (vid "$m"))))],
+  stores := [(vid "$t", vid "$op")] }
 def ptr : Program := { funcs := #[
-  mainUnit [intP "x", intP "y", ⟨"p", pInt⟩, ⟨"mutv", fnTy [.pointer pInt, pInt] [.int]⟩]
-    [.assign (.var "x") (.intLit 10), .assign (.var "y") (.intLit 100), .assign (.var "p") (.ref "x"),
-     .assign (.var "mutv") (clos "ptrMut" ["p", "y"]),
-     .unseq ptrGraph (println [str "x y", .var "x", .var "y"])],
+  mainUnit [intP "x", intP "y", ⟨vid "p", pInt⟩, ⟨vid "mutv", fnTy [.pointer pInt, pInt] [.int]⟩]
+    [.assign (.var (vid "x")) (.intLit 10), .assign (.var (vid "y")) (.intLit 100), .assign (.var (vid "p")) (.ref (vid "x")),
+     .assign (.var (vid "mutv")) (clos "ptrMut" ["p", "y"]),
+     .unseq ptrGraph (println [str "x y", .var (vid "x"), .var (vid "y")])],
   ptrMut] }
 
 def cellMut : Func := {
-  id := ⟨"cellMut"⟩, args := #[⟨"pa", pSlice⟩], results := #[intP "r"],
+  id := ⟨"cellMut"⟩, args := #[⟨vid "pa", pSlice⟩], results := #[intP "r"],
   body := .seqn #[storeElem "pa" (.intLit 0) (.intLit 100), ret "r" (.intLit 1)] }
 def cellGraph : UnseqGraph := r4graph
 def cell : Program := { funcs := #[
-  mainUnit [sliceP "a", ⟨"mutv", fnTy [pSlice] [.int]⟩]
+  mainUnit [sliceP "a", ⟨vid "mutv", fnTy [pSlice] [.int]⟩]
     (makeSlice "a" [10] ++
-     [.assign (.var "mutv") (clos "cellMut" ["a"]),
-      .unseq cellGraph (println [str "a", .indexGet (.var "a") (.intLit 0)])]),
+     [.assign (.var (vid "mutv")) (clos "cellMut" ["a"]),
+      .unseq cellGraph (println [str "a", .indexGet (.var (vid "a")) (.intLit 0)])]),
   cellMut] }
 
 /-- Stage E E2 (2026-09-21): `m[1] += mut()` where `mut` REBINDS the captured map
@@ -568,24 +573,24 @@ before mut → the OLD map's entry becomes 11 (`old 11 / m 100`); plan after mut
 the NEW map's entry becomes 101 (`old 10 / m 101`); the hybrids (a read through one
 map, a store into the other) are not members. The v2.1 spike's R4, on a map. -/
 def mapMut : Func := {
-  id := ⟨"mapMut"⟩, args := #[⟨"pm", .pointer (.map .int .int)⟩, ⟨"pm2", .pointer (.map .int .int)⟩], results := #[intP "r"],
-  body := .seqn #[.assign (.addr (.var "pm")) (.deref (.var "pm2") (.map .int .int)), ret "r" (.intLit 1)] }
+  id := ⟨"mapMut"⟩, args := #[⟨vid "pm", .pointer (.map .int .int)⟩, ⟨vid "pm2", .pointer (.map .int .int)⟩], results := #[intP "r"],
+  body := .seqn #[.assign (.addr (.var (vid "pm"))) (.deref (.var (vid "pm2")) (.map .int .int)), ret "r" (.intLit 1)] }
 def mapGraph : UnseqGraph := {
-  cells := [⟨"$hdr", .map .int .int⟩, intP "$rd", intP "$m", intP "$op"],
-  occs := [occ "R_m" (.eval "$hdr" (.var "m")),
-           occ "L" (.target "$t" (.mapElem (.var "$hdr") (.intLit 1) .int .int)),
-           occ "Rd" (.load "$rd" "$t"),
-           occ "E_mut" (.invoke ["$m"] (.var "mutv") []),
-           occ "Op" (.eval "$op" (.add (.var "$rd") (.var "$m")))],
-  stores := [("$t", "$op")] }
+  cells := [⟨vid "$hdr", .map .int .int⟩, intP "$rd", intP "$m", intP "$op"],
+  occs := [occ "R_m" (.eval (vid "$hdr") (.var (vid "m"))),
+           occ "L" (.target (vid "$t") (.mapElem (.var (vid "$hdr")) (.intLit 1) .int .int)),
+           occ "Rd" (.load (vid "$rd") (vid "$t")),
+           occ "E_mut" (.invoke [vid "$m"] (.var (vid "mutv")) []),
+           occ "Op" (.eval (vid "$op") (.add (.var (vid "$rd")) (.var (vid "$m"))))],
+  stores := [(vid "$t", vid "$op")] }
 def mapProg : Program := { funcs := #[
-  mainUnit [⟨"m", .map .int .int⟩, ⟨"m2", .map .int .int⟩, ⟨"old", .map .int .int⟩, ⟨"mutv", fnTy [.pointer (.map .int .int), .pointer (.map .int .int)] [.int]⟩]
-    [.makeMap (.var "m") .int .int none, .mapAssign (.var "m") (.intLit 1) (.intLit 10) .int .int,
-     .makeMap (.var "m2") .int .int none, .mapAssign (.var "m2") (.intLit 1) (.intLit 100) .int .int,
-     .assign (.var "old") (.var "m"),
-     .assign (.var "mutv") (clos "mapMut" ["m", "m2"]),
-     .unseq mapGraph (println [str "old", .mapGet (.var "old") (.intLit 1) .int .int,
-                               str "m", .mapGet (.var "m") (.intLit 1) .int .int])],
+  mainUnit [⟨vid "m", .map .int .int⟩, ⟨vid "m2", .map .int .int⟩, ⟨vid "old", .map .int .int⟩, ⟨vid "mutv", fnTy [.pointer (.map .int .int), .pointer (.map .int .int)] [.int]⟩]
+    [.makeMap (.var (vid "m")) .int .int none, .mapAssign (.var (vid "m")) (.intLit 1) (.intLit 10) .int .int,
+     .makeMap (.var (vid "m2")) .int .int none, .mapAssign (.var (vid "m2")) (.intLit 1) (.intLit 100) .int .int,
+     .assign (.var (vid "old")) (.var (vid "m")),
+     .assign (.var (vid "mutv")) (clos "mapMut" ["m", "m2"]),
+     .unseq mapGraph (println [str "old", .mapGet (.var (vid "old")) (.intLit 1) .int .int,
+                               str "m", .mapGet (.var (vid "m")) (.intLit 1) .int .int])],
   mapMut] }
 
 /-! ## Audit fix round (2026-09-16; `docs/2026-09-16_unseq-stage-b-audit.md`) — the
@@ -599,59 +604,59 @@ def a4h : Func := pr "a4h" "h ran" 42
 /-- A4: the phase-2 store's VALUE binder `$h` is produced only inside the region. -/
 def a4Graph : UnseqGraph := {
   cells := [boolP "$z", intP "$h", boolP "$cor"],
-  occs := [occ "R_z" (.eval "$z" (.var "z")),
-           occ "G" (.guard "$z" false "$cor"),
-           occ "E_h" (.invoke ["$h"] (.var "hv") []) [] (some "G"),
-           occ "C_or" (.eval "$cor" (.boolLit true)) [] (some "G"),
-           occ "T" (.target "$t" (.var "out"))],
-  stores := [("$t", "$h")] }
+  occs := [occ "R_z" (.eval (vid "$z") (.var (vid "z"))),
+           occ "G" (.guard (vid "$z") false (vid "$cor")),
+           occ "E_h" (.invoke [vid "$h"] (.var (vid "hv")) []) [] (some "G"),
+           occ "C_or" (.eval (vid "$cor") (.boolLit true)) [] (some "G"),
+           occ "T" (.target (vid "$t") (.var (vid "out")))],
+  stores := [(vid "$t", vid "$h")] }
 def a4 (z : Bool) : Program := { funcs := #[
-  mainUnit [boolP "z", intP "out", ⟨"hv", fnTy [] [.int]⟩]
-    [.assign (.var "z") (.boolLit z), .assign (.var "out") (.intLit 7),
-     .assign (.var "hv") (clos "a4h" []),
-     .unseq a4Graph (println [str "out", .var "out"])],
+  mainUnit [boolP "z", intP "out", ⟨vid "hv", fnTy [] [.int]⟩]
+    [.assign (.var (vid "z")) (.boolLit z), .assign (.var (vid "out")) (.intLit 7),
+     .assign (.var (vid "hv")) (clos "a4h" []),
+     .unseq a4Graph (println [str "out", .var (vid "out")])],
   a4h] }
 /-- A5: `thenB` reads `$h` directly (no store). -/
 def a5Graph : UnseqGraph := { a4Graph with stores := [], occs := a4Graph.occs.take 4 }
 def a5 (z : Bool) (thenB : Stmt) : Program := { funcs := #[
-  mainUnit [boolP "z", ⟨"hv", fnTy [] [.int]⟩]
-    [.assign (.var "z") (.boolLit z), .assign (.var "hv") (clos "a4h" []), .unseq a5Graph thenB],
+  mainUnit [boolP "z", ⟨vid "hv", fnTy [] [.int]⟩]
+    [.assign (.var (vid "z")) (.boolLit z), .assign (.var (vid "hv")) (clos "a4h" []), .unseq a5Graph thenB],
   a4h] }
 /-- A8 (the audit's contrast): a phase-2 store through a TARGET binder produced
 inside a SKIPPED region — refused by name already before the fix round. -/
 def a8Graph : UnseqGraph := {
   cells := [boolP "$z", boolP "$cor", intP "$one"],
-  occs := [occ "R_z" (.eval "$z" (.var "z")),
-           occ "G" (.guard "$z" false "$cor"),
-           occ "T" (.target "$t" (.var "out")) [] (some "G"),
-           occ "C_or" (.eval "$cor" (.boolLit true)) [] (some "G"),
-           occ "K" (.eval "$one" (.intLit 1))],
-  stores := [("$t", "$one")] }
+  occs := [occ "R_z" (.eval (vid "$z") (.var (vid "z"))),
+           occ "G" (.guard (vid "$z") false (vid "$cor")),
+           occ "T" (.target (vid "$t") (.var (vid "out"))) [] (some "G"),
+           occ "C_or" (.eval (vid "$cor") (.boolLit true)) [] (some "G"),
+           occ "K" (.eval (vid "$one") (.intLit 1))],
+  stores := [(vid "$t", vid "$one")] }
 def a8 : Program := { funcs := #[
   mainUnit [boolP "z", intP "out"]
-    [.assign (.var "z") (.boolLit true), .assign (.var "out") (.intLit 7),
-     .unseq a8Graph (println [str "out", .var "out"])]] }
+    [.assign (.var (vid "z")) (.boolLit true), .assign (.var (vid "out")) (.intLit 7),
+     .unseq a8Graph (println [str "out", .var (vid "out")])]] }
 /-- A3 (audit R2): a use confined to a LATER-skipped region of a binder confined
 to an earlier-skipped region — the machine refuses per §1 G as soon as the
 producer is skipped; the reference enumerator now refuses it too. -/
 def a3Sink : Func := {
   id := ⟨"a3Sink"⟩, args := #[boolP "a", boolP "b"], results := #[],
-  body := println [str "sink", .var "a", .var "b"] }
+  body := println [str "sink", .var (vid "a"), .var (vid "b")] }
 def a3Graph : UnseqGraph := {
   cells := [boolP "$z1", boolP "$h", boolP "$c1", boolP "$z2", boolP "$x", boolP "$c2"],
-  occs := [occ "R_z1" (.eval "$z1" (.var "z1")),
-           occ "G1" (.guard "$z1" false "$c1"),
-           occ "E_h" (.invoke ["$h"] (.var "hv") []) [] (some "G1"),
-           occ "C1" (.eval "$c1" (.var "$h")) [] (some "G1"),
-           occ "R_z2" (.eval "$z2" (.var "z2")) ["C1"],
-           occ "G2" (.guard "$z2" false "$c2"),
-           occ "X" (.eval "$x" (.var "$h")) [] (some "G2"),
-           occ "C2" (.eval "$c2" (.var "$x")) [] (some "G2"),
-           occ "E_sink" (.invoke [] (.var "sinkv") [.var "$c1", .var "$c2"])] }
+  occs := [occ "R_z1" (.eval (vid "$z1") (.var (vid "z1"))),
+           occ "G1" (.guard (vid "$z1") false (vid "$c1")),
+           occ "E_h" (.invoke [vid "$h"] (.var (vid "hv")) []) [] (some "G1"),
+           occ "C1" (.eval (vid "$c1") (.var (vid "$h"))) [] (some "G1"),
+           occ "R_z2" (.eval (vid "$z2") (.var (vid "z2"))) ["C1"],
+           occ "G2" (.guard (vid "$z2") false (vid "$c2")),
+           occ "X" (.eval (vid "$x") (.var (vid "$h"))) [] (some "G2"),
+           occ "C2" (.eval (vid "$c2") (.var (vid "$x"))) [] (some "G2"),
+           occ "E_sink" (.invoke [] (.var (vid "sinkv")) [.var (vid "$c1"), .var (vid "$c2")])] }
 def a3 : Program := { funcs := #[
-  mainUnit [boolP "z1", boolP "z2", ⟨"hv", fnTy [] [.bool]⟩, ⟨"sinkv", fnTy [.bool, .bool] []⟩]
-    [.assign (.var "z1") (.boolLit true), .assign (.var "z2") (.boolLit true),
-     .assign (.var "hv") (clos "r2ah" []), .assign (.var "sinkv") (clos "a3Sink" []),
+  mainUnit [boolP "z1", boolP "z2", ⟨vid "hv", fnTy [] [.bool]⟩, ⟨vid "sinkv", fnTy [.bool, .bool] []⟩]
+    [.assign (.var (vid "z1")) (.boolLit true), .assign (.var (vid "z2")) (.boolLit true),
+     .assign (.var (vid "hv")) (clos "r2ah" []), .assign (.var (vid "sinkv")) (clos "a3Sink" []),
      .unseq a3Graph (.seqn #[])],
   r2ah, a3Sink] }
 
@@ -659,67 +664,67 @@ def a3 : Program := { funcs := #[
 
 /-- The R4 program around any target graph (the two `println`s show old storage and the current header). -/
 def r4with (g : UnseqGraph) : Program := { funcs := #[
-  mainUnit [sliceP "a", sliceP "b", sliceP "old", ⟨"mutv", fnTy [pSlice, pSlice] [.int]⟩]
+  mainUnit [sliceP "a", sliceP "b", sliceP "old", ⟨vid "mutv", fnTy [pSlice, pSlice] [.int]⟩]
     (makeSlice "a" [10, 20] ++ makeSlice "b" [100, 200] ++
-     [.assign (.var "old") (.var "a"), .assign (.var "mutv") (clos "r4mut" ["a", "b"]),
+     [.assign (.var (vid "old")) (.var (vid "a")), .assign (.var (vid "mutv")) (clos "r4mut" ["a", "b"]),
       .unseq g (.seqn #[
-        println [str "old", .indexGet (.var "old") (.intLit 0), .indexGet (.var "old") (.intLit 1)],
-        println [str "a", .indexGet (.var "a") (.intLit 0), .indexGet (.var "a") (.intLit 1)]])]),
+        println [str "old", .indexGet (.var (vid "old")) (.intLit 0), .indexGet (.var (vid "old")) (.intLit 1)],
+        println [str "a", .indexGet (.var (vid "a")) (.intLit 0), .indexGet (.var (vid "a")) (.intLit 1)]])]),
   r4mut] }
-/-- C1: the plan spelled `&a[0]` with `.ref "a"` — an admitted atom, but the anchor
+/-- C1: the plan spelled `&a[0]` with `.ref (vid "a")` — an admitted atom, but the anchor
 is the slice VARIABLE's address: `resolveChain` would re-read its header at the
 load and at the store (the forbidden hybrid `old 10 20 / a 11 200`). -/
 def c1Graph : UnseqGraph := { r4graph with
   cells := [intP "$rd", intP "$m", intP "$op"],
-  occs := [occ "L" (.target "$t" (.addr (.indexAddr (.ref "a") (.intLit 0)))),
-           occ "Rd" (.load "$rd" "$t"),
-           occ "E_mut" (.invoke ["$m"] (.var "mutv") []),
-           occ "Op" (.eval "$op" (.add (.var "$rd") (.var "$m")))] }
-/-- C1b: the source local's header READ at the plan step (`.var "a"`) — frozen from then on. -/
+  occs := [occ "L" (.target (vid "$t") (.addr (.indexAddr (.ref (vid "a")) (.intLit 0)))),
+           occ "Rd" (.load (vid "$rd") (vid "$t")),
+           occ "E_mut" (.invoke [vid "$m"] (.var (vid "mutv")) []),
+           occ "Op" (.eval (vid "$op") (.add (.var (vid "$rd")) (.var (vid "$m"))))] }
+/-- C1b: the source local's header READ at the plan step (`.var (vid "a")`) — frozen from then on. -/
 def c1bGraph : UnseqGraph := { c1Graph with
-  occs := [occ "L" (.target "$t" (.addr (.indexAddr (.var "a") (.intLit 0)))),
-           occ "Rd" (.load "$rd" "$t"),
-           occ "E_mut" (.invoke ["$m"] (.var "mutv") []),
-           occ "Op" (.eval "$op" (.add (.var "$rd") (.var "$m")))] }
+  occs := [occ "L" (.target (vid "$t") (.addr (.indexAddr (.var (vid "a")) (.intLit 0)))),
+           occ "Rd" (.load (vid "$rd") (vid "$t")),
+           occ "E_mut" (.invoke [vid "$m"] (.var (vid "mutv")) []),
+           occ "Op" (.eval (vid "$op") (.add (.var (vid "$rd")) (.var (vid "$m"))))] }
 /-- An ARRAY variable's address is a stable identity (arrays do not rebind): accepted. -/
 def arrGraph : UnseqGraph := {
   cells := [intP "$rd", intP "$m", intP "$op"],
-  occs := [occ "L" (.target "$t" (.addr (.indexAddr (.ref "arr") (.intLit 0)))),
-           occ "Rd" (.load "$rd" "$t"),
-           occ "E_one" (.invoke ["$m"] (.var "onev") []),
-           occ "Op" (.eval "$op" (.add (.var "$rd") (.var "$m")))],
-  stores := [("$t", "$op")] }
+  occs := [occ "L" (.target (vid "$t") (.addr (.indexAddr (.ref (vid "arr")) (.intLit 0)))),
+           occ "Rd" (.load (vid "$rd") (vid "$t")),
+           occ "E_one" (.invoke [vid "$m"] (.var (vid "onev")) []),
+           occ "Op" (.eval (vid "$op") (.add (.var (vid "$rd")) (.var (vid "$m"))))],
+  stores := [(vid "$t", vid "$op")] }
 def arrProg : Program := { funcs := #[
-  mainUnit [⟨"arr", .array 2 .int⟩, ⟨"onev", fnTy [] [.int]⟩]
-    [.assign (.addr (.indexAddr (.ref "arr") (.intLit 0))) (.intLit 10),
-     .assign (.addr (.indexAddr (.ref "arr") (.intLit 1))) (.intLit 20),
-     .assign (.var "onev") (clos "one" []),
-     .unseq arrGraph (println [str "arr", .indexGet (.var "arr") (.intLit 0), .indexGet (.var "arr") (.intLit 1)])],
+  mainUnit [⟨vid "arr", .array 2 .int⟩, ⟨vid "onev", fnTy [] [.int]⟩]
+    [.assign (.addr (.indexAddr (.ref (vid "arr")) (.intLit 0))) (.intLit 10),
+     .assign (.addr (.indexAddr (.ref (vid "arr")) (.intLit 1))) (.intLit 20),
+     .assign (.var (vid "onev")) (clos "one" []),
+     .unseq arrGraph (println [str "arr", .indexGet (.var (vid "arr")) (.intLit 0), .indexGet (.var (vid "arr")) (.intLit 1)])],
   pr "one" "one" 1] }
 
 /-! ### F3 — a binder without the `$` reservation is refused (it would shadow a source local) -/
 
-def b4g : UnseqGraph := { cells := [intP "a"], occs := [occ "K" (.eval "a" (.intLit 42))] }
+def b4g : UnseqGraph := { cells := [intP "a"], occs := [occ "K" (.eval (vid "a") (.intLit 42))] }
 def b4 : Program := { funcs := #[
-  mainUnit [intP "a"] [.assign (.var "a") (.intLit 1),
-    .unseq b4g (println [str "then a", .var "a"]),
-    println [str "after a", .var "a"]]] }
+  mainUnit [intP "a"] [.assign (.var (vid "a")) (.intLit 1),
+    .unseq b4g (println [str "then a", .var (vid "a")]),
+    println [str "after a", .var (vid "a")]]] }
 def mBareTarget : UnseqGraph := {
   cells := [intP "$a"],
-  occs := [occ "A" (.eval "$a" (.intLit 0)), occ "T" (.target "t" (.var "x"))],
-  stores := [("t", "$a")] }
+  occs := [occ "A" (.eval (vid "$a") (.intLit 0)), occ "T" (.target (vid "t") (.var (vid "x")))],
+  stores := [(vid "t", vid "$a")] }
 
 /-! ### N3 — a guard's test/completion cell must be a bool cell (refused at ENTER by name) -/
 
 def k4Graph (testTy outTy : Ty) : UnseqGraph := {
-  cells := [⟨"$z", testTy⟩, intP "$h", ⟨"$cor", outTy⟩],
-  occs := [occ "R_z" (.eval "$z" (.var "z")), occ "G" (.guard "$z" false "$cor"),
-           occ "E_h" (.invoke ["$h"] (.var "hv") []) [] (some "G"),
-           occ "C_or" (.eval "$cor" (.var "$h")) [] (some "G")] }
+  cells := [⟨vid "$z", testTy⟩, intP "$h", ⟨vid "$cor", outTy⟩],
+  occs := [occ "R_z" (.eval (vid "$z") (.var (vid "z"))), occ "G" (.guard (vid "$z") false (vid "$cor")),
+           occ "E_h" (.invoke [vid "$h"] (.var (vid "hv")) []) [] (some "G"),
+           occ "C_or" (.eval (vid "$cor") (.var (vid "$h"))) [] (some "G")] }
 def k4 (testTy outTy : Ty) : Program := { funcs := #[
-  mainUnit [boolP "z", ⟨"hv", fnTy [] [.int]⟩]
-    [.assign (.var "z") (.boolLit true), .assign (.var "hv") (clos "a4h" []),
-     .unseq (k4Graph testTy outTy) (println [str "c", .var "$cor"])],
+  mainUnit [boolP "z", ⟨vid "hv", fnTy [] [.int]⟩]
+    [.assign (.var (vid "z")) (.boolLit true), .assign (.var (vid "hv")) (clos "a4h" []),
+     .unseq (k4Graph testTy outTy) (println [str "c", .var (vid "$cor")])],
   a4h] }
 
 /-! ### R5 — the headline lowering `x := a + f()` ↦ `thenB = .initialization x; x = $op` -/
@@ -727,59 +732,59 @@ def k4 (testTy outTy : Ty) : Program := { funcs := #[
 def fv1 : Func := { id := ⟨"fv1"⟩, args := #[], results := #[intP "r"], body := ret "r" (.intLit 2) }
 def kGraph : UnseqGraph := {
   cells := [intP "$a", intP "$f", intP "$op"],
-  occs := [occ "R_a" (.eval "$a" (.var "a")), occ "E_f" (.invoke ["$f"] (.var "fv") []),
-           occ "Op" (.eval "$op" (.add (.var "$a") (.var "$f")))] }
-def thenDecl (x : String) : Stmt := .seqn #[.initialization (intP x), .assign (.var x) (.var "$op")]
+  occs := [occ "R_a" (.eval (vid "$a") (.var (vid "a"))), occ "E_f" (.invoke [vid "$f"] (.var (vid "fv")) []),
+           occ "Op" (.eval (vid "$op") (.add (.var (vid "$a")) (.var (vid "$f"))))] }
+def thenDecl (x : String) : Stmt := .seqn #[.initialization (intP x), .assign (.var (vid x)) (.var (vid "$op"))]
 /-- K2: the sweep in the MIDDLE of a block; `x` declared by `thenB` survives for the rest. -/
 def k2 : Program := { funcs := #[
-  mainUnit [intP "a", ⟨"fv", fnTy [] [.int]⟩]
-    [.assign (.var "a") (.intLit 1), .assign (.var "fv") (clos "fv1" []),
+  mainUnit [intP "a", ⟨vid "fv", fnTy [] [.int]⟩]
+    [.assign (.var (vid "a")) (.intLit 1), .assign (.var (vid "fv")) (clos "fv1" []),
      .unseq kGraph (thenDecl "x"),
-     println [str "x", .var "x"],
-     .assign (.var "a") (.intLit 10),
+     println [str "x", .var (vid "x")],
+     .assign (.var (vid "a")) (.intLit 10),
      .unseq kGraph (thenDecl "y"),
-     println [str "x y", .var "x", .var "y"]],
+     println [str "x y", .var (vid "x"), .var (vid "y")]],
   fv1] }
 /-- K3: the same inside a 2-iteration loop body (a fresh `x` per iteration). -/
 def k3 : Program := { funcs := #[
-  mainUnit [intP "a", intP "n", ⟨"fv", fnTy [] [.int]⟩]
-    [.assign (.var "a") (.intLit 1), .assign (.var "n") (.intLit 0), .assign (.var "fv") (clos "fv1" []),
-     .while (.lessCmp (.var "n") (.intLit 2))
-       (.seqn #[.unseq kGraph (thenDecl "x"), println [str "x", .var "x"],
-                .assign (.var "a") (.add (.var "a") (.intLit 1)), .assign (.var "n") (.add (.var "n") (.intLit 1))])],
+  mainUnit [intP "a", intP "n", ⟨vid "fv", fnTy [] [.int]⟩]
+    [.assign (.var (vid "a")) (.intLit 1), .assign (.var (vid "n")) (.intLit 0), .assign (.var (vid "fv")) (clos "fv1" []),
+     .while (.lessCmp (.var (vid "n")) (.intLit 2))
+       (.seqn #[.unseq kGraph (thenDecl "x"), println [str "x", .var (vid "x")],
+                .assign (.var (vid "a")) (.add (.var (vid "a")) (.intLit 1)), .assign (.var (vid "n")) (.add (.var (vid "n")) (.intLit 1))])],
   fv1] }
 
 /-! ## Binder lifetime across recursion: `sum(n) = g(n) + sum(n-1)` inside a sweep — per-activation cells -/
 
 def sumG : Func := {
-  id := ⟨"sumG"⟩, args := #[intP "n"], results := #[intP "r"], body := ret "r" (.var "n") }
+  id := ⟨"sumG"⟩, args := #[intP "n"], results := #[intP "r"], body := ret "r" (.var (vid "n")) }
 def sumGraph : UnseqGraph := {
   cells := [intP "$g", intP "$n1", intP "$s", intP "$op"],
-  occs := [occ "E_g" (.invoke ["$g"] (.var "gv") [.var "n"]),
-           occ "K" (.eval "$n1" (.sub (.var "n") (.intLit 1))),
-           occ "E_rec" (.invoke ["$s"] (.funcVal ⟨"sum"⟩ #[]) [.var "$n1", .var "gv"]) ["E_g"],
-           occ "Op" (.eval "$op" (.add (.var "$g") (.var "$s"))),
-           occ "T_r" (.target "$t" (.var "r"))],
-  stores := [("$t", "$op")] }
+  occs := [occ "E_g" (.invoke [vid "$g"] (.var (vid "gv")) [.var (vid "n")]),
+           occ "K" (.eval (vid "$n1") (.sub (.var (vid "n")) (.intLit 1))),
+           occ "E_rec" (.invoke [vid "$s"] (.funcVal ⟨"sum"⟩ #[]) [.var (vid "$n1"), .var (vid "gv")]) ["E_g"],
+           occ "Op" (.eval (vid "$op") (.add (.var (vid "$g")) (.var (vid "$s")))),
+           occ "T_r" (.target (vid "$t") (.var (vid "r")))],
+  stores := [(vid "$t", vid "$op")] }
 def sumF : Func := {
-  id := ⟨"sum"⟩, args := #[intP "n", ⟨"gv", fnTy [.int] [.int]⟩], results := #[intP "r"],
-  body := .ifThenElse (.eqCmp .int (.var "n") (.intLit 0)) (ret "r" (.intLit 0))
+  id := ⟨"sum"⟩, args := #[intP "n", ⟨vid "gv", fnTy [.int] [.int]⟩], results := #[intP "r"],
+  body := .ifThenElse (.eqCmp .int (.var (vid "n")) (.intLit 0)) (ret "r" (.intLit 0))
     (.seqn #[.unseq sumGraph (.seqn #[])]) }
 def recursion : Program := { funcs := #[
-  mainInt [⟨"gv", fnTy [.int] [.int]⟩]
-    [.assign (.var "gv") (clos "sumG" []), .call #[.var "z"] ⟨"sum"⟩ #[.intLit 4, .var "gv"]],
+  mainInt [⟨vid "gv", fnTy [.int] [.int]⟩]
+    [.assign (.var (vid "gv")) (clos "sumG" []), .call #[.var (vid "z")] ⟨"sum"⟩ #[.intLit 4, .var (vid "gv")]],
   sumG, sumF] }
 
 /-! ## Replay: three unordered printing events — every order is a schedule, each realized by its rank tape -/
 
 def trGraph : UnseqGraph := {
   cells := [intP "$a", intP "$b", intP "$c"],
-  occs := [occ "A" (.invoke ["$a"] (.var "av") []), occ "B" (.invoke ["$b"] (.var "bv") []),
-           occ "C" (.invoke ["$c"] (.var "cv") [])] }
+  occs := [occ "A" (.invoke [vid "$a"] (.var (vid "av")) []), occ "B" (.invoke [vid "$b"] (.var (vid "bv")) []),
+           occ "C" (.invoke [vid "$c"] (.var (vid "cv")) [])] }
 def trace : Program := { funcs := #[
-  mainUnit [⟨"av", fnTy [] [.int]⟩, ⟨"bv", fnTy [] [.int]⟩, ⟨"cv", fnTy [] [.int]⟩]
-    [.assign (.var "av") (clos "prA" []), .assign (.var "bv") (clos "prB" []),
-     .assign (.var "cv") (clos "prC" []), .unseq trGraph (.seqn #[])],
+  mainUnit [⟨vid "av", fnTy [] [.int]⟩, ⟨vid "bv", fnTy [] [.int]⟩, ⟨vid "cv", fnTy [] [.int]⟩]
+    [.assign (.var (vid "av")) (clos "prA" []), .assign (.var (vid "bv")) (clos "prB" []),
+     .assign (.var (vid "cv")) (clos "prC" []), .unseq trGraph (.seqn #[])],
   pr "prA" "A" 0, pr "prB" "B" 0, pr "prC" "C" 0] }
 
 /-- The rank tape of an occurrence ORDER (a permutation of the graph's
@@ -852,7 +857,10 @@ def main (_args : List String) : IO Unit := do
     expectTape "C1 singleton picks: the tape is untouched" c1 "main" [5, 6] (okZ 8) (some [5, 6]),
     expectTape "C2 singleton picks: the tape is untouched" c2 "main" [7] (okZ 3) (some [7]),
     -- Malformed graphs by name
-    expectRefusal "malformed: unknown slot" (malformed mUnknownSlot) "main" "unknown slot",
+    -- B6 (2026-09-30): the «unknown slot» SPELLING check moved to the decoder (`NativeToIR`,
+    -- `unseqCheckLocalAtoms`; wire mutant `mut-unknown-slot`); a hand-built graph mentioning an
+    -- undeclared slot is the machine's own `stuck` at the read (fail closed at the point of failure).
+    expectRefusal "malformed: unknown slot (a hand-built graph: the machine's unbound read)" (malformed mUnknownSlot) "main" "unbound GoCore variable address",
     expectRefusal "malformed: duplicate result" (malformed mDupResult) "main" "duplicate result",
     expectRefusal "malformed: load through a VALUE binder (sort mismatch)" (malformed mSortLoad) "main" "sort mismatch",
     expectRefusal "malformed: TARGET binder used as a value (sort mismatch)" (malformed mSortTargetAsValue) "main" "sort mismatch",
@@ -867,10 +875,10 @@ def main (_args : List String) : IO Unit := do
     -- Audit fix round (2026-09-16): F1
     expectRefusal "F1/A4 phase-2 store of a SKIPPED producer's binder (z=true): refused by name" (a4 true) "main" "was not produced",
     expectSet "F1/A4 control (z=false): h runs, 42 stored" (a4 false) "main" [okOut "h ran\nout 42\n"],
-    expectRefusal "F1/A5 thenB reads a SKIPPED producer's cell (z=true): refused by name" (a5 true (println [str "h", .var "$h"])) "main" "was not produced",
-    expectSet "F1/A5 control (z=false): h runs, thenB reads 42" (a5 false (println [str "h", .var "$h"])) "main" [okOut "h ran\nh 42\n"],
-    expectSet "F1 the legitimate join: thenB reads the skipped region's COMPLETION binder (z=true)" (a5 true (println [str "c", .var "$cor"])) "main" [okOut "c true\n"],
-    expectSet "F1 the legitimate join, region enabled (z=false)" (a5 false (println [str "c", .var "$cor"])) "main" [okOut "h ran\nc true\n"],
+    expectRefusal "F1/A5 thenB reads a SKIPPED producer's cell (z=true): refused by name" (a5 true (println [str "h", .var (vid "$h")])) "main" "was not produced",
+    expectSet "F1/A5 control (z=false): h runs, thenB reads 42" (a5 false (println [str "h", .var (vid "$h")])) "main" [okOut "h ran\nh 42\n"],
+    expectSet "F1 the legitimate join: thenB reads the skipped region's COMPLETION binder (z=true)" (a5 true (println [str "c", .var (vid "$cor")])) "main" [okOut "c true\n"],
+    expectSet "F1 the legitimate join, region enabled (z=false)" (a5 false (println [str "c", .var (vid "$cor")])) "main" [okOut "h ran\nc true\n"],
     expectRefusal "A8 store through a TARGET binder from a skipped region: refused by name (pre-existing)" a8 "main" "has not been produced",
     expectRefusal "A3 (R2) a use confined to a LATER-skipped region: refused by name" a3 "main" "confined to a skipped region",
     -- F2
@@ -878,8 +886,10 @@ def main (_args : List String) : IO Unit := do
     expectSet "F2/C1b R4 plan with the header READ at the plan step (.var a): the frozen R4 set" (r4with c1bGraph) "main" [okOut "old 11 20\na 100 200\n", okOut "old 10 20\na 101 200\n"],
     expectSet "F2 an ARRAY variable's address is a stable anchor: accepted" arrProg "main" [okOut "one\narr 11 20\n"],
     -- F3
-    expectRefusal "F3/B4 a bare (non-$) cell name would shadow the source local: refused by name" b4 "main" "not a reserved `$` slot name",
-    expectRefusal "F3 a bare (non-$) target binder: refused by name" (malformed mBareTarget) "main" "not a reserved `$` slot name",
+    -- B6 (2026-09-30): the F3 reservation («a bare, non-`$` binder would shadow a source local»)
+    -- is a SPELLING test; ids have none. It lives at the decoder (`NativeToIR.binder`; wire mutant
+    -- `mut-nondollar`), where the spellings are. The two hand-built rows it had here (`b4`,
+    -- `mBareTarget`) are retired — design note docs/2026-09-30_numeric-locals-design.md D6.
     -- N3
     expectRefusal "N3/K4 guard completion cell typed int: refused by name at ENTER" (k4 .bool .int) "main" "not a bool cell",
     expectRefusal "N3 guard test cell typed int: refused by name at ENTER" (k4 .int .bool) "main" "not a bool cell",

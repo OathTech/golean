@@ -36,7 +36,7 @@ references a body consumes (∩ the graph's binder cells = its VALUE
 dependencies) and the admitted stable reads of source locals. Total; no
 constructor catch-all (adding syntax requires choosing its traversal —
 the `AdmissionIndices` discipline). -/
-def Expr.names : Expr → List String
+def Expr.names : Expr → List VarId
   | .var id | .ref id => [id]
   | .nil _ | .intLit _ _ | .floatLit _ _ _ | .stringLit _ | .boolLit _
   | .global _ | .defaultValue _ | .recoverCall | .unsupported _ => []
@@ -55,24 +55,24 @@ def Expr.names : Expr → List String
   | .structLit _ es => exprListNames es.toList
   | .arrayLit _ _ es => keyedExprNames es.toList
   | .slice b lo hi m => Expr.names b ++ Expr.names lo ++ Expr.names hi ++ optExprNames m
-def exprListNames : List Expr → List String
+def exprListNames : List Expr → List VarId
   | [] => []
   | e :: es => Expr.names e ++ exprListNames es
-def keyedExprNames : List (Int × Expr) → List String
+def keyedExprNames : List (Int × Expr) → List VarId
   | [] => []
   | (_, e) :: es => Expr.names e ++ keyedExprNames es
-def optExprNames : Option Expr → List String
+def optExprNames : Option Expr → List VarId
   | none => []
   | some e => Expr.names e
 end
 
 /-- The names a map literal's entries mention (Stage E5 E5c). -/
-def pairExprNames : List (Expr × Expr) → List String
+def pairExprNames : List (Expr × Expr) → List VarId
   | [] => []
   | (k, v) :: es => Expr.names k ++ Expr.names v ++ pairExprNames es
 
 /-- The names an allocation's operands mention (Stage E E4). -/
-def AllocSpec.names : AllocSpec → List String
+def AllocSpec.names : AllocSpec → List VarId
   | .new v _ => Expr.names v
   | .makeSlice _ len cap => Expr.names len ++ optExprNames cap
   | .makeMap _ _ hint => optExprNames hint
@@ -81,7 +81,7 @@ def AllocSpec.names : AllocSpec → List String
   | .mapLit _ _ entries => pairExprNames entries
 
 /-- The names a wide statement's operands mention (Stage E5 E5a). -/
-def WideSpec.names : WideSpec → List String
+def WideSpec.names : WideSpec → List VarId
   | .append _ slice elems => Expr.names slice ++ Expr.names elems
   | .copy dst src => Expr.names dst ++ Expr.names src
   | .mapLookup base key _ _ => Expr.names base ++ Expr.names key
@@ -89,17 +89,17 @@ def WideSpec.names : WideSpec → List String
 
 /-- The names an assignee's OPERANDS mention (`targetPlan`'s operand
 expressions: `x` ↦ `&x`'s name, `a[i]` ↦ the anchor and index names). -/
-def Assignee.names : Assignee → List String
+def Assignee.names : Assignee → List VarId
   | .var id => [id]
   | .addr e => Expr.names e
   | .mapElem b k _ _ => Expr.names b ++ Expr.names k
   | .unsupported _ => []
 
-def assigneeListNames : List Assignee → List String
+def assigneeListNames : List Assignee → List VarId
   | [] => []
   | a :: as => a.names ++ assigneeListNames as
 
-def selectHeadNames : SelectClauseHead → List String
+def selectHeadNames : SelectClauseHead → List VarId
   | .send c v _ => c.names ++ v.names
   | .recv as c _ => assigneeListNames as.toList ++ c.names
 
@@ -126,20 +126,20 @@ inductive UnseqPhase where
 namespace UnseqBody
 
 /-- The VALUE binders a body produces (its results). -/
-def valueBinds : UnseqBody → List String
+def valueBinds : UnseqBody → List VarId
   | .eval b _ | .load b _ | .allocate b _ => [b]
   | .invoke bs _ _ | .recv bs _ _ | .wide bs _ => bs
   | .target _ _ | .guard _ _ _ => []
 
 /-- The TARGET binder a body produces, if any. -/
-def targetBind? : UnseqBody → Option String
+def targetBind? : UnseqBody → Option VarId
   | .target b _ => some b
   | _ => none
 
 /-- The VALUE names a body consumes: slot references and admitted
 source-local reads (a guard consumes its test binder). A `load` consumes
 only a TARGET (`targetMentions`). -/
-def mentions : UnseqBody → List String
+def mentions : UnseqBody → List VarId
   | .eval _ head => head.names
   | .load _ _ => []
   | .invoke _ callee args => callee.names ++ exprListNames args
@@ -150,7 +150,7 @@ def mentions : UnseqBody → List String
   | .guard test _ _ => [test]
 
 /-- The TARGET binders a body reads through. -/
-def targetMentions : UnseqBody → List String
+def targetMentions : UnseqBody → List VarId
   | .load _ tgt => [tgt]
   | _ => []
 
@@ -159,7 +159,7 @@ end UnseqBody
 /-- The slot names a nested graph's bodies and stores mention (a nested
 `unseq` in a completion statement is the decoder's refusal, Stage C; the
 walk below stays total over it). -/
-def unseqGraphNames (g : UnseqGraph) : List String :=
+def unseqGraphNames (g : UnseqGraph) : List VarId :=
   g.occs.flatMap (fun o => o.body.mentions ++ o.body.targetMentions)
     ++ g.stores.flatMap (fun (t, v) => [t, v])
 
@@ -170,7 +170,7 @@ are not mentions). Total; no constructor catch-all (adding syntax requires
 choosing its traversal — the `AdmissionIndices` discipline; the case list
 mirrors `Admission.stmtIndices`). Consumed by `UnseqGraph.unproducedConsumer?`
 (audit F1, 2026-09-16). -/
-def Stmt.names : Stmt → List String
+def Stmt.names : Stmt → List VarId
   | .seqn ss => stmtListNames ss.toList
   | .block _ ss => stmtListNames ss.toList
   | .breakable s | .labeled _ s => Stmt.names s
@@ -202,25 +202,46 @@ def Stmt.names : Stmt → List String
   | .chanRecv as c _ => assigneeListNames as.toList ++ c.names
   | .selectStmt cs d => selectNames cs.toList ++ optStmtNames d
   | .print _ es => exprListNames es.toList
-def stmtListNames : List Stmt → List String
+def stmtListNames : List Stmt → List VarId
   | [] => []
   | s :: ss => Stmt.names s ++ stmtListNames ss
-def selectNames : List (SelectClauseHead × Stmt) → List String
+def selectNames : List (SelectClauseHead × Stmt) → List VarId
   | [] => []
   | (c, s) :: cs => selectHeadNames c ++ Stmt.names s ++ selectNames cs
-def optStmtNames : Option Stmt → List String
+def optStmtNames : Option Stmt → List VarId
   | none => []
   | some s => Stmt.names s
 end
 
 /-- Pairwise distinctness of a name list. -/
-def namesDistinct : List String → Bool
+def namesDistinct {α : Type} [BEq α] : List α → Bool
   | [] => true
   | x :: xs => !xs.contains x && namesDistinct xs
 
+theorem namesDistinct_cons {α : Type} [BEq α] [LawfulBEq α] {a : α} {l : List α}
+    (h : namesDistinct (a :: l) = true) : a ∉ l ∧ namesDistinct l = true := by
+  simp only [namesDistinct, Bool.and_eq_true, Bool.not_eq_true'] at h
+  exact ⟨fun hm => by simp_all, h.2⟩
+
+theorem namesDistinct_append {α : Type} [BEq α] [LawfulBEq α] :
+    ∀ {l₁ l₂ : List α}, namesDistinct (l₁ ++ l₂) = true →
+      namesDistinct l₁ = true ∧ namesDistinct l₂ = true ∧ ∀ a, a ∈ l₁ → a ∉ l₂
+  | [], l₂, h => ⟨rfl, h, fun _ h' => absurd h' (List.not_mem_nil)⟩
+  | a :: l₁, l₂, h => by
+      obtain ⟨hn, hrest⟩ := namesDistinct_cons h
+      obtain ⟨h1, h2, h3⟩ := namesDistinct_append hrest
+      refine ⟨?_, h2, ?_⟩
+      · simp only [namesDistinct, Bool.and_eq_true, Bool.not_eq_true', h1, and_true]
+        have : a ∉ l₁ := fun hm => hn (List.mem_append_left _ hm)
+        simpa using this
+      · intro b hb
+        rcases List.mem_cons.mp hb with rfl | hb'
+        · exact fun h2' => hn (List.mem_append_right _ h2')
+        · exact h3 b hb'
+
 namespace UnseqGraph
 
-def cellNames (g : UnseqGraph) : List String := g.cells.map (·.id)
+def cellNames (g : UnseqGraph) : List VarId := g.cells.map (·.id)
 
 def occNames (g : UnseqGraph) : List String := g.occs.map (·.name)
 
@@ -229,19 +250,19 @@ def index? (g : UnseqGraph) (name : String) : Option Nat :=
   g.occs.findIdx? (·.name == name)
 
 /-- The occurrence producing `slot` (a VALUE cell or a TARGET binder). -/
-def producer? (g : UnseqGraph) (slot : String) : Option Nat :=
+def producer? (g : UnseqGraph) (slot : VarId) : Option Nat :=
   g.occs.findIdx? fun o => o.body.valueBinds.contains slot || o.body.targetBind? == some slot
 
-def targetBinders (g : UnseqGraph) : List String :=
+def targetBinders (g : UnseqGraph) : List VarId :=
   g.occs.filterMap (·.body.targetBind?)
 
-def isCell (g : UnseqGraph) (n : String) : Bool := g.cellNames.contains n
+def isCell (g : UnseqGraph) (n : VarId) : Bool := g.cellNames.contains n
 
 /-- The declared type of a binder cell. -/
-def cellType? (g : UnseqGraph) (n : String) : Option Ty :=
+def cellType? (g : UnseqGraph) (n : VarId) : Option Ty :=
   (g.cells.find? (·.id == n)).map (·.typ)
 
-def isTargetBinder (g : UnseqGraph) (n : String) : Bool := g.targetBinders.contains n
+def isTargetBinder (g : UnseqGraph) (n : VarId) : Bool := g.targetBinders.contains n
 
 def isGuard (g : UnseqGraph) (n : String) : Bool :=
   g.occs.any fun o => o.name == n && match o.body with | .guard .. => true | _ => false
@@ -250,7 +271,7 @@ def isGuard (g : UnseqGraph) (n : String) : Bool :=
 mentions (IMPLIED by slot mentions — a name that is not a cell is an
 admitted source-local read, not an edge) plus the target binders it
 reads through. -/
-def deps (g : UnseqGraph) (o : UnseqOcc) : List String :=
+def deps (g : UnseqGraph) (o : UnseqOcc) : List VarId :=
   o.body.mentions.filter g.isCell ++ o.body.targetMentions
 
 def statusOf (g : UnseqGraph) (st : List UnseqStatus) (name : String) : Option UnseqStatus :=
@@ -261,7 +282,7 @@ def statusOf (g : UnseqGraph) (st : List UnseqStatus) (name : String) : Option U
 status array ([AGENT] representation choice, Stage B: one array, not
 two; the alternative — an explicit bitmap beside the statuses — is
 recorded in the handoff). -/
-def produced (g : UnseqGraph) (st : List UnseqStatus) (slot : String) : Bool :=
+def produced (g : UnseqGraph) (st : List UnseqStatus) (slot : VarId) : Bool :=
   match g.producer? slot with
   | some p => st[p]? == some .done
   | none => false
@@ -335,7 +356,7 @@ outside its region, skipped or not, other than the completion binder) is the
 decoder's check (Stage C); this is the machine's own refusal at the point of
 failure, which hand-built graphs cannot bypass. -/
 def unproducedConsumer? (g : UnseqGraph) (st : List UnseqStatus) (thenB : Stmt) : Option String :=
-  let blame (consumer v : String) : Option String :=
+  let blame (consumer : String) (v : VarId) : Option String :=
     if g.produced st v then none
     else
       let why := match (g.producer? v).bind (g.occs[·]?) with
@@ -384,14 +405,12 @@ def wellFormed? (g : UnseqGraph) : Option String :=
   else if !namesDistinct (g.occs.flatMap (·.body.valueBinds)) then some "duplicate result (a value binder produced twice)"
   else if !namesDistinct g.targetBinders then some "duplicate result (a target binder produced twice)"
   else
-    -- Audit F3 (2026-09-16): every binder — cell or target — carries the
-    -- frontend's `$` reservation. The cells are declared into the SOURCE
-    -- scope at ENTER (the `.initialization` idiom), so a bare name would
-    -- SHADOW the source local of that name for the rest of the block,
-    -- silently. Refused by name, before anything else about the shape.
-    match (g.cellNames ++ g.targetBinders).find? (fun n => !n.startsWith "$") with
-    | some n => some s!"binder '{n}' is not a reserved `$` slot name (every binder cell and target binder is `$`-prefixed — the frontend's reservation; a bare name would shadow the source local '{n}' for the rest of the block)"
-    | none =>
+    -- B6 (2026-09-30): the audit-F3 reservation check («every binder carries
+    -- the frontend's `$` prefix, else it would shadow a source local») was a
+    -- SPELLING test; ids have no spelling. The disjointness it guarded is
+    -- the decoder's (`NativeToIR`: binder cells are `$`-temporaries interned
+    -- past the function's source ids), stated in
+    -- `docs/2026-09-30_numeric-locals-design.md` D6.
     match g.occs.flatMap (·.body.valueBinds) |>.find? (fun b => !g.isCell b) with
     | some b => some s!"result binder '{b}' is not a declared cell"
     | none =>
@@ -406,14 +425,10 @@ def wellFormed? (g : UnseqGraph) : Option String :=
           s!"sort mismatch: TARGET binder '{t}' used as a value in occurrence '{o.name}'") with
     | some msg => some msg
     | none =>
-    -- A `$`-prefixed name is a SLOT by the frontend's reservation (its temps
-    -- and binders); one that is neither a cell nor a target binder is
-    -- unknown, never an admitted source-local read.
-    match g.occs.findSome? (fun o =>
-        (o.body.mentions.find? (fun n => n.startsWith "$" && !g.isCell n && !g.isTargetBinder n)).map fun n =>
-          s!"unknown slot '{n}' mentioned by occurrence '{o.name}'") with
-    | some msg => some msg
-    | none =>
+    -- B6 (2026-09-30): the «unknown slot» check (a `$`-spelled mention that is
+    -- neither a cell nor a target binder) was likewise a spelling test; the
+    -- decoder refuses it (`unseqCheckLocalAtoms`), and at run time an
+    -- unbound mention is the machine's own `stuck` at the read.
     match g.occs.findSome? (fun o =>
         (o.body.targetMentions.find? (fun t => !g.isTargetBinder t)).map fun t =>
           s!"sort mismatch: occurrence '{o.name}' loads through '{t}', not a TARGET binder") with

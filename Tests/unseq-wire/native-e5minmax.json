@@ -24,6 +24,7 @@
        {
         "expr": {
          "expr": "ident",
+         "local": 0,
          "name": "y$cap"
         },
         "target": "addr"
@@ -57,10 +58,19 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "capture",
+     "name": "y",
+     "pos": "main.go:9:2",
+     "wire": "y$cap"
+    }
+   ],
    "name": "e5minmax$lit0",
    "params": [
     {
      "id": "y$cap",
+     "local": 0,
      "type": {
       "elem": {
        "int": "int",
@@ -89,6 +99,7 @@
       "lhs": [
        {
         "id": "x",
+        "local": 0,
         "target": "declare",
         "type": {
          "int": "int",
@@ -113,6 +124,7 @@
       "lhs": [
        {
         "id": "y",
+        "local": 1,
         "target": "declare",
         "type": {
          "int": "int",
@@ -137,6 +149,7 @@
       "lhs": [
        {
         "id": "m",
+        "local": 2,
         "target": "declare",
         "type": {
          "kind": "func",
@@ -156,7 +169,8 @@
         "captured": [
          {
           "expr": "ref",
-          "id": "y"
+          "id": "y",
+          "local": 1
          }
         ],
         "expr": "func-value",
@@ -221,6 +235,7 @@
          "args": [
           {
            "expr": "ident",
+           "local": 0,
            "name": "x",
            "type": {
             "int": "int",
@@ -255,6 +270,7 @@
         ],
         "callee": {
          "expr": "ident",
+         "local": 2,
          "name": "m",
          "type": {
           "kind": "func",
@@ -281,6 +297,7 @@
         "bind": "$u1",
         "head": {
          "expr": "ident",
+         "local": 1,
          "name": "y",
          "type": {
           "int": "int",
@@ -368,6 +385,23 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "local",
+     "name": "x",
+     "pos": "main.go:8:2"
+    },
+    {
+     "kind": "local",
+     "name": "y",
+     "pos": "main.go:9:2"
+    },
+    {
+     "kind": "local",
+     "name": "m",
+     "pos": "main.go:10:2"
+    }
+   ],
    "name": "e5minmax",
    "params": [],
    "results": [
@@ -386,6 +420,6 @@
  "methods": [],
  "package": "main",
  "promotions": [],
- "schema": "golean-native-v2",
+ "schema": "golean-native-v3",
  "types": []
 }

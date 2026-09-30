@@ -54,6 +54,7 @@
     ],
     "stmt": "block"
    },
+   "locals": [],
    "name": "h",
    "params": [],
    "results": [
@@ -106,6 +107,7 @@
     ],
     "stmt": "block"
    },
+   "locals": [],
    "name": "k",
    "params": [],
    "results": [
@@ -146,6 +148,7 @@
        },
        {
         "expr": "ident",
+        "local": 0,
         "name": "b",
         "type": {
          "kind": "bool"
@@ -153,6 +156,7 @@
        },
        {
         "expr": "ident",
+        "local": 1,
         "name": "n",
         "type": {
          "int": "int",
@@ -166,16 +170,30 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "param",
+     "name": "b",
+     "pos": "main.go:7:12"
+    },
+    {
+     "kind": "param",
+     "name": "n",
+     "pos": "main.go:7:20"
+    }
+   ],
    "name": "sinkB",
    "params": [
     {
      "id": "b",
+     "local": 0,
      "type": {
       "kind": "bool"
      }
     },
     {
      "id": "n",
+     "local": 1,
      "type": {
       "int": "int",
       "kind": "int"
@@ -193,6 +211,7 @@
       "lhs": [
        {
         "id": "z",
+        "local": 0,
         "target": "declare",
         "type": {
          "kind": "bool"
@@ -243,6 +262,7 @@
         "bind": "$u0",
         "head": {
          "expr": "ident",
+         "local": 0,
          "name": "z",
          "type": {
           "kind": "bool"
@@ -351,6 +371,13 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "local",
+     "name": "z",
+     "pos": "main.go:10:2"
+    }
+   ],
    "name": "r2aTrue",
    "params": [],
    "results": [],
@@ -364,6 +391,7 @@
       "lhs": [
        {
         "id": "z",
+        "local": 0,
         "target": "declare",
         "type": {
          "kind": "bool"
@@ -414,6 +442,7 @@
         "bind": "$u0",
         "head": {
          "expr": "ident",
+         "local": 0,
          "name": "z",
          "type": {
           "kind": "bool"
@@ -522,6 +551,13 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "local",
+     "name": "z",
+     "pos": "main.go:15:2"
+    }
+   ],
    "name": "r2aFalse",
    "params": [],
    "results": [],
@@ -532,6 +568,6 @@
  "methods": [],
  "package": "main",
  "promotions": [],
- "schema": "golean-native-v2",
+ "schema": "golean-native-v3",
  "types": []
 }

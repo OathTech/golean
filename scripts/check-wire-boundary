@@ -74,7 +74,7 @@ def find_discard_call(v):
             if r is not None: return r
     return None
 
-assert compact.count('"schema":"golean-native-v2"') == 1
+assert compact.count('"schema":"golean-native-v3"') == 1
 assert '"package":"main"' in compact, 'fixture wire has no package field to mutate'
 assert 'buildContext' in base, 'fixture wire has no buildContext (BUG-108 record)'
 
@@ -384,6 +384,7 @@ m = fresh(); rec(m, 'main.mid', 'val')['adjust'] = 'deref'; write('prom-wrong-ad
 m = fresh(); rec(m, 'main.mid', 'val')['target'] = dict(rec(m, 'main.mid', 'inc')['target']); write('prom-target-mismatch', m)
 m = fresh(); del rec(m, 'main.locked', 'Lock')['unsupported']; write('prom-sig-without-unsupported', m)
 m = fresh(); m['schema'] = 'golean-native-v1'; write('prom-wire-v1', m)                                  # a v1 wire (wrappers era) refuses by name
+m = fresh(); m['schema'] = 'golean-native-v2'; write('prom-wire-v2', m)                                  # a v2 wire (spelled locals, pre-B6) refuses by name
 m = fresh(); method(m, 'main.base', 'val')['wrapper'] = True; write('prom-wrapper-key', m)               # the retired marker on a declared method
 m = fresh(); m['promotions'] = [r for r in m['promotions'] if not (r['type'] == 'main.outer' and r['member']['name'] == 'val')]; write('prom-record-removed', m)  # v.val() has no record and no wrapper: the dispatch refuses
 m = fresh(); m['promotions'].append(dict(rec(m, 'main.mid', 'val'))); write('prom-duplicate', m)
@@ -399,9 +400,95 @@ expect_refusal prom-wrong-set               'inPtrSetOnly is true' 'spec#Struct_
 expect_refusal prom-wrong-adjust            'adjust is' 'requires'
 expect_refusal prom-target-mismatch         'member identity' 'disagrees with the target'
 expect_refusal prom-sig-without-unsupported 'sig without unsupported'
-expect_refusal prom-wire-v1                 'golean-native-v1 predates G-P S2' 'golean-native-v2'
+expect_refusal prom-wire-v1                 'golean-native-v1 predates G-P S2' 'golean-native-v3'
+expect_refusal prom-wire-v2                 'golean-native-v2 predates B6' 'golean-native-v3'
 expect_refusal prom-wrapper-key             'wrapper' 'retired at G-P S2'
 expect_refusal prom-record-removed          'dynamic type main.outer has no method val'
 expect_refusal prom-duplicate               'duplicate promotion record'
 expect_refusal prom-declared-conflict       'is a DECLARED method of the carrier'
-echo 'Wire boundary gate: PASS (11 byte-level controls + 56 unseq-node controls + 12 promotion-record controls through the real CLI)'
+
+# ---- B6, numeric locals (2026-09-30; design note docs/2026-09-30_numeric-locals-design.md D5) ----
+# Fixture Tests/wire-boundary-locals/main.go (a shadowed `x`, a capture pointer, a named result and a
+# `:=` reuse, a range pair, a type-switch binder) lowered FRESH; one field forged per mutant, each refused
+# BY NAME by the decoder's checks c1 (index in range, spelling agreement), c2 (table kinds/spellings, the
+# signature's distinct ids), c3 (a reference in scope), c4 (the frontend's resolution and the decoder's
+# lexical walk agree), the temporaries' reservation, and the required `locals` table. The positive control
+# runs `shadow(2)`: the inner `x` prints 4, the outer `x` returns 2.
+GOCACHE="$ROOT/artifacts/go-build-cache" GO111MODULE=off \
+  go run ./tools/nativefrontend --dir Tests/wire-boundary-locals --out "$gate_scratch/locals.json"
+python3 - "$gate_scratch" <<'PY'
+import json, sys
+from pathlib import Path
+scratch = Path(sys.argv[1])
+base = json.loads((scratch / 'locals.json').read_text('utf-8'))
+assert base['schema'] == 'golean-native-v3', base['schema']
+def fresh():
+    return json.loads(json.dumps(base))
+def write(name, data):
+    (scratch / f'{name}.json').write_text(json.dumps(data, separators=(',', ':')), 'utf-8')
+def func(w, name):
+    hits = [f for f in w['funcs'] if f['name'] == name]
+    assert len(hits) == 1, (name, len(hits))
+    return hits[0]
+def find_nodes(v, pred):
+    out = []
+    if isinstance(v, dict):
+        if pred(v): out.append(v)
+        for c in v.values(): out += find_nodes(c, pred)
+    elif isinstance(v, list):
+        for c in v: out += find_nodes(c, pred)
+    return out
+def idents(w, fn, name):
+    return find_nodes(func(w, fn)['body'], lambda n: n.get('expr') == 'ident' and n.get('name') == name)
+sh = func(base, 'shadow')
+assert [e['name'] for e in sh['locals']] == ['n', 'x', 'x'], sh['locals']          # two objects spelled x
+outer_x, inner_x = 1, 2
+xs = idents(base, 'shadow', 'x')
+assert sorted({n['local'] for n in xs}) == [outer_x, inner_x], xs
+assert func(base, 'capture$lit0')['locals'][0]['kind'] == 'capture' and func(base, 'capture$lit0')['locals'][0]['wire'] == 'x$cap'
+assert [e['kind'] for e in func(base, 'named')['locals']] == ['param', 'result', 'result']
+it = func(base, 'iter')
+rng = find_nodes(it['body'], lambda n: n.get('stmt') == 'range')[0]
+assert rng['keyLocal'] == 3 and rng['valLocal'] == 4, (rng.get('keyLocal'), rng.get('valLocal'))
+
+write('locals-base', fresh())
+# c1: a reference without its index; an index past the table; an index naming another spelling
+m = fresh(); del idents(m, 'shadow', 'x')[0]['local']; write('b6-local-missing', m)
+m = fresh(); idents(m, 'shadow', 'x')[0]['local'] = 99; write('b6-local-range', m)
+m = fresh(); idents(m, 'shadow', 'x')[0]['local'] = 0; write('b6-local-spelling', m)                      # 0 spells n
+# c4: the inner x's reference re-pointed at the OUTER declaration (in scope, same spelling, wrong object)
+m = fresh()
+inner_refs = [n for n in idents(m, 'shadow', 'x') if n['local'] == inner_x]
+assert inner_refs, 'no inner reference'
+inner_refs[0]['local'] = outer_x; write('b6-local-disagree', m)
+# c3: a reference to a declaration that is not in scope (the OUTER x referenced inside `capture`, whose table has no such object: forge the table too)
+m = fresh(); cap = func(m, 'capture'); cap['locals'].append({'kind': 'local', 'name': 'q'})
+ref = find_nodes(cap['body'], lambda n: n.get('expr') == 'ref' and n.get('id') == 'x')[0]; ref['id'] = 'q'; ref['local'] = len(cap['locals']) - 1; write('b6-local-scope', m)
+# the temporaries' reservation: a `$`-spelled node carrying an index; a table entry spelled `$`
+m = fresh(); temps = find_nodes(m['funcs'], lambda n: n.get('expr') == 'ident' and str(n.get('name', '')).startswith('$')); assert temps, 'no frontend temporary in the fixture'; temps[0]['local'] = 0; write('b6-temp-indexed', m)
+m = fresh(); func(m, 'shadow')['locals'][1]['name'] = '$x'; write('b6-table-dollar', m)
+# c2: a wire entry of the decoder's kind; a parameter recorded as a result; the signature binding one id twice; the table absent
+m = fresh(); func(m, 'shadow')['locals'][1]['kind'] = 'temp'; write('b6-table-temp', m)
+m = fresh(); func(m, 'shadow')['locals'][0]['kind'] = 'result'; write('b6-table-kind', m)
+m = fresh(); nm = func(m, 'named'); nm['results'][1]['local'] = nm['results'][0]['local']; nm['results'][1]['id'] = 'r'; write('b6-sig-dup', m)
+m = fresh(); del func(m, 'shadow')['locals']; write('b6-table-absent', m)
+print('B6 mutants written')
+PY
+run_shadow() { "$GOLEAN" native-json-run --input "$1" --function shadow --arg-int 2 2>&1; }
+out="$(run_shadow "$gate_scratch/locals-base.json")" || { echo "check-wire-boundary: FAIL [locals-base] — the B6 fixture did not run: $out" >&2; exit 1; }
+if [[ "$out" != *'"status":"ok"'* || "$out" != *'"value":2'* || "$out" != *'4\n'* ]]; then
+  echo "check-wire-boundary: FAIL [locals-base] — expected shadow(2) to print 4 and return 2: $out" >&2; exit 1
+fi
+echo "ok [locals-base] shadow(2): the inner x printed 4, the outer x returned 2"
+expect_refusal b6-local-missing   'carries no' 'local' 'declaration index'
+expect_refusal b6-local-range     'is past the function' 'name table'
+expect_refusal b6-local-spelling  'in the function' 'name table, but the node spells'
+expect_refusal b6-local-disagree  'by lexical scope' 'the frontend' 'resolution and the decoder' 'disagree'
+expect_refusal b6-local-scope     'is not in scope at this statement'
+expect_refusal b6-temp-indexed    'carries a' 'local' 'index' 'temporaries are interned by the decoder'
+expect_refusal b6-table-dollar    'starts with' 'the temporaries' 'reservation'
+expect_refusal b6-table-temp      'is the decoder' 'kind'
+expect_refusal b6-table-kind      'is recorded with kind' 'expected recv | param | capture'
+expect_refusal b6-sig-dup         'binds a declaration id twice'
+expect_refusal b6-table-absent    'locals'
+echo 'Wire boundary gate: PASS (11 byte-level controls + 56 unseq-node controls + 13 promotion-record controls + 11 B6 numeric-locals controls through the real CLI)'

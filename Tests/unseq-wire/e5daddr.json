@@ -24,6 +24,7 @@
        {
         "expr": {
          "expr": "ident",
+         "local": 0,
          "name": "p",
          "type": {
           "elem": {
@@ -64,10 +65,18 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "param",
+     "name": "p",
+     "pos": "main.go:8:10"
+    }
+   ],
    "name": "use",
    "params": [
     {
      "id": "p",
+     "local": 0,
      "type": {
       "elem": {
        "int": "int",
@@ -96,6 +105,7 @@
       "lhs": [
        {
         "id": "x",
+        "local": 0,
         "target": "declare",
         "type": {
          "int": "int",
@@ -144,7 +154,8 @@
         "args": [
          {
           "expr": "ref",
-          "id": "x"
+          "id": "x",
+          "local": 0
          }
         ],
         "binds": [
@@ -168,6 +179,7 @@
         "bind": "$u1",
         "head": {
          "expr": "ident",
+         "local": 0,
          "name": "x",
          "type": {
           "int": "int",
@@ -226,6 +238,13 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "local",
+     "name": "x",
+     "pos": "main.go:14:2"
+    }
+   ],
    "name": "e5daddr",
    "params": [],
    "results": [
@@ -244,6 +263,6 @@
  "methods": [],
  "package": "main",
  "promotions": [],
- "schema": "golean-native-v2",
+ "schema": "golean-native-v3",
  "types": []
 }

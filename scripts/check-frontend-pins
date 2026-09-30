@@ -342,6 +342,13 @@ if ! diff -q "$DEV_BASE" "$WORK/deviation.obs" > /dev/null; then
 fi
 echo "check-frontend-pins: ok [hidden-dep-order] — realized deviation order matches the recorded pin"
 
+# [AGENT worker, lane core/numeric-locals-0930] 2026-09-30 B6 twin re-pin (numeric locals; design
+# docs/2026-09-30_numeric-locals-design.md D4): schema golean-native-v2 -> golean-native-v3. Key-by-key
+# JSON comparison of the old and the new wire after removing the B6 additions: IDENTICAL except 49 unnamed
+# receivers/parameters whose empty spelling "" became the `$recv` / `$p{i}` temporaries (never referenced;
+# an env key only). Added: 12641 `local` + 60 `keyLocal` + 66 `valLocal` declaration indices and 924
+# per-function `locals` tables (2879 entries; funcs 450, methods 481). No statement, expression or type
+# node otherwise changed. 0b58402a… -> 8a158eff…. Written reason and diff: the lane's handoff.
 # ---- 2. Twin wire pin ----
 TWIN_BASE="baselines/pins/twin-chdriver.wire.json"
 [ -f "$TWIN_BASE" ] || { echo "check-frontend-pins: FAIL — no wire pin at $TWIN_BASE" >&2; exit 1; }

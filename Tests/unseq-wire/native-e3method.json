@@ -25,6 +25,7 @@
         "expr": {
          "base": {
           "expr": "ident",
+          "local": 0,
           "name": "v$cap"
          },
          "expr": "field-addr",
@@ -62,10 +63,19 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "capture",
+     "name": "v",
+     "pos": "main.go:13:2",
+     "wire": "v$cap"
+    }
+   ],
    "name": "e3method$lit0",
    "params": [
     {
      "id": "v$cap",
+     "local": 0,
      "type": {
       "elem": {
        "kind": "named",
@@ -94,6 +104,7 @@
       "lhs": [
        {
         "id": "v",
+        "local": 0,
         "target": "declare",
         "type": {
          "kind": "named",
@@ -131,6 +142,7 @@
       "lhs": [
        {
         "id": "f",
+        "local": 1,
         "target": "declare",
         "type": {
          "kind": "func",
@@ -150,7 +162,8 @@
         "captured": [
          {
           "expr": "ref",
-          "id": "v"
+          "id": "v",
+          "local": 0
          }
         ],
         "expr": "func-value",
@@ -202,6 +215,7 @@
         ],
         "callee": {
          "expr": "ident",
+         "local": 1,
          "name": "f",
          "type": {
           "kind": "func",
@@ -228,6 +242,7 @@
         "bind": "$u0",
         "head": {
          "expr": "ident",
+         "local": 0,
          "name": "v",
          "type": {
           "kind": "named",
@@ -296,6 +311,18 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "local",
+     "name": "v",
+     "pos": "main.go:13:2"
+    },
+    {
+     "kind": "local",
+     "name": "f",
+     "pos": "main.go:14:2"
+    }
+   ],
    "name": "e3method",
    "params": [],
    "results": [
@@ -334,6 +361,7 @@
          "field": "n",
          "recv": {
           "expr": "ident",
+          "local": 1,
           "name": "v",
           "type": {
            "kind": "named",
@@ -348,6 +376,7 @@
         },
         "y": {
          "expr": "ident",
+         "local": 0,
          "name": "a",
          "type": {
           "int": "int",
@@ -365,9 +394,22 @@
     "name": "Plus",
     "package": ""
    },
+   "locals": [
+    {
+     "kind": "param",
+     "name": "a",
+     "pos": "main.go:10:17"
+    },
+    {
+     "kind": "recv",
+     "name": "v",
+     "pos": "main.go:10:7"
+    }
+   ],
    "params": [
     {
      "id": "a",
+     "local": 0,
      "type": {
       "int": "int",
       "kind": "int"
@@ -376,6 +418,7 @@
    ],
    "recv": {
     "id": "v",
+    "local": 1,
     "type": {
      "kind": "named",
      "name": "main.V"
@@ -396,7 +439,7 @@
  ],
  "package": "main",
  "promotions": [],
- "schema": "golean-native-v2",
+ "schema": "golean-native-v3",
  "types": [
   {
    "def": {

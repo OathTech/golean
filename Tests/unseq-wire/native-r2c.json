@@ -34,6 +34,7 @@
        },
        {
         "expr": "ident",
+        "local": 0,
         "name": "g",
         "type": {
          "int": "int",
@@ -42,6 +43,7 @@
        },
        {
         "expr": "ident",
+        "local": 1,
         "name": "c",
         "type": {
          "kind": "bool"
@@ -49,6 +51,7 @@
        },
        {
         "expr": "ident",
+        "local": 2,
         "name": "k",
         "type": {
          "int": "int",
@@ -62,10 +65,28 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "param",
+     "name": "g",
+     "pos": "main.go:5:12"
+    },
+    {
+     "kind": "param",
+     "name": "c",
+     "pos": "main.go:5:19"
+    },
+    {
+     "kind": "param",
+     "name": "k",
+     "pos": "main.go:5:27"
+    }
+   ],
    "name": "sink3",
    "params": [
     {
      "id": "g",
+     "local": 0,
      "type": {
       "int": "int",
       "kind": "int"
@@ -73,12 +94,14 @@
     },
     {
      "id": "c",
+     "local": 1,
      "type": {
       "kind": "bool"
      }
     },
     {
      "id": "k",
+     "local": 2,
      "type": {
       "int": "int",
       "kind": "int"
@@ -112,6 +135,7 @@
        {
         "expr": {
          "expr": "ident",
+         "local": 0,
          "name": "a$cap"
         },
         "target": "addr"
@@ -144,10 +168,19 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "capture",
+     "name": "a",
+     "pos": "main.go:8:2",
+     "wire": "a$cap"
+    }
+   ],
    "name": "r2cTrue$lit0",
    "params": [
     {
      "id": "a$cap",
+     "local": 0,
      "type": {
       "elem": {
        "kind": "bool"
@@ -200,6 +233,7 @@
     ],
     "stmt": "block"
    },
+   "locals": [],
    "name": "r2cTrue$lit1",
    "params": [],
    "results": [
@@ -246,6 +280,7 @@
     ],
     "stmt": "block"
    },
+   "locals": [],
    "name": "r2cTrue$lit2",
    "params": [],
    "results": [
@@ -267,6 +302,7 @@
       "lhs": [
        {
         "id": "a",
+        "local": 0,
         "target": "declare",
         "type": {
          "kind": "bool"
@@ -289,6 +325,7 @@
       "lhs": [
        {
         "id": "b",
+        "local": 1,
         "target": "declare",
         "type": {
          "kind": "bool"
@@ -311,6 +348,7 @@
       "lhs": [
        {
         "id": "g",
+        "local": 2,
         "target": "declare",
         "type": {
          "kind": "func",
@@ -330,7 +368,8 @@
         "captured": [
          {
           "expr": "ref",
-          "id": "a"
+          "id": "a",
+          "local": 0
          }
         ],
         "expr": "func-value",
@@ -355,6 +394,7 @@
       "lhs": [
        {
         "id": "h2",
+        "local": 3,
         "target": "declare",
         "type": {
          "kind": "func",
@@ -392,6 +432,7 @@
       "lhs": [
        {
         "id": "k2",
+        "local": 4,
         "target": "declare",
         "type": {
          "kind": "func",
@@ -481,6 +522,7 @@
         ],
         "callee": {
          "expr": "ident",
+         "local": 2,
          "name": "g",
          "type": {
           "kind": "func",
@@ -507,6 +549,7 @@
         "bind": "$u1",
         "head": {
          "expr": "ident",
+         "local": 0,
          "name": "a",
          "type": {
           "kind": "bool"
@@ -529,6 +572,7 @@
         "bind": "$u3",
         "head": {
          "expr": "ident",
+         "local": 1,
          "name": "b",
          "type": {
           "kind": "bool"
@@ -553,6 +597,7 @@
         ],
         "callee": {
          "expr": "ident",
+         "local": 3,
          "name": "h2",
          "type": {
           "kind": "func",
@@ -610,6 +655,7 @@
         ],
         "callee": {
          "expr": "ident",
+         "local": 4,
          "name": "k2",
          "type": {
           "kind": "func",
@@ -682,6 +728,33 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "local",
+     "name": "a",
+     "pos": "main.go:8:2"
+    },
+    {
+     "kind": "local",
+     "name": "b",
+     "pos": "main.go:9:2"
+    },
+    {
+     "kind": "local",
+     "name": "g",
+     "pos": "main.go:10:2"
+    },
+    {
+     "kind": "local",
+     "name": "h2",
+     "pos": "main.go:11:2"
+    },
+    {
+     "kind": "local",
+     "name": "k2",
+     "pos": "main.go:12:2"
+    }
+   ],
    "name": "r2cTrue",
    "params": [],
    "results": [],
@@ -711,6 +784,7 @@
        {
         "expr": {
          "expr": "ident",
+         "local": 0,
          "name": "a$cap"
         },
         "target": "addr"
@@ -743,10 +817,19 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "capture",
+     "name": "a",
+     "pos": "main.go:17:2",
+     "wire": "a$cap"
+    }
+   ],
    "name": "r2cFalse$lit0",
    "params": [
     {
      "id": "a$cap",
+     "local": 0,
      "type": {
       "elem": {
        "kind": "bool"
@@ -799,6 +882,7 @@
     ],
     "stmt": "block"
    },
+   "locals": [],
    "name": "r2cFalse$lit1",
    "params": [],
    "results": [
@@ -845,6 +929,7 @@
     ],
     "stmt": "block"
    },
+   "locals": [],
    "name": "r2cFalse$lit2",
    "params": [],
    "results": [
@@ -866,6 +951,7 @@
       "lhs": [
        {
         "id": "a",
+        "local": 0,
         "target": "declare",
         "type": {
          "kind": "bool"
@@ -888,6 +974,7 @@
       "lhs": [
        {
         "id": "b",
+        "local": 1,
         "target": "declare",
         "type": {
          "kind": "bool"
@@ -910,6 +997,7 @@
       "lhs": [
        {
         "id": "g",
+        "local": 2,
         "target": "declare",
         "type": {
          "kind": "func",
@@ -929,7 +1017,8 @@
         "captured": [
          {
           "expr": "ref",
-          "id": "a"
+          "id": "a",
+          "local": 0
          }
         ],
         "expr": "func-value",
@@ -954,6 +1043,7 @@
       "lhs": [
        {
         "id": "h2",
+        "local": 3,
         "target": "declare",
         "type": {
          "kind": "func",
@@ -991,6 +1081,7 @@
       "lhs": [
        {
         "id": "k2",
+        "local": 4,
         "target": "declare",
         "type": {
          "kind": "func",
@@ -1080,6 +1171,7 @@
         ],
         "callee": {
          "expr": "ident",
+         "local": 2,
          "name": "g",
          "type": {
           "kind": "func",
@@ -1106,6 +1198,7 @@
         "bind": "$u8",
         "head": {
          "expr": "ident",
+         "local": 0,
          "name": "a",
          "type": {
           "kind": "bool"
@@ -1128,6 +1221,7 @@
         "bind": "$u10",
         "head": {
          "expr": "ident",
+         "local": 1,
          "name": "b",
          "type": {
           "kind": "bool"
@@ -1152,6 +1246,7 @@
         ],
         "callee": {
          "expr": "ident",
+         "local": 3,
          "name": "h2",
          "type": {
           "kind": "func",
@@ -1209,6 +1304,7 @@
         ],
         "callee": {
          "expr": "ident",
+         "local": 4,
          "name": "k2",
          "type": {
           "kind": "func",
@@ -1281,6 +1377,33 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "local",
+     "name": "a",
+     "pos": "main.go:17:2"
+    },
+    {
+     "kind": "local",
+     "name": "b",
+     "pos": "main.go:18:2"
+    },
+    {
+     "kind": "local",
+     "name": "g",
+     "pos": "main.go:19:2"
+    },
+    {
+     "kind": "local",
+     "name": "h2",
+     "pos": "main.go:20:2"
+    },
+    {
+     "kind": "local",
+     "name": "k2",
+     "pos": "main.go:21:2"
+    }
+   ],
    "name": "r2cFalse",
    "params": [],
    "results": [],
@@ -1291,6 +1414,6 @@
  "methods": [],
  "package": "main",
  "promotions": [],
- "schema": "golean-native-v2",
+ "schema": "golean-native-v3",
  "types": []
 }

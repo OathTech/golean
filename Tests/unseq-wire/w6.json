@@ -24,6 +24,7 @@
        "expr": "deref",
        "ptr": {
         "expr": "ident",
+        "local": 0,
         "name": "x$cap"
        },
        "type": {
@@ -35,6 +36,7 @@
       "target": {
        "expr": {
         "expr": "ident",
+        "local": 0,
         "name": "x$cap"
        },
        "target": "addr"
@@ -60,10 +62,19 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "capture",
+     "name": "x",
+     "pos": "main.go:5:2",
+     "wire": "x$cap"
+    }
+   ],
    "name": "w6$lit0",
    "params": [
     {
      "id": "x$cap",
+     "local": 0,
      "type": {
       "elem": {
        "int": "int",
@@ -92,6 +103,7 @@
       "lhs": [
        {
         "id": "x",
+        "local": 0,
         "target": "declare",
         "type": {
          "int": "int",
@@ -116,6 +128,7 @@
       "lhs": [
        {
         "id": "inc",
+        "local": 1,
         "target": "declare",
         "type": {
          "kind": "func",
@@ -135,7 +148,8 @@
         "captured": [
          {
           "expr": "ref",
-          "id": "x"
+          "id": "x",
+          "local": 0
          }
         ],
         "expr": "func-value",
@@ -198,6 +212,7 @@
         "bind": "$u0",
         "head": {
          "expr": "ident",
+         "local": 0,
          "name": "x",
          "type": {
           "int": "int",
@@ -214,6 +229,7 @@
         ],
         "callee": {
          "expr": "ident",
+         "local": 1,
          "name": "inc"
         },
         "kind": "invoke",
@@ -235,6 +251,7 @@
         ],
         "callee": {
          "expr": "ident",
+         "local": 1,
          "name": "inc"
         },
         "kind": "invoke",
@@ -312,6 +329,7 @@
        "lhs": [
         {
          "id": "v",
+         "local": 2,
          "target": "declare",
          "type": {
           "int": "int",
@@ -336,6 +354,7 @@
       "results": [
        {
         "expr": "ident",
+        "local": 2,
         "name": "v",
         "type": {
          "int": "int",
@@ -348,6 +367,23 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "local",
+     "name": "x",
+     "pos": "main.go:5:2"
+    },
+    {
+     "kind": "local",
+     "name": "inc",
+     "pos": "main.go:6:2"
+    },
+    {
+     "kind": "local",
+     "name": "v",
+     "pos": "main.go:7:2"
+    }
+   ],
    "name": "w6",
    "params": [],
    "results": [
@@ -366,6 +402,6 @@
  "methods": [],
  "package": "main",
  "promotions": [],
- "schema": "golean-native-v2",
+ "schema": "golean-native-v3",
  "types": []
 }

@@ -1035,7 +1035,8 @@ func isBlankTarget(l ast.Expr) bool {
 func (b *unseqBuilder) varTarget(id *ast.Ident) string {
 	t := b.newTargetBinder()
 	b.emit(map[string]any{"name": b.occName("target"), "kind": "target", "bind": t,
-		"lhs": map[string]any{"target": "var", "id": b.e.localRename(b.e.info.Uses[id], id.Name)}})
+		"lhs": map[string]any{"target": "var", "id": b.e.localRename(b.e.info.Uses[id], id.Name),
+			"local": b.e.localID(b.e.info.Uses[id], "local", b.e.localRename(b.e.info.Uses[id], id.Name))}})
 	return t
 }
 

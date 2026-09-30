@@ -383,6 +383,17 @@ theorem SelectClauseHead.eqbF_sound :
 def Param.eqb (a b : Param) : Bool :=
   a.id == b.id && Ty.eqb a.typ b.typ
 
+/-- B6 (2026-09-30): the name-table entry's structural equality (kind by decidable
+equality, the three spellings by `String`'s lawful `BEq`). -/
+def LocalName.eqb (a b : LocalName) : Bool :=
+  a.name == b.name && decide (a.kind = b.kind) && a.pos == b.pos && a.wire == b.wire
+
+theorem LocalName.eqb_sound (a b : LocalName) (h : LocalName.eqb a b = true) : a = b := by
+  obtain ⟨n1, k1, p1, w1⟩ := a
+  obtain ⟨n2, k2, p2, w2⟩ := b
+  obtain ⟨h1, h2, h3, h4⟩ := andSplit4 h
+  cases eq_of_beq h1; cases of_decide_eq_true h2; cases eq_of_beq h3; cases eq_of_beq h4; rfl
+
 theorem Param.eqb_sound (a b : Param) (h : Param.eqb a b = true) : a = b := by
   obtain ⟨i1, t1⟩ := a
   obtain ⟨i2, t2⟩ := b
@@ -868,17 +879,19 @@ def Func.eqbF (fuel : Nat) (a b : Func) : Bool :=
     && eqbArrayP Param.eqb a.results b.results
     && Stmt.eqbF fuel a.body b.body
     && a.variadic == b.variadic
+    && eqbArrayP LocalName.eqb a.locals b.locals
 
 theorem Func.eqbF_sound :
     ∀ f (a b : Func), Func.eqbF f a b = true → a = b := by
   intro f a b h
-  obtain ⟨i1, ar1, re1, bo1, v1⟩ := a
-  obtain ⟨i2, ar2, re2, bo2, v2⟩ := b
-  obtain ⟨h1, h2, h3, h4, h5⟩ := andSplit5 h
+  obtain ⟨i1, ar1, re1, bo1, v1, l1⟩ := a
+  obtain ⟨i2, ar2, re2, bo2, v2, l2⟩ := b
+  obtain ⟨h1, h2, h3, h4, h5, h6⟩ := andSplit6 h
   cases FuncId.beq_sound h1
   cases eqbArrayP_sound Param.eqb_sound h2
   cases eqbArrayP_sound Param.eqb_sound h3
   cases Stmt.eqbF_sound _ _ _ h4
-  cases eq_of_beq h5; rfl
+  cases eq_of_beq h5
+  cases eqbArrayP_sound LocalName.eqb_sound h6; rfl
 
 end GoLean.GoCore

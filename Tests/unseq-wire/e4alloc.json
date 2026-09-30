@@ -59,6 +59,7 @@
     ],
     "stmt": "block"
    },
+   "locals": [],
    "name": "wit5",
    "params": [],
    "results": [
@@ -106,6 +107,7 @@
       "lhs": [
        {
         "id": "s",
+        "local": 0,
         "target": "declare",
         "type": {
          "elem": {
@@ -136,6 +138,7 @@
       "lhs": [
        {
         "id": "i",
+        "local": 1,
         "target": "declare",
         "type": {
          "int": "int",
@@ -221,6 +224,7 @@
         "head": {
          "base": {
           "expr": "ident",
+          "local": 0,
           "name": "s",
           "type": {
            "elem": {
@@ -233,6 +237,7 @@
          "expr": "index-get",
          "index": {
           "expr": "ident",
+          "local": 1,
           "name": "i",
           "type": {
            "int": "int",
@@ -353,6 +358,18 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "local",
+     "name": "s",
+     "pos": "main.go:14:2"
+    },
+    {
+     "kind": "local",
+     "name": "i",
+     "pos": "main.go:15:2"
+    }
+   ],
    "name": "e4alloc",
    "params": [],
    "results": [
@@ -371,6 +388,6 @@
  "methods": [],
  "package": "main",
  "promotions": [],
- "schema": "golean-native-v2",
+ "schema": "golean-native-v3",
  "types": []
 }

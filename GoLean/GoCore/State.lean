@@ -7,7 +7,7 @@ open GoLean
 
 /-- One lexical scope: bindings from local names to heap-backed locations,
 innermost binding first. -/
-abbrev Scope := List (String × Loc)
+abbrev Scope := List (VarId × Loc)
 
 /-- Lexical scope stack, innermost scope first. Name lookup walks scopes
 inner to outer; declaration always creates a fresh binding in the innermost
@@ -98,12 +98,12 @@ structure Readout where
 -- terminal `.next .stop`; a signal reaching `.stop` is a refusal, not a
 -- completion class.)
 
-def Scope.lookup : Scope → String → Option Loc
+def Scope.lookup : Scope → VarId → Option Loc
   | [], _ => none
   | (name, loc) :: rest, needle =>
       if name == needle then some loc else Scope.lookup rest needle
 
-def LocalEnv.lookup : LocalEnv → String → Option Loc
+def LocalEnv.lookup : LocalEnv → VarId → Option Loc
   | [], _ => none
   | scope :: outer, needle =>
       match Scope.lookup scope needle with
@@ -112,12 +112,44 @@ def LocalEnv.lookup : LocalEnv → String → Option Loc
 
 /-- Bind a name in the innermost scope. An empty environment is treated as a
 single empty scope so frame setup can start from `[]`. -/
-def LocalEnv.declare : LocalEnv → String → Loc → LocalEnv
+def LocalEnv.declare : LocalEnv → VarId → Loc → LocalEnv
   | [], name, loc => [[(name, loc)]]
   | scope :: outer, name, loc => ((name, loc) :: scope) :: outer
 
 def LocalEnv.pushScope (env : LocalEnv) : LocalEnv :=
   [] :: env
+
+/-! ### The env-lookup laws (B6, numeric locals, 2026-09-30; the logic team's request 3)
+
+`declare` binds in the innermost scope (an empty environment counts as one empty
+scope); `lookup` walks inner→outer. These are the equations a client composes to
+read a frame's slots — `bindParams`/`allocDecls` (`Machine.lean`) are folds of
+`declare`, and their slot lemmas (`bindParams_lookup`, `allocDecls_lookup`,
+`enterFrame_lookup_arg`/`_result`) rest on these. -/
+
+@[simp] theorem Scope.lookup_cons_self (sc : Scope) (id : VarId) (loc : Loc) :
+    Scope.lookup ((id, loc) :: sc) id = some loc := by
+  simp [Scope.lookup]
+
+theorem Scope.lookup_cons_ne (sc : Scope) {id id' : VarId} (h : id' ≠ id) (loc : Loc) :
+    Scope.lookup ((id, loc) :: sc) id' = Scope.lookup sc id' := by
+  simp [Scope.lookup, Ne.symm h]
+
+theorem LocalEnv.lookup_declare_self (env : LocalEnv) (id : VarId) (loc : Loc) :
+    LocalEnv.lookup (env.declare id loc) id = some loc := by
+  cases env <;> simp [LocalEnv.declare, LocalEnv.lookup, Scope.lookup]
+
+theorem LocalEnv.lookup_declare_ne (env : LocalEnv) {id id' : VarId} (h : id' ≠ id) (loc : Loc) :
+    LocalEnv.lookup (env.declare id loc) id' = LocalEnv.lookup env id' := by
+  cases env with
+  | nil => simp [LocalEnv.declare, LocalEnv.lookup, Scope.lookup, Ne.symm h]
+  | cons sc outer => simp [LocalEnv.declare, LocalEnv.lookup, Scope.lookup, Ne.symm h]
+
+@[simp] theorem LocalEnv.lookup_pushScope (env : LocalEnv) (id : VarId) :
+    LocalEnv.lookup env.pushScope id = LocalEnv.lookup env id := by
+  simp [LocalEnv.pushScope, LocalEnv.lookup, Scope.lookup]
+
+@[simp] theorem LocalEnv.lookup_nil (id : VarId) : LocalEnv.lookup [] id = none := rfl
 
 -- `LocalEnv.popScope` deleted (reshape S4): scope exit is continuation
 -- discard in the machine; nothing pops.

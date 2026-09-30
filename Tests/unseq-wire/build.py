@@ -1158,7 +1158,198 @@ def splice(wire, fn, until_decl, keep_tail, node, path):
     stmts_holder[key] = stmts[:keep_head] + [node] + tail
 
 
+# ---------------------------------------------------------------- B6: numeric locals (2026-09-30)
+# The frontend's envelope numbers every SOURCE local (a `local` declaration index beside the
+# spelling; per-function `locals` name tables; schema golean-native-v3 — design note
+# docs/2026-09-30_numeric-locals-design.md D1/D4). The HAND-WRITTEN nodes (the `unseq` graphs,
+# the kept `then`s, the mutants' inserted statements) spell their source locals without an index,
+# so `render` numbers them by the decoder's own scope rule (NativeToIR `jsonDeclaredLocals` /
+# `nestedStmtKeys`): the environment at a node is the function's params/results plus the
+# declarations that PRECEDE the node in its enclosing blocks; `block`/`breakable`/`labeled` bodies,
+# an `if`'s init/branches, a `for`'s init/post/condPre/body, a `range`'s body and a `select`'s
+# clauses open scopes; an `unseq`'s `then` is spliced into the enclosing block. A hand-written
+# `declare` of a NEW spelling allots a fresh table entry (a new object); a reference resolves to the
+# innermost in-scope declaration — a spelling with NO declaration in scope is left unnumbered on
+# purpose (the negative mutants: the decoder's E6a atom check names it first). `$`-spellings are the
+# decoder's temporaries and carry no index.
+
+def _spelling(entry):
+    return entry.get("wire") or entry["name"]
+
+
+def _bind(env, table, name, local, kind="local"):
+    if local is None:
+        # A hand-written declaration of a spelling the frontend's table already carries and no
+        # scope currently binds IS that source object (the script replaced the frontend's
+        # statement for it — the kept tail still references its index): reuse the entry. A
+        # spelling bound in scope is a true shadow: a new object, a fresh entry.
+        bound = {v for scope in env for v in scope.values()}
+        for i, e in enumerate(table):
+            if _spelling(e) == name and i not in bound:
+                local = i
+                break
+    if local is None:
+        local = len(table)
+        table.append({"kind": kind, "name": name})
+    env[-1][name] = local
+    return local
+
+
+def _resolve(env, name):
+    for scope in reversed(env):
+        if name in scope:
+            return scope[name]
+    return None
+
+
+def _number_ref(node, key, env):
+    name = node.get(key)
+    if not isinstance(name, str) or name.startswith("$") or "local" in node:
+        return
+    local = _resolve(env, name)
+    if local is not None:
+        node["local"] = local
+
+
+def _number_declare(node, env, table):
+    name = node["id"]
+    if not isinstance(name, str) or name.startswith("$"):
+        return
+    node["local"] = _bind(env, table, name, node.get("local"))
+
+
+def _number_expr(node, env, table):
+    """References inside an expression / operand tree (no declarations here)."""
+    if isinstance(node, dict):
+        kind = node.get("expr")
+        if kind == "ident":
+            _number_ref(node, "name", env)
+        elif kind == "ref":
+            _number_ref(node, "id", env)
+        for k, v in node.items():
+            if k in ("name", "id"):
+                continue
+            _number_expr(v, env, table)
+    elif isinstance(node, list):
+        for v in node:
+            _number_expr(v, env, table)
+
+
+def _number_target(t, env, table):
+    if not isinstance(t, dict):
+        return
+    tag = t.get("target")
+    if tag == "declare":
+        _number_declare(t, env, table)
+    elif tag == "var":
+        _number_ref(t, "id", env)
+    else:
+        for k, v in t.items():
+            if k != "target":
+                _number_expr(v, env, table)
+
+
+def _number_stmt(st, env, table):
+    if isinstance(st, list):
+        for x in st:
+            _number_stmt(x, env, table)
+        return
+    if not isinstance(st, dict):
+        return
+    tag = st.get("stmt")
+    if tag in ("block", "breakable", "labeled"):
+        env.append({})
+        _number_stmt(st.get("body"), env, table)
+        env.pop()
+        return
+    if tag == "if":
+        env.append({})
+        if st.get("init") is not None:
+            _number_stmt(st["init"], env, table)
+        _number_expr(st.get("cond"), env, table)
+        _number_stmt(st.get("then"), env, table)
+        _number_stmt(st.get("else"), env, table)
+        env.pop()
+        return
+    if tag == "for":
+        env.append({})
+        if st.get("init") is not None:
+            _number_stmt(st["init"], env, table)
+        _number_stmt(st.get("condPre"), env, table)
+        _number_expr(st.get("cond"), env, table)
+        _number_stmt(st.get("post"), env, table)
+        _number_stmt(st.get("body"), env, table)
+        env.pop()
+        return
+    if tag == "range":
+        _number_expr(st.get("collection"), env, table)
+        env.append({})
+        for var, key in (("keyVar", "keyLocal"), ("valVar", "valLocal")):
+            name = st.get(var)
+            if isinstance(name, str) and not name.startswith("$"):
+                st[key] = _bind(env, table, name, st.get(key))
+        _number_stmt(st.get("body"), env, table)
+        env.pop()
+        return
+    if tag == "select":
+        for clause in st.get("clauses") or []:
+            env.append({})
+            for k, v in clause.items():
+                if k in ("targets", "body"):
+                    continue
+                _number_expr(v, env, table)
+            for t in clause.get("targets") or []:
+                _number_target(t, env, table)
+            _number_stmt(clause.get("body"), env, table)
+            env.pop()
+        _number_stmt(st.get("default"), env, table)
+        return
+    if tag == "var":
+        for d in st.get("decls") or []:
+            if d.get("init") is not None:
+                _number_expr(d["init"], env, table)
+            _number_declare(d, env, table)
+        return
+    if tag == "unseq":
+        for o in st.get("occs") or []:
+            for k, v in o.items():
+                if k == "lhs":
+                    _number_target(v, env, table)
+                elif k not in ("name", "kind", "bind", "binds", "target", "test", "out", "after", "region", "when"):
+                    _number_expr(v, env, table)
+        _number_stmt(st.get("then"), env, table)
+        return
+    # every other statement: operands first, then its declaration targets (a statement never
+    # sees its own declarations — Go's scope rule)
+    targets = []
+    for k, v in st.items():
+        if k in ("lhs", "targets", "target", "okTarget"):
+            targets.append(v)
+        elif k != "stmt":
+            _number_expr(v, env, table)
+    for group in targets:
+        if isinstance(group, list):
+            for t in group:
+                _number_target(t, env, table)
+        else:
+            _number_target(group, env, table)
+
+
+def number_locals(wire):
+    for f in list(wire.get("funcs") or []) + list(wire.get("methods") or []):
+        if "body" not in f:
+            continue
+        table = f.setdefault("locals", [])
+        env = [{}]
+        for slot in (f.get("params") or []) + (f.get("results") or []) + ([f["recv"]] if "recv" in f else []):
+            if isinstance(slot, dict) and "local" in slot:
+                env[0][slot["id"]] = slot["local"]
+        _number_stmt(f["body"], env, table)
+    return wire
+
+
 def render(wire):
+    wire = number_locals(copy.deepcopy(wire))
     return (json.dumps(wire, indent=1, sort_keys=True, ensure_ascii=False) + "\n").encode("utf-8")
 
 

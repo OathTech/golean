@@ -2,6 +2,7 @@ import GoLean.NativeDeclaration
 import GoLean.StrictJson
 import GoLean.GoCore.Syntax
 import GoLean.GoCore.Unseq
+import GoLean.GoCore.Locals
 
 /-!
 # Native frontend lowering
@@ -31,6 +32,17 @@ namespace GoLean.NativeToIR
 open Lean GoLean GoLean.GoCore
 open GoLean.StrictJson
 
+/-- One in-scope declaration of the R1 environment (B6, 2026-09-30): the
+lowering's spelling (the wire's `id`/`name` — a shadow rename or capture pointer
+where the frontend renamed), its numeric declaration id, and its declared type. -/
+private structure LocalDecl where
+  name : String
+  id : VarId
+  typ : Ty
+  deriving Repr, BEq, Inhabited
+
+private def LocalDecl.param (d : LocalDecl) : Param := { id := d.id, typ := d.typ }
+
 /-- The lowering monad: failure plus a reader carrying the PROGRAM's
 package-level-variable count (audit response 2026-08-05, C1): every
 `globaladdr` gid must be strictly below it, checked AT THE DECODE
@@ -52,6 +64,10 @@ machine-reserved entries — BEFORE any body decodes). -/
 private structure LowerCtx where
   nGlobals : Nat
   typeIdx : Std.HashMap String TypeIdx
+  /-- B6 (2026-09-30): the enclosing function's WIRE name table — the frontend's
+  source entries, indexed by the `local` indices its nodes carry; the decoder's
+  `$`-temporaries are interned after them (`LowerSt`). Empty outside a function. -/
+  table : Array LocalName := #[]
   /-- Stage E6a R1 (2026-09-24): the locals IN SCOPE at the statement being decoded — the
   enclosing function's params and results, then every `declare` target / `var` declaration /
   `range` variable / `select` clause binder / `if`-`for` init declaration that PRECEDES the
@@ -62,12 +78,76 @@ private structure LowerCtx where
   annotation against it (the E6a audit fix round, 2026-09-24, F2: the tip's flat per-function
   table let a forged annotation equal to ANOTHER declaration of the same name pass — a
   type-switch clause binder, a block-shadowed name). Empty outside a function body. -/
-  locals : Array Param := #[]
+  locals : Array LocalDecl := #[]
 
-private abbrev LowerM := ReaderT LowerCtx (Except String)
+/-- B6 (2026-09-30): the decoder's per-function interning state — the
+`$`-temporaries seen so far (the frontend's and the decoder's own), in
+first-sight order; temporary `k` has id `base + k`, `base` the wire table's
+size. Reset at each function; per spelling per function, so nested desugars
+that reuse a spelling shadow exactly as they did over strings (design D2). -/
+private structure LowerSt where
+  temps : Array String := #[]
+  base : Nat := 0
+
+private abbrev LowerM := ReaderT LowerCtx (StateT LowerSt (Except String))
 
 private def fail {α} (msg : String) : LowerM α :=
-  fun _ => .error s!"native lowering: {msg}"
+  throw s!"native lowering: {msg}"
+
+/-- Run a lowering action from a fresh interning state. -/
+private def runLower {α} (act : LowerM α) (ctx : LowerCtx) : Except String α :=
+  (act.run ctx).run' {}
+
+/-- B6: intern a `$`-temporary's spelling in the current function (idempotent —
+the same spelling returns the same id). -/
+private def tmp (spelling : String) : LowerM VarId := do
+  let st ← get
+  match st.temps.findIdx? (· == spelling) with
+  | some k => pure (st.base + k)
+  | none =>
+      set { st with temps := st.temps.push spelling }
+      pure (st.base + st.temps.size)
+
+/-- B6: the id a DECLARATION site carries. A `$`-spelling is a temporary — interned
+here, never numbered by the frontend (a `local` index on one refuses); a source
+spelling MUST carry its `local` index (c1: in range, and the table's spelling —
+`wire` where the frontend renamed, else `name` — agrees with the node's). -/
+private def declLocal (path name : String) (localJ : Option Json) : LowerM VarId := do
+  if name.startsWith "$" then
+    match localJ with
+    | some _ => fail s!"{path}: the `$`-temporary '{name}' carries a `local` index — temporaries are interned by the decoder, never numbered by the frontend (B6, docs/2026-09-30_numeric-locals-design.md D2); refused by name"
+    | none => tmp name
+  else
+    match localJ with
+    | none => fail s!"{path}: the source local '{name}' carries no `local` declaration index — every source local on a golean-native-v3 wire is numbered by the frontend (B6 D1/D4); refused by name"
+    | some j =>
+        let id ← StrictJson.nat s!"{path}.local" j
+        let table := (← read).table
+        match table[id]? with
+        | none => fail s!"{path}: local index {id} for '{name}' is past the function's name table ({table.size} entries) (B6 c1); refused by name"
+        | some e =>
+            let spelled := if e.wire.isEmpty then e.name else e.wire
+            if spelled != name then
+              fail s!"{path}: local index {id} names '{spelled}' in the function's name table, but the node spells '{name}' (B6 c1, spelling agreement); refused by name"
+            pure id
+
+/-- B6: the id a REFERENCE carries (`ident`, `ref`, a `var` target): `declLocal`'s
+checks plus SCOPE — the innermost in-scope declaration of that spelling in the
+R1 environment (the enclosing function's params/results and the declarations
+preceding the statement in its enclosing blocks) must be this very declaration
+(c3: in scope; c4: the frontend's go/types resolution and the decoder's lexical
+walk AGREE — the pure-renaming certificate, design D1). -/
+private def refLocal (path name : String) (localJ : Option Json) : LowerM VarId := do
+  let id ← declLocal path name localJ
+  if name.startsWith "$" then pure id
+  else
+    match (← read).locals.findRev? (·.name == name) with
+    | none => fail s!"{path}: the source local '{name}' (declaration {id}) is not in scope at this statement — no declaration of that spelling among the enclosing function's params, results and the declarations that precede the statement in its enclosing blocks (B6 c3; the Stage E6a R1 environment); refused by name"
+    | some d =>
+        if d.id != id then
+          fail s!"{path}: the source local '{name}' resolves to declaration {d.id} by lexical scope (the innermost in-scope declaration of that spelling), but the wire names declaration {id} — the frontend's resolution and the decoder's disagree (B6 c4); refused by name"
+        pure id
+
 
 /-! ## Exact-key discipline
 
@@ -112,7 +192,7 @@ private def tyAllowedKeys : String → Option (List String)
 allowed almost everywhere: the emitter post-attaches it to any
 expression node whose type it can resolve. -/
 private def exprAllowedKeys : String → Option (List String)
-  | "ident" => some ["expr", "name", "type"]
+  | "ident" => some ["expr", "name", "type", "local"]
   | "func-value" => some ["expr", "func", "captured", "type"]
   | "int" | "bool" => some ["expr", "value", "type"]
   | "float" => some ["expr", "num", "den", "type"]
@@ -122,7 +202,7 @@ private def exprAllowedKeys : String → Option (List String)
   | "runes-from-string" | "string-from-runes" => some ["expr", "x", "type"]
   | "float-bits" => some ["expr", "op", "x", "type"]
   | "min" | "max" => some ["expr", "args", "type"]
-  | "ref" => some ["expr", "id", "type"]
+  | "ref" => some ["expr", "id", "type", "local"]
   | "globaladdr" => some ["expr", "gid", "type"]
   | "deref" | "addr-of-deref" => some ["expr", "ptr", "type"]
   | "field-get" => some ["expr", "recv", "typeId", "field", "type"]
@@ -223,8 +303,8 @@ private def stmtAllowedKeys : String → Option (List String)
 
 /-- Allowed key sets for assignment-target nodes, by `target` tag. -/
 private def targetAllowedKeys : String → Option (List String)
-  | "declare" => some ["target", "id", "type"]
-  | "var" => some ["target", "id"]
+  | "declare" => some ["target", "id", "type", "local"]
+  | "var" => some ["target", "id", "local"]
   | "blank" => some ["target"]
   | "addr" => some ["target", "expr"]
   | "map" => some ["target", "base", "index", "keyType", "valueType"]
@@ -233,11 +313,11 @@ private def targetAllowedKeys : String → Option (List String)
 /-- Allowed key sets for range statements, by `kind` (the shared base
 plus the per-kind extras the emitter merges in). -/
 private def rangeAllowedKeys : String → Option (List String)
-  | "map" => some ["stmt", "keyVar", "valVar", "collection", "body", "kind", "keyType", "valueType"]
-  | "chan" | "slice" | "array" => some ["stmt", "keyVar", "valVar", "collection", "body", "kind", "elemType"]
-  | "int" => some ["stmt", "keyVar", "valVar", "collection", "body", "kind", "operandType"]
-  | "array-pointer" => some ["stmt", "keyVar", "valVar", "collection", "body", "kind", "elemType", "arrType", "len"]
-  | "string" => some ["stmt", "keyVar", "valVar", "collection", "body", "kind"]
+  | "map" => some ["stmt", "keyVar", "valVar", "keyLocal", "valLocal", "collection", "body", "kind", "keyType", "valueType"]
+  | "chan" | "slice" | "array" => some ["stmt", "keyVar", "valVar", "keyLocal", "valLocal", "collection", "body", "kind", "elemType"]
+  | "int" => some ["stmt", "keyVar", "valVar", "keyLocal", "valLocal", "collection", "body", "kind", "operandType"]
+  | "array-pointer" => some ["stmt", "keyVar", "valVar", "keyLocal", "valLocal", "collection", "body", "kind", "elemType", "arrType", "len"]
+  | "string" => some ["stmt", "keyVar", "valVar", "keyLocal", "valLocal", "collection", "body", "kind"]
   | _ => none
 
 /-- Dispatch-level key check: known kinds are checked; an unknown kind
@@ -397,12 +477,92 @@ partial def decodeTy (path : String) (json : Json) : LowerM Ty := do
         variadic)
   | other => fail s!"unsupported type kind {other} at {path}"
 
-private def decodeParam (path : String) (json : Json) : LowerM Param := do
+/-- B6: decode a function's `locals` name table — `[{name, kind, pos?, wire?}]`, the
+frontend's source entries in allotment order. Checked (c2): no `$`-prefixed source
+name (that prefix is the temporaries' reservation), `kind` one of the five source
+kinds (`temp` is the decoder's alone), spellings non-empty. -/
+private def decodeLocalsTable (path : String) (obj : StrictJson.Obj) : LowerM (Array LocalName) := do
+  let entries ← StrictJson.array s!"{path}.locals" (← StrictJson.field path obj "locals")
+  entries.mapIdxM fun i e => do
+    let ep := s!"{path}.locals[{i}]"
+    let eo ← StrictJson.obj ep e
+    checkAllowedKeys ep eo ["name", "kind", "pos", "wire"]
+    let name ← StrictJson.string s!"{ep}.name" (← StrictJson.field ep eo "name")
+    let kindS ← StrictJson.string s!"{ep}.kind" (← StrictJson.field ep eo "kind")
+    let kind ← match kindS with
+      | "recv" => pure LocalKind.recv
+      | "param" => pure LocalKind.param
+      | "result" => pure LocalKind.result
+      | "capture" => pure LocalKind.capture
+      | "local" => pure LocalKind.local
+      | "temp" => fail s!"{ep}.kind: `temp` is the decoder's kind (interned `$`-temporaries), never a wire entry (B6 c2); refused by name"
+      | other => fail s!"{ep}.kind: unknown local kind '{other}' (expected recv | param | result | capture | local) (B6 c2); refused by name"
+    let pos ← match eo.get? "pos" with
+      | some j => StrictJson.string s!"{ep}.pos" j
+      | none => pure ""
+    let wire ← match eo.get? "wire" with
+      | some j => StrictJson.string s!"{ep}.wire" j
+      | none => pure ""
+    if name.isEmpty then fail s!"{ep}.name: an empty local name (B6 c2); refused by name"
+    if name.startsWith "$" then
+      fail s!"{ep}.name: the source local name '{name}' starts with `$`, the temporaries' reservation — a frontend temporary is interned by the decoder, never a table entry (B6 c2); refused by name"
+    if wire.startsWith "$" then
+      fail s!"{ep}.wire: the lowering spelling '{wire}' starts with `$`, the temporaries' reservation (B6 c2); refused by name"
+    pure { name, kind, pos, wire }
+
+/-- B6: open a function's interning state — temporaries are numbered after the wire
+table's entries. -/
+private def beginLocals (table : Array LocalName) : LowerM Unit :=
+  set ({ temps := #[], base := table.size } : LowerSt)
+
+/-- B6: close a function's interning state — the table the `Func` carries: the wire's
+source entries, then the temporaries interned while decoding it, `kind := .temp`. -/
+private def endLocals : LowerM (Array LocalName) := do
+  let st ← get
+  let table := (← read).table
+  pure (table ++ st.temps.map fun t => { name := t, kind := .temp })
+
+/-- B6 (c2, the signature): a wire-numbered receiver/parameter carries kind `recv`,
+`param` or `capture`; a wire-numbered result carries kind `result`; and the
+signature's ids are pairwise distinct (a repeated id would make two slots one
+binding — `bindParams` binds each id to its own fresh cell, so a repeat is the
+frontend's error, refused here rather than shadowed silently). -/
+private def checkSignatureLocals (path : String) (table : Array LocalName)
+    (args res : Array LocalDecl) : LowerM Unit := do
+  for a in args do
+    match table[a.id]? with
+    | some e =>
+        unless e.kind == .param || e.kind == .recv || e.kind == .capture do
+          fail s!"{path}: parameter '{a.name}' (declaration {a.id}) is recorded with kind {repr e.kind} in the function's name table (expected recv | param | capture) (B6 c2); refused by name"
+    | none => pure ()  -- a `$`-temporary parameter (a shim's, a stub's)
+  for r in res do
+    match table[r.id]? with
+    | some e =>
+        unless e.kind == .result do
+          fail s!"{path}: result '{r.name}' (declaration {r.id}) is recorded with kind {repr e.kind} in the function's name table (expected result) (B6 c2); refused by name"
+    | none => pure ()
+  let ids := (args ++ res).map (·.id)
+  if !namesDistinct ids.toList then
+    fail s!"{path}: the signature binds a declaration id twice ({ids}) — each parameter and result is its own slot (B6 c2); refused by name"
+
+/-- B6 (c5): the core's total check over the DECODED function — every id the tree
+names is inside its table and the signature's ids are distinct
+(`Func.localsOk`, `GoLean/GoCore/Locals.lean`). A decoded function that fails it
+is refused here, so `localsOk f = true` holds of every function `decodeProgram`
+returns (the customer's `decide`-able premise for `localsOk_covers`). -/
+private def checkLocalsOk (path : String) (f : Func) : LowerM Unit := do
+  unless f.localsOk do
+    fail s!"{path}: the decoded function names a local outside its name table ({f.locals.size} entries) or binds a signature id twice — `Func.localsOk` is false (B6 c5); refused by name"
+
+private def decodeParam (path : String) (json : Json) : LowerM LocalDecl := do
   let obj ← StrictJson.obj path json
-  checkAllowedKeys path obj ["id", "type"]
-  let id ← StrictJson.string s!"{path}.id" (← StrictJson.field path obj "id")
+  checkAllowedKeys path obj ["id", "type", "local"]
+  let name ← StrictJson.string s!"{path}.id" (← StrictJson.field path obj "id")
   let typ ← decodeTy s!"{path}.type" (← StrictJson.field path obj "type")
-  pure { id, typ }
+  -- B6: a parameter is a declaration site — its id from the wire (`local`) or, for a
+  -- `$`-spelled synthesized parameter, interned.
+  let id ← declLocal path name (obj.get? "local")
+  pure { name, id, typ }
 
 /-! ## Expressions
 
@@ -421,7 +581,8 @@ partial def decodeExpr (path : String) (json : Json) : LowerM Expr := do
   checkKindKeys path obj exprAllowedKeys tag
   match tag with
   | "ident" =>
-      pure (.var (← StrictJson.string s!"{path}.name" (← StrictJson.field path obj "name")))
+      let name ← StrictJson.string s!"{path}.name" (← StrictJson.field path obj "name")
+      pure (.var (← refLocal path name (obj.get? "local")))
   | "func-value" =>
       let fid ← StrictJson.string s!"{path}.func" (← StrictJson.field path obj "func")
       let captured ← StrictJson.array s!"{path}.captured" (← StrictJson.field path obj "captured")
@@ -499,7 +660,8 @@ partial def decodeExpr (path : String) (json : Json) : LowerM Expr := do
         | other => throw s!"{path}.op: unknown float-bits op {repr other} (the four are f64bits/f64frombits/f32bits/f32frombits)"
       pure (.floatBits op (← decodeExpr s!"{path}.x" (← StrictJson.field path obj "x")))
   | "ref" =>
-      pure (.ref (← StrictJson.string s!"{path}.id" (← StrictJson.field path obj "id")))
+      let name ← StrictJson.string s!"{path}.id" (← StrictJson.field path obj "id")
+      pure (.ref (← refLocal path name (obj.get? "local")))
   | "globaladdr" =>
       -- A statically resolved package-level variable (init slice,
       -- docs/2026-08-05_init-design.md §2): global `gid` (wire declaration
@@ -686,11 +848,13 @@ private def decodeTarget (path : String) (json : Json) : LowerM Target := do
   checkKindKeys path obj targetAllowedKeys tag
   match tag with
   | "declare" =>
-      let id ← StrictJson.string s!"{path}.id" (← StrictJson.field path obj "id")
+      let name ← StrictJson.string s!"{path}.id" (← StrictJson.field path obj "id")
       let typ ← decodeTy s!"{path}.type" (← StrictJson.field path obj "type")
+      let id ← declLocal path name (obj.get? "local")
       pure { assignee := .var id, declare := some { id, typ } }
   | "var" =>
-      let id ← StrictJson.string s!"{path}.id" (← StrictJson.field path obj "id")
+      let name ← StrictJson.string s!"{path}.id" (← StrictJson.field path obj "id")
+      let id ← refLocal path name (obj.get? "local")
       pure { assignee := .var id, declare := none }
   | "blank" =>
       pure { assignee := .unsupported "blank assignment target", declare := none }
@@ -712,10 +876,10 @@ private def targetAssignee (t : Target) : LowerM Assignee := pure t.assignee
 
 /-- The expression that reads a declared local target (used to index into a
 freshly-built slice/map temp). -/
-private def targetBaseExpr (t : Target) : Expr :=
+private def targetBaseExpr (t : Target) (lit : VarId) : Expr :=
   match t.assignee with
   | .var id => .var id
-  | _ => .var "$lit"
+  | _ => .var lit
 
 private def declaresOf (targets : Array Target) : LowerM (Array Stmt) := do
   pure (targets.filterMap (fun t => t.declare.map Stmt.initialization))
@@ -971,7 +1135,7 @@ carries one — a `$` slot's declared cell type (`none` for an undeclared slot: 
 «unknown slot» check names that), a source local's / constant's / zero value's `type` annotation,
 a boxing's `target`, a struct literal's `target`. Used to check `new`'s value against the
 allocation's element type. -/
-private def unseqPayloadTy? (cells : Array Param) (path : String) (j : Json) : LowerM (Option Ty) := do
+private def unseqPayloadTy? (cells : Array LocalDecl) (path : String) (j : Json) : LowerM (Option Ty) := do
   let typeField (key : String) : LowerM (Option Ty) := do
     match j.getObjVal? key with
     | .ok t => pure (some (← decodeTy s!"{path}.{key}" t))
@@ -980,7 +1144,7 @@ private def unseqPayloadTy? (cells : Array Param) (path : String) (j : Json) : L
   | .ok (.str "ident") =>
       match j.getObjVal? "name" with
       | .ok (.str n) =>
-          if n.startsWith "$" then pure ((cells.find? (·.id == n)).map (·.typ))
+          if n.startsWith "$" then pure ((cells.find? (·.name == n)).map (·.typ))
           else typeField "type"
       | _ => pure none
   | .ok (.str "int") | .ok (.str "bool") | .ok (.str "string") | .ok (.str "default") => typeField "type"
@@ -998,7 +1162,7 @@ the ONE go/types map type (`emitType(mt.Key())` / `emitType(mt.Elem())` beside t
 annotation), so no emitted wire changes; the `map` TARGET plan (E2's `{"target":"map"}`) is checked
 the same way. Mutants `mut-wide-lookup-keytype-vs-base`, `mut-wide-lookup-valuetype-vs-base`,
 `mut-mapget-keytype-vs-base`, `mut-map-target-keytype-vs-base`. -/
-private def unseqCheckMapBase (cells : Array Param) (path what : String) (baseJ : Json)
+private def unseqCheckMapBase (cells : Array LocalDecl) (path what : String) (baseJ : Json)
     (keyTy valueTy : Ty) : LowerM Unit := do
   match ← unseqPayloadTy? cells path baseJ with
   | none =>
@@ -1068,7 +1232,7 @@ lived inside `jsonDeclaredLocals` the enclosing block's per-statement fold picke
 when it walked the range node, and a legal program shadowing an outer variable of another type with
 a range variable and graphing the OUTER one after the loop was refused whole — the scope rule on
 `nestedStmtKeys`). -/
-private def rangeBinderLocals (path : String) (kvs : StrictJson.Obj) : LowerM (Array Param) := do
+private def rangeBinderLocals (path : String) (kvs : StrictJson.Obj) : LowerM (Array LocalDecl) := do
   let var? (key : String) : Option String :=
     match kvs.get? key with
     | some (Json.str n) => some n
@@ -1077,21 +1241,22 @@ private def rangeBinderLocals (path : String) (kvs : StrictJson.Obj) : LowerM (A
     match kvs.get? key with
     | some t => pure (some (← decodeTy s!"{path}.range.{key}" t))
     | none => pure none
-  let push (n? : Option String) (t? : Option Ty) : LowerM (Array Param) := do
+  -- B6: a range variable is a declaration site — `keyLocal` / `valLocal` carry the ids.
+  let push (n? : Option String) (localKey : String) (t? : Option Ty) : LowerM (Array LocalDecl) := do
     match n?, t? with
-    | some n, some t => pure #[{ id := n, typ := t }]
+    | some n, some t => pure #[{ name := n, id := ← declLocal s!"{path}.range.{localKey}" n (kvs.get? localKey), typ := t }]
     | _, _ => pure #[]
   match kvs.get? "kind" with
   | some (Json.str "map") =>
-      pure ((← push (var? "keyVar") (← tyOf "keyType")) ++ (← push (var? "valVar") (← tyOf "valueType")))
+      pure ((← push (var? "keyVar") "keyLocal" (← tyOf "keyType")) ++ (← push (var? "valVar") "valLocal" (← tyOf "valueType")))
   | some (Json.str "chan") =>
-      push (var? "keyVar") (← tyOf "elemType")
+      push (var? "keyVar") "keyLocal" (← tyOf "elemType")
   | some (Json.str "slice") | some (Json.str "array") | some (Json.str "array-pointer") =>
-      pure ((← push (var? "keyVar") (some (.int .int))) ++ (← push (var? "valVar") (← tyOf "elemType")))
+      pure ((← push (var? "keyVar") "keyLocal" (some (.int .int))) ++ (← push (var? "valVar") "valLocal" (← tyOf "elemType")))
   | some (Json.str "int") =>
-      push (var? "keyVar") (← tyOf "operandType")
+      push (var? "keyVar") "keyLocal" (← tyOf "operandType")
   | some (Json.str "string") =>
-      pure ((← push (var? "keyVar") (some (.int .int))) ++ (← push (var? "valVar") (some (.int .int32))))
+      pure ((← push (var? "keyVar") "keyLocal" (some (.int .int))) ++ (← push (var? "valVar") "valLocal" (some (.int .int32))))
   | _ => pure #[]
 
 /-- Stage E6a R1 (2026-09-24; the Stage E5 audit re-verification's R1, RATIFIED [USER] 2026-09-22
@@ -1109,12 +1274,14 @@ own declarations). The tip's version walked the WHOLE body once per function (a 
 A construct's own scoped binders are NOT here either (fix round 2, the re-verification's R1): a
 `range` node's key / value variables are `rangeBinderLocals`, opened by `decodeRange` for the body
 alone — the scope rule on `nestedStmtKeys` has the full construct table. -/
-private partial def jsonDeclaredLocals (path : String) : Json → LowerM (Array Param)
+private partial def jsonDeclaredLocals (path : String) : Json → LowerM (Array LocalDecl)
   | .obj kvs => do
-      let mut acc : Array Param := #[]
+      let mut acc : Array LocalDecl := #[]
       match kvs.get? "target", kvs.get? "id", kvs.get? "type" with
-      | some (Json.str "declare"), some (Json.str id), some t =>
-          acc := acc.push { id, typ := ← decodeTy s!"{path}.declare({id}).type" t }
+      | some (Json.str "declare"), some (Json.str name), some t =>
+          let typ ← decodeTy s!"{path}.declare({name}).type" t
+          let id ← declLocal s!"{path}.declare({name})" name (kvs.get? "local")
+          acc := acc.push { name, id, typ }
       | _, _, _ => pure ()
       match kvs.get? "stmt" with
       | some (Json.str "var") =>
@@ -1122,7 +1289,10 @@ private partial def jsonDeclaredLocals (path : String) : Json → LowerM (Array 
           | some (.arr ds) =>
               for d in ds do
                 match d.getObjVal? "id", d.getObjVal? "type" with
-                | .ok (Json.str id), .ok t => acc := acc.push { id, typ := ← decodeTy s!"{path}.var({id}).type" t }
+                | .ok (Json.str name), .ok t =>
+                    let typ ← decodeTy s!"{path}.var({name}).type" t
+                    let id ← declLocal s!"{path}.var({name})" name (d.getObjVal? "local" |>.toOption)
+                    acc := acc.push { name, id, typ }
                 | _, _ => pure ()
           | _ => pure ()
       | _ => pure ()
@@ -1137,7 +1307,7 @@ private partial def jsonDeclaredLocals (path : String) : Json → LowerM (Array 
           acc := acc ++ (← jsonDeclaredLocals path v)
       pure acc
   | .arr xs => do
-      let mut acc : Array Param := #[]
+      let mut acc : Array LocalDecl := #[]
       for x in xs do
         acc := acc ++ (← jsonDeclaredLocals path x)
       pure acc
@@ -1147,12 +1317,12 @@ private partial def jsonDeclaredLocals (path : String) : Json → LowerM (Array 
 scope: the init's declarations, looking THROUGH a wrapping `block` (the emitter may wrap an init
 with its hoists) — Go's rule makes an init's declarations visible in the condition, the branches,
 the loop body and the post statement, and nowhere after. -/
-private partial def initDeclaredLocals (path : String) (json : Json) : LowerM (Array Param) := do
+private partial def initDeclaredLocals (path : String) (json : Json) : LowerM (Array LocalDecl) := do
   match json with
   | .obj kvs =>
       match kvs.get? "stmt", kvs.get? "body" with
       | some (Json.str "block"), some (.arr body) => do
-          let mut acc : Array Param := #[]
+          let mut acc : Array LocalDecl := #[]
           for i in [:body.size] do
             acc := acc ++ (← initDeclaredLocals s!"{path}.body[{i}]" body[i]!)
           pure acc
@@ -1161,7 +1331,7 @@ private partial def initDeclaredLocals (path : String) (json : Json) : LowerM (A
 
 /-- Decode under the environment extended by `more` (the declarations a control-flow statement
 brings into scope for its bodies). -/
-private def withLocals {α} (more : Array Param) (act : LowerM α) : LowerM α :=
+private def withLocals {α} (more : Array LocalDecl) (act : LowerM α) : LowerM α :=
   withReader (fun ctx => { ctx with locals := ctx.locals ++ more }) act
 
 /-- Stage E6a R1: every SOURCE-LOCAL atom mentioned anywhere in an `unseq` node — an `ident` whose
@@ -1180,12 +1350,18 @@ type-switch clause binder's annotation to the OTHER clause's type and the wire d
 answered; since the fix round (2026-09-24) the environment is scope-exact and that forgery, the
 block-shadow forgery and an atom naming a local declared only later or in a sibling block all
 refuse by name (`Tests/unseq-wire/mut-local-{annotation-shadowed,shadow-other-decl,out-of-scope}`). -/
-private partial def unseqCheckLocalAtoms (locals : Array Param) (path : String) : Json → LowerM Unit
+private partial def unseqCheckLocalAtoms (locals : Array LocalDecl) (slots : Array String) (path : String) : Json → LowerM Unit
   | .obj kvs => do
       match kvs.get? "expr", kvs.get? "name" with
       | some (Json.str "ident"), some (Json.str n) =>
+          -- B6: a `$`-spelled mention is a SLOT by the frontend's reservation (its temps and
+          -- binders); one that is neither a cell nor a target binder is unknown, never an admitted
+          -- source-local read (formerly `UnseqGraph.wellFormed?`'s «unknown slot» check — a spelling
+          -- test, so it lives here since numeric locals).
+          if n.startsWith "$" && !slots.contains n then
+            fail s!"unseq: unknown slot '{n}' mentioned at {path} (neither a binder cell nor a target binder of this graph); refused by name"
           if !n.startsWith "$" then
-            match locals.findRev? (·.id == n) with
+            match locals.findRev? (·.name == n) with
             | none =>
                 fail s!"unseq: source-local atom '{n}' at {path} has no declaration in the enclosing function that is in scope at this statement (its params, results, and the `declare` / var / range / clause declarations that precede the statement in its enclosing blocks) — the graph may name only locals in scope (Stage E6a R1, scope-exact since the audit fix round 2026-09-24); refused by name"
             | some d =>
@@ -1198,12 +1374,12 @@ private partial def unseqCheckLocalAtoms (locals : Array Param) (path : String) 
       | _, _ => pure ()
       match kvs.get? "expr", kvs.get? "id" with
       | some (Json.str "ref"), some (Json.str n) =>
-          if !n.startsWith "$" && !(locals.any (·.id == n)) then
+          if !n.startsWith "$" && !(locals.any (·.name == n)) then
             fail s!"unseq: `ref` of '{n}' at {path} names no local the enclosing function declares in scope at this statement (Stage E6a R1, 2026-09-24); refused by name"
       | _, _ => pure ()
       for (_, v) in kvs.toList do
-        unseqCheckLocalAtoms locals path v
-  | .arr xs => xs.forM (unseqCheckLocalAtoms locals path)
+        unseqCheckLocalAtoms locals slots path v
+  | .arr xs => xs.forM (unseqCheckLocalAtoms locals slots path)
   | _ => pure ()
 
 /-- D8 for an `eval` head: one of the admitted heads over ATOM operands, or a
@@ -1221,7 +1397,7 @@ high («the length of the sliced operand»), which the emitter spells as a lengt
 of the one evaluated base. Stage E E1 (2026-09-21) admits the `deref` head over
 an atom or a `globaladdr` pointer — the READ of a package-level variable
 (`deref(globaladdr)`) and, for E2, of `*p`. -/
-private def unseqCheckHead (cells : Array Param) (path : String) (head : Json) : LowerM Unit := do
+private def unseqCheckHead (cells : Array LocalDecl) (path : String) (head : Json) : LowerM Unit := do
   if jsonMentionsRecover head then
     fail s!"unseq: recover() inside an occurrence head at {path} — recover is an EVENT (it changes the continuation), never a pure op (v2.1 §3.1); refused by name"
   let obj ← StrictJson.obj path head
@@ -1375,7 +1551,7 @@ outer region was active, and was refused only DYNAMICALLY when it was skipped
 (`UnseqGraph.unproducedConsumer?`, GoLean/GoCore/Unseq.lean — the machine's
 own refusal, unchanged, stays behind this static net as defence in depth;
 mutant `mut-nested-completion-join`). -/
-private def unseqConfinedTo? (g : UnseqGraph) (slot : String) : Option String :=
+private def unseqConfinedTo? (g : UnseqGraph) (slot : VarId) : Option String :=
   match (g.producer? slot).bind (g.occs[·]?) with
   | some p =>
       match p.region with
@@ -1405,9 +1581,11 @@ private def unseqCheckTargetShape (path : String) (a : Assignee) : LowerM Unit :
     | .var _ | .ref _ | .global _ => true
     | _ => false
   match a with
-  | .var id =>
-      if id.startsWith "$" then
-        fail s!"unseq: a binder ('{id}') cannot be a store target at {path}; refused by name"
+  | .var id => do
+      -- B6: a binder / temporary is an INTERNED id (≥ the function's wire-table
+      -- size); a source local's id is below it (the spelling test `$`, restated).
+      if id ≥ (← get).base then
+        fail s!"unseq: a binder (slot {id}) cannot be a store target at {path}; refused by name"
       else pure ()
   | .addr (.indexAddr base idx) =>
       if atomE base && atomE idx then pure ()
@@ -1420,6 +1598,15 @@ private def unseqCheckTargetShape (path : String) (a : Assignee) : LowerM Unit :
       if atomE base && atomE key then pure ()
       else fail s!"unseq: target plan at {path} indexes a map with a non-atom base or key (the map VALUE and key VALUE are frozen, v2.1 §3.4); refused by name"
   | _ => fail s!"unseq: target plan at {path} is outside the admitted fragment (a local; a slice element, a dereference, a field or a map element on atoms); refused by name"
+
+/-- B6: a graph BINDER (a cell, a value/target slot) is a `$`-temporary — the
+frontend's reservation (audit F3, 2026-09-16, formerly `UnseqGraph.wellFormed?`'s
+first check: the cells are declared into the SOURCE scope at ENTER, so a bare
+name would shadow the source local of that name for the rest of the block) —
+interned like every other temporary; a bare spelling refuses by name. -/
+private def binder (path spelling : String) : LowerM VarId := do
+  if spelling.startsWith "$" then tmp spelling
+  else fail s!"unseq: binder '{spelling}' at {path} is not a reserved `$` slot name (every binder cell and target binder is `$`-prefixed — the frontend's reservation; a bare name would shadow the source local '{spelling}' for the rest of the block); refused by name"
 
 mutual
 
@@ -1501,15 +1688,17 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
       let mut vAssignee : Assignee := .unsupported "type-assert target"
       let mut okAssignee : Assignee := .unsupported "type-assert okTarget"
       if targetIsBlank tJson then
-        decls := decls.push (.initialization { id := "$ta", typ := ty })
-        vAssignee := .var "$ta"
+        let ta ← tmp "$ta"
+        decls := decls.push (.initialization { id := ta, typ := ty })
+        vAssignee := .var ta
       else
         let t ← decodeTarget s!"{path}.target" tJson
         decls := decls ++ (← declaresOf #[t])
         vAssignee := t.assignee
       if targetIsBlank okJson then
-        decls := decls.push (.initialization { id := "$taok", typ := .bool })
-        okAssignee := .var "$taok"
+        let taok ← tmp "$taok"
+        decls := decls.push (.initialization { id := taok, typ := .bool })
+        okAssignee := .var taok
       else
         let okT ← decodeTarget s!"{path}.okTarget" okJson
         decls := decls ++ (← declaresOf #[okT])
@@ -1568,10 +1757,11 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
         let rt ← StrictJson.field s!"{path}.expr" callObj "resultTypes"
         let arr ← StrictJson.array s!"{path}.expr.resultTypes" rt
         let tys ← arr.mapIdxM (fun i t => decodeTy s!"{path}.expr.resultTypes[{i}]" t)
+        let ids ← tys.mapIdxM (fun i _ => tmp s!"{prefixName}{i}")
         let decls := tys.mapIdx (fun i ty =>
-          Stmt.initialization { id := s!"{prefixName}{i}", typ := ty })
+          Stmt.initialization { id := ids[i]!, typ := ty })
         let assignees := tys.mapIdx (fun i _ =>
-          Assignee.var s!"{prefixName}{i}")
+          Assignee.var ids[i]!)
         pure (decls, assignees)
       match ← asCall? e with
       | some (name, args) =>
@@ -1847,7 +2037,7 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
             checkAllowedKeys s!"{path}.elems[{i}]" eo ["index", "value"]
             let index ← StrictJson.int s!"{path}.elems[{i}].index" (← StrictJson.field s!"{path}.elems[{i}]" eo "index")
             let value ← decodeExpr s!"{path}.elems[{i}].value" (← StrictJson.field s!"{path}.elems[{i}]" eo "value")
-            stmts := stmts.push (.assign (.addr (.indexAddr (targetBaseExpr t) (.intLit index .int))) value)
+            stmts := stmts.push (.assign (.addr (.indexAddr (targetBaseExpr t (← tmp "$lit")) (.intLit index .int))) value)
         | none => pure ()
       pure (.seqn stmts)
   | "map-lit" =>
@@ -1856,10 +2046,10 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
       let keyTy ← decodeTy s!"{path}.keyType" (← StrictJson.field path obj "keyType")
       let valTy ← decodeTy s!"{path}.valueType" (← StrictJson.field path obj "valueType")
       let entries ← StrictJson.array s!"{path}.entries" (← StrictJson.field path obj "entries")
-      let base : Expr :=
+      let base : Expr ←
         match t.assignee with
-        | .var id => .var id
-        | _ => .var "$maplit"
+        | .var id => pure (.var id)
+        | _ => do pure (.var (← tmp "$maplit"))
       let mut stmts ← declaresOf #[t]
       stmts := stmts.push (.makeMap t.assignee keyTy valTy none)
       for i in [:entries.size] do
@@ -1906,8 +2096,16 @@ partial def decodeRange (results : Array Param) (path : String) (obj : StrictJso
     (label : Option String := none) : LowerM Stmt := do
   let kind ← StrictJson.string s!"{path}.kind" (← StrictJson.field path obj "kind")
   checkKindKeys path obj rangeAllowedKeys kind
-  let keyVar := optString obj "keyVar"
-  let valVar := optString obj "valVar"
+  let keyVarName := optString obj "keyVar"
+  let valVarName := optString obj "valVar"
+  -- B6: the range variables' declaration ids (`keyLocal` / `valLocal`; a `$`-spelled
+  -- variable is interned) — the same resolution `rangeBinderLocals` records for the body's scope.
+  let keyVar ← match keyVarName with
+    | some n => do pure (some (← declLocal s!"{path}.keyLocal" n (obj.get? "keyLocal")))
+    | none => pure none
+  let valVar ← match valVarName with
+    | some n => do pure (some (← declLocal s!"{path}.valLocal" n (obj.get? "valLocal")))
+    | none => pure none
   let collJson ← StrictJson.field path obj "collection"
   let coll ← decodeExpr s!"{path}.collection" collJson
   -- F2 (scope-exact R1), corrected at fix round 2 (the audit re-verification's R1): the range's
@@ -1939,18 +2137,21 @@ partial def decodeRange (results : Array Param) (path : String) (obj : StrictJso
       -- nondeterministic order).
       let collTy ← exprTypeOf s!"{path}.collection" collJson
       let elemTy ← decodeTy s!"{path}.elemType" (← StrictJson.field path obj "elemType")
+      let rcoll ← tmp "$rcoll"
+      let rrecv ← tmp "$rrecv"
+      let rok ← tmp "$rok"
       let mut iter : Array Stmt := #[
-        .chanRecv #[.var "$rrecv", .var "$rok"] (.var "$rcoll") elemTy,
-        .ifThenElse (.not (.var "$rok")) .breakStmt (.seqn #[])
+        .chanRecv #[.var rrecv, .var rok] (.var rcoll) elemTy,
+        .ifThenElse (.not (.var rok)) .breakStmt (.seqn #[])
       ]
       match keyVar with
-      | some k => iter := iter ++ #[.initialization { id := k, typ := elemTy }, .assign (.var k) (.var "$rrecv")]
+      | some k => iter := iter ++ #[.initialization { id := k, typ := elemTy }, .assign (.var k) (.var rrecv)]
       | none => pure ()
       iter := iter.push body
       pure (.block #[] #[
-        .initialization { id := "$rcoll", typ := collTy }, .assign (.var "$rcoll") coll,
-        .initialization { id := "$rrecv", typ := elemTy },
-        .initialization { id := "$rok", typ := .bool },
+        .initialization { id := rcoll, typ := collTy }, .assign (.var rcoll) coll,
+        .initialization { id := rrecv, typ := elemTy },
+        .initialization { id := rok, typ := .bool },
         lab (.while (.boolLit true) (.block #[] iter))
       ])
   | "slice" | "array" | "int" | "array-pointer" =>
@@ -1977,7 +2178,11 @@ partial def decodeRange (results : Array Param) (path : String) (obj : StrictJso
           | none => fail s!"range-over-int at {path} carries no operandType — the loop variable has no kind to take"
         else pure intTy
       let idxKind : IntKind := match idxTy with | .int k => k | _ => .int
-      let ridx : Expr := .var "$ridx"
+      let rcoll ← tmp "$rcoll"
+      let rlen ← tmp "$rlen"
+      let ridxId ← tmp "$ridx"
+      let rfirst ← tmp "$rfirst"
+      let ridx : Expr := .var ridxId
       -- Range over *[N]T (value form): the pointer binds once; each
       -- iteration reads the element THROUGH it, so writes to the array
       -- during the loop are observed and a nil pointer panics at the
@@ -1991,19 +2196,19 @@ partial def decodeRange (results : Array Param) (path : String) (obj : StrictJso
       -- Length: len(collection) for slice/array; the int itself for int
       -- range; the static N for array-pointer.
       let lenExpr : Expr :=
-        if kind == "int" then .var "$rcoll"
+        if kind == "int" then .var rcoll
         else match arrPtrLen? with
         | some n => .intLit (Int.ofNat n) .int
-        | none => .length (.var "$rcoll") none
+        | none => .length (.var rcoll) none
       -- Per-iteration loop-variable bindings.
       let mut iter : Array Stmt := #[
         -- increment index at top except on the first iteration (the
         -- synthetic 1 in the OPERAND's kind — BUG-043)
-        .ifThenElse (.var "$rfirst")
-          (.assign (.var "$rfirst") (.boolLit false))
-          (.assign (.var "$ridx") (.add ridx (.intLit 1 idxKind))),
+        .ifThenElse (.var rfirst)
+          (.assign (.var rfirst) (.boolLit false))
+          (.assign (.var ridxId) (.add ridx (.intLit 1 idxKind))),
         -- exit when the index reaches the length
-        .ifThenElse (.atLeastCmp ridx (.var "$rlen")) .breakStmt (.seqn #[])
+        .ifThenElse (.atLeastCmp ridx (.var rlen)) .breakStmt (.seqn #[])
       ]
       match keyVar with
       | some k => iter := iter ++ #[.initialization { id := k, typ := idxTy }, .assign (.var k) ridx]
@@ -2014,16 +2219,16 @@ partial def decodeRange (results : Array Param) (path : String) (obj : StrictJso
             let elemTy ← decodeTy s!"{path}.elemType" (← StrictJson.field path obj "elemType")
             let base : Expr :=
               match arrPtrTy? with
-              | some arrTy => .deref (.var "$rcoll") arrTy
-              | none => .var "$rcoll"
+              | some arrTy => .deref (.var rcoll) arrTy
+              | none => .var rcoll
             iter := iter ++ #[.initialization { id := v, typ := elemTy }, .assign (.var v) (.indexGet base ridx)]
         | none => pure ()
       iter := iter.push body
       pure (.block #[] #[
-        .initialization { id := "$rcoll", typ := collTy }, .assign (.var "$rcoll") coll,
-        .initialization { id := "$rlen", typ := idxTy }, .assign (.var "$rlen") lenExpr,
-        .initialization { id := "$ridx", typ := idxTy }, .assign (.var "$ridx") (.intLit 0 idxKind),
-        .initialization { id := "$rfirst", typ := .bool }, .assign (.var "$rfirst") (.boolLit true),
+        .initialization { id := rcoll, typ := collTy }, .assign (.var rcoll) coll,
+        .initialization { id := rlen, typ := idxTy }, .assign (.var rlen) lenExpr,
+        .initialization { id := ridxId, typ := idxTy }, .assign (.var ridxId) (.intLit 0 idxKind),
+        .initialization { id := rfirst, typ := .bool }, .assign (.var rfirst) (.boolLit true),
         lab (.while (.boolLit true) (.block #[] iter))
       ])
   | "string" =>
@@ -2033,13 +2238,16 @@ partial def decodeRange (results : Array Param) (path : String) (obj : StrictJso
       -- each iteration, before the body, so `continue` re-tests with the
       -- advance already applied.
       let intTy : Ty := .int .int
-      let roff : Expr := .var "$roff"
+      let rcoll ← tmp "$rcoll"
+      let rnext ← tmp "$rnext"
+      let roffId ← tmp "$roff"
+      let roff : Expr := .var roffId
       let mut iter : Array Stmt := #[
-        .ifThenElse (.atLeastCmp (.var "$rnext") (.length (.var "$rcoll") none))
+        .ifThenElse (.atLeastCmp (.var rnext) (.length (.var rcoll) none))
           .breakStmt (.seqn #[]),
-        .initialization { id := "$roff", typ := intTy },
-        .assign (.var "$roff") (.var "$rnext"),
-        .assign (.var "$rnext") (.add roff (.runeSizeAt (.var "$rcoll") roff))
+        .initialization { id := roffId, typ := intTy },
+        .assign (.var roffId) (.var rnext),
+        .assign (.var rnext) (.add roff (.runeSizeAt (.var rcoll) roff))
       ]
       match keyVar with
       | some k => iter := iter ++ #[.initialization { id := k, typ := intTy }, .assign (.var k) roff]
@@ -2047,12 +2255,12 @@ partial def decodeRange (results : Array Param) (path : String) (obj : StrictJso
       match valVar with
       | some v => iter := iter ++
           #[.initialization { id := v, typ := .int .int32 },
-            .assign (.var v) (.runeAt (.var "$rcoll") roff)]
+            .assign (.var v) (.runeAt (.var rcoll) roff)]
       | none => pure ()
       iter := iter.push body
       pure (.block #[] #[
-        .initialization { id := "$rcoll", typ := .string }, .assign (.var "$rcoll") coll,
-        .initialization { id := "$rnext", typ := intTy }, .assign (.var "$rnext") (.intLit 0 .int),
+        .initialization { id := rcoll, typ := .string }, .assign (.var rcoll) coll,
+        .initialization { id := rnext, typ := intTy }, .assign (.var rnext) (.intLit 0 .int),
         lab (.while (.boolLit true) (.block #[] iter))
       ])
   | other => fail s!"unsupported range kind {other} at {path}"
@@ -2094,10 +2302,10 @@ partial def decodeReturn (results : Array Param) (path : String) (obj : StrictJs
     for i in [:rs.size] do
       match rs[i]?, results[i]? with
       | some rj, some rp =>
-          let tmp := s!"$ret{i}"
-          evals := evals.push (.initialization { id := tmp, typ := rp.typ })
-          evals := evals.push (.assign (.var tmp) (← decodeExpr s!"{path}.results[{i}]" rj))
-          stores := stores.push (.assign (.var rp.id) (.var tmp))
+          let ret ← tmp s!"$ret{i}"
+          evals := evals.push (.initialization { id := ret, typ := rp.typ })
+          evals := evals.push (.assign (.var ret) (← decodeExpr s!"{path}.results[{i}]" rj))
+          stores := stores.push (.assign (.var rp.id) (.var ret))
       | _, _ => pure ()
     pure (.seqn (evals ++ stores ++ #[.returnStmt]))
   else
@@ -2122,12 +2330,12 @@ partial def decodeAssign (results : Array Param) (path : String) (obj : StrictJs
         for i in [:lhs.size] do
           let lj := lhs[i]!
           if targetIsBlank lj then
-            let tmp := s!"$cr{i}"
+            let cr ← tmp s!"$cr{i}"
             let ty ← match resultTypes[i]? with
               | some ty => pure ty
               | none => fail s!"resultTypes[{i}] absent at {path}.rhs[0] (fail closed)"
-            decls := decls.push (.initialization { id := tmp, typ := ty })
-            assignees := assignees.push (.var tmp)
+            decls := decls.push (.initialization { id := cr, typ := ty })
+            assignees := assignees.push (.var cr)
           else
             let t ← decodeTarget s!"{path}.lhs[{i}]" lj
             decls := decls ++ (← declaresOf #[t])
@@ -2154,8 +2362,9 @@ partial def decodeAssign (results : Array Param) (path : String) (obj : StrictJs
         if targetIsBlank lj then
           match resultTypes[0]? with
           | some ty =>
-              decls := decls.push (.initialization { id := "$ca0", typ := ty })
-              assignee := .var "$ca0"
+              let ca0 ← tmp "$ca0"
+              decls := decls.push (.initialization { id := ca0, typ := ty })
+              assignee := .var ca0
           | none => fail s!"blank atomic-op target without a result type at {path} (fail closed)"
         else
           let t ← decodeTarget s!"{path}.lhs[0]" lj
@@ -2200,12 +2409,12 @@ partial def decodeAssign (results : Array Param) (path : String) (obj : StrictJs
         for i in [:lhs.size] do
           let lj := lhs[i]!
           if targetIsBlank lj then
-            let tmp := s!"$cv{i}"
+            let cv ← tmp s!"$cv{i}"
             let ty ← match resultTypes[i]? with
               | some ty => pure ty
               | none => fail s!"resultTypes[{i}] absent at {path}.rhs[0] (fail closed)"
-            decls := decls.push (.initialization { id := tmp, typ := ty })
-            assignees := assignees.push (.var tmp)
+            decls := decls.push (.initialization { id := cv, typ := ty })
+            assignees := assignees.push (.var cv)
           else
             let t ← decodeTarget s!"{path}.lhs[{i}]" lj
             decls := decls ++ (← declaresOf #[t])
@@ -2220,9 +2429,10 @@ partial def decodeAssign (results : Array Param) (path : String) (obj : StrictJs
         let index ← decodeExpr s!"{path}.rhs[0].index" indexJ
         let keyTy ← decodeTy s!"{path}.rhs[0].keyType" keyTyJ
         let valTy ← decodeTy s!"{path}.rhs[0].valueType" valTyJ
-        let commaOkTarget (j : Json) (p : String) (ty : Ty) (tmp : String) : LowerM (Assignee × Array Stmt) :=
-          if targetIsBlank j then
-            pure (.var tmp, #[.initialization { id := tmp, typ := ty }])
+        let commaOkTarget (j : Json) (p : String) (ty : Ty) (tmpName : String) : LowerM (Assignee × Array Stmt) :=
+          if targetIsBlank j then do
+            let t ← tmp tmpName
+            pure (.var t, #[.initialization { id := t, typ := ty }])
           else do
             let t ← decodeTarget p j
             pure (t.assignee, ← declaresOf #[t])
@@ -2244,8 +2454,9 @@ partial def decodeAssign (results : Array Param) (path : String) (obj : StrictJs
     if lhs.size == 1 then
       -- `_ = e`: evaluate for effect into a discard local.
       let ty ← exprTypeOf s!"{path}.rhs[0]" rhs[0]!
-      pure (.seqn #[.initialization { id := "$blank0", typ := ty },
-        .assign (.var "$blank0") (← decodeExpr s!"{path}.rhs[0]" rhs[0]!)])
+      let blank0 ← tmp "$blank0"
+      pure (.seqn #[.initialization { id := blank0, typ := ty },
+        .assign (.var blank0) (← decodeExpr s!"{path}.rhs[0]" rhs[0]!)])
     else do
       let mut decls : Array Stmt := #[]
       let mut assignees : Array Assignee := #[]
@@ -2253,9 +2464,9 @@ partial def decodeAssign (results : Array Param) (path : String) (obj : StrictJs
       for l in lhs do
         if targetIsBlank l then
           let ty ← exprTypeOf s!"{path}.rhs[{i}]" rhs[i]!
-          let tmp := s!"$blank{i}"
-          decls := decls.push (.initialization { id := tmp, typ := ty })
-          assignees := assignees.push (.var tmp)
+          let blank ← tmp s!"$blank{i}"
+          decls := decls.push (.initialization { id := blank, typ := ty })
+          assignees := assignees.push (.var blank)
         else
           let t ← decodeTarget s!"{path}.lhs[{i}]" l
           decls := decls ++ (← declaresOf #[t])
@@ -2279,16 +2490,27 @@ partial def decodeAssign (results : Array Param) (path : String) (obj : StrictJs
 partial def decodeUnseq (results : Array Param) (path : String) (obj : StrictJson.Obj) : LowerM Stmt := do
   -- cells (D2)
   let cellsJ ← StrictJson.array s!"{path}.cells" (← StrictJson.field path obj "cells")
+  -- B6: every cell is a `$`-temporary (the F3 reservation, restated at the boundary) — checked on
+  -- the SPELLINGS first, so a bare cell name refuses by that name, not as an unnumbered source local.
+  for i in [:cellsJ.size] do
+    let co ← StrictJson.obj s!"{path}.cells[{i}]" cellsJ[i]!
+    let cname ← StrictJson.string s!"{path}.cells[{i}].id" (← StrictJson.field s!"{path}.cells[{i}]" co "id")
+    let _ ← binder s!"{path}.cells[{i}]" cname
   let cells ← cellsJ.mapIdxM (fun i c => decodeParam s!"{path}.cells[{i}]" c)
   -- Stage E6a R1 (2026-09-24): every SOURCE-LOCAL atom the node mentions is a local the enclosing
   -- function declares, and its `type` annotation is that declaration's — checked before any
   -- occurrence decodes, over the whole node (heads, callees, arguments, payloads, plans, wide
   -- operands and the completion alike), so that no later check (`unseqPayloadTy?`,
   -- `unseqCheckMapBase`) reads a forged annotation. A name that is one of the graph's own CELLS is
-  -- a binder, not a source local (its `$` reservation is D2's check, `wellFormed?`), so it is skipped.
-  unseqCheckLocalAtoms ((← read).locals ++ cells) path (Json.mkObj (obj.toList))
-  -- occurrences (D3, D4, D8–D10, D13)
+  -- a binder, not a source local (its `$` reservation is `binder`'s check above), so it is skipped.
   let occsJ ← StrictJson.array s!"{path}.occs" (← StrictJson.field path obj "occs")
+  -- the graph's SLOTS by spelling: its cells and its target binders (`kind: target`'s `bind`)
+  let targetBinds : Array String := occsJ.filterMap fun o =>
+    match o.getObjVal? "kind", o.getObjVal? "bind" with
+    | .ok (Json.str "target"), .ok (Json.str b) => some b
+    | _, _ => none
+  unseqCheckLocalAtoms ((← read).locals ++ cells) (cells.map (·.name) ++ targetBinds) path (Json.mkObj (obj.toList))
+  -- occurrences (D3, D4, D8–D10, D13)
   if occsJ.isEmpty then
     fail s!"unseq: empty graph at {path} — a sweep with no occurrence is not a sweep; refused by name"
   let mut occs : Array UnseqOcc := #[]
@@ -2311,7 +2533,7 @@ partial def decodeUnseq (results : Array Param) (path : String) (obj : StrictJso
       | some r => some <$> StrictJson.string s!"{opath}.region" r
       | none => pure none
     let cellTy (bind : String) : LowerM Ty := do
-      match cells.find? (·.id == bind) with
+      match cells.find? (·.name == bind) with
       | some c => pure c.typ
       | none => fail s!"unseq: result binder '{bind}' at {opath} is not a declared cell; refused by name"
     let body ← match kind with
@@ -2327,7 +2549,7 @@ partial def decodeUnseq (results : Array Param) (path : String) (obj : StrictJso
               let hty ← decodeTy s!"{opath}.head.type" t
               if hty != cty then
                 fail s!"unseq: head type {repr hty} at {opath} disagrees with cell '{bind}' declared {repr cty}; refused by name"
-          pure (UnseqBody.eval bind (← decodeExpr s!"{opath}.head" headJ))
+          pure (UnseqBody.eval (← binder opath bind) (← decodeExpr s!"{opath}.head" headJ))
       | "invoke" => do
           let bindsJ ← StrictJson.array s!"{opath}.binds" (← StrictJson.field opath o "binds")
           let binds ← bindsJ.toList.mapIdxM (fun j b => StrictJson.string s!"{opath}.binds[{j}]" b)
@@ -2345,7 +2567,7 @@ partial def decodeUnseq (results : Array Param) (path : String) (obj : StrictJso
               fail s!"unseq: result type {repr t} at {opath}.resultTypes disagrees with cell '{b}' declared {repr cty}; refused by name"
           let callee ← decodeExpr s!"{opath}.callee" calleeJ
           let args ← argsJ.mapIdxM (fun j a => decodeExpr s!"{opath}.args[{j}]" a)
-          pure (UnseqBody.invoke binds callee args.toList)
+          pure (UnseqBody.invoke (← binds.mapM (binder opath)) callee args.toList)
       | "target" => do
           let bind ← StrictJson.string s!"{opath}.bind" (← StrictJson.field opath o "bind")
           let lhsJ ← StrictJson.field opath o "lhs"
@@ -2361,16 +2583,16 @@ partial def decodeUnseq (results : Array Param) (path : String) (obj : StrictJso
           if t.declare.isSome then
             fail s!"unseq: a target plan at {opath} cannot declare its target; refused by name"
           unseqCheckTargetShape s!"{opath}.lhs" t.assignee
-          pure (UnseqBody.target bind t.assignee)
+          pure (UnseqBody.target (← binder opath bind) t.assignee)
       | "load" => do
           let bind ← StrictJson.string s!"{opath}.bind" (← StrictJson.field opath o "bind")
           let tgt ← StrictJson.string s!"{opath}.target" (← StrictJson.field opath o "target")
-          pure (UnseqBody.load bind tgt)
+          pure (UnseqBody.load (← binder opath bind) (← binder opath tgt))
       | "guard" => do
           let test ← StrictJson.string s!"{opath}.test" (← StrictJson.field opath o "test")
           let w ← StrictJson.bool s!"{opath}.when" (← StrictJson.field opath o "when")
           let out ← StrictJson.string s!"{opath}.out" (← StrictJson.field opath o "out")
-          pure (UnseqBody.guard test w out)
+          pure (UnseqBody.guard (← binder opath test) w (← binder opath out))
       | "recv" => do
           -- Stage E E3 (2026-09-21): a RECEIVE occurrence — the channel an ATOM (the
           -- channel VALUE already evaluated), one binder (the comma-ok form is E5's),
@@ -2395,7 +2617,7 @@ partial def decodeUnseq (results : Array Param) (path : String) (obj : StrictJso
           if elem != cty then
             fail s!"unseq: receive element type {repr elem} at {opath} disagrees with cell '{binds[0]!}' declared {repr cty}; refused by name"
           let ch ← decodeExpr s!"{opath}.ch" chJ
-          pure (UnseqBody.recv binds ch elem)
+          pure (UnseqBody.recv (← binds.mapM (binder opath)) ch elem)
       | "allocate" => do
           -- Stage E E4 (2026-09-21): an ALLOCATION occurrence — the hoisted statement's
           -- shape (new | make-slice | make-map | make-chan | slice-lit) with the binder
@@ -2544,7 +2766,7 @@ partial def decodeUnseq (results : Array Param) (path : String) (obj : StrictJso
             | none => false
           if (tag == "slice-lit" || tag == "map-lit" || (tag == "new" && structLitValue)) && !after.isEmpty then
             fail s!"unseq: allocation '{name}' at {apath}: an `after` edge on a literal allocation ({tag}) — a composite literal is not an E1 participant (v2.1 R3), so the lowering never orders it behind an event; the edge would narrow the set by a policy the wire cannot express (Stage E audit F8, ratified 2026-09-22; Stage E6a); refused by name"
-          pure (UnseqBody.allocate bind spec)
+          pure (UnseqBody.allocate (← binder opath bind) spec)
       | "wide" => do
           -- Stage E5 E5a (2026-09-22): a WIDE built-in occurrence — `append` / `copy` (the comma-ok
           -- `map-lookup` / `type-assert` join at E5b) — the hoisted wide statement's shape with the
@@ -2623,7 +2845,7 @@ partial def decodeUnseq (results : Array Param) (path : String) (obj : StrictJso
                 pure (WideSpec.typeAssert operand target)
             | other =>
                 fail s!"unseq: wide built-in '{name}' at {wpath}: statement '{other}' is outside the admitted fragment (append | copy | map-lookup | type-assert); refused by name"
-          pure (UnseqBody.wide binds spec)
+          pure (UnseqBody.wide (← binds.mapM (binder opath)) spec)
       | other => fail s!"unseq: unknown occurrence kind '{other}' at {opath}; refused by name"
     occs := occs.push { name, body, after, region }
   -- stores
@@ -2634,7 +2856,7 @@ partial def decodeUnseq (results : Array Param) (path : String) (obj : StrictJso
     checkAllowedKeys spath so ["target", "value"]
     let t ← StrictJson.string s!"{spath}.target" (← StrictJson.field spath so "target")
     let v ← StrictJson.string s!"{spath}.value" (← StrictJson.field spath so "value")
-    pure (t, v))
+    pure (← binder spath t, ← binder spath v))
   -- the completion (D14)
   let thenJ ← StrictJson.field path obj "then"
   if jsonMentionsStmt ["unseq"] thenJ then
@@ -2644,7 +2866,7 @@ partial def decodeUnseq (results : Array Param) (path : String) (obj : StrictJso
   if jsonMentionsRecover thenJ then
     fail s!"unseq: recover() inside the completion at {path}.then; refused by name"
   let thenB ← decodeStmt results s!"{path}.then" thenJ
-  let g : UnseqGraph := { cells := cells.toList, occs := occs.toList, stores }
+  let g : UnseqGraph := { cells := cells.toList.map (·.param), occs := occs.toList, stores }
   -- the machine's static shape check, at the boundary (D2, D5, D6, D11)
   match g.wellFormed? with
   | some msg => fail s!"unseq: malformed graph at {path} — {msg}; refused by name"
@@ -2697,9 +2919,10 @@ partial def decodeVar (path : String) (obj : StrictJson.Obj) : LowerM Stmt := do
   let mut stmts : Array Stmt := #[]
   for i in [:decls.size] do
     let d ← StrictJson.obj s!"{path}.decls[{i}]" decls[i]!
-    checkAllowedKeys s!"{path}.decls[{i}]" d ["id", "type", "init"]
-    let id ← StrictJson.string s!"{path}.decls[{i}].id" (← StrictJson.field path d "id")
+    checkAllowedKeys s!"{path}.decls[{i}]" d ["id", "type", "init", "local"]
+    let name ← StrictJson.string s!"{path}.decls[{i}].id" (← StrictJson.field path d "id")
     let typ ← decodeTy s!"{path}.decls[{i}].type" (← StrictJson.field path d "type")
+    let id ← declLocal s!"{path}.decls[{i}]" name (d.get? "local")
     stmts := stmts.push (.initialization { id, typ })
     match d.get? "init" with
     | some initE => stmts := stmts.push (.assign (.var id) (← decodeExpr s!"{path}.decls[{i}].init" initE))
@@ -2710,7 +2933,7 @@ partial def decodeIf (results : Array Param) (path : String) (obj : StrictJson.O
   -- F2 (scope-exact R1): the init statement decodes first, under the enclosing environment; what it
   -- declares is in scope for the condition and both branches (Go's if-statement scope) — and nowhere
   -- after (the enclosing block's fold skips `init`, `then`, `else`: `nestedStmtKeys`).
-  let core (initLocals : Array Param) : LowerM Stmt := withLocals initLocals do
+  let core (initLocals : Array LocalDecl) : LowerM Stmt := withLocals initLocals do
     let cond ← decodeExpr s!"{path}.cond" (← StrictJson.field path obj "cond")
     let thenS ← decodeStmt results s!"{path}.then" (← StrictJson.field path obj "then")
     let elseS ← (match obj.get? "else" with
@@ -2757,9 +2980,10 @@ partial def decodeFor (results : Array Param) (path : String) (obj : StrictJson.
   -- its whole body on continue. So run post at the top of the body except on
   -- the first iteration (guarded by a flag), then re-check the condition; this
   -- makes `for init; cond; post` faithful under continue and break.
+  let forFirst ← tmp "$forFirst"
   let loopBody := Stmt.block #[] #[
-    .ifThenElse (.var "$forFirst")
-      (.assign (.var "$forFirst") (.boolLit false))
+    .ifThenElse (.var forFirst)
+      (.assign (.var forFirst) (.boolLit false))
       post,
     .seqn condPre,
     .ifThenElse cond (.seqn #[]) .breakStmt,
@@ -2772,8 +2996,8 @@ partial def decodeFor (results : Array Param) (path : String) (obj : StrictJson.
     | some l => .labeled l (.while (.boolLit true) loopBody)
     | none => .while (.boolLit true) loopBody
   let loop := Stmt.block #[] #[
-    .initialization { id := "$forFirst", typ := .bool },
-    .assign (.var "$forFirst") (.boolLit true),
+    .initialization { id := forFirst, typ := .bool },
+    .assign (.var forFirst) (.boolLit true),
     whileStmt
   ]
   match initS? with
@@ -2877,7 +3101,7 @@ private def decodeFunc (path : String) (json : Json) : LowerM Func := do
   if obj.contains "unsupported" then
     checkAllowedKeys path obj ["name", "unsupported", "arity"]
   else
-    checkAllowedKeys path obj ["name", "params", "results", "variadic", "body"]
+    checkAllowedKeys path obj ["name", "params", "results", "variadic", "body", "locals"]
   let name ← StrictJson.string s!"{path}.name" (← StrictJson.field path obj "name")
   -- A QUARANTINED declaration (per-decl fail-closed, slice 1 of arc
   -- wrong-answers-builtins): the frontend could not lower this function
@@ -2894,9 +3118,12 @@ private def decodeFunc (path : String) (json : Json) : LowerM Func := do
       -- frontend-export), keeping the fidelity ledger for machine gaps.
       let reason := s!"frontend-quarantined: {reason}"
       let arity ← StrictJson.nat s!"{path}.arity" (← StrictJson.field path obj "arity")
-      let args := (Array.range arity).map
-        (fun i => ({ id := s!"$stub{i}", typ := .unsupported reason } : Param))
-      pure { id := ⟨name⟩, args, results := #[], body := .unsupported reason }
+      -- B6: the stub's parameters are `$`-temporaries of an empty table.
+      beginLocals #[]
+      let args ← (Array.range arity).mapM
+        (fun i => do pure ({ id := ← tmp s!"$stub{i}", typ := .unsupported reason } : Param))
+      let locals ← endLocals
+      pure { id := ⟨name⟩, args, results := #[], body := .unsupported reason, locals }
   | none =>
   let params ← StrictJson.array s!"{path}.params" (← StrictJson.field path obj "params")
   let results ← StrictJson.array s!"{path}.results" (← StrictJson.field path obj "results")
@@ -2904,14 +3131,24 @@ private def decodeFunc (path : String) (json : Json) : LowerM Func := do
   -- satisfaction compares (audit finding 0). A wire without it fails
   -- closed rather than defaulting to non-variadic.
   let variadic ← StrictJson.bool s!"{path}.variadic" (← StrictJson.field path obj "variadic")
+  -- B6: the function's wire name table opens the interning state and the reader's
+  -- table BEFORE any declaration decodes (params and results are declaration sites).
+  let table ← decodeLocalsTable path obj
+  beginLocals table
+  withReader (fun ctx => { ctx with table }) do
   let args ← params.mapIdxM (fun i p => decodeParam s!"{path}.params[{i}]" p)
   let res ← results.mapIdxM (fun i p => decodeParam s!"{path}.results[{i}]" p)
+  checkSignatureLocals path table args res
   let bodyJ ← StrictJson.field path obj "body"
   -- Stage E6a R1: the function's params and results open the environment for the `unseq` arm's
   -- annotation cross-check; the body's `block` fold adds each declaration as it is passed (F2).
   let locals := args ++ res
-  let body ← withReader (fun ctx => { ctx with locals }) (decodeStmt res s!"{path}.body" bodyJ)
-  pure { id := ⟨name⟩, args, results := res, body, variadic }
+  let resP := res.map (·.param)
+  let body ← withReader (fun ctx => { ctx with locals }) (decodeStmt resP s!"{path}.body" bodyJ)
+  let tableAll ← endLocals
+  let f : Func := { id := ⟨name⟩, args := args.map (·.param), results := resP, body, variadic, locals := tableAll }
+  checkLocalsOk path f
+  pure f
 
 /-- The receiver key used to derive a callable target and the receiver type
 used by method resolution must denote the same carrier. This checks the
@@ -2939,9 +3176,14 @@ private def decodeMethod (path : String) (json : Json) : LowerM (Func × MethodI
     fail s!"{path}.wrapper: the synthesized-promotion-wrapper marker was retired at G-P S2 (2026-09-28) — a promoted method-set entry is a record in program.promotions, and `methods` carries declared methods, interface anchors and imported stubs only; a wire carrying `wrapper` predates the v2 schema and is refused"
   checkAllowedKeys path obj
     ["id", "recvType", "recv", "params", "results", "variadic",
-     "interface", "unsupported", "body"]
+     "interface", "unsupported", "body", "locals"]
   let id ← NativeDeclaration.decodeMemberId s!"{path}.id" (← StrictJson.field path obj "id")
   let recvType ← StrictJson.string s!"{path}.recvType" (← StrictJson.field path obj "recvType")
+  -- B6: the method's wire name table opens the interning state before the receiver,
+  -- params and results (declaration sites) decode.
+  let table ← decodeLocalsTable path obj
+  beginLocals table
+  withReader (fun ctx => { ctx with table }) do
   let recv ← decodeParam s!"{path}.recv" (← StrictJson.field path obj "recv")
   unless methodReceiverAgrees (← read) recvType recv.typ do
     fail s!"method receiver identity disagrees at {path}.recvType / {path}.recv.type: {recvType}"
@@ -2950,6 +3192,7 @@ private def decodeMethod (path : String) (json : Json) : LowerM (Func × MethodI
   let variadic ← StrictJson.bool s!"{path}.variadic" (← StrictJson.field path obj "variadic")
   let args ← params.mapIdxM (fun i p => decodeParam s!"{path}.params[{i}]" p)
   let res ← results.mapIdxM (fun i p => decodeParam s!"{path}.results[{i}]" p)
+  checkSignatureLocals path table (#[recv] ++ args) res
   let funcId := methodFuncId recvType id
   let info : MethodInfo := { id, funcId, recv := recv.typ }
   -- A declaration-only STUB (imported named types, design note D5): the
@@ -2958,9 +3201,13 @@ private def decodeMethod (path : String) (json : Json) : LowerM (Func × MethodI
   match obj.get? "unsupported" with
   | some r =>
       let reason ← StrictJson.string s!"{path}.unsupported" r
-      pure ({ id := funcId, args := #[recv] ++ args, results := res,
-              body := .unsupported s!"frontend-quarantined: {reason}",
-              variadic }, info)
+      let locals ← endLocals
+      let argsP := (#[recv] ++ args).map (·.param)
+      let resP := res.map (·.param)
+      let body : Stmt := .unsupported s!"frontend-quarantined: {reason}"
+      let f : Func := { id := funcId, args := argsP, results := resP, body, variadic, locals }
+      checkLocalsOk path f
+      pure (f, info)
   | none =>
   -- A present `interface` key is decoded STRICTLY (delta-review R2,
   -- 2026-08-05 — same class as the F7 `runtimeError` fix; this presence-only
@@ -2976,16 +3223,24 @@ private def decodeMethod (path : String) (json : Json) : LowerM (Func × MethodI
       -- is unreachable and fails STUCK (call to a nonexistent function)
       -- if a dispatch bug ever reaches it — never a silent zero return.
       let stub : Stmt := .call #[] ⟨"$interface-method-unreachable"⟩ #[]
-      pure ({ id := funcId, args := #[recv] ++ args, results := res, body := stub,
-              variadic }, info)
+      let locals ← endLocals
+      let argsP := (#[recv] ++ args).map (·.param)
+      let resP := res.map (·.param)
+      let f : Func := { id := funcId, args := argsP, results := resP, body := stub, variadic, locals }
+      checkLocalsOk path f
+      pure (f, info)
   else
       let bodyJ ← StrictJson.field path obj "body"
       -- Stage E6a R1: the receiver, params and results open the environment; the body's `block`
       -- fold adds each declaration as it is passed (F2)
       let locals := #[recv] ++ args ++ res
-      let body ← withReader (fun ctx => { ctx with locals }) (decodeStmt res s!"{path}.body" bodyJ)
-      pure ({ id := funcId, args := #[recv] ++ args, results := res, body,
-              variadic }, info)
+      let resP := res.map (·.param)
+      let body ← withReader (fun ctx => { ctx with locals }) (decodeStmt resP s!"{path}.body" bodyJ)
+      let tableAll ← endLocals
+      let argsP := (#[recv] ++ args).map (·.param)
+      let f : Func := { id := funcId, args := argsP, results := resP, body, variadic, locals := tableAll }
+      checkLocalsOk path f
+      pure (f, info)
 
 /-! ## Promotion records (G-P S1 — validated; G-P S2 — the machine's only source)
 
@@ -3276,15 +3531,21 @@ partial def decodeProgram (json : Json) : Except String Program := do
   let noCtx : LowerCtx := { nGlobals := 0, typeIdx := {} }
   let _ ← (checkAllowedKeys "program" obj
     ["schema", "package", "types", "funcs", "methods", "methodSets", "globals",
-     "fileOrder", "buildContext", "promotions"]).run noCtx
+     "fileOrder", "buildContext", "promotions"]) |> (runLower · noCtx)
   let schema ← StrictJson.string "program.schema" (← StrictJson.field "program" obj "schema")
   -- G-P S2 (2026-09-28): the schema moved to v2 — promotion wrappers retired,
   -- `program.promotions` consumed, `wrapper` refused. A v1 wire is refused BY
   -- NAME: its promoted entries are synthesized `Func`s this decoder no longer
   -- accepts, so re-export with the current frontend.
   if schema == "golean-native-v1" then
-    throw "native lowering: schema golean-native-v1 predates G-P S2 (2026-09-28: promotion wrappers retired, promotion records consumed — docs/2026-09-28_gp-method-promotion-design.md §4); this decoder reads golean-native-v2 — re-export the package with the current frontend"
-  if schema != "golean-native-v2" then
+    throw "native lowering: schema golean-native-v1 predates G-P S2 (2026-09-28: promotion wrappers retired, promotion records consumed — docs/2026-09-28_gp-method-promotion-design.md §4); this decoder reads golean-native-v3 — re-export the package with the current frontend"
+  -- B6 (2026-09-30): the schema moved to v3 — locals are numbered (every source
+  -- local carries its `local` declaration index and every function its `locals`
+  -- name table; docs/2026-09-30_numeric-locals-design.md D4). A v2 wire is
+  -- refused BY NAME: its locals are spellings this decoder no longer accepts.
+  if schema == "golean-native-v2" then
+    throw "native lowering: schema golean-native-v2 predates B6 (2026-09-30: numeric locals — `local` declaration indices and per-function `locals` name tables; docs/2026-09-30_numeric-locals-design.md D4); this decoder reads golean-native-v3 — re-export the package with the current frontend"
+  if schema != "golean-native-v3" then
     throw s!"native lowering: unexpected schema {schema}"
   -- `buildContext` (BUG-108): the file-selection target, REQUIRED and
   -- checked against this machine's pin — unlike `fileOrder` it has a
@@ -3324,11 +3585,11 @@ partial def decodeProgram (json : Json) : Except String Program := do
         let arr ← StrictJson.array "program.globals" gj
         arr.mapIdxM (fun i g => do
           let gobj ← StrictJson.obj s!"program.globals[{i}]" g
-          let _ ← (checkAllowedKeys s!"program.globals[{i}]" gobj ["name", "type"]).run ctx0
+          let _ ← (checkAllowedKeys s!"program.globals[{i}]" gobj ["name", "type"]) |> (runLower · ctx0)
           let name ← StrictJson.string s!"program.globals[{i}].name"
             (← StrictJson.field s!"program.globals[{i}]" gobj "name")
           let typ ← (decodeTy s!"program.globals[{i}].type"
-            (← StrictJson.field s!"program.globals[{i}]" gobj "type")).run ctx0
+            (← StrictJson.field s!"program.globals[{i}]" gobj "type")) |> (runLower · ctx0)
           pure ({ name, typ } : GlobalDef))
   let mut seenGlobals : Std.HashSet String := {}
   for g in globals do
@@ -3337,8 +3598,8 @@ partial def decodeProgram (json : Json) : Except String Program := do
     seenGlobals := seenGlobals.insert g.name
   let ctx : LowerCtx := { nGlobals := globals.size, typeIdx }
   let funcsJson ← StrictJson.array "program.funcs" (← StrictJson.field "program" obj "funcs")
-  let funcs ← funcsJson.mapIdxM (fun i f => (decodeFunc s!"program.funcs[{i}]" f).run ctx)
-  let declaredEntries ← typesJson.mapIdxM (fun i t => (decodeTypeDef s!"program.types[{i}]" t).run ctx)
+  let funcs ← funcsJson.mapIdxM (fun i f => runLower (decodeFunc s!"program.funcs[{i}]" f) ctx)
+  let declaredEntries ← typesJson.mapIdxM (fun i t => runLower (decodeTypeDef s!"program.types[{i}]" t) ctx)
   let declaredDefs := declaredEntries.map (·.1)
   -- The machine-reserved prefix leads (the canonical empty struct —
   -- `map[K]struct{}` sets — and the runtime-error payload type).
@@ -3372,7 +3633,7 @@ partial def decodeProgram (json : Json) : Except String Program := do
         throw s!"native lowering: program.types is not dependency-ordered — table entry {i} ({nm i}) depends on entry {j} ({nm j}) with {j} ≥ {i} (a forward reference or a cycle; indices count the two machine-reserved entries)"
     | none => throw "native lowering: program.types failed the well-foundedness decision but no violating edge was found (internal inconsistency; fail closed)"
   let methodsJson ← StrictJson.array "program.methods" (← StrictJson.field "program" obj "methods")
-  let methodPairs ← methodsJson.mapIdxM (fun i m => (decodeMethod s!"program.methods[{i}]" m).run ctx)
+  let methodPairs ← methodsJson.mapIdxM (fun i m => runLower (decodeMethod s!"program.methods[{i}]" m) ctx)
   -- Method bodies are executable functions (looked up by FuncId on call);
   -- MethodInfo is the dispatch table.
   let allFuncs := funcs ++ methodPairs.map Prod.fst
@@ -3397,7 +3658,7 @@ partial def decodeProgram (json : Json) : Except String Program := do
     (← StrictJson.field "program" obj "methodSets")
   let declaredRecords ← msJson.mapIdxM (fun i m => do
     let mobj ← StrictJson.obj s!"program.methodSets[{i}]" m
-    let _ ← (checkAllowedKeys s!"program.methodSets[{i}]" mobj ["type", "coverage"]).run noCtx
+    let _ ← (checkAllowedKeys s!"program.methodSets[{i}]" mobj ["type", "coverage"]) |> (runLower · noCtx)
     let key ← StrictJson.string s!"program.methodSets[{i}].type"
       (← StrictJson.field s!"program.methodSets[{i}]" mobj "type")
     let covStr ← StrictJson.string s!"program.methodSets[{i}].coverage"
@@ -3427,7 +3688,7 @@ must be full|exported, got {other}"
     | none =>
         throw "native lowering: program.promotions is missing — the frontend records every promoted method-set entry as data (G-P, docs/2026-09-28_gp-method-promotion-design.md §4); a wire without the field predates the records and is refused"
   let promotions ← promJson.mapIdxM
-    (fun i pj => (decodePromotion s!"program.promotions[{i}]" pj).run ctx)
+    (fun i pj => runLower (decodePromotion s!"program.promotions[{i}]" pj) ctx)
   let methods := methodPairs.map Prod.snd
   let mut seenPromotions : Std.HashSet String := {}
   for i in [:promotions.size] do

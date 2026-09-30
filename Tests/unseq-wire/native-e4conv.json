@@ -24,6 +24,7 @@
        {
         "expr": {
          "expr": "ident",
+         "local": 0,
          "name": "s$cap"
         },
         "target": "addr"
@@ -59,10 +60,19 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "capture",
+     "name": "s",
+     "pos": "main.go:10:2",
+     "wire": "s$cap"
+    }
+   ],
    "name": "e4conv$lit0",
    "params": [
     {
      "id": "s$cap",
+     "local": 0,
      "type": {
       "elem": {
        "kind": "string"
@@ -90,6 +100,7 @@
       "lhs": [
        {
         "id": "s",
+        "local": 0,
         "target": "declare",
         "type": {
          "kind": "string"
@@ -115,6 +126,7 @@
       "lhs": [
        {
         "id": "mut",
+        "local": 1,
         "target": "declare",
         "type": {
          "kind": "func",
@@ -134,7 +146,8 @@
         "captured": [
          {
           "expr": "ref",
-          "id": "s"
+          "id": "s",
+          "local": 0
          }
         ],
         "expr": "func-value",
@@ -209,6 +222,7 @@
         ],
         "callee": {
          "expr": "ident",
+         "local": 1,
          "name": "mut",
          "type": {
           "kind": "func",
@@ -235,6 +249,7 @@
         "bind": "$u0",
         "head": {
          "expr": "ident",
+         "local": 0,
          "name": "s",
          "type": {
           "kind": "string"
@@ -369,6 +384,18 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "local",
+     "name": "s",
+     "pos": "main.go:10:2"
+    },
+    {
+     "kind": "local",
+     "name": "mut",
+     "pos": "main.go:11:2"
+    }
+   ],
    "name": "e4conv",
    "params": [],
    "results": [
@@ -387,6 +414,6 @@
  "methods": [],
  "package": "main",
  "promotions": [],
- "schema": "golean-native-v2",
+ "schema": "golean-native-v3",
  "types": []
 }

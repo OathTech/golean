@@ -78,6 +78,7 @@
        {
         "expr": {
          "expr": "ident",
+         "local": 0,
          "name": "ps",
          "type": {
           "elem": {
@@ -124,10 +125,18 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "param",
+     "name": "ps",
+     "pos": "main.go:9:14"
+    }
+   ],
    "name": "rebindS",
    "params": [
     {
      "id": "ps",
+     "local": 0,
      "type": {
       "elem": {
        "elem": {
@@ -171,6 +180,7 @@
         "args": [
          {
           "expr": "ident",
+          "local": 0,
           "name": "s$cap",
           "type": {
            "elem": {
@@ -212,10 +222,19 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "capture",
+     "name": "s",
+     "pos": "main.go:12:2",
+     "wire": "s$cap"
+    }
+   ],
    "name": "e5btuple$lit0",
    "params": [
     {
      "id": "s$cap",
+     "local": 0,
      "type": {
       "elem": {
        "elem": {
@@ -290,6 +309,7 @@
       "lhs": [
        {
         "id": "s",
+        "local": 0,
         "target": "declare",
         "type": {
          "elem": {
@@ -320,6 +340,7 @@
       "lhs": [
        {
         "id": "old",
+        "local": 1,
         "target": "declare",
         "type": {
          "elem": {
@@ -333,6 +354,7 @@
       "rhs": [
        {
         "expr": "ident",
+        "local": 0,
         "name": "s",
         "type": {
          "elem": {
@@ -349,6 +371,7 @@
       "decls": [
        {
         "id": "x",
+        "local": 2,
         "type": {
          "int": "int",
          "kind": "int"
@@ -362,6 +385,7 @@
       "lhs": [
        {
         "id": "m",
+        "local": 3,
         "target": "declare",
         "type": {
          "kind": "func",
@@ -381,7 +405,8 @@
         "captured": [
          {
           "expr": "ref",
-          "id": "s"
+          "id": "s",
+          "local": 0
          }
         ],
         "expr": "func-value",
@@ -436,6 +461,7 @@
         ],
         "callee": {
          "expr": "ident",
+         "local": 3,
          "name": "m",
          "type": {
           "kind": "func",
@@ -462,6 +488,7 @@
         "bind": "$u3",
         "head": {
          "expr": "ident",
+         "local": 0,
          "name": "s",
          "type": {
           "elem": {
@@ -509,6 +536,7 @@
         "kind": "target",
         "lhs": {
          "id": "x",
+         "local": 2,
          "target": "var"
         },
         "name": "target3"
@@ -576,6 +604,7 @@
            "x": {
             "base": {
              "expr": "ident",
+             "local": 1,
              "name": "old",
              "type": {
               "elem": {
@@ -611,6 +640,7 @@
           "y": {
            "base": {
             "expr": "ident",
+            "local": 0,
             "name": "s",
             "type": {
              "elem": {
@@ -637,6 +667,7 @@
          },
          "y": {
           "expr": "ident",
+          "local": 2,
           "name": "x",
           "type": {
            "int": "int",
@@ -659,6 +690,28 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "local",
+     "name": "s",
+     "pos": "main.go:12:2"
+    },
+    {
+     "kind": "local",
+     "name": "old",
+     "pos": "main.go:13:2"
+    },
+    {
+     "kind": "local",
+     "name": "x",
+     "pos": "main.go:14:6"
+    },
+    {
+     "kind": "local",
+     "name": "m",
+     "pos": "main.go:15:2"
+    }
+   ],
    "name": "e5btuple",
    "params": [],
    "results": [
@@ -677,6 +730,6 @@
  "methods": [],
  "package": "main",
  "promotions": [],
- "schema": "golean-native-v2",
+ "schema": "golean-native-v3",
  "types": []
 }

@@ -105,6 +105,7 @@ func (e *emitter) fmtCompositeTopLift(fn string, plus bool, t types.Type) (strin
 		"params":   []any{map[string]any{"id": "$x", "type": tw}},
 		"results":  []any{map[string]any{"id": "$res0", "type": strTy}},
 		"variadic": false,
+		"locals":   []any{},
 		"body":     map[string]any{"stmt": "block", "body": stmts},
 	})
 	return name, nil
@@ -411,6 +412,7 @@ func (e *emitter) fmtSliceLift(fn string, plus bool, sliceT types.Type, elemT ty
 		"params":   []any{map[string]any{"id": "$s", "type": sliceW}},
 		"results":  []any{map[string]any{"id": "$res0", "type": strTy}},
 		"variadic": false,
+		"locals":   []any{},
 		"body":     map[string]any{"stmt": "block", "body": body},
 	})
 	return name, nil

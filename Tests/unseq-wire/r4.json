@@ -24,6 +24,7 @@
        {
         "expr": {
          "expr": "ident",
+         "local": 0,
          "name": "a$cap"
         },
         "target": "addr"
@@ -34,6 +35,7 @@
         "expr": "deref",
         "ptr": {
          "expr": "ident",
+         "local": 1,
          "name": "b$cap"
         },
         "type": {
@@ -63,10 +65,25 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "capture",
+     "name": "a",
+     "pos": "main.go:6:2",
+     "wire": "a$cap"
+    },
+    {
+     "kind": "capture",
+     "name": "b",
+     "pos": "main.go:9:2",
+     "wire": "b$cap"
+    }
+   ],
    "name": "r4$lit0",
    "params": [
     {
      "id": "a$cap",
+     "local": 0,
      "type": {
       "elem": {
        "elem": {
@@ -80,6 +97,7 @@
     },
     {
      "id": "b$cap",
+     "local": 1,
      "type": {
       "elem": {
        "elem": {
@@ -137,6 +155,7 @@
       "lhs": [
        {
         "id": "a",
+        "local": 0,
         "target": "declare",
         "type": {
          "elem": {
@@ -169,6 +188,7 @@
         "expr": {
          "base": {
           "expr": "ident",
+          "local": 0,
           "name": "a",
           "type": {
            "elem": {
@@ -210,6 +230,7 @@
         "expr": {
          "base": {
           "expr": "ident",
+          "local": 0,
           "name": "a",
           "type": {
            "elem": {
@@ -275,6 +296,7 @@
       "lhs": [
        {
         "id": "b",
+        "local": 1,
         "target": "declare",
         "type": {
          "elem": {
@@ -307,6 +329,7 @@
         "expr": {
          "base": {
           "expr": "ident",
+          "local": 1,
           "name": "b",
           "type": {
            "elem": {
@@ -348,6 +371,7 @@
         "expr": {
          "base": {
           "expr": "ident",
+          "local": 1,
           "name": "b",
           "type": {
            "elem": {
@@ -387,6 +411,7 @@
       "lhs": [
        {
         "id": "old",
+        "local": 2,
         "target": "declare",
         "type": {
          "elem": {
@@ -400,6 +425,7 @@
       "rhs": [
        {
         "expr": "ident",
+        "local": 0,
         "name": "a",
         "type": {
          "elem": {
@@ -417,6 +443,7 @@
       "lhs": [
        {
         "id": "mut",
+        "local": 3,
         "target": "declare",
         "type": {
          "kind": "func",
@@ -436,11 +463,13 @@
         "captured": [
          {
           "expr": "ref",
-          "id": "a"
+          "id": "a",
+          "local": 0
          },
          {
           "expr": "ref",
-          "id": "b"
+          "id": "b",
+          "local": 1
          }
         ],
         "expr": "func-value",
@@ -499,6 +528,7 @@
         "bind": "$u0",
         "head": {
          "expr": "ident",
+         "local": 0,
          "name": "a",
          "type": {
           "elem": {
@@ -554,6 +584,7 @@
         ],
         "callee": {
          "expr": "ident",
+         "local": 3,
          "name": "mut"
         },
         "kind": "invoke",
@@ -623,6 +654,7 @@
        {
         "base": {
          "expr": "ident",
+         "local": 2,
          "name": "old",
          "type": {
           "elem": {
@@ -649,6 +681,7 @@
        {
         "base": {
          "expr": "ident",
+         "local": 2,
          "name": "old",
          "type": {
           "elem": {
@@ -690,6 +723,7 @@
        {
         "base": {
          "expr": "ident",
+         "local": 0,
          "name": "a",
          "type": {
           "elem": {
@@ -716,6 +750,7 @@
        {
         "base": {
          "expr": "ident",
+         "local": 0,
          "name": "a",
          "type": {
           "elem": {
@@ -746,6 +781,28 @@
     ],
     "stmt": "block"
    },
+   "locals": [
+    {
+     "kind": "local",
+     "name": "a",
+     "pos": "main.go:6:2"
+    },
+    {
+     "kind": "local",
+     "name": "b",
+     "pos": "main.go:9:2"
+    },
+    {
+     "kind": "local",
+     "name": "old",
+     "pos": "main.go:12:2"
+    },
+    {
+     "kind": "local",
+     "name": "mut",
+     "pos": "main.go:13:2"
+    }
+   ],
    "name": "r4",
    "params": [],
    "results": [],
@@ -756,6 +813,6 @@
  "methods": [],
  "package": "main",
  "promotions": [],
- "schema": "golean-native-v2",
+ "schema": "golean-native-v3",
  "types": []
 }

@@ -235,7 +235,7 @@ first failure). At `.wait i` an invocation's statement completion marks it
 DONE; a value head's completion arrives at `.retV` instead
 (`stepUnseqValue`). -/
 def stepUnseqNext (s : Store) (g : UnseqGraph) (thenB : Stmt) (st : List UnseqStatus)
-    (tg : List (String × TargetRef)) (env : LocalEnv) (ph : UnseqPhase) (k : Cont)
+    (tg : List (VarId × TargetRef)) (env : LocalEnv) (ph : UnseqPhase) (k : Cont)
     (choices : Choices) : Except Stop (Config × Store × Choices × StepLabel) :=
   match ph with
   | .pick =>
@@ -313,7 +313,7 @@ declared type — a root cell, so the store cannot panic) and the occurrence
 is DONE; the frame returns to its pick position. Any other arrival is a
 machine-internal shape breach, refused by name. -/
 def stepUnseqValue (s : Store) (v : GoValue) (g : UnseqGraph) (thenB : Stmt)
-    (st : List UnseqStatus) (tg : List (String × TargetRef)) (env : LocalEnv)
+    (st : List UnseqStatus) (tg : List (VarId × TargetRef)) (env : LocalEnv)
     (ph : UnseqPhase) (k : Cont) (choices : Choices) :
     Except Stop (Config × Store × Choices × StepLabel) :=
   match ph with

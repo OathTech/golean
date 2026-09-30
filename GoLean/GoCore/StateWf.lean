@@ -469,7 +469,7 @@ def targetRefListSup : List TargetRef → Nat
 
 /-- The `unseq` sweep frame's TARGET table: every frozen plan's operand
 VALUES (Stage B). -/
-def unseqTargetsSup : List (String × TargetRef) → Nat
+def unseqTargetsSup : List (VarId × TargetRef) → Nat
   | [] => 0
   | (_, r) :: rs => max (TargetRef.locSup r) (unseqTargetsSup rs)
 
@@ -922,7 +922,7 @@ theorem forIn_list_inv {α β : Type} {P : β → Prop} :
 
 /-! ## Environment and heap lemmas -/
 
-theorem Scope.lookup_locSup {sc : Scope} {id : String} {l : Loc}
+theorem Scope.lookup_locSup {sc : Scope} {id : VarId} {l : Loc}
     (h : Scope.lookup sc id = some l) : Loc.locSup l ≤ Scope.locSup sc := by
   induction sc with
   | nil => simp [Scope.lookup] at h
@@ -933,7 +933,7 @@ theorem Scope.lookup_locSup {sc : Scope} {id : String} {l : Loc}
     · cases h; exact Nat.le_max_left _ _
     · exact Nat.le_trans (ih h) (Nat.le_max_right _ _)
 
-theorem LocalEnv.lookup_locSup {env : LocalEnv} {id : String} {l : Loc}
+theorem LocalEnv.lookup_locSup {env : LocalEnv} {id : VarId} {l : Loc}
     (h : LocalEnv.lookup env id = some l) : Loc.locSup l ≤ LocalEnv.locSup env := by
   induction env with
   | nil => simp [LocalEnv.lookup] at h
@@ -945,7 +945,7 @@ theorem LocalEnv.lookup_locSup {env : LocalEnv} {id : String} {l : Loc}
       exact Nat.le_trans (Scope.lookup_locSup heq) (Nat.le_max_left _ _)
     · exact Nat.le_trans (ih h) (Nat.le_max_right _ _)
 
-theorem LocalEnv.declare_locSup {env : LocalEnv} {id : String} {l : Loc} :
+theorem LocalEnv.declare_locSup {env : LocalEnv} {id : VarId} {l : Loc} :
     LocalEnv.locSup (env.declare id l) ≤ max (LocalEnv.locSup env) (Loc.locSup l) := by
   cases env with
   | nil => simp [LocalEnv.declare, LocalEnv.locSup, Scope.locSup]
@@ -3802,7 +3802,7 @@ theorem enterFrame_wf {σ : Store} {fid : FuncId} {argVals : List GoValue}
 
 
 theorem bindIterVars_wf {env : LocalEnv} {σ : Store}
-    {kv vv : Option String} {kt vt : Ty} {key value : GoValue}
+    {kv vv : Option VarId} {kt vt : Ty} {key value : GoValue}
     {env' : LocalEnv} {σ' : Store}
     (hw : StateWf ctx σ) (henv : LocalEnv.locSup env ≤ σ.nextAddr)
     (hk : GoValue.locSup key ≤ σ.nextAddr)
@@ -7174,7 +7174,7 @@ theorem applyAtomicOp_wf {σ : Store} {op : AtomicOp}
 
 /-! ## The `unseq` construct's loc lemmas (Stage B, 2026-09-16) -/
 
-theorem unseqCellLoc_locSup {env : LocalEnv} {bind : String} {loc : Loc}
+theorem unseqCellLoc_locSup {env : LocalEnv} {bind : VarId} {loc : Loc}
     (h : unseqCellLoc env bind = .ok loc) : Loc.locSup loc ≤ LocalEnv.locSup env := by
   unfold unseqCellLoc at h
   split at h
@@ -7185,7 +7185,7 @@ theorem unseqCellLoc_locSup {env : LocalEnv} {bind : String} {loc : Loc}
   · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
 
 theorem unseqLookupTarget_locSup :
-    ∀ {tg : List (String × TargetRef)} {t : String} {r : TargetRef},
+    ∀ {tg : List (VarId × TargetRef)} {t : VarId} {r : TargetRef},
       unseqLookupTarget tg t = .ok r → TargetRef.locSup r ≤ unseqTargetsSup tg
   | [], _, _, h => by simp [unseqLookupTarget, stuck, throw, throwThe, MonadExceptOf.throw] at h
   | (n, r') :: rest, t, r, h => by
@@ -7282,8 +7282,8 @@ theorem unseqReadTarget_locSup {s : Store} {r : TargetRef} {v : GoValue} {tr : A
       obtain ⟨rfl, rfl⟩ := h
       exact mapLookupValue_locSup hlook
 
-theorem unseqLoad_pres {σ : Store} {env : LocalEnv} {tg : List (String × TargetRef)}
-    {bind tgt : String} {σ' : Store} {tr : AccessTrace}
+theorem unseqLoad_pres {σ : Store} {env : LocalEnv} {tg : List (VarId × TargetRef)}
+    {bind tgt : VarId} {σ' : Store} {tr : AccessTrace}
     (hw : StateWf ctx σ) (henv : LocalEnv.locSup env ≤ σ.nextAddr)
     (h : unseqLoad ctx σ env tg bind tgt = .ok (σ', tr)) :
     StmtOpPres ctx σ σ' ∧ σ'.nextAddr = σ.nextAddr := by
@@ -7306,7 +7306,7 @@ theorem unseqLoad_pres {σ : Store} {env : LocalEnv} {tg : List (String × Targe
   exact ⟨Mem.store_pres hw (by omega) (by omega) hst, Mem.store_shape hst⟩
 
 theorem unseqGuard_pres {σ : Store} {g : UnseqGraph} {env : LocalEnv}
-    {st st' : List UnseqStatus} {i : Nat} {test : String} {w : Bool} {out : String}
+    {st st' : List UnseqStatus} {i : Nat} {test : VarId} {w : Bool} {out : VarId}
     {σ' : Store} {tr : AccessTrace}
     (hw : StateWf ctx σ) (henv : LocalEnv.locSup env ≤ σ.nextAddr)
     (h : unseqGuard ctx σ g env st i test w out = .ok (st', σ', tr)) :
@@ -7330,8 +7330,8 @@ theorem unseqGuard_pres {σ : Store} {g : UnseqGraph} {env : LocalEnv}
       exact ⟨Mem.store_pres hw (by omega) (by simp [GoValue.locSup]) hst, Mem.store_shape hst⟩
     · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
 
-theorem unseqStorePlan_locSup {s : Store} {env : LocalEnv} {tg : List (String × TargetRef)} :
-    ∀ {stores : List (String × String)} {refs : List TargetRef} {vals : List GoValue},
+theorem unseqStorePlan_locSup {s : Store} {env : LocalEnv} {tg : List (VarId × TargetRef)} :
+    ∀ {stores : List (VarId × VarId)} {refs : List TargetRef} {vals : List GoValue},
       unseqStorePlan ctx s env tg stores = .ok (refs, vals) →
       targetRefListSup refs ≤ unseqTargetsSup tg ∧ goValueListSup vals ≤ Heap.locSup s.heap
   | [], refs, vals, h => by
@@ -7364,12 +7364,12 @@ theorem unseqBodySup_of_get :
       simp only [unseqOccsSup]
       omega
 
-theorem assigneeListSup_vars : ∀ (binds : List String),
+theorem assigneeListSup_vars : ∀ (binds : List VarId),
     assigneeListSup (binds.map Assignee.var) = 0
   | [] => rfl
   | _ :: bs => by simp [assigneeListSup, Assignee.locSup, assigneeListSup_vars bs]
 
-theorem unseqInvokeStmt_locSup {binds : List String} {callee : Expr} {args : List Expr} :
+theorem unseqInvokeStmt_locSup {binds : List VarId} {callee : Expr} {args : List Expr} :
     Stmt.locSup (unseqInvokeStmt binds callee args)
       ≤ unseqBodySup (.invoke binds callee args) := by
   simp only [unseqInvokeStmt, Stmt.locSup, unseqBodySup, List.toList_toArray,
@@ -7378,7 +7378,7 @@ theorem unseqInvokeStmt_locSup {binds : List String} {callee : Expr} {args : Lis
 
 /-- Stage E E3: the receive statement's loc bound is its body's (the binder
 targets are `var`s, bound 0). -/
-theorem unseqRecvStmt_locSup {binds : List String} {ch : Expr} {elem : Ty} :
+theorem unseqRecvStmt_locSup {binds : List VarId} {ch : Expr} {elem : Ty} :
     Stmt.locSup (unseqRecvStmt binds ch elem) ≤ unseqBodySup (.recv binds ch elem) := by
   simp only [unseqRecvStmt, Stmt.locSup, unseqBodySup, List.toList_toArray,
     assigneeListSup_vars]
@@ -7386,13 +7386,13 @@ theorem unseqRecvStmt_locSup {binds : List String} {ch : Expr} {elem : Ty} :
 
 /-- Stage E E4: the allocation statement's loc bound is its body's (program text is
 loc-free since A4 — `Stmt.locSup_eq_zero`). -/
-theorem unseqAllocStmt_locSup {bind : String} {spec : AllocSpec} :
+theorem unseqAllocStmt_locSup {bind : VarId} {spec : AllocSpec} :
     Stmt.locSup (unseqAllocStmt bind spec) ≤ unseqBodySup (.allocate bind spec) := by
   simp [Stmt.locSup_eq_zero]
 
 /-- Stage E5 E5a: the wide statement's loc bound is its body's (program text is
 loc-free since A4 — `Stmt.locSup_eq_zero`). -/
-theorem unseqWideStmt_locSup {binds : List String} {spec : WideSpec} :
+theorem unseqWideStmt_locSup {binds : List VarId} {spec : WideSpec} :
     Stmt.locSup (unseqWideStmt binds spec) ≤ unseqBodySup (.wide binds spec) := by
   simp [Stmt.locSup_eq_zero]
 

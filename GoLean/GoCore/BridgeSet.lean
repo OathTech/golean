@@ -2,6 +2,7 @@ import GoLean.GoCore.Trace
 import GoLean.GoCore.ProgramTrace
 import GoLean.GoCore.MultiSound
 import GoLean.GoCore.Prefix
+import GoLean.GoCore.Locals
 
 /-!
 # The stable bridge set — pinned statements (window charter row 0)
@@ -71,6 +72,15 @@ an implicit `{x}` and an explicit `(x)` binder is NOT caught; nor is a changed d
 with an unchanged type (that is the semantic-equation file's job, charter row 7).
 
 `Trace.lean` is imported explicitly: neither `ProgramTrace` nor `MultiSound` reaches it.
+
+RE-PIN 6 — B6, numeric locals ([AGENT worker, lane core/numeric-locals-0930], 2026-09-30; design
+note `docs/2026-09-30_numeric-locals-design.md`; the logic team's request 3 of 2026-09-28): rows 1–107
+BYTE-IDENTICAL (no pinned statement spells a local — `LocalEnv`, `Param`, `Expr` keep their names;
+their local positions are now `VarId := Nat`); rows 108–125 ADDED — the local id and the binder
+positions that became numeric (`Param.id`, `Expr.var`/`ref`, `Assignee.var`, `Scope`), the name table
+(`LocalKind`, `LocalName`, `Func.locals`, `Func.localName?`), the decoder's checked predicate
+`Func.localsOk` with its two lemmas, the env-lookup laws, and the activation-slot lemmas
+(`bindParams_lookup`, `allocDecls_lookup`, `enterFrame_lookup_arg`/`_result`).
 -/
 
 namespace GoLean.GoCore.BridgeSet
@@ -804,5 +814,102 @@ example : ∀ {ctx : ProgramCtx} (s : Store) (tenv : LocalEnv) (k' : Cont) (fr :
 -- (RE-PIN 5)
 example : ∀ (f : Frame) (k : Cont), Cont.locSup (f :: k) = max (Cont.locSup [f]) (Cont.locSup k) :=
   @GoLean.GoCore.Machine.Cont.locSup_cons
+
+-- ---- RE-PIN 6 (B6, numeric locals, 2026-09-30) ----
+
+-- 108. `Syntax.lean` — a local's identity is a NUMBER: an index into its function's name table
+example : VarId = Nat := rfl
+
+-- 109. `Syntax.lean` — the binder positions are numeric: a parameter/result/declaration
+example : ∀ (p : Param), p.id = p.id ∧ (Param.id : Param → VarId) = Param.id := fun _ => ⟨rfl, rfl⟩
+
+-- 110. `Syntax.lean` — a variable read, its address, and an assignment target name a `VarId`
+example : (Expr.var : VarId → Expr) = Expr.var ∧ (Expr.ref : VarId → Expr) = Expr.ref
+    ∧ (Assignee.var : VarId → Assignee) = Assignee.var := ⟨rfl, rfl, rfl⟩
+
+-- 111. `State.lean` — a scope binds ids to locations; the env is a stack of scopes (unchanged shape)
+example : Scope = List (VarId × Loc) ∧ LocalEnv = List Scope := ⟨rfl, rfl⟩
+
+-- 112. `Syntax.lean` — the name-table entry: Go's identifier, the kind, the declaring position, the
+-- lowering's spelling where it differs
+example : ∀ (e : LocalName), e = { name := e.name, kind := e.kind, pos := e.pos, wire := e.wire } :=
+  fun _ => rfl
+
+-- 113. `Syntax.lean` — the six kinds
+example : ∀ (k : LocalKind), k = .recv ∨ k = .param ∨ k = .result ∨ k = .capture ∨ k = .local ∨ k = .temp := by
+  intro k; cases k <;> simp
+
+-- 114. `Syntax.lean` — a function carries its table; the lookup is the table's index
+example : ∀ (f : Func) (id : VarId), f.localName? id = f.locals[id]? := fun _ _ => rfl
+
+-- 115. `Locals.lean` — every id a function names: its signature's, its declarations', its mentions'
+example : ∀ (f : Func), f.ids = (f.args ++ f.results).toList.map (·.id) ++ f.body.declIds ++ f.body.names :=
+  fun _ => rfl
+
+-- 116. `Locals.lean` — the decoder's final check (c5): the table covers every named id and the
+-- signature's ids are pairwise distinct
+example : ∀ (f : Func), f.localsOk = (f.ids.all (· < f.locals.size)
+    && namesDistinct ((f.args ++ f.results).toList.map (·.id))) := fun _ => rfl
+
+-- 117. `Locals.lean` — «source spellings are retained»: under `localsOk`, every id the function
+-- names has a table entry
+example : ∀ {f : Func}, f.localsOk = true → ∀ {id : VarId}, id ∈ f.ids → (f.localName? id).isSome = true :=
+  @GoLean.GoCore.Func.localsOk_covers
+
+-- 118. `Locals.lean` — under `localsOk`, the signature's ids are pairwise distinct (the slot lemmas' premise)
+example : ∀ {f : Func}, f.localsOk = true → namesDistinct ((f.args ++ f.results).toList.map (·.id)) = true :=
+  @GoLean.GoCore.Func.localsOk_sigDistinct
+
+-- 119. `State.lean` — `declare` then `lookup` of the same id: the new cell
+example : ∀ (env : LocalEnv) (id : VarId) (loc : Loc), LocalEnv.lookup (env.declare id loc) id = some loc :=
+  GoLean.GoCore.LocalEnv.lookup_declare_self
+
+-- 120. `State.lean` — `declare` leaves every other id's binding alone
+example : ∀ (env : LocalEnv) {id id' : VarId}, id' ≠ id → ∀ (loc : Loc),
+    LocalEnv.lookup (env.declare id loc) id' = LocalEnv.lookup env id' :=
+  @GoLean.GoCore.LocalEnv.lookup_declare_ne
+
+-- 121. `State.lean` — a fresh scope changes no binding
+example : ∀ (env : LocalEnv) (id : VarId), LocalEnv.lookup env.pushScope id = LocalEnv.lookup env id :=
+  GoLean.GoCore.LocalEnv.lookup_pushScope
+
+-- 122. `Machine.lean` — arguments bind in order: parameter `i` at the `i`-th cell allocated from `s`
+example : ∀ (ctx : ProgramCtx) (env : LocalEnv) (s : Store) (ps : List Param) (vs : List GoValue)
+    {env' : LocalEnv} {s' : Store}, bindParams ctx env s ps vs = .ok (env', s') →
+    namesDistinct (ps.map (·.id)) = true →
+    ∀ (i : Nat) (hi : i < ps.length), LocalEnv.lookup env' ps[i].id = some (.base ⟨s.heap.size + i⟩) :=
+  @GoLean.GoCore.Machine.bindParams_lookup
+
+-- 123. `Machine.lean` — declared locals allocate in order: declaration `j` at the `j`-th cell
+example : ∀ (ctx : ProgramCtx) (env : LocalEnv) (s : Store) (ps : List Param)
+    {env' : LocalEnv} {s' : Store}, allocDecls ctx env s ps = .ok (env', s') →
+    namesDistinct (ps.map (·.id)) = true →
+    ∀ (j : Nat) (hj : j < ps.length), LocalEnv.lookup env' ps[j].id = some (.base ⟨s.heap.size + j⟩) :=
+  @GoLean.GoCore.Machine.allocDecls_lookup
+
+-- 124. `Machine.lean` — «table lookup agrees with the activation's runtime slot», arguments: a declared
+-- non-anchor function entered with `argVals` binds parameter `i` to `.base ⟨s.heap.size + i⟩`
+example : ∀ {ctx : ProgramCtx} {s : Store} {fid : FuncId} {argVals : List GoValue} {func : Func},
+    findFunctionIn? ctx.functions fid = some func →
+    (∀ m, methodInfoByFuncId? ctx func.id = some m → methodRecvInterfaceName? m = none) →
+    func.args.size = argVals.length →
+    namesDistinct ((func.args ++ func.results).toList.map (·.id)) = true →
+    ∀ {frameEnv : LocalEnv} {resultLocs : List Loc} {s' : Store} {tr : AccessTrace},
+    enterFrame ctx s fid argVals = .ok (.run func frameEnv resultLocs, s', tr) →
+    ∀ (i : Nat) (hi : i < func.args.size),
+      LocalEnv.lookup frameEnv func.args[i].id = some (.base ⟨s.heap.size + i⟩) :=
+  @GoLean.GoCore.Machine.enterFrame_lookup_arg
+
+-- 125. `Machine.lean` — the same, results: result `j` at the cell after all the parameters
+example : ∀ {ctx : ProgramCtx} {s : Store} {fid : FuncId} {argVals : List GoValue} {func : Func},
+    findFunctionIn? ctx.functions fid = some func →
+    (∀ m, methodInfoByFuncId? ctx func.id = some m → methodRecvInterfaceName? m = none) →
+    func.args.size = argVals.length →
+    namesDistinct ((func.args ++ func.results).toList.map (·.id)) = true →
+    ∀ {frameEnv : LocalEnv} {resultLocs : List Loc} {s' : Store} {tr : AccessTrace},
+    enterFrame ctx s fid argVals = .ok (.run func frameEnv resultLocs, s', tr) →
+    ∀ (j : Nat) (hj : j < func.results.size),
+      LocalEnv.lookup frameEnv func.results[j].id = some (.base ⟨s.heap.size + func.args.size + j⟩) :=
+  @GoLean.GoCore.Machine.enterFrame_lookup_result
 
 end GoLean.GoCore.BridgeSet
