@@ -130,3 +130,13 @@ See the «Row 5 — B6» section and the tool-interface lines added there in thi
   is the distinctness premise C4's layout function inherits.
 - Packet D (equations): `Locals.lean` is in the core aggregator and the audit's required list; the
   `fun_cases stepFn` case list is unchanged (no arm added or removed).
+
+## Merge train r57 — the 5a record ([AGENT] coordinator, 2026-09-30)
+
+[USER] Mike 2026-09-30 «land it» (relayed). Pre-merge main `90df0fe1` → `refs/snapshots/r57/main`; train tip `bc91aa39`
+fast-forwarded (numeric locals + audit + the BUG-004 item 4 design branch + the rulings, with the certified row's `wire-sha256`
+moved dc232a8c… → f448d579… BEFORE the gate). `release-check` EXIT=2 (EXPECTED — STALE, `build/files/GoLean/GoCore.lean`);
+`GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --slow` EXIT=1, 1037 s — red on EXACTLY the 5a pair; 3791 rows, 3553 PASS / 238
+FAIL = the pin 3554 / 237 with the one 5a-class row red; the slow tier re-enumerated in the same run (the pre-recorded hash):
+`observations_sha256` IDENTICAL, the claim differs only in `wire_sha256` — candidate (receipt `bc91aa39`, 121.133 s)
+INSTALLED; a provenance refresh, not a re-pin. Tail: `docs/evidence/2026-09-30_numeric-locals/r57-ci-slow.tail.txt`.
