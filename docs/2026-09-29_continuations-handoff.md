@@ -88,3 +88,5 @@ EXACTLY the 5a pair; 3791 rows, 3553 PASS / 238 FAIL = the pin 3554 / 237 with t
 and `observations_sha256` IDENTICAL; seven compiled modules and `tools/raftsubject/derive.py` (the comment fix) differ, plus
 the receipt (`20049982`, 94.906 s) — INSTALLED; a provenance refresh, not a re-pin. Tail:
 `docs/evidence/2026-09-30_packet-c/r56-ci-slow.tail.txt`.
+
+**Green re-run at the records commit `131a7313`** ([AGENT] coordinator, 2026-09-30): `ci --diff` EXIT=0, `RESULT: PASS`, baseline diff FULL 3791/3791, certificate provenance ok. Round 56 closed.
