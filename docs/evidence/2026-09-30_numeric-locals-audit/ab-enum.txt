@@ -1,0 +1,11 @@
+# Attack 1 (enumeration lanes) — every NON-STRICT manifest row (386: 239 membership, 102 confluent, 45 racy) re-enumerated on BOTH binaries with its OWN lane params (width/sites/cap/work/engine/backedge/nonterm/statuses from the manifest; racy rows --expect-status race; the tier=slow row at its certified claim's argv), 2026-09-30
+rows per side: 386
+differing files across sides (observations / enumerator stats / exit code; argv differs only in the wire path): 0
+exit-code histogram (identical on both sides): 384×rc0 2×rc1 
+total enumerated observation lines: cand 1289 / main 1289
+the two rc=1 rows (same on both sides): embedding__promoted-stub-dispatch__box-sync-stub-race goroutines__worker-pool__sum 
+## the certified slow-tier row imported-goose/channel/google-search
+argv: coverage-observations --input Corpus__coverage__exec__imported-goose__channel__google-search.json --function goleanGoogle --max-width 4 --max-sites 48 --cap 64 --work-cap 60000000 --expect-status ok --engine dedup
+members: 6 on both sides; sha256 of the observation lines: main e40ba07d11827b48aa8c9246bd84d6c21849159983d46c47b793b5759cfbbfd8 / cand e40ba07d11827b48aa8c9246bd84d6c21849159983d46c47b793b5759cfbbfd8
+certified record observations_sha256: e40ba07d11827b48aa8c9246bd84d6c21849159983d46c47b793b5759cfbbfd8
+stats (identical on both sides): coverage-observations: observations=6 steps=6565663 probes=0 sites=6193933 leaves=0 maxdepth=0 width=4 engine=dedup nodes=6193933 edges=6565663 dedupHits=371731 certified=checkCert

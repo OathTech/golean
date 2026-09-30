@@ -1,0 +1,14 @@
+# Attack 1 — pure renaming, independently (auditor's own frontends and binaries), 2026-09-30
+# main = git archive 131a7313 (frontend built from it; golean binary = the primary's, lake-verified current against those sources, sha256 8e042f19…)
+# cand = a6df705f (runtime 0fb43dcd; frontend built from it; golean sha256 302956fc…, identical to the lane worktree's)
+# both frontends run with cwd = their own tree (deps/go and baselines/stdlib-pin.tsv identical on both sides)
+## Lowering: every unique fixture dir of the 3791-row manifest (1368 dirs)
+frontend exit codes identical across all dirs: yes; frontend stderr logs identical per dir: yes
+nonzero frontend exits (both sides): 24 dirs (all under Corpus/coverage/exec — the pre-existing refusals)
+## Runs: every manifest row through native-json-run (stdout+stderr+exit code captured), 3791 rows per side
+differing files (diff -rq runs/): 1 — arrays__materialization-budget__over-budget.out : the BUG-078 decoder refusal whose message embeds the wire's absolute PATH (main/ vs cand/); byte-identical otherwise
+exit-code histogram (cand): 3084×rc0 672×rc1 1×rc134 34×rc99  (rc99 = no wire: the 34 frontend-refused rows)
+status histogram (cand): 27 "deadlock"; 1 "error"; 9 "fatal"; 3084 "ok"; 401 "panic"; 50 "race"; 5 "stuck"; 178 "unsupported"; 
+## Enumeration, pass 1: all 386 non-strict rows + the first 300 strict rows, ALL at width 2/sites 8/cap 64/work 200000 (an argv-identical A/B; 686 rows per side)
+differing files (obs/stats/rc): 1 — the same BUG-078 path line
+rc histogram (cand): 502×rc0 176×rc1 8×rc2 

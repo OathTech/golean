@@ -1,0 +1,36 @@
+# Attack 3 — D1's certificate: auditor's decoder mutants on the lane's fixture wire (Tests/wire-boundary-locals lowered fresh) and the shadow-if-init probe wire; candidate binary; native-json-run (shadow: --arg-int 2), 2026-09-30
+# [expect] is the auditor's prediction before running; REFUSE = must refuse by name; PASS? = predicted to decode (a check the design does not make)
+M1-declare-reuses-in-scope-id	[PASS?]	rc=0	"ok"	
+M2-sibling-binder-ids-swapped	[PASS?]	rc=1	"unsupported"	len for non-array/slice/map value GoLean.GoValue.int 3 (GoLean.GoCore.IntKind.int)
+M3-result-slot-is-the-param	[REFUSE]	rc=1	"error"	native lowering: program.funcs[3]: result 'a' (declaration 0) is recorded with kind GoLean.GoCore.LocalKind.param in the function's name table (expected result) (B6 c2); 
+M4-capture-ref-forged-id	[REFUSE]	rc=1	"error"	native lowering: program.funcs[2].body.body[1].results[0].captured[0]: the source local 'x' resolves to declaration 0 by lexical scope (the innermost in-scope declaration
+M4b-capture-param-wrong-index	[REFUSE]	rc=1	"error"	native lowering: program.funcs[1].params[0]: local index 1 names 'y$cap' in the function's name table, but the node spells 'x$cap' (B6 c1, spelling agreement); refused by
+M5-table-wire-dollar	[REFUSE]	rc=1	"error"	native lowering: program.funcs[0].locals[1].wire: the lowering spelling '$c0' starts with `$`, the temporaries' reservation (B6 c2); refused by name
+M5b-ident-temp-spelling-with-index	[REFUSE]	rc=1	"error"	native lowering: program.funcs[0].body.body[1].then.body[0].rhs[0].x: the `$`-temporary '$c0' carries a `local` index — temporaries are interned by the decoder, never n
+M6-body-local-kind-recv	[PASS?]	rc=0	"ok"	
+M7-table-truncated	[REFUSE]	rc=1	"error"	native lowering: program.funcs[0].body.body[1].then.body[1].lhs[0]: local index 2 for 'x' is past the function's name table (2 entries) (B6 c1); refused by name
+M8a-v3-wire-labelled-v2	[REFUSE]	rc=1	"error"	native lowering: schema golean-native-v2 predates B6 (2026-09-30: numeric locals — `local` declaration indices and per-function `locals` name tables; docs/2026-09-30_nu
+M8b-stripped-v2-wire	[REFUSE]	rc=1	"error"	native lowering: schema golean-native-v2 predates B6 (2026-09-30: numeric locals — `local` declaration indices and per-function `locals` name tables; docs/2026-09-30_nu
+M8c-stripped-but-v3	[REFUSE]	rc=1	"error"	program.funcs[0]: missing field 'locals'
+M9-range-locals-swapped	[REFUSE]	rc=1	"error"	native lowering: program.funcs[4].body.body[1].keyLocal: local index 4 names 'x' in the function's name table, but the node spells 'i' (B6 c1, spelling agreement); refuse
+M10-index-neg	[REFUSE]	rc=1	"error"	program.funcs[0].body.body[1].then.body[0].rhs[0].x.local: Natural number expected
+M10-index-str	[REFUSE]	rc=1	"error"	program.funcs[0].body.body[1].then.body[0].rhs[0].x.local: Natural number expected
+M10-index-float	[REFUSE]	rc=1	"error"	program.funcs[0].body.body[1].then.body[0].rhs[0].x.local: Natural number expected
+M10-index-null	[REFUSE]	rc=1	"error"	program.funcs[0].body.body[1].then.body[0].rhs[0].x.local: Natural number expected
+M10-index-bool	[REFUSE]	rc=1	"error"	program.funcs[0].body.body[1].then.body[0].rhs[0].x.local: Natural number expected
+M11-outer-ref-to-inner-decl	[REFUSE]	rc=1	"error"	native lowering: program.funcs[0].body.body[2].results[0]: the source local 'x' resolves to declaration 1 by lexical scope (the innermost in-scope declaration of that spe
+M12-probe-init-x-reuses-outer-id	[PASS?]	rc=0	"ok"	
+M13-table-name-forged-behind-wire	[PASS?]	rc=0	"ok"	
+M14-pos-forged	[PASS?]	rc=0	"ok"	
+M15-undeclared-temp-reference	[?]	rc=1	"stuck"	unbound GoCore variable address: 5
+M16-unused-table-entry	[PASS?]	rc=0	"ok"	
+
+# Attack 4 — the moved spelling checks (D2/D6): the same one-edit mutant applied to the v2 fixture (git 131a7313) run on main's binary and to the v3 fixture run on the candidate's
+W1-guard-test-unknown	main(v2)	native lowering: unseq: malformed graph at program.funcs[1].body.body[2] — unknown slot '$nope' mentioned by occurrence 'guard1'; refused by name
+W1-guard-test-unknown	cand(v3)	native lowering: unseq: malformed graph at program.funcs[1].body.body[2] — guard 'guard1' tests '7', not a VALUE binder; refused by name
+W2-head-unknown-slot	main(v2)	native lowering: unseq: malformed graph at program.funcs[1].body.body[2] — unknown slot '$nope' mentioned by occurrence 'join3'; refused by name
+W2-head-unknown-slot	cand(v3)	native lowering: unseq: unknown slot '$nope' mentioned at program.funcs[1].body.body[2] (neither a binder cell nor a target binder of this graph); refused by name
+W3-ref-unknown-slot	main(v2)	native lowering: unseq: an invocation argument at program.funcs[1].body.body[1].occs[0].args[0] takes the address of a binder cell '$nope' — a graph cell is written only by its producer; a
+W3-ref-unknown-slot	cand(v3)	native lowering: unseq: an invocation argument at program.funcs[1].body.body[1].occs[0].args[0] takes the address of a binder cell '$nope' — a graph cell is written only by its producer; a
+W4-guard-out-unknown	main(v2)	native lowering: unseq: malformed graph at program.funcs[1].body.body[2] — guard 'guard1' completion '$nope' is not a VALUE binder; refused by name
+W4-guard-out-unknown	cand(v3)	native lowering: unseq: malformed graph at program.funcs[1].body.body[2] — guard 'guard1' completion '7' is not a VALUE binder; refused by name

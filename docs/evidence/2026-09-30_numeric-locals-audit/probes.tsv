@@ -1,0 +1,32 @@
+# Attack 2 — the logic team's B6 conditions, one probe program each (auditor-written, .tmp/probes/<name>/main.go; lowered with BOTH frontends, run with BOTH binaries via native-json-run --function subject; go run = oracle), 2026-09-30
+# verdict column: IDENTICAL = main and candidate outputs + exit codes byte-identical; the Lean observation and the Go oracle output are quoted
+decl-forms	IDENTICAL	rc=0	lean=ok '' [{'kind': 'int', 'tag': 'int', 'value': 132}]	go=132 
+defer-recover-shadow	IDENTICAL	rc=0	lean=ok 'recovered shadow\n' [{'kind': 'int', 'tag': 'int', 'value': 42}]	go=recovered shadow 42 
+embedded-promotion	IDENTICAL	rc=0	lean=ok 'outer v 5\n' [{'kind': 'int', 'tag': 'int', 'value': 14}]	go=outer v 5 14 
+generics-methodvalue	IDENTICAL	rc=0	lean=ok '' [{'kind': 'int', 'tag': 'int', 'value': 17}]	go=17 
+goroutine-capture	IDENTICAL	rc=1	lean=race '' data race detected	go=1 
+goto-hoist-shadow	IDENTICAL	rc=0	lean=ok '' [{'kind': 'int', 'tag': 'int', 'value': 1006}]	go=1006 
+labels-vs-vars	IDENTICAL	rc=0	lean=ok '' [{'kind': 'int', 'tag': 'int', 'value': 5}]	go=5 
+loopvar-closures	IDENTICAL	rc=0	lean=ok 'body 0\nbody 10\nbody 20\nrangeint 100\nrangeint 101\n' [{'kind': 'int', 'tag': 'int', 'value': 6}]	go=body 0 body 10 body 20 rangeint 100 rangeint 101 6 
+maprange-shadow	IDENTICAL	rc=0	lean=ok 'a! 1\nassign a\nafter a 100\n' [{'kind': 'int', 'tag': 'int', 'value': 100}]	go=a! 1 assign a after a 100 100 
+nested-closures	IDENTICAL	rc=0	lean=ok 'x 1 y 4 r 28\n' [{'kind': 'int', 'tag': 'int', 'value': 33}]	go=x 1 y 4 r 28 33 
+params-blank-unnamed	IDENTICAL	rc=0	lean=ok '' [{'kind': 'int', 'tag': 'int', 'value': 37}]	go=37 
+range-closure-capture	IDENTICAL	rc=0	lean=ok '' [{'kind': 'int', 'tag': 'int', 'value': 36}]	go=36 
+recursion-blocks	IDENTICAL	rc=0	lean=ok 'depth 2 1\ndepth 3 2\ndepth 2 1\ndepth 2 1\ndepth 4 3\ndepth 2 1\ndep [{'kind': 'int', 'tag': 'int', 'value': 5}]	go=depth 2 1 depth 3 2 depth 2 1 depth 2 1 depth 4 3 depth 2 1 depth 3 2 
+recv-result-shadow	IDENTICAL	rc=0	lean=ok 'shadow 7 7\n' [{'kind': 'int', 'tag': 'int', 'value': 18}]	go=shadow 7 7 18 
+redecl-reuse	IDENTICAL	rc=0	lean=ok 'inner 3 true\nouter 1 7 9 true\n' [{'kind': 'int', 'tag': 'int', 'value': 17}]	go=inner 3 true outer 1 7 9 true 17 
+shadow-goto	IDENTICAL	rc=0	lean=ok 'label 0 11\nlabel 1 11\nafter 1\n' [{'kind': 'int', 'tag': 'int', 'value': 1}]	go=label 0 11 label 1 11 after 1 1 
+shadow-if-init	IDENTICAL	rc=0	lean=ok 'inner 12\nafter 1\n' [{'kind': 'int', 'tag': 'int', 'value': 1}]	go=inner 12 after 1 1 
+shadow-select	IDENTICAL	rc=0	lean=ok 'recv 18\ndefault2 1\nafter 1\n' [{'kind': 'int', 'tag': 'int', 'value': 1}]	go=recv 18 default2 1 after 1 1 
+shadow-switch	IDENTICAL	rc=0	lean=ok 'case2 5\nafter 1\n' [{'kind': 'int', 'tag': 'int', 'value': 1}]	go=case2 5 after 1 1 
+shadow-typeswitch	IDENTICAL	rc=0	lean=ok 'int 4\nmulti true\nafter 100\n' [{'kind': 'int', 'tag': 'int', 'value': 100}]	go=int 4 multi true after 100 100 
+unseq-shadow	IDENTICAL	rc=0	lean=ok 'inner 5\nouter 12 2321\n' [{'kind': 'int', 'tag': 'int', 'value': 12}]	go=inner 5 outer 12 2321 12 
+
+# condition -> probe(s):
+lexical id != activation location (recursion, re-entered blocks): recursion-blocks (fib with nested r-blocks per activation)
+per-iteration loop variables + escaping captures (&i, closures over i): loopvar-closures, range-closure-capture, goroutine-capture (race on both sides)
+shadowing (if-init, switch, type-switch, select, goto, nested blocks): shadow-if-init, shadow-switch, shadow-typeswitch, shadow-select, shadow-goto, unseq-shadow
+same-block short-declaration reuse (a, err := ...; b, err := ...): redecl-reuse
+argument/result slots incl. named results, unnamed/blank params and receivers, method values/expressions: recv-result-shadow, params-blank-unnamed, defer-recover-shadow (named result written by a deferred closure)
+capture mappings (nested closures re-capturing an outer capture; closure param shadowing a captured name): nested-closures
+generics (stencils), method promotion, labels vs variables, goto hoists, declaration forms (var groups, blank results, locals named nil/true, const shadowing): generics-methodvalue, embedded-promotion, labels-vs-vars, goto-hoist-shadow, decl-forms

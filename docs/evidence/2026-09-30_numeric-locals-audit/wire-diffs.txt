@@ -1,0 +1,19 @@
+# Attack 8 — the twin re-pin and the certified row's wire, reproduced with the auditor's own frontends (.tmp/wirediff.py: strip local/keyLocal/valLocal/locals from the v3 wire, then key-by-key compare with the v2 wire), 2026-09-30
+## twin (raftsubject/* + tools/raftsubject/twin-*.go assembled as scripts/check-frontend-pins does; sources identical 131a7313..a6df705f)
+main frontend emit == git 131a7313:baselines/pins/twin-chdriver.wire.json : yes (sha256 0b58402a7699e7bb…)
+candidate frontend emit == baselines/pins/twin-chdriver.wire.json at a6df705f : yes (sha256 8a158eff727c18ef…)
+schema golean-native-v2 -> golean-native-v3
+added: {'local': 12641, 'valLocal': 66, 'locals': 924, 'keyLocal': 60} tables 924 entries 2879
+residual diffs: 50
+  33 x '' -> '$recv'
+  11 x '' -> '$p0'
+  5 x '' -> '$p1'
+residual diffs OUTSIDE the unnamed-receiver/param respelling: 0
+## imported-goose/channel/google-search (the certified slow-tier row)
+schema golean-native-v2 -> golean-native-v3
+added: {'local': 51, 'locals': 8, 'valLocal': 1} tables 8 entries 18
+residual diffs: 1
+residual diffs OUTSIDE the unnamed-receiver/param respelling: 0
+sha256 main (v2): dc232a8c2075ba658597182a7fef491f504ba95d54cdf26298eee203cc02f1be  = the certified claim's wire_sha256
+sha256 cand (v3): f448d579dfdbaadbbeceabe9f3872638552ae7331aa4c1740db5a5333d98f5d2
+certified record wire_sha256: dc232a8c2075ba658597182a7fef491f504ba95d54cdf26298eee203cc02f1be
