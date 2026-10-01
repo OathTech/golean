@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+# The n <= 0 control, exact text: math/rand.Intn's own guard (rand.go:179-181 @ go1.26.5), emitted by the lowering ahead of the draw.
+-	drawZero	-	panic	invalid argument to Intn	stdlib,rand,builtins,panic

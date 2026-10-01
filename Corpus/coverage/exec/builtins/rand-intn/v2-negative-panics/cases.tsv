@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+# The n <= 0 control for the v2 callee, exact text: math/rand/v2.IntN's guard (v2/rand.go:192-193 @ go1.26.5); a negative bound takes the same path.
+-	drawNegative	-	panic	invalid argument to IntN	stdlib,rand,builtins,panic

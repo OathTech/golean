@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+# The [0, n) DRAW as one choice-tape pick (window unit 5b, 2026-09-30; design docs/2026-09-30_intn-pick-design.md):
+# the machine certifies the admitted set {0,1,2,3,4} = [0,5) and every go-run sample must fall inside it.
+-	drawFive	-	ok	-	stdlib,rand,builtins,ints,nondet	membership	math/rand.Intn(5) is ONE intn pick (Stmt.randIntn; the envelope statement is that docstring): the ONE consumption site is the intn draw (Stmt.randIntn, window unit 5b): bound = n EXACTLY = 5, slot v IS the value v, so the admitted set is [0,5) — members=5; gc draws uniformly, so the K draws exhibit several members; width 8 >= 5	width=8,sites=8,members=5

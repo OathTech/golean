@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+# The v2 callee (math/rand/v2.IntN) on the SAME site: admitted set {0,1,2}.
+-	drawThree	-	ok	-	stdlib,rand,builtins,ints,nondet	membership	math/rand/v2.IntN(3) is the same intn pick as Intn (one machine op; the callee tag only selects the guard text): the ONE consumption site is the intn draw (Stmt.randIntn, window unit 5b): bound = n EXACTLY = 3, admitted set [0,3) — members=3; width 8 >= 3	width=8,sites=8,members=3

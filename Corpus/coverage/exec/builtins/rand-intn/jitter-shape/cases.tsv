@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+# The election-jitter shape over the native site (the D-11 subject patch, RE-KEYED 2026-09-30): electionTimeout + Intn(electionTimeout)
+# realizes raft's contract range [electionTimeout, 2*electionTimeout) at timeout 5 — admitted set {5,6,7,8,9}; the predecessor
+# guardrail maps/jitter-draw pins the retired map-range idiom.
+-	jitter	-	ok	-	stdlib,rand,builtins,ints,nondet	membership	the composed observable electionTimeout + Intn(electionTimeout) at timeout 5: the ONE consumption site is the intn draw (Stmt.randIntn, window unit 5b): bound = n EXACTLY = 5, so the admitted set is {5,6,7,8,9} — members=5 (raft's contract range [5,10)); width 8 >= 5	width=8,sites=8,members=5

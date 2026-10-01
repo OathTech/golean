@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+# The n = 1 control: [0,1) has one member; a bound-1 consult pops nothing (G-U) — a STRICT row, 0 on every tape.
+-	drawOne	-	ok	-	stdlib,rand,builtins,ints

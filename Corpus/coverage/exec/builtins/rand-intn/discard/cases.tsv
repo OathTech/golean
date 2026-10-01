@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+# The discarded-result form (design D4): the draw still happens (a pick is consulted, Stmt.randIntn with no target) and the observable is stream-independent — a STRICT row; the invariance re-run across streams certifies the discard.
+-	discard	-	ok	-	stdlib,rand,builtins,ints

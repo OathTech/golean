@@ -1,5 +1,13 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 3791 (3554 PASS / 237 FAIL)
+# cases: 3799 (3562 PASS / 237 FAIL)
+# re-pinned: 2026-09-30 [AGENT], core/intn-pick-0930, window unit 5b — the native `Intn`-style pick site ([USER] Mike 2026-09-30,
+#   item 2 of «The raft-proofs team's subject-delta note (2026-09-30) — RULED», relayed; design docs/2026-09-30_intn-pick-design.md,
+#   D1–D8 PENDING [USER] ratification at the merge ask). BORN ROWS ONLY: +8 `builtins/rand-intn/*` (5 strict PASS: one, zero-panics,
+#   v2-negative-panics, recover-string-payload, discard; 3 membership PASS: membership {0..4} members=5, v2-membership {0,1,2}
+#   members=3, jitter-shape {5..9} members=5 — every gc draw inside, all members exhibited). NO existing row's result or stage
+#   changed (the new `ChoiceSite.intn` is consulted only by the new `Stmt.randIntn`, which only the born rows and the re-keyed raft
+#   twin reach); the whole-corpus choice trace vs main is recorded in docs/2026-09-30_intn-pick-handoff.md §2. Measured by
+#   `scripts/diff-one` over the 8 ids + maps/jitter-draw (9/9 PASS, 2026-10-01 00:05Z) and by the gate run recorded in the handoff.
 # re-pinned: 2026-09-20 [AGENT], core/unseq-stage-d-0920, STAGE D of the evaluation-order model v2.1 (route α —
 #   docs/2026-09-20_unseq-stage-d-design.md §2–§3; handoff docs/2026-09-20_unseq-stage-d-handoff.md): NO row added, NO
 #   result changed, ONE stage changed — spec-examples-stmt/continue-label PASS/- -> PASS/confluent, the strict depth=128
@@ -1848,6 +1856,18 @@
 #   embedding/promoted-stub-dispatch package's wire; its other four rows are unmoved (diff-one: 3 PASS / 2 FAIL as pinned).
 #   Measured by scripts/diff-one at the tree and on the archive build; the full gate line is in the handoff §6.
 #   3790 + 1 = 3791; 3553 + 1 = 3554; 237 FAIL unchanged. No PASS -> non-PASS flip.
+# reason: channels/select-select/beside-loop — stage alternation ([USER] ruling (a) 2026-09-03;
+#   members re-stated at the strict-lane depth guard, round-8a merge train 2026-09-03 [AGENT]):
+#   gc samples 5 or 90 (the subject's "5 or 90 in gc"); the machine's default stream
+#   commits 5. scripts/diff-coverage runs the strict-lane differential check BEFORE
+#   the oracle-invariance re-run and returns early, so the red's stage is
+#   oracle-schedule-dependent: gc=90 -> Lean=5 != Go=90 -> FAIL/differential;
+#   gc=5 -> equality holds, then a variant-stream run hits the `unsupported`
+#   refusal, which the strict-lane depth guard (membership-depth memo P1 item 4,
+#   lane strict-routing) reports as a REFUSAL at lean-observation — no longer as
+#   "varies with iteration order" (nondet) -> FAIL/lean-observation. Result FAIL
+#   either way; the row stays the F10 over-broad-trigger marker
+#   (baselines/untriaged-ids, disposition coverage).
 result	id	stage
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
@@ -2189,6 +2209,14 @@ FAIL	builtins/print/refused/zero-operands	frontend-export
 PASS	builtins/print/string	-
 PASS	builtins/print/uints	-
 PASS	builtins/print/values-and-output	-
+PASS	builtins/rand-intn/discard	-
+PASS	builtins/rand-intn/jitter-shape	membership
+PASS	builtins/rand-intn/membership	membership
+PASS	builtins/rand-intn/one	-
+PASS	builtins/rand-intn/recover-string-payload	-
+PASS	builtins/rand-intn/v2-membership	membership
+PASS	builtins/rand-intn/v2-negative-panics	-
+PASS	builtins/rand-intn/zero-panics	-
 FAIL	builtins/real-imag	frontend-export
 PASS	builtins/recover-outside-defer	-
 PASS	builtins/statement-position/copy-stmt	-
@@ -2306,18 +2334,6 @@ PASS	channels/select-recv-edge/dep-index-target	-
 PASS	channels/select-recv-edge/fallback-call-index	-
 PASS	channels/select-recv-edge/field-second-target-stores-first	-
 PASS	channels/select-recv-edge/nil-index-base-second	-
-# reason: channels/select-select/beside-loop — stage alternation ([USER] ruling (a) 2026-09-03;
-#   members re-stated at the strict-lane depth guard, round-8a merge train 2026-09-03 [AGENT]):
-#   gc samples 5 or 90 (the subject's "5 or 90 in gc"); the machine's default stream
-#   commits 5. scripts/diff-coverage runs the strict-lane differential check BEFORE
-#   the oracle-invariance re-run and returns early, so the red's stage is
-#   oracle-schedule-dependent: gc=90 -> Lean=5 != Go=90 -> FAIL/differential;
-#   gc=5 -> equality holds, then a variant-stream run hits the `unsupported`
-#   refusal, which the strict-lane depth guard (membership-depth memo P1 item 4,
-#   lane strict-routing) reports as a REFUSAL at lean-observation — no longer as
-#   "varies with iteration order" (nondet) -> FAIL/lean-observation. Result FAIL
-#   either way; the row stays the F10 over-broad-trigger marker
-#   (baselines/untriaged-ids, disposition coverage).
 FAIL	channels/select-select/beside-loop	lean-observation|differential
 FAIL	channels/select-select/core	lean-observation
 PASS	channels/send-closed-panic	-

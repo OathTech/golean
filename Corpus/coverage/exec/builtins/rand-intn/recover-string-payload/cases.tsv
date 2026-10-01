@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+# The payload-CLASS control (design D2): gc's Intn(0) is a plain panic(string) — recover().(string) answers true and the text is the payload verbatim; a machine-arm panic would box as runtime.Error and read "other".
+-	recoverStringPayload	-	ok	-	stdlib,rand,builtins,panic,recover,defer,strings
