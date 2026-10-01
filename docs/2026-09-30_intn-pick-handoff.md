@@ -175,3 +175,5 @@ coordinator process defect, not a candidate defect. The 55 files were purged (li
 redone, and `ci --slow` re-run (1047 s): red on EXACTLY the 5a pair; 3800 rows, 3562 PASS / 238 FAIL = the pin 3563 / 237
 with the one 5a-class row red. Candidate: `claim` and `observations_sha256` IDENTICAL (receipt `723939b3`, 156.864 s) —
 INSTALLED; a provenance refresh. Tail: `docs/evidence/2026-10-01_r58-harness-fix/r58-ci-slow.tail.txt`.
+
+**Green re-run at the records commit `2230c84c`** ([AGENT] coordinator, 2026-10-01): `ci --diff` EXIT=0, `RESULT: PASS`, baseline diff FULL 3800/3800, certificate provenance ok. Round 58 closed: the native Intn pick site landed.
