@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"math/rand"
 	"slices"
 	"strings"
 	"sync"
@@ -93,29 +94,21 @@ type lockedRand struct {
 }
 
 // GOLEAN SUBJECT DELTA D-11 (H-15, the election-jitter CHOICE SITE —
-// docs/raft-w41-log.md item 3). Upstream draws via crypto/rand +
-// math/big, which the machine never models (jitter is nondeterminism;
-// the envelope, not a stream of modeled bits, is the semantics). The
-// draw below has envelope [0, n) on BOTH oracles: under the machine the
-// first key of a map range is the map-iteration choice site; under
-// `go run` it is Go's own randomized iteration order. The n <= 0 panic
-// preserves upstream's failure mode (the upstream draw panics on a
-// non-positive max). The mutex stays: globalRand is shared package
-// state and dropping the lock would smuggle in a concurrency delta.
+// docs/raft-w41-log.md item 3; RE-KEYED 2026-09-30, window unit 5b:
+// docs/2026-09-30_intn-pick-design.md D6). Upstream draws via crypto/rand
+// + math/big, which the machine never models (jitter is nondeterminism;
+// the envelope, not a stream of modeled bits, is the semantics). The draw
+// below is ONE call into the machine's general [0, n) pick site — the
+// frontend's rand-intn primitive (GoCore Stmt.randIntn / ChoiceSite.intn:
+// bound n exactly, every value of [0, n) a member; under `go run` a uniform
+// draw, as upstream's is). The n <= 0 failure mode is a panic(string) on
+// both oracles (upstream's text differs; unreachable: Config.validate
+// forces n = electionTimeout >= 2). The mutex stays: globalRand is shared
+// package state and dropping the lock would smuggle in a concurrency
+// delta.
 func (r *lockedRand) Intn(n int) int {
-	if n <= 0 {
-		panic("golean subject delta D-11: Intn requires n > 0 (the upstream draw panics on a non-positive max)")
-	}
 	r.mu.Lock()
-	draws := make(map[int]struct{}, n)
-	for i := 0; i < n; i++ {
-		draws[i] = struct{}{}
-	}
-	v := 0
-	for k := range draws {
-		v = k
-		break
-	}
+	v := rand.Intn(n)
 	r.mu.Unlock()
 	return v
 }

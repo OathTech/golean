@@ -718,6 +718,15 @@ continuation (D-7…D-10), all unchanged. **This section is where D-11 lives
 in the ledger; it was previously recorded only in prose in this log's exit
 state, which is not the ledger — audit B-4.**
 
+> RE-KEYED 2026-09-30 (window unit 5b, lane `core/intn-pick-0930`; [USER]
+> ruling item 2 of the 2026-09-30 subject-delta record, relayed): the body
+> is now ONE call into the machine's general `[0, n)` pick site,
+> `rand.Intn(n)` from `math/rand` (`Stmt.randIntn` / `ChoiceSite.intn`),
+> not the map-range idiom described below; the distribution delta is gone,
+> the residual is the callee and an unreachable panic text. The current
+> entry is the 2026-09-30 continuation in `docs/raft-w42-log.md`; the text
+> below is the W4.1 record as written.
+
 **D-11 `raft/rand.go`, `(*lockedRand).Intn` — the jitter CHOICE SITE**
 (item 3, JC-19). Body replaced by the exact-text-keyed `SUBJECT_PATCHES`
 derivation patch: the draw becomes the first key of a range over a fresh

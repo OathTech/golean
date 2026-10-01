@@ -19,7 +19,9 @@ raftsubject/
               dispatch since W4.1)
   raft/       the root package (W2.2+): verbatim, plus node_decls.go (a
               declaration subset of node.go) and the recorded subject
-              patches D-11 (jitter choice site) and D-12 (logger
+              patches D-11 (the jitter draw — since 2026-09-30 one
+              call into the machine's general [0, n) pick site,
+              math/rand.Intn; docs/raft-w42-log.md) and D-12 (logger
               initializers — logger.go is upstream verbatim since W4.2;
               the harness supplies the Logger through both seams)
 ```

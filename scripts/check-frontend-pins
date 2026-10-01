@@ -349,6 +349,16 @@ echo "check-frontend-pins: ok [hidden-dep-order] — realized deviation order ma
 # an env key only). Added: 12641 `local` + 60 `keyLocal` + 66 `valLocal` declaration indices and 924
 # per-function `locals` tables (2879 entries; funcs 450, methods 481). No statement, expression or type
 # node otherwise changed. 0b58402a… -> 8a158eff…. Written reason and diff: the lane's handoff.
+# [AGENT worker, lane core/intn-pick-0930] 2026-09-30 window unit 5b twin re-pin: the D-11 subject patch RE-KEYED onto
+# the native `[0, n)` pick site ([USER] Mike 2026-09-30, item 2 of «The raft-proofs team's subject-delta note (2026-09-30) —
+# RULED», relayed; design docs/2026-09-30_intn-pick-design.md D6; ledger docs/raft-w42-log.md). `(*lockedRand).Intn`'s body
+# is now lock / `v := rand.Intn(n)` (math/rand, the frontend's `rand-intn` primitive) / unlock / return, replacing the
+# map-range idiom (9 statements → 4; locals n,r,draws,i,v,k → n,r,v). Key-by-key JSON comparison of the old and the new wire:
+# 3418 differences = 29 inside that one method's body and locals table, 3159 renumberings of the emitter's per-emit hoist
+# temporaries (`$c`/`$sw`/`$swi`/`$swf` counters, each shifted by ONE after the removed `make-map` hoist — pure spelling, never
+# referenced across declarations), 230 `pos` line shifts in the `locals` tables of 60 later raft.go declarations (the file is
+# 7 lines shorter), 0 other. Schema golean-native-v3, funcs 450, methods 481, fileOrder 20 unchanged; no other statement,
+# expression or type node changed. 8a158eff… -> d5186f43…. Written reason and the classification script: the lane's handoff.
 # ---- 2. Twin wire pin ----
 TWIN_BASE="baselines/pins/twin-chdriver.wire.json"
 [ -f "$TWIN_BASE" ] || { echo "check-frontend-pins: FAIL — no wire pin at $TWIN_BASE" >&2; exit 1; }

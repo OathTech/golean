@@ -826,3 +826,36 @@ it fails 16 entries on the error text and 10 on groups/unknowns (measured by the
 refusal (a category-(c) pin), so a twin row on a malformed proposal is red on the machine whatever the codec; the passing
 witness is a recovering driver variant (the R-1 forced-half pattern) as a membership row over the two spellings — route A's
 S3. No BUGS.md entry: these are subject deltas (the subject vs upstream), not machine-vs-gc fidelity bugs.
+
+## Subject-delta ledger continuation (2026-09-30, window unit 5b): D-11 RE-KEYED onto the native `intn` pick site
+
+[AGENT] worker, lane `core/intn-pick-0930` (worktree `.claude/worktrees/intn-pick`, off `main` @ `bc91aa39`). Authority:
+[USER] Mike 2026-09-30, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «Yes, I also prefer A, as long as it
+could be made faithful», item 2 of `docs/2026-08-31_qrow-rulings.md` «The raft-proofs team's subject-delta note (2026-09-30) —
+RULED»: a native `Intn`-style pick site — GENERAL (a value in `[0, n)`, a panic if `n ≤ 0`), not raft-specific — inside the
+window before the single re-pin; execution table `docs/2026-09-24_window-plan.md` §4 unit 5b; design
+`docs/2026-09-30_intn-pick-design.md` (decisions D1–D8 PENDING [USER] ratification at the merge ask).
+
+**D-11 `raft/raft.go`, `(*lockedRand).Intn` — RE-KEYED (D6).** Before (W4.1 item 3, JC-19): the draw was the first key of a
+range over a fresh `n`-key map — the map-iteration choice site, with a DISTRIBUTION delta under `go run` (Go's iteration
+randomness vs `crypto/rand` uniformity). Now: the body is the lock, `v := rand.Intn(n)` from `math/rand`, the unlock — ONE call
+into the machine's general `[0, n)` pick site (`Stmt.randIntn` / `ChoiceSite.intn`: bound `n` exactly, every value of `[0, n)`
+a member — the first-class pick the logic team asked to name, «one step rule»: `Step_randIntn_draw`, MachineSound.lean, pinned
+in `BridgeSet`). The import `crypto/rand` is SWAPPED for `math/rand` (`derive.py` `swap_imports` — the `rand` identifier stays
+bound, so the residual-reference check is skipped for it by design); `math/big` is dropped as before and stays
+residual-checked. The patch still keys on upstream's EXACT `Intn` text and refuses on drift; `derive.py --check` clean.
+**What stays a delta, and why:** (i) the callee — `crypto/rand.Int(rand.Reader, big.NewInt(int64(n)))` + `int(v.Int64())` vs
+`math/rand.Intn(n)`: the entropy source differs, the ENVELOPE `[0, n)` is identical and both draws are uniform, so the
+distribution delta of the map-range idiom is GONE and nothing observable remains on the success path; (ii) the `n ≤ 0` failure
+text — upstream `crypto/rand: argument to Int is <= 0` vs `invalid argument to Intn` (both `panic(string)`; the latter is
+math/rand's own guard, emitted by the lowering ahead of the draw) — UNREACHABLE in raft: `Config.validate` forces
+`ElectionTick > HeartbeatTick > 0`, so `n = electionTimeout ≥ 2` at the one call site `resetRandomizedElectionTimeout`, and every
+run's draw is a genuine bound-≥-2 pop. Retiring D-11 to upstream's VERBATIM body is design §2 option B — measured by
+`scripts/lower-diagnose`: four refused keys, `crypto/rand.Int`, `crypto/rand.Reader` (an unmodeled package variable),
+`math/big.NewInt`, `math/big.Int.Int64` — a `*big.Int` representation plus environment contracts, over a session; POSED, not
+taken (plan §4: «the re-keyed patch is the interim either way»). **Twin:** `baselines/pins/twin-chdriver.wire.json` re-pinned
+(the reason and the JSON diff: `scripts/check-frontend-pins`' comment block and the lane handoff). **Guardrails:** the born rows
+`builtins/rand-intn/*` — `jitter-shape` is the composed observable `electionTimeout + Intn(electionTimeout)` over the native
+site (admitted set `{5,…,9}`, members=5); `maps/jitter-draw` stays as the pin of the RETIRED idiom's map-range shape (its
+`main.go` comment says which). `sweep.py`'s tripwire (a quarantined `lockedRand.Intn` = the patch not in effect) is unchanged and
+still meaningful: the body lowers through the new primitive.

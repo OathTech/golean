@@ -198,18 +198,35 @@ DIGESTS = {
 # W4.1 item 3 (docs/raft-w41-log.md; the ruling: docs/raft-w3-log.md H-15,
 # harness design §5): the jitter draw is NONDETERMINISM and belongs to the
 # ENVELOPE — `crypto/rand` + `math/big` are never modeled. The subject
-# carries ONE recorded patch: `(*lockedRand).Intn`'s body becomes a plain-Go
-# draw whose nondeterminism ENVELOPE under the machine is exactly [0, n) —
-# the first key produced by ranging over a fresh n-key map, which is the
-# machine's map-iteration choice site (and, under `go run`, Go's own
-# randomized iteration order). `resetRandomizedElectionTimeout` then
-# realizes raft's contract range [electionTimeout, 2*electionTimeout),
-# which is what the latitude entry files (W4.5). Upstream itself treats
-# the value as injectable (rafttest's set-randomized-election-timeout).
+# carries ONE recorded patch: `(*lockedRand).Intn`'s body becomes ONE call
+# into the machine's GENERAL `[0, n)` pick site.
+#
+# RE-KEYED 2026-09-30 (window unit 5b, lane core/intn-pick-0930; [USER] Mike,
+# item 2 of «The raft-proofs team's subject-delta note (2026-09-30) — RULED»,
+# relayed: a native `Intn`-style pick site, GENERAL, replacing the map-range
+# idiom; design docs/2026-09-30_intn-pick-design.md D6). Before: the first
+# key of a range over a fresh n-key map (the map-iteration choice site, with
+# a DISTRIBUTION delta under `go run`). Now: `rand.Intn(n)` from `math/rand`
+# — the frontend's `rand-intn` primitive, `Stmt.randIntn` / `ChoiceSite.intn`
+# (bound n exactly, every value of [0, n) a member; under `go run` a uniform
+# draw, as upstream's `crypto/rand.Int` is). The `n <= 0` failure mode is a
+# `panic(string)` on both (upstream «crypto/rand: argument to Int is <= 0»,
+# here math/rand's «invalid argument to Intn», emitted by the lowering as
+# upstream math/rand's own guard) — UNREACHABLE in raft: `Config.validate`
+# forces ElectionTick > HeartbeatTick > 0, so n >= 2 at the one call site
+# (`resetRandomizedElectionTimeout`). `resetRandomizedElectionTimeout` then
+# realizes raft's contract range [electionTimeout, 2*electionTimeout), which
+# is what the latitude entry files (W4.5). Upstream itself treats the value
+# as injectable (rafttest's set-randomized-election-timeout). Retiring D-11
+# to upstream's VERBATIM body needs `crypto/rand.Int` + `crypto/rand.Reader`
+# as environment contracts over a `*big.Int` representation (`math/big.NewInt`,
+# `(*big.Int).Int64`) — measured by `scripts/lower-diagnose`, POSED in the
+# design note (§2 option B), not taken.
 #
 # The patch is keyed to upstream's EXACT text and fails closed on drift —
 # a new rev's Intn must be re-read, not silently re-patched. Subject-delta
-# ledger row: D-11 (the W4.1 log).
+# ledger row: D-11 (the W4.1 log; the 2026-09-30 re-key continuation in
+# docs/raft-w42-log.md).
 INTN_UPSTREAM = """func (r *lockedRand) Intn(n int) int {
 	r.mu.Lock()
 	v, _ := rand.Int(rand.Reader, big.NewInt(int64(n)))
@@ -218,29 +235,21 @@ INTN_UPSTREAM = """func (r *lockedRand) Intn(n int) int {
 }"""
 
 INTN_PATCHED = """// GOLEAN SUBJECT DELTA D-11 (H-15, the election-jitter CHOICE SITE —
-// docs/raft-w41-log.md item 3). Upstream draws via crypto/rand +
-// math/big, which the machine never models (jitter is nondeterminism;
-// the envelope, not a stream of modeled bits, is the semantics). The
-// draw below has envelope [0, n) on BOTH oracles: under the machine the
-// first key of a map range is the map-iteration choice site; under
-// `go run` it is Go's own randomized iteration order. The n <= 0 panic
-// preserves upstream's failure mode (the upstream draw panics on a
-// non-positive max). The mutex stays: globalRand is shared package
-// state and dropping the lock would smuggle in a concurrency delta.
+// docs/raft-w41-log.md item 3; RE-KEYED 2026-09-30, window unit 5b:
+// docs/2026-09-30_intn-pick-design.md D6). Upstream draws via crypto/rand
+// + math/big, which the machine never models (jitter is nondeterminism;
+// the envelope, not a stream of modeled bits, is the semantics). The draw
+// below is ONE call into the machine's general [0, n) pick site — the
+// frontend's rand-intn primitive (GoCore Stmt.randIntn / ChoiceSite.intn:
+// bound n exactly, every value of [0, n) a member; under `go run` a uniform
+// draw, as upstream's is). The n <= 0 failure mode is a panic(string) on
+// both oracles (upstream's text differs; unreachable: Config.validate
+// forces n = electionTimeout >= 2). The mutex stays: globalRand is shared
+// package state and dropping the lock would smuggle in a concurrency
+// delta.
 func (r *lockedRand) Intn(n int) int {
-	if n <= 0 {
-		panic("golean subject delta D-11: Intn requires n > 0 (the upstream draw panics on a non-positive max)")
-	}
 	r.mu.Lock()
-	draws := make(map[int]struct{}, n)
-	for i := 0; i < n; i++ {
-		draws[i] = struct{}{}
-	}
-	v := 0
-	for k := range draws {
-		v = k
-		break
-	}
+	v := rand.Intn(n)
 	r.mu.Unlock()
 	return v
 }"""
@@ -328,7 +337,12 @@ var (
 SUBJECT_PATCHES = {
     "raft/raft.go": {
         "swaps": [(INTN_UPSTREAM, INTN_PATCHED)],
-        "drop_imports": ["crypto/rand", "math/big"],
+        # D-11 re-key (2026-09-30): crypto/rand -> math/rand keeps the `rand`
+        # identifier bound (the residual-reference check is skipped for a
+        # SWAPPED import by design: the new body's `rand.Intn` is the point);
+        # math/big is dropped with the old body and stays residual-checked.
+        "swap_imports": [("crypto/rand", "math/rand")],
+        "drop_imports": ["math/big"],
     },
     "raft/logger.go": {
         "swaps": [(LOGGER_VARS_UPSTREAM, LOGGER_VARS_PATCHED)],
@@ -348,10 +362,22 @@ def apply_subject_patches(outp, text):
                    "(must be exactly once) — upstream moved under the patch; "
                    "re-read it:\n%s" % (outp, text.count(old), old[:120]))
         text = text.replace(old, new)
+    # An import SWAP (D-11 re-key, 2026-09-30): one upstream import path
+    # becomes another with the SAME last element, so the patched body's
+    # references stay bound; exactly once, fail closed if absent. gofmt (run
+    # over the whole tree at the end) re-sorts the import block.
+    for old_pkg, new_pkg in spec.get("swap_imports", []):
+        if old_pkg.split("/")[-1] != new_pkg.split("/")[-1]:
+            refuse("subject patch for %s: swap %r -> %r changes the bound "
+                   "identifier — use drop_imports + a re-read body" % (outp, old_pkg, new_pkg))
+        text, n = re.subn(r'^\t"%s"\n' % re.escape(old_pkg), '\t"%s"\n' % new_pkg, text,
+                          count=1, flags=re.M)
+        if not n:
+            refuse("subject patch for %s: import %r to swap is not present" % (outp, old_pkg))
     # The residual-reference check ranges over CODE, not comments
     # (upstream's own doc comment above lockedRand says "rand.Rand").
     code = "\n".join(re.sub(r"//.*$", "", ln) for ln in text.split("\n"))
-    for pkg in spec["drop_imports"]:
+    for pkg in spec.get("drop_imports", []):
         text, n = re.subn(r'^\t(?:\w+ )?"%s"\n' % re.escape(pkg), "", text,
                           count=1, flags=re.M)
         if not n:
@@ -359,7 +385,7 @@ def apply_subject_patches(outp, text):
         if re.search(r"\b%s\." % re.escape(pkg.split("/")[-1]), code):
             refuse("subject patch for %s: the code still references %s after "
                    "dropping its import" % (outp, pkg))
-    return text, len(spec["swaps"]) + len(spec["drop_imports"])
+    return text, len(spec["swaps"]) + len(spec.get("swap_imports", [])) + len(spec.get("drop_imports", []))
 
 
 # Packages that exist in the subject tree, hence whose import paths get
