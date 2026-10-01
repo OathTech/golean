@@ -42,8 +42,59 @@ site, «a value in `[0, n)`, panic if `n ≤ 0`», inside the window before the 
 
 ## 2. Gate results
 
-TBD — filled at the end of the lane (build; `ci --diff`; the whole-corpus choice trace vs `main`; `ci --slow`; the
-elaboration-cost measurement against G-C3's 1.5× stop rule).
+1. **Build.** `scripts/capped lake build GoLean golean` green at the runtime tip — 109 jobs, 0 errors, 0 warnings
+   (eight iterations; the proof-side repairs were: `Stmt.locSup`'s two-arm form, `applyStmtOpCore_wf`'s refusal arm,
+   the `hri` inequality on the two core-dispatch lemmas, a mis-parsed `absurd`, `intnBound?_some` by `by_cases`, the
+   nested-bind congruence by case analysis on both stores, the `MultiStreams` flag argument, the `StepErrors` commit
+   arm). `scripts/check-stdlib-register` green (3/3 primitives; overlay rows verified). `derive.py --check` clean.
+2. **Born rows.** `scripts/capped scripts/diff-one` over the 8 ids + `maps/jitter-draw`: 9/9 PASS (2026-10-01 00:05Z) —
+   `membership` enumerated 5 / exhibited 5 (11 draws, stopped at the `members=5` pin), `jitter-shape` 5/5,
+   `v2-membership` 3/3, the three `n` controls and the payload-class control strict PASS, `discard` PASS (invariance
+   re-run across streams). The two v2 rows first FAILED at `go-run` on the oracle-harness `/v2` import defect (§4a) and
+   pass with the explicit alias.
+3. **Wire boundary.** `scripts/capped scripts/check-wire-boundary`: PASS — 11 + 56 + 13 + 16 + the 5 new `rand-intn`
+   controls (`ri` answers 42; `ri-bad-callee`, `ri-result-not-int`, `ri-absent-resultTypes`, `ri-two-targets` refuse
+   naming the cause).
+4. **Whole-corpus choice trace vs `main`: IDENTICAL except the born rows.** Pre = the primary checkout at `ac6baa31`
+   (its own frontend and binary, `scripts/choice-trace-corpus --jobs 4 --dump --out <root-relative dir>`), post = the
+   lane; the two B6 exclusions (`goroutines/send-then-spin`, `strings/trimspace-repeat/repeat-bound-refused` — the
+   first spins to the fuel cap under every stream and stalled chunk 1 on BOTH sides for ~1 h; killed by PID, the chunk's
+   remaining ids re-traced with `--exclude`). 3757 / 3765 rows exported (pre / post; the same 34 frontend refusals).
+   Consuming ids 790 → 794: the four new ids are exactly the born rows that CONSUME (`builtins/rand-intn/{membership,
+   v2-membership,jitter-shape,discard}`, 6 streams each, site `intn` only); the other four born rows consume nothing by
+   design (`n = 1` pops nothing; `n ≤ 0` panics ahead of the draw). Ids only in pre: none. Ids with changed rows: NONE
+   — the sorted dump rows of the 790 common ids digest `7748758dff29ca9a` on both sides (25404 → 25428 rows = +4×6).
+   The raft twin is not an executable-corpus row (its draw moves in the twin pin, §1). Comparison script: §4.
+5. **Elaboration cost (G-C3's 1.5× stop rule): INSIDE.** `scripts/capped lake env lean <file>` per module, before =
+   `main`'s sources in the primary checkout, after = the lane, same box, sequential under the lock (2026-10-01
+   00:05–00:22Z): StepErrors 227.3 → 227.8 s (1.00×), MachineSound 69.8 → 71.7 (1.03×), NativeToIR 89.0 → 89.0,
+   StateWf 17.1 → 17.3, PrefixFacts 15.8 → 16.0, SyntaxEqb 8.0 → 8.4 (1.05×, the max), MachineEqb 5.0 → 5.0, Machine
+   4.4 → 4.5. No `maxHeartbeats` raised; the one NEW setting the int-congruence chain had mirrored was REMOVED and the
+   gate's build confirms it unnecessary.
+6. **`GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --slow` at the fix-round tip (run 3, quiet box, 2026-10-01
+   01:41–01:58Z, wall 1030 s): EXIT 1 on EXACTLY the 5a pair** — `certificate provenance` STALE (changed dependency
+   files, `GoLean/ChoiceTrace.lean` and kin; the train's step 5a) and the ONE drift line `imported-goose/channel/
+   google-search PASS/membership → FAIL/membership` (the certified slow-tier row, STALE certification — the same line B6
+   and C3 reported); `cases=3799 pass=3561 fail=238` = the pin's 3562 / 237 with that row; the row's program draws
+   nothing, so its WIRE is unchanged (§2a). Every other step ok: core build warning-free, core totality audit (the
+   required list with the 10 new names), admission audit, declaration boundary, wire boundary (incl. the 5 `rand-intn`
+   controls), method identity, frontend pins (twin = the new pin), stdlib register, lowering-diagnostic tables, eval
+   tests 298, Go tests, the lane-validation self-tests, negative lane 394 matched. Reconciler: C9 (5a) and the
+   pre-existing C13 only. The `git_dirty` note is this handoff, committed after the run.
+   Runs 1 and 2 (same tip modulo the fix round) surfaced and resolved: (i) the baseline's `# reason:` block detached
+   from its alternation row by my first edit (`baseline diff` REFUSED — fixed in place); (ii) the `lowerdiag`
+   vocabulary (3 new frontend formats); (iii) the warmed cache's foreign absolute paths (`declaration boundary`, §4c);
+   (iv) two load-induced 1 s / subprocess-timeout flakes in the lane-validation T3 self-test and the method-identity
+   audit while eight tracer processes ran — both green on their quiet re-runs (`check-method-identity` alone: PASS).
+
+### 2a. The certified slow-tier row's wire (for the train's 5a step)
+
+`imported-goose/channel/google-search`: the fresh `certification-candidate.json` of run 3 carries `wire_sha256
+f448d579dfdbaadbbeceabe9f3872638552ae7331aa4c1740db5a5333d98f5d2` = the installed record's (B6's hash). The program
+draws nothing, the frontend change touches only `math/rand.Intn` / `math/rand/v2.IntN` call sites, so the wire did not
+move; the row's STALE certification is the changed-dependency inventory (`GoLean/ChoiceTrace.lean` and the other
+touched modules) — a provenance refresh at the train (the r55/r57 precedent), not a re-pin. This lane does not touch
+`baselines/certified/`.
 
 ## 3. PENDING [USER] at the merge ask
 
@@ -80,6 +131,25 @@ lane was running (a process LIST, never a kill), removed the lane's own lock, an
 trap fired (it had not removed the successor's lock). Later builds release explicitly after the build as well as by
 trap. Lesson for `docs/operational-lessons.md` if it recurs: a background subshell's EXIT trap is not a reliable release
 under the agent harness; pair it with an explicit `rm` in the command chain and an owner-checked cleanup.
+
+## 4c. Operational note — warming `.lake/build` from a cache that was itself warmed elsewhere
+
+The lane warmed `.lake/build` from the primary checkout (sources identical at the time). That cache had been warmed from
+the `continuations` worktree by an earlier train, and 50 of its `*.setup.json` / `*.trace` files still carried ABSOLUTE
+paths into `.claude/worktrees/continuations/.lake/…`. Lake judged the oleans current (content hashes), so the stale
+files survived every build; the first gate run then FAILED `declaration boundary`, which runs `lake env lean --setup
+.lake/build/ir/<module>.setup.json` directly and could not open the foreign path. Remedy applied: `grep -rlZ
+worktrees/continuations .lake/build | xargs -0 rm -f` (the gate's own `lake build` regenerated them — deterministic
+oleans, no cascade). Lesson for `docs/operational-lessons.md`: after warming, purge cache files that name another
+worktree, or warm only from a cache built in place. (Also: zsh does not word-split an unquoted `$files` — the first
+purge attempt removed nothing; use `xargs -0`.)
+
+## 4d. Operational note — pattern-derived PIDs
+
+Terminating the two fuel-capped tracers (§2 item 4) by PID, the PID list came from `pgrep -f "golean choice-trace
+--batch"`, which also matched the tool shell running that very command (its command line contains the pattern); the
+signal went to my own shell as well (harmless — it survived). Filter pattern-derived PID lists to the intended binary
+(`pgrep -f "bin/golean choice-trace"`) before signalling; never signal a list without reading it.
 
 ## 5. Rebase note
 
