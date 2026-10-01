@@ -17,7 +17,7 @@ structural map with no recovery heuristics.
 The wire is a typed Go AST (Go's grammar with resolved types attached). The
 GoCore-specific desugaring lives here and is inspectable:
 
-- `x := e` / `var x T = e`  →  `initialization` then `assign`
+- `x := e` / `var x T = e`  →  a block-entry declaration (the enclosing block's `decls`, C4) then `assign` at the source point
 - `return e`                →  assign the result local, then `returnStmt`
 - `for init; c; post {..}`  →  `block[init; while c (block[body; post])]`
 - `if init; c {..} else ..` →  `block[init; ifThenElse c ..]`
@@ -86,8 +86,17 @@ first-sight order; temporary `k` has id `base + k`, `base` the wire table's
 size. Reset at each function; per spelling per function, so nested desugars
 that reuse a spelling shadow exactly as they did over strings (design D2). -/
 private structure LowerSt where
-  temps : Array String := #[]
+  /-- B6: the interned `$`-temporaries in id order (id = `base` + index). C4 (D5): a temporary
+  DECLARED at a site is keyed by `(spelling, some type)` — one id per spelling AND type, so a
+  block-entry cell has ONE declared type (a cell is typed; `storeLoc` normalizes at it); a
+  read-side temporary never declared keys by `(spelling, none)`. The name table carries the
+  spelling either way. -/
+  temps : Array (String × Option Ty) := #[]
   base : Nat := 0
+  /-- C4 (block-entry allocation, 2026-10-01): the declarations recorded on the innermost OPEN
+  block — `closeBlock` claims them as that block's `decls` (allocated at its entry, `Step.block`);
+  every former `.initialization` site records here and emits no statement. -/
+  pending : Array Param := #[]
 
 private abbrev LowerM := ReaderT LowerCtx (StateT LowerSt (Except String))
 
@@ -98,15 +107,56 @@ private def fail {α} (msg : String) : LowerM α :=
 private def runLower {α} (act : LowerM α) (ctx : LowerCtx) : Except String α :=
   (act.run ctx).run' {}
 
-/-- B6: intern a `$`-temporary's spelling in the current function (idempotent —
-the same spelling returns the same id). -/
-private def tmp (spelling : String) : LowerM VarId := do
+/-- B6: intern a `$`-temporary's key in the current function (idempotent — the same key
+returns the same id). -/
+private def tmpKeyed (key : String × Option Ty) : LowerM VarId := do
   let st ← get
-  match st.temps.findIdx? (· == spelling) with
+  match st.temps.findIdx? (· == key) with
   | some k => pure (st.base + k)
   | none =>
-      set { st with temps := st.temps.push spelling }
+      set { st with temps := st.temps.push key }
       pure (st.base + st.temps.size)
+
+/-- B6: intern a READ-SIDE `$`-temporary's spelling (never declared by the decoder: a sweep
+binder the wire names, the `$lit`/`$maplit` fallback bases). -/
+private def tmp (spelling : String) : LowerM VarId := tmpKeyed (spelling, none)
+
+/-- C4: record a declaration on the innermost open block — its cell is allocated at that block's
+entry (`Step.block`, `allocDecls`), zero-valued at the declared type; the initializer stays at the
+source point as the `.assign` it already is (storage allocation separate from initializer
+execution, charter row 6). No statement is emitted. -/
+private def declarePending (p : Param) : LowerM Unit :=
+  modify fun st => { st with pending := st.pending.push p }
+
+/-- C4 (D5): intern a typed, DECLARED `$`-temporary and record it on the open block. -/
+private def declTmp (spelling : String) (ty : Ty) : LowerM VarId := do
+  let id ← tmpKeyed (spelling, some ty)
+  declarePending { id, typ := ty }
+  pure id
+
+/-- C4: run `act` as the body of a BLOCK: the declarations recorded meanwhile become the block's
+`decls` — first occurrence per id (D5: a temporary two statements of the block share), the same id
+at two types refused by name — and the outer block's list is restored. `α` carries a value out of
+the body (the loop desugar's flag id). -/
+private def closeBlockWith {α} (act : LowerM (α × Array Stmt)) : LowerM (α × Stmt) := do
+  let outer := (← get).pending
+  modify fun st => { st with pending := #[] }
+  let (a, stmts) ← act
+  let recorded := (← get).pending
+  modify fun st => { st with pending := outer }
+  let mut decls : Array Param := #[]
+  for q in recorded do
+    match decls.find? (·.id == q.id) with
+    | some d =>
+        if d.typ != q.typ then
+          fail s!"C4: declaration {q.id} recorded twice in one block at two types ({repr d.typ} and {repr q.typ}); refused by name"
+    | none => decls := decls.push q
+  pure (a, .block decls stmts)
+
+@[inherit_doc closeBlockWith]
+private def closeBlock (act : LowerM (Array Stmt)) : LowerM Stmt := do
+  let (_, b) ← closeBlockWith (α := Unit) (do pure ((), ← act))
+  pure b
 
 /-- B6: the id a DECLARATION site carries. A `$`-spelling is a temporary — interned
 here, never numbered by the frontend (a `local` index on one refuses); a source
@@ -543,7 +593,7 @@ source entries, then the temporaries interned while decoding it, `kind := .temp`
 private def endLocals : LowerM (Array LocalName) := do
   let st ← get
   let table := (← read).table
-  pure (table ++ st.temps.map fun t => { name := t, kind := .temp })
+  pure (table ++ st.temps.map fun t => { name := t.1, kind := .temp })
 
 /-- B6 (c2, the signature): a wire-numbered receiver/parameter carries kind `recv`,
 `param` or `capture`; a wire-numbered result carries kind `result`; and the
@@ -935,8 +985,13 @@ private def targetBaseExpr (t : Target) : LowerM Expr :=
   | .var id => pure (.var id)
   | _ => do pure (.var (← tmp "$lit"))  -- interned only when the fallback is taken (F1 (b): no dead entry)
 
-private def declaresOf (targets : Array Target) : LowerM (Array Stmt) := do
-  pure (targets.filterMap (fun t => t.declare.map Stmt.initialization))
+/-- C4: the targets a statement DECLARES (`x := …` forms) — recorded on the open block, no
+statement emitted (was `declaresOf`: one `.initialization` per declared target). -/
+private def declareTargets (targets : Array Target) : LowerM Unit := do
+  for t in targets do
+    match t.declare with
+    | some p => declarePending p
+    | none => pure ()
 
 /-- Whether a wire assignment target is the blank identifier `_`. -/
 private def targetIsBlank (json : Json) : Bool :=
@@ -1079,13 +1134,12 @@ where the callee identity lives; the draw op is callee-independent (one general 
 private def expandRandIntn (path : String) (guardText : String) (nJson : Json)
     (target : Option Assignee) : LowerM Stmt := do
   let nE ← decodeExpr s!"{path}.n" nJson
-  let nId ← tmp "$intn"
+  let nId ← declTmp "$intn" .int
   let guard : Stmt := .ifThenElse (.lessCmp (.var nId) (.intLit 1 .int))
     (.panicStmt (.toInterface (.interface ⟨"any"⟩) .string
       (.stringLit (GoString.fromLeanString guardText))))
     (.seqn #[])
-  pure (.seqn #[.initialization { id := nId, typ := .int }, .assign (.var nId) nE, guard,
-    .randIntn target (.var nId)])
+  pure (.seqn #[.assign (.var nId) nE, guard, .randIntn target (.var nId)])
 
 /-- Recognize the value-returning sync ops' EXPRESSION node (Q-TRYLOCK):
 `{"expr":"sync-op","op":<tryLock|tryRLock|tryWLock>,"args":[recv],
@@ -1728,14 +1782,17 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
       -- E6a audit fix round (2026-09-24, F2 — the R1 environment is SCOPE-EXACT): each statement
       -- decodes under the locals declared BEFORE it in this block and in the enclosing scopes; its
       -- own declarations join the environment for the statements AFTER it, never for itself.
-      let mut env := (← read).locals
-      let mut stmts : Array Stmt := #[]
-      for i in [:body.size] do
-        let s := body[i]!
-        stmts := stmts.push
-          (← withReader (fun ctx => { ctx with locals := env }) (decodeStmt results s!"{path}.body[{i}]" s))
-        env := env ++ (← jsonDeclaredLocals s!"{path}.body[{i}]" s)
-      pure (.block #[] stmts)
+      -- C4: the block CLOSES over the declarations its statements record (`closeBlock`): they are
+      -- its `decls`, allocated at entry; the wire keeps each `declare` at its source point.
+      closeBlock do
+        let mut env := (← read).locals
+        let mut stmts : Array Stmt := #[]
+        for i in [:body.size] do
+          let s := body[i]!
+          stmts := stmts.push
+            (← withReader (fun ctx => { ctx with locals := env }) (decodeStmt results s!"{path}.body[{i}]" s))
+          env := env ++ (← jsonDeclaredLocals s!"{path}.body[{i}]" s)
+        pure stmts
   | "defer" =>
       let callee ← decodeExpr s!"{path}.callee" (← StrictJson.field path obj "callee")
       let args ← StrictJson.array s!"{path}.args" (← StrictJson.field path obj "args")
@@ -1789,26 +1846,23 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
       let okJson ← StrictJson.field path obj "okTarget"
       let e ← decodeExpr s!"{path}.expr" (← StrictJson.field path obj "expr")
       let ty ← decodeTy s!"{path}.targetType" (← StrictJson.field path obj "targetType")
-      let mut decls : Array Stmt := #[]
       let mut vAssignee : Assignee := .unsupported "type-assert target"
       let mut okAssignee : Assignee := .unsupported "type-assert okTarget"
       if targetIsBlank tJson then
-        let ta ← tmp "$ta"
-        decls := decls.push (.initialization { id := ta, typ := ty })
+        let ta ← declTmp "$ta" ty
         vAssignee := .var ta
       else
         let t ← decodeTarget s!"{path}.target" tJson
-        decls := decls ++ (← declaresOf #[t])
+        declareTargets #[t]
         vAssignee := t.assignee
       if targetIsBlank okJson then
-        let taok ← tmp "$taok"
-        decls := decls.push (.initialization { id := taok, typ := .bool })
+        let taok ← declTmp "$taok" .bool
         okAssignee := .var taok
       else
         let okT ← decodeTarget s!"{path}.okTarget" okJson
-        decls := decls ++ (← declaresOf #[okT])
+        declareTargets #[okT]
         okAssignee := okT.assignee
-      return .seqn (decls.push (.typeAssert vAssignee okAssignee e ty))
+      return .seqn #[.typeAssert vAssignee okAssignee e ty]
   | "var" =>
       decodeVar path obj
   | "if" =>
@@ -1857,35 +1911,32 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
       -- targetless lowering — a wire without it refuses by name.
       let e ← StrictJson.field path obj "expr"
       let discardTemps (prefixName : String) (callJson : Json) :
-          LowerM (Array Stmt × Array Assignee) := do
+          LowerM (Array Assignee) := do
         let callObj ← StrictJson.obj s!"{path}.expr" callJson
         let rt ← StrictJson.field s!"{path}.expr" callObj "resultTypes"
         let arr ← StrictJson.array s!"{path}.expr.resultTypes" rt
         let tys ← arr.mapIdxM (fun i t => decodeTy s!"{path}.expr.resultTypes[{i}]" t)
-        let ids ← tys.mapIdxM (fun i _ => tmp s!"{prefixName}{i}")
-        let decls := tys.mapIdx (fun i ty =>
-          Stmt.initialization { id := ids[i]!, typ := ty })
-        let assignees := tys.mapIdx (fun i _ =>
-          Assignee.var ids[i]!)
-        pure (decls, assignees)
+        -- C4: typed discard temporaries, declared on the open block
+        let ids ← tys.mapIdxM (fun i ty => declTmp s!"{prefixName}{i}" ty)
+        pure (ids.map Assignee.var)
       match ← asCall? e with
       | some (name, args) =>
-          let (decls, assignees) ← discardTemps "$cr" e
+          let assignees ← discardTemps "$cr" e
           let argsE ← args.mapIdxM (fun i a => decodeExpr s!"{path}.expr.args[{i}]" a)
-          if decls.isEmpty then
+          if assignees.isEmpty then
             pure (.call #[] ⟨name⟩ argsE)
           else
-            pure (.seqn (decls.push (.call assignees ⟨name⟩ argsE)))
+            pure (.seqn #[.call assignees ⟨name⟩ argsE])
       | none =>
           match ← asCallValue? e with
           | some (callee, args) =>
-              let (decls, assignees) ← discardTemps "$cv" e
+              let assignees ← discardTemps "$cv" e
               let calleeE ← decodeExpr s!"{path}.expr.callee" callee
               let argsE ← args.mapIdxM (fun i a => decodeExpr s!"{path}.expr.args[{i}]" a)
-              if decls.isEmpty then
+              if assignees.isEmpty then
                 pure (.callValue #[] calleeE argsE)
               else
-                pure (.seqn (decls.push (.callValue assignees calleeE argsE)))
+                pure (.seqn #[.callValue assignees calleeE argsE])
           | none =>
               -- A bare-statement `sync/atomic` op DISCARDS its result
               -- (atomics arc wave 1): no target — `atomicPlan` admits
@@ -1917,7 +1968,8 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
       let t ← decodeTarget s!"{path}.target" (← StrictJson.field path obj "target")
       let value ← decodeExpr s!"{path}.value" (← StrictJson.field path obj "value")
       let elemTy ← decodeTy s!"{path}.elemType" (← StrictJson.field path obj "elemType")
-      pure (.seqn ((← declaresOf #[t]).push (.allocNew t.assignee value elemTy)))
+      declareTargets #[t]
+      pure (.seqn #[.allocNew t.assignee value elemTy])
   | "make-slice" =>
       let t ← decodeTarget s!"{path}.target" (← StrictJson.field path obj "target")
       let elemTy ← decodeTy s!"{path}.elem" (← StrictJson.field path obj "elem")
@@ -1925,7 +1977,8 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
       let capE ← (match obj.get? "cap" with
         | some c => do pure (some (← decodeExpr s!"{path}.cap" c))
         | none => pure none)
-      pure (.seqn ((← declaresOf #[t]).push (.makeSlice t.assignee elemTy lenE capE)))
+      declareTargets #[t]
+      pure (.seqn #[.makeSlice t.assignee elemTy lenE capE])
   | "make-map" =>
       let t ← decodeTarget s!"{path}.target" (← StrictJson.field path obj "target")
       let keyTy ← decodeTy s!"{path}.keyType" (← StrictJson.field path obj "keyType")
@@ -1940,7 +1993,8 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
       let hintE ← (match obj.get? "hint" with
         | some h => do pure (some (← decodeExpr s!"{path}.hint" h))
         | none => pure none)
-      pure (.seqn ((← declaresOf #[t]).push (.makeMap t.assignee keyTy valTy hintE)))
+      declareTargets #[t]
+      pure (.seqn #[.makeMap t.assignee keyTy valTy hintE])
   -- Channel statements (channels arc slice 1). All decode arms fail
   -- closed on malformed shapes (target counts, clause kinds, directions).
   | "make-chan" =>
@@ -1949,7 +2003,8 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
       let capE ← (match obj.get? "cap" with
         | some c => do pure (some (← decodeExpr s!"{path}.cap" c))
         | none => pure none)
-      pure (.seqn ((← declaresOf #[t]).push (.makeChan t.assignee elemTy capE)))
+      declareTargets #[t]
+      pure (.seqn #[.makeChan t.assignee elemTy capE])
   | "chan-send" =>
       let chE ← decodeExpr s!"{path}.ch" (← StrictJson.field path obj "ch")
       let value ← decodeExpr s!"{path}.value" (← StrictJson.field path obj "value")
@@ -1962,7 +2017,8 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
       let ts ← targetsJ.mapIdxM (fun i t => decodeTarget s!"{path}.targets[{i}]" t)
       let chE ← decodeExpr s!"{path}.ch" (← StrictJson.field path obj "ch")
       let elemTy ← decodeTy s!"{path}.elem" (← StrictJson.field path obj "elem")
-      pure (.seqn ((← declaresOf ts).push (.chanRecv (ts.map (·.assignee)) chE elemTy)))
+      declareTargets ts
+      pure (.seqn #[.chanRecv (ts.map (·.assignee)) chE elemTy])
   | "chan-close" =>
       pure (.closeChan (← decodeExpr s!"{path}.ch" (← StrictJson.field path obj "ch")))
   -- Sync statements (spec-parity slice 2, design note §§3-4): `args`
@@ -1985,7 +2041,8 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
         | none => pure (.syncStmt op args #[])
         | some tj => do
             let t ← decodeTarget s!"{path}.target" tj
-            pure (.seqn ((← declaresOf #[t]).push (.syncStmt op args #[t.assignee])))
+            declareTargets #[t]
+            pure (.seqn #[.syncStmt op args #[t.assignee]])
       match opName with
       | "lock" => plain .lock 1
       -- The TRY heads in STATEMENT position: with a `target` (the bodied
@@ -2007,7 +2064,8 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
           if args.size != 1 then
             fail s!"sync op onceBegin expects 1 operand, got {args.size} at {path}"
           let t ← decodeTarget s!"{path}.target" (← StrictJson.field path obj "target")
-          pure (.seqn ((← declaresOf #[t]).push (.syncStmt .onceBegin args #[t.assignee])))
+          declareTargets #[t]
+          pure (.seqn #[.syncStmt .onceBegin args #[t.assignee]])
       | other => fail s!"unsupported sync op {other} at {path}"
   | "select" =>
       -- Receive-clause targets are the frontend's fresh temps; their
@@ -2015,7 +2073,6 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
       -- pre-declaration is unobservable), leaving plain var targets for
       -- the machine's post-selection stores.
       let clausesJ ← StrictJson.array s!"{path}.clauses" (← StrictJson.field path obj "clauses")
-      let mut decls : Array Stmt := #[]
       let mut cls : Array (SelectClauseHead × Stmt) := #[]
       for i in [:clausesJ.size] do
         match clausesJ[i]? with
@@ -2042,7 +2099,7 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
                 if targetsJ.size > 2 then
                   fail s!"select receive with {targetsJ.size} targets at {cpath}"
                 let ts ← targetsJ.mapIdxM (fun j t => decodeTarget s!"{cpath}.targets[{j}]" t)
-                decls := decls ++ (← declaresOf ts)
+                declareTargets ts
                 let chE ← decodeExpr s!"{cpath}.ch" (← StrictJson.field cpath co "ch")
                 let elemTy ← decodeTy s!"{cpath}.elem" (← StrictJson.field cpath co "elem")
                 cls := cls.push (.recv (ts.map (·.assignee)) chE elemTy, body)
@@ -2051,7 +2108,7 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
       let default? ← (match obj.get? "default" with
         | some dJ => do pure (some (← decodeStmt results s!"{path}.default" dJ))
         | none => pure none)
-      pure (.seqn (decls.push (.selectStmt cls default?)))
+      pure (.seqn #[.selectStmt cls default?])
   | "map-delete" =>
       let base ← decodeExpr s!"{path}.base" (← StrictJson.field path obj "base")
       let index ← decodeExpr s!"{path}.index" (← StrictJson.field path obj "index")
@@ -2087,12 +2144,14 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
       let elemTy ← decodeTy s!"{path}.elem" (← StrictJson.field path obj "elem")
       let slice ← decodeExpr s!"{path}.slice" (← StrictJson.field path obj "slice")
       let elems ← decodeExpr s!"{path}.elems" (← StrictJson.field path obj "elems")
-      pure (.seqn ((← declaresOf #[t]).push (.appendSlice t.assignee elemTy slice elems)))
+      declareTargets #[t]
+      pure (.seqn #[.appendSlice t.assignee elemTy slice elems])
   | "copy" =>
       let t ← decodeTarget s!"{path}.target" (← StrictJson.field path obj "target")
       let dst ← decodeExpr s!"{path}.dst" (← StrictJson.field path obj "dst")
       let src ← decodeExpr s!"{path}.src" (← StrictJson.field path obj "src")
-      pure (.seqn ((← declaresOf #[t]).push (.copySlice t.assignee dst src)))
+      declareTargets #[t]
+      pure (.seqn #[.copySlice t.assignee dst src])
   | "unseq-probe" =>
       -- The unsequenced-operand probe (latitude E13 option (b), lane e13-b
       -- 2026-09-05; `Stmt.unseqProbe` is the envelope statement). The
@@ -2139,7 +2198,8 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
       let length ← StrictJson.nat s!"{path}.length" (← StrictJson.field path obj "length")
       let elems ← StrictJson.array s!"{path}.elems" (← StrictJson.field path obj "elems")
       let lenLit : Expr := .intLit (Int.ofNat length) .int
-      let mut stmts ← declaresOf #[t]
+      declareTargets #[t]
+      let mut stmts : Array Stmt := #[]
       stmts := stmts.push (.makeSlice t.assignee elemTy lenLit (some lenLit))
       for i in [:elems.size] do
         match elems[i]? with
@@ -2161,7 +2221,8 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
         match t.assignee with
         | .var id => pure (.var id)
         | _ => do pure (.var (← tmp "$maplit"))
-      let mut stmts ← declaresOf #[t]
+      declareTargets #[t]
+      let mut stmts : Array Stmt := #[]
       stmts := stmts.push (.makeMap t.assignee keyTy valTy none)
       for i in [:entries.size] do
         match entries[i]? with
@@ -2233,6 +2294,12 @@ partial def decodeRange (results : Array Param) (path : String) (obj : StrictJso
     | none => st
   match kind with
   | "map" =>
+      -- C4 D1 (fail closed): a loop body is a `.block`, so its locals are allocated fresh per
+      -- entry. The index/chan/string ranges wrap the body in a synthetic iteration block below;
+      -- the primitive `mapRange` runs the wire body directly, so the wire must have supplied one.
+      match body with
+      | .block .. => pure ()
+      | _ => fail s!"range-over-map body at {path}.body is not a block (C4 D1: per-iteration locals need a block entry); refused by name"
       let keyTy ← decodeTy s!"{path}.keyType" (← StrictJson.field path obj "keyType")
       let valTy ← decodeTy s!"{path}.valueType" (← StrictJson.field path obj "valueType")
       pure (lab (.mapRange keyVar valVar coll keyTy valTy body))
@@ -2248,23 +2315,27 @@ partial def decodeRange (results : Array Param) (path : String) (obj : StrictJso
       -- nondeterministic order).
       let collTy ← exprTypeOf s!"{path}.collection" collJson
       let elemTy ← decodeTy s!"{path}.elemType" (← StrictJson.field path obj "elemType")
-      let rcoll ← tmp "$rcoll"
-      let rrecv ← tmp "$rrecv"
-      let rok ← tmp "$rok"
-      let mut iter : Array Stmt := #[
-        .chanRecv #[.var rrecv, .var rok] (.var rcoll) elemTy,
-        .ifThenElse (.not (.var rok)) .breakStmt (.seqn #[])
-      ]
-      match keyVar with
-      | some k => iter := iter ++ #[.initialization { id := k, typ := elemTy }, .assign (.var k) (.var rrecv)]
-      | none => pure ()
-      iter := iter.push body
-      pure (.block #[] #[
-        .initialization { id := rcoll, typ := collTy }, .assign (.var rcoll) coll,
-        .initialization { id := rrecv, typ := elemTy },
-        .initialization { id := rok, typ := .bool },
-        lab (.while (.boolLit true) (.block #[] iter))
-      ])
+      -- C4: the range's outer block owns the collection/receive temporaries; the iteration
+      -- block owns the per-iteration variable (fresh per entry — D6).
+      closeBlock do
+        let rcoll ← declTmp "$rcoll" collTy
+        let rrecv ← declTmp "$rrecv" elemTy
+        let rok ← declTmp "$rok" .bool
+        let iterB ← closeBlock do
+          let mut iter : Array Stmt := #[
+            .chanRecv #[.var rrecv, .var rok] (.var rcoll) elemTy,
+            .ifThenElse (.not (.var rok)) .breakStmt (.seqn #[])
+          ]
+          match keyVar with
+          | some k =>
+              declarePending { id := k, typ := elemTy }
+              iter := iter ++ #[.assign (.var k) (.var rrecv)]
+          | none => pure ()
+          pure (iter.push body)
+        pure #[
+          .assign (.var rcoll) coll,
+          lab (.while (.boolLit true) iterB)
+        ]
   | "slice" | "array" | "int" | "array-pointer" =>
       let collTy ← exprTypeOf s!"{path}.collection" collJson
       let intTy : Ty := .int .int
@@ -2289,59 +2360,66 @@ partial def decodeRange (results : Array Param) (path : String) (obj : StrictJso
           | none => fail s!"range-over-int at {path} carries no operandType — the loop variable has no kind to take"
         else pure intTy
       let idxKind : IntKind := match idxTy with | .int k => k | _ => .int
-      let rcoll ← tmp "$rcoll"
-      let rlen ← tmp "$rlen"
-      let ridxId ← tmp "$ridx"
-      let rfirst ← tmp "$rfirst"
-      let ridx : Expr := .var ridxId
-      -- Range over *[N]T (value form): the pointer binds once; each
-      -- iteration reads the element THROUGH it, so writes to the array
-      -- during the loop are observed and a nil pointer panics at the
-      -- first read (pre-merge audit 2026-07-26). N is static.
-      let arrPtrTy? ← (match obj.get? "arrType" with
-        | some t => do pure (some (← decodeTy s!"{path}.arrType" t))
-        | none => pure none)
-      let arrPtrLen? ← (match obj.get? "len" with
-        | some l => do pure (some (← StrictJson.nat s!"{path}.len" l))
-        | none => pure none)
-      -- Length: len(collection) for slice/array; the int itself for int
-      -- range; the static N for array-pointer.
-      let lenExpr : Expr :=
-        if kind == "int" then .var rcoll
-        else match arrPtrLen? with
-        | some n => .intLit (Int.ofNat n) .int
-        | none => .length (.var rcoll) none
-      -- Per-iteration loop-variable bindings.
-      let mut iter : Array Stmt := #[
-        -- increment index at top except on the first iteration (the
-        -- synthetic 1 in the OPERAND's kind — BUG-043)
-        .ifThenElse (.var rfirst)
-          (.assign (.var rfirst) (.boolLit false))
-          (.assign (.var ridxId) (.add ridx (.intLit 1 idxKind))),
-        -- exit when the index reaches the length
-        .ifThenElse (.atLeastCmp ridx (.var rlen)) .breakStmt (.seqn #[])
-      ]
-      match keyVar with
-      | some k => iter := iter ++ #[.initialization { id := k, typ := idxTy }, .assign (.var k) ridx]
-      | none => pure ()
-      if kind != "int" then
-        match valVar with
-        | some v =>
-            let elemTy ← decodeTy s!"{path}.elemType" (← StrictJson.field path obj "elemType")
-            let base : Expr :=
-              match arrPtrTy? with
-              | some arrTy => .deref (.var rcoll) arrTy
-              | none => .var rcoll
-            iter := iter ++ #[.initialization { id := v, typ := elemTy }, .assign (.var v) (.indexGet base ridx)]
-        | none => pure ()
-      iter := iter.push body
-      pure (.block #[] #[
-        .initialization { id := rcoll, typ := collTy }, .assign (.var rcoll) coll,
-        .initialization { id := rlen, typ := idxTy }, .assign (.var rlen) lenExpr,
-        .initialization { id := ridxId, typ := idxTy }, .assign (.var ridxId) (.intLit 0 idxKind),
-        .initialization { id := rfirst, typ := .bool }, .assign (.var rfirst) (.boolLit true),
-        lab (.while (.boolLit true) (.block #[] iter))
-      ])
+      -- C4: the range's outer block owns the collection/length/index/flag temporaries; the
+      -- iteration block owns the per-iteration key/value variables (fresh per entry — D6).
+      closeBlock do
+        let rcoll ← declTmp "$rcoll" collTy
+        let rlen ← declTmp "$rlen" idxTy
+        let ridxId ← declTmp "$ridx" idxTy
+        let rfirst ← declTmp "$rfirst" .bool
+        let ridx : Expr := .var ridxId
+        -- Range over *[N]T (value form): the pointer binds once; each
+        -- iteration reads the element THROUGH it, so writes to the array
+        -- during the loop are observed and a nil pointer panics at the
+        -- first read (pre-merge audit 2026-07-26). N is static.
+        let arrPtrTy? ← (match obj.get? "arrType" with
+          | some t => do pure (some (← decodeTy s!"{path}.arrType" t))
+          | none => pure none)
+        let arrPtrLen? ← (match obj.get? "len" with
+          | some l => do pure (some (← StrictJson.nat s!"{path}.len" l))
+          | none => pure none)
+        -- Length: len(collection) for slice/array; the int itself for int
+        -- range; the static N for array-pointer.
+        let lenExpr : Expr :=
+          if kind == "int" then .var rcoll
+          else match arrPtrLen? with
+          | some n => .intLit (Int.ofNat n) .int
+          | none => .length (.var rcoll) none
+        let iterB ← closeBlock do
+          -- Per-iteration loop-variable bindings.
+          let mut iter : Array Stmt := #[
+            -- increment index at top except on the first iteration (the
+            -- synthetic 1 in the OPERAND's kind — BUG-043)
+            .ifThenElse (.var rfirst)
+              (.assign (.var rfirst) (.boolLit false))
+              (.assign (.var ridxId) (.add ridx (.intLit 1 idxKind))),
+            -- exit when the index reaches the length
+            .ifThenElse (.atLeastCmp ridx (.var rlen)) .breakStmt (.seqn #[])
+          ]
+          match keyVar with
+          | some k =>
+              declarePending { id := k, typ := idxTy }
+              iter := iter ++ #[.assign (.var k) ridx]
+          | none => pure ()
+          if kind != "int" then
+            match valVar with
+            | some v =>
+                let elemTy ← decodeTy s!"{path}.elemType" (← StrictJson.field path obj "elemType")
+                let base : Expr :=
+                  match arrPtrTy? with
+                  | some arrTy => .deref (.var rcoll) arrTy
+                  | none => .var rcoll
+                declarePending { id := v, typ := elemTy }
+                iter := iter ++ #[.assign (.var v) (.indexGet base ridx)]
+            | none => pure ()
+          pure (iter.push body)
+        pure #[
+          .assign (.var rcoll) coll,
+          .assign (.var rlen) lenExpr,
+          .assign (.var ridxId) (.intLit 0 idxKind),
+          .assign (.var rfirst) (.boolLit true),
+          lab (.while (.boolLit true) iterB)
+        ]
   | "string" =>
       -- Rune iteration: the key is the rune's starting BYTE offset, the
       -- value the decoded rune (invalid encodings: U+FFFD, width 1 — the
@@ -2349,31 +2427,36 @@ partial def decodeRange (results : Array Param) (path : String) (obj : StrictJso
       -- each iteration, before the body, so `continue` re-tests with the
       -- advance already applied.
       let intTy : Ty := .int .int
-      let rcoll ← tmp "$rcoll"
-      let rnext ← tmp "$rnext"
-      let roffId ← tmp "$roff"
-      let roff : Expr := .var roffId
-      let mut iter : Array Stmt := #[
-        .ifThenElse (.atLeastCmp (.var rnext) (.length (.var rcoll) none))
-          .breakStmt (.seqn #[]),
-        .initialization { id := roffId, typ := intTy },
-        .assign (.var roffId) (.var rnext),
-        .assign (.var rnext) (.add roff (.runeSizeAt (.var rcoll) roff))
-      ]
-      match keyVar with
-      | some k => iter := iter ++ #[.initialization { id := k, typ := intTy }, .assign (.var k) roff]
-      | none => pure ()
-      match valVar with
-      | some v => iter := iter ++
-          #[.initialization { id := v, typ := .int .int32 },
-            .assign (.var v) (.runeAt (.var rcoll) roff)]
-      | none => pure ()
-      iter := iter.push body
-      pure (.block #[] #[
-        .initialization { id := rcoll, typ := .string }, .assign (.var rcoll) coll,
-        .initialization { id := rnext, typ := intTy }, .assign (.var rnext) (.intLit 0 .int),
-        lab (.while (.boolLit true) (.block #[] iter))
-      ])
+      -- C4: the outer block owns the string/next-offset temporaries; the iteration block owns
+      -- the offset temporary and the per-iteration key/value variables (fresh per entry — D6).
+      closeBlock do
+        let rcoll ← declTmp "$rcoll" .string
+        let rnext ← declTmp "$rnext" intTy
+        let iterB ← closeBlock do
+          let roffId ← declTmp "$roff" intTy
+          let roff : Expr := .var roffId
+          let mut iter : Array Stmt := #[
+            .ifThenElse (.atLeastCmp (.var rnext) (.length (.var rcoll) none))
+              .breakStmt (.seqn #[]),
+            .assign (.var roffId) (.var rnext),
+            .assign (.var rnext) (.add roff (.runeSizeAt (.var rcoll) roff))
+          ]
+          match keyVar with
+          | some k =>
+              declarePending { id := k, typ := intTy }
+              iter := iter ++ #[.assign (.var k) roff]
+          | none => pure ()
+          match valVar with
+          | some v =>
+              declarePending { id := v, typ := .int .int32 }
+              iter := iter ++ #[.assign (.var v) (.runeAt (.var rcoll) roff)]
+          | none => pure ()
+          pure (iter.push body)
+        pure #[
+          .assign (.var rcoll) coll,
+          .assign (.var rnext) (.intLit 0 .int),
+          lab (.while (.boolLit true) iterB)
+        ]
   | other => fail s!"unsupported range kind {other} at {path}"
 
 partial def decodeReturn (results : Array Param) (path : String) (obj : StrictJson.Obj) : LowerM Stmt := do
@@ -2413,8 +2496,7 @@ partial def decodeReturn (results : Array Param) (path : String) (obj : StrictJs
     for i in [:rs.size] do
       match rs[i]?, results[i]? with
       | some rj, some rp =>
-          let ret ← tmp s!"$ret{i}"
-          evals := evals.push (.initialization { id := ret, typ := rp.typ })
+          let ret ← declTmp s!"$ret{i}" rp.typ
           evals := evals.push (.assign (.var ret) (← decodeExpr s!"{path}.results[{i}]" rj))
           stores := stores.push (.assign (.var rp.id) (.var ret))
       | _, _ => pure ()
@@ -2436,22 +2518,20 @@ partial def decodeAssign (results : Array Param) (path : String) (obj : StrictJs
         -- replaces the `resultTypes[i]?.getD .int` reconstruction).
         let callObj ← StrictJson.obj s!"{path}.rhs[0]" rhs[0]!
         let resultTypes ← decodeResultTypes s!"{path}.rhs[0]" callObj lhs.size
-        let mut decls : Array Stmt := #[]
         let mut assignees : Array Assignee := #[]
         for i in [:lhs.size] do
           let lj := lhs[i]!
           if targetIsBlank lj then
-            let cr ← tmp s!"$cr{i}"
             let ty ← match resultTypes[i]? with
               | some ty => pure ty
               | none => fail s!"resultTypes[{i}] absent at {path}.rhs[0] (fail closed)"
-            decls := decls.push (.initialization { id := cr, typ := ty })
+            let cr ← declTmp s!"$cr{i}" ty
             assignees := assignees.push (.var cr)
           else
             let t ← decodeTarget s!"{path}.lhs[{i}]" lj
-            decls := decls ++ (← declaresOf #[t])
+            declareTargets #[t]
             assignees := assignees.push t.assignee
-        return .seqn (decls.push (.call assignees ⟨name⟩ (← args.mapIdxM (fun i a => decodeExpr s!"{path}.args[{i}]" a))))
+        return .seqn #[.call assignees ⟨name⟩ (← args.mapIdxM (fun i a => decodeExpr s!"{path}.args[{i}]" a))]
     | none => pure ()
   -- A `sync/atomic` op on the RHS (atomics arc wave 1): exactly ONE
   -- target (the single result — `store` has none and never reaches
@@ -2468,21 +2548,19 @@ partial def decodeAssign (results : Array Param) (path : String) (obj : StrictJs
         -- one result, REQUIRED (BUG-110 / the F5 tightening)
         let resultTypes ← decodeResultTypes s!"{path}.rhs[0]" opObj 1
         let lj := lhs[0]!
-        let mut decls : Array Stmt := #[]
         let mut assignee : Assignee := .unsupported "atomic-op target"
         if targetIsBlank lj then
           match resultTypes[0]? with
           | some ty =>
-              let ca0 ← tmp "$ca0"
-              decls := decls.push (.initialization { id := ca0, typ := ty })
+              let ca0 ← declTmp "$ca0" ty
               assignee := .var ca0
           | none => fail s!"blank atomic-op target without a result type at {path} (fail closed)"
         else
           let t ← decodeTarget s!"{path}.lhs[0]" lj
-          decls := decls ++ (← declaresOf #[t])
+          declareTargets #[t]
           assignee := t.assignee
         let argsE ← args.mapIdxM (fun i a => decodeExpr s!"{path}.rhs[0].args[{i}]" a)
-        return .seqn (decls.push (.atomicStmt op kind argsE #[assignee]))
+        return .seqn #[.atomicStmt op kind argsE #[assignee]]
     | none => pure ()
   -- A value-returning sync op on the RHS (Q-TRYLOCK): exactly ONE
   -- target (the Bool result); a blank target drops the result — the op
@@ -2503,8 +2581,8 @@ partial def decodeAssign (results : Array Param) (path : String) (obj : StrictJs
           return .syncStmt op argsE #[]
         else
           let t ← decodeTarget s!"{path}.lhs[0]" lj
-          let decls ← declaresOf #[t]
-          return .seqn (decls.push (.syncStmt op argsE #[t.assignee]))
+          declareTargets #[t]
+          return .seqn #[.syncStmt op argsE #[t.assignee]]
     | none => pure ()
   -- The `[0, n)` draw on the RHS (unit 5b): exactly ONE target (the `int`
   -- result); a blank target drops the value — the draw still happens
@@ -2520,9 +2598,9 @@ partial def decodeAssign (results : Array Param) (path : String) (obj : StrictJs
           return ← expandRandIntn s!"{path}.rhs[0]" text nJ none
         else
           let t ← decodeTarget s!"{path}.lhs[0]" lj
-          let decls ← declaresOf #[t]
+          declareTargets #[t]
           let draw ← expandRandIntn s!"{path}.rhs[0]" text nJ (some t.assignee)
-          return .seqn (decls.push draw)
+          return .seqn #[draw]
     | none => pure ()
   -- Same for a call through a func value.
   if rhs.size == 1 then
@@ -2533,22 +2611,20 @@ partial def decodeAssign (results : Array Param) (path : String) (obj : StrictJs
         let resultTypes ← decodeResultTypes s!"{path}.rhs[0]" callObj lhs.size
         let callee ← decodeExpr s!"{path}.rhs[0].callee" calleeJ
         let argEs ← args.mapIdxM (fun i a => decodeExpr s!"{path}.rhs[0].args[{i}]" a)
-        let mut decls : Array Stmt := #[]
         let mut assignees : Array Assignee := #[]
         for i in [:lhs.size] do
           let lj := lhs[i]!
           if targetIsBlank lj then
-            let cv ← tmp s!"$cv{i}"
             let ty ← match resultTypes[i]? with
               | some ty => pure ty
               | none => fail s!"resultTypes[{i}] absent at {path}.rhs[0] (fail closed)"
-            decls := decls.push (.initialization { id := cv, typ := ty })
+            let cv ← declTmp s!"$cv{i}" ty
             assignees := assignees.push (.var cv)
           else
             let t ← decodeTarget s!"{path}.lhs[{i}]" lj
-            decls := decls ++ (← declaresOf #[t])
+            declareTargets #[t]
             assignees := assignees.push t.assignee
-        return .seqn (decls.push (.callValue assignees callee argEs))
+        return .seqn #[.callValue assignees callee argEs]
     | none => pure ()
   -- Comma-ok map lookup: `v, ok := m[k]`. Blank targets route to fresh temps.
   if lhs.size == 2 && rhs.size == 1 then
@@ -2558,16 +2634,16 @@ partial def decodeAssign (results : Array Param) (path : String) (obj : StrictJs
         let index ← decodeExpr s!"{path}.rhs[0].index" indexJ
         let keyTy ← decodeTy s!"{path}.rhs[0].keyType" keyTyJ
         let valTy ← decodeTy s!"{path}.rhs[0].valueType" valTyJ
-        let commaOkTarget (j : Json) (p : String) (ty : Ty) (tmpName : String) : LowerM (Assignee × Array Stmt) :=
+        let commaOkTarget (j : Json) (p : String) (ty : Ty) (tmpName : String) : LowerM Assignee :=
           if targetIsBlank j then do
-            let t ← tmp tmpName
-            pure (.var t, #[.initialization { id := t, typ := ty }])
+            pure (.var (← declTmp tmpName ty))
           else do
             let t ← decodeTarget p j
-            pure (t.assignee, ← declaresOf #[t])
-        let (a0, d0) ← commaOkTarget lhs[0]! s!"{path}.lhs[0]" valTy "$mlv"
-        let (a1, d1) ← commaOkTarget lhs[1]! s!"{path}.lhs[1]" .bool "$mlok"
-        return .seqn (d0 ++ d1 ++ #[.mapLookup a0 a1 base index keyTy valTy])
+            declareTargets #[t]
+            pure t.assignee
+        let a0 ← commaOkTarget lhs[0]! s!"{path}.lhs[0]" valTy "$mlv"
+        let a1 ← commaOkTarget lhs[1]! s!"{path}.lhs[1]" .bool "$mlok"
+        return .seqn #[.mapLookup a0 a1 base index keyTy valTy]
     | none => pure ()
   if lhs.size != rhs.size then
     fail s!"assignment arity {lhs.size} != {rhs.size} at {path}"
@@ -2583,37 +2659,34 @@ partial def decodeAssign (results : Array Param) (path : String) (obj : StrictJs
     if lhs.size == 1 then
       -- `_ = e`: evaluate for effect into a discard local.
       let ty ← exprTypeOf s!"{path}.rhs[0]" rhs[0]!
-      let blank0 ← tmp "$blank0"
-      pure (.seqn #[.initialization { id := blank0, typ := ty },
-        .assign (.var blank0) (← decodeExpr s!"{path}.rhs[0]" rhs[0]!)])
+      let blank0 ← declTmp "$blank0" ty
+      pure (.seqn #[.assign (.var blank0) (← decodeExpr s!"{path}.rhs[0]" rhs[0]!)])
     else do
-      let mut decls : Array Stmt := #[]
       let mut assignees : Array Assignee := #[]
       let mut i := 0
       for l in lhs do
         if targetIsBlank l then
           let ty ← exprTypeOf s!"{path}.rhs[{i}]" rhs[i]!
-          let blank ← tmp s!"$blank{i}"
-          decls := decls.push (.initialization { id := blank, typ := ty })
+          let blank ← declTmp s!"$blank{i}" ty
           assignees := assignees.push (.var blank)
         else
           let t ← decodeTarget s!"{path}.lhs[{i}]" l
-          decls := decls ++ (← declaresOf #[t])
+          declareTargets #[t]
           assignees := assignees.push t.assignee
         i := i + 1
       let exprs ← rhs.mapIdxM (fun i e => decodeExpr s!"{path}.rhs[{i}]" e)
-      pure (.seqn (decls.push (.assignMany assignees exprs)))
+      pure (.seqn #[.assignMany assignees exprs])
   else
     -- No blanks: declarations first, then a simultaneous multi-assign so swaps
     -- are correct.
     let targets ← lhs.mapIdxM (fun i t => decodeTarget s!"{path}.lhs[{i}]" t)
     let exprs ← rhs.mapIdxM (fun i e => decodeExpr s!"{path}.rhs[{i}]" e)
     let assignees ← targets.mapM (fun t => targetAssignee t)
-    let decls ← declaresOf targets
+    declareTargets targets
     if assignees.size == 1 then
-      pure (.seqn (decls.push (.assign assignees[0]! exprs[0]!)))
+      pure (.seqn #[.assign assignees[0]! exprs[0]!])
     else
-      pure (.seqn (decls.push (.assignMany assignees exprs)))
+      pure (.seqn #[.assignMany assignees exprs])
 
 /-- Lower an `unseq` statement (the Stage C wire arm; docstring at the section head). -/
 partial def decodeUnseq (results : Array Param) (path : String) (obj : StrictJson.Obj) : LowerM Stmt := do
@@ -3052,7 +3125,7 @@ partial def decodeVar (path : String) (obj : StrictJson.Obj) : LowerM Stmt := do
     let name ← StrictJson.string s!"{path}.decls[{i}].id" (← StrictJson.field path d "id")
     let typ ← decodeTy s!"{path}.decls[{i}].type" (← StrictJson.field path d "type")
     let id ← declLocal s!"{path}.decls[{i}]" name (d.get? "local")
-    stmts := stmts.push (.initialization { id, typ })
+    declarePending { id, typ }  -- C4: the cell is the enclosing block's, at its entry
     match d.get? "init" with
     | some initE => stmts := stmts.push (.assign (.var id) (← decodeExpr s!"{path}.decls[{i}].init" initE))
     | none => pure ()
@@ -3071,9 +3144,11 @@ partial def decodeIf (results : Array Param) (path : String) (obj : StrictJson.O
     pure (Stmt.ifThenElse cond thenS elseS)
   match obj.get? "init" with
   | some initE =>
-      let initS ← decodeStmt results s!"{path}.init" initE
-      let initLocals ← initDeclaredLocals s!"{path}.init" initE
-      pure (.block #[] #[initS, ← core initLocals])
+      -- C4: the if-statement's implicit block owns what `init` declares (`closeBlock`)
+      closeBlock do
+        let initS ← decodeStmt results s!"{path}.init" initE
+        let initLocals ← initDeclaredLocals s!"{path}.init" initE
+        pure #[initS, ← core initLocals]
   | none => core #[]
 
 partial def decodeFor (results : Array Param) (path : String) (obj : StrictJson.Obj)
@@ -3082,56 +3157,61 @@ partial def decodeFor (results : Array Param) (path : String) (obj : StrictJson.
   -- F2 (scope-exact R1): the init statement decodes first, under the enclosing environment; what it
   -- declares is in scope for the condition, its hoists, the post statement and the body (Go's
   -- for-statement scope) — and nowhere after (the enclosing block's fold skips them: `nestedStmtKeys`).
-  let initS? ← (match obj.get? "init" with
-    | some initE => some <$> decodeStmt results s!"{path}.init" initE
-    | none => pure none)
   let initLocals ← (match obj.get? "init" with
     | some initE => initDeclaredLocals s!"{path}.init" initE
     | none => pure #[])
-  let (cond, body, post, condPre) ← withLocals initLocals do
-    let cond ← (match obj.get? "cond" with
-      | some c => decodeExpr s!"{path}.cond" c
-      | none => pure (.boolLit true))
-    let body ← decodeStmt results s!"{path}.body" (← StrictJson.field path obj "body")
-    let post ← (match obj.get? "post" with
-      | some p => decodeStmt results s!"{path}.post" p
-      | none => pure (.seqn #[]))
-    -- `condPre`: the condition's hoisted call/alloc temps, re-run before
-    -- EVERY test (the test happens inside the loop body, so hoists are
-    -- legal here — control-flow slice, docs/2026-08-04_control-flow-design.md).
-    let condPre ← (match obj.get? "condPre" with
-      | some cp => do
-          let arr ← StrictJson.array s!"{path}.condPre" cp
-          arr.mapIdxM (fun i s => decodeStmt results s!"{path}.condPre[{i}]" s)
-      | none => pure #[])
-    pure (cond, body, post, condPre)
-  -- `continue` must still run the post statement, but GoCore's `while` re-runs
-  -- its whole body on continue. So run post at the top of the body except on
-  -- the first iteration (guarded by a flag), then re-check the condition; this
-  -- makes `for init; cond; post` faithful under continue and break.
-  let forFirst ← tmp "$forFirst"
-  let loopBody := Stmt.block #[] #[
-    .ifThenElse (.var forFirst)
-      (.assign (.var forFirst) (.boolLit false))
-      post,
-    .seqn condPre,
-    .ifThenElse cond (.seqn #[]) .breakStmt,
-    body
-  ]
-  -- A label (from a wire "labeled" wrapper) attaches DIRECTLY to the
-  -- `.while` — the machine's `contHeadLabel` placement invariant.
-  let whileStmt : Stmt :=
-    match label with
-    | some l => .labeled l (.while (.boolLit true) loopBody)
-    | none => .while (.boolLit true) loopBody
-  let loop := Stmt.block #[] #[
-    .initialization { id := forFirst, typ := .bool },
-    .assign (.var forFirst) (.boolLit true),
-    whileStmt
-  ]
-  match initS? with
-  | some initS => pure (.block #[] #[initS, loop])
-  | none => pure loop
+  -- C4: three blocks, each closing over what it declares (`closeBlock`): the for-statement's
+  -- implicit block (`init`'s locals), the `loop` block (the first-iteration flag) and the body
+  -- block (the condition's hoisted temporaries, `post`'s, and the wire body — fresh per
+  -- iteration, D1/D6). The decode order is the old one (init, then the body, then `$forFirst`).
+  let mkLoop : LowerM Stmt := do
+    let (forFirst, loopBody) ← closeBlockWith do
+      let (cond, body, post, condPre) ← withLocals initLocals do
+        let cond ← (match obj.get? "cond" with
+          | some c => decodeExpr s!"{path}.cond" c
+          | none => pure (.boolLit true))
+        let body ← decodeStmt results s!"{path}.body" (← StrictJson.field path obj "body")
+        let post ← (match obj.get? "post" with
+          | some p => decodeStmt results s!"{path}.post" p
+          | none => pure (.seqn #[]))
+        -- `condPre`: the condition's hoisted call/alloc temps, re-run before
+        -- EVERY test (the test happens inside the loop body, so hoists are
+        -- legal here — control-flow slice, docs/2026-08-04_control-flow-design.md).
+        let condPre ← (match obj.get? "condPre" with
+          | some cp => do
+              let arr ← StrictJson.array s!"{path}.condPre" cp
+              arr.mapIdxM (fun i s => decodeStmt results s!"{path}.condPre[{i}]" s)
+          | none => pure #[])
+        pure (cond, body, post, condPre)
+      -- `continue` must still run the post statement, but GoCore's `while` re-runs
+      -- its whole body on continue. So run post at the top of the body except on
+      -- the first iteration (guarded by a flag), then re-check the condition; this
+      -- makes `for init; cond; post` faithful under continue and break.
+      let forFirst ← tmpKeyed ("$forFirst", some .bool)
+      pure (forFirst, #[
+        .ifThenElse (.var forFirst)
+          (.assign (.var forFirst) (.boolLit false))
+          post,
+        .seqn condPre,
+        .ifThenElse cond (.seqn #[]) .breakStmt,
+        body
+      ])
+    closeBlock do
+      -- the flag is the `loop` block's cell (one per loop entry, NOT per iteration)
+      declarePending { id := forFirst, typ := .bool }
+      -- A label (from a wire "labeled" wrapper) attaches DIRECTLY to the
+      -- `.while` — the machine's `contHeadLabel` placement invariant.
+      let whileStmt : Stmt :=
+        match label with
+        | some l => .labeled l (.while (.boolLit true) loopBody)
+        | none => .while (.boolLit true) loopBody
+      pure #[.assign (.var forFirst) (.boolLit true), whileStmt]
+  match obj.get? "init" with
+  | some initE =>
+      closeBlock do
+        let initS ← decodeStmt results s!"{path}.init" initE
+        pure #[initS, ← mkLoop]
+  | none => mkLoop
 
 end
 
@@ -3274,6 +3354,11 @@ private def decodeFunc (path : String) (json : Json) : LowerM Func := do
   let locals := args ++ res
   let resP := res.map (·.param)
   let body ← withReader (fun ctx => { ctx with locals }) (decodeStmt resP s!"{path}.body" bodyJ)
+  -- C4: every declaration was claimed by a block (the body is a wire `block`, whose closer owns
+  -- the function's top-level locals); a declaration left pending would have no cell — refused.
+  let stray := (← get).pending
+  unless stray.isEmpty do
+    fail s!"{path}.body: {stray.size} declaration(s) recorded outside any block (ids {stray.map (·.id)}) — the body is not a block (C4); refused by name"
   let tableAll ← endLocals
   let f : Func := { id := ⟨name⟩, args := args.map (·.param), results := resP, body, variadic, locals := tableAll }
   checkLocalsOk path f
