@@ -1,6 +1,10 @@
 # G-C4 design note — block-entry allocation (window row 6, C4)
 
-STATUS: PROPOSED — HARD-STOP design gate; the [USER] passes or amends §7. [AGENT] design writer, 2026-10-01, branch `docs/gc4-design-1001`
+STATUS: RULED 2026-10-01 — G-C4 PASSED with all nine §7 decisions as recommended ([USER] Mike, verbatim, relayed by the [AGENT]
+coordinator — cite as relayed: «Those costs seem fine to me. Go ahead with these decisions. You can work on block allocation on the
+basis of approving all of your recommendations.»; ledger record `docs/2026-08-31_qrow-rulings.md` «G-C4 (block-entry allocation)
+passed — RULED (2026-10-01)»; landing lane `core/block-allocation-1001`, handoff `docs/2026-10-01_block-allocation-handoff.md`).
+Was: PROPOSED — HARD-STOP design gate; the [USER] passes or amends §7. [AGENT] design writer, 2026-10-01, branch `docs/gc4-design-1001`
 off `main` @ `ac6baa31` (P, C3, B6 landed; the `Intn` pick site 5b still to run — nothing below depends on it). Inputs:
 `docs/2026-09-03_design-hygiene-arc.md` (v) (G-C4 RULED in principle [USER] 2026-09-04, relayed, with the «up to heap isomorphism» caveat);
 `docs/2026-09-04_reasoning-surface-plan.md` §3.C4; charter row 6 + decision 9 (RULED 2026-09-24: the SCOPED form, behavioural gate
@@ -127,14 +131,14 @@ capped, locked; `Machine`, `StepFn`, `MachineSound`, `StateWf`, `MachineEqb`, `S
 reported and the lane stops. Fable: this note (the audit), D3b's rule text, the D8 statements, the audit of the landed lane; Opus: everything
 mechanical. Any §2 verdict overturned by a run is a STOP-and-report (invariant 2), never a re-pin.
 
-## 7. Decisions for the [USER]
+## 7. Decisions for the [USER] — ALL NINE RULED as recommended, 2026-10-01 ([USER] Mike, relayed; the record at the top)
 
-1. **Pass G-C4 in the scoped form of §3**, with §2's verdicts as the discharged precondition (no supported observation changes). Rec: YES.
-2. **D2 = W1** — wire unchanged, decoder-side hoist; the lane's gate is `--diff` (plus the train's 5a `--slow`); no twin re-pin. Rec: YES.
-3. **D3 = (b)** — `unseq` binder cells in a sweep-private scope at ENTER; the fixed-`.seq`-env law holds without exception. Rec: YES.
-4. **D4** — keep `seqCont`'s equality splice; the 2026-09-04 «splice unconditionally» wording is withdrawn as unsound in general. Rec: YES.
-5. **D1, D5–D7 as routine lane choices** (block-entry unit with the loop-body-is-a-block check; temp dedupe; the FR-11 note; results/defers untouched; zero at entry). Rec: YES.
-6. **Channel 5 (`locJson` raw ids)** — RECORD as a standing limit of the observation schema, outside C4; canonicalizing it is a separate decision if a consumer ever pins reference-valued Lean observations. Rec: record, do not change here.
-7. **Fuel** — accept the step-count decrease with no compensating no-op step; a budget-row flip is reported and ruled, never absorbed. Rec: YES.
-8. **D8's layout function and lemma set** as the lane's acceptance list (BridgeSet RE-PIN 7, the audit list). Rec: YES.
-9. **The estimate (3–4 sessions + audit) and the G-C3 stop rule** as the lane's bounds. Rec: accept.
+1. **Pass G-C4 in the scoped form of §3**, with §2's verdicts as the discharged precondition (no supported observation changes). Rec: YES. **RULED 2026-10-01: as recommended.**
+2. **D2 = W1** — wire unchanged, decoder-side hoist; the lane's gate is `--diff` (plus the train's 5a `--slow`); no twin re-pin. Rec: YES. **RULED 2026-10-01: as recommended.**
+3. **D3 = (b)** — `unseq` binder cells in a sweep-private scope at ENTER; the fixed-`.seq`-env law holds without exception. Rec: YES. **RULED 2026-10-01: as recommended.**
+4. **D4** — keep `seqCont`'s equality splice; the 2026-09-04 «splice unconditionally» wording is withdrawn as unsound in general. Rec: YES. **RULED 2026-10-01: as recommended.**
+5. **D1, D5–D7 as routine lane choices** (block-entry unit with the loop-body-is-a-block check; temp dedupe; the FR-11 note; results/defers untouched; zero at entry). Rec: YES. **RULED 2026-10-01: as recommended.**
+6. **Channel 5 (`locJson` raw ids)** — RECORD as a standing limit of the observation schema, outside C4; canonicalizing it is a separate decision if a consumer ever pins reference-valued Lean observations. Rec: record, do not change here. **RULED 2026-10-01: as recommended.**
+7. **Fuel** — accept the step-count decrease with no compensating no-op step; a budget-row flip is reported and ruled, never absorbed. Rec: YES. **RULED 2026-10-01: as recommended.**
+8. **D8's layout function and lemma set** as the lane's acceptance list (BridgeSet RE-PIN 7, the audit list). Rec: YES. **RULED 2026-10-01: as recommended.**
+9. **The estimate (3–4 sessions + audit) and the G-C3 stop rule** as the lane's bounds. Rec: accept. **RULED 2026-10-01: as recommended.**

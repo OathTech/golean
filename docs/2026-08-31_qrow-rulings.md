@@ -1261,3 +1261,21 @@ the harness fix. Then move to next steps» — the merge sign-off for `core/intn
 its D1–D8 RATIFIED (option B, upstream's verbatim `crypto/rand`/`math/big` body, NOT taken), and the coverage harness's
 `/vN` import-name fix (trusted surface #2; a new unaliased `math/rand/v2` row). Baseline 3800 = 3563 / 237; FR-36 opened for
 dot imports of quarantined/primitive-bound packages.
+
+### G-C4 (block-entry allocation) passed — RULED (2026-10-01)
+
+[USER] Mike, 2026-10-01, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «Those costs seem fine to me. Go
+ahead with these decisions. You can work on block allocation on the basis of approving all of your recommendations.» — the
+named design gate G-C4 PASSED with all nine recommendations of `docs/2026-10-01_gc4-block-allocation-design.md` §7 (branch
+`docs/gc4-design-1001` @ `b8c44973`): (1) G-C4 in the scoped form (an injection with private cells + stuttering over the stated
+observable domain; the address-sensitive-escape audit's verdicts as the discharged precondition); (2) D2 = W1 — wire
+`golean-native-v3` unchanged, a decoder-side hoist (blocks' `decls` filled), lane gate `--diff` (+ the train's `--slow`), no twin
+re-pin; (3) D3 = (b) — `unseq` binder cells in a sweep-private scope at ENTER, so the fixed-environment law holds without
+exception; (4) D4 — keep `seqCont`'s equality splice; the 2026-09-04 «splice unconditionally» wording WITHDRAWN; (5) D1, D5–D7
+as the note's routine choices (block-entry unit with the loop-body-is-a-block check; temp dedupe; the FR-11 note; results/defers
+untouched; zero values at entry); (6) channel 5 (the Lean readout JSON's raw address ids, `locJson`) recorded as a standing
+schema limit, OUTSIDE C4 — not changed; (7) fuel: the step-count decrease accepted with NO compensating no-op step — any budget
+row that flips is reported and STOPS for a [USER] ruling; (8) D8's `entrySlot` function + lemma set as the lane's acceptance
+list (a BridgeSet re-pin; the core audit's required list) — the logic side's request 4; (9) estimate 3–4 sessions + audit, with
+G-C3's elaboration stop rule (any module > 1.5× slower or a new/raised `maxHeartbeats` → report and stop). Lane
+`core/block-allocation-1001` (window row 6).

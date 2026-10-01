@@ -218,7 +218,11 @@ cost and touches the fewest positional `fun_cases` proofs.
     review's PRESERVATION CAVEAT explicitly: semantics-preserving
     only UP TO HEAP ISOMORPHISM (allocation order changes `Loc.base`
     ids; observations are address-free, but dedup certificates and
-    any pinned `repr` change); C5 `.opDone` out of `Config` —
+    any pinned `repr` change; G-C4 PASSED 2026-10-01 in the SCOPED
+    form — an injection with private cells + stuttering over a stated
+    observable domain, `docs/2026-10-01_gc4-block-allocation-design.md`
+    §3; the plan's «`seqCont` splices unconditionally» wording is
+    WITHDRAWN there, D4 — the equality splice stays); C5 `.opDone` out of `Config` —
     carries the review's caveat explicitly: preserving MODULO FUEL
     ACCOUNTING (the marker strip is one `stepFn` step on both
     drivers; removing it shifts the exact fuel at which `fuelOut`

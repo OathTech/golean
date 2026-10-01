@@ -545,7 +545,8 @@ revival guide records as banned for new members), `ChoiceTrace`,
 (1.2), `.opDone` (1.3), `Stmt.initialization` (C4), the `*Fuel`
 functions and `typeResolutionFuel` (C2 deletes them), `seqCont`
 (Machine.lean:2172 — its env-equality splice is an implementation of
-`.seq` sequencing that C4 makes unconditional), `StateEqb`/`MachineEqb`
+`.seq` sequencing that C4 makes unconditional — WITHDRAWN 2026-10-01: the splice stays conditional, G-C4 D4,
+`docs/2026-10-01_gc4-block-allocation-design.md` §4, [USER] ruled as recommended), `StateEqb`/`MachineEqb`
 (decidability instruments), the `$`-named temporaries (B6 makes them
 `VarId`s; the wire may keep names as diagnostics).
 
@@ -1159,6 +1160,18 @@ have a FIXED environment. Delete `Stmt.initialization` (Syntax.lean:
 `seqCont`'s splice test (Machine.lean:2173 — splice unconditionally;
 with fixed envs both choices are equivalent). With B6, "declared
 locals of a block" is a `List (VarId × Ty)`.
+
+**D4 correction (2026-10-01, G-C4 RULED [USER] Mike, relayed; design note
+`docs/2026-10-01_gc4-block-allocation-design.md` §4 D4, §7 decision 4):** the
+«splice unconditionally; with fixed envs both choices are equivalent»
+sentence above is WITHDRAWN as unsound in general — when `env' ≠ env`,
+splicing would run `rest` under the wrong environment. `seqCont` keeps its
+equality test; with fixed `.seq` environments the non-splicing branch is
+reached only where a statement runs under a scope the continuation does
+not share (after D3 (b), a sweep's completion statement under its private
+binder scope), and it is correct there. Everything else in this item
+stands: `Stmt.initialization`, `Step.initialization` and the `stepFn` arm
+are deleted by the landing lane `core/block-allocation-1001`.
 
 **Order.** After B6 (numbering locals per block makes the declaration
 list a frontend artifact of the same pass). Pre-pin preferred (so the
