@@ -3200,6 +3200,9 @@ func (e *emitter) emitStmt(s ast.Stmt) (any, error) {
 		if err := e.refuseInterceptedLibraryCallee("defer", st.Call); err != nil {
 			return nil, err
 		}
+		if err := e.refuseRandIntnDeferGo("defer", st.Call); err != nil {
+			return nil, err
+		}
 		if id, ok := st.Call.Fun.(*ast.Ident); ok {
 			if _, isBuiltin := e.info.Uses[id].(*types.Builtin); isBuiltin {
 				// `defer recover()` does NOT recover: recover must be called
@@ -3259,6 +3262,9 @@ func (e *emitter) emitStmt(s ast.Stmt) (any, error) {
 			}
 		}
 		if err := e.refuseInterceptedLibraryCallee("go", st.Call); err != nil {
+			return nil, err
+		}
+		if err := e.refuseRandIntnDeferGo("go", st.Call); err != nil {
 			return nil, err
 		}
 		callee, err := e.emitExpr(st.Call.Fun)
@@ -8567,6 +8573,12 @@ func (e *emitter) emitCallNode(c *ast.CallExpr) (any, bool, error) {
 		// PRIMITIVE — a pure strict op, never hoisted (floatbits.go).
 		if fn, isFB := isFloatBitsFunc(e.info.Uses[sel.Sel]); isFB {
 			return e.emitFloatBitsCall(c, fn)
+		}
+		// math/rand.Intn & math/rand/v2.IntN (window unit 5b): the
+		// `rand-intn` PRIMITIVE — the `[0, n)` draw as ONE choice-tape
+		// pick, an effectful node hoisted like a call (randintn.go).
+		if fn, tag, isRI := isRandIntnFunc(e.info.Uses[sel.Sel]); isRI {
+			return e.emitRandIntnCall(c, fn, tag)
 		}
 		if node, handled, err := e.emitStdlibShimCall(c, sel); handled || err != nil {
 			return node, handled, err

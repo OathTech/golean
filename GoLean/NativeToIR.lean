@@ -222,6 +222,7 @@ private def exprAllowedKeys : String → Option (List String)
   | "call" => some ["expr", "func", "args", "resultTypes"]
   | "call-value" => some ["expr", "callee", "args", "resultTypes"]
   | "atomic-op" => some ["expr", "op", "kind", "args", "resultTypes"]
+  | "rand-intn" => some ["expr", "callee", "n", "resultTypes"]
   | "sync-op" => some ["expr", "op", "args", "resultTypes"]
   | _ => none
 
@@ -835,6 +836,7 @@ partial def decodeExpr (path : String) (json : Json) : LowerM Expr := do
       pure (.typeAssert operand target source)
   | "call" => fail "call in expression position is not modeled (calls are statements)"
   | "atomic-op" => fail "atomic op in expression position is not modeled (sync/atomic ops are statements, like calls)"
+  | "rand-intn" => fail "rand-intn in expression position is not modeled (the frontend hoists the draw like a call; a forged wire)"
   | "sync-op" => fail "sync op in expression position is not modeled (TryLock/TryRLock are statements, like calls)"
   | other => fail s!"unsupported expression {other} at {path}"
 where
@@ -1033,6 +1035,57 @@ private def asAtomicOp? (json : Json) : LowerM (Option (AtomicStmtOp × IntKind 
         fail s!"atomic op {opName} expects {arity} operand(s), got {args.size}"
       pure (some (op, kind, args))
   | _ => pure none
+
+/-- The `rand-intn` callees and the text of each one's `n <= 0` guard — upstream's own
+`panic(string)` (window unit 5b, `Stmt.randIntn`'s docstring is the envelope statement):
+`Intn` = `math/rand.Intn` (`deps/go/src/math/rand/rand.go:179–181` @ go1.26.5), `IntN` =
+`math/rand/v2.IntN` (`math/rand/v2/rand.go:192–193`). A closed table: any other callee tag on
+the wire refuses by name (a widened frontend must widen this table with the text and its pin). -/
+private def randIntnGuardText? : String → Option String
+  | "Intn" => some "invalid argument to Intn"
+  | "IntN" => some "invalid argument to IntN"
+  | _ => none
+
+/-- Recognize the `[0, n)` draw's EXPRESSION node (window unit 5b):
+`{"expr":"rand-intn","callee":<Intn|IntN>,"n":<int expr>,"resultTypes":[int]}` — the frontend
+emits it for a direct `rand.Intn(n)` / `rand.IntN(n)` call and hoists it exactly like a call, so
+it is admitted ONLY where `atomic-op` is (an expression statement; the single RHS of an
+assignment) and EXPANDS there (`expandRandIntn`). `resultTypes` is REQUIRED and must be the one
+`int`. -/
+private def asRandIntnOp? (json : Json) : LowerM (Option (String × Json)) := do
+  match json.getObjVal? "expr" with
+  | .ok (.str "rand-intn") =>
+      let obj ← StrictJson.obj "rand-intn" json
+      checkAllowedKeys "rand-intn" obj ["expr", "callee", "n", "resultTypes"]
+      requireResultTypes "rand-intn" obj
+      let callee ← StrictJson.string "rand-intn.callee" (← StrictJson.field "rand-intn" obj "callee")
+      let text ← match randIntnGuardText? callee with
+        | some t => pure t
+        | none => fail s!"unsupported rand-intn callee {repr callee} (the two admitted are Intn = math/rand.Intn and IntN = math/rand/v2.IntN; a forged wire)"
+      let resultTypes ← decodeResultTypes "rand-intn" obj 1
+      if resultTypes[0]? != some (.int .int) then
+        fail s!"rand-intn result type is not int at rand-intn.resultTypes[0] (Intn/IntN return an int; forged wire)"
+      pure (some (text, ← StrictJson.field "rand-intn" obj "n"))
+  | _ => pure none
+
+/-- **The `rand-intn` EXPANSION** (window unit 5b; design `docs/2026-09-30_intn-pick-design.md`
+D2): `target := rand-intn(callee, e)` lowers to
+`$intn := e; if $intn < 1 { panic("<the callee's text>") }; randIntn target $intn`
+— `e` evaluated ONCE into a decoder temp; then upstream's own guard (`if n <= 0 {
+panic("invalid argument to Intn") }`, a language-level `panic(string)` — the payload class gc
+realizes, which a machine apply's `.panic` could NOT deliver: `deliver` boxes those as
+`runtime.Error`); then the draw, `Stmt.randIntn`, whose machine domain is `n ≥ 1`. The guard is
+where the callee identity lives; the draw op is callee-independent (one general site). -/
+private def expandRandIntn (path : String) (guardText : String) (nJson : Json)
+    (target : Option Assignee) : LowerM Stmt := do
+  let nE ← decodeExpr s!"{path}.n" nJson
+  let nId ← tmp "$intn"
+  let guard : Stmt := .ifThenElse (.lessCmp (.var nId) (.intLit 1 .int))
+    (.panicStmt (.toInterface (.interface ⟨"any"⟩) .string
+      (.stringLit (GoString.fromLeanString guardText))))
+    (.seqn #[])
+  pure (.seqn #[.initialization { id := nId, typ := .int }, .assign (.var nId) nE, guard,
+    .randIntn target (.var nId)])
 
 /-- Recognize the value-returning sync ops' EXPRESSION node (Q-TRYLOCK):
 `{"expr":"sync-op","op":<tryLock|tryRLock|tryWLock>,"args":[recv],
@@ -1850,6 +1903,12 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
               | some (op, args) =>
                   let argsE ← args.mapIdxM (fun i a => decodeExpr s!"{path}.expr.args[{i}]" a)
                   pure (.syncStmt op argsE #[])
+              | none =>
+              -- A bare `rand.Intn(n)` statement DISCARDS its result but
+              -- still DRAWS (unit 5b, `Stmt.randIntn` with no target — the
+              -- generator advances in Go too).
+              match ← asRandIntnOp? e with
+              | some (text, nJ) => expandRandIntn s!"{path}.expr" text nJ none
               | none => fail s!"expression statement is not a call at {path} (calls are the only effectful expressions modeled)"
   | "range" =>
       decodeRange results path obj
@@ -2446,6 +2505,24 @@ partial def decodeAssign (results : Array Param) (path : String) (obj : StrictJs
           let t ← decodeTarget s!"{path}.lhs[0]" lj
           let decls ← declaresOf #[t]
           return .seqn (decls.push (.syncStmt op argsE #[t.assignee]))
+    | none => pure ()
+  -- The `[0, n)` draw on the RHS (unit 5b): exactly ONE target (the `int`
+  -- result); a blank target drops the value — the draw still happens
+  -- (`Stmt.randIntn` with no target). The node EXPANDS into the guard +
+  -- draw sequence (`expandRandIntn`), the target's declaration first.
+  if rhs.size == 1 then
+    match ← asRandIntnOp? rhs[0]! with
+    | some (text, nJ) =>
+        if lhs.size != 1 then
+          fail s!"rand-intn assigned to {lhs.size} targets at {path} (Intn/IntN have exactly one result)"
+        let lj := lhs[0]!
+        if targetIsBlank lj then
+          return ← expandRandIntn s!"{path}.rhs[0]" text nJ none
+        else
+          let t ← decodeTarget s!"{path}.lhs[0]" lj
+          let decls ← declaresOf #[t]
+          let draw ← expandRandIntn s!"{path}.rhs[0]" text nJ (some t.assignee)
+          return .seqn (decls.push draw)
     | none => pure ()
   -- Same for a call through a func value.
   if rhs.size == 1 then

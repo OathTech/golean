@@ -20,12 +20,19 @@ package main
 //                    `import` rows are the consequential import
 //                    neutralizations, listed as `overlay-import`, not
 //                    counted (see the table's header)
-//   primitive        machine ops of library origin — CAP 2, FULL since
-//                    stdlib slice 3 (2026-09-04): `float-bits` (math's
-//                    four bit-reinterpretation functions, [USER]-admitted)
-//                    and `print-output` (print/println + the fd-2 output
-//                    observable, gate G2). Widening past 2 is a [USER]
-//                    re-ratification (an over-cap table refuses to render).
+//   primitive        machine ops of library origin — CAP 3 (was 2, FULL
+//                    since stdlib slice 3, 2026-09-04): `float-bits` (math's
+//                    four bit-reinterpretation functions, [USER]-admitted),
+//                    `print-output` (print/println + the fd-2 output
+//                    observable, gate G2), and since window unit 5b
+//                    (2026-09-30) `rand-intn` (math/rand.Intn + math/rand/
+//                    v2.IntN as the `[0, n)` choice-tape draw — the op is
+//                    [USER]-admitted, item 2 of the 2026-09-30 subject-delta
+//                    ruling, relayed; the cap move 2 -> 3 is its mechanical
+//                    consequence and is POSED for [USER] re-ratification at
+//                    the lane's merge ask, design note D5). Widening past 3
+//                    is a [USER] re-ratification (an over-cap table refuses
+//                    to render).
 //   shim             the RETAINED user-package injections (frozen, D-002;
 //                    since slice 2 only the fmt desugar's 6 members)
 //   shadow-type      the E5-T shadow models (importedmodel.go; since
@@ -38,7 +45,11 @@ import (
 
 const (
 	stdlibOverlayCap   = 12
-	stdlibPrimitiveCap = 2
+	// 2 -> 3 at window unit 5b (2026-09-30): the `rand-intn` primitive. The
+	// op is [USER]-admitted (the 2026-09-30 ruling, item 2, relayed); this
+	// NUMBER is [AGENT]-provisional, PENDING [USER] re-ratification at the
+	// lane's merge ask (docs/2026-09-30_intn-pick-design.md D5).
+	stdlibPrimitiveCap = 3
 	// stdlibOverlayImportCap: the consequential `import` rows' OWN cap
 	// (audit fix round, [AGENT] structural decision disclosed for the
 	// [USER]): 5 today + headroom for bytes' MakeNoZero import should a
@@ -51,10 +62,11 @@ const (
 
 // The overlay table lives in stdlib-overlay.tsv (stdlibsource.go parses
 // and APPLIES it — one source for the substitutions and for the rows
-// below). The primitive table names the two library-origin machine ops
-// (stdlib slice 3). Both exist so the register's counts are derived from
-// code, not asserted.
+// below). The primitive table names the three library-origin machine ops
+// (stdlib slice 3; `rand-intn` since window unit 5b). Both exist so the
+// register's counts are derived from code, not asserted.
 var stdlibPrimitives = map[string]string{
+	"rand-intn":    "math/rand.Intn(n) / math/rand/v2.IntN(n) — the package-level functions — as ONE machine STATEMENT, the `[0, n)` DRAW (wire `rand-intn` with a callee tag, GoCore `Stmt.randIntn`/`StmtOp.randIntn`, the choice site `ChoiceSite.intn`; frontend randintn.go; the decoder's `expandRandIntn`): the draw IS nondeterminism, so the semantics is the ENVELOPE reified on the choice tape — bound `n` exactly, every value of `[0, n)` a member, `n = 1` a bound-1 consult that pops nothing, a DATA pick (`Stmt.randIntn`'s docstring is the envelope statement; latitude inventory §0) — never a modeled generator. The callee's `n <= 0` guard, upstream's own `if n <= 0 { panic(\"invalid argument to Intn\") }`, is EMITTED BY THE DECODER ahead of the draw as the language-level `panic(string)` it is (the payload class gc realizes: `recover().(string)` answers true; an apply-arm panic would box as `runtime.Error`), the text chosen per callee from a closed table — `invalid argument to Intn` / `invalid argument to IntN`; the machine op's domain is `n >= 1` and a bypassed guard is `stuck` by name (a forged wire). ADMITTED [USER] Mike 2026-09-30 (item 2 of «The raft-proofs team's subject-delta note (2026-09-30) — RULED», relayed: a GENERAL native `Intn`-style pick site, «a value in `[0, n)`, panic if `n ≤ 0`», not raft-specific); design docs/2026-09-30_intn-pick-design.md (D1–D8 PENDING [USER] ratification at the merge ask; the cap move 2 -> 3 is D5). Anchors: deps/go/src/math/rand/rand.go:176-181 @ go1.26.5 (Intn's doc comment + guard) and math/rand/v2/rand.go:189-193 (IntN) — file:line citations because neither package is source-through (the float-bits convention). NOT bound (kept on the by-name package quarantine): the method forms `(*rand.Rand).Intn`/`(*rand.Rand).IntN` (a `*Rand` needs `rand.New`, outside the modeled surface; a nil receiver dereferences in gc), every other member of the two packages, and `defer`/`go` of the function (refused by name, randintn.go). Rows: builtins/rand-intn/* (the membership row over Intn(5) with gc's draws inside, the n = 1 and n <= 0 controls with the exact texts, the recover payload-class control, the jitter shape); the raft twin's D-11 re-keyed onto this site (tools/raftsubject/derive.py).",
 	"float-bits":   "math.Float64bits / Float64frombits / Float32bits / Float32frombits as ONE machine expression op with a direction/width tag (wire `float-bits`, GoCore `Expr.floatBits`/`floatBitsApply`; frontend floatbits.go): a bit reinterpretation the LANGUAGE has no operation for (math's bodies are `*(*uint64)(unsafe.Pointer(&f))`) over a representation that IS the bit pattern — identity both ways, NaN payloads (quiet and signalling), signed zero and the infinities BIT-EXACT (the audit's admission condition; rows builtins/float-bits/*). ADMITTED [USER] 2026-09-04 (relayed: «add this as a primitive language operation? This sounds reasonable, do it»). Anchor: deps/go/src/math/unsafe.go:21-41 @ go1.26.5 (the four doc comments — Float32bits :21-24, Float32frombits :26-30, Float64bits :32-35, Float64frombits :37-41; a file:line citation because math is NOT source-through and the pinned-manifest godoc: grammar of gate G3 covers source-through packages only — the runtime-source rows' convention). ONE fail-closed arm, [AGENT] disclosed: `*bits` of the machine's CANONICAL NaN (0x7FF8000000000000 / 0x7FC00000) refuses by name — inventory R7 narrows every machine-PRODUCED NaN to that pattern while gc/amd64 realizes hardware payloads, so the observation would be the narrowing presenting as a wrong answer (row builtins/float-bits/canonical-nan-refused; R7's re-envelope obligation). Unblocks internal/strconv's deps.go casts for a later slice.",
 	"print-output": "print / println (spec#Bootstrapping: «formatting of arguments is implementation-specific») as the `print` machine STATEMENT (wire `print`, GoCore `Stmt.print`/`StmtOp.print`/`renderPrint`; frontend emitPrintStmt) with gc's runtime/print.go @ go1.26.5 format PINNED for bool (`true`/`false`), every integer kind (decimal, `-` for negatives; a defined type prints as its underlying kind) and string (bytes verbatim); println = operands joined by ` ` + `\n`, print = concatenation. The bytes are the machine's OUTPUT EVENT (`StepEvent.out`, pool layer; folded by the driver into `Readout.output` — design gate G-OUT RULED [USER]), the differential's new `output` observation field, byte-compared against gc's fd 2 (the harness's stderr split). G2 RULED [USER] 2026-09-03 as recommended (relayed). REFUSED by name, permanently: pointer/chan/map/func/slice/interface/unsafe.Pointer operands (gc prints ADDRESSES — ledger §5.1 item 3). REFUSED by name THIS SLICE ([AGENT], disclosed): float/complex operands (gc: internal/strconv.AppendFloat 'g' -1, the shortest-repr algorithm, go1.26 commit 9035f7ae) and the zero-operand spellings (no nullary plan, A8) — ledger FR-29; print during $pkginit (the sequential init driver has no event fold — runInitConfig refuses). Latitude inventory R17 (format pin) / R18 (concurrent-print interleaving = L1, membership lane).",
 }
