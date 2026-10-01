@@ -128,6 +128,10 @@ def innerVecs (s : Store) (ts : Array Thread) (i : Nat) :
              if appendApplyNoSpill ctx s ((v :: done).reverse) then some [[]]
              else none
          | _ => none)
+      -- Unit 5b: the `randIntn` apply's `intn` pick (bound `n`, read off the
+      -- operand VALUES, not the configuration's shape) is outside the
+      -- certified fragment (fail closed; the CLI enumerator carries such rows).
+      else if consumesRandIntn c then none
       -- Q-TRYLOCK: the TRY heads' `tryLock` pick is outside the certified
       -- fragment (fail closed; the CLI enumerator carries such rows).
       else if consumesTryLock c then none

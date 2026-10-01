@@ -189,6 +189,7 @@ def Stmt.names : Stmt → List VarId
   | .mapLookup a ok b i _ _ => a.names ++ ok.names ++ b.names ++ i.names
   | .typeAssert a ok e _ => a.names ++ ok.names ++ e.names
   | .appendSlice a _ s es => a.names ++ s.names ++ es.names
+  | .randIntn t n => t.toList.flatMap Assignee.names ++ n.names
   | .copySlice a d s => a.names ++ d.names ++ s.names
   | .callValue as e es => assigneeListNames as.toList ++ e.names ++ exprListNames es.toList
   | .deferCall e es | .goStmt e es => e.names ++ exprListNames es.toList

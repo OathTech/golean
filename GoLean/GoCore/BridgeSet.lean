@@ -86,6 +86,18 @@ row 116 re-pinned over the two-way check (`tableCovers && tableNamed && sigDisti
 resultKinds && recvFirst && bodyKinds`) with its three part equations; rows 126–132 ADDED — table ⊆
 tree, the kind lookup, the four kind lemmas, and the `unseqEnter` rule with its id-level entry
 premise (`unseqEntryCheck?`).
+
+RE-PIN 7 — window unit 5b, the native `Intn`-style pick site ([AGENT worker, lane core/intn-pick-0930],
+2026-09-30; [USER] Mike, item 2 of «The raft-proofs team's subject-delta note (2026-09-30) — RULED», relayed;
+design note `docs/2026-09-30_intn-pick-design.md`, D7): rows 1–132 BYTE-IDENTICAL (no pinned statement
+enumerates `ChoiceSite`, `Stmt` or `StmtOp` — the new constructors `ChoiceSite.intn`, `Stmt.randIntn`,
+`StmtOp.randIntn` widen the types without moving a row); rows 133–135 ADDED — the draw's apply EQUATION
+(`applyStmtOp_randIntn_eq`: the tape's `intn` pick at bound `n` is stored, the record is
+`PickRecord.ofPick .intn n.toNat pick`), the draw's STEP RULE derived from `stmtOpApply`
+(`Step_randIntn_draw`: every `i < n` is realized by the singleton tape, its label's picks = its replay
+record), and the pick-lifted plan at a popping bound (`applyStmtOp_plan_randIntn_draw`, the form the
+coverage proofs consume). The site records exactly like the others: `replay_coverage` (row 48),
+`stepFn_picks_none` / `_some` (rows 62–63) hold unchanged.
 -/
 
 namespace GoLean.GoCore.BridgeSet
@@ -962,5 +974,42 @@ example : ∀ {ctx : ProgramCtx} {g : UnseqGraph} {thenB : Stmt} {rest : List St
     Step ctx (.exec (.unseq g thenB) env (.seq rest env k)) s
       (.next (.unseqK g thenB g.initStatus [] env' .pick (.seq rest env' k))) s' ⟨[], [], []⟩ :=
   @GoLean.GoCore.Machine.Step.unseqEnter
+
+-- ---- RE-PIN 7 (window unit 5b, the `intn` pick site, 2026-09-30) ----
+
+-- 133. `MachineSound.lean` — the `[0, n)` draw's apply EQUATION: at the `randIntn` apply with an address
+-- target and bound `n ≥ 1`, the apply stores the tape's `intn` pick at bound `n` (an `int`) and returns the
+-- popped tape beside exactly the record `PickRecord.ofPick .intn n.toNat pick` (`[]` at `n = 1`, the no-pop
+-- instance; the one labelled pick otherwise)
+example : ∀ {ctx : ProgramCtx} {σ : Store} {tv : GoValue} {tloc : Loc} {n : Int} {ch : Choices},
+    valueAsLoc tv = .ok tloc → 1 ≤ n →
+    applyStmtOp ctx σ ch .randIntn 1 [tv, .int n .int]
+      = (Mem.store ctx σ tloc (.int (Choices.consumeAt .intn n.toNat ch).1 .int)).map
+          fun p => (p.1, (Choices.consumeAt .intn n.toNat ch).2,
+            PickRecord.ofPick .intn n.toNat (Choices.consumeAt .intn n.toNat ch).1, p.2) :=
+  @GoLean.GoCore.Machine.applyStmtOp_randIntn_eq
+
+-- 134. `MachineSound.lean` — the draw's STEP RULE, derived from `stmtOpApply` (the logic team's «one step
+-- rule»): for every `i < n` the singleton tape `[i]` takes the step storing `i` into the target, with the
+-- label `⟨tr, PickRecord.ofPick .intn n.toNat i, []⟩` — the relation admits every member of `[0, n)`
+example : ∀ {ctx : ProgramCtx} {σ : Store} {tv : GoValue} {tloc : Loc} {n : Int} {env : LocalEnv} {k : Cont},
+    valueAsLoc tv = .ok tloc → 1 ≤ n → ∀ {i : Nat}, i < n.toNat →
+    ∀ {σ' : Store} {tr : AccessTrace}, Mem.store ctx σ tloc (.int i .int) = .ok (σ', tr) →
+    Step ctx (.retV (.int n .int) (.stmtOpK .randIntn 1 [tv] [] env k)) σ (.next k) σ'
+      ⟨tr, PickRecord.ofPick .intn n.toNat i, []⟩ :=
+  @GoLean.GoCore.Machine.Step_randIntn_draw
+
+-- 135. `MachineSound.lean` — the pick-lifted plan at a POPPING bound (`intnBound? = some w`): the validate
+-- phase is a function of the `intn` pick alone beside the site's pop and its record, and never panics
+example : ∀ {ctx : ProgramCtx} {σ : Store} {nt : Nat} {vs : List GoValue} {w : Nat},
+    intnBound? vs = some w →
+    ∃ g : Nat → Except Stop (Commit (Store × AccessTrace)),
+      (∀ ch : Choices,
+        applyStmtOp.plan ctx σ ch .randIntn nt vs
+          = (g (Choices.consumeAt .intn w ch).1).map
+              (Commit.withStream (Choices.consumeAt .intn w ch).2
+                [⟨.intn, w, (Choices.consumeAt .intn w ch).1⟩]))
+      ∧ (∀ pick, NoPanic (g pick)) :=
+  @GoLean.GoCore.Machine.applyStmtOp_plan_randIntn_draw
 
 end GoLean.GoCore.BridgeSet

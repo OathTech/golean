@@ -135,6 +135,7 @@ def stmtIndices : Stmt → List TypeIdx
       exprIndices b ++ exprIndices i ++ tyIndices k ++ tyIndices v
   | .typeAssert a ok e t => assigneeIndices a ++ assigneeIndices ok ++ exprIndices e ++ tyIndices t
   | .appendSlice a t s es => assigneeIndices a ++ tyIndices t ++ exprIndices s ++ exprIndices es
+  | .randIntn t n => t.toList.flatMap assigneeIndices ++ exprIndices n
   | .copySlice a d s => assigneeIndices a ++ exprIndices d ++ exprIndices s
   | .callValue as e es => assigneesIndices as ++ exprIndices e ++ exprListIndices es.toList
   | .deferCall e es | .goStmt e es => exprIndices e ++ exprListIndices es.toList

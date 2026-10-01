@@ -337,21 +337,36 @@ theorem stepFn_picks_some {σ : Store} {c : Config} {ch₀ : Choices} {site : Ch
   case case97 =>
     rename_i v op nt done env k'
     simp only [seqConsumption, Config.applyPos] at hsc
-    obtain ⟨elem, rfl, rfl, hw⟩ := stmtConsult?_some hsc
-    obtain ⟨g, hg, hnp⟩ := applyStmtOp_plan_appendSlice_spill (nt := nt) hw
-    have h1 := appendSpill?_gt_one hw
-    rw [hg]
-    cases hgv : g (Choices.consumeAt .appendSpill b ch₀).1 with
-    | error e =>
-      cases_stop e
-      all_goals first
-        | (okp_norm; done)
-        | exact absurd hgv (hnp _ _)
-    | ok c =>
-      simp only [Except.map, toResult_ok, Bind.bind, Except.bind, deliverV_ok, runCommit_withStream]
-      intro a ha
-      cases hrc : runCommit c σ <;> simp_all [Functor.map, Except.map]
-      all_goals (subst_vars; simp [PickRecord.ofPick, show ¬ b ≤ 1 by omega])
+    -- the two consuming wide ops: the spilling append, and (unit 5b) the `[0, n)` draw
+    rcases stmtConsult?_some hsc with ⟨elem, rfl, rfl, hw⟩ | ⟨rfl, rfl, hw⟩
+    · obtain ⟨g, hg, hnp⟩ := applyStmtOp_plan_appendSlice_spill (nt := nt) hw
+      have h1 := appendSpill?_gt_one hw
+      rw [hg]
+      cases hgv : g (Choices.consumeAt .appendSpill b ch₀).1 with
+      | error e =>
+        cases_stop e
+        all_goals first
+          | (okp_norm; done)
+          | exact absurd hgv (hnp _ _)
+      | ok c =>
+        simp only [Except.map, toResult_ok, Bind.bind, Except.bind, deliverV_ok, runCommit_withStream]
+        intro a ha
+        cases hrc : runCommit c σ <;> simp_all [Functor.map, Except.map]
+        all_goals (subst_vars; simp [PickRecord.ofPick, show ¬ b ≤ 1 by omega])
+    · obtain ⟨g, hg, hnp⟩ := applyStmtOp_plan_randIntn_draw (nt := nt) hw
+      have h1 := intnBound?_gt_one hw
+      rw [hg]
+      cases hgv : g (Choices.consumeAt .intn b ch₀).1 with
+      | error e =>
+        cases_stop e
+        all_goals first
+          | (okp_norm; done)
+          | exact absurd hgv (hnp _ _)
+      | ok c =>
+        simp only [Except.map, toResult_ok, Bind.bind, Except.bind, deliverV_ok, runCommit_withStream]
+        intro a ha
+        cases hrc : runCommit c σ <;> simp_all [Functor.map, Except.map]
+        all_goals (subst_vars; simp [PickRecord.ofPick, show ¬ b ≤ 1 by omega])
   case case119 =>
     rename_i v clauses default? done env k'
     simp only [seqConsumption, Config.applyPos, selectConsult?] at hsc
@@ -532,12 +547,15 @@ theorem stepFn_consumption_some' {σ : Store} {c : Config} {ch₀ : Choices}
     exact stepFrameExit_consumption_some (.inr rfl) hsc h
   case case97 =>
     simp only [seqConsumption, Config.applyPos] at hsc
-    obtain ⟨elem, rfl, rfl, hw⟩ := stmtConsult?_some hsc
-    -- C1 S3: the post-consult tail is the validate phase's, panic-free for EVERY
-    -- target (`applyStmtOp_plan_appendSlice_spill`) — the root-target proviso
-    -- `hloc` is no longer needed here (kept in the statement for its callers).
-    obtain ⟨g, hg, hnp⟩ := applyStmtOp_plan_appendSlice_spill hw
-    exact stepFn_stmtOp_spill hg hnp h
+    -- the two consuming wide ops (`stmtConsult?_some`): the spilling append and
+    -- (unit 5b) the `[0, n)` draw; each plan is pick-lifted and `stepFn_stmtOp_pick`
+    -- closes both. C1 S3: the post-consult tail is the validate phase's,
+    -- panic-free for EVERY target — no root-target proviso is needed here.
+    rcases stmtConsult?_some hsc with ⟨elem, rfl, rfl, hw⟩ | ⟨rfl, rfl, hw⟩
+    · obtain ⟨g, hg, hnp⟩ := applyStmtOp_plan_appendSlice_spill hw
+      exact stepFn_stmtOp_pick hg hnp h
+    · obtain ⟨g, hg, hnp⟩ := applyStmtOp_plan_randIntn_draw hw
+      exact stepFn_stmtOp_pick hg hnp h
   case case119 =>
     rename_i v clauses default? done env k'
     simp only [seqConsumption, Config.applyPos, selectConsult?] at hsc

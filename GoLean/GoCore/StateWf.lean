@@ -292,6 +292,8 @@ def Stmt.locSup : Stmt → Nat
       max (max (Assignee.locSup t) (Assignee.locSup okT)) (Expr.locSup e)
   | .appendSlice t _ sl els =>
       max (Assignee.locSup t) (max (Expr.locSup sl) (Expr.locSup els))
+  | .randIntn (some t) n => max (Assignee.locSup t) (Expr.locSup n)
+  | .randIntn none n => Expr.locSup n
   | .copySlice t dst src =>
       max (Assignee.locSup t) (max (Expr.locSup dst) (Expr.locSup src))
   | .call targets _ args =>
@@ -5561,6 +5563,9 @@ theorem applyStmtOpCore_wf {σ : Store} {op : StmtOp}
   · -- appendSlice: dispatches through applyStmtOp
     simp only [throw, throwThe, MonadExceptOf.throw] at hplan
     cases hplan
+  · -- randIntn (unit 5b): dispatches through applyStmtOp
+    simp only [throw, throwThe, MonadExceptOf.throw] at hplan
+    cases hplan
 
 set_option maxHeartbeats 1600000 in
 theorem applyStmtOp_wf {σ : Store} {ch : Choices} {op : StmtOp} {nt : Nat}
@@ -5638,6 +5643,43 @@ theorem applyStmtOp_wf {σ : Store} {ch : Choices} {op : StmtOp} {nt : Nat}
         refine Mem.store_pres w1 (by omega) ?_ h
         show optLocSup (some base) ≤ σa.nextAddr
         exact w2
+    · simp at hplan
+  · -- the `[0, n)` draw (unit 5b): the consult, then ONE `int` store into the
+    -- validated target address (a loc-free value into a bounded loc), or — in
+    -- the discarded-result shape — no store at all
+    split at hplan
+    · rename_i tv n
+      simp only [goValueListSup] at hvs
+      simp only [bind_eq_ok] at hplan
+      obtain ⟨tloc, htloc, hplan⟩ := hplan
+      have htlocb : Loc.locSup tloc ≤ σ.nextAddr := by
+        have := valueAsLoc_locSup htloc
+        omega
+      split at hplan
+      · simp at hplan
+      · rcases hc : Choices.consumeAtE .intn n.toNat ch with ⟨pick, ch₁, ps₁⟩
+        rw [hc] at hplan
+        simp only [pure_eq_ok, Except.ok.injEq] at hplan
+        subst hplan
+        try dsimp only at h
+        simp only [Commit.withStream, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+        obtain ⟨⟨sp, trp⟩, ⟨⟨s₂, trT⟩, hst, rfl, rfl⟩, hσ, hch, htr⟩ := h
+        try dsimp only at hσ hch htr
+        subst hσ
+        exact Mem.store_pres hw htlocb (by simp [GoValue.locSup]) hst
+    · rename_i n
+      split at hplan
+      · simp at hplan
+      · rcases hc : Choices.consumeAtE .intn n.toNat ch with ⟨pick, ch₁, ps₁⟩
+        rw [hc] at hplan
+        simp only [pure_eq_ok, Except.ok.injEq] at hplan
+        subst hplan
+        try dsimp only at h
+        simp only [Commit.withStream, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+        obtain ⟨⟨sp, trp⟩, ⟨rfl, rfl⟩, hσ, hch, htr⟩ := h
+        try dsimp only at hσ hch htr
+        subst hσ
+        exact stmtOpPres_refl hw
     · simp at hplan
   · -- every other arm dispatches to applyStmtOpCore
     rename_i op' hne
@@ -5873,6 +5915,22 @@ theorem stmtPlan_locSup {stmt : Stmt} {op : StmtOp} {nt : Nat} {es : List Expr}
     obtain ⟨-, -, rfl⟩ := h
     simp only [Stmt.locSup, exprListSup, Nat.max_le]
     omega
+  case randIntn target n =>
+    -- unit 5b: the target's address (when there is one), then the bound
+    cases target with
+    | none =>
+      simp only [stmtPlan, Option.pure_def, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨-, -, rfl⟩ := h
+      simp only [Stmt.locSup, exprListSup, Nat.max_le]
+      omega
+    | some t =>
+      simp only [stmtPlan] at h
+      obtain ⟨te, hte, h⟩ := Option.bind_eq_some_iff.mp h
+      simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨-, -, rfl⟩ := h
+      have h1 := assigneeExpr_locSup hte
+      simp only [Stmt.locSup, exprListSup, Nat.max_le]
+      omega
   case appendSlice target elem sl els =>
     simp only [stmtPlan] at h
     obtain ⟨te, hte, h⟩ := Option.bind_eq_some_iff.mp h

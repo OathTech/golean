@@ -346,6 +346,21 @@ The sites and their consuming definitions:
                    `seqConsumption` (Machine.lean); the envelope statement
                    lives at `Stmt.unseq` (Syntax.lean). A DATA pick over
                    evaluation order, not a scheduling pick.
+* `intn`         — THE `[0, n)` DRAW (window unit 5b, 2026-09-30; [USER]
+                   Mike, item 2 of «The raft-proofs team's subject-delta note
+                   (2026-09-30) — RULED», relayed — a GENERAL native
+                   `Intn`-style pick site; design
+                   `docs/2026-09-30_intn-pick-design.md`): the one uniform
+                   draw `math/rand.Intn(n)` / `math/rand/v2.IntN(n)` make,
+                   `Stmt.randIntn`'s apply (`applyStmtOp.plan`'s `.randIntn`
+                   arm, Machine.lean; projection arm `stmtConsult?` in
+                   `seqConsumption`). Bound `n` EXACTLY (`n ≥ 1`; slot `v` is
+                   the value `v`); `n = 1` is a bound-1 consult that pops
+                   nothing; a bound `≤ 0` never reaches the apply for a decoded
+                   program (the lowering emits the callee's own `panic(string)`
+                   guard ahead of it) and is `stuck` by name if forged. The
+                   envelope statement lives at `Stmt.randIntn` (Syntax.lean).
+                   A DATA pick over a value, not a scheduling pick.
 
 The scheduling sites — what a future `Fair : Choices → Prop`
 quantifies over — are exactly
@@ -361,6 +376,7 @@ inductive ChoiceSite where
   | unseqPanic
   | repanicCollapse
   | unseqNext
+  | intn
   deriving Repr, DecidableEq
 
 /-- **The canonical member at slot 0** — one docstring row per site
@@ -401,6 +417,8 @@ def ChoiceSite.canonicalSlot0 : ChoiceSite → String
       "COLLAPSE (slot 0 = the abort's first line ends ` [recovered, repanicked]` — gc's line when the re-panicked value is the recovered interface box itself (`panic(r)`: identical eface bits, runtime/panic.go:715 at the pin), the member the corpus pinned at `panic-recover/repanic-same-value-abort`; slot 1 = ` [recovered]` — gc's first line when the equal value was RE-BOXED (`panic(r.(string))`, a runtime-computed string: a fresh `convTstring`/`convT64` allocation) and every go ≤ 1.24's only form); bound is 2 exactly at an abort whose head is recovered with an EQUAL successor payload (`repanicCollapseWidth`), 1 at every other abort (unequal adjacent payloads cannot share a box: ` [recovered]` is forced there, and an unrecovered head carries no suffix) — a bound-1 consult pops nothing, so every pre-existing abort consumes exactly as before"
   | .unseqNext =>
       "the LOWEST canonical rank among the READY occurrences (slot j = the j-th ready occurrence in declaration order — the `unseq` scheduler's pick, evaluation-order model v2.1 §3.5: the all-zero tape realizes the canonical order, today's ANF emission order; slots 1.. = the later-ranked ready occurrences; a singleton ready set consults at bound 1 and pops nothing — G-U; the bound is EXACTLY the number of ready occurrences, `UnseqGraph.ready`, so an ordinary sweep whose occurrences are forced by their edges never touches the stream)"
+  | .intn =>
+      "the value 0 (slot v = the value v of `[0, n)` — the `math/rand.Intn` / `math/rand/v2.IntN` draw as ONE pick, window unit 5b 2026-09-30; the empty/exhausted tape draws 0, the least member; bound is `n` EXACTLY, so the singleton tape `[v]` realizes every member; `n = 1` is a bound-1 consult and pops nothing — the only member is 0; `n ≤ 0` never consults: the lowering's guard raises the callee's `panic(string)` ahead of the apply, and a forged bound is `stuck` there. A DATA pick, not a scheduling pick)"
 
 -- (`site` is the census TAG: the rule no longer reads anything from it,
 -- and that is the point — the tag is for the trace and the theorems.)

@@ -110,6 +110,10 @@ def poolThreadOblivious (s : Store) (ts : Array Thread) (i : Nat) : Bool :=
        | .ok .cellPath => selectApplyDone ctx s c
        | _ => false)
     else if consumesAppendSlice c then false
+    -- Unit 5b: a `randIntn` apply draws the `intn` site at bound `n`; the
+    -- checker refuses it (fail closed, even at the bound-1 instance that pops
+    -- nothing) — the CLI enumerator carries such rows.
+    else if consumesRandIntn c then false
     -- Q-TRYLOCK: a TRY head's sync apply draws the `tryLock` site; the
     -- checker refuses it (fail closed, even at the held cell's bound 1)
     -- — the CLI enumerator's `stepNeeds` carries such rows.
@@ -408,6 +412,12 @@ theorem stepThread_oblivious {s : Store} {ts : Array Thread} {i : Nat}
           | false =>
           rw [hnapp] at hobl
           simp only [Bool.false_eq_true, reduceIte] at hobl
+          -- unit 5b: the `randIntn` apply is refused (`false`)
+          cases hnri : consumesRandIntn c with
+          | true => rw [hnri] at hobl; simp at hobl
+          | false =>
+          rw [hnri] at hobl
+          simp only [Bool.false_eq_true, reduceIte] at hobl
           cases hntl : consumesTryLock c with
           | true => rw [hntl] at hobl; simp at hobl
           | false =>
@@ -475,7 +485,7 @@ theorem stepThread_oblivious {s : Store} {ts : Array Thread} {i : Nat}
               simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
               obtain ⟨rfl, rfl, rfl, rfl⟩ := h
               obtain ⟨rfl, hall⟩ := stepFn_oblivious
-                (isMapIterNext_false_elim hnmi) hnapp hnsel hnnv hntl hnup hnn
+                (isMapIterNext_false_elim hnmi) hnapp hnri hnsel hnnv hntl hnup hnn
                 (by simp [consumesRepanicCollapse, hab]) hstep
               refine ⟨rfl, fun ch => ?_⟩
               unfold stepThread

@@ -1028,7 +1028,7 @@ design note `docs/2026-09-28_step-label.md`):
   made, in consultation order: the pool layer's own (`l1Sched`/`postOp`/
   `backEdge` at a boundary, `l2Arrival`, `l4Waiter`, the abort's
   `repanicCollapse`) FOLLOWED by the sequential step's label picks
-  (`mapIter`, `appendSpill`, `l2Entry`, `tryLock`, `nilValueMethodText`
+  (`mapIter`, `appendSpill`, `intn`, `l2Entry`, `tryLock`, `nilValueMethodText`
   — also at a spawn's child entry —, `unseqPanic`, `unseqNext`), taken
   FROM that label, never re-derived. The driver's `l5ExitWindow` draw is
   between steps and belongs to no step's label.

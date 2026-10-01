@@ -1251,6 +1251,14 @@ inductive StmtOp where
   | makeChan (elem : Ty) (hasCap : Bool)
   | mapAssign (keyTy valueTy : Ty)
   | appendSlice (elem : Ty)
+  /-- The `[0, n)` DRAW (`Stmt.randIntn`, window unit 5b — the envelope
+  statement is that constructor's docstring, Syntax.lean): the SECOND
+  stream-consuming wide op after the append spill. Its apply draws
+  `ChoiceSite.intn` at bound `n` (the last operand's value; `n ≥ 1`, the
+  lowering's guard ahead of it makes `n ≤ 0` a `stuck` refusal here) and
+  stores the pick, an `int`, into the target — or nowhere, in the
+  discarded-result shape (`nt = 0`). -/
+  | randIntn
   | copySlice
   | mapDelete (keyTy : Ty)
   | clearMap
@@ -1290,6 +1298,12 @@ def stmtPlan : Stmt → Option (StmtOp × Nat × List Expr)
   | .appendSlice target elem slice elems => do
       let te ← assigneeExpr target
       return (.appendSlice elem, 1, [te, slice, elems])
+  -- The `[0, n)` draw (unit 5b): the target's address first (when there is
+  -- one), then the bound; the discarded-result shape has no target operand.
+  | .randIntn (some target) n => do
+      let te ← assigneeExpr target
+      return (.randIntn, 1, [te, n])
+  | .randIntn none n => return (.randIntn, 0, [n])
   | .copySlice target dst src => do
       let te ← assigneeExpr target
       return (.copySlice, 1, [te, dst, src])
@@ -1643,6 +1657,8 @@ def applyStmtOpCore.plan (s : Store) (op : StmtOp)
       return fun s => return (s, [])
   | .appendSlice _ =>
       throw (.internal "applyStmtOpCore: appendSlice dispatches through applyStmtOp")
+  | .randIntn =>
+      throw (.internal "applyStmtOpCore: randIntn dispatches through applyStmtOp")
 
 @[inherit_doc applyStmtOpCore.plan]
 def applyStmtOpCore (s : Store) (op : StmtOp)
@@ -1781,6 +1797,36 @@ def applyStmtOp.plan (s : Store) (choices : Choices) (op : StmtOp) (_nt : Nat)
                 (.slice { base := some base, offset := 0, len := newLen, cap := newCap })
               return (s', trE ++ trO ++ trT)
       | _ => stuck "malformed appendSlice operands"
+  -- THE `[0, n)` DRAW (`Stmt.randIntn`, window unit 5b, 2026-09-30 — the
+  -- envelope statement is that constructor's docstring): ONE `intn` consult
+  -- at bound `n` EXACTLY, the pick stored into the target as an `int` (or
+  -- discarded, `nt = 0`); `n = 1` is a bound-1 consult and pops nothing
+  -- (`Choices.consumeAtE_le_one`). A bound `≤ 0` is `stuck` BY NAME: for a
+  -- decoded program the lowering's guard (`if n <= 0 { panic("invalid
+  -- argument to Intn") }`, the callee's own text) has already raised the
+  -- language-level `panic(string)` — reaching here means the guard was
+  -- bypassed (a forged wire), and a `.panic` from this arm would be
+  -- delivered as a `runtime.Error` box, the WRONG payload class. The consult
+  -- happens in the VALIDATE phase (before the seam, like the spill's); the
+  -- commit is the one header store and consumes nothing.
+  | .randIntn =>
+      match vs with
+      | [tv, .int n .int] => do
+          let tloc ← valueAsLoc tv
+          if n < 1 then
+            stuck s!"rand-intn: bound {n} ≤ 0 reached the draw (the lowering's guard was bypassed — forged wire)"
+          else
+            let (pick, choices, ps) := Choices.consumeAtE .intn n.toNat choices
+            return Commit.withStream choices ps fun s => do
+              let (s', trT) ← Mem.store ctx s tloc (.int pick .int)
+              return (s', trT)
+      | [.int n .int] =>
+          if n < 1 then
+            stuck s!"rand-intn: bound {n} ≤ 0 reached the draw (the lowering's guard was bypassed — forged wire)"
+          else
+            let (_, choices, ps) := Choices.consumeAtE .intn n.toNat choices
+            return Commit.withStream choices ps fun s => return (s, [])
+      | _ => stuck "malformed rand-intn operands (expected [target address,] an int bound)"
   | op => do
       let c ← applyStmtOpCore.plan ctx s op vs
       return Commit.withStream choices [] c
@@ -5625,11 +5671,29 @@ def mapIterConsult? (σ : Store) (keyTy valTy : Ty) (base : Option Loc)
         if w ≤ 1 then none else some (.mapIter, w)
   | .error _ => none
 
-/-- The wide-statement apply's consult: only a SPILLING `appendSlice`
-draws (`appendSpill?`). -/
+/-- The `intn` site's consult WIDTH at a `randIntn` apply (`Stmt.randIntn`,
+unit 5b), mirroring the arm's own order of checks: the bound `n` — the `int`
+LAST operand, in either operand shape (`[target address, n]` or the
+discarded-result `[n]`) — when the arm reaches the consult and it pops
+(`n ≥ 2`); `none` at `n = 1` (a bound-1 consult, no pop — G-U), at `n ≤ 0`
+(the arm refuses BEFORE any consult), on a target that is not an address
+(`valueAsLoc` fails ahead of the consult — the nil target's panic, or a
+`stuck`), and on a malformed shape (`stuck` at the arm). -/
+def intnBound? (vs : List GoValue) : Option Nat :=
+  match vs with
+  | [tv, .int n .int] =>
+      match valueAsLoc tv with
+      | .ok _ => if 2 ≤ n then some n.toNat else none
+      | .error _ => none
+  | [.int n .int] => if 2 ≤ n then some n.toNat else none
+  | _ => none
+
+/-- The wide-statement apply's consult: a SPILLING `appendSlice` draws
+(`appendSpill?`), and the `[0, n)` draw draws at `n ≥ 2` (`intnBound?`). -/
 def stmtConsult? (σ : Store) (op : StmtOp) (vs : List GoValue) : Option (ChoiceSite × Nat) :=
   match op with
   | .appendSlice elem => (appendSpill? ctx σ elem vs).map (.appendSpill, ·)
+  | .randIntn => (intnBound? vs).map (.intn, ·)
   | _ => none
 
 /-- The select apply's consult: the L2 pick at a multi-ready analysis
@@ -5709,9 +5773,10 @@ def consumesRepanicCollapse (c : Config) : Bool :=
 
 /-- **The sequential consumption projection**: the site and bound the next
 `stepFn` step draws — `some` exactly when the consult POPS (a bound-≤-1
-consult is `none` at every site — the uniform rule, G-U). Eight sites, one
+consult is `none` at every site — the uniform rule, G-U). Nine sites, one
 consult function each: `mapIter` at a live range frame, `appendSpill` at
-a spilling append, `l2Entry` at a multi-ready select, `tryLock` at an
+a spilling append, `intn` at a `randIntn` apply with bound `n ≥ 2` (unit 5b;
+`n = 1` pops nothing), `l2Entry` at a multi-ready select, `tryLock` at an
 acquirable TRY head, `nilValueMethodText` at a panicking frame entry in
 the wrapper family, `unseqPanic` at a panic that reached an
 unsequenced-operand probe frame (bound 2, constant), `repanicCollapse` at

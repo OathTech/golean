@@ -47,6 +47,16 @@ def requiredModules : List Name := [
 /-- Required core theorems (the `semantic interface` audit's CORE exports, plus the
 re-homed regressions). Each must exist as a theorem. -/
 def exports : List Name := [
+    -- window unit 5b, the `intn` pick site (2026-09-30; design docs/2026-09-30_intn-pick-design.md D7):
+    -- the draw's apply equation, its derived step rule, the pick-lifted / oblivious plans, the
+    -- generalized wide-op pick lemma, the two-way consult characterization, and the int-store
+    -- class congruence behind the ∀-streams kit; BridgeSet rows 133–135
+    ``GoLean.GoCore.Machine.applyStmtOp_randIntn_eq, ``GoLean.GoCore.Machine.Step_randIntn_draw,
+    ``GoLean.GoCore.Machine.applyStmtOp_plan_randIntn_draw,
+    ``GoLean.GoCore.Machine.applyStmtOp_plan_randIntn_nodraw,
+    ``GoLean.GoCore.Machine.stepFn_stmtOp_pick, ``GoLean.GoCore.Machine.stmtConsult?_some,
+    ``GoLean.GoCore.Machine.intnBound?_some, ``GoLean.GoCore.Machine.intnBound?_gt_one,
+    ``GoLean.GoCore.Machine.Mem.store_int_congr, ``GoLean.GoCore.Machine.applyStmtOp_randIntn_congr,
     -- B6, numeric locals (2026-09-30): the name-table interface (the logic team's request 3)
     ``GoLean.GoCore.Func.localsOk_covers, ``GoLean.GoCore.Func.localsOk_sigDistinct,
     ``GoLean.GoCore.Func.localsOk_named, ``GoLean.GoCore.Func.localsOk_argKind,

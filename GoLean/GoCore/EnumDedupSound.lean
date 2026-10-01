@@ -336,6 +336,12 @@ theorem stepThread_total_covered {s : Store} {ts : Array Thread}
               | false =>
                 rw [hnapp] at hiv
                 simp only [Bool.false_eq_true, reduceIte] at hiv
+                -- Unit 5b: the `randIntn` apply is refused (`none`).
+                cases hnri : consumesRandIntn c with
+                | true => rw [hnri] at hiv; simp at hiv
+                | false =>
+                rw [hnri] at hiv
+                simp only [Bool.false_eq_true, reduceIte] at hiv
                 -- Q-TRYLOCK: the TRY heads' apply is refused (`none`).
                 cases hntl : consumesTryLock c with
                 | true => rw [hntl] at hiv; simp at hiv

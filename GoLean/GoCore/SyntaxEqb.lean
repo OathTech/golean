@@ -657,6 +657,11 @@ def Stmt.eqbF : Nat → Stmt → Stmt → Bool
         Expr.eqbF f b1 b2 && Ty.eqb e1 e2
     | .sortSlice b1 e1, .sortSlice b2 e2 =>
         Expr.eqbF f b1 b2 && Ty.eqb e1 e2
+    | .randIntn t1 n1, .randIntn t2 n2 =>
+        (match t1, t2 with
+         | some a1, some a2 => Assignee.eqbF f a1 a2
+         | none, none => true
+         | _, _ => false) && Expr.eqbF f n1 n2
     | .mapLookup t1 o1 b1 i1 k1 v1, .mapLookup t2 o2 b2 i2 k2 v2 =>
         Assignee.eqbF f t1 t2 && Assignee.eqbF f o1 o2 && Expr.eqbF f b1 b2
           && Expr.eqbF f i1 i2 && Ty.eqb k1 k2 && Ty.eqb v1 v2
@@ -771,6 +776,12 @@ theorem Stmt.eqbF_sound : ∀ f (a b : Stmt), Stmt.eqbF f a b = true → a = b :
     case sortSlice.sortSlice b1 e1 b2 e2 =>
       obtain ⟨h1, h2⟩ := andSplit2 h
       cases Expr.eqbF_sound _ _ _ h1; cases Ty.eqb_sound h2; rfl
+    case randIntn.randIntn t1 n1 t2 n2 =>
+      obtain ⟨h1, h2⟩ := andSplit2 h
+      cases Expr.eqbF_sound _ _ _ h2
+      cases t1 <;> cases t2 <;> simp only [Bool.false_eq_true] at h1
+      · rfl
+      · cases Assignee.eqbF_sound _ _ _ h1; rfl
     case mapLookup.mapLookup t1 o1 b1 i1 k1 v1 t2 o2 b2 i2 k2 v2 =>
       obtain ⟨h1, h2, h3, h4, h5, h6⟩ := andSplit6 h
       cases Assignee.eqbF_sound _ _ _ h1; cases Assignee.eqbF_sound _ _ _ h2

@@ -866,6 +866,8 @@ theorem applyStmtOp_commit_noPanic (s : Store) (ch : Choices) (op : StmtOp) (nt 
   rw [applyStmtOp.plan.eq_def]
   split
   · plan_no_panic
+  · -- the `[0, n)` draw (unit 5b): the consult, then one `int` store or nothing
+    plan_no_panic
   · -- every other head: the core's commit, lifted beside the stream
     refine PlanNoPanic.bind fun c hc => PlanNoPanic.pure fun s' => ?_
     unfold Commit.withStream
@@ -1075,11 +1077,12 @@ theorem enterFramePickV_of_nopanic {s : Store} {fid : FuncId} {args : List GoVal
 
 /-- Every non-append head's plan is the core's plan lifted beside the stream. -/
 theorem applyStmtOp_plan_eq_core {σ : Store} {ch : Choices} {op : StmtOp} {nt : Nat}
-    {vs : List GoValue} (hop : ∀ e, op ≠ .appendSlice e) :
+    {vs : List GoValue} (hop : ∀ e, op ≠ .appendSlice e) (hri : op ≠ .randIntn) :
     applyStmtOp.plan ctx σ ch op nt vs = (applyStmtOpCore.plan ctx σ op vs).map (Commit.withStream ch []) := by
   cases op <;>
     first
     | exact absurd rfl (hop _)
+    | exact absurd rfl hri
     | (simp only [applyStmtOp.plan, Bind.bind, Except.bind, Except.map, pure, Except.pure]
        try (cases applyStmtOpCore.plan ctx σ _ vs <;> rfl))
 
@@ -2737,13 +2740,14 @@ since the `applyStmtOpCore` refactor. -/
 theorem applyStmtOp_ok_any_ch_core {σ : Store} {ch : Choices}
     {op : StmtOp} {nt : Nat} {vs : List GoValue} {σ' : Store}
     {ch' : Choices} {ps : List PickRecord} {tr : AccessTrace} (hop : ∀ elem, op ≠ .appendSlice elem)
+    (hri : op ≠ .randIntn)
     (h : applyStmtOp ctx σ ch op nt vs = .ok (σ', ch', ps, tr)) :
     ∀ ch₂ : Choices, applyStmtOp ctx σ ch₂ op nt vs = .ok (σ', ch₂, ps, tr) := by
   intro ch₂
   -- C1 S3: the non-append plan is the core's plan beside the stream; the
   -- commit runs on `σ` under either stream.
   unfold applyStmtOp at h ⊢
-  rw [applyStmtOp_plan_eq_core hop] at h ⊢
+  rw [applyStmtOp_plan_eq_core hop hri] at h ⊢
   cases hcp : applyStmtOpCore.plan ctx σ op vs with
   | error e => rw [hcp] at h; simp [Except.map, Bind.bind, Except.bind] at h
   | ok c =>
@@ -3512,6 +3516,118 @@ theorem Mem.store_congr {σ₁ σ₂ : Store} {l : Loc} {v w : GoValue}
   simp only [Mem.store]
   exact exceptCong.bind_congr (storeLoc_congr hl hcc) fun _ _ _ => trivial
 
+/-! #### Outcome-class congruence for two `int`s of ONE kind (window unit 5b: the draw's store)
+
+The `[0, n)` draw (`Stmt.randIntn`) stores a DIFFERENT `int` under different tapes; the
+∀-streams kit needs the store's outcome CLASS to be pick-independent. `capCong` relates a
+non-structural value only to itself, so this is the same chain as the spill's
+(`writeAt_congr` / `storeLoc_congr` / `Mem.store_congr`) restated for the relation «two
+`int`s of one kind»: normalization at a type decides by the value's CONSTRUCTOR and kind —
+the int arm wraps both (`.ok`), every other arm refuses both (`.stuck`) or passes both
+through — never by the magnitude. -/
+
+/-- Type-layer normalization treats two `int`s of one kind alike in class. -/
+theorem normalizeValueForTyTy_int_congr {f : TypeIdx → GoValue → Except Stop GoValue}
+    {a b : Int} {k : IntKind}
+    (hf : ∀ i, exceptCong (fun _ _ : GoValue => True) (f i (.int a k)) (f i (.int b k))) :
+    ∀ ty : Ty, exceptCong (fun _ _ : GoValue => True)
+      (normalizeValueForTyTy f ty (.int a k)) (normalizeValueForTyTy f ty (.int b k)) := by
+  intro ty
+  cases ty <;>
+    first
+    | exact hf _
+    | (simp only [normalizeValueForTyTy]; first | trivial | rfl)
+    | (simp [normalizeValueForTyTy, exceptCong, Stop.isPanic])
+
+set_option maxHeartbeats 1600000 in
+/-- Index-layer normalization, the same, by induction on the bound. -/
+theorem normalizeValueForTyAt_int_congr (types : TypeEnv) {a b : Int} {k : IntKind} :
+    ∀ (bound : Nat) (i : TypeIdx), exceptCong (fun _ _ : GoValue => True)
+      (normalizeValueForTyAt types bound i (.int a k))
+      (normalizeValueForTyAt types bound i (.int b k)) := by
+  intro bound
+  induction bound with
+  | zero =>
+    intro i
+    simp [normalizeValueForTyAt, typeIndexExhausted, exceptCong, Stop.isPanic]
+  | succ n ih =>
+    intro i
+    simp only [normalizeValueForTyAt]
+    cases hlook : types[i]? with
+    | none => exact rfl
+    | some e =>
+      obtain ⟨name, td⟩ := e
+      cases td with
+      | defined target => exact normalizeValueForTyTy_int_congr ih target
+      | opaqueDecl _ => exact rfl
+      | interfaceDef _ => exact rfl
+      | struct fields =>
+        first
+        | (simp only [normalizeStructValueWith]; first | trivial | rfl)
+        | (simp [normalizeStructValueWith, exceptCong, Stop.isPanic])
+
+/-- The path write's class congruence for two `int`s of one kind (`writeAt_congr`'s twin:
+the value descends the path unchanged and only the leaf normalization sees it). -/
+theorem writeAt_int_congr {a b : Int} {k : IntKind} :
+    ∀ {path : List PathStep} {bnd : Nat} {ty : Ty} {root : GoValue},
+      exceptCong (fun _ _ : GoValue => True)
+        (writeAt ctx bnd ty root path (.int a k)) (writeAt ctx bnd ty root path (.int b k)) := by
+  intro path
+  induction path with
+  | nil =>
+    intro bnd ty root
+    simp only [writeAt]
+    exact normalizeValueForTyTy_int_congr (normalizeValueForTyAt_int_congr _ _) ty
+  | cons step rest ih =>
+    intro bnd ty root
+    cases step with
+    | field tid f =>
+      cases root with
+      | struct actual fields =>
+        simp only [writeAt]
+        refine exceptCong.ite_congr (fun _ => rfl) fun _ => ?_
+        cases fieldIdx? fields f with
+        | none => exact rfl
+        | some j =>
+          refine exceptCong.bind_congr (R := Eq) (exceptCong.self fun _ => rfl)
+            fun p q hpq => ?_
+          subst hpq
+          obtain ⟨fty, b'⟩ := p
+          refine exceptCong.bind_congr (Array.modifyM_congr fun x => ?_) fun _ _ _ => trivial
+          exact exceptCong.bind_congr ih fun _ _ _ => trivial
+      | _ => simp only [writeAt]; split <;> exact rfl
+    | index i =>
+      cases root with
+      | array values =>
+        simp only [writeAt]
+        refine exceptCong.bind_congr (R := Eq) (exceptCong.self fun _ => rfl)
+          fun j j' hj => ?_
+        subst hj
+        refine exceptCong.bind_congr (R := Eq) (exceptCong.self fun _ => rfl)
+          fun p q hpq => ?_
+        subst hpq
+        obtain ⟨ety, b'⟩ := p
+        refine exceptCong.bind_congr (Array.modifyM_congr fun x => ih) fun _ _ _ => trivial
+      | _ => simp only [writeAt]; split <;> exact rfl
+
+/-- `storeLoc`'s class congruence for two `int`s of one kind at the same store and loc. -/
+theorem storeLoc_int_congr {σ : Store} {l : Loc} {a b : Int} {k : IntKind} :
+    exceptCong (fun _ _ : Store => True) (storeLoc ctx σ l (.int a k)) (storeLoc ctx σ l (.int b k)) := by
+  simp only [storeLoc]
+  refine Store.updateCell_congr rfl fun c => ?_
+  cases c with
+  | value ty root => exact exceptCong.map_congr writeAt_int_congr fun _ _ _ => trivial
+  | mapPayload _ _ => cases (Loc.rootPath l).2 <;> exact rfl
+  | chanPayload _ _ _ => cases (Loc.rootPath l).2 <;> exact rfl
+
+/-- `Mem.store`'s class congruence for two `int`s of one kind: the draw's store succeeds,
+panics or refuses TOGETHER for every pick. -/
+theorem Mem.store_int_congr {σ : Store} {l : Loc} {a b : Int} {k : IntKind} :
+    exceptCong (fun _ _ : Store × AccessTrace => True)
+      (Mem.store ctx σ l (.int a k)) (Mem.store ctx σ l (.int b k)) := by
+  simp only [Mem.store]
+  exact exceptCong.bind_congr storeLoc_int_congr fun _ _ _ => trivial
+
 /-! #### Loop-shape facts for the spill path -/
 
 /-- A loop whose every successful step yields a one-element push grows
@@ -4219,6 +4335,47 @@ theorem applyStmtOp_appendSlice_congr {σ : Store} {elem : Ty} {nt : Nat}
           rw [Heap.lookup_push_ne hkey, Heap.lookup_push_ne hkey]
         · exact ⟨rfl, rfl, rfl⟩
 
+/-- The `[0, n)` draw's outcome class is choice-independent (unit 5b): the target check and
+the bound test precede the consult and see no stream; after it, the ONLY pick-dependent
+thing is the `int` stored, and `Mem.store_int_congr` makes its class pick-independent. -/
+theorem applyStmtOp_randIntn_congr {σ : Store} {nt : Nat} {vs : List GoValue}
+    (ch₁ ch₂ : Choices) :
+    exceptCong (fun _ _ : Store × Choices × List PickRecord × AccessTrace => True)
+      (applyStmtOp ctx σ ch₁ .randIntn nt vs) (applyStmtOp ctx σ ch₂ .randIntn nt vs) := by
+  unfold applyStmtOp applyStmtOp.plan
+  dsimp only
+  split
+  · rename_i tv n
+    cases htl : valueAsLoc tv with
+    | error e => simp only [Bind.bind, Except.bind]; exact rfl
+    | ok tloc =>
+      by_cases hlt : n < 1
+      · simp only [if_pos hlt, stuck, throw, throwThe, MonadExceptOf.throw, Bind.bind, Except.bind]
+        exact rfl
+      · simp only [if_neg hlt, Choices.consumeAtE_eq]
+        rcases hc₁ : Choices.consumeAt .intn n.toNat ch₁ with ⟨p₁, r₁⟩
+        rcases hc₂ : Choices.consumeAt .intn n.toNat ch₂ with ⟨p₂, r₂⟩
+        -- the only pick-dependent thing left is the stored `int`; its store's
+        -- outcome class is pick-independent (`Mem.store_int_congr`)
+        have hcong := Mem.store_int_congr (ctx := ctx) (σ := σ) (l := tloc)
+          (a := (p₁ : Int)) (b := (p₂ : Int)) (k := .int)
+        simp only [Bind.bind, Except.bind, pure, Except.pure, Commit.withStream]
+        cases h1 : Mem.store ctx σ tloc (.int (p₁ : Int) .int) <;>
+          cases h2 : Mem.store ctx σ tloc (.int (p₂ : Int) .int) <;>
+          simp only [h1, h2, exceptCong] at hcong ⊢ <;>
+          first | trivial | exact hcong | exact hcong.elim
+  · rename_i n
+    by_cases hlt : n < 1
+    · simp only [if_pos hlt, stuck, throw, throwThe, MonadExceptOf.throw, Bind.bind, Except.bind]
+      exact rfl
+    · simp only [if_neg hlt, Choices.consumeAtE_eq]
+      rcases hc₁ : Choices.consumeAt .intn n.toNat ch₁ with ⟨p₁, r₁⟩
+      rcases hc₂ : Choices.consumeAt .intn n.toNat ch₂ with ⟨p₂, r₂⟩
+      simp only [Bind.bind, Except.bind, pure, Except.pure, Commit.withStream]
+      trivial
+  · simp only [stuck, throw, throwThe, MonadExceptOf.throw, Bind.bind, Except.bind]
+    exact rfl
+
 /-- The full wide-op table's outcome class is choice-independent given
 bounded operands: everything but appendSlice is choices-free by
 construction, and appendSlice is the lemma above (which needs only the
@@ -4231,12 +4388,13 @@ theorem applyStmtOp_congr_any_ch {σ : Store} {op : StmtOp} {nt : Nat}
       (applyStmtOp ctx σ ch₁ op nt vs) (applyStmtOp ctx σ ch₂ op nt vs) := by
   cases op
   case appendSlice elem => exact applyStmtOp_appendSlice_congr hb ch₁ ch₂
+  case randIntn => exact applyStmtOp_randIntn_congr ch₁ ch₂
   -- C1 S3: every other head is the core's plan beside either stream; the
   -- commit runs on `σ` under both.
   all_goals
     (unfold applyStmtOp
-     rw [applyStmtOp_plan_eq_core (by intro e h; cases h),
-       applyStmtOp_plan_eq_core (by intro e h; cases h)]
+     rw [applyStmtOp_plan_eq_core (by intro e h; cases h) (by intro h; cases h),
+       applyStmtOp_plan_eq_core (by intro e h; cases h) (by intro h; cases h)]
      cases applyStmtOpCore.plan ctx σ _ vs with
      | error e => exact rfl
      | ok c =>
@@ -4648,11 +4806,11 @@ theorem applySelect_ok_or_panic_any_ch {σ : Store}
 the result is the core's, with the stream threaded through untouched —
 on success AND on error. -/
 theorem applyStmtOp_eq_core {σ : Store} {ch : Choices} {op : StmtOp}
-    {nt : Nat} {vs : List GoValue} (hop : ∀ e, op ≠ .appendSlice e) :
+    {nt : Nat} {vs : List GoValue} (hop : ∀ e, op ≠ .appendSlice e) (hri : op ≠ .randIntn) :
     applyStmtOp ctx σ ch op nt vs
       = (fun p => (p.1, ch, [], p.2)) <$> applyStmtOpCore ctx σ op vs := by
   unfold applyStmtOp applyStmtOpCore
-  rw [applyStmtOp_plan_eq_core hop]
+  rw [applyStmtOp_plan_eq_core hop hri]
   cases applyStmtOpCore.plan ctx σ op vs with
   | error e => rfl
   | ok c =>
@@ -5047,6 +5205,35 @@ def consumesAppendSlice : Config → Bool
       | _ => false
   | _ => false
 
+/-- Is this configuration about to dispatch `applyStmtOp` with the `randIntn`
+op — the `[0, n)` draw (`Stmt.randIntn`, window unit 5b), the SECOND
+stream-consuming wide op? Conservative, like `consumesAppendSlice`: flags
+every `randIntn` apply, including the bound-1 one that pops nothing — the
+obliviousness checkers fail closed there rather than reading the bound; the
+certified dedup engine refuses it too (`innerVecs`) and the CLI enumerator
+carries such rows. -/
+def consumesRandIntn : Config → Bool
+  | .retV _ (.stmtOpK op _ _ [] _ _) =>
+      match op with
+      | .randIntn => true
+      | _ => false
+  | .exec stmt _ _ =>
+      match stmtPlan stmt with
+      | some (op, _, []) =>
+          match op with
+          | .randIntn => true
+          | _ => false
+      | _ => false
+  | _ => false
+
+theorem consumesRandIntn_stmtOpK {v : GoValue} {op : StmtOp} {nt : Nat}
+    {done : List GoValue} {env : LocalEnv} {k : Cont}
+    (h : consumesRandIntn (.retV v (.stmtOpK op nt done [] env k)) = false) :
+    op ≠ .randIntn := by
+  intro he
+  subst he
+  simp [consumesRandIntn] at h
+
 /-- Is this configuration the select APPLY position (whose
 `applySelect` may consume the L2 clause pick — slice 4)? Conservative,
 like `consumesAppendSlice`: flags every select apply, including the
@@ -5094,8 +5281,9 @@ def allStreamsOk : Nat → Store → Config → Bool
                   | .ok (c', σ', _, _) => allStreamsOk fuel σ' c'
                   | .error _ => false
       | c =>
-          if consumesAppendSlice c || consumesSelect c || consumesNilValueMethod ctx c || consumesTryLock c
-              || consumesUnseqPanic c || consumesUnseqNext c || consumesRepanicCollapse c then false
+          if consumesAppendSlice c || consumesRandIntn c || consumesSelect c || consumesNilValueMethod ctx c
+              || consumesTryLock c || consumesUnseqPanic c || consumesUnseqNext c
+              || consumesRepanicCollapse c then false
           else
             match stepFn ctx σ c [0] with
             | .ok (c', σ', _, _) => allStreamsOk fuel σ' c'
@@ -5398,21 +5586,173 @@ theorem applyStmtOp_plan_appendSlice_spill {σ : Store} {elem : Ty} {nt : Nat}
       cases buildAppendBackingValue ctx elem oldValues elemValues _ <;> rfl
     · exact NoPanic.bind (buildAppendBackingValue_noPanic _ _ _ _) fun _ => NoPanic.pure _
 
+/-! ### The `[0, n)` draw's stream lemmas (`Stmt.randIntn`, window unit 5b, 2026-09-30) -/
+
+/-- Unpacking the draw's consult width: a `some w` is one of the two operand shapes
+with an `int` bound `n ≥ 2` and `w = n.toNat` — and, in the target shape, a target
+that IS an address (the arm's `valueAsLoc` succeeds ahead of the consult). -/
+theorem intnBound?_some {vs : List GoValue} {w : Nat} (h : intnBound? vs = some w) :
+    (∃ tv n tloc, vs = [tv, .int n .int] ∧ valueAsLoc tv = .ok tloc ∧ 2 ≤ n ∧ w = n.toNat)
+      ∨ (∃ n : Int, vs = [.int n .int] ∧ 2 ≤ n ∧ w = n.toNat) := by
+  unfold intnBound? at h
+  split at h
+  · rename_i tv n
+    cases htl : valueAsLoc tv with
+    | error e => simp only [htl] at h; cases h
+    | ok tloc =>
+      simp only [htl] at h
+      by_cases h2 : 2 ≤ n
+      · rw [if_pos h2] at h
+        exact .inl ⟨tv, n, tloc, rfl, htl, h2, (Option.some.inj h).symm⟩
+      · rw [if_neg h2] at h; cases h
+  · rename_i n
+    by_cases h2 : 2 ≤ n
+    · rw [if_pos h2] at h
+      exact .inr ⟨n, rfl, h2, (Option.some.inj h).symm⟩
+    · rw [if_neg h2] at h; cases h
+  · cases h
+
+/-- The draw's consult width is a genuine pop (`≥ 2`). -/
+theorem intnBound?_gt_one {vs : List GoValue} {w : Nat} (h : intnBound? vs = some w) : 1 < w := by
+  rcases intnBound?_some h with ⟨_, n, _, -, -, h2, rfl⟩ | ⟨n, -, h2, rfl⟩ <;> omega
+
+/-- The `[0, n)` draw at a NON-popping instance (`intnBound? = none`: a malformed
+operand shape, a target that is not an address, a forged bound `≤ 0`, or the bound
+`1`) is stream-oblivious — the refusal or panic ahead of the consult, or the bound-1
+consult that pops nothing and stores 0. -/
+theorem applyStmtOp_plan_randIntn_nodraw {σ : Store} {nt : Nat} {vs : List GoValue}
+    (hw : intnBound? vs = none) :
+    ∃ r : Except Stop (Commit (Store × AccessTrace)), ∀ ch : Choices,
+      applyStmtOp.plan ctx σ ch .randIntn nt vs = r.map (Commit.withStream ch []) := by
+  unfold applyStmtOp.plan
+  dsimp only
+  split
+  · rename_i tv n
+    simp only [intnBound?] at hw
+    cases htl : valueAsLoc tv with
+    | error e => exact ⟨.error e, fun _ => rfl⟩
+    | ok tloc =>
+      simp only [htl] at hw
+      by_cases hlt : n < 1
+      · refine ⟨.error (.stuck s!"rand-intn: bound {n} ≤ 0 reached the draw (the lowering's guard was bypassed — forged wire)"),
+          fun ch => ?_⟩
+        simp only [except_bind_ok, if_pos hlt]
+        rfl
+      · have hn2 : ¬ 2 ≤ n := by
+          intro h2; rw [if_pos h2] at hw; cases hw
+        have hn1 : n.toNat ≤ 1 := by omega
+        refine ⟨.ok (fun s => do
+            let (s', trT) ← Mem.store ctx s tloc (.int 0 .int)
+            return (s', trT)), fun ch => ?_⟩
+        simp only [except_bind_ok, if_neg hlt, Choices.consumeAtE_le_one hn1]
+        rfl
+  · rename_i n
+    simp only [intnBound?] at hw
+    by_cases hlt : n < 1
+    · refine ⟨.error (.stuck s!"rand-intn: bound {n} ≤ 0 reached the draw (the lowering's guard was bypassed — forged wire)"),
+        fun ch => ?_⟩
+      simp only [if_pos hlt]
+      rfl
+    · have hn2 : ¬ 2 ≤ n := by
+        intro h2; rw [if_pos h2] at hw; cases hw
+      have hn1 : n.toNat ≤ 1 := by omega
+      refine ⟨.ok (fun s => return (s, [])), fun ch => ?_⟩
+      simp only [if_neg hlt, Choices.consumeAtE_le_one hn1]
+      rfl
+  · exact ⟨.error (.stuck "malformed rand-intn operands (expected [target address,] an int bound)"),
+      fun _ => rfl⟩
+
+/-- **The draw's pop** (the twin of `applyStmtOp_plan_appendSlice_spill`): at
+`intnBound? = some w` the plan reaches the consult and is a function `g` of the `intn`
+pick alone, lifted beside the site's pop at bound `w` — and `g` never raises a
+recoverable panic (its commit is one `int` store into an address that
+`valueAsLoc` already validated, or nothing). -/
+theorem applyStmtOp_plan_randIntn_draw {σ : Store} {nt : Nat} {vs : List GoValue} {w : Nat}
+    (hw : intnBound? vs = some w) :
+    ∃ g : Nat → Except Stop (Commit (Store × AccessTrace)),
+      (∀ ch : Choices,
+        applyStmtOp.plan ctx σ ch .randIntn nt vs
+          = (g (Choices.consumeAt .intn w ch).1).map
+              (Commit.withStream (Choices.consumeAt .intn w ch).2
+                [⟨.intn, w, (Choices.consumeAt .intn w ch).1⟩]))
+      ∧ (∀ pick, NoPanic (g pick)) := by
+  have hw1 := intnBound?_gt_one hw
+  rcases intnBound?_some hw with ⟨tv, n, tloc, rfl, htl, h2, rfl⟩ | ⟨n, rfl, h2, rfl⟩
+  · have hlt : ¬ n < 1 := by omega
+    unfold applyStmtOp.plan
+    dsimp only
+    simp only [htl, except_bind_ok, if_neg hlt, Choices.consumeAtE_eq, PickRecord.ofPick,
+      if_neg (Nat.not_le_of_lt hw1)]
+    refine ⟨fun pick => .ok (fun s => do
+        let (s', trT) ← Mem.store ctx s tloc (.int pick .int)
+        return (s', trT)), fun ch => ?_, fun pick => NoPanic.ok _⟩
+    rcases hc : Choices.consumeAt .intn n.toNat ch with ⟨pick, rest⟩
+    rfl
+  · have hlt : ¬ n < 1 := by omega
+    unfold applyStmtOp.plan
+    dsimp only
+    simp only [if_neg hlt, Choices.consumeAtE_eq, PickRecord.ofPick, if_neg (Nat.not_le_of_lt hw1)]
+    refine ⟨fun _ => .ok (fun s => return (s, [])), fun ch => ?_, fun pick => NoPanic.ok _⟩
+    rcases hc : Choices.consumeAt .intn n.toNat ch with ⟨pick, rest⟩
+    rfl
+
+/-- **The draw's apply, as an equation** (the `intn` site's equation for the logic team,
+design D7): at the `randIntn` apply with an address target and bound `n ≥ 1`, on a tape
+whose `intn` pick at bound `n` is `i`, the apply stores `i` into the target and returns the
+popped tape beside exactly the record `PickRecord.ofPick .intn n.toNat i` — `[]` at `n = 1`
+(the no-pop instance), the one labelled pick otherwise. -/
+theorem applyStmtOp_randIntn_eq {σ : Store} {tv : GoValue} {tloc : Loc} {n : Int} {ch : Choices}
+    (htl : valueAsLoc tv = .ok tloc) (hn : 1 ≤ n) :
+    applyStmtOp ctx σ ch .randIntn 1 [tv, .int n .int]
+      = (Mem.store ctx σ tloc (.int (Choices.consumeAt .intn n.toNat ch).1 .int)).map
+          fun p => (p.1, (Choices.consumeAt .intn n.toNat ch).2,
+            PickRecord.ofPick .intn n.toNat (Choices.consumeAt .intn n.toNat ch).1, p.2) := by
+  have hlt : ¬ n < 1 := by omega
+  unfold applyStmtOp applyStmtOp.plan
+  dsimp only
+  simp only [htl, except_bind_ok, if_neg hlt, Choices.consumeAtE_eq]
+  rcases hc : Choices.consumeAt .intn n.toNat ch with ⟨pick, rest⟩
+  simp only [Bind.bind, Except.bind, pure, Except.pure, Commit.withStream]
+  cases hst : Mem.store ctx σ tloc (.int pick .int) with
+  | error e => cases e <;> rfl
+  | ok p => rfl
+
+/-- **The draw's step rule, derived** (the logic team's «one step rule», design D7): at the
+`randIntn` apply with an address target `tloc` and bound `n ≥ 1`, for EVERY value `i < n` the
+singleton tape `[i]` takes the `stmtOpApply` step that stores `i` into the target, with the
+label `⟨tr, PickRecord.ofPick .intn n.toNat i, []⟩` — so the relation admits every member of
+`[0, n)` (`Step` quantifies the stream; `Choices.consumeAt_fst_singleton` realizes the pick). -/
+theorem Step_randIntn_draw {σ : Store} {tv : GoValue} {tloc : Loc} {n : Int} {env : LocalEnv}
+    {k : Cont} (htl : valueAsLoc tv = .ok tloc) (hn : 1 ≤ n) {i : Nat} (hi : i < n.toNat)
+    {σ' : Store} {tr : AccessTrace} (hst : Mem.store ctx σ tloc (.int i .int) = .ok (σ', tr)) :
+    Step ctx (.retV (.int n .int) (.stmtOpK .randIntn 1 [tv] [] env k)) σ (.next k) σ'
+      ⟨tr, PickRecord.ofPick .intn n.toNat i, []⟩ := by
+  have hpick : (Choices.consumeAt .intn n.toNat [i]).1 = i := Choices.consumeAt_fst_singleton hi
+  refine Step.stmtOpApply (ch := [i])
+    (r := .ok (σ', (Choices.consumeAt .intn n.toNat [i]).2, PickRecord.ofPick .intn n.toNat i, tr))
+    ?_ rfl
+  rw [show (List.reverse [GoValue.int n .int, tv]) = [tv, .int n .int] from rfl,
+    applyStmtOp_randIntn_eq htl hn, hpick, hst]
+  rfl
+
 /-- A wide-statement apply whose consult is `none` is a stream-oblivious plan: the core's
 plan for every non-append head, the non-spilling / refusing append otherwise. -/
 theorem applyStmtOp_plan_of_stmtConsult?_none {σ : Store} {op : StmtOp} {nt : Nat}
     {vs : List GoValue} (h : stmtConsult? ctx σ op vs = none) :
     ∃ r : Except Stop (Commit (Store × AccessTrace)), ∀ ch : Choices,
       applyStmtOp.plan ctx σ ch op nt vs = r.map (Commit.withStream ch []) := by
-  by_cases hap : ∀ e, op ≠ .appendSlice e
-  · exact ⟨applyStmtOpCore.plan ctx σ op vs, fun ch => applyStmtOp_plan_eq_core hap⟩
-  · obtain ⟨e, rfl⟩ : ∃ e, op = .appendSlice e := by
-      cases op <;>
-        first
-        | exact ⟨_, rfl⟩
-        | exact absurd (fun e h => by cases h) hap
-    simp only [stmtConsult?, Option.map_eq_none_iff] at h
-    exact applyStmtOp_plan_appendSlice_nospill h
+  by_cases hap : (∀ e, op ≠ .appendSlice e) ∧ op ≠ .randIntn
+  · exact ⟨applyStmtOpCore.plan ctx σ op vs, fun ch => applyStmtOp_plan_eq_core hap.1 hap.2⟩
+  · rcases (show (∃ e, op = .appendSlice e) ∨ op = .randIntn by
+        cases op <;>
+          first
+          | exact .inl ⟨_, rfl⟩
+          | exact .inr rfl
+          | exact absurd (And.intro (fun _ h => nomatch h) (fun h => nomatch h)) hap) with ⟨e, rfl⟩ | rfl
+    · simp only [stmtConsult?, Option.map_eq_none_iff] at h
+      exact applyStmtOp_plan_appendSlice_nospill h
+    · simp only [stmtConsult?, Option.map_eq_none_iff] at h
+      exact applyStmtOp_plan_randIntn_nodraw h
 
 /-- The done-check `mapIterK` step is oblivious: with no candidate
 left it pops the continuation at every stream (BUG-005 (L): "no
@@ -5572,14 +5912,22 @@ macro "consumption_entry_some " h:ident hsc:ident : tactic =>
     (try simp only [List.append_assoc] at hpanic' hpk)
     simp [stepFn, enterFramePickV_of_plan_panic hpanic', hpk, Bind.bind, Except.bind]))
 
+/-- A popping wide-statement consult is one of the TWO consuming wide ops: a
+spilling append at `appendSpill`, or (unit 5b) the `[0, n)` draw at `intn`
+with bound `n ≥ 2`. -/
 theorem stmtConsult?_some {σ : Store} {op : StmtOp} {vs : List GoValue}
     {site : ChoiceSite} {b : Nat} (h : stmtConsult? ctx σ op vs = some (site, b)) :
-    ∃ elem, op = .appendSlice elem ∧ site = .appendSpill ∧ appendSpill? ctx σ elem vs = some b := by
+    (∃ elem, op = .appendSlice elem ∧ site = .appendSpill ∧ appendSpill? ctx σ elem vs = some b)
+      ∨ (op = .randIntn ∧ site = .intn ∧ intnBound? vs = some b) := by
   cases op with
   | appendSlice elem =>
     simp only [stmtConsult?, Option.map_eq_some_iff, Prod.mk.injEq] at h
     obtain ⟨w, hw, rfl, rfl⟩ := h
-    exact ⟨elem, rfl, rfl, hw⟩
+    exact .inl ⟨elem, rfl, rfl, hw⟩
+  | randIntn =>
+    simp only [stmtConsult?, Option.map_eq_some_iff, Prod.mk.injEq] at h
+    obtain ⟨w, hw, rfl, rfl⟩ := h
+    exact .inr ⟨rfl, rfl, hw⟩
   | _ => simp [stmtConsult?] at h
 
 set_option linter.unusedSimpArgs false in
@@ -5637,28 +5985,31 @@ theorem stepFn_stmtOp_oblivious {σ : Store} {op : StmtOp} {nt : Nat} {done : Li
       rw [hr ch]
       simp [Except.map, Bind.bind, Except.bind, deliverV_ok, runCommit_withStream, hrc, Functor.map]
 
-/-- The wide-statement apply arm at a SPILLING append: the `appendSpill` pop, and
+/-- The wide-statement apply arm at a POPPING consult — a SPILLING append at
+`appendSpill`, or (unit 5b) the `[0, n)` draw at `intn`: the site's pop, and
 pick-dependence only (C1 S3: `g` is the post-consult VALIDATE tail, panic-free; the
-commit's panic is unreachable and refused, never an `.ok` with the wrong stream). -/
-theorem stepFn_stmtOp_spill {σ : Store} {elem : Ty} {nt : Nat} {done : List GoValue}
-    {v : GoValue} {env : LocalEnv} {k : Cont} {w : Nat}
+commit's panic is unreachable and refused, never an `.ok` with the wrong stream).
+Stated over any `op`/`site` whose plan has the pick-lifted shape `hg`
+(`applyStmtOp_plan_appendSlice_spill`, `applyStmtOp_plan_randIntn_draw`). -/
+theorem stepFn_stmtOp_pick {σ : Store} {op : StmtOp} {site : ChoiceSite} {nt : Nat}
+    {done : List GoValue} {v : GoValue} {env : LocalEnv} {k : Cont} {w : Nat}
     {g : Nat → Except Stop (Commit (Store × AccessTrace))}
-    (hg : ∀ ch : Choices, applyStmtOp.plan ctx σ ch (.appendSlice elem) nt (v :: done).reverse
-      = (g (Choices.consumeAt .appendSpill w ch).1).map
-          (Commit.withStream (Choices.consumeAt .appendSpill w ch).2
-            [⟨.appendSpill, w, (Choices.consumeAt .appendSpill w ch).1⟩]))
+    (hg : ∀ ch : Choices, applyStmtOp.plan ctx σ ch op nt (v :: done).reverse
+      = (g (Choices.consumeAt site w ch).1).map
+          (Commit.withStream (Choices.consumeAt site w ch).2
+            [⟨site, w, (Choices.consumeAt site w ch).1⟩]))
     (hnp : ∀ pick, NoPanic (g pick))
     {ch₀ : Choices} {c' : Config} {σ' : Store} {ch₀' : Choices} {tr : StepLabel}
-    (h : stepFn ctx σ (.retV v (.stmtOpK (.appendSlice elem) nt done [] env k)) ch₀
+    (h : stepFn ctx σ (.retV v (.stmtOpK op nt done [] env k)) ch₀
       = .ok (c', σ', ch₀', tr)) :
-    ch₀' = (Choices.consumeAt .appendSpill w ch₀).2 ∧ ∀ ch : Choices,
-      (Choices.consumeAt .appendSpill w ch).1 = (Choices.consumeAt .appendSpill w ch₀).1 →
-      stepFn ctx σ (.retV v (.stmtOpK (.appendSlice elem) nt done [] env k)) ch
-        = .ok (c', σ', (Choices.consumeAt .appendSpill w ch).2, tr) := by
+    ch₀' = (Choices.consumeAt site w ch₀).2 ∧ ∀ ch : Choices,
+      (Choices.consumeAt site w ch).1 = (Choices.consumeAt site w ch₀).1 →
+      stepFn ctx σ (.retV v (.stmtOpK op nt done [] env k)) ch
+        = .ok (c', σ', (Choices.consumeAt site w ch).2, tr) := by
   unfold stepFn at h
   dsimp only at h
   rw [hg ch₀] at h
-  cases hgv : g (Choices.consumeAt .appendSpill w ch₀).1 with
+  cases hgv : g (Choices.consumeAt site w ch₀).1 with
   | error e =>
     rw [hgv] at h
     cases_stop e <;> simp only [Except.map, toResult_panic, toResult_refusal, toResult_fatal,
@@ -6297,12 +6648,17 @@ theorem stepFn_consumption_some {σ : Store} {c : Config} {ch₀ : Choices}
     exact stepFrameExit_consumption_some (.inr rfl) hsc h
   case case97 =>
     simp only [seqConsumption, Config.applyPos] at hsc
-    obtain ⟨elem, rfl, rfl, hw⟩ := stmtConsult?_some hsc
-    -- C1 S3: the post-consult tail is the validate phase's, panic-free for EVERY
-    -- target (`applyStmtOp_plan_appendSlice_spill`) — the root-target proviso
-    -- `hloc` is no longer needed here (kept in the statement for its callers).
-    obtain ⟨g, hg, hnp⟩ := applyStmtOp_plan_appendSlice_spill hw
-    exact stepFn_stmtOp_spill hg hnp h
+    -- The two consuming wide ops (`stmtConsult?_some`): the spilling append and
+    -- (unit 5b) the `[0, n)` draw — each plan is pick-lifted (`_spill` /
+    -- `_draw`), and `stepFn_stmtOp_pick` closes both. C1 S3: the post-consult
+    -- tail is the validate phase's, panic-free for EVERY target — the
+    -- root-target proviso `hloc` is no longer needed here (kept in the
+    -- statement for its callers).
+    rcases stmtConsult?_some hsc with ⟨elem, rfl, rfl, hw⟩ | ⟨rfl, rfl, hw⟩
+    · obtain ⟨g, hg, hnp⟩ := applyStmtOp_plan_appendSlice_spill hw
+      exact stepFn_stmtOp_pick hg hnp h
+    · obtain ⟨g, hg, hnp⟩ := applyStmtOp_plan_randIntn_draw hw
+      exact stepFn_stmtOp_pick hg hnp h
   case case119 =>
     rename_i v clauses default? done env k'
     simp only [seqConsumption, Config.applyPos, selectConsult?] at hsc
@@ -6515,6 +6871,7 @@ theorem seqConsumption_none_of_flags {σ : Store} {c : Config}
       (env : LocalEnv) (k : Cont),
       c ≠ .next (.mapIterK kv vv kt vt body base produced start env k))
     (hnc : consumesAppendSlice c = false)
+    (hni : consumesRandIntn c = false)
     (hns : consumesSelect c = false)
     (hnv : consumesNilValueMethod ctx c = false)
     (hnt : consumesTryLock c = false)
@@ -6522,9 +6879,9 @@ theorem seqConsumption_none_of_flags {σ : Store} {c : Config}
     (hnn : consumesUnseqNext c = false)
     (hnr : consumesRepanicCollapse c = false) :
     seqConsumption ctx σ c = none := by
-  revert hmi hnc hns hnv hnt hnu hnn hnr
+  revert hmi hnc hni hns hnv hnt hnu hnn hnr
   unfold seqConsumption
-  split <;> intro hmi hnc hns hnv hnt hnu hnn hnr
+  split <;> intro hmi hnc hni hns hnv hnt hnu hnn hnr
   · exact absurd rfl (hmi _ _ _ _ _ _ _ _ _ _)
   · simp [consumesUnseqPanic] at hnu
   · simp [consumesUnseqNext] at hnn
@@ -6535,7 +6892,7 @@ theorem seqConsumption_none_of_flags {σ : Store} {c : Config}
       | rfl
       | (rename_i heq
          obtain ⟨v, done, rfl, rfl⟩ := applyPos_stmt heq
-         cases ‹StmtOp› <;> simp_all [stmtConsult?, consumesAppendSlice])
+         cases ‹StmtOp› <;> simp_all [stmtConsult?, consumesAppendSlice, consumesRandIntn])
       | (rename_i heq
          obtain ⟨v, done, rfl⟩ := applyPos_select heq
          simp [consumesSelect] at hns)
@@ -6575,6 +6932,7 @@ theorem stepFn_oblivious {σ : Store} {c : Config} {ch₀ : Choices}
       (env : LocalEnv) (k : Cont),
       c ≠ .next (.mapIterK kv vv kt vt body base produced start env k))
     (hnc : consumesAppendSlice c = false)
+    (hni : consumesRandIntn c = false)
     (hns : consumesSelect c = false)
     (hnv : consumesNilValueMethod ctx c = false)
     (hnt : consumesTryLock c = false)
@@ -6583,7 +6941,7 @@ theorem stepFn_oblivious {σ : Store} {c : Config} {ch₀ : Choices}
     (hnr : consumesRepanicCollapse c = false)
     (h : stepFn ctx σ c ch₀ = .ok (c', σ', ch₀', tr)) :
     ch₀' = ch₀ ∧ ∀ ch : Choices, stepFn ctx σ c ch = .ok (c', σ', ch, tr) :=
-  stepFn_consumption_none (seqConsumption_none_of_flags hmi hnc hns hnv hnt hnu hnn hnr) h
+  stepFn_consumption_none (seqConsumption_none_of_flags hmi hnc hni hns hnv hnt hnu hnn hnr) h
 
 /-- The one-layer unfolding of `execStmtLoop`, as an EQUATION (the loop
 is fuel-structural, so the definitional unfolding needs the fuel
@@ -6743,15 +7101,17 @@ theorem execStmtLoop_ok_of_allStreamsOk :
           exact hrun
     · -- the oblivious catch-all
       rename_i hx1 hx2
-      cases hnc : (consumesAppendSlice c || consumesSelect c || consumesNilValueMethod ctx c || consumesTryLock c
-          || consumesUnseqPanic c || consumesUnseqNext c || consumesRepanicCollapse c) with
+      cases hnc : (consumesAppendSlice c || consumesRandIntn c || consumesSelect c || consumesNilValueMethod ctx c
+          || consumesTryLock c || consumesUnseqPanic c || consumesUnseqNext c
+          || consumesRepanicCollapse c) with
       | true =>
         rw [hnc] at hall
         simp at hall
       | false =>
         rw [hnc] at hall
         simp only [Bool.false_eq_true, if_false] at hall
-        obtain ⟨⟨⟨⟨⟨⟨hnc1, hnc2⟩, hnc3⟩, hnc4⟩, hnc5⟩, hnc7⟩, hnc6⟩ : (((((consumesAppendSlice c = false
+        obtain ⟨⟨⟨⟨⟨⟨⟨hnc1, hnc8⟩, hnc2⟩, hnc3⟩, hnc4⟩, hnc5⟩, hnc7⟩, hnc6⟩ : ((((((consumesAppendSlice c = false
+            ∧ consumesRandIntn c = false)
             ∧ consumesSelect c = false) ∧ consumesNilValueMethod ctx c = false)
             ∧ consumesTryLock c = false) ∧ consumesUnseqPanic c = false)
             ∧ consumesUnseqNext c = false)
@@ -6762,7 +7122,7 @@ theorem execStmtLoop_ok_of_allStreamsOk :
           obtain ⟨-, hobl⟩ := stepFn_oblivious
             (fun kv vv kt vt b bs pr st e kk heq =>
               hx2 kv vv kt vt b bs pr st e kk heq)
-            hnc1 hnc2 hnc3 hnc4 hnc5 hnc7 hnc6 hprobe
+            hnc1 hnc8 hnc2 hnc3 hnc4 hnc5 hnc7 hnc6 hprobe
           obtain ⟨out, ch', hrun⟩ := ih hall ch
           exact ⟨out, ch', by rw [execStmtLoop_step (hobl ch)]; exact hrun⟩
         · exact absurd hall (by simp)

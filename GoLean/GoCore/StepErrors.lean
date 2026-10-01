@@ -628,6 +628,9 @@ theorem applyStmtOp_plan_commitOk {s : Store} {ch : Choices} {op : StmtOp} {nt :
   split
   · okp
     all_goals (try (intro s; (try dsimp only); errp))
+  · -- the `[0, n)` draw (unit 5b): the consult, then one `int` store or a pure return — tame commits
+    okp
+    all_goals (try (intro s; (try dsimp only); errp))
   · refine OkP.bind_eq (fun c hc => OkP.pure (fun s' => ?_))
     unfold Commit.withStream
     exact ErrP.bind (applyStmtOpCore_plan_commitOk c hc s') (fun _ => ErrP.pure)

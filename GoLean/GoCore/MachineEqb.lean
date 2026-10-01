@@ -204,7 +204,7 @@ theorem StrictOp.eqb_sound :
   case funcValOf.funcValOf f1 f2 =>
     cases FuncId.beq_sound (show (f1 == f2) = true from h); rfl
 
-/-! ## `StmtOp` — the wide-statement op table (11 ctors) -/
+/-! ## `StmtOp` — the wide-statement op table (12 ctors; `randIntn` since window unit 5b) -/
 
 def StmtOp.eqb : StmtOp → StmtOp → Bool
   | .allocNew t1, .allocNew t2 => Ty.eqb t1 t2
@@ -213,6 +213,7 @@ def StmtOp.eqb : StmtOp → StmtOp → Bool
   | .makeChan e1 c1, .makeChan e2 c2 => Ty.eqb e1 e2 && c1 == c2
   | .mapAssign k1 v1, .mapAssign k2 v2 => Ty.eqb k1 k2 && Ty.eqb v1 v2
   | .appendSlice e1, .appendSlice e2 => Ty.eqb e1 e2
+  | .randIntn, .randIntn => true
   | .copySlice, .copySlice => true
   | .mapDelete k1, .mapDelete k2 => Ty.eqb k1 k2
   | .clearMap, .clearMap => true

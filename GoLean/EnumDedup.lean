@@ -137,6 +137,7 @@ private def refusalReason (s : Store) (ts : Array Thread) (i : Nat) :
       | .ok (.multi _) => s!"goroutine {i}: multi-ready select arrival (L2 .multi)"
       | .error e => s!"goroutine {i}: select arrival analysis error: {e.message}"
     else if consumesAppendSlice c then s!"goroutine {i}: append spill capacity pick"
+    else if consumesRandIntn c then s!"goroutine {i}: rand-intn apply (the intn `[0, n)` draw, window unit 5b — its bound is an operand VALUE, outside the dedup checker's certified fragment; use the default enumerator)"
     else if consumesTryLock c then s!"goroutine {i}: TryLock/TryRLock apply (the tryLock spurious-failure site — outside the dedup checker's certified fragment; use the default enumerator)"
     else if isMapIterNext c then s!"goroutine {i}: mapIterK iteration pick"
     else if consumesNilValueMethod ctx c then s!"goroutine {i}: frame-entry panic-text pick (nilValueMethodText, BUG-087)"

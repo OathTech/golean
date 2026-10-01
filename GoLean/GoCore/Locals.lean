@@ -37,7 +37,8 @@ def Stmt.declIds : Stmt → List VarId
   | .allocNew _ _ _ | .makeSlice _ _ _ _ | .makeMap _ _ _ _ | .mapAssign _ _ _ _ _
   | .mapDelete _ _ _ | .clearMap _ | .closeChan _ | .panicStmt _ | .unseqProbe _
   | .clearSlice _ _ | .sortSlice _ _ | .mapLookup _ _ _ _ _ _ | .typeAssert _ _ _ _
-  | .appendSlice _ _ _ _ | .copySlice _ _ _ | .callValue _ _ _ | .deferCall _ _ | .goStmt _ _
+  | .appendSlice _ _ _ _ | .randIntn _ _ | .copySlice _ _ _ | .callValue _ _ _ | .deferCall _ _
+  | .goStmt _ _
   | .returnStmt | .breakStmt | .continueStmt | .breakTo _ | .continueTo _
   | .inertLabel _ | .unsupported _ | .makeChan _ _ _ | .chanSend _ _ _ | .chanRecv _ _ _
   | .print _ _ => []

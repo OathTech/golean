@@ -104,11 +104,12 @@ def siteName : ChoiceSite → String
   | .unseqPanic => "unseqPanic"
   | .repanicCollapse => "repanicCollapse"
   | .unseqNext => "unseqNext"
+  | .intn => "intn"
 
 def allSites : List ChoiceSite :=
   [.mapIter, .appendSpill, .l2Entry, .l2Arrival, .l4Waiter, .l1Sched,
    .l5ExitWindow, .postOp, .backEdge, .nilValueMethodText, .tryLock, .unseqPanic,
-   .repanicCollapse, .unseqNext]
+   .repanicCollapse, .unseqNext, .intn]
 
 variable {ctx}
 /-- `allSites` is COMPLETE: every `ChoiceSite` constructor is listed (a
@@ -471,6 +472,25 @@ def unseqNextFacts (c : Config) : MenuFacts :=
            invariants := [("unseqNext site at a configuration that is not an unseq sweep frame's pick position", false)],
            pickCheck := fun _ => [] }
 
+/-- The `intn` site's menu facts (`Stmt.randIntn`, window unit 5b): the pick
+exists ONLY at a `randIntn` apply whose bound operand is an `int` `n ≥ 2` —
+the width IS `n`, recomputed here from the operand values exactly as
+`intnBound?` reads them (the target, when present, must be an address); a
+bound `1` pops nothing and a bound `≤ 0` never reaches the draw, so a record
+at either is a violation, as is any other configuration reporting the site. -/
+def intnFacts (c : Config) : MenuFacts :=
+  let bad := fun (why : String) =>
+    ({ specWidth := none, invariants := [(why, false)], pickCheck := fun _ => [] } : MenuFacts)
+  match c with
+  | .retV v (.stmtOpK .randIntn _ done [] _ _) =>
+      match intnBound? ((v :: done).reverse) with
+      | some n =>
+          { specWidth := some n
+            invariants := [("bound n ≥ 2 at a consult (n = 1 pops nothing; n ≤ 0 never reaches the draw)", decide (2 ≤ n))]
+            pickCheck := fun p => if p ≥ n then [s!"pick {p} outside the bound {n}"] else [] }
+      | none => bad "rand-intn apply with a popping bound (an int n ≥ 2 behind an address target)"
+  | _ => bad "intn site at a configuration that is not a randIntn apply"
+
 /-- The `repanicCollapse` site's menu facts (BUG-004 item 1, landing chunk
 L3): the pick exists ONLY at an abort — `.panicking (first :: rest) .stop`
 — whose head is recovered and whose successor carries an equal payload,
@@ -551,6 +571,7 @@ def seqFacts (σ : Store) (c : Config) : ChoiceSite → MenuFacts
       | _ => { specWidth := none, invariants := [("l2Entry site at a non-select configuration", false)],
                pickCheck := fun _ => [] }
   | .appendSpill => spillFacts ctx σ c
+  | .intn => intnFacts c
   | .tryLock => tryLockFacts ctx σ c
   | .unseqPanic => unseqPanicFacts c
   | .unseqNext => unseqNextFacts c

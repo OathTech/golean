@@ -630,6 +630,35 @@ inductive Stmt where
   | mapLookup (target okTarget : Assignee) (base index : Expr) (keyTy valueTy : Ty)
   | typeAssert (target okTarget : Assignee) (expr : Expr) (targetTy : Ty)
   | appendSlice (target : Assignee) (elem : Ty) (slice elems : Expr)
+  /-- **The `[0, n)` DRAW** (window unit 5b, 2026-09-30 — [USER] Mike, item 2 of
+  «The raft-proofs team's subject-delta note (2026-09-30) — RULED», relayed by
+  the [AGENT] coordinator: a native `Intn`-style pick site, GENERAL — «a value
+  in `[0, n)`, panic if `n ≤ 0`», not raft-specific; design
+  `docs/2026-09-30_intn-pick-design.md`): the ONE uniform draw
+  `math/rand.Intn(n)` / `math/rand/v2.IntN(n)` make, as ONE choice-tape pick.
+  THE ENVELOPE STATEMENT of `ChoiceSite.intn`: bound `n` exactly; every value
+  of `[0, n)` is a member — slot `v` IS the value `v`, and the singleton tape
+  `[v]` realizes it (`Choices.consumeAt_fst_singleton`); `n = 1` is a bound-1
+  consult that pops nothing (0 is the only member, G-U); a DATA pick over a
+  value, never a scheduling pick. DOMAIN `n ≥ 1`: the callee's `n <= 0` guard
+  is upstream's own statement — `if n <= 0 { panic("invalid argument to Intn") }`
+  (`deps/go/src/math/rand/rand.go:179–181` @ go1.26.5; `IntN`'s text
+  `invalid argument to IntN`, `math/rand/v2/rand.go:192–193`), a language-level
+  `panic(string)` — which the LOWERING emits AHEAD of this statement (the
+  decoder's `rand-intn` expansion, `GoLean/NativeToIR.lean`), so the payload
+  class is Go's plain `string` (a `recover().(string)` answers true, as in gc),
+  never the machine's `runtime.Error` box that an apply's `.panic` would be
+  delivered as; a bound `≤ 0` REACHING the apply is `stuck` by name (a bypassed
+  guard is a forged wire), never a draw. `target = none` is the discarded-
+  result form (`rand.Intn(5)` as an expression statement, `_ = rand.Intn(5)`):
+  the draw still happens and is recorded, as Go's generator still advances.
+  Rides the wide-statement machinery (`StmtOp.randIntn`, `stmtPlan`,
+  `applyStmtOp.plan`, Machine.lean): the target's address first, then `n`, then
+  ONE apply step whose label `picks` is `PickRecord.ofPick .intn n v`. The
+  method forms `(*rand.Rand).Intn` / `(*rand.Rand).IntN` are NOT bound (a
+  `*Rand` needs `rand.New`, outside the modeled surface — the frontend keeps
+  its by-name package quarantine there). -/
+  | randIntn (target : Option Assignee) (n : Expr)
   | copySlice (target : Assignee) (dst src : Expr)
   | call (targets : Array Assignee) (func : FuncId) (args : Array Expr)
   /-- Call through a function VALUE (a closure, method value, or func-typed
