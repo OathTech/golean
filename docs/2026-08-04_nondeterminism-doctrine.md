@@ -109,7 +109,19 @@ exhaustiveness; the list below is a READER'S MIRROR of that datatype
   at a sweep frame's `.next (.unseqK … .pick _)` position, `StepFn.lean`;
   width = the number of READY occurrences (`UnseqGraph.ready`, `Unseq.lean`)
   EXACTLY, a consult only at ≥ 2, slot j = the j-th ready occurrence in
-  canonical rank order; a singleton ready set pops nothing).
+  canonical rank order; a singleton ready set pops nothing);
+- the `[0, n)` draw (`intn`, window unit 5b, lane core/intn-pick-0930
+  2026-09-30 — [USER] Mike, item 2 of «The raft-proofs team's subject-delta
+  note (2026-09-30) — RULED», relayed: a GENERAL native `Intn`-style pick
+  site; design `docs/2026-09-30_intn-pick-design.md`, decisions PENDING
+  [USER] ratification at the merge ask — `applyStmtOp.plan`'s `.randIntn`
+  arm, `Machine.lean`, reached from `math/rand.Intn` / `math/rand/v2.IntN`
+  through the frontend's `rand-intn` primitive and the decoder's guard
+  expansion; width = the bound `n` EXACTLY, a consult only at `n ≥ 2`
+  (`n = 1` pops nothing; `n ≤ 0` never reaches the apply — the lowering's
+  guard raises the callee's own `panic(string)` ahead of it), slot `v` = the
+  value `v`; a DATA pick, the envelope statement at `Stmt.randIntn`,
+  `Syntax.lean`).
 
 **Mirror re-synced 2026-09-07** ([AGENT] landing worker, chunk L3): the
 `tryLock` and `unseqPanic` entries were missing from this list — their

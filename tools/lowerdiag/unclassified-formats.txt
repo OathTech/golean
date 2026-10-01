@@ -19,13 +19,17 @@
 # DIAGNOSTIC — NOT A LOWERING. tools/lowerdiag report: no wire is written; nothing in this file is a gate input.
 # distinct unsup(...) formats: 409; classified by causes.tsv: 372; unclassified (listed): 37
 # 2026-09-19 lane core/unseq-stage-c-0919 [AGENT]: regenerated after Stage C (the `unseq` lowering, tools/nativefrontend/unseq_lower.go) — its 17 INTERNAL contract-breach formats (`unseq lowering: …`, unreachable for an admitted sweep) classify from the format alone (causes.tsv unseq-lowering-invariant, by-design); coverage 388/425; the list is unchanged in content.
+# 2026-09-30 lane core/intn-pick-0930 (window unit 5b) [AGENT]: regenerated — THREE new frontend formats surface here, all from the `rand-intn` primitive (tools/nativefrontend/randintn.go): the defer/go by-name refusal (`X X.X: the [0, n) draw lowers at direct-call sites only …`) and the two argument-shape refusals (`X.X called with X argument(s) …`, `X.X with a tuple-splat argument list …`); the two pin-drift signature refusals classify from the format (frontend-apparatus). Classifying these three from the format alone is OWED to the lower-diagnose lane, as for the fr22-fr23 formats above.
 &composite (elided) in X
 &composite in X
 TypeDef X has no display record — its key was minted outside the identity boundary constructors (docs/2026-09-05_fr19-bug097-design.md §3.1)
 TypeDef entry of unexpected shape X
 TypeId registered with two different display records: X
 X
+X X.X: the [0, n) draw lowers at direct-call sites only (the rand-intn primitive, window unit 5b); as a deferred/spawned FUNCTION VALUE it has no lowering — refused by name
 X with X arguments
+X.X called with X argument(s) (a multi-valued call as the sole argument is outside the lowering) — fail closed
+X.X with a tuple-splat argument list — fail closed
 builtin X in statement position
 declaration array has unknown length
 declaration channel has invalid direction X

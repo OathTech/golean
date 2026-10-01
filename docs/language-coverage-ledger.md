@@ -571,7 +571,17 @@ than as speculative cases.)
 
 ## 8. Counts and the closing arithmetic
 
-All numbers at the current tracked baseline (3791 cases, 3554 PASS / 237 FAIL; [AGENT] worker, lane
+All numbers at the current tracked baseline (3799 cases, 3562 PASS / 237 FAIL; [AGENT] worker, lane
+`core/intn-pick-0930` — window unit 5b, the native `Intn`-style pick site ([USER] Mike 2026-09-30, item 2 of «The raft-proofs
+team's subject-delta note (2026-09-30) — RULED», relayed; design `docs/2026-09-30_intn-pick-design.md`, D1–D8 PENDING [USER]
+ratification at the merge ask); measured by `scripts/diff-one` over the 8 born ids + `maps/jitter-draw` (9/9 PASS, 2026-10-01
+00:05Z) and the full gate recorded in `docs/2026-09-30_intn-pick-handoff.md` §2). The delta over the R1 tally (3791 = 3554 / 237):
+EIGHT rows BORN PASS, `builtins/rand-intn/*` — 5 strict (`one`, `zero-panics`, `v2-negative-panics`, `recover-string-payload`,
+`discard`) and 3 membership (`membership` {0..4} members=5, `v2-membership` {0,1,2} members=3, `jitter-shape` {5..9} members=5);
+nothing else moved. 3791 + 8 = 3799; 3554 + 8 = 3562; 237 unchanged; no PASS → non-PASS. No bucket moved:
+130 + 9 + (24 + 1) + 8 + 65 = 237 ✓.
+
+Previous tally, then current (3791 cases, 3554 PASS / 237 FAIL; [AGENT] worker, lane
 `core/method-promotion-0928` — the G-P AUDIT RE-VERIFICATION R1 (the audit's «Re-verification (`ddf62818`)» section on
 `review/method-promotion-0928` @ `0b5bd524`; the [AGENT] coordinator's disposition, relayed); measured by `scripts/diff-one` at
 the tree and on main `4e7272b3` built from `git archive` (`docs/evidence/2026-09-29_method-promotion-fix/red-first-fr23.txt`),

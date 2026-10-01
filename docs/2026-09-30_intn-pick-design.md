@@ -58,7 +58,8 @@ uniform draw in `[0, n)` (`rand.go:178–181`). `math/rand/v2.IntN` likewise, te
   map-range idiom's distribution delta is gone); the twin wire moves (reason recorded at the pin check).
 - **D7** No new `Step` rule (the apply is `stmtOpApply`'s); the logic team's «one step rule» is a DERIVED lemma: for
   every `i < n` the singleton tape realizes the draw with label picks `PickRecord.ofPick .intn n i`; pinned in
-  `BridgeSet` beside the apply equation and the `n = 1` no-pop equation, added to the core audit's required list.
+  `BridgeSet` (rows 133–135) beside the apply EQUATION (whose record is `[]` at `n = 1`, the no-pop instance) and the
+  pick-lifted plan the coverage proofs consume; all three plus the supporting lemmas in the core audit's required list.
 - **D8** The dedup engine refuses the site (fail closed, like `tryLock`); the default enumerator carries the rows.
 
 ## 4. What D-11 becomes; what stays a delta and why
