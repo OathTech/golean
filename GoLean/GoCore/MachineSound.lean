@@ -3539,7 +3539,6 @@ theorem normalizeValueForTyTy_int_congr {f : TypeIdx → GoValue → Except Stop
     | (simp only [normalizeValueForTyTy]; first | trivial | rfl)
     | (simp [normalizeValueForTyTy, exceptCong, Stop.isPanic])
 
-set_option maxHeartbeats 1600000 in
 /-- Index-layer normalization, the same, by induction on the bound. -/
 theorem normalizeValueForTyAt_int_congr (types : TypeEnv) {a b : Int} {k : IntKind} :
     ∀ (bound : Nat) (i : TypeIdx), exceptCong (fun _ _ : GoValue => True)
