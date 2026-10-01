@@ -1,0 +1,11 @@
+# r58 pre-landing harness fix (audit F4) — red-first and gc evidence for builtins/rand-intn/v2-membership-unaliased
+# [AGENT] worker, branch prep/r58-0930, 2026-10-01; oracle /usr/local/go/bin/go = go1.26.5 linux/amd64
+## RED on the unfixed harness (tools/coverageharness/main.go at 89ffda7a), scripts/diff-one:
+FAIL	builtins/rand-intn/v2-membership-unaliased	stdlib,rand,builtins,ints,nondet	stage=membership	detail=draw 1/32 (plain) go sample run failed (status outside the declared set ok): stdout="" stderr="# _<worktree>/artifacts/coverage/go-run/builtins__rand-intn__v2-membership-unaliased\n./main.go:16:9: undefined: rand\n"
+## GREEN with the fix, scripts/diff-one (new row + the aliased sibling):
+PASS	builtins/rand-intn/v2-membership	stdlib,rand,builtins,ints,nondet	stage=membership	detail=enumerated=3 exhibited=3 draws=5 (K=32; stopped at the members=3 pin) unexhibited=0 (members in artifacts/coverage/membership/builtins/rand-intn/v2-membership)
+PASS	builtins/rand-intn/v2-membership-unaliased	stdlib,rand,builtins,ints,nondet	stage=membership	detail=enumerated=3 exhibited=3 draws=8 (K=32; stopped at the members=3 pin) unexhibited=0 (members in artifacts/coverage/membership/builtins/rand-intn/v2-membership-unaliased)
+## gc: the row's main.go built once (go build, GO111MODULE=off) and run 200 times; value counts:
+     70 0
+     65 1
+     65 2

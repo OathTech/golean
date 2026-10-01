@@ -14,6 +14,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 )
 
 type config struct {
@@ -412,7 +414,48 @@ func importName(spec *ast.ImportSpec) string {
 	if err != nil {
 		return ""
 	}
-	return path.Base(value)
+	return assumedImportName(value)
+}
+
+// assumedImportName is goimports' assumed-name rule
+// (golang.org/x/tools/internal/imports.ImportPathToAssumedName): the name
+// an UNALIASED import is assumed to bind, without loading the package.
+// (1) A last element that is a major-version suffix `v[0-9]+` names the
+// previous element when there is one: `math/rand/v2` binds `rand`, not
+// `v2` (a bare `v2` path keeps `v2`). (2) A `go-` prefix is dropped.
+// (3) The name is cut at the first byte that cannot occur in an
+// identifier, which also covers the `gopkg.in/yaml.v3` form (`yaml`).
+// Go's actual rule is the imported package's clause; this is a guess,
+// and a wrong guess stays FAIL-NOISY: a pruned import that is used, or a
+// kept import that is unused, is a compile error at the oracle's go-run
+// stage (audit F4, docs/2026-10-01_intn-pick-audit.md).
+func assumedImportName(importPath string) string {
+	base := path.Base(importPath)
+	if isMajorVersionElem(base) {
+		if dir := path.Dir(importPath); dir != "." {
+			base = path.Base(dir)
+		}
+	}
+	base = strings.TrimPrefix(base, "go-")
+	if i := strings.IndexFunc(base, func(r rune) bool {
+		return !('a' <= r && r <= 'z' || 'A' <= r && r <= 'Z' || '0' <= r && r <= '9' || r == '_' || r >= utf8.RuneSelf && unicode.IsLetter(r))
+	}); i >= 0 {
+		base = base[:i]
+	}
+	return base
+}
+
+// isMajorVersionElem: `v` followed by one or more ASCII digits.
+func isMajorVersionElem(elem string) bool {
+	if len(elem) < 2 || elem[0] != 'v' {
+		return false
+	}
+	for i := 1; i < len(elem); i++ {
+		if elem[i] < '0' || elem[i] > '9' {
+			return false
+		}
+	}
+	return true
 }
 
 func formatNode(fset *token.FileSet, node any) ([]byte, error) {

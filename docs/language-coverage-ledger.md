@@ -571,7 +571,16 @@ than as speculative cases.)
 
 ## 8. Counts and the closing arithmetic
 
-All numbers at the current tracked baseline (3799 cases, 3562 PASS / 237 FAIL; [AGENT] worker, lane
+All numbers at the current tracked baseline (3800 cases, 3563 PASS / 237 FAIL; [AGENT] worker, branch
+`prep/r58-0930` — train r58's pre-landing harness fix (audit F4 of `docs/2026-10-01_intn-pick-audit.md`; [USER] Mike 2026-10-01
+«agree, land it, ratify all including the harness fix», relayed): the oracle harness's `importName` now applies goimports'
+assumed-name rule, so an UNALIASED `import "math/rand/v2"` binds `rand`; measured by `scripts/diff-one` on the new row and
+`builtins/rand-intn/v2-membership` (2/2 PASS; red on the unfixed harness, `docs/evidence/2026-10-01_r58-harness-fix/`), then the
+full gate). The delta over the 5b tally (3799 = 3562 / 237): ONE row BORN PASS, `builtins/rand-intn/v2-membership-unaliased`
+PASS/membership ({0,1,2} members=3); nothing else moved. 3799 + 1 = 3800; 3562 + 1 = 3563; 237 unchanged; no PASS → non-PASS.
+No bucket moved: 130 + 9 + (24 + 1) + 8 + 65 = 237 ✓.
+
+Previous tally, then current (3799 cases, 3562 PASS / 237 FAIL; [AGENT] worker, lane
 `core/intn-pick-0930` — window unit 5b, the native `Intn`-style pick site ([USER] Mike 2026-09-30, item 2 of «The raft-proofs
 team's subject-delta note (2026-09-30) — RULED», relayed; design `docs/2026-09-30_intn-pick-design.md`, D1–D8 PENDING [USER]
 ratification at the merge ask); measured by `scripts/diff-one` over the 8 born ids + `maps/jitter-draw` (9/9 PASS, 2026-10-01

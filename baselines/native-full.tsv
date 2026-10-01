@@ -1,5 +1,16 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 3799 (3562 PASS / 237 FAIL)
+# cases: 3800 (3563 PASS / 237 FAIL)
+# re-pinned: 2026-10-01 [AGENT], prep/r58-0930, train r58 pre-landing — the oracle harness's assumed-name fix (audit F4 of
+#   docs/2026-10-01_intn-pick-audit.md; [USER] Mike 2026-10-01 «agree, land it, ratify all including the harness fix», relayed).
+#   WHY: tools/coverageharness/main.go `importName` assumed an UNALIASED import binds path.Base(path), so `import "math/rand/v2"`
+#   was taken to bind `v2`, pruned as unused, and the oracle build failed `undefined: rand` (fail-noisy). It now applies goimports'
+#   assumed-name rule (a major-version last element names the previous element). ONE row BORN PASS:
+#   builtins/rand-intn/v2-membership-unaliased PASS/membership (the unaliased spelling of v2-membership, the same lane; {0,1,2}
+#   members=3, all exhibited; gc 200/200 draws in {0,1,2}). RED on the unfixed harness (go-run `undefined: rand`) — the red-first
+#   record and the gc sample in docs/evidence/2026-10-01_r58-harness-fix/. NO existing row's result or stage moved (the only
+#   other /vN imports in the corpus carry an explicit alias, which importName honours unchanged). Measured by scripts/diff-one on
+#   the new row and v2-membership (2/2 PASS), then the full gate `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff`.
+#   3799 + 1 = 3800; 3562 + 1 = 3563; 237 FAIL unchanged. No PASS -> non-PASS flip.
 # re-pinned: 2026-09-30 [AGENT], core/intn-pick-0930, window unit 5b — the native `Intn`-style pick site ([USER] Mike 2026-09-30,
 #   item 2 of «The raft-proofs team's subject-delta note (2026-09-30) — RULED», relayed; design docs/2026-09-30_intn-pick-design.md,
 #   D1–D8 PENDING [USER] ratification at the merge ask). BORN ROWS ONLY: +8 `builtins/rand-intn/*` (5 strict PASS: one, zero-panics,
@@ -2205,6 +2216,7 @@ FAIL	builtins/print/refused/zero-operands	frontend-export
 PASS	builtins/print/string	-
 PASS	builtins/print/uints	-
 PASS	builtins/print/values-and-output	-
+PASS	builtins/rand-intn/v2-membership-unaliased	membership
 FAIL	builtins/real-imag	frontend-export
 PASS	builtins/recover-outside-defer	-
 PASS	builtins/statement-position/copy-stmt	-

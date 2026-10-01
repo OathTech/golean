@@ -1,10 +1,10 @@
 package main
 
-// The explicit alias is for the ORACLE HARNESS: tools/coverageharness/main.go
-// `importName` assumes an import binds `path.Base(path)` — `v2` here — and
-// prunes the import as unused (the Go build then fails `undefined: rand`).
-// Go's rule is the imported package clause (`rand`); the alias states it.
-// Recorded as an apparatus finding in docs/2026-09-30_intn-pick-handoff.md.
+// The explicit alias was first a workaround for the ORACLE HARNESS, whose
+// `importName` assumed an import binds `path.Base(path)` — `v2` here — and
+// pruned it as unused (handoff docs/2026-09-30_intn-pick-handoff.md §4a).
+// Fixed for train r58 (audit F4: goimports' assumed-name rule); the alias
+// stays so the ALIASED spelling is covered (v2-membership-unaliased: bare).
 import rand "math/rand/v2"
 
 // The same site through the v2 callee (math/rand/v2.IntN, v2/rand.go:189 @
