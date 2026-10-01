@@ -1,0 +1,11 @@
+# Whole-corpus choice trace, lane core/block-allocation-1001 @ 58fe18f9 (post) vs main @ 52eddf4c (pre, the primary checkout's certified binary 579c0206…), 2026-10-01
+# scripts/choice-trace-corpus --dump, excludes goroutines/send-then-spin + strings/trimspace-repeat/repeat-bound-refused (the B6 precedent); each side lowers the corpus with its own frontend (unchanged) and runs its own binary
+tsv/txt files identical (modulo the --out path): 14 of 15; differing: summary.txt only (see below)
+pre (main): 4 dump files, 26445 rows; sha256 of concatenated dumps (paths normalized): 6bf9800841e8e5c4
+post (lane): 4 dump files, 26445 rows; sha256 of concatenated dumps (paths normalized): 6bf9800841e8e5c4
+results-*.tsv (per row × stream: status, consumed, wide, perSite, obsHash, driverAgreement) IDENTICAL; batch 3764 exported, 34 frontend refusals, 2 exclusions on both sides
+summary.txt residual diff:
+14c14
+<     ERROR arrays/materialization-budget/over-budget (baseline: FAIL/lean-observation): OUT/wire/arrays__materialization-budget__over-budget.json: native lowering: array type of 
+---
+>     ERROR arrays/materialization-budget/over-budget (baseline: FAIL/lean-observation): OUT/wire/arrays__materialization-budget__over-budget.json: native lowering: array type of 2097152 elements exceeds the int

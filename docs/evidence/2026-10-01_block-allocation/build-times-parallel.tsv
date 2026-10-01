@@ -1,0 +1,10 @@
+# Fresh-build per-module elaboration times (parallel lake build, 48G cap; NOT the sequential A/B — see elaboration-ab.tsv)
+module	main-tree fresh build (s)	lane after S1b/S2 (s)
+Machine	6.0	(rebuilt incrementally)
+StateWf	24	18 (second pass)
+MachineSound	78	77
+PrefixFacts	17	17
+StepErrors	229	238
+MachineEqb	5.0	5.2
+BridgeSet	0.997	1.0
+NativeToIR	98	84

@@ -1,0 +1,10 @@
+row	final_status	main_min_fuel	lane_min_fuel	delta
+noodler/budget/loop-100k	ok	5300089	5300083	-6
+noodler/budget/map-20k	ok	880099	880091	-8
+noodler/budget/recursion-1k	ok	46055	44053	-2002
+noodler/budget/recursion-5k	ok	230055	220053	-10002
+noodler/budget/slice-1k	ok	120206	116184	-4022
+noodler/budget/string-build-5k	ok	245091	245085	-6
+control-flow/for-loopvar-escape	ok	424	402	-22
+functions/closure-share	ok	134	126	-8
+control-flow/goto-loop	ok	498	490	-8

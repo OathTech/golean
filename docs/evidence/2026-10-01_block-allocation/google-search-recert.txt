@@ -1,0 +1,3 @@
+# imported-goose/channel/google-search (tier=slow, engine=dedup, work cap 60000000) re-certified on the lane @ 58fe18f9 (+ inventory fix), 2026-10-01: GOLEAN_SLOW=1 scripts/diff-one
+FAIL	imported-goose/channel/google-search	imported_goose,channels,goroutines,nondet	stage=membership	detail=certification: STALE certification: changed dependency build/files/GoLean/GoCore/AdmissionIndices.lean\nFresh certification: unchanged set; seconds=105.760; candidate=/home/dev/projects/golean/.claude/worktrees/block-allocation/artifacts/coverage/membership/imported-goose/channel/google-sear
+lane enum-stats: coverage-observations: observations=6 steps=6279747 probes=0 sites=5908017 leaves=0 maxdepth=0 width=4 engine=dedup nodes=5908017 edges=6279747 dedupHits=371731 certified=checkCert

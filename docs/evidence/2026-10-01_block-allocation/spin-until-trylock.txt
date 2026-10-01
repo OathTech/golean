@@ -1,0 +1,13 @@
+# sync/trylock/spin-until-trylock — the enumeration at a RAISED work cap (4000000; the row's pin is 200000), lane @ 59ac9431 vs main @ 52eddf4c (the primary checkout's certified binary), identical wire (sha 776d8690…)
+# argv: coverage-observations --function spinUntilTryLock --max-width 4 --max-sites 200 --cap 64 --work-cap 4000000 --expect-status ok --backedge 1 --allow-nonterm N
+main N=200: observations=1 steps=115312 probes=19464 sites=6812 leaves=2571 maxdepth=18 width=4 backedge=1 backedgeCapped=0 allow-nonterm=200 nonterm=4242
+lane N=200: observations=1 steps=214263 probes=26571 sites=9272 leaves=2571 maxdepth=18 width=4 backedge=1 backedgeCapped=0 allow-nonterm=200 nonterm=6702
+observations (both): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":42}]}
+# sensitivity to the per-branch step budget (--allow-nonterm): lane at N=190 reproduces main at N=210 (an iteration of the spin loop is ~10% fewer steps since C4)
+lane N=170: observations=1 steps=75701 probes=11991 sites=4321 leaves=2571 maxdepth=18 nonterm=1751
+lane N=180: observations=1 steps=97876 probes=14622 sites=5198 leaves=2571 maxdepth=18 nonterm=2628
+lane N=190: observations=1 steps=148554 probes=26331 sites=9101 leaves=2571 maxdepth=18 nonterm=6531
+main N=210: observations=1 steps=172040 probes=26331 sites=9102 leaves=2571 maxdepth=18 nonterm=6532
+main N=220: observations=1 steps=238695 probes=39099 sites=13448 leaves=9621 maxdepth=22 nonterm=3828
+main N=230: observations=1 steps=287301 probes=42282 sites=14873 leaves=9621 maxdepth=22 nonterm=5253
+# at the PINNED cap (200000) the lane refuses: «work cap exceeded after 177861 step(s) + 22140 probe(s) with subtrees still unexplored» — the row's gate line (FAIL/membership); main at the pin: observations=1 steps=115312 probes=19464 (PASS)
