@@ -164,3 +164,14 @@ signal went to my own shell as well (harmless — it survived). Filter pattern-d
 
 `main` moved `bc91aa39` → `ac6baa31` (train r57's 5a records and close; records only, no `GoLean/` change). The lane
 rebases onto `main` before its gate run so the merge is `--ff-only`.
+
+## Merge train r58 — the 5a record ([AGENT] coordinator, 2026-10-01)
+
+[USER] Mike 2026-10-01 «agree, land it, ratify all including the harness fix» (relayed). Pre-merge main `ac6baa31` →
+`refs/snapshots/r58/main`; train tip `723939b3` fast-forwarded. The first `ci --slow` (1253 s) was red on the 5a pair PLUS
+`declaration boundary` and `executed library coverage`: the primary checkout's `.lake/build` held 55 files naming
+`.claude/worktrees/continuations/…` (an r56 warm copy by the coordinator; that worktree's `.lake` was later pruned) — a
+coordinator process defect, not a candidate defect. The 55 files were purged (list in `artifacts/train-r58/`), the build
+redone, and `ci --slow` re-run (1047 s): red on EXACTLY the 5a pair; 3800 rows, 3562 PASS / 238 FAIL = the pin 3563 / 237
+with the one 5a-class row red. Candidate: `claim` and `observations_sha256` IDENTICAL (receipt `723939b3`, 156.864 s) —
+INSTALLED; a provenance refresh. Tail: `docs/evidence/2026-10-01_r58-harness-fix/r58-ci-slow.tail.txt`.
