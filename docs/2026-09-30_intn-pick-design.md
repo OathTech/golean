@@ -5,7 +5,8 @@ verbatim, relayed by the [AGENT] coordinator — cite as relayed: «Yes, I also 
 faithful», item (2) of `docs/2026-08-31_qrow-rulings.md` «The raft-proofs team's subject-delta note (2026-09-30) — RULED»:
 a GENERAL native pick site — a value in `[0, n)`, a panic if `n ≤ 0` — inside the window, before the single re-pin;
 execution table `docs/2026-09-24_window-plan.md` §4 unit 5b. The three teams' notes are design input, not positions
-([USER], same day). Every decision below is [AGENT], PENDING [USER] ratification at the merge ask; none changes an
+([USER], same day). Every decision below is [AGENT]; PENDING [USER] ratification at the lane's tip, RATIFIED [USER] Mike 2026-10-01 at train
+r58 — «agree, land it, ratify all including the harness fix» (relayed by the [AGENT] coordinator — cite as relayed), all of D1–D8, option B (§2) NOT taken. None changes an
 existing row's observations or takes a (b) pin (the whole-corpus choice trace is the check).
 
 ## 1. What Go says at the pin (go1.26.5, `deps/go/src`)
@@ -37,10 +38,11 @@ uniform draw in `[0, n)` (`rand.go:178–181`). `math/rand/v2.IntN` likewise, te
   `math/big.Int.Int64`. It needs a `*big.Int` value representation (a shadow type, or `math/big` source-through —
   its closure reaches `fmt`, `math/rand`, `strconv`, `sync`, assembly-twinned `arith_decl.go`) plus `crypto/rand.Int`
   as an environment contract over it and a stand-in for `Reader`. Well over one session → POSED, not taken (plan §4:
-  «the re-keyed patch is the interim either way»).
+  «the re-keyed patch is the interim either way»). NOT TAKEN at the ratification ([USER] 2026-10-01, train r58: D1–D8
+  ratified, B not taken; the re-keyed D-11 stands).
 - **C. A raft-specific native for `(*lockedRand).Intn`.** Excluded by the ruling (GENERAL, not raft-specific).
 
-## 3. Decisions (all [AGENT], PENDING [USER] ratification at the merge ask)
+## 3. Decisions (all [AGENT]; RATIFIED [USER] Mike 2026-10-01, train r58 — «agree, land it, ratify all including the harness fix», relayed; PENDING at the lane's tip)
 
 - **D1** Option A. `ChoiceSite.intn`, canonical slot 0 = the value 0 (the empty/exhausted tape draws 0; bound = `n`
   exactly; `n = 1` pops nothing; `n ≥ 2` always pops — a DATA pick, not a scheduling pick).
@@ -52,7 +54,8 @@ uniform draw in `[0, n)` (`rand.go:178–181`). `math/rand/v2.IntN` likewise, te
   by-name package quarantine. `Int63n`/`Int31n`/`Perm`/`Shuffle`/… stay quarantined (other contracts).
 - **D4** The target-less form (`rand.Intn(5)` as an expression statement, `_ =`) still DRAWS (Go does).
 - **D5** Register: a third library-origin `primitive` row `rand-intn`; the cap 2 → 3. The register's own rule says a cap
-  move is [USER] re-ratification — the ruling admits the op, the number is what is posed here.
+  move is [USER] re-ratification — the ruling admits the op, the number is what is posed here. Cap 3 RATIFIED [USER]
+  2026-10-01 (train r58, with D1–D8).
 - **D6** D-11 RE-KEYED: `(*lockedRand).Intn`'s body becomes the lock, `v := rand.Intn(n)` (`math/rand`), unlock; the
   import `crypto/rand` → `math/rand`, `math/big` dropped. Same envelope `[0, n)`, uniform on both oracles (the old
   map-range idiom's distribution delta is gone); the twin wire moves (reason recorded at the pin check).

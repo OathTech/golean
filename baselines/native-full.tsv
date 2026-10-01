@@ -1867,14 +1867,6 @@
 #   embedding/promoted-stub-dispatch package's wire; its other four rows are unmoved (diff-one: 3 PASS / 2 FAIL as pinned).
 #   Measured by scripts/diff-one at the tree and on the archive build; the full gate line is in the handoff §6.
 #   3790 + 1 = 3791; 3553 + 1 = 3554; 237 FAIL unchanged. No PASS -> non-PASS flip.
-PASS	builtins/rand-intn/discard	-
-PASS	builtins/rand-intn/jitter-shape	membership
-PASS	builtins/rand-intn/membership	membership
-PASS	builtins/rand-intn/one	-
-PASS	builtins/rand-intn/recover-string-payload	-
-PASS	builtins/rand-intn/v2-membership	membership
-PASS	builtins/rand-intn/v2-negative-panics	-
-PASS	builtins/rand-intn/zero-panics	-
 result	id	stage
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
@@ -2216,7 +2208,15 @@ FAIL	builtins/print/refused/zero-operands	frontend-export
 PASS	builtins/print/string	-
 PASS	builtins/print/uints	-
 PASS	builtins/print/values-and-output	-
+PASS	builtins/rand-intn/discard	-
+PASS	builtins/rand-intn/jitter-shape	membership
+PASS	builtins/rand-intn/membership	membership
+PASS	builtins/rand-intn/one	-
+PASS	builtins/rand-intn/recover-string-payload	-
+PASS	builtins/rand-intn/v2-membership	membership
 PASS	builtins/rand-intn/v2-membership-unaliased	membership
+PASS	builtins/rand-intn/v2-negative-panics	-
+PASS	builtins/rand-intn/zero-panics	-
 FAIL	builtins/real-imag	frontend-export
 PASS	builtins/recover-outside-defer	-
 PASS	builtins/statement-position/copy-stmt	-

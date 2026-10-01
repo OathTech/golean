@@ -113,9 +113,9 @@ exhaustiveness; the list below is a READER'S MIRROR of that datatype
 - the `[0, n)` draw (`intn`, window unit 5b, lane core/intn-pick-0930
   2026-09-30 — [USER] Mike, item 2 of «The raft-proofs team's subject-delta
   note (2026-09-30) — RULED», relayed: a GENERAL native `Intn`-style pick
-  site; design `docs/2026-09-30_intn-pick-design.md`, decisions PENDING
-  [USER] ratification at the merge ask — `applyStmtOp.plan`'s `.randIntn`
-  arm, `Machine.lean`, reached from `math/rand.Intn` / `math/rand/v2.IntN`
+  site; design `docs/2026-09-30_intn-pick-design.md`, decisions D1–D8
+  RATIFIED [USER] Mike 2026-10-01 at train r58 (PENDING at the lane's
+  tip) — `applyStmtOp.plan`'s `.randIntn` arm, `Machine.lean`, reached from `math/rand.Intn` / `math/rand/v2.IntN`
   through the frontend's `rand-intn` primitive and the decoder's guard
   expansion; width = the bound `n` EXACTLY, a consult only at `n ≥ 2`
   (`n = 1` pops nothing; `n ≤ 0` never reaches the apply — the lowering's

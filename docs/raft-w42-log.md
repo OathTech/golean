@@ -834,7 +834,8 @@ S3. No BUGS.md entry: these are subject deltas (the subject vs upstream), not ma
 could be made faithful», item 2 of `docs/2026-08-31_qrow-rulings.md` «The raft-proofs team's subject-delta note (2026-09-30) —
 RULED»: a native `Intn`-style pick site — GENERAL (a value in `[0, n)`, a panic if `n ≤ 0`), not raft-specific — inside the
 window before the single re-pin; execution table `docs/2026-09-24_window-plan.md` §4 unit 5b; design
-`docs/2026-09-30_intn-pick-design.md` (decisions D1–D8 PENDING [USER] ratification at the merge ask).
+`docs/2026-09-30_intn-pick-design.md` (decisions D1–D8 PENDING [USER] ratification at the merge ask — RATIFIED [USER] Mike
+2026-10-01 at train r58, «agree, land it, ratify all including the harness fix», relayed; option B not taken).
 
 **D-11 `raft/raft.go`, `(*lockedRand).Intn` — RE-KEYED (D6).** Before (W4.1 item 3, JC-19): the draw was the first key of a
 range over a fresh `n`-key map — the map-iteration choice site, with a DISTRIBUTION delta under `go run` (Go's iteration
@@ -857,5 +858,6 @@ taken (plan §4: «the re-keyed patch is the interim either way»). **Twin:** `b
 (the reason and the JSON diff: `scripts/check-frontend-pins`' comment block and the lane handoff). **Guardrails:** the born rows
 `builtins/rand-intn/*` — `jitter-shape` is the composed observable `electionTimeout + Intn(electionTimeout)` over the native
 site (admitted set `{5,…,9}`, members=5); `maps/jitter-draw` stays as the pin of the RETIRED idiom's map-range shape (its
-`main.go` comment says which). `sweep.py`'s tripwire (a quarantined `lockedRand.Intn` = the patch not in effect) is unchanged and
+`main.go` comment says which — [AGENT] 2026-10-01, train r58 prep: it did NOT until then, it still claimed D-11 «carries
+EXACTLY this draw»; corrected with `cases.tsv`'s matching sentence, audit F1 of `docs/2026-10-01_intn-pick-audit.md`). `sweep.py`'s tripwire (a quarantined `lockedRand.Intn` = the patch not in effect) is unchanged and
 still meaningful: the body lowers through the new primitive.

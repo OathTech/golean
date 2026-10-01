@@ -161,7 +161,7 @@ func TestStdlibRegisterPrimitivesFull(t *testing.T) {
 		t.Fatal(err)
 	}
 	// 3 / cap 3 since window unit 5b (2026-09-30): the `rand-intn` primitive
-	// (the cap move is PENDING [USER] re-ratification, stdlibregister.go).
+	// (the cap move RATIFIED [USER] 2026-10-01 at train r58, stdlibregister.go).
 	for _, want := range []string{"count\tprimitive\t3 / cap 3", "primitive\tfloat-bits\t", "primitive\tprint-output\t", "primitive\trand-intn\t"} {
 		if !strings.Contains(dump, want) {
 			t.Errorf("register dump lacks %q", want)

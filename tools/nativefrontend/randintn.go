@@ -46,7 +46,11 @@ package main
 // `Perm`, `Shuffle`, `Float64`, `Seed`, …: other contracts). A `defer` / `go`
 // of the function refuses by name (`refuseRandIntnDeferGo`): as a FUNCTION
 // VALUE the callee has no lowering, and the draw is defined at direct-call
-// sites only.
+// sites only. GAP (pre-existing, frontier FR-36 in
+// docs/language-coverage-ledger.md, 5b audit F3): a DOT import
+// (`import . "math/rand"`; `Intn(5)`) reaches neither this binding nor the
+// quarantine — the bare identifier lowers as a user call and the machine
+// answers `stuck: GoCore function not found: Intn`, fail-noisy but unnamed.
 
 import (
 	"go/ast"
