@@ -1,0 +1,8 @@
+# forged rand-intn wires (one-edit mutants of alias-import's node) through the candidate CLI
+n-bool	stuck	expected int value, got GoLean.GoValue.bool true
+n-int32	ok output 0	the int32 literal is normalized by the typed-local binding and the draw proceeds at bound 5 — PRE-EXISTING binding policy (same normalization on main for a user call's int32-forged argument: 105 on both binaries); unreachable from the frontend (signature pinned func(int) int)
+n-string	error (lowering)	unknown key 'value' at ...rhs[0].n — exact-key discipline, fail closed
+n-nested	error (lowering)	rand-intn in expression position is not modeled (a forged wire)
+n-negative-lit	panic	invalid argument to Intn (the decoder's guard; no draw)
+n-zero-lit	panic	invalid argument to Intn
+# the gate's own 5 controls (scripts/check-wire-boundary): ri answers 42; ri-bad-callee / ri-result-not-int / ri-absent-resultTypes / ri-two-targets refuse naming the cause

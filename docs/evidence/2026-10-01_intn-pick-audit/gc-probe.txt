@@ -1,0 +1,13 @@
+# go version go1.26.5 linux/amd64 (/usr/local/go/bin/go, the oracle pin); output of gc-probe.go:
+v1 Intn(0): string "invalid argument to Intn"
+v2 IntN(0): string "invalid argument to IntN"
+v1 Intn(-1): string "invalid argument to Intn"
+v2 IntN(-1): string "invalid argument to IntN"
+v1 Intn(-4611686018427387904): string "invalid argument to Intn"
+v2 IntN(-4611686018427387904): string "invalid argument to IntN"
+Intn(1) x20: [0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]
+all draws in range: true
+Intn(5) members seen: 5
+# uncaught abort lines:
+panic: invalid argument to Intn
+panic: invalid argument to IntN

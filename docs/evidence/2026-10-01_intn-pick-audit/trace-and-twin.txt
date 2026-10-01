@@ -1,0 +1,19 @@
+# Sampled two-binary choice trace (scripts/choice-trace-corpus --jobs 3 --dump): main = git archive ac6baa31 built in
+# .tmp/main-ref with its own frontend/scripts/binary; lane = f4276cdb. Sample = every 6th `nondet` manifest id (40) +
+# maps/jitter-draw + the 8 born rows (lane side only; 49 ids lane / 41 main).
+dump rows main/lane: 601 625
+common consuming ids: 42 — dump rows IDENTICAL (sha256 prefix 536a2471dc529d63 both sides); results rows identical (249/249)
+ids only in lane: builtins/rand-intn/{discard,jitter-shape,membership,v2-membership} — site intn only
+ids only in main: none
+
+# Twin pin diff (git show ac6baa31:baselines/pins/twin-chdriver.wire.json vs tip), key-by-key JSON walk:
+total 3391 differences = 2 subtrees inside methods[lockedRand.Intn] (body + locals; the lane's leaf count is 29)
+  + 3159 hoist-temp renumberings ($name<digits> -> $name<digits>) + 230 `pos` raft.go:L:C shifts + 0 other
+schema golean-native-v3 both; funcs 450/450; methods 481/481
+scripts/check-frontend-pins: ok [hidden-dep-order]; ok [twin-wire] fresh emit = pinned wire (d5186f43aae8…); ok [stdlib-pin] 61 files
+python3 tools/raftsubject/derive.py --check: clean
+
+# Certified row imported-goose/channel/google-search lowered with BOTH frontends: sha256 f448d579dfdbaadbbece… = the installed record's wire_sha256
+
+# BridgeSet row 133 mutation (1 ≤ n -> 0 ≤ n in the example's statement), `lake env lean` on the copy:
+.tmp/BridgeSetMut.lean:990:2: error: Type mismatch — @applyStmtOp_randIntn_eq has type … 1 ≤ n → … (the pinned row is real)

@@ -1,0 +1,32 @@
+# probe	frontend	rand-intn nodes	refusal or lowering note (first)	cli native-json-run --function subject (default tape)
+alias-import	lowered	1	-	ok output 0
+arg-order-print	lowered	1	-	output "f" then panic "invalid argument to Intn" (argument evaluated once, before the guard)
+arg-panics	lowered	1	-	panic "g" (no draw)
+blank	lowered	1	-	ok output ok
+closure-bodies	lowered	2	-	ok 0,0
+defer-intn	refused-in-wire	0	defer math/rand.Intn: the [0, n) draw lowers at direct-call sites only (the rand-intn primitive, window unit 5b); as a deferred/spawned FUNCTION VALUE it has no lowering — refused by name	(not run)
+dot-import	lowered	0	call func=Intn (bare user call; PRE-EXISTING at main — identical wire)	stuck: GoCore function not found: Intn
+func-value	refused-in-wire	0	stdlib-qualified selector rand.Intn in value position: only allowlisted DIRECT CALLS of modeled stdlib members lower (E5 shims / fmt desugar); the value shape is outside the modeled surface (package "	(not run)
+go-intn	refused-in-wire	0	go math/rand.Intn: the [0, n) draw lowers at direct-call sites only (the rand-intn primitive, window unit 5b); as a deferred/spawned FUNCTION VALUE it has no lowering — refused by name	(not run)
+init-func	lowered	1	-	ok 0
+intn-two-draws-print	lowered	2	-	output f,g,0 (left-to-right)
+large-2pow62	lowered	1	-	ok output true (enumerator: bound 4611686018427387904 exceeds width — by name)
+large-maxint	lowered	1	-	ok output true (enumerator: site bound 9223372036854775807 exceeds width 8 — REFUTED, by name)
+method-form	refused-in-wire	0	package-selector call rand.New (package "math/rand" surface not modeled)	(not run)
+negative-computed	lowered	1	-	panic "invalid argument to Intn"
+nested-positions	lowered	11	-	ok (11 hoisted draws; enumerator refuses > --max-sites 8 by name)
+nil-recv	refused-in-wire	0	imported method math/rand.Rand.ExpFloat64 (declaration-only stub: satisfaction answers, calls fail closed)	(not run)
+other-Float64	refused-in-wire	0	builtin println operand 1 of type float64: floats and complex print through internal/strconv.AppendFloat ('g', -1, shortest round-trip) — not modeled this slice (stdlib slice 3; FR-29)	(not run)
+other-Int	refused-in-wire	0	package-selector call rand.Int (package "math/rand" surface not modeled)	(not run)
+other-Int63n	refused-in-wire	0	package-selector call rand.Int63n (package "math/rand" surface not modeled)	(not run)
+other-Perm	refused-in-wire	0	package-selector call rand.Perm (package "math/rand" surface not modeled)	(not run)
+other-Shuffle	refused-in-wire	0	package-selector call rand.Shuffle (package "math/rand" surface not modeled)	(not run)
+pkg-var	lowered	1	-	ok 0 (init-time draw ENUMERATED {0..4})
+seed-then-intn	refused-in-wire	0	package-selector call rand.Seed (package "math/rand" surface not modeled)	(not run)
+shadow-local	lowered	0	-	ok 105 (user method, not the primitive)
+v2-Int64N	refused-in-wire	0	package-selector call rand.Int64N (package "math/rand/v2" surface not modeled)	(not run)
+v2-N	refused-in-wire	0	package-selector call rand.N (package "math/rand/v2" surface not modeled)	(not run)
+v2-UintN	refused-in-wire	0	package-selector call rand.UintN (package "math/rand/v2" surface not modeled)	(not run)
+v2-len	lowered	1	-	ok 0 (enumerated {0,1,2})
+v2-method	refused-in-wire	0	package-selector call rand.New (package "math/rand/v2" surface not modeled)	(not run)
+v2-unaliased	lowered	1	-	ok 0
