@@ -1646,9 +1646,8 @@ def coreClosureShareFunction : GoCore.Func := {
   id := ⟨"closureShare"⟩
   args := #[]
   results := #[⟨vid "r", .int .int⟩]
-  body := .seqn #[
-    .initialization ⟨vid "x", .int .int⟩,
-    .initialization ⟨vid "f", .funcType [] [] false⟩,
+  -- C4 (2026-10-01): `x` and `f` are the body block's declarations (were `.initialization`s).
+  body := .block #[⟨vid "x", .int .int⟩, ⟨vid "f", .funcType [] [] false⟩] #[
     .assign (.var (vid "f")) (.funcVal ⟨"main$lit0"⟩ #[.ref (vid "x")]),
     .callValue #[] (.var (vid "f")) #[],
     .callValue #[] (.var (vid "f")) #[],

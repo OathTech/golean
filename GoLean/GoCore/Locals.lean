@@ -24,15 +24,14 @@ beside `enterFrame` in `Machine.lean`. Nothing here is read by `stepFn`.
 namespace GoLean.GoCore
 
 mutual
-/-- The declaration ids a statement DECLARES — block declarations, `.initialization`,
-a `mapRange`'s variables, an `unseq` graph's cells — the complement of `Stmt.names`
+/-- The declaration ids a statement DECLARES — block declarations (every local's
+declaration since C4), a `mapRange`'s variables, an `unseq` graph's cells — the complement of `Stmt.names`
 (mentions). Total; no constructor catch-all (adding syntax requires choosing its
 traversal — the `AdmissionIndices` discipline; the case list mirrors `Stmt.names`). -/
 def Stmt.declIds : Stmt → List VarId
   | .seqn ss => stmtListDeclIds ss.toList
   | .block decls ss => decls.toList.map (·.id) ++ stmtListDeclIds ss.toList
   | .breakable s | .labeled _ s => Stmt.declIds s
-  | .initialization p => [p.id]
   | .assign _ _ | .assignMany _ _ | .call _ _ _ | .syncStmt _ _ _ | .atomicStmt _ _ _ _
   | .allocNew _ _ _ | .makeSlice _ _ _ _ | .makeMap _ _ _ _ | .mapAssign _ _ _ _ _
   | .mapDelete _ _ _ | .clearMap _ | .closeChan _ | .panicStmt _ | .unseqProbe _
@@ -103,7 +102,7 @@ def Func.recvFirst (f : Func) : Bool :=
     | some .recv => false
     | _ => true
 
-/-- A local the BODY declares (a block declaration, an `.initialization`, a range variable, a
+/-- A local the BODY declares (a block declaration, a range variable, a
 graph cell or binder) is a body local or a `$`-temporary — never a receiver, parameter,
 capture or result (B6 fix round F1 (c): a body local cannot claim `recv`). -/
 def Func.bodyKinds (f : Func) : Bool :=

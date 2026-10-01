@@ -47,6 +47,19 @@ def requiredModules : List Name := [
 /-- Required core theorems (the `semantic interface` audit's CORE exports, plus the
 re-homed regressions). Each must exist as a theorem. -/
 def exports : List Name := [
+    -- C4, block-entry allocation (2026-10-01; design docs/2026-10-01_gc4-block-allocation-design.md D8 —
+    -- the layout function's lemma set, the lane's acceptance list; BridgeSet rows 136–154)
+    ``GoLean.GoCore.Machine.entrySlot_def, ``GoLean.GoCore.Machine.entrySlot_inj,
+    ``GoLean.GoCore.Machine.entrySlot_not_allocated,
+    ``GoLean.GoCore.Machine.blockEntry_shift, ``GoLean.GoCore.Machine.blockEntry_lookup,
+    ``GoLean.GoCore.Machine.blockEntry_lookup_outer, ``GoLean.GoCore.Machine.blockEntry_zero,
+    ``GoLean.GoCore.Machine.allocDecls_zero, ``GoLean.GoCore.Machine.allocDecls_heap_get_lt,
+    ``GoLean.GoCore.Machine.Store.alloc_cell,
+    ``GoLean.GoCore.Machine.blockEntry_fresh, ``GoLean.GoCore.Machine.blockExit_store_eq,
+    ``GoLean.GoCore.Machine.heap_size_mono, ``GoLean.GoCore.Machine.enterFrame_shift,
+    ``GoLean.GoCore.Machine.frameEntry_lookup_arg, ``GoLean.GoCore.Machine.frameEntry_lookup_result,
+    ``GoLean.GoCore.Machine.frameEntry_fresh,
+    ``GoLean.GoCore.Machine.pushDefer_saves_values, ``GoLean.GoCore.Machine.funcVal_captures_locs,
     -- window unit 5b, the `intn` pick site (2026-09-30; design docs/2026-09-30_intn-pick-design.md D7):
     -- the draw's apply equation, its derived step rule, the pick-lifted / oblivious plans, the
     -- generalized wide-op pick lemma, the two-way consult characterization, and the int-store

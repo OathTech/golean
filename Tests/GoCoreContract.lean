@@ -307,7 +307,8 @@ theorem actual_scope_restoration (b : Bool) :
         loadMany emptyCtx s [.base ⟨0⟩]) = .ok [.bool b] := by
   cases b <;> with_unfolding_all rfl
 
-def zeroBody : Stmt := .seqn #[.initialization ⟨vid "zero", .bool⟩,
+-- C4 (2026-10-01): the declaration is the block's entry allocation (was `.initialization`).
+def zeroBody : Stmt := .block #[⟨vid "zero", .bool⟩] #[
   .assign (.var (vid "result")) (.var (vid "zero")), .returnStmt]
 
 theorem actual_new_local_zero (b : Bool) :
@@ -339,11 +340,13 @@ theorem equal_repanic_keeps_history (bytes : GoString) :
 
 def scopedFunction : Func := {
   id := ⟨"scoped"⟩, args := #[⟨vid "x", .bool⟩], results := #[⟨vid "result", .bool⟩]
-  body := .block #[⟨vid "zero", .bool⟩] #[
+  -- C4 (2026-10-01): `payload` is the outer block's declaration (was an `.initialization`
+  -- mid-sequence), allocated at the block's entry; its initializer stays where it was.
+  body := .block #[⟨vid "zero", .bool⟩, ⟨vid "payload", .interface ⟨"any"⟩⟩] #[
     .block #[⟨vid "x", .interface ⟨"any"⟩⟩] #[
       .assign (.var (vid "x")) (.toInterface (.interface ⟨"any"⟩) .string
         (.stringLit (.fromLeanString "shadow")))],
-    .seqn #[.initialization ⟨vid "payload", .interface ⟨"any"⟩⟩],
+    .seqn #[],
     .assign (.var (vid "payload")) (.nil none),
     .assign (.var (vid "result")) (.and (.var (vid "x")) (.not (.var (vid "zero")))), .returnStmt]
 }

@@ -174,7 +174,6 @@ def Stmt.names : Stmt → List VarId
   | .seqn ss => stmtListNames ss.toList
   | .block _ ss => stmtListNames ss.toList
   | .breakable s | .labeled _ s => Stmt.names s
-  | .initialization _ => []
   | .assign a e => a.names ++ e.names
   | .assignMany as es | .call as _ es | .syncStmt _ es as | .atomicStmt _ _ es as =>
       assigneeListNames as.toList ++ exprListNames es.toList

@@ -582,8 +582,8 @@ structure UnseqOcc where
   deriving Repr, BEq, Inhabited
 
 /-- A sweep's static graph: the VALUE binders with their declared types
-(allocated at ENTER, zero-initialised, in the source scope — the
-`.initialization` idiom), the occurrences in canonical rank order, and
+(allocated at ENTER, zero-initialised, in a sweep-PRIVATE scope pushed on
+the source environment — C4 D3 (b), 2026-10-01), the occurrences in canonical rank order, and
 the PHASE-2 STORES `(target binder, value binder)` carried out left to
 right at completion (spec#Assignment_statements: «the assignments are
 carried out in left-to-right order»; each store's own check fires at the
@@ -605,7 +605,10 @@ inductive Stmt where
   desugaring would be a shortcut that labeled break and `select` later
   have to undo, which the arc's defer-never-foreclose rule forbids. -/
   | breakable (body : Stmt)
-  | initialization (var : Param)
+  -- `initialization (var : Param)` DELETED by C4 (block-entry allocation, 2026-10-01,
+  -- `docs/2026-10-01_gc4-block-allocation-design.md`): a local's cell is its enclosing
+  -- `.block`'s, allocated at the block's entry (`decls`); the initializer is the `.assign`
+  -- at the source point. A `Frame.seq`'s environment is fixed from creation to pop.
   | assign (left : Assignee) (right : Expr)
   | assignMany (left : Array Assignee) (right : Array Expr)
   | allocNew (target : Assignee) (value : Expr) (typ : Ty)
@@ -842,12 +845,14 @@ inductive Stmt where
   schedule its occurrences (any READY one next: `ChoiceSite.unseqNext`
   at bound = the number of ready occurrences; a singleton consumes
   nothing), carry out its phase-2 stores left to right, then run
-  `thenBranch` in the source scope (source declarations there survive:
-  `x := e` lowers to `.initialization x; x = $u` in `thenBranch`). An
+  `thenBranch` under the sweep's scope (C4 D3 (b): the binder cells live in
+  a PRIVATE scope pushed on the source environment at ENTER, so a source
+  declaration in `thenBranch` is — as everywhere since C4 — the enclosing
+  block's cell, and `x := e` lowers to `x = $u` in `thenBranch`). An
   occurrence's failure is the sweep's first failure with the effect prefix
   so far — the frame and binders are dropped, defers/recover unchanged.
-  Requires the statement-sequence position `.initialization` requires
-  (the enclosing `.seq` frame's environment is extended in place).
+  Requires the statement-sequence position (the enclosing `.seq` frame is
+  the continuation the sweep returns to, unchanged).
   ENVELOPE STATEMENT (spec#Order_of_evaluation): «the order of those
   events compared to the evaluation and indexing of x and the evaluation
   of y and z is not specified, except as required lexically» — every

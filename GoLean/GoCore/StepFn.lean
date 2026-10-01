@@ -192,12 +192,15 @@ theorem stepFrameExit_nil (s : Store) (tenv : LocalEnv) (k' : Cont) (fr : FuncId
     stepFrameExit ctx s [] tenv [] [] k' fr choices = .ok (.next k', s, choices, ⟨[], [], []⟩) := rfl
 
 /-- **The `unseq` sweep's ENTER** (Stage B, 2026-09-16; rule `unseqEnter`;
-design `docs/2026-09-16_evaluation-order-model-v2.md` §3.3): the
-statement-sequence position `.initialization` requires — the enclosing
-`.seq` frame's environment is extended IN PLACE with the binder cells
-(`allocDecls`: one typed cell per VALUE binder, zero-initialised), so
-`thenB`'s source declarations survive the sweep and the cells fall out of
-scope with the enclosing block; every status starts ACTIVE, the target
+design `docs/2026-09-16_evaluation-order-model-v2.md` §3.3; C4 D3 (b),
+2026-10-01): at the statement-sequence position, the binder cells are
+allocated in a sweep-PRIVATE scope pushed on the source environment
+(`allocDecls` over `env.pushScope`: one typed cell per VALUE binder,
+zero-initialised) — the sweep frame's scope; the continuation `.seq rest
+env k` keeps the source environment unchanged (a `.seq` frame's
+environment is fixed from creation to pop). `thenB` runs under the sweep
+scope: its binder reads resolve there, its source assignments reach the
+enclosing block's cells. Every status starts ACTIVE, the target
 table empty. The graph's static shape is refused BY NAME
 (`UnseqGraph.wellFormed?`) before any cell exists, then its binders' freshness and
 its slots' knownness against the enclosing environment (`unseqEntryCheck?`, B6 fix
@@ -214,8 +217,8 @@ def stepUnseqEnter (s : Store) (g : UnseqGraph) (thenB : Stmt) (env : LocalEnv)
         match unseqEntryCheck? g env with
         | some msg => throw (.stuck s!"unseq: malformed graph at entry — {msg}")
         | none => do
-            let (env', s') ← allocDecls ctx env s g.cells
-            return (.next (.unseqK g thenB g.initStatus [] env' .pick (.seq rest env' k')),
+            let (env', s') ← allocDecls ctx env.pushScope s g.cells
+            return (.next (.unseqK g thenB g.initStatus [] env' .pick (.seq rest env k')),
               s', choices, ⟨[], [], []⟩)
       else throw (.internal "unseq under foreign-scope sequence")
   | _ => throw (.stuck "GoCore unseq outside a statement sequence")
@@ -414,15 +417,6 @@ def stepFn (s : Store) (c : Config) (choices : Choices) :
       | .block decls ss => do
           let (env', s') ← allocDecls ctx env.pushScope s decls.toList
           return (.next (.seq ss.toList env' k), s', choices, ⟨[], [], []⟩)
-      | .initialization p =>
-          match k with
-          | .seq rest kenv k' =>
-              if kenv = env then do
-                let v ← defaultValue ctx p.typ
-                let (loc, s') ← Store.alloc ctx s v p.typ
-                return (.next (.seq rest (env.declare p.id loc) k'), s', choices, ⟨[], [], []⟩)
-              else throw (.internal "initialization under foreign-scope sequence")
-          | _ => throw (.stuck "GoCore initialization outside a statement sequence")
       | .assign lhs rhs =>
           -- Round 4 (BUG-037): a single assignment rides the spine as a
           -- one-target multi-assign — the RHS is phase 1, the target
@@ -1057,6 +1051,13 @@ theorem stepFn_next_frame (s : Store) (targets : List (TargetShape × List Expr)
     (fr : FuncId) (k' : Cont) (choices : Choices) :
     stepFn ctx s (.next (Frame.frame targets tenv results ds fr :: k')) choices
       = stepFrameExit ctx s targets tenv results ds k' fr choices := rfl
+
+variable {ctx} in
+/-- C4 D8 — BLOCK EXIT leaves the store alone: the `.seq []` pop (rule `Step.seqDone`) is
+store-neutral, so a cell that escaped its block (address taken, captured by a closure) survives the
+block's lexical exit — the executable equation beside the rule. -/
+theorem blockExit_store_eq (s : Store) (env : LocalEnv) (k : Cont) (ch : Choices) :
+    stepFn ctx s (.next (.seq [] env k)) ch = .ok (.next k, s, ch, ⟨[], [], []⟩) := rfl
 
 /-- Raw `n`-fold iteration of `stepFn` — NO terminal check and no outcome
 classification (sem-adequacy arc slice 4, 2026-08-04). `stepFn` itself

@@ -728,7 +728,8 @@ def k4 (testTy outTy : Ty) : Program := { funcs := #[
      .unseq (k4Graph testTy outTy) (println [str "c", .var (vid "$cor")])],
   a4h] }
 
-/-! ### R5 — the headline lowering `x := a + f()` ↦ `thenB = .initialization x; x = $op` -/
+/-! ### R5 — the headline lowering `x := a + f()` ↦ `x` a declaration of the enclosing block (C4,
+2026-10-01: allocated at the block's entry — was `.initialization x` in `thenB`), `thenB = x = $op` -/
 
 def fv1 : Func := { id := ⟨"fv1"⟩, args := #[], results := #[intP "r"], body := ret "r" (.intLit 2) }
 /-- The K graph over binders suffixed `sfx` — two sweeps in ONE block must use distinct binders (B6 fix round F3:
@@ -739,11 +740,12 @@ def kGraphS (sfx : String) : UnseqGraph := {
   occs := [occ "R_a" (.eval (vid s!"$a{sfx}") (.var (vid "a"))), occ "E_f" (.invoke [vid s!"$f{sfx}"] (.var (vid "fv")) []),
            occ "Op" (.eval (vid s!"$op{sfx}") (.add (.var (vid s!"$a{sfx}")) (.var (vid s!"$f{sfx}"))))] }
 def kGraph : UnseqGraph := kGraphS ""
-def thenDeclS (x sfx : String) : Stmt := .seqn #[.initialization (intP x), .assign (.var (vid x)) (.var (vid s!"$op{sfx}"))]
+def thenDeclS (x sfx : String) : Stmt := .seqn #[.assign (.var (vid x)) (.var (vid s!"$op{sfx}"))]
 def thenDecl (x : String) : Stmt := thenDeclS x ""
-/-- K2: the sweep in the MIDDLE of a block; `x` declared by `thenB` survives for the rest. -/
+/-- K2: the sweep in the MIDDLE of a block; `x`/`y` are the block's cells (C4) — assigned by
+`thenB` under the sweep's private scope, read after the sweep. -/
 def k2 : Program := { funcs := #[
-  mainUnit [intP "a", ⟨vid "fv", fnTy [] [.int]⟩]
+  mainUnit [intP "a", ⟨vid "fv", fnTy [] [.int]⟩, intP "x", intP "y"]
     [.assign (.var (vid "a")) (.intLit 1), .assign (.var (vid "fv")) (clos "fv1" []),
      .unseq kGraph (thenDecl "x"),
      println [str "x", .var (vid "x")],
@@ -751,12 +753,13 @@ def k2 : Program := { funcs := #[
      .unseq (kGraphS "2") (thenDeclS "y" "2"),
      println [str "x y", .var (vid "x"), .var (vid "y")]],
   fv1] }
-/-- K3: the same inside a 2-iteration loop body (a fresh `x` per iteration). -/
+/-- K3: the same inside a 2-iteration loop body (a fresh `x` per iteration: the body BLOCK's
+cell, allocated at each entry — C4 D1/D6). -/
 def k3 : Program := { funcs := #[
   mainUnit [intP "a", intP "n", ⟨vid "fv", fnTy [] [.int]⟩]
     [.assign (.var (vid "a")) (.intLit 1), .assign (.var (vid "n")) (.intLit 0), .assign (.var (vid "fv")) (clos "fv1" []),
      .while (.lessCmp (.var (vid "n")) (.intLit 2))
-       (.seqn #[.unseq kGraph (thenDecl "x"), println [str "x", .var (vid "x")],
+       (.block #[intP "x"] #[.unseq kGraph (thenDecl "x"), println [str "x", .var (vid "x")],
                 .assign (.var (vid "a")) (.add (.var (vid "a")) (.intLit 1)), .assign (.var (vid "n")) (.add (.var (vid "n")) (.intLit 1))])],
   fv1] }
 
@@ -903,7 +906,7 @@ def main (_args : List String) : IO Unit := do
     expectRefusal "N3/K4 guard completion cell typed int: refused by name at ENTER" (k4 .bool .int) "main" "not a bool cell",
     expectRefusal "N3 guard test cell typed int: refused by name at ENTER" (k4 .int .bool) "main" "not a bool cell",
     -- R5
-    expectSet "R5/K2 x := a + f() via .initialization in thenB, mid-block, two sweeps" k2 "main" [okOut "x 3\nx y 3 12\n"],
+    expectSet "R5/K2 x := a + f() via the block's declaration + thenB's assign, mid-block, two sweeps" k2 "main" [okOut "x 3\nx y 3 12\n"],
     expectSet "R5/K3 the same in a loop body: a fresh x per iteration" k3 "main" [okOut "x 3\nx 4\n"],
     -- Replay
     expectSet "replay graph: three unordered events" trace "main"

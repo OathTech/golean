@@ -117,7 +117,6 @@ def stmtIndices : Stmt → List TypeIdx
   | .seqn ss => stmtListIndices ss.toList
   | .block ps ss => paramsIndices ps ++ stmtListIndices ss.toList
   | .breakable s | .labeled _ s => stmtIndices s
-  | .initialization p => paramIndices p
   | .assign a e => assigneeIndices a ++ exprIndices e
   | .assignMany as es | .call as _ es | .syncStmt _ es as | .atomicStmt _ _ es as =>
       assigneesIndices as ++ exprListIndices es.toList

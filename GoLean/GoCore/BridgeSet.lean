@@ -98,6 +98,21 @@ enumerates `ChoiceSite`, `Stmt` or `StmtOp` — the new constructors `ChoiceSite
 record), and the pick-lifted plan at a popping bound (`applyStmtOp_plan_randIntn_draw`, the form the
 coverage proofs consume). The site records exactly like the others: `replay_coverage` (row 48),
 `stepFn_picks_none` / `_some` (rows 62–63) hold unchanged.
+
+RE-PIN 8 — window row 6, C4 block-entry allocation ([AGENT worker, lane core/block-allocation-1001],
+2026-10-01; G-C4 PASSED [USER] Mike 2026-10-01 «Those costs seem fine to me. Go ahead with these decisions. You
+can work on block allocation on the basis of approving all of your recommendations.», relayed; design note
+`docs/2026-10-01_gc4-block-allocation-design.md` §4 D8; handoff `docs/2026-10-01_block-allocation-handoff.md`):
+rows 1–131 and 133–135 BYTE-IDENTICAL (`Stmt.initialization` / `Step.initialization` were pinned nowhere; no
+pinned statement enumerates `Stmt`); row 132 RE-PINNED — decision 3, D3 (b): the `unseqEnter` rule allocates the
+binder cells over `env.pushScope` (a sweep-private scope) and its continuation keeps the source environment
+(`.seq rest env k`, was `.seq rest env' k`), so a `Frame.seq`'s environment is fixed from creation to pop with no
+exception. Rows 136–154 ADDED — the D8 acceptance list: the layout function `entrySlot s i = .base ⟨s.heap.size + i⟩`
+for BOTH entries, the block-entry rule `Step.block`, `blockEntry_shift` / `_lookup` / `_lookup_outer` /
+`_zero`, the two freshness halves (`entrySlot_not_allocated`, `blockEntry_fresh`), block exit as the rule
+`Step.seqDone` and the executable equation `blockExit_store_eq`, `heap_size_mono` (the wf_loc conjunct, named),
+`enterFrame_shift`, `frameEntry_lookup_arg` / `_result` (rows 124–125 restated through `entrySlot`),
+`frameEntry_fresh`, and the D7 pair `pushDefer_saves_values` / `funcVal_captures_locs` beside `Step.evalRef`.
 -/
 
 namespace GoLean.GoCore.BridgeSet
@@ -966,13 +981,15 @@ example : ∀ {f : Func}, f.localsOk = true → ∀ {id : VarId}, id ∈ f.body.
 
 -- 132. `Machine.lean` — the sweep's id-level entry check (fix round F3): the `unseqEnter` rule's
 -- second premise — every binder fresh in the enclosing environment, every mentioned slot a cell
--- or a bound local
+-- or a bound local. RE-PINNED at RE-PIN 8 (C4 D3 (b), 2026-10-01): the cells are allocated in a
+-- sweep-PRIVATE scope (`env.pushScope`) and the continuation keeps the source environment
+-- (`.seq rest env k`, was `.seq rest env' k`)
 example : ∀ {ctx : ProgramCtx} {g : UnseqGraph} {thenB : Stmt} {rest : List Stmt} {env env' : LocalEnv}
     {k : Cont} {s s' : Store},
     g.wellFormed? = none → unseqEntryCheck? g env = none →
-    allocDecls ctx env s g.cells = .ok (env', s') →
+    allocDecls ctx env.pushScope s g.cells = .ok (env', s') →
     Step ctx (.exec (.unseq g thenB) env (.seq rest env k)) s
-      (.next (.unseqK g thenB g.initStatus [] env' .pick (.seq rest env' k))) s' ⟨[], [], []⟩ :=
+      (.next (.unseqK g thenB g.initStatus [] env' .pick (.seq rest env k))) s' ⟨[], [], []⟩ :=
   @GoLean.GoCore.Machine.Step.unseqEnter
 
 -- ---- RE-PIN 7 (window unit 5b, the `intn` pick site, 2026-09-30) ----
@@ -1011,5 +1028,139 @@ example : ∀ {ctx : ProgramCtx} {σ : Store} {nt : Nat} {vs : List GoValue} {w 
                 [⟨.intn, w, (Choices.consumeAt .intn w ch).1⟩]))
       ∧ (∀ pick, NoPanic (g pick)) :=
   @GoLean.GoCore.Machine.applyStmtOp_plan_randIntn_draw
+
+-- ---- RE-PIN 8 (window row 6, C4 block-entry allocation, 2026-10-01) ----
+
+-- 136. `Machine.lean` — THE LAYOUT FUNCTION (D8, request 4): the `i`-th cell an entry allocates from
+-- store `s` — frame entry's `args[i]` / `results[args.size + j]`, block entry's `decls[i]`
+example : ∀ (s : Store) (i : Nat), entrySlot s i = .base ⟨s.heap.size + i⟩ :=
+  GoLean.GoCore.Machine.entrySlot_def
+
+-- 137. `Machine.lean` — two slots of one entry are distinct iff their indices are
+example : ∀ (s : Store) {i j : Nat}, entrySlot s i = entrySlot s j ↔ i = j :=
+  @GoLean.GoCore.Machine.entrySlot_inj
+
+-- 138. `Machine.lean` — the block-entry RULE (every declaration of a decoded program since C4 is some
+-- block's; `Stmt.initialization` is gone): the block's declarations allocate under a fresh scope
+example : ∀ {ctx : ProgramCtx} {decls : Array Param} {ss : Array Stmt} {env env' : LocalEnv} {k : Cont}
+    {s s' : Store},
+    allocDecls ctx env.pushScope s decls.toList = .ok (env', s') →
+    Step ctx (.exec (.block decls ss) env k) s (.next (.seq ss.toList env' k)) s' ⟨[], [], []⟩ :=
+  @GoLean.GoCore.Machine.Step.block
+
+-- 139. `Machine.lean` — block entry SHIFTS the heap by the declaration count
+example : ∀ {ctx : ProgramCtx} {env env' : LocalEnv} {s s' : Store} {decls : Array Param},
+    allocDecls ctx env.pushScope s decls.toList = .ok (env', s') →
+    s'.heap.size = s.heap.size + decls.size :=
+  @GoLean.GoCore.Machine.blockEntry_shift
+
+-- 140. `Machine.lean` — block entry binds declaration `i` to `entrySlot s i` (premise: the block's ids
+-- pairwise distinct — the decoder's per-block dedupe, D5)
+example : ∀ {ctx : ProgramCtx} {env env' : LocalEnv} {s s' : Store} {decls : Array Param},
+    allocDecls ctx env.pushScope s decls.toList = .ok (env', s') →
+    namesDistinct (decls.toList.map (·.id)) = true →
+    ∀ (i : Nat) (hi : i < decls.size), LocalEnv.lookup env' decls[i].id = some (entrySlot s i) :=
+  @GoLean.GoCore.Machine.blockEntry_lookup
+
+-- 141. `Machine.lean` — an id the block does not declare resolves as in the enclosing environment
+-- (shadowing by scope)
+example : ∀ {ctx : ProgramCtx} {env env' : LocalEnv} {s s' : Store} {decls : Array Param},
+    allocDecls ctx env.pushScope s decls.toList = .ok (env', s') →
+    ∀ {id : VarId}, id ∉ decls.toList.map (·.id) → LocalEnv.lookup env' id = LocalEnv.lookup env id :=
+  @GoLean.GoCore.Machine.blockEntry_lookup_outer
+
+-- 142. `Machine.lean` — FRESHNESS, the heap half: an entry slot is no cell of the entry store
+example : ∀ (s : Store) (i : Nat), Heap.lookup s.heap (entrySlot s i) = none :=
+  GoLean.GoCore.Machine.entrySlot_not_allocated
+
+-- 143. `StateWf.lean` — FRESHNESS, the environment half: no binding of a loc-bounded environment names
+-- an entry slot (with `ConfigWf`: no existing value, environment or label names the new cell)
+example : ∀ {env : LocalEnv} {s : Store}, LocalEnv.locSup env ≤ s.nextAddr →
+    ∀ (id : VarId) (i : Nat), LocalEnv.lookup env id ≠ some (entrySlot s i) :=
+  @GoLean.GoCore.Machine.blockEntry_fresh
+
+-- 144. `Machine.lean` — ZERO VALUE AT ENTRY: declaration `i`'s cell holds `defaultValue` normalized at
+-- the declared type (`Store.alloc` normalizes at birth — the C1 D3 premise), at that type
+example : ∀ {ctx : ProgramCtx} {env env' : LocalEnv} {s s' : Store} {decls : Array Param},
+    allocDecls ctx env.pushScope s decls.toList = .ok (env', s') →
+    ∀ (i : Nat) (hi : i < decls.size),
+      ∃ v₀ v, defaultValue ctx decls[i].typ = .ok v₀
+        ∧ normalizeValueForTy ctx decls[i].typ v₀ = .ok v
+        ∧ Heap.lookup s'.heap (entrySlot s i) = some (.value decls[i].typ v) :=
+  @GoLean.GoCore.Machine.blockEntry_zero
+
+-- 145. `Machine.lean` — BLOCK EXIT, the rule: the `.seq []` pop is store-neutral
+example : ∀ {ctx : ProgramCtx} {env : LocalEnv} {k : Cont} {s : Store},
+    Step ctx (.next (.seq [] env k)) s (.next k) s ⟨[], [], []⟩ :=
+  @GoLean.GoCore.Machine.Step.seqDone
+
+-- 146. `StepFn.lean` — BLOCK EXIT, the executable: the pop returns the same store (an escaped /
+-- captured cell survives its block's lexical exit)
+example : ∀ {ctx : ProgramCtx} (s : Store) (env : LocalEnv) (k : Cont) (ch : Choices),
+    stepFn ctx s (.next (.seq [] env k)) ch = .ok (.next k, s, ch, ⟨[], [], []⟩) :=
+  @GoLean.GoCore.Machine.blockExit_store_eq
+
+-- 147. `StateWf.lean` — the heap never shrinks along a step (the lifetime half of `frameEntry_fresh`;
+-- the `σ.nextAddr ≤ σ'.nextAddr` conjunct of `step_preserves_wf_loc`, named)
+example : ∀ {ctx : ProgramCtx} {c : Config} {σ : Store} {c' : Config} {σ' : Store} {l : StepLabel},
+    Step ctx c σ c' σ' l → StateWf ctx σ → ConfigWf σ.nextAddr c → σ.heap.size ≤ σ'.heap.size :=
+  @GoLean.GoCore.Machine.heap_size_mono
+
+-- 148. `Machine.lean` — frame entry SHIFTS the heap by the activation's slot count
+example : ∀ {ctx : ProgramCtx} {s : Store} {fid : FuncId} {argVals : List GoValue} {func : Func},
+    findFunctionIn? ctx.functions fid = some func →
+    (∀ m, methodInfoByFuncId? ctx func.id = some m → methodRecvInterfaceName? m = none) →
+    func.args.size = argVals.length →
+    ∀ {frameEnv : LocalEnv} {resultLocs : List Loc} {s' : Store} {tr : AccessTrace},
+    enterFrame ctx s fid argVals = .ok (.run func frameEnv resultLocs, s', tr) →
+    s'.heap.size = s.heap.size + func.args.size + func.results.size :=
+  @GoLean.GoCore.Machine.enterFrame_shift
+
+-- 149. `Machine.lean` — frame entry through the layout function, arguments (row 124 restated)
+example : ∀ {ctx : ProgramCtx} {s : Store} {fid : FuncId} {argVals : List GoValue} {func : Func},
+    findFunctionIn? ctx.functions fid = some func →
+    (∀ m, methodInfoByFuncId? ctx func.id = some m → methodRecvInterfaceName? m = none) →
+    func.args.size = argVals.length →
+    namesDistinct ((func.args ++ func.results).toList.map (·.id)) = true →
+    ∀ {frameEnv : LocalEnv} {resultLocs : List Loc} {s' : Store} {tr : AccessTrace},
+    enterFrame ctx s fid argVals = .ok (.run func frameEnv resultLocs, s', tr) →
+    ∀ (i : Nat) (hi : i < func.args.size),
+      LocalEnv.lookup frameEnv func.args[i].id = some (entrySlot s i) :=
+  @GoLean.GoCore.Machine.frameEntry_lookup_arg
+
+-- 150. `Machine.lean` — frame entry through the layout function, results (row 125 restated)
+example : ∀ {ctx : ProgramCtx} {s : Store} {fid : FuncId} {argVals : List GoValue} {func : Func},
+    findFunctionIn? ctx.functions fid = some func →
+    (∀ m, methodInfoByFuncId? ctx func.id = some m → methodRecvInterfaceName? m = none) →
+    func.args.size = argVals.length →
+    namesDistinct ((func.args ++ func.results).toList.map (·.id)) = true →
+    ∀ {frameEnv : LocalEnv} {resultLocs : List Loc} {s' : Store} {tr : AccessTrace},
+    enterFrame ctx s fid argVals = .ok (.run func frameEnv resultLocs, s', tr) →
+    ∀ (j : Nat) (hj : j < func.results.size),
+      LocalEnv.lookup frameEnv func.results[j].id = some (entrySlot s (func.args.size + j)) :=
+  @GoLean.GoCore.Machine.frameEntry_lookup_result
+
+-- 151. `Machine.lean` — two activations never share a slot (layout arithmetic; the lifetime premise
+-- is row 147 composed along the run)
+example : ∀ {s₁ s₂ : Store} {n : Nat}, s₁.heap.size + n ≤ s₂.heap.size →
+    ∀ {i : Nat}, i < n → ∀ (j : Nat), entrySlot s₁ i ≠ entrySlot s₂ j :=
+  @GoLean.GoCore.Machine.frameEntry_fresh
+
+-- 152. `Machine.lean` — D7, a deferred call saves argument VALUES (no store involved)
+example : ∀ (f : GoValue) (vs : List GoValue) (t : List (TargetShape × List Expr)) (te : LocalEnv)
+    (r : List Loc) (ds : List (GoValue × List GoValue)) (fr : FuncId) (k : Cont),
+    pushDefer (f, vs) (Frame.frame t te r ds fr :: k) = some (Frame.frame t te r ((f, vs) :: ds) fr :: k) :=
+  GoLean.GoCore.Machine.pushDefer_saves_values
+
+-- 153. `Machine.lean` — D7, a closure value packs its capture operands' VALUES, store untouched …
+example : ∀ {ctx : ProgramCtx} (s : Store) (leafOf : Loc → Loc) (fid : FuncId) (vs : List GoValue),
+    applyStrictOp ctx s leafOf (.funcValOf fid) vs = .ok (.funcVal fid vs, s, []) :=
+  @GoLean.GoCore.Machine.funcVal_captures_locs
+
+-- 154. `Machine.lean` — … and a capture operand `.ref x` evaluates to the local's cell ADDRESS
+example : ∀ {ctx : ProgramCtx} {id : VarId} {loc : Loc} {env : LocalEnv} {k : Cont} {s : Store},
+    LocalEnv.lookup env id = some loc →
+    Step ctx (.evalE (.ref id) env k) s (.retV (.addr loc) k) s ⟨[], [], []⟩ :=
+  @GoLean.GoCore.Machine.Step.evalRef
 
 end GoLean.GoCore.BridgeSet

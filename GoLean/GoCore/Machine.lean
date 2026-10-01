@@ -51,11 +51,11 @@ mid-arc audit):
   evaluating the key; call arity checked before argument evaluation) here
   happen after all operands are evaluated — observable only for ill-typed
   programs the frontend cannot emit; both sides fail closed;
-- a bare `.initialization` NOT directly under a statement sequence is
-  stuck here where the big-step interpreter ran it as a dead no-op — the
-  declaration's whole purpose is extending the enclosing sequence's
-  environment, so outside one it fails closed; the frontend only ever
-  emits initializations inside `.seqn`/`.block` statement lists.
+- (historical) a bare `.initialization` NOT directly under a statement
+  sequence was stuck here where the big-step interpreter ran it as a dead
+  no-op. `Stmt.initialization` was DELETED by C4 (block-entry allocation,
+  2026-10-01): every local is its enclosing `.block`'s cell, allocated at
+  entry by `Step.block`/`allocDecls`; a `Frame.seq`'s environment is fixed.
 
 Statement-side coverage (S2): the full interpreter fragment. Wide
 statements (`allocNew`, make/assign/lookup for maps and
@@ -3713,9 +3713,10 @@ inductive Frame where
   its occurrence is DONE, `UnseqGraph.produced`); the continuation-owned
   TARGET table (frozen plans of sort TARGET, `TargetRef` — never a
   `GoValue`, review R4); the sweep's SCOPE `env` (the source environment
-  with the binder cells declared in it at ENTER — the `.initialization`
-  idiom, so `thenB`'s source declarations survive the sweep and the cells
-  fall out of scope with the enclosing block); and the `phase`: `.pick` (the
+  under a sweep-PRIVATE scope holding the binder cells, pushed at ENTER —
+  C4 D3 (b), 2026-10-01: `thenB` runs under it, its binder reads resolve
+  there and its source assignments reach the enclosing block's cells; the
+  continuation keeps the source environment); and the `phase`: `.pick` (the
   scheduler's step — review R2's cases (i)–(iii), `stepUnseqNext`), `.run i`
   (occurrence `i` starts this step), `.wait i` (its value / statement
   completion is awaited). `FrameClass.exprGlue`: a panic reaching it is the
@@ -6004,11 +6005,8 @@ inductive Step : Config → Store → Config → Store → StepLabel → Prop wh
   | block {decls ss env env' k s s'} :
       allocDecls ctx env.pushScope s decls.toList = .ok (env', s') →
       Step (.exec (.block decls ss) env k) s (.next (.seq ss.toList env' k)) s' ⟨[], [], []⟩
-  | initialization {p v loc rest env k s s'} :
-      defaultValue ctx p.typ = .ok v →
-      Store.alloc ctx s v p.typ = .ok (loc, s') →
-      Step (.exec (.initialization p) env (.seq rest env k)) s
-        (.next (.seq rest (env.declare p.id loc) k)) s' ⟨[], [], []⟩
+  -- `initialization` DELETED by C4 (2026-10-01): declarations are `block`'s entry
+  -- allocations; no rule rewrites a `.seq` frame's environment.
   -- Assignment (round 4, BUG-037): the SINGLE assignment rides the
   -- phase-split spine as a one-target multi-assign — the RHS is
   -- phase 1, the target chain's checks fire at the store (phase 2).
@@ -6621,10 +6619,10 @@ inductive Step : Config → Store → Config → Store → StepLabel → Prop wh
   -- **The `unseq` construct** (evaluation-order model v2.1 §3.3; Stage B,
   -- lane `core/unseq-scheduler-b-0916`, 2026-09-16; the mechanism RULED
   -- [USER] Mike 2026-09-16 relayed — «the Cerberus model is the correct
-  -- one»). ENTER allocates the binder cells in the source scope (the
-  -- `.initialization` idiom: the enclosing `.seq` frame's environment is
-  -- extended in place, so `thenB`'s source declarations survive); the
-  -- graph's static shape is checked BY NAME (`UnseqGraph.wellFormed?`).
+  -- one»). ENTER allocates the binder cells in a sweep-PRIVATE scope pushed
+  -- on the source environment (C4 D3 (b), 2026-10-01 — the continuation
+  -- `.seq rest env k` is untouched: a `.seq` frame's environment is fixed);
+  -- the graph's static shape is checked BY NAME (`UnseqGraph.wellFormed?`).
   -- PICK (review R2's three cases): (i) no active occurrence → phase 2 —
   -- the stores ride the existing `storeK` spine, then `thenB` runs in the
   -- source scope; (ii) ANY ready occurrence may run next — nondeterminism
@@ -6646,9 +6644,9 @@ inductive Step : Config → Store → Config → Store → StepLabel → Prop wh
   | unseqEnter {g thenB rest env env' k s s'} :
       g.wellFormed? = none →
       unseqEntryCheck? g env = none →
-      allocDecls ctx env s g.cells = .ok (env', s') →
+      allocDecls ctx env.pushScope s g.cells = .ok (env', s') →
       Step (.exec (.unseq g thenB) env (.seq rest env k)) s
-        (.next (.unseqK g thenB g.initStatus [] env' .pick (.seq rest env' k))) s' ⟨[], [], []⟩
+        (.next (.unseqK g thenB g.initStatus [] env' .pick (.seq rest env k))) s' ⟨[], [], []⟩
   /-- Case (ii): the `j`-th READY occurrence (canonical rank order) runs
   next — the `ChoiceSite.unseqNext` pick; `j` is free (every ready
   occurrence is a legal choice). -/
@@ -7077,6 +7075,230 @@ theorem enterFrame_lookup_result {s : Store} {fid : FuncId} {argVals : List GoVa
   obtain ⟨env', locs', heq, -, hres⟩ := enterFrame_lookup hf hanchor harity hdistinct h
   cases heq
   exact hres j hj
+
+/-! ## Block-entry allocation — the layout function and the lifetime lemmas (C4 D8, 2026-10-01)
+
+`docs/2026-10-01_gc4-block-allocation-design.md` §4 D8 (G-C4 RULED [USER] Mike 2026-10-01, relayed;
+the logic team's request 4): ONE layout function for both entries. Frame entry binds
+`args[i] ↦ entrySlot s i` and `results[j] ↦ entrySlot s (args.size + j)` (`enterFrame_lookup_arg` /
+`_result`, restated through it below as `frameEntry_lookup_arg` / `_result`); block entry binds
+`decls[i] ↦ entrySlot s i` (`Step.block`: `allocDecls` over `env.pushScope`). Since C4 every local of
+a decoded program is some block's declaration (the decoder's hoist), so these ARE the slot laws of
+every activation: `blockEntry_shift` (the heap grows by the declaration count), `blockEntry_lookup`
+(the slot), `blockEntry_lookup_outer` (shadowing by scope), `entrySlot_not_allocated` (no cell yet),
+`blockEntry_zero` (the zero value, normalized at the type — the C1 D3 premise), `frameEntry_fresh`
+(two activations never share a slot; its lifetime half is `heap_size_mono`, `StateWf.lean`),
+`enterFrame_shift`, and the D7 pair as equations — `pushDefer_saves_values` (a deferred call keeps
+argument VALUES) beside `funcVal_captures_locs` (a closure keeps cell ADDRESSES, `Step.evalRef`).
+`blockEntry_fresh` (no bounded environment names a new slot) lives in `StateWf.lean` with the sup
+laws; `blockExit_store_eq` (the pop is store-neutral) in `StepFn.lean` beside the executable. -/
+
+/-- The `i`-th cell an entry allocates from store `s`: an address IS a heap index (dense heap,
+A2; `Store.allocCell`), so the layout is arithmetic on the entry store's size. -/
+def entrySlot (s : Store) (i : Nat) : Loc := .base ⟨s.heap.size + i⟩
+
+theorem entrySlot_def (s : Store) (i : Nat) : entrySlot s i = .base ⟨s.heap.size + i⟩ := rfl
+
+/-- Two slots of one entry are distinct iff their indices are. -/
+theorem entrySlot_inj (s : Store) {i j : Nat} : entrySlot s i = entrySlot s j ↔ i = j := by
+  simp [entrySlot]
+
+/-- An entry slot is NO cell of the entry store (its index is past the heap). -/
+theorem entrySlot_not_allocated (s : Store) (i : Nat) :
+    Heap.lookup s.heap (entrySlot s i) = none := by
+  simp [entrySlot, Heap.lookup]
+
+/-- Block entry SHIFTS the heap by the declaration count. -/
+theorem blockEntry_shift {env env' : LocalEnv} {s s' : Store} {decls : Array Param}
+    (h : allocDecls ctx env.pushScope s decls.toList = .ok (env', s')) :
+    s'.heap.size = s.heap.size + decls.size := by
+  simpa using allocDecls_heap_size _ _ _ h
+
+/-- Block entry binds declaration `i` to `entrySlot s i` (`allocDecls_lookup` through the layout
+function; the premise is the block's declaration ids pairwise distinct — the decoder's dedupe). -/
+theorem blockEntry_lookup {env env' : LocalEnv} {s s' : Store} {decls : Array Param}
+    (h : allocDecls ctx env.pushScope s decls.toList = .ok (env', s'))
+    (hd : namesDistinct (decls.toList.map (·.id)) = true)
+    (i : Nat) (hi : i < decls.size) :
+    LocalEnv.lookup env' decls[i].id = some (entrySlot s i) := by
+  have hi' : i < decls.toList.length := by simpa using hi
+  rw [← Array.getElem_toList (h := hi')]
+  exact allocDecls_lookup _ _ _ h hd i hi'
+
+/-- An id the block does not declare resolves as in the enclosing environment — shadowing is by
+scope (`LocalEnv.lookup_pushScope` + `allocDecls_lookup_preserve`), never by overwriting. -/
+theorem blockEntry_lookup_outer {env env' : LocalEnv} {s s' : Store} {decls : Array Param}
+    (h : allocDecls ctx env.pushScope s decls.toList = .ok (env', s'))
+    {id : VarId} (hid : id ∉ decls.toList.map (·.id)) :
+    LocalEnv.lookup env' id = LocalEnv.lookup env id := by
+  rw [allocDecls_lookup_preserve _ _ _ h hid, LocalEnv.lookup_pushScope]
+
+/-- `Store.alloc` writes the NORMALIZED value at the declared type into the new cell (C1 D3). -/
+theorem Store.alloc_cell {s s' : Store} {v : GoValue} {ty : Ty} {l : Loc}
+    (h : Store.alloc ctx s v ty = .ok (l, s')) :
+    ∃ v', normalizeValueForTy ctx ty v = .ok v' ∧ s'.heap = s.heap.push (.value ty v') := by
+  unfold Store.alloc at h
+  cases hn : normalizeValueForTy ctx ty v with
+  | error e => simp [hn, Bind.bind, Except.bind] at h
+  | ok v' =>
+      simp only [hn, Bind.bind, Except.bind, pure, Except.pure, Store.allocCell, Except.ok.injEq,
+        Prod.mk.injEq] at h
+      obtain ⟨-, rfl⟩ := h
+      exact ⟨v', rfl, rfl⟩
+
+/-- `allocDecls` leaves every EXISTING cell as it was (it only pushes). -/
+theorem allocDecls_heap_get_lt : ∀ (env : LocalEnv) (s : Store) (ps : List Param)
+    {env' : LocalEnv} {s' : Store}, allocDecls ctx env s ps = .ok (env', s') →
+    ∀ {j : Nat}, j < s.heap.size → s'.heap[j]? = s.heap[j]?
+  | _, _, [], _, _, h, _, _ => by
+      simp only [allocDecls, pure, Except.pure, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨-, rfl⟩ := h; rfl
+  | env, s, p :: ps, env', s', h, j, hj => by
+      simp only [allocDecls, Bind.bind, Except.bind] at h
+      cases hn : defaultValue ctx p.typ with
+      | error e => simp [hn] at h
+      | ok v =>
+        simp only [hn] at h
+        cases ha : Store.alloc ctx s v p.typ with
+        | error e => simp [ha] at h
+        | ok ls =>
+          obtain ⟨l, s₁⟩ := ls
+          simp only [ha] at h
+          obtain ⟨v', -, hheap⟩ := Store.alloc_cell ha
+          have hsz : s₁.heap.size = s.heap.size + 1 := (Store.alloc_shape ha).2
+          rw [allocDecls_heap_get_lt _ _ ps h (by omega), hheap, Array.getElem?_push_lt hj]
+          exact (Array.getElem?_eq_getElem hj).symm
+
+/-- ZERO VALUE AT ENTRY: declaration `i`'s cell holds `defaultValue` NORMALIZED at the declared
+type (`Store.alloc` normalizes at birth — the C1 D3 premise), at that type. Stated for any
+environment; block entry instantiates `env.pushScope`. -/
+theorem allocDecls_zero : ∀ (env : LocalEnv) (s : Store) (ps : List Param)
+    {env' : LocalEnv} {s' : Store}, allocDecls ctx env s ps = .ok (env', s') →
+    ∀ (i : Nat) (hi : i < ps.length),
+      ∃ v₀ v, defaultValue ctx ps[i].typ = .ok v₀
+        ∧ normalizeValueForTy ctx ps[i].typ v₀ = .ok v
+        ∧ Heap.lookup s'.heap (entrySlot s i) = some (.value ps[i].typ v)
+  | _, _, [], _, _, _, i, hi => absurd hi (Nat.not_lt_zero i)
+  | env, s, p :: ps, env', s', h, i, hi => by
+      simp only [allocDecls, Bind.bind, Except.bind] at h
+      cases hn : defaultValue ctx p.typ with
+      | error e => simp [hn] at h
+      | ok v₀ =>
+        simp only [hn] at h
+        cases ha : Store.alloc ctx s v₀ p.typ with
+        | error e => simp [ha] at h
+        | ok ls =>
+          obtain ⟨l, s₁⟩ := ls
+          simp only [ha] at h
+          obtain ⟨v', hnorm, hheap⟩ := Store.alloc_cell ha
+          have hsz : s₁.heap.size = s.heap.size + 1 := (Store.alloc_shape ha).2
+          cases i with
+          | zero =>
+              refine ⟨v₀, v', hn, hnorm, ?_⟩
+              simp only [entrySlot, Heap.lookup, Nat.add_zero]
+              rw [allocDecls_heap_get_lt _ _ ps h (by omega), hheap]
+              simp
+          | succ i =>
+              have hi' : i < ps.length := Nat.lt_of_succ_lt_succ hi
+              obtain ⟨v₀', v'', h1, h2, h3⟩ := allocDecls_zero _ _ ps h i hi'
+              refine ⟨v₀', v'', h1, h2, ?_⟩
+              simp only [entrySlot, Heap.lookup] at h3 ⊢
+              rw [hsz] at h3
+              simpa [Nat.add_assoc, Nat.add_comm 1] using h3
+
+@[inherit_doc allocDecls_zero]
+theorem blockEntry_zero {env env' : LocalEnv} {s s' : Store} {decls : Array Param}
+    (h : allocDecls ctx env.pushScope s decls.toList = .ok (env', s'))
+    (i : Nat) (hi : i < decls.size) :
+    ∃ v₀ v, defaultValue ctx decls[i].typ = .ok v₀
+      ∧ normalizeValueForTy ctx decls[i].typ v₀ = .ok v
+      ∧ Heap.lookup s'.heap (entrySlot s i) = some (.value decls[i].typ v) := by
+  have hi' : i < decls.toList.length := by simpa using hi
+  rw [← Array.getElem_toList (h := hi')]
+  exact allocDecls_zero _ _ _ h i hi'
+
+/-- Frame entry SHIFTS the heap by the activation's slot count (parameters, then results). -/
+theorem enterFrame_shift {s : Store} {fid : FuncId} {argVals : List GoValue} {func : Func}
+    (hf : findFunctionIn? ctx.functions fid = some func)
+    (hanchor : ∀ m, methodInfoByFuncId? ctx func.id = some m → methodRecvInterfaceName? m = none)
+    (harity : func.args.size = argVals.length)
+    {frameEnv : LocalEnv} {resultLocs : List Loc} {s' : Store} {tr : AccessTrace}
+    (h : enterFrame ctx s fid argVals = .ok (.run func frameEnv resultLocs, s', tr)) :
+    s'.heap.size = s.heap.size + func.args.size + func.results.size := by
+  rw [enterFrame_declared hf hanchor harity] at h
+  simp only [Bind.bind, Except.bind] at h
+  cases hb : bindParams ctx [] s func.args.toList argVals with
+  | error e => simp [hb] at h
+  | ok as =>
+    obtain ⟨argsEnv, s₁⟩ := as
+    simp only [hb] at h
+    cases ha : allocDecls ctx argsEnv s₁ func.results.toList with
+    | error e => simp [ha] at h
+    | ok fs =>
+      obtain ⟨frameEnv', s₂⟩ := fs
+      simp only [ha] at h
+      cases hp : pinResultLocs frameEnv' func.results.toList with
+      | error e => simp [hp] at h
+      | ok resultLocs' =>
+        simp only [hp, pure, Except.pure, Except.ok.injEq, Prod.mk.injEq] at h
+        obtain ⟨-, rfl, -⟩ := h
+        have h1 := bindParams_heap_size _ _ _ _ hb
+        have h2 := allocDecls_heap_size _ _ _ ha
+        simp only [Array.length_toList] at h1 h2
+        omega
+
+/-- Frame entry binds parameter `i` to `entrySlot s i` (`enterFrame_lookup_arg` through the layout
+function). -/
+theorem frameEntry_lookup_arg {s : Store} {fid : FuncId} {argVals : List GoValue} {func : Func}
+    (hf : findFunctionIn? ctx.functions fid = some func)
+    (hanchor : ∀ m, methodInfoByFuncId? ctx func.id = some m → methodRecvInterfaceName? m = none)
+    (harity : func.args.size = argVals.length)
+    (hdistinct : namesDistinct ((func.args ++ func.results).toList.map (·.id)) = true)
+    {frameEnv : LocalEnv} {resultLocs : List Loc} {s' : Store} {tr : AccessTrace}
+    (h : enterFrame ctx s fid argVals = .ok (.run func frameEnv resultLocs, s', tr))
+    (i : Nat) (hi : i < func.args.size) :
+    LocalEnv.lookup frameEnv func.args[i].id = some (entrySlot s i) :=
+  enterFrame_lookup_arg hf hanchor harity hdistinct h i hi
+
+/-- Frame entry binds result `j` to the slot after all the parameters, `entrySlot s (args.size + j)`
+(`enterFrame_lookup_result` through the layout function). -/
+theorem frameEntry_lookup_result {s : Store} {fid : FuncId} {argVals : List GoValue} {func : Func}
+    (hf : findFunctionIn? ctx.functions fid = some func)
+    (hanchor : ∀ m, methodInfoByFuncId? ctx func.id = some m → methodRecvInterfaceName? m = none)
+    (harity : func.args.size = argVals.length)
+    (hdistinct : namesDistinct ((func.args ++ func.results).toList.map (·.id)) = true)
+    {frameEnv : LocalEnv} {resultLocs : List Loc} {s' : Store} {tr : AccessTrace}
+    (h : enterFrame ctx s fid argVals = .ok (.run func frameEnv resultLocs, s', tr))
+    (j : Nat) (hj : j < func.results.size) :
+    LocalEnv.lookup frameEnv func.results[j].id = some (entrySlot s (func.args.size + j)) := by
+  have := enterFrame_lookup_result hf hanchor harity hdistinct h j hj
+  simpa [entrySlot, Nat.add_assoc] using this
+
+/-- Two activations never share a slot: an entry at `s₁` owns `n` slots (`enterFrame_shift` /
+`blockEntry_shift`); any later entry's store is at least as large as the first entry's successor
+(the heap only grows — `heap_size_mono`, `StateWf.lean`), so its slots start at or past
+`s₁.heap.size + n`. Pure layout arithmetic. -/
+theorem frameEntry_fresh {s₁ s₂ : Store} {n : Nat} (h : s₁.heap.size + n ≤ s₂.heap.size)
+    {i : Nat} (hi : i < n) (j : Nat) : entrySlot s₁ i ≠ entrySlot s₂ j := by
+  simp only [entrySlot, ne_eq, Loc.base.injEq, Addr.mk.injEq]
+  omega
+
+/-- D7 — `defer f(args)` saves argument VALUES: the pending call is the pair `(callee value,
+argument values)` prepended to the frame's chain; no cell is read or written (`pushDefer` takes no
+store at all). The D7 contrast is `funcVal_captures_locs`. -/
+theorem pushDefer_saves_values (f : GoValue) (vs : List GoValue)
+    (t : List (TargetShape × List Expr)) (te : LocalEnv) (r : List Loc)
+    (ds : List (GoValue × List GoValue)) (fr : FuncId) (k : Cont) :
+    pushDefer (f, vs) (Frame.frame t te r ds fr :: k) = some (Frame.frame t te r ((f, vs) :: ds) fr :: k) :=
+  rfl
+
+/-- D7 — a closure value captures cell ADDRESSES: `.funcVal fid captured` is the strict form whose
+operands are the capture expressions (the lowering's `.ref x`, which `Step.evalRef` evaluates to the
+local's cell address), and the apply packs the operand VALUES into the closure — store untouched, no
+copy of any pointee. -/
+theorem funcVal_captures_locs (s : Store) (leafOf : Loc → Loc) (fid : FuncId) (vs : List GoValue) :
+    applyStrictOp ctx s leafOf (.funcValOf fid) vs = .ok (.funcVal fid vs, s, []) := rfl
+
 variable (ctx)
 
 end GoLean.GoCore.Machine

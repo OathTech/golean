@@ -632,7 +632,6 @@ def Stmt.eqbF : Nat → Stmt → Stmt → Bool
     | .block d1 s1, .block d2 s2 =>
         eqbArrayP Param.eqb d1 d2 && eqbArrayP (Stmt.eqbF f) s1 s2
     | .breakable b1, .breakable b2 => Stmt.eqbF f b1 b2
-    | .initialization v1, .initialization v2 => Param.eqb v1 v2
     | .assign l1 r1, .assign l2 r2 =>
         Assignee.eqbF f l1 l2 && Expr.eqbF f r1 r2
     | .assignMany l1 r1, .assignMany l2 r2 =>
@@ -733,8 +732,6 @@ theorem Stmt.eqbF_sound : ∀ f (a b : Stmt), Stmt.eqbF f a b = true → a = b :
       cases eqbArrayP_sound Param.eqb_sound h1
       cases eqbArrayP_sound ih h2; rfl
     case breakable.breakable b1 b2 => cases ih _ _ h; rfl
-    case initialization.initialization v1 v2 =>
-      cases Param.eqb_sound _ _ (show Param.eqb v1 v2 = true from h); rfl
     case assign.assign l1 r1 l2 r2 =>
       obtain ⟨h1, h2⟩ := andSplit2 h
       cases Assignee.eqbF_sound _ _ _ h1; cases Expr.eqbF_sound _ _ _ h2; rfl

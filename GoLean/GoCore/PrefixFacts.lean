@@ -175,30 +175,30 @@ theorem stepFn_picks_none {σ : Store} {c : Config} {ch₀ : Choices}
   all_goals (try (okp; done))
   case case6 => simp [seqConsumption] at hsc
   case case2 => picks_entry_none hsc
-  case case35 => picks_entry_none hsc
-  case case94 => picks_entry_none hsc
-  case case98 => picks_entry_none hsc
-  case case104 => picks_entry_none hsc
-  case case66 => unfold stepUnseqEnter; okp
-  case case138 => unfold stepUnseqValue; okp
-  case case145 =>
-    unfold stepFrameExit; okp
-    all_goals
-      simp only [seqConsumption, Config.applyPos, entryCallSite?] at hsc
-      exact entry_ps_nil hsc (by assumption)
-  case case157 =>
+  case case32 => picks_entry_none hsc
+  case case91 => picks_entry_none hsc
+  case case95 => picks_entry_none hsc
+  case case101 => picks_entry_none hsc
+  case case63 => unfold stepUnseqEnter; okp
+  case case135 => unfold stepUnseqValue; okp
+  case case142 =>
     unfold stepFrameExit; okp
     all_goals
       simp only [seqConsumption, Config.applyPos, entryCallSite?] at hsc
       exact entry_ps_nil hsc (by assumption)
   case case154 =>
+    unfold stepFrameExit; okp
+    all_goals
+      simp only [seqConsumption, Config.applyPos, entryCallSite?] at hsc
+      exact entry_ps_nil hsc (by assumption)
+  case case151 =>
     unfold stepUnseqNext; okp
     all_goals
       simp only [seqConsumption] at hsc
       split at hsc
       · cases hsc
       · exact consumeAtE_ps_nil ‹_› (by assumption)
-  case case97 =>
+  case case94 =>
     simp only [seqConsumption, Config.applyPos] at hsc
     obtain ⟨r, hr⟩ := applyStmtOp_plan_of_stmtConsult?_none (nt := ‹Nat›) hsc
     rw [hr]
@@ -209,7 +209,7 @@ theorem stepFn_picks_none {σ : Store} {c : Config} {ch₀ : Choices}
       intro a ha
       cases hrc : runCommit c σ <;> simp_all [Functor.map, Except.map]
       all_goals (subst_vars; rfl)
-  case case119 =>
+  case case116 =>
     rename_i v clauses default? done env k'
     cases hcore : applySelectCore ctx σ clauses default? ((v :: done).reverse) env k' with
     | error e =>
@@ -224,7 +224,7 @@ theorem stepFn_picks_none {σ : Store} {c : Config} {ch₀ : Choices}
         simp only [seqConsumption, Config.applyPos, selectConsult?] at hsc
         rw [hcore] at hsc
         cases hsc
-  case case134 =>
+  case case131 =>
     rename_i v op done env k'
     simp only [seqConsumption, Config.applyPos, syncConsult?, Option.map_eq_none_iff] at hsc
     cases hop : op.tryTargets? with
@@ -274,7 +274,7 @@ theorem stepFn_picks_none {σ : Store} {c : Config} {ch₀ : Choices}
             cases applyTryLock ctx σ op loc pre false targets env k' with
             | error e => cases_stop e <;> okp_norm
             | ok p => okp_norm
-  case case150 =>
+  case case147 =>
     rename_i kv vv kt vt body base produced start env k'
     simp only [seqConsumption, mapIterConsult?] at hsc
     cases hcands : mapIterCandidates ctx σ kt vt base produced with
@@ -308,21 +308,21 @@ theorem stepFn_picks_some {σ : Store} {c : Config} {ch₀ : Choices} {site : Ch
     | (simp_all [seqConsumption, Config.applyPos, entryCallSite?]; done)
     | (okp; done)
     | skip
-  case case156 =>
+  case case153 =>
     simp [seqConsumption, Config.applyPos, entryCallSite?_of_signalStep ‹_›] at hsc
   case case2 => picks_entry_some hsc
-  case case35 => picks_entry_some hsc
-  case case94 => picks_entry_some hsc
-  case case98 => picks_entry_some hsc
-  case case104 => picks_entry_some hsc
-  case case145 =>
+  case case32 => picks_entry_some hsc
+  case case91 => picks_entry_some hsc
+  case case95 => picks_entry_some hsc
+  case case101 => picks_entry_some hsc
+  case case142 =>
     unfold stepFrameExit; okp
     all_goals first
       | (simp [seqConsumption, Config.applyPos, entryCallSite?] at hsc; done)
       | (simp only [seqConsumption, Config.applyPos, entryCallSite?] at hsc
          obtain ⟨_, hr, hps⟩ := entry_some_panic hsc (by assumption)
          first | exact hps | (cases hr <;> exact hps) | (exfalso; simp_all; done))
-  case case157 =>
+  case case154 =>
     unfold stepFrameExit; okp
     all_goals first
       | (simp [seqConsumption, Config.applyPos, entryCallSite?] at hsc; done)
@@ -334,7 +334,7 @@ theorem stepFn_picks_some {σ : Store} {c : Config} {ch₀ : Choices} {site : Ch
     obtain ⟨rfl, rfl⟩ := hsc
     okp
     all_goals (obtain ⟨hps, hc⟩ := Choices.consumeAtE_inv (by assumption); rw [hc]; exact hps)
-  case case97 =>
+  case case94 =>
     rename_i v op nt done env k'
     simp only [seqConsumption, Config.applyPos] at hsc
     -- the two consuming wide ops: the spilling append, and (unit 5b) the `[0, n)` draw
@@ -367,7 +367,7 @@ theorem stepFn_picks_some {σ : Store} {c : Config} {ch₀ : Choices} {site : Ch
         intro a ha
         cases hrc : runCommit c σ <;> simp_all [Functor.map, Except.map]
         all_goals (subst_vars; simp [PickRecord.ofPick, show ¬ b ≤ 1 by omega])
-  case case119 =>
+  case case116 =>
     rename_i v clauses default? done env k'
     simp only [seqConsumption, Config.applyPos, selectConsult?] at hsc
     cases hcore : applySelectCore ctx σ clauses default? ((v :: done).reverse) env k' with
@@ -385,7 +385,7 @@ theorem stepFn_picks_some {σ : Store} {c : Config} {ch₀ : Choices} {site : Ch
         | some p =>
           obtain ⟨cl, r⟩ := p
           cases r <;> okp_norm
-  case case134 =>
+  case case131 =>
     rename_i v op done env k'
     simp only [seqConsumption, Config.applyPos, syncConsult?, Option.map_eq_some_iff,
       Prod.mk.injEq] at hsc
@@ -428,7 +428,7 @@ theorem stepFn_picks_some {σ : Store} {c : Config} {ch₀ : Choices} {site : Ch
                   | (okp_norm; done)
                   | exact absurd hat (applyTryLock_noPanic hcell _ _ _ _ _ _)
               | ok p => okp_norm
-  case case150 =>
+  case case147 =>
     rename_i kv vv kt vt body base produced start env k'
     simp only [seqConsumption, mapIterConsult?] at hsc
     cases hcands : mapIterCandidates ctx σ kt vt base produced with
@@ -450,7 +450,7 @@ theorem stepFn_picks_some {σ : Store} {c : Config} {ch₀ : Choices} {site : Ch
         (try dsimp only)
         rw [Choices.consumeAtE_eq]
         okp
-  case case154 =>
+  case case151 =>
     rename_i g thenB st tg env ph k'
     cases ph with
     | run i => simp [seqConsumption, Config.applyPos, entryCallSite?] at hsc
@@ -514,18 +514,18 @@ theorem stepFn_consumption_some' {σ : Store} {c : Config} {ch₀ : Choices}
     simp [stepFn, hpc, Choices.consumeAtE_eq]
   -- The `unseq` scheduler's pick (Stage B): the `unseqNext` pop at bound
   -- `|ready|`, the step depending on the stream only through the pick.
-  case case154 =>
+  case case151 =>
     simp only [stepFn] at h ⊢
     exact stepUnseqNext_consumption_some hsc h
   case case2 =>
     consumption_entry_some h hsc
-  case case35 =>
+  case case32 =>
     consumption_entry_some h hsc
-  case case94 =>
+  case case91 =>
     consumption_entry_some h hsc
-  case case98 =>
+  case case95 =>
     consumption_entry_some h hsc
-  case case104 =>
+  case case101 =>
     consumption_entry_some h hsc
   case case7 =>
     -- THE ABORT: the `repanicCollapse` consult's step is the `panic`
@@ -535,17 +535,17 @@ theorem stepFn_consumption_some' {σ : Store} {c : Config} {ch₀ : Choices}
     simp only [stepFn, bind_eq_ok] at h
     obtain ⟨msg, -, h⟩ := h
     simp [throw, throwThe, MonadExceptOf.throw] at h
-  case case145 =>
+  case case142 =>
     simp only [stepFn] at h ⊢
     exact stepFrameExit_consumption_some (.inl rfl) hsc h
-  case case156 =>
+  case case153 =>
     -- B4: a signal the table resolves consumes nothing (no entry, no apply).
     exfalso
     simp [seqConsumption, Config.applyPos, entryCallSite?_of_signalStep ‹_›] at hsc
-  case case157 =>
+  case case154 =>
     simp only [stepFn, signalStep_frame] at h ⊢
     exact stepFrameExit_consumption_some (.inr rfl) hsc h
-  case case97 =>
+  case case94 =>
     simp only [seqConsumption, Config.applyPos] at hsc
     -- the two consuming wide ops (`stmtConsult?_some`): the spilling append and
     -- (unit 5b) the `[0, n)` draw; each plan is pick-lifted and `stepFn_stmtOp_pick`
@@ -556,7 +556,7 @@ theorem stepFn_consumption_some' {σ : Store} {c : Config} {ch₀ : Choices}
       exact stepFn_stmtOp_pick hg hnp h
     · obtain ⟨g, hg, hnp⟩ := applyStmtOp_plan_randIntn_draw hw
       exact stepFn_stmtOp_pick hg hnp h
-  case case119 =>
+  case case116 =>
     rename_i v clauses default? done env k'
     simp only [seqConsumption, Config.applyPos, selectConsult?] at hsc
     cases hcore : applySelectCore ctx σ clauses default? ((v :: done).reverse) env k' with
@@ -598,7 +598,7 @@ theorem stepFn_consumption_some' {σ : Store} {c : Config} {ch₀ : Choices}
             dsimp only
             rw [applySelect_picks_stream hcore ch, hpk, hget]
             rfl
-  case case134 =>
+  case case131 =>
     rename_i v op done env k'
     simp only [seqConsumption, Config.applyPos, syncConsult?, Option.map_eq_some_iff,
       Prod.mk.injEq] at hsc
@@ -660,7 +660,7 @@ theorem stepFn_consumption_some' {σ : Store} {c : Config} {ch₀ : Choices}
                 simp only [List.reverse_cons, List.reverse_nil, List.nil_append]
                 rw [hap ch, hpk, hat]
                 rfl
-  case case150 =>
+  case case147 =>
     rename_i kv vv kt vt body base produced start env k'
     simp only [seqConsumption, mapIterConsult?] at hsc
     cases hcands : mapIterCandidates ctx σ kt vt base produced with

@@ -263,7 +263,7 @@ def UnseqGraph.locSup (g : UnseqGraph) : Nat := unseqOccsSup g.occs
 mutual
 
 def Stmt.locSup : Stmt → Nat
-  | .initialization _ | .returnStmt | .breakStmt | .continueStmt
+  | .returnStmt | .breakStmt | .continueStmt
   | .inertLabel _ | .breakTo _ | .continueTo _ | .unsupported _ => 0
   | .unseqProbe e => Expr.locSup e
   | .unseq g t => max (UnseqGraph.locSup g) (Stmt.locSup t)
@@ -958,6 +958,16 @@ theorem LocalEnv.declare_locSup {env : LocalEnv} {id : VarId} {l : Loc} :
 theorem LocalEnv.pushScope_locSup {env : LocalEnv} :
     LocalEnv.locSup env.pushScope = LocalEnv.locSup env := by
   simp [LocalEnv.pushScope, LocalEnv.locSup, Scope.locSup]
+
+/-- C4 D8 — FRESHNESS of an entry slot: no binding of a loc-bounded environment names it (an
+entry slot's root is at or past the store's size, every bounded binding's root strictly below); with
+`ConfigWf`'s sup bounds this is «no existing value, environment or label names the new cell». -/
+theorem blockEntry_fresh {env : LocalEnv} {s : Store} (henv : LocalEnv.locSup env ≤ s.nextAddr)
+    (id : VarId) (i : Nat) : LocalEnv.lookup env id ≠ some (entrySlot s i) := by
+  intro h
+  have hsup := LocalEnv.lookup_locSup h
+  simp only [entrySlot, Loc.locSup, Loc.rootBase, Store.nextAddr] at hsup henv
+  omega
 
 theorem Heap.lookup_locSup {h : Heap} {l : Loc} {c : HeapCell}
     (hl : Heap.lookup h l = some c) : HeapCell.locSup c ≤ Heap.locSup h := by
@@ -7653,22 +7663,6 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
       runtimeErrorValue_locSup, panicEntry_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc ⊢
     omega
-  case initialization p v loc rest env k hdef halloc =>
-    have hv0 := defaultValue_locSup hdef
-    obtain ⟨w1, w2, w3⟩ := alloc_wf hs (by omega) halloc
-    obtain ⟨d1, d2, _⟩ := alloc_shape halloc
-    have hdecl := LocalEnv.declare_locSup (env := env) (id := p.id) (l := loc)
-    refine ⟨w1, ?_, by omega⟩
-    simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
-      GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
-      stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
-      goValueListSup_append, exprListSup_append, stmtListSup_append,
-      locListSup_append, panicChainSup_append, goValueListSup_reverse,
-      targetRefListSup, targetPlansSup, targetRefListSup_append,
-      LocalEnv.locSup, Scope.locSup,
-      runtimeErrorValue_locSup, panicEntry_locSup, panicPayload, LocalEnv.pushScope_locSup,
-      Nat.max_le] at hc ⊢
-    omega
   case callStart targets fid args plans a rest env k hplan hargs =>
     refine ⟨hs, ?_, Nat.le_refl _⟩
     have h1 := targetsPlan_locSup hplan
@@ -8308,7 +8302,8 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
   case unseqEnter g thenB rest env env' k hwf hentry hdecls =>
     have hc' := hc
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Nat.max_le] at hc'
-    obtain ⟨w1, w2, w6⟩ := allocDecls_wf hdecls hs (by omega)
+    -- C4 D3 (b): the cells go into a pushed scope — same sup as the source environment
+    obtain ⟨w1, w2, w6⟩ := allocDecls_wf hdecls hs (by rw [LocalEnv.pushScope_locSup]; omega)
     refine ⟨w1, ?_, w2⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, unseqTargetsSup,
       Nat.max_le] at hc ⊢
@@ -8415,6 +8410,14 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
     · wf_loc_panic hs hc hdel
 
 
+
+/-- C4 D8 — the heap never shrinks along a step (the `σ.nextAddr ≤ σ'.nextAddr` conjunct of
+`step_preserves_wf_loc`, named): an entry slot of an earlier store stays below every later store's
+size — the lifetime half of `frameEntry_fresh`. -/
+theorem heap_size_mono {c : Config} {σ : Store} {c' : Config} {σ' : Store} {l : StepLabel}
+    (h : Step ctx c σ c' σ' l) (hs : StateWf ctx σ) (hc : ConfigWf σ.nextAddr c) :
+    σ.heap.size ≤ σ'.heap.size :=
+  (step_preserves_wf_loc h hs hc).2.2
 
 /-! ## Preservation of the map-iteration typing component -/
 

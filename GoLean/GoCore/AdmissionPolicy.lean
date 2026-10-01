@@ -72,7 +72,6 @@ mutual
 inductive BoolStmt : Stmt → Prop
   | seqn {ss} : BoolStmts ss.toList → BoolStmt (.seqn ss)
   | block {ps ss} : BoolParams ps → BoolStmts ss.toList → BoolStmt (.block ps ss)
-  | initialization {p} : p.typ = .bool → BoolStmt (.initialization p)
   | assign {x e} : BoolExpr e → BoolStmt (.assign (.var x) e)
   | branch {e t f} : BoolExpr e → BoolStmt t → BoolStmt f → BoolStmt (.ifThenElse e t f)
   | ret : BoolStmt .returnStmt
@@ -85,7 +84,6 @@ mutual
 def boolStmt : Stmt → Bool
   | .seqn ss => boolStmts ss.toList
   | .block ps ss => decide (BoolParams ps) && boolStmts ss.toList
-  | .initialization p => isBoolTy p.typ
   | .assign (.var _) e => boolExpr e
   | .ifThenElse e t f => boolExpr e && boolStmt t && boolStmt f
   | .returnStmt => true
@@ -100,7 +98,6 @@ theorem boolStmt_sound (s : Stmt) (h : boolStmt s = true) : BoolStmt s := by
   cases s <;> try simp only [boolStmt, Bool.and_eq_true, Bool.false_eq_true] at h
   case seqn ss => exact .seqn (boolStmts_sound ss.toList h)
   case block ps ss => exact .block (of_decide_eq_true h.1) (boolStmts_sound ss.toList h.2)
-  case initialization p => exact .initialization ((isBoolTy_iff p.typ).mp h)
   case assign a e =>
     cases a <;> simp only [boolStmt, Bool.false_eq_true] at h
     exact .assign (boolExpr_sound e h)
@@ -119,10 +116,10 @@ end
 
 theorem boolStmt_complete {s : Stmt} (h : BoolStmt s) : boolStmt s = true := by
   induction h using BoolStmt.rec (motive_2 := fun ss _ => boolStmts ss = true) <;>
-    simp_all [boolStmt, boolStmts, isBoolTy_iff, boolExpr_iff]
+    simp_all [boolStmt, boolStmts, boolExpr_iff]
 theorem boolStmts_complete {ss : List Stmt} (h : BoolStmts ss) : boolStmts ss = true := by
   induction h using BoolStmts.rec (motive_1 := fun s _ => boolStmt s = true) <;>
-    simp_all [boolStmt, boolStmts, isBoolTy_iff, boolExpr_iff]
+    simp_all [boolStmt, boolStmts, boolExpr_iff]
 
 theorem boolStmt_iff (s : Stmt) : boolStmt s = true ↔ BoolStmt s :=
   ⟨boolStmt_sound s, boolStmt_complete⟩
