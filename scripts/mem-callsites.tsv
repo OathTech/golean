@@ -19,7 +19,6 @@ GoLean/ChoiceTrace.lean	tryLockFacts	syncCell	1	TRACER OBSERVATION — the choic
 GoLean/EnumDedup.lean	nodeObs	loadMany	1	DRIVER READOUT — the untrusted dedup engine's observation of a terminated node (CLI-side)
 GoLean/GoCore/EnumDedupCheck.lean	checkNode	loadMany	1	DRIVER READOUT — the verified checker's observation of a terminated node
 GoLean/GoCore/EnumSpec.lean	obsOf?	loadMany	1	DRIVER READOUT — the enumeration spec's observation of a terminated configuration
-GoLean/GoCore/Machine.lean	Step	alloc	1	NO EXECUTION — the relation's `initialization` premise mirrors stepFn's Store.alloc (Step is the Prop-level twin; the label is fixed by the premise)
 GoLean/GoCore/Machine.lean	allocDecls	alloc	1	FRESH ALLOCATION — block-scoped declaration cells (the malloc convention: the creating write precedes every escape)
 GoLean/GoCore/Machine.lean	applyAtomicOp	loadLoc	1	SYNCHRONIZATION — the atomic op's indivisible RMW read; the apply EMITS the op's access at the cell's own path with the ATOMIC kind and its clock action (`atomicEvents`, C1 S2c)
 GoLean/GoCore/Machine.lean	applyChanOp	chanCell	3	SYNCHRONIZATION — the channel object's state read; the apply EMITS gc's channel-object accesses (`chanSendEntry`/`chanCloseWrite`) and the slot / close actions (C1 S2c)
@@ -79,7 +78,6 @@ GoLean/GoCore/ProgramTrace.lean	ProgramRun	loadMany	2	NO EXECUTION — the progr
 GoLean/GoCore/StepFn.lean	runFunctionWithContextM	loadMany	1	DRIVER READOUT — result cells after termination
 GoLean/GoCore/StepFn.lean	runProgramM	loadMany	1	DRIVER READOUT — result cells after termination
 GoLean/GoCore/StepFn.lean	seedGlobals	alloc	1	FRESH ALLOCATION — the globals' cells at program setup
-GoLean/GoCore/StepFn.lean	stepFn	alloc	1	FRESH ALLOCATION — the `initialization` arm allocates the declared variable's cell (the Step premise mirrors it)
 GoLean/GoCore/Store.lean	Store.updateCell	alloc	1	NOT A CALL — the .internal refusal text names `Store.alloc` («allocation goes through Store.alloc only», D10)
 GoLean/GoCore/Store.lean	chanPayload?	Heap.lookup	1	THE PEEK ITSELF — the channel-payload reader's cell lookup (module primitive)
 GoLean/GoCore/Store.lean	mapPayload?	Heap.lookup	1	THE PEEK ITSELF — the map-payload reader's cell lookup (module primitive)
