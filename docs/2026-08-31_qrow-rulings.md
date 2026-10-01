@@ -1253,3 +1253,11 @@ only) NOT taken.
 `unseqEntryCheck?` at `unseq` ENTER; core audit 158; wire schema v3; twin `8a158eff…`) and `docs/bug004-item4-design-0930`
 (the design note, the logic side's route-A reply and its dispositions, unit 6b ruled inside the window). The certified row's
 `wire-sha256` moves dc232a8c… → f448d579… (B6 fields only), recorded before the gate.
+
+### Train r58 — the native Intn pick site and the harness fix landed — RULED (2026-10-01)
+
+[USER] Mike, 2026-10-01, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «agree, land it, ratify all including
+the harness fix. Then move to next steps» — the merge sign-off for `core/intn-pick-0930` (window unit 5b; audit MERGE-CLEAN),
+its D1–D8 RATIFIED (option B, upstream's verbatim `crypto/rand`/`math/big` body, NOT taken), and the coverage harness's
+`/vN` import-name fix (trusted surface #2; a new unaliased `math/rand/v2` row). Baseline 3800 = 3563 / 237; FR-36 opened for
+dot imports of quarantined/primitive-bound packages.
