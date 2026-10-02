@@ -1,0 +1,28 @@
+# Behaviour-preservation probes — go1.26.5 vs main @ 52eddf4c vs candidate @ ada8cf34 (same wire; frontend untouched; subject `probe`). [AGENT auditor] 2026-10-02. Sources: the auditor's scratch .tmp/probes (deleted); shapes listed in the audit note §1.
+# probe	verdict(main=cand)	go-match	go_output	lean_status	lean_output_or_values
+p01-goto-forward-nested	SAME	GO-MATCH	1|	ok	1|
+p02-goto-backward-var-noinit	SAME	GO-MATCH	0 0|1 1|2 2|	ok	0 0|1 1|2 2|
+p03-goto-backward-nested-block	SAME	GO-MATCH	1 0 0|0 2 1|3 0 2|3|	ok	1 0 0|0 2 1|3 0 2|3|
+p04-loopvar-three-clause-continue	SAME	GO-MATCH	0 2 3 0 2 3 0 100 2|	ok	0 2 3 0 2 3 0 100 2|
+p05-range-loopvar-modified	SAME	GO-MATCH	20 21 64 20|	ok	20 21 64 20|
+p06-if-switch-init-capture	SAME	GO-MATCH	-1 20 2 22 4 12 |	ok	-1 20 2 22 4 12 |
+p07-shadowing-block-entry	SAME	GO-MATCH	2|20|21|2|1|5|outer|	ok	2|20|21|2|1|5|outer|
+p08-decl-after-early-exit	SAME	GO-MATCH	5 -4 6|7|	ok	5 -4 6|7|
+p09-defer-block-locals	SAME	GO-MATCH	1|0|5|3|1|	ok	1|0|5|3|1|
+p10-named-results-defer	SAME	GO-MATCH	12 2 3 3 0|	ok	12 2 3 3 0|
+p11-typed-temporaries	SAME	GO-MATCH	a 1 1 0 1 0|	ok	a 1 1 0 1 0|
+p12-unseq-in-loop-capture	SAME	GO-MATCH	1 6 5 10 13 14 |	ok	1 6 5 10 13 14 |
+p13-select-recv-decl-loop	SAME	GO-MATCH	1 2 3 |	ok	1 2 3 |
+p14-struct-array-noinit-loop	SAME	GO-MATCH	0 0 0 0 1 0|0 1 0 1 1 0|0 0 2 2 1 0|	ok	0 0 0 0 1 0|0 1 0 1 1 0|0 0 2 2 1 0|
+p15-recursive-closure	SAME	GO-MATCH	55|	ok	55|
+p16-range-kinds-capture	SAME	GO-MATCH	0 1 2 97 198 7 8 5 16 |	ok	0 1 2 97 198 7 8 5 16 |
+p17-pointer-identity	SAME	GO-MATCH	0 10 20 3|	ok	0 10 20 3|
+p18-labeled-continue-capture	SAME	GO-MATCH	0 10 20 |	ok	0 10 20 |
+p19-goto-backward-redeclare-group	SAME	GO-MATCH	1 1 2 3 z|2 2 4 6 z|3 3 6 9 z|	ok	1 1 2 3 z|2 2 4 6 z|3 3 6 9 z|
+p20-typeswitch-bind-capture	SAME	GO-MATCH	3 4 5 |	ok	3 4 5 |
+p21-values-subject	SAME	GO-MATCH		ok	[{"kind": "int", "tag": "int", "value": 5}, {"kind": "int", "tag": "int", "value": 4}]
+p22-unseq-sweep-loop-capture	SAME	GO-MATCH	1 0 11 21 20 |	ok	1 0 11 21 20 |
+q01-count-3-decls	SAME	GO-MATCH		ok	[{"kind": "int", "tag": "int", "value": 6}]
+q02-count-loop-decls	SAME	GO-MATCH		ok	[{"kind": "int", "tag": "int", "value": 10}]
+q03-count-1-decl	SAME	GO-MATCH		ok	[{"kind": "int", "tag": "int", "value": 7}]
+q04-count-0-decl	SAME	GO-MATCH		ok	[{"kind": "int", "tag": "int", "value": 7}]

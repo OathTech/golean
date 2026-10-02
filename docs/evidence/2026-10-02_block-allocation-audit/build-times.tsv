@@ -1,0 +1,12 @@
+# Fresh parallel builds (scripts/capped lake build, LEAN_NUM_THREADS=8, GOLEAN_MEM_MAX=80G, box-wide lock, same box, sequential: candidate then main). Per-module lake times; NOT the sequential A/B of the lane's elaboration-ab.tsv. [AGENT auditor] 2026-10-02
+module	main_52eddf4c	cand_ada8cf34
+Machine	5.1s	5.3s
+StepFn	1.0s	1.1s
+StateWf	20s	21s
+MachineEqb	4.9s	4.7s
+MachineSound	70s	69s
+StepErrors	184s	187s
+BridgeSet	917ms	956ms
+NativeToIR	83s	83s
+PrefixFacts	16s	15s
+whole build	~5.4 min	~5.5 min (108 jobs each, EXIT 0, 0 warnings)

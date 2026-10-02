@@ -1,0 +1,17 @@
+# Minimal completing fuel (native-json-run --fuel, exit 0) by bisection on identical wires, main @ 52eddf4c vs candidate @ ada8cf34. [AGENT auditor] 2026-10-02
+# The saving is TWO stepFn steps per declaration executed (the `.seq` dispatch step `Step.seqNext` + the `.exec` of the deleted statement), not one:
+# q04 (0 declarations) 0; q03 (1: `a := 7`) -2; q01 (3: a,b,c; single-result return uses no $ret temp) -6; q02 (s, i, $forFirst, v x5 = 8) -16.
+probe	declarations_executed	main_min_fuel	cand_min_fuel	delta
+q04-count-0-decl	0	16	16	0
+q03-count-1-decl	1	29	27	-2
+q01-count-3-decls	3	63	57	-6
+q02-count-loop-decls	8	399	383	-16
+p02-goto-backward-var-noinit	-	496	486	-10
+p07-shadowing-block-entry	-	173	155	-18
+p11-typed-temporaries	-	639	561	-78
+p19-goto-backward-redeclare-group	-	631	615	-16
+p16-range-kinds-capture	-	2143	1997	-146
+p04-loopvar-three-clause-continue	-	1418	1336	-82
+p22-unseq-sweep-loop-capture	-	1727	1640	-87
+q06-nosweep-assign	4 (a, i, x, slice-literal temp); no sweep	119	111	-8
+q05-sweep-assign	the same + ONE unseq sweep (x = a[i] + f())	175	168	-7  (= -8 + 1: one seqDone pop per completed sweep, D3 (b))

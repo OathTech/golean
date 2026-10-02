@@ -1,0 +1,47 @@
+# Enumeration-lane sweep — every membership/confluent/racy row (390), main @ 52eddf4c vs candidate @ ada8cf34, both fresh binaries,
+# the gate run's wires (artifacts/coverage/native/<id>/wire.json), the manifest's params (coverage-observations). [AGENT auditor] 2026-10-02
+# verdict = exit code AND sorted observation set identical. SAME 387 | DIFF 1 (the STOPPED row: exit 1 vs 0) | SKIP-SLOW 1 (run separately below) | NOWIRE 1
+# (builtins/print/refused/race-with-output — a frontend-refused racy row; no wire on either side; baseline FAIL/go-observation).
+# Statistics: 9 rows byte-identical, 378 moved; 20 rows' TOTAL enumeration steps GREW on the candidate (below) — the 4 nonterm=200 rows
+# (a per-branch STEP budget admits more iterations), 5 dedup-engine rows (merge rate: fewer merges, more nodes), and 11 DFS rows with
+# IDENTICAL trees (probes/sites/leaves) and +1 step per completed `unseq` sweep per path (D3 (b): thenB's `.seqn` frame is no longer
+# spliced — env' ≠ env — so each sweep completion pays one `seqDone` pop; confirmed by probes q05/q06: −7 vs −8). No row above 90 % of its cap.
+# the DIFF row
+sync/trylock/spin-until-trylock	membership	DIFF	1	0	e3b0c44298fc/0	f0b7366cdfa4/1	coverage-observations: work cap exceeded after 177861 step(s) + 22140 probe(s) with subtrees still unexplored — raise --work-cap or narrow the case	coverage-observations: observations=1 steps=115312 probes=19464 sites=6812 leaves=2571 maxdepth=18 width=4 backedge=1 backedgeCapped=0 allow-nonterm=200 nonterm=4242
+# the slow row (tier=slow, engine=dedup, work 60000000), run on both binaries at the manifest params (not the certification path):
+main: exit=0 wall=93s  obs-sha256-prefix=e40ba07d1182 n=6 | observations=6 steps=6565663 nodes=6193933 edges=6565663 dedupHits=371731 certified=checkCert
+cand: exit=0 wall=102s obs-sha256-prefix=e40ba07d1182 n=6 | observations=6 steps=6279747 nodes=5908017 edges=6279747 dedupHits=371731 certified=checkCert   (= the tracked record's observations_sha256 e40ba07d…; the lane's figures)
+# rows whose total steps grew: id | main steps/probes/sites/leaves/nodes | cand ... | work/cap main -> cand | params
+noodler/methods/nil-receiver-recursion | 9292/0/9053/0/9053 | 9300/0/9061/0/9061 | 0.046 -> 0.046 | width=4,sites=64,work=200000,engine=dedup
+noodler/select/ping-pong | 18694/0/17705/0/17705 | 20130/0/19045/0/19045 | 0.093 -> 0.101 | width=4,sites=64,work=200000,engine=dedup,backedge=full
+noodler/latitude/index-call-index | 3124/117/39/45/- | 3163/117/39/45/- | 0.016 -> 0.016 | width=3,sites=8,members=4
+channels/make-edge/ordinary-receive-eval-order | 2019/72/24/28/- | 2041/72/24/28/- | 0.010 -> 0.011 | width=3,sites=8,members=3
+goroutines/fork-join/two-workers-own-chans | 9885/0/9015/0/9015 | 10021/0/9151/0/9151 | 0.049 -> 0.050 | width=4,sites=24,work=200000,engine=dedup
+goroutines/pipeline/two-stage | 954907/0/866780/0/866780 | 1030161/0/934642/0/934642 | 0.477 -> 0.515 | width=4,sites=64,work=2000000,engine=dedup,backedge=full
+goroutines/pipeline/request-reply | 18350/0/17601/0/17601 | 20362/0/19517/0/19517 | 0.015 -> 0.017 | width=4,sites=64,work=1200000,engine=dedup
+goroutines/send-then-spin | 11187/14355/4940/4725/- | 12859/17103/5856/5641/- | 0.128 -> 0.150 | width=4,sites=200,members=1,nonterm=200,backedge=1
+slices/append-spill-below-formula | 94538/5397/1799/1953/- | 96485/5397/1799/1953/- | 0.500 -> 0.509 | width=32,sites=8
+race/atomics-free/cas-failure-acquires | 21838/3585/1243/969/- | 28552/4890/1688/969/- | 0.127 -> 0.167 | width=4,sites=200,members=1,nonterm=200,backedge=1
+builtins/e13-sibling-panic-order/assert-ok-early-len-hoist | 1437/45/15/16/- | 1444/45/15/16/- | 0.007 -> 0.007 | width=3,sites=8,members=2,statuses=ok+panic
+builtins/e13-sibling-panic-order/slice-value-early-len-hoist | 2837/87/29/30/- | 2855/87/29/30/- | 0.015 -> 0.015 | width=3,sites=8,members=2
+builtins/e13-sibling-panic-order/bytes-conv-value-vs-mutating-call | 429/12/4/5/- | 432/12/4/5/- | 0.002 -> 0.002 | width=2,sites=8,members=2
+builtins/len-vs-call-order/len-nil-only-none | 20705/576/192/198/- | 20893/576/192/198/- | 0.106 -> 0.107 | width=3,sites=16,members=2
+atomics/spin/flag-wait | 23103/3591/1245/969/- | 30074/5175/1783/969/- | 0.133 -> 0.176 | width=4,sites=200,members=1,nonterm=200,backedge=1
+evalorder/unseq-globals/compound-vs-call | 203/3/1/2/- | 205/3/1/2/- | 0.001 -> 0.001 | width=2,sites=8,members=2
+evalorder/unseq-builtins/append-spread-str-vs-call | 794/24/8/9/- | 795/24/8/9/- | 0.004 -> 0.004 | width=2,sites=8,members=2
+evalorder/unseq-addr/addr-global-arg-vs-read | 170/3/1/2/- | 172/3/1/2/- | 0.001 -> 0.001 | width=2,sites=8,members=2
+evalorder/unseq-conv-alloc/conv-read-vs-call | 434/12/4/5/- | 435/12/4/5/- | 0.002 -> 0.002 | width=2,sites=8,members=2
+evalorder/unseq-conv-alloc/new-call-vs-call | 3928/129/43/46/- | 3970/129/43/46/- | 0.020 -> 0.020 | width=3,sites=8,members=2
+# highest work/cap on the candidate (main -> cand):
+  multipkg/mini-raft-twin/choice-order: 0.913 -> 0.892
+  race/free-sync/rw-tryrlock-acquire: 0.747 -> 0.742
+  stdlib-source/builder-cap/grow-after-write: 0.632 -> 0.591
+  goroutines/pipeline/two-stage: 0.477 -> 0.515
+  slices/append-spill-below-formula: 0.500 -> 0.509
+  goroutines/sched-dependent/waiter-pick: 0.485 -> 0.481
+
+# Whole-corpus output sweep — every row of the executable corpus (3800), native-json-run at the default fuel on the gate run's wire,
+# main @ 52eddf4c vs candidate @ ada8cf34: stdout (the observation JSON: status, output, values, message) AND exit code compared.
+# SAME 3756 (3091 exit 0 + 665 exit 1 — refusals/panics — identical on both sides) | NOWIRE 43 (rows the frontend refuses or that
+# produce no wire on either side — the lane's 34 frontend refusals + the no-wire negative/init rows) | SKIP-SPIN 1 (goroutines/send-then-spin
+# spins to the fuel cap at the default fuel; covered in nonterm-rows.txt). ZERO differences.

@@ -1,0 +1,18 @@
+# The three nonterm=200 membership rows on both binaries (main @ 52eddf4c fresh build; candidate @ ada8cf34 fresh build), identical wires
+# (sync/trylock wire sha256 776d8690904b8efd = the lane's). argv: coverage-observations --max-width 4 --max-sites 200 --cap 64 --work-cap W
+# --expect-status ok --backedge 1 --allow-nonterm N. [AGENT auditor] 2026-10-02. obs = sha256-prefix/line-count of the observation set.
+main spinUntilTryLock work=200000 N=200 exit=0 | obs=13274ee62b89/1 | steps=115312 probes=19464 sites=6812 leaves=2571 maxdepth=18 nonterm=4242
+cand spinUntilTryLock work=200000 N=200 exit=1 | obs=-/0 | work cap exceeded after 177861 step(s) + 22140 probe(s) with subtrees still unexplored   <- THE STOPPED ROW (handoff §4), reproduced
+main sendThenSpin     work=200000 N=200 exit=0 | obs=13274ee62b89/1 | steps=11187 probes=14355 sites=4940 leaves=4725 maxdepth=137 nonterm=216
+cand sendThenSpin     work=200000 N=200 exit=0 | obs=13274ee62b89/1 | steps=12859 probes=17103 sites=5856 leaves=5641 maxdepth=143 nonterm=216   <- PASS both; tree moved (15% of cap)
+main casFailureAcquires work=200000 N=200 exit=0 | obs=18b97e8e631b/1 | steps=21838 probes=3585 sites=1243 leaves=969 maxdepth=14 nonterm=275
+cand casFailureAcquires work=200000 N=200 exit=0 | obs=18b97e8e631b/1 | steps=28552 probes=4890 sites=1688 leaves=969 maxdepth=14 nonterm=720   <- PASS both; tree moved (17% of cap)
+# spin-until-trylock at a raised cap and the per-branch-budget scan (candidate), vs main's pinned tree
+main N=200 work=4M: steps=115312 probes=19464 sites=6812 leaves=2571 maxdepth=18 nonterm=4242   (the PINNED tree)
+cand N=200 work=4M: steps=214263 probes=26571 sites=9272 leaves=2571 maxdepth=18 nonterm=6702   (observation set identical: {42})
+cand N=190 work=4M: steps=148554 probes=26331 sites=9101 leaves=2571 maxdepth=18 nonterm=6531   = main N=210 (probes 26331, sites 9102, nonterm 6532) — NOT the pinned tree
+main N=210 work=4M: steps=172040 probes=26331 sites=9102 leaves=2571 maxdepth=18 nonterm=6532
+cand N=181 work=4M: steps=100648 probes=15054 sites=5342 leaves=2571 maxdepth=18 nonterm=2772
+cand N=182 work=4M: steps=104890 probes=19464 sites=6812 leaves=2571 maxdepth=18 nonterm=4242   <- main's pinned tree EXACTLY (probes/sites/leaves/nonterm), fewer steps
+cand N=183 work=4M: steps=109132 probes=19464 sites=6812 leaves=2571 maxdepth=18 nonterm=4242   <- same
+cand N=185 work=4M: steps=117616 probes=19464 sites=6812 leaves=2571 maxdepth=18 nonterm=4242   <- same (a plateau 182..185; 190 is past it)

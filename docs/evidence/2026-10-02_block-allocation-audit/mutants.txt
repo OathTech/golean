@@ -1,0 +1,14 @@
+# Decoder fail-closed checks (D1/D2) and BridgeSet pin mutants. [AGENT auditor] 2026-10-02
+## Decoder (wire maps/delete-during-range, subject mapDeleteDuringRange; mutants built by editing the JSON)
+control         cand: ok values=[10]                                        main: ok values=[10]
+mutA: range-over-map body replaced by its first inner statement (incdec, not a block)
+                cand: REFUSED "range-over-map body at program.funcs[0].body.body[3].body is not a block (C4 D1: per-iteration locals need a block entry); refused by name"
+                main: ACCEPTED, ok values=[33]   (a different value — the check is load-bearing; main had no such check)
+mutB: function body replaced by a bare define-assign (a declaration outside any block)
+                cand: REFUSED "program.funcs[0].body: 1 declaration(s) recorded outside any block (ids #[0]) — the body is not a block (C4); refused by name"
+                main: REFUSED by the B6 name-table check (unused entry) — a different refusal, also by name
+## BridgeSet pins (copies under .tmp/mut, `scripts/capped lake env lean <copy>` against the candidate's oleans)
+control (byte-identical copy)                                    EXIT=0
+row 136 `entrySlot s i = .base ⟨s.heap.size + i + 1⟩`            EXIT=1 Type mismatch
+row 139 `s'.heap.size = s.heap.size + decls.size + 1`            EXIT=1 Type mismatch
+row 143 premise `LocalEnv.locSup env ≤ s.nextAddr` dropped       EXIT=1 Type mismatch
