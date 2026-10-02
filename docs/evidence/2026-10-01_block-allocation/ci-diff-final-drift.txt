@@ -1,0 +1,5 @@
+DRIFT vs baselines/native-full.tsv (3800 case(s) run):
+imported-goose/channel/google-search	baseline[PASS/membership] -> now[FAIL/membership]
+sync/trylock/spin-until-trylock	baseline[PASS/membership] -> now[FAIL/membership]
+
+[1m── cross-ledger reconciliation (tools/reconcile-records — REPORT-ONLY, informs, never fails the gate)[0m

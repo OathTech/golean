@@ -9,6 +9,8 @@ end); every build/gate `scripts/capped`, full builds and gates under the box-wid
   red on the 5a pair + `sync/trylock/spin-until-trylock` (the posed budget row).
 - `ci-diff-2b-drift.txt` / `ci-diff-2b-tail.txt` — the same gate at `58fe18f9`: EXIT 1, 909 s; the same two drift
   lines + the two stale `mem-callsites` rows (fixed at `ed423c72`).
+- `ci-diff-final-drift.txt` / `ci-diff-final-tail.txt` — the same gate at the records tip `f219637d` (the inventory
+  rows fixed): EXIT 1, 830 s; red on exactly the 5a pair + the posed row, every other step ok.
 - `spin-until-trylock.txt` — the posed row at a raised work cap on both binaries (identical observation set and
   leaves) and the per-branch-budget sensitivity that identifies the cause (channel 10, fuel).
 - `choice-trace.txt` — the whole-corpus choice trace, lane vs main: byte-identical modulo the output path (26445 dump
