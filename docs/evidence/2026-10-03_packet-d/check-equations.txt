@@ -1,0 +1,8 @@
+# scripts/capped scripts/check-equations (GOLEAN_MEM_MAX=48G), tree = proofs commit 5335ee03; the lake build lines dropped
+info: Tests/EquationClient.lean:1725:0: Equation client: enrollment complete — 229 equation theorems pinned, 7 facts
+Equation client: enrollment complete — 229 equation theorems pinned, 7 facts
+Equation client: PASS — 7 facts by the equation set only
+ok [no-unfold] Tests/EquationClient.lean never unfolds stepFn
+ok [self-test unfold] the guard fires on a client that unfolds stepFn
+ok [self-test pin] deleting Pin.storeTarget_inv_panic fails the enrollment check by name
+Equation gate: PASS (client PASS, exhaustive enrollment, no-unfold guard, 2 self-tests)
