@@ -51,7 +51,7 @@ schema limit predating C4, channel 10 the one place a row can move (via a budget
 | 7 | Race detector keys / NPDRF / detector-soundness matrix | `ShadowKey` over `Loc` (Race.lean:303–324); verdicts compared, never addresses; overlap is renaming-invariant | UNAFFECTED (renamed uniformly) |
 | 8 | Dedup engine (`EnumDedup`, `dedupNodeEqb`) and the certified slow-tier row | the node hash salts `heap.size`/`nextAddr` (EnumDedup.lean:105–113) and equality is whole-state; earlier cells change which interleavings merge (the A6 precedent: merge rate, no observation); the claim is `argv + wire_sha256` + `observations_sha256`; work cap 60 M, r57 wall 121 s | observations UNCHANGED expected; node/edge counts MAY move; a work-cap exceedance is a visible refusal |
 | 9 | `repr` pins in tests | hand-built states only (GoCoreContract.lean:98–370, GoCoreEval.lean:2344–2461); no test pins a program-derived heap | UNAFFECTED; the 7 hand-built `.initialization` uses are rewritten |
-| 10 | Fuel | each declaration was ONE `stepFn` step; block entry is one step for all of them → fewer steps per block | AFFECTED: budget rows (`arrays/materialization-budget/over-budget` FAIL; `noodler/budget/*` PASS) may move — invariant-2 STOP-and-report, decision 7 |
+| 10 | Fuel | each declaration was ONE `stepFn` step [CORRECTED at landing, audit F2 2026-10-02: TWO — the `.seq` dispatch and the `.exec`; and D3 (b) adds one pop per completed sweep]; block entry is one step for all of them → fewer steps per block | AFFECTED: budget rows (`arrays/materialization-budget/over-budget` FAIL; `noodler/budget/*` PASS) may move — invariant-2 STOP-and-report, decision 7 |
 | 11 | Per-iteration loop variables, backward `goto` (the plan's two probe classes) | body-locals live in the loop-body `.block` (decodeFor :3036; range `iter` blocks; `emitForPerIteration` emit.go:4296–4380 declares the copy INSIDE the body) — fresh per entry, as now; `goto` hoists refuse captured/address-taken variables (emit.go:2735–2760) | UNAFFECTED; gc witnesses: probe p1 (body-local `&x` per iteration, closures, a `continue` before a declaration) `false false 0 10 20 / 0 10 20 / 4 1`; probe p2 (backward `goto` over `x := n; &x`) `false false 0 1 2` |
 
 ## 3. The preservation claim (scoped form, charter decision 9)
@@ -108,7 +108,7 @@ consumption, the detector-soundness matrix cell-for-cell. The run-level simulati
 
 ## 5. Blast radius
 
-Core: `Stmt` 44 → 43 constructors (the plan's «39» predates E13/`unseq`); `Step` 128 → 127 rules; `stepFn` loses `case13`
+Core: `Stmt` 44 → 43 constructors [CORRECTED at landing, audit F3: 45 → 44 — 5b's `randIntn` landed after this note's base] (the plan's «39» predates E13/`unseq`); `Step` 128 → 127 rules; `stepFn` loses `case13`
 (MachineSound.lean:1756–1759) — the 112 positional tags there and 44 in `PrefixFacts.lean` after it shift by one (mechanical re-tagging, the C3
 class); `StateWf` (`Stmt.locSup` :266, `step_preserves_wf` case :7598), `StepErrors` (`stepFn_strict`, one case fewer), `SyntaxEqb` :635/:731,
 `Locals.declIds` :35, `Admission*` arms, `UnseqSound` + `StateWf`'s `unseqEnter` case (D3b). Theorem STATEMENTS unchanged: packet A/B

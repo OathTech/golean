@@ -6,20 +6,27 @@ decisions ([USER] Mike 2026-10-01, verbatim, relayed by the [AGENT] coordinator 
 fine to me. Go ahead with these decisions. You can work on block allocation on the basis of approving all of your
 recommendations.»; ledger `docs/2026-08-31_qrow-rulings.md` «G-C4 (block-entry allocation) passed — RULED»). Before =
 `main` @ `52eddf4c`; after = the lane tip. Branch complete + the audit ask posed is this lane's end state; merge/push
-are the coordinator's and the [USER]'s. **One item is STOPPED for a [USER] ruling (§4: a fuel-budget row flips at its
-pinned work cap — decision 7); the lane's gate is red on that row and on the expected 5a pair, on nothing else.**
-Evidence: `docs/evidence/2026-10-01_block-allocation/`.
+are the coordinator's and the [USER]'s. **The one STOPPED item (§4: a fuel-budget row flipped at its pinned work
+cap — decision 7) was RULED 2026-10-03 — option (a), raise the row's work cap:** [USER] Mike, 2026-10-03, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «yeah, agree with 1, land it». The row's `work=500000` is landed (§4);
+the gate is red on the expected 5a pair only. The pre-merge audit (`docs/2026-10-02_block-allocation-audit.md`,
+branch `review/block-allocation-1001` @ `305afc95`) is MERGE-CLEAN; its records corrections F1–F6 are folded in below,
+each marked «(audit Fn)». Evidence: `docs/evidence/2026-10-01_block-allocation/`.
 
 ## 1. State (what landed)
 
 **The shape.** Every local of a decoded program is a declaration of its innermost enclosing `.block`, allocated at the
 block's entry by `Step.block` (`allocDecls` over `env.pushScope`), zero-valued at its declared type; its initializer
 stays at the source point as the `.assign` it already was. `Stmt.initialization`, `Step.initialization` and `stepFn`'s
-arm (with its two refusal texts) are DELETED: `Stmt` 44 → 43 constructors, `Step` 128 → 127 rules. A `Frame.seq rest
+arm (with its two refusal texts) are DELETED: `Stmt` 45 → 44 constructors (audit F3: 5b's `randIntn` landed between the design note's base and this lane's), `Step` 128 → 127 rules. A `Frame.seq rest
 env`'s environment is fixed from creation to pop — no rule rewrites it. The `unseq` sweep (decision 3, D3 (b)):
 `unseqEnter` allocates the binder cells over `env.pushScope` (a sweep-private scope — the sweep frame's `env`) and its
 continuation keeps the source environment (`.seq rest env k`, was `.seq rest env' k`); `thenB` runs under the sweep
-scope, so its binder reads resolve there and its source assignments reach the enclosing block's cells. `seqCont`
+scope, so its binder reads resolve there and its source assignments reach the enclosing block's cells. Side effect to
+record (audit F6, by the rule text): the binder cells no longer persist in the enclosing `.seq` environment after a
+sweep, so the B6 F3 runtime check `unseqEntryCheck?` («binder already bound in the enclosing scope») can no longer fire
+for two sweeps in ONE block that reuse a binder id — `main` refused such a hand-built wire by name at the second ENTER;
+the lane accepts it (harmlessly: the cells are private). Decoded programs are unaffected (the frontend numbers binders
+uniquely per function); the Stage C mutants still pass; K2's «distinct binders per sweep» is now a frontend fact. `seqCont`
 unchanged (decision 4): with D3 (b) its non-splicing branch IS reached — at a sweep completion whose `thenB` is a
 `.seqn` (`seqCont ss env' (.seq rest env k)` with `env' ≠ env`) — and is correct there (the design note's «unreachable
 for decoded programs» aside was too strong; the ruling — keep the test — stands). Wire `golean-native-v3` UNCHANGED
@@ -37,6 +44,10 @@ normalizes at it, so the note's «one cell per id» for `_ = a; _ = s` (`$blank0
 would have been one wrong-typed cell — a `writeAt` refusal on common rows — not an unobservable share; with the typed
 key the share is exactly the same-spelling-same-type case, which is unobservable as the note argued. The same id at
 two types in one block refuses by name (unreachable now); a declaration left pending at function end refuses by name.
+CONFIRMED by the audit (F5: sound, the minimal correct reading; probe p11 — `$blank0`/`$cr0`/`$ta`/`$mlv` at two types in
+one block — identical on both binaries and to gc) and ACCEPTED by the landing. Consequence to record (audit F5): a
+function's `locals` name table may now carry the same `$`-spelling twice (kind `.temp`, two ids); `Func.localsOk` /
+`tableNamed` accept it.
 The `.seqn #[s]` wrappers were kept (no shape change beyond the deleted declarations).
 
 **Core (commit `58fe18f9`).** `Syntax.lean` (constructor deleted; the `UnseqGraph` / `unseq` docstrings),
@@ -62,7 +73,8 @@ i ≠ entrySlot s₂ j` for `i < n`; the lifetime premise is `heap_size_mono` co
 `funcVal_captures_locs` (`applyStrictOp … (.funcValOf fid) vs = .ok (.funcVal fid vs, s, [])`) beside `Step.evalRef`
 (a capture operand `.ref x` is the cell's address). `BridgeSet.lean` RE-PIN 8 (the note said «RE-PIN 7»; 5b took that
 number): rows 1–131 and 133–135 byte-identical; **row 132 RE-PINNED** (D3 (b) — it pins the `unseqEnter` rule
-decision 3 changes; the note's «rows 1–132 unchanged» overlooked that); rows 136–154 added. `Tests/GoCoreAudit.lean`'s
+decision 3 changes; the note's «rows 1–132 unchanged» overlooked that); rows 136–154 added; the row-132 re-pin is
+ACCEPTED by the landing (the audit confirms rows 1–131/133–135 byte-identical). `Tests/GoCoreAudit.lean`'s
 required list +19 (core audit PASS).
 
 **Tests.** `Tests/GoCoreContract.lean` (`zeroBody`, `scopedFunction`), `Tests/GoCoreEval.lean`
@@ -102,22 +114,32 @@ outputs unchanged (eval 298 ok; unseq scheduler PASS).
    train's 5a `--slow` installs it). `google-search-recert.txt`.
 5. **Elaboration A/B** — §5.
 
-## 3. Fuel (decision 7 — no compensating step; the movements)
+## 3. Fuel (decision 7 — no compensating no-op step ADDED; the movements, corrected per audit F2)
 
-Each former `.initialization` was ONE `stepFn` step; a block entry is one step for all its declarations (and
-`Step.block` was already a step for the empty list), so a run loses exactly one step per declaration executed. Measured
+Each former `.initialization` cost TWO `stepFn` steps — its `.seq` dispatch (`Step.seqNext`) and its `.exec`; a block
+entry is one step for all its declarations (and `Step.block` was already a step for the empty list), so a run loses
+exactly TWO steps per declaration executed (audit F2 — the first draft said one; every bisection delta below is even).
+PLUS one step per completed `unseq` sweep: with D3 (b) `thenB`'s continuation is `.seq rest env k` with `env' ≠ env`,
+so `seqCont` no longer splices a `.seqn` `thenB` and the nested frame costs a `seqDone` pop (audit F2; the enumeration
+sweep shows 11 DFS rows with identical trees and total steps up by exactly the sweep count per path). «No compensating
+step» (decision 7) means no padding no-op step was ADDED; D3 (b)'s one pop per sweep is the rule's own cost. Measured
 as the MINIMAL COMPLETING FUEL by bisection on identical wires, main vs lane (`fuel-bisect.tsv`):
 `noodler/budget/loop-100k` 5300089 → 5300083 (−6: no declaration inside the loop body), `map-20k` 880099 → 880091,
-`recursion-1k` 46055 → 44053 (−2 per activation: two body declarations), `recursion-5k` 230055 → 220053,
+`recursion-1k` 46055 → 44053 (−2 per activation: ONE declaration, the hoisted call temporary `$c0`, × 2 steps), `recursion-5k` 230055 → 220053,
 `slice-1k` 120206 → 116184, `string-build-5k` 245091 → 245085, `control-flow/for-loopvar-escape` 424 → 402,
 `functions/closure-share` 134 → 126, `control-flow/goto-loop` 498 → 490. Every sequential budget row keeps its status
 (`noodler/budget/*` PASS; `arrays/materialization-budget/over-budget` FAIL at the lowering refusal, as pinned). The
 run-fuel budget (10 M) is nowhere near. The ONE budget that flips is an enumerator's per-branch step budget — §4.
 
-## 4. STOPPED — a fuel-budget row flip (decision 7), posed for a [USER] ruling
+## 4. The fuel-budget row flip (decision 7) — RULED 2026-10-03: option (a), the work cap raised
 
 **Row:** `sync/trylock/spin-until-trylock` (membership; params `width=4,sites=200,members=1,nonterm=200,backedge=1`;
-work cap 200000 — the manifest default). **Before:** PASS — `observations=1 steps=115312 probes=19464 sites=6812
+work cap 200000 — the manifest default). **RULING:** [USER] Mike, 2026-10-03, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «yeah, agree with 1, land it» — option (a). **Landed:** `work=500000` on the row
+(`Corpus/coverage/exec/sync/trylock/cases.tsv`, with the reason in its `why`). Measured on the lane binary at
+`nonterm=200`: the enumeration needs 240834 work units (214263 steps + 26571 probes) — `--work-cap 240000` refuses
+(«exceeded after 213499 step(s) + 26502 probe(s)»), 250000 / 300000 / 500000 pass with the identical tree; 500000 is
+the smallest round value with ≥ 2× headroom. The observation set {42}, `leaves=2571`, `maxdepth=18` are the pinned
+tree's. NO baseline re-pin: the row returns to PASS at its pinned status. **Before:** PASS — `observations=1 steps=115312 probes=19464 sites=6812
 leaves=2571 maxdepth=18 nonterm=4242`. **After:** FAIL — «work cap exceeded after 177861 step(s) + 22140 probe(s) with
 subtrees still unexplored». **Diagnosis** (`spin-until-trylock.txt`): at a raised cap (4 M) the lane completes with the
 IDENTICAL observation set ({42}), identical `leaves=2571` and `maxdepth=18`, and `steps=214263 probes=26571
@@ -125,15 +147,23 @@ sites=9272 nonterm=6702`. The cause is the row's `--allow-nonterm 200` — a PER
 iteration (`for !m.TryLock() {}`: the loop-body block's one temporary declaration) is one step shorter since C4, so the
 budget admits more spin iterations before cutting a branch, each a width-2 `tryLock` pick and a `backEdge` boundary —
 the lane at `--allow-nonterm 190` reproduces main at 210 almost exactly (probes 26331 / 26331, sites 9101 / 9102,
-nonterm 6531 / 6532). This is the escape audit's channel 10 (fuel), not channel 8 (the merge rate: `dedupHits` is
+nonterm 6531 / 6532) — a tree that was never pinned; main's PINNED tree (nonterm 200: probes 19464, sites 6812, leaves
+2571, maxdepth 18, nonterm 4242) is reproduced by the lane at `--allow-nonterm` ∈ [182, 185] (audit F1; re-run here:
+182 → steps 104890, 185 → steps 117616, every tree statistic identical; `spin-until-trylock.txt`). All FOUR
+`nonterm=200` rows moved, not one (audit F1): `goroutines/send-then-spin` steps 11187 → 12859, probes 14355 → 17103;
+`race/atomics-free/cas-failure-acquires` steps 21838 → 28552, nonterm 275 → 720; `atomics/spin/flag-wait` steps 23103 →
+30074, nonterm 277 → 815 — the three still PASS at 15–18 % of the 200000 cap. A per-branch STEP budget moves with
+EVERY step-count change (the `.seqn #[s]` clean-up of §7 would move these rows again) — hence the apparatus follow-up
+in §7. This is the escape audit's channel 10 (fuel), not channel 8 (the merge rate: `dedupHits` is
 untouched on the certified row); the per-iteration scheduling points are unchanged (only spawns, registry-op
 completions and loop back-edges open boundaries). **Not absorbed:** the manifest row and the baseline are untouched.
 **Options for the ruling:** (a) raise the row's work cap (`work=` in `Corpus/coverage/exec/sync/trylock/cases.tsv`;
 the enumeration needs ~241 k at `nonterm=200`; a 2× margin is 500000) — the budget is the apparatus's, the observation
-set and the claim are unchanged; (b) lower the row's `nonterm` to 190 (the pre-C4 tree, exactly) — a tighter
-per-branch budget, same observation; (c) re-pin PASS → FAIL with a `BUGS.md` Cases line — contrary to decision 7's
-intent (a visible refusal where nothing semantic changed). [AGENT] recommendation: (a), with the reason written into
-the row's `why`. Until ruled, the lane's gate is red on this one row beyond the 5a pair.
+set and the claim are unchanged; (b) lower the row's `nonterm` to 182–185 (the pre-C4 PINNED tree, exactly — audit F1 corrected the first draft's
+«190», which is main's tree at 210) — a tighter per-branch budget, same observation, the step-dependence explicit in
+the row; (c) re-pin PASS → FAIL with a `BUGS.md` Cases line — contrary to decision 7's
+intent (a visible refusal where nothing semantic changed). [AGENT] recommendation was (a), with the reason written into
+the row's `why` — RULED as (a) (above); the gate is red on the 5a pair only.
 
 ## 5. Elaboration A/B (G-C3 stop rule: any module > 1.5× or a new/raised `maxHeartbeats` stops the lane)
 
@@ -147,15 +177,15 @@ reference in `build-times-parallel.tsv`.
 
 ## 6. Posed / for the audit
 
-1. §4 — the budget-row ruling (decision 7).
-2. The D5 realization (typed temporary keys) — an [AGENT] implementation choice inside decision 5; the note's text
-   («one cell per id») is realized as one cell per (spelling, type) — stated in §1; please confirm or redirect.
-3. BridgeSet row 132 re-pinned (D3 (b)); the design note listed the rule change but not the row — recorded here and in
-   RE-PIN 8's header; the changelog's «what a re-pin touches» names it.
+1. §4 — the budget-row ruling (decision 7): RULED (a), landed.
+2. The D5 realization (typed temporary keys) — CONFIRMED by the audit (F5) and accepted by the landing (§1).
+3. BridgeSet row 132 re-pinned (D3 (b)) — accepted by the landing; the changelog's «what a re-pin touches» names it.
 4. The positional-tag shift is −3, not −1 (two refusal cases the note did not count) — mechanical; recorded.
-5. `blockEntry_fresh` is stated over `LocalEnv.locSup env ≤ s.nextAddr` (the sup form `ConfigWf` supplies) rather than
-   over a full `ConfigWf` — the environment half; the heap half is `entrySlot_not_allocated`; the value/label halves
-   follow from `ConfigWf`'s sup bounds the same way and were not written out as separate names.
+5. D8's `blockEntry_fresh` sentence, AMENDED (audit F4): `blockEntry_fresh` is the ENVIRONMENT half of «no existing
+   value, env or label names the new cell» (`LocalEnv.locSup env ≤ s.nextAddr → lookup env id ≠ some (entrySlot s i)`),
+   `entrySlot_not_allocated` the heap-domain half; the value and label halves are DERIVABLE from `StateWf`/`ConfigWf`'s
+   sup bounds the same way (`Loc.locSup` is strict, `Store.nextAddr = heap.size`) and are NOT named — BridgeSet rows
+   142–143 say exactly what they prove. Naming the value half is a later-slice candidate (§7).
 
 ## 7. Follow-ups (not taken here)
 
@@ -164,3 +194,9 @@ reference in `build-times-parallel.tsv`.
   `.seq rest env k`»); a one-rule simplification for a later slice (UnseqSound/StateWf cases + row 132 again).
 - The `.seqn #[s]` wrappers the hoist left behind (one extra step each) — a shape clean-up with its own fuel movement.
 - Channel 5 (`locJson` raw ids) — recorded as a standing schema limit (decision 6), untouched.
+- APPARATUS, post-window (audit F1; [USER] 2026-10-03 ruling text): express the membership rows' spin bounds in LOOP
+  ITERATIONS (loop back-edges), not raw steps — `nonterm=` is a per-branch STEP budget, so the four `nonterm=200` rows
+  move with every step-count change in the machine; the C4 raise of `spin-until-trylock`'s work cap is the second time
+  a budget row carried a non-semantic step shift.
+- Name the value half of the freshness statement (a `StateWf`-premised lemma over `Heap.lookup` / `HeapCell.locSup`)
+  — audit F4.

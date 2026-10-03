@@ -1279,3 +1279,17 @@ row that flips is reported and STOPS for a [USER] ruling; (8) D8's `entrySlot` f
 list (a BridgeSet re-pin; the core audit's required list) — the logic side's request 4; (9) estimate 3–4 sessions + audit, with
 G-C3's elaboration stop rule (any module > 1.5× slower or a new/raised `maxHeartbeats` → report and stop). Lane
 `core/block-allocation-1001` (window row 6).
+
+### C4 budget-row flip (`sync/trylock/spin-until-trylock`) — RULED (2026-10-03)
+
+[USER] Mike, 2026-10-03, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «yeah, agree with 1, land it» — the one item the C4 lane
+(`core/block-allocation-1001`, window row 6) STOPPED under G-C4 decision 7: the membership row's enumeration exceeded
+its pinned work cap (200000) after block-entry allocation because its `nonterm=200` is a per-branch STEP budget and
+C4 shortens each spin iteration by two steps, so more iterations fit before a branch is cut; the observation set
+{42}, leaves 2571 and maxdepth 18 are identical at a high cap. Option 1 of the handoff's three (RAISE the row's work
+cap) — landed as `work=500000` (measured need 240834; 240000 refuses, 250000 passes; ≥ 2× headroom), the reason in the
+manifest row's `why`; no baseline re-pin (the row returns to PASS). Options (b) (lower `nonterm` to 182–185, the pinned
+tree exactly — audit F1) and (c) (PASS → FAIL re-pin) NOT taken. Post-window apparatus follow-up recorded: express
+spin bounds in loop iterations, not raw steps (all four `nonterm=200` rows moved with C4). The pre-merge audit
+(`docs/2026-10-02_block-allocation-audit.md` @ `305afc95`) is MERGE-CLEAN; its F1–F6 records corrections are folded
+into the handoff, the changelog row and the design note at landing.

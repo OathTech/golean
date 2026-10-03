@@ -12,12 +12,14 @@ end); every build/gate `scripts/capped`, full builds and gates under the box-wid
 - `ci-diff-final-drift.txt` / `ci-diff-final-tail.txt` — the same gate at the records tip `f219637d` (the inventory
   rows fixed): EXIT 1, 830 s; red on exactly the 5a pair + the posed row, every other step ok.
 - `spin-until-trylock.txt` — the posed row at a raised work cap on both binaries (identical observation set and
-  leaves) and the per-branch-budget sensitivity that identifies the cause (channel 10, fuel).
+  leaves), the per-branch-budget sensitivity that identifies the cause (channel 10, fuel; the pinned tree at nonterm
+  182–185 — audit F1), and the work-cap measurement behind the RULED `work=500000` (needs 240834; 240000 refuses).
+- `ci-diff-ruled-*.txt` — the gate after the ruling (the row back to PASS): expected red on the 5a pair only.
 - `choice-trace.txt` — the whole-corpus choice trace, lane vs main: byte-identical modulo the output path (26445 dump
   rows, sha256 `6bf9800841e8e5c4` on both sides).
 - `google-search-recert.txt` — the certified slow-tier row re-enumerated on the lane: unchanged set; nodes/edges/wall
   moved (the handoff §2.4 has main's figures from the tracked record).
 - `fuel-bisect.tsv` — minimal completing fuel by bisection, main vs lane, for the budget rows and three loop/closure
-  rows (the per-declaration step saving, exactly).
+  rows (TWO steps per declaration executed — audit F2; every delta even).
 - `elaboration-ab.tsv` — the sequential elaboration A/B (G-C3 stop rule): every hot module within 0.92–1.07×.
 - `build-times-parallel.tsv` — the fresh parallel build's per-module times, for reference only.

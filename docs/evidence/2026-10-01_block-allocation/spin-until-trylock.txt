@@ -3,7 +3,9 @@
 main N=200: observations=1 steps=115312 probes=19464 sites=6812 leaves=2571 maxdepth=18 width=4 backedge=1 backedgeCapped=0 allow-nonterm=200 nonterm=4242
 lane N=200: observations=1 steps=214263 probes=26571 sites=9272 leaves=2571 maxdepth=18 width=4 backedge=1 backedgeCapped=0 allow-nonterm=200 nonterm=6702
 observations (both): {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":42}]}
-# sensitivity to the per-branch step budget (--allow-nonterm): lane at N=190 reproduces main at N=210 (an iteration of the spin loop is ~10% fewer steps since C4)
+# sensitivity to the per-branch step budget (--allow-nonterm): lane at N=190 reproduces main at N=210 — a tree never pinned (audit F1); main's PINNED tree (N=200) is reproduced by the lane at N in [182, 185] (below); an iteration of the spin loop is two steps shorter since C4
+lane N=182: observations=1 steps=104890 probes=19464 sites=6812 leaves=2571 maxdepth=18 nonterm=4242   (= main N=200's tree, fewer steps)
+lane N=185: observations=1 steps=117616 probes=19464 sites=6812 leaves=2571 maxdepth=18 nonterm=4242
 lane N=170: observations=1 steps=75701 probes=11991 sites=4321 leaves=2571 maxdepth=18 nonterm=1751
 lane N=180: observations=1 steps=97876 probes=14622 sites=5198 leaves=2571 maxdepth=18 nonterm=2628
 lane N=190: observations=1 steps=148554 probes=26331 sites=9101 leaves=2571 maxdepth=18 nonterm=6531
@@ -11,3 +13,9 @@ main N=210: observations=1 steps=172040 probes=26331 sites=9102 leaves=2571 maxd
 main N=220: observations=1 steps=238695 probes=39099 sites=13448 leaves=9621 maxdepth=22 nonterm=3828
 main N=230: observations=1 steps=287301 probes=42282 sites=14873 leaves=9621 maxdepth=22 nonterm=5253
 # at the PINNED cap (200000) the lane refuses: «work cap exceeded after 177861 step(s) + 22140 probe(s) with subtrees still unexplored» — the row's gate line (FAIL/membership); main at the pin: observations=1 steps=115312 probes=19464 (PASS)
+# RULED 2026-10-03 ([USER] Mike «yeah, agree with 1, land it», relayed): option (a). Work needed at N=200 on the lane binary = 240834 (214263 steps + 26571 probes):
+lane work-cap=240000: work cap exceeded after 213499 step(s) + 26502 probe(s) with subtrees still unexplored
+lane work-cap=250000: observations=1 steps=214263 probes=26571 sites=9272 leaves=2571 maxdepth=18 width=4 backedge=1 backedgeCapped=0 allow-nonterm=200 nonterm=6702
+lane work-cap=300000: observations=1 steps=214263 probes=26571 sites=9272 leaves=2571 maxdepth=18 width=4 backedge=1 backedgeCapped=0 allow-nonterm=200 nonterm=6702
+lane work-cap=500000: observations=1 steps=214263 probes=26571 sites=9272 leaves=2571 maxdepth=18 width=4 backedge=1 backedgeCapped=0 allow-nonterm=200 nonterm=6702
+# chosen: work=500000 (the smallest round value with >= 2x headroom); manifest row Corpus/coverage/exec/sync/trylock/cases.tsv
