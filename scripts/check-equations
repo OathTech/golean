@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+# The semantic-EQUATION gate (window packet D, 2026-10-03; charter row 7's second and third
+# checks beside BridgeSet's statements): (a) the equation file GoLean/GoCore/Equations.lean —
+# one PROVED lemma per `stepFn` arm, the `stepFn_eqns` rewrite set — builds with the toy client
+# library; (b) the client Tests/EquationClient.lean runs and reports PASS — its facts are proved
+# by the equation set alone, and its in-file `#eval` checks EXHAUSTIVE enrollment (every theorem
+# of namespace GoLean.GoCore.Equations has a `Pin.<name>` whose type IS the theorem's); (c) the
+# NO-UNFOLD guard: the client never spells `unfold stepFn`, `simp [... stepFn ...]`, `cbv` or
+# `decide` (a client that re-unfolds the interpreter is no client); (d) the enrollment check's
+# failure is (b)'s failure; (e) SELF-TESTS, fail closed: a scratch copy of the client with one
+# `stepFn_eqns` use replaced by `unfold stepFn` must trip (c); a scratch copy with one pin deleted
+# must fail (d) naming the unenrolled equation. Every step fails closed; no allowlist.
+set -Eeuo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT"
+[[ $# = 0 ]] || { echo 'check-equations: expected no arguments' >&2; exit 2; }
+. "$ROOT/scripts/typed-gate-scratch.sh"
+
+CLIENT=Tests/EquationClient.lean
+GUARD='unfold stepFn|simp \[[^]]*stepFn|cbv|decide'
+
+# (a) the equation file and the client library build
+scripts/capped lake build GoLean EquationTests
+
+# (b) + (d) the client runs — its `#eval` enrollment check elaborates first — and reports PASS
+scripts/capped lake env lean --run "$CLIENT" | tee "$gate_scratch/client.log"
+grep -q '^Equation client: PASS' "$gate_scratch/client.log"
+grep -q 'enrollment complete' "$gate_scratch/client.log" || {
+  echo "check-equations: FAIL — the client's enrollment check did not report completion" >&2; exit 1; }
+
+# (c) the NO-UNFOLD guard over the tracked client
+if git grep -n -E "$GUARD" -- "$CLIENT"; then
+  echo "check-equations: FAIL — $CLIENT re-unfolds stepFn (or spells cbv/decide): see the lines above" >&2
+  exit 1
+fi
+echo "ok [no-unfold] $CLIENT never unfolds stepFn"
+
+# (e1) self-test: one `simp only [stepFn_eqns]` replaced by `unfold stepFn` must trip the guard
+mut1="$gate_scratch/mut-unfold.lean"
+grep -q 'simp only \[stepFn_eqns\]' "$CLIENT" || { echo "check-equations: FAIL — the client has no stepFn_eqns rewrite to mutate" >&2; exit 1; }
+sed '0,/simp only \[stepFn_eqns\]/s//unfold stepFn/' "$CLIENT" > "$mut1"
+if grep -q -E "$GUARD" "$mut1"; then
+  echo "ok [self-test unfold] the guard fires on a client that unfolds stepFn"
+else
+  echo "check-equations: FAIL — self-test: the guard did NOT fire on the unfold mutant" >&2; exit 1
+fi
+
+# (e2) self-test: one pin deleted must fail the enrollment check, naming the equation
+mut2="$gate_scratch/mut-pin.lean"
+victim="$(grep -m1 -o '^theorem Pin\.[A-Za-z0-9_'"'"'?]*' "$CLIENT" | sed 's/^theorem Pin\.//')"
+[[ -n "$victim" ]] || { echo "check-equations: FAIL — no pin found to delete for the self-test" >&2; exit 1; }
+awk -v v="theorem Pin.$victim :" 'BEGIN{skip=0} $0 ~ "^"v{skip=1} skip && /^$/{skip=0; next} !skip' "$CLIENT" > "$mut2"
+if grep -q "theorem Pin.$victim :" "$mut2"; then
+  echo "check-equations: FAIL — self-test: the pin $victim was not removed from the mutant" >&2; exit 1
+fi
+set +e
+scripts/capped lake env lean "$mut2" > "$gate_scratch/mut-pin.log" 2>&1
+rc=$?
+set -e
+if [[ $rc -eq 0 ]]; then
+  echo "check-equations: FAIL — self-test: the client with pin $victim deleted still elaborated" >&2; exit 1
+fi
+grep -q "UNENROLLED equation GoLean.GoCore.Equations.$victim" "$gate_scratch/mut-pin.log" || {
+  echo "check-equations: FAIL — self-test: the mutant failed but did not name the unenrolled equation $victim" >&2
+  tail -20 "$gate_scratch/mut-pin.log" >&2; exit 1; }
+echo "ok [self-test pin] deleting Pin.$victim fails the enrollment check by name"
+
+printf '%s\n' "Equation gate: PASS (client PASS, exhaustive enrollment, no-unfold guard, 2 self-tests)"

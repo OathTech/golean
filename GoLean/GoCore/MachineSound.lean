@@ -1912,8 +1912,19 @@ theorem stepFn_sound {s : Store} {c : Config} {ch : Choices}
   -- (0.5 s before C3) and took the theorem past its heartbeat budget.
   -- Unit 6b: the two catch-alls now carry the preprint frame's store /
   -- resolution steps (`stepRetOther`/`stepNextOther`), proved above.
-  case case137 => simp only [stepFn] at h; exact stepRetOther_sound h
-  case case152 => simp only [stepFn] at h; exact stepNextOther_sound h
+  -- Packet D (packet B audit F2, 2026-10-03): the two catch-alls are closed by the
+  -- SHAPE `stepFn` reduces to at them — `stepRetOther`/`stepNextOther` — tried on
+  -- the goals whose `h` is a `.retV`/`.next` step at a FREE continuation (the
+  -- `guard_hyp` shape tests skip the constructor-headed arms), never by their
+  -- positional `caseN` tags (which every arm insertion renumbers).
+  all_goals first
+    | (guard_hyp h : stepFn _ _ (Config.retV _ (_ :: _)) _ = _; skip)
+    | (guard_hyp h : stepFn _ _ (Config.retV _ []) _ = _; skip)
+    | (guard_hyp h : stepFn _ _ (Config.retV _ _) _ = _; simp only [stepFn] at h; exact stepRetOther_sound h)
+    | (guard_hyp h : stepFn _ _ (Config.next (_ :: _)) _ = _; skip)
+    | (guard_hyp h : stepFn _ _ (Config.next []) _ = _; skip)
+    | (guard_hyp h : stepFn _ _ (Config.next _) _ = _; simp only [stepFn] at h; exact stepNextOther_sound h)
+    | skip
   all_goals
     (first
       | (simp_all [stepFn]; done)
@@ -6502,8 +6513,16 @@ theorem stepFn_consumption_none {σ : Store} {c : Config} {ch₀ : Choices}
   -- G-C3 (packet C): the `.retV`/`.next` catch-all refusals closed directly,
   -- as in `stepFn_sound` (the generic `simp_all [stepFn]` is ~9 s there).
   -- Unit 6b: the catch-alls carry the preprint frame's stream-free steps.
-  case case137 => simp only [stepFn] at h ⊢; exact stepRetOther_stream h
-  case case152 => simp only [stepFn] at h ⊢; exact stepNextOther_stream h
+  -- Packet D (packet B audit F2): closed by the shape `stepFn` reduces to, not by
+  -- the positional tags (see `stepFn_sound`).
+  all_goals first
+    | (guard_hyp h : stepFn _ _ (Config.retV _ (_ :: _)) _ = _; skip)
+    | (guard_hyp h : stepFn _ _ (Config.retV _ []) _ = _; skip)
+    | (guard_hyp h : stepFn _ _ (Config.retV _ _) _ = _; simp only [stepFn] at h ⊢; exact stepRetOther_stream h)
+    | (guard_hyp h : stepFn _ _ (Config.next (_ :: _)) _ = _; skip)
+    | (guard_hyp h : stepFn _ _ (Config.next []) _ = _; skip)
+    | (guard_hyp h : stepFn _ _ (Config.next _) _ = _; simp only [stepFn] at h ⊢; exact stepNextOther_stream h)
+    | skip
   all_goals first
     | (refine ⟨?_, fun ch => ?_⟩ <;> (simp_all [stepFn]; done))
     | skip
@@ -6876,17 +6895,19 @@ set_option linter.unusedSimpArgs false in
 `some (site, b)` DRAWS the site's pick at bound `b`, its stream is the
 site's pop, and it depends on the stream only through that pick — any
 stream drawing the same pick yields the same successor with its own popped
-tail. The one hypothesis, `Config.appendTargetLocal`, is the frontend's
-lowering contract at an `appendSlice` apply (the target is a hoisted local
-temp, a ROOT cell); under it the post-consult tail of a spilling append
-cannot panic (`applyStmtOp_appendSlice_spill`), as a TRY head's apply never
-can (`applyTryLock_noPanic`) — the "post-pop panic restores the pre-apply
+tail. PREMISE-FREE since packet D (2026-10-03; packet B audit F3, folding
+`PrefixFacts.stepFn_consumption_some'` back here): the former hypothesis
+`Config.appendTargetLocal` — the frontend's lowering contract at an
+`appendSlice` apply (the target a hoisted local temp, a ROOT cell) — was
+never read by this proof since C1 S3: the post-consult tail of a spilling
+append is the VALIDATE phase's, panic-free for EVERY target
+(`applyStmtOp_plan_appendSlice_spill`), as a TRY head's apply never panics
+(`applyTryLock_noPanic`) — the "post-pop panic restores the pre-apply
 stream" disjunct the first statement carried was a PROOF ARTIFACT of
 stating the theorem over arbitrary configurations, refuted here (wave-(iii)
 audit fix F1; design note §B8). -/
 theorem stepFn_consumption_some {σ : Store} {c : Config} {ch₀ : Choices}
-    {c' : Config} {σ' : Store} {ch₀' : Choices} {site : ChoiceSite} {b : Nat}
-    (_hloc : c.appendTargetLocal)
+    {c' : Config} {σ' : Store} {ch₀' : Choices} {site : ChoiceSite} {b : Nat} {tr : StepLabel}
     (hsc : seqConsumption ctx σ c = some (site, b))
     (h : stepFn ctx σ c ch₀ = .ok (c', σ', ch₀', tr)) :
     ch₀' = (Choices.consumeAt site b ch₀).2 ∧ ∀ ch : Choices,

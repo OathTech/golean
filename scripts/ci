@@ -599,6 +599,19 @@ else
   bad "unseq wire (Stage C) (scripts/check-unseq-wire)"
 fi
 
+# The semantic EQUATIONS (window packet D, 2026-10-03; charter row 7's second and third checks):
+# the per-arm `stepFn` equation lemmas (GoLean/GoCore/Equations.lean, the `stepFn_eqns` rewrite
+# set) build; the toy client (Tests/EquationClient.lean) proves its facts by the equation set
+# alone, pins every equation theorem (exhaustive enrollment, checked in-file) and never unfolds
+# `stepFn` (the no-unfold guard); two fail-closed self-tests (an unfolding mutant trips the guard,
+# a pin-deleted mutant fails the enrollment check by name).
+step "semantic equations (packet D): equation lemmas, the toy client, exhaustive enrollment, no-unfold guard, self-tests"
+if library_step equations bash scripts/check-equations; then
+  ok "semantic equations (scripts/check-equations)"
+else
+  bad "semantic equations (scripts/check-equations)"
+fi
+
 # The typed-profile family's nine steps (semantic interface; typed contract ×7;
 # typed recovery terminal classification) were REMOVED 2026-09-16 with the family
 # they gated (docs/2026-09-16_typed-profiles-parked.md §1 accounts for every step;

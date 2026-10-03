@@ -16,6 +16,11 @@ import GoLean.GoCore.StringPanic
 import GoLean.GoCore.BridgeSet
 import GoLean.GoCore.ExecutionStatement
 import GoLean.GoCore.Prefix
+-- Window packet D (2026-10-03): the per-arm `stepFn` EQUATIONS with the `stepFn_eqns` rewrite
+-- set (charter row 7's second check) and the sequential-to-pool PROJECTIONS (packet B audit F5).
+import GoLean.GoCore.EquationsAttr
+import GoLean.GoCore.Equations
+import GoLean.GoCore.PoolProjection
 import GoLean.NativeToIR
 import GoLean.CLI
 import GoLean.ChoiceTrace

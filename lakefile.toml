@@ -61,3 +61,11 @@ globs = ["Tests.UnseqWire"]
 # (classical trio only), with the panic-text renderer/member tests.
 name = "GoCoreAuditTests"
 globs = ["Tests.GoCoreContract", "Tests.PanicRendering", "Tests.StringPanicMembers", "Tests.GoCoreAudit"]
+
+[[lean_lib]]
+# The toy semantic-equation CLIENT (window packet D, 2026-10-03; charter row 7, decision 8): GoCore
+# only, symbolic state and continuations, proves its facts by the `stepFn_eqns` rewrite set and
+# pins every equation theorem (exhaustive enrollment); run by scripts/check-equations. No runtime
+# module imports it.
+name = "EquationTests"
+globs = ["Tests.EquationClient"]

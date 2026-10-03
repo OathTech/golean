@@ -306,7 +306,7 @@ theorem boundary_refused_zero : boundary_refused_zero_stmt := by
 
 /-- **Consultation coverage, by record**: the answer to the reshape lane's flag. The
 `appendTargetLocal` premise is NOT needed: the premise-free consumption theorem
-(`stepFn_consumption_some'`) and the record sweeps (`stepFn_picks_none`/`_some`) close it for
+(`stepFn_consumption_some`, premise-free since packet D) and the record sweeps (`stepFn_picks_none`/`_some`) close it for
 every configuration. -/
 theorem replay_coverage : replay_coverage_stmt := by
   intro ctx s s' c c' ch ch' l h ch₂ ch₂' hr
@@ -322,7 +322,7 @@ theorem replay_coverage : replay_coverage_stmt := by
     obtain ⟨site, b⟩ := p
     have hp : l.picks = PickRecord.ofPick site b (Choices.consumeAt site b ch).1 :=
       stepFn_picks_some (ch₀ := ch) hsc _ h
-    obtain ⟨-, hall⟩ := stepFn_consumption_some' hsc h
+    obtain ⟨-, hall⟩ := stepFn_consumption_some hsc h
     by_cases hb : b ≤ 1
     · rw [hp, PickRecord.ofPick, if_pos hb] at hr
       simp only [replays] at hr
@@ -560,7 +560,7 @@ theorem stepFn_any_residual {ctx : ProgramCtx} {s s' : Store} {c c' : Config} {c
   | none => exact ⟨ch, (stepFn_consumption_none hsc h).2 ch⟩
   | some p =>
     obtain ⟨site, b⟩ := p
-    obtain ⟨-, hall⟩ := stepFn_consumption_some' hsc h
+    obtain ⟨-, hall⟩ := stepFn_consumption_some hsc h
     by_cases hb : b ≤ 1
     · refine ⟨ch, ?_⟩
       have h₂ := hall ch (by rw [Choices.consumeAt_le_one hb, Choices.consumeAt_le_one hb])

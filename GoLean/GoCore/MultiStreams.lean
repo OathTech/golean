@@ -567,7 +567,7 @@ theorem stepThread_pick_run {s : Store} {ts : Array Thread} {i : Nat} {c : Confi
     (hsp : spawnPlan c = none)
     (harr : arrivalCases ctx s ts i c = .ok .cellPath)
     (hselp : selectApplyPlan c = none)
-    (hloc : c.appendTargetLocal)
+    (_hloc : c.appendTargetLocal)
     {site : ChoiceSite} {b : Nat}
     (hsc : seqConsumption ctx s c = some (site, b))
     (hb : 2 ≤ b)
@@ -587,7 +587,7 @@ theorem stepThread_pick_run {s : Store} {ts : Array Thread} {i : Nat} {c : Confi
   obtain ⟨⟨c₂, s₂, ch₂, tr₂⟩, hstep, hvec⟩ := hvec
   simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hvec
   obtain ⟨rfl, rfl, rfl, rfl⟩ := hvec
-  obtain ⟨-, hall⟩ := stepFn_consumption_some hloc hsc hstep
+  obtain ⟨-, hall⟩ := stepFn_consumption_some hsc hstep
   have hpk : (Choices.consumeAt site b ch).1 = (Choices.consumeAt site b [p]).1 := by
     simp only [Choices.consumeAt, hnb, reduceIte, hcons, hcP]
   have hrest : (Choices.consumeAt site b ch).2 = rest := by

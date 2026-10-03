@@ -6,5 +6,6 @@
   "method-identity": {"libraries": ["MethodIdentityTests"], "executables": []},
   "unseq-scheduler": {"libraries": ["UnseqSchedulerTests"], "executables": []},
   "unseq-wire": {"libraries": ["UnseqWireTests"], "executables": []},
-  "core-audit": {"libraries": ["GoCoreAuditTests"], "executables": []}
+  "core-audit": {"libraries": ["GoCoreAuditTests"], "executables": []},
+  "equations": {"libraries": ["EquationTests"], "executables": []}
 }
