@@ -102,3 +102,5 @@ claim. Cost: C4 slips by the unit's 1–2 sessions; the window total ≈ +1–2.
 | `frontend/writer-typed-globals` (D-12 / H-20) | the isolation/effect story for writer-typed package-level globals (`docs/raft-w42-log.md`, H-20 — the honest alternative, «D-12 is cheap and may as well be permanent», stays on the table); until then the raft-proofs note's «Logger installed» premise | frontend-lane work, «not small» (W4.2) | `--diff` + `--slow` |
 
 **Unit 6b added ([USER] 2026-09-30, «Yes, agree, do the fix inside this window»).** BUG-004 item 4, the preprint phase for error/Stringer panic payloads (`docs/2026-09-30_bug004-item4-design.md`), after C4 and before packet D; ≈3.5–5 sessions; Fable S1–S2, Opus S3; the G-C3 stop rule. Packet D states its abort and frame-exit equations over the phase's arms.
+
+**Whole-window review and packet D landing ([USER] 2026-10-03, «agree on 1-4»).** The independent review `docs/2026-10-03_window-review.md` stands as the whole-window review; packet D and the CL1–CL5 disposition land at train r61; additive BridgeSet pin rows are exempt from the G-C3 stop rule. Remaining: unit 7b, the re-pin offer.

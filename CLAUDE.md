@@ -71,13 +71,22 @@ counted, choice-threaded prefix closure; the finishing classification
 with its five endings; the fuel bridges; choice replay by record; the
 refusal-separate classification; statements pinned in
 `GoLean/GoCore/BridgeSet.lean`). Still OWED, kept in step with the
-interpreter (priority (c) of the 2026-09-11 ruling): the pool/registry
-half, the single-goroutine output agreement and the sequential-to-pool
-terminal projection. Limits: setup is a premise, init-time printing is
-refused, and the domain premise `NoRefusal` covers the sequential driver
-only (a `go` statement leaves it). A refusal has no relation
+interpreter (priority (c) of the 2026-09-11 ruling): the pool/registry half — the labelled pool
+relation over `StepLabel` with attribution, registry boundaries and
+the pool deadlock's own condition. Proved 2026-10-03
+(`GoLean/GoCore/PoolProjection.lean`): the single-goroutine output
+agreement (the pool's output fold is the sequential labels' fold) and
+the sequential-to-pool terminal projection — every sequential result
+but the deadlock and the refusals, the `fatal` terminal included, is
+the one-goroutine pool's at the pool's fuel `fuel + seqOpCount`, and
+at EQUAL fuel when no reachable step opens a registry boundary.
+Limits: setup is a premise (its no-globals, no-initializer case is the
+pinned equation `runProgramSetup_noInit`), init-time printing is
+refused, and the domain premise `NoRefusal` covers the sequential
+driver only (a `go` statement leaves it). A refusal has no relation
 successor: a partial-correctness boundary ([USER] approved this
-wording 2026-09-28, «D2: approved», relayed). (3):
+wording 2026-09-28, «D2: approved», and its update 2026-10-03,
+«agree on 1-4», relayed). (3):
 the typed-admission profile family, the `GoLean/Interface.lean`
 facade and the adapter spikes were PARKED 2026-09-16 ([USER] ruling;
 tag `typed-profiles/last-main-2026-09-16`,

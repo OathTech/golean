@@ -1309,3 +1309,18 @@ constructors, 128 → 127 rules), the `unseq` sweep-private scope, `entrySlot` +
 for `core/panic-preprint-1003` (window unit 6b; audit MERGE-CLEAN, 68 extra gc probes), acknowledging the three internal
 statement changes (`Prefix.abort?_some`, `Prefix.stepFn_abort`, `MachineSound.step_abort_elim` gain the settled-chain premise;
 the pinned `_stmt`s byte-identical). Baseline 3821 = 3584 / 237. Follow-ups in the lane handoff §7.
+
+### Train r61 — packet D, the corpus lanes, the window review — RULED (2026-10-03)
+
+[USER] Mike, 2026-10-03, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «agree on 1-4» — on the coordinator's
+four items: (1) re-check packet D's window-review fixes, then land packet D (`window/packet-d-equations-1003` @ `d8529ab7`:
+293 per-arm `stepFn` equations, the setup equation `runProgramSetup_noInit`, the pool projections, the fold-back, the
+equation client and `scripts/check-equations`; the re-check (Fable) found the gate's import boundary open — closed before
+landing by an import whitelist and a closure up to the published API, its two bypasses now gate negative controls) and the
+corpus-lane disposition `records/window-corpus-cl-1003` (CL1–CL5 mapped; 39 rows born, all PASS; stated limits recorded);
+(2) `CLAUDE.md`'s «still OWED» passage updated to the approved wording (the pool/registry half owed; the single-goroutine
+output agreement and terminal projection proved; the limits); (3) additive pin rows in `GoLean/GoCore/BridgeSet.lean` are
+EXEMPT from the G-C3 1.5× elaboration stop rule (it targets regressions in hot proof modules; BridgeSet ≈ 1.9 s); (4) the
+independent Codex review `docs/2026-10-03_window-review.md` (landed with this train) counts as the whole-window review
+requested 2026-10-03 — no separate Fable pass; its F1–F4 are dispositioned (F1/F2/F4 fixed in packet D, F3 by the corpus
+lanes). Next: the re-pin OFFER (window unit 7b).
