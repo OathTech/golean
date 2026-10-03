@@ -12,8 +12,9 @@
 # failure; (e) SELF-TESTS, fail closed: an `unfold stepFn` mutant trips the regex; a pin-deleted mutant
 # fails (d) naming the equation; each of the audit's seven unfolding spellings at the anchored fact is
 # REFUSED by name by the proof-term check, and so is an unfolding hidden in a private helper the fact
-# `exact`s (the window review's F2: the check covers the client-owned proof-dependency closure). Every step
-# fails closed; no allowlist.
+# `exact`s (the window review's F2: the check covers the proof-dependency closure up to the PUBLISHED API —
+# the audit's R1: an imported rfl-theorem over stepFn and a foreign test-support module are both refused; the
+# client's imports are whitelisted). Every step fails closed.
 set -Eeuo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$ROOT"
@@ -38,6 +39,18 @@ if git grep -n -E "$GUARD" -- "$CLIENT"; then
   exit 1
 fi
 echo "ok [no-unfold] $CLIENT never unfolds stepFn"
+
+# (c') the IMPORT WHITELIST pre-filter (audit re-verification R1): every `import` line of the client names a toolchain
+# root or a published API module; the load-bearing check is the client's own (`checkEnrollment` reads the environment
+# header), this is the cheap textual twin. Fail closed on any other import.
+import_whitelist='Init Std Lean GoLean.GoCore.Equations GoLean.GoCore.EquationsAttr GoLean.GoCore.Prefix GoLean.GoCore.ExecutionStatement GoLean.GoCore.PoolProjection GoLean.GoCore.BridgeSet'
+while IFS= read -r impline; do
+  mod="${impline#import }"; mod="${mod%% *}"
+  ok_import=0
+  for w in $import_whitelist; do [[ "$mod" == "$w" ]] && ok_import=1; done
+  [[ $ok_import -eq 1 ]] || { echo "check-equations: FAIL — $CLIENT imports '$mod', which is not a toolchain root or a published API module ($import_whitelist)" >&2; exit 1; }
+done < <(grep -E '^import ' "$CLIENT")
+echo "ok [imports] every import of $CLIENT is a toolchain root or a published API module"
 
 # (e1) self-test: one `simp only [stepFn_eqns]` replaced by `unfold stepFn` must trip the guard
 mut1="$gate_scratch/mut-unfold.lean"
@@ -127,4 +140,57 @@ grep -q "fact Tests.EquationClient.fact_usage_simp_set REFUSED — its proof unf
   grep -E "error" "$gate_scratch/mut-indirect.log" | head -5 >&2; exit 1; }
 echo "ok [self-test indirect] a private helper proved by rfl on stepFn, exact-ed from a fact, is refused naming fact and helper"
 
-printf '%s\n' "Equation gate: PASS (client PASS, exhaustive enrollment, the Lean-level no-unfold check over the client-owned closure, the regex pre-filter, 10 self-tests)"
+# (e5) self-test: witness A of the audit's re-verification (R1) — a NEW fact proved by the IMPORTED `rfl`-theorem
+# `GoLean.GoCore.Machine.stepFn_next_frame` (the interpreter's own module `StepFn`, outside the published API). The
+# closure must traverse the imported theorem and REFUSE the fact naming it.
+mut5="$gate_scratch/mut-imported-rfl.lean"
+fact_a='theorem fact_via_imported_rfl (s : Store) (targets : List (TargetShape × List Expr)) (tenv : LocalEnv)\n    (results : List Loc) (ds : List (GoValue × List GoValue)) (fr : FuncId) (k'"'"' : Cont) (ch : Choices) :\n    stepFn ctx s (.next (Frame.frame targets tenv results ds fr :: k'"'"')) ch\n      = stepFrameExit ctx s targets tenv results ds k'"'"' fr ch :=\n  stepFn_next_frame s targets tenv results ds fr k'"'"' ch\n'
+awk -v fact="$fact_a" '/^\/-- FACT 8 /{printf "%s\n", fact} {print}' "$base3" \
+  | sed 's|^def factCount : Nat := 12$|def factCount : Nat := 13|' > "$mut5"
+grep -q "^theorem fact_via_imported_rfl" "$mut5" || { echo "check-equations: FAIL — self-test: witness A was not inserted" >&2; exit 1; }
+grep -q "^def factCount : Nat := 13$" "$mut5" || { echo "check-equations: FAIL — self-test: witness A's factCount was not bumped" >&2; exit 1; }
+set +e
+scripts/capped lake env lean "$mut5" > "$gate_scratch/mut-imported-rfl.log" 2>&1
+rc=$?
+set -e
+if [[ $rc -eq 0 ]]; then
+  echo "check-equations: FAIL — self-test: the client with witness A (an imported rfl-theorem over stepFn) still elaborated" >&2; exit 1
+fi
+grep -q "fact Tests.EquationClient.fact_via_imported_rfl REFUSED — its proof unfolds stepFn in its helper GoLean.GoCore.Machine.stepFn_next_frame" "$gate_scratch/mut-imported-rfl.log" || {
+  echo "check-equations: FAIL — self-test: witness A failed but was not REFUSED naming the fact and the imported theorem" >&2
+  grep -E "error" "$gate_scratch/mut-imported-rfl.log" | head -5 >&2; exit 1; }
+echo "ok [self-test imported-rfl] a fact proved by the interpreter's own rfl-theorem stepFn_next_frame is refused naming fact and theorem"
+
+# (e6) self-test: witness B of the re-verification (R1) — a FOREIGN test-support module with a `rfl`-on-`stepFn` helper,
+# compiled to an olean on an extended LEAN_PATH, imported by the client and `exact`-ed from the anchored fact. The
+# import whitelist must REFUSE the import by name (before any fact is looked at).
+support_src="$gate_scratch/AuditSupport.lean"
+cat > "$support_src" <<'SUPPORT'
+import GoLean.GoCore.Equations
+open GoLean GoLean.GoCore GoLean.GoCore.Machine
+namespace AuditSupport
+theorem helper {ctx : ProgramCtx} (s : Store) (env : LocalEnv) (k : Cont) (ch : Choices) :
+    stepFn ctx s (.exec .returnStmt env k) ch = .ok (.signal .ret k, s, ch, ⟨[], [], []⟩) := rfl
+end AuditSupport
+SUPPORT
+scripts/capped lake env lean -o "$gate_scratch/AuditSupport.olean" "$support_src" > "$gate_scratch/AuditSupport.log" 2>&1 || {
+  echo "check-equations: FAIL — self-test: the foreign support module did not compile (the control cannot run)" >&2
+  tail -5 "$gate_scratch/AuditSupport.log" >&2; exit 1; }
+mut6="$gate_scratch/mut-foreign-import.lean"
+sed 's|^import GoLean.GoCore.Prefix$|import GoLean.GoCore.Prefix\nimport AuditSupport|' "$base3" \
+  | sed "s|^$anchor\$|  exact AuditSupport.helper s env k ch|" > "$mut6"
+grep -q "^import AuditSupport$" "$mut6" || { echo "check-equations: FAIL — self-test: the foreign import was not inserted" >&2; exit 1; }
+lake_lean_path="$(scripts/capped lake env printenv LEAN_PATH)"
+set +e
+LEAN_PATH="$gate_scratch:$lake_lean_path" scripts/capped lean "$mut6" > "$gate_scratch/mut-foreign-import.log" 2>&1
+rc=$?
+set -e
+if [[ $rc -eq 0 ]]; then
+  echo "check-equations: FAIL — self-test: the client importing a foreign rfl-on-stepFn helper still elaborated" >&2; exit 1
+fi
+grep -q "Equation client: import AuditSupport is NOT WHITELISTED" "$gate_scratch/mut-foreign-import.log" || {
+  echo "check-equations: FAIL — self-test: the foreign import failed but was not REFUSED by the import whitelist by name" >&2
+  grep -E "error" "$gate_scratch/mut-foreign-import.log" | head -5 >&2; exit 1; }
+echo "ok [self-test foreign-import] importing a test-support module with a rfl-on-stepFn helper is refused by the import whitelist by name"
+
+printf '%s\n' "Equation gate: PASS (client PASS, exhaustive enrollment, the Lean-level no-unfold check over the closure up to the published API, the import whitelist, the regex pre-filter, 12 self-tests)"

@@ -19,7 +19,7 @@ per theorem of the namespace `GoLean.GoCore.Equations`, its statement written ou
 `#eval` at the end against the environment (every equation theorem has a pin, and the pin's type
 IS the theorem's type up to alpha-equivalence — a statement drift fails here as well as in
 `BridgeSet.lean`) — and the NO-UNFOLD CHECK of every fact's PROOF TERM and of every declaration of this file
-the proof depends on, transitively (pre-landing round, audit F2; window review F2: no `stepFn.*` constant, no
+the proof depends on, transitively, up to the PUBLISHED API (`apiModules`; the client's imports are WHITELISTED — pre-landing round, audit F2; window review F2; the re-verification's R1: no `stepFn.*` constant, no
 reflexivity on a `stepFn`-headed term, the term re-type-checked with `stepFn` irreducible on every obligation
 that can reach `stepFn`, the classical trio at most). `main` prints the PASS line the gate greps for; the
 `#eval` fails the file before `main` can run when a fact — or a helper it uses — unfolds `stepFn`, an equation
@@ -2168,6 +2168,53 @@ def factTheorems (env : Environment) : List Name :=
     else acc
 
 open Lean in
+/-- THE PUBLISHED API — the modules whose constants are the BOUNDARY of the closure check (cited, never traversed):
+the equation set and its attribute, the prefix algebra and the execution statements it refines, the pool projections,
+the pinned bridge set. A fact may use what these modules state; a lemma from ANY other module (the interpreter's own
+`rfl`-theorems in `StepFn`/`Machine`/`MachineSound`, a test-support module) is a HELPER and is checked like one
+(the audit's re-verification R1: an imported `rfl`-theorem over `stepFn` is an unfolding of `stepFn`). -/
+def apiModules : List Name :=
+  [`GoLean.GoCore.Equations, `GoLean.GoCore.EquationsAttr, `GoLean.GoCore.Prefix, `GoLean.GoCore.ExecutionStatement,
+   `GoLean.GoCore.PoolProjection, `GoLean.GoCore.BridgeSet]
+
+open Lean in
+/-- The IMPORT WHITELIST of this module: the toolchain roots and the API modules — every DIRECT import of the client
+must be one of these (`checkEnrollment` reads the environment's header; the gate pre-filters the `import` lines). What
+they transitively bring (the interpreter, `Init`/`Std`/`Lean`) comes along and is classified below. -/
+def importWhitelist : List Name := [`Init, `Std, `Lean] ++ apiModules
+
+open Lean in
+/-- A TOOLCHAIN module (`Init`/`Std`/`Lean`/`Lake`): compiled before `stepFn` exists, so none of its constants can
+reach `stepFn` by unfolding — a boundary by construction. -/
+def toolchainModule (m : Name) : Bool :=
+  [`Init, `Std, `Lean, `Lake].any fun r => r == m || r.isPrefixOf m
+
+/-- What the closure check does with a constant, by its module. -/
+inductive Owner where
+  /-- this module, or a foreign non-`GoLean` module (a test-support module): EVERY value is traversed -/
+  | client
+  /-- a non-API `GoLean` module (the semantic core: `StepFn`, `Machine`, `Ops`, …): its THEOREMS and Prop-typed
+  constants are traversed (a `rfl`-theorem over `stepFn` there is an unfolding); its DEFINITIONS are the SUBJECT —
+  what a proof may or may not unfold, which check (3) measures at the use site — and are not traversed (`stepFn`
+  itself first of all; the core's own gates — the escape-hatch scans, no evaluation-by-kernel closers — exclude a
+  proof hidden in a core definition) -/
+  | core
+  /-- an API module or a toolchain module: the boundary -/
+  | boundary
+  deriving Repr, DecidableEq
+
+open Lean in
+/-- The owner of a constant: by the module that declares it (`none` = this module). -/
+def ownerOf (env : Environment) (c : Name) : Owner :=
+  match env.getModuleIdxFor? c with
+  | none => .client
+  | some idx =>
+      let m := env.header.moduleNames[idx.toNat]!
+      if apiModules.contains m || toolchainModule m then .boundary
+      else if (`GoLean).isPrefixOf m then .core
+      else .client
+
+open Lean in
 /-- Does DEFINITIONAL UNFOLDING from the constant `c` reach `stepFn`? — `c` is `stepFn`, or the VALUE of `c` (a
 definition's body, a theorem's proof, an opaque's value) names a constant that does; an inductive, a
 constructor, a recursor, an axiom has no value and reaches nothing. Memoized. This is the test that lets the
@@ -2249,25 +2296,38 @@ partial def checkNoUnfold (stepFnN : Name) (may : Lean.Expr → MetaM Bool) : Le
   | _ => pure ()
 
 open Lean Meta in
-/-- Fail-closed: a fact whose proof — or the proof/value of any declaration OF THIS FILE its proof depends on,
-transitively (the window review's F2: a helper proved by `rfl` on `stepFn` and `exact`ed from a fact) — unfolds
-`stepFn` by any of the four readings above, an equation without a pin, a pin whose type is not the equation's
-(up to alpha-equivalence), or a fact count that drifted from `factCount`, is an elaboration error. The closure
-is over the CLIENT-OWNED constants (those of the current module, `getModuleIdxFor? = none`); the published API
-— the equation and prefix modules, the interpreter, everything imported — is the boundary and is not
-traversed. The facts are checked FIRST, so a mutant client reports the refused fact before any enrollment
-issue; a refusal names the fact and, when the unfolding is in a helper, the helper. -/
+/-- Fail-closed: a non-whitelisted IMPORT; a fact whose proof — or the proof/value of any declaration its proof depends
+on, transitively, up to the published API (`apiModules`; the window review's F2 and the audit's R1: a helper proved by
+`rfl` on `stepFn`, whether private to this file, in the interpreter's own modules or in a foreign module) — unfolds
+`stepFn` by any of the four readings above; an equation without a pin; a pin whose type is not the equation's (up to
+alpha-equivalence); a fact count that drifted from `factCount`: each is an elaboration error. The closure follows
+`getUsedConstants` of the values; `ownerOf` settles per constant: `.client` traversed whole, `.core` traversed for its
+theorems and Prop-typed constants (never `stepFn` itself), `.boundary` cited and stopped at. The facts are checked
+FIRST, so a mutant client reports the refused fact before any enrollment issue; a refusal names the fact and, when the
+unfolding is in a helper, the helper. -/
 def checkEnrollment : CoreM Unit := do
   let env ← getEnv
   let stepFnN := `GoLean.GoCore.Machine.stepFn
+  -- (0) the import whitelist: every DIRECT import of this module
+  for imp in env.header.imports do
+    unless importWhitelist.contains imp.module do
+      throwError "Equation client: import {imp.module} is NOT WHITELISTED — the client may import only {importWhitelist}"
   let facts := factTheorems env
   if facts.isEmpty then
     throwError "Equation client: NO fact_* theorems found (fail closed)"
   let memo ← IO.mkRef ({} : NameMap Bool)
-  let owned (c : Name) : Bool := (env.getModuleIdxFor? c).isNone
   let userName (c : Name) : Name := if isPrivateName c then privateToUserName c else c
-  -- (1)–(4) per fact and per client-owned declaration its proof reaches, with `stepFn` irreducible for the
-  -- duration of (3)
+  -- is the constant traversed? (by owner and kind)
+  let traverse (c : Name) (ci : ConstantInfo) : MetaM Bool := do
+    if c == stepFnN then return false
+    match ownerOf env c with
+    | .boundary => return false
+    | .client => return true
+    | .core =>
+        match ci with
+        | .thmInfo _ => return true
+        | _ => isProp ci.type
+  -- (1)–(4) per fact and per traversed declaration its proof reaches, with `stepFn` irreducible for the duration of (3)
   let st0 ← getReducibilityStatus stepFnN
   setIrreducibleAttribute stepFnN
   let mut checked : NameSet := {}
@@ -2281,13 +2341,15 @@ def checkEnrollment : CoreM Unit := do
         if checked.contains c then continue
         checked := checked.insert c
         let some ci := env.find? c | throwError "Equation client: {c} vanished"
-        let some value := ci.value? (allowOpaque := true) | continue  -- a client inductive/constructor: no proof
+        unless c == root || (← MetaM.run' (traverse c ci)) do continue
+        let some value := ci.value? (allowOpaque := true) | continue  -- an inductive/constructor/recursor: no proof
         let who := if c == root then s!"fact {root} REFUSED — its proof unfolds stepFn"
           else s!"fact {root} REFUSED — its proof unfolds stepFn in its helper {userName c}"
         if c != root then nHelpers := nHelpers + 1
-        -- (1) the interpreter's own equation lemmas and matchers
+        -- (1) the interpreter's own equation lemmas (`eq_N`, `eq_def`, …); its matchers `match_N` are not an unfolding
+        -- (a reused matcher cannot reduce `stepFn`; a proof through one still meets check (3))
         let used := value.foldConsts (init := ([] : List Name)) fun d acc =>
-          if stepFnN.isPrefixOf d && d != stepFnN then d :: acc else acc
+          if stepFnN.isPrefixOf d && d != stepFnN && !(d.getString!.startsWith "match_") then d :: acc else acc
         unless used.isEmpty do
           throwError "Equation client: {who} (it names {used.head!})"
         -- (2) reflexivity on a `stepFn`-headed term
@@ -2308,9 +2370,9 @@ def checkEnrollment : CoreM Unit := do
           catch ex => pure (some (← ex.toMessageData.toString))
         if let some why := ok then
           throwError "Equation client: {who} ({why})"
-        -- the closure: the client-owned constants the value names
+        -- the closure: every constant the value names (its owner settles whether it is traversed, above)
         for d in value.getUsedConstants do
-          if owned d && !checked.contains d then
+          if !checked.contains d then
             work := d :: work
       -- (4) axioms (transitive already)
       let axioms ← collectAxioms root
@@ -2338,7 +2400,7 @@ def checkEnrollment : CoreM Unit := do
         pinned := pinned + 1
     | some _ => throwError "Equation client: {pin} exists but is not a theorem"
     | none => throwError "Equation client: UNENROLLED equation {n} — no pin {pin} in Tests/EquationClient.lean"
-  logInfo s!"Equation client: enrollment complete — {pinned} equation theorems pinned, {facts.length} facts and {nHelpers} client-owned helpers, none unfolds stepFn"
+  logInfo s!"Equation client: enrollment complete — {pinned} equation theorems pinned, {facts.length} facts and {nHelpers} traversed helpers up to the published API, none unfolds stepFn"
 
 #eval checkEnrollment
 
@@ -2347,4 +2409,4 @@ end Tests.EquationClient
 /-- The PASS line `scripts/check-equations` greps for (reached only if every declaration above —
 the facts, the pins and the enrollment `#eval` — elaborated). -/
 def main (_args : List String) : IO Unit := do
-  IO.println s!"Equation client: PASS — {Tests.EquationClient.factCount} facts by the equation set only"
+  IO.println s!"Equation client: PASS — {Tests.EquationClient.factCount} facts by the equation set and the published API"
