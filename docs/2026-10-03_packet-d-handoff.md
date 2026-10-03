@@ -382,3 +382,5 @@ fast-forwarded (packet D `d8529ab7`, its audit and re-check, the CL1–CL5 corpu
 `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --slow` EXIT=1, 1232 s — red on EXACTLY the 5a pair; 3860 rows, 3622 PASS / 238 FAIL =
 the pin 3623 / 237 with the one 5a-class row red. Candidate: `claim` and `observations_sha256` IDENTICAL (receipt `44d99cdb`,
 157.072 s) — INSTALLED; a provenance refresh. Tail: `docs/evidence/2026-10-03_packet-d/r61-ci-slow.tail.txt`.
+
+**Green re-run at the records commit `5a1c92f1`** ([AGENT] coordinator, 2026-10-03): `ci --diff` EXIT=0, `RESULT: PASS`, baseline diff FULL 3860/3860, certificate provenance ok, semantic equations ok. Round 61 closed: the batched window's build items are all on main.
