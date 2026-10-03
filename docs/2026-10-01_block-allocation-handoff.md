@@ -95,7 +95,10 @@ outputs unchanged (eval 298 ok; unseq scheduler PASS).
    declarations, wire boundary, method identity, unseq scheduler (Stage B) + wire (Stage C), frontend pins (**the raft
    twin = the pinned bytes — the wire does not change**), import-goose, frontend unit tests, lowering diagnostics,
    harness unit tests, eval tests 298 ok, negative baseline 394. NO `baselines/native-full.tsv` edit; nothing under
-   `baselines/` touched. Tails: `ci-diff-2a-*.txt`, `ci-diff-2b-*.txt`.
+   `baselines/` touched. Tails: `ci-diff-2a-*.txt`, `ci-diff-2b-*.txt`. **After the ruling** (`14231757`, the row's
+   `work=500000`): the same gate EXIT 1, 850 s, red on EXACTLY the 5a pair — `certificate provenance` + the one drift line
+   `imported-goose/channel/google-search` — `cases=3800 pass=3562 fail=238` = the baseline's 3563 / 237 with that line;
+   `spin-until-trylock` PASS. Tail: `ci-diff-ruled-*.txt`.
 2. **Whole-corpus choice trace, byte-identical.** `scripts/choice-trace-corpus --dump` (the B6 method; excludes
    `goroutines/send-then-spin`, `strings/trimspace-repeat/repeat-bound-refused`) — pre = the primary checkout at
    `main` @ `52eddf4c` with its certified binary (`579c0206…`), post = the lane @ `58fe18f9`: 14 of 15 tsv/txt files
