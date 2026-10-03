@@ -15,3 +15,12 @@ Note: `docs/2026-10-03_packet-d-audit.md`. Branch `review/packet-d-equations-100
 
 Sizes: every file under the 256 KiB cap; the directory under the 4 MiB cap; nothing is a copy of a
 tracked file (`scripts/check-evidence-size`).
+
+## Re-verification at `7a976448` (2026-10-03; note §«Re-verification»)
+
+| file | what |
+|---|---|
+| `reverify-gates.txt` | `ci --diff` at the rebased tree (red on exactly the 5a pair, 3821 = 3583/238, 944 s; the procedural dirty-tree note), `check-equations` EXIT 0 (10 self-tests), `check-core-audit` EXIT 0 (536 required) |
+| `reverify-inhabitation.txt` | FACT 3's inhabitation evaluated: the eight premises at the concrete values, the boxing law's instance, the 20-step run to the abort with the store at the stop = the written store |
+| `reverify-bypass-mutants.txt` | seven one-change mutants of the client against the closure no-unfold check: C1/C3/C5/C6/C9 (alias, projection, `id`, `let`, `match`-auxiliary) REFUSED; A (imported API `rfl` theorem) and B (imported test-support module, source included) PASS — finding R1 |
+| `reverify-statements-and-table.txt` | BridgeSet rows 1–436/1–501 byte-identical to their predecessors, row 502, numbering; the `GoLean` diff file list and new definitions; the F4 table's flag lists and UNCHANGED-cell derivations re-run |

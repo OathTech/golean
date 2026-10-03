@@ -191,3 +191,102 @@ cheap follow-ups the offer's wording should absorb.
 
 Provenance: every judgment above is the [AGENT auditor]'s; the [USER]'s calls (the merge, the CLAUDE.md sentence,
 G-C3's reading of additive pin rows, the follow-ups F1–F4) are posed, not taken. Commit on this branch only.
+
+## Re-verification (`7a976448`, 2026-10-03)
+
+[AGENT auditor], at the coordinator's targeted re-check request (the [USER] asked for it before landing, relayed).
+Tip `7a976448` (code `43624b55`), four commits after `556ab207`: the F1–F6 round (`4a4f381f`/`9c14fef1`) and the
+window-review round (`43624b55`/`7a976448`, answering `docs/2026-10-03_window-review.md` F1/F2/F4 at `66d09ab5`).
+Setup: snapshot `refs/snapshots/audit-packet-d/pre-reverify` = `d59bbe7d`; this branch REBASED onto `7a976448`
+(one records commit replayed cleanly — the tree is the candidate's plus this note and its evidence); the worktree's own
+`.lake` (fresh at `556ab207`) rebuilt incrementally; every build and gate through `scripts/capped`, the full gates under
+the lock (taken 3×, never contended). Evidence: `docs/evidence/2026-10-03_packet-d-audit/reverify-*.txt` (four files,
+≈12 KiB). Scratch bulk deleted.
+
+### REVISED VERDICT: MERGE-CLEAN — with ONE follow-up the [USER] may hold to the review's letter (R1)
+
+The rewritten FACT 3 is non-vacuous and its inhabitation is the same theorem at concrete values; the closure no-unfold
+check refuses every δ-route I could build inside the client; the statements are additions only (rows 1–501
+byte-identical, row 502 added, core audit 536); no runtime definition changed; the F4 table reproduces; the gate is red
+on exactly the 5a pair with `semantic equations` green and both standalone gates exit 0. The one substantive finding
+(R1) is a BOUNDARY narrower than the window review requested: the check stops at «everything imported» rather than at
+«the supported equation/prefix API», and the client's import list is unconstrained — two passing witnesses below. It is
+a test-contract gap at the gate (a speedbump), not a semantics or axiom issue; a five-line import whitelist closes the
+foreign-module half now, the API-module allow-list is the follow-up.
+
+### Items
+
+1. **`fact_write_survives_panic` (rewritten) + `fact_inhabit_write_survives_panic` + row 502.** The fact now runs the
+   caller's write, ENTERS the declared nullary `f()` (`exec_call_nullary`, premise `he : enterFrame ctx s' f [] = .ok
+   (.run func fenv [], s', tr)`), the callee's `panic(any(txt))` boxes the string (`evalE_strict_more` →
+   `retV_strictK_apply` with the new law), raises, unwinds callee frame → caller glue → barrier, and finishes
+   `Finish.aborted t s' ch` with `s'` the WRITTEN store (twenty steps; `hsettled` and `hmsg` over the BOXED entry
+   `strEntry ctx txt := panicEntryOf ctx (.interface .string (.string txt))`). The inhabitation is literally
+   `fact_write_survives_panic (lx := …) … boomEnv ⟨"main"⟩ [] rfl rfl rfl rfl rfl rfl rfl (by with_unfolding_all rfl)` —
+   the SAME theorem, not a restatement — and its stated endpoint is `boomStore₁` (cell 0 ← 7). Evaluated independently
+   (`reverify-inhabitation.txt`): all eight premises hold at the values (lookups, the read `7`, `storeLoc` = `boomStore₁`,
+   the entry store- and trace-free with env `[]`, the body, settled, `abortMsg … = .ok "boom"`, the boxing instance);
+   iterating `stepFn` from the inhabitation's start configuration gives 20 `ok` steps then the abort `panic "boom"` with
+   the store at the stop EQUAL to `boomStore₁`; `execStmtLoop` agrees. `applyStrictOp_toInterface_string (s tgt ty v) :
+   applyStrictOp ctx s tgt (.toInterface ty .string) [v] = .ok (.interface .string v, s, [])` is TRUE by `rfl` (the arm
+   boxes at the canonical dynamic type without inspecting `v`; `checkedDynamicTy .string` passes through) and MINIMAL
+   (no premise; `ty` and `v` free because the arm ignores them — it states the arm, not a Go-level intent). Row 502 pins
+   it, the core audit exports it, the client pins it.
+2. **The closure no-unfold check** (`checkEnrollment`: the client-owned proof-dependency closure through
+   `getUsedConstants`; checks (1) no `stepFn.*` constant, (2) no reflexivity on a `stepFn`-headed term, (3) the
+   irreducible-`stepFn` re-type-check on obligations whose sides name a constant REACHING `stepFn`, (4) axioms). The
+   filter's premise — «the kernel can only unfold what an obligation names» — HOLDS: `reachesStepFn` is δ-reachability
+   over the WHOLE environment's values (imported constants included, `ci.value?` with opaques), and β/ι/ζ/projection
+   reduction exposes no constant outside the sides' transitive constant closure; let-bound locals are zeta-expanded and
+   free locals' types scanned. Bypass attempts (`reverify-bypass-mutants.txt`; one change each to the client at the tip):
+   C1 alias `private def myStep := stepFn …` + `rfl`, C3 a structure projection whose value is `stepFn`, C5 `id (stepFn
+   ctx)`, C6 a `let`-bound alias, C9 a `match` compiled to an auxiliary — ALL REFUSED by (3) («the proof's type … is not
+   the statement without unfolding stepFn»). A `decide`-on-Bool route is inapplicable (no `DecidableEq` on the result
+   type; `decide` is also regex-caught). TWO PASS — **R1 (LOW; MEDIUM if the round is held to the review's letter):**
+   (A) a NEW fact proved by the IMPORTED `rfl`-theorem `StepFn.stepFn_next_frame` (published GoLean API, outside the
+   equation set): «13 facts … none unfolds stepFn», gate PASS; (B) the anchored fact proved by `AuditSupport.helper`, a
+   `rfl`-on-`stepFn` theorem in a FOREIGN test-support module the client imports (compiled to an olean, `LEAN_PATH`
+   extended): «12 facts … none unfolds stepFn», gate PASS. Cause: the declaration closure stops at ANY imported
+   constant (`getModuleIdxFor? = none`) and nothing constrains the client's imports — the boundary implemented is
+   «everything imported», the review asked for «the supported equation/prefix API as the boundary» (F2's requested
+   correction, verbatim). The delivered client at the tip imports only `Lean`, `GoLean.GoCore.Equations`,
+   `GoLean.GoCore.Prefix` and its facts cite the equations plus `Prefix`/`Finish`/the named API lemmas the brief allowed,
+   so the CLAIM about this client is true; the GATE does not enforce it. Remedies: (i) now, five lines — the gate (and
+   `checkEnrollment`, via `env.header.moduleNames`) asserts the client's imports are exactly `Init`/`Std`/`Lean`,
+   `GoLean.GoCore.Equations`, `GoLean.GoCore.Prefix` — closes (B); (ii) follow-up — traverse imported constants whose
+   module is NOT in an allow-list of API modules (`Equations`, `Prefix`, `ExecutionStatement`, `PoolProjection`,
+   `Init`/`Std`/`Lean`), so a `rfl`-over-`stepFn` theorem from `StepFn`/`MachineSound` is refused like a client helper —
+   closes (A) and matches the review's boundary; (iii) until then, the PASS line should read «… by the equation set and
+   the imported API, no unfolding of `stepFn` in the client». All 10 gate self-tests still reject (gate log and the
+   standalone run). The filter is honest about its own cost case (the inhabitation's `abortMsg` obligation).
+3. **F4, the cumulative tool-interface table** (`docs/changelog/61958f2e-WINDOW.md` §«Cumulative tool-interface
+   table»): reproduced from `git diff 61958f2e 43624b55` (`reverify-statements-and-table.txt`) — `tools/nativefrontend`
+   flags at the pin are exactly the table's 8 (`allow-hidden-dep-init-order dir out stdlib-overlay-check stdlib-pin
+   stdlib-pin-manifest stdlib-register stdlib-src`), at `43624b55` the same 8 plus `unseq-census` (the only other
+   `flag.` text in the tool is a comment on reflect's `flag.ro`); the UNCHANGED cells' derivation commands return empty
+   diffs verbatim (`lean-toolchain lake-manifest.json`, `scripts/setup-deps`, `scripts/diff-coverage
+   scripts/coverage-manifest`, `tools/certification.py`); `decodeProgram`'s signature, `RunResult`, `runProgramM`'s
+   type, `leanprover/lean4:v4.32.2` and go1.26.5 identical at both commits; the wire string v1 → v3 as recorded.
+4. **Statements.** Mechanically (`reverify-statements-and-table.txt`): BridgeSet rows 1–436 identical to `556ab207`,
+   rows 1–501 identical to `9c14fef1`, row 502 = the boxing law, numbering 1…502 contiguous; `check-core-audit`: 536
+   required theorems present; `git diff --stat 3bb8f4fc 7a976448 -- GoLean GoLean.lean` touches only `BridgeSet`,
+   `Equations`, `EquationsAttr`, `MachineSound` (proof blocks + one theorem's binders), `MultiStreams` (a renamed
+   hypothesis), `PoolProjection`, `Prefix` (call sites), `PrefixFacts` (the deleted copy) and the root imports; the only
+   added definitions are the `defn_eq` macro and the three proof-layer defs; the new modules are imported by `BridgeSet`,
+   the client and the root `GoLean.lean` only. The `defn_eq` change (85 uses, 31 `:= rfl` left on helper laws; 293
+   theorems, 230 tagged) alters no statement: my 78-example concrete harness from the first audit re-elaborates at the
+   tip unchanged (EXIT 0, 53/1 as before).
+5. **Gates** (`reverify-gates.txt`): `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff` at the rebased tree under
+   the lock — **EXIT 1 on exactly the 5a pair** (`FAIL certificate provenance` STALE on `GoLean.lean`; `FAIL baseline
+   diff` = the one certified row's drift line), `cases=3821 pass=3583 fail=238`, 36 steps ok incl. `semantic equations`
+   (10 self-tests) and the core totality audit, 944 s. `scripts/check-equations` standalone under the lock: **EXIT 0**
+   (293 pinned, 12 facts, 15 client-owned helpers, 10 self-tests). `scripts/check-core-audit` standalone under the lock:
+   **EXIT 0** (536 required). **Procedural note, mine:** the negative-run record reports `git_dirty=true` because I wrote
+   the `reverify-*` evidence files under `docs/evidence/` at ≈20:24–20:27 while the gate was in its differential-corpus
+   phase (lock taken 20:13:54; the build and every source-reading step had completed); no tracked source changed and no
+   later step reads `docs/evidence/`; the evidence-size gate was re-run standalone on the committed tree (PASS). A
+   by-the-letter re-run on a clean tree is 16 minutes if the train wants the record without the note.
+
+Not verified here: the main-side elaboration numbers (unchanged scope); the review's F3 (corpus commitment accounting —
+not in this re-check's focus). Every judgment is the [AGENT auditor]'s; R1's disposition (fix now, or land with the
+follow-up) is the [USER]'s call.

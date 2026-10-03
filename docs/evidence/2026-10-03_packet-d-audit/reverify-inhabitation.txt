@@ -1,0 +1,49 @@
+# Re-verification at 7a976448 — FACT 3's inhabitation evaluated concretely (.tmp/Inhabit.lean; scripts/capped lake env lean) — [AGENT auditor] 2026-10-03
+# fact_inhabit_write_survives_panic := fact_write_survives_panic (lx := .base 0) (ly := .base 1) (vy := .int 7) (func := boomFunc) (fenv := []) (ty := anyTy) (txt := boomText) boomEnv ⟨"main"⟩ [] rfl rfl rfl rfl rfl rfl rfl (by with_unfolding_all rfl) — the SAME theorem applied; conclusion LRun … (.aborted "boom" boomStore₁ []) with boomStore₁ the WRITTEN store.
+
+(some (GoLean.Loc.base { id := 0 }), some (GoLean.Loc.base { id := 1 }))
+Except.ok (GoLean.GoValue.int 7 (GoLean.GoCore.IntKind.int))
+"storeLoc ok; = boomStore₁? true"
+Except.ok (GoLean.GoCore.Machine.Entry.run
+ { id := { key := "boom" },
+ args := #[],
+ results := #[],
+ body := GoLean.GoCore.Stmt.panicStmt
+ (GoLean.GoCore.Expr.toInterface
+ (GoLean.GoCore.Ty.interface { key := "any" })
+ (GoLean.GoCore.Ty.string)
+ (GoLean.GoCore.Expr.stringLit { bytes := #[98, 111, 111, 109] })),
+ variadic := false,
+ locals := #[] }
+ []
+ [],
+ { heap := #[GoLean.GoCore.HeapCell.value
+ (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+ (GoLean.GoValue.int 7 (GoLean.GoCore.IntKind.int)),
+ GoLean.GoCore.HeapCell.value
+ (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+ (GoLean.GoValue.int 7 (GoLean.GoCore.IntKind.int))] },
+ [])
+true
+none
+Except.ok "boom"
+Except.ok (GoLean.GoValue.interface (GoLean.GoCore.Ty.string) (GoLean.GoValue.string { bytes := #[98, 111, 111, 109] }),
+ { heap := #[GoLean.GoCore.HeapCell.value
+ (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+ (GoLean.GoValue.int 7 (GoLean.GoCore.IntKind.int)),
+ GoLean.GoCore.HeapCell.value
+ (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int))
+ (GoLean.GoValue.int 7 (GoLean.GoCore.IntKind.int))] },
+ [])
+["1: ok out=0 tr=0 picks=0 store=S1? false", "2: ok out=0 tr=0 picks=0 store=S1? false",
+ "3: ok out=0 tr=0 picks=0 store=S1? false", "4: ok out=0 tr=0 picks=0 store=S1? false",
+ "5: ok out=0 tr=0 picks=0 store=S1? false", "6: ok out=0 tr=1 picks=0 store=S1? false",
+ "7: ok out=0 tr=0 picks=0 store=S1? false", "8: ok out=0 tr=1 picks=0 store=S1? true",
+ "9: ok out=0 tr=0 picks=0 store=S1? true", "10: ok out=0 tr=0 picks=0 store=S1? true",
+ "11: ok out=0 tr=0 picks=0 store=S1? true", "12: ok out=0 tr=0 picks=0 store=S1? true",
+ "13: ok out=0 tr=0 picks=0 store=S1? true", "14: ok out=0 tr=0 picks=0 store=S1? true",
+ "15: ok out=0 tr=0 picks=0 store=S1? true", "16: ok out=0 tr=0 picks=0 store=S1? true",
+ "17: ok out=0 tr=0 picks=0 store=S1? true", "18: ok out=0 tr=0 picks=0 store=S1? true",
+ "19: ok out=0 tr=0 picks=0 store=S1? true", "20: ok out=0 tr=0 picks=0 store=S1? true",
+ "STOP after 20 steps: GoLean.Stop.terminal (GoLean.Terminal.panic "boom"); store at the stop = boomStore₁? true"]
+Except.error (GoLean.Stop.terminal (GoLean.Terminal.panic "boom"))

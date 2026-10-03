@@ -1,0 +1,32 @@
+# Re-verification at 7a976448 — statements, pins, audit, runtime (mechanical) — [AGENT auditor] 2026-10-03
+BridgeSet rows 1-436 vs 556ab207 body: identical (diff shows only the appended RE-PIN blocks)
+BridgeSet rows 1-501 vs 9c14fef1 body: identical (diff = the 'end' line vs the row-502 marker)
+row 502: applyStrictOp_toInterface_string — example : ∀ {ctx : ProgramCtx} (s : Store) (tgt : Loc → Loc) (ty : Ty) (v : GoValue),  applyStrictOp ctx s tgt (.toInterface ty .string) [v] = .ok (.interface .string v, s, []) := 
+row numbering: 1..502 contiguous
+core audit (my standalone run, below): see reverify-gates.txt
+git diff --stat 3bb8f4fc 7a976448 -- GoLean GoLean.lean:
+ GoLean.lean                       |    5 +
+ GoLean/GoCore/BridgeSet.lean      | 2245 ++++++++++++++++++++++++++++++++++++-
+ GoLean/GoCore/Equations.lean      | 1857 ++++++++++++++++++++++++++++++
+ GoLean/GoCore/EquationsAttr.lean  |   26 +
+ GoLean/GoCore/MachineSound.lean   |   43 +-
+ GoLean/GoCore/MultiStreams.lean   |    4 +-
+ GoLean/GoCore/PoolProjection.lean |  569 ++++++++++
+ GoLean/GoCore/Prefix.lean         |    6 +-
+ GoLean/GoCore/PrefixFacts.lean    |  258 +----
+ 9 files changed, 4741 insertions(+), 272 deletions(-)
+new def/abbrev/instance/structure/inductive/macro lines in that diff:
++macro "defn_eq" : tactic => `(tactic| exact Eq.mpr (Eq.refl _) rfl)
++def transferableWide : Except Stop (Store × Choices) → Prop
++def seqOut : Nat → Store → Config → Choices → GoString → GoString
++def outFold (ls : List StepLabel) (acc : GoString) : GoString :=
+importers of the new modules: GoLean/GoCore/Equations.lean GoLean/GoCore/BridgeSet.lean Tests/EquationClient.lean GoLean.lean 
+
+# F4 — the cumulative tool-interface table spot-checked
+flags at 61958f2e: allow-hidden-dep-init-order dir out stdlib-overlay-check stdlib-pin stdlib-pin-manifest stdlib-register stdlib-src 
+flags at 43624b55: allow-hidden-dep-init-order dir out stdlib-overlay-check stdlib-pin stdlib-pin-manifest stdlib-register stdlib-src unseq-census   (fmtcomposite.go's 'flag.' hits are comments on reflect's flag.ro)
+git diff --stat 61958f2e 43624b55 -- lean-toolchain lake-manifest.json             -> []
+git diff --stat 61958f2e 43624b55 -- scripts/setup-deps                            -> []
+git diff --stat 61958f2e 43624b55 -- scripts/diff-coverage scripts/coverage-manifest -> []
+git diff --stat 61958f2e 43624b55 -- tools/certification.py                        -> []
+decodeProgram pin/now: 1/1 matches of the same signature; RunResult identical; runProgramM identical; lean-toolchain leanprover/lean4:v4.32.2 = leanprover/lean4:v4.32.2; go pin go1.26.5 both

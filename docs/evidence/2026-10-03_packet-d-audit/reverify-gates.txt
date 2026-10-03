@@ -1,0 +1,79 @@
+# Re-verification at 7a976448 (review branch rebased: 6e9e225e = 7a976448 + the audit records commit) — gate exits — [AGENT auditor] 2026-10-03
+
+## GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff (under the lock; incremental rebuild of the audit worktree's own .lake from its 556ab207 fresh build)
+locked-run: lock taken (review/packet-d-equations-1003 auditor pid 2452163 2026-10-03T20:13:54+00:00)
+differential coverage summary: cases=3821 pass=3583 fail=238 export_status=0
+imported-goose/channel/google-search	baseline[PASS/membership] -> now[FAIL/membership]
+  [01] C9  HIGH    certificate provenance: STALE certification: changed dependency build/files/GoLean.lean
+CI total wall seconds: 944
+locked-run: lock released (2026-10-03T20:29:38+00:00)
+CI_EXIT=1
+  ok   Tests/library ownership (no exceptions; executed builds checked at exit)
+  note build parallelism: cap 48G -> LEAN_NUM_THREADS=6 (cap/8G, floor 2; 32 cores on this box)
+  ok   oracle toolchain (go1.26.5 = pin)
+  ok   escape-hatch preflight
+  ok   meta-layer escape hatches (allowlist empty since the repo split)
+  ok   escape-hatch addendum (no decide +native / native-config spellings)
+  ok   bug-index cross-check
+  ok   feature-coverage (no dead tags)
+  ok   spec-anchor citations resolve at the pin
+  ok   stdlib admission register = frontend tables
+  ok   lane-validation fixtures (manifest gates reject bad shapes)
+  ok   evidence-on-main size gate
+  ok   AGENTS.md alias of CLAUDE.md
+  ok   imported-goose verbatim (above-marker bytes = pinned upstream)
+  ok   engine-isolation (core ↛ EnumDedup)
+  ok   memory-module raw call-site inventory (emit/peek discipline)
+  ok   core build (warning-free)
+  FAIL certificate provenance
+  ok   core totality audit (every GoLean/ module; required core theorems; poison controls)
+  ok   admission checker proofs and post-import audit
+  ok   declaration boundary
+  ok   wire boundary (byte-level controls through the real CLI)
+  ok   package-correct method identity
+  ok   unseq scheduler (Stage B)
+  ok   unseq wire (Stage C)
+  ok   semantic equations (scripts/check-equations)
+  ok   frontend pins (realized init-order deviation + twin wire = pinned bytes)
+  ok   import-goose fixtures (importer + verbatim guard reject bad shapes)
+  ok   frontend unit tests
+  ok   lowering-diagnostic tables
+  ok   coverage-harness unit tests
+  ok   eval tests (298 ok)
+  ok   differential run completed (exit 1; failing-set judged by baseline diff)
+  ok   lane-validation fixtures incl. harness half (F4/F6/B3-B5/G5/T1-T8/D1-D6)
+  ok   negative run completed (exit 0; set judged by baseline diff)
+  ok   Tests/FloatVectors.lean = fresh hardware-oracle regeneration (byte-exact)
+  ok   inittask-std.tsv = fresh gc-derived regeneration (header at pin; byte-exact modulo date line)
+  note negative baseline diff matched (394 case(s)) but the record was made on a DIRTY tree (git_dirty=true) — certifies that worktree state, not a commit
+  FAIL baseline diff (DRIFT — see above)
+  note reconciler: 2 finding(s), 1 HIGH — report-only (details: tools/reconcile-records)
+  ok   executed library coverage (all declared libraries; all Tests modules)
+RESULT: FAIL
+PROCEDURAL NOTE: the negative-run record's git_dirty=true is the auditor's doing — the reverify-* evidence files under docs/evidence/ were written at ~20:24–20:27 while the gate was in its differential-corpus phase (lock taken 20:13:54; the build and every source-reading step had completed by then); no tracked source changed; the evidence-size gate was re-run standalone on the committed tree (below).
+
+## scripts/check-equations (standalone, under the lock)
+info: Tests/EquationClient.lean:2343:0: Equation client: enrollment complete — 293 equation theorems pinned, 12 facts and 15 client-owned helpers, none unfolds stepFn
+Equation client: enrollment complete — 293 equation theorems pinned, 12 facts and 15 client-owned helpers, none unfolds stepFn
+Equation client: PASS — 12 facts by the equation set only
+ok [no-unfold] Tests/EquationClient.lean never unfolds stepFn
+ok [self-test unfold] the guard fires on a client that unfolds stepFn
+ok [self-test pin] deleting Pin.storeTarget_inv_panic fails the enrollment check by name
+ok [self-test bypass 1] 'exact rfl' is refused by the proof-term check
+ok [self-test bypass 2] 'simp only [stepFn]; rfl' is refused by the proof-term check
+ok [self-test bypass 3] 'delta stepFn; rfl' is refused by the proof-term check
+ok [self-test bypass 4] 'simp_all [stepFn]' is refused by the proof-term check
+ok [self-test bypass 5] 'simpa [stepFn]' is refused by the proof-term check
+ok [self-test bypass 6] 'rw [stepFn]; rfl' is refused by the proof-term check
+ok [self-test bypass 7] 'unfold GoLean.GoCore.Machine.stepFn; rfl' is refused by the proof-term check
+ok [self-test indirect] a private helper proved by rfl on stepFn, exact-ed from a fact, is refused naming fact and helper
+Equation gate: PASS (client PASS, exhaustive enrollment, the Lean-level no-unfold check over the client-owned closure, the regex pre-filter, 10 self-tests)
+CHECK_EQUATIONS_EXIT=0
+
+## scripts/check-core-audit (standalone, under the lock)
+Typed audit control: core-audit/contract_trailing compiled then rejected (coreAuditContractHole, sorryAx)
+Core totality audit: 54 GoLean modules in the closure (45 under GoLean.GoCore), all on disk; 536 required theorems present; 19862 declarations across all imported local modules; classical trio only
+Typed audit: core-audit: 5 compiled controls passed
+core-audit-audit PASS; scratch removed (10329378 owned bytes; dependencies symlinked)
+Core totality audit gate: PASS
+CHECK_CORE_AUDIT_EXIT=0

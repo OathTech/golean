@@ -1,0 +1,43 @@
+# Re-verification at 7a976448 (code 43624b55) — bypass candidates against the CLOSURE no-unfold check — [AGENT auditor] 2026-10-03
+# Each mutant = Tests/EquationClient.lean at 7a976448 with ONE change (the BYPASS-ANCHOR line of fact_usage_simp_set replaced, a private helper inserted before FACT 8, or one fact added with factCount bumped); elaborated with scripts/capped lake env lean (B: plain lean with LEAN_PATH extended by .tmp, where AuditSupport.olean was compiled from AuditSupport.lean).
+
+## AuditSupport.lean (the imported test-support module of mutant B)
+import GoLean.GoCore.Equations
+open GoLean GoLean.GoCore GoLean.GoCore.Machine
+namespace AuditSupport
+/-- An IMPORTED helper proved by `rfl` on a `stepFn`-headed equation (a test-support module the client imports). -/
+theorem helper {ctx : ProgramCtx} (s : Store) (env : LocalEnv) (k : Cont) (ch : Choices) :
+    stepFn ctx s (.exec .returnStmt env k) ch = .ok (.signal .ret k, s, ch, ⟨[], [], []⟩) := rfl
+end AuditSupport
+
+## mutant A — a NEW fact proved by the IMPORTED rfl-theorem StepFn.stepFn_next_frame (published API outside the equation set; factCount 13)
+EXIT=0
+Equation client: enrollment complete — 293 equation theorems pinned, 13 facts and 15 client-owned helpers, none unfolds stepFn
+
+## mutant B — import AuditSupport; the anchored fact := exact AuditSupport.helper s env k ch (an imported module, rfl on stepFn there)
+EXIT=0
+Equation client: enrollment complete — 293 equation theorems pinned, 12 facts and 15 client-owned helpers, none unfolds stepFn
+
+## mutant C1 — private def myStep := stepFn …; exact (rfl : myStep ctx s _ ch = _)
+EXIT=1
+.tmp/mut-C1.lean:2345:0: error: Equation client: fact Tests.EquationClient.fact_usage_simp_set REFUSED — its proof unfolds stepFn (the proof's type ∀ {ctx : GoLean.GoCore.ProgramCtx} (s : GoLean.GoCore.Store) (env : GoLean.GoCore.LocalEnv)
+
+## mutant C3 — private structure W; private def w : W := ⟨stepFn…⟩; exact (rfl : w.f ctx s _ ch = _)
+EXIT=1
+.tmp/mut-C3.lean:2347:0: error: Equation client: fact Tests.EquationClient.fact_usage_simp_set REFUSED — its proof unfolds stepFn (the proof's type ∀ {ctx : GoLean.GoCore.ProgramCtx} (s : GoLean.GoCore.Store) (env : GoLean.GoCore.LocalEnv)
+
+## mutant C5 — exact (rfl : (id (stepFn ctx)) s _ ch = _)
+EXIT=1
+.tmp/mut-C5.lean:2343:0: error: Equation client: fact Tests.EquationClient.fact_usage_simp_set REFUSED — its proof unfolds stepFn (the proof's type ∀ {ctx : GoLean.GoCore.ProgramCtx} (s : GoLean.GoCore.Store) (env : GoLean.GoCore.LocalEnv)
+
+## mutant C6 — exact (let g := stepFn ctx; (rfl : g s _ ch = _))
+EXIT=1
+.tmp/mut-C6.lean:2343:0: error: Equation client: fact Tests.EquationClient.fact_usage_simp_set REFUSED — its proof unfolds stepFn (the proof's type ∀ {ctx : GoLean.GoCore.ProgramCtx} (s : GoLean.GoCore.Store) (env : GoLean.GoCore.LocalEnv)
+
+## mutant C9 — private def viaMatch (b : Bool) … := match b with | true => stepFn … | false => .error .fuelOut; exact (rfl : viaMatch true ctx s _ ch = _)
+EXIT=1
+.tmp/mut-C9.lean:2346:0: error: Equation client: fact Tests.EquationClient.fact_usage_simp_set REFUSED — its proof unfolds stepFn (the proof's type ∀ {ctx : GoLean.GoCore.ProgramCtx} (s : GoLean.GoCore.Store) (env : GoLean.GoCore.LocalEnv)
+
+## Reading
+C1/C3/C5/C6/C9 (every δ-route built INSIDE the client): REFUSED by check (3) — the filtered re-check holds; the claim «the kernel can only unfold what an obligation names» is sound because reachesStepFn runs over the whole environment's VALUES (imported constants included) and δ/β/ι/ζ/proj expose no constant outside that closure.
+A and B PASS: the DECLARATION closure stops at any imported constant, and the client's import list is unconstrained — the boundary implemented is «everything imported», wider than the review's «supported equation/prefix API». A is published GoLean API (StepFn.stepFn_next_frame, a rfl theorem); B is a foreign test-support module. Neither is an axiom/kernel issue; both are a claim/contract gap at the gate («by the equation set only»).
