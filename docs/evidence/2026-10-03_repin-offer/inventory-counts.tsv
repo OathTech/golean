@@ -1,0 +1,32 @@
+unit	total_stmts	unseq_nodes	legacy_unseq_probe	occ_eval	occ_invoke	occ_target	occ_load	occ_guard	occ_recv	occ_allocate	occ_wide	occ_other	stmt_histogram
+abort-write	4	0	0	0	0	0	0	0	0	0	0	0	assign=2 block=1 panic=1
+aggregates	48	0	0	0	0	0	0	0	0	0	0	0	assign=31 block=7 if=1 return=6 var=3
+callchain	10	0	0	0	0	0	0	0	0	0	0	0	assign=2 block=4 defer=1 expr=2 return=1
+e1-equivalent	49	0	0	0	0	0	0	0	0	0	0	0	assign=19 block=10 expr=10 if=1 make-map=1 map-assign=1 new=1 return=6
+e1-local	62	0	0	0	0	0	0	0	0	0	0	0	assign=28 block=13 expr=11 if=1 make-map=1 map-assign=1 new=1 return=6
+e1-wrong	49	0	0	0	0	0	0	0	0	0	0	0	assign=19 block=10 expr=10 if=1 make-map=1 map-assign=1 new=1 return=6
+e1	49	0	0	0	0	0	0	0	0	0	0	0	assign=19 block=10 expr=10 if=1 make-map=1 map-assign=1 new=1 return=6
+error-string	10	0	0	0	0	0	0	0	0	0	0	0	assign=2 block=3 new=2 return=3
+f1-alternative	45	0	0	0	0	0	0	0	0	0	0	0	assign=16 block=11 expr=6 return=8 var=4
+f1-s-local	49	0	0	0	0	0	0	0	0	0	0	0	assign=16 block=11 expr=8 return=8 var=6
+f1-s-results	45	0	0	0	0	0	0	0	0	0	0	0	assign=16 block=11 expr=6 return=8 var=4
+f1-s-wrong-target	45	0	0	0	0	0	0	0	0	0	0	0	assign=16 block=11 expr=6 return=8 var=4
+f1	45	0	0	0	0	0	0	0	0	0	0	0	assign=16 block=11 expr=6 return=8 var=4
+f2-proof-positive-block-fallthrough	59	0	0	0	0	0	0	0	0	0	0	0	assign=17 block=17 defer=9 expr=4 if=1 return=9 var=2
+f2-proof-positive-closure	58	0	0	0	0	0	0	0	0	0	0	0	assign=17 block=17 defer=9 expr=4 if=1 return=9 var=1
+f2-proof-positive-declare-after-defer	59	0	0	0	0	0	0	0	0	0	0	0	assign=17 block=17 defer=9 expr=4 if=1 return=9 var=2
+f2-proof-positive-declare-before-defer	59	0	0	0	0	0	0	0	0	0	0	0	assign=17 block=17 defer=9 expr=4 if=1 return=9 var=2
+f2-proof-positive-set	60	0	0	0	0	0	0	0	0	0	0	0	assign=18 block=17 defer=9 expr=4 if=1 return=9 var=2
+f2-proof-wrong-capture-target	57	0	0	0	0	0	0	0	0	0	0	0	assign=16 block=17 defer=9 expr=4 if=1 return=9 var=1
+f2-proof-wrong-helper-value	57	0	0	0	0	0	0	0	0	0	0	0	assign=16 block=17 defer=9 expr=4 if=1 return=9 var=1
+f2-proof-wrong-shared-order	57	0	0	0	0	0	0	0	0	0	0	0	assign=16 block=17 defer=9 expr=4 if=1 return=9 var=1
+f2	57	0	0	0	0	0	0	0	0	0	0	0	assign=16 block=17 defer=9 expr=4 if=1 return=9 var=1
+integers	25	0	0	0	0	0	0	0	0	0	0	0	assign=14 block=5 if=1 return=5
+loops	110	0	0	0	0	0	0	0	0	0	0	0	assign=36 block=29 break=2 break-to=1 breakable=1 compound-assign=5 continue-to=1 for=5 if=13 incdec=6 labeled=1 new=1 return=6 var=3
+observe-prefix	48	0	0	0	0	0	0	0	0	0	0	0	assign=16 block=10 defer=1 expr=8 if=1 panic=1 return=6 var=5
+perf	86	0	0	0	0	0	0	0	0	0	0	0	assign=84 block=1 return=1
+records	26	0	0	0	0	0	0	0	0	0	0	0	assign=16 block=4 if=2 new=2 return=2
+recovery	16	0	0	0	0	0	0	0	0	0	0	0	assign=3 block=6 defer=1 expr=2 if=1 panic=1 return=2
+references	46	0	0	0	0	0	0	0	0	0	0	0	assign=26 block=8 if=1 new=2 return=7 var=2
+shared	69	0	0	0	0	0	0	0	0	0	0	0	assign=22 block=22 defer=6 if=6 panic=3 return=10
+write-call-panic	64	0	0	0	0	0	0	0	0	0	0	0	assign=19 block=19 defer=3 expr=10 if=1 panic=1 return=11

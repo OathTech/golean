@@ -1,0 +1,3 @@
+unit	total_stmts	unseq_nodes	legacy_unseq_probe	occ_eval	occ_invoke	occ_target	occ_load	occ_guard	occ_recv	occ_allocate	occ_wide	occ_other	stmt_histogram
+e13-sibling-panic-order	629	60	9	193	52	18	9	0	5	13	4	0	append=2 assign=187 block=111 chan-send=6 copy=2 defer=7 expr=1 if=1 incdec=1 make-chan=5 make-slice=19 map-lit=6 new=6 panic=2 print=8 return=83 slice-lit=78 unseq=60 unseq-probe=9 var=35
+len-vs-call-order	256	13	6	60	6	0	0	1	0	9	0	0	append=1 assign=74 block=45 chan-recv=1 chan-send=6 defer=2 for=1 if=8 incdec=1 make-chan=5 make-map=9 make-slice=7 map-lit=6 new=7 panic=1 return=34 slice-lit=14 unseq=13 unseq-probe=6 var=15

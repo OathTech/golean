@@ -1,0 +1,68 @@
+# their gate's differential step, run in the dry-run workspace (.golean-ws = our main @ 20d3946d) over their examples/fixtures/manifest.tsv (18 rows), 2026-10-03
+# command (cwd .golean-ws): GOLEAN_MEM_MAX=16G LEAN_NUM_THREADS=2 GOLEAN_COVERAGE_JOBS=2 GOLEAN_COVERAGE_ARTIFACTS=<scratch> LAKE_BUILD_TIMEOUT_SECONDS=600 scripts/capped bash scripts/diff-coverage .tmp/golean-logic-fixtures/manifest.tsv ; EXIT=0
+## stdout tail
+diff-coverage: membership sampling budget K=32 (mode: gate; alternate plain/-race, early stop at members=)
+native frontend: per-case type-check + emit (no batch export)
+PASS	logic/shared/ReversedTrue	logic
+PASS	logic/shared/SharedTrue	logic
+PASS	logic/recovery/Normal	logic
+PASS	logic/error-string/Probe	logic
+PASS	logic/callchain/Caller	logic
+PASS	logic/write-call-panic/DriveDeferFull	logic
+PASS	logic/write-call-panic/DriveFull	logic
+PASS	logic/shared/SharedFalse	logic
+PASS	logic/observe-prefix/DriveFail	logic
+PASS	logic/recovery/Uncaught	logic
+PASS	logic/observe-prefix/DriveOk	logic
+PASS	logic/recovery/Recovered	logic
+PASS	logic/write-call-panic/DriveEmpty	logic
+PASS	logic/shared/Outside	logic
+PASS	logic/abort-write/WriteThenPanic-max	logic
+PASS	logic/error-string/ProbeBytes	logic
+PASS	logic/abort-write/WriteThenPanic-7	logic
+PASS	logic/shared/DirectTrue	logic
+differential coverage summary: cases=18 pass=18 fail=0 export_status=0
+## latest.tsv
+result	id	features	stage	detail
+PASS	logic/recovery/Recovered	logic	-	wide=0 exhausted=none depth=fixed
+PASS	logic/recovery/Normal	logic	-	wide=0 exhausted=none depth=fixed
+PASS	logic/recovery/Uncaught	logic	-	wide=0 exhausted=none depth=fixed
+PASS	logic/shared/SharedFalse	logic	-	wide=0 exhausted=none depth=fixed
+PASS	logic/shared/SharedTrue	logic	-	wide=0 exhausted=none depth=fixed
+PASS	logic/shared/Outside	logic	-	wide=0 exhausted=none depth=fixed
+PASS	logic/shared/ReversedTrue	logic	-	wide=0 exhausted=none depth=fixed
+PASS	logic/shared/DirectTrue	logic	-	wide=0 exhausted=none depth=fixed
+PASS	logic/callchain/Caller	logic	-	wide=0 exhausted=none depth=fixed
+PASS	logic/error-string/Probe	logic	-	wide=0 exhausted=none depth=fixed
+PASS	logic/error-string/ProbeBytes	logic	-	wide=0 exhausted=none depth=fixed
+PASS	logic/abort-write/WriteThenPanic-7	logic	-	wide=0 exhausted=none depth=fixed
+PASS	logic/abort-write/WriteThenPanic-max	logic	-	wide=0 exhausted=none depth=fixed
+PASS	logic/write-call-panic/DriveFull	logic	-	wide=0 exhausted=none depth=fixed
+PASS	logic/write-call-panic/DriveEmpty	logic	-	wide=0 exhausted=none depth=fixed
+PASS	logic/write-call-panic/DriveDeferFull	logic	-	wide=0 exhausted=none depth=fixed
+PASS	logic/observe-prefix/DriveFail	logic	-	wide=0 exhausted=none depth=fixed
+PASS	logic/observe-prefix/DriveOk	logic	-	wide=0 exhausted=none depth=fixed
+## latest.meta.tsv
+key	value
+frontend	native
+manifest	.tmp/golean-logic-fixtures/manifest.tsv
+manifest_sha256	5a107b72c7036c1ef30f2d10ad7665a0b1e4ee9e6f134b05360b3adcecbb78c5
+manifest_cases	18
+total_corpus_cases	unknown
+full_run	unknown
+filters	unknown
+git_commit	20d3946de2a8a8ffdbc462268180103351224fe7
+git_dirty	false
+go_toolchain	go1.26.5
+go_traceback	system
+go_crash_channel	same-run-setcrashoutput-v1
+go_drift_allowed	0
+go_drift_actual	false
+depth_guard	choice-trace wideAfterExhaustion=0 on every invariance stream
+depth_seeds	1,2,3
+depth_generator	lcg31(1103515245,12345) bits16..31
+depth_trace_timeout_seconds	240
+membership_draws	32
+jobs	2
+fanout_find_exit	0
+fanout_pool_exit	0

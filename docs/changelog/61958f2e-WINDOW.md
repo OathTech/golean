@@ -1,4 +1,125 @@
-# Changelog `61958f2e` → the window's offer commit (LIVE draft)
+# Changelog `61958f2e` → the window's offer commit `OFFER_COMMIT` (FROZEN at the offer)
+
+## Offer summary — the cumulative before → after, `61958f2e` → `OFFER_COMMIT` ([AGENT] unit 7b worker, 2026-10-03)
+
+FROZEN at the offer commit. `OFFER_COMMIT` is a placeholder: the coordinator substitutes the SHA of this branch's tip as
+landed on `main` (window plan row 7b; the local tag `logic-offer/2026-10-03` points at it — created by the coordinator at
+landing, never pushed). Every number below was measured on `main` @ `20d3946d` (the last content commit before this
+records branch; `git diff 20d3946d OFFER_COMMIT -- GoLean tools` is empty) against `git show 61958f2e:<path>`; the
+rows below the summary are the window's per-lane records, kept as written. Authority for the offer: [USER] Mike
+2026-10-03 «prepare the offer, do the dry run», relayed by the [AGENT] coordinator. Size of the move: `GoLean/GoCore/`
+38 files, +25329/−8922 lines (nine NEW modules: `BridgeSet`, `ExecutionStatement`, `Prefix`, `PrefixFacts`,
+`StepErrors`, `Locals`, `Equations`, `EquationsAttr`, `PoolProjection`); `tools/nativefrontend/` 20 files, +7690/−666.
+
+**Constructors and shapes (counted by extracting each `inductive`'s `  | ` lines at both commits).**
+
+| Type | At `61958f2e` | At the offer | What moved (row) |
+|---|---|---|---|
+| `Stmt` | 44 | 44 — a DIFFERENT set: `+ randIntn (target : Option Assignee) (n : Expr)` (row 5b), `− initialization` (row 6) | an exhaustive `match` gains one arm and loses one |
+| `StmtOp` | 12 | 13 (`+ randIntn`) | row 5b |
+| `Cont` | `inductive Cont`, 33 constructors (`stop` + 32 frames with a `k : Cont`) | `abbrev Cont := List Frame`; `inductive Frame`, 33 (the 32 frames minus `k`, `+ preprintK older entry newer`); the 33 old names survive as `@[match_pattern] abbrev` views in the CURRENT argument order (`.stop = []`, `.frame targets tenv results defers k fid`) | rows 4, 6b; a `cases k` sees `nil`/`cons f k` then `cases f` (the in-repo `cases_cont`) |
+| `Cont.frame`'s last field | `(wrapper : Bool := false)` | `(fid : FuncId)` — the callee whose body the frame runs ([USER] 2026-09-28, request 6 option 1) | row 3 |
+| `Step` | 122 rules, `Config → Store → Config → Store → Prop` | 134 rules, `… → Store → StepLabel → Prop`: `+6` `unseq` sweep rules (`unseqRunRecv/Alloc/Wide`, `unseq{Recv,Alloc,Wide}Done` — Stage E5, before the window), `−1` `initialization` (row 6), `+7` preprint rules (`preprintCollapse/Distinct/Select/Resolve/Return/Fall/Store`, row 6b); the entry rules deliver through `Entry.callConfig` (row 3); `unseqEnter` re-pinned (row 6, D3 (b)) | an exhaustive `cases` on `Step`: +12 arms, one fewer, one more index |
+| `stepFn`'s result | `Except Stop (Config × Store × Choices)` | `Except Stop (Config × Store × Choices × StepLabel)` | row 2a (`StepLabel := { trace : AccessTrace, picks : List PickRecord, out : List GoString }`, a pure step `⟨[], [], []⟩`; `StepEvent := { who, action, label }`) |
+| `ChoiceSite` | 10 | 11 (`+ intn`, canonical slot 0, width `n`) | row 5b |
+| `PanicEntry` | `{ value, recovered }` | `{ value, recovered, rewrite : Rewrite := .none, repanicked : Bool := false }`; NEW `inductive Rewrite \| none \| pending (member) \| unrecorded \| done (text)`; `renderPanicPayload : PanicEntry → …` (was `GoValue → …`) | row 6b; the anonymous `⟨v, false⟩` no longer elaborates |
+| `FrameClass` | 2 | 3 (`+ preprint`) | row 6b |
+| `Config` | 10 | 10 — `Config.abort?`'s TYPE unchanged; its EQUATION gains the settled conjunct (`Config.abort?_some_iff`: a chain with a `.pending` entry at `.stop` is RUNNING) | row 6b |
+| `Func` | `{ …, wrapper : Bool := false }`; `Param.id : String`, `Expr.var/ref (id : String)`, `Assignee.var (id : String)`, `Scope := List (String × Loc)` | `wrapper` DELETED; `+ locals : Array LocalName := #[]` (NEW `LocalName := {name, kind, pos, wire}`, `LocalKind`); `abbrev VarId := Nat` at EVERY local position; `Scope := List (VarId × Loc)`; `Program.promotions : Array Promotion`; `ProgramCtx.ofTables (… , promotions := #[])` | rows 3, 5 |
+| entry / dispatch | `enterFrame…` → `Func × LocalEnv × List Loc × Store × AccessTrace`; `concreteMethodForDynamic?`, `concreteMethodSignature?`, `dynamicDispatch? … (Func × Array GoValue)`, `dispatchLeaf`, `wrapperForwardArg`, `recvFieldChain`, `Cont.recoverTransparent`, `recoverThroughWrappers` | `Entry × Store × AccessTrace` (`inductive Entry \| run func frameEnv resultLocs \| again fid args`); `resolveMethod? : Ty → MemberId → Option MethodResolution`, `funcSignature?`/`resolvedSignature?`, `Dispatched \| target \| again`, `receiverAt` (the path walk), `callee? : FuncId → Option Callee`, `recoverAtDeferred`; `findFunctionIn?` SAME signature, domain minus wrappers and promoted stubs (`findFunctionIn?_filter`); `methodInfoByFuncId?` UNCHANGED | row 3 (the migration table names every deletion's replacement or «deleted, no replacement») |
+| memory | `Store.alloc : Store → GoValue → Ty → Loc × Store` (total, no normalization); no access label | `Store.alloc : … → Except Stop (Loc × Store)` NORMALIZES at the type (C1, before the window; `HeapNormal` a `StateWf` conjunct); `Mem.load`/`store`/`mapRead`/`mapWrite` emit `[.access .read/.write …]`; `AccessKind` 4, `MemEvent` 3; the root-only reader `loadRoot` at the six binding-cell reads | «Shapes changed since the pin» rows 4–5; the 2026-09-27 line |
+| the legacy triple | `Stmt.unseqProbe`, `Cont.probeK` (now `Frame.probeK`), `Step.unseqProbe`, `ChoiceSite.unseqPanic` | PRESENT — shape-only changes (the label argument; `probeDefer`/`probeRaise` record `⟨.unseqPanic, 2, pick⟩`); SURVIVES into this offer ([USER] 2026-09-27) | § «The legacy evaluation-order triple» |
+
+**The wire** `golean-native-v1` → `v2` (row 3: `promotions` REQUIRED; `methods` without wrappers/stubs; a `wrapper` key
+REFUSED by name) → `v3` (row 5: per function `locals: [{name, kind, pos?, wire?}]`, `local: n` beside every source
+spelling, `keyLocal`/`valLocal`, unnamed params/receivers `$p{i}`/`$recv`); a v1 or v2 wire REFUSES by name. New
+nodes: `{"stmt":"unseq", cells, occs, stores, then}` with eight occurrence kinds (Stages C–E6a; the decoder had NO
+`unseq` schema at the pin), `{"expr":"rand-intn", callee, n, resultTypes}` (row 5b). Frontend flags 8 → 9
+(`-unseq-census` ADDED, emits a TSV census, no wire). `NativeToIR.decodeProgram : Json → Except String Program` SAME
+signature; its accepted input is v3. The 31 current fixture units of the logic repository all export as v3 with zero
+`unseq` graphs and zero legacy probes (`docs/2026-10-03_offer-to-logic-team.md` §2).
+
+**Choice sites and consultation records.** `+ ChoiceSite.intn` (ONE `consumeAtE .intn n` per draw; `Step_randIntn_draw`).
+Every consultation of bound > 1 is now RECORDED in the step label's `picks` (`PickRecord.ofPick`; `consumeAtE` = `consumeAt`
+plus the record; bound ≤ 1 records nothing; an empty tape picks 0 and records at bound > 1); the `repanicCollapse` site
+(bound 2) is additionally drawn by the PREPRINT PHASE at every equal adjacent pair the walk meets (row 6b) and by the abort
+only on an un-rewritten head; a nil box dispatching to a promoted declaration-only stub consumes NO `nilValueMethodText`
+pick (was one; row 3 fix round F1). `unseqPanic`'s protocol is the pin's.
+
+**Allocation and fuel.** Allocation: a block's declarations sit at its ENTRY in declaration order at `entrySlot s i :=
+.base ⟨s.heap.size + i⟩` (zero-valued at the declared type; skipped declarations are PRIVATE cells), frame entry `args[i] ↦
+entrySlot s i`, `results[j] ↦ entrySlot s (args.size + j)`; setup with no globals/initializer: `args[i] ↦ .base ⟨i⟩`,
+`results[j] ↦ .base ⟨args.size + j⟩` (`runProgramSetup_noInit`); `Store.alloc` normalizes and may REFUSE. Fuel: TWO
+`stepFn` steps fewer per declaration executed and ONE more per completed `unseq` sweep (row 6); a promoted call has NO
+wrapper frame — fewer steps, and an embedded-interface-terminal path re-dispatches as ONE extra step (`Entry.again`, row 3);
+per rewritten panic payload +3 phase steps + the `Error()`/`String()` call's own steps + its frame exit, a collapse ONE
+step (row 6b); the driver's cost conventions are the pin's `execStmtLoop`'s, now stated (`ZeroCost` endpoints classified at
+cost 0, the abort/refusal/fatal at cost 1 — the `Finish` constructors). No compensating no-op step anywhere. One pinned budget row moved with C4 (`sync/trylock/spin-until-trylock`, work cap 200000 → 500000, RULED).
+
+**Refusals changed.** NEW, by name: the decoder's v1/v2 refusal, `wrapper` key, missing `promotions`, the B6 checks c1–c5
+(a reference whose spelling has no in-scope declaration or disagrees with the innermost one; table ⊄ tree; kinds), the
+`unseq` grammar's 82 `unseq:`-prefixed refusals (decoder `fail` sites 62 → 184), a forged `rand-intn` node, `defer`/`go` of
+`Intn`; the machine's `.internal «binding cell is not a root location»` (`loadRoot`, 2026-09-27), `Store.alloc`'s normalizer
+refusals, `intn` at bound ≤ 0 (`stuck`, unreachable for a decoded program), `unseqEntryCheck?` at ENTER (hand-built graphs),
+a call through a stub promotion record, the preprint fatal's two refused payload families (`runtime.Error` payloads BUG-099;
+other families unpinned). RETIRED: `Stmt.initialization`'s two texts, FR-3's deref-adapter refusal for promoted entries,
+`UnseqGraph.wellFormed?`'s two `$`-spelling tests (moved to the decoder). CHANGED: refusal texts that quoted a local's
+spelling print its NUMBER. RETAINED: `initPrintRefusal?` ([USER] decision 10), `os.Exit` and `time` by name.
+
+**Theorem premises and statements that changed** (statements PINNED in `BridgeSet.lean`, 502 rows; 23 `_stmt`s of
+`ExecutionStatement.lean` proved in `Prefix.lean`; 293 arm equations in `Equations.lean`; 36 projections in
+`PoolProjection.lean`): `stepFn_sound`/`step_complete` carry the label (`tr : StepLabel`) on both sides; `Prefix.abort?_some`,
+`Prefix.stepFn_abort`, `MachineSound.step_abort_elim` GAIN the settled-chain premise `splitNewestPending? (first :: rest) = none`
+(row 6b; the pinned `_stmt`s byte-identical); `stepFn_consumption_some` is PREMISE-FREE (`appendTargetLocal` dropped) and
+`PrefixFacts.stepFn_consumption_some'` is DELETED (row 7a); `stmtConsult?_some` is a DISJUNCTION (spill ∨ intn draw),
+`applyStmtOp_plan_eq_core` gains `op ≠ .randIntn`, `stepFn_oblivious`/`seqConsumption_none_of_flags` take one more `false`
+flag, `stepFn_stmtOp_spill` → `stepFn_stmtOp_pick` (row 5b); `Step.unseqEnter` over `env.pushScope` with `.seq rest env k`
+(row 6, D3 (b)); `enterFrame_wf`/`enterFrame_inv_ok`/`spawnStep` over `Entry` (row 3); `Config.abort?_some_iff` (row 6b);
+`single_embedding_stmt` keeps `transferable`, `transferableWide` is offered beside it (row 7a, posed). A client premise
+`findFunctionIn? ctx.functions fid = some f` crosses the domain change through `findFunctionIn?_filter`; the non-method
+premise `methodInfoByFuncId? ctx f.id = none` is UNCHANGED.
+
+**Tool interfaces** (request 8): the cumulative table at the end of this file — frontend flags 8 → 9 (`-unseq-census`);
+wire v1 → v3; `scripts/diff-coverage` manifest schema UNCHANGED; `decodeProgram` signature UNCHANGED; `RunResult :=
+Except (Stop × GoString) Readout` and `runProgramM : … → Except Stop Readout` UNCHANGED; Lean `leanprover/lean4:v4.32.2`
+UNCHANGED; the `deps/go` pin go1.26.5 UNCHANGED (`git diff --stat 61958f2e 20d3946d -- lean-toolchain lake-manifest.json
+scripts/setup-deps scripts/diff-coverage scripts/coverage-manifest tools/certification.py` is EMPTY). Differential baseline
+3676 = 3428 PASS / 248 FAIL (`61958f2e`) → 3860 = 3623 / 237 (train r61: `ci --diff` RESULT PASS 3860/3860, certificate
+provenance ok, semantic equations ok — commit `20d3946d`); the certified slow-tier record
+(`baselines/certified/imported-goose__channel__google-search.certified.json`): receipt commit `44d99cdb` (train r61, a
+provenance refresh), its `observations_sha256` IDENTICAL to the pin's (`e40ba07d…`), its claim's `wire_sha256` moved with the
+two schema moves (`736f1730…` at the pin → `dc232a8c…` at v2 → `f448d579…` at v3, the B6 fields only).
+
+**STATED LIMITS of the offer (one place; each is a limit, not a gap to be read as closed).**
+1. MEMORY FLOOR: variable reads reach `loadRoot`, plain/chain stores reach `storeLoc`, block/frame entry reach `Store.alloc`;
+   a pointer read `*p`, a field read `x.f`, an index read `a[i]`, a map get / comma-ok STOP at the composed
+   `applyStrictOp`/`applyRhsOp` — their inner `loadLoc`/`Mem.loadFor` laws are NOT stated. Slice header/backing/sublocation
+   and disjoint-update laws are later work (response §4 C1).
+2. THE POOL/REGISTRY HALF IS OWED: the labelled pool relation over `StepLabel` with attribution, registry boundaries and the
+   pool deadlock's own condition. Proved: the single-goroutine output agreement and the sequential-to-pool terminal
+   projection (every result but the deadlock and the refusals), equal fuel when no reachable step opens a boundary.
+3. THE LEGACY EVALUATION-ORDER TRIPLE SURVIVES (E6b–E6e off the critical path, [USER] 2026-09-27): one extra `Frame`
+   constructor and one `Step` rule to port; for the logic team's fragment `cases` arms only (their fixtures emit none).
+4. C4's run-level preservation (an injection with private cells + stuttering over the stated observable domain) is a STATED
+   CLAIM with the escape audit's verdicts as its precondition — NOT a theorem (`docs/2026-10-01_gc4-block-allocation-design.md`).
+5. The Lean readout JSON prints RAW location ids (`locJson`; G-C4 decision 6: a standing schema limit, outside C4).
+6. The program bridge ASSUMES successful setup (`runProgramSetupM … = .ok …`; the no-globals, no-initializer case is the
+   pinned equation `runProgramSetup_noInit`); init-time printing is REFUSED (`initPrintRefusal?` retained, decision 10).
+7. `NoRefusal` and the classification corollary cover the SEQUENTIAL driver only (a `go` statement leaves the domain); a
+   refusal has NO relation successor — a partial-correctness boundary (CLAUDE.md).
+8. CORPUS LIMITS (`docs/2026-10-03_window-corpus-disposition.md`): Storage is a program, not an external contract; timers and
+   the wall clock (`time.*`, `rand.New`) are REFUSED by name; access labels are not a differential observable; refusal ≠
+   panic is enforced by the apparatus, not by a row; loops/`range`/map iteration as proof subjects, goroutines/`select`,
+   protobuf route A and the subject deltas U-1..U-3 are post-window.
+9. DEFERRED, unscheduled unless named: NaN [a]+[b] (BUG-094; [USER]); E6b–E6e (the retirement, a later removal-only change);
+   protobuf route A (post-window lane, go-ahead PENDING [USER] at dispatch); the `unseq` COMMUTATION theorem under an
+   independence hypothesis (the DRF-confluence claim is WITHDRAWN — `Tests/unseq-wire/src/w1/main.go` permits `{1, 2}`);
+   NPDRF's reduction stays EXPLICITLY UNUSABLE (the access-granularity obligation is open); typed profiles PARKED; no
+   iris-lean `Language` spike; module-path mapping D-6/7, `%+#v` D-3, the default logger D-12/H-20 (post-window lanes).
+10. The native lowering carries NO correctness theorem (CLAUDE.md qualification (1)); a consumer of a GoCore program inherits
+    the wire's provenance record and the Platform instance (gc, linux/amd64).
+
+---
 
 [AGENT packet A worker] 2026-09-27 — window charter row 0 (`docs/2026-09-23_batched-window-charter.md` §1),
 packet A brief `docs/codex-briefs/2026-09-24_packet-A-contract.md` §6, run as an Opus 5.5 subagent under the
@@ -267,7 +388,8 @@ Hand-built wires: `Tests/unseq-wire/build.py` numbers its hand-written nodes by 
 
 candidate freeze: `6fb3ac16` (packet D's R1 code commit — the content tip, on top of the window-review round `43624b55`/`7a976448`, the pre-landing round `4a4f381f`/`9c14fef1`, `5335ee03`/`03779748`/`556ab207` and the MERGE-CLEAN audit; the records commit on top of it carries row 7a's addendum, the F4 table, the handoff §10 and the evidence tails only; the coordinator freezes this file at the offer commit, plan row 7b).
 
-LIVE through the window; FROZEN at the offer commit (charter row 7).
+LIVE through the window; FROZEN at the offer commit `OFFER_COMMIT` (charter row 7; unit 7b, 2026-10-03 — the «Offer summary» at
+the top is the frozen cumulative record; the coordinator substitutes the SHA at landing).
 
 ## Cumulative tool-interface table, pin → the round's content tip (window review F4; [AGENT packet D worker] 2026-10-03)
 

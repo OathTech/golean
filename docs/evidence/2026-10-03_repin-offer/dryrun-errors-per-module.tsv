@@ -1,0 +1,29 @@
+module	kind	error_blocks	truncated_at_maxErrors	causes
+GoLeanIrisExamples.AggregatesProgram	generated-artifact	101	yes	B6-varid-nat=87 C4-initialization-gone=7 P-wrapper-deleted=6 maxErrors-cap=1
+GoLeanIrisExamples.E1EquivalentProgram	generated-artifact	101	yes	B6-varid-nat=87 P-wrapper-deleted=7 C4-initialization-gone=6 maxErrors-cap=1
+GoLeanIrisExamples.E1LocalProgram	generated-artifact	101	yes	B6-varid-nat=85 C4-initialization-gone=9 P-wrapper-deleted=6 maxErrors-cap=1
+GoLeanIrisExamples.E1Program	generated-artifact	101	yes	B6-varid-nat=87 P-wrapper-deleted=7 C4-initialization-gone=6 maxErrors-cap=1
+GoLeanIrisExamples.E1WrongProgram	generated-artifact	101	yes	B6-varid-nat=87 P-wrapper-deleted=7 C4-initialization-gone=6 maxErrors-cap=1
+GoLeanIrisExamples.F1AlternativeProgram	generated-artifact	101	yes	B6-varid-nat=82 P-wrapper-deleted=9 C4-initialization-gone=9 maxErrors-cap=1
+GoLeanIrisExamples.F1Program	generated-artifact	101	yes	B6-varid-nat=82 P-wrapper-deleted=9 C4-initialization-gone=9 maxErrors-cap=1
+GoLeanIrisExamples.F1SLocalProgram	generated-artifact	101	yes	B6-varid-nat=81 C4-initialization-gone=10 P-wrapper-deleted=9 maxErrors-cap=1
+GoLeanIrisExamples.F1SResultsProgram	generated-artifact	101	yes	B6-varid-nat=82 P-wrapper-deleted=9 C4-initialization-gone=9 maxErrors-cap=1
+GoLeanIrisExamples.F1SWrongTargetProgram	generated-artifact	101	yes	B6-varid-nat=82 P-wrapper-deleted=9 C4-initialization-gone=9 maxErrors-cap=1
+GoLeanIrisExamples.F2Program	generated-artifact	101	yes	B6-varid-nat=89 P-wrapper-deleted=9 C4-initialization-gone=2 maxErrors-cap=1
+GoLeanIrisExamples.IntegersProgram	generated-artifact	101	yes	B6-varid-nat=89 C4-initialization-gone=7 P-wrapper-deleted=4 maxErrors-cap=1
+GoLeanIrisExamples.LoopsProgram	generated-artifact	101	yes	B6-varid-nat=84 C4-initialization-gone=12 P-wrapper-deleted=4 maxErrors-cap=1
+GoLeanIrisExamples.PerfProgram	generated-artifact	101	yes	B6-varid-nat=99 P-wrapper-deleted=1 maxErrors-cap=1
+GoLeanIrisExamples.ReferencesProgram	generated-artifact	101	yes	B6-varid-nat=86 C4-initialization-gone=8 P-wrapper-deleted=6 maxErrors-cap=1
+GoLeanIrisExamples.WriteCallPanicProgram	generated-artifact	101	yes	B6-varid-nat=88 P-wrapper-deleted=12 maxErrors-cap=1
+GoLeanIrisExamples.ObservePrefixProgram	generated-artifact	77	no	B6-varid-nat=60 P-wrapper-deleted=9 C4-initialization-gone=8
+GoLeanIrisExamples.RecordsProgram	generated-artifact	57	no	B6-varid-nat=50 C4-initialization-gone=5 P-wrapper-deleted=2
+GoLeanIris.Logic.Source	hand-written	28	no	B6-varid-nat=25 C4-initialization-gone=2 P-wrapper-deleted=1
+GoLeanIrisExamples.ErrorStringProgram	generated-artifact	23	no	B6-varid-nat=16 C4-initialization-gone=4 P-wrapper-deleted=3
+GoLeanIrisExamples.RecoveryProgram	generated-artifact	15	no	B6-varid-nat=9 P-wrapper-deleted=5 C4-initialization-gone=1
+GoLeanIris.Logic.Binding	hand-written	14	no	B6-varid-nat=14
+GoLeanIrisExamples.CallchainProgram	generated-artifact	13	no	B6-varid-nat=9 P-wrapper-deleted=4
+GoLeanIrisExamples.AbortWriteProgram	generated-artifact	7	no	B6-varid-nat=6 P-wrapper-deleted=1
+GoLeanIris.Language	hand-written	6	no	label-steplabel=6
+GoLeanIris.Logic.StepAdapter	hand-written	5	no	label-steplabel=5
+GoLeanIris.Logic.Direct	hand-written	2	no	B6-varid-nat=2
+GoLeanIris.Logic.FrameCont	hand-written	1	no	P-wrapper-deleted=1
