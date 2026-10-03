@@ -18,8 +18,10 @@ forbidden spellings and runs it. NOT an iris-lean `Language` instance (typed pro
 per theorem of the namespace `GoLean.GoCore.Equations`, its statement written out, checked by the
 `#eval` at the end against the environment (every equation theorem has a pin, and the pin's type
 IS the theorem's type up to alpha-equivalence — a statement drift fails here as well as in
-`BridgeSet.lean`). `main` prints the PASS line the gate greps for; the `#eval` fails the file
-before `main` can run when an equation is unenrolled or a pin has drifted.
+`BridgeSet.lean`) — and the NO-UNFOLD CHECK of every fact's PROOF TERM (pre-landing round, audit F2: no
+`stepFn.*` constant, no reflexivity on a `stepFn`-headed term, the term re-type-checked with `stepFn`
+irreducible, the classical trio at most). `main` prints the PASS line the gate greps for; the `#eval` fails
+the file before `main` can run when a fact unfolds `stepFn`, an equation is unenrolled or a pin has drifted.
 -/
 
 namespace Tests.EquationClient
@@ -263,10 +265,37 @@ theorem fact_block_then_lookup {s s' : Store} {p : Param} {loc : Loc} (t e : Stm
   · rw [evalE_var _ _ ch (LocalEnv.lookup_declare_self _ _ _) hread]; rfl
   · rw [retV_ifK_false t e _ _ ch (valueAsBool_bool false)]
 
+/-- FACT 8 — the plain simp-set idiom: a premise-free arm closes by `simp only [stepFn_eqns]` alone. The gate's
+bypass self-tests replace THIS proof line (the `BYPASS-ANCHOR`) by each unfolding spelling the audit listed and
+require the enrollment check to REFUSE the fact by name. -/
+theorem fact_usage_simp_set (s : Store) (env : LocalEnv) (k : Cont) (ch : Choices) :
+    stepFn ctx s (.exec .returnStmt env k) ch = .ok (.signal .ret k, s, ch, silent) := by
+  simp only [stepFn_eqns]  -- BYPASS-ANCHOR
+
+/-- FACT 9 — the INSTANTIATION idiom (`rw`): a premised arm whose successor names premise-bound values
+(`loc`, `v`) is applied to its premises. -/
+theorem fact_usage_rw {s : Store} {id : VarId} {loc : Loc} {v : GoValue} (env : LocalEnv) (k : Cont) (ch : Choices)
+    (hl : LocalEnv.lookup env id = some loc) (hv : loadRoot ctx s loc = .ok v) :
+    stepFn ctx s (.evalE (.var id) env k) ch = .ok (.retV v k, s, ch, readOf (projChainTarget ctx s k loc)) := by
+  rw [evalE_var env k ch hl hv]
+
+/-- FACT 10 — the instantiated-simp idiom: the same arm, handed to `simp only` already applied to its premises. -/
+theorem fact_usage_simp_instance {s : Store} {id : VarId} {loc : Loc} {v : GoValue} (env : LocalEnv) (k : Cont) (ch : Choices)
+    (hl : LocalEnv.lookup env id = some loc) (hv : loadRoot ctx s loc = .ok v) :
+    stepFn ctx s (.evalE (.var id) env k) ch = .ok (.retV v k, s, ch, readOf (projChainTarget ctx s k loc)) := by
+  simp only [evalE_var env k ch hl hv]
+
+/-- FACT 11 — the DISCHARGER idiom: the whole rewrite set, the arm's premises found in context by `assumption`
+(the plain `simp only [stepFn_eqns, hl, hv]` cannot fire here — the successor names `loc` and `v`). -/
+theorem fact_usage_simp_discharger {s : Store} {id : VarId} {loc : Loc} {v : GoValue} (env : LocalEnv) (k : Cont) (ch : Choices)
+    (hl : LocalEnv.lookup env id = some loc) (hv : loadRoot ctx s loc = .ok v) :
+    stepFn ctx s (.evalE (.var id) env k) ch = .ok (.retV v k, s, ch, readOf (projChainTarget ctx s k loc)) := by
+  simp (discharger := assumption) only [stepFn_eqns]
+
 end Facts
 
 /-- The number of facts above (cross-checked against the environment by the `#eval` below). -/
-def factCount : Nat := 7
+def factCount : Nat := 11
 
 /-! ## §B — the exhaustive enrollment: one pin per equation theorem, the statement written out -/
 
@@ -1670,10 +1699,364 @@ theorem Pin.setup_heap_size : ∀ {program : Program} {func : Func} {args : Arra
     (_ha : allocDecls ⟨program⟩ env s₂ func.results.toList = .ok (frameEnv, s₃)),
     s₃.heap.size = func.args.size + func.results.size :=
   @GoLean.GoCore.Equations.setup_heap_size
+
+theorem Pin.bind_eq_error : ∀ {ε α β : Type} {x : Except ε α} {f : α → Except ε β} {e : ε}
+    (_h : x >>= f = .error e),
+    x = .error e ∨ ∃ a, x = .ok a ∧ f a = .error e :=
+  @GoLean.GoCore.Equations.bind_eq_error
+
+theorem Pin.runCommit_error : ∀ {α : Type} {c : Commit α} {s : Store} {e : Stop} (_hcs : c s = .error e)
+    (_hne : ∀ msg, e ≠ .panic msg),
+    runCommit c s = .error e :=
+  @GoLean.GoCore.Equations.runCommit_error
+
+theorem Pin.enterFramePickV_of_plan_error : ∀ {ctx : ProgramCtx} {s : Store} {fid : FuncId}
+    {args : List GoValue} {e : Stop} (ch : Choices) (_h : enterFrame.plan ctx s fid args = .error e)
+    (_hne : ∀ msg, e ≠ .panic msg),
+    enterFramePickV ctx s fid args ch = .error e :=
+  @GoLean.GoCore.Equations.enterFramePickV_of_plan_error
+
+theorem Pin.enterFrame_inv_error : ∀ {ctx : ProgramCtx} {s : Store} {fid : FuncId} {args : List GoValue}
+    {e : Stop} (_h : enterFrame ctx s fid args = .error e),
+    enterFrame.plan ctx s fid args = .error e ∨ ∃ c, enterFrame.plan ctx s fid args = .ok c ∧ c s = .error e :=
+  @GoLean.GoCore.Equations.enterFrame_inv_error
+
+theorem Pin.retV_syncStK_apply_panic : ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {op : SyncOp}
+    {done : List GoValue} {msg : String} (env : LocalEnv) (k' : Cont) (ch : Choices)
+    (_h : applySyncOp ctx s ch op (v :: done).reverse env k' = .error (.panic msg)),
+    stepFn ctx s (.retV v (.syncStK op done [] env k')) ch = .ok (.panicking [panicEntry msg] k', s, ch, ⟨[], [], []⟩) :=
+  @GoLean.GoCore.Equations.retV_syncStK_apply_panic
+
+theorem Pin.evalE_strict_nullary_error : ∀ {ctx : ProgramCtx} {s : Store} {e : Expr} {op : StrictOp} {st : Stop}
+    (env : LocalEnv) (k : Cont) (ch : Choices) (_h : strictPlan e = some (op, []))
+    (_ha : applyStrictOp ctx s (projChainTarget ctx s k) op [] = .error st) (_hne : ∀ msg, st ≠ .panic msg),
+    stepFn ctx s (.evalE e env k) ch = .error st :=
+  @GoLean.GoCore.Equations.evalE_strict_nullary_error
+
+theorem Pin.retV_chanStK_apply_error : ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {op : ChanStOp}
+    {done : List GoValue} {e : Stop} (env : LocalEnv) (k' : Cont) (ch : Choices)
+    (_h : applyChanOp ctx s op (v :: done).reverse env k' = .error e) (_hne : ∀ msg, e ≠ .panic msg),
+    stepFn ctx s (.retV v (.chanStK op done [] env k')) ch = .error e :=
+  @GoLean.GoCore.Equations.retV_chanStK_apply_error
+
+theorem Pin.retV_selectOpsK_apply_panic : ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue}
+    {clauses : List (SelectClauseHead × Stmt)} {default? : Option Stmt} {done : List GoValue} {msg : String}
+    (env : LocalEnv) (k' : Cont) (ch : Choices)
+    (_h : applySelect ctx s clauses default? (v :: done).reverse env k' ch = .error (.panic msg)),
+    stepFn ctx s (.retV v (.selectOpsK clauses default? done [] env k')) ch
+      = .ok (.panicking [panicEntry msg] k', s, ch, ⟨[], [], []⟩) :=
+  @GoLean.GoCore.Equations.retV_selectOpsK_apply_panic
+
+theorem Pin.retV_selectOpsK_apply_error : ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue}
+    {clauses : List (SelectClauseHead × Stmt)} {default? : Option Stmt} {done : List GoValue} {e : Stop}
+    (env : LocalEnv) (k' : Cont) (ch : Choices)
+    (_h : applySelect ctx s clauses default? (v :: done).reverse env k' ch = .error e)
+    (_hne : ∀ msg, e ≠ .panic msg),
+    stepFn ctx s (.retV v (.selectOpsK clauses default? done [] env k')) ch = .error e :=
+  @GoLean.GoCore.Equations.retV_selectOpsK_apply_error
+
+theorem Pin.retV_rhsK_apply_error : ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {rop : RhsOp}
+    {done : List GoValue} {e : Stop} (refs : List TargetRef) (body : Stmt) (env : LocalEnv) (k' : Cont)
+    (ch : Choices) (_h : applyRhsOp ctx s rop (v :: done).reverse = .error e) (_hne : ∀ msg, e ≠ .panic msg),
+    stepFn ctx s (.retV v (.rhsK rop refs done [] body env k')) ch = .error e :=
+  @GoLean.GoCore.Equations.retV_rhsK_apply_error
+
+theorem Pin.retV_atomicStK_apply_error : ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {op : AtomicOp}
+    {done : List GoValue} {e : Stop} (env : LocalEnv) (k' : Cont) (ch : Choices)
+    (_h : applyAtomicOp ctx s op (v :: done).reverse env k' = .error e) (_hne : ∀ msg, e ≠ .panic msg),
+    stepFn ctx s (.retV v (.atomicStK op done [] env k')) ch = .error e :=
+  @GoLean.GoCore.Equations.retV_atomicStK_apply_error
+
+theorem Pin.next_preprintK_error : ∀ {ctx : ProgramCtx} {s : Store} {older : List PanicEntry}
+    {entry : PanicEntry} {newer : List PanicEntry} {e : Stop} (k' : Cont) (ch : Choices)
+    (_h : preprintDispatch ctx s entry = .error e) (_hne : ∀ msg, e ≠ .panic msg),
+    stepFn ctx s (.next (.preprintK older entry newer k')) ch = .error e :=
+  @GoLean.GoCore.Equations.next_preprintK_error
+
+theorem Pin.retV_stmtOpK_apply_error : ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {op : StmtOp} {nt : Nat}
+    {done : List GoValue} {e : Stop} (env : LocalEnv) (k' : Cont) (ch : Choices)
+    (_h : applyStmtOp ctx s ch op nt (v :: done).reverse = .error e) (_hne : ∀ msg, e ≠ .panic msg),
+    stepFn ctx s (.retV v (.stmtOpK op nt done [] env k')) ch = .error e :=
+  @GoLean.GoCore.Equations.retV_stmtOpK_apply_error
+
+theorem Pin.next_storeK_error : ∀ {ctx : ProgramCtx} {s : Store} {ref : TargetRef} {val : GoValue} {e : Stop}
+    (rs : List TargetRef) (vrest : List GoValue) (body : Stmt) (env : LocalEnv) (k' : Cont) (ch : Choices)
+    (_h : storeTarget ctx s ref val = .error e) (_hne : ∀ msg, e ≠ .panic msg),
+    stepFn ctx s (.next (.storeK (ref :: rs) (val :: vrest) body env k')) ch = .error e :=
+  @GoLean.GoCore.Equations.next_storeK_error
+
+theorem Pin.exec_call_nullary_error : ∀ {ctx : ProgramCtx} {s : Store} {targets : Array Assignee} {fid : FuncId}
+    {args : Array Expr} {plans : List (TargetShape × List Expr)} {e : Stop} (env : LocalEnv) (k : Cont)
+    (ch : Choices) (_hp : targetsPlan targets.toList = some plans) (_hargs : args.toList = [])
+    (_he : enterFrame ctx s fid [] = .error e) (_hne : ∀ msg, e ≠ .panic msg),
+    stepFn ctx s (.exec (.call targets fid args) env k) ch = .error e :=
+  @GoLean.GoCore.Equations.exec_call_nullary_error
+
+theorem Pin.retV_callArgsK_enter_error : ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {fid : FuncId}
+    {plans : List (TargetShape × List Expr)} {vals : List GoValue} {e : Stop} (env : LocalEnv) (k' : Cont)
+    (ch : Choices) (_he : enterFrame ctx s fid (vals ++ [v]) = .error e) (_hne : ∀ msg, e ≠ .panic msg),
+    stepFn ctx s (.retV v (.callArgsK fid plans vals [] env k')) ch = .error e :=
+  @GoLean.GoCore.Equations.retV_callArgsK_enter_error
+
+theorem Pin.retV_callValCalleeK_enter_error : ∀ {ctx : ProgramCtx} {s : Store} {fid : FuncId}
+    {captured : List GoValue} {plans : List (TargetShape × List Expr)} {e : Stop} (env : LocalEnv) (k' : Cont)
+    (ch : Choices) (_he : enterFrame ctx s fid captured = .error e) (_hne : ∀ msg, e ≠ .panic msg),
+    stepFn ctx s (.retV (.funcVal fid captured) (.callValCalleeK plans [] env k')) ch = .error e :=
+  @GoLean.GoCore.Equations.retV_callValCalleeK_enter_error
+
+theorem Pin.retV_callValArgsK_enter_error : ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {fid : FuncId}
+    {captured vals : List GoValue} {plans : List (TargetShape × List Expr)} {e : Stop} (env : LocalEnv)
+    (k' : Cont) (ch : Choices) (_he : enterFrame ctx s fid (captured ++ vals ++ [v]) = .error e)
+    (_hne : ∀ msg, e ≠ .panic msg),
+    stepFn ctx s (.retV v (.callValArgsK (.funcVal fid captured) plans vals [] env k')) ch = .error e :=
+  @GoLean.GoCore.Equations.retV_callValArgsK_enter_error
+
+theorem Pin.panicking_frame_defer_error : ∀ {ctx : ProgramCtx} {s : Store} {chain : List PanicEntry}
+    {fid : FuncId} {captured args : List GoValue} {e : Stop} (t : List (TargetShape × List Expr))
+    (te : LocalEnv) (r : List Loc) (ds : List (GoValue × List GoValue)) (k' : Cont) (fr : FuncId) (ch : Choices)
+    (_he : enterFrame ctx s fid (captured ++ args) = .error e) (_hne : ∀ msg, e ≠ .panic msg),
+    stepFn ctx s (.panicking chain (.frame t te r ((.funcVal fid captured, args) :: ds) k' fr)) ch = .error e :=
+  @GoLean.GoCore.Equations.panicking_frame_defer_error
+
+theorem Pin.frameExit_defer_error : ∀ {ctx : ProgramCtx} {s : Store} {fid : FuncId}
+    {captured args : List GoValue} {e : Stop} (targets : List (TargetShape × List Expr)) (tenv : LocalEnv)
+    (results : List Loc) (ds : List (GoValue × List GoValue)) (k' : Cont) (fr : FuncId) (ch : Choices)
+    (_he : enterFrame ctx s fid (captured ++ args) = .error e) (_hne : ∀ msg, e ≠ .panic msg),
+    stepFrameExit ctx s targets tenv results ((.funcVal fid captured, args) :: ds) k' fr ch = .error e :=
+  @GoLean.GoCore.Equations.frameExit_defer_error
+
+theorem Pin.exec_block_error : ∀ {ctx : ProgramCtx} {s : Store} {decls : Array Param} {env : LocalEnv}
+    {e : Stop} (ss : Array Stmt) (k : Cont) (ch : Choices)
+    (_h : allocDecls ctx env.pushScope s decls.toList = .error e),
+    stepFn ctx s (.exec (.block decls ss) env k) ch = .error e :=
+  @GoLean.GoCore.Equations.exec_block_error
+
+theorem Pin.evalE_var_error : ∀ {ctx : ProgramCtx} {s : Store} {id : VarId} {loc : Loc} {e : Stop}
+    (env : LocalEnv) (k : Cont) (ch : Choices) (_hl : LocalEnv.lookup env id = some loc)
+    (_hv : loadRoot ctx s loc = .error e),
+    stepFn ctx s (.evalE (.var id) env k) ch = .error e :=
+  @GoLean.GoCore.Equations.evalE_var_error
+
+theorem Pin.retV_mapRangeK_error : ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {e : Stop}
+    (keyVar valVar : Option VarId) (keyTy valTy : Ty) (body : Stmt) (env : LocalEnv) (k' : Cont) (ch : Choices)
+    (_h : mapRangeStartSets s v = .error e),
+    stepFn ctx s (.retV v (.mapRangeK keyVar valVar keyTy valTy body env k')) ch = .error e :=
+  @GoLean.GoCore.Equations.retV_mapRangeK_error
+
+theorem Pin.next_mapIterK_error : ∀ {ctx : ProgramCtx} {s : Store} {keyTy valTy : Ty} {base : Option Loc}
+    {produced : Array Nat} {e : Stop} (keyVar valVar : Option VarId) (body : Stmt) (start : Array Nat)
+    (env : LocalEnv) (k' : Cont) (ch : Choices)
+    (_h : mapIterCandidates ctx s keyTy valTy base produced = .error e),
+    stepFn ctx s (.next (.mapIterK keyVar valVar keyTy valTy body base produced start env k')) ch = .error e :=
+  @GoLean.GoCore.Equations.next_mapIterK_error
+
+theorem Pin.frameExit_targets_error : ∀ {ctx : ProgramCtx} {s : Store} {results : List Loc} {e : Stop}
+    (sh : TargetShape) (ex : Expr) (ops : List Expr) (rest : List (TargetShape × List Expr)) (tenv : LocalEnv)
+    (k' : Cont) (fr : FuncId) (ch : Choices) (_hl : loadResults ctx s results = .error e),
+    stepFrameExit ctx s ((sh, ex :: ops) :: rest) tenv results [] k' fr ch = .error e :=
+  @GoLean.GoCore.Equations.frameExit_targets_error
+
+theorem Pin.frameExit_preprint_error : ∀ {ctx : ProgramCtx} {s : Store} {rl : Loc} {e : Stop} (tenv : LocalEnv)
+    (older : List PanicEntry) (entry : PanicEntry) (newer : List PanicEntry) (k'' : Cont) (fr : FuncId)
+    (ch : Choices) (_hl : loadRoot ctx s rl = .error e),
+    stepFrameExit ctx s [] tenv [rl] [] (.preprintK older entry newer k'') fr ch = .error e :=
+  @GoLean.GoCore.Equations.frameExit_preprint_error
+
+theorem Pin.unseqEnter_error : ∀ {ctx : ProgramCtx} {s : Store} {g : UnseqGraph} {env : LocalEnv} {e : Stop}
+    (thenB : Stmt) (rest : List Stmt) (k' : Cont) (ch : Choices) (_hwf : g.wellFormed? = none)
+    (_hen : unseqEntryCheck? g env = none) (_ha : allocDecls ctx env.pushScope s g.cells = .error e),
+    stepFn ctx s (.exec (.unseq g thenB) env (.seq rest env k')) ch = .error e :=
+  @GoLean.GoCore.Equations.unseqEnter_error
+
+theorem Pin.unseqValue_error : ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {g : UnseqGraph} {i : Nat}
+    {o : UnseqOcc} {bind : VarId} {head : Expr} {loc : Loc} {e : Stop} (thenB : Stmt) (st : List UnseqStatus)
+    (tg : List (VarId × TargetRef)) (env : LocalEnv) (k' : Cont) (ch : Choices) (_hget : g.occs[i]? = some o)
+    (_hbody : o.body = .eval bind head) (_hloc : unseqCellLoc env bind = .ok loc)
+    (_hst : storeLoc ctx s loc v = .error e),
+    stepFn ctx s (.retV v (.unseqK g thenB st tg env (.wait i) k')) ch = .error e :=
+  @GoLean.GoCore.Equations.unseqValue_error
+
+theorem Pin.retV_ifK_error : ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {e : Stop} (t el : Stmt)
+    (env : LocalEnv) (k' : Cont) (ch : Choices) (_hv : valueAsBool v = .error e),
+    stepFn ctx s (.retV v (.ifK t el env k')) ch = .error e :=
+  @GoLean.GoCore.Equations.retV_ifK_error
+
+theorem Pin.retV_whileK_error : ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {e : Stop} (c : Expr) (b : Stmt)
+    (env : LocalEnv) (k' : Cont) (ch : Choices) (_hv : valueAsBool v = .error e),
+    stepFn ctx s (.retV v (.whileK c b env k')) ch = .error e :=
+  @GoLean.GoCore.Equations.retV_whileK_error
+
+theorem Pin.retV_andK_error : ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {e : Stop} (r : Expr)
+    (env : LocalEnv) (k' : Cont) (ch : Choices) (_hv : valueAsBool v = .error e),
+    stepFn ctx s (.retV v (.andK r env k')) ch = .error e :=
+  @GoLean.GoCore.Equations.retV_andK_error
+
+theorem Pin.retV_orK_error : ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {e : Stop} (r : Expr)
+    (env : LocalEnv) (k' : Cont) (ch : Choices) (_hv : valueAsBool v = .error e),
+    stepFn ctx s (.retV v (.orK r env k')) ch = .error e :=
+  @GoLean.GoCore.Equations.retV_orK_error
+
+theorem Pin.retV_boolK_error : ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {e : Stop} (k' : Cont)
+    (ch : Choices) (_hv : valueAsBool v = .error e),
+    stepFn ctx s (.retV v (.boolK k')) ch = .error e :=
+  @GoLean.GoCore.Equations.retV_boolK_error
+
+theorem Pin.valueAsBool_nonbool : ∀ {v : GoValue} (_h : ∀ b, v ≠ .bool b),
+    valueAsBool v = .error (.stuck s!"expected bool value, got {repr v}") :=
+  @GoLean.GoCore.Equations.valueAsBool_nonbool
+
+theorem Pin.retV_callValCalleeK_args_notfunc : ∀ {ctx : ProgramCtx} {s : Store} {cv : GoValue}
+    (plans : List (TargetShape × List Expr)) (a : Expr) (rest : List Expr) (env : LocalEnv) (k' : Cont)
+    (ch : Choices) (_hd : deferrableCallee cv = false),
+    stepFn ctx s (.retV cv (.callValCalleeK plans (a :: rest) env k')) ch
+      = .error (.stuck s!"expected function value, got {repr cv}") :=
+  @GoLean.GoCore.Equations.retV_callValCalleeK_args_notfunc
+
+theorem Pin.retV_deferCalleeK_notfunc : ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} (args : List Expr)
+    (env : LocalEnv) (k' : Cont) (ch : Choices) (_hd : deferrableCallee v = false),
+    stepFn ctx s (.retV v (.deferCalleeK args env k')) ch = .error (.stuck s!"expected function value in defer, got {repr v}") :=
+  @GoLean.GoCore.Equations.retV_deferCalleeK_notfunc
+
+theorem Pin.retV_goCalleeK_notfunc : ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} (args : List Expr)
+    (env : LocalEnv) (k' : Cont) (ch : Choices) (_hd : deferrableCallee v = false),
+    stepFn ctx s (.retV v (.goCalleeK args env k')) ch = .error (.stuck s!"expected function value in go statement, got {repr v}") :=
+  @GoLean.GoCore.Equations.retV_goCalleeK_notfunc
+
+theorem Pin.deferrableCallee_false : ∀ {cv : GoValue} (_hf : ∀ fid c, cv ≠ .funcVal fid c) (_hn : cv ≠ .nil),
+    deferrableCallee cv = false :=
+  @GoLean.GoCore.Equations.deferrableCallee_false
+
+theorem Pin.panicking_frame_defer_notfunc : ∀ {ctx : ProgramCtx} {s : Store} {chain : List PanicEntry}
+    {cv : GoValue} (args : List GoValue) (t : List (TargetShape × List Expr)) (te : LocalEnv) (r : List Loc)
+    (ds : List (GoValue × List GoValue)) (k' : Cont) (fr : FuncId) (ch : Choices)
+    (_hf : ∀ fid c, cv ≠ .funcVal fid c) (_hn : cv ≠ .nil),
+    stepFn ctx s (.panicking chain (.frame t te r ((cv, args) :: ds) k' fr)) ch
+      = .error (.stuck s!"deferred callee is not a function value: {repr cv}") :=
+  @GoLean.GoCore.Equations.panicking_frame_defer_notfunc
+
+theorem Pin.frameExit_defer_notfunc : ∀ {ctx : ProgramCtx} {s : Store} {cv : GoValue} (args : List GoValue)
+    (targets : List (TargetShape × List Expr)) (tenv : LocalEnv) (results : List Loc)
+    (ds : List (GoValue × List GoValue)) (k' : Cont) (fr : FuncId) (ch : Choices)
+    (_hf : ∀ fid c, cv ≠ .funcVal fid c) (_hn : cv ≠ .nil),
+    stepFrameExit ctx s targets tenv results ((cv, args) :: ds) k' fr ch
+      = .error (.stuck s!"deferred callee is not a function value: {repr cv}") :=
+  @GoLean.GoCore.Equations.frameExit_defer_notfunc
+
+theorem Pin.retV_preprintK_nonstring : ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} (older : List PanicEntry)
+    (entry : PanicEntry) (newer : List PanicEntry) (k' : Cont) (ch : Choices) (_hs : ∀ t, v ≠ .string t),
+    stepFn ctx s (.retV v (.preprintK older entry newer k')) ch
+      = .error (.stuck s!"preprint: the payload method returned a non-string result {repr v}") :=
+  @GoLean.GoCore.Equations.retV_preprintK_nonstring
+
+theorem Pin.next_storeK_arity_refs : ∀ {ctx : ProgramCtx} (s : Store) (r : TargetRef) (rs : List TargetRef)
+    (body : Stmt) (env : LocalEnv) (k' : Cont) (ch : Choices),
+    stepFn ctx s (.next (.storeK (r :: rs) [] body env k')) ch
+      = .error (.internal "storeK value/target arity mismatch (the shared phase-2 spine: receive delivery, assignment, comma-ok, call write-back)") :=
+  @GoLean.GoCore.Equations.next_storeK_arity_refs
+
+theorem Pin.next_storeK_arity_vals : ∀ {ctx : ProgramCtx} (s : Store) (v : GoValue) (vs : List GoValue)
+    (body : Stmt) (env : LocalEnv) (k' : Cont) (ch : Choices),
+    stepFn ctx s (.next (.storeK [] (v :: vs) body env k')) ch
+      = .error (.internal "storeK value/target arity mismatch (the shared phase-2 spine: receive delivery, assignment, comma-ok, call write-back)") :=
+  @GoLean.GoCore.Equations.next_storeK_arity_vals
+
+theorem Pin.contHeadLabel_labelK : ∀ (name : String) (k : Cont),
+    contHeadLabel (.labelK name k) = some name :=
+  @GoLean.GoCore.Equations.contHeadLabel_labelK
+
+theorem Pin.contHeadLabel_stop :
+    contHeadLabel .stop = none :=
+  @GoLean.GoCore.Equations.contHeadLabel_stop
+
+theorem Pin.contHeadLabel_frame : ∀ (t : List (TargetShape × List Expr)) (te : LocalEnv) (r : List Loc)
+    (ds : List (GoValue × List GoValue)) (k : Cont) (fr : FuncId),
+    contHeadLabel (.frame t te r ds k fr) = none :=
+  @GoLean.GoCore.Equations.contHeadLabel_frame
+
+theorem Pin.signalStep_breakableK_brkTo : ∀ (L : String) (k' : Cont),
+    signalStep (.brkTo L) (.breakableK k') = some (.signal (.brkTo L) k') :=
+  @GoLean.GoCore.Equations.signalStep_breakableK_brkTo
+
+theorem Pin.signalStep_breakableK_contTo : ∀ (L : String) (k' : Cont),
+    signalStep (.contTo L) (.breakableK k') = some (.signal (.contTo L) k') :=
+  @GoLean.GoCore.Equations.signalStep_breakableK_contTo
+
+theorem Pin.signalStep_labelK_brk : ∀ (name : String) (k' : Cont),
+    signalStep .brk (.labelK name k') = some (.signal .brk k') :=
+  @GoLean.GoCore.Equations.signalStep_labelK_brk
+
+theorem Pin.signalStep_labelK_cont : ∀ (name : String) (k' : Cont),
+    signalStep .cont (.labelK name k') = some (.signal .cont k') :=
+  @GoLean.GoCore.Equations.signalStep_labelK_cont
+
+theorem Pin.signalStep_labelK_brkTo_ne : ∀ {name L : String} (k' : Cont) (_h : name ≠ L),
+    signalStep (.brkTo L) (.labelK name k') = some (.signal (.brkTo L) k') :=
+  @GoLean.GoCore.Equations.signalStep_labelK_brkTo_ne
+
+theorem Pin.signalStep_labelK_contTo_self : ∀ (name : String) (k' : Cont),
+    signalStep (.contTo name) (.labelK name k') = none :=
+  @GoLean.GoCore.Equations.signalStep_labelK_contTo_self
+
+theorem Pin.signalStep_labelK_contTo_ne : ∀ {name L : String} (k' : Cont) (_h : name ≠ L),
+    signalStep (.contTo L) (.labelK name k') = some (.signal (.contTo L) k') :=
+  @GoLean.GoCore.Equations.signalStep_labelK_contTo_ne
+
+theorem Pin.signalStep_loop_brkTo : ∀ (L : String) (c : Expr) (b : Stmt) (env : LocalEnv) (k' : Cont),
+    signalStep (.brkTo L) (.loop c b env k') = some (.signal (.brkTo L) k') :=
+  @GoLean.GoCore.Equations.signalStep_loop_brkTo
+
+theorem Pin.signalStep_loop_contTo_self : ∀ {L : String} (c : Expr) (b : Stmt) (env : LocalEnv) {k' : Cont}
+    (_h : contHeadLabel k' = some L),
+    signalStep (.contTo L) (.loop c b env k') = some (.exec (.while c b) env k') :=
+  @GoLean.GoCore.Equations.signalStep_loop_contTo_self
+
+theorem Pin.signalStep_loop_contTo_ne : ∀ {L : String} (c : Expr) (b : Stmt) (env : LocalEnv) {k' : Cont}
+    (_h : contHeadLabel k' ≠ some L),
+    signalStep (.contTo L) (.loop c b env k') = some (.signal (.contTo L) k') :=
+  @GoLean.GoCore.Equations.signalStep_loop_contTo_ne
+
+theorem Pin.signalStep_mapIterK_brk : ∀ (keyVar valVar : Option VarId) (keyTy valTy : Ty) (body : Stmt)
+    (base : Option Loc) (produced start : Array Nat) (env : LocalEnv) (k' : Cont),
+    signalStep .brk (.mapIterK keyVar valVar keyTy valTy body base produced start env k') = some (.next k') :=
+  @GoLean.GoCore.Equations.signalStep_mapIterK_brk
+
+theorem Pin.signalStep_mapIterK_cont : ∀ (keyVar valVar : Option VarId) (keyTy valTy : Ty) (body : Stmt)
+    (base : Option Loc) (produced start : Array Nat) (env : LocalEnv) (k' : Cont),
+    signalStep .cont (.mapIterK keyVar valVar keyTy valTy body base produced start env k')
+      = some (.next (.mapIterK keyVar valVar keyTy valTy body base produced start env k')) :=
+  @GoLean.GoCore.Equations.signalStep_mapIterK_cont
+
+theorem Pin.signalStep_mapIterK_ret : ∀ (keyVar valVar : Option VarId) (keyTy valTy : Ty) (body : Stmt)
+    (base : Option Loc) (produced start : Array Nat) (env : LocalEnv) (k' : Cont),
+    signalStep .ret (.mapIterK keyVar valVar keyTy valTy body base produced start env k') = some (.signal .ret k') :=
+  @GoLean.GoCore.Equations.signalStep_mapIterK_ret
+
+theorem Pin.signalStep_mapIterK_brkTo : ∀ (L : String) (keyVar valVar : Option VarId) (keyTy valTy : Ty)
+    (body : Stmt) (base : Option Loc) (produced start : Array Nat) (env : LocalEnv) (k' : Cont),
+    signalStep (.brkTo L) (.mapIterK keyVar valVar keyTy valTy body base produced start env k') = some (.signal (.brkTo L) k') :=
+  @GoLean.GoCore.Equations.signalStep_mapIterK_brkTo
+
+theorem Pin.signalStep_mapIterK_contTo_self : ∀ {L : String} (keyVar valVar : Option VarId) (keyTy valTy : Ty)
+    (body : Stmt) (base : Option Loc) (produced start : Array Nat) (env : LocalEnv) {k' : Cont}
+    (_h : contHeadLabel k' = some L),
+    signalStep (.contTo L) (.mapIterK keyVar valVar keyTy valTy body base produced start env k')
+      = some (.next (.mapIterK keyVar valVar keyTy valTy body base produced start env k')) :=
+  @GoLean.GoCore.Equations.signalStep_mapIterK_contTo_self
+
+theorem Pin.signalStep_mapIterK_contTo_ne : ∀ {L : String} (keyVar valVar : Option VarId) (keyTy valTy : Ty)
+    (body : Stmt) (base : Option Loc) (produced start : Array Nat) (env : LocalEnv) {k' : Cont}
+    (_h : contHeadLabel k' ≠ some L),
+    signalStep (.contTo L) (.mapIterK keyVar valVar keyTy valTy body base produced start env k') = some (.signal (.contTo L) k') :=
+  @GoLean.GoCore.Equations.signalStep_mapIterK_contTo_ne
+
+theorem Pin.signal_labelK_contTo_self : ∀ {ctx : ProgramCtx} (s : Store) (name : String) (k' : Cont)
+    (ch : Choices),
+    stepFn ctx s (.signal (.contTo name) (.labelK name k')) ch = .error (.stuck s!"continue to non-loop label {name}") :=
+  @GoLean.GoCore.Equations.signal_labelK_contTo_self
 -- PINS-END
 end Pins
 
-/-! ## The enrollment check -/
+/-! ## The enrollment and NO-UNFOLD check (pre-landing round, audit F2: a Lean-level proof-term check) -/
 
 open Lean in
 /-- Every `theorem` of the namespace `GoLean.GoCore.Equations` (auxiliary and internal names
@@ -1696,11 +2079,96 @@ def factTheorems (env : Environment) : List Name :=
       | _ => acc
     else acc
 
-open Lean in
-/-- Fail-closed: an equation without a pin, or a pin whose type is not the equation's (up to
-alpha-equivalence), or a fact count that drifted from `factCount`, is an elaboration error. -/
+open Lean Meta in
+/-- THE NO-UNFOLD CHECK of a fact's proof term, Lean-level. A proof «by the equation set only» (1) names no
+constant under `GoLean.GoCore.Machine.stepFn.` (the interpreter's equation lemmas `eq_def`/`eq_N`, its matchers
+`match_N` — what `unfold`/`rw [stepFn]`/`delta stepFn` leave), (2) closes no `stepFn`-headed equation by
+`Eq.refl`/`rfl`, and (3) TYPE-CHECKS WITH `stepFn` IRREDUCIBLE: every defeq obligation of the term (each
+application's argument against its binder, each `let`, and the term's type against the fact's statement) is
+re-checked at default transparency with `stepFn` marked irreducible — what a `simp`/`simp_all`/`simpa` call
+given `stepFn` itself, `simp only` of it followed by `rfl`, and `delta` hide in a cast (`@id`, `Eq.mpr`) fails here, while a
+proof by the equations (propositional rewrites, `defn_eq`) and by the `Prefix`/`Finish` constructors needs no
+unfolding of `stepFn`. The traversal is `Meta.check`'s shape at a controlled transparency (`Meta.check` itself
+runs at `.all`, which unfolds irreducibles). (4) Axioms: the classical trio at most. -/
+partial def checkNoUnfold (stepFnN : Name) : Lean.Expr → MetaM Unit
+  | e@(.app ..) => do
+    let f := e.getAppFn
+    let args := e.getAppArgs
+    checkNoUnfold stepFnN f
+    let mut fType ← inferType f
+    for a in args do
+      checkNoUnfold stepFnN a
+      fType ← whnf fType
+      let .forallE _ dom body _ := fType
+        | throwError "no-unfold check: {f} applied beyond its arity"
+      let aType ← inferType a
+      unless ← isDefEq aType dom do
+        throwError "a defeq obligation needs `stepFn` unfolded: argument {a} : {aType} against {dom}"
+      fType := body.instantiate1 a
+  | .lam n d b bi => do
+    checkNoUnfold stepFnN d
+    withLocalDecl n bi d fun x => checkNoUnfold stepFnN (b.instantiate1 x)
+  | .forallE n d b bi => do
+    checkNoUnfold stepFnN d
+    withLocalDecl n bi d fun x => checkNoUnfold stepFnN (b.instantiate1 x)
+  | .letE n t v b _ => do
+    checkNoUnfold stepFnN t
+    checkNoUnfold stepFnN v
+    unless ← isDefEq (← inferType v) t do
+      throwError "a `let` obligation needs `stepFn` unfolded: {v} : {t}"
+    withLetDecl n t v fun x => checkNoUnfold stepFnN (b.instantiate1 x)
+  | .mdata _ b => checkNoUnfold stepFnN b
+  | .proj _ _ b => checkNoUnfold stepFnN b
+  | _ => pure ()
+
+open Lean Meta in
+/-- Fail-closed: a fact whose proof unfolds `stepFn` (by any of the four readings above), an equation without a
+pin, a pin whose type is not the equation's (up to alpha-equivalence), or a fact count that drifted from
+`factCount`, is an elaboration error. The facts are checked FIRST, so a mutant client reports the refused fact
+before any enrollment issue. -/
 def checkEnrollment : CoreM Unit := do
   let env ← getEnv
+  let stepFnN := `GoLean.GoCore.Machine.stepFn
+  let facts := factTheorems env
+  if facts.isEmpty then
+    throwError "Equation client: NO fact_* theorems found (fail closed)"
+  -- (1)–(4) per fact, with `stepFn` irreducible for the duration of (3)
+  let st0 ← getReducibilityStatus stepFnN
+  setIrreducibleAttribute stepFnN
+  try
+    for n in facts do
+      let some (.thmInfo v) := env.find? n | throwError "Equation client: {n} vanished"
+      -- (1) the interpreter's own equation lemmas and matchers
+      let used := v.value.foldConsts (init := ([] : List Name)) fun c acc =>
+        if stepFnN.isPrefixOf c && c != stepFnN then c :: acc else acc
+      unless used.isEmpty do
+        throwError "Equation client: fact {n} REFUSED — its proof unfolds stepFn (it names {used.head!})"
+      -- (2) reflexivity on a `stepFn`-headed term
+      if let some sub := v.value.find? fun sub =>
+          (sub.isAppOfArity ``Eq.refl 2 || sub.isAppOfArity ``rfl 2) && sub.appArg!.getAppFn.isConstOf stepFnN then
+        throwError "Equation client: fact {n} REFUSED — its proof unfolds stepFn (it closes {sub} by reflexivity)"
+      -- (3) the term type-checks against its statement with `stepFn` irreducible
+      let ok ← MetaM.run' do
+        try
+          withTransparency .default do
+            checkNoUnfold stepFnN v.value
+            let ty ← inferType v.value
+            unless ← isDefEq ty v.type do
+              throwError "the proof's type {ty} is not the statement without unfolding stepFn"
+          pure (none : Option String)
+        catch ex => pure (some (← ex.toMessageData.toString))
+      if let some why := ok then
+        throwError "Equation client: fact {n} REFUSED — its proof unfolds stepFn ({why})"
+      -- (4) axioms
+      let axioms ← collectAxioms n
+      for ax in axioms do
+        unless [``propext, ``Classical.choice, ``Quot.sound].contains ax do
+          throwError "Equation client: fact {n} REFUSED — it depends on the axiom {ax}"
+  finally
+    setReducibilityStatus stepFnN st0
+  unless facts.length == factCount do
+    throwError "Equation client: factCount = {factCount} but {facts.length} fact_* theorems are present"
+  -- the exhaustive enrollment
   let eqns := equationTheorems env
   if eqns.isEmpty then
     throwError "Equation client: NO equation theorems found in GoLean.GoCore.Equations (fail closed)"
@@ -1717,10 +2185,7 @@ def checkEnrollment : CoreM Unit := do
         pinned := pinned + 1
     | some _ => throwError "Equation client: {pin} exists but is not a theorem"
     | none => throwError "Equation client: UNENROLLED equation {n} — no pin {pin} in Tests/EquationClient.lean"
-  let facts := factTheorems env
-  unless facts.length == factCount do
-    throwError "Equation client: factCount = {factCount} but {facts.length} fact_* theorems are present"
-  logInfo s!"Equation client: enrollment complete — {pinned} equation theorems pinned, {facts.length} facts"
+  logInfo s!"Equation client: enrollment complete — {pinned} equation theorems pinned, {facts.length} facts, none unfolds stepFn"
 
 #eval checkEnrollment
 

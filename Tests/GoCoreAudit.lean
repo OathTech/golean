@@ -49,8 +49,8 @@ def requiredModules : List Name := [
 re-homed regressions). Each must exist as a theorem. -/
 def exports : List Name := [
     -- Window packet D (2026-10-03): the per-arm `stepFn` EQUATIONS and their helper laws (every
-    -- theorem of `GoLean/GoCore/Equations.lean`; BridgeSet rows 174–402) and the sequential-to-pool
-    -- PROJECTIONS (`GoLean/GoCore/PoolProjection.lean`; rows 403–436) — the re-pin offer's interface
+    -- theorem of `GoLean/GoCore/Equations.lean`; BridgeSet rows 174–402 and 437–499) and the sequential-to-pool
+    -- PROJECTIONS (`GoLean/GoCore/PoolProjection.lean`; rows 403–436 and 500–501) — the re-pin offer's interface
     ``GoLean.GoCore.Equations.storeTarget_inv_panic, ``GoLean.GoCore.Equations.applyStmtOp_inv_panic,
     ``GoLean.GoCore.Equations.toResult_of_error, ``GoLean.GoCore.Equations.valueAsBool_bool,
     ``GoLean.GoCore.Equations.valueAsLoc_addr, ``GoLean.GoCore.Equations.valueAsLoc_nil,
@@ -168,6 +168,42 @@ def exports : List Name := [
     ``GoLean.GoCore.Equations.runProgramSetup_noInit, ``GoLean.GoCore.Equations.pinResultLocs_eq_of_lookup,
     ``GoLean.GoCore.Equations.setup_lookup_arg, ``GoLean.GoCore.Equations.setup_lookup_result,
     ``GoLean.GoCore.Equations.setup_resultLocs, ``GoLean.GoCore.Equations.setup_heap_size,
+    ``GoLean.GoCore.Equations.bind_eq_error, ``GoLean.GoCore.Equations.runCommit_error,
+    ``GoLean.GoCore.Equations.enterFramePickV_of_plan_error, ``GoLean.GoCore.Equations.enterFrame_inv_error,
+    ``GoLean.GoCore.Equations.retV_syncStK_apply_panic, ``GoLean.GoCore.Equations.evalE_strict_nullary_error,
+    ``GoLean.GoCore.Equations.retV_chanStK_apply_error, ``GoLean.GoCore.Equations.retV_selectOpsK_apply_panic,
+    ``GoLean.GoCore.Equations.retV_selectOpsK_apply_error, ``GoLean.GoCore.Equations.retV_rhsK_apply_error,
+    ``GoLean.GoCore.Equations.retV_atomicStK_apply_error, ``GoLean.GoCore.Equations.next_preprintK_error,
+    ``GoLean.GoCore.Equations.retV_stmtOpK_apply_error, ``GoLean.GoCore.Equations.next_storeK_error,
+    ``GoLean.GoCore.Equations.exec_call_nullary_error, ``GoLean.GoCore.Equations.retV_callArgsK_enter_error,
+    ``GoLean.GoCore.Equations.retV_callValCalleeK_enter_error,
+    ``GoLean.GoCore.Equations.retV_callValArgsK_enter_error,
+    ``GoLean.GoCore.Equations.panicking_frame_defer_error, ``GoLean.GoCore.Equations.frameExit_defer_error,
+    ``GoLean.GoCore.Equations.exec_block_error, ``GoLean.GoCore.Equations.evalE_var_error,
+    ``GoLean.GoCore.Equations.retV_mapRangeK_error, ``GoLean.GoCore.Equations.next_mapIterK_error,
+    ``GoLean.GoCore.Equations.frameExit_targets_error, ``GoLean.GoCore.Equations.frameExit_preprint_error,
+    ``GoLean.GoCore.Equations.unseqEnter_error, ``GoLean.GoCore.Equations.unseqValue_error,
+    ``GoLean.GoCore.Equations.retV_ifK_error, ``GoLean.GoCore.Equations.retV_whileK_error,
+    ``GoLean.GoCore.Equations.retV_andK_error, ``GoLean.GoCore.Equations.retV_orK_error,
+    ``GoLean.GoCore.Equations.retV_boolK_error, ``GoLean.GoCore.Equations.valueAsBool_nonbool,
+    ``GoLean.GoCore.Equations.retV_callValCalleeK_args_notfunc,
+    ``GoLean.GoCore.Equations.retV_deferCalleeK_notfunc, ``GoLean.GoCore.Equations.retV_goCalleeK_notfunc,
+    ``GoLean.GoCore.Equations.deferrableCallee_false, ``GoLean.GoCore.Equations.panicking_frame_defer_notfunc,
+    ``GoLean.GoCore.Equations.frameExit_defer_notfunc, ``GoLean.GoCore.Equations.retV_preprintK_nonstring,
+    ``GoLean.GoCore.Equations.next_storeK_arity_refs, ``GoLean.GoCore.Equations.next_storeK_arity_vals,
+    ``GoLean.GoCore.Equations.contHeadLabel_labelK, ``GoLean.GoCore.Equations.contHeadLabel_stop,
+    ``GoLean.GoCore.Equations.contHeadLabel_frame, ``GoLean.GoCore.Equations.signalStep_breakableK_brkTo,
+    ``GoLean.GoCore.Equations.signalStep_breakableK_contTo, ``GoLean.GoCore.Equations.signalStep_labelK_brk,
+    ``GoLean.GoCore.Equations.signalStep_labelK_cont, ``GoLean.GoCore.Equations.signalStep_labelK_brkTo_ne,
+    ``GoLean.GoCore.Equations.signalStep_labelK_contTo_self,
+    ``GoLean.GoCore.Equations.signalStep_labelK_contTo_ne, ``GoLean.GoCore.Equations.signalStep_loop_brkTo,
+    ``GoLean.GoCore.Equations.signalStep_loop_contTo_self,
+    ``GoLean.GoCore.Equations.signalStep_loop_contTo_ne, ``GoLean.GoCore.Equations.signalStep_mapIterK_brk,
+    ``GoLean.GoCore.Equations.signalStep_mapIterK_cont, ``GoLean.GoCore.Equations.signalStep_mapIterK_ret,
+    ``GoLean.GoCore.Equations.signalStep_mapIterK_brkTo,
+    ``GoLean.GoCore.Equations.signalStep_mapIterK_contTo_self,
+    ``GoLean.GoCore.Equations.signalStep_mapIterK_contTo_ne,
+    ``GoLean.GoCore.Equations.signal_labelK_contTo_self,
     ``GoLean.GoCore.Machine.transferable_wide, ``GoLean.GoCore.Machine.transferableWide_ok,
     ``GoLean.GoCore.Machine.transferableWide_fuelOut, ``GoLean.GoCore.Machine.transferableWide_terminal,
     ``GoLean.GoCore.Machine.not_transferableWide_deadlock,
@@ -187,6 +223,8 @@ def exports : List Name := [
     ``GoLean.GoCore.Machine.execProgLoopOut_single_prefix, ``GoLean.GoCore.Machine.pool_run_single_prefix,
     ``GoLean.GoCore.Machine.afterStepFlag_none_of_noRegistry, ``GoLean.GoCore.Machine.seqOpCount_eq_zero,
     ``GoLean.GoCore.Machine.execProgLoop_single_noBoundary,
+    ``GoLean.GoCore.Machine.execProgLoop_single_noBoundary_wide,
+    ``GoLean.GoCore.Machine.execProgLoopOut_single_noBoundary_wide,
     -- Unit 6b, BUG-004 item 4 — the preprint phase (2026-10-03; design
     -- docs/2026-09-30_bug004-item4-design.md §2 (i), RULED [USER] 2026-09-30 relayed): the
     -- abort's characterization over the settled chain, the split's two facts, the rendering

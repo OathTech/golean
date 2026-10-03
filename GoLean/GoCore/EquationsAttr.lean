@@ -17,3 +17,10 @@ Equations.lean`): `simp only [stepFn_eqns]` rewrites a `stepFn` call at a known
 configuration shape to its successor (or its named refusal) under the arm's
 explicit operation premises. -/
 register_simp_attr stepFn_eqns
+
+/-- Close a DEFINITIONAL equation with a proof term that is NOT `rfl`-shaped (`Eq.mpr (Eq.refl _) rfl`), so
+`simp` treats the lemma as a PROPOSITIONAL rewrite rather than a `dsimp` (definitional) one: a client's
+proof term then RECORDS every equation it used, which is what the client gate's proof-term check reads
+(a `dsimp`-rewrite by an `rfl`-theorem leaves no trace and is indistinguishable from unfolding `stepFn`).
+Pre-landing round of packet D (audit F2), 2026-10-03. -/
+macro "defn_eq" : tactic => `(tactic| exact Eq.mpr (Eq.refl _) rfl)

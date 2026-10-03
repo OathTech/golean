@@ -543,4 +543,27 @@ theorem execProgLoop_single_noBoundary {fuel : Nat} {σ : Store} {c : Config} {c
   have h := execProgLoop_single (rs := rs) hr htr
   rwa [seqOpCount_eq_zero hnb, Nat.add_zero] at h
 
+
+/-- **The equal-fuel embedding, WIDE** (pre-landing round, audit F4): every sequential result but the deadlock
+and the refusals — the `fatal` and `raceDetected` terminals included — along a run that opens no registry
+boundary is the one-goroutine pool run at the SAME fuel. -/
+theorem execProgLoop_single_noBoundary_wide {fuel : Nat} {σ : Store} {c : Config} {ch : Choices} {rs : RaceState}
+    {r : Except Stop (Store × Choices)}
+    (hr : execStmtLoop ctx fuel σ c ch = r) (htr : transferableWide r)
+    (hnb : ∀ n σ' c' ch' ls, Prefix ctx n σ c ch ls σ' c' ch' → n < fuel →
+      ∀ c'' σ'' ch'' l, stepFn ctx σ' c' ch' = .ok (c'', σ'', ch'', l) → c'.afterStepFlag σ' c'' = none) :
+    execProgLoop ctx fuel ⟨#[.running c none], σ, 0⟩ rs ch = r := by
+  have h := execProgLoop_single_wide (rs := rs) hr htr
+  rwa [seqOpCount_eq_zero hnb, Nat.add_zero] at h
+
+/-- The same with the output fold: at equal fuel the pool returns the sequential output fold and the result. -/
+theorem execProgLoopOut_single_noBoundary_wide {fuel : Nat} {σ : Store} {c : Config} {ch : Choices} {rs : RaceState}
+    {acc : GoString} {r : Except Stop (Store × Choices)}
+    (hr : execStmtLoop ctx fuel σ c ch = r) (htr : transferableWide r)
+    (hnb : ∀ n σ' c' ch' ls, Prefix ctx n σ c ch ls σ' c' ch' → n < fuel →
+      ∀ c'' σ'' ch'' l, stepFn ctx σ' c' ch' = .ok (c'', σ'', ch'', l) → c'.afterStepFlag σ' c'' = none) :
+    execProgLoopOut ctx fuel ⟨#[.running c none], σ, 0⟩ rs ch acc = (seqOut ctx fuel σ c ch acc, r) := by
+  have h := execProgLoopOut_single_wide (rs := rs) (acc := acc) hr htr
+  rwa [seqOpCount_eq_zero hnb, Nat.add_zero] at h
+
 end GoLean.GoCore.Machine

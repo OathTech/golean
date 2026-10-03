@@ -5,11 +5,13 @@
 # library; (b) the client Tests/EquationClient.lean runs and reports PASS — its facts are proved
 # by the equation set alone, and its in-file `#eval` checks EXHAUSTIVE enrollment (every theorem
 # of namespace GoLean.GoCore.Equations has a `Pin.<name>` whose type IS the theorem's); (c) the
-# NO-UNFOLD guard: the client never spells `unfold stepFn`, `simp [... stepFn ...]`, `cbv` or
-# `decide` (a client that re-unfolds the interpreter is no client); (d) the enrollment check's
-# failure is (b)'s failure; (e) SELF-TESTS, fail closed: a scratch copy of the client with one
-# `stepFn_eqns` use replaced by `unfold stepFn` must trip (c); a scratch copy with one pin deleted
-# must fail (d) naming the unenrolled equation. Every step fails closed; no allowlist.
+# NO-UNFOLD guard — a cheap regex PRE-FILTER (the client never spells `unfold stepFn`, `simp [... stepFn
+# ...]`, `cbv` or `decide`); the LOAD-BEARING check is the client's own Lean-level proof-term check
+# (packet D audit F2: no `stepFn.*` constant, no reflexivity on `stepFn`, the term re-type-checked with
+# `stepFn` irreducible), whose failure is (b)'s failure; (d) the enrollment check's failure is (b)'s
+# failure; (e) SELF-TESTS, fail closed: an `unfold stepFn` mutant trips the regex; a pin-deleted mutant
+# fails (d) naming the equation; each of the audit's seven unfolding spellings at the anchored fact is
+# REFUSED by name by the proof-term check. Every step fails closed; no allowlist.
 set -Eeuo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$ROOT"
@@ -65,4 +67,41 @@ grep -q "UNENROLLED equation GoLean.GoCore.Equations.$victim" "$gate_scratch/mut
   tail -20 "$gate_scratch/mut-pin.log" >&2; exit 1; }
 echo "ok [self-test pin] deleting Pin.$victim fails the enrollment check by name"
 
-printf '%s\n' "Equation gate: PASS (client PASS, exhaustive enrollment, no-unfold guard, 2 self-tests)"
+# (e3) self-tests: the audit's UNFOLDING spellings (packet D audit F2), each replacing the anchored proof of
+# `fact_usage_simp_set`, must be REFUSED by the client's Lean-level proof-term check, naming the fact. The
+# mutants drop the pins (the facts are checked first; a pin-less mutant is fast) — the refusal is the Lean
+# check's, not the regex's (none of these spellings except `unfold …stepFn` matches the regex).
+anchor='  simp only \[stepFn_eqns\]  -- BYPASS-ANCHOR'
+grep -q -- "$anchor" "$CLIENT" || { echo "check-equations: FAIL — the bypass anchor is missing from $CLIENT" >&2; exit 1; }
+base3="$gate_scratch/mut-base.lean"
+awk '/^-- PINS-BEGIN$/{print; skip=1; next} /^-- PINS-END$/{skip=0} !skip' "$CLIENT" > "$base3"
+n3=0
+while IFS= read -r spelling; do
+  [[ -n "$spelling" ]] || continue
+  n3=$((n3+1))
+  mut3="$gate_scratch/mut-bypass-$n3.lean"
+  sed "s|^$anchor\$|  $spelling|" "$base3" > "$mut3"
+  grep -q -- "$anchor" "$mut3" && { echo "check-equations: FAIL — self-test: the anchor was not replaced for '$spelling'" >&2; exit 1; }
+  set +e
+  scripts/capped lake env lean "$mut3" > "$gate_scratch/mut-bypass-$n3.log" 2>&1
+  rc=$?
+  set -e
+  if [[ $rc -eq 0 ]]; then
+    echo "check-equations: FAIL — self-test: the client with '$spelling' at the anchor still elaborated" >&2; exit 1
+  fi
+  grep -q "fact Tests.EquationClient.fact_usage_simp_set REFUSED — its proof unfolds stepFn" "$gate_scratch/mut-bypass-$n3.log" || {
+    echo "check-equations: FAIL — self-test: '$spelling' failed but was not REFUSED as an unfolding of stepFn" >&2
+    grep -E "error" "$gate_scratch/mut-bypass-$n3.log" | head -5 >&2; exit 1; }
+  echo "ok [self-test bypass $n3] '$spelling' is refused by the proof-term check"
+done <<'SPELLINGS'
+exact rfl
+simp only [stepFn]; rfl
+delta stepFn; rfl
+simp_all [stepFn]
+simpa [stepFn]
+rw [stepFn]; rfl
+unfold GoLean.GoCore.Machine.stepFn; rfl
+SPELLINGS
+[[ $n3 -eq 7 ]] || { echo "check-equations: FAIL — expected 7 bypass self-tests, ran $n3" >&2; exit 1; }
+
+printf '%s\n' "Equation gate: PASS (client PASS, exhaustive enrollment, the Lean-level no-unfold check, the regex pre-filter, 9 self-tests)"

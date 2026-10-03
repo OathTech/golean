@@ -21,8 +21,17 @@ out in the memory module's primitives where the arm's helper is a thin wrapper o
 applies otherwise (`applyStrictOp`, `applyStmtOp`, `applyChanOp`, `applySelect`, `applySyncOp`,
 `applyAtomicOp`, `applyRhsOp`, `storeTarget`, `enterFrame`): the logic team's request 1, with its
 filing correction (`callArgsK`, `callValCalleeK`, `callValArgsK`, `deferCalleeK`, `deferArgsK`,
-`stmtOpK` are `.retV v` arms). Every lemma carries `@[stepFn_eqns]` (`EquationsAttr.lean`);
-`simp only [stepFn_eqns, <the premises>]` is the intended use.
+`stmtOpK` are `.retV v` arms). Every arm lemma carries `@[stepFn_eqns]` (`EquationsAttr.lean`) as a
+PROPOSITIONAL rewrite — no `rfl`-proof (`defn_eq`), so a client's proof term records every equation it uses.
+USE (pre-landing round, audit F1): the premise-free arms and the arms whose premises range over LHS variables
+only (`retV_ifK_true`, `next_panicResumeK_unrecovered`, `exec_call_args`, …) close by `simp only [stepFn_eqns]`
+(with the premises as further simp arguments where needed); an arm whose SUCCESSOR mentions a premise-bound
+value (`evalE_var`'s `loc`/`v`, every `enterFrame` entry's `e`/`s'`/`tr`, `next_storeK_*`'s `s'`, `exec_block`'s
+`env'`/`s'`, `frameExit_targets`'s `vs`/`tr`, `retV_rhsK_apply`, `retV_stmtOpK_apply`, …) is applied by
+INSTANTIATION — `rw [evalE_var env k ch hl hv]`, `exact …` — or under `simp (discharger := assumption) only
+[stepFn_eqns]` with the premises in context; the plain `simp only [stepFn_eqns, hl, hv]` does NOT fire there
+(the default discharger cannot solve a side condition whose value only the successor names).
+`Tests/EquationClient.lean` tests each idiom (`fact_usage_*`).
 
 Sections, in the charter's §3 priority: (1) control, calls, defer, return, panic/recover, the
 signal table, FRAME EXIT (`stepFrameExit` with named results, defers pending, result readback —
@@ -33,11 +42,25 @@ statements, channels/select/go/sync/atomic, `unseq`; then the PINNED SETUP EQUAT
 no globals, no package initializer — the entry configuration, the argument/result layout, the
 residual tape).
 
-Not expressible as stated and therefore NOT here (reported, per the brief): the `.evalE`
-catch-all's `"unclassified expression"` refusal is UNREACHABLE — every `Expr` constructor is either
-an explicit arm or has a `strictPlan` — so no equation states it; the `.retV` catch-all's
-`"expected function value"` refusals over an arbitrary non-function value are stated only for the
-shapes the frontend emits (`nil`, a function value) — the general form would enumerate `GoValue`.
+INVENTORY of what is NOT an equation here (pre-landing round, audit F3): (i) UNREACHABLE — the `.evalE`
+catch-all's `"unclassified expression"` refusal (every `Expr` constructor is an explicit arm or has a
+`strictPlan`). (ii) STATED only by shape — the `.retV` `"expected function value"` refusals: over `nil`/function
+values (`retV_callValCalleeK_nil`, `_args`) and over a NON-DEFERRABLE callee with the `deferrableCallee cv =
+false` premise (`retV_callValCalleeK_args_notfunc`, `retV_deferCalleeK_notfunc`, `retV_goCalleeK_notfunc`); the
+`"deferred callee is not a function value"` refusals of the drains over a value that is neither a function
+value nor `nil` (`panicking_frame_defer_notfunc`, `frameExit_defer_notfunc`); the preprint frame's non-string
+result (`retV_preprintK_nonstring`); the `valueAsBool` refusals (`retV_ifK_error`, `_whileK_error`,
+`_andK_error`, `_orK_error`, `_boolK_error`); `storeK`'s arity breaches (`next_storeK_arity_refs`/`_vals`).
+(iii) The composed applies' NON-PANIC `Stop` pass-through (a refusal or the `fatal` terminal propagates as the
+step's `Stop`) is stated for every apply/entry position: `*_apply_error`, `*_enter_error`, `next_storeK_error`,
+`frameExit_defer_error`, `panicking_frame_defer_error`, `next_preprintK_error`, and the plain-bind arms
+(`exec_block_error`, `evalE_var_error`, `retV_mapRangeK_error`, `next_mapIterK_error`, `frameExit_targets_error`,
+`frameExit_preprint_error`, `unseqEnter_error`, `unseqValue_error`) — each over the composed helper's error, the
+premise `∀ msg, e ≠ .panic msg` where the helper can panic. (iv) `signalStep`'s table: every row is an equation
+(`signalStep_*`, incl. the labelled `brkTo`/`contTo` rows under `contHeadLabel` and the five `mapIterK` rows).
+NOT stated: the `unseq` scheduler's remaining phases (`stepUnseqNext`'s pick/run/wait arms beyond `unseqRun_eval`
+and `unseqWait_invoke`) — the sweep reduces to its helpers (`exec_unseq`, `next_unseqK`, `retV_unseqK`), whose
+soundness lemmas live in `MachineSound`.
 -/
 
 namespace GoLean.GoCore.Equations
@@ -122,40 +145,40 @@ theorem Heap.lookup_push_self {h : Heap} {c : HeapCell} :
 /-! ## (1) Control: sequencing, branches, loops, labels, the five control transfers -/
 
 @[stepFn_eqns] theorem exec_seqn (s : Store) (ss : Array Stmt) (env : LocalEnv) (k : Cont) (ch : Choices) :
-    stepFn ctx s (.exec (.seqn ss) env k) ch = .ok (.next (seqCont ss.toList env k), s, ch, ⟨[], [], []⟩) := rfl
+    stepFn ctx s (.exec (.seqn ss) env k) ch = .ok (.next (seqCont ss.toList env k), s, ch, ⟨[], [], []⟩) := by defn_eq
 
 @[stepFn_eqns] theorem exec_ifThenElse (s : Store) (c : Expr) (t e : Stmt) (env : LocalEnv) (k : Cont) (ch : Choices) :
-    stepFn ctx s (.exec (.ifThenElse c t e) env k) ch = .ok (.evalE c env (.ifK t e env k), s, ch, ⟨[], [], []⟩) := rfl
+    stepFn ctx s (.exec (.ifThenElse c t e) env k) ch = .ok (.evalE c env (.ifK t e env k), s, ch, ⟨[], [], []⟩) := by defn_eq
 
 @[stepFn_eqns] theorem exec_while (s : Store) (c : Expr) (b : Stmt) (env : LocalEnv) (k : Cont) (ch : Choices) :
-    stepFn ctx s (.exec (.while c b) env k) ch = .ok (.evalE c env (.whileK c b env k), s, ch, ⟨[], [], []⟩) := rfl
+    stepFn ctx s (.exec (.while c b) env k) ch = .ok (.evalE c env (.whileK c b env k), s, ch, ⟨[], [], []⟩) := by defn_eq
 
 @[stepFn_eqns] theorem exec_returnStmt (s : Store) (env : LocalEnv) (k : Cont) (ch : Choices) :
-    stepFn ctx s (.exec .returnStmt env k) ch = .ok (.signal .ret k, s, ch, ⟨[], [], []⟩) := rfl
+    stepFn ctx s (.exec .returnStmt env k) ch = .ok (.signal .ret k, s, ch, ⟨[], [], []⟩) := by defn_eq
 
 @[stepFn_eqns] theorem exec_breakStmt (s : Store) (env : LocalEnv) (k : Cont) (ch : Choices) :
-    stepFn ctx s (.exec .breakStmt env k) ch = .ok (.signal .brk k, s, ch, ⟨[], [], []⟩) := rfl
+    stepFn ctx s (.exec .breakStmt env k) ch = .ok (.signal .brk k, s, ch, ⟨[], [], []⟩) := by defn_eq
 
 @[stepFn_eqns] theorem exec_continueStmt (s : Store) (env : LocalEnv) (k : Cont) (ch : Choices) :
-    stepFn ctx s (.exec .continueStmt env k) ch = .ok (.signal .cont k, s, ch, ⟨[], [], []⟩) := rfl
+    stepFn ctx s (.exec .continueStmt env k) ch = .ok (.signal .cont k, s, ch, ⟨[], [], []⟩) := by defn_eq
 
 @[stepFn_eqns] theorem exec_inertLabel (s : Store) (name : String) (env : LocalEnv) (k : Cont) (ch : Choices) :
-    stepFn ctx s (.exec (.inertLabel name) env k) ch = .ok (.next k, s, ch, ⟨[], [], []⟩) := rfl
+    stepFn ctx s (.exec (.inertLabel name) env k) ch = .ok (.next k, s, ch, ⟨[], [], []⟩) := by defn_eq
 
 @[stepFn_eqns] theorem exec_labeled (s : Store) (name : String) (b : Stmt) (env : LocalEnv) (k : Cont) (ch : Choices) :
-    stepFn ctx s (.exec (.labeled name b) env k) ch = .ok (.exec b env (.labelK name k), s, ch, ⟨[], [], []⟩) := rfl
+    stepFn ctx s (.exec (.labeled name b) env k) ch = .ok (.exec b env (.labelK name k), s, ch, ⟨[], [], []⟩) := by defn_eq
 
 @[stepFn_eqns] theorem exec_breakTo (s : Store) (name : String) (env : LocalEnv) (k : Cont) (ch : Choices) :
-    stepFn ctx s (.exec (.breakTo name) env k) ch = .ok (.signal (.brkTo name) k, s, ch, ⟨[], [], []⟩) := rfl
+    stepFn ctx s (.exec (.breakTo name) env k) ch = .ok (.signal (.brkTo name) k, s, ch, ⟨[], [], []⟩) := by defn_eq
 
 @[stepFn_eqns] theorem exec_continueTo (s : Store) (name : String) (env : LocalEnv) (k : Cont) (ch : Choices) :
-    stepFn ctx s (.exec (.continueTo name) env k) ch = .ok (.signal (.contTo name) k, s, ch, ⟨[], [], []⟩) := rfl
+    stepFn ctx s (.exec (.continueTo name) env k) ch = .ok (.signal (.contTo name) k, s, ch, ⟨[], [], []⟩) := by defn_eq
 
 @[stepFn_eqns] theorem exec_breakable (s : Store) (b : Stmt) (env : LocalEnv) (k : Cont) (ch : Choices) :
-    stepFn ctx s (.exec (.breakable b) env k) ch = .ok (.exec b env (.breakableK k), s, ch, ⟨[], [], []⟩) := rfl
+    stepFn ctx s (.exec (.breakable b) env k) ch = .ok (.exec b env (.breakableK k), s, ch, ⟨[], [], []⟩) := by defn_eq
 
 @[stepFn_eqns] theorem exec_unsupported (s : Store) (feature : String) (env : LocalEnv) (k : Cont) (ch : Choices) :
-    stepFn ctx s (.exec (.unsupported feature) env k) ch = .error (.unsupported feature) := rfl
+    stepFn ctx s (.exec (.unsupported feature) env k) ch = .error (.unsupported feature) := by defn_eq
 
 /-! ## (1) Calls: the declared call, the value call, the argument walks, frame ENTRY -/
 
@@ -214,7 +237,7 @@ the `nilValueMethodText` consult's pick, residual and record. -/
 @[stepFn_eqns] theorem retV_callArgsK_more (s : Store) (v : GoValue) (fid : FuncId) (plans : List (TargetShape × List Expr))
     (vals : List GoValue) (a : Expr) (rest : List Expr) (env : LocalEnv) (k' : Cont) (ch : Choices) :
     stepFn ctx s (.retV v (.callArgsK fid plans vals (a :: rest) env k')) ch
-      = .ok (.evalE a env (.callArgsK fid plans (vals ++ [v]) rest env k'), s, ch, ⟨[], [], []⟩) := rfl
+      = .ok (.evalE a env (.callArgsK fid plans (vals ++ [v]) rest env k'), s, ch, ⟨[], [], []⟩) := by defn_eq
 
 /-- The last argument arrived: frame ENTRY (request 1's filing correction — a `.retV` arm). -/
 @[stepFn_eqns] theorem retV_callArgsK_enter {s s' : Store} {v : GoValue} {fid : FuncId} {plans : List (TargetShape × List Expr)}
@@ -261,7 +284,7 @@ captures (request 1's filing correction — a `.retV` arm). -/
 @[stepFn_eqns] theorem retV_callValCalleeK_nil (s : Store) (plans : List (TargetShape × List Expr)) (env : LocalEnv)
     (k' : Cont) (ch : Choices) :
     stepFn ctx s (.retV .nil (.callValCalleeK plans [] env k')) ch
-      = .ok (.panicking [panicEntry nilDerefPanicText] k', s, ch, ⟨[], [], []⟩) := rfl
+      = .ok (.panicking [panicEntry nilDerefPanicText] k', s, ch, ⟨[], [], []⟩) := by defn_eq
 
 /-- The value call's callee arrived with arguments pending: a deferrable callee (a function value
 or nil — Go evaluates every argument before the nil check) starts the argument walk. -/
@@ -274,7 +297,7 @@ or nil — Go evaluates every argument before the nil check) starts the argument
 @[stepFn_eqns] theorem retV_callValArgsK_more (s : Store) (v cv : GoValue) (plans : List (TargetShape × List Expr))
     (vals : List GoValue) (a : Expr) (rest : List Expr) (env : LocalEnv) (k' : Cont) (ch : Choices) :
     stepFn ctx s (.retV v (.callValArgsK cv plans vals (a :: rest) env k')) ch
-      = .ok (.evalE a env (.callValArgsK cv plans (vals ++ [v]) rest env k'), s, ch, ⟨[], [], []⟩) := rfl
+      = .ok (.evalE a env (.callValArgsK cv plans (vals ++ [v]) rest env k'), s, ch, ⟨[], [], []⟩) := by defn_eq
 
 @[stepFn_eqns] theorem retV_callValArgsK_enter {s s' : Store} {v : GoValue} {fid : FuncId} {captured vals : List GoValue}
     {plans : List (TargetShape × List Expr)} {e : Entry} {tr : AccessTrace} (env : LocalEnv) (k' : Cont) (ch : Choices)
@@ -300,13 +323,13 @@ or nil — Go evaluates every argument before the nil check) starts the argument
 @[stepFn_eqns] theorem retV_callValArgsK_nil (s : Store) (v : GoValue) (plans : List (TargetShape × List Expr))
     (vals : List GoValue) (env : LocalEnv) (k' : Cont) (ch : Choices) :
     stepFn ctx s (.retV v (.callValArgsK .nil plans vals [] env k')) ch
-      = .ok (.panicking [panicEntry nilDerefPanicText] k', s, ch, ⟨[], [], []⟩) := rfl
+      = .ok (.panicking [panicEntry nilDerefPanicText] k', s, ch, ⟨[], [], []⟩) := by defn_eq
 
 /-! ## (1) Defer: registration (`pushDefer`) -/
 
 @[stepFn_eqns] theorem exec_deferCall (s : Store) (callee : Expr) (args : Array Expr) (env : LocalEnv) (k : Cont) (ch : Choices) :
     stepFn ctx s (.exec (.deferCall callee args) env k) ch
-      = .ok (.evalE callee env (.deferCalleeK args.toList env k), s, ch, ⟨[], [], []⟩) := rfl
+      = .ok (.evalE callee env (.deferCalleeK args.toList env k), s, ch, ⟨[], [], []⟩) := by defn_eq
 
 @[stepFn_eqns] theorem retV_deferCalleeK_args {s : Store} {v : GoValue} (a : Expr) (rest : List Expr) (env : LocalEnv)
     (k' : Cont) (ch : Choices) (hd : deferrableCallee v = true) :
@@ -336,7 +359,7 @@ or nil — Go evaluates every argument before the nil check) starts the argument
 @[stepFn_eqns] theorem retV_deferArgsK_more (s : Store) (v cv : GoValue) (vals : List GoValue) (a : Expr) (rest : List Expr)
     (env : LocalEnv) (k' : Cont) (ch : Choices) :
     stepFn ctx s (.retV v (.deferArgsK cv vals (a :: rest) env k')) ch
-      = .ok (.evalE a env (.deferArgsK cv (vals ++ [v]) rest env k'), s, ch, ⟨[], [], []⟩) := rfl
+      = .ok (.evalE a env (.deferArgsK cv (vals ++ [v]) rest env k'), s, ch, ⟨[], [], []⟩) := by defn_eq
 
 /-- The last deferred argument arrived: the call is registered with its argument VALUES
 (`pushDefer_saves_values`). -/
@@ -360,26 +383,26 @@ or nil — Go evaluates every argument before the nil check) starts the argument
 /-! ## (1) Panic and recover: the raise, `recover()` -/
 
 @[stepFn_eqns] theorem exec_panicStmt (s : Store) (e : Expr) (env : LocalEnv) (k : Cont) (ch : Choices) :
-    stepFn ctx s (.exec (.panicStmt e) env k) ch = .ok (.evalE e env (.panicArgK k), s, ch, ⟨[], [], []⟩) := rfl
+    stepFn ctx s (.exec (.panicStmt e) env k) ch = .ok (.evalE e env (.panicArgK k), s, ch, ⟨[], [], []⟩) := by defn_eq
 
 /-- THE RAISE: the payload's entry (its rewrite mark decided by its dynamic type) starts
 unwinding under `k'`. -/
 @[stepFn_eqns] theorem retV_panicArgK (s : Store) (v : GoValue) (k' : Cont) (ch : Choices) :
     stepFn ctx s (.retV v (.panicArgK k')) ch
-      = .ok (.panicking [panicEntryOf ctx (panicPayload v)] k', s, ch, ⟨[], [], []⟩) := rfl
+      = .ok (.panicking [panicEntryOf ctx (panicPayload v)] k', s, ch, ⟨[], [], []⟩) := by defn_eq
 
 /-- `recover()`: the walk's answer and the continuation with the entry marked
 (`recoverResult_eq`/`_frame`/`_glue` state the walk). -/
 @[stepFn_eqns] theorem evalE_recoverCall (s : Store) (env : LocalEnv) (k : Cont) (ch : Choices) :
     stepFn ctx s (.evalE .recoverCall env k) ch
-      = .ok (.retV (recoverResult k).1 (recoverResult k).2, s, ch, ⟨[], [], []⟩) := rfl
+      = .ok (.retV (recoverResult k).1 (recoverResult k).2, s, ch, ⟨[], [], []⟩) := by defn_eq
 
 /-! ## (1) The UNWINDING equations (request 7; stated over the preprint phase's arms) -/
 
 /-- Stripping a call frame with an EMPTY defer list: the chain moves below it. -/
 @[stepFn_eqns] theorem panicking_frame_empty (s : Store) (chain : List PanicEntry) (t : List (TargetShape × List Expr))
     (te : LocalEnv) (r : List Loc) (k' : Cont) (fr : FuncId) (ch : Choices) :
-    stepFn ctx s (.panicking chain (.frame t te r [] k' fr)) ch = .ok (.panicking chain k', s, ch, ⟨[], [], []⟩) := rfl
+    stepFn ctx s (.panicking chain (.frame t te r [] k' fr)) ch = .ok (.panicking chain k', s, ch, ⟨[], [], []⟩) := by defn_eq
 
 /-- A deferred call runs ON THE PANIC PATH: entered above the suspended chain's marker
 (`panicResumeK chain`) on the draining frame — the `deferPanic` entry. -/
@@ -423,12 +446,12 @@ unwinding under `k'`. -/
     (t : List (TargetShape × List Expr)) (te : LocalEnv) (r : List Loc) (ds : List (GoValue × List GoValue))
     (k' : Cont) (fr : FuncId) (ch : Choices) :
     stepFn ctx s (.panicking chain (.frame t te r ((.nil, args) :: ds) k' fr)) ch
-      = .ok (.panicking (chain ++ [panicEntry nilDerefPanicText]) (.frame t te r ds k' fr), s, ch, ⟨[], [], []⟩) := rfl
+      = .ok (.panicking (chain ++ [panicEntry nilDerefPanicText]) (.frame t te r ds k' fr), s, ch, ⟨[], [], []⟩) := by defn_eq
 
 /-- A panic reaching the suspended chain's marker JOINS it (the newer entries after the older). -/
 @[stepFn_eqns] theorem panicking_panicResumeK (s : Store) (chain suspended : List PanicEntry) (k' : Cont) (ch : Choices) :
     stepFn ctx s (.panicking chain (.panicResumeK suspended k')) ch
-      = .ok (.panicking (suspended ++ chain) k', s, ch, ⟨[], [], []⟩) := rfl
+      = .ok (.panicking (suspended ++ chain) k', s, ch, ⟨[], [], []⟩) := by defn_eq
 
 /-- `panicResumeK` RESUMING: the drain completed with the newest entry UNRECOVERED — the unwind
 continues below the marker. -/
@@ -454,24 +477,24 @@ are its instances below). -/
 
 /-- Sequence and block glue (a block's body runs under a `.seq` frame, C4). -/
 @[stepFn_eqns] theorem panicking_seq (s : Store) (chain : List PanicEntry) (rest : List Stmt) (env : LocalEnv) (k : Cont) (ch : Choices) :
-    stepFn ctx s (.panicking chain (.seq rest env k)) ch = .ok (.panicking chain k, s, ch, ⟨[], [], []⟩) := rfl
+    stepFn ctx s (.panicking chain (.seq rest env k)) ch = .ok (.panicking chain k, s, ch, ⟨[], [], []⟩) := by defn_eq
 
 @[stepFn_eqns] theorem panicking_loop (s : Store) (chain : List PanicEntry) (c : Expr) (b : Stmt) (env : LocalEnv) (k : Cont) (ch : Choices) :
-    stepFn ctx s (.panicking chain (.loop c b env k)) ch = .ok (.panicking chain k, s, ch, ⟨[], [], []⟩) := rfl
+    stepFn ctx s (.panicking chain (.loop c b env k)) ch = .ok (.panicking chain k, s, ch, ⟨[], [], []⟩) := by defn_eq
 
 @[stepFn_eqns] theorem panicking_breakableK (s : Store) (chain : List PanicEntry) (k : Cont) (ch : Choices) :
-    stepFn ctx s (.panicking chain (.breakableK k)) ch = .ok (.panicking chain k, s, ch, ⟨[], [], []⟩) := rfl
+    stepFn ctx s (.panicking chain (.breakableK k)) ch = .ok (.panicking chain k, s, ch, ⟨[], [], []⟩) := by defn_eq
 
 @[stepFn_eqns] theorem panicking_labelK (s : Store) (chain : List PanicEntry) (name : String) (k : Cont) (ch : Choices) :
-    stepFn ctx s (.panicking chain (.labelK name k)) ch = .ok (.panicking chain k, s, ch, ⟨[], [], []⟩) := rfl
+    stepFn ctx s (.panicking chain (.labelK name k)) ch = .ok (.panicking chain k, s, ch, ⟨[], [], []⟩) := by defn_eq
 
 @[stepFn_eqns] theorem panicking_strictK (s : Store) (chain : List PanicEntry) (op : StrictOp) (done : List GoValue)
     (pending : List Expr) (env : LocalEnv) (k : Cont) (ch : Choices) :
-    stepFn ctx s (.panicking chain (.strictK op done pending env k)) ch = .ok (.panicking chain k, s, ch, ⟨[], [], []⟩) := rfl
+    stepFn ctx s (.panicking chain (.strictK op done pending env k)) ch = .ok (.panicking chain k, s, ch, ⟨[], [], []⟩) := by defn_eq
 
 @[stepFn_eqns] theorem panicking_storeK (s : Store) (chain : List PanicEntry) (refs : List TargetRef) (vals : List GoValue)
     (body : Stmt) (env : LocalEnv) (k : Cont) (ch : Choices) :
-    stepFn ctx s (.panicking chain (.storeK refs vals body env k)) ch = .ok (.panicking chain k, s, ch, ⟨[], [], []⟩) := rfl
+    stepFn ctx s (.panicking chain (.storeK refs vals body env k)) ch = .ok (.panicking chain k, s, ch, ⟨[], [], []⟩) := by defn_eq
 
 /-- The probe frame's `unseqPanic` consult (E13 option (b)): slot 0 DEFERS the operand's panic
 (re-evaluated at its residual position), any other slot RAISES it now. -/
@@ -508,7 +531,7 @@ the preprint frame built. -/
   rfl
 
 @[stepFn_eqns] theorem panicking_nil_stop (s : Store) (ch : Choices) :
-    stepFn ctx s (.panicking [] .stop) ch = .error (.internal "empty panic chain at stop") := rfl
+    stepFn ctx s (.panicking [] .stop) ch = .error (.internal "empty panic chain at stop") := by defn_eq
 
 /-- The preprint frame RESOLVES its pending call (`preprintDispatch`: the member on the payload's
 dynamic type, the receiver adjusted) and re-queues it as the nullary value call the
@@ -535,13 +558,13 @@ resumes at the frame's tail. -/
 @[stepFn_eqns] theorem retV_preprintK_string (s : Store) (text : GoString) (older : List PanicEntry) (entry : PanicEntry)
     (newer : List PanicEntry) (k' : Cont) (ch : Choices) :
     stepFn ctx s (.retV (.string text) (.preprintK older entry newer k')) ch
-      = .ok (.panicking (older ++ { entry with rewrite := .done text } :: newer) k', s, ch, ⟨[], [], []⟩) := rfl
+      = .ok (.panicking (older ++ { entry with rewrite := .done text } :: newer) k', s, ch, ⟨[], [], []⟩) := by defn_eq
 
 /-- The payload method's own panic unwound onto the preprint frame: gc's unrecoverable fatal
 «panic while printing panic value» (`preprintFatalStop`). -/
 @[stepFn_eqns] theorem panicking_preprintK (s : Store) (chain older : List PanicEntry) (entry : PanicEntry)
     (newer : List PanicEntry) (k' : Cont) (ch : Choices) :
-    stepFn ctx s (.panicking chain (.preprintK older entry newer k')) ch = .error (preprintFatalStop ctx chain) := rfl
+    stepFn ctx s (.panicking chain (.preprintK older entry newer k')) ch = .error (preprintFatalStop ctx chain) := by defn_eq
 
 /-! ## (1) FRAME EXIT (`stepFrameExit`; continuations audit F4): the two entries and every arm -/
 
@@ -549,17 +572,17 @@ resumes at the frame's tail. -/
 @[stepFn_eqns] theorem next_frame (s : Store) (targets : List (TargetShape × List Expr)) (tenv : LocalEnv) (results : List Loc)
     (ds : List (GoValue × List GoValue)) (k' : Cont) (fr : FuncId) (ch : Choices) :
     stepFn ctx s (.next (.frame targets tenv results ds k' fr)) ch
-      = stepFrameExit ctx s targets tenv results ds k' fr ch := rfl
+      = stepFrameExit ctx s targets tenv results ds k' fr ch := by defn_eq
 
 /-- `return` at a call frame IS the frame exit (the `.signal .ret` entry). -/
 @[stepFn_eqns] theorem signal_ret_frame (s : Store) (targets : List (TargetShape × List Expr)) (tenv : LocalEnv) (results : List Loc)
     (ds : List (GoValue × List GoValue)) (k' : Cont) (fr : FuncId) (ch : Choices) :
     stepFn ctx s (.signal .ret (.frame targets tenv results ds k' fr)) ch
-      = stepFrameExit ctx s targets tenv results ds k' fr ch := rfl
+      = stepFrameExit ctx s targets tenv results ds k' fr ch := by defn_eq
 
 /-- An empty frame (no targets, no results, no defers) pops itself. -/
 @[stepFn_eqns] theorem frameExit_nil (s : Store) (tenv : LocalEnv) (k' : Cont) (fr : FuncId) (ch : Choices) :
-    stepFrameExit ctx s [] tenv [] [] k' fr ch = .ok (.next k', s, ch, ⟨[], [], []⟩) := rfl
+    stepFrameExit ctx s [] tenv [] [] k' fr ch = .ok (.next k', s, ch, ⟨[], [], []⟩) := by defn_eq
 
 /-- Defers drained, caller targets pending: the pinned RESULT CELLS are read (`loadResults` — one
 emitting `loadRoot` each) and the first target's operand evaluates on the `tgtOpK` spine with the
@@ -643,7 +666,7 @@ shape, reads them and is stuck-closed (the frontend always supplies targets). -/
 
 @[stepFn_eqns] theorem frameExit_malformed (s : Store) (sh : TargetShape) (rest : List (TargetShape × List Expr)) (tenv : LocalEnv)
     (results : List Loc) (k' : Cont) (fr : FuncId) (ch : Choices) :
-    stepFrameExit ctx s ((sh, []) :: rest) tenv results [] k' fr ch = .error (.internal "malformed call target plan") := rfl
+    stepFrameExit ctx s ((sh, []) :: rest) tenv results [] k' fr ch = .error (.internal "malformed call target plan") := by defn_eq
 
 /-- The result readback, bottomed out: `loadResults` is one `loadRoot` per pinned cell, one read event each. -/
 theorem loadResults_nil (s : Store) : loadResults ctx s [] = .ok ([], []) := rfl
@@ -691,51 +714,51 @@ theorem signalStep_labelK_brkTo_self (name : String) (k' : Cont) :
 /-! ## (1) The `.next` control arms: sequences, loops, labels, the terminal -/
 
 @[stepFn_eqns] theorem next_stop (s : Store) (ch : Choices) :
-    stepFn ctx s (.next .stop) ch = .error (.internal "step on terminal configuration") := rfl
+    stepFn ctx s (.next .stop) ch = .error (.internal "step on terminal configuration") := by defn_eq
 
 @[stepFn_eqns] theorem next_seq_cons (s : Store) (t : Stmt) (rest : List Stmt) (env : LocalEnv) (k' : Cont) (ch : Choices) :
-    stepFn ctx s (.next (.seq (t :: rest) env k')) ch = .ok (.exec t env (.seq rest env k'), s, ch, ⟨[], [], []⟩) := rfl
+    stepFn ctx s (.next (.seq (t :: rest) env k')) ch = .ok (.exec t env (.seq rest env k'), s, ch, ⟨[], [], []⟩) := by defn_eq
 
 /-- Block/sequence EXIT is store-neutral (`blockExit_store_eq`, C4 D8). -/
 @[stepFn_eqns] theorem next_seq_nil (s : Store) (env : LocalEnv) (k' : Cont) (ch : Choices) :
-    stepFn ctx s (.next (.seq [] env k')) ch = .ok (.next k', s, ch, ⟨[], [], []⟩) := rfl
+    stepFn ctx s (.next (.seq [] env k')) ch = .ok (.next k', s, ch, ⟨[], [], []⟩) := by defn_eq
 
 @[stepFn_eqns] theorem next_loop (s : Store) (c : Expr) (b : Stmt) (env : LocalEnv) (k' : Cont) (ch : Choices) :
-    stepFn ctx s (.next (.loop c b env k')) ch = .ok (.exec (.while c b) env k', s, ch, ⟨[], [], []⟩) := rfl
+    stepFn ctx s (.next (.loop c b env k')) ch = .ok (.exec (.while c b) env k', s, ch, ⟨[], [], []⟩) := by defn_eq
 
 @[stepFn_eqns] theorem next_breakableK (s : Store) (k' : Cont) (ch : Choices) :
-    stepFn ctx s (.next (.breakableK k')) ch = .ok (.next k', s, ch, ⟨[], [], []⟩) := rfl
+    stepFn ctx s (.next (.breakableK k')) ch = .ok (.next k', s, ch, ⟨[], [], []⟩) := by defn_eq
 
 @[stepFn_eqns] theorem next_labelK (s : Store) (name : String) (k' : Cont) (ch : Choices) :
-    stepFn ctx s (.next (.labelK name k')) ch = .ok (.next k', s, ch, ⟨[], [], []⟩) := rfl
+    stepFn ctx s (.next (.labelK name k')) ch = .ok (.next k', s, ch, ⟨[], [], []⟩) := by defn_eq
 
 /-- A statement completion delivered to an expression frame is a machine-internal breach, named
 (three representative instances). -/
 @[stepFn_eqns] theorem next_strictK (s : Store) (op : StrictOp) (done : List GoValue) (pending : List Expr) (env : LocalEnv)
     (k' : Cont) (ch : Choices) :
     stepFn ctx s (.next (.strictK op done pending env k')) ch
-      = .error (.internal "completion delivered to expression continuation") := rfl
+      = .error (.internal "completion delivered to expression continuation") := by defn_eq
 @[stepFn_eqns] theorem next_ifK (s : Store) (t e : Stmt) (env : LocalEnv) (k' : Cont) (ch : Choices) :
-    stepFn ctx s (.next (.ifK t e env k')) ch = .error (.internal "completion delivered to expression continuation") := rfl
+    stepFn ctx s (.next (.ifK t e env k')) ch = .error (.internal "completion delivered to expression continuation") := by defn_eq
 @[stepFn_eqns] theorem next_callArgsK (s : Store) (fid : FuncId) (plans : List (TargetShape × List Expr)) (vals : List GoValue)
     (pending : List Expr) (env : LocalEnv) (k' : Cont) (ch : Choices) :
     stepFn ctx s (.next (.callArgsK fid plans vals pending env k')) ch
-      = .error (.internal "completion delivered to expression continuation") := rfl
+      = .error (.internal "completion delivered to expression continuation") := by defn_eq
 
 /-- A VALUE delivered to a statement frame is a machine-internal breach, named (the `.retV`
 catch-all's statement half; instances for the statement frames). -/
 @[stepFn_eqns] theorem retV_seq (s : Store) (v : GoValue) (rest : List Stmt) (env : LocalEnv) (k' : Cont) (ch : Choices) :
-    stepFn ctx s (.retV v (.seq rest env k')) ch = .error (.internal "value delivered to statement continuation") := rfl
+    stepFn ctx s (.retV v (.seq rest env k')) ch = .error (.internal "value delivered to statement continuation") := by defn_eq
 @[stepFn_eqns] theorem retV_frame (s : Store) (v : GoValue) (targets : List (TargetShape × List Expr)) (tenv : LocalEnv)
     (results : List Loc) (ds : List (GoValue × List GoValue)) (k' : Cont) (fr : FuncId) (ch : Choices) :
     stepFn ctx s (.retV v (.frame targets tenv results ds k' fr)) ch
-      = .error (.internal "value delivered to statement continuation") := rfl
+      = .error (.internal "value delivered to statement continuation") := by defn_eq
 @[stepFn_eqns] theorem retV_storeK (s : Store) (v : GoValue) (refs : List TargetRef) (vals : List GoValue) (body : Stmt)
     (env : LocalEnv) (k' : Cont) (ch : Choices) :
     stepFn ctx s (.retV v (.storeK refs vals body env k')) ch
-      = .error (.internal "value delivered to statement continuation") := rfl
+      = .error (.internal "value delivered to statement continuation") := by defn_eq
 @[stepFn_eqns] theorem retV_stop (s : Store) (v : GoValue) (ch : Choices) :
-    stepFn ctx s (.retV v .stop) ch = .error (.internal "value delivered to empty continuation") := rfl
+    stepFn ctx s (.retV v .stop) ch = .error (.internal "value delivered to empty continuation") := by defn_eq
 
 /-! ## (2) MEMORY: reads, addresses, the store spine, block entry -/
 
@@ -784,17 +807,17 @@ operands first. -/
 /-- The plain-variable assignment, written out: the target's address first. -/
 @[stepFn_eqns] theorem exec_assign_var (s : Store) (id : VarId) (rhs : Expr) (env : LocalEnv) (k : Cont) (ch : Choices) :
     stepFn ctx s (.exec (.assign (.var id) rhs) env k) ch
-      = .ok (.evalE (.ref id) env (.tgtOpK (.chain []) [] [] [] [] .vals [rhs] [] (.seqn #[]) env k), s, ch, ⟨[], [], []⟩) := rfl
+      = .ok (.evalE (.ref id) env (.tgtOpK (.chain []) [] [] [] [] .vals [rhs] [] (.seqn #[]) env k), s, ch, ⟨[], [], []⟩) := by defn_eq
 
 @[stepFn_eqns] theorem exec_assign_unsupported (s : Store) (feature : String) (rhs : Expr) (env : LocalEnv) (k : Cont) (ch : Choices) :
-    stepFn ctx s (.exec (.assign (.unsupported feature) rhs) env k) ch = .error (.unsupported feature) := rfl
+    stepFn ctx s (.exec (.assign (.unsupported feature) rhs) env k) ch = .error (.unsupported feature) := by defn_eq
 
 /-- Phase 1 of the spine: another operand of the current target. -/
 @[stepFn_eqns] theorem retV_tgtOpK_more (s : Store) (v : GoValue) (sh : TargetShape) (ops : List GoValue) (e : Expr) (rest : List Expr)
     (refs : List TargetRef) (targets : List (TargetShape × List Expr)) (rop : RhsOp) (rhs : List Expr) (vals : List GoValue)
     (body : Stmt) (env : LocalEnv) (k' : Cont) (ch : Choices) :
     stepFn ctx s (.retV v (.tgtOpK sh ops (e :: rest) refs targets rop rhs vals body env k')) ch
-      = .ok (.evalE e env (.tgtOpK sh (v :: ops) rest refs targets rop rhs vals body env k'), s, ch, ⟨[], [], []⟩) := rfl
+      = .ok (.evalE e env (.tgtOpK sh (v :: ops) rest refs targets rop rhs vals body env k'), s, ch, ⟨[], [], []⟩) := by defn_eq
 
 /-- The current target completes (`completeTargetRef`); the next target's first operand evaluates. -/
 @[stepFn_eqns] theorem retV_tgtOpK_next_target {s : Store} {v : GoValue} {sh : TargetShape} {ops : List GoValue} {r : TargetRef}
@@ -832,7 +855,7 @@ operands first. -/
 @[stepFn_eqns] theorem retV_rhsK_more (s : Store) (v : GoValue) (rop : RhsOp) (refs : List TargetRef) (done : List GoValue) (e : Expr)
     (rest : List Expr) (body : Stmt) (env : LocalEnv) (k' : Cont) (ch : Choices) :
     stepFn ctx s (.retV v (.rhsK rop refs done (e :: rest) body env k')) ch
-      = .ok (.evalE e env (.rhsK rop refs (v :: done) rest body env k'), s, ch, ⟨[], [], []⟩) := rfl
+      = .ok (.evalE e env (.rhsK rop refs (v :: done) rest body env k'), s, ch, ⟨[], [], []⟩) := by defn_eq
 
 /-- The last right-hand side arrived: the value source applies (`applyRhsOp` — the identity for
 `.vals`, `applyRhsOp_vals`) and phase 2 begins. -/
@@ -886,7 +909,7 @@ operands first. -/
 
 /-- Phase 2 done: the statement's body (the assignment's `(.seqn #[])`, a receive's clause body). -/
 @[stepFn_eqns] theorem next_storeK_done (s : Store) (body : Stmt) (env : LocalEnv) (k' : Cont) (ch : Choices) :
-    stepFn ctx s (.next (.storeK [] [] body env k')) ch = .ok (.exec body env k', s, ch, ⟨[], [], []⟩) := rfl
+    stepFn ctx s (.next (.storeK [] [] body env k')) ch = .ok (.exec body env k', s, ch, ⟨[], [], []⟩) := by defn_eq
 
 /-- BLOCK ENTRY (C4): the declarations' cells are allocated in a fresh scope — `allocDecls` over
 `env.pushScope`, one `Store.alloc` per declaration at its zero value (`blockEntry_shift`/`_lookup`/
@@ -932,10 +955,10 @@ theorem bindParams_cons {env : LocalEnv} {s s₁ : Store} {p : Param} {v v' : Go
   simp [stepFn, hv, Bind.bind, Except.bind]
 
 @[stepFn_eqns] theorem evalE_and (s : Store) (l r : Expr) (env : LocalEnv) (k : Cont) (ch : Choices) :
-    stepFn ctx s (.evalE (.and l r) env k) ch = .ok (.evalE l env (.andK r env k), s, ch, ⟨[], [], []⟩) := rfl
+    stepFn ctx s (.evalE (.and l r) env k) ch = .ok (.evalE l env (.andK r env k), s, ch, ⟨[], [], []⟩) := by defn_eq
 
 @[stepFn_eqns] theorem evalE_or (s : Store) (l r : Expr) (env : LocalEnv) (k : Cont) (ch : Choices) :
-    stepFn ctx s (.evalE (.or l r) env k) ch = .ok (.evalE l env (.orK r env k), s, ch, ⟨[], [], []⟩) := rfl
+    stepFn ctx s (.evalE (.or l r) env k) ch = .ok (.evalE l env (.orK r env k), s, ch, ⟨[], [], []⟩) := by defn_eq
 
 @[stepFn_eqns] theorem retV_andK_true {s : Store} {v : GoValue} (r : Expr) (env : LocalEnv) (k' : Cont) (ch : Choices)
     (hv : valueAsBool v = .ok true) :
@@ -964,16 +987,16 @@ theorem bindParams_cons {env : LocalEnv} {s s₁ : Store} {p : Param} {v v' : Go
 /-! ## (3) Literals and the strict operators -/
 
 @[stepFn_eqns] theorem evalE_intLit (s : Store) (value : Int) (kind : IntKind) (env : LocalEnv) (k : Cont) (ch : Choices) :
-    stepFn ctx s (.evalE (.intLit value kind) env k) ch = .ok (.retV (.int (kind.normalize value) kind) k, s, ch, ⟨[], [], []⟩) := rfl
+    stepFn ctx s (.evalE (.intLit value kind) env k) ch = .ok (.retV (.int (kind.normalize value) kind) k, s, ch, ⟨[], [], []⟩) := by defn_eq
 
 @[stepFn_eqns] theorem evalE_boolLit (s : Store) (value : Bool) (env : LocalEnv) (k : Cont) (ch : Choices) :
-    stepFn ctx s (.evalE (.boolLit value) env k) ch = .ok (.retV (.bool value) k, s, ch, ⟨[], [], []⟩) := rfl
+    stepFn ctx s (.evalE (.boolLit value) env k) ch = .ok (.retV (.bool value) k, s, ch, ⟨[], [], []⟩) := by defn_eq
 
 @[stepFn_eqns] theorem evalE_stringLit (s : Store) (value : GoString) (env : LocalEnv) (k : Cont) (ch : Choices) :
-    stepFn ctx s (.evalE (.stringLit value) env k) ch = .ok (.retV (.string value) k, s, ch, ⟨[], [], []⟩) := rfl
+    stepFn ctx s (.evalE (.stringLit value) env k) ch = .ok (.retV (.string value) k, s, ch, ⟨[], [], []⟩) := by defn_eq
 
 @[stepFn_eqns] theorem evalE_unsupported (s : Store) (feature : String) (env : LocalEnv) (k : Cont) (ch : Choices) :
-    stepFn ctx s (.evalE (.unsupported feature) env k) ch = .error (.unsupported feature) := rfl
+    stepFn ctx s (.evalE (.unsupported feature) env k) ch = .error (.unsupported feature) := by defn_eq
 
 /-- A strict form with operands (`strictPlan e = some (op, e₁ :: rest)`): the first operand evaluates
 under `strictK`. -/
@@ -998,7 +1021,7 @@ in the same step (`applyStrictOp`, read-only — `deliverS`). -/
 @[stepFn_eqns] theorem retV_strictK_more (s : Store) (v : GoValue) (op : StrictOp) (done : List GoValue) (e : Expr) (rest : List Expr)
     (env : LocalEnv) (k' : Cont) (ch : Choices) :
     stepFn ctx s (.retV v (.strictK op done (e :: rest) env k')) ch
-      = .ok (.evalE e env (.strictK op (v :: done) rest env k'), s, ch, ⟨[], [], []⟩) := rfl
+      = .ok (.evalE e env (.strictK op (v :: done) rest env k'), s, ch, ⟨[], [], []⟩) := by defn_eq
 
 /-- The last operand arrived: the strict APPLY (`applyStrictOp`, the leaf narrowed by the
 continuation's projection chain) delivers its value. -/
@@ -1038,7 +1061,7 @@ continuation's projection chain) delivers its value. -/
 
 @[stepFn_eqns] theorem exec_mapAssign (s : Store) (base index value : Expr) (keyTy valueTy : Ty) (env : LocalEnv) (k : Cont) (ch : Choices) :
     stepFn ctx s (.exec (.mapAssign base index value keyTy valueTy) env k) ch
-      = .ok (.evalE base env (.stmtOpK (.mapAssign keyTy valueTy) 0 [] [index, value] env k), s, ch, ⟨[], [], []⟩) := rfl
+      = .ok (.evalE base env (.stmtOpK (.mapAssign keyTy valueTy) 0 [] [index, value] env k), s, ch, ⟨[], [], []⟩) := by defn_eq
 
 @[stepFn_eqns] theorem exec_appendSlice {s : Store} {target : Assignee} {te : Expr} (elem : Ty) (slice elems : Expr) (env : LocalEnv)
     (k : Cont) (ch : Choices) (ht : assigneeExpr target = some te) :
@@ -1094,7 +1117,7 @@ output on the label (`stmtOpOut`: the `print` bytes). -/
 @[stepFn_eqns] theorem exec_mapRange (s : Store) (keyVar valVar : Option VarId) (mapExpr : Expr) (keyTy valTy : Ty) (body : Stmt)
     (env : LocalEnv) (k : Cont) (ch : Choices) :
     stepFn ctx s (.exec (.mapRange keyVar valVar mapExpr keyTy valTy body) env k) ch
-      = .ok (.evalE mapExpr env (.mapRangeK keyVar valVar keyTy valTy body env k), s, ch, ⟨[], [], []⟩) := rfl
+      = .ok (.evalE mapExpr env (.mapRangeK keyVar valVar keyTy valTy body env k), s, ch, ⟨[], [], []⟩) := by defn_eq
 
 /-- The range STARTS: the base cell and the start-id set are recorded (one map read). -/
 @[stepFn_eqns] theorem retV_mapRangeK {s : Store} {v : GoValue} {base : Option Loc} {start : Array Nat} {tr : AccessTrace}
@@ -1174,10 +1197,10 @@ scope and runs the body, the stop slot ends the range. -/
 
 @[stepFn_eqns] theorem exec_chanSend (s : Store) (chE value : Expr) (elem : Ty) (env : LocalEnv) (k : Cont) (ch : Choices) :
     stepFn ctx s (.exec (.chanSend chE value elem) env k) ch
-      = .ok (.evalE chE env (.chanStK (.send elem) [] [value] env k), s, ch, ⟨[], [], []⟩) := rfl
+      = .ok (.evalE chE env (.chanStK (.send elem) [] [value] env k), s, ch, ⟨[], [], []⟩) := by defn_eq
 
 @[stepFn_eqns] theorem exec_closeChan (s : Store) (chE : Expr) (env : LocalEnv) (k : Cont) (ch : Choices) :
-    stepFn ctx s (.exec (.closeChan chE) env k) ch = .ok (.evalE chE env (.chanStK .close [] [] env k), s, ch, ⟨[], [], []⟩) := rfl
+    stepFn ctx s (.exec (.closeChan chE) env k) ch = .ok (.evalE chE env (.chanStK .close [] [] env k), s, ch, ⟨[], [], []⟩) := by defn_eq
 
 /-- A receive with admitted targets (at most two, each with a plan): the channel operand first; the
 targets evaluate AFTER the communication (phase 2). -/
@@ -1197,7 +1220,7 @@ targets evaluate AFTER the communication (phase 2). -/
 @[stepFn_eqns] theorem retV_chanStK_more (s : Store) (v : GoValue) (op : ChanStOp) (done : List GoValue) (e : Expr) (rest : List Expr)
     (env : LocalEnv) (k' : Cont) (ch : Choices) :
     stepFn ctx s (.retV v (.chanStK op done (e :: rest) env k')) ch
-      = .ok (.evalE e env (.chanStK op (v :: done) rest env k'), s, ch, ⟨[], [], []⟩) := rfl
+      = .ok (.evalE e env (.chanStK op (v :: done) rest env k'), s, ch, ⟨[], [], []⟩) := by defn_eq
 
 /-- The channel APPLY (`applyChanOp`): a completed op's successor, or the parked shape. -/
 @[stepFn_eqns] theorem retV_chanStK_apply {s s' : Store} {v : GoValue} {op : ChanStOp} {done : List GoValue} {c' : Config} {tr : AccessTrace}
@@ -1229,7 +1252,7 @@ targets evaluate AFTER the communication (phase 2). -/
 @[stepFn_eqns] theorem retV_selectOpsK_more (s : Store) (v : GoValue) (clauses : List (SelectClauseHead × Stmt)) (default? : Option Stmt)
     (done : List GoValue) (e : Expr) (rest : List Expr) (env : LocalEnv) (k' : Cont) (ch : Choices) :
     stepFn ctx s (.retV v (.selectOpsK clauses default? done (e :: rest) env k')) ch
-      = .ok (.evalE e env (.selectOpsK clauses default? (v :: done) rest env k'), s, ch, ⟨[], [], []⟩) := rfl
+      = .ok (.evalE e env (.selectOpsK clauses default? (v :: done) rest env k'), s, ch, ⟨[], [], []⟩) := by defn_eq
 
 /-- The select APPLY (`applySelect`): the tape threads through it (the multi-ready `l2Entry` consult);
 the sequential step projects the emitted commit identity away. -/
@@ -1242,7 +1265,7 @@ the sequential step projects the emitted commit identity away. -/
 
 @[stepFn_eqns] theorem exec_goStmt (s : Store) (callee : Expr) (args : Array Expr) (env : LocalEnv) (k : Cont) (ch : Choices) :
     stepFn ctx s (.exec (.goStmt callee args) env k) ch
-      = .ok (.evalE callee env (.goCalleeK args.toList env k), s, ch, ⟨[], [], []⟩) := rfl
+      = .ok (.evalE callee env (.goCalleeK args.toList env k), s, ch, ⟨[], [], []⟩) := by defn_eq
 
 @[stepFn_eqns] theorem retV_goCalleeK_args {s : Store} {v : GoValue} (a : Expr) (rest : List Expr) (env : LocalEnv) (k' : Cont) (ch : Choices)
     (hd : deferrableCallee v = true) :
@@ -1260,12 +1283,12 @@ the sequential step projects the emitted commit identity away. -/
 @[stepFn_eqns] theorem retV_goArgsK_more (s : Store) (v cv : GoValue) (vals : List GoValue) (a : Expr) (rest : List Expr) (env : LocalEnv)
     (k' : Cont) (ch : Choices) :
     stepFn ctx s (.retV v (.goArgsK cv vals (a :: rest) env k')) ch
-      = .ok (.evalE a env (.goArgsK cv (vals ++ [v]) rest env k'), s, ch, ⟨[], [], []⟩) := rfl
+      = .ok (.evalE a env (.goArgsK cv (vals ++ [v]) rest env k'), s, ch, ⟨[], [], []⟩) := by defn_eq
 
 @[stepFn_eqns] theorem retV_goArgsK_spawn (s : Store) (v cv : GoValue) (vals : List GoValue) (env : LocalEnv) (k' : Cont) (ch : Choices) :
     stepFn ctx s (.retV v (.goArgsK cv vals [] env k')) ch
       = .error (.unsupported
-          "go spawn outside the thread pool (goroutine spawn is a pool step; go during package init is refused this slice)") := rfl
+          "go spawn outside the thread pool (goroutine spawn is a pool step; go during package init is refused this slice)") := by defn_eq
 
 @[stepFn_eqns] theorem exec_syncStmt {s : Store} {op : SyncStmtOp} {args : Array Expr} {targets : Array Assignee} {sop : SyncOp} {e : Expr}
     {rest : List Expr} (env : LocalEnv) (k : Cont) (ch : Choices) (h : syncPlan (.syncStmt op args targets) = some (sop, e :: rest)) :
@@ -1293,7 +1316,7 @@ the sequential step projects the emitted commit identity away. -/
 @[stepFn_eqns] theorem retV_syncStK_more (s : Store) (v : GoValue) (op : SyncOp) (done : List GoValue) (e : Expr) (rest : List Expr)
     (env : LocalEnv) (k' : Cont) (ch : Choices) :
     stepFn ctx s (.retV v (.syncStK op done (e :: rest) env k')) ch
-      = .ok (.evalE e env (.syncStK op (v :: done) rest env k'), s, ch, ⟨[], [], []⟩) := rfl
+      = .ok (.evalE e env (.syncStK op (v :: done) rest env k'), s, ch, ⟨[], [], []⟩) := by defn_eq
 
 /-- The sync APPLY (`applySyncOp`; only the TRY heads draw from the tape). -/
 @[stepFn_eqns] theorem retV_syncStK_apply {s s' : Store} {v : GoValue} {op : SyncOp} {done : List GoValue} {c' : Config} {ch' : Choices}
@@ -1312,7 +1335,7 @@ the sequential step projects the emitted commit identity away. -/
 @[stepFn_eqns] theorem retV_atomicStK_more (s : Store) (v : GoValue) (op : AtomicOp) (done : List GoValue) (e : Expr) (rest : List Expr)
     (env : LocalEnv) (k' : Cont) (ch : Choices) :
     stepFn ctx s (.retV v (.atomicStK op done (e :: rest) env k')) ch
-      = .ok (.evalE e env (.atomicStK op (v :: done) rest env k'), s, ch, ⟨[], [], []⟩) := rfl
+      = .ok (.evalE e env (.atomicStK op (v :: done) rest env k'), s, ch, ⟨[], [], []⟩) := by defn_eq
 
 /-- The atomic APPLY (`applyAtomicOp`): one fused step, no consult. -/
 @[stepFn_eqns] theorem retV_atomicStK_apply {s s' : Store} {v : GoValue} {op : AtomicOp} {done : List GoValue} {c' : Config} {tr : AccessTrace}
@@ -1327,33 +1350,33 @@ the sequential step projects the emitted commit identity away. -/
 
 /-- The four blocked shapes: relation-silent, the sequential DEADLOCK terminal. -/
 @[stepFn_eqns] theorem blockedSend (s : Store) (chl : Option Loc) (v : GoValue) (k : Cont) (ch : Choices) :
-    stepFn ctx s (.blockedSend chl v k) ch = .error .deadlock := rfl
+    stepFn ctx s (.blockedSend chl v k) ch = .error .deadlock := by defn_eq
 @[stepFn_eqns] theorem blockedRecv (s : Store) (chl : Option Loc) (targets : List Assignee) (elem : Ty) (env : LocalEnv) (k : Cont) (ch : Choices) :
-    stepFn ctx s (.blockedRecv chl targets elem env k) ch = .error .deadlock := rfl
+    stepFn ctx s (.blockedRecv chl targets elem env k) ch = .error .deadlock := by defn_eq
 @[stepFn_eqns] theorem blockedSelect (s : Store) (clauses : List EvClause) (env : LocalEnv) (k : Cont) (ch : Choices) :
-    stepFn ctx s (.blockedSelect clauses env k) ch = .error .deadlock := rfl
+    stepFn ctx s (.blockedSelect clauses env k) ch = .error .deadlock := by defn_eq
 @[stepFn_eqns] theorem blockedSync (s : Store) (op : SyncOp) (loc : Loc) (env : LocalEnv) (k : Cont) (ch : Choices) :
-    stepFn ctx s (.blockedSync op loc env k) ch = .error .deadlock := rfl
+    stepFn ctx s (.blockedSync op loc env k) ch = .error .deadlock := by defn_eq
 
 /-! ## (3) The probe and the `unseq` sweep -/
 
 @[stepFn_eqns] theorem exec_unseqProbe (s : Store) (e : Expr) (env : LocalEnv) (k : Cont) (ch : Choices) :
-    stepFn ctx s (.exec (.unseqProbe e) env k) ch = .ok (.evalE e env (.probeK k), s, ch, ⟨[], [], []⟩) := rfl
+    stepFn ctx s (.exec (.unseqProbe e) env k) ch = .ok (.evalE e env (.probeK k), s, ch, ⟨[], [], []⟩) := by defn_eq
 
 /-- A probed operand that yields a VALUE is re-evaluated at its residual position; nothing consumed. -/
 @[stepFn_eqns] theorem retV_probeK (s : Store) (v : GoValue) (k' : Cont) (ch : Choices) :
-    stepFn ctx s (.retV v (.probeK k')) ch = .ok (.next k', s, ch, ⟨[], [], []⟩) := rfl
+    stepFn ctx s (.retV v (.probeK k')) ch = .ok (.next k', s, ch, ⟨[], [], []⟩) := by defn_eq
 
 /-- The `unseq` sweep's three positions reduce to their helpers (each stated against its rules in
 `MachineSound`). -/
 @[stepFn_eqns] theorem exec_unseq (s : Store) (g : UnseqGraph) (thenB : Stmt) (env : LocalEnv) (k : Cont) (ch : Choices) :
-    stepFn ctx s (.exec (.unseq g thenB) env k) ch = stepUnseqEnter ctx s g thenB env k ch := rfl
+    stepFn ctx s (.exec (.unseq g thenB) env k) ch = stepUnseqEnter ctx s g thenB env k ch := by defn_eq
 @[stepFn_eqns] theorem next_unseqK (s : Store) (g : UnseqGraph) (thenB : Stmt) (st : List UnseqStatus) (tg : List (VarId × TargetRef))
     (env : LocalEnv) (ph : UnseqPhase) (k' : Cont) (ch : Choices) :
-    stepFn ctx s (.next (.unseqK g thenB st tg env ph k')) ch = stepUnseqNext ctx s g thenB st tg env ph k' ch := rfl
+    stepFn ctx s (.next (.unseqK g thenB st tg env ph k')) ch = stepUnseqNext ctx s g thenB st tg env ph k' ch := by defn_eq
 @[stepFn_eqns] theorem retV_unseqK (s : Store) (v : GoValue) (g : UnseqGraph) (thenB : Stmt) (st : List UnseqStatus)
     (tg : List (VarId × TargetRef)) (env : LocalEnv) (ph : UnseqPhase) (k' : Cont) (ch : Choices) :
-    stepFn ctx s (.retV v (.unseqK g thenB st tg env ph k')) ch = stepUnseqValue ctx s v g thenB st tg env ph k' ch := rfl
+    stepFn ctx s (.retV v (.unseqK g thenB st tg env ph k')) ch = stepUnseqValue ctx s v g thenB st tg env ph k' ch := by defn_eq
 
 /-- `unseq` ENTER at a statement-sequence position: the shape and the id-level checks pass, the
 binder cells are allocated in a sweep-private scope (`allocDecls` over `env.pushScope`, C4 D3 (b)). -/
@@ -1500,5 +1523,329 @@ theorem setup_heap_size {program : Program} {func : Func} {args : Array GoValue}
   have h2 := allocDecls_heap_size _ _ _ ha
   simp at h1 h2
   omega
+
+
+/-! ## Pre-landing round (audit F3): the sync panic twin, the non-panic pass-throughs, the refusal arms, the
+signal table completed. APPENDED (rows 437+): the rows above keep their numbers. -/
+
+/-- A `bind` that errors did so in its first or its second stage. -/
+theorem bind_eq_error {ε α β : Type} {x : Except ε α} {f : α → Except ε β} {e : ε} (h : x >>= f = .error e) :
+    x = .error e ∨ ∃ a, x = .ok a ∧ f a = .error e := by
+  cases x with
+  | error e' => simp only [Bind.bind, Except.bind, Except.error.injEq] at h; exact .inl (by rw [h])
+  | ok a => exact .inr ⟨a, rfl, h⟩
+
+/-- A commit that stops on a non-panic `Stop` passes it through. -/
+theorem runCommit_error {α : Type} {c : Commit α} {s : Store} {e : Stop} (hcs : c s = .error e)
+    (hne : ∀ msg, e ≠ .panic msg) : runCommit c s = .error e := by
+  unfold runCommit
+  rw [hcs]
+  cases_stop e <;> first | rfl | exact absurd rfl (hne _)
+
+/-- The V entry funnel on a validate phase that stops on a non-panic `Stop`. -/
+theorem enterFramePickV_of_plan_error {s : Store} {fid : FuncId} {args : List GoValue} {e : Stop} (ch : Choices)
+    (h : enterFrame.plan ctx s fid args = .error e) (hne : ∀ msg, e ≠ .panic msg) :
+    enterFramePickV ctx s fid args ch = .error e := by
+  simp [enterFramePickV, toResult_of_error h hne]
+
+/-- The composed `enterFrame`'s non-panic stop, read back to its phases. -/
+theorem enterFrame_inv_error {s : Store} {fid : FuncId} {args : List GoValue} {e : Stop}
+    (h : enterFrame ctx s fid args = .error e) :
+    enterFrame.plan ctx s fid args = .error e ∨ ∃ c, enterFrame.plan ctx s fid args = .ok c ∧ c s = .error e := by
+  unfold enterFrame at h; exact bind_eq_error h
+
+/-- (F3a) The sync APPLY's recoverable panic (a nil mutex/waitgroup address). -/
+@[stepFn_eqns] theorem retV_syncStK_apply_panic {s : Store} {v : GoValue} {op : SyncOp} {done : List GoValue} {msg : String}
+    (env : LocalEnv) (k' : Cont) (ch : Choices) (h : applySyncOp ctx s ch op (v :: done).reverse env k' = .error (.panic msg)) :
+    stepFn ctx s (.retV v (.syncStK op done [] env k')) ch = .ok (.panicking [panicEntry msg] k', s, ch, ⟨[], [], []⟩) := by
+  simp only [stepFn, h, toResult_panic, Bind.bind, Except.bind, deliverS_panic, pure_eq_ok, List.nil_append]
+
+/-! ### (iii) The non-panic `Stop` pass-throughs -/
+
+@[stepFn_eqns] theorem evalE_strict_nullary_error {s : Store} {e : Expr} {op : StrictOp} {st : Stop} (env : LocalEnv) (k : Cont)
+    (ch : Choices) (h : strictPlan e = some (op, []))
+    (ha : applyStrictOp ctx s (projChainTarget ctx s k) op [] = .error st) (hne : ∀ msg, st ≠ .panic msg) :
+    stepFn ctx s (.evalE e env k) ch = .error st := by
+  cases e
+  case slice b lo hi m => cases m <;> simp [strictPlan] at h
+  all_goals simp [strictPlan] at h
+  all_goals first | (obtain ⟨rfl, rfl⟩ := h) | (subst h)
+  all_goals (try simp at ha)
+  all_goals simp [stepFn, strictPlan, toResult_of_error ha hne, Bind.bind, Except.bind]
+
+@[stepFn_eqns] theorem retV_chanStK_apply_error {s : Store} {v : GoValue} {op : ChanStOp} {done : List GoValue} {e : Stop}
+    (env : LocalEnv) (k' : Cont) (ch : Choices) (h : applyChanOp ctx s op (v :: done).reverse env k' = .error e)
+    (hne : ∀ msg, e ≠ .panic msg) :
+    stepFn ctx s (.retV v (.chanStK op done [] env k')) ch = .error e := by
+  simp only [stepFn, toResult_of_error h hne, Bind.bind, Except.bind]
+
+@[stepFn_eqns] theorem retV_selectOpsK_apply_panic {s : Store} {v : GoValue} {clauses : List (SelectClauseHead × Stmt)}
+    {default? : Option Stmt} {done : List GoValue} {msg : String} (env : LocalEnv) (k' : Cont) (ch : Choices)
+    (h : applySelect ctx s clauses default? (v :: done).reverse env k' ch = .error (.panic msg)) :
+    stepFn ctx s (.retV v (.selectOpsK clauses default? done [] env k')) ch
+      = .ok (.panicking [panicEntry msg] k', s, ch, ⟨[], [], []⟩) := by
+  simp only [stepFn, h, toResult_panic, Bind.bind, Except.bind, deliverS_panic, pure_eq_ok, List.nil_append]
+
+@[stepFn_eqns] theorem retV_selectOpsK_apply_error {s : Store} {v : GoValue} {clauses : List (SelectClauseHead × Stmt)}
+    {default? : Option Stmt} {done : List GoValue} {e : Stop} (env : LocalEnv) (k' : Cont) (ch : Choices)
+    (h : applySelect ctx s clauses default? (v :: done).reverse env k' ch = .error e) (hne : ∀ msg, e ≠ .panic msg) :
+    stepFn ctx s (.retV v (.selectOpsK clauses default? done [] env k')) ch = .error e := by
+  simp only [stepFn, toResult_of_error h hne, Bind.bind, Except.bind]
+
+@[stepFn_eqns] theorem retV_rhsK_apply_error {s : Store} {v : GoValue} {rop : RhsOp} {done : List GoValue} {e : Stop}
+    (refs : List TargetRef) (body : Stmt) (env : LocalEnv) (k' : Cont) (ch : Choices)
+    (h : applyRhsOp ctx s rop (v :: done).reverse = .error e) (hne : ∀ msg, e ≠ .panic msg) :
+    stepFn ctx s (.retV v (.rhsK rop refs done [] body env k')) ch = .error e := by
+  simp only [stepFn, toResult_of_error h hne, Bind.bind, Except.bind]
+
+@[stepFn_eqns] theorem retV_atomicStK_apply_error {s : Store} {v : GoValue} {op : AtomicOp} {done : List GoValue} {e : Stop}
+    (env : LocalEnv) (k' : Cont) (ch : Choices) (h : applyAtomicOp ctx s op (v :: done).reverse env k' = .error e)
+    (hne : ∀ msg, e ≠ .panic msg) :
+    stepFn ctx s (.retV v (.atomicStK op done [] env k')) ch = .error e := by
+  simp only [stepFn, toResult_of_error h hne, Bind.bind, Except.bind]
+
+@[stepFn_eqns] theorem next_preprintK_error {s : Store} {older : List PanicEntry} {entry : PanicEntry} {newer : List PanicEntry}
+    {e : Stop} (k' : Cont) (ch : Choices) (h : preprintDispatch ctx s entry = .error e) (hne : ∀ msg, e ≠ .panic msg) :
+    stepFn ctx s (.next (.preprintK older entry newer k')) ch = .error e := by
+  simp only [stepFn, stepNextOther, toResult_of_error h hne, Bind.bind, Except.bind]
+
+@[stepFn_eqns] theorem retV_stmtOpK_apply_error {s : Store} {v : GoValue} {op : StmtOp} {nt : Nat} {done : List GoValue} {e : Stop}
+    (env : LocalEnv) (k' : Cont) (ch : Choices) (h : applyStmtOp ctx s ch op nt (v :: done).reverse = .error e)
+    (hne : ∀ msg, e ≠ .panic msg) :
+    stepFn ctx s (.retV v (.stmtOpK op nt done [] env k')) ch = .error e := by
+  unfold applyStmtOp at h
+  rcases bind_eq_error h with hp | ⟨c, hc, hcs⟩
+  · simp only [stepFn, toResult_of_error hp hne, Bind.bind, Except.bind]
+  · simp only [stepFn, hc, toResult_ok, Bind.bind, Except.bind, deliverV_ok, runCommit_error hcs hne, Functor.map, Except.map]
+
+@[stepFn_eqns] theorem next_storeK_error {s : Store} {ref : TargetRef} {val : GoValue} {e : Stop} (rs : List TargetRef)
+    (vrest : List GoValue) (body : Stmt) (env : LocalEnv) (k' : Cont) (ch : Choices)
+    (h : storeTarget ctx s ref val = .error e) (hne : ∀ msg, e ≠ .panic msg) :
+    stepFn ctx s (.next (.storeK (ref :: rs) (val :: vrest) body env k')) ch = .error e := by
+  unfold storeTarget at h
+  rcases bind_eq_error h with hp | ⟨c, hc, hcs⟩
+  · simp only [stepFn, toResult_of_error hp hne, Bind.bind, Except.bind]
+  · simp only [stepFn, hc, toResult_ok, Bind.bind, Except.bind, deliverV_ok, runCommit_error hcs hne, Functor.map, Except.map]
+
+@[stepFn_eqns] theorem exec_call_nullary_error {s : Store} {targets : Array Assignee} {fid : FuncId} {args : Array Expr}
+    {plans : List (TargetShape × List Expr)} {e : Stop} (env : LocalEnv) (k : Cont) (ch : Choices)
+    (hp : targetsPlan targets.toList = some plans) (hargs : args.toList = [])
+    (he : enterFrame ctx s fid [] = .error e) (hne : ∀ msg, e ≠ .panic msg) :
+    stepFn ctx s (.exec (.call targets fid args) env k) ch = .error e := by
+  rcases enterFrame_inv_error he with hpl | ⟨c, hpl, hcs⟩
+  · simp [stepFn, hp, hargs, enterFramePickV_of_plan_error ch hpl hne, Bind.bind, Except.bind]
+  · simp [stepFn, hp, hargs, enterFramePickV_of_plan_ok hpl, Bind.bind, Except.bind, runCommit_error hcs hne, Functor.map, Except.map]
+
+@[stepFn_eqns] theorem retV_callArgsK_enter_error {s : Store} {v : GoValue} {fid : FuncId} {plans : List (TargetShape × List Expr)}
+    {vals : List GoValue} {e : Stop} (env : LocalEnv) (k' : Cont) (ch : Choices)
+    (he : enterFrame ctx s fid (vals ++ [v]) = .error e) (hne : ∀ msg, e ≠ .panic msg) :
+    stepFn ctx s (.retV v (.callArgsK fid plans vals [] env k')) ch = .error e := by
+  rcases enterFrame_inv_error he with hpl | ⟨c, hpl, hcs⟩
+  · simp [stepFn, enterFramePickV_of_plan_error ch hpl hne, Bind.bind, Except.bind]
+  · simp [stepFn, enterFramePickV_of_plan_ok hpl, Bind.bind, Except.bind, runCommit_error hcs hne, Functor.map, Except.map]
+
+@[stepFn_eqns] theorem retV_callValCalleeK_enter_error {s : Store} {fid : FuncId} {captured : List GoValue}
+    {plans : List (TargetShape × List Expr)} {e : Stop} (env : LocalEnv) (k' : Cont) (ch : Choices)
+    (he : enterFrame ctx s fid captured = .error e) (hne : ∀ msg, e ≠ .panic msg) :
+    stepFn ctx s (.retV (.funcVal fid captured) (.callValCalleeK plans [] env k')) ch = .error e := by
+  rcases enterFrame_inv_error he with hpl | ⟨c, hpl, hcs⟩
+  · simp [stepFn, enterFramePickV_of_plan_error ch hpl hne, Bind.bind, Except.bind]
+  · simp [stepFn, enterFramePickV_of_plan_ok hpl, Bind.bind, Except.bind, runCommit_error hcs hne, Functor.map, Except.map]
+
+@[stepFn_eqns] theorem retV_callValArgsK_enter_error {s : Store} {v : GoValue} {fid : FuncId} {captured vals : List GoValue}
+    {plans : List (TargetShape × List Expr)} {e : Stop} (env : LocalEnv) (k' : Cont) (ch : Choices)
+    (he : enterFrame ctx s fid (captured ++ vals ++ [v]) = .error e) (hne : ∀ msg, e ≠ .panic msg) :
+    stepFn ctx s (.retV v (.callValArgsK (.funcVal fid captured) plans vals [] env k')) ch = .error e := by
+  rw [List.append_assoc] at he
+  rcases enterFrame_inv_error he with hpl | ⟨c, hpl, hcs⟩
+  · simp [stepFn, enterFramePickV_of_plan_error ch hpl hne, Bind.bind, Except.bind]
+  · simp [stepFn, enterFramePickV_of_plan_ok hpl, Bind.bind, Except.bind, runCommit_error hcs hne, Functor.map, Except.map]
+
+@[stepFn_eqns] theorem panicking_frame_defer_error {s : Store} {chain : List PanicEntry} {fid : FuncId} {captured args : List GoValue}
+    {e : Stop} (t : List (TargetShape × List Expr)) (te : LocalEnv) (r : List Loc) (ds : List (GoValue × List GoValue))
+    (k' : Cont) (fr : FuncId) (ch : Choices) (he : enterFrame ctx s fid (captured ++ args) = .error e)
+    (hne : ∀ msg, e ≠ .panic msg) :
+    stepFn ctx s (.panicking chain (.frame t te r ((.funcVal fid captured, args) :: ds) k' fr)) ch = .error e := by
+  rcases enterFrame_inv_error he with hpl | ⟨c, hpl, hcs⟩
+  · simp [stepFn, enterFramePickV_of_plan_error ch hpl hne, Bind.bind, Except.bind]
+  · simp [stepFn, enterFramePickV_of_plan_ok hpl, Bind.bind, Except.bind, runCommit_error hcs hne, Functor.map, Except.map]
+
+@[stepFn_eqns] theorem frameExit_defer_error {s : Store} {fid : FuncId} {captured args : List GoValue} {e : Stop}
+    (targets : List (TargetShape × List Expr)) (tenv : LocalEnv) (results : List Loc) (ds : List (GoValue × List GoValue))
+    (k' : Cont) (fr : FuncId) (ch : Choices) (he : enterFrame ctx s fid (captured ++ args) = .error e)
+    (hne : ∀ msg, e ≠ .panic msg) :
+    stepFrameExit ctx s targets tenv results ((.funcVal fid captured, args) :: ds) k' fr ch = .error e := by
+  rcases enterFrame_inv_error he with hpl | ⟨c, hpl, hcs⟩
+  · simp [stepFrameExit, enterFramePickV_of_plan_error ch hpl hne, Bind.bind, Except.bind]
+  · simp [stepFrameExit, enterFramePickV_of_plan_ok hpl, Bind.bind, Except.bind, runCommit_error hcs hne, Functor.map, Except.map]
+
+/-- The plain-bind arms: the helper's `Stop`, whatever it is, is the step's. -/
+@[stepFn_eqns] theorem exec_block_error {s : Store} {decls : Array Param} {env : LocalEnv} {e : Stop} (ss : Array Stmt) (k : Cont)
+    (ch : Choices) (h : allocDecls ctx env.pushScope s decls.toList = .error e) :
+    stepFn ctx s (.exec (.block decls ss) env k) ch = .error e := by
+  simp [stepFn, h, Bind.bind, Except.bind]
+
+@[stepFn_eqns] theorem evalE_var_error {s : Store} {id : VarId} {loc : Loc} {e : Stop} (env : LocalEnv) (k : Cont) (ch : Choices)
+    (hl : LocalEnv.lookup env id = some loc) (hv : loadRoot ctx s loc = .error e) :
+    stepFn ctx s (.evalE (.var id) env k) ch = .error e := by
+  simp [stepFn, hl, Mem.loadBindingFor, hv, Bind.bind, Except.bind]
+
+@[stepFn_eqns] theorem retV_mapRangeK_error {s : Store} {v : GoValue} {e : Stop} (keyVar valVar : Option VarId) (keyTy valTy : Ty)
+    (body : Stmt) (env : LocalEnv) (k' : Cont) (ch : Choices) (h : mapRangeStartSets s v = .error e) :
+    stepFn ctx s (.retV v (.mapRangeK keyVar valVar keyTy valTy body env k')) ch = .error e := by
+  simp [stepFn, h, Bind.bind, Except.bind]
+
+@[stepFn_eqns] theorem next_mapIterK_error {s : Store} {keyTy valTy : Ty} {base : Option Loc} {produced : Array Nat} {e : Stop}
+    (keyVar valVar : Option VarId) (body : Stmt) (start : Array Nat) (env : LocalEnv) (k' : Cont) (ch : Choices)
+    (h : mapIterCandidates ctx s keyTy valTy base produced = .error e) :
+    stepFn ctx s (.next (.mapIterK keyVar valVar keyTy valTy body base produced start env k')) ch = .error e := by
+  simp [stepFn, h, Bind.bind, Except.bind]
+
+@[stepFn_eqns] theorem frameExit_targets_error {s : Store} {results : List Loc} {e : Stop} (sh : TargetShape) (ex : Expr) (ops : List Expr)
+    (rest : List (TargetShape × List Expr)) (tenv : LocalEnv) (k' : Cont) (fr : FuncId) (ch : Choices)
+    (hl : loadResults ctx s results = .error e) :
+    stepFrameExit ctx s ((sh, ex :: ops) :: rest) tenv results [] k' fr ch = .error e := by
+  simp [stepFrameExit, hl, Bind.bind, Except.bind]
+
+@[stepFn_eqns] theorem frameExit_preprint_error {s : Store} {rl : Loc} {e : Stop} (tenv : LocalEnv) (older : List PanicEntry)
+    (entry : PanicEntry) (newer : List PanicEntry) (k'' : Cont) (fr : FuncId) (ch : Choices) (hl : loadRoot ctx s rl = .error e) :
+    stepFrameExit ctx s [] tenv [rl] [] (.preprintK older entry newer k'') fr ch = .error e := by
+  simp [stepFrameExit, Mem.loadBinding, hl, Bind.bind, Except.bind]
+
+@[stepFn_eqns] theorem unseqEnter_error {s : Store} {g : UnseqGraph} {env : LocalEnv} {e : Stop} (thenB : Stmt) (rest : List Stmt)
+    (k' : Cont) (ch : Choices) (hwf : g.wellFormed? = none) (hen : unseqEntryCheck? g env = none)
+    (ha : allocDecls ctx env.pushScope s g.cells = .error e) :
+    stepFn ctx s (.exec (.unseq g thenB) env (.seq rest env k')) ch = .error e := by
+  simp [stepFn, stepUnseqEnter, hwf, hen, ha, Bind.bind, Except.bind]
+
+@[stepFn_eqns] theorem unseqValue_error {s : Store} {v : GoValue} {g : UnseqGraph} {i : Nat} {o : UnseqOcc} {bind : VarId}
+    {head : Expr} {loc : Loc} {e : Stop} (thenB : Stmt) (st : List UnseqStatus) (tg : List (VarId × TargetRef)) (env : LocalEnv)
+    (k' : Cont) (ch : Choices) (hget : g.occs[i]? = some o) (hbody : o.body = .eval bind head)
+    (hloc : unseqCellLoc env bind = .ok loc) (hst : storeLoc ctx s loc v = .error e) :
+    stepFn ctx s (.retV v (.unseqK g thenB st tg env (.wait i) k')) ch = .error e := by
+  simp [stepFn, stepUnseqValue, hget, hbody, hloc, Mem.store, hst, Bind.bind, Except.bind]
+
+/-! ### (ii) The refusal arms stated by shape -/
+
+@[stepFn_eqns] theorem retV_ifK_error {s : Store} {v : GoValue} {e : Stop} (t el : Stmt) (env : LocalEnv) (k' : Cont) (ch : Choices)
+    (hv : valueAsBool v = .error e) : stepFn ctx s (.retV v (.ifK t el env k')) ch = .error e := by
+  simp [stepFn, hv, Bind.bind, Except.bind]
+@[stepFn_eqns] theorem retV_whileK_error {s : Store} {v : GoValue} {e : Stop} (c : Expr) (b : Stmt) (env : LocalEnv) (k' : Cont)
+    (ch : Choices) (hv : valueAsBool v = .error e) : stepFn ctx s (.retV v (.whileK c b env k')) ch = .error e := by
+  simp [stepFn, hv, Bind.bind, Except.bind]
+@[stepFn_eqns] theorem retV_andK_error {s : Store} {v : GoValue} {e : Stop} (r : Expr) (env : LocalEnv) (k' : Cont) (ch : Choices)
+    (hv : valueAsBool v = .error e) : stepFn ctx s (.retV v (.andK r env k')) ch = .error e := by
+  simp [stepFn, hv, Bind.bind, Except.bind]
+@[stepFn_eqns] theorem retV_orK_error {s : Store} {v : GoValue} {e : Stop} (r : Expr) (env : LocalEnv) (k' : Cont) (ch : Choices)
+    (hv : valueAsBool v = .error e) : stepFn ctx s (.retV v (.orK r env k')) ch = .error e := by
+  simp [stepFn, hv, Bind.bind, Except.bind]
+@[stepFn_eqns] theorem retV_boolK_error {s : Store} {v : GoValue} {e : Stop} (k' : Cont) (ch : Choices) (hv : valueAsBool v = .error e) :
+    stepFn ctx s (.retV v (.boolK k')) ch = .error e := by
+  simp [stepFn, hv, Bind.bind, Except.bind]
+
+/-- `valueAsBool` refuses every non-Boolean value by name. -/
+theorem valueAsBool_nonbool {v : GoValue} (h : ∀ b, v ≠ .bool b) :
+    valueAsBool v = .error (.stuck s!"expected bool value, got {repr v}") := by
+  cases v <;> first | exact absurd rfl (h _) | rfl
+
+@[stepFn_eqns] theorem retV_callValCalleeK_args_notfunc {s : Store} {cv : GoValue} (plans : List (TargetShape × List Expr)) (a : Expr)
+    (rest : List Expr) (env : LocalEnv) (k' : Cont) (ch : Choices) (hd : deferrableCallee cv = false) :
+    stepFn ctx s (.retV cv (.callValCalleeK plans (a :: rest) env k')) ch
+      = .error (.stuck s!"expected function value, got {repr cv}") := by
+  simp [stepFn, hd, throw, throwThe, MonadExceptOf.throw]
+
+@[stepFn_eqns] theorem retV_deferCalleeK_notfunc {s : Store} {v : GoValue} (args : List Expr) (env : LocalEnv) (k' : Cont) (ch : Choices)
+    (hd : deferrableCallee v = false) :
+    stepFn ctx s (.retV v (.deferCalleeK args env k')) ch = .error (.stuck s!"expected function value in defer, got {repr v}") := by
+  simp [stepFn, hd, throw, throwThe, MonadExceptOf.throw]
+
+@[stepFn_eqns] theorem retV_goCalleeK_notfunc {s : Store} {v : GoValue} (args : List Expr) (env : LocalEnv) (k' : Cont) (ch : Choices)
+    (hd : deferrableCallee v = false) :
+    stepFn ctx s (.retV v (.goCalleeK args env k')) ch = .error (.stuck s!"expected function value in go statement, got {repr v}") := by
+  simp [stepFn, hd, throw, throwThe, MonadExceptOf.throw]
+
+/-- A value that is no function value and not `nil` is not deferrable (`deferrableCallee`'s table). -/
+theorem deferrableCallee_false {cv : GoValue} (hf : ∀ fid c, cv ≠ .funcVal fid c) (hn : cv ≠ .nil) : deferrableCallee cv = false := by
+  cases cv <;> first | exact absurd rfl hn | exact absurd rfl (hf _ _) | rfl
+
+@[stepFn_eqns] theorem panicking_frame_defer_notfunc {s : Store} {chain : List PanicEntry} {cv : GoValue} (args : List GoValue)
+    (t : List (TargetShape × List Expr)) (te : LocalEnv) (r : List Loc) (ds : List (GoValue × List GoValue)) (k' : Cont) (fr : FuncId)
+    (ch : Choices) (hf : ∀ fid c, cv ≠ .funcVal fid c) (hn : cv ≠ .nil) :
+    stepFn ctx s (.panicking chain (.frame t te r ((cv, args) :: ds) k' fr)) ch
+      = .error (.stuck s!"deferred callee is not a function value: {repr cv}") := by
+  cases cv <;> first | exact absurd rfl hn | exact absurd rfl (hf _ _) | simp [stepFn, throw, throwThe, MonadExceptOf.throw]
+
+@[stepFn_eqns] theorem frameExit_defer_notfunc {s : Store} {cv : GoValue} (args : List GoValue) (targets : List (TargetShape × List Expr))
+    (tenv : LocalEnv) (results : List Loc) (ds : List (GoValue × List GoValue)) (k' : Cont) (fr : FuncId) (ch : Choices)
+    (hf : ∀ fid c, cv ≠ .funcVal fid c) (hn : cv ≠ .nil) :
+    stepFrameExit ctx s targets tenv results ((cv, args) :: ds) k' fr ch
+      = .error (.stuck s!"deferred callee is not a function value: {repr cv}") := by
+  cases cv <;> first | exact absurd rfl hn | exact absurd rfl (hf _ _) | simp [stepFrameExit, throw, throwThe, MonadExceptOf.throw]
+
+@[stepFn_eqns] theorem retV_preprintK_nonstring {s : Store} {v : GoValue} (older : List PanicEntry) (entry : PanicEntry)
+    (newer : List PanicEntry) (k' : Cont) (ch : Choices) (hs : ∀ t, v ≠ .string t) :
+    stepFn ctx s (.retV v (.preprintK older entry newer k')) ch
+      = .error (.stuck s!"preprint: the payload method returned a non-string result {repr v}") := by
+  cases v <;> first | exact absurd rfl (hs _) | simp [stepFn, stepRetOther, throw, throwThe, MonadExceptOf.throw]
+
+@[stepFn_eqns] theorem next_storeK_arity_refs (s : Store) (r : TargetRef) (rs : List TargetRef) (body : Stmt) (env : LocalEnv) (k' : Cont)
+    (ch : Choices) :
+    stepFn ctx s (.next (.storeK (r :: rs) [] body env k')) ch
+      = .error (.internal "storeK value/target arity mismatch (the shared phase-2 spine: receive delivery, assignment, comma-ok, call write-back)") := by
+  defn_eq
+@[stepFn_eqns] theorem next_storeK_arity_vals (s : Store) (v : GoValue) (vs : List GoValue) (body : Stmt) (env : LocalEnv) (k' : Cont)
+    (ch : Choices) :
+    stepFn ctx s (.next (.storeK [] (v :: vs) body env k')) ch
+      = .error (.internal "storeK value/target arity mismatch (the shared phase-2 spine: receive delivery, assignment, comma-ok, call write-back)") := by
+  defn_eq
+
+/-! ### (iv) The signal table, completed -/
+
+theorem contHeadLabel_labelK (name : String) (k : Cont) : contHeadLabel (.labelK name k) = some name := rfl
+theorem contHeadLabel_stop : contHeadLabel .stop = none := rfl
+theorem contHeadLabel_frame (t : List (TargetShape × List Expr)) (te : LocalEnv) (r : List Loc) (ds : List (GoValue × List GoValue))
+    (k : Cont) (fr : FuncId) : contHeadLabel (.frame t te r ds k fr) = none := rfl
+theorem signalStep_breakableK_brkTo (L : String) (k' : Cont) : signalStep (.brkTo L) (.breakableK k') = some (.signal (.brkTo L) k') := rfl
+theorem signalStep_breakableK_contTo (L : String) (k' : Cont) : signalStep (.contTo L) (.breakableK k') = some (.signal (.contTo L) k') := rfl
+theorem signalStep_labelK_brk (name : String) (k' : Cont) : signalStep .brk (.labelK name k') = some (.signal .brk k') := rfl
+theorem signalStep_labelK_cont (name : String) (k' : Cont) : signalStep .cont (.labelK name k') = some (.signal .cont k') := rfl
+theorem signalStep_labelK_brkTo_ne {name L : String} (k' : Cont) (h : name ≠ L) :
+    signalStep (.brkTo L) (.labelK name k') = some (.signal (.brkTo L) k') := by simp [signalStep, h]
+theorem signalStep_labelK_contTo_self (name : String) (k' : Cont) : signalStep (.contTo name) (.labelK name k') = none := by
+  simp [signalStep]
+theorem signalStep_labelK_contTo_ne {name L : String} (k' : Cont) (h : name ≠ L) :
+    signalStep (.contTo L) (.labelK name k') = some (.signal (.contTo L) k') := by simp [signalStep, h]
+theorem signalStep_loop_brkTo (L : String) (c : Expr) (b : Stmt) (env : LocalEnv) (k' : Cont) :
+    signalStep (.brkTo L) (.loop c b env k') = some (.signal (.brkTo L) k') := rfl
+theorem signalStep_loop_contTo_self {L : String} (c : Expr) (b : Stmt) (env : LocalEnv) {k' : Cont} (h : contHeadLabel k' = some L) :
+    signalStep (.contTo L) (.loop c b env k') = some (.exec (.while c b) env k') := by simp [signalStep, h]
+theorem signalStep_loop_contTo_ne {L : String} (c : Expr) (b : Stmt) (env : LocalEnv) {k' : Cont} (h : contHeadLabel k' ≠ some L) :
+    signalStep (.contTo L) (.loop c b env k') = some (.signal (.contTo L) k') := by simp [signalStep, h]
+theorem signalStep_mapIterK_brk (keyVar valVar : Option VarId) (keyTy valTy : Ty) (body : Stmt) (base : Option Loc)
+    (produced start : Array Nat) (env : LocalEnv) (k' : Cont) :
+    signalStep .brk (.mapIterK keyVar valVar keyTy valTy body base produced start env k') = some (.next k') := rfl
+theorem signalStep_mapIterK_cont (keyVar valVar : Option VarId) (keyTy valTy : Ty) (body : Stmt) (base : Option Loc)
+    (produced start : Array Nat) (env : LocalEnv) (k' : Cont) :
+    signalStep .cont (.mapIterK keyVar valVar keyTy valTy body base produced start env k')
+      = some (.next (.mapIterK keyVar valVar keyTy valTy body base produced start env k')) := rfl
+theorem signalStep_mapIterK_ret (keyVar valVar : Option VarId) (keyTy valTy : Ty) (body : Stmt) (base : Option Loc)
+    (produced start : Array Nat) (env : LocalEnv) (k' : Cont) :
+    signalStep .ret (.mapIterK keyVar valVar keyTy valTy body base produced start env k') = some (.signal .ret k') := rfl
+theorem signalStep_mapIterK_brkTo (L : String) (keyVar valVar : Option VarId) (keyTy valTy : Ty) (body : Stmt) (base : Option Loc)
+    (produced start : Array Nat) (env : LocalEnv) (k' : Cont) :
+    signalStep (.brkTo L) (.mapIterK keyVar valVar keyTy valTy body base produced start env k') = some (.signal (.brkTo L) k') := rfl
+theorem signalStep_mapIterK_contTo_self {L : String} (keyVar valVar : Option VarId) (keyTy valTy : Ty) (body : Stmt) (base : Option Loc)
+    (produced start : Array Nat) (env : LocalEnv) {k' : Cont} (h : contHeadLabel k' = some L) :
+    signalStep (.contTo L) (.mapIterK keyVar valVar keyTy valTy body base produced start env k')
+      = some (.next (.mapIterK keyVar valVar keyTy valTy body base produced start env k')) := by simp [signalStep, h]
+theorem signalStep_mapIterK_contTo_ne {L : String} (keyVar valVar : Option VarId) (keyTy valTy : Ty) (body : Stmt) (base : Option Loc)
+    (produced start : Array Nat) (env : LocalEnv) {k' : Cont} (h : contHeadLabel k' ≠ some L) :
+    signalStep (.contTo L) (.mapIterK keyVar valVar keyTy valTy body base produced start env k') = some (.signal (.contTo L) k') := by
+  simp [signalStep, h]
+
+/-- `continue L` at the label `L` of a non-loop statement: the table has no successor and the refusal names it. -/
+@[stepFn_eqns] theorem signal_labelK_contTo_self (s : Store) (name : String) (k' : Cont) (ch : Choices) :
+    stepFn ctx s (.signal (.contTo name) (.labelK name k')) ch = .error (.stuck s!"continue to non-loop label {name}") := by
+  simp [stepFn, signalStep, signalRefusal, throw, throwThe, MonadExceptOf.throw]
 
 end GoLean.GoCore.Equations

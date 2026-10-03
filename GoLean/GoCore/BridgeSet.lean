@@ -147,7 +147,18 @@ the SEQUENTIAL-TO-POOL TERMINAL PROJECTION (`execProgLoop_single_terminal`, `exe
 `transferableWide`), and the embedding without the `seqOpCount = 0` premise (request 9:
 `execProgLoop_single_noBoundary`). The rows of this re-pin are GENERATED from the two files' theorem headers
 (binders written out, `∀ {ctx : ProgramCtx}` first where the statement mentions the context); the client
-`Tests/EquationClient.lean` pins the same 229 equation statements a second time and checks the set exhaustive.
+`Tests/EquationClient.lean` pins every equation statement a second time and checks the set exhaustive.
+PRE-LANDING ROUND (packet D audit, MERGE-CLEAN with follow-ups; [AGENT] coordinator dispositions 2026-10-03):
+rows 1–436 BYTE-IDENTICAL; rows 437–499 ADDED — `Equations.lean`'s appended section (audit F3: the sync
+apply's panic twin `retV_syncStK_apply_panic`; the composed applies' and entries' NON-PANIC `Stop` pass-throughs
+`*_apply_error`/`*_enter_error`/`next_storeK_error`/…; the refusal arms stated by shape — the `valueAsBool`
+refusals, the non-deferrable callees, the drains' non-function callees, the preprint non-string result, `storeK`'s
+arity breaches; the `signalStep` table completed, labelled `brkTo`/`contTo` and the `mapIterK` rows; the helpers
+`bind_eq_error`, `runCommit_error`, `enterFramePickV_of_plan_error`, `enterFrame_inv_error`, `valueAsBool_nonbool`,
+`deferrableCallee_false`, `contHeadLabel_*`); rows 500–501 ADDED — `PoolProjection.lean`'s
+`execProgLoop_single_noBoundary_wide`/`execProgLoopOut_single_noBoundary_wide` (audit F4: the equal-fuel embedding
+over `transferableWide`). The arm equations are now PROPOSITIONAL (`defn_eq`, no `rfl`-proof) so a client's proof
+term records them (audit F2); their STATEMENTS are unchanged.
 -/
 
 namespace GoLean.GoCore.BridgeSet
@@ -3109,5 +3120,424 @@ example : ∀ {ctx : ProgramCtx} {fuel : Nat} {σ : Store} {c : Config} {ch : Ch
     (_hnb : ∀ n σ' c' ch' ls, Prefix ctx n σ c ch ls σ' c' ch' → n < fuel → ∀ c'' σ'' ch'' l, stepFn ctx σ' c' ch' = .ok (c'', σ'', ch'', l) → c'.afterStepFlag σ' c'' = none),
     execProgLoop ctx fuel ⟨#[.running c none], σ, 0⟩ rs ch = r :=
   @GoLean.GoCore.Machine.execProgLoop_single_noBoundary
+
+-- ---- RE-PIN 10, the pre-landing round (packet D audit F3/F4): rows 437–499 (`Equations.lean`, appended), rows 500–501 (`PoolProjection.lean`, appended) ----
+
+-- 437. `Equations.lean` — `bind_eq_error`
+example : ∀ {ε α β : Type} {x : Except ε α} {f : α → Except ε β} {e : ε} (_h : x >>= f = .error e),
+    x = .error e ∨ ∃ a, x = .ok a ∧ f a = .error e :=
+  @GoLean.GoCore.Equations.bind_eq_error
+
+-- 438. `Equations.lean` — `runCommit_error`
+example : ∀ {α : Type} {c : Commit α} {s : Store} {e : Stop} (_hcs : c s = .error e)
+    (_hne : ∀ msg, e ≠ .panic msg),
+    runCommit c s = .error e :=
+  @GoLean.GoCore.Equations.runCommit_error
+
+-- 439. `Equations.lean` — `enterFramePickV_of_plan_error`
+example : ∀ {ctx : ProgramCtx} {s : Store} {fid : FuncId} {args : List GoValue} {e : Stop} (ch : Choices)
+    (_h : enterFrame.plan ctx s fid args = .error e) (_hne : ∀ msg, e ≠ .panic msg),
+    enterFramePickV ctx s fid args ch = .error e :=
+  @GoLean.GoCore.Equations.enterFramePickV_of_plan_error
+
+-- 440. `Equations.lean` — `enterFrame_inv_error`
+example : ∀ {ctx : ProgramCtx} {s : Store} {fid : FuncId} {args : List GoValue} {e : Stop}
+    (_h : enterFrame ctx s fid args = .error e),
+    enterFrame.plan ctx s fid args = .error e ∨ ∃ c, enterFrame.plan ctx s fid args = .ok c ∧ c s = .error e :=
+  @GoLean.GoCore.Equations.enterFrame_inv_error
+
+-- 441. `Equations.lean` — `retV_syncStK_apply_panic`
+example : ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {op : SyncOp} {done : List GoValue} {msg : String}
+    (env : LocalEnv) (k' : Cont) (ch : Choices)
+    (_h : applySyncOp ctx s ch op (v :: done).reverse env k' = .error (.panic msg)),
+    stepFn ctx s (.retV v (.syncStK op done [] env k')) ch = .ok (.panicking [panicEntry msg] k', s, ch, ⟨[], [], []⟩) :=
+  @GoLean.GoCore.Equations.retV_syncStK_apply_panic
+
+-- 442. `Equations.lean` — `evalE_strict_nullary_error`
+example : ∀ {ctx : ProgramCtx} {s : Store} {e : Expr} {op : StrictOp} {st : Stop} (env : LocalEnv) (k : Cont)
+    (ch : Choices) (_h : strictPlan e = some (op, []))
+    (_ha : applyStrictOp ctx s (projChainTarget ctx s k) op [] = .error st) (_hne : ∀ msg, st ≠ .panic msg),
+    stepFn ctx s (.evalE e env k) ch = .error st :=
+  @GoLean.GoCore.Equations.evalE_strict_nullary_error
+
+-- 443. `Equations.lean` — `retV_chanStK_apply_error`
+example : ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {op : ChanStOp} {done : List GoValue} {e : Stop}
+    (env : LocalEnv) (k' : Cont) (ch : Choices)
+    (_h : applyChanOp ctx s op (v :: done).reverse env k' = .error e) (_hne : ∀ msg, e ≠ .panic msg),
+    stepFn ctx s (.retV v (.chanStK op done [] env k')) ch = .error e :=
+  @GoLean.GoCore.Equations.retV_chanStK_apply_error
+
+-- 444. `Equations.lean` — `retV_selectOpsK_apply_panic`
+example : ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {clauses : List (SelectClauseHead × Stmt)}
+    {default? : Option Stmt} {done : List GoValue} {msg : String} (env : LocalEnv) (k' : Cont) (ch : Choices)
+    (_h : applySelect ctx s clauses default? (v :: done).reverse env k' ch = .error (.panic msg)),
+    stepFn ctx s (.retV v (.selectOpsK clauses default? done [] env k')) ch
+      = .ok (.panicking [panicEntry msg] k', s, ch, ⟨[], [], []⟩) :=
+  @GoLean.GoCore.Equations.retV_selectOpsK_apply_panic
+
+-- 445. `Equations.lean` — `retV_selectOpsK_apply_error`
+example : ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {clauses : List (SelectClauseHead × Stmt)}
+    {default? : Option Stmt} {done : List GoValue} {e : Stop} (env : LocalEnv) (k' : Cont) (ch : Choices)
+    (_h : applySelect ctx s clauses default? (v :: done).reverse env k' ch = .error e)
+    (_hne : ∀ msg, e ≠ .panic msg),
+    stepFn ctx s (.retV v (.selectOpsK clauses default? done [] env k')) ch = .error e :=
+  @GoLean.GoCore.Equations.retV_selectOpsK_apply_error
+
+-- 446. `Equations.lean` — `retV_rhsK_apply_error`
+example : ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {rop : RhsOp} {done : List GoValue} {e : Stop}
+    (refs : List TargetRef) (body : Stmt) (env : LocalEnv) (k' : Cont) (ch : Choices)
+    (_h : applyRhsOp ctx s rop (v :: done).reverse = .error e) (_hne : ∀ msg, e ≠ .panic msg),
+    stepFn ctx s (.retV v (.rhsK rop refs done [] body env k')) ch = .error e :=
+  @GoLean.GoCore.Equations.retV_rhsK_apply_error
+
+-- 447. `Equations.lean` — `retV_atomicStK_apply_error`
+example : ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {op : AtomicOp} {done : List GoValue} {e : Stop}
+    (env : LocalEnv) (k' : Cont) (ch : Choices)
+    (_h : applyAtomicOp ctx s op (v :: done).reverse env k' = .error e) (_hne : ∀ msg, e ≠ .panic msg),
+    stepFn ctx s (.retV v (.atomicStK op done [] env k')) ch = .error e :=
+  @GoLean.GoCore.Equations.retV_atomicStK_apply_error
+
+-- 448. `Equations.lean` — `next_preprintK_error`
+example : ∀ {ctx : ProgramCtx} {s : Store} {older : List PanicEntry} {entry : PanicEntry}
+    {newer : List PanicEntry} {e : Stop} (k' : Cont) (ch : Choices)
+    (_h : preprintDispatch ctx s entry = .error e) (_hne : ∀ msg, e ≠ .panic msg),
+    stepFn ctx s (.next (.preprintK older entry newer k')) ch = .error e :=
+  @GoLean.GoCore.Equations.next_preprintK_error
+
+-- 449. `Equations.lean` — `retV_stmtOpK_apply_error`
+example : ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {op : StmtOp} {nt : Nat} {done : List GoValue}
+    {e : Stop} (env : LocalEnv) (k' : Cont) (ch : Choices)
+    (_h : applyStmtOp ctx s ch op nt (v :: done).reverse = .error e) (_hne : ∀ msg, e ≠ .panic msg),
+    stepFn ctx s (.retV v (.stmtOpK op nt done [] env k')) ch = .error e :=
+  @GoLean.GoCore.Equations.retV_stmtOpK_apply_error
+
+-- 450. `Equations.lean` — `next_storeK_error`
+example : ∀ {ctx : ProgramCtx} {s : Store} {ref : TargetRef} {val : GoValue} {e : Stop} (rs : List TargetRef)
+    (vrest : List GoValue) (body : Stmt) (env : LocalEnv) (k' : Cont) (ch : Choices)
+    (_h : storeTarget ctx s ref val = .error e) (_hne : ∀ msg, e ≠ .panic msg),
+    stepFn ctx s (.next (.storeK (ref :: rs) (val :: vrest) body env k')) ch = .error e :=
+  @GoLean.GoCore.Equations.next_storeK_error
+
+-- 451. `Equations.lean` — `exec_call_nullary_error`
+example : ∀ {ctx : ProgramCtx} {s : Store} {targets : Array Assignee} {fid : FuncId} {args : Array Expr}
+    {plans : List (TargetShape × List Expr)} {e : Stop} (env : LocalEnv) (k : Cont) (ch : Choices)
+    (_hp : targetsPlan targets.toList = some plans) (_hargs : args.toList = [])
+    (_he : enterFrame ctx s fid [] = .error e) (_hne : ∀ msg, e ≠ .panic msg),
+    stepFn ctx s (.exec (.call targets fid args) env k) ch = .error e :=
+  @GoLean.GoCore.Equations.exec_call_nullary_error
+
+-- 452. `Equations.lean` — `retV_callArgsK_enter_error`
+example : ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {fid : FuncId} {plans : List (TargetShape × List Expr)}
+    {vals : List GoValue} {e : Stop} (env : LocalEnv) (k' : Cont) (ch : Choices)
+    (_he : enterFrame ctx s fid (vals ++ [v]) = .error e) (_hne : ∀ msg, e ≠ .panic msg),
+    stepFn ctx s (.retV v (.callArgsK fid plans vals [] env k')) ch = .error e :=
+  @GoLean.GoCore.Equations.retV_callArgsK_enter_error
+
+-- 453. `Equations.lean` — `retV_callValCalleeK_enter_error`
+example : ∀ {ctx : ProgramCtx} {s : Store} {fid : FuncId} {captured : List GoValue}
+    {plans : List (TargetShape × List Expr)} {e : Stop} (env : LocalEnv) (k' : Cont) (ch : Choices)
+    (_he : enterFrame ctx s fid captured = .error e) (_hne : ∀ msg, e ≠ .panic msg),
+    stepFn ctx s (.retV (.funcVal fid captured) (.callValCalleeK plans [] env k')) ch = .error e :=
+  @GoLean.GoCore.Equations.retV_callValCalleeK_enter_error
+
+-- 454. `Equations.lean` — `retV_callValArgsK_enter_error`
+example : ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {fid : FuncId} {captured vals : List GoValue}
+    {plans : List (TargetShape × List Expr)} {e : Stop} (env : LocalEnv) (k' : Cont) (ch : Choices)
+    (_he : enterFrame ctx s fid (captured ++ vals ++ [v]) = .error e) (_hne : ∀ msg, e ≠ .panic msg),
+    stepFn ctx s (.retV v (.callValArgsK (.funcVal fid captured) plans vals [] env k')) ch = .error e :=
+  @GoLean.GoCore.Equations.retV_callValArgsK_enter_error
+
+-- 455. `Equations.lean` — `panicking_frame_defer_error`
+example : ∀ {ctx : ProgramCtx} {s : Store} {chain : List PanicEntry} {fid : FuncId}
+    {captured args : List GoValue} {e : Stop} (t : List (TargetShape × List Expr)) (te : LocalEnv)
+    (r : List Loc) (ds : List (GoValue × List GoValue)) (k' : Cont) (fr : FuncId) (ch : Choices)
+    (_he : enterFrame ctx s fid (captured ++ args) = .error e) (_hne : ∀ msg, e ≠ .panic msg),
+    stepFn ctx s (.panicking chain (.frame t te r ((.funcVal fid captured, args) :: ds) k' fr)) ch = .error e :=
+  @GoLean.GoCore.Equations.panicking_frame_defer_error
+
+-- 456. `Equations.lean` — `frameExit_defer_error`
+example : ∀ {ctx : ProgramCtx} {s : Store} {fid : FuncId} {captured args : List GoValue} {e : Stop}
+    (targets : List (TargetShape × List Expr)) (tenv : LocalEnv) (results : List Loc)
+    (ds : List (GoValue × List GoValue)) (k' : Cont) (fr : FuncId) (ch : Choices)
+    (_he : enterFrame ctx s fid (captured ++ args) = .error e) (_hne : ∀ msg, e ≠ .panic msg),
+    stepFrameExit ctx s targets tenv results ((.funcVal fid captured, args) :: ds) k' fr ch = .error e :=
+  @GoLean.GoCore.Equations.frameExit_defer_error
+
+-- 457. `Equations.lean` — `exec_block_error`
+example : ∀ {ctx : ProgramCtx} {s : Store} {decls : Array Param} {env : LocalEnv} {e : Stop} (ss : Array Stmt)
+    (k : Cont) (ch : Choices) (_h : allocDecls ctx env.pushScope s decls.toList = .error e),
+    stepFn ctx s (.exec (.block decls ss) env k) ch = .error e :=
+  @GoLean.GoCore.Equations.exec_block_error
+
+-- 458. `Equations.lean` — `evalE_var_error`
+example : ∀ {ctx : ProgramCtx} {s : Store} {id : VarId} {loc : Loc} {e : Stop} (env : LocalEnv) (k : Cont)
+    (ch : Choices) (_hl : LocalEnv.lookup env id = some loc) (_hv : loadRoot ctx s loc = .error e),
+    stepFn ctx s (.evalE (.var id) env k) ch = .error e :=
+  @GoLean.GoCore.Equations.evalE_var_error
+
+-- 459. `Equations.lean` — `retV_mapRangeK_error`
+example : ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {e : Stop} (keyVar valVar : Option VarId)
+    (keyTy valTy : Ty) (body : Stmt) (env : LocalEnv) (k' : Cont) (ch : Choices)
+    (_h : mapRangeStartSets s v = .error e),
+    stepFn ctx s (.retV v (.mapRangeK keyVar valVar keyTy valTy body env k')) ch = .error e :=
+  @GoLean.GoCore.Equations.retV_mapRangeK_error
+
+-- 460. `Equations.lean` — `next_mapIterK_error`
+example : ∀ {ctx : ProgramCtx} {s : Store} {keyTy valTy : Ty} {base : Option Loc} {produced : Array Nat}
+    {e : Stop} (keyVar valVar : Option VarId) (body : Stmt) (start : Array Nat) (env : LocalEnv) (k' : Cont)
+    (ch : Choices) (_h : mapIterCandidates ctx s keyTy valTy base produced = .error e),
+    stepFn ctx s (.next (.mapIterK keyVar valVar keyTy valTy body base produced start env k')) ch = .error e :=
+  @GoLean.GoCore.Equations.next_mapIterK_error
+
+-- 461. `Equations.lean` — `frameExit_targets_error`
+example : ∀ {ctx : ProgramCtx} {s : Store} {results : List Loc} {e : Stop} (sh : TargetShape) (ex : Expr)
+    (ops : List Expr) (rest : List (TargetShape × List Expr)) (tenv : LocalEnv) (k' : Cont) (fr : FuncId)
+    (ch : Choices) (_hl : loadResults ctx s results = .error e),
+    stepFrameExit ctx s ((sh, ex :: ops) :: rest) tenv results [] k' fr ch = .error e :=
+  @GoLean.GoCore.Equations.frameExit_targets_error
+
+-- 462. `Equations.lean` — `frameExit_preprint_error`
+example : ∀ {ctx : ProgramCtx} {s : Store} {rl : Loc} {e : Stop} (tenv : LocalEnv) (older : List PanicEntry)
+    (entry : PanicEntry) (newer : List PanicEntry) (k'' : Cont) (fr : FuncId) (ch : Choices)
+    (_hl : loadRoot ctx s rl = .error e),
+    stepFrameExit ctx s [] tenv [rl] [] (.preprintK older entry newer k'') fr ch = .error e :=
+  @GoLean.GoCore.Equations.frameExit_preprint_error
+
+-- 463. `Equations.lean` — `unseqEnter_error`
+example : ∀ {ctx : ProgramCtx} {s : Store} {g : UnseqGraph} {env : LocalEnv} {e : Stop} (thenB : Stmt)
+    (rest : List Stmt) (k' : Cont) (ch : Choices) (_hwf : g.wellFormed? = none)
+    (_hen : unseqEntryCheck? g env = none) (_ha : allocDecls ctx env.pushScope s g.cells = .error e),
+    stepFn ctx s (.exec (.unseq g thenB) env (.seq rest env k')) ch = .error e :=
+  @GoLean.GoCore.Equations.unseqEnter_error
+
+-- 464. `Equations.lean` — `unseqValue_error`
+example : ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {g : UnseqGraph} {i : Nat} {o : UnseqOcc}
+    {bind : VarId} {head : Expr} {loc : Loc} {e : Stop} (thenB : Stmt) (st : List UnseqStatus)
+    (tg : List (VarId × TargetRef)) (env : LocalEnv) (k' : Cont) (ch : Choices) (_hget : g.occs[i]? = some o)
+    (_hbody : o.body = .eval bind head) (_hloc : unseqCellLoc env bind = .ok loc)
+    (_hst : storeLoc ctx s loc v = .error e),
+    stepFn ctx s (.retV v (.unseqK g thenB st tg env (.wait i) k')) ch = .error e :=
+  @GoLean.GoCore.Equations.unseqValue_error
+
+-- 465. `Equations.lean` — `retV_ifK_error`
+example : ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {e : Stop} (t el : Stmt) (env : LocalEnv) (k' : Cont)
+    (ch : Choices) (_hv : valueAsBool v = .error e),
+    stepFn ctx s (.retV v (.ifK t el env k')) ch = .error e :=
+  @GoLean.GoCore.Equations.retV_ifK_error
+
+-- 466. `Equations.lean` — `retV_whileK_error`
+example : ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {e : Stop} (c : Expr) (b : Stmt) (env : LocalEnv)
+    (k' : Cont) (ch : Choices) (_hv : valueAsBool v = .error e),
+    stepFn ctx s (.retV v (.whileK c b env k')) ch = .error e :=
+  @GoLean.GoCore.Equations.retV_whileK_error
+
+-- 467. `Equations.lean` — `retV_andK_error`
+example : ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {e : Stop} (r : Expr) (env : LocalEnv) (k' : Cont)
+    (ch : Choices) (_hv : valueAsBool v = .error e),
+    stepFn ctx s (.retV v (.andK r env k')) ch = .error e :=
+  @GoLean.GoCore.Equations.retV_andK_error
+
+-- 468. `Equations.lean` — `retV_orK_error`
+example : ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {e : Stop} (r : Expr) (env : LocalEnv) (k' : Cont)
+    (ch : Choices) (_hv : valueAsBool v = .error e),
+    stepFn ctx s (.retV v (.orK r env k')) ch = .error e :=
+  @GoLean.GoCore.Equations.retV_orK_error
+
+-- 469. `Equations.lean` — `retV_boolK_error`
+example : ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {e : Stop} (k' : Cont) (ch : Choices)
+    (_hv : valueAsBool v = .error e),
+    stepFn ctx s (.retV v (.boolK k')) ch = .error e :=
+  @GoLean.GoCore.Equations.retV_boolK_error
+
+-- 470. `Equations.lean` — `valueAsBool_nonbool`
+example : ∀ {v : GoValue} (_h : ∀ b, v ≠ .bool b),
+    valueAsBool v = .error (.stuck s!"expected bool value, got {repr v}") :=
+  @GoLean.GoCore.Equations.valueAsBool_nonbool
+
+-- 471. `Equations.lean` — `retV_callValCalleeK_args_notfunc`
+example : ∀ {ctx : ProgramCtx} {s : Store} {cv : GoValue} (plans : List (TargetShape × List Expr)) (a : Expr)
+    (rest : List Expr) (env : LocalEnv) (k' : Cont) (ch : Choices) (_hd : deferrableCallee cv = false),
+    stepFn ctx s (.retV cv (.callValCalleeK plans (a :: rest) env k')) ch
+      = .error (.stuck s!"expected function value, got {repr cv}") :=
+  @GoLean.GoCore.Equations.retV_callValCalleeK_args_notfunc
+
+-- 472. `Equations.lean` — `retV_deferCalleeK_notfunc`
+example : ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} (args : List Expr) (env : LocalEnv) (k' : Cont)
+    (ch : Choices) (_hd : deferrableCallee v = false),
+    stepFn ctx s (.retV v (.deferCalleeK args env k')) ch = .error (.stuck s!"expected function value in defer, got {repr v}") :=
+  @GoLean.GoCore.Equations.retV_deferCalleeK_notfunc
+
+-- 473. `Equations.lean` — `retV_goCalleeK_notfunc`
+example : ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} (args : List Expr) (env : LocalEnv) (k' : Cont)
+    (ch : Choices) (_hd : deferrableCallee v = false),
+    stepFn ctx s (.retV v (.goCalleeK args env k')) ch = .error (.stuck s!"expected function value in go statement, got {repr v}") :=
+  @GoLean.GoCore.Equations.retV_goCalleeK_notfunc
+
+-- 474. `Equations.lean` — `deferrableCallee_false`
+example : ∀ {cv : GoValue} (_hf : ∀ fid c, cv ≠ .funcVal fid c) (_hn : cv ≠ .nil),
+    deferrableCallee cv = false :=
+  @GoLean.GoCore.Equations.deferrableCallee_false
+
+-- 475. `Equations.lean` — `panicking_frame_defer_notfunc`
+example : ∀ {ctx : ProgramCtx} {s : Store} {chain : List PanicEntry} {cv : GoValue} (args : List GoValue)
+    (t : List (TargetShape × List Expr)) (te : LocalEnv) (r : List Loc) (ds : List (GoValue × List GoValue))
+    (k' : Cont) (fr : FuncId) (ch : Choices) (_hf : ∀ fid c, cv ≠ .funcVal fid c) (_hn : cv ≠ .nil),
+    stepFn ctx s (.panicking chain (.frame t te r ((cv, args) :: ds) k' fr)) ch
+      = .error (.stuck s!"deferred callee is not a function value: {repr cv}") :=
+  @GoLean.GoCore.Equations.panicking_frame_defer_notfunc
+
+-- 476. `Equations.lean` — `frameExit_defer_notfunc`
+example : ∀ {ctx : ProgramCtx} {s : Store} {cv : GoValue} (args : List GoValue)
+    (targets : List (TargetShape × List Expr)) (tenv : LocalEnv) (results : List Loc)
+    (ds : List (GoValue × List GoValue)) (k' : Cont) (fr : FuncId) (ch : Choices)
+    (_hf : ∀ fid c, cv ≠ .funcVal fid c) (_hn : cv ≠ .nil),
+    stepFrameExit ctx s targets tenv results ((cv, args) :: ds) k' fr ch
+      = .error (.stuck s!"deferred callee is not a function value: {repr cv}") :=
+  @GoLean.GoCore.Equations.frameExit_defer_notfunc
+
+-- 477. `Equations.lean` — `retV_preprintK_nonstring`
+example : ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} (older : List PanicEntry) (entry : PanicEntry)
+    (newer : List PanicEntry) (k' : Cont) (ch : Choices) (_hs : ∀ t, v ≠ .string t),
+    stepFn ctx s (.retV v (.preprintK older entry newer k')) ch
+      = .error (.stuck s!"preprint: the payload method returned a non-string result {repr v}") :=
+  @GoLean.GoCore.Equations.retV_preprintK_nonstring
+
+-- 478. `Equations.lean` — `next_storeK_arity_refs`
+example : ∀ {ctx : ProgramCtx} (s : Store) (r : TargetRef) (rs : List TargetRef) (body : Stmt) (env : LocalEnv)
+    (k' : Cont) (ch : Choices),
+    stepFn ctx s (.next (.storeK (r :: rs) [] body env k')) ch
+      = .error (.internal "storeK value/target arity mismatch (the shared phase-2 spine: receive delivery, assignment, comma-ok, call write-back)") :=
+  @GoLean.GoCore.Equations.next_storeK_arity_refs
+
+-- 479. `Equations.lean` — `next_storeK_arity_vals`
+example : ∀ {ctx : ProgramCtx} (s : Store) (v : GoValue) (vs : List GoValue) (body : Stmt) (env : LocalEnv)
+    (k' : Cont) (ch : Choices),
+    stepFn ctx s (.next (.storeK [] (v :: vs) body env k')) ch
+      = .error (.internal "storeK value/target arity mismatch (the shared phase-2 spine: receive delivery, assignment, comma-ok, call write-back)") :=
+  @GoLean.GoCore.Equations.next_storeK_arity_vals
+
+-- 480. `Equations.lean` — `contHeadLabel_labelK`
+example : ∀ (name : String) (k : Cont),
+    contHeadLabel (.labelK name k) = some name :=
+  @GoLean.GoCore.Equations.contHeadLabel_labelK
+
+-- 481. `Equations.lean` — `contHeadLabel_stop`
+example :
+    contHeadLabel .stop = none :=
+  @GoLean.GoCore.Equations.contHeadLabel_stop
+
+-- 482. `Equations.lean` — `contHeadLabel_frame`
+example : ∀ (t : List (TargetShape × List Expr)) (te : LocalEnv) (r : List Loc)
+    (ds : List (GoValue × List GoValue)) (k : Cont) (fr : FuncId),
+    contHeadLabel (.frame t te r ds k fr) = none :=
+  @GoLean.GoCore.Equations.contHeadLabel_frame
+
+-- 483. `Equations.lean` — `signalStep_breakableK_brkTo`
+example : ∀ (L : String) (k' : Cont),
+    signalStep (.brkTo L) (.breakableK k') = some (.signal (.brkTo L) k') :=
+  @GoLean.GoCore.Equations.signalStep_breakableK_brkTo
+
+-- 484. `Equations.lean` — `signalStep_breakableK_contTo`
+example : ∀ (L : String) (k' : Cont),
+    signalStep (.contTo L) (.breakableK k') = some (.signal (.contTo L) k') :=
+  @GoLean.GoCore.Equations.signalStep_breakableK_contTo
+
+-- 485. `Equations.lean` — `signalStep_labelK_brk`
+example : ∀ (name : String) (k' : Cont),
+    signalStep .brk (.labelK name k') = some (.signal .brk k') :=
+  @GoLean.GoCore.Equations.signalStep_labelK_brk
+
+-- 486. `Equations.lean` — `signalStep_labelK_cont`
+example : ∀ (name : String) (k' : Cont),
+    signalStep .cont (.labelK name k') = some (.signal .cont k') :=
+  @GoLean.GoCore.Equations.signalStep_labelK_cont
+
+-- 487. `Equations.lean` — `signalStep_labelK_brkTo_ne`
+example : ∀ {name L : String} (k' : Cont) (_h : name ≠ L),
+    signalStep (.brkTo L) (.labelK name k') = some (.signal (.brkTo L) k') :=
+  @GoLean.GoCore.Equations.signalStep_labelK_brkTo_ne
+
+-- 488. `Equations.lean` — `signalStep_labelK_contTo_self`
+example : ∀ (name : String) (k' : Cont),
+    signalStep (.contTo name) (.labelK name k') = none :=
+  @GoLean.GoCore.Equations.signalStep_labelK_contTo_self
+
+-- 489. `Equations.lean` — `signalStep_labelK_contTo_ne`
+example : ∀ {name L : String} (k' : Cont) (_h : name ≠ L),
+    signalStep (.contTo L) (.labelK name k') = some (.signal (.contTo L) k') :=
+  @GoLean.GoCore.Equations.signalStep_labelK_contTo_ne
+
+-- 490. `Equations.lean` — `signalStep_loop_brkTo`
+example : ∀ (L : String) (c : Expr) (b : Stmt) (env : LocalEnv) (k' : Cont),
+    signalStep (.brkTo L) (.loop c b env k') = some (.signal (.brkTo L) k') :=
+  @GoLean.GoCore.Equations.signalStep_loop_brkTo
+
+-- 491. `Equations.lean` — `signalStep_loop_contTo_self`
+example : ∀ {L : String} (c : Expr) (b : Stmt) (env : LocalEnv) {k' : Cont} (_h : contHeadLabel k' = some L),
+    signalStep (.contTo L) (.loop c b env k') = some (.exec (.while c b) env k') :=
+  @GoLean.GoCore.Equations.signalStep_loop_contTo_self
+
+-- 492. `Equations.lean` — `signalStep_loop_contTo_ne`
+example : ∀ {L : String} (c : Expr) (b : Stmt) (env : LocalEnv) {k' : Cont} (_h : contHeadLabel k' ≠ some L),
+    signalStep (.contTo L) (.loop c b env k') = some (.signal (.contTo L) k') :=
+  @GoLean.GoCore.Equations.signalStep_loop_contTo_ne
+
+-- 493. `Equations.lean` — `signalStep_mapIterK_brk`
+example : ∀ (keyVar valVar : Option VarId) (keyTy valTy : Ty) (body : Stmt) (base : Option Loc)
+    (produced start : Array Nat) (env : LocalEnv) (k' : Cont),
+    signalStep .brk (.mapIterK keyVar valVar keyTy valTy body base produced start env k') = some (.next k') :=
+  @GoLean.GoCore.Equations.signalStep_mapIterK_brk
+
+-- 494. `Equations.lean` — `signalStep_mapIterK_cont`
+example : ∀ (keyVar valVar : Option VarId) (keyTy valTy : Ty) (body : Stmt) (base : Option Loc)
+    (produced start : Array Nat) (env : LocalEnv) (k' : Cont),
+    signalStep .cont (.mapIterK keyVar valVar keyTy valTy body base produced start env k')
+      = some (.next (.mapIterK keyVar valVar keyTy valTy body base produced start env k')) :=
+  @GoLean.GoCore.Equations.signalStep_mapIterK_cont
+
+-- 495. `Equations.lean` — `signalStep_mapIterK_ret`
+example : ∀ (keyVar valVar : Option VarId) (keyTy valTy : Ty) (body : Stmt) (base : Option Loc)
+    (produced start : Array Nat) (env : LocalEnv) (k' : Cont),
+    signalStep .ret (.mapIterK keyVar valVar keyTy valTy body base produced start env k') = some (.signal .ret k') :=
+  @GoLean.GoCore.Equations.signalStep_mapIterK_ret
+
+-- 496. `Equations.lean` — `signalStep_mapIterK_brkTo`
+example : ∀ (L : String) (keyVar valVar : Option VarId) (keyTy valTy : Ty) (body : Stmt) (base : Option Loc)
+    (produced start : Array Nat) (env : LocalEnv) (k' : Cont),
+    signalStep (.brkTo L) (.mapIterK keyVar valVar keyTy valTy body base produced start env k') = some (.signal (.brkTo L) k') :=
+  @GoLean.GoCore.Equations.signalStep_mapIterK_brkTo
+
+-- 497. `Equations.lean` — `signalStep_mapIterK_contTo_self`
+example : ∀ {L : String} (keyVar valVar : Option VarId) (keyTy valTy : Ty) (body : Stmt) (base : Option Loc)
+    (produced start : Array Nat) (env : LocalEnv) {k' : Cont} (_h : contHeadLabel k' = some L),
+    signalStep (.contTo L) (.mapIterK keyVar valVar keyTy valTy body base produced start env k')
+      = some (.next (.mapIterK keyVar valVar keyTy valTy body base produced start env k')) :=
+  @GoLean.GoCore.Equations.signalStep_mapIterK_contTo_self
+
+-- 498. `Equations.lean` — `signalStep_mapIterK_contTo_ne`
+example : ∀ {L : String} (keyVar valVar : Option VarId) (keyTy valTy : Ty) (body : Stmt) (base : Option Loc)
+    (produced start : Array Nat) (env : LocalEnv) {k' : Cont} (_h : contHeadLabel k' ≠ some L),
+    signalStep (.contTo L) (.mapIterK keyVar valVar keyTy valTy body base produced start env k') = some (.signal (.contTo L) k') :=
+  @GoLean.GoCore.Equations.signalStep_mapIterK_contTo_ne
+
+-- 499. `Equations.lean` — `signal_labelK_contTo_self`
+example : ∀ {ctx : ProgramCtx} (s : Store) (name : String) (k' : Cont) (ch : Choices),
+    stepFn ctx s (.signal (.contTo name) (.labelK name k')) ch = .error (.stuck s!"continue to non-loop label {name}") :=
+  @GoLean.GoCore.Equations.signal_labelK_contTo_self
+
+-- 500. `PoolProjection.lean` — `execProgLoop_single_noBoundary_wide`
+example : ∀ {ctx : ProgramCtx} {fuel : Nat} {σ : Store} {c : Config} {ch : Choices} {rs : RaceState}
+    {r : Except Stop (Store × Choices)} (_hr : execStmtLoop ctx fuel σ c ch = r) (_htr : transferableWide r)
+    (_hnb : ∀ n σ' c' ch' ls, Prefix ctx n σ c ch ls σ' c' ch' → n < fuel → ∀ c'' σ'' ch'' l, stepFn ctx σ' c' ch' = .ok (c'', σ'', ch'', l) → c'.afterStepFlag σ' c'' = none),
+    execProgLoop ctx fuel ⟨#[.running c none], σ, 0⟩ rs ch = r :=
+  @GoLean.GoCore.Machine.execProgLoop_single_noBoundary_wide
+
+-- 501. `PoolProjection.lean` — `execProgLoopOut_single_noBoundary_wide`
+example : ∀ {ctx : ProgramCtx} {fuel : Nat} {σ : Store} {c : Config} {ch : Choices} {rs : RaceState}
+    {acc : GoString} {r : Except Stop (Store × Choices)} (_hr : execStmtLoop ctx fuel σ c ch = r)
+    (_htr : transferableWide r)
+    (_hnb : ∀ n σ' c' ch' ls, Prefix ctx n σ c ch ls σ' c' ch' → n < fuel → ∀ c'' σ'' ch'' l, stepFn ctx σ' c' ch' = .ok (c'', σ'', ch'', l) → c'.afterStepFlag σ' c'' = none),
+    execProgLoopOut ctx fuel ⟨#[.running c none], σ, 0⟩ rs ch acc = (seqOut ctx fuel σ c ch acc, r) :=
+  @GoLean.GoCore.Machine.execProgLoopOut_single_noBoundary_wide
 
 end GoLean.GoCore.BridgeSet
