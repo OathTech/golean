@@ -179,3 +179,5 @@ fast-forwarded; fresh primary build (0 foreign references). `release-check` EXIT
 5a pair; 3821 rows, 3583 PASS / 238 FAIL = the pin 3584 / 237 with the one 5a-class row red. Candidate: `claim` and
 `observations_sha256` IDENTICAL (receipt `a1327d1a`, 150.961 s) — INSTALLED; a provenance refresh. Tail:
 `docs/evidence/2026-10-03_panic-preprint/r60-ci-slow.tail.txt`.
+
+**Green re-run at the records commit `53c5ea28`** ([AGENT] coordinator, 2026-10-03): `ci --diff` EXIT=0, `RESULT: PASS`, baseline diff FULL 3821/3821, certificate provenance ok. Round 60 closed: the panic preprint phase landed.
