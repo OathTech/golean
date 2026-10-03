@@ -18,10 +18,12 @@ forbidden spellings and runs it. NOT an iris-lean `Language` instance (typed pro
 per theorem of the namespace `GoLean.GoCore.Equations`, its statement written out, checked by the
 `#eval` at the end against the environment (every equation theorem has a pin, and the pin's type
 IS the theorem's type up to alpha-equivalence — a statement drift fails here as well as in
-`BridgeSet.lean`) — and the NO-UNFOLD CHECK of every fact's PROOF TERM (pre-landing round, audit F2: no
-`stepFn.*` constant, no reflexivity on a `stepFn`-headed term, the term re-type-checked with `stepFn`
-irreducible, the classical trio at most). `main` prints the PASS line the gate greps for; the `#eval` fails
-the file before `main` can run when a fact unfolds `stepFn`, an equation is unenrolled or a pin has drifted.
+`BridgeSet.lean`) — and the NO-UNFOLD CHECK of every fact's PROOF TERM and of every declaration of this file
+the proof depends on, transitively (pre-landing round, audit F2; window review F2: no `stepFn.*` constant, no
+reflexivity on a `stepFn`-headed term, the term re-type-checked with `stepFn` irreducible on every obligation
+that can reach `stepFn`, the classical trio at most). `main` prints the PASS line the gate greps for; the
+`#eval` fails the file before `main` can run when a fact — or a helper it uses — unfolds `stepFn`, an equation
+is unenrolled or a pin has drifted.
 -/
 
 namespace Tests.EquationClient
@@ -46,12 +48,22 @@ abbrev writeOf (l : Loc) : StepLabel := ⟨[.access .write (.data l.canon)], [],
 /-- The drivers' barrier frame over the empty continuation, naming the subject `fid`. -/
 abbrev barrier (fid : FuncId) : Cont := .frame [] [] [] [] .stop fid
 
-/-- The sequence frame of FACT 3 after its first statement: the panic statement pending. -/
-abbrev afterWrite (txt : GoString) (env : LocalEnv) (fid : FuncId) : Cont :=
-  .seq [.panicStmt (.stringLit txt)] env (barrier fid)
+/-- The caller's sequence frame of FACT 3 after its first statement: the call of `f` pending. -/
+abbrev callerSeq (f : FuncId) (env : LocalEnv) (fid : FuncId) : Cont :=
+  .seq [.call #[] f #[]] env (barrier fid)
 
-/-- The chain entry a string payload raises (settled: no preprint phase). -/
-abbrev strEntry (ctx : ProgramCtx) (txt : GoString) : PanicEntry := panicEntryOf ctx (.string txt)
+/-- The callee's frame of FACT 3: targetless, resultless, defer-free, over the caller's continuation
+after the call (the drained sequence glue on the barrier). -/
+abbrev calleeFrame (env : LocalEnv) (fid cid : FuncId) : Cont :=
+  .frame [] env [] [] (.seq [] env (barrier fid)) cid
+
+/-- The chain entry a BOXED string payload raises (`panic(any("…"))`: the string at the dynamic type
+`string`, `renderPanicPayload`'s string arm renders it). Settled — no preprint phase — when `string`
+carries neither `Error` nor `String`: FACT 3's premise `hsettled`, inhabited below. The window
+review's F1: an UNBOXED `.string` is not a Go interface value and has no rendering arm
+(`witness_unboxed_payload_unrenderable`). -/
+abbrev strEntry (ctx : ProgramCtx) (txt : GoString) : PanicEntry :=
+  panicEntryOf ctx (.interface .string (.string txt))
 
 /-- FACT 1 — a call entry then a return: a nullary declared call enters its frame (the entry
 premise bottoms out in `enterFrame`, which `enterFrame_declared` reduces to `bindParams`/
@@ -111,68 +123,122 @@ theorem fact_defer_then_drain {s s' : Store} {g : VarId} {gl : Loc} {gfid : Func
   · simp only [stepFn_eqns]
   · simp only [stepFn_eqns]
 
-/-- FACT 3 — a write, then a callee panic: the store `x = y` lands (one `loadRoot`, one
-`storeLoc`), the panic raised afterwards unwinds through the sequence glue and the empty frame to
-the empty continuation, and the run FINISHES aborted — at the endpoint store `s'`, the written one:
-the write survives the abort. The payload is a string, so the chain is settled (no preprint phase)
-and the `repanicCollapse` consult is at bound 1 (nothing drawn); the renderer's answer `t` is the
-one hypothesis the fact keeps abstract. -/
+/-- FACT 3 — a write, then a CALLEE's panic: the store `x = y` lands in the caller (one `loadRoot`, one
+`storeLoc`), the nullary declared call `f()` ENTERS its frame (`enterFrame`, FACT 1's entry premise; its
+trace `tr` is the call's one label), the callee's body `panic(any(txt))` BOXES the string
+(`applyStrictOp_toInterface_string`) and RAISES it, the chain unwinds through the callee's empty frame, the
+caller's sequence glue and the barrier frame to the empty continuation, and the run FINISHES aborted at the
+endpoint store `s'`, the written one: the write survives the abort. Twenty steps. The premises: the memory
+floor (`hlx`/`hly`/`hy`/`hst`), the entry (`he`, store-preserving for a parameterless, resultless callee) and
+its body (`hbody`), and the boxed string entry's rendering — SETTLED (`hsettled`: `string` carries no
+`Error`/`String` method, so no preprint phase; the `repanicCollapse` consult is then at bound 1, nothing
+drawn) and the renderer's text `t` (`hmsg`). Every premise is INHABITED by
+`fact_inhabit_write_survives_panic` below (the window review's F1: the previous statement raised an UNBOXED
+`.string`, whose `hmsg` no context satisfies — `witness_unboxed_premise_false`). -/
 theorem fact_write_survives_panic {s s' : Store} {x y : VarId} {lx ly : Loc} {vy : GoValue}
-    {txt : GoString} {t : String} (env : LocalEnv) (fid : FuncId) (ch : Choices)
+    {f : FuncId} {func : Func} {fenv : LocalEnv} {tr : AccessTrace} {ty : Ty} {txt : GoString} {t : String}
+    (env : LocalEnv) (fid : FuncId) (ch : Choices)
     (hlx : LocalEnv.lookup env x = some lx) (hly : LocalEnv.lookup env y = some ly)
     (hy : loadRoot ctx s ly = .ok vy) (hst : storeLoc ctx s lx vy = .ok s')
-    (hmsg : abortMsg ctx (panicEntryOf ctx (.string txt)) [] 0 = .ok t) :
-    LRun ctx s (.exec (.seqn #[.assign (.var x) (.var y), .panicStmt (.stringLit txt)]) env (barrier fid)) ch
-      [silent, silent, silent, silent, silent, readOf ly, silent, writeOf lx, silent, silent, silent, silent,
-        silent, silent, silent, silent]
+    (he : enterFrame ctx s' f [] = .ok (.run func fenv [], s', tr))
+    (hbody : func.body = .panicStmt (.toInterface ty .string (.stringLit txt)))
+    (hsettled : splitNewestPending? [strEntry ctx txt] = none)
+    (hmsg : abortMsg ctx (strEntry ctx txt) [] 0 = .ok t) :
+    LRun ctx s (.exec (.seqn #[.assign (.var x) (.var y), .call #[] f #[]]) env (barrier fid)) ch
+      [silent, silent, silent, silent, silent, readOf ly, silent, writeOf lx, silent, silent, silent,
+        ⟨tr, [], []⟩, silent, silent, silent, silent, silent, silent, silent, silent]
       [] (.aborted t s' ch) := by
-  have hprefix : Prefix ctx 16 s (.exec (.seqn #[.assign (.var x) (.var y), .panicStmt (.stringLit txt)]) env
-      (barrier fid)) ch
-      [silent, silent, silent, silent, silent, readOf ly, silent, writeOf lx, silent, silent, silent, silent,
-        silent, silent, silent, silent] s' (.panicking [strEntry ctx txt] .stop) ch := by
-    refine .step (c₁ := .next (.seq [.assign (.var x) (.var y), .panicStmt (.stringLit txt)] env (barrier fid))) (s₁ := s) (ch₁ := ch) ?_
-      (.step (c₁ := .exec (.assign (.var x) (.var y)) env (afterWrite txt env fid)) (s₁ := s) (ch₁ := ch) ?_
-      (.step (c₁ := .evalE (.ref x) env (.tgtOpK (.chain []) [] [] [] [] .vals [.var y] [] (.seqn #[]) env (afterWrite txt env fid)))
-        (s₁ := s) (ch₁ := ch) ?_
-      (.step (c₁ := .retV (.addr lx) (.tgtOpK (.chain []) [] [] [] [] .vals [.var y] [] (.seqn #[]) env (afterWrite txt env fid)))
-        (s₁ := s) (ch₁ := ch) ?_
-      (.step (c₁ := .evalE (.var y) env (.rhsK .vals [.chain (.addr lx) [] []] [] [] (.seqn #[]) env (afterWrite txt env fid)))
-        (s₁ := s) (ch₁ := ch) ?_
-      (.step (c₁ := .retV vy (.rhsK .vals [.chain (.addr lx) [] []] [] [] (.seqn #[]) env (afterWrite txt env fid))) (s₁ := s) (ch₁ := ch) ?_
-      (.step (c₁ := .next (.storeK [.chain (.addr lx) [] []] [vy] (.seqn #[]) env (afterWrite txt env fid))) (s₁ := s) (ch₁ := ch) ?_
-      (.step (c₁ := .next (.storeK [] [] (.seqn #[]) env (afterWrite txt env fid))) (s₁ := s') (ch₁ := ch) ?_
-      (.step (c₁ := .exec (.seqn #[]) env (afterWrite txt env fid)) (s₁ := s') (ch₁ := ch) ?_
-      (.step (c₁ := .next (afterWrite txt env fid)) (s₁ := s') (ch₁ := ch) ?_
-      (.step (c₁ := .exec (.panicStmt (.stringLit txt)) env (.seq [] env (barrier fid))) (s₁ := s') (ch₁ := ch) ?_
-      (.step (c₁ := .evalE (.stringLit txt) env (.panicArgK (.seq [] env (barrier fid)))) (s₁ := s') (ch₁ := ch) ?_
-      (.step (c₁ := .retV (.string txt) (.panicArgK (.seq [] env (barrier fid)))) (s₁ := s') (ch₁ := ch) ?_
+  have hprefix : Prefix ctx 20 s (.exec (.seqn #[.assign (.var x) (.var y), .call #[] f #[]]) env (barrier fid)) ch
+      [silent, silent, silent, silent, silent, readOf ly, silent, writeOf lx, silent, silent, silent,
+        ⟨tr, [], []⟩, silent, silent, silent, silent, silent, silent, silent, silent]
+      s' (.panicking [strEntry ctx txt] .stop) ch := by
+    refine .step (c₁ := .next (.seq [.assign (.var x) (.var y), .call #[] f #[]] env (barrier fid))) (s₁ := s) (ch₁ := ch) ?_
+      (.step (c₁ := .exec (.assign (.var x) (.var y)) env (callerSeq f env fid)) (s₁ := s) (ch₁ := ch) ?_
+      (.step (c₁ := .evalE (.ref x) env (.tgtOpK (.chain []) [] [] [] [] .vals [.var y] [] (.seqn #[]) env (callerSeq f env fid))) (s₁ := s) (ch₁ := ch) ?_
+      (.step (c₁ := .retV (.addr lx) (.tgtOpK (.chain []) [] [] [] [] .vals [.var y] [] (.seqn #[]) env (callerSeq f env fid))) (s₁ := s) (ch₁ := ch) ?_
+      (.step (c₁ := .evalE (.var y) env (.rhsK .vals [.chain (.addr lx) [] []] [] [] (.seqn #[]) env (callerSeq f env fid))) (s₁ := s) (ch₁ := ch) ?_
+      (.step (c₁ := .retV vy (.rhsK .vals [.chain (.addr lx) [] []] [] [] (.seqn #[]) env (callerSeq f env fid))) (s₁ := s) (ch₁ := ch) ?_
+      (.step (c₁ := .next (.storeK [.chain (.addr lx) [] []] [vy] (.seqn #[]) env (callerSeq f env fid))) (s₁ := s) (ch₁ := ch) ?_
+      (.step (c₁ := .next (.storeK [] [] (.seqn #[]) env (callerSeq f env fid))) (s₁ := s') (ch₁ := ch) ?_
+      (.step (c₁ := .exec (.seqn #[]) env (callerSeq f env fid)) (s₁ := s') (ch₁ := ch) ?_
+      (.step (c₁ := .next (callerSeq f env fid)) (s₁ := s') (ch₁ := ch) ?_
+      (.step (c₁ := .exec (.call #[] f #[]) env (.seq [] env (barrier fid))) (s₁ := s') (ch₁ := ch) ?_
+      (.step (c₁ := .exec func.body fenv (calleeFrame env fid func.id)) (s₁ := s') (ch₁ := ch) ?_
+      (.step (c₁ := .evalE (.toInterface ty .string (.stringLit txt)) fenv (.panicArgK (calleeFrame env fid func.id))) (s₁ := s') (ch₁ := ch) ?_
+      (.step (c₁ := .evalE (.stringLit txt) fenv (.strictK (.toInterface ty .string) [] [] fenv (.panicArgK (calleeFrame env fid func.id)))) (s₁ := s') (ch₁ := ch) ?_
+      (.step (c₁ := .retV (.string txt) (.strictK (.toInterface ty .string) [] [] fenv (.panicArgK (calleeFrame env fid func.id)))) (s₁ := s') (ch₁ := ch) ?_
+      (.step (c₁ := .retV (.interface .string (.string txt)) (.panicArgK (calleeFrame env fid func.id))) (s₁ := s') (ch₁ := ch) ?_
+      (.step (c₁ := .panicking [strEntry ctx txt] (calleeFrame env fid func.id)) (s₁ := s') (ch₁ := ch) ?_
       (.step (c₁ := .panicking [strEntry ctx txt] (.seq [] env (barrier fid))) (s₁ := s') (ch₁ := ch) ?_
       (.step (c₁ := .panicking [strEntry ctx txt] (barrier fid)) (s₁ := s') (ch₁ := ch) ?_
-      (.step (c₁ := .panicking [strEntry ctx txt] .stop) (s₁ := s') (ch₁ := ch) ?_ .done)))))))))))))))
+      (.step (c₁ := .panicking [strEntry ctx txt] .stop) (s₁ := s') (ch₁ := ch) ?_ .done)))))))))))))))))))
     · simp only [stepFn_eqns]; rfl
     · simp only [stepFn_eqns]
     · simp only [stepFn_eqns]
     · rw [evalE_ref env _ ch hlx]
-    · rw [retV_tgtOpK_rhs [] .vals (.var y) [] [] (.seqn #[]) env (afterWrite txt env fid) ch (completeTargetRef_var (.addr lx))]; rfl
+    · rw [retV_tgtOpK_rhs [] .vals (.var y) [] [] (.seqn #[]) env (callerSeq f env fid) ch (completeTargetRef_var (.addr lx))]; rfl
     · rw [evalE_var env _ ch hly hy]; rfl
-    · rw [retV_rhsK_apply [.chain (.addr lx) [] []] (.seqn #[]) env (afterWrite txt env fid) ch (applyRhsOp_vals s [vy])]
-    · rw [next_storeK_var [] [] (.seqn #[]) env (afterWrite txt env fid) ch hst]
+    · rw [retV_rhsK_apply [.chain (.addr lx) [] []] (.seqn #[]) env (callerSeq f env fid) ch (applyRhsOp_vals s [vy])]
+    · rw [next_storeK_var [] [] (.seqn #[]) env (callerSeq f env fid) ch hst]
     · simp only [stepFn_eqns]
     · rw [exec_seqn, seqCont_seq]; rfl
     · simp only [stepFn_eqns]
+    · rw [exec_call_nullary env _ ch rfl rfl he]; rfl
+    · rw [hbody]; simp only [stepFn_eqns]
+    · rw [evalE_strict_more (e := .toInterface ty .string (.stringLit txt)) fenv _ ch rfl]
     · simp only [stepFn_eqns]
-    · simp only [stepFn_eqns]
+    · rw [retV_strictK_apply (v := .string txt) (done := []) fenv _ ch
+        (applyStrictOp_toInterface_string s' _ ty (.string txt))]
     · simp only [stepFn_eqns, panicPayload]
     · simp only [stepFn_eqns]
     · simp only [stepFn_eqns]
-  -- the finish: a settled single-entry chain at the empty continuation is the abort; its consult
-  -- is at bound 1 (the head is not a recovered entry with an equal successor), so nothing is drawn
-  have hsettled : splitNewestPending? [strEntry ctx txt] = none := rfl
+    · simp only [stepFn_eqns]
+  -- the finish: a settled single-entry chain at the empty continuation is the abort; its consult is at
+  -- bound 1 (a single entry has no equal successor), so nothing is drawn
   have hwidth : repanicCollapseWidth (strEntry ctx txt) [] = 1 := rfl
-  refine ⟨16, s', .panicking [strEntry ctx txt] .stop, ch, 1, hprefix, ?_⟩
+  refine ⟨20, s', .panicking [strEntry ctx txt] .stop, ch, 1, hprefix, ?_⟩
   refine Finish.aborted (Config.abort?_of_settled hsettled) ?_ hmsg
   rw [hwidth]
   exact Choices.consumeAtE_le_one (Nat.le_refl 1)
+
+/-! ### FACT 3's premises are INHABITED (window review F1) -/
+
+/-- The payload text of the inhabitation. -/
+def boomText : GoString := GoString.fromLeanString "boom"
+
+/-- The boxing target: the empty interface. -/
+def anyTy : Ty := .interface ⟨"any"⟩
+
+/-- The callee `boom()`: parameterless, resultless, its body `panic(any("boom"))`. -/
+def boomFunc : Func :=
+  { id := ⟨"boom"⟩, args := #[], results := #[], body := .panicStmt (.toInterface anyTy .string (.stringLit boomText)) }
+
+/-- The context: the reserved types and the one function. -/
+def boomCtx : ProgramCtx := ProgramCtx.ofTables TypeEnv.reserved #[boomFunc]
+
+/-- Two root `int` cells — `x` (cell 0, holding 0) and `y` (cell 1, holding 7) — … -/
+def boomStore₀ : Store := { heap := #[.value .int (.int 0 .int), .value .int (.int 7 .int)] }
+
+/-- … and the store after `x = y`: the write FACT 3 says survives. -/
+def boomStore₁ : Store := { heap := #[.value .int (.int 7 .int), .value .int (.int 7 .int)] }
+
+/-- The caller's environment: `x ↦ cell 0`, `y ↦ cell 1`. -/
+def boomEnv : LocalEnv := [[(0, .base ⟨0⟩), (1, .base ⟨1⟩)]]
+
+/-- FACT 3 INHABITED: every premise discharged by computation at the concrete context, stores and environment
+above (the lookups, the read, the write, the entry — `enterFrame` of a parameterless callee is store- and
+trace-free — the body, the settled chain, and the renderer's `"boom"` by `with_unfolding_all rfl`: the abort's
+UTF-8 decoding is well-founded recursion). The conclusion is FACT 3's at these values — so the symbolic
+statement is not vacuous. The enrollment check verifies this proof too (it is a `fact_*`): its premise
+obligations name no constant that unfolds to `stepFn`, so none is re-run. -/
+theorem fact_inhabit_write_survives_panic :
+    LRun boomCtx boomStore₀
+      (.exec (.seqn #[.assign (.var 0) (.var 1), .call #[] ⟨"boom"⟩ #[]]) boomEnv (barrier ⟨"main"⟩)) []
+      [silent, silent, silent, silent, silent, readOf (.base ⟨1⟩), silent, writeOf (.base ⟨0⟩), silent, silent,
+        silent, silent, silent, silent, silent, silent, silent, silent, silent, silent]
+      [] (.aborted "boom" boomStore₁ []) :=
+  fact_write_survives_panic (lx := .base ⟨0⟩) (ly := .base ⟨1⟩) (vy := .int 7 .int) (func := boomFunc) (fenv := [])
+    (ty := anyTy) (txt := boomText) boomEnv ⟨"main"⟩ [] rfl rfl rfl rfl rfl rfl rfl (by with_unfolding_all rfl)
 
 /-- FACT 4 — an `if` on a symbolic Boolean: the condition is read from a local, and the branch
 taken is `if bv then t else e` for the symbolic `bv` — three steps, one read. -/
@@ -294,8 +360,25 @@ theorem fact_usage_simp_discharger {s : Store} {id : VarId} {loc : Loc} {v : GoV
 
 end Facts
 
+/-! ### The window review's witnesses (F1): the UNBOXED payload has no rendering -/
+
+section Witnesses
+
+/-- An unboxed `.string` payload is not a Go interface value: `renderPanicPayload` has no arm for it, for
+every context and text. -/
+theorem witness_unboxed_payload_unrenderable (ctx : ProgramCtx) (txt : GoString) :
+    renderPanicPayload ctx (panicEntryOf ctx (.string txt)) = none := rfl
+
+/-- … so the previous FACT 3's rendering premise — `abortMsg` of that entry answering `.ok t` — was
+UNSATISFIABLE: it refutes itself for every context, text and `t` (the previous fact was vacuous). -/
+theorem witness_unboxed_premise_false (ctx : ProgramCtx) (txt : GoString) (t : String)
+    (hmsg : abortMsg ctx (panicEntryOf ctx (.string txt)) [] 0 = .ok t) : False := by
+  cases hmsg
+
+end Witnesses
+
 /-- The number of facts above (cross-checked against the environment by the `#eval` below). -/
-def factCount : Nat := 11
+def factCount : Nat := 12
 
 /-! ## §B — the exhaustive enrollment: one pin per equation theorem, the statement written out -/
 
@@ -346,6 +429,10 @@ theorem Pin.resolveChain_nil : ∀ {ctx : ProgramCtx} (s : Store) (a : GoValue),
 theorem Pin.applyRhsOp_vals : ∀ {ctx : ProgramCtx} (s : Store) (vs : List GoValue),
     applyRhsOp ctx s .vals vs = .ok (vs, []) :=
   @GoLean.GoCore.Equations.applyRhsOp_vals
+
+theorem Pin.applyStrictOp_toInterface_string : ∀ {ctx : ProgramCtx} (s : Store) (tgt : Loc → Loc) (ty : Ty) (v : GoValue),
+    applyStrictOp ctx s tgt (.toInterface ty .string) [v] = .ok (.interface .string v, s, []) :=
+  @GoLean.GoCore.Equations.applyStrictOp_toInterface_string
 
 theorem Pin.loadRoot_base : ∀ {ctx : ProgramCtx} {s : Store} {a : Addr} {ty : Ty} {v : GoValue}
     (_hl : Heap.lookup s.heap (.base a) = some (.value ty v)),
@@ -2056,7 +2143,8 @@ theorem Pin.signal_labelK_contTo_self : ∀ {ctx : ProgramCtx} (s : Store) (name
 -- PINS-END
 end Pins
 
-/-! ## The enrollment and NO-UNFOLD check (pre-landing round, audit F2: a Lean-level proof-term check) -/
+/-! ## The enrollment and NO-UNFOLD check (pre-landing round, audit F2: a Lean-level proof-term check; the
+window review's F2: over the proof-dependency CLOSURE of the client's own declarations) -/
 
 open Lean in
 /-- Every `theorem` of the namespace `GoLean.GoCore.Equations` (auxiliary and internal names
@@ -2079,91 +2167,156 @@ def factTheorems (env : Environment) : List Name :=
       | _ => acc
     else acc
 
+open Lean in
+/-- Does DEFINITIONAL UNFOLDING from the constant `c` reach `stepFn`? — `c` is `stepFn`, or the VALUE of `c` (a
+definition's body, a theorem's proof, an opaque's value) names a constant that does; an inductive, a
+constructor, a recursor, an axiom has no value and reaches nothing. Memoized. This is the test that lets the
+no-unfold check SKIP a defeq obligation neither side of which names such a constant: the kernel's check of
+that obligation can only unfold what its two sides name, so it never meets `stepFn` — re-running it would
+prove nothing about `stepFn` and may be arbitrarily expensive (the inhabitation's `abortMsg … = .ok "boom"`,
+well-founded UTF-8 decoding, is such an obligation). Every obligation that CAN reach `stepFn` is re-run with
+`stepFn` irreducible. -/
+partial def reachesStepFn (env : Environment) (stepFnN : Name) (c : Name) : StateM (NameMap Bool) Bool := do
+  if c == stepFnN then return true
+  if let some b := (← get).find? c then return b
+  modify fun m => m.insert c false  -- the cycle guard (mutual blocks)
+  let r ← match env.find? c with
+    | some ci =>
+        match ci.value? (allowOpaque := true) with
+        | some v => v.getUsedConstants.anyM fun d => reachesStepFn env stepFnN d
+        | none => pure false
+    | none => pure false
+  modify fun m => m.insert c r
+  return r
+
 open Lean Meta in
-/-- THE NO-UNFOLD CHECK of a fact's proof term, Lean-level. A proof «by the equation set only» (1) names no
-constant under `GoLean.GoCore.Machine.stepFn.` (the interpreter's equation lemmas `eq_def`/`eq_N`, its matchers
+/-- May a defeq check of `e` unfold `stepFn`? — a constant of `e` (let-bound locals zeta-expanded; the types
+of its free locals included, conservatively) reaches `stepFn`. -/
+def mayUnfoldStepFn (env : Environment) (stepFnN : Name) (memo : IO.Ref (NameMap Bool)) (e : Lean.Expr) :
+    MetaM Bool := do
+  let e ← zetaReduce (← instantiateMVars e)
+  let mut cs := e.getUsedConstants
+  for fv in (collectFVars {} e).fvarIds do
+    cs := cs ++ (← fv.getDecl).type.getUsedConstants
+  let (r, m') := (cs.anyM fun c => reachesStepFn env stepFnN c).run (← memo.get)
+  memo.set m'
+  return r
+
+open Lean Meta in
+/-- THE NO-UNFOLD CHECK of a proof term, Lean-level. A proof «by the equation set only» (1) names no constant
+under `GoLean.GoCore.Machine.stepFn.` (the interpreter's equation lemmas `eq_def`/`eq_N`, its matchers
 `match_N` — what `unfold`/`rw [stepFn]`/`delta stepFn` leave), (2) closes no `stepFn`-headed equation by
 `Eq.refl`/`rfl`, and (3) TYPE-CHECKS WITH `stepFn` IRREDUCIBLE: every defeq obligation of the term (each
-application's argument against its binder, each `let`, and the term's type against the fact's statement) is
-re-checked at default transparency with `stepFn` marked irreducible — what a `simp`/`simp_all`/`simpa` call
-given `stepFn` itself, `simp only` of it followed by `rfl`, and `delta` hide in a cast (`@id`, `Eq.mpr`) fails here, while a
-proof by the equations (propositional rewrites, `defn_eq`) and by the `Prefix`/`Finish` constructors needs no
-unfolding of `stepFn`. The traversal is `Meta.check`'s shape at a controlled transparency (`Meta.check` itself
-runs at `.all`, which unfolds irreducibles). (4) Axioms: the classical trio at most. -/
-partial def checkNoUnfold (stepFnN : Name) : Lean.Expr → MetaM Unit
+application's argument against its binder, each `let`, and the term's type against the statement) THAT CAN
+UNFOLD `stepFn` (`mayUnfoldStepFn` on either side) is re-checked at default transparency with `stepFn` marked
+irreducible — what a `simp`/`simp_all`/`simpa` call given `stepFn` itself, `simp only` of it followed by
+`rfl`, and `delta` hide in a cast (`@id`, `Eq.mpr`) fails here, while a proof by the equations
+(propositional rewrites, `defn_eq`) and by the `Prefix`/`Finish` constructors needs no unfolding of `stepFn`.
+The traversal is `Meta.check`'s shape at a controlled transparency (`Meta.check` itself runs at `.all`, which
+unfolds irreducibles). (4) Axioms: the classical trio at most. -/
+partial def checkNoUnfold (stepFnN : Name) (may : Lean.Expr → MetaM Bool) : Lean.Expr → MetaM Unit
   | e@(.app ..) => do
     let f := e.getAppFn
     let args := e.getAppArgs
-    checkNoUnfold stepFnN f
+    checkNoUnfold stepFnN may f
     let mut fType ← inferType f
     for a in args do
-      checkNoUnfold stepFnN a
+      checkNoUnfold stepFnN may a
       fType ← whnf fType
       let .forallE _ dom body _ := fType
         | throwError "no-unfold check: {f} applied beyond its arity"
       let aType ← inferType a
-      unless ← isDefEq aType dom do
-        throwError "a defeq obligation needs `stepFn` unfolded: argument {a} : {aType} against {dom}"
+      if (← may aType) || (← may dom) then
+        unless ← isDefEq aType dom do
+          throwError "a defeq obligation needs `stepFn` unfolded: argument {a} : {aType} against {dom}"
       fType := body.instantiate1 a
   | .lam n d b bi => do
-    checkNoUnfold stepFnN d
-    withLocalDecl n bi d fun x => checkNoUnfold stepFnN (b.instantiate1 x)
+    checkNoUnfold stepFnN may d
+    withLocalDecl n bi d fun x => checkNoUnfold stepFnN may (b.instantiate1 x)
   | .forallE n d b bi => do
-    checkNoUnfold stepFnN d
-    withLocalDecl n bi d fun x => checkNoUnfold stepFnN (b.instantiate1 x)
+    checkNoUnfold stepFnN may d
+    withLocalDecl n bi d fun x => checkNoUnfold stepFnN may (b.instantiate1 x)
   | .letE n t v b _ => do
-    checkNoUnfold stepFnN t
-    checkNoUnfold stepFnN v
-    unless ← isDefEq (← inferType v) t do
-      throwError "a `let` obligation needs `stepFn` unfolded: {v} : {t}"
-    withLetDecl n t v fun x => checkNoUnfold stepFnN (b.instantiate1 x)
-  | .mdata _ b => checkNoUnfold stepFnN b
-  | .proj _ _ b => checkNoUnfold stepFnN b
+    checkNoUnfold stepFnN may t
+    checkNoUnfold stepFnN may v
+    let vt ← inferType v
+    if (← may vt) || (← may t) then
+      unless ← isDefEq vt t do
+        throwError "a `let` obligation needs `stepFn` unfolded: {v} : {t}"
+    withLetDecl n t v fun x => checkNoUnfold stepFnN may (b.instantiate1 x)
+  | .mdata _ b => checkNoUnfold stepFnN may b
+  | .proj _ _ b => checkNoUnfold stepFnN may b
   | _ => pure ()
 
 open Lean Meta in
-/-- Fail-closed: a fact whose proof unfolds `stepFn` (by any of the four readings above), an equation without a
-pin, a pin whose type is not the equation's (up to alpha-equivalence), or a fact count that drifted from
-`factCount`, is an elaboration error. The facts are checked FIRST, so a mutant client reports the refused fact
-before any enrollment issue. -/
+/-- Fail-closed: a fact whose proof — or the proof/value of any declaration OF THIS FILE its proof depends on,
+transitively (the window review's F2: a helper proved by `rfl` on `stepFn` and `exact`ed from a fact) — unfolds
+`stepFn` by any of the four readings above, an equation without a pin, a pin whose type is not the equation's
+(up to alpha-equivalence), or a fact count that drifted from `factCount`, is an elaboration error. The closure
+is over the CLIENT-OWNED constants (those of the current module, `getModuleIdxFor? = none`); the published API
+— the equation and prefix modules, the interpreter, everything imported — is the boundary and is not
+traversed. The facts are checked FIRST, so a mutant client reports the refused fact before any enrollment
+issue; a refusal names the fact and, when the unfolding is in a helper, the helper. -/
 def checkEnrollment : CoreM Unit := do
   let env ← getEnv
   let stepFnN := `GoLean.GoCore.Machine.stepFn
   let facts := factTheorems env
   if facts.isEmpty then
     throwError "Equation client: NO fact_* theorems found (fail closed)"
-  -- (1)–(4) per fact, with `stepFn` irreducible for the duration of (3)
+  let memo ← IO.mkRef ({} : NameMap Bool)
+  let owned (c : Name) : Bool := (env.getModuleIdxFor? c).isNone
+  let userName (c : Name) : Name := if isPrivateName c then privateToUserName c else c
+  -- (1)–(4) per fact and per client-owned declaration its proof reaches, with `stepFn` irreducible for the
+  -- duration of (3)
   let st0 ← getReducibilityStatus stepFnN
   setIrreducibleAttribute stepFnN
+  let mut checked : NameSet := {}
+  let mut nHelpers := 0
   try
-    for n in facts do
-      let some (.thmInfo v) := env.find? n | throwError "Equation client: {n} vanished"
-      -- (1) the interpreter's own equation lemmas and matchers
-      let used := v.value.foldConsts (init := ([] : List Name)) fun c acc =>
-        if stepFnN.isPrefixOf c && c != stepFnN then c :: acc else acc
-      unless used.isEmpty do
-        throwError "Equation client: fact {n} REFUSED — its proof unfolds stepFn (it names {used.head!})"
-      -- (2) reflexivity on a `stepFn`-headed term
-      if let some sub := v.value.find? fun sub =>
-          (sub.isAppOfArity ``Eq.refl 2 || sub.isAppOfArity ``rfl 2) && sub.appArg!.getAppFn.isConstOf stepFnN then
-        throwError "Equation client: fact {n} REFUSED — its proof unfolds stepFn (it closes {sub} by reflexivity)"
-      -- (3) the term type-checks against its statement with `stepFn` irreducible
-      let ok ← MetaM.run' do
-        try
-          withTransparency .default do
-            checkNoUnfold stepFnN v.value
-            let ty ← inferType v.value
-            unless ← isDefEq ty v.type do
-              throwError "the proof's type {ty} is not the statement without unfolding stepFn"
-          pure (none : Option String)
-        catch ex => pure (some (← ex.toMessageData.toString))
-      if let some why := ok then
-        throwError "Equation client: fact {n} REFUSED — its proof unfolds stepFn ({why})"
-      -- (4) axioms
-      let axioms ← collectAxioms n
+    for root in facts do
+      let mut work : List Name := [root]
+      while !work.isEmpty do
+        let c := work.head!
+        work := work.tail
+        if checked.contains c then continue
+        checked := checked.insert c
+        let some ci := env.find? c | throwError "Equation client: {c} vanished"
+        let some value := ci.value? (allowOpaque := true) | continue  -- a client inductive/constructor: no proof
+        let who := if c == root then s!"fact {root} REFUSED — its proof unfolds stepFn"
+          else s!"fact {root} REFUSED — its proof unfolds stepFn in its helper {userName c}"
+        if c != root then nHelpers := nHelpers + 1
+        -- (1) the interpreter's own equation lemmas and matchers
+        let used := value.foldConsts (init := ([] : List Name)) fun d acc =>
+          if stepFnN.isPrefixOf d && d != stepFnN then d :: acc else acc
+        unless used.isEmpty do
+          throwError "Equation client: {who} (it names {used.head!})"
+        -- (2) reflexivity on a `stepFn`-headed term
+        if let some sub := value.find? fun sub =>
+            (sub.isAppOfArity ``Eq.refl 2 || sub.isAppOfArity ``rfl 2) && sub.appArg!.getAppFn.isConstOf stepFnN then
+          throwError "Equation client: {who} (it closes {sub} by reflexivity)"
+        -- (3) the term type-checks against its statement with `stepFn` irreducible
+        let may := mayUnfoldStepFn env stepFnN memo
+        let ok ← MetaM.run' do
+          try
+            withTransparency .default do
+              checkNoUnfold stepFnN may value
+              let ty ← inferType value
+              if (← may ty) || (← may ci.type) then
+                unless ← isDefEq ty ci.type do
+                  throwError "the proof's type {ty} is not the statement without unfolding stepFn"
+            pure (none : Option String)
+          catch ex => pure (some (← ex.toMessageData.toString))
+        if let some why := ok then
+          throwError "Equation client: {who} ({why})"
+        -- the closure: the client-owned constants the value names
+        for d in value.getUsedConstants do
+          if owned d && !checked.contains d then
+            work := d :: work
+      -- (4) axioms (transitive already)
+      let axioms ← collectAxioms root
       for ax in axioms do
         unless [``propext, ``Classical.choice, ``Quot.sound].contains ax do
-          throwError "Equation client: fact {n} REFUSED — it depends on the axiom {ax}"
+          throwError "Equation client: fact {root} REFUSED — it depends on the axiom {ax}"
   finally
     setReducibilityStatus stepFnN st0
   unless facts.length == factCount do
@@ -2185,7 +2338,7 @@ def checkEnrollment : CoreM Unit := do
         pinned := pinned + 1
     | some _ => throwError "Equation client: {pin} exists but is not a theorem"
     | none => throwError "Equation client: UNENROLLED equation {n} — no pin {pin} in Tests/EquationClient.lean"
-  logInfo s!"Equation client: enrollment complete — {pinned} equation theorems pinned, {facts.length} facts, none unfolds stepFn"
+  logInfo s!"Equation client: enrollment complete — {pinned} equation theorems pinned, {facts.length} facts and {nHelpers} client-owned helpers, none unfolds stepFn"
 
 #eval checkEnrollment
 

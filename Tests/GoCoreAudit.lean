@@ -49,13 +49,14 @@ def requiredModules : List Name := [
 re-homed regressions). Each must exist as a theorem. -/
 def exports : List Name := [
     -- Window packet D (2026-10-03): the per-arm `stepFn` EQUATIONS and their helper laws (every
-    -- theorem of `GoLean/GoCore/Equations.lean`; BridgeSet rows 174–402 and 437–499) and the sequential-to-pool
+    -- theorem of `GoLean/GoCore/Equations.lean`; BridgeSet rows 174–402, 437–499 and 502) and the sequential-to-pool
     -- PROJECTIONS (`GoLean/GoCore/PoolProjection.lean`; rows 403–436 and 500–501) — the re-pin offer's interface
     ``GoLean.GoCore.Equations.storeTarget_inv_panic, ``GoLean.GoCore.Equations.applyStmtOp_inv_panic,
     ``GoLean.GoCore.Equations.toResult_of_error, ``GoLean.GoCore.Equations.valueAsBool_bool,
     ``GoLean.GoCore.Equations.valueAsLoc_addr, ``GoLean.GoCore.Equations.valueAsLoc_nil,
     ``GoLean.GoCore.Equations.targetPlan_var, ``GoLean.GoCore.Equations.completeTargetRef_var,
     ``GoLean.GoCore.Equations.resolveChain_nil, ``GoLean.GoCore.Equations.applyRhsOp_vals,
+    ``GoLean.GoCore.Equations.applyStrictOp_toInterface_string,
     ``GoLean.GoCore.Equations.loadRoot_base, ``GoLean.GoCore.Equations.storeLoc_root,
     ``GoLean.GoCore.Equations.Heap.lookup_set_self, ``GoLean.GoCore.Equations.Heap.lookup_push_self,
     ``GoLean.GoCore.Equations.exec_seqn, ``GoLean.GoCore.Equations.exec_ifThenElse,

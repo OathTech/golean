@@ -107,6 +107,12 @@ theorem targetPlan_var (id : VarId) : targetPlan (.var id) = some (.chain [], [.
 theorem completeTargetRef_var (a : GoValue) : completeTargetRef (.chain []) [a] = some (.chain a [] []) := rfl
 theorem resolveChain_nil (s : Store) (a : GoValue) : resolveChain ctx s a [] [] = .ok a := rfl
 theorem applyRhsOp_vals (s : Store) (vs : List GoValue) : applyRhsOp ctx s .vals vs = .ok (vs, []) := rfl
+/-- BOXING a value at the dynamic type `string` (`any("…")`, `error`-free): the interface value with
+the canonical dynamic type, read-only, trace-free — `string` mentions nothing unsupported, so
+`checkedDynamicTy` passes it through (the window review's F1: the renderable string payload is the
+BOXED one; an unboxed `.string` is not a Go interface value and `renderPanicPayload` has no arm for it). -/
+theorem applyStrictOp_toInterface_string (s : Store) (tgt : Loc → Loc) (ty : Ty) (v : GoValue) :
+    applyStrictOp ctx s tgt (.toInterface ty .string) [v] = .ok (.interface .string v, s, []) := rfl
 
 /-! ## The root-cell read/write laws (request 1: the arm premises' floor) -/
 

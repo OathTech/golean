@@ -11,7 +11,9 @@
 # `stepFn` irreducible), whose failure is (b)'s failure; (d) the enrollment check's failure is (b)'s
 # failure; (e) SELF-TESTS, fail closed: an `unfold stepFn` mutant trips the regex; a pin-deleted mutant
 # fails (d) naming the equation; each of the audit's seven unfolding spellings at the anchored fact is
-# REFUSED by name by the proof-term check. Every step fails closed; no allowlist.
+# REFUSED by name by the proof-term check, and so is an unfolding hidden in a private helper the fact
+# `exact`s (the window review's F2: the check covers the client-owned proof-dependency closure). Every step
+# fails closed; no allowlist.
 set -Eeuo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$ROOT"
@@ -104,4 +106,25 @@ unfold GoLean.GoCore.Machine.stepFn; rfl
 SPELLINGS
 [[ $n3 -eq 7 ]] || { echo "check-equations: FAIL — expected 7 bypass self-tests, ran $n3" >&2; exit 1; }
 
-printf '%s\n' "Equation gate: PASS (client PASS, exhaustive enrollment, the Lean-level no-unfold check, the regex pre-filter, 9 self-tests)"
+# (e4) self-test: the INDIRECT unfolding (window review F2) — a private helper of the client proved by `rfl` on a
+# `stepFn`-headed equation, `exact`ed from the anchored fact. Neither the regex nor a per-fact check sees it; the
+# closure check must REFUSE the fact by name AND name the helper.
+mut4="$gate_scratch/mut-indirect.lean"
+helper_decl='private theorem returnViaReduction (s : Store) (env : LocalEnv) (k : Cont) (ch : Choices) :\n    stepFn ctx s (.exec .returnStmt env k) ch = .ok (.signal .ret k, s, ch, silent) := by rfl\n'
+awk -v helper="$helper_decl" '/^\/-- FACT 8 /{printf "%s\n", helper} {print}' "$base3" \
+  | sed "s|^$anchor\$|  exact returnViaReduction s env k ch|" > "$mut4"
+grep -q "^private theorem returnViaReduction" "$mut4" || { echo "check-equations: FAIL — self-test: the indirect helper was not inserted" >&2; exit 1; }
+grep -q -- "$anchor" "$mut4" && { echo "check-equations: FAIL — self-test: the anchor was not replaced for the indirect helper" >&2; exit 1; }
+set +e
+scripts/capped lake env lean "$mut4" > "$gate_scratch/mut-indirect.log" 2>&1
+rc=$?
+set -e
+if [[ $rc -eq 0 ]]; then
+  echo "check-equations: FAIL — self-test: the client with the indirect helper still elaborated" >&2; exit 1
+fi
+grep -q "fact Tests.EquationClient.fact_usage_simp_set REFUSED — its proof unfolds stepFn in its helper .*returnViaReduction" "$gate_scratch/mut-indirect.log" || {
+  echo "check-equations: FAIL — self-test: the indirect helper failed but was not REFUSED naming the fact and the helper" >&2
+  grep -E "error" "$gate_scratch/mut-indirect.log" | head -5 >&2; exit 1; }
+echo "ok [self-test indirect] a private helper proved by rfl on stepFn, exact-ed from a fact, is refused naming fact and helper"
+
+printf '%s\n' "Equation gate: PASS (client PASS, exhaustive enrollment, the Lean-level no-unfold check over the client-owned closure, the regex pre-filter, 10 self-tests)"

@@ -159,6 +159,10 @@ arity breaches; the `signalStep` table completed, labelled `brkTo`/`contTo` and 
 `execProgLoop_single_noBoundary_wide`/`execProgLoopOut_single_noBoundary_wide` (audit F4: the equal-fuel embedding
 over `transferableWide`). The arm equations are now PROPOSITIONAL (`defn_eq`, no `rfl`-proof) so a client's proof
 term records them (audit F2); their STATEMENTS are unchanged.
+WINDOW-REVIEW ROUND (`docs/2026-10-03_window-review.md` F1; [AGENT packet D worker] 2026-10-03): rows 1–501
+BYTE-IDENTICAL; row 502 ADDED — the boxing law `applyStrictOp_toInterface_string` (`any("…")` is the interface
+value at the canonical dynamic type `string`, read-only, trace-free), the law the client's rewritten FACT 3
+(a callee's BOXED string panic unwinding past the caller's write) bottoms out in.
 -/
 
 namespace GoLean.GoCore.BridgeSet
@@ -3539,5 +3543,13 @@ example : ∀ {ctx : ProgramCtx} {fuel : Nat} {σ : Store} {c : Config} {ch : Ch
     (_hnb : ∀ n σ' c' ch' ls, Prefix ctx n σ c ch ls σ' c' ch' → n < fuel → ∀ c'' σ'' ch'' l, stepFn ctx σ' c' ch' = .ok (c'', σ'', ch'', l) → c'.afterStepFlag σ' c'' = none),
     execProgLoopOut ctx fuel ⟨#[.running c none], σ, 0⟩ rs ch acc = (seqOut ctx fuel σ c ch acc, r) :=
   @GoLean.GoCore.Machine.execProgLoopOut_single_noBoundary_wide
+
+-- ---- RE-PIN 10, the window-review round (window review F1): row 502 (`Equations.lean`, the helper laws) ----
+
+-- 502. `Equations.lean` — `applyStrictOp_toInterface_string` (window review F1: the boxing law FACT 3's
+-- callee payload bottoms out in)
+example : ∀ {ctx : ProgramCtx} (s : Store) (tgt : Loc → Loc) (ty : Ty) (v : GoValue),
+    applyStrictOp ctx s tgt (.toInterface ty .string) [v] = .ok (.interface .string v, s, []) :=
+  @GoLean.GoCore.Equations.applyStrictOp_toInterface_string
 
 end GoLean.GoCore.BridgeSet
