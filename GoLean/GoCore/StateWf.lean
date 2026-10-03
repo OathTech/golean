@@ -490,6 +490,11 @@ def Cont.locSup : Cont → Nat
   | .unseqK g thenB _ targets env _ k =>
       max (max (UnseqGraph.locSup g) (Stmt.locSup thenB))
         (max (unseqTargetsSup targets) (max (LocalEnv.locSup env) (Cont.locSup k)))
+  -- The preprint frame (unit 6b): the suspended chain's three parts
+  -- (`Rewrite.done`'s text is scalar — no location).
+  | .preprintK older entry newer k =>
+      max (max (panicChainSup older) (GoValue.locSup entry.value))
+        (max (panicChainSup newer) (Cont.locSup k))
   | .seq rest env k =>
       max (max (stmtListSup rest) (LocalEnv.locSup env)) (Cont.locSup k)
   | .loop cond body env k =>
@@ -3526,6 +3531,29 @@ theorem receiverAt_locSup {σ : Store} {root : GoValue} {path : Array PromotionH
     obtain ⟨rfl, rfl⟩ := h
     simpa [WalkCursor.locSup, GoValue.locSup] using hw
 
+/-- The preprint call's RESOLUTION (unit 6b, `preprintDispatch`): the
+adjusted receiver is bounded by the payload and the heap (`receiverAt_locSup`
+on the boxed inner value). -/
+theorem preprintDispatch_locSup {σ : Store} {e : PanicEntry} {fid : FuncId} {recv : GoValue}
+    {tr : AccessTrace} (h : preprintDispatch ctx σ e = .ok (fid, recv, tr)) :
+    GoValue.locSup recv ≤ max (GoValue.locSup e.value) (Heap.locSup σ.heap) := by
+  unfold preprintDispatch at h
+  split at h
+  · split at h
+    · rename_i dynTy inner heq
+      split at h
+      · split at h
+        · simp [throw, throwThe, MonadExceptOf.throw] at h
+        · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+          obtain ⟨⟨recv', tr'⟩, hrecv, rfl, rfl, rfl⟩ := h
+          have := receiverAt_locSup hrecv
+          rw [heq]
+          simp only [GoValue.locSup]
+          exact this
+      · simp [throw, throwThe, MonadExceptOf.throw] at h
+    · simp [throw, throwThe, MonadExceptOf.throw] at h
+  · simp [throw, throwThe, MonadExceptOf.throw] at h
+
 /-- A dispatch's arguments are bounded by the entry's and the heap, and a
 `.target`'s `Func` is one of the program's (G-P S2: the receiver is
 `receiverAt`'s, the other arguments the entry's). -/
@@ -6128,6 +6156,21 @@ theorem panicChainSup_append {a b : List PanicEntry} :
     panicChainSup (a ++ b) = max (panicChainSup a) (panicChainSup b) := by
   simp [panicChainSup_eq, supBy_append]
 
+/-- The preprint phase's collapse mark touches no payload (unit 6b). -/
+theorem panicChainSup_markLastRepanicked :
+    ∀ {l : List PanicEntry}, panicChainSup (markLastRepanicked l) = panicChainSup l
+  | [] => rfl
+  | [e] => by simp [markLastRepanicked, panicChainSup]
+  | e :: e' :: rest => by
+    simp only [markLastRepanicked, panicChainSup]
+    rw [panicChainSup_markLastRepanicked (l := e' :: rest)]
+    rfl
+
+/-- The phase's collapse drops an entry and marks another: never a new location. -/
+theorem panicChainSup_preprintDrop {older newer : List PanicEntry} :
+    panicChainSup (preprintDrop older newer) = max (panicChainSup older) (panicChainSup newer) := by
+  simp [preprintDrop, panicChainSup_append, panicChainSup_markLastRepanicked]
+
 theorem goValueListSup_reverse {a : List GoValue} :
     goValueListSup a.reverse = goValueListSup a := by
   simp [goValueListSup_eq, supBy_reverse]
@@ -7528,7 +7571,55 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
     refine ⟨hs, ?_, Nat.le_refl _⟩
     have hp := panicPayload_locSup (v := v)
     simp only [ConfigWf, Config.locSup, Cont.locSup, Expr.locSup,
-      GoValue.locSup, panicChainSup, Nat.max_le] at hc ⊢
+      GoValue.locSup, panicChainSup, panicEntryOf, Nat.max_le] at hc ⊢
+    omega
+  -- The preprint phase (unit 6b): the chain is re-arranged, never extended
+  -- with a location; the resolution's receiver is bounded by the payload
+  -- and the heap; the delivered result is a cell's value.
+  case preprintCollapse chain older entry newer hsplit hcol =>
+    refine ⟨hs, ?_, Nat.le_refl _⟩
+    rw [splitNewestPending?_eq hsplit] at hc
+    simp only [ConfigWf, Config.locSup, Cont.locSup, panicChainSup_preprintDrop,
+      panicChainSup_append, panicChainSup, Nat.max_le] at hc ⊢
+    omega
+  case preprintDistinct chain older entry newer hsplit hcol =>
+    refine ⟨hs, ?_, Nat.le_refl _⟩
+    rw [splitNewestPending?_eq hsplit] at hc
+    simp only [ConfigWf, Config.locSup, Cont.locSup, panicChainSup_append, panicChainSup,
+      Nat.max_le] at hc ⊢
+    omega
+  case preprintSelect chain older entry newer hsplit hcol =>
+    refine ⟨hs, ?_, Nat.le_refl _⟩
+    rw [splitNewestPending?_eq hsplit] at hc
+    simp only [ConfigWf, Config.locSup, Cont.locSup, panicChainSup_append, panicChainSup,
+      Nat.max_le] at hc ⊢
+    omega
+  case preprintResolve older entry newer k r hres hdel =>
+    rcases toResult_cases hres with ⟨⟨fid, recv, tr₀⟩, rfl, hX⟩ | ⟨msg, rfl, hX⟩
+    · simp only [deliver_ok, Prod.mk.injEq] at hdel
+      obtain ⟨rfl, rfl, rfl⟩ := hdel
+      refine ⟨hs, ?_, Nat.le_refl _⟩
+      have hrecv := preprintDispatch_locSup hX
+      simp only [ConfigWf, Config.locSup, Cont.locSup, GoValue.locSup, goValueListSup,
+        targetPlansSup, exprListSup, LocalEnv.locSup, Nat.max_le] at hc hrecv ⊢
+      omega
+    · simp only [deliver_panic, Prod.mk.injEq] at hdel
+      obtain ⟨rfl, rfl, rfl⟩ := hdel
+      refine ⟨hs, ?_, Nat.le_refl _⟩
+      simp only [ConfigWf, Config.locSup, Cont.locSup, panicChainSup, panicEntry_locSup,
+        List.nil_append, Nat.max_le] at hc ⊢
+      omega
+  case preprintReturn tenv rl older entry newer k fr v tr₀ hload =>
+    refine ⟨hs, ?_, Nat.le_refl _⟩
+    have h1 := loadLoc_locSup (Mem.load_eq (loadBinding_ok ctx hload)).1
+    simp only [ConfigWf, Config.locSup, Cont.locSup, GoValue.locSup, locListSup, deferListSup,
+      targetPlansSup, LocalEnv.locSup, Nat.max_le] at hc h1 ⊢
+    omega
+  case preprintFall tenv rl older entry newer k fr v tr₀ hload =>
+    refine ⟨hs, ?_, Nat.le_refl _⟩
+    have h1 := loadLoc_locSup (Mem.load_eq (loadBinding_ok ctx hload)).1
+    simp only [ConfigWf, Config.locSup, Cont.locSup, GoValue.locSup, locListSup, deferListSup,
+      targetPlansSup, LocalEnv.locSup, Nat.max_le] at hc h1 ⊢
     omega
   case evalRef id loc env k hlook =>
     refine ⟨hs, ?_, Nat.le_refl _⟩

@@ -785,10 +785,62 @@ def Config.blockedB : Config → Bool
   | .blockedSend .. | .blockedRecv .. | .blockedSelect .. | .blockedSync .. => true
   | _ => false
 
+/-! ## The preprint phase's arms (BUG-004 item 4, unit 6b) -/
+
+/-- gc's «panic while printing panic value» is the unrecoverable `fatal`, or a
+refusal by name — never a recoverable panic. -/
+theorem preprintFatalStop_strict {chain : List PanicEntry} :
+    (preprintFatalStop ctx chain).Strict := by
+  unfold preprintFatalStop
+  repeat' split
+  all_goals exact True.intro
+
+theorem panicUnwindStop_strict {chain : List PanicEntry} {k : Cont} :
+    (panicUnwindStop ctx chain k).Strict := by
+  unfold panicUnwindStop
+  split
+  · exact preprintFatalStop_strict
+  · exact True.intro
+
+/-- The call's resolution: a refusal, or the receiver adjustment's recoverable
+panic (a nil `*T` under a value method) — delivered, never raised. -/
+theorem preprintDispatch_tame {σ : Store} {e : PanicEntry} :
+    ErrP Stop.Tame (preprintDispatch ctx σ e) := by
+  unfold preprintDispatch
+  errp
+macro_rules | `(tactic| errp_leaf) => `(tactic| with_reducible exact preprintDispatch_tame)
+
+theorem stepRetOther_strict {σ : Store} {v : GoValue} {k : Cont} {ch : Choices} :
+    ErrP Stop.Strict (stepRetOther σ v k ch) := by
+  unfold stepRetOther
+  errp
+
+theorem stepNextOther_strict {σ : Store} {k : Cont} {ch : Choices} :
+    ErrP Stop.Strict (stepNextOther ctx σ k ch) := by
+  unfold stepNextOther
+  errp
+
+/-- The `.stop` arm away from the abort — an UNSETTLED chain — takes the phase
+step, which never raises. -/
+theorem stepPanicStop_strict {σ : Store} {first : PanicEntry} {rest : List PanicEntry}
+    {ch : Choices} (hab : Config.abort? (.panicking (first :: rest) .stop) = none) :
+    ErrP Stop.Strict (stepPanicStop ctx σ first rest ch) := by
+  unfold stepPanicStop
+  split
+  · rename_i hs
+    rw [Config.abort?_of_settled hs] at hab
+    cases hab
+  · errp
+
+macro_rules | `(tactic| errp_leaf) => `(tactic| with_reducible exact stepRetOther_strict)
+macro_rules | `(tactic| errp_leaf) => `(tactic| with_reducible exact stepNextOther_strict)
+macro_rules | `(tactic| errp_leaf) => `(tactic| with_reducible exact stepPanicStop_strict (by assumption))
+macro_rules | `(tactic| errp_leaf) => `(tactic| exact ErrP.throw panicUnwindStop_strict)
+
 set_option maxHeartbeats 8000000 in
 /-- **What `stepFn` raises** away from the abort and the blocked forms: a refusal or `fatal`
 only — never a Go panic (no stray panic), never the deadlock or the race terminal, never
-fuel-out. -/
+fuel-out. (Unit 6b: the preprint phase's arms are refusals, the fatal, or `.ok`.) -/
 theorem stepFn_strict {σ : Store} {c : Config} {ch : Choices}
     (hab : c.abort? = none) (hnb : c.blockedB = false) :
     ErrP Stop.Strict (stepFn ctx σ c ch) := by

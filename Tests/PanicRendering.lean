@@ -20,9 +20,11 @@ open GoCore GoCore.Machine
 state; every renderer under test reads the context only). -/
 def state : ProgramCtx := ProgramCtx.ofTables (types := TypeEnv.reserved)
 def entry (text : String) (recovered := false) : PanicEntry :=
-  ⟨.interface .string (.string (GoString.fromLeanString text)), recovered⟩
+  { value := .interface .string (.string (GoString.fromLeanString text)), recovered }
 def rawEntry (bytes : Array UInt8) (recovered := false) : PanicEntry :=
-  ⟨.interface .string (.string ⟨bytes⟩), recovered⟩
+  { value := .interface .string (.string ⟨bytes⟩), recovered }
+/-- An un-rewritten entry of any payload (the value arms' families). -/
+def plain (v : GoValue) (recovered := false) : PanicEntry := { value := v, recovered }
 
 /-- Witness w12: `aé界😀z` renders verbatim (a correctly encoded U+FFFD is
 kept — it is three bytes, not the decoder's width-1 sentinel). -/
@@ -80,20 +82,20 @@ theorem equal_repanic_members :
 defined-free int, the `panic(nil)` runtime error and a runtime fault all
 render both members. -/
 theorem equal_repanic_other_families :
-    renderPanicHead state ⟨.interface .bool (.bool true), true⟩
-      [⟨.interface .bool (.bool true), false⟩] 0 = some "true [recovered, repanicked]" ∧
-    renderPanicHead state ⟨.interface .bool (.bool true), true⟩
-      [⟨.interface .bool (.bool true), false⟩] 1 = some "true [recovered]" ∧
-    renderPanicHead state ⟨.interface (.int .int) (.int 7 .int), true⟩
-      [⟨.interface (.int .int) (.int 7 .int), false⟩] 0 = some "7 [recovered, repanicked]" ∧
-    renderPanicHead state ⟨.interface (.int .int) (.int 7 .int), true⟩
-      [⟨.interface (.int .int) (.int 7 .int), false⟩] 1 = some "7 [recovered]" ∧
-    renderPanicHead state ⟨panicPayload .nil, true⟩ [⟨panicPayload .nil, false⟩] 0
+    renderPanicHead state (plain (.interface .bool (.bool true)) true)
+      [plain (.interface .bool (.bool true))] 0 = some "true [recovered, repanicked]" ∧
+    renderPanicHead state (plain (.interface .bool (.bool true)) true)
+      [plain (.interface .bool (.bool true))] 1 = some "true [recovered]" ∧
+    renderPanicHead state (plain (.interface (.int .int) (.int 7 .int)) true)
+      [plain (.interface (.int .int) (.int 7 .int))] 0 = some "7 [recovered, repanicked]" ∧
+    renderPanicHead state (plain (.interface (.int .int) (.int 7 .int)) true)
+      [plain (.interface (.int .int) (.int 7 .int))] 1 = some "7 [recovered]" ∧
+    renderPanicHead state (plain (panicPayload .nil) true) [plain (panicPayload .nil)] 0
       = some "panic called with nil argument [recovered, repanicked]" ∧
-    renderPanicHead state ⟨panicPayload .nil, true⟩ [⟨panicPayload .nil, false⟩] 1
+    renderPanicHead state (plain (panicPayload .nil) true) [plain (panicPayload .nil)] 1
       = some "panic called with nil argument [recovered]" ∧
-    renderPanicHead state ⟨runtimeErrorValue nilDerefPanicText, true⟩
-      [⟨runtimeErrorValue nilDerefPanicText, false⟩] 0
+    renderPanicHead state (plain (runtimeErrorValue nilDerefPanicText) true)
+      [plain (runtimeErrorValue nilDerefPanicText)] 0
       = some (nilDerefPanicText ++ " [recovered, repanicked]") := by
   decide +kernel
 
@@ -126,6 +128,71 @@ theorem decoder_bytes_exact :
 theorem refusal_names_the_cause :
     (abortRefusal state (rawEntry #[0xff, 0x5a])).startsWith
       "panic abort rendering: the string payload's first line is not valid UTF-8" = true := by
+  decide +kernel
+
+/-! ## Unit 6b (BUG-004 item 4): the REWRITTEN payload and the phase's records -/
+
+/-- A defined-type box (index 7 — any index other than the twin's) whose rewrite is
+owed, done, or unrecorded. -/
+def boxed (rewrite : Rewrite) (recovered := false) (repanicked := false) : PanicEntry :=
+  { value := .interface (.defined 7) (.int 9 .int), recovered, rewrite, repanicked }
+
+/-- The stored text prints as a string payload: first line, suffix by the flags
+(the phase's `repanicked` record selects ` [recovered, repanicked]` on a
+recovered head with NO abort-time draw); a `.pending`/`.unrecorded` entry has
+no member (fail closed by name). -/
+theorem rewritten_text_renders :
+    renderPanicHead state (boxed (.done (GoString.fromLeanString "boom"))) [] 0 = some "boom" ∧
+    renderPanicHead state (boxed (.done (GoString.fromLeanString "line-one\nline-two"))) [] 0
+      = some "line-one" ∧
+    renderPanicHead state (boxed (.done (GoString.fromLeanString "same")) true true) [] 1
+      = some "same [recovered, repanicked]" ∧
+    renderPanicHead state (boxed (.done (GoString.fromLeanString "same")) true false) [] 0
+      = some "same [recovered]" ∧
+    renderPanicHead state (boxed (.done (GoString.fromLeanString "same")) false true) [] 0
+      = some "same" ∧
+    (renderPanicHead state (boxed (.pending ⟨"Error", ""⟩)) [] 0).isNone ∧
+    (renderPanicHead state (boxed .unrecorded) [] 0).isNone ∧
+    (renderPanicHead state (boxed (.done ⟨#[0xff]⟩)) [] 0).isNone := by
+  decide +kernel
+
+/-- A rewritten head draws nothing at the abort even beside an equal successor
+(`repanicEqualNext` requires an un-rewritten head): width 1, the suffix from
+the phase's record alone. -/
+theorem rewritten_head_no_abort_draw :
+    repanicCollapseWidth (boxed (.done (GoString.fromLeanString "x")) true)
+      [boxed (.done (GoString.fromLeanString "x"))] = 1 ∧
+    repanicEqualNext (boxed (.done (GoString.fromLeanString "x")) true)
+      [boxed (.done (GoString.fromLeanString "x"))] = false := by
+  decide +kernel
+
+/-- The phase's cursor and collapse: the newest pending entry is split out
+(the settled `newer` suffix kept), a collision marks the older entry and drops
+the newer; the abort is `none` while a rewrite is owed. -/
+theorem phase_cursor_and_collapse :
+    (splitNewestPending? [boxed (.pending ⟨"Error", ""⟩) true, boxed (.pending ⟨"Error", ""⟩),
+        boxed (.done (GoString.fromLeanString "t"))]
+      == some ([boxed (.pending ⟨"Error", ""⟩) true], boxed (.pending ⟨"Error", ""⟩),
+          [boxed (.done (GoString.fromLeanString "t"))])) = true ∧
+    (splitNewestPending? [boxed (.done (GoString.fromLeanString "t")), entry "s"]).isNone = true ∧
+    preprintCollide [boxed (.pending ⟨"Error", ""⟩) true] (boxed (.pending ⟨"Error", ""⟩)) = true ∧
+    preprintCollide [entry "s"] (boxed (.pending ⟨"Error", ""⟩)) = false ∧
+    (preprintDrop [boxed (.pending ⟨"Error", ""⟩) true] [entry "s"]
+      == [boxed (.pending ⟨"Error", ""⟩) true true, entry "s"]) = true ∧
+    (Config.abort? (.panicking [boxed (.pending ⟨"Error", ""⟩)] .stop)).isNone = true ∧
+    (Config.abort? (.panicking [boxed (.done (GoString.fromLeanString "t"))] .stop)
+      == some (boxed (.done (GoString.fromLeanString "t")), [])) = true := by
+  decide +kernel
+
+/-- The fatal text (decision 4): exact for a string payload's first line; a
+runtime-error payload is refused by name (BUG-099). -/
+theorem preprint_fatal_text :
+    (preprintFatalStop state [entry "inner-string"]
+      == .fatal "panic while printing panic value: inner-string") = true ∧
+    (preprintFatalStop state [entry "a\nb"] == .fatal "panic while printing panic value: a") = true ∧
+    (match preprintFatalStop state [panicEntry nilDerefPanicText] with
+      | .unsupported _ => true
+      | _ => false) = true := by
   decide +kernel
 
 end GoLean.PanicRenderingTests

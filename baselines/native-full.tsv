@@ -1,5 +1,18 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 3800 (3563 PASS / 237 FAIL)
+# cases: 3821 (3584 PASS / 237 FAIL)
+# re-pinned: 2026-10-03 [AGENT], core/panic-preprint-1003, window unit 6b — BUG-004 item 4 FIXED: the PREPRINT PHASE ([USER] Mike
+#   2026-09-30 «Yes, agree, do the fix inside this window», relayed; design docs/2026-09-30_bug004-item4-design.md §2 (i), all §5
+#   decisions as recommended; handoff docs/2026-10-03_panic-preprint-handoff.md). WHY: gc's `preprintpanics` CALLS a panic payload's
+#   Error()/String() after every deferred call and before the terminal (runtime/panic.go:702–730 at the pin); the machine now runs the
+#   same calls as ordinary machine steps at the empty continuation (Machine.lean `Cont.preprintK`, the `preprint*` rules; a chain with a
+#   pending rewrite at `.stop` is a running configuration, the abort is the SETTLED chain). TWO FLIPS FAIL→PASS (planned, BUG-004's Cases
+#   line): panic-recover/panic-defined-payload-methods/error (`boom`) and /stringer (`strung`). 21 BORN rows panic-recover/panic-preprint/*
+#   (one per design probe p01–p24, gc1.26.5-validated under the harness env before the run — docs/evidence/2026-10-03_panic-preprint/
+#   gc-fixture-check.txt): 13 strict PASS, 5 membership PASS (members=2, the phase's repanicCollapse draw at an equal adjacent pair — the
+#   CALL COUNT is observable; gc exhibits one member per row), 1 deadlock PASS, 1 confluent PASS, 2 FAIL/lean-observation RED BY DESIGN
+#   (nil-ptr-receiver-deref, value-method-nil-ptr: gc's fatal names a CONCRETE runtime-error type the machine's one runtime.Error twin
+#   cannot — refused by name; on BUG-099's Cases line). NO PASS→non-PASS flip; no other row's result or stage moved. Wire unchanged; twin
+#   byte-identical. 3800 + 21 = 3821; 3563 + 2 + 19 = 3584 PASS; 237 − 2 + 2 = 237 FAIL.
 # re-pinned: 2026-10-01 [AGENT], prep/r58-0930, train r58 pre-landing — the oracle harness's assumed-name fix (audit F4 of
 #   docs/2026-10-01_intn-pick-audit.md; [USER] Mike 2026-10-01 «agree, land it, ratify all including the harness fix», relayed).
 #   WHY: tools/coverageharness/main.go `importName` assumed an UNALIASED import binds path.Base(path), so `import "math/rand/v2"`
@@ -4573,10 +4586,10 @@ PASS	panic-recover/panic-controls/recovered-newline	-
 PASS	panic-recover/panic-controls/soh	-
 PASS	panic-recover/panic-controls/tab	-
 PASS	panic-recover/panic-defer-order	-
-FAIL	panic-recover/panic-defined-payload-methods/error	lean-observation
+PASS	panic-recover/panic-defined-payload-methods/error	-
 PASS	panic-recover/panic-defined-payload-methods/error-forced-half	-
 PASS	panic-recover/panic-defined-payload-methods/plain	-
-FAIL	panic-recover/panic-defined-payload-methods/stringer	lean-observation
+PASS	panic-recover/panic-defined-payload-methods/stringer	-
 PASS	panic-recover/panic-defined-payload-methods/stringer-forced-half	-
 PASS	panic-recover/panic-int-abort	-
 PASS	panic-recover/panic-markers/deadlock-literal	-
@@ -4594,6 +4607,27 @@ PASS	panic-recover/panic-named-type-abort	-
 PASS	panic-recover/panic-newline-abort	-
 PASS	panic-recover/panic-nil-abort	-
 PASS	panic-recover/panic-nil-recover	-
+PASS	panic-recover/panic-preprint/blocking-method-deadlock	-
+PASS	panic-recover/panic-preprint/chain-order	-
+PASS	panic-recover/panic-preprint/error-wins-over-stringer	-
+PASS	panic-recover/panic-preprint/method-panics-defined	-
+PASS	panic-recover/panic-preprint/method-panics-string	-
+PASS	panic-recover/panic-preprint/multiline-text	-
+PASS	panic-recover/panic-preprint/nil-ptr-receiver-const	-
+FAIL	panic-recover/panic-preprint/nil-ptr-receiver-deref	lean-observation
+PASS	panic-recover/panic-preprint/other-goroutine-blocked	confluent
+PASS	panic-recover/panic-preprint/panic-nil-repanic	membership
+PASS	panic-recover/panic-preprint/post-defer-state	-
+PASS	panic-recover/panic-preprint/promoted-error	-
+PASS	panic-recover/panic-preprint/ptr-method-not-in-value-set	-
+PASS	panic-recover/panic-preprint/recovered-not-called	-
+PASS	panic-recover/panic-preprint/recover-inside-method	-
+PASS	panic-recover/panic-preprint/repanic-distinct-equal	membership
+PASS	panic-recover/panic-preprint/repanic-reboxed	membership
+PASS	panic-recover/panic-preprint/repanic-same-box	membership
+PASS	panic-recover/panic-preprint/unrecovered-equal-pair	membership
+FAIL	panic-recover/panic-preprint/value-method-nil-ptr	lean-observation
+PASS	panic-recover/panic-preprint/wrong-signature-not-rewritten	-
 PASS	panic-recover/panic-text/invalid-after-lf	-
 FAIL	panic-recover/panic-text/invalid-first-line	go-observation
 FAIL	panic-recover/panic-text/invalid-recovered-equal	go-observation

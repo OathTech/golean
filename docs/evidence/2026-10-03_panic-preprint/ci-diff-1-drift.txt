@@ -1,0 +1,30 @@
+# scripts/coverage-baseline-diff --full on the FIRST ci --diff pass (pre re-pin; baseline = main @ aeab81c5's): the planned set + the 5a row
+DRIFT vs baselines/native-full.tsv (3821 case(s) run):
+imported-goose/channel/google-search	baseline[PASS/membership] -> now[FAIL/membership]
+panic-recover/panic-defined-payload-methods/error	baseline[FAIL/lean-observation] -> now[PASS/-]
+panic-recover/panic-defined-payload-methods/stringer	baseline[FAIL/lean-observation] -> now[PASS/-]
+panic-recover/panic-preprint/blocking-method-deadlock	NEW id (not in baseline) -> PASS/-
+panic-recover/panic-preprint/chain-order	NEW id (not in baseline) -> PASS/-
+panic-recover/panic-preprint/error-wins-over-stringer	NEW id (not in baseline) -> PASS/-
+panic-recover/panic-preprint/method-panics-defined	NEW id (not in baseline) -> PASS/-
+panic-recover/panic-preprint/method-panics-string	NEW id (not in baseline) -> PASS/-
+panic-recover/panic-preprint/multiline-text	NEW id (not in baseline) -> PASS/-
+panic-recover/panic-preprint/nil-ptr-receiver-const	NEW id (not in baseline) -> PASS/-
+panic-recover/panic-preprint/nil-ptr-receiver-deref	NEW id (not in baseline) -> FAIL/lean-observation
+panic-recover/panic-preprint/other-goroutine-blocked	NEW id (not in baseline) -> PASS/confluent
+panic-recover/panic-preprint/panic-nil-repanic	NEW id (not in baseline) -> PASS/membership
+panic-recover/panic-preprint/post-defer-state	NEW id (not in baseline) -> PASS/-
+panic-recover/panic-preprint/promoted-error	NEW id (not in baseline) -> PASS/-
+panic-recover/panic-preprint/ptr-method-not-in-value-set	NEW id (not in baseline) -> PASS/-
+panic-recover/panic-preprint/recover-inside-method	NEW id (not in baseline) -> PASS/-
+panic-recover/panic-preprint/recovered-not-called	NEW id (not in baseline) -> PASS/-
+panic-recover/panic-preprint/repanic-distinct-equal	NEW id (not in baseline) -> PASS/membership
+panic-recover/panic-preprint/repanic-reboxed	NEW id (not in baseline) -> PASS/membership
+panic-recover/panic-preprint/repanic-same-box	NEW id (not in baseline) -> PASS/membership
+panic-recover/panic-preprint/unrecovered-equal-pair	NEW id (not in baseline) -> PASS/membership
+panic-recover/panic-preprint/value-method-nil-ptr	NEW id (not in baseline) -> FAIL/lean-observation
+panic-recover/panic-preprint/wrong-signature-not-rewritten	NEW id (not in baseline) -> PASS/-
+
+# after the surgical re-pin (header + counts 3800→3821 / 3563→3584 / 237→237, 2 flips, 21 rows):
+DRIFT vs baselines/native-full.tsv (3821 case(s) run):
+imported-goose/channel/google-search	baseline[PASS/membership] -> now[FAIL/membership]

@@ -1,0 +1,52 @@
+# Whole-corpus choice trace, lane core/panic-preprint-1003 (tree @ aeab81c5 + the lane) vs main @ aeab81c5 (the primary checkout's binary built by train r59 at 00:57Z), 2026-10-03
+# scripts/choice-trace-corpus --dump, both sides over THIS worktree's corpus (incl. the 21 born rows) with the two precedent exclusions (goroutines/send-then-spin, strings/trimspace-repeat/repeat-bound-refused — the B6/C4 precedent); each side's own binary; the 23 lane ids (2 flips + 21 born) compared separately below
+ct-main: all=26478 rest=26445 lane-ids=33 sha(rest)=79b1c69b56da4b44 sha(all)=068bbe71215b07ec
+ct-lane: all=26484 rest=26445 lane-ids=39 sha(rest)=79b1c69b56da4b44 sha(all)=36d8451731b3aa8d
+REST IDENTICAL (every consumption of every row outside the 23 lane ids is byte-identical, main vs lane)
+RESULTS (per row x stream) outside the lane ids IDENTICAL
+--- lane ids, main side (consumptions):
+panic-recover/panic-preprint/other-goroutine-blocked	1,3,5,7,9,2,4,6,8,0	0	pool	l1Sched	2	1	1
+panic-recover/panic-preprint/other-goroutine-blocked	1,3,5,7,9,2,4,6,8,0	1	pool	l1Sched	2	3	1
+panic-recover/panic-preprint/other-goroutine-blocked	5,5,5,5,5,5,5,5	0	pool	l1Sched	2	5	1
+panic-recover/panic-preprint/other-goroutine-blocked	5,5,5,5,5,5,5,5	1	pool	l1Sched	2	5	1
+panic-recover/panic-preprint/other-goroutine-blocked	9,8,7,6,5,4,3,2,1,0	0	pool	l1Sched	2	9	1
+--- lane ids, lane side (consumptions):
+panic-recover/panic-preprint/other-goroutine-blocked	1,3,5,7,9,2,4,6,8,0	0	pool	l1Sched	2	1	1
+panic-recover/panic-preprint/other-goroutine-blocked	1,3,5,7,9,2,4,6,8,0	1	pool	l1Sched	2	3	1
+panic-recover/panic-preprint/other-goroutine-blocked	5,5,5,5,5,5,5,5	0	pool	l1Sched	2	5	1
+panic-recover/panic-preprint/other-goroutine-blocked	5,5,5,5,5,5,5,5	1	pool	l1Sched	2	5	1
+panic-recover/panic-preprint/other-goroutine-blocked	9,8,7,6,5,4,3,2,1,0	0	pool	l1Sched	2	9	1
+panic-recover/panic-preprint/other-goroutine-blocked	9,8,7,6,5,4,3,2,1,0	1	pool	l1Sched	2	8	0
+panic-recover/panic-preprint/other-goroutine-blocked	default	0	pool	l1Sched	2	-	0
+panic-recover/panic-preprint/other-goroutine-blocked	rand:1:4096	0	pool	l1Sched	2	47062	0
+panic-recover/panic-preprint/other-goroutine-blocked	rand:2:4096	0	pool	l1Sched	2	45548	0
+panic-recover/panic-preprint/panic-nil-repanic	1,3,5,7,9,2,4,6,8,0	0	pool	repanicCollapse	2	1	1
+panic-recover/panic-preprint/panic-nil-repanic	5,5,5,5,5,5,5,5	0	pool	repanicCollapse	2	5	1
+panic-recover/panic-preprint/panic-nil-repanic	9,8,7,6,5,4,3,2,1,0	0	pool	repanicCollapse	2	9	1
+panic-recover/panic-preprint/panic-nil-repanic	default	0	pool	repanicCollapse	2	-	0
+panic-recover/panic-preprint/panic-nil-repanic	rand:1:4096	0	pool	repanicCollapse	2	47062	0
+panic-recover/panic-preprint/panic-nil-repanic	rand:2:4096	0	pool	repanicCollapse	2	45548	0
+panic-recover/panic-preprint/repanic-distinct-equal	1,3,5,7,9,2,4,6,8,0	0	pool	repanicCollapse	2	1	1
+panic-recover/panic-preprint/repanic-distinct-equal	5,5,5,5,5,5,5,5	0	pool	repanicCollapse	2	5	1
+panic-recover/panic-preprint/repanic-distinct-equal	9,8,7,6,5,4,3,2,1,0	0	pool	repanicCollapse	2	9	1
+panic-recover/panic-preprint/repanic-distinct-equal	default	0	pool	repanicCollapse	2	-	0
+panic-recover/panic-preprint/repanic-distinct-equal	rand:1:4096	0	pool	repanicCollapse	2	47062	0
+panic-recover/panic-preprint/repanic-distinct-equal	rand:2:4096	0	pool	repanicCollapse	2	45548	0
+panic-recover/panic-preprint/repanic-reboxed	1,3,5,7,9,2,4,6,8,0	0	pool	repanicCollapse	2	1	1
+panic-recover/panic-preprint/repanic-reboxed	5,5,5,5,5,5,5,5	0	pool	repanicCollapse	2	5	1
+panic-recover/panic-preprint/repanic-reboxed	9,8,7,6,5,4,3,2,1,0	0	pool	repanicCollapse	2	9	1
+panic-recover/panic-preprint/repanic-reboxed	default	0	pool	repanicCollapse	2	-	0
+panic-recover/panic-preprint/repanic-reboxed	rand:1:4096	0	pool	repanicCollapse	2	47062	0
+panic-recover/panic-preprint/repanic-reboxed	rand:2:4096	0	pool	repanicCollapse	2	45548	0
+panic-recover/panic-preprint/repanic-same-box	1,3,5,7,9,2,4,6,8,0	0	pool	repanicCollapse	2	1	1
+panic-recover/panic-preprint/repanic-same-box	5,5,5,5,5,5,5,5	0	pool	repanicCollapse	2	5	1
+panic-recover/panic-preprint/repanic-same-box	9,8,7,6,5,4,3,2,1,0	0	pool	repanicCollapse	2	9	1
+panic-recover/panic-preprint/repanic-same-box	default	0	pool	repanicCollapse	2	-	0
+panic-recover/panic-preprint/repanic-same-box	rand:1:4096	0	pool	repanicCollapse	2	47062	0
+panic-recover/panic-preprint/repanic-same-box	rand:2:4096	0	pool	repanicCollapse	2	45548	0
+panic-recover/panic-preprint/unrecovered-equal-pair	1,3,5,7,9,2,4,6,8,0	0	pool	repanicCollapse	2	1	1
+panic-recover/panic-preprint/unrecovered-equal-pair	5,5,5,5,5,5,5,5	0	pool	repanicCollapse	2	5	1
+panic-recover/panic-preprint/unrecovered-equal-pair	9,8,7,6,5,4,3,2,1,0	0	pool	repanicCollapse	2	9	1
+panic-recover/panic-preprint/unrecovered-equal-pair	default	0	pool	repanicCollapse	2	-	0
+panic-recover/panic-preprint/unrecovered-equal-pair	rand:1:4096	0	pool	repanicCollapse	2	47062	0
+panic-recover/panic-preprint/unrecovered-equal-pair	rand:2:4096	0	pool	repanicCollapse	2	45548	0

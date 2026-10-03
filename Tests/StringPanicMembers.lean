@@ -12,7 +12,7 @@ renderers read and the (empty) STORE the abort step carries. -/
 def ctx : ProgramCtx := ProgramCtx.ofTables (types := TypeEnv.reserved)
 def state : Store := {}
 def entry (bytes : Array UInt8) (recovered := false) : PanicEntry :=
-  ⟨.interface .string (.string ⟨bytes⟩), recovered⟩
+  { value := .interface .string (.string ⟨bytes⟩), recovered }
 
 theorem invalid_first_line_refused :
     renderPanicHead ctx (entry #[0xff]) [] 0 = none ∧
@@ -43,26 +43,30 @@ theorem member_is_renderer (bytes : Array UInt8) (recovered : Bool)
   renderPanicHead_string _ rest ⟨bytes⟩ pick rfl
 
 /-- The actual abort step is the member the STREAM's pick selects, or the
-named refusal — for every byte string, flag, tail, stream and fuel. -/
+named refusal — for every byte string, flag, SETTLED tail (unit 6b: a tail
+with a rewrite still owed is the preprint phase's running configuration, not
+the abort), stream and fuel. -/
 theorem generic_actual_abort (bytes : Array UInt8) (recovered : Bool)
     (rest : List PanicEntry) (choices : Choices) (fuel : Nat) (msg : String)
+    (hs : splitNewestPending? (entry bytes recovered :: rest) = none)
     (hm : stringPanicHead ⟨bytes⟩ recovered
       (collapseBit (entry bytes recovered) rest (abortConsult (entry bytes recovered) rest choices).1)
       = some msg) :
     runConfig ctx (fuel + 1) state (.panicking (entry bytes recovered :: rest) .stop) choices =
       .error (.panic msg) :=
   runConfig_string_abort fuel state (.panicking (entry bytes recovered :: rest) .stop)
-    choices (entry bytes recovered) rest ⟨bytes⟩ msg rfl rfl hm
+    choices (entry bytes recovered) rest ⟨bytes⟩ msg (Config.abort?_of_settled hs) rfl hm
 
 theorem generic_actual_abort_refused (bytes : Array UInt8) (recovered : Bool)
     (rest : List PanicEntry) (choices : Choices) (fuel : Nat)
+    (hs : splitNewestPending? (entry bytes recovered :: rest) = none)
     (hm : stringPanicHead ⟨bytes⟩ recovered
       (collapseBit (entry bytes recovered) rest (abortConsult (entry bytes recovered) rest choices).1)
       = none) :
     runConfig ctx (fuel + 1) state (.panicking (entry bytes recovered :: rest) .stop) choices =
       .error (.unsupported (abortRefusal ctx (entry bytes recovered))) :=
   runConfig_string_abort_refused fuel state (.panicking (entry bytes recovered :: rest) .stop)
-    choices (entry bytes recovered) rest ⟨bytes⟩ rfl rfl hm
+    choices (entry bytes recovered) rest ⟨bytes⟩ (Config.abort?_of_settled hs) rfl hm
 
 theorem abort_zero_fuel :
     runConfig ctx 0 state (.panicking [entry #[0xff]] .stop) [] = .error .fuelOut := by

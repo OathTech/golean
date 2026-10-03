@@ -4,9 +4,11 @@ stringer	panicDefinedStringerPayload	-	panic	strung	panic,interfaces,defined_typ
 plain	panicDefinedPlainPayload	-	panic	main.payloadPlain	panic,interfaces,defined_type
 # W4.3 item 5 (docs/raft-w43-log.md): the R-1 forced-half proof rows —
 # the same payloads recovered and inspected in-language (kind,
-# identity, control flow), compared exactly. The abort rows above stay
+# identity, control flow), compared exactly. The abort rows above were
 # red awaiting the machine's quotient MEMBER (semantic-core, the W3.2
-# lane's); these rows are the "forced half proved-matching" clause of
+# lane's) and flipped PASS at unit 6b (2026-10-03, the preprint phase —
+# BUG-004 item 4 fixed; panic-recover/panic-preprint/* are the born
+# rows); these rows are the "forced half proved-matching" clause of
 # the w32 charter §S3(b), executed case-level.
 error-forced-half	recoverDefinedErrorPayload	-	ok	-	panic,recover,interfaces,defined_type,methods
 stringer-forced-half	recoverDefinedStringerPayload	-	ok	-	panic,recover,interfaces,defined_type,methods

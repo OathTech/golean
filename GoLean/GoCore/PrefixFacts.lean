@@ -163,6 +163,63 @@ macro "picks_entry_none " hsc:ident : tactic =>
     okp
     all_goals exact entry_ps_nil $hsc:ident (by assumption)))
 
+/-- The `.stop` arm's records (unit 6b): with the projection `none` — a settled chain (which
+throws) or a non-colliding phase step (bound 1) — no record is emitted. -/
+theorem stepPanicStop_picks_none {σ : Store} {first : PanicEntry} {rest : List PanicEntry}
+    {ch₀ : Choices}
+    (hsc : seqConsumption ctx σ (.panicking (first :: rest) .stop) = none) :
+    OkP (fun r : Config × Store × Choices × StepLabel => r.2.2.2.picks = [])
+      (stepPanicStop ctx σ first rest ch₀) := by
+  intro r hr
+  unfold stepPanicStop at hr
+  split at hr
+  · simp only [bind_eq_ok] at hr
+    obtain ⟨msg, -, hr⟩ := hr
+    simp [throw, throwThe, MonadExceptOf.throw] at hr
+  · rename_i older entry newer hsplit
+    simp only [seqConsumption, hsplit] at hsc
+    have hcol : preprintCollide older entry = false := by
+      cases hc : preprintCollide older entry
+      · rfl
+      · simp [hc] at hsc
+    have hw : preprintWidth older entry = 1 := by simp [preprintWidth, hcol]
+    rw [hw, Choices.consumeAtE_le_one (Nat.le_refl 1)] at hr
+    simp only [pure_eq_ok, Except.ok.injEq] at hr
+    subst hr
+    rfl
+
+/-- … and with the projection `some`: the phase's collision draw records the
+`repanicCollapse` pick at bound 2 (a settled chain throws). -/
+theorem stepPanicStop_picks_some {σ : Store} {first : PanicEntry} {rest : List PanicEntry}
+    {ch₀ : Choices} {site : ChoiceSite} {b : Nat}
+    (hsc : seqConsumption ctx σ (.panicking (first :: rest) .stop) = some (site, b)) :
+    OkP (fun r : Config × Store × Choices × StepLabel =>
+        r.2.2.2.picks = PickRecord.ofPick site b (Choices.consumeAt site b ch₀).1)
+      (stepPanicStop ctx σ first rest ch₀) := by
+  intro r hr
+  unfold stepPanicStop at hr
+  split at hr
+  · simp only [bind_eq_ok] at hr
+    obtain ⟨msg, -, hr⟩ := hr
+    simp [throw, throwThe, MonadExceptOf.throw] at hr
+  · rename_i older entry newer hsplit
+    simp only [seqConsumption, hsplit] at hsc
+    have hcol : preprintCollide older entry = true := by
+      cases hc : preprintCollide older entry
+      · simp [hc] at hsc
+      · rfl
+    simp only [hcol, ite_true, Option.some.injEq, Prod.mk.injEq] at hsc
+    obtain ⟨rfl, rfl⟩ := hsc
+    have hw : preprintWidth older entry = 2 := by simp [preprintWidth, hcol]
+    rw [hw] at hr
+    rcases hx : Choices.consumeAtE .repanicCollapse 2 ch₀ with ⟨pick, ch', ps⟩
+    rw [hx] at hr
+    simp only [pure_eq_ok, Except.ok.injEq] at hr
+    subst hr
+    obtain ⟨hps, hc⟩ := Choices.consumeAtE_inv hx
+    simp only [hc]
+    exact hps
+
 set_option maxHeartbeats 1600000 in
 set_option linter.unusedSimpArgs false in
 /-- **No record without a consultation**: a step whose projection is `none` emits no pick
@@ -174,6 +231,12 @@ theorem stepFn_picks_none {σ : Store} {c : Config} {ch₀ : Choices}
   fun_cases stepFn ctx σ c ch₀
   all_goals (try (okp; done))
   case case6 => simp [seqConsumption] at hsc
+  case case7 =>
+    -- The `.stop` arm (unit 6b): the abort throws; the phase step at a
+    -- non-colliding entry pops nothing (bound 1).
+    exact stepPanicStop_picks_none hsc
+  case case137 => unfold stepRetOther; okp
+  case case152 => unfold stepNextOther; okp
   case case2 => picks_entry_none hsc
   case case32 => picks_entry_none hsc
   case case91 => picks_entry_none hsc
@@ -334,6 +397,10 @@ theorem stepFn_picks_some {σ : Store} {c : Config} {ch₀ : Choices} {site : Ch
     obtain ⟨rfl, rfl⟩ := hsc
     okp
     all_goals (obtain ⟨hps, hc⟩ := Choices.consumeAtE_inv (by assumption); rw [hc]; exact hps)
+  case case7 =>
+    -- The `.stop` arm (unit 6b): the abort throws; the phase's collision
+    -- draw records the `repanicCollapse` pick at bound 2.
+    exact stepPanicStop_picks_some hsc
   case case94 =>
     rename_i v op nt done env k'
     simp only [seqConsumption, Config.applyPos] at hsc
@@ -528,13 +595,10 @@ theorem stepFn_consumption_some' {σ : Store} {c : Config} {ch₀ : Choices}
   case case101 =>
     consumption_entry_some h hsc
   case case7 =>
-    -- THE ABORT: the `repanicCollapse` consult's step is the `panic`
-    -- terminal (or the render's refusal) — it never returns `.ok`, so the
-    -- `some` half is vacuous here (the pool's `stepMulti_sound` carries
-    -- the pick into the relation).
-    simp only [stepFn, bind_eq_ok] at h
-    obtain ⟨msg, -, h⟩ := h
-    simp [throw, throwThe, MonadExceptOf.throw] at h
+    -- The `.stop` arm (unit 6b): the abort never returns `.ok`; the phase's
+    -- collision draw is the bound-2 pop (`stepPanicStop_consumption_some`).
+    simp only [stepFn] at h ⊢
+    exact stepPanicStop_consumption_some hsc h
   case case142 =>
     simp only [stepFn] at h ⊢
     exact stepFrameExit_consumption_some (.inl rfl) hsc h

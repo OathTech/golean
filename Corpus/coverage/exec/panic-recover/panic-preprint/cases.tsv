@@ -1,0 +1,40 @@
+# id	subject	args	expected_status	expected_reason	features
+# THE PREPRINT PHASE (BUG-004 item 4, window unit 6b; design note
+# docs/2026-09-30_bug004-item4-design.md §2 (i), RULED [USER] Mike 2026-09-30
+# «Yes, agree, do the fix inside this window», relayed by the [AGENT]
+# coordinator; lane core/panic-preprint-1003, 2026-10-03). gc calls a panic
+# payload's Error()/String() after every deferred call and before the
+# terminal (runtime/panic.go:702–730 at the pin); the machine runs the same
+# calls as ordinary steps at the empty continuation. One row per design
+# probe (docs/evidence/2026-09-30_bug004-item4-design/probes.md, pNN), all
+# red-first on main. Membership rows: gc's eface identity at an EQUAL
+# adjacent pair (panic.go:715) decides the call COUNT and the suffix — the
+# `repanicCollapse` pick drawn by the phase at the pair (bound 2; decision 3
+# of the design note, RULED): slot 0 = IDENTICAL (one call, the collapsed
+# line), slot 1 = DISTINCT (both called, the two-line form). The machine has
+# no boxing identity (latitude inventory R10a); members=2 on each.
+error-wins-over-stringer	errorWinsOverStringer	-	panic	from-Error	panic,interfaces,defined_type,methods
+method-panics-string	methodPanicsString	-	fatal	panic while printing panic value: inner-string	panic,defined_type,methods,fatal
+method-panics-defined	methodPanicsDefined	-	fatal	panic while printing panic value: type main.inner	panic,defined_type,methods,structs,fatal
+# RED by design (BUG-099): the fatal names gc's CONCRETE runtime-error type
+# (`runtime.errorString` for the nil dereference, `runtime.plainError` for
+# panicwrap); the machine's one `runtime.Error` twin cannot name it and
+# REFUSES by name (`preprintFatalStop`). Both rows are on BUG-099's Cases line.
+nil-ptr-receiver-deref	nilPtrReceiverDeref	-	fatal	panic while printing panic value: type runtime.errorString	panic,defined_type,methods,pointers,nil,fatal
+value-method-nil-ptr	valueMethodNilPtr	-	fatal	panic while printing panic value: type runtime.plainError	panic,defined_type,methods,pointers,nil,fatal
+nil-ptr-receiver-const	nilPtrReceiverConst	-	panic	const-text	panic,defined_type,methods,pointers,nil
+ptr-method-not-in-value-set	ptrMethodNotInValueSet	-	panic	main.ptrOnly(3)	panic,defer,defined_type,methods,pointers,structs
+post-defer-state	postDeferState	-	panic	after	panic,defer,defined_type,methods,globals
+recovered-not-called	recoveredNotCalled	-	panic	unrecovered	panic,recover,defer,defined_type,methods,structs,print
+chain-order	chainOrder	-	panic	first	panic,recover,defer,defined_type,methods,structs,print
+repanic-same-box	repanicSameBox	-	panic	same	panic,recover,defer,defined_type,methods,pointers,structs,print,nondet	membership	unit 6b (BUG-004 item 4; design docs/2026-09-30_bug004-item4-design.md §2 (i) 3, decision 3 RULED [USER] 2026-09-30 relayed): the preprint phase draws the repanicCollapse pick at the EQUAL adjacent pair (bound 2) — slot 0 = IDENTICAL eface (gc: the recovered box passed through, runtime/panic.go:715): Error() is called ONCE (one `CALLED:same`) and the line collapses to `same [recovered, repanicked]`; slot 1 = DISTINCT: both entries' Error() run (two `CALLED:same`) and the two-line form prints `same [recovered]`. The machine has no boxing identity (R10a); members=2; gc draws member 0 here (probe p11)	width=2,sites=8,members=2
+repanic-reboxed	repanicReboxed	-	panic	boom	panic,recover,defer,defined_type,methods,type_assertions,print,nondet	membership	unit 6b (BUG-004 item 4; design §2 (i) 3, decision 3 RULED): the same pair draw — slot 0 = one `CALLED` and `boom [recovered, repanicked]`; slot 1 = two `CALLED` and `boom [recovered]`. gc re-boxes the asserted small int (a fresh allocation) and draws member 1 here (probe p11b); members=2	width=2,sites=8,members=2
+repanic-distinct-equal	repanicDistinctEqual	-	panic	x	panic,recover,defer,defined_type,methods,structs,print,nondet	membership	unit 6b (BUG-004 item 4; design §2 (i) 3, decision 3 RULED): two equal struct literals — slot 0 = one `CALLED:x` and `x [recovered, repanicked]`; slot 1 = two `CALLED:x` and `x [recovered]`. gc's two literals are statically deduplicated and it draws member 0 here (probe p12); members=2	width=2,sites=8,members=2
+unrecovered-equal-pair	unrecoveredEqualPair	-	panic	same	panic,defer,defined_type,methods,pointers,structs,print,nondet	membership	unit 6b (BUG-004 item 4; design §2 (i) 3, decision 3 RULED): an UNRECOVERED identical pair — slot 0 = one `CALLED:same` and the bare `same` (gc's oldest line carries no suffix whether or not the duplicate is suppressed, panic.go:749); slot 1 = two `CALLED:same` and `same` on the first of two lines. The members differ in OUTPUT, not in the first line; gc draws member 0 here (probe p21); members=2	width=2,sites=8,members=2
+panic-nil-repanic	panicNilRepanic	-	panic	panic called with nil argument	panic,recover,defer,nil,nondet	membership	unit 6b (BUG-004 item 4): `panic(nil)` is the `*runtime.PanicNilError` runtime error whose text is already gc's rewritten payload — the phase leaves it alone (`Rewrite.none`) and the ABORT's own repanicCollapse pick applies (BUG-004 item 1, landing chunk L3): slot 0 = `panic called with nil argument [recovered, repanicked]`, slot 1 = `… [recovered]`; gc draws member 0 here (probe p13); members=2	width=2,sites=8,members=2
+blocking-method-deadlock	blockingMethodDeadlock	-	deadlock	-	panic,defined_type,methods,channels,deadlock
+recover-inside-method	recoverInsideMethod	-	panic	text	panic,recover,defer,defined_type,methods,print
+wrong-signature-not-rewritten	wrongSignatureNotRewritten	-	panic	main.wrongStringer(3)	panic,defer,defined_type,methods
+promoted-error	promotedError	-	panic	promoted-text	panic,defined_type,methods,structs,embedding
+multiline-text	multilineText	-	panic	line-one	panic,defined_type,methods,strings
+other-goroutine-blocked	otherGoroutineBlocked	-	panic	got	panic,defined_type,methods,goroutines,channels	confluent	unit 6b (BUG-004 item 4): the payload method runs with the world still running (gc calls it before `fatalpanic` freezes the world) — a sibling goroutine blocked on a receive neither deadlocks the phase nor changes the abort on any schedule (probe p24)	width=4,sites=8

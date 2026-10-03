@@ -1259,6 +1259,10 @@ theorem stepFrameExit_sound {s : Store} {targets : List (TargetShape × List Exp
   · simp only [stepFrameExit, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl, rfl, rfl⟩ := h
     exact ⟨Step.frameFall, Step.frameReturn⟩
+  · -- unit 6b: the payload method's one result delivered to the preprint frame
+    simp only [stepFrameExit, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨⟨v, trv⟩, hload, rfl, rfl, rfl, rfl⟩ := h
+    exact ⟨Step.preprintFall hload, Step.preprintReturn hload⟩
   · simp only [stepFrameExit, bind_eq_ok] at h
     obtain ⟨vs, _, h⟩ := h
     simp [throw, throwThe, MonadExceptOf.throw] at h
@@ -1288,6 +1292,214 @@ theorem stepFrameExit_sound {s : Store} {targets : List (TargetShape × List Exp
     obtain ⟨rfl, rfl, rfl, rfl⟩ := h
     exact ⟨Step.frameDeferNilFall, Step.frameDeferNilReturn⟩
   · simp [stepFrameExit, throw, throwThe, MonadExceptOf.throw] at h
+
+/-! ### The preprint phase's step functions (BUG-004 item 4, unit 6b)
+
+`stepPanicStop`/`stepRetOther`/`stepNextOther` (StepFn.lean) sit at three
+existing `stepFn` arm positions (the `.stop` arm, the `.retV` and `.next`
+catch-alls), proved here against their `Step` rules and their stream
+contract — the `stepFrameExit_sound` pattern. -/
+
+/-- The `.stop` arm's step is a relation step: at a SETTLED chain it never
+returns `.ok` (the abort is the `panic` terminal — no rule); at an unsettled
+one it is the phase's collapse / selection under the drawn pick. -/
+theorem stepPanicStop_sound {s : Store} {first : PanicEntry} {rest : List PanicEntry}
+    {ch : Choices} {c' : Config} {s' : Store} {ch' : Choices} {tr : StepLabel}
+    (h : stepPanicStop ctx s first rest ch = .ok (c', s', ch', tr)) :
+    Step ctx (.panicking (first :: rest) .stop) s c' s' tr := by
+  unfold stepPanicStop at h
+  split at h
+  · simp only [bind_eq_ok] at h
+    obtain ⟨msg, -, h⟩ := h
+    simp [throw, throwThe, MonadExceptOf.throw] at h
+  · rename_i older entry newer hsplit
+    rcases hx : Choices.consumeAtE .repanicCollapse (preprintWidth older entry) ch with ⟨pick, ch'', ps⟩
+    rw [hx] at h
+    simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl, rfl, rfl⟩ := h
+    obtain ⟨rfl, hc⟩ := Choices.consumeAtE_inv hx
+    have hlt : pick < preprintWidth older entry := by
+      have h2 := congrArg Prod.fst hc
+      simp only at h2
+      rw [← h2]
+      exact Choices.consumeAt_fst_lt (by unfold preprintWidth; split <;> omega)
+    cases hcol : preprintCollide older entry
+    · have hw : preprintWidth older entry = 1 := by simp [preprintWidth, hcol]
+      rw [hw] at hlt ⊢
+      simp only [Bool.false_and, Bool.false_eq_true, ↓reduceIte, PickRecord.ofPick, Nat.le_refl]
+      exact Step.preprintSelect hsplit hcol
+    · have hw : preprintWidth older entry = 2 := by simp [preprintWidth, hcol]
+      rw [hw] at hlt ⊢
+      by_cases hp : pick = 0
+      · subst hp
+        simp only [Bool.true_and, decide_true, ↓reduceIte, PickRecord.ofPick, Nat.reduceLeDiff]
+        exact Step.preprintCollapse hsplit hcol
+      · obtain rfl : pick = 1 := by omega
+        simp only [Bool.true_and, PickRecord.ofPick, Nat.reduceLeDiff, ↓reduceIte,
+          Nat.one_ne_zero, decide_false, Bool.false_eq_true]
+        exact Step.preprintDistinct hsplit hcol
+
+/-- The `.retV` catch-all's step: the preprint frame's STORE (rule
+`preprintStore`); the statement frames refuse. -/
+theorem stepRetOther_sound {s : Store} {v : GoValue} {k : Cont} {ch : Choices}
+    {c' : Config} {s' : Store} {ch' : Choices} {tr : StepLabel}
+    (h : stepRetOther s v k ch = .ok (c', s', ch', tr)) :
+    Step ctx (.retV v k) s c' s' tr := by
+  unfold stepRetOther at h
+  split at h
+  · split at h
+    · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl, rfl, rfl⟩ := h
+      exact Step.preprintStore
+    · simp [throw, throwThe, MonadExceptOf.throw] at h
+  · simp [throw, throwThe, MonadExceptOf.throw] at h
+
+/-- The `.next` catch-all's step: the preprint frame's RESOLUTION (rule
+`preprintResolve`, through `deliver`); the expression frames refuse. -/
+theorem stepNextOther_sound {s : Store} {k : Cont} {ch : Choices}
+    {c' : Config} {s' : Store} {ch' : Choices} {tr : StepLabel}
+    (h : stepNextOther ctx s k ch = .ok (c', s', ch', tr)) :
+    Step ctx (.next k) s c' s' tr := by
+  unfold stepNextOther at h
+  split at h
+  · simp only [bind_eq_ok] at h
+    obtain ⟨r, hr, h⟩ := h
+    simp only [pure_eq_ok, Except.ok.injEq] at h
+    refine Step.preprintResolve hr ?_
+    cases r with
+    | ok a =>
+      obtain ⟨fid, recv, tr₀⟩ := a
+      simp only [deliverS_ok, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl, rfl, rfl⟩ := h
+      rfl
+    | panic msg =>
+      simp only [deliverS_panic, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl, rfl, rfl⟩ := h
+      rfl
+  · simp [throw, throwThe, MonadExceptOf.throw] at h
+
+/-- The `.retV` catch-all is stream-oblivious: it draws nothing. -/
+theorem stepRetOther_stream {s : Store} {v : GoValue} {k : Cont} {ch₀ : Choices}
+    {c' : Config} {s' : Store} {ch₀' : Choices} {tr : StepLabel}
+    (h : stepRetOther s v k ch₀ = .ok (c', s', ch₀', tr)) :
+    ch₀' = ch₀ ∧ ∀ ch : Choices, stepRetOther s v k ch = .ok (c', s', ch, tr) := by
+  unfold stepRetOther at h ⊢
+  split at h
+  · split at h
+    · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl, rfl, rfl⟩ := h
+      exact ⟨rfl, fun ch => rfl⟩
+    · simp [throw, throwThe, MonadExceptOf.throw] at h
+  · simp [throw, throwThe, MonadExceptOf.throw] at h
+
+/-- The `.next` catch-all is stream-oblivious: the resolution reads the
+store, never the stream. -/
+theorem stepNextOther_stream {s : Store} {k : Cont} {ch₀ : Choices}
+    {c' : Config} {s' : Store} {ch₀' : Choices} {tr : StepLabel}
+    (h : stepNextOther ctx s k ch₀ = .ok (c', s', ch₀', tr)) :
+    ch₀' = ch₀ ∧ ∀ ch : Choices, stepNextOther ctx s k ch = .ok (c', s', ch, tr) := by
+  unfold stepNextOther at h ⊢
+  split at h
+  · simp only [bind_eq_ok] at h
+    obtain ⟨r, hr, h⟩ := h
+    simp only [pure_eq_ok, Except.ok.injEq] at h
+    cases r with
+    | ok a =>
+      obtain ⟨fid, recv, tr₀⟩ := a
+      simp only [deliverS_ok, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl, rfl, rfl⟩ := h
+      exact ⟨rfl, fun ch => by simp [hr, Bind.bind, Except.bind, deliverS]⟩
+    | panic msg =>
+      simp only [deliverS_panic, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl, rfl, rfl⟩ := h
+      exact ⟨rfl, fun ch => by simp [hr, Bind.bind, Except.bind, deliverS]⟩
+  · simp [throw, throwThe, MonadExceptOf.throw] at h
+
+/-- At the two catch-all positions the projection is `none`: a `some`
+projection with an `.ok` step is impossible. -/
+theorem stepRetOther_consumption_some_elim {σ : Store} {v : GoValue} {k : Cont} {ch₀ : Choices}
+    {c' : Config} {σ' : Store} {ch₀' : Choices} {tr : StepLabel} {p : ChoiceSite × Nat}
+    (hsc : seqConsumption ctx σ (.retV v k) = some p)
+    (h : stepRetOther σ v k ch₀ = .ok (c', σ', ch₀', tr)) : False := by
+  unfold stepRetOther at h
+  split at h
+  · simp [seqConsumption, Config.applyPos, entryCallSite?] at hsc
+  · simp [throw, throwThe, MonadExceptOf.throw] at h
+
+theorem stepNextOther_consumption_some_elim {σ : Store} {k : Cont} {ch₀ : Choices}
+    {c' : Config} {σ' : Store} {ch₀' : Choices} {tr : StepLabel} {p : ChoiceSite × Nat}
+    (hsc : seqConsumption ctx σ (.next k) = some p)
+    (h : stepNextOther ctx σ k ch₀ = .ok (c', σ', ch₀', tr)) : False := by
+  unfold stepNextOther at h
+  split at h
+  · simp [seqConsumption, Config.applyPos, entryCallSite?] at hsc
+  · simp [throw, throwThe, MonadExceptOf.throw] at h
+
+/-- The `.stop` arm's consumption, `none` half: no collision — the phase
+step pops nothing and is stream-oblivious (a settled chain never returns
+`.ok`). -/
+theorem stepPanicStop_consumption_none {σ : Store} {first : PanicEntry} {rest : List PanicEntry}
+    {ch₀ : Choices} {c' : Config} {σ' : Store} {ch₀' : Choices} {tr : StepLabel}
+    (hsc : seqConsumption ctx σ (.panicking (first :: rest) .stop) = none)
+    (h : stepPanicStop ctx σ first rest ch₀ = .ok (c', σ', ch₀', tr)) :
+    ch₀' = ch₀ ∧ ∀ ch : Choices, stepPanicStop ctx σ first rest ch = .ok (c', σ', ch, tr) := by
+  unfold stepPanicStop at h ⊢
+  split at h
+  · simp only [bind_eq_ok] at h
+    obtain ⟨msg, -, h⟩ := h
+    simp [throw, throwThe, MonadExceptOf.throw] at h
+  · rename_i older entry newer hsplit
+    simp only [seqConsumption, hsplit] at hsc
+    have hcol : preprintCollide older entry = false := by
+      cases hc : preprintCollide older entry
+      · rfl
+      · simp [hc] at hsc
+    have hw : preprintWidth older entry = 1 := by simp [preprintWidth, hcol]
+    rw [hw, Choices.consumeAtE_le_one (Nat.le_refl 1)] at h
+    simp only [hcol, Bool.false_and, Bool.false_eq_true, ↓reduceIte, pure_eq_ok, Except.ok.injEq,
+      Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl, rfl, rfl⟩ := h
+    refine ⟨rfl, fun ch => ?_⟩
+    simp [hw, Choices.consumeAtE_le_one (Nat.le_refl 1), hcol]
+
+/-- The `.stop` arm's consumption, `some` half: a collision — the
+`repanicCollapse` pop at bound 2; the step depends on the stream only
+through the pick. -/
+theorem stepPanicStop_consumption_some {σ : Store} {first : PanicEntry} {rest : List PanicEntry}
+    {ch₀ : Choices} {c' : Config} {σ' : Store} {ch₀' : Choices} {tr : StepLabel}
+    {site : ChoiceSite} {b : Nat}
+    (hsc : seqConsumption ctx σ (.panicking (first :: rest) .stop) = some (site, b))
+    (h : stepPanicStop ctx σ first rest ch₀ = .ok (c', σ', ch₀', tr)) :
+    ch₀' = (Choices.consumeAt site b ch₀).2 ∧ ∀ ch : Choices,
+      (Choices.consumeAt site b ch).1 = (Choices.consumeAt site b ch₀).1 →
+      stepPanicStop ctx σ first rest ch = .ok (c', σ', (Choices.consumeAt site b ch).2, tr) := by
+  unfold stepPanicStop at h ⊢
+  split at h
+  · simp only [bind_eq_ok] at h
+    obtain ⟨msg, -, h⟩ := h
+    simp [throw, throwThe, MonadExceptOf.throw] at h
+  · rename_i older entry newer hsplit
+    simp only [seqConsumption, hsplit] at hsc
+    have hcol : preprintCollide older entry = true := by
+      cases hc : preprintCollide older entry
+      · simp [hc] at hsc
+      · rfl
+    simp only [hcol, ite_true, Option.some.injEq, Prod.mk.injEq] at hsc
+    obtain ⟨rfl, rfl⟩ := hsc
+    have hw : preprintWidth older entry = 2 := by simp [preprintWidth, hcol]
+    rw [hw] at h ⊢
+    rcases hx : Choices.consumeAtE .repanicCollapse 2 ch₀ with ⟨pick, ch'', ps⟩
+    rw [hx] at h
+    simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl, rfl, rfl⟩ := h
+    obtain ⟨rfl, hx'⟩ := Choices.consumeAtE_inv hx
+    refine ⟨by rw [hx'], fun ch hpk => ?_⟩
+    rw [hx'] at hpk
+    obtain ⟨p, cs, hpc⟩ : ∃ p cs, Choices.consumeAt .repanicCollapse 2 ch = (p, cs) := ⟨_, _, rfl⟩
+    rw [hpc] at hpk ⊢
+    simp only at hpk
+    subst hpk
+    simp [hpc, Choices.consumeAtE_eq]
 
 /-! ### The `unseq` construct's step functions (Stage B, 2026-09-16)
 
@@ -1698,8 +1910,10 @@ theorem stepFn_sound {s : Store} {c : Config} {ch : Choices}
   -- overlap premises and leaves the `throw`. The generic `simp_all [stepFn]`
   -- below costs ~9 s on the `.retV` arm's 26 list-shaped overlap hypotheses
   -- (0.5 s before C3) and took the theorem past its heartbeat budget.
-  case case137 => simp only [stepFn] at h; simp [throw, throwThe, MonadExceptOf.throw] at h
-  case case152 => simp only [stepFn] at h; simp [throw, throwThe, MonadExceptOf.throw] at h
+  -- Unit 6b: the two catch-alls now carry the preprint frame's store /
+  -- resolution steps (`stepRetOther`/`stepNextOther`), proved above.
+  case case137 => simp only [stepFn] at h; exact stepRetOther_sound h
+  case case152 => simp only [stepFn] at h; exact stepNextOther_sound h
   all_goals
     (first
       | (simp_all [stepFn]; done)
@@ -2003,10 +2217,10 @@ theorem stepFn_sound {s : Store} {c : Config} {ch : Choices}
     simp [throw, throwThe, MonadExceptOf.throw] at h
 
   case case7 =>
-    -- B4: the ABORT raises the `panic` terminal; no `.ok` step exists.
-    simp only [stepFn, bind_eq_ok] at h
-    obtain ⟨msg, -, h⟩ := h
-    simp [throw, throwThe, MonadExceptOf.throw] at h
+    -- B4 + unit 6b: the `.stop` arm — the ABORT raises the `panic`
+    -- terminal (no `.ok` step), the preprint PHASE steps (`stepPanicStop_sound`).
+    simp only [stepFn] at h
+    exact stepPanicStop_sound h
   case case142 =>
     -- B4: frame exit on the fall-through entry (`stepFrameExit`).
     simp only [stepFn] at h
@@ -2443,6 +2657,54 @@ theorem step_complete {c : Config} {s : Store} {c' : Config} {s' : Store} {tr : 
   case unseqWideDone =>
     rename_i g thenB st tg env k o binds spec i hget hbody
     exact ⟨[], [], by simp [stepFn, stepUnseqNext, hget, hbody]⟩
+  -- The preprint phase (unit 6b): the identity draws under the singleton
+  -- streams `[0]` / `[1]` (the probe recipe), the rest under the empty stream.
+  case preprintCollapse =>
+    rename_i chain older entry newer hsplit hcol
+    cases chain with
+    | nil => simp [splitNewestPending?] at hsplit
+    | cons first rest =>
+      exact ⟨[0], [], by
+        simp [stepFn, stepPanicStop, hsplit, preprintWidth, hcol, Choices.consumeAtE_eq,
+          PickRecord.ofPick, Choices.consumeAt, Choices.consume]⟩
+  case preprintDistinct =>
+    rename_i chain older entry newer hsplit hcol
+    cases chain with
+    | nil => simp [splitNewestPending?] at hsplit
+    | cons first rest =>
+      exact ⟨[1], [], by
+        simp [stepFn, stepPanicStop, hsplit, preprintWidth, hcol, Choices.consumeAtE_eq,
+          PickRecord.ofPick, Choices.consumeAt, Choices.consume]⟩
+  case preprintSelect =>
+    rename_i chain older entry newer hsplit hcol
+    cases chain with
+    | nil => simp [splitNewestPending?] at hsplit
+    | cons first rest =>
+      exact ⟨[], [], by
+        simp [stepFn, stepPanicStop, hsplit, preprintWidth, hcol, Choices.consumeAtE_eq,
+          PickRecord.ofPick, Choices.consumeAt]⟩
+  case preprintResolve =>
+    rename_i older entry newer k r hres hdel
+    refine ⟨[], [], ?_⟩
+    simp only [stepFn, stepNextOther, hres, Bind.bind, Except.bind, pure_eq_ok, Except.ok.injEq]
+    cases r with
+    | ok a =>
+      obtain ⟨fid, recv, tr₀⟩ := a
+      simp only [deliver_ok, Prod.mk.injEq] at hdel
+      obtain ⟨rfl, rfl, rfl⟩ := hdel
+      rfl
+    | panic msg =>
+      simp only [deliver_panic, Prod.mk.injEq] at hdel
+      obtain ⟨rfl, rfl, rfl⟩ := hdel
+      rfl
+  case preprintReturn =>
+    rename_i tenv rl older entry newer k fr v tr₀ hload
+    exact ⟨[], [], by simp [stepFn, stepFrameExit, signalStep, hload, Bind.bind, Except.bind]⟩
+  case preprintFall =>
+    rename_i tenv rl older entry newer k fr v tr₀ hload
+    exact ⟨[], [], by simp [stepFn, stepFrameExit, hload, Bind.bind, Except.bind]⟩
+  case preprintStore =>
+    exact ⟨[], [], by simp [stepFn, stepRetOther]⟩
   all_goals
     exact ⟨[], [], by simp_all [stepFn, stepFrameExit, Bind.bind, Except.bind, valueAsBool]⟩
 
@@ -2608,10 +2870,20 @@ driver (B4): no rule's source configuration is an unrecovered chain at
 (`panicPassthrough` refuses `.stop`) — so a reachable abort can never be
 discharged by "it still steps" in a progress hypothesis. -/
 theorem step_abort_elim {chain : List PanicEntry} {σ : Store} {c' : Config}
-    {σ' : Store} {tr : StepLabel} : ¬ Step ctx (.panicking chain .stop) σ c' σ' tr := by
+    {σ' : Store} {tr : StepLabel} (hs : splitNewestPending? chain = none) :
+    ¬ Step ctx (.panicking chain .stop) σ c' σ' tr := by
   intro h
-  cases h
-  simp [panicPassthrough, Cont.isGlue, Cont.class] at *
+  cases h <;> simp_all [panicPassthrough, Cont.isGlue, Cont.class]
+
+/-- Unit 6b: the ONLY steps from a chain at `.stop` are the preprint phase's
+— so a chain that steps there is UNSETTLED (its newest pending entry
+exists), and `Config.abort?` is `none` on it. -/
+theorem step_stop_unsettled {chain : List PanicEntry} {σ : Store} {c' : Config}
+    {σ' : Store} {tr : StepLabel} (h : Step ctx (.panicking chain .stop) σ c' σ' tr) :
+    ∃ older entry newer, splitNewestPending? chain = some (older, entry, newer) := by
+  cases h <;> first
+    | exact ⟨_, _, _, ‹_›⟩
+    | (simp [panicPassthrough, Cont.isGlue, Cont.class] at *)
 
 /-! The three unwound-`.stop` terminals are ALSO genuinely terminal for
 the relation (audit response 2026-08-04; B4: ONE fact now — the signal
@@ -5066,6 +5338,40 @@ theorem step_complete_any_wf_aux {c : Config} {σ : Store} {c' : Config}
     simp [stepFn, stepUnseqNext, hget, hbody]
   case unseqWideDone g thenB st tg env k o binds spec i hget hbody =>
     simp [stepFn, stepUnseqNext, hget, hbody]
+  -- The preprint phase (unit 6b): every stream realizes a step at each arm.
+  case preprintCollapse chain older entry newer hsplit hcol =>
+    cases chain with
+    | nil => simp [splitNewestPending?] at hsplit
+    | cons first rest =>
+      rcases hx : Choices.consumeAtE .repanicCollapse (preprintWidth older entry) ch with ⟨pick, ch', ps⟩
+      simp only [stepFn, stepPanicStop, hsplit, hx]
+      exact ⟨_, rfl⟩
+  case preprintDistinct chain older entry newer hsplit hcol =>
+    cases chain with
+    | nil => simp [splitNewestPending?] at hsplit
+    | cons first rest =>
+      rcases hx : Choices.consumeAtE .repanicCollapse (preprintWidth older entry) ch with ⟨pick, ch', ps⟩
+      simp only [stepFn, stepPanicStop, hsplit, hx]
+      exact ⟨_, rfl⟩
+  case preprintSelect chain older entry newer hsplit hcol =>
+    cases chain with
+    | nil => simp [splitNewestPending?] at hsplit
+    | cons first rest =>
+      rcases hx : Choices.consumeAtE .repanicCollapse (preprintWidth older entry) ch with ⟨pick, ch', ps⟩
+      simp only [stepFn, stepPanicStop, hsplit, hx]
+      exact ⟨_, rfl⟩
+  case preprintResolve older entry newer k r hres hdel =>
+    simp only [stepFn, stepNextOther, hres, Bind.bind, Except.bind]
+    exact ⟨_, rfl⟩
+  case preprintReturn tenv rl older entry newer k fr v tr₀ hload =>
+    simp only [stepFn, stepFrameExit, signalStep, hload, Bind.bind, Except.bind]
+    exact ⟨_, rfl⟩
+  case preprintFall tenv rl older entry newer k fr v tr₀ hload =>
+    simp only [stepFn, stepFrameExit, hload, Bind.bind, Except.bind]
+    exact ⟨_, rfl⟩
+  case preprintStore older entry newer k text =>
+    simp only [stepFn, stepRetOther]
+    exact ⟨_, rfl⟩
   all_goals simp_all [stepFn, stepFrameExit, Bind.bind, Except.bind, valueAsBool]
 
 /-- **Completeness at every stream** (the recorded kit obligation): a
@@ -6084,6 +6390,10 @@ theorem stepFrameExit_consumption_none {σ : Store}
   · simp only [stepFrameExit, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl, rfl, rfl⟩ := h
     exact ⟨rfl, fun ch => by simp [stepFrameExit]⟩
+  · -- unit 6b: the preprint delivery reads a cell, never the stream
+    simp only [stepFrameExit, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨⟨v, trv⟩, hload, rfl, rfl, rfl, rfl⟩ := h
+    exact ⟨rfl, fun ch => by simp [stepFrameExit, hload, Bind.bind, Except.bind]⟩
   · simp only [stepFrameExit, bind_eq_ok] at h
     obtain ⟨vs, _, h⟩ := h
     simp [throw, throwThe, MonadExceptOf.throw] at h
@@ -6191,8 +6501,9 @@ theorem stepFn_consumption_none {σ : Store} {c : Config} {ch₀ : Choices}
   fun_cases stepFn ctx σ c ch₀
   -- G-C3 (packet C): the `.retV`/`.next` catch-all refusals closed directly,
   -- as in `stepFn_sound` (the generic `simp_all [stepFn]` is ~9 s there).
-  case case137 => simp only [stepFn] at h; simp [throw, throwThe, MonadExceptOf.throw] at h
-  case case152 => simp only [stepFn] at h; simp [throw, throwThe, MonadExceptOf.throw] at h
+  -- Unit 6b: the catch-alls carry the preprint frame's stream-free steps.
+  case case137 => simp only [stepFn] at h ⊢; exact stepRetOther_stream h
+  case case152 => simp only [stepFn] at h ⊢; exact stepNextOther_stream h
   all_goals first
     | (refine ⟨?_, fun ch => ?_⟩ <;> (simp_all [stepFn]; done))
     | skip
@@ -6222,9 +6533,10 @@ theorem stepFn_consumption_none {σ : Store} {c : Config} {ch₀ : Choices}
   case case101 =>
     consumption_entry_none h hsc
   case case7 =>
-    simp only [stepFn, bind_eq_ok] at h
-    obtain ⟨msg, -, h⟩ := h
-    simp [throw, throwThe, MonadExceptOf.throw] at h
+    -- The `.stop` arm (unit 6b): the abort never returns `.ok`; the phase
+    -- step at a non-colliding entry pops nothing.
+    simp only [stepFn] at h ⊢
+    exact stepPanicStop_consumption_none hsc h
   case case142 =>
     simp only [stepFn] at h ⊢
     exact stepFrameExit_consumption_none (.inl rfl) hsc h
@@ -6619,13 +6931,12 @@ theorem stepFn_consumption_some {σ : Store} {c : Config} {ch₀ : Choices}
   case case101 =>
     consumption_entry_some h hsc
   case case7 =>
-    -- THE ABORT: the `repanicCollapse` consult's step is the `panic`
-    -- terminal (or the render's refusal) — it never returns `.ok`, so the
-    -- `some` half is vacuous here (the pool's `stepMulti_sound` carries
-    -- the pick into the relation).
-    simp only [stepFn, bind_eq_ok] at h
-    obtain ⟨msg, -, h⟩ := h
-    simp [throw, throwThe, MonadExceptOf.throw] at h
+    -- The `.stop` arm (unit 6b): THE ABORT's consult step is the `panic`
+    -- terminal (never `.ok`; the pool's `stepMulti_sound` carries its pick
+    -- into the relation); the preprint PHASE's collision draw is a genuine
+    -- bound-2 pop, the step depending on the stream only through the pick.
+    simp only [stepFn] at h ⊢
+    exact stepPanicStop_consumption_some hsc h
   case case142 =>
     simp only [stepFn] at h ⊢
     exact stepFrameExit_consumption_some (.inl rfl) hsc h
@@ -6875,8 +7186,9 @@ theorem seqConsumption_none_of_flags {σ : Store} {c : Config}
   · exact absurd rfl (hmi _ _ _ _ _ _ _ _ _ _)
   · simp [consumesUnseqPanic] at hnu
   · simp [consumesUnseqNext] at hnn
-  · simp only [consumesRepanicCollapse, Config.abort?] at hnr
-    simp [hnr]
+  · -- Unit 6b: the phase's collision draw and the abort's draw share the flag.
+    simp only [consumesRepanicCollapse] at hnr
+    split at hnr <;> simp [*]
   · split
     all_goals first
       | rfl

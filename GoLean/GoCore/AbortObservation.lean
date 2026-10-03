@@ -18,7 +18,7 @@ structure AbortHead where
   deriving Repr
 
 def AbortHead.entry (head : AbortHead) : PanicEntry :=
-  ⟨.interface .string (.string head.bytes), head.recovered⟩
+  { value := .interface .string (.string head.bytes), recovered := head.recovered }
 
 structure AbortRecord where
   bytes : GoString
@@ -29,10 +29,14 @@ structure AbortRecord where
 def AbortRecord.chain (record : AbortRecord) : List PanicEntry :=
   (AbortHead.mk record.bytes record.recovered).entry :: record.tail.map AbortHead.entry
 
+/-- The record of a STRING chain entry: its bytes and `recovered` flag. Unit 6b: only an
+UN-PHASED entry (`rewrite = .none`, `repanicked = false` — every raised string entry; the
+preprint phase never marks a string, which is never pending) has a record, so the record
+reconstructs the entry exactly (`stringPanicEntry?_some`). -/
 def stringPanicEntry? (entry : PanicEntry) : Option AbortHead :=
-  match entry.value with
-  | .interface .string (.string bytes) => some ⟨bytes, entry.recovered⟩
-  | _ => none
+  match entry.value, entry.rewrite, entry.repanicked with
+  | .interface .string (.string bytes), .none, false => some ⟨bytes, entry.recovered⟩
+  | _, _, _ => none
 
 def stringPanicEntries? : List PanicEntry → Option (List AbortHead)
   | [] => some []
@@ -77,11 +81,11 @@ theorem stringPanicEntry?_some {entry : PanicEntry} {head : AbortHead}
     (h : stringPanicEntry? entry = some head) : entry = head.entry := by
   unfold stringPanicEntry? at h
   split at h
-  · rename_i bytes hv
+  · rename_i bytes hv hw hp
     cases h
     cases entry
-    simp only at hv
-    cases hv
+    simp only at hv hw hp
+    cases hv; cases hw; cases hp
     rfl
   · contradiction
 
@@ -100,16 +104,20 @@ theorem stringPanicEntries?_some {entries : List PanicEntry} {heads : List Abort
         subst heads
         simp only [List.map_cons, ← stringPanicEntry?_some hh, ← ih ht]
 
+/-- A chain of UN-PHASED string entries has a record (unit 6b: the rewrite and
+collapse records are part of the premise — every raised string entry carries
+`.none` / `false`). -/
 theorem stringPanicEntries?_typed (entries : List PanicEntry)
-    (h : ∀ e ∈ entries, ∃ bytes, e.value = .interface .string (.string bytes)) :
+    (h : ∀ e ∈ entries, (∃ bytes, e.value = .interface .string (.string bytes))
+      ∧ e.rewrite = .none ∧ e.repanicked = false) :
     ∃ heads, stringPanicEntries? entries = some heads := by
   induction entries with
   | nil => exact ⟨[], rfl⟩
   | cons first rest ih =>
-    obtain ⟨bytes, value⟩ := h first (by simp)
+    obtain ⟨⟨bytes, value⟩, hw, hp⟩ := h first (by simp)
     obtain ⟨tail, ht⟩ := ih (fun e he => h e (by simp [he]))
     exact ⟨⟨bytes, first.recovered⟩ :: tail, by
-      simp [stringPanicEntries?, stringPanicEntry?, value, ht]⟩
+      simp [stringPanicEntries?, stringPanicEntry?, value, hw, hp, ht]⟩
 
 theorem abortRecord?_some {c : Config} {head : AbortRecord} (h : abortRecord? c = some head) :
     ∃ first rest, c.abort? = some (first, rest) ∧

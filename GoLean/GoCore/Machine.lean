@@ -3107,15 +3107,109 @@ def atomicEvents (head : AtomicStmtOp) (loc : Loc) (stored : Bool) : AccessTrace
 
 /-! ## The panic chain (the unwinding arc, `docs/2026-07-25_unwinding-arc.md` §A1–A3) -/
 
+/-- **The payload REWRITE gc's `preprintpanics` performs before printing**
+(BUG-004 item 4, window unit 6b, design note
+`docs/2026-09-30_bug004-item4-design.md` §2 (i), [USER] Mike 2026-09-30
+«Yes, agree, do the fix inside this window», relayed): a payload whose
+dynamic type carries `Error() string` or `String() string` (the runtime's
+own two interfaces, `runtime/panic.go:723`–`:725` at the pin) is printed as
+the STRING that method returns — CALLED on the panicking goroutine after
+every deferred call and before anything prints. The mark is decided at the
+RAISE (`panicEntryOf`) by today's method-set check — a static property of
+the dynamic type, so deciding it early is sound — and the text is stored
+BESIDE the payload once the preprint phase has called the method
+(`.done`): gc compares eface identity on the RAW `arg` before overwriting
+it, and the machine's collapse envelope compares the original values.
+`.none` is a payload gc prints as it is (string/int/bool payloads, the
+machine's `runtime.Error` twin — `runtimeErrorValue` already IS gc's
+rewritten text — and a recorded method set without either method);
+`.unrecorded` is a carrier WITHOUT a method-set record (BUG-053): gc may
+rewrite it through a method the wire never saw, so the abort refuses by
+name — recovering it stays fully supported. -/
+inductive Rewrite where
+  | none
+  | pending (member : Declaration.MemberId)
+  | unrecorded
+  | done (text : GoString)
+  deriving Repr, BEq
+
 /-- One entry of a goroutine's panic chain: the payload (the interface
 value `recover` returns) and whether a `recover` has caught it. The chain
 is oldest-first; Go's abort output prints it in this order and the
 differential's fault identity compares the FIRST line, so the head entry
-(with its `recovered` flag) is what terminal rendering must get right. -/
+(with its `recovered` flag) is what terminal rendering must get right.
+Since unit 6b the entry also carries gc's two `_panic` records the abort
+reads (`runtime/panic.go` at the pin): the payload `rewrite` (above) and
+`repanicked` — set on the OLDER of two adjacent entries whose payloads the
+preprint phase decided IDENTICAL (`p.link.repanicked = true`, `:718`),
+which suppresses the newer entry's line and selects the head's
+` [recovered, repanicked]` suffix (`printpanics`, `:751`). -/
 structure PanicEntry where
   value : GoValue
   recovered : Bool
+  rewrite : Rewrite := .none
+  repanicked : Bool := false
   deriving Repr, BEq
+
+/-- Is the entry's rewrite still OWED — a method call the preprint phase has
+yet to make? Exactly the `.pending` mark. -/
+def PanicEntry.isPending (e : PanicEntry) : Bool :=
+  match e.rewrite with
+  | .pending _ => true
+  | _ => false
+
+/-- **The preprint phase's cursor**: the NEWEST pending entry of a chain, as
+the split `(older, entry, newer)` with `older ++ entry :: newer` the chain
+and every entry of `newer` settled — `none` when no rewrite is owed (the
+chain is SETTLED: the abort, `Config.abort?`). gc's `preprintpanics` walks
+the chain newest → oldest (`:713`); the phase realizes that order by
+always working at this split. Structural on the (oldest-first) list. -/
+def splitNewestPending? : List PanicEntry →
+    Option (List PanicEntry × PanicEntry × List PanicEntry)
+  | [] => none
+  | e :: es =>
+      match splitNewestPending? es with
+      | some (older, p, newer) => some (e :: older, p, newer)
+      | none => if e.isPending then some ([], e, es) else none
+
+/-- A chain with no owed rewrite: the shape the abort renders. -/
+def chainSettled (chain : List PanicEntry) : Bool := (splitNewestPending? chain).isNone
+
+/-- The split IS the chain: `older ++ entry :: newer`. -/
+theorem splitNewestPending?_eq :
+    ∀ {chain older : List PanicEntry} {entry : PanicEntry} {newer : List PanicEntry},
+      splitNewestPending? chain = some (older, entry, newer) → chain = older ++ entry :: newer
+  | [], _, _, _, h => by simp [splitNewestPending?] at h
+  | e :: es, older, entry, newer, h => by
+    simp only [splitNewestPending?] at h
+    split at h
+    · rename_i older' p newer' hrec
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl, rfl⟩ := h
+      simp [splitNewestPending?_eq hrec]
+    · split at h
+      · simp only [Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl, rfl⟩ := h
+        rfl
+      · cases h
+
+/-- The split's entry owes its rewrite. -/
+theorem splitNewestPending?_pending :
+    ∀ {chain older : List PanicEntry} {entry : PanicEntry} {newer : List PanicEntry},
+      splitNewestPending? chain = some (older, entry, newer) → entry.isPending = true
+  | [], _, _, _, h => by simp [splitNewestPending?] at h
+  | e :: es, older, entry, newer, h => by
+    simp only [splitNewestPending?] at h
+    split at h
+    · rename_i older' p newer' hrec
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl, rfl⟩ := h
+      exact splitNewestPending?_pending hrec
+    · split at h
+      · simp only [Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl, rfl⟩ := h
+        assumption
+      · cases h
 
 -- `runtimeErrorTypeId` moved to Syntax.lean (2026-08-05, slice-2 stage 5):
 -- the decoder synthesizes the runtime-panic payload for the nil-interface
@@ -3132,7 +3226,7 @@ def runtimeErrorValue (msg : String) : GoValue :=
 payload, not yet recovered. The one spelling behind every conversion of
 a helper's `.panic msg` into an unwinding configuration (`deliver`) and
 behind the in-helper channel/nil-callee panics. -/
-def panicEntry (msg : String) : PanicEntry := ⟨runtimeErrorValue msg, false⟩
+def panicEntry (msg : String) : PanicEntry := { value := runtimeErrorValue msg, recovered := false }
 
 /-- The payload of a PACKAGE-CODE panic raised with a string literal —
 gc's sync package panics this way (`panic("sync: negative WaitGroup
@@ -3251,23 +3345,97 @@ def hasNoArgStringMethod (dynTy : Ty) (member : Declaration.MemberId) : Bool :=
 def panicPayloadIsRewritten (dynTy : Ty) : Bool :=
   hasNoArgStringMethod ctx dynTy ⟨"Error", ""⟩ || hasNoArgStringMethod ctx dynTy ⟨"String", ""⟩
 
-/-- Render a panic payload as Go's first abort line renders it (after
-`panic: `): the payload's TEXT and whether the payload continues onto a
-second line (string payloads only — `stringFirstLine?`; every other
-family is single-line). The recovered-suffix and first-line rule is
-`renderPanicHead`'s.
+/-- The member identities gc's `preprintpanics` consults, in ITS order:
+`error` first (`case error:` precedes `case stringer:`, panic.go:722–725;
+probe p01 — a type with both prints `Error()`'s text). -/
+def errorMember : Declaration.MemberId := ⟨"Error", ""⟩
+def stringerMember : Declaration.MemberId := ⟨"String", ""⟩
 
-Go's `preprintpanics` REWRITES the payload to `v.Error()` / `v.String()`
-before `printpanicval` runs, so `printanycustomtype`'s `main.T(v)` shape
-applies only to a defined type with NEITHER method. The rewritten form
-would require CALLING a method at abort time — which the terminal rule
-cannot do — so a payload whose dynamic type implements either interface
-fails CLOSED here (pre-merge audit 2026-07-31, finding 3; the unconditional
-`main.T(v)` arm this replaces was a fail-closed → wrong-answer regression).
+/-- **The rewrite mark, decided at the RAISE** (unit 6b, design §2 (i) 1): a
+boxed payload whose dynamic type carries `Error() string` is `.pending
+Error`; else `String() string` → `.pending String` (gc's order, p01); else
+a carrier WITHOUT a method-set record is `.unrecorded` (BUG-053: no
+definite answer from absence — the abort refuses by name; `Error`/`String`
+are exported names, so a FOUND method is real whatever the record's
+coverage); else `.none`. The machine's `runtime.Error` twin is `.none`
+without consulting any record: `runtimeErrorValue` already IS gc's
+rewritten text (`panic(nil)` maps there — `panicPayload`; probes p13/p23).
+Unboxed values (the chain never holds one from a raise) are `.none`. -/
+def rewriteMark : GoValue → Rewrite
+  | .interface dynTy _ =>
+      if dynTy == .defined runtimeErrorTypeIdx then .none
+      else if hasNoArgStringMethod ctx dynTy errorMember then .pending errorMember
+      else if hasNoArgStringMethod ctx dynTy stringerMember then .pending stringerMember
+      else if dynamicMethodSetRecorded ctx dynTy then .none
+      else .unrecorded
+  | _ => .none
+
+/-- THE chain entry of a raised payload (`Step.panicArgValue`; the one raise
+site of a user payload): unrecovered, marked for the preprint phase by the
+payload's dynamic type, not yet collapsed. -/
+def panicEntryOf (v : GoValue) : PanicEntry :=
+  { value := v, recovered := false, rewrite := rewriteMark ctx v }
+
+/-- The REWRITE arms of `renderPanicPayload` (below): the phase's text
+(`.done` — printed as a string payload, first line and D5 included), the
+defined-int `main.T(v)` shape for a `.none` entry, and the two refusals.
+Reached for every payload the value arms do not print. -/
+def renderPanicRewrite (e : PanicEntry) : Option (String × Bool) :=
+  match e.rewrite with
+  | .done text => stringFirstLine? text.bytes
+  | .pending _ => none
+  | .unrecorded => none
+  | .none =>
+    match e.value with
+    -- A DEFINED-type payload renders qualified with Go's
+    -- `printanycustomtype` shape: `main.Code(7)` (BUG-004 item 2 — the
+    -- identity is modeled since the interfaces campaign; the type prints
+    -- its DISPLAY record — gc's type string — never its key, design note
+    -- 2026-09-05 §3.2; the record is read through the table INDEX, C2).
+    -- Only the int-underlying form is pinned; other underlyings stay
+    -- closed.
+    | .interface (.defined idx) (.int v _) =>
+        if idx == runtimeErrorTypeIdx then
+          none
+        else if !dynamicMethodSetRecorded ctx (.defined idx) then
+          none
+        else if panicPayloadIsRewritten ctx (.defined idx) then
+          none
+        else
+          -- The entry is read back from the type table; an index the table
+          -- does not have is unrenderable (fail closed), never a guess. A
+          -- present entry renders its DISPLAY record (no record: the visible
+          -- marker, never the key — design note 2026-09-05 §3.2).
+          (ctx.types.nameOf? idx).map fun name => (s!"{displayNameOfId ctx name}({v})", false)
+    | _ => none
+
+/-- Render a panic chain entry as Go's first abort line renders it (after
+`panic: `): the payload's TEXT and whether the payload continues onto a
+second line (string payloads — including a REWRITTEN payload's text —
+`stringFirstLine?`; every other family is single-line). The
+recovered-suffix and first-line rule is `renderPanicHead`'s.
+
+The VALUE arms come first (string, the `runtime.Error` twin, int, bool —
+payloads gc prints as they are, never rewritten; `renderPanicHead_string`/
+`_runtimeError` and every `StringPanic` statement hold by their present
+proofs), then the REWRITE: a `.done text` entry — the preprint phase CALLED
+`v.Error()`/`v.String()` and stored the returned string beside the payload
+(unit 6b) — prints that string exactly as a string payload (`printpanicval`
+on the rewritten `arg`, the first-line rule and D5's invalid-UTF-8 refusal
+included; probe p20), THEN `printanycustomtype`'s `main.T(v)` shape for a
+defined type with NEITHER method (`.none`; BUG-004 item 2), int-underlying
+only. A `.pending` entry at an abort is unreachable (`Config.abort?` demands
+a settled chain) and refuses by name; `.unrecorded` is the BUG-053 refusal
+(no method-set record — gc may rewrite through a method the wire never
+saw; fail closed to an unrenderable abort, never a fabricated `main.T(v)`).
+The `.none` arm re-checks the method set — a hand-built chain whose mark
+disagrees with its type refuses rather than renders (the standing
+fail-closed guard; on a raised chain the two agree by construction).
 A string whose FIRST LINE is not valid UTF-8 is `none` (D5: no byte
 channel — `utf8String?`). Everything else not pinned is `none` for the
 same reason. -/
-def renderPanicPayload : GoValue → Option (String × Bool)
+def renderPanicPayload (e : PanicEntry) : Option (String × Bool) :=
+  match e.value with
   -- A RAW nil payload never reaches a chain: `panicPayload` maps
   -- `panic(nil)` to the `*runtime.PanicNilError` runtime error under the
   -- pinned `GODEBUG=panicnil=0` (the only raise site, `.panicArgK`), and
@@ -3276,40 +3444,12 @@ def renderPanicPayload : GoValue → Option (String × Bool)
   -- answer (audit fix round 2026-09-07, L4, [AGENT]; was `some ("nil", false)`).
   | .nil => none
   | .interface (.defined idx) (.string s) =>
-      if idx == runtimeErrorTypeIdx then stringFirstLine? s.bytes else none
+      if idx == runtimeErrorTypeIdx then stringFirstLine? s.bytes else renderPanicRewrite ctx e
   | .interface .string (.string s) => stringFirstLine? s.bytes
   | .interface (.int dkind) (.int v kind) =>
       if dkind == kind then some (toString v, false) else none
   | .interface .bool (.bool b) => some (if b then "true" else "false", false)
-  -- A DEFINED-type payload renders qualified with Go's
-  -- `printanycustomtype` shape: `main.Code(7)` (BUG-004 item 2 — the
-  -- identity is modeled since the interfaces campaign; the type prints
-  -- its DISPLAY record — gc's type string — never its key, design note
-  -- 2026-09-05 §3.2; the record is read through the table INDEX, C2).
-  -- Only the int-underlying form is pinned; other underlyings stay
-  -- closed.
-  | .interface (.defined idx) (.int v _) =>
-      if idx == runtimeErrorTypeIdx then
-        none
-      else if !dynamicMethodSetRecorded ctx (.defined idx) then
-        -- BUG-053 class, renderer consumer (contract note §4,
-        -- 2026-08-10): with no method-set record,
-        -- `panicPayloadIsRewritten`'s "no Error()/String()" below would
-        -- be an answer from absence — gc may well rewrite the payload
-        -- through a method we never saw. Fail closed to an unrenderable
-        -- abort, never a fabricated `main.T(v)`. (`Error`/`String` are
-        -- exported names, so an `exported`-coverage record suffices to
-        -- decide honestly.)
-        none
-      else if panicPayloadIsRewritten ctx (.defined idx) then
-        none -- Error()/String() would have to be CALLED: fail closed
-      else
-        -- The entry is read back from the type table; an index the table
-        -- does not have is unrenderable (fail closed), never a guess. A
-        -- present entry renders its DISPLAY record (no record: the visible
-        -- marker, never the key — design note 2026-09-05 §3.2).
-        (ctx.types.nameOf? idx).map fun name => (s!"{displayNameOfId ctx name}({v})", false)
-  | _ => none
+  | _ => renderPanicRewrite ctx e
 
 /-- The diagnostic suffix of the unrenderable-abort refusal: a boxed
 payload's dynamic type by the KEY read back from the table
@@ -3343,9 +3483,17 @@ extension of BUG-087's ruling SHAPE — «demonic choice so both are
 admitted», [USER] 2026-09-03 relayed, ruled for ONE choice at the nil
 arm/R9a — to this marker under R-1's re-envelope authority: the rendered
 text is spec-silent; [USER] ratification — PENDING at the lane's tip, RULED [USER] 2026-09-07 at merge train round 24 — «Go ahead with the merge» (relayed by the [AGENT] coordinator; the merge-ask listed D2, D5, the BUG-087-shape extension and the C4 (c)→(a) move as the four items ratified by this sign-off)), never
-decided in evaluator recursion and never a single hard-coded member. -/
+decided in evaluator recursion and never a single hard-coded member.
+
+Unit 6b (the preprint phase): a head whose rewrite is `.done` had its
+identity against its successor DECIDED IN THE PHASE — the phase's own
+`repanicCollapse` draw at that pair (`preprintCollide`; slot 0 marked the
+head `repanicked` and dropped the successor, slot 1 kept both) — so the
+abort draws NOTHING there (no second pop): the shape is additionally
+`first.rewrite ≠ .done _`. An un-phased chain (no entry ever pending) is
+exactly today's. -/
 def repanicEqualNext (first : PanicEntry) (rest : List PanicEntry) : Bool :=
-  first.recovered && (match rest with
+  first.recovered && (match first.rewrite with | .done _ => false | _ => true) && (match rest with
     | e :: _ => e.value == first.value
     | [] => false)
 
@@ -3369,15 +3517,18 @@ def abortConsult (first : PanicEntry) (rest : List PanicEntry) (ch : Choices) :
     Nat × Choices :=
   Choices.consumeAt .repanicCollapse (repanicCollapseWidth first rest) ch
 
-/-- The suffix gc appends to the payload (panic.go:749–752 at the pin):
-` [recovered, repanicked]` iff the head is recovered AND its duplicate
-successor line is suppressed — the `repanicCollapse` pick 0 on the
-`repanicEqualNext` shape; ` [recovered]` iff recovered otherwise; nothing
-for an unrecovered head (gc's oldest line carries no suffix whether or
-not a later duplicate is suppressed — witness w25). -/
+/-- The suffix gc appends to the payload (panic.go:749–752 at the pin;
+`if p.recovered && p.repanicked … else if p.recovered …`): ` [recovered,
+repanicked]` iff the head is recovered AND its duplicate successor line is
+suppressed — the head's `repanicked` record, set by the preprint phase's
+collapse (unit 6b), or the `repanicCollapse` pick 0 on the
+`repanicEqualNext` shape at an un-phased abort; ` [recovered]` iff recovered
+otherwise; nothing for an unrecovered head (gc's oldest line carries no
+suffix whether or not a later duplicate is suppressed — witness w25; probe
+p21: an unrecovered identical pair prints `panic: same`, no suffix). -/
 def recoveredSuffix (first : PanicEntry) (rest : List PanicEntry) (pick : Nat) : String :=
   if !first.recovered then ""
-  else if repanicEqualNext first rest && pick == 0 then " [recovered, repanicked]"
+  else if first.repanicked || (repanicEqualNext first rest && pick == 0) then " [recovered, repanicked]"
   else " [recovered]"
 
 /-- Go's first abort line for a panic chain, given the `repanicCollapse`
@@ -3388,7 +3539,7 @@ witnesses w14/w15/w34). `none` exactly where the payload refuses
 (`renderPanicPayload`'s fail-closed arms). -/
 def renderPanicHead (first : PanicEntry) (rest : List PanicEntry)
     (pick : Nat) : Option String :=
-  (renderPanicPayload ctx first.value).map fun (base, multiline) =>
+  (renderPanicPayload ctx first).map fun (base, multiline) =>
     if multiline then base else base ++ recoveredSuffix first rest pick
 
 /-- Mark the newest (last) chain entry recovered, returning its payload —
@@ -3729,6 +3880,34 @@ inductive Frame where
   stable. -/
   | unseqK (g : UnseqGraph) (thenB : Stmt) (status : List UnseqStatus)
       (targets : List (VarId × TargetRef)) (env : LocalEnv) (phase : UnseqPhase)
+  /-- **The preprint frame** (BUG-004 item 4, window unit 6b, design note
+  `docs/2026-09-30_bug004-item4-design.md` §2 (i) 4; [USER] Mike 2026-09-30
+  «Yes, agree, do the fix inside this window», relayed): the unrecovered
+  panic chain `older ++ entry :: newer`, SUSPENDED at the empty continuation
+  while gc's `preprintpanics` calls `entry`'s `Error()`/`String()` method
+  (`runtime/panic.go:702`–`:730` at the pin — after every deferred call,
+  before anything prints, with the world still running). `entry` is the
+  NEWEST pending entry (`splitNewestPending?`; every entry of `newer` is
+  settled), its identity against `older`'s last entry already decided
+  (`preprintCollide`'s draw at the `.stop` arm). Positions: `.next` here
+  RESOLVES the call (`preprintDispatch`: the method on the payload's dynamic
+  type, the receiver adjusted — a nil `*T` under a value method PANICS here
+  as at any dispatch) and re-queues it as the ordinary nullary value call
+  the `callValCalleeK` entry takes (the `Entry.again` shape — no new entry
+  position); the method's frame (`Frame.frame [] [] [rl] [] … fid`) sits on
+  this frame and its exit delivers the ONE result here (`stepFrameExit`'s
+  preprint sub-arm); `.retV text` STORES `rewrite := .done text` into the
+  entry and resumes the chain at `.stop`; a PANIC reaching this frame is
+  gc's `throw("panic while printing panic value: …")` — the unrecoverable
+  `fatal`, the original `panic:` line never printed (`preprintFatalStop`).
+  Its own `FrameClass` (`.preprint`): crossed by NO walk — not glue
+  (`panicPassthrough` must not strip it: the `.panicking` arm ACTS on it),
+  `recover` does not see through it (the method's own `recover` works
+  inside its own frames, probe p17; nothing sits below this frame but
+  `.stop`), and the statement travellers cannot reach it (the method runs in
+  its own call frame). Appended at the END so positional case tags stay
+  stable. -/
+  | preprintK (older : List PanicEntry) (entry : PanicEntry) (newer : List PanicEntry)
 
 /-- The continuation: a stack of frames, innermost first (G-C3, packet C,
 [USER] 2026-09-29 «Agree with 1-4», relayed; design note
@@ -3836,7 +4015,10 @@ abbrev Cont := List Frame
 @[match_pattern] abbrev Cont.unseqK (g : UnseqGraph) (thenB : Stmt) (status : List UnseqStatus) (targets : List (VarId × TargetRef)) (env : LocalEnv) (phase : UnseqPhase) (k : Cont) : Cont :=
   Frame.unseqK g thenB status targets env phase :: k
 
-/-- Split a continuation into `.stop` and its 32 frame views — the pre-C3
+@[match_pattern] abbrev Cont.preprintK (older : List PanicEntry) (entry : PanicEntry) (newer : List PanicEntry) (k : Cont) : Cont :=
+  Frame.preprintK older entry newer :: k
+
+/-- Split a continuation into `.stop` and its 33 frame views — the pre-C3
 `cases k` (G-C3): list `cases`, then `cases` on the head frame. The goals
 read `Frame.x … :: k`, which is the view `Cont.x … k` by `rfl`. -/
 syntax (name := casesCont) "cases_cont " term : tactic
@@ -3895,12 +4077,19 @@ inductive FrameClass where
   contains `recover()`: frontend rule + decoder refusal), and the
   statement-level travellers (`break`/`continue`/`return`) cannot reach it. -/
   | probe
+  /-- The preprint frame (`Cont.preprintK`, unit 6b): crossed by NO walk —
+  the `.panicking` arm ACTS on it (the fatal «panic while printing panic
+  value»), `recover` stops at the method's own call frame above it, and the
+  statement travellers cannot reach it (only the method's call frame runs
+  on it). -/
+  | preprint
   deriving DecidableEq, Repr
 
 def Frame.class : Frame → FrameClass
   | .frame .. => .callFrame
   | .panicResumeK .. => .resumeMarker
   | .probeK .. => .probe
+  | .preprintK .. => .preprint
   | .seq .. | .loop .. | .breakableK .. | .labelK .. | .mapIterK .. => .stmtGlue
   -- EXHAUSTIVE on purpose (audit fix F2): a new frame must be classified
   -- here by hand — no absorbing default can make it glue silently.
@@ -4416,33 +4605,87 @@ The configuration has no rule; what happens next is the DRIVER's:
 pool (`stepThread`) turns the goroutine into its `aborted` tombstone —
 both through `abortMsg`, both as ONE machine step, so the fuel accounting
 of the old `.panicked` step is exact. An empty chain at `.stop` is a
-machine-internal breach (`stepFn` refuses it by name). -/
+machine-internal breach (`stepFn` refuses it by name).
+
+Unit 6b (the preprint phase, design §2 (i) 2): the chain must be SETTLED —
+no entry's rewrite still `.pending` (`chainSettled`). A chain with a pending
+entry at `.stop` is an ordinary RUNNING configuration: gc calls the payload's
+`Error()`/`String()` there (`preprintpanics`) before the terminal, and so
+does the machine (`stepFn`'s `.stop` arm, `stepPanicStop`; the relation's
+`preprint*` rules). The type is unchanged (BridgeSet row 19). -/
 def Config.abort? : Config → Option (PanicEntry × List PanicEntry)
-  | .panicking (first :: rest) .stop => some (first, rest)
+  | .panicking (first :: rest) .stop =>
+      match splitNewestPending? (first :: rest) with
+      | none => some (first, rest)
+      | some _ => none
   | _ => none
+
+variable {ctx} in
+/-- The abort's characterization (unit 6b): a `some` answer IS a settled
+unrecovered chain at `.stop`. -/
+theorem Config.abort?_some_iff {c : Config} {first : PanicEntry} {rest : List PanicEntry} :
+    c.abort? = some (first, rest) ↔
+      c = .panicking (first :: rest) .stop ∧ splitNewestPending? (first :: rest) = none := by
+  constructor
+  · intro h
+    unfold Config.abort? at h
+    split at h
+    · rename_i f r
+      split at h
+      · simp only [Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        exact ⟨rfl, ‹_›⟩
+      · cases h
+    · cases h
+  · rintro ⟨rfl, hs⟩
+    simp [Config.abort?, hs]
+
+variable {ctx} in
+/-- A settled chain at `.stop` is the abort. -/
+theorem Config.abort?_of_settled {first : PanicEntry} {rest : List PanicEntry}
+    (hs : splitNewestPending? (first :: rest) = none) :
+    Config.abort? (.panicking (first :: rest) .stop) = some (first, rest) := by
+  simp [Config.abort?, hs]
+
+variable {ctx} in
+/-- An unsettled chain at `.stop` is NOT the abort (the phase runs first). -/
+theorem Config.abort?_of_pending {first : PanicEntry} {rest older : List PanicEntry}
+    {entry : PanicEntry} {newer : List PanicEntry}
+    (hs : splitNewestPending? (first :: rest) = some (older, entry, newer)) :
+    Config.abort? (.panicking (first :: rest) .stop) = none := by
+  simp [Config.abort?, hs]
 
 /-- The cause a refused abort rendering NAMES (fail closed BY NAME, CLAUDE.md):
 a string or `runtime.Error` payload whose FIRST LINE is not valid UTF-8 is
 the D5 refusal — gc writes the raw bytes and the `String`-valued
 observation cannot carry them (BUG-004 item 3, `docs/2026-09-07_land-panic-
-text-tape.md` §2.3); everything else is the standing payload refusal
-(BUG-004 item 4's `Error()`/`String()` rewrite, an unpinned family, a
-carrier without a method-set record), named by the payload's dynamic type
+text-tape.md` §2.3) — a REWRITTEN payload's text (`.done`, unit 6b)
+included; a carrier without a method-set record (`.unrecorded`, BUG-053) and
+a rewrite still owed at an abort (`.pending` — unreachable: `Config.abort?`
+demands a settled chain) are named as such; everything else is the standing
+payload refusal (an unpinned family), named by the payload's dynamic type
 key beside the `repr`, which prints a bare `Ty.defined i` since C2
 (`payloadDynamicTypeNote`, audit fix R16). -/
 def abortRefusal (first : PanicEntry) : String :=
-  let invalidFirstLine : Option (Array UInt8) := match first.value with
-    | .interface .string (.string gs) =>
+  let invalidFirstLine : Option (Array UInt8) := match first.value, first.rewrite with
+    | .interface .string (.string gs), _ =>
         if (stringFirstLine? gs.bytes).isNone then some gs.bytes else none
-    | .interface (.defined idx) (.string gs) =>
+    | .interface (.defined idx) (.string gs), _ =>
         if idx == runtimeErrorTypeIdx && (stringFirstLine? gs.bytes).isNone then some gs.bytes
         else none
-    | _ => none
+    | _, .done text => if (stringFirstLine? text.bytes).isNone then some text.bytes else none
+    | _, _ => none
   match invalidFirstLine with
   | some bytes =>
       s!"panic abort rendering: the string payload's first line is not valid UTF-8 ({bytes.size} payload byte(s), first line {(bytes.takeWhile (· != 0x0A)).toList.map (·.toNat)}) — gc prints the raw bytes and the String-valued observation cannot carry them (BUG-004 item 3 / landing decision D5: no byte channel)"
   | none =>
-      s!"panic abort rendering for payload {repr first.value}{payloadDynamicTypeNote ctx first.value}"
+      match first.rewrite with
+      | .unrecorded =>
+          s!"panic abort rendering for payload {repr first.value}{payloadDynamicTypeNote ctx first.value}: the dynamic type's method set is not recorded on the wire, so whether gc rewrites the payload through Error()/String() cannot be decided (BUG-053)"
+      | .pending m =>
+          s!"panic abort rendering for payload {repr first.value}{payloadDynamicTypeNote ctx first.value}: the {m.name}() rewrite is still owed at the abort (a machine-internal breach — the preprint phase runs before the abort)"
+      | _ =>
+          s!"panic abort rendering for payload {repr first.value}{payloadDynamicTypeNote ctx first.value}"
 
 /-- Go's first `panic: ` line for an abort under the `repanicCollapse`
 pick, or the refusal that names why it cannot be rendered. Shared by the
@@ -4463,6 +4706,135 @@ def abortLeftover (c : Config) (ch : Choices) : Choices :=
   match c.abort? with
   | some (first, rest) => (abortConsult first rest ch).2
   | none => ch
+
+/-! ## The preprint phase (BUG-004 item 4, window unit 6b)
+
+Design note `docs/2026-09-30_bug004-item4-design.md` §2 (i), RULED [USER]
+Mike 2026-09-30 («Yes, agree, do the fix inside this window», relayed by
+the [AGENT] coordinator — cite as relayed; ledger «BUG-004 item 4
+(error/Stringer panic payloads) — placement and design RULED»). gc's
+`preprintpanics` (`runtime/panic.go:702`–`:730` at the pin) runs on the
+panicking goroutine after ALL its deferred calls and before anything prints:
+it walks the chain newest → oldest, and per entry either SKIPS it — its older
+neighbour holds the identical eface (`:715`): the older is marked
+`repanicked`, the newer never called and never printed — or CALLS
+`v.Error()` (`error` first) / `v.String()` and stores the string as the
+payload to print. The machine realizes this as ORDINARY machine steps at
+the empty continuation (the chain is a running configuration until it is
+SETTLED — `Config.abort?`): the `.stop` arm's phase step draws the identity
+pick and selects the entry (`preprintCollide`/`preprintDrop`; the frame
+`Cont.preprintK`), the frame's `.next` position resolves the call and
+re-queues it as a value call (`preprintDispatch`), the method's frame exit
+delivers its one result to the frame, and `.retV` stores the text
+(`Rewrite.done`). A panic out of the method is gc's `throw("panic while
+printing panic value: …")` (`preprintFatalStop`). Implementation shape
+([AGENT] worker, lane `core/panic-preprint-1003`; recorded in the handoff for
+the audit): the note's single «phase step» is split so that EVERY step draws
+at most ONE site — the consult at the `.stop` arm, the entry's
+`nilValueMethodText` consult at the existing `callValCalleeK` position —
+which keeps `seqConsumption`'s one-site projection and `stepFn_picks_*`
+true as stated; the frame carries the chain SPLIT `(older, entry, newer)`
+(isomorphic to the note's `(i, chain)`). -/
+
+/-- gc's identity check at the walk (`panic.go:715`): does the entry's OLDER
+neighbour carry an equal payload? Equal payloads are the shape where eface
+identity is LATITUDE relative to the machine's state (`repanicEqualNext`'s
+envelope statement) — THE `repanicCollapse` draw at bound 2; unequal
+payloads can never share a box (no draw). -/
+def preprintCollide (older : List PanicEntry) (entry : PanicEntry) : Bool :=
+  match older.getLast? with
+  | some prev => prev.value == entry.value
+  | none => false
+
+/-- The site's width at the phase step: 2 exactly at a collision, 1 (no pop)
+otherwise — the uniform rule, as `repanicCollapseWidth` at the abort. -/
+def preprintWidth (older : List PanicEntry) (entry : PanicEntry) : Nat :=
+  if preprintCollide older entry then 2 else 1
+
+/-- Mark the LAST (newest) entry `repanicked` — gc's `p.link.repanicked =
+true` (`:718`) on the older of an identical pair. -/
+def markLastRepanicked : List PanicEntry → List PanicEntry
+  | [] => []
+  | [e] => [{ e with repanicked := true }]
+  | e :: rest => e :: markLastRepanicked rest
+
+/-- The COLLAPSE (slot 0 at a collision): the newer entry of the identical
+pair is DROPPED from the chain — gc never calls its method and never prints
+its line (`printpanics` returns at `p.link.repanicked`, `:741`) — and the
+older is marked. -/
+def preprintDrop (older newer : List PanicEntry) : List PanicEntry :=
+  markLastRepanicked older ++ newer
+
+/-- The function a resolution's call enters: a declared target's own id, or
+— a promotion path that ended in an embedded INTERFACE field — the
+interface's dispatch anchor, which re-dispatches on the field's value at
+its entry (`dynamicDispatch?`, as `Entry.again` does). -/
+def preprintTargetFid (member : Declaration.MemberId) (r : MethodResolution) : FuncId :=
+  match r.target with
+  | .method f => f
+  | .iface i => methodFuncId i.key member
+
+/-- **The method call's RESOLUTION** (design §2 (i) 3): the pending member
+resolved on the payload's dynamic type (`resolveMethod?` — Go's method-set
+rule, promoted entries included; the mark guarantees a resolution exists)
+and the receiver adjusted along the resolution's path (`receiverAt` — the
+loads are the step's trace; a nil `*T` under a value method PANICS here
+exactly as at any dispatch: gc's `panicwrap`, probe p06). The result is the
+callee and its one argument, entered at the NEXT step through the ordinary
+value-call position. A declaration-only stub record refuses by name with
+the frontend's cause (as `dynamicDispatch?` does); every other failure of
+the invariant «a pending entry is a boxed payload whose type resolves the
+member» is a machine-internal breach, named. -/
+def preprintDispatch (s : Store) (e : PanicEntry) :
+    Except Stop (FuncId × GoValue × AccessTrace) :=
+  match e.rewrite with
+  | .pending m =>
+      match e.value with
+      | .interface dynTy inner =>
+          match resolveMethod? ctx dynTy m with
+          | some r =>
+              match r.unsupported with
+              | some cause => throw (.unsupported cause)
+              | none => do
+                  let (recv, tr) ← receiverAt ctx s inner r.path r.adjust
+                  return (preprintTargetFid m r, recv, tr)
+          | none =>
+              throw (.internal s!"preprint: the pending {m.name}() does not resolve on the payload's dynamic type{payloadDynamicTypeNote ctx e.value}")
+      | other => throw (.internal s!"preprint: a pending rewrite on an unboxed payload {repr other}")
+  | _ => throw (.internal "preprint: the frame's entry owes no rewrite")
+
+/-- **gc's fatal when the method itself panics** (design §2 (i) 6; decision
+4): `preprintpanics`' deferred function recovers the method's panic and
+throws `"panic while printing panic value: " ++ r` for a STRING payload
+(probe p02), `"…: type " ++ <gc's type string>` otherwise (p03) — an
+unrecoverable `fatal` (exit 2), the original `panic:` line never printed.
+The chain here is the METHOD's own chain (it unwound through the method's
+frames onto the preprint frame); `recover()` yields its NEWEST entry. Exact
+for a string payload (its first line — the observation is gc's first stderr
+line; D5's invalid-UTF-8 refusal applies) and for a defined type with a
+display record (`main.Inner`); a RUNTIME-ERROR payload (p04's nil
+dereference → `type runtime.errorString`, p06's `panicwrap` → `type
+runtime.plainError`) is REFUSED by name — the machine's one `runtime.Error`
+twin cannot name gc's concrete type (BUG-099); every other family (an
+unnamed or pointer type, int, bool, …) is refused by name as unpinned. -/
+def preprintFatalStop (chain : List PanicEntry) : Stop :=
+  match chain.getLast? with
+  | none => .internal "preprint: an empty panic chain reached the preprint frame"
+  | some pe =>
+      match pe.value with
+      | .interface .string (.string gs) =>
+          match stringFirstLine? gs.bytes with
+          | some (line, _) => .fatal ("panic while printing panic value: " ++ line)
+          | none => .unsupported "panic while printing panic value: the string payload's first line is not valid UTF-8 — gc prints the raw bytes and the String-valued observation cannot carry them (BUG-004 item 3 / landing decision D5: no byte channel)"
+      | .interface (.defined idx) _ =>
+          if idx == runtimeErrorTypeIdx then
+            .unsupported "panic while printing panic value: the payload is a runtime error — gc prints its concrete type (runtime.errorString for a nil dereference, runtime.plainError for panicwrap) and the machine's one runtime.Error twin cannot name it (BUG-099)"
+          else
+            match ctx.types.nameOf? idx with
+            | some name => .fatal ("panic while printing panic value: type " ++ displayNameOfId ctx name)
+            | none => .unsupported s!"panic while printing panic value: the payload's defined type index {idx} has no table entry to name"
+      | other =>
+          .unsupported s!"panic while printing panic value: payload family not pinned {repr other}{payloadDynamicTypeNote ctx other}"
 
 /-! ## The signal table (B4) -/
 
@@ -4564,6 +4936,10 @@ def signalRefusal (sg : Signal) : Cont → Stop
   | .loop .. => .internal "signal at a loop frame the table resolves"
   | .breakableK _ => .internal "signal at a breakable frame the table resolves"
   | .mapIterK .. => .internal "signal at a map-iteration frame the table resolves"
+  -- The preprint frame (unit 6b): only the payload method's own call frame
+  -- runs on it, so no statement traveller can arrive here; named, never
+  -- mis-reported as an expression continuation.
+  | .preprintK .. => .internal "signal at the preprint frame (nothing but the payload method's call frame runs on it)"
   | _ =>
       match sg with
       | .brk => .internal "break delivered to expression continuation"
@@ -5070,8 +5446,9 @@ def applySyncOpCore (s : Store) (op : SyncOp) (vs : List GoValue)
             -- gc's sync package raises this with `panic("...")` — a plain
             -- string, package code — where the channel panics are runtime
             -- `plainError`s. `recover().(string)` answers true here.
-            return (.panicking [⟨stringPanicValue
-              "sync: negative WaitGroup counter", false⟩] k, s', tr)
+            return (.panicking
+              [{ value := stringPanicValue "sync: negative WaitGroup counter", recovered := false }]
+              k, s', tr)
           else
             -- gc's Add-side misuse panic (waitgroup.go:120, `w != 0 &&
             -- delta > 0 && v == int32(delta)`) is UNREACHABLE at
@@ -5768,9 +6145,15 @@ pops nothing. The stream-obliviousness checkers exclude exactly this
 (`stepFn_oblivious`' `hnr`, `poolThreadOblivious`, `innerVecs`) — a
 fail-closed flag like `consumesUnseqPanic`. -/
 def consumesRepanicCollapse (c : Config) : Bool :=
-  match c.abort? with
-  | some (first, rest) => repanicEqualNext first rest
-  | none => false
+  match c with
+  | .panicking (first :: rest) .stop =>
+      -- Unit 6b: the same site is drawn by the preprint PHASE step at an
+      -- unsettled chain whose newest pending entry collides with its older
+      -- neighbour (`preprintCollide`), and by the abort at a settled one.
+      match splitNewestPending? (first :: rest) with
+      | some (older, entry, _) => preprintCollide older entry
+      | none => repanicEqualNext first rest
+  | _ => false
 
 /-- **The sequential consumption projection**: the site and bound the next
 `stepFn` step draws — `some` exactly when the consult POPS (a bound-≤-1
@@ -5797,7 +6180,14 @@ def seqConsumption (σ : Store) (c : Config) : Option (ChoiceSite × Nat) :=
   | .next (.unseqK g _ st _ _ .pick _) =>
       if 2 ≤ (g.ready st).length then some (.unseqNext, (g.ready st).length) else none
   | .panicking (first :: rest) .stop =>
-      if repanicEqualNext first rest then some (.repanicCollapse, 2) else none
+      -- Unit 6b: an UNSETTLED chain's phase step draws the site at a
+      -- collision (`preprintCollide`, bound 2); a settled chain's abort at
+      -- the `repanicEqualNext` shape — the same site, one draw per step.
+      match splitNewestPending? (first :: rest) with
+      | some (older, entry, _) =>
+          if preprintCollide older entry then some (.repanicCollapse, 2) else none
+      | none =>
+          if repanicEqualNext first rest then some (.repanicCollapse, 2) else none
   | c =>
     match c.applyPos with
     | some (.stmt op _, vs, _, _) => stmtConsult? ctx σ op vs
@@ -6324,7 +6714,7 @@ inductive Step : Config → Store → Config → Store → StepLabel → Prop wh
   | panicStmt {e env k s} :
       Step (.exec (.panicStmt e) env k) s (.evalE e env (.panicArgK k)) s ⟨[], [], []⟩
   | panicArgValue {v k s} :
-      Step (.retV v (.panicArgK k)) s (.panicking [⟨panicPayload v, false⟩] k) s ⟨[], [], []⟩
+      Step (.retV v (.panicArgK k)) s (.panicking [panicEntryOf ctx (panicPayload v)] k) s ⟨[], [], []⟩
   /-- Unwinding strips every non-frame, non-marker continuation. -/
   | panicUnwind {chain k k' s} :
       panicPassthrough k = some k' →
@@ -6376,11 +6766,80 @@ inductive Step : Config → Store → Config → Store → StepLabel → Prop wh
   | panicResumeContinue {chain k s} :
       chainNewestRecovered chain = false →
       Step (.next (.panicResumeK chain k)) s (.panicking chain k) s ⟨[], [], []⟩
-  -- (An unrecovered chain at `.stop` — the abort — has NO rule since B4:
-  -- `Config.abort?`; the sequential driver raises the `panic` terminal
+  -- **The preprint phase** (BUG-004 item 4, window unit 6b; design note
+  -- `docs/2026-09-30_bug004-item4-design.md` §2 (i) 3–6, RULED [USER] Mike
+  -- 2026-09-30 relayed; the module docstring at `preprintCollide`). An
+  -- UNSETTLED chain at `.stop` — some entry's `Error()`/`String()` call
+  -- still owed — is a RUNNING configuration: gc's `preprintpanics` runs
+  -- the payload methods after every deferred call and before the terminal.
+  /-- The phase step at the newest pending entry (`splitNewestPending?`):
+  gc's identity check against the OLDER neighbour (`panic.go:715`) is THE
+  `repanicCollapse` draw at bound 2 when the two payloads are EQUAL
+  (`preprintCollide` — the shape where eface identity is latitude relative
+  to the machine's state). Slot 0 = IDENTICAL: the older entry is marked
+  `repanicked`, the newer DROPPED — never called, never printed
+  (`preprintDrop`; probes p11/p12/p21: one `CALLED`, the collapsed line). -/
+  | preprintCollapse {chain older entry newer s} :
+      splitNewestPending? chain = some (older, entry, newer) →
+      preprintCollide older entry = true →
+      Step (.panicking chain .stop) s (.panicking (preprintDrop older newer) .stop) s
+        ⟨[], [⟨.repanicCollapse, 2, 0⟩], []⟩
+  /-- Slot 1 = DISTINCT (a re-boxed equal value, p11b): the entry is selected
+  for its call — the preprint frame holds the chain split around it. -/
+  | preprintDistinct {chain older entry newer s} :
+      splitNewestPending? chain = some (older, entry, newer) →
+      preprintCollide older entry = true →
+      Step (.panicking chain .stop) s (.next (.preprintK older entry newer .stop)) s
+        ⟨[], [⟨.repanicCollapse, 2, 1⟩], []⟩
+  /-- No collision (unequal older neighbour, or none): the entry is selected
+  with no draw. -/
+  | preprintSelect {chain older entry newer s} :
+      splitNewestPending? chain = some (older, entry, newer) →
+      preprintCollide older entry = false →
+      Step (.panicking chain .stop) s (.next (.preprintK older entry newer .stop)) s ⟨[], [], []⟩
+  /-- The call's RESOLUTION at the frame (`preprintDispatch`): the member on
+  the payload's dynamic type, the receiver adjusted (its loads are the
+  step's trace), re-queued as the ordinary nullary value call of the
+  callee with the receiver as its one captured argument — the NEXT step is
+  that call's entry at the `callValCalleeK` position (the `Entry.again`
+  shape; the entry's own `nilValueMethodText` consult rides there). The
+  receiver adjustment's panic (a nil `*T` under a value method, p06) is
+  delivered as a fresh chain ON the preprint frame — the fatal below. -/
+  | preprintResolve {older entry newer k s r c' s' l} :
+      toResult (preprintDispatch ctx s entry) = .ok r →
+      deliver s (.preprintK older entry newer k)
+        (fun (fid, recv, tr) =>
+          (.retV (.funcVal fid [recv]) (.callValCalleeK [] [] [] (.preprintK older entry newer k)),
+            s, ⟨tr, [], []⟩)) r = (c', s', l) →
+      Step (.next (.preprintK older entry newer k)) s c' s' l
+  /-- The method's frame EXIT on the preprint frame — both entries (a
+  `return`, a fall-through; the `frameReturn*`/`frameFall*` twins): the ONE
+  pinned result cell is read (`Mem.loadBinding`, one emitting read) and
+  delivered to the frame as a value. The frame is targetless (no caller
+  plan): the result's consumer is the preprint frame itself. -/
+  | preprintReturn {tenv rl older entry newer k fr s v tr} :
+      Mem.loadBinding ctx s rl = .ok (v, tr) →
+      Step (.signal .ret (.frame [] tenv [rl] [] (.preprintK older entry newer k) fr)) s
+        (.retV v (.preprintK older entry newer k)) s ⟨tr, [], []⟩
+  | preprintFall {tenv rl older entry newer k fr s v tr} :
+      Mem.loadBinding ctx s rl = .ok (v, tr) →
+      Step (.next (.frame [] tenv [rl] [] (.preprintK older entry newer k) fr)) s
+        (.retV v (.preprintK older entry newer k)) s ⟨tr, [], []⟩
+  /-- The returned STRING is stored beside the payload (`Rewrite.done` —
+  gc's `p.arg = v.Error()`, `:723`) and the chain resumes at `.stop`: the
+  next phase step takes the next pending entry, or the chain is settled and
+  the abort renders (`Config.abort?`). -/
+  | preprintStore {older entry newer k s text} :
+      Step (.retV (.string text) (.preprintK older entry newer k)) s
+        (.panicking (older ++ { entry with rewrite := .done text } :: newer) k) s ⟨[], [], []⟩
+  -- (A SETTLED unrecovered chain at `.stop` — the abort — has NO rule since
+  -- B4: `Config.abort?`; the sequential driver raises the `panic` terminal
   -- there and the pool records the goroutine's `aborted` tombstone, both
   -- through `abortMsg`. The former `panicAbort` step to the k-less
-  -- `.panicked` is gone with that constructor.)
+  -- `.panicked` is gone with that constructor. A panic reaching the
+  -- preprint frame has no rule either: it is the unrecoverable `fatal`
+  -- «panic while printing panic value» — `preprintFatalStop`, classified
+  -- by the drivers like the sync-misuse fatals.)
   -- (The seven `*Panic`/`*EnterPanic` frame-entry twins that lived here
   -- were folded into their entry rules by B2 — `enterFramePick` +
   -- `deliver`; the BUG-087 entry-panic TEXT is now the pick the rule's

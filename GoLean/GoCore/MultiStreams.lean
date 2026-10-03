@@ -104,6 +104,11 @@ def poolThreadOblivious (s : Store) (ts : Array Thread) (i : Nat) : Bool :=
     -- shape (landing chunk L3): a recovered head with an equal successor
     -- payload draws the collapse pick at bound 2 — fail closed.
     else if c.abort?.isSome then !consumesRepanicCollapse c
+    -- Unit 6b: the preprint PHASE step at an unsettled chain draws the same
+    -- site at a collision (bound 2) — fail closed; the CLI enumerator
+    -- carries such rows (the non-colliding phase step pops nothing and is
+    -- oblivious through the generic arm below).
+    else if consumesRepanicCollapse c then false
     else if (spawnPlan c).isSome then !consumesNilValueMethod ctx c
     else if consumesSelect c then
       (match arrivalCases ctx s ts i c with
@@ -309,7 +314,11 @@ theorem stepThread_oblivious {s : Store} {ts : Array Thread} {i : Nat}
         rw [hab] at h hobl
         simp only [Option.isSome_some, reduceIte, Bool.not_eq_true'] at hobl
         have hw : repanicCollapseWidth first rest ≤ 1 := by
-          simp only [consumesRepanicCollapse, hab] at hobl
+          -- Unit 6b: the flag is read off the chain's shape at `.stop`; the
+          -- abort is the SETTLED chain (`Config.abort?_some_iff`).
+          obtain ⟨hc, hs⟩ := Config.abort?_some_iff.mp hab
+          subst hc
+          simp only [consumesRepanicCollapse, hs] at hobl
           simp [repanicCollapseWidth, hobl]
         simp only [Choices.consumeAtE_le_one hw, bind_eq_ok] at h
         obtain ⟨msg, hmsg, h⟩ := h
@@ -324,6 +333,13 @@ theorem stepThread_oblivious {s : Store} {ts : Array Thread} {i : Nat}
       | none =>
         rw [hab] at h hobl
         simp only [Option.isSome_none, Bool.false_eq_true, reduceIte] at hobl
+        -- Unit 6b: the preprint phase's collision draw is refused by the
+        -- checker (fail closed); every shape below has the flag false.
+        cases hnrc : consumesRepanicCollapse c with
+        | true => rw [hnrc] at hobl; simp at hobl
+        | false =>
+        rw [hnrc] at hobl
+        simp only [Bool.false_eq_true, reduceIte] at hobl
         cases hsp : spawnPlan c with
         | some p =>
           obtain ⟨cv, args, k⟩ := p
@@ -486,7 +502,7 @@ theorem stepThread_oblivious {s : Store} {ts : Array Thread} {i : Nat}
               obtain ⟨rfl, rfl, rfl, rfl⟩ := h
               obtain ⟨rfl, hall⟩ := stepFn_oblivious
                 (isMapIterNext_false_elim hnmi) hnapp hnri hnsel hnnv hntl hnup hnn
-                (by simp [consumesRepanicCollapse, hab]) hstep
+                hnrc hstep
               refine ⟨rfl, fun ch => ?_⟩
               unfold stepThread
               rw [hti]

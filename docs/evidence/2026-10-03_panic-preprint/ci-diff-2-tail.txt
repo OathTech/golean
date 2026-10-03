@@ -1,0 +1,45 @@
+# tail of the SECOND GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff at the lane's tip tree (post re-pin, post test fix; tree @ aeab81c5 + the lane), 2026-10-03: RESULT FAIL on exactly the 5a pair — certificate provenance (STALE certification: changed dependency build/files/GoLean/ChoiceTrace.lean — the lane changes the semantic sources; the train re-certifies at merge) and the baseline diff's one DRIFT line, imported-goose/channel/google-search PASS/membership -> FAIL/membership (the certified row). Every other step ok; re-pin guard 0 PASS→non-PASS; 3821 run = 3583 PASS / 238 FAIL (237 + the 5a row).
+921:  ok   Tests/library ownership (no exceptions; executed builds checked at exit)
+923:  ok   oracle toolchain (go1.26.5 = pin)
+924:  ok   escape-hatch preflight
+925:  ok   meta-layer escape hatches (allowlist empty since the repo split)
+926:  ok   escape-hatch addendum (no decide +native / native-config spellings)
+927:  ok   bug-index cross-check
+928:  ok   feature-coverage (no dead tags)
+929:  ok   spec-anchor citations resolve at the pin
+930:  ok   stdlib admission register = frontend tables
+931:  ok   lane-validation fixtures (manifest gates reject bad shapes)
+932:  ok   evidence-on-main size gate
+933:  ok   AGENTS.md alias of CLAUDE.md
+934:  ok   imported-goose verbatim (above-marker bytes = pinned upstream)
+935:  ok   engine-isolation (core ↛ EnumDedup)
+936:  ok   memory-module raw call-site inventory (emit/peek discipline)
+937:  ok   core build (warning-free)
+938:  FAIL certificate provenance
+939:  ok   core totality audit (every GoLean/ module; required core theorems; poison controls)
+940:  ok   admission checker proofs and post-import audit
+941:  ok   declaration boundary
+942:  ok   wire boundary (byte-level controls through the real CLI)
+943:  ok   package-correct method identity
+944:  ok   unseq scheduler (Stage B)
+945:  ok   unseq wire (Stage C)
+946:  ok   frontend pins (realized init-order deviation + twin wire = pinned bytes)
+947:  ok   import-goose fixtures (importer + verbatim guard reject bad shapes)
+948:  ok   frontend unit tests
+949:  ok   lowering-diagnostic tables
+950:  ok   coverage-harness unit tests
+951:  ok   eval tests (298 ok)
+952:  ok   differential run completed (exit 1; failing-set judged by baseline diff)
+953:  ok   lane-validation fixtures incl. harness half (F4/F6/B3-B5/G5/T1-T8/D1-D6)
+954:  ok   negative run completed (exit 0; set judged by baseline diff)
+955:  ok   Tests/FloatVectors.lean = fresh hardware-oracle regeneration (byte-exact)
+956:  ok   inittask-std.tsv = fresh gc-derived regeneration (header at pin; byte-exact modulo date line)
+958:  FAIL baseline diff (DRIFT — see above)
+959:  ok   re-pin guard (0 PASS→non-PASS flip(s), all listed in BUGS.md Cases)
+962:  ok   executed library coverage (all declared libraries; all Tests modules)
+964:[1mRESULT: FAIL[0m
+968:exit=1
+
+# scripts/coverage-baseline-diff --full artifacts/coverage/latest.tsv at the tip:
+DRIFT vs baselines/native-full.tsv (3821 case(s) run):
+imported-goose/channel/google-search	baseline[PASS/membership] -> now[FAIL/membership]

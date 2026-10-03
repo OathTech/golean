@@ -474,11 +474,10 @@ theorem stepFn_abort {σ : Store} {c : Config} {ch : Choices}
     (hab : c.abort? = some (first, rest)) :
     stepFn ctx σ c ch = (do let msg ← abortMsg ctx first rest (abortConsult first rest ch).1
                             throw (.panic msg)) := by
-  match c, hab with
-  | .panicking (f :: r) .stop, hab =>
-    simp only [Config.abort?, Option.some.injEq, Prod.mk.injEq] at hab
-    obtain ⟨rfl, rfl⟩ := hab
-    rfl
+  -- Unit 6b: the abort is a SETTLED chain at `.stop` (`Config.abort?_some_iff`);
+  -- the `.stop` arm's helper takes its abort branch there.
+  obtain ⟨rfl, hs⟩ := Config.abort?_some_iff.mp hab
+  simp only [stepFn, stepPanicStop, hs]
 
 /-- An abort configuration is not parked. -/
 theorem isBlockedConfig_of_abort {c : Config} {first : PanicEntry}
@@ -939,7 +938,11 @@ theorem abort?_none_of_stepE {n : Nat} {c : Config} {σ : Store} {c' : Config}
     cases h with
     | lift hstep =>
       match c, hab with
-      | .panicking (f :: r) .stop, _ => exact step_abort_elim hstep
+      | .panicking (f :: r) .stop, hab =>
+        -- Unit 6b: the abort is a SETTLED chain; a settled chain has no step.
+        have hs := Config.abort?_some_iff.mp hab
+        cases hs.1
+        exact step_abort_elim hs.2 hstep
     | spawn hsp _ =>
       match c, hab, hsp with
       | .panicking (f :: r) .stop, _, hsp => simp [spawnPlan] at hsp

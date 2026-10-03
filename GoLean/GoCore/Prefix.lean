@@ -129,17 +129,18 @@ theorem Prefix.run_eq {ctx : ProgramCtx} {n fuel : Nat} {s sf : Store} {c cf : C
 
 /-! ## The abort arm of `stepFn` (deliverable 3) -/
 
+/-- An abort IS a SETTLED unrecovered chain at `.stop` (unit 6b: the settled conjunct —
+`splitNewestPending? = none` — is what separates the abort from the preprint phase's running
+configurations at the same shape; `Config.abort?_some_iff`). -/
 theorem abort?_some {c : Config} {first : PanicEntry} {rest : List PanicEntry}
-    (h : c.abort? = some (first, rest)) : c = .panicking (first :: rest) .stop := by
-  unfold Config.abort? at h
-  split at h
-  · cases h; rfl
-  · cases h
+    (h : c.abort? = some (first, rest)) :
+    c = .panicking (first :: rest) .stop ∧ splitNewestPending? (first :: rest) = none :=
+  Config.abort?_some_iff.mp h
 
-/-- `stepFn` at an abort: the consult, then the renderer; a render is the panic terminal,
-a renderer error is passed through. -/
+/-- `stepFn` at an abort — a SETTLED chain at `.stop` (unit 6b) — : the consult, then the
+renderer; a render is the panic terminal, a renderer error is passed through. -/
 theorem stepFn_abort {ctx : ProgramCtx} {s : Store} {first : PanicEntry}
-    {rest : List PanicEntry} {ch : Choices} :
+    {rest : List PanicEntry} {ch : Choices} (hs : splitNewestPending? (first :: rest) = none) :
     stepFn ctx s (.panicking (first :: rest) .stop) ch =
       (match abortMsg ctx first rest
           (Choices.consumeAtE .repanicCollapse (repanicCollapseWidth first rest) ch).1 with
@@ -148,7 +149,7 @@ theorem stepFn_abort {ctx : ProgramCtx} {s : Store} {first : PanicEntry}
   have hp : (abortConsult first rest ch).1
       = (Choices.consumeAtE .repanicCollapse (repanicCollapseWidth first rest) ch).1 := by
     rw [abortConsult, ← Choices.consumeAtE_fst_snd]
-  simp only [stepFn, hp]
+  simp only [stepFn, stepPanicStop, hs, hp]
   cases abortMsg ctx first rest
       (Choices.consumeAtE .repanicCollapse (repanicCollapseWidth first rest) ch).1 <;> rfl
 
@@ -164,14 +165,15 @@ theorem abortMsg_error {ctx : ProgramCtx} {first : PanicEntry} {rest : List Pani
 
 theorem finish_refused_step : finish_refused_step_stmt := by
   intro ctx s c ch first rest r hab
-  have hc := abort?_some hab
+  obtain ⟨hc, hs⟩ := abort?_some hab
   subst hc
-  rw [stepFn_abort]
+  rw [stepFn_abort hs]
   constructor
   · rintro ⟨rec, ch'', hf⟩
     cases hf with
     | abortRefused hab' hcon hmsg =>
-      simp only [Config.abort?, Option.some.injEq, Prod.mk.injEq] at hab'
+      rw [Config.abort?_of_settled hs] at hab'
+      simp only [Option.some.injEq, Prod.mk.injEq] at hab'
       obtain ⟨rfl, rfl⟩ := hab'
       rw [hcon]
       simp only [hmsg]
@@ -184,7 +186,7 @@ theorem finish_refused_step : finish_refused_step_stmt := by
     · cases h
     · rename_i e he
       cases h
-      exact ⟨rec, ch'', .abortRefused rfl hx he⟩
+      exact ⟨rec, ch'', .abortRefused (Config.abort?_of_settled hs) hx he⟩
 
 /-- Where the `aborted` finish's `stepFn` side comes from: the abort configuration's panic
 terminal. -/
@@ -194,10 +196,10 @@ theorem finish_aborted_stepFn {ctx : ProgramCtx} {s : Store} {c : Config} {ch : 
     cost = 1 ∧ s' = s ∧ c.abort?.isSome ∧ stepFn ctx s c ch = .error (.terminal (.panic t)) := by
   cases h with
   | aborted hab hcon hmsg =>
-    have hc := abort?_some hab
+    obtain ⟨hc, hs⟩ := abort?_some hab
     subst hc
-    refine ⟨rfl, rfl, by simp [Config.abort?], ?_⟩
-    rw [stepFn_abort, hcon]
+    refine ⟨rfl, rfl, by simp [Config.abort?_of_settled hs], ?_⟩
+    rw [stepFn_abort hs, hcon]
     simp only [hmsg]
 
 /-- The `aborted` finish from the executable's panic terminal at an abort configuration. -/
@@ -205,9 +207,9 @@ theorem finish_aborted_of_stepFn {ctx : ProgramCtx} {s : Store} {c : Config} {ch
     {first : PanicEntry} {rest : List PanicEntry} {t : String}
     (hab : c.abort? = some (first, rest)) (h : stepFn ctx s c ch = .error (.terminal (.panic t))) :
     ∃ rec ch'', Finish ctx s c ch rec (.aborted t s ch'') 1 := by
-  have hc := abort?_some hab
+  obtain ⟨hc, hs⟩ := abort?_some hab
   subst hc
-  rw [stepFn_abort] at h
+  rw [stepFn_abort hs] at h
   rcases hx : Choices.consumeAtE .repanicCollapse (repanicCollapseWidth first rest) ch with
     ⟨p, ch'', rec⟩
   rw [hx] at h
@@ -216,7 +218,7 @@ theorem finish_aborted_of_stepFn {ctx : ProgramCtx} {s : Store} {c : Config} {ch
   · rename_i t' ht
     simp only [Except.error.injEq, Stop.terminal.injEq, Terminal.panic.injEq] at h
     subst h
-    exact ⟨rec, ch'', .aborted rfl hx ht⟩
+    exact ⟨rec, ch'', .aborted (Config.abort?_of_settled hs) hx ht⟩
   · rename_i e he
     obtain ⟨r, rfl⟩ := abortMsg_error he
     cases h
@@ -279,24 +281,24 @@ theorem finish_replay : finish_replay_stmt := by
 
 theorem boundary_abort_one : boundary_abort_one_stmt := by
   intro ctx s c ch first rest t hab hmsg
-  have hc := abort?_some hab
+  obtain ⟨hc, hs⟩ := abort?_some hab
   subst hc
   rw [execStmtLoop_nonZero (by simp [ZeroCost, Blocked])]
-  simp only [stepFn_abort, hmsg, Except.bind]
+  simp only [stepFn_abort hs, hmsg, Except.bind]
 
 theorem boundary_blocked_zero : boundary_blocked_zero_stmt := fun _ _ _ _ hb =>
   execStmtLoop_blocked hb
 
 theorem boundary_refused_one : boundary_refused_one_stmt := by
   intro ctx s c ch first rest r hab hmsg
-  have hc := abort?_some hab
+  obtain ⟨hc, hs⟩ := abort?_some hab
   subst hc
   rw [execStmtLoop_nonZero (by simp [ZeroCost, Blocked])]
-  simp only [stepFn_abort, hmsg, Except.bind]
+  simp only [stepFn_abort hs, hmsg, Except.bind]
 
 theorem boundary_refused_zero : boundary_refused_zero_stmt := by
   intro ctx s c ch first rest r hab _
-  have hc := abort?_some hab
+  obtain ⟨hc, -⟩ := abort?_some hab
   subst hc
   rw [execStmtLoop_nonZero (by simp [ZeroCost, Blocked])]
 
@@ -353,9 +355,9 @@ theorem stepFn_error_cases {ctx : ProgramCtx} {s : Store} {c : Config} {ch : Cho
     obtain ⟨first, rest⟩ := p
     left
     refine ⟨rfl, ?_⟩
-    have hc := abort?_some hab
+    obtain ⟨hc, hs⟩ := abort?_some hab
     subst hc
-    rw [stepFn_abort] at h
+    rw [stepFn_abort hs] at h
     split at h
     · cases h; exact .inl ⟨_, rfl⟩
     · rename_i e' he'
@@ -469,7 +471,7 @@ theorem run_panic_iff : run_panic_iff_stmt := by
     rw [hp.run_le (by omega)]
     have hz : ¬ ZeroCost cf := by
       obtain ⟨p, hp'⟩ := Option.isSome_iff_exists.mp hab
-      rw [abort?_some hp']; simp [ZeroCost, Blocked]
+      rw [(abort?_some hp').1]; simp [ZeroCost, Blocked]
     rw [execStmtLoop_nonZero hz]
     obtain ⟨k, hk⟩ : ∃ k, fuel - n = k + 1 := ⟨fuel - n - 1, by omega⟩
     rw [hk]
@@ -600,7 +602,7 @@ theorem program_bridge : program_bridge_stmt := by
 section Controls
 
 /-- A payload the abort renderer refuses: a string whose first line is not valid UTF-8. -/
-def controlBadEntry : PanicEntry := ⟨.interface .string (.string ⟨#[0xff]⟩), false⟩
+def controlBadEntry : PanicEntry := { value := .interface .string (.string ⟨#[0xff]⟩), recovered := false }
 
 -- an abort: fuel-out at 0, the panic terminal at 1
 example (s : Store) (ch : Choices) :

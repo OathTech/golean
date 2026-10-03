@@ -159,9 +159,21 @@ def stepFrameExit (s : Store) (targets : List (TargetShape × List Expr))
     Except Stop (Config × Store × Choices × StepLabel) := do
   match targets, results, ds with
   | [], [], [] => return (.next k', s, choices, ⟨[], [], []⟩)
-  | [], rl :: rls, [] => do
-      let _ ← loadResults ctx s (rl :: rls)
-      throw (.stuck "extra GoCore assignment value")
+  | [], rl :: rls, [] =>
+      match k', rls with
+      | .preprintK older entry newer k'', [] => do
+          -- The payload method's frame on the PREPRINT frame (unit 6b;
+          -- rules `preprintReturn`/`preprintFall`): targetless, ONE pinned
+          -- result — read here (one emitting read, `Mem.loadBinding`) and
+          -- delivered to the preprint frame as a value, which stores it
+          -- beside the payload (`stepRetOther`). A pending member has the
+          -- signature `() string` (`hasNoArgStringMethod`), so exactly one
+          -- result cell exists; more refuse below by name.
+          let (v, tr) ← Mem.loadBinding ctx s rl
+          return (.retV v (.preprintK older entry newer k''), s, choices, ⟨tr, [], []⟩)
+      | _, _ => do
+          let _ ← loadResults ctx s (rl :: rls)
+          throw (.stuck "extra GoCore assignment value")
   | (sh, e :: ops) :: rest, results, [] => do
       -- The pinned result cells are READ here (one emitting read each).
       let (vs, tr) ← loadResults ctx s results
@@ -338,6 +350,86 @@ def stepUnseqValue (s : Store) (v : GoValue) (g : UnseqGraph) (thenB : Stmt)
         | _ => throw (.internal "unseq: value delivered for an occurrence whose body is not a value head")
   | _ => throw (.internal "unseq: value delivered to the sweep frame outside a running occurrence")
 
+/-! ## The preprint phase's executable arms (BUG-004 item 4, unit 6b)
+
+Each helper sits at ONE existing `stepFn` arm position so the positional
+`fun_cases` tags of `MachineSound`/`PrefixFacts`/`StepErrors` stand (the
+e13-b precedent); their soundness lemmas close the arm (`MachineSound`). -/
+
+/-- **The `.stop` arm's step** (B4 + unit 6b). A SETTLED chain is THE ABORT:
+the `repanicCollapse` consult (`abortConsult`: bound 2 exactly when the
+head is a recovered entry whose successor carries an equal payload, bound 1
+— no pop — at every other abort), then the renderer `abortMsg` — the Go
+`panic` terminal, ONE step, no successor configuration (the pool records a
+tombstone instead, `stepThread`); the popped stream is dropped (the
+machine stops; enumerators read `abortLeftover`). An UNSETTLED chain takes
+the preprint PHASE step at its newest pending entry (`splitNewestPending?`):
+THE same `repanicCollapse` consult at bound 2 exactly at a COLLISION with
+the older neighbour (`preprintWidth`; the draw gc's `panic.go:715` identity
+compare stands for) — slot 0 = IDENTICAL: the older entry marked
+`repanicked`, the newer dropped, the chain resumes at `.stop`
+(`preprintCollapse`); slot 1, or no collision: the entry is selected and
+the preprint frame built (`preprintDistinct`/`preprintSelect`). Written as
+a single `let`+`if` term so the pick's record rides the label and the arm
+has one shape per branch. -/
+def stepPanicStop (s : Store) (first : PanicEntry) (rest : List PanicEntry) (choices : Choices) :
+    Except Stop (Config × Store × Choices × StepLabel) :=
+  match splitNewestPending? (first :: rest) with
+  | none => do
+      let pick := (abortConsult first rest choices).1
+      throw (.panic (← abortMsg ctx first rest pick))
+  | some (older, entry, newer) =>
+      let (pick, ch', ps) := Choices.consumeAtE .repanicCollapse (preprintWidth older entry) choices
+      return (if preprintCollide older entry && pick = 0
+                then .panicking (preprintDrop older newer) .stop
+                else .next (.preprintK older entry newer .stop), s, ch', ⟨[], ps, []⟩)
+
+/-- The `.panicking` arm's head that is neither glue, a call frame, the
+resume marker, a probe nor `.stop`: the PREPRINT frame — the payload
+method's own panic unwound onto it — is gc's unrecoverable fatal «panic
+while printing panic value» (`preprintFatalStop`, unit 6b; `Finish.fatal`
+classifies it at cost 1, exit 2 as gc); anything else is a machine-internal
+breach, named. -/
+def panicUnwindStop (chain : List PanicEntry) : Cont → Stop
+  | .preprintK _ _ _ _ => preprintFatalStop ctx chain
+  | _ => .internal "unclassified continuation in panic unwinding"
+
+/-- The `.retV` arm's catch-all position: at the PREPRINT frame the value is
+the payload method's returned STRING — stored beside the payload
+(`Rewrite.done`, gc's `p.arg = v.Error()`) and the chain resumes at the
+frame's tail (`.stop`; rule `preprintStore`); a non-string result refuses by
+name (the member's signature is `() string`). Every statement frame refuses
+as before. -/
+def stepRetOther (s : Store) (v : GoValue) (k : Cont) (choices : Choices) :
+    Except Stop (Config × Store × Choices × StepLabel) :=
+  match k with
+  | .preprintK older entry newer k' =>
+      match v with
+      | .string text =>
+          return (.panicking (older ++ { entry with rewrite := .done text } :: newer) k', s, choices,
+            ⟨[], [], []⟩)
+      | other => throw (.stuck s!"preprint: the payload method returned a non-string result {repr other}")
+  | _ => throw (.internal "value delivered to statement continuation")
+
+/-- The `.next` arm's catch-all position: at the PREPRINT frame the step
+RESOLVES the pending call (`preprintDispatch` — the member on the payload's
+dynamic type, the receiver adjusted; its loads are the step's trace) and
+re-queues it as the ordinary nullary value call the `callValCalleeK`
+position enters next step (rule `preprintResolve`); the adjustment's panic
+(a nil `*T` under a value method) is delivered as a fresh chain on the
+preprint frame — the fatal at the next step. The expression frames refuse
+as before. -/
+def stepNextOther (s : Store) (k : Cont) (choices : Choices) :
+    Except Stop (Config × Store × Choices × StepLabel) :=
+  match k with
+  | .preprintK older entry newer k' => do
+      let r ← toResult (preprintDispatch ctx s entry)
+      return deliverS s (.preprintK older entry newer k') choices
+        (fun (fid, recv, tr) =>
+          (.retV (.funcVal fid [recv]) (.callValCalleeK [] [] [] (.preprintK older entry newer k')),
+            s, choices, ⟨tr, [], []⟩)) r
+  | _ => throw (.internal "completion delivered to expression continuation")
+
 /-- One machine step. `.ok` is a step the relation permits; `.error` is
 either a Go TERMINAL the machine reached (the abort's `panic`, a sync
 `fatal`, a sequential `deadlock`) or a refusal that names its cause (the
@@ -402,15 +494,20 @@ def stepFn (s : Store) (c : Config) (choices : Choices) :
           -- popped stream is dropped here (the machine stops; the pool
           -- returns it, enumerators read `abortLeftover`). A plain `let`,
           -- not a match arm, so `fun_cases`' positional tags stand.
+          -- Unit 6b: a SETTLED chain is the abort; an UNSETTLED one takes the
+          -- preprint PHASE step (`stepPanicStop`, one helper so the arm
+          -- keeps its one `fun_cases` position).
           match chain with
-          | first :: rest =>
-              let pick := (abortConsult first rest choices).1
-              throw (.panic (← abortMsg ctx first rest pick))
+          | first :: rest => stepPanicStop ctx s first rest choices
           | [] => throw (.internal "empty panic chain at stop")
       | k =>
           match panicPassthrough k with
           | some k' => return (.panicking chain k', s, choices, ⟨[], [], []⟩)
-          | none => throw (.internal "unclassified continuation in panic unwinding")
+          -- The PREPRINT frame (unit 6b): the payload method's own panic
+          -- reached it — gc's fatal «panic while printing panic value»;
+          -- any other non-glue head is a machine-internal breach, named
+          -- (`panicUnwindStop`).
+          | none => throw (panicUnwindStop ctx chain k)
   | .exec stmt env k =>
       match stmt with
       | .seqn ss => return (.next (seqCont ss.toList env k), s, choices, ⟨[], [], []⟩)
@@ -733,7 +830,9 @@ def stepFn (s : Store) (c : Config) (choices : Choices) :
           let (base, start, tr) ← mapRangeStartSets s v
           return (.next (.mapIterK keyVar valVar keyTy valTy body base #[] start env k'), s, choices, ⟨tr, [], []⟩)
       | .panicArgK k' =>
-          return (.panicking [⟨panicPayload v, false⟩] k', s, choices, ⟨[], [], []⟩)
+          -- THE RAISE: the entry's rewrite mark is decided here by the
+          -- payload's dynamic type (`panicEntryOf`, unit 6b).
+          return (.panicking [panicEntryOf ctx (panicPayload v)] k', s, choices, ⟨[], [], []⟩)
       | .chanStK op done pending env k' =>
           -- Pre-communication operands only; a receive's targets evaluate
           -- AFTER the apply step (BUG-022 — spec §Assignments phase 2,
@@ -856,7 +955,10 @@ def stepFn (s : Store) (c : Config) (choices : Choices) :
           -- The `unseq` sweep frame (Stage B): a value head's result.
           stepUnseqValue ctx s v g thenB st tg env' ph k' choices
       | .stop => throw (.internal "value delivered to empty continuation")
-      | _ => throw (.internal "value delivered to statement continuation")
+      -- The PREPRINT frame (unit 6b, rule `preprintStore`) and the statement
+      -- frames' refusal share this catch-all position (`stepRetOther`, so the
+      -- arm keeps its one `fun_cases` tag).
+      | k => stepRetOther s v k choices
   | .next k =>
       match k with
       | .stop => throw (.internal "step on terminal configuration")
@@ -922,8 +1024,9 @@ def stepFn (s : Store) (c : Config) (choices : Choices) :
       | .unseqK g thenB st tg env ph k' =>
           -- The `unseq` sweep frame (Stage B): the scheduler (`stepUnseqNext`).
           stepUnseqNext ctx s g thenB st tg env ph k' choices
-      -- covers `.probeK` too (unreachable: no statement runs under a probe — Machine.lean's reachability invariant; e13-b R12/R1'-6)
-      | _ => throw (.internal "completion delivered to expression continuation")
+      -- covers `.probeK` too (unreachable: no statement runs under a probe — Machine.lean's reachability invariant; e13-b R12/R1'-6);
+      -- the PREPRINT frame's resolution step (unit 6b, rule `preprintResolve`) shares this position (`stepNextOther`).
+      | k => stepNextOther ctx s k choices
   | .signal sg k =>
       -- The frame×signal TABLE (B4, rule `signal`): pass, catch, or —
       -- where the table has no successor — the call frame's `ret` is the

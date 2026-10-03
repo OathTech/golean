@@ -332,11 +332,11 @@ theorem registration_is_lifo (first second : GoValue × List GoValue)
 /-- Equal re-panic payloads are distinct chain entries. Recovery marks the
 newest entry while retaining the older recovered history, for any bytes. -/
 theorem equal_repanic_keeps_history (bytes : GoString) :
-    markNewestRecovered [⟨.interface .string (.string bytes), true⟩,
-      ⟨.interface .string (.string bytes), false⟩] =
+    markNewestRecovered [{ value := .interface .string (.string bytes), recovered := true },
+      { value := .interface .string (.string bytes), recovered := false }] =
       some (.interface .string (.string bytes),
-        [⟨.interface .string (.string bytes), true⟩,
-          ⟨.interface .string (.string bytes), true⟩]) := rfl
+        [{ value := .interface .string (.string bytes), recovered := true },
+          { value := .interface .string (.string bytes), recovered := true }]) := rfl
 
 def scopedFunction : Func := {
   id := ⟨"scoped"⟩, args := #[⟨vid "x", .bool⟩], results := #[⟨vid "result", .bool⟩]
@@ -390,8 +390,8 @@ set_option maxRecDepth 8192
 def text : GoString := ⟨#[104, 101, 97, 100]⟩
 def later : GoString := ⟨#[255, 0, 10, 9]⟩
 def entries : List PanicEntry :=
-  [⟨.interface .string (.string text), false⟩,
-   ⟨.interface .string (.string later), true⟩]
+  [{ value := .interface .string (.string text), recovered := false },
+   { value := .interface .string (.string later), recovered := true }]
 def record : AbortRecord := ⟨text, false, [⟨later, true⟩]⟩
 def abortConfig : Config := .panicking entries .stop
 
@@ -399,7 +399,8 @@ theorem complete_chain_bytes_and_flags : abortRecord? abortConfig = some record 
 
 theorem nonstring_tail_rejected :
     abortRecord? (.panicking
-      [⟨.interface .string (.string text), false⟩, ⟨.interface .bool (.bool true), false⟩] .stop) = none := by rfl
+      [{ value := .interface .string (.string text), recovered := false },
+       { value := .interface .bool (.bool true), recovered := false }] .stop) = none := by rfl
 
 theorem recovered_transient_rejected :
     abortRecord? (.panicking entries (.frame [] [] [] [] .stop auditFid)) = none := by rfl

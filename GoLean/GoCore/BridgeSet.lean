@@ -3,6 +3,7 @@ import GoLean.GoCore.ProgramTrace
 import GoLean.GoCore.MultiSound
 import GoLean.GoCore.Prefix
 import GoLean.GoCore.Locals
+import GoLean.GoCore.StringPanic
 
 /-!
 # The stable bridge set — pinned statements (window charter row 0)
@@ -113,6 +114,21 @@ for BOTH entries, the block-entry rule `Step.block`, `blockEntry_shift` / `_look
 `Step.seqDone` and the executable equation `blockExit_store_eq`, `heap_size_mono` (the wf_loc conjunct, named),
 `enterFrame_shift`, `frameEntry_lookup_arg` / `_result` (rows 124–125 restated through `entrySlot`),
 `frameEntry_fresh`, and the D7 pair `pushDefer_saves_values` / `funcVal_captures_locs` beside `Step.evalRef`.
+
+RE-PIN 9 — window unit 6b, BUG-004 item 4: the PREPRINT PHASE ([AGENT worker, lane core/panic-preprint-1003],
+2026-10-03; RULED [USER] Mike 2026-09-30 «Yes, agree, do the fix inside this window», relayed — design note
+`docs/2026-09-30_bug004-item4-design.md` §2 (i), all §5 decisions as recommended; handoff
+`docs/2026-10-03_panic-preprint-handoff.md`): NO pinned STATEMENT changes text — rows 1–154 BYTE-IDENTICAL; row 19
+(`Config.abort?`) keeps its type, its EQUATION gains the settled conjunct (`Config.abort?_some_iff`, row 155).
+SHAPE changes a client's exhaustive case split meets: `PanicEntry` gains `rewrite : Rewrite` and `repanicked : Bool`
+(both defaulted — `{ value, recovered }` instances elaborate; the anonymous `⟨v, false⟩` does not), `Frame` gains
+`preprintK older entry newer` (33 frames), `Step` gains seven rules (`preprintCollapse`/`preprintDistinct`/
+`preprintSelect`/`preprintResolve`/`preprintReturn`/`preprintFall`/`preprintStore`, 127 → 134), `FrameClass` gains
+`preprint`. Rows 155–173 ADDED: the abort's characterization over the SETTLED chain, the split's two facts, the
+rendering equations the logic side asked for (`renderPanicHead_text`/`abortMsg_text`/`stepFn_text_abort`/
+`runConfig_text_abort` and the refusal twins — the `StringPanic` string lemmas' shape with `first.rewrite = .done text`
+as the payload premise), the seven rules' types, and the relation-side elimination facts (`step_abort_elim` now takes
+the settled premise; `step_stop_unsettled`).
 -/
 
 namespace GoLean.GoCore.BridgeSet
@@ -1162,5 +1178,137 @@ example : ∀ {ctx : ProgramCtx} {id : VarId} {loc : Loc} {env : LocalEnv} {k : 
     LocalEnv.lookup env id = some loc →
     Step ctx (.evalE (.ref id) env k) s (.retV (.addr loc) k) s ⟨[], [], []⟩ :=
   @GoLean.GoCore.Machine.Step.evalRef
+
+-- RE-PIN 9 (unit 6b, the preprint phase) — rows 155–173.
+-- 155. `Machine.lean` — the abort IS a settled unrecovered chain at `.stop` (row 19's equation)
+example : ∀ {c : Config} {first : PanicEntry} {rest : List PanicEntry},
+    c.abort? = some (first, rest) ↔
+      c = .panicking (first :: rest) .stop ∧ splitNewestPending? (first :: rest) = none :=
+  @GoLean.GoCore.Machine.Config.abort?_some_iff
+
+-- 156. `Machine.lean` — the phase's cursor splits the chain
+example : ∀ {chain older : List PanicEntry} {entry : PanicEntry} {newer : List PanicEntry},
+    splitNewestPending? chain = some (older, entry, newer) → chain = older ++ entry :: newer :=
+  @GoLean.GoCore.Machine.splitNewestPending?_eq
+
+-- 157. `Machine.lean` — … at an entry whose rewrite is owed
+example : ∀ {chain older : List PanicEntry} {entry : PanicEntry} {newer : List PanicEntry},
+    splitNewestPending? chain = some (older, entry, newer) → entry.isPending = true :=
+  @GoLean.GoCore.Machine.splitNewestPending?_pending
+
+-- 158. `StringPanic.lean` — the renderer on a REWRITTEN payload is the string member function
+example : ∀ {ctx : ProgramCtx} (first : PanicEntry) (rest : List PanicEntry) (text : GoString) (pick : Nat),
+    rewritableBox first.value → first.rewrite = .done text →
+    renderPanicHead ctx first rest pick =
+      stringPanicHead text first.recovered (collapseBit first rest pick) :=
+  @GoLean.GoCore.Machine.renderPanicHead_text
+
+-- 159. `StringPanic.lean` — the abort message on a rewritten payload
+example : ∀ {ctx : ProgramCtx} (first : PanicEntry) (rest : List PanicEntry) (text : GoString) (pick : Nat)
+    (msg : String), rewritableBox first.value → first.rewrite = .done text →
+    stringPanicHead text first.recovered (collapseBit first rest pick) = some msg →
+    abortMsg ctx first rest pick = .ok msg :=
+  @GoLean.GoCore.Machine.abortMsg_text
+
+-- 160. `StringPanic.lean` — … and its refusal, by name
+example : ∀ {ctx : ProgramCtx} (first : PanicEntry) (rest : List PanicEntry) (text : GoString) (pick : Nat),
+    rewritableBox first.value → first.rewrite = .done text →
+    stringPanicHead text first.recovered (collapseBit first rest pick) = none →
+    abortMsg ctx first rest pick = .error (.unsupported (abortRefusal ctx first)) :=
+  @GoLean.GoCore.Machine.abortMsg_text_refused
+
+-- 161. `StringPanic.lean` — the sequential abort step on a rewritten payload
+example : ∀ {ctx : ProgramCtx} (s : Store) (c : Config) (choices : Choices) (first : PanicEntry)
+    (rest : List PanicEntry) (text : GoString) (msg : String),
+    c.abort? = some (first, rest) → rewritableBox first.value → first.rewrite = .done text →
+    stringPanicHead text first.recovered
+      (collapseBit first rest (abortConsult first rest choices).1) = some msg →
+    stepFn ctx s c choices = .error (.panic msg) :=
+  @GoLean.GoCore.Machine.stepFn_text_abort
+
+-- 162. `StringPanic.lean` — the bounded run's abort on a rewritten payload
+example : ∀ {ctx : ProgramCtx} (fuel : Nat) (s : Store) (c : Config) (choices : Choices)
+    (first : PanicEntry) (rest : List PanicEntry) (text : GoString) (msg : String),
+    c.abort? = some (first, rest) → rewritableBox first.value → first.rewrite = .done text →
+    stringPanicHead text first.recovered
+      (collapseBit first rest (abortConsult first rest choices).1) = some msg →
+    runConfig ctx (fuel + 1) s c choices = .error (.panic msg) :=
+  @GoLean.GoCore.Machine.runConfig_text_abort
+
+-- 163. `Machine.lean` — the phase's collapse (slot 0 at a collision)
+example : ∀ {ctx : ProgramCtx} {chain older : List PanicEntry} {entry : PanicEntry}
+    {newer : List PanicEntry} {s : Store},
+    splitNewestPending? chain = some (older, entry, newer) → preprintCollide older entry = true →
+    Step ctx (.panicking chain .stop) s (.panicking (preprintDrop older newer) .stop) s
+      ⟨[], [⟨.repanicCollapse, 2, 0⟩], []⟩ :=
+  @GoLean.GoCore.Machine.Step.preprintCollapse
+
+-- 164. `Machine.lean` — the phase's selection at a collision (slot 1)
+example : ∀ {ctx : ProgramCtx} {chain older : List PanicEntry} {entry : PanicEntry}
+    {newer : List PanicEntry} {s : Store},
+    splitNewestPending? chain = some (older, entry, newer) → preprintCollide older entry = true →
+    Step ctx (.panicking chain .stop) s (.next (.preprintK older entry newer .stop)) s
+      ⟨[], [⟨.repanicCollapse, 2, 1⟩], []⟩ :=
+  @GoLean.GoCore.Machine.Step.preprintDistinct
+
+-- 165. `Machine.lean` — the phase's selection with no collision (no draw)
+example : ∀ {ctx : ProgramCtx} {chain older : List PanicEntry} {entry : PanicEntry}
+    {newer : List PanicEntry} {s : Store},
+    splitNewestPending? chain = some (older, entry, newer) → preprintCollide older entry = false →
+    Step ctx (.panicking chain .stop) s (.next (.preprintK older entry newer .stop)) s ⟨[], [], []⟩ :=
+  @GoLean.GoCore.Machine.Step.preprintSelect
+
+-- 166. `Machine.lean` — the call's resolution at the preprint frame, re-queued as a value call
+example : ∀ {ctx : ProgramCtx} {older : List PanicEntry} {entry : PanicEntry} {newer : List PanicEntry}
+    {k : Cont} {s : Store} {r : Result (FuncId × GoValue × AccessTrace)} {c' : Config} {s' : Store}
+    {l : StepLabel},
+    toResult (preprintDispatch ctx s entry) = .ok r →
+    deliver s (.preprintK older entry newer k)
+      (fun (fid, recv, tr) =>
+        (.retV (.funcVal fid [recv]) (.callValCalleeK [] [] [] (.preprintK older entry newer k)),
+          s, ⟨tr, [], []⟩)) r = (c', s', l) →
+    Step ctx (.next (.preprintK older entry newer k)) s c' s' l :=
+  @GoLean.GoCore.Machine.Step.preprintResolve
+
+-- 167. `Machine.lean` — the method's frame exit delivers its one result to the frame (`return`)
+example : ∀ {ctx : ProgramCtx} {tenv : LocalEnv} {rl : Loc} {older : List PanicEntry} {entry : PanicEntry}
+    {newer : List PanicEntry} {k : Cont} {fr : FuncId} {s : Store} {v : GoValue} {tr : AccessTrace},
+    Mem.loadBinding ctx s rl = .ok (v, tr) →
+    Step ctx (.signal .ret (.frame [] tenv [rl] [] (.preprintK older entry newer k) fr)) s
+      (.retV v (.preprintK older entry newer k)) s ⟨tr, [], []⟩ :=
+  @GoLean.GoCore.Machine.Step.preprintReturn
+
+-- 168. `Machine.lean` — … and on the fall-through entry
+example : ∀ {ctx : ProgramCtx} {tenv : LocalEnv} {rl : Loc} {older : List PanicEntry} {entry : PanicEntry}
+    {newer : List PanicEntry} {k : Cont} {fr : FuncId} {s : Store} {v : GoValue} {tr : AccessTrace},
+    Mem.loadBinding ctx s rl = .ok (v, tr) →
+    Step ctx (.next (.frame [] tenv [rl] [] (.preprintK older entry newer k) fr)) s
+      (.retV v (.preprintK older entry newer k)) s ⟨tr, [], []⟩ :=
+  @GoLean.GoCore.Machine.Step.preprintFall
+
+-- 169. `Machine.lean` — the returned string is stored beside the payload; the chain resumes
+example : ∀ {ctx : ProgramCtx} {older : List PanicEntry} {entry : PanicEntry} {newer : List PanicEntry}
+    {k : Cont} {s : Store} {text : GoString},
+    Step ctx (.retV (.string text) (.preprintK older entry newer k)) s
+      (.panicking (older ++ { entry with rewrite := .done text } :: newer) k) s ⟨[], [], []⟩ :=
+  @GoLean.GoCore.Machine.Step.preprintStore
+
+-- 170. `MachineSound.lean` — no rule steps a SETTLED chain at `.stop` (the abort is terminal)
+example : ∀ {ctx : ProgramCtx} {chain : List PanicEntry} {σ : Store} {c' : Config} {σ' : Store}
+    {tr : StepLabel}, splitNewestPending? chain = none →
+    ¬ Step ctx (.panicking chain .stop) σ c' σ' tr :=
+  @GoLean.GoCore.Machine.step_abort_elim
+
+-- 171. `MachineSound.lean` — a chain that steps at `.stop` is unsettled
+example : ∀ {ctx : ProgramCtx} {chain : List PanicEntry} {σ : Store} {c' : Config} {σ' : Store}
+    {tr : StepLabel}, Step ctx (.panicking chain .stop) σ c' σ' tr →
+    ∃ older entry newer, splitNewestPending? chain = some (older, entry, newer) :=
+  @GoLean.GoCore.Machine.step_stop_unsettled
+
+-- 172. `Machine.lean` — the entry's rewrite mark at the raise (the shape, row 19's companion)
+example : GoValue → PanicEntry := fun v => @GoLean.GoCore.Machine.panicEntryOf (ProgramCtx.ofTables (types := TypeEnv.reserved)) v
+
+-- 173. `Machine.lean` — the fatal of a panic inside the payload method, as a `Stop`
+example : ProgramCtx → List PanicEntry → Stop := @GoLean.GoCore.Machine.preprintFatalStop
 
 end GoLean.GoCore.BridgeSet

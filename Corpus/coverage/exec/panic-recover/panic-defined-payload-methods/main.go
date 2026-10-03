@@ -6,7 +6,10 @@ package main
 // `main.T(v)` (pre-merge audit 2026-07-31, finding 3 — the unconditional
 // `main.T(v)` arm was a fail-closed → wrong-answer regression). Rendering the
 // rewritten form would mean CALLING a method at abort time, which the terminal
-// rule cannot do, so the two method-bearing rows are pinned RED (fail closed).
+// rule cannot do, so the two method-bearing rows were pinned RED (fail
+// closed) until unit 6b (2026-10-03): the PREPRINT PHASE now calls the method
+// as ordinary machine steps before the terminal (Machine.lean `Cont.preprintK`;
+// docs/2026-09-30_bug004-item4-design.md) and both rows are green.
 
 type payloadCode int
 

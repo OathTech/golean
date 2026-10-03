@@ -1,0 +1,4 @@
+Typed audit: core-audit: 5 compiled controls passed
+core-audit-audit PASS; scratch removed (9062298 owned bytes; dependencies symlinked)
+Core totality audit gate: PASS
+exit=0

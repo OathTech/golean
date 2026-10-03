@@ -1,0 +1,11 @@
+# Isolated elaboration A/B, back-to-back per module (alternating sides under the same box load — load average 5–11 from other projects' builds), 2026-10-03: main = detached worktree @ aeab81c5 (fresh .lake), lane = core/panic-preprint-1003; each build = the module's own artifacts deleted, then the single-target lake build under the lock and the 48G cap; seconds = lake's per-module figure. Rule (G-C3, decision 6): a module > 1.5× STOPS — none does; no maxHeartbeats raised or added.
+module	main_s	lane_s	ratio
+Machine	5.40	5.80	1.07
+StateWf	22.00	23.00	1.05
+StepFn	1.00	1.00	1.00
+MachineEqb	5.00	5.10	1.02
+StringPanic	1.90	1.40	0.74
+MachineSound	69.00	81.00	1.17
+PrefixFacts	16.00	23.00	1.44
+StepErrors	213.00	248.00	1.16
+BridgeSet	1.00	1.10	1.10

@@ -2855,7 +2855,24 @@ without re-running `step_complete_any_wf`'s mapIterNext case.
 
 - Status: open
 - Pinned-by: differential
-- Cases: panic-recover/panic-text/invalid-single, panic-recover/panic-text/invalid-first-line, panic-recover/panic-text/invalid-recovered-equal, panic-recover/panic-defined-payload-methods/error, panic-recover/panic-defined-payload-methods/stringer
+- Cases: panic-recover/panic-text/invalid-single, panic-recover/panic-text/invalid-first-line, panic-recover/panic-text/invalid-recovered-equal
+
+**Unit 6b, 2026-10-03 ([AGENT] lane `core/panic-preprint-1003`; design note
+`docs/2026-09-30_bug004-item4-design.md` §2 (i), RULED [USER] Mike 2026-09-30
+«Yes, agree, do the fix inside this window», relayed; handoff
+`docs/2026-10-03_panic-preprint-handoff.md`): ITEM 4 IS FIXED.** gc's
+`preprintpanics` CALLS the payload's `Error()`/`String()` — after every deferred
+call, before anything prints (`runtime/panic.go:702`–`:730` at the pin) — and
+the machine now does the same as ordinary machine steps at the empty
+continuation (the PREPRINT PHASE: `Rewrite`/`PanicEntry.rewrite`/`repanicked`,
+`Cont.preprintK`, the `preprint*` rules; `Config.abort?` demands a SETTLED
+chain). `panic-defined-payload-methods/{error,stringer}` flipped FAIL → PASS
+(`boom`/`strung`) and LEFT the Cases line above; the born rows are
+`panic-recover/panic-preprint/*` (one per design probe; the two refused-by-name
+fatals — gc names a CONCRETE runtime-error type — sit on BUG-099's line). The
+identity question of item 1 is now drawn by the phase at EVERY equal adjacent
+pair (the call COUNT is observable: probes p11/p12/p21), at the existing
+`repanicCollapse` site, bound 2.
 
 **Landing chunk L3, 2026-09-07 ([AGENT] lane `land-panic-text`,
 `docs/2026-09-07_land-panic-text-tape.md`; the typed-consumer sprint's
@@ -3090,7 +3107,10 @@ printing a wrong first line:
    program mentions `error`) and returns `none` when either is present.
    `main.T(v)` survives for the method-less case
    (`panic-defined-payload-methods/plain` is the green pin; `/error` and
-   `/stringer` are the red ones).
+   `/stringer` are the red ones). FIXED 2026-10-03 (unit 6b, above): the
+   rewrite is COMPUTED — the method is called in the preprint phase and
+   its string stored beside the payload (`Rewrite.done`), then printed as
+   a string payload; `/error` and `/stringer` are green.
 
 RECOVERING any of these payloads is fully supported — only the terminal
 abort line is restricted. The remaining fixes, if ever needed, are an
@@ -6336,7 +6356,7 @@ exports revive.
 
 - Status: open
 - Pinned-by: differential
-- Cases: panic-recover/recovered-runtime-error-type/observed, panic-recover/recovered-runtime-error-type/assert-int
+- Cases: panic-recover/recovered-runtime-error-type/observed, panic-recover/recovered-runtime-error-type/assert-int, panic-recover/panic-preprint/nil-ptr-receiver-deref, panic-recover/panic-preprint/value-method-nil-ptr
 - Discovered: 2026-09-05 (lane `fr19-bug097` adversarial audit R3 — the `<TypeId $runtime.Error has no display record>` marker inside a `recover(); r.(error).Error()` refusal disproved the design note's "unreachable" — and R20 — `Ty.dynamicName` passes the synthetic key to the observation channel; the wrong observation measured at the fix round: `docs/evidence/2026-09-05_fr19-bug097/gc-probe-r3-recovered-runtime-error.go`, transcript in the evidence README)
 
 WHAT: gc's runtime panics carry CONCRETE types — an index fault is

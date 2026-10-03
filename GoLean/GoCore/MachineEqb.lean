@@ -405,15 +405,38 @@ theorem EvClause.eqbF_sound :
     cases eqbListP_sound (Assignee.eqbF_sound f) h2
     cases Ty.eqb_sound h3; cases Stmt.eqbF_sound _ _ _ h4; rfl
 
+/-- The rewrite mark (unit 6b): structural; the member's two strings and the
+stored text's bytes compared through their lawful `BEq`s. -/
+def Rewrite.eqb : Rewrite → Rewrite → Bool
+  | .none, .none => true
+  | .pending a, .pending b => a.name == b.name && a.package == b.package
+  | .unrecorded, .unrecorded => true
+  | .done a, .done b => a.bytes == b.bytes
+  | _, _ => false
+
+theorem Rewrite.eqb_sound (a b : Rewrite) (h : Rewrite.eqb a b = true) : a = b := by
+  cases a <;> cases b <;> (try exact Bool.noConfusion h) <;> (try rfl)
+  case pending.pending a b =>
+    obtain ⟨h1, h2⟩ := andSplit2 h
+    obtain ⟨n1, p1⟩ := a; obtain ⟨n2, p2⟩ := b
+    simp only at h1 h2
+    cases eq_of_beq h1; cases eq_of_beq h2; rfl
+  case done.done a b =>
+    obtain ⟨b1⟩ := a; obtain ⟨b2⟩ := b
+    simp only [Rewrite.eqb] at h
+    cases eq_of_beq h; rfl
+
 def PanicEntry.eqb (a b : PanicEntry) : Bool :=
   GoValue.eqb a.value b.value && a.recovered == b.recovered
+    && Rewrite.eqb a.rewrite b.rewrite && a.repanicked == b.repanicked
 
 theorem PanicEntry.eqb_sound (a b : PanicEntry) (h : PanicEntry.eqb a b = true) :
     a = b := by
-  obtain ⟨v1, r1⟩ := a
-  obtain ⟨v2, r2⟩ := b
-  obtain ⟨h1, h2⟩ := andSplit2 h
-  cases GoValue.eqb_sound h1; cases eq_of_beq h2; rfl
+  obtain ⟨v1, r1, w1, p1⟩ := a
+  obtain ⟨v2, r2, w2, p2⟩ := b
+  obtain ⟨h1, h2, h3, h4⟩ := andSplit4 h
+  cases GoValue.eqb_sound h1; cases eq_of_beq h2; cases Rewrite.eqb_sound _ _ h3
+  cases eq_of_beq h4; rfl
 
 /-! ## `Cont` — the continuation tower (30 constructors) -/
 
@@ -496,6 +519,9 @@ def Cont.eqbF : Nat → Cont → Cont → Bool
     | .panicArgK k1, .panicArgK k2 => Cont.eqbF f k1 k2
     | .panicResumeK c1 k1, .panicResumeK c2 k2 =>
         eqbListP PanicEntry.eqb c1 c2 && Cont.eqbF f k1 k2
+    | .preprintK o1 e1 n1 k1, .preprintK o2 e2 n2 k2 =>
+        eqbListP PanicEntry.eqb o1 o2 && PanicEntry.eqb e1 e2 && eqbListP PanicEntry.eqb n1 n2
+          && Cont.eqbF f k1 k2
     | .chanStK o1 d1 p1 e1 k1, .chanStK o2 d2 p2 e2 k2 =>
         ChanStOp.eqbF f o1 o2 && eqbListP GoValue.eqb d1 d2
           && eqbListP (Expr.eqbF f) p1 p2 && e1 == e2 && Cont.eqbF f k1 k2
@@ -663,6 +689,12 @@ theorem Cont.eqbF_sound : ∀ f (a b : Cont), Cont.eqbF f a b = true → a = b :
       obtain ⟨h1, h2⟩ := andSplit2 h
       cases eqbListP_sound PanicEntry.eqb_sound h1
       cases ih _ _ h2; rfl
+    case preprintK.preprintK o1 e1 n1 o2 e2 n2 =>
+      obtain ⟨h1, h2, h3, h4⟩ := andSplit4 h
+      cases eqbListP_sound PanicEntry.eqb_sound h1
+      cases PanicEntry.eqb_sound _ _ h2
+      cases eqbListP_sound PanicEntry.eqb_sound h3
+      cases ih _ _ h4; rfl
     case chanStK.chanStK o1 d1 p1 e1 o2 d2 p2 e2 =>
       obtain ⟨h1, h2, h3, h4, h5⟩ := andSplit5 h
       cases ChanStOp.eqbF_sound _ _ _ h1; cases goValues_sound h2

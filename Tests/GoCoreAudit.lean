@@ -47,6 +47,22 @@ def requiredModules : List Name := [
 /-- Required core theorems (the `semantic interface` audit's CORE exports, plus the
 re-homed regressions). Each must exist as a theorem. -/
 def exports : List Name := [
+    -- Unit 6b, BUG-004 item 4 — the preprint phase (2026-10-03; design
+    -- docs/2026-09-30_bug004-item4-design.md §2 (i), RULED [USER] 2026-09-30 relayed): the
+    -- abort's characterization over the settled chain, the split's two facts, the rendering
+    -- equations the logic side asked for (`*_text`, the `StringPanic` string lemmas' twins),
+    -- the helper arms' soundness and the relation-side elimination facts
+    ``GoLean.GoCore.Machine.Config.abort?_some_iff, ``GoLean.GoCore.Machine.Config.abort?_of_settled,
+    ``GoLean.GoCore.Machine.Config.abort?_of_pending,
+    ``GoLean.GoCore.Machine.splitNewestPending?_eq, ``GoLean.GoCore.Machine.splitNewestPending?_pending,
+    ``GoLean.GoCore.Machine.renderPanicHead_text, ``GoLean.GoCore.Machine.abortMsg_text,
+    ``GoLean.GoCore.Machine.abortMsg_text_refused, ``GoLean.GoCore.Machine.abortMsg_text_ok,
+    ``GoLean.GoCore.Machine.stepFn_text_abort, ``GoLean.GoCore.Machine.stepFn_text_abort_refused,
+    ``GoLean.GoCore.Machine.runConfig_text_abort, ``GoLean.GoCore.Machine.runConfig_text_abort_refused,
+    ``GoLean.GoCore.Machine.stepPanicStop_sound, ``GoLean.GoCore.Machine.stepRetOther_sound,
+    ``GoLean.GoCore.Machine.stepNextOther_sound,
+    ``GoLean.GoCore.Machine.step_abort_elim, ``GoLean.GoCore.Machine.step_stop_unsettled,
+    ``GoLean.GoCore.Machine.stepPanicStop_strict, ``GoLean.GoCore.Machine.preprintFatalStop_strict,
     -- C4, block-entry allocation (2026-10-01; design docs/2026-10-01_gc4-block-allocation-design.md D8 —
     -- the layout function's lemma set, the lane's acceptance list; BridgeSet rows 136–154)
     ``GoLean.GoCore.Machine.entrySlot_def, ``GoLean.GoCore.Machine.entrySlot_inj,

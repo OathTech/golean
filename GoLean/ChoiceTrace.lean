@@ -501,16 +501,35 @@ other configuration reporting the site is a violation. -/
 def repanicCollapseFacts (c : Config) : MenuFacts :=
   match c with
   | .panicking (first :: rest) .stop =>
-      let equalNext := match rest with
-        | e :: _ => e.value == first.value
-        | [] => false
-      { specWidth := some (if first.recovered && equalNext then 2 else 1)
-        invariants :=
-          [ ("head entry is recovered", first.recovered),
-            ("successor payload equals the head payload (BEq)", equalNext) ]
-        pickCheck := fun p => if p ≥ 2 then [s!"pick {p} outside the two renderings"] else [] }
+      match splitNewestPending? (first :: rest) with
+      | some (older, entry, _) =>
+          -- Unit 6b: the preprint PHASE's draw at the newest pending entry
+          -- — the same site, bound 2 exactly when the entry's OLDER
+          -- neighbour carries an equal payload (`preprintCollide`),
+          -- recomputed here by a second, direct reading.
+          let equalPrev := match older.getLast? with
+            | some prev => prev.value == entry.value
+            | none => false
+          { specWidth := some (if equalPrev then 2 else 1)
+            invariants :=
+              [ ("the entry's rewrite is pending (the phase's cursor)", entry.isPending),
+                ("the older neighbour's payload equals the entry's payload (BEq)", equalPrev) ]
+            pickCheck := fun p => if p ≥ 2 then [s!"pick {p} outside the two identities"] else [] }
+      | none =>
+          let equalNext := match rest with
+            | e :: _ => e.value == first.value
+            | [] => false
+          let unrewritten := match first.rewrite with
+            | .done _ => false
+            | _ => true
+          { specWidth := some (if first.recovered && unrewritten && equalNext then 2 else 1)
+            invariants :=
+              [ ("head entry is recovered", first.recovered),
+                ("head entry is not rewritten (a rewritten head's identity was drawn in the phase)", unrewritten),
+                ("successor payload equals the head payload (BEq)", equalNext) ]
+            pickCheck := fun p => if p ≥ 2 then [s!"pick {p} outside the two renderings"] else [] }
   | _ => { specWidth := none,
-           invariants := [("repanicCollapse site at a configuration that is not an abort", false)],
+           invariants := [("repanicCollapse site at a configuration that is not a panic chain at `.stop`", false)],
            pickCheck := fun _ => [] }
 
 /-- TryLock facts (Q-TRYLOCK, `ChoiceSite.tryLock`): the width is

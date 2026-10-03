@@ -1,0 +1,24 @@
+# scripts/diff-one on the 21 born rows + the 2 flipped rows, lane core/panic-preprint-1003 @ aeab81c5 + the lane's tree, 2026-10-03 (result, id, stage/detail; membership detail truncated)
+PASS	panic-recover/panic-defined-payload-methods/error
+PASS	panic-recover/panic-defined-payload-methods/stringer
+FAIL	panic-recover/panic-preprint/value-method-nil-ptr	stage=lean-observation
+FAIL	panic-recover/panic-preprint/nil-ptr-receiver-deref	stage=lean-observation
+PASS	panic-recover/panic-preprint/promoted-error
+PASS	panic-recover/panic-preprint/recover-inside-method
+PASS	panic-recover/panic-preprint/blocking-method-deadlock
+PASS	panic-recover/panic-preprint/method-panics-string
+PASS	panic-recover/panic-preprint/multiline-text
+PASS	panic-recover/panic-preprint/method-panics-defined
+PASS	panic-recover/panic-preprint/ptr-method-not-in-value-set
+PASS	panic-recover/panic-preprint/nil-ptr-receiver-const
+PASS	panic-recover/panic-preprint/chain-order
+PASS	panic-recover/panic-preprint/post-defer-state
+PASS	panic-recover/panic-preprint/wrong-signature-not-rewritten
+PASS	panic-recover/panic-preprint/error-wins-over-stringer
+PASS	panic-recover/panic-preprint/other-goroutine-blocked	stage=confluent
+PASS	panic-recover/panic-preprint/recovered-not-called
+PASS	panic-recover/panic-preprint/unrecovered-equal-pair	stage=membership
+PASS	panic-recover/panic-preprint/repanic-same-box	stage=membership
+PASS	panic-recover/panic-preprint/panic-nil-repanic	stage=membership
+PASS	panic-recover/panic-preprint/repanic-distinct-equal	stage=membership
+PASS	panic-recover/panic-preprint/repanic-reboxed	stage=membership

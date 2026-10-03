@@ -2623,6 +2623,27 @@ instance of R2.
   and unobserved) is the unwinding arc's dated 2026-09-07 rule; the
   widening is ledger FR-32 (fix round R4).
 
+- UNIT 6b ADDENDUM (2026-10-03, [AGENT] lane `core/panic-preprint-1003`;
+  BUG-004 item 4 FIXED — design note `docs/2026-09-30_bug004-item4-design.md`
+  §2 (i), decision 3 RULED [USER] Mike 2026-09-30 «Yes, agree, do the fix
+  inside this window», relayed): the SAME site is now also drawn by the
+  PREPRINT PHASE — gc's `preprintpanics` identity compare (`panic.go:715`)
+  decides, for a payload whose `Error()`/`String()` the runtime calls,
+  whether the method is CALLED at all (the older of an identical pair is
+  marked `repanicked`, the newer never called and never printed). The phase
+  draws at every equal adjacent pair it meets (`preprintCollide`, bound 2,
+  at the `.stop` arm's phase step — `stepPanicStop`): slot 0 = identical
+  (one call, the collapsed line), slot 1 = distinct (both called, the
+  two-line form). A rewritten HEAD's identity is therefore decided in the
+  phase and the abort draws nothing there (`repanicEqualNext` requires
+  `first.rewrite ≠ .done _`); un-phased chains draw at the abort as before.
+  The family grows by the call COUNT as an observable (members differ in
+  OUTPUT even when the first line agrees — an UNRECOVERED identical pair,
+  probe p21): born membership rows `panic-recover/panic-preprint/
+  {repanic-same-box, repanic-reboxed, repanic-distinct-equal,
+  unrecovered-equal-pair, panic-nil-repanic}`, `members=2`, gc's draw
+  recorded per row (p11 → 0, p11b → 1, p12 → 0, p21 → 0, p13 → 0).
+
 ### R11. Sync misuse fatal class — (b) PINNED to gc's throw realization
 
 - WHERE: DOCS — "It is a run-time error if m is not locked on entry to
