@@ -212,3 +212,5 @@ EXIT=2 (EXPECTED — STALE, `build/files/GoLean/GoCore/AdmissionIndices.lean`); 
 --slow` EXIT=1, 1310 s — red on EXACTLY the 5a pair (the spin row PASS at its raised cap); 3800 rows, 3562 PASS / 238 FAIL =
 the pin 3563 / 237 with the one 5a-class row red. Candidate: `claim` and `observations_sha256` IDENTICAL (receipt `cd043086`,
 167.029 s) — INSTALLED; a provenance refresh. Tail: `docs/evidence/2026-10-01_block-allocation/r59-ci-slow.tail.txt`.
+
+**Green re-run at the records commit `54686a92`** ([AGENT] coordinator, 2026-10-03): `ci --diff` EXIT=0, `RESULT: PASS`, baseline diff FULL 3800/3800, certificate provenance ok. Round 59 closed: block-entry allocation landed.
