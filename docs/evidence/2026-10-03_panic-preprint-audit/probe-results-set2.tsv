@@ -1,0 +1,14 @@
+# Audit probes (set 2, method-set corners), candidate 517f9883 vs main aeab81c5, 2026-10-03; scripts/coverage run --prefix panic-recover/audit-preprint-2 on each side (go1.26.5). Columns: id, gc first line, candidate result/stage, main result/stage, candidate detail (truncated).
+id	gc_first_line	candidate	main	candidate_detail
+panic-recover/audit-preprint-2/ambiguous-error-unique-stringer	panic: s	PASS/-	FAIL/lean-observation	wide=0 exhausted=none depth=fixed
+panic-recover/audit-preprint-2/ambiguous-promoted	panic: (main.ambig) 0x584f80	FAIL/lean-observation	FAIL/lean-observation	expected status panic, got {"message":"panic abort rendering for payload GoLean.GoValue.interface\n  (GoLean.GoCore.Ty.defined 5)\n  (GoLean.GoValue.struct\n    { key := 
+panic-recover/audit-preprint-2/direct-stringer-promoted-error	panic: a	PASS/-	FAIL/lean-observation	wide=0 exhausted=none depth=fixed
+panic-recover/audit-preprint-2/embedded-ptr-non-nil	panic: z	PASS/-	FAIL/lean-observation	wide=0 exhausted=none depth=fixed
+panic-recover/audit-preprint-2/embedded-ptr-promotes-ptr-methods	panic: po	PASS/-	FAIL/lean-observation	wide=0 exhausted=none depth=fixed
+panic-recover/audit-preprint-2/embedded-value-lacks-ptr-method	panic: (main.embVal) 0x583fa0	FAIL/lean-observation	FAIL/lean-observation	expected status panic, got {"message":"panic abort rendering for payload GoLean.GoValue.interface\n  (GoLean.GoCore.Ty.defined 16)\n  (GoLean.GoValue.struct { key := \"ma
+panic-recover/audit-preprint-2/embedded-value-ptr-has	panic: po	PASS/-	FAIL/lean-observation	wide=0 exhausted=none depth=fixed
+panic-recover/audit-preprint-2/field-not-method	panic: (main.fieldErr) 0x4bb798	FAIL/lean-observation	FAIL/lean-observation	expected status panic, got {"message":"panic abort rendering for payload GoLean.GoValue.interface\n  (GoLean.GoCore.Ty.defined 10)\n  (GoLean.GoValue.struct\n    { key :=
+panic-recover/audit-preprint-2/ptr-ptr-payload	panic: (**main.ea) 0x144de9182048	FAIL/lean-observation	FAIL/lean-observation	expected status panic, got {"message":"panic abort rendering for payload GoLean.GoValue.interface\n  (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty
+panic-recover/audit-preprint-2/shallow-wins	panic: a	PASS/-	FAIL/lean-observation	wide=0 exhausted=none depth=fixed
+panic-recover/audit-preprint-2/stringer-via-embedded-iface	panic: s	PASS/-	FAIL/lean-observation	wide=0 exhausted=none depth=fixed
+panic-recover/audit-preprint-2/two-goroutines-panic-error	panic: m	FAIL/membership	FAIL/membership	draw 1/32 (plain) go sample: could not extract Go panic message: abort classification: additional or unknown report boundary after selected origin, refused; stdout="" std

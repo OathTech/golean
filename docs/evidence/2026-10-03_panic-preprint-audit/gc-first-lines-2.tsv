@@ -1,0 +1,13 @@
+# gc first lines, set 2 (go1.26.5; harness oracle.stderr per row), 2026-10-03.
+panic-recover__audit-preprint-2__ambiguous-error-unique-stringer	panic: s
+panic-recover__audit-preprint-2__ambiguous-promoted	panic: (main.ambig) 0x584f80
+panic-recover__audit-preprint-2__direct-stringer-promoted-error	panic: a
+panic-recover__audit-preprint-2__embedded-ptr-non-nil	panic: z
+panic-recover__audit-preprint-2__embedded-ptr-promotes-ptr-methods	panic: po
+panic-recover__audit-preprint-2__embedded-value-lacks-ptr-method	panic: (main.embVal) 0x583fa0
+panic-recover__audit-preprint-2__embedded-value-ptr-has	panic: po
+panic-recover__audit-preprint-2__field-not-method	panic: (main.fieldErr) 0x4bb798
+panic-recover__audit-preprint-2__ptr-ptr-payload	panic: (**main.ea) 0x144de9182048
+panic-recover__audit-preprint-2__shallow-wins	panic: a
+panic-recover__audit-preprint-2__stringer-via-embedded-iface	panic: s
+panic-recover__audit-preprint-2__two-goroutines-panic-error	panic: m

@@ -1,0 +1,9 @@
+# BridgeSet rows 155–173 are load-bearing (pre-merge audit, 2026-10-03, candidate 517f9883).
+# Scratch copy .tmp/BridgeSetMut.lean of GoLean/GoCore/BridgeSet.lean with TWO one-token mutations, elaborated with
+#   GOLEAN_MEM_MAX=16G scripts/capped lake env lean .tmp/BridgeSetMut.lean
+# mutation 1 (row 163, preprintCollapse's label): ⟨.repanicCollapse, 2, 0⟩ -> ⟨.repanicCollapse, 2, 1⟩
+# mutation 2 (row 155, Config.abort?_some_iff's settled conjunct): = none -> ≠ none
+# result: 2 errors —
+.tmp/BridgeSetMut.lean:1187:2: error: Type mismatch
+.tmp/BridgeSetMut.lean:1244:2: error: Type mismatch
+# control: the unmutated copy (.tmp/BridgeSetOrig.lean) elaborates with 0 errors.

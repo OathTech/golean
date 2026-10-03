@@ -1,0 +1,52 @@
+# id	subject	args	expected_status	expected_reason	features
+# AUDIT PROBES (pre-merge audit of core/panic-preprint-1003, 2026-10-03; [AGENT] auditor). Scratch, evidence only.
+iface-holding-error	ifaceHoldingError	-	panic	x	panic,interfaces,defined_type,methods,structs,print
+embedded-iface-promoted	embeddedIfacePromoted	-	panic	inner	panic,interfaces,embedding,defined_type,methods,structs,print
+embedded-iface-nil	embeddedIfaceNil	-	fatal	panic while printing panic value: type runtime.errorString	panic,interfaces,embedding,nil,methods,structs,fatal
+defined-string-type	definedStringType	-	panic	hi!	panic,defined_type,methods,strings
+defined-slice-type	definedSliceType	-	panic	len2	panic,defined_type,methods,slices
+defined-map-type	definedMapType	-	panic	m	panic,defined_type,methods,maps
+defined-func-type	definedFuncType	-	panic	f	panic,defined_type,methods,functions,nil
+defined-bool-stringer	definedBoolStringer	-	panic	b	panic,defined_type,methods,bools
+defined-float-type	definedFloatType	-	panic	fl	panic,defined_type,methods,floats
+defined-array-type	definedArrayType	-	panic	arr	panic,defined_type,methods,arrays
+ptr-mutated-by-defer	ptrMutatedByDefer	-	panic	b	panic,defer,defined_type,methods,pointers,structs,print
+named-result-defer	namedResultDefer	-	panic	changed	panic,defer,defined_type,methods,named-results
+method-recovers-own-panic	methodRecoversOwnPanic	-	panic	recovered-inner	panic,recover,defer,defined_type,methods,named-results
+newer-string-older-error	newerStringOlderError	-	panic	err	panic,recover,defer,defined_type,methods,structs,strings,print
+older-string-newer-error	olderStringNewerError	-	panic	str	panic,recover,defer,defined_type,methods,structs,strings,print
+state-order-across-methods	stateOrderAcrossMethods	-	panic	set-by-newest	panic,recover,defer,defined_type,methods,globals
+three-same-box	threeSameBox	-	panic	same	panic,recover,defer,defined_type,methods,pointers,structs,print,nondet	membership	audit: two adjacent collisions on one box; gc = one call + collapsed line; the machine's per-pair draws give 4 observations	width=2,sites=8,members=4
+distinct-types-equal-fields	distinctTypesEqualFields	-	panic	x	panic,recover,defer,defined_type,methods,structs,print
+distinct-pointers-equal-pointee	distinctPointersEqualPointee	-	panic	x	panic,recover,defer,defined_type,methods,pointers,structs,print
+same-box-slice-field	sameBoxSliceField	-	panic	ws	panic,recover,defer,defined_type,methods,structs,slices,print,nondet	membership	audit: the recovered box re-panicked, struct with a slice field; gc member 0	width=2,sites=8,members=2
+map-payload-repanic	mapPayloadRepanic	-	panic	m	panic,recover,defer,defined_type,methods,maps,print,nondet	membership	audit: a map payload re-panicked through recover; gc member 0	width=2,sites=8,members=2
+non-adjacent-equal	nonAdjacentEqual	-	panic	x	panic,recover,defer,defined_type,methods,pointers,structs,print
+stringer-ptr-receiver	stringerPtrReceiver	-	panic	sp	panic,defined_type,methods,pointers,structs
+mix-value	mixValue	-	panic	S	panic,defined_type,methods,pointers
+mix-pointer	mixPointer	-	panic	E	panic,defined_type,methods,pointers
+method-spawns-goroutine	methodSpawnsGoroutine	-	panic	from-goroutine	panic,defined_type,methods,goroutines,channels	confluent	audit: probe p15 — the method spawns a goroutine and completes a round trip	width=4,sites=8
+goroutine-panics-error	goroutinePanicsError	-	panic	from-g	panic,defined_type,methods,goroutines,channels,structs,print	confluent	audit: a non-main goroutine panics with an error payload while main blocks	width=4,sites=8
+goroutine-repanic-same-box	goroutineRepanicSameBox	-	panic	g	panic,recover,defer,defined_type,methods,pointers,structs,goroutines,channels,print,nondet	membership	audit: the phase's collision draw inside a non-main goroutine (pool); gc member 0	width=4,sites=8,members=2
+method-panics-ptr	methodPanicsPtr	-	fatal	panic while printing panic value: type *main.inner2	panic,defined_type,methods,pointers,structs,fatal
+method-panics-int	methodPanicsInt	-	fatal	panic while printing panic value: type int	panic,defined_type,methods,ints,fatal
+method-panics-error-typed	methodPanicsErrorTyped	-	fatal	panic while printing panic value: type main.ev	panic,defined_type,methods,structs,fatal
+method-panics-defined-string	methodPanicsDefinedString	-	fatal	panic while printing panic value: type main.dstr2	panic,defined_type,methods,strings,fatal
+method-panics-nil	methodPanicsNil	-	fatal	panic while printing panic value: type *runtime.PanicNilError	panic,defined_type,methods,nil,fatal
+method-panics-multiline	methodPanicsMultiline	-	fatal	panic while printing panic value: l1	panic,defined_type,methods,strings,fatal
+method-defer-panics	methodDeferPanics	-	fatal	panic while printing panic value: in-defer	panic,defer,defined_type,methods,fatal
+method-recover-direct	methodRecoverDirect	-	panic	nil-recover	panic,recover,defined_type,methods
+iface-embedding-error	ifaceEmbeddingError	-	panic	ce	panic,interfaces,embedding,defined_type,methods,structs
+value-receiver-on-ptr	valueReceiverOnPtr	-	panic	v2	panic,defined_type,methods,pointers
+embedded-nil-ptr-const	embeddedNilPtrConst	-	panic	in	panic,embedding,defined_type,methods,pointers,nil,structs
+embedded-nil-ptr-value-recv	embeddedNilPtrValueRecv	-	fatal	panic while printing panic value: type runtime.errorString	panic,embedding,defined_type,methods,pointers,nil,structs,fatal
+head-string-newer-pair	headStringNewerPair	-	panic	s	panic,defer,defined_type,methods,pointers,structs,strings,print,nondet	membership	audit: unrecovered string head, then an identical pair; members differ in the call count only; gc member 0	width=2,sites=8,members=2
+head-draw-after-phase	headDrawAfterPhase	-	panic	s	panic,recover,defer,defined_type,methods,structs,strings,print,nondet	membership	audit: the abort's own head draw (recovered equal strings) after the phase settled the newest error entry	width=2,sites=8,members=2
+error-wins-ptr	errorWinsPtr	-	panic	E	panic,defined_type,methods,pointers,structs
+newest-mutates-oldest	newestMutatesOldest	-	panic	mutated	panic,recover,defer,defined_type,methods,pointers,structs,globals,print
+repanic-runtime-equal	repanicRuntimeEqual	-	panic	rt	panic,recover,defer,defined_type,methods,structs,bytes,conversions,print,nondet	membership	audit: equal payloads built at run time (gc: two boxes, member 1)	width=2,sites=8,members=2
+goroutine-method-blocks-deadlock	goroutineMethodBlocksDeadlock	-	deadlock	-	panic,defined_type,methods,goroutines,channels,deadlock
+method-woken-by-goroutine	methodWokenByGoroutine	-	panic	woken	panic,defined_type,methods,goroutines,channels,globals	confluent	audit: main's method blocks and is woken by another goroutine	width=4,sites=8
+method-returns-empty	methodReturnsEmpty	-	panic	EMPTY	panic,recover,defer,defined_type,methods
+three-distinct	threeDistinct	-	panic	a	panic,recover,defer,defined_type,methods,structs,print
+repanic-ptr-to-int	repanicPtrToInt	-	panic	dint	panic,recover,defer,defined_type,methods,pointers,print,nondet	membership	audit: the recovered *dint box re-panicked; gc member 0	width=2,sites=8,members=2

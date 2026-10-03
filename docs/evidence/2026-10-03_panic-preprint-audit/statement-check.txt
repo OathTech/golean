@@ -1,0 +1,25 @@
+# Statement comparison main @ aeab81c5 vs candidate @ 517f9883 (pre-merge audit, 2026-10-03).
+# Method: the theorem header (from `theorem NAME` to `:= by`) extracted from both revisions and compared byte-wise.
+SAME   stepFn_sound (MachineSound)
+SAME   step_complete (MachineSound)
+SAME   stepFn_strict (StepErrors)
+SAME   stepFn_no_stray_panic (Prefix)
+SAME   stepFn_picks_none (PrefixFacts)
+SAME   stepFn_picks_some (PrefixFacts)
+SAME   stepFn_consumption_none (MachineSound)
+SAME   stepFn_consumption_some (MachineSound)
+SAME   stepFn_consumption_some' (PrefixFacts)
+SAME   step_preserves_wf_loc (StateWf)
+SAME   stepFn_oblivious (MachineSound)
+SAME   MultiSound.stepFn_abort (pool side)
+# GoLean/GoCore/ExecutionStatement.lean (every pinned `_stmt`): `git diff aeab81c5 517f9883 --stat -- GoLean/GoCore/ExecutionStatement.lean` is EMPTY — byte-identical.
+# BridgeSet.lean: the diff is additions only (the RE-PIN 9 header paragraph + rows 155–173); rows 1–154 untouched.
+# The three posed internal changes (handoff §3), exact old -> new, verified in the diff:
+#   Prefix.abort?_some      : conclusion `c = .panicking (first :: rest) .stop` -> `… ∧ splitNewestPending? (first :: rest) = none`
+#   Prefix.stepFn_abort     : + hypothesis `(hs : splitNewestPending? (first :: rest) = none)`
+#   MachineSound.step_abort_elim : + hypothesis `(hs : splitNewestPending? chain = none)`; new converse `step_stop_unsettled`
+#   AbortObservation.stringPanicEntry? : + erasure premise (`.none`, `false`) — `stringPanicEntries?_typed` gains the two conjuncts
+#   Tests/StringPanicMembers generic theorems : + `(hs : splitNewestPending? (entry bytes recovered :: rest) = none)`
+# None of the three (nor stringPanicEntry?'s statement) was pinned in main's BridgeSet (grep empty); `stringPanicEntry?_some` is in the
+# core audit's required list BY NAME only (statement not pinned). `step_abort_elim` (new form) is NOW pinned as row 170.
+# Step rules 127 -> 134 (the seven preprint* constructors), Frame 32 -> 33, no `maxHeartbeats` line changed in the commit.

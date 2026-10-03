@@ -1,0 +1,8 @@
+# Ad hoc: Error() recovers its own panic and returns the zero string (probe methodReturnsEmpty). gc at the pin prints
+# `panic: ` with an EMPTY payload line (harness oracle.stderr: "panic: \n\ngoroutine 1 …"). The row cannot be expressed as a
+# cases.tsv expectation (empty reason), so the machine side was run by hand on the candidate binary:
+#   GO111MODULE=off GOCACHE="$PWD/artifacts/go-build-cache" go run ./tools/nativefrontend --dir artifacts/coverage/go-run/panic-recover__audit-preprint__method-returns-empty --out .tmp/adhoc/empty.json
+#   .lake/build/bin/golean native-json-run --input .tmp/adhoc/empty.json --function methodReturnsEmpty
+# ->
+{"message":"","output":"","schema":"golean-observation-v1","status":"panic"}
+# = gc's empty line. MATCH.

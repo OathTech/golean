@@ -1,0 +1,57 @@
+# Audit probes (set 1), pre-merge audit of core/panic-preprint-1003 @ 517f9883 vs main @ aeab81c5, 2026-10-03; scripts/coverage run --prefix panic-recover/audit-preprint on each side (go1.26.5 oracle). Columns: id, candidate result/stage, main result/stage, candidate detail (truncated).
+id	candidate	main	candidate_detail
+panic-recover/audit-preprint-stdlib/errors-new-payload	PASS/-	FAIL/lean-observation	wide=0 exhausted=none depth=fixed
+panic-recover/audit-preprint-stdlib/errors-new-repanic	PASS/membership	FAIL/membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/panic-recover/aud
+panic-recover/audit-preprint-stdlib/fmt-errorf-payload	PASS/-	FAIL/lean-observation	wide=2 exhausted=none depth=fixed
+panic-recover/audit-preprint-stdlib/goexit-during-error-panic	FAIL/frontend-export	FAIL/frontend-export	{"message":"frontend-quarantined: package-selector call runtime.Goexit (package \"runtime\" surface not modeled)","output":"","schema":"golean-observation-v1","
+panic-recover/audit-preprint-stdlib/method-prints-stdout	FAIL/frontend-export	FAIL/lean-observation	{"message":"frontend-quarantined: method main.printer.Error (package-selector call fmt.Println (package \"fmt\" surface not modeled); satisfaction answers, call
+panic-recover/audit-preprint/defined-array-type	PASS/-	FAIL/lean-observation	wide=0 exhausted=none depth=fixed
+panic-recover/audit-preprint/defined-bool-stringer	PASS/-	FAIL/lean-observation	wide=0 exhausted=none depth=fixed
+panic-recover/audit-preprint/defined-float-type	PASS/-	FAIL/lean-observation	wide=0 exhausted=none depth=fixed
+panic-recover/audit-preprint/defined-func-type	PASS/-	FAIL/lean-observation	wide=0 exhausted=none depth=fixed
+panic-recover/audit-preprint/defined-map-type	PASS/-	FAIL/lean-observation	wide=0 exhausted=none depth=fixed
+panic-recover/audit-preprint/defined-slice-type	PASS/-	FAIL/lean-observation	wide=0 exhausted=none depth=fixed
+panic-recover/audit-preprint/defined-string-type	PASS/-	FAIL/lean-observation	wide=0 exhausted=none depth=fixed
+panic-recover/audit-preprint/distinct-pointers-equal-pointee	PASS/-	FAIL/lean-observation	wide=0 exhausted=none depth=fixed
+panic-recover/audit-preprint/distinct-types-equal-fields	PASS/-	FAIL/lean-observation	wide=0 exhausted=none depth=fixed
+panic-recover/audit-preprint/embedded-iface-nil	FAIL/lean-observation	FAIL/lean-observation	expected status fatal, got {"message":"panic while printing panic value: the payload is a runtime error — gc prints its concrete type (runtime.errorString for a
+panic-recover/audit-preprint/embedded-iface-promoted	PASS/-	FAIL/lean-observation	wide=0 exhausted=none depth=fixed
+panic-recover/audit-preprint/embedded-nil-ptr-const	PASS/-	FAIL/lean-observation	wide=0 exhausted=none depth=fixed
+panic-recover/audit-preprint/embedded-nil-ptr-value-recv	FAIL/go-run	FAIL/go-run	expected Go fatal error 'panic while printing panic value: type runtime.plainError', got: stdout="" stderr="fatal error: panic while printing panic value: type 
+panic-recover/audit-preprint/error-wins-ptr	PASS/-	FAIL/lean-observation	wide=0 exhausted=none depth=fixed
+panic-recover/audit-preprint/goroutine-method-blocks-deadlock	PASS/-	FAIL/lean-observation	wide=2 exhausted=none depth=fixed
+panic-recover/audit-preprint/goroutine-panics-error	PASS/confluent	FAIL/confluent	|set|=1 certified over all schedules; coverage-observations: observations=1 steps=202 probes=6 sites=2 leaves=3 maxdepth=2 width=4
+panic-recover/audit-preprint/goroutine-repanic-same-box	PASS/membership	FAIL/membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/panic-recover/aud
+panic-recover/audit-preprint/head-draw-after-phase	PASS/membership	FAIL/membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/panic-recover/aud
+panic-recover/audit-preprint/head-string-newer-pair	PASS/membership	FAIL/membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/panic-recover/aud
+panic-recover/audit-preprint/iface-embedding-error	PASS/-	FAIL/lean-observation	wide=0 exhausted=none depth=fixed
+panic-recover/audit-preprint/iface-holding-error	PASS/-	FAIL/lean-observation	wide=0 exhausted=none depth=fixed
+panic-recover/audit-preprint/map-payload-repanic	PASS/membership	FAIL/membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/panic-recover/aud
+panic-recover/audit-preprint/method-defer-panics	PASS/-	FAIL/lean-observation	wide=0 exhausted=none depth=fixed
+panic-recover/audit-preprint/method-panics-defined-string	PASS/-	FAIL/lean-observation	wide=0 exhausted=none depth=fixed
+panic-recover/audit-preprint/method-panics-error-typed	PASS/-	FAIL/lean-observation	wide=0 exhausted=none depth=fixed
+panic-recover/audit-preprint/method-panics-int	FAIL/lean-observation	FAIL/lean-observation	expected status fatal, got {"message":"panic while printing panic value: payload family not pinned GoLean.GoValue.interface\n  (GoLean.GoCore.Ty.int (GoLean.GoC
+panic-recover/audit-preprint/method-panics-multiline	PASS/-	FAIL/lean-observation	wide=0 exhausted=none depth=fixed
+panic-recover/audit-preprint/method-panics-nil	FAIL/lean-observation	FAIL/lean-observation	expected status fatal, got {"message":"panic while printing panic value: the payload is a runtime error — gc prints its concrete type (runtime.errorString for a
+panic-recover/audit-preprint/method-panics-ptr	FAIL/lean-observation	FAIL/lean-observation	expected status fatal, got {"message":"panic while printing panic value: payload family not pinned GoLean.GoValue.interface\n  (GoLean.GoCore.Ty.pointer (GoLean
+panic-recover/audit-preprint/method-recover-direct	PASS/-	FAIL/lean-observation	wide=0 exhausted=none depth=fixed
+panic-recover/audit-preprint/method-recovers-own-panic	PASS/-	FAIL/lean-observation	wide=0 exhausted=none depth=fixed
+panic-recover/audit-preprint/method-returns-empty	FAIL/go-observation	FAIL/go-observation	Go panic did not contain expected reason EMPTY: stdout="" stderr="panic: \n\ngoroutine 1 gp=0x253e2bd01e0 m=0 mp=0x565240 [running]:\npanic({0x49b080?, 0x4bbd10
+panic-recover/audit-preprint/method-spawns-goroutine	PASS/confluent	FAIL/confluent	|set|=1 certified over all schedules; coverage-observations: observations=1 steps=427 probes=33 sites=11 leaves=12 maxdepth=4 width=4
+panic-recover/audit-preprint/method-woken-by-goroutine	PASS/confluent	FAIL/confluent	|set|=1 certified over all schedules; coverage-observations: observations=1 steps=378 probes=33 sites=11 leaves=12 maxdepth=4 width=4
+panic-recover/audit-preprint/mix-pointer	PASS/-	FAIL/lean-observation	wide=0 exhausted=none depth=fixed
+panic-recover/audit-preprint/mix-value	PASS/-	FAIL/lean-observation	wide=0 exhausted=none depth=fixed
+panic-recover/audit-preprint/named-result-defer	PASS/-	FAIL/lean-observation	wide=0 exhausted=none depth=fixed
+panic-recover/audit-preprint/newer-string-older-error	PASS/-	FAIL/lean-observation	wide=0 exhausted=none depth=fixed
+panic-recover/audit-preprint/newest-mutates-oldest	PASS/-	FAIL/lean-observation	wide=0 exhausted=none depth=fixed
+panic-recover/audit-preprint/non-adjacent-equal	PASS/-	FAIL/lean-observation	wide=0 exhausted=none depth=fixed
+panic-recover/audit-preprint/older-string-newer-error	PASS/-	FAIL/differential	wide=0 exhausted=none depth=fixed
+panic-recover/audit-preprint/ptr-mutated-by-defer	PASS/-	FAIL/lean-observation	wide=0 exhausted=none depth=fixed
+panic-recover/audit-preprint/repanic-ptr-to-int	PASS/membership	FAIL/membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/panic-recover/aud
+panic-recover/audit-preprint/repanic-runtime-equal	PASS/membership	FAIL/membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/panic-recover/aud
+panic-recover/audit-preprint/same-box-slice-field	PASS/membership	FAIL/membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/panic-recover/aud
+panic-recover/audit-preprint/state-order-across-methods	PASS/-	FAIL/lean-observation	wide=0 exhausted=none depth=fixed
+panic-recover/audit-preprint/stringer-ptr-receiver	PASS/-	FAIL/lean-observation	wide=0 exhausted=none depth=fixed
+panic-recover/audit-preprint/three-distinct	PASS/-	FAIL/lean-observation	wide=0 exhausted=none depth=fixed
+panic-recover/audit-preprint/three-same-box	PASS/membership	FAIL/membership	enumerated=4 exhibited=1 draws=32 (K=32; pin members=4 NOT reached — 1 distinct drawn) unexhibited=3 (members in artifacts/coverage/membership/panic-recover/aud
+panic-recover/audit-preprint/value-receiver-on-ptr	PASS/-	FAIL/lean-observation	wide=0 exhausted=none depth=fixed

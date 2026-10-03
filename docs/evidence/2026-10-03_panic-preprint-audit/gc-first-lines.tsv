@@ -1,0 +1,55 @@
+panic-recover__audit-preprint__defined-array-type	panic: arr
+panic-recover__audit-preprint__defined-bool-stringer	panic: b
+panic-recover__audit-preprint__defined-float-type	panic: fl
+panic-recover__audit-preprint__defined-func-type	panic: f
+panic-recover__audit-preprint__defined-map-type	panic: m
+panic-recover__audit-preprint__defined-slice-type	panic: len2
+panic-recover__audit-preprint__defined-string-type	panic: hi!
+panic-recover__audit-preprint__distinct-pointers-equal-pointee	panic: x [recovered]
+panic-recover__audit-preprint__distinct-types-equal-fields	panic: x [recovered]
+panic-recover__audit-preprint__embedded-iface-nil	fatal error: panic while printing panic value: type runtime.errorString
+panic-recover__audit-preprint__embedded-iface-promoted	panic: inner
+panic-recover__audit-preprint__embedded-nil-ptr-const	panic: in
+panic-recover__audit-preprint__embedded-nil-ptr-value-recv	fatal error: panic while printing panic value: type runtime.errorString
+panic-recover__audit-preprint__error-wins-ptr	panic: E
+panic-recover__audit-preprint__goroutine-method-blocks-deadlock	fatal error: all goroutines are asleep - deadlock!
+panic-recover__audit-preprint__goroutine-panics-error	panic: from-g
+panic-recover__audit-preprint__goroutine-repanic-same-box	panic: g [recovered, repanicked]
+panic-recover__audit-preprint__head-draw-after-phase	panic: s [recovered, repanicked]
+panic-recover__audit-preprint__head-string-newer-pair	panic: s
+panic-recover__audit-preprint__iface-embedding-error	panic: ce
+panic-recover__audit-preprint__iface-holding-error	panic: x
+panic-recover__audit-preprint__map-payload-repanic	panic: m [recovered, repanicked]
+panic-recover__audit-preprint__method-defer-panics	fatal error: panic while printing panic value: in-defer
+panic-recover__audit-preprint__method-panics-defined-string	fatal error: panic while printing panic value: type main.dstr2
+panic-recover__audit-preprint__method-panics-error-typed	fatal error: panic while printing panic value: type main.ev
+panic-recover__audit-preprint__method-panics-int	fatal error: panic while printing panic value: type int
+panic-recover__audit-preprint__method-panics-multiline	fatal error: panic while printing panic value: l1
+panic-recover__audit-preprint__method-panics-nil	fatal error: panic while printing panic value: type *runtime.PanicNilError
+panic-recover__audit-preprint__method-panics-ptr	fatal error: panic while printing panic value: type *main.inner2
+panic-recover__audit-preprint__method-recover-direct	panic: nil-recover
+panic-recover__audit-preprint__method-recovers-own-panic	panic: recovered-inner
+panic-recover__audit-preprint__method-returns-empty	panic: 
+panic-recover__audit-preprint__method-spawns-goroutine	panic: from-goroutine
+panic-recover__audit-preprint__method-woken-by-goroutine	panic: woken
+panic-recover__audit-preprint__mix-pointer	panic: E
+panic-recover__audit-preprint__mix-value	panic: S
+panic-recover__audit-preprint__named-result-defer	panic: changed
+panic-recover__audit-preprint__newer-string-older-error	panic: err [recovered]
+panic-recover__audit-preprint__newest-mutates-oldest	panic: mutated [recovered]
+panic-recover__audit-preprint__non-adjacent-equal	panic: x [recovered]
+panic-recover__audit-preprint__older-string-newer-error	panic: str [recovered]
+panic-recover__audit-preprint__ptr-mutated-by-defer	panic: b
+panic-recover__audit-preprint__repanic-ptr-to-int	panic: dint [recovered, repanicked]
+panic-recover__audit-preprint__repanic-runtime-equal	panic: rt [recovered]
+panic-recover__audit-preprint__same-box-slice-field	panic: ws [recovered, repanicked]
+panic-recover__audit-preprint__state-order-across-methods	panic: set-by-newest [recovered]
+panic-recover__audit-preprint-stdlib__errors-new-payload	panic: lib
+panic-recover__audit-preprint-stdlib__errors-new-repanic	panic: again [recovered, repanicked]
+panic-recover__audit-preprint-stdlib__fmt-errorf-payload	panic: w: 3
+panic-recover__audit-preprint-stdlib__goexit-during-error-panic	fatal error: no goroutines (main called runtime.Goexit) - deadlock!
+panic-recover__audit-preprint-stdlib__method-prints-stdout	panic: printed
+panic-recover__audit-preprint__stringer-ptr-receiver	panic: sp
+panic-recover__audit-preprint__three-distinct	panic: a [recovered]
+panic-recover__audit-preprint__three-same-box	panic: same [recovered, repanicked]
+panic-recover__audit-preprint__value-receiver-on-ptr	panic: v2

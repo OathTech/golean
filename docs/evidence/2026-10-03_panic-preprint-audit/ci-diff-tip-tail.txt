@@ -1,0 +1,50 @@
+# Tail of GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff at the candidate tip 517f9883 (audit worktree, fresh .lake, under the box-wide lock), 2026-10-03 04:48–05:03 UTC (CI total wall seconds: 916). RESULT FAIL on exactly the 5a pair: certificate provenance (STALE certification: changed dependency build/files/GoLean/ChoiceTrace.lean) and the baseline diff's one drift line (imported-goose/channel/google-search, the certified row). 3821 run = 3583 PASS / 238 FAIL. The cross-ledger reconciliation (report-only) flags the language-coverage ledger §8 totals as stale (audit F7).
+
+DRIFT vs baselines/native-full.tsv (3821 case(s) run):
+imported-goose/channel/google-search	baseline[PASS/membership] -> now[FAIL/membership]
+  re-pin note: GREENED	panic-recover/panic-defined-payload-methods/error	FAIL -> PASS
+  re-pin note: GREENED	panic-recover/panic-defined-payload-methods/stringer	FAIL -> PASS
+  [01] C4  HIGH    the language-coverage ledger §8 arithmetic is computed over a STALE baseline: §8 says 3800 cases / 3563 PASS / 237 FAIL; the tracked baseline at this tip is 3821 / 3584 / 237 (delta: 21 cases, 0 reds). §8 claims 'every one on a named row'
+  [02] C9  HIGH    certificate provenance: STALE certification: changed dependency build/files/GoLean/ChoiceTrace.lean
+  [03] C13  MEDIUM  79 doc site(s) across 10 file(s) name a patch-level Go version other than the pin (go1.25.13/go1.26.5 per docs/spec-sources.md). Some are legitimately historical; a toolchain/oracle claim off the pin is not, because the pin's whole job is t
+  ok   Tests/library ownership (no exceptions; executed builds checked at exit)
+  ok   oracle toolchain (go1.26.5 = pin)
+  ok   escape-hatch preflight
+  ok   meta-layer escape hatches (allowlist empty since the repo split)
+  ok   escape-hatch addendum (no decide +native / native-config spellings)
+  ok   bug-index cross-check
+  ok   feature-coverage (no dead tags)
+  ok   spec-anchor citations resolve at the pin
+  ok   stdlib admission register = frontend tables
+  ok   lane-validation fixtures (manifest gates reject bad shapes)
+  ok   evidence-on-main size gate
+  ok   AGENTS.md alias of CLAUDE.md
+  ok   imported-goose verbatim (above-marker bytes = pinned upstream)
+  ok   engine-isolation (core ↛ EnumDedup)
+  ok   memory-module raw call-site inventory (emit/peek discipline)
+  ok   core build (warning-free)
+  FAIL certificate provenance
+  ok   core totality audit (every GoLean/ module; required core theorems; poison controls)
+  ok   admission checker proofs and post-import audit
+  ok   declaration boundary
+  ok   wire boundary (byte-level controls through the real CLI)
+  ok   package-correct method identity
+  ok   unseq scheduler (Stage B)
+  ok   unseq wire (Stage C)
+  ok   frontend pins (realized init-order deviation + twin wire = pinned bytes)
+  ok   import-goose fixtures (importer + verbatim guard reject bad shapes)
+  ok   frontend unit tests
+  ok   lowering-diagnostic tables
+  ok   coverage-harness unit tests
+  ok   eval tests (298 ok)
+  ok   differential run completed (exit 1; failing-set judged by baseline diff)
+  ok   lane-validation fixtures incl. harness half (F4/F6/B3-B5/G5/T1-T8/D1-D6)
+  ok   negative run completed (exit 0; set judged by baseline diff)
+  ok   Tests/FloatVectors.lean = fresh hardware-oracle regeneration (byte-exact)
+  ok   inittask-std.tsv = fresh gc-derived regeneration (header at pin; byte-exact modulo date line)
+  ok   negative baseline diff (no regression)
+  FAIL baseline diff (DRIFT — see above)
+  ok   re-pin guard (0 PASS→non-PASS flip(s), all listed in BUGS.md Cases)
+  ok   executed library coverage (all declared libraries; all Tests modules)
+RESULT: FAIL
+CI total wall seconds: 916

@@ -1,0 +1,7 @@
+# id	subject	args	expected_status	expected_reason	features
+# AUDIT PROBES, stdlib half (pre-merge audit of core/panic-preprint-1003, 2026-10-03; [AGENT] auditor). Scratch, evidence only.
+errors-new-payload	errorsNewPayload	-	panic	lib	panic,stdlib,imports,methods
+fmt-errorf-payload	fmtErrorfPayload	-	panic	w: 3	panic,stdlib,imports,methods
+errors-new-repanic	errorsNewRepanic	-	panic	again	panic,recover,defer,stdlib,imports,methods,nondet	membership	audit: the recovered errors.New box re-panicked; gc member 0	width=2,sites=8,members=2
+goexit-during-error-panic	goexitDuringErrorPanic	-	fatal	no goroutines (main called runtime.Goexit) - deadlock!	panic,defer,goexit,stdlib,imports,defined_type,methods,structs,print,fatal
+method-prints-stdout	methodPrintsStdout	-	panic	printed	panic,defined_type,methods,stdlib,imports,print

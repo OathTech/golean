@@ -1,0 +1,14 @@
+# id	subject	args	expected_status	expected_reason	features
+# AUDIT PROBES set 2 (pre-merge audit of core/panic-preprint-1003, 2026-10-03; [AGENT] auditor). Scratch, evidence only.
+ambiguous-promoted	ambiguousPromoted	-	panic	(main.ambig)	panic,embedding,defined_type,methods,structs
+shallow-wins	shallowWins	-	panic	a	panic,embedding,defined_type,methods,structs
+ambiguous-error-unique-stringer	ambiguousErrorUniqueStringer	-	panic	s	panic,embedding,defined_type,methods,structs
+ptr-ptr-payload	ptrPtrPayload	-	panic	(**main.ea)	panic,defined_type,methods,pointers,structs
+field-not-method	fieldNotMethod	-	panic	(main.fieldErr)	panic,defined_type,fields,functions,structs
+embedded-ptr-non-nil	embeddedPtrNonNil	-	panic	z	panic,embedding,defined_type,methods,pointers,structs
+stringer-via-embedded-iface	stringerViaEmbeddedIface	-	panic	s	panic,embedding,interfaces,defined_type,methods,structs
+embedded-ptr-promotes-ptr-methods	embeddedPtrPromotesPtrMethods	-	panic	po	panic,embedding,defined_type,methods,pointers,structs
+embedded-value-lacks-ptr-method	embeddedValueLacksPtrMethod	-	panic	(main.embVal)	panic,embedding,defined_type,methods,pointers,structs
+embedded-value-ptr-has	embeddedValuePtrHas	-	panic	po	panic,embedding,defined_type,methods,pointers,structs
+direct-stringer-promoted-error	directStringerPromotedError	-	panic	a	panic,embedding,defined_type,methods,structs
+two-goroutines-panic-error	twoGoroutinesPanicError	-	panic	m	panic,defined_type,methods,goroutines,structs,print,nondet	membership	audit: two goroutines panic with error payloads concurrently; whichever aborts first prints; the other's CALLED line may precede	width=4,sites=8,members=4

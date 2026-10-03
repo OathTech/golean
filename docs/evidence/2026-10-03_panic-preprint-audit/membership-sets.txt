@@ -1,0 +1,35 @@
+## panic-recover/audit-preprint/goroutine-panics-error
+{"message":"from-g","output":"CALLED:from-g\n","schema":"golean-observation-v1","status":"panic"}
+## panic-recover/audit-preprint/goroutine-repanic-same-box
+{"message":"g [recovered, repanicked]","output":"CALLED:g\n","schema":"golean-observation-v1","status":"panic"}
+{"message":"g [recovered]","output":"CALLED:g\nCALLED:g\n","schema":"golean-observation-v1","status":"panic"}
+## panic-recover/audit-preprint/head-draw-after-phase
+{"message":"s [recovered, repanicked]","output":"CALLED:e\n","schema":"golean-observation-v1","status":"panic"}
+{"message":"s [recovered]","output":"CALLED:e\n","schema":"golean-observation-v1","status":"panic"}
+## panic-recover/audit-preprint/head-string-newer-pair
+{"message":"s","output":"CALLED:e\n","schema":"golean-observation-v1","status":"panic"}
+{"message":"s","output":"CALLED:e\nCALLED:e\n","schema":"golean-observation-v1","status":"panic"}
+## panic-recover/audit-preprint/map-payload-repanic
+{"message":"m [recovered, repanicked]","output":"CALLED:m\n","schema":"golean-observation-v1","status":"panic"}
+{"message":"m [recovered]","output":"CALLED:m\nCALLED:m\n","schema":"golean-observation-v1","status":"panic"}
+## panic-recover/audit-preprint/method-spawns-goroutine
+{"message":"from-goroutine","output":"","schema":"golean-observation-v1","status":"panic"}
+## panic-recover/audit-preprint/method-woken-by-goroutine
+{"message":"woken","output":"","schema":"golean-observation-v1","status":"panic"}
+## panic-recover/audit-preprint/repanic-ptr-to-int
+{"message":"dint [recovered, repanicked]","output":"CALLED:dint\n","schema":"golean-observation-v1","status":"panic"}
+{"message":"dint [recovered]","output":"CALLED:dint\nCALLED:dint\n","schema":"golean-observation-v1","status":"panic"}
+## panic-recover/audit-preprint/repanic-runtime-equal
+{"message":"rt [recovered, repanicked]","output":"CALLED:rt\n","schema":"golean-observation-v1","status":"panic"}
+{"message":"rt [recovered]","output":"CALLED:rt\nCALLED:rt\n","schema":"golean-observation-v1","status":"panic"}
+## panic-recover/audit-preprint/same-box-slice-field
+{"message":"ws [recovered, repanicked]","output":"CALLED:ws\n","schema":"golean-observation-v1","status":"panic"}
+{"message":"ws [recovered]","output":"CALLED:ws\nCALLED:ws\n","schema":"golean-observation-v1","status":"panic"}
+## panic-recover/audit-preprint-stdlib/errors-new-repanic
+{"message":"again [recovered, repanicked]","output":"","schema":"golean-observation-v1","status":"panic"}
+{"message":"again [recovered]","output":"","schema":"golean-observation-v1","status":"panic"}
+## panic-recover/audit-preprint/three-same-box
+{"message":"same [recovered, repanicked]","output":"CALLED:same\n","schema":"golean-observation-v1","status":"panic"}
+{"message":"same [recovered, repanicked]","output":"CALLED:same\nCALLED:same\n","schema":"golean-observation-v1","status":"panic"}
+{"message":"same [recovered]","output":"CALLED:same\nCALLED:same\n","schema":"golean-observation-v1","status":"panic"}
+{"message":"same [recovered]","output":"CALLED:same\nCALLED:same\nCALLED:same\n","schema":"golean-observation-v1","status":"panic"}
