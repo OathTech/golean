@@ -170,3 +170,12 @@ frontend pins (twin byte-identical), eval tests 298 ok, re-pin guard 0 PASS→no
 ## 7. Landing notes ([AGENT] coordinator, train r60)
 
 [USER] Mike 2026-10-03, verbatim, relayed: «Great, land it» — the merge sign-off, acknowledging the three internal statement changes of §3. Audit (`docs/2026-10-03_panic-preprint-audit.md`, MERGE-CLEAN) follow-ups recorded, not done here: F1 — `PrefixFacts` elaborates at 1.48× (2 % under the G-C3 stop); the next lane that adds `stepFn` arms restructures the `fun_cases` sweeps in `stepFn_picks_none/_some` first; F2 — the BUG-099 refusal in `preprintFatalStop` also covers `*runtime.PanicNilError` (`panic(nil)` inside `Error()`), its text names only two types — widen the text with BUG-099's fix; F3 — a non-head `.unrecorded` entry is treated as settled (not constructible via the frontend; BUG-053 area); F4 — fatal payloads of pointer/basic type refuse as «payload family not pinned» (cheap widenings).
+
+## Merge train r60 — the 5a record ([AGENT] coordinator, 2026-10-03)
+
+[USER] Mike 2026-10-03 «Great, land it» (relayed). Pre-merge main `aeab81c5` → `refs/snapshots/r60/main`; train tip `a1327d1a`
+fast-forwarded; fresh primary build (0 foreign references). `release-check` EXIT=2 (EXPECTED — STALE,
+`build/files/GoLean/ChoiceTrace.lean`); `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --slow` EXIT=1, 1217 s — red on EXACTLY the
+5a pair; 3821 rows, 3583 PASS / 238 FAIL = the pin 3584 / 237 with the one 5a-class row red. Candidate: `claim` and
+`observations_sha256` IDENTICAL (receipt `a1327d1a`, 150.961 s) — INSTALLED; a provenance refresh. Tail:
+`docs/evidence/2026-10-03_panic-preprint/r60-ci-slow.tail.txt`.
