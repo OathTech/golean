@@ -1,7 +1,8 @@
 Build completed successfully (59 jobs).
-Equation client: enrollment complete — 293 equation theorems pinned, 12 facts and 15 client-owned helpers, none unfolds stepFn
-Equation client: PASS — 12 facts by the equation set only
+Equation client: enrollment complete — 293 equation theorems pinned, 12 facts and 23 traversed helpers up to the published API, none unfolds stepFn
+Equation client: PASS — 12 facts by the equation set and the published API
 ok [no-unfold] Tests/EquationClient.lean never unfolds stepFn
+ok [imports] every import of Tests/EquationClient.lean is a toolchain root or a published API module
 ok [self-test unfold] the guard fires on a client that unfolds stepFn
 ok [self-test pin] deleting Pin.storeTarget_inv_panic fails the enrollment check by name
 ok [self-test bypass 1] 'exact rfl' is refused by the proof-term check
@@ -12,4 +13,6 @@ ok [self-test bypass 5] 'simpa [stepFn]' is refused by the proof-term check
 ok [self-test bypass 6] 'rw [stepFn]; rfl' is refused by the proof-term check
 ok [self-test bypass 7] 'unfold GoLean.GoCore.Machine.stepFn; rfl' is refused by the proof-term check
 ok [self-test indirect] a private helper proved by rfl on stepFn, exact-ed from a fact, is refused naming fact and helper
-Equation gate: PASS (client PASS, exhaustive enrollment, the Lean-level no-unfold check over the client-owned closure, the regex pre-filter, 10 self-tests)
+ok [self-test imported-rfl] a fact proved by the interpreter's own rfl-theorem stepFn_next_frame is refused naming fact and theorem
+ok [self-test foreign-import] importing a test-support module with a rfl-on-stepFn helper is refused by the import whitelist by name
+Equation gate: PASS (client PASS, exhaustive enrollment, the Lean-level no-unfold check over the closure up to the published API, the import whitelist, the regex pre-filter, 12 self-tests)

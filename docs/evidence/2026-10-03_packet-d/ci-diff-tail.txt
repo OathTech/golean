@@ -1,7 +1,6 @@
-# ci --diff, the window-review round (tree = the code commit; GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff, under the lock; ANSI stripped; the summary block)
+# ci --diff, the R1 round (tree = the code commit 6fb3ac16, CLEAN — no writes during the run; GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff, under the lock; ANSI stripped; the summary block)
 differential coverage summary: cases=3821 pass=3583 fail=238 export_status=0
 imported-goose/channel/google-search	baseline[PASS/membership] -> now[FAIL/membership]
-  note negative baseline diff matched (394 case(s)) but the record was made on a DIRTY tree (git_dirty=true) — certifies that worktree state, not a commit
 
   ok   oracle toolchain (go1.26.5 = pin)
   ok   escape-hatch preflight
@@ -38,12 +37,12 @@ imported-goose/channel/google-search	baseline[PASS/membership] -> now[FAIL/membe
   ok   negative run completed (exit 0; set judged by baseline diff)
   ok   Tests/FloatVectors.lean = fresh hardware-oracle regeneration (byte-exact)
   ok   inittask-std.tsv = fresh gc-derived regeneration (header at pin; byte-exact modulo date line)
-  note negative baseline diff matched (394 case(s)) but the record was made on a DIRTY tree (git_dirty=true) — certifies that worktree state, not a commit
+  ok   negative baseline diff (no regression)
   FAIL baseline diff (DRIFT — see above)
   note reconciler: 2 finding(s), 1 HIGH — report-only (details: tools/reconcile-records)
   ok   executed library coverage (all declared libraries; all Tests modules)
 
 RESULT: FAIL
-Failed CI receipts retained: /home/dev/projects/golean/.claude/worktrees/packet-d/.tmp/ci-libraries-raowoauw
-CI coverage timing: close: seconds=0.018
-CI total wall seconds: 1215
+Failed CI receipts retained: /home/dev/projects/golean/.claude/worktrees/packet-d/.tmp/ci-libraries-8d28qrf2
+CI coverage timing: close: seconds=0.016
+CI total wall seconds: 971

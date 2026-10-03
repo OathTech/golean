@@ -1,12 +1,12 @@
 Typed audit control: core-audit/trace_private compiled then rejected (coreAuditTraceHole, coreAuditTraceHole)
-/home/dev/projects/golean/.claude/worktrees/packet-d/.tmp/core-audit-audit-6kwvh3aw/AuditAll.lean:56:0: error: Core totality audit: _private.GoLean.GoCore.AbortObservation.0.coreAuditObserverHole depends on forbidden axiom _private.GoLean.GoCore.AbortObservation.0.coreAuditObserverHole
+/home/dev/projects/golean/.claude/worktrees/packet-d/.tmp/core-audit-audit-m244zd4s/AuditAll.lean:56:0: error: Core totality audit: _private.GoLean.GoCore.AbortObservation.0.coreAuditObserverHole depends on forbidden axiom _private.GoLean.GoCore.AbortObservation.0.coreAuditObserverHole
 Typed audit control: core-audit/observer_private compiled then rejected (coreAuditObserverHole, coreAuditObserverHole)
-/home/dev/projects/golean/.claude/worktrees/packet-d/.tmp/core-audit-audit-6kwvh3aw/AuditAll.lean:56:0: error: Core totality audit: _private.GoLean.GoCore.StringPanic.0.coreAuditStringPanicHole depends on forbidden axiom _private.GoLean.GoCore.StringPanic.0.coreAuditStringPanicHole
+/home/dev/projects/golean/.claude/worktrees/packet-d/.tmp/core-audit-audit-m244zd4s/AuditAll.lean:56:0: error: Core totality audit: _private.GoLean.GoCore.StringPanic.0.coreAuditStringPanicHole depends on forbidden axiom _private.GoLean.GoCore.StringPanic.0.coreAuditStringPanicHole
 Typed audit control: core-audit/string_panic_private compiled then rejected (coreAuditStringPanicHole, coreAuditStringPanicHole)
-/home/dev/projects/golean/.claude/worktrees/packet-d/.tmp/core-audit-audit-6kwvh3aw/AuditAll.lean:56:0: error: Core totality audit: _private.Tests.GoCoreAudit.0.coreAuditSelfHole depends on forbidden axiom _private.Tests.GoCoreAudit.0.coreAuditSelfHole
+/home/dev/projects/golean/.claude/worktrees/packet-d/.tmp/core-audit-audit-m244zd4s/AuditAll.lean:56:0: error: Core totality audit: _private.Tests.GoCoreAudit.0.coreAuditSelfHole depends on forbidden axiom _private.Tests.GoCoreAudit.0.coreAuditSelfHole
 Typed audit control: core-audit/audit_private compiled then rejected (coreAuditSelfHole, coreAuditSelfHole)
-/home/dev/projects/golean/.claude/worktrees/packet-d/.tmp/core-audit-audit-6kwvh3aw/contract_trailing/Tests/GoCoreContract.lean:418:16: warning: declaration uses `sorry`
-/home/dev/projects/golean/.claude/worktrees/packet-d/.tmp/core-audit-audit-6kwvh3aw/AuditAll.lean:56:0: error: Core totality audit: _private.Tests.GoCoreContract.0.coreAuditContractHole depends on forbidden axiom sorryAx
+/home/dev/projects/golean/.claude/worktrees/packet-d/.tmp/core-audit-audit-m244zd4s/contract_trailing/Tests/GoCoreContract.lean:418:16: warning: declaration uses `sorry`
+/home/dev/projects/golean/.claude/worktrees/packet-d/.tmp/core-audit-audit-m244zd4s/AuditAll.lean:56:0: error: Core totality audit: _private.Tests.GoCoreContract.0.coreAuditContractHole depends on forbidden axiom sorryAx
 Typed audit control: core-audit/contract_trailing compiled then rejected (coreAuditContractHole, sorryAx)
 Core totality audit: 54 GoLean modules in the closure (45 under GoLean.GoCore), all on disk; 536 required theorems present; 19862 declarations across all imported local modules; classical trio only
 Typed audit: core-audit: 5 compiled controls passed

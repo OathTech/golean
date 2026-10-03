@@ -212,7 +212,7 @@ Every clause is now backed by a stated theorem (pre-landing round, audit F4): th
 ## 8. The offer's interface summary (what a consumer gets at this tip)
 - Three separate checks: STATEMENTS (`BridgeSet.lean`, 502 rows), EQUATIONS (`Equations.lean`, 293 proved; `stepFn_eqns`,
   propositional), the CLIENT (`Tests/EquationClient.lean`, 12 facts — the concrete inhabitation included — 293 pins, the
-  Lean-level no-unfold check over the client-owned closure, `scripts/check-equations` with ten self-tests; §10). Usage: see §1 item 1 (instantiation / discharger for the premised arms).
+  Lean-level no-unfold check over the client-owned closure, `scripts/check-equations` with twelve self-tests and the import whitelist; §10–§11). Usage: see §1 item 1 (instantiation / discharger for the premised arms).
 - Memory floor, precisely (audit F5): VARIABLE READS (`evalE_var`, the pinned-result readback `frameExit_targets`/
   `loadResults_cons`/`frameExit_preprint`) reach `loadRoot` (= `loadLoc` at a root cell, `loadRoot_base`); PLAIN and CHAIN
   STORES (`next_storeK_var`/`_chain`, `unseqValue`) reach `storeLoc` (`storeLoc_root`, `Heap.lookup_set_self`); BLOCK and
@@ -331,3 +331,45 @@ set over the whole `applyStrictOp` match); the gates' first full run (all green 
 replaced by `rfl` (0 ms; the arm reduces definitionally) and every gate re-run on the final tree. No other module changed;
 `PrefixFacts` untouched (0.67× stands); `maxHeartbeats` never raised. The client's `#eval` now checks 12 facts + 15
 helpers in ~1 s (the obligation filter skips what cannot reach `stepFn`).
+
+## 11. The audit's RE-VERIFICATION, R1 (`docs/2026-10-03_packet-d-audit.md` §«Re-verification (`7a976448`)»; [AGENT] coordinator disposition: close both witnesses before landing; [AGENT packet D worker] 2026-10-03)
+
+Commits: the code group `6fb3ac16` (`Tests/EquationClient.lean`, `scripts/check-equations` only), the records commit after it (this
+section, the changelog's row 7a addendum and candidate freeze, the evidence tails). No statement, pin, export or runtime byte
+touched; no module of `GoLean/` changed (no elaboration measurement owed).
+
+### R1 — the closure stopped at ANY imported constant, and the imports were unconstrained
+- BEFORE: `checkEnrollment` traversed the CLIENT-OWNED closure (`getModuleIdxFor? = none`); two witnesses passed the gate —
+  (A) a new fact proved by the imported `rfl`-theorem `GoLean.GoCore.Machine.stepFn_next_frame` (`StepFn.lean`, outside the
+  equation set); (B) the anchored fact proved by `AuditSupport.helper`, a `rfl`-on-`stepFn` theorem in a FOREIGN test-support
+  module compiled to an olean and imported on an extended `LEAN_PATH`.
+- AFTER (1) — the IMPORT WHITELIST: `importWhitelist := [Init, Std, Lean] ++ apiModules` with `apiModules := [Equations,
+  EquationsAttr, Prefix, ExecutionStatement, PoolProjection, BridgeSet]` (all `GoLean.GoCore.*`); `checkEnrollment` reads
+  `env.header.imports` FIRST and refuses a non-whitelisted import BY NAME («import AuditSupport is NOT WHITELISTED — the client
+  may import only […]»); the gate pre-filters the client's `import` lines against the same list (`ok [imports]`).
+- AFTER (2) — the boundary is the PUBLISHED API: `ownerOf` classifies every constant the closure meets by its module —
+  `.boundary` (an API module, or a toolchain module `Init`/`Std`/`Lean`/`Lake`, which predate `stepFn` and cannot reach it):
+  cited, not traversed; `.client` (this module, or any non-`GoLean` module): every value traversed; `.core` (a non-API
+  `GoLean` module — `StepFn`, `Machine`, `Ops`, …): its THEOREMS and Prop-typed constants traversed, never `stepFn` itself and
+  not its definitions (they are the SUBJECT — what a proof may or may not unfold, which check (3) measures at the use site;
+  the core's own gates exclude a proof hidden in a core definition — RECORDED LIMIT). Check (1) no longer counts `stepFn`'s
+  MATCHERS `match_N` (Lean reuses matchers across declarations; a matcher cannot unfold `stepFn`, and a proof through one
+  still meets check (3)) — otherwise a traversed core theorem could be refused for a reused matcher. The reachability filter
+  of check (3) is unchanged. The traversal now reaches 23 helpers (15 client-owned + the core theorems the facts cite:
+  `Config.abort?_of_settled`, `Choices.consumeAtE_le_one`, … and their proof dependencies up to the API/toolchain).
+- AFTER (3) — gate self-tests 11–12 (`scripts/check-equations` e5/e6), each REFUSED by name: witness A rebuilt as
+  `fact_via_imported_rfl` (factCount 13) → «fact Tests.EquationClient.fact_via_imported_rfl REFUSED — its proof unfolds
+  stepFn in its helper GoLean.GoCore.Machine.stepFn_next_frame (it closes rfl by reflexivity)»; witness B rebuilt from the
+  audit's `AuditSupport.lean` (compiled with `lake env lean -o` into the gate's scratch, `LEAN_PATH` extended, plain `lean`
+  through `scripts/capped`) → «Equation client: import AuditSupport is NOT WHITELISTED — the client may import only [Init,
+  Std, Lean, GoLean.GoCore.Equations, …]». Both lines reproduced outside the gate from the same recipes (`.tmp`, deleted).
+- AFTER (4) — the PASS line: «Equation client: PASS — 12 facts by the equation set and the published API».
+- Gates of the round: `check-equations` **EXIT=0** (293 pinned, 12 facts, 23 traversed helpers, **12 self-tests**);
+  `check-core-audit` **EXIT=0** (536 required); `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff` on the CLEAN committed
+  tree `6fb3ac16` (no writes during the run) **EXIT=1 on exactly the 5a pair** (`certificate provenance` STALE on `GoLean.lean`;
+  the one drift row `imported-goose/channel/google-search PASS/membership → FAIL/membership`), 3821 = 3583/238, 971 s.
+  Tails: `docs/evidence/2026-10-03_packet-d/` (`check-equations.txt`, `core-audit-tail.txt`, `ci-diff-tail.txt` replaced by
+  this round's).
+- POSED: the `.core` rule (definitions of the semantic core are not traversed) is an [AGENT] boundary choice, justified above
+  and recorded as a limit; a stricter variant (traverse every core definition that names `stepFn`) was not taken for its cost
+  and its false-refusal risk on the compiled recursion structure.
