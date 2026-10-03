@@ -5,7 +5,7 @@ Brief `docs/codex-briefs/2026-09-24_packet-D-equations.md` as amended 2026-09-28
 (coordinator addenda); the coordinator's packet-D specification of 2026-10-03 (five items). The [USER] is the user of
 the three teams; the logic team's requests 1, 2, 7 and 9 (`docs/2026-09-28_note-from-logic-team.md`, relayed) are
 design input served here. ZERO behaviour change: no runtime definition touched — proofs, lemmas, tests, scripts,
-records only. Tip at this handoff: ``5335ee03` (the proofs commit) + the records commit that adds this handoff, the evidence dir and the changelog row`. Changelog row 7a: `docs/changelog/61958f2e-WINDOW.md`.
+records only. Tips: `5335ee03` (the proofs commit — the content tip; the changelog's `candidate freeze` line), `03779748` (the records commit: this handoff, the evidence dir, changelog row 7a), then this records fix. Changelog row 7a: `docs/changelog/61958f2e-WINDOW.md`.
 
 ## 1. State — what landed on the branch
 
@@ -153,6 +153,8 @@ RE-PIN 10 rows into a second pin module would read 1.0× without changing any st
   disk; 470 required theorems present (263 added here); 19751 declarations; classical trio only; 5 compiled poison controls
   rejected by name. Tail: `core-audit-tail.txt`.
 - `python3 tools/ci_libraries.py check`: PASS (10 libraries, 9 steps, 20 Tests modules); the `selftests` ran green inside `ci`.
+- `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci` (the fast gate, no `--diff`) at the records tree `03779748`: **EXIT=1 on the same
+  5a pair only** (`certificate provenance` STALE on `GoLean.lean`; the cached differential's one drift row), 32 steps ok, 517 s.
 - NOT re-run here (unchanged inputs): the whole-corpus choice trace and the raft twin — this packet changes no runtime byte and
   the gate moved no row beyond the 5a line.
 
