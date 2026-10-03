@@ -27,7 +27,7 @@ in gitignored scratch and was deleted at the end; what is kept here reproduces f
 | `dryrun-module-status.tsv` | every enrolled logic module (242 of `provenance/audit.json` + the 4 consumer libraries): `ok` (built), `failed` (its own errors), `blocked` (a transitive import failed — the first failing import named) |
 | `dryrun-error-census.tsv` | the 1864 error blocks grouped by CAUSE, with example `module:line:col`, the answering changelog row and the answering BridgeSet pins |
 | `dryrun-errors-per-module.tsv` | per failing module: generated artifact vs hand-written, error blocks, whether Lean's `maxErrors` (100) truncated it, causes |
-| `dryrun-differential.txt` | their gate's `differential` step (`scripts/diff-coverage` over their `examples/fixtures/manifest.tsv`, 18 rows) run in the dry-run workspace against our `main` — see the offer note §6 |
+| `dryrun-differential.txt` | their gate's `differential` step (`scripts/diff-coverage` over their `examples/fixtures/manifest.tsv`, 18 rows) run in the dry-run workspace against our `main` — see the offer note §5 |
 
 ## Reproduction
 

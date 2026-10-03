@@ -1,11 +1,10 @@
-# Changelog `61958f2e` → the window's offer commit `OFFER_COMMIT` (FROZEN at the offer)
+# Changelog `61958f2e` → the window's offer commit `20d3946d` (FROZEN at the offer; the frozen text lands in the records commit after it)
 
-## Offer summary — the cumulative before → after, `61958f2e` → `OFFER_COMMIT` ([AGENT] unit 7b worker, 2026-10-03)
+## Offer summary — the cumulative before → after, `61958f2e` → `20d3946d` ([AGENT] unit 7b worker, 2026-10-03)
 
-FROZEN at the offer commit. `OFFER_COMMIT` is a placeholder: the coordinator substitutes the SHA of this branch's tip as
-landed on `main` (window plan row 7b; the local tag `logic-offer/2026-10-03` points at it — created by the coordinator at
-landing, never pushed). Every number below was measured on `main` @ `20d3946d` (the last content commit before this
-records branch; `git diff 20d3946d OFFER_COMMIT -- GoLean tools` is empty) against `git show 61958f2e:<path>`; the
+The offer commit is `20d3946d`, the last content commit (window plan row 7b). The local tag `logic-offer/2026-10-03`
+points at it (made by the coordinator at landing, never pushed). This summary lands in a records-only commit after it.
+Every number below was measured on `20d3946d` against `git show 61958f2e:<path>`; the
 rows below the summary are the window's per-lane records, kept as written. Authority for the offer: [USER] Mike
 2026-10-03 «prepare the offer, do the dry run», relayed by the [AGENT] coordinator. Size of the move: `GoLean/GoCore/`
 38 files, +25329/−8922 lines (nine NEW modules: `BridgeSet`, `ExecutionStatement`, `Prefix`, `PrefixFacts`,
@@ -115,7 +114,9 @@ two schema moves (`736f1730…` at the pin → `dc232a8c…` at v2 → `f448d579
    protobuf route A (post-window lane, go-ahead PENDING [USER] at dispatch); the `unseq` COMMUTATION theorem under an
    independence hypothesis (the DRF-confluence claim is WITHDRAWN — `Tests/unseq-wire/src/w1/main.go` permits `{1, 2}`);
    NPDRF's reduction stays EXPLICITLY UNUSABLE (the access-granularity obligation is open); typed profiles PARKED; no
-   iris-lean `Language` spike; module-path mapping D-6/7, `%+#v` D-3, the default logger D-12/H-20 (post-window lanes).
+   iris-lean `Language` spike; module-path mapping D-6/7, `%+#v` D-3, the default logger D-12/H-20 (post-window lanes);
+   native `Intn`: only direct `math/rand.Intn` / `math/rand/v2.IntN` call sites are bound, method forms are not (D3,
+   `docs/2026-09-30_intn-pick-design.md`); the raft subject's `crypto/rand`+`math/big` body is not restored (option B not taken).
 10. The native lowering carries NO correctness theorem (CLAUDE.md qualification (1)); a consumer of a GoCore program inherits
     the wire's provenance record and the Platform instance (gc, linux/amd64).
 
@@ -388,8 +389,8 @@ Hand-built wires: `Tests/unseq-wire/build.py` numbers its hand-written nodes by 
 
 candidate freeze: `6fb3ac16` (packet D's R1 code commit — the content tip, on top of the window-review round `43624b55`/`7a976448`, the pre-landing round `4a4f381f`/`9c14fef1`, `5335ee03`/`03779748`/`556ab207` and the MERGE-CLEAN audit; the records commit on top of it carries row 7a's addendum, the F4 table, the handoff §10 and the evidence tails only; the coordinator freezes this file at the offer commit, plan row 7b).
 
-LIVE through the window; FROZEN at the offer commit `OFFER_COMMIT` (charter row 7; unit 7b, 2026-10-03 — the «Offer summary» at
-the top is the frozen cumulative record; the coordinator substitutes the SHA at landing).
+LIVE through the window; FROZEN for the offer commit `20d3946d` (charter row 7; unit 7b, 2026-10-03 — the «Offer summary» at
+the top is the frozen cumulative record, landed in the records commit after `20d3946d`).
 
 ## Cumulative tool-interface table, pin → the round's content tip (window review F4; [AGENT packet D worker] 2026-10-03)
 

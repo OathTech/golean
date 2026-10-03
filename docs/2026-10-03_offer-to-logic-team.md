@@ -8,12 +8,15 @@ LOCAL (no push has ever been authorized). Evidence: `docs/evidence/2026-10-03_re
 
 ## 1. The offer
 
-- **The commit** `OFFER_COMMIT` — a placeholder for the SHA of this branch's tip as landed on `main`; the coordinator substitutes
-  it at the train. Content = `main` @ `20d3946d` (train r61 close); this branch adds records only (`git diff 20d3946d OFFER_COMMIT
-  -- GoLean tools scripts baselines` is empty). The local tag `logic-offer/2026-10-03` names it (charter row 7 spelled it
-  `customer-pin/<date>`). Pin `provenance/pins.json` `golean.rev` to it; your Lean (`v4.32.2`) and Go (`c19862e5…`) pins are unchanged.
-- **Green at the content tip.** `scripts/ci --diff` RESULT PASS, 3860/3860 rows against the baseline (3623 PASS / 237 FAIL, each
-  FAIL on a `BUGS.md` Cases line), certificate provenance ok, semantic equations ok (commit `20d3946d`); charter row 7's three
+- **The commit** `20d3946d` (train r61 close; local tag `logic-offer/2026-10-03`) — the content commit. The records (this note,
+  the frozen changelog, the evidence) land in the commit after it and change no code (`git diff 20d3946d <the records commit> --
+  GoLean tools scripts baselines` is empty). A checkout of `20d3946d` therefore holds the LIVE draft changelog; the frozen one is
+  on `main` after it. Charter row 7 spelled the tag `customer-pin/<date>`. Pin `provenance/pins.json` `golean.rev` to it; your Lean
+  (`v4.32.2`) and Go (`c19862e5…`) pins are unchanged. The commit is local to this machine (no push authorized); resolve it with
+  `scripts/setup --golean-source /home/dev/projects/golean`, as the dry run did.
+- **Green at the content tip.** `scripts/ci --diff` RESULT PASS, 3860/3860 rows against the baseline (3623 PASS / 237 FAIL; every
+  FAIL is explained — on a `BUGS.md` Cases line, a named frontend refusal, or a ceilinged coverage/latitude row of
+  `baselines/untriaged-ids` with `wrong-answer 0` — `scripts/check-bugs.sh`), certificate provenance ok, semantic equations ok (commit `20d3946d`); charter row 7's three
   checks — STATEMENTS (`GoLean/GoCore/BridgeSet.lean`, 502 pinned rows, default build), EQUATIONS (`Equations.lean`, 293 proved,
   `scripts/check-equations`), the independent CLIENT (`Tests/EquationClient.lean`, 12 facts by the equation set alone, no runtime
   dependency, 12 gate self-tests + import whitelist); the core audit (classical trio only). The certified slow-tier record's
@@ -47,14 +50,15 @@ the abort at cost 1; `run_ok/panic/deadlock/fuelOut_iff` (fuel-out = the fixed t
 zero-cost finish); `prefix_refl/comp/split/erase_*/iter` for every `n`; the four boundary controls. (4) `replays` by record,
 `finish_replay`, `replay_coverage` PREMISE-FREE. (5) `classification` unconditional over four disjoint cases, `classification_wf`
 the domain corollary; `NoRefusal` sequential-only. **§3 labels.** `{trace, picks, out}`, ordered per channel and across steps,
-no total interleaving (documented); `fold` + `fold_silent` (no `[emptyLabel]`); `stepThread_privateStep_label`, `PoolProjection`;
+no total interleaving (documented); `fold` + `fold_silent` (no `[emptyLabel]`); `stepThread_privateStep_label`, `PoolProjection` (attribution OWED — limit 2);
 `initPrintRefusal?` RETAINED; call/return cuts through the frame's `fid` + `frame_exit_returns` — `out` is printed bytes, not a
 `Ready` event. **§4 conditions.** P: receiver once, pointer/value adjustment, embedded traversal, nil behaviour, qualified
 identity, method-value capture at creation, direct-`recover` eligibility PRESERVED (rows 65–89; `methodInfoByFuncId?` unchanged).
 B6: declaration ids + the checked table (`Func.localsOk`), lexical id ≠ activation slot (`bindParams_lookup`,
 `enterFrame_lookup_arg/_result`); ids stable across edits are NOT an API promise. C4: allocation separate from initializer
 execution; `entrySlot` as the stated function; lifetime lemmas (`blockEntry_fresh`, `pushDefer_saves_values`,
-`funcVal_captures_locs`, `frameEntry_fresh`); the preservation claim SCOPED (injection + stuttering, escape audit first) — a
+`funcVal_captures_locs`, `frameEntry_fresh` under its heap-size premise; table positions are metadata, not a proof of
+source provenance); the preservation claim SCOPED (injection + stuttering, escape audit first) — a
 stated claim, not a theorem. C1: the normalization premise (`Store.alloc`, `HeapNormal`), `loadRoot_base`, `storeLoc_root`,
 `Store.alloc_shape/_cell`, `Heap.lookup_set_self/push_self`; the memory FLOOR is limit 1. **§6.** BridgeSet 502 rows (statements
 AND equations); the `stepFn_eqns` rewrite set (premised arms by instantiation or `simp (discharger := assumption) only
@@ -71,7 +75,8 @@ correction made (`callArgsK`, `callValCalleeK`, `callValArgsK`, `deferCalleeK`, 
 table (flags 8 → 9: `-unseq-census`; the rest unchanged). (9) `execProgLoop_single_noBoundary` (+ `_wide`): equal fuel when no boundary opens.
 **Route A (2026-09-30), post-window.** Your §5 requirements (a named `FuncId` list; hash-pinned generator output; plain indexed
 loops / `break` / `continue` / depth-bounded recursion / no reflection; the init-time pick in ONE `mapIter` shape; a documented
-footprint) are carried in the lane brief (`subject/protobuf-route-a`; go-ahead PENDING [USER] at dispatch). Your §4 caveat is answered
+footprint) are recorded as the lane brief's required content (`docs/2026-08-31_qrow-rulings.md`, route-A disposition 2); the
+lane (`subject/protobuf-route-a`) and its brief are not yet dispatched — go-ahead PENDING [USER]. Your §4 caveat is answered
 in the window: BUG-004 item 4 landed (row 6b) with `renderPanicHead_text`/`abortMsg_text`/`stepFn_text_abort`/`runConfig_text_abort`
 and their refusal twins (rows 155–173).
 
@@ -82,7 +87,9 @@ run-level simulation is a stated claim, not a theorem; (5) raw location ids in t
 (`runProgramSetup_noInit` is its no-globals case), init-time printing refused; (7) `NoRefusal`/classification sequential-only, a
 refusal has no successor; (8) the corpus limits (Storage is a program; `time`/`rand.New` refused by name; access labels not a
 differential observable; loops/`range`/goroutines/route A post-window); (9) deferred: NaN, E6b–e, route A, the `unseq` commutation
-theorem (confluence WITHDRAWN), NPDRF unusable, typed profiles parked; (10) the lowering carries no correctness theorem. Charter
+theorem (confluence WITHDRAWN), NPDRF unusable, typed profiles parked; native `Intn`: only direct `math/rand.Intn` /
+`math/rand/v2.IntN` call sites are bound, method forms are not (D3); the `crypto/rand`+`math/big` body is not restored (option B
+not taken); (10) the lowering carries no correctness theorem. Charter
 §2 tail: the restricted sequential result does NOT discharge the whole owed simulation.
 
 ## 5. The dry run (evidence, NOT your acceptance)
@@ -93,7 +100,7 @@ dir>` — local clones, copied caches, no network, «Exact live dependency check
 GoLeanIris GoLeanIrisExamples GoLeanIrisAudit GoLean.NativeToIR` under `scripts/capped` (48G, 6 threads, the box-wide lock),
 142 s, EXIT=1. **GoLean itself built with zero errors** (26 modules incl. `Machine`, `StepFn`, `MachineSound`, `MultiSound`,
 `NativeToIR`). Of your 242 enrolled modules + 4 consumer libraries: **6 built, 28 failed on their own errors, 212 blocked** by a
-failing import (189 via `GoLeanIris.Language`; the consumers via `Logic.Public`). 22 of the 28 are generated `*Program.lean`
+failing import (189 via `GoLeanIris.Language`, the four consumers and `Logic.Public` among them). 22 of the 28 are generated `*Program.lean`
 artifacts («Do not hand-edit the emitted body» — your `tools/emit-native-program.lean` regenerates them from the wire at gate
 time); 6 are hand-written (`Language`, `Logic.StepAdapter`, `Logic.FrameCont`, `Logic.Direct`, `Logic.Binding`, `Logic.Source`).
 1864 error blocks; 16 artifacts truncated at Lean's `maxErrors` (lower bounds). By cause (`dryrun-error-census.tsv`):
