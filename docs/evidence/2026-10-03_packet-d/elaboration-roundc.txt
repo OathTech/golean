@@ -1,0 +1,11 @@
+# Elaboration, the window-review round (standalone `lake env lean` of the module, 2 reps each, same lock session, GOLEAN_MEM_MAX=16G; OLD = the file at 9c14fef1 extracted to .tmp, NEW = the round's tree)
+Equations-NEW(rfl) rep1 WALL 2.41 s PEAK 940440 kB
+Equations-OLD rep1 WALL 2.45 s PEAK 931452 kB
+Equations-NEW(rfl) rep2 WALL 2.40 s PEAK 950128 kB
+Equations-OLD rep2 WALL 2.38 s PEAK 931144 kB
+# The first proof of the added law (`simp [applyStrictOp, …]`) measured 5.02–5.11 s against OLD 2.34–2.44 s (2.1×) and was replaced by `rfl` before the gates' final run:
+Equations rep1 WALL 5.11 s PEAK 1039968 kB
+Equations rep2 WALL 5.02 s PEAK 993852 kB
+# BridgeSet (+1 row) in the same session:
+BridgeSet rep1 WALL 1.88 s PEAK 1757420 kB
+BridgeSet rep2 WALL 1.86 s PEAK 1755712 kB

@@ -11,14 +11,14 @@ records only. Tips: `5335ee03` (the proofs commit), `03779748` (the records comm
 
 | Item | File(s) | What |
 |---|---|---|
-| 1 the EQUATION SET | `GoLean/GoCore/Equations.lean` (NEW, 292 theorems after the pre-landing round), `GoLean/GoCore/EquationsAttr.lean` (NEW: `register_simp_attr stepFn_eqns`, the propositional closer `defn_eq`) | one lemma per `stepFn` arm's success and panic forms, the refusal pass-throughs as listed, over a symbolic store/env/continuation/tape with explicit operation premises; every arm equation tagged `@[stepFn_eqns]` as a PROPOSITIONAL rewrite. USE (audit F1): premise-free arms and arms whose premises range over LHS variables close by `simp only [stepFn_eqns]`; an arm whose successor names a premise-bound value (`evalE_var`, the entries, `next_storeK_*`, `exec_block`, `frameExit_targets`, the applies) is applied by INSTANTIATION (`rw [evalE_var env k ch hl hv]`) or under `simp (discharger := assumption) only [stepFn_eqns]` — the plain `simp only [stepFn_eqns, hl, hv]` does NOT fire there; the client tests each idiom (`fact_usage_*`) |
+| 1 the EQUATION SET | `GoLean/GoCore/Equations.lean` (NEW, 292 theorems after the pre-landing round; 293 after the window-review round — the boxing law, §10), `GoLean/GoCore/EquationsAttr.lean` (NEW: `register_simp_attr stepFn_eqns`, the propositional closer `defn_eq`) | one lemma per `stepFn` arm's success and panic forms, the refusal pass-throughs as listed, over a symbolic store/env/continuation/tape with explicit operation premises; every arm equation tagged `@[stepFn_eqns]` as a PROPOSITIONAL rewrite. USE (audit F1): premise-free arms and arms whose premises range over LHS variables close by `simp only [stepFn_eqns]`; an arm whose successor names a premise-bound value (`evalE_var`, the entries, `next_storeK_*`, `exec_block`, `frameExit_targets`, the applies) is applied by INSTANTIATION (`rw [evalE_var env k ch hl hv]`) or under `simp (discharger := assumption) only [stepFn_eqns]` — the plain `simp only [stepFn_eqns, hl, hv]` does NOT fire there; the client tests each idiom (`fact_usage_*`) |
 | 2 the PROJECTIONS | `GoLean/GoCore/PoolProjection.lean` (NEW, 36 theorems) | the single-goroutine OUTPUT AGREEMENT, the SEQUENTIAL-TO-POOL TERMINAL PROJECTION, the embedding without the `seqOpCount = 0` premise (request 9) |
 | 3 the SETUP EQUATION | `Equations.lean` §«The pinned SETUP EQUATION» | `runProgramSetup_noInit` + layout `setup_lookup_arg`/`_result`, `setup_resultLocs`, `setup_heap_size` (request 2) |
 | 4 the FOLD-BACK | `MachineSound.lean`, `PrefixFacts.lean`, `MultiStreams.lean`, `Prefix.lean`, `BridgeSet.lean` row 62 | `stepFn_consumption_some` premise-free; the PrefixFacts copy DELETED; row 62 re-targeted, statement unchanged (packet B audit F3) |
 | 5 audit F2 | `MachineSound.lean` (`stepFn_sound`, `stepFn_consumption_none`) | the `.retV`/`.next` catch-alls closed by SHAPE (`guard_hyp` tests for a free continuation), not by `case137`/`case152` |
-| the CLIENT | `Tests/EquationClient.lean` (NEW; library `EquationTests`) | 11 facts by the equation set + `Prefix`/`Finish` (7 symbolic runs + the 4 usage idioms); 292 pins `Pin.<name>` with the statements written out; the in-file `#eval`: the Lean-level NO-UNFOLD check of every fact's proof term (audit F2) and the exhaustive enrollment |
-| the GATE | `scripts/check-equations` (NEW), `scripts/ci` step `equations`, `scripts/ci-libraries.json`, `lakefile.toml` | builds, runs the client (its proof-term check and enrollment), the regex pre-filter, nine fail-closed self-tests (the regex mutant, the pin deletion, the audit's seven unfolding spellings each REFUSED by name) |
-| the records | `BridgeSet.lean` RE-PIN 10 (rows 174–436; the pre-landing round rows 437–501), `Tests/GoCoreAudit.lean` (3 modules, 328 theorems required), changelog row 7a, this handoff, `docs/evidence/2026-10-03_packet-d/` | |
+| the CLIENT | `Tests/EquationClient.lean` (NEW; library `EquationTests`) | 12 facts by the equation set + `Prefix`/`Finish` (7 symbolic runs + the 4 usage idioms + the concrete inhabitation of FACT 3, §10); 293 pins `Pin.<name>` with the statements written out; the in-file `#eval`: the Lean-level NO-UNFOLD check of every fact's proof term (audit F2) and the exhaustive enrollment |
+| the GATE | `scripts/check-equations` (NEW), `scripts/ci` step `equations`, `scripts/ci-libraries.json`, `lakefile.toml` | builds, runs the client (its proof-term check and enrollment), the regex pre-filter, ten fail-closed self-tests (the window-review round added the indirect helper, §10) (the regex mutant, the pin deletion, the audit's seven unfolding spellings each REFUSED by name) |
+| the records | `BridgeSet.lean` RE-PIN 10 (rows 174–436; the pre-landing round rows 437–501; the window-review round row 502), `Tests/GoCoreAudit.lean` (3 modules, 329 theorems required), changelog row 7a, this handoff, `docs/evidence/2026-10-03_packet-d/` | |
 
 ## 2. What is PROVED (by group, names)
 
@@ -210,9 +210,9 @@ Every clause is now backed by a stated theorem (pre-landing round, audit F4): th
 `transferable` only.
 
 ## 8. The offer's interface summary (what a consumer gets at this tip)
-- Three separate checks: STATEMENTS (`BridgeSet.lean`, 501 rows), EQUATIONS (`Equations.lean`, 292 proved; `stepFn_eqns`,
-  propositional), the CLIENT (`Tests/EquationClient.lean`, 11 facts, 292 pins, the Lean-level no-unfold check,
-  `scripts/check-equations` with nine self-tests). Usage: see §1 item 1 (instantiation / discharger for the premised arms).
+- Three separate checks: STATEMENTS (`BridgeSet.lean`, 502 rows), EQUATIONS (`Equations.lean`, 293 proved; `stepFn_eqns`,
+  propositional), the CLIENT (`Tests/EquationClient.lean`, 12 facts — the concrete inhabitation included — 293 pins, the
+  Lean-level no-unfold check over the client-owned closure, `scripts/check-equations` with ten self-tests; §10). Usage: see §1 item 1 (instantiation / discharger for the premised arms).
 - Memory floor, precisely (audit F5): VARIABLE READS (`evalE_var`, the pinned-result readback `frameExit_targets`/
   `loadResults_cons`/`frameExit_preprint`) reach `loadRoot` (= `loadLoc` at a root cell, `loadRoot_base`); PLAIN and CHAIN
   STORES (`next_storeK_var`/`_chain`, `unseqValue`) reach `storeLoc` (`storeLoc_root`, `Heap.lookup_set_self`); BLOCK and
@@ -234,3 +234,100 @@ Every clause is now backed by a stated theorem (pre-landing round, audit F4): th
      done). A later re-pin could widen `single_embedding_stmt` itself to `transferableWide` — a STATEMENT change, so posed.
   4. The brief's `[AGENT Codex, packet D]` commit tag was replaced by `[AGENT packet D worker]` (the coordinator's execution-model
      ruling: packets run as subagents, not Codex).
+
+## 10. The WINDOW-REVIEW round (`docs/2026-10-03_window-review.md` F1/F2/F4; [AGENT packet D worker] 2026-10-03) — before → after
+
+Commits: the code group `43624b55` (`Equations.lean` +1 law, `BridgeSet.lean` row 502, `Tests/GoCoreAudit.lean` +1 export,
+`Tests/EquationClient.lean`, `scripts/check-equations`), the records group `the commit after it (this records commit)` (this section, the changelog's F4
+table and row 7a, the evidence tails). No pinned statement changed (row 502 and the export are ADDITIONS); no runtime
+definition touched; `maxHeartbeats` never raised.
+
+### F1 (P2) — `fact_write_survives_panic` had an unsatisfiable premise and entered no callee
+- BEFORE: the fact raised `.panicStmt (.stringLit txt)` — an UNBOXED `.string` payload, which is not a Go interface value;
+  `renderPanicPayload` has no arm for it, so the premise `hmsg : abortMsg ctx (panicEntryOf ctx (.string txt)) [] 0 = .ok t`
+  held for NO `ctx`/`txt`/`t` and the fact was vacuous; and nothing was called — the «callee» was the sequence glue.
+- AFTER: the caller runs `x = y` then the nullary declared call `f()`; the callee's body is `panic(any(txt))` — the string
+  BOXED by `Expr.toInterface ty .string` (`applyStrictOp_toInterface_string`, the NEW helper law: the apply is read-only,
+  trace-free, the interface value at the canonical dynamic type `string`; row 502, pinned and exported). Twenty steps: the
+  assignment's spine (7), the call's entry (`exec_call_nullary`, trace `tr`), `exec_panicStmt`, `evalE_strict_more`,
+  `evalE_stringLit`, `retV_strictK_apply`, `retV_panicArgK`, then the unwinding `panicking_frame_empty` (the callee's frame),
+  `panicking_seq` (the caller's glue), `panicking_frame_empty` (the barrier); `Finish.aborted` at the empty continuation.
+  Premises: `hlx hly hy hst` (the memory floor), `he : enterFrame ctx s' f [] = .ok (.run func fenv [], s', tr)` (store-
+  preserving for a parameterless, resultless callee), `hbody`, `hsettled : splitNewestPending? [strEntry ctx txt] = none`
+  (`string` carries no `Error`/`String` method — no preprint phase), `hmsg : abortMsg ctx (strEntry ctx txt) [] 0 = .ok t`,
+  with `strEntry ctx txt := panicEntryOf ctx (.interface .string (.string txt))`. Endpoint `.aborted t s' ch` with `s'` the
+  WRITTEN store.
+- INHABITATION: `fact_inhabit_write_survives_panic` (a named `fact_*` theorem rather than an `example`, so the enrollment
+  check verifies it too): context `boomCtx := ProgramCtx.ofTables TypeEnv.reserved #[boomFunc]`, callee `boom()` with body
+  `panic(any("boom"))`, two root `int` cells (`x ↦ 0 holding 0`, `y ↦ 1 holding 7`), environment `[[(0, .base 0), (1, .base 1)]]`;
+  conclusion `LRun boomCtx boomStore₀ … [] [silent, …, readOf (.base 1), silent, writeOf (.base 0), …] [] (.aborted "boom"
+  boomStore₁ [])` with `boomStore₁` = the heap after the write. Every premise discharged by computation: seven `rfl`
+  (lookups, read, write, entry, body, settled) and `with_unfolding_all rfl` for `hmsg` (the abort's UTF-8 decoding is
+  well-founded recursion). Verified by `#eval` first (the choice of values), then the kernel.
+- THE REVIEW'S WITNESSES, now theorems of the client (`section Witnesses`): `witness_unboxed_payload_unrenderable (ctx) (txt) :
+  renderPanicPayload ctx (panicEntryOf ctx (.string txt)) = none := rfl` and `witness_unboxed_premise_false (ctx) (txt) (t)
+  (hmsg : abortMsg ctx (panicEntryOf ctx (.string txt)) [] 0 = .ok t) : False := by cases hmsg` — both elaborate at the
+  round's tip (the gate's client run): the old premise refutes itself for every context, text and `t`.
+
+### F2 (P2) — the no-unfold check visited the facts' proof terms only
+- BEFORE: `checkEnrollment` ran (1)–(4) on each `fact_*` value; a `private theorem … := by rfl` on a `stepFn`-headed equation,
+  `exact`ed from a fact, passed (the review's reproducer) — the unfolding sat in a constant the fact merely named.
+- AFTER: the check runs over the proof-dependency CLOSURE of the CLIENT-OWNED declarations (constants of the current
+  module, `env.getModuleIdxFor? = none`) reachable from each fact through `getUsedConstants` of the values; the published API
+  (`GoLean.GoCore.Equations`, `Prefix`, `ExecutionStatement`, the interpreter — everything imported) is the boundary and is
+  not traversed. Each reached declaration with a value (theorem proof, definition body, opaque) gets (1) no `stepFn.*`
+  constant, (2) no reflexivity on a `stepFn`-headed term, (3) the irreducible-`stepFn` re-type-check; (4) axioms at the root
+  (transitive already). A refusal names the fact AND the helper: «fact <root> REFUSED — its proof unfolds stepFn in its
+  helper <helper> (…)».
+- THE OBLIGATION FILTER ([AGENT] design, flagged): (3) re-runs a defeq obligation only when one of its two sides names a
+  constant whose definitional unfolding REACHES `stepFn` (`reachesStepFn`: memoized reachability through constant VALUES;
+  `mayUnfoldStepFn`: the sides' constants after zeta-expansion, the free locals' types included). Why: the kernel's check of
+  an obligation can only unfold what its sides name, so an obligation naming nothing that reaches `stepFn` never meets it —
+  re-running it proves nothing about `stepFn` and may be arbitrarily expensive (the inhabitation's
+  `abortMsg … = .ok "boom"` is well-founded UTF-8 decoding; re-run at `.all` with a `canUnfold?` override it blew the
+  heartbeat budget — the override disables the whnf cache — and at `.default` it is stuck on the irreducible well-founded
+  helper, a FALSE refusal). Every obligation that can reach `stepFn` is re-run exactly as before; the seven bypass spellings
+  and the indirect helper are all refused (gate self-tests 3–10).
+- NEGATIVE CONTROL #10 (`scripts/check-equations`, step e4): the client with `private theorem returnViaReduction … := by rfl`
+  inserted before FACT 8 and the anchor replaced by `exact returnViaReduction s env k ch` must fail with «fact
+  Tests.EquationClient.fact_usage_simp_set REFUSED — its proof unfolds stepFn in its helper …returnViaReduction». Gate
+  output: «ok [self-test indirect] …»; the gate now counts 10 self-tests.
+- Witness re-run (the review's reproducer at the round's tip): REFUSED — see the gate tail `check-equations.txt`
+  (`ok [self-test indirect]`), and the mutant's log line quoted in the evidence README.
+
+### F4 (P3) — the cumulative tool-interface table
+- BEFORE: the changelog's per-lane «flags unchanged» lines, true of their lanes, missed the frontend's additive
+  `-unseq-census` flag (`tools/nativefrontend/main.go:87`) in the pin-to-offer record.
+- AFTER: `docs/changelog/61958f2e-WINDOW.md` §«Cumulative tool-interface table» — computed from `git diff 61958f2e 43624b55`
+  over request 8's interfaces: frontend flags 8 → 9 (`-unseq-census` ADDED; emits a TSV census, no wire; no gate/baseline/
+  corpus path reads it), the wire schema v1 → v3 (already recorded), the `scripts/diff-coverage` manifest schema UNCHANGED,
+  `decodeProgram : Json → Except String Program` UNCHANGED (its accepted input moved with the schema), `RunResult :=
+  Except (Stop × GoString) Readout` and `runProgramM : … → Except Stop Readout` UNCHANGED, Lean `v4.32.2` UNCHANGED, the
+  `deps/go` pin go1.26.5 UNCHANGED; each cell with its derivation command.
+
+### Gates of the round (every EXIT; tails in `docs/evidence/2026-10-03_packet-d/`)
+- `GOLEAN_MEM_MAX=48G scripts/capped scripts/check-equations` (under the lock): **EXIT=0** — client PASS, «293 equation theorems
+  pinned, 12 facts and 15 client-owned helpers, none unfolds stepFn», the regex pre-filter, **10 self-tests** (the regex
+  mutant, the pin deletion, the seven bypass spellings, the NEW indirect helper). Tail: `check-equations.txt`.
+- `scripts/capped scripts/check-core-audit`: **EXIT=0** — 54 modules in the closure, **536 required theorems present** (+1:
+  `applyStrictOp_toInterface_string`), 20100 declarations, classical trio only, 5 poison controls rejected by name. Tail:
+  `core-audit-tail.txt`.
+- `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff` (under the lock, at the tree of `43624b55`): **EXIT=1, RED ON EXACTLY THE
+  5a PAIR** — `certificate provenance` (STALE: changed dependency `GoLean.lean`) and `baseline diff` (the one drift row
+  `imported-goose/channel/google-search PASS/membership → FAIL/membership`); `cases=3821 pass=3583 fail=238`; negative
+  baseline 394 matched; every other step ok (core build warning-free, `semantic equations` ok, eval tests 298 ok, executed
+  library coverage); 1215 s. Tail: `ci-diff-tail.txt`. The run BEFORE the law's proof was switched to `rfl` (below) had
+  the same verdict (920 s).
+- The REVIEW'S WITNESSES re-run: `witness_unboxed_payload_unrenderable`/`witness_unboxed_premise_false` elaborate in the
+  client (the gate's build); the F2 reproducer, rebuilt outside the gate from the same recipe, fails with
+  «`Equation client: fact Tests.EquationClient.fact_usage_simp_set REFUSED — its proof unfolds stepFn in its helper
+  Tests.EquationClient.returnViaReduction (it closes Eq.refl …`» (README).
+
+### Elaboration of the round
+Standalone `lake env lean` of the module, two reps, one lock session (`elaboration-roundc.txt`): `Equations.lean` NEW
+2.40–2.41 s vs the file at `9c14fef1` 2.38–2.45 s — **1.00×**; `BridgeSet.lean` (+1 row) 1.86–1.88 s (the pre-landing round's
+1.9 s). HONEST NOTE: the law's FIRST proof, `simp [applyStrictOp, checkedDynamicTy, …]`, cost 5.02–5.11 s (2.1× — the simp
+set over the whole `applyStrictOp` match); the gates' first full run (all green on the same lines) was on that proof; it was
+replaced by `rfl` (0 ms; the arm reduces definitionally) and every gate re-run on the final tree. No other module changed;
+`PrefixFacts` untouched (0.67× stands); `maxHeartbeats` never raised. The client's `#eval` now checks 12 facts + 15
+helpers in ~1 s (the obligation filter skips what cannot reach `stepFn`).
