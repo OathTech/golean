@@ -573,7 +573,7 @@ than as speculative cases.)
 
 ## 8. Counts and the closing arithmetic
 
-All numbers at the current tracked baseline (3800 cases, 3563 PASS / 237 FAIL; [AGENT] worker, branch
+All numbers at the current tracked baseline (3821 cases, 3584 PASS / 237 FAIL; [AGENT] coordinator, train r60 — the panic preprint phase (window unit 6b, BUG-004 item 4) landed: 21 rows born (19 PASS, 2 FAIL red-by-design on BUG-099's Cases line) and `panic-defined-payload-methods/{error,stringer}` FAIL→PASS; the FAIL bucket total is unchanged at 237 because the two flips leave and the two born reds enter; movement §8ar). Previous tally: (3800 cases, 3563 PASS / 237 FAIL; [AGENT] worker, branch
 `prep/r58-0930` — train r58's pre-landing harness fix (audit F4 of `docs/2026-10-01_intn-pick-audit.md`; [USER] Mike 2026-10-01
 «agree, land it, ratify all including the harness fix», relayed): the oracle harness's `importName` now applies goimports'
 assumed-name rule, so an UNALIASED `import "math/rand/v2"` binds `rand`; measured by `scripts/diff-one` on the new row and
@@ -3054,3 +3054,7 @@ trylock-uncontended` — Q-COND's 3 and Q-TRYLOCK's 1, both deferred
 with envelopes pre-ruled, rulings rows 8/5 — and FR-5's witness
 `sync/promoted-mutex/trylock-expr`) are unmoved, re-verified red with
 cause-naming refusals on this slice's full run.
+
+### 8ar. Movement at the panic preprint phase (2026-10-03, lane `core/panic-preprint-1003`, train r60)
+
+Baseline 3800 = 3563 / 237 → 3821 = 3584 / 237: +21 born under `panic-recover/panic-preprint/` (19 PASS, 2 FAIL red-by-design — `nil-ptr-receiver-deref`, `value-method-nil-ptr`, refused by name, on BUG-099's Cases line); `panic-defined-payload-methods/{error,stringer}` FAIL → PASS (off BUG-004's Cases line; item 4 FIXED); 0 PASS → non-PASS. Recorded at landing by the coordinator (audit F5: the lane re-pinned the baseline without this movement line).

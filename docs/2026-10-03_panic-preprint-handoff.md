@@ -85,7 +85,7 @@ the payload premises. `BridgeSet.lean` RE-PIN 9: rows 1–154 byte-identical; ro
    (`i = older.length`, `chain = older ++ entry :: newer`); list-structural, so the wf and completeness proofs need
    no index arithmetic. The note's name `preprintK` is kept.
 
-## 3. Statement changes (internal — not pinned in `BridgeSet`; posed here, exact old/new)
+## 3. Statement changes (internal — unpinned on main; posed here, exact old/new). Correction (audit F6): `step_abort_elim`'s NEW form is pinned as BridgeSet row 170 (`step_stop_unsettled` row 171)
 
 | Theorem | Old | New |
 |---|---|---|
@@ -166,3 +166,7 @@ frontend pins (twin byte-identical), eval tests 298 ok, re-pin guard 0 PASS→no
 - BUG-099 now also gates the two preprint fatals (concrete runtime-error type names).
 - Packet D states its abort and frame-exit equations over the phase's arms (`stepPanicStop`, `stepNextOther`,
   `stepRetOther`, the `stepFrameExit` sub-arm) — statable as landed.
+
+## 7. Landing notes ([AGENT] coordinator, train r60)
+
+[USER] Mike 2026-10-03, verbatim, relayed: «Great, land it» — the merge sign-off, acknowledging the three internal statement changes of §3. Audit (`docs/2026-10-03_panic-preprint-audit.md`, MERGE-CLEAN) follow-ups recorded, not done here: F1 — `PrefixFacts` elaborates at 1.48× (2 % under the G-C3 stop); the next lane that adds `stepFn` arms restructures the `fun_cases` sweeps in `stepFn_picks_none/_some` first; F2 — the BUG-099 refusal in `preprintFatalStop` also covers `*runtime.PanicNilError` (`panic(nil)` inside `Error()`), its text names only two types — widen the text with BUG-099's fix; F3 — a non-head `.unrecorded` entry is treated as settled (not constructible via the frontend; BUG-053 area); F4 — fatal payloads of pointer/basic type refuse as «payload family not pinned» (cheap widenings).

@@ -1302,3 +1302,10 @@ merge sign-off for `core/block-allocation-1001` (G-C4; audit MERGE-CLEAN), with 
 audit's records corrections folded in. Landed: the decoder hoist (wire unchanged), `Stmt.initialization` deleted (45 → 44
 constructors, 128 → 127 rules), the `unseq` sweep-private scope, `entrySlot` + the lifetime lemmas (the logic side's request
 4). Post-window follow-up recorded: spin bounds in loop iterations, not raw steps.
+
+### Train r60 — the panic preprint phase (BUG-004 item 4) landed — RULED (2026-10-03)
+
+[USER] Mike, 2026-10-03, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «Great, land it» — the merge sign-off
+for `core/panic-preprint-1003` (window unit 6b; audit MERGE-CLEAN, 68 extra gc probes), acknowledging the three internal
+statement changes (`Prefix.abort?_some`, `Prefix.stepFn_abort`, `MachineSound.step_abort_elim` gain the settled-chain premise;
+the pinned `_stmt`s byte-identical). Baseline 3821 = 3584 / 237. Follow-ups in the lane handoff §7.
