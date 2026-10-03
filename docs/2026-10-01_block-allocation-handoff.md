@@ -203,3 +203,12 @@ reference in `build-times-parallel.tsv`.
   a budget row carried a non-semantic step shift.
 - Name the value half of the freshness statement (a `StateWf`-premised lemma over `Heap.lookup` / `HeapCell.locSup`)
   — audit F4.
+
+## Merge train r59 — the 5a record ([AGENT] coordinator, 2026-10-03)
+
+[USER] Mike 2026-10-03 «yeah, agree with 1, land it» (relayed). Pre-merge main `52eddf4c` → `refs/snapshots/r59/main`; train tip
+`cd043086` fast-forwarded; the primary's `.lake` built fresh (no warm copy; 0 foreign-worktree references). `release-check`
+EXIT=2 (EXPECTED — STALE, `build/files/GoLean/GoCore/AdmissionIndices.lean`); `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci
+--slow` EXIT=1, 1310 s — red on EXACTLY the 5a pair (the spin row PASS at its raised cap); 3800 rows, 3562 PASS / 238 FAIL =
+the pin 3563 / 237 with the one 5a-class row red. Candidate: `claim` and `observations_sha256` IDENTICAL (receipt `cd043086`,
+167.029 s) — INSTALLED; a provenance refresh. Tail: `docs/evidence/2026-10-01_block-allocation/r59-ci-slow.tail.txt`.

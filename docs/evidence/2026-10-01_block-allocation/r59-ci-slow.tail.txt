@@ -1,0 +1,90 @@
+── Tests/library ownership, executed-build and audit scratch self-tests
+── build parallelism (LEAN_NUM_THREADS scaled to the memory cap)
+── oracle toolchain pin (baselines/go-oracle-pin)
+── escape-hatch preflight (sorry / admit / native_decide / axiom in the semantic core)
+── meta-layer escape hatches (unsafe / opaque / @[implemented_by] outside the allowlist)
+── escape-hatch addendum (decide +native / config-syntax native spellings — A-TRIP F4)
+── fidelity-bug index cross-check (scripts/check-bugs.sh)
+── feature-coverage cross-check (scripts/check-coverage)
+── spec-anchor citations (scripts/check-spec-anchors)
+── stdlib admission register (scripts/check-stdlib-register)
+── membership-lane gate self-test (scripts/test-lane-validation; incl. G1-G4 no-publish)
+── evidence-on-main size gate (scripts/check-evidence-size; self-test first)
+── AGENTS.md alias of CLAUDE.md (scripts/check-agents-alias; self-test first)
+── imported-goose verbatim staleness (scripts/check-imported-goose)
+── engine-isolation lint (semantic core imports no EnumDedup — CLI-only by design)
+── memory-module raw call sites (scripts/check-mem-callsites vs scripts/mem-callsites.tsv)
+── core build (lake build; must be WARNING-free — GoLean/ module warnings
+Certified build: compiled inputs match; sha256=35469b4de26d7f35fbe17fb01e9eb8d80a3c2711cef5e43a2eebf037de5422db
+── certificate provenance (compiled inputs, mutation controls, current records)
+Fresh certification: unchanged set; seconds=0.064; candidate=/home/dev/projects/golean/.tmp/certification-controls-jublxzgl/membership-enum/certification-candidate.json
+Fresh certification: unchanged set; seconds=0.032; candidate=/home/dev/projects/golean/.tmp/certification-controls-jublxzgl/confluent-enum/certification-candidate.json
+Fresh certification: unchanged set; seconds=0.064; candidate=/home/dev/projects/golean/.tmp/certification-controls-jublxzgl/membership-enum/certification-candidate.json
+certification: STALE certification: changed dependency build/files/GoLean/GoCore/AdmissionIndices.lean
+── core totality audit (every GoLean/ module post-import: classical trio only, required core theorems, compiled poison controls)
+── admission checker proofs and post-import audit
+── declaration boundary (Go identity, strict JSON, fixture pin, dependency audit)
+── wire boundary (production byte decoder through the real CLI: scripts/check-wire-boundary)
+── package-correct method identity (fresh wire, strict decoder, audit controls)
+── unseq scheduler (Stage B): reference sets over all tapes, named refusals, replay, theorem audit
+── unseq wire (Stage C): exact reference sets over hand-built wires, decoder mutants by name, fixture re-derivation
+── frontend pins (scripts/check-frontend-pins — deviation observation + raft twin wire)
+── import-goose gate self-test (scripts/test-import-goose)
+── frontend unit tests (go test ./tools/nativefrontend)
+── lowering-diagnostic tables (go test ./tools/lowerdiag — causes.tsv vs ledger, surface tables vs frontend, calibration)
+── coverage-harness unit tests (go test ./tools/coverageharness — crash channel, terminal classifier, byte transport, hook inertness)
+── interpreter eval tests (gocore-eval-tests)
+── re-run full native differential corpus (--slow: --diff + GOLEAN_SLOW=1 tier=slow re-certification)
+differential coverage summary: cases=3800 pass=3562 fail=238 export_status=0
+── membership-lane gate self-test, go-dependent half (--with-go: F4 param re-validation, F6 frontend guard, B3-B5 slice-4 lane gates, G5 fan-out-never-ran no-publish, T1-T4 timeouts name their cause, T5-T8 exit 2/137/143 name did-not-decide, D1-D6 the strict-lane depth guard; G1-G4 run in the fast half since audit F19)
+── re-run negative corpus (--diff)
+── derived oracle artifacts re-derived (Tests/FloatVectors.lean + tools/nativefrontend/inittask-std.tsv)
+── negative baseline diff
+no regression: 394 case(s) run in negative-latest.tsv match baselines/negative-full.tsv
+── differential baseline diff (scripts/coverage-baseline-diff)
+DRIFT vs baselines/native-full.tsv (3800 case(s) run):
+imported-goose/channel/google-search	baseline[PASS/membership] -> now[FAIL/membership]
+── cross-ledger reconciliation (tools/reconcile-records — REPORT-ONLY, informs, never fails the gate)
+── executed library coverage (all named build receipts from this CI invocation)
+  ok   Tests/library ownership (no exceptions; executed builds checked at exit)
+  note build parallelism: cap 48G -> LEAN_NUM_THREADS=6 (cap/8G, floor 2; 32 cores on this box)
+  ok   oracle toolchain (go1.26.5 = pin)
+  ok   escape-hatch preflight
+  ok   meta-layer escape hatches (allowlist empty since the repo split)
+  ok   escape-hatch addendum (no decide +native / native-config spellings)
+  ok   bug-index cross-check
+  ok   feature-coverage (no dead tags)
+  ok   spec-anchor citations resolve at the pin
+  ok   stdlib admission register = frontend tables
+  ok   lane-validation fixtures (manifest gates reject bad shapes)
+  ok   evidence-on-main size gate
+  ok   AGENTS.md alias of CLAUDE.md
+  ok   imported-goose verbatim (above-marker bytes = pinned upstream)
+  ok   engine-isolation (core ↛ EnumDedup)
+  ok   memory-module raw call-site inventory (emit/peek discipline)
+  ok   core build (warning-free)
+  FAIL certificate provenance
+  ok   core totality audit (every GoLean/ module; required core theorems; poison controls)
+  ok   admission checker proofs and post-import audit
+  ok   declaration boundary
+  ok   wire boundary (byte-level controls through the real CLI)
+  ok   package-correct method identity
+  ok   unseq scheduler (Stage B)
+  ok   unseq wire (Stage C)
+  ok   frontend pins (realized init-order deviation + twin wire = pinned bytes)
+  ok   import-goose fixtures (importer + verbatim guard reject bad shapes)
+  ok   frontend unit tests
+  ok   lowering-diagnostic tables
+  ok   coverage-harness unit tests
+  ok   eval tests (298 ok)
+  ok   differential run completed (exit 1; failing-set judged by baseline diff)
+  ok   lane-validation fixtures incl. harness half (F4/F6/B3-B5/G5/T1-T8/D1-D6)
+  ok   negative run completed (exit 0; set judged by baseline diff)
+  ok   Tests/FloatVectors.lean = fresh hardware-oracle regeneration (byte-exact)
+  ok   inittask-std.tsv = fresh gc-derived regeneration (header at pin; byte-exact modulo date line)
+  ok   negative baseline diff (no regression)
+  FAIL baseline diff (DRIFT — see above)
+  note reconciler: 2 finding(s), 1 HIGH — report-only (details: tools/reconcile-records)
+  ok   executed library coverage (all declared libraries; all Tests modules)
+RESULT: FAIL
+CI total wall seconds: 1310
