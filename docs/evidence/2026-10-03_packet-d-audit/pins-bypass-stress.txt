@@ -1,0 +1,51 @@
+# Pins, guard bypass, symbolic-shape stress, simp-discharge variants — [AGENT auditor] 2026-10-03 (scratch files under .tmp/, elaborated with scripts/capped lake env lean)
+
+## BridgeSet rows mutated (3 real rows, one token each; expect 3 errors)
+-- MUTANT 1: exec_seqn with the label changed (silent → one output byte)
+-- MUTANT 2: evalE_var with the successor changed (.retV v k → .retV v (k ++ k))
+-- MUTANT 3: runProgramSetup_noInit with the residual tape changed (choices → [])
+errors=3
+1:.tmp/PinMutants.lean:11:2: error: Type mismatch
+11:.tmp/PinMutants.lean:19:2: error: Type mismatch
+31:.tmp/PinMutants.lean:33:2: error: Type mismatch
+
+## The no-unfold GUARD regex probed line by line (CAUGHT vs ESCAPES)
+ESCAPES:   simp only [stepFn]
+ESCAPES:   rw [stepFn]
+CAUGHT :   dsimp [stepFn]
+ESCAPES:   simp_all [stepFn]
+ESCAPES:   simpa [stepFn]
+ESCAPES:   delta stepFn
+ESCAPES:   unfold Machine.stepFn
+ESCAPES:   unfold GoLean.GoCore.Machine.stepFn
+ESCAPES: := rfl
+ESCAPES:   exact rfl
+CAUGHT :   simp [stepFn_eqns]
+CAUGHT :   unfold stepFn
+CAUGHT :   simp [stepFn]
+
+## Client-style facts that PROVE their statement by unfolding stepFn and pass the GUARD (.tmp/Bypass.lean)
+fact_rfl	:= rfl
+fact_simp_only_step	by simp only [stepFn]; rfl
+fact_delta	by delta stepFn; rfl
+fact_qualified_unfold	fact_simp_all
+fact_exact_rfl	by exact rfl
+GUARD hits in Bypass.lean: 1   elaboration errors: 0
+
+## Symbolic shapes under simp only [stepFn_eqns] (.tmp/SymStress.lean): (a)-(f) fully symbolic config/retV/evalE/exec/panicking/next → each 'simp made no progress' (fail fast; whole file elaborates in seconds)
+1:.tmp/SymStress.lean:7:87: error: `simp` made no progress
+2:.tmp/SymStress.lean:8:109: error: `simp` made no progress
+3:.tmp/SymStress.lean:9:128: error: `simp` made no progress
+4:.tmp/SymStress.lean:10:133: error: `simp` made no progress
+5:.tmp/SymStress.lean:11:149: error: `simp` made no progress
+6:.tmp/SymStress.lean:12:93: error: `simp` made no progress
+7:.tmp/SymStress.lean:17:2: error: `simp` made no progress
+8:.tmp/SymStress.lean:22:2: error: `simp` made no progress
+9:.tmp/SymStress.lean:29:2: error: `simp` made no progress
+10:.tmp/SymStress.lean:33:2: error: `simp` made no progress
+lines 7-12 = the six symbolic shapes (expected); lines 17/22/29/33 = evalE_var / next_storeK_var / exec_block / retV_callArgsK_enter with the premises IN THE SIMP SET (default discharger): NO PROGRESS; retV_ifK_true and next_panicResumeK_unrecovered (premises over LHS variables): closed
+
+## Variants on evalE_var (.tmp/SimpVariants.lean): V1 simp only [evalE_var env k ch hl hv] OK; V2 simp (discharger := assumption) only [stepFn_eqns] OK; V3 simp only [stepFn_eqns] (premises in context only) NO PROGRESS; V4 rw [evalE_var env k ch hl hv] OK
+1:.tmp/SimpVariants.lean:19:2: error: `simp` made no progress
+
+## BridgeSet elaboration, lane, one shot: wall=1.64s maxrss=1755108KB (lake env lean GoLean/GoCore/BridgeSet.lean, capped 16G)

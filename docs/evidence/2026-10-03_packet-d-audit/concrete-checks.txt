@@ -1,0 +1,95 @@
+# Concrete-instance checks of the packet D equations — [AGENT auditor] 2026-10-03
+# Source: EqCheck.lean.txt (this dir; scratch, elaborated with GOLEAN_MEM_MAX=16G scripts/capped lake env lean against the review worktree's fresh .lake at 556ab207).
+# Method per check: #eval stepFn on a CONCRETE configuration, compared with the equation's RHS by compiled code (resEq over Config.eqbF/Store.eqb; 'true' lines), AND the same instance proved by the equation applied / simp only [stepFn_eqns] with every premise discharged on the instance by rfl ('example' lines; 20 premise theorems h_* proved by rfl after an #eval).
+# Result: lean EXIT=0, 0 errors; 78 examples accepted; 128 #evals; 53 'true' agreements, 1 'false' = the #eval of chainNewestRecovered on the unrecovered chain (the CORRECT value; it is the premise of next_panicResumeK_unrecovered).
+
+## The checks (the harness's section headers)
+-- C1 exec_seqn
+-- C2 exec_call_nullary — the entry on `enterFrame`, concrete
+-- C3 retV_callArgsK_enter — a declared call with one argument: entry binds the arg and the result
+-- C4 retV_callValCalleeK_nil — nil callee at invocation
+-- C5 retV_callValArgsK_enter — a value call `f(5)` through a function value
+-- C6 retV_deferCalleeK_push_frame — registration directly on the frame
+-- C7 retV_deferCalleeK_push — registration THROUGH sequence glue (pushDefer walks the glue)
+-- C8 retV_deferArgsK_outside — no call frame below: the named refusal
+-- C9 retV_panicArgK — THE RAISE (a string payload: settled entry)
+-- C10 evalE_recoverCall — the deferred frame directly on the marker: recover answers the payload
+-- C11 panicking_frame_defer_run — a pending defer runs ON THE PANIC PATH above the marker
+-- C12 panicking_frame_defer_nil — a nil deferred callee joins the chain
+-- C13 next_panicResumeK_unrecovered / _recovered
+-- C14 panicking_glue (an expression frame) and panicking_seq
+-- C15 panicking_probeK — the `unseqPanic` consult: slot 1 raises, slot 0 defers
+-- C16 THE ABORT — panicking_stop_settled on a settled chain: no successor, the `panic` terminal.
+-- C17 THE PREPRINT PHASE — panicking_stop_pending on an UNSETTLED chain (a `.pending` mark)
+-- C18 retV_preprintK_string (the method returned its string) and panicking_preprintK (the fatal)
+-- C19 the preprint frame's resolution on this hand-built entry: what does `preprintDispatch` answer?
+-- C20 FRAME EXIT with a NAMED RESULT and a caller target: the pinned cell is READ (loadRoot), then the target spine
+-- C21 FRAME EXIT with a PENDING DEFER and named results: the defer drains FIRST (results read later)
+-- C22 frameExit_nil (the empty frame pops) and the pop to the terminal
+-- C23 frameExit_extra_results — a targetless frame with a pinned result, not under the preprint frame
+-- C24 signal_table with a table row: `continue` at a loop frame re-tests the condition
+-- C25 signal_frame_escape — `break` escaping the function body refuses by name
+-- C26 next_stop — stepping the terminal is the named internal breach
+-- M1 evalE_var — THE READ, bottomed out through loadRoot_base at the heap cell
+-- M2 evalE_var_unbound
+-- M3 evalE_ref, M4 evalE_global / _oob
+-- M5–M8 the assignment spine `x = y`, step by step, ending in ONE storeLoc
+-- M9 next_storeK_panic — a store through a nil address panics AT THE STORE
+-- M10 next_storeK_done
+-- M11 exec_block — C4 block entry: one Store.alloc at the entry slot, bottomed out via allocDecls_cons/_nil
+-- M12 bindParams_cons/_nil — frame entry's floor from the EMPTY store
+-- R1 retV_ifK_true/false, R2 retV_whileK_false
+-- R3 evalE_and + retV_andK_false
+-- R4 evalE_intLit (the literal is normalized at its kind)
+-- R5 evalE_strict_more — `x + y` enters the strict walk
+-- R6 retV_strictK_apply — the arithmetic apply
+-- R7 retV_strictK_apply_panic — integer divide by zero
+-- R8 evalE_strict_nullary — `nil` is a nullary strict form applied in the same step
+-- R9 the DEREF read `*p` — the equation holds, its premise is the COMPOSED applyStrictOp (the floor is not loadLoc here)
+-- R10 exec_print + retV_stmtOpK_apply — the wide apply prints on the label
+-- R11 randIntn — the `[0,n)` DRAW rides the wide apply: the tape is consumed INSIDE applyStmtOp
+-- R12 exec_allocNew — `assigneeExpr` of a variable target
+-- R13 channels: exec_chanSend, then the apply on a NIL channel parks (the blocked shape); stepping it is the deadlock
+-- R14 select: `select {}` blocks; a default-only select runs the default
+-- R15 a select with one receive on a nil channel and a default: the apply takes the default
+-- R16 exec_goStmt + the sequential spawn refusal
+-- R17 map range over a NIL MAP (the typed nil, computed through the machine): start, then the done pick
+-- R18 exec_mapLookup (comma-ok) and exec_assignMany_arity
+-- R19 sync: the apply on a NIL mutex — does it PANIC? (the equation set has no retV_syncStK_apply_panic)
+-- R20 the probe
+
+## Descriptive outputs (refusals/terminals the instances produced, in order)
+"GoLean.Stop.refusal (GoLean.Refusal.stuck \"defer outside a call frame\")"
+"GoLean.Stop.refusal (GoLean.Refusal.unsupported \"panic abort rendering for payload GoLean.GoValue.string { bytes := #[98, 111, 111, 109] }\")"
+"GoLean.Stop.terminal (GoLean.Terminal.panic \"boom\")"
+"GoLean.Stop.refusal (GoLean.Refusal.unsupported \"panic while printing panic value: payload family not pinned GoLean.GoValue.string { bytes := #[98, 111, 111, 109] }\")"
+"GoLean.Stop.terminal (GoLean.Terminal.fatal \"panic while printing panic value: boom\")"
+"GoLean.Stop.refusal (GoLean.Refusal.internal \"preprint: a pending rewrite on an unboxed payload GoLean.GoValue.int 3 (GoLean.GoCore.IntKind.int)\")"
+"GoLean.Stop.refusal (GoLean.Refusal.stuck \"extra GoCore assignment value\")"
+"GoLean.Stop.refusal (GoLean.Refusal.stuck \"function body escaped with break\")"
+"GoLean.Stop.refusal (GoLean.Refusal.internal \"step on terminal configuration\")"
+"GoLean.Stop.refusal (GoLean.Refusal.stuck \"unbound GoCore variable address: 99\")"
+"GoLean.Stop.refusal (GoLean.Refusal.stuck \"global 9 out of range: the heap has 5 cell(s)\")"
+"GoLean.Stop.refusal (GoLean.Refusal.stuck \"expected bool value, got GoLean.GoValue.int 1 (GoLean.GoCore.IntKind.int)\")"
+"<ok>"
+"panicking: GoLean.GoValue.interface (GoLean.GoCore.Ty.defined 1) (GoLean.GoValue.string { bytes := #[114, 117, 110, 116, 105, 109, 101, 32, 101, 114, 114, 111, 114, 58, 32, 105, 110, 116, 101, 103, 101, 114, 32, 100, 105, 118, 10
+"store cell0=some (GoLean.GoCore.HeapCell.value (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int)) (GoLean.GoValue.int 2 (GoLean.GoCore.IntKind.int))) residual=[9] picks=[{ site := GoLean.GoCore.ChoiceSite.intn, bound := 3, pick :
+"ok blockedSend? true store-same=true trace=[]"
+"GoLean.Stop.refusal (GoLean.Refusal.stuck \"expected channel value, got GoLean.GoValue.nil\")"
+"GoLean.Stop.terminal (GoLean.Terminal.deadlock)"
+"ok default-branch? true store-same=true ch'=[1, 0, 1] ps=[] cl=none tr=[]"
+"GoLean.Stop.refusal (GoLean.Refusal.unsupported \"go spawn outside the thread pool (goroutine spawn is a pool step; go during package init is refused this slice)\")"
+"GoLean.Stop.refusal (GoLean.Refusal.stuck \"multi-assignment expected 1 value(s), got 2\")"
+"error GoLean.Stop.terminal (GoLean.Terminal.panic \"runtime error: invalid memory address or nil pointer dereference\")"
+"<ok>"
+"PANICKING (no equation states this arm): GoLean.GoValue.interface (GoLean.GoCore.Ty.defined 1) (GoLean.GoValue.string { bytes := #[114, 117, 110, 116, 105, 109, 101, 32, 101, 114, 114, 111, 114, 58, 32, 105, 110, 118, 97, 108, 10
+"entry-config-as-stated=true store=true resultLocs=[GoLean.Loc.base { id := 1 }] residual=[3]"
+"PRINT seq=ok heap=5 ch=[] seqOut={ bytes := #[104, 105, 10] } pool=ok heap=5 ch=[] poolOut={ bytes := #[104, 105, 10] } agree=true"
+"PANIC seq=error GoLean.Stop.terminal (GoLean.Terminal.panic \"boom\") pool=error GoLean.Stop.terminal (GoLean.Terminal.panic \"boom\") poolOut={ bytes := #[] } poolOut-eq-seqOut=true agree=true"
+"DEADLOCK (excluded by transferableWide) seq=error GoLean.Stop.terminal (GoLean.Terminal.deadlock) pool=error GoLean.Stop.terminal (GoLean.Terminal.deadlock)"
+
+## Notable machine facts met on the way (not packet D defects)
+- a hand-built PanicEntry over a BARE .string payload: the abort REFUSES by name ('panic abort rendering for payload …'); the frontend boxes payloads in the empty interface — on the boxed payload the abort is .terminal (.panic "boom") and the preprint fatal renders gc's 'panic while printing panic value: boom'
+- a bare .nil is not a channel/map value (the applies refuse 'expected channel value'); the typed nil (.nil (some (.chan ..))) parks a send as .blockedSend none … and stepping it is the sequential deadlock
+- applySyncOp .lock on .nil PANICS (the boxed runtime error) and stepFn goes .panicking — the arm no equation states (finding F3a)
+- preprintDispatch on a hand-built .pending entry over an unboxed payload refuses .internal — the preprint frame's non-panic error class (finding F3b)

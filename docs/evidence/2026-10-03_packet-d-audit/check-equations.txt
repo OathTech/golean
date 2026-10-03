@@ -1,0 +1,9 @@
+# GOLEAN_MEM_MAX=48G scripts/capped scripts/check-equations at 556ab207 (under the lock) — tail
+Build completed successfully (59 jobs).
+Equation client: enrollment complete — 229 equation theorems pinned, 7 facts
+Equation client: PASS — 7 facts by the equation set only
+ok [no-unfold] Tests/EquationClient.lean never unfolds stepFn
+ok [self-test unfold] the guard fires on a client that unfolds stepFn
+ok [self-test pin] deleting Pin.storeTarget_inv_panic fails the enrollment check by name
+Equation gate: PASS (client PASS, exhaustive enrollment, no-unfold guard, 2 self-tests)
+CHECK_EQUATIONS_EXIT=0

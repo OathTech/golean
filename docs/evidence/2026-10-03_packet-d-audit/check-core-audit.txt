@@ -1,0 +1,8 @@
+# scripts/capped scripts/check-core-audit at 556ab207 (under the lock) — tail
+/home/dev/projects/golean/.claude/worktrees/audit-packet-d/.tmp/core-audit-audit-pcbirem6/AuditAll.lean:56:0: error: Core totality audit: _private.Tests.GoCoreContract.0.coreAuditContractHole depends on forbidden axiom sorryAx
+Typed audit control: core-audit/contract_trailing compiled then rejected (coreAuditContractHole, sorryAx)
+Core totality audit: 54 GoLean modules in the closure (45 under GoLean.GoCore), all on disk; 470 required theorems present; 19751 declarations across all imported local modules; classical trio only
+Typed audit: core-audit: 5 compiled controls passed
+core-audit-audit PASS; scratch removed (10073919 owned bytes; dependencies symlinked)
+Core totality audit gate: PASS
+CHECK_CORE_AUDIT_EXIT=0

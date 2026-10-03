@@ -1,0 +1,658 @@
+import GoLean.GoCore.Equations
+import GoLean.GoCore.MachineEqb
+import GoLean.GoCore.PoolProjection
+
+/-!
+[AGENT auditor, review/packet-d-equations-1003] Concrete-instance checks of the packet D
+equations (scratch; never tracked). For each sampled equation: (i) `#eval` the interpreter on a
+CONCRETE configuration and compare it with the equation's right-hand side (`resEq`, compiled
+code — a path independent of the kernel); (ii) prove the same instance by the rewrite set
+`stepFn_eqns` (or the equation applied) with every premise discharged ON THE INSTANCE by `rfl`
+(after an `#eval` of the premise) — so no sampled equation is vacuous on its instance.
+-/
+
+open GoLean GoLean.GoCore GoLean.GoCore.Machine GoLean.GoCore.Equations
+
+namespace AuditCheck
+
+def gs (s : String) : GoString := GoString.fromLeanString s
+
+/-! ## The concrete program, store, environment, tape -/
+
+def pArg : Param := { id := 1, typ := .int }
+def pRes : Param := { id := 2, typ := .int }
+def fRet : Func := {
+  id := ⟨"fRet"⟩
+  args := #[]
+  results := #[]
+  body := .returnStmt }
+def fId : Func := {
+  id := ⟨"fId"⟩
+  args := #[pArg]
+  results := #[pRes]
+  body := .assign (.var 2) (.var 1) }
+def fPanic : Func := {
+  id := ⟨"fPanic"⟩
+  args := #[]
+  results := #[]
+  body := .panicStmt (.toInterface (.interface ⟨"empty_interface"⟩) .string (.stringLit (gs "boom"))) }
+def fPrint : Func := {
+  id := ⟨"fPrint"⟩
+  args := #[]
+  results := #[]
+  body := .print true #[.stringLit (gs "hi")] }
+def fDeadlock : Func := {
+  id := ⟨"fDeadlock"⟩
+  args := #[]
+  results := #[]
+  body := .chanSend (.nil (some (.chan .both .int))) (.intLit 1) .int }
+def prog : Program := { funcs := #[fRet, fId, fPanic, fPrint, fDeadlock] }
+def ctx : ProgramCtx := ⟨prog⟩
+
+/-- cells 0: int 5 · 1: bool true · 2: string "s" · 3: func fRet · 4: int 7 -/
+def s0 : Store := { heap := #[.value .int (.int 5), .value .bool (.bool true), .value .string (.string (gs "s")),
+  .value (.funcType [] [] false) (.funcVal ⟨"fRet"⟩ []), .value .int (.int 7)] }
+def env0 : LocalEnv := [[(10, .base ⟨0⟩), (11, .base ⟨1⟩), (12, .base ⟨2⟩), (13, .base ⟨3⟩), (14, .base ⟨4⟩)]]
+def mainId : FuncId := ⟨"main"⟩
+/-- the drivers' barrier frame -/
+def K0 : Cont := .frame [] [] [] [] .stop mainId
+def ch0 : Choices := [1, 0, 1]
+def silent : StepLabel := ⟨[], [], []⟩
+
+abbrev R := Except Stop (Config × Store × Choices × StepLabel)
+
+def labelEq (a b : StepLabel) : Bool := a.trace == b.trace && a.picks == b.picks && a.out == b.out
+
+def resEq (a b : R) : Bool :=
+  match a, b with
+  | .ok (c, s, ch, l), .ok (c', s', ch', l') => Config.eqbF 100000 c c' && Store.eqb s s' && ch == ch' && labelEq l l'
+  | .error e, .error e' => e == e'
+  | _, _ => false
+
+def errOf (a : R) : String := match a with | .error e => reprStr e | .ok _ => "<ok>"
+
+/-! ## Group (1) — control, calls, defer, return, panic/recover, unwinding, frame exit -/
+
+-- C1 exec_seqn
+#eval resEq (stepFn ctx s0 (.exec (.seqn #[.returnStmt, .breakStmt]) env0 K0) ch0)
+  (.ok (.next (seqCont [.returnStmt, .breakStmt] env0 K0), s0, ch0, silent))
+example : stepFn ctx s0 (.exec (.seqn #[.returnStmt, .breakStmt]) env0 K0) ch0
+    = .ok (.next (seqCont [.returnStmt, .breakStmt] env0 K0), s0, ch0, ⟨[], [], []⟩) := by simp only [stepFn_eqns]
+
+-- C2 exec_call_nullary — the entry on `enterFrame`, concrete
+#eval enterFrame ctx s0 ⟨"fRet"⟩ []
+theorem h_enter_fRet : enterFrame ctx s0 ⟨"fRet"⟩ [] = .ok (.run fRet [] [], s0, []) := rfl
+#eval resEq (stepFn ctx s0 (.exec (.call #[] ⟨"fRet"⟩ #[]) env0 K0) ch0)
+  (.ok (.exec .returnStmt [] (.frame [] env0 [] [] K0 ⟨"fRet"⟩), s0, ch0, silent))
+example : stepFn ctx s0 (.exec (.call #[] ⟨"fRet"⟩ #[]) env0 K0) ch0
+    = .ok ((Entry.run fRet [] []).callConfig [] env0 K0, s0, ch0, ⟨[], [], []⟩) :=
+  exec_call_nullary env0 K0 ch0 rfl rfl h_enter_fRet
+
+-- C3 retV_callArgsK_enter — a declared call with one argument: entry binds the arg and the result
+#eval enterFrame ctx s0 ⟨"fId"⟩ [.int 5]
+def s_fId : Store := { heap := s0.heap ++ #[.value .int (.int 5), .value .int (.int 0)] }
+theorem h_enter_fId : enterFrame ctx s0 ⟨"fId"⟩ [.int 5]
+    = .ok (.run fId [[(2, .base ⟨6⟩), (1, .base ⟨5⟩)]] [.base ⟨6⟩], s_fId, []) := rfl
+#eval resEq (stepFn ctx s0 (.retV (.int 5) (.callArgsK ⟨"fId"⟩ [(.chain [], [.ref 10])] [] [] env0 K0)) ch0)
+  (.ok (.exec fId.body [[(2, .base ⟨6⟩), (1, .base ⟨5⟩)]] (.frame [(.chain [], [.ref 10])] env0 [.base ⟨6⟩] [] K0 ⟨"fId"⟩),
+    s_fId, ch0, silent))
+example : stepFn ctx s0 (.retV (.int 5) (.callArgsK ⟨"fId"⟩ [(.chain [], [.ref 10])] [] [] env0 K0)) ch0
+    = .ok ((Entry.run fId [[(2, .base ⟨6⟩), (1, .base ⟨5⟩)]] [.base ⟨6⟩]).callConfig [(.chain [], [.ref 10])] env0 K0,
+      s_fId, ch0, ⟨[], [], []⟩) :=
+  retV_callArgsK_enter env0 K0 ch0 h_enter_fId
+
+-- C4 retV_callValCalleeK_nil — nil callee at invocation
+#eval resEq (stepFn ctx s0 (.retV .nil (.callValCalleeK [] [] env0 K0)) ch0)
+  (.ok (.panicking [panicEntry nilDerefPanicText] K0, s0, ch0, silent))
+example : stepFn ctx s0 (.retV .nil (.callValCalleeK [] [] env0 K0)) ch0
+    = .ok (.panicking [panicEntry nilDerefPanicText] K0, s0, ch0, ⟨[], [], []⟩) := by simp only [stepFn_eqns]
+
+-- C5 retV_callValArgsK_enter — a value call `f(5)` through a function value
+#eval resEq (stepFn ctx s0 (.retV (.int 5) (.callValArgsK (.funcVal ⟨"fId"⟩ []) [] [] [] env0 K0)) ch0)
+  (.ok (.exec fId.body [[(2, .base ⟨6⟩), (1, .base ⟨5⟩)]] (.frame [] env0 [.base ⟨6⟩] [] K0 ⟨"fId"⟩), s_fId, ch0, silent))
+example : stepFn ctx s0 (.retV (.int 5) (.callValArgsK (.funcVal ⟨"fId"⟩ []) [] [] [] env0 K0)) ch0
+    = .ok ((Entry.run fId [[(2, .base ⟨6⟩), (1, .base ⟨5⟩)]] [.base ⟨6⟩]).callConfig [] env0 K0, s_fId, ch0, ⟨[], [], []⟩) :=
+  retV_callValArgsK_enter env0 K0 ch0 (by simpa using h_enter_fId)
+
+-- C6 retV_deferCalleeK_push_frame — registration directly on the frame
+#eval resEq (stepFn ctx s0 (.retV (.funcVal ⟨"fRet"⟩ []) (.deferCalleeK [] env0 K0)) ch0)
+  (.ok (.next (.frame [] [] [] [(.funcVal ⟨"fRet"⟩ [], [])] .stop mainId), s0, ch0, silent))
+example : stepFn ctx s0 (.retV (.funcVal ⟨"fRet"⟩ []) (.deferCalleeK [] env0 K0)) ch0
+    = .ok (.next (.frame [] [] [] [(.funcVal ⟨"fRet"⟩ [], [])] .stop mainId), s0, ch0, ⟨[], [], []⟩) :=
+  retV_deferCalleeK_push_frame env0 ch0 [] [] [] [] .stop mainId rfl
+
+-- C7 retV_deferCalleeK_push — registration THROUGH sequence glue (pushDefer walks the glue)
+#eval match pushDefer (.funcVal ⟨"fRet"⟩ [], []) (.seq [.returnStmt] env0 K0) with
+  | some k => Cont.eqbF 1000 k (.seq [.returnStmt] env0 (.frame [] [] [] [(.funcVal ⟨"fRet"⟩ [], [])] .stop mainId)) | none => false
+theorem h_push : pushDefer (.funcVal ⟨"fRet"⟩ [], []) (.seq [.returnStmt] env0 K0)
+    = some (.seq [.returnStmt] env0 (.frame [] [] [] [(.funcVal ⟨"fRet"⟩ [], [])] .stop mainId)) := rfl
+#eval resEq (stepFn ctx s0 (.retV (.funcVal ⟨"fRet"⟩ []) (.deferCalleeK [] env0 (.seq [.returnStmt] env0 K0))) ch0)
+  (.ok (.next (.seq [.returnStmt] env0 (.frame [] [] [] [(.funcVal ⟨"fRet"⟩ [], [])] .stop mainId)), s0, ch0, silent))
+example : stepFn ctx s0 (.retV (.funcVal ⟨"fRet"⟩ []) (.deferCalleeK [] env0 (.seq [.returnStmt] env0 K0))) ch0
+    = .ok (.next (.seq [.returnStmt] env0 (.frame [] [] [] [(.funcVal ⟨"fRet"⟩ [], [])] .stop mainId)), s0, ch0, ⟨[], [], []⟩) :=
+  retV_deferCalleeK_push env0 ch0 rfl h_push
+
+-- C8 retV_deferArgsK_outside — no call frame below: the named refusal
+#eval errOf (stepFn ctx s0 (.retV (.int 1) (.deferArgsK (.funcVal ⟨"fId"⟩ []) [] [] env0 .stop)) ch0)
+example : stepFn ctx s0 (.retV (.int 1) (.deferArgsK (.funcVal ⟨"fId"⟩ []) [] [] env0 .stop)) ch0
+    = .error (.stuck "defer outside a call frame") := retV_deferArgsK_outside env0 ch0 rfl
+
+-- C9 retV_panicArgK — THE RAISE (a string payload: settled entry)
+#eval resEq (stepFn ctx s0 (.retV (.string (gs "boom")) (.panicArgK K0)) ch0)
+  (.ok (.panicking [{ value := .string (gs "boom"), recovered := false }] K0, s0, ch0, silent))
+example : stepFn ctx s0 (.retV (.string (gs "boom")) (.panicArgK K0)) ch0
+    = .ok (.panicking [panicEntryOf ctx (panicPayload (.string (gs "boom")))] K0, s0, ch0, ⟨[], [], []⟩) := by
+  simp only [stepFn_eqns]
+
+-- C10 evalE_recoverCall — the deferred frame directly on the marker: recover answers the payload
+def eB : PanicEntry := { value := .string (gs "boom"), recovered := false }
+def chainB : List PanicEntry := [eB]
+def kRec : Cont := .frame [] [] [] [] (.panicResumeK chainB K0) ⟨"fRet"⟩
+#eval (recoverResult kRec).1
+#eval resEq (stepFn ctx s0 (.evalE .recoverCall env0 kRec) ch0)
+  (.ok (.retV (.string (gs "boom")) (.frame [] [] [] [] (.panicResumeK [{ value := .string (gs "boom"), recovered := true }] K0) ⟨"fRet"⟩),
+    s0, ch0, silent))
+example : stepFn ctx s0 (.evalE .recoverCall env0 kRec) ch0
+    = .ok (.retV (recoverResult kRec).1 (recoverResult kRec).2, s0, ch0, ⟨[], [], []⟩) := by simp only [stepFn_eqns]
+
+-- C11 panicking_frame_defer_run — a pending defer runs ON THE PANIC PATH above the marker
+#eval resEq (stepFn ctx s0 (.panicking chainB (.frame [] env0 [] [(.funcVal ⟨"fRet"⟩ [], [])] K0 mainId)) ch0)
+  (.ok (.exec .returnStmt [] (.frame [] [] [] [] (.panicResumeK chainB (.frame [] env0 [] [] K0 mainId)) ⟨"fRet"⟩), s0, ch0, silent))
+example : stepFn ctx s0 (.panicking chainB (.frame [] env0 [] [(.funcVal ⟨"fRet"⟩ [], [])] K0 mainId)) ch0
+    = .ok (.exec fRet.body [] (.frame [] [] [] [] (.panicResumeK chainB (.frame [] env0 [] [] K0 mainId)) fRet.id), s0, ch0, ⟨[], [], []⟩) :=
+  panicking_frame_defer_run [] env0 [] [] K0 mainId ch0 h_enter_fRet
+
+-- C12 panicking_frame_defer_nil — a nil deferred callee joins the chain
+#eval resEq (stepFn ctx s0 (.panicking chainB (.frame [] env0 [] [(.nil, [.int 1])] K0 mainId)) ch0)
+  (.ok (.panicking (chainB ++ [panicEntry nilDerefPanicText]) (.frame [] env0 [] [] K0 mainId), s0, ch0, silent))
+example : stepFn ctx s0 (.panicking chainB (.frame [] env0 [] [(.nil, [.int 1])] K0 mainId)) ch0
+    = .ok (.panicking (chainB ++ [panicEntry nilDerefPanicText]) (.frame [] env0 [] [] K0 mainId), s0, ch0, ⟨[], [], []⟩) := by
+  simp only [stepFn_eqns]
+
+-- C13 next_panicResumeK_unrecovered / _recovered
+#eval chainNewestRecovered chainB
+#eval resEq (stepFn ctx s0 (.next (.panicResumeK chainB K0)) ch0) (.ok (.panicking chainB K0, s0, ch0, silent))
+example : stepFn ctx s0 (.next (.panicResumeK chainB K0)) ch0 = .ok (.panicking chainB K0, s0, ch0, ⟨[], [], []⟩) :=
+  next_panicResumeK_unrecovered K0 ch0 rfl
+def chainR : List PanicEntry := [{ value := .string (gs "boom"), recovered := true }]
+#eval resEq (stepFn ctx s0 (.next (.panicResumeK chainR K0)) ch0) (.ok (.next K0, s0, ch0, silent))
+example : stepFn ctx s0 (.next (.panicResumeK chainR K0)) ch0 = .ok (.next K0, s0, ch0, ⟨[], [], []⟩) :=
+  next_panicResumeK_recovered K0 ch0 rfl
+
+-- C14 panicking_glue (an expression frame) and panicking_seq
+#eval resEq (stepFn ctx s0 (.panicking chainB (.ifK .returnStmt .breakStmt env0 K0)) ch0) (.ok (.panicking chainB K0, s0, ch0, silent))
+example : stepFn ctx s0 (.panicking chainB (.ifK .returnStmt .breakStmt env0 K0)) ch0 = .ok (.panicking chainB K0, s0, ch0, ⟨[], [], []⟩) :=
+  panicking_glue K0 ch0 (.inr rfl)
+example : stepFn ctx s0 (.panicking chainB (.seq [.returnStmt] env0 K0)) ch0 = .ok (.panicking chainB K0, s0, ch0, ⟨[], [], []⟩) := by
+  simp only [stepFn_eqns]
+
+-- C15 panicking_probeK — the `unseqPanic` consult: slot 1 raises, slot 0 defers
+#eval resEq (stepFn ctx s0 (.panicking chainB (.probeK K0)) [1, 7]) (.ok (.panicking chainB K0, s0, [7], ⟨[], [⟨.unseqPanic, 2, 1⟩], []⟩))
+#eval resEq (stepFn ctx s0 (.panicking chainB (.probeK K0)) [0, 7]) (.ok (.next K0, s0, [7], ⟨[], [⟨.unseqPanic, 2, 0⟩], []⟩))
+example : stepFn ctx s0 (.panicking chainB (.probeK K0)) [1, 7]
+    = .ok (if (Choices.consumeAtE .unseqPanic 2 [1, 7]).1 = 0 then .next K0 else .panicking chainB K0, s0,
+          (Choices.consumeAtE .unseqPanic 2 [1, 7]).2.1, ⟨[], (Choices.consumeAtE .unseqPanic 2 [1, 7]).2.2, []⟩) := by
+  simp only [stepFn_eqns]
+
+-- C16 THE ABORT — panicking_stop_settled on a settled chain: no successor, the `panic` terminal.
+-- On a hand-built BARE string entry the renderer refuses by name (the frontend boxes payloads in the empty interface):
+#eval splitNewestPending? chainB
+#eval abortMsg ctx eB [] (abortConsult eB [] ch0).1
+#eval errOf (stepFn ctx s0 (.panicking chainB .stop) ch0)
+theorem h_settled : splitNewestPending? chainB = none := rfl
+example : stepFn ctx s0 (.panicking chainB .stop) ch0
+    = (do let msg ← abortMsg ctx eB [] (abortConsult eB [] ch0).1; throw (.panic msg)) :=
+  panicking_stop_settled ch0 h_settled
+-- the frontend's shape: the payload boxed in the empty interface — the abort IS `panic "boom"`
+def vBoom : GoValue := match applyStrictOp ctx s0 id (.toInterface (.interface ⟨"empty_interface"⟩) .string) [.string (gs "boom")] with
+  | .ok (v, _, _) => v | .error _ => .nil
+#eval vBoom
+def eBoom : PanicEntry := panicEntryOf ctx (panicPayload vBoom)
+#eval eBoom
+#eval splitNewestPending? [eBoom]
+#eval abortMsg ctx eBoom [] (abortConsult eBoom [] ch0).1
+#eval errOf (stepFn ctx s0 (.panicking [eBoom] .stop) ch0)
+#eval resEq (stepFn ctx s0 (.panicking [eBoom] .stop) ch0) (.error (.panic "boom"))
+#eval resEq (stepFn ctx s0 (.panicking [eBoom] .stop) ch0)
+  (do let msg ← abortMsg ctx eBoom [] (abortConsult eBoom [] ch0).1; throw (.panic msg))
+-- C17 THE PREPRINT PHASE — panicking_stop_pending on an UNSETTLED chain (a `.pending` mark)
+def ePend : PanicEntry := { value := .int 3, recovered := false, rewrite := .pending ⟨"Error", "main"⟩ }
+#eval splitNewestPending? [ePend]
+#eval (preprintCollide [] ePend, preprintWidth [] ePend)
+theorem h_pending : splitNewestPending? [ePend] = some ([], ePend, []) := rfl
+#eval resEq (stepFn ctx s0 (.panicking [ePend] .stop) ch0) (.ok (.next (.preprintK [] ePend [] .stop), s0, ch0, silent))
+example : stepFn ctx s0 (.panicking [ePend] .stop) ch0
+    = .ok (if preprintCollide [] ePend && (Choices.consumeAtE .repanicCollapse (preprintWidth [] ePend) ch0).1 = 0
+            then .panicking (preprintDrop [] []) .stop else .next (.preprintK [] ePend [] .stop), s0,
+          (Choices.consumeAtE .repanicCollapse (preprintWidth [] ePend) ch0).2.1,
+          ⟨[], (Choices.consumeAtE .repanicCollapse (preprintWidth [] ePend) ch0).2.2, []⟩) :=
+  panicking_stop_pending ch0 h_pending
+-- the collision case: two equal pending payloads, slot 0 collapses (older marked repanicked, newer dropped)
+#eval (preprintCollide [ePend] ePend, preprintWidth [ePend] ePend)
+#eval resEq (stepFn ctx s0 (.panicking [ePend, ePend] .stop) [0, 9])
+  (.ok (.panicking (preprintDrop [ePend] []) .stop, s0, [9], ⟨[], [⟨.repanicCollapse, 2, 0⟩], []⟩))
+#eval splitNewestPending? [ePend, ePend]
+-- C18 retV_preprintK_string (the method returned its string) and panicking_preprintK (the fatal)
+#eval resEq (stepFn ctx s0 (.retV (.string (gs "E!")) (.preprintK [] ePend [] .stop)) ch0)
+  (.ok (.panicking [{ ePend with rewrite := .done (gs "E!") }] .stop, s0, ch0, silent))
+example : stepFn ctx s0 (.retV (.string (gs "E!")) (.preprintK [] ePend [] .stop)) ch0
+    = .ok (.panicking ([] ++ { ePend with rewrite := .done (gs "E!") } :: []) .stop, s0, ch0, ⟨[], [], []⟩) := by simp only [stepFn_eqns]
+#eval errOf (stepFn ctx s0 (.panicking chainB (.preprintK [] ePend [] .stop)) ch0)
+-- the preprint fatal on the BOXED string payload: gc's «panic while printing panic value: boom»
+#eval errOf (stepFn ctx s0 (.panicking [eBoom] (.preprintK [] ePend [] .stop)) ch0)
+example : stepFn ctx s0 (.panicking chainB (.preprintK [] ePend [] .stop)) ch0 = .error (preprintFatalStop ctx chainB) := by
+  simp only [stepFn_eqns]
+-- C19 the preprint frame's resolution on this hand-built entry: what does `preprintDispatch` answer?
+#eval preprintDispatch ctx s0 ePend
+#eval errOf (stepFn ctx s0 (.next (.preprintK [] ePend [] .stop)) ch0)
+
+-- C20 FRAME EXIT with a NAMED RESULT and a caller target: the pinned cell is READ (loadRoot), then the target spine
+abbrev kExit : Cont := .frame [(.chain [], [.ref 10])] env0 [.base ⟨4⟩] [] K0 ⟨"fId"⟩
+#eval loadResults ctx s0 [.base ⟨4⟩]
+theorem h_lres : loadResults ctx s0 [.base ⟨4⟩] = .ok ([.int 7], [.access .read (.data (Loc.base ⟨4⟩).canon)]) := rfl
+#eval resEq (stepFn ctx s0 (.next kExit) ch0)
+  (.ok (.evalE (.ref 10) env0 (.tgtOpK (.chain []) [] [] [] [] .vals [] [.int 7] (.seqn #[]) env0 K0), s0, ch0,
+    ⟨[.access .read (.data (Loc.base ⟨4⟩).canon)], [], []⟩))
+example : stepFn ctx s0 (.next kExit) ch0
+    = .ok (.evalE (.ref 10) env0 (.tgtOpK (.chain []) [] [] [] [] .vals [] [.int 7] (.seqn #[]) env0 K0), s0, ch0,
+      ⟨[.access .read (.data (Loc.base ⟨4⟩).canon)], [], []⟩) := by
+  rw [next_frame, frameExit_targets (.chain []) (.ref 10) [] [] env0 K0 ⟨"fId"⟩ ch0 h_lres]
+-- the same through `return` (the signal entry)
+example : stepFn ctx s0 (.signal .ret kExit) ch0
+    = .ok (.evalE (.ref 10) env0 (.tgtOpK (.chain []) [] [] [] [] .vals [] [.int 7] (.seqn #[]) env0 K0), s0, ch0,
+      ⟨[.access .read (.data (Loc.base ⟨4⟩).canon)], [], []⟩) := by
+  rw [signal_ret_frame, frameExit_targets (.chain []) (.ref 10) [] [] env0 K0 ⟨"fId"⟩ ch0 h_lres]
+-- the result readback bottomed out: loadResults_cons over loadRoot
+example : loadResults ctx s0 [.base ⟨4⟩] = .ok ([.int 7], [.access .read (.data (Loc.base ⟨4⟩).canon)] ++ []) :=
+  loadResults_cons (loadRoot_base rfl) (loadResults_nil s0)
+
+-- C21 FRAME EXIT with a PENDING DEFER and named results: the defer drains FIRST (results read later)
+abbrev kExitD : Cont := .frame [(.chain [], [.ref 10])] env0 [.base ⟨4⟩] [(.funcVal ⟨"fRet"⟩ [], [])] K0 ⟨"fId"⟩
+#eval resEq (stepFn ctx s0 (.signal .ret kExitD) ch0)
+  (.ok (.exec .returnStmt [] (.frame [] [] [] [] (.frame [(.chain [], [.ref 10])] env0 [.base ⟨4⟩] [] K0 ⟨"fId"⟩) ⟨"fRet"⟩), s0, ch0, silent))
+example : stepFn ctx s0 (.signal .ret kExitD) ch0
+    = .ok (.exec fRet.body [] (.frame [] [] [] [] (.frame [(.chain [], [.ref 10])] env0 [.base ⟨4⟩] [] K0 ⟨"fId"⟩) fRet.id), s0, ch0, ⟨[], [], []⟩) := by
+  rw [signal_ret_frame, frameExit_defer_run [(.chain [], [.ref 10])] env0 [.base ⟨4⟩] [] K0 ⟨"fId"⟩ ch0 h_enter_fRet]
+
+-- C22 frameExit_nil (the empty frame pops) and the pop to the terminal
+#eval resEq (stepFn ctx s0 (.next K0) ch0) (.ok (.next .stop, s0, ch0, silent))
+example : stepFn ctx s0 (.next K0) ch0 = .ok (.next .stop, s0, ch0, ⟨[], [], []⟩) := by simp only [stepFn_eqns, K0]
+
+-- C23 frameExit_extra_results — a targetless frame with a pinned result, not under the preprint frame
+#eval errOf (stepFn ctx s0 (.next (.frame [] env0 [.base ⟨4⟩] [] K0 ⟨"fId"⟩)) ch0)
+example : stepFn ctx s0 (.next (.frame [] env0 [.base ⟨4⟩] [] K0 ⟨"fId"⟩)) ch0 = .error (.stuck "extra GoCore assignment value") := by
+  rw [next_frame, frameExit_extra_results env0 K0 ⟨"fId"⟩ ch0 h_lres (fun _ _ _ _ h => by cases h)]
+
+-- C24 signal_table with a table row: `continue` at a loop frame re-tests the condition
+#eval resEq (stepFn ctx s0 (.signal .cont (.loop (.boolLit true) .breakStmt env0 K0)) ch0)
+  (.ok (.exec (.while (.boolLit true) .breakStmt) env0 K0, s0, ch0, silent))
+example : stepFn ctx s0 (.signal .cont (.loop (.boolLit true) .breakStmt env0 K0)) ch0
+    = .ok (.exec (.while (.boolLit true) .breakStmt) env0 K0, s0, ch0, ⟨[], [], []⟩) :=
+  signal_table ch0 (signalStep_loop_cont _ _ env0 K0)
+-- a row the equation set does NOT enumerate (labelled continue at a loop whose head carries the label):
+#eval match signalStep (.contTo "L") (.loop (.boolLit true) .breakStmt env0 (.labelK "L" K0)) with
+  | some c => Config.eqbF 1000 c (.exec (.while (.boolLit true) .breakStmt) env0 (.labelK "L" K0)) | none => false
+
+-- C25 signal_frame_escape — `break` escaping the function body refuses by name
+#eval errOf (stepFn ctx s0 (.signal .brk K0) ch0)
+example : stepFn ctx s0 (.signal .brk K0) ch0 = .error (signalRefusal .brk K0) :=
+  signal_frame_escape [] [] [] [] .stop mainId ch0 (by decide)
+
+-- C26 next_stop — stepping the terminal is the named internal breach
+#eval errOf (stepFn ctx s0 (.next .stop) ch0)
+example : stepFn ctx s0 (.next .stop) ch0 = .error (.internal "step on terminal configuration") := by simp only [stepFn_eqns]
+
+/-! ## Group (2) — memory -/
+
+-- M1 evalE_var — THE READ, bottomed out through loadRoot_base at the heap cell
+theorem h_lk10 : LocalEnv.lookup env0 10 = some (.base ⟨0⟩) := rfl
+theorem h_cell0 : Heap.lookup s0.heap (.base ⟨0⟩) = some (.value .int (.int 5)) := rfl
+#eval projChainTarget ctx s0 K0 (.base ⟨0⟩)
+#eval resEq (stepFn ctx s0 (.evalE (.var 10) env0 K0) ch0)
+  (.ok (.retV (.int 5) K0, s0, ch0, ⟨[.access .read (.data (Loc.base ⟨0⟩).canon)], [], []⟩))
+example : stepFn ctx s0 (.evalE (.var 10) env0 K0) ch0
+    = .ok (.retV (.int 5) K0, s0, ch0, ⟨[.access .read (.data (projChainTarget ctx s0 K0 (.base ⟨0⟩)).canon)], [], []⟩) :=
+  evalE_var env0 K0 ch0 h_lk10 (loadRoot_base h_cell0)
+
+-- M2 evalE_var_unbound
+#eval errOf (stepFn ctx s0 (.evalE (.var 99) env0 K0) ch0)
+example : stepFn ctx s0 (.evalE (.var 99) env0 K0) ch0 = .error (.stuck s!"unbound GoCore variable address: {(99 : VarId)}") :=
+  evalE_var_unbound env0 K0 ch0 rfl
+
+-- M3 evalE_ref, M4 evalE_global / _oob
+#eval resEq (stepFn ctx s0 (.evalE (.ref 10) env0 K0) ch0) (.ok (.retV (.addr (.base ⟨0⟩)) K0, s0, ch0, silent))
+example : stepFn ctx s0 (.evalE (.ref 10) env0 K0) ch0 = .ok (.retV (.addr (.base ⟨0⟩)) K0, s0, ch0, ⟨[], [], []⟩) :=
+  evalE_ref env0 K0 ch0 h_lk10
+#eval resEq (stepFn ctx s0 (.evalE (.global 2) env0 K0) ch0) (.ok (.retV (.addr (.base ⟨2⟩)) K0, s0, ch0, silent))
+example : stepFn ctx s0 (.evalE (.global 2) env0 K0) ch0 = .ok (.retV (.addr (.base ⟨2⟩)) K0, s0, ch0, ⟨[], [], []⟩) :=
+  evalE_global env0 K0 ch0 (by decide)
+#eval errOf (stepFn ctx s0 (.evalE (.global 9) env0 K0) ch0)
+example : stepFn ctx s0 (.evalE (.global 9) env0 K0) ch0 = .error (.stuck s!"global {9} out of range: the heap has {s0.heap.size} cell(s)") :=
+  evalE_global_oob env0 K0 ch0 (by decide)
+
+-- M5–M8 the assignment spine `x = y`, step by step, ending in ONE storeLoc
+#eval resEq (stepFn ctx s0 (.exec (.assign (.var 10) (.var 14)) env0 K0) ch0)
+  (.ok (.evalE (.ref 10) env0 (.tgtOpK (.chain []) [] [] [] [] .vals [.var 14] [] (.seqn #[]) env0 K0), s0, ch0, silent))
+example : stepFn ctx s0 (.exec (.assign (.var 10) (.var 14)) env0 K0) ch0
+    = .ok (.evalE (.ref 10) env0 (.tgtOpK (.chain []) [] [] [] [] .vals [.var 14] [] (.seqn #[]) env0 K0), s0, ch0, ⟨[], [], []⟩) := by
+  simp only [stepFn_eqns]
+abbrev kT : Cont := .tgtOpK (.chain []) [] [] [] [] .vals [.var 14] [] (.seqn #[]) env0 K0
+#eval resEq (stepFn ctx s0 (.retV (.addr (.base ⟨0⟩)) kT) ch0)
+  (.ok (.evalE (.var 14) env0 (.rhsK .vals [.chain (.addr (.base ⟨0⟩)) [] []] [] [] (.seqn #[]) env0 K0), s0, ch0, silent))
+example : stepFn ctx s0 (.retV (.addr (.base ⟨0⟩)) kT) ch0
+    = .ok (.evalE (.var 14) env0 (.rhsK .vals ([] ++ [.chain (.addr (.base ⟨0⟩)) [] []]) [] [] (.seqn #[]) env0 K0), s0, ch0, ⟨[], [], []⟩) :=
+  retV_tgtOpK_rhs [] .vals (.var 14) [] [] (.seqn #[]) env0 K0 ch0 (completeTargetRef_var _)
+abbrev kR : Cont := .rhsK .vals [.chain (.addr (.base ⟨0⟩)) [] []] [] [] (.seqn #[]) env0 K0
+#eval resEq (stepFn ctx s0 (.retV (.int 7) kR) ch0)
+  (.ok (.next (.storeK [.chain (.addr (.base ⟨0⟩)) [] []] [.int 7] (.seqn #[]) env0 K0), s0, ch0, silent))
+example : stepFn ctx s0 (.retV (.int 7) kR) ch0
+    = .ok (.next (.storeK [.chain (.addr (.base ⟨0⟩)) [] []] [.int 7] (.seqn #[]) env0 K0), s0, ch0, ⟨[], [], []⟩) :=
+  retV_rhsK_apply [.chain (.addr (.base ⟨0⟩)) [] []] (.seqn #[]) env0 K0 ch0 (applyRhsOp_vals s0 [.int 7])
+-- the store: storeLoc_root gives the written store IN PLACE, normalized at the cell's type
+def s1 : Store := { heap := #[.value .int (.int 7), .value .bool (.bool true), .value .string (.string (gs "s")),
+  .value (.funcType [] [] false) (.funcVal ⟨"fRet"⟩ []), .value .int (.int 7)] }
+#eval match storeLoc ctx s0 (.base ⟨0⟩) (.int 7) with | .ok s => Store.eqb s s1 | .error _ => false
+theorem h_norm : normalizeValueForTy ctx .int (.int 7) = .ok (.int 7) := rfl
+theorem h_st : storeLoc ctx s0 (.base ⟨0⟩) (.int 7) = .ok s1 := by
+  rw [storeLoc_root h_cell0 h_norm]; rfl
+#eval resEq (stepFn ctx s0 (.next (.storeK [.chain (.addr (.base ⟨0⟩)) [] []] [.int 7] (.seqn #[]) env0 K0)) ch0)
+  (.ok (.next (.storeK [] [] (.seqn #[]) env0 K0), s1, ch0, ⟨[.access .write (.data (Loc.base ⟨0⟩).canon)], [], []⟩))
+example : stepFn ctx s0 (.next (.storeK [.chain (.addr (.base ⟨0⟩)) [] []] [.int 7] (.seqn #[]) env0 K0)) ch0
+    = .ok (.next (.storeK [] [] (.seqn #[]) env0 K0), s1, ch0, ⟨[.access .write (.data (Loc.base ⟨0⟩).canon)], [], []⟩) :=
+  next_storeK_var [] [] (.seqn #[]) env0 K0 ch0 h_st
+-- read back (Heap.lookup_set_self ∘ loadRoot_base)
+#eval loadRoot ctx s1 (.base ⟨0⟩)
+example : loadRoot ctx s1 (.base ⟨0⟩) = .ok (.int 7) := by
+  have := storeLoc_root (ctx := ctx) h_cell0 h_norm
+  rw [h_st] at this; cases this
+  exact loadRoot_base (Heap.lookup_set_self (hi := Heap.lookup_lt h_cell0))
+
+-- M9 next_storeK_panic — a store through a nil address panics AT THE STORE
+#eval storeTarget ctx s0 (.chain .nil [] []) (.int 1)
+theorem h_stnil : storeTarget ctx s0 (.chain .nil [] []) (.int 1) = .error (.panic nilDerefPanicText) := rfl
+#eval resEq (stepFn ctx s0 (.next (.storeK [.chain .nil [] []] [.int 1] (.seqn #[]) env0 K0)) ch0)
+  (.ok (.panicking [panicEntry nilDerefPanicText] K0, s0, ch0, silent))
+example : stepFn ctx s0 (.next (.storeK [.chain .nil [] []] [.int 1] (.seqn #[]) env0 K0)) ch0
+    = .ok (.panicking [panicEntry nilDerefPanicText] K0, s0, ch0, ⟨[], [], []⟩) :=
+  next_storeK_panic [] [] (.seqn #[]) env0 K0 ch0 h_stnil
+
+-- M10 next_storeK_done
+example : stepFn ctx s0 (.next (.storeK [] [] (.seqn #[]) env0 K0)) ch0 = .ok (.exec (.seqn #[]) env0 K0, s0, ch0, ⟨[], [], []⟩) := by
+  simp only [stepFn_eqns]
+
+-- M11 exec_block — C4 block entry: one Store.alloc at the entry slot, bottomed out via allocDecls_cons/_nil
+def pB : Param := { id := 20, typ := .bool }
+#eval allocDecls ctx env0.pushScope s0 [pB]
+#eval Store.alloc ctx s0 (.bool false) .bool
+def s0b : Store := { heap := s0.heap.push (.value .bool (.bool false)) }
+theorem h_def : defaultValue ctx .bool = .ok (.bool false) := rfl
+theorem h_alloc : Store.alloc ctx s0 (.bool false) .bool = .ok (.base ⟨5⟩, s0b) := rfl
+theorem h_decls : allocDecls ctx env0.pushScope s0 [pB] = .ok (env0.pushScope.declare 20 (.base ⟨5⟩), s0b) := by
+  rw [allocDecls_cons [] h_def h_alloc, allocDecls_nil]; rfl
+#eval resEq (stepFn ctx s0 (.exec (.block #[pB] #[.returnStmt]) env0 K0) ch0)
+  (.ok (.next (.seq [.returnStmt] (env0.pushScope.declare 20 (.base ⟨5⟩)) K0), s0b, ch0, silent))
+example : stepFn ctx s0 (.exec (.block #[pB] #[.returnStmt]) env0 K0) ch0
+    = .ok (.next (.seq [.returnStmt] (env0.pushScope.declare 20 (.base ⟨5⟩)) K0), s0b, ch0, ⟨[], [], []⟩) :=
+  exec_block #[.returnStmt] K0 ch0 h_decls
+-- the allocated cell reads back as the zero value (Heap.lookup_push_self ∘ loadRoot_base)
+example : loadRoot ctx s0b (.base ⟨5⟩) = .ok (.bool false) := loadRoot_base Heap.lookup_push_self
+
+-- M12 bindParams_cons/_nil — frame entry's floor from the EMPTY store
+#eval bindParams ctx [] {} [{ id := 1, typ := .int }] [.int 5]
+example : bindParams ctx [] {} [{ id := 1, typ := .int }] [.int 5] = .ok (LocalEnv.declare [] 1 (.base ⟨0⟩), { heap := #[.value .int (.int 5)] }) := by
+  rw [bindParams_cons [] [] (hn := (rfl : normalizeValueForTy ctx .int (.int 5) = .ok (.int 5)))
+    (ha := (rfl : Store.alloc ctx {} (.int 5) .int = .ok (.base ⟨0⟩, { heap := #[.value .int (.int 5)] }))), bindParams_nil]; rfl
+
+/-! ## Group (3) — the rest -/
+
+-- R1 retV_ifK_true/false, R2 retV_whileK_false
+#eval resEq (stepFn ctx s0 (.retV (.bool true) (.ifK .returnStmt .breakStmt env0 K0)) ch0) (.ok (.exec .returnStmt env0 K0, s0, ch0, silent))
+example : stepFn ctx s0 (.retV (.bool true) (.ifK .returnStmt .breakStmt env0 K0)) ch0 = .ok (.exec .returnStmt env0 K0, s0, ch0, ⟨[], [], []⟩) :=
+  retV_ifK_true _ _ env0 K0 ch0 (valueAsBool_bool true)
+#eval resEq (stepFn ctx s0 (.retV (.bool false) (.whileK (.boolLit true) .breakStmt env0 K0)) ch0) (.ok (.next K0, s0, ch0, silent))
+example : stepFn ctx s0 (.retV (.bool false) (.whileK (.boolLit true) .breakStmt env0 K0)) ch0 = .ok (.next K0, s0, ch0, ⟨[], [], []⟩) :=
+  retV_whileK_false _ _ env0 K0 ch0 (valueAsBool_bool false)
+-- a non-Boolean at `ifK`: the refusal NO equation states
+#eval errOf (stepFn ctx s0 (.retV (.int 1) (.ifK .returnStmt .breakStmt env0 K0)) ch0)
+
+-- R3 evalE_and + retV_andK_false
+example : stepFn ctx s0 (.evalE (.and (.var 11) (.var 11)) env0 K0) ch0 = .ok (.evalE (.var 11) env0 (.andK (.var 11) env0 K0), s0, ch0, ⟨[], [], []⟩) := by
+  simp only [stepFn_eqns]
+#eval resEq (stepFn ctx s0 (.retV (.bool false) (.andK (.var 11) env0 K0)) ch0) (.ok (.retV (.bool false) K0, s0, ch0, silent))
+example : stepFn ctx s0 (.retV (.bool false) (.andK (.var 11) env0 K0)) ch0 = .ok (.retV (.bool false) K0, s0, ch0, ⟨[], [], []⟩) :=
+  retV_andK_false _ env0 K0 ch0 (valueAsBool_bool false)
+
+-- R4 evalE_intLit (the literal is normalized at its kind)
+#eval resEq (stepFn ctx s0 (.evalE (.intLit 300 .int8) env0 K0) ch0) (.ok (.retV (.int (IntKind.int8.normalize 300) .int8) K0, s0, ch0, silent))
+#eval IntKind.int8.normalize 300
+example : stepFn ctx s0 (.evalE (.intLit 300 .int8) env0 K0) ch0 = .ok (.retV (.int (IntKind.int8.normalize 300) .int8) K0, s0, ch0, ⟨[], [], []⟩) := by
+  simp only [stepFn_eqns]
+
+-- R5 evalE_strict_more — `x + y` enters the strict walk
+#eval strictPlan (.add (.var 10) (.var 14))
+example : stepFn ctx s0 (.evalE (.add (.var 10) (.var 14)) env0 K0) ch0
+    = .ok (.evalE (.var 10) env0 (.strictK .add [] [.var 14] env0 K0), s0, ch0, ⟨[], [], []⟩) :=
+  evalE_strict_more env0 K0 ch0 rfl
+#eval resEq (stepFn ctx s0 (.evalE (.add (.var 10) (.var 14)) env0 K0) ch0)
+  (.ok (.evalE (.var 10) env0 (.strictK .add [] [.var 14] env0 K0), s0, ch0, silent))
+
+-- R6 retV_strictK_apply — the arithmetic apply
+#eval applyStrictOp ctx s0 (projChainTarget ctx s0 K0) .add [.int 5, .int 7]
+theorem h_add : applyStrictOp ctx s0 (projChainTarget ctx s0 K0) .add ([.int 7, .int 5] : List GoValue).reverse = .ok (.int 12, s0, []) := rfl
+#eval resEq (stepFn ctx s0 (.retV (.int 7) (.strictK .add [.int 5] [] env0 K0)) ch0) (.ok (.retV (.int 12) K0, s0, ch0, silent))
+example : stepFn ctx s0 (.retV (.int 7) (.strictK .add [.int 5] [] env0 K0)) ch0 = .ok (.retV (.int 12) K0, s0, ch0, ⟨[], [], []⟩) :=
+  retV_strictK_apply env0 K0 ch0 h_add
+
+-- R7 retV_strictK_apply_panic — integer divide by zero
+#eval applyStrictOp ctx s0 (projChainTarget ctx s0 K0) .div [.int 5, .int 0]
+#eval errOf (stepFn ctx s0 (.retV (.int 0) (.strictK .div [.int 5] [] env0 K0)) ch0)
+#eval match stepFn ctx s0 (.retV (.int 0) (.strictK .div [.int 5] [] env0 K0)) ch0 with
+  | .ok (.panicking [e] _, _, _, _) => s!"panicking: {reprStr e.value}" | _ => "other"
+
+-- R8 evalE_strict_nullary — `nil` is a nullary strict form applied in the same step
+#eval strictPlan (.nil none)
+#eval applyStrictOp ctx s0 (projChainTarget ctx s0 K0) (.nilLit none) []
+#eval resEq (stepFn ctx s0 (.evalE (.nil none) env0 K0) ch0) (.ok (.retV .nil K0, s0, ch0, silent))
+example : stepFn ctx s0 (.evalE (.nil none) env0 K0) ch0 = .ok (.retV .nil K0, s0, ch0, ⟨[], [], []⟩) :=
+  evalE_strict_nullary env0 K0 ch0 rfl rfl
+
+-- R9 the DEREF read `*p` — the equation holds, its premise is the COMPOSED applyStrictOp (the floor is not loadLoc here)
+#eval applyStrictOp ctx s0 (projChainTarget ctx s0 K0) (.deref .int) [.addr (.base ⟨0⟩)]
+theorem h_deref : applyStrictOp ctx s0 (projChainTarget ctx s0 K0) (.deref .int) ([.addr (.base ⟨0⟩)] : List GoValue).reverse
+    = .ok (.int 5, s0, [.access .read (.data (Loc.base ⟨0⟩).canon)]) := rfl
+example : stepFn ctx s0 (.retV (.addr (.base ⟨0⟩)) (.strictK (.deref .int) [] [] env0 K0)) ch0
+    = .ok (.retV (.int 5) K0, s0, ch0, ⟨[.access .read (.data (Loc.base ⟨0⟩).canon)], [], []⟩) :=
+  retV_strictK_apply env0 K0 ch0 h_deref
+
+-- R10 exec_print + retV_stmtOpK_apply — the wide apply prints on the label
+example : stepFn ctx s0 (.exec (.print true #[.stringLit (gs "hi")]) env0 K0) ch0
+    = .ok (.evalE (.stringLit (gs "hi")) env0 (.stmtOpK (.print true) 0 [] [] env0 K0), s0, ch0, ⟨[], [], []⟩) :=
+  exec_print true env0 K0 ch0 rfl
+#eval applyStmtOp ctx s0 ch0 (.print true) 0 [.string (gs "hi")]
+theorem h_print : applyStmtOp ctx s0 ch0 (.print true) 0 ([.string (gs "hi")] : List GoValue).reverse = .ok (s0, ch0, [], []) := rfl
+#eval resEq (stepFn ctx s0 (.retV (.string (gs "hi")) (.stmtOpK (.print true) 0 [] [] env0 K0)) ch0)
+  (.ok (.next K0, s0, ch0, ⟨[], [], [gs "hi\n"]⟩))
+example : stepFn ctx s0 (.retV (.string (gs "hi")) (.stmtOpK (.print true) 0 [] [] env0 K0)) ch0
+    = .ok (.next K0, s0, ch0, ⟨[], [], stmtOpOut (.print true) ([.string (gs "hi")] : List GoValue).reverse⟩) :=
+  retV_stmtOpK_apply env0 K0 ch0 h_print
+
+-- R11 randIntn — the `[0,n)` DRAW rides the wide apply: the tape is consumed INSIDE applyStmtOp
+#eval stmtPlan (.randIntn (some (.var 10)) (.intLit 3))
+example : stepFn ctx s0 (.exec (.randIntn (some (.var 10)) (.intLit 3)) env0 K0) ch0
+    = .ok (.evalE (.ref 10) env0 (.stmtOpK .randIntn 1 [] [.intLit 3] env0 K0), s0, ch0, ⟨[], [], []⟩) :=
+  exec_wide env0 K0 ch0 rfl
+#eval applyStmtOp ctx s0 [2, 9] .randIntn 1 [.addr (.base ⟨0⟩), .int 3]
+#eval match applyStmtOp ctx s0 [2, 9] .randIntn 1 [.addr (.base ⟨0⟩), .int 3] with
+  | .ok (s', ch', ps, tr) => s!"store cell0={reprStr (Heap.lookup s'.heap (.base ⟨0⟩))} residual={ch'} picks={reprStr ps} trace={reprStr tr}"
+  | .error e => s!"error {reprStr e}"
+def rIntn := applyStmtOp ctx s0 [2, 9] .randIntn 1 [.addr (.base ⟨0⟩), .int 3]
+#eval match rIntn with
+  | .ok (s', ch', ps, tr) => resEq (stepFn ctx s0 (.retV (.int 3) (.stmtOpK .randIntn 1 [.addr (.base ⟨0⟩)] [] env0 K0)) [2, 9])
+      (.ok (.next K0, s', ch', ⟨tr, ps, []⟩))
+  | .error _ => false
+
+-- R12 exec_allocNew — `assigneeExpr` of a variable target
+example : stepFn ctx s0 (.exec (.allocNew (.var 10) (.intLit 1) .int) env0 K0) ch0
+    = .ok (.evalE (.ref 10) env0 (.stmtOpK (.allocNew .int) 1 [] [.intLit 1] env0 K0), s0, ch0, ⟨[], [], []⟩) :=
+  exec_allocNew (.intLit 1) .int env0 K0 ch0 rfl
+
+-- R13 channels: exec_chanSend, then the apply on a NIL channel parks (the blocked shape); stepping it is the deadlock
+example : stepFn ctx s0 (.exec (.chanSend (.nil (some (.chan .both .int))) (.intLit 1) .int) env0 K0) ch0
+    = .ok (.evalE (.nil (some (.chan .both .int))) env0 (.chanStK (.send .int) [] [.intLit 1] env0 K0), s0, ch0, ⟨[], [], []⟩) := by simp only [stepFn_eqns]
+def vNilChan : GoValue := match applyStrictOp ctx s0 id (.nilLit (some (.chan .both .int))) [] with | .ok (v, _, _) => v | .error _ => .nil
+#eval vNilChan
+def rSend := applyChanOp ctx s0 (.send .int) [vNilChan, .int 1] env0 K0
+#eval match rSend with
+  | .ok (c', s', tr) => s!"ok blockedSend? {Config.eqbF 1000 c' (.blockedSend none (.int 1) K0)} store-same={Store.eqb s' s0} trace={reprStr tr}"
+  | .error e => s!"error {reprStr e}"
+#eval match rSend with
+  | .ok (c', s', tr) => resEq (stepFn ctx s0 (.retV (.int 1) (.chanStK (.send .int) [vNilChan] [] env0 K0)) ch0) (.ok (c', s', ch0, ⟨tr, [], []⟩))
+  | .error _ => false
+-- a bare `.nil` is NOT a channel value: the apply REFUSES (no `_apply_error` equation for chanStK states this)
+#eval errOf (stepFn ctx s0 (.retV (.int 1) (.chanStK (.send .int) [.nil] [] env0 K0)) ch0)
+#eval errOf (stepFn ctx s0 (.blockedSend none (.int 1) K0) ch0)
+example : stepFn ctx s0 (.blockedSend none (.int 1) K0) ch0 = .error .deadlock := by simp only [stepFn_eqns]
+
+-- R14 select: `select {}` blocks; a default-only select runs the default
+example : stepFn ctx s0 (.exec (.selectStmt #[] none) env0 K0) ch0 = .ok (.blockedSelect [] env0 K0, s0, ch0, ⟨[], [], []⟩) :=
+  exec_selectStmt_block env0 K0 ch0 rfl
+example : stepFn ctx s0 (.exec (.selectStmt #[] (some .returnStmt)) env0 K0) ch0 = .ok (.exec .returnStmt env0 K0, s0, ch0, ⟨[], [], []⟩) :=
+  exec_selectStmt_default .returnStmt env0 K0 ch0 rfl
+-- R15 a select with one receive on a nil channel and a default: the apply takes the default
+def selCl : List (SelectClauseHead × Stmt) := [(.recv #[] (.nil (some (.chan .both .int))) .int, .breakStmt)]
+#eval selectOperands selCl
+#eval match applySelect ctx s0 selCl (some .returnStmt) [vNilChan] env0 K0 ch0 with
+  | .ok (c', s', ch', ps, cl?, tr) => s!"ok default-branch? {Config.eqbF 1000 c' (.exec .returnStmt env0 K0)} store-same={Store.eqb s' s0} ch'={ch'} ps={reprStr ps} cl={reprStr cl?} tr={reprStr tr}"
+  | .error e => s!"error {reprStr e}"
+def rSel := applySelect ctx s0 selCl (some .returnStmt) [vNilChan] env0 K0 ch0
+#eval match rSel with
+  | .ok (c', s', ch', ps, _, tr) => resEq (stepFn ctx s0 (.retV vNilChan (.selectOpsK selCl (some .returnStmt) [] [] env0 K0)) ch0) (.ok (c', s', ch', ⟨tr, ps, []⟩))
+  | .error _ => false
+
+-- R16 exec_goStmt + the sequential spawn refusal
+example : stepFn ctx s0 (.exec (.goStmt (.var 13) #[]) env0 K0) ch0 = .ok (.evalE (.var 13) env0 (.goCalleeK [] env0 K0), s0, ch0, ⟨[], [], []⟩) := by
+  simp only [stepFn_eqns]
+#eval errOf (stepFn ctx s0 (.retV (.funcVal ⟨"fRet"⟩ []) (.goCalleeK [] env0 K0)) ch0)
+example : stepFn ctx s0 (.retV (.funcVal ⟨"fRet"⟩ []) (.goCalleeK [] env0 K0)) ch0
+    = .error (.unsupported "go spawn outside the thread pool (goroutine spawn is a pool step; go during package init is refused this slice)") :=
+  retV_goCalleeK_spawn env0 K0 ch0 rfl
+
+-- R17 map range over a NIL MAP (the typed nil, computed through the machine): start, then the done pick
+#eval mapRangeStartSets s0 .nil
+def vNilMap : GoValue := match applyStrictOp ctx s0 id (.nilLit (some (.map .int .int))) [] with | .ok (v, _, _) => v | .error _ => .nil
+#eval vNilMap
+#eval mapRangeStartSets s0 vNilMap
+def rRange := mapRangeStartSets s0 vNilMap
+#eval match rRange with
+  | .ok (b, st, tr) => resEq (stepFn ctx s0 (.retV vNilMap (.mapRangeK none none .int .int .breakStmt env0 K0)) ch0)
+      (.ok (.next (.mapIterK none none .int .int .breakStmt b #[] st env0 K0), s0, ch0, ⟨tr, [], []⟩))
+  | .error _ => false
+example : stepFn ctx s0 (.retV vNilMap (.mapRangeK none none .int .int .breakStmt env0 K0)) ch0
+    = .ok (.next (.mapIterK none none .int .int .breakStmt none #[] #[] env0 K0), s0, ch0, ⟨[], [], []⟩) :=
+  retV_mapRangeK none none .int .int .breakStmt env0 K0 ch0 (by rfl)
+#eval mapIterCandidates ctx s0 .int .int none #[]
+#eval resEq (stepFn ctx s0 (.next (.mapIterK none none .int .int .breakStmt none #[] #[] env0 K0)) ch0) (.ok (.next K0, s0, ch0, silent))
+example : stepFn ctx s0 (.next (.mapIterK none none .int .int .breakStmt none #[] #[] env0 K0)) ch0 = .ok (.next K0, s0, ch0, ⟨[], [], []⟩) :=
+  next_mapIterK_done none none .breakStmt #[] env0 K0 ch0 (by rfl)
+
+-- R18 exec_mapLookup (comma-ok) and exec_assignMany_arity
+#eval targetsPlan [Assignee.var 10, .var 11]
+example : stepFn ctx s0 (.exec (.mapLookup (.var 10) (.var 11) (.var 12) (.intLit 1) .int .int) env0 K0) ch0
+    = .ok (.evalE (.ref 10) env0 (.tgtOpK (.chain []) [] [] [] [(.chain [], [.ref 11])] (.mapLookup .int .int) [.var 12, .intLit 1] [] (.seqn #[]) env0 K0), s0, ch0, ⟨[], [], []⟩) :=
+  exec_mapLookup (.var 12) (.intLit 1) .int .int env0 K0 ch0 (by rfl)
+#eval errOf (stepFn ctx s0 (.exec (.assignMany #[.var 10] #[.intLit 1, .intLit 2]) env0 K0) ch0)
+example : stepFn ctx s0 (.exec (.assignMany #[.var 10] #[.intLit 1, .intLit 2]) env0 K0) ch0
+    = .error (.stuck s!"multi-assignment expected {(#[Assignee.var 10] : Array Assignee).size} value(s), got {(#[Expr.intLit 1, .intLit 2] : Array Expr).size}") :=
+  exec_assignMany_arity env0 K0 ch0 (by decide)
+
+-- R19 sync: the apply on a NIL mutex — does it PANIC? (the equation set has no retV_syncStK_apply_panic)
+#eval match applySyncOp ctx s0 ch0 .lock [.nil] env0 K0 with
+  | .ok _ => "ok" | .error e => s!"error {reprStr e}"
+#eval errOf (stepFn ctx s0 (.retV .nil (.syncStK .lock [] [] env0 K0)) ch0)
+#eval match stepFn ctx s0 (.retV .nil (.syncStK .lock [] [] env0 K0)) ch0 with
+  | .ok (.panicking [e] _, _, _, _) => s!"PANICKING (no equation states this arm): {reprStr e.value}" | .ok _ => "ok other" | .error e => s!"error {reprStr e}"
+
+-- R20 the probe
+example : stepFn ctx s0 (.exec (.unseqProbe (.var 10)) env0 K0) ch0 = .ok (.evalE (.var 10) env0 (.probeK K0), s0, ch0, ⟨[], [], []⟩) := by simp only [stepFn_eqns]
+example : stepFn ctx s0 (.retV (.int 5) (.probeK K0)) ch0 = .ok (.next K0, s0, ch0, ⟨[], [], []⟩) := by simp only [stepFn_eqns]
+
+/-! ## The setup equation (request 2), concrete -/
+
+def setupRes := runProgramSetupM 10 prog "fId" #[.int 5] [3]
+#eval bindParams (⟨prog⟩ : ProgramCtx) [] {} fId.args.toList [GoValue.int 5]
+def envA : LocalEnv := [[(1, .base ⟨0⟩)]]
+def envF : LocalEnv := [[(2, .base ⟨1⟩), (1, .base ⟨0⟩)]]
+def sS : Store := { heap := #[.value .int (.int 5), .value .int (.int 0)] }
+theorem h_bp : bindParams (⟨prog⟩ : ProgramCtx) [] {} fId.args.toList (#[GoValue.int 5] : Array GoValue).toList = .ok (envA, { heap := #[.value .int (.int 5)] }) := rfl
+theorem h_ad : allocDecls (⟨prog⟩ : ProgramCtx) envA { heap := #[.value .int (.int 5)] } fId.results.toList = .ok (envF, sS) := rfl
+theorem h_pin : pinResultLocs envF fId.results.toList = .ok [.base ⟨1⟩] := rfl
+set_option maxRecDepth 8192 in
+example : runProgramSetupM 10 prog "fId" #[.int 5] [3] = .ok (⟨prog⟩, .exec fId.body envF (.frame [] [] [] [] .stop fId.id), sS, [.base ⟨1⟩], [3]) :=
+  runProgramSetup_noInit rfl rfl rfl rfl rfl h_bp h_ad h_pin
+#eval match setupRes with
+  | .ok (_, c, s, rl, ch) => s!"entry-config-as-stated={Config.eqbF 1000 c (.exec fId.body envF (.frame [] [] [] [] .stop fId.id))} store={Store.eqb s sS} resultLocs={reprStr rl} residual={ch}"
+  | .error e => s!"error {reprStr e}"
+-- the layout lemmas on the instance
+example : LocalEnv.lookup envF fId.args[0].id = some (.base ⟨0⟩) := setup_lookup_arg h_bp h_ad rfl 0 (by decide)
+example : LocalEnv.lookup envF fId.results[0].id = some (.base ⟨fId.args.size + 0⟩) := setup_lookup_result h_bp h_ad rfl 0 (by decide)
+example : [Loc.base ⟨1⟩] = (List.range fId.results.size).map (fun j => Loc.base ⟨fId.args.size + j⟩) := setup_resultLocs h_bp h_ad rfl h_pin
+example : sS.heap.size = fId.args.size + fId.results.size := setup_heap_size h_bp h_ad
+#eval (LocalEnv.lookup envF 1, LocalEnv.lookup envF 2, sS.heap.size)
+
+/-! ## The projections, concrete (one goroutine): output agreement and the terminal projection -/
+
+def cPrint : Config := .exec fPrint.body [] (.frame [] [] [] [] .stop fPrint.id)
+def cPanic : Config := .exec fPanic.body [] (.frame [] [] [] [] .stop fPanic.id)
+def cDead : Config := .exec fDeadlock.body [] (.frame [] [] [] [] .stop fDeadlock.id)
+def seqRun (c : Config) := execStmtLoop ctx 40 s0 c []
+def poolRun (c : Config) := execProgLoopOut ctx (40 + seqOpCount ctx 40 s0 c []) ⟨#[.running c none], s0, 0⟩ ({} : RaceState) [] GoString.empty
+def seqO (c : Config) := seqOut ctx 40 s0 c [] GoString.empty
+def res2Eq (a b : Except Stop (Store × Choices)) : Bool := match a, b with
+  | .ok (s, ch), .ok (s', ch') => Store.eqb s s' && ch == ch' | .error e, .error e' => e == e' | _, _ => false
+def showRes (r : Except Stop (Store × Choices)) : String := match r with
+  | .ok (s, ch) => s!"ok heap={s.heap.size} ch={ch}" | .error e => s!"error {reprStr e}"
+#eval (seqOpCount ctx 40 s0 cPrint [], seqOpCount ctx 40 s0 cPanic [], seqOpCount ctx 40 s0 cDead [])
+#eval s!"PRINT seq={showRes (seqRun cPrint)} seqOut={reprStr (seqO cPrint)} pool={showRes (poolRun cPrint).2} poolOut={reprStr (poolRun cPrint).1} agree={(poolRun cPrint).1 == seqO cPrint && res2Eq (poolRun cPrint).2 (seqRun cPrint)}"
+#eval s!"PANIC seq={showRes (seqRun cPanic)} pool={showRes (poolRun cPanic).2} poolOut={reprStr (poolRun cPanic).1} poolOut-eq-seqOut={(poolRun cPanic).1 == seqO cPanic} agree={res2Eq (poolRun cPanic).2 (seqRun cPanic)}"
+#eval s!"DEADLOCK (excluded by transferableWide) seq={showRes (seqRun cDead)} pool={showRes (poolRun cDead).2}"
+-- the theorem on the instance (the premise `execStmtLoop … = r` discharged by evaluation is NOT attempted
+-- (#eval before decide); the instance is checked above by evaluation only)
+
+/-! ## The `unseq` sweep, concrete: ENTER, `.run i` on a value head, the value WRITE at `.wait i` -/
+
+def gU : UnseqGraph := { cells := [{ id := 30, typ := .int }], occs := [⟨"R", .eval 30 (.var 10), [], none⟩] }
+#eval gU.wellFormed?
+#eval unseqEntryCheck? gU env0
+#eval allocDecls ctx env0.pushScope s0 gU.cells
+def envU : LocalEnv := (env0.pushScope.declare 30 (.base ⟨5⟩))
+def sU : Store := { heap := s0.heap.push (.value .int (.int 0)) }
+theorem h_gwf : gU.wellFormed? = none := rfl
+theorem h_gen : unseqEntryCheck? gU env0 = none := rfl
+theorem h_gal : allocDecls ctx env0.pushScope s0 gU.cells = .ok (envU, sU) := rfl
+#eval resEq (stepFn ctx s0 (.exec (.unseq gU (.seqn #[])) env0 (.seq [] env0 K0)) ch0)
+  (.ok (.next (.unseqK gU (.seqn #[]) gU.initStatus [] envU .pick (.seq [] env0 K0)), sU, ch0, silent))
+example : stepFn ctx s0 (.exec (.unseq gU (.seqn #[])) env0 (.seq [] env0 K0)) ch0
+    = .ok (.next (.unseqK gU (.seqn #[]) gU.initStatus [] envU .pick (.seq [] env0 K0)), sU, ch0, ⟨[], [], []⟩) :=
+  unseqEnter (.seqn #[]) [] K0 ch0 h_gwf h_gen h_gal
+-- `.run 0` on the value head: the head evaluates under the waiting frame
+#eval resEq (stepFn ctx sU (.next (.unseqK gU (.seqn #[]) gU.initStatus [] envU (.run 0) (.seq [] env0 K0))) ch0)
+  (.ok (.evalE (.var 10) envU (.unseqK gU (.seqn #[]) gU.initStatus [] envU (.wait 0) (.seq [] env0 K0)), sU, ch0, silent))
+example : stepFn ctx sU (.next (.unseqK gU (.seqn #[]) gU.initStatus [] envU (.run 0) (.seq [] env0 K0))) ch0
+    = .ok (.evalE (.var 10) envU (.unseqK gU (.seqn #[]) gU.initStatus [] envU (.wait 0) (.seq [] env0 K0)), sU, ch0, ⟨[], [], []⟩) :=
+  unseqRun_eval (.seqn #[]) gU.initStatus [] envU (.seq [] env0 K0) ch0 rfl rfl
+-- the value WRITE into the binder cell at `.wait 0`: one storeLoc
+#eval unseqCellLoc envU 30
+#eval match storeLoc ctx sU (.base ⟨5⟩) (.int 5) with | .ok s => s.heap.size | .error _ => 0
+def sU2 : Store := { heap := s0.heap.push (.value .int (.int 5)) }
+theorem h_ucell : unseqCellLoc envU 30 = .ok (.base ⟨5⟩) := rfl
+theorem h_ust : storeLoc ctx sU (.base ⟨5⟩) (.int 5) = .ok sU2 := by
+  rw [storeLoc_root (ty := .int) (old := .int 0) rfl rfl]; rfl
+#eval resEq (stepFn ctx sU (.retV (.int 5) (.unseqK gU (.seqn #[]) gU.initStatus [] envU (.wait 0) (.seq [] env0 K0))) ch0)
+  (.ok (.next (.unseqK gU (.seqn #[]) (gU.initStatus.set 0 .done) [] envU .pick (.seq [] env0 K0)), sU2, ch0,
+    ⟨[.access .write (.data (Loc.base ⟨5⟩).canon)], [], []⟩))
+example : stepFn ctx sU (.retV (.int 5) (.unseqK gU (.seqn #[]) gU.initStatus [] envU (.wait 0) (.seq [] env0 K0))) ch0
+    = .ok (.next (.unseqK gU (.seqn #[]) (gU.initStatus.set 0 .done) [] envU .pick (.seq [] env0 K0)), sU2, ch0,
+      ⟨[.access .write (.data (Loc.base ⟨5⟩).canon)], [], []⟩) :=
+  unseqValue (.seqn #[]) gU.initStatus [] envU (.seq [] env0 K0) ch0 rfl rfl h_ucell h_ust
+
+end AuditCheck
