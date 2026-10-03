@@ -1,8 +1,15 @@
-# scripts/capped scripts/check-equations (GOLEAN_MEM_MAX=48G), tree = proofs commit 5335ee03; the lake build lines dropped
-info: Tests/EquationClient.lean:1725:0: Equation client: enrollment complete — 229 equation theorems pinned, 7 facts
-Equation client: enrollment complete — 229 equation theorems pinned, 7 facts
-Equation client: PASS — 7 facts by the equation set only
+# scripts/capped scripts/check-equations (GOLEAN_MEM_MAX=48G), tree = the pre-landing round (facts 11, pins 292, the Lean-level no-unfold check, nine self-tests); the lake build lines dropped
+info: Tests/EquationClient.lean:2190:0: Equation client: enrollment complete — 292 equation theorems pinned, 11 facts, none unfolds stepFn
+Equation client: enrollment complete — 292 equation theorems pinned, 11 facts, none unfolds stepFn
+Equation client: PASS — 11 facts by the equation set only
 ok [no-unfold] Tests/EquationClient.lean never unfolds stepFn
 ok [self-test unfold] the guard fires on a client that unfolds stepFn
 ok [self-test pin] deleting Pin.storeTarget_inv_panic fails the enrollment check by name
-Equation gate: PASS (client PASS, exhaustive enrollment, no-unfold guard, 2 self-tests)
+ok [self-test bypass 1] 'exact rfl' is refused by the proof-term check
+ok [self-test bypass 2] 'simp only [stepFn]; rfl' is refused by the proof-term check
+ok [self-test bypass 3] 'delta stepFn; rfl' is refused by the proof-term check
+ok [self-test bypass 4] 'simp_all [stepFn]' is refused by the proof-term check
+ok [self-test bypass 5] 'simpa [stepFn]' is refused by the proof-term check
+ok [self-test bypass 6] 'rw [stepFn]; rfl' is refused by the proof-term check
+ok [self-test bypass 7] 'unfold GoLean.GoCore.Machine.stepFn; rfl' is refused by the proof-term check
+Equation gate: PASS (client PASS, exhaustive enrollment, the Lean-level no-unfold check, the regex pre-filter, 9 self-tests)

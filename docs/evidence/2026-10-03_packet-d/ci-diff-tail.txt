@@ -5,8 +5,8 @@ imported-goose/channel/google-search	baseline[PASS/membership] -> now[FAIL/membe
   [01] C9  HIGH    certificate provenance: STALE certification: changed dependency build/files/GoLean.lean
   [02] C13  MEDIUM  79 doc site(s) across 10 file(s) name a patch-level Go version other than the pin (go1.25.13/go1.26.5 per docs/spec-sources.md). Some are legitimately historical; a toolchain/oracle claim off the pin is not, because the pin's whole job is that the spec text and the thing that produced the numbers moved together.
 ── executed library coverage (all named build receipts from this CI invocation)
-CI coverage timing: verify: seconds=0.018
-Executed library coverage: PASS; 10 libraries, 20 Tests modules, 9 named steps; timings: artifacts/ci-library-timings/293e2c5a005544f69fba55c4159b1db1.json
+CI coverage timing: verify: seconds=0.016
+Executed library coverage: PASS; 10 libraries, 20 Tests modules, 9 named steps; timings: artifacts/ci-library-timings/6c4ca8aa8ab14e2e83ba577f2f3a6a91.json
 ══ scripts/ci summary ══
   ok   Tests/library ownership (no exceptions; executed builds checked at exit)
   note build parallelism: cap 48G -> LEAN_NUM_THREADS=6 (cap/8G, floor 2; 32 cores on this box)
@@ -50,9 +50,9 @@ Executed library coverage: PASS; 10 libraries, 20 Tests modules, 9 named steps; 
   note reconciler: 2 finding(s), 1 HIGH — report-only (details: tools/reconcile-records)
   ok   executed library coverage (all declared libraries; all Tests modules)
 RESULT: FAIL
-Failed CI receipts retained: .tmp/ci-libraries-jfhw56tw
-CI coverage timing: close: seconds=0.017
-CI total wall seconds: 1261
+Failed CI receipts retained: .tmp/ci-libraries-g0vhiizm
+CI coverage timing: close: seconds=0.018
+CI total wall seconds: 879
 with-lock: command exit=1
 with-lock: released
 CI EXIT=1
