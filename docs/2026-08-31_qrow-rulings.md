@@ -1293,3 +1293,12 @@ tree exactly — audit F1) and (c) (PASS → FAIL re-pin) NOT taken. Post-window
 spin bounds in loop iterations, not raw steps (all four `nonterm=200` rows moved with C4). The pre-merge audit
 (`docs/2026-10-02_block-allocation-audit.md` @ `305afc95`) is MERGE-CLEAN; its F1–F6 records corrections are folded
 into the handoff, the changelog row and the design note at landing.
+
+### Train r59 — block-entry allocation (C4) landed — RULED (2026-10-03)
+
+[USER] Mike, 2026-10-03, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «yeah, agree with 1, land it» — the
+merge sign-off for `core/block-allocation-1001` (G-C4; audit MERGE-CLEAN), with the STOPPED budget row
+`sync/trylock/spin-until-trylock` resolved by option 1 (its work cap raised to 500000; the observation set unchanged) and the
+audit's records corrections folded in. Landed: the decoder hoist (wire unchanged), `Stmt.initialization` deleted (45 → 44
+constructors, 128 → 127 rules), the `unseq` sweep-private scope, `entrySlot` + the lifetime lemmas (the logic side's request
+4). Post-window follow-up recorded: spin bounds in loop iterations, not raw steps.
