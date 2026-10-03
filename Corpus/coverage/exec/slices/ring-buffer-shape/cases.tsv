@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+# CL4 (window charter §4.4): the tracker.Inflights ring — wrapping cursor, growth by make+copy, stale slots, Clone vs header-sharing copy.
+wrap	ringWrap	-	ok	-	slices,make,copy,methods,pointers,structs,loops,aliasing
+stale-slots	ringStaleSlots	-	ok	-	slices,make,copy,methods,pointers,structs,loops
+clone-vs-alias	ringCloneVsAlias	-	ok	-	slices,append,nil,aliasing,copy_semantics,methods,pointers,structs

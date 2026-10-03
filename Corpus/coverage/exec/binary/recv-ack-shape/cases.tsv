@@ -1,0 +1,20 @@
+# id	subject	args	expected_status	expected_reason	features
+# CL2 (window charter §4.2): the readOnly.recvAck shape — nil/empty no-op, >= 8 bytes LE, missing key, max both ways, lengths 1..7 panic, nil map.
+# depth=64: the decoding rows outran the three fixed invariance streams (default-stream wide count w = 10..16, measured by scripts/diff-one 2026-10-03); N = the smallest power of two >= 4*w, min 64 (docs/coverage-suite-structure.md).
+nil-ctx	recvAckLen	1,-1	ok	-	stdlib,bytes,slices,maps,max,nil,methods
+empty-ctx	recvAckLen	1,0	ok	-	stdlib,bytes,slices,maps,max,empty,methods
+len8-existing	recvAckLen	1,8	ok	-	stdlib,bytes,slices,maps,max,bitwise,methods	strict	-	depth=64
+len8-missing-key	recvAckLen	2,8	ok	-	stdlib,bytes,slices,maps,max,bitwise,methods	strict	-	depth=64
+len9-first-eight	recvAckLen	2,9	ok	-	stdlib,bytes,slices,maps,max,bitwise,methods	strict	-	depth=64
+len16-first-eight	recvAckLen	1,16	ok	-	stdlib,bytes,slices,maps,max,bitwise,methods	strict	-	depth=64
+len1-panics	recvAckLen	1,1	panic	index out of range	stdlib,bytes,slices,maps,panic,methods
+len2-panics	recvAckLen	1,2	panic	index out of range	stdlib,bytes,slices,maps,panic,methods
+len3-panics	recvAckLen	1,3	panic	index out of range	stdlib,bytes,slices,maps,panic,methods
+len4-panics	recvAckLen	1,4	panic	index out of range	stdlib,bytes,slices,maps,panic,methods
+len5-panics	recvAckLen	1,5	panic	index out of range	stdlib,bytes,slices,maps,panic,methods
+len6-panics	recvAckLen	1,6	panic	index out of range	stdlib,bytes,slices,maps,panic,methods
+len7-panics	recvAckLen	1,7	panic	index out of range	stdlib,bytes,slices,maps,panic,methods
+keeps-larger	recvAckKeepsLarger	-	ok	-	stdlib,bytes,slices,maps,max,methods	strict	-	depth=64
+nil-map-empty-ctx	recvAckNilMap	0	ok	-	maps,nil,empty,methods
+nil-map-len8-panics	recvAckNilMap	8	panic	assignment to entry in nil map	stdlib,bytes,maps,nil,panic,methods
+hand-decode	handDecode	-	ok	-	stdlib,bytes,slices,bitwise,shifts,conversions

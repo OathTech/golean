@@ -1,0 +1,10 @@
+# id	subject	args	expected_status	expected_reason	features
+# CL5 (window charter §4.5): stored step/tick dispatch, one interface site / two callees, a mutating visitor that panics, Storage-like (value, error) identity.
+stored-dispatch	storedDispatch	-	ok	-	functions,higher_order,closures,fields,methods,pointers,identity
+iface-dispatch	ifaceDispatch	-	ok	-	interfaces,methods,pointers,value_copy,range,slices
+visitor-panics-mid	visitorPanics	2	ok	-	functions,higher_order,closures,panic,recover,defer,named-results,range
+visitor-completes	visitorPanics	9	ok	-	functions,higher_order,closures,panic,recover,defer,named-results,range
+storage-compacted	storageReply	2	ok	-	interfaces,stdlib,identity,multi_result,methods
+storage-value	storageReply	6	ok	-	interfaces,stdlib,identity,multi_result,methods
+storage-unavailable	storageReply	9	ok	-	interfaces,stdlib,identity,multi_result,methods
+global-rand-locked	lockedJitter	-	ok	-	stdlib,rand,sync,mutex,methods,globals,nondet	membership	the composed observable electionTimeout + globalRand.Intn(electionTimeout) at timeout 5 through the mutex-locked package-global wrapper (raft.go D-11 shape): the ONE value-bearing consumption site is the intn draw (Stmt.randIntn), bound = n EXACTLY = 5, so the admitted set is {5,6,7,8,9} — members=5; width 8 >= 5	width=8,sites=8,members=5

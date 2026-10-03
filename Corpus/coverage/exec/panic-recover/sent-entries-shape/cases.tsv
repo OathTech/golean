@@ -1,0 +1,8 @@
+# id	subject	args	expected_status	expected_reason	features
+# CL3 (window charter §4.3): the Progress.SentEntries shape — write-call-panic, the later update skipped, deferred prints across two frames, observation before failure, error vs panic.
+normal-path	sentEntriesRecovered	0	ok	-	methods,pointers,structs,panic,recover,defer,named-results
+write-survives-recovered	sentEntriesRecovered	1	ok	-	methods,pointers,structs,panic,recover,defer,named-results
+write-survives-abort	sentEntriesAbort	-	panic	cannot add into a Full inflights	methods,pointers,structs,panic,defer,print
+error-not-panic	classifyTerm	3	ok	-	stdlib,interfaces,identity,panic,recover,defer,multi_result
+panic-not-error	classifyTerm	12	ok	-	stdlib,interfaces,identity,panic,recover,defer,multi_result
+value	classifyTerm	7	ok	-	stdlib,interfaces,identity,panic,recover,defer,multi_result

@@ -1,5 +1,13 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 3821 (3584 PASS / 237 FAIL)
+# cases: 3860 (3623 PASS / 237 FAIL)
+# re-pinned: 2026-10-03 [AGENT], records/window-corpus-cl-1003 — the window's corpus lanes CL1–CL5 given an explicit disposition
+#   (window review F3, docs/2026-10-03_window-review.md on review/window-1003 @ 66d09ab5; the disposition
+#   docs/2026-10-03_window-corpus-disposition.md). WHY: the charter's §4 corpus commitments had no completion accounting; existing
+#   rows were mapped per subcondition and ONLY the uncovered subconditions got rows. BORN ROWS ONLY, all PASS: +5
+#   methods/maybe-update-shape/* (CL1), +17 binary/recv-ack-shape/* (CL2; 5 strict depth=64 — w = 10..16 measured), +6
+#   panic-recover/sent-entries-shape/* (CL3), +3 slices/ring-buffer-shape/* (CL4), +8 functions/callback-dispatch-shape/* (CL5;
+#   global-rand-locked membership {5..9} members=5, plus 20 gc draws plain/-race all inside). No code changed; no existing row's
+#   result or stage moved. Measured by scripts/diff-one (39/39 PASS), then the full gate. 3821 + 39 = 3860; 3584 + 39 = 3623; 237 FAIL.
 # re-pinned: 2026-10-03 [AGENT], core/panic-preprint-1003, window unit 6b — BUG-004 item 4 FIXED: the PREPRINT PHASE ([USER] Mike
 #   2026-09-30 «Yes, agree, do the fix inside this window», relayed; design docs/2026-09-30_bug004-item4-design.md §2 (i), all §5
 #   decisions as recommended; handoff docs/2026-10-03_panic-preprint-handoff.md). WHY: gc's `preprintpanics` CALLS a panic payload's
@@ -1950,6 +1958,23 @@ PASS	binary/little-endian/golden	-
 PASS	binary/little-endian/heartbeat-ctx-shape	-
 PASS	binary/little-endian/roundtrip	-
 PASS	binary/little-endian/short-read	-
+PASS	binary/recv-ack-shape/empty-ctx	-
+PASS	binary/recv-ack-shape/hand-decode	-
+PASS	binary/recv-ack-shape/keeps-larger	-
+PASS	binary/recv-ack-shape/len1-panics	-
+PASS	binary/recv-ack-shape/len16-first-eight	-
+PASS	binary/recv-ack-shape/len2-panics	-
+PASS	binary/recv-ack-shape/len3-panics	-
+PASS	binary/recv-ack-shape/len4-panics	-
+PASS	binary/recv-ack-shape/len5-panics	-
+PASS	binary/recv-ack-shape/len6-panics	-
+PASS	binary/recv-ack-shape/len7-panics	-
+PASS	binary/recv-ack-shape/len8-existing	-
+PASS	binary/recv-ack-shape/len8-missing-key	-
+PASS	binary/recv-ack-shape/len9-first-eight	-
+PASS	binary/recv-ack-shape/nil-ctx	-
+PASS	binary/recv-ack-shape/nil-map-empty-ctx	-
+PASS	binary/recv-ack-shape/nil-map-len8-panics	-
 PASS	binop-order/operand-panic-vs-call/call-before-left	membership
 PASS	binop-order/operand-panic-vs-call/call-before-left-div	membership
 PASS	binop-order/operand-panic-vs-call/left-first	-
@@ -3086,6 +3111,14 @@ PASS	functions/bare-call-chain/func-value	-
 PASS	functions/bare-call-chain/helper	-
 PASS	functions/bare-call-chain/multi-result	-
 PASS	functions/bare-call-discard-result	-
+PASS	functions/callback-dispatch-shape/global-rand-locked	membership
+PASS	functions/callback-dispatch-shape/iface-dispatch	-
+PASS	functions/callback-dispatch-shape/storage-compacted	-
+PASS	functions/callback-dispatch-shape/storage-unavailable	-
+PASS	functions/callback-dispatch-shape/storage-value	-
+PASS	functions/callback-dispatch-shape/stored-dispatch	-
+PASS	functions/callback-dispatch-shape/visitor-completes	-
+PASS	functions/callback-dispatch-shape/visitor-panics-mid	-
 PASS	functions/callchain/base	-
 PASS	functions/callchain/neg	-
 PASS	functions/callchain/zero	-
@@ -3843,6 +3876,11 @@ PASS	methods/defined-int-receiver	-
 PASS	methods/defined-map-receiver	-
 PASS	methods/embedded-interface-satisfaction	-
 PASS	methods/interface-dispatch	-
+PASS	methods/maybe-update-shape/advance-then-stale	-
+PASS	methods/maybe-update-shape/advance-twice	-
+PASS	methods/maybe-update-shape/equal-unchanged	-
+PASS	methods/maybe-update-shape/uint64-wrap	-
+PASS	methods/maybe-update-shape/widths-field-copy	-
 PASS	methods/method-expr-call-position/call-order	-
 PASS	methods/method-expr-call-position/interface-receiver	-
 PASS	methods/method-expr-call-position/pointer-receiver	-
@@ -4683,6 +4721,12 @@ PASS	panic-recover/repanic-same-value-abort	membership
 PASS	panic-recover/repanic-same-value-abort/forced-half	-
 PASS	panic-recover/return-expression-panic-recovered	-
 PASS	panic-recover/self-recovered-defer-panic	-
+PASS	panic-recover/sent-entries-shape/error-not-panic	-
+PASS	panic-recover/sent-entries-shape/normal-path	-
+PASS	panic-recover/sent-entries-shape/panic-not-error	-
+PASS	panic-recover/sent-entries-shape/value	-
+PASS	panic-recover/sent-entries-shape/write-survives-abort	-
+PASS	panic-recover/sent-entries-shape/write-survives-recovered	-
 PASS	panic-recover/shim-refusal-unrecoverable/parse-recover	-
 PASS	panic-recover/shim-refusal-unrecoverable/render-recover	-
 PASS	panic-recover/shim-refusal-unrecoverable/split-recover	-
@@ -4969,6 +5013,9 @@ PASS	slices/make-slice	-
 PASS	slices/make-slice-cap-bounds	-
 PASS	slices/make-slice-zero	-
 PASS	slices/reslice-capacity	-
+PASS	slices/ring-buffer-shape/clone-vs-alias	-
+PASS	slices/ring-buffer-shape/stale-slots	-
+PASS	slices/ring-buffer-shape/wrap	-
 PASS	slices/slice-append	-
 PASS	slices/slice-copy	-
 PASS	slices/slice-elided-high-eval-once/call-base	-

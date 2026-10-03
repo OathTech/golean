@@ -573,7 +573,7 @@ than as speculative cases.)
 
 ## 8. Counts and the closing arithmetic
 
-All numbers at the current tracked baseline (3821 cases, 3584 PASS / 237 FAIL; [AGENT] coordinator, train r60 — the panic preprint phase (window unit 6b, BUG-004 item 4) landed: 21 rows born (19 PASS, 2 FAIL red-by-design on BUG-099's Cases line) and `panic-defined-payload-methods/{error,stringer}` FAIL→PASS; the FAIL bucket total is unchanged at 237 because the two flips leave and the two born reds enter; movement §8ar). Previous tally: (3800 cases, 3563 PASS / 237 FAIL; [AGENT] worker, branch
+All numbers at the current tracked baseline (3860 cases, 3623 PASS / 237 FAIL; [AGENT] worker, branch `records/window-corpus-cl-1003` — the window's corpus lanes CL1–CL5 dispositioned (window review F3; `docs/2026-10-03_window-corpus-disposition.md`): 39 rows BORN PASS under `methods/maybe-update-shape/`, `binary/recv-ack-shape/`, `panic-recover/sent-entries-shape/`, `slices/ring-buffer-shape/`, `functions/callback-dispatch-shape/`; nothing else moved; 3821 + 39 = 3860, 3584 + 39 = 3623, 237 unchanged, no PASS → non-PASS; 130 + 9 + (24 + 1) + 8 + 65 = 237 ✓; movement §8as). Previous tally: (3821 cases, 3584 PASS / 237 FAIL; [AGENT] coordinator, train r60 — the panic preprint phase (window unit 6b, BUG-004 item 4) landed: 21 rows born (19 PASS, 2 FAIL red-by-design on BUG-099's Cases line) and `panic-defined-payload-methods/{error,stringer}` FAIL→PASS; the FAIL bucket total is unchanged at 237 because the two flips leave and the two born reds enter; movement §8ar). Previous tally: (3800 cases, 3563 PASS / 237 FAIL; [AGENT] worker, branch
 `prep/r58-0930` — train r58's pre-landing harness fix (audit F4 of `docs/2026-10-01_intn-pick-audit.md`; [USER] Mike 2026-10-01
 «agree, land it, ratify all including the harness fix», relayed): the oracle harness's `importName` now applies goimports'
 assumed-name rule, so an UNALIASED `import "math/rand/v2"` binds `rand`; measured by `scripts/diff-one` on the new row and
@@ -3058,3 +3058,7 @@ cause-naming refusals on this slice's full run.
 ### 8ar. Movement at the panic preprint phase (2026-10-03, lane `core/panic-preprint-1003`, train r60)
 
 Baseline 3800 = 3563 / 237 → 3821 = 3584 / 237: +21 born under `panic-recover/panic-preprint/` (19 PASS, 2 FAIL red-by-design — `nil-ptr-receiver-deref`, `value-method-nil-ptr`, refused by name, on BUG-099's Cases line); `panic-defined-payload-methods/{error,stringer}` FAIL → PASS (off BUG-004's Cases line; item 4 FIXED); 0 PASS → non-PASS. Recorded at landing by the coordinator (audit F5: the lane re-pinned the baseline without this movement line).
+
+### 8as. Movement at the window corpus disposition (2026-10-03, branch `records/window-corpus-cl-1003`)
+
+Baseline 3821 = 3584 / 237 → 3860 = 3623 / 237: +39 born, all PASS — `methods/maybe-update-shape/*` 5 (CL1), `binary/recv-ack-shape/*` 17 (CL2; 5 strict `depth=64`), `panic-recover/sent-entries-shape/*` 6 (CL3), `slices/ring-buffer-shape/*` 3 (CL4), `functions/callback-dispatch-shape/*` 8 (CL5; `global-rand-locked` membership {5..9}, members=5). No code changed; no existing row moved; 0 PASS → non-PASS. The per-subcondition map and the stated limits: `docs/2026-10-03_window-corpus-disposition.md`.

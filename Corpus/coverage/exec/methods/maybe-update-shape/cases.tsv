@@ -1,0 +1,7 @@
+# id	subject	args	expected_status	expected_reason	features
+# CL1 (window charter §4.1): the Progress.MaybeUpdate shape — advance then stale, advance twice, equal input, the n+1 wrap, widths + field copy.
+advance-then-stale	maybeUpdateTwice	5,3	ok	-	methods,pointers,structs,fields,max,widths
+advance-twice	maybeUpdateTwice	5,9	ok	-	methods,pointers,structs,fields,max,widths
+equal-unchanged	maybeUpdateTwice	3,3	ok	-	methods,pointers,structs,fields,max,widths
+uint64-wrap	maybeUpdateWrap	-	ok	-	methods,pointers,structs,max,overflow,widths
+widths-field-copy	fieldWidthsAndCopy	-	ok	-	structs,fields,overflow,widths,value_copy
