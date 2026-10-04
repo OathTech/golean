@@ -1383,3 +1383,7 @@ the 5a pair (`certificate provenance` + the certified row `imported-goose/channe
 3622 PASS / 238 FAIL = the pin 3623 / 237 with the one 5a-class row red; negative baseline no regression (394). Candidate:
 `schema`, `claim` and `observations_sha256` IDENTICAL (receipt `efc57692`, 175.921 s, binary `cae2c786…`) — INSTALLED; a
 provenance refresh. Tail: `docs/evidence/2026-10-04_train-r64/r64-ci-slow.tail.txt`.
+
+**Green re-run at the records commit `8de2f255`** ([AGENT] train worker, 2026-10-04): `ci --diff` EXIT=0, 963 s, `RESULT: PASS`,
+baseline diff FULL 3860/3860 (3623 / 237, no regression), certificate provenance ok, semantic equations ok. Round 64 closed:
+the pool/registry spec packet and the lowerdiag primitive fix are on main; the pool grind and route A's build are separate lanes.
