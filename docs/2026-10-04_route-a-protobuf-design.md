@@ -196,3 +196,22 @@ through RawNode. The probe's check 5 deliberately exposes that a typed-nil `Mars
 - **Q6** Go-ahead and sizing: 3–3.5 Opus sessions as S1–S3, the audit ask at the end, merge as one train with the `--slow` re-pin.
 - **Q7 (outside this lane)** `tools/lowerdiag`'s static tables still judge `math/rand.Intn` refused (the 5b primitive is dynamic-only
   in its view): a one-line table fix lane, or leave as a known staleness?
+
+## 7. Ratification (2026-10-04)
+
+[USER] Mike 2026-10-04, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «Approved». This ratifies decisions
+D1–D12 as recommended, and the open questions as the coordinator recommended (per-question outcomes as relayed by the [AGENT]
+coordinator, ratified by the [USER] «Approved»):
+
+- **Q1 (D5)** — the spelling pick uses the `intn` site (`rand.Intn(2)` on `ChoiceSite.intn`; index 0 = U+0020, 1 = U+00A0), not
+  `mapIter`.
+- **Q2 (D7)** — retire the `confstate.go` overlay NOW, inside this lane (upstream text + the two-line exact-text subject patch).
+- **Q3 (D4)** — yes: the raftpb client API is in scope; `errRecursionDepth` is generated, not refused.
+- **Q4 (D3)** — D-3 (`%+#v`) accepted as a PERMANENT stated inexactness.
+- **Q5 (D6)** — PENDING: the tagless `switch` question is being relayed to the logic team by the [USER]. Build with the design's
+  shape (tagless `switch` field dispatch), but keep the tagless-switch sites easy to change and list them.
+- **Q6** — go-ahead at 3–3.5 sessions as slices S1–S3, EACH gated + audited before merge.
+- **Q7** — `tools/lowerdiag`'s stale `math/rand.Intn` judgement is a SEPARATE fix, outside this lane.
+
+Build lane for slice S1: `lane/route-a-s1-1004` (worktree `.claude/worktrees/route-a-s1`), branched from this design branch at
+`04b659f0` so the note lands with the build.
