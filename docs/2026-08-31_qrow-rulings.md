@@ -1387,3 +1387,26 @@ provenance refresh. Tail: `docs/evidence/2026-10-04_train-r64/r64-ci-slow.tail.t
 **Green re-run at the records commit `8de2f255`** ([AGENT] train worker, 2026-10-04): `ci --diff` EXIT=0, 963 s, `RESULT: PASS`,
 baseline diff FULL 3860/3860 (3623 / 237, no regression), certificate provenance ok, semantic equations ok. Round 64 closed:
 the pool/registry spec packet and the lowerdiag primitive fix are on main; the pool grind and route A's build are separate lanes.
+
+### Train r65 — route A slice S1 landed — RULED (2026-10-04)
+
+[USER] Mike, 2026-10-04, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «merge it and share» (merge
+sign-off for `lane/route-a-s1-1004` @ `7ed733c1`, route A slice S1 — the faithful protobuf codec for the raft subject, its
+design `docs/2026-10-04_route-a-protobuf-design.md`); «agree to (i)» (the recursion-edge corpus row is NOT born; `codeccheck.py`
+checks 48–51 — both oracles, raised fuel 3e8 — and `difftest.py` section 8 stand in; recorded in the design note §8 as a
+STATED LIMIT). Audit: Fable adversarial audit MERGE-CLEAN with two minor records findings, both folded in at this train's
+records commit: Minor-1 (the D6 «indexed loops» reading — condition-only `for len(b) > 0` loops — not yet confirmed by the
+consumer) closed by the logic team's answer (b) below; Minor-2 (the consumer-visible D5 init pick had no consumer-facing
+changelog line) closed by the NEW post-offer changelog `docs/changelog/20d3946d-WINDOW.md` (its first row; the r64 lowerdiag
+fix listed beside it, tooling only).
+
+The logic team's answers (golean-logic coordinator, 2026-10-04, by cross-session message relayed by the [AGENT] coordinator,
+verbatim): (a) «Tagless `switch { case num == 1: … }` is fine — keep it; no need for an if-chain or tagged switch. … leave
+DISPATCH_FORM as is.» → Q5 RESOLVED (keep). (b) «Condition-only loops `for len(b) > 0 { … }` are acceptable — no rewrite
+needed. … "plain indexed loops" in our note was an example of supported shape, not a requirement. Our logic is
+partial-correctness … the termination measure isn't used by our proofs, though recording it is welcome.» → the D6 loop
+reading ACCEPTED. The logic team acknowledged the init pick (their closed-program theorems assume no package initializer —
+their planned package-init support); raft-proofs was notified 2026-10-04 by the [AGENT] coordinator at the [USER]'s request
+(«share»). Train: `train/r65` = the lane rebased onto main `032b5f97` (linear; one provenance-only conflict on the
+google-search certified record, resolved [AGENT] to main's version — claim and observations identical on both sides; step
+5a re-certifies).

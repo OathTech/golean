@@ -210,6 +210,8 @@ coordinator, ratified by the [USER] «Approved»):
 - **Q4 (D3)** — D-3 (`%+#v`) accepted as a PERMANENT stated inexactness.
 - **Q5 (D6)** — PENDING: the tagless `switch` question is being relayed to the logic team by the [USER]. Build with the design's
   shape (tagless `switch` field dispatch), but keep the tagless-switch sites easy to change and list them.
+  **RESOLVED 2026-10-04 — KEEP** (the logic team's answer (a), below in §8 «Logic team answers»): `DISPATCH_FORM` stays
+  `"tagless-switch"`; no generator change.
 - **Q6** — go-ahead at 3–3.5 sessions as slices S1–S3, EACH gated + audited before merge.
 - **Q7** — `tools/lowerdiag`'s stale `math/rand.Intn` judgement is a SEPARATE fix, outside this lane.
 
@@ -269,3 +271,23 @@ default stream) is byte-identical on the pre- and post-S1 wires. A POSITIONAL ch
 
 **Pre-existing finding.** `codeccheck.py`'s machine leg was already red on `main` (an E13 (b) structural-allocation quarantine
 on two battery literals); the red-first commit hoists them.
+
+**Logic team answers (2026-10-04) — Q5 RESOLVED, the D6 loop reading ACCEPTED.** The golean-logic coordinator, 2026-10-04,
+by cross-session message relayed by the [AGENT] coordinator, verbatim:
+- (a) «Tagless `switch { case num == 1: … }` is fine — keep it; no need for an if-chain or tagged switch. … leave
+  DISPATCH_FORM as is.» → **Q5 RESOLVED: KEEP.** `DISPATCH_FORM` stays `"tagless-switch"`; the if-chain form stays
+  generate-and-compile only.
+- (b) «Condition-only loops `for len(b) > 0 { … }` are acceptable — no rewrite needed. … "plain indexed loops" in our note
+  was an example of supported shape, not a requirement. Our logic is partial-correctness … the termination measure isn't
+  used by our proofs, though recording it is welcome.» → **the D6 loop reading above is ACCEPTED by the consumer**; no
+  generator change (adversarial audit Minor-1 closed by this answer).
+
+**The recursion-edge row — [USER] ruling (i), a STATED LIMIT.** [USER] Mike 2026-10-04, verbatim, relayed by the [AGENT]
+coordinator — cite as relayed: «agree to (i)». The `recursion-depth-10000-vs-10001` corpus row is NOT born. Its stand-in:
+`codeccheck.py` checks 48–51 (both oracles, the machine leg at raised fuel 3e8) and `difftest.py` section 8 (exact vs
+protobuf-go). Stated limit: the differential baseline itself does not exercise the 10000/10001 recursion edges (each edge
+decode costs 10M–40M machine steps, past the strict lane's fixed 10M fuel); options (ii) (a strict-lane fuel parameter, an
+apparatus change) and (iii) (a born-red row) are not taken.
+
+**Landing.** Merge sign-off [USER] Mike 2026-10-04, verbatim, relayed: «merge it and share» — train r65 (Fable adversarial
+audit MERGE-CLEAN; Minor-1 closed above, Minor-2 by the post-offer changelog `docs/changelog/20d3946d-WINDOW.md`).
