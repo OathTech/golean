@@ -876,7 +876,10 @@ cost row), plus — per the coordinator's brief — the D9 instruments red-first
 depth», D4/Q3). The prefix spacing is ONE init-time pick, `rand.Intn(2)` on `ChoiceSite.intn` (D5/Q1): slot 0 = U+0020, slot
 1 = U+00A0. Under `go run` the subject draws per process; protobuf-go's draw is per binary — the differential compares by
 MEMBERSHIP over the two spellings (difftest.py section 8 records both bits). `errors.Is` stays refused on the machine by name
-(FR-14/G6, D10); the `Unwrap` chain is checked directly (codeccheck 47, corpus row `sentinel-unwrap`).
+(FR-14/G6, D10); the `Unwrap` chain is checked directly (codeccheck 47, corpus row `sentinel-unwrap`). The pick is consumed
+during package initialization of every program linking the subject `proto` (the twin included): slot 0 under the default
+tape, so the twin's default-stream observation is unchanged; an explicit positional `--choices` record made before S1 shifts by
+one consumption.
 
 **U-2 unknown groups — RESOLVED.** The `protowire.consumeFieldValueD` twin skips a group (nested, end-tag-matched,
 depth-limited at 10000) and the decoder retains it whole; the in-group/top-level field-number asymmetry is reproduced.

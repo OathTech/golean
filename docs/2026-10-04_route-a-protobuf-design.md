@@ -261,5 +261,11 @@ leg runs at fuel 3e8; both oracles agree) and `difftest.py` section 8 (exact vs 
 accept the instrument coverage as the row's stand-in; (ii) a strict-lane fuel parameter (apparatus change, its own lane);
 (iii) a born-red row with a ledger entry.
 
+**Consumer-visible effect of D5, stated.** Every program that links the subject's `proto` package (the twin, raft's own
+tree) now consumes ONE `intn` pick (bound 2) during package initialization, before `main` — the logic team's (d). Under the
+default (all-zero) tape it takes slot 0 (U+0020) and nothing else moves: the twin driver's observation (`probeTwinChoice`,
+default stream) is byte-identical on the pre- and post-S1 wires. A POSITIONAL choice-tape record made against the pre-S1 twin
+(an explicit `--choices` stream) is shifted by one consumption; a ∀-stream statement (T1) is unaffected.
+
 **Pre-existing finding.** `codeccheck.py`'s machine leg was already red on `main` (an E13 (b) structural-allocation quarantine
 on two battery literals); the red-first commit hoists them.
