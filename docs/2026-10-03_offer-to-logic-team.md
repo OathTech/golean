@@ -88,7 +88,7 @@ run-level simulation is a stated claim, not a theorem; (5) raw location ids in t
 refusal has no successor; (8) the corpus limits (Storage is a program; `time`/`rand.New` refused by name; access labels not a
 differential observable; loops/`range`/goroutines/route A post-window); (9) deferred: NaN, E6b–e, route A, the `unseq` commutation
 theorem (confluence WITHDRAWN), NPDRF unusable, typed profiles parked; native `Intn`: only direct `math/rand.Intn` /
-`math/rand/v2.IntN` call sites are bound, method forms are not (D3); the `crypto/rand`+`math/big` body is not restored (option B
+`math/rand/v2.IntN` call sites are bound, the stdlib method forms `(*math/rand.Rand).Intn` / `(*rand/v2.Rand).IntN` are not (D3) — a user method wrapping a direct call, e.g. raft's `(*lockedRand).Intn`, IS on the site (clarified 2026-10-04, `docs/2026-10-04_reply-to-logic-team-intn.md`); the `crypto/rand`+`math/big` body is not restored (option B
 not taken); (10) the lowering carries no correctness theorem. Charter
 §2 tail: the restricted sequential result does NOT discharge the whole owed simulation.
 

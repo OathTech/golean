@@ -115,8 +115,9 @@ two schema moves (`736f1730…` at the pin → `dc232a8c…` at v2 → `f448d579
    independence hypothesis (the DRF-confluence claim is WITHDRAWN — `Tests/unseq-wire/src/w1/main.go` permits `{1, 2}`);
    NPDRF's reduction stays EXPLICITLY UNUSABLE (the access-granularity obligation is open); typed profiles PARKED; no
    iris-lean `Language` spike; module-path mapping D-6/7, `%+#v` D-3, the default logger D-12/H-20 (post-window lanes);
-   native `Intn`: only direct `math/rand.Intn` / `math/rand/v2.IntN` call sites are bound, method forms are not (D3,
-   `docs/2026-09-30_intn-pick-design.md`); the raft subject's `crypto/rand`+`math/big` body is not restored (option B not taken).
+   native `Intn`: only direct `math/rand.Intn` / `math/rand/v2.IntN` call sites are bound, the stdlib method forms `(*math/rand.Rand).Intn` / `(*rand/v2.Rand).IntN` are not (D3,
+   `docs/2026-09-30_intn-pick-design.md`) — a user method wrapping a direct call, e.g. raft's `(*lockedRand).Intn`, IS on the
+   site (wording clarified 2026-10-04 after the frozen text, `docs/2026-10-04_reply-to-logic-team-intn.md`); the raft subject's `crypto/rand`+`math/big` body is not restored (option B not taken).
 10. The native lowering carries NO correctness theorem (CLAUDE.md qualification (1)); a consumer of a GoCore program inherits
     the wire's provenance record and the Platform instance (gc, linux/amd64).
 
