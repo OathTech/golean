@@ -1350,3 +1350,27 @@ r58 onto a direct `math/rand.Intn` inside the user method, so the draw is `Choic
 map-range body; limit 9's «method forms» meant the stdlib `*rand.Rand` methods only (wording clarified, dated). Ruled: the
 D-11 residual (`crypto/rand`+`math/big` → `math/rand`, unobservable; `n ≤ 0` text unreachable in raft) stays a stated subject
 delta; option B stays not taken. Reply `docs/2026-10-04_reply-to-logic-team-intn.md`, relayed by the [USER].
+
+### Train r64 — the pool/registry spec packet and the lowerdiag primitive fix — RULED (2026-10-04)
+
+[USER] Mike, 2026-10-04, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «Great, launch it» (the
+spec-packet + Codex-grind plan for the pool/registry half); «Approved» (spec Q1–Q7 as recommended, and the statement review
+before the grind; the same word approved route A's design D1–D12 / Q1–Q7 — route A's BUILD is a separate lane, NOT in this
+train); «Yes, approve 1 / 2» (item 1 = merge sign-off for this train; item 2 = folding float-bits into the lowerdiag fix).
+Landed: (a) `design/pool-relation-spec-1004` @ `185db6d8` — the pool/registry SPEC PACKET (the labelled pool relation over
+`StepEvent`, the pool deadlock's own predicate, the driver carriers, the frozen `_stmt`s, a sorry'd skeleton OUTSIDE the
+build, `scripts/check-pool-spec`, the design note and the grind brief); the adversarial statement review returned NEEDS-FIX
+— B1 (the freeze missed glue defs), B2 (a blank-line parse hole in the freeze check), B3 (replay statements: ADDED rather
+than scoped out, [AGENT] coordinator decision), M1–M5 — all fixed at `185db6d8`. (b) `fix/lowerdiag-intn-1004` @
+`77c5e5dd` — lowerdiag supplies the `rand-intn` primitive (`math/rand.Intn`, `math/rand/v2.IntN`) and the float-bits
+primitive (`math.Float64bits` & siblings); Opus audit MERGE-CLEAN. Train: lowerdiag tip, the spec packet cherry-picked in
+order (linear history).
+
+The lowerdiag fix worker's four further disagreements with the wire — rowed here [AGENT] per «every detected gap is rowed»:
+(1) defer/go of a package-level `sync/atomic` function — lowerdiag says lowers, the wire refuses («stdlib-qualified
+selector … in value position»); (2) defer/go of a `fmt` member — lowerdiag says lowers (shim), the wire refuses (the
+calibration test skips fmt-calling decls, so this went unseen); (3) a sync-op method value (`return mu.Lock`) — lowerdiag
+refuses `sync-value-shape`, the wire lowers (lowerdiag over-strict); (4) a dot-imported `math/rand.Intn` — both accept, the
+machine is stuck: the known FR-36 (`docs/language-coverage-ledger.md`, queue 36). Items 1–3 are diagnosis-tool defects
+(untrusted tooling; no semantic effect), queued [AGENT] as a small lowerdiag follow-up fix; listed in
+`docs/2026-09-04_lower-diagnose.md` «Known disagreements with the wire (2026-10-04)».

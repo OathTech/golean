@@ -371,3 +371,19 @@ was sound, the measurement misreported)
 LOW: the hint line prints the run's `--dir`; one lowers-convention for
 distance and projection; UNROWED fires for may-refuse; table sha
 stamped; §5 prose corrected (gcgort, "5 of 10"); README counts.
+
+## Known disagreements with the wire (2026-10-04)
+
+Found by the rand-intn / float-bits fix worker (`fix/lowerdiag-intn-1004`), rowed [AGENT] at train r64
+(`docs/2026-08-31_qrow-rulings.md`, «Train r64»). Diagnosis-tool defects only (untrusted tooling; the
+wire and the machine are unaffected); queued as a small lowerdiag follow-up fix:
+
+1. `defer`/`go` of a package-level `sync/atomic` function: lowerdiag says lowers; the wire refuses
+   («stdlib-qualified selector … in value position»).
+2. `defer`/`go` of a `fmt` member: lowerdiag says lowers (shim); the wire refuses. The calibration
+   test skips fmt-calling declarations, so the calibration did not see it.
+3. A sync-op method value (`return mu.Lock`): lowerdiag refuses `sync-value-shape`; the wire lowers
+   (lowerdiag over-strict).
+
+Not a lowerdiag defect: a dot-imported `math/rand.Intn` — both accept and the machine is stuck; that
+is FR-36 (`docs/language-coverage-ledger.md`, queue 36).
