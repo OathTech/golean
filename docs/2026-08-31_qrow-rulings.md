@@ -1339,3 +1339,14 @@ placeholder wording) plus seven minor scope statements — all fixed in `3d1a3e2
 decisions: the offer commit is the content commit `20d3946d` (a commit cannot name its own SHA; the records follow it and
 change no code); local annotated tag `logic-offer/2026-10-03` on `20d3946d`, NOT pushed (push never authorized). The
 [USER] relays the note to the logic team; their `scripts/check`, theorems, controls and consumers decide acceptance.
+
+### The logic team's `Intn` note (2026-10-04) — RULED
+
+[USER] Mike, 2026-10-04, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «Yes, let's go with your approach.
+I'll share the note»; merge sign-off «merge it». The note (`docs/2026-10-04_note-from-logic-team-intn.md`, their branch
+`docs/golean-intn-note-1004` @ `dfc46ae`) accepts the offer (acceptance in progress on their criteria) and asked to bind the
+method form of `Intn` for raft's `(*lockedRand).Intn`. [AGENT] finding: already covered at `20d3946d` — D-11 was re-keyed at
+r58 onto a direct `math/rand.Intn` inside the user method, so the draw is `ChoiceSite.intn`; their note read the old pin's
+map-range body; limit 9's «method forms» meant the stdlib `*rand.Rand` methods only (wording clarified, dated). Ruled: the
+D-11 residual (`crypto/rand`+`math/big` → `math/rand`, unobservable; `n ≤ 0` text unreachable in raft) stays a stated subject
+delta; option B stays not taken. Reply `docs/2026-10-04_reply-to-logic-team-intn.md`, relayed by the [USER].
