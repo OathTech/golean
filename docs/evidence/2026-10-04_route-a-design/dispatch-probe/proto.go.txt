@@ -1,0 +1,79 @@
+// Probe: a stdlib-free `proto` stand-in that does NOT import the generated
+// package — dispatch through an interface, as protobuf-go's protoMethods does.
+package proto
+
+import "errors"
+
+// Error is a sentinel matching all errors produced by this package.
+var Error = errors.New("protobuf error")
+
+type prefixError struct{ s string }
+
+func (e *prefixError) Error() string { return prefix + e.s }
+func (e *prefixError) Unwrap() error { return Error }
+
+// prefix: detrand's per-binary bit as ONE package-init mapIter pick.
+var prefix = pickPrefix()
+
+func pickPrefix() string {
+	cands := map[string]bool{"proto:\u00a0": true, "proto: ": true}
+	for s := range cands {
+		return s
+	}
+	return ""
+}
+
+var ErrDecode = &prefixError{s: "cannot parse invalid wire-format data"}
+
+type Message interface{ ProtoMessage() }
+
+type methods interface {
+	AppendMessage(b []byte) []byte
+	SizeMessage() int
+	UnmarshalMessage(b []byte) error
+	ResetMessage()
+	ProtoClone() Message
+	ProtoEqual(y Message) bool
+}
+
+func Marshal(m Message) ([]byte, error) {
+	if m == nil {
+		return nil, nil
+	}
+	x, ok := m.(methods)
+	if !ok {
+		panic("proto: message type without generated methods")
+	}
+	b := x.AppendMessage(nil)
+	if b == nil {
+		return []byte{}, nil
+	}
+	return b, nil
+}
+
+func Size(m Message) int {
+	if m == nil {
+		return 0
+	}
+	return m.(methods).SizeMessage()
+}
+
+func Unmarshal(b []byte, m Message) error {
+	x := m.(methods)
+	x.ResetMessage()
+	return x.UnmarshalMessage(b)
+}
+
+func Clone(m Message) Message {
+	if m == nil {
+		return nil
+	}
+	return m.(methods).ProtoClone()
+}
+
+func Equal(a, b Message) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	return a.(methods).ProtoEqual(b)
+}

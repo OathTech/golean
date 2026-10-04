@@ -1,0 +1,19 @@
+# go run (GOPATH scratch, GO111MODULE=off), 2026-10-04, go1.26.5:
+-5 45
+panic: proto: cannot parse invalid wire-format data
+
+goroutine 1 [running]:
+main.probePanic()
+	.tmp/gopath/src/dispatch/main.go:39 +0x5b
+main.main()
+	.tmp/gopath/src/dispatch/main.go:46 +0x74
+exit status 2
+# exit status: 2 (go run: `exit status 2` above)
+
+# machine (main @ 450412a7 frontend emit; golean binary built 2026-10-03 21:26 from main @ 43624b55 GoLean/), --fuel 5000000:
+## probeDispatch
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":-5}]}
+## probePrefixLen
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":45}]}
+## probePanic
+{"message":"proto: cannot parse invalid wire-format data","output":"","schema":"golean-observation-v1","status":"panic"}

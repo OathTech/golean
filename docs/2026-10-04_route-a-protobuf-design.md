@@ -1,0 +1,198 @@
+# Protobuf route A — the faithful codec: DESIGN (2026-10-04) — a named design gate, HARD STOP
+
+[AGENT] design worker, lane `design/route-a-protobuf-1004` (worktree `.claude/worktrees/route-a-design`, off `main` @ `450412a7`).
+Authority: [USER] Mike 2026-10-04, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «Great, launch it» — a design
+note for route A, a NAMED DESIGN GATE: nothing below is built before [USER] review. Standing rulings: [USER] 2026-09-30 «Yes, I
+also prefer A, as long as it could be made faithful» (relayed; `docs/2026-08-31_qrow-rulings.md`, subject-delta note item 3,
+route-A dispositions 1–4). This note BUILDS ON the feasibility study `docs/2026-09-30_protobuf-route-a.md` (verdict
+FAITHFUL-FEASIBLE, conditions C1–C5 — not redone here) and carries the logic team's requirements
+(`docs/2026-09-30_note-from-logic-team-route-a.md` §5, disposition 2's required content) and the raft-proofs findings U-1–U-3
+(`docs/2026-09-30_note-from-raft-proofs.md`). Pins: protobuf-go **v1.36.11** (`deps/raft/go.mod`; read from the module cache
+`/home/dev/go/pkg/mod/google.golang.org/protobuf@v1.36.11`, no network), raft `56e32004`, go1.26.5. Every decision in §4 is
+[AGENT], PENDING [USER] ratification. Evidence (small, this day's probes): `docs/evidence/2026-10-04_route-a-design/`.
+
+## 0. Recommendation in two lines
+
+Build route A as **A1** (§3): a GENERATED, reflection-free Go codec inside `raftsubject/`, decomposed function-for-function after
+protobuf-go's own `protowire`/`impl` entry points so every generated function names its upstream twin by file:line, dispatched
+through an interface (the subject `proto` package no longer imports `raftpb`, so the two hand-written overlays retire to upstream
+text), with `unknownFields []byte` retained, ONE `prefixError` value, and the per-binary spelling as one labelled choice at package
+init. No core change, no trusted-surface change, no register change, no wire-schema change; 3–3.5 sessions.
+
+## 1. Scope — exactly what raft reaches (measured)
+
+- **Generated code shape.** Upstream `raftpb/raft.pb.go` is `protoc-gen-go v1.36.11` / `protoc v3.20.3` output — the golang
+  protobuf APIv2 «open.v1» API, NOT gogo (raft v3's `go.mod` requires only `google.golang.org/protobuf v1.36.11`). `raft.proto` is
+  **proto2**: nine messages, four enums, field numbers 1–14, kinds `optional uint64|bool|enum|bytes|message`, `repeated uint64`
+  (unpacked; `ConfState` ×4), `repeated message` (`Message.entries`, `Message.responses` — **self-recursive**, `ConfChangeV2.changes`);
+  no `required`, no `string`, no map, no oneof, no group, no extension. Each struct carries `state protoimpl.MessageState`,
+  `unknownFields protoimpl.UnknownFields` (= `[]byte`, `internal/impl/message.go:114`), `sizeCache`, and `ProtoReflect()`; the
+  file-descriptor init registers the types (reflection). The D-1 strip (`derive.py` `parse_struct`, `PROTOIMPL_FIELD_TYPES`) removes
+  all three fields and drops `reflect`/`sync`/`unsafe`/`protoreflect`/`protoimpl`.
+- **Call sites in the subject** (upstream text, import paths rewritten). `proto.Marshal`: `raft/bootstrap.go:56` (`&pb.ConfChange{…}`),
+  `raftpb/confchange.go` `MarshalConfChange` (ConfChange / ConfChangeV2; overlay today) ← `raft/node_decls.go:115`
+  (`ProposeConfChange`) and `raft/raft.go:760` (auto-leave, `confChangeToMsg(nil)` → nil data). `proto.Unmarshal`: `raft/raft.go:1326/1332`
+  — `panic(err)`, the VALUE is the payload and its text the abort line; `raft/util.go:225/232` — `err.Error()` into `DescribeEntry`.
+  `proto.Size`: `raft/util.go:277/290/292` (Entry). `proto.Clone`: `raft/storage.go:213/234/259/262`, `raft/log_unstable.go:114/187`,
+  `raft/log.go:295` (Snapshot, ConfState), `raft/raft.go:829` (Entry). `proto.Equal`: through `(*ConfState).Equivalent`
+  (`raft/util.go:321`). All decoded messages are ConfChange/ConfChangeV2; Size/Clone/Marshal/Equal run on constructed values. The
+  go-run reference harness `raftharness/` links the REAL runtime (`google.golang.org/protobuf/proto`; `harness.go:232/323/329`).
+- **`scripts/lower-diagnose` over the twin assembly** (`raftsubject/{quorum,raftpb,tracker,proto,confchange,raft}` + `twin-lib.go`
+  + `twin-chdriver*.go`, i.e. `check-frontend-pins`' program): EXPORT OK; static 690/696 declarations demand nothing refused;
+  `raftpb` 250/250, `proto` 6/6, `confchange` 24/24 — NO protobuf-side refusal. Every refused key: `os.Exit` ×2
+  (`DefaultLogger.Fatal/Fatalf`, FR-14), `log.Logger.Panic`/`Panicf` (`DefaultLogger.Panic/Panicf`, FR-14), `math/rand.Intn`
+  (`lockedRand.Intn` — a STATIC-pass staleness: the dynamic pass lowers it through the 5b `rand-intn` primitive and the twin wire
+  pin is green; `tools/lowerdiag`'s tables predate the primitive — a one-line follow-up outside this lane); may-refuse: the
+  `!with_tla` build constraint (`state_trace_nop.go`). The 31 wire quarantines are all stdlib (`bytealg` ×2, `bytes.Buffer` ×7 on
+  `io.EOF`, `log.Logger` ×22). Over the 2026-09-30 prototype: 35/36, the one refusal `errors.Is` (FR-14, `reflectlite.TypeOf`).
+  Over UPSTREAM `raftpb` verbatim: does not type-check — `google.golang.org/protobuf/{proto,reflect/protoreflect,runtime/protoimpl}`
+  are unresolvable at the frontend's module boundary (no `foreign-module` path exists), so option C (§3) is refused before any
+  declaration is judged. Heads of the three reports: the evidence dir.
+
+## 2. What protobuf-go does where raft (or a raftpb client) can observe it — v1.36.11, by file:line
+
+- **Entry points.** `proto.Unmarshal` (`proto/decode.go:61-64`) = `UnmarshalOptions{RecursionLimit: 10000}.unmarshal`: `Reset` unless
+  `Merge` (`:93-96`; `proto/reset.go:16-22` calls the generated `Reset()`), then the generated fast path `methods.Unmarshal`
+  (`:99-120`), then `checkInitialized` — no `required` field, so never an error (`:131-135`). `proto.Marshal` (`proto/encode.go:105-116`):
+  a nil interface → `nil, nil`; an EMPTY valid message → the non-nil empty buffer; a TYPED-NIL pointer → `nil` (`emptyBytesForMessage`,
+  `:141-146`: invalid message → nil). `proto.Size` (`proto/size.go:19-35`): nil → 0; typed nil → 0 (`impl/encode.go` `sizePointer`
+  on a nil pointer). `proto.Clone` (`proto/merge.go:41-60`): nil → nil; typed nil → `Type().Zero().Interface()` = the typed nil;
+  else `New` + merge. `proto.Equal` (`proto/equal.go:42-66`): `x == nil || y == nil → x == nil && y == nil`; validity must agree; then
+  the generated `Equal` (`impl/equal.go:22-131`), which ends in `equalUnknown` (`:193-224`: equal length AND (byte-equal OR equal
+  per-field-number raw-bytes multisets)).
+- **The decode loop** (`impl/decode.go:123-241`, `unmarshalPointerEager`): depth counter `opts.depth--` per message entry
+  (`:103-106`, `errRecursionDepth` = «exceeded maximum recursion depth», `:20`); tag = 1-byte / 2-byte fast path else
+  `protowire.ConsumeVarint` (`:136-148`, `n < 0 → errDecode`); field number `< 1` or `> 2^29−1` → `errDecode` (`:149-155`;
+  `protowire/wire.go:24-27`); an end-group tag whose number ≠ the enclosing group's → `errDecode` (`:158-164`); a known field's
+  consumer returns `errUnknown` on a WRONG wire type and `errDecode` on a malformed value (`codec_gen.go:2762-2790` `consumeUint64Ptr`,
+  `:108` `consumeBoolPtr`, `:5410-5421` `consumeBytes` — an empty value becomes a NON-nil empty slice, `:687` `consumeInt32Ptr`
+  which IS the enum coder: `codec_unsafe.go:12` `coderEnumPtr = coderInt32Ptr`, `codec_tables.go:288-290` — so **Go treats the
+  proto2 enums as OPEN**: an unlisted enum value is stored, never diverted to unknowns; `codec_gen.go:2816` `consumeUint64Slice`
+  accepts packed AND unpacked; `codec_field.go:175-193` `consumeMessageInfo` allocates-if-nil and MERGES, `:438`
+  `consumeMessageSliceInfo` appends a fresh element); `errUnknown` → `protowire.ConsumeFieldValue` (`:218-224`; `n < 0 → errDecode`)
+  and, unless `DiscardUnknown`, RETENTION of the canonical tag (`AppendTag`) + the raw value bytes in arrival order (`:225-229`);
+  a group left open at end of input → `errDecode` (`:233-235`). `consumeFieldValueD` (`wire.go:116-160`): wire types 0/1/2/5 by
+  size; 3 = skip tag/value pairs recursively (`depth−1`, limit 10000, `errCodeRecursionDepth`) until the matching end tag
+  (`errCodeEndGroup` on a mismatch); 4 at top → `errCodeEndGroup`; 6/7 → `errCodeReserved`. INSIDE a skipped group the tag is read by
+  `ConsumeTag` (`:168-178`), which refuses only `num < 1` — `DecodeTag` (`:525-531`) maps `x>>3 > MaxInt32` to −1 — so a field
+  number in [2^29, 2^31) is ACCEPTED inside a group and REFUSED at top level: an asymmetry the generated codec must reproduce.
+  `ConsumeVarint` (`:267-367`): ≤ 10 bytes, the 10th < 2 (`errCodeOverflow`), truncation `errCodeTruncated`. Every negative code
+  collapses to the ONE value `errDecode` (`impl/decode.go:19`, «cannot parse invalid wire-format data»).
+- **The error value and its spelling.** `internal/errors/errors.go:20-22` `New` → `&prefixError{s}`; `Error()` = `prefix + s`
+  (`:36-38`); `Unwrap()` = the sentinel `Error` («protobuf error», `:16`), so `errors.Is(err, proto.Error)` holds. `prefix` is
+  computed ONCE at package init (`:26-34`): `"proto: "` with U+00A0 if `detrand.Bool()`, else U+0020. `internal/detrand/rand.go:25-27`
+  `Bool() = randSeed%2 == 1`; `randSeed = binaryHash()` (`:38-69`) = FNV-64 over the executable's size + eight 64-byte samples, 0 on
+  any failure (→ U+0020). A per-BINARY latitude: the weakest machine admits both spellings (C2).
+- **Encoding.** `marshalAppendPointer` walks `orderedCoderFields` sorted by field NUMBER (`impl/codec_message.go:158-160`), proto2
+  presence (set-but-zero scalars and empty-but-present bytes emitted), repeated varints unpacked, and appends the unknown bytes LAST
+  (`impl/encode.go:220-224`); `Size` adds `len(unknown)` (`:113-116`); Merge/Clone appends src's unknown bytes when non-empty
+  (`impl/merge.go:106-111`). Marshal cannot fail on these schemas (no required, no UTF-8 check): `err` is always nil.
+
+## 3. The options
+
+| | A1 (RECOMMENDED) | A0 (the feasibility prototype's shape) | B — library-origin primitive codec | C — source-through upstream + modeled runtime |
+|---|---|---|---|---|
+| what | `derive.py` generates a plain-Go codec from the parsed field lists, mirroring protobuf-go's decomposition: `consumeVarint`/`consumeTag`/`consumeBytes`/`consumeFieldValue(depth)`/`appendTag`/`appendVarint` twins + per-type `MarshalAppend`/`SizeMessage`/`UnmarshalMessage(depth)`/`ProtoClone`/`ProtoEqual`/`ResetMessage`/`IsNilMessage`; `proto` dispatches via an interface (does NOT import `raftpb`); `unknownFields []byte` retained; `prefixError` + sentinel; the init spelling pick | one monolithic `UnmarshalMessage` per type, type-switch dispatch in `proto` (imports `raftpb`), both overlays stay | a machine op family (`Stmt`/`Expr` constructors, wire node, `stepFn` arms, equations) implementing Marshal/Unmarshal/Size/Clone/Equal over GoValue structs in Lean | lower upstream `raft.pb.go` + `protoimpl`/`internal/impl` as source |
+| faithfulness argument | per-function twin table (file:line, §2) checked by `difftest.py` §8 EXACT (verdict, sentinel, text modulo the prefix byte, Size, bytes, Clone/Equal) over the 26-entry corpus + a generated adversarial battery; structure matches, so the asymmetries of §2 fall out instead of being special-cased | same differential; structure differs, so each asymmetry is a special case to remember | a Lean definition proved nothing about protobuf-go; differential only through the machine | upstream text itself — but it never lowers |
+| refused by name | `errors.Is` on the machine (FR-14/G6 — raft never calls it; the `Unwrap` chain serves go-run clients); prototext `String()`, `Descriptor`, `UnmarshalJSON` stay fail-closed stubs (C1); `%+#v` dumps (D-3, its own lane) | the same + the typed-nil `Marshal` wrong answer (`nonNil`, §5 row) unless fixed | a non-nine message type refuses by name; the spelling bit needs its own site | refused at the module boundary (§1, measured) and by the closure: `pointer_unsafe.go`, `codec_unsafe.go`, `message_reflect*.go`, atomic `sizeCache`, `sync` — reflect/unsafe, out of language (G6) |
+| cost | 3–3.5 sessions (Opus): S1 generator + dispatch + overlays 1.5, S2 differential instruments + corpus rows 1, S3 twin rows + `--slow` re-pin + ledger/README + audit ask 0.5–1 | 2–3 sessions (the 2026-09-30 estimate) | 4–8 sessions; Lean codec + totality + equations + BridgeSet rows + decoder + frontend binding | unbounded (a reflect subset + a module-source register class) |
+| trusted surface / register | none / none (subject text; lowered like the rest of raft; exercised by the twin pin) | none / none | WIDENED (the codec enters the interpreter) / primitive cap **3 → 4** — a [USER] re-ratification | a NEW register class (module source-through) — [USER] |
+| wire schema / logic side | no node, no constructor, no statement change; they see a `FuncId` list + footprint TSV and (if they pin it) new twin-wire bytes | same | new wire node, `Stmt`/`Expr` constructors, `stepFn` arms, new equations — a statement change in their re-pin | n/a |
+
+B is excluded by the standing ruling unless A proves impossible (it has not); C is measured impossible under the current frontend.
+A0 vs A1: A1 costs ~1 session more and buys (i) verbatim `raftpb/confchange.go` and a two-line `confstate.go` residue, (ii) a
+per-function proof target the logic team can contract one twin at a time, (iii) the typed-nil behaviours right by construction.
+**Probe evidence for A1's two new mechanisms** (evidence dir `dispatch-probe/`): a three-package program — `proto` dispatching via
+`m.(methods)` to a `pb` type that imports `proto`, the init pick as a package-level `var prefix = pickPrefix()` over a two-key map
+range, `panic(err)` with the `*prefixError` payload — LOWERS (wire 129,578 B) and the machine agrees with `go run` on all three
+probes: dispatch/retention/re-encode/Size/Clone/Equal checks 1–4 pass on both; `len(ErrDecode.Error())` = 45 on both (the
+U+00A0 member — slot 0 on the machine, this process's draw under gc); the abort renders `status: panic`, message
+`proto: cannot parse invalid wire-format data` — BUG-004 item 4 (unit 6b) has landed, so C3 is DISCHARGED and the twin row goes
+through RawNode. The probe's check 5 deliberately exposes that a typed-nil `Marshal` answers `[]byte{}` through an `AppendMessage`
+-style dispatch (today's `proto.go` `nonNil` does the same) where protobuf-go answers `nil` — hence `IsNilMessage` in D2.
+
+## 4. Decisions (all [AGENT]; PENDING [USER] ratification; none moves a register cap or the trusted surface)
+
+- **D1** Shape A1. The generator emits ONE helper file (`raftpb/plain_wire.go`: the `protowire` twins, each with its upstream
+  file:line in the doc comment) and the per-type codec (`plain_codec.go`) from the parsed field lists; `--check` stays the drift guard.
+- **D2** Dispatch through an interface. `proto.Message` stays `interface{ ProtoMessage() }` (upstream's parameter type); `proto`
+  asserts to an unexported interface listing the generated EXPORTED methods `MarshalAppend([]byte) []byte`, `SizeMessage() int`,
+  `UnmarshalMessage([]byte, int) error`, `ResetMessage()`, `ProtoClone() proto.Message`, `ProtoEqual(proto.Message) bool`,
+  `IsNilMessage() bool` (`raftpb` imports `proto`, as upstream imports `protoimpl`). Typed-nil behaviours per §2: Marshal → `nil, nil`,
+  Size → 0, Clone → the typed nil, Equal → protobuf-go's validity rule; a type outside the nine still panics by name in the assertion's
+  `!ok` arm. Cross-package interface assertion is modeled (rows `interfaces/assert-imported-interface/*` PASS; the probe).
+- **D3** The strip KEEPS `unknownFields []byte` under upstream's field name (`protoimpl.UnknownFields` is `[]byte`); `state` and
+  `sizeCache` stay stripped (D-1 narrowed, not retired). Consequence stated for the D-3 lane: `%+#v` can never be exact — upstream's
+  dump prints `state`'s `*impl.MessageInfo` pointer — so D-3 is a permanent narrowed premise, not a route-A residue (Q4).
+- **D4** Two error values, both `*prefixError` with `Unwrap() = proto.Error`: `errDecode` for every malformation and
+  `errRecursionDepth` — REACHABLE for a raftpb client through `Message.responses` (self-recursive) at > 10000 nested messages, so
+  `UnmarshalMessage` carries protobuf-go's depth counter (10000, decremented per message entry) and `consumeFieldValue` its own
+  (groups). The feasibility note's «unreachable» holds for raft's own paths only; C1 puts the client API in scope.
+- **D5** The spelling pick is ONE fixed shape, a package-level `var prefix = pickPrefix()`. Recommended mechanism: `rand.Intn(2)` on
+  the EXISTING `ChoiceSite.intn` (index 0 = U+0020, detrand's failure default; 1 = U+00A0) — one data pick with pinned equations
+  (BridgeSet rows 133–135, the 5b derived lemma), uniform under gc. Alternative: the prototype's two-key map range (`mapIter`,
+  slot 0 = first key); the logic team accepted either shape («the mapIter idiom is fine, but please fix its exact shape»). [USER]
+  picks (Q1). Either way the differential compares by MEMBERSHIP over {44, 45} / the two texts, recording the reference bit.
+- **D6** Generated-code grammar (their (c)): indexed `for` loops only (no `range`), `break`/`continue` only, recursion bounded by
+  the depth counter, no closures, no `goto`, no `fmt`, no reflection; the tagless `switch` field dispatch is retained (Q5).
+- **D7** Overlays. `raftpb/confchange.go` → upstream VERBATIM (its `google.golang.org/protobuf/proto` import rewritten to `proto` by
+  the existing `SUBJECT_PACKAGES` rewrite — JC-13 / the W2 overlay delta RETIRED). `raftpb/confstate.go` → upstream text plus an
+  exact-text SUBJECT PATCH on the two `fmt.Errorf` lines (D-3's true residue, refusing on drift) — or the overlay stays until the
+  D-3 lane (Q2).
+- **D8** Hash-pinned output + the `FuncId` list + footprint (their (a), (b), (e)): `derive.py` writes `tools/raftsubject/codec-funcids.tsv`
+  (every generated function/method: wire key, upstream twin file:line, footprint class — reads of `b`/the receiver, writes of the
+  receiver's fields/`unknownFields`, allocation, recursion bound) and a `GENERATED_DIGESTS` table of the emitted files, both checked by
+  `--check`; the generator is deterministic (sorted field numbers), so regeneration churns nothing.
+- **D9** Instruments, red-first: `difftest.py` §8 (the 26-entry corpus imported with provenance from raft-proofs
+  `fixtures/i6/malformed-conf-bytes.json` @ `f3d857f`, frozen; + a generated adversarial battery over all nine types; exact);
+  `codeccheck.py` gains the same corpus as check ids under both oracles; the corpus rows of §5; two twin schedules through RawNode
+  via `runprobe.py`.
+- **D10** `errors.Is` stays refused on the machine by name (FR-14/G6); recorded as a stated limit, not a delta.
+- **D11** Prototext `String()`/`Descriptor()`/`EnumDescriptor()`/`UnmarshalJSON` stay fail-closed stubs (C1); enum `String()` stays real.
+- **D12** Records at landing: twin wire RE-PINNED under `--slow` with the written reason and a structural diff; U-1/U-2/U-3 RETIRED,
+  D-4 RETIRED, D-1 and D-3 NARROWED, JC-14/JC-15 amended, `raftsubject/README.md` item 4 rewritten; no BUGS.md entry (subject deltas).
+
+## 5. Acceptance plan
+
+- **Born differential rows vs go1.26.5** (`Corpus/coverage/exec/multipkg/wire-codec/`, `wirepb` extended to mirror the NEW generated
+  forms exactly — the corpus pin for the language shapes the codec runs on; fixtures are stdlib-only, so protobuf-go itself is never
+  a corpus oracle): strict — `unknown-retain-reencode` (tag canonicalized, arrival order, after known fields), `wrong-wiretype-retain`,
+  `group-skip-nested` (depth 0–3, one unknown field), `group-end-mismatch`, `group-truncated`, `stray-end-group`, `field-number-zero`,
+  `field-number-max` (2^29−1 accepted), `field-number-over-max-top-vs-in-group` (the §2 asymmetry), `varint-ten-bytes`, `varint-overflow`
+  (10th byte ≥ 2), `varint-truncated`, `packed-accepted-unpacked-emitted`, `bytes-empty-presence`, `merge-twice-singular`,
+  `enum-unlisted-value-stored`, `typed-nil-{marshal,size,clone,equal}`, `nil-and-empty-input`, `recursion-depth-10000-vs-10001`
+  (nested `responses`; the group limit too), `sentinel-unwrap`; membership — `prefix-pick` (lengths {44, 45}) and `panic-abort-text`
+  (the two spellings, gc's draw inside). Exact texts: `proto: cannot parse invalid wire-format data`, `proto: exceeded maximum
+  recursion depth`, `protobuf error`.
+- **Exactness vs protobuf-go**: `difftest.py` §8 per input — verdict; `errors.Is(err, Error)`; text equal after normalizing the ONE
+  prefix byte (reference bit recorded); `Size` and `Marshal` bytes; `Clone` + `Equal`. A NOTE class does not exist for §8. Red-first:
+  16 + 10 corpus entries fail against today's codec (the feasibility measurement).
+- **Through RawNode** (`runprobe.py`, twin schedules; instruments, not gates): a malformed ConfChange proposal → both legs abort with
+  the subject's text (membership over the spellings); an unknown-GROUP proposal → accepted on both (the entry reaches Ready).
+- **Deltas retiring**: U-1, U-2, U-3 (resolved), D-4 (confchange overlay — JC-13); narrowed: D-1 (`unknownFields` kept), D-3 (two
+  `fmt.Errorf` lines); unchanged: D-2 (generated clone/equality, now over unknowns), D-9 (generated dispatch, reshaped).
+- **Pins and certification**: `baselines/pins/twin-chdriver.wire.json` moves (subject bytes change) — re-pin under
+  `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff --slow` with the reason in `check-frontend-pins`' history; `hidden-dep-order`
+  and `stdlib-pin.tsv` unchanged (no new stdlib surface; `math/rand.Intn` is already on the register if D5-i); `derive.py` is in the
+  certification `tools/` inventory, so `release-check` reports a changed dependency and step 5a is a provenance refresh under
+  `--slow` (precedent trains r55/r56), not a certified re-pin; `check-stdlib-register` unchanged (primitive 3/3, overlay 5/12).
+- **The logic team's §5, one-to-one**: (a) named `FuncId` list → D8's TSV; (b) deterministic hash-pinned generator output → D8's
+  digests + `--check`; (c) plain indexed loops / `break`/`continue` / depth-bounded recursion / no reflection → D6 (+ D4's counter);
+  (d) the init pick as ONE labelled choice consumed before `main` → D5; (e) a documented footprint → D8's footprint column; their §4
+  caveat (C3) → item 4 landed, the `probePanic` evidence; rendering equations for error payloads are unit 6b's deliverable.
+- **Gate**: `scripts/ci --diff --slow` green via `scripts/capped`; `derive.py --check`, `difftest.py` §1–§8, `codeccheck.py` green;
+  no existing row's observations change except the twin pin; the pre-merge audit asked, never skipped.
+
+## 6. Open questions for the [USER]
+
+- **Q1 (D5)** The spelling pick's site: `rand.Intn(2)` on the pinned `intn` site (recommended: one lemma already exists) or the
+  prototype's `mapIter` two-key range (the shape the logic team explicitly accepted)?
+- **Q2 (D7)** Retire the `confstate.go` overlay to upstream + a two-line exact-text patch now, or leave it whole for the D-3 lane?
+- **Q3 (D4)** Confirm C1's scope includes the raftpb client API, so `errRecursionDepth` (reachable only via `Message.responses` at
+  > 10000 nesting, never through RawNode) is generated rather than refused by name.
+- **Q4 (D3)** Accept that D-3 (`%+#v` ConfState dumps) can never be exact under any route (the `state` pointer in upstream's dump) and
+  record it as a permanent narrowed premise in raft-proofs' §4 form?
+- **Q5 (D6)** Is the tagless `switch` acceptable to the logic team's supported forms, or should the generator emit an `if` chain?
+- **Q6** Go-ahead and sizing: 3–3.5 Opus sessions as S1–S3, the audit ask at the end, merge as one train with the `--slow` re-pin.
+- **Q7 (outside this lane)** `tools/lowerdiag`'s static tables still judge `math/rand.Intn` refused (the 5b primitive is dynamic-only
+  in its view): a one-line table fix lane, or leave as a known staleness?

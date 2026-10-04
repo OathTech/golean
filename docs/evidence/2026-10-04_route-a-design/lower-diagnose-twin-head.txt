@@ -1,0 +1,60 @@
+DIAGNOSTIC — NOT A LOWERING. tools/lowerdiag report: no wire is written; nothing in this file is a gate input.
+target: .tmp/twin-prog
+commit: 450412a7c125e276444eb19e1968507b824237c6   go: go1.26.5   tables: ad37fa3e827a (causes.tsv + machine-surface.tsv + library-refusals.tsv)
+register: docs/stdlib-admission-register.md (45 rows)   causes table: 70 rows
+
+== first refusal (what the frontend says today)
+  frontend: EXPORT OK (rc 0) — the export lowers; the probe wire carries 31 quarantined non-shim declaration(s):
+    func internal/bytealg.Cutover: FR-21/stdlib-source-gap stdlib-source-gap
+    func internal/bytealg.IndexString: FR-21/stdlib-source-gap stdlib-source-gap
+    method bytes.Buffer.Peek: FR-14/stdlib-value-position io.EOF
+    method bytes.Buffer.Read: FR-14/stdlib-value-position io.EOF
+    method bytes.Buffer.ReadByte: FR-14/stdlib-value-position io.EOF
+    method bytes.Buffer.ReadFrom: FR-14/stdlib-value-position io.EOF
+    method bytes.Buffer.ReadRune: FR-14/stdlib-value-position io.EOF
+    method bytes.Buffer.WriteTo: FR-14/stdlib-value-position io.ErrShortWrite
+    method bytes.Buffer.readSlice: FR-14/stdlib-value-position io.EOF
+    method log.Logger.Fatal: FR-14/stdlib-type-method log.Logger.Fatal
+    method log.Logger.Fatalf: FR-14/stdlib-type-method log.Logger.Fatalf
+    method log.Logger.Fatalln: FR-14/stdlib-type-method log.Logger.Fatalln
+    method log.Logger.Flags: FR-14/stdlib-type-method log.Logger.Flags
+    method log.Logger.Output: FR-14/stdlib-type-method log.Logger.Output
+    method log.Logger.Panic: FR-14/stdlib-type-method log.Logger.Panic
+    method log.Logger.Panicf: FR-14/stdlib-type-method log.Logger.Panicf
+    method log.Logger.Panicln: FR-14/stdlib-type-method log.Logger.Panicln
+    method log.Logger.Prefix: FR-14/stdlib-type-method log.Logger.Prefix
+    method log.Logger.Print: FR-14/stdlib-type-method log.Logger.Print
+    method log.Logger.Printf: FR-14/stdlib-type-method log.Logger.Printf
+    method log.Logger.Println: FR-14/stdlib-type-method log.Logger.Println
+    method log.Logger.SetFlags: FR-14/stdlib-type-method log.Logger.SetFlags
+    method log.Logger.SetOutput: FR-14/stdlib-type-method log.Logger.SetOutput
+    method log.Logger.SetPrefix: FR-14/stdlib-type-method log.Logger.SetPrefix
+    method log.Logger.Writer: FR-14/stdlib-type-method log.Logger.Writer
+    … 6 more (report.json frontend_wire_quarantines)
+
+== distance
+  declarations demanding nothing refused: 690 / 696 (99.1%)   funcs+methods: 485 / 490 (99.0%)   may-refuse: 1   refused: 5
+  export kills: 0 declaration(s) refuse the WHOLE export of their package today; 0 / 7 package(s) export-killed (own or inherited)
+
+== blockers by cause (sorted by unblock value: sole = declarations this cause alone blocks)
+  cause                      fr               scope  decls  sole pkgs export  top keys
+  stdlib-package-unmodeled   FR-14            decl       3     3    1      0  os.Exit×2, math/rand.Intn×1
+  stdlib-type-method         FR-14            call       2     2    1      0  log.Logger.Panic×1, log.Logger.Panicf×1
+
+== top blockers — what each is and where its plan lives
+   1. stdlib-package-unmodeled [FR-14] — 3 decls (3 sole, 1 pkgs): a call into a stdlib package that is neither source-through nor shimmed (register: no row) — FR-14's extern surface; memo §6 slices (source-through admission per package)
+   2. stdlib-type-method [FR-14] — 2 decls (2 sole, 1 pkgs): a method call on an imported named type whose package is not source-through (time.Time.Before, bytes-like models before slice 2) — the D5 stub answers satisfaction, the call refuses; FR-14
+
+== projection — declarations lowering if the top causes were fixed, cumulatively
+  + stdlib-package-unmodeled   -> 693 / 696 lower (+3), 0 export(s) revived
+  + stdlib-type-method         -> 695 / 696 lower (+2), 0 export(s) revived
+
+== per package
+  package                                  decls lowers  may-ref  refd   +top3    share  export
+  quorum                                      25     25        0     0      25   100.0%  ok
+  raftpb                                     250    250        0     0     250   100.0%  ok
+  tracker                                     48     48        0     0      48   100.0%  ok
+  confchange                                  24     24        0     0      24   100.0%  ok
+  proto                                        6      6        0     0       6   100.0%  ok
+  raft                                       292    286        1     5     291    97.9%  ok
+  main                                        51     51        0     0      51   100.0%  ok

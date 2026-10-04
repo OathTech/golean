@@ -1,0 +1,94 @@
+package pb
+
+import "proto"
+
+type Entry struct {
+	Term          *uint64
+	unknownFields []byte
+}
+
+func (*Entry) ProtoMessage() {}
+func (x *Entry) ResetMessage() { *x = Entry{} }
+
+func (x *Entry) SizeMessage() int {
+	if x == nil {
+		return 0
+	}
+	n := 0
+	if x.Term != nil {
+		n += 2
+	}
+	return n + len(x.unknownFields)
+}
+
+func (x *Entry) AppendMessage(b []byte) []byte {
+	if x == nil {
+		return b
+	}
+	if x.Term != nil {
+		b = append(b, 0x10, byte(*x.Term))
+	}
+	return append(b, x.unknownFields...)
+}
+
+func (x *Entry) UnmarshalMessage(b []byte) error {
+	i := 0
+	for i < len(b) {
+		tag := uint64(b[i])
+		i++
+		num := tag >> 3
+		wire := tag & 7
+		if num == 0 {
+			return proto.ErrDecode
+		}
+		if num == 2 && wire == 0 {
+			if i >= len(b) {
+				return proto.ErrDecode
+			}
+			v := uint64(b[i])
+			x.Term = &v
+			i++
+			continue
+		}
+		if wire != 0 || i >= len(b) {
+			return proto.ErrDecode
+		}
+		x.unknownFields = append(x.unknownFields, byte(tag), b[i])
+		i++
+	}
+	return nil
+}
+
+func (x *Entry) ProtoClone() proto.Message {
+	if x == nil {
+		return (*Entry)(nil)
+	}
+	y := &Entry{}
+	if x.Term != nil {
+		t := *x.Term
+		y.Term = &t
+	}
+	if len(x.unknownFields) > 0 {
+		y.unknownFields = append([]byte(nil), x.unknownFields...)
+	}
+	return y
+}
+
+func (x *Entry) ProtoEqual(m proto.Message) bool {
+	y, ok := m.(*Entry)
+	if !ok || y == nil {
+		return false
+	}
+	if (x.Term == nil) != (y.Term == nil) || (x.Term != nil && *x.Term != *y.Term) {
+		return false
+	}
+	if len(x.unknownFields) != len(y.unknownFields) {
+		return false
+	}
+	for i := range x.unknownFields {
+		if x.unknownFields[i] != y.unknownFields[i] {
+			return false
+		}
+	}
+	return true
+}

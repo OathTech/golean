@@ -1,0 +1,26 @@
+DIAGNOSTIC — NOT A LOWERING. tools/lowerdiag report: no wire is written; nothing in this file is a gate input.
+target: .tmp/proto-a
+commit: 450412a7c125e276444eb19e1968507b824237c6   go: go1.26.5   tables: ad37fa3e827a (causes.tsv + machine-surface.tsv + library-refusals.tsv)
+register: docs/stdlib-admission-register.md (45 rows)   causes table: 70 rows
+
+== first refusal (what the frontend says today)
+  frontend: EXPORT OK (rc 0) — the export lowers; the probe wire carries 1 quarantined non-shim declaration(s):
+    func errors.Is: FR-14/stdlib-package-unmodeled reflectlite.TypeOf
+
+== distance
+  declarations demanding nothing refused: 35 / 36 (97.2%)   funcs+methods: 25 / 26 (96.2%)   may-refuse: 0   refused: 1
+  export kills: 0 declaration(s) refuse the WHOLE export of their package today; 0 / 1 package(s) export-killed (own or inherited)
+
+== blockers by cause (sorted by unblock value: sole = declarations this cause alone blocks)
+  cause                      fr               scope  decls  sole pkgs export  top keys
+  reflect                    out-of-language  decl       1     1    1      0  errors.Is×1
+
+== top blockers — what each is and where its plan lives
+   1. reflect [out-of-language] — 1 decls (1 sole, 1 pkgs): reflect / internal/reflectlite (encoding/json, errors.Is/As): the G6 reflect-subset frontier — outside the modeled language today
+
+== projection — declarations lowering if the top causes were fixed, cumulatively
+  + reflect                    -> 36 / 36 lower (+1), 0 export(s) revived
+
+== per package
+  package                                  decls lowers  may-ref  refd   +top3    share  export
+  main                                        36     35        0     1      36    97.2%  ok

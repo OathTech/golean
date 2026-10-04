@@ -1,0 +1,47 @@
+package main
+
+import (
+	"pb"
+	"proto"
+)
+
+func probeDispatch() int {
+	e := &pb.Entry{}
+	// field 2 = 7, then an unknown varint field 5 = 9: retained and re-emitted after known fields
+	if err := proto.Unmarshal([]byte{0x28, 0x09, 0x10, 0x07}, e); err != nil {
+		return -1
+	}
+	b, _ := proto.Marshal(e)
+	if len(b) != 4 || b[0] != 0x10 || b[1] != 0x07 || b[2] != 0x28 || b[3] != 0x09 {
+		return -2
+	}
+	if proto.Size(e) != 4 {
+		return -3
+	}
+	c := proto.Clone(e).(*pb.Entry)
+	if !proto.Equal(c, e) || c == e {
+		return -4
+	}
+	var nilMsg *pb.Entry
+	if z, _ := proto.Marshal(nilMsg); z != nil {
+		return -5
+	}
+	return 4
+}
+
+func probePrefixLen() int {
+	return len(proto.ErrDecode.Error())
+}
+
+func probePanic() int {
+	e := &pb.Entry{}
+	if err := proto.Unmarshal([]byte{0x00}, e); err != nil {
+		panic(err)
+	}
+	return 0
+}
+
+func main() {
+	println(probeDispatch(), probePrefixLen())
+	probePanic()
+}
