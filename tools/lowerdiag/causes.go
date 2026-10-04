@@ -304,6 +304,7 @@ type supply struct {
 	atomicKind    map[string]bool
 	initCallee    map[string]bool // pureUnmodeledCallees
 	randIntn      map[string]bool // "math/rand.Intn" — the rand-intn primitive's direct-call callees (randintn.go randIntnCallees)
+	floatBits     map[string]bool // "math.Float64bits" — the float-bits primitive's direct-call callees (floatbits.go floatBitsOps)
 	surfaceRows   int
 	libRefused    map[string]libraryRefusal // source-through members refused by name
 }
@@ -445,6 +446,11 @@ func readMachineSurface(src string, s *supply) error {
 				s.randIntn = map[string]bool{}
 			}
 			s.randIntn[f[1]] = true
+		case "float-bits":
+			if s.floatBits == nil {
+				s.floatBits = map[string]bool{}
+			}
+			s.floatBits[f[1]] = true
 		default:
 			return fmt.Errorf("machine-surface.tsv: unknown kind %q", f[0])
 		}
@@ -455,7 +461,7 @@ func readMachineSurface(src string, s *supply) error {
 func newSupply(registerPath string) (*supply, error) {
 	s := &supply{sourceThrough: map[string]bool{}, shim: map[string]string{}, intercept: map[string]bool{},
 		shadowType: map[string]bool{}, syncType: map[string]bool{}, syncOp: map[string]bool{},
-		atomicKind: map[string]bool{}, initCallee: map[string]bool{}, randIntn: map[string]bool{}}
+		atomicKind: map[string]bool{}, initCallee: map[string]bool{}, randIntn: map[string]bool{}, floatBits: map[string]bool{}}
 	if err := readRegister(registerPath, s); err != nil {
 		return nil, err
 	}

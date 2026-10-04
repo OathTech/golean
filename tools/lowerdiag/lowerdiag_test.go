@@ -428,6 +428,7 @@ func itoa(i int) string { return fmt.Sprintf("%d", i) }
 type surfaceSets struct {
 	syncTypes, syncOps, atomicPrefixes, atomicKinds, initCallees map[string]bool
 	randIntn                                                     map[string]bool // randintn.go randIntnCallees keys, "path.Name"
+	floatBits                                                    map[string]bool // floatbits.go floatBitsOps keys under mathPkgPath, "math.Name"
 }
 
 func frontendSurface(t *testing.T) surfaceSets {
@@ -439,8 +440,8 @@ func frontendSurface(t *testing.T) surfaceSets {
 		}
 		return f
 	}
-	emit, atomics, wire, randintn := parse("emit.go"), parse("atomics.go"), parse("wire.go"), parse("randintn.go")
-	ss := surfaceSets{map[string]bool{}, map[string]bool{}, map[string]bool{}, map[string]bool{}, map[string]bool{}, map[string]bool{}}
+	emit, atomics, wire, randintn, floatbits := parse("emit.go"), parse("atomics.go"), parse("wire.go"), parse("randintn.go"), parse("floatbits.go")
+	ss := surfaceSets{map[string]bool{}, map[string]bool{}, map[string]bool{}, map[string]bool{}, map[string]bool{}, map[string]bool{}, map[string]bool{}}
 	strLit := func(e ast.Expr) (string, bool) {
 		if bl, ok := e.(*ast.BasicLit); ok && bl.Kind == token.STRING {
 			s, err := strconv.Unquote(bl.Value)
@@ -564,6 +565,18 @@ func frontendSurface(t *testing.T) surfaceSets {
 	})
 	ss.syncTypes["sync.Locker"] = true // `obj.Name() != "Locker"` guard: a plain interface
 	// atomics tables and pureUnmodeledCallees
+	// floatbits.go's `const mathPkgPath = "math"`: isFloatBitsFunc keys
+	// floatBitsOps under this package path (read, not assumed).
+	mathPath := ""
+	ast.Inspect(floatbits, func(n ast.Node) bool {
+		if vs, ok := n.(*ast.ValueSpec); ok && len(vs.Names) == 1 && vs.Names[0].Name == "mathPkgPath" && len(vs.Values) == 1 {
+			mathPath, _ = strLit(vs.Values[0])
+		}
+		return true
+	})
+	if mathPath == "" {
+		t.Fatal("floatbits.go: const mathPkgPath not found — the float-bits derivation cannot run (fail closed)")
+	}
 	keysOf := func(f *ast.File, name string, want string) {
 		ast.Inspect(f, func(n ast.Node) bool {
 			vs, ok := n.(*ast.ValueSpec)
@@ -593,6 +606,8 @@ func frontendSurface(t *testing.T) surfaceSets {
 							ss.atomicKinds[v] = true
 						case "init":
 							ss.initCallees[v] = true
+						case "float-bits":
+							ss.floatBits[mathPath+"."+v] = true
 						}
 					}
 				case *ast.CompositeLit: // {"CompareAndSwap", "cas"}
@@ -610,6 +625,7 @@ func frontendSurface(t *testing.T) surfaceSets {
 	keysOf(atomics, "atomicOpPrefixes", "prefix")
 	keysOf(emit, "pureUnmodeledCallees", "init")
 	keysOf(randintn, "randIntnCallees", "rand-intn")
+	keysOf(floatbits, "floatBitsOps", "float-bits")
 	return ss
 }
 
@@ -645,6 +661,7 @@ func checkMachineSurface(tsv string, ss surfaceSets) error {
 	cmp("atomic-kind", s.atomicKind, ss.atomicKinds)
 	cmp("init-callee", s.initCallee, ss.initCallees)
 	cmp("rand-intn", s.randIntn, ss.randIntn)
+	cmp("float-bits", s.floatBits, ss.floatBits)
 	if len(errs) > 0 {
 		sort.Strings(errs)
 		return fmt.Errorf("%s", strings.Join(errs, "\n"))
@@ -654,8 +671,8 @@ func checkMachineSurface(tsv string, ss surfaceSets) error {
 
 func TestMachineSurfaceEqualsFrontendTables(t *testing.T) {
 	ss := frontendSurface(t)
-	if len(ss.syncOps) < 10 || len(ss.syncTypes) != 5 || len(ss.atomicPrefixes) != 5 || len(ss.atomicKinds) != 5 || len(ss.initCallees) != 3 || len(ss.randIntn) != 2 {
-		t.Fatalf("derivation looks wrong: ops=%d types=%d prefixes=%d kinds=%d init=%d rand-intn=%d", len(ss.syncOps), len(ss.syncTypes), len(ss.atomicPrefixes), len(ss.atomicKinds), len(ss.initCallees), len(ss.randIntn))
+	if len(ss.syncOps) < 10 || len(ss.syncTypes) != 5 || len(ss.atomicPrefixes) != 5 || len(ss.atomicKinds) != 5 || len(ss.initCallees) != 3 || len(ss.randIntn) != 2 || len(ss.floatBits) != 4 {
+		t.Fatalf("derivation looks wrong: ops=%d types=%d prefixes=%d kinds=%d init=%d rand-intn=%d float-bits=%d", len(ss.syncOps), len(ss.syncTypes), len(ss.atomicPrefixes), len(ss.atomicKinds), len(ss.initCallees), len(ss.randIntn), len(ss.floatBits))
 	}
 	if err := checkMachineSurface(machineSurfaceTSV, ss); err != nil {
 		t.Fatal(err)
@@ -679,6 +696,94 @@ func TestMachineSurfaceEqualsFrontendTables(t *testing.T) {
 	droppedR := strings.Replace(machineSurfaceTSV, "rand-intn\tmath/rand/v2.IntN\t", "#dropped\t", 1)
 	if err := checkMachineSurface(droppedR, ss); err == nil || !strings.Contains(err.Error(), "math/rand/v2.IntN") {
 		t.Fatalf("dropped math/rand/v2.IntN row not caught: %v", err)
+	}
+	// float-bits (folded in 2026-10-04): a sibling math member the frontend
+	// does NOT bind (math.Sqrt) listed as
+	// bound is caught, and so is a dropped Float32frombits row.
+	fabF := machineSurfaceTSV + "float-bits\tmath.Sqrt\ttools/nativefrontend/floatbits.go\tfabricated\n"
+	if err := checkMachineSurface(fabF, ss); err == nil || !strings.Contains(err.Error(), "math.Sqrt") {
+		t.Fatalf("fabricated math.Sqrt float-bits row not caught: %v", err)
+	}
+	droppedF := strings.Replace(machineSurfaceTSV, "float-bits\tmath.Float32frombits\t", "#dropped\t", 1)
+	if err := checkMachineSurface(droppedF, ss); err == nil || !strings.Contains(err.Error(), "math.Float32frombits") {
+		t.Fatalf("dropped math.Float32frombits row not caught: %v", err)
+	}
+}
+
+// TestFloatBitsPrimitiveIsSupplied — the float-bits half of the same stale
+// judgment (folded into this lane by [USER] Mike 2026-10-04 «Yes, approve
+// 1 / 2», relayed): since stdlib slice 3 the frontend binds a DIRECT call of
+// math.Float64bits / Float64frombits / Float32bits / Float32frombits to the
+// pure `float-bits` node, but the static pass judged every math key
+// stdlib-package-unmodeled. Pinned per declaration of testdata/calib (whose
+// wire verdicts TestCalibrationAgainstWire checks against the real
+// frontend), mirroring the frontend's refusals exactly: defer/go and the
+// value position refuse as `stdlib-value-position` (emit.go's value-position
+// selector text), the dot-imported bare call by name (dot-import-float-bits),
+// math.Sqrt stays stdlib-package-unmodeled.
+func TestFloatBitsPrimitiveIsSupplied(t *testing.T) {
+	if err := initCauses(); err != nil {
+		t.Fatal(err)
+	}
+	sup, err := newSupply("../../docs/stdlib-admission-register.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(sup.floatBits) != 4 || !sup.floatBits["math.Float64bits"] || !sup.floatBits["math.Float32frombits"] {
+		t.Fatalf("float-bits supply = %v, want the four math bit-reinterpretation functions", sup.floatBits)
+	}
+	prog, err := loadProgram("testdata/calib", sup)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prog.census()
+	decls := map[string]*declReport{}
+	for _, d := range prog.pkgs["main"].decls {
+		decls[d.Name] = d
+	}
+	type want struct {
+		supplied, cause, key string
+	}
+	cases := map[string]want{
+		"fbBits":   {supplied: "math.Float64bits (machine float-bits)"},
+		"fbFrom32": {supplied: "math.Float32frombits (machine float-bits)"},
+		"fbStmt":   {supplied: "math.Float64bits (machine float-bits)"},
+		"fbDefer":  {cause: "stdlib-value-position", key: "math.Float64bits"},
+		"fbGo":     {cause: "stdlib-value-position", key: "math.Float32bits"},
+		"fbValue":  {cause: "stdlib-value-position", key: "math.Float64frombits"},
+		"fbSqrt":   {cause: "stdlib-package-unmodeled", key: "math.Sqrt"},
+		"fbDot":    {cause: "dot-import-float-bits", key: "Float64bits"},
+	}
+	for name, w := range cases {
+		d := decls[name]
+		if d == nil {
+			t.Errorf("%s: not in testdata/calib", name)
+			continue
+		}
+		if w.supplied != "" && !slices.Contains(d.Supplied, w.supplied) {
+			t.Errorf("%s: Supplied %v lacks %q", name, d.Supplied, w.supplied)
+		}
+		if w.cause == "" {
+			if len(d.Findings) != 0 {
+				t.Errorf("%s: want no finding, got %+v", name, d.Findings)
+			}
+			continue
+		}
+		if len(d.Findings) != 1 || d.Findings[0].Cause.ID != w.cause || d.Findings[0].Key != w.key {
+			t.Errorf("%s: want the one finding %s/%s, got %+v", name, w.cause, w.key, d.Findings)
+		}
+		if len(d.declRefusals()) == 0 {
+			t.Errorf("%s: want a declaration-scoped refusal, got none", name)
+		}
+	}
+	// the dynamic pass: the frontend's real texts classify to the same causes
+	for txt, wantID := range map[string]string{
+		`stdlib-qualified selector math.Float64bits in value position: only allowlisted DIRECT CALLS of modeled stdlib members lower (E5 shims / fmt desugar); the value shape is outside the modeled surface (package "math")`: "stdlib-value-position",
+		`dot-imported math.Float64bits called as a bare identifier: the float-bits primitive lowers the qualified spelling only (import . "math" is outside the identity boundary) — fail closed`:                               "dot-import-float-bits",
+	} {
+		if c, _ := classifyText(txt); c == nil || c.ID != wantID {
+			t.Errorf("classifyText(%q) = %v, want %s", txt, c, wantID)
+		}
 	}
 }
 
@@ -922,7 +1027,9 @@ func TestCalibrationAgainstWire(t *testing.T) {
 	// primitive); deferIntn and drawInt63n stay refused (route-A review Q7,
 	// 2026-10-04: lowerdiag had judged rand.Intn refused).
 	want := map[string]bool{"retBox": false, "assignBox": true, "sortStrings": false, "sortInts": false, "deferSort": false, "isE": false, "fields": false,
-		"drawIntn": false, "drawIntNv2": false, "drawInt63n": true, "deferIntn": true}
+		"drawIntn": false, "drawIntNv2": false, "drawInt63n": true, "deferIntn": true,
+		// the float-bits primitive (folded in 2026-10-04)
+		"fbBits": false, "fbFrom32": false, "fbStmt": false, "fbDefer": true, "fbGo": true, "fbValue": true, "fbSqrt": true, "fbDot": true}
 	if wireQ["errors.Is"] == "" {
 		t.Errorf("wire: the library function errors.Is should be quarantined (library-refusals.tsv row); got lowered")
 	}

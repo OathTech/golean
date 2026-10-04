@@ -10,15 +10,17 @@ package main
 import (
 	"errors"
 	"fmt"
+	"math"
 	"math/rand"
 	randv2 "math/rand/v2"
 	"slices"
 	"strings"
 )
 
-type E struct{}
+// ErrE (was E until 2026-10-04: dot.go's import . "math" declares math.E in the file block).
+type ErrE struct{}
 
-func (E) Error() string { return "e" }
+func (ErrE) Error() string { return "e" }
 
 func two() (int, string) { return 1, "a" }
 
@@ -43,7 +45,7 @@ func sortInts(s []int)       { slices.Sort(s) }
 func deferSort(s []int) { defer slices.Sort(s) }
 
 // errors.Is reaches internal/reflectlite (register: refuses by name).
-func isE(err error) bool { return errors.Is(err, E{}) }
+func isE(err error) bool { return errors.Is(err, ErrE{}) }
 
 // source-through member that lowers.
 func fields(s string) int { return len(strings.Fields(s)) }
@@ -58,6 +60,19 @@ func drawIntNv2(n int) int        { return randv2.IntN(n) }
 func drawInt63n() int64           { return rand.Int63n(5) }
 func deferIntn()                  { defer rand.Intn(5) }
 func drawMethod(r *rand.Rand) int { return r.Intn(5) }
+
+// The float-bits PRIMITIVE (tools/nativefrontend/floatbits.go, stdlib slice
+// 3; folded into the Q7 fix 2026-10-04): a DIRECT call of the four math
+// functions lowers (an expression statement too); defer/go and the value
+// position refuse as a value-position selector; other math members stay
+// unmodeled. The dot-imported bare call is in dot.go.
+func fbBits(f float64) uint64       { return math.Float64bits(f) }
+func fbFrom32(u uint32) float32     { return math.Float32frombits(u) }
+func fbStmt(f float64)              { math.Float64bits(f) }
+func fbDefer(f float64)             { defer math.Float64bits(f) }
+func fbGo(f float32)                { go math.Float32bits(f) }
+func fbValue() func(uint64) float64 { return math.Float64frombits }
+func fbSqrt(f float64) float64      { return math.Sqrt(f) }
 
 // fmt shim: the verb matrix is NOT judged statically (disclosed, not asserted).
 func sprintf(x int) string { return fmt.Sprintf("%d", x) }

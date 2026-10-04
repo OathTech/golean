@@ -4,7 +4,11 @@
 # tools/lowerdiag beside docs/stdlib-admission-register.md. Every row cites
 # the frontend source it transcribes; TestMachineSurfaceCitesSources checks
 # the cited files exist and mention the entry.
-# kind: sync-type | sync-op | atomic-op-prefix | atomic-kind | init-callee | rand-intn
+# kind: sync-type | sync-op | atomic-op-prefix | atomic-kind | init-callee | rand-intn | float-bits
+# float-bits (2026-10-04, same lane [AGENT], folded in by [USER] Mike 2026-10-04 «Yes, approve 1 / 2»,
+# relayed): the four math functions the frontend binds to the `float-bits` node at a DIRECT call
+# (floatbits.go floatBitsOps under mathPkgPath); defer/go refuses as a value-position selector, a
+# dot-imported bare call by name (causes.tsv dot-import-float-bits). Set equality: same test.
 # rand-intn (2026-10-04, fix/lowerdiag-intn-1004 [AGENT], route-A review item Q7 approved [USER] Mike
 # 2026-10-04, relayed): the package-level callees the frontend binds to the `rand-intn` wire node at a
 # DIRECT call (randintn.go randIntnCallees, window unit 5b); the method forms (*rand.Rand).Intn /
@@ -44,3 +48,7 @@ init-callee	os.LookupEnv	tools/nativefrontend/emit.go	pureUnmodeledCallees
 init-callee	time.Date	tools/nativefrontend/emit.go	pureUnmodeledCallees — admitted at the FR-22 slice (2026-09-04, lane fr22-fr23) with its written result-only/panic-free argument; the register's init-callee class renders the same table
 rand-intn	math/rand.Intn	tools/nativefrontend/randintn.go	randIntnCallees — the `rand-intn` primitive (window unit 5b; register row primitive/rand-intn): a direct call lowers to the [0, n) choice-tape draw
 rand-intn	math/rand/v2.IntN	tools/nativefrontend/randintn.go	randIntnCallees — same primitive, callee tag IntN
+float-bits	math.Float64bits	tools/nativefrontend/floatbits.go	floatBitsOps — the `float-bits` primitive (stdlib slice 3; register row primitive/float-bits): a direct call lowers to the pure bit-reinterpretation expression op
+float-bits	math.Float64frombits	tools/nativefrontend/floatbits.go	floatBitsOps — the `float-bits` primitive (stdlib slice 3; register row primitive/float-bits): a direct call lowers to the pure bit-reinterpretation expression op
+float-bits	math.Float32bits	tools/nativefrontend/floatbits.go	floatBitsOps — the `float-bits` primitive (stdlib slice 3; register row primitive/float-bits): a direct call lowers to the pure bit-reinterpretation expression op
+float-bits	math.Float32frombits	tools/nativefrontend/floatbits.go	floatBitsOps — the `float-bits` primitive (stdlib slice 3; register row primitive/float-bits): a direct call lowers to the pure bit-reinterpretation expression op

@@ -814,6 +814,13 @@ func (a *analyzer) classifyPkgCall(d *declReport, path, member string, at ast.No
 		} else {
 			d.add(finding{Cause: mustCause("atomic-unmodeled"), Key: key, Pos: pos, Certain: true})
 		}
+	case sup.floatBits[key]:
+		// The float-bits PRIMITIVE (floatbits.go, stdlib slice 3): a direct
+		// call of math.Float64bits & siblings lowers to the pure `float-bits`
+		// expression node (an expression statement too); defer/go of it
+		// refuses as a value-position selector (interceptedSpawn), a
+		// dot-imported bare call by name (the body walk).
+		d.supplied(key, "machine float-bits")
 	case sup.randIntn[key]:
 		// The rand-intn PRIMITIVE (randintn.go, window unit 5b): a direct
 		// call of the package-level draw lowers to the `rand-intn` wire
@@ -958,6 +965,17 @@ func (a *analyzer) body(d *declReport, root ast.Node, fd *ast.FuncDecl) {
 			}
 			if tv, ok := a.info.Types[x.Fun]; ok && tv.IsType() {
 				break // conversion — the type scan covers it
+			}
+			// A bare-identifier call of a float-bits function: only a dot
+			// import (`import . "math"`) reaches it; the frontend refuses it
+			// by name (emit.go: "dot-imported math.X called as a bare
+			// identifier …", audit fix round D 2026-09-05).
+			if id, ok := x.Fun.(*ast.Ident); ok {
+				if fn, ok := a.info.Uses[id].(*types.Func); ok && fn.Pkg() != nil && !a.p.isLocalPkg(fn.Pkg()) {
+					if key := fn.Pkg().Path() + "." + fn.Name(); a.p.sup.floatBits[key] {
+						d.add(finding{Cause: mustCause("dot-import-float-bits"), Key: fn.Name(), Pos: pos, Certain: true})
+					}
+				}
 			}
 			if sel, ok := x.Fun.(*ast.SelectorExpr); ok {
 				if path, member, obj, ok := a.stdlibSel(sel); ok {
@@ -1170,7 +1188,9 @@ func (a *analyzer) syncRecv(t types.Type) bool {
 // (slices.Sort, cmp.Compare) refuses by name (emit.go: "the direct call of
 // this library member is frontend-intercepted … in expression-statement
 // position only"); so does defer/go of a rand-intn primitive callee
-// (math/rand.Intn, math/rand/v2.IntN — randintn.go refuseRandIntnDeferGo).
+// (math/rand.Intn, math/rand/v2.IntN — randintn.go refuseRandIntnDeferGo)
+// and of a float-bits callee (math.Float64bits & siblings — the frontend's
+// value-position selector refusal).
 func (a *analyzer) interceptedSpawn(d *declReport, how string, call *ast.CallExpr, pos string) {
 	sel, ok := call.Fun.(*ast.SelectorExpr)
 	if !ok {
@@ -1178,6 +1198,13 @@ func (a *analyzer) interceptedSpawn(d *declReport, how string, call *ast.CallExp
 	}
 	if path, member, _, ok := a.stdlibSel(sel); ok && a.p.sup.intercept[path+"."+member] {
 		d.add(finding{Cause: mustCause("intercepted-defer-go"), Key: how + " " + path + "." + member, Pos: pos, Certain: true})
+	}
+	// defer/go of a float-bits callee: the frontend has no float-bits arm on
+	// the defer/go path, so the callee reaches emitExpr as a SELECTOR and
+	// refuses there (`stdlib-qualified selector math.Float64bits in value
+	// position …`, emit.go) — the cause that text classifies to.
+	if path, member, _, ok := a.stdlibSel(sel); ok && a.p.sup.floatBits[path+"."+member] {
+		d.add(finding{Cause: mustCause("stdlib-value-position"), Key: path + "." + member, Pos: pos, Certain: true})
 	}
 	// defer/go of the rand-intn primitive's callee: randintn.go
 	// refuseRandIntnDeferGo (the draw lowers at direct-call sites only).
