@@ -1,14 +1,15 @@
-# The pool/registry half — the GRIND BRIEF (draft; launchable only after the design gate)
+# The pool/registry half — the GRIND BRIEF (the design gate ratified 2026-10-04; not yet launched)
 
-STATUS: **DRAFT — NOT LAUNCHED.** The spec packet it drives is a NAMED DESIGN GATE awaiting [USER] review
-(`docs/2026-10-04_pool-relation-spec.md` §8). Authority for the shape: [USER] Mike 2026-10-04 «Great, launch it»
+STATUS: **NOT LAUNCHED.** The spec packet it drives (a NAMED DESIGN GATE) was RATIFIED by the [USER] 2026-10-04
+(«Approved», relayed — `docs/2026-10-04_pool-relation-spec.md` §9; Codex confirmed as the tool) and its statements
+passed an adversarial statement review, findings applied (§10 there: 48 statements, replay added). Authority for the shape: [USER] Mike 2026-10-04 «Great, launch it»
 (relayed) — a Fable spec packet, then a Codex grind «with enough flex it could build successfully, without giving
 too much space for drift». Written by the [AGENT] design worker; the coordinator refreshes §2 (the input commit)
 and deletes this paragraph at launch. Provenance in the grind's commits: **[AGENT Codex, pool grind]**.
 **Ambiguity policy: if two readings of this brief differ materially, STOP, write both in the report, do not choose.**
 
 ## 1. Purpose
-Prove every `<name>_stmt` of `GoLean/GoCore/PoolStatement.lean` — 45 statements — as `theorem <name> : <name>_stmt`
+Prove every `<name>_stmt` of `GoLean/GoCore/PoolStatement.lean` — 48 statements — as `theorem <name> : <name>_stmt`
 in a new `GoLean/GoCore/PoolSound.lean`, the statements UNCHANGED; pin them in `BridgeSet.lean`; extend the core
 audit's required list; land milestone by milestone. The design note is the specification; this brief is its fence.
 
@@ -43,8 +44,8 @@ The existing kit: `Multi.lean` (`stepThread`, `stepMulti`, `StepM`, `schedPick`,
 `NPDRF.lean` (`threadDone_atBoundary`, `isBlockedConfig_atBoundary`), `Tests/GoCoreAudit.lean` (`requiredModules`, `exports`).
 
 ## 4. The FROZEN surface (`scripts/check-pool-spec` guards it; a drift FAILS by name)
-Every definition of `PoolStep.lean` and every `_stmt` body of `PoolStatement.lean`, byte-for-byte up to comments and
-whitespace (`docs/specs/pool-relation/FROZEN.sha256`). Also frozen: the interpreter (`stepFn`, `stepThread`, `stepMulti`,
+Every definition of `PoolStep.lean`, the WHOLE of `PoolStatement.lean` (glue definitions, statements, controls) and
+every `_stmt` body in it (named keys), byte-for-byte up to comments and whitespace (`docs/specs/pool-relation/FROZEN.sha256`). Also frozen: the interpreter (`stepFn`, `stepThread`, `stepMulti`,
 the drivers, `Choices.*`, every helper) and every statement already pinned in `BridgeSet.lean` (rows 1–502).
 
 ## 5. The zones
@@ -68,7 +69,8 @@ and `stepML_frame_stmt` (an `applyPairing` arm writing a third goroutine). A fin
 
 ## 6. Boundaries — what NOT to do
 Edit ONLY: the new `GoLean/GoCore/PoolSound.lean` (and new proof-only modules under `GoLean/GoCore/` that it imports),
-`GoLean.lean`'s import list (enroll the new modules), `GoLean/GoCore/BridgeSet.lean` (ADD rows only), `Tests/GoCoreAudit.lean`
+`GoLean.lean`'s import list (enroll the new modules), `GoLean/GoCore/BridgeSet.lean` (ADD rows only),
+`docs/specs/pool-relation/Skeleton.lean` (delete the lines of proved names per §7; add lines only for a §5(iv) split), `Tests/GoCoreAudit.lean`
 (`requiredModules`/`exports` — ADD only), `docs/changelog/61958f2e-WINDOW.md` (one row per milestone), your evidence dir
 (`docs/evidence/<date>_pool-grind/`, ≤ 256 KiB per file) and your report. NO change to `PoolStep.lean`, to a `_stmt`
 outside §5's bounded list, to `stepFn`/`stepThread`/`stepMulti`/the drivers/`Choices.*`/any helper, to any rule of `Step`,
@@ -80,17 +82,18 @@ differential unless the coordinator asks (nothing here changes runtime behaviour
 
 ## 7. Proof order — five milestones, each mergeable alone (its theorems depend only on earlier ones)
 M1 **step correspondence + error classes** — `raceUpdate_error`, `stepMulti_error_cases` (FIRST: it decides whether
-the classification theorems are provable as stated), `schedSlot_iff`, `stepML_erase`, `stepMulti_sound` (the existing
+the classification theorems are provable as stated), `schedSlot_iff`, `stepML_erase`, `stepML_sound` (the existing
 `stepMulti_sound`/`stepThreadInto_sound` case tree, with label equalities — reuse `stepThread_privateStep_label`,
 `stepFn_selectApply_inv`, `spawnStep_shape`, `arrivalPlan_of_*`, `consumeAtE_eq`), `stepML_complete` (the existing
-`stepM_complete`/`stepMulti_of_inner` route, the sched slot realized by `slot :: ch` at bound ≥ 2), `stepM_lift`, `stepsML_erase`.
+`stepM_complete`/`stepMulti_of_inner` route, the sched slot realized by `slot :: ch` at bound ≥ 2), `stepM_lift`, `stepsML_erase`, `stepMulti_replay` (every consultation a record-emitting `consumeAtE`).
 M2 **attribution, boundaries, deadlock** — `stepML_who_runnable`, `stepML_sched`, `stepML_switch_boundary`,
 `stepML_sched_record`, `stepML_frame` (an `applyPairing_frame` helper: the arms' two `setIfInBounds`), `stepML_paired_trace`,
 `stepML_spawn`, `asleep_silent`, `singleton_deadlock`, `mainOutcome_not_deadlock`, `stepMulti_deadlock_elim`.
 M3 **the driver carriers** — `front_continue`, `front_finish`, `front_refusal`, `poolFinish_functional`, `poolFinish_zero_not_continue`.
 M4 **the run lifts + the program seam** — `poolPrefix_comp`, `poolPrefix_split`, `poolPrefix_labelled`, `poolPrefix_erase`,
 `poolPrefix_run` (induction with `unfold_driver`), the pool twin of `execStmtLoop_error` as a helper, then `pool_run_ok_iff`,
-`pool_run_terminal_iff`, `pool_run_fuelOut_iff`, `pool_run_refusal_iff`, `pool_classification`, `run_ok_prefix`, `program_prefix`.
+`pool_run_terminal_iff`, `pool_run_fuelOut_iff`, `pool_run_refusal_iff`, `pool_classification`, `run_ok_prefix`, `program_prefix`,
+`continue_replay`, `poolPrefix_replay` (induction; `replays` split over each iteration's `window ++ picks`).
 M5 **the single-goroutine reduction** — `stepML_single_sound`, `stepML_single_complete`, `singleton_finish_normal/_aborted/
 _refused/_fatal/_deadlock`, `singleton_prefix_embedding` (mirror `execProgLoopOut_single_wide`'s induction), `singleton_run`.
 Each milestone ends with: `scripts/check-pool-spec` (statements intact; discharged so far listed — until M5 lands, run it
@@ -102,7 +105,8 @@ with `--statements-only` AND report the undischarged names explicitly), the Skel
 `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci` green (no `--diff`: no runtime change; the coordinator may ask for it);
 `scripts/capped bash scripts/check-core-audit` PASS with the new modules in the closure and the milestone's theorems in
 `exports`; `python3 scripts/check-pool-spec` (M5) / `--statements-only` (M1–M4) exit 0; the escape-hatch preflight clean;
-`BridgeSet.lean` compiles with the new rows; `git diff --stat <input> -- GoLean/GoCore/PoolStep.lean` EMPTY and
+`BridgeSet.lean` compiles with the new rows; `git diff --stat <input> -- GoLean/GoCore/PoolStep.lean` EMPTY; `git diff <input> -- GoLean/GoCore/PoolStatement.lean`
+EMPTY unless a §5 bounded adjustment is reported, and then every hunk confined to the named `_stmt` body; and
 `FROZEN.sha256` unchanged unless a §5 bounded adjustment is reported line by line; no existing theorem's statement changed
 (`git diff <input> -- GoLean/GoCore/{Multi,MultiSound,PoolTrace,PoolProjection,Prefix,ExecutionStatement}.lean` shows
 proof bodies only, if anything). Evidence: gate tails and the `check-pool-spec` output per milestone.

@@ -3,22 +3,32 @@
 grind's acceptance, not yet a `scripts/ci` step).
 
 Two files are the frozen surface — `GoLean/GoCore/PoolStep.lean` (the definitions) and
-`GoLean/GoCore/PoolStatement.lean` (every `def <name>_stmt : Prop`). This script
+`GoLean/GoCore/PoolStatement.lean` (every `def <name>_stmt : Prop`, the glue definitions beside
+them — `poolOut`, `DriverEvent.events`, `PoolClass*` — and the controls). This script
 
-  (a) hashes the definitions file with its comments stripped and whitespace normalized, and every
-      `_stmt` body the same way, and compares them with `docs/specs/pool-relation/FROZEN.sha256`
-      (written by `--freeze`): ANY drift — a changed body, a renamed/added/removed statement — FAILS
-      by name. A bounded-zone adjustment (grind brief §5) re-freezes with a written reason.
+  (a) hashes BOTH files whole with comments stripped and whitespace normalized (keys `defs` and
+      `stmts-file`), and every `_stmt` body the same way (keys `stmt <name>`, for naming), and
+      compares them with `docs/specs/pool-relation/FROZEN.sha256` (written by `--freeze`): ANY
+      drift — a changed body, a changed glue definition, a renamed/added/removed statement — FAILS
+      by name. A `_stmt` body runs from its `def` line to the next column-0 command token (blank
+      lines inside a body do NOT end it); a column-0 line that is not a known command token FAILS
+      (fail closed). A bounded-zone adjustment (grind brief §5) re-freezes with a written reason.
   (b) checks that every `_stmt` is DISCHARGED as `theorem <name> : <name>_stmt` in
       `GoLean/GoCore/PoolSound.lean` (the grind's module). Before the grind lands that file does
       not exist: pass `--statements-only` during the spec phase; without the flag its absence FAILS
       (fail closed — a check that cannot run does not pass).
+  (c) SELF-TESTS first, on every invocation (`--freeze` included): negative controls on scratch
+      copies under `.tmp/check-pool-spec-selftest/` — a glue definition rewritten to `True`, and
+      `∨ True` appended to a `_stmt` body after a blank line — must each be DETECTED, and the
+      comment stripper must keep `--` and `/-` inside string and char literals. A self-test that
+      does not detect its mutation FAILS the check.
 
 Exit 0 only when every check passes. No allowlist.
 """
 import hashlib
 import pathlib
 import re
+import shutil
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -26,10 +36,29 @@ DEFS = ROOT / "GoLean/GoCore/PoolStep.lean"
 STMT = ROOT / "GoLean/GoCore/PoolStatement.lean"
 SOUND = ROOT / "GoLean/GoCore/PoolSound.lean"
 FREEZE = ROOT / "docs/specs/pool-relation/FROZEN.sha256"
+SCRATCH = ROOT / ".tmp/check-pool-spec-selftest"
+
+# Column-0 tokens that may follow a `_stmt` body (after comment stripping). Anything else at
+# column 0 is an unrecognised shape and FAILS rather than being silently absorbed or cut.
+COMMAND_TOKENS = {
+    "def", "theorem", "lemma", "example", "abbrev", "instance", "structure", "inductive", "class",
+    "end", "section", "namespace", "open", "variable", "set_option", "attribute", "noncomputable",
+    "private", "protected", "opaque", "axiom", "macro", "macro_rules", "syntax", "universe",
+    "mutual", "local", "scoped", "import", "notation", "infix", "infixl", "infixr", "prefix",
+    "postfix", "deriving", "elab", "initialize", "#eval", "#check", "#print", "#reduce", "@[",
+}
+
+_CHAR_LIT = re.compile(r"'(\\.|[^\\'\n])'")
+
+
+class SpecError(Exception):
+    pass
 
 
 def strip_comments(text: str) -> str:
-    """Drop `/- … -/` blocks (nesting-aware) and `--` line comments."""
+    """Drop `/- … -/` blocks (nesting-aware) and `--` line comments. String literals `"…"`
+    (with `\\` escapes) and char literals `'c'` are copied verbatim at depth 0, so a `--` or `/-`
+    inside them is NOT a comment (review M4)."""
     out = []
     depth = 0
     i = 0
@@ -45,12 +74,30 @@ def strip_comments(text: str) -> str:
             i += 2
             continue
         if depth == 0:
+            ch = text[i]
             if two == "--":
                 while i < n and text[i] != "\n":
                     i += 1
                 continue
-            out.append(text[i])
+            if ch == '"':
+                j = i + 1
+                while j < n and text[j] != '"':
+                    j += 2 if text[j] == "\\" else 1
+                if j >= n:
+                    raise SpecError("unterminated string literal")
+                out.append(text[i:j + 1])
+                i = j + 1
+                continue
+            if ch == "'" and (i == 0 or not (text[i - 1].isalnum() or text[i - 1] in "_'.!?")):
+                m = _CHAR_LIT.match(text, i)
+                if m:
+                    out.append(m.group(0))
+                    i = m.end()
+                    continue
+            out.append(ch)
         i += 1
+    if depth != 0:
+        raise SpecError("unterminated block comment")
     return "".join(out)
 
 
@@ -63,9 +110,9 @@ def sha(s: str) -> str:
 
 
 def stmt_bodies(text: str) -> dict:
-    """`def <name>_stmt : Prop :=` up to the next blank line, comments stripped, normalized."""
-    stripped = strip_comments(text)
-    lines = stripped.splitlines()
+    """`def <name>_stmt : Prop :=` up to the next column-0 command token, comments stripped,
+    normalized. Blank lines inside a body are part of it (review B2)."""
+    lines = strip_comments(text).splitlines()
     bodies = {}
     i = 0
     while i < len(lines):
@@ -76,34 +123,114 @@ def stmt_bodies(text: str) -> dict:
         name = m.group(1)
         j = i + 1
         body = []
-        while j < len(lines) and lines[j].strip() != "":
-            body.append(lines[j])
+        while j < len(lines):
+            line = lines[j]
+            if line.strip() and not line[0].isspace():
+                tok = "@[" if line.startswith("@[") else line.split()[0]
+                if tok not in COMMAND_TOKENS:
+                    raise SpecError(f"{name}: column-0 line {j + 1} is not a known command token "
+                                    f"({line.strip()[:40]!r}) — refusing to guess where the body ends")
+                break
+            body.append(line)
             j += 1
         if name in bodies:
-            sys.exit(f"check-pool-spec: FAIL — duplicate statement {name}")
+            raise SpecError(f"duplicate statement {name}")
         bodies[name] = norm(" ".join(body))
         i = j
     if not bodies:
-        sys.exit("check-pool-spec: FAIL — no `_stmt` found in PoolStatement.lean (a vacuous check is refused)")
+        raise SpecError("no `_stmt` found in PoolStatement.lean (a vacuous check is refused)")
     return bodies
 
 
-def current() -> dict:
-    cur = {"defs": sha(norm(strip_comments(DEFS.read_text())))}
-    for name, body in stmt_bodies(STMT.read_text()).items():
+def hashes(defs_path: pathlib.Path, stmt_path: pathlib.Path) -> dict:
+    stmt_text = stmt_path.read_text()
+    cur = {"defs": sha(norm(strip_comments(defs_path.read_text()))),
+           "stmts-file": sha(norm(strip_comments(stmt_text)))}
+    for name, body in stmt_bodies(stmt_text).items():
         cur[f"stmt {name}"] = sha(body)
     return cur
 
 
+def drift(frozen: dict, cur: dict) -> list:
+    bad = []
+    for k in sorted(set(frozen) | set(cur)):
+        if k not in cur:
+            bad.append(f"REMOVED or RENAMED: {k}")
+        elif k not in frozen:
+            bad.append(f"ADDED (not frozen): {k}")
+        elif frozen[k] != cur[k]:
+            bad.append(f"CHANGED: {k}")
+    return bad
+
+
+def self_tests(base: dict) -> list:
+    """Negative controls; returns the list of FAILED self-tests (empty = all detected)."""
+    failures = []
+    text = STMT.read_text()
+    if SCRATCH.exists():
+        shutil.rmtree(SCRATCH)
+    SCRATCH.mkdir(parents=True)
+    try:
+        # (a) a glue definition (not a `_stmt`) rewritten to `True` — review B1.
+        m = re.search(r"^def PoolClassOk\b[\s\S]*?:\s*Prop\s*:=\n(?:[ \t]+.*\n)+", text, re.M)
+        if not m:
+            failures.append("(a) PoolClassOk definition not found in PoolStatement.lean")
+        else:
+            head = m.group(0).split(":=\n", 1)[0]
+            mut = text[:m.start()] + head + ":=\n  True\n" + text[m.end():]
+            p = SCRATCH / "a_glue_true.lean"
+            p.write_text(mut)
+            got = drift(base, hashes(DEFS, p))
+            if "CHANGED: stmts-file" not in got:
+                failures.append(f"(a) `PoolClassOk … := True` NOT detected (drift: {got})")
+        # (b) `\n\n    ∨ True` appended to a `_stmt` body — review B2 (the blank-line hole).
+        m = re.search(r"^def (\w+_stmt) : Prop :=\n(?:[ \t]+.*\n)+", text, re.M)
+        if not m:
+            failures.append("(b) no `_stmt` body found to mutate")
+        else:
+            name = m.group(1)
+            mut = text[:m.end()].rstrip("\n") + "\n\n    ∨ True\n" + text[m.end():]
+            p = SCRATCH / "b_blankline_disjunct.lean"
+            p.write_text(mut)
+            got = drift(base, hashes(DEFS, p))
+            for key in ("stmts-file", f"stmt {name}"):
+                if f"CHANGED: {key}" not in got:
+                    failures.append(f"(b) `∨ True` after a blank line in {name} NOT detected by `{key}` "
+                                    f"(drift: {got})")
+        # (c) the stripper keeps `--` / `/-` inside string and char literals — review M4.
+        cases = [
+            ('def s := "a--b" -- gone\n', 'def s := "a--b" \n'),
+            ('def s := "x/-y" /- gone -/ z\n', 'def s := "x/-y"  z\n'),
+            ('def s := "q\\"--r" -- gone\n', 'def s := "q\\"--r" \n'),
+            ("def c := '-' -- gone\n", "def c := '-' \n"),
+            ("def c := '\"' -- \"\n", "def c := '\"' \n"),
+            ("def m' := m'' -- gone\n", "def m' := m'' \n"),
+            ("a /- x /- y -/ z -/ b\n", "a  b\n"),
+        ]
+        for src, want in cases:
+            try:
+                got_s = strip_comments(src)
+            except SpecError as e:
+                got_s = f"<SpecError: {e}>"
+            if got_s != want:
+                failures.append(f"(c) strip_comments({src!r}) = {got_s!r}, expected {want!r}")
+    finally:
+        if SCRATCH.exists() and SCRATCH.is_relative_to(ROOT / ".tmp"):
+            shutil.rmtree(SCRATCH)
+    return failures
+
+
 def read_freeze() -> dict:
     if not FREEZE.exists():
-        sys.exit(f"check-pool-spec: FAIL — {FREEZE.relative_to(ROOT)} missing (run --freeze once, deliberately)")
+        raise SpecError(f"{FREEZE.relative_to(ROOT)} missing (run --freeze once, deliberately)")
     frozen = {}
     for line in FREEZE.read_text().splitlines():
         line = line.strip()
         if not line or line.startswith("#"):
             continue
         key, _, h = line.rpartition(" ")
+        if not key or not re.fullmatch(r"[0-9a-f]{64}", h):
+            raise SpecError(f"malformed line in {FREEZE.relative_to(ROOT)}: {line!r}")
         frozen[key] = h
     return frozen
 
@@ -113,33 +240,36 @@ def main(argv) -> int:
     statements_only = "--statements-only" in argv
     for a in argv:
         if a not in ("--freeze", "--statements-only"):
-            sys.exit(f"check-pool-spec: unknown argument {a!r}")
-    cur = current()
+            print(f"check-pool-spec: unknown argument {a!r}", file=sys.stderr)
+            return 2
+    cur = hashes(DEFS, STMT)
+    nstmts = sum(1 for k in cur if k.startswith("stmt "))
+    failures = self_tests(cur)
+    if failures:
+        print("check-pool-spec: FAIL — a self-test did not detect its mutation:", file=sys.stderr)
+        for f in failures:
+            print(f"  {f}", file=sys.stderr)
+        return 1
+    print("ok [self-tests] (a) glue `:= True` detected; (b) blank-line `∨ True` detected by the file "
+          "and statement keys; (c) literals survive comment stripping")
     if freeze:
         FREEZE.parent.mkdir(parents=True, exist_ok=True)
         body = ["# FROZEN SURFACE of the pool/registry half (scripts/check-pool-spec --freeze).",
                 "# `defs` = GoLean/GoCore/PoolStep.lean, comments stripped, whitespace normalized;",
-                "# `stmt <name>` = that statement's body in GoLean/GoCore/PoolStatement.lean, likewise.",
+                "# `stmts-file` = GoLean/GoCore/PoolStatement.lean whole (glue defs, statements, controls), likewise;",
+                "# `stmt <name>` = that statement's body (to the next column-0 command token), likewise.",
                 "# Re-freezing is a bounded-zone act: the grind brief requires a written reason per line."]
         body += [f"{k} {v}" for k, v in sorted(cur.items())]
         FREEZE.write_text("\n".join(body) + "\n")
-        print(f"check-pool-spec: froze {len(cur) - 1} statements + the definitions into {FREEZE.relative_to(ROOT)}")
+        print(f"check-pool-spec: froze {nstmts} statements + both files into {FREEZE.relative_to(ROOT)}")
         return 0
-    frozen = read_freeze()
-    bad = []
-    for k in sorted(set(frozen) | set(cur)):
-        if k not in cur:
-            bad.append(f"REMOVED or RENAMED: {k}")
-        elif k not in frozen:
-            bad.append(f"ADDED (not frozen): {k}")
-        elif frozen[k] != cur[k]:
-            bad.append(f"CHANGED: {k}")
+    bad = drift(read_freeze(), cur)
     if bad:
         print("check-pool-spec: FAIL — the frozen surface drifted:", file=sys.stderr)
         for b in bad:
             print(f"  {b}", file=sys.stderr)
         return 1
-    print(f"ok [frozen] the definitions and {len(cur) - 1} statements match {FREEZE.relative_to(ROOT)}")
+    print(f"ok [frozen] both files and {nstmts} statements match {FREEZE.relative_to(ROOT)}")
     names = [k.split(" ", 1)[1] for k in cur if k.startswith("stmt ")]
     if not SOUND.exists():
         if statements_only:
@@ -165,4 +295,8 @@ def main(argv) -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv[1:]))
+    try:
+        sys.exit(main(sys.argv[1:]))
+    except SpecError as e:
+        print(f"check-pool-spec: FAIL — {e}", file=sys.stderr)
+        sys.exit(1)

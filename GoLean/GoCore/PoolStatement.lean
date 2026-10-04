@@ -20,7 +20,7 @@ Groups: (A) the step correspondence and the projection to `StepM`; (B) attributi
 boundaries; (C) the pool deadlock; (D) the step's error classes (the pool twin of «no stray
 panic»); (E) the driver carriers — `Continue`/`PoolFinish` vs `front`, terminal priority; (F) the
 run lifts — the `PoolPrefix` algebra, erasure, the exact fuel bridges and the four-way
-classification; (G) the program seam; (H) the single-goroutine reduction — step level (to `Step`),
+classification, replay by record (step, gate, prefix); (G) the program seam; (H) the single-goroutine reduction — step level (to `Step`),
 finish level (to `Finish`), prefix level (to `Prefix`, the labels fold-equal, attribution 0), and
 the pin that `PoolProjection`'s result is the special case.
 -/
@@ -28,7 +28,7 @@ the pin that `PoolProjection`'s result is the special case.
 namespace GoLean.GoCore.PoolStatement
 
 open GoLean GoLean.GoCore GoLean.GoCore.Machine GoLean.Semantics GoLean.Semantics.Pool
-open GoLean.GoCore.ExecutionStatement (Prefix Finish FinishOutcome Blocked)
+open GoLean.GoCore.ExecutionStatement (Prefix Finish FinishOutcome Blocked replays)
 
 /-! ## Glue definitions (proof-layer; beside `seqOut`/`outFold`) -/
 
@@ -45,7 +45,7 @@ def DriverEvent.events (des : List DriverEvent) : List StepEvent := des.map (·.
 /-- **Soundness of the executable pool step**: every `stepMulti` step is a `StepML` step with the
 SAME event — attribution, action and full label (the analogue of `stepFn_sound`, over the pool).
 Refines `stepMulti_sound` (`MultiSound.lean:1192`), whose conclusion is this one's trace. -/
-def stepMulti_sound_stmt : Prop :=
+def stepML_sound_stmt : Prop :=
   ∀ (ctx : ProgramCtx) (m m' : MultiConfig) (ch ch' : Choices) (ev : StepEvent),
     stepMulti ctx m ch = .ok (m', ch', ev) → StepML ctx m m' ev
 
@@ -362,12 +362,37 @@ def run_ok_prefix_stmt : Prop :=
         n ≤ fuel ∧ PoolPrefix ctx n m r ch des mf rf chf₀ ∧
           PoolFinish ctx mf rf chf₀ rec (.normal σ chf) 0 ∧ out = poolOut des acc
 
+/-- **Replay of the pool step BY RECORD** (the pool twin of the sequential `replays`, statement review
+B3): any tape that replays the event's pick records — the scheduling record first, then the step's
+own — drives `stepMulti` to the SAME successor and event, leaving the replay's residue. -/
+def stepMulti_replay_stmt : Prop :=
+  ∀ (ctx : ProgramCtx) (m m' : MultiConfig) (ch ch' : Choices) (ev : StepEvent),
+    stepMulti ctx m ch = .ok (m', ch', ev) →
+    ∀ ch₂ ch₂' : Choices, replays ev.picks ch₂ ch₂' → stepMulti ctx m ch₂ = .ok (m', ch₂', ev)
+
+/-- **Replay of the gate**: the window draw's record (`[]` for `running`) replays on any tape. -/
+def continue_replay_stmt : Prop :=
+  ∀ (ctx : ProgramCtx) (m : MultiConfig) (ch ch₁ : Choices) (rec : List PickRecord),
+    Continue ctx m ch ch₁ rec → ∀ ch₂ ch₂' : Choices, replays rec ch₂ ch₂' → Continue ctx m ch₂ ch₂' rec
+
+/-- **Replay of a pool prefix**: a tape replaying the prefix's records in driver order — each
+iteration's window record, then its event's picks — carries the SAME prefix (pools, detector
+states, driver events), ending at the replay's residue. -/
+def poolPrefix_replay_stmt : Prop :=
+  ∀ (ctx : ProgramCtx) (n : Nat) (m mf : MultiConfig) (r rf : RaceState) (ch chf : Choices)
+    (des : List DriverEvent),
+    PoolPrefix ctx n m r ch des mf rf chf →
+    ∀ ch₂ ch₂' : Choices, replays (des.flatMap fun d => d.window ++ d.event.picks) ch₂ ch₂' →
+      PoolPrefix ctx n m r ch₂ des mf rf ch₂'
+
 /-! ## (G) The program seam -/
 
 /-- **The program bridge over the labelled pool carrier** (under successful setup — setup stays a
 premise, `program_bridge`'s limit RETAINED): a program's normal readout is a pool prefix from the
 seeded one-goroutine pool to a pool finishing by main's exit, the program's output the prefix's
-fold, the values `loadMany`'s readout at the final shared store. -/
+fold, the values `loadMany`'s readout at the final shared store. ONE-DIRECTIONAL and ok-only: the
+program's terminal and refusal cases, and the converse (a prefix + normal finish → the readout), are
+not stated here — they derive from `program_bridge` and the `pool_run_*_iff_stmt`s. -/
 def program_prefix_stmt : Prop :=
   ∀ (fuel : Nat) (p : Program) (name : String) (args : Array GoValue) (ch : Choices)
     (pctx : ProgramCtx) (c₀ : Config) (s₀ : Store) (locs : List Loc) (ch₁ : Choices)
@@ -508,6 +533,27 @@ example : MultiConfig.schedMenu? controlCtx
     = some (.l1Sched, [1]) := rfl
 example : schedRecord controlCtx
     ⟨#[.running (.next .stop) none, .running (.next (.seq [] [] .stop)) none], {}, 0⟩ 0 = [] := rfl
+
+-- (7) Replay of the pool step (`stepMulti_replay_stmt`'s shape, one instance): (4)'s pool steps
+-- goroutine 1 on the tape `[1, 7]`, its picks the one scheduling record, residue `[7]`; the tape
+-- `[1, 9, 9]` replays that record (to `[9, 9]`) and yields the SAME successor and event with residue
+-- `[9, 9]`. (A negative control — residue `[9]` — was checked to fail `rfl` in scratch.)
+example : ((stepMulti controlCtx
+      ⟨#[.running (.next .stop) (some .postOp), .running (.next (.seq [] [] .stop)) none], {}, 0⟩
+      [1, 7]).map fun r => (r.2.1, r.2.2.who, r.2.2.picks))
+    = .ok ([7], 1, [⟨.postOp, 2, 1⟩]) := rfl
+example : replays [⟨.postOp, 2, 1⟩] [1, 9, 9] [9, 9] := ⟨[9, 9], rfl, rfl⟩
+example : stepMulti controlCtx
+      ⟨#[.running (.next .stop) (some .postOp), .running (.next (.seq [] [] .stop)) none], {}, 0⟩
+      [1, 9, 9]
+    = (stepMulti controlCtx
+      ⟨#[.running (.next .stop) (some .postOp), .running (.next (.seq [] [] .stop)) none], {}, 0⟩
+      [1, 7]).map fun r => (r.1, [9, 9], r.2.2) := rfl
+
+-- (8) Replay of the gate's window draw (`continue_replay_stmt`'s `window` arm): the draw records
+-- `⟨l5ExitWindow, 2, 1⟩`, and any tape replaying that record re-draws CONTINUE.
+example : Choices.consumeAtE .l5ExitWindow 2 [1, 4] = (1, [4], [⟨.l5ExitWindow, 2, 1⟩]) := rfl
+example : replays [⟨.l5ExitWindow, 2, 1⟩] [1, 6] [6] := ⟨[6], rfl, rfl⟩
 
 end Controls
 

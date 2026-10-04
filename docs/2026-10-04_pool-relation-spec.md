@@ -5,13 +5,14 @@ launch it» (relayed by the [AGENT] coordinator — cite as relayed), approving:
 exact statements, a `sorry`'d skeleton outside the build, this note — as a NAMED DESIGN GATE (a HARD STOP for
 [USER] review), then a Codex grind under a tight brief («Codex is good at tightly specified difficult 'grinds' on
 hard theorems. We would want to give enough flex it could build successfully, without giving too much space for
-drift» — [USER], same day). **Nothing here is proved and no grind has started.** Every decision below is [AGENT],
-PENDING [USER] ratification; the open questions are §8.
+drift» — [USER], same day). **Nothing here is proved and no grind has started.** Every decision below was [AGENT];
+the gate was RATIFIED by the [USER] on 2026-10-04 (§9) and the statements then passed an adversarial statement
+review whose findings are applied (§10).
 
 Files (all on this branch): `GoLean/GoCore/PoolStep.lean` (the FROZEN DEFINITIONS; compiles, no `sorry`, total),
-`GoLean/GoCore/PoolStatement.lean` (the 45 target statements as `def <name>_stmt : Prop`, plus `rfl` controls;
-compiles), `docs/specs/pool-relation/Skeleton.lean` (`theorem <name> : <name>_stmt := by sorry` × 45; OUTSIDE every
-build target and gate scan; elaborates: exit 0, 45 `sorry` warnings, nothing else), `scripts/check-pool-spec` +
+`GoLean/GoCore/PoolStatement.lean` (the 48 target statements as `def <name>_stmt : Prop`, plus `rfl` controls;
+compiles), `docs/specs/pool-relation/Skeleton.lean` (`theorem <name> : <name>_stmt := by sorry` × 48; OUTSIDE every
+build target and gate scan; elaborates: exit 0, 48 `sorry` warnings, nothing else), `scripts/check-pool-spec` +
 `docs/specs/pool-relation/FROZEN.sha256` (the statement-hash check), `docs/2026-10-04_pool-relation-grind-brief.md`
 (the grind brief, draft). Both modules are wired into `GoLean.lean` (the core audit's two-way closure requires it);
 `scripts/capped lake build GoLean` is warning-free and `scripts/check-core-audit` passes at this tip.
@@ -107,7 +108,7 @@ BUG (the pool analogue of packet A's audit F1), not a proof obstacle: HARD STOP 
 
 ## 4. Composition with what is proved
 
-`StepM`-level results stay as they are and become corollaries: `stepMulti_sound = stepML_erase ∘ stepMulti_sound'`,
+`StepM`-level results stay as they are and become corollaries: `stepMulti_sound = stepML_erase ∘ stepML_sound`,
 `stepM_complete` from `stepM_lift` + `stepML_complete`. `PoolTrace.Run` is `PoolPrefix` + `PoolFinish`
 (`run_ok_prefix_stmt`; `Run.step`'s premises are `PoolPrefix.step`'s, `front` is `Continue`/`PoolFinish` by
 `front_continue/finish/refusal_stmt`). `PoolProjection`'s singleton theorems are the base case of the reduction
@@ -120,21 +121,25 @@ Attribution as data (`ev.who`; the partner/child in `ev.action` and in the trace
 `stepML_spawn_stmt`); the FRAME law (`stepML_frame_stmt`: a step rewrites `who` and, on a pairing, its named
 partner, nothing else; the pool never shrinks); context switches only at registry boundaries, with the scheduling
 record first in the picks; terminal events (`PoolOutcome.raced ev`, the tombstone's text, the window's record);
-replay-ready picks (every consultation recorded with site/bound/pick, bound ≤ 1 silent — the sequential
-`replays` applies verbatim); the exact fuel bridges and the refusal-separate classification over the pool; the
+replay BY RECORD (every consultation recorded with site/bound/pick, bound ≤ 1 silent — the sequential
+`replays` applies verbatim: `stepMulti_replay_stmt`, `continue_replay_stmt`, `poolPrefix_replay_stmt`, added by
+the statement review, §10); the exact fuel bridges and the refusal-separate classification over the pool; the
 program seam under setup (`program_prefix_stmt`); the single-goroutine reduction to `Step`/`Finish`/`Prefix`.
 NOT provided (unchanged limits): setup is a premise; init-time printing refused; `NoRefusal` sequential-only (no
 pool domain premise is introduced here — the classification is unconditional, refusal reported); the access
-granularity reduction (`NPDRF`) untouched.
+granularity reduction (`NPDRF`) untouched. Also NOT provided, and FALSE as a bare statement: the run-level
+converse «every `StepsML` run is some tape's `PoolPrefix`» — `StepML` steps a pool holding a TOMBSTONE (an aborted
+goroutine does not stop the others relationally), while the driver's gate `Continue` refuses to step it (the
+tombstone is classified first, `PoolFinish.aborted`). The converse holds only per step (`stepML_complete_stmt`) and for runs that pass the gate at every step.
 
-## 6. The 45 statements and why each is true (one line each; proofs are the grind's)
+## 6. The 48 statements and why each is true (one line each; proofs are the grind's)
 
-(A) `stepMulti_sound` — `stepMulti ∘ stepThread`'s arms are the ten rules; the sched record is `consumeAtE`'s (`consumeAtE_eq`); the existing proof's case tree with label equalities. `stepML_complete` — realize the slot by the tape `slot :: ch` at bound ≥ 2 (`consume (slot :: ch) b = (slot, ch)`), nothing at bound 1; the inner tape as `stepM_complete` builds it (`step_complete`, singleton tapes for L2/L4/`repanicCollapse`, `applySelect`'s own tape); the helpers are deterministic. `stepML_erase` — rule by rule (`thread` → `StepE.lift`; `spawn` → `StepE.spawn` with `push_eq_append_running`; the select arms → `Step.selectApply` via `toResult_ok`/`toResult_panic` + `deliver`). `stepM_lift` — the converse by cases on `selectApplyPlan`; the slot from `schedSlot_iff`. `stepsML_erase` — induction.
+(A) `stepML_sound` — `stepMulti ∘ stepThread`'s arms are the ten rules; the sched record is `consumeAtE`'s (`consumeAtE_eq`); the existing proof's case tree with label equalities. `stepML_complete` — realize the slot by the tape `slot :: ch` at bound ≥ 2 (`consume (slot :: ch) b = (slot, ch)`), nothing at bound 1; the inner tape as `stepM_complete` builds it (`step_complete`, singleton tapes for L2/L4/`repanicCollapse`, `applySelect`'s own tape); the helpers are deterministic. `stepML_erase` — rule by rule (`thread` → `StepE.lift`; `spawn` → `StepE.spawn` with `push_eq_append_running`; the select arms → `Step.selectApply` via `toResult_ok`/`toResult_panic` + `deliver`). `stepM_lift` — the converse by cases on `selectApplyPlan`; the slot from `schedSlot_iff`. `stepsML_erase` — induction. `stepMulti_replay` — every `stepMulti` consultation is a record-emitting `consumeAtE` (bound ≤ 1 pops nothing and records nothing), so a replaying tape re-draws the same picks; the rest of the step is tape-independent (`stepFn`'s own replay, `finish_replay`/`replay_coverage`'s pattern).
 (B) `stepML_who_runnable` — at a boundary the menu ⊆ runnable (`schedSlots_mem`); off it `i = cur` with a live, unflagged, non-terminal (`step_terminal_elim`; the other arms' shapes are `.retV`/abort) goroutine. `stepML_sched` — `schedSlot_iff` →; `cur := i` by construction. `stepML_switch_boundary` — off a boundary `SchedSlot` forces `i = cur`. `stepML_sched_record` — `ofPick` at bound > 1 is the one record; every rule's picks start with it. `schedSlot_iff` — `schedSlots_mem`/`mem_schedSlots_of_runnable` + `List.mem_iff_getElem?`. `stepML_frame` — `setIfInBounds` touches `i`; `push` keeps `j < size`; `applyPairing` writes `i` and `cs[idx].2.partnerIdx` only (each arm's two `setIfInBounds`). `stepML_paired_trace` — `pairSendEvents`/`pairRecvEvents` name `j` by `rendezvous` or `attributed`. `stepML_spawn` — the `spawn` rule's trace head and `push`; every other rule keeps the size.
 (C) `asleep_silent` — from `stepML_who_runnable`. `singleton_deadlock` — no tombstone, blocked ≠ `.next .stop`, `threadRunnable = wakeReady` on a blocked thread (`isBlockedConfig_ne_terminal`). `mainOutcome_not_deadlock` — the predicate's third conjunct.
 (D) `stepMulti_error_cases` — every throw site (`stepThread`, `spawnStep`, `resumeThread`, `applyPairing`, `arrivalPlan`, `commitClause`, `enterRecvTargets`, the cell/sync helpers) is a refusal or `fatal`; `stepFn` runs only off the abort (`stepFn_no_stray_panic`); the one `.deadlock` throw is the empty menu. `stepMulti_deadlock_elim` — `Continue` gives `runnableIdxs ≠ []`, `mem_schedSlots_of_runnable` fills the menu. `raceUpdate_error` — `accessKey`'s only throw.
 (E) `front_continue`/`front_finish`/`front_refusal` — unfold `front`: its arms are these cases (`consumeAtE_eq` for the window; the pick is `< 2`). `poolFinish_functional` — the discriminating premises are exclusive pairwise; `Continue`, `consumeAtE`, `stepMulti`, `raceUpdate` are functions. `poolFinish_zero_not_continue` — tombstone/none, `[]`/`≠ []`, pick 0/1, `mainOutcome?` none/some.
-(F) `poolPrefix_comp/split` — as `prefix_comp/split`. `poolPrefix_labelled/erase` — `stepMulti_sound` per step. `poolPrefix_run` — induction with `unfold_driver` + `front_continue` ←, `outFold_cons`. `pool_run_ok/terminal/fuelOut/refusal_iff` — the pool twin of `execStmtLoop_error` (`unfold_driver` per fuel; `front` classifies or steps; the step's error classes by (D)); ← by `poolPrefix_run` then the finish. `pool_classification` — case on the result shape. `run_ok_prefix` — `run_iff` + `pool_run_ok_iff`.
+(F) `poolPrefix_comp/split` — as `prefix_comp/split`. `poolPrefix_labelled/erase` — `stepML_sound` per step. `poolPrefix_run` — induction with `unfold_driver` + `front_continue` ←, `outFold_cons`. `pool_run_ok/terminal/fuelOut/refusal_iff` — the pool twin of `execStmtLoop_error` (`unfold_driver` per fuel; `front` classifies or steps; the step's error classes by (D)); ← by `poolPrefix_run` then the finish. `pool_classification` — case on the result shape. `run_ok_prefix` — `run_iff` + `pool_run_ok_iff`. `continue_replay` — `running`: `rec = []`, `replays [] ch₂ ch₂'` forces `ch₂' = ch₂`; `window`: the one record re-draws pick 1. `poolPrefix_replay` — induction, splitting the replay at each iteration's `window ++ picks` (`replays` over an append), `continue_replay` then `stepMulti_replay`; `raceUpdate` reads no tape.
 (G) `program_prefix` — `runProgramPoolOutM` unfolded under setup (`program_bridge`'s equation) + `pool_run_ok_iff`; `Array.toList_toArray`.
 (H) `stepML_single_sound` — `arrivalCases_singleton` kills the pairing arms; the premises kill `strip`/`abort`/`spawn`/`wake`; `schedSlots_singleton` makes the record `[]`; structure eta gives `ev.label = l`. `stepML_single_complete` — by `selectApplyPlan`: `thread` or the inverted `Step.selectApply`. `singleton_finish_normal` — `runnableIdxs_singleton_none`. `singleton_finish_aborted/refused` — `finish_aborted_stepFn`/`abortLeftover` shape + `stepMulti_abort_single`. `singleton_finish_fatal` — `stepMulti_single` maps the error through; `Continue.running` from the singleton facts. `singleton_finish_deadlock` — `singleton_deadlock` →. `singleton_prefix_embedding` — `execProgLoopOut_single_wide`'s induction over `Prefix` (`stepMulti_single`, `stepMulti_flagged_single`, `raceUpdate_single`, `front_single_step/_flagged`), the fold by `fold_silent`. `singleton_run` — `run_iff.mp (execProgLoopOut_single_wide …)`.
 
@@ -147,12 +152,12 @@ is a PROPOSAL (not a `ci` step): `--freeze` wrote `FROZEN.sha256`; without flags
 `PoolSound.lean` exists (`--statements-only` for the spec phase). No interpreter behaviour, no pinned statement, no
 baseline touched; the differential was not run (records and Prop definitions only).
 
-## 8. Open questions for the [USER] (the gate)
+## 8. Open questions for the [USER] (the gate) — RATIFIED 2026-10-04, §9
 
 1. **D1** — ratify the label as the executable `StepEvent` verbatim (incl. `action`)?
 2. **D5** — ratify `DriverEvent.window` beside the event (the driver's draw not folded into the step's picks)?
 3. **D4** — ratify the non-empty-pool conjunct of `PoolDeadlock`?
-4. **Scope** — 45 statements in 5 milestones (grind brief §7); ratify milestone-by-milestone landing (each
+4. **Scope** — 45 statements (48 after the statement review, §10) in 5 milestones (grind brief §7); ratify milestone-by-milestone landing (each
    milestone's theorems depend only on earlier ones)?
 5. **`StepM`'s future** — keep the trace-labelled relation as the proved projection (recommended until the logic
    repo re-pins), or retire it after the grind?
@@ -160,3 +165,46 @@ baseline touched; the differential was not run (records and Prop definitions onl
    the `_iff`s; no third `ProgramLRun` carrier. Sufficient, or add it?
 7. **The brief's tool** — the ruling names Codex; the brief is written for a tightly specified grind by any
    worker. Confirm Codex and the Fable/Opus review assignment at its close.
+
+## 9. Ratification
+
+[USER] Mike, 2026-10-04 (verbatim, relayed by the [AGENT] coordinator — cite as relayed): «Approved» — ratifying
+§8's questions 1–7 as recommended, and ordering an adversarial statement review before the grind (§10). Outcomes:
+
+1. **Label** — `StepEvent` verbatim (`who`, `action`, the full `StepLabel`), as D1.
+2. **Driver draw** — `DriverEvent.window` beside the event; the window draw is not folded into the step's picks (D5).
+3. **Deadlock** — `PoolDeadlock` keeps the non-empty-pool conjunct (D4).
+4. **Scope** — milestone-by-milestone landing (grind brief §7).
+5. **`StepM`** — kept, as a proved projection of `StepML` (`stepML_erase_stmt`, `stepM_lift_stmt`).
+6. **Relabelling** — no third `ProgramLRun` carrier.
+7. **Tool** — the grind is a Codex worker under the brief.
+
+## 10. Statement review (adversarial, before the grind)
+
+Verdict **NEEDS-FIX → fixed** on this branch ([AGENT] fix worker, 2026-10-04). Findings:
+
+- **B1** (blocking) — the freeze covered only the `_stmt` bodies: the glue definitions they call (`poolOut`,
+  `DriverEvent.events`, `PoolClassOk`/`Terminal`/`FuelOut`/`Refusal`) could drift unseen (e.g. `PoolClassOk … :=
+  True` made `pool_classification_stmt` trivial). Fixed: `scripts/check-pool-spec` adds the whole-file key
+  `stmts-file` (`PoolStatement.lean`, comment-stripped, whitespace-normalised like `defs`), keeping the per-`_stmt`
+  keys for naming; a self-test (negative control on a scratch copy) proves `PoolClassOk … := True` FAILS.
+- **B2** (blocking) — a `_stmt` body ended at the first blank line, so `∨ True` after a blank line escaped its key.
+  Fixed: a body runs to the next column-0 command token (an unrecognised column-0 line FAILS); a self-test proves the
+  appended `∨ True` FAILS on both the file key and the statement's own key.
+- **B3** (blocking) — §5 claimed replay by record was provided, and the logic team's 2026-09-23 §2(4) requires it,
+  but no statement carried it. [AGENT] coordinator decision: ADD the replay statements rather than scope replay
+  out. Added: `stepMulti_replay_stmt` (milestone 1), `continue_replay_stmt` and `poolPrefix_replay_stmt` (milestone
+  4), elaborated as given, with `rfl` controls (7)–(8) in `PoolStatement.lean` (one instance of the step's replay on
+  a two-goroutine boundary pool; the window draw's record).
+- **M1** — `stepMulti_sound_stmt` collided in name with the existing trace-level `stepMulti_sound`; renamed
+  `stepML_sound_stmt` everywhere.
+- **M2** — §5 now says the run-level converse (`StepsML` → ∃ tape, `PoolPrefix`) is false as a bare statement.
+- **M3** — `program_prefix_stmt`'s docstring now says it is one-directional and ok-only; the terminal/refusal program
+  cases and the converse derive from `program_bridge` + the `pool_run_*_iff_stmt`s.
+- **M4** — the comment stripper treated `--` inside a string literal as a comment; string and char literals are now
+  copied verbatim (self-tested).
+- **M5** — grind brief §6's edit list gains `docs/specs/pool-relation/Skeleton.lean`; §8 requires `git diff <input>
+  -- GoLean/GoCore/PoolStatement.lean` EMPTY unless a §5 bounded adjustment is reported, its hunks confined to the
+  named `_stmt` body.
+
+`FROZEN.sha256` re-frozen after the fixes (48 statements + `defs` + `stmts-file`).

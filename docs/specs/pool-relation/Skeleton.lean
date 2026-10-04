@@ -30,10 +30,11 @@ theorem stepMulti_error_cases : stepMulti_error_cases_stmt := by sorry
 theorem raceUpdate_error : raceUpdate_error_stmt := by sorry
 theorem schedSlot_iff : schedSlot_iff_stmt := by sorry
 theorem stepML_erase : stepML_erase_stmt := by sorry
-theorem stepMulti_sound : stepMulti_sound_stmt := by sorry
+theorem stepML_sound : stepML_sound_stmt := by sorry
 theorem stepML_complete : stepML_complete_stmt := by sorry
 theorem stepM_lift : stepM_lift_stmt := by sorry
 theorem stepsML_erase : stepsML_erase_stmt := by sorry
+theorem stepMulti_replay : stepMulti_replay_stmt := by sorry
 
 /-! ## Milestone 2 — attribution, registry boundaries (B) and the deadlock (C) -/
 
@@ -70,6 +71,8 @@ theorem pool_run_fuelOut_iff : pool_run_fuelOut_iff_stmt := by sorry
 theorem pool_run_refusal_iff : pool_run_refusal_iff_stmt := by sorry
 theorem pool_classification : pool_classification_stmt := by sorry
 theorem run_ok_prefix : run_ok_prefix_stmt := by sorry
+theorem continue_replay : continue_replay_stmt := by sorry
+theorem poolPrefix_replay : poolPrefix_replay_stmt := by sorry
 theorem program_prefix : program_prefix_stmt := by sorry
 
 /-! ## Milestone 5 — the single-goroutine reduction (H) -/

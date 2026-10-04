@@ -102,7 +102,7 @@ def selectAction : Option EvClause → StepAction
 /-! ## The labelled pool relation -/
 
 /-- **THE LABELLED POOL RELATION** (`StepM` re-labelled by the full executable event; `stepMulti`
-is its executable instantiation — `stepMulti_sound_stmt`/`stepML_complete_stmt`). Ten rule
+is its executable instantiation — `stepML_sound_stmt`/`stepML_complete_stmt`). Ten rule
 classes, one per arm of `stepMulti ∘ stepThread`, every premise `StepM`'s or `stepThread`'s own:
 
 * `strip` — the boundary CLEAR (C5): the flagged goroutine clears its flag; `.opDoneStrip`.
