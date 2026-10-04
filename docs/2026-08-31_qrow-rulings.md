@@ -1410,3 +1410,13 @@ their planned package-init support); raft-proofs was notified 2026-10-04 by the 
 («share»). Train: `train/r65` = the lane rebased onto main `032b5f97` (linear; one provenance-only conflict on the
 google-search certified record, resolved [AGENT] to main's version — claim and observations identical on both sides; step
 5a re-certifies).
+
+**Merge train r65 — the 5a record** ([AGENT] train worker, 2026-10-04). Pre-merge main `032b5f97` →
+`refs/snapshots/r65/main`; train tip `34a0d9d7` fast-forwarded; primary build `scripts/build-certified` EXIT=0 (0 foreign
+references). `release-check --base refs/snapshots/r65/main` EXIT=2 (EXPECTED — STALE, `files/scripts/check-frontend-pins`:
+S1 moved the frontend-pin script and the subject's codec tooling). `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --slow`
+EXIT=1, 1252 s — red on EXACTLY the 5a pair (`certificate provenance` + the certified row
+`imported-goose/channel/google-search` PASS→FAIL); 3884 rows, 3646 PASS / 238 FAIL = the pin 3647 / 237 with the one
+5a-class row red; frontend pins ok (twin wire = pinned `661022b9…`); negative baseline no regression (394). Candidate:
+`schema`, `claim` and `observations_sha256` IDENTICAL (only `inputs.files` and the receipt moved; receipt `34a0d9d7`,
+202.308 s, binary `cae2c786…`) — INSTALLED; a provenance refresh. Tail: `docs/evidence/2026-10-04_train-r65/r65-ci-slow.tail.txt`.
