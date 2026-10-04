@@ -21,6 +21,11 @@ import GoLean.GoCore.Prefix
 import GoLean.GoCore.EquationsAttr
 import GoLean.GoCore.Equations
 import GoLean.GoCore.PoolProjection
+-- The pool/registry half's SPEC PACKET (design gate, 2026-10-04): the labelled pool relation's
+-- frozen DEFINITIONS and its target STATEMENTS (Prop definitions only; the grind proves them).
+-- Enrolled here = default-build membership and the core audit's two-way closure.
+import GoLean.GoCore.PoolStep
+import GoLean.GoCore.PoolStatement
 import GoLean.NativeToIR
 import GoLean.CLI
 import GoLean.ChoiceTrace

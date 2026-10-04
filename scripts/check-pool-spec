@@ -1,0 +1,168 @@
+#!/usr/bin/env python3
+"""The pool/registry half's FROZEN-SURFACE check (spec packet, 2026-10-04; a PROPOSAL for the
+grind's acceptance, not yet a `scripts/ci` step).
+
+Two files are the frozen surface — `GoLean/GoCore/PoolStep.lean` (the definitions) and
+`GoLean/GoCore/PoolStatement.lean` (every `def <name>_stmt : Prop`). This script
+
+  (a) hashes the definitions file with its comments stripped and whitespace normalized, and every
+      `_stmt` body the same way, and compares them with `docs/specs/pool-relation/FROZEN.sha256`
+      (written by `--freeze`): ANY drift — a changed body, a renamed/added/removed statement — FAILS
+      by name. A bounded-zone adjustment (grind brief §5) re-freezes with a written reason.
+  (b) checks that every `_stmt` is DISCHARGED as `theorem <name> : <name>_stmt` in
+      `GoLean/GoCore/PoolSound.lean` (the grind's module). Before the grind lands that file does
+      not exist: pass `--statements-only` during the spec phase; without the flag its absence FAILS
+      (fail closed — a check that cannot run does not pass).
+
+Exit 0 only when every check passes. No allowlist.
+"""
+import hashlib
+import pathlib
+import re
+import sys
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+DEFS = ROOT / "GoLean/GoCore/PoolStep.lean"
+STMT = ROOT / "GoLean/GoCore/PoolStatement.lean"
+SOUND = ROOT / "GoLean/GoCore/PoolSound.lean"
+FREEZE = ROOT / "docs/specs/pool-relation/FROZEN.sha256"
+
+
+def strip_comments(text: str) -> str:
+    """Drop `/- … -/` blocks (nesting-aware) and `--` line comments."""
+    out = []
+    depth = 0
+    i = 0
+    n = len(text)
+    while i < n:
+        two = text[i:i + 2]
+        if two == "/-":
+            depth += 1
+            i += 2
+            continue
+        if two == "-/" and depth > 0:
+            depth -= 1
+            i += 2
+            continue
+        if depth == 0:
+            if two == "--":
+                while i < n and text[i] != "\n":
+                    i += 1
+                continue
+            out.append(text[i])
+        i += 1
+    return "".join(out)
+
+
+def norm(s: str) -> str:
+    return " ".join(s.split())
+
+
+def sha(s: str) -> str:
+    return hashlib.sha256(s.encode("utf-8")).hexdigest()
+
+
+def stmt_bodies(text: str) -> dict:
+    """`def <name>_stmt : Prop :=` up to the next blank line, comments stripped, normalized."""
+    stripped = strip_comments(text)
+    lines = stripped.splitlines()
+    bodies = {}
+    i = 0
+    while i < len(lines):
+        m = re.match(r"^def (\w+_stmt) : Prop :=\s*$", lines[i])
+        if not m:
+            i += 1
+            continue
+        name = m.group(1)
+        j = i + 1
+        body = []
+        while j < len(lines) and lines[j].strip() != "":
+            body.append(lines[j])
+            j += 1
+        if name in bodies:
+            sys.exit(f"check-pool-spec: FAIL — duplicate statement {name}")
+        bodies[name] = norm(" ".join(body))
+        i = j
+    if not bodies:
+        sys.exit("check-pool-spec: FAIL — no `_stmt` found in PoolStatement.lean (a vacuous check is refused)")
+    return bodies
+
+
+def current() -> dict:
+    cur = {"defs": sha(norm(strip_comments(DEFS.read_text())))}
+    for name, body in stmt_bodies(STMT.read_text()).items():
+        cur[f"stmt {name}"] = sha(body)
+    return cur
+
+
+def read_freeze() -> dict:
+    if not FREEZE.exists():
+        sys.exit(f"check-pool-spec: FAIL — {FREEZE.relative_to(ROOT)} missing (run --freeze once, deliberately)")
+    frozen = {}
+    for line in FREEZE.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        key, _, h = line.rpartition(" ")
+        frozen[key] = h
+    return frozen
+
+
+def main(argv) -> int:
+    freeze = "--freeze" in argv
+    statements_only = "--statements-only" in argv
+    for a in argv:
+        if a not in ("--freeze", "--statements-only"):
+            sys.exit(f"check-pool-spec: unknown argument {a!r}")
+    cur = current()
+    if freeze:
+        FREEZE.parent.mkdir(parents=True, exist_ok=True)
+        body = ["# FROZEN SURFACE of the pool/registry half (scripts/check-pool-spec --freeze).",
+                "# `defs` = GoLean/GoCore/PoolStep.lean, comments stripped, whitespace normalized;",
+                "# `stmt <name>` = that statement's body in GoLean/GoCore/PoolStatement.lean, likewise.",
+                "# Re-freezing is a bounded-zone act: the grind brief requires a written reason per line."]
+        body += [f"{k} {v}" for k, v in sorted(cur.items())]
+        FREEZE.write_text("\n".join(body) + "\n")
+        print(f"check-pool-spec: froze {len(cur) - 1} statements + the definitions into {FREEZE.relative_to(ROOT)}")
+        return 0
+    frozen = read_freeze()
+    bad = []
+    for k in sorted(set(frozen) | set(cur)):
+        if k not in cur:
+            bad.append(f"REMOVED or RENAMED: {k}")
+        elif k not in frozen:
+            bad.append(f"ADDED (not frozen): {k}")
+        elif frozen[k] != cur[k]:
+            bad.append(f"CHANGED: {k}")
+    if bad:
+        print("check-pool-spec: FAIL — the frozen surface drifted:", file=sys.stderr)
+        for b in bad:
+            print(f"  {b}", file=sys.stderr)
+        return 1
+    print(f"ok [frozen] the definitions and {len(cur) - 1} statements match {FREEZE.relative_to(ROOT)}")
+    names = [k.split(" ", 1)[1] for k in cur if k.startswith("stmt ")]
+    if not SOUND.exists():
+        if statements_only:
+            print(f"ok [statements-only] {SOUND.relative_to(ROOT)} absent — the grind has not landed; discharge not checked")
+            return 0
+        print(f"check-pool-spec: FAIL — {SOUND.relative_to(ROOT)} absent; the discharge check cannot run "
+              "(pass --statements-only during the spec phase)", file=sys.stderr)
+        return 1
+    sound = strip_comments(SOUND.read_text())
+    missing = []
+    for name in names:
+        base = name[: -len("_stmt")]
+        if not re.search(rf"^theorem {re.escape(base)}\s*:\s*(\S+\.)?{re.escape(name)}\b", sound, re.M):
+            missing.append(name)
+    if missing:
+        print("check-pool-spec: FAIL — statements without `theorem <name> : <name>_stmt` in PoolSound.lean:",
+              file=sys.stderr)
+        for m in missing:
+            print(f"  {m}", file=sys.stderr)
+        return 1
+    print(f"ok [discharged] every one of the {len(names)} statements has its theorem in {SOUND.relative_to(ROOT)}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
