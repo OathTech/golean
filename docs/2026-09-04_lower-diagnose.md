@@ -56,11 +56,14 @@ scripts/lower-diagnose <go package dir | main.go> [--json] [--tsv] [--include pk
      register class refuses.
    - `tools/lowerdiag/machine-surface.tsv` — the language/memory-model
      surface the machine owns (sync types/ops, atomics wave-1
-     prefixes/kinds, H-11's `pureUnmodeledCallees`). Test-checked for
+     prefixes/kinds, H-11's `pureUnmodeledCallees`, and since 2026-10-04
+     the `rand-intn` primitive's direct-call callees — route-A review Q7,
+     approved [USER] Mike 2026-10-04, relayed; [AGENT] fix lane
+     `fix/lowerdiag-intn-1004`). Test-checked for
      SET EQUALITY, both ways, against the frontend's own tables derived
      with go/ast from `syncOpFor`/`syncValueOpFor`/`emitSyncOpStmt`,
      wire.go's sync arm, `atomicOpPrefixes`/`atomicIntSuffixes`,
-     `pureUnmodeledCallees` (§8).
+     `pureUnmodeledCallees`, randintn.go's `randIntnCallees` (§8).
    - `tools/lowerdiag/library-refusals.tsv` — members of SOURCE-THROUGH
      packages the loader refuses BY NAME (`errors.Is/As` → reflectlite;
      `strconv.FormatFloat` → float-bits; `slices.Insert` → overlaps;

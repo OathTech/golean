@@ -4,7 +4,12 @@
 # tools/lowerdiag beside docs/stdlib-admission-register.md. Every row cites
 # the frontend source it transcribes; TestMachineSurfaceCitesSources checks
 # the cited files exist and mention the entry.
-# kind: sync-type | sync-op | atomic-op-prefix | atomic-kind | init-callee
+# kind: sync-type | sync-op | atomic-op-prefix | atomic-kind | init-callee | rand-intn
+# rand-intn (2026-10-04, fix/lowerdiag-intn-1004 [AGENT], route-A review item Q7 approved [USER] Mike
+# 2026-10-04, relayed): the package-level callees the frontend binds to the `rand-intn` wire node at a
+# DIRECT call (randintn.go randIntnCallees, window unit 5b); the method forms (*rand.Rand).Intn /
+# (*rand/v2.Rand).IntN are NOT rows (they stay refused), and defer/go of a row refuses by name
+# (causes.tsv rand-intn-defer-go). TestMachineSurfaceEqualsFrontendTables derives the set from the map.
 kind	entry	source	detail
 sync-type	sync.Mutex	tools/nativefrontend/wire.go	emitType's sync arm: "only Mutex/RWMutex/WaitGroup/Once are modeled" (+ sync.Locker as a plain interface)
 sync-type	sync.RWMutex	tools/nativefrontend/wire.go	same arm
@@ -37,3 +42,5 @@ atomic-kind	Uintptr	tools/nativefrontend/atomics.go	atomicTypedWrappers / atomic
 init-callee	os.Getenv	tools/nativefrontend/emit.go	pureUnmodeledCallees — H-11's effect-isolation allowlist (FR-22's boundary on main)
 init-callee	os.LookupEnv	tools/nativefrontend/emit.go	pureUnmodeledCallees
 init-callee	time.Date	tools/nativefrontend/emit.go	pureUnmodeledCallees — admitted at the FR-22 slice (2026-09-04, lane fr22-fr23) with its written result-only/panic-free argument; the register's init-callee class renders the same table
+rand-intn	math/rand.Intn	tools/nativefrontend/randintn.go	randIntnCallees — the `rand-intn` primitive (window unit 5b; register row primitive/rand-intn): a direct call lowers to the [0, n) choice-tape draw
+rand-intn	math/rand/v2.IntN	tools/nativefrontend/randintn.go	randIntnCallees — same primitive, callee tag IntN

@@ -814,6 +814,12 @@ func (a *analyzer) classifyPkgCall(d *declReport, path, member string, at ast.No
 		} else {
 			d.add(finding{Cause: mustCause("atomic-unmodeled"), Key: key, Pos: pos, Certain: true})
 		}
+	case sup.randIntn[key]:
+		// The rand-intn PRIMITIVE (randintn.go, window unit 5b): a direct
+		// call of the package-level draw lowers to the `rand-intn` wire
+		// node; the package stays otherwise unmodeled (the default arm),
+		// and defer/go of it refuses by name (interceptedSpawn).
+		d.supplied(key, "machine rand-intn")
 	case sup.intercept[key]:
 		d.supplied(key, "intercept")
 	case sup.sourceThrough[path]:
@@ -1163,7 +1169,8 @@ func (a *analyzer) syncRecv(t types.Type) bool {
 // interceptedSpawn: defer/go of a frontend-INTERCEPTED library member
 // (slices.Sort, cmp.Compare) refuses by name (emit.go: "the direct call of
 // this library member is frontend-intercepted … in expression-statement
-// position only").
+// position only"); so does defer/go of a rand-intn primitive callee
+// (math/rand.Intn, math/rand/v2.IntN — randintn.go refuseRandIntnDeferGo).
 func (a *analyzer) interceptedSpawn(d *declReport, how string, call *ast.CallExpr, pos string) {
 	sel, ok := call.Fun.(*ast.SelectorExpr)
 	if !ok {
@@ -1171,6 +1178,11 @@ func (a *analyzer) interceptedSpawn(d *declReport, how string, call *ast.CallExp
 	}
 	if path, member, _, ok := a.stdlibSel(sel); ok && a.p.sup.intercept[path+"."+member] {
 		d.add(finding{Cause: mustCause("intercepted-defer-go"), Key: how + " " + path + "." + member, Pos: pos, Certain: true})
+	}
+	// defer/go of the rand-intn primitive's callee: randintn.go
+	// refuseRandIntnDeferGo (the draw lowers at direct-call sites only).
+	if path, member, _, ok := a.stdlibSel(sel); ok && a.p.sup.randIntn[path+"."+member] {
+		d.add(finding{Cause: mustCause("rand-intn-defer-go"), Key: how + " " + path + "." + member, Pos: pos, Certain: true})
 	}
 }
 

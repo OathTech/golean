@@ -10,6 +10,8 @@ package main
 import (
 	"errors"
 	"fmt"
+	"math/rand"
+	randv2 "math/rand/v2"
 	"slices"
 	"strings"
 )
@@ -45,6 +47,17 @@ func isE(err error) bool { return errors.Is(err, E{}) }
 
 // source-through member that lowers.
 func fields(s string) int { return len(strings.Fields(s)) }
+
+// The rand-intn PRIMITIVE (tools/nativefrontend/randintn.go, window unit 5b;
+// route-A review Q7, 2026-10-04): a DIRECT call of the package-level
+// math/rand.Intn / math/rand/v2.IntN lowers to the `rand-intn` node, so both
+// declarations LOWER; the method form, defer of the function and every other
+// member of the package stay refused.
+func drawIntn(n int) int          { return rand.Intn(n) }
+func drawIntNv2(n int) int        { return randv2.IntN(n) }
+func drawInt63n() int64           { return rand.Int63n(5) }
+func deferIntn()                  { defer rand.Intn(5) }
+func drawMethod(r *rand.Rand) int { return r.Intn(5) }
 
 // fmt shim: the verb matrix is NOT judged statically (disclosed, not asserted).
 func sprintf(x int) string { return fmt.Sprintf("%d", x) }

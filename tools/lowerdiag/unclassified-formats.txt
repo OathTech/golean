@@ -17,16 +17,16 @@
 # 2026-09-12 lane fix/review-boundary-0911 (BUG-108) [AGENT]: regenerated — six new fileselect.go formats (go/build-pinned file selection) are CLASSIFIED by three new causes.tsv rows (cgo-file, non-go-sources: out-of-language; gc-refuses-directory: by-design — gc's own refusal mirrored by name); nothing else moved. Coverage 358/401 -> 364/401.
 # 2026-09-12 lane fix/review-boundary-0911 (BUG-109) [AGENT]: regenerated — the eight modfile.go formats (module `go` directive) are CLASSIFIED by the causes.tsv row foreign-module-version (by-design: RULED [USER] refuse non-1.26); nothing else moved. Coverage 364/401 -> 372/409.
 # DIAGNOSTIC — NOT A LOWERING. tools/lowerdiag report: no wire is written; nothing in this file is a gate input.
-# distinct unsup(...) formats: 409; classified by causes.tsv: 372; unclassified (listed): 37
+# distinct unsup(...) formats: 465; classified by causes.tsv: 426; unclassified (listed): 39
 # 2026-09-19 lane core/unseq-stage-c-0919 [AGENT]: regenerated after Stage C (the `unseq` lowering, tools/nativefrontend/unseq_lower.go) — its 17 INTERNAL contract-breach formats (`unseq lowering: …`, unreachable for an admitted sweep) classify from the format alone (causes.tsv unseq-lowering-invariant, by-design); coverage 388/425; the list is unchanged in content.
 # 2026-09-30 lane core/intn-pick-0930 (window unit 5b) [AGENT]: regenerated — THREE new frontend formats surface here, all from the `rand-intn` primitive (tools/nativefrontend/randintn.go): the defer/go by-name refusal (`X X.X: the [0, n) draw lowers at direct-call sites only …`) and the two argument-shape refusals (`X.X called with X argument(s) …`, `X.X with a tuple-splat argument list …`); the two pin-drift signature refusals classify from the format (frontend-apparatus). Classifying these three from the format alone is OWED to the lower-diagnose lane, as for the fr22-fr23 formats above.
+# 2026-10-04 lane fix/lowerdiag-intn-1004 [AGENT] (route-A review Q7, approved [USER] Mike 2026-10-04, relayed): the rand-intn defer/go by-name format now CLASSIFIES (causes.tsv rand-intn-defer-go), so the list shrinks by one; the counts line above is re-measured (it had not been refreshed since 409/372/37). The two argument-shape formats and the pin-drift formats stay as before.
 &composite (elided) in X
 &composite in X
 TypeDef X has no display record — its key was minted outside the identity boundary constructors (docs/2026-09-05_fr19-bug097-design.md §3.1)
 TypeDef entry of unexpected shape X
 TypeId registered with two different display records: X
 X
-X X.X: the [0, n) draw lowers at direct-call sites only (the rand-intn primitive, window unit 5b); as a deferred/spawned FUNCTION VALUE it has no lowering — refused by name
 X with X arguments
 X.X called with X argument(s) (a multi-valued call as the sole argument is outside the lowering) — fail closed
 X.X with a tuple-splat argument list — fail closed

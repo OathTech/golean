@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -426,6 +427,7 @@ func itoa(i int) string { return fmt.Sprintf("%d", i) }
 // pureUnmodeledCallees (emit.go) from the frontend sources.
 type surfaceSets struct {
 	syncTypes, syncOps, atomicPrefixes, atomicKinds, initCallees map[string]bool
+	randIntn                                                     map[string]bool // randintn.go randIntnCallees keys, "path.Name"
 }
 
 func frontendSurface(t *testing.T) surfaceSets {
@@ -437,8 +439,8 @@ func frontendSurface(t *testing.T) surfaceSets {
 		}
 		return f
 	}
-	emit, atomics, wire := parse("emit.go"), parse("atomics.go"), parse("wire.go")
-	ss := surfaceSets{map[string]bool{}, map[string]bool{}, map[string]bool{}, map[string]bool{}, map[string]bool{}}
+	emit, atomics, wire, randintn := parse("emit.go"), parse("atomics.go"), parse("wire.go"), parse("randintn.go")
+	ss := surfaceSets{map[string]bool{}, map[string]bool{}, map[string]bool{}, map[string]bool{}, map[string]bool{}, map[string]bool{}}
 	strLit := func(e ast.Expr) (string, bool) {
 		if bl, ok := e.(*ast.BasicLit); ok && bl.Kind == token.STRING {
 			s, err := strconv.Unquote(bl.Value)
@@ -575,6 +577,16 @@ func frontendSurface(t *testing.T) surfaceSets {
 			for _, el := range cl.Elts {
 				switch x := el.(type) {
 				case *ast.KeyValueExpr:
+					if k, ok := x.Key.(*ast.CompositeLit); ok && want == "rand-intn" {
+						// randIntnCallees: {"math/rand", "Intn"}: "Intn"
+						if len(k.Elts) == 2 {
+							p, ok1 := strLit(k.Elts[0])
+							n, ok2 := strLit(k.Elts[1])
+							if ok1 && ok2 {
+								ss.randIntn[p+"."+n] = true
+							}
+						}
+					}
 					if v, ok := strLit(x.Key); ok {
 						switch want {
 						case "kind":
@@ -597,6 +609,7 @@ func frontendSurface(t *testing.T) surfaceSets {
 	keysOf(atomics, "atomicIntSuffixes", "kind")
 	keysOf(atomics, "atomicOpPrefixes", "prefix")
 	keysOf(emit, "pureUnmodeledCallees", "init")
+	keysOf(randintn, "randIntnCallees", "rand-intn")
 	return ss
 }
 
@@ -631,6 +644,7 @@ func checkMachineSurface(tsv string, ss surfaceSets) error {
 	cmp("atomic-op-prefix", prefixes, ss.atomicPrefixes)
 	cmp("atomic-kind", s.atomicKind, ss.atomicKinds)
 	cmp("init-callee", s.initCallee, ss.initCallees)
+	cmp("rand-intn", s.randIntn, ss.randIntn)
 	if len(errs) > 0 {
 		sort.Strings(errs)
 		return fmt.Errorf("%s", strings.Join(errs, "\n"))
@@ -640,8 +654,8 @@ func checkMachineSurface(tsv string, ss surfaceSets) error {
 
 func TestMachineSurfaceEqualsFrontendTables(t *testing.T) {
 	ss := frontendSurface(t)
-	if len(ss.syncOps) < 10 || len(ss.syncTypes) != 5 || len(ss.atomicPrefixes) != 5 || len(ss.atomicKinds) != 5 || len(ss.initCallees) != 3 {
-		t.Fatalf("derivation looks wrong: ops=%d types=%d prefixes=%d kinds=%d init=%d", len(ss.syncOps), len(ss.syncTypes), len(ss.atomicPrefixes), len(ss.atomicKinds), len(ss.initCallees))
+	if len(ss.syncOps) < 10 || len(ss.syncTypes) != 5 || len(ss.atomicPrefixes) != 5 || len(ss.atomicKinds) != 5 || len(ss.initCallees) != 3 || len(ss.randIntn) != 2 {
+		t.Fatalf("derivation looks wrong: ops=%d types=%d prefixes=%d kinds=%d init=%d rand-intn=%d", len(ss.syncOps), len(ss.syncTypes), len(ss.atomicPrefixes), len(ss.atomicKinds), len(ss.initCallees), len(ss.randIntn))
 	}
 	if err := checkMachineSurface(machineSurfaceTSV, ss); err != nil {
 		t.Fatal(err)
@@ -655,6 +669,90 @@ func TestMachineSurfaceEqualsFrontendTables(t *testing.T) {
 	dropped := strings.Replace(machineSurfaceTSV, "sync-op\tsync.WaitGroup.Done\t", "#dropped\t", 1)
 	if err := checkMachineSurface(dropped, ss); err == nil || !strings.Contains(err.Error(), "WaitGroup.Done") {
 		t.Fatalf("dropped Done row not caught: %v", err)
+	}
+	// rand-intn (route-A review Q7, 2026-10-04): a METHOD form or another
+	// package member listed as bound is caught, and so is a dropped callee.
+	fabR := machineSurfaceTSV + "rand-intn\tmath/rand.Rand.Intn\ttools/nativefrontend/randintn.go\tfabricated\n"
+	if err := checkMachineSurface(fabR, ss); err == nil || !strings.Contains(err.Error(), "math/rand.Rand.Intn") {
+		t.Fatalf("fabricated method-form rand-intn row not caught: %v", err)
+	}
+	droppedR := strings.Replace(machineSurfaceTSV, "rand-intn\tmath/rand/v2.IntN\t", "#dropped\t", 1)
+	if err := checkMachineSurface(droppedR, ss); err == nil || !strings.Contains(err.Error(), "math/rand/v2.IntN") {
+		t.Fatalf("dropped math/rand/v2.IntN row not caught: %v", err)
+	}
+}
+
+// TestRandIntnPrimitiveIsSupplied — route-A review Q7 (approved [USER] Mike
+// 2026-10-04, relayed): since window unit 5b the frontend binds a DIRECT
+// call of math/rand.Intn / math/rand/v2.IntN to the `rand-intn` node, but
+// the static pass still judged the key `stdlib-package-unmodeled`. Pinned
+// here per declaration of testdata/calib (whose wire verdicts
+// TestCalibrationAgainstWire checks against the real frontend): the two
+// direct draws are SUPPLIED with no finding; defer of the function refuses
+// by name (rand-intn-defer-go); the method form (*rand.Rand).Intn stays a
+// refused key (call-scoped stdlib-type-method — the declaration lowers to a
+// stub call, as the wire does); every other member (Int63n) stays
+// stdlib-package-unmodeled.
+func TestRandIntnPrimitiveIsSupplied(t *testing.T) {
+	if err := initCauses(); err != nil {
+		t.Fatal(err)
+	}
+	sup, err := newSupply("../../docs/stdlib-admission-register.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(sup.randIntn) != 2 || !sup.randIntn["math/rand.Intn"] || !sup.randIntn["math/rand/v2.IntN"] {
+		t.Fatalf("rand-intn supply = %v, want exactly math/rand.Intn and math/rand/v2.IntN", sup.randIntn)
+	}
+	prog, err := loadProgram("testdata/calib", sup)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prog.census()
+	decls := map[string]*declReport{}
+	for _, d := range prog.pkgs["main"].decls {
+		decls[d.Name] = d
+	}
+	type want struct {
+		supplied string // a Supplied entry that must be present ("" = none required)
+		cause    string // the ONLY finding's cause ("" = no finding at all)
+		key      string
+		declRef  bool // a declaration-scoped refusal
+	}
+	cases := map[string]want{
+		"drawIntn":   {supplied: "math/rand.Intn (machine rand-intn)"},
+		"drawIntNv2": {supplied: "math/rand/v2.IntN (machine rand-intn)"},
+		"deferIntn":  {cause: "rand-intn-defer-go", key: "defer math/rand.Intn", declRef: true},
+		"drawInt63n": {cause: "stdlib-package-unmodeled", key: "math/rand.Int63n", declRef: true},
+		"drawMethod": {cause: "stdlib-type-method", key: "math/rand.Rand.Intn"},
+	}
+	for name, w := range cases {
+		d := decls[name]
+		if d == nil {
+			t.Errorf("%s: not in testdata/calib", name)
+			continue
+		}
+		if w.supplied != "" && !slices.Contains(d.Supplied, w.supplied) {
+			t.Errorf("%s: Supplied %v lacks %q", name, d.Supplied, w.supplied)
+		}
+		if w.cause == "" {
+			if len(d.Findings) != 0 {
+				t.Errorf("%s: want no finding, got %+v", name, d.Findings)
+			}
+		} else if len(d.Findings) != 1 || d.Findings[0].Cause.ID != w.cause || d.Findings[0].Key != w.key {
+			t.Errorf("%s: want the one finding %s/%s, got %+v", name, w.cause, w.key, d.Findings)
+		}
+		if got := len(d.declRefusals()) > 0; got != w.declRef {
+			t.Errorf("%s: declaration refused=%v, want %v", name, got, w.declRef)
+		}
+	}
+	// the dynamic pass: the frontend's real defer/go text classifies by name
+	for _, how := range []string{"defer", "go"} {
+		txt := how + " math/rand/v2.IntN: the [0, n) draw lowers at direct-call sites only (the rand-intn primitive, window unit 5b); as a deferred/spawned FUNCTION VALUE it has no lowering — refused by name"
+		c, key := classifyText(txt)
+		if c == nil || c.ID != "rand-intn-defer-go" || key != how+" math/rand/v2.IntN" {
+			t.Errorf("classifyText(%q) = %v / %q, want rand-intn-defer-go / %q", txt, c, key, how+" math/rand/v2.IntN")
+		}
 	}
 }
 
@@ -820,7 +918,11 @@ func TestCalibrationAgainstWire(t *testing.T) {
 	// 2026-09-04): slices.Sort is the real generic at every ordered kind
 	// and nothing is intercepted, so the string sort and the deferred
 	// function value both reach pdqsortOrdered.
-	want := map[string]bool{"retBox": false, "assignBox": true, "sortStrings": false, "sortInts": false, "deferSort": false, "isE": false, "fields": false}
+	// drawIntn / drawIntNv2 LOWER since window unit 5b (the rand-intn
+	// primitive); deferIntn and drawInt63n stay refused (route-A review Q7,
+	// 2026-10-04: lowerdiag had judged rand.Intn refused).
+	want := map[string]bool{"retBox": false, "assignBox": true, "sortStrings": false, "sortInts": false, "deferSort": false, "isE": false, "fields": false,
+		"drawIntn": false, "drawIntNv2": false, "drawInt63n": true, "deferIntn": true}
 	if wireQ["errors.Is"] == "" {
 		t.Errorf("wire: the library function errors.Is should be quarantined (library-refusals.tsv row); got lowered")
 	}
