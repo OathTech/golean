@@ -1,0 +1,217 @@
+{
+ "corpus": "tools/raftsubject/fixtures/i6-malformed-conf-bytes.json sha256 cd724c9b40a96879c024ffe5b0c8f494c44ff2fe87a59484c15f6d19ebca5dd9",
+ "entries": [
+  {
+   "marshal": "",
+   "name": "corpus/v1-varint-overflow-value",
+   "size": 0,
+   "text": "cannot parse invalid wire-format data",
+   "type": "ConfChange",
+   "verdict": "err"
+  },
+  {
+   "marshal": "",
+   "name": "corpus/v2-varint-overflow-tag",
+   "size": 0,
+   "text": "cannot parse invalid wire-format data",
+   "type": "ConfChangeV2",
+   "verdict": "err"
+  },
+  {
+   "marshal": "",
+   "name": "corpus/v1-varint-unterminated",
+   "size": 0,
+   "text": "cannot parse invalid wire-format data",
+   "type": "ConfChange",
+   "verdict": "err"
+  },
+  {
+   "marshal": "08ffffffffffffffffff01",
+   "name": "corpus/v1-varint-ten-bytes-max",
+   "size": 11,
+   "text": "",
+   "type": "ConfChange",
+   "verdict": "ok"
+  },
+  {
+   "marshal": "120100",
+   "name": "corpus/v1-type-as-bytes",
+   "size": 3,
+   "text": "",
+   "type": "ConfChange",
+   "verdict": "ok"
+  },
+  {
+   "marshal": "1005",
+   "name": "corpus/v2-changes-as-varint",
+   "size": 2,
+   "text": "",
+   "type": "ConfChangeV2",
+   "verdict": "ok"
+  },
+  {
+   "marshal": "",
+   "name": "corpus/v1-wire-type-6",
+   "size": 0,
+   "text": "cannot parse invalid wire-format data",
+   "type": "ConfChange",
+   "verdict": "err"
+  },
+  {
+   "marshal": "",
+   "name": "corpus/v2-wire-type-7",
+   "size": 0,
+   "text": "cannot parse invalid wire-format data",
+   "type": "ConfChangeV2",
+   "verdict": "err"
+  },
+  {
+   "marshal": "",
+   "name": "corpus/v1-end-group-unmatched",
+   "size": 0,
+   "text": "cannot parse invalid wire-format data",
+   "type": "ConfChange",
+   "verdict": "err"
+  },
+  {
+   "marshal": "",
+   "name": "corpus/v2-group-end-mismatch",
+   "size": 0,
+   "text": "cannot parse invalid wire-format data",
+   "type": "ConfChangeV2",
+   "verdict": "err"
+  },
+  {
+   "marshal": "",
+   "name": "corpus/v1-tag-only",
+   "size": 0,
+   "text": "cannot parse invalid wire-format data",
+   "type": "ConfChange",
+   "verdict": "err"
+  },
+  {
+   "marshal": "",
+   "name": "corpus/v1-truncated-bytes",
+   "size": 0,
+   "text": "cannot parse invalid wire-format data",
+   "type": "ConfChange",
+   "verdict": "err"
+  },
+  {
+   "marshal": "",
+   "name": "corpus/v1-truncated-fixed64",
+   "size": 0,
+   "text": "cannot parse invalid wire-format data",
+   "type": "ConfChange",
+   "verdict": "err"
+  },
+  {
+   "marshal": "",
+   "name": "corpus/v2-truncated-fixed32",
+   "size": 0,
+   "text": "cannot parse invalid wire-format data",
+   "type": "ConfChangeV2",
+   "verdict": "err"
+  },
+  {
+   "marshal": "",
+   "name": "corpus/v2-truncated-group",
+   "size": 0,
+   "text": "cannot parse invalid wire-format data",
+   "type": "ConfChangeV2",
+   "verdict": "err"
+  },
+  {
+   "marshal": "",
+   "name": "corpus/v2-truncated-nested-change",
+   "size": 0,
+   "text": "cannot parse invalid wire-format data",
+   "type": "ConfChangeV2",
+   "verdict": "err"
+  },
+  {
+   "marshal": "",
+   "name": "corpus/v2-length-overflow",
+   "size": 0,
+   "text": "cannot parse invalid wire-format data",
+   "type": "ConfChangeV2",
+   "verdict": "err"
+  },
+  {
+   "marshal": "2801",
+   "name": "corpus/v1-unknown-varint",
+   "size": 2,
+   "text": "",
+   "type": "ConfChange",
+   "verdict": "ok"
+  },
+  {
+   "marshal": "120608011002180148015101020304050607085a0161630802646d0a0b0c0d",
+   "name": "corpus/v2-unknown-all-wire-types",
+   "size": 31,
+   "text": "",
+   "type": "ConfChangeV2",
+   "verdict": "ok"
+  },
+  {
+   "marshal": "f8ffffff0f01",
+   "name": "corpus/v1-unknown-field-number-max",
+   "size": 6,
+   "text": "",
+   "type": "ConfChange",
+   "verdict": "ok"
+  },
+  {
+   "marshal": "",
+   "name": "corpus/v2-field-number-too-large",
+   "size": 0,
+   "text": "cannot parse invalid wire-format data",
+   "type": "ConfChangeV2",
+   "verdict": "err"
+  },
+  {
+   "marshal": "",
+   "name": "corpus/v1-field-number-zero",
+   "size": 0,
+   "text": "cannot parse invalid wire-format data",
+   "type": "ConfChange",
+   "verdict": "err"
+  },
+  {
+   "marshal": "",
+   "name": "corpus/v1-nil",
+   "size": 0,
+   "text": "",
+   "type": "ConfChange",
+   "verdict": "ok"
+  },
+  {
+   "marshal": "",
+   "name": "corpus/v1-empty",
+   "size": 0,
+   "text": "",
+   "type": "ConfChange",
+   "verdict": "ok"
+  },
+  {
+   "marshal": "",
+   "name": "corpus/v2-nil",
+   "size": 0,
+   "text": "",
+   "type": "ConfChangeV2",
+   "verdict": "ok"
+  },
+  {
+   "marshal": "",
+   "name": "corpus/v2-empty",
+   "size": 0,
+   "text": "",
+   "type": "ConfChangeV2",
+   "verdict": "ok"
+  }
+ ],
+ "generated_by": "tools/raftsubject/difftest.py --emit-reference",
+ "reference": "protobuf-go v1.36.11 over upstream raftpb @ deps/raft 56e3200, go1.26.5",
+ "schema": "golean-route-a-corpus-reference-v1",
+ "text_note": "error text WITHOUT the 7-byte proto: prefix (its spacing is per-binary latitude)"
+}

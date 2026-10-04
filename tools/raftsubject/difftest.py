@@ -34,6 +34,7 @@ out of raft.pb.go, so the probe cannot drift from the shim it probes.
 """
 
 import argparse
+import json
 import os
 import shutil
 import subprocess
@@ -46,6 +47,7 @@ import tempfile
 sys.dont_write_bytecode = True
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import derive  # noqa: E402
+import difftest_sec8  # noqa: E402
 
 REPO = derive.REPO
 
@@ -753,6 +755,11 @@ func main() {
 	}
 	fmt.Printf("ok  Codec               %d values: bytes, Size, and both cross-unmarshals across all 9 message types\n", codecChecks)
 
+	// 8. ROUTE A exactness (difftest_sec8.py): the imported 26-entry
+	//    corpus + the generated adversarial battery + the recursion edges +
+	//    constructed values, through BOTH proto packages, exact.
+	section8()
+
 	if fails > 0 {
 		fmt.Printf("\nFAIL %d disagreement(s)\n", fails)
 		os.Exit(1)
@@ -766,6 +773,10 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default=None)
     ap.add_argument("--keep", action="store_true")
+    ap.add_argument("--emit-reference", default=None, metavar="PATH",
+                    help="also write protobuf-go's outcome for every imported "
+                         "corpus entry (section 8) to PATH as JSON — the "
+                         "expectation table codeccheck.py embeds")
     args = ap.parse_args()
 
     src = open(os.path.join(REPO, "deps", "raft", "raftpb", "raft.pb.go")).read()
@@ -773,9 +784,31 @@ def main():
 
     out = args.out or tempfile.mkdtemp(prefix="plainpb-diff-")
     os.makedirs(out, exist_ok=True)
-    shutil.rmtree(os.path.join(out, "plainpb"), ignore_errors=True)
-    shutil.copytree(os.path.join(REPO, "raftsubject", "raftpb"),
-                    os.path.join(out, "plainpb"))
+    # The subject's raftpb AND proto packages, at module paths: the tree's
+    # short dot-free imports ("raftpb", "proto" — either direction, so the
+    # same harness runs on a pre- and a post-route-A tree) are rewritten in
+    # the COPIES only.
+    for src_pkg, dst_pkg in (("raftpb", "plainpb"), ("proto", "plainproto")):
+        shutil.rmtree(os.path.join(out, dst_pkg), ignore_errors=True)
+        shutil.copytree(os.path.join(REPO, "raftsubject", src_pkg),
+                        os.path.join(out, dst_pkg))
+    for dst_pkg in ("plainpb", "plainproto"):
+        d = os.path.join(out, dst_pkg)
+        for fn in sorted(os.listdir(d)):
+            fp = os.path.join(d, fn)
+            txt = open(fp).read()
+            txt = txt.replace('\t"raftpb"\n', '\t"golean.local/plainpbdiff/plainpb"\n')
+            txt = txt.replace('import "raftpb"\n', 'import "golean.local/plainpbdiff/plainpb"\n')
+            txt = txt.replace('\t"proto"\n', '\t"golean.local/plainpbdiff/plainproto"\n')
+            txt = txt.replace('import "proto"\n', 'import "golean.local/plainpbdiff/plainproto"\n')
+            with open(fp, "w") as f:
+                f.write(txt)
+    proto_src = open(os.path.join(REPO, "raftsubject", "proto", "proto.go")).read()
+    sec8_go, n8, n8c = difftest_sec8.gen_go(msgs, enums, derive.classify_field,
+                                            derive.refuse, proto_src)
+    with open(os.path.join(out, "sec8.go"), "w") as f:
+        f.write(sec8_go)
+    print("difftest: section 8 — %d inputs (%d imported corpus) generated" % (n8, n8c))
     with open(os.path.join(out, "go.mod"), "w") as f:
         f.write("module golean.local/plainpbdiff\n\ngo 1.26\n\n"
                 "require (\n\tgo.etcd.io/raft/v3 v3.0.0-00010101000000-000000000000\n"
@@ -793,7 +826,34 @@ def main():
     env["GOCACHE"] = os.path.join(REPO, "artifacts", "go-build-cache")
     env["GOFLAGS"] = "-mod=mod"
     print("difftest: running go run in %s" % out)
-    r = subprocess.run(["go", "run", "."], cwd=out, env=env)
+    if args.emit_reference:
+        env["DIFFTEST_EMIT_REFERENCE"] = "1"
+        r = subprocess.run(["go", "run", "."], cwd=out, env=env,
+                           stdout=subprocess.PIPE, text=True)
+        refs = []
+        for ln in r.stdout.split("\n"):
+            if ln.startswith("REF8\t"):
+                _t, name, typ, verdict, text, size, mhex = ln.split("\t")
+                refs.append({"name": name, "type": typ, "verdict": verdict,
+                             "text": text, "size": int(size), "marshal": mhex})
+            elif ln:
+                print(ln)
+        if len(refs) != difftest_sec8.FIXTURE_ENTRIES:
+            derive.refuse("difftest: --emit-reference saw %d corpus outcomes, "
+                          "expected %d" % (len(refs), difftest_sec8.FIXTURE_ENTRIES))
+        with open(args.emit_reference, "w") as f:
+            json.dump({"schema": "golean-route-a-corpus-reference-v1",
+                       "reference": "protobuf-go v1.36.11 over upstream raftpb @ deps/raft "
+                                    + derive.PINNED_RAFT_REV[:7] + ", go1.26.5",
+                       "corpus": "tools/raftsubject/fixtures/i6-malformed-conf-bytes.json sha256 "
+                                 + difftest_sec8.FIXTURE_SHA256,
+                       "generated_by": "tools/raftsubject/difftest.py --emit-reference",
+                       "text_note": "error text WITHOUT the 7-byte proto: prefix (its spacing is per-binary latitude)",
+                       "entries": refs}, f, indent=1, sort_keys=True)
+            f.write("\n")
+        print("difftest: wrote %d reference outcomes to %s" % (len(refs), args.emit_reference))
+    else:
+        r = subprocess.run(["go", "run", "."], cwd=out, env=env)
     if not args.keep and args.out is None:
         shutil.rmtree(out)
     sys.exit(r.returncode)

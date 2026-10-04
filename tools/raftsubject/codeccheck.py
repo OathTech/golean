@@ -239,12 +239,20 @@ func codecBattery() int {
 	if !rtMessage(&pb.Message{}) {
 		return 17
 	}
+	// (The nested literals are HOISTED: the frontend's E13 (b) residual
+	// quarantines a slice literal with a panicky payload followed by an
+	// ordered call in the same statement — found 2026-10-04 by route A S1:
+	// this battery's machine leg had gone red on main for that reason.)
+	m18e1 := &pb.Entry{Term: u64(1), Index: u64(2), Data: []byte("x")}
+	m18e2 := &pb.Entry{Term: u64(1), Index: u64(3)}
+	m18es := []*pb.Entry{m18e1, m18e2}
+	m18r := &pb.Message{To: u64(9)}
+	m18rs := []*pb.Message{m18r}
+	m18s := &pb.Snapshot{Metadata: &pb.SnapshotMetadata{Index: u64(7)}}
 	if !rtMessage(&pb.Message{Type: &mt, To: u64(2), From: u64(1), Term: u64(4),
 		LogTerm: u64(3), Index: u64(10), Commit: u64(8), Vote: u64(5),
 		Reject: bl(true), RejectHint: u64(9), Context: []byte("c"),
-		Entries: []*pb.Entry{{Term: u64(1), Index: u64(2), Data: []byte("x")}, {Term: u64(1), Index: u64(3)}},
-		Snapshot: &pb.Snapshot{Metadata: &pb.SnapshotMetadata{Index: u64(7)}},
-		Responses: []*pb.Message{{To: u64(9)}}}) {
+		Entries: m18es, Snapshot: m18s, Responses: m18rs}) {
 		return 18
 	}
 	if !rtMessage(&pb.Message{Reject: bl(false), Entries: []*pb.Entry{}}) {
@@ -294,9 +302,11 @@ func codecBattery() int {
 		return 23
 	}
 	// nested messages with length prefixes.
+	m24e := &pb.Entry{Term: u64(1), Index: u64(2)}
+	m24es := []*pb.Entry{m24e}
+	m24s := &pb.Snapshot{Metadata: &pb.SnapshotMetadata{Index: u64(9)}}
 	b, err = proto.Marshal(&pb.Message{Type: &mt, To: u64(2), From: u64(1),
-		Entries:  []*pb.Entry{{Term: u64(1), Index: u64(2)}},
-		Snapshot: &pb.Snapshot{Metadata: &pb.SnapshotMetadata{Index: u64(9)}}})
+		Entries: m24es, Snapshot: m24s})
 	want = []byte{
 		0x08, 0x03, 0x10, 0x02, 0x18, 0x01,
 		0x3a, 0x04, 0x10, 0x01, 0x18, 0x02,
@@ -446,6 +456,11 @@ func codecBattery() int {
 		return 38
 	}
 
+	// ---- route A (checks 39..): typed nils, Equal, the sentinel, and the
+	// imported corpus — generated below (codeccheck.py ROUTE_A_GO).
+	if r := routeABattery(); r != 0 {
+		return r
+	}
 	return 0
 }
 
@@ -453,6 +468,153 @@ func main() {
 	println(codecBattery())
 }
 '''
+
+
+# ---- ROUTE A additions (docs/2026-10-04_route-a-protobuf-design.md D9) ----
+#
+# Checks 39-41: the typed-nil behaviours of proto.Marshal / Size / Clone
+# (proto/encode.go:141-146, size.go:19-35, merge.go:55-57). Checks 42-46:
+# proto.Equal (the subject declares it since route A; on a tree without it
+# the battery answers 42 — red, never skipped). Check 47: the error value
+# unwraps to the proto.Error sentinel (errors.Is itself is refused on the
+# machine by name, FR-14 — D10 — so the battery checks Unwrap directly;
+# absent sentinel -> 47). Checks 100+k: entry k of the imported 26-entry
+# corpus (tools/raftsubject/fixtures/i6-malformed-conf-bytes.json) against
+# protobuf-go's OWN outcome (fixtures/i6-reference-protobuf-go-v1.36.11.json,
+# written by `difftest.py --emit-reference`): verdict, error text modulo the
+# per-binary prefix (MEMBERSHIP over the two spellings), Size, and the
+# re-Marshal bytes (non-nil for a decoded message).
+
+REFERENCE = os.path.join(HERE, "fixtures", "i6-reference-protobuf-go-v1.36.11.json")
+CORPUS = os.path.join(HERE, "fixtures", "i6-malformed-conf-bytes.json")
+CORPUS_SHA256 = "cd724c9b40a96879c024ffe5b0c8f494c44ff2fe87a59484c15f6d19ebca5dd9"
+
+
+def go_bytes(h):
+    if not h:
+        return "[]byte{}"
+    return "[]byte{" + ", ".join("0x%02x" % c for c in bytes.fromhex(h)) + "}"
+
+
+def route_a_go(proto_src):
+    import hashlib
+    raw = open(CORPUS, "rb").read()
+    if hashlib.sha256(raw).hexdigest() != CORPUS_SHA256:
+        sys.exit("codeccheck.py: the imported corpus changed (frozen; fail closed)")
+    corpus = json.loads(raw)["entries"]
+    ref = json.load(open(REFERENCE))
+    refs = {e["name"]: e for e in ref["entries"]}
+    if len(corpus) != 26 or len(refs) != 26:
+        sys.exit("codeccheck.py: corpus/reference size mismatch (%d/%d)" % (len(corpus), len(refs)))
+    has_equal = "func Equal(" in proto_src
+    has_error = "\nvar Error " in proto_src
+    g = ["func routeABattery() int {",
+         "\t// typed nils (checks 39..41)",
+         "\tvar tn *pb.Entry",
+         "\tnb, nerr := proto.Marshal(tn)",
+         "\tif nerr != nil {",
+         "\t\treturn 39",
+         "\t}",
+         "\tif nb != nil {",
+         "\t\treturn 39",
+         "\t}",
+         "\tif proto.Size(tn) != 0 {",
+         "\t\treturn 40",
+         "\t}",
+         "\tnc := proto.Clone(tn)",
+         "\tif nc == nil {",
+         "\t\treturn 41",
+         "\t}",
+         "\tif nc.(*pb.Entry) != nil {",
+         "\t\treturn 41",
+         "\t}"]
+    if has_equal:
+        g += ["\t// proto.Equal (checks 42..46)",
+              "\tx := &pb.Entry{Term: u64(3), Data: []byte(\"q\")}",
+              "\tif !proto.Equal(x, proto.Clone(x)) {",
+              "\t\treturn 42",
+              "\t}",
+              "\tif proto.Equal(&pb.Entry{}, tn) {",
+              "\t\treturn 43",
+              "\t}",
+              "\tif !proto.Equal(nil, nil) {",
+              "\t\treturn 44",
+              "\t}",
+              "\tua := &pb.HardState{}",
+              "\tub := &pb.HardState{}",
+              "\tab := []byte{0x78, 0x01, 0x80, 0x01, 0x02}",
+              "\tba := []byte{0x80, 0x01, 0x02, 0x78, 0x01}",
+              "\tif proto.Unmarshal(ab, ua) != nil {",
+              "\t\treturn 45",
+              "\t}",
+              "\tif proto.Unmarshal(ba, ub) != nil {",
+              "\t\treturn 45",
+              "\t}",
+              "\tif !proto.Equal(ua, ub) {",
+              "\t\treturn 45",
+              "\t}",
+              "\tuc := &pb.HardState{}",
+              "\txy := []byte{0x78, 0x01, 0x78, 0x02}",
+              "\tif proto.Unmarshal(xy, uc) != nil {",
+              "\t\treturn 46",
+              "\t}",
+              "\tud := &pb.HardState{}",
+              "\tyx := []byte{0x78, 0x02, 0x78, 0x01}",
+              "\tif proto.Unmarshal(yx, ud) != nil {",
+              "\t\treturn 46",
+              "\t}",
+              "\tif proto.Equal(uc, ud) {",
+              "\t\treturn 46",
+              "\t}"]
+    else:
+        g += ["\t// the subject proto declares NO Equal (pre-route-A tree): red",
+              "\treturn 42"]
+    if has_error:
+        g += ["\t// the sentinel (check 47)",
+              "\tserr := proto.Unmarshal([]byte{0x00}, &pb.HardState{})",
+              "\tif serr == nil {",
+              "\t\treturn 47",
+              "\t}",
+              "\tuw, uok := serr.(interface{ Unwrap() error })",
+              "\tif !uok {",
+              "\t\treturn 47",
+              "\t}",
+              "\tif uw.Unwrap() != proto.Error {",
+              "\t\treturn 47",
+              "\t}"]
+    else:
+        g += ["\t// the subject proto declares NO Error sentinel (pre-route-A tree): red",
+              "\treturn 47"]
+    g += ["\t// the imported corpus (checks 100..125)"]
+    for k, e in enumerate(corpus):
+        r = refs.get("corpus/" + e["name"])
+        if r is None:
+            sys.exit("codeccheck.py: no reference outcome for corpus entry %s" % e["name"])
+        cid = 100 + k
+        typ = "ConfChange" if e["kind"] == "v1" else "ConfChangeV2"
+        data = "nil" if e["data"] is None else go_bytes(e["data"])
+        v = "c%d" % k
+        g += ["\t// %d: %s" % (cid, e["name"]),
+              "\t%sm := &pb.%s{}" % (v, typ),
+              "\tvar %sd []byte = %s" % (v, data),
+              "\t%serr := proto.Unmarshal(%sd, %sm)" % (v, v, v)]
+        if r["verdict"] == "ok":
+            g += ["\tif %serr != nil {" % v, "\t\treturn %d" % cid, "\t}"]
+        else:
+            g += ["\tif %serr == nil {" % v, "\t\treturn %d" % cid, "\t}",
+                  "\t%st := %serr.Error()" % (v, v),
+                  "\tif %st != \"proto: %s\" {" % (v, r["text"]),
+                  "\t\tif %st != \"proto:\\u00a0%s\" {" % (v, r["text"]),
+                  "\t\t\treturn %d" % cid,
+                  "\t\t}",
+                  "\t}"]
+        g += ["\tif proto.Size(%sm) != %d {" % (v, r["size"]), "\t\treturn %d" % cid, "\t}",
+              "\t%sb, %sme := proto.Marshal(%sm)" % (v, v, v),
+              "\tif %sme != nil {" % v, "\t\treturn %d" % cid, "\t}",
+              "\tif %sb == nil {" % v, "\t\treturn %d" % cid, "\t}",
+              "\tif !bytesEq(%sb, %s) {" % (v, go_bytes(r["marshal"])), "\t\treturn %d" % cid, "\t}"]
+    g += ["\treturn 0", "}"]
+    return "\n".join(g) + "\n"
 
 
 def main():
@@ -477,8 +639,10 @@ def main():
     os.makedirs(prog)
     for pkg in ("raftpb", "proto"):
         shutil.copytree(os.path.join(REPO, "raftsubject", pkg), os.path.join(prog, pkg))
+    proto_src = open(os.path.join(REPO, "raftsubject", "proto", "proto.go")).read()
     with open(os.path.join(prog, "main.go"), "w") as f:
         f.write(BATTERY)
+        f.write("\n" + route_a_go(proto_src))
     gopath = os.path.join(out, "gopath")
     os.makedirs(os.path.join(gopath, "src"))
     for pkg in ("raftpb", "proto"):
@@ -524,7 +688,7 @@ def main():
     if go_verdict != "0":
         sys.exit("codeccheck.py: battery check %s FAILED under both oracles"
                  % go_verdict)
-    print("codeccheck: PASS — 38 checks, both oracles agree, verdict 0")
+    print("codeccheck: PASS — checks 1-47 + the 26 imported corpus entries (100-125), both oracles agree, verdict 0")
 
 
 if __name__ == "__main__":

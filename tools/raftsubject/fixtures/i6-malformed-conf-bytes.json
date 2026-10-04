@@ -1,0 +1,195 @@
+{
+ "schema": "i6-malformed-conf-bytes-v1",
+ "provenance": "[AGENT] I6 L4 executor, 2026-09-29. The frozen named malformed configuration-bytes corpus of the completion plan (D1): varint overflow, wire-type mismatch, truncation, unknown fields, empty/nil. Each entry is proposed to a leader as the single entry of a MsgProp (EntryConfChange for v1, EntryConfChangeV2 for v2); raft decodes it at raft.go:1314-1321. Entries that decode are controls whose outcome is an ordinary return. Frozen: extend only with a new dated list.",
+ "categories": [
+  "varint-overflow",
+  "wire-type-mismatch",
+  "truncation",
+  "unknown-fields",
+  "empty-nil"
+ ],
+ "entries": [
+  {
+   "name": "v1-varint-overflow-value",
+   "category": "varint-overflow",
+   "kind": "v1",
+   "data": "08ffffffffffffffffff02",
+   "note": "field 1 (id) varint whose tenth byte exceeds 1"
+  },
+  {
+   "name": "v2-varint-overflow-tag",
+   "category": "varint-overflow",
+   "kind": "v2",
+   "data": "ffffffffffffffffffff01",
+   "note": "an eleven-byte tag varint"
+  },
+  {
+   "name": "v1-varint-unterminated",
+   "category": "varint-overflow",
+   "kind": "v1",
+   "data": "08ffff",
+   "note": "field 1 varint without a terminating byte"
+  },
+  {
+   "name": "v1-varint-ten-bytes-max",
+   "category": "varint-overflow",
+   "kind": "v1",
+   "data": "08ffffffffffffffffff01",
+   "note": "control: the longest valid varint (id 2^64-1) decodes"
+  },
+  {
+   "name": "v1-type-as-bytes",
+   "category": "wire-type-mismatch",
+   "kind": "v1",
+   "data": "120100",
+   "note": "known field 2 (type) with wire type 2: kept as an unknown field, decodes"
+  },
+  {
+   "name": "v2-changes-as-varint",
+   "category": "wire-type-mismatch",
+   "kind": "v2",
+   "data": "1005",
+   "note": "known field 2 (changes) with wire type 0: kept as an unknown field, decodes"
+  },
+  {
+   "name": "v1-wire-type-6",
+   "category": "wire-type-mismatch",
+   "kind": "v1",
+   "data": "0e00",
+   "note": "reserved wire type 6"
+  },
+  {
+   "name": "v2-wire-type-7",
+   "category": "wire-type-mismatch",
+   "kind": "v2",
+   "data": "0f",
+   "note": "reserved wire type 7"
+  },
+  {
+   "name": "v1-end-group-unmatched",
+   "category": "wire-type-mismatch",
+   "kind": "v1",
+   "data": "0c",
+   "note": "an end-group tag without a start group"
+  },
+  {
+   "name": "v2-group-end-mismatch",
+   "category": "wire-type-mismatch",
+   "kind": "v2",
+   "data": "2b34",
+   "note": "start group 5 closed by end group 6"
+  },
+  {
+   "name": "v1-tag-only",
+   "category": "truncation",
+   "kind": "v1",
+   "data": "10",
+   "note": "field 2 tag with no value"
+  },
+  {
+   "name": "v1-truncated-bytes",
+   "category": "truncation",
+   "kind": "v1",
+   "data": "22056162",
+   "note": "field 4 (context) length 5 with two bytes"
+  },
+  {
+   "name": "v1-truncated-fixed64",
+   "category": "truncation",
+   "kind": "v1",
+   "data": "29010203",
+   "note": "unknown field 5 fixed64 with three bytes"
+  },
+  {
+   "name": "v2-truncated-fixed32",
+   "category": "truncation",
+   "kind": "v2",
+   "data": "6d0102",
+   "note": "unknown field 13 fixed32 with two bytes"
+  },
+  {
+   "name": "v2-truncated-group",
+   "category": "truncation",
+   "kind": "v2",
+   "data": "2b",
+   "note": "start group 5 without its end"
+  },
+  {
+   "name": "v2-truncated-nested-change",
+   "category": "truncation",
+   "kind": "v2",
+   "data": "12020880",
+   "note": "a change whose type varint is unterminated"
+  },
+  {
+   "name": "v2-length-overflow",
+   "category": "truncation",
+   "kind": "v2",
+   "data": "1affffffff0f",
+   "note": "field 3 (context) with a length far beyond the input"
+  },
+  {
+   "name": "v1-unknown-varint",
+   "category": "unknown-fields",
+   "kind": "v1",
+   "data": "2801",
+   "note": "unknown field 5 varint, decodes"
+  },
+  {
+   "name": "v2-unknown-all-wire-types",
+   "category": "unknown-fields",
+   "kind": "v2",
+   "data": "48015101020304050607085a0161630802646d0a0b0c0d1206080110021801",
+   "note": "unknown fields of every wire type (varint, fixed64, bytes, group, fixed32) and one change carrying an unknown varint, decodes"
+  },
+  {
+   "name": "v1-unknown-field-number-max",
+   "category": "unknown-fields",
+   "kind": "v1",
+   "data": "f8ffffff0f01",
+   "note": "unknown field 536870911 (the largest), decodes"
+  },
+  {
+   "name": "v2-field-number-too-large",
+   "category": "unknown-fields",
+   "kind": "v2",
+   "data": "808080801000",
+   "note": "field number 536870912 is rejected"
+  },
+  {
+   "name": "v1-field-number-zero",
+   "category": "unknown-fields",
+   "kind": "v1",
+   "data": "0001",
+   "note": "field number 0 is rejected"
+  },
+  {
+   "name": "v1-nil",
+   "category": "empty-nil",
+   "kind": "v1",
+   "data": null,
+   "note": "nil data decodes to an empty ConfChange (AddNode 0)"
+  },
+  {
+   "name": "v1-empty",
+   "category": "empty-nil",
+   "kind": "v1",
+   "data": "",
+   "note": "empty data decodes to an empty ConfChange"
+  },
+  {
+   "name": "v2-nil",
+   "category": "empty-nil",
+   "kind": "v2",
+   "data": null,
+   "note": "nil data decodes to an empty ConfChangeV2 (refused by validation)"
+  },
+  {
+   "name": "v2-empty",
+   "category": "empty-nil",
+   "kind": "v2",
+   "data": "",
+   "note": "empty data decodes to an empty ConfChangeV2"
+  }
+ ]
+}

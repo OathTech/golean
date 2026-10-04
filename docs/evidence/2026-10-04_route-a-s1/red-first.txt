@@ -1,0 +1,66 @@
+# difftest.py RED-FIRST run against the PRE-route-A tree (raftsubject/ @ 04b659f0), 2026-10-04, go1.26.5,
+# protobuf-go v1.36.11 from the module cache (TMPDIR=.tmp GOPROXY=off GOSUMDB=off GOFLAGS=-mod=mod).
+# Sections 1-7 unchanged (PASS lines); section 8 DISAGREE counts by check class:
+ok  Equivalent          169 ordered pairs over 13 ConfStates
+ok  Equal               611 ordered pairs across 5 message types
+ok  Clone               51 values across 5 message types
+ok  Clone deep-copy     nested bytes, *uint64 and []uint64 all unaliased
+ok  Equivalent purity   inputs unsorted and AutoLeave still unset after the call
+ok  Clone nil-ness      0 Go-level nil/empty divergence(s) recorded (invisible to proto.Equal)
+ok  Codec               72 values: bytes, Size, and both cross-unmarshals across all 9 message types
+ok  Section 8           1041 inputs (26 corpus + generated + recursion edges + constructed), 123534 Equal pairs; reference prefix U+00A0, subject prefix unrecorded
+FAIL 127394 disagreement(s)
+difftest: section 8 — 1022 inputs (26 imported corpus) generated
+difftest: running go run in .tmp/difftest-red
+ 123534 S8/equal-pair
+   1041 S8/clone-equal
+    556 S8/marshal
+    556 S8/clone-marshal
+    547 S8/size
+    314 S8/text
+    314 S8/prefix-member
+    314 S8/errors.Is
+    185 S8/verdict
+     15 S8/equal-vs-nil-interface
+     15 S8/equal-vs-empty
+      3 S8/equal-nil-vs-empty-elem
+# imported-corpus entries with >= 1 disagreement: 26/26 (all: the old proto declares no Equal); excluding the Equal-shim class: 21/26:
+corpus/v1-end-group-unmatched
+corpus/v1-field-number-zero
+corpus/v1-tag-only
+corpus/v1-truncated-bytes
+corpus/v1-truncated-fixed64
+corpus/v1-type-as-bytes
+corpus/v1-unknown-field-number-max
+corpus/v1-unknown-varint
+corpus/v1-varint-overflow-value
+corpus/v1-varint-unterminated
+corpus/v1-wire-type-6
+corpus/v2-changes-as-varint
+corpus/v2-field-number-too-large
+corpus/v2-group-end-mismatch
+corpus/v2-length-overflow
+corpus/v2-truncated-fixed32
+corpus/v2-truncated-group
+corpus/v2-truncated-nested-change
+corpus/v2-unknown-all-wire-types
+corpus/v2-varint-overflow-tag
+corpus/v2-wire-type-7
+# sample (first corpus disagreements):
+DISAGREE S8/prefix-member/ConfChange corpus/v1-varint-overflow-value                upstream=proto: | proto:\u00a0 plainpb=plainpb: malformed wire input
+DISAGREE S8/text/ConfChange corpus/v1-varint-overflow-value                upstream=proto: cannot parse invalid wire-format data plainpb=plainpb: malformed wire input
+DISAGREE S8/errors.Is/ConfChange corpus/v1-varint-overflow-value                upstream=true plainpb=false
+DISAGREE S8/prefix-member/ConfChangeV2 corpus/v2-varint-overflow-tag                  upstream=proto: | proto:\u00a0 plainpb=plainpb: malformed wire input
+DISAGREE S8/text/ConfChangeV2 corpus/v2-varint-overflow-tag                  upstream=proto: cannot parse invalid wire-format data plainpb=plainpb: malformed wire input
+DISAGREE S8/errors.Is/ConfChangeV2 corpus/v2-varint-overflow-tag                  upstream=true plainpb=false
+DISAGREE S8/prefix-member/ConfChange corpus/v1-varint-unterminated                  upstream=proto: | proto:\u00a0 plainpb=plainpb: malformed wire input
+DISAGREE S8/text/ConfChange corpus/v1-varint-unterminated                  upstream=proto: cannot parse invalid wire-format data plainpb=plainpb: malformed wire input
+DISAGREE S8/errors.Is/ConfChange corpus/v1-varint-unterminated                  upstream=true plainpb=false
+DISAGREE S8/size/ConfChange corpus/v1-type-as-bytes                        upstream=3 plainpb=0
+DISAGREE S8/marshal/ConfChange corpus/v1-type-as-bytes                        upstream=[120100] plainpb=[]
+DISAGREE S8/clone-marshal/ConfChange corpus/v1-type-as-bytes                        upstream=[120100] plainpb=[]
+
+# codeccheck.py RED-FIRST (same tree):
+codeccheck: go run verdict: 39
+codeccheck: machine verdict: 39
+codeccheck.py: battery check 39 FAILED under both oracles
