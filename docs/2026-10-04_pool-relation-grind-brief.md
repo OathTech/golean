@@ -1,11 +1,11 @@
-# The pool/registry half — the GRIND BRIEF (the design gate ratified 2026-10-04; not yet launched)
+# The pool/registry half — the GRIND BRIEF (the design gate ratified 2026-10-04; LAUNCHED 2026-10-04)
 
-STATUS: **NOT LAUNCHED.** The spec packet it drives (a NAMED DESIGN GATE) was RATIFIED by the [USER] 2026-10-04
-(«Approved», relayed — `docs/2026-10-04_pool-relation-spec.md` §9; Codex confirmed as the tool) and its statements
-passed an adversarial statement review, findings applied (§10 there: 48 statements, replay added). Authority for the shape: [USER] Mike 2026-10-04 «Great, launch it»
-(relayed) — a Fable spec packet, then a Codex grind «with enough flex it could build successfully, without giving
-too much space for drift». Written by the [AGENT] design worker; the coordinator refreshes §2 (the input commit)
-and deletes this paragraph at launch. Provenance in the grind's commits: **[AGENT Codex, pool grind]**.
+STATUS: **LAUNCHED** 2026-10-04 at input commit `a11f349f` (train r64 close; the spec packet landed as `7b068123` +
+`31bc27f2`). Spec: `docs/2026-10-04_pool-relation-spec.md` (§9 [USER] ratification «Approved», relayed; §10 the
+statement review, 48 statements). Authority for the shape: [USER] Mike 2026-10-04 «Great, launch it» (relayed) — «with
+enough flex it could build successfully, without giving too much space for drift». Provenance in the grind's commits:
+**[AGENT Codex, pool grind]**. The coordinator wires `scripts/check-pool-spec` into `scripts/ci` at the M1 landing train
+(until then it is run by hand per §8).
 **Ambiguity policy: if two readings of this brief differ materially, STOP, write both in the report, do not choose.**
 
 ## 1. Purpose
@@ -14,8 +14,8 @@ in a new `GoLean/GoCore/PoolSound.lean`, the statements UNCHANGED; pin them in `
 audit's required list; land milestone by milestone. The design note is the specification; this brief is its fence.
 
 ## 2. Setup
-`git -C /home/dev/projects/golean worktree add .claude/worktrees/pool-grind -b core/pool-grind-<date> <INPUT COMMIT — the
-spec packet's landed tip, refreshed by the coordinator>`. Seed the Lean cache from the primary checkout at the same commit
+`git -C /home/dev/projects/golean worktree add .claude/worktrees/pool-grind -b core/pool-grind-<date> main` (`main` at launch: `a11f349f` + this brief's launch-status commit; the frozen surface is
+pinned by `scripts/check-pool-spec`, not by the commit). Seed the Lean cache from the primary checkout at the same commit
 (`cp -a .lake <worktree>/.lake`). Scratch under the worktree's `.tmp/` only (never `/tmp`); every build through
 `scripts/capped` with an explicit `GOLEAN_MEM_MAX` (≤ 48G for explicit targets); the box-wide lock
 (`mkdir /home/dev/projects/golean/artifacts/build-lock.d` + `owner` file; wait-retry; never take over; release under a
