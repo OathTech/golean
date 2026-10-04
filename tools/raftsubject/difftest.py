@@ -10,15 +10,19 @@ plainpb's real logic that is NOT upstream text kept verbatim:
 
   * `(*T).CloneMessage()`   generated, stands in for proto.Clone
   * `(*T).EqualMessage(y)`  generated, stands in for proto.Equal
-  * `(*ConfState).Equivalent(cs2)`  overlay, upstream's algorithm with the
-    two proto calls swapped for the two above
-  * the WIRE CODEC (W4.1, H-1): `(*T).AppendMessage/SizeMessage/
+  * `(*ConfState).Equivalent(cs2)`  upstream text since route A S1 (its
+    proto.Clone/proto.Equal go to the subject proto package; the D-3 patch
+    on the two error texts)
+  * the WIRE CODEC (W4.1, H-1; route A S1): `(*T).MarshalAppend/SizeMessage/
     UnmarshalMessage`, standing in for proto.Marshal/Size/Unmarshal —
     section 7 compares BYTES against the real runtime's Marshal, Size
     against Size, and cross-unmarshals each side's bytes through the other,
     for ALL NINE message types as TOP-LEVEL subjects (widened by the W4.1
     audit round: a type reached only nested exercises the sub-encoder, not
     its own Append/Size/Unmarshal entry points)
+
+Section 8 (route A S1, difftest_sec8.py) is the EXACT battery over the
+subject's `proto` package — see that module's docstring.
 
 This script builds a throwaway Go module that links BOTH the upstream raftpb
 (deps/raft, with the real protobuf runtime) and the derived plainpb, converts
@@ -262,7 +266,7 @@ func hardStates() []struct {
 // NESTED inside a Message and ConfChangeSingle only nested inside a
 // ConfChangeV2, and ConfChange not at all — a nested subject exercises
 // the length-delimited sub-encoder but never the type's own
-// AppendMessage/SizeMessage/UnmarshalMessage entry points, which is
+// MarshalAppend/SizeMessage/UnmarshalMessage entry points, which is
 // exactly what section 7 exists to compare. All 9 are top-level now.
 
 func snapshotMetas() []struct {
@@ -556,9 +560,9 @@ func main() {
 			continue
 		}
 		ppv := upToPlainConfState(a.cs)
-		ppB := ppv.AppendMessage(nil)
+		ppB := ppv.MarshalAppend(nil)
 		dec := &pp.ConfState{}
-		if err := dec.UnmarshalMessage(upB); err != nil {
+		if err := dec.UnmarshalMessage(upB, 10000); err != nil {
 			report("Codec/dec-theirs-err/CS", a.name, nil, err)
 			continue
 		}
@@ -579,9 +583,9 @@ func main() {
 			continue
 		}
 		ppv := upToPlainEntry(a.e)
-		ppB := ppv.AppendMessage(nil)
+		ppB := ppv.MarshalAppend(nil)
 		dec := &pp.Entry{}
-		if err := dec.UnmarshalMessage(upB); err != nil {
+		if err := dec.UnmarshalMessage(upB, 10000); err != nil {
 			report("Codec/dec-theirs-err/Entry", a.name, nil, err)
 			continue
 		}
@@ -602,9 +606,9 @@ func main() {
 			continue
 		}
 		ppv := upToPlainMessage(a.m)
-		ppB := ppv.AppendMessage(nil)
+		ppB := ppv.MarshalAppend(nil)
 		dec := &pp.Message{}
-		if err := dec.UnmarshalMessage(upB); err != nil {
+		if err := dec.UnmarshalMessage(upB, 10000); err != nil {
 			report("Codec/dec-theirs-err/Msg", a.name, nil, err)
 			continue
 		}
@@ -625,9 +629,9 @@ func main() {
 			continue
 		}
 		ppv := upToPlainConfChangeV2(a.c)
-		ppB := ppv.AppendMessage(nil)
+		ppB := ppv.MarshalAppend(nil)
 		dec := &pp.ConfChangeV2{}
-		if err := dec.UnmarshalMessage(upB); err != nil {
+		if err := dec.UnmarshalMessage(upB, 10000); err != nil {
 			report("Codec/dec-theirs-err/CCV2", a.name, nil, err)
 			continue
 		}
@@ -648,9 +652,9 @@ func main() {
 			continue
 		}
 		ppv := upToPlainHardState(a.h)
-		ppB := ppv.AppendMessage(nil)
+		ppB := ppv.MarshalAppend(nil)
 		dec := &pp.HardState{}
-		if err := dec.UnmarshalMessage(upB); err != nil {
+		if err := dec.UnmarshalMessage(upB, 10000); err != nil {
 			report("Codec/dec-theirs-err/HS", a.name, nil, err)
 			continue
 		}
@@ -671,9 +675,9 @@ func main() {
 			continue
 		}
 		ppv := upToPlainSnapshotMetadata(a.s)
-		ppB := ppv.AppendMessage(nil)
+		ppB := ppv.MarshalAppend(nil)
 		dec := &pp.SnapshotMetadata{}
-		if err := dec.UnmarshalMessage(upB); err != nil {
+		if err := dec.UnmarshalMessage(upB, 10000); err != nil {
 			report("Codec/dec-theirs-err/SnapMeta", a.name, nil, err)
 			continue
 		}
@@ -694,9 +698,9 @@ func main() {
 			continue
 		}
 		ppv := upToPlainSnapshot(a.s)
-		ppB := ppv.AppendMessage(nil)
+		ppB := ppv.MarshalAppend(nil)
 		dec := &pp.Snapshot{}
-		if err := dec.UnmarshalMessage(upB); err != nil {
+		if err := dec.UnmarshalMessage(upB, 10000); err != nil {
 			report("Codec/dec-theirs-err/Snap", a.name, nil, err)
 			continue
 		}
@@ -717,9 +721,9 @@ func main() {
 			continue
 		}
 		ppv := upToPlainConfChangeSingle(a.c)
-		ppB := ppv.AppendMessage(nil)
+		ppB := ppv.MarshalAppend(nil)
 		dec := &pp.ConfChangeSingle{}
-		if err := dec.UnmarshalMessage(upB); err != nil {
+		if err := dec.UnmarshalMessage(upB, 10000); err != nil {
 			report("Codec/dec-theirs-err/CCS", a.name, nil, err)
 			continue
 		}
@@ -740,9 +744,9 @@ func main() {
 			continue
 		}
 		ppv := upToPlainConfChange(a.c)
-		ppB := ppv.AppendMessage(nil)
+		ppB := ppv.MarshalAppend(nil)
 		dec := &pp.ConfChange{}
-		if err := dec.UnmarshalMessage(upB); err != nil {
+		if err := dec.UnmarshalMessage(upB, 10000); err != nil {
 			report("Codec/dec-theirs-err/CC", a.name, nil, err)
 			continue
 		}

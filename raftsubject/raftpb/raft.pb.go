@@ -15,16 +15,19 @@
 // Fail-closed stubs: 26 (message String, Descriptor, EnumDescriptor,
 // UnmarshalJSON). Enum String is REAL (W4.3 item 1): the _name map plus
 // the decimal fallback, mirroring the runtime's EnumStringOf.
-// Dropped: the file-descriptor machinery and ProtoReflect (see the log's
-// subject-delta ledger for the itemised list and the reasoning).
+// Dropped: the file-descriptor machinery and ProtoReflect, and the
+// runtime's private `state` and `sizeCache` fields (see the log's
+// subject-delta ledger for the itemised list and the reasoning). KEPT
+// since route A (D3, D-1 narrowed): `unknownFields []byte` under
+// upstream's name and type (protoimpl.UnknownFields = []byte).
 //
-// WIRE CODEC (W4.1, H-1 discharged — docs/raft-w41-log.md item 1): the
-// per-type Marshal/Unmarshal/Size live in the generated plain_codec.go
-// (AppendMessage / SizeMessage / UnmarshalMessage), derived from the field
-// numbers and wire types pinned in the struct tags below. The byte-format
-// contract is protobuf wire compatibility for exactly these nine messages;
-// the differential obligation is difftest.py section 7 (vs the real
-// protobuf runtime) plus the in-sandbox codeccheck.py battery.
+// WIRE CODEC — ROUTE A (docs/2026-10-04_route-a-protobuf-design.md): the
+// generated plain_wire.go / plain_codec.go / plain_clone.go, decomposed
+// after protobuf-go v1.36.11's protowire / internal/impl functions (each
+// names its twin by file:line), dispatched from the subject-local proto
+// package through an interface. The differential obligation is
+// difftest.py sections 7-8 (vs the real protobuf runtime, exact) plus the
+// codeccheck.py battery under both oracles.
 package raftpb
 
 type EntryType int32
@@ -274,10 +277,11 @@ func (ConfChangeType) EnumDescriptor() ([]byte, []int) {
 }
 
 type Entry struct {
-	Term  *uint64    `protobuf:"varint,2,opt,name=Term" json:"Term,omitempty"`
-	Index *uint64    `protobuf:"varint,3,opt,name=Index" json:"Index,omitempty"`
-	Type  *EntryType `protobuf:"varint,1,opt,name=Type,enum=raftpb.EntryType" json:"Type,omitempty"`
-	Data  []byte     `protobuf:"bytes,4,opt,name=Data" json:"Data,omitempty"`
+	Term          *uint64    `protobuf:"varint,2,opt,name=Term" json:"Term,omitempty"`
+	Index         *uint64    `protobuf:"varint,3,opt,name=Index" json:"Index,omitempty"`
+	Type          *EntryType `protobuf:"varint,1,opt,name=Type,enum=raftpb.EntryType" json:"Type,omitempty"`
+	Data          []byte     `protobuf:"bytes,4,opt,name=Data" json:"Data,omitempty"`
+	unknownFields []byte
 }
 
 func (x *Entry) Reset() {
@@ -323,9 +327,10 @@ func (x *Entry) GetData() []byte {
 }
 
 type SnapshotMetadata struct {
-	ConfState *ConfState `protobuf:"bytes,1,opt,name=conf_state,json=confState" json:"conf_state,omitempty"`
-	Index     *uint64    `protobuf:"varint,2,opt,name=index" json:"index,omitempty"`
-	Term      *uint64    `protobuf:"varint,3,opt,name=term" json:"term,omitempty"`
+	ConfState     *ConfState `protobuf:"bytes,1,opt,name=conf_state,json=confState" json:"conf_state,omitempty"`
+	Index         *uint64    `protobuf:"varint,2,opt,name=index" json:"index,omitempty"`
+	Term          *uint64    `protobuf:"varint,3,opt,name=term" json:"term,omitempty"`
+	unknownFields []byte
 }
 
 func (x *SnapshotMetadata) Reset() {
@@ -364,8 +369,9 @@ func (x *SnapshotMetadata) GetTerm() uint64 {
 }
 
 type Snapshot struct {
-	Data     []byte            `protobuf:"bytes,1,opt,name=data" json:"data,omitempty"`
-	Metadata *SnapshotMetadata `protobuf:"bytes,2,opt,name=metadata" json:"metadata,omitempty"`
+	Data          []byte            `protobuf:"bytes,1,opt,name=data" json:"data,omitempty"`
+	Metadata      *SnapshotMetadata `protobuf:"bytes,2,opt,name=metadata" json:"metadata,omitempty"`
+	unknownFields []byte
 }
 
 func (x *Snapshot) Reset() {
@@ -432,7 +438,8 @@ type Message struct {
 	// responses are populated by a raft node to instruct storage threads on how
 	// to respond and who to respond to when the work associated with a message
 	// is complete. Populated for MsgStorageAppend and MsgStorageApply messages.
-	Responses []*Message `protobuf:"bytes,14,rep,name=responses" json:"responses,omitempty"`
+	Responses     []*Message `protobuf:"bytes,14,rep,name=responses" json:"responses,omitempty"`
+	unknownFields []byte
 }
 
 func (x *Message) Reset() {
@@ -548,9 +555,10 @@ func (x *Message) GetResponses() []*Message {
 }
 
 type HardState struct {
-	Term   *uint64 `protobuf:"varint,1,opt,name=term" json:"term,omitempty"`
-	Vote   *uint64 `protobuf:"varint,2,opt,name=vote" json:"vote,omitempty"`
-	Commit *uint64 `protobuf:"varint,3,opt,name=commit" json:"commit,omitempty"`
+	Term          *uint64 `protobuf:"varint,1,opt,name=term" json:"term,omitempty"`
+	Vote          *uint64 `protobuf:"varint,2,opt,name=vote" json:"vote,omitempty"`
+	Commit        *uint64 `protobuf:"varint,3,opt,name=commit" json:"commit,omitempty"`
+	unknownFields []byte
 }
 
 func (x *HardState) Reset() {
@@ -602,7 +610,8 @@ type ConfState struct {
 	LearnersNext []uint64 `protobuf:"varint,4,rep,name=learners_next,json=learnersNext" json:"learners_next,omitempty"`
 	// If set, the config is joint and Raft will automatically transition into
 	// the final config (i.e. remove the outgoing config) when this is safe.
-	AutoLeave *bool `protobuf:"varint,5,opt,name=auto_leave,json=autoLeave" json:"auto_leave,omitempty"`
+	AutoLeave     *bool `protobuf:"varint,5,opt,name=auto_leave,json=autoLeave" json:"auto_leave,omitempty"`
+	unknownFields []byte
 }
 
 func (x *ConfState) Reset() {
@@ -661,7 +670,8 @@ type ConfChange struct {
 	// NB: this is used only by etcd to thread through a unique identifier.
 	// Ideally it should really use the Context instead. No counterpart to
 	// this field exists in ConfChangeV2.
-	Id *uint64 `protobuf:"varint,1,opt,name=id" json:"id,omitempty"`
+	Id            *uint64 `protobuf:"varint,1,opt,name=id" json:"id,omitempty"`
+	unknownFields []byte
 }
 
 func (x *ConfChange) Reset() {
@@ -707,8 +717,9 @@ func (x *ConfChange) GetId() uint64 {
 }
 
 type ConfChangeSingle struct {
-	Type   *ConfChangeType `protobuf:"varint,1,opt,name=type,enum=raftpb.ConfChangeType" json:"type,omitempty"`
-	NodeId *uint64         `protobuf:"varint,2,opt,name=node_id,json=nodeId" json:"node_id,omitempty"`
+	Type          *ConfChangeType `protobuf:"varint,1,opt,name=type,enum=raftpb.ConfChangeType" json:"type,omitempty"`
+	NodeId        *uint64         `protobuf:"varint,2,opt,name=node_id,json=nodeId" json:"node_id,omitempty"`
+	unknownFields []byte
 }
 
 func (x *ConfChangeSingle) Reset() {
@@ -740,9 +751,10 @@ func (x *ConfChangeSingle) GetNodeId() uint64 {
 }
 
 type ConfChangeV2 struct {
-	Transition *ConfChangeTransition `protobuf:"varint,1,opt,name=transition,enum=raftpb.ConfChangeTransition" json:"transition,omitempty"`
-	Changes    []*ConfChangeSingle   `protobuf:"bytes,2,rep,name=changes" json:"changes,omitempty"`
-	Context    []byte                `protobuf:"bytes,3,opt,name=context" json:"context,omitempty"`
+	Transition    *ConfChangeTransition `protobuf:"varint,1,opt,name=transition,enum=raftpb.ConfChangeTransition" json:"transition,omitempty"`
+	Changes       []*ConfChangeSingle   `protobuf:"bytes,2,rep,name=changes" json:"changes,omitempty"`
+	Context       []byte                `protobuf:"bytes,3,opt,name=context" json:"context,omitempty"`
+	unknownFields []byte
 }
 
 func (x *ConfChangeV2) Reset() {

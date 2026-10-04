@@ -31,17 +31,20 @@ THE THREE DERIVATION MODES
 
   plainpb   raftpb/raft.pb.go: strip the protobuf runtime out of the generated
             file, keeping the WIRE TYPES DECLARED (structs, field numbers in
-            their struct tags, enums, getters) and turning every
-            runtime-touching method into a FAIL-CLOSED STUB.  Additionally
-            EMIT plain-Go deep-clone and structural-equality methods, derived
-            from the same parsed field lists (raftpb's own confstate.go needs
-            them; they carry a differential obligation — see the log).
+            their struct tags, enums, getters, the unknownFields store) and
+            turning every runtime-touching method into a FAIL-CLOSED STUB.
+            Additionally EMIT the route A codec (plain_wire.go,
+            plain_codec.go, plain_clone.go) from the same parsed field lists,
+            each function named after its protobuf-go twin, plus the FuncId
+            table tools/raftsubject/codec-funcids.tsv (D8).
 
   overlay   A hand-written replacement for an upstream file that cannot be
             mechanically stripped (it is hand-written Go that calls into the
-            protobuf runtime).  Two raftpb files use it; logger.go no longer
-            does (W4.2 retired the D-5 no-op overlay — the file is verbatim
-            plus the recorded D-12 initializer patch, per the Q2 ruling).
+            protobuf runtime).  NO file uses it since route A S1 (2026-10-04,
+            D7): raftpb/confchange.go is verbatim and raftpb/confstate.go is
+            verbatim plus the recorded D-3 patch, as logger.go has been since
+            W4.2 (the D-5 no-op overlay retired; verbatim plus D-12).  The
+            mode stays, fail-closed, for a future file a patch cannot reach.
             The upstream file's SHA-256 is PINNED here: when the
             pin moves and upstream changes, the derivation FAILS LOUD and the
             overlay must be revisited by hand.  That digest pin is the
@@ -99,32 +102,20 @@ NODE_KEEP = [
 # names one.
 NODE_DROP_IMPORTS = ["context"]
 
-# The protobuf-runtime functions the vendored tree calls.  `derive.py` emits a
-# subject-local `proto` package declaring exactly these, and REFUSES if the
-# tree reaches for one that is not here — so a raft rev that starts calling
-# `proto.Merge` cannot slip through.
-#
-# Since W4.1 (H-1 discharged, docs/raft-w41-log.md item 1) the four bodies are
-# REAL: type-switch dispatch over the nine plainpb message types into the
-# generated per-type codec (`raftpb/plain_codec.go` — AppendMessage /
-# SizeMessage / UnmarshalMessage, derived from the same parsed field lists as
-# CloneMessage).  A message type outside the nine still fails closed with an
-# explicit panic in the dispatch default.
-PROTO_FUNCS = {
-    "Clone": ("func Clone(m Message) Message", "Message"),
-    "Marshal": ("func Marshal(m Message) ([]byte, error)", "([]byte, error)"),
-    "Unmarshal": ("func Unmarshal(b []byte, m Message) error", "error"),
-    "Size": ("func Size(m Message) int", "int"),
-}
-PROTO_PATH = "google.golang.org/protobuf/proto"
+# PROTO_FUNCS / PROTO_PATH: see the proto stand-in section below (route A).
 
 # Upstream files -> (out path, mode).  Order is the emission order.
 VENDOR = [
     ("raftpb/raft.pb.go", "raftpb/raft.pb.go", "plainpb"),
     ("raftpb/alias.go", "raftpb/alias.go", "verbatim"),
     ("raftpb/util.go", "raftpb/util.go", "verbatim"),
-    ("raftpb/confstate.go", "raftpb/confstate.go", "overlay"),
-    ("raftpb/confchange.go", "raftpb/confchange.go", "overlay"),
+    # ROUTE A S1 (D7, Q2 ruled [USER] 2026-10-04): both former overlays
+    # retire. confchange.go is upstream VERBATIM (its protobuf import
+    # rewritten to the subject-local `proto`, JC-13 / the W2 overlay delta
+    # RETIRED); confstate.go is upstream text plus the recorded exact-text
+    # patch D-3 on its two fmt.Errorf lines (SUBJECT_PATCHES).
+    ("raftpb/confstate.go", "raftpb/confstate.go", "verbatim"),
+    ("raftpb/confchange.go", "raftpb/confchange.go", "verbatim"),
     ("quorum/quorum.go", "quorum/quorum.go", "verbatim"),
     ("quorum/majority.go", "quorum/majority.go", "verbatim"),
     ("quorum/joint.go", "quorum/joint.go", "verbatim"),
@@ -333,8 +324,48 @@ var (
 	raftLogger    = Logger(defaultLogger)
 )"""
 
+# ---- recorded subject patch D-3 (route A S1, D7 — the confstate overlay
+# RETIRED) ------------------------------------------------------------------
+#
+# ROUTE A slice S1 (docs/2026-10-04_route-a-protobuf-design.md D7; Q2 ruled
+# [USER] Mike 2026-10-04 «Approved», relayed: retire the overlay NOW):
+# upstream raftpb/confstate.go is vendored as TEXT — its proto.Clone /
+# proto.Equal calls go to the subject-local proto package like every other
+# call site — and the ONE residue is D-3's: the two `fmt.Errorf` lines,
+# because `fmt` does not lower. Each becomes `errors.New` over the
+# format string's fixed text (fmt.Errorf without %w IS errors.New(s) —
+# go1.26.5 src/fmt/errors.go — so the error's dynamic type is upstream's;
+# its TEXT loses the `(left=…, right=…)` booleans and the four `%+#v`
+# dumps). The VERDICT (nil vs non-nil) is unchanged. D-3 is a PERMANENT
+# stated inexactness ([USER] 2026-10-04, Q4): upstream's `%+#v` prints the
+# runtime's `state` field (a *impl.MessageInfo pointer), which no route can
+# reproduce. Keyed to upstream's EXACT text; fails closed on drift.
+CONFSTATE_NIL_UPSTREAM = (
+    '\t\treturn fmt.Errorf("cannot compare ConfState: nil input (left=%v, right=%v)", cs == nil, cs2 == nil)\n')
+CONFSTATE_NIL_PATCHED = (
+    '\t\t// GOLEAN SUBJECT DELTA D-3 (route A D7): fmt.Errorf -> errors.New, the\n'
+    '\t\t// (left=%v, right=%v) booleans dropped; the verdict is upstream\'s.\n'
+    '\t\treturn errors.New("cannot compare ConfState: nil input")\n')
+CONFSTATE_NEQ_UPSTREAM = (
+    '\t\treturn fmt.Errorf("ConfStates not equivalent after sorting:\\n%+#v\\n%+#v\\nInputs were:\\n%+#v\\n%+#v", cs1v, cs2v, cs, cs2)\n')
+CONFSTATE_NEQ_PATCHED = (
+    '\t\t// GOLEAN SUBJECT DELTA D-3 (route A D7): fmt.Errorf -> errors.New, the\n'
+    '\t\t// four %+#v dumps dropped (permanent: the dump prints the runtime\'s\n'
+    '\t\t// state pointer); the verdict is upstream\'s.\n'
+    '\t\treturn errors.New("ConfStates not equivalent after sorting")\n')
+CONFSTATE_IMPORT_UPSTREAM = '\t"fmt"\n\t"slices"\n'
+CONFSTATE_IMPORT_PATCHED = '\t"errors"\n\t"slices"\n'
+
 # file (by OUT path) -> ordered (exact-once old, new) pairs + imports to drop.
 SUBJECT_PATCHES = {
+    "raftpb/confstate.go": {
+        "swaps": [(CONFSTATE_NIL_UPSTREAM, CONFSTATE_NIL_PATCHED),
+                  (CONFSTATE_NEQ_UPSTREAM, CONFSTATE_NEQ_PATCHED),
+                  (CONFSTATE_IMPORT_UPSTREAM, CONFSTATE_IMPORT_PATCHED)],
+        # The fmt import is replaced by the swap above; the residue check
+        # proves no `fmt.` reference survives in the code.
+        "residual_free": ["fmt"],
+    },
     "raft/raft.go": {
         "swaps": [(INTN_UPSTREAM, INTN_PATCHED)],
         # D-11 re-key (2026-09-30): crypto/rand -> math/rand keeps the `rand`
@@ -377,6 +408,10 @@ def apply_subject_patches(outp, text):
     # The residual-reference check ranges over CODE, not comments
     # (upstream's own doc comment above lockedRand says "rand.Rand").
     code = "\n".join(re.sub(r"//.*$", "", ln) for ln in text.split("\n"))
+    for pkg in spec.get("residual_free", []):
+        if re.search(r"\b%s\." % re.escape(pkg), code):
+            refuse("subject patch for %s: the code still references %s. after "
+                   "the patch" % (outp, pkg))
     for pkg in spec.get("drop_imports", []):
         text, n = re.subn(r'^\t(?:\w+ )?"%s"\n' % re.escape(pkg), "", text,
                           count=1, flags=re.M)
@@ -479,6 +514,7 @@ class Msg:
     def __init__(self, name):
         self.name = name
         self.fields = []  # (name, gotype, tag)
+        self.has_unknown = False  # the kept unknownFields []byte (D3)
 
 
 def parse_struct(decl):
@@ -497,6 +533,17 @@ def parse_struct(decl):
         if not fm:
             refuse("unrecognised struct field in %s: %r" % (msg.name, ln))
         fname, ftype, ftag = fm.group(1), fm.group(2), (fm.group(3) or "")
+        if ftype == "protoimpl.UnknownFields":
+            # ROUTE A D3 (D-1 NARROWED): the unknown-field store is KEPT,
+            # under upstream's field name, at its own type —
+            # protoimpl.UnknownFields = impl.UnknownFields = []byte
+            # (runtime/protoimpl/impl.go:38, internal/impl/message.go:114-
+            # 115). It is not a protobuf field, so it joins no field list.
+            if fname != "unknownFields" or msg.has_unknown:
+                refuse("unexpected unknown-field store in %s: %r" % (msg.name, ln))
+            msg.has_unknown = True
+            kept.append("\tunknownFields []byte")
+            continue
         if ftype in PROTOIMPL_FIELD_TYPES:
             continue  # T3: strip the protobuf runtime's private fields
         if "protoimpl" in ftype or "protoreflect" in ftype:
@@ -505,6 +552,10 @@ def parse_struct(decl):
         msg.fields.append((fname, ftype, ftag.strip()))
         kept.append(ln)
     kept.append("}")
+    if not msg.has_unknown:
+        refuse("message %s has no protoimpl.UnknownFields store — the route A "
+               "codec retains unknown fields (D3); re-read the generated "
+               "struct" % msg.name)
     # Re-gofmt the kept field block (dropping the state field changes the
     # alignment column); gofmt runs over the whole file at the end.
     return msg, "\n".join(kept)
@@ -765,278 +816,84 @@ PLAINPB_HEADER = """// Code DERIVED from etcd-io/raft raftpb/raft.pb.go by
 // Fail-closed stubs: %d (message String, Descriptor, EnumDescriptor,
 // UnmarshalJSON). Enum String is REAL (W4.3 item 1): the _name map plus
 // the decimal fallback, mirroring the runtime's EnumStringOf.
-// Dropped: the file-descriptor machinery and ProtoReflect (see the log's
-// subject-delta ledger for the itemised list and the reasoning).
+// Dropped: the file-descriptor machinery and ProtoReflect, and the
+// runtime's private `state` and `sizeCache` fields (see the log's
+// subject-delta ledger for the itemised list and the reasoning). KEPT
+// since route A (D3, D-1 narrowed): `unknownFields []byte` under
+// upstream's name and type (protoimpl.UnknownFields = []byte).
 //
-// WIRE CODEC (W4.1, H-1 discharged — docs/raft-w41-log.md item 1): the
-// per-type Marshal/Unmarshal/Size live in the generated plain_codec.go
-// (AppendMessage / SizeMessage / UnmarshalMessage), derived from the field
-// numbers and wire types pinned in the struct tags below. The byte-format
-// contract is protobuf wire compatibility for exactly these nine messages;
-// the differential obligation is difftest.py section 7 (vs the real
-// protobuf runtime) plus the in-sandbox codeccheck.py battery."""
+// WIRE CODEC — ROUTE A (docs/2026-10-04_route-a-protobuf-design.md): the
+// generated plain_wire.go / plain_codec.go / plain_clone.go, decomposed
+// after protobuf-go v1.36.11's protowire / internal/impl functions (each
+// names its twin by file:line), dispatched from the subject-local proto
+// package through an interface. The differential obligation is
+// difftest.py sections 7-8 (vs the real protobuf runtime, exact) plus the
+// codeccheck.py battery under both oracles."""
 
 
-# ------------------------------------------- generated clone / equality ----
-
-CLONE_HEADER = """// Code GENERATED by tools/raftsubject/derive.py from the message field
-// lists parsed out of raft.pb.go. DO NOT EDIT — edit the derivation.
-//
-// Plain-Go replacements for the two protobuf-runtime functions raft calls on
-// its NORMAL paths (so marshal-avoidance does not remove them; scoping §7
-// layer C names both as residue):
-//
-//   proto.Clone  -> x.CloneMessage()   deep copy
-//   proto.Equal  -> x.EqualMessage(y)  structural equality
-//
-// proto2 presence semantics, which is what these must reproduce: an optional
-// scalar/bytes field is SET iff its pointer (or, for bytes, its slice) is
-// non-nil, and unset != set-to-zero. Repeated fields have no presence, so
-// nil and empty are equal. These carry a DIFFERENTIAL OBLIGATION against
-// upstream proto.Clone/proto.Equal — see docs/raft-w2-log.md.
-
-package raftpb
-"""
-
-
-def gen_clone(msgs, enums):
-    order = list(msgs.keys())
-    out = [CLONE_HEADER]
-    for name in order:
-        msg = msgs[name]
-        c = ["// CloneMessage returns a deep copy of x. A nil receiver clones to nil,",
-             "// matching proto.Clone's treatment of a nil message.",
-             "func (x *%s) CloneMessage() *%s {" % (name, name),
-             "\tif x == nil {",
-             "\t\treturn nil",
-             "\t}",
-             "\tout := &%s{}" % name]
-        e = ["// EqualMessage reports whether x and y carry the same fields with the",
-             "// same presence. Two nil messages are equal; nil and non-nil are not.",
-             "func (x *%s) EqualMessage(y *%s) bool {" % (name, name),
-             "\tif x == nil || y == nil {",
-             "\t\treturn x == nil && y == nil",
-             "\t}"]
-        for fname, ftype, _tag in msg.fields:
-            base = ftype.lstrip("*[]")
-            if ftype.startswith("*") and (base in enums or base in ("uint64", "bool")):
-                # optional scalar / enum: presence-carrying pointer
-                c += ["\tif x.%s != nil {" % fname,
-                      "\t\tv := *x.%s" % fname,
-                      "\t\tout.%s = &v" % fname,
-                      "\t}"]
-                e += ["\tif (x.%s == nil) != (y.%s == nil) {" % (fname, fname),
-                      "\t\treturn false",
-                      "\t}",
-                      "\tif x.%s != nil && *x.%s != *y.%s {" % (fname, fname, fname),
-                      "\t\treturn false",
-                      "\t}"]
-            elif ftype.startswith("*") and base in msgs:
-                c += ["\tout.%s = x.%s.CloneMessage()" % (fname, fname)]
-                e += ["\tif (x.%s == nil) != (y.%s == nil) {" % (fname, fname),
-                      "\t\treturn false",
-                      "\t}",
-                      "\tif x.%s != nil && !x.%s.EqualMessage(y.%s) {" % (fname, fname, fname),
-                      "\t\treturn false",
-                      "\t}"]
-            elif ftype == "[]byte":
-                # optional bytes: nil is unset, empty-non-nil is set-to-empty
-                c += ["\tif x.%s != nil {" % fname,
-                      "\t\tout.%s = make([]byte, len(x.%s))" % (fname, fname),
-                      "\t\t_ = copy(out.%s, x.%s)" % (fname, fname),
-                      "\t}"]
-                e += ["\tif (x.%s == nil) != (y.%s == nil) {" % (fname, fname),
-                      "\t\treturn false",
-                      "\t}",
-                      "\tif len(x.%s) != len(y.%s) {" % (fname, fname),
-                      "\t\treturn false",
-                      "\t}",
-                      "\tfor i := range x.%s {" % fname,
-                      "\t\tif x.%s[i] != y.%s[i] {" % (fname, fname),
-                      "\t\t\treturn false",
-                      "\t\t}",
-                      "\t}"]
-            elif ftype.startswith("[]*") and base in msgs:
-                # len>0, not != nil: a repeated field has NO presence, and
-                # proto.Clone (which ranges over POPULATED fields) leaves an
-                # empty one unset — so an empty-non-nil slice clones to nil.
-                # Probed and pinned by tools/raftsubject/difftest.py section 6.
-                c += ["\tif len(x.%s) > 0 {" % fname,
-                      "\t\tout.%s = make([]*%s, len(x.%s))" % (fname, base, fname),
-                      "\t\tfor i := range x.%s {" % fname,
-                      "\t\t\tout.%s[i] = x.%s[i].CloneMessage()" % (fname, fname),
-                      "\t\t}",
-                      "\t}"]
-                e += ["\tif len(x.%s) != len(y.%s) {" % (fname, fname),
-                      "\t\treturn false",
-                      "\t}",
-                      "\tfor i := range x.%s {" % fname,
-                      "\t\tif !x.%s[i].EqualMessage(y.%s[i]) {" % (fname, fname),
-                      "\t\t\treturn false",
-                      "\t\t}",
-                      "\t}"]
-            elif ftype.startswith("[]") and base in ("uint64",):
-                # len>0: see the repeated-message arm above. (Contrast the
-                # []byte arm, which uses != nil — proto2 optional bytes DO
-                # carry presence, so set-to-empty is distinct from unset.)
-                c += ["\tif len(x.%s) > 0 {" % fname,
-                      "\t\tout.%s = make([]%s, len(x.%s))" % (fname, base, fname),
-                      "\t\t_ = copy(out.%s, x.%s)" % (fname, fname),
-                      "\t}"]
-                e += ["\tif len(x.%s) != len(y.%s) {" % (fname, fname),
-                      "\t\treturn false",
-                      "\t}",
-                      "\tfor i := range x.%s {" % fname,
-                      "\t\tif x.%s[i] != y.%s[i] {" % (fname, fname),
-                      "\t\t\treturn false",
-                      "\t\t}",
-                      "\t}"]
-            else:
-                refuse("no clone/equal rule for field %s.%s of type %s"
-                       % (name, fname, ftype))
-        c += ["\treturn out", "}"]
-        e += ["\treturn true", "}"]
-        out.append("\n".join(c))
-        out.append("\n".join(e))
-    return "\n\n".join(out) + "\n"
-
-
-# ----------------------------------------------- generated wire codec ------
+# ------------------------------------- generated codec: route A, shape A1 ----
 #
-# W4.1 (H-1): a plainpb codec — per-type SizeMessage / AppendMessage /
-# UnmarshalMessage — generated from the SAME parsed field lists as the
-# clone/equality code, cross-checked against the struct tags protoc-gen-go
-# pinned (wire type + field number + opt/rep mode).  The fidelity bar is BYTE
-# COMPATIBILITY with the protobuf wire format for exactly these nine message
-# types; the arguments and their validation live in docs/raft-w41-log.md
-# item 1 (JC-14/JC-15).  Anything the rules below do not recognise REFUSES.
+# ROUTE A slice S1 (design docs/2026-10-04_route-a-protobuf-design.md, D1-D8,
+# ratified [USER] Mike 2026-10-04 «Approved», relayed): a GENERATED,
+# reflection-free Go codec decomposed function-for-function after
+# protobuf-go v1.36.11's own `protowire` / `internal/impl` entry points, so
+# every generated function names its upstream twin by file:line (the doc
+# comment, and the FuncId table D8 writes to tools/raftsubject/
+# codec-funcids.tsv).  Three files, all derived from the field lists parsed
+# out of raft.pb.go and cross-checked against the struct tags:
+#
+#   raftpb/plain_wire.go    the protowire twins + the impl-level shared
+#                           helpers and error values (schema-independent)
+#   raftpb/plain_codec.go   per type: IsNilMessage / ResetMessage /
+#                           SizeMessage / MarshalAppend /
+#                           UnmarshalMessage(b, depth) / ProtoClone /
+#                           ProtoEqual
+#   raftpb/plain_clone.go   per type: CloneMessage (New + mergePointer) /
+#                           mergeMessage / EqualMessage (equalMessage)
+#
+# and the subject-local `proto` package (proto/proto.go) dispatches through
+# an INTERFACE (D2) — it no longer imports raftpb; raftpb imports proto, as
+# upstream's generated code imports protoimpl.  Anything the rules below do
+# not recognise REFUSES.
+#
+# D6, the generated-code grammar: plain `for` loops (three-clause or a
+# single condition — never `range`, never `for {}`), no closures, no
+# `goto`, no `fmt`, no reflection; recursion is bounded by protobuf-go's own
+# depth counters (D4).  The field-number dispatch in each UnmarshalMessage
+# is the ONE place a tagless `switch` is emitted — Q5 is PENDING with the
+# logic team ([USER] relaying), so the form is ONE constant here:
+# DISPATCH_FORM = "tagless-switch" | "if-chain"; flipping it regenerates
+# every site (listed in codec-funcids.tsv, column `dispatch`).
 
-CODEC_HEADER = """// Code GENERATED by tools/raftsubject/derive.py from the message field
-// lists parsed out of raft.pb.go, cross-checked against the struct tags
-// (wire type, field number, opt/rep mode). DO NOT EDIT — edit the
-// derivation.
-//
-// The plainpb WIRE CODEC (W4.1, H-1 — docs/raft-w41-log.md item 1):
-//
-//   (x *T) SizeMessage() int           == len(x.AppendMessage(nil))
-//   (x *T) AppendMessage(b) []byte     appends the protobuf wire encoding
-//   (x *T) UnmarshalMessage(b) error   parses and MERGES into x
-//
-// Encoding contract (JC-15): fields in FIELD-NUMBER order; proto2
-// presence (a set-but-zero optional scalar and a present-but-empty bytes
-// field are both emitted); repeated varints UNPACKED (the pinned proto2
-// default).  Decoding contract (JC-14): merge semantics (proto.Unmarshal
-// = Reset + merge, done in the proto package dispatch); scalars last-one-
-// wins with a fresh cell; embedded messages merge; repeated fields
-// append; PACKED repeated varints are accepted although never emitted;
-// unknown fields and wrong-wire-type known fields are SKIPPED (delta vs
-// the runtime's unknown-field preservation — subject delta U-3); wire
-// types 3/4 (groups — absent from all nine schemas; the runtime SKIPS an
-// unknown group where this codec rejects it — subject delta U-2) and
-// malformed input return an error.  Varint bounds are protobuf-go's
-// ConsumeVarint's (<= 10 bytes, 10th byte <= 1).  U-1/U-2/U-3 are the
-// 2026-09-30 ledger continuation in docs/raft-w42-log.md, resolved by
-// protobuf route A (docs/2026-09-30_protobuf-route-a.md).
-//
-// The differential obligation: difftest.py section 7 (byte equality vs
-// the real protobuf runtime — OWED where the module cache is denied, see
-// the log) and codeccheck.py (round-trip, Size = len∘Marshal, and
-// hand-verified golden byte sequences, under BOTH go run and the
-// machine).
+PB_VERSION = "protobuf-go v1.36.11"
 
-package raftpb
+DISPATCH_FORM = "tagless-switch"
+DISPATCH_FORMS = ("tagless-switch", "if-chain")
 
-import "errors"
+FUNCIDS_PATH = "tools/raftsubject/codec-funcids.tsv"
 
-// errPlainpbMalformed is the codec's single decode error. raft DOES
-// observe an Unmarshal error's VALUE: stepLeader's MsgProp arm panics
-// with it (raft.go:1334/1340 in this tree, upstream raft.go:1315/1321),
-// so the error's text is the abort line — under protobuf-go
-// "proto: cannot parse invalid wire-format data" (the one prefixError
-// value impl.errDecode; its prefix spacing is U+00A0 or U+0020 per
-// BINARY, internal/detrand), here "plainpb: malformed wire input". That
-// difference is subject delta U-1 (docs/raft-w42-log.md, the 2026-09-30
-// ledger continuation), resolved by protobuf route A; until then the
-// single sentinel names the codec so a transcript shows which codec
-// answered. The earlier comment here — «raft observes only the nil-ness
-// of an Unmarshal error» — was FALSE; corrected 2026-09-30 on the
-// raft-proofs team's U-1 (docs/2026-09-30_note-from-raft-proofs.md).
-var errPlainpbMalformed = errors.New("plainpb: malformed wire input")
-
-func plainpbSizeVarint(v uint64) int {
-	n := 1
-	for v >= 0x80 {
-		v >>= 7
-		n++
-	}
-	return n
+# D8: the SHA-256 of every GENERATED file, pinned.  `--check` recomputes
+# them from a fresh derivation and refuses a mismatch, so an edit to the
+# generator that changes emitted bytes is visible in review as a digest move
+# (paste the table printed by --print-generated-digests).  The generator is
+# deterministic (field-number order; no map iteration feeds the output).
+GENERATED_DIGESTS = {
+    "raftpb/plain_wire.go": "33bcf2bad2d9166f61a4bd8053f0a0d2c9c15d5240bc52cca9aa1bd2c7e57867",
+    "raftpb/plain_codec.go": "0d5dd5367b4cff998f6c168f4a866f806efa97e98fa2a78c906d78a1f2967fd8",
+    "raftpb/plain_clone.go": "9bbb04defd0cda2a24e276015a41dab9b0d838bfb384dd9cc9597d7d6c2351ec",
+    "proto/proto.go": "8542e21dc8bffe6e4f559bfaf9cf7c1fb1ecebec8a13e5334fd8055e93ae2fe1",
 }
 
-func plainpbAppendVarint(b []byte, v uint64) []byte {
-	for v >= 0x80 {
-		b = append(b, byte(v)|0x80)
-		v >>= 7
-	}
-	return append(b, byte(v))
-}
 
-// plainpbConsumeVarint parses a base-128 varint at b[i:], returning the
-// value and the index just past it. ok=false on truncation or 64-bit
-// overflow (protobuf-go's bounds: at most 10 bytes, the 10th <= 1;
-// non-canonical over-long encodings of small values are accepted, as the
-// wire format requires).
-func plainpbConsumeVarint(b []byte, i int) (uint64, int, bool) {
-	var v uint64
-	for k := 0; k < 10; k++ {
-		if i+k >= len(b) {
-			return 0, 0, false
-		}
-		c := b[i+k]
-		if k == 9 && c > 1 {
-			return 0, 0, false
-		}
-		v |= uint64(c&0x7f) << (7 * k)
-		if c < 0x80 {
-			return v, i + k + 1, true
-		}
-	}
-	return 0, 0, false
-}
-
-// plainpbSkipField skips one unknown (or wrong-wire-type) field body.
-// Wire types 3/4 (groups) fail here. That is subject delta U-2: no
-// group exists in any plainpb schema, but the protobuf wire format makes
-// an unknown group a VALID unknown field of any message, and protobuf-go
-// (protowire.ConsumeFieldValue) skips it — nested, end-tag-matched,
-// depth-limited — where this codec rejects it. Route A restores the skip.
-func plainpbSkipField(b []byte, i int, wire uint64) (int, bool) {
-	switch wire {
-	case 0:
-		_, j, ok := plainpbConsumeVarint(b, i)
-		if !ok {
-			return 0, false
-		}
-		return j, true
-	case 1:
-		if len(b)-i < 8 {
-			return 0, false
-		}
-		return i + 8, true
-	case 2:
-		n, j, ok := plainpbConsumeVarint(b, i)
-		if !ok || uint64(len(b)-j) < n {
-			return 0, false
-		}
-		return j + int(n), true
-	case 5:
-		if len(b)-i < 4 {
-			return 0, false
-		}
-		return i + 4, true
-	}
-	return 0, false
-}
-"""
+def tag_bytes(num, wt):
+    """protowire.EncodeTag + the varint width (= f.tagsize)."""
+    tag = num << 3 | wt
+    n = 1
+    v = tag
+    while v >= 0x80:
+        v >>= 7
+        n += 1
+    return tag, n
 
 
 def parse_field_tag(msg_name, fname, ftag):
@@ -1085,242 +942,1236 @@ def classify_field(msgs, enums, msg_name, fname, ftype, ftag):
         refuse("field %s.%s: struct tag says (%s,%s) but the Go type %s "
                "implies (%s,%s) — the schema moved under the codec rules"
                % (msg_name, fname, wt, mode, ftype, want[0], want[1]))
+    if not (1 <= num <= (1 << 29) - 1):
+        refuse("field %s.%s: field number %d outside protowire's valid range"
+               % (msg_name, fname, num))
     return kind, num
 
 
-def gen_codec(msgs, enums):
+def message_fields(msgs, enums, name):
+    """The message's fields as (num, fname, ftype, kind), FIELD-NUMBER order
+    (impl/codec_message.go:158-160 orderedCoderFields)."""
+    fields = []
+    for fname, ftype, ftag in msgs[name].fields:
+        kind, num = classify_field(msgs, enums, name, fname, ftype, ftag)
+        fields.append((num, fname, ftype, kind))
+    fields.sort()
+    nums = [f[0] for f in fields]
+    if len(set(nums)) != len(nums):
+        refuse("duplicate field numbers in %s: %s" % (name, nums))
+    return fields
+
+
+# ---- plain_wire.go: schema-independent ------------------------------------
+#
+# Every entry: (wire key, upstream twin, footprint).  The footprint column is
+# the logic team's (e): what the function reads, writes, allocates, and what
+# bounds its recursion.  Kept beside the text it describes so the two cannot
+# drift apart silently (the TSV is regenerated from this table + the
+# per-type records below, and --check compares it).
+WIRE_FUNCS = [
+    ("const raftpb.{varintType..endGroupType}", "encoding/protowire/wire.go:39-46 (Type constants)", "constant"),
+    ("const raftpb.{minValidNumber,maxValidNumber,defaultRecursionLimit}", "encoding/protowire/wire.go:24-29", "constant"),
+    ("const raftpb.{errCodeTruncated..errCodeRecursionDepth}", "encoding/protowire/wire.go:48-56 (negative error codes)", "constant"),
+    ("var raftpb.emptyBuf", "internal/impl/codec_gen.go:5703 (proto/decode_gen.go:603 in the proto twin)", "package state, zero-length, never written"),
+    ("var raftpb.errDecode", "internal/impl/decode.go:19", "package state, set once at init (proto.NewError)"),
+    ("var raftpb.errRecursionDepth", "internal/impl/decode.go:20", "package state, set once at init (proto.NewError)"),
+    ("var raftpb.errUnknown", "internal/impl/decode.go:101", "package state, set once at init (errors.New); never returned to a caller of proto"),
+    ("func raftpb.consumeVarint", "encoding/protowire/wire.go:267-367 ConsumeVarint", "pure: reads b[0:10]; loop bounded by 10"),
+    ("func raftpb.sizeVarint", "encoding/protowire/wire.go:371-399 SizeVarint", "pure; loop bounded by 10"),
+    ("func raftpb.appendVarint", "encoding/protowire/wire.go:185-263 AppendVarint", "allocates (append to b); loop bounded by 10"),
+    ("func raftpb.encodeTag", "encoding/protowire/wire.go:534-536 EncodeTag", "pure"),
+    ("func raftpb.decodeTag", "encoding/protowire/wire.go:525-531 DecodeTag", "pure"),
+    ("func raftpb.appendTag", "encoding/protowire/wire.go:162-164 AppendTag", "allocates (append to b)"),
+    ("func raftpb.consumeTag", "encoding/protowire/wire.go:168-178 ConsumeTag", "pure: reads b"),
+    ("func raftpb.encodeBool", "encoding/protowire/wire.go:566-571 EncodeBool", "pure"),
+    ("func raftpb.decodeBool", "encoding/protowire/wire.go:558-560 DecodeBool", "pure"),
+    ("func raftpb.consumeFixed32", "encoding/protowire/wire.go:412-418 ConsumeFixed32 (length only; the value is never used by a skip)", "pure: reads len(b)"),
+    ("func raftpb.consumeFixed64", "encoding/protowire/wire.go:440-446 ConsumeFixed64 (length only; the value is never used by a skip)", "pure: reads len(b)"),
+    ("func raftpb.consumeBytes", "encoding/protowire/wire.go:460-469 ConsumeBytes", "pure: reads b; result aliases b"),
+    ("func raftpb.appendBytes", "encoding/protowire/wire.go:454-456 AppendBytes", "allocates (append to b); reads v"),
+    ("func raftpb.sizeBytes", "encoding/protowire/wire.go:473-475 SizeBytes", "pure"),
+    ("func raftpb.consumeFieldValue", "encoding/protowire/wire.go:112-114 ConsumeFieldValue", "pure: reads b; recursion via consumeFieldValueD"),
+    ("func raftpb.consumeFieldValueD", "encoding/protowire/wire.go:116-160 consumeFieldValueD", "pure: reads b; recursion bounded by depth (defaultRecursionLimit, -1 per nested group); loop consumes >= 1 byte per iteration"),
+    ("func raftpb.consumeField", "encoding/protowire/wire.go:94-105 ConsumeField", "pure: reads b"),
+    ("func raftpb.bytesEqual", "go1.26.5 bytes.Equal (src/bytes/bytes.go) — as called by impl/equal.go:197", "pure: reads a, b"),
+    ("func raftpb.unknownFieldRecords", "internal/impl/equal.go:205-209 (the per-field-number accumulation mx[fnum] = append(mx[fnum], x[:n]...), map-free)", "allocates (the concatenation); reads x"),
+    ("func raftpb.equalUnknown", "internal/impl/equal.go:193-224 equalUnknown", "allocates (per-number concatenations); reads x, y"),
+    ("func raftpb.consumeVarintValue", "internal/impl/codec_gen.go:2762-2780 (the shared head of consumeUint64Ptr; = :108-124 consumeBoolPtr, :687-703 consumeInt32Ptr — coderEnumPtr = coderInt32Ptr, codec_unsafe.go:12)", "pure: reads b"),
+    ("func raftpb.consumeBytesValue", "internal/impl/codec_gen.go:5410-5417 (the shared head of consumeBytes; = codec_field.go:175-182 consumeMessageInfo, :438-445 consumeMessageSliceInfo)", "pure: reads b; result aliases b"),
+    ("func raftpb.consumePackedUint64", "internal/impl/codec_gen.go:2818-2850 (the packed branch of consumeUint64Slice)", "allocates (append to s); reads b; loop consumes >= 1 byte per iteration"),
+]
+
+
+WIRE_GO = '''// Code GENERATED by tools/raftsubject/derive.py. DO NOT EDIT — edit the
+// derivation.
+//
+// ROUTE A (docs/2026-10-04_route-a-protobuf-design.md, D1): the protowire
+// twins and the impl-level shared helpers of the plainpb codec, each named
+// after its %(pb)s twin by file:line (paths relative to the
+// module root google.golang.org/protobuf@v1.36.11). The FuncId table with
+// the footprint of every function here is tools/raftsubject/codec-funcids.tsv.
+//
+// Plain Go: no reflection, no unsafe, no fmt, no closures, no `range`.
+// Recursion (the group skipper) is bounded by protowire's own depth counter.
+
+package raftpb
+
+import (
+	"errors"
+
+	"proto"
+)
+
+// protowire.Type — encoding/protowire/wire.go:39-46.
+const (
+	varintType     = 0
+	fixed64Type    = 1
+	bytesType      = 2
+	startGroupType = 3
+	endGroupType   = 4
+	fixed32Type    = 5
+)
+
+// encoding/protowire/wire.go:24-29.
+const (
+	minValidNumber        = 1
+	maxValidNumber        = 1<<29 - 1
+	defaultRecursionLimit = 10000
+)
+
+// The negative error codes — encoding/protowire/wire.go:48-56. The impl
+// layer collapses every one of them to errDecode (impl/decode.go:19).
+const (
+	errCodeTruncated      = -1
+	errCodeFieldNumber    = -2
+	errCodeOverflow       = -3
+	errCodeReserved       = -4
+	errCodeEndGroup       = -5
+	errCodeRecursionDepth = -6
+)
+
+// emptyBuf — internal/impl/codec_gen.go:5703: appending to emptyBuf[:]
+// yields a NON-nil slice even for zero bytes (proto2 bytes presence).
+var emptyBuf [0]byte
+
+// errDecode — internal/impl/decode.go:19: the ONE value every malformation
+// returns (a *prefixError: «proto: cannot parse invalid wire-format data»,
+// the prefix spelled per the proto package's init pick).
+var errDecode = proto.NewError("cannot parse invalid wire-format data")
+
+// errRecursionDepth — internal/impl/decode.go:20 (D4: reachable for a
+// raftpb client through Message.responses nested past 10000 messages).
+var errRecursionDepth = proto.NewError("exceeded maximum recursion depth")
+
+// errUnknown — internal/impl/decode.go:101: the in-band sentinel a field
+// consumer returns for a WRONG wire type; the decode loop turns it into
+// unknown-field retention. Never returned to a caller of proto.Unmarshal.
+var errUnknown = errors.New("unknown")
+
+// consumeVarint — encoding/protowire/wire.go:267-367 ConsumeVarint (the
+// unrolled ten steps as one bounded loop): at most 10 bytes, the 10th < 2
+// (errCodeOverflow), errCodeTruncated when b ends first.
+func consumeVarint(b []byte) (uint64, int) {
+	var v uint64
+	for i := 0; i < 10; i++ {
+		if len(b) <= i {
+			return 0, errCodeTruncated
+		}
+		y := uint64(b[i])
+		if i == 9 {
+			v += y << 63
+			if y < 2 {
+				return v, 10
+			}
+			return 0, errCodeOverflow
+		}
+		v += y << (7 * uint(i))
+		if y < 0x80 {
+			return v, i + 1
+		}
+		v -= uint64(0x80) << (7 * uint(i))
+	}
+	return 0, errCodeOverflow
+}
+
+// sizeVarint — encoding/protowire/wire.go:371-399 SizeVarint: 1..10.
+func sizeVarint(v uint64) int {
+	n := 1
+	for i := 0; i < 9; i++ {
+		if v < 0x80 {
+			break
+		}
+		v >>= 7
+		n++
+	}
+	return n
+}
+
+// appendVarint — encoding/protowire/wire.go:185-263 AppendVarint.
+func appendVarint(b []byte, v uint64) []byte {
+	for i := 0; i < 9; i++ {
+		if v < 0x80 {
+			break
+		}
+		b = append(b, byte(v&0x7f|0x80))
+		v >>= 7
+	}
+	return append(b, byte(v))
+}
+
+// encodeTag — encoding/protowire/wire.go:534-536 EncodeTag.
+func encodeTag(num int32, typ int) uint64 {
+	return uint64(num)<<3 | uint64(typ&7)
+}
+
+// decodeTag — encoding/protowire/wire.go:525-531 DecodeTag: a field number
+// above MaxInt32 decodes to -1.
+func decodeTag(x uint64) (int32, int) {
+	if x>>3 > 0x7fffffff {
+		return -1, 0
+	}
+	return int32(x >> 3), int(x & 7)
+}
+
+// appendTag — encoding/protowire/wire.go:162-164 AppendTag (the CANONICAL
+// re-encoding: a non-minimal tag on the wire is retained minimal).
+func appendTag(b []byte, num int32, typ int) []byte {
+	return appendVarint(b, encodeTag(num, typ))
+}
+
+// consumeTag — encoding/protowire/wire.go:168-178 ConsumeTag: refuses only
+// num < 1 — so INSIDE a skipped group a field number in [2^29, 2^31) is
+// accepted, where the message loop (impl/decode.go:149-155) refuses it.
+func consumeTag(b []byte) (int32, int, int) {
+	v, n := consumeVarint(b)
+	if n < 0 {
+		return 0, 0, n
+	}
+	num, typ := decodeTag(v)
+	if num < minValidNumber {
+		return 0, 0, errCodeFieldNumber
+	}
+	return num, typ, n
+}
+
+// encodeBool — encoding/protowire/wire.go:566-571 EncodeBool.
+func encodeBool(x bool) uint64 {
+	if x {
+		return 1
+	}
+	return 0
+}
+
+// decodeBool — encoding/protowire/wire.go:558-560 DecodeBool.
+func decodeBool(x uint64) bool {
+	return x != 0
+}
+
+// consumeFixed32 — encoding/protowire/wire.go:412-418 ConsumeFixed32
+// (the length half; a skip never reads the value).
+func consumeFixed32(b []byte) int {
+	if len(b) < 4 {
+		return errCodeTruncated
+	}
+	return 4
+}
+
+// consumeFixed64 — encoding/protowire/wire.go:440-446 ConsumeFixed64
+// (the length half; a skip never reads the value).
+func consumeFixed64(b []byte) int {
+	if len(b) < 8 {
+		return errCodeTruncated
+	}
+	return 8
+}
+
+// consumeBytes — encoding/protowire/wire.go:460-469 ConsumeBytes: the
+// length-prefixed value, ALIASING b (callers copy where upstream copies).
+func consumeBytes(b []byte) ([]byte, int) {
+	m, n := consumeVarint(b)
+	if n < 0 {
+		return nil, n
+	}
+	if m > uint64(len(b)-n) {
+		return nil, errCodeTruncated
+	}
+	return b[n : n+int(m)], n + int(m)
+}
+
+// appendBytes — encoding/protowire/wire.go:454-456 AppendBytes.
+func appendBytes(b []byte, v []byte) []byte {
+	b = appendVarint(b, uint64(len(v)))
+	return append(b, v...)
+}
+
+// sizeBytes — encoding/protowire/wire.go:473-475 SizeBytes.
+func sizeBytes(n int) int {
+	return sizeVarint(uint64(n)) + n
+}
+
+// consumeFieldValue — encoding/protowire/wire.go:112-114 ConsumeFieldValue.
+func consumeFieldValue(num int32, typ int, b []byte) int {
+	return consumeFieldValueD(num, typ, b, defaultRecursionLimit)
+}
+
+// consumeFieldValueD — encoding/protowire/wire.go:116-160: wire types
+// 0/1/2/5 by size; 3 skips tag/value pairs recursively (depth-1 per level,
+// errCodeRecursionDepth below 0) up to the matching end tag
+// (errCodeEndGroup on a mismatch); 4 alone is errCodeEndGroup; 6/7 are
+// errCodeReserved. Upstream's `for {}` is the `for len(b) > 0` loop here,
+// with the empty-input exit made explicit: ConsumeTag on empty input is
+// errCodeTruncated, exactly the value returned after the loop.
+func consumeFieldValueD(num int32, typ int, b []byte, depth int) int {
+	if typ == varintType {
+		_, n := consumeVarint(b)
+		return n
+	}
+	if typ == fixed32Type {
+		return consumeFixed32(b)
+	}
+	if typ == fixed64Type {
+		return consumeFixed64(b)
+	}
+	if typ == bytesType {
+		_, n := consumeBytes(b)
+		return n
+	}
+	if typ == startGroupType {
+		if depth < 0 {
+			return errCodeRecursionDepth
+		}
+		n0 := len(b)
+		for len(b) > 0 {
+			num2, typ2, n := consumeTag(b)
+			if n < 0 {
+				return n
+			}
+			b = b[n:]
+			if typ2 == endGroupType {
+				if num != num2 {
+					return errCodeEndGroup
+				}
+				return n0 - len(b)
+			}
+			m := consumeFieldValueD(num2, typ2, b, depth-1)
+			if m < 0 {
+				return m
+			}
+			b = b[m:]
+		}
+		return errCodeTruncated
+	}
+	if typ == endGroupType {
+		return errCodeEndGroup
+	}
+	return errCodeReserved
+}
+
+// consumeField — encoding/protowire/wire.go:94-105 ConsumeField: the whole
+// record (tag + value, an end-group marker included).
+func consumeField(b []byte) (int32, int, int) {
+	num, typ, n := consumeTag(b)
+	if n < 0 {
+		return 0, 0, n
+	}
+	m := consumeFieldValue(num, typ, b[n:])
+	if m < 0 {
+		return 0, 0, m
+	}
+	return num, typ, n + m
+}
+
+// bytesEqual — bytes.Equal (go1.26.5 src/bytes/bytes.go) as impl/equal.go
+// calls it: equal lengths and equal bytes; nil equals empty.
+func bytesEqual(a, b []byte) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := 0; i < len(a); i++ {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
+// unknownFieldRecords — the per-field-number accumulation of
+// internal/impl/equal.go:205-209 (mx[fnum] = append(mx[fnum], x[:n]...)),
+// map-free: the raw records of x whose number is num, concatenated in
+// arrival order. x is retained unknown bytes, well-formed by construction
+// (the decode loop validated every record); a negative n would slice-panic
+// here exactly as upstream's x[:n] does.
+func unknownFieldRecords(x []byte, num int32) []byte {
+	var out []byte
+	for len(x) > 0 {
+		fnum, _, n := consumeField(x)
+		if fnum == num {
+			out = append(out, x[:n]...)
+		}
+		x = x[n:]
+	}
+	return out
+}
+
+// equalUnknown — internal/impl/equal.go:193-224 equalUnknown: equal length
+// AND (byte-equal OR, per field number, equal concatenations of that
+// number's records in arrival order, over the same set of numbers).
+func equalUnknown(x, y []byte) bool {
+	if len(x) != len(y) {
+		return false
+	}
+	if bytesEqual(x, y) {
+		return true
+	}
+	rest := x
+	for len(rest) > 0 {
+		fnum, _, n := consumeField(rest)
+		if !bytesEqual(unknownFieldRecords(x, fnum), unknownFieldRecords(y, fnum)) {
+			return false
+		}
+		rest = rest[n:]
+	}
+	rest = y
+	for len(rest) > 0 {
+		fnum, _, n := consumeField(rest)
+		if len(unknownFieldRecords(x, fnum)) == 0 {
+			return false
+		}
+		rest = rest[n:]
+	}
+	return true
+}
+
+// consumeVarintValue — internal/impl/codec_gen.go:2762-2780, the shared
+// head of consumeUint64Ptr (= :108-124 consumeBoolPtr, :687-703
+// consumeInt32Ptr, which IS the enum coder): a wrong wire type is
+// errUnknown (retained as an unknown field), a malformed value errDecode;
+// the 1-byte and 2-byte fast paths are upstream's.
+func consumeVarintValue(b []byte, wtyp int) (uint64, int, error) {
+	if wtyp != varintType {
+		return 0, 0, errUnknown
+	}
+	var v uint64
+	var n int
+	if len(b) >= 1 && b[0] < 0x80 {
+		v = uint64(b[0])
+		n = 1
+	} else if len(b) >= 2 && b[1] < 128 {
+		v = uint64(b[0]&0x7f) + uint64(b[1])<<7
+		n = 2
+	} else {
+		v, n = consumeVarint(b)
+	}
+	if n < 0 {
+		return 0, 0, errDecode
+	}
+	return v, n, nil
+}
+
+// consumeBytesValue — internal/impl/codec_gen.go:5410-5417, the shared head
+// of consumeBytes (= codec_field.go:175-182 consumeMessageInfo, :438-445
+// consumeMessageSliceInfo): wrong wire type errUnknown, malformed errDecode.
+func consumeBytesValue(b []byte, wtyp int) ([]byte, int, error) {
+	if wtyp != bytesType {
+		return nil, 0, errUnknown
+	}
+	v, n := consumeBytes(b)
+	if n < 0 {
+		return nil, 0, errDecode
+	}
+	return v, n, nil
+}
+
+// consumePackedUint64 — internal/impl/codec_gen.go:2818-2850, the PACKED
+// branch of consumeUint64Slice: accepted although never emitted. (Upstream
+// pre-grows the slice by the element count — a capacity-only effect, not
+// reproduced.) On error s is returned unextended, as upstream stores *sp
+// only on success.
+func consumePackedUint64(b []byte, s []uint64) ([]uint64, int, error) {
+	p, n := consumeBytes(b)
+	if n < 0 {
+		return s, 0, errDecode
+	}
+	out := s
+	for len(p) > 0 {
+		var v uint64
+		var k int
+		if len(p) >= 1 && p[0] < 0x80 {
+			v = uint64(p[0])
+			k = 1
+		} else if len(p) >= 2 && p[1] < 128 {
+			v = uint64(p[0]&0x7f) + uint64(p[1])<<7
+			k = 2
+		} else {
+			v, k = consumeVarint(p)
+		}
+		if k < 0 {
+			return s, 0, errDecode
+		}
+		out = append(out, v)
+		p = p[k:]
+	}
+	return out, n, nil
+}
+''' % {"pb": PB_VERSION}
+
+
+def gen_wire():
+    return WIRE_GO
+
+
+# ---- the per-type codec (plain_codec.go) -----------------------------------
+
+CODEC_HEADER = """// Code GENERATED by tools/raftsubject/derive.py from the message field
+// lists parsed out of raft.pb.go, cross-checked against the struct tags
+// (wire type, field number, opt/rep mode). DO NOT EDIT — edit the
+// derivation.
+//
+// ROUTE A (docs/2026-10-04_route-a-protobuf-design.md, D1/D2/D4): per
+// message type, the methods the proto package dispatches to through its
+// `methods` interface, each the twin of a %(pb)s
+// internal/impl entry point (file:line in each doc comment; the FuncId
+// table: tools/raftsubject/codec-funcids.tsv):
+//
+//   IsNilMessage()          !ProtoReflect().IsValid()   (a typed nil)
+//   ResetMessage()          the generated Reset's plain-Go half
+//   SizeMessage() int       impl/encode.go:47 sizePointer
+//   MarshalAppend(b) []byte impl/encode.go:148 marshalAppendPointer
+//   UnmarshalMessage(b, d)  impl/decode.go:103 unmarshalPointer + :124
+//                           unmarshalPointerEager (d = remaining depth)
+//   ProtoClone() Message    proto/merge.go:41 Clone (New + mergePointer)
+//   ProtoEqual(Message)     impl/equal.go:22 equalMessage
+//
+// Encoding: fields in FIELD-NUMBER order, proto2 presence, repeated
+// varints UNPACKED, the retained unknown bytes LAST. Decoding: merge
+// semantics, last-one-wins scalars REUSING the cell, embedded messages
+// merge, repeated fields append, packed varints accepted, a WRONG wire
+// type on a known field and every unknown field RETAINED in
+// unknownFields (canonical tag + raw value, arrival order), every
+// malformation the one errDecode value, nesting past 10000 messages
+// errRecursionDepth.
+
+package raftpb
+
+import "proto"
+""" % {"pb": PB_VERSION}
+
+
+def _dispatch(arms, indent):
+    """Render the field-number dispatch: arms = [(cond, [body lines])].
+    The ONLY tagless-switch site of the generator (Q5 PENDING)."""
+    t = "\t" * indent
+    out = []
+    if DISPATCH_FORM == "tagless-switch":
+        out.append(t + "switch {")
+        for cond, body in arms:
+            out.append(t + "case %s:" % cond)
+            out += [t + "\t" + ln for ln in body]
+        out.append(t + "}")
+    elif DISPATCH_FORM == "if-chain":
+        for k, (cond, body) in enumerate(arms):
+            out.append(t + ("if %s {" % cond if k == 0 else "} else if %s {" % cond))
+            out += [t + "\t" + ln for ln in body]
+        if arms:
+            out.append(t + "}")
+    else:
+        refuse("DISPATCH_FORM %r is not one of %s" % (DISPATCH_FORM, DISPATCH_FORMS))
+    return out
+
+
+def gen_codec(msgs, enums, records):
     out = [CODEC_HEADER]
     for name in msgs:
-        msg = msgs[name]
-        fields = []
-        for fname, ftype, ftag in msg.fields:
-            kind, num = classify_field(msgs, enums, name, fname, ftype, ftag)
-            fields.append((num, fname, ftype, kind))
-        fields.sort()
-        nums = [num for num, _f, _t, _k in fields]
-        if len(set(nums)) != len(nums):
-            refuse("duplicate field numbers in %s: %s" % (name, nums))
-        if any(num <= 0 or num >= 16 for num in nums):
-            # All nine schemas top out at field 14, so every tag fits one
-            # byte and the generator emits tags as single-byte constants.
-            # A schema with a higher number is a change to READ.
-            refuse("field number outside 1..15 in %s: %s — the single-byte "
-                   "tag assumption no longer holds" % (name, nums))
+        fields = message_fields(msgs, enums, name)
+        recv = "(*raftpb.%s)" % name
 
-        # ---- SizeMessage --------------------------------------------------
-        s = ["// SizeMessage returns len(x.AppendMessage(nil)) without",
-             "// allocating. A nil receiver sizes to 0 (proto.Size of a nil",
-             "// message).",
+        # ---- IsNilMessage / ResetMessage ---------------------------------
+        out.append("\n".join([
+            "// IsNilMessage reports a TYPED-NIL message — the negation of",
+            "// ProtoReflect().IsValid() for a generated message (proto/encode.go:141-146",
+            "// emptyBytesForMessage, proto/merge.go:55-57 Clone, proto/equal.go:52-54 Equal).",
+            "func (x *%s) IsNilMessage() bool {" % name,
+            "\treturn x == nil",
+            "}"]))
+        records.append(("method %s.IsNilMessage" % recv,
+                        "protoreflect.Message.IsValid on a generated message (internal/impl/message_reflect.go messageState/messageReflectWrapper)",
+                        "pure: reads the receiver pointer", "-"))
+        out.append("\n".join([
+            "// ResetMessage is the generated Reset's plain-Go half (raft.pb.go",
+            "// `*x = %s{}`; proto/reset.go:16-22 calls it). A typed-nil receiver" % name,
+            "// nil-dereferences, as upstream's does.",
+            "func (x *%s) ResetMessage() {" % name,
+            "\t*x = %s{}" % name,
+            "}"]))
+        records.append(("method %s.ResetMessage" % recv,
+                        "raft.pb.go generated Reset (the `*x = T{}` half) via proto/reset.go:16-22",
+                        "writes *x (every field, unknownFields included)", "-"))
+
+        # ---- SizeMessage -------------------------------------------------
+        s = ["// SizeMessage — internal/impl/encode.go:47-61 sizePointer + :63-132",
+             "// sizePointerSlow: a nil receiver sizes 0; per present field tagsize +",
+             "// value size in field-number order; plus len(unknownFields).",
              "func (x *%s) SizeMessage() int {" % name,
              "\tif x == nil {",
              "\t\treturn 0",
              "\t}",
              "\tn := 0"]
         for num, fname, ftype, kind in fields:
-            base = ftype.lstrip("*[]")
+            wt = 2 if kind in ("bytes", "msg", "rep-msg") else 0
+            _tag, ts = tag_bytes(num, wt)
             if kind == "scalar-u64":
                 s += ["\tif x.%s != nil {" % fname,
-                      "\t\tn += 1 + plainpbSizeVarint(*x.%s)" % fname,
+                      "\t\tn += %d + sizeVarint(*x.%s)" % (ts, fname),
                       "\t}"]
             elif kind == "scalar-bool":
                 s += ["\tif x.%s != nil {" % fname,
-                      "\t\tn += 2",
+                      "\t\tn += %d + sizeVarint(encodeBool(*x.%s))" % (ts, fname),
                       "\t}"]
             elif kind == "scalar-enum":
                 s += ["\tif x.%s != nil {" % fname,
-                      "\t\tn += 1 + plainpbSizeVarint(uint64(*x.%s))" % fname,
+                      "\t\tn += %d + sizeVarint(uint64(*x.%s))" % (ts, fname),
                       "\t}"]
             elif kind == "bytes":
                 s += ["\tif x.%s != nil {" % fname,
-                      "\t\tn += 1 + plainpbSizeVarint(uint64(len(x.%s))) + len(x.%s)" % (fname, fname),
+                      "\t\tn += %d + sizeBytes(len(x.%s))" % (ts, fname),
                       "\t}"]
             elif kind == "msg":
                 s += ["\tif x.%s != nil {" % fname,
-                      "\t\ts := x.%s.SizeMessage()" % fname,
-                      "\t\tn += 1 + plainpbSizeVarint(uint64(s)) + s",
+                      "\t\tn += %d + sizeBytes(x.%s.SizeMessage())" % (ts, fname),
                       "\t}"]
             elif kind == "rep-u64":
-                s += ["\tfor _, v := range x.%s {" % fname,
-                      "\t\tn += 1 + plainpbSizeVarint(v)",
+                s += ["\tfor i := 0; i < len(x.%s); i++ {" % fname,
+                      "\t\tn += %d + sizeVarint(x.%s[i])" % (ts, fname),
                       "\t}"]
             elif kind == "rep-msg":
-                s += ["\tfor _, e := range x.%s {" % fname,
-                      "\t\ts := e.SizeMessage()",
-                      "\t\tn += 1 + plainpbSizeVarint(uint64(s)) + s",
+                s += ["\tfor i := 0; i < len(x.%s); i++ {" % fname,
+                      "\t\tn += %d + sizeBytes(x.%s[i].SizeMessage())" % (ts, fname),
                       "\t}"]
-        s += ["\treturn n", "}"]
+        s += ["\tn += len(x.unknownFields)", "\treturn n", "}"]
         out.append("\n".join(s))
+        records.append(("method %s.SizeMessage" % recv,
+                        "internal/impl/encode.go:47-61 sizePointer, :63-132 sizePointerSlow; codec_gen.go sizeUint64Ptr :2747 / sizeBoolPtr :93 / sizeInt32Ptr :672 / sizeUint64Slice :2797 / sizeBytes :5396; codec_field.go sizeMessageInfo :159 / sizeMessageSliceInfo :410",
+                        "pure: reads *x (recursively the embedded messages); recursion bounded by the value's finite nesting", "-"))
 
-        # ---- AppendMessage ------------------------------------------------
-        a = ["// AppendMessage appends x's protobuf wire encoding to b, fields",
-             "// in field-number order. A nil receiver appends nothing.",
-             "func (x *%s) AppendMessage(b []byte) []byte {" % name,
+        # ---- MarshalAppend -----------------------------------------------
+        a = ["// MarshalAppend — internal/impl/encode.go:148-226 marshalAppendPointer:",
+             "// a nil receiver appends nothing; present fields in field-number order;",
+             "// the retained unknown bytes LAST. Marshal cannot fail on these schemas",
+             "// (no required field, no UTF-8 check; the size-mismatch error of",
+             "// codec_field.go:169-171 needs a concurrent mutation).",
+             "func (x *%s) MarshalAppend(b []byte) []byte {" % name,
              "\tif x == nil {",
              "\t\treturn b",
              "\t}"]
         for num, fname, ftype, kind in fields:
-            wt = {"scalar-u64": 0, "scalar-bool": 0, "scalar-enum": 0,
-                  "bytes": 2, "msg": 2, "rep-u64": 0, "rep-msg": 2}[kind]
-            tag = "0x%02x" % (num << 3 | wt)
+            wt = 2 if kind in ("bytes", "msg", "rep-msg") else 0
+            tag, _ts = tag_bytes(num, wt)
             if kind == "scalar-u64":
                 a += ["\tif x.%s != nil {" % fname,
-                      "\t\tb = append(b, %s)" % tag,
-                      "\t\tb = plainpbAppendVarint(b, *x.%s)" % fname,
+                      "\t\tb = appendVarint(b, 0x%x)" % tag,
+                      "\t\tb = appendVarint(b, *x.%s)" % fname,
                       "\t}"]
             elif kind == "scalar-bool":
                 a += ["\tif x.%s != nil {" % fname,
-                      "\t\tb = append(b, %s)" % tag,
-                      "\t\tif *x.%s {" % fname,
-                      "\t\t\tb = append(b, 1)",
-                      "\t\t} else {",
-                      "\t\t\tb = append(b, 0)",
-                      "\t\t}",
+                      "\t\tb = appendVarint(b, 0x%x)" % tag,
+                      "\t\tb = appendVarint(b, encodeBool(*x.%s))" % fname,
                       "\t}"]
             elif kind == "scalar-enum":
                 a += ["\tif x.%s != nil {" % fname,
-                      "\t\tb = append(b, %s)" % tag,
-                      "\t\tb = plainpbAppendVarint(b, uint64(*x.%s))" % fname,
+                      "\t\tb = appendVarint(b, 0x%x)" % tag,
+                      "\t\tb = appendVarint(b, uint64(*x.%s))" % fname,
                       "\t}"]
             elif kind == "bytes":
                 a += ["\tif x.%s != nil {" % fname,
-                      "\t\tb = append(b, %s)" % tag,
-                      "\t\tb = plainpbAppendVarint(b, uint64(len(x.%s)))" % fname,
-                      "\t\tb = append(b, x.%s...)" % fname,
+                      "\t\tb = appendVarint(b, 0x%x)" % tag,
+                      "\t\tb = appendBytes(b, x.%s)" % fname,
                       "\t}"]
             elif kind == "msg":
                 a += ["\tif x.%s != nil {" % fname,
-                      "\t\tb = append(b, %s)" % tag,
-                      "\t\tb = plainpbAppendVarint(b, uint64(x.%s.SizeMessage()))" % fname,
-                      "\t\tb = x.%s.AppendMessage(b)" % fname,
+                      "\t\tsiz := x.%s.SizeMessage()" % fname,
+                      "\t\tb = appendVarint(b, 0x%x)" % tag,
+                      "\t\tb = appendVarint(b, uint64(siz))",
+                      "\t\tb = x.%s.MarshalAppend(b)" % fname,
                       "\t}"]
             elif kind == "rep-u64":
-                a += ["\tfor _, v := range x.%s {" % fname,
-                      "\t\tb = append(b, %s)" % tag,
-                      "\t\tb = plainpbAppendVarint(b, v)",
+                a += ["\tfor i := 0; i < len(x.%s); i++ {" % fname,
+                      "\t\tb = appendVarint(b, 0x%x)" % tag,
+                      "\t\tb = appendVarint(b, x.%s[i])" % fname,
                       "\t}"]
             elif kind == "rep-msg":
-                a += ["\tfor _, e := range x.%s {" % fname,
-                      "\t\tb = append(b, %s)" % tag,
-                      "\t\tb = plainpbAppendVarint(b, uint64(e.SizeMessage()))",
-                      "\t\tb = e.AppendMessage(b)",
+                a += ["\tfor i := 0; i < len(x.%s); i++ {" % fname,
+                      "\t\tb = appendVarint(b, 0x%x)" % tag,
+                      "\t\tsiz := x.%s[i].SizeMessage()" % fname,
+                      "\t\tb = appendVarint(b, uint64(siz))",
+                      "\t\tb = x.%s[i].MarshalAppend(b)" % fname,
                       "\t}"]
-        a += ["\treturn b", "}"]
+        a += ["\tb = append(b, x.unknownFields...)", "\treturn b", "}"]
         out.append("\n".join(a))
+        records.append(("method %s.MarshalAppend" % recv,
+                        "internal/impl/encode.go:148-226 marshalAppendPointer; codec_gen.go appendUint64Ptr :2754 / appendBoolPtr :100 / appendInt32Ptr :679 / appendUint64Slice :2806 / appendBytes :5402; codec_field.go appendMessageInfo :163 / appendMessageSliceInfo :419",
+                        "allocates (append to b); reads *x (recursively); recursion bounded by the value's finite nesting", "-"))
 
-        # ---- UnmarshalMessage ---------------------------------------------
-        u = ["// UnmarshalMessage parses b and MERGES into x (the proto",
-             "// package's Unmarshal resets first; embedded-message fields",
-             "// recurse through this merge form, which is what makes a",
-             "// twice-encoded singular message field merge as the wire",
-             "// format specifies).",
-             "func (x *%s) UnmarshalMessage(b []byte) error {" % name,
-             "\ti := 0",
-             "\tfor i < len(b) {",
-             "\t\ttag, j, ok := plainpbConsumeVarint(b, i)",
-             "\t\tif !ok {",
-             "\t\t\treturn errPlainpbMalformed",
-             "\t\t}",
-             "\t\ti = j",
-             "\t\tnum := tag >> 3",
-             "\t\twire := tag & 7",
-             "\t\tif num == 0 {",
-             "\t\t\treturn errPlainpbMalformed",
-             "\t\t}",
-             "\t\tswitch {"]
+        # ---- UnmarshalMessage --------------------------------------------
+        arms = []
         for num, fname, ftype, kind in fields:
             base = ftype.lstrip("*[]")
-            if kind in ("scalar-u64", "rep-u64"):
-                u += ["\t\tcase num == %d && wire == 0:" % num,
-                      "\t\t\tv, j2, ok2 := plainpbConsumeVarint(b, i)",
-                      "\t\t\tif !ok2 {",
-                      "\t\t\t\treturn errPlainpbMalformed",
-                      "\t\t\t}"]
-                if kind == "scalar-u64":
-                    u += ["\t\t\tx.%s = &v" % fname]
-                else:
-                    u += ["\t\t\tx.%s = append(x.%s, v)" % (fname, fname)]
-                u += ["\t\t\ti = j2"]
-                if kind == "rep-u64":
-                    # Packed acceptance (JC-14): never emitted, always parsed.
-                    u += ["\t\tcase num == %d && wire == 2:" % num,
-                          "\t\t\tn, j2, ok2 := plainpbConsumeVarint(b, i)",
-                          "\t\t\tif !ok2 || uint64(len(b)-j2) < n {",
-                          "\t\t\t\treturn errPlainpbMalformed",
-                          "\t\t\t}",
-                          "\t\t\tend := j2 + int(n)",
-                          "\t\t\tfor j2 < end {",
-                          "\t\t\t\tv, k, ok3 := plainpbConsumeVarint(b, j2)",
-                          "\t\t\t\tif !ok3 || k > end {",
-                          "\t\t\t\t\treturn errPlainpbMalformed",
-                          "\t\t\t\t}",
-                          "\t\t\t\tx.%s = append(x.%s, v)" % (fname, fname),
-                          "\t\t\t\tj2 = k",
-                          "\t\t\t}",
-                          "\t\t\ti = end"]
-            elif kind == "scalar-bool":
-                u += ["\t\tcase num == %d && wire == 0:" % num,
-                      "\t\t\tv, j2, ok2 := plainpbConsumeVarint(b, i)",
-                      "\t\t\tif !ok2 {",
-                      "\t\t\t\treturn errPlainpbMalformed",
-                      "\t\t\t}",
-                      "\t\t\tbv := v != 0",
-                      "\t\t\tx.%s = &bv" % fname,
-                      "\t\t\ti = j2"]
-            elif kind == "scalar-enum":
-                u += ["\t\tcase num == %d && wire == 0:" % num,
-                      "\t\t\tv, j2, ok2 := plainpbConsumeVarint(b, i)",
-                      "\t\t\tif !ok2 {",
-                      "\t\t\t\treturn errPlainpbMalformed",
-                      "\t\t\t}",
-                      "\t\t\tev := %s(int32(uint32(v)))" % base,
-                      "\t\t\tx.%s = &ev" % fname,
-                      "\t\t\ti = j2"]
+            cond = "num == %d" % num
+            if kind in ("scalar-u64", "scalar-bool", "scalar-enum"):
+                store = {"scalar-u64": "v",
+                         "scalar-bool": "decodeBool(v)",
+                         "scalar-enum": "%s(int32(v))" % base}[kind]
+                cell = {"scalar-u64": "uint64", "scalar-bool": "bool",
+                        "scalar-enum": base}[kind]
+                arms.append((cond, [
+                    "v, m, e := consumeVarintValue(b, wtyp)",
+                    "n = m",
+                    "err = e",
+                    "if e == nil {",
+                    "\tif x.%s == nil {" % fname,
+                    "\t\tx.%s = new(%s)" % (fname, cell),
+                    "\t}",
+                    "\t*x.%s = %s" % (fname, store),
+                    "}"]))
             elif kind == "bytes":
-                u += ["\t\tcase num == %d && wire == 2:" % num,
-                      "\t\t\tn, j2, ok2 := plainpbConsumeVarint(b, i)",
-                      "\t\t\tif !ok2 || uint64(len(b)-j2) < n {",
-                      "\t\t\t\treturn errPlainpbMalformed",
-                      "\t\t\t}",
-                      "\t\t\ts := make([]byte, n)",
-                      "\t\t\tcopy(s, b[j2:j2+int(n)])",
-                      "\t\t\tx.%s = s" % fname,
-                      "\t\t\ti = j2 + int(n)"]
+                arms.append((cond, [
+                    "v, m, e := consumeBytesValue(b, wtyp)",
+                    "n = m",
+                    "err = e",
+                    "if e == nil {",
+                    "\tx.%s = append(emptyBuf[:], v...)" % fname,
+                    "}"]))
             elif kind == "msg":
-                u += ["\t\tcase num == %d && wire == 2:" % num,
-                      "\t\t\tn, j2, ok2 := plainpbConsumeVarint(b, i)",
-                      "\t\t\tif !ok2 || uint64(len(b)-j2) < n {",
-                      "\t\t\t\treturn errPlainpbMalformed",
-                      "\t\t\t}",
-                      "\t\t\tif x.%s == nil {" % fname,
-                      "\t\t\t\tx.%s = &%s{}" % (fname, base),
-                      "\t\t\t}",
-                      "\t\t\tif err := x.%s.UnmarshalMessage(b[j2 : j2+int(n)]); err != nil {" % fname,
-                      "\t\t\t\treturn err",
-                      "\t\t\t}",
-                      "\t\t\ti = j2 + int(n)"]
+                arms.append((cond, [
+                    "v, m, e := consumeBytesValue(b, wtyp)",
+                    "n = m",
+                    "err = e",
+                    "if e == nil {",
+                    "\tif x.%s == nil {" % fname,
+                    "\t\tx.%s = &%s{}" % (fname, base),
+                    "\t}",
+                    "\tif e2 := x.%s.UnmarshalMessage(v, depth); e2 != nil {" % fname,
+                    "\t\treturn e2",
+                    "\t}",
+                    "}"]))
+            elif kind == "rep-u64":
+                arms.append((cond, [
+                    "if wtyp == bytesType {",
+                    "\ts, m, e := consumePackedUint64(b, x.%s)" % fname,
+                    "\tn = m",
+                    "\terr = e",
+                    "\tif e == nil {",
+                    "\t\tx.%s = s" % fname,
+                    "\t}",
+                    "} else {",
+                    "\tv, m, e := consumeVarintValue(b, wtyp)",
+                    "\tn = m",
+                    "\terr = e",
+                    "\tif e == nil {",
+                    "\t\tx.%s = append(x.%s, v)" % (fname, fname),
+                    "\t}",
+                    "}"]))
             elif kind == "rep-msg":
-                u += ["\t\tcase num == %d && wire == 2:" % num,
-                      "\t\t\tn, j2, ok2 := plainpbConsumeVarint(b, i)",
-                      "\t\t\tif !ok2 || uint64(len(b)-j2) < n {",
-                      "\t\t\t\treturn errPlainpbMalformed",
-                      "\t\t\t}",
-                      "\t\t\te := &%s{}" % base,
-                      "\t\t\tif err := e.UnmarshalMessage(b[j2 : j2+int(n)]); err != nil {",
-                      "\t\t\t\treturn err",
-                      "\t\t\t}",
-                      "\t\t\tx.%s = append(x.%s, e)" % (fname, fname),
-                      "\t\t\ti = j2 + int(n)"]
-        u += ["\t\tdefault:",
-              "\t\t\tj2, ok2 := plainpbSkipField(b, i, wire)",
-              "\t\t\tif !ok2 {",
-              "\t\t\t\treturn errPlainpbMalformed",
+                arms.append((cond, [
+                    "v, m, e := consumeBytesValue(b, wtyp)",
+                    "n = m",
+                    "err = e",
+                    "if e == nil {",
+                    "\tel := &%s{}" % base,
+                    "\tif e2 := el.UnmarshalMessage(v, depth); e2 != nil {",
+                    "\t\treturn e2",
+                    "\t}",
+                    "\tx.%s = append(x.%s, el)" % (fname, fname),
+                    "}"]))
+        u = ["// UnmarshalMessage parses b and MERGES into x — internal/impl/decode.go",
+             "// :103-106 unmarshalPointer (the depth counter: decremented on entry,",
+             "// errRecursionDepth below 0; proto.Unmarshal passes 10000, an embedded",
+             "// message the caller's decremented value) + :124-241",
+             "// unmarshalPointerEager (the tag fast paths, the field-number bounds,",
+             "// the end-group check — groupTag is 0 for a message, so ANY end-group",
+             "// tag mismatches —, the field consumers, unknown-field retention).",
+             "func (x *%s) UnmarshalMessage(b []byte, depth int) error {" % name,
+             "\tdepth--",
+             "\tif depth < 0 {",
+             "\t\treturn errRecursionDepth",
+             "\t}",
+             "\tfor len(b) > 0 {",
+             "\t\tvar tag uint64",
+             "\t\tif b[0] < 0x80 {",
+             "\t\t\ttag = uint64(b[0])",
+             "\t\t\tb = b[1:]",
+             "\t\t} else if len(b) >= 2 && b[1] < 128 {",
+             "\t\t\ttag = uint64(b[0]&0x7f) + uint64(b[1])<<7",
+             "\t\t\tb = b[2:]",
+             "\t\t} else {",
+             "\t\t\tv, k := consumeVarint(b)",
+             "\t\t\tif k < 0 {",
+             "\t\t\t\treturn errDecode",
+             "\t\t\t}",
+             "\t\t\ttag = v",
+             "\t\t\tb = b[k:]",
+             "\t\t}",
+             "\t\tfn := tag >> 3",
+             "\t\tif fn < minValidNumber || fn > maxValidNumber {",
+             "\t\t\treturn errDecode",
+             "\t\t}",
+             "\t\tnum := int32(fn)",
+             "\t\twtyp := int(tag & 7)",
+             "\t\tif wtyp == endGroupType {",
+             "\t\t\treturn errDecode",
+             "\t\t}",
+             "\t\tn := 0",
+             "\t\terr := errUnknown"]
+        u += _dispatch(arms, 2)
+        u += ["\t\tif err != nil {",
+              "\t\t\tif err != errUnknown {",
+              "\t\t\t\treturn err",
               "\t\t\t}",
-              "\t\t\ti = j2",
+              "\t\t\tn = consumeFieldValue(num, wtyp, b)",
+              "\t\t\tif n < 0 {",
+              "\t\t\t\treturn errDecode",
+              "\t\t\t}",
+              "\t\t\tx.unknownFields = appendTag(x.unknownFields, num, wtyp)",
+              "\t\t\tx.unknownFields = append(x.unknownFields, b[:n]...)",
               "\t\t}",
+              "\t\tb = b[n:]",
               "\t}",
               "\treturn nil",
               "}"]
         out.append("\n".join(u))
+        records.append(("method %s.UnmarshalMessage" % recv,
+                        "internal/impl/decode.go:103-120 unmarshalPointer, :124-241 unmarshalPointerEager; consumers codec_gen.go consumeUint64Ptr :2762 / consumeBoolPtr :108 / consumeInt32Ptr :687 / consumeUint64Slice :2816 / consumeBytes :5410, codec_field.go consumeMessageInfo :175 / consumeMessageSliceInfo :438",
+                        "reads b; writes x's fields (allocating cells, slices and embedded messages) and x.unknownFields; recursion bounded by depth (10000 from proto.Unmarshal, -1 per embedded message); the loop consumes >= 1 byte per iteration",
+                        DISPATCH_FORM))
+
+        # ---- ProtoClone / ProtoEqual -------------------------------------
+        out.append("\n".join([
+            "// ProtoClone — proto/merge.go:41-60 Clone past its nil-interface and",
+            "// validity arms (the proto package keeps those): New + mergePointer, i.e.",
+            "// CloneMessage. A typed-nil receiver answers the typed nil.",
+            "func (x *%s) ProtoClone() proto.Message {" % name,
+            "\treturn x.CloneMessage()",
+            "}"]))
+        records.append(("method %s.ProtoClone" % recv,
+                        "proto/merge.go:41-60 Clone (dst := src.New(); mergeMessage)",
+                        "allocates (the deep copy); reads *x (recursively)", "-"))
+        out.append("\n".join([
+            "// ProtoEqual — the generated fast path internal/impl/equal.go:22-27",
+            "// equalMessage: a different message type is unequal (the descriptor",
+            "// check); same type compares by EqualMessage.",
+            "func (x *%s) ProtoEqual(m proto.Message) bool {" % name,
+            "\ty, ok := m.(*%s)" % name,
+            "\tif !ok {",
+            "\t\treturn false",
+            "\t}",
+            "\treturn x.EqualMessage(y)",
+            "}"]))
+        records.append(("method %s.ProtoEqual" % recv,
+                        "internal/impl/equal.go:22-27 equalMessage (the descriptor check) -> EqualMessage",
+                        "pure: reads *x, *y (recursively)", "-"))
+    return "\n\n".join(out) + "\n"
+
+
+# ---- clone (merge) / equality (plain_clone.go) ------------------------------
+
+CLONE_HEADER = """// Code GENERATED by tools/raftsubject/derive.py from the message field
+// lists parsed out of raft.pb.go. DO NOT EDIT — edit the derivation.
+//
+// ROUTE A (docs/2026-10-04_route-a-protobuf-design.md): the typed halves
+// of proto.Clone and proto.Equal, twins of %(pb)s internal/impl:
+//
+//   (x *T) CloneMessage() *T     proto/merge.go:41-60 Clone = New +
+//                                impl/merge.go:36-113 mergePointer
+//   (x *T) mergeMessage(src *T)  impl/merge.go:36-113 mergePointer
+//   (x *T) EqualMessage(y *T)    impl/equal.go:22-132 equalMessage, ending
+//                                in equalUnknown (:193-224)
+//
+// proto2 presence: an optional scalar/bytes field is SET iff its pointer
+// (or, for bytes, its slice) is non-nil; a repeated field has no presence
+// (nil and empty are equal; an empty one clones to nil); a NIL ELEMENT of
+// a repeated message field clones to an EMPTY message
+// (impl/merge.go:175-185: mergePointer from a nil src is a no-op) and
+// compares equal to an empty message (the invalid element takes
+// protoreflect's slow path, which ranges over no fields). Retained
+// unknown bytes clone by append (impl/merge.go:106-111) and compare by
+// equalUnknown.
+
+package raftpb
+""" % {"pb": PB_VERSION}
+
+
+def gen_clone(msgs, enums, records):
+    out = [CLONE_HEADER]
+    for name in msgs:
+        fields = message_fields(msgs, enums, name)
+        recv = "(*raftpb.%s)" % name
+        out.append("\n".join([
+            "// CloneMessage — proto.Clone's New + mergePointer: a deep copy. A nil",
+            "// receiver clones to nil (proto.Clone of a typed nil is the typed nil).",
+            "func (x *%s) CloneMessage() *%s {" % (name, name),
+            "\tif x == nil {",
+            "\t\treturn nil",
+            "\t}",
+            "\tout := &%s{}" % name,
+            "\tout.mergeMessage(x)",
+            "\treturn out",
+            "}"]))
+        records.append(("method %s.CloneMessage" % recv,
+                        "proto/merge.go:41-60 Clone (New + mergeOptions.mergeMessage)",
+                        "allocates (the deep copy); reads *x (recursively)", "-"))
+        mm = ["// mergeMessage — internal/impl/merge.go:36-113 mergePointer: a nil src is",
+              "// a no-op; per present src field: scalars into a FRESH cell",
+              "// (merge_gen.go:122 mergeUint64Ptr), bytes as append(emptyBuf[:], ...)",
+              "// (merge.go:187 mergeBytes), embedded messages merged into an",
+              "// allocated-if-nil destination (:159 mergeMessage), repeated fields",
+              "// appended (merge_gen.go:130 mergeUint64Slice; merge.go:175",
+              "// mergeMessageSlice — a fresh message per element), and src's",
+              "// unknown bytes appended when non-empty (:106-111).",
+              "func (x *%s) mergeMessage(src *%s) {" % (name, name),
+              "\tif src == nil {",
+              "\t\treturn",
+              "\t}"]
+        e = ["// EqualMessage — internal/impl/equal.go:22-132 equalMessage over two",
+             "// messages of this type: presence must agree per field, values compare",
+             "// equal, then equalUnknown. Two nil messages are equal; nil and",
+             "// non-nil are not (proto.Equal checks validity first).",
+             "func (x *%s) EqualMessage(y *%s) bool {" % (name, name),
+             "\tif x == nil || y == nil {",
+             "\t\treturn x == nil && y == nil",
+             "\t}"]
+        for num, fname, ftype, kind in fields:
+            base = ftype.lstrip("*[]")
+            if kind in ("scalar-u64", "scalar-bool", "scalar-enum"):
+                mm += ["\tif src.%s != nil {" % fname,
+                       "\t\tv := *src.%s" % fname,
+                       "\t\tx.%s = &v" % fname,
+                       "\t}"]
+                e += ["\tif (x.%s == nil) != (y.%s == nil) {" % (fname, fname),
+                      "\t\treturn false",
+                      "\t}",
+                      "\tif x.%s != nil && *x.%s != *y.%s {" % (fname, fname, fname),
+                      "\t\treturn false",
+                      "\t}"]
+            elif kind == "bytes":
+                mm += ["\tif src.%s != nil {" % fname,
+                       "\t\tx.%s = append(emptyBuf[:], src.%s...)" % (fname, fname),
+                       "\t}"]
+                e += ["\tif (x.%s == nil) != (y.%s == nil) {" % (fname, fname),
+                      "\t\treturn false",
+                      "\t}",
+                      "\tif !bytesEqual(x.%s, y.%s) {" % (fname, fname),
+                      "\t\treturn false",
+                      "\t}"]
+            elif kind == "msg":
+                mm += ["\tif src.%s != nil {" % fname,
+                       "\t\tif x.%s == nil {" % fname,
+                       "\t\t\tx.%s = &%s{}" % (fname, base),
+                       "\t\t}",
+                       "\t\tx.%s.mergeMessage(src.%s)" % (fname, fname),
+                       "\t}"]
+                e += ["\tif (x.%s == nil) != (y.%s == nil) {" % (fname, fname),
+                      "\t\treturn false",
+                      "\t}",
+                      "\tif x.%s != nil && !x.%s.EqualMessage(y.%s) {" % (fname, fname, fname),
+                      "\t\treturn false",
+                      "\t}"]
+            elif kind == "rep-u64":
+                mm += ["\tif len(src.%s) > 0 {" % fname,
+                       "\t\tx.%s = append(x.%s, src.%s...)" % (fname, fname, fname),
+                       "\t}"]
+                e += ["\tif len(x.%s) != len(y.%s) {" % (fname, fname),
+                      "\t\treturn false",
+                      "\t}",
+                      "\tfor i := 0; i < len(x.%s); i++ {" % fname,
+                      "\t\tif x.%s[i] != y.%s[i] {" % (fname, fname),
+                      "\t\t\treturn false",
+                      "\t\t}",
+                      "\t}"]
+            elif kind == "rep-msg":
+                mm += ["\tfor i := 0; i < len(src.%s); i++ {" % fname,
+                       "\t\tel := &%s{}" % base,
+                       "\t\tel.mergeMessage(src.%s[i])" % fname,
+                       "\t\tx.%s = append(x.%s, el)" % (fname, fname),
+                       "\t}"]
+                e += ["\tif len(x.%s) != len(y.%s) {" % (fname, fname),
+                      "\t\treturn false",
+                      "\t}",
+                      "\tfor i := 0; i < len(x.%s); i++ {" % fname,
+                      "\t\tex := x.%s[i]" % fname,
+                      "\t\tif ex == nil {",
+                      "\t\t\tex = &%s{}" % base,
+                      "\t\t}",
+                      "\t\tey := y.%s[i]" % fname,
+                      "\t\tif ey == nil {",
+                      "\t\t\tey = &%s{}" % base,
+                      "\t\t}",
+                      "\t\tif !ex.EqualMessage(ey) {",
+                      "\t\t\treturn false",
+                      "\t\t}",
+                      "\t}"]
+            else:
+                refuse("no clone/equal rule for field %s.%s of type %s"
+                       % (name, fname, ftype))
+        mm += ["\tif len(src.unknownFields) > 0 {",
+               "\t\tx.unknownFields = append(x.unknownFields, src.unknownFields...)",
+               "\t}",
+               "}"]
+        e += ["\treturn equalUnknown(x.unknownFields, y.unknownFields)", "}"]
+        out.append("\n".join(mm))
+        records.append(("method %s.mergeMessage" % recv,
+                        "internal/impl/merge.go:36-113 mergePointer; merge_gen.go mergeUint64Ptr :122 / mergeBoolPtr :22 / mergeInt32Ptr :47 / mergeUint64Slice :130; merge.go mergeMessage :159 / mergeMessageSlice :175 / mergeBytes :187",
+                        "writes *x (allocating cells, slices, embedded messages, unknownFields); reads *src (recursively)", "-"))
+        out.append("\n".join(e))
+        records.append(("method %s.EqualMessage" % recv,
+                        "internal/impl/equal.go:22-132 equalMessage (+ :177-190 equalMessageList; the nil-element slow path reflect/protoreflect/value_equal.go equalMessage), :193-224 equalUnknown",
+                        "allocates (equalUnknown's concatenations); reads *x, *y (recursively)", "-"))
+    return "\n\n".join(out) + "\n"
+
+
+# ---- the proto stand-in (proto/proto.go) ------------------------------------
+
+# The protobuf-runtime functions the vendored tree calls.  `derive.py` emits a
+# subject-local `proto` package declaring exactly these (plus the error
+# machinery and the dispatch interface), and REFUSES if the tree reaches for
+# one that is not here — so a raft rev that starts calling `proto.Merge`
+# cannot slip through.  Route A (D2): Equal joins the set — upstream
+# raftpb/confstate.go is vendored verbatim since S1 and calls it.
+PROTO_FUNCS = {
+    "Clone": "func Clone(m Message) Message",
+    "Equal": "func Equal(x, y Message) bool",
+    "Marshal": "func Marshal(m Message) ([]byte, error)",
+    "Unmarshal": "func Unmarshal(b []byte, m Message) error",
+    "Size": "func Size(m Message) int",
+}
+PROTO_PATH = "google.golang.org/protobuf/proto"
+
+PROTO_HEADER = """// Code GENERATED by tools/raftsubject/derive.py. DO NOT EDIT — edit the
+// derivation.
+//
+// The subject-local stand-in for %(path)s
+// (%(pb)s), ROUTE A shape A1 (docs/2026-10-04_route-a-protobuf-design.md
+// D2/D4/D5). The entry points keep upstream's signatures and their nil /
+// typed-nil arms, then DISPATCH THROUGH AN INTERFACE to the generated
+// per-type codec (raftpb/plain_codec.go) — this package does NOT import
+// raftpb; raftpb imports it, as upstream's generated code imports
+// protoimpl. A message type outside the plainpb nine fails the `methods`
+// assertion and panics BY NAME — never a silent zero.
+//
+// The error machinery is internal/errors' (errors.go:16-42): ONE
+// `*prefixError` type whose Error() is prefix + text and whose Unwrap()
+// is the sentinel Error, so errors.Is(err, proto.Error) holds under
+// `go run` (on the machine errors.Is is refused by name, FR-14/G6 — D10).
+// The prefix's spacing is detrand's per-BINARY bit (internal/detrand/
+// rand.go:25-27): LATITUDE, modeled as ONE labelled choice consumed at
+// package init — rand.Intn(2) on the machine's general [0, n) pick site
+// (ChoiceSite.intn; index 0 = U+0020, detrand's failure default; 1 =
+// U+00A0) — ruled [USER] 2026-10-04 (Q1, relayed).
+
+package proto
+
+import (
+	"errors"
+	"math/rand"
+)
+"""
+
+PROTO_COMMON = '''
+// Error — proto/proto.go:32-35 (= internal/errors/errors.go:16): the
+// sentinel every error this package produces unwraps to.
+var Error = errors.New("protobuf error")
+
+// prefixError — internal/errors/errors.go:24.
+type prefixError struct{ s string }
+
+// prefix — internal/errors/errors.go:26-34, computed ONCE at package init.
+var prefix = pickPrefix()
+
+// pickPrefix — the init-time spelling pick (D5, Q1): detrand.Bool()
+// (internal/detrand/rand.go:25-27) is a function of the executable's bytes,
+// so the weakest machine admits both members; ONE draw from the [0, 2) pick
+// site. 0 = "proto: " (U+0020, detrand's failure default), 1 = "proto:"
+// + U+00A0.
+func pickPrefix() string {
+	k := rand.Intn(2)
+	if k == 1 {
+		return "proto:\\u00a0"
+	}
+	return "proto: "
+}
+
+// Error — internal/errors/errors.go:36-38.
+func (e *prefixError) Error() string {
+	return prefix + e.s
+}
+
+// Unwrap — internal/errors/errors.go:40-42.
+func (e *prefixError) Unwrap() error {
+	return Error
+}
+
+// NewError — internal/errors/errors.go:20-22 New, without format verbs (the
+// two values the codec needs carry fixed text). Exported only because the
+// generated codec (raftpb, the internal/impl twin) declares errDecode and
+// errRecursionDepth through it, as impl/decode.go:19-20 declare them
+// through internal/errors; not part of upstream proto's API.
+func NewError(s string) error {
+	return &prefixError{s: s}
+}
+
+// Message is the interface the vendored callers pass (upstream's parameter
+// type). Every plainpb message type satisfies it through its generated
+// ProtoMessage() marker method, kept verbatim.
+type Message interface {
+	ProtoMessage()
+}
+
+// methods — the generated fast-path table (protoiface.Methods as
+// protoMethods returns it): what every plainpb message type implements in
+// raftpb/plain_codec.go.
+type methods interface {
+	IsNilMessage() bool
+	ResetMessage()
+	SizeMessage() int
+	MarshalAppend(b []byte) []byte
+	UnmarshalMessage(b []byte, depth int) error
+	ProtoClone() Message
+	ProtoEqual(y Message) bool
+}
+
+// emptyBuf — proto/decode_gen.go:603.
+var emptyBuf [0]byte
+
+// defaultRecursionLimit — encoding/protowire/wire.go:28.
+const defaultRecursionLimit = 10000
+'''
+
+PROTO_BODIES = {
+    "Clone": '''// Clone — proto/merge.go:41-60: nil -> nil; a typed nil -> the typed nil
+// (Type().Zero().Interface()); else New + merge.
+func Clone(m Message) Message {
+	if m == nil {
+		return nil
+	}
+	x, ok := m.(methods)
+	if !ok {
+		panic("proto: Clone on a message type outside the plainpb nine (fail closed; extend the derivation after reading the new type)")
+	}
+	if x.IsNilMessage() {
+		return m
+	}
+	return x.ProtoClone()
+}''',
+    "Equal": '''// Equal — proto/equal.go:42-66: a nil interface equals only a nil
+// interface; identical pointers are equal; validity must agree; then the
+// generated fast path (impl/equal.go:22). Upstream's identical-pointer
+// shortcut is guarded by reflect (Kind == Ptr); every plainpb message is
+// a pointer, so the guard here is the methods assertion, taken first.
+func Equal(x, y Message) bool {
+	if x == nil || y == nil {
+		return x == nil && y == nil
+	}
+	mx, ok := x.(methods)
+	if !ok {
+		panic("proto: Equal on a message type outside the plainpb nine (fail closed; extend the derivation after reading the new type)")
+	}
+	my, ok := y.(methods)
+	if !ok {
+		panic("proto: Equal on a message type outside the plainpb nine (fail closed; extend the derivation after reading the new type)")
+	}
+	if x == y {
+		return true
+	}
+	if mx.IsNilMessage() != my.IsNilMessage() {
+		return false
+	}
+	return mx.ProtoEqual(y)
+}''',
+    "Marshal": '''// Marshal — proto/encode.go:105-116: a nil interface -> nil, nil; an empty
+// encoding -> emptyBytesForMessage (:141-146): nil for a TYPED-NIL
+// message, the non-nil empty buffer for a valid one. The error is always
+// nil on these schemas.
+func Marshal(m Message) ([]byte, error) {
+	if m == nil {
+		return nil, nil
+	}
+	x, ok := m.(methods)
+	if !ok {
+		panic("proto: Marshal on a message type outside the plainpb nine (fail closed; extend the derivation after reading the new type)")
+	}
+	b := x.MarshalAppend(nil)
+	if len(b) == 0 {
+		if x.IsNilMessage() {
+			return nil, nil
+		}
+		return emptyBuf[:], nil
+	}
+	return b, nil
+}''',
+    "Size": '''// Size — proto/size.go:19-35: nil -> 0; a typed nil -> 0 (sizePointer).
+func Size(m Message) int {
+	if m == nil {
+		return 0
+	}
+	x, ok := m.(methods)
+	if !ok {
+		panic("proto: Size on a message type outside the plainpb nine (fail closed; extend the derivation after reading the new type)")
+	}
+	return x.SizeMessage()
+}''',
+    "Unmarshal": '''// Unmarshal — proto/decode.go:61-64 + :90-135 unmarshal: Reset (the
+// generated Reset; a typed nil nil-dereferences there, as upstream's
+// does), then the generated fast path with RecursionLimit 10000;
+// checkInitialized never fails (no required field). A nil interface
+// nil-dereferences at the method call, as upstream's m.ProtoReflect()
+// does.
+func Unmarshal(b []byte, m Message) error {
+	if m == nil {
+		m.ProtoMessage()
+	}
+	x, ok := m.(methods)
+	if !ok {
+		panic("proto: Unmarshal on a message type outside the plainpb nine (fail closed; extend the derivation after reading the new type)")
+	}
+	x.ResetMessage()
+	return x.UnmarshalMessage(b, defaultRecursionLimit)
+}''',
+}
+
+PROTO_TWINS = {
+    "Clone": ("proto/merge.go:41-60 Clone", "allocates (the deep copy); reads the message"),
+    "Equal": ("proto/equal.go:42-66 Equal", "pure: reads both messages"),
+    "Marshal": ("proto/encode.go:105-116 Marshal, :141-146 emptyBytesForMessage", "allocates the encoding; reads the message"),
+    "Unmarshal": ("proto/decode.go:61-64 Unmarshal, :90-135 unmarshal; proto/reset.go:16-22 Reset", "writes the message (reset, then decode); reads b"),
+    "Size": ("proto/size.go:19-35 Size", "pure: reads the message"),
+}
+
+
+def gen_proto(used, records):
+    """Emit the subject-local proto package: the error machinery, the
+    dispatch interface, and exactly the used entry points."""
+    unknown = sorted(u for u in used if u not in PROTO_FUNCS)
+    if unknown:
+        refuse("the vendored tree calls proto.%s, which the stand-in does not "
+               "declare — read the new call site and extend PROTO_FUNCS "
+               "(fail-closed by design)" % ", proto.".join(unknown))
+    out = [PROTO_HEADER % {"path": PROTO_PATH, "pb": PB_VERSION} + PROTO_COMMON.rstrip("\n")]
+    records += [
+        ("var proto.Error", "proto/proto.go:32-35 (internal/errors/errors.go:16)", "package state, set once at init", "-"),
+        ("type proto.prefixError", "internal/errors/errors.go:24", "-", "-"),
+        ("var proto.prefix", "internal/errors/errors.go:26-34 (the per-binary detrand bit)", "package state, set once at init by ONE ChoiceSite.intn draw (bound 2)", "-"),
+        ("func proto.pickPrefix", "internal/detrand/rand.go:25-27 Bool (+ errors.go:26-34)", "ONE choice: rand.Intn(2), consumed before main", "-"),
+        ("method (*proto.prefixError).Error", "internal/errors/errors.go:36-38", "pure: reads prefix, e.s", "-"),
+        ("method (*proto.prefixError).Unwrap", "internal/errors/errors.go:40-42", "pure", "-"),
+        ("func proto.NewError", "internal/errors/errors.go:20-22 New (no format verbs)", "allocates the *prefixError", "-"),
+        ("var proto.emptyBuf", "proto/decode_gen.go:603", "package state, zero-length", "-"),
+    ]
+    for name in sorted(used):
+        body = PROTO_BODIES[name]
+        if PROTO_FUNCS[name] not in body:
+            refuse("internal: proto.%s body does not carry its pinned signature" % name)
+        out.append(body)
+        twin, fp = PROTO_TWINS[name]
+        records.append(("func proto.%s" % name, twin, fp, "-"))
     return "\n\n".join(out) + "\n"
 
 
@@ -1342,99 +2193,6 @@ def rewrite_imports(src):
     src, k = re.subn(r'"%s"' % re.escape(PROTO_PATH), '"proto"', src)
     n += k
     return src, n
-
-
-# ------------------------------------------------- the proto stand-in ------
-
-PROTO_HEADER = """// Code GENERATED by tools/raftsubject/derive.py. DO NOT EDIT — edit the
-// derivation.
-//
-// The subject-local stand-in for %s, which the
-// vendored raft root package calls on four functions.  Since W4.1 (H-1
-// discharged — docs/raft-w41-log.md item 1) the four bodies are REAL:
-// type-switch dispatch over the nine plainpb message types into the
-// generated per-type codec (raftpb/plain_codec.go: AppendMessage /
-// SizeMessage / UnmarshalMessage) and deep clone (raftpb/plain_clone.go:
-// CloneMessage).  A message type outside the nine cannot exist in the
-// subject tree (the derivation refuses unknown proto surface), and the
-// dispatch defaults still fail closed with an explicit panic — never a
-// silent zero.
-//
-// Semantics deltas vs the runtime, recorded (JC-14/JC-15 in the log):
-// Clone of a TYPED-NIL message returns the typed nil (the runtime returns
-// a read-only zero message) — unreachable in the tree, every clone site
-// guards or guarantees non-nil; Unmarshal DROPS unknown fields after
-// skipping them (the runtime preserves them for re-marshal).
-
-package proto
-
-import (
-	"raftpb"
-)
-
-// Message is the interface the vendored callers pass.  Every plainpb message
-// type satisfies it — the derivation keeps their generated ProtoMessage()
-// marker methods verbatim — so the stand-in type-checks exactly where the
-// runtime's own proto.Message did.
-type Message interface {
-	ProtoMessage()
-}
-
-// nonNil matches proto.Marshal's empty-message behavior: a valid message
-// with nothing to encode marshals to a zero-length NON-NIL slice.
-func nonNil(b []byte) []byte {
-	if b == nil {
-		return []byte{}
-	}
-	return b
-}
-"""
-
-
-def gen_proto(used, msgs):
-    """Emit the subject-local proto package for exactly the used functions,
-    each a type-switch dispatch over the nine plainpb message types."""
-    unknown = sorted(u for u in used if u not in PROTO_FUNCS)
-    if unknown:
-        refuse("the vendored tree calls proto.%s, which the stand-in does not "
-               "declare — read the new call site and extend PROTO_FUNCS "
-               "(fail-closed by design)" % ", proto.".join(unknown))
-    names = list(msgs.keys())
-    out = [PROTO_HEADER % PROTO_PATH]
-    for name in sorted(used):
-        sig, _res = PROTO_FUNCS[name]
-        body = ["%s {" % sig]
-        if name == "Clone":
-            body += ["\tif m == nil {",
-                     "\t\treturn nil",
-                     "\t}",
-                     "\tswitch x := m.(type) {"]
-            for t in names:
-                body += ["\tcase *raftpb.%s:" % t,
-                         "\t\treturn x.CloneMessage()"]
-        elif name == "Marshal":
-            body += ["\tswitch x := m.(type) {"]
-            for t in names:
-                body += ["\tcase *raftpb.%s:" % t,
-                         "\t\treturn nonNil(x.AppendMessage(nil)), nil"]
-        elif name == "Size":
-            body += ["\tswitch x := m.(type) {"]
-            for t in names:
-                body += ["\tcase *raftpb.%s:" % t,
-                         "\t\treturn x.SizeMessage()"]
-        elif name == "Unmarshal":
-            body += ["\tswitch x := m.(type) {"]
-            for t in names:
-                body += ["\tcase *raftpb.%s:" % t,
-                         "\t\tx.Reset()",
-                         "\t\treturn x.UnmarshalMessage(b)"]
-        body += ["\t}",
-                 '\tpanic("proto: %s on a message type outside the plainpb '
-                 'nine (fail closed; extend the derivation after reading '
-                 'the new type)")' % name,
-                 "}"]
-        out.append("\n".join(body))
-    return "\n\n".join(out) + "\n"
 
 
 # ------------------------------------------------ declaration selection ----
@@ -1501,6 +2259,133 @@ def digest(path):
         return hashlib.sha256(f.read()).hexdigest()
 
 
+# ---- the corpus mirror (D9 / acceptance §5: the language shapes) -----------
+#
+# Corpus/coverage/exec/multipkg/wire-codec/ pins, differentially (go run vs
+# the machine, stdlib only — protobuf-go is never a corpus oracle), the
+# LANGUAGE SHAPES the generated codec runs on. Since route A S1 its two local
+# packages are not hand-mirrored: they are THIS generator's output over a
+# small synthetic schema (four messages: a self-recursive one with every
+# field kind, so the recursion edges, groups, unknowns and typed nils are
+# all reachable), renamed raftpb -> wirepb and proto -> wireproto. --check
+# regenerates them and fails on drift, so a generator change (the Q5
+# dispatch-form flip included) moves the corpus pin in the same commit.
+MIRROR_DIR = "Corpus/coverage/exec/multipkg/wire-codec"
+MIRROR_ENUMS = ["EntryType", "ConfChangeType"]
+MIRROR_SCHEMA = [
+    ("Entry", [
+        ("Term", "*uint64", '`protobuf:"varint,2,opt,name=Term"`'),
+        ("Index", "*uint64", '`protobuf:"varint,3,opt,name=Index"`'),
+        ("Type", "*EntryType", '`protobuf:"varint,1,opt,name=Type,enum=wirepb.EntryType"`'),
+        ("Data", "[]byte", '`protobuf:"bytes,4,opt,name=Data"`'),
+    ]),
+    ("ConfChange", [
+        ("Type", "*ConfChangeType", '`protobuf:"varint,2,opt,name=type,enum=wirepb.ConfChangeType"`'),
+        ("NodeId", "*uint64", '`protobuf:"varint,3,opt,name=node_id"`'),
+        ("Context", "[]byte", '`protobuf:"bytes,4,opt,name=context"`'),
+        ("Id", "*uint64", '`protobuf:"varint,1,opt,name=id"`'),
+    ]),
+    ("ConfState", [
+        ("Voters", "[]uint64", '`protobuf:"varint,1,rep,name=voters"`'),
+        ("AutoLeave", "*bool", '`protobuf:"varint,5,opt,name=auto_leave"`'),
+    ]),
+    ("Message", [
+        ("To", "*uint64", '`protobuf:"varint,2,opt,name=to"`'),
+        ("Entries", "[]*Entry", '`protobuf:"bytes,7,rep,name=entries"`'),
+        ("Conf", "*ConfState", '`protobuf:"bytes,9,opt,name=conf"`'),
+        ("Context", "[]byte", '`protobuf:"bytes,12,opt,name=context"`'),
+        ("Responses", "[]*Message", '`protobuf:"bytes,14,rep,name=responses"`'),
+    ]),
+]
+
+MIRROR_HEADER = """// Code GENERATED by tools/raftsubject/derive.py (the corpus mirror, route A
+// S1). DO NOT EDIT — derive.py --check regenerates and compares it.
+//
+// The route A codec generator's output over a four-message SYNTHETIC schema
+// (MIRROR_SCHEMA), renamed raftpb -> wirepb and proto -> wireproto: the
+// corpus pin for the language shapes raftsubject's generated codec runs on.
+"""
+
+
+def mirror_rename(text):
+    text = text.replace("\npackage raftpb\n", "\npackage wirepb\n")
+    text = text.replace("\npackage proto\n", "\npackage wireproto\n")
+    text = text.replace('\t"proto"\n', '\t"wireproto"\n')
+    text = text.replace('import "proto"\n', 'import "wireproto"\n')
+    text = re.sub(r"\bproto\.(NewError|Message)\b", r"wireproto.\1", text)
+    return MIRROR_HEADER + "\n" + text
+
+
+def gen_corpus_mirror(out_dir):
+    """Write wirepb/ and wireproto/ under out_dir (the case directory)."""
+    msgs = {}
+    for name, fields in MIRROR_SCHEMA:
+        m = Msg(name)
+        m.fields = list(fields)
+        m.has_unknown = True
+        msgs[name] = m
+    enums = set(MIRROR_ENUMS)
+    types = ["package wirepb", ""]
+    for e in MIRROR_ENUMS:
+        types += ["type %s int32" % e, ""]
+    for name, fields in MIRROR_SCHEMA:
+        types.append("type %s struct {" % name)
+        for fname, ftype, ftag in fields:
+            types.append("\t%s %s %s" % (fname, ftype, ftag))
+        types += ["\tunknownFields []byte", "}", "",
+                  "func (*%s) ProtoMessage() {}" % name, ""]
+    files = {
+        "wirepb/types.go": MIRROR_HEADER + "\n" + "\n".join(types),
+        "wirepb/plain_wire.go": mirror_rename(gen_wire()),
+        "wirepb/plain_codec.go": mirror_rename(gen_codec(msgs, enums, [])),
+        "wirepb/plain_clone.go": mirror_rename(gen_clone(msgs, enums, [])),
+        "wireproto/proto.go": mirror_rename(gen_proto(set(PROTO_FUNCS), [])),
+    }
+    for rel, text in sorted(files.items()):
+        if re.search(r"\braftpb\b\.|\bproto\.(NewError|Message)\b", re.sub(r"//.*", "", text)):
+            refuse("corpus mirror %s still names raftpb./proto. in code" % rel)
+        dst = os.path.join(out_dir, rel)
+        os.makedirs(os.path.dirname(dst), exist_ok=True)
+        with open(dst, "w") as f:
+            f.write(text)
+    gofmt = subprocess.run(["gofmt", "-w", os.path.join(out_dir, "wirepb"),
+                            os.path.join(out_dir, "wireproto")], capture_output=True, text=True)
+    if gofmt.returncode != 0:
+        refuse("gofmt failed on the corpus mirror:\n%s" % gofmt.stderr)
+    return sorted(files)
+
+
+GENERATED_FILES = ["raftpb/plain_wire.go", "raftpb/plain_codec.go",
+                   "raftpb/plain_clone.go", "proto/proto.go"]
+
+
+def generated_digests(out_dir):
+    return {g: digest(os.path.join(out_dir, g)) for g in GENERATED_FILES}
+
+
+def render_funcids(funcids, out_dir):
+    """D8 (the logic team's (a), (b), (e)): every generated function,
+    method and package-level value of the route A codec, with its upstream
+    twin and its footprint; the dispatch column names the Q5 sites. The
+    trailer pins the generated files' digests (also in GENERATED_DIGESTS)."""
+    keys = [r[0] for r in funcids]
+    if len(set(keys)) != len(keys):
+        refuse("duplicate FuncId rows: %s" % sorted(k for k in keys if keys.count(k) > 1))
+    lines = [
+        "# codec-funcids.tsv — GENERATED by tools/raftsubject/derive.py (route A D8,",
+        "# docs/2026-10-04_route-a-protobuf-design.md). DO NOT EDIT; --check compares it.",
+        "# Upstream twins: %s, paths relative to google.golang.org/protobuf@v1.36.11." % PB_VERSION,
+        "# dispatch: the field-number dispatch form of the row's body (Q5 PENDING —",
+        "# DISPATCH_FORM in derive.py; '-' = no field-number dispatch).",
+        "# wire_key\tfile\tupstream_twin\tfootprint\tdispatch"]
+    for r in funcids:
+        lines.append("\t".join(r))
+    dg = generated_digests(out_dir)
+    for g in GENERATED_FILES:
+        lines.append("# sha256 %s %s" % (dg[g], g))
+    return "\n".join(lines) + "\n"
+
+
 def derive(raft_dir, out_dir, verbose=True):
     rev = subprocess.run(["git", "-C", raft_dir, "rev-parse", "HEAD"],
                          capture_output=True, text=True).stdout.strip()
@@ -1523,6 +2408,7 @@ def derive(raft_dir, out_dir, verbose=True):
     report = []
     proto_used = set()
     plainpb_msgs = None
+    funcids = []  # D8: (wire key, file, upstream twin, footprint, dispatch)
     for up, outp, mode in VENDOR:
         src = open(os.path.join(raft_dir, up)).read()
         dst = os.path.join(out_dir, outp)
@@ -1548,16 +2434,26 @@ def derive(raft_dir, out_dir, verbose=True):
         elif mode == "plainpb":
             text, msgs, enums, stubbed, dropped = plainpb(src)
             plainpb_msgs = msgs
-            with open(os.path.join(out_dir, "raftpb", "plain_clone.go"), "w") as f:
-                f.write(gen_clone(msgs, enums))
+            for fp in WIRE_FUNCS:
+                funcids.append((fp[0], "raftpb/plain_wire.go", fp[1], fp[2], "-"))
+            with open(os.path.join(out_dir, "raftpb", "plain_wire.go"), "w") as f:
+                f.write(gen_wire())
+            recs = []
             with open(os.path.join(out_dir, "raftpb", "plain_codec.go"), "w") as f:
-                f.write(gen_codec(msgs, enums))
+                f.write(gen_codec(msgs, enums, recs))
+            funcids += [(r[0], "raftpb/plain_codec.go", r[1], r[2], r[3]) for r in recs]
+            recs = []
+            with open(os.path.join(out_dir, "raftpb", "plain_clone.go"), "w") as f:
+                f.write(gen_clone(msgs, enums, recs))
+            funcids += [(r[0], "raftpb/plain_clone.go", r[1], r[2], r[3]) for r in recs]
             report.append("plainpb  %-32s (%d msgs, %d enums, %d stubs, %d drops)"
                           % (outp, len(msgs), len(enums), len(stubbed), len(dropped)))
-            report.append("generate %-32s (CloneMessage/EqualMessage x %d)"
+            report.append("generate %-32s (protowire/impl twins, %d entries)"
+                          % ("raftpb/plain_wire.go", len(WIRE_FUNCS)))
+            report.append("generate %-32s (IsNil/Reset/Size/MarshalAppend/Unmarshal/ProtoClone/ProtoEqual x %d; dispatch form %s)"
+                          % ("raftpb/plain_codec.go", len(msgs), DISPATCH_FORM))
+            report.append("generate %-32s (CloneMessage/mergeMessage/EqualMessage x %d)"
                           % ("raftpb/plain_clone.go", len(msgs)))
-            report.append("generate %-32s (Size/Append/UnmarshalMessage x %d)"
-                          % ("raftpb/plain_codec.go", len(msgs)))
         elif mode == "overlay":
             ov = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                               "overlay", outp)
@@ -1581,7 +2477,9 @@ def derive(raft_dir, out_dir, verbose=True):
             refuse("proto surface used but no plainpb step ran — VENDOR order broken")
         os.makedirs(os.path.join(out_dir, "proto"), exist_ok=True)
         with open(os.path.join(out_dir, "proto", "proto.go"), "w") as f:
-            f.write(gen_proto(proto_used, plainpb_msgs))
+            recs = []
+            f.write(gen_proto(proto_used, recs))
+            funcids += [(r[0], "proto/proto.go", r[1], r[2], r[3]) for r in recs]
         report.append("generate %-32s (%d codec dispatch function%s: %s)"
                       % ("proto/proto.go", len(proto_used),
                          "" if len(proto_used) == 1 else "s",
@@ -1590,6 +2488,14 @@ def derive(raft_dir, out_dir, verbose=True):
     gofmt = subprocess.run(["gofmt", "-w", out_dir], capture_output=True, text=True)
     if gofmt.returncode != 0:
         refuse("gofmt failed on the derived tree:\n%s" % gofmt.stderr)
+
+    # D8: the FuncId table (wire key, file, twin, footprint, dispatch form)
+    # and the digests of the generated files, written beside the tree as
+    # `.funcids.tsv` (main() places it at FUNCIDS_PATH / compares it).
+    if plainpb_msgs is None:
+        refuse("no plainpb step ran — the codec FuncId table cannot be built")
+    with open(os.path.join(out_dir, ".funcids.tsv"), "w") as f:
+        f.write(render_funcids(funcids, out_dir))
 
     if verbose:
         for line in report:
@@ -1604,7 +2510,28 @@ def main():
     ap.add_argument("--check", action="store_true",
                     help="derive to a temp dir and diff against --out")
     ap.add_argument("--print-digests", action="store_true")
+    ap.add_argument("--print-generated-digests", action="store_true",
+                    help="derive to a temp dir and print the GENERATED_DIGESTS "
+                         "table to paste (D8; a human act, like --print-digests)")
     args = ap.parse_args()
+    funcids_out = os.path.join(REPO, FUNCIDS_PATH)
+
+    def digest_mismatch(tree):
+        got = generated_digests(tree)
+        return [g for g in GENERATED_FILES if GENERATED_DIGESTS.get(g) != got[g]], got
+
+    if args.print_generated_digests:
+        tmp = tempfile.mkdtemp(prefix="raftsubject-gen-")
+        try:
+            derive(args.raft, tmp, verbose=False)
+            _bad, got = digest_mismatch(tmp)
+            print("GENERATED_DIGESTS = {")
+            for g in GENERATED_FILES:
+                print('    "%s": "%s",' % (g, got[g]))
+            print("}")
+        finally:
+            shutil.rmtree(tmp)
+        return
 
     if args.print_digests:
         print("DIGESTS = {")
@@ -1618,6 +2545,28 @@ def main():
         try:
             derive(args.raft, tmp, verbose=False)
             drift = []
+            bad, _got = digest_mismatch(tmp)
+            for g in bad:
+                drift.append("%s (generated digest differs from GENERATED_DIGESTS — "
+                             "the generator's output moved; review, then paste "
+                             "--print-generated-digests)" % g)
+            fresh_ids = os.path.join(tmp, ".funcids.tsv")
+            if not os.path.exists(funcids_out) or \
+                    not filecmp.cmp(fresh_ids, funcids_out, shallow=False):
+                drift.append(FUNCIDS_PATH + " (FuncId table differs from the derivation)")
+            os.remove(fresh_ids)
+            mtmp = os.path.join(tmp, ".mirror")
+            for rel in gen_corpus_mirror(mtmp):
+                tracked = os.path.join(REPO, MIRROR_DIR, rel)
+                if not os.path.exists(tracked) or \
+                        not filecmp.cmp(os.path.join(mtmp, rel), tracked, shallow=False):
+                    drift.append("%s/%s (corpus mirror differs from the generator)" % (MIRROR_DIR, rel))
+            for sub in ("wirepb", "wireproto"):
+                d = os.path.join(REPO, MIRROR_DIR, sub)
+                for fn in (sorted(os.listdir(d)) if os.path.isdir(d) else []):
+                    if fn.endswith(".go") and not os.path.exists(os.path.join(mtmp, sub, fn)):
+                        drift.append("%s/%s/%s (tracked in the mirror but not generated)" % (MIRROR_DIR, sub, fn))
+            shutil.rmtree(mtmp)
             for root, _d, files in os.walk(tmp):
                 for fn in files:
                     a = os.path.join(root, fn)
@@ -1643,6 +2592,18 @@ def main():
         return
 
     derive(args.raft, args.out)
+    shutil.move(os.path.join(args.out, ".funcids.tsv"), funcids_out)
+    mirror_dir = os.path.join(REPO, MIRROR_DIR)
+    stale = os.path.join(mirror_dir, "wirepb", "wirepb.go")
+    if os.path.exists(stale):
+        os.remove(stale)  # the pre-route-A hand mirror, superseded
+    gen_corpus_mirror(mirror_dir)
+    bad, _got = digest_mismatch(args.out)
+    if bad:
+        refuse("the tree was written, but the generated file(s) %s differ from "
+               "GENERATED_DIGESTS — review the generator change, then paste the "
+               "table printed by --print-generated-digests (fail closed: an "
+               "unreviewed generator move is not a derivation)" % ", ".join(bad))
 
 
 if __name__ == "__main__":

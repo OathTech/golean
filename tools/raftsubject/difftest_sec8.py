@@ -591,6 +591,16 @@ def _gen_go(msgs, enums, message_fields, refuse, proto_src):
                          % (t, fname, t, fname, base, t, fname, base))
             typed.append('\tsec8Typed(types["%s"], "nil-and-empty-elem-%s", &up.%s{%s: []*up.%s{nil, {}}}, &pp.%s{%s: []*pp.%s{nil, {}}})'
                          % (t, fname, t, fname, base, t, fname, base))
+            # Go-level: proto.Clone turns a nil element into an EMPTY message
+            # (impl/merge.go:175-185) — invisible to Marshal and Equal, so
+            # checked directly.
+            typed.append('\t{')
+            typed.append('\t\tuc := proto.Clone(&up.%s{%s: []*up.%s{nil}}).(*up.%s)' % (t, fname, base, t))
+            typed.append('\t\tpc := pproto.Clone(&pp.%s{%s: []*pp.%s{nil}}).(*pp.%s)' % (t, fname, base, t))
+            typed.append('\t\tif (uc.%s[0] == nil) != (pc.%s[0] == nil) {' % (fname, fname))
+            typed.append('\t\t\treport("S8/clone-nil-elem/%s", "%s", uc.%s[0] == nil, pc.%s[0] == nil)' % (t, fname, fname, fname))
+            typed.append('\t\t}')
+            typed.append('\t}')
             typed.append('\t{')
             typed.append('\t\tue := proto.Equal(&up.%s{%s: []*up.%s{nil}}, &up.%s{%s: []*up.%s{{}}})'
                          % (t, fname, base, t, fname, base))

@@ -779,6 +779,13 @@ about the walk plan and is untouched.
   now carries upstream's body with the two `proto.Marshal` calls replaced by
   the per-type `AppendMessage` (raftpb cannot import the subject-local
   `proto` package — `proto` imports `raftpb`).
+
+  > **Amended 2026-10-04 (route A S1, design D7; [USER] 2026-10-04
+  > «Approved», relayed).** The overlay is RETIRED: `proto` no longer
+  > imports `raftpb` (interface dispatch, D2), so `raftpb/confchange.go` is
+  > upstream VERBATIM — its two `proto.Marshal` calls go to the subject-local
+  > `proto` package like every other call site (the W2 overlay delta D-4
+  > RETIRED; `docs/raft-w42-log.md`, the 2026-10-04 ledger continuation).
 - **JC-14: Unmarshal semantics = protobuf wire spec over the 9 schemas,
   fail closed at the edges.** Merge semantics (proto.Unmarshal = Reset +
   merge; embedded messages merge, scalars last-one-wins, repeated append);
@@ -808,6 +815,16 @@ about the walk plan and is untouched.
   > skipped as unknown (protobuf-go's own treatment)» is half right:
   > protobuf-go treats them as unknown AND RETAINS them. All resolved by
   > protobuf route A (`docs/2026-09-30_protobuf-route-a.md`).
+
+  > **Superseded 2026-10-04 (route A S1, `docs/2026-10-04_route-a-protobuf-
+  > design.md` D1-D4).** The decoding contract is now protobuf-go v1.36.11's
+  > own, by construction: the generated decoder mirrors `impl/decode.go`
+  > `unmarshalPointerEager` (unknown fields AND wrong-wire-type known fields
+  > RETAINED — canonical tag + raw bytes, arrival order; unknown groups
+  > SKIPPED by the `protowire.consumeFieldValueD` twin, depth-limited; the
+  > field-number bounds and their in-group asymmetry; every malformation the
+  > one `errDecode` value; `errRecursionDepth` past 10000 nested messages).
+  > Validated EXACTLY by `difftest.py` section 8.
 - **JC-15: the byte-fidelity bar and where each half is validated.**
   Marshal emits fields in FIELD-NUMBER order (protobuf-go's table-driven
   marshaler order; maps — the one Deterministic-flag concern — do not occur
@@ -836,3 +853,12 @@ about the walk plan and is untouched.
   > not a gate, and probes WELL-FORMED shapes only: the malformed / unknown-
   > field / group battery that would see U-1–U-3 is route A's section 8
   > (`docs/raft-w42-log.md`, the 2026-09-30 ledger continuation).
+
+  > **Amended 2026-10-04 (route A S1).** Section 8 LANDED
+  > (`tools/raftsubject/difftest_sec8.py`): the imported 26-entry corpus + a
+  > generated adversarial battery + the recursion edges + typed nils, EXACT
+  > (no note class). Two JC-15 sentences change: Marshal of a TYPED-NIL
+  > message returns `nil` (protobuf-go `emptyBytesForMessage`), not
+  > `[]byte{}` — only a VALID empty message gets the non-nil empty buffer;
+  > and Marshal re-emits retained unknown bytes after the known fields.
+  > `codeccheck.py` gained checks 39-51 + the corpus (100-125).

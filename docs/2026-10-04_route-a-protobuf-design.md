@@ -215,3 +215,51 @@ coordinator, ratified by the [USER] «Approved»):
 
 Build lane for slice S1: `lane/route-a-s1-1004` (worktree `.claude/worktrees/route-a-s1`), branched from this design branch at
 `04b659f0` so the note lands with the build.
+
+## 8. S1 build record (2026-10-04) — [AGENT] S1 build worker, lane `lane/route-a-s1-1004`
+
+Delivered against §3's S1 row (generator + dispatch + overlays) and the coordinator's brief (the D9 instruments red-first, the
+born corpus rows): D1 (`plain_wire.go` + `plain_codec.go` + `plain_clone.go`, each function's twin by file:line), D2 (interface
+dispatch; `proto` no longer imports `raftpb`; typed-nil Marshal → `nil`), D3 (`unknownFields []byte` kept), D4 (`errDecode`,
+`errRecursionDepth`, both `*prefixError` unwrapping to `proto.Error`; the two depth counters), D5 (`var prefix = pickPrefix()`,
+one `rand.Intn(2)`), D6 (below), D7 (`confchange.go` verbatim; `confstate.go` upstream + the D-3 patch), D8
+(`tools/raftsubject/codec-funcids.tsv`, `GENERATED_DIGESTS`, both under `--check`), D9 (difftest section 8 + codeccheck
+39–51/100–125, red-first then green; 24 corpus rows), D10/D11 unchanged surfaces, D12's records for what S1 changes (ledger
+continuation in `docs/raft-w42-log.md`, JC-13/14/15 amended, the twin re-pin, README). S2 keeps the RawNode twin schedules
+(`runprobe.py`); S3 the rest of D12.
+
+[AGENT] readings inside the ratified decisions, stated for review (none moves a decision):
+- **D6 loops.** «Indexed `for` loops only» is read as: no `range`, no `for {}`; three-clause loops, and single-condition
+  loops where the code consumes a byte slice (`for len(b) > 0`, upstream's own decode-loop shape). Upstream's `for {}` group
+  loop (`consumeFieldValueD`) is `for len(b) > 0` + an explicit `errCodeTruncated` return — the value upstream's `ConsumeTag`
+  gives on empty input. If the logic team's (c) means three-clause only, it is a generator change, not a design one.
+- **Twin signatures.** `consumeFixed32/64` return the length only (a skip never reads the value); `consumeVarintValue` /
+  `consumeBytesValue` are the shared heads of the per-kind consumers, each kind's store inlined at its field arm.
+- **`proto.NewError`** is exported from the stand-in (the twin of `internal/errors.New`) because the generated codec — the
+  `internal/impl` twin — declares its two error values through it; it is not part of upstream `proto`'s API.
+- **Not reproduced, capacity only:** the packed-field pre-grow (`growUint64Slice`) and `Marshal`'s `growcap` buffer sizing —
+  slice CAPACITY, which `append`'s own latitude already leaves open.
+- **`proto.Unmarshal(b, nil)`** nil-dereferences through `m.ProtoMessage()` on the nil interface, as upstream's
+  `m.ProtoReflect()` does.
+- **§2 wording correction.** `equalUnknown` compares, per field number, the CONCATENATION of that number's records in arrival
+  order (`mx[fnum] = append(mx[fnum], x[:n]...)`), not a multiset; the generated twin does exactly that (section 8's
+  `unknown-same-num-xy`/`-yx` pair is unequal on both sides).
+
+**Q5 (PENDING) — the tagless `switch` sites.** ONE constant, `derive.py` `DISPATCH_FORM` (`"tagless-switch"` | `"if-chain"`),
+renders every site; the if-chain form generates and compiles (checked by a scratch derivation + `go build` of the twin), it is
+not machine-run until chosen. Sites: the field-number dispatch inside `UnmarshalMessage` of each of the nine raftpb types
+(`Entry`, `SnapshotMetadata`, `Snapshot`, `Message`, `HardState`, `ConfState`, `ConfChange`, `ConfChangeSingle`,
+`ConfChangeV2`) — the `dispatch` column of `codec-funcids.tsv` — and the same four sites in the corpus mirror
+(`Corpus/coverage/exec/multipkg/wire-codec/wirepb/plain_codec.go`: `Entry`, `ConfChange`, `ConfState`, `Message`), which
+`--check` regenerates with the subject. No other `switch` is emitted.
+
+**OPEN ITEM (a deviation the apparatus forces — reported, not self-adjudicated).** §5's `recursion-depth-10000-vs-10001` corpus
+row is NOT born: each edge decode costs 10M–40M machine steps (measured: 9999/10000 nested `responses` and 10001 nested groups
+fuel-out at 10M and complete at 40M; 10002 groups completes under 10M), past the strict lane's fixed 10M fuel, and a per-row
+fuel parameter would be an apparatus (trusted-surface #2) change. Covered instead by `codeccheck.py` checks 48–51 (the machine
+leg runs at fuel 3e8; both oracles agree) and `difftest.py` section 8 (exact vs protobuf-go). Options for the [USER]: (i)
+accept the instrument coverage as the row's stand-in; (ii) a strict-lane fuel parameter (apparatus change, its own lane);
+(iii) a born-red row with a ledger entry.
+
+**Pre-existing finding.** `codeccheck.py`'s machine leg was already red on `main` (an E13 (b) structural-allocation quarantine
+on two battery literals); the red-first commit hoists them.

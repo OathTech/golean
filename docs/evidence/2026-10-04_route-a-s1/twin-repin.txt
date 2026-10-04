@@ -1,0 +1,177 @@
+# Twin wire re-pin, route A slice S1 (2026-10-04) — [AGENT] S1 build worker, lane lane/route-a-s1-1004.
+# old d5186f43aae8510e9969c1bbbd1c1df118b1d90839ef12f8b6eb696ed009cc60 (11925714 B)
+# new 661022b90b72df6d422f0bc3dbc3d43046be3770c5fd3485753d7f663a17e935 (12253125 B)
+# Fresh emit: the check-frontend-pins assembly (raftsubject/{quorum,raftpb,tracker,proto,confchange,raft} +
+# tools/raftsubject/{twin-lib,twin-chdriver,twin-chdriver-main}.go), GO111MODULE=off go run ./tools/nativefrontend.
+# Classification scripts: key-level diff (wirediff) and body classification (wireclass: hoist temporaries
+# $c/$sw/$swi/$swf/$t/$tmp/$ret/$v/$u/$ts/$tsv/$tso normalized, pos fields dropped, global ids mapped to names).
+
+## key-level
+schema       IDENTICAL
+package      IDENTICAL
+buildContext IDENTICAL
+fileOrder: old 20 new 20
+
+== funcs: old 450 new 471; added 26, removed 5, changed 241
+  added by package: {'proto': 3, 'raftpb': 23}
+  removed by package: {'proto': 1, 'raftpb': 4}
+  changed by package: {'$pkginit': 1, 'bytes': 3, 'cmp': 1, 'confchange': 28, 'installLogger': 1, 'itoa': 1, 'newTwin': 1, 'probeTwinElect': 1, 'probeTwinPerturb': 1, 'probeTwinSingle': 1, 'probeTwinTicks': 1, 'proto': 4, 'quorum': 18, 'raft': 82, 'raftpb': 32, 'runSched': 1, 'runTwinChoice': 1, 'slices': 22, 'stateChar': 1, 'strings': 12, 'tracker': 26, 'unicode': 2}
+  changed OUTSIDE raftpb/proto: 205
+== methods: old 481 new 534; added 63, removed 10, changed 285
+  added by package: {'proto': 9, 'raftpb': 54}
+  removed by package: {'raftpb': 10}
+  changed by package: {'bytes': 8, 'confchange': 9, 'encoding/binary': 3, 'main': 6, 'quorum': 9, 'raft': 115, 'raftpb': 113, 'strings': 5, 'tracker': 17}
+  changed OUTSIDE raftpb/proto: 172
+== types: old 93 new 94; added 2, removed 1, changed 9
+  added by package: {'proto': 2}
+  removed by package: {'raftpb': 1}
+  changed by package: {'raftpb': 9}
+== globals: old 50 new 56; added 7, removed 1, changed 0
+  added by package: {'proto': 3, 'raftpb': 4}
+  removed by package: {'raftpb': 1}
+  changed by package: {}
+== methodSets: old 82 new 82 — the one set keyed raftpb.confStateError replaced by proto.prefixError's (coverage full)
+== promotions: old 56 new 71 — +18 = {IsNilMessage, MarshalAppend, ProtoClone, ProtoEqual, ResetMessage, mergeMessage} x
+   {raft.BasicStatus.HardState, raft.Ready.HardState, raft.Status.BasicStatus}; -3 = AppendMessage x the same three paths
+
+## added / removed declarations (funcs, methods, types, globals)
+    a proto.Equal
+    a proto.NewError
+    a proto.pickPrefix
+    a raftpb.appendBytes
+    a raftpb.appendTag
+    a raftpb.appendVarint
+    a raftpb.bytesEqual
+    a raftpb.consumeBytes
+    a raftpb.consumeBytesValue
+    a raftpb.consumeField
+    a raftpb.consumeFieldValue
+    a raftpb.consumeFieldValueD
+    a raftpb.consumeFixed32
+    a raftpb.consumeFixed64
+    a raftpb.consumePackedUint64
+    a raftpb.consumeTag
+    a raftpb.consumeVarint
+    a raftpb.consumeVarintValue
+    a raftpb.decodeBool
+    a raftpb.decodeTag
+    a raftpb.encodeBool
+    a raftpb.encodeTag
+    a raftpb.equalUnknown
+    a raftpb.sizeBytes
+    a raftpb.sizeVarint
+    a raftpb.unknownFieldRecords
+    r proto.nonNil
+    r raftpb.plainpbAppendVarint
+    r raftpb.plainpbConsumeVarint
+    r raftpb.plainpbSizeVarint
+    r raftpb.plainpbSkipField
+    a proto.methods.IsNilMessage
+    a proto.methods.MarshalAppend
+    a proto.methods.ProtoClone
+    a proto.methods.ProtoEqual
+    a proto.methods.ResetMessage
+    a proto.methods.SizeMessage
+    a proto.methods.UnmarshalMessage
+    a proto.prefixError.Error
+    a proto.prefixError.Unwrap
+    a raftpb.ConfChange.IsNilMessage
+    a raftpb.ConfChange.MarshalAppend
+    a raftpb.ConfChange.ProtoClone
+    a raftpb.ConfChange.ProtoEqual
+    a raftpb.ConfChange.ResetMessage
+    a raftpb.ConfChange.mergeMessage
+    a raftpb.ConfChangeSingle.IsNilMessage
+    a raftpb.ConfChangeSingle.MarshalAppend
+    a raftpb.ConfChangeSingle.ProtoClone
+    a raftpb.ConfChangeSingle.ProtoEqual
+    a raftpb.ConfChangeSingle.ResetMessage
+    a raftpb.ConfChangeSingle.mergeMessage
+    a raftpb.ConfChangeV2.IsNilMessage
+    a raftpb.ConfChangeV2.MarshalAppend
+    a raftpb.ConfChangeV2.ProtoClone
+    a raftpb.ConfChangeV2.ProtoEqual
+    a raftpb.ConfChangeV2.ResetMessage
+    a raftpb.ConfChangeV2.mergeMessage
+    a raftpb.ConfState.IsNilMessage
+    a raftpb.ConfState.MarshalAppend
+    a raftpb.ConfState.ProtoClone
+    a raftpb.ConfState.ProtoEqual
+    a raftpb.ConfState.ResetMessage
+    a raftpb.ConfState.mergeMessage
+    a raftpb.Entry.IsNilMessage
+    a raftpb.Entry.MarshalAppend
+    a raftpb.Entry.ProtoClone
+    a raftpb.Entry.ProtoEqual
+    a raftpb.Entry.ResetMessage
+    a raftpb.Entry.mergeMessage
+    a raftpb.HardState.IsNilMessage
+    a raftpb.HardState.MarshalAppend
+    a raftpb.HardState.ProtoClone
+    a raftpb.HardState.ProtoEqual
+    a raftpb.HardState.ResetMessage
+    a raftpb.HardState.mergeMessage
+    a raftpb.Message.IsNilMessage
+    a raftpb.Message.MarshalAppend
+    a raftpb.Message.ProtoClone
+    a raftpb.Message.ProtoEqual
+    a raftpb.Message.ResetMessage
+    a raftpb.Message.mergeMessage
+    a raftpb.Snapshot.IsNilMessage
+    a raftpb.Snapshot.MarshalAppend
+    a raftpb.Snapshot.ProtoClone
+    a raftpb.Snapshot.ProtoEqual
+    a raftpb.Snapshot.ResetMessage
+    a raftpb.Snapshot.mergeMessage
+    a raftpb.SnapshotMetadata.IsNilMessage
+    a raftpb.SnapshotMetadata.MarshalAppend
+    a raftpb.SnapshotMetadata.ProtoClone
+    a raftpb.SnapshotMetadata.ProtoEqual
+    a raftpb.SnapshotMetadata.ResetMessage
+    a raftpb.SnapshotMetadata.mergeMessage
+    r raftpb.ConfChange.AppendMessage
+    r raftpb.ConfChangeSingle.AppendMessage
+    r raftpb.ConfChangeV2.AppendMessage
+    r raftpb.ConfState.AppendMessage
+    r raftpb.Entry.AppendMessage
+    r raftpb.HardState.AppendMessage
+    r raftpb.Message.AppendMessage
+    r raftpb.Snapshot.AppendMessage
+    r raftpb.SnapshotMetadata.AppendMessage
+    r raftpb.confStateError.Error
+    a proto.methods
+    a proto.prefixError
+    r raftpb.confStateError
+    a proto.Error
+    a proto.emptyBuf
+    a proto.prefix
+    a raftpb.emptyBuf
+    a raftpb.errDecode
+    a raftpb.errRecursionDepth
+    a raftpb.errUnknown
+    r raftpb.errPlainpbMalformed
+
+## body classification of the CHANGED funcs/methods
+funcs    RESIDUAL                                 11
+funcs    raftpb/proto (route A body)              36
+funcs    temp renumbering / global-index shift / pos only 194
+methods  RESIDUAL                                 26
+methods  raftpb/proto (route A body)              113
+methods  temp renumbering / global-index shift / pos only 146
+RESIDUAL classes:
+     1  $pkginit: 68 -> 72 initializers
+     4  struct-lit raftpb.ConfChange +1 trailing default []byte arg (unknownFields, D3)
+     5  struct-lit raftpb.ConfChangeSingle +1 trailing default []byte arg (unknownFields, D3)
+     2  struct-lit raftpb.ConfChangeV2 +1 trailing default []byte arg (unknownFields, D3)
+     2  struct-lit raftpb.ConfState +1 trailing default []byte arg (unknownFields, D3)
+     9  struct-lit raftpb.Entry +1 trailing default []byte arg (unknownFields, D3)
+     1  struct-lit raftpb.HardState +1 trailing default []byte arg (unknownFields, D3)
+    34  struct-lit raftpb.Message +1 trailing default []byte arg (unknownFields, D3)
+     1  struct-lit raftpb.Snapshot +1 trailing default []byte arg (unknownFields, D3)
+     1  struct-lit raftpb.SnapshotMetadata +1 trailing default []byte arg (unknownFields, D3)
+UNCLASSIFIED: 0
+
+## twin driver, old vs new wire (machine, probeTwinChoice, default stream, --fuel 8000000000)
+old: EXIT=0 0.66 s 121876 KB observation sha256 76d2bc87562b313c…
+new: EXIT=0 0.67 s 124320 KB observation sha256 76d2bc87562b313c…
+byte-identical observations; status ok; tail: end viol=0 claims=1 committed=6 complete=1 floor=1 rounds=30

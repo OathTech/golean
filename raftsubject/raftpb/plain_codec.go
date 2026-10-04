@@ -3,1262 +3,1766 @@
 // (wire type, field number, opt/rep mode). DO NOT EDIT — edit the
 // derivation.
 //
-// The plainpb WIRE CODEC (W4.1, H-1 — docs/raft-w41-log.md item 1):
+// ROUTE A (docs/2026-10-04_route-a-protobuf-design.md, D1/D2/D4): per
+// message type, the methods the proto package dispatches to through its
+// `methods` interface, each the twin of a protobuf-go v1.36.11
+// internal/impl entry point (file:line in each doc comment; the FuncId
+// table: tools/raftsubject/codec-funcids.tsv):
 //
-//   (x *T) SizeMessage() int           == len(x.AppendMessage(nil))
-//   (x *T) AppendMessage(b) []byte     appends the protobuf wire encoding
-//   (x *T) UnmarshalMessage(b) error   parses and MERGES into x
+//   IsNilMessage()          !ProtoReflect().IsValid()   (a typed nil)
+//   ResetMessage()          the generated Reset's plain-Go half
+//   SizeMessage() int       impl/encode.go:47 sizePointer
+//   MarshalAppend(b) []byte impl/encode.go:148 marshalAppendPointer
+//   UnmarshalMessage(b, d)  impl/decode.go:103 unmarshalPointer + :124
+//                           unmarshalPointerEager (d = remaining depth)
+//   ProtoClone() Message    proto/merge.go:41 Clone (New + mergePointer)
+//   ProtoEqual(Message)     impl/equal.go:22 equalMessage
 //
-// Encoding contract (JC-15): fields in FIELD-NUMBER order; proto2
-// presence (a set-but-zero optional scalar and a present-but-empty bytes
-// field are both emitted); repeated varints UNPACKED (the pinned proto2
-// default).  Decoding contract (JC-14): merge semantics (proto.Unmarshal
-// = Reset + merge, done in the proto package dispatch); scalars last-one-
-// wins with a fresh cell; embedded messages merge; repeated fields
-// append; PACKED repeated varints are accepted although never emitted;
-// unknown fields and wrong-wire-type known fields are SKIPPED (delta vs
-// the runtime's unknown-field preservation — subject delta U-3); wire
-// types 3/4 (groups — absent from all nine schemas; the runtime SKIPS an
-// unknown group where this codec rejects it — subject delta U-2) and
-// malformed input return an error.  Varint bounds are protobuf-go's
-// ConsumeVarint's (<= 10 bytes, 10th byte <= 1).  U-1/U-2/U-3 are the
-// 2026-09-30 ledger continuation in docs/raft-w42-log.md, resolved by
-// protobuf route A (docs/2026-09-30_protobuf-route-a.md).
-//
-// The differential obligation: difftest.py section 7 (byte equality vs
-// the real protobuf runtime — OWED where the module cache is denied, see
-// the log) and codeccheck.py (round-trip, Size = len∘Marshal, and
-// hand-verified golden byte sequences, under BOTH go run and the
-// machine).
+// Encoding: fields in FIELD-NUMBER order, proto2 presence, repeated
+// varints UNPACKED, the retained unknown bytes LAST. Decoding: merge
+// semantics, last-one-wins scalars REUSING the cell, embedded messages
+// merge, repeated fields append, packed varints accepted, a WRONG wire
+// type on a known field and every unknown field RETAINED in
+// unknownFields (canonical tag + raw value, arrival order), every
+// malformation the one errDecode value, nesting past 10000 messages
+// errRecursionDepth.
 
 package raftpb
 
-import "errors"
+import "proto"
 
-// errPlainpbMalformed is the codec's single decode error. raft DOES
-// observe an Unmarshal error's VALUE: stepLeader's MsgProp arm panics
-// with it (raft.go:1334/1340 in this tree, upstream raft.go:1315/1321),
-// so the error's text is the abort line — under protobuf-go
-// "proto: cannot parse invalid wire-format data" (the one prefixError
-// value impl.errDecode; its prefix spacing is U+00A0 or U+0020 per
-// BINARY, internal/detrand), here "plainpb: malformed wire input". That
-// difference is subject delta U-1 (docs/raft-w42-log.md, the 2026-09-30
-// ledger continuation), resolved by protobuf route A; until then the
-// single sentinel names the codec so a transcript shows which codec
-// answered. The earlier comment here — «raft observes only the nil-ness
-// of an Unmarshal error» — was FALSE; corrected 2026-09-30 on the
-// raft-proofs team's U-1 (docs/2026-09-30_note-from-raft-proofs.md).
-var errPlainpbMalformed = errors.New("plainpb: malformed wire input")
-
-func plainpbSizeVarint(v uint64) int {
-	n := 1
-	for v >= 0x80 {
-		v >>= 7
-		n++
-	}
-	return n
+// IsNilMessage reports a TYPED-NIL message — the negation of
+// ProtoReflect().IsValid() for a generated message (proto/encode.go:141-146
+// emptyBytesForMessage, proto/merge.go:55-57 Clone, proto/equal.go:52-54 Equal).
+func (x *Entry) IsNilMessage() bool {
+	return x == nil
 }
 
-func plainpbAppendVarint(b []byte, v uint64) []byte {
-	for v >= 0x80 {
-		b = append(b, byte(v)|0x80)
-		v >>= 7
-	}
-	return append(b, byte(v))
+// ResetMessage is the generated Reset's plain-Go half (raft.pb.go
+// `*x = Entry{}`; proto/reset.go:16-22 calls it). A typed-nil receiver
+// nil-dereferences, as upstream's does.
+func (x *Entry) ResetMessage() {
+	*x = Entry{}
 }
 
-// plainpbConsumeVarint parses a base-128 varint at b[i:], returning the
-// value and the index just past it. ok=false on truncation or 64-bit
-// overflow (protobuf-go's bounds: at most 10 bytes, the 10th <= 1;
-// non-canonical over-long encodings of small values are accepted, as the
-// wire format requires).
-func plainpbConsumeVarint(b []byte, i int) (uint64, int, bool) {
-	var v uint64
-	for k := 0; k < 10; k++ {
-		if i+k >= len(b) {
-			return 0, 0, false
-		}
-		c := b[i+k]
-		if k == 9 && c > 1 {
-			return 0, 0, false
-		}
-		v |= uint64(c&0x7f) << (7 * k)
-		if c < 0x80 {
-			return v, i + k + 1, true
-		}
-	}
-	return 0, 0, false
-}
-
-// plainpbSkipField skips one unknown (or wrong-wire-type) field body.
-// Wire types 3/4 (groups) fail here. That is subject delta U-2: no
-// group exists in any plainpb schema, but the protobuf wire format makes
-// an unknown group a VALID unknown field of any message, and protobuf-go
-// (protowire.ConsumeFieldValue) skips it — nested, end-tag-matched,
-// depth-limited — where this codec rejects it. Route A restores the skip.
-func plainpbSkipField(b []byte, i int, wire uint64) (int, bool) {
-	switch wire {
-	case 0:
-		_, j, ok := plainpbConsumeVarint(b, i)
-		if !ok {
-			return 0, false
-		}
-		return j, true
-	case 1:
-		if len(b)-i < 8 {
-			return 0, false
-		}
-		return i + 8, true
-	case 2:
-		n, j, ok := plainpbConsumeVarint(b, i)
-		if !ok || uint64(len(b)-j) < n {
-			return 0, false
-		}
-		return j + int(n), true
-	case 5:
-		if len(b)-i < 4 {
-			return 0, false
-		}
-		return i + 4, true
-	}
-	return 0, false
-}
-
-// SizeMessage returns len(x.AppendMessage(nil)) without
-// allocating. A nil receiver sizes to 0 (proto.Size of a nil
-// message).
+// SizeMessage — internal/impl/encode.go:47-61 sizePointer + :63-132
+// sizePointerSlow: a nil receiver sizes 0; per present field tagsize +
+// value size in field-number order; plus len(unknownFields).
 func (x *Entry) SizeMessage() int {
 	if x == nil {
 		return 0
 	}
 	n := 0
 	if x.Type != nil {
-		n += 1 + plainpbSizeVarint(uint64(*x.Type))
+		n += 1 + sizeVarint(uint64(*x.Type))
 	}
 	if x.Term != nil {
-		n += 1 + plainpbSizeVarint(*x.Term)
+		n += 1 + sizeVarint(*x.Term)
 	}
 	if x.Index != nil {
-		n += 1 + plainpbSizeVarint(*x.Index)
+		n += 1 + sizeVarint(*x.Index)
 	}
 	if x.Data != nil {
-		n += 1 + plainpbSizeVarint(uint64(len(x.Data))) + len(x.Data)
+		n += 1 + sizeBytes(len(x.Data))
 	}
+	n += len(x.unknownFields)
 	return n
 }
 
-// AppendMessage appends x's protobuf wire encoding to b, fields
-// in field-number order. A nil receiver appends nothing.
-func (x *Entry) AppendMessage(b []byte) []byte {
+// MarshalAppend — internal/impl/encode.go:148-226 marshalAppendPointer:
+// a nil receiver appends nothing; present fields in field-number order;
+// the retained unknown bytes LAST. Marshal cannot fail on these schemas
+// (no required field, no UTF-8 check; the size-mismatch error of
+// codec_field.go:169-171 needs a concurrent mutation).
+func (x *Entry) MarshalAppend(b []byte) []byte {
 	if x == nil {
 		return b
 	}
 	if x.Type != nil {
-		b = append(b, 0x08)
-		b = plainpbAppendVarint(b, uint64(*x.Type))
+		b = appendVarint(b, 0x8)
+		b = appendVarint(b, uint64(*x.Type))
 	}
 	if x.Term != nil {
-		b = append(b, 0x10)
-		b = plainpbAppendVarint(b, *x.Term)
+		b = appendVarint(b, 0x10)
+		b = appendVarint(b, *x.Term)
 	}
 	if x.Index != nil {
-		b = append(b, 0x18)
-		b = plainpbAppendVarint(b, *x.Index)
+		b = appendVarint(b, 0x18)
+		b = appendVarint(b, *x.Index)
 	}
 	if x.Data != nil {
-		b = append(b, 0x22)
-		b = plainpbAppendVarint(b, uint64(len(x.Data)))
-		b = append(b, x.Data...)
+		b = appendVarint(b, 0x22)
+		b = appendBytes(b, x.Data)
 	}
+	b = append(b, x.unknownFields...)
 	return b
 }
 
-// UnmarshalMessage parses b and MERGES into x (the proto
-// package's Unmarshal resets first; embedded-message fields
-// recurse through this merge form, which is what makes a
-// twice-encoded singular message field merge as the wire
-// format specifies).
-func (x *Entry) UnmarshalMessage(b []byte) error {
-	i := 0
-	for i < len(b) {
-		tag, j, ok := plainpbConsumeVarint(b, i)
-		if !ok {
-			return errPlainpbMalformed
+// UnmarshalMessage parses b and MERGES into x — internal/impl/decode.go
+// :103-106 unmarshalPointer (the depth counter: decremented on entry,
+// errRecursionDepth below 0; proto.Unmarshal passes 10000, an embedded
+// message the caller's decremented value) + :124-241
+// unmarshalPointerEager (the tag fast paths, the field-number bounds,
+// the end-group check — groupTag is 0 for a message, so ANY end-group
+// tag mismatches —, the field consumers, unknown-field retention).
+func (x *Entry) UnmarshalMessage(b []byte, depth int) error {
+	depth--
+	if depth < 0 {
+		return errRecursionDepth
+	}
+	for len(b) > 0 {
+		var tag uint64
+		if b[0] < 0x80 {
+			tag = uint64(b[0])
+			b = b[1:]
+		} else if len(b) >= 2 && b[1] < 128 {
+			tag = uint64(b[0]&0x7f) + uint64(b[1])<<7
+			b = b[2:]
+		} else {
+			v, k := consumeVarint(b)
+			if k < 0 {
+				return errDecode
+			}
+			tag = v
+			b = b[k:]
 		}
-		i = j
-		num := tag >> 3
-		wire := tag & 7
-		if num == 0 {
-			return errPlainpbMalformed
+		fn := tag >> 3
+		if fn < minValidNumber || fn > maxValidNumber {
+			return errDecode
 		}
+		num := int32(fn)
+		wtyp := int(tag & 7)
+		if wtyp == endGroupType {
+			return errDecode
+		}
+		n := 0
+		err := errUnknown
 		switch {
-		case num == 1 && wire == 0:
-			v, j2, ok2 := plainpbConsumeVarint(b, i)
-			if !ok2 {
-				return errPlainpbMalformed
+		case num == 1:
+			v, m, e := consumeVarintValue(b, wtyp)
+			n = m
+			err = e
+			if e == nil {
+				if x.Type == nil {
+					x.Type = new(EntryType)
+				}
+				*x.Type = EntryType(int32(v))
 			}
-			ev := EntryType(int32(uint32(v)))
-			x.Type = &ev
-			i = j2
-		case num == 2 && wire == 0:
-			v, j2, ok2 := plainpbConsumeVarint(b, i)
-			if !ok2 {
-				return errPlainpbMalformed
+		case num == 2:
+			v, m, e := consumeVarintValue(b, wtyp)
+			n = m
+			err = e
+			if e == nil {
+				if x.Term == nil {
+					x.Term = new(uint64)
+				}
+				*x.Term = v
 			}
-			x.Term = &v
-			i = j2
-		case num == 3 && wire == 0:
-			v, j2, ok2 := plainpbConsumeVarint(b, i)
-			if !ok2 {
-				return errPlainpbMalformed
+		case num == 3:
+			v, m, e := consumeVarintValue(b, wtyp)
+			n = m
+			err = e
+			if e == nil {
+				if x.Index == nil {
+					x.Index = new(uint64)
+				}
+				*x.Index = v
 			}
-			x.Index = &v
-			i = j2
-		case num == 4 && wire == 2:
-			n, j2, ok2 := plainpbConsumeVarint(b, i)
-			if !ok2 || uint64(len(b)-j2) < n {
-				return errPlainpbMalformed
+		case num == 4:
+			v, m, e := consumeBytesValue(b, wtyp)
+			n = m
+			err = e
+			if e == nil {
+				x.Data = append(emptyBuf[:], v...)
 			}
-			s := make([]byte, n)
-			copy(s, b[j2:j2+int(n)])
-			x.Data = s
-			i = j2 + int(n)
-		default:
-			j2, ok2 := plainpbSkipField(b, i, wire)
-			if !ok2 {
-				return errPlainpbMalformed
-			}
-			i = j2
 		}
+		if err != nil {
+			if err != errUnknown {
+				return err
+			}
+			n = consumeFieldValue(num, wtyp, b)
+			if n < 0 {
+				return errDecode
+			}
+			x.unknownFields = appendTag(x.unknownFields, num, wtyp)
+			x.unknownFields = append(x.unknownFields, b[:n]...)
+		}
+		b = b[n:]
 	}
 	return nil
 }
 
-// SizeMessage returns len(x.AppendMessage(nil)) without
-// allocating. A nil receiver sizes to 0 (proto.Size of a nil
-// message).
+// ProtoClone — proto/merge.go:41-60 Clone past its nil-interface and
+// validity arms (the proto package keeps those): New + mergePointer, i.e.
+// CloneMessage. A typed-nil receiver answers the typed nil.
+func (x *Entry) ProtoClone() proto.Message {
+	return x.CloneMessage()
+}
+
+// ProtoEqual — the generated fast path internal/impl/equal.go:22-27
+// equalMessage: a different message type is unequal (the descriptor
+// check); same type compares by EqualMessage.
+func (x *Entry) ProtoEqual(m proto.Message) bool {
+	y, ok := m.(*Entry)
+	if !ok {
+		return false
+	}
+	return x.EqualMessage(y)
+}
+
+// IsNilMessage reports a TYPED-NIL message — the negation of
+// ProtoReflect().IsValid() for a generated message (proto/encode.go:141-146
+// emptyBytesForMessage, proto/merge.go:55-57 Clone, proto/equal.go:52-54 Equal).
+func (x *SnapshotMetadata) IsNilMessage() bool {
+	return x == nil
+}
+
+// ResetMessage is the generated Reset's plain-Go half (raft.pb.go
+// `*x = SnapshotMetadata{}`; proto/reset.go:16-22 calls it). A typed-nil receiver
+// nil-dereferences, as upstream's does.
+func (x *SnapshotMetadata) ResetMessage() {
+	*x = SnapshotMetadata{}
+}
+
+// SizeMessage — internal/impl/encode.go:47-61 sizePointer + :63-132
+// sizePointerSlow: a nil receiver sizes 0; per present field tagsize +
+// value size in field-number order; plus len(unknownFields).
 func (x *SnapshotMetadata) SizeMessage() int {
 	if x == nil {
 		return 0
 	}
 	n := 0
 	if x.ConfState != nil {
-		s := x.ConfState.SizeMessage()
-		n += 1 + plainpbSizeVarint(uint64(s)) + s
+		n += 1 + sizeBytes(x.ConfState.SizeMessage())
 	}
 	if x.Index != nil {
-		n += 1 + plainpbSizeVarint(*x.Index)
+		n += 1 + sizeVarint(*x.Index)
 	}
 	if x.Term != nil {
-		n += 1 + plainpbSizeVarint(*x.Term)
+		n += 1 + sizeVarint(*x.Term)
 	}
+	n += len(x.unknownFields)
 	return n
 }
 
-// AppendMessage appends x's protobuf wire encoding to b, fields
-// in field-number order. A nil receiver appends nothing.
-func (x *SnapshotMetadata) AppendMessage(b []byte) []byte {
+// MarshalAppend — internal/impl/encode.go:148-226 marshalAppendPointer:
+// a nil receiver appends nothing; present fields in field-number order;
+// the retained unknown bytes LAST. Marshal cannot fail on these schemas
+// (no required field, no UTF-8 check; the size-mismatch error of
+// codec_field.go:169-171 needs a concurrent mutation).
+func (x *SnapshotMetadata) MarshalAppend(b []byte) []byte {
 	if x == nil {
 		return b
 	}
 	if x.ConfState != nil {
-		b = append(b, 0x0a)
-		b = plainpbAppendVarint(b, uint64(x.ConfState.SizeMessage()))
-		b = x.ConfState.AppendMessage(b)
+		siz := x.ConfState.SizeMessage()
+		b = appendVarint(b, 0xa)
+		b = appendVarint(b, uint64(siz))
+		b = x.ConfState.MarshalAppend(b)
 	}
 	if x.Index != nil {
-		b = append(b, 0x10)
-		b = plainpbAppendVarint(b, *x.Index)
+		b = appendVarint(b, 0x10)
+		b = appendVarint(b, *x.Index)
 	}
 	if x.Term != nil {
-		b = append(b, 0x18)
-		b = plainpbAppendVarint(b, *x.Term)
+		b = appendVarint(b, 0x18)
+		b = appendVarint(b, *x.Term)
 	}
+	b = append(b, x.unknownFields...)
 	return b
 }
 
-// UnmarshalMessage parses b and MERGES into x (the proto
-// package's Unmarshal resets first; embedded-message fields
-// recurse through this merge form, which is what makes a
-// twice-encoded singular message field merge as the wire
-// format specifies).
-func (x *SnapshotMetadata) UnmarshalMessage(b []byte) error {
-	i := 0
-	for i < len(b) {
-		tag, j, ok := plainpbConsumeVarint(b, i)
-		if !ok {
-			return errPlainpbMalformed
+// UnmarshalMessage parses b and MERGES into x — internal/impl/decode.go
+// :103-106 unmarshalPointer (the depth counter: decremented on entry,
+// errRecursionDepth below 0; proto.Unmarshal passes 10000, an embedded
+// message the caller's decremented value) + :124-241
+// unmarshalPointerEager (the tag fast paths, the field-number bounds,
+// the end-group check — groupTag is 0 for a message, so ANY end-group
+// tag mismatches —, the field consumers, unknown-field retention).
+func (x *SnapshotMetadata) UnmarshalMessage(b []byte, depth int) error {
+	depth--
+	if depth < 0 {
+		return errRecursionDepth
+	}
+	for len(b) > 0 {
+		var tag uint64
+		if b[0] < 0x80 {
+			tag = uint64(b[0])
+			b = b[1:]
+		} else if len(b) >= 2 && b[1] < 128 {
+			tag = uint64(b[0]&0x7f) + uint64(b[1])<<7
+			b = b[2:]
+		} else {
+			v, k := consumeVarint(b)
+			if k < 0 {
+				return errDecode
+			}
+			tag = v
+			b = b[k:]
 		}
-		i = j
-		num := tag >> 3
-		wire := tag & 7
-		if num == 0 {
-			return errPlainpbMalformed
+		fn := tag >> 3
+		if fn < minValidNumber || fn > maxValidNumber {
+			return errDecode
 		}
+		num := int32(fn)
+		wtyp := int(tag & 7)
+		if wtyp == endGroupType {
+			return errDecode
+		}
+		n := 0
+		err := errUnknown
 		switch {
-		case num == 1 && wire == 2:
-			n, j2, ok2 := plainpbConsumeVarint(b, i)
-			if !ok2 || uint64(len(b)-j2) < n {
-				return errPlainpbMalformed
+		case num == 1:
+			v, m, e := consumeBytesValue(b, wtyp)
+			n = m
+			err = e
+			if e == nil {
+				if x.ConfState == nil {
+					x.ConfState = &ConfState{}
+				}
+				if e2 := x.ConfState.UnmarshalMessage(v, depth); e2 != nil {
+					return e2
+				}
 			}
-			if x.ConfState == nil {
-				x.ConfState = &ConfState{}
+		case num == 2:
+			v, m, e := consumeVarintValue(b, wtyp)
+			n = m
+			err = e
+			if e == nil {
+				if x.Index == nil {
+					x.Index = new(uint64)
+				}
+				*x.Index = v
 			}
-			if err := x.ConfState.UnmarshalMessage(b[j2 : j2+int(n)]); err != nil {
+		case num == 3:
+			v, m, e := consumeVarintValue(b, wtyp)
+			n = m
+			err = e
+			if e == nil {
+				if x.Term == nil {
+					x.Term = new(uint64)
+				}
+				*x.Term = v
+			}
+		}
+		if err != nil {
+			if err != errUnknown {
 				return err
 			}
-			i = j2 + int(n)
-		case num == 2 && wire == 0:
-			v, j2, ok2 := plainpbConsumeVarint(b, i)
-			if !ok2 {
-				return errPlainpbMalformed
+			n = consumeFieldValue(num, wtyp, b)
+			if n < 0 {
+				return errDecode
 			}
-			x.Index = &v
-			i = j2
-		case num == 3 && wire == 0:
-			v, j2, ok2 := plainpbConsumeVarint(b, i)
-			if !ok2 {
-				return errPlainpbMalformed
-			}
-			x.Term = &v
-			i = j2
-		default:
-			j2, ok2 := plainpbSkipField(b, i, wire)
-			if !ok2 {
-				return errPlainpbMalformed
-			}
-			i = j2
+			x.unknownFields = appendTag(x.unknownFields, num, wtyp)
+			x.unknownFields = append(x.unknownFields, b[:n]...)
 		}
+		b = b[n:]
 	}
 	return nil
 }
 
-// SizeMessage returns len(x.AppendMessage(nil)) without
-// allocating. A nil receiver sizes to 0 (proto.Size of a nil
-// message).
+// ProtoClone — proto/merge.go:41-60 Clone past its nil-interface and
+// validity arms (the proto package keeps those): New + mergePointer, i.e.
+// CloneMessage. A typed-nil receiver answers the typed nil.
+func (x *SnapshotMetadata) ProtoClone() proto.Message {
+	return x.CloneMessage()
+}
+
+// ProtoEqual — the generated fast path internal/impl/equal.go:22-27
+// equalMessage: a different message type is unequal (the descriptor
+// check); same type compares by EqualMessage.
+func (x *SnapshotMetadata) ProtoEqual(m proto.Message) bool {
+	y, ok := m.(*SnapshotMetadata)
+	if !ok {
+		return false
+	}
+	return x.EqualMessage(y)
+}
+
+// IsNilMessage reports a TYPED-NIL message — the negation of
+// ProtoReflect().IsValid() for a generated message (proto/encode.go:141-146
+// emptyBytesForMessage, proto/merge.go:55-57 Clone, proto/equal.go:52-54 Equal).
+func (x *Snapshot) IsNilMessage() bool {
+	return x == nil
+}
+
+// ResetMessage is the generated Reset's plain-Go half (raft.pb.go
+// `*x = Snapshot{}`; proto/reset.go:16-22 calls it). A typed-nil receiver
+// nil-dereferences, as upstream's does.
+func (x *Snapshot) ResetMessage() {
+	*x = Snapshot{}
+}
+
+// SizeMessage — internal/impl/encode.go:47-61 sizePointer + :63-132
+// sizePointerSlow: a nil receiver sizes 0; per present field tagsize +
+// value size in field-number order; plus len(unknownFields).
 func (x *Snapshot) SizeMessage() int {
 	if x == nil {
 		return 0
 	}
 	n := 0
 	if x.Data != nil {
-		n += 1 + plainpbSizeVarint(uint64(len(x.Data))) + len(x.Data)
+		n += 1 + sizeBytes(len(x.Data))
 	}
 	if x.Metadata != nil {
-		s := x.Metadata.SizeMessage()
-		n += 1 + plainpbSizeVarint(uint64(s)) + s
+		n += 1 + sizeBytes(x.Metadata.SizeMessage())
 	}
+	n += len(x.unknownFields)
 	return n
 }
 
-// AppendMessage appends x's protobuf wire encoding to b, fields
-// in field-number order. A nil receiver appends nothing.
-func (x *Snapshot) AppendMessage(b []byte) []byte {
+// MarshalAppend — internal/impl/encode.go:148-226 marshalAppendPointer:
+// a nil receiver appends nothing; present fields in field-number order;
+// the retained unknown bytes LAST. Marshal cannot fail on these schemas
+// (no required field, no UTF-8 check; the size-mismatch error of
+// codec_field.go:169-171 needs a concurrent mutation).
+func (x *Snapshot) MarshalAppend(b []byte) []byte {
 	if x == nil {
 		return b
 	}
 	if x.Data != nil {
-		b = append(b, 0x0a)
-		b = plainpbAppendVarint(b, uint64(len(x.Data)))
-		b = append(b, x.Data...)
+		b = appendVarint(b, 0xa)
+		b = appendBytes(b, x.Data)
 	}
 	if x.Metadata != nil {
-		b = append(b, 0x12)
-		b = plainpbAppendVarint(b, uint64(x.Metadata.SizeMessage()))
-		b = x.Metadata.AppendMessage(b)
+		siz := x.Metadata.SizeMessage()
+		b = appendVarint(b, 0x12)
+		b = appendVarint(b, uint64(siz))
+		b = x.Metadata.MarshalAppend(b)
 	}
+	b = append(b, x.unknownFields...)
 	return b
 }
 
-// UnmarshalMessage parses b and MERGES into x (the proto
-// package's Unmarshal resets first; embedded-message fields
-// recurse through this merge form, which is what makes a
-// twice-encoded singular message field merge as the wire
-// format specifies).
-func (x *Snapshot) UnmarshalMessage(b []byte) error {
-	i := 0
-	for i < len(b) {
-		tag, j, ok := plainpbConsumeVarint(b, i)
-		if !ok {
-			return errPlainpbMalformed
+// UnmarshalMessage parses b and MERGES into x — internal/impl/decode.go
+// :103-106 unmarshalPointer (the depth counter: decremented on entry,
+// errRecursionDepth below 0; proto.Unmarshal passes 10000, an embedded
+// message the caller's decremented value) + :124-241
+// unmarshalPointerEager (the tag fast paths, the field-number bounds,
+// the end-group check — groupTag is 0 for a message, so ANY end-group
+// tag mismatches —, the field consumers, unknown-field retention).
+func (x *Snapshot) UnmarshalMessage(b []byte, depth int) error {
+	depth--
+	if depth < 0 {
+		return errRecursionDepth
+	}
+	for len(b) > 0 {
+		var tag uint64
+		if b[0] < 0x80 {
+			tag = uint64(b[0])
+			b = b[1:]
+		} else if len(b) >= 2 && b[1] < 128 {
+			tag = uint64(b[0]&0x7f) + uint64(b[1])<<7
+			b = b[2:]
+		} else {
+			v, k := consumeVarint(b)
+			if k < 0 {
+				return errDecode
+			}
+			tag = v
+			b = b[k:]
 		}
-		i = j
-		num := tag >> 3
-		wire := tag & 7
-		if num == 0 {
-			return errPlainpbMalformed
+		fn := tag >> 3
+		if fn < minValidNumber || fn > maxValidNumber {
+			return errDecode
 		}
+		num := int32(fn)
+		wtyp := int(tag & 7)
+		if wtyp == endGroupType {
+			return errDecode
+		}
+		n := 0
+		err := errUnknown
 		switch {
-		case num == 1 && wire == 2:
-			n, j2, ok2 := plainpbConsumeVarint(b, i)
-			if !ok2 || uint64(len(b)-j2) < n {
-				return errPlainpbMalformed
+		case num == 1:
+			v, m, e := consumeBytesValue(b, wtyp)
+			n = m
+			err = e
+			if e == nil {
+				x.Data = append(emptyBuf[:], v...)
 			}
-			s := make([]byte, n)
-			copy(s, b[j2:j2+int(n)])
-			x.Data = s
-			i = j2 + int(n)
-		case num == 2 && wire == 2:
-			n, j2, ok2 := plainpbConsumeVarint(b, i)
-			if !ok2 || uint64(len(b)-j2) < n {
-				return errPlainpbMalformed
+		case num == 2:
+			v, m, e := consumeBytesValue(b, wtyp)
+			n = m
+			err = e
+			if e == nil {
+				if x.Metadata == nil {
+					x.Metadata = &SnapshotMetadata{}
+				}
+				if e2 := x.Metadata.UnmarshalMessage(v, depth); e2 != nil {
+					return e2
+				}
 			}
-			if x.Metadata == nil {
-				x.Metadata = &SnapshotMetadata{}
-			}
-			if err := x.Metadata.UnmarshalMessage(b[j2 : j2+int(n)]); err != nil {
+		}
+		if err != nil {
+			if err != errUnknown {
 				return err
 			}
-			i = j2 + int(n)
-		default:
-			j2, ok2 := plainpbSkipField(b, i, wire)
-			if !ok2 {
-				return errPlainpbMalformed
+			n = consumeFieldValue(num, wtyp, b)
+			if n < 0 {
+				return errDecode
 			}
-			i = j2
+			x.unknownFields = appendTag(x.unknownFields, num, wtyp)
+			x.unknownFields = append(x.unknownFields, b[:n]...)
 		}
+		b = b[n:]
 	}
 	return nil
 }
 
-// SizeMessage returns len(x.AppendMessage(nil)) without
-// allocating. A nil receiver sizes to 0 (proto.Size of a nil
-// message).
+// ProtoClone — proto/merge.go:41-60 Clone past its nil-interface and
+// validity arms (the proto package keeps those): New + mergePointer, i.e.
+// CloneMessage. A typed-nil receiver answers the typed nil.
+func (x *Snapshot) ProtoClone() proto.Message {
+	return x.CloneMessage()
+}
+
+// ProtoEqual — the generated fast path internal/impl/equal.go:22-27
+// equalMessage: a different message type is unequal (the descriptor
+// check); same type compares by EqualMessage.
+func (x *Snapshot) ProtoEqual(m proto.Message) bool {
+	y, ok := m.(*Snapshot)
+	if !ok {
+		return false
+	}
+	return x.EqualMessage(y)
+}
+
+// IsNilMessage reports a TYPED-NIL message — the negation of
+// ProtoReflect().IsValid() for a generated message (proto/encode.go:141-146
+// emptyBytesForMessage, proto/merge.go:55-57 Clone, proto/equal.go:52-54 Equal).
+func (x *Message) IsNilMessage() bool {
+	return x == nil
+}
+
+// ResetMessage is the generated Reset's plain-Go half (raft.pb.go
+// `*x = Message{}`; proto/reset.go:16-22 calls it). A typed-nil receiver
+// nil-dereferences, as upstream's does.
+func (x *Message) ResetMessage() {
+	*x = Message{}
+}
+
+// SizeMessage — internal/impl/encode.go:47-61 sizePointer + :63-132
+// sizePointerSlow: a nil receiver sizes 0; per present field tagsize +
+// value size in field-number order; plus len(unknownFields).
 func (x *Message) SizeMessage() int {
 	if x == nil {
 		return 0
 	}
 	n := 0
 	if x.Type != nil {
-		n += 1 + plainpbSizeVarint(uint64(*x.Type))
+		n += 1 + sizeVarint(uint64(*x.Type))
 	}
 	if x.To != nil {
-		n += 1 + plainpbSizeVarint(*x.To)
+		n += 1 + sizeVarint(*x.To)
 	}
 	if x.From != nil {
-		n += 1 + plainpbSizeVarint(*x.From)
+		n += 1 + sizeVarint(*x.From)
 	}
 	if x.Term != nil {
-		n += 1 + plainpbSizeVarint(*x.Term)
+		n += 1 + sizeVarint(*x.Term)
 	}
 	if x.LogTerm != nil {
-		n += 1 + plainpbSizeVarint(*x.LogTerm)
+		n += 1 + sizeVarint(*x.LogTerm)
 	}
 	if x.Index != nil {
-		n += 1 + plainpbSizeVarint(*x.Index)
+		n += 1 + sizeVarint(*x.Index)
 	}
-	for _, e := range x.Entries {
-		s := e.SizeMessage()
-		n += 1 + plainpbSizeVarint(uint64(s)) + s
+	for i := 0; i < len(x.Entries); i++ {
+		n += 1 + sizeBytes(x.Entries[i].SizeMessage())
 	}
 	if x.Commit != nil {
-		n += 1 + plainpbSizeVarint(*x.Commit)
+		n += 1 + sizeVarint(*x.Commit)
 	}
 	if x.Snapshot != nil {
-		s := x.Snapshot.SizeMessage()
-		n += 1 + plainpbSizeVarint(uint64(s)) + s
+		n += 1 + sizeBytes(x.Snapshot.SizeMessage())
 	}
 	if x.Reject != nil {
-		n += 2
+		n += 1 + sizeVarint(encodeBool(*x.Reject))
 	}
 	if x.RejectHint != nil {
-		n += 1 + plainpbSizeVarint(*x.RejectHint)
+		n += 1 + sizeVarint(*x.RejectHint)
 	}
 	if x.Context != nil {
-		n += 1 + plainpbSizeVarint(uint64(len(x.Context))) + len(x.Context)
+		n += 1 + sizeBytes(len(x.Context))
 	}
 	if x.Vote != nil {
-		n += 1 + plainpbSizeVarint(*x.Vote)
+		n += 1 + sizeVarint(*x.Vote)
 	}
-	for _, e := range x.Responses {
-		s := e.SizeMessage()
-		n += 1 + plainpbSizeVarint(uint64(s)) + s
+	for i := 0; i < len(x.Responses); i++ {
+		n += 1 + sizeBytes(x.Responses[i].SizeMessage())
 	}
+	n += len(x.unknownFields)
 	return n
 }
 
-// AppendMessage appends x's protobuf wire encoding to b, fields
-// in field-number order. A nil receiver appends nothing.
-func (x *Message) AppendMessage(b []byte) []byte {
+// MarshalAppend — internal/impl/encode.go:148-226 marshalAppendPointer:
+// a nil receiver appends nothing; present fields in field-number order;
+// the retained unknown bytes LAST. Marshal cannot fail on these schemas
+// (no required field, no UTF-8 check; the size-mismatch error of
+// codec_field.go:169-171 needs a concurrent mutation).
+func (x *Message) MarshalAppend(b []byte) []byte {
 	if x == nil {
 		return b
 	}
 	if x.Type != nil {
-		b = append(b, 0x08)
-		b = plainpbAppendVarint(b, uint64(*x.Type))
+		b = appendVarint(b, 0x8)
+		b = appendVarint(b, uint64(*x.Type))
 	}
 	if x.To != nil {
-		b = append(b, 0x10)
-		b = plainpbAppendVarint(b, *x.To)
+		b = appendVarint(b, 0x10)
+		b = appendVarint(b, *x.To)
 	}
 	if x.From != nil {
-		b = append(b, 0x18)
-		b = plainpbAppendVarint(b, *x.From)
+		b = appendVarint(b, 0x18)
+		b = appendVarint(b, *x.From)
 	}
 	if x.Term != nil {
-		b = append(b, 0x20)
-		b = plainpbAppendVarint(b, *x.Term)
+		b = appendVarint(b, 0x20)
+		b = appendVarint(b, *x.Term)
 	}
 	if x.LogTerm != nil {
-		b = append(b, 0x28)
-		b = plainpbAppendVarint(b, *x.LogTerm)
+		b = appendVarint(b, 0x28)
+		b = appendVarint(b, *x.LogTerm)
 	}
 	if x.Index != nil {
-		b = append(b, 0x30)
-		b = plainpbAppendVarint(b, *x.Index)
+		b = appendVarint(b, 0x30)
+		b = appendVarint(b, *x.Index)
 	}
-	for _, e := range x.Entries {
-		b = append(b, 0x3a)
-		b = plainpbAppendVarint(b, uint64(e.SizeMessage()))
-		b = e.AppendMessage(b)
+	for i := 0; i < len(x.Entries); i++ {
+		b = appendVarint(b, 0x3a)
+		siz := x.Entries[i].SizeMessage()
+		b = appendVarint(b, uint64(siz))
+		b = x.Entries[i].MarshalAppend(b)
 	}
 	if x.Commit != nil {
-		b = append(b, 0x40)
-		b = plainpbAppendVarint(b, *x.Commit)
+		b = appendVarint(b, 0x40)
+		b = appendVarint(b, *x.Commit)
 	}
 	if x.Snapshot != nil {
-		b = append(b, 0x4a)
-		b = plainpbAppendVarint(b, uint64(x.Snapshot.SizeMessage()))
-		b = x.Snapshot.AppendMessage(b)
+		siz := x.Snapshot.SizeMessage()
+		b = appendVarint(b, 0x4a)
+		b = appendVarint(b, uint64(siz))
+		b = x.Snapshot.MarshalAppend(b)
 	}
 	if x.Reject != nil {
-		b = append(b, 0x50)
-		if *x.Reject {
-			b = append(b, 1)
-		} else {
-			b = append(b, 0)
-		}
+		b = appendVarint(b, 0x50)
+		b = appendVarint(b, encodeBool(*x.Reject))
 	}
 	if x.RejectHint != nil {
-		b = append(b, 0x58)
-		b = plainpbAppendVarint(b, *x.RejectHint)
+		b = appendVarint(b, 0x58)
+		b = appendVarint(b, *x.RejectHint)
 	}
 	if x.Context != nil {
-		b = append(b, 0x62)
-		b = plainpbAppendVarint(b, uint64(len(x.Context)))
-		b = append(b, x.Context...)
+		b = appendVarint(b, 0x62)
+		b = appendBytes(b, x.Context)
 	}
 	if x.Vote != nil {
-		b = append(b, 0x68)
-		b = plainpbAppendVarint(b, *x.Vote)
+		b = appendVarint(b, 0x68)
+		b = appendVarint(b, *x.Vote)
 	}
-	for _, e := range x.Responses {
-		b = append(b, 0x72)
-		b = plainpbAppendVarint(b, uint64(e.SizeMessage()))
-		b = e.AppendMessage(b)
+	for i := 0; i < len(x.Responses); i++ {
+		b = appendVarint(b, 0x72)
+		siz := x.Responses[i].SizeMessage()
+		b = appendVarint(b, uint64(siz))
+		b = x.Responses[i].MarshalAppend(b)
 	}
+	b = append(b, x.unknownFields...)
 	return b
 }
 
-// UnmarshalMessage parses b and MERGES into x (the proto
-// package's Unmarshal resets first; embedded-message fields
-// recurse through this merge form, which is what makes a
-// twice-encoded singular message field merge as the wire
-// format specifies).
-func (x *Message) UnmarshalMessage(b []byte) error {
-	i := 0
-	for i < len(b) {
-		tag, j, ok := plainpbConsumeVarint(b, i)
-		if !ok {
-			return errPlainpbMalformed
+// UnmarshalMessage parses b and MERGES into x — internal/impl/decode.go
+// :103-106 unmarshalPointer (the depth counter: decremented on entry,
+// errRecursionDepth below 0; proto.Unmarshal passes 10000, an embedded
+// message the caller's decremented value) + :124-241
+// unmarshalPointerEager (the tag fast paths, the field-number bounds,
+// the end-group check — groupTag is 0 for a message, so ANY end-group
+// tag mismatches —, the field consumers, unknown-field retention).
+func (x *Message) UnmarshalMessage(b []byte, depth int) error {
+	depth--
+	if depth < 0 {
+		return errRecursionDepth
+	}
+	for len(b) > 0 {
+		var tag uint64
+		if b[0] < 0x80 {
+			tag = uint64(b[0])
+			b = b[1:]
+		} else if len(b) >= 2 && b[1] < 128 {
+			tag = uint64(b[0]&0x7f) + uint64(b[1])<<7
+			b = b[2:]
+		} else {
+			v, k := consumeVarint(b)
+			if k < 0 {
+				return errDecode
+			}
+			tag = v
+			b = b[k:]
 		}
-		i = j
-		num := tag >> 3
-		wire := tag & 7
-		if num == 0 {
-			return errPlainpbMalformed
+		fn := tag >> 3
+		if fn < minValidNumber || fn > maxValidNumber {
+			return errDecode
 		}
+		num := int32(fn)
+		wtyp := int(tag & 7)
+		if wtyp == endGroupType {
+			return errDecode
+		}
+		n := 0
+		err := errUnknown
 		switch {
-		case num == 1 && wire == 0:
-			v, j2, ok2 := plainpbConsumeVarint(b, i)
-			if !ok2 {
-				return errPlainpbMalformed
+		case num == 1:
+			v, m, e := consumeVarintValue(b, wtyp)
+			n = m
+			err = e
+			if e == nil {
+				if x.Type == nil {
+					x.Type = new(MessageType)
+				}
+				*x.Type = MessageType(int32(v))
 			}
-			ev := MessageType(int32(uint32(v)))
-			x.Type = &ev
-			i = j2
-		case num == 2 && wire == 0:
-			v, j2, ok2 := plainpbConsumeVarint(b, i)
-			if !ok2 {
-				return errPlainpbMalformed
+		case num == 2:
+			v, m, e := consumeVarintValue(b, wtyp)
+			n = m
+			err = e
+			if e == nil {
+				if x.To == nil {
+					x.To = new(uint64)
+				}
+				*x.To = v
 			}
-			x.To = &v
-			i = j2
-		case num == 3 && wire == 0:
-			v, j2, ok2 := plainpbConsumeVarint(b, i)
-			if !ok2 {
-				return errPlainpbMalformed
+		case num == 3:
+			v, m, e := consumeVarintValue(b, wtyp)
+			n = m
+			err = e
+			if e == nil {
+				if x.From == nil {
+					x.From = new(uint64)
+				}
+				*x.From = v
 			}
-			x.From = &v
-			i = j2
-		case num == 4 && wire == 0:
-			v, j2, ok2 := plainpbConsumeVarint(b, i)
-			if !ok2 {
-				return errPlainpbMalformed
+		case num == 4:
+			v, m, e := consumeVarintValue(b, wtyp)
+			n = m
+			err = e
+			if e == nil {
+				if x.Term == nil {
+					x.Term = new(uint64)
+				}
+				*x.Term = v
 			}
-			x.Term = &v
-			i = j2
-		case num == 5 && wire == 0:
-			v, j2, ok2 := plainpbConsumeVarint(b, i)
-			if !ok2 {
-				return errPlainpbMalformed
+		case num == 5:
+			v, m, e := consumeVarintValue(b, wtyp)
+			n = m
+			err = e
+			if e == nil {
+				if x.LogTerm == nil {
+					x.LogTerm = new(uint64)
+				}
+				*x.LogTerm = v
 			}
-			x.LogTerm = &v
-			i = j2
-		case num == 6 && wire == 0:
-			v, j2, ok2 := plainpbConsumeVarint(b, i)
-			if !ok2 {
-				return errPlainpbMalformed
+		case num == 6:
+			v, m, e := consumeVarintValue(b, wtyp)
+			n = m
+			err = e
+			if e == nil {
+				if x.Index == nil {
+					x.Index = new(uint64)
+				}
+				*x.Index = v
 			}
-			x.Index = &v
-			i = j2
-		case num == 7 && wire == 2:
-			n, j2, ok2 := plainpbConsumeVarint(b, i)
-			if !ok2 || uint64(len(b)-j2) < n {
-				return errPlainpbMalformed
+		case num == 7:
+			v, m, e := consumeBytesValue(b, wtyp)
+			n = m
+			err = e
+			if e == nil {
+				el := &Entry{}
+				if e2 := el.UnmarshalMessage(v, depth); e2 != nil {
+					return e2
+				}
+				x.Entries = append(x.Entries, el)
 			}
-			e := &Entry{}
-			if err := e.UnmarshalMessage(b[j2 : j2+int(n)]); err != nil {
-				return err
+		case num == 8:
+			v, m, e := consumeVarintValue(b, wtyp)
+			n = m
+			err = e
+			if e == nil {
+				if x.Commit == nil {
+					x.Commit = new(uint64)
+				}
+				*x.Commit = v
 			}
-			x.Entries = append(x.Entries, e)
-			i = j2 + int(n)
-		case num == 8 && wire == 0:
-			v, j2, ok2 := plainpbConsumeVarint(b, i)
-			if !ok2 {
-				return errPlainpbMalformed
+		case num == 9:
+			v, m, e := consumeBytesValue(b, wtyp)
+			n = m
+			err = e
+			if e == nil {
+				if x.Snapshot == nil {
+					x.Snapshot = &Snapshot{}
+				}
+				if e2 := x.Snapshot.UnmarshalMessage(v, depth); e2 != nil {
+					return e2
+				}
 			}
-			x.Commit = &v
-			i = j2
-		case num == 9 && wire == 2:
-			n, j2, ok2 := plainpbConsumeVarint(b, i)
-			if !ok2 || uint64(len(b)-j2) < n {
-				return errPlainpbMalformed
+		case num == 10:
+			v, m, e := consumeVarintValue(b, wtyp)
+			n = m
+			err = e
+			if e == nil {
+				if x.Reject == nil {
+					x.Reject = new(bool)
+				}
+				*x.Reject = decodeBool(v)
 			}
-			if x.Snapshot == nil {
-				x.Snapshot = &Snapshot{}
+		case num == 11:
+			v, m, e := consumeVarintValue(b, wtyp)
+			n = m
+			err = e
+			if e == nil {
+				if x.RejectHint == nil {
+					x.RejectHint = new(uint64)
+				}
+				*x.RejectHint = v
 			}
-			if err := x.Snapshot.UnmarshalMessage(b[j2 : j2+int(n)]); err != nil {
-				return err
+		case num == 12:
+			v, m, e := consumeBytesValue(b, wtyp)
+			n = m
+			err = e
+			if e == nil {
+				x.Context = append(emptyBuf[:], v...)
 			}
-			i = j2 + int(n)
-		case num == 10 && wire == 0:
-			v, j2, ok2 := plainpbConsumeVarint(b, i)
-			if !ok2 {
-				return errPlainpbMalformed
+		case num == 13:
+			v, m, e := consumeVarintValue(b, wtyp)
+			n = m
+			err = e
+			if e == nil {
+				if x.Vote == nil {
+					x.Vote = new(uint64)
+				}
+				*x.Vote = v
 			}
-			bv := v != 0
-			x.Reject = &bv
-			i = j2
-		case num == 11 && wire == 0:
-			v, j2, ok2 := plainpbConsumeVarint(b, i)
-			if !ok2 {
-				return errPlainpbMalformed
+		case num == 14:
+			v, m, e := consumeBytesValue(b, wtyp)
+			n = m
+			err = e
+			if e == nil {
+				el := &Message{}
+				if e2 := el.UnmarshalMessage(v, depth); e2 != nil {
+					return e2
+				}
+				x.Responses = append(x.Responses, el)
 			}
-			x.RejectHint = &v
-			i = j2
-		case num == 12 && wire == 2:
-			n, j2, ok2 := plainpbConsumeVarint(b, i)
-			if !ok2 || uint64(len(b)-j2) < n {
-				return errPlainpbMalformed
-			}
-			s := make([]byte, n)
-			copy(s, b[j2:j2+int(n)])
-			x.Context = s
-			i = j2 + int(n)
-		case num == 13 && wire == 0:
-			v, j2, ok2 := plainpbConsumeVarint(b, i)
-			if !ok2 {
-				return errPlainpbMalformed
-			}
-			x.Vote = &v
-			i = j2
-		case num == 14 && wire == 2:
-			n, j2, ok2 := plainpbConsumeVarint(b, i)
-			if !ok2 || uint64(len(b)-j2) < n {
-				return errPlainpbMalformed
-			}
-			e := &Message{}
-			if err := e.UnmarshalMessage(b[j2 : j2+int(n)]); err != nil {
-				return err
-			}
-			x.Responses = append(x.Responses, e)
-			i = j2 + int(n)
-		default:
-			j2, ok2 := plainpbSkipField(b, i, wire)
-			if !ok2 {
-				return errPlainpbMalformed
-			}
-			i = j2
 		}
+		if err != nil {
+			if err != errUnknown {
+				return err
+			}
+			n = consumeFieldValue(num, wtyp, b)
+			if n < 0 {
+				return errDecode
+			}
+			x.unknownFields = appendTag(x.unknownFields, num, wtyp)
+			x.unknownFields = append(x.unknownFields, b[:n]...)
+		}
+		b = b[n:]
 	}
 	return nil
 }
 
-// SizeMessage returns len(x.AppendMessage(nil)) without
-// allocating. A nil receiver sizes to 0 (proto.Size of a nil
-// message).
+// ProtoClone — proto/merge.go:41-60 Clone past its nil-interface and
+// validity arms (the proto package keeps those): New + mergePointer, i.e.
+// CloneMessage. A typed-nil receiver answers the typed nil.
+func (x *Message) ProtoClone() proto.Message {
+	return x.CloneMessage()
+}
+
+// ProtoEqual — the generated fast path internal/impl/equal.go:22-27
+// equalMessage: a different message type is unequal (the descriptor
+// check); same type compares by EqualMessage.
+func (x *Message) ProtoEqual(m proto.Message) bool {
+	y, ok := m.(*Message)
+	if !ok {
+		return false
+	}
+	return x.EqualMessage(y)
+}
+
+// IsNilMessage reports a TYPED-NIL message — the negation of
+// ProtoReflect().IsValid() for a generated message (proto/encode.go:141-146
+// emptyBytesForMessage, proto/merge.go:55-57 Clone, proto/equal.go:52-54 Equal).
+func (x *HardState) IsNilMessage() bool {
+	return x == nil
+}
+
+// ResetMessage is the generated Reset's plain-Go half (raft.pb.go
+// `*x = HardState{}`; proto/reset.go:16-22 calls it). A typed-nil receiver
+// nil-dereferences, as upstream's does.
+func (x *HardState) ResetMessage() {
+	*x = HardState{}
+}
+
+// SizeMessage — internal/impl/encode.go:47-61 sizePointer + :63-132
+// sizePointerSlow: a nil receiver sizes 0; per present field tagsize +
+// value size in field-number order; plus len(unknownFields).
 func (x *HardState) SizeMessage() int {
 	if x == nil {
 		return 0
 	}
 	n := 0
 	if x.Term != nil {
-		n += 1 + plainpbSizeVarint(*x.Term)
+		n += 1 + sizeVarint(*x.Term)
 	}
 	if x.Vote != nil {
-		n += 1 + plainpbSizeVarint(*x.Vote)
+		n += 1 + sizeVarint(*x.Vote)
 	}
 	if x.Commit != nil {
-		n += 1 + plainpbSizeVarint(*x.Commit)
+		n += 1 + sizeVarint(*x.Commit)
 	}
+	n += len(x.unknownFields)
 	return n
 }
 
-// AppendMessage appends x's protobuf wire encoding to b, fields
-// in field-number order. A nil receiver appends nothing.
-func (x *HardState) AppendMessage(b []byte) []byte {
+// MarshalAppend — internal/impl/encode.go:148-226 marshalAppendPointer:
+// a nil receiver appends nothing; present fields in field-number order;
+// the retained unknown bytes LAST. Marshal cannot fail on these schemas
+// (no required field, no UTF-8 check; the size-mismatch error of
+// codec_field.go:169-171 needs a concurrent mutation).
+func (x *HardState) MarshalAppend(b []byte) []byte {
 	if x == nil {
 		return b
 	}
 	if x.Term != nil {
-		b = append(b, 0x08)
-		b = plainpbAppendVarint(b, *x.Term)
+		b = appendVarint(b, 0x8)
+		b = appendVarint(b, *x.Term)
 	}
 	if x.Vote != nil {
-		b = append(b, 0x10)
-		b = plainpbAppendVarint(b, *x.Vote)
+		b = appendVarint(b, 0x10)
+		b = appendVarint(b, *x.Vote)
 	}
 	if x.Commit != nil {
-		b = append(b, 0x18)
-		b = plainpbAppendVarint(b, *x.Commit)
+		b = appendVarint(b, 0x18)
+		b = appendVarint(b, *x.Commit)
 	}
+	b = append(b, x.unknownFields...)
 	return b
 }
 
-// UnmarshalMessage parses b and MERGES into x (the proto
-// package's Unmarshal resets first; embedded-message fields
-// recurse through this merge form, which is what makes a
-// twice-encoded singular message field merge as the wire
-// format specifies).
-func (x *HardState) UnmarshalMessage(b []byte) error {
-	i := 0
-	for i < len(b) {
-		tag, j, ok := plainpbConsumeVarint(b, i)
-		if !ok {
-			return errPlainpbMalformed
+// UnmarshalMessage parses b and MERGES into x — internal/impl/decode.go
+// :103-106 unmarshalPointer (the depth counter: decremented on entry,
+// errRecursionDepth below 0; proto.Unmarshal passes 10000, an embedded
+// message the caller's decremented value) + :124-241
+// unmarshalPointerEager (the tag fast paths, the field-number bounds,
+// the end-group check — groupTag is 0 for a message, so ANY end-group
+// tag mismatches —, the field consumers, unknown-field retention).
+func (x *HardState) UnmarshalMessage(b []byte, depth int) error {
+	depth--
+	if depth < 0 {
+		return errRecursionDepth
+	}
+	for len(b) > 0 {
+		var tag uint64
+		if b[0] < 0x80 {
+			tag = uint64(b[0])
+			b = b[1:]
+		} else if len(b) >= 2 && b[1] < 128 {
+			tag = uint64(b[0]&0x7f) + uint64(b[1])<<7
+			b = b[2:]
+		} else {
+			v, k := consumeVarint(b)
+			if k < 0 {
+				return errDecode
+			}
+			tag = v
+			b = b[k:]
 		}
-		i = j
-		num := tag >> 3
-		wire := tag & 7
-		if num == 0 {
-			return errPlainpbMalformed
+		fn := tag >> 3
+		if fn < minValidNumber || fn > maxValidNumber {
+			return errDecode
 		}
+		num := int32(fn)
+		wtyp := int(tag & 7)
+		if wtyp == endGroupType {
+			return errDecode
+		}
+		n := 0
+		err := errUnknown
 		switch {
-		case num == 1 && wire == 0:
-			v, j2, ok2 := plainpbConsumeVarint(b, i)
-			if !ok2 {
-				return errPlainpbMalformed
+		case num == 1:
+			v, m, e := consumeVarintValue(b, wtyp)
+			n = m
+			err = e
+			if e == nil {
+				if x.Term == nil {
+					x.Term = new(uint64)
+				}
+				*x.Term = v
 			}
-			x.Term = &v
-			i = j2
-		case num == 2 && wire == 0:
-			v, j2, ok2 := plainpbConsumeVarint(b, i)
-			if !ok2 {
-				return errPlainpbMalformed
+		case num == 2:
+			v, m, e := consumeVarintValue(b, wtyp)
+			n = m
+			err = e
+			if e == nil {
+				if x.Vote == nil {
+					x.Vote = new(uint64)
+				}
+				*x.Vote = v
 			}
-			x.Vote = &v
-			i = j2
-		case num == 3 && wire == 0:
-			v, j2, ok2 := plainpbConsumeVarint(b, i)
-			if !ok2 {
-				return errPlainpbMalformed
+		case num == 3:
+			v, m, e := consumeVarintValue(b, wtyp)
+			n = m
+			err = e
+			if e == nil {
+				if x.Commit == nil {
+					x.Commit = new(uint64)
+				}
+				*x.Commit = v
 			}
-			x.Commit = &v
-			i = j2
-		default:
-			j2, ok2 := plainpbSkipField(b, i, wire)
-			if !ok2 {
-				return errPlainpbMalformed
-			}
-			i = j2
 		}
+		if err != nil {
+			if err != errUnknown {
+				return err
+			}
+			n = consumeFieldValue(num, wtyp, b)
+			if n < 0 {
+				return errDecode
+			}
+			x.unknownFields = appendTag(x.unknownFields, num, wtyp)
+			x.unknownFields = append(x.unknownFields, b[:n]...)
+		}
+		b = b[n:]
 	}
 	return nil
 }
 
-// SizeMessage returns len(x.AppendMessage(nil)) without
-// allocating. A nil receiver sizes to 0 (proto.Size of a nil
-// message).
+// ProtoClone — proto/merge.go:41-60 Clone past its nil-interface and
+// validity arms (the proto package keeps those): New + mergePointer, i.e.
+// CloneMessage. A typed-nil receiver answers the typed nil.
+func (x *HardState) ProtoClone() proto.Message {
+	return x.CloneMessage()
+}
+
+// ProtoEqual — the generated fast path internal/impl/equal.go:22-27
+// equalMessage: a different message type is unequal (the descriptor
+// check); same type compares by EqualMessage.
+func (x *HardState) ProtoEqual(m proto.Message) bool {
+	y, ok := m.(*HardState)
+	if !ok {
+		return false
+	}
+	return x.EqualMessage(y)
+}
+
+// IsNilMessage reports a TYPED-NIL message — the negation of
+// ProtoReflect().IsValid() for a generated message (proto/encode.go:141-146
+// emptyBytesForMessage, proto/merge.go:55-57 Clone, proto/equal.go:52-54 Equal).
+func (x *ConfState) IsNilMessage() bool {
+	return x == nil
+}
+
+// ResetMessage is the generated Reset's plain-Go half (raft.pb.go
+// `*x = ConfState{}`; proto/reset.go:16-22 calls it). A typed-nil receiver
+// nil-dereferences, as upstream's does.
+func (x *ConfState) ResetMessage() {
+	*x = ConfState{}
+}
+
+// SizeMessage — internal/impl/encode.go:47-61 sizePointer + :63-132
+// sizePointerSlow: a nil receiver sizes 0; per present field tagsize +
+// value size in field-number order; plus len(unknownFields).
 func (x *ConfState) SizeMessage() int {
 	if x == nil {
 		return 0
 	}
 	n := 0
-	for _, v := range x.Voters {
-		n += 1 + plainpbSizeVarint(v)
+	for i := 0; i < len(x.Voters); i++ {
+		n += 1 + sizeVarint(x.Voters[i])
 	}
-	for _, v := range x.Learners {
-		n += 1 + plainpbSizeVarint(v)
+	for i := 0; i < len(x.Learners); i++ {
+		n += 1 + sizeVarint(x.Learners[i])
 	}
-	for _, v := range x.VotersOutgoing {
-		n += 1 + plainpbSizeVarint(v)
+	for i := 0; i < len(x.VotersOutgoing); i++ {
+		n += 1 + sizeVarint(x.VotersOutgoing[i])
 	}
-	for _, v := range x.LearnersNext {
-		n += 1 + plainpbSizeVarint(v)
+	for i := 0; i < len(x.LearnersNext); i++ {
+		n += 1 + sizeVarint(x.LearnersNext[i])
 	}
 	if x.AutoLeave != nil {
-		n += 2
+		n += 1 + sizeVarint(encodeBool(*x.AutoLeave))
 	}
+	n += len(x.unknownFields)
 	return n
 }
 
-// AppendMessage appends x's protobuf wire encoding to b, fields
-// in field-number order. A nil receiver appends nothing.
-func (x *ConfState) AppendMessage(b []byte) []byte {
+// MarshalAppend — internal/impl/encode.go:148-226 marshalAppendPointer:
+// a nil receiver appends nothing; present fields in field-number order;
+// the retained unknown bytes LAST. Marshal cannot fail on these schemas
+// (no required field, no UTF-8 check; the size-mismatch error of
+// codec_field.go:169-171 needs a concurrent mutation).
+func (x *ConfState) MarshalAppend(b []byte) []byte {
 	if x == nil {
 		return b
 	}
-	for _, v := range x.Voters {
-		b = append(b, 0x08)
-		b = plainpbAppendVarint(b, v)
+	for i := 0; i < len(x.Voters); i++ {
+		b = appendVarint(b, 0x8)
+		b = appendVarint(b, x.Voters[i])
 	}
-	for _, v := range x.Learners {
-		b = append(b, 0x10)
-		b = plainpbAppendVarint(b, v)
+	for i := 0; i < len(x.Learners); i++ {
+		b = appendVarint(b, 0x10)
+		b = appendVarint(b, x.Learners[i])
 	}
-	for _, v := range x.VotersOutgoing {
-		b = append(b, 0x18)
-		b = plainpbAppendVarint(b, v)
+	for i := 0; i < len(x.VotersOutgoing); i++ {
+		b = appendVarint(b, 0x18)
+		b = appendVarint(b, x.VotersOutgoing[i])
 	}
-	for _, v := range x.LearnersNext {
-		b = append(b, 0x20)
-		b = plainpbAppendVarint(b, v)
+	for i := 0; i < len(x.LearnersNext); i++ {
+		b = appendVarint(b, 0x20)
+		b = appendVarint(b, x.LearnersNext[i])
 	}
 	if x.AutoLeave != nil {
-		b = append(b, 0x28)
-		if *x.AutoLeave {
-			b = append(b, 1)
-		} else {
-			b = append(b, 0)
-		}
+		b = appendVarint(b, 0x28)
+		b = appendVarint(b, encodeBool(*x.AutoLeave))
 	}
+	b = append(b, x.unknownFields...)
 	return b
 }
 
-// UnmarshalMessage parses b and MERGES into x (the proto
-// package's Unmarshal resets first; embedded-message fields
-// recurse through this merge form, which is what makes a
-// twice-encoded singular message field merge as the wire
-// format specifies).
-func (x *ConfState) UnmarshalMessage(b []byte) error {
-	i := 0
-	for i < len(b) {
-		tag, j, ok := plainpbConsumeVarint(b, i)
-		if !ok {
-			return errPlainpbMalformed
+// UnmarshalMessage parses b and MERGES into x — internal/impl/decode.go
+// :103-106 unmarshalPointer (the depth counter: decremented on entry,
+// errRecursionDepth below 0; proto.Unmarshal passes 10000, an embedded
+// message the caller's decremented value) + :124-241
+// unmarshalPointerEager (the tag fast paths, the field-number bounds,
+// the end-group check — groupTag is 0 for a message, so ANY end-group
+// tag mismatches —, the field consumers, unknown-field retention).
+func (x *ConfState) UnmarshalMessage(b []byte, depth int) error {
+	depth--
+	if depth < 0 {
+		return errRecursionDepth
+	}
+	for len(b) > 0 {
+		var tag uint64
+		if b[0] < 0x80 {
+			tag = uint64(b[0])
+			b = b[1:]
+		} else if len(b) >= 2 && b[1] < 128 {
+			tag = uint64(b[0]&0x7f) + uint64(b[1])<<7
+			b = b[2:]
+		} else {
+			v, k := consumeVarint(b)
+			if k < 0 {
+				return errDecode
+			}
+			tag = v
+			b = b[k:]
 		}
-		i = j
-		num := tag >> 3
-		wire := tag & 7
-		if num == 0 {
-			return errPlainpbMalformed
+		fn := tag >> 3
+		if fn < minValidNumber || fn > maxValidNumber {
+			return errDecode
 		}
+		num := int32(fn)
+		wtyp := int(tag & 7)
+		if wtyp == endGroupType {
+			return errDecode
+		}
+		n := 0
+		err := errUnknown
 		switch {
-		case num == 1 && wire == 0:
-			v, j2, ok2 := plainpbConsumeVarint(b, i)
-			if !ok2 {
-				return errPlainpbMalformed
-			}
-			x.Voters = append(x.Voters, v)
-			i = j2
-		case num == 1 && wire == 2:
-			n, j2, ok2 := plainpbConsumeVarint(b, i)
-			if !ok2 || uint64(len(b)-j2) < n {
-				return errPlainpbMalformed
-			}
-			end := j2 + int(n)
-			for j2 < end {
-				v, k, ok3 := plainpbConsumeVarint(b, j2)
-				if !ok3 || k > end {
-					return errPlainpbMalformed
+		case num == 1:
+			if wtyp == bytesType {
+				s, m, e := consumePackedUint64(b, x.Voters)
+				n = m
+				err = e
+				if e == nil {
+					x.Voters = s
 				}
-				x.Voters = append(x.Voters, v)
-				j2 = k
-			}
-			i = end
-		case num == 2 && wire == 0:
-			v, j2, ok2 := plainpbConsumeVarint(b, i)
-			if !ok2 {
-				return errPlainpbMalformed
-			}
-			x.Learners = append(x.Learners, v)
-			i = j2
-		case num == 2 && wire == 2:
-			n, j2, ok2 := plainpbConsumeVarint(b, i)
-			if !ok2 || uint64(len(b)-j2) < n {
-				return errPlainpbMalformed
-			}
-			end := j2 + int(n)
-			for j2 < end {
-				v, k, ok3 := plainpbConsumeVarint(b, j2)
-				if !ok3 || k > end {
-					return errPlainpbMalformed
+			} else {
+				v, m, e := consumeVarintValue(b, wtyp)
+				n = m
+				err = e
+				if e == nil {
+					x.Voters = append(x.Voters, v)
 				}
-				x.Learners = append(x.Learners, v)
-				j2 = k
 			}
-			i = end
-		case num == 3 && wire == 0:
-			v, j2, ok2 := plainpbConsumeVarint(b, i)
-			if !ok2 {
-				return errPlainpbMalformed
-			}
-			x.VotersOutgoing = append(x.VotersOutgoing, v)
-			i = j2
-		case num == 3 && wire == 2:
-			n, j2, ok2 := plainpbConsumeVarint(b, i)
-			if !ok2 || uint64(len(b)-j2) < n {
-				return errPlainpbMalformed
-			}
-			end := j2 + int(n)
-			for j2 < end {
-				v, k, ok3 := plainpbConsumeVarint(b, j2)
-				if !ok3 || k > end {
-					return errPlainpbMalformed
+		case num == 2:
+			if wtyp == bytesType {
+				s, m, e := consumePackedUint64(b, x.Learners)
+				n = m
+				err = e
+				if e == nil {
+					x.Learners = s
 				}
-				x.VotersOutgoing = append(x.VotersOutgoing, v)
-				j2 = k
-			}
-			i = end
-		case num == 4 && wire == 0:
-			v, j2, ok2 := plainpbConsumeVarint(b, i)
-			if !ok2 {
-				return errPlainpbMalformed
-			}
-			x.LearnersNext = append(x.LearnersNext, v)
-			i = j2
-		case num == 4 && wire == 2:
-			n, j2, ok2 := plainpbConsumeVarint(b, i)
-			if !ok2 || uint64(len(b)-j2) < n {
-				return errPlainpbMalformed
-			}
-			end := j2 + int(n)
-			for j2 < end {
-				v, k, ok3 := plainpbConsumeVarint(b, j2)
-				if !ok3 || k > end {
-					return errPlainpbMalformed
+			} else {
+				v, m, e := consumeVarintValue(b, wtyp)
+				n = m
+				err = e
+				if e == nil {
+					x.Learners = append(x.Learners, v)
 				}
-				x.LearnersNext = append(x.LearnersNext, v)
-				j2 = k
 			}
-			i = end
-		case num == 5 && wire == 0:
-			v, j2, ok2 := plainpbConsumeVarint(b, i)
-			if !ok2 {
-				return errPlainpbMalformed
+		case num == 3:
+			if wtyp == bytesType {
+				s, m, e := consumePackedUint64(b, x.VotersOutgoing)
+				n = m
+				err = e
+				if e == nil {
+					x.VotersOutgoing = s
+				}
+			} else {
+				v, m, e := consumeVarintValue(b, wtyp)
+				n = m
+				err = e
+				if e == nil {
+					x.VotersOutgoing = append(x.VotersOutgoing, v)
+				}
 			}
-			bv := v != 0
-			x.AutoLeave = &bv
-			i = j2
-		default:
-			j2, ok2 := plainpbSkipField(b, i, wire)
-			if !ok2 {
-				return errPlainpbMalformed
+		case num == 4:
+			if wtyp == bytesType {
+				s, m, e := consumePackedUint64(b, x.LearnersNext)
+				n = m
+				err = e
+				if e == nil {
+					x.LearnersNext = s
+				}
+			} else {
+				v, m, e := consumeVarintValue(b, wtyp)
+				n = m
+				err = e
+				if e == nil {
+					x.LearnersNext = append(x.LearnersNext, v)
+				}
 			}
-			i = j2
+		case num == 5:
+			v, m, e := consumeVarintValue(b, wtyp)
+			n = m
+			err = e
+			if e == nil {
+				if x.AutoLeave == nil {
+					x.AutoLeave = new(bool)
+				}
+				*x.AutoLeave = decodeBool(v)
+			}
 		}
+		if err != nil {
+			if err != errUnknown {
+				return err
+			}
+			n = consumeFieldValue(num, wtyp, b)
+			if n < 0 {
+				return errDecode
+			}
+			x.unknownFields = appendTag(x.unknownFields, num, wtyp)
+			x.unknownFields = append(x.unknownFields, b[:n]...)
+		}
+		b = b[n:]
 	}
 	return nil
 }
 
-// SizeMessage returns len(x.AppendMessage(nil)) without
-// allocating. A nil receiver sizes to 0 (proto.Size of a nil
-// message).
+// ProtoClone — proto/merge.go:41-60 Clone past its nil-interface and
+// validity arms (the proto package keeps those): New + mergePointer, i.e.
+// CloneMessage. A typed-nil receiver answers the typed nil.
+func (x *ConfState) ProtoClone() proto.Message {
+	return x.CloneMessage()
+}
+
+// ProtoEqual — the generated fast path internal/impl/equal.go:22-27
+// equalMessage: a different message type is unequal (the descriptor
+// check); same type compares by EqualMessage.
+func (x *ConfState) ProtoEqual(m proto.Message) bool {
+	y, ok := m.(*ConfState)
+	if !ok {
+		return false
+	}
+	return x.EqualMessage(y)
+}
+
+// IsNilMessage reports a TYPED-NIL message — the negation of
+// ProtoReflect().IsValid() for a generated message (proto/encode.go:141-146
+// emptyBytesForMessage, proto/merge.go:55-57 Clone, proto/equal.go:52-54 Equal).
+func (x *ConfChange) IsNilMessage() bool {
+	return x == nil
+}
+
+// ResetMessage is the generated Reset's plain-Go half (raft.pb.go
+// `*x = ConfChange{}`; proto/reset.go:16-22 calls it). A typed-nil receiver
+// nil-dereferences, as upstream's does.
+func (x *ConfChange) ResetMessage() {
+	*x = ConfChange{}
+}
+
+// SizeMessage — internal/impl/encode.go:47-61 sizePointer + :63-132
+// sizePointerSlow: a nil receiver sizes 0; per present field tagsize +
+// value size in field-number order; plus len(unknownFields).
 func (x *ConfChange) SizeMessage() int {
 	if x == nil {
 		return 0
 	}
 	n := 0
 	if x.Id != nil {
-		n += 1 + plainpbSizeVarint(*x.Id)
+		n += 1 + sizeVarint(*x.Id)
 	}
 	if x.Type != nil {
-		n += 1 + plainpbSizeVarint(uint64(*x.Type))
+		n += 1 + sizeVarint(uint64(*x.Type))
 	}
 	if x.NodeId != nil {
-		n += 1 + plainpbSizeVarint(*x.NodeId)
+		n += 1 + sizeVarint(*x.NodeId)
 	}
 	if x.Context != nil {
-		n += 1 + plainpbSizeVarint(uint64(len(x.Context))) + len(x.Context)
+		n += 1 + sizeBytes(len(x.Context))
 	}
+	n += len(x.unknownFields)
 	return n
 }
 
-// AppendMessage appends x's protobuf wire encoding to b, fields
-// in field-number order. A nil receiver appends nothing.
-func (x *ConfChange) AppendMessage(b []byte) []byte {
+// MarshalAppend — internal/impl/encode.go:148-226 marshalAppendPointer:
+// a nil receiver appends nothing; present fields in field-number order;
+// the retained unknown bytes LAST. Marshal cannot fail on these schemas
+// (no required field, no UTF-8 check; the size-mismatch error of
+// codec_field.go:169-171 needs a concurrent mutation).
+func (x *ConfChange) MarshalAppend(b []byte) []byte {
 	if x == nil {
 		return b
 	}
 	if x.Id != nil {
-		b = append(b, 0x08)
-		b = plainpbAppendVarint(b, *x.Id)
+		b = appendVarint(b, 0x8)
+		b = appendVarint(b, *x.Id)
 	}
 	if x.Type != nil {
-		b = append(b, 0x10)
-		b = plainpbAppendVarint(b, uint64(*x.Type))
+		b = appendVarint(b, 0x10)
+		b = appendVarint(b, uint64(*x.Type))
 	}
 	if x.NodeId != nil {
-		b = append(b, 0x18)
-		b = plainpbAppendVarint(b, *x.NodeId)
+		b = appendVarint(b, 0x18)
+		b = appendVarint(b, *x.NodeId)
 	}
 	if x.Context != nil {
-		b = append(b, 0x22)
-		b = plainpbAppendVarint(b, uint64(len(x.Context)))
-		b = append(b, x.Context...)
+		b = appendVarint(b, 0x22)
+		b = appendBytes(b, x.Context)
 	}
+	b = append(b, x.unknownFields...)
 	return b
 }
 
-// UnmarshalMessage parses b and MERGES into x (the proto
-// package's Unmarshal resets first; embedded-message fields
-// recurse through this merge form, which is what makes a
-// twice-encoded singular message field merge as the wire
-// format specifies).
-func (x *ConfChange) UnmarshalMessage(b []byte) error {
-	i := 0
-	for i < len(b) {
-		tag, j, ok := plainpbConsumeVarint(b, i)
-		if !ok {
-			return errPlainpbMalformed
+// UnmarshalMessage parses b and MERGES into x — internal/impl/decode.go
+// :103-106 unmarshalPointer (the depth counter: decremented on entry,
+// errRecursionDepth below 0; proto.Unmarshal passes 10000, an embedded
+// message the caller's decremented value) + :124-241
+// unmarshalPointerEager (the tag fast paths, the field-number bounds,
+// the end-group check — groupTag is 0 for a message, so ANY end-group
+// tag mismatches —, the field consumers, unknown-field retention).
+func (x *ConfChange) UnmarshalMessage(b []byte, depth int) error {
+	depth--
+	if depth < 0 {
+		return errRecursionDepth
+	}
+	for len(b) > 0 {
+		var tag uint64
+		if b[0] < 0x80 {
+			tag = uint64(b[0])
+			b = b[1:]
+		} else if len(b) >= 2 && b[1] < 128 {
+			tag = uint64(b[0]&0x7f) + uint64(b[1])<<7
+			b = b[2:]
+		} else {
+			v, k := consumeVarint(b)
+			if k < 0 {
+				return errDecode
+			}
+			tag = v
+			b = b[k:]
 		}
-		i = j
-		num := tag >> 3
-		wire := tag & 7
-		if num == 0 {
-			return errPlainpbMalformed
+		fn := tag >> 3
+		if fn < minValidNumber || fn > maxValidNumber {
+			return errDecode
 		}
+		num := int32(fn)
+		wtyp := int(tag & 7)
+		if wtyp == endGroupType {
+			return errDecode
+		}
+		n := 0
+		err := errUnknown
 		switch {
-		case num == 1 && wire == 0:
-			v, j2, ok2 := plainpbConsumeVarint(b, i)
-			if !ok2 {
-				return errPlainpbMalformed
+		case num == 1:
+			v, m, e := consumeVarintValue(b, wtyp)
+			n = m
+			err = e
+			if e == nil {
+				if x.Id == nil {
+					x.Id = new(uint64)
+				}
+				*x.Id = v
 			}
-			x.Id = &v
-			i = j2
-		case num == 2 && wire == 0:
-			v, j2, ok2 := plainpbConsumeVarint(b, i)
-			if !ok2 {
-				return errPlainpbMalformed
+		case num == 2:
+			v, m, e := consumeVarintValue(b, wtyp)
+			n = m
+			err = e
+			if e == nil {
+				if x.Type == nil {
+					x.Type = new(ConfChangeType)
+				}
+				*x.Type = ConfChangeType(int32(v))
 			}
-			ev := ConfChangeType(int32(uint32(v)))
-			x.Type = &ev
-			i = j2
-		case num == 3 && wire == 0:
-			v, j2, ok2 := plainpbConsumeVarint(b, i)
-			if !ok2 {
-				return errPlainpbMalformed
+		case num == 3:
+			v, m, e := consumeVarintValue(b, wtyp)
+			n = m
+			err = e
+			if e == nil {
+				if x.NodeId == nil {
+					x.NodeId = new(uint64)
+				}
+				*x.NodeId = v
 			}
-			x.NodeId = &v
-			i = j2
-		case num == 4 && wire == 2:
-			n, j2, ok2 := plainpbConsumeVarint(b, i)
-			if !ok2 || uint64(len(b)-j2) < n {
-				return errPlainpbMalformed
+		case num == 4:
+			v, m, e := consumeBytesValue(b, wtyp)
+			n = m
+			err = e
+			if e == nil {
+				x.Context = append(emptyBuf[:], v...)
 			}
-			s := make([]byte, n)
-			copy(s, b[j2:j2+int(n)])
-			x.Context = s
-			i = j2 + int(n)
-		default:
-			j2, ok2 := plainpbSkipField(b, i, wire)
-			if !ok2 {
-				return errPlainpbMalformed
-			}
-			i = j2
 		}
+		if err != nil {
+			if err != errUnknown {
+				return err
+			}
+			n = consumeFieldValue(num, wtyp, b)
+			if n < 0 {
+				return errDecode
+			}
+			x.unknownFields = appendTag(x.unknownFields, num, wtyp)
+			x.unknownFields = append(x.unknownFields, b[:n]...)
+		}
+		b = b[n:]
 	}
 	return nil
 }
 
-// SizeMessage returns len(x.AppendMessage(nil)) without
-// allocating. A nil receiver sizes to 0 (proto.Size of a nil
-// message).
+// ProtoClone — proto/merge.go:41-60 Clone past its nil-interface and
+// validity arms (the proto package keeps those): New + mergePointer, i.e.
+// CloneMessage. A typed-nil receiver answers the typed nil.
+func (x *ConfChange) ProtoClone() proto.Message {
+	return x.CloneMessage()
+}
+
+// ProtoEqual — the generated fast path internal/impl/equal.go:22-27
+// equalMessage: a different message type is unequal (the descriptor
+// check); same type compares by EqualMessage.
+func (x *ConfChange) ProtoEqual(m proto.Message) bool {
+	y, ok := m.(*ConfChange)
+	if !ok {
+		return false
+	}
+	return x.EqualMessage(y)
+}
+
+// IsNilMessage reports a TYPED-NIL message — the negation of
+// ProtoReflect().IsValid() for a generated message (proto/encode.go:141-146
+// emptyBytesForMessage, proto/merge.go:55-57 Clone, proto/equal.go:52-54 Equal).
+func (x *ConfChangeSingle) IsNilMessage() bool {
+	return x == nil
+}
+
+// ResetMessage is the generated Reset's plain-Go half (raft.pb.go
+// `*x = ConfChangeSingle{}`; proto/reset.go:16-22 calls it). A typed-nil receiver
+// nil-dereferences, as upstream's does.
+func (x *ConfChangeSingle) ResetMessage() {
+	*x = ConfChangeSingle{}
+}
+
+// SizeMessage — internal/impl/encode.go:47-61 sizePointer + :63-132
+// sizePointerSlow: a nil receiver sizes 0; per present field tagsize +
+// value size in field-number order; plus len(unknownFields).
 func (x *ConfChangeSingle) SizeMessage() int {
 	if x == nil {
 		return 0
 	}
 	n := 0
 	if x.Type != nil {
-		n += 1 + plainpbSizeVarint(uint64(*x.Type))
+		n += 1 + sizeVarint(uint64(*x.Type))
 	}
 	if x.NodeId != nil {
-		n += 1 + plainpbSizeVarint(*x.NodeId)
+		n += 1 + sizeVarint(*x.NodeId)
 	}
+	n += len(x.unknownFields)
 	return n
 }
 
-// AppendMessage appends x's protobuf wire encoding to b, fields
-// in field-number order. A nil receiver appends nothing.
-func (x *ConfChangeSingle) AppendMessage(b []byte) []byte {
+// MarshalAppend — internal/impl/encode.go:148-226 marshalAppendPointer:
+// a nil receiver appends nothing; present fields in field-number order;
+// the retained unknown bytes LAST. Marshal cannot fail on these schemas
+// (no required field, no UTF-8 check; the size-mismatch error of
+// codec_field.go:169-171 needs a concurrent mutation).
+func (x *ConfChangeSingle) MarshalAppend(b []byte) []byte {
 	if x == nil {
 		return b
 	}
 	if x.Type != nil {
-		b = append(b, 0x08)
-		b = plainpbAppendVarint(b, uint64(*x.Type))
+		b = appendVarint(b, 0x8)
+		b = appendVarint(b, uint64(*x.Type))
 	}
 	if x.NodeId != nil {
-		b = append(b, 0x10)
-		b = plainpbAppendVarint(b, *x.NodeId)
+		b = appendVarint(b, 0x10)
+		b = appendVarint(b, *x.NodeId)
 	}
+	b = append(b, x.unknownFields...)
 	return b
 }
 
-// UnmarshalMessage parses b and MERGES into x (the proto
-// package's Unmarshal resets first; embedded-message fields
-// recurse through this merge form, which is what makes a
-// twice-encoded singular message field merge as the wire
-// format specifies).
-func (x *ConfChangeSingle) UnmarshalMessage(b []byte) error {
-	i := 0
-	for i < len(b) {
-		tag, j, ok := plainpbConsumeVarint(b, i)
-		if !ok {
-			return errPlainpbMalformed
+// UnmarshalMessage parses b and MERGES into x — internal/impl/decode.go
+// :103-106 unmarshalPointer (the depth counter: decremented on entry,
+// errRecursionDepth below 0; proto.Unmarshal passes 10000, an embedded
+// message the caller's decremented value) + :124-241
+// unmarshalPointerEager (the tag fast paths, the field-number bounds,
+// the end-group check — groupTag is 0 for a message, so ANY end-group
+// tag mismatches —, the field consumers, unknown-field retention).
+func (x *ConfChangeSingle) UnmarshalMessage(b []byte, depth int) error {
+	depth--
+	if depth < 0 {
+		return errRecursionDepth
+	}
+	for len(b) > 0 {
+		var tag uint64
+		if b[0] < 0x80 {
+			tag = uint64(b[0])
+			b = b[1:]
+		} else if len(b) >= 2 && b[1] < 128 {
+			tag = uint64(b[0]&0x7f) + uint64(b[1])<<7
+			b = b[2:]
+		} else {
+			v, k := consumeVarint(b)
+			if k < 0 {
+				return errDecode
+			}
+			tag = v
+			b = b[k:]
 		}
-		i = j
-		num := tag >> 3
-		wire := tag & 7
-		if num == 0 {
-			return errPlainpbMalformed
+		fn := tag >> 3
+		if fn < minValidNumber || fn > maxValidNumber {
+			return errDecode
 		}
+		num := int32(fn)
+		wtyp := int(tag & 7)
+		if wtyp == endGroupType {
+			return errDecode
+		}
+		n := 0
+		err := errUnknown
 		switch {
-		case num == 1 && wire == 0:
-			v, j2, ok2 := plainpbConsumeVarint(b, i)
-			if !ok2 {
-				return errPlainpbMalformed
+		case num == 1:
+			v, m, e := consumeVarintValue(b, wtyp)
+			n = m
+			err = e
+			if e == nil {
+				if x.Type == nil {
+					x.Type = new(ConfChangeType)
+				}
+				*x.Type = ConfChangeType(int32(v))
 			}
-			ev := ConfChangeType(int32(uint32(v)))
-			x.Type = &ev
-			i = j2
-		case num == 2 && wire == 0:
-			v, j2, ok2 := plainpbConsumeVarint(b, i)
-			if !ok2 {
-				return errPlainpbMalformed
+		case num == 2:
+			v, m, e := consumeVarintValue(b, wtyp)
+			n = m
+			err = e
+			if e == nil {
+				if x.NodeId == nil {
+					x.NodeId = new(uint64)
+				}
+				*x.NodeId = v
 			}
-			x.NodeId = &v
-			i = j2
-		default:
-			j2, ok2 := plainpbSkipField(b, i, wire)
-			if !ok2 {
-				return errPlainpbMalformed
-			}
-			i = j2
 		}
+		if err != nil {
+			if err != errUnknown {
+				return err
+			}
+			n = consumeFieldValue(num, wtyp, b)
+			if n < 0 {
+				return errDecode
+			}
+			x.unknownFields = appendTag(x.unknownFields, num, wtyp)
+			x.unknownFields = append(x.unknownFields, b[:n]...)
+		}
+		b = b[n:]
 	}
 	return nil
 }
 
-// SizeMessage returns len(x.AppendMessage(nil)) without
-// allocating. A nil receiver sizes to 0 (proto.Size of a nil
-// message).
+// ProtoClone — proto/merge.go:41-60 Clone past its nil-interface and
+// validity arms (the proto package keeps those): New + mergePointer, i.e.
+// CloneMessage. A typed-nil receiver answers the typed nil.
+func (x *ConfChangeSingle) ProtoClone() proto.Message {
+	return x.CloneMessage()
+}
+
+// ProtoEqual — the generated fast path internal/impl/equal.go:22-27
+// equalMessage: a different message type is unequal (the descriptor
+// check); same type compares by EqualMessage.
+func (x *ConfChangeSingle) ProtoEqual(m proto.Message) bool {
+	y, ok := m.(*ConfChangeSingle)
+	if !ok {
+		return false
+	}
+	return x.EqualMessage(y)
+}
+
+// IsNilMessage reports a TYPED-NIL message — the negation of
+// ProtoReflect().IsValid() for a generated message (proto/encode.go:141-146
+// emptyBytesForMessage, proto/merge.go:55-57 Clone, proto/equal.go:52-54 Equal).
+func (x *ConfChangeV2) IsNilMessage() bool {
+	return x == nil
+}
+
+// ResetMessage is the generated Reset's plain-Go half (raft.pb.go
+// `*x = ConfChangeV2{}`; proto/reset.go:16-22 calls it). A typed-nil receiver
+// nil-dereferences, as upstream's does.
+func (x *ConfChangeV2) ResetMessage() {
+	*x = ConfChangeV2{}
+}
+
+// SizeMessage — internal/impl/encode.go:47-61 sizePointer + :63-132
+// sizePointerSlow: a nil receiver sizes 0; per present field tagsize +
+// value size in field-number order; plus len(unknownFields).
 func (x *ConfChangeV2) SizeMessage() int {
 	if x == nil {
 		return 0
 	}
 	n := 0
 	if x.Transition != nil {
-		n += 1 + plainpbSizeVarint(uint64(*x.Transition))
+		n += 1 + sizeVarint(uint64(*x.Transition))
 	}
-	for _, e := range x.Changes {
-		s := e.SizeMessage()
-		n += 1 + plainpbSizeVarint(uint64(s)) + s
+	for i := 0; i < len(x.Changes); i++ {
+		n += 1 + sizeBytes(x.Changes[i].SizeMessage())
 	}
 	if x.Context != nil {
-		n += 1 + plainpbSizeVarint(uint64(len(x.Context))) + len(x.Context)
+		n += 1 + sizeBytes(len(x.Context))
 	}
+	n += len(x.unknownFields)
 	return n
 }
 
-// AppendMessage appends x's protobuf wire encoding to b, fields
-// in field-number order. A nil receiver appends nothing.
-func (x *ConfChangeV2) AppendMessage(b []byte) []byte {
+// MarshalAppend — internal/impl/encode.go:148-226 marshalAppendPointer:
+// a nil receiver appends nothing; present fields in field-number order;
+// the retained unknown bytes LAST. Marshal cannot fail on these schemas
+// (no required field, no UTF-8 check; the size-mismatch error of
+// codec_field.go:169-171 needs a concurrent mutation).
+func (x *ConfChangeV2) MarshalAppend(b []byte) []byte {
 	if x == nil {
 		return b
 	}
 	if x.Transition != nil {
-		b = append(b, 0x08)
-		b = plainpbAppendVarint(b, uint64(*x.Transition))
+		b = appendVarint(b, 0x8)
+		b = appendVarint(b, uint64(*x.Transition))
 	}
-	for _, e := range x.Changes {
-		b = append(b, 0x12)
-		b = plainpbAppendVarint(b, uint64(e.SizeMessage()))
-		b = e.AppendMessage(b)
+	for i := 0; i < len(x.Changes); i++ {
+		b = appendVarint(b, 0x12)
+		siz := x.Changes[i].SizeMessage()
+		b = appendVarint(b, uint64(siz))
+		b = x.Changes[i].MarshalAppend(b)
 	}
 	if x.Context != nil {
-		b = append(b, 0x1a)
-		b = plainpbAppendVarint(b, uint64(len(x.Context)))
-		b = append(b, x.Context...)
+		b = appendVarint(b, 0x1a)
+		b = appendBytes(b, x.Context)
 	}
+	b = append(b, x.unknownFields...)
 	return b
 }
 
-// UnmarshalMessage parses b and MERGES into x (the proto
-// package's Unmarshal resets first; embedded-message fields
-// recurse through this merge form, which is what makes a
-// twice-encoded singular message field merge as the wire
-// format specifies).
-func (x *ConfChangeV2) UnmarshalMessage(b []byte) error {
-	i := 0
-	for i < len(b) {
-		tag, j, ok := plainpbConsumeVarint(b, i)
-		if !ok {
-			return errPlainpbMalformed
+// UnmarshalMessage parses b and MERGES into x — internal/impl/decode.go
+// :103-106 unmarshalPointer (the depth counter: decremented on entry,
+// errRecursionDepth below 0; proto.Unmarshal passes 10000, an embedded
+// message the caller's decremented value) + :124-241
+// unmarshalPointerEager (the tag fast paths, the field-number bounds,
+// the end-group check — groupTag is 0 for a message, so ANY end-group
+// tag mismatches —, the field consumers, unknown-field retention).
+func (x *ConfChangeV2) UnmarshalMessage(b []byte, depth int) error {
+	depth--
+	if depth < 0 {
+		return errRecursionDepth
+	}
+	for len(b) > 0 {
+		var tag uint64
+		if b[0] < 0x80 {
+			tag = uint64(b[0])
+			b = b[1:]
+		} else if len(b) >= 2 && b[1] < 128 {
+			tag = uint64(b[0]&0x7f) + uint64(b[1])<<7
+			b = b[2:]
+		} else {
+			v, k := consumeVarint(b)
+			if k < 0 {
+				return errDecode
+			}
+			tag = v
+			b = b[k:]
 		}
-		i = j
-		num := tag >> 3
-		wire := tag & 7
-		if num == 0 {
-			return errPlainpbMalformed
+		fn := tag >> 3
+		if fn < minValidNumber || fn > maxValidNumber {
+			return errDecode
 		}
+		num := int32(fn)
+		wtyp := int(tag & 7)
+		if wtyp == endGroupType {
+			return errDecode
+		}
+		n := 0
+		err := errUnknown
 		switch {
-		case num == 1 && wire == 0:
-			v, j2, ok2 := plainpbConsumeVarint(b, i)
-			if !ok2 {
-				return errPlainpbMalformed
+		case num == 1:
+			v, m, e := consumeVarintValue(b, wtyp)
+			n = m
+			err = e
+			if e == nil {
+				if x.Transition == nil {
+					x.Transition = new(ConfChangeTransition)
+				}
+				*x.Transition = ConfChangeTransition(int32(v))
 			}
-			ev := ConfChangeTransition(int32(uint32(v)))
-			x.Transition = &ev
-			i = j2
-		case num == 2 && wire == 2:
-			n, j2, ok2 := plainpbConsumeVarint(b, i)
-			if !ok2 || uint64(len(b)-j2) < n {
-				return errPlainpbMalformed
+		case num == 2:
+			v, m, e := consumeBytesValue(b, wtyp)
+			n = m
+			err = e
+			if e == nil {
+				el := &ConfChangeSingle{}
+				if e2 := el.UnmarshalMessage(v, depth); e2 != nil {
+					return e2
+				}
+				x.Changes = append(x.Changes, el)
 			}
-			e := &ConfChangeSingle{}
-			if err := e.UnmarshalMessage(b[j2 : j2+int(n)]); err != nil {
+		case num == 3:
+			v, m, e := consumeBytesValue(b, wtyp)
+			n = m
+			err = e
+			if e == nil {
+				x.Context = append(emptyBuf[:], v...)
+			}
+		}
+		if err != nil {
+			if err != errUnknown {
 				return err
 			}
-			x.Changes = append(x.Changes, e)
-			i = j2 + int(n)
-		case num == 3 && wire == 2:
-			n, j2, ok2 := plainpbConsumeVarint(b, i)
-			if !ok2 || uint64(len(b)-j2) < n {
-				return errPlainpbMalformed
+			n = consumeFieldValue(num, wtyp, b)
+			if n < 0 {
+				return errDecode
 			}
-			s := make([]byte, n)
-			copy(s, b[j2:j2+int(n)])
-			x.Context = s
-			i = j2 + int(n)
-		default:
-			j2, ok2 := plainpbSkipField(b, i, wire)
-			if !ok2 {
-				return errPlainpbMalformed
-			}
-			i = j2
+			x.unknownFields = appendTag(x.unknownFields, num, wtyp)
+			x.unknownFields = append(x.unknownFields, b[:n]...)
 		}
+		b = b[n:]
 	}
 	return nil
+}
+
+// ProtoClone — proto/merge.go:41-60 Clone past its nil-interface and
+// validity arms (the proto package keeps those): New + mergePointer, i.e.
+// CloneMessage. A typed-nil receiver answers the typed nil.
+func (x *ConfChangeV2) ProtoClone() proto.Message {
+	return x.CloneMessage()
+}
+
+// ProtoEqual — the generated fast path internal/impl/equal.go:22-27
+// equalMessage: a different message type is unequal (the descriptor
+// check); same type compares by EqualMessage.
+func (x *ConfChangeV2) ProtoEqual(m proto.Message) bool {
+	y, ok := m.(*ConfChangeV2)
+	if !ok {
+		return false
+	}
+	return x.EqualMessage(y)
 }

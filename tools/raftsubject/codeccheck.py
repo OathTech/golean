@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """codeccheck.py — the plainpb CODEC battery, under BOTH oracles.
 
-The W4.1 codec (raftpb/plain_codec.go + proto/proto.go, docs/raft-w41-log.md
-item 1) carries a differential obligation against the REAL protobuf runtime —
-that half is difftest.py section 7 and needs the Go module cache, which some
-sandboxes deny. THIS instrument is the half that always runs: a stdlib-free
+The generated codec (W4.1, docs/raft-w41-log.md item 1; route A S1 since
+2026-10-04: raftpb/plain_wire.go + plain_codec.go + plain_clone.go +
+proto/proto.go) carries a differential obligation against the REAL protobuf
+runtime — that half is difftest.py sections 7-8 and needs the Go module cache,
+which some sandboxes deny. THIS instrument is the half that always runs: a stdlib-free
 battery over the DERIVED codec itself, executed
 
   1. under `go run` (GOPATH scratch — raftpb/proto have no imports beyond
@@ -21,7 +22,10 @@ comparing the two verdicts. The battery checks, per value shape:
     wire spec by hand (varint edges included: 300, 2^40, MaxUint64);
   * decode-only paths: packed repeated varints, unknown-field skipping,
     singular-embedded-message merge, malformed-input errors (truncation,
-    field number 0, group wire types).
+    field number 0, group wire types);
+  * ROUTE A (checks 39-51, 100-125): typed nils, Equal, the Unwrap
+    sentinel, the recursion edges, and the imported corpus against
+    protobuf-go's recorded outcomes (see ROUTE A ADDITIONS below).
 
 The battery function returns 0 on success or the FAILING CHECK's id; the
 script requires both oracles to answer 0 and to AGREE. A check id, not a
@@ -490,6 +494,49 @@ CORPUS = os.path.join(HERE, "fixtures", "i6-malformed-conf-bytes.json")
 CORPUS_SHA256 = "cd724c9b40a96879c024ffe5b0c8f494c44ff2fe87a59484c15f6d19ebca5dd9"
 
 
+NEST_GO = """// nestResponses: d nested Message.responses (field 14) levels, built in
+// O(total) — the lengths first, then the prefixes outermost-first.
+func nestResponses(d int) []byte {
+	lens := make([]int, d+1)
+	for k := 1; k <= d; k++ {
+		inner := lens[k-1]
+		w := 1
+		for v := inner; v >= 0x80; v >>= 7 {
+			w++
+		}
+		lens[k] = 1 + w + inner
+	}
+	b := make([]byte, 0, lens[d])
+	for k := d; k >= 1; k-- {
+		b = append(b, 0x72)
+		v := lens[k-1]
+		for v >= 0x80 {
+			b = append(b, byte(v)|0x80)
+			v >>= 7
+		}
+		b = append(b, byte(v))
+	}
+	return b
+}
+
+// nestGroups: d nested unknown groups of field 15.
+func nestGroups(d int) []byte {
+	b := make([]byte, 0, 2*d)
+	for k := 0; k < d; k++ {
+		b = append(b, 0x7b)
+	}
+	for k := 0; k < d; k++ {
+		b = append(b, 0x7c)
+	}
+	return b
+}
+"""
+
+# The machine leg's fuel: the recursion edges (checks 48..51) need
+# 10M-40M steps each (measured 2026-10-04).
+MACHINE_FUEL = "300000000"
+
+
 def go_bytes(h):
     if not h:
         return "[]byte{}"
@@ -585,6 +632,41 @@ def route_a_go(proto_src):
     else:
         g += ["\t// the subject proto declares NO Error sentinel (pre-route-A tree): red",
               "\treturn 47"]
+    if has_error:
+        # The recursion edges (checks 48..51; design D4, Q3 [USER]
+        # 2026-10-04): 10000 nested messages (the top one included) decode,
+        # 10001 is errRecursionDepth; 10001 nested unknown groups skip,
+        # 10002 is errDecode. Each edge costs 10M-40M machine steps — past
+        # the corpus strict lane's 10M fuel, so the edges live HERE (the
+        # machine leg runs with --fuel MACHINE_FUEL) and in difftest.py
+        # section 8 (exact vs protobuf-go).
+        g += ["\t// the recursion edges (checks 48..51)",
+              "\tif proto.Unmarshal(nestResponses(9999), &pb.Message{}) != nil {",
+              "\t\treturn 48",
+              "\t}",
+              "\trerr := proto.Unmarshal(nestResponses(10000), &pb.Message{})",
+              "\tif rerr == nil {",
+              "\t\treturn 49",
+              "\t}",
+              "\trt := rerr.Error()",
+              "\tif rt != \"proto: exceeded maximum recursion depth\" {",
+              "\t\tif rt != \"proto:\\u00a0exceeded maximum recursion depth\" {",
+              "\t\t\treturn 49",
+              "\t\t}",
+              "\t}",
+              "\tif proto.Unmarshal(nestGroups(10001), &pb.Message{}) != nil {",
+              "\t\treturn 50",
+              "\t}",
+              "\tgerr := proto.Unmarshal(nestGroups(10002), &pb.Message{})",
+              "\tif gerr == nil {",
+              "\t\treturn 51",
+              "\t}",
+              "\tgt := gerr.Error()",
+              "\tif gt != \"proto: cannot parse invalid wire-format data\" {",
+              "\t\tif gt != \"proto:\\u00a0cannot parse invalid wire-format data\" {",
+              "\t\t\treturn 51",
+              "\t\t}",
+              "\t}"]
     g += ["\t// the imported corpus (checks 100..125)"]
     for k, e in enumerate(corpus):
         r = refs.get("corpus/" + e["name"])
@@ -613,7 +695,7 @@ def route_a_go(proto_src):
               "\tif %sme != nil {" % v, "\t\treturn %d" % cid, "\t}",
               "\tif %sb == nil {" % v, "\t\treturn %d" % cid, "\t}",
               "\tif !bytesEq(%sb, %s) {" % (v, go_bytes(r["marshal"])), "\t\treturn %d" % cid, "\t}"]
-    g += ["\treturn 0", "}"]
+    g += ["\treturn 0", "}", "", NEST_GO]
     return "\n".join(g) + "\n"
 
 
@@ -667,7 +749,7 @@ def main():
     if r.returncode != 0:
         sys.exit("codeccheck.py: frontend export failed:\n%s" % r.stderr)
     r = subprocess.run([args.golean, "native-json-run", "--input", wire,
-                        "--function", "codecBattery", "--fuel", "30000000"],
+                        "--function", "codecBattery", "--fuel", MACHINE_FUEL],
                        capture_output=True, text=True)
     if r.returncode != 0 and not r.stdout.strip():
         sys.exit("codeccheck.py: machine run failed:\n%s" % r.stderr)
@@ -688,7 +770,7 @@ def main():
     if go_verdict != "0":
         sys.exit("codeccheck.py: battery check %s FAILED under both oracles"
                  % go_verdict)
-    print("codeccheck: PASS — checks 1-47 + the 26 imported corpus entries (100-125), both oracles agree, verdict 0")
+    print("codeccheck: PASS — checks 1-51 + the 26 imported corpus entries (100-125), both oracles agree, verdict 0")
 
 
 if __name__ == "__main__":

@@ -1,11 +1,39 @@
 # id	subject	args	expected_status	expected_reason	features
-# H-1 codec guardrails (raft W4.1 item 1): the language shapes the
-# generated plainpb codec runs on — pinned green BEFORE the derived
-# codec landed (the shapes were already modeled; these rows keep them
-# so). wirepb mirrors gen_codec's output forms; the derived codec's own
-# batteries are codeccheck.py (both oracles) + difftest.py section 7.
-roundtrip	codecRoundTrip	-	ok	-	slices,strings,pointers,structs,methods,multipackage,imports
-size	codecSize	-	ok	-	slices,pointers,structs,methods,range,multipackage,imports
-golden	codecGolden	-	ok	-	slices,structs,methods,multipackage,imports
-unknown-skip	codecUnknownSkip	-	ok	-	slices,structs,methods,switch,multipackage,imports
-malformed	codecMalformed	-	ok	-	slices,structs,methods,range,multipackage,imports
+# H-1 codec guardrails (raft W4.1 item 1), re-born for protobuf route A slice S1
+# (docs/2026-10-04_route-a-protobuf-design.md D9, acceptance §5; [USER] Mike 2026-10-04 «Approved», relayed):
+# the language shapes the GENERATED raftsubject codec runs on. wirepb/ and wireproto/ are derive.py's own
+# codec generator over a synthetic schema (derive.py --check keeps them in sync); the first five rows keep
+# their pre-route-A observations. Exactness vs protobuf-go is difftest.py section 8; the subject codec under
+# both oracles is codeccheck.py. Every program run draws the ONE init-time spelling pick (wireproto.pickPrefix,
+# rand.Intn(2)); the strict rows' observables do not depend on it, the two membership rows' observables ARE it.
+# The recursion-edge row of acceptance §5 is NOT born here: each edge needs 10M-40M machine steps, past the
+# strict lane's 10M fuel (measured; an open item of S1 — see main.go's header).
+roundtrip	codecRoundTrip	-	ok	-	slices,strings,pointers,structs,methods,multipackage,imports,interfaces
+size	codecSize	-	ok	-	slices,pointers,structs,methods,loops,multipackage,imports,interfaces
+golden	codecGolden	-	ok	-	slices,structs,methods,multipackage,imports,interfaces
+unknown-skip	codecUnknownSkip	-	ok	-	slices,structs,methods,multipackage,imports,interfaces
+malformed	codecMalformed	-	ok	-	slices,structs,methods,loops,multipackage,imports,interfaces
+unknown-retain-reencode	codecUnknownRetainReencode	-	ok	-	slices,structs,methods,append,multipackage,imports,interfaces
+wrong-wiretype-retain	codecWrongWiretypeRetain	-	ok	-	slices,structs,methods,append,multipackage,imports,interfaces
+group-skip-nested	codecGroupSkipNested	-	ok	-	slices,structs,methods,recursion,append,multipackage,imports,interfaces	-	-	depth=24
+group-end-mismatch	codecGroupEndMismatch	-	ok	-	slices,structs,methods,recursion,strings,multipackage,imports,interfaces
+group-truncated	codecGroupTruncated	-	ok	-	slices,structs,methods,recursion,strings,multipackage,imports,interfaces
+stray-end-group	codecStrayEndGroup	-	ok	-	slices,structs,methods,strings,multipackage,imports,interfaces
+field-number-zero	codecFieldNumberZero	-	ok	-	slices,structs,methods,strings,multipackage,imports,interfaces
+field-number-max	codecFieldNumberMax	-	ok	-	slices,structs,methods,shifts,multipackage,imports,interfaces
+field-number-over-max-top-vs-in-group	codecFieldNumberOverMax	-	ok	-	slices,structs,methods,shifts,recursion,multipackage,imports,interfaces
+varint-ten-bytes	codecVarintTenBytes	-	ok	-	slices,structs,methods,shifts,overflow,multipackage,imports,interfaces
+varint-overflow	codecVarintOverflow	-	ok	-	slices,structs,methods,shifts,strings,multipackage,imports,interfaces
+varint-truncated	codecVarintTruncated	-	ok	-	slices,structs,methods,shifts,strings,multipackage,imports,interfaces
+packed-accepted-unpacked-emitted	codecPackedAcceptedUnpackedEmitted	-	ok	-	slices,structs,methods,append,multipackage,imports,interfaces
+bytes-empty-presence	codecBytesEmptyPresence	-	ok	-	slices,structs,methods,nil,zero_len,multipackage,imports,interfaces
+merge-twice-singular	codecMergeTwiceSingular	-	ok	-	slices,structs,methods,pointers,recursion,multipackage,imports,interfaces
+enum-unlisted-value-stored	codecEnumUnlistedValueStored	-	ok	-	slices,structs,methods,conversions,defined_type,multipackage,imports,interfaces
+typed-nil-marshal	codecTypedNilMarshal	-	ok	-	slices,structs,methods,nil,interfaces,multipackage,imports
+typed-nil-size	codecTypedNilSize	-	ok	-	structs,methods,nil,interfaces,multipackage,imports
+typed-nil-clone	codecTypedNilClone	-	ok	-	structs,methods,nil,interfaces,type_assertions,multipackage,imports
+typed-nil-equal	codecTypedNilEqual	-	ok	-	structs,methods,nil,interfaces,type_assertions,multipackage,imports
+nil-and-empty-input	codecNilAndEmptyInput	-	ok	-	slices,structs,methods,nil,zero_len,interfaces,multipackage,imports
+sentinel-unwrap	codecSentinelUnwrap	-	ok	-	structs,methods,interfaces,type_assertions,globals,multipackage,imports
+prefix-pick	codecPrefixPick	-	ok	-	strings,len,globals,init,stdlib,rand,nondet,interfaces,multipackage,imports	membership	the decode error's text is the generated proto stand-in's prefix + fixed text; the prefix is picked ONCE at package init by wireproto.pickPrefix = rand.Intn(2) (ONE intn consumption site, bound 2: slot 0 = "proto: " U+0020, slot 1 = "proto:" U+00A0 — protobuf-go's per-binary detrand bit, internal/detrand/rand.go:25-27, design D5/Q1 [USER] 2026-10-04) — so len(err.Error()) is 44 or 45; members=2; no other consumption site exists in the program; width 2 = the one bound	width=2,sites=8,members=2
+panic-abort-text	codecPanicAbortText	-	panic	cannot parse invalid wire-format data	strings,globals,init,stdlib,rand,nondet,panic,interfaces,multipackage,imports	membership	raft's stepLeader shape: panic(err) with the decode error VALUE aborts with err.Error(), whose prefix is the ONE init-time intn pick of wireproto.pickPrefix (bound 2: slot 0 = "proto: ", slot 1 = "proto:" + U+00A0; design D5/Q1 [USER] 2026-10-04) — members=2; the shared substring is the fixed text; no other consumption site; width 2 = the one bound	width=2,sites=8,members=2

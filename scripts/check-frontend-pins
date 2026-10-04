@@ -359,6 +359,23 @@ echo "check-frontend-pins: ok [hidden-dep-order] — realized deviation order ma
 # referenced across declarations), 230 `pos` line shifts in the `locals` tables of 60 later raft.go declarations (the file is
 # 7 lines shorter), 0 other. Schema golean-native-v3, funcs 450, methods 481, fileOrder 20 unchanged; no other statement,
 # expression or type node changed. 8a158eff… -> d5186f43…. Written reason and the classification script: the lane's handoff.
+# [AGENT S1 build worker, lane lane/route-a-s1-1004] 2026-10-04 twin re-pin: protobuf ROUTE A slice S1 ([USER] Mike
+# 2026-10-04 «Approved», relayed — design docs/2026-10-04_route-a-protobuf-design.md D1-D12; D12 names this re-pin). The
+# subject's protobuf surface is now the generated route A codec: raftpb gains plain_wire.go (the protowire/impl twins),
+# plain_codec.go/plain_clone.go are regenerated (MarshalAppend/SizeMessage/UnmarshalMessage(b, depth)/ResetMessage/
+# IsNilMessage/ProtoClone/ProtoEqual/CloneMessage/mergeMessage/EqualMessage), every raftpb struct keeps `unknownFields
+# []byte` (D3), proto/proto.go dispatches through an interface and carries prefixError/Error/NewError and the init pick
+# `var prefix = pickPrefix()` (one rand.Intn(2)), raftpb/confchange.go is upstream verbatim, raftpb/confstate.go upstream +
+# the D-3 patch. Key-by-key JSON comparison (docs/evidence/2026-10-04_route-a-s1/twin-repin.txt): schema golean-native-v3,
+# package, buildContext IDENTICAL; funcs 450 -> 471, methods 481 -> 534, types 93 -> 94, globals 50 -> 56, promotions
+# 56 -> 71, methodSets 82 (one key raftpb.confStateError -> proto.prefixError); every added/removed declaration is in raftpb
+# or proto. Of the CHANGED bodies outside raftpb/proto: 340 differ only by hoist-temporary renumbering, global-index
+# shifts (7 globals in, 1 out) or pos; the other 37 are exactly (a) 59 raftpb struct literals gaining ONE trailing
+# `default []byte` argument (the kept unknownFields, D3) and (b) $pkginit's 68 -> 72 initializers — 0 unclassified.
+# The twin driver (probeTwinChoice, default stream, fuel 8e9) under the machine on the OLD and the NEW wire: observations
+# byte-identical (ok; «end viol=0 claims=1 committed=6 complete=1 floor=1 rounds=30»; sha256 76d2bc87… both); the codec's
+# own behaviour is validated by difftest.py section 8 (exact vs protobuf-go) and codeccheck.py (both oracles).
+# d5186f43… -> 661022b9….
 # ---- 2. Twin wire pin ----
 TWIN_BASE="baselines/pins/twin-chdriver.wire.json"
 [ -f "$TWIN_BASE" ] || { echo "check-frontend-pins: FAIL — no wire pin at $TWIN_BASE" >&2; exit 1; }

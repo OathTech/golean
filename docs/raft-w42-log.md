@@ -861,3 +861,64 @@ site (admitted set `{5,…,9}`, members=5); `maps/jitter-draw` stays as the pin 
 `main.go` comment says which — [AGENT] 2026-10-01, train r58 prep: it did NOT until then, it still claimed D-11 «carries
 EXACTLY this draw»; corrected with `cases.tsv`'s matching sentence, audit F1 of `docs/2026-10-01_intn-pick-audit.md`). `sweep.py`'s tripwire (a quarantined `lockedRand.Intn` = the patch not in effect) is unchanged and
 still meaningful: the body lowers through the new primitive.
+
+## Subject-delta ledger continuation (2026-10-04, route A slice S1): U-1, U-2, U-3 RESOLVED; D-4 RETIRED; D-1, D-3 NARROWED
+
+[AGENT] S1 build worker, lane `lane/route-a-s1-1004` (worktree `.claude/worktrees/route-a-s1`, off the design branch
+`design/route-a-protobuf-1004` @ `04b659f0`). Authority: [USER] Mike 2026-10-04, verbatim, relayed by the [AGENT]
+coordinator — cite as relayed: «Approved» — ratifying `docs/2026-10-04_route-a-protobuf-design.md` D1–D12 and Q1–Q4, Q6, Q7 as
+recommended (Q5 PENDING; the note's §7 records the ruling). Slice S1 = the generator, the dispatch and the overlays (design §3
+cost row), plus — per the coordinator's brief — the D9 instruments red-first and the born corpus rows.
+
+**U-1 the Unmarshal error VALUE — RESOLVED.** Every malformation returns the ONE value `errDecode`, a `*prefixError` (the
+`proto` stand-in's twin of `internal/errors`) whose `Error()` is `prefix + "cannot parse invalid wire-format data"` and whose
+`Unwrap()` is the `proto.Error` sentinel; nesting past 10000 messages returns `errRecursionDepth` («exceeded maximum recursion
+depth», D4/Q3). The prefix spacing is ONE init-time pick, `rand.Intn(2)` on `ChoiceSite.intn` (D5/Q1): slot 0 = U+0020, slot
+1 = U+00A0. Under `go run` the subject draws per process; protobuf-go's draw is per binary — the differential compares by
+MEMBERSHIP over the two spellings (difftest.py section 8 records both bits). `errors.Is` stays refused on the machine by name
+(FR-14/G6, D10); the `Unwrap` chain is checked directly (codeccheck 47, corpus row `sentinel-unwrap`).
+
+**U-2 unknown groups — RESOLVED.** The `protowire.consumeFieldValueD` twin skips a group (nested, end-tag-matched,
+depth-limited at 10000) and the decoder retains it whole; the in-group/top-level field-number asymmetry is reproduced.
+
+**U-3 unknown fields — RESOLVED.** The strip KEEPS `unknownFields []byte` (D3); the decoder retains every unknown field and
+every known field at a wrong wire type (canonical tag + raw bytes, arrival order); `Marshal` re-emits them after the known
+fields, `Size` counts them, `Clone` copies them, `Equal` compares them by the `equalUnknown` twin.
+
+**Witness.** `tools/raftsubject/difftest.py` section 8 (`difftest_sec8.py`): the 26-entry corpus imported verbatim from
+raft-proofs `fixtures/i6/malformed-conf-bytes.json` @ `f3d857f` (sha256 pinned) + a generated adversarial battery over all
+nine types + the recursion edges + typed nils and nil elements — 1041 inputs, 123534 Equal pairs, EXACT (verdict,
+`errors.Is`, text modulo the prefix byte, Size, Marshal bytes incl. nil-ness, Clone, Equal; no note class). RED-FIRST against
+the pre-route-A tree (21/26 corpus entries disagree before the Equal class; `docs/evidence/2026-10-04_route-a-s1/
+red-first.txt`); GREEN on the S1 tree (0 disagreements). `codeccheck.py` (both oracles): checks 39–51 + the corpus (100–125,
+against protobuf-go's recorded outcomes `tools/raftsubject/fixtures/i6-reference-protobuf-go-v1.36.11.json`) — verdict 0 on
+both. Through RawNode (the D9 twin schedules via `runprobe.py`) is NOT in S1 — S2's.
+
+**D-4 `raftpb/confchange.go` — RETIRED.** Upstream VERBATIM (import path rewritten): `proto` no longer imports `raftpb`
+(interface dispatch, D2), so the two `proto.Marshal` calls stay (JC-13 amended in `docs/raft-w41-log.md`).
+
+**D-3 `raftpb/confstate.go` — NARROWED (the overlay retired, Q2).** Upstream text; its `proto.Clone`/`proto.Equal` go to the
+subject-local `proto`. The recorded exact-text patch (`derive.py` `SUBJECT_PATCHES`, refusing on drift) turns the two
+`fmt.Errorf` lines into `errors.New` over the fixed text («cannot compare ConfState: nil input», «ConfStates not equivalent
+after sorting») and swaps the `fmt` import for `errors`. The error's dynamic type is now upstream's (`fmt.Errorf` without `%w`
+IS `errors.New`, go1.26.5 `src/fmt/errors.go`); the TEXT loses the `(left=…, right=…)` booleans and the four `%+#v` dumps —
+a PERMANENT stated inexactness ([USER] 2026-10-04, Q4: upstream's dump prints the runtime's `state` pointer). The verdict
+(nil vs non-nil) is upstream's.
+
+**D-1 the strip — NARROWED.** `unknownFields []byte` is KEPT (D3); `state` and `sizeCache` stay stripped.
+
+**D-2 (generated clone/equality) and D-9 (the generated `proto`) — RESHAPED, not retired.** Both are now the route A
+generator's output, named after their protobuf-go twins (the FuncId/footprint table `tools/raftsubject/codec-funcids.tsv`,
+D8; the generated files' digests pinned in `derive.py` `GENERATED_DIGESTS`, checked by `--check`). Two pre-existing
+inexactnesses surfaced by section 8 are FIXED in the regenerated code: a NIL ELEMENT of a repeated message field
+clones to an EMPTY message (`impl/merge.go:175-185`) and compares equal to an empty message (the invalid element takes
+protoreflect's slow path); and `Marshal` of a TYPED-NIL message answers `nil` (`emptyBytesForMessage`), not `[]byte{}`.
+
+**Corpus.** `Corpus/coverage/exec/multipkg/wire-codec/`: `wirepb/` + `wireproto/` are now the codec GENERATOR's output over
+a four-message synthetic schema (`derive.py` `MIRROR_SCHEMA`; `--check` regenerates and compares them), the five pre-route-A
+rows keep their observations, and 24 rows are born (22 strict + 2 membership: `prefix-pick`, `panic-abort-text`). The
+recursion-edge row of the design's acceptance plan is NOT born: each edge needs 10M–40M machine steps, past the strict lane's
+fixed 10M fuel — an open item of S1 (reported); the edges are covered by codeccheck 48–51 (machine leg at fuel 3e8) and
+section 8. **Twin:** `baselines/pins/twin-chdriver.wire.json` re-pinned (reason and classification in
+`scripts/check-frontend-pins`' comment block and `docs/evidence/2026-10-04_route-a-s1/twin-repin.txt`). No BUGS.md entry:
+subject deltas, not machine-vs-gc fidelity bugs.

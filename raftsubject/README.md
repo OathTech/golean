@@ -5,18 +5,19 @@ short dot-free import paths and **entirely derived** by
 `tools/raftsubject/derive.py` from `deps/raft` @ `56e3200`.
 
 **Do not edit anything under this directory.** Every file is regenerated;
-edit the derivation (`tools/raftsubject/derive.py`, or an overlay under
-`tools/raftsubject/overlay/`) and re-run it. `derive.py --check` fails if the
+edit the derivation (`tools/raftsubject/derive.py` — its rules, its
+recorded `SUBJECT_PATCHES`, or its codec generator) and re-run it. `derive.py --check` fails if the
 tree and the derivation have drifted.
 
 ```
 raftsubject/
   raftpb/     plainpb — raft's wire types DECLARED, protobuf runtime stripped
+              (unknownFields kept), plus the generated route A codec
   quorum/     upstream verbatim (import paths rewritten)
   tracker/    upstream verbatim (import paths rewritten)
   confchange/ upstream verbatim (import paths rewritten)
-  proto/      generated — the subject-local protobuf stand-in (real codec
-              dispatch since W4.1)
+  proto/      generated — the subject-local protobuf stand-in (route A:
+              interface dispatch into the generated codec, since 2026-10-04)
   raft/       the root package (W2.2+): verbatim, plus node_decls.go (a
               declaration subset of node.go) and the recorded subject
               patches D-11 (the jitter draw — since 2026-09-30 one
@@ -42,28 +43,33 @@ subject-delta ledger (continued in the W3, W4.1 and W4.2 logs) and in the
 header comment of the file itself:
 
 1. **`raftpb/raft.pb.go`** — mechanically stripped: wire types, field
-   numbers, enums and every getter KEPT; `Marshal`/`Unmarshal`/`Size` absent
-   from the file (the generated codec of item 4 stands in since W4.1);
+   numbers, enums, every getter and (since route A, D3) the `unknownFields
+   []byte` store KEPT; the runtime's `state`/`sizeCache` fields, the
+   file-descriptor machinery and `ProtoReflect` gone;
    `String`/`Descriptor`/`EnumDescriptor`/`UnmarshalJSON` are fail-closed
-   panics; the file-descriptor machinery, `ProtoReflect` and the
-   `unknownFields` store are gone.
-2. **`raftpb/plain_clone.go`** — GENERATED, not upstream: plain-Go
-   `CloneMessage`/`EqualMessage` standing in for `proto.Clone`/`proto.Equal`,
-   which raft calls on its normal paths. Differentially validated against the
-   real protobuf runtime by `tools/raftsubject/difftest.py`.
-3. **`raftpb/confstate.go`, `raftpb/confchange.go`** — overlays (upstream
-   digests pinned in the derivation, so a pin move fails loud).
-   `raft/logger.go` is NOT an overlay since W4.2: it is upstream verbatim
-   plus the recorded D-12 initializer patch (`docs/raft-w42-log.md`).
-4. **`raftpb/plain_codec.go` + `proto/proto.go`** — GENERATED wire codec
-   and dispatch (W4.1, `docs/raft-w41-log.md` item 1), differentially
-   validated against the real protobuf runtime by `difftest.py` section 7.
-   Three recorded behaviour deltas vs protobuf-go, found by the raft-proofs
-   team 2026-09-30: U-1 the decode error VALUE (raft panics with it,
-   `raft/raft.go:1334/1340`), U-2 unknown groups rejected where protobuf-go
-   skips them, U-3 unknown fields dropped where protobuf-go retains them —
-   `docs/raft-w42-log.md` (the 2026-09-30 ledger continuation); all three
-   resolved by protobuf route A (`docs/2026-09-30_protobuf-route-a.md`).
+   panics; enum `String` is real.
+2. **`raftpb/plain_wire.go`, `plain_codec.go`, `plain_clone.go` +
+   `proto/proto.go`** — GENERATED, not upstream: protobuf route A
+   (`docs/2026-10-04_route-a-protobuf-design.md`, ratified 2026-10-04; slice
+   S1): a reflection-free codec decomposed function-for-function after
+   protobuf-go v1.36.11's `protowire`/`internal/impl` (each function names its
+   twin by file:line; the FuncId/footprint table is
+   `tools/raftsubject/codec-funcids.tsv`), dispatched from the subject-local
+   `proto` package through an interface; the `*prefixError` value with its
+   `Unwrap` sentinel; the per-binary prefix spelling as ONE init-time
+   `rand.Intn(2)` pick. Validated EXACTLY against the real runtime by
+   `difftest.py` sections 7-8 and under both oracles by `codeccheck.py`. The
+   2026-09-30 deltas U-1 (the error value), U-2 (unknown groups) and U-3
+   (unknown fields) are resolved by this codec (`docs/raft-w42-log.md`, the
+   2026-10-04 ledger continuation).
+3. **`raftpb/confstate.go`** — upstream text plus the recorded exact-text
+   patch D-3: its two `fmt.Errorf` lines become `errors.New` over the fixed
+   text (the verdict is upstream's; the `%+#v` dumps are a PERMANENT stated
+   inexactness). `raftpb/confchange.go` is upstream VERBATIM since route A
+   (the W2 overlay retired). `raft/logger.go` is upstream verbatim plus the
+   recorded D-12 initializer patch (`docs/raft-w42-log.md`).
+4. **`raft/raft.go`** — the recorded D-11 patch (the jitter draw, one
+   `math/rand.Intn` call on the machine's pick site).
 
 Everything else — including the parts the frontend cannot lower yet
 (statement-position `copy`, `panic(fmt.Sprintf(...))`, the `String`/`Describe`
@@ -75,6 +81,6 @@ instead of being papered over. The current refusal inventory is in
 
 ```
 tools/raftsubject/derive.py --check    # tree matches the derivation
-tools/raftsubject/difftest.py          # plainpb agrees with upstream raftpb
+tools/raftsubject/difftest.py          # plainpb + proto agree with upstream raftpb + protobuf-go (sections 1-8)
 tools/raftsubject/frontier.py          # the refusal inventory
 ```

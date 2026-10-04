@@ -1,5 +1,13 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 3860 (3623 PASS / 237 FAIL)
+# cases: 3884 (3647 PASS / 237 FAIL)
+# re-pinned: 2026-10-04 [AGENT], lane/route-a-s1-1004 — protobuf ROUTE A slice S1 ([USER] Mike 2026-10-04 «Approved», relayed;
+#   design docs/2026-10-04_route-a-protobuf-design.md D9 / acceptance §5). BORN ROWS ONLY, all PASS: +24
+#   multipkg/wire-codec/* — 22 strict (group-skip-nested declares depth=24: w=18 wide picks measured, the codec's appends) + 2
+#   membership (prefix-pick: len(err.Error()) in {44,45}; panic-abort-text: the two spellings) over the ONE init-time
+#   rand.Intn(2) prefix pick. The case's wirepb/ + wireproto/ are now derive.py's codec generator output (the 5 pre-route-A
+#   rows keep their result and stage). The acceptance plan's recursion-edge row is NOT born (10M-40M machine steps per edge,
+#   past the strict lane's 10M fuel; an open item reported with S1). Measured by scripts/diff-coverage over the case
+#   (29/29 PASS), then the full gate. 3860 + 24 = 3884; 3623 + 24 = 3647; 237 FAIL.
 # re-pinned: 2026-10-03 [AGENT], records/window-corpus-cl-1003 — the window's corpus lanes CL1–CL5 given an explicit disposition
 #   (window review F3, docs/2026-10-03_window-review.md on review/window-1003 @ 66d09ab5; the disposition
 #   docs/2026-10-03_window-corpus-disposition.md). WHY: the charter's §4 corpus commitments had no completion accounting; existing
@@ -4016,11 +4024,35 @@ PASS	multipkg/same-name-pointer-panic/value-method	-
 PASS	multipkg/unexported-method-scope/assert-panic	-
 PASS	multipkg/unexported-method-scope/distinct	-
 PASS	multipkg/unexported-method-scope/distinct-names	-
+PASS	multipkg/wire-codec/bytes-empty-presence	-
+PASS	multipkg/wire-codec/enum-unlisted-value-stored	-
+PASS	multipkg/wire-codec/field-number-max	-
+PASS	multipkg/wire-codec/field-number-over-max-top-vs-in-group	-
+PASS	multipkg/wire-codec/field-number-zero	-
 PASS	multipkg/wire-codec/golden	-
+PASS	multipkg/wire-codec/group-end-mismatch	-
+PASS	multipkg/wire-codec/group-skip-nested	-
+PASS	multipkg/wire-codec/group-truncated	-
 PASS	multipkg/wire-codec/malformed	-
+PASS	multipkg/wire-codec/merge-twice-singular	-
+PASS	multipkg/wire-codec/nil-and-empty-input	-
+PASS	multipkg/wire-codec/packed-accepted-unpacked-emitted	-
+PASS	multipkg/wire-codec/panic-abort-text	-
+PASS	multipkg/wire-codec/prefix-pick	-
 PASS	multipkg/wire-codec/roundtrip	-
+PASS	multipkg/wire-codec/sentinel-unwrap	-
 PASS	multipkg/wire-codec/size	-
+PASS	multipkg/wire-codec/stray-end-group	-
+PASS	multipkg/wire-codec/typed-nil-clone	-
+PASS	multipkg/wire-codec/typed-nil-equal	-
+PASS	multipkg/wire-codec/typed-nil-marshal	-
+PASS	multipkg/wire-codec/typed-nil-size	-
+PASS	multipkg/wire-codec/unknown-retain-reencode	-
 PASS	multipkg/wire-codec/unknown-skip	-
+PASS	multipkg/wire-codec/varint-overflow	-
+PASS	multipkg/wire-codec/varint-ten-bytes	-
+PASS	multipkg/wire-codec/varint-truncated	-
+PASS	multipkg/wire-codec/wrong-wiretype-retain	-
 PASS	native-smoke/arith	-
 PASS	native-smoke/maprange	-
 PASS	native-smoke/method	-
