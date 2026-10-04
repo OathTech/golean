@@ -4037,8 +4037,8 @@ PASS	multipkg/wire-codec/malformed	-
 PASS	multipkg/wire-codec/merge-twice-singular	-
 PASS	multipkg/wire-codec/nil-and-empty-input	-
 PASS	multipkg/wire-codec/packed-accepted-unpacked-emitted	-
-PASS	multipkg/wire-codec/panic-abort-text	-
-PASS	multipkg/wire-codec/prefix-pick	-
+PASS	multipkg/wire-codec/panic-abort-text	membership
+PASS	multipkg/wire-codec/prefix-pick	membership
 PASS	multipkg/wire-codec/roundtrip	-
 PASS	multipkg/wire-codec/sentinel-unwrap	-
 PASS	multipkg/wire-codec/size	-
