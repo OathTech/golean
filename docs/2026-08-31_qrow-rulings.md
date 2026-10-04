@@ -1324,3 +1324,18 @@ EXEMPT from the G-C3 1.5× elaboration stop rule (it targets regressions in hot 
 independent Codex review `docs/2026-10-03_window-review.md` (landed with this train) counts as the whole-window review
 requested 2026-10-03 — no separate Fable pass; its F1–F4 are dispositioned (F1/F2/F4 fixed in packet D, F3 by the corpus
 lanes). Next: the re-pin OFFER (window unit 7b).
+
+### Train r62 — the re-pin OFFER (window unit 7b) landed — RULED (2026-10-04)
+
+[USER] Mike, verbatim, relayed by the [AGENT] coordinator — cite as relayed: 2026-10-03 «prepare the offer, do the dry run»;
+«yes, review, then merge if nothing comes back requiring fixes. I can relay to the logic team»; 2026-10-04 «merge» (the
+at-that-moment sign-off, given after the audit returned NEEDS-FIX and the fixes were applied). Landed:
+`docs/repin-offer-1003` @ `3d1a3e21` (records only; `git diff 20d3946d 3d1a3e21 -- GoLean tools scripts baselines` empty):
+the offer note `docs/2026-10-03_offer-to-logic-team.md`, the frozen changelog summary + ten stated limits, the evidence
+`docs/evidence/2026-10-03_repin-offer/` (fixture inventory 31/31 lowered, 0 `unseq`/probes; isolated dry run — GoLean clean,
+their tree 6/28/212 with four causes, B6 1568 · P 140 · C4 129 · label 11; their differential 18/18). Audit (Opus): NEEDS-FIX
+— B1 (a false «each FAIL on a Cases line»: 61 Cases / 162 named frontend refusals / 14 ceilinged untriaged rows) and B2 (the
+placeholder wording) plus seven minor scope statements — all fixed in `3d1a3e21`, verified by the coordinator. [AGENT]
+decisions: the offer commit is the content commit `20d3946d` (a commit cannot name its own SHA; the records follow it and
+change no code); local annotated tag `logic-offer/2026-10-03` on `20d3946d`, NOT pushed (push never authorized). The
+[USER] relays the note to the logic team; their `scripts/check`, theorems, controls and consumers decide acceptance.
