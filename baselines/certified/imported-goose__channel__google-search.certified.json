@@ -30,7 +30,7 @@
   "inputs": {
     "build": {
       "files": {
-        "GoLean.lean": "cac66611d6dbb722e100d8d22590077fc0665d1f3f52b6fe653b7337ff19b5b2",
+        "GoLean.lean": "ee297a0446a4a5e515714947b803bfaa578a036a02fde32ee680ae9d41e83d1a",
         "GoLean/CLI.lean": "345a9f4a3fa4da28ebb765d34c5219d5b340eb8c605d2b8156120245103b466c",
         "GoLean/ChoiceTrace.lean": "db8f5a022effdc0f7758712a16c1e2d2c959d2509e9d4924d51cbf373a948c2c",
         "GoLean/DeclarationUnicode.lean": "7b567b3fa61a7f94c3bafe302b18f6cf7eaaea47266b12b9429550cce92fddc5",
@@ -62,6 +62,8 @@
         "GoLean/GoCore/PanicText.lean": "561c150335ecdd76a2304634c0b11449ff11e4b3b0d8555c4934da473157edd5",
         "GoLean/GoCore/Platform.lean": "649d2ff30adeeeb96e5fe349e1cd8e42da1c8eb6c024b3e605aac39fa16acc20",
         "GoLean/GoCore/PoolProjection.lean": "3928dfab8cd88f1dbb603e682e1ac45789941909056b2a87b942ce038ea9fa25",
+        "GoLean/GoCore/PoolStatement.lean": "38b8046d5aaab717a12a7d26e2675338c27e2d6ee970684837d3d422314ee8b8",
+        "GoLean/GoCore/PoolStep.lean": "09449f533c32eb4ab5e689c5122a906fd004908a9b95c46ecff232ac7059301f",
         "GoLean/GoCore/PoolTrace.lean": "b0b004ffe8aed6026f0c2781c796b1b1395684f3c493a64f4cc5fa9247e87c9a",
         "GoLean/GoCore/Prefix.lean": "9929a5c49da5cc3a27b4c3de358e72c795080ac642ef297c96651715f0348445",
         "GoLean/GoCore/PrefixFacts.lean": "da5b576a0591c58b4afc5399a86013bd4fd8e594e65fc0f3022aae9b195eacdd",
@@ -121,6 +123,7 @@
       "scripts/check-imported-goose": "5e20ea57f3a2ea0671877ae5f7688397d7a936947a5dbe9217469c8406a6f566",
       "scripts/check-mem-callsites": "e6f7200bfb693593f90ca26c73f49573701a09b0cb564c7f8e6e9a29109be82f",
       "scripts/check-method-identity": "6df9bc44ca18680ade5fb4144e5e3b56d2bd035baa3823b564c8b878037db81a",
+      "scripts/check-pool-spec": "8c646b0107778606e7e1ec1244547a85b6d4a35fd8f7cc16056e6881adb4c522",
       "scripts/check-spec-anchors": "0ea75982c91cf4434133f7b6811b53fd2f79d5573e8868f1aa79fe7e4e916559",
       "scripts/check-stdlib-register": "5fe5b97546ae8e06b9af19ca66d4093cca376b6aafb76b558dcc86cf51211cbe",
       "scripts/check-unseq-scheduler": "d70368d1014137cf6dcbedf6b475a069aa3a0190449a86f2ac3d380703d57231",
@@ -147,7 +150,7 @@
       "scripts/import-goose": "8d3352a6ebf813fe84c7b219167a71871b8337e64f310f32df9830ad73e9e54c",
       "scripts/lean-scan.sh": "9310d587a6afe19a9b6c042b0776d8c7861508aaeb488054014d8a35653f6c17",
       "scripts/lower-diagnose": "89fdc58da16866b1d52dc1e56a3642d9f57ca89354fbaf595bdfe00ea4f563d8",
-      "scripts/mem-callsites.tsv": "f68092dbd4bce05a0f36c15b07512746cd56e30035274bce01c11229ee274511",
+      "scripts/mem-callsites.tsv": "cc3cc277df3614afb197f9ef807635b5d84ea2dd66ad639fd893c90d1220db61",
       "scripts/membership-sampling": "f530cf673f7517a24309f4248c21ddc115ef147cb371b9708fe9e87ae7892605",
       "scripts/membership-sampling-sweep": "296e6feec095c57a9280e53ebbc1d626285198d0810eec1bb6fca5a802ffc8b8",
       "scripts/mine-spec-archaeology": "71a5d4f70d1da574d329b7790dee6962ef419ff7a57aa5673975f9ae0423b1c2",
@@ -186,17 +189,18 @@
       "tools/declaration-unicode/main.go": "816ee1e744a1cb52f90d9c52119adc08abe528a8816cd7a2f50140f48608bf8d",
       "tools/floatvectors/main.go": "2bef884be10a31f3de25f1218e8fc68a07bc3b2a060857747c6934834a34da38",
       "tools/godocanchors/main.go": "f185b941317b218553231dbd913b28bbd386ba955d7f0d448ff7bbc1ecd8aad9",
-      "tools/lowerdiag/causes.go": "cb6b794cb15ad9ae67b0b25fd109a4ef06cb625c376a93e53873e94f12897c01",
-      "tools/lowerdiag/causes.tsv": "07656d58494dc7c395a5c6a11cd58819ec9ee4a33ab6676f49eec44b9991521c",
+      "tools/lowerdiag/causes.go": "e6bc9126a4b0d9e11a8e1c20f85504d25b562fe934aaa61bde0c8fa37d8e9bf1",
+      "tools/lowerdiag/causes.tsv": "aca959d98b3a8a468ed449f35ccf4ae2269b6cd600e3db0581203a5a9f80952e",
       "tools/lowerdiag/library-refusals.tsv": "7b0bcb638b6518d8970b24bb09bd4315bf0f76669dccddd95e5ffedfcb504990",
-      "tools/lowerdiag/lowerdiag_test.go": "0fff46acdca7ce3df50a0f9bf36edff0c184b2d67d34c5df657ef80f6c68054c",
-      "tools/lowerdiag/machine-surface.tsv": "bdcd26131bc2ebdc41a7724fad74f9b0a56980b7fe345c203acdd556bf2b64fc",
+      "tools/lowerdiag/lowerdiag_test.go": "6cf41b83b50a166e8c1197baaf6e71000ad75bf5a5e77762efc41a4ffe95bbbb",
+      "tools/lowerdiag/machine-surface.tsv": "c13f2854eb057a35ada7b5e7a6b84fe64c6a01bb4828dae9bc19039aae2d7927",
       "tools/lowerdiag/main.go": "48c0923f4f47cdda430a81bf4cdfabd7a5587d7963d470fac982395346cc6483",
       "tools/lowerdiag/report.go": "f6271003d9bec55389e1effe2b0a77768b5df6d6a704a0c6f39bac0271666ea3",
-      "tools/lowerdiag/static.go": "51ab662b7f762a35a5be002f268979d280311d0912590c098a816af648018596",
-      "tools/lowerdiag/testdata/calib/main.go": "da7932c2331e6102b76952e2c937d757b56f58675068c5f8de95bde23c833e22",
+      "tools/lowerdiag/static.go": "8d41989c0bbd25438815b824039c5ed57f3c0696b0c2d7ac48e0b00bc8ae1b98",
+      "tools/lowerdiag/testdata/calib/dot.go": "17f8ca1eb6d03b1077560337f686aab3d3458794a6c1b30a8548896a84c68b73",
+      "tools/lowerdiag/testdata/calib/main.go": "c5448845222bae14e42d0d5542b6c724c81f67cdda2f4b992063cf13d8ac0ce3",
       "tools/lowerdiag/testdata/fivecauses/main.go": "7181b411e6dc97fcfd60e7372e4366873f73cb6ef0c87a8a3b7f2149bb83c54a",
-      "tools/lowerdiag/unclassified-formats.txt": "19d5c49a455df265731bb05e8c950cc6b26e3c44d6fc2fe8fb3cd7d19e95d33a",
+      "tools/lowerdiag/unclassified-formats.txt": "eeffe354ec098921f55903116616990f668fd2ced64d0476e075d88627176c41",
       "tools/lsimports/main.go": "d2a94c7fa6844296978a0ad12eecbaf1eb87cb792e52229cca28259b380c2e23",
       "tools/method-identity-audit.py": "07eee5543ecb4e2200c0ad41f5ecb52456233e15f534c38a373bacc3f9a0d0e6",
       "tools/method-identity-dispatch.py": "827b132f463545367d921b6a4a515523de97c29cf8e28567106259010687a37c",
@@ -295,7 +299,7 @@
   },
   "observations_sha256": "e40ba07d11827b48aa8c9246bd84d6c21849159983d46c47b793b5759cfbbfd8",
   "receipt": {
-    "binary_sha256": "4665fe801d25c6df9b55b6e059bf558ceae095a7ebff111a57d6ddbdefd29a33",
+    "binary_sha256": "cae2c78678d90bdd2457edf493ccb0b740bf6a62db8ed5c46bc82663dc365e51",
     "captured_exit": 0,
     "certifier": "tools/certification.py",
     "command": [
@@ -318,12 +322,12 @@
       "--engine",
       "dedup"
     ],
-    "finished_utc": "2026-10-03T21:41:13.393331+00:00",
+    "finished_utc": "2026-10-04T22:10:26.677202+00:00",
     "git_dirty": false,
-    "source_commit": "44d99cdb11ca70b57c4d928f0607b4d730937520",
-    "started_utc": "2026-10-03T21:38:32.955869+00:00",
+    "source_commit": "efc5769236626e87f0ad379e5fc425d4fc514f51",
+    "started_utc": "2026-10-04T22:07:27.262093+00:00",
     "stats_sha256": "80614849ba8583af41ce62fc0a0cefdc7a5b6f22fbb482784a125e8bd19f3283",
-    "wall_seconds": 157.072
+    "wall_seconds": 175.921
   },
   "schema": "golean-certification-v1"
 }

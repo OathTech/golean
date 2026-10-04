@@ -1374,3 +1374,12 @@ refuses `sync-value-shape`, the wire lowers (lowerdiag over-strict); (4) a dot-i
 machine is stuck: the known FR-36 (`docs/language-coverage-ledger.md`, queue 36). Items 1–3 are diagnosis-tool defects
 (untrusted tooling; no semantic effect), queued [AGENT] as a small lowerdiag follow-up fix; listed in
 `docs/2026-09-04_lower-diagnose.md` «Known disagreements with the wire (2026-10-04)».
+
+**Merge train r64 — the 5a record** ([AGENT] train worker, 2026-10-04). Pre-merge main `450412a7` →
+`refs/snapshots/r64/main`; train tip `efc57692` fast-forwarded; primary build `scripts/build-certified` EXIT=0 (0 foreign
+references). `release-check --base refs/snapshots/r64/main` EXIT=2 (EXPECTED — STALE, `build/files/GoLean.lean`: the two
+new pool-spec modules are imported). `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --slow` EXIT=1, 1207 s — red on EXACTLY
+the 5a pair (`certificate provenance` + the certified row `imported-goose/channel/google-search` PASS→FAIL); 3860 rows,
+3622 PASS / 238 FAIL = the pin 3623 / 237 with the one 5a-class row red; negative baseline no regression (394). Candidate:
+`schema`, `claim` and `observations_sha256` IDENTICAL (receipt `efc57692`, 175.921 s, binary `cae2c786…`) — INSTALLED; a
+provenance refresh. Tail: `docs/evidence/2026-10-04_train-r64/r64-ci-slow.tail.txt`.
