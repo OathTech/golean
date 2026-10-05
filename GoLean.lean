@@ -26,6 +26,9 @@ import GoLean.GoCore.PoolProjection
 -- Enrolled here = default-build membership and the core audit's two-way closure.
 import GoLean.GoCore.PoolStep
 import GoLean.GoCore.PoolStatement
+import GoLean.GoCore.PoolErrorFacts
+import GoLean.GoCore.PoolReplayFacts
+import GoLean.GoCore.PoolSound
 import GoLean.NativeToIR
 import GoLean.CLI
 import GoLean.ChoiceTrace

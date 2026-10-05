@@ -6,6 +6,7 @@ import GoLean.GoCore.Locals
 import GoLean.GoCore.StringPanic
 import GoLean.GoCore.Equations
 import GoLean.GoCore.PoolProjection
+import GoLean.GoCore.PoolSound
 
 /-!
 # The stable bridge set — pinned statements (window charter row 0)
@@ -3551,5 +3552,63 @@ example : ∀ {ctx : ProgramCtx} {fuel : Nat} {σ : Store} {c : Config} {ch : Ch
 example : ∀ {ctx : ProgramCtx} (s : Store) (tgt : Loc → Loc) (ty : Ty) (v : GoValue),
     applyStrictOp ctx s tgt (.toInterface ty .string) [v] = .ok (.interface .string v, s, []) :=
   @GoLean.GoCore.Equations.applyStrictOp_toInterface_string
+
+-- Pool grind M1, 2026-10-05: [AGENT Codex, pool grind]. Additions to rows 1–502.
+
+-- 503. `PoolSound.lean` — `raceUpdate_error`
+example :
+  ∀ (ev : StepEvent) (m' : MultiConfig) (r : RaceState) (e : Stop),
+    raceUpdate ev m' r = .error e → e = .raceDetected :=
+  @GoLean.GoCore.PoolSound.raceUpdate_error
+
+-- 504. `PoolSound.lean` — `stepMulti_error_cases`
+example :
+  ∀ (ctx : ProgramCtx) (m : MultiConfig) (ch : Choices) (e : Stop),
+    stepMulti ctx m ch = .error e →
+      (∃ r : Refusal, e = .refusal r) ∨ (∃ msg : String, e = .fatal msg) ∨ e = .deadlock :=
+  @GoLean.GoCore.PoolSound.stepMulti_error_cases
+
+-- 505. `PoolSound.lean` — `schedSlot_iff`
+example :
+  ∀ (ctx : ProgramCtx) (m : MultiConfig) (i : Nat),
+    schedPick ctx m i ↔ ∃ slot : Nat, SchedSlot ctx m i slot :=
+  @GoLean.GoCore.PoolSound.schedSlot_iff
+
+-- 506. `PoolSound.lean` — `stepML_erase`
+example :
+  ∀ (ctx : ProgramCtx) (m m' : MultiConfig) (ev : StepEvent),
+    StepML ctx m m' ev → StepM ctx m m' ev.trace :=
+  @GoLean.GoCore.PoolSound.stepML_erase
+
+-- 507. `PoolSound.lean` — `stepML_sound`
+example :
+  ∀ (ctx : ProgramCtx) (m m' : MultiConfig) (ch ch' : Choices) (ev : StepEvent),
+    stepMulti ctx m ch = .ok (m', ch', ev) → StepML ctx m m' ev :=
+  @GoLean.GoCore.PoolSound.stepML_sound
+
+-- 508. `PoolSound.lean` — `stepML_complete`
+example :
+  ∀ (ctx : ProgramCtx) (m m' : MultiConfig) (ev : StepEvent),
+    StepML ctx m m' ev → ∃ ch ch' : Choices, stepMulti ctx m ch = .ok (m', ch', ev) :=
+  @GoLean.GoCore.PoolSound.stepML_complete
+
+-- 509. `PoolSound.lean` — `stepM_lift`
+example :
+  ∀ (ctx : ProgramCtx) (m m' : MultiConfig) (tr : AccessTrace),
+    StepM ctx m m' tr → ∃ ev : StepEvent, StepML ctx m m' ev ∧ ev.trace = tr :=
+  @GoLean.GoCore.PoolSound.stepM_lift
+
+-- 510. `PoolSound.lean` — `stepsML_erase`
+example :
+  ∀ (ctx : ProgramCtx) (m mf : MultiConfig) (evs : List StepEvent),
+    StepsML ctx m mf evs → PoolSteps ctx m mf :=
+  @GoLean.GoCore.PoolSound.stepsML_erase
+
+-- 511. `PoolSound.lean` — `stepMulti_replay`
+example :
+  ∀ (ctx : ProgramCtx) (m m' : MultiConfig) (ch ch' : Choices) (ev : StepEvent),
+    stepMulti ctx m ch = .ok (m', ch', ev) →
+    ∀ ch₂ ch₂' : Choices, replays ev.picks ch₂ ch₂' → stepMulti ctx m ch₂ = .ok (m', ch₂', ev) :=
+  @GoLean.GoCore.PoolSound.stepMulti_replay
 
 end GoLean.GoCore.BridgeSet

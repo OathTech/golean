@@ -26,15 +26,6 @@ open GoLean.GoCore.PoolStatement
 
 /-! ## Milestone 1 — the step correspondence (A) and the error classes (D) -/
 
-theorem stepMulti_error_cases : stepMulti_error_cases_stmt := by sorry
-theorem raceUpdate_error : raceUpdate_error_stmt := by sorry
-theorem schedSlot_iff : schedSlot_iff_stmt := by sorry
-theorem stepML_erase : stepML_erase_stmt := by sorry
-theorem stepML_sound : stepML_sound_stmt := by sorry
-theorem stepML_complete : stepML_complete_stmt := by sorry
-theorem stepM_lift : stepM_lift_stmt := by sorry
-theorem stepsML_erase : stepsML_erase_stmt := by sorry
-theorem stepMulti_replay : stepMulti_replay_stmt := by sorry
 
 /-! ## Milestone 2 — attribution, registry boundaries (B) and the deadlock (C) -/
 

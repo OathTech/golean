@@ -33,6 +33,7 @@ namespace Tests.GoCoreAudit
 def allowedRoots : List Name := [`Init, `Std, `Lean, `GoLean, `Tests]
 
 def requiredModules : List Name := [
+    `GoLean.GoCore.PoolErrorFacts, `GoLean.GoCore.PoolReplayFacts, `GoLean.GoCore.PoolSound,
     `GoLean.GoCore, `GoLean.GoCore.Machine, `GoLean.GoCore.StepFn, `GoLean.GoCore.StateWf,
     `GoLean.GoCore.MachineSound, `GoLean.GoCore.UnseqSound, `GoLean.GoCore.Multi,
     `GoLean.GoCore.MultiSound, `GoLean.GoCore.Trace, `GoLean.GoCore.PoolTrace,
@@ -48,6 +49,17 @@ def requiredModules : List Name := [
 /-- Required core theorems (the `semantic interface` audit's CORE exports, plus the
 re-homed regressions). Each must exist as a theorem. -/
 def exports : List Name := [
+    -- Pool grind M1: the nine frozen statements, BridgeSet rows 503–511.
+    ``GoLean.GoCore.PoolSound.raceUpdate_error,
+    ``GoLean.GoCore.PoolSound.stepMulti_error_cases,
+    ``GoLean.GoCore.PoolSound.schedSlot_iff,
+    ``GoLean.GoCore.PoolSound.stepML_erase,
+    ``GoLean.GoCore.PoolSound.stepML_sound,
+    ``GoLean.GoCore.PoolSound.stepML_complete,
+    ``GoLean.GoCore.PoolSound.stepM_lift,
+    ``GoLean.GoCore.PoolSound.stepsML_erase,
+    ``GoLean.GoCore.PoolSound.stepMulti_replay,
+
     -- Window packet D (2026-10-03): the per-arm `stepFn` EQUATIONS and their helper laws (every
     -- theorem of `GoLean/GoCore/Equations.lean`; BridgeSet rows 174–402, 437–499 and 502) and the sequential-to-pool
     -- PROJECTIONS (`GoLean/GoCore/PoolProjection.lean`; rows 403–436 and 500–501) — the re-pin offer's interface
