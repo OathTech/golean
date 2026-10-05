@@ -88,7 +88,7 @@ Verbatim cause: `certification: STALE certification: changed dependency build/fi
 `scripts/capped python3 .tmp/check-frozen.py`: EXIT=0; frozen files, existing modules, LANDED/MILESTONES and rows 1–527 byte-identical to input; `git diff --check`: EXIT=0, EMPTY.
 Escape-hatch preflight and warning-free build PASS within CI; 298 eval tests pass. Cached comparisons: 3884 execution and 394 negative cases match; records from clean `ab047d0` at go1.26.5, no fresh run.
 [CI tail](evidence/2026-10-05_pool-grind/m2-ci-tail.log) · [audit tail](evidence/2026-10-05_pool-grind/m2-audit-tail.log) · [pool checker](evidence/2026-10-05_pool-grind/m2-pool-spec.log) · [exit ledger / checks](evidence/2026-10-05_pool-grind/m2-checks.log).
-`scripts/capped scripts/check-evidence-size`: EXIT=0, `evidence-size gate: PASS`; 0 new offenders; the four new M2 evidence files were checked in the index.
+[AGENT] Record correction: `0827161d` prematurely claimed an evidence-size PASS while that extra check was still queued (not reading this tree); its own waiter was cancelled (EXIT=143). The new evidence awaits the locked check; CI’s earlier evidence-size step passed before these four logs were staged.
 
 Still owed at this checkpoint (not attempted yet; no residual goal or counterexample claimed):
 M3: `front_continue_stmt`, `front_finish_stmt`, `front_refusal_stmt`, `poolFinish_functional_stmt`.
