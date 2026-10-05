@@ -7,6 +7,7 @@ import GoLean.GoCore.StringPanic
 import GoLean.GoCore.Equations
 import GoLean.GoCore.PoolProjection
 import GoLean.GoCore.PoolSound
+import GoLean.GoCore.SetupSound
 
 /-!
 # The stable bridge set — pinned statements (window charter row 0)
@@ -168,6 +169,20 @@ value at the canonical dynamic type `string`, read-only, trace-free), the law th
 RE-PIN 11 — pool grind M1 (Codex, `844e9393`, train r66; [AGENT train worker] 2026-10-05, merge sign-off
 [USER] Mike 2026-10-05 «(1) Go ahead, (2) merge once ready», relayed): rows 1–502 BYTE-IDENTICAL; rows 503–511
 ADDED (the nine M1 statements of `PoolStatement.lean`, proved in `PoolSound.lean`).
+
+RE-PIN 12 — the SETUP EQUATIONS, the logic team's G-R1–G-R3 ([AGENT worker, lane
+`core/setup-equations-1005`], 2026-10-05; [USER] Mike 2026-10-05 «(1) Go ahead», relayed; the request
+verbatim `docs/2026-10-05_note-from-logic-team-setup-equations.md`; the lane's note
+`docs/2026-10-05_setup-equations.md`): rows 1–511 BYTE-IDENTICAL; rows 512–520 ADDED — the nine
+`_stmt`s of `SetupStatement.lean` proved in `SetupSound.lean`, written out: G-R2 `seedGlobals_cells`
+(the seeded heap IS the zero cells in order, one `Except` equation), `seedGlobals_cell` (global `i` at
+`.base ⟨i⟩`), `seedGlobals_heap_size`, `seedGlobals_wf` (unconditional); G-R1 `runProgramSetup_init`
+(seeding, init and the entry bind as one rewrite — no `StateWf` premise, discharged by `seedGlobals_wf`);
+G-R3 `setup_lookup_arg_from` / `setup_lookup_result_from` / `setup_resultLocs_from` /
+`setup_heap_size_from` (the `{}`-store lemmas over an arbitrary pre-bind store, at `entrySlot s₁`).
+Rows 397 and 399–402 (`runProgramSetup_noInit`, the `{}` forms) are UNCHANGED — their instances.
+G-R4 (`SetupStatement.runInitConfig_eq_execStmtLoop_stmt`) is a STATEMENT ONLY, not pinned here: its
+text is out for the logic team's review before it is proved.
 -/
 
 namespace GoLean.GoCore.BridgeSet
@@ -3614,5 +3629,105 @@ example :
     stepMulti ctx m ch = .ok (m', ch', ev) →
     ∀ ch₂ ch₂' : Choices, replays ev.picks ch₂ ch₂' → stepMulti ctx m ch₂ = .ok (m', ch₂', ev) :=
   @GoLean.GoCore.PoolSound.stepMulti_replay
+
+-- ---- RE-PIN 12 (the setup equations G-R1–G-R3, 2026-10-05): rows 512–520 (`SetupSound.lean`; the
+-- `_stmt`s in `SetupStatement.lean`, each written out). Additions to rows 1–511. ----
+
+-- 512. `SetupSound.lean` — `seedGlobals_cells_stmt`, written out (G-R2: the seeding equation — the
+-- seeded heap IS the zero cells of the globals, in order, as one `Except` equation)
+example :
+  ∀ (ctx : ProgramCtx) (globals : Array GlobalDef),
+    seedGlobals ctx {} globals
+      = (fun cells => ({ heap := cells.toArray } : Store))
+          <$> globals.toList.mapM (SetupStatement.zeroCell ctx) :=
+  @GoLean.GoCore.SetupSound.seedGlobals_cells
+
+-- 513. `SetupSound.lean` — `seedGlobals_cell_stmt`, written out (G-R2: global `i` at `.base ⟨i⟩`,
+-- holding its zero value at its type)
+example :
+  ∀ {ctx : ProgramCtx} {globals : Array GlobalDef} {s₀ : Store},
+    seedGlobals ctx {} globals = .ok s₀ →
+    ∀ (i : Nat) (hi : i < globals.size), ∃ z : GoValue,
+      defaultValue ctx globals[i].typ = .ok z
+        ∧ Heap.lookup s₀.heap (.base ⟨i⟩) = some (.value globals[i].typ z) :=
+  @GoLean.GoCore.SetupSound.seedGlobals_cell
+
+-- 514. `SetupSound.lean` — `seedGlobals_heap_size_stmt`, written out (G-R2: one cell per global)
+example :
+  ∀ {ctx : ProgramCtx} {globals : Array GlobalDef} {s₀ : Store},
+    seedGlobals ctx {} globals = .ok s₀ → s₀.heap.size = globals.size :=
+  @GoLean.GoCore.SetupSound.seedGlobals_heap_size
+
+-- 515. `SetupSound.lean` — `seedGlobals_wf_stmt`, written out (G-R2: a seeded store is well-formed,
+-- unconditionally — so the setup seam's `StateWf` check never fires)
+example :
+  ∀ {ctx : ProgramCtx} {globals : Array GlobalDef} {s₀ : Store},
+    seedGlobals ctx {} globals = .ok s₀ → StateWf ctx s₀ :=
+  @GoLean.GoCore.SetupSound.seedGlobals_wf
+
+-- 516. `SetupSound.lean` — `runProgramSetup_init_stmt`, written out (G-R1: the general setup
+-- equation — seeding, package initialization and the entry bind as one rewrite; row 397
+-- `runProgramSetup_noInit` is this at `globals = #[]`, no `$pkginit`)
+example :
+  ∀ {fuel : Nat} {program : Program} {name : String} {args : Array GoValue} {choices : Choices}
+    {func : Func} {s₀ s₁ : Store} {choices₁ : Choices} {env frameEnv : LocalEnv} {s₂ s₃ : Store}
+    {resultLocs : List Loc},
+    findFunctionIn? program.funcs ⟨name⟩ = some func → func.args.size = args.size →
+    program.typeDefs.hasReservedPrefix = true →
+    seedGlobals ⟨program⟩ {} program.globals = .ok s₀ →
+    runPkgInitM ⟨program⟩ fuel s₀ choices = .ok (s₁, choices₁) →
+    bindParams ⟨program⟩ [] s₁ func.args.toList args.toList = .ok (env, s₂) →
+    allocDecls ⟨program⟩ env s₂ func.results.toList = .ok (frameEnv, s₃) →
+    pinResultLocs frameEnv func.results.toList = .ok resultLocs →
+    runProgramSetupM fuel program name args choices
+      = .ok (⟨program⟩, .exec func.body frameEnv (.frame [] [] [] [] .stop func.id), s₃, resultLocs,
+          choices₁) :=
+  @GoLean.GoCore.SetupSound.runProgramSetup_init
+
+-- 517. `SetupSound.lean` — `setup_lookup_arg_from_stmt`, written out (G-R3: row 399 over an arbitrary
+-- pre-bind store — parameter `i` at `entrySlot s₁ i`)
+example :
+  ∀ {program : Program} {func : Func} {args : Array GoValue} {env frameEnv : LocalEnv}
+    {s₁ s₂ s₃ : Store},
+    bindParams ⟨program⟩ [] s₁ func.args.toList args.toList = .ok (env, s₂) →
+    allocDecls ⟨program⟩ env s₂ func.results.toList = .ok (frameEnv, s₃) →
+    namesDistinct ((func.args ++ func.results).toList.map (·.id)) = true →
+    ∀ (i : Nat) (hi : i < func.args.size),
+      LocalEnv.lookup frameEnv func.args[i].id = some (entrySlot s₁ i) :=
+  @GoLean.GoCore.SetupSound.setup_lookup_arg_from
+
+-- 518. `SetupSound.lean` — `setup_lookup_result_from_stmt`, written out (G-R3: row 400 over an
+-- arbitrary pre-bind store — result `j` at `entrySlot s₁ (func.args.size + j)`)
+example :
+  ∀ {program : Program} {func : Func} {args : Array GoValue} {env frameEnv : LocalEnv}
+    {s₁ s₂ s₃ : Store},
+    bindParams ⟨program⟩ [] s₁ func.args.toList args.toList = .ok (env, s₂) →
+    allocDecls ⟨program⟩ env s₂ func.results.toList = .ok (frameEnv, s₃) →
+    namesDistinct ((func.args ++ func.results).toList.map (·.id)) = true →
+    ∀ (j : Nat) (hj : j < func.results.size),
+      LocalEnv.lookup frameEnv func.results[j].id = some (entrySlot s₁ (func.args.size + j)) :=
+  @GoLean.GoCore.SetupSound.setup_lookup_result_from
+
+-- 519. `SetupSound.lean` — `setup_resultLocs_from_stmt`, written out (G-R3: row 401 over an arbitrary
+-- pre-bind store)
+example :
+  ∀ {program : Program} {func : Func} {args : Array GoValue} {env frameEnv : LocalEnv}
+    {s₁ s₂ s₃ : Store} {resultLocs : List Loc},
+    bindParams ⟨program⟩ [] s₁ func.args.toList args.toList = .ok (env, s₂) →
+    allocDecls ⟨program⟩ env s₂ func.results.toList = .ok (frameEnv, s₃) →
+    namesDistinct ((func.args ++ func.results).toList.map (·.id)) = true →
+    pinResultLocs frameEnv func.results.toList = .ok resultLocs →
+    resultLocs = (List.range func.results.size).map (fun j => entrySlot s₁ (func.args.size + j)) :=
+  @GoLean.GoCore.SetupSound.setup_resultLocs_from
+
+-- 520. `SetupSound.lean` — `setup_heap_size_from_stmt`, written out (G-R3: row 402 over an arbitrary
+-- pre-bind store)
+example :
+  ∀ {program : Program} {func : Func} {args : Array GoValue} {env frameEnv : LocalEnv}
+    {s₁ s₂ s₃ : Store},
+    bindParams ⟨program⟩ [] s₁ func.args.toList args.toList = .ok (env, s₂) →
+    allocDecls ⟨program⟩ env s₂ func.results.toList = .ok (frameEnv, s₃) →
+    s₃.heap.size = s₁.heap.size + func.args.size + func.results.size :=
+  @GoLean.GoCore.SetupSound.setup_heap_size_from
 
 end GoLean.GoCore.BridgeSet

@@ -75,6 +75,8 @@ GoLean/GoCore/Ops.lean	mapEntries	mapPayload?	1	THE MAP RMW's ENTRY PEEK — map
 GoLean/GoCore/Ops.lean	storeLoc	updateCell	1	THE RAW WRITER ITSELF — storeLoc's one root-cell update (module primitive)
 GoLean/GoCore/ExecutionStatement.lean	program_bridge_stmt	loadMany	1	NO EXECUTION — the program bridge statement's readout (a Prop definition, statements only; Prop-level twin of the drivers' loadMany)
 GoLean/GoCore/PoolStatement.lean	program_prefix_stmt	loadMany	1	NO EXECUTION — the pool/registry half's program-seam statement's readout (a Prop definition, statements only — the spec packet of 2026-10-04; Prop-level twin of the drivers' loadMany, as program_bridge_stmt's row)
+GoLean/GoCore/SetupSound.lean	seedStep	alloc	1	PROOF DEVICE, NO EXECUTION — seedGlobals' own loop body restated verbatim as a private def so the seeding loop can be characterized by induction (`seedGlobals_eq_loop` is `rfl`, `seedLoop`; the setup equations G-R2, 2026-10-05): its alloc IS the driver's FRESH ALLOCATION of the global cells (row `StepFn.lean seedGlobals alloc`); no run executes this definition
+GoLean/GoCore/SetupStatement.lean	seedGlobals_cell_stmt	Heap.lookup	1	NO EXECUTION — the pointwise seeding statement's cell reader (a Prop definition, statements only — the setup equations G-R2, 2026-10-05; Prop-level twin of the dense heap's index read: global i at .base ⟨i⟩)
 GoLean/GoCore/ProgramTrace.lean	ProgramRun	loadMany	2	NO EXECUTION — the program-level run relation's readout premise (Prop-level twin of the drivers' loadMany)
 GoLean/GoCore/StepFn.lean	runFunctionWithContextM	loadMany	1	DRIVER READOUT — result cells after termination
 GoLean/GoCore/StepFn.lean	runProgramM	loadMany	1	DRIVER READOUT — result cells after termination

@@ -43,12 +43,25 @@ def requiredModules : List Name := [
     `GoLean.GoCore.ExecutionStatement, `GoLean.GoCore.Prefix, `GoLean.GoCore.BridgeSet,
     `GoLean.GoCore.PrefixFacts, `GoLean.GoCore.StepErrors, `GoLean.GoCore.Locals,
     `GoLean.GoCore.EquationsAttr, `GoLean.GoCore.Equations, `GoLean.GoCore.PoolProjection,
+    `GoLean.GoCore.SetupStatement, `GoLean.GoCore.SetupSound,
     `Tests.GoCoreContract, `Tests.PanicRendering, `Tests.StringPanicMembers,
     `Tests.GoCoreAudit]
 
 /-- Required core theorems (the `semantic interface` audit's CORE exports, plus the
 re-homed regressions). Each must exist as a theorem. -/
 def exports : List Name := [
+    -- The setup equations G-R1–G-R3 (2026-10-05): the nine proved statements of
+    -- `SetupStatement.lean` (`SetupSound.lean`), BridgeSet rows 512–520. G-R4 is a statement only.
+    ``GoLean.GoCore.SetupSound.seedGlobals_cells,
+    ``GoLean.GoCore.SetupSound.seedGlobals_cell,
+    ``GoLean.GoCore.SetupSound.seedGlobals_heap_size,
+    ``GoLean.GoCore.SetupSound.seedGlobals_wf,
+    ``GoLean.GoCore.SetupSound.runProgramSetup_init,
+    ``GoLean.GoCore.SetupSound.setup_lookup_arg_from,
+    ``GoLean.GoCore.SetupSound.setup_lookup_result_from,
+    ``GoLean.GoCore.SetupSound.setup_resultLocs_from,
+    ``GoLean.GoCore.SetupSound.setup_heap_size_from,
+
     -- Pool grind M1: the nine frozen statements, BridgeSet rows 503–511.
     ``GoLean.GoCore.PoolSound.raceUpdate_error,
     ``GoLean.GoCore.PoolSound.stepMulti_error_cases,
