@@ -276,12 +276,15 @@
       "tools/raftsubject/rawnode-probe-main.go": "e3c9f6c95e75af986aca31fdd2ca1965d51ed045bd105cc372ba1aef9f8b308b",
       "tools/raftsubject/reachability.py": "26140eb44e68650a283a3a68f5f6dbc6b53a01fb18ee25e4c69b664e815aaf31",
       "tools/raftsubject/replayenv.go": "ec93f4cb3c2904633144ec1aef3e3a6061d5038d232929ad07afb4e73cd30fc8",
-      "tools/raftsubject/runprobe.py": "e9f4fbcc09324cbe9f1281082701e66fcae158673470e2be0b127150ae768e88",
+      "tools/raftsubject/runprobe.py": "1575308d56ca7879ed07cff0ace0a8719f55659118b868cf698e580dab04be7d",
       "tools/raftsubject/sweep.py": "28c44396ee9c4e35fc1b0ebf59c4e9c665a8a7a13284f7f968c26e4d262560a8",
       "tools/raftsubject/tracefamilies.py": "79c51b7e41f2a0642ce3b496e02336b2e471100bb054a653c70b25451fc25386",
       "tools/raftsubject/tracereplay.py": "5b6ac1baaebc90a369ec2bd0901b048bcfae79a2a60da91624e1482c9e0281a0",
       "tools/raftsubject/twin-chdriver-main.go": "ad0fb8ece9bf7724e08ab2c4ef2653954c2db0ce1289d3a3dcd27d9fe9de3c5c",
       "tools/raftsubject/twin-chdriver.go": "6e1078ab767a266837e9ed7b3e1c2455afc706c2f572be8bd72d3ca8a61ecc2d",
+      "tools/raftsubject/twin-codec-abort-main.go": "6c929ec79b46cb925bcbb127cf449e28796b308ce96fa7d432c7656dd485fb1b",
+      "tools/raftsubject/twin-codec-group-main.go": "162e7aed613ff6868ba629344168088f275826ff3413fd8cdd1a371ef37bf1cc",
+      "tools/raftsubject/twin-codec-lib.go": "58468741b64b6397e5b9a8ff4cf7f9705d45a545369fde518cdc7b46a77f2eb3",
       "tools/raftsubject/twin-elect-main.go": "114a073b19d532b82842565dca837db0525ecf112d74fb04b4452c86da048042",
       "tools/raftsubject/twin-lib.go": "fd31d4390418a04d741ce1a3da0b39c473990832bd297fa14c83d91a7d48e91c",
       "tools/raftsubject/twin-main.go": "617836152a9435d92b8cd928ca65eb8853d96ec1dc025bd49552cb1bf05d5769",
@@ -324,12 +327,12 @@
       "--engine",
       "dedup"
     ],
-    "finished_utc": "2026-10-04T23:44:29.793369+00:00",
+    "finished_utc": "2026-10-05T01:23:06.754816+00:00",
     "git_dirty": false,
-    "source_commit": "34a0d9d7609246b75ae0d6d5011c0d0cbfd5d052",
-    "started_utc": "2026-10-04T23:41:02.335229+00:00",
+    "source_commit": "68da7b4662e74013e634a1604bc5805db64f2481",
+    "started_utc": "2026-10-05T01:19:12.839240+00:00",
     "stats_sha256": "80614849ba8583af41ce62fc0a0cefdc7a5b6f22fbb482784a125e8bd19f3283",
-    "wall_seconds": 202.308
+    "wall_seconds": 227.415
   },
   "schema": "golean-certification-v1"
 }
