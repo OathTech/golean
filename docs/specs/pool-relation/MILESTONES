@@ -1,0 +1,66 @@
+# The pool/registry half's MILESTONE MAP — every frozen `<name>_stmt` of
+# GoLean/GoCore/PoolStatement.lean assigned to exactly one milestone, per the grind brief
+# docs/2026-10-04_pool-relation-grind-brief.md §7 and the spec note's statement review
+# (docs/2026-10-04_pool-relation-spec.md §10 B3: `stepMulti_replay` → M1, `continue_replay` and
+# `poolPrefix_replay` → M4). scripts/check-pool-spec FAILS unless this map covers EXACTLY the
+# frozen `_stmt` names (no missing, no extra, no duplicate). A §5(iv) split adds a line per part.
+# Format: `<M1..M5> <name>_stmt`, one per line; `#` comments and blank lines ignored.
+# Written [AGENT] tooling worker 2026-10-05 (coordinator brief, transcribing §7 verbatim).
+
+# M1 — step correspondence + error classes
+M1 raceUpdate_error_stmt
+M1 stepMulti_error_cases_stmt
+M1 schedSlot_iff_stmt
+M1 stepML_erase_stmt
+M1 stepML_sound_stmt
+M1 stepML_complete_stmt
+M1 stepM_lift_stmt
+M1 stepsML_erase_stmt
+M1 stepMulti_replay_stmt
+
+# M2 — attribution, boundaries, deadlock
+M2 stepML_who_runnable_stmt
+M2 stepML_sched_stmt
+M2 stepML_switch_boundary_stmt
+M2 stepML_sched_record_stmt
+M2 stepML_frame_stmt
+M2 stepML_paired_trace_stmt
+M2 stepML_spawn_stmt
+M2 asleep_silent_stmt
+M2 singleton_deadlock_stmt
+M2 mainOutcome_not_deadlock_stmt
+M2 stepMulti_deadlock_elim_stmt
+
+# M3 — the driver carriers
+M3 front_continue_stmt
+M3 front_finish_stmt
+M3 front_refusal_stmt
+M3 poolFinish_functional_stmt
+M3 poolFinish_zero_not_continue_stmt
+
+# M4 — the run lifts + the program seam
+M4 poolPrefix_comp_stmt
+M4 poolPrefix_split_stmt
+M4 poolPrefix_labelled_stmt
+M4 poolPrefix_erase_stmt
+M4 poolPrefix_run_stmt
+M4 pool_run_ok_iff_stmt
+M4 pool_run_terminal_iff_stmt
+M4 pool_run_fuelOut_iff_stmt
+M4 pool_run_refusal_iff_stmt
+M4 pool_classification_stmt
+M4 run_ok_prefix_stmt
+M4 program_prefix_stmt
+M4 continue_replay_stmt
+M4 poolPrefix_replay_stmt
+
+# M5 — the single-goroutine reduction
+M5 stepML_single_sound_stmt
+M5 stepML_single_complete_stmt
+M5 singleton_finish_normal_stmt
+M5 singleton_finish_aborted_stmt
+M5 singleton_finish_refused_stmt
+M5 singleton_finish_fatal_stmt
+M5 singleton_finish_deadlock_stmt
+M5 singleton_prefix_embedding_stmt
+M5 singleton_run_stmt

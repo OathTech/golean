@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""The pool/registry half's FROZEN-SURFACE check (spec packet, 2026-10-04; a PROPOSAL for the
-grind's acceptance, not yet a `scripts/ci` step).
+"""The pool/registry half's FROZEN-SURFACE + STAGED-DISCHARGE check (spec packet, 2026-10-04;
+milestone staging and the `scripts/ci` step added 2026-10-05 by the [AGENT] tooling worker on the
+coordinator's brief, after the grind's M1 report named the all-or-nothing discharge as a blocker).
 
 Two files are the frozen surface — `GoLean/GoCore/PoolStep.lean` (the definitions) and
 `GoLean/GoCore/PoolStatement.lean` (every `def <name>_stmt : Prop`, the glue definitions beside
@@ -13,15 +14,25 @@ them — `poolOut`, `DriverEvent.events`, `PoolClass*` — and the controls). Th
       by name. A `_stmt` body runs from its `def` line to the next column-0 command token (blank
       lines inside a body do NOT end it); a column-0 line that is not a known command token FAILS
       (fail closed). A bounded-zone adjustment (grind brief §5) re-freezes with a written reason.
-  (b) checks that every `_stmt` is DISCHARGED as `theorem <name> : <name>_stmt` in
-      `GoLean/GoCore/PoolSound.lean` (the grind's module). Before the grind lands that file does
-      not exist: pass `--statements-only` during the spec phase; without the flag its absence FAILS
-      (fail closed — a check that cannot run does not pass).
-  (c) SELF-TESTS first, on every invocation (`--freeze` included): negative controls on scratch
+  (b) checks the MILESTONE MAP `docs/specs/pool-relation/MILESTONES` (`<M1..M5> <name>_stmt` per
+      line) covers EXACTLY the frozen `_stmt` names — a missing, extra or duplicated name, or a
+      malformed line, FAILS.
+  (c) checks the STAGED DISCHARGE against the landed level `L` — read from
+      `docs/specs/pool-relation/LANDED` (one tag `M0`..`M5`; the landing TRAIN bumps it), or
+      overridden locally by `--landed Mk` (the grinder's spelling for the milestone it is
+      finishing; `--statements-only` is kept as the spelling of `--landed M0`, the spec phase):
+        * `L = M0`: `GoLean/GoCore/PoolSound.lean` must be ABSENT (present FAILS — bump LANDED);
+        * `L >= M1`: it must be PRESENT (absent FAILS), and every statement mapped to a milestone
+          `<= L` must be DISCHARGED as `theorem <name> : <name>_stmt` in it — a missing one FAILS
+          by name; statements of LATER milestones discharged early are REPORTED, never failed;
+          the still-owed later statements are listed. At `L = M5` this is the full check.
+  (d) SELF-TESTS first, on every invocation (`--freeze` included): negative controls on scratch
       copies under `.tmp/check-pool-spec-selftest/` — a glue definition rewritten to `True`, and
-      `∨ True` appended to a `_stmt` body after a blank line — must each be DETECTED, and the
-      comment stripper must keep `--` and `/-` inside string and char literals. A self-test that
-      does not detect its mutation FAILS the check.
+      `∨ True` appended to a `_stmt` body after a blank line — must each be DETECTED, the comment
+      stripper must keep `--` and `/-` inside string and char literals, an incomplete / padded /
+      duplicated / mis-tagged milestone map must be DETECTED, and the staged discharge must detect
+      a missing M1 theorem at `L = M1`, PoolSound present at `M0` and absent at `M1`, while passing
+      (and reporting) an early M2 discharge. A self-test that does not detect its mutation FAILS.
 
 Exit 0 only when every check passes. No allowlist.
 """
@@ -37,6 +48,9 @@ STMT = ROOT / "GoLean/GoCore/PoolStatement.lean"
 SOUND = ROOT / "GoLean/GoCore/PoolSound.lean"
 FREEZE = ROOT / "docs/specs/pool-relation/FROZEN.sha256"
 SCRATCH = ROOT / ".tmp/check-pool-spec-selftest"
+MILESTONES = ROOT / "docs/specs/pool-relation/MILESTONES"
+LANDED = ROOT / "docs/specs/pool-relation/LANDED"
+LEVELS = ("M0", "M1", "M2", "M3", "M4", "M5")  # M0 = nothing landed; statements map to M1..M5
 
 # Column-0 tokens that may follow a `_stmt` body (after comment stripping). Anything else at
 # column 0 is an unrecognised shape and FAILS rather than being silently absorbed or cut.
@@ -220,6 +234,135 @@ def self_tests(base: dict) -> list:
     return failures
 
 
+def parse_milestones(text: str, names: list) -> dict:
+    """The milestone map: `<M1..M5> <name>_stmt` per line (`#` comments, blank lines ignored).
+    Raises SpecError unless it covers EXACTLY `names` — no missing, extra or duplicate entry."""
+    mmap = {}
+    errors = []
+    for i, raw in enumerate(text.splitlines(), 1):
+        line = raw.split("#", 1)[0].strip()
+        if not line:
+            continue
+        parts = line.split()
+        if len(parts) != 2 or parts[0] not in LEVELS[1:] or not re.fullmatch(r"\w+_stmt", parts[1]):
+            errors.append(f"line {i}: malformed entry {raw.strip()!r} (want `<M1..M5> <name>_stmt`)")
+            continue
+        tag, name = parts
+        if name in mmap:
+            errors.append(f"line {i}: DUPLICATE {name} (already {mmap[name]})")
+            continue
+        mmap[name] = tag
+    want = set(names)
+    for name in sorted(want - set(mmap)):
+        errors.append(f"MISSING from the map: {name}")
+    for name in sorted(set(mmap) - want):
+        errors.append(f"EXTRA in the map (not a frozen statement): {name}")
+    if errors:
+        raise SpecError("milestone map does not cover exactly the frozen statements:\n  "
+                        + "\n  ".join(errors))
+    return mmap
+
+
+def parse_landed(text: str, origin: str) -> str:
+    tags = [l.strip() for l in text.splitlines() if l.strip() and not l.strip().startswith("#")]
+    if len(tags) != 1 or tags[0] not in LEVELS:
+        raise SpecError(f"{origin}: want exactly one tag of {'/'.join(LEVELS)}, got {tags!r}")
+    return tags[0]
+
+
+def discharged(sound_text: str, name: str) -> bool:
+    base = name[: -len("_stmt")]
+    return re.search(rf"^theorem {re.escape(base)}\s*:\s*(\S+\.)?{re.escape(name)}\b",
+                     sound_text, re.M) is not None
+
+
+def staged_verdict(landed: str, mmap: dict, sound_text) -> tuple:
+    """The staged discharge at landed level `landed`. `sound_text` is PoolSound.lean with comments
+    stripped, or None when the file is absent. Returns (failures, required_ok, early, owed): the
+    failure lines (empty = pass), the required statements discharged, the later-milestone
+    statements discharged early, and the later-milestone statements still owed."""
+    lvl = LEVELS.index(landed)
+    if sound_text is None:
+        if lvl == 0:
+            return [], [], [], sorted(mmap)
+        return [f"PoolSound.lean absent at LANDED={landed} — the discharge check cannot run"], [], [], []
+    if lvl == 0:
+        return ["PoolSound.lean present at LANDED=M0 — the grind has landed something: bump "
+                "docs/specs/pool-relation/LANDED (train) or pass --landed Mk (grinder)"], [], [], []
+    failures, required_ok, early, owed = [], [], [], []
+    for name in sorted(mmap, key=lambda n: (mmap[n], n)):
+        req = LEVELS.index(mmap[name]) <= lvl
+        done = discharged(sound_text, name)
+        if req and done:
+            required_ok.append(name)
+        elif req:
+            failures.append(f"{mmap[name]} {name}: no `theorem {name[:-5]} : {name}` in PoolSound.lean")
+        elif done:
+            early.append(name)
+        else:
+            owed.append(name)
+    return failures, required_ok, early, owed
+
+
+def staged_self_tests(names: list) -> list:
+    """Negative/positive controls of the milestone map and the staged discharge, in memory."""
+    failures = []
+    if len(names) < 2:
+        return ["(d) fewer than two frozen statements — the staging self-tests cannot run"]
+    a, b = names[0], names[1]
+    good = f"M1 {a}\nM2 {b}\n" + "".join(f"M5 {n}\n" for n in names[2:])
+
+    def map_rejects(text, label, needle):
+        try:
+            parse_milestones(text, names)
+        except SpecError as e:
+            if needle not in str(e):
+                failures.append(f"(d) {label}: rejected, but without naming {needle!r}: {e}")
+            return
+        failures.append(f"(d) {label} NOT detected")
+    try:
+        mm = parse_milestones(good, names)
+    except SpecError as e:
+        failures.append(f"(d) a complete map was rejected: {e}")
+        return failures
+    map_rejects(good.replace(f"M1 {a}\n", ""), "a map missing a statement", f"MISSING from the map: {a}")
+    map_rejects(good + "M3 bogus_extra_stmt\n", "a map with an extra name", "EXTRA in the map")
+    map_rejects(good + f"M3 {a}\n", "a duplicated map entry", f"DUPLICATE {a}")
+    map_rejects(good.replace(f"M1 {a}", f"M6 {a}"), "an out-of-range tag", "malformed entry")
+    map_rejects(good.replace(f"M1 {a}", f"M0 {a}"), "a statement mapped to M0", "malformed entry")
+    for bad in ("", "M1\nM2\n", "M9\n", "m1\n"):
+        try:
+            parse_landed(bad, "selftest")
+            failures.append(f"(e) LANDED {bad!r} NOT rejected")
+        except SpecError:
+            pass
+    th = lambda n: f"theorem {n[:-5]} : {n} := by\n  trivial\n"
+    # (e1) a missing M1 theorem at LANDED=M1 is detected, by name.
+    f, _, _, _ = staged_verdict("M1", mm, th(b))
+    if not any(a in x for x in f):
+        failures.append(f"(e1) missing M1 theorem {a} at LANDED=M1 NOT detected ({f})")
+    # (e2) all M1 discharged + an M2 early: passes, and reports the early one.
+    f, ok_, early, owed = staged_verdict("M1", mm, th(a) + th(b))
+    if f or ok_ != [a] or early != [b] or len(owed) != len(names) - 2:
+        failures.append(f"(e2) M1 complete + early M2 misjudged (fail={f}, ok={ok_}, early={early})")
+    # (e3) the same file at LANDED=M5 fails naming the M5 statements.
+    f, _, _, _ = staged_verdict("M5", mm, th(a) + th(b))
+    if len(f) != len(names) - 2:
+        failures.append(f"(e3) LANDED=M5 with M5 statements missing NOT detected ({len(f)} failures)")
+    # (e4) PoolSound present at M0, absent at M1: both FAIL; absent at M0 passes.
+    if not staged_verdict("M0", mm, th(a))[0]:
+        failures.append("(e4) PoolSound present at LANDED=M0 NOT detected")
+    if not staged_verdict("M1", mm, None)[0]:
+        failures.append("(e4) PoolSound absent at LANDED=M1 NOT detected")
+    if staged_verdict("M0", mm, None)[0]:
+        failures.append("(e4) PoolSound absent at LANDED=M0 wrongly failed")
+    # (e5) a near-miss theorem (wrong statement, comment-only) does not count as discharged.
+    near = f"theorem {a[:-5]} : {b} := sorry\n" + strip_comments(f"-- {th(a)}")
+    if not staged_verdict("M1", mm, strip_comments(near))[0]:
+        failures.append("(e5) a mis-typed / commented-out theorem counted as a discharge")
+    return failures
+
+
 def read_freeze() -> dict:
     if not FREEZE.exists():
         raise SpecError(f"{FREEZE.relative_to(ROOT)} missing (run --freeze once, deliberately)")
@@ -236,22 +379,42 @@ def read_freeze() -> dict:
 
 
 def main(argv) -> int:
-    freeze = "--freeze" in argv
-    statements_only = "--statements-only" in argv
-    for a in argv:
-        if a not in ("--freeze", "--statements-only"):
+    freeze = False
+    landed_override = None
+    i = 0
+    while i < len(argv):
+        a = argv[i]
+        if a == "--freeze":
+            freeze = True
+        elif a in ("--statements-only", "--landed"):
+            if landed_override is not None:
+                print("check-pool-spec: give --landed / --statements-only at most once", file=sys.stderr)
+                return 2
+            if a == "--statements-only":
+                landed_override = "M0"
+            else:
+                if i + 1 >= len(argv) or argv[i + 1] not in LEVELS:
+                    print(f"check-pool-spec: --landed needs one of {'/'.join(LEVELS)}", file=sys.stderr)
+                    return 2
+                i += 1
+                landed_override = argv[i]
+        else:
             print(f"check-pool-spec: unknown argument {a!r}", file=sys.stderr)
             return 2
+        i += 1
     cur = hashes(DEFS, STMT)
-    nstmts = sum(1 for k in cur if k.startswith("stmt "))
-    failures = self_tests(cur)
+    names = [k.split(" ", 1)[1] for k in cur if k.startswith("stmt ")]
+    nstmts = len(names)
+    failures = self_tests(cur) + staged_self_tests(names)
     if failures:
         print("check-pool-spec: FAIL — a self-test did not detect its mutation:", file=sys.stderr)
         for f in failures:
             print(f"  {f}", file=sys.stderr)
         return 1
     print("ok [self-tests] (a) glue `:= True` detected; (b) blank-line `∨ True` detected by the file "
-          "and statement keys; (c) literals survive comment stripping")
+          "and statement keys; (c) literals survive comment stripping; (d) incomplete/padded/duplicated/"
+          "mis-tagged milestone maps detected; (e) staged discharge: missing M1 theorem at M1, PoolSound "
+          "present at M0 / absent at M1 detected, early M2 reported not failed")
     if freeze:
         FREEZE.parent.mkdir(parents=True, exist_ok=True)
         body = ["# FROZEN SURFACE of the pool/registry half (scripts/check-pool-spec --freeze).",
@@ -270,29 +433,37 @@ def main(argv) -> int:
             print(f"  {b}", file=sys.stderr)
         return 1
     print(f"ok [frozen] both files and {nstmts} statements match {FREEZE.relative_to(ROOT)}")
-    names = [k.split(" ", 1)[1] for k in cur if k.startswith("stmt ")]
-    if not SOUND.exists():
-        if statements_only:
-            print(f"ok [statements-only] {SOUND.relative_to(ROOT)} absent — the grind has not landed; discharge not checked")
-            return 0
-        print(f"check-pool-spec: FAIL — {SOUND.relative_to(ROOT)} absent; the discharge check cannot run "
-              "(pass --statements-only during the spec phase)", file=sys.stderr)
+    if not MILESTONES.exists():
+        raise SpecError(f"{MILESTONES.relative_to(ROOT)} missing — the staged discharge cannot run")
+    mmap = parse_milestones(MILESTONES.read_text(), names)
+    counts = {t: sum(1 for v in mmap.values() if v == t) for t in LEVELS[1:]}
+    print(f"ok [milestones] {MILESTONES.relative_to(ROOT)} covers exactly the {nstmts} statements ("
+          + ", ".join(f"{t}: {c}" for t, c in counts.items()) + ")")
+    if landed_override is not None:
+        landed, origin = landed_override, "--landed override"
+    else:
+        if not LANDED.exists():
+            raise SpecError(f"{LANDED.relative_to(ROOT)} missing — the landed level is unknown")
+        landed, origin = parse_landed(LANDED.read_text(), str(LANDED.relative_to(ROOT))), str(LANDED.relative_to(ROOT))
+    sound_text = strip_comments(SOUND.read_text()) if SOUND.exists() else None
+    fails, required_ok, early, owed = staged_verdict(landed, mmap, sound_text)
+    if early:
+        print(f"note [early] {len(early)} statement(s) of later milestones already discharged: "
+              + ", ".join(f"{mmap[n]} {n}" for n in early))
+    if fails:
+        print(f"check-pool-spec: FAIL — the staged discharge at LANDED={landed} ({origin}):", file=sys.stderr)
+        for f in fails:
+            print(f"  {f}", file=sys.stderr)
         return 1
-    sound = strip_comments(SOUND.read_text())
-    missing = []
-    for name in names:
-        base = name[: -len("_stmt")]
-        if not re.search(rf"^theorem {re.escape(base)}\s*:\s*(\S+\.)?{re.escape(name)}\b", sound, re.M):
-            missing.append(name)
-    if missing:
-        print("check-pool-spec: FAIL — statements without `theorem <name> : <name>_stmt` in PoolSound.lean:",
-              file=sys.stderr)
-        for m in missing:
-            print(f"  {m}", file=sys.stderr)
-        return 1
-    print(f"ok [discharged] every one of the {len(names)} statements has its theorem in {SOUND.relative_to(ROOT)}")
+    if sound_text is None:
+        print(f"ok [discharge] LANDED={landed} ({origin}): {SOUND.relative_to(ROOT)} absent, as M0 requires; "
+              f"all {len(owed)} statements owed")
+        return 0
+    print(f"ok [discharge] LANDED={landed} ({origin}): all {len(required_ok)} statements of M1..{landed} "
+          f"discharged in {SOUND.relative_to(ROOT)}; {len(early)} early; {len(owed)} owed by later milestones")
+    if owed:
+        print("note [owed] " + ", ".join(f"{mmap[n]} {n}" for n in owed))
     return 0
-
 
 if __name__ == "__main__":
     try:

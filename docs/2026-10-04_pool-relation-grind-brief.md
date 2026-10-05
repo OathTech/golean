@@ -5,7 +5,8 @@ STATUS: **LAUNCHED** 2026-10-04 at input commit `a11f349f` (train r64 close; the
 statement review, 48 statements). Authority for the shape: [USER] Mike 2026-10-04 «Great, launch it» (relayed) — «with
 enough flex it could build successfully, without giving too much space for drift». Provenance in the grind's commits:
 **[AGENT Codex, pool grind]**. The coordinator wires `scripts/check-pool-spec` into `scripts/ci` at the M1 landing train
-(until then it is run by hand per §8).
+(until then it is run by hand per §8). Wired with milestone staging on branch `tools/pool-spec-milestones-1005` (2026-10-05; §8
+staging note).
 **Ambiguity policy: if two readings of this brief differ materially, STOP, write both in the report, do not choose.**
 
 ## 1. Purpose
@@ -96,20 +97,35 @@ M4 **the run lifts + the program seam** — `poolPrefix_comp`, `poolPrefix_split
 `continue_replay`, `poolPrefix_replay` (induction; `replays` split over each iteration's `window ++ picks`).
 M5 **the single-goroutine reduction** — `stepML_single_sound`, `stepML_single_complete`, `singleton_finish_normal/_aborted/
 _refused/_fatal/_deadlock`, `singleton_prefix_embedding` (mirror `execProgLoopOut_single_wide`'s induction), `singleton_run`.
-Each milestone ends with: `scripts/check-pool-spec` (statements intact; discharged so far listed — until M5 lands, run it
-with `--statements-only` AND report the undischarged names explicitly), the Skeleton's lines for the proved names deleted
+Each milestone ends with: `scripts/check-pool-spec --landed M<k>` (statements intact; every statement of M1..M<k>
+discharged; it lists the early and the still-owed names — report the owed names explicitly; §8), the Skeleton's lines for the proved names deleted
 (the Skeleton shrinks to what is still owed; at M5 it is deleted), BridgeSet rows added (`example : <stmt written out>
 := @GoLean.GoCore.PoolSound.<name>`), `exports` extended, a changelog row, and the gate below.
 
 ## 8. Acceptance (per milestone; capped; locked; every EXIT code recorded)
 `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci` green (no `--diff`: no runtime change; the coordinator may ask for it);
 `scripts/capped bash scripts/check-core-audit` PASS with the new modules in the closure and the milestone's theorems in
-`exports`; `python3 scripts/check-pool-spec` (M5) / `--statements-only` (M1–M4) exit 0; the escape-hatch preflight clean;
+`exports`; `python3 scripts/check-pool-spec --landed M<k>` exit 0 for the milestone M<k> being finished (see the staging
+note below); the escape-hatch preflight clean;
 `BridgeSet.lean` compiles with the new rows; `git diff --stat <input> -- GoLean/GoCore/PoolStep.lean` EMPTY; `git diff <input> -- GoLean/GoCore/PoolStatement.lean`
 EMPTY unless a §5 bounded adjustment is reported, and then every hunk confined to the named `_stmt` body; and
 `FROZEN.sha256` unchanged unless a §5 bounded adjustment is reported line by line; no existing theorem's statement changed
 (`git diff <input> -- GoLean/GoCore/{Multi,MultiSound,PoolTrace,PoolProjection,Prefix,ExecutionStatement}.lean` shows
 proof bodies only, if anything). Evidence: gate tails and the `check-pool-spec` output per milestone.
+
+**Staging note** ([AGENT] coordinator, amended 2026-10-05 on the grind's M1 report BLOCKER — the all-or-nothing
+discharge check made no milestone passable; implemented by the [AGENT] tooling worker on branch
+`tools/pool-spec-milestones-1005`): `docs/specs/pool-relation/MILESTONES` maps each of the 48 statements to M1–M5
+exactly as §7 (the script fails unless the map covers exactly the frozen `_stmt` names); `docs/specs/pool-relation/LANDED`
+holds the landed level (`M0`..`M5`). `scripts/check-pool-spec` (no flag; the `scripts/ci` step «pool spec freeze +
+discharge») requires every statement of milestones ≤ `LANDED` discharged, reports later ones discharged early, and is the
+full check at `M5`; `PoolSound.lean` must be absent at `M0` and present from `M1`. **Setting `LANDED` is the TRAIN's
+job** (the landing train bumps it at the milestone's merge) — the grinder does NOT edit it, and instead runs
+`python3 scripts/check-pool-spec --landed M<k>` (a local override) for its milestone; `--statements-only` survives only
+as the spelling of `--landed M0` (the spec phase). On a grind branch `scripts/ci`'s **stale-certification failure is
+EXPECTED**: any change under `GoLean/` makes the certified record stale; the landing train's merge-protocol step 5a
+refreshes it. It is not the grinder's to fix — record the failure verbatim with its EXIT and confirm it is the only
+non-ok step besides any the coordinator has named.
 
 ## 9. Report — `docs/<date>_pool-grind-report.md` (≤ 60 lines per milestone)
 Tip commit; the theorems proved with the `_stmt` each discharges; every bounded-zone adjustment with its hash line and

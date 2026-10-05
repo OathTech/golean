@@ -612,6 +612,23 @@ else
   bad "semantic equations (scripts/check-equations)"
 fi
 
+# The pool/registry half (spec packet 2026-10-04; grind brief §§4, 7–8; wired at the M1 landing
+# train as the brief commits, [AGENT] tooling worker 2026-10-05): the FROZEN surface
+# (PoolStep.lean, PoolStatement.lean, every `_stmt` body vs docs/specs/pool-relation/FROZEN.sha256),
+# the milestone map covering exactly the frozen statements (docs/specs/pool-relation/MILESTONES),
+# and the STAGED discharge: every statement of milestones <= docs/specs/pool-relation/LANDED proved
+# as `theorem <name> : <name>_stmt` in GoLean/GoCore/PoolSound.lean (later ones may land early).
+# Self-tests (frozen-surface mutants, map mutants, staged-discharge controls) run first. Pure
+# Python: no build; the Lean side is the default build + the core audit above.
+step "pool spec freeze + discharge (scripts/check-pool-spec)"
+if poolout="$(python3 scripts/check-pool-spec 2>&1)"; then
+  echo "$poolout" | sed -e '/^note \[owed\]/d' -e 's/^/  /'
+  ok "pool spec freeze + discharge (scripts/check-pool-spec)"
+else
+  echo "$poolout" | sed 's/^/  /'
+  bad "pool spec freeze + discharge (scripts/check-pool-spec)"
+fi
+
 # The typed-profile family's nine steps (semantic interface; typed contract ×7;
 # typed recovery terminal classification) were REMOVED 2026-09-16 with the family
 # they gated (docs/2026-09-16_typed-profiles-parked.md §1 accounts for every step;

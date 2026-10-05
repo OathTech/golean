@@ -1,0 +1,5 @@
+# The highest pool-relation milestone LANDED on this branch (M0 = none; M1..M5 per MILESTONES).
+# scripts/check-pool-spec requires every statement of milestones <= this one discharged in
+# GoLean/GoCore/PoolSound.lean. Bumping it is the LANDING TRAIN's job, never the grinder's
+# (the grinder uses `--landed Mk` locally). Exactly one non-comment line.
+M1
