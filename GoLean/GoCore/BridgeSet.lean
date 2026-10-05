@@ -3900,4 +3900,44 @@ example :
     Continue ctx m ch ch₁ rec → stepMulti ctx m ch₁ ≠ .error .deadlock :=
   @GoLean.GoCore.PoolSound.stepMulti_deadlock_elim
 
+-- Pool grind M3, 2026-10-05: [AGENT Codex, pool grind].
+
+-- 539. `PoolSound.lean` — `front_continue`
+example :
+  ∀ (ctx : ProgramCtx) (m : MultiConfig) (ch ch₁ : Choices),
+    front ctx m ch = .ok (.inr ch₁) ↔ ∃ rec : List PickRecord, Continue ctx m ch ch₁ rec :=
+  @GoLean.GoCore.PoolSound.front_continue
+
+-- 540. `PoolSound.lean` — `front_finish`
+example :
+  ∀ (ctx : ProgramCtx) (m : MultiConfig) (r : RaceState) (ch : Choices),
+    (∀ (σ : Store) (ch' : Choices),
+      front ctx m ch = .ok (.inl (σ, ch')) ↔ ∃ rec, PoolFinish ctx m r ch rec (.normal σ ch') 0) ∧
+    (∀ msg : String,
+      front ctx m ch = .error (.panic msg) ↔ PoolFinish ctx m r ch [] (.aborted msg ch) 0) ∧
+    (front ctx m ch = .error .deadlock ↔ PoolFinish ctx m r ch [] (.deadlock ch) 0) :=
+  @GoLean.GoCore.PoolSound.front_finish
+
+-- 541. `PoolSound.lean` — `front_refusal`
+example :
+  ∀ (ctx : ProgramCtx) (m : MultiConfig) (ch : Choices) (rr : Refusal),
+    front ctx m ch = .error (.refusal rr) ↔
+      m.threads.isEmpty = true ∧ rr = .internal "thread pool without a main goroutine" :=
+  @GoLean.GoCore.PoolSound.front_refusal
+
+-- 542. `PoolSound.lean` — `poolFinish_functional`
+example :
+  ∀ (ctx : ProgramCtx) (m : MultiConfig) (r : RaceState) (ch : Choices)
+    (rec rec' : List PickRecord) (o o' : PoolOutcome) (cost cost' : Nat),
+    PoolFinish ctx m r ch rec o cost → PoolFinish ctx m r ch rec' o' cost' →
+      rec = rec' ∧ o = o' ∧ cost = cost' :=
+  @GoLean.GoCore.PoolSound.poolFinish_functional
+
+-- 543. `PoolSound.lean` — `poolFinish_zero_not_continue`
+example :
+  ∀ (ctx : ProgramCtx) (m : MultiConfig) (r : RaceState) (ch ch₁ : Choices)
+    (rec rec' : List PickRecord) (o : PoolOutcome),
+    PoolFinish ctx m r ch rec o 0 → ¬ Continue ctx m ch ch₁ rec' :=
+  @GoLean.GoCore.PoolSound.poolFinish_zero_not_continue
+
 end GoLean.GoCore.BridgeSet

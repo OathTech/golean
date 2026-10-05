@@ -1,3 +1,4 @@
+import GoLean.GoCore.PoolFrontFacts
 import GoLean.GoCore.PoolStructure
 import GoLean.GoCore.PoolErrorFacts
 import GoLean.GoCore.PoolReplayFacts
@@ -941,5 +942,113 @@ theorem stepMulti_deadlock_elim : stepMulti_deadlock_elim_stmt := by
     · simp only [Bool.not_eq_true] at hb
       simp only [hb, Bool.false_eq_true, reduceIte] at h
       exact stepThreadInto_strict (schedPick_cur hcur hb) _ h
+
+/-! ## M3 — the driver carriers -/
+
+theorem front_continue : front_continue_stmt := by
+  intro ctx m ch ch'
+  exact PoolFrontFacts.front_continue
+
+theorem front_finish : front_finish_stmt := by
+  intro ctx m r ch
+  exact ⟨fun _ _ => PoolFrontFacts.front_normal,
+    fun _ => PoolFrontFacts.front_aborted, PoolFrontFacts.front_deadlock⟩
+
+theorem front_refusal : front_refusal_stmt := by
+  intro ctx m ch rr
+  exact PoolFrontFacts.front_refusal
+
+theorem poolFinish_zero_not_continue : poolFinish_zero_not_continue_stmt := by
+  intro ctx m r ch ch₁ rec rec' o hf hc
+  cases hf <;> cases hc <;> simp_all [PoolDeadlock]
+
+set_option linter.unusedSimpArgs false in
+theorem poolFinish_functional : poolFinish_functional_stmt := by
+  intro ctx m r ch rec rec' o o' cost cost' hf hf'
+  cases hf with
+  | aborted hp =>
+      cases hf' with
+      | aborted hp₂ =>
+          simp_all [PoolDeadlock]
+      | normal hp₂ hm₂ hr₂ =>
+          simp_all [PoolDeadlock]
+      | exitWindow hp₂ hm₂ hr₂ hw₂ =>
+          simp_all [PoolDeadlock]
+      | deadlock hd₂ =>
+          simp_all [PoolDeadlock]
+      | fatal hc₂ hs₂ =>
+          cases hc₂ <;> simp_all [PoolDeadlock]
+      | raced hc₂ hs₂ hr₂ =>
+          cases hc₂ <;> simp_all [PoolDeadlock]
+  | normal hp hm hr =>
+      cases hf' with
+      | aborted hp₂ =>
+          simp_all [PoolDeadlock]
+      | normal hp₂ hm₂ hr₂ =>
+          simp_all [PoolDeadlock]
+      | exitWindow hp₂ hm₂ hr₂ hw₂ =>
+          simp_all [PoolDeadlock]
+      | deadlock hd₂ =>
+          simp_all [PoolDeadlock]
+      | fatal hc₂ hs₂ =>
+          cases hc₂ <;> simp_all [PoolDeadlock]
+      | raced hc₂ hs₂ hr₂ =>
+          cases hc₂ <;> simp_all [PoolDeadlock]
+  | exitWindow hp hm hr hw =>
+      cases hf' with
+      | aborted hp₂ =>
+          simp_all [PoolDeadlock]
+      | normal hp₂ hm₂ hr₂ =>
+          simp_all [PoolDeadlock]
+      | exitWindow hp₂ hm₂ hr₂ hw₂ =>
+          simp_all [PoolDeadlock]
+      | deadlock hd₂ =>
+          simp_all [PoolDeadlock]
+      | fatal hc₂ hs₂ =>
+          cases hc₂ <;> simp_all [PoolDeadlock]
+      | raced hc₂ hs₂ hr₂ =>
+          cases hc₂ <;> simp_all [PoolDeadlock]
+  | deadlock hd =>
+      cases hf' with
+      | aborted hp₂ =>
+          simp_all [PoolDeadlock]
+      | normal hp₂ hm₂ hr₂ =>
+          simp_all [PoolDeadlock]
+      | exitWindow hp₂ hm₂ hr₂ hw₂ =>
+          simp_all [PoolDeadlock]
+      | deadlock hd₂ =>
+          simp_all [PoolDeadlock]
+      | fatal hc₂ hs₂ =>
+          cases hc₂ <;> simp_all [PoolDeadlock]
+      | raced hc₂ hs₂ hr₂ =>
+          cases hc₂ <;> simp_all [PoolDeadlock]
+  | fatal hc hs =>
+      cases hf' with
+      | aborted hp₂ =>
+          cases hc <;> simp_all [PoolDeadlock]
+      | normal hp₂ hm₂ hr₂ =>
+          cases hc <;> simp_all [PoolDeadlock]
+      | exitWindow hp₂ hm₂ hr₂ hw₂ =>
+          cases hc <;> simp_all [PoolDeadlock]
+      | deadlock hd₂ =>
+          cases hc <;> simp_all [PoolDeadlock]
+      | fatal hc₂ hs₂ =>
+          cases hc <;> cases hc₂ <;> simp_all [PoolDeadlock]
+      | raced hc₂ hs₂ hr₂ =>
+          cases hc <;> cases hc₂ <;> simp_all [PoolDeadlock]
+  | raced hc hs hr =>
+      cases hf' with
+      | aborted hp₂ =>
+          cases hc <;> simp_all [PoolDeadlock]
+      | normal hp₂ hm₂ hr₂ =>
+          cases hc <;> simp_all [PoolDeadlock]
+      | exitWindow hp₂ hm₂ hr₂ hw₂ =>
+          cases hc <;> simp_all [PoolDeadlock]
+      | deadlock hd₂ =>
+          cases hc <;> simp_all [PoolDeadlock]
+      | fatal hc₂ hs₂ =>
+          cases hc <;> cases hc₂ <;> simp_all [PoolDeadlock]
+      | raced hc₂ hs₂ hr₂ =>
+          cases hc <;> cases hc₂ <;> simp_all [PoolDeadlock]
 
 end GoLean.GoCore.PoolSound

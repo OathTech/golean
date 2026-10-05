@@ -33,6 +33,7 @@ namespace Tests.GoCoreAudit
 def allowedRoots : List Name := [`Init, `Std, `Lean, `GoLean, `Tests]
 
 def requiredModules : List Name := [
+    `GoLean.GoCore.PoolFrontFacts,
     `GoLean.GoCore.PoolStructure,
     `GoLean.GoCore.PoolErrorFacts, `GoLean.GoCore.PoolReplayFacts, `GoLean.GoCore.PoolSound,
     `GoLean.GoCore, `GoLean.GoCore.Machine, `GoLean.GoCore.StepFn, `GoLean.GoCore.StateWf,
@@ -51,6 +52,12 @@ def requiredModules : List Name := [
 /-- Required core theorems (the `semantic interface` audit's CORE exports, plus the
 re-homed regressions). Each must exist as a theorem. -/
 def exports : List Name := [
+    -- Pool grind M3, BridgeSet rows 539–543.
+    ``GoLean.GoCore.PoolSound.front_continue,
+    ``GoLean.GoCore.PoolSound.front_finish,
+    ``GoLean.GoCore.PoolSound.front_refusal,
+    ``GoLean.GoCore.PoolSound.poolFinish_functional,
+    ``GoLean.GoCore.PoolSound.poolFinish_zero_not_continue,
     -- Pool grind M2, BridgeSet rows 528–538.
     ``GoLean.GoCore.PoolSound.stepML_who_runnable,
     ``GoLean.GoCore.PoolSound.stepML_sched,

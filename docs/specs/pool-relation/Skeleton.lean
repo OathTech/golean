@@ -32,11 +32,6 @@ open GoLean.GoCore.PoolStatement
 
 /-! ## Milestone 3 — the driver carriers vs `front`; terminal priority (E) -/
 
-theorem front_continue : front_continue_stmt := by sorry
-theorem front_finish : front_finish_stmt := by sorry
-theorem front_refusal : front_refusal_stmt := by sorry
-theorem poolFinish_functional : poolFinish_functional_stmt := by sorry
-theorem poolFinish_zero_not_continue : poolFinish_zero_not_continue_stmt := by sorry
 
 /-! ## Milestone 4 — the run lifts (F) and the program seam (G) -/
 
