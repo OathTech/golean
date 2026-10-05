@@ -1,0 +1,18 @@
+Core audit harness: 63 GoLean modules on disk (54 under GoLean/GoCore/)
+core-audit-audit scratch: /home/dev/projects/golean/.claude/worktrees/pool-grind-m2m5/.tmp/core-audit-audit-c9px7rc6
+Core totality audit: 63 GoLean modules in the closure (54 under GoLean.GoCore), all on disk; 577 required theorems present; 20701 declarations across all imported local modules; classical trio only
+/home/dev/projects/golean/.claude/worktrees/pool-grind-m2m5/.tmp/core-audit-audit-c9px7rc6/AuditAll.lean:65:0: error: Core totality audit: _private.GoLean.GoCore.Trace.0.coreAuditTraceHole depends on forbidden axiom _private.GoLean.GoCore.Trace.0.coreAuditTraceHole
+Typed audit control: core-audit/trace_private compiled then rejected (coreAuditTraceHole, coreAuditTraceHole)
+/home/dev/projects/golean/.claude/worktrees/pool-grind-m2m5/.tmp/core-audit-audit-c9px7rc6/AuditAll.lean:65:0: error: Core totality audit: _private.GoLean.GoCore.AbortObservation.0.coreAuditObserverHole depends on forbidden axiom _private.GoLean.GoCore.AbortObservation.0.coreAuditObserverHole
+Typed audit control: core-audit/observer_private compiled then rejected (coreAuditObserverHole, coreAuditObserverHole)
+/home/dev/projects/golean/.claude/worktrees/pool-grind-m2m5/.tmp/core-audit-audit-c9px7rc6/AuditAll.lean:65:0: error: Core totality audit: _private.GoLean.GoCore.StringPanic.0.coreAuditStringPanicHole depends on forbidden axiom _private.GoLean.GoCore.StringPanic.0.coreAuditStringPanicHole
+Typed audit control: core-audit/string_panic_private compiled then rejected (coreAuditStringPanicHole, coreAuditStringPanicHole)
+/home/dev/projects/golean/.claude/worktrees/pool-grind-m2m5/.tmp/core-audit-audit-c9px7rc6/AuditAll.lean:65:0: error: Core totality audit: _private.Tests.GoCoreAudit.0.coreAuditSelfHole depends on forbidden axiom _private.Tests.GoCoreAudit.0.coreAuditSelfHole
+Typed audit control: core-audit/audit_private compiled then rejected (coreAuditSelfHole, coreAuditSelfHole)
+/home/dev/projects/golean/.claude/worktrees/pool-grind-m2m5/.tmp/core-audit-audit-c9px7rc6/contract_trailing/Tests/GoCoreContract.lean:418:16: warning: declaration uses `sorry`
+/home/dev/projects/golean/.claude/worktrees/pool-grind-m2m5/.tmp/core-audit-audit-c9px7rc6/AuditAll.lean:65:0: error: Core totality audit: _private.Tests.GoCoreContract.0.coreAuditContractHole depends on forbidden axiom sorryAx
+Typed audit control: core-audit/contract_trailing compiled then rejected (coreAuditContractHole, sorryAx)
+Core totality audit: 63 GoLean modules in the closure (54 under GoLean.GoCore), all on disk; 577 required theorems present; 20701 declarations across all imported local modules; classical trio only
+Typed audit: core-audit: 5 compiled controls passed
+core-audit-audit PASS; scratch removed (10506838 owned bytes; dependencies symlinked)
+Core totality audit gate: PASS

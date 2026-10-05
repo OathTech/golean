@@ -102,3 +102,31 @@ M5: `stepML_single_sound_stmt`, `stepML_single_complete_stmt`, `singleton_finish
 `singleton_finish_refused_stmt`, `singleton_finish_fatal_stmt`, `singleton_finish_deadlock_stmt`, `singleton_prefix_embedding_stmt`.
 `singleton_run_stmt`.
 M2 complete; acceptance differs from green only by the authorized stale-certificate red. Continue to M3; no review ask, merge or push.
+
+## M3 checkpoint — driver carriers, 2026-10-05
+
+[AGENT Codex, pool grind] Continuous M2–M5 authority; input `a3e18ff5`, branch `core/pool-grind-m2m5-2026-10-05`.
+Proof/integration commit: `4b5f0ba884053bb9b51d9be8664efb2f19ba3931`; this checkpoint's subsequent record commit changes documentation only.
+Five exact frozen declarations proved in `PoolSound.lean`: `front_continue`, `front_finish`, `front_refusal`, `poolFinish_functional`, `poolFinish_zero_not_continue`.
+BridgeSet rows 539–543 added; all old rows retained. Five exports added, `PoolFrontFacts` enrolled in default imports and the audit.
+New module helpers characterize the front's continue/normal/aborted/deadlock/refusal cases, with raw-choice iff lemmas.
+Finish uniqueness is an exhaustive constructor proof; local development required explicit exit-window records and replacing an unsuccessful repeated tactic search.
+No counterexample, residual goal, repair, bounded statement adjustment, frozen hash change, or existing proof-module edit.
+All acceptance ran under the box-wide lock, capped at 48G, locale `en_US.UTF-8`, two Lean threads, worktree-local TMPDIR.
+`scripts/capped scripts/ci`: EXIT=1, `RESULT: FAIL`; ONLY failing summary step: certificate provenance.
+Verbatim expected cause: `certification: STALE certification: changed dependency build/files/GoLean.lean`.
+`scripts/capped bash scripts/check-core-audit`: EXIT=0; PASS, 63 modules / 54 core modules / 577 required theorems / 20701 declarations, classical trio only; five poison controls rejected.
+`scripts/capped python3 scripts/check-pool-spec --landed M3`: EXIT=0; all 25 M1–M3 statements discharged, 0 early, 23 owed; both frozen files and all 48 statement hashes match.
+`scripts/capped lake build GoLean.GoCore.BridgeSet`: EXIT=0, 41 jobs; pre-checkpoint target build also EXIT=0; PoolSound target EXIT=0, 34 jobs.
+`scripts/capped python3 .tmp/check-frozen.py`: EXIT=0; frozen files, existing modules, LANDED/MILESTONES and BridgeSet rows 1–527 byte-identical to input.
+`git diff --check`: EXIT=0, EMPTY. CI escape-hatch scans and warning-free build pass; 298 eval tests pass.
+Cached comparison only: 3884 execution and 394 negative cases match, records from clean `ab047d0` / go1.26.5; no fresh differential or certification refresh.
+[CI tail](evidence/2026-10-05_pool-grind/m3-ci-tail.log) · [audit tail](evidence/2026-10-05_pool-grind/m3-audit-tail.log) · [pool checker](evidence/2026-10-05_pool-grind/m3-pool-spec.log) · [exit ledger](evidence/2026-10-05_pool-grind/m3-checks.log).
+Still owed (M4/M5 drafts are unverified scratch, no obstruction claimed):
+M4: `poolPrefix_comp_stmt`, `poolPrefix_split_stmt`, `poolPrefix_labelled_stmt`, `poolPrefix_erase_stmt`, `poolPrefix_run_stmt`.
+`pool_run_ok_iff_stmt`, `pool_run_terminal_iff_stmt`, `pool_run_fuelOut_iff_stmt`, `pool_run_refusal_iff_stmt`, `pool_classification_stmt`.
+`run_ok_prefix_stmt`, `program_prefix_stmt`, `continue_replay_stmt`, `poolPrefix_replay_stmt`.
+M5: `stepML_single_sound_stmt`, `stepML_single_complete_stmt`, `singleton_finish_normal_stmt`, `singleton_finish_aborted_stmt`.
+`singleton_finish_refused_stmt`, `singleton_finish_fatal_stmt`, `singleton_finish_deadlock_stmt`, `singleton_prefix_embedding_stmt`, `singleton_run_stmt`.
+M3 complete; acceptance differs from green only by the authorized stale-certificate failure. Continue without review, merge or push.
+New M3 evidence is staged; its extra size check was cancelled while waiting for another lane (EXIT=143, never read this tree) and is requeued before M4’s first compiler pass. No size PASS for those new logs is claimed yet.
