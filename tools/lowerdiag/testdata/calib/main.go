@@ -15,6 +15,8 @@ import (
 	randv2 "math/rand/v2"
 	"slices"
 	"strings"
+	"sync"
+	"sync/atomic"
 )
 
 // ErrE (was E until 2026-10-04: dot.go's import . "math" declares math.E in the file block).
@@ -74,8 +76,36 @@ func fbGo(f float32)                { go math.Float32bits(f) }
 func fbValue() func(uint64) float64 { return math.Float64frombits }
 func fbSqrt(f float64) float64      { return math.Sqrt(f) }
 
-// fmt shim: the verb matrix is NOT judged statically (disclosed, not asserted).
+// fmt shim: a direct call lowers (the fmt desugar). Lowerdiag does not judge
+// the verb matrix in general (disclosed in its report); this fixture holds
+// only verbs whose verdict is settled, so the calibration judges it.
 func sprintf(x int) string { return fmt.Sprintf("%d", x) }
+
+// defer/go of a package-qualified stdlib member that is NOT source-through
+// (lowerdiag known disagreements 1-2, 2026-10-04): the frontend lowers the
+// callee as a VALUE (emit.go DeferStmt/GoStmt -> emitExpr), and a non-source
+// stdlib selector in value position refuses ("stdlib-qualified selector
+// fmt.Sprint / atomic.AddInt64 in value position"). The direct calls lower.
+var ctr int64
+
+func atomicCall()  { atomic.AddInt64(&ctr, 1) }
+func atomicDefer() { defer atomic.AddInt64(&ctr, 1) }
+func atomicGo()    { go atomic.AddInt64(&ctr, 1) }
+func fmtCall()     { _ = fmt.Sprint("x") }
+func fmtDefer()    { defer fmt.Sprint("x") }
+func fmtGo()       { go fmt.Sprintf("%d", 1) }
+
+// Sync-op METHOD VALUES (P-S2-6, Q-SYNCVAL; lowerdiag known disagreement 3):
+// a modeled op's method value lowers over the bodied stub, promoted ones
+// too; an unmodeled member's method value and every sync method EXPRESSION
+// refuse.
+type guarded struct{ sync.Mutex }
+
+func syncMV(mu *sync.Mutex) func()                        { return mu.Lock }
+func syncMVWg(wg *sync.WaitGroup) func()                  { return wg.Done }
+func syncMVPromoted(g *guarded) func()                    { return g.Unlock }
+func syncMVUnmodeled(rw *sync.RWMutex) func() sync.Locker { return rw.RLocker }
+func syncMExpr() func(*sync.Mutex)                        { return (*sync.Mutex).Lock }
 
 func entry() int { _, _ = retBox(); sortInts(nil); return fields("a b") }
 

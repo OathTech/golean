@@ -200,7 +200,8 @@ interface-dispatch spelling of Q-SYNCVAL.
   the real frontend emits a wire for `testdata/calib` and every user
   declaration's static verdict (decl/export-scoped refusals) must equal
   the wire's quarantine set; shim callers are reported as not judged,
-  not asserted. The fixture holds the FR-7 RETURN case (`retBox` —
+  not asserted (superseded 2026-10-05: every declaration is judged, shim
+  callers included — «Known disagreements», item 2). The fixture holds the FR-7 RETURN case (`retBox` —
   lowers in the wire, as the static pass now says), the FR-7 ASSIGN case
   (`assignBox` — refused, both agree), `slices.Sort` at `[]string`
   (refused) and `[]int` (lowers), `defer slices.Sort` (refused),
@@ -379,11 +380,39 @@ Found by the rand-intn / float-bits fix worker (`fix/lowerdiag-intn-1004`), rowe
 wire and the machine are unaffected); queued as a small lowerdiag follow-up fix:
 
 1. `defer`/`go` of a package-level `sync/atomic` function: lowerdiag says lowers; the wire refuses
-   («stdlib-qualified selector … in value position»).
+   («stdlib-qualified selector … in value position»). **FIXED 2026-10-05** (below).
 2. `defer`/`go` of a `fmt` member: lowerdiag says lowers (shim); the wire refuses. The calibration
-   test skips fmt-calling declarations, so the calibration did not see it.
+   test skips fmt-calling declarations, so the calibration did not see it. **FIXED 2026-10-05**, the
+   skip lifted (below).
 3. A sync-op method value (`return mu.Lock`): lowerdiag refuses `sync-value-shape`; the wire lowers
-   (lowerdiag over-strict).
+   (lowerdiag over-strict). **FIXED 2026-10-05** (below).
+
+**Fixed 2026-10-05** ([AGENT] build worker, lane `lane/route-a-s3-lowerdiag-1005`; [USER] Mike
+2026-10-05, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «Yes, go ahead»).
+Diagnosis-tool changes only (`tools/lowerdiag/`); no frontend, wire or machine change.
+- Items 1–2, one rule mirroring the frontend: `emit.go`'s `DeferStmt`/`GoStmt` arms refuse an
+  intercepted member and the rand-intn callee by name, then lower the callee with `emitExpr` — as a
+  VALUE; `emitSelector` routes only SOURCE packages (local + source-through) to the qualified arm and
+  refuses every other stdlib selector there. So `interceptedSpawn` now emits `stdlib-value-position`
+  (keyed `path.Member`) for defer/go of ANY package-qualified stdlib callee whose package is not
+  source-through (after the two by-name refusals) — the float-bits defer/go case of 2026-10-04 is
+  the special case it generalises; `defer slices.Sort(s)` (source-through) still lowers. The fmt
+  desugar is not on the E5 shim allowlist, so fmt takes the «stdlib-qualified selector» text too.
+- Item 3: the method-value / method-expression arms key on the method's DECLARED receiver
+  (`syncMethodPrim`, the frontend's own rule — promoted selections included; `sync.Locker` is a plain
+  interface): a MODELED op's method value (the `sync-op` rows = the frontend's `syncValueOpModeled`)
+  is supplied, an unmodeled member's method value and every sync method expression stay
+  `sync-value-shape`.
+- Calibration: `TestCalibrationAgainstWire` no longer skips declarations that call a shim member
+  (the skip hid item 2); the fixture is curated, so it holds only fmt shapes whose verdict is
+  settled — the general fmt verb matrix stays unjudged statically, as the report discloses. New
+  `testdata/calib` declarations, each asserted against the real frontend's wire: `atomicCall`,
+  `fmtCall`, `syncMV`, `syncMVWg`, `syncMVPromoted` (lower); `atomicDefer`, `atomicGo`, `fmtDefer`,
+  `fmtGo`, `syncMVUnmodeled` (`rw.RLocker`), `syncMExpr` (`(*sync.Mutex).Lock`) (refused); the
+  pinned per-declaration verdicts and the four frontend texts' classification:
+  `TestDeferGoStdlibAndSyncMethodValueVerdicts`. Red-first: the pre-fix `static.go` against the new
+  fixture fails both tests (6 calibration disagreements: the four defer/go declarations judged lowered,
+  `syncMV`/`syncMVWg` judged refused).
 
 Not a lowerdiag defect: a dot-imported `math/rand.Intn` — both accept and the machine is stuck; that
 is FR-36 (`docs/language-coverage-ledger.md`, queue 36).

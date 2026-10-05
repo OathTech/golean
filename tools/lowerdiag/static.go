@@ -1031,8 +1031,21 @@ func (a *analyzer) body(d *declReport, root ast.Node, fd *ast.FuncDecl) {
 				switch s.Kind() {
 				case types.MethodVal:
 					if !parentIsCallFun {
-						if a.syncRecv(s.Recv()) {
-							d.add(finding{Cause: mustCause("sync-value-shape"), Key: "method value " + typeStr(s.Recv()) + "." + x.Sel.Name, Pos: pos, Certain: true})
+						// Mirrors emit.go emitSelector's sync arm (P-S2-6,
+						// Q-SYNCVAL): the primitive is the method's DECLARED
+						// receiver (syncMethodPrim — promoted selections
+						// included); a MODELED op's method value lowers over
+						// the bodied stub (syncValueOpModeled = the sync-op
+						// rows of machine-surface.tsv), an unmodeled member
+						// refuses. (Lowerdiag known disagreement 3,
+						// 2026-10-04: `return mu.Lock` was judged refused.)
+						if prim := syncMethodPrim(s); prim != "" {
+							key := "sync." + prim + "." + x.Sel.Name
+							if a.p.sup.syncOp[key] {
+								d.supplied(key, "machine sync-op method value")
+							} else {
+								d.add(finding{Cause: mustCause("sync-value-shape"), Key: "method value " + typeStr(s.Recv()) + "." + x.Sel.Name, Pos: pos, Certain: true})
+							}
 						} else {
 							a.classifyMethod(d, s.Recv(), x.Sel.Name, x)
 						}
@@ -1048,7 +1061,7 @@ func (a *analyzer) body(d *declReport, root ast.Node, fd *ast.FuncDecl) {
 							}
 						}
 					}
-					if a.syncRecv(s.Recv()) {
+					if syncMethodPrim(s) != "" {
 						d.add(finding{Cause: mustCause("sync-value-shape"), Key: "method expression " + typeStr(s.Recv()) + "." + x.Sel.Name, Pos: pos, Certain: true})
 					} else {
 						a.classifyMethod(d, s.Recv(), x.Sel.Name, x)
@@ -1175,22 +1188,43 @@ func (a *analyzer) body(d *declReport, root ast.Node, fd *ast.FuncDecl) {
 	})
 }
 
-// syncRecv: is t (or *t) one of the machine-owned sync primitives?
-func (a *analyzer) syncRecv(t types.Type) bool {
-	if p, ok := t.(*types.Pointer); ok {
-		t = p.Elem()
+// syncMethodPrim mirrors emit.go syncMethodPrim/syncPrimName: the modeled
+// sync primitive OWNING a resolved method selection — the method's
+// DECLARED receiver, deref'd — or "". Only Mutex/RWMutex/WaitGroup/Once
+// are primitives here; sync.Locker is a plain interface and rides the
+// ordinary interface path.
+func syncMethodPrim(s *types.Selection) string {
+	fn, ok := s.Obj().(*types.Func)
+	if !ok {
+		return ""
 	}
-	nm, ok := types.Unalias(t).(*types.Named)
-	return ok && nm.Obj().Pkg() != nil && nm.Obj().Pkg().Path() == "sync" && a.p.sup.syncType["sync."+nm.Obj().Name()]
+	sig, ok := fn.Type().(*types.Signature)
+	if !ok || sig.Recv() == nil {
+		return ""
+	}
+	t := types.Unalias(sig.Recv().Type())
+	if p, ok := t.(*types.Pointer); ok {
+		t = types.Unalias(p.Elem())
+	}
+	nm, ok := t.(*types.Named)
+	if !ok || nm.Obj().Pkg() == nil || nm.Obj().Pkg().Path() != "sync" {
+		return ""
+	}
+	switch nm.Obj().Name() {
+	case "Mutex", "RWMutex", "WaitGroup", "Once":
+		return nm.Obj().Name()
+	}
+	return ""
 }
 
 // interceptedSpawn: defer/go of a frontend-INTERCEPTED library member
 // (slices.Sort, cmp.Compare) refuses by name (emit.go: "the direct call of
 // this library member is frontend-intercepted … in expression-statement
 // position only"); so does defer/go of a rand-intn primitive callee
-// (math/rand.Intn, math/rand/v2.IntN — randintn.go refuseRandIntnDeferGo)
-// and of a float-bits callee (math.Float64bits & siblings — the frontend's
-// value-position selector refusal).
+// (math/rand.Intn, math/rand/v2.IntN — randintn.go refuseRandIntnDeferGo);
+// and defer/go of every other NON-source-through stdlib member (fmt,
+// sync/atomic, math.Float64bits & siblings, …) refuses as a value-position
+// selector — the frontend lowers the callee as a value.
 func (a *analyzer) interceptedSpawn(d *declReport, how string, call *ast.CallExpr, pos string) {
 	sel, ok := call.Fun.(*ast.SelectorExpr)
 	if !ok {
@@ -1199,17 +1233,29 @@ func (a *analyzer) interceptedSpawn(d *declReport, how string, call *ast.CallExp
 	if path, member, _, ok := a.stdlibSel(sel); ok && a.p.sup.intercept[path+"."+member] {
 		d.add(finding{Cause: mustCause("intercepted-defer-go"), Key: how + " " + path + "." + member, Pos: pos, Certain: true})
 	}
-	// defer/go of a float-bits callee: the frontend has no float-bits arm on
-	// the defer/go path, so the callee reaches emitExpr as a SELECTOR and
-	// refuses there (`stdlib-qualified selector math.Float64bits in value
-	// position …`, emit.go) — the cause that text classifies to.
-	if path, member, _, ok := a.stdlibSel(sel); ok && a.p.sup.floatBits[path+"."+member] {
-		d.add(finding{Cause: mustCause("stdlib-value-position"), Key: path + "." + member, Pos: pos, Certain: true})
-	}
 	// defer/go of the rand-intn primitive's callee: randintn.go
 	// refuseRandIntnDeferGo (the draw lowers at direct-call sites only).
 	if path, member, _, ok := a.stdlibSel(sel); ok && a.p.sup.randIntn[path+"."+member] {
 		d.add(finding{Cause: mustCause("rand-intn-defer-go"), Key: how + " " + path + "." + member, Pos: pos, Certain: true})
+		return
+	}
+	// defer/go of ANY other package-qualified stdlib callee whose package is
+	// not source-through: after the two by-name refusals above (and the
+	// builtin / sync-METHOD arms, which a package-qualified selector never
+	// reaches), emit.go's DeferStmt/GoStmt arms lower the callee with
+	// emitExpr, i.e. as a VALUE. emitSelector routes only SOURCE packages
+	// (local + source-through, isSourcePackage) to the qualified arm; every
+	// other stdlib selector refuses there — `pkg.F used as a function VALUE`
+	// for an E5 shim-allowlisted member, `stdlib-qualified selector pkg.F in
+	// value position` otherwise (fmt.Sprint — the fmt desugar is not on the
+	// E5 allowlist —, sync/atomic.AddInt64, math.Float64bits, …); both texts
+	// classify to stdlib-value-position.
+	// A direct call of the same member (fmt desugar, atomic-op, float-bits)
+	// has no defer/go arm. (Lowerdiag known disagreements 1-2, 2026-10-04;
+	// generalises the float-bits defer/go case of 77c5e5dd.) A source-through
+	// callee (`defer slices.Sort(s)`) is the real function value and lowers.
+	if path, member, _, ok := a.stdlibSel(sel); ok && !a.p.sup.intercept[path+"."+member] && !a.p.sup.sourceThrough[path] {
+		d.add(finding{Cause: mustCause("stdlib-value-position"), Key: path + "." + member, Pos: pos, Certain: true})
 	}
 }
 

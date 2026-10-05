@@ -787,6 +787,86 @@ func TestFloatBitsPrimitiveIsSupplied(t *testing.T) {
 	}
 }
 
+// TestDeferGoStdlibAndSyncMethodValueVerdicts — the lowerdiag known
+// disagreements with the wire of 2026-10-04 (docs/2026-09-04_lower-
+// diagnose.md), items 1-3, fixed 2026-10-05 ([USER] Mike 2026-10-05 «Yes,
+// go ahead», relayed). Pinned per declaration of testdata/calib (whose wire
+// verdicts TestCalibrationAgainstWire checks against the real frontend):
+// defer/go of a non-source-through stdlib member refuses as
+// stdlib-value-position (the frontend lowers the callee as a value) while
+// the direct call is supplied; a MODELED sync op's method value lowers
+// (promoted too), an unmodeled member's method value and a sync method
+// expression refuse as sync-value-shape.
+func TestDeferGoStdlibAndSyncMethodValueVerdicts(t *testing.T) {
+	if err := initCauses(); err != nil {
+		t.Fatal(err)
+	}
+	sup, err := newSupply("../../docs/stdlib-admission-register.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	prog, err := loadProgram("testdata/calib", sup)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prog.census()
+	decls := map[string]*declReport{}
+	for _, d := range prog.pkgs["main"].decls {
+		decls[d.Name] = d
+	}
+	type want struct {
+		supplied, cause, key string
+	}
+	cases := map[string]want{
+		"atomicCall":      {supplied: "sync/atomic.AddInt64 (machine atomic-op)"},
+		"atomicDefer":     {cause: "stdlib-value-position", key: "sync/atomic.AddInt64"},
+		"atomicGo":        {cause: "stdlib-value-position", key: "sync/atomic.AddInt64"},
+		"fmtCall":         {supplied: "fmt.Sprint (shim)"},
+		"fmtDefer":        {cause: "stdlib-value-position", key: "fmt.Sprint"},
+		"fmtGo":           {cause: "stdlib-value-position", key: "fmt.Sprintf"},
+		"deferSort":       {supplied: "slices.Sort (source-through)"},
+		"syncMV":          {supplied: "sync.Mutex.Lock (machine sync-op method value)"},
+		"syncMVWg":        {supplied: "sync.WaitGroup.Done (machine sync-op method value)"},
+		"syncMVPromoted":  {supplied: "sync.Mutex.Unlock (machine sync-op method value)"},
+		"syncMVUnmodeled": {cause: "sync-value-shape", key: "method value *sync.RWMutex.RLocker"},
+		"syncMExpr":       {cause: "sync-value-shape", key: "method expression *sync.Mutex.Lock"},
+	}
+	for name, w := range cases {
+		d := decls[name]
+		if d == nil {
+			t.Errorf("%s: not in testdata/calib", name)
+			continue
+		}
+		if w.supplied != "" && !slices.Contains(d.Supplied, w.supplied) {
+			t.Errorf("%s: Supplied %v lacks %q", name, d.Supplied, w.supplied)
+		}
+		if w.cause == "" {
+			if len(d.Findings) != 0 {
+				t.Errorf("%s: want no finding, got %+v", name, d.Findings)
+			}
+			continue
+		}
+		if len(d.Findings) != 1 || d.Findings[0].Cause.ID != w.cause || d.Findings[0].Key != w.key {
+			t.Errorf("%s: want the one finding %s/%s, got %+v", name, w.cause, w.key, d.Findings)
+		}
+		if len(d.declRefusals()) == 0 {
+			t.Errorf("%s: want a declaration-scoped refusal, got none", name)
+		}
+	}
+	// the dynamic pass: the frontend's real texts (this fixture's wire,
+	// 2026-10-05) classify to the same causes
+	for txt, wantID := range map[string]string{
+		`stdlib-qualified selector atomic.AddInt64 in value position: only allowlisted DIRECT CALLS of modeled stdlib members lower (E5 shims / fmt desugar); the value shape is outside the modeled surface (package "sync/atomic")`: "stdlib-value-position",
+		`stdlib-qualified selector fmt.Sprint in value position: only allowlisted DIRECT CALLS of modeled stdlib members lower (E5 shims / fmt desugar); the value shape is outside the modeled surface (package "fmt")`:              "stdlib-value-position",
+		`sync.RWMutex.RLocker as a method value (the member is outside the modeled sync surface; the modeled ops' method values lower — P-S2-6)`:                                                                                      "sync-value-shape",
+		`sync.Mutex.Lock as a method expression (the modeled sync ops lower as METHOD VALUES — P-S2-6; the method-expression shape stays refused)`:                                                                                    "sync-value-shape",
+	} {
+		if c, _ := classifyText(txt); c == nil || c.ID != wantID {
+			t.Errorf("classifyText(%q) = %v, want %s", txt, c, wantID)
+		}
+	}
+}
+
 // TestRandIntnPrimitiveIsSupplied — route-A review Q7 (approved [USER] Mike
 // 2026-10-04, relayed): since window unit 5b the frontend binds a DIRECT
 // call of math/rand.Intn / math/rand/v2.IntN to the `rand-intn` node, but
@@ -993,16 +1073,11 @@ func TestCalibrationAgainstWire(t *testing.T) {
 			t.Errorf("static decl %s not in the wire", d.Name)
 			continue
 		}
-		unjudged := false
-		for _, s := range d.Supplied {
-			if strings.Contains(s, "(shim)") {
-				unjudged = true
-			}
-		}
-		if unjudged {
-			t.Logf("not judged (shim member): %s — wire: %q", d.Name, u)
-			continue
-		}
+		// Every declaration is judged, shim callers included (2026-10-05:
+		// the former skip of "(shim)" declarations hid known disagreement 2,
+		// `defer fmt.Println(...)`). Lowerdiag does not judge the fmt verb
+		// matrix in general — its report discloses that — so this curated
+		// fixture holds only fmt shapes whose verdict is settled.
 		checked++
 		staticRefused := len(d.declRefusals()) > 0
 		if staticRefused != (u != "") {
@@ -1029,7 +1104,10 @@ func TestCalibrationAgainstWire(t *testing.T) {
 	want := map[string]bool{"retBox": false, "assignBox": true, "sortStrings": false, "sortInts": false, "deferSort": false, "isE": false, "fields": false,
 		"drawIntn": false, "drawIntNv2": false, "drawInt63n": true, "deferIntn": true,
 		// the float-bits primitive (folded in 2026-10-04)
-		"fbBits": false, "fbFrom32": false, "fbStmt": false, "fbDefer": true, "fbGo": true, "fbValue": true, "fbSqrt": true, "fbDot": true}
+		"fbBits": false, "fbFrom32": false, "fbStmt": false, "fbDefer": true, "fbGo": true, "fbValue": true, "fbSqrt": true, "fbDot": true,
+		// defer/go of a non-source stdlib member; sync method values (2026-10-05)
+		"sprintf": false, "atomicCall": false, "atomicDefer": true, "atomicGo": true, "fmtCall": false, "fmtDefer": true, "fmtGo": true,
+		"syncMV": false, "syncMVWg": false, "syncMVPromoted": false, "syncMVUnmodeled": true, "syncMExpr": true}
 	if wireQ["errors.Is"] == "" {
 		t.Errorf("wire: the library function errors.Is should be quarantined (library-refusals.tsv row); got lowered")
 	}
