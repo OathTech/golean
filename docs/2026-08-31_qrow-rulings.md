@@ -1457,3 +1457,16 @@ section to `docs/changelog/61958f2e-WINDOW.md`, whose header says FROZEN at the 
 (`docs/2026-10-04_pool-relation-grind-brief.md` lines 75/103, written at r64 before the post-offer changelog existed)
 points the grinder there. Kept as reviewed and merged; the post-offer changelog carries the r66 M1 row. Whether to
 move that section and re-point the brief is the coordinator's call.
+
+**Merge train r66 — the 5a record** ([AGENT] train worker, 2026-10-05). Pre-merge main `72e309c2` →
+`refs/snapshots/r66/main`; train tip `46244c48` fast-forwarded; BridgeSet rebuilt in the train worktree EXIT=0 (66 s);
+primary build `scripts/build-certified` EXIT=0 (93 s, binary `f026bf0b…`, 0 foreign references).
+`release-check --base refs/snapshots/r66/main` EXIT=2 (EXPECTED — STALE, `build/files/GoLean.lean`: the pool grind's new
+modules). `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --slow` EXIT=1, 1345 s — red on EXACTLY the 5a pair
+(`certificate provenance` + the certified row `imported-goose/channel/google-search` PASS→FAIL); 3884 rows, 3646 PASS /
+238 FAIL = the pin 3647 / 237 with the one 5a-class row red; the NEW step «pool spec freeze + discharge» ok (frozen 48
+statements match; MILESTONES covers exactly the 48 — M1 9, M2 11, M3 5, M4 14, M5 9; LANDED=M1: all 9 discharged, 39
+owed); semantic equations ok; frontend pins ok; negative baseline no regression (394). Candidate: `schema`, `claim` and
+`observations_sha256` IDENTICAL (moved: `inputs.build` and `inputs.files` for `scripts/check-pool-spec`, `scripts/ci`,
+`tools/raftsubject/twin-codec-lib.go`; the receipt — source `46244c48`, 224.881 s, binary `f026bf0b…`) — INSTALLED; a
+provenance refresh. Tail: `docs/evidence/2026-10-05_train-r66/r66-ci-slow.tail.txt`.

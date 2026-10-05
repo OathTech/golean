@@ -30,7 +30,7 @@
   "inputs": {
     "build": {
       "files": {
-        "GoLean.lean": "ee297a0446a4a5e515714947b803bfaa578a036a02fde32ee680ae9d41e83d1a",
+        "GoLean.lean": "02275831324a0c054d60f7208731cffe05e9f9890293454f68d6550c499d5270",
         "GoLean/CLI.lean": "345a9f4a3fa4da28ebb765d34c5219d5b340eb8c605d2b8156120245103b466c",
         "GoLean/ChoiceTrace.lean": "db8f5a022effdc0f7758712a16c1e2d2c959d2509e9d4924d51cbf373a948c2c",
         "GoLean/DeclarationUnicode.lean": "7b567b3fa61a7f94c3bafe302b18f6cf7eaaea47266b12b9429550cce92fddc5",
@@ -40,7 +40,7 @@
         "GoLean/GoCore/Admission.lean": "adffb8dec55e81b645b43a292787bd0583c84fd9c2dea48113442873d136538b",
         "GoLean/GoCore/AdmissionIndices.lean": "fbd97a563a2475a1ec380a3859ef48f788e3032054097cbfcbc5e731a4f6bbb4",
         "GoLean/GoCore/AdmissionPolicy.lean": "319ce2f63974c931e6e09f509e82cd28e10ec3f1e89eadab05095d766d04c346",
-        "GoLean/GoCore/BridgeSet.lean": "88d2d09e2802b911870b18b1fa4a551e26da9ff7c49c2821bd6c1326b3819988",
+        "GoLean/GoCore/BridgeSet.lean": "442c2da09474a0f505600f59e5826697b97f9d5096b563a752085c664336d9cd",
         "GoLean/GoCore/Declaration.lean": "c66e53248a3786c244049ebed2266f323b88f2deb8af628188b79c252c0fe5dd",
         "GoLean/GoCore/EnumDedupCheck.lean": "93192faeafca27fe429f4e71afdc73cf7d886805a1eb4a8b3fb0f28baba8d1a6",
         "GoLean/GoCore/EnumDedupSound.lean": "6378612947e3d32720f29521e3c9688bb367c50cb82789bdd71b553982e684ca",
@@ -61,7 +61,10 @@
         "GoLean/GoCore/Ops.lean": "04be0c9dc9de17a36f1d5242813fae793220e3b7e10ebf3b1bbf616f30d782ec",
         "GoLean/GoCore/PanicText.lean": "561c150335ecdd76a2304634c0b11449ff11e4b3b0d8555c4934da473157edd5",
         "GoLean/GoCore/Platform.lean": "649d2ff30adeeeb96e5fe349e1cd8e42da1c8eb6c024b3e605aac39fa16acc20",
+        "GoLean/GoCore/PoolErrorFacts.lean": "517a54612f8935ab79a20dc53c0f8066a7c1ab70c5feb9888979f5f5ea8a2038",
         "GoLean/GoCore/PoolProjection.lean": "3928dfab8cd88f1dbb603e682e1ac45789941909056b2a87b942ce038ea9fa25",
+        "GoLean/GoCore/PoolReplayFacts.lean": "7ac73a44371e2ab3b04dca166e385e0237a2e7e5e3d81240d4804b33c3a8044a",
+        "GoLean/GoCore/PoolSound.lean": "96b655267c694f31b63dae9e0171385da42a2aa71a726fd70ed978c4d3c9c210",
         "GoLean/GoCore/PoolStatement.lean": "38b8046d5aaab717a12a7d26e2675338c27e2d6ee970684837d3d422314ee8b8",
         "GoLean/GoCore/PoolStep.lean": "09449f533c32eb4ab5e689c5122a906fd004908a9b95c46ecff232ac7059301f",
         "GoLean/GoCore/PoolTrace.lean": "b0b004ffe8aed6026f0c2781c796b1b1395684f3c493a64f4cc5fa9247e87c9a",
@@ -123,7 +126,7 @@
       "scripts/check-imported-goose": "5e20ea57f3a2ea0671877ae5f7688397d7a936947a5dbe9217469c8406a6f566",
       "scripts/check-mem-callsites": "e6f7200bfb693593f90ca26c73f49573701a09b0cb564c7f8e6e9a29109be82f",
       "scripts/check-method-identity": "6df9bc44ca18680ade5fb4144e5e3b56d2bd035baa3823b564c8b878037db81a",
-      "scripts/check-pool-spec": "8c646b0107778606e7e1ec1244547a85b6d4a35fd8f7cc16056e6881adb4c522",
+      "scripts/check-pool-spec": "20dee9b4a14e1f793af5aba3af54f2bfe55d5717f61f9b694b9cb5f9ea3ab989",
       "scripts/check-spec-anchors": "0ea75982c91cf4434133f7b6811b53fd2f79d5573e8868f1aa79fe7e4e916559",
       "scripts/check-stdlib-register": "5fe5b97546ae8e06b9af19ca66d4093cca376b6aafb76b558dcc86cf51211cbe",
       "scripts/check-unseq-scheduler": "d70368d1014137cf6dcbedf6b475a069aa3a0190449a86f2ac3d380703d57231",
@@ -131,7 +134,7 @@
       "scripts/check-wire-boundary": "290d60924d949b0a5c8549bc54e793278123698b37b94c96b23627f69ee180ff",
       "scripts/choice-trace-corpus": "ae4357adda68e7b242d9112a6ecfca43c1c201c07a861f34e455ce57ca5f62c5",
       "scripts/choice-trace-summarize": "177ae4088b6bc30b5c175092fb55f1fadc9c24938bfed65c7e7c86fef774f565",
-      "scripts/ci": "590cb1bb16acba643a08094500ce9ec88d0cca31c0b8da2bbcf2b0ea4064b47c",
+      "scripts/ci": "dd6934bd5942e9398a96457e9ce11412980c12ca09b9f906d301810e544848b0",
       "scripts/ci-libraries.json": "237d1b95877e5ae5d6c54a8c8b70c8a4168931683a2f728388884b2988bfb0e9",
       "scripts/coverage": "cce5231de7ee527c4398df030b4a721d53c2696585e21fff495ef3d06dca8121",
       "scripts/coverage-baseline-diff": "222df888409ad9439d6de60d0257bad6bab5a30cb0b99916e5299b7f6d60ac6f",
@@ -284,7 +287,7 @@
       "tools/raftsubject/twin-chdriver.go": "6e1078ab767a266837e9ed7b3e1c2455afc706c2f572be8bd72d3ca8a61ecc2d",
       "tools/raftsubject/twin-codec-abort-main.go": "6c929ec79b46cb925bcbb127cf449e28796b308ce96fa7d432c7656dd485fb1b",
       "tools/raftsubject/twin-codec-group-main.go": "162e7aed613ff6868ba629344168088f275826ff3413fd8cdd1a371ef37bf1cc",
-      "tools/raftsubject/twin-codec-lib.go": "58468741b64b6397e5b9a8ff4cf7f9705d45a545369fde518cdc7b46a77f2eb3",
+      "tools/raftsubject/twin-codec-lib.go": "af59502d37663fd09f62090910d4473f97301e82aedf6ff07dbccdaddc57d441",
       "tools/raftsubject/twin-elect-main.go": "114a073b19d532b82842565dca837db0525ecf112d74fb04b4452c86da048042",
       "tools/raftsubject/twin-lib.go": "fd31d4390418a04d741ce1a3da0b39c473990832bd297fa14c83d91a7d48e91c",
       "tools/raftsubject/twin-main.go": "617836152a9435d92b8cd928ca65eb8853d96ec1dc025bd49552cb1bf05d5769",
@@ -304,7 +307,7 @@
   },
   "observations_sha256": "e40ba07d11827b48aa8c9246bd84d6c21849159983d46c47b793b5759cfbbfd8",
   "receipt": {
-    "binary_sha256": "cae2c78678d90bdd2457edf493ccb0b740bf6a62db8ed5c46bc82663dc365e51",
+    "binary_sha256": "f026bf0b187fa3921041d3a7f3032208bd8922be0be12acd80b3f9ec3cca8aa4",
     "captured_exit": 0,
     "certifier": "tools/certification.py",
     "command": [
@@ -327,12 +330,12 @@
       "--engine",
       "dedup"
     ],
-    "finished_utc": "2026-10-05T01:23:06.754816+00:00",
+    "finished_utc": "2026-10-05T03:51:17.329868+00:00",
     "git_dirty": false,
-    "source_commit": "68da7b4662e74013e634a1604bc5805db64f2481",
-    "started_utc": "2026-10-05T01:19:12.839240+00:00",
+    "source_commit": "46244c48ac7fdfc8147ad39c2cdc663294f2d893",
+    "started_utc": "2026-10-05T03:47:28.218191+00:00",
     "stats_sha256": "80614849ba8583af41ce62fc0a0cefdc7a5b6f22fbb482784a125e8bd19f3283",
-    "wall_seconds": 227.415
+    "wall_seconds": 224.881
   },
   "schema": "golean-certification-v1"
 }
