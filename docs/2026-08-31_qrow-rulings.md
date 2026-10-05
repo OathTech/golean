@@ -1476,3 +1476,11 @@ baseline diff FULL 3884/3884 (3647 / 237, no regression), certificate provenance
 freeze + discharge ok (LANDED=M1), frontend pins ok. Round 66 closed: route A S2 and pool grind M1 (with the staged
 pool-spec check in the gate) are on main; the Codex grind continues on `core/pool-grind-2026-10-05` (M2–M5); the
 setup-equations lane (G-R1–G-R4) is next ([USER] «(1) Go ahead», relayed).
+
+Coordinator follow-up to train r66 ([AGENT], 2026-10-05): (1) the M1 grind commit `844e9393` had appended a «Pool grind
+milestone record» section to the FROZEN offer changelog `docs/changelog/61958f2e-WINDOW.md` (its brief predated the
+post-offer changelog and pointed there) — removed; its M1 content is the r66 M1 row of `docs/changelog/20d3946d-WINDOW.md`;
+the grind brief §6 re-pointed to the post-offer changelog before M2. (2) The staged pool-spec check
+(`tools/pool-spec-milestones-1005`) had NO separate adversarial audit — an [AGENT] call: gate tooling that only tightens
+acceptance, exercised by its own self-tests and the green r66 gate (rule: gates are speedbumps, not audit targets);
+the [USER]'s sign-off «merge once ready» covered it.

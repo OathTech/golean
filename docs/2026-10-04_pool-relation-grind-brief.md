@@ -72,7 +72,7 @@ and `stepML_frame_stmt` (an `applyPairing` arm writing a third goroutine). A fin
 Edit ONLY: the new `GoLean/GoCore/PoolSound.lean` (and new proof-only modules under `GoLean/GoCore/` that it imports),
 `GoLean.lean`'s import list (enroll the new modules), `GoLean/GoCore/BridgeSet.lean` (ADD rows only),
 `docs/specs/pool-relation/Skeleton.lean` (delete the lines of proved names per §7; add lines only for a §5(iv) split), `Tests/GoCoreAudit.lean`
-(`requiredModules`/`exports` — ADD only), `docs/changelog/61958f2e-WINDOW.md` (one row per milestone), your evidence dir
+(`requiredModules`/`exports` — ADD only), `docs/changelog/20d3946d-WINDOW.md` (the post-offer changelog; one row per milestone — NEVER the frozen `61958f2e-WINDOW.md`; amended [AGENT] coordinator 2026-10-05 after M1 wrote there), your evidence dir
 (`docs/evidence/<date>_pool-grind/`, ≤ 256 KiB per file) and your report. NO change to `PoolStep.lean`, to a `_stmt`
 outside §5's bounded list, to `stepFn`/`stepThread`/`stepMulti`/the drivers/`Choices.*`/any helper, to any rule of `Step`,
 `StepE`, `StepM`, to the frontend, decoder, `Corpus/`, `baselines/`, `scripts/` (except `check-pool-spec`'s re-freeze

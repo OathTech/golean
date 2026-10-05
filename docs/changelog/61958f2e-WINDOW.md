@@ -419,9 +419,3 @@ lanes (none added the flag) and INCOMPLETE as a pin-to-offer statement — this 
 Besides the semantics, every re-pin entry lists changes to the tool interfaces the logic team's gate calls: `tools/nativefrontend` flags; the `scripts/diff-coverage` manifest schema; `NativeToIR.decodeProgram`'s signature; `runProgramM`'s `RunResult`; the Lean toolchain; the `deps/go` pin. Rows for these are added as each lane lands and checked at the offer.
 
 **Row 4 addendum (continuations audit F1, 2026-09-30).** In `fun_cases stepFn`, the `frame` arm's binders now come in the order `… fid, k'` (the `@[match_pattern]` view unfolds to `Frame.frame … fid :: k`), not `… k', fid`; a client proof that names `fun_cases` binders positionally for that arm re-orders them. Patterns written with the constructor name (`.frame t te r ds k fid`) are unaffected.
-
-## Pool grind milestone record (brief §6; additive after the frozen offer)
-
-| Milestone | Change |
-|---|---|
-| M1 (2026-10-05, [AGENT Codex, pool grind]) | Nine frozen pool statements proved in `PoolSound.lean`: exact-event step correspondence, trace projections, scheduler slots, error classes, and replay by record. BridgeSet rows 503–511 and core audit exports added; helper modules `PoolErrorFacts`/`PoolReplayFacts` enrolled. Frozen definitions, statements, hashes, runtime, existing proofs, and tool interfaces unchanged. Acceptance blocked by the milestone checker and certificate provenance; report: `docs/2026-10-05_pool-grind-report.md`. |
