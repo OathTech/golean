@@ -7,6 +7,21 @@ enough flex it could build successfully, without giving too much space for drift
 **[AGENT Codex, pool grind]**. The coordinator wires `scripts/check-pool-spec` into `scripts/ci` at the M1 landing train
 (until then it is run by hand per §8). Wired with milestone staging on branch `tools/pool-spec-milestones-1005` (2026-10-05; §8
 staging note).
+**CONTINUOUS RUN M2–M5 (supersedes the per-milestone stop; [USER] Mike 2026-10-05, verbatim, relayed by the [AGENT]
+coordinator: «We really want this to not be checked in at milestones. Codex excels at long-cycle, low oversight builds
+against a very clear objective»).** M1 is LANDED on `main` (train r66, `LANDED=M1`). The goal is now ONE run to the end
+state: all 48 statements discharged, `python3 scripts/check-pool-spec --landed M5` exit 0. (1) Start a NEW branch
+`core/pool-grind-m2m5-<date>` off `main` @ `a46a1808` or later (NOT the old M1 branch — its commits are on `main` as
+cherry-picks). (2) `BridgeSet.lean` rows 1–527 are taken (503–511 = M1; 512–527 = the setup equations, train r67): your
+rows start at 528, rows 1–527 byte-identical. (3) Milestones are CHECKPOINTS, not stops: at each milestone commit, run that
+milestone's §8 acceptance, record it in the report, and CONTINUE without waiting — never ask for review mid-run. You may
+prove statements out of the §7 order. (4) STOP only for: the end state reached; a §5 HARD STOP (a statement false or
+unprovable as written) — and even then, first finish every statement that does not depend on it, then stop with the
+finding; or an environment failure you cannot resolve inside the rules. (5) Expected and NOT a stop: `scripts/ci`'s
+certificate-provenance STALE red (and its google-search echo) on your branch — the landing train refreshes it.
+(6) End state: branch clean, all checkpoints committed, report complete (§9, one section per milestone + the final
+`--landed M5` output); the coordinator audits and lands the whole run, bumping `LANDED`. Where this paragraph and §7–§9
+differ, THIS paragraph governs (no ambiguity STOP for that difference).
 **Ambiguity policy: if two readings of this brief differ materially, STOP, write both in the report, do not choose.**
 
 ## 1. Purpose
