@@ -1531,3 +1531,9 @@ modules). `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --slow` EXIT=1, 1204 s �
 the new `GoLean/GoCore/SetupSound.lean` and `GoLean/GoCore/SetupStatement.lean` — and `inputs.files` for
 `scripts/mem-callsites.tsv`; the receipt — source `67175ae6`, 163.931 s, binary `0c808381…`) — INSTALLED; a provenance
 refresh. Tail: `docs/evidence/2026-10-05_train-r67/r67-ci-slow.tail.txt`.
+
+**Green re-run at the records commit `ab047d09`** ([AGENT] train worker, 2026-10-05): `ci --diff` EXIT=0, 928 s, `RESULT: PASS`,
+baseline diff FULL 3884/3884 (3647 / 237, no regression), certificate provenance ok, semantic equations ok, pool spec
+freeze + discharge ok (LANDED=M1), frontend pins ok, negative baseline no regression. Round 67 closed: the setup equations
+G-R1–G-R4 (BridgeSet rows 512–527) are on main for the logic team's next additive re-pin; the Codex grind continues on
+`core/pool-grind-2026-10-05` (untouched by this train).
