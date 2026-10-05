@@ -33,6 +33,7 @@ namespace Tests.GoCoreAudit
 def allowedRoots : List Name := [`Init, `Std, `Lean, `GoLean, `Tests]
 
 def requiredModules : List Name := [
+    `GoLean.GoCore.PoolStructure,
     `GoLean.GoCore.PoolErrorFacts, `GoLean.GoCore.PoolReplayFacts, `GoLean.GoCore.PoolSound,
     `GoLean.GoCore, `GoLean.GoCore.Machine, `GoLean.GoCore.StepFn, `GoLean.GoCore.StateWf,
     `GoLean.GoCore.MachineSound, `GoLean.GoCore.UnseqSound, `GoLean.GoCore.Multi,
@@ -50,6 +51,19 @@ def requiredModules : List Name := [
 /-- Required core theorems (the `semantic interface` audit's CORE exports, plus the
 re-homed regressions). Each must exist as a theorem. -/
 def exports : List Name := [
+    -- Pool grind M2, BridgeSet rows 528–538.
+    ``GoLean.GoCore.PoolSound.stepML_who_runnable,
+    ``GoLean.GoCore.PoolSound.stepML_sched,
+    ``GoLean.GoCore.PoolSound.stepML_switch_boundary,
+    ``GoLean.GoCore.PoolSound.stepML_sched_record,
+    ``GoLean.GoCore.PoolSound.stepML_frame,
+    ``GoLean.GoCore.PoolSound.stepML_paired_trace,
+    ``GoLean.GoCore.PoolSound.stepML_spawn,
+    ``GoLean.GoCore.PoolSound.asleep_silent,
+    ``GoLean.GoCore.PoolSound.singleton_deadlock,
+    ``GoLean.GoCore.PoolSound.mainOutcome_not_deadlock,
+    ``GoLean.GoCore.PoolSound.stepMulti_deadlock_elim,
+
     -- The setup equations G-R1–G-R3 (2026-10-05): the nine proved statements of
     -- `SetupStatement.lean` (`SetupSound.lean`), BridgeSet rows 512–520. G-R4 is a statement only.
     ``GoLean.GoCore.SetupSound.seedGlobals_cells,

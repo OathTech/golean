@@ -1,3 +1,4 @@
+import GoLean.GoCore.PoolStructure
 import GoLean.GoCore.PoolErrorFacts
 import GoLean.GoCore.PoolReplayFacts
 
@@ -803,5 +804,142 @@ private theorem stepML_replay {ctx : ProgramCtx} {m m' : MultiConfig} {ev : Step
 theorem stepMulti_replay : stepMulti_replay_stmt := by
   intro ctx m m' ch ch' ev h other rest hr
   exact stepML_replay (stepML_sound ctx m m' ch ch' ev h) hr
+
+/-! ## M2 — attribution, boundaries, and the pool deadlock -/
+
+private theorem stepML_slot {ctx : ProgramCtx} {m m' : MultiConfig} {ev : StepEvent}
+    (h : StepML ctx m m' ev) :
+    ∃ slot, SchedSlot ctx m ev.who slot ∧ m'.cur = ev.who ∧
+      ∃ tail, ev.picks = schedRecord ctx m slot ++ tail := by
+  cases h <;> first
+    | exact ⟨_, ‹SchedSlot _ _ _ _›, rfl, _, rfl⟩
+    | exact ⟨_, ‹SchedSlot _ _ _ _›, rfl, [], (List.append_nil _).symm⟩
+
+theorem stepML_sched : stepML_sched_stmt := by
+  intro ctx m m' ev h
+  obtain ⟨slot, hs, hc, _⟩ := stepML_slot h
+  exact ⟨(schedSlot_iff ctx m ev.who).mpr ⟨slot, hs⟩, hc⟩
+
+theorem stepML_who_runnable : stepML_who_runnable_stmt := by
+  intro ctx m m' ev h
+  exact schedPick_le_fine (stepML_sched ctx m m' ev h).1
+
+theorem stepML_switch_boundary : stepML_switch_boundary_stmt := by
+  intro ctx m m' ev h hne
+  have hs := (stepML_sched ctx m m' ev h).1
+  unfold schedPick at hs
+  cases ht : m.threads[m.cur]? with
+  | none => simp [ht] at hs
+  | some t =>
+    rw [ht] at hs
+    by_cases hb : t.atBoundary = true
+    · exact ⟨t, rfl, hb⟩
+    · simp [hb] at hs
+      exact (hne hs).elim
+
+theorem stepML_sched_record : stepML_sched_record_stmt := by
+  intro ctx m m' ev site menu h hm hn
+  obtain ⟨slot, hs, _, tail, hp⟩ := stepML_slot h
+  unfold MultiConfig.schedMenu? at hm
+  cases ht : m.threads[m.cur]? with
+  | none => simp [ht] at hm
+  | some t =>
+    rw [ht] at hm
+    dsimp only at hm
+    by_cases hb : t.atBoundary = true
+    · simp only [if_pos hb, Option.some.injEq, Prod.mk.injEq] at hm
+      obtain ⟨rfl, rfl⟩ := hm
+      refine ⟨slot, ?_, ?_⟩
+      · simpa [SchedSlot, ht, hb] using hs
+      · rw [hp]
+        simp [schedRecord, ht, hb, PickRecord.ofPick, Nat.not_le.mpr hn]
+    · simp [hb] at hm
+
+theorem asleep_silent : asleep_silent_stmt := by
+  intro ctx m hn m' ev h
+  have hw := stepML_who_runnable ctx m m' ev h
+  simp [hn] at hw
+
+theorem mainOutcome_not_deadlock : mainOutcome_not_deadlock_stmt := by
+  intro ctx m s hm hd
+  have := hd.2.2.1
+  simp [hm] at this
+
+theorem singleton_deadlock : singleton_deadlock_stmt := by
+  intro ctx s c hb
+  rcases hb with ⟨_, _, _, rfl⟩ | ⟨_, _, _, _, _, rfl⟩ |
+    ⟨_, _, _, rfl⟩ | ⟨_, _, _, _, rfl⟩ <;>
+    simp [PoolDeadlock, MultiConfig.panicMsg?, MultiConfig.mainOutcome?,
+      runnableIdxs, threadRunnable, Config.isTerminal, isBlockedConfig]
+
+set_option linter.unusedSimpArgs false in
+theorem stepML_frame : stepML_frame_stmt := by
+  intro ctx m m' ev h
+  cases h
+  all_goals try obtain ⟨ti, tj, rfl⟩ :=
+    PoolStructure.applyPairing_shape ‹applyPairing _ _ _ _ _ _ = _›
+  all_goals refine ⟨by simp, ?_⟩
+  all_goals intro j hj hne
+  all_goals apply Classical.byContradiction
+  all_goals intro hn
+  all_goals simp only [not_or] at hn
+  all_goals obtain ⟨hf, hp⟩ := hn
+  all_goals apply hf
+  all_goals simp_all [Array.getElem?_push, Array.getElem?_setIfInBounds,
+    Ne.symm hne, Nat.ne_of_lt hj]
+
+set_option linter.unusedSimpArgs false in
+theorem stepML_paired_trace : stepML_paired_trace_stmt := by
+  intro ctx m m' ev j h hj
+  cases h <;> simp only [StepEvent.action, StepAction.noConfusion, selectAction] at hj
+  all_goals first
+    | contradiction
+    | (cases hj
+       exact PoolStructure.applyPairing_trace ‹applyPairing _ _ _ _ _ _ = _›)
+    | (split at hj <;> cases hj)
+
+set_option linter.unusedSimpArgs false in
+theorem stepML_spawn : stepML_spawn_stmt := by
+  intro ctx m m' ev h
+  cases h
+  all_goals try obtain ⟨ti, tj, rfl⟩ :=
+    PoolStructure.applyPairing_shape ‹applyPairing _ _ _ _ _ _ = _›
+  all_goals simp [selectAction, StepEvent.trace]
+  all_goals intro n; split <;> simp
+
+theorem stepMulti_deadlock_elim : stepMulti_deadlock_elim_stmt := by
+  intro ctx m ch ch₁ rec hc h
+  have hr : runnableIdxs ctx m.shared m.threads ≠ [] := by cases hc <;> assumption
+  unfold stepMulti at h
+  cases hcur : m.threads[m.cur]? with
+  | none => rw [hcur] at h; cases h
+  | some t =>
+    rw [hcur] at h
+    by_cases hb : t.atBoundary = true
+    · simp only [hb, reduceIte] at h
+      cases hrs : schedSlots ctx m.shared m.threads m.cur t.boundarySite with
+      | nil =>
+        obtain ⟨i, hi⟩ := List.exists_mem_of_ne_nil _ hr
+        have hm := mem_schedSlots_of_runnable (cur := m.cur) (site := t.boundarySite) hi
+        simp [hrs] at hm
+      | cons r0 rest =>
+        rw [hrs] at h
+        dsimp only at h
+        rcases hcons : Choices.consumeAtE t.boundarySite (r0 :: rest).length ch₁
+          with ⟨pick, ch₂, ps⟩
+        rw [hcons] at h
+        cases hget : (r0 :: rest)[pick]? with
+        | none => rw [hget] at h; cases h
+        | some i =>
+          rw [hget] at h
+          have hm : i ∈ runnableIdxs ctx m.shared m.threads := by
+            apply schedSlots_mem hcur
+            rw [hrs]
+            exact List.mem_of_getElem? hget
+          have he := stepThreadInto_strict (ch := ch₂) (schedPick_of_boundary hcur hb hm)
+          exact ErrP.bind he (fun _ => ErrP.pure) _ h
+    · simp only [Bool.not_eq_true] at hb
+      simp only [hb, Bool.false_eq_true, reduceIte] at h
+      exact stepThreadInto_strict (schedPick_cur hcur hb) _ h
 
 end GoLean.GoCore.PoolSound

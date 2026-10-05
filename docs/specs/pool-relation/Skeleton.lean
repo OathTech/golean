@@ -29,17 +29,6 @@ open GoLean.GoCore.PoolStatement
 
 /-! ## Milestone 2 — attribution, registry boundaries (B) and the deadlock (C) -/
 
-theorem stepML_who_runnable : stepML_who_runnable_stmt := by sorry
-theorem stepML_sched : stepML_sched_stmt := by sorry
-theorem stepML_switch_boundary : stepML_switch_boundary_stmt := by sorry
-theorem stepML_sched_record : stepML_sched_record_stmt := by sorry
-theorem stepML_frame : stepML_frame_stmt := by sorry
-theorem stepML_paired_trace : stepML_paired_trace_stmt := by sorry
-theorem stepML_spawn : stepML_spawn_stmt := by sorry
-theorem asleep_silent : asleep_silent_stmt := by sorry
-theorem singleton_deadlock : singleton_deadlock_stmt := by sorry
-theorem mainOutcome_not_deadlock : mainOutcome_not_deadlock_stmt := by sorry
-theorem stepMulti_deadlock_elim : stepMulti_deadlock_elim_stmt := by sorry
 
 /-! ## Milestone 3 — the driver carriers vs `front`; terminal priority (E) -/
 

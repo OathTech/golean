@@ -3822,4 +3822,82 @@ example :
         = .ok (s₁, ch₁)) :=
   @GoLean.GoCore.SetupSound.runPkgInitM_ok_iff
 
+-- Pool grind M2, 2026-10-05: [AGENT Codex, pool grind]. Rows 1–527 unchanged.
+
+-- 528. `PoolSound.lean` — `stepML_who_runnable`
+example :
+  ∀ (ctx : ProgramCtx) (m m' : MultiConfig) (ev : StepEvent),
+    StepML ctx m m' ev → ev.who ∈ runnableIdxs ctx m.shared m.threads :=
+  @GoLean.GoCore.PoolSound.stepML_who_runnable
+
+-- 529. `PoolSound.lean` — `stepML_sched`
+example :
+  ∀ (ctx : ProgramCtx) (m m' : MultiConfig) (ev : StepEvent),
+    StepML ctx m m' ev → schedPick ctx m ev.who ∧ m'.cur = ev.who :=
+  @GoLean.GoCore.PoolSound.stepML_sched
+
+-- 530. `PoolSound.lean` — `stepML_switch_boundary`
+example :
+  ∀ (ctx : ProgramCtx) (m m' : MultiConfig) (ev : StepEvent),
+    StepML ctx m m' ev → ev.who ≠ m.cur →
+      ∃ t : Thread, m.threads[m.cur]? = some t ∧ t.atBoundary = true :=
+  @GoLean.GoCore.PoolSound.stepML_switch_boundary
+
+-- 531. `PoolSound.lean` — `stepML_sched_record`
+example :
+  ∀ (ctx : ProgramCtx) (m m' : MultiConfig) (ev : StepEvent) (site : ChoiceSite) (menu : List Nat),
+    StepML ctx m m' ev → m.schedMenu? ctx = some (site, menu) → 1 < menu.length →
+      ∃ slot : Nat, menu[slot]? = some ev.who ∧ ev.picks.head? = some ⟨site, menu.length, slot⟩ :=
+  @GoLean.GoCore.PoolSound.stepML_sched_record
+
+-- 532. `PoolSound.lean` — `stepML_frame`
+example :
+  ∀ (ctx : ProgramCtx) (m m' : MultiConfig) (ev : StepEvent),
+    StepML ctx m m' ev →
+      m.threads.size ≤ m'.threads.size ∧
+      ∀ j : Nat, j < m.threads.size → j ≠ ev.who →
+        m'.threads[j]? = m.threads[j]? ∨ ev.action = .paired j :=
+  @GoLean.GoCore.PoolSound.stepML_frame
+
+-- 533. `PoolSound.lean` — `stepML_paired_trace`
+example :
+  ∀ (ctx : ProgramCtx) (m m' : MultiConfig) (ev : StepEvent) (j : Nat),
+    StepML ctx m m' ev → ev.action = .paired j →
+      (∃ e : MemEvent, MemEvent.attributed j e ∈ ev.trace) ∨ MemEvent.hb (.rendezvous j) ∈ ev.trace :=
+  @GoLean.GoCore.PoolSound.stepML_paired_trace
+
+-- 534. `PoolSound.lean` — `stepML_spawn`
+example :
+  ∀ (ctx : ProgramCtx) (m m' : MultiConfig) (ev : StepEvent),
+    StepML ctx m m' ev →
+      ((∀ n : Nat, ev.action ≠ .spawned n) → m'.threads.size = m.threads.size) ∧
+      (∀ n : Nat, ev.action = .spawned n →
+        n = m.threads.size ∧ m'.threads.size = m.threads.size + 1 ∧
+          MemEvent.hb (.spawn n) ∈ ev.trace) :=
+  @GoLean.GoCore.PoolSound.stepML_spawn
+
+-- 535. `PoolSound.lean` — `asleep_silent`
+example :
+  ∀ (ctx : ProgramCtx) (m : MultiConfig),
+    runnableIdxs ctx m.shared m.threads = [] → ∀ (m' : MultiConfig) (ev : StepEvent), ¬ StepML ctx m m' ev :=
+  @GoLean.GoCore.PoolSound.asleep_silent
+
+-- 536. `PoolSound.lean` — `singleton_deadlock`
+example :
+  ∀ (ctx : ProgramCtx) (σ : Store) (c : Config),
+    Blocked c → (PoolDeadlock ctx ⟨#[.running c none], σ, 0⟩ ↔ wakeReady ctx σ c = false) :=
+  @GoLean.GoCore.PoolSound.singleton_deadlock
+
+-- 537. `PoolSound.lean` — `mainOutcome_not_deadlock`
+example :
+  ∀ (ctx : ProgramCtx) (m : MultiConfig) (σ : Store),
+    m.mainOutcome? = some σ → ¬ PoolDeadlock ctx m :=
+  @GoLean.GoCore.PoolSound.mainOutcome_not_deadlock
+
+-- 538. `PoolSound.lean` — `stepMulti_deadlock_elim`
+example :
+  ∀ (ctx : ProgramCtx) (m : MultiConfig) (ch ch₁ : Choices) (rec : List PickRecord),
+    Continue ctx m ch ch₁ rec → stepMulti ctx m ch₁ ≠ .error .deadlock :=
+  @GoLean.GoCore.PoolSound.stepMulti_deadlock_elim
+
 end GoLean.GoCore.BridgeSet
