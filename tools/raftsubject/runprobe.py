@@ -18,7 +18,17 @@ report.
 
     tools/raftsubject/runprobe.py [--function probeRawNode]
                                   [--main rawnode-probe-main.go]
-                                  [--fuel N] [--keep]
+                                  [--fuel N] [--choices N,N,...] [--keep]
+                                  [--expect-panic-member TEXT ...]
+
+Since route A slice S2 (docs/2026-10-04_route-a-protobuf-design.md §5
+«Through RawNode»): `--expect-panic-member TEXT` (repeatable) is the
+ABORT-MEMBERSHIP mode — PASS iff `go run` aborts with a `panic: <m>` line
+and the machine stops with status `panic` and message <m'>, where m and
+m' are each EXACTLY one of the listed members (they need not be the same
+member: the members are a latitude's admitted texts, each leg draws its
+own). `\\uXXXX` escapes in TEXT are decoded (the U+00A0 spelling).
+`--choices` is passed through to the machine leg verbatim.
 
 Needs `artifacts/nativefrontend` and `.lake/build/bin/golean`.
 Uncapped — point it only at this small tree.
@@ -27,6 +37,7 @@ Uncapped — point it only at this small tree.
 import argparse
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -66,11 +77,29 @@ def main():
                          "same drive WITH the harness logger installed is a "
                          "meaningful negative (nothing called the stub), not "
                          "a vacuous one.")
+    ap.add_argument("--expect-panic-member", action="append", default=None,
+                    metavar="TEXT",
+                    help="ABORT-MEMBERSHIP mode (route A S2): PASS iff both "
+                         "oracles abort with a panic whose text is EXACTLY "
+                         "one of the members given (repeat the flag per "
+                         "member; \\uXXXX escapes decoded). Each leg's "
+                         "member is reported.")
+    ap.add_argument("--choices", default=None, metavar="N,N,...",
+                    help="the machine leg's choice stream (passed to "
+                         "native-json-run --choices verbatim)")
     ap.add_argument("--keep", action="store_true")
     ap.add_argument("--out", default=os.path.join(REPO, "artifacts", "runprobe"))
     ap.add_argument("--frontend", default=os.path.join(REPO, "artifacts", "nativefrontend"))
     ap.add_argument("--golean", default=os.path.join(REPO, ".lake", "build", "bin", "golean"))
     args = ap.parse_args()
+    if args.expect_panic_member is not None and args.expect_stop is not None:
+        sys.exit("runprobe.py: --expect-stop and --expect-panic-member are "
+                 "different modes; give one")
+    members = None
+    if args.expect_panic_member is not None:
+        members = [re.sub(r"\\u([0-9a-fA-F]{4})",
+                          lambda mo: chr(int(mo.group(1), 16)), t)
+                   for t in args.expect_panic_member]
 
     for tool, hint in ((args.frontend, "GO111MODULE=off go build -o artifacts/nativefrontend ./tools/nativefrontend"),
                        (args.golean, "scripts/capped lake build golean")):
@@ -105,10 +134,25 @@ def main():
         print("runprobe: go run refused loudly, as the probe expects "
               "(last lines):\n  %s"
               % "\n  ".join(r.stderr.strip().splitlines()[-3:]))
+    elif members is not None:
+        if r.returncode == 0:
+            sys.exit("runprobe.py: expect-panic probe: go run SUCCEEDED, but "
+                     "the probe expects an abort:\n%s" % r.stderr)
+        plines = [l for l in r.stderr.splitlines() if l.startswith("panic: ")]
+        if len(plines) != 1:
+            sys.exit("runprobe.py: expect-panic probe: go run's stderr has "
+                     "%d 'panic: ' lines (want exactly 1):\n%s"
+                     % (len(plines), r.stderr))
+        go_text = plines[0][len("panic: "):]
+        if go_text not in members:
+            sys.exit("runprobe.py: expect-panic probe: go run aborted with "
+                     "%r, NOT a member of %r" % (go_text, members))
+        print("runprobe: go run aborted with member %d: %r"
+              % (members.index(go_text), go_text))
     elif r.returncode != 0:
         sys.exit("runprobe.py: go run failed:\n%s%s" % (r.stdout, r.stderr))
     go_verdict = r.stderr.strip()  # builtin println writes to stderr
-    if args.expect_stop is None:
+    if args.expect_stop is None and members is None:
         print("runprobe: go run %s -> %s" % (args.function, go_verdict))
 
     wire = os.path.join(out, "wire.json")
@@ -116,9 +160,11 @@ def main():
                        capture_output=True, text=True)
     if r.returncode != 0:
         sys.exit("runprobe.py: FRONTEND EXPORT REFUSED (the machine's first stop):\n%s" % r.stderr)
-    r = subprocess.run([args.golean, "native-json-run", "--input", wire,
-                        "--function", args.function, "--fuel", args.fuel],
-                       capture_output=True, text=True)
+    cmd = [args.golean, "native-json-run", "--input", wire,
+           "--function", args.function, "--fuel", args.fuel]
+    if args.choices is not None:
+        cmd += ["--choices", args.choices]
+    r = subprocess.run(cmd, capture_output=True, text=True)
     raw = r.stdout.strip()
     if not raw:
         sys.exit("runprobe.py: machine produced no observation:\n%s" % r.stderr)
@@ -140,6 +186,23 @@ def main():
             shutil.rmtree(out, ignore_errors=True)
         print("runprobe: PASS (expect-stop) — both oracles refuse this drive "
               "loudly; the fail-closed stub has teeth")
+        return
+    if members is not None:
+        if obs.get("status") != "panic":
+            sys.exit("runprobe.py: expect-panic probe: the machine's status "
+                     "is %r, not 'panic' (verbatim):\n%s"
+                     % (obs.get("status"), raw[:2000]))
+        m_text = obs.get("message")
+        if m_text not in members:
+            sys.exit("runprobe.py: expect-panic probe: the machine aborted "
+                     "with %r, NOT a member of %r" % (m_text, members))
+        print("runprobe: machine aborted with member %d: %r"
+              % (members.index(m_text), m_text))
+        if not args.keep:
+            shutil.rmtree(out, ignore_errors=True)
+        print("runprobe: PASS (expect-panic) — both oracles abort with a "
+              "member text (go: member %d, machine: member %d)"
+              % (members.index(go_text), members.index(m_text)))
         return
     if obs.get("status") != "ok":
         sys.exit("runprobe.py: THE MACHINE STOPPED (first stop, verbatim):\n%s" % raw)
