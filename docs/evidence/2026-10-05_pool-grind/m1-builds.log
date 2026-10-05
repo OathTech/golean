@@ -1,0 +1,13 @@
+2026-10-05 — [AGENT Codex, pool grind]
+Proof/integration tip: 16cdd1431a6c76e5416e14c0f0424692c3c1ffea
+These explicit target builds used the <=48G lock exemption; later CI was locked.
+
+$ GOLEAN_MEM_MAX=48G scripts/capped lake build GoLean.GoCore.PoolSound
+EXIT=0
+✔ [31/31] Built GoLean.GoCore.PoolSound (7.3s)
+Build completed successfully (31 jobs).
+
+$ GOLEAN_MEM_MAX=48G scripts/capped lake build GoLean.GoCore.BridgeSet
+EXIT=0
+✔ [36/36] Built GoLean.GoCore.BridgeSet (2.9s)
+Build completed successfully (36 jobs).

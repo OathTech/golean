@@ -1,0 +1,51 @@
+2026-10-05 — [AGENT Codex, pool grind]
+Command: GOLEAN_MEM_MAX=48G scripts/capped scripts/ci
+Environment: LEAN_NUM_THREADS=2; LC_ALL=C.UTF-8; TMPDIR=<worktree>/.tmp
+Box-wide lock held; EXIT=1. No --diff or --slow. Output below is an excerpt.
+
+Certified build: compiled inputs match; sha256=c3280fef0e38d89487be818a738a888b634613102ba21351d80761342a1c771e
+Certification controls: 68 PASS; wall_seconds=70.590
+certification: STALE certification: changed dependency build/files/GoLean.lean
+
+══ scripts/ci summary ══
+  ok   Tests/library ownership (no exceptions; executed builds checked at exit)
+  note build parallelism: LEAN_NUM_THREADS=2 (set by the caller — honoured as-is)
+  ok   oracle toolchain (go1.26.5 = pin)
+  ok   escape-hatch preflight
+  ok   meta-layer escape hatches (allowlist empty since the repo split)
+  ok   escape-hatch addendum (no decide +native / native-config spellings)
+  ok   bug-index cross-check
+  ok   feature-coverage (no dead tags)
+  ok   spec-anchor citations resolve at the pin
+  ok   stdlib admission register = frontend tables
+  ok   lane-validation fixtures (manifest gates reject bad shapes)
+  ok   evidence-on-main size gate
+  ok   AGENTS.md alias of CLAUDE.md
+  ok   imported-goose verbatim (above-marker bytes = pinned upstream)
+  ok   engine-isolation (core ↛ EnumDedup)
+  ok   memory-module raw call-site inventory (emit/peek discipline)
+  ok   core build (warning-free)
+  FAIL certificate provenance
+  ok   core totality audit (every GoLean/ module; required core theorems; poison controls)
+  ok   admission checker proofs and post-import audit
+  ok   declaration boundary
+  ok   wire boundary (byte-level controls through the real CLI)
+  ok   package-correct method identity
+  ok   unseq scheduler (Stage B)
+  ok   unseq wire (Stage C)
+  ok   semantic equations (scripts/check-equations)
+  ok   frontend pins (realized init-order deviation + twin wire = pinned bytes)
+  ok   import-goose fixtures (importer + verbatim guard reject bad shapes)
+  ok   frontend unit tests
+  ok   lowering-diagnostic tables
+  ok   coverage-harness unit tests
+  ok   eval tests (298 ok)
+  FAIL negative baseline diff (published meta manifest_sha256 [45683e60767c612e4fbb9d9d80e89229aa7d0c8c9b305758d0aba913d1cecbf6] does not match the current negative-corpus manifest — stale/foreign results; re-run scripts/coverage-negative)
+  FAIL baseline diff (published meta manifest_sha256 [a0af3893582de54a6fa0fa1aa1181d4f2b537c12368168782217a06feee8e626] does not match the current corpus manifest — stale/foreign results; re-run scripts/ci --diff)
+  note reconciler: 2 finding(s), 1 HIGH — report-only (details: tools/reconcile-records)
+  ok   executed library coverage (all declared libraries; all Tests modules)
+
+RESULT: FAIL
+Failed CI receipts retained: /home/dev/projects/golean/.claude/worktrees/pool-grind/.tmp/ci-libraries-r276u6zk
+CI coverage timing: close: seconds=0.016
+CI total wall seconds: 579

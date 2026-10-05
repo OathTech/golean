@@ -1,0 +1,46 @@
+Initial acceptance, under box-wide lock:
+$ python3 scripts/check-pool-spec --statements-only
+EXIT=1
+
+check-pool-spec: FAIL — statements without `theorem <name> : <name>_stmt` in PoolSound.lean:
+  stepML_who_runnable_stmt
+  stepML_sched_stmt
+  stepML_switch_boundary_stmt
+  stepML_sched_record_stmt
+  stepML_frame_stmt
+  stepML_paired_trace_stmt
+  stepML_spawn_stmt
+  asleep_silent_stmt
+  singleton_deadlock_stmt
+  mainOutcome_not_deadlock_stmt
+  stepMulti_deadlock_elim_stmt
+  front_continue_stmt
+  front_finish_stmt
+  front_refusal_stmt
+  poolFinish_functional_stmt
+  poolFinish_zero_not_continue_stmt
+  poolPrefix_comp_stmt
+  poolPrefix_split_stmt
+  poolPrefix_labelled_stmt
+  poolPrefix_erase_stmt
+  poolPrefix_run_stmt
+  pool_run_ok_iff_stmt
+  pool_run_terminal_iff_stmt
+  pool_run_fuelOut_iff_stmt
+  pool_run_refusal_iff_stmt
+  pool_classification_stmt
+  run_ok_prefix_stmt
+  continue_replay_stmt
+  poolPrefix_replay_stmt
+  program_prefix_stmt
+  stepML_single_sound_stmt
+  stepML_single_complete_stmt
+  singleton_prefix_embedding_stmt
+  singleton_finish_normal_stmt
+  singleton_finish_aborted_stmt
+  singleton_finish_refused_stmt
+  singleton_finish_fatal_stmt
+  singleton_finish_deadlock_stmt
+  singleton_run_stmt
+ok [self-tests] (a) glue `:= True` detected; (b) blank-line `∨ True` detected by the file and statement keys; (c) literals survive comment stripping
+ok [frozen] both files and 48 statements match docs/specs/pool-relation/FROZEN.sha256

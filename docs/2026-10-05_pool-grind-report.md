@@ -1,0 +1,60 @@
+# Pool grind — M1, 2026-10-05
+
+[AGENT Codex, pool grind] M1 proofs complete; acceptance BLOCKED. Stop here; M2 not started.
+Proof/integration tip: `16cdd1431a6c76e5416e14c0f0424692c3c1ffea`; the subsequent report commit changes records only.
+Input: `72e309c22b0869c142f7f28b628a2dba43a1a939`; branch `core/pool-grind-2026-10-05`; worktree `.claude/worktrees/pool-grind`.
+All nine declarations below are in `GoLean/GoCore/PoolSound.lean`, exactly `theorem <name> : <name>_stmt`:
+
+| Theorem | Frozen statement discharged |
+|---|---|
+| `raceUpdate_error` | `raceUpdate_error_stmt` |
+| `stepMulti_error_cases` | `stepMulti_error_cases_stmt` |
+| `schedSlot_iff` | `schedSlot_iff_stmt` |
+| `stepML_erase` | `stepML_erase_stmt` |
+| `stepML_sound` | `stepML_sound_stmt` |
+| `stepML_complete` | `stepML_complete_stmt` |
+| `stepM_lift` | `stepM_lift_stmt` |
+| `stepsML_erase` | `stepsML_erase_stmt` |
+| `stepMulti_replay` | `stepMulti_replay_stmt` |
+
+BridgeSet rows 503–511 write out the statements; the core audit requires all nine exports and three new modules.
+New proof-only helpers: `PoolErrorFacts.lean`, `PoolReplayFacts.lean`; no helpers added to pre-existing modules, no existing proof changed.
+Bounded adjustments: NONE. Frozen definitions, statement bodies, controls and hash lines unchanged; interpreter/scripts/baselines unchanged.
+The nine proved Skeleton lines were deleted (39 remain); one additive changelog row records M1.
+
+Acceptance uses `GOLEAN_MEM_MAX=48G`, box-wide lock, `TMPDIR=<worktree>/.tmp`, `LEAN_NUM_THREADS=2`; explicit target builds use the brief's lock exemption.
+Evidence: [gate tail](evidence/2026-10-05_pool-grind/m1-ci-tail.log), [core audit](evidence/2026-10-05_pool-grind/m1-core-audit.log), [target builds](evidence/2026-10-05_pool-grind/m1-builds.log), [pool checker](evidence/2026-10-05_pool-grind/m1-pool-spec.log).
+`scripts/capped lake build GoLean.GoCore.PoolSound`: EXIT=0, `Build completed successfully (31 jobs).`
+`scripts/capped lake build GoLean.GoCore.BridgeSet`: EXIT=0, `Build completed successfully (36 jobs).`
+`scripts/capped scripts/ci`: EXIT=1, `RESULT: FAIL`; certificate provenance plus two cached-manifest hash failures; all other summary checks pass, including escape-hatch preflight, warning-free build and 298 eval tests.
+`scripts/capped bash scripts/check-core-audit`: EXIT=0, `Core totality audit gate: PASS`; 59 modules / 545 required theorems; all five poison controls rejected.
+`python3 scripts/check-pool-spec --statements-only`: EXIT=1; `ok [frozen] both files and 48 statements match docs/specs/pool-relation/FROZEN.sha256`.
+`git diff --exit-code <input> --` the frozen files plus `{Multi,MultiSound,PoolTrace,PoolProjection,Prefix,ExecutionStatement}.lean`: EXIT=0, EMPTY; `git diff --check`: EXIT=0, EMPTY.
+Final diagnostics below also held the box-wide lock, with `GOLEAN_MEM_MAX=48G` and `LC_ALL=en_US.UTF-8`; combined script EXIT=1 (two known blockers).
+`scripts/capped python3 .tmp/m1-locale-check.py`: EXIT=0, `PASS: locale explains both manifest-hash failures; cached results/meta unchanged; no fresh differential run.`
+`scripts/capped scripts/coverage-baseline-diff --full`: EXIT=0, `no regression: 3884 case(s) run in latest.tsv match baselines/native-full.tsv`; with `--baseline baselines/negative-full.tsv artifacts/coverage/negative-latest.tsv`: EXIT=0, `no regression: 394 case(s) run in negative-latest.tsv match baselines/negative-full.tsv`.
+`scripts/capped python3 tools/certification.py check-records`: EXIT=2, verbatim BLOCKER 2 below; `scripts/capped python3 scripts/check-pool-spec --statements-only`: EXIT=1, same frozen PASS and missing-39 output as above.
+`scripts/capped scripts/check-evidence-size`: EXIT=0, `evidence-size gate: PASS`; 2402 tracked files / 32070513 bytes / 151 evidence dirs; 17 pre-existing allowlisted offenders, 0 new (the four new evidence files remain unchanged after this check).
+`scripts/capped git diff --exit-code <input> -- <same frozen/existing files above>`, `scripts/capped git diff --check`, `scripts/capped git diff --cached --check`: each EXIT=0, EMPTY.
+
+BLOCKER 1 (verbatim): ``check-pool-spec: FAIL — statements without `theorem <name> : <name>_stmt` in PoolSound.lean:`` (39 names in the linked output).
+`scripts/check-pool-spec` uses `--statements-only` only when PoolSound is absent; once present it demands all 48. Brief §§7–8 require staged acceptance, while §6 forbids script edits. No workaround or gate weakening applied; coordinator resolution required.
+BLOCKER 2 (verbatim): `certification: STALE certification: changed dependency build/files/GoLean.lean`.
+Required imports/new proof sources change the certified build inventory. Brief §6 forbids baseline edits and unrequested differential runs; no record refreshed. Coordinator must resolve the acceptance/boundary conflict. No claim that M1 is mergeable or gate green.
+Cached manifest diagnosis: `LC_ALL=en_US.UTF-8` reproduces both recorded hashes; `C.UTF-8` differs only in row order (3884 execution / 394 negative rows). Results/meta were copied unchanged from primary, recorded at `0b072f7d`, go1.26.5, clean; no fresh differential or re-certification performed.
+The queued full CI retry was cancelled before acquiring the lock (own waiter PID only, EXIT=143); no second full CI result is claimed.
+
+Still unproved (all deferred to M2–M5, unattempted under the required milestone stop; no residual Lean goal or counterexample asserted):
+M2: `stepML_who_runnable_stmt`, `stepML_sched_stmt`, `stepML_switch_boundary_stmt`, `stepML_sched_record_stmt`;
+`stepML_frame_stmt`, `stepML_paired_trace_stmt`, `stepML_spawn_stmt`, `asleep_silent_stmt`;
+`singleton_deadlock_stmt`, `mainOutcome_not_deadlock_stmt`, `stepMulti_deadlock_elim_stmt`.
+M3: `front_continue_stmt`, `front_finish_stmt`, `front_refusal_stmt`, `poolFinish_functional_stmt`, `poolFinish_zero_not_continue_stmt`.
+M4: `poolPrefix_comp_stmt`, `poolPrefix_split_stmt`, `poolPrefix_labelled_stmt`, `poolPrefix_erase_stmt`, `poolPrefix_run_stmt`;
+`pool_run_ok_iff_stmt`, `pool_run_terminal_iff_stmt`, `pool_run_fuelOut_iff_stmt`, `pool_run_refusal_iff_stmt`, `pool_classification_stmt`;
+`run_ok_prefix_stmt`, `continue_replay_stmt`, `poolPrefix_replay_stmt`, `program_prefix_stmt`.
+M5: `stepML_single_sound_stmt`, `stepML_single_complete_stmt`, `singleton_prefix_embedding_stmt`;
+`singleton_finish_normal_stmt`, `singleton_finish_aborted_stmt`, `singleton_finish_refused_stmt`, `singleton_finish_fatal_stmt`, `singleton_finish_deadlock_stmt`, `singleton_run_stmt`.
+No §5 false-statement/unprovability finding surfaced in M1; no material interpretation self-adjudicated.
+
+End state: proved M1 work preserved on the branch; clean after the records commit; primary checkout remains clean on input `main`; nothing merged or pushed.
+Audit ask to coordinator (CLAUDE.md, unconditional pre-merge ask; scope/waiver yours): please arrange adversarial review of these nine proofs, helper modules, pins/exports and the two acceptance blockers. No merge sign-off requested.
