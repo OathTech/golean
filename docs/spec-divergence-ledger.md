@@ -300,6 +300,19 @@ Discipline notes, recorded up front:
 - Status: open. Owed: (a) BUG-061, the measured residual; (b) the
   re-envelope decision above; (c) a latitude-inventory entry, since
   this ledger records faults and the envelope itself belongs there.
+- 2026-10-05 (evidence, recorded [AGENT] train worker r66; cross-session
+  message from the golean-logic coordinator, relayed): golean-logic
+  2026-10-05 (read-only, raft @ 20d3946d): no observable divergence
+  between the pinned init order and gc's — of 46 package-level vars
+  only `raft.raftLogger = Logger(defaultLogger)` and
+  `unicode.White_Space = _White_Space` reference another var, both
+  direct and in declaration order; no init() in the subject, no
+  closures/function/method values/interface calls/cross-package reads
+  in initializers; order only affects sentinel addresses (unobservable
+  beyond equality). They re-check at the re-pin bringing route A's
+  `proto` (`var prefix = pickPrefix()`: does any initializer call
+  Error() during init?). Their design: branch design/globals-init-1005,
+  docs/2026-10-05_globals-init-design.md §12.
 
 ### L-012 — deleted-then-recreated map entry during range: new entry or resurrected? — `spec-ambiguity` (ADOPTED READING, user ruling 2026-08-19)
 

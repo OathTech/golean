@@ -44,3 +44,7 @@ The ruling these implement, and every delta they introduce, are recorded in
 `reachability.py` needs an exported wire from it; `difftest.py` needs the Go
 module cache. None is capped, so none should be pointed at anything but this
 small tree.
+
+## Known issues
+
+- `runprobe.py --out` with a RELATIVE path breaks the go-run leg (GOPATH must be absolute); the default is absolute. Found in route A S2 (2026-10-05); recorded [AGENT] train worker r66. Not yet fixed — pass an absolute `--out`.

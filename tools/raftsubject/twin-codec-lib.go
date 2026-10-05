@@ -116,8 +116,8 @@ func (t *twin) proposeRawCC(id int, data []byte) {
 // harvestCC: twin-lib.go's harvest (persist before send, record,
 // send, apply, Advance — to LOCAL quiescence) with one extra arm: a
 // committed EntryConfChange is decoded through the subject proto,
-// applied, and re-encoded, and the leader-side Ready that first
-// carries the proposed payload is traced.
+// applied, and re-encoded, and every Ready whose Entries carry an
+// EntryConfChange is traced (per node).
 func (t *twin) harvestCC(nd *twinNode, want []byte) int {
 	rounds := 0
 	for nd.rn.HasReady() {

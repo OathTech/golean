@@ -1424,3 +1424,36 @@ EXIT=1, 1252 s — red on EXACTLY the 5a pair (`certificate provenance` + the ce
 **Green re-run at the records commit `0b072f7d`** ([AGENT] train worker, 2026-10-05): `ci --diff` EXIT=0, 1019 s, `RESULT: PASS`,
 baseline diff FULL 3884/3884 (3647 / 237, no regression), certificate provenance ok, semantic equations ok. Round 65 closed:
 route A slice S1 (the faithful protobuf codec) is on main; S2/S3 are separate lanes, each gated + audited (Q6).
+
+### Train r66 — route A S2, pool grind M1, staged pool-spec check — RULED (2026-10-05)
+
+[USER] Mike, 2026-10-05, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «Go ahead with Route A S2» (the
+lane `lane/route-a-s2-1005`, design `docs/2026-10-04_route-a-protobuf-design.md` D9 / §5 / §9); «(1) Go ahead, (2) merge once
+ready» — (1) = the setup-equations lane G-R1–G-R4 for the logic team, scheduled AFTER this train; (2) = the merge sign-off
+for ONE train carrying three branches: (a) `lane/route-a-s2-1005` @ `a82b3ab6`; (b) `core/pool-grind-2026-10-05` @
+`844e9393` (the Codex pool grind, milestone M1); (c) `tools/pool-spec-milestones-1005` @ `300e4f6f` (one commit on top of
+(b): the milestone-staged `scripts/check-pool-spec`, `docs/specs/pool-relation/{MILESTONES,LANDED}` at LANDED=M1, wired
+into `scripts/ci`).
+
+Audits (as relayed by the [AGENT] coordinator): (a) Opus audit MERGE-CLEAN, 3 optional nits — the `harvestCC` comment nit
+folded in at this train's records commit (`tools/raftsubject/twin-codec-lib.go`: «every Ready whose Entries carry an
+EntryConfChange is traced (per node)»; comment only); (b) Opus audit MERGE-CLEAN, 1 nit; (c) reviewed before the
+sign-off (its verdict text was not relayed to the train worker). M1 acceptance blockers named in the grind report
+(`docs/2026-10-05_pool-grind-report.md`): the staged check was missing — `check-pool-spec` demanded all 48 discharges once
+`PoolSound.lean` existed — FIXED by (c) ([AGENT] coordinator); the stale certification — EXPECTED, refreshed at step 5a.
+Train: `train/r66` = (a)'s 4 commits then (b)'s 2 + (c)'s 1, cherry-picked onto main `72e309c2`, 0 conflicts.
+
+Records at this train ([AGENT] train worker): BridgeSet header RE-PIN 11 (rows 1–502 byte-identical, 503–511 added);
+post-offer changelog `docs/changelog/20d3946d-WINDOW.md` rows r66 ×2; the logic team's request G-R1–G-R4 (2026-10-05, by
+cross-session message, «with Mike's approval») recorded verbatim in `docs/2026-10-05_note-from-logic-team-setup-equations.md`
+with the coordinator's reply (acknowledged; one lane after train r66; additive, old forms kept as corollaries; G-R4's exact
+statement sent to them for review before proving); their init-order finding recorded under `docs/spec-divergence-ledger.md`
+L-011 (2026-10-05 line: no observable divergence at raft @ `20d3946d`; re-check at the re-pin bringing route A's `proto`);
+the S2 tooling bug (`runprobe.py --out` with a relative path breaks the go-run leg) rowed in `tools/raftsubject/README.md`
+«Known issues».
+
+Open item flagged, NOT changed ([AGENT] train worker): (b)'s records commit appended a «Pool grind milestone record»
+section to `docs/changelog/61958f2e-WINDOW.md`, whose header says FROZEN at the offer — the grind brief
+(`docs/2026-10-04_pool-relation-grind-brief.md` lines 75/103, written at r64 before the post-offer changelog existed)
+points the grinder there. Kept as reviewed and merged; the post-offer changelog carries the r66 M1 row. Whether to
+move that section and re-point the brief is the coordinator's call.

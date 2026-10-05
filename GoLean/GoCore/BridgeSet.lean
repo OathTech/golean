@@ -164,6 +164,10 @@ WINDOW-REVIEW ROUND (`docs/2026-10-03_window-review.md` F1; [AGENT packet D work
 BYTE-IDENTICAL; row 502 ADDED — the boxing law `applyStrictOp_toInterface_string` (`any("…")` is the interface
 value at the canonical dynamic type `string`, read-only, trace-free), the law the client's rewritten FACT 3
 (a callee's BOXED string panic unwinding past the caller's write) bottoms out in.
+
+RE-PIN 11 — pool grind M1 (Codex, `844e9393`, train r66; [AGENT train worker] 2026-10-05, merge sign-off
+[USER] Mike 2026-10-05 «(1) Go ahead, (2) merge once ready», relayed): rows 1–502 BYTE-IDENTICAL; rows 503–511
+ADDED (the nine M1 statements of `PoolStatement.lean`, proved in `PoolSound.lean`).
 -/
 
 namespace GoLean.GoCore.BridgeSet
