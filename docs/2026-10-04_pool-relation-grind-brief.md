@@ -15,12 +15,21 @@ state: all 48 statements discharged, `python3 scripts/check-pool-spec --landed M
 cherry-picks). (2) `BridgeSet.lean` rows 1–527 are taken (503–511 = M1; 512–527 = the setup equations, train r67): your
 rows start at 528, rows 1–527 byte-identical. (3) Milestones are CHECKPOINTS, not stops: at each milestone commit, run that
 milestone's §8 acceptance, record it in the report, and CONTINUE without waiting — never ask for review mid-run. You may
-prove statements out of the §7 order. (4) STOP only for: the end state reached; a §5 HARD STOP (a statement false or
-unprovable as written) — and even then, first finish every statement that does not depend on it, then stop with the
-finding; or an environment failure you cannot resolve inside the rules. (5) Expected and NOT a stop: `scripts/ci`'s
+prove statements out of the §7 order. (4) A statement found FALSE or unprovable as written is NOT a stop (amended [USER] Mike 2026-10-05, verbatim, relayed:
+«a false / unprovable statement isn't a stop. Instead, *prove all provable statements* and for other statements
+*propose a repair*»). For each such statement: leave its frozen `_stmt` UNCHANGED and undischarged (never weaken it, never
+patch the interpreter); write in `docs/specs/pool-relation/REPAIRS.md` the counterexample or obstruction (a concrete pool
+and tape, or the missing invariant), a PROPOSED repaired statement as exact Lean, and why it is the closest true
+statement; where you can, prove the repair as `theorem <name>_repaired` in a separate module
+`GoLean/GoCore/PoolRepairs.lean` (imported by `GoLean`, NOT pinned in `BridgeSet`, NOT frozen) — a proved repair is
+strong evidence. Statements that depend on a refuted one: prove them from the repaired form in `PoolRepairs.lean` if
+possible, and say so. Then CONTINUE. The [USER] rules on each repair; adopting one re-freezes the statement (a new
+design-gate decision, not yours). STOP only for: the end state, or an environment failure you cannot resolve inside the
+rules. The END STATE is: every provable statement discharged in `PoolSound.lean`, every other one has a REPAIRS.md entry,
+and `check-pool-spec --landed M5` either exits 0 or lists exactly the REPAIRS.md statements as owed. (5) Expected and NOT a stop: `scripts/ci`'s
 certificate-provenance STALE red (and its google-search echo) on your branch — the landing train refreshes it.
-(6) End state: branch clean, all checkpoints committed, report complete (§9, one section per milestone + the final
-`--landed M5` output); the coordinator audits and lands the whole run, bumping `LANDED`. Where this paragraph and §7–§9
+(6) Finish: branch clean, all checkpoints committed, report complete (§9, one section per milestone, the final
+`--landed M5` output and a summary of REPAIRS.md); the coordinator audits and lands the whole run, bumping `LANDED`. Where this paragraph and §5's HARD STOP or §7–§9
 differ, THIS paragraph governs (no ambiguity STOP for that difference).
 **Ambiguity policy: if two readings of this brief differ materially, STOP, write both in the report, do not choose.**
 
