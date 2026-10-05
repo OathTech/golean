@@ -1470,3 +1470,9 @@ owed); semantic equations ok; frontend pins ok; negative baseline no regression 
 `observations_sha256` IDENTICAL (moved: `inputs.build` and `inputs.files` for `scripts/check-pool-spec`, `scripts/ci`,
 `tools/raftsubject/twin-codec-lib.go`; the receipt — source `46244c48`, 224.881 s, binary `f026bf0b…`) — INSTALLED; a
 provenance refresh. Tail: `docs/evidence/2026-10-05_train-r66/r66-ci-slow.tail.txt`.
+
+**Green re-run at the records commit `239e2da8`** ([AGENT] train worker, 2026-10-05): `ci --diff` EXIT=0, 915 s, `RESULT: PASS`,
+baseline diff FULL 3884/3884 (3647 / 237, no regression), certificate provenance ok, semantic equations ok, pool spec
+freeze + discharge ok (LANDED=M1), frontend pins ok. Round 66 closed: route A S2 and pool grind M1 (with the staged
+pool-spec check in the gate) are on main; the Codex grind continues on `core/pool-grind-2026-10-05` (M2–M5); the
+setup-equations lane (G-R1–G-R4) is next ([USER] «(1) Go ahead», relayed).
