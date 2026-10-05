@@ -197,13 +197,13 @@
       "tools/lowerdiag/causes.go": "e6bc9126a4b0d9e11a8e1c20f85504d25b562fe934aaa61bde0c8fa37d8e9bf1",
       "tools/lowerdiag/causes.tsv": "aca959d98b3a8a468ed449f35ccf4ae2269b6cd600e3db0581203a5a9f80952e",
       "tools/lowerdiag/library-refusals.tsv": "7b0bcb638b6518d8970b24bb09bd4315bf0f76669dccddd95e5ffedfcb504990",
-      "tools/lowerdiag/lowerdiag_test.go": "6cf41b83b50a166e8c1197baaf6e71000ad75bf5a5e77762efc41a4ffe95bbbb",
+      "tools/lowerdiag/lowerdiag_test.go": "a531a37c77a08c8ae544578e935ca97738f37a4ee96a02c2c0d2e34f80b2557e",
       "tools/lowerdiag/machine-surface.tsv": "c13f2854eb057a35ada7b5e7a6b84fe64c6a01bb4828dae9bc19039aae2d7927",
       "tools/lowerdiag/main.go": "48c0923f4f47cdda430a81bf4cdfabd7a5587d7963d470fac982395346cc6483",
       "tools/lowerdiag/report.go": "f6271003d9bec55389e1effe2b0a77768b5df6d6a704a0c6f39bac0271666ea3",
-      "tools/lowerdiag/static.go": "8d41989c0bbd25438815b824039c5ed57f3c0696b0c2d7ac48e0b00bc8ae1b98",
+      "tools/lowerdiag/static.go": "cc13c89b72ff35ebb6f108809c6ae7b23103cda6fe9d6951576ec5760bbbdd10",
       "tools/lowerdiag/testdata/calib/dot.go": "17f8ca1eb6d03b1077560337f686aab3d3458794a6c1b30a8548896a84c68b73",
-      "tools/lowerdiag/testdata/calib/main.go": "c5448845222bae14e42d0d5542b6c724c81f67cdda2f4b992063cf13d8ac0ce3",
+      "tools/lowerdiag/testdata/calib/main.go": "5c3a02f81c3771d608fe31ea929db8a4211d1aaaa359296e3aedf4a11d5ea766",
       "tools/lowerdiag/testdata/fivecauses/main.go": "7181b411e6dc97fcfd60e7372e4366873f73cb6ef0c87a8a3b7f2149bb83c54a",
       "tools/lowerdiag/unclassified-formats.txt": "eeffe354ec098921f55903116616990f668fd2ced64d0476e075d88627176c41",
       "tools/lsimports/main.go": "d2a94c7fa6844296978a0ad12eecbaf1eb87cb792e52229cca28259b380c2e23",
@@ -332,12 +332,12 @@
       "--engine",
       "dedup"
     ],
-    "finished_utc": "2026-10-05T06:36:51.730148+00:00",
+    "finished_utc": "2026-10-05T23:47:07.544964+00:00",
     "git_dirty": false,
-    "source_commit": "67175ae6e5292f13d50e183c57744e64eddf2e20",
-    "started_utc": "2026-10-05T06:34:04.352143+00:00",
+    "source_commit": "b0a1a9171176ffb3cb1f67e1a821cdb72dd6080e",
+    "started_utc": "2026-10-05T23:44:12.322084+00:00",
     "stats_sha256": "80614849ba8583af41ce62fc0a0cefdc7a5b6f22fbb482784a125e8bd19f3283",
-    "wall_seconds": 163.931
+    "wall_seconds": 170.671
   },
   "schema": "golean-certification-v1"
 }
