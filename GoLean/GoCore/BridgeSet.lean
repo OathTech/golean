@@ -182,7 +182,8 @@ G-R3 `setup_lookup_arg_from` / `setup_lookup_result_from` / `setup_resultLocs_fr
 `setup_heap_size_from` (the `{}`-store lemmas over an arbitrary pre-bind store, at `entrySlot s₁`).
 Rows 397 and 399–402 (`runProgramSetup_noInit`, the `{}` forms) are UNCHANGED — their instances.
 G-R4 (`SetupStatement.runInitConfig_eq_execStmtLoop_stmt`) is a STATEMENT ONLY, not pinned here: its
-text is out for the logic team's review before it is proved.
+text is out for the logic team's review before it is proved (superseded by RE-PIN 13: G-R4 proved and
+pinned, rows 521–527).
 
 RE-PIN 13 — G-R4 APPROVED and proved, with the logic team's four answers ([AGENT worker, lane
 `core/setup-equations-1005`], 2026-10-05; the golean-logic coordinator's reply of 2026-10-05, by

@@ -291,8 +291,8 @@ example : runProgramM 12 initControl "F" #[] = .ok { values := #[.int 7 .int] } 
 /-- The init configuration `runPkgInitM` builds for the control. -/
 def initControlConfig : Config := .exec initControlBody [] (.frame [] [] [] [] .stop pkgInitFuncId)
 
-/-- G-R4 at the control, positive: no print position and no blocked configuration on the
-initializer's path, so the init loop and the entry loop AGREE — at the fuel the body needs (10
+/-- G-R4 at the control, positive: no print position on the initializer's path, so the init
+loop and the entry loop AGREE — at the fuel the body needs (10
 steps: both reach `.next .stop` with the written cell), at fuel 9 (both fuel out) and at 0. -/
 example : runInitConfig ⟨initControl⟩ 10 { heap := #[.value .int (.int 0 .int)] } initControlConfig []
     = execStmtLoop ⟨initControl⟩ 10 { heap := #[.value .int (.int 0 .int)] } initControlConfig [] :=

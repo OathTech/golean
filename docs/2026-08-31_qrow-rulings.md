@@ -1484,3 +1484,37 @@ the grind brief §6 re-pointed to the post-offer changelog before M2. (2) The st
 (`tools/pool-spec-milestones-1005`) had NO separate adversarial audit — an [AGENT] call: gate tooling that only tightens
 acceptance, exercised by its own self-tests and the green r66 gate (rule: gates are speedbumps, not audit targets);
 the [USER]'s sign-off «merge once ready» covered it.
+
+### Train r67 — the setup equations G-R1–G-R4 for the logic team — RULED (2026-10-05)
+
+[USER] Mike, 2026-10-05, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «(1) Go ahead» (the lane
+`core/setup-equations-1005`, the golean-logic team's request G-R1–G-R4 of 2026-10-05, recorded verbatim with the
+coordinator's reply in `docs/2026-10-05_note-from-logic-team-setup-equations.md`; ruled under train r66); «merge it» — the
+merge sign-off for `core/setup-equations-1005` @ `d4651a5f` (two commits: `36e0b302` G-R1–G-R3 proved, G-R4 stated for
+review; `d4651a5f` G-R4 approved and proved).
+
+The logic team's review (the golean-logic coordinator, 2026-10-05, by cross-session message, relayed by the [AGENT]
+coordinator — verbatim in `docs/2026-10-05_setup-equations.md` §3.1): «G-R1–G-R3 look exactly right, and both deviations
+are improvements … On G-R4, approved as stated with these answers: (a) DROP the no-blocked premise. If it's dispensable
+(stepFn throws on a blocked config so no Prefix passes one, and both loops give .deadlock), the theorem is stronger and
+cleaner without it; our init-mode adequacy wouldn't have to discharge it. (b) Keep `initPrintRefusal? c' = none` — it's
+the guard runInitConfig actually uses … Keep the `n ≤ fuel` bound as you found it must be. (c) Yes, please pin the
+run_ok_iff-style corollaries for runInitConfig (ok / panic / fuelOut / deadlock characterizations via Prefix/Finish, under
+the no-print premise) — our init-prefix adequacy theorem composes with the existing Prefix/Finish statements through them.
+(d) Yes, please add the runPkgInitM / markInitPhase wrapper equation relating runPkgInitM to runInitConfig on the init
+configuration — G-R1's premise is stated over runPkgInitM's result, so we need that link to reach runInitConfig and then
+(via G-R4) execStmtLoop. No other changes. Prove as above; we'll consume them at the next (additive) re-pin.» All four
+applied (rows 521–527); dropping the premise held (no counterexample; the proof went through without it).
+
+Audits (as relayed by the [AGENT] coordinator): two Opus adversarial audits, both MERGE-CLEAN — `36e0b302` (G-R1–G-R3 and
+the G-R4 statement) and `36e0b302..d4651a5f` (G-R4 proved, the corollaries, the wrapper). Nits closed at this train's
+records commit ([AGENT] train worker; comment/label only, no statement changed): `GoLean/GoCore/BridgeSet.lean` RE-PIN 12
+paragraph marked «(superseded by RE-PIN 13: G-R4 proved and pinned, rows 521–527)»; `GoLean/GoCore/SetupStatement.lean`
+the positive G-R4 control's docstring no longer names a «no blocked configuration» condition (the premise was dropped);
+`scripts/mem-callsites.tsv` the `seedStep` row's class reads NO EXECUTION (the «PROOF DEVICE, » prefix dropped).
+BridgeSet rebuilt in the train worktree EXIT=0; `scripts/check-mem-callsites` PASS (74 rows).
+
+Train: `train/r67` = the lane's 2 commits cherry-picked onto main `7a0a1568`, 0 conflicts (no BridgeSet re-pin on main
+since the lane's base). Records: post-offer changelog `docs/changelog/20d3946d-WINDOW.md` row r67 (additive; rows 512–527
+named; the `{}` lemmas unchanged). The G-R4 relay is CLOSED; the logic team consumes rows 512–527 at their next additive
+re-pin.
