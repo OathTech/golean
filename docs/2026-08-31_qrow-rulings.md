@@ -1420,3 +1420,7 @@ EXIT=1, 1252 s — red on EXACTLY the 5a pair (`certificate provenance` + the ce
 5a-class row red; frontend pins ok (twin wire = pinned `661022b9…`); negative baseline no regression (394). Candidate:
 `schema`, `claim` and `observations_sha256` IDENTICAL (only `inputs.files` and the receipt moved; receipt `34a0d9d7`,
 202.308 s, binary `cae2c786…`) — INSTALLED; a provenance refresh. Tail: `docs/evidence/2026-10-04_train-r65/r65-ci-slow.tail.txt`.
+
+**Green re-run at the records commit `0b072f7d`** ([AGENT] train worker, 2026-10-05): `ci --diff` EXIT=0, 1019 s, `RESULT: PASS`,
+baseline diff FULL 3884/3884 (3647 / 237, no regression), certificate provenance ok, semantic equations ok. Round 65 closed:
+route A slice S1 (the faithful protobuf codec) is on main; S2/S3 are separate lanes, each gated + audited (Q6).
