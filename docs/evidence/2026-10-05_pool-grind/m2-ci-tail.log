@@ -1,0 +1,48 @@
+[AGENT Codex, pool grind] M2; GOLEAN_MEM_MAX=48G; box-wide lock held; LC_ALL=en_US.UTF-8.
+Command: scripts/capped scripts/ci; EXIT=1; no --diff/--slow.
+Certified build: compiled inputs match; sha256=c9e2413fa3b84f2a1b6dc9836e45af2794fcd3c5c8a8f93be723e38ed12f574a
+certification: STALE certification: changed dependency build/files/GoLean.lean
+
+══ scripts/ci summary ══
+  ok   Tests/library ownership (no exceptions; executed builds checked at exit)
+  note build parallelism: LEAN_NUM_THREADS=2 (set by the caller — honoured as-is)
+  ok   oracle toolchain (go1.26.5 = pin)
+  ok   escape-hatch preflight
+  ok   meta-layer escape hatches (allowlist empty since the repo split)
+  ok   escape-hatch addendum (no decide +native / native-config spellings)
+  ok   bug-index cross-check
+  ok   feature-coverage (no dead tags)
+  ok   spec-anchor citations resolve at the pin
+  ok   stdlib admission register = frontend tables
+  ok   lane-validation fixtures (manifest gates reject bad shapes)
+  ok   evidence-on-main size gate
+  ok   AGENTS.md alias of CLAUDE.md
+  ok   imported-goose verbatim (above-marker bytes = pinned upstream)
+  ok   engine-isolation (core ↛ EnumDedup)
+  ok   memory-module raw call-site inventory (emit/peek discipline)
+  ok   core build (warning-free)
+  FAIL certificate provenance
+  ok   core totality audit (every GoLean/ module; required core theorems; poison controls)
+  ok   admission checker proofs and post-import audit
+  ok   declaration boundary
+  ok   wire boundary (byte-level controls through the real CLI)
+  ok   package-correct method identity
+  ok   unseq scheduler (Stage B)
+  ok   unseq wire (Stage C)
+  ok   semantic equations (scripts/check-equations)
+  ok   pool spec freeze + discharge (scripts/check-pool-spec)
+  ok   frontend pins (realized init-order deviation + twin wire = pinned bytes)
+  ok   import-goose fixtures (importer + verbatim guard reject bad shapes)
+  ok   frontend unit tests
+  ok   lowering-diagnostic tables
+  ok   coverage-harness unit tests
+  ok   eval tests (298 ok)
+  ok   negative baseline diff (no regression) [recorded at ab047d0, HEAD is 7474939 — stale]
+  ok   baseline diff FULL (3884/3884, no regression) [recorded at ab047d0, HEAD is 7474939 — stale]
+  note reconciler: 2 finding(s), 1 HIGH — report-only (details: tools/reconcile-records)
+  ok   executed library coverage (all declared libraries; all Tests modules)
+
+RESULT: FAIL
+Failed CI receipts retained: /home/dev/projects/golean/.claude/worktrees/pool-grind-m2m5/.tmp/ci-libraries-96n7c25l
+CI coverage timing: close: seconds=0.016
+CI total wall seconds: 598

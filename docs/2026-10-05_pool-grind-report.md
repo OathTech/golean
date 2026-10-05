@@ -58,3 +58,46 @@ No §5 false-statement/unprovability finding surfaced in M1; no material interpr
 
 End state: proved M1 work preserved on the branch; clean after the records commit; primary checkout remains clean on input `main`; nothing merged or pushed.
 Audit ask to coordinator (CLAUDE.md, unconditional pre-merge ask; scope/waiver yours): please arrange adversarial review of these nine proofs, helper modules, pins/exports and the two acceptance blockers. No merge sign-off requested.
+
+## M2 — continuous run checkpoint (2026-10-05)
+
+[AGENT Codex, pool grind] Proof tip `74749393ff4f778268e52b892a6db015c91986fc`; new branch `core/pool-grind-m2m5-2026-10-05`, worktree `.claude/worktrees/pool-grind-m2m5`, input `a3e18ff5`.
+Authority: [USER] 2026-10-05 continuous-run instruction and amended brief; checkpoints commit and continue, no intermediate review pause.
+All eleven frozen statements below are discharged in `PoolSound.lean`:
+- `stepML_who_runnable` : `stepML_who_runnable_stmt`.
+- `stepML_sched` : `stepML_sched_stmt`.
+- `stepML_switch_boundary` : `stepML_switch_boundary_stmt`.
+- `stepML_sched_record` : `stepML_sched_record_stmt`.
+- `stepML_frame` : `stepML_frame_stmt`.
+- `stepML_paired_trace` : `stepML_paired_trace_stmt`.
+- `stepML_spawn` : `stepML_spawn_stmt`.
+- `asleep_silent` : `asleep_silent_stmt`.
+- `singleton_deadlock` : `singleton_deadlock_stmt`.
+- `mainOutcome_not_deadlock` : `mainOutcome_not_deadlock_stmt`.
+- `stepMulti_deadlock_elim` : `stepMulti_deadlock_elim_stmt`.
+
+BridgeSet rows 528–538; rows 1–527 byte-identical. All eleven exports added; `PoolStructure` enrolled in default imports and the audit.
+Helpers in the pre-existing `PoolSound`: private `stepML_slot`. New module helpers: `PoolStructure.applyPairing_shape`, `applyPairing_trace`.
+No bounded adjustment, frozen hash change, existing `MultiSound`/`PoolProjection` edit, or repair. Runtime and scripts unchanged.
+All following gates ran under the box-wide lock with `GOLEAN_MEM_MAX=48G`, `LC_ALL=en_US.UTF-8`, `LEAN_NUM_THREADS=2`, worktree-local TMPDIR.
+`scripts/capped scripts/ci`: EXIT=1, `RESULT: FAIL`; the ONLY non-ok summary step is certificate provenance (expected by the amended brief).
+Verbatim cause: `certification: STALE certification: changed dependency build/files/GoLean.lean`. No re-certification, baseline edit, or fresh differential run.
+`scripts/capped bash scripts/check-core-audit`: EXIT=0, `Core totality audit gate: PASS`; 62 modules / 572 required theorems / five poison controls rejected.
+`scripts/capped python3 scripts/check-pool-spec --landed M2`: EXIT=0; all 20 M1–M2 statements discharged; frozen files and all 48 hashes match; 28 later statements owed.
+`scripts/capped lake build GoLean.GoCore.BridgeSet`: EXIT=0, `Build completed successfully (40 jobs).`; earlier PoolSound target EXIT=0 (33 jobs).
+`scripts/capped python3 .tmp/check-frozen.py`: EXIT=0; frozen files, existing modules, LANDED/MILESTONES and rows 1–527 byte-identical to input; `git diff --check`: EXIT=0, EMPTY.
+Escape-hatch preflight and warning-free build PASS within CI; 298 eval tests pass. Cached comparisons: 3884 execution and 394 negative cases match; records from clean `ab047d0` at go1.26.5, no fresh run.
+[CI tail](evidence/2026-10-05_pool-grind/m2-ci-tail.log) · [audit tail](evidence/2026-10-05_pool-grind/m2-audit-tail.log) · [pool checker](evidence/2026-10-05_pool-grind/m2-pool-spec.log) · [exit ledger / checks](evidence/2026-10-05_pool-grind/m2-checks.log).
+`scripts/capped scripts/check-evidence-size`: EXIT=0, `evidence-size gate: PASS`; 0 new offenders; the four new M2 evidence files were checked in the index.
+
+Still owed at this checkpoint (not attempted yet; no residual goal or counterexample claimed):
+M3: `front_continue_stmt`, `front_finish_stmt`, `front_refusal_stmt`, `poolFinish_functional_stmt`.
+`poolFinish_zero_not_continue_stmt`.
+M4: `poolPrefix_comp_stmt`, `poolPrefix_split_stmt`, `poolPrefix_labelled_stmt`, `poolPrefix_erase_stmt`.
+`poolPrefix_run_stmt`, `pool_run_ok_iff_stmt`, `pool_run_terminal_iff_stmt`, `pool_run_fuelOut_iff_stmt`.
+`pool_run_refusal_iff_stmt`, `pool_classification_stmt`, `run_ok_prefix_stmt`, `program_prefix_stmt`.
+`continue_replay_stmt`, `poolPrefix_replay_stmt`.
+M5: `stepML_single_sound_stmt`, `stepML_single_complete_stmt`, `singleton_finish_normal_stmt`, `singleton_finish_aborted_stmt`.
+`singleton_finish_refused_stmt`, `singleton_finish_fatal_stmt`, `singleton_finish_deadlock_stmt`, `singleton_prefix_embedding_stmt`.
+`singleton_run_stmt`.
+M2 complete; acceptance differs from green only by the authorized stale-certificate red. Continue to M3; no review ask, merge or push.

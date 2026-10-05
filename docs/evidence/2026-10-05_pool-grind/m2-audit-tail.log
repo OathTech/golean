@@ -1,0 +1,6 @@
+Command: GOLEAN_MEM_MAX=48G scripts/capped bash scripts/check-core-audit; locked; EXIT=0.
+Expected poison controls compiled and were rejected. Tail:
+Core totality audit: 62 GoLean modules in the closure (53 under GoLean.GoCore), all on disk; 572 required theorems present; 20664 declarations across all imported local modules; classical trio only
+Typed audit: core-audit: 5 compiled controls passed
+core-audit-audit PASS; scratch removed (10484687 owned bytes; dependencies symlinked)
+Core totality audit gate: PASS

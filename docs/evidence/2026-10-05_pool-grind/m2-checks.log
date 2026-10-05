@@ -1,0 +1,16 @@
+Checkpoint runs through bash .tmp/locked bash .tmp/checkpoint.sh M2; cap=48G; lock held; combined EXIT=1.
+EXIT ledger:
+ci	1
+core-audit	0
+pool-spec	0
+bridge	0
+frozen	0
+whitespace	0
+
+BridgeSet build tail:
+Build completed successfully (40 jobs).
+
+Frozen input check:
+PASS: frozen files, existing modules, LANDED/MILESTONES, and BridgeSet rows 1–527 byte-identical to a3e18ff5.
+
+Whitespace tail: EMPTY (EXIT=0).
