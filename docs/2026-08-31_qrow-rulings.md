@@ -1518,3 +1518,16 @@ Train: `train/r67` = the lane's 2 commits cherry-picked onto main `7a0a1568`, 0 
 since the lane's base). Records: post-offer changelog `docs/changelog/20d3946d-WINDOW.md` row r67 (additive; rows 512–527
 named; the `{}` lemmas unchanged). The G-R4 relay is CLOSED; the logic team consumes rows 512–527 at their next additive
 re-pin.
+
+**Merge train r67 — the 5a record** ([AGENT] train worker, 2026-10-05). Pre-merge main `7a0a1568` →
+`refs/snapshots/r67/main`; train tip `67175ae6` fast-forwarded; BridgeSet (+ SetupStatement) rebuilt in the train worktree
+EXIT=0 (480 s); primary build `scripts/build-certified` EXIT=0 (23 s, binary `0c808381…`, 0 foreign references).
+`release-check --base refs/snapshots/r67/main` EXIT=2 (EXPECTED — STALE, `build/files/GoLean.lean`: the two new setup
+modules). `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --slow` EXIT=1, 1204 s — red on EXACTLY the 5a pair
+(`certificate provenance` + the certified row `imported-goose/channel/google-search` PASS→FAIL); 3884 rows, 3646 PASS /
+238 FAIL = the pin 3647 / 237 with the one 5a-class row red; pool spec freeze + discharge ok (LANDED=M1: all 9 discharged,
+39 owed); semantic equations ok; core totality audit ok; frontend pins ok; negative baseline no regression. Candidate:
+`schema`, `claim` and `observations_sha256` IDENTICAL (moved: `inputs.build` — `GoLean.lean`, `GoLean/GoCore/BridgeSet.lean`,
+the new `GoLean/GoCore/SetupSound.lean` and `GoLean/GoCore/SetupStatement.lean` — and `inputs.files` for
+`scripts/mem-callsites.tsv`; the receipt — source `67175ae6`, 163.931 s, binary `0c808381…`) — INSTALLED; a provenance
+refresh. Tail: `docs/evidence/2026-10-05_train-r67/r67-ci-slow.tail.txt`.
