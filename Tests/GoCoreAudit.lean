@@ -52,6 +52,21 @@ def requiredModules : List Name := [
 /-- Required core theorems (the `semantic interface` audit's CORE exports, plus the
 re-homed regressions). Each must exist as a theorem. -/
 def exports : List Name := [
+    -- Pool grind M4, BridgeSet rows 544–557.
+    ``GoLean.GoCore.PoolSound.poolPrefix_comp,
+    ``GoLean.GoCore.PoolSound.poolPrefix_split,
+    ``GoLean.GoCore.PoolSound.poolPrefix_labelled,
+    ``GoLean.GoCore.PoolSound.poolPrefix_erase,
+    ``GoLean.GoCore.PoolSound.poolPrefix_run,
+    ``GoLean.GoCore.PoolSound.pool_run_ok_iff,
+    ``GoLean.GoCore.PoolSound.pool_run_terminal_iff,
+    ``GoLean.GoCore.PoolSound.pool_run_fuelOut_iff,
+    ``GoLean.GoCore.PoolSound.pool_run_refusal_iff,
+    ``GoLean.GoCore.PoolSound.pool_classification,
+    ``GoLean.GoCore.PoolSound.run_ok_prefix,
+    ``GoLean.GoCore.PoolSound.program_prefix,
+    ``GoLean.GoCore.PoolSound.continue_replay,
+    ``GoLean.GoCore.PoolSound.poolPrefix_replay,
     -- Pool grind M3, BridgeSet rows 539–543.
     ``GoLean.GoCore.PoolSound.front_continue,
     ``GoLean.GoCore.PoolSound.front_finish,

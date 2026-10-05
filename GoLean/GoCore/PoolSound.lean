@@ -1051,4 +1051,265 @@ theorem poolFinish_functional : poolFinish_functional_stmt := by
       | raced hc₂ hs₂ hr₂ =>
           cases hc <;> cases hc₂ <;> simp_all [PoolDeadlock]
 
+/-! ## M4 — the run lifts and the program seam -/
+
+private theorem poolOut_cons (d : DriverEvent) (ds : List DriverEvent) (acc : GoString) :
+    poolOut (d :: ds) acc = poolOut ds (d.event.out.foldl GoString.append acc) := rfl
+
+theorem poolPrefix_comp : poolPrefix_comp_stmt := by
+  intro ctx n k m m₁ mf r r₁ rf ch ch₁ chf des des' h₁ h₂
+  induction h₁ with
+  | done => simpa using h₂
+  | step hc hs hr _ ih =>
+      rw [Nat.add_right_comm]
+      exact .step hc hs hr (ih h₂)
+
+theorem poolPrefix_split : poolPrefix_split_stmt := by
+  intro ctx n k
+  induction n with
+  | zero =>
+      intro m mf r rf ch chf des h
+      exact ⟨[], des, m, r, ch, rfl, .done, by simpa using h⟩
+  | succ n ih =>
+      intro m mf r rf ch chf des h
+      rw [Nat.add_right_comm] at h
+      cases h with
+      | step hc hs hr hp =>
+          obtain ⟨ds₁, ds₂, m₁, r₁, ch₁, rfl, h₁, h₂⟩ := ih _ _ _ _ _ _ _ hp
+          exact ⟨_ :: ds₁, ds₂, m₁, r₁, ch₁, rfl, .step hc hs hr h₁, h₂⟩
+
+theorem poolPrefix_labelled : poolPrefix_labelled_stmt := by
+  intro ctx n m mf r rf ch chf des h
+  induction h with
+  | done => exact .refl _
+  | step _ hs _ _ ih => exact .head (stepML_sound _ _ _ _ _ _ hs) ih
+
+theorem poolPrefix_erase : poolPrefix_erase_stmt := by
+  intro ctx n m mf r rf ch chf des h
+  exact stepsML_erase _ _ _ _ (poolPrefix_labelled _ _ _ _ _ _ _ _ _ h)
+
+theorem poolPrefix_run : poolPrefix_run_stmt := by
+  intro ctx n k m mf r rf ch chf des acc h
+  induction h generalizing acc with
+  | done => simp only [Nat.zero_add]; rfl
+  | step hc hs hr _ ih =>
+      rw [Nat.add_right_comm, unfold_driver, (front_continue _ _ _ _).mpr ⟨_, hc⟩]
+      simpa only [hs, hr, poolOut_cons] using ih _
+
+theorem continue_replay : continue_replay_stmt := by
+  intro ctx m ch ch₁ rec h ch₂ ch₂' hr
+  cases h with
+  | running hp hm hn => cases hr; exact .running hp hm hn
+  | window hp hm hn hc => exact .window hp hm hn (consult_replay hc hr)
+
+theorem poolPrefix_replay : poolPrefix_replay_stmt := by
+  intro ctx n m mf r rf ch chf des h
+  induction h with
+  | done => intro ch₂ ch₂' hr; cases hr; exact .done
+  | step hc hs hr _ ih =>
+      intro ch₂ ch₂' hp
+      simp only [List.flatMap_cons] at hp
+      obtain ⟨mid, hrec, htail⟩ := replays_append.mp hp
+      obtain ⟨next, hwin, hev⟩ := replays_append.mp hrec
+      exact .step (continue_replay _ _ _ _ _ hc _ _ hwin)
+        (stepMulti_replay _ _ _ _ _ _ hs _ _ hev) hr (ih _ _ htail)
+
+private theorem front_error_cases {ctx : ProgramCtx} {m : MultiConfig} {ch : Choices}
+    {e : Stop} (h : front ctx m ch = .error e) :
+    (∃ rr, e = .refusal rr) ∨ (∃ msg, e = .panic msg) ∨ e = .deadlock := by
+  unfold front at h
+  repeat' first
+    | split at h
+    | (cases h; first | exact .inl ⟨_, rfl⟩ | exact .inr (.inl ⟨_, rfl⟩) | exact .inr (.inr rfl))
+  all_goals cases h
+
+/-- The finite driver trace retains the exact ending witness and output fold. -/
+private inductive RunEvidence (ctx : ProgramCtx) (fuel : Nat) (m : MultiConfig)
+    (r : RaceState) (ch : Choices) (acc : GoString) : GoLean.Semantics.Pool.Result → Prop where
+  | normal {n des mf rf ch₀ rec sf chf} :
+      n ≤ fuel → PoolPrefix ctx n m r ch des mf rf ch₀ →
+      PoolFinish ctx mf rf ch₀ rec (.normal sf chf) 0 →
+      RunEvidence ctx fuel m r ch acc (poolOut des acc, .ok (sf, chf))
+  | terminal {n des mf rf ch₀ rec o cost t} :
+      n + cost ≤ fuel → PoolPrefix ctx n m r ch des mf rf ch₀ →
+      PoolFinish ctx mf rf ch₀ rec o cost → o.terminal? = some t →
+      RunEvidence ctx fuel m r ch acc (poolOut des acc, .error (.terminal t))
+  | exhausted {des mf rf ch₀ ch₁ rec} :
+      PoolPrefix ctx fuel m r ch des mf rf ch₀ → Continue ctx mf ch₀ ch₁ rec →
+      RunEvidence ctx fuel m r ch acc (poolOut des acc, .error .fuelOut)
+  | refusal {n des mf rf ch₀ rr} :
+      PoolPrefix ctx n m r ch des mf rf ch₀ →
+      ((n ≤ fuel ∧ front ctx mf ch₀ = .error (.refusal rr)) ∨
+       (n + 1 ≤ fuel ∧ ∃ ch₁ rec, Continue ctx mf ch₀ ch₁ rec ∧
+         stepMulti ctx mf ch₁ = .error (.refusal rr))) →
+      RunEvidence ctx fuel m r ch acc (poolOut des acc, .error (.refusal rr))
+
+private theorem run_evidence {ctx : ProgramCtx} {fuel m r ch acc result}
+    (h : Run ctx fuel m r ch acc result) : RunEvidence ctx fuel m r ch acc result := by
+  induction h with
+  | stop hf =>
+      rcases front_error_cases hf with ⟨rr, rfl⟩ | ⟨msg, rfl⟩ | rfl
+      · exact .refusal (n := 0) (des := []) .done (.inl ⟨Nat.zero_le _, hf⟩)
+      · exact .terminal (n := 0) (des := []) (Nat.zero_le _) .done
+          (PoolFrontFacts.front_aborted.mp hf) rfl
+      · exact .terminal (n := 0) (des := []) (Nat.zero_le _) .done
+          (PoolFrontFacts.front_deadlock.mp hf) rfl
+  | done hf =>
+      obtain ⟨rec, hf⟩ := PoolFrontFacts.front_normal.mp hf
+      exact .normal (n := 0) (des := []) (Nat.zero_le _) .done hf
+  | exhausted hf =>
+      obtain ⟨rec, hc⟩ := PoolFrontFacts.front_continue.mp hf
+      exact .exhausted (des := []) .done hc
+  | stepError hf hs =>
+      obtain ⟨rec, hc⟩ := PoolFrontFacts.front_continue.mp hf
+      rcases stepMulti_error_cases _ _ _ _ hs with ⟨rr, rfl⟩ | ⟨msg, rfl⟩ | rfl
+      · exact .refusal (n := 0) (des := []) .done (.inr ⟨by omega, _, _, hc, hs⟩)
+      · exact .terminal (n := 0) (des := []) (by omega) .done (.fatal hc hs) rfl
+      · exact False.elim (stepMulti_deadlock_elim _ _ _ _ _ hc hs)
+  | raceError hf hs hr =>
+      have he := raceUpdate_error _ _ _ _ hr
+      subst he
+      obtain ⟨rec, hc⟩ := PoolFrontFacts.front_continue.mp hf
+      exact .terminal (n := 0) (des := []) (by omega) .done (.raced hc hs hr) rfl
+  | step hf hs hr _ ih =>
+      obtain ⟨rec, hc⟩ := PoolFrontFacts.front_continue.mp hf
+      cases ih with
+      | normal hn hp hend =>
+          exact .normal (by omega) (.step hc hs hr hp) hend
+      | terminal hn hp hend ht =>
+          exact .terminal (by omega) (.step hc hs hr hp) hend ht
+      | exhausted hp hend => exact .exhausted (.step hc hs hr hp) hend
+      | refusal hp hend =>
+          apply RunEvidence.refusal (.step hc hs hr hp)
+          rcases hend with ⟨hn, hf⟩ | ⟨hn, h⟩
+          · exact .inl ⟨by omega, hf⟩
+          · exact .inr ⟨by omega, h⟩
+
+private theorem finish_normal_run {ctx : ProgramCtx} {m : MultiConfig} {r : RaceState}
+    {ch rec sf chf} (h : PoolFinish ctx m r ch rec (.normal sf chf) 0)
+    (fuel : Nat) (acc : GoString) : execProgLoopOut ctx fuel m r ch acc = (acc, .ok (sf, chf)) := by
+  rw [unfold_driver, PoolFrontFacts.front_normal.mpr ⟨rec, h⟩]
+
+private theorem finish_terminal_run {ctx : ProgramCtx} {m : MultiConfig} {r : RaceState}
+    {ch rec o cost t fuel} (h : PoolFinish ctx m r ch rec o cost)
+    (ht : o.terminal? = some t) (hn : cost ≤ fuel) (acc : GoString) :
+    execProgLoopOut ctx fuel m r ch acc = (acc, .error (.terminal t)) := by
+  cases h with
+  | aborted hp =>
+      cases ht
+      rw [unfold_driver, (PoolFrontFacts.front_aborted (r := r)).mpr (.aborted hp)]
+  | normal => cases ht
+  | exitWindow => cases ht
+  | deadlock hp =>
+      cases ht
+      rw [unfold_driver, (PoolFrontFacts.front_deadlock (r := r)).mpr (.deadlock hp)]
+  | fatal hc hs =>
+      cases ht
+      cases fuel with
+      | zero => omega
+      | succ fuel => rw [unfold_driver, PoolFrontFacts.front_continue.mpr ⟨_, hc⟩]; simp only [hs]
+  | raced hc hs hr =>
+      cases ht
+      cases fuel with
+      | zero => omega
+      | succ fuel => rw [unfold_driver, PoolFrontFacts.front_continue.mpr ⟨_, hc⟩]; simp only [hs, hr]
+
+theorem pool_run_ok_iff : pool_run_ok_iff_stmt := by
+  intro ctx fuel m r ch acc out sf chf
+  constructor
+  · intro h
+    cases run_evidence (run_iff.mp h) with
+    | normal hn hp hf => exact ⟨_, _, _, _, _, _, hn, hp, hf, rfl⟩
+  · rintro ⟨n, des, mf, rf, ch₀, rec, hn, hp, hf, rfl⟩
+    have he := poolPrefix_run ctx n (fuel - n) m mf r rf ch ch₀ des acc hp
+    have hn' : n + (fuel - n) = fuel := by omega
+    rw [hn'] at he
+    rw [he]
+    exact finish_normal_run hf _ _
+
+theorem pool_run_terminal_iff : pool_run_terminal_iff_stmt := by
+  intro ctx fuel m r ch acc out t
+  constructor
+  · intro h
+    cases run_evidence (run_iff.mp h) with
+    | terminal hn hp hf ht => exact ⟨_, _, _, _, _, _, _, _, hn, hp, hf, ht, rfl⟩
+  · rintro ⟨n, des, mf, rf, ch₀, rec, o, cost, hn, hp, hf, ht, rfl⟩
+    have he := poolPrefix_run ctx n (fuel - n) m mf r rf ch ch₀ des acc hp
+    have hn' : n + (fuel - n) = fuel := by omega
+    rw [hn'] at he
+    rw [he]
+    exact finish_terminal_run hf ht (by omega) _
+
+theorem pool_run_fuelOut_iff : pool_run_fuelOut_iff_stmt := by
+  intro ctx fuel m r ch acc out
+  constructor
+  · intro h
+    cases run_evidence (run_iff.mp h) with
+    | exhausted hp hc => exact ⟨_, _, _, _, _, _, hp, hc, rfl⟩
+  · rintro ⟨des, mf, rf, ch₀, ch₁, rec, hp, hc, rfl⟩
+    have he := poolPrefix_run ctx fuel 0 m mf r rf ch ch₀ des acc hp
+    rw [Nat.add_zero] at he
+    rw [he, unfold_driver, PoolFrontFacts.front_continue.mpr ⟨rec, hc⟩]
+
+theorem pool_run_refusal_iff : pool_run_refusal_iff_stmt := by
+  intro ctx fuel m r ch acc out rr
+  constructor
+  · intro h
+    cases run_evidence (run_iff.mp h) with
+    | refusal hp he => exact ⟨_, _, _, _, _, hp, rfl, he⟩
+  · rintro ⟨n, des, mf, rf, ch₀, hp, rfl, hend⟩
+    have hn : n ≤ fuel := by rcases hend with ⟨hn, _⟩ | ⟨hn, _⟩ <;> omega
+    have he := poolPrefix_run ctx n (fuel - n) m mf r rf ch ch₀ des acc hp
+    have hn' : n + (fuel - n) = fuel := by omega
+    rw [hn'] at he
+    rw [he, unfold_driver]
+    rcases hend with ⟨_, hf⟩ | ⟨hn, ch₁, rec, hc, hs⟩
+    · rw [hf]
+    · rw [PoolFrontFacts.front_continue.mpr ⟨rec, hc⟩]
+      have hk : ∃ k, fuel - n = k + 1 := ⟨fuel - n - 1, by omega⟩
+      obtain ⟨k, hk⟩ := hk
+      simp only [hk, hs]
+
+theorem pool_classification : pool_classification_stmt := by
+  intro ctx fuel m r ch acc
+  rcases hr : execProgLoopOut ctx fuel m r ch acc with ⟨out, res⟩
+  cases res with
+  | ok res =>
+      obtain ⟨sf, chf⟩ := res
+      exact .inl ⟨out, sf, chf, hr, (pool_run_ok_iff _ _ _ _ _ _ _ _ _).mp hr⟩
+  | error e =>
+      cases e with
+      | terminal t =>
+          exact .inr (.inl ⟨out, t, hr, (pool_run_terminal_iff _ _ _ _ _ _ _ _).mp hr⟩)
+      | fuelOut =>
+          exact .inr (.inr (.inl ⟨out, hr, (pool_run_fuelOut_iff _ _ _ _ _ _ _).mp hr⟩))
+      | refusal rr =>
+          exact .inr (.inr (.inr ⟨out, rr, hr, (pool_run_refusal_iff _ _ _ _ _ _ _ _).mp hr⟩))
+
+theorem run_ok_prefix : run_ok_prefix_stmt := by
+  intro ctx fuel m r ch acc out sf chf
+  rw [← run_iff]
+  exact pool_run_ok_iff _ _ _ _ _ _ _ _ _
+
+theorem program_prefix : program_prefix_stmt := by
+  intro fuel p name args ch ctx c₀ s₀ locs ch₁ ro hsetup hrun
+  unfold runProgramPoolOutM at hrun
+  simp only [hsetup] at hrun
+  rcases he : execProgLoopOut ctx fuel ⟨#[.running c₀ none], s₀, 0⟩ {} ch₁ GoString.empty
+    with ⟨out, res⟩
+  simp only [he] at hrun
+  cases res with
+  | error e => cases hrun
+  | ok res =>
+      obtain ⟨sf, chf⟩ := res
+      dsimp only at hrun
+      cases hl : loadMany ctx sf locs with
+      | error e => rw [hl] at hrun; cases hrun
+      | ok vs =>
+          rw [hl] at hrun
+          cases hrun
+          obtain ⟨n, des, mf, rf, ch₀, rec, hn, hp, hf, ho⟩ :=
+            (pool_run_ok_iff _ _ _ _ _ _ _ _ _).mp he
+          exact ⟨n, des, mf, rf, ch₀, chf, rec, sf, hn, hp, hf, ho, by simpa using hl⟩
+
 end GoLean.GoCore.PoolSound

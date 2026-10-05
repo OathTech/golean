@@ -14,3 +14,5 @@ PASS: frozen files, existing modules, LANDED/MILESTONES, and BridgeSet rows 1–
 
 whitespace:
 EMPTY (EXIT=0).
+
+evidence-size gate: PASS — 2415 tracked files / 32110168 bytes in 154 evidence dirs; caps file 262144 B, dir 4194304 B, no archives, no source copies; 17 pre-existing offender(s) allowlisted (frozen 2026-09-07), 0 new

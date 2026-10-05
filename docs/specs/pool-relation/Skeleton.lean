@@ -35,20 +35,6 @@ open GoLean.GoCore.PoolStatement
 
 /-! ## Milestone 4 — the run lifts (F) and the program seam (G) -/
 
-theorem poolPrefix_comp : poolPrefix_comp_stmt := by sorry
-theorem poolPrefix_split : poolPrefix_split_stmt := by sorry
-theorem poolPrefix_labelled : poolPrefix_labelled_stmt := by sorry
-theorem poolPrefix_erase : poolPrefix_erase_stmt := by sorry
-theorem poolPrefix_run : poolPrefix_run_stmt := by sorry
-theorem pool_run_ok_iff : pool_run_ok_iff_stmt := by sorry
-theorem pool_run_terminal_iff : pool_run_terminal_iff_stmt := by sorry
-theorem pool_run_fuelOut_iff : pool_run_fuelOut_iff_stmt := by sorry
-theorem pool_run_refusal_iff : pool_run_refusal_iff_stmt := by sorry
-theorem pool_classification : pool_classification_stmt := by sorry
-theorem run_ok_prefix : run_ok_prefix_stmt := by sorry
-theorem continue_replay : continue_replay_stmt := by sorry
-theorem poolPrefix_replay : poolPrefix_replay_stmt := by sorry
-theorem program_prefix : program_prefix_stmt := by sorry
 
 /-! ## Milestone 5 — the single-goroutine reduction (H) -/
 

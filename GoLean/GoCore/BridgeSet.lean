@@ -3940,4 +3940,141 @@ example :
     PoolFinish ctx m r ch rec o 0 → ¬ Continue ctx m ch ch₁ rec' :=
   @GoLean.GoCore.PoolSound.poolFinish_zero_not_continue
 
+-- Pool grind M4, 2026-10-05: [AGENT Codex, pool grind].
+
+open GoLean.GoCore.PoolStatement
+
+-- 544. `PoolSound.lean` — `poolPrefix_comp`
+example :
+  ∀ (ctx : ProgramCtx) (n k : Nat) (m m₁ mf : MultiConfig) (r r₁ rf : RaceState)
+    (ch ch₁ chf : Choices) (des des' : List DriverEvent),
+    PoolPrefix ctx n m r ch des m₁ r₁ ch₁ → PoolPrefix ctx k m₁ r₁ ch₁ des' mf rf chf →
+    PoolPrefix ctx (n + k) m r ch (des ++ des') mf rf chf :=
+  @GoLean.GoCore.PoolSound.poolPrefix_comp
+
+-- 545. `PoolSound.lean` — `poolPrefix_split`
+example :
+  ∀ (ctx : ProgramCtx) (n k : Nat) (m mf : MultiConfig) (r rf : RaceState) (ch chf : Choices)
+    (des : List DriverEvent),
+    PoolPrefix ctx (n + k) m r ch des mf rf chf →
+    ∃ (des₁ des₂ : List DriverEvent) (m₁ : MultiConfig) (r₁ : RaceState) (ch₁ : Choices),
+      des = des₁ ++ des₂ ∧ PoolPrefix ctx n m r ch des₁ m₁ r₁ ch₁ ∧
+        PoolPrefix ctx k m₁ r₁ ch₁ des₂ mf rf chf :=
+  @GoLean.GoCore.PoolSound.poolPrefix_split
+
+-- 546. `PoolSound.lean` — `poolPrefix_labelled`
+example :
+  ∀ (ctx : ProgramCtx) (n : Nat) (m mf : MultiConfig) (r rf : RaceState) (ch chf : Choices)
+    (des : List DriverEvent),
+    PoolPrefix ctx n m r ch des mf rf chf → StepsML ctx m mf (DriverEvent.events des) :=
+  @GoLean.GoCore.PoolSound.poolPrefix_labelled
+
+-- 547. `PoolSound.lean` — `poolPrefix_erase`
+example :
+  ∀ (ctx : ProgramCtx) (n : Nat) (m mf : MultiConfig) (r rf : RaceState) (ch chf : Choices)
+    (des : List DriverEvent),
+    PoolPrefix ctx n m r ch des mf rf chf → PoolSteps ctx m mf :=
+  @GoLean.GoCore.PoolSound.poolPrefix_erase
+
+-- 548. `PoolSound.lean` — `poolPrefix_run`
+example :
+  ∀ (ctx : ProgramCtx) (n k : Nat) (m mf : MultiConfig) (r rf : RaceState) (ch chf : Choices)
+    (des : List DriverEvent) (acc : GoString),
+    PoolPrefix ctx n m r ch des mf rf chf →
+    execProgLoopOut ctx (n + k) m r ch acc = execProgLoopOut ctx k mf rf chf (poolOut des acc) :=
+  @GoLean.GoCore.PoolSound.poolPrefix_run
+
+-- 549. `PoolSound.lean` — `pool_run_ok_iff`
+example :
+  ∀ (ctx : ProgramCtx) (fuel : Nat) (m : MultiConfig) (r : RaceState) (ch : Choices)
+    (acc out : GoString) (σ : Store) (chf : Choices),
+    execProgLoopOut ctx fuel m r ch acc = (out, .ok (σ, chf)) ↔
+      ∃ (n : Nat) (des : List DriverEvent) (mf : MultiConfig) (rf : RaceState) (chf₀ : Choices)
+        (rec : List PickRecord),
+        n ≤ fuel ∧ PoolPrefix ctx n m r ch des mf rf chf₀ ∧
+          PoolFinish ctx mf rf chf₀ rec (.normal σ chf) 0 ∧ out = poolOut des acc :=
+  @GoLean.GoCore.PoolSound.pool_run_ok_iff
+
+-- 550. `PoolSound.lean` — `pool_run_terminal_iff`
+example :
+  ∀ (ctx : ProgramCtx) (fuel : Nat) (m : MultiConfig) (r : RaceState) (ch : Choices)
+    (acc out : GoString) (t : Terminal),
+    execProgLoopOut ctx fuel m r ch acc = (out, .error (.terminal t)) ↔
+      ∃ (n : Nat) (des : List DriverEvent) (mf : MultiConfig) (rf : RaceState) (chf : Choices)
+        (rec : List PickRecord) (o : PoolOutcome) (cost : Nat),
+        n + cost ≤ fuel ∧ PoolPrefix ctx n m r ch des mf rf chf ∧
+          PoolFinish ctx mf rf chf rec o cost ∧ o.terminal? = some t ∧ out = poolOut des acc :=
+  @GoLean.GoCore.PoolSound.pool_run_terminal_iff
+
+-- 551. `PoolSound.lean` — `pool_run_fuelOut_iff`
+example :
+  ∀ (ctx : ProgramCtx) (fuel : Nat) (m : MultiConfig) (r : RaceState) (ch : Choices)
+    (acc out : GoString),
+    execProgLoopOut ctx fuel m r ch acc = (out, .error .fuelOut) ↔
+      ∃ (des : List DriverEvent) (mf : MultiConfig) (rf : RaceState) (chf ch₁ : Choices)
+        (rec : List PickRecord),
+        PoolPrefix ctx fuel m r ch des mf rf chf ∧ Continue ctx mf chf ch₁ rec ∧
+          out = poolOut des acc :=
+  @GoLean.GoCore.PoolSound.pool_run_fuelOut_iff
+
+-- 552. `PoolSound.lean` — `pool_run_refusal_iff`
+example :
+  ∀ (ctx : ProgramCtx) (fuel : Nat) (m : MultiConfig) (r : RaceState) (ch : Choices)
+    (acc out : GoString) (rr : Refusal),
+    execProgLoopOut ctx fuel m r ch acc = (out, .error (.refusal rr)) ↔
+      ∃ (n : Nat) (des : List DriverEvent) (mf : MultiConfig) (rf : RaceState) (chf : Choices),
+        PoolPrefix ctx n m r ch des mf rf chf ∧ out = poolOut des acc ∧
+          ((n ≤ fuel ∧ front ctx mf chf = .error (.refusal rr)) ∨
+           (n + 1 ≤ fuel ∧ ∃ (ch₁ : Choices) (rec : List PickRecord),
+              Continue ctx mf chf ch₁ rec ∧ stepMulti ctx mf ch₁ = .error (.refusal rr))) :=
+  @GoLean.GoCore.PoolSound.pool_run_refusal_iff
+
+-- 553. `PoolSound.lean` — `pool_classification`
+example :
+  ∀ (ctx : ProgramCtx) (fuel : Nat) (m : MultiConfig) (r : RaceState) (ch : Choices)
+    (acc : GoString),
+    PoolClassOk ctx fuel m r ch acc ∨ PoolClassTerminal ctx fuel m r ch acc ∨
+      PoolClassFuelOut ctx fuel m r ch acc ∨ PoolClassRefusal ctx fuel m r ch acc :=
+  @GoLean.GoCore.PoolSound.pool_classification
+
+-- 554. `PoolSound.lean` — `run_ok_prefix`
+example :
+  ∀ (ctx : ProgramCtx) (fuel : Nat) (m : MultiConfig) (r : RaceState) (ch : Choices)
+    (acc out : GoString) (σ : Store) (chf : Choices),
+    Run ctx fuel m r ch acc (out, .ok (σ, chf)) ↔
+      ∃ (n : Nat) (des : List DriverEvent) (mf : MultiConfig) (rf : RaceState) (chf₀ : Choices)
+        (rec : List PickRecord),
+        n ≤ fuel ∧ PoolPrefix ctx n m r ch des mf rf chf₀ ∧
+          PoolFinish ctx mf rf chf₀ rec (.normal σ chf) 0 ∧ out = poolOut des acc :=
+  @GoLean.GoCore.PoolSound.run_ok_prefix
+
+-- 555. `PoolSound.lean` — `program_prefix`
+example :
+  ∀ (fuel : Nat) (p : Program) (name : String) (args : Array GoValue) (ch : Choices)
+    (pctx : ProgramCtx) (c₀ : Config) (s₀ : Store) (locs : List Loc) (ch₁ : Choices)
+    (ro : Readout),
+    runProgramSetupM fuel p name args ch = .ok (pctx, c₀, s₀, locs, ch₁) →
+    runProgramPoolOutM fuel p name args ch = .ok ro →
+    ∃ (n : Nat) (des : List DriverEvent) (mf : MultiConfig) (rf : RaceState) (chf₀ chf : Choices)
+      (rec : List PickRecord) (sf : Store),
+      n ≤ fuel ∧ PoolPrefix pctx n ⟨#[Thread.running c₀ none], s₀, 0⟩ {} ch₁ des mf rf chf₀ ∧
+        PoolFinish pctx mf rf chf₀ rec (.normal sf chf) 0 ∧
+        ro.output = poolOut des GoString.empty ∧ loadMany pctx sf locs = .ok ro.values.toList :=
+  @GoLean.GoCore.PoolSound.program_prefix
+
+-- 556. `PoolSound.lean` — `continue_replay`
+example :
+  ∀ (ctx : ProgramCtx) (m : MultiConfig) (ch ch₁ : Choices) (rec : List PickRecord),
+    Continue ctx m ch ch₁ rec → ∀ ch₂ ch₂' : Choices, replays rec ch₂ ch₂' → Continue ctx m ch₂ ch₂' rec :=
+  @GoLean.GoCore.PoolSound.continue_replay
+
+-- 557. `PoolSound.lean` — `poolPrefix_replay`
+example :
+  ∀ (ctx : ProgramCtx) (n : Nat) (m mf : MultiConfig) (r rf : RaceState) (ch chf : Choices)
+    (des : List DriverEvent),
+    PoolPrefix ctx n m r ch des mf rf chf →
+    ∀ ch₂ ch₂' : Choices, replays (des.flatMap fun d => d.window ++ d.event.picks) ch₂ ch₂' →
+      PoolPrefix ctx n m r ch₂ des mf rf ch₂' :=
+  @GoLean.GoCore.PoolSound.poolPrefix_replay
+
 end GoLean.GoCore.BridgeSet

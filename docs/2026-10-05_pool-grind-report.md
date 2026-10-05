@@ -130,3 +130,4 @@ M5: `stepML_single_sound_stmt`, `stepML_single_complete_stmt`, `singleton_finish
 `singleton_finish_refused_stmt`, `singleton_finish_fatal_stmt`, `singleton_finish_deadlock_stmt`, `singleton_prefix_embedding_stmt`, `singleton_run_stmt`.
 M3 complete; acceptance differs from green only by the authorized stale-certificate failure. Continue without review, merge or push.
 New M3 evidence is staged; its extra size check was cancelled while waiting for another lane (EXIT=143, never read this tree) and is requeued before M4’s first compiler pass. No size PASS for those new logs is claimed yet.
+[AGENT] M3 evidence-size resolution, 2026-10-05 23:55 UTC: the capped, locked check completed EXIT=0 on the four new M3 logs: 2415 tracked files / 32110168 bytes, 0 new offenders. Actual output retained in `m3-checks.log`.
