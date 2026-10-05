@@ -58,10 +58,15 @@ header comment of the file itself:
    `proto` package through an interface; the `*prefixError` value with its
    `Unwrap` sentinel; the per-binary prefix spelling as ONE init-time
    `rand.Intn(2)` pick. Validated EXACTLY against the real runtime by
-   `difftest.py` sections 7-8 and under both oracles by `codeccheck.py`. The
-   2026-09-30 deltas U-1 (the error value), U-2 (unknown groups) and U-3
-   (unknown fields) are resolved by this codec (`docs/raft-w42-log.md`, the
-   2026-10-04 ledger continuation).
+   `difftest.py` sections 7-8, under both oracles by `codeccheck.py`, and
+   through RawNode by the twin schedules `tools/raftsubject/twin-codec-*.go`
+   (`runprobe.py`). The 2026-09-30 deltas U-1 (the error value), U-2 (unknown
+   groups) and U-3 (unknown fields) are RETIRED by this codec — route A is
+   complete (slices S1-S3, `docs/raft-w42-log.md`, the 2026-10-04 and
+   2026-10-05 ledger continuations). Stated limits, not deltas: `errors.Is`
+   refuses on the machine by name; the prefix spelling is compared by
+   membership; the 10000/10001 recursion edges are covered by the
+   instruments, not by a corpus row.
 3. **`raftpb/confstate.go`** — upstream text plus the recorded exact-text
    patch D-3: its two `fmt.Errorf` lines become `errors.New` over the fixed
    text (the verdict is upstream's; the `%+#v` dumps are a PERMANENT stated

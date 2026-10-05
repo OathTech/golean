@@ -339,3 +339,40 @@ consumption, no subject delta, no twin wire move). An informational changelog li
 Where S3 starts: the rest of D12 — the deltas' final records (U-1/U-2/U-3 already RESOLVED and D-4 RETIRED by S1 in
 `docs/raft-w42-log.md`; S3 confirms and closes them against these RawNode witnesses), JC-14/JC-15 and `raftsubject/README.md`
 item 4 final wording, the `--slow` re-pin only if S3 moves the twin wire (S2 does not), and the pre-merge audit ask.
+
+## 10. S3 record and «Route A complete» (2026-10-05) — [AGENT] S3 build worker, lane `lane/route-a-s3-lowerdiag-1005`
+
+Authority: [USER] Mike 2026-10-05, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «Yes, go ahead» (route A
+S3 and the lowerdiag defer/go fix as one lane). Off `main` @ `a3e18ff5`. S3 delivered the rest of D12 as records only — no
+subject, generator, `GoLean/`, frontend, baseline or trusted-surface change; the twin wire does not move, so there is no
+`--slow` re-pin:
+- `docs/raft-w42-log.md` — the 2026-10-05 S3 ledger continuation: U-1, U-2, U-3 RETIRED and D-4 RETIRED (confirmed), D-1
+  and D-3 NARROWED (final), each against the S2 RawNode witnesses (`docs/evidence/2026-10-05_route-a-s2/`) and the S1
+  instruments; the 2026-09-30 forward reference to a «recovering driver variant … route A's S3» recorded as SUPERSEDED (C3
+  discharged, §3 — the abort runs through RawNode on the machine; S2's codec-abort schedule is that witness).
+- `docs/raft-w2-log.md` §4 — dated pointer blocks at the origin entries D-1, D-3 (NARROWED) and D-4 (RETIRED).
+- `docs/raft-w41-log.md` — JC-14 and JC-15 final wording (the decoding contract and the byte-fidelity bar are protobuf-go
+  v1.36.11's, by construction; where each half is validated; nothing OWED).
+- `raftsubject/README.md` — the codec item (D12's «item 4»: since S1's rewrite it is item 2, «`plain_wire.go`,
+  `plain_codec.go`, `plain_clone.go` + `proto/proto.go`») — final wording: U-1–U-3 RETIRED, the RawNode schedules named,
+  the stated limits listed.
+- No BUGS.md entry (subject deltas). The pre-merge audit ask is the coordinator's.
+
+**Route A complete.** What RETIRED: U-1 (the decode error value — now `errDecode`, a `*prefixError` unwrapping to
+`proto.Error`, its per-binary spelling one init-time `intn` pick), U-2 (unknown groups skipped and retained), U-3 (unknown
+fields retained, re-encoded, sized, cloned, compared), D-4 (the `confchange.go` overlay — upstream verbatim). What NARROWED:
+D-1 (`unknownFields` kept; `state`/`sizeCache`/descriptor machinery stay stripped), D-3 (one two-line text patch). What
+stays, as STATED LIMITS:
+- **D-3 `%+#v`** — PERMANENT: upstream's dump prints the runtime's `state` pointer; no route can make it exact ([USER] Q4,
+  §7).
+- **The recursion-edge row** — `recursion-depth-10000-vs-10001` is not a corpus row; `codeccheck.py` 48–51 and `difftest.py`
+  section 8 stand in ([USER] «agree to (i)», §8).
+- **`errors.Is`** — refused on the machine by name (FR-14/G6), a machine limit, not a subject delta (D10); the `Unwrap`
+  chain is checked directly.
+- **Prototext** — `String()`/`Descriptor()`/`EnumDescriptor()`/`UnmarshalJSON` stay fail-closed stubs; enum `String()` is
+  real (D11).
+- Reshaped, not retired, by design: D-2 (generated clone/equality) and D-9 (generated `proto` dispatch) — subject-local code
+  named function-for-function after protobuf-go (D8's FuncId table), validated EXACTLY by section 8.
+
+Consumer visibility of S3: none (records only). No post-offer changelog row is drafted for S3; the lowerdiag half of the
+lane is untrusted diagnosis tooling and is not consumer-visible either.

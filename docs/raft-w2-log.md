@@ -265,6 +265,13 @@ opening sentence now says "outside the five files itemised below" rather than
 `raftpb/alias.go` and `raftpb/util.go`, and it was never a claim about
 `raft.pb.go`, which this section itemises.
 
+> **NARROWED 2026-10-04/05 (protobuf route A, S1 + S3 close-out —
+> `docs/2026-10-04_route-a-protobuf-design.md` D12; [USER] 2026-10-04
+> «Approved», relayed).** `unknownFields []byte` is KEPT under upstream's
+> name (retention, re-encoding, `Size`, `Clone`, `Equal` — the generated
+> route A codec); `state` and `sizeCache` stay stripped. Final record: `docs/raft-w42-log.md`,
+> the 2026-10-05 route A S3 ledger continuation.
+
 ### D-2 `raftpb/plain_clone.go` — GENERATED, no upstream counterpart
 Plain-Go `CloneMessage()`/`EqualMessage()` per message type (9 each), derived
 from the same parsed field lists, standing in for `proto.Clone`/`proto.Equal`
@@ -292,6 +299,14 @@ logged the dumps loses them; under the no-op logger nothing does. `slices.Sort`
 is kept (the one modeled stdlib extern). The algorithm — sort copies, treat
 nil `AutoLeave` as false, compare — is upstream's, transcribed.
 
+> **NARROWED 2026-10-04/05 (protobuf route A, S1 + S3 close-out —
+> `docs/2026-10-04_route-a-protobuf-design.md` D12; [USER] 2026-10-04
+> «Approved», relayed).** The overlay is RETIRED: upstream text plus a
+> recorded exact-text patch on the two `fmt.Errorf` lines (`errors.New`
+> over the fixed text); the `%+#v` dumps are a PERMANENT stated
+> inexactness ([USER] Q4). Final record: `docs/raft-w42-log.md`,
+> the 2026-10-05 route A S3 ledger continuation.
+
 ### D-4 `raftpb/confchange.go` — overlay
 ONE change: the `google.golang.org/protobuf/proto` import and with it
 `MarshalConfChange`'s body, which becomes a fail-closed panic (§3).
@@ -299,6 +314,13 @@ Everything else is upstream verbatim, INCLUDING what the frontend cannot lower
 — `EnterJoint`'s `panic(fmt.Sprintf(...))` and the `strings`/`strconv`
 rendering helpers stay exactly as etcd writes them, so they classify honestly
 in §6 instead of being papered over.
+
+> **RETIRED 2026-10-04/05 (protobuf route A, S1 + S3 close-out —
+> `docs/2026-10-04_route-a-protobuf-design.md` D12; [USER] 2026-10-04
+> «Approved», relayed).** `raftpb/confchange.go` is upstream VERBATIM
+> (import path rewritten); `MarshalConfChange` calls the subject-local
+> `proto`. Final record: `docs/raft-w42-log.md`,
+> the 2026-10-05 route A S3 ledger continuation.
 
 ### D-5 `raft/logger.go` — the W2.2 no-op Logger injection
 The `Logger` INTERFACE is upstream verbatim (twelve methods, same signatures),

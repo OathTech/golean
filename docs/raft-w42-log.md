@@ -935,3 +935,62 @@ spelling (membership), an unknown-GROUP proposal is ACCEPTED, committed, applied
 red on both legs over the pre-route-A subject, green at the tip, the group trace byte-identical over upstream raft +
 protobuf-go v1.36.11 (`docs/evidence/2026-10-05_route-a-s2/rawnode-schedules.txt`; design note §9). No subject change; no
 delta opens, closes or narrows; the twin wire pin does not move.
+
+## Subject-delta ledger continuation (2026-10-05, route A slice S3): route A CLOSED — U-1, U-2, U-3 and D-4 RETIRED; D-1, D-3 NARROWED (final)
+
+[AGENT] S3 build worker, lane `lane/route-a-s3-lowerdiag-1005` (worktree `.claude/worktrees/route-a-s3`, off `main` @
+`a3e18ff5`). Authority: [USER] Mike 2026-10-05, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «Yes, go
+ahead» (route A S3 + the lowerdiag defer/go fix as one lane). S3 = «the rest of D12» (`docs/2026-10-04_route-a-protobuf-
+design.md` §4 D12, §8, §9 «Where S3 starts»). No subject change, no twin wire move, no baseline change on this slice; the
+records below CLOSE the entries the S1 continuation opened, against the witnesses now on `main`.
+
+**The witnesses, by delta** (all instruments, not gates — design §5; none is a corpus row, because the corpus fixtures are
+stdlib-only and protobuf-go cannot be an oracle there — the 2026-09-30 continuation's «Witness rows» paragraph):
+- through RawNode, both oracles (S2; `docs/evidence/2026-10-05_route-a-s2/rawnode-schedules.txt`): **codec-abort** — a
+  ConfChange proposal ending in an open field-15 group aborts at the leader's `proto.Unmarshal` → `panic(err)` on BOTH
+  legs with `proto: cannot parse invalid wire-format data`, a member of the two spellings (machine slot 0 under the default
+  tape, slot 1 under `--choices 1`); **codec-unknown-group** — a complete unknown group is ACCEPTED, committed at index 3 on
+  all three nodes, applied, and re-encoded byte-identical (`size=10`, `reencode-same=1`), strict trace agreement, and
+  byte-identical to upstream raft @ `56e32004` + protobuf-go v1.36.11. Red on both legs over the pre-route-A subject.
+- against protobuf-go itself: `difftest.py` section 8 (1041 inputs, EXACT) and `codeccheck.py` 39–51 + 100–125 (both
+  oracles) — the S1 continuation's «Witness» paragraph.
+
+**U-1 the Unmarshal error VALUE — RETIRED.** RawNode witness: codec-abort (the abort line IS the error text; membership over
+the per-binary spelling). What stays, as stated limits, not deltas: `errors.Is` is refused on the machine by name (FR-14/G6,
+design D10 — raft never calls it; the `Unwrap` chain is checked directly, corpus row `sentinel-unwrap`); the spelling is
+compared by MEMBERSHIP, never by a pinned byte (protobuf-go draws it per binary).
+
+**U-2 unknown groups — RETIRED.** RawNode witness: codec-unknown-group (accepted, where the pre-route-A subject aborted).
+Stated limit: the 10000/10001 recursion edges are not a corpus row ([USER] 2026-10-04 «agree to (i)», relayed; design §8) —
+covered by `codeccheck.py` 48–51 (machine leg at fuel 3e8) and section 8.
+
+**U-3 unknown fields — RETIRED.** RawNode witness: codec-unknown-group's application leg (each node decodes the committed
+entry through the subject `proto`, re-encodes it byte-identical and `Size` counts the retained group). The 2026-09-30
+qualification stands: on RawNode's OWN paths no decoded message is re-marshalled, so retention is visible to a raftpb client
+(here the harness's application) — which the schedule exercises.
+
+**D-4 `raftpb/confchange.go` — RETIRED** (S1; confirmed: `derive.py --check` holds it upstream VERBATIM modulo the import
+rewrite). Origin entry pointer: `docs/raft-w2-log.md` §4 D-4.
+
+**D-1 the strip — NARROWED, final.** Kept: `unknownFields []byte` (D3, exercised by codec-unknown-group's re-encode). Still
+stripped, permanently under route A: `state` and `sizeCache` (the runtime's message-info pointer and the atomic size cache —
+reflection/`sync/atomic` internals outside the language the subject is lowered in) and the file-descriptor/`ProtoReflect`
+machinery; prototext `String()`/`Descriptor()`/`EnumDescriptor()`/`UnmarshalJSON` stay fail-closed stubs (design D11; enum
+`String()` is real). Origin entry pointer: `docs/raft-w2-log.md` §4 D-1.
+
+**D-3 `raftpb/confstate.go` — NARROWED, final; the residue is PERMANENT.** Upstream text + the two-line exact-text patch
+(`errors.New` over the fixed texts). The `%+#v` dumps can never be exact under any route — upstream's dump prints the
+runtime's `state` pointer ([USER] 2026-10-04, Q4: a permanent stated inexactness). The verdict (nil vs non-nil) is
+upstream's; the S2 schedules do not reach `Equivalent` (no RawNode witness is owed for a text-only residue). Origin entry
+pointer: `docs/raft-w2-log.md` §4 D-3.
+
+**D-2 and D-9 — RESHAPED (unchanged by S3).** The generated clone/equality and the generated `proto` dispatch remain
+subject-local code by construction (route A's generator output, each function named after its protobuf-go twin; D8's FuncId
+table), validated EXACTLY by section 8.
+
+**A forward reference superseded.** The 2026-09-30 continuation planned the passing RawNode witness as «a recovering driver
+variant (the R-1 forced-half pattern) as a membership row over the two spellings — route A's S3», because the machine's
+abort line for `panic(err)` was then BUG-004 item 4's refusal. Item 4 landed before route A (design §3: C3 DISCHARGED — the
+machine renders `status: panic` with the payload's message), so the abort runs through RawNode on the machine itself and
+S2's codec-abort schedule (ABORT-MEMBERSHIP mode) is that witness; no recovering variant is built. No BUGS.md entry: subject
+deltas, not machine-vs-gc fidelity bugs. The twin wire pin (`baselines/pins/twin-chdriver.wire.json`) does not move in S3.

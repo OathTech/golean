@@ -825,6 +825,24 @@ about the walk plan and is untouched.
   > field-number bounds and their in-group asymmetry; every malformation the
   > one `errDecode` value; `errRecursionDepth` past 10000 nested messages).
   > Validated EXACTLY by `difftest.py` section 8.
+
+  > **Final wording 2026-10-05 (route A complete, slice S3; [USER] 2026-10-05
+  > «Yes, go ahead», relayed).** JC-14 now reads: *Unmarshal semantics =
+  > protobuf-go v1.36.11's `impl`/`protowire` decoder over the 9 schemas, by
+  > construction (the route A generator; each function names its twin) —
+  > merge semantics, packed and unpacked acceptance (unpacked emitted),
+  > unknown and wrong-wire-type fields RETAINED, unknown groups SKIPPED and
+  > retained, every malformation the one `errDecode` value, nesting past
+  > 10000 the `errRecursionDepth` value.* Witnessed EXACTLY against
+  > protobuf-go (`difftest.py` section 8, `codeccheck.py`) and through
+  > RawNode on both oracles (route A S2: `docs/evidence/2026-10-05_route-a-s2/
+  > rawnode-schedules.txt` — a malformed proposal aborts with the U-1 text,
+  > an unknown-group proposal is accepted and re-encoded byte-identical).
+  > Stated limits, not deltas: `errors.Is` refused on the machine by name
+  > (D10); the prefix spelling compared by membership (protobuf-go draws it
+  > per binary); the 10000/10001 recursion edges covered by instruments, not
+  > a corpus row ([USER] «agree to (i)»). U-1/U-2/U-3 RETIRED
+  > (`docs/raft-w42-log.md`, the 2026-10-05 S3 continuation).
 - **JC-15: the byte-fidelity bar and where each half is validated.**
   Marshal emits fields in FIELD-NUMBER order (protobuf-go's table-driven
   marshaler order; maps — the one Deterministic-flag concern — do not occur
@@ -862,3 +880,16 @@ about the walk plan and is untouched.
   > `[]byte{}` — only a VALID empty message gets the non-nil empty buffer;
   > and Marshal re-emits retained unknown bytes after the known fields.
   > `codeccheck.py` gained checks 39-51 + the corpus (100-125).
+
+  > **Final wording 2026-10-05 (route A complete, slice S3).** JC-15 now
+  > reads: *the bar is protobuf-go v1.36.11 EXACTLY — Marshal bytes (fields in
+  > field-number order, then retained unknown bytes in arrival order; a
+  > typed-nil message → `nil`, a valid empty message → `[]byte{}`), `Size`,
+  > `Clone`, `Equal` (`equalUnknown`'s per-number concatenation), the
+  > decode verdict, `errors.Is(err, proto.Error)`, the error text modulo the
+  > one per-binary prefix byte.* Where each half is validated: against the
+  > real runtime by `difftest.py` sections 7-8 (offline from the module
+  > cache; instruments, not gates); under BOTH oracles by `codeccheck.py`
+  > and, through RawNode, by the S2 twin schedules (`runprobe.py`); in the
+  > gate by the `wire-codec` corpus rows over the generator's mirror schema
+  > and by the twin wire pin. Nothing in this JC remains OWED.
