@@ -925,3 +925,13 @@ fixed 10M fuel — an open item of S1 (reported); the edges are covered by codec
 section 8. **Twin:** `baselines/pins/twin-chdriver.wire.json` re-pinned (reason and classification in
 `scripts/check-frontend-pins`' comment block and `docs/evidence/2026-10-04_route-a-s1/twin-repin.txt`). No BUGS.md entry:
 subject deltas, not machine-vs-gc fidelity bugs.
+
+## Subject-delta ledger continuation (2026-10-05, route A slice S2): no delta changes; U-1/U-2 witnessed through RawNode
+
+[AGENT] S2 build worker, lane `lane/route-a-s2-1005` ([USER] Mike 2026-10-05 «Go ahead with Route A S2», relayed). The S1
+entry's forward reference («Through RawNode … is NOT in S1 — S2's») is discharged: two twin schedules via `runprobe.py`
+(`tools/raftsubject/twin-codec-lib.go`) — a malformed ConfChange proposal ABORTS on both legs with the U-1 text in either
+spelling (membership), an unknown-GROUP proposal is ACCEPTED, committed, applied and re-encoded byte-identical (U-2/U-3) —
+red on both legs over the pre-route-A subject, green at the tip, the group trace byte-identical over upstream raft +
+protobuf-go v1.36.11 (`docs/evidence/2026-10-05_route-a-s2/rawnode-schedules.txt`; design note §9). No subject change; no
+delta opens, closes or narrows; the twin wire pin does not move.

@@ -291,3 +291,51 @@ apparatus change) and (iii) (a born-red row) are not taken.
 
 **Landing.** Merge sign-off [USER] Mike 2026-10-04, verbatim, relayed: «merge it and share» — train r65 (Fable adversarial
 audit MERGE-CLEAN; Minor-1 closed above, Minor-2 by the post-offer changelog `docs/changelog/20d3946d-WINDOW.md`).
+
+## 9. S2 build record (2026-10-05) — [AGENT] S2 build worker, lane `lane/route-a-s2-1005`
+
+Authority: [USER] Mike 2026-10-05, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «Go ahead with Route A S2».
+Off `main` @ `72e309c2`. Delivered against §8's «S2 keeps the RawNode twin schedules (`runprobe.py`)» — §5's «Through
+RawNode» item of D9; nothing else in the slice plan is assigned to S2 (§3's S2 cost row also named the differential
+instruments and corpus rows; S1 delivered those, §8). No change to the subject, `GoLean/`, the trusted surface, the stdlib
+register, the wire schema, or any baseline; the twin wire pin does not move.
+
+- **The two schedules** (`tools/raftsubject/twin-codec-lib.go` + thin mains `twin-codec-abort-main.go`,
+  `twin-codec-group-main.go`): the n=3 twin, node 1 elected (campaign + drain), then a hand-encoded EntryConfChange MsgProp
+  stepped into FOLLOWER 2 (`RawNode.Step`), forwarded through the multiset and decoded by the leader at `raft/raft.go:1326`.
+  Payload = the subject's `Marshal` of `ConfChange{Type: UpdateNode, NodeId: 2, Id: 7}` (`08 07 10 02 18 02`) plus a tail:
+  `7b` (a field-15 group left open → `errDecode`) for **codec-abort**; `7b 08 2a 7c` (a complete field-15 group carrying
+  field 1 = 42) for **codec-unknown-group**.
+- **Observations.** codec-abort: both legs abort with `proto: cannot parse invalid wire-format data`, checked by MEMBERSHIP
+  over the two spellings (each leg draws its own: `go run` per process; the machine's init pick is the stream's first
+  consumption — default tape slot 0 = U+0020, `--choices 1` slot 1 = U+00A0; both witnessed). codec-unknown-group: strict
+  trace agreement — the entry reaches Ready on all three nodes with the payload byte-identical (`same=1`), commits at
+  index 3, and each node's application decodes it through the subject `proto`, applies it (UpdateNode: a configuration
+  no-op, voters=3) and re-encodes it byte-identical (`reencode-same=1`, `Size` = 10: the group retained and re-emitted
+  after the known fields); `viol=0`.
+- **runprobe.py** gains the ABORT-MEMBERSHIP mode `--expect-panic-member TEXT` (repeatable; exactly one `panic: <m>` line
+  on `go run`, machine status `panic` with message <m'>, each EXACTLY a member; `\uXXXX` escapes decoded) and `--choices`
+  (passed to the machine leg). Existing modes unchanged.
+- **Red-first** (no S2 change turns them green — S1's codec already does — so the red is shown against the PRE-route-A
+  subject, `raftsubject/` @ `6aa04c5d`): both schedules abort with `plainpb: malformed wire input` on BOTH legs (not a
+  member; the unknown-group proposal refused instead of accepted — U-1/U-2 through RawNode).
+- **Upstream anchor** (one-off, not an instrument): the same two schedule files over UPSTREAM raft @ `56e32004` + the real
+  protobuf-go v1.36.11 — abort with `proto: cannot parse invalid wire-format data` (that binary's U+0020 draw) at upstream
+  `stepLeader`; the unknown-group trace BYTE-IDENTICAL to both subject legs.
+- Evidence: `docs/evidence/2026-10-05_route-a-s2/rawnode-schedules.txt` (red, green, anchor) and the gate tail(s) beside it.
+
+[AGENT] readings inside the ratified decisions, stated for review (none moves a decision):
+- **Own harvest.** `twin-lib.go`'s harvest flags every non-EntryNormal entry as an S3 anomaly («v1 proposes no conf
+  changes»), so the codec schedules run `harvestCC` — the same persist/record/send/apply/Advance cycle plus a conf-change
+  apply arm — rather than editing `twin-lib.go`, which would move the pinned twin wire for no semantic reason.
+- **Proposal at a follower via `RawNode.Step`**, not `ProposeConfChange` (which encodes a well-formed value); the forwarded
+  path is the one a peer's raw bytes take. UpdateNode is chosen so applying the change neither reshapes the cluster nor
+  addresses a message outside the twin.
+- **Instruments, not gates** (§5): `scripts/ci` does not run them.
+
+Consumer visibility: none of S2 changes what a consumer of the subject, the wire or a GoCore program observes (no choice
+consumption, no subject delta, no twin wire move). An informational changelog line is drafted for the landing train.
+
+Where S3 starts: the rest of D12 — the deltas' final records (U-1/U-2/U-3 already RESOLVED and D-4 RETIRED by S1 in
+`docs/raft-w42-log.md`; S3 confirms and closes them against these RawNode witnesses), JC-14/JC-15 and `raftsubject/README.md`
+item 4 final wording, the `--slow` re-pin only if S3 moves the twin wire (S2 does not), and the pre-merge audit ask.
