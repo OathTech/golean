@@ -1,13 +1,17 @@
 import GoLean.GoCore.SetupStatement
 import GoLean.GoCore.Equations
+import GoLean.GoCore.Prefix
 
 /-!
-# Proofs for the setup equations G-R1–G-R3 (`SetupStatement.lean`)
+# Proofs for the setup equations G-R1–G-R4 (`SetupStatement.lean`)
 
 [AGENT worker, lane `core/setup-equations-1005`] 2026-10-05; authority and the request as in
 `SetupStatement.lean`'s header. Every `<name>_stmt` of G-R1–G-R3 is discharged here as
-`theorem <name> : <name>_stmt`, the statement unchanged. G-R4 is NOT proved here (its statement is
-out for the logic team's review).
+`theorem <name> : <name>_stmt`, the statement unchanged. Phase 3 (the logic team's approval of G-R4
+with answers (a)–(d), 2026-10-05, relayed): G-R4 `runInitConfig_eq_execStmtLoop` — induction on the
+fuel through the init loop's one-layer unfolding (`runInitConfig_unfold`, the twin of
+`MachineSound.lean`'s `execStmtLoop_unfold`) — then its four `run_*_iff` corollaries (each the
+equation followed by `Prefix.lean`'s sequential statement) and the `runPkgInitM` wrapper pair.
 
 The seeding equation rests on ONE loop lemma (`seedLoop`): `seedGlobals`'s `for g in globals, i in
 [0:globals.size]` is a `forIn` over the globals with the index range threaded as a `Stream`
@@ -271,6 +275,126 @@ theorem setup_heap_size_from : setup_heap_size_from_stmt := by
   have h2 := allocDecls_heap_size _ _ _ ha
   simp at h1 h2
   omega
+
+/-! ## G-R4 — the init loop and the entry loop -/
+
+section InitLoop
+
+open GoLean.GoCore.ExecutionStatement (Prefix Blocked ZeroCost zeroCost_cases execStmtLoop_nonZero
+  execStmtLoop_blocked)
+
+/-- The one-layer unfolding of `runInitConfig`, as an equation (the twin of `execStmtLoop_unfold`). -/
+private theorem runInitConfig_unfold (ctx : ProgramCtx) (fuel : Nat) (s : Store) (c : Config)
+    (ch : Choices) :
+    runInitConfig ctx fuel s c ch
+      = (match c with
+         | .next .stop => .ok (s, ch)
+         | .blockedSend _ _ _ => throw .deadlock
+         | .blockedRecv _ _ _ _ _ => throw .deadlock
+         | .blockedSelect _ _ _ => throw .deadlock
+         | .blockedSync _ _ _ _ => throw .deadlock
+         | c =>
+             match initPrintRefusal? c with
+             | some e => throw e
+             | none =>
+               match fuel with
+               | 0 => throw .fuelOut
+               | fuel + 1 => do
+                   let (c', s', choices', _) ← stepFn ctx s c ch
+                   runInitConfig ctx fuel s' c' choices') := by
+  rw [runInitConfig.eq_def]
+  rfl
+
+/-- The init loop at a blocked configuration is the deadlock at every fuel (no guard is consulted). -/
+private theorem runInitConfig_blocked {ctx : ProgramCtx} {fuel : Nat} {s : Store} {c : Config}
+    {ch : Choices} (hb : Blocked c) : runInitConfig ctx fuel s c ch = .error (.terminal .deadlock) := by
+  rcases hb with ⟨_, _, _, rfl⟩ | ⟨_, _, _, _, _, rfl⟩ | ⟨_, _, _, rfl⟩ | ⟨_, _, _, _, rfl⟩ <;>
+    (rw [runInitConfig_unfold]; rfl)
+
+/-- The init loop at a non-zero-cost configuration whose guard is silent: the entry loop's own shape
+— fuel-out at 0, one `stepFn` call then the init loop at `fuel + 1`. -/
+private theorem runInitConfig_nonZero {ctx : ProgramCtx} {fuel : Nat} {s : Store} {c : Config}
+    {ch : Choices} (hz : ¬ ZeroCost c) (hp : initPrintRefusal? c = none) :
+    runInitConfig ctx fuel s c ch =
+      (match fuel with
+       | 0 => .error .fuelOut
+       | f + 1 => (stepFn ctx s c ch).bind fun r => runInitConfig ctx f r.2.1 r.1 r.2.2.1) := by
+  rw [runInitConfig_unfold]
+  unfold ZeroCost Blocked at hz
+  split
+  · exact absurd (.inl rfl) hz
+  · exact absurd (.inr (.inl ⟨_, _, _, rfl⟩)) hz
+  · exact absurd (.inr (.inr (.inl ⟨_, _, _, _, _, rfl⟩))) hz
+  · exact absurd (.inr (.inr (.inr (.inl ⟨_, _, _, rfl⟩)))) hz
+  · exact absurd (.inr (.inr (.inr (.inr ⟨_, _, _, _, rfl⟩)))) hz
+  · rw [hp]
+    cases fuel with
+    | zero => rfl
+    | succ f => simp only [Bind.bind]
+
+/-- **G-R4.** Induction on the fuel, generalizing the store, configuration and tape: at a zero-cost
+configuration both loops agree outright; otherwise the no-print premise at `n = 0` silences the
+guard, both loops fall to the same fuel match, and on a successful step the premise transfers to
+the successor through `Prefix.step`. -/
+theorem runInitConfig_eq_execStmtLoop : runInitConfig_eq_execStmtLoop_stmt := by
+  intro ctx fuel
+  induction fuel with
+  | zero =>
+    intro σ c ch hnp
+    rcases zeroCost_cases c with rfl | hb | hz
+    · rw [runInitConfig_unfold, execStmtLoop_unfold]
+    · rw [runInitConfig_blocked hb, execStmtLoop_blocked hb]
+    · rw [runInitConfig_nonZero hz (hnp 0 σ c ch [] .done (Nat.le_refl 0)), execStmtLoop_nonZero hz]
+  | succ f ih =>
+    intro σ c ch hnp
+    rcases zeroCost_cases c with rfl | hb | hz
+    · rw [runInitConfig_unfold, execStmtLoop_unfold]
+    · rw [runInitConfig_blocked hb, execStmtLoop_blocked hb]
+    · rw [runInitConfig_nonZero hz (hnp 0 σ c ch [] .done (Nat.zero_le _)), execStmtLoop_nonZero hz]
+      simp only
+      cases hs : stepFn ctx σ c ch with
+      | error e => rfl
+      | ok r =>
+        obtain ⟨c₁, σ₁, ch₁, l⟩ := r
+        simp only [Except.bind]
+        exact ih (σ := σ₁) (c := c₁) (ch := ch₁) fun n σ' c' ch' ls hpre hn =>
+          hnp (n + 1) σ' c' ch' (l :: ls) (.step hs hpre) (Nat.succ_le_succ hn)
+
+theorem runInitConfig_ok_iff : runInitConfig_ok_iff_stmt := by
+  intro ctx fuel s sf c ch chf hnp
+  rw [runInitConfig_eq_execStmtLoop hnp]
+  exact GoLean.GoCore.ExecutionStatement.run_ok_iff ctx fuel s sf c ch chf
+
+theorem runInitConfig_panic_iff : runInitConfig_panic_iff_stmt := by
+  intro ctx fuel s c ch t hnp
+  rw [runInitConfig_eq_execStmtLoop hnp]
+  exact GoLean.GoCore.ExecutionStatement.run_panic_iff ctx fuel s c ch t
+
+theorem runInitConfig_deadlock_iff : runInitConfig_deadlock_iff_stmt := by
+  intro ctx fuel s c ch hnp
+  rw [runInitConfig_eq_execStmtLoop hnp]
+  exact GoLean.GoCore.ExecutionStatement.run_deadlock_iff ctx fuel s c ch
+
+theorem runInitConfig_fuelOut_iff : runInitConfig_fuelOut_iff_stmt := by
+  intro ctx fuel s c ch hnp
+  rw [runInitConfig_eq_execStmtLoop hnp]
+  exact GoLean.GoCore.ExecutionStatement.run_fuelOut_iff ctx fuel s c ch
+
+end InitLoop
+
+/-! ## The `runPkgInitM` wrapper -/
+
+theorem runPkgInitM_some : runPkgInitM_some_stmt := by
+  intro ctx fuel s ch initF hf ha hr
+  simp only [runPkgInitM, hf, ha, hr, bne_self_eq_false, Bool.or_self, Bool.false_eq_true,
+    ↓reduceIte]
+  cases runInitConfig ctx fuel s (.exec initF.body [] (.frame [] [] [] [] .stop initF.id)) ch <;> rfl
+
+theorem runPkgInitM_ok_iff : runPkgInitM_ok_iff_stmt := by
+  intro ctx fuel s s₁ ch ch₁ initF hf ha hr
+  rw [runPkgInitM_some hf ha hr]
+  cases runInitConfig ctx fuel s (.exec initF.body [] (.frame [] [] [] [] .stop initF.id)) ch <;>
+    simp [Except.mapError]
 
 /-! ## The `{}`-store forms are the instances at the empty store
 

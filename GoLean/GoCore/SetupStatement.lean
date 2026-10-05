@@ -14,9 +14,14 @@ lane's note: `docs/2026-10-05_setup-equations.md`.
 Every statement here is a `def <name>_stmt : Prop` (the `ExecutionStatement`/`PoolStatement`
 grain: it elaborates with no proof). G-R1–G-R3 are PROVED in `SetupSound.lean` as
 `theorem <name> : <name>_stmt`, the statements unchanged, and pinned WRITTEN OUT in
-`BridgeSet.lean` (RE-PIN 12, rows 512–520). G-R4 (`runInitConfig_eq_execStmtLoop_stmt`) is
-STATED ONLY: its exact text goes to the logic team for review BEFORE it is proved (the [AGENT]
-coordinator's committed reply in the request note).
+`BridgeSet.lean` (RE-PIN 12, rows 512–520). G-R4 (`runInitConfig_eq_execStmtLoop_stmt`) was
+STATED first and sent to the logic team for review (the [AGENT] coordinator's committed reply in
+the request note); APPROVED 2026-10-05 with four answers (the golean-logic coordinator, by
+cross-session message, relayed by the [AGENT] coordinator; verbatim in the lane's note §3): (a) the
+no-blocked premise DROPPED, (b) the guard spelling `initPrintRefusal? c' = none` and the bound
+`n ≤ fuel` kept, (c) the `run_*_iff`-style corollaries for `runInitConfig` added, (d) the
+`runPkgInitM`/`markInitPhase` wrapper equation added. Phase 3 proves them all (`SetupSound.lean`;
+RE-PIN 13, rows 521–527).
 
 ADDITIVE. The pinned `runProgramSetup_noInit` and the `{}`-store `setup_lookup_arg` /
 `setup_lookup_result` / `setup_resultLocs` / `setup_heap_size` of `Equations.lean` are unchanged
@@ -33,7 +38,7 @@ load-bearing).
 namespace GoLean.GoCore.SetupStatement
 
 open GoLean GoLean.GoCore GoLean.GoCore.Machine
-open GoLean.GoCore.ExecutionStatement (Prefix Blocked)
+open GoLean.GoCore.ExecutionStatement (Prefix Blocked Finish ZeroCost)
 
 /-! ## G-R2 — seeding -/
 
@@ -156,29 +161,105 @@ def setup_heap_size_from_stmt : Prop :=
     allocDecls ⟨program⟩ env s₂ func.results.toList = .ok (frameEnv, s₃) →
     s₃.heap.size = s₁.heap.size + func.args.size + func.results.size
 
-/-! ## G-R4 — the init loop and the entry loop (STATEMENT ONLY, for the logic team's review) -/
+/-! ## G-R4 — the init loop and the entry loop
 
-/-- **G-R4 (stated, NOT proved — awaiting the logic team's review of this text).** `runInitConfig` is
-`execStmtLoop` with ONE extra guard: the init-phase print refusal (`initPrintRefusal?`), consulted
-before the fuel match on every configuration that is neither `.next .stop` nor blocked. So the two
-loops agree whenever no print position is reached: for every configuration the run reaches within
-the fuel — `Prefix ctx n σ c ch ls σ' c' ch'` with `n ≤ fuel` (the configuration at step `fuel` IS
-inspected, before the fuel-out) — the guard is silent. `initPrintRefusal? c' = none` is
-`printOut? c' = none` (the guard reads nothing else); the design's init mode carries the former
-(§5.2).
+The premise shared by every statement of this section — NO PRINT POSITION REACHED: for every
+configuration the run reaches within the fuel (`Prefix ctx n σ c ch ls σ' c' ch'`, `n ≤ fuel` —
+the configuration at step `fuel` IS inspected by the guard, before the fuel-out), the init-phase
+guard is silent, `initPrintRefusal? c' = none` (equivalently `printOut? c' = none`; the guard reads
+nothing else). The design's init mode carries exactly this side condition on `Prim.step` (golean-logic
+design §5.2); the logic team's answer (b) keeps the spelling and the bound. -/
 
-The second premise — no blocked configuration reached — is the request's («when no print or
-blocked configuration is reached»). It is NOT needed for the equation: both loops classify a
-blocked configuration as `.deadlock` before any guard, and `stepFn` itself throws on one, so no
-`Prefix` passes through a blocked configuration. It is kept as the request names it, for the
-requesters to confirm or drop (the note's review section). -/
+/-- **G-R4 (approved as stated minus the no-blocked premise; answer (a)).** `runInitConfig` is
+`execStmtLoop` with ONE extra guard — the init-phase print refusal, consulted before the fuel match
+on every configuration that is neither `.next .stop` nor blocked — so under the no-print premise the
+two loops are EQUAL. No premise on blocked configurations: both loops classify a blocked
+configuration as `.deadlock` before any guard, and `stepFn` itself throws on one, so no `Prefix`
+passes through a blocked configuration — the equation holds without it (the request had named it;
+dropped at the requesters' answer (a): «the theorem is stronger and cleaner without it»). -/
 def runInitConfig_eq_execStmtLoop_stmt : Prop :=
   ∀ {ctx : ProgramCtx} {fuel : Nat} {σ : Store} {c : Config} {ch : Choices},
     (∀ (n : Nat) (σ' : Store) (c' : Config) (ch' : Choices) (ls : List StepLabel),
       Prefix ctx n σ c ch ls σ' c' ch' → n ≤ fuel → initPrintRefusal? c' = none) →
-    (∀ (n : Nat) (σ' : Store) (c' : Config) (ch' : Choices) (ls : List StepLabel),
-      Prefix ctx n σ c ch ls σ' c' ch' → n ≤ fuel → ¬ Blocked c') →
     runInitConfig ctx fuel σ c ch = execStmtLoop ctx fuel σ c ch
+
+/-! ### The `run_*_iff` corollaries for the init loop (answer (c))
+
+`ExecutionStatement.lean`'s `run_ok_iff` / `run_panic_iff` / `run_deadlock_iff` / `run_fuelOut_iff`
+for `runInitConfig`, under the no-print premise — the same right-hand sides (`Prefix`, `Finish`,
+`ZeroCost`), so the logic team's init-prefix adequacy composes with the existing `Prefix`/`Finish`
+statements through them. Each is G-R4 followed by the sequential statement. -/
+
+/-- Normal completion of the init loop: a prefix of length `n ≤ fuel` to `.next .stop` (cost 0). -/
+def runInitConfig_ok_iff_stmt : Prop :=
+  ∀ (ctx : ProgramCtx) (fuel : Nat) (s sf : Store) (c : Config) (ch chf : Choices),
+    (∀ (n : Nat) (σ' : Store) (c' : Config) (ch' : Choices) (ls : List StepLabel),
+      Prefix ctx n s c ch ls σ' c' ch' → n ≤ fuel → initPrintRefusal? c' = none) →
+    (runInitConfig ctx fuel s c ch = .ok (sf, chf) ↔
+      ∃ n, n ≤ fuel ∧ ∃ ls, Prefix ctx n s c ch ls sf (.next .stop) chf)
+
+/-- The init loop's panic terminal (an initializer's unrecovered panic kills the program before
+`main`): prefix length plus the abort's cost 1 within the fuel; `markInitPhase` leaves it unmarked. -/
+def runInitConfig_panic_iff_stmt : Prop :=
+  ∀ (ctx : ProgramCtx) (fuel : Nat) (s : Store) (c : Config) (ch : Choices) (t : String),
+    (∀ (n : Nat) (σ' : Store) (c' : Config) (ch' : Choices) (ls : List StepLabel),
+      Prefix ctx n s c ch ls σ' c' ch' → n ≤ fuel → initPrintRefusal? c' = none) →
+    (runInitConfig ctx fuel s c ch = .error (.terminal (.panic t)) ↔
+      ∃ (n : Nat) (ls : List StepLabel) (sf : Store) (cf : Config) (chf ch'' : Choices)
+        (rec : List PickRecord),
+        n + 1 ≤ fuel ∧ Prefix ctx n s c ch ls sf cf chf ∧
+          Finish ctx sf cf chf rec (.aborted t sf ch'') 1)
+
+/-- The init loop's deadlock: a blocked endpoint at `n ≤ fuel` (cost 0). -/
+def runInitConfig_deadlock_iff_stmt : Prop :=
+  ∀ (ctx : ProgramCtx) (fuel : Nat) (s : Store) (c : Config) (ch : Choices),
+    (∀ (n : Nat) (σ' : Store) (c' : Config) (ch' : Choices) (ls : List StepLabel),
+      Prefix ctx n s c ch ls σ' c' ch' → n ≤ fuel → initPrintRefusal? c' = none) →
+    (runInitConfig ctx fuel s c ch = .error (.terminal .deadlock) ↔
+      ∃ n, n ≤ fuel ∧ ∃ (ls : List StepLabel) (sf : Store) (cf : Config) (chf : Choices),
+        Prefix ctx n s c ch ls sf cf chf ∧ Finish ctx sf cf chf [] (.deadlock sf chf) 0)
+
+/-- The init loop's fuel-out: the fixed tape's prefix of length exactly `fuel`, ending at a
+configuration that is not zero-cost (`markInitPhase` leaves `fuelOut` unmarked — an init-phase
+fuel exhaustion is indistinguishable from the subject's by design). -/
+def runInitConfig_fuelOut_iff_stmt : Prop :=
+  ∀ (ctx : ProgramCtx) (fuel : Nat) (s : Store) (c : Config) (ch : Choices),
+    (∀ (n : Nat) (σ' : Store) (c' : Config) (ch' : Choices) (ls : List StepLabel),
+      Prefix ctx n s c ch ls σ' c' ch' → n ≤ fuel → initPrintRefusal? c' = none) →
+    (runInitConfig ctx fuel s c ch = .error .fuelOut ↔
+      ∃ (ls : List StepLabel) (sf : Store) (cf : Config) (chf : Choices),
+        Prefix ctx fuel s c ch ls sf cf chf ∧ ¬ ZeroCost cf)
+
+/-! ### The `runPkgInitM` wrapper (answer (d))
+
+`runPkgInitM` with a `$pkginit` PRESENT, in terms of `runInitConfig` on the init configuration —
+the link from G-R1's premise (`runPkgInitM ⟨program⟩ fuel s₀ choices = .ok (s₁, choices₁)`) to
+`runInitConfig`, and through G-R4 to `execStmtLoop`. The twin of `Equations.lean`'s
+`runPkgInitM_none`. -/
+
+/-- **The wrapper equation.** With `$pkginit` found, nullary and resultless (the design's
+`Definition ctx hI [] [] Dinit`), `runPkgInitM` IS `runInitConfig` on the init configuration — the
+body under a targetless barrier frame naming `$pkginit`, the empty environment — with the error
+re-labelled by `markInitPhase` (`stuck`/`unsupported`/`internal` get the `package init:` prefix;
+`fuelOut` and the terminals pass unmarked). -/
+def runPkgInitM_some_stmt : Prop :=
+  ∀ {ctx : ProgramCtx} {fuel : Nat} {s : Store} {ch : Choices} {initF : Func},
+    findFunctionIn? ctx.functions pkgInitFuncId = some initF →
+    initF.args.size = 0 → initF.results.size = 0 →
+    runPkgInitM ctx fuel s ch
+      = (runInitConfig ctx fuel s (.exec initF.body [] (.frame [] [] [] [] .stop initF.id)) ch).mapError
+          markInitPhase
+
+/-- The wrapper's SUCCESS link — the form G-R1's premise composes with: `runPkgInitM` succeeds with
+`(s₁, ch₁)` iff `runInitConfig` on the init configuration does (`markInitPhase` touches errors
+only). -/
+def runPkgInitM_ok_iff_stmt : Prop :=
+  ∀ {ctx : ProgramCtx} {fuel : Nat} {s s₁ : Store} {ch ch₁ : Choices} {initF : Func},
+    findFunctionIn? ctx.functions pkgInitFuncId = some initF →
+    initF.args.size = 0 → initF.results.size = 0 →
+    (runPkgInitM ctx fuel s ch = .ok (s₁, ch₁) ↔
+      runInitConfig ctx fuel s (.exec initF.body [] (.frame [] [] [] [] .stop initF.id)) ch
+        = .ok (s₁, ch₁))
 
 /-! ## Controls (`#eval` first — the probe's results are what the `rfl`s below pin) -/
 
@@ -226,6 +307,14 @@ example : runInitConfig ⟨initControl⟩ 9 { heap := #[.value .int (.int 0 .int
 example : runInitConfig ⟨initControl⟩ 0 { heap := #[.value .int (.int 0 .int)] } initControlConfig []
     = execStmtLoop ⟨initControl⟩ 0 { heap := #[.value .int (.int 0 .int)] } initControlConfig [] :=
   rfl
+
+/-- The wrapper at the control: `runPkgInitM` IS `runInitConfig` on the init configuration (success
+passes through `markInitPhase` unmarked). -/
+example : runPkgInitM ⟨initControl⟩ 10 { heap := #[.value .int (.int 0 .int)] } []
+    = runInitConfig ⟨initControl⟩ 10 { heap := #[.value .int (.int 0 .int)] } initControlConfig [] :=
+  rfl
+example : runPkgInitM ⟨initControl⟩ 10 { heap := #[.value .int (.int 0 .int)] } []
+    = .ok ({ heap := #[.value .int (.int 7 .int)] }, []) := rfl
 
 /-- A `println(1)` at its apply position: the one operand delivered, no targets, nothing pending. -/
 def printPosition : Config := .retV (.int 1 .int) (.stmtOpK (.print true) 0 [] [] [] .stop)

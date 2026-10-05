@@ -8,14 +8,14 @@ the requesters' design (read-only): golean-logic branch `design/globals-init-100
 — new names, the existing pinned statements unchanged, the old `{}`-store forms kept as corollaries — and G-R4's
 exact statement goes to the logic team for review BEFORE it is proved. This note is that delivery.
 
-## 1. What landed (phase 1: G-R1–G-R3 proved; phase 2: G-R4 stated)
+## 1. What landed (phase 1: G-R1–G-R3 proved; phase 2: G-R4 stated; phase 3: G-R4 approved and proved, with the logic team's answers (a)–(d))
 
 | File | Content |
 |---|---|
-| `GoLean/GoCore/SetupStatement.lean` (new) | the `def <name>_stmt : Prop` of G-R1–G-R4 (the `ExecutionStatement`/`PoolStatement` grain); the one new definition `zeroCell`; `rfl` controls after `#eval` (§5) |
-| `GoLean/GoCore/SetupSound.lean` (new) | `theorem <name> : <name>_stmt` for the nine statements of G-R1–G-R3; `example`s re-deriving the `{}`-store statements of `Equations.lean` from the general forms |
-| `GoLean/GoCore/BridgeSet.lean` | RE-PIN 12: rows 1–511 byte-identical; rows 512–520 ADDED (the nine, written out); import of `SetupSound` |
-| `Tests/GoCoreAudit.lean` | the two modules in `requiredModules`; the nine theorems in `exports` |
+| `GoLean/GoCore/SetupStatement.lean` (new) | the `def <name>_stmt : Prop` of G-R1–G-R4 (the `ExecutionStatement`/`PoolStatement` grain); the one new definition `zeroCell`; `rfl` controls after `#eval` (§5). Phase 3: G-R4 restated WITHOUT the no-blocked premise; the four `runInitConfig_*_iff_stmt` corollaries; the wrapper pair `runPkgInitM_some_stmt` / `runPkgInitM_ok_iff_stmt`; a `runPkgInitM` control |
+| `GoLean/GoCore/SetupSound.lean` (new) | `theorem <name> : <name>_stmt` for the nine statements of G-R1–G-R3; `example`s re-deriving the `{}`-store statements of `Equations.lean` from the general forms. Phase 3: G-R4 proved (induction on the fuel through `runInitConfig_unfold`, the twin of `execStmtLoop_unfold`), the four corollaries (the equation + `Prefix.lean`'s sequential statement), the wrapper pair |
+| `GoLean/GoCore/BridgeSet.lean` | RE-PIN 12: rows 1–511 byte-identical; rows 512–520 ADDED (the nine, written out); import of `SetupSound`. RE-PIN 13: rows 1–520 byte-identical; rows 521–527 ADDED (G-R4, its four corollaries, the wrapper pair) |
+| `Tests/GoCoreAudit.lean` | the two modules in `requiredModules`; the nine theorems in `exports`; phase 3: the seven more |
 | `GoLean.lean` | the two modules enrolled in the default build |
 | `scripts/mem-callsites.tsv` | two rows (the raw call-site inventory, `scripts/check-mem-callsites`): `SetupSound.lean seedStep alloc` — a PROOF DEVICE, `seedGlobals`' loop body restated verbatim so the loop can be characterized by induction, never executed by a run; `SetupStatement.lean seedGlobals_cell_stmt Heap.lookup` — NO EXECUTION, the Prop statement's cell reader (the precedent of the `program_bridge_stmt`/`program_prefix_stmt` rows) |
 
@@ -96,61 +96,89 @@ No deviation. Each `{}` lemma's statement is re-derived as an `example` in `Setu
 (`entrySlot {} i = .base ⟨0 + i⟩`). The names carry `_from` («from the store `s₁`»); the old names stay on the `{}`
 forms.
 
-## 3. G-R4 statement for the logic team's review
+## 3. G-R4 — reviewed, approved, proved (phase 3)
 
-STATED, NOT PROVED (`GoLean/GoCore/SetupStatement.lean`, `runInitConfig_eq_execStmtLoop_stmt`; it elaborates; not
-pinned in `BridgeSet.lean` until proved). The exact Lean text:
+### 3.1 The review and the logic team's answers (verbatim, with provenance)
+
+Phase 2 sent the statement below WITH a second premise (no blocked configuration reached) and four points for the
+requesters (the dispensability of that premise; the guard's spelling; whether to pin the `run_*_iff`-style
+corollaries; whether a `runPkgInitM`/`markInitPhase` wrapper equation is wanted). The reply — the golean-logic
+coordinator, 2026-10-05, by cross-session message, relayed by the [AGENT] coordinator; cite as relayed — verbatim:
+
+> «G-R1–G-R3 look exactly right, and both deviations are improvements … On G-R4, approved as stated with these
+> answers: (a) DROP the no-blocked premise. If it's dispensable (stepFn throws on a blocked config so no Prefix
+> passes one, and both loops give .deadlock), the theorem is stronger and cleaner without it; our init-mode adequacy
+> wouldn't have to discharge it. (b) Keep `initPrintRefusal? c' = none` — it's the guard runInitConfig actually uses
+> … Keep the `n ≤ fuel` bound as you found it must be. (c) Yes, please pin the run_ok_iff-style corollaries for
+> runInitConfig (ok / panic / fuelOut / deadlock characterizations via Prefix/Finish, under the no-print premise) —
+> our init-prefix adequacy theorem composes with the existing Prefix/Finish statements through them. (d) Yes, please
+> add the runPkgInitM / markInitPhase wrapper equation relating runPkgInitM to runInitConfig on the init
+> configuration — G-R1's premise is stated over runPkgInitM's result, so we need that link to reach runInitConfig
+> and then (via G-R4) execStmtLoop. No other changes. Prove as above; we'll consume them at the next (additive)
+> re-pin.»
+
+Phase 3's instruction ([AGENT] coordinator, 2026-10-05): prove G-R4 with the four answers applied, on the same
+branch by added commits (an auditor reads `36e0b302`), with the standing rule «if dropping the premise turns out
+false, STOP and report the counterexample». It did not: the proof went through without it (§3.2).
+
+### 3.2 What changed, and the final G-R4 statement (row 521)
+
+Answer (a) applied — the second premise is gone; nothing else in the text changed (answer (b)):
 
 ```lean
 def runInitConfig_eq_execStmtLoop_stmt : Prop :=
   ∀ {ctx : ProgramCtx} {fuel : Nat} {σ : Store} {c : Config} {ch : Choices},
     (∀ (n : Nat) (σ' : Store) (c' : Config) (ch' : Choices) (ls : List StepLabel),
       Prefix ctx n σ c ch ls σ' c' ch' → n ≤ fuel → initPrintRefusal? c' = none) →
-    (∀ (n : Nat) (σ' : Store) (c' : Config) (ch' : Choices) (ls : List StepLabel),
-      Prefix ctx n σ c ch ls σ' c' ch' → n ≤ fuel → ¬ Blocked c') →
     runInitConfig ctx fuel σ c ch = execStmtLoop ctx fuel σ c ch
 ```
 
-(`Prefix`, `Blocked` from `ExecutionStatement.lean`; `initPrintRefusal?`, `runInitConfig`, `execStmtLoop` from
-`StepFn.lean`.) Instantiated at `runPkgInitM`'s own call — `σ := s₀` (the seeded store), `c := .exec initF.body []
-(.frame [] [] [] [] .stop initF.id)` — it turns the init phase into an `execStmtLoop` run, so every pinned
-`execStmtLoop` bridge (rows 3, 5, 500–501 and `Prefix.lean`'s classification) applies to it; `markInitPhase` then
-only re-labels diagnostic errors.
+PROVED (`SetupSound.lean`, `runInitConfig_eq_execStmtLoop`), by the argument of the review: `runInitConfig` and
+`execStmtLoop` (`StepFn.lean`) have the same five zero-cost arms — `.next .stop ↦ .ok (σ, ch)`, the four blocked
+shapes `↦ .error .deadlock` — and differ in exactly one place: in the default arm, `runInitConfig` consults
+`initPrintRefusal? c` and throws before the fuel match; after that both do `0 ↦ .fuelOut` and `fuel+1 ↦ stepFn ctx
+σ c ch >>= recurse`. The proof is the induction on `fuel`, generalizing `σ c ch`, through the init loop's one-layer
+unfolding `runInitConfig_unfold` (the twin of `MachineSound.lean`'s `execStmtLoop_unfold`) and its two
+consequences `runInitConfig_blocked` / `runInitConfig_nonZero` (the twins of `Prefix.lean`'s): at a zero-cost
+configuration both sides agree outright; otherwise the premise at `n = 0` (`Prefix.done`) silences the guard, both
+loops fall to the same fuel match, and on a successful step the premise transfers to the successor through
+`Prefix.step`. The bound stays `n ≤ fuel` (at `n < fuel` the statement is false: fuel 0 at a print position is
+`.error (refusal)` vs `.error .fuelOut` — checked by `#eval`).
 
-**Truth argument (one paragraph).** `runInitConfig` and `execStmtLoop` (`StepFn.lean`) have the same five
-zero-cost arms — `.next .stop ↦ .ok (σ, ch)`, the four blocked shapes `↦ .error .deadlock` — and differ in exactly
-one place: in the default arm, `runInitConfig` consults `initPrintRefusal? c` (= `some e` iff `printOut? c = some
-_`) and throws `e` before the fuel match; after that both do `0 ↦ .fuelOut` and `fuel+1 ↦ stepFn ctx σ c ch >>=
-recurse`. Induction on `fuel`, generalizing `σ c ch`: at a zero-cost arm both sides agree outright; in the default
-arm the first premise at `n = 0` (`Prefix.done`) gives `initPrintRefusal? c = none`, so `runInitConfig` falls
-through to the same fuel match; at `fuel = 0` both are `.fuelOut`; at `fuel + 1` both call the same `stepFn` — on
-`.error e` both are `.error e`; on `.ok (c', σ', ch', l)` both recurse, and both premises transfer to
-`(σ', c', ch')` at bound `fuel` through `Prefix.step` (a prefix of length `n` from the successor is a prefix of
-length `n + 1 ≤ fuel + 1` from the start). The bound is `n ≤ fuel`, not `n < fuel`: the configuration reached at
-step `fuel` IS inspected by the guard before the fuel-out, so the premise must cover it (at `n < fuel` the
-statement is FALSE: fuel 0 at a print position gives `.error (refusal)` vs `.error .fuelOut`). ∎
+### 3.3 The corollaries (answer (c); rows 522–525)
 
-**Points for the requesters.**
+`ExecutionStatement.lean`'s `run_ok_iff` / `run_panic_iff` / `run_deadlock_iff` / `run_fuelOut_iff` (rows 44–47)
+for `runInitConfig`, each with the no-print premise prepended and the SAME right-hand side (`Prefix`, `Finish`,
+`ZeroCost`), so the init-prefix adequacy composes with the existing `Prefix`/`Finish` statements through them:
 
-1. *The blocked premise is dispensable.* Both loops classify a blocked configuration as `.deadlock` before any
-   guard, and `stepFn` itself throws `.deadlock` on one (`StepFn.lean:1054`), so no `Prefix` passes through a
-   blocked configuration; the equation holds without the second premise. It is kept as the request names it
-   («when no print or blocked configuration is reached», design §5.5). Say whether to keep it (it costs the client
-   one discharge, which `NotStuck` in `init` mode gives anyway) or drop it (the stronger, premise-lean form; the
-   proof is the same).
-2. *The guard's spelling.* The no-print premise is `initPrintRefusal? c' = none`, the loop's own guard and the
-   design's §5.2 side condition on `Prim.step`. `printOut? c' = none` is equivalent (`initPrintRefusal?` reads
-   nothing else) and is the form the design's generic liftings carry; either can be the pinned spelling.
-3. *The quantifier shape* follows rows 500–501 (`∀ n σ' c' ch' ls, Prefix ctx n σ c ch ls σ' c' ch' → n ≤ fuel →
-   …`). A `Finish`-side corollary (`runInitConfig … = .ok (sf, chf) ↔ ∃ n ≤ fuel, Trace …`, the `run_ok_iff` twin)
-   follows from this equation and row 3; say if it should be pinned as well.
-4. The statement is silent on `markInitPhase`: `runPkgInitM` wraps `runInitConfig`'s error with it (`fuelOut`,
-   `panic` unmarked; `stuck`/`unsupported`/`internal` get the `package init:` prefix). If the logic needs the
-   wrapper as a rewrite too (`runPkgInitM` with `$pkginit` present, in terms of `runInitConfig`), name it; it is a
-   one-line equation we can add to the same lane.
+* **522 `runInitConfig_ok_iff`** — `runInitConfig ctx fuel s c ch = .ok (sf, chf) ↔ ∃ n, n ≤ fuel ∧ ∃ ls, Prefix ctx n
+  s c ch ls sf (.next .stop) chf`.
+* **523 `runInitConfig_panic_iff`** — `… = .error (.terminal (.panic t)) ↔ ∃ n ls sf cf chf ch'' rec, n + 1 ≤ fuel ∧
+  Prefix ctx n s c ch ls sf cf chf ∧ Finish ctx sf cf chf rec (.aborted t sf ch'') 1`.
+* **524 `runInitConfig_deadlock_iff`** — `… = .error (.terminal .deadlock) ↔ ∃ n, n ≤ fuel ∧ ∃ ls sf cf chf, Prefix …
+  ∧ Finish ctx sf cf chf [] (.deadlock sf chf) 0`.
+* **525 `runInitConfig_fuelOut_iff`** — `… = .error .fuelOut ↔ ∃ ls sf cf chf, Prefix ctx fuel s c ch ls sf cf chf ∧
+  ¬ ZeroCost cf`.
 
-Once the text is confirmed (or amended), the proof is the induction above, in `SetupSound.lean`, and the row is
-pinned at 521.
+Each proof is G-R4's rewrite followed by the sequential statement. (The refusal/`fatal` endings are not
+characterized by `iff` for the sequential loop either; nothing was asked for them.)
+
+### 3.4 The wrapper (answer (d); rows 526–527)
+
+The twin of `Equations.lean`'s `runPkgInitM_none` (row 396), for `$pkginit` PRESENT — nullary and resultless, the
+design's `Definition ctx hI [] [] Dinit`:
+
+* **526 `runPkgInitM_some`** — `findFunctionIn? ctx.functions pkgInitFuncId = some initF → initF.args.size = 0 →
+  initF.results.size = 0 → runPkgInitM ctx fuel s ch = (runInitConfig ctx fuel s (.exec initF.body [] (.frame [] []
+  [] [] .stop initF.id)) ch).mapError markInitPhase`. `markInitPhase` prefixes `stuck`/`unsupported`/`internal` with
+  `package init:` and passes `fuelOut` and the terminals unmarked.
+* **527 `runPkgInitM_ok_iff`** — the SUCCESS link G-R1's premise composes with: `runPkgInitM ctx fuel s ch = .ok (s₁,
+  ch₁) ↔ runInitConfig ctx fuel s (.exec initF.body [] (.frame [] [] [] [] .stop initF.id)) ch = .ok (s₁, ch₁)`.
+
+The chain the logic team asked for is now pinned end to end: G-R1's premise `runPkgInitM ⟨program⟩ fuel s₀ choices =
+.ok (s₁, choices₁)` → (527) `runInitConfig` on the init configuration → (521, under no-print) `execStmtLoop` → (522,
+or row 3 `run_ok_iff`) a `Prefix` of length `n ≤ fuel` from `(s₀, cI, choices)` to `(s₁, .next .stop, choices₁)`.
+`ctx.functions ⟨program⟩` is `program.funcs` by `rfl` (as `runProgramSetup_noInit`'s proof already uses).
 
 ## 4. The `{}`-store corollaries
 
@@ -175,17 +203,23 @@ end of `SetupSound.lean`, each stating the pinned `{}` form verbatim and closing
 * G-R4 negative — the no-print premise is load-bearing: at `printPosition` (a `println(1)` apply position)
   `runInitConfig … 4 {} … = .error (refusal …)` (the init-phase text, pinned byte-for-byte on `initPrintRefusal?`)
   while `execStmtLoop … 4 {} … = .ok ({}, [])`.
+* The wrapper (phase 3): `runPkgInitM ⟨initControl⟩ 10 {seeded} [] = runInitConfig ⟨initControl⟩ 10 {seeded}
+  initControlConfig []`, both `.ok ({ heap := #[.value .int (.int 7 .int)] }, [])`.
 
 ## 6. For the train (records, not this lane's to write)
 
 * Post-offer changelog row (`docs/changelog/20d3946d-WINDOW.md`), draft: «additive, no existing statement or
-  behaviour changed: the setup equations G-R1–G-R3 (the logic team's 2026-10-05 request) — new modules
-  `GoLean/GoCore/SetupStatement.lean` (statements; G-R4 stated only, out for review) and
+  behaviour changed: the setup equations G-R1–G-R4 (the logic team's 2026-10-05 request; G-R4 approved 2026-10-05
+  with answers (a)–(d), relayed) — new modules `GoLean/GoCore/SetupStatement.lean` (statements) and
   `GoLean/GoCore/SetupSound.lean` (proofs); BridgeSet RE-PIN 12, rows 512–520 (`seedGlobals_cells`, `_cell`,
   `_heap_size`, `_wf`; `runProgramSetup_init`; `setup_lookup_arg_from`, `_result_from`, `setup_resultLocs_from`,
-  `setup_heap_size_from`); rows 397, 399–402 unchanged. [USER] Mike 2026-10-05 «(1) Go ahead», relayed.»
+  `setup_heap_size_from`) and RE-PIN 13, rows 521–527 (`runInitConfig_eq_execStmtLoop` — no blocked premise;
+  `runInitConfig_ok_iff`/`_panic_iff`/`_deadlock_iff`/`_fuelOut_iff`; `runPkgInitM_some`, `runPkgInitM_ok_iff`);
+  rows 1–511 and 397, 399–402 unchanged; two NO-EXECUTION rows in `scripts/mem-callsites.tsv`. [USER] Mike
+  2026-10-05 «(1) Go ahead», relayed; the logic team's approval of G-R4 relayed by the [AGENT] coordinator.»
 * Certificate provenance: STALE on this branch (it touches `GoLean/`); the train's step 5a refreshes it.
-* The G-R4 relay: §3 above, to the logic team; the proof lands in a follow-up on their confirmation.
+* The G-R4 relay is CLOSED (approved and proved, §3); the logic team consumes rows 512–527 at the next additive
+  re-pin.
 
 ## 7. Gate tails (worktree `.claude/worktrees/setup-eqs`, branch `core/setup-equations-1005`, all under the box lock)
 
@@ -221,3 +255,20 @@ end of `SetupSound.lean`, each stating the pinned `{}` form verbatim and closing
   records this exact item on every GoLean-touching train: «the 5a-class item … not re-pinned here»). NOT re-pinned
   here; the train's step 5a (`scripts/ci --slow`, candidate installed as the round's records commit) refreshes it.
   No other row moved. The negative record notes `git_dirty=true` (run before this commit).
+
+**Phase 3 (G-R4 proved; the same gates, same lock, re-run at the phase-3 tree):**
+
+* `scripts/capped lake build GoLean` — `Build completed successfully` EXIT=0, 0 warnings.
+* `scripts/check-core-audit` — `Core totality audit: 61 GoLean modules in the closure (52 under GoLean.GoCore), all
+  on disk; 561 required theorems present; 20563 declarations across all imported local modules; classical trio
+  only` · PASS (554 → 561: the seven new required theorems).
+* `scripts/check-equations` — `Equation gate: PASS (… 12 self-tests)`.
+* `scripts/check-pool-spec` — `ok [discharge] LANDED=M1 … all 9 statements of M1..M1 discharged` · PASS.
+* `scripts/check-mem-callsites` — `PASS (74 (file, declaration, raw-op) rows, all inventoried with reasons)` (no
+  new raw sites: the phase-3 proofs touch no memory operation).
+* `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci` (fast) — `RESULT: FAIL`, 513 s, on exactly the same two lines of
+  the one expected cause: `FAIL certificate provenance` (`certification: STALE certification: changed dependency
+  build/files/GoLean.lean`) and its echo `FAIL baseline diff (DRIFT — see above)` — `DRIFT vs
+  baselines/native-full.tsv (3884 case(s) run): imported-goose/channel/google-search baseline[PASS/membership] ->
+  now[FAIL/membership]` (judged from this worktree's phase-2 `--diff` record; the fast gate re-runs no Go). Every
+  other step `ok`. Not re-pinned; the train's 5a refreshes it.

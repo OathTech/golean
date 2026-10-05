@@ -61,6 +61,15 @@ def exports : List Name := [
     ``GoLean.GoCore.SetupSound.setup_lookup_result_from,
     ``GoLean.GoCore.SetupSound.setup_resultLocs_from,
     ``GoLean.GoCore.SetupSound.setup_heap_size_from,
+    -- G-R4 approved and proved with the logic team's answers (a)–(d) (2026-10-05): the init loop's
+    -- equation, its four `run_*_iff` corollaries and the `runPkgInitM` wrapper pair, BridgeSet rows 521–527.
+    ``GoLean.GoCore.SetupSound.runInitConfig_eq_execStmtLoop,
+    ``GoLean.GoCore.SetupSound.runInitConfig_ok_iff,
+    ``GoLean.GoCore.SetupSound.runInitConfig_panic_iff,
+    ``GoLean.GoCore.SetupSound.runInitConfig_deadlock_iff,
+    ``GoLean.GoCore.SetupSound.runInitConfig_fuelOut_iff,
+    ``GoLean.GoCore.SetupSound.runPkgInitM_some,
+    ``GoLean.GoCore.SetupSound.runPkgInitM_ok_iff,
 
     -- Pool grind M1: the nine frozen statements, BridgeSet rows 503–511.
     ``GoLean.GoCore.PoolSound.raceUpdate_error,

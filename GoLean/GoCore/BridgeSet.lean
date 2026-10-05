@@ -183,6 +183,18 @@ G-R3 `setup_lookup_arg_from` / `setup_lookup_result_from` / `setup_resultLocs_fr
 Rows 397 and 399–402 (`runProgramSetup_noInit`, the `{}` forms) are UNCHANGED — their instances.
 G-R4 (`SetupStatement.runInitConfig_eq_execStmtLoop_stmt`) is a STATEMENT ONLY, not pinned here: its
 text is out for the logic team's review before it is proved.
+
+RE-PIN 13 — G-R4 APPROVED and proved, with the logic team's four answers ([AGENT worker, lane
+`core/setup-equations-1005`], 2026-10-05; the golean-logic coordinator's reply of 2026-10-05, by
+cross-session message, relayed by the [AGENT] coordinator — verbatim in `docs/2026-10-05_setup-equations.md`
+§3): rows 1–520 BYTE-IDENTICAL; rows 521–527 ADDED — row 521 `runInitConfig_eq_execStmtLoop` (G-R4 with the
+no-blocked premise DROPPED, answer (a); the guard spelling `initPrintRefusal? c' = none` and the bound
+`n ≤ fuel` kept, answer (b)); rows 522–525 the `run_*_iff` corollaries for the init loop under the no-print
+premise — `runInitConfig_ok_iff` / `_panic_iff` / `_deadlock_iff` / `_fuelOut_iff`, the same right-hand sides
+as rows 44–47's sequential statements (answer (c)); rows 526–527 the `runPkgInitM` wrapper — `runPkgInitM_some`
+(`runPkgInitM` with `$pkginit` present IS `runInitConfig` on the init configuration under
+`Except.mapError markInitPhase`) and its success link `runPkgInitM_ok_iff`, the form G-R1's premise composes
+with (answer (d)). All proved in `SetupSound.lean`; statements in `SetupStatement.lean`.
 -/
 
 namespace GoLean.GoCore.BridgeSet
@@ -3729,5 +3741,84 @@ example :
     allocDecls ⟨program⟩ env s₂ func.results.toList = .ok (frameEnv, s₃) →
     s₃.heap.size = s₁.heap.size + func.args.size + func.results.size :=
   @GoLean.GoCore.SetupSound.setup_heap_size_from
+
+-- ---- RE-PIN 13 (G-R4 approved and proved, with the logic team's answers (a)–(d), 2026-10-05): rows
+-- 521–527 (`SetupSound.lean`; the `_stmt`s in `SetupStatement.lean`, each written out). Additions to rows
+-- 1–520. ----
+
+-- 521. `SetupSound.lean` — `runInitConfig_eq_execStmtLoop_stmt`, written out (G-R4: the init loop IS the
+-- entry loop when no print position is reached within the fuel; no blocked premise — answer (a))
+example :
+  ∀ {ctx : ProgramCtx} {fuel : Nat} {σ : Store} {c : Config} {ch : Choices},
+    (∀ (n : Nat) (σ' : Store) (c' : Config) (ch' : Choices) (ls : List StepLabel),
+      Prefix ctx n σ c ch ls σ' c' ch' → n ≤ fuel → initPrintRefusal? c' = none) →
+    runInitConfig ctx fuel σ c ch = execStmtLoop ctx fuel σ c ch :=
+  @GoLean.GoCore.SetupSound.runInitConfig_eq_execStmtLoop
+
+-- 522. `SetupSound.lean` — `runInitConfig_ok_iff_stmt`, written out (answer (c); row 44 for the init loop)
+example :
+  ∀ (ctx : ProgramCtx) (fuel : Nat) (s sf : Store) (c : Config) (ch chf : Choices),
+    (∀ (n : Nat) (σ' : Store) (c' : Config) (ch' : Choices) (ls : List StepLabel),
+      Prefix ctx n s c ch ls σ' c' ch' → n ≤ fuel → initPrintRefusal? c' = none) →
+    (runInitConfig ctx fuel s c ch = .ok (sf, chf) ↔
+      ∃ n, n ≤ fuel ∧ ∃ ls, Prefix ctx n s c ch ls sf (.next .stop) chf) :=
+  @GoLean.GoCore.SetupSound.runInitConfig_ok_iff
+
+-- 523. `SetupSound.lean` — `runInitConfig_panic_iff_stmt`, written out (answer (c); row 45 for the init loop)
+example :
+  ∀ (ctx : ProgramCtx) (fuel : Nat) (s : Store) (c : Config) (ch : Choices) (t : String),
+    (∀ (n : Nat) (σ' : Store) (c' : Config) (ch' : Choices) (ls : List StepLabel),
+      Prefix ctx n s c ch ls σ' c' ch' → n ≤ fuel → initPrintRefusal? c' = none) →
+    (runInitConfig ctx fuel s c ch = .error (.terminal (.panic t)) ↔
+      ∃ (n : Nat) (ls : List StepLabel) (sf : Store) (cf : Config) (chf ch'' : Choices)
+        (rec : List PickRecord),
+        n + 1 ≤ fuel ∧ Prefix ctx n s c ch ls sf cf chf ∧
+          Finish ctx sf cf chf rec (.aborted t sf ch'') 1) :=
+  @GoLean.GoCore.SetupSound.runInitConfig_panic_iff
+
+-- 524. `SetupSound.lean` — `runInitConfig_deadlock_iff_stmt`, written out (answer (c); row 46 for the init
+-- loop)
+example :
+  ∀ (ctx : ProgramCtx) (fuel : Nat) (s : Store) (c : Config) (ch : Choices),
+    (∀ (n : Nat) (σ' : Store) (c' : Config) (ch' : Choices) (ls : List StepLabel),
+      Prefix ctx n s c ch ls σ' c' ch' → n ≤ fuel → initPrintRefusal? c' = none) →
+    (runInitConfig ctx fuel s c ch = .error (.terminal .deadlock) ↔
+      ∃ n, n ≤ fuel ∧ ∃ (ls : List StepLabel) (sf : Store) (cf : Config) (chf : Choices),
+        Prefix ctx n s c ch ls sf cf chf ∧ Finish ctx sf cf chf [] (.deadlock sf chf) 0) :=
+  @GoLean.GoCore.SetupSound.runInitConfig_deadlock_iff
+
+-- 525. `SetupSound.lean` — `runInitConfig_fuelOut_iff_stmt`, written out (answer (c); row 47 for the init
+-- loop)
+example :
+  ∀ (ctx : ProgramCtx) (fuel : Nat) (s : Store) (c : Config) (ch : Choices),
+    (∀ (n : Nat) (σ' : Store) (c' : Config) (ch' : Choices) (ls : List StepLabel),
+      Prefix ctx n s c ch ls σ' c' ch' → n ≤ fuel → initPrintRefusal? c' = none) →
+    (runInitConfig ctx fuel s c ch = .error .fuelOut ↔
+      ∃ (ls : List StepLabel) (sf : Store) (cf : Config) (chf : Choices),
+        Prefix ctx fuel s c ch ls sf cf chf ∧ ¬ ZeroCost cf) :=
+  @GoLean.GoCore.SetupSound.runInitConfig_fuelOut_iff
+
+-- 526. `SetupSound.lean` — `runPkgInitM_some_stmt`, written out (answer (d): `runPkgInitM` with `$pkginit`
+-- present IS `runInitConfig` on the init configuration under `Except.mapError markInitPhase`; the twin of
+-- row 396 `runPkgInitM_none`)
+example :
+  ∀ {ctx : ProgramCtx} {fuel : Nat} {s : Store} {ch : Choices} {initF : Func},
+    findFunctionIn? ctx.functions pkgInitFuncId = some initF →
+    initF.args.size = 0 → initF.results.size = 0 →
+    runPkgInitM ctx fuel s ch
+      = (runInitConfig ctx fuel s (.exec initF.body [] (.frame [] [] [] [] .stop initF.id)) ch).mapError
+          markInitPhase :=
+  @GoLean.GoCore.SetupSound.runPkgInitM_some
+
+-- 527. `SetupSound.lean` — `runPkgInitM_ok_iff_stmt`, written out (answer (d): the success link G-R1's
+-- `runPkgInitM` premise composes with)
+example :
+  ∀ {ctx : ProgramCtx} {fuel : Nat} {s s₁ : Store} {ch ch₁ : Choices} {initF : Func},
+    findFunctionIn? ctx.functions pkgInitFuncId = some initF →
+    initF.args.size = 0 → initF.results.size = 0 →
+    (runPkgInitM ctx fuel s ch = .ok (s₁, ch₁) ↔
+      runInitConfig ctx fuel s (.exec initF.body [] (.frame [] [] [] [] .stop initF.id)) ch
+        = .ok (s₁, ch₁)) :=
+  @GoLean.GoCore.SetupSound.runPkgInitM_ok_iff
 
 end GoLean.GoCore.BridgeSet
