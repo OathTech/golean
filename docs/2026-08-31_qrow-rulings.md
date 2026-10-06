@@ -1638,3 +1638,10 @@ refresh, not a re-pin. Tail: `docs/evidence/2026-10-06_train-r69/r69-ci-slow.tai
 proposed row id and two code spellings in the reds column) were moved into the fix-plan prose in this commit; the
 remaining C5 findings are the lane's citation shorthand (`math/rand.Perm`, the lane branch name in FR-14/FR-36, and
 FR-36's «4 born» count, 3 PASS + 1 red) — informational, never gating, left as written.
+
+**Green re-run at the records commit `c72b0164`** ([AGENT] train worker, 2026-10-06): `ci --diff` EXIT=0, 981 s, `RESULT: PASS`,
+baseline diff FULL 3888/3888 (3650 / 238, no regression), certificate provenance ok, semantic equations ok, pool spec
+freeze + discharge ok (LANDED=M1), frontend pins ok, lowering-diagnostic tables ok, negative baseline no regression.
+Round 69 closed: FR-36 is closed for dot-imported functions and the membership lane's spin bounds count loop
+re-entries (`iters=`) on main; FR-37 (the dot-imported variable, queue slot 37) is open; the Codex grind on
+`core/pool-grind-*` is untouched by this train.
