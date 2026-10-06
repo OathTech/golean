@@ -332,12 +332,12 @@
       "--engine",
       "dedup"
     ],
-    "finished_utc": "2026-10-06T00:54:20.564684+00:00",
+    "finished_utc": "2026-10-06T02:15:05.953167+00:00",
     "git_dirty": false,
-    "source_commit": "76def698556efc59a75793f97a9b4737a3d775a5",
-    "started_utc": "2026-10-06T00:50:38.696069+00:00",
+    "source_commit": "6e297cd3bec0266c7df870608c4448c9072848b5",
+    "started_utc": "2026-10-06T02:11:21.280118+00:00",
     "stats_sha256": "80614849ba8583af41ce62fc0a0cefdc7a5b6f22fbb482784a125e8bd19f3283",
-    "wall_seconds": 213.511
+    "wall_seconds": 218.945
   },
   "schema": "golean-certification-v1"
 }

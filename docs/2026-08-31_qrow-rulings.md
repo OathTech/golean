@@ -1562,3 +1562,17 @@ carries records and untrusted tooling (`tools/lowerdiag/`) only — no semantic 
 BridgeSet change.
 
 Train: `train/r68` = the lane's 7 commits cherry-picked onto main `a3e18ff5`, 0 conflicts; tree identical to the lane tip.
+
+**Merge train r68 — the 5a record** ([AGENT] train worker, 2026-10-06). Pre-merge main `a3e18ff5` →
+`refs/snapshots/r68/main`; train tip `6e297cd3` fast-forwarded; primary build `scripts/build-certified` EXIT=0 (16 s,
+binary `0c808381…`). `release-check --base refs/snapshots/r68/main` EXIT=1 — the documented «train owes a slow run»
+result (the current record is valid — the lane's `4112f772` provenance refresh — but its inputs differ from the
+pre-merge tip's: `tools/lowerdiag/`); r67's EXIT=2 was the stale-record case, so EXIT=1 rather than the 2 the train brief
+anticipated is expected for a lane that refreshed its own record ([AGENT] reading of `tools/certification.py`
+`release_check`). `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --slow` EXIT=0, 1671 s, `RESULT: PASS` — fully green
+(no 5a pair: the lane's refresh already matched): certificate provenance ok; baseline diff FULL 3884/3884 (3647 PASS /
+237 FAIL = the pin, no regression); pool spec freeze + discharge ok (LANDED=M1: all 9 discharged, 39 owed); semantic
+equations ok; lowering-diagnostic tables ok; negative baseline no regression. Candidate: `schema`, `claim`, `inputs` and
+`observations_sha256` IDENTICAL to the tracked record; only the receipt moved (source `76def698` — a lane commit, not on
+main — → `6e297cd3`, 218.945 s) — INSTALLED so the receipt names a main commit; a provenance refresh, not a re-pin. Tail:
+`docs/evidence/2026-10-06_train-r68/r68-ci-slow.tail.txt`.
