@@ -1622,3 +1622,19 @@ is filled as round r69, scoped the same way, and names the RETIRED `--allow-nont
 
 Train: `train/r69` = the lane's 5 commits cherry-picked onto main `ee5dbd41`, 0 conflicts; tree identical to the lane
 tip `4a9c73dc`.
+
+**Merge train r69 — the 5a record** ([AGENT] train worker, 2026-10-06). Pre-merge main `ee5dbd41` →
+`refs/snapshots/r69/main`; train tip `0142ca35` fast-forwarded; primary build `scripts/build-certified` EXIT=0 (16 s,
+binary `1b089750…`). `release-check --base refs/snapshots/r69/main` EXIT=1 — «the train owes a slow run» (the lane's
+`06431890` provenance refresh is current; its inputs differ from the pre-merge tip's: `GoLean/CLI.lean` and the rest of
+the lane's frontend/apparatus inputs) — the r68 reading, within the brief's 1-or-2. `GOLEAN_MEM_MAX=48G scripts/capped
+scripts/ci --slow` EXIT=0, 1383 s, `RESULT: PASS` — fully green (no 5a pair): certificate provenance ok; baseline diff
+FULL 3888/3888 (3650 PASS / 238 FAIL = the pin, no regression); pool spec freeze + discharge ok (LANDED=M1); semantic
+equations ok; frontend pins ok; lowering-diagnostic tables ok; negative baseline no regression. Candidate: `schema`,
+`claim`, `inputs` and `observations_sha256` IDENTICAL to the tracked record; only the receipt moved (source `4f01b0d2` —
+a lane commit, not on main — → `0142ca35`, 192.837 s) — INSTALLED so the receipt names a main commit; a provenance
+refresh, not a re-pin. Tail: `docs/evidence/2026-10-06_train-r69/r69-ci-slow.tail.txt`. The report-only reconciler
+(`tools/reconcile-records`) noted C5 citation findings at this run; the three introduced by this train's FR-37 row (a
+proposed row id and two code spellings in the reds column) were moved into the fix-plan prose in this commit; the
+remaining C5 findings are the lane's citation shorthand (`math/rand.Perm`, the lane branch name in FR-14/FR-36, and
+FR-36's «4 born» count, 3 PASS + 1 red) — informational, never gating, left as written.
