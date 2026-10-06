@@ -981,9 +981,11 @@ reflection/`sync/atomic` internals outside the language the subject is lowered i
 machinery; prototext `String()`/`Descriptor()`/`EnumDescriptor()`/`UnmarshalJSON` stay fail-closed stubs (design D11; enum
 `String()` is real). Origin entry pointer: `docs/raft-w2-log.md` §4 D-1.
 
-**D-3 `raftpb/confstate.go` — NARROWED, final; the residue is PERMANENT.** Upstream text + the two-line exact-text patch
-(`errors.New` over the fixed texts). The `%+#v` dumps can never be exact under any route — upstream's dump prints the
-runtime's `state` pointer ([USER] 2026-10-04, Q4: a permanent stated inexactness). The verdict (nil vs non-nil) is
+**D-3 `raftpb/confstate.go` — NARROWED, final.** Upstream text + the two-line exact-text patch (`errors.New` over the
+fixed texts). The `%+#v` residue is PERMANENT (Q4): the dumps can never be exact under any route — upstream's dump prints the
+runtime's `state` pointer ([USER] 2026-10-04, Q4: a permanent stated inexactness). The dropped `(left=…, right=…)` booleans
+of the nil-input error are the price of dynamic-type exactness while `fmt.Errorf` carries the injected shim type
+(`tools/nativefrontend/stdlibshim.go`, the fmt desugar's `goleanShimErrorsNew`) — narrowable, not Q4-permanent. The verdict (nil vs non-nil) is
 upstream's; the S2 schedules do not reach `Equivalent` (no RawNode witness is owed for a text-only residue). Origin entry
 pointer: `docs/raft-w2-log.md` §4 D-3.
 

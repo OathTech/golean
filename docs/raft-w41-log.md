@@ -886,8 +886,9 @@ about the walk plan and is untouched.
   > field-number order, then retained unknown bytes in arrival order; a
   > typed-nil message → `nil`, a valid empty message → `[]byte{}`), `Size`,
   > `Clone`, `Equal` (`equalUnknown`'s per-number concatenation), the
-  > decode verdict, `errors.Is(err, proto.Error)`, the error text modulo the
-  > one per-binary prefix byte.* Where each half is validated: against the
+  > decode verdict, `errors.Is(err, proto.Error)` (on the machine via the
+  > `Unwrap` chain — `errors.Is` itself is refused by name, D10), the error
+  > text modulo the one per-binary prefix byte.* Where each half is validated: against the
   > real runtime by `difftest.py` sections 7-8 (offline from the module
   > cache; instruments, not gates); under BOTH oracles by `codeccheck.py`
   > and, through RawNode, by the S2 twin schedules (`runprobe.py`); in the

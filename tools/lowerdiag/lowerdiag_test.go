@@ -1019,8 +1019,8 @@ func TestVocabularyCoverageIsTracked(t *testing.T) {
 
 // TestCalibrationAgainstWire runs the REAL frontend on testdata/calib and
 // asserts, per user declaration, that the static verdict equals the wire's
-// quarantine set — except declarations the static pass declares NOT judged
-// (those referencing fmt shim members), which are reported, not asserted.
+// quarantine set — every user declaration (non-generic func) is judged,
+// shim callers included (2026-10-05).
 func TestCalibrationAgainstWire(t *testing.T) {
 	if err := initCauses(); err != nil {
 		t.Fatal(err)

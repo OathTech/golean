@@ -368,10 +368,13 @@ subject, generator, `GoLean/`, frontend, baseline or trusted-surface change; the
 **Route A complete.** What RETIRED: U-1 (the decode error value — now `errDecode`, a `*prefixError` unwrapping to
 `proto.Error`, its per-binary spelling one init-time `intn` pick), U-2 (unknown groups skipped and retained), U-3 (unknown
 fields retained, re-encoded, sized, cloned, compared), D-4 (the `confchange.go` overlay — upstream verbatim). What NARROWED:
-D-1 (`unknownFields` kept; `state`/`sizeCache`/descriptor machinery stay stripped), D-3 (one two-line text patch). What
+D-1 (`unknownFields` kept; `state`/`sizeCache`/descriptor machinery stay stripped), D-3 (one two-line text patch: the `%+#v` dumps and the nil-input error's booleans). What
 stays, as STATED LIMITS:
 - **D-3 `%+#v`** — PERMANENT: upstream's dump prints the runtime's `state` pointer; no route can make it exact ([USER] Q4,
   §7).
+- **D-3 `(left=…, right=…)`** — the nil-input error's dropped booleans are the price of dynamic-type exactness (`errors.New`)
+  while `fmt.Errorf` carries the injected shim type (`stdlibshim.go`, the fmt desugar's `goleanShimErrorsNew`) — narrowable,
+  not Q4-permanent: it closes when the fmt desugar routes `Errorf` onto the real `errors.New`.
 - **The recursion-edge row** — `recursion-depth-10000-vs-10001` is not a corpus row; `codeccheck.py` 48–51 and `difftest.py`
   section 8 stand in ([USER] «agree to (i)», §8).
 - **`errors.Is`** — refused on the machine by name (FR-14/G6), a machine limit, not a subject delta (D10); the `Unwrap`
