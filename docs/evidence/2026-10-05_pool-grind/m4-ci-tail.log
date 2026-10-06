@@ -1,0 +1,75 @@
+check-frontend-pins: ok [twin-wire] — fresh emit = pinned wire (661022b90b72…)
+check-frontend-pins: ok [stdlib-pin] — 61 lowered stdlib source files match the pinned sha256 manifest
+
+── import-goose gate self-test (scripts/test-import-goose)
+  test-import-goose: all fixtures behave
+
+── frontend unit tests (go test ./tools/nativefrontend)
+ok  	_/home/dev/projects/golean/.claude/worktrees/pool-grind-m2m5/tools/nativefrontend	1.937s
+
+── lowering-diagnostic tables (go test ./tools/lowerdiag — causes.tsv vs ledger, surface tables vs frontend, calibration)
+ok  	_/home/dev/projects/golean/.claude/worktrees/pool-grind-m2m5/tools/lowerdiag	0.872s
+
+── coverage-harness unit tests (go test ./tools/coverageharness — crash channel, terminal classifier, byte transport, hook inertness)
+ok  	_/home/dev/projects/golean/.claude/worktrees/pool-grind-m2m5/tools/coverageharness	1.690s
+
+── interpreter eval tests (gocore-eval-tests)
+  ok:298  fail:0  exit:0
+
+── negative baseline diff
+no regression: 394 case(s) run in negative-latest.tsv match baselines/negative-full.tsv
+
+── differential baseline diff (scripts/coverage-baseline-diff)
+no regression: 3884 case(s) run in latest.tsv match baselines/native-full.tsv
+
+── cross-ledger reconciliation (tools/reconcile-records — REPORT-ONLY, informs, never fails the gate)
+  [01] C9  HIGH    certificate provenance: STALE certification: changed dependency build/files/GoLean.lean
+  [02] C13  MEDIUM  79 doc site(s) across 10 file(s) name a patch-level Go version other than the pin (go1.25.13/go1.26.5 per docs/spec-sources.md). Some are legitimately historical; a toolchain/oracle claim off the pin is not, because the pin's whole job is that the spec text and the thing that produced the numbers moved together.
+
+── executed library coverage (all named build receipts from this CI invocation)
+CI coverage timing: verify: seconds=0.017
+Executed library coverage: PASS; 10 libraries, 20 Tests modules, 9 named steps; timings: /home/dev/projects/golean/.claude/worktrees/pool-grind-m2m5/artifacts/ci-library-timings/d8f903f3cac64b848f12af606d3fac19.json
+
+══ scripts/ci summary ══
+  ok   Tests/library ownership (no exceptions; executed builds checked at exit)
+  note build parallelism: LEAN_NUM_THREADS=2 (set by the caller — honoured as-is)
+  ok   oracle toolchain (go1.26.5 = pin)
+  ok   escape-hatch preflight
+  ok   meta-layer escape hatches (allowlist empty since the repo split)
+  ok   escape-hatch addendum (no decide +native / native-config spellings)
+  ok   bug-index cross-check
+  ok   feature-coverage (no dead tags)
+  ok   spec-anchor citations resolve at the pin
+  ok   stdlib admission register = frontend tables
+  ok   lane-validation fixtures (manifest gates reject bad shapes)
+  ok   evidence-on-main size gate
+  ok   AGENTS.md alias of CLAUDE.md
+  ok   imported-goose verbatim (above-marker bytes = pinned upstream)
+  ok   engine-isolation (core ↛ EnumDedup)
+  ok   memory-module raw call-site inventory (emit/peek discipline)
+  ok   core build (warning-free)
+  FAIL certificate provenance
+  ok   core totality audit (every GoLean/ module; required core theorems; poison controls)
+  ok   admission checker proofs and post-import audit
+  ok   declaration boundary
+  ok   wire boundary (byte-level controls through the real CLI)
+  ok   package-correct method identity
+  ok   unseq scheduler (Stage B)
+  ok   unseq wire (Stage C)
+  ok   semantic equations (scripts/check-equations)
+  ok   pool spec freeze + discharge (scripts/check-pool-spec)
+  ok   frontend pins (realized init-order deviation + twin wire = pinned bytes)
+  ok   import-goose fixtures (importer + verbatim guard reject bad shapes)
+  ok   frontend unit tests
+  ok   lowering-diagnostic tables
+  ok   coverage-harness unit tests
+  ok   eval tests (298 ok)
+  ok   negative baseline diff (no regression) [recorded at ab047d0, HEAD is 4cefee1 — stale]
+  ok   baseline diff FULL (3884/3884, no regression) [recorded at ab047d0, HEAD is 4cefee1 — stale]
+  note reconciler: 2 finding(s), 1 HIGH — report-only (details: tools/reconcile-records)
+  ok   executed library coverage (all declared libraries; all Tests modules)
+
+RESULT: FAIL
+Failed CI receipts retained: /home/dev/projects/golean/.claude/worktrees/pool-grind-m2m5/.tmp/ci-libraries-9emd39t1
+CI coverage timing: close: seconds=0.016
+CI total wall seconds: 724

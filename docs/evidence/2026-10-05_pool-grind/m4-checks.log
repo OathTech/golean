@@ -1,0 +1,16 @@
+[AGENT Codex, pool grind] M4 acceptance exit codes (capped, box-wide locked):
+ci	1
+core-audit	0
+pool-spec	0
+bridge	0
+frozen	0
+whitespace	0
+
+bridge:
+Build completed successfully (41 jobs).
+
+frozen:
+PASS: frozen files, existing modules, LANDED/MILESTONES, and BridgeSet rows 1–527 byte-identical to a3e18ff5.
+
+whitespace:
+EMPTY (EXIT=0).

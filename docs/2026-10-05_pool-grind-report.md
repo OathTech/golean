@@ -130,4 +130,34 @@ M5: `stepML_single_sound_stmt`, `stepML_single_complete_stmt`, `singleton_finish
 `singleton_finish_refused_stmt`, `singleton_finish_fatal_stmt`, `singleton_finish_deadlock_stmt`, `singleton_prefix_embedding_stmt`, `singleton_run_stmt`.
 M3 complete; acceptance differs from green only by the authorized stale-certificate failure. Continue without review, merge or push.
 New M3 evidence is staged; its extra size check was cancelled while waiting for another lane (EXIT=143, never read this tree) and is requeued before M4’s first compiler pass. No size PASS for those new logs is claimed yet.
-[AGENT] M3 evidence-size resolution, 2026-10-05 23:55 UTC: the capped, locked check completed EXIT=0 on the four new M3 logs: 2415 tracked files / 32110168 bytes, 0 new offenders. Actual output retained in `m3-checks.log`.
+[AGENT] M3 evidence-size resolution, 2026-10-05 23:54 UTC: the capped, locked check completed EXIT=0 on the four new M3 logs: 2415 tracked files / 32110168 bytes, 0 new offenders. Actual output retained in `m3-checks.log`.
+
+## M4 checkpoint — run lifts, 2026-10-05–06
+
+[AGENT Codex, pool grind] Continuous-run authority; same input, branch and worktree as M2–M3.
+Proof/integration commit: `4cefee19b7dc998bcd6063847435460c1446d0c6`; acceptance completed 2026-10-06 UTC.
+Fourteen exact frozen declarations proved:
+`poolPrefix_comp`, `poolPrefix_split`, `poolPrefix_labelled`, `poolPrefix_erase`, `poolPrefix_run`.
+`pool_run_ok_iff`, `pool_run_terminal_iff`, `pool_run_fuelOut_iff`, `pool_run_refusal_iff`, `pool_classification`.
+`run_ok_prefix`, `program_prefix`, `continue_replay`, `poolPrefix_replay`.
+BridgeSet rows 544–557 and fourteen audit exports added; no new module. Previous rows retained byte-for-byte.
+Private helpers in `PoolSound`: `poolOut_cons`, `front_error_cases`, the proof carrier `RunEvidence`, `run_evidence`, `finish_normal_run`, `finish_terminal_run`.
+The finite driver trace yields each exact ending witness; prefix execution supplies the converses, preserving output, detector state, tapes and finishing cost.
+All development goals discharged. No counterexample, repair, bounded adjustment, frozen hash change, or edit to an existing proof module outside `PoolSound`.
+Every acceptance command capped at 48G under the box-wide lock, locale `en_US.UTF-8`, two Lean threads, worktree-local TMPDIR.
+`scripts/capped scripts/ci`: EXIT=1, `RESULT: FAIL`; ONLY failing summary step is certificate provenance.
+Verbatim expected cause: `certification: STALE certification: changed dependency build/files/GoLean.lean`.
+`scripts/capped bash scripts/check-core-audit`: EXIT=0; PASS, 63 modules / 54 core / 591 required theorems / 20756 declarations, classical trio only; five poison controls rejected.
+`scripts/capped python3 scripts/check-pool-spec --landed M4`: EXIT=0; 39 M1–M4 statements discharged, 0 early, 9 owed; all frozen files and 48 statement hashes match.
+`scripts/capped lake build GoLean.GoCore.BridgeSet`: EXIT=0, 41 jobs; the integrated pre-checkpoint PoolSound/BridgeSet build also EXIT=0.
+`scripts/capped python3 .tmp/check-frozen.py`: EXIT=0; frozen surface, existing modules, LANDED/MILESTONES and rows 1–527 byte-identical to input.
+`git diff --check`: EXIT=0, EMPTY. CI escape-hatch scans and warning-free build pass; 298 eval tests pass.
+Cached comparisons only: 3884 execution / 394 negative cases match; clean `ab047d0` records, go1.26.5. No fresh differential or certification refresh.
+[CI tail](evidence/2026-10-05_pool-grind/m4-ci-tail.log) · [audit tail](evidence/2026-10-05_pool-grind/m4-audit-tail.log) · [pool checker](evidence/2026-10-05_pool-grind/m4-pool-spec.log) · [exit ledger](evidence/2026-10-05_pool-grind/m4-checks.log).
+An optional interactive-terminal request failed with `failed to openpty` / `Permission denied`; `nono why --path /dev/ptmx --op write` reported `path_not_granted`.
+No permission or profile change: ordinary capped commands worked and the run continued. The M3 evidence-size timestamp above is corrected to its log's actual 23:54 UTC minute.
+Still owed at this checkpoint: M5 `stepML_single_sound_stmt`, `stepML_single_complete_stmt`, `singleton_finish_normal_stmt`.
+`singleton_finish_aborted_stmt`, `singleton_finish_refused_stmt`, `singleton_finish_fatal_stmt`, `singleton_finish_deadlock_stmt`.
+`singleton_prefix_embedding_stmt`, `singleton_run_stmt`. No obstruction claimed; M5's first compiler pass follows.
+M4 complete; only the authorized stale-certificate red remains in acceptance. Continue without review, merge or push.
+M4 staged evidence-size check: capped and locked, EXIT=0; 2419 tracked files / 32118971 bytes in 154 evidence directories, 0 new offenders.
