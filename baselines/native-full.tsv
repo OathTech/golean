@@ -1,5 +1,19 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 3884 (3647 PASS / 237 FAIL)
+# cases: 3888 (3649 PASS / 239 FAIL)
+# re-pinned: 2026-10-06 [AGENT], lane/fr36-spin-bounds-1006 — FR-36 closed ([USER] Mike 2026-10-06 «Yeah, let's do 3+4», relayed; item 3)
+#   + spin bounds in loop iterations (item 4, docs/2026-10-06_spin-bounds.md). WHY: the frontend resolves a DOT-IMPORTED stdlib
+#   identifier through the SAME object-keyed binding as the selector spelling (tools/nativefrontend/dotimport.go): the primitives
+#   lower, a quarantined member refuses BY NAME (import form named), a source-through member lowers qualified. BORN ROWS ONLY: +4
+#   stdlib-source/dot-import/* — intn-membership PASS/membership ({0..4}, members=5, the dot-imported Intn draw),
+#   strings-source-through PASS, perm-quarantined FAIL/frontend-export RED BY DESIGN on FR-14's line (the dot-imported math/rand.Perm:
+#   'package-selector call rand.Perm (package "math/rand" surface not modeled) — reached through a dot import'), float-bits
+#   FAIL/frontend-export RED BY DESIGN on FR-36's line (the dot-imported Float64bits keeps a NAMED refusal: tools/lowerdiag's calibration
+#   cause dot-import-float-bits pins it refused and that table is another lane's — flips with their cause). The four spin rows
+#   (goroutines/send-then-spin, sync/trylock/spin-until-trylock, race/atomics-free/cas-failure-acquires, atomics/spin/flag-wait) moved
+#   from the RETIRED nonterm=200 step budget to iters=5/1/1/1 loop re-entries — their results, stages and observation sets unchanged
+#   (measured: docs/evidence/2026-10-06_spin-bounds/measurements.txt); spin-until-trylock's work=500000 reverted to the default. A
+#   program with no dot import has a byte-identical wire. NO PASS→non-PASS flip; no existing row's result or stage moved. Measured by
+#   scripts/diff-one (4/4 spin PASS; dot-import 2 PASS + 2 red by design), then the full gate. 3884 + 4 = 3888; 3647 + 2 = 3649; 239 FAIL.
 # re-pinned: 2026-10-04 [AGENT], lane/route-a-s1-1004 — protobuf ROUTE A slice S1 ([USER] Mike 2026-10-04 «Approved», relayed;
 #   design docs/2026-10-04_route-a-protobuf-design.md D9 / acceptance §5). BORN ROWS ONLY, all PASS: +24
 #   multipkg/wire-codec/* — 22 strict (group-skip-nested declares depth=24: w=18 wide picks measured, the codec's appends) + 2
@@ -5438,6 +5452,10 @@ PASS	stdlib-source/cmp-compare/floats-nan	-
 PASS	stdlib-source/cmp-compare/less	-
 PASS	stdlib-source/cmp-compare/local-float-type	-
 PASS	stdlib-source/cmp-compare/or	-
+FAIL	stdlib-source/dot-import/float-bits	frontend-export
+PASS	stdlib-source/dot-import/intn-membership	membership
+FAIL	stdlib-source/dot-import/perm-quarantined	frontend-export
+PASS	stdlib-source/dot-import/strings-source-through	-
 PASS	stdlib-source/errors-join/all-nil	-
 PASS	stdlib-source/errors-join/distinct	-
 PASS	stdlib-source/errors-join/empty-texts	-

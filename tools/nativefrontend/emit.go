@@ -8113,6 +8113,15 @@ func (e *emitter) emitIdent(id *ast.Ident) (any, error) {
 	// the mangled stencil.
 	if fn, ok := e.info.Uses[id].(*types.Func); ok {
 		if sig, isSig := fn.Type().(*types.Signature); isSig {
+			// FR-36 (dotimport.go): a dot-imported NON-source stdlib
+			// function as a VALUE (`f := Intn`; `defer Intn(5)` / `go
+			// Intn(5)` evaluate their callee here) — the qualified
+			// spelling's value-position refusal (FR-14), import form
+			// named; the primitives lower at direct-call sites only.
+			// Before: a bare `func-value "Intn"` and a runtime `stuck`.
+			if pkg, dot := e.dotImportedStdlibFunc(fn); dot {
+				return nil, e.refuseDotImportedValue(fn, pkg)
+			}
 			name := e.funcWireName(fn)
 			if sig.TypeParams().Len() > 0 {
 				mangled, _, err := e.funcInstanceAt(id, fn)
@@ -8560,25 +8569,17 @@ func (e *emitter) emitCallNode(c *ast.CallExpr) (any, bool, error) {
 	// to the injected shim; every other selector call falls through to
 	// the method machinery and its standing refusals, byte-identical.
 	if sel, ok := c.Fun.(*ast.SelectorExpr); ok {
-		// sync/atomic (atomics arc wave 1, atomics.go): a direct call of
-		// a package-level atomic function is ONE fused machine op —
-		// the `atomic-op` node; out-of-scope members refuse in-hook by
-		// name and wave. Resolved through the *types.Func so this and
-		// the bare-ident spelling (the shadow model's method bodies)
-		// meet at one site.
-		if fn, isAtomic := isAtomicFunc(e.info.Uses[sel.Sel]); isAtomic {
-			return e.emitAtomicCall(c, fn)
-		}
-		// math.Float64bits & siblings (stdlib slice 3): the `float-bits`
-		// PRIMITIVE — a pure strict op, never hoisted (floatbits.go).
-		if fn, isFB := isFloatBitsFunc(e.info.Uses[sel.Sel]); isFB {
-			return e.emitFloatBitsCall(c, fn)
-		}
-		// math/rand.Intn & math/rand/v2.IntN (window unit 5b): the
-		// `rand-intn` PRIMITIVE — the `[0, n)` draw as ONE choice-tape
-		// pick, an effectful node hoisted like a call (randintn.go).
-		if fn, tag, isRI := isRandIntnFunc(e.info.Uses[sel.Sel]); isRI {
-			return e.emitRandIntnCall(c, fn, tag)
+		// The OBJECT-keyed PRIMITIVES (dotimport.go emitPrimitiveCall —
+		// one lookup on the resolved *types.Func, shared with the
+		// bare-identifier spelling of a dot import, FR-36): sync/atomic's
+		// package-level functions as the fused `atomic-op` (atomics arc
+		// wave 1, atomics.go; out-of-scope members refuse in-hook by name
+		// and wave), math.Float64bits & siblings as the pure strict
+		// `float-bits` op (stdlib slice 3, floatbits.go; never hoisted),
+		// math/rand.Intn & math/rand/v2.IntN as the `rand-intn` draw
+		// (window unit 5b, randintn.go; effectful, hoisted like a call).
+		if node, effectful, handled, err := e.emitPrimitiveCall(c, e.info.Uses[sel.Sel]); handled {
+			return node, effectful, err
 		}
 		if node, handled, err := e.emitStdlibShimCall(c, sel); handled || err != nil {
 			return node, handled, err
@@ -8681,27 +8682,47 @@ func (e *emitter) emitCallNode(c *ast.CallExpr) (any, bool, error) {
 	var calleeName string
 	switch obj := e.info.Uses[fnID].(type) {
 	case *types.Func:
-		// A bare-ident call of a sync/atomic function: reachable only
-		// inside the typed-wrapper shadow model (atomics.go), whose
-		// method bodies call the package's own functions unqualified —
-		// the same `atomic-op` node as the qualified spelling.
-		if fn, isAtomic := isAtomicFunc(obj); isAtomic {
-			return e.emitAtomicCall(c, fn)
-		}
-		// A bare-ident call of a `math` float-bits function can only come
-		// from a dot-import (`import . "math"`); the selector spelling
-		// lowers to the primitive, this one refuses NAMING the package
-		// (audit fix round D, 2026-09-05) — the dot-import defect class
-		// stays visible rather than being lowered on a path the identity
-		// boundary does not police.
+		// The OBJECT-keyed primitives first (dotimport.go
+		// emitPrimitiveCall): the sync/atomic shadow model's unqualified
+		// calls of the package's own functions (atomics.go), and — FR-36,
+		// closed 2026-10-06 — a DOT-IMPORTED `Float64bits` / `Intn`
+		// (`import . "math"`, `import . "math/rand"`), which reach the SAME
+		// `atomic-op` / `float-bits` / `rand-intn` lowering as the selector
+		// spelling: one lookup on the resolved object, never a path of its
+		// own. (The audit-fix-round-D refusal of the dot-imported
+		// float-bits call, 2026-09-05, was the stopgap that kept the
+		// then-unfixed class visible — RETAINED for float-bits alone as the
+		// lowerdiag-pinned residual below.)
+		//
+		// RESIDUAL (a named refusal, not a lowering): the dot-imported
+		// FLOAT-BITS call. The lowering-diagnosis tool's calibration
+		// fixture (tools/lowerdiag/testdata/calib/dot.go `fbDot`, cause
+		// `dot-import-float-bits`) pins this member REFUSED and the gate's
+		// calibration step compares it with the wire; that tool is another
+		// lane's, so lowering here would leave the gate red on their table.
+		// Refuse by name, stating the pin; the lowerdiag lane flips the
+		// cause and this arm together (one line each) — FR-36's record.
 		if fn, isFB := isFloatBitsFunc(obj); isFB {
-			return nil, false, unsup("dot-imported math.%s called as a bare identifier: the float-bits primitive lowers the qualified spelling only (import . \"math\" is outside the identity boundary) — fail closed", fn.Name())
+			return nil, false, e.refuseDotImportedFloatBits(fn)
+		}
+		if node, effectful, handled, err := e.emitPrimitiveCall(c, obj); handled {
+			return node, effectful, err
+		}
+		// Any other bare identifier resolving to a function of another,
+		// NON-source package is a dot-imported QUARANTINED stdlib member:
+		// refuse BY NAME with the selector spelling's own text, the import
+		// form named (dotimport.go). Before FR-36 this lowered as a bare
+		// user `call` and the machine answered `stuck: GoCore function not
+		// found` — fail-noisy, cause unnamed (identity note §6's recorded
+		// defect, closed here).
+		if pkg, dot := e.dotImportedStdlibFunc(obj); dot {
+			return nil, false, e.refuseDotImportedCall(obj, pkg)
 		}
 		sig, _ = obj.Type().(*types.Signature)
 		// Wire FuncId via the identity boundary (W1.1): same-package
-		// calls inside a non-main unit must target the QUALIFIED id.
-		// Stdlib objects stay bare — the recorded dot-import defect's
-		// exact shape (identity note §6), neither fixed nor widened.
+		// calls inside a non-main unit must target the QUALIFIED id; a
+		// dot-imported SOURCE-THROUGH stdlib member (`import . "strings"`;
+		// `ToUpper("ab")`) is a source function and qualifies the same way.
 		calleeName = e.funcWireName(obj)
 	case *types.Builtin:
 		return e.emitBuiltin(c, fnID.Name)

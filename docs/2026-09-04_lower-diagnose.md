@@ -415,4 +415,15 @@ Diagnosis-tool changes only (`tools/lowerdiag/`); no frontend, wire or machine c
   `syncMV`/`syncMVWg` judged refused).
 
 Not a lowerdiag defect: a dot-imported `math/rand.Intn` — both accept and the machine is stuck; that
-is FR-36 (`docs/language-coverage-ledger.md`, queue 36).
+is FR-36 (`docs/language-coverage-ledger.md`, queue 36). **FR-36 PARTIALLY CLOSED 2026-10-06**
+(lane `lane/fr36-spin-bounds-1006`, `tools/nativefrontend/dotimport.go`): the wire now lowers the
+dot-imported `Intn` to the `rand-intn` primitive and refuses every other dot-imported non-source
+stdlib member BY NAME (the selector spelling's text, import form named). Two lowerdiag follow-ups
+for this tool's lane (item-4 class, not fixed here — `tools/lowerdiag/` is that lane's): (a) the
+calibration cause `dot-import-float-bits` (fixture `fbDot`) pins the dot-imported `Float64bits`
+REFUSED; the frontend keeps that spelling a named refusal only so the gate's calibration step stays
+green — flip the cause to "lowers" together with the one-arm change in `emit.go` (route it through
+`emitPrimitiveCall`; delete `refuseDotImportedFloatBits`), and the row
+`stdlib-source/dot-import/float-bits` goes PASS; (b) a dot-imported QUARANTINED member
+(`import . "math/rand"`; `Perm(3)`) — lowerdiag says lowers; the wire refuses by name (no calibration
+fixture covers it today, so the gate does not see this one).

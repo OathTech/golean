@@ -892,7 +892,7 @@ run_case_rows() {
   confluent_member=""
   confluent_detail=""
   if [[ "$lane" == "confluent" ]]; then
-    local width sites obs_cap work members statuses tier backedge nonterm engine
+    local width sites obs_cap work members statuses tier backedge iters engine
     parse_lane_params || return 0
     local conf_dir="$OUT/membership/$id"
     mkdir -p "$conf_dir"
@@ -1023,7 +1023,7 @@ run_case_rows() {
   # approximation (the old adversarial-stream loop is subsumed: every
   # stream's path is in the enumerated tree).
   if [[ "$lane" == "racy" ]]; then
-    local width sites obs_cap work members statuses tier backedge nonterm engine
+    local width sites obs_cap work members statuses tier backedge iters engine
     parse_lane_params || return 0
     local racy_dir="$OUT/membership/$id"
     mkdir -p "$racy_dir"
@@ -1469,7 +1469,7 @@ membership_go_observation() {
 # by name, so a row that still carries it cannot pass with a budget it
 # did not get. Returns nonzero after reporting on a bad shape.
 parse_lane_params() {
-  width="" sites=8 obs_cap=64 work=200000 members="" statuses="$expected_status" tier="" backedge="" nonterm="" engine=""
+  width="" sites=8 obs_cap=64 work=200000 members="" statuses="$expected_status" tier="" backedge="" iters="" engine=""
   if [[ "$params" != "-" ]]; then
     local kv key value
     IFS=',' read -r -a kvs <<< "$params"
@@ -1550,20 +1550,29 @@ parse_lane_params() {
         continue
       fi
       if [[ "$key" == "nonterm" ]]; then
-        # allow-nonterm (stage D §5d): per-branch pool fuel N with
-        # fuel-exhausted branches counted (never members; membership =
-        # oracle observation ∈ TERMINATING members). Membership-only:
-        # a confluent/racy claim has no honest divergent-branch
-        # reading.
+        # RETIRED 2026-10-06 (docs/2026-10-06_spin-bounds.md): a per-branch
+        # budget in pool STEPS moved with every step-count refactor (C4,
+        # train r59). Refused by name, never silently re-read as iters=.
+        report_fail "$id" "$features" "manifest" "nonterm= is RETIRED (a per-branch budget in pool steps; it moved with every step-count change): declare the budget in loop re-entries with iters=<K> — docs/2026-10-06_spin-bounds.md: $kv"
+        return 1
+      fi
+      if [[ "$key" == "iters" ]]; then
+        # allow-nonterm-iters (stage D §5d, re-expressed 2026-10-06):
+        # per-branch budget of K LOOP RE-ENTRIES (the machine's backEdge
+        # shapes) with branches taking a (K+1)-th counted (never members;
+        # membership = oracle observation ∈ TERMINATING members). The
+        # step fuel stays the run default — its exhaustion is a NAMED
+        # enumerator refusal, never a counted branch. Membership-only: a
+        # confluent/racy claim has no honest divergent-branch reading.
         if [[ "$lane" != "membership" ]]; then
-          report_fail "$id" "$features" "manifest" "nonterm= is a membership-lane param: $kv (lane=$lane)"
+          report_fail "$id" "$features" "manifest" "iters= is a membership-lane param: $kv (lane=$lane)"
           return 1
         fi
         if [[ ! "$value" =~ ^[1-9][0-9]*$ ]]; then
-          report_fail "$id" "$features" "manifest" "nonterm= must be a positive integer (the per-branch fuel): $kv"
+          report_fail "$id" "$features" "manifest" "iters= must be a positive integer (the per-branch loop re-entry budget): $kv"
           return 1
         fi
-        nonterm="$value"
+        iters="$value"
         continue
       fi
       if [[ "$key" == "depth" ]]; then
@@ -1626,7 +1635,7 @@ member_status_allowed() {
 }
 
 run_membership_case_rows() {
-  local width sites obs_cap work members statuses tier backedge nonterm engine
+  local width sites obs_cap work members statuses tier backedge iters engine
   parse_lane_params || return 0
 
   local mem_dir="$OUT/membership/$id"
@@ -1760,8 +1769,8 @@ run_membership_case_rows() {
   if [[ -n "$engine" ]]; then
     enum_args+=(--engine "$engine")
   fi
-  if [[ -n "$nonterm" ]]; then
-    enum_args+=(--allow-nonterm "$nonterm")
+  if [[ -n "$iters" ]]; then
+    enum_args+=(--allow-nonterm-iters "$iters")
   fi
   if [[ "$tier" == "slow" ]]; then
     certified_observations "baselines/certified/${id//\//__}.certified.tsv" \
@@ -1788,7 +1797,7 @@ run_membership_case_rows() {
 
   local member_count
   member_count="$(grep -c . "$mem_dir/observations.txt" || true)"
-  if [[ "$member_count" -le 1 && -z "$nonterm" ]]; then
+  if [[ "$member_count" -le 1 && -z "$iters" ]]; then
     report_fail "$id" "$features" "membership" "enumerated observation set is a singleton ($member_count member) — the case belongs in the strict or confluent lane"
     return 0
   fi
@@ -1826,10 +1835,11 @@ run_membership_case_rows() {
       report_fail "$id" "$features" "membership" "$coupling_cause — coupling NOT certified (a killed run is not copied-driver drift); captured output: $coupling_obs"
       return 0
     fi
-    if [[ -n "$nonterm" && "$coupling_obs" == *'"status":"fuel-out"'* ]]; then
-      # Declared-nonterm row (stage D §5d): a coupling stream landing
-      # on a DIVERGENT branch is the counted-nonterm class, not a
-      # member — the same honest bucket the enumeration reports
+    if [[ -n "$iters" && "$coupling_obs" == *'"status":"fuel-out"'* ]]; then
+      # Declared-nonterm row (stage D §5d; iters= since 2026-10-06): a
+      # coupling stream landing on a DIVERGENT branch runs the single-run
+      # driver to ITS default fuel and is the counted-nonterm class, not
+      # a member — the same honest bucket the enumeration reports
       # (`nonterm=` in the run record). Terminating coupling
       # observations still must be members.
       continue

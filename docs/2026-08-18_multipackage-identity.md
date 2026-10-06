@@ -351,7 +351,12 @@ another platform or a move of the Go pin re-derives the table;
   refuses at the loader — new capability, closed by default. The
   recorded pre-existing stdlib dot-import defect (stdlibshim.go
   FAIL-CLOSED RULES: dangling plain call → runtime `stuck`, recorded
-  2026-08-16) is deliberately NOT fixed or widened here.
+  2026-08-16) was deliberately NOT fixed or widened here; it was
+  CLOSED 2026-10-06 as FR-36 (`tools/nativefrontend/dotimport.go`): a
+  bare identifier resolving to a non-source stdlib function takes the
+  object-keyed primitive bindings or the by-name quarantine exactly
+  like the selector spelling; a dot-imported source-through member is
+  a source function and qualifies through `funcWireName` as before.
 - **Stdlib shims** (`E5`) are injected PER UNIT. (Superseded text: this
   section originally said shims "stay MAIN-PACKAGE-ONLY" — raft W4.0
   widened injection to every source unit, `load.go` `parseLocal`'s

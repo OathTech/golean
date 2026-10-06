@@ -29,7 +29,7 @@
 #                  exclusion is RECORDED in $OUT/excluded.tsv and echoed in the
 #                  summary header, never silent. Use for rows that spin to the
 #                  fuel cap under the default stream (goroutines/send-then-spin,
-#                  a membership row with nonterm=200: ~10 min per fuel-out
+#                  a membership row with iters=1 (formerly nonterm=200): ~10 min per fuel-out
 #                  stream at the default fuel) and trace them separately with
 #                  a lower --fuel.
 #   <id> ...       restrict to these manifest ids

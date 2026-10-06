@@ -35,7 +35,7 @@ private def usage : String :=
   "  golean observation-eq --left <json> --right <json>\n" ++
   "  golean coverage-observations --input <file> --function <name> [--arg-int <n> ...] [--fuel <n>] [--engine dedup]\n" ++
   "      [--max-width <B>] [--max-sites <D>] [--cap <N>] [--work-cap <W>] [--expect-status <ok|panic|ok,panic|race>]
-      [--allow-nonterm <per-branch-fuel>] [--backedge <full|k>]\n"
+      [--allow-nonterm-iters <per-branch-loop-re-entries>] [--backedge <full|k>]\n"
 
 private def absoluteFrom (base : FilePath) (path : FilePath) : FilePath :=
   if path.isRelative then (base / path).normalize else path.normalize
@@ -706,9 +706,15 @@ structure EnumArgs where
   the declared set is a machine bug). `none` skips the check (bare
   CLI exploration). -/
   expectStatus : Option (List String) := none
-  /-- `--allow-nonterm N` (stage D §5d): per-branch pool fuel N with
-  fuel-exhausted branches counted as `nonterm`, never members. -/
-  allowNonterm : Option Nat := none
+  /-- `--allow-nonterm-iters K` (stage D §5d, re-expressed 2026-10-06 —
+  `docs/2026-10-06_spin-bounds.md`): per-branch budget of K LOOP
+  RE-ENTRIES (`loopReentry`), with branches that take a (K+1)-th counted
+  as `nonterm`, never members. Replaces `--allow-nonterm N` (a per-branch
+  budget in pool STEPS, RETIRED: a refactor changing the steps per
+  iteration moved every spin row's tree — C4, train r59). The step fuel
+  stays the run default; its exhaustion under this accounting is a named
+  refusal, never a nonterm count. -/
+  allowNontermIters : Option Nat := none
   /-- `--backedge full` or `--backedge <k>` (stage D §5d): the backEdge
   per-site enumeration mode; absent = a bound ≥ 2 backEdge consult
   fails loud. -/
@@ -742,8 +748,13 @@ private def parseEnumArgs : List String → EnumArgs → Except String EnumArgs
       parseEnumArgs rest { cfg with cap := (← parseJsonNat "--cap" value) }
   | "--work-cap" :: value :: rest, cfg => do
       parseEnumArgs rest { cfg with workCap := (← parseJsonNat "--work-cap" value) }
-  | "--allow-nonterm" :: value :: rest, cfg => do
-      parseEnumArgs rest { cfg with allowNonterm := some (← parseJsonNat "--allow-nonterm" value) }
+  | "--allow-nonterm-iters" :: value :: rest, cfg => do
+      parseEnumArgs rest { cfg with allowNontermIters := some (← parseJsonNat "--allow-nonterm-iters" value) }
+  | "--allow-nonterm" :: _ :: _, _ =>
+      -- RETIRED 2026-10-06 (docs/2026-10-06_spin-bounds.md): a per-branch
+      -- budget in pool STEPS moves with every step-count refactor. Refused
+      -- by name, never silently re-read as the iteration budget.
+      .error s!"--allow-nonterm is RETIRED (a per-branch budget in pool steps; it moved with every step-count change — C4, train r59): declare the budget in loop re-entries with --allow-nonterm-iters <K> (docs/2026-10-06_spin-bounds.md)\n{usage}"
   | "--backedge" :: value :: rest, cfg => do
       if value == "full" then
         parseEnumArgs rest { cfg with backedgeMode := some none }
@@ -828,6 +839,32 @@ def enumSetup (program : GoCore.Program) (name : String)
         else pure (some initF.body)
   return { ctx, σ₀, initBody?, func, args }
 
+/-- A pool step is a LOOP RE-ENTRY iff the goroutine it stepped
+(`StepEvent.who`) was, BEFORE the step, running with its boundary flag
+clear at a back-edge shape — `Config.boundarySite = .backEdge`:
+`.next (.loop …)`, `.signal .cont (.loop …)`, `.next (.mapIterK …)` (the
+envelope statement of `ChoiceSite.backEdge`, Multi.lean). The flag-clear
+step (`.running c (some _)` → `.opDoneStrip`) is NOT one, so an iteration
+counts exactly once. The spin rows' per-branch budget
+(`--allow-nonterm-iters K`) is counted in these — the machine's own
+iteration vocabulary, read through a public definition — rather than in
+pool steps, which a refactor changing the steps per iteration moves (C4,
+train r59; `docs/2026-10-06_spin-bounds.md`). -/
+def loopReentry (m : GoCore.Machine.MultiConfig) (ev : GoCore.Machine.StepEvent) : Bool :=
+  match m.threads[ev.who]? with
+  | some (.running c none) => c.boundarySite == .backEdge
+  | _ => false
+
+/-- The stop at step-fuel 0 on a budgeted pool run: `.fuelOut` under the
+plain run fuel; under the iteration accounting (`--allow-nonterm-iters K`)
+the step fuel is the SAFETY NET and its exhaustion is NAMED — the
+iteration bound was not the one that cut the branch — never the counted
+nonterm class (fail closed: an exhausted bound is a refusal, not a pass). -/
+def stepFuelStop (itersCap : Option Nat) : Stop :=
+  match itersCap with
+  | none => .fuelOut
+  | some k => .internal s!"per-branch step fuel exhausted under the iteration accounting (--allow-nonterm-iters {k}): the step fuel, not the iteration bound, cut this branch — the declared bound is not the binding one; raise --fuel or re-examine the row (docs/2026-10-06_spin-bounds.md)"
+
 /-- One machine run to a program terminal: the observation JSON plus
 the LEFTOVER choice stream. `Choices.consume` pops exactly one element
 while the stream is non-empty (exhaustion consumes nothing and yields the
@@ -859,12 +896,17 @@ part of the observation, so an error without it compared only
 status + message and could not see an output divergence on any
 refusal path). Returns (status, observation, leftover); non-`private`
 so the driver-agreement eval tests can pin it against the originals it
-mirrors (audit F5). -/
-def enumPoolRun (pctx : GoCore.ProgramCtx) (resultLocs : List Loc) :
-    Nat → GoCore.Machine.MultiConfig → GoCore.Machine.RaceState →
+mirrors (audit F5). The per-branch budget (2026-10-06): `itersCap` =
+`--allow-nonterm-iters K` (none = no iteration accounting) and `iters` =
+the loop re-entries taken so far (`loopReentry`); the (K+1)-th re-entry
+throws `.fuelOut` with the output so far — the declared nonterm class —
+while step-fuel exhaustion under a cap is `stepFuelStop`'s named stop. -/
+def enumPoolRun (pctx : GoCore.ProgramCtx) (resultLocs : List Loc)
+    (itersCap : Option Nat) :
+    Nat → Nat → GoCore.Machine.MultiConfig → GoCore.Machine.RaceState →
     GoCore.Choices → GoString →
     Except (Stop × GoString) (String × Json × GoCore.Choices)
-  | fuel, m, r, choices, acc =>
+  | fuel, iters, m, r, choices, acc =>
       -- `acc`: the program output folded so far (stdlib slice 3) — every
       -- member observation carries it (`execProgLoopOut`'s fold, mirrored),
       -- and so does every refusal (`execProgLoopOut`'s `(acc, throw e)`).
@@ -895,31 +937,37 @@ def enumPoolRun (pctx : GoCore.ProgramCtx) (resultLocs : List Loc) :
                         choices₁)
                     else
                       match fuel with
-                      | 0 => throw (.fuelOut, acc)
+                      | 0 => throw (stepFuelStop itersCap, acc)
                       | fuel + 1 => do
                           let (m', choices', ev) ←
                             (GoCore.Machine.stepMulti pctx m choices₁).mapError (·, acc)
                           let acc' := ev.out.foldl GoString.append acc
+                          let iters' := if loopReentry m ev then iters + 1 else iters
                           match GoCore.Machine.raceUpdate ev m' r with
                           | .error .raceDetected =>
                               return ("race", errorJson .raceDetected acc', choices')
                           | .error e => throw (e, acc)
-                          | .ok r' => enumPoolRun pctx resultLocs fuel m' r' choices' acc')
+                          | .ok r' =>
+                              if itersCap.any (iters' > ·) then throw (.fuelOut, acc')
+                              else enumPoolRun pctx resultLocs itersCap fuel iters' m' r' choices' acc')
             | none =>
                 if (GoCore.Machine.runnableIdxs pctx m.shared m.threads).isEmpty then
                   throw (.deadlock, acc)
                 else
                   match fuel with
-                  | 0 => throw (.fuelOut, acc)
+                  | 0 => throw (stepFuelStop itersCap, acc)
                   | fuel + 1 => do
                       let (m', choices', ev) ←
                         (GoCore.Machine.stepMulti pctx m choices).mapError (·, acc)
                       let acc' := ev.out.foldl GoString.append acc
+                      let iters' := if loopReentry m ev then iters + 1 else iters
                       match GoCore.Machine.raceUpdate ev m' r with
                       | .error .raceDetected =>
                           return ("race", errorJson .raceDetected acc', choices')
                       | .error e => throw (e, acc)
-                      | .ok r' => enumPoolRun pctx resultLocs fuel m' r' choices' acc'
+                      | .ok r' =>
+                          if itersCap.any (iters' > ·) then throw (.fuelOut, acc')
+                          else enumPoolRun pctx resultLocs itersCap fuel iters' m' r' choices' acc'
 
 /-- The `$pkginit` phase of an enumeration run (init slice):
 `runConfig`-mirroring terminal handling, but returning the FINAL STATE
@@ -961,7 +1009,7 @@ the setup and the sequential init phase, `runProgramPoolOutM`'s
 mirror), so the tracer's driver-agreement check compares the WHOLE
 refusal observation (audit fix 2026-09-05). -/
 def enumRunProgram (ep : EnumProgram) (runFuel : Nat)
-    (stream : GoCore.Choices) :
+    (stream : GoCore.Choices) (itersCap : Option Nat := none) :
     Except (Stop × GoString) (String × Json × GoCore.Choices) := do
   let noOut {α} (r : Except Stop α) : Except (Stop × GoString) α :=
     r.mapError (·, GoString.empty)
@@ -983,7 +1031,7 @@ def enumRunProgram (ep : EnumProgram) (runFuel : Nat)
   -- The subject runs on the POOL (slice 4), mirroring `runProgramPoolM`:
   -- a fresh one-thread pool over the initialized state, race detector
   -- armed from empty.
-  enumPoolRun ep.ctx resultLocs runFuel
+  enumPoolRun ep.ctx resultLocs itersCap runFuel 0
     ⟨#[.running (.exec ep.func.body frameEnv (.frame [] [] [] [] .stop ep.func.id)) none], s₃, 0⟩ {}
     choices₁ GoString.empty
 
@@ -1039,11 +1087,13 @@ structure EnumOutcome where
   leaves : Nat := 0
   /-- Maximum picks consumed along any single path. -/
   maxDepth : Nat := 0
-  /-- Branches that exhausted the per-branch step budget under an
-  explicit `--allow-nonterm` (W3.2 stage D §5d): COUNTED, never an
-  observation member, never green-contributing — membership means
-  "oracle observation ∈ TERMINATING members". Without the flag a
-  fuel-out branch stays a loud failure (fail-closed default). -/
+  /-- Branches that exhausted the per-branch ITERATION budget under an
+  explicit `--allow-nonterm-iters K` (W3.2 stage D §5d; counted in loop
+  re-entries since 2026-10-06, `docs/2026-10-06_spin-bounds.md`):
+  COUNTED, never an observation member, never green-contributing —
+  membership means "oracle observation ∈ TERMINATING members". Without
+  the flag every budget exhaustion stays a loud failure (fail-closed
+  default); the step fuel's exhaustion is loud under either setting. -/
   nonterm : Nat := 0
   /-- backEdge scheduling sites explored CAPPED (canonical slot + k
   anti-progress slots) rather than exhaustively — the per-site
@@ -1137,11 +1187,14 @@ structure ExpCtx where
   cap : Nat
   workCap : Nat
   expectStatus : Option (List String)
-  /-- `some N` = `--allow-nonterm N`: per-branch pool fuel N, with
-  fuel-exhausted branches counted into `EnumOutcome.nonterm` instead of
-  failing the enumeration (stage D §5d — the wedge family's honest
-  divergent branches). `none` = the fail-closed default. -/
-  allowNonterm : Option Nat := none
+  /-- `some K` = `--allow-nonterm-iters K`: the per-branch budget in LOOP
+  RE-ENTRIES (`loopReentry`), with branches taking a (K+1)-th counted into
+  `EnumOutcome.nonterm` instead of failing the enumeration (stage D §5d —
+  the wedge family's honest divergent branches; re-expressed from pool
+  steps 2026-10-06, `docs/2026-10-06_spin-bounds.md`). `none` = the
+  fail-closed default. The step fuel (`runFuel`) is never a nonterm
+  accounting: its exhaustion fails loud under either setting. -/
+  allowNontermIters : Option Nat := none
   /-- backEdge per-site enumeration mode (stage D §5d): `none` =
   UNDECLARED — a bound ≥ 2 backEdge consult fails loud (a row must say
   which tree it certifies); `some none` = `--backedge full`
@@ -1191,13 +1244,16 @@ def probeSite (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
   let prefixPicks := path.reverse
   let mut o := out
   for d in [bound, 2 * bound + 1, 4 * bound + 3] do
-    match enumRunProgram ctx.ep ctx.runFuel (prefixPicks ++ [d]) with
+    match enumRunProgram ctx.ep ctx.runFuel (prefixPicks ++ [d]) ctx.allowNontermIters with
     | .error (.fuelOut, _) =>
-        if ctx.allowNonterm.isSome then
-          -- The rung aliased onto a divergent branch — the same class
-          -- the DFS counts into `nonterm` under the explicit flag; it
-          -- yields no observation, so it cannot escape the membership
-          -- check either. Counted as a probe run (work accounting).
+        if ctx.allowNontermIters.isSome then
+          -- The rung aliased onto a divergent branch — under the
+          -- iteration accounting `enumPoolRun` throws `.fuelOut` ONLY at
+          -- the (K+1)-th loop re-entry (step-fuel exhaustion is the named
+          -- `stepFuelStop`, caught by the arm below) — the same class the
+          -- DFS counts into `nonterm` under the explicit flag; it yields
+          -- no observation, so it cannot escape the membership check
+          -- either. Counted as a probe run (work accounting).
           o := { o with probes := o.probes + 1 }
         else
           throw s!"alias-guard probe {prefixPicks ++ [d]} failed: the probed member's run errored — {renderStop Stop.fuelOut}. Under a correct bound this rung aliases onto an in-bound member, so this is a member-class failure (e.g. a deadlocking or fuel-out member, which has no membership handling), NOT evidence against the computed bound {bound} (audit F15; a bound refutation is a probe OBSERVATION outside the enumerated set)"
@@ -1230,22 +1286,33 @@ def branchSite (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
       o ← k o b
     return o
 
-/-- A branch that exhausted its per-branch budget under
-`--allow-nonterm`: counted, pruned, never a member (stage D §5d). -/
+/-- A branch that exhausted its per-branch iteration budget under
+`--allow-nonterm-iters`: counted, pruned, never a member (stage D §5d). -/
 def recordNonterm (out : EnumOutcome) : Except String EnumOutcome :=
   .ok { out with nonterm := out.nonterm + 1 }
+
+/-- The DFS's step-fuel exhaustion text: ALWAYS a loud failure (the step
+fuel is never a nonterm accounting). Under `--allow-nonterm-iters` it
+names the cause — the step fuel, not the declared iteration bound, cut
+the branch, so the declared bound is not the binding one. -/
+def stepFuelExhausted (ctx : ExpCtx) : String :=
+  match ctx.allowNontermIters with
+  | none => "per-path fuel exhausted (raise --fuel)"
+  | some k => s!"per-path STEP fuel exhausted under the iteration accounting (--allow-nonterm-iters {k}): the step fuel, not the iteration bound, cut this branch — the declared bound is not the binding one; raise --fuel or re-examine the row (docs/2026-10-06_spin-bounds.md)"
 
 mutual
 
 /-- DFS over the POOL phase from a mid-run state. `path` is the picks
 consumed so far, REVERSED (a snoc list); `stepPicks` the picks fed to
 the in-progress pool step (reversed); `fuel` the remaining per-path
-pool-step budget. Terminal classification mirrors `enumPoolRun`
+pool-step budget (the safety net); `iters` the loop re-entries taken
+along this path (`loopReentry`), judged against `ctx.allowNontermIters`
+at each completed step. Terminal classification mirrors `enumPoolRun`
 (panic/main/deadlock before the fuel check); each completed step goes
 through the REAL `stepMulti` + `raceUpdate`. -/
 partial def poolDFS (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
     (resultLocs : List Loc)
-    (fuel : Nat) (m : GoCore.Machine.MultiConfig)
+    (fuel iters : Nat) (m : GoCore.Machine.MultiConfig)
     (r : GoCore.Machine.RaceState) (acc : GoString) : Except String EnumOutcome := do
   -- `acc`: the program output folded along THIS path (stdlib slice 3) —
   -- a path-local accumulator, so two interleavings printing "ab"/"ba"
@@ -1280,26 +1347,22 @@ partial def poolDFS (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
                 if b == 0 then exitLeaf o (b :: path)
                 else
                   match fuel with
-                  | 0 =>
-                      if ctx.allowNonterm.isSome then recordNonterm o
-                      else .error "per-path fuel exhausted (raise --fuel)"
+                  | 0 => .error (stepFuelExhausted ctx)
                   | fuel' + 1 =>
-                      poolStepDFS ctx o (b :: path) resultLocs fuel' m r acc [])
+                      poolStepDFS ctx o (b :: path) resultLocs fuel' iters m r acc [])
       | none =>
         if (GoCore.Machine.runnableIdxs ctx.ep.ctx m.shared m.threads).isEmpty then
           .error s!"deadlock member under pick assignment {path.reverse} — deadlocking members have no membership handling (fail loud, per the design)"
         else
           match fuel with
-          | 0 =>
-              if ctx.allowNonterm.isSome then recordNonterm out
-              else .error "per-path fuel exhausted (raise --fuel)"
-          | fuel' + 1 => poolStepDFS ctx out path resultLocs fuel' m r acc []
+          | 0 => .error (stepFuelExhausted ctx)
+          | fuel' + 1 => poolStepDFS ctx out path resultLocs fuel' iters m r acc []
 
 /-- Feed picks to the CURRENT pool step until the accountant says the
 vector suffices, branching at each reported site; then take the step
 through the real `stepMulti` + `raceUpdate`. -/
 partial def poolStepDFS (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
-    (resultLocs : List Loc) (fuel : Nat)
+    (resultLocs : List Loc) (fuel iters : Nat)
     (m : GoCore.Machine.MultiConfig) (r : GoCore.Machine.RaceState)
     (acc : GoString) (stepPicks : List Nat) : Except String EnumOutcome := do
   let picks := stepPicks.reverse
@@ -1327,7 +1390,7 @@ partial def poolStepDFS (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
             .error s!"backEdge scheduling site of bound {bound} under pick assignment {path.reverse} — the row must DECLARE its back-edge tree: backedge=<k> (capped: canonical slot + k anti-progress slots per occurrence) or backedge=full (exhaustive; loop-length-exponential) — stage D §5d, never a silent prune"
         | some none =>
             branchSite ctx out path bound path.length fun o b =>
-              poolStepDFS ctx o (b :: path) resultLocs fuel m r acc (b :: stepPicks)
+              poolStepDFS ctx o (b :: path) resultLocs fuel iters m r acc (b :: stepPicks)
         | some (some kcap) =>
             -- Capped: slots [0 .. min kcap (bound-1)]; the alias
             -- ladder is SKIPPED (a capped occurrence's width is
@@ -1346,12 +1409,12 @@ partial def poolStepDFS (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
                     out.backedgeCapped + (if explored < bound then 1 else 0) }
               let mut o := out
               for b in List.range explored do
-                o ← poolStepDFS ctx o (b :: path) resultLocs fuel m r acc
+                o ← poolStepDFS ctx o (b :: path) resultLocs fuel iters m r acc
                   (b :: stepPicks)
               return o
       else
         branchSite ctx out path bound path.length fun o b =>
-          poolStepDFS ctx o (b :: path) resultLocs fuel m r acc (b :: stepPicks)
+          poolStepDFS ctx o (b :: path) resultLocs fuel iters m r acc (b :: stepPicks)
   | none =>
       -- TWO-SIDED drift alarm (S4 audit): run the step with ONE
       -- SENTINEL pick appended and require the sentinel to survive as
@@ -1380,8 +1443,16 @@ partial def poolStepDFS (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
             | .error e =>
                 .error s!"race-detector update failed: {renderStop e}"
             | .ok r' =>
-                poolDFS ctx { out with steps := out.steps + 1 } path
-                  resultLocs fuel m' r' acc'
+                -- The per-branch ITERATION budget (2026-10-06): a loop
+                -- re-entry (`loopReentry`, the pre-step config of the
+                -- stepped goroutine) beyond the declared K prunes the
+                -- branch into the counted nonterm class — the same
+                -- bucket the step-fuel budget used to fill, now moved
+                -- only by the program's own iteration count.
+                let iters' := if loopReentry m ev then iters + 1 else iters
+                let out' := { out with steps := out.steps + 1 }
+                if ctx.allowNontermIters.any (iters' > ·) then recordNonterm out'
+                else poolDFS ctx out' path resultLocs fuel iters' m' r' acc'
 
 end
 
@@ -1400,7 +1471,7 @@ partial def subjectEntry (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
       match GoCore.Machine.pinResultLocs frameEnv ctx.ep.func.results.toList with
       | .error e => .error s!"subject entry failed: {renderStop e}"
       | .ok resultLocs =>
-          poolDFS ctx out path resultLocs ctx.runFuel
+          poolDFS ctx out path resultLocs ctx.runFuel 0
             ⟨#[.running (.exec ctx.ep.func.body frameEnv (.frame [] [] [] [] .stop ctx.ep.func.id)) none], s₃, 0⟩
             {} GoString.empty
 
@@ -1469,16 +1540,16 @@ present, then the pool subject per branch), then run the certification
 check — every alias-probe observation must be a member. -/
 def explore (ep : EnumProgram) (runFuel width sites cap workCap : Nat)
     (expectStatus : Option (List String))
-    (allowNonterm : Option Nat := none)
+    (allowNontermIters : Option Nat := none)
     (backedgeMode : Option (Option Nat) := none) :
     Except String EnumOutcome := do
-  -- `--allow-nonterm N` is the PER-BRANCH budget: it replaces the run
-  -- fuel, so divergent branches are pruned-and-counted at N instead of
-  -- burning the default 10M each (stage D §5d).
-  let runFuel := allowNonterm.getD runFuel
+  -- `--allow-nonterm-iters K` is the PER-BRANCH budget, counted in loop
+  -- re-entries (stage D §5d, re-expressed 2026-10-06): divergent branches
+  -- are pruned-and-counted at their (K+1)-th re-entry. The run fuel stays
+  -- the step SAFETY NET (never a nonterm accounting — `stepFuelExhausted`).
   let ctx : ExpCtx :=
     { ep, runFuel, width, sites, cap, workCap, expectStatus,
-      allowNonterm, backedgeMode }
+      allowNontermIters, backedgeMode }
   let out ←
     match ep.initBody? with
     | none => subjectEntry ctx {} [] ep.σ₀
@@ -1522,8 +1593,8 @@ def runDedupObservations (ep : EnumProgram) (cfg : EnumArgs) : IO UInt32 := do
   -- ruling (M-9) — a certificate is silent about divergent branches,
   -- so accepting the flag here would answer M-9 silently (launch
   -- audit D3-F-3; previously the flag was dropped without a word).
-  if cfg.allowNonterm.isSome then
-    IO.eprintln "coverage-observations: --engine dedup does not support --allow-nonterm (refused fail-closed pending the M-9 ruling; use the DFS engine)"
+  if cfg.allowNontermIters.isSome then
+    IO.eprintln "coverage-observations: --engine dedup does not support --allow-nonterm-iters (refused fail-closed pending the M-9 ruling; use the DFS engine)"
     return 1
   match dedupSeed ep with
   | .error e =>
@@ -1606,7 +1677,7 @@ private def runCoverageObservations (args : List String) : IO UInt32 := do
                       | none =>
                       match explore ep cfg.fuel
                           cfg.maxWidth cfg.maxSites cfg.cap cfg.workCap
-                          cfg.expectStatus cfg.allowNonterm
+                          cfg.expectStatus cfg.allowNontermIters
                           cfg.backedgeMode with
                       | .error err =>
                           IO.eprintln s!"coverage-observations: {err}"
@@ -1625,9 +1696,9 @@ private def runCoverageObservations (args : List String) : IO UInt32 := do
                             | some none => " backedge=full"
                             | some (some k) => s!" backedge={k} backedgeCapped={out.backedgeCapped}"
                           let ntStr :=
-                            match cfg.allowNonterm with
+                            match cfg.allowNontermIters with
                             | none => ""
-                            | some n => s!" allow-nonterm={n} nonterm={out.nonterm}"
+                            | some k => s!" allow-nonterm-iters={k} nonterm={out.nonterm}"
                           IO.eprintln s!"coverage-observations: observations={out.observations.size} steps={out.steps} probes={out.probes} sites={out.sitesSeen} leaves={out.leaves} maxdepth={out.maxDepth} width={cfg.maxWidth}{modeStr}{ntStr}"
                           return 0
       | _, _ =>

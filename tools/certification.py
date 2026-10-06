@@ -328,7 +328,7 @@ def build(root):
 
 ENUM_FLAGS = {'--input', '--function', '--arg-int', '--fuel', '--max-width',
               '--max-sites', '--cap', '--work-cap', '--expect-status', '--backedge',
-              '--engine', '--allow-nonterm'}
+              '--engine', '--allow-nonterm-iters'}
 
 
 def claim_for(root, case_id, lane, params, row_status, argv):

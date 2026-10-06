@@ -282,7 +282,14 @@ validate_lane_params() {
     key="${kv%%=*}"
     value="${kv#*=}"
     case "$key" in
-      width|sites|cap|work|members|statuses|tier|backedge|nonterm|engine) ;;
+      width|sites|cap|work|members|statuses|tier|backedge|iters|engine) ;;
+      nonterm)
+        # RETIRED 2026-10-06 (docs/2026-10-06_spin-bounds.md): a per-branch
+        # budget in pool STEPS moved with every step-count refactor (C4,
+        # train r59). Refused by name, never silently re-read as iters=.
+        echo "coverage-manifest: $cases_file: nonterm= is RETIRED (a per-branch budget in pool steps; it moved with every step-count change): declare the budget in loop re-entries with iters=<K> — docs/2026-10-06_spin-bounds.md: $kv" >&2
+        return 1
+        ;;
       depth)
         # depth=N is the STRICT lane's declaration (memo P1); the
         # enumerating lanes certify the whole tree — a category error.
@@ -389,15 +396,17 @@ validate_lane_params() {
       fi
       continue
     fi
-    if [[ "$key" == "nonterm" ]]; then
-      # allow-nonterm (stage D §5d): membership-only per-branch fuel;
-      # fuel-exhausted branches counted, never members.
+    if [[ "$key" == "iters" ]]; then
+      # allow-nonterm-iters (stage D §5d, re-expressed 2026-10-06 —
+      # docs/2026-10-06_spin-bounds.md): membership-only per-branch
+      # budget in LOOP RE-ENTRIES; branches taking a (K+1)-th are
+      # counted, never members.
       if [[ "$lane_ctx" != "membership" ]]; then
-        echo "coverage-manifest: $cases_file: nonterm= is a membership-lane param (lane=$lane_ctx): $kv" >&2
+        echo "coverage-manifest: $cases_file: iters= is a membership-lane param (lane=$lane_ctx): $kv" >&2
         return 1
       fi
       if [[ ! "$value" =~ ^[1-9][0-9]*$ ]]; then
-        echo "coverage-manifest: $cases_file: nonterm= must be a positive integer (the per-branch fuel): $kv" >&2
+        echo "coverage-manifest: $cases_file: iters= must be a positive integer (the per-branch loop re-entry budget): $kv" >&2
         return 1
       fi
       continue

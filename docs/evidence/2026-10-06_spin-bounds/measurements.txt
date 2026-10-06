@@ -1,0 +1,36 @@
+# Spin-bound measurements, lane lane/fr36-spin-bounds-1006 (2026-10-06). REF = main's binary (a3e18ff5) with the RETIRED --allow-nonterm 200 (pool steps); NEW = the lane binary with --allow-nonterm-iters K (loop re-entries). All runs: --max-width 4 --cap 64 --expect-status ok --backedge 1 --work-cap 4000000; --max-sites 200 (REF, K>=10 sweep) / 1000 (K<=5 sweep). Wire = go run ./tools/nativefrontend --dir <case>. Each line is the enumerator's stderr record verbatim.
+
+### goroutines__send-then-spin / sendThenSpin
+REF nonterm=200: coverage-observations: observations=1 steps=12859 probes=17103 sites=5856 leaves=5641 maxdepth=143 width=4 backedge=1 backedgeCapped=0 allow-nonterm=200 nonterm=216
+NEW iters=10: coverage-observations: run consumes more than --max-sites 200 choice site(s) — raise the case's sites bound (never truncated silently)
+NEW iters=20: coverage-observations: run consumes more than --max-sites 200 choice site(s) — raise the case's sites bound (never truncated silently)
+NEW iters=40: coverage-observations: run consumes more than --max-sites 200 choice site(s) — raise the case's sites bound (never truncated silently)
+### sync__trylock / spinUntilTryLock
+REF nonterm=200: coverage-observations: observations=1 steps=214263 probes=26571 sites=9272 leaves=2571 maxdepth=18 width=4 backedge=1 backedgeCapped=0 allow-nonterm=200 nonterm=6702
+NEW iters=10: coverage-observations: work cap exceeded after 3445307 step(s) + 554694 probe(s) with subtrees still unexplored — raise --work-cap or narrow the case
+NEW iters=20: coverage-observations: work cap exceeded after 3486506 step(s) + 513495 probe(s) with subtrees still unexplored — raise --work-cap or narrow the case
+NEW iters=40: (timed out at 300 s)
+### race__atomics-free / casFailureAcquires
+REF nonterm=200: coverage-observations: observations=1 steps=28552 probes=4890 sites=1688 leaves=969 maxdepth=14 width=4 backedge=1 backedgeCapped=0 allow-nonterm=200 nonterm=720
+NEW iters=10: coverage-observations: observations=1 steps=607302 probes=110958 sites=37591 leaves=37257 maxdepth=41 width=4 backedge=1 backedgeCapped=0 allow-nonterm-iters=10 nonterm=335
+NEW iters=20: coverage-observations: observations=1 steps=2257972 probes=412158 sites=139486 leaves=138852 maxdepth=71 width=4 backedge=1 backedgeCapped=0 allow-nonterm-iters=20 nonterm=635
+NEW iters=40: (timed out at 300 s)
+### atomics__spin / spinOnFlag
+REF nonterm=200: coverage-observations: observations=1 steps=30074 probes=5175 sites=1783 leaves=969 maxdepth=14 width=4 backedge=1 backedgeCapped=0 allow-nonterm=200 nonterm=815
+NEW iters=10: coverage-observations: observations=1 steps=625122 probes=110958 sites=37591 leaves=37257 maxdepth=41 width=4 backedge=1 backedgeCapped=0 allow-nonterm-iters=10 nonterm=335
+
+### small-K sweep (lane binary, --max-sites 1000)
+send-then-spin K=1: observations=1 steps=2086 probes=1899 sites=658 leaves=607 maxdepth=67 nonterm=52
+send-then-spin K=3: observations=1 steps=5970 probes=7320 sites=2514 leaves=2399 maxdepth=109 nonterm=116
+send-then-spin K=4: observations=1 steps=9218 probes=12495 sites=4275 leaves=4115 maxdepth=130 nonterm=161
+send-then-spin K=5: observations=1 steps=13611 probes=19968 sites=6811 leaves=6596 maxdepth=151 nonterm=216   <- CHOSEN (nonterm count = REF's 216; exit-window depth 151 >= REF's 143)
+trylock K=1: observations=1 steps=40847 probes=8388 sites=2900 leaves=2571 maxdepth=18 nonterm=330   <- CHOSEN (leaves/maxdepth = REF's exactly; work 49235 < 200000/2)
+trylock K=3: observations=1 steps=434230 probes=83130 sites=28489 leaves=26110 maxdepth=26 nonterm=2380
+cas K=1: observations=1 steps=16371 probes=3012 sites=1033 leaves=969 maxdepth=14 nonterm=65   <- CHOSEN (= REF's leaves/maxdepth)
+cas K=2: observations=1 steps=40174 probes=7374 sites=2515 leaves=2421 maxdepth=17 nonterm=95
+cas K=3: observations=1 steps=74441 probes=13644 sites=4642 leaves=4518 maxdepth=20 nonterm=125
+flag-wait K=1: observations=1 steps=16911 probes=3012 sites=1033 leaves=969 maxdepth=14 nonterm=65   <- CHOSEN (= REF's leaves/maxdepth)
+flag-wait K=2: observations=1 steps=41434 probes=7374 sites=2515 leaves=2421 maxdepth=17 nonterm=95
+flag-wait K=3: observations=1 steps=76721 probes=13644 sites=4642 leaves=4518 maxdepth=20 nonterm=125
+### control: a sequential loop row under --allow-nonterm-iters 1 (noodler/budget/loop-100k, arg 100000, --max-sites 8)
+observations=0 steps=139 probes=0 sites=0 leaves=0 maxdepth=0 nonterm=1   (cut at the second re-entry: the counter fires on the machine's .next (.loop ..) shape)

@@ -1,0 +1,15 @@
+# id	subject	args	expected_status	expected_reason	features
+# FR-36 (2026-10-06, lane lane/fr36-spin-bounds-1006; docs/language-coverage-ledger.md FR-36 / queue 36; the 5b audit's F3):
+# a DOT import's bare-identifier call resolves through the SAME object-keyed binding as the `pkg.F` selector spelling
+# (tools/nativefrontend/dotimport.go). Red-first: all four rows were born FAIL against main's frontend (the Intn and
+# quarantined rows at `stuck: GoCore function not found`; float-bits at round D's by-name refusal; strings green) and land:
+# intn-membership PASS (membership), strings-source-through PASS (unchanged), perm-quarantined RED BY DESIGN — the frontend
+# refuses `math/rand.Perm` BY NAME exactly as the selector spelling does (FR-14's package surface, now reached through the dot
+# import and named at the point of failure), Go runs it — and float-bits RED BY DESIGN (FR-36 residual): the lowering-diagnosis
+# calibration (tools/lowerdiag cause dot-import-float-bits, fixture fbDot — another lane's table) pins the dot-imported
+# float-bits spelling refused, so the frontend keeps that spelling a named refusal until that lane flips the cause with the
+# lowering; Go runs it.
+intn-membership	dotIntn	-	ok	-	stdlib,rand,builtins,ints,nondet,imports	membership	math/rand.Intn(5) through a DOT import is the ONE intn pick (Stmt.randIntn, window unit 5b) exactly as the selector row builtins/rand-intn/membership: bound = n = 5, slot v IS the value v, admitted set [0,5) — members=5; gc draws uniformly, so the K draws exhibit several members; width 8 >= 5	width=8,sites=8,members=5
+float-bits	dotFloatBits	-	ok	-	stdlib,floats,ints,imports
+strings-source-through	dotToUpper	-	ok	-	stdlib,strings,imports
+perm-quarantined	dotPerm	-	ok	-	stdlib,rand,imports

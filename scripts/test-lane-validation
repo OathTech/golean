@@ -906,7 +906,7 @@ EOF
       # {42}) with a fake oracle answering 42 in both modes must take
       # EXACTLY two draws, plain then race, and caption the floor. Red on
       # the pre-floor branch (it stopped at draw 1: `draws=1`).
-      run_s S6-two-draw-floor single42 "width=4,sites=200,members=1,nonterm=200,backedge=1" PASS \
+      run_s S6-two-draw-floor single42 "width=4,sites=200,members=1,iters=1,backedge=1" PASS \
         "exhibited=1 draws=2 (floor; K=32; stopped at the members=1 pin after the two-draw floor — one plain + one -race)" "draws=1 " $'plain\nrace' "" \
         "" "Corpus/coverage/exec/atomics/spin" "flag-wait"
     fi

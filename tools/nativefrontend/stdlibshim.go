@@ -28,19 +28,21 @@
 //     owes new guardrail corpus rows and a fidelity argument FIRST.
 //   - Only the direct CALL shape `pkg.Fn(args)` is admitted. The
 //     function VALUE (`f := strings.Fields`) and every other selector
-//     reference shape keep their existing refusals. DOT IMPORTS ARE
-//     THE EXCEPTION, and it is a PRE-EXISTING DEFECT, not a refusal:
-//     `import . "strings"; Fields(x)` never reaches the selector
-//     quarantine at all — it emits a dangling plain call and the
-//     machine answers `stuck` ("GoCore function not found: Fields").
-//     Visible-red, never a wrong answer, but a `stuck` where the
-//     fail-closed doctrine wants an explicit boundary refusal. E5
-//     neither widened nor narrowed it. Recorded in
-//     docs/gallery-campaign-log/g2.md (findings); the clean fix is a
-//     frontend refusal on `*types.Func` callees whose package is not
-//     the user package. [Wording corrected 2026-08-16 by the
-//     post-autonomy audit, which found this comment claiming a
-//     refusal that does not exist.]
+//     reference shape keep their existing refusals. DOT IMPORTS were
+//     the exception — a PRE-EXISTING DEFECT, not a refusal: `import .
+//     "math/rand"; Intn(5)` never reached the selector quarantine, it
+//     emitted a dangling plain call and the machine answered `stuck`
+//     ("GoCore function not found: Intn"); visible-red, never a wrong
+//     answer, but a `stuck` where the fail-closed doctrine wants an
+//     explicit boundary refusal (recorded in
+//     docs/gallery-campaign-log/g2.md; wording corrected 2026-08-16 by
+//     the post-autonomy audit, which found this comment claiming a
+//     refusal that did not exist). CLOSED 2026-10-06 (FR-36,
+//     dotimport.go): a bare identifier resolving to a non-source
+//     stdlib function takes the OBJECT-keyed primitive bindings or the
+//     by-name quarantine exactly like the selector spelling; a
+//     dot-imported SOURCE-THROUGH member (`import . "strings"`;
+//     `ToUpper`) is a source function and lowers as a qualified call.
 //   - Shim declaration names are reserved: a user package-level
 //     declaration of the same name refuses the export loudly at
 //     injection (never a silent merge or override).

@@ -304,7 +304,7 @@ run_row() {
     echo "$s_out" > "$d/single.txt"
     # enumerator params: strict rows take --strict-enum; enumerating-lane
     # rows take their own params, which must declare width= and sites=.
-    local width="" sites="" cap=64 work=200000 engine="" backedge="" nonterm=""
+    local width="" sites="" cap=64 work=200000 engine="" backedge="" iters=""
     local plist="$params"
     if [[ "$lane" == "strict" ]]; then plist="$STRICT_ENUM"; fi
     local kv key value
@@ -313,7 +313,7 @@ run_row() {
       key="${kv%%=*}"; value="${kv#*=}"
       case "$key" in
         width) width="$value" ;; sites) sites="$value" ;; cap) cap="$value" ;; work) work="$value" ;;
-        engine) engine="$value" ;; backedge) backedge="$value" ;; nonterm) nonterm="$value" ;;
+        engine) engine="$value" ;; backedge) backedge="$value" ;; iters) iters="$value" ;;
         *) ;;  # statuses/samples/members/tier: gc-sampling / cardinality params, irrelevant here
       esac
     done
@@ -327,7 +327,7 @@ run_row() {
       local e_args=(coverage-observations --input "$wire" --function "$fn" --max-width "$width" --max-sites "$sites" --cap "$cap" --work-cap "$work")
       [[ -n "$engine" ]] && e_args+=(--engine "$engine")
       [[ -n "$backedge" ]] && e_args+=(--backedge "$backedge")
-      [[ -n "$nonterm" && -z "$engine" ]] && e_args+=(--allow-nonterm "$nonterm")
+      [[ -n "$iters" && -z "$engine" ]] && e_args+=(--allow-nonterm-iters "$iters")
       e_args+=(${args[@]+"${args[@]}"})
       run_with_timeout "$ENUM_TIMEOUT" "$GOLEAN_BIN" "${e_args[@]}" > "$d/observations.txt" 2> "$d/enum-stats.txt"
       rc=$?

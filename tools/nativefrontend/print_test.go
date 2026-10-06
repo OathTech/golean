@@ -169,6 +169,13 @@ func TestStdlibRegisterPrimitivesFull(t *testing.T) {
 	}
 }
 
+// FR-36 (2026-10-06, dotimport.go): the dot-imported float-bits call is the
+// one RESIDUAL named refusal of the class fix — the lowering-diagnosis
+// calibration fixture (tools/lowerdiag cause `dot-import-float-bits`, `fbDot`)
+// pins this spelling refused and that table is another lane's, so the arm
+// refuses BY NAME stating the pin (audit fix round D's refusal, 2026-09-05,
+// re-worded). The per-declaration quarantine keeps the export OK; the stub's
+// reason carries the text. Flips to a lowering test with the lowerdiag cause.
 func TestFloatBitsDotImportRefusesNamingMath(t *testing.T) {
 	src := `package main
 import . "math"
@@ -176,18 +183,20 @@ func subject(f float64) uint64 {
 	return Float64bits(f)
 }
 `
-	refused, msg := exportRefused(t, src)
-	if !refused {
-		program, err := emitSource(t, src)
-		if err != nil {
-			t.Fatal(err)
+	program, err := emitSource(t, src)
+	if err != nil {
+		t.Fatalf("the per-declaration quarantine keeps the export OK: %v", err)
+	}
+	reason := stubReason(t, program, "subject")
+	if reason == "" {
+		t.Fatalf("a dot-imported float-bits call must refuse by name (FR-36 residual, lowerdiag-pinned), not lower:\n%s", mustJSON(t, program))
+	}
+	for _, want := range []string{"dot-imported math.Float64bits", "dot-import-float-bits", "FR-36 residual"} {
+		if !strings.Contains(reason, want) {
+			t.Errorf("the refusal must carry %q (the member, the lowerdiag pin, the row):\n%s", want, reason)
 		}
-		msg = mustJSON(t, program)
 	}
-	if !strings.Contains(msg, "dot-imported math.Float64bits") {
-		t.Errorf("a dot-imported float-bits call must refuse naming math:\n%s", msg)
-	}
-	if strings.Contains(msg, `"expr":"float-bits"`) {
-		t.Errorf("a dot-imported float-bits call must not lower:\n%s", msg)
+	if msg := mustJSON(t, program); strings.Contains(msg, `"expr":"float-bits"`) {
+		t.Errorf("a dot-imported float-bits call must not lower while the lowerdiag cause pins it refused:\n%s", msg)
 	}
 }

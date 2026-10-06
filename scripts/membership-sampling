@@ -168,7 +168,7 @@ while IFS=$'\t' read -r id go_dir fn args status features reason lane why params
   # pre-rule gate order (5 plain then 5 race) that this instrument
   # replays for the drawsAtGate/distinctAtGate columns, so the memo's
   # "at the old gate budget" statistic stays reproducible.
-  width="" sites=8 obs_cap=64 samples=5 work=200000 statuses="$status" tier="" backedge="" nonterm="" engine="" members=""
+  width="" sites=8 obs_cap=64 samples=5 work=200000 statuses="$status" tier="" backedge="" iters="" engine="" members=""
   if [[ "$params" != "-" ]]; then
     IFS=',' read -r -a kvs <<< "$params"
     for kv in "${kvs[@]}"; do
@@ -178,7 +178,7 @@ while IFS=$'\t' read -r id go_dir fn args status features reason lane why params
         samples) echo "membership-sampling: $id: samples= is RETIRED (2026-09-03 sampling rule — the gate's budget is K by run mode, scripts/diff-coverage MEMBERSHIP_DRAWS); this instrument has its own --draws; remove $kv from the row" >&2; exit 2 ;;
         work) work="$value" ;; members) members="$value" ;;
         statuses) statuses="$value" ;; tier) tier="$value" ;; backedge) backedge="$value" ;;
-        nonterm) nonterm="$value" ;; engine) engine="$value" ;;
+        iters) iters="$value" ;; engine) engine="$value" ;;
       esac
     done
   fi
@@ -204,7 +204,7 @@ while IFS=$'\t' read -r id go_dir fn args status features reason lane why params
     enum_args=(coverage-observations --input "$wire" --function "$fn" --max-width "$width" --max-sites "$sites" --cap "$obs_cap" --work-cap "$work" --expect-status "${statuses//+/,}")
     [[ -n "$backedge" ]] && enum_args+=(--backedge "$backedge")
     [[ -n "$engine" ]] && enum_args+=(--engine "$engine")
-    [[ -n "$nonterm" ]] && enum_args+=(--allow-nonterm "$nonterm")
+    [[ -n "$iters" ]] && enum_args+=(--allow-nonterm-iters "$iters")
     if [[ "$args" != "-" ]]; then
       IFS=',' read -r -a ints <<< "$args"
       for v in "${ints[@]}"; do enum_args+=(--arg-int "$v"); done
