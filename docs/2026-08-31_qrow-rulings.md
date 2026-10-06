@@ -1698,3 +1698,18 @@ case id) and `lane/fr36-spin-bounds-1006` (FR-14; a deleted branch name, tip kep
 
 Train: `train/r70` = the branch's 9 commits cherry-picked onto main `4d4042fe`, 0 conflicts; the train's delta equals the
 branch's (merge-base `a3e18ff5`..`7626aa73`) modulo one hunk-offset shift in the append-only changelog.
+
+**Merge train r70 — the 5a record** ([AGENT] train worker, 2026-10-06). Pre-merge main `4d4042fe` →
+`refs/snapshots/r70/main`; train tip `bf778774` fast-forwarded; primary build `scripts/build-certified` EXIT=0 (21 s,
+binary `efe52c0c…`). `release-check --base refs/snapshots/r70/main` EXIT=2 — «STALE certification: changed dependency
+build/files/GoLean.lean» (the branch carried no provenance refresh; the run's report named the stale certificate as
+expected, for the landing train). `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --slow` EXIT=1, 1191 s, `RESULT: FAIL`
+on EXACTLY the 5a pair: `certificate provenance` STALE and its echo `imported-goose/channel/google-search` PASS → FAIL
+(membership; 3888 = 3649 / 239 at the run). Every other step ok: pool spec freeze + discharge ok at LANDED=M5 (48
+discharged, 0 owed); semantic equations ok; core totality audit ok; frontend pins ok; negative baseline no regression.
+Candidate: `schema`, `claim` and `observations_sha256` IDENTICAL to the tracked record (the re-enumeration reproduced
+the certified set); `inputs` differ only in the build file hashes — `GoLean.lean`, `GoLean/GoCore/BridgeSet.lean`,
+`GoLean/GoCore/PoolSound.lean` and the three new proof-only modules (`PoolStructure`, `PoolFrontFacts`,
+`PoolSingletonFacts`, added); the receipt moved (source `0142ca35` → `bf778774`, 183.366 s). INSTALLED as
+`baselines/certified/imported-goose__channel__google-search.certified.json` — a provenance refresh, not a re-pin; the
+certified set is unchanged. Tail: `docs/evidence/2026-10-06_train-r70/r70-ci-slow.tail.txt`.
