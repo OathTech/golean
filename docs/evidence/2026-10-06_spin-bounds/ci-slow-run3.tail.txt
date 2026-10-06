@@ -1,0 +1,60 @@
+
+[1m── differential baseline diff (scripts/coverage-baseline-diff)[0m
+no regression: 3888 case(s) run in latest.tsv match baselines/native-full.tsv
+
+[1m── cross-ledger reconciliation (tools/reconcile-records — REPORT-ONLY, informs, never fails the gate)[0m
+  [01] C13  MEDIUM  79 doc site(s) across 10 file(s) name a patch-level Go version other than the pin (go1.25.13/go1.26.5 per docs/spec-sources.md). Some are legitimately historical; a toolchain/oracle claim off the pin is not, because the pin's whole job is that the spec text and the thing that produced the numbers moved together.
+  [02] C5  MEDIUM  3 frontier-table case citation(s) do not resolve against the baseline
+  [03] C5  MEDIUM  1 frontier row(s) claim a red count that is not mechanically re-derivable from their citations. Some of this is citation SHORTHAND (a prose family like 'F3 family 7', an ellipsis inside a glob, or a '+ adjacency' the count deliberately excludes) rather than drift — each needs a read, which is exactly why the count should not be re-derived from prose.
+
+[1m── executed library coverage (all named build receipts from this CI invocation)[0m
+CI coverage timing: verify: seconds=0.017
+Executed library coverage: PASS; 10 libraries, 20 Tests modules, 9 named steps; timings: /home/dev/projects/golean/.claude/worktrees/fr36-spin/artifacts/ci-library-timings/72c2f6b98c894c779a76dbbfd1e8229b.json
+
+[1m══ scripts/ci summary ══[0m
+  ok   Tests/library ownership (no exceptions; executed builds checked at exit)
+  note build parallelism: cap 48G -> LEAN_NUM_THREADS=6 (cap/8G, floor 2; 32 cores on this box)
+  ok   oracle toolchain (go1.26.5 = pin)
+  ok   escape-hatch preflight
+  ok   meta-layer escape hatches (allowlist empty since the repo split)
+  ok   escape-hatch addendum (no decide +native / native-config spellings)
+  ok   bug-index cross-check
+  ok   feature-coverage (no dead tags)
+  ok   spec-anchor citations resolve at the pin
+  ok   stdlib admission register = frontend tables
+  ok   lane-validation fixtures (manifest gates reject bad shapes)
+  ok   evidence-on-main size gate
+  ok   AGENTS.md alias of CLAUDE.md
+  ok   imported-goose verbatim (above-marker bytes = pinned upstream)
+  ok   engine-isolation (core ↛ EnumDedup)
+  ok   memory-module raw call-site inventory (emit/peek discipline)
+  ok   core build (warning-free)
+  ok   certificate provenance
+  ok   core totality audit (every GoLean/ module; required core theorems; poison controls)
+  ok   admission checker proofs and post-import audit
+  ok   declaration boundary
+  ok   wire boundary (byte-level controls through the real CLI)
+  ok   package-correct method identity
+  ok   unseq scheduler (Stage B)
+  ok   unseq wire (Stage C)
+  ok   semantic equations (scripts/check-equations)
+  ok   pool spec freeze + discharge (scripts/check-pool-spec)
+  ok   frontend pins (realized init-order deviation + twin wire = pinned bytes)
+  ok   import-goose fixtures (importer + verbatim guard reject bad shapes)
+  ok   frontend unit tests
+  ok   lowering-diagnostic tables
+  ok   coverage-harness unit tests
+  ok   eval tests (298 ok)
+  ok   differential run completed (exit 1; failing-set judged by baseline diff)
+  ok   lane-validation fixtures incl. harness half (F4/F6/B3-B5/G5/T1-T8/D1-D6)
+  ok   negative run completed (exit 0; set judged by baseline diff)
+  ok   Tests/FloatVectors.lean = fresh hardware-oracle regeneration (byte-exact)
+  ok   inittask-std.tsv = fresh gc-derived regeneration (header at pin; byte-exact modulo date line)
+  ok   negative baseline diff (no regression)
+  ok   baseline diff FULL (3888/3888, no regression)
+  note reconciler: 3 finding(s), 0 HIGH — report-only (details: tools/reconcile-records)
+  ok   executed library coverage (all declared libraries; all Tests modules)
+
+[1mRESULT: PASS[0m
+CI coverage timing: close: seconds=0.033
+CI total wall seconds: 1140
