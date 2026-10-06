@@ -1645,3 +1645,56 @@ freeze + discharge ok (LANDED=M1), frontend pins ok, lowering-diagnostic tables 
 Round 69 closed: FR-36 is closed for dot-imported functions and the membership lane's spin bounds count loop
 re-entries (`iters=`) on main; FR-37 (the dot-imported variable, queue slot 37) is open; the Codex grind on
 `core/pool-grind-*` is untouched by this train.
+
+### Train r70 — the pool/registry half complete (Codex M2–M5) and the CLAUDE.md item (2) update — RULED (2026-10-06)
+
+[USER] Mike, verbatim, relayed by the [AGENT] coordinator — cite as relayed:
+- 2026-10-05, the continuous-run ruling (superseding the per-milestone stop of the grind brief): «We really want this to
+  not be checked in at milestones. Codex excels at long-cycle, low oversight builds against a very clear objective»
+  (`docs/2026-10-04_pool-relation-grind-brief.md`, the CONTINUOUS RUN M2–M5 paragraph).
+- 2026-10-05, the repairs-not-stops amendment: «a false / unprovable statement isn't a stop. Instead, *prove all provable
+  statements* and for other statements *propose a repair*» (same paragraph, item (4)).
+- 2026-10-06: «Agree on 1 / 2» — (1) the merge sign-off for `core/pool-grind-m2m5-2026-10-05` @ `7626aa73`; (2) approval
+  of the CLAUDE.md item (2) amendment text below.
+
+The run (Codex, one continuous run, checkpoints M2–M5 recorded in `docs/2026-10-05_pool-grind-report.md`): all 39 M2–M5
+statements of `GoLean/GoCore/PoolStatement.lean` proved UNCHANGED in `GoLean/GoCore/PoolSound.lean` (+ the proof-only
+`PoolStructure.lean`, `PoolFrontFacts.lean`, `PoolSingletonFacts.lean`); with M1's nine (train r66) all 48 frozen
+statements are discharged. NO repairs: `docs/specs/pool-relation/REPAIRS.md` records none proposed. BridgeSet rows
+528–566 added, rows 1–527 byte-identical (RE-PIN 14).
+
+Audit (as relayed by the [AGENT] coordinator): one Opus adversarial audit, **MERGE-CLEAN with minors F1–F3**; none
+blocks. [AGENT train worker] The audit report's texts of F1–F3 were NOT delivered to this train (not on disk at train
+time); they are recorded here by number only, PENDING the coordinator's append of their texts and closures. What this
+train's records commit closes on its brief: the four «pool grind Mk (branch checkpoint)» lines the run appended OUTSIDE
+the post-offer changelog table are deleted and replaced by ONE r70 row at the table's top; the frozen files' header
+comments (`PoolStep.lean`, `PoolStatement.lean`) still point to the deleted `docs/specs/pool-relation/Skeleton.lean` — a
+dangling pointer, NOT editable without a re-freeze, noted in the changelog row.
+
+`docs/specs/pool-relation/LANDED`: `M1` → `M5` (the landing train's job per its header); `python3
+scripts/check-pool-spec` EXIT=0 — LANDED=M5, all 48 statements of M1..M5 discharged, 0 early, 0 owed.
+
+CLAUDE.md item (2) ([USER]-approved text, «Agree on 1 / 2», relayed; first word adjusted only to start a sentence): the
+span «Still OWED, kept in step with the interpreter (priority (c) of the 2026-09-11 ruling): the pool/registry half — …
+Proved 2026-10-03 (`GoLean/GoCore/PoolProjection.lean`): the single-goroutine output agreement … and at EQUAL fuel when
+no reachable step opens a registry boundary.» (the pool half as OWED, with only the 2026-10-03 projection proved) is
+replaced by: «And, since 2026-10-06 (train r70), for the goroutine pool over the labelled step
+(`GoLean/GoCore/PoolStep.lean`, `PoolSound.lean`; 48 statements frozen by `scripts/check-pool-spec`): per-step soundness
+and completeness of the scheduler against the relation `StepML`, whose label is the executable's own event (who stepped,
+its action, its `StepLabel`); attribution and the frame law; context switches only at registry boundaries, with the
+scheduling pick recorded first; the pool deadlock as its own predicate; the counted pool prefix and its classification
+with terminal priority; the fuel bridges; replay by record; and the single-goroutine reduction to the sequential results
+(`PoolProjection.lean`). Not a theorem: the run-level converse «every relational run is some tape's prefix» is FALSE as
+a bare statement (the relation steps past an aborted goroutine, the driver classifies it first); it holds per step and
+for runs that pass the driver's gate.» The «Limits: …» sentence is unchanged; the paragraph's closing provenance
+parenthetical gains «, and its 2026-10-06 update, «Agree on 1 / 2», relayed». `scripts/check-agents-alias` PASS.
+
+Reconciler C5 tidy (r69's report-only findings; [AGENT train worker], records only): FR-36's reds cell now reads «4 born
+(3 PASS + 1 red by design)». The reconciler reads the cell's LEADING integer as the red count, so finding [04] (claims 4,
+resolves 1) still fires on this spelling — informational, never gating; a «1 red …» lead would clear it and is left to
+the coordinator. The unresolvable citations stay as written: `math/rand.Perm` (FR-14, FR-36; a Go member spelling, not a
+case id) and `lane/fr36-spin-bounds-1006` (FR-14; a deleted branch name, tip kept at
+`refs/snapshots/r69/lane-fr36-spin-bounds-1006`).
+
+Train: `train/r70` = the branch's 9 commits cherry-picked onto main `4d4042fe`, 0 conflicts; the train's delta equals the
+branch's (merge-base `a3e18ff5`..`7626aa73`) modulo one hunk-offset shift in the append-only changelog.

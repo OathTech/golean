@@ -196,6 +196,10 @@ as rows 44–47's sequential statements (answer (c)); rows 526–527 the `runPkg
 (`runPkgInitM` with `$pkginit` present IS `runInitConfig` on the init configuration under
 `Except.mapError markInitPhase`) and its success link `runPkgInitM_ok_iff`, the form G-R1's premise composes
 with (answer (d)). All proved in `SetupSound.lean`; statements in `SetupStatement.lean`.
+
+RE-PIN 14 — pool grind M2–M5 (Codex, `7626aa73`, train r70; [USER] «Agree on 1 / 2», relayed): rows 1–527
+BYTE-IDENTICAL; rows 528–566 ADDED (the 39 M2–M5 statements of `PoolStatement.lean`, proved in
+`PoolSound.lean`); all 48 pool statements now pinned (503–511, 528–566).
 -/
 
 namespace GoLean.GoCore.BridgeSet
