@@ -846,6 +846,24 @@ func (a *analyzer) classifyPkgCall(d *declReport, path, member string, at ast.No
 	}
 }
 
+// classifyDotImportedCall judges a bare-identifier call of a NON-local
+// package's function — only a dot import (`import . "pkg"`) reaches it
+// (FR-36, 2026-10-06). The frontend resolves it through the SAME object-keyed
+// binding as the selector spelling (tools/nativefrontend/dotimport.go): the
+// primitives and source-through members lower, every other member takes the
+// package quarantine — so this pass reuses classifyPkgCall — except the fmt
+// DESUGAR members (the register's retained fmt shims), which the frontend
+// refuses NAMING the desugar: its shim injection (stdlibshim.go) and
+// Formatter check (fmtdesugar.go) are selector-keyed. An FR-36 cause of its
+// own, so the one named-refusal residual of the class fix stays countable.
+func (a *analyzer) classifyDotImportedCall(d *declReport, path, member string, at ast.Node) {
+	if key := path + "." + member; path == "fmt" && a.p.sup.shim[key] != "" {
+		d.add(finding{Cause: mustCause("dot-import-fmt-desugar"), Key: key, Pos: a.p.pos(at), Certain: true})
+		return
+	}
+	a.classifyPkgCall(d, path, member, at)
+}
+
 // classifyMethod judges a method value/call on an IMPORTED named receiver.
 func (a *analyzer) classifyMethod(d *declReport, recv types.Type, method string, at ast.Node) {
 	if p, ok := recv.(*types.Pointer); ok {
@@ -966,14 +984,18 @@ func (a *analyzer) body(d *declReport, root ast.Node, fd *ast.FuncDecl) {
 			if tv, ok := a.info.Types[x.Fun]; ok && tv.IsType() {
 				break // conversion — the type scan covers it
 			}
-			// A bare-identifier call of a float-bits function: only a dot
-			// import (`import . "math"`) reaches it; the frontend refuses it
-			// by name (emit.go: "dot-imported math.X called as a bare
-			// identifier …", audit fix round D 2026-09-05).
+			// A bare-identifier call of a NON-local package's function: only
+			// a dot import (`import . "pkg"`) reaches it (FR-36, 2026-10-06).
+			// The frontend judges it through the SAME object-keyed binding as
+			// the selector spelling (tools/nativefrontend/dotimport.go), and
+			// so does this pass (classifyDotImportedCall). Until 2026-10-06
+			// only the float-bits family was judged here, as a by-name
+			// refusal (audit fix round D, cause dot-import-float-bits —
+			// retired: the primitive lowers from either spelling).
 			if id, ok := x.Fun.(*ast.Ident); ok {
 				if fn, ok := a.info.Uses[id].(*types.Func); ok && fn.Pkg() != nil && !a.p.isLocalPkg(fn.Pkg()) {
-					if key := fn.Pkg().Path() + "." + fn.Name(); a.p.sup.floatBits[key] {
-						d.add(finding{Cause: mustCause("dot-import-float-bits"), Key: fn.Name(), Pos: pos, Certain: true})
+					if sig, ok := fn.Type().(*types.Signature); ok && sig.Recv() == nil {
+						a.classifyDotImportedCall(d, fn.Pkg().Path(), fn.Name(), x)
 					}
 				}
 			}
@@ -1108,6 +1130,38 @@ func (a *analyzer) body(d *declReport, root ast.Node, fd *ast.FuncDecl) {
 			if _, inst := a.info.Instances[x]; inst {
 				d.GenericSites++
 			}
+			// FR-36 (2026-10-06): a bare identifier naming a NON-local
+			// package's FUNCTION in VALUE position (not the Fun of a call —
+			// the parent check, as for selectors) is a dot-imported stdlib
+			// function used as a value (`f := Intn`): the frontend refuses
+			// it by name unless the package is source-through, where it is
+			// the real function value and lowers (tools/nativefrontend/
+			// dotimport.go refuseDotImportedValue). Call heads are judged by
+			// the CallExpr arm (classifyDotImportedCall), defer/go callees
+			// by interceptedSpawn.
+			if fn, ok := a.info.Uses[x].(*types.Func); ok && fn.Pkg() != nil && !a.p.isLocalPkg(fn.Pkg()) {
+				if sig, ok := fn.Type().(*types.Signature); ok && sig.Recv() == nil {
+					// A BARE identifier only: not the `Sel` of a qualified
+					// selector (`math.Float64bits` — the SelectorExpr arm
+					// judges that spelling) and not a call head.
+					bare := true
+					if len(stack) >= 2 {
+						switch p := stack[len(stack)-2].(type) {
+						case *ast.SelectorExpr:
+							if p.Sel == x {
+								bare = false
+							}
+						case *ast.CallExpr:
+							if p.Fun == x {
+								bare = false
+							}
+						}
+					}
+					if bare && !a.p.sup.sourceThrough[fn.Pkg().Path()] {
+						d.add(finding{Cause: mustCause("dot-import-value-position"), Key: fn.Pkg().Path() + "." + fn.Name(), Pos: pos, Certain: true})
+					}
+				}
+			}
 			if v, ok := a.info.Uses[x].(*types.Var); ok && v.Pkg() != nil && a.p.isLocalPkg(v.Pkg()) && v.Parent() == v.Pkg().Scope() {
 				if d.usedVars == nil {
 					d.usedVars = map[types.Object]bool{}
@@ -1226,6 +1280,19 @@ func syncMethodPrim(s *types.Selection) string {
 // sync/atomic, math.Float64bits & siblings, …) refuses as a value-position
 // selector — the frontend lowers the callee as a value.
 func (a *analyzer) interceptedSpawn(d *declReport, how string, call *ast.CallExpr, pos string) {
+	// FR-36 (2026-10-06): defer/go of a DOT-IMPORTED stdlib function — the
+	// frontend evaluates the callee as a VALUE (emitIdent) and refuses a
+	// non-source package's function by name (tools/nativefrontend/
+	// dotimport.go refuseDotImportedValue); a source-through member is the
+	// real function value and lowers (the selector arm's rule below).
+	if id, ok := call.Fun.(*ast.Ident); ok {
+		if fn, ok := a.info.Uses[id].(*types.Func); ok && fn.Pkg() != nil && !a.p.isLocalPkg(fn.Pkg()) && !a.p.sup.sourceThrough[fn.Pkg().Path()] {
+			if sig, ok := fn.Type().(*types.Signature); ok && sig.Recv() == nil {
+				d.add(finding{Cause: mustCause("dot-import-value-position"), Key: how + " " + fn.Pkg().Path() + "." + fn.Name(), Pos: pos, Certain: true})
+			}
+		}
+		return
+	}
 	sel, ok := call.Fun.(*ast.SelectorExpr)
 	if !ok {
 		return

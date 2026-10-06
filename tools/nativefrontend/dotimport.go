@@ -17,15 +17,12 @@ package main
 // THE FIX: one OBJECT-keyed lookup on the resolved `*types.Func`, shared by
 // the selector spelling and the bare-identifier spelling, so an import form
 // can never reach a lowering the other form does not:
-//   - the PRIMITIVES (`atomic-op`, `rand-intn`) lower the same node from
-//     either spelling (`emitPrimitiveCall`) — the op is a fact about the
-//     callee object, not about how the file spelled it. RESIDUAL: the
-//     dot-imported FLOAT-BITS call keeps a NAMED refusal
-//     (`refuseDotImportedFloatBits`): the lowering-diagnosis tool's
-//     calibration fixture (tools/lowerdiag/testdata/calib/dot.go `fbDot`,
-//     cause `dot-import-float-bits`) pins it refused and the gate compares
-//     that table with the wire; the tool is another lane's, so the flip
-//     (their cause + this arm, one line each) is theirs to land together;
+//   - the PRIMITIVES (`atomic-op`, `float-bits`, `rand-intn`) lower the same
+//     node from either spelling (`emitPrimitiveCall`) — the op is a fact
+//     about the callee object, not about how the file spelled it (the
+//     lowering-diagnosis calibration, tools/lowerdiag testdata/calib/dot.go
+//     `fbDot`, pins the dot-imported float-bits call SUPPLIED since
+//     2026-10-06; its `dot-import-float-bits` cause is retired);
 //   - a SOURCE-THROUGH member (`import . "strings"`; `ToUpper`) was already a
 //     source function (`funcWireName` qualifies it) and stays green;
 //   - every other non-source stdlib member refuses BY NAME with the selector
@@ -95,13 +92,6 @@ func (e *emitter) refuseDotImportedCall(fn *types.Func, pkg *types.Package) erro
 	}
 	return unsup("package-selector call %s.%s (package %q surface not modeled) — reached through a dot import (import . %q: the bare identifier %s is that package's member; FR-36)",
 		pkg.Name(), fn.Name(), pkg.Path(), pkg.Path(), fn.Name())
-}
-
-// refuseDotImportedFloatBits: the dot-imported float-bits CALL (header,
-// RESIDUAL) — refused by name, the pin stated, so the gap reads at the point
-// of failure and flips with the lowerdiag cause in one move.
-func (e *emitter) refuseDotImportedFloatBits(fn *types.Func) error {
-	return unsup("dot-imported math.%s called as a bare identifier (import . \"math\"): the float-bits primitive lowers the qualified spelling only — the lowering-diagnosis calibration (tools/lowerdiag cause dot-import-float-bits, fixture fbDot) pins this spelling refused and is another lane's table; refused by name (FR-36 residual)", fn.Name())
 }
 
 // refuseDotImportedValue: a dot-imported non-source stdlib function in VALUE

@@ -8691,20 +8691,9 @@ func (e *emitter) emitCallNode(c *ast.CallExpr) (any, bool, error) {
 		// spelling: one lookup on the resolved object, never a path of its
 		// own. (The audit-fix-round-D refusal of the dot-imported
 		// float-bits call, 2026-09-05, was the stopgap that kept the
-		// then-unfixed class visible — RETAINED for float-bits alone as the
-		// lowerdiag-pinned residual below.)
-		//
-		// RESIDUAL (a named refusal, not a lowering): the dot-imported
-		// FLOAT-BITS call. The lowering-diagnosis tool's calibration
-		// fixture (tools/lowerdiag/testdata/calib/dot.go `fbDot`, cause
-		// `dot-import-float-bits`) pins this member REFUSED and the gate's
-		// calibration step compares it with the wire; that tool is another
-		// lane's, so lowering here would leave the gate red on their table.
-		// Refuse by name, stating the pin; the lowerdiag lane flips the
-		// cause and this arm together (one line each) — FR-36's record.
-		if fn, isFB := isFloatBitsFunc(obj); isFB {
-			return nil, false, e.refuseDotImportedFloatBits(fn)
-		}
+		// then-unfixed class visible; the class fix retires it — the
+		// lowerdiag calibration cause `dot-import-float-bits` retired with
+		// it in the same change, 2026-10-06.)
 		if node, effectful, handled, err := e.emitPrimitiveCall(c, obj); handled {
 			return node, effectful, err
 		}

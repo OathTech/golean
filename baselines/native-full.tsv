@@ -1,5 +1,11 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 3888 (3649 PASS / 239 FAIL)
+# cases: 3888 (3650 PASS / 238 FAIL)
+# re-pinned: 2026-10-06 [AGENT], lane/fr36-spin-bounds-1006 (second re-pin, after the rebase onto main ee5dbd41) — the born row
+#   stdlib-source/dot-import/float-bits flips FAIL/frontend-export → PASS (a BORN-ROW flip, not a regression): the lowerdiag lane landed at
+#   train r68 and tools/lowerdiag became this lane's, so the dot-imported float-bits call now LOWERS to the float-bits primitive like the
+#   selector spelling (the by-name refusal and lowerdiag's dot-import-float-bits calibration cause retired together — [AGENT] coordinator
+#   decision 2026-10-06: the FR-36 fix was approved whole, the refusal was a stand-in for the lane-ownership split). No other row moved.
+#   3888 cases; 3649 + 1 = 3650 PASS; 239 - 1 = 238 FAIL. Measured by scripts/diff-one, then the full gate.
 # re-pinned: 2026-10-06 [AGENT], lane/fr36-spin-bounds-1006 — FR-36 closed ([USER] Mike 2026-10-06 «Yeah, let's do 3+4», relayed; item 3)
 #   + spin bounds in loop iterations (item 4, docs/2026-10-06_spin-bounds.md). WHY: the frontend resolves a DOT-IMPORTED stdlib
 #   identifier through the SAME object-keyed binding as the selector spelling (tools/nativefrontend/dotimport.go): the primitives
@@ -5452,7 +5458,7 @@ PASS	stdlib-source/cmp-compare/floats-nan	-
 PASS	stdlib-source/cmp-compare/less	-
 PASS	stdlib-source/cmp-compare/local-float-type	-
 PASS	stdlib-source/cmp-compare/or	-
-FAIL	stdlib-source/dot-import/float-bits	frontend-export
+PASS	stdlib-source/dot-import/float-bits	-
 PASS	stdlib-source/dot-import/intn-membership	membership
 FAIL	stdlib-source/dot-import/perm-quarantined	frontend-export
 PASS	stdlib-source/dot-import/strings-source-through	-

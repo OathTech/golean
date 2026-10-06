@@ -29,11 +29,10 @@ func dotIntn() int {
 // float-bits: the `float-bits` PRIMITIVE through the dot import (math.
 // Float64bits, deps/go/src/math/unsafe.go:21 @ go1.26.5): the bit pattern
 // of 1.0 is 0x3FF0000000000000; printed as the shifted high word so the
-// value stays in int range on both legs. RED BY DESIGN for now (FR-36
-// residual): the frontend refuses this spelling BY NAME because the
-// lowering-diagnosis calibration (tools/lowerdiag cause
-// dot-import-float-bits, fixture fbDot — another lane's table) pins it
-// refused; the row flips to PASS with that lane's one-line cause change.
+// value stays in int range on both legs. (Born red on 2026-10-06's first
+// landing attempt while the lowering-diagnosis calibration — then another
+// lane's table — pinned this spelling refused; the cause retired the same
+// day, and the row is a PASS.)
 func dotFloatBits() int {
 	return int(Float64bits(1.0) >> 48)
 }

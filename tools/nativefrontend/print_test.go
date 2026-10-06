@@ -169,14 +169,13 @@ func TestStdlibRegisterPrimitivesFull(t *testing.T) {
 	}
 }
 
-// FR-36 (2026-10-06, dotimport.go): the dot-imported float-bits call is the
-// one RESIDUAL named refusal of the class fix — the lowering-diagnosis
-// calibration fixture (tools/lowerdiag cause `dot-import-float-bits`, `fbDot`)
-// pins this spelling refused and that table is another lane's, so the arm
-// refuses BY NAME stating the pin (audit fix round D's refusal, 2026-09-05,
-// re-worded). The per-declaration quarantine keeps the export OK; the stub's
-// reason carries the text. Flips to a lowering test with the lowerdiag cause.
-func TestFloatBitsDotImportRefusesNamingMath(t *testing.T) {
+// FR-36 (2026-10-06, dotimport.go): the dot-imported spelling reaches the
+// SAME object-keyed primitive as the selector spelling. This test's former
+// shape (audit fix round D, 2026-09-05) asserted a by-name REFUSAL — the
+// stopgap that kept the then-unfixed dot-import class visible; the class fix
+// retires it together with the lowerdiag calibration cause
+// `dot-import-float-bits`, and the wire must now carry the `float-bits` op.
+func TestFloatBitsDotImportLowersToPrimitive(t *testing.T) {
 	src := `package main
 import . "math"
 func subject(f float64) uint64 {
@@ -185,18 +184,16 @@ func subject(f float64) uint64 {
 `
 	program, err := emitSource(t, src)
 	if err != nil {
-		t.Fatalf("the per-declaration quarantine keeps the export OK: %v", err)
+		t.Fatalf("a dot-imported float-bits call must lower like the qualified spelling (FR-36): %v", err)
 	}
-	reason := stubReason(t, program, "subject")
-	if reason == "" {
-		t.Fatalf("a dot-imported float-bits call must refuse by name (FR-36 residual, lowerdiag-pinned), not lower:\n%s", mustJSON(t, program))
+	if reason := stubReason(t, program, "subject"); reason != "" {
+		t.Fatalf("a dot-imported Float64bits call must not be quarantined: %s", reason)
 	}
-	for _, want := range []string{"dot-imported math.Float64bits", "dot-import-float-bits", "FR-36 residual"} {
-		if !strings.Contains(reason, want) {
-			t.Errorf("the refusal must carry %q (the member, the lowerdiag pin, the row):\n%s", want, reason)
-		}
+	msg := mustJSON(t, program)
+	if !strings.Contains(msg, `"expr":"float-bits"`) || !strings.Contains(msg, `"op":"f64bits"`) {
+		t.Errorf("a dot-imported Float64bits call must lower to the float-bits primitive (op f64bits):\n%s", msg)
 	}
-	if msg := mustJSON(t, program); strings.Contains(msg, `"expr":"float-bits"`) {
-		t.Errorf("a dot-imported float-bits call must not lower while the lowerdiag cause pins it refused:\n%s", msg)
+	if strings.Contains(msg, `"func":"Float64bits"`) {
+		t.Errorf("a dot-imported Float64bits call must not lower as a bare user call (the pre-FR-36 defect):\n%s", msg)
 	}
 }

@@ -193,6 +193,10 @@ func TestClassifyTextVocabulary(t *testing.T) {
 		`stdlib source-through: internal/stringslite.Clone needs unsafe.String (…)`:                     "stdlib-source-gap",
 		`references quarantined package-level variable maxDatetime (its initializer does not lower: …)`: "quarantine-cascade",
 		`imported package-level variable time.UTC has no seeded cell`:                                   "stdlib-var-unmodeled",
+		// FR-36 (2026-10-06): the dot-imported stdlib member's refusals — the quarantine text names the import form and still classifies FR-14; the two FR-36 causes
+		`package-selector call rand.Perm (package "math/rand" surface not modeled) — reached through a dot import (import . "math/rand": the bare identifier Perm is that package's member; FR-36)`: "stdlib-package-unmodeled",
+		`dot-imported fmt.Errorf called as a bare identifier (import . "fmt"): the fmt desugar lowers the qualified spelling only — …`:                                                              "dot-import-fmt-desugar",
+		`dot-imported stdlib function atomic.AddInt64 (import . "sync/atomic") in value position: only DIRECT CALLS of modeled stdlib members lower (…)`:                                            "dot-import-value-position",
 		// measured on cedar-go once FR-4 stopped killing the export (lane fr4-rowm, census §11)
 		`generic instantiation artifacts/cedar/cases/drv-eval-operators/cedargo/types/entity_uid.go:143:9`: "explicit-instantiation-call",
 		`method cedargo/x/exp/schema/internal/parser.lexer.skipWhitespaceAndComments (len of a potentially-panicking operand between a potentially-panicking operand to its left and a later ordered call/receive in the same statement (hoisting len would reorder the panics); satisfaction answers, calls fail closed)`: "len-hoist-panic-order",
@@ -752,7 +756,16 @@ func TestFloatBitsPrimitiveIsSupplied(t *testing.T) {
 		"fbGo":     {cause: "stdlib-value-position", key: "math.Float32bits"},
 		"fbValue":  {cause: "stdlib-value-position", key: "math.Float64frombits"},
 		"fbSqrt":   {cause: "stdlib-package-unmodeled", key: "math.Sqrt"},
-		"fbDot":    {cause: "dot-import-float-bits", key: "Float64bits"},
+		// FR-36 (2026-10-06): the dot-imported spelling is judged through the
+		// SAME object-keyed binding as the selector spelling — fbDot LOWERS
+		// (the former dot-import-float-bits refusal retired); dot_fr36.go pins
+		// the rest of the class.
+		"fbDot":        {supplied: "math.Float64bits (machine float-bits)"},
+		"dotIntn":      {supplied: "math/rand.Intn (machine rand-intn)"},
+		"dotPerm":      {cause: "stdlib-package-unmodeled", key: "math/rand.Perm"},
+		"dotIntnValue": {cause: "dot-import-value-position", key: "math/rand.Intn"},
+		"dotIntnDefer": {cause: "dot-import-value-position", key: "defer math/rand.Intn"},
+		"dotSprintf":   {cause: "dot-import-fmt-desugar", key: "fmt.Sprintf"},
 	}
 	for name, w := range cases {
 		d := decls[name]
@@ -779,7 +792,9 @@ func TestFloatBitsPrimitiveIsSupplied(t *testing.T) {
 	// the dynamic pass: the frontend's real texts classify to the same causes
 	for txt, wantID := range map[string]string{
 		`stdlib-qualified selector math.Float64bits in value position: only allowlisted DIRECT CALLS of modeled stdlib members lower (E5 shims / fmt desugar); the value shape is outside the modeled surface (package "math")`: "stdlib-value-position",
-		`dot-imported math.Float64bits called as a bare identifier: the float-bits primitive lowers the qualified spelling only (import . "math" is outside the identity boundary) — fail closed`:                               "dot-import-float-bits",
+		// FR-36 (2026-10-06): the dot-imported float-bits text is GONE (the primitive lowers from either spelling); the class's two by-name refusals classify to their FR-36 causes.
+		`dot-imported fmt.Sprintf called as a bare identifier (import . "fmt"): the fmt desugar lowers the qualified spelling only — its shim injection and Formatter checks key on the selector (fmtdesugar.go, stdlibshim.go) — refused by name (FR-36 residual)`:                                                                    "dot-import-fmt-desugar",
+		`dot-imported stdlib function rand.Intn (import . "math/rand") in value position: only DIRECT CALLS of modeled stdlib members lower (the primitives / the fmt desugar); the value shape is outside the modeled surface (package "math/rand") — the qualified selector's refusal (FR-14), reached through a dot import (FR-36)`: "dot-import-value-position",
 	} {
 		if c, _ := classifyText(txt); c == nil || c.ID != wantID {
 			t.Errorf("classifyText(%q) = %v, want %s", txt, c, wantID)
@@ -1104,7 +1119,9 @@ func TestCalibrationAgainstWire(t *testing.T) {
 	want := map[string]bool{"retBox": false, "assignBox": true, "sortStrings": false, "sortInts": false, "deferSort": false, "isE": false, "fields": false,
 		"drawIntn": false, "drawIntNv2": false, "drawInt63n": true, "deferIntn": true,
 		// the float-bits primitive (folded in 2026-10-04)
-		"fbBits": false, "fbFrom32": false, "fbStmt": false, "fbDefer": true, "fbGo": true, "fbValue": true, "fbSqrt": true, "fbDot": true,
+		"fbBits": false, "fbFrom32": false, "fbStmt": false, "fbDefer": true, "fbGo": true, "fbValue": true, "fbSqrt": true, "fbDot": false,
+		// FR-36 (2026-10-06): the dot-imported spelling judged like the selector spelling — the primitive lowers, the rest refuse by name
+		"dotIntn": false, "dotPerm": true, "dotIntnValue": true, "dotIntnDefer": true, "dotSprintf": true,
 		// defer/go of a non-source stdlib member; sync method values (2026-10-05)
 		"sprintf": false, "atomicCall": false, "atomicDefer": true, "atomicGo": true, "fmtCall": false, "fmtDefer": true, "fmtGo": true,
 		"syncMV": false, "syncMVWg": false, "syncMVPromoted": false, "syncMVUnmodeled": true, "syncMExpr": true}

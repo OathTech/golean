@@ -159,6 +159,10 @@ var staticCauseIDs = []string{
 	"duplicate-typeid", "local-import-shape", "build-constraint", "fmt-verb-matrix",
 	"slices-sort-kind", "intercepted-defer-go", "quarantine-cascade", "sync-literal", "sync-value-shape",
 	"stdlib-source-gap",
+	// FR-36 (2026-10-06): the dot-imported stdlib member's two by-name refusals
+	// (the fmt desugar member; the value shape). The former dot-import-float-bits
+	// cause is RETIRED — the primitive lowers from either spelling.
+	"dot-import-fmt-desugar", "dot-import-value-position",
 }
 
 // methodWrap unwraps the per-declaration quarantine's "method T.M (cause;
