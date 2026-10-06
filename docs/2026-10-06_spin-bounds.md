@@ -47,6 +47,23 @@ Design written BEFORE the change; §4 holds the measurements taken after it.
   are unchanged and the terminating tree is reproduced; each row's `why` records the measurement.
   `spin-until-trylock`'s `work=500000` is reverted to the default iff §4 measures ≥ 2× headroom.
 
+### 2.1 Limits (recorded [AGENT] train worker r69, 2026-10-06, from the lane's adversarial audit — MERGE-CLEAN, minors 2 and 3)
+
+- **Labelled `continue L` re-entries are NOT counted** (audit Minor-2). `loopReentry` reads
+  `Config.boundarySite` (`GoLean/GoCore/Multi.lean:1622-1626`), which has no
+  `.signal (.contTo _) (.loop …)` arm; `signalStep` (`GoLean/GoCore/Machine.lean:4877-4879`) takes a
+  matching `contTo` straight to `.exec (.while …)`. Such iterations are therefore neither counted
+  re-entries nor back-edge scheduling points. A spinner built that way is cut only by the `sites=` cap
+  or the named step-fuel refusal (loud, never a silent pass, never a nonterm count). Widening the
+  boundary set changes the core's scheduling envelope, so it needs its own [USER] ruling and is not
+  this note's to make.
+- **K is a per-PATH total over all loops and all goroutines** (audit Minor-3), not a per-loop or
+  per-goroutine bound. A nested 3×3 loop needs K=12 (3 outer re-entries + 3·3 inner), and a
+  main-goroutine loop's re-entries count against a child's spin budget on the same path. A map
+  `range` over N elements costs N+1 re-entries (the `.mapIterK` shape).
+- None of the four migrated rows is affected: none uses a labelled `continue`, and each row's K was
+  measured on the row's whole program (§4).
+
 ## 3. NOT changed
 
 - The semantic core: no new `Stop` constructor, no driver change; `native-json-run` and the

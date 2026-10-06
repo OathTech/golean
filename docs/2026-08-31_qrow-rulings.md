@@ -1582,3 +1582,43 @@ baseline diff FULL 3884/3884 (3647 / 237, no regression), certificate provenance
 freeze + discharge ok (LANDED=M1), frontend pins ok, lowering-diagnostic tables ok, negative baseline no regression.
 Round 68 closed: route A is complete on main and the lowerdiag known disagreements 1–3 are fixed; FR-36 (item 4)
 continues on `lane/fr36-spin-bounds-1006` and the Codex grind on `core/pool-grind-*` (both untouched by this train).
+
+### Train r69 — FR-36 (dot-import binding) and spin bounds in loop iterations — RULED (2026-10-06)
+
+[USER] Mike, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «Yeah, let's do 3+4» (2026-10-06 — item 3 =
+FR-36, the dot-imported stdlib member binding; item 4 = the spin bounds in loop iterations, train r59's C4 follow-up);
+«merge» (2026-10-06 — the merge sign-off for `lane/fr36-spin-bounds-1006` @ `4a9c73dc`).
+
+[AGENT] coordinator decision (2026-10-06, as relayed): the lane's first landing attempt split on ownership — the FR-36
+fix retired the dot-imported float-bits refusal, but `tools/lowerdiag`'s calibration cause `dot-import-float-bits`
+pinned that spelling refused and the tool belonged to the route A S3 + lowerdiag lane (gate run 2 failed on exactly that
+step, `lowering-diagnostic tables`). Once train r68 landed that lane, the coordinator gave `tools/lowerdiag/` to this
+lane and ruled the FR-36 fix approved whole: the lane rebased onto `ee5dbd41`, retired the cause with the refusal, and
+flipped the born row `stdlib-source/dot-import/float-bits` FAIL → PASS (a born-row flip, not a regression). Gate run 3
+(`ci --slow` at `06431890`): `RESULT: PASS`, 3888 = 3650 PASS / 238 FAIL.
+
+Audit (as relayed by the [AGENT] coordinator): one Fable adversarial audit, **MERGE-CLEAN with five minors**; none
+blocks, none is a wrong answer; all recorded by this train's records commit (records/comments only, no code change):
+- Minor-1 — a dot-imported package-level VARIABLE (`import . "os"; len(Args)`) is refused by the DECODER with an unnamed
+  B6 c3 local-scope cause that masks sibling refusals; PRE-EXISTING, fail-closed. Recorded as FR-36 residual (ii) and
+  rowed as the NEW frontier row **FR-37** with **queue slot 37** (S; fix = one `emitIdent` arm before `localIdent`
+  naming the imported package variable; red-first row `stdlib-source/dot-import/var-args` proposed, born at the fix);
+  `tools/lowerdiag` judging the program `lowers(static)` noted as a tool follow-up beside it
+  (`docs/language-coverage-ledger.md`).
+- Minor-2 — labelled `continue L` re-entries are not counted by `loopReentry` (no `.signal (.contTo _) (.loop …)` arm in
+  `Config.boundarySite`); such spinners are cut only by `sites=` or the named step-fuel refusal. Widening the boundary
+  set is a core envelope question for a separate [USER] ruling (`docs/2026-10-06_spin-bounds.md` §2.1).
+- Minor-3 — K is a per-path total over all loops and goroutines; a map range of N elements costs N+1 re-entries
+  (`docs/2026-10-06_spin-bounds.md` §2.1; none of the four rows affected).
+- Minor-4 — a dot-imported GENERIC non-source member (`import . "math/rand/v2"; N(5)`) refuses via the generic path's
+  text — named, not the selector text; FR-36 residual (iii), noted, not queued.
+- Minor-5 — stale `nonterm=` wording: `docs/coverage-ledger.md` (flag-wait → the `iters=` accounting) and the
+  `goroutines/send-then-spin/cases.tsv` header comment (now `iters=5`, leaves 6596 / maxdepth 151 / nonterm 216);
+  comment-only, no manifest or certification input hashes the file.
+
+The FR-36 closure is scoped to dot-imported FUNCTIONS. The post-offer changelog row (`docs/changelog/20d3946d-WINDOW.md`)
+is filled as round r69, scoped the same way, and names the RETIRED `--allow-nonterm` CLI flag (now refused by name;
+`--allow-nonterm-iters K` replaces it) as a tool-interface change for consumers who script the CLI.
+
+Train: `train/r69` = the lane's 5 commits cherry-picked onto main `ee5dbd41`, 0 conflicts; tree identical to the lane
+tip `4a9c73dc`.
