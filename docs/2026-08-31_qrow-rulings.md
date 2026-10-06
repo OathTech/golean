@@ -1713,3 +1713,10 @@ the certified set); `inputs` differ only in the build file hashes — `GoLean.le
 `PoolSingletonFacts`, added); the receipt moved (source `0142ca35` → `bf778774`, 183.366 s). INSTALLED as
 `baselines/certified/imported-goose__channel__google-search.certified.json` — a provenance refresh, not a re-pin; the
 certified set is unchanged. Tail: `docs/evidence/2026-10-06_train-r70/r70-ci-slow.tail.txt`.
+
+**Green re-run at the records commit `3db421d7`** ([AGENT] train worker, 2026-10-06): `ci --diff` EXIT=0, 973 s, `RESULT: PASS`,
+baseline diff FULL 3888/3888 (3650 / 238, no regression), certificate provenance ok, core totality audit ok, semantic
+equations ok, pool spec freeze + discharge ok (LANDED=M5: all 48 discharged, 0 owed), frontend pins ok, negative baseline
+no regression. Round 70 closed: the pool/registry half of the relational semantics is complete on main and CLAUDE.md
+item (2) says so; the audit's F1–F3 texts remain PENDING the coordinator's append (above); the Codex worktrees
+`pool-grind` / `pool-grind-m2m5` and their branches are untouched by this train (removable at the user's call).
