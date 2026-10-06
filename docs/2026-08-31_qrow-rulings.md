@@ -1537,3 +1537,28 @@ baseline diff FULL 3884/3884 (3647 / 237, no regression), certificate provenance
 freeze + discharge ok (LANDED=M1), frontend pins ok, negative baseline no regression. Round 67 closed: the setup equations
 G-R1–G-R4 (BridgeSet rows 512–527) are on main for the logic team's next additive re-pin; the Codex grind continues on
 `core/pool-grind-2026-10-05` (untouched by this train).
+
+### Train r68 — route A complete (S3) and the lowerdiag defer/go + sync-method-value fix — RULED (2026-10-06)
+
+[USER] Mike, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «Yes, go ahead» (2026-10-05 — the lane
+`lane/route-a-s3-lowerdiag-1005`: route A S3, the records completing route A, plus the lowerdiag defer/go and
+sync-method-value fix); «merge it» (2026-10-06 — the merge sign-off for `lane/route-a-s3-lowerdiag-1005` @ `682073db`).
+
+Audit (as relayed by the [AGENT] coordinator): one Opus adversarial audit, NEEDS-FIX — three wording items, all fixed in
+`76def698` (docs/comments only): (1) D-3's two residues separated — the `%+#v` dumps PERMANENT (per Q4), the nil-input
+error's dropped `(left=…, right=…)` booleans narrowable (the price of dynamic-type exactness while `fmt.Errorf` carries
+the injected shim type), in `docs/raft-w42-log.md` and the design note §10 stated limits; (2) JC-15's `errors.Is`
+qualified by D10 (on the machine via the `Unwrap` chain; `errors.Is` itself refused by name); (3) the
+`TestCalibrationAgainstWire` doc comment says every user declaration is judged, shim callers included. The lane then
+re-refreshed the certified record's provenance (`4112f772`: claim, `observations_sha256` and every other field identical;
+only the `tools/lowerdiag/lowerdiag_test.go` input hash and the receipt moved) and re-ran `ci --diff` PASS (`682073db`).
+
+Outcomes: **route A COMPLETE** (`docs/2026-10-04_route-a-protobuf-design.md` §10 — U-1/U-2/U-3 and D-4 RETIRED, D-1/D-3
+NARROWED (final), with the stated limits). The lowerdiag «Known disagreements» (`docs/2026-09-04_lower-diagnose.md`)
+items 1–3 FIXED (defer/go of a non-source-through stdlib member refuses as `stdlib-value-position` — sync/atomic and fmt;
+a modeled sync-op method value lowers, keyed on the declared receiver; calibration judges shim callers too); item 4 is
+FR-36, owned by the separate lane `lane/fr36-spin-bounds-1006` (not this train). No post-offer changelog row: this train
+carries records and untrusted tooling (`tools/lowerdiag/`) only — no semantic source, frontend, wire, baseline or
+BridgeSet change.
+
+Train: `train/r68` = the lane's 7 commits cherry-picked onto main `a3e18ff5`, 0 conflicts; tree identical to the lane tip.
