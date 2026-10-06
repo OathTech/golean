@@ -1720,3 +1720,11 @@ equations ok, pool spec freeze + discharge ok (LANDED=M5: all 48 discharged, 0 o
 no regression. Round 70 closed: the pool/registry half of the relational semantics is complete on main and CLAUDE.md
 item (2) says so; the audit's F1–F3 texts remain PENDING the coordinator's append (above); the Codex worktrees
 `pool-grind` / `pool-grind-m2m5` and their branches are untouched by this train (removable at the user's call).
+
+Coordinator append to train r70 ([AGENT], 2026-10-06) — the audit's F1–F3, recorded PENDING above: F1 (Minor) no RE-PIN
+paragraph for BridgeSet rows 528+ → CLOSED by the train's RE-PIN 14; F2 (Minor) the grind's four changelog «branch
+checkpoint» rows sat outside the post-offer changelog's table, newest-last, without a train id → CLOSED, replaced by
+the r70 row at the table's top; F3 (Info) the frozen files' header comments (`PoolStep.lean:11`, `PoolStatement.lean:13`)
+point to the deleted `docs/specs/pool-relation/Skeleton.lean` → NOTED in the r70 changelog row (not editable without a
+re-freeze). The FR-36 reds cell re-worded to lead with its red count («1 red by design (of 4 born …)») so the
+reconciler reads it.
