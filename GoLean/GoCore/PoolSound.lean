@@ -1,3 +1,4 @@
+import GoLean.GoCore.PoolSingletonFacts
 import GoLean.GoCore.PoolFrontFacts
 import GoLean.GoCore.PoolStructure
 import GoLean.GoCore.PoolErrorFacts
@@ -1311,5 +1312,171 @@ theorem program_prefix : program_prefix_stmt := by
           obtain ⟨n, des, mf, rf, ch₀, rec, hn, hp, hf, ho⟩ :=
             (pool_run_ok_iff _ _ _ _ _ _ _ _ _).mp he
           exact ⟨n, des, mf, rf, ch₀, chf, rec, sf, hn, hp, hf, ho, by simpa using hl⟩
+
+/-! ## M5 — the single-goroutine reduction -/
+
+private theorem continue_single {ctx : ProgramCtx} {s : Store} {c : Config} {ch : Choices}
+    (hd : c.isTerminal = false) (hb : isBlockedConfig c = false) :
+    Continue ctx ⟨#[.running c none], s, 0⟩ ch ch [] := by
+  refine .running rfl (mainOutcome?_single_none hd) ?_
+  have ht : threadRunnable ctx s (.running c none) = true := by simp [threadRunnable, hd, hb]
+  simp [runnableIdxs_singleton ht]
+
+private theorem continue_flagged {ctx : ProgramCtx} {s : Store} {c : Config} {ch : Choices}
+    {site : ChoiceSite} : Continue ctx ⟨#[.running c (some site)], s, 0⟩ ch ch [] := by
+  refine .running rfl (by simp [MultiConfig.mainOutcome?]) ?_
+  have ht : threadRunnable ctx s (.running c (some site)) = true := rfl
+  simp [runnableIdxs_singleton ht]
+
+theorem stepML_single_complete : stepML_single_complete_stmt := by
+  intro ctx s s' c c' l h
+  obtain ⟨ch, ch', hs⟩ := step_complete h
+  obtain ⟨ev, hm, hw, hl⟩ := PoolSingletonFacts.step_label hs
+  exact ⟨ev, stepML_sound _ _ _ _ _ _ hm, hw, hl⟩
+
+theorem stepML_single_sound : stepML_single_sound_stmt := by
+  intro ctx s c m' ev hb hsp hab h
+  have hw := stepML_who_runnable _ _ _ _ h
+  have hd : c.isTerminal = false := by
+    cases he : c.isTerminal with
+    | false => rfl
+    | true => simp [runnableIdxs, threadRunnable, he, hb] at hw
+  obtain ⟨ch, ch', hm⟩ := stepML_complete _ _ _ _ h
+  obtain ⟨ev₀, hmap⟩ := stepMulti_single (ctx := ctx) (σ := s) (ch := ch) hb hsp hab hd
+  cases hs : stepFn ctx s c ch with
+  | error e => rw [hs] at hmap; rw [hmap] at hm; cases hm
+  | ok v =>
+      obtain ⟨c', s', tail, l⟩ := v
+      obtain ⟨ev₁, hm₁, hw₁, hl₁⟩ := PoolSingletonFacts.step_label hs
+      rw [hm₁] at hm
+      cases hm
+      exact ⟨c', s', l, stepFn_sound hs, rfl, hw₁, hl₁⟩
+
+theorem singleton_finish_normal : singleton_finish_normal_stmt := by
+  intro ctx sf chf rs
+  exact .normal rfl rfl (by simp [runnableIdxs, threadRunnable, Config.isTerminal])
+
+theorem singleton_finish_aborted : singleton_finish_aborted_stmt := by
+  intro ctx sf cf chf ch'' rec t rs h
+  cases h with
+  | aborted ha hc hm =>
+      refine ⟨?_, .aborted rfl⟩
+      rw [stepMulti_abort_single ha, hc]
+      simp only [hm, Except.map]
+
+theorem singleton_finish_refused : singleton_finish_refused_stmt := by
+  intro ctx sf cf chf ch'' rec rr h
+  cases h with
+  | abortRefused ha hc hm =>
+      rw [stepMulti_abort_single ha, hc]
+      simp only [hm, Except.map]
+
+theorem singleton_finish_deadlock : singleton_finish_deadlock_stmt := by
+  intro ctx sf cf chf rs h hw
+  cases h with
+  | blocked hb => exact .deadlock ((singleton_deadlock _ _ _ hb).mpr hw)
+
+theorem singleton_finish_fatal : singleton_finish_fatal_stmt := by
+  intro ctx sf cf chf msg rs hf
+  cases hf with
+  | fatal hs =>
+      have hz : ¬ ExecutionStatement.ZeroCost cf := by
+        intro hz
+        rcases hz with rfl | ⟨_, _, _, rfl⟩ | ⟨_, _, _, _, _, rfl⟩ |
+          ⟨_, _, _, rfl⟩ | ⟨_, _, _, _, rfl⟩ <;>
+          simp [stepFn, throw, throwThe, MonadExceptOf.throw] at hs
+      have hd : cf.isTerminal = false := by
+        cases he : cf.isTerminal with
+        | false => rfl
+        | true =>
+            unfold Config.isTerminal at he
+            split at he
+            · exact False.elim (hz (.inl rfl))
+            · cases he
+      have hb : isBlockedConfig cf = false := by
+        cases he : isBlockedConfig cf with
+        | false => rfl
+        | true =>
+            exfalso
+            apply hz
+            unfold isBlockedConfig at he
+            split at he
+            · exact .inr (.inl ⟨_, _, _, rfl⟩)
+            · exact .inr (.inr (.inl ⟨_, _, _, _, _, rfl⟩))
+            · exact .inr (.inr (.inr (.inl ⟨_, _, _, rfl⟩)))
+            · exact .inr (.inr (.inr (.inr ⟨_, _, _, _, rfl⟩)))
+            · cases he
+      have hab : cf.abort? = none := by
+        rcases ExecutionStatement.stepFn_error_cases hz hs with ⟨_, ⟨_, he⟩ | ⟨_, he⟩⟩ | ⟨ha, _⟩
+        · cases he
+        · cases he
+        · exact ha
+      have hsp : spawnPlan cf = none := by
+        cases he : spawnPlan cf with
+        | none => rfl
+        | some p =>
+            have hbad := spawnPlan_stepFn_refuses (ctx := ctx) (σ := sf) (ch := chf) he
+            rw [hs] at hbad
+            exact hbad.elim
+      obtain ⟨ev, hm⟩ := stepMulti_single (ctx := ctx) (σ := sf) (ch := chf) hb hsp hab hd
+      rw [hs] at hm
+      exact .fatal (continue_single hd hb) hm
+
+private theorem fold_cons_congr {ls ls' : List StepLabel} (l : StepLabel)
+    (h : StepLabel.fold ls = StepLabel.fold ls') :
+    StepLabel.fold (l :: ls) = StepLabel.fold (l :: ls') := by
+  have ht := congrArg StepLabel.trace h
+  have hp := congrArg StepLabel.picks h
+  have ho := congrArg StepLabel.out h
+  simp only [StepLabel.fold, List.map_cons, List.flatten_cons] at ht hp ho ⊢
+  rw [ht, hp, ho]
+
+theorem singleton_prefix_embedding : singleton_prefix_embedding_stmt := by
+  intro ctx n s sf c cf ch chf ls rs hp
+  induction hp with
+  | done => exact ⟨[], .done, by simp, rfl⟩
+  | @step n s s₁ sf c c₁ cf ch ch₁ chf l ls hs hp ih =>
+      obtain ⟨ds, hp', hattr, hfold⟩ := ih
+      have hd := isTerminal_false_of_stepFn_ok hs
+      have hb := isBlockedConfig_false_of_stepFn_ok hs
+      obtain ⟨ev, hm, hw, hl⟩ := PoolSingletonFacts.step_label hs
+      have hc := continue_single (ctx := ctx) (s := s) (ch := ch) hd hb
+      have hn : seqOpCount ctx (n + 1) s c ch =
+          (if (c.afterStepFlag s c₁).isSome then 1 else 0) + seqOpCount ctx n s₁ c₁ ch₁ := by
+        simp only [seqOpCount, hd, hb, Bool.or_self, Bool.false_eq_true, reduceIte, hs]
+      cases hflag : c.afterStepFlag s c₁ with
+      | none =>
+          simp only [hflag, Option.isSome_none, Bool.false_eq_true, reduceIte, Nat.zero_add] at hn
+          simp only [Thread.afterStep, hflag] at hm
+          refine ⟨⟨[], ev⟩ :: ds, ?_, ?_, ?_⟩
+          · rw [hn, show n + 1 + seqOpCount ctx n s₁ c₁ ch₁ =
+                (n + seqOpCount ctx n s₁ c₁ ch₁) + 1 by omega]
+            exact .step hc hm raceUpdate_single hp'
+          · intro d hd
+            rcases List.mem_cons.mp hd with rfl | hd
+            · exact ⟨rfl, hw⟩
+            · exact hattr d hd
+          · simpa only [DriverEvent.events, List.map_cons, hl] using fold_cons_congr l hfold
+      | some site =>
+          simp only [hflag, Option.isSome_some, reduceIte] at hn
+          simp only [Thread.afterStep, hflag] at hm
+          let clear : StepEvent := ⟨0, .opDoneStrip, ⟨[], [], []⟩⟩
+          refine ⟨⟨[], ev⟩ :: ⟨[], clear⟩ :: ds, ?_, ?_, ?_⟩
+          · rw [hn, show n + 1 + (1 + seqOpCount ctx n s₁ c₁ ch₁) =
+                ((n + seqOpCount ctx n s₁ c₁ ch₁) + 1) + 1 by omega]
+            exact .step hc hm raceUpdate_single
+              (.step continue_flagged stepMulti_flagged_single raceUpdate_single hp')
+          · intro d hd
+            rcases List.mem_cons.mp hd with rfl | hd
+            · exact ⟨rfl, hw⟩
+            · rcases List.mem_cons.mp hd with rfl | hd
+              · exact ⟨rfl, rfl⟩
+              · exact hattr d hd
+          · have hf := fold_cons_congr l hfold
+            simpa [DriverEvent.events, clear, hl, StepLabel.fold] using hf
+
+theorem singleton_run : singleton_run_stmt := by
+  intro ctx fuel s c ch rs acc r h ht
+  exact run_iff.mp (execProgLoopOut_single_wide h ht)
 
 end GoLean.GoCore.PoolSound

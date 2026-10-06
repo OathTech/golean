@@ -34,6 +34,7 @@ def allowedRoots : List Name := [`Init, `Std, `Lean, `GoLean, `Tests]
 
 def requiredModules : List Name := [
     `GoLean.GoCore.PoolFrontFacts,
+    `GoLean.GoCore.PoolSingletonFacts,
     `GoLean.GoCore.PoolStructure,
     `GoLean.GoCore.PoolErrorFacts, `GoLean.GoCore.PoolReplayFacts, `GoLean.GoCore.PoolSound,
     `GoLean.GoCore, `GoLean.GoCore.Machine, `GoLean.GoCore.StepFn, `GoLean.GoCore.StateWf,
@@ -52,6 +53,16 @@ def requiredModules : List Name := [
 /-- Required core theorems (the `semantic interface` audit's CORE exports, plus the
 re-homed regressions). Each must exist as a theorem. -/
 def exports : List Name := [
+    -- Pool grind M5, BridgeSet rows 558–566.
+    ``GoLean.GoCore.PoolSound.stepML_single_sound,
+    ``GoLean.GoCore.PoolSound.stepML_single_complete,
+    ``GoLean.GoCore.PoolSound.singleton_finish_normal,
+    ``GoLean.GoCore.PoolSound.singleton_finish_aborted,
+    ``GoLean.GoCore.PoolSound.singleton_finish_refused,
+    ``GoLean.GoCore.PoolSound.singleton_finish_fatal,
+    ``GoLean.GoCore.PoolSound.singleton_finish_deadlock,
+    ``GoLean.GoCore.PoolSound.singleton_prefix_embedding,
+    ``GoLean.GoCore.PoolSound.singleton_run,
     -- Pool grind M4, BridgeSet rows 544–557.
     ``GoLean.GoCore.PoolSound.poolPrefix_comp,
     ``GoLean.GoCore.PoolSound.poolPrefix_split,

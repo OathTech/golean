@@ -4077,4 +4077,84 @@ example :
       PoolPrefix ctx n m r ch₂ des mf rf ch₂' :=
   @GoLean.GoCore.PoolSound.poolPrefix_replay
 
+-- Pool grind M5, 2026-10-06: [AGENT Codex, pool grind].
+
+-- 558. `PoolSound.lean` — `stepML_single_sound`
+example :
+  ∀ (ctx : ProgramCtx) (σ : Store) (c : Config) (m' : MultiConfig) (ev : StepEvent),
+    isBlockedConfig c = false → spawnPlan c = none → c.abort? = none →
+    StepML ctx ⟨#[.running c none], σ, 0⟩ m' ev →
+      ∃ (c' : Config) (σ' : Store) (l : StepLabel),
+        Step ctx c σ c' σ' l ∧ m' = ⟨#[Thread.afterStep σ c c'], σ', 0⟩ ∧
+          ev.who = 0 ∧ ev.label = l :=
+  @GoLean.GoCore.PoolSound.stepML_single_sound
+
+-- 559. `PoolSound.lean` — `stepML_single_complete`
+example :
+  ∀ (ctx : ProgramCtx) (σ σ' : Store) (c c' : Config) (l : StepLabel),
+    Step ctx c σ c' σ' l →
+      ∃ ev : StepEvent,
+        StepML ctx ⟨#[.running c none], σ, 0⟩ ⟨#[Thread.afterStep σ c c'], σ', 0⟩ ev ∧
+          ev.who = 0 ∧ ev.label = l :=
+  @GoLean.GoCore.PoolSound.stepML_single_complete
+
+-- 560. `PoolSound.lean` — `singleton_finish_normal`
+example :
+  ∀ (ctx : ProgramCtx) (sf : Store) (chf : Choices) (rs : RaceState),
+    PoolFinish ctx ⟨#[.running (.next .stop) none], sf, 0⟩ rs chf [] (.normal sf chf) 0 :=
+  @GoLean.GoCore.PoolSound.singleton_finish_normal
+
+-- 561. `PoolSound.lean` — `singleton_finish_aborted`
+example :
+  ∀ (ctx : ProgramCtx) (sf : Store) (cf : Config) (chf ch'' : Choices) (rec : List PickRecord)
+    (t : String) (rs : RaceState),
+    Finish ctx sf cf chf rec (.aborted t sf ch'') 1 →
+      stepMulti ctx ⟨#[.running cf none], sf, 0⟩ chf
+          = .ok (⟨#[.aborted t], sf, 0⟩, ch'', ⟨0, .aborted, ⟨[], rec, []⟩⟩) ∧
+        PoolFinish ctx ⟨#[.aborted t], sf, 0⟩ rs ch'' [] (.aborted t ch'') 0 :=
+  @GoLean.GoCore.PoolSound.singleton_finish_aborted
+
+-- 562. `PoolSound.lean` — `singleton_finish_refused`
+example :
+  ∀ (ctx : ProgramCtx) (sf : Store) (cf : Config) (chf ch'' : Choices) (rec : List PickRecord)
+    (rr : Refusal),
+    Finish ctx sf cf chf rec (.refused rr sf ch'') 1 →
+      stepMulti ctx ⟨#[.running cf none], sf, 0⟩ chf = .error (.refusal rr) :=
+  @GoLean.GoCore.PoolSound.singleton_finish_refused
+
+-- 563. `PoolSound.lean` — `singleton_finish_fatal`
+example :
+  ∀ (ctx : ProgramCtx) (sf : Store) (cf : Config) (chf : Choices) (msg : String) (rs : RaceState),
+    Finish ctx sf cf chf [] (.fatal msg sf chf) 1 →
+      PoolFinish ctx ⟨#[.running cf none], sf, 0⟩ rs chf [] (.fatal msg chf) 1 :=
+  @GoLean.GoCore.PoolSound.singleton_finish_fatal
+
+-- 564. `PoolSound.lean` — `singleton_finish_deadlock`
+example :
+  ∀ (ctx : ProgramCtx) (sf : Store) (cf : Config) (chf : Choices) (rs : RaceState),
+    Finish ctx sf cf chf [] (.deadlock sf chf) 0 → wakeReady ctx sf cf = false →
+      PoolFinish ctx ⟨#[.running cf none], sf, 0⟩ rs chf [] (.deadlock chf) 0 :=
+  @GoLean.GoCore.PoolSound.singleton_finish_deadlock
+
+-- 565. `PoolSound.lean` — `singleton_prefix_embedding`
+example :
+  ∀ (ctx : ProgramCtx) (n : Nat) (σ sf : Store) (c cf : Config) (ch chf : Choices)
+    (ls : List StepLabel) (rs : RaceState),
+    Prefix ctx n σ c ch ls sf cf chf →
+      ∃ des : List DriverEvent,
+        PoolPrefix ctx (n + seqOpCount ctx n σ c ch) ⟨#[.running c none], σ, 0⟩ rs ch des
+          ⟨#[.running cf none], sf, 0⟩ rs chf ∧
+        (∀ d ∈ des, d.window = [] ∧ d.event.who = 0) ∧
+        StepLabel.fold ((DriverEvent.events des).map StepEvent.label) = StepLabel.fold ls :=
+  @GoLean.GoCore.PoolSound.singleton_prefix_embedding
+
+-- 566. `PoolSound.lean` — `singleton_run`
+example :
+  ∀ (ctx : ProgramCtx) (fuel : Nat) (σ : Store) (c : Config) (ch : Choices) (rs : RaceState)
+    (acc : GoString) (r : Except Stop (Store × Choices)),
+    execStmtLoop ctx fuel σ c ch = r → transferableWide r →
+    Run ctx (fuel + seqOpCount ctx fuel σ c ch) ⟨#[.running c none], σ, 0⟩ rs ch acc
+      (seqOut ctx fuel σ c ch acc, r) :=
+  @GoLean.GoCore.PoolSound.singleton_run
+
 end GoLean.GoCore.BridgeSet

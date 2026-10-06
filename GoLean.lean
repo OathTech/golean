@@ -30,6 +30,7 @@ import GoLean.GoCore.PoolErrorFacts
 import GoLean.GoCore.PoolReplayFacts
 import GoLean.GoCore.PoolStructure
 import GoLean.GoCore.PoolFrontFacts
+import GoLean.GoCore.PoolSingletonFacts
 import GoLean.GoCore.PoolSound
 -- The SETUP EQUATIONS (the logic team's G-R1–G-R4, 2026-10-05): the statements (`_stmt` defs; G-R4
 -- stated only, out for review) and the proofs of G-R1–G-R3 (BridgeSet RE-PIN 12, rows 512–520).
