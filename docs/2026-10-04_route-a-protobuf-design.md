@@ -356,6 +356,13 @@ subject, generator, `GoLean/`, frontend, baseline or trusted-surface change; the
 - `raftsubject/README.md` — the codec item (D12's «item 4»: since S1's rewrite it is item 2, «`plain_wire.go`,
   `plain_codec.go`, `plain_clone.go` + `proto/proto.go`») — final wording: U-1–U-3 RETIRED, the RawNode schedules named,
   the stated limits listed.
+- The S2 schedules RE-RUN at the lane tip `e6ed642b`: all three PASS
+  (`docs/evidence/2026-10-05_route-a-s3/rawnode-schedules-at-tip.txt`).
+- Gate: `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff` RESULT: PASS at `e6ed642b` (baseline diff FULL 3884/3884,
+  certificate provenance ok; `docs/evidence/2026-10-05_route-a-s3/ci-diff-final.tail.txt`) after a PROVENANCE refresh of
+  `imported-goose/channel/google-search`'s certified record (the lane's `tools/lowerdiag` change moved three input hashes;
+  `ci --slow` run 1's candidate had claim and `observations_sha256` identical — `ci-slow-run1.tail.txt`). The train still
+  owns step 5a.
 - No BUGS.md entry (subject deltas). The pre-merge audit ask is the coordinator's.
 
 **Route A complete.** What RETIRED: U-1 (the decode error value — now `errDecode`, a `*prefixError` unwrapping to

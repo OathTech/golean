@@ -1,0 +1,27 @@
+# Route A S3 — the S2 RawNode schedules RE-RUN at the lane tip e6ed642b (2026-10-06 UTC), both oracles; instruments, not gates.
+# artifacts/nativefrontend + .lake/build/bin/golean built in this worktree at the tip; GOLEAN_MEM_MAX=16G scripts/capped python3 tools/raftsubject/runprobe.py ...
+
+## codec-unknown-group, strict
+runprobe: go run probeTwinCodecUnknownGroup -> [codec-unknown-group]
+runprobe: machine probeTwinCodecUnknownGroup -> [codec-unknown-group]
+runprobe: PASS — both oracles agree: [codec-unknown-group]
+EXIT=0
+
+## codec-abort, default machine stream
+runprobe: go run aborted with member 1: 'proto:\xa0cannot parse invalid wire-format data'
+runprobe: machine aborted with member 0: 'proto: cannot parse invalid wire-format data'
+runprobe: PASS (expect-panic) — both oracles abort with a member text (go: member 1, machine: member 0)
+EXIT=0
+
+## codec-abort, machine --choices 1
+runprobe: go run aborted with member 0: 'proto: cannot parse invalid wire-format data'
+runprobe: machine aborted with member 1: 'proto:\xa0cannot parse invalid wire-format data'
+runprobe: PASS (expect-panic) — both oracles abort with a member text (go: member 0, machine: member 1)
+EXIT=0
+
+## the unknown-group trace (both legs identical)
+e1 campaign1 |C1/1/0 F0/0/0 F0/0/0 net=2
+e2 drain |L1/2/2 F1/2/2 F1/2/2 net=0
+e3 proposeCC2=0807100218027b082a7c |L1/2/2 F1/2/2 F1/2/2 net=1
+e4 drain ready1:cc@3 same=1 ready2:cc@3 same=1 ready3:cc@3 same=1 apply1:cc@3 type=2 node=2 voters=3 size=10 reencode-same=1 apply2:cc@3 type=2 node=2 voters=3 size=10 reencode-same=1 apply3:cc@3 type=2 node=2 voters=3 size=10 reencode-same=1 |L1/3/3 F1/3/3 F1/3/3 net=0
+end viol=0 claims=1

@@ -954,6 +954,9 @@ stdlib-only and protobuf-go cannot be an oracle there — the 2026-09-30 continu
   byte-identical to upstream raft @ `56e32004` + protobuf-go v1.36.11. Red on both legs over the pre-route-A subject.
 - against protobuf-go itself: `difftest.py` section 8 (1041 inputs, EXACT) and `codeccheck.py` 39–51 + 100–125 (both
   oracles) — the S1 continuation's «Witness» paragraph.
+- RE-RUN at this lane's tip `e6ed642b` (S3; the subject is unchanged since S1): all three schedules PASS again —
+  codec-unknown-group strict, codec-abort under the default tape (machine member 0) and `--choices 1` (machine member 1)
+  (`docs/evidence/2026-10-05_route-a-s3/rawnode-schedules-at-tip.txt`).
 
 **U-1 the Unmarshal error VALUE — RETIRED.** RawNode witness: codec-abort (the abort line IS the error text; membership over
 the per-binary spelling). What stays, as stated limits, not deltas: `errors.Is` is refused on the machine by name (FR-14/G6,
