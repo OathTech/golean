@@ -1,4 +1,14 @@
-# Pool grind — M1, 2026-10-05
+# Pool/registry proof completion — 2026-10-05–06
+
+[AGENT Codex, pool grind] The continuous M2–M5 run is complete: **all 48 original frozen statements proved**, including the nine M1 statements already on the input main.
+Branch: `core/pool-grind-m2m5-2026-10-05`; worktree: `.claude/worktrees/pool-grind-m2m5`; input: `a3e18ff5`.
+Final proof/integration tip: `94a9aa97f29a203e7a70442fd6bbbd5135ee2f01`; the final record commit changes documentation only.
+All four new checkpoints are recorded below. Their spec, bridge and standalone audit checks pass; each CI run's only failing summary step is the explicitly expected stale certificate.
+Frozen definitions/statements and BridgeSet rows 1–527 remain byte-identical to input; new rows are 528–566. No bounded adjustments, runtime changes, merges or pushes.
+[Repair ledger](specs/pool-relation/REPAIRS.md): **zero proposed repairs**. No `PoolRepairs.lean` is needed; every original statement is discharged in `PoolSound.lean`.
+The coordinator's required adversarial audit and landing remain outside this run. The inherited M1 record below is historical; its old stop/blocker text is not the current status.
+
+## Historical M1 checkpoint — 2026-10-05
 
 [AGENT Codex, pool grind] M1 proofs complete; acceptance BLOCKED. Stop here; M2 not started.
 Proof/integration tip: `16cdd1431a6c76e5416e14c0f0424692c3c1ffea`; the subsequent report commit changes records only.
@@ -56,8 +66,7 @@ M5: `stepML_single_sound_stmt`, `stepML_single_complete_stmt`, `singleton_prefix
 `singleton_finish_normal_stmt`, `singleton_finish_aborted_stmt`, `singleton_finish_refused_stmt`, `singleton_finish_fatal_stmt`, `singleton_finish_deadlock_stmt`, `singleton_run_stmt`.
 No §5 false-statement/unprovability finding surfaced in M1; no material interpretation self-adjudicated.
 
-End state: proved M1 work preserved on the branch; clean after the records commit; primary checkout remains clean on input `main`; nothing merged or pushed.
-Audit ask to coordinator (CLAUDE.md, unconditional pre-merge ask; scope/waiver yours): please arrange adversarial review of these nine proofs, helper modules, pins/exports and the two acceptance blockers. No merge sign-off requested.
+End state: proved M1 work preserved on the branch; clean after the records commit; primary checkout remains clean on input `main`; nothing merged or pushed. Audit ask to coordinator (CLAUDE.md, unconditional pre-merge ask; scope/waiver yours): please arrange adversarial review of these nine proofs, helper modules, pins/exports and the two acceptance blockers. No merge sign-off requested.
 
 ## M2 — continuous run checkpoint (2026-10-05)
 
@@ -161,3 +170,35 @@ Still owed at this checkpoint: M5 `stepML_single_sound_stmt`, `stepML_single_com
 `singleton_prefix_embedding_stmt`, `singleton_run_stmt`. No obstruction claimed; M5's first compiler pass follows.
 M4 complete; only the authorized stale-certificate red remains in acceptance. Continue without review, merge or push.
 M4 staged evidence-size check: capped and locked, EXIT=0; 2419 tracked files / 32118971 bytes in 154 evidence directories, 0 new offenders.
+
+## M5 checkpoint — singleton reduction and completion, 2026-10-06
+
+[AGENT Codex, pool grind] Same continuous-run authority, input and worktree as M2–M4. Final source commit: `94a9aa97f29a203e7a70442fd6bbbd5135ee2f01`.
+Nine exact frozen declarations proved: `stepML_single_sound`, `stepML_single_complete`, `singleton_finish_normal`, `singleton_finish_aborted`.
+`singleton_finish_refused`, `singleton_finish_fatal`, `singleton_finish_deadlock`, `singleton_prefix_embedding`, `singleton_run`.
+BridgeSet rows 558–566 and nine audit exports added. The fully discharged Skeleton is deleted; LANDED and MILESTONES are untouched for the landing train.
+New proof-only module `PoolSingletonFacts`: `thread_label`, `multi_label`, `step_label` retain the entire sequential label and attribution 0.
+Private `PoolSound` helpers: `continue_single`, `continue_flagged`, `fold_cons_congr`. The prefix proof adds one silent clear per opened registry boundary, at exactly `n + seqOpCount`.
+No residual goal, counterexample, repair, bounded statement adjustment, frozen hash change, or edit to the original projection/soundness modules.
+Every acceptance command ran capped at 48G under the box-wide lock, locale `en_US.UTF-8`, two Lean threads, worktree-local TMPDIR.
+`scripts/capped scripts/ci`: EXIT=1, `RESULT: FAIL`; ONLY failing summary step: certificate provenance.
+Verbatim expected cause: `certification: STALE certification: changed dependency build/files/GoLean.lean`. No certificate, baseline or runtime change made to absorb it.
+`scripts/capped bash scripts/check-core-audit`: EXIT=0; PASS, 64 modules / 55 core / 600 required theorems / 20820 declarations, classical trio only; five poison controls rejected.
+`scripts/capped lake build GoLean.GoCore.BridgeSet`: EXIT=0, 42 jobs; the integrated target build also EXIT=0, including `PoolSingletonFacts` and `PoolSound`.
+`scripts/capped python3 .tmp/check-frozen.py`: EXIT=0; frozen surface, existing modules, LANDED/MILESTONES and rows 1–527 byte-identical to input.
+`git diff --check`: EXIT=0, EMPTY. CI escape-hatch scans and warning-free build pass; 298 eval tests pass.
+Cached comparisons only: 3884 execution / 394 negative cases match the clean `ab047d0` records under go1.26.5; no fresh differential run.
+[CI tail](evidence/2026-10-05_pool-grind/m5-ci-tail.log) · [audit tail](evidence/2026-10-05_pool-grind/m5-audit-tail.log) · [checker](evidence/2026-10-05_pool-grind/m5-pool-spec.log) · [exit ledger](evidence/2026-10-05_pool-grind/m5-checks.log).
+Final `scripts/capped python3 scripts/check-pool-spec --landed M5` output (EXIT=0):
+
+```text
+ok [self-tests] (a) glue `:= True` detected; (b) blank-line `∨ True` detected by the file and statement keys; (c) literals survive comment stripping; (d) incomplete/padded/duplicated/mis-tagged milestone maps detected; (e) staged discharge: missing M1 theorem at M1, PoolSound present at M0 / absent at M1 detected, early M2 reported not failed
+ok [frozen] both files and 48 statements match docs/specs/pool-relation/FROZEN.sha256
+ok [milestones] docs/specs/pool-relation/MILESTONES covers exactly the 48 statements (M1: 9, M2: 11, M3: 5, M4: 14, M5: 9)
+ok [discharge] LANDED=M5 (--landed override): all 48 statements of M1..M5 discharged in GoLean/GoCore/PoolSound.lean; 0 early; 0 owed by later milestones
+```
+
+REPAIRS.md summary: zero entries; all 48 original statements are proved unchanged. No repaired substitute or `PoolRepairs` module is required.
+[AGENT] Final staged evidence-size check, capped and locked: EXIT=0, PASS; 2423 tracked files / 32127387 bytes in 154 evidence dirs; 17 pre-existing allowlisted offenders, 0 new. Evidence files unchanged after this check.
+End state reached: the 39 M2–M5 proofs join the nine landed M1 proofs; all checkpoint acceptances are recorded, with only the authorized stale-certificate exception.
+No merge, push, rebase, tag, interpreter change, or primary-checkout edit. Request the required adversarial audit before the coordinator lands the branch.

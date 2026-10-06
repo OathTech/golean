@@ -1,0 +1,4 @@
+ok [self-tests] (a) glue `:= True` detected; (b) blank-line `∨ True` detected by the file and statement keys; (c) literals survive comment stripping; (d) incomplete/padded/duplicated/mis-tagged milestone maps detected; (e) staged discharge: missing M1 theorem at M1, PoolSound present at M0 / absent at M1 detected, early M2 reported not failed
+ok [frozen] both files and 48 statements match docs/specs/pool-relation/FROZEN.sha256
+ok [milestones] docs/specs/pool-relation/MILESTONES covers exactly the 48 statements (M1: 9, M2: 11, M3: 5, M4: 14, M5: 9)
+ok [discharge] LANDED=M5 (--landed override): all 48 statements of M1..M5 discharged in GoLean/GoCore/PoolSound.lean; 0 early; 0 owed by later milestones
