@@ -197,7 +197,7 @@
       "tools/lowerdiag/causes.go": "e6bc9126a4b0d9e11a8e1c20f85504d25b562fe934aaa61bde0c8fa37d8e9bf1",
       "tools/lowerdiag/causes.tsv": "aca959d98b3a8a468ed449f35ccf4ae2269b6cd600e3db0581203a5a9f80952e",
       "tools/lowerdiag/library-refusals.tsv": "7b0bcb638b6518d8970b24bb09bd4315bf0f76669dccddd95e5ffedfcb504990",
-      "tools/lowerdiag/lowerdiag_test.go": "a531a37c77a08c8ae544578e935ca97738f37a4ee96a02c2c0d2e34f80b2557e",
+      "tools/lowerdiag/lowerdiag_test.go": "c92112fa991d8776c1d4d0f8b61ff7996ec6a2c4498a61c46a40c4c808decccb",
       "tools/lowerdiag/machine-surface.tsv": "c13f2854eb057a35ada7b5e7a6b84fe64c6a01bb4828dae9bc19039aae2d7927",
       "tools/lowerdiag/main.go": "48c0923f4f47cdda430a81bf4cdfabd7a5587d7963d470fac982395346cc6483",
       "tools/lowerdiag/report.go": "f6271003d9bec55389e1effe2b0a77768b5df6d6a704a0c6f39bac0271666ea3",
@@ -332,12 +332,12 @@
       "--engine",
       "dedup"
     ],
-    "finished_utc": "2026-10-05T23:47:07.544964+00:00",
+    "finished_utc": "2026-10-06T00:54:20.564684+00:00",
     "git_dirty": false,
-    "source_commit": "b0a1a9171176ffb3cb1f67e1a821cdb72dd6080e",
-    "started_utc": "2026-10-05T23:44:12.322084+00:00",
+    "source_commit": "76def698556efc59a75793f97a9b4737a3d775a5",
+    "started_utc": "2026-10-06T00:50:38.696069+00:00",
     "stats_sha256": "80614849ba8583af41ce62fc0a0cefdc7a5b6f22fbb482784a125e8bd19f3283",
-    "wall_seconds": 170.671
+    "wall_seconds": 213.511
   },
   "schema": "golean-certification-v1"
 }
