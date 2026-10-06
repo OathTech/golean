@@ -1576,3 +1576,9 @@ equations ok; lowering-diagnostic tables ok; negative baseline no regression. Ca
 `observations_sha256` IDENTICAL to the tracked record; only the receipt moved (source `76def698` — a lane commit, not on
 main — → `6e297cd3`, 218.945 s) — INSTALLED so the receipt names a main commit; a provenance refresh, not a re-pin. Tail:
 `docs/evidence/2026-10-06_train-r68/r68-ci-slow.tail.txt`.
+
+**Green re-run at the records commit `80b9106c`** ([AGENT] train worker, 2026-10-06): `ci --diff` EXIT=0, 1023 s, `RESULT: PASS`,
+baseline diff FULL 3884/3884 (3647 / 237, no regression), certificate provenance ok, semantic equations ok, pool spec
+freeze + discharge ok (LANDED=M1), frontend pins ok, lowering-diagnostic tables ok, negative baseline no regression.
+Round 68 closed: route A is complete on main and the lowerdiag known disagreements 1–3 are fixed; FR-36 (item 4)
+continues on `lane/fr36-spin-bounds-1006` and the Codex grind on `core/pool-grind-*` (both untouched by this train).
