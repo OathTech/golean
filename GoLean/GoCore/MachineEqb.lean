@@ -119,7 +119,7 @@ def StrictOp.eqb : StrictOp → StrictOp → Bool
   | .lessCmp, .lessCmp => true
   | .greaterCmp, .greaterCmp => true
   | .convert t1, .convert t2 => Ty.eqb t1 t2
-  | .bytesFromString, .bytesFromString => true
+  | .bytesFromString l1, .bytesFromString l2 => l1 == l2
   | .stringFromByteSlice, .stringFromByteSlice => true
   | .stringFromRune, .stringFromRune => true
   | .deref t1, .deref t2 => Ty.eqb t1 t2
@@ -145,7 +145,7 @@ def StrictOp.eqb : StrictOp → StrictOp → Bool
   | .maxOf, .maxOf => true
   | .runeAt, .runeAt => true
   | .runeSizeAt, .runeSizeAt => true
-  | .runesFromString, .runesFromString => true
+  | .runesFromString l1, .runesFromString l2 => l1 == l2
   | .stringFromRuneSlice, .stringFromRuneSlice => true
   | .floatBits o1, .floatBits o2 => o1 == o2
   | _, _ => false
@@ -165,6 +165,10 @@ theorem StrictOp.eqb_sound :
     cases Ty.eqb_sound (show Ty.eqb t1 t2 = true from h); rfl
   case convert.convert t1 t2 =>
     cases Ty.eqb_sound (show Ty.eqb t1 t2 = true from h); rfl
+  case bytesFromString.bytesFromString l1 l2 =>
+    cases eq_of_beq (show (l1 == l2) = true from h); rfl
+  case runesFromString.runesFromString l1 l2 =>
+    cases eq_of_beq (show (l1 == l2) = true from h); rfl
   case deref.deref t1 t2 =>
     cases Ty.eqb_sound (show Ty.eqb t1 t2 = true from h); rfl
   case fieldGet.fieldGet i1 n1 i2 n2 =>

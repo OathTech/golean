@@ -2405,8 +2405,16 @@ theorem step_complete {c : Config} {s : Store} {c' : Config} {s' : Store} {tr : 
     · obtain ⟨rfl, rfl, rfl⟩ := deliver_panic_eq hdel
       exact ⟨[], [], by simp [stepFn, hlt, hX, Bind.bind, Except.bind]⟩
   case strictApply =>
-    rename_i op done v r env k hres hdel
-    complete_apply hres hdel []
+    -- R3 / b6: the rule carries its own stream (`ch₀`); the funnel's result holds the
+    -- popped stream — realize under exactly it.
+    rename_i op done v r env k ch₀ hres hdel
+    rcases toResult_cases hres with ⟨⟨⟨out, s₂, tr₂⟩, ch₁, ps⟩, rfl, hX⟩ | ⟨msg, rfl, hX⟩ <;>
+      simp only [List.reverse_cons] at hX
+    · simp only [deliver_ok, Prod.mk.injEq] at hdel
+      obtain ⟨rfl, rfl, rfl⟩ := hdel
+      exact ⟨ch₀, ch₁, by simp [stepFn, hX, Bind.bind, Except.bind]⟩
+    · obtain ⟨rfl, rfl, rfl⟩ := deliver_panic_eq hdel
+      exact ⟨ch₀, ch₀, by simp [stepFn, hX, Bind.bind, Except.bind]⟩
   case chanStApply =>
     rename_i op done v r env k hres hdel
     rcases toResult_cases hres with ⟨⟨c₂, s₂⟩, rfl, hX⟩ | ⟨msg, rfl, hX⟩ <;>
@@ -4704,6 +4712,110 @@ theorem applyStmtOp_panic_any_ch_wf {σ : Store} {ch₀ : Choices}
     ∀ ch : Choices, ∃ m', applyStmtOp ctx σ ch op nt vs = .error (.panic m') :=
   fun ch => exceptCong.panic_left (applyStmtOp_congr_any_ch hb ch₀ ch) h
 
+/-! #### The conversion funnel's outcome class is choice-independent (R3 / b6, 2026-10-07)
+
+The pick selects the backing's CAPACITY; the backing is the spill's
+`buildAppendBackingValue` at that capacity, so the spill's own congruence applies — read
+with the default element given outright (the conversion's element types are integers;
+the spill's `e.size ≠ 0` reading of it is unavailable for the empty string). -/
+
+/-- `buildAppendBackingValue_congr` with the default value supplied instead of read off a
+non-empty element run. -/
+theorem buildAppendBackingValue_congr_of_default {elem : Ty}
+    {o e : Array GoValue} {cap₁ cap₂ : Nat}
+    (h₁ : o.size + e.size ≤ cap₁) (h₂ : o.size + e.size ≤ cap₂)
+    (hd : ∃ d, defaultValue ctx elem = .ok d) :
+    exceptCong (fun _ _ : GoValue => True)
+      (buildAppendBackingValue ctx elem o e cap₁)
+      (buildAppendBackingValue ctx elem o e cap₂) := by
+  unfold buildAppendBackingValue
+  refine exceptCong.bind_congr
+    (exceptCong.self_post (P := fun out : Array GoValue => out.size = o.size + e.size) ?_)
+    fun values values' hv => ?_
+  · intro out hout
+    rw [← Array.forIn_toList] at hout
+    have hsz := forIn_yield_push_size (body := _)
+      (fun a r s hbody => by
+        simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at hbody
+        obtain ⟨v, hv, hs⟩ := hbody
+        exact ⟨v, hs.symm⟩) _ hout
+    have h' : out.size = 0 + (o ++ e).size := hsz
+    rw [Array.size_append] at h'
+    omega
+  · obtain ⟨rfl, hsz⟩ := hv
+    obtain ⟨d, hd⟩ := hd
+    rw [if_neg (by omega), if_neg (by omega)]
+    refine exceptCong.of_oks ?_ ?_ <;>
+      · refine bind_isOk ?_ fun vs => ⟨.array vs, rfl⟩
+        rw [Std.Legacy.Range.forIn_eq_forIn_range']
+        exact forIn_ok_of_body_ok
+          (fun a b => ⟨b.push d, by
+            simp [hd, Bind.bind, Except.bind, pure, Except.pure]⟩) _ _
+
+/-- The conversion's element type has a default value (an integer zero). -/
+theorem ConvKind.elemTy_default (kind : ConvKind) :
+    ∃ d, defaultValue ctx kind.elemTy = .ok d := by
+  cases kind <;> exact ⟨_, by simp [ConvKind.elemTy, defaultValue, defaultValueTy]; rfl⟩
+
+/-- The conversion's apply has one outcome class at every slot: the backings at two
+capacities build together (`buildAppendBackingValue_congr_of_default`, both `≥ len` —
+`convCapAt_ge`), re-normalize to themselves, and allocate at the same fresh address. -/
+theorem convCapApplyAt_congr {s : Store} {kind : ConvKind} {literal : Bool} {value : GoString}
+    (p₁ p₂ : Nat) :
+    exceptCong (fun _ _ : GoValue × Store × AccessTrace => True)
+      (convCapApplyAt ctx s kind literal value p₁) (convCapApplyAt ctx s kind literal value p₂) := by
+  unfold convCapApplyAt
+  dsimp only
+  have h₁ : (#[] : Array GoValue).size + (convElems kind value).size
+      ≤ convCapAt kind literal (convElems kind value).size p₁ := by
+    simpa using convCapAt_ge kind literal (convElems kind value).size p₁
+  have h₂ : (#[] : Array GoValue).size + (convElems kind value).size
+      ≤ convCapAt kind literal (convElems kind value).size p₂ := by
+    simpa using convCapAt_ge kind literal (convElems kind value).size p₂
+  refine exceptCong.bind_congr
+    (exceptCong.post_both (buildAppendBackingValue_congr_of_default h₁ h₂ (ConvKind.elemTy_default kind))
+      (fun b hb => buildAppendBackingValue_normalize hb)
+      (fun b hb => buildAppendBackingValue_normalize hb))
+    fun b₁ b₂ ⟨hn₁, hn₂⟩ => ?_
+  simp only [Store.alloc, hn₁, hn₂, Bind.bind, Except.bind, pure, Except.pure, Store.allocCell]
+  trivial
+
+/-- The strict funnel's outcome class is choice-independent: the pure apply at a
+non-conversion head, the refusal ahead of the consult, or `convCapApplyAt_congr`. -/
+theorem applyStrictOpPick_congr_any_ch {s : Store} {leafOf : Loc → Loc} {op : StrictOp}
+    {vs : List GoValue} (ch₁ ch₂ : Choices) :
+    exceptCong (fun _ _ : (GoValue × Store × AccessTrace) × Choices × List PickRecord => True)
+      (applyStrictOpPick ctx s leafOf op vs ch₁) (applyStrictOpPick ctx s leafOf op vs ch₂) := by
+  cases hk : op.convKind? with
+  | none =>
+    rw [applyStrictOpPick_of_convKind?_none hk, applyStrictOpPick_of_convKind?_none hk]
+    exact exceptCong.map_congr (exceptCong.self (R := fun _ _ => True) fun _ => trivial) fun _ _ _ => trivial
+  | some p =>
+    obtain ⟨kind, literal⟩ := p
+    cases hv : convOperand? vs with
+    | none =>
+      rw [applyStrictOpPick_refuse hk hv, applyStrictOpPick_refuse hk hv]
+      exact exceptCong.map_congr (exceptCong.self (R := fun _ _ => True) fun _ => trivial) fun _ _ _ => trivial
+    | some value =>
+      rw [applyStrictOpPick_conv hk hv, applyStrictOpPick_conv hk hv]
+      exact exceptCong.map_congr (convCapApplyAt_congr _ _) fun _ _ _ => trivial
+
+/-- A strict apply that succeeds under one stream succeeds under every stream. -/
+theorem applyStrictOpPick_ok_any_ch {s : Store} {leafOf : Loc → Loc} {op : StrictOp}
+    {vs : List GoValue} {ch₀ : Choices} {r : (GoValue × Store × AccessTrace) × Choices × List PickRecord}
+    (h : applyStrictOpPick ctx s leafOf op vs ch₀ = .ok r) :
+    ∀ ch : Choices, ∃ r', applyStrictOpPick ctx s leafOf op vs ch = .ok r' := by
+  intro ch
+  obtain ⟨r', hr', -⟩ := exceptCong.ok_left (applyStrictOpPick_congr_any_ch ch₀ ch) h
+  exact ⟨r', hr'⟩
+
+/-- A strict apply that panics under one stream panics under every stream. -/
+theorem applyStrictOpPick_panic_any_ch {s : Store} {leafOf : Loc → Loc} {op : StrictOp}
+    {vs : List GoValue} {ch₀ : Choices} {m : String}
+    (h : applyStrictOpPick ctx s leafOf op vs ch₀ = .error (.panic m)) :
+    ∀ ch : Choices, ∃ m', applyStrictOpPick ctx s leafOf op vs ch = .error (.panic m') :=
+  fun ch => exceptCong.panic_left (applyStrictOpPick_congr_any_ch ch₀ ch) h
+
 /-! ### Completeness at EVERY stream, under `MachineWf` -/
 
 /-! ### The TRY heads' half of the ∀-choices kit (Q-TRYLOCK, 2026-09-03)
@@ -5210,6 +5322,16 @@ theorem step_complete_any_wf_aux {c : Config} {σ : Store} {c' : Config}
       simp only [List.reverse_cons] at hm'
       have hpl := applyStmtOp_inv_panic hm'
       simp [stepFn, hpl, List.reverse_cons, Bind.bind, Except.bind]
+  case strictApply op done v r env k ch₀ hres hdel =>
+    -- R3 / b6: the funnel's outcome class is pick-independent
+    -- (`applyStrictOpPick_ok_any_ch` / `_panic_any_ch`); the successor shape is the same.
+    rcases toResult_cases hres with ⟨⟨⟨out, σ₂, tr₂⟩, ch₁, ps⟩, rfl, happly⟩ | ⟨msg, rfl, happly⟩
+    · obtain ⟨⟨⟨out', σ₃, tr₃⟩, ch₃, ps'⟩, hr⟩ := applyStrictOpPick_ok_any_ch happly ch
+      simp only [List.reverse_cons] at hr
+      simp [stepFn, hr, List.reverse_cons, Bind.bind, Except.bind]
+    · obtain ⟨m', hm'⟩ := applyStrictOpPick_panic_any_ch happly ch
+      simp only [List.reverse_cons] at hm'
+      simp [stepFn, hm', List.reverse_cons, Bind.bind, Except.bind]
   case stmtOpShiftPlain op nt done v e rest env k hle =>
     simp only [stepFn]
     rw [if_neg (Nat.not_lt.mpr hle)]
@@ -5546,6 +5668,24 @@ theorem consumesRandIntn_stmtOpK {v : GoValue} {op : StmtOp} {nt : Nat}
   subst he
   simp [consumesRandIntn] at h
 
+/-- Is this configuration about to dispatch the strict apply of a CONVERSION head —
+`[]byte(s)` / `[]rune(s)`, whose funnel `applyStrictOpPick` draws `ChoiceSite.convCap`
+(R3 / b6, 2026-10-07)? Conservative, like `consumesRandIntn`: flags every conversion
+apply, including the one-member instance that pops nothing (every literal conversion)
+and the refusing one — the obliviousness checkers fail closed there rather than reading
+the operand; the certified dedup engine refuses it too (`innerVecs`, design D7) and the
+CLI enumerator carries such rows. No nullary conversion exists (`strictPlan` always
+produces one operand), so the `.evalE` nullary-apply shape is never a conversion. -/
+def consumesConvCap : Config → Bool
+  | .retV _ (.strictK op _ [] _ _) => op.convKind?.isSome
+  | _ => false
+
+theorem consumesConvCap_strictK {v : GoValue} {op : StrictOp} {done : List GoValue}
+    {env : LocalEnv} {k : Cont}
+    (h : consumesConvCap (.retV v (.strictK op done [] env k)) = false) :
+    op.convKind? = none := by
+  simpa [consumesConvCap, Option.isSome_eq_false_iff, Option.isNone_iff_eq_none] using h
+
 /-- Is this configuration the select APPLY position (whose
 `applySelect` may consume the L2 clause pick — slice 4)? Conservative,
 like `consumesAppendSlice`: flags every select apply, including the
@@ -5593,9 +5733,9 @@ def allStreamsOk : Nat → Store → Config → Bool
                   | .ok (c', σ', _, _) => allStreamsOk fuel σ' c'
                   | .error _ => false
       | c =>
-          if consumesAppendSlice c || consumesRandIntn c || consumesSelect c || consumesNilValueMethod ctx c
-              || consumesTryLock c || consumesUnseqPanic c || consumesUnseqNext c
-              || consumesRepanicCollapse c then false
+          if consumesAppendSlice c || consumesRandIntn c || consumesConvCap c || consumesSelect c
+              || consumesNilValueMethod ctx c || consumesTryLock c || consumesUnseqPanic c
+              || consumesUnseqNext c || consumesRepanicCollapse c then false
           else
             match stepFn ctx σ c [0] with
             | .ok (c', σ', _, _) => allStreamsOk fuel σ' c'
@@ -6045,6 +6185,179 @@ theorem Step_randIntn_draw {σ : Store} {tv : GoValue} {tloc : Loc} {n : Int} {e
     ?_ rfl
   rw [show (List.reverse [GoValue.int n .int, tv]) = [tv, .int n .int] from rfl,
     applyStmtOp_randIntn_eq htl hn, hpick, hst]
+  rfl
+
+/-! ### The conversion funnel's stream lemmas (`ChoiceSite.convCap`, R3 / b6, 2026-10-07)
+
+The strict apply draws the capacity pick of `[]byte(s)` / `[]rune(s)` inside
+`applyStrictOpPick` (Machine.lean). The lemmas below are the strict twins of the wide-op
+kit above: the post-consult tail never panics, the consult's `some`/`none` unpack, the
+pick-lifted and the oblivious shapes of the funnel, the two `stepFn` arm lemmas the
+consumption sweeps close with, and the DERIVED step rule (design D6, the intn D7 shape). -/
+
+/-- `convCapApplyAt` never raises a recoverable panic: one allocation, which refuses or
+succeeds. -/
+theorem convCapApplyAt_noPanic (s : Store) (kind : ConvKind) (literal : Bool) (value : GoString)
+    (pick : Nat) : NoPanic (convCapApplyAt ctx s kind literal value pick) := by
+  unfold convCapApplyAt
+  dsimp only
+  exact NoPanic.bind (buildAppendBackingValue_noPanic _ _ _ _) fun _ =>
+    NoPanic.bind (Store.alloc_noPanic _ _ _) fun _ => NoPanic.pure _
+
+/-- Unpacking the strict consult's `some`: the site is `convCap`, the head a conversion
+head on a string operand, the bound its member count — a genuine pop (`≥ 2`). -/
+theorem strictConsult?_some {op : StrictOp} {vs : List GoValue} {site : ChoiceSite} {b : Nat}
+    (h : strictConsult? op vs = some (site, b)) :
+    site = .convCap ∧ ∃ kind literal value, op.convKind? = some (kind, literal)
+      ∧ convOperand? vs = some value ∧ b = convCapWidth kind literal value ∧ 1 < b := by
+  unfold strictConsult? at h
+  split at h
+  · rename_i kind literal value hk hv
+    split at h
+    · cases h
+    · rename_i hw
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      exact ⟨rfl, kind, literal, value, hk, hv, rfl, Nat.lt_of_not_le hw⟩
+  · cases h
+
+/-- The strict apply at a NON-popping instance (`strictConsult? = none`) is
+stream-oblivious: the pure apply at a non-conversion head; at a conversion head, the
+refusal ahead of the consult (a non-string operand, a malformed arity) or the bound-1
+consult that pops nothing. -/
+theorem applyStrictOpPick_of_strictConsult?_none {s : Store} {leafOf : Loc → Loc} {op : StrictOp}
+    {vs : List GoValue} (h : strictConsult? op vs = none) :
+    ∃ r : Except Stop (GoValue × Store × AccessTrace), ∀ ch : Choices,
+      applyStrictOpPick ctx s leafOf op vs ch = r.map fun x => (x, ch, []) := by
+  cases hk : op.convKind? with
+  | none => exact ⟨applyStrictOp ctx s leafOf op vs, fun ch => applyStrictOpPick_of_convKind?_none hk⟩
+  | some p =>
+    obtain ⟨kind, literal⟩ := p
+    cases hv : convOperand? vs with
+    | none => exact ⟨convRefuse kind vs, fun ch => applyStrictOpPick_refuse hk hv⟩
+    | some value =>
+      have hw : convCapWidth kind literal value ≤ 1 := by
+        by_cases hgt : convCapWidth kind literal value ≤ 1
+        · exact hgt
+        · simp [strictConsult?, hk, hv, hgt] at h
+      refine ⟨convCapApplyAt ctx s kind literal value 0, fun ch => ?_⟩
+      rw [applyStrictOpPick_conv hk hv, Choices.consumeAt_le_one hw, PickRecord.ofPick, if_pos hw]
+
+/-- **The conversion's pop** (the twin of `applyStmtOp_plan_randIntn_draw`): at a conversion
+head on a string operand with a popping width, the funnel is a function `g` of the
+`convCap` pick alone, lifted beside the site's pop and its record — and `g` never raises a
+recoverable panic. -/
+theorem applyStrictOpPick_draw {s : Store} {leafOf : Loc → Loc} {op : StrictOp} {vs : List GoValue}
+    {kind : ConvKind} {literal : Bool} {value : GoString}
+    (hk : op.convKind? = some (kind, literal)) (hv : convOperand? vs = some value)
+    (hw : 1 < convCapWidth kind literal value) :
+    ∃ g : Nat → Except Stop (GoValue × Store × AccessTrace),
+      (∀ ch : Choices,
+        applyStrictOpPick ctx s leafOf op vs ch
+          = (g (Choices.consumeAt .convCap (convCapWidth kind literal value) ch).1).map
+              fun r => (r, (Choices.consumeAt .convCap (convCapWidth kind literal value) ch).2,
+                [⟨.convCap, convCapWidth kind literal value,
+                  (Choices.consumeAt .convCap (convCapWidth kind literal value) ch).1⟩]))
+      ∧ (∀ pick, NoPanic (g pick)) := by
+  refine ⟨fun pick => convCapApplyAt ctx s kind literal value pick, fun ch => ?_,
+    fun pick => convCapApplyAt_noPanic _ _ _ _ _⟩
+  rw [applyStrictOpPick_conv hk hv]
+  simp only [PickRecord.ofPick, if_neg (Nat.not_le_of_lt hw)]
+
+/-- The strict apply arm at a stream-oblivious funnel: the classified result is the same
+at every stream and the arm returns its own stream untouched. -/
+theorem stepFn_strict_oblivious {σ : Store} {op : StrictOp} {done : List GoValue} {v : GoValue}
+    {env : LocalEnv} {k : Cont} {r : Except Stop (GoValue × Store × AccessTrace)}
+    (hr : ∀ ch : Choices, applyStrictOpPick ctx σ (projChainTarget ctx σ k) op (v :: done).reverse ch
+      = r.map fun x => (x, ch, []))
+    {ch₀ : Choices} {c' : Config} {σ' : Store} {ch₀' : Choices} {tr : StepLabel}
+    (h : stepFn ctx σ (.retV v (.strictK op done [] env k)) ch₀ = .ok (c', σ', ch₀', tr)) :
+    ch₀' = ch₀ ∧ ∀ ch : Choices,
+      stepFn ctx σ (.retV v (.strictK op done [] env k)) ch = .ok (c', σ', ch, tr) := by
+  unfold stepFn at h
+  dsimp only at h
+  rw [hr ch₀] at h
+  cases r with
+  | error e =>
+    cases_stop e <;> simp only [Except.map, toResult_panic, toResult_refusal, toResult_fatal,
+      toResult_deadlock, toResult_raceDetected, toResult_fuelOut, Bind.bind, Except.bind,
+      deliverS_panic, reduceCtorEq] at h
+    case panic msg =>
+    obtain ⟨rfl, rfl, rfl, rfl⟩ := h
+    refine ⟨rfl, fun ch => ?_⟩
+    unfold stepFn
+    dsimp only
+    rw [hr ch]
+    rfl
+  | ok x =>
+    obtain ⟨out, s₂, tr₂⟩ := x
+    simp only [Except.map, toResult_ok, Bind.bind, Except.bind, deliverS_ok] at h
+    obtain ⟨rfl, rfl, rfl, rfl⟩ := h
+    refine ⟨rfl, fun ch => ?_⟩
+    unfold stepFn
+    dsimp only
+    rw [hr ch]
+    rfl
+
+/-- The strict apply arm at a POPPING conversion: the `convCap` pop, and pick-dependence
+only (the post-consult tail is panic-free, so the delivered panic is unreachable). -/
+theorem stepFn_strict_pick {σ : Store} {op : StrictOp} {done : List GoValue} {v : GoValue}
+    {env : LocalEnv} {k : Cont} {w : Nat} {g : Nat → Except Stop (GoValue × Store × AccessTrace)}
+    (hg : ∀ ch : Choices, applyStrictOpPick ctx σ (projChainTarget ctx σ k) op (v :: done).reverse ch
+      = (g (Choices.consumeAt .convCap w ch).1).map
+          fun r => (r, (Choices.consumeAt .convCap w ch).2,
+            [⟨.convCap, w, (Choices.consumeAt .convCap w ch).1⟩]))
+    (hnp : ∀ pick, NoPanic (g pick))
+    {ch₀ : Choices} {c' : Config} {σ' : Store} {ch₀' : Choices} {tr : StepLabel}
+    (h : stepFn ctx σ (.retV v (.strictK op done [] env k)) ch₀ = .ok (c', σ', ch₀', tr)) :
+    ch₀' = (Choices.consumeAt .convCap w ch₀).2 ∧ ∀ ch : Choices,
+      (Choices.consumeAt .convCap w ch).1 = (Choices.consumeAt .convCap w ch₀).1 →
+      stepFn ctx σ (.retV v (.strictK op done [] env k)) ch
+        = .ok (c', σ', (Choices.consumeAt .convCap w ch).2, tr) := by
+  unfold stepFn at h
+  dsimp only at h
+  rw [hg ch₀] at h
+  cases hgv : g (Choices.consumeAt .convCap w ch₀).1 with
+  | error e =>
+    rw [hgv] at h
+    cases_stop e <;> simp only [Except.map, toResult_panic, toResult_refusal, toResult_fatal,
+      toResult_deadlock, toResult_raceDetected, toResult_fuelOut, Bind.bind, Except.bind,
+      deliverS_panic, reduceCtorEq] at h
+    case panic msg =>
+    -- refuted: the post-consult tail never panics (`hnp`)
+    exact absurd hgv (hnp _ msg)
+  | ok x =>
+    obtain ⟨out, s₂, tr₂⟩ := x
+    rw [hgv] at h
+    simp only [Except.map, toResult_ok, Bind.bind, Except.bind, deliverS_ok] at h
+    obtain ⟨rfl, rfl, rfl, rfl⟩ := h
+    refine ⟨rfl, fun ch hpk => ?_⟩
+    unfold stepFn
+    dsimp only
+    rw [hg ch, hpk, hgv]
+    rfl
+
+/-- **The conversion's step rule, derived** (design D6 — the intn D7 shape, the logic
+team's «one step rule»): at the apply of a conversion head on the string `value`, for
+EVERY slot `i` below the member count the singleton tape `[i]` takes the `strictApply`
+step that allocates the backing at member `i` (`convCapApplyAt`), with the label
+`⟨tr, PickRecord.ofPick .convCap w i, []⟩` — so the relation admits every member of the
+envelope (`Step` quantifies the stream; `Choices.consumeAt_fst_singleton` realizes the
+pick; at a one-member list the record is `[]`). -/
+theorem Step_convCap_draw {σ : Store} {op : StrictOp} {kind : ConvKind} {literal : Bool}
+    {value : GoString} {env : LocalEnv} {k : Cont} (hk : op.convKind? = some (kind, literal))
+    {i : Nat} (hi : i < convCapWidth kind literal value)
+    {out : GoValue} {σ' : Store} {tr : AccessTrace}
+    (ha : convCapApplyAt ctx σ kind literal value i = .ok (out, σ', tr)) :
+    Step ctx (.retV (.string value) (.strictK op [] [] env k)) σ (.retV out k) σ'
+      ⟨tr, PickRecord.ofPick .convCap (convCapWidth kind literal value) i, []⟩ := by
+  have hpick : (Choices.consumeAt .convCap (convCapWidth kind literal value) [i]).1 = i :=
+    Choices.consumeAt_fst_singleton hi
+  refine Step.strictApply (ch := [i])
+    (r := .ok ((out, σ', tr), (Choices.consumeAt .convCap (convCapWidth kind literal value) [i]).2,
+      PickRecord.ofPick .convCap (convCapWidth kind literal value) i)) ?_ rfl
+  rw [show (List.reverse [GoValue.string value]) = [.string value] from rfl,
+    applyStrictOpPick_conv hk (convOperand?_string value), hpick, ha]
   rfl
 
 /-- A wide-statement apply whose consult is `none` is a stream-oblivious plan: the core's
@@ -6802,7 +7115,13 @@ theorem stepFn_consumption_none {σ : Store} {c : Config} {ch₀ : Choices}
   case case81 =>
     oblivious_apply h
   case case84 =>
-    oblivious_apply h
+    -- R3 / b6: the strict apply through the funnel; a `none` projection is a
+    -- non-popping instance (`applyStrictOpPick_of_strictConsult?_none`).
+    rename_i v op done env k'
+    simp only [seqConsumption, Config.applyPos] at hsc
+    obtain ⟨r, hr⟩ := applyStrictOpPick_of_strictConsult?_none (ctx := ctx) (s := σ)
+      (leafOf := projChainTarget ctx σ k') hsc
+    exact stepFn_strict_oblivious hr h
   case case85 =>
     simp only [stepFn, bind_eq_ok] at h
     obtain ⟨b, hb, h⟩ := h
@@ -6968,6 +7287,16 @@ theorem stepFn_consumption_some {σ : Store} {c : Config} {ch₀ : Choices}
   case case154 =>
     simp only [stepFn, signalStep_frame] at h ⊢
     exact stepFrameExit_consumption_some (.inr rfl) hsc h
+  case case84 =>
+    -- R3 / b6: the strict apply through the funnel at a POPPING conversion
+    -- (`strictConsult?_some`): the plan is pick-lifted (`applyStrictOpPick_draw`)
+    -- and `stepFn_strict_pick` closes it.
+    rename_i v op done env k'
+    simp only [seqConsumption, Config.applyPos] at hsc
+    obtain ⟨rfl, kind, literal, value, hk, hv, rfl, h1⟩ := strictConsult?_some hsc
+    obtain ⟨g, hg, hnp⟩ := applyStrictOpPick_draw (ctx := ctx) (s := σ)
+      (leafOf := projChainTarget ctx σ k') hk hv h1
+    exact stepFn_strict_pick hg hnp h
   case case94 =>
     simp only [seqConsumption, Config.applyPos] at hsc
     -- The two consuming wide ops (`stmtConsult?_some`): the spilling append and
@@ -7183,6 +7512,15 @@ theorem applyPos_sync {c : Config} {op : SyncOp} {vs : List GoValue}
   obtain ⟨rfl, rfl, rfl, rfl⟩ := h
   exact ⟨_, _, rfl⟩
 
+theorem applyPos_strict {c : Config} {op : StrictOp} {vs : List GoValue}
+    {env : LocalEnv} {k : Cont} (h : c.applyPos = some (.strict op, vs, env, k)) :
+    ∃ v done, c = .retV v (.strictK op done [] env k) ∧ vs = (v :: done).reverse := by
+  unfold Config.applyPos at h
+  split at h <;> simp only [Option.some.injEq, Prod.mk.injEq, ApplyHead.strict.injEq,
+    reduceCtorEq, false_and] at h
+  obtain ⟨rfl, rfl, rfl, rfl⟩ := h
+  exact ⟨_, _, rfl, rfl⟩
+
 /-- The seven hand flags of the retired sweep entail a `none` projection
 (the sixth, `hnu`, is E13 option (b)'s `unseqPanic` probe consult; the
 seventh, `hnr`, is the abort's `repanicCollapse` consult — landing chunk
@@ -7194,6 +7532,7 @@ theorem seqConsumption_none_of_flags {σ : Store} {c : Config}
       c ≠ .next (.mapIterK kv vv kt vt body base produced start env k))
     (hnc : consumesAppendSlice c = false)
     (hni : consumesRandIntn c = false)
+    (hnk : consumesConvCap c = false)
     (hns : consumesSelect c = false)
     (hnv : consumesNilValueMethod ctx c = false)
     (hnt : consumesTryLock c = false)
@@ -7201,9 +7540,9 @@ theorem seqConsumption_none_of_flags {σ : Store} {c : Config}
     (hnn : consumesUnseqNext c = false)
     (hnr : consumesRepanicCollapse c = false) :
     seqConsumption ctx σ c = none := by
-  revert hmi hnc hni hns hnv hnt hnu hnn hnr
+  revert hmi hnc hni hnk hns hnv hnt hnu hnn hnr
   unfold seqConsumption
-  split <;> intro hmi hnc hni hns hnv hnt hnu hnn hnr
+  split <;> intro hmi hnc hni hnk hns hnv hnt hnu hnn hnr
   · exact absurd rfl (hmi _ _ _ _ _ _ _ _ _ _)
   · simp [consumesUnseqPanic] at hnu
   · simp [consumesUnseqNext] at hnn
@@ -7216,6 +7555,9 @@ theorem seqConsumption_none_of_flags {σ : Store} {c : Config}
       | (rename_i heq
          obtain ⟨v, done, rfl, rfl⟩ := applyPos_stmt heq
          cases ‹StmtOp› <;> simp_all [stmtConsult?, consumesAppendSlice, consumesRandIntn])
+      | (rename_i heq
+         obtain ⟨v, done, rfl, rfl⟩ := applyPos_strict heq
+         simp [strictConsult?, consumesConvCap_strictK hnk])
       | (rename_i heq
          obtain ⟨v, done, rfl⟩ := applyPos_select heq
          simp [consumesSelect] at hns)
@@ -7256,6 +7598,7 @@ theorem stepFn_oblivious {σ : Store} {c : Config} {ch₀ : Choices}
       c ≠ .next (.mapIterK kv vv kt vt body base produced start env k))
     (hnc : consumesAppendSlice c = false)
     (hni : consumesRandIntn c = false)
+    (hnk : consumesConvCap c = false)
     (hns : consumesSelect c = false)
     (hnv : consumesNilValueMethod ctx c = false)
     (hnt : consumesTryLock c = false)
@@ -7264,7 +7607,7 @@ theorem stepFn_oblivious {σ : Store} {c : Config} {ch₀ : Choices}
     (hnr : consumesRepanicCollapse c = false)
     (h : stepFn ctx σ c ch₀ = .ok (c', σ', ch₀', tr)) :
     ch₀' = ch₀ ∧ ∀ ch : Choices, stepFn ctx σ c ch = .ok (c', σ', ch, tr) :=
-  stepFn_consumption_none (seqConsumption_none_of_flags hmi hnc hni hns hnv hnt hnu hnn hnr) h
+  stepFn_consumption_none (seqConsumption_none_of_flags hmi hnc hni hnk hns hnv hnt hnu hnn hnr) h
 
 /-- The one-layer unfolding of `execStmtLoop`, as an EQUATION (the loop
 is fuel-structural, so the definitional unfolding needs the fuel
@@ -7424,17 +7767,17 @@ theorem execStmtLoop_ok_of_allStreamsOk :
           exact hrun
     · -- the oblivious catch-all
       rename_i hx1 hx2
-      cases hnc : (consumesAppendSlice c || consumesRandIntn c || consumesSelect c || consumesNilValueMethod ctx c
-          || consumesTryLock c || consumesUnseqPanic c || consumesUnseqNext c
-          || consumesRepanicCollapse c) with
+      cases hnc : (consumesAppendSlice c || consumesRandIntn c || consumesConvCap c || consumesSelect c
+          || consumesNilValueMethod ctx c || consumesTryLock c || consumesUnseqPanic c
+          || consumesUnseqNext c || consumesRepanicCollapse c) with
       | true =>
         rw [hnc] at hall
         simp at hall
       | false =>
         rw [hnc] at hall
         simp only [Bool.false_eq_true, if_false] at hall
-        obtain ⟨⟨⟨⟨⟨⟨⟨hnc1, hnc8⟩, hnc2⟩, hnc3⟩, hnc4⟩, hnc5⟩, hnc7⟩, hnc6⟩ : ((((((consumesAppendSlice c = false
-            ∧ consumesRandIntn c = false)
+        obtain ⟨⟨⟨⟨⟨⟨⟨⟨hnc1, hnc8⟩, hnc9⟩, hnc2⟩, hnc3⟩, hnc4⟩, hnc5⟩, hnc7⟩, hnc6⟩ : (((((((consumesAppendSlice c = false
+            ∧ consumesRandIntn c = false) ∧ consumesConvCap c = false)
             ∧ consumesSelect c = false) ∧ consumesNilValueMethod ctx c = false)
             ∧ consumesTryLock c = false) ∧ consumesUnseqPanic c = false)
             ∧ consumesUnseqNext c = false)
@@ -7445,7 +7788,7 @@ theorem execStmtLoop_ok_of_allStreamsOk :
           obtain ⟨-, hobl⟩ := stepFn_oblivious
             (fun kv vv kt vt b bs pr st e kk heq =>
               hx2 kv vv kt vt b bs pr st e kk heq)
-            hnc1 hnc8 hnc2 hnc3 hnc4 hnc5 hnc7 hnc6 hprobe
+            hnc1 hnc8 hnc9 hnc2 hnc3 hnc4 hnc5 hnc7 hnc6 hprobe
           obtain ⟨out, ch', hrun⟩ := ih hall ch
           exact ⟨out, ch', by rw [execStmtLoop_step (hobl ch)]; exact hrun⟩
         · exact absurd hall (by simp)

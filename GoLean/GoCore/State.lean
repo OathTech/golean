@@ -361,6 +361,27 @@ The sites and their consuming definitions:
                    guard ahead of it) and is `stuck` by name if forged. The
                    envelope statement lives at `Stmt.randIntn` (Syntax.lean).
                    A DATA pick over a value, not a scheduling pick.
+* `convCap`      — THE CAPACITY of `[]byte(s)` / `[]rune(s)` (latitude R3 / the
+                   gc-verified project's b6, 2026-10-07; [USER] Mike «yeah agree,
+                   build now», relayed — design `docs/2026-10-07_conv-cap-design.md`
+                   D1–D8 under the standing rule «semantic widenings must match
+                   real Go»): spec §Conversions declares the capacity
+                   implementation-specific; gc realizes FOUR regimes (literal → n;
+                   zero-copy → n; the 32-element conversion buffer; size-class
+                   `roundupsize`) decided by its optimizer, and the admitted set is
+                   EXACTLY their measured union per (kind, literal operand?, length)
+                   — `convCapMembers` (Ops.lean: the envelope statement, with gc's
+                   size-class tables as pinned platform data). Drawn at the strict
+                   APPLY of the two conversion heads (`applyStrictOpPick`,
+                   Machine.lean — the stream-holding funnel beside the pure
+                   `applyStrictOp`; projection arm `strictConsult?` in
+                   `seqConsumption`). Bound = the member count (1 to 3); slot i =
+                   the i-th member; a one-member list — every literal conversion,
+                   and every length whose members coincide — is a bound-1 consult
+                   that pops nothing. Drawn ONCE per conversion value (the cap lives
+                   in the header), so no execution observes inconsistent answers;
+                   two conversions of one string may draw differently, as gc's
+                   regimes may. A DATA pick over a value, not a scheduling pick.
 
 The scheduling sites — what a future `Fair : Choices → Prop`
 quantifies over — are exactly
@@ -377,6 +398,7 @@ inductive ChoiceSite where
   | repanicCollapse
   | unseqNext
   | intn
+  | convCap
   deriving Repr, DecidableEq
 
 /-- **The canonical member at slot 0** — one docstring row per site
@@ -419,6 +441,8 @@ def ChoiceSite.canonicalSlot0 : ChoiceSite → String
       "the LOWEST canonical rank among the READY occurrences (slot j = the j-th ready occurrence in declaration order — the `unseq` scheduler's pick, evaluation-order model v2.1 §3.5: the all-zero tape realizes the canonical order, today's ANF emission order; slots 1.. = the later-ranked ready occurrences; a singleton ready set consults at bound 1 and pops nothing — G-U; the bound is EXACTLY the number of ready occurrences, `UnseqGraph.ready`, so an ordinary sweep whose occurrences are forced by their edges never touches the stream)"
   | .intn =>
       "the value 0 (slot v = the value v of `[0, n)` — the `math/rand.Intn` / `math/rand/v2.IntN` draw as ONE pick, window unit 5b 2026-09-30; the empty/exhausted tape draws 0, the least member; bound is `n` EXACTLY, so the singleton tape `[v]` realizes every member; `n = 1` is a bound-1 consult and pops nothing — the only member is 0; `n ≤ 0` never consults: the lowering's guard raises the callee's `panic(string)` ahead of the apply, and a forged bound is `stuck` there. A DATA pick, not a scheduling pick)"
+  | .convCap =>
+      "the FIRST member of `convCapMembers` (Ops.lean; R3 / b6, 2026-10-07): bytes slot 0 = the length n — gc's zero-copy member and the pre-widening singleton, so the empty/default tape reproduces every byte-conversion observation on `main`; runes slot 0 = the size-class member roundupsize(4n)/4 — gc's deterministic point for n > 32 and its escaping point below (the pre-widening singleton cap = len was OUTSIDE gc for almost every non-literal rune conversion: BUG-118); the later slots in list order (the size-class member, then the 32-element conversion buffer); bound = the member count (1 to 3), so the singleton tape `[i]` realizes member i; a one-member list — every literal conversion, and every length whose members coincide — is a bound-1 consult and pops nothing (G-U). A DATA pick, not a scheduling pick"
 
 -- (`site` is the census TAG: the rule no longer reads anything from it,
 -- and that is the point — the tag is for the trace and the theorems.)

@@ -753,6 +753,17 @@ The semantic core's consume sites and their accountant arms:
    a value head's result) is non-consuming (`stepUnseqEnter_stream`,
    `stepUnseqValue_stream`, `stepUnseqNext_consumption_none`). The
    constructor + `canonicalSlot0` row are State.lean's.
+11. THE CONVERSION CAPACITY pick (Machine.lean's `applyStrictOpPick`, the
+   strict apply's one stream-holding funnel — `ChoiceSite.convCap`, latitude
+   R3 / the gc-verified project's b6, [USER] Mike 2026-10-07 «yeah agree,
+   build now», relayed; design `docs/2026-10-07_conv-cap-design.md`): at the
+   apply of `[]byte(s)` / `[]rune(s)` on a string operand, bound = the member
+   count of gc's measured envelope `convCapMembers kind literal len`
+   (Ops.lean: 1 to 3), a consult only at ≥ 2 → the `.strict` arm of
+   `seqConsumption` (`strictConsult?`, Machine.lean), which both accountants
+   project; a one-member list (every literal conversion) pops nothing, and a
+   non-string operand refuses ahead of the consult. The constructor +
+   `canonicalSlot0` row are State.lean's.
 Non-consuming by signature (no arm needed): `resumeThread`,
 `spawnStep`, `commitClause`, `applyPairing`, the boundary clear,
 `raceUpdate` (stage B: it folds the step's emitted `StepEvent` and

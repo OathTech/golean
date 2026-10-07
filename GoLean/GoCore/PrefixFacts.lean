@@ -272,6 +272,19 @@ theorem stepFn_picks_none {σ : Store} {c : Config} {ch₀ : Choices}
       intro a ha
       cases hrc : runCommit c σ <;> simp_all [Functor.map, Except.map]
       all_goals (subst_vars; rfl)
+  case case84 =>
+    -- R3 / b6: the strict apply through the funnel at a NON-popping instance
+    -- (`applyStrictOpPick_of_strictConsult?_none`): no record.
+    rename_i v op done env k'
+    simp only [seqConsumption, Config.applyPos] at hsc
+    obtain ⟨r, hr⟩ := applyStrictOpPick_of_strictConsult?_none (ctx := ctx) (s := σ)
+      (leafOf := projChainTarget ctx σ k') hsc
+    rw [hr]
+    cases r with
+    | error e => cases_stop e <;> okp_norm
+    | ok x =>
+      obtain ⟨out, s₂, tr₂⟩ := x
+      okp_norm
   case case116 =>
     rename_i v clauses default? done env k'
     cases hcore : applySelectCore ctx σ clauses default? ((v :: done).reverse) env k' with
@@ -397,6 +410,25 @@ theorem stepFn_picks_some {σ : Store} {c : Config} {ch₀ : Choices} {site : Ch
     obtain ⟨rfl, rfl⟩ := hsc
     okp
     all_goals (obtain ⟨hps, hc⟩ := Choices.consumeAtE_inv (by assumption); rw [hc]; exact hps)
+  case case84 =>
+    -- R3 / b6: the strict apply through the funnel at a POPPING conversion: the
+    -- pick-lifted plan (`applyStrictOpPick_draw`), its record is the site's.
+    rename_i v op done env k'
+    simp only [seqConsumption, Config.applyPos] at hsc
+    obtain ⟨rfl, kind, literal, value, hk, hv, rfl, h1⟩ := strictConsult?_some hsc
+    obtain ⟨g, hg, hnp⟩ := applyStrictOpPick_draw (ctx := ctx) (s := σ)
+      (leafOf := projChainTarget ctx σ k') hk hv h1
+    rw [hg]
+    cases hgv : g (Choices.consumeAt .convCap (convCapWidth kind literal value) ch₀).1 with
+    | error e =>
+      cases_stop e
+      all_goals first
+        | (okp_norm; done)
+        | exact absurd hgv (hnp _ _)
+    | ok x =>
+      obtain ⟨out, s₂, tr₂⟩ := x
+      okp_norm
+      all_goals simp [PickRecord.ofPick, show ¬ convCapWidth kind literal value ≤ 1 by omega]
   case case7 =>
     -- The `.stop` arm (unit 6b): the abort throws; the phase's collision
     -- draw records the `repanicCollapse` pick at bound 2.

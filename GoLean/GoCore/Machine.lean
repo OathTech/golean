@@ -114,7 +114,15 @@ inductive StrictOp where
   | eqCmp (ty : Ty) | neqCmp (ty : Ty)
   | atMostCmp | atLeastCmp | lessCmp | greaterCmp
   | convert (ty : Ty)
-  | bytesFromString | stringFromByteSlice | stringFromRune
+  /-- `[]byte(s)`. The `literal` bit (R3 / b6, 2026-10-07, design D3) records
+  whether the operand is a string LITERAL (`Expr.stringLit` — the native
+  frontend folds constants and constant concatenation into it, the same
+  classification gc's typechecker makes), set by `strictPlan`; it selects the
+  capacity envelope `convCapMembers` (Ops.lean) the apply draws
+  `ChoiceSite.convCap` over: a literal operand has the one member `n`, a
+  non-literal one the union of gc's regimes. The wire is unchanged. -/
+  | bytesFromString (literal : Bool)
+  | stringFromByteSlice | stringFromRune
   | deref (ty : Ty)
   /-- `&*p`: nil-assert on the pointer VALUE, yield it unchanged, no
   memory access (BUG-056 — gc's `TESTB` probe shape). -/
@@ -141,13 +149,37 @@ inductive StrictOp where
   | runeAt
   | runeSizeAt
   /-- `[]rune(s)` / `string([]rune)` (triage L1, 2026-08-19). Appended
-  last so positional proof bullets over earlier arms stay put. -/
-  | runesFromString
+  last so positional proof bullets over earlier arms stay put. The
+  `literal` bit as on `bytesFromString` (R3 / b6, design D3). -/
+  | runesFromString (literal : Bool)
   | stringFromRuneSlice
   /-- The `float-bits` primitive (stdlib slice 3; `floatBitsApply`,
   Ops.lean): pure, one operand, appended last. -/
   | floatBits (op : FloatBitsOp)
   deriving Repr, BEq
+
+/-- The two CONVERSION heads — the ones whose apply draws `ChoiceSite.convCap`
+(R3 / b6): their kind and their operand's literal bit; `none` for every other
+head. The hypothesis the three strict-apply equations carry since the
+widening (`retV_strictK_apply`/`_panic`/`_error`, Equations.lean: a
+non-conversion head applies through the pure `applyStrictOp` and pops
+nothing). -/
+def StrictOp.convKind? : StrictOp → Option (ConvKind × Bool)
+  | .bytesFromString literal => some (.bytes, literal)
+  | .runesFromString literal => some (.runes, literal)
+  | _ => none
+
+@[simp] theorem StrictOp.convKind?_bytesFromString (literal : Bool) :
+    (StrictOp.bytesFromString literal).convKind? = some (.bytes, literal) := rfl
+@[simp] theorem StrictOp.convKind?_runesFromString (literal : Bool) :
+    (StrictOp.runesFromString literal).convKind? = some (.runes, literal) := rfl
+
+/-- Is the expression a string literal (`Expr.stringLit`)? The frontend's own
+classification of a conversion operand (design D3): gc folds exactly these to a
+`[n]byte` / rune-literal conversion with capacity `n`. -/
+def _root_.GoLean.GoCore.Expr.isStringLit : Expr → Bool
+  | .stringLit _ => true
+  | _ => false
 
 /-- Classify an expression as a strict-operator application: the head and
 the operand list, in evaluation order. `none` for the forms with their own
@@ -155,7 +187,7 @@ rules (`var`/literals/`ref`/`global`, short-circuit `and`/`or`) and for
 `unsupported`. -/
 def strictPlan : Expr → Option (StrictOp × List Expr)
   | .convert ty e => some (.convert ty, [e])
-  | .bytesFromString e => some (.bytesFromString, [e])
+  | .bytesFromString e => some (.bytesFromString e.isStringLit, [e])
   | .stringFromByteSlice e => some (.stringFromByteSlice, [e])
   | .stringFromRune e => some (.stringFromRune, [e])
   | .add l r => some (.add, [l, r])
@@ -202,7 +234,7 @@ def strictPlan : Expr → Option (StrictOp × List Expr)
   | .maxOf args => some (.maxOf, args.toList)
   | .runeAt s off => some (.runeAt, [s, off])
   | .runeSizeAt s off => some (.runeSizeAt, [s, off])
-  | .runesFromString e => some (.runesFromString, [e])
+  | .runesFromString e => some (.runesFromString e.isStringLit, [e])
   | .stringFromRuneSlice e => some (.stringFromRuneSlice, [e])
   | .floatBits op e => some (.floatBits op, [e])
   | _ => none
@@ -417,28 +449,24 @@ def applyStrictOp (s : Store) (leafOf : Loc → Loc) :
   | .lessCmp, [l, r] => do return (.bool (← valueLess l r), s, [])
   | .greaterCmp, [l, r] => do return (.bool (← valueGreater l r), s, [])
   | .convert ty, [v] => do return ((← convertValueToTy ctx ty v), s, [])
-  -- ENVELOPE STATEMENT (recorded narrowing, arc-final audit F8,
-  -- 2026-08-06). Spec §Conversions on `[]byte(s)`: "The capacity of the
-  -- resulting slice is implementation-specific and may be larger than
-  -- the slice length" — a declared latitude. The model resolves it to
-  -- the SINGLETON cap = len, with no Choices consumption. gc's realized
-  -- point depends on escape analysis: cap = len when the backing does
-  -- not escape (probe go1.26.5: len 5 → cap 5, len 6 → cap 6), but
-  -- roundupsize(len) when it escapes (len 5 → cap 8, len 33 → cap 48,
-  -- len 100 → cap 112). TRANSFER CAVEAT: a theorem asserting
-  -- cap([]byte(s)) = len(s) does NOT transfer to gc executions where
-  -- the conversion escapes; the green version-tracking pin
-  -- (strings/byte-conversion-cap, a non-escaping shape) tracks the
-  -- agreeing point only. Widening this to a Choices site is deliberate
-  -- future work if a cap-observing escaping shape ever needs to pass —
-  -- do not silently match one compiler mode.
-  | .bytesFromString, [v] =>
-      match v with
-      | .string value => do
-          let bytes := value.bytes.map (fun b => GoValue.int (Int.ofNat b.toNat) .uint8)
-          let (base, s') ← Store.alloc ctx s (.array bytes) (.array bytes.size (.int .uint8))
-          return (.slice { base := some base, offset := 0, len := bytes.size, cap := bytes.size }, s', [])
-      | other => stuck s!"expected string operand for []byte conversion, got {repr other}"
+  -- `[]byte(s)`: ENVELOPED since R3 / b6 (2026-10-07; the arc-final audit F8
+  -- narrowing of 2026-08-06 is RETIRED). Spec §Conversions: "The capacity of
+  -- the resulting slice is implementation-specific and may be larger than
+  -- the slice length" — a declared latitude the machine now REIFIES as
+  -- `ChoiceSite.convCap`, drawn by the stream-holding funnel
+  -- `applyStrictOpPick` (below) over EXACTLY gc's measured member set
+  -- (`convCapMembers`, Ops.lean — the envelope statement). The 2026-08-06
+  -- comment's «cap = len when the backing does not escape» was true only on
+  -- gc's never-written zero-copy regime: a WRITTEN non-escaping `[]byte(s)`
+  -- realizes the 32-byte conversion buffer (n ≤ 32) or roundupsize(n), an
+  -- escaping one roundupsize(n), a literal operand n (design note §1). The
+  -- green row `strings/byte-conversion-cap` pins the zero-copy member — the
+  -- default tape's slot 0, so its observation is unchanged. This pure table
+  -- has NO conversion arm: the head dispatches through the funnel, which is
+  -- the one definition of the conversion (the `applyStmtOpCore`/`appendSlice`
+  -- precedent); reaching here is an internal breach, refused by name.
+  | .bytesFromString _, _ =>
+      throw (.internal "applyStrictOp: bytesFromString dispatches through applyStrictOpPick")
   | .stringFromByteSlice, [v] => do
       let slice ← valueAsSlice v
       let (values, tr) ← Mem.loadSlice ctx s slice
@@ -690,29 +718,19 @@ def applyStrictOp (s : Store) (leafOf : Loc → Loc) :
   -- `[]rune(s)` (triage L1, 2026-08-19): decode every code point
   -- (`runesOfString` — invalid encodings yield U+FFFD per byte, the
   -- same accept-range kernel as range-over-string) into a FRESH backing
-  -- array, exactly the `bytesFromString` shape. ENVELOPE STATEMENT: the
-  -- resulting capacity shares `bytesFromString`'s recorded narrowing —
-  -- spec §Conversions declares the cap implementation-specific; the
-  -- model pins the SINGLETON cap = len. The transfer caveat here is
-  -- WIDER than the bytes arm's: gc is outside the singleton even on
-  -- the small NON-escaping shape (probe go1.26.5:
-  -- cap([]rune("héllo")) = 32 — the runtime's 32-rune conversion
-  -- buffer), so no cap-observing rune case can pin an agreeing point
-  -- (the byte-conversion-cap sibling was measured red and deliberately
-  -- NOT added, R3's own precedent for the escaping byte shape). A
-  -- theorem asserting cap([]rune(s)) = len does not transfer to gc;
-  -- the re-envelope obligation is R3's, covering both arms (latitude
-  -- inventory R3).
-  | .runesFromString, [v] =>
-      match v with
-      | .string value => do
-          let runes := (runesOfString value).map
-            (fun r => GoValue.int r .int32)
-          let (base, s') ← Store.alloc ctx s (.array runes)
-            (.array runes.size (.int .int32))
-          return (.slice { base := some base, offset := 0,
-                           len := runes.size, cap := runes.size }, s', [])
-      | other => stuck s!"expected string operand for []rune conversion, got {repr other}"
+  -- array, exactly the `bytesFromString` shape — in the funnel
+  -- `applyStrictOpPick` (below), never here. ENVELOPED since R3 / b6
+  -- (2026-10-07): the pre-widening SINGLETON cap = len was a WRONG ANSWER
+  -- on almost every non-literal rune conversion (BUG-118, observed ∉
+  -- modeled): gc realizes the 32-rune conversion buffer for every
+  -- non-literal operand of ≤ 32 runes (written or not — there is no rune
+  -- zero-copy regime) and roundupsize(4n)/4 above or when escaping; the
+  -- length is a member only when 4n is a size class. The 2026-08-19
+  -- comment's «cap([]rune("héllo")) = 32» was the VARIABLE-operand value;
+  -- the literal gives 5 (design note §1, `probe_literal.go`). The envelope
+  -- is `convCapMembers .runes` (Ops.lean), slot 0 = roundupsize(4n)/4.
+  | .runesFromString _, _ =>
+      throw (.internal "applyStrictOp: runesFromString dispatches through applyStrictOpPick")
   -- `string(rs)` over a rune slice (triage L1): concatenate the UTF-8
   -- encodings of the individual rune values (spec §Conversions to and
   -- from a string type) — values outside the valid code-point range
@@ -733,6 +751,127 @@ def applyStrictOp (s : Store) (leafOf : Loc → Loc) :
   -- footprint (Race.lean's inventory), no consumption.
   | .floatBits op, [v] => do return ((← floatBitsApply op v), s, [])
   | op, vs => stuck s!"malformed strict-operator application: {repr op} on {vs.length} operand(s)"
+
+/-! ### The conversion apply — the strict table's ONE stream-holding funnel (R3 / b6, 2026-10-07)
+
+`[]byte(s)` / `[]rune(s)` are strict expression heads whose length is known only at the
+apply, so the capacity pick (`ChoiceSite.convCap`, the envelope statement at
+`convCapMembers`, Ops.lean) is drawn HERE — a new consult position beside the pure
+`applyStrictOp`, in the `enterFramePick` idiom: the funnel holds the stream, the two
+conversion heads consult it, every other head passes through untouched. The result
+shape is `applyStmtOp`'s (the stream and the pick's record beside the value;
+`toResult` classifies outside, `Step.strictApply` and `stepFn`'s arm deliver it), so the
+relation's rule keeps the «apply, then deliver» form over `ch`. -/
+
+/-- The conversion's apply at a GIVEN slot: the fresh backing of `convCapAt … pick`
+cells — the elements, then a zeroed tail: the append spill's own padded
+`buildAppendBackingValue` (gc's `memclr` and the zeroed conversion buffers agree: the
+tail past `len` reads as zero through any reslice) — and the header
+`{offset 0, len n, cap}`. The post-consult tail the coverage proofs consume: a function
+of the pick alone, never a panic (an allocation refuses or succeeds), and of one outcome
+class at every slot (`convCapApplyAt_congr`, MachineSound). -/
+def convCapApplyAt (s : Store) (kind : ConvKind) (literal : Bool) (value : GoString)
+    (pick : Nat) : Except Stop (GoValue × Store × AccessTrace) := do
+  let elems := convElems kind value
+  let cap := convCapAt kind literal elems.size pick
+  let backing ← buildAppendBackingValue ctx kind.elemTy #[] elems cap
+  let (base, s') ← Store.alloc ctx s backing (.array cap kind.elemTy)
+  return (.slice { base := some base, offset := 0, len := elems.size, cap := cap }, s', [])
+
+/-- The conversion's operand: the string, exactly when the operand list is one string
+value (the shape `strictPlan` produces for a well-typed program). -/
+def convOperand? : List GoValue → Option GoString
+  | [.string value] => some value
+  | _ => none
+
+/-- The refusal AHEAD of any consult: a non-string operand, or a malformed arity —
+always `stuck`, never a panic, never a value. -/
+def convRefuse (kind : ConvKind) (vs : List GoValue) : Except Stop (GoValue × Store × AccessTrace) :=
+  match vs with
+  | [other] => stuck s!"expected string operand for {kind.spell} conversion, got {repr other}"
+  | vs => stuck s!"malformed {kind.spell} conversion: {vs.length} operand(s) (expected one string)"
+
+/-- The conversion's apply WITH the stream: ONE `convCap` consult at the member count
+(`convCapWidth`; a one-member list pops nothing — G-U), then `convCapApplyAt` at the
+pick. A non-string operand or a malformed arity is refused BEFORE any consult
+(`convRefuse`, the stream untouched), so the projection `strictConsult?` reports no draw
+there. -/
+def convCapApply (s : Store) (kind : ConvKind) (literal : Bool) (vs : List GoValue)
+    (ch : Choices) :
+    Except Stop ((GoValue × Store × AccessTrace) × Choices × List PickRecord) :=
+  match convOperand? vs with
+  | some value =>
+      let (pick, ch', ps) := Choices.consumeAtE .convCap (convCapWidth kind literal value) ch
+      (convCapApplyAt ctx s kind literal value pick).map fun r => (r, ch', ps)
+  | none => (convRefuse kind vs).map fun r => (r, ch, [])
+
+/-- **The strict apply with the stream in hand**: the conversion heads through
+`convCapApply` (their pick drawn, the popped stream and the record returned); every
+other head through the pure `applyStrictOp`, the stream returned untouched with no
+record. -/
+def applyStrictOpPick (s : Store) (leafOf : Loc → Loc) (op : StrictOp) (vs : List GoValue)
+    (ch : Choices) :
+    Except Stop ((GoValue × Store × AccessTrace) × Choices × List PickRecord) :=
+  match op.convKind? with
+  | some (kind, literal) => convCapApply ctx s kind literal vs ch
+  | none => (applyStrictOp ctx s leafOf op vs).map fun r => (r, ch, [])
+
+variable {ctx}
+/-- A non-conversion head is the pure apply beside the untouched stream. -/
+theorem applyStrictOpPick_of_convKind?_none {s : Store} {leafOf : Loc → Loc} {op : StrictOp}
+    {vs : List GoValue} {ch : Choices} (hk : op.convKind? = none) :
+    applyStrictOpPick ctx s leafOf op vs ch = (applyStrictOp ctx s leafOf op vs).map fun r => (r, ch, []) := by
+  simp [applyStrictOpPick, hk]
+
+theorem applyStrictOpPick_ok_of_none {s s' : Store} {leafOf : Loc → Loc} {op : StrictOp}
+    {vs : List GoValue} {ch : Choices} {out : GoValue} {tr : AccessTrace} (hk : op.convKind? = none)
+    (ha : applyStrictOp ctx s leafOf op vs = .ok (out, s', tr)) :
+    applyStrictOpPick ctx s leafOf op vs ch = .ok ((out, s', tr), ch, []) := by
+  simp [applyStrictOpPick, hk, ha, Except.map]
+
+theorem applyStrictOpPick_error_of_none {s : Store} {leafOf : Loc → Loc} {op : StrictOp}
+    {vs : List GoValue} {ch : Choices} {e : Stop} (hk : op.convKind? = none)
+    (ha : applyStrictOp ctx s leafOf op vs = .error e) :
+    applyStrictOpPick ctx s leafOf op vs ch = .error e := by
+  simp [applyStrictOpPick, hk, ha, Except.map]
+
+@[simp] theorem convOperand?_string (value : GoString) :
+    convOperand? [.string value] = some value := rfl
+
+/-- A `some` operand IS the one-string list. -/
+theorem convOperand?_some {vs : List GoValue} {value : GoString}
+    (h : convOperand? vs = some value) : vs = [.string value] := by
+  unfold convOperand? at h
+  split at h
+  · cases h; rfl
+  · cases h
+
+/-- The refusal is always an error — a `stuck`, never a panic. -/
+theorem convRefuse_eq_error (kind : ConvKind) (vs : List GoValue) :
+    ∃ msg : String, convRefuse kind vs = .error (.stuck msg) := by
+  unfold convRefuse
+  split <;> exact ⟨_, rfl⟩
+
+/-- A conversion head with a string operand: the consult, then the apply at the pick. -/
+theorem applyStrictOpPick_conv {s : Store} {leafOf : Loc → Loc} {op : StrictOp} {kind : ConvKind}
+    {literal : Bool} {vs : List GoValue} {value : GoString} {ch : Choices}
+    (hk : op.convKind? = some (kind, literal)) (hv : convOperand? vs = some value) :
+    applyStrictOpPick ctx s leafOf op vs ch
+      = (convCapApplyAt ctx s kind literal value
+            (Choices.consumeAt .convCap (convCapWidth kind literal value) ch).1).map
+          fun r => (r, (Choices.consumeAt .convCap (convCapWidth kind literal value) ch).2,
+            PickRecord.ofPick .convCap (convCapWidth kind literal value)
+              (Choices.consumeAt .convCap (convCapWidth kind literal value) ch).1) := by
+  simp only [applyStrictOpPick, hk, convCapApply, hv, Choices.consumeAtE_eq]
+
+/-- A conversion head without a string operand refuses ahead of the consult, the stream
+untouched. -/
+theorem applyStrictOpPick_refuse {s : Store} {leafOf : Loc → Loc} {op : StrictOp} {kind : ConvKind}
+    {literal : Bool} {vs : List GoValue} {ch : Choices}
+    (hk : op.convKind? = some (kind, literal)) (hv : convOperand? vs = none) :
+    applyStrictOpPick ctx s leafOf op vs ch = (convRefuse kind vs).map fun r => (r, ch, []) := by
+  simp only [applyStrictOpPick, hk, convCapApply, hv]
+variable (ctx)
 
 /-! ## Shared list operations (env-threading; used as rule premises and by
 `stepFn`) -/
@@ -6074,6 +6213,18 @@ def stmtConsult? (σ : Store) (op : StmtOp) (vs : List GoValue) : Option (Choice
   | .randIntn => (intnBound? vs).map (.intn, ·)
   | _ => none
 
+/-- The strict apply's consult (R3 / b6): a CONVERSION head with a string operand draws
+`convCap` at the member count when it is ≥ 2 (`convCapWidth`); `none` at a one-member
+list (a bound-1 consult, no pop — G-U), at a non-string operand or a malformed arity (the
+funnel refuses BEFORE any consult), and at every non-conversion head. Mirrors
+`convCapApply`'s own order of checks. -/
+def strictConsult? (op : StrictOp) (vs : List GoValue) : Option (ChoiceSite × Nat) :=
+  match op.convKind?, convOperand? vs with
+  | some (kind, literal), some value =>
+      if convCapWidth kind literal value ≤ 1 then none
+      else some (.convCap, convCapWidth kind literal value)
+  | _, _ => none
+
 /-- The select apply's consult: the L2 pick at a multi-ready analysis
 (`applySelectCore`'s `.picks`), nothing at `.done` or a refusal. -/
 def selectConsult? (σ : Store) (clauses : List (SelectClauseHead × Stmt))
@@ -6193,7 +6344,9 @@ def seqConsumption (σ : Store) (c : Config) : Option (ChoiceSite × Nat) :=
     | some (.stmt op _, vs, _, _) => stmtConsult? ctx σ op vs
     | some (.select clauses default?, vs, env, k) => selectConsult? ctx σ clauses default? vs env k
     | some (.sync op, vs, _, _) => syncConsult? ctx σ op vs
-    | some (.strict _, _, _, _) | some (.chan _, _, _, _) | some (.atomic _, _, _, _)
+    -- R3 / b6: the strict apply draws `convCap` at a conversion head (`strictConsult?`).
+    | some (.strict op, vs, _, _) => strictConsult? op vs
+    | some (.chan _, _, _, _) | some (.atomic _, _, _, _)
     | some (.rhs _ _ _, _, _, _) => none
     | none =>
       match entryCallSite? c with
@@ -6358,9 +6511,13 @@ inductive Step : Config → Store → Config → Store → StepLabel → Prop wh
   | strictShift {op done e rest v env k s} :
       Step (.retV v (.strictK op done (e :: rest) env k)) s
         (.evalE e env (.strictK op (v :: done) rest env k)) s ⟨[], [], []⟩
-  | strictApply {op done v r env k s c' s' l} :
-      toResult (applyStrictOp ctx s (projChainTarget ctx s k) op (v :: done).reverse) = .ok r →
-      deliver s k (fun (out, s', tr) => (.retV out k, s', ⟨tr, [], []⟩)) r = (c', s', l) →
+  /-- The strict APPLY, over the stream-holding funnel (R3 / b6, 2026-10-07): the
+  rule quantifies the stream `ch` (the `stmtOpApply` idiom); a conversion head draws
+  `ChoiceSite.convCap` inside `applyStrictOpPick` and its label carries the pick's
+  record `ps`; every other head is the pure `applyStrictOp` with `ps = []`. -/
+  | strictApply {op done v r env k s ch c' s' l} :
+      toResult (applyStrictOpPick ctx s (projChainTarget ctx s k) op (v :: done).reverse ch) = .ok r →
+      deliver s k (fun ((out, s', tr), _, ps) => (.retV out k, s', ⟨tr, ps, []⟩)) r = (c', s', l) →
       Step (.retV v (.strictK op done [] env k)) s c' s' l
   -- Short-circuit frames
   | andTrue {r env k s} :

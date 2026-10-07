@@ -132,6 +132,10 @@ def innerVecs (s : Store) (ts : Array Thread) (i : Nat) :
       -- operand VALUES, not the configuration's shape) is outside the
       -- certified fragment (fail closed; the CLI enumerator carries such rows).
       else if consumesRandIntn c then none
+      -- R3 / b6 (design D7): the conversion apply's `convCap` pick (the member count,
+      -- read off the operand VALUE) is outside the certified fragment (fail closed;
+      -- the CLI enumerator carries such rows).
+      else if consumesConvCap c then none
       -- Q-TRYLOCK: the TRY heads' `tryLock` pick is outside the certified
       -- fragment (fail closed; the CLI enumerator carries such rows).
       else if consumesTryLock c then none

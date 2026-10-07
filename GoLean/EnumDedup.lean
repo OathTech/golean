@@ -138,6 +138,7 @@ private def refusalReason (s : Store) (ts : Array Thread) (i : Nat) :
       | .error e => s!"goroutine {i}: select arrival analysis error: {e.message}"
     else if consumesAppendSlice c then s!"goroutine {i}: append spill capacity pick"
     else if consumesRandIntn c then s!"goroutine {i}: rand-intn apply (the intn `[0, n)` draw, window unit 5b — its bound is an operand VALUE, outside the dedup checker's certified fragment; use the default enumerator)"
+    else if consumesConvCap c then s!"goroutine {i}: []byte(s) / []rune(s) conversion apply (the convCap capacity pick, R3 / b6 — its bound is the member count of an operand VALUE's length, outside the dedup checker's certified fragment; use the default enumerator)"
     else if consumesTryLock c then s!"goroutine {i}: TryLock/TryRLock apply (the tryLock spurious-failure site — outside the dedup checker's certified fragment; use the default enumerator)"
     else if isMapIterNext c then s!"goroutine {i}: mapIterK iteration pick"
     else if consumesNilValueMethod ctx c then s!"goroutine {i}: frame-entry panic-text pick (nilValueMethodText, BUG-087)"

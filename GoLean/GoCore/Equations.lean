@@ -1009,7 +1009,16 @@ under `strictK`. -/
 @[stepFn_eqns] theorem evalE_strict_more {s : Store} {e e₁ : Expr} {op : StrictOp} {rest : List Expr} (env : LocalEnv) (k : Cont)
     (ch : Choices) (h : strictPlan e = some (op, e₁ :: rest)) :
     stepFn ctx s (.evalE e env k) ch = .ok (.evalE e₁ env (.strictK op [] rest env k), s, ch, ⟨[], [], []⟩) := by
-  cases e <;> simp [strictPlan] at h <;> simp [stepFn, strictPlan, h]
+  cases e <;> simp [strictPlan] at h
+  -- R3 / b6: the two conversion heads carry the operand's computed `literal` bit —
+  -- substitute the plan's three equations outright.
+  case bytesFromString operand =>
+    obtain ⟨rfl, rfl, rfl⟩ := h
+    simp [stepFn, strictPlan]
+  case runesFromString operand =>
+    obtain ⟨rfl, rfl, rfl⟩ := h
+    simp [stepFn, strictPlan]
+  all_goals simp [stepFn, strictPlan, h]
 
 /-- A nullary strict form (a `nil`, a float literal, a zero value, a capture-free closure): the apply
 in the same step (`applyStrictOp`, read-only — `deliverS`). -/
@@ -1030,25 +1039,71 @@ in the same step (`applyStrictOp`, read-only — `deliverS`). -/
       = .ok (.evalE e env (.strictK op (v :: done) rest env k'), s, ch, ⟨[], [], []⟩) := by defn_eq
 
 /-- The last operand arrived: the strict APPLY (`applyStrictOp`, the leaf narrowed by the
-continuation's projection chain) delivers its value. -/
+continuation's projection chain) delivers its value. RE-PINNED (R3 / b6, 2026-10-07, design
+D6): the hypothesis `hk` — a NON-conversion head — since the two conversion heads apply
+through the stream-holding funnel (`retV_strictK_conv` below); for every other head the
+funnel is the pure apply and the stream is untouched (a `rfl` argument at every use). -/
 @[stepFn_eqns] theorem retV_strictK_apply {s s' : Store} {v out : GoValue} {op : StrictOp} {done : List GoValue} {tr : AccessTrace}
-    (env : LocalEnv) (k' : Cont) (ch : Choices)
+    (env : LocalEnv) (k' : Cont) (ch : Choices) (hk : op.convKind? = none)
     (ha : applyStrictOp ctx s (projChainTarget ctx s k') op (v :: done).reverse = .ok (out, s', tr)) :
     stepFn ctx s (.retV v (.strictK op done [] env k')) ch = .ok (.retV out k', s', ch, ⟨tr, [], []⟩) := by
-  simp only [stepFn, ha, toResult_ok, Bind.bind, Except.bind, deliverS_ok, pure_eq_ok]
+  simp only [stepFn, applyStrictOpPick_ok_of_none hk ha, toResult_ok, Bind.bind, Except.bind, deliverS_ok, pure_eq_ok]
 
 @[stepFn_eqns] theorem retV_strictK_apply_panic {s : Store} {v : GoValue} {op : StrictOp} {done : List GoValue} {msg : String}
-    (env : LocalEnv) (k' : Cont) (ch : Choices)
+    (env : LocalEnv) (k' : Cont) (ch : Choices) (hk : op.convKind? = none)
     (ha : applyStrictOp ctx s (projChainTarget ctx s k') op (v :: done).reverse = .error (.panic msg)) :
     stepFn ctx s (.retV v (.strictK op done [] env k')) ch = .ok (.panicking [panicEntry msg] k', s, ch, ⟨[], [], []⟩) := by
-  simp only [stepFn, ha, toResult_panic, Bind.bind, Except.bind, deliverS_panic, pure_eq_ok, List.nil_append]
+  simp only [stepFn, applyStrictOpPick_error_of_none hk ha, toResult_panic, Bind.bind, Except.bind, deliverS_panic, pure_eq_ok, List.nil_append]
 
 /-- A strict apply's refusal or fatal propagates as the step's `Stop`. -/
 @[stepFn_eqns] theorem retV_strictK_apply_error {s : Store} {v : GoValue} {op : StrictOp} {done : List GoValue} {e : Stop}
-    (env : LocalEnv) (k' : Cont) (ch : Choices)
+    (env : LocalEnv) (k' : Cont) (ch : Choices) (hk : op.convKind? = none)
     (ha : applyStrictOp ctx s (projChainTarget ctx s k') op (v :: done).reverse = .error e) (hne : ∀ msg, e ≠ .panic msg) :
     stepFn ctx s (.retV v (.strictK op done [] env k')) ch = .error e := by
-  simp only [stepFn, toResult_of_error ha hne, Bind.bind, Except.bind]
+  simp only [stepFn, toResult_of_error (applyStrictOpPick_error_of_none hk ha) hne, Bind.bind, Except.bind]
+
+/-- **The conversion apply** (R3 / b6, 2026-10-07; `ChoiceSite.convCap`, design D6): at a
+CONVERSION head (`[]byte(s)` / `[]rune(s)`) on a string operand the funnel draws the tape's
+`convCap` pick at the member count `convCapWidth` and applies at it (`convCapApplyAt`: the
+backing at the drawn capacity); the step returns the popped tape beside exactly the record
+`PickRecord.ofPick .convCap w pick` — `[]` at a one-member list (`retV_strictK_conv_nopop`), the
+one labelled pick otherwise. -/
+@[stepFn_eqns] theorem retV_strictK_conv {s s' : Store} {v out : GoValue} {op : StrictOp} {done : List GoValue}
+    {kind : ConvKind} {literal : Bool} {value : GoString} {tr : AccessTrace}
+    (env : LocalEnv) (k' : Cont) (ch : Choices)
+    (hk : op.convKind? = some (kind, literal)) (hv : convOperand? (v :: done).reverse = some value)
+    (ha : convCapApplyAt ctx s kind literal value
+      (Choices.consumeAt .convCap (convCapWidth kind literal value) ch).1 = .ok (out, s', tr)) :
+    stepFn ctx s (.retV v (.strictK op done [] env k')) ch
+      = .ok (.retV out k', s', (Choices.consumeAt .convCap (convCapWidth kind literal value) ch).2,
+          ⟨tr, PickRecord.ofPick .convCap (convCapWidth kind literal value)
+            (Choices.consumeAt .convCap (convCapWidth kind literal value) ch).1, []⟩) := by
+  simp only [stepFn, applyStrictOpPick_conv hk hv, ha, Except.map, toResult_ok, Bind.bind, Except.bind, deliverS_ok, pure_eq_ok]
+
+/-- The conversion apply's NO-POP instance: a one-member list — every literal conversion, and
+every length whose members coincide — consults at bound ≤ 1, pops nothing, records nothing,
+and applies at slot 0. -/
+@[stepFn_eqns] theorem retV_strictK_conv_nopop {s s' : Store} {v out : GoValue} {op : StrictOp} {done : List GoValue}
+    {kind : ConvKind} {literal : Bool} {value : GoString} {tr : AccessTrace}
+    (env : LocalEnv) (k' : Cont) (ch : Choices)
+    (hk : op.convKind? = some (kind, literal)) (hv : convOperand? (v :: done).reverse = some value)
+    (hw : convCapWidth kind literal value ≤ 1)
+    (ha : convCapApplyAt ctx s kind literal value 0 = .ok (out, s', tr)) :
+    stepFn ctx s (.retV v (.strictK op done [] env k')) ch = .ok (.retV out k', s', ch, ⟨tr, [], []⟩) := by
+  have h := retV_strictK_conv env k' ch hk hv (by rwa [Choices.consumeAt_le_one hw])
+  rwa [Choices.consumeAt_le_one hw, PickRecord.ofPick, if_pos hw] at h
+
+/-- A conversion head WITHOUT a string operand (a non-string operand, a malformed arity) refuses
+AHEAD of any consult (`convRefuse`: a `stuck`, never a panic), the step's `Stop`. -/
+@[stepFn_eqns] theorem retV_strictK_conv_refuse {s : Store} {v : GoValue} {op : StrictOp} {done : List GoValue}
+    {kind : ConvKind} {literal : Bool} {e : Stop}
+    (env : LocalEnv) (k' : Cont) (ch : Choices)
+    (hk : op.convKind? = some (kind, literal)) (hv : convOperand? (v :: done).reverse = none)
+    (hr : convRefuse kind (v :: done).reverse = .error e) (hne : ∀ msg, e ≠ .panic msg) :
+    stepFn ctx s (.retV v (.strictK op done [] env k')) ch = .error e := by
+  have h : applyStrictOpPick ctx s (projChainTarget ctx s k') op (v :: done).reverse ch = .error e := by
+    rw [applyStrictOpPick_refuse hk hv, hr]; rfl
+  simp only [stepFn, toResult_of_error h hne, Bind.bind, Except.bind]
 
 /-! ## (3) The wide statements (`stmtPlan` → `stmtOpK` → `applyStmtOp`) -/
 

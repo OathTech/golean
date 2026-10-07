@@ -7782,6 +7782,44 @@ failure, a package error, a no-Go-files error on a buildable package, a dependen
 `go list` and a malformed listing — each exits 1 naming its cause — plus two positive controls. Evidence
 `docs/evidence/2026-10-07_field-offsets/inittask-regen.txt`.
 
+## BUG-118 — `cap([]rune(s))` for a NON-LITERAL `s`: the machine's pinned singleton cap = len was OUTSIDE gc on almost every input — gc realizes the 32-rune conversion buffer (`[32]rune`, every non-literal operand of ≤ 32 runes, written or not) or roundupsize(4·len)/4 (escaping, or > 32 runes); len itself is a member only when 4·len is a size class [semantic core; wrong answer (observed ∉ modeled); FIXED by the R3 / b6 widening `ChoiceSite.convCap` (lane `lane/conv-cap-1007`, 2026-10-07); known since the 2026-08-19 rune arm's own comment («cap([]rune("héllo")) = 32», deliberately left unpinned), measured as a wrong answer by the b6 design note's 140-row envelope (`docs/evidence/2026-10-07_conv-cap-design/envelope.tsv`)]
+
+- Status: fixed ([AGENT] build worker, lane `lane/conv-cap-1007`, 2026-10-07; the widening ratified [USER] Mike
+  2026-10-07 «yeah agree, build now», relayed — design `docs/2026-10-07_conv-cap-design.md` D1–D8, under the
+  standing rule «semantic widenings must match real Go»: the envelope is EXACTLY gc's measured member set)
+- Pinned-by: differential
+- Cases: strings/conv-cap/runes-var-nomut-5, strings/conv-cap/runes-var-esc-5, strings/conv-cap/runes-var-nomut-33, strings/conv-cap/runes-var-esc-33, strings/conv-cap/runes-var-nomut-100, strings/conv-cap/runes-var-esc-100
+- Discovered: 2026-08-19 as a transfer caveat (triage L1, the `runesFromString` arm's comment and latitude inventory
+  R3's rune paragraph: «gc is outside the singleton even on the small NON-escaping shape … a cap-observing case was
+  measured red and deliberately NOT added»); classified a WRONG ANSWER (not a latitude caveat) by the b6 design note
+  (2026-10-07, §1 correction (ii)); born red-first on this lane (`docs/evidence/2026-10-07_conv-cap/red-first-witness.txt`:
+  modeled `{5}`, gc 32 plain and `-race`, for `runes-var-nomut-5`; modeled `{5}`, gc 6, for `runes-var-esc-5`)
+
+WHAT: spec §Conversions to and from a string type declares the capacity of `[]rune(s)` implementation-specific
+(«may be larger than the slice length»). The 2026-08-19 arm pinned the SINGLETON cap = len with no choice
+consumption, and recorded that gc disagrees on the small non-escaping shape — but did not pin the disagreement as a
+case, so the wrong answer lived in a comment. gc go1.26.5 (`walk/convert.go` `walkStringToRunes`,
+`runtime/string.go` `stringtoslicerune`/`rawruneslice`, `runtime/msize.go` `roundupsize`): a NON-literal operand of
+n ≤ 32 runes converts into the 32-rune stack buffer whether or not the result is written (there is no rune
+zero-copy regime), an escaping result or n > 32 allocates `roundupsize(4n)` bytes — so `cap` is 32 for n ≤ 32
+non-escaping, `roundupsize(4n)/4` otherwise (6 for n = 5 escaping, 36 for n = 33, 104 for n = 100); the length is
+realized only for a LITERAL operand (`stringtoruneslit`) or when 4n is itself a size class
+(n ∈ {0, 2, 4, 6, 8, 12, 16, 20, 24, 28, 32}). Every non-literal rune conversion whose cap is observed (directly, or
+through an `append`'s aliasing) was therefore a wrong answer on `main`.
+
+FIX (this lane, design D1–D4): the two conversion heads draw `ChoiceSite.convCap` at the strict apply over
+`convCapMembers kind literal n` (Ops.lean) — the measured union of gc's regimes per (kind, literal?, len): runes
+non-literal `{roundupsize(4n)/4} ∪ {32 | n ≤ 32}`, bytes non-literal `{n} ∪ {roundupsize(n)} ∪ {32 | n ≤ 32}`,
+literal `{n}` — nothing in between. The default tape's rune slot 0 is the size-class member (gc's deterministic point
+for n > 32, its escaping point below); the byte slot 0 is `n` (the zero-copy member, the pre-widening singleton — no
+byte row's observation moves). The six rune rows above are born red-first and PASS at the lane tip — the two at n = 5
+as membership rows (envelope {6, 32}), the four at n ∈ {33, 100} as STRICT rows (their envelope is the singleton
+{36} / {104}, which the membership lane refuses by design; on `main` they are plain differential mismatches, 33 vs 36
+and 100 vs 104 — the witness file records the pre-change membership-shape run: modeled {33} / {100} vs gc's 36 /
+104); the byte rows `strings/conv-cap/bytes-*` witness every byte member likewise (not a wrong answer on `main` — the
+singleton `n` was a gc member for every byte conversion — but the membership lane's singleton guard made them red
+there too).
+
 ## BUG-119 — `golean coverage-observations --arg-int` is UNCHECKED against the entry parameters: an out-of-range literal wraps SILENTLY at its parameter's kind, and an `--arg-int` at a `bool`/`string`/interface parameter reaches the machine unchecked — `native-json-run` refuses both by name since train r73 [CLI; tool interface; PREDATES lane `lane/argbool-layout-1007` (the lane left `coverage-observations` unchanged by design); found by the lane's Opus adversarial audit (note), 2026-10-07]
 
 - Status: open

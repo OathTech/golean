@@ -2241,6 +2241,23 @@ row so the axis stops being invisible, nothing more.
   allocator lands on other members (cap-zero → 1) — live validation.
   XIMPL (gccgo/tinygo allocators) would stress the upper end.
 
+**OVER-WIDTH FINDING (R3 / b6 design, 2026-10-07 — a later R2 narrowing lane,
+PENDING [USER]).** Under the standing rule of 2026-10-07 («semantic widenings
+should only be allowed if they match real Go» — a widening admits only what the
+spec permits AND the pinned gc realizes) this interval is TOO WIDE: it admits
+every capacity in `[newLen, max(32, 2·growth)]`, while gc realizes exactly one
+point per regime — the growth formula's `nextslicecap` rounded by
+`roundupsize` (now in the core as `gcRoundupSize`, Ops.lean, with the pinned
+size-class tables), the 32-byte stack buffer for a small non-escaping append,
+or the spec floor `newLen`. The design note (§3, option C) posed and did not
+take the narrowing: `gcRoundupSize` would let a later lane re-derive the
+append envelope as gc's measured member set (the conversion mold: a member
+list, not an interval), with the membership rows `slices/append-spill-*`
+re-pinned to the narrower set; the site's `canonicalSlot0` («width ≥ 2 always
+— `one_lt_appendSpillWidth`») and `spillFacts`' bijection invariant would
+change with it. Not scheduled by this lane; rowed here so the over-admission
+is not forgotten (every detected gap is rowed).
+
 **`strings.Builder.grow` rides this envelope (added 2026-09-03,
 `stdlib-source-2`).** Upstream's `bytealg.MakeNoZero(2*cap+n)` — a
 runtime leaf documented as "length n and capacity of AT LEAST n" (gc
@@ -2257,31 +2274,69 @@ grow-after-write,grow-then-write}` version-track gc's point against it
 model; it is a real observable now). No new latitude row: the site is an
 instance of R2.
 
-### R3. `[]byte(s)` conversion capacity — (b-n) PINNED singleton, **gc known outside** (escaping path)
+### R3. `[]byte(s)` / `[]rune(s)` conversion capacity — (a) ENVELOPED, exactly gc's measured members (since 2026-10-07, R3 / b6)
 
-- WHERE: spec §Conversions: "The capacity of the resulting slice is
-  implementation-specific and may be larger than the slice length."
-  Machine: SINGLETON cap = len, no consumption, transfer caveat at the
-  arm (Machine.lean:340–356): gc's ESCAPING path realizes
-  roundupsize(len) — outside the singleton.
-- This is the same class as pre-widening BUG-021 (a real behavior
-  outside the model), currently guarded only by the caveat: a theorem
-  asserting cap = len does not transfer where the conversion escapes,
-  and a corpus case observing cap of an escaping conversion would go
-  red.
-- RE-ENVELOPE OBLIGATION + COST: the append-spill mold — envelope
-  [len, roundupsize-style upper], one arm + width metadata + a
-  membership pin for the escaping regime. LOW cost; ranked high on
-  value-per-cost (§7).
-- RUNE ARM (2026-08-19, bugfix-arc 19-red slice): `[]rune(s)` now
-  EXISTS (`runesFromString`, triage L1) and shares the singleton
-  cap = len — with a WIDER caveat: gc is outside the singleton even on
-  the small non-escaping shape (probe go1.26.5: `cap([]rune("héllo"))`
-  = 32, the runtime's 32-rune conversion buffer; the escaping path
-  roundups like bytes). So the rune direction has NO agreeing
-  version-tracking pin (a cap-observing case was measured red and
-  deliberately not added — this entry is the record instead); the
-  re-envelope obligation above covers both arms.
+- WHERE: spec §Conversions to and from a string type, both arms: "The
+  capacity of the resulting slice is implementation-specific and may be
+  larger than the slice length." Machine: `ChoiceSite.convCap`, drawn at the
+  strict apply of the two conversion heads by the stream-holding funnel
+  `applyStrictOpPick` (Machine.lean; projection `strictConsult?` in
+  `seqConsumption`) over `convCapMembers kind literal n` (Ops.lean — the
+  envelope statement, with gc's size-class tables as pinned platform data
+  and `gcRoundupSize` = `runtime.roundupsize`, noscan): literal operand →
+  `{n}`; bytes non-literal → `{n} ∪ {R(n)} ∪ {32 | n ≤ 32}`; runes
+  non-literal → `{R(4n)/4} ∪ {32 | n ≤ 32}`. Bound = the member count
+  (1 to 3); a one-member list is a bound-1 consult that pops nothing.
+- EXACTLY gc's measured union, nothing in between (the standing rule of
+  2026-10-07, [USER] Mike «the semantic widenings should only be allowed if
+  they match real Go», relayed; design `docs/2026-10-07_conv-cap-design.md`
+  D2): gc realizes FOUR regimes decided by its typechecker, escape analysis
+  and inlining — literal → n; non-literal never written and non-escaping →
+  n (zero-copy, the slice ALIASES the string — unobservable since nothing
+  writes); written non-escaping n ≤ 32 → the 32-element conversion buffer
+  (runes: for every n ≤ 32); escaping or n > 32 → roundupsize — measured
+  over 140 rows with 0 mismatches
+  (`docs/evidence/2026-10-07_conv-cap-design/envelope.tsv`). The literal /
+  non-literal split IS a program property (the frontend emits a literal or
+  folded-constant operand as `Expr.stringLit`, the same classification gc's
+  typechecker makes — `StrictOp.bytesFromString/runesFromString (literal :
+  Bool)`, set by `strictPlan`); escape and mutation status are OPTIMIZER
+  decisions, so the envelope is the union over the regimes — latitude on the
+  tape. Default tape: bytes slot 0 = n (gc's zero-copy member and the
+  pre-widening singleton: no byte row's observation moved), runes slot 0 =
+  R(4n)/4.
+- CORRECTIONS of the pre-widening record (design note §1): (i) the
+  2026-08-06 arm comment's «cap = len when the backing does not escape» was
+  true only on the never-written zero-copy regime — a WRITTEN non-escaping
+  `[]byte(s)` realizes 32 or R(n); (ii) the 2026-08-19 rune paragraph's
+  «cap([]rune("héllo")) = 32» was the VARIABLE-operand value — the literal
+  gives 5; (iii) the green row `strings/byte-conversion-cap` (`s :=
+  "hello"; []byte(s)`, read only) pins the zero-copy member, not a
+  «non-escaping point». The pre-widening rune singleton cap = len was a WRONG
+  ANSWER on almost every non-literal rune conversion (len is a member only
+  when 4n is a size class) — BUG-118, fixed by the widening; the byte
+  singleton was a gc member (zero-copy) for every byte conversion.
+- EVIDENCE: the rows `strings/conv-cap/*` (22 rows born red-first on
+  `main`, PASS at the lane tip — 18 membership rows: bytes var/{nomut, mut,
+  esc} at n ∈ {0, 5, 33, 100}, concat/esc at 5, runes var/{nomut, esc} at
+  n = 5, the inlined-helper shape — ONE source line realizing 5 and 32 in
+  ONE run —, and two aliasing witnesses through `append`: in place at 32, a
+  spill at cap = len; and 4 STRICT rows, runes var/{nomut, esc} at n ∈ {33,
+  100}, whose envelope is the singleton {36} / {104} — the membership lane
+  refuses a one-member set by design), plus the four literal controls
+  (bytes, const-folded, named-type, runes: strict, cap = n). `-race` draws byte-identical to plain. Every
+  member of the envelope has a gc witness (the rule's «differentially
+  witnessed»); a toolchain that moves the size-class table or disables
+  zero-copy (`-d=zerocopy=0` deletes the `n` member on 27 of the measured
+  non-literal byte rows) turns the rows red — a deliberate re-pin, never a
+  float. The proofs: `convCapMembers_ge` / `convCapAt_ge` (the spec floor at
+  every member and slot), `Step_convCap_draw` (every member realized by the
+  singleton tape), `applyStrictOpPick_conv` (the apply equation), BridgeSet
+  rows 567–577.
+- HISTORY: (b-n) PINNED singleton cap = len with the transfer caveat from
+  the arc-final audit F8 (2026-08-06) and the rune arm (2026-08-19, triage
+  L1); the re-envelope obligation discharged 2026-10-07 by the gc-verified
+  project's (b6) request under the standing rule.
 
 ### R4. Float fusion + extra intermediate precision — (b-n) NARROWED to per-op rounding (platform-scoped singleton)
 

@@ -105,11 +105,12 @@ def siteName : ChoiceSite → String
   | .repanicCollapse => "repanicCollapse"
   | .unseqNext => "unseqNext"
   | .intn => "intn"
+  | .convCap => "convCap"
 
 def allSites : List ChoiceSite :=
   [.mapIter, .appendSpill, .l2Entry, .l2Arrival, .l4Waiter, .l1Sched,
    .l5ExitWindow, .postOp, .backEdge, .nilValueMethodText, .tryLock, .unseqPanic,
-   .repanicCollapse, .unseqNext, .intn]
+   .repanicCollapse, .unseqNext, .intn, .convCap]
 
 variable {ctx}
 /-- `allSites` is COMPLETE: every `ChoiceSite` constructor is listed (a
@@ -124,8 +125,8 @@ variable (ctx)
 Since the step-label reshape (2026-09-28) that is EVERY step-level site:
 the pool layer's (`l1Sched`/`postOp`/`backEdge`, `l2Arrival`, `l4Waiter`,
 the tombstone's `repanicCollapse`) and the sequential machine's
-(`mapIter`, `appendSpill`, `l2Entry`, `tryLock`, `nilValueMethodText`,
-`unseqPanic`, `unseqNext`) — the pool event takes the sequential step's
+(`mapIter`, `appendSpill`, `intn`, `convCap`, `l2Entry`, `tryLock`,
+`nilValueMethodText`, `unseqPanic`, `unseqNext`) — the pool event takes the sequential step's
 picks from its label. The one exception is the driver's `l5ExitWindow`,
 drawn between steps (no step's label). The sequential abort's
 `repanicCollapse` draw (the `$pkginit` phase's `stepFn` abort arm) raises
@@ -491,6 +492,36 @@ def intnFacts (c : Config) : MenuFacts :=
       | none => bad "rand-intn apply with a popping bound (an int n ≥ 2 behind an address target)"
   | _ => bad "intn site at a configuration that is not a randIntn apply"
 
+/-- The `convCap` site's menu facts (R3 / b6, `[]byte(s)` / `[]rune(s)`): the pick exists
+ONLY at the strict apply of a conversion head on a string operand whose member list has
+≥ 2 entries — the width IS the member count (`convCapWidth`, recomputed here from the
+operand exactly as `strictConsult?` reads it); the structural invariants are the envelope
+statement's (`convCapMembers`, Ops.lean): every member ≥ len (the spec floor), at most
+three members, bytes slot 0 = len (the default tape keeps `main`'s byte-conversion
+observations). A one-member list pops nothing and a refusing operand never reaches the
+consult, so a record at either is a violation, as is any other configuration reporting
+the site. -/
+def convFacts (c : Config) : MenuFacts :=
+  let bad := fun (why : String) =>
+    ({ specWidth := none, invariants := [(why, false)], pickCheck := fun _ => [] } : MenuFacts)
+  match c with
+  | .retV v (.strictK op done [] _ _) =>
+      match op.convKind?, convOperand? ((v :: done).reverse) with
+      | some (kind, literal), some value =>
+          let n := (convElems kind value).size
+          let members := convCapMembers kind literal n
+          let w := members.length
+          { specWidth := some w
+            invariants :=
+              [ ("width ≥ 2 at a consult (a one-member list pops nothing)", decide (2 ≤ w)),
+                ("every member ≥ len (the spec floor)", members.all (fun m => decide (n ≤ m))),
+                ("at most three members", decide (w ≤ 3)),
+                ("bytes slot 0 = len (the default tape keeps main's observation)",
+                  kind != .bytes || members.headD 0 == n) ]
+            pickCheck := fun p => if p ≥ w then [s!"pick {p} outside the member count {w}"] else [] }
+      | _, _ => bad "conversion apply with a string operand"
+  | _ => bad "convCap site at a configuration that is not a conversion apply"
+
 /-- The `repanicCollapse` site's menu facts (BUG-004 item 1, landing chunk
 L3): the pick exists ONLY at an abort — `.panicking (first :: rest) .stop`
 — whose head is recovered and whose successor carries an equal payload,
@@ -591,6 +622,7 @@ def seqFacts (σ : Store) (c : Config) : ChoiceSite → MenuFacts
                pickCheck := fun _ => [] }
   | .appendSpill => spillFacts ctx σ c
   | .intn => intnFacts c
+  | .convCap => convFacts c
   | .tryLock => tryLockFacts ctx σ c
   | .unseqPanic => unseqPanicFacts c
   | .unseqNext => unseqNextFacts c

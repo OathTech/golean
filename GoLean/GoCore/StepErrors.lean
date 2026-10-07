@@ -500,6 +500,32 @@ theorem applyStrictOp_tame {s : Store} {leafOf : Loc → Loc} {op : StrictOp} {v
   errp
 macro_rules | `(tactic| errp_leaf) => `(tactic| with_reducible exact applyStrictOp_tame)
 
+/-! The conversion funnel (R3 / b6): the strict apply's one stream-holding position. -/
+
+theorem convCapApplyAt_strict {s : Store} {kind : ConvKind} {literal : Bool} {value : GoString}
+    {pick : Nat} : ErrP Stop.Strict (convCapApplyAt ctx s kind literal value pick) := by
+  unfold convCapApplyAt
+  errp
+macro_rules | `(tactic| errp_leaf) => `(tactic| with_reducible exact convCapApplyAt_strict)
+
+theorem convRefuse_strict {kind : ConvKind} {vs : List GoValue} :
+    ErrP Stop.Strict (convRefuse kind vs) := by
+  unfold convRefuse
+  errp
+macro_rules | `(tactic| errp_leaf) => `(tactic| with_reducible exact convRefuse_strict)
+
+theorem convCapApply_strict {s : Store} {kind : ConvKind} {literal : Bool} {vs : List GoValue}
+    {ch : Choices} : ErrP Stop.Strict (convCapApply ctx s kind literal vs ch) := by
+  unfold convCapApply
+  errp
+macro_rules | `(tactic| errp_leaf) => `(tactic| with_reducible exact convCapApply_strict)
+
+theorem applyStrictOpPick_tame {s : Store} {leafOf : Loc → Loc} {op : StrictOp} {vs : List GoValue}
+    {ch : Choices} : ErrP Stop.Tame (applyStrictOpPick ctx s leafOf op vs ch) := by
+  unfold applyStrictOpPick
+  errp
+macro_rules | `(tactic| errp_leaf) => `(tactic| with_reducible exact applyStrictOpPick_tame)
+
 theorem structSizeAlignWith_strict {f : Ty → Except Stop (Nat × Nat)}
     (hf : ∀ t, ErrP Stop.Strict (f t)) (fs : List FieldDef) (a b c d : Nat) :
     ErrP Stop.Strict (structSizeAlignWith f fs a b c d) := by

@@ -68,6 +68,23 @@ def exports : List Name := [
     ``GoLean.GoCore.tyStructLayoutAt_sizeAlign,
     ``GoLean.GoCore.tyStructLayout_ok_sizeAlign,
     ``GoLean.GoCore.tyStructLayout_fields,
+    -- R3 / b6, the `convCap` pick site (2026-10-07; design docs/2026-10-07_conv-cap-design.md D6):
+    -- the conversion apply equation (the funnel), its derived step rule, the pick-lifted and oblivious
+    -- funnel shapes, the two-way consult characterization, the two `stepFn` arm lemmas, the funnel's
+    -- outcome-class congruence and its well-formedness, the envelope's lemmas (the spec floor at every
+    -- member and slot, the default-tape slots, the literal singleton, gc's roundupsize floor), and the
+    -- three conversion equations; BridgeSet rows 573–583
+    ``GoLean.GoCore.Machine.applyStrictOpPick_conv, ``GoLean.GoCore.Machine.Step_convCap_draw,
+    ``GoLean.GoCore.Machine.applyStrictOpPick_draw,
+    ``GoLean.GoCore.Machine.applyStrictOpPick_of_strictConsult?_none,
+    ``GoLean.GoCore.Machine.strictConsult?_some, ``GoLean.GoCore.Machine.stepFn_strict_pick,
+    ``GoLean.GoCore.Machine.stepFn_strict_oblivious, ``GoLean.GoCore.Machine.applyStrictOpPick_congr_any_ch,
+    ``GoLean.GoCore.Machine.convCapApplyAt_congr, ``GoLean.GoCore.Machine.applyStrictOpPick_wf,
+    ``GoLean.GoCore.convCapMembers_ge, ``GoLean.GoCore.convCapAt_ge, ``GoLean.GoCore.gcRoundupSize_ge,
+    ``GoLean.GoCore.convCapAt_bytes_zero, ``GoLean.GoCore.convCapAt_runes_zero,
+    ``GoLean.GoCore.convCapMembers_literal,
+    ``GoLean.GoCore.Equations.retV_strictK_conv, ``GoLean.GoCore.Equations.retV_strictK_conv_nopop,
+    ``GoLean.GoCore.Equations.retV_strictK_conv_refuse,
     -- Pool grind M5, BridgeSet rows 558–566.
     ``GoLean.GoCore.PoolSound.stepML_single_sound,
     ``GoLean.GoCore.PoolSound.stepML_single_complete,

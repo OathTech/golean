@@ -224,6 +224,23 @@ field and `struct{}` = `(0, 1)` included); row 578 `tyStructLayout_align_dvd` (f
 alignment at the entry point, under `Platform.PowTwoAligns`); row 579 `gcAmd64_powTwoAligns` (gc's platform
 satisfies it). «field alignment ∣ struct alignment» is FALSE without the power-of-two premise (a 48-bit-`int`
 platform: `struct{a int32; b int}` aligns at 6; the `Ops.lean` control), hence the premise in rows 575/578.
+
+RE-PIN 16 — R3 / b6, the `[]byte(s)` / `[]rune(s)` capacity envelope ([AGENT build worker, lane lane/conv-cap-1007],
+2026-10-07; [USER] Mike 2026-10-07 «yeah agree, build now», relayed; design note `docs/2026-10-07_conv-cap-design.md`,
+D1–D8 ratified): rows 335–337 RE-PINNED with ONE hypothesis each — `op.convKind? = none`, a non-conversion head
+(the two conversion heads now apply through the stream-holding funnel `applyStrictOpPick`, so the three pure
+strict-apply equations hold verbatim for every other head; a downstream use discharges it by `rfl`); rows 1–334
+and 338–572 BYTE-IDENTICAL (the new constructor `ChoiceSite.convCap` and the `literal : Bool` on
+`StrictOp.bytesFromString`/`runesFromString` widen their types without moving a row; no pinned statement
+enumerates `ChoiceSite` or `StrictOp`, and `Step.strictApply` is not a pinned row). Rows 573–583 ADDED — the
+conversion apply EQUATION at the funnel (`applyStrictOpPick_conv`: the tape's `convCap` pick at the member count,
+the record `PickRecord.ofPick` — `[]` at a one-member list, the no-pop instance), the derived STEP RULE
+(`Step_convCap_draw`: every member `i` is realized by the singleton tape `[i]` with picks
+`PickRecord.ofPick .convCap w i` — the intn D7 shape), the pick-lifted plan the coverage proofs consume
+(`applyStrictOpPick_draw`), the three `stepFn` equations of the conversion arm (`retV_strictK_conv`, its no-pop
+instance, its refusal), and the envelope's facts (every member and every slot is `≥ len` — the spec floor; bytes
+slot 0 = len and runes slot 0 = roundupsize(4n)/4 — the default tape; the literal singleton). The site records
+exactly like the others: `replay_coverage` (row 48), `stepFn_picks_none` / `_some` (rows 62–63) hold unchanged.
 -/
 
 namespace GoLean.GoCore.BridgeSet
@@ -2472,23 +2489,24 @@ example : ∀ {ctx : ProgramCtx} (s : Store) (v : GoValue) (op : StrictOp) (done
       = .ok (.evalE e env (.strictK op (v :: done) rest env k'), s, ch, ⟨[], [], []⟩) :=
   @GoLean.GoCore.Equations.retV_strictK_more
 
--- 335. `Equations.lean` — `retV_strictK_apply`
+-- 335. `Equations.lean` — `retV_strictK_apply` — RE-PINNED (RE-PIN 16, R3 / b6): the hypothesis `_hk`, a
+-- NON-conversion head (`StrictOp.convKind? = none`, a `rfl` argument at every downstream use)
 example : ∀ {ctx : ProgramCtx} {s s' : Store} {v out : GoValue} {op : StrictOp} {done : List GoValue}
-    {tr : AccessTrace} (env : LocalEnv) (k' : Cont) (ch : Choices)
+    {tr : AccessTrace} (env : LocalEnv) (k' : Cont) (ch : Choices) (_hk : op.convKind? = none)
     (_ha : applyStrictOp ctx s (projChainTarget ctx s k') op (v :: done).reverse = .ok (out, s', tr)),
     stepFn ctx s (.retV v (.strictK op done [] env k')) ch = .ok (.retV out k', s', ch, ⟨tr, [], []⟩) :=
   @GoLean.GoCore.Equations.retV_strictK_apply
 
--- 336. `Equations.lean` — `retV_strictK_apply_panic`
+-- 336. `Equations.lean` — `retV_strictK_apply_panic` — RE-PINNED (RE-PIN 16): the hypothesis `_hk`
 example : ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {op : StrictOp} {done : List GoValue} {msg : String}
-    (env : LocalEnv) (k' : Cont) (ch : Choices)
+    (env : LocalEnv) (k' : Cont) (ch : Choices) (_hk : op.convKind? = none)
     (_ha : applyStrictOp ctx s (projChainTarget ctx s k') op (v :: done).reverse = .error (.panic msg)),
     stepFn ctx s (.retV v (.strictK op done [] env k')) ch = .ok (.panicking [panicEntry msg] k', s, ch, ⟨[], [], []⟩) :=
   @GoLean.GoCore.Equations.retV_strictK_apply_panic
 
--- 337. `Equations.lean` — `retV_strictK_apply_error`
+-- 337. `Equations.lean` — `retV_strictK_apply_error` — RE-PINNED (RE-PIN 16): the hypothesis `_hk`
 example : ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {op : StrictOp} {done : List GoValue} {e : Stop}
-    (env : LocalEnv) (k' : Cont) (ch : Choices)
+    (env : LocalEnv) (k' : Cont) (ch : Choices) (_hk : op.convKind? = none)
     (_ha : applyStrictOp ctx s (projChainTarget ctx s k') op (v :: done).reverse = .error e)
     (_hne : ∀ msg, e ≠ .panic msg),
     stepFn ctx s (.retV v (.strictK op done [] env k')) ch = .error e :=
@@ -4314,5 +4332,105 @@ example :
 
 -- 579. `Ops.lean` — `gcAmd64_powTwoAligns`
 example : gcAmd64.PowTwoAligns := GoLean.GoCore.gcAmd64_powTwoAligns
+
+-- ---- RE-PIN 16 (R3 / b6, the `convCap` pick site, 2026-10-07): rows 573–583 ----
+
+-- 579. `Machine.lean` — the conversion apply EQUATION (design D6): at a conversion head on a string operand the
+-- funnel draws the tape's `convCap` pick at the member count and applies at it (`convCapApplyAt`); the record is
+-- `PickRecord.ofPick` — `[]` at a one-member list (the no-pop instance: every literal conversion, every length
+-- whose members coincide), the one labelled pick otherwise
+example : ∀ {ctx : ProgramCtx} {s : Store} {leafOf : Loc → Loc} {op : StrictOp} {kind : ConvKind}
+    {literal : Bool} {vs : List GoValue} {value : GoString} {ch : Choices},
+    op.convKind? = some (kind, literal) → convOperand? vs = some value →
+    applyStrictOpPick ctx s leafOf op vs ch
+      = (convCapApplyAt ctx s kind literal value
+            (Choices.consumeAt .convCap (convCapWidth kind literal value) ch).1).map
+          fun r => (r, (Choices.consumeAt .convCap (convCapWidth kind literal value) ch).2,
+            PickRecord.ofPick .convCap (convCapWidth kind literal value)
+              (Choices.consumeAt .convCap (convCapWidth kind literal value) ch).1) :=
+  @GoLean.GoCore.Machine.applyStrictOpPick_conv
+
+-- 580. `MachineSound.lean` — the conversion's STEP RULE, derived from `strictApply` (the logic team's «one step
+-- rule», the intn D7 shape): for every slot `i` below the member count the singleton tape `[i]` takes the step
+-- allocating the backing at member `i`, with the label `⟨tr, PickRecord.ofPick .convCap w i, []⟩` — the relation
+-- admits every member of the envelope
+example : ∀ {ctx : ProgramCtx} {σ : Store} {op : StrictOp} {kind : ConvKind} {literal : Bool} {value : GoString}
+    {env : LocalEnv} {k : Cont}, op.convKind? = some (kind, literal) →
+    ∀ {i : Nat}, i < convCapWidth kind literal value →
+    ∀ {out : GoValue} {σ' : Store} {tr : AccessTrace},
+    convCapApplyAt ctx σ kind literal value i = .ok (out, σ', tr) →
+    Step ctx (.retV (.string value) (.strictK op [] [] env k)) σ (.retV out k) σ'
+      ⟨tr, PickRecord.ofPick .convCap (convCapWidth kind literal value) i, []⟩ :=
+  @GoLean.GoCore.Machine.Step_convCap_draw
+
+-- 581. `MachineSound.lean` — the pick-lifted plan at a POPPING conversion: the funnel is a function of the
+-- `convCap` pick alone beside the site's pop and its record, and never panics
+example : ∀ {ctx : ProgramCtx} {s : Store} {leafOf : Loc → Loc} {op : StrictOp} {vs : List GoValue}
+    {kind : ConvKind} {literal : Bool} {value : GoString},
+    op.convKind? = some (kind, literal) → convOperand? vs = some value →
+    1 < convCapWidth kind literal value →
+    ∃ g : Nat → Except Stop (GoValue × Store × AccessTrace),
+      (∀ ch : Choices,
+        applyStrictOpPick ctx s leafOf op vs ch
+          = (g (Choices.consumeAt .convCap (convCapWidth kind literal value) ch).1).map
+              fun r => (r, (Choices.consumeAt .convCap (convCapWidth kind literal value) ch).2,
+                [⟨.convCap, convCapWidth kind literal value,
+                  (Choices.consumeAt .convCap (convCapWidth kind literal value) ch).1⟩]))
+      ∧ (∀ pick, NoPanic (g pick)) :=
+  @GoLean.GoCore.Machine.applyStrictOpPick_draw
+
+-- 582. `Equations.lean` — `retV_strictK_conv`: the conversion arm's `stepFn` equation
+example : ∀ {ctx : ProgramCtx} {s s' : Store} {v out : GoValue} {op : StrictOp} {done : List GoValue}
+    {kind : ConvKind} {literal : Bool} {value : GoString} {tr : AccessTrace}
+    (env : LocalEnv) (k' : Cont) (ch : Choices)
+    (_hk : op.convKind? = some (kind, literal)) (_hv : convOperand? (v :: done).reverse = some value)
+    (_ha : convCapApplyAt ctx s kind literal value
+      (Choices.consumeAt .convCap (convCapWidth kind literal value) ch).1 = .ok (out, s', tr)),
+    stepFn ctx s (.retV v (.strictK op done [] env k')) ch
+      = .ok (.retV out k', s', (Choices.consumeAt .convCap (convCapWidth kind literal value) ch).2,
+          ⟨tr, PickRecord.ofPick .convCap (convCapWidth kind literal value)
+            (Choices.consumeAt .convCap (convCapWidth kind literal value) ch).1, []⟩) :=
+  @GoLean.GoCore.Equations.retV_strictK_conv
+
+-- 583. `Equations.lean` — `retV_strictK_conv_nopop`: the no-pop instance (a one-member list)
+example : ∀ {ctx : ProgramCtx} {s s' : Store} {v out : GoValue} {op : StrictOp} {done : List GoValue}
+    {kind : ConvKind} {literal : Bool} {value : GoString} {tr : AccessTrace}
+    (env : LocalEnv) (k' : Cont) (ch : Choices)
+    (_hk : op.convKind? = some (kind, literal)) (_hv : convOperand? (v :: done).reverse = some value)
+    (_hw : convCapWidth kind literal value ≤ 1)
+    (_ha : convCapApplyAt ctx s kind literal value 0 = .ok (out, s', tr)),
+    stepFn ctx s (.retV v (.strictK op done [] env k')) ch = .ok (.retV out k', s', ch, ⟨tr, [], []⟩) :=
+  @GoLean.GoCore.Equations.retV_strictK_conv_nopop
+
+-- 578. `Equations.lean` — `retV_strictK_conv_refuse`: a conversion head without a string operand refuses ahead
+-- of any consult
+example : ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {op : StrictOp} {done : List GoValue}
+    {kind : ConvKind} {literal : Bool} {e : Stop}
+    (env : LocalEnv) (k' : Cont) (ch : Choices)
+    (_hk : op.convKind? = some (kind, literal)) (_hv : convOperand? (v :: done).reverse = none)
+    (_hr : convRefuse kind (v :: done).reverse = .error e) (_hne : ∀ msg, e ≠ .panic msg),
+    stepFn ctx s (.retV v (.strictK op done [] env k')) ch = .error e :=
+  @GoLean.GoCore.Equations.retV_strictK_conv_refuse
+
+-- 579. `Ops.lean` — the spec floor: every member of the envelope is at least the length
+example : ∀ {kind : ConvKind} {literal : Bool} {n m : Nat}, m ∈ convCapMembers kind literal n → n ≤ m :=
+  @GoLean.GoCore.convCapMembers_ge
+
+-- 580. `Ops.lean` — the spec floor at every SLOT (a slot past the list reads the floor)
+example : ∀ (kind : ConvKind) (literal : Bool) (n pick : Nat), n ≤ convCapAt kind literal n pick :=
+  @GoLean.GoCore.convCapAt_ge
+
+-- 581. `Ops.lean` — the default tape: bytes slot 0 is the length (gc's zero-copy member, the pre-widening
+-- singleton — every byte-conversion observation on `main` is kept)
+example : ∀ (literal : Bool) (n : Nat), convCapAt .bytes literal n 0 = n :=
+  @GoLean.GoCore.convCapAt_bytes_zero
+
+-- 582. `Ops.lean` — the default tape: runes slot 0 is the size-class member roundupsize(4n)/4
+example : ∀ (n : Nat), convCapAt .runes false n 0 = gcRoundupSize (4 * n) / 4 :=
+  @GoLean.GoCore.convCapAt_runes_zero
+
+-- 583. `Ops.lean` — a literal operand has the one member `n` (a bound-1 consult, no pop)
+example : ∀ (kind : ConvKind) (n : Nat), convCapMembers kind true n = [n] :=
+  @GoLean.GoCore.convCapMembers_literal
 
 end GoLean.GoCore.BridgeSet

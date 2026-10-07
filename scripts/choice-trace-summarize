@@ -183,7 +183,7 @@ def main():
             d = by_id[i].get("default")
             sites = set() if not d or d["perSite"] == "-" else {p.split("=")[0] for p in d["perSite"].split(";")}
             fam["scheduling/select/waiter sites reached" if sites & SCHED else
-                "appendSpill and/or mapIter only (capacity / map-order latitude, no scheduling site)"] += 1
+                "data-latitude sites only (appendSpill / mapIter / intn / convCap / tryLock …: capacity, map-order, draw, conversion-cap latitude; no scheduling site)"] += 1
         for k, v in sorted(fam.items()):
             print(f"      of which {k}: {v}")
         if a.list_exhausted or L == "strict":

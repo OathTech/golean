@@ -342,6 +342,12 @@ theorem stepThread_total_covered {s : Store} {ts : Array Thread}
                 | false =>
                 rw [hnri] at hiv
                 simp only [Bool.false_eq_true, reduceIte] at hiv
+                -- R3 / b6: the conversion apply is refused (`none`).
+                cases hnk : consumesConvCap c with
+                | true => rw [hnk] at hiv; simp at hiv
+                | false =>
+                rw [hnk] at hiv
+                simp only [Bool.false_eq_true, reduceIte] at hiv
                 -- Q-TRYLOCK: the TRY heads' apply is refused (`none`).
                 cases hntl : consumesTryLock c with
                 | true => rw [hntl] at hiv; simp at hiv

@@ -4452,28 +4452,10 @@ theorem applyStrictOp_wf {σ : Store} {leafOf : Loc → Loc} {op : StrictOp} {vs
     have := convertValueToTy_locSup hcv
     simp only [goValueListSup] at hvs
     exact strictWfSame hw (by omega)
-  · -- bytesFromString: the ONE allocating arm
-    split at h
-    · rename_i bytes
-      try dsimp only at h
-      try simp only [bind_eq_ok] at h
-      obtain ⟨⟨base, σa⟩, halloc, h⟩ := h
-      · try dsimp only at h
-        simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl, rfl⟩ := h
-        have hvb : GoValue.locSup (.array (bytes.bytes.map fun b =>
-            GoValue.int (Int.ofNat b.toNat) IntKind.uint8)) ≤ σ.nextAddr := by
-          simp only [GoValue.locSup, goValueListSup_eq]
-          refine Nat.le_trans (supBy_le_iff.mpr fun x hx => ?_) (Nat.zero_le _)
-          rw [Array.toList_map] at hx
-          obtain ⟨b, _, rfl⟩ := List.mem_map.mp hx
-          exact Nat.le_refl _
-        obtain ⟨w1, w2, w3⟩ := alloc_wf hw hvb halloc
-        obtain ⟨d1, d2, d6⟩ := alloc_shape halloc
-        refine ⟨w1, by omega, ?_⟩
-        show Loc.locSup base ≤ σa.nextAddr
-        omega
-    · simp at h
+  · -- bytesFromString: dispatches through `applyStrictOpPick` (R3 / b6) — the
+    -- allocating arm is `convCapApplyAt_wf` below
+    simp only [throw, throwThe, MonadExceptOf.throw] at h
+    cases h
   · -- stringFromByteSlice
     try dsimp only at h
     simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
@@ -4914,29 +4896,9 @@ theorem applyStrictOp_wf {σ : Store} {leafOf : Loc → Loc} {op : StrictOp} {vs
         exact strictWfSame hw (by simp [GoValue.locSup])
       · simp at h
       · simp at h
-  · -- runesFromString: the second allocating arm (triage L1, mirrors
-    -- bytesFromString's proof with the rune-decode map)
-    split at h
-    · rename_i str
-      try dsimp only at h
-      try simp only [bind_eq_ok] at h
-      obtain ⟨⟨base, σa⟩, halloc, h⟩ := h
-      · try dsimp only at h
-        simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl, rfl⟩ := h
-        have hvb : GoValue.locSup (.array ((runesOfString str).map fun r =>
-            GoValue.int r IntKind.int32)) ≤ σ.nextAddr := by
-          simp only [GoValue.locSup, goValueListSup_eq]
-          refine Nat.le_trans (supBy_le_iff.mpr fun x hx => ?_) (Nat.zero_le _)
-          rw [Array.toList_map] at hx
-          obtain ⟨r, _, rfl⟩ := List.mem_map.mp hx
-          exact Nat.le_refl _
-        obtain ⟨w1, w2, w3⟩ := alloc_wf hw hvb halloc
-        obtain ⟨d1, d2, d6⟩ := alloc_shape halloc
-        refine ⟨w1, by omega, ?_⟩
-        show Loc.locSup base ≤ σa.nextAddr
-        omega
-    · simp at h
+  · -- runesFromString: dispatches through `applyStrictOpPick` (R3 / b6)
+    simp only [throw, throwThe, MonadExceptOf.throw] at h
+    cases h
   · -- stringFromRuneSlice
     try dsimp only at h
     simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
@@ -4950,6 +4912,86 @@ theorem applyStrictOp_wf {σ : Store} {leafOf : Loc → Loc} {op : StrictOp} {vs
     exact strictWfSame hw (by rw [floatBitsApply_locSup hr]; exact Nat.zero_le _)
   · -- catch-all
     simp at h
+
+/-! ### The conversion funnel preserves well-formedness (R3 / b6, 2026-10-07) -/
+
+/-- The converted elements are integers (`uint8`s / `int32`s): no location. -/
+theorem convElems_ints (kind : ConvKind) (value : GoString) :
+    ∀ x ∈ (convElems kind value).toList, ∃ i k, x = .int i k := by
+  intro x hx
+  cases kind <;> simp only [convElems, Array.toList_map, List.mem_map] at hx <;>
+    obtain ⟨_, _, rfl⟩ := hx <;> exact ⟨_, _, rfl⟩
+
+theorem convElems_sup (kind : ConvKind) (value : GoString) :
+    goValueListSup (convElems kind value).toList = 0 := by
+  rw [goValueListSup_eq]
+  refine Nat.le_antisymm (supBy_le_iff.mpr fun x hx => ?_) (Nat.zero_le _)
+  obtain ⟨i, k, rfl⟩ := convElems_ints kind value x hx
+  exact Nat.le_refl _
+
+/-- The conversion's apply at a slot: one fresh allocation of a location-free backing
+(the twin of the retired `bytesFromString`/`runesFromString` arm proofs; the backing is
+the spill's `buildAppendBackingValue`, whose `locSup` is its elements'). -/
+theorem convCapApplyAt_wf {σ : Store} {kind : ConvKind} {literal : Bool} {value : GoString}
+    {pick : Nat} {v : GoValue} {σ' : Store} {tr : AccessTrace}
+    (hw : StateWf ctx σ) (h : convCapApplyAt ctx σ kind literal value pick = .ok (v, σ', tr)) :
+    StateWf ctx σ' ∧ σ.nextAddr ≤ σ'.nextAddr ∧ GoValue.locSup v ≤ σ'.nextAddr := by
+  unfold convCapApplyAt at h
+  try dsimp only at h
+  simp only [bind_eq_ok] at h
+  obtain ⟨backing, hbacking, h⟩ := h
+  obtain ⟨⟨base, σa⟩, halloc, h⟩ := h
+  try dsimp only at h
+  simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl, rfl⟩ := h
+  have hvb : GoValue.locSup backing ≤ σ.nextAddr := by
+    have hbb := buildAppendBackingValue_locSup hbacking
+    rw [convElems_sup] at hbb
+    simp only [Array.toList_empty, goValueListSup, Nat.max_self] at hbb
+    omega
+  obtain ⟨w1, w2, w3⟩ := alloc_wf hw hvb halloc
+  obtain ⟨d1, d2, d6⟩ := alloc_shape halloc
+  refine ⟨w1, by omega, ?_⟩
+  show Loc.locSup base ≤ σa.nextAddr
+  omega
+
+/-- The strict apply WITH the stream preserves well-formedness: a conversion head is
+`convCapApplyAt` at the drawn slot (the consult touches no store), every other head is
+`applyStrictOp`. -/
+theorem applyStrictOpPick_wf {σ : Store} {leafOf : Loc → Loc} {op : StrictOp} {vs : List GoValue}
+    {ch : Choices} {v : GoValue} {σ' : Store} {tr : AccessTrace} {ch' : Choices}
+    {ps : List PickRecord}
+    (hw : StateWf ctx σ) (hvs : goValueListSup vs ≤ σ.nextAddr)
+    (h : applyStrictOpPick ctx σ leafOf op vs ch = .ok ((v, σ', tr), ch', ps)) :
+    StateWf ctx σ' ∧ σ.nextAddr ≤ σ'.nextAddr ∧ GoValue.locSup v ≤ σ'.nextAddr := by
+  unfold applyStrictOpPick at h
+  split at h
+  · -- a conversion head
+    rename_i kind literal hk
+    unfold convCapApply at h
+    split at h
+    · rename_i value hv
+      rcases hc : Choices.consumeAtE .convCap (convCapWidth kind literal value) ch with ⟨pick, ch₁, ps₁⟩
+      rw [hc] at h
+      try dsimp only at h
+      cases hx : convCapApplyAt ctx σ kind literal value pick with
+      | error e => rw [hx] at h; simp [Except.map] at h
+      | ok r =>
+        rw [hx] at h
+        simp only [Except.map, Except.ok.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl, rfl⟩ := h
+        exact convCapApplyAt_wf hw hx
+    · obtain ⟨msg, hr⟩ := convRefuse_eq_error kind vs
+      rw [hr] at h
+      simp [Except.map] at h
+  · -- every other head: the pure apply beside the untouched stream
+    cases hx : applyStrictOp ctx σ leafOf op vs with
+    | error e => rw [hx] at h; simp [Except.map] at h
+    | ok r =>
+      rw [hx] at h
+      simp only [Except.map, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl, rfl⟩ := h
+      exact applyStrictOp_wf hw hvs hx
 
 /-! ## `applyStmtOpCore` / `applyStmtOp` preserve well-formedness -/
 
@@ -7686,8 +7728,8 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
       runtimeErrorValue_locSup, panicEntry_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc ⊢
     omega
-  case strictApply op done v r env k hres hdel =>
-    rcases toResult_cases hres with ⟨⟨out, s₂, tr₂⟩, rfl, happly⟩ | ⟨msg, rfl, -⟩
+  case strictApply op done v r env k ch hres hdel =>
+    rcases toResult_cases hres with ⟨⟨⟨out, s₂, tr₂⟩, ch₂, ps₂⟩, rfl, happly⟩ | ⟨msg, rfl, -⟩
     · simp only [deliver_ok, Prod.mk.injEq] at hdel
       obtain ⟨rfl, rfl, rfl⟩ := hdel
 
@@ -7704,7 +7746,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : Store} {c' : Config}
         Nat.max_le] at hc
         simp only [goValueListSup]
         omega
-      obtain ⟨w1, w2, w6⟩ := applyStrictOp_wf hs hop happly
+      obtain ⟨w1, w2, w6⟩ := applyStrictOpPick_wf hs hop happly
       refine ⟨w1, ?_, w2⟩
       simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
         GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,

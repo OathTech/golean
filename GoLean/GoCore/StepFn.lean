@@ -726,9 +726,16 @@ def stepFn (s : Store) (c : Config) (choices : Choices) :
           return (.evalE e env (.strictK op (v :: done) rest env k'), s, choices, ⟨[], [], []⟩)
       | .strictK op done [] _ k' => do
           -- `.deref`'s pointee read is narrowed by the continuation's
-          -- projection chain (`leafOf := projChainTarget ctx s k'`).
-          let r ← toResult (applyStrictOp ctx s (projChainTarget ctx s k') op (v :: done).reverse)
-          return deliverS s k' choices (fun (out, s', tr) => (.retV out k', s', choices, ⟨tr, [], []⟩)) r
+          -- projection chain (`leafOf := projChainTarget ctx s k'`). The apply
+          -- goes through the stream-holding funnel `applyStrictOpPick` (R3 /
+          -- b6, 2026-10-07): the two conversion heads draw `ChoiceSite.convCap`
+          -- there and return the popped stream with the pick's record; every
+          -- other head is the pure `applyStrictOp`, the stream untouched. The
+          -- delivered panic (no conversion panics; a non-conversion head never
+          -- consults) carries the pre-apply stream and the empty label.
+          let r ← toResult (applyStrictOpPick ctx s (projChainTarget ctx s k') op (v :: done).reverse choices)
+          return deliverS s k' choices
+            (fun ((out, s', tr), choices', ps) => (.retV out k', s', choices', ⟨tr, ps, []⟩)) r
       | .andK r env k' => do
           if ← valueAsBool v then
             return (.evalE r env (.boolK k'), s, choices, ⟨[], [], []⟩)

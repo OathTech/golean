@@ -1,2 +1,2 @@
-# id	subject	args	expected_status	expected_reason	features
--	byteConversionCap	-	ok	-	strings,bytes,conversions,cap
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+-	byteConversionCap	-	ok	-	strings,bytes,conversions,cap,nondet	membership	R3 / b6 (docs/2026-10-07_conv-cap-design.md §1 (iii); ChoiceSite.convCap): cap([]byte(s))*10 + len for a VARIABLE s := "hello" (a non-literal operand), the result only read — gc realizes the zero-copy member 5 (cap = len: the slice aliases the string); the envelope is {5, 8, 32} = len ∪ roundupsize(5) ∪ the 32-byte conversion buffer, so the observation set is {55, 85, 325}: one convCap consult at bound 3. Re-laned from strict 2026-10-07 — the row observed a latitude the pre-widening machine pinned to its default-tape member; PASS on both lanes	width=3,members=3,sites=8

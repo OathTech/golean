@@ -187,7 +187,7 @@ theorem fact_write_survives_panic {s s' : Store} {x y : VarId} {lx ly : Loc} {vy
     · rw [hbody]; simp only [stepFn_eqns]
     · rw [evalE_strict_more (e := .toInterface ty .string (.stringLit txt)) fenv _ ch rfl]
     · simp only [stepFn_eqns]
-    · rw [retV_strictK_apply (v := .string txt) (done := []) fenv _ ch
+    · rw [retV_strictK_apply (v := .string txt) (done := []) fenv _ ch rfl
         (applyStrictOp_toInterface_string s' _ ty (.string txt))]
     · simp only [stepFn_eqns, panicPayload]
     · simp only [stepFn_eqns]
@@ -1334,23 +1334,52 @@ theorem Pin.retV_strictK_more : ∀ {ctx : ProgramCtx} (s : Store) (v : GoValue)
   @GoLean.GoCore.Equations.retV_strictK_more
 
 theorem Pin.retV_strictK_apply : ∀ {ctx : ProgramCtx} {s s' : Store} {v out : GoValue} {op : StrictOp}
-    {done : List GoValue} {tr : AccessTrace} (env : LocalEnv) (k' : Cont) (ch : Choices)
+    {done : List GoValue} {tr : AccessTrace} (env : LocalEnv) (k' : Cont) (ch : Choices) (_hk : op.convKind? = none)
     (_ha : applyStrictOp ctx s (projChainTarget ctx s k') op (v :: done).reverse = .ok (out, s', tr)),
     stepFn ctx s (.retV v (.strictK op done [] env k')) ch = .ok (.retV out k', s', ch, ⟨tr, [], []⟩) :=
   @GoLean.GoCore.Equations.retV_strictK_apply
 
 theorem Pin.retV_strictK_apply_panic : ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {op : StrictOp}
-    {done : List GoValue} {msg : String} (env : LocalEnv) (k' : Cont) (ch : Choices)
+    {done : List GoValue} {msg : String} (env : LocalEnv) (k' : Cont) (ch : Choices) (_hk : op.convKind? = none)
     (_ha : applyStrictOp ctx s (projChainTarget ctx s k') op (v :: done).reverse = .error (.panic msg)),
     stepFn ctx s (.retV v (.strictK op done [] env k')) ch = .ok (.panicking [panicEntry msg] k', s, ch, ⟨[], [], []⟩) :=
   @GoLean.GoCore.Equations.retV_strictK_apply_panic
 
 theorem Pin.retV_strictK_apply_error : ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {op : StrictOp}
-    {done : List GoValue} {e : Stop} (env : LocalEnv) (k' : Cont) (ch : Choices)
+    {done : List GoValue} {e : Stop} (env : LocalEnv) (k' : Cont) (ch : Choices) (_hk : op.convKind? = none)
     (_ha : applyStrictOp ctx s (projChainTarget ctx s k') op (v :: done).reverse = .error e)
     (_hne : ∀ msg, e ≠ .panic msg),
     stepFn ctx s (.retV v (.strictK op done [] env k')) ch = .error e :=
   @GoLean.GoCore.Equations.retV_strictK_apply_error
+
+theorem Pin.retV_strictK_conv : ∀ {ctx : ProgramCtx} {s s' : Store} {v out : GoValue} {op : StrictOp}
+    {done : List GoValue} {kind : ConvKind} {literal : Bool} {value : GoString} {tr : AccessTrace}
+    (env : LocalEnv) (k' : Cont) (ch : Choices)
+    (_hk : op.convKind? = some (kind, literal)) (_hv : convOperand? (v :: done).reverse = some value)
+    (_ha : convCapApplyAt ctx s kind literal value
+      (Choices.consumeAt .convCap (convCapWidth kind literal value) ch).1 = .ok (out, s', tr)),
+    stepFn ctx s (.retV v (.strictK op done [] env k')) ch
+      = .ok (.retV out k', s', (Choices.consumeAt .convCap (convCapWidth kind literal value) ch).2,
+          ⟨tr, PickRecord.ofPick .convCap (convCapWidth kind literal value)
+            (Choices.consumeAt .convCap (convCapWidth kind literal value) ch).1, []⟩) :=
+  @GoLean.GoCore.Equations.retV_strictK_conv
+
+theorem Pin.retV_strictK_conv_nopop : ∀ {ctx : ProgramCtx} {s s' : Store} {v out : GoValue} {op : StrictOp}
+    {done : List GoValue} {kind : ConvKind} {literal : Bool} {value : GoString} {tr : AccessTrace}
+    (env : LocalEnv) (k' : Cont) (ch : Choices)
+    (_hk : op.convKind? = some (kind, literal)) (_hv : convOperand? (v :: done).reverse = some value)
+    (_hw : convCapWidth kind literal value ≤ 1)
+    (_ha : convCapApplyAt ctx s kind literal value 0 = .ok (out, s', tr)),
+    stepFn ctx s (.retV v (.strictK op done [] env k')) ch = .ok (.retV out k', s', ch, ⟨tr, [], []⟩) :=
+  @GoLean.GoCore.Equations.retV_strictK_conv_nopop
+
+theorem Pin.retV_strictK_conv_refuse : ∀ {ctx : ProgramCtx} {s : Store} {v : GoValue} {op : StrictOp}
+    {done : List GoValue} {kind : ConvKind} {literal : Bool} {e : Stop}
+    (env : LocalEnv) (k' : Cont) (ch : Choices)
+    (_hk : op.convKind? = some (kind, literal)) (_hv : convOperand? (v :: done).reverse = none)
+    (_hr : convRefuse kind (v :: done).reverse = .error e) (_hne : ∀ msg, e ≠ .panic msg),
+    stepFn ctx s (.retV v (.strictK op done [] env k')) ch = .error e :=
+  @GoLean.GoCore.Equations.retV_strictK_conv_refuse
 
 theorem Pin.exec_wide : ∀ {ctx : ProgramCtx} {s : Store} {stmt : Stmt} {op : StmtOp} {nt : Nat} {e : Expr}
     {rest : List Expr} (env : LocalEnv) (k : Cont) (ch : Choices)
