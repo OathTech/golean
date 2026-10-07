@@ -1798,3 +1798,44 @@ equations ok, pool spec freeze + discharge ok (LANDED=M5: all 48 discharged, 0 o
 tables ok, inittask-std.tsv re-derivation ok, negative baseline no regression. Round 71 closed: FR-37 is closed on main
 (dot-imported stdlib variables refuse by name); BUG-117 (the inittask generator's fail-open) is open with its fix queued
 per item (4), batched with the gc-verified (a1) field-offsets lane; items (2)–(3) are queued lanes untouched by this train.
+
+### Train r72 — exported struct field offsets (gc-verified a1) and BUG-117 fixed — RULED (2026-10-07)
+
+[USER] Mike, 2026-10-07, verbatim, relayed by the [AGENT] coordinator — cite as relayed:
+- «1-4 approved as proposed» (recorded under Train r71, above) — items (2) the gc-verified project's (a1) field offsets:
+  build now, and (4) the `scripts/gen-inittask-table` fail-open fix (BUG-117), batched with (a1): the lane's authority.
+- «merge it» — the merge sign-off for `lane/field-offsets-inittask-1007` @ `4ea281da`, option (A): merge now, the
+  audit's follow-ups queued (below).
+
+The lane (3 commits): `GoLean/GoCore/Ops.lean` gains `structLayoutWith` / `tyStructLayoutAt` / `tyStructLayout` /
+`tyFieldOffsets` (pure addition, `Platform`-parametric, a non-struct refuses by name); layout lemmas pinned as BridgeSet
+rows 567–572 (RE-PIN 15; rows 1–566 byte-identical) and required by the core audit; `scripts/gen-inittask-table` fails
+closed (BUG-117 FIXED: a failing `go tool nm`, a `go list` package/dependency error outside the no-Go-files class, or a
+missing archive for a package with Go files dies by name), the tracked table re-derives byte-identical modulo the date
+line, and the new self-test `scripts/test-gen-inittask-table` runs in `scripts/ci`. No wire, frontend or semantic-core
+behaviour change. Caveat kept from the oracle: the four `sync` size arms are the amd64 constants and ignore the
+`Platform`. Lane gate (`ci --diff` at `afda6296`): FAIL on exactly the expected 5a pair (certificate provenance STALE:
+BridgeSet/Ops changed; the google-search echo); every other step ok
+(`docs/evidence/2026-10-07_field-offsets/ci-diff.tail.txt`).
+
+gc cross-check: the `rfl` controls' offsets agree with `unsafe.Offsetof` under go1.26.5 for the 4 structs checked
+in-lane (`docs/evidence/2026-10-07_field-offsets/gc-crosscheck.txt`) and for 5 more checked independently by the
+auditor — all 9 exact.
+
+Audit (as relayed by the [AGENT] coordinator): one Opus adversarial audit, **MERGE-CLEAN**; no blocking finding, no
+wrong answer. For the record, the auditor's own slip: it ran a Python check with `bash` and started a `scripts/ci` in its
+own scratch worktree, which it killed by PID; no tracked changes resulted.
+
+Queued follow-up ([AGENT], a small queue item; not part of this train):
+- (f1) `tyStructLayout_disjoint` at the entry point — row 569's (`structLayoutWith_disjoint`) non-overlap is stated for
+  the inner loop only.
+- (f2) lemmas «field alignment ∣ struct alignment» and «alignment ∣ size» (needed for nested structs and arrays of
+  structs).
+- (f3) `scripts/test-gen-inittask-table` leaves a `.tmp/gen-inittask-test.*` directory behind per ci run — delete it on
+  success.
+
+The post-offer changelog's drafted field-offsets row (`docs/changelog/20d3946d-WINDOW.md`) is filled as round r72 at the
+table's top (the `sync`-sizes platform caveat kept).
+
+Train: `train/r72` = the lane's 3 commits cherry-picked onto main `5c5d225e` (the lane's merge-base), 0 conflicts; tree
+identical to the lane tip `4ea281da`.
