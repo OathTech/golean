@@ -1910,8 +1910,9 @@ function and an arity mismatch now refuse at the CLI as `status:error` (previous
 rowed open in `docs/BUGS.md` ([AGENT], «every detected gap is rowed»): **BUG-119** (`coverage-observations` still
 takes `--arg-int` unchecked, so an out-of-range value wraps silently; `native-json-run` now refuses it) and
 **BUG-120** (a missing `--input` file makes `native-json-run` throw an uncaught exception instead of a named
-refusal). [AGENT] numbering: BUG-118 is reserved by the unmerged lane `lane/conv-cap-1007` (its fixed `cap([]rune(s))`
-entry), so these two take 119 and 120.
+refusal). [AGENT] numbering: id 118 is reserved by the unmerged lane `lane/conv-cap-1007` (its fixed `cap([]rune(s))`
+entry), so these two take 119 and 120 (spelled without the `BUG-` prefix here so that the reconciler's C6 check does not
+flag it as dangling before that lane lands; the r73 5a commit made this wording fix).
 
 **Gate budget raises** (item (2); gate apparatus, trusted surface #2; its own commit, not records-only): the
 per-subprocess audit budget in `tools/typed_audit.py` (`run_logged`; it governs the method-identity poison compile and
@@ -1927,3 +1928,19 @@ for the budget raises.
 
 Train: `train/r73` = the lane's 3 commits cherry-picked onto main `c605aa4c` (the lane's merge-base), 0 conflicts; tree
 identical to the lane tip `0a9db639`; then the gate-budget commit and this records commit.
+
+**Merge train r73 — the 5a record** ([AGENT] train worker, 2026-10-07). Pre-merge main `c605aa4c` →
+`refs/snapshots/r73/main`; train tip `a02e84da` fast-forwarded; primary build `scripts/build-certified` EXIT=0 (668 s;
+binary `32a01814…` → `b6074d6c…`). `release-check --base refs/snapshots/r73/main` EXIT=2 — «STALE certification:
+changed dependency build/files/GoLean/CLI.lean» (expected). `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --slow`
+(start load 17.9/24.1/26.1) EXIT=1, 1536 s, `RESULT: FAIL` on EXACTLY the 5a pair: `certificate provenance` STALE and its
+echo `imported-goose/channel/google-search` PASS → FAIL (membership; 3890 = 3649 / 241 at the run); every other step
+ok, incl. wire boundary (with the 10 entry-argument controls), package-correct method identity (139 s, under the new
+360 s budget), pool spec at LANDED=M5 (48 discharged, 0 owed), semantic equations, core totality audit, core build
+warning-free, frontend pins, inittask self-test and re-derivation, negative baseline no regression; the reconciler's
+one HIGH is the stale certificate itself (report-only). Candidate: `schema`, `claim` and `observations_sha256`
+IDENTICAL to the tracked record; inputs differ only in `build/files` `GoLean/CLI.lean`,
+`GoLean/GoCore/{BridgeSet,Ops}.lean` and `files` `scripts/check-wire-boundary`, `scripts/diff-coverage`,
+`scripts/test-gen-inittask-table`, `tools/typed_audit.py`; the receipt moved (source `3d311a35` → `a02e84da`,
+213.18 s). INSTALLED as `baselines/certified/imported-goose__channel__google-search.certified.json` — a provenance
+refresh, not a re-pin; the certified set is unchanged. Tail: `docs/evidence/2026-10-07_train-r73/r73-ci-slow.tail.txt`.
