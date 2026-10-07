@@ -7,7 +7,11 @@ package main
 // scripts/check-wire-boundary run it through the real CLI: the mixed call
 // answers pick(1, true, false, 2) = 103 (and the other bool order 1001+2),
 // and every mistyped, malformed, out-of-range or wrong-arity call refuses
-// naming its cause.
+// naming its cause. `quarantined` is frontend-QUARANTINED (a non-constant
+// Sprintf format): its parameter is an unsupported stub, so the CLI defers
+// and the machine refuses as `unsupported`, naming the quarantine.
+
+import "fmt"
 
 type Flag bool
 type Small uint8
@@ -23,6 +27,12 @@ func pick(n int, b bool, f Flag, s Small) int {
 	return r + int(s)
 }
 
+func quarantined(n int) string {
+	f := "%d"
+	return fmt.Sprintf(f, n)
+}
+
 func main() {
 	println(pick(1, true, false, 2))
+	println(quarantined(1))
 }

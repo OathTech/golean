@@ -564,7 +564,8 @@ expect_refusal ri-two-targets         'rand-intn assigned to 2 targets'
 # orders, so a swapped binding cannot pass), then refusals by name: --arg-bool at an int parameter, --arg-int at a
 # bool parameter and at a DECLARED-bool parameter (once a later `stuck`, or nothing), an out-of-range --arg-int at a
 # declared uint8 (once a silent wrap), an arity mismatch (exit 1, JSON refusal), and a malformed bool literal (a
-# parse-time usage refusal, exit 2 — `--arg-int`'s malformed-literal exit code).
+# parse-time usage refusal, exit 2 — `--arg-int`'s malformed-literal exit code); a quarantined entry's stub parameter is
+# deferred to the machine's `unsupported` refusal (both flags).
 GOCACHE="$ROOT/artifacts/go-build-cache" GO111MODULE=off \
   go run ./tools/nativefrontend --dir Tests/wire-boundary-argbool --out "$gate_scratch/ab.json"
 run_pick() { "$GOLEAN" native-json-run --input "$gate_scratch/ab.json" --function pick "$@" 2>&1; }
@@ -605,4 +606,14 @@ expect_pick_refusal arg-arity          1 --arg-int 1 --arg-bool true --arg-bool 
   'takes 4 parameter(s), got 3'
 expect_pick_refusal arg-bool-malformed 2 --arg-int 1 --arg-bool yes --arg-bool false --arg-int 2 -- \
   '--arg-bool: not a bool literal' 'yes'
-echo 'Wire boundary gate: PASS (11 byte-level controls + 56 unseq-node controls + 13 promotion-record controls + 16 B6 numeric-locals controls + 5 rand-intn controls + 8 entry-argument controls through the real CLI)'
+# A frontend-quarantined entry's stub parameter: the CLI defers, the machine refuses as `unsupported` naming the
+# quarantine (the refusal keeps its class — the harness stages it frontend-export, as before the check existed).
+for qarg in '--arg-int 1' '--arg-bool true'; do
+  out="$("$GOLEAN" native-json-run --input "$gate_scratch/ab.json" --function quarantined $qarg 2>&1)" && {
+    echo "check-wire-boundary: FAIL [arg-quarantined $qarg] — the quarantined entry RAN: $out" >&2; exit 1; }
+  if [[ "$out" != *'"status":"unsupported"'* || "$out" != *'frontend-quarantined'* ]]; then
+    echo "check-wire-boundary: FAIL [arg-quarantined $qarg] — expected the machine's unsupported refusal naming the quarantine: $out" >&2; exit 1
+  fi
+  echo "ok [arg-quarantined $qarg] deferred to the machine: unsupported, naming the quarantine"
+done
+echo 'Wire boundary gate: PASS (11 byte-level controls + 56 unseq-node controls + 13 promotion-record controls + 16 B6 numeric-locals controls + 5 rand-intn controls + 10 entry-argument controls through the real CLI)'

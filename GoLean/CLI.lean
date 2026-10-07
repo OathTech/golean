@@ -41,14 +41,18 @@ def parseBoolLiteral (value : String) : Except String Bool :=
 /-- A parameter type's UNDERLYING type for entry-argument checking: a
 declared non-struct type (`type Flag bool`, `type Count uint8`) resolves
 through the table to its underlying; every other type (structs and
-interfaces included) is returned as is. `bound` descends on the table's
-dependency order (`TypeEnv.WellFounded`); exhaustion, an unknown index or
-an opaque declaration refuses by name. -/
+interfaces included) is returned as is; an opaque declaration resolves to
+`.unsupported` (the machine's refusal). `bound` descends on the table's
+dependency order (`TypeEnv.WellFounded`); exhaustion or an unknown index
+refuses by name. -/
 def entryParamUnderlying (types : GoCore.TypeEnv) : Nat → GoCore.Ty → Except String GoCore.Ty
   | bound + 1, .defined i =>
       match types[i]? with
       | some (_, .defined target) => entryParamUnderlying types bound target
-      | some (_, .opaqueDecl reason) => .error s!"parameter type index {i} is opaque: {reason}"
+      -- An opaque declaration is the machine's to refuse (`unsupported`,
+      -- naming the feature, at parameter normalization): handed back as
+      -- `.unsupported` so `entryArgValues` defers to it.
+      | some (_, .opaqueDecl reason) => .ok (.unsupported reason)
       | some _ => .ok (.defined i)
       | none => .error s!"parameter type index {i} is not in the program's type table"
   | 0, .defined i => .error s!"parameter type index {i}: type-table descent exhausted"
@@ -60,8 +64,10 @@ BY NAME, on: an unknown entry function; an arity mismatch; an
 `--arg-int` at a parameter whose underlying type is not an integer type;
 an `--arg-int` literal outside its parameter kind's range (no silent
 wrap — a Go call `f(300)` at a `uint8` parameter is a compile error); an
-`--arg-bool` at a parameter whose underlying type is not `bool`. Before
-this check (2026-10-07) an `--arg-int` at a `bool`, `string` or
+`--arg-bool` at a parameter whose underlying type is not `bool`. A
+parameter whose underlying type is `.unsupported` (a frontend-quarantined
+stub, an opaque declaration) is deferred to the machine, which refuses it as
+`unsupported` naming the quarantine cause. Before this check (2026-10-07) an `--arg-int` at a `bool`, `string` or
 interface parameter reached the machine unchecked (normalization's
 catch-all arm keeps the raw `.int`), so the mismatch surfaced, if at
 all, only as a `stuck` at a later use of the parameter, and an
@@ -93,6 +99,13 @@ def entryArgValues (program : GoCore.Program) (name : String) (args : Array Entr
           throw s!"--arg-int (argument {pos + 1}): {v} is out of range for parameter {pname} of type {shown} ({kind.name})"
         out := out.push (.int v)
     | .bool b, .bool => out := out.push (.bool b)
+    -- A frontend-QUARANTINED parameter (`$stub` params of a quarantined
+    -- function, an opaque declaration) is not checked here: the value is
+    -- handed on and the machine refuses it as `unsupported`, naming the
+    -- quarantine cause (parameter normalization's `.unsupported` arm), so
+    -- the refusal keeps its class (the harness's frontend-export stage).
+    | .int v, .unsupported _ => out := out.push (.int v)
+    | .bool b, .unsupported _ => out := out.push (.bool b)
     | _, _ =>
         throw s!"{arg.flag} (argument {pos + 1}): parameter {pname} of entry function {name} has type {shown}, which {arg.flag} cannot supply"
   return out
