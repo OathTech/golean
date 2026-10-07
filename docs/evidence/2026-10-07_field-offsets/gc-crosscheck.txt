@@ -1,0 +1,17 @@
+# gc cross-check of GoLean's tyStructLayout controls (GoLean/GoCore/Ops.lean, the 'Controls' block).
+# [AGENT] build worker, lane lane/field-offsets-inittask-1007, 2026-10-07.
+# Probe: offsetof-probe.go.txt (save as main.go). Command, from a scratch dir under .tmp/:
+#   GOCACHE=<scratch> GO111MODULE=off go run main.go
+# toolchain: go version go1.26.5 linux/amd64
+## gc output (unsafe.Offsetof / Sizeof / Alignof):
+T0 offsets [0 8 16] size 24 align 8
+E offsets [] size 0 align 1
+T2 offsets [0 8] size 16 align 8
+T3 offsets [0 8 24 28 36] size 40 align 8
+## GoLean controls (each an 'example ... := rfl' on gcAmd64; #eval'd first):
+T0 = struct{a int8; b int64; c int16}            tyStructLayout = .ok ([0, 8, 16], 24, 8)
+E  = struct{}                                     tyStructLayout = .ok ([], 0, 1)
+T2 = struct{a int64; z E}                         tyStructLayout = .ok ([0, 8], 16, 8)   (zero-size final field occupies 1 byte)
+T3 = struct{a byte; s string; b bool; m sync.Mutex; c int32}  tyStructLayout = .ok ([0, 8, 24, 28, 36], 40, 8)
+## verdict: all four agree with gc (offsets, size, alignment).
+## caveat: sync.Mutex's (8, 4) is tySizeAlignTy's amd64 constant arm, which ignores the Platform (Platform.lean).

@@ -53,6 +53,13 @@ def requiredModules : List Name := [
 /-- Required core theorems (the `semantic interface` audit's CORE exports, plus the
 re-homed regressions). Each must exist as a theorem. -/
 def exports : List Name := [
+    -- Exported struct field offsets (gc-verified (a1)), BridgeSet rows 567–572.
+    ``GoLean.GoCore.structLayoutWith_sizeAlign,
+    ``GoLean.GoCore.structLayoutWith_fields,
+    ``GoLean.GoCore.structLayoutWith_disjoint,
+    ``GoLean.GoCore.tyStructLayoutAt_sizeAlign,
+    ``GoLean.GoCore.tyStructLayout_ok_sizeAlign,
+    ``GoLean.GoCore.tyStructLayout_fields,
     -- Pool grind M5, BridgeSet rows 558–566.
     ``GoLean.GoCore.PoolSound.stepML_single_sound,
     ``GoLean.GoCore.PoolSound.stepML_single_complete,

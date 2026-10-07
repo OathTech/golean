@@ -1,0 +1,40 @@
+// gc cross-check for GoLean's tyStructLayout controls (Ops.lean, 2026-10-07).
+package main
+
+import (
+	"fmt"
+	"sync"
+	"unsafe"
+)
+
+type E struct{}
+
+type T0 struct {
+	a int8
+	b int64
+	c int16
+}
+
+type T2 struct {
+	a int64
+	z E
+}
+
+type T3 struct {
+	a byte
+	s string
+	b bool
+	m sync.Mutex
+	c int32
+}
+
+func main() {
+	var t0 T0
+	fmt.Printf("T0 offsets [%d %d %d] size %d align %d\n", unsafe.Offsetof(t0.a), unsafe.Offsetof(t0.b), unsafe.Offsetof(t0.c), unsafe.Sizeof(t0), unsafe.Alignof(t0))
+	var e E
+	fmt.Printf("E offsets [] size %d align %d\n", unsafe.Sizeof(e), unsafe.Alignof(e))
+	var t2 T2
+	fmt.Printf("T2 offsets [%d %d] size %d align %d\n", unsafe.Offsetof(t2.a), unsafe.Offsetof(t2.z), unsafe.Sizeof(t2), unsafe.Alignof(t2))
+	var t3 T3
+	fmt.Printf("T3 offsets [%d %d %d %d %d] size %d align %d\n", unsafe.Offsetof(t3.a), unsafe.Offsetof(t3.s), unsafe.Offsetof(t3.b), unsafe.Offsetof(t3.m), unsafe.Offsetof(t3.c), unsafe.Sizeof(t3), unsafe.Alignof(t3))
+}

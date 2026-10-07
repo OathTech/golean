@@ -436,6 +436,396 @@ def tySizeBytes (types : TypeEnv) (ty : Ty) : Except Stop Nat := do
   let (size, _) ← tySizeAlign platform types ty
   pure size
 
+/-! ### Struct field offsets (gc-verified request (a1), 2026-10-07)
+
+The per-field offsets `structSizeAlignWith` computes and discards, EXPORTED
+(the gc-verified team's request (a1); [USER] Mike 2026-10-07 «1-4 approved as
+proposed», relayed). Pure addition: `structLayoutWith` is the SAME loop — the
+same field-size oracle, the same accumulators, the same final-field rule —
+that also returns each field's offset; `structLayoutWith_sizeAlign` proves its
+`(size, align)` projection IS `structSizeAlignWith` on every input (error
+included), so the size computation is untouched and the offsets cannot drift
+from it. Offsets are gc's `Offsetsof` (`deps/go/src/go/types/gcsizes.go`);
+cross-checked against `unsafe.Offsetof` under go1.26.5,
+`docs/evidence/2026-10-07_field-offsets/`. Caveat inherited from the oracle:
+the four `.sync` arms of `tySizeAlignTy` are the amd64 constants and ignore
+`p` (`Platform.lean`), so a struct embedding a `sync` primitive has
+platform-parametric offsets only up to that caveat. -/
+
+/-- `structSizeAlignWith`'s loop, also returning the field offsets in field
+order: `(offsets, size, align)`. -/
+def structLayoutWith (fieldSize : Ty → Except Stop (Nat × Nat)) :
+    List FieldDef → Nat → Nat → Nat → Nat → Except Stop (List Nat × Nat × Nat)
+  | [], _, maxAlign, lastOffset, lastSize =>
+      let lastSize := if lastOffset > 0 && lastSize == 0 then 1 else lastSize
+      pure ([], alignUpTo (lastOffset + lastSize) maxAlign, maxAlign)
+  | field :: rest, offset, maxAlign, _, _ => do
+      let (size, align) ← fieldSize field.typ
+      let fieldOffset := alignUpTo offset align
+      let (offsets, structSize, structAlign) ←
+        structLayoutWith fieldSize rest (fieldOffset + size) (max maxAlign align)
+          fieldOffset size
+      pure (fieldOffset :: offsets, structSize, structAlign)
+
+/-- The INDEX layer: the layout of the STRUCT declared at index `i`, with the
+field oracle `tySizeAlignAt` uses at the same bound (so `tySizeAlignAt`'s
+struct arm is this layout's projection, `tyStructLayoutAt_sizeAlign`). `struct{}`
+is `([], 0, 1)`. FAIL-CLOSED: a non-struct entry (a defined type over a
+non-struct — defined-over-defined-struct never reaches the table, `TypeDef`),
+an interface, an opaque declaration or an unknown index is a cause-naming
+refusal. -/
+def tyStructLayoutAt (p : Platform) (types : TypeEnv) :
+    Nat → TypeIdx → Except Stop (List Nat × Nat × Nat)
+  | 0, i => typeIndexExhausted "struct-layout computation" i
+  | bound + 1, i =>
+      match types[i]? with
+      | some (_, .struct fields) =>
+          if fields.isEmpty then pure ([], 0, 1)
+          else structLayoutWith (tySizeAlignTy p (tySizeAlignAt p types bound)) fields.toList 0 1 0 0
+      | some (_, .defined _) =>
+          unsupported s!"struct-layout computation: type index {i} is not a struct type"
+      | some (_, .interfaceDef _) =>
+          unsupported s!"struct-layout computation: type index {i} is an interface, not a struct type"
+      | some (_, .opaqueDecl feature) =>
+          unsupported s!"struct-layout computation: {feature}"
+      | none => unsupported s!"struct-layout computation: unknown type index {i}"
+
+/-- The layout `(offsets, size, align)` of a struct type under platform `p`
+(`tySizeAlign`'s signature; the descent seeded at `types.size`). Only a
+`.defined` head naming a struct entry has field offsets; any other type is a
+cause-naming refusal. -/
+def tyStructLayout (p : Platform) (types : TypeEnv) : Ty → Except Stop (List Nat × Nat × Nat)
+  | .defined i => tyStructLayoutAt p types types.size i
+  | _ => unsupported "struct-layout computation: not a struct type"
+
+/-- The field offsets of a struct type under platform `p`, in field order
+(gc's `Offsetsof`; `unsafe.Offsetof` of each field). -/
+def tyFieldOffsets (p : Platform) (types : TypeEnv) (ty : Ty) : Except Stop (List Nat) := do
+  let (offsets, _, _) ← tyStructLayout p types ty
+  pure offsets
+
+/-! #### Layout lemmas -/
+
+theorem alignUpTo_ge (offset align : Nat) : offset ≤ alignUpTo offset align := by
+  unfold alignUpTo
+  split
+  · exact Nat.le_refl _
+  · rename_i h
+    have ha : 0 < align := Nat.pos_of_ne_zero (by simpa using h)
+    have hdm := Nat.div_add_mod (offset + align - 1) align
+    have hlt := Nat.mod_lt (offset + align - 1) ha
+    rw [Nat.mul_comm] at hdm
+    omega
+
+theorem alignUpTo_dvd {offset align : Nat} (h : align ≠ 0) : align ∣ alignUpTo offset align := by
+  unfold alignUpTo
+  have : (align == 0) = false := by simpa using h
+  rw [if_neg (by simp [this])]
+  exact Nat.dvd_mul_left _ _
+
+/-- The size oracle is monotone in its index layer: an answer of `f` that is
+also `g`'s makes every type-layer answer of `f` also `g`'s. -/
+theorem tySizeAlignTy_mono {p : Platform} {f g : TypeIdx → Except Stop (Nat × Nat)}
+    (hfg : ∀ i r, f i = .ok r → g i = .ok r) :
+    ∀ (ty : Ty) (r : Nat × Nat), tySizeAlignTy p f ty = .ok r → tySizeAlignTy p g ty = .ok r := by
+  intro ty
+  induction ty using Ty.arrayInduction with
+  | array n e ih =>
+      intro r h
+      simp only [tySizeAlignTy] at h ⊢
+      cases he : tySizeAlignTy p f e with
+      | error _ => rw [he] at h; cases h
+      | ok r' => rw [he] at h; rw [ih r' he]; exact h
+  | leaf t hne =>
+      intro r h
+      cases t with
+      | array n e => exact absurd rfl (hne n e)
+      | defined i => exact hfg i r h
+      | sync k => cases k <;> exact h
+      | _ => exact h
+
+theorem structSizeAlignWith_mono {f g : Ty → Except Stop (Nat × Nat)}
+    (hfg : ∀ t r, f t = .ok r → g t = .ok r) :
+    ∀ (fields : List FieldDef) (offset maxAlign lastOffset lastSize : Nat) (r : Nat × Nat),
+      structSizeAlignWith f fields offset maxAlign lastOffset lastSize = .ok r →
+      structSizeAlignWith g fields offset maxAlign lastOffset lastSize = .ok r
+  | [], _, _, _, _, _, h => h
+  | field :: rest, offset, maxAlign, lastOffset, lastSize, r, h => by
+      simp only [structSizeAlignWith] at h ⊢
+      cases hf : f field.typ with
+      | error _ => rw [hf] at h; cases h
+      | ok sa =>
+          rw [hf] at h
+          rw [hfg _ _ hf]
+          exact structSizeAlignWith_mono hfg rest _ _ _ _ r h
+
+/-- Raising the index bound by one preserves every successful answer. -/
+theorem tySizeAlignAt_succ (p : Platform) (types : TypeEnv) :
+    ∀ (bound : Nat) (i : TypeIdx) (r : Nat × Nat),
+      tySizeAlignAt p types bound i = .ok r → tySizeAlignAt p types (bound + 1) i = .ok r := by
+  intro bound
+  induction bound with
+  | zero =>
+      intro i r h
+      simp [tySizeAlignAt, typeIndexExhausted, unsupported, throw, throwThe, MonadExceptOf.throw] at h
+  | succ b ih =>
+      intro i r h
+      have hty := tySizeAlignTy_mono (p := p) ih
+      rw [tySizeAlignAt.eq_2] at h ⊢
+      cases hi : types[i]? with
+      | none => simp only [hi] at h ⊢; exact h
+      | some e =>
+          obtain ⟨id, d⟩ := e
+          cases d with
+          | struct fields =>
+              simp only [hi] at h ⊢
+              cases he : fields.isEmpty
+              · simp only [he, Bool.false_eq_true, ↓reduceIte] at h ⊢
+                exact structSizeAlignWith_mono hty _ _ _ _ _ _ h
+              · simp only [he, ↓reduceIte] at h ⊢; exact h
+          | defined u => simp only [hi] at h ⊢; exact hty _ _ h
+          | interfaceDef _ => simp only [hi] at h ⊢; exact h
+          | opaqueDecl _ => simp only [hi] at h ⊢; exact h
+
+/-- The layout's `(size, align)` projection IS `structSizeAlignWith`, on every
+input, error included. -/
+theorem structLayoutWith_sizeAlign (fieldSize : Ty → Except Stop (Nat × Nat))
+    (fields : List FieldDef) (offset maxAlign lastOffset lastSize : Nat) :
+    (fun r => (r.2.1, r.2.2)) <$> structLayoutWith fieldSize fields offset maxAlign lastOffset lastSize
+      = structSizeAlignWith fieldSize fields offset maxAlign lastOffset lastSize := by
+  induction fields generalizing offset maxAlign lastOffset lastSize with
+  | nil => rfl
+  | cons field rest ih =>
+      simp only [structLayoutWith, structSizeAlignWith]
+      cases fieldSize field.typ with
+      | error e => rfl
+      | ok sa =>
+          obtain ⟨size, align⟩ := sa
+          simp only [bind, Except.bind]
+          rw [← ih]
+          cases structLayoutWith fieldSize rest (alignUpTo offset align + size) (max maxAlign align)
+              (alignUpTo offset align) size with
+          | error e => rfl
+          | ok r => rfl
+
+/-- Success-form corollary: a layout's size and alignment are
+`structSizeAlignWith`'s. -/
+theorem structLayoutWith_ok_sizeAlign {fieldSize : Ty → Except Stop (Nat × Nat)}
+    {fields : List FieldDef} {offset maxAlign lastOffset lastSize : Nat}
+    {offsets : List Nat} {size align : Nat}
+    (h : structLayoutWith fieldSize fields offset maxAlign lastOffset lastSize
+      = .ok (offsets, size, align)) :
+    structSizeAlignWith fieldSize fields offset maxAlign lastOffset lastSize = .ok (size, align) := by
+  rw [← structLayoutWith_sizeAlign, h]; rfl
+
+/-- The cons step, as an equation of successes: the head field sits at its
+alignment-rounded offset and the rest is laid from its end. -/
+theorem structLayoutWith_cons_ok {fieldSize : Ty → Except Stop (Nat × Nat)}
+    {field : FieldDef} {rest : List FieldDef} {offset maxAlign lastOffset lastSize : Nat}
+    {offsets : List Nat} {size align : Nat} :
+    structLayoutWith fieldSize (field :: rest) offset maxAlign lastOffset lastSize
+        = .ok (offsets, size, align) ↔
+      ∃ sz al offs, fieldSize field.typ = .ok (sz, al) ∧
+        offsets = alignUpTo offset al :: offs ∧
+        structLayoutWith fieldSize rest (alignUpTo offset al + sz) (max maxAlign al)
+          (alignUpTo offset al) sz = .ok (offs, size, align) := by
+  constructor
+  · intro h
+    simp only [structLayoutWith, bind, Except.bind] at h
+    cases hf : fieldSize field.typ with
+    | error e => simp only [hf] at h; cases h
+    | ok sa =>
+        obtain ⟨sz, al⟩ := sa
+        simp only [hf] at h
+        cases hr : structLayoutWith fieldSize rest (alignUpTo offset al + sz) (max maxAlign al)
+            (alignUpTo offset al) sz with
+        | error e => simp only [hr] at h; cases h
+        | ok r =>
+            obtain ⟨offs, s, a⟩ := r
+            simp only [hr, pure, Except.pure, Except.ok.injEq, Prod.mk.injEq] at h
+            obtain ⟨rfl, rfl, rfl⟩ := h
+            exact ⟨sz, al, offs, rfl, rfl, hr⟩
+  · rintro ⟨sz, al, offs, hf, rfl, hr⟩
+    simp only [structLayoutWith, bind, Except.bind, hf, hr, pure, Except.pure]
+
+/-- The layout's per-field facts, by position: one offset per field, and field
+`k`'s oracle answer `(sz, al)` puts its offset `off` aligned to `al` (when
+`al ≠ 0`), at or after the loop's start `offset`, and `off + sz` within the
+struct size. Premise `offset ≤ lastOffset + lastSize` is the loop invariant
+(initially `0 ≤ 0 + 0`). -/
+theorem structLayoutWith_fields {fieldSize : Ty → Except Stop (Nat × Nat)} :
+    ∀ {fields : List FieldDef} {offset maxAlign lastOffset lastSize : Nat}
+      {offsets : List Nat} {size align : Nat},
+      offset ≤ lastOffset + lastSize →
+      structLayoutWith fieldSize fields offset maxAlign lastOffset lastSize
+        = .ok (offsets, size, align) →
+      offset ≤ size ∧ offsets.length = fields.length ∧
+      ∀ (k : Nat) (fd : FieldDef), fields[k]? = some fd →
+        ∃ off sz al, offsets[k]? = some off ∧ fieldSize fd.typ = .ok (sz, al) ∧
+          (al ≠ 0 → al ∣ off) ∧ offset ≤ off ∧ off + sz ≤ size
+  | [], offset, maxAlign, lastOffset, lastSize, offsets, size, align, hinv, h => by
+      simp only [structLayoutWith, pure, Except.pure, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl, -⟩ := h
+      have hl : lastSize ≤ (if lastOffset > 0 && lastSize == 0 then 1 else lastSize) := by
+        cases lastSize <;> simp
+      refine ⟨Nat.le_trans hinv (Nat.le_trans (by omega) (alignUpTo_ge _ _)), rfl, ?_⟩
+      intro k fd hk; simp at hk
+  | field :: rest, offset, maxAlign, lastOffset, lastSize, offsets, size, align, _, h => by
+      obtain ⟨sz, al, offs, hf, rfl, hr⟩ := structLayoutWith_cons_ok.mp h
+      obtain ⟨hs, hlen, hrest⟩ := structLayoutWith_fields (Nat.le_refl _) hr
+      have hge := alignUpTo_ge offset al
+      refine ⟨by omega, by simp [hlen], ?_⟩
+      intro k fd hk
+      cases k with
+      | zero =>
+          simp only [List.getElem?_cons_zero, Option.some.injEq] at hk
+          subst hk
+          exact ⟨_, sz, al, rfl, hf, alignUpTo_dvd, hge, by omega⟩
+      | succ k =>
+          simp only [List.getElem?_cons_succ] at hk ⊢
+          obtain ⟨off, sz', al', ho, hf', hd, hle, hb⟩ := hrest k fd hk
+          exact ⟨off, sz', al', ho, hf', hd, by omega, hb⟩
+
+/-- One field per offset. -/
+theorem structLayoutWith_length {fieldSize : Ty → Except Stop (Nat × Nat)}
+    {fields : List FieldDef} {offset maxAlign lastOffset lastSize : Nat}
+    {offsets : List Nat} {size align : Nat}
+    (hinv : offset ≤ lastOffset + lastSize)
+    (h : structLayoutWith fieldSize fields offset maxAlign lastOffset lastSize
+      = .ok (offsets, size, align)) :
+    offsets.length = fields.length :=
+  (structLayoutWith_fields hinv h).2.1
+
+/-- NON-OVERLAP in field order: in a successful layout, field `j` (oracle
+answer `(sz, al)`, offset `off`) ends at or before the offset `off'` of every
+later field `k`. -/
+theorem structLayoutWith_disjoint {fieldSize : Ty → Except Stop (Nat × Nat)} :
+    ∀ {fields : List FieldDef} {offset maxAlign lastOffset lastSize : Nat}
+      {offsets : List Nat} {size align : Nat},
+      structLayoutWith fieldSize fields offset maxAlign lastOffset lastSize
+        = .ok (offsets, size, align) →
+      ∀ (j k : Nat) (fd : FieldDef) (off off' sz al : Nat), j < k →
+        fields[j]? = some fd → fieldSize fd.typ = .ok (sz, al) →
+        offsets[j]? = some off → offsets[k]? = some off' → off + sz ≤ off'
+  | [], _, _, _, _, _, _, _, _, j, _, fd, _, _, _, _, _, hj, _, _, _ => by simp at hj
+  | field :: rest, offset, maxAlign, lastOffset, lastSize, offsets, size, align, h,
+      j, k, fd, off, off', sz, al, hjk, hj, hf, ho, ho' => by
+      obtain ⟨sz₀, al₀, offs, hf₀, rfl, hr⟩ := structLayoutWith_cons_ok.mp h
+      cases k with
+      | zero => omega
+      | succ k =>
+          simp only [List.getElem?_cons_succ] at ho'
+          cases j with
+          | zero =>
+              simp only [List.getElem?_cons_zero, Option.some.injEq] at hj ho
+              subst hj; subst ho
+              rw [hf] at hf₀; cases hf₀
+              obtain ⟨-, -, hrest⟩ := structLayoutWith_fields (Nat.le_refl _) hr
+              have hk : k < rest.length := by
+                have := (structLayoutWith_length (Nat.le_refl _) hr) ▸
+                  (List.getElem?_eq_some_iff.mp ho').1
+                exact this
+              obtain ⟨off'', _, _, ho'', _, _, hle, _⟩ :=
+                hrest k rest[k] (List.getElem?_eq_getElem hk)
+              rw [ho'] at ho''; cases ho''
+              exact hle
+          | succ j =>
+              simp only [List.getElem?_cons_succ] at hj ho
+              exact structLayoutWith_disjoint hr j k fd off off' sz al (by omega) hj hf ho ho'
+
+/-- The struct arm of `tySizeAlignAt` IS the layout's projection, at every
+positive bound (error included; at bound 0 both refuse, naming their own
+computation). -/
+theorem tyStructLayoutAt_sizeAlign (p : Platform) (types : TypeEnv) (bound : Nat) (i : TypeIdx)
+    (fields : Array FieldDef) {id : TypeId} (hi : types[i]? = some (id, .struct fields)) :
+    (fun r => (r.2.1, r.2.2)) <$> tyStructLayoutAt p types (bound + 1) i
+      = tySizeAlignAt p types (bound + 1) i := by
+  simp only [tyStructLayoutAt, tySizeAlignAt, hi]
+  split
+  · rfl
+  · exact structLayoutWith_sizeAlign _ _ _ _ _ _
+
+/-- The entry point agrees with `tySizeAlign`: a struct type's layout has
+`tySizeAlign`'s size and alignment. -/
+theorem tyStructLayout_ok_sizeAlign {p : Platform} {types : TypeEnv} {ty : Ty}
+    {offsets : List Nat} {size align : Nat}
+    (h : tyStructLayout p types ty = .ok (offsets, size, align)) :
+    tySizeAlign p types ty = .ok (size, align) := by
+  cases ty with
+  | defined i =>
+      simp only [tyStructLayout] at h
+      show tySizeAlignAt p types types.size i = _
+      cases hb : types.size with
+      | zero => rw [hb] at h; cases h
+      | succ b =>
+          rw [hb] at h
+          cases hi : types[i]? with
+          | none => simp [tyStructLayoutAt, hi, unsupported, throw, throwThe, MonadExceptOf.throw] at h
+          | some e =>
+              obtain ⟨id, d⟩ := e
+              cases d with
+              | struct fields =>
+                  rw [← tyStructLayoutAt_sizeAlign p types b i fields hi, h]; rfl
+              | _ => simp [tyStructLayoutAt, hi, unsupported, throw, throwThe, MonadExceptOf.throw] at h
+  | _ => simp [tyStructLayout, unsupported, throw, throwThe, MonadExceptOf.throw] at h
+
+/-- The entry point's per-field facts: under a successful layout, offsets and
+fields correspond one-to-one, each offset is aligned to its field's
+alignment, and each field ends within the struct size. -/
+theorem tyStructLayout_fields {p : Platform} {types : TypeEnv} {i : TypeIdx} {id : TypeId}
+    {fields : Array FieldDef} {offsets : List Nat} {size align : Nat}
+    (hi : types[i]? = some (id, .struct fields))
+    (h : tyStructLayout p types (.defined i) = .ok (offsets, size, align)) :
+    offsets.length = fields.size ∧
+    ∀ (k : Nat) (fd : FieldDef), fields[k]? = some fd →
+      ∃ off sz al, offsets[k]? = some off ∧ tySizeAlign p types fd.typ = .ok (sz, al) ∧
+        (al ≠ 0 → al ∣ off) ∧ off + sz ≤ size := by
+  simp only [tyStructLayout] at h
+  have hsz : types.size = (types.size - 1) + 1 := by
+    obtain ⟨hlt, -⟩ := Array.getElem?_eq_some_iff.mp hi; omega
+  rw [hsz] at h
+  simp only [tyStructLayoutAt, hi] at h
+  split at h
+  · rename_i he
+    simp only [pure, Except.pure, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, -, -⟩ := h
+    have he' : fields.size = 0 := by simpa using he
+    refine ⟨he'.symm, fun k fd hk => ?_⟩
+    have := (Array.getElem?_eq_some_iff.mp hk).1
+    omega
+  · obtain ⟨-, hlen, hfa⟩ := structLayoutWith_fields (Nat.zero_le _) h
+    refine ⟨by simpa using hlen, fun k fd hk => ?_⟩
+    obtain ⟨off, sz, al, ho, hf, hd, _, hb⟩ := hfa k fd (by simpa using hk)
+    refine ⟨off, sz, al, ho, ?_, hd, hb⟩
+    show tySizeAlignTy p (tySizeAlignAt p types types.size) fd.typ = _
+    refine tySizeAlignTy_mono (fun j r hj => ?_) _ _ hf
+    rw [hsz]
+    exact tySizeAlignAt_succ p types _ j r hj
+
+/-! #### Controls (gc cross-check: `docs/evidence/2026-10-07_field-offsets/`) -/
+
+/-- `struct{a int8; b int64; c int16}` at index 0; `struct{a int64; z struct{}}`
+(the zero-size final field) at index 2 over `struct{}` at 1; `struct{a byte;
+s string; b bool; m sync.Mutex; c int32}` at 3. -/
+private def layoutControlTypes : TypeEnv := #[
+  (⟨"T0"⟩, .struct #[⟨"a", .int .int8, false⟩, ⟨"b", .int .int64, false⟩,
+    ⟨"c", .int .int16, false⟩]),
+  (⟨"E"⟩, .struct #[]),
+  (⟨"T2"⟩, .struct #[⟨"a", .int .int64, false⟩, ⟨"z", .defined 1, false⟩]),
+  (⟨"T3"⟩, .struct #[⟨"a", .int .uint8, false⟩, ⟨"s", .string, false⟩,
+    ⟨"b", .bool, false⟩, ⟨"m", .sync .mutex, false⟩, ⟨"c", .int .int32, false⟩])]
+
+example : tyStructLayout gcAmd64 layoutControlTypes (.defined 0) = .ok ([0, 8, 16], 24, 8) := rfl
+example : tyStructLayout gcAmd64 layoutControlTypes (.defined 1) = .ok ([], 0, 1) := rfl
+example : tyStructLayout gcAmd64 layoutControlTypes (.defined 2) = .ok ([0, 8], 16, 8) := rfl
+example : tyStructLayout gcAmd64 layoutControlTypes (.defined 3) = .ok ([0, 8, 24, 28, 36], 40, 8) := rfl
+example : tyFieldOffsets gcAmd64 layoutControlTypes (.defined 0) = .ok [0, 8, 16] := rfl
+example : tySizeAlign gcAmd64 layoutControlTypes (.defined 3) = .ok (40, 8) := rfl
+example : tyStructLayout gcAmd64 layoutControlTypes .bool
+    = .error (.refusal (.unsupported "struct-layout computation: not a struct type")) := rfl
+example : tyStructLayout gcAmd64 layoutControlTypes (.defined 7)
+    = .error (.refusal (.unsupported "struct-layout computation: unknown type index 7")) := rfl
+
 /-- Go's TWO-index slice-expression bounds check, with the runtime's exact
 messages and check ORDER (oracle-pinned 2026-07-25, arc
 `wrong-answers-builtins`): the HIGH bound first — negative renders `[:h]`
