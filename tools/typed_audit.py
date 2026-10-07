@@ -40,12 +40,12 @@ def run_logged(args, log, *, env=None, cwd=ROOT, expected=0):
     try:
         result = subprocess.run(args, cwd=cwd, env=env, text=True,
                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                                timeout=180)
+                                timeout=360)
     except subprocess.TimeoutExpired as error:
         output = error.stdout or b""
         if isinstance(output, bytes):
             output = output.decode(errors="replace")
-        log.write_text(output + "\nAudit subprocess exceeded 180 seconds.\n")
+        log.write_text(output + "\nAudit subprocess exceeded 360 seconds.\n")
         raise RuntimeError(f"audit subprocess timeout: {args}; log: {log}") from error
     log.write_text(result.stdout)
     print(result.stdout, end="", flush=True)

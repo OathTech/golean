@@ -349,7 +349,9 @@ covered by the fixed streams):
   a silent singleton, the engine closes it. The 41 membership rows the engine
   also closes (their declared sets reproduced exactly) are recorded, not moved.
 - The tracer's wall budget: `LEAN_TRACE_TIMEOUT_SECONDS` (default 8 ×
-  `LEAN_TIMEOUT_SECONDS` = 240 s; the tracer makes eight interpreter
+  `LEAN_TIMEOUT_SECONDS` = 480 s since 2026-10-07, 240 s before
+  — the single-run default moved 30 → 60 s, [USER] «Agree 1 / 2»,
+  relayed; the tracer makes eight interpreter
   passes where `native-json-run` makes one). The guard's first full
   run under the 30 s single-run budget timed out on four heavy
   zero-consumption rows (`imported-goose/unittest/replicated-disk`,

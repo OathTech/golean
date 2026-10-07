@@ -12,7 +12,7 @@ FRONTEND="${GOLEAN_FRONTEND:-native}"
 GO_BUILD_CACHE="$ROOT/artifacts/go-build-cache"
 LAKE_BUILD_TIMEOUT_SECONDS="${LAKE_BUILD_TIMEOUT_SECONDS:-120}"
 GO_TIMEOUT_SECONDS="${GO_TIMEOUT_SECONDS:-30}"
-LEAN_TIMEOUT_SECONDS="${LEAN_TIMEOUT_SECONDS:-30}"
+LEAN_TIMEOUT_SECONDS="${LEAN_TIMEOUT_SECONDS:-60}"
 # The depth guard's tracer (`golean choice-trace`, memo P1) replays the
 # default stream and the three invariance streams in lockstep with the
 # accountant AND runs the enumerator driver on each — eight interpreter

@@ -527,6 +527,11 @@ coverage` echoed the failed receipt); the fresh re-run, started at
 decision; until then, re-run under lower load (check `uptime` first).
 Train r72 ([AGENT] train worker; the re-run-not-retune ruling [AGENT]
 coordinator, 2026-10-07).
+**Raised 180 → 360 s** in train r73 ([USER] Mike 2026-10-07 «Agree 1 /
+2», relayed). The budget is `run_logged`'s per-subprocess timeout, so
+it also governs the core-audit harness/poison compiles and the
+method-identity dispatch subprocesses. Measured alone 150–201 s, so
+360 s still catches a hang; under load, still check `uptime` first.
 
 The same holds for the per-run `LEAN_TIMEOUT_SECONDS`: the 30 s
 `LEAN_TIMEOUT_SECONDS` on heavy budget rows (e.g.
@@ -537,3 +542,8 @@ at load 17/34/43 timed out on it, failing closed (PASS → FAIL/nondet,
 load 30/40/46) passed. A budget change is a [USER] decision. Train r72
 ([AGENT] train worker; the re-run ruling [AGENT] coordinator,
 2026-10-07).
+**Default raised 30 → 60 s** in train r73 ([USER] Mike 2026-10-07
+«Agree 1 / 2», relayed): only the default in `scripts/diff-coverage`;
+the derived tracer budget `LEAN_TRACE_TIMEOUT_SECONDS` (8 ×) moves
+240 → 480 s with it. map-20k measures 4.7–9.6 s alone, so 60 s still
+catches a hang.
