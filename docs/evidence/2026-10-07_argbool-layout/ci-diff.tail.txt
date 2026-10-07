@@ -1,0 +1,61 @@
+# scripts/ci --diff at dd4c7ccd (lane lane/argbool-layout-1007), GOLEAN_MEM_MAX=48G scripts/capped, under the box lock, 2026-10-07. [AGENT build worker]
+# Expected 5a reds: certificate provenance STALE (GoLean/CLI.lean, GoLean/GoCore/Ops.lean changed) and its echo imported-goose/channel/google-search PASS->FAIL/membership; the train owns 5a.
+# package-correct method identity FAILED by a typed-audit subprocess TimeoutExpired under box load (~34); executed library coverage failed on that step's receipt. Re-run of scripts/check-method-identity alone at load ~10: PASS (2m06s) — tail at the end.
+# The first run at a7c54180 also drifted 7 rows FAIL/frontend-export -> FAIL/lean-observation (quarantined $stub params refused by the new CLI check as a generic error); fixed at dd4c7ccd (deferred to the machine's unsupported refusal), absent here.
+── differential baseline diff (scripts/coverage-baseline-diff)
+DRIFT vs baselines/native-full.tsv (3890 case(s) run):
+imported-goose/channel/google-search	baseline[PASS/membership] -> now[FAIL/membership]
+
+══ scripts/ci summary ══
+  ok   Tests/library ownership (no exceptions; executed builds checked at exit)
+  note build parallelism: cap 48G -> LEAN_NUM_THREADS=6 (cap/8G, floor 2; 32 cores on this box)
+  ok   oracle toolchain (go1.26.5 = pin)
+  ok   escape-hatch preflight
+  ok   meta-layer escape hatches (allowlist empty since the repo split)
+  ok   escape-hatch addendum (no decide +native / native-config spellings)
+  ok   bug-index cross-check
+  ok   feature-coverage (no dead tags)
+  ok   spec-anchor citations resolve at the pin
+  ok   stdlib admission register = frontend tables
+  ok   lane-validation fixtures (manifest gates reject bad shapes)
+  ok   evidence-on-main size gate
+  ok   AGENTS.md alias of CLAUDE.md
+  ok   inittask generator fail-closed self-test
+  ok   imported-goose verbatim (above-marker bytes = pinned upstream)
+  ok   engine-isolation (core ↛ EnumDedup)
+  ok   memory-module raw call-site inventory (emit/peek discipline)
+  ok   core build (warning-free)
+  FAIL certificate provenance
+  ok   core totality audit (every GoLean/ module; required core theorems; poison controls)
+  ok   admission checker proofs and post-import audit
+  ok   declaration boundary
+  ok   wire boundary (byte-level controls through the real CLI)
+  FAIL package-correct method identity
+  ok   unseq scheduler (Stage B)
+  ok   unseq wire (Stage C)
+  ok   semantic equations (scripts/check-equations)
+  ok   pool spec freeze + discharge (scripts/check-pool-spec)
+  ok   frontend pins (realized init-order deviation + twin wire = pinned bytes)
+  ok   import-goose fixtures (importer + verbatim guard reject bad shapes)
+  ok   frontend unit tests
+  ok   lowering-diagnostic tables
+  ok   coverage-harness unit tests
+  ok   eval tests (298 ok)
+  ok   differential run completed (exit 1; failing-set judged by baseline diff)
+  ok   lane-validation fixtures incl. harness half (F4/F6/B3-B5/G5/T1-T8/D1-D6)
+  ok   negative run completed (exit 0; set judged by baseline diff)
+  ok   Tests/FloatVectors.lean = fresh hardware-oracle regeneration (byte-exact)
+  ok   inittask-std.tsv = fresh gc-derived regeneration (header at pin; byte-exact modulo date line)
+  ok   negative baseline diff (no regression)
+  FAIL baseline diff (DRIFT — see above)
+  note reconciler: 4 finding(s), 1 HIGH — report-only (details: tools/reconcile-records)
+  FAIL executed library coverage (a named step is absent, stale or failed)
+
+RESULT: FAIL
+CI coverage timing: close: seconds=0.016
+CI total wall seconds: 1691
+CI_EXIT=1
+## re-run: scripts/check-method-identity
+Method dispatch control: collide-wrappers compiled, exported, then rejected by stuck: dynamic type main.Mix has no method m
+method-identity-dispatch PASS; scratch removed (29881038 owned bytes; dependencies symlinked)
+Method identity gate: PASS
