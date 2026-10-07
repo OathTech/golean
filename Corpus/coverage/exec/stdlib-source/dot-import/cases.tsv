@@ -11,3 +11,10 @@ intn-membership	dotIntn	-	ok	-	stdlib,rand,builtins,ints,nondet,imports	membersh
 float-bits	dotFloatBits	-	ok	-	stdlib,floats,ints,imports
 strings-source-through	dotToUpper	-	ok	-	stdlib,strings,imports
 perm-quarantined	dotPerm	-	ok	-	stdlib,rand,imports
+# FR-37 (2026-10-07, lane lane/fr37-dot-var-1007; docs/language-coverage-ledger.md FR-37 / queue 37): a dot-imported
+# package-level VARIABLE of a non-source package refuses BY NAME at the frontend (tools/nativefrontend/dotimport.go
+# dotImportedStdlibVar). Red-first: before the fix this file's wire carried a bare `ident Args` and the decoder refused
+# the WHOLE wire unnamed (B6 c3), every row here red with it. var-args RED BY DESIGN (os.Args, named, FR-14's line);
+# var-masking-sibling RED BY DESIGN (the qualified os.Getenv quarantine, now reported by its own name, FR-14's line).
+var-args	dotArgs	-	ok	-	stdlib,imports
+var-masking-sibling	qualifiedGetenv	-	ok	-	stdlib,imports

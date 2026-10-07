@@ -354,6 +354,12 @@ func (e *emitter) unseqLocalVar(obj types.Object) (*types.Var, bool) {
 	if v.Parent() == nil || e.isSourceScope(v.Parent()) {
 		return nil, false
 	}
+	// FR-37 (dotimport.go): a dot-imported stdlib package variable is no
+	// local — the sweep refuses ("non-local identifier") to the legacy
+	// path, whose emitIdent refuses it by name.
+	if _, _, dot := e.dotImportedStdlibVar(v); dot {
+		return nil, false
+	}
 	return v, true
 }
 

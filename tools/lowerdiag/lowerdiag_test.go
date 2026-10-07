@@ -766,6 +766,12 @@ func TestFloatBitsPrimitiveIsSupplied(t *testing.T) {
 		"dotIntnValue": {cause: "dot-import-value-position", key: "math/rand.Intn"},
 		"dotIntnDefer": {cause: "dot-import-value-position", key: "defer math/rand.Intn"},
 		"dotSprintf":   {cause: "dot-import-fmt-desugar", key: "fmt.Sprintf"},
+		// FR-37 (2026-10-07): the dot-imported stdlib VARIABLE, every shape,
+		// on the selector spelling's own cause (dot_fr37.go).
+		"dotArgsRead":   {cause: "stdlib-var-unmodeled", key: "os.Args"},
+		"dotArgsIndex":  {cause: "stdlib-var-unmodeled", key: "os.Args"},
+		"dotArgsAssign": {cause: "stdlib-var-unmodeled", key: "os.Args"},
+		"dotArgsAddr":   {cause: "stdlib-var-unmodeled", key: "os.Args"},
 	}
 	for name, w := range cases {
 		d := decls[name]

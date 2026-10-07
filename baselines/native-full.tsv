@@ -1,5 +1,17 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 3888 (3650 PASS / 238 FAIL)
+# cases: 3890 (3650 PASS / 240 FAIL)
+# re-pinned: 2026-10-07 [AGENT], lane/fr37-dot-var-1007 — FR-37 closed ([USER] Mike 2026-10-07 «We can run the FR-37 fix in a subagent
+#   right? Worth getting it done», relayed). WHY: a DOT-imported package-level VARIABLE of a non-source stdlib package (import . "os";
+#   len(Args)) now refuses BY NAME at the frontend (tools/nativefrontend/dotimport.go dotImportedStdlibVar / refuseDotImportedVar —
+#   'imported package-level variable os.Args has no seeded cell — reached through a dot import …; FR-37') instead of reaching the wire
+#   as a bare local ident the DECODER refused unnamed (B6 c3) for the WHOLE program. BORN ROWS ONLY: +2 stdlib-source/dot-import/* —
+#   var-args FAIL/frontend-export RED BY DESIGN on FR-14's line (os.Args, named; Go runs it), var-masking-sibling FAIL/frontend-export
+#   RED BY DESIGN on FR-14's line (the qualified os.Getenv quarantine in the same program, now reported by its own name). Red-first
+#   (main's frontend, the rows added): all SIX rows of the directory FAIL/lean-observation on the unnamed decode refusal — the masking
+#   FR-37 named (docs/evidence/2026-10-07_fr37/red-first.tsv); with the fix the four existing rows are back at their pins. A program
+#   with no dot-imported stdlib variable has a byte-identical wire. NO PASS→non-PASS flip; no existing row's result or stage moved.
+#   Measured by scripts/coverage run --prefix stdlib-source/dot-import/ (3 PASS + 3 red by design), then the full gate.
+#   3888 + 2 = 3890; 3650 PASS; 238 + 2 = 240 FAIL.
 # re-pinned: 2026-10-06 [AGENT], lane/fr36-spin-bounds-1006 (second re-pin, after the rebase onto main ee5dbd41) — the born row
 #   stdlib-source/dot-import/float-bits flips FAIL/frontend-export → PASS (a BORN-ROW flip, not a regression): the lowerdiag lane landed at
 #   train r68 and tools/lowerdiag became this lane's, so the dot-imported float-bits call now LOWERS to the float-bits primitive like the
@@ -5462,6 +5474,8 @@ PASS	stdlib-source/dot-import/float-bits	-
 PASS	stdlib-source/dot-import/intn-membership	membership
 FAIL	stdlib-source/dot-import/perm-quarantined	frontend-export
 PASS	stdlib-source/dot-import/strings-source-through	-
+FAIL	stdlib-source/dot-import/var-args	frontend-export
+FAIL	stdlib-source/dot-import/var-masking-sibling	frontend-export
 PASS	stdlib-source/errors-join/all-nil	-
 PASS	stdlib-source/errors-join/distinct	-
 PASS	stdlib-source/errors-join/empty-texts	-

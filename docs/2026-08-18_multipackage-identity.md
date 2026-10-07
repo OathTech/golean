@@ -357,6 +357,10 @@ another platform or a move of the Go pin re-derives the table;
   object-keyed primitive bindings or the by-name quarantine exactly
   like the selector spelling; a dot-imported source-through member is
   a source function and qualifies through `funcWireName` as before.
+  A dot-imported stdlib package-level VARIABLE (`import . "os"`;
+  `Args`) refuses by name at the frontend since 2026-10-07 (FR-37,
+  `dotImportedStdlibVar`); a source-through package's variable is a
+  source global (`isPackageVar`) and reads its seeded cell as before.
 - **Stdlib shims** (`E5`) are injected PER UNIT. (Superseded text: this
   section originally said shims "stay MAIN-PACKAGE-ONLY" — raft W4.0
   widened injection to every source unit, `load.go` `parseLocal`'s

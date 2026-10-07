@@ -429,3 +429,13 @@ either spelling — fixture `fbDot` now pins SUPPLIED) and `testdata/calib/dot_f
 dot-import shapes against the wire. Both follow-ups recorded at the lane's first landing attempt
 (the float-bits refusal that stood in for the lane-ownership split; the dot-imported quarantined
 member lowerdiag judged "lowers") are closed by it; the tracked vocabulary needed no regeneration.
+**FR-37 CLOSED 2026-10-07** (lane `lane/fr37-dot-var-1007`): a dot-imported package-level VARIABLE
+of a non-source stdlib package (`import . "os"`; `len(Args)`) — this tool judged it `lowers(static)`
+while the decoder refused the whole wire unnamed — now refuses BY NAME at the frontend
+(`dotimport.go refuseDotImportedVar`, the qualified spelling's no-seeded-cell text plus the import
+form), and `static.go`'s body-walk identifier arm judges the bare variable exactly like the selector
+spelling's variable arm (source-through → supplied `source-through var`; otherwise
+`stdlib-var-unmodeled`, FR-14). `testdata/calib/dot_fr37.go` pins four shapes (read, index,
+assignment target, address-of) against the wire; red-first, the pre-fix `static.go` fails both
+calibration tests on all four. The new frontend text classifies under the existing
+`stdlib-var-unmodeled` pattern, so the tracked vocabulary needed no regeneration.

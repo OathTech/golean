@@ -103,3 +103,47 @@ func (e *emitter) refuseDotImportedValue(fn *types.Func, pkg *types.Package) err
 	return unsup("dot-imported stdlib function %s.%s (import . %q) in value position: only DIRECT CALLS of modeled stdlib members lower (the primitives / the fmt desugar); the value shape is outside the modeled surface (package %q) — the qualified selector's refusal (FR-14), reached through a dot import (FR-36)",
 		pkg.Name(), fn.Name(), pkg.Path(), pkg.Path())
 }
+
+// FR-37 (2026-10-07, lane `lane/fr37-dot-var-1007`; [USER] Mike 2026-10-07
+// «We can run the FR-37 fix in a subagent right? Worth getting it done»,
+// relayed by the [AGENT] coordinator — cite as relayed): a dot import also
+// puts the package's VARIABLES in the file block (`import . "os"`;
+// `len(Args)`). Such a `*types.Var` is no source package's global
+// (`isPackageVar` keys on source scopes), so every identifier site fell
+// through to `localIdent` and exported a bare
+// `{"expr":"ident","local":0,"name":"Args"}` that the DECODER refused
+// unnamed (the B6 c3 local-scope check) — fail closed, but the cause was
+// not named, and the whole-wire decode failure masked every sibling
+// refusal. The qualified spelling `os.Args` refuses by name in value
+// position (FR-14). THE FIX: every identifier site that resolves a
+// variable (`emitIdent`, the assignment-target arms, `emitAddressOf`, the
+// lvalue arm) consults `dotImportedStdlibVar` BEFORE the local fallback and
+// refuses by name — the variable has no driver-seeded cell (only source
+// packages' globals are seeded; init design note §2). Go forbids a file
+// block name to collide with the package block and the loader refuses dot
+// imports of SOURCE packages (load.go), so a non-source package's
+// package-scope variable reached as an identifier is exactly a dot-imported
+// stdlib variable. Rows: stdlib-source/dot-import/{var-args,var-masking}.
+
+// dotImportedStdlibVar reports whether obj — reached as a bare IDENTIFIER —
+// is a package-level variable of a package other than the current one that
+// is NOT a source package: exactly a dot-imported stdlib variable (above).
+func (e *emitter) dotImportedStdlibVar(obj types.Object) (*types.Var, *types.Package, bool) {
+	v, isVar := obj.(*types.Var)
+	if !isVar || v == nil || v.IsField() {
+		return nil, nil, false
+	}
+	pkg := v.Pkg()
+	if pkg == nil || pkg == e.pkg || e.isSourcePackage(pkg) || v.Parent() != pkg.Scope() {
+		return nil, nil, false
+	}
+	return v, pkg, true
+}
+
+// refuseDotImportedVar: the by-name refusal for a dot-imported stdlib
+// variable in any shape (read, assignment target, address-of; index,
+// range and selector uses reach it through their operand).
+func (e *emitter) refuseDotImportedVar(v *types.Var, pkg *types.Package) error {
+	return unsup("imported package-level variable %s.%s has no seeded cell — reached through a dot import (import . %q: the bare identifier %s is that package's variable; only source packages' globals are driver-seeded, and package %q is not source-through; FR-37)",
+		pkg.Path(), v.Name(), pkg.Path(), v.Name(), pkg.Path())
+}

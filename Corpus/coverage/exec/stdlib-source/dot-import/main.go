@@ -3,6 +3,8 @@ package main
 import (
 	. "math"
 	. "math/rand"
+	"os"
+	. "os"
 	. "strings"
 )
 
@@ -56,6 +58,35 @@ func dotPerm() int {
 	return len(Perm(3))
 }
 
+// var-args (FR-37, 2026-10-07): a dot-imported package-level VARIABLE of a
+// non-source stdlib package (os.Args, deps/go/src/os/proc.go:16 @ go1.26.5:
+// "Args hold the command-line arguments, starting with the program name" —
+// so len >= 1 under `go run`; the row's expectation is Go's: 1). The
+// frontend refuses the declaration BY NAME — `imported package-level
+// variable os.Args has no seeded cell — reached through a dot import` —
+// RED BY DESIGN on FR-14's line (package "os" is outside the modeled
+// surface; the qualified `os.Args` refuses there too). Before FR-37 the
+// bare identifier reached the wire as `{"expr":"ident","local":0,
+// "name":"Args"}` and the DECODER refused the WHOLE wire unnamed (B6 c3) —
+// every sibling row in this file, the three PASS rows included, went red
+// with it.
+func dotArgs() int {
+	if len(Args) >= 1 {
+		return 1
+	}
+	return 0
+}
+
+// var-masking-sibling (FR-37): a QUALIFIED quarantined call in the same
+// program as the dot-imported variable. Go runs it (the variable is unset:
+// 0); the frontend refuses it by its OWN name — `package-selector call
+// os.Getenv (package "os" surface not modeled)` — RED BY DESIGN on FR-14's
+// line. Before FR-37 this refusal was MASKED: the whole-wire decode failure
+// above reported the unnamed B6 c3 cause instead.
+func qualifiedGetenv() int {
+	return len(os.Getenv("GOLEAN_FR37_UNSET"))
+}
+
 func main() {
-	println(dotIntn(), dotFloatBits(), dotToUpper(), dotPerm())
+	println(dotIntn(), dotFloatBits(), dotToUpper(), dotPerm(), dotArgs(), qualifiedGetenv())
 }

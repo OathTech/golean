@@ -1162,6 +1162,33 @@ func (a *analyzer) body(d *declReport, root ast.Node, fd *ast.FuncDecl) {
 					}
 				}
 			}
+			// FR-37 (2026-10-07): a bare identifier naming a NON-local
+			// package's package-level VARIABLE is a dot-imported stdlib
+			// variable (`import . "os"`; `len(Args)` — the loader refuses
+			// dot imports of local packages). The frontend refuses it by
+			// name with the qualified spelling's no-seeded-cell text
+			// (tools/nativefrontend/dotimport.go refuseDotImportedVar), so
+			// it is judged exactly like the selector spelling's variable
+			// arm above: source-through supplies it, anything else is
+			// stdlib-var-unmodeled (FR-14's line). Before: no finding at
+			// all — the tool judged the program lowers(static) while the
+			// decoder refused the wire.
+			if v, ok := a.info.Uses[x].(*types.Var); ok && v.Pkg() != nil && !a.p.isLocalPkg(v.Pkg()) && v.Parent() == v.Pkg().Scope() {
+				bare := true
+				if len(stack) >= 2 {
+					if p, ok := stack[len(stack)-2].(*ast.SelectorExpr); ok && p.Sel == x {
+						bare = false
+					}
+				}
+				if bare {
+					key := v.Pkg().Path() + "." + v.Name()
+					if a.p.sup.sourceThrough[v.Pkg().Path()] {
+						d.supplied(key, "source-through var")
+					} else {
+						d.add(finding{Cause: mustCause("stdlib-var-unmodeled"), Key: key, Pos: pos, Certain: true})
+					}
+				}
+			}
 			if v, ok := a.info.Uses[x].(*types.Var); ok && v.Pkg() != nil && a.p.isLocalPkg(v.Pkg()) && v.Parent() == v.Pkg().Scope() {
 				if d.usedVars == nil {
 					d.usedVars = map[types.Object]bool{}

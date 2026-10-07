@@ -3824,6 +3824,9 @@ func (e *emitter) emitAssignTargetPhase1(l ast.Expr, define bool) (any, error) {
 			}
 			return map[string]any{"target": "addr", "expr": ga}, nil
 		}
+		if dv, dpkg, dot := e.dotImportedStdlibVar(obj); dot { // FR-37
+			return nil, e.refuseDotImportedVar(dv, dpkg)
+		}
 		return map[string]any{"target": "var",
 			"id": e.localRename(obj, id.Name), "local": e.localID(obj, "local", e.localRename(obj, id.Name))}, nil
 	}
@@ -7351,6 +7354,9 @@ func (e *emitter) emitAddressOf(x ast.Expr) (any, error) {
 			}
 			return ga, nil
 		}
+		if dv, dpkg, dot := e.dotImportedStdlibVar(e.info.Uses[ex]); dot { // FR-37
+			return nil, e.refuseDotImportedVar(dv, dpkg)
+		}
 		return map[string]any{"expr": "ref",
 			"id": e.localRename(e.info.Uses[ex], ex.Name), "local": e.localID(e.info.Uses[ex], "local", e.localRename(e.info.Uses[ex], ex.Name))}, nil
 	case *ast.SelectorExpr:
@@ -7495,6 +7501,9 @@ func (e *emitter) emitLValuePhase1(x ast.Expr) (any, error) {
 				return nil, unsup("package-level variable %s has no seeded cell", id.Name)
 			}
 			return map[string]any{"target": "addr", "expr": ga}, nil
+		}
+		if dv, dpkg, dot := e.dotImportedStdlibVar(e.info.Uses[id]); dot { // FR-37
+			return nil, e.refuseDotImportedVar(dv, dpkg)
 		}
 		return map[string]any{"target": "var",
 			"id": e.localRename(e.info.Uses[id], id.Name), "local": e.localID(e.info.Uses[id], "local", e.localRename(e.info.Uses[id], id.Name))}, nil
@@ -7936,6 +7945,12 @@ func (e *emitter) freeCaptures(lit *ast.FuncLit) []*types.Var {
 		if v.Parent() == nil || e.isSourceScope(v.Parent()) {
 			return true
 		}
+		// FR-37 (dotimport.go): a dot-imported stdlib package variable
+		// is no capture either — the lifted body's emitIdent refuses it
+		// by name (before: captured by `ref` as if a local).
+		if _, _, dot := e.dotImportedStdlibVar(v); dot {
+			return true
+		}
 		seen[v] = true
 		out = append(out, v)
 		return true
@@ -8163,6 +8178,13 @@ func (e *emitter) emitIdent(id *ast.Ident) (any, error) {
 				return nil, err
 			}
 			return map[string]any{"expr": "deref", "ptr": ga, "type": ty}, nil
+		}
+		// FR-37 (dotimport.go): a dot-imported NON-source stdlib
+		// package variable (`import . "os"`; `len(Args)`) has no seeded
+		// cell — refused by name here, never a bare local ident the
+		// decoder would refuse unnamed (B6 c3).
+		if dv, dpkg, dot := e.dotImportedStdlibVar(obj); dot {
+			return nil, e.refuseDotImportedVar(dv, dpkg)
 		}
 		// Named-result shadow rename (resultshadow.go), object-keyed; B6: with
 		// the object's declaration index.
