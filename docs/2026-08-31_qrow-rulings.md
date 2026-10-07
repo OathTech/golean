@@ -1728,3 +1728,15 @@ the r70 row at the table's top; F3 (Info) the frozen files' header comments (`Po
 point to the deleted `docs/specs/pool-relation/Skeleton.lean` → NOTED in the r70 changelog row (not editable without a
 re-freeze). The FR-36 reds cell re-worded to lead with its red count («1 red by design (of 4 born …)») so the
 reconciler reads it.
+
+### Semantic widenings must match real Go — RULED (2026-10-07)
+
+[USER] Mike, 2026-10-07, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «Yeah, the semantic widenings
+should only be allowed if they match real Go» — in reply to the gc-verified project's questions (session gc-verified-99,
+2026-10-07: candidate GoLean changes for compiler validation, incl. widenings R15 zero-size pointer identity and R3
+`[]byte(s)`/`[]rune(s)` cap). Standing rule: a latitude widening admits only behaviours the Go spec permits AND the
+pinned gc realizes (differentially witnessed), never a wider machine; a choice site that would let one execution observe
+inconsistent answers (e.g. a comparison-time pick for `p == q`) is excluded. Applied in the coordinator's reply: R15's
+fix stays at creation, not comparison; R3's envelope is gc's measured members. Neither widening is scheduled; both stay
+PENDING [USER] on the queue. The reply (answers to a1–a4, b5–b6, the gap notes, the pin `fa343e48`) was sent
+2026-10-07 by cross-session message; no work promised.
