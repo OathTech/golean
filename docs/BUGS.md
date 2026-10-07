@@ -7735,3 +7735,32 @@ its own edge enumeration of the two phases (BUG-025/BUG-052's assignment spine).
 in the E5 handoff §2 (item 2), not this entry's to take. Fix criterion: every Cases row PASS (the five A3
 rows strict against gc; `map-target-nil-legacy-refusal` PASS strict: `wit 1` · panic).
 
+## BUG-117 — `scripts/gen-inittask-table` is FAIL-OPEN: a build or `nm` failure for a std package is recorded as the silent `?`/unknown row instead of dying [apparatus; derived oracle artifact `tools/nativefrontend/inittask-std.tsv` (the gate's inittask re-derivation, `scripts/ci`); trusted surface #2; found by the FR-37 lane's gate run 1 and its adversarial audit (apparatus finding), 2026-10-07]
+
+- Status: open ([AGENT] train worker r71, 2026-10-07, at the coordinator's brief; «every detected gap is rowed» —
+  [USER] Mike 2026-09-03, relayed; the fix is queued and APPROVED: [USER] Mike 2026-10-07 «1-4 approved as
+  proposed», item 4, relayed — batched with the gc-verified (a1) field-offsets lane)
+- Pinned-by: none (a transient tool failure under gate load, not a row state: seen ONCE — the FR-37 lane's gate run 1,
+  `ci --slow` at `10270c5a`, the `crypto/hmac` row read `unknown`; NOT reproduced in 3+4 re-runs (four hand
+  re-derivations at the same tree byte-identical; gate run 2 ok) — `docs/evidence/2026-10-07_fr37/ci-slow-run1.tail.txt`)
+- Discovered: 2026-10-07, FR-37 lane gate run 1; classified fail-open by the lane's Fable adversarial audit (apparatus
+  finding, as relayed by the [AGENT] coordinator)
+
+WHAT: `row_for` maps BOTH an empty `Export` from `go list -export -e` (any build failure, transient included — the
+script never reads `{{.Error}}`) AND a non-zero `go tool nm` (`inittask_symbols` returns `(None, None)`) to the silent
+`?`/unknown row. A transient failure under gate load is therefore RECORDED as "unknown" instead of dying with its
+cause; only the downstream byte-exact comparison against the tracked table (`scripts/ci`, «derived oracle artifacts
+re-derived») caught it. Run directly (`-o` to regenerate the tracked table), the script would have written the wrong
+row silently. Effect direction: not a wrong answer at the frontend (an `?` package refuses on import), but a
+fail-open record of the oracle's own facts — the doctrine's «unclassified case → explicit refusal naming its cause»
+violated in the apparatus.
+
+WHERE: `scripts/gen-inittask-table` — `inittask_symbols` (`if r.returncode != 0: return None, None`), `row_for` (the
+`not export_file` arm and the `defined is None` arm), and the `go list -export -e -f
+'{{.ImportPath}}\t{{.Export}}' std` format (no `.Error` field read).
+
+FIX PLAN (queued, [USER] approved 2026-10-07 «1-4 approved as proposed», item 4, relayed; batched with the field-offsets
+lane): die on `nm` non-zero, naming the package and `nm`'s stderr; add `{{if .Error}}{{.Error.Err}}{{end}}` to the
+`go list` format and die unless the error is of the known no-Go-files / build-constraints class (the legitimate
+no-archive directories the `?` arm documents). Fix criterion: a forced `nm` failure and a forced build error both
+make the script exit non-zero naming the package; the tracked table re-derives byte-identical.

@@ -1740,3 +1740,39 @@ inconsistent answers (e.g. a comparison-time pick for `p == q`) is excluded. App
 fix stays at creation, not comparison; R3's envelope is gc's measured members. Neither widening is scheduled; both stay
 PENDING [USER] on the queue. The reply (answers to a1–a4, b5–b6, the gap notes, the pin `fa343e48`) was sent
 2026-10-07 by cross-session message; no work promised.
+
+### Train r71 — FR-37 (dot-imported variables refuse by name) — RULED (2026-10-07)
+
+[USER] Mike, 2026-10-07, verbatim, relayed by the [AGENT] coordinator — cite as relayed:
+- «We can run the FR-37 fix in a subagent right? Worth getting it done» (the lane's authority).
+- «1-4 approved as proposed» — (1) the merge sign-off for `lane/fr37-dot-var-1007` @ `07659c43`; (2) the gc-verified
+  project's (a1) field offsets: build now; (3) the gc-verified project's (b6) cap widening: a design note first (whether
+  the append-spill choice site can be reused to be assessed in it; the standing rule «Semantic widenings must match real
+  Go», above, applies); (4) the `scripts/gen-inittask-table` fail-open fix (BUG-117), batched with (a1).
+
+The gc-verified project's requests (session gc-verified-99, 2026-10-07, as relayed by the [AGENT] coordinator): pin
+`fa343e48`; (a1) now; (b6) now; (a2) later, with the seed generated as a Go prologue so that seeded runs keep a `go run`
+oracle; (b5) deferred — a creation-time choice; (a3) dropped. Items (2)–(4) are queued lanes, not part of this train.
+
+The lane (FR-37, queue slot 37): a dot-imported stdlib package-level VARIABLE (`import . "os"; len(Args)`, any shape)
+refuses BY NAME at the frontend as the standing per-declaration quarantine, instead of the decoder's unnamed B6 c3
+local-scope refusal of the whole program (which masked sibling refusals); `tools/lowerdiag` judges it like the selector
+spelling. Two rows born red by design (`stdlib-source/dot-import/{var-args,var-masking-sibling}`, FR-14's line);
+twin wire byte-identical; no semantic-core change; no existing row's result or stage moved. Lane gate run 1 (`ci --slow`
+at `10270c5a`): FAIL on the 5a pair and on the inittask re-derivation (one `crypto/hmac` row read `unknown`; four hand
+re-derivations byte-identical — a flake, filed as BUG-117); gate run 2 (`ci --slow` at `4233793e`): `RESULT: PASS`,
+3890 = 3650 PASS / 240 FAIL.
+
+Audit (as relayed by the [AGENT] coordinator): one Fable adversarial audit, **MERGE-CLEAN**, one comment nit and one
+apparatus finding; neither blocks, neither is a wrong answer. Closed by this train's records commit:
+- Nit — `tools/nativefrontend/dotimport.go`'s header comment named the row `{var-args,var-masking}`; corrected to
+  `{var-args,var-masking-sibling}` (comment only).
+- Apparatus finding — `scripts/gen-inittask-table` is fail-open (an empty `Export` from `go list -export -e` and a
+  non-zero `go tool nm` both become the silent `?`/unknown row); ROWED as **BUG-117** (`docs/BUGS.md`, open,
+  `Pinned-by: none`), the fix queued per item (4).
+
+The post-offer changelog's drafted FR-37 row (`docs/changelog/20d3946d-WINDOW.md`) is filled as round r71 at the table's
+top.
+
+Train: `train/r71` = the lane's 4 commits cherry-picked onto main `9fb77e91` (the lane's merge-base), 0 conflicts; tree
+identical to the lane tip `07659c43`.

@@ -123,7 +123,7 @@ func (e *emitter) refuseDotImportedValue(fn *types.Func, pkg *types.Package) err
 // block name to collide with the package block and the loader refuses dot
 // imports of SOURCE packages (load.go), so a non-source package's
 // package-scope variable reached as an identifier is exactly a dot-imported
-// stdlib variable. Rows: stdlib-source/dot-import/{var-args,var-masking}.
+// stdlib variable. Rows: stdlib-source/dot-import/{var-args,var-masking-sibling}.
 
 // dotImportedStdlibVar reports whether obj — reached as a bare IDENTIFIER —
 // is a package-level variable of a package other than the current one that
