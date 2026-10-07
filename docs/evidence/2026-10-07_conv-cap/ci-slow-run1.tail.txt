@@ -1,0 +1,119 @@
+# scripts/ci --slow at 0fdcbd29 (lane lane/conv-cap-1007, 2026-10-07; GOLEAN_MEM_MAX=48G; box lock held 08:41:56Z–09:08Z; CI total wall 1557 s). RESULT: FAIL on three steps — bug-index cross-check (BUG-118's Cases rows absent from the baseline until a re-pin), certificate provenance (STALE; the fresh certification is an UNCHANGED SET — the 5a pair), baseline diff (DRIFT: 26 new rows, 1 re-lane, 20 PASS→FAIL flips — the design-gate finding in README.md). Made on a dirty tree (this directory's then-uncommitted evidence files).
+
+## differential baseline diff (DRIFT)
+── differential baseline diff (scripts/coverage-baseline-diff)
+DRIFT vs baselines/native-full.tsv (3916 case(s) run):
+builtins/e13-sibling-panic-order/bytes-conv-left-len-hoist	baseline[PASS/membership] -> now[FAIL/membership]
+builtins/e13-sibling-panic-order/bytes-conv-value-vs-mutating-call	baseline[PASS/membership] -> now[FAIL/membership]
+evalorder/unseq-conv-alloc/conv-read-vs-call	baseline[PASS/membership] -> now[FAIL/membership]
+imported-goose/channel/google-search	baseline[PASS/membership] -> now[FAIL/membership]
+stdlib-source/builder-cap/grow-after-write	baseline[PASS/membership] -> now[FAIL/membership]
+stdlib-source/builder-overlay/grow-contract	baseline[PASS/-] -> now[FAIL/nondet]
+stdlib-source/builder-overlay/join-large	baseline[PASS/-] -> now[FAIL/nondet]
+stdlib-source/builder-overlay/repeat-doubling-loop	baseline[PASS/-] -> now[FAIL/nondet]
+stdlib-source/bytes-buffer/grow-contract	baseline[PASS/-] -> now[FAIL/nondet]
+stdlib-source/slices-sortfunc/others	baseline[PASS/-] -> now[FAIL/nondet]
+stdlib-source/slices-sortfunc/sort-stable-func	baseline[PASS/-] -> now[FAIL/nondet]
+stdlib-source/slices-sortfunc/sortfunc-large	baseline[PASS/-] -> now[FAIL/nondet]
+stdlib-source/slices-sortfunc/sortfunc-reversed-input	baseline[PASS/-] -> now[FAIL/nondet]
+stdlib-source/slices-sortfunc/sortfunc-strings-by-len	baseline[PASS/-] -> now[FAIL/nondet]
+stdlib-source/slices-sortfunc/sortfunc-ties-projected	baseline[PASS/-] -> now[FAIL/nondet]
+stdlib-source/slices-sortfunc/sortfunc-ties-realized	baseline[PASS/-] -> now[FAIL/nondet]
+stdlib-source/strconv-parseuint/bitsize-saturation	baseline[PASS/-] -> now[FAIL/nondet]
+stdlib-source/strconv-parseuint/error-quoting	baseline[PASS/-] -> now[FAIL/nondet]
+stdlib-source/strconv-parseuint/error-texts	baseline[PASS/-] -> now[FAIL/nondet]
+strings/byte-conversion-cap	baseline[PASS/-] -> now[PASS/membership]
+strings/conv-cap/bytes-alias-append-esc-8	NEW id (not in baseline) -> PASS/membership
+strings/conv-cap/bytes-alias-append-mut-5	NEW id (not in baseline) -> PASS/membership
+strings/conv-cap/bytes-concat-esc-5	NEW id (not in baseline) -> PASS/membership
+strings/conv-cap/bytes-const-lit	NEW id (not in baseline) -> PASS/-
+strings/conv-cap/bytes-inline-helper	NEW id (not in baseline) -> PASS/membership
+strings/conv-cap/bytes-lit	NEW id (not in baseline) -> PASS/-
+strings/conv-cap/bytes-named-lit	NEW id (not in baseline) -> PASS/-
+strings/conv-cap/bytes-var-esc-0	NEW id (not in baseline) -> PASS/membership
+strings/conv-cap/bytes-var-esc-100	NEW id (not in baseline) -> PASS/membership
+strings/conv-cap/bytes-var-esc-33	NEW id (not in baseline) -> PASS/membership
+strings/conv-cap/bytes-var-esc-5	NEW id (not in baseline) -> PASS/membership
+strings/conv-cap/bytes-var-mut-0	NEW id (not in baseline) -> PASS/membership
+strings/conv-cap/bytes-var-mut-100	NEW id (not in baseline) -> PASS/membership
+strings/conv-cap/bytes-var-mut-33	NEW id (not in baseline) -> PASS/membership
+strings/conv-cap/bytes-var-mut-5	NEW id (not in baseline) -> PASS/membership
+strings/conv-cap/bytes-var-nomut-0	NEW id (not in baseline) -> PASS/membership
+strings/conv-cap/bytes-var-nomut-100	NEW id (not in baseline) -> PASS/membership
+strings/conv-cap/bytes-var-nomut-33	NEW id (not in baseline) -> PASS/membership
+strings/conv-cap/bytes-var-nomut-5	NEW id (not in baseline) -> PASS/membership
+strings/conv-cap/runes-lit	NEW id (not in baseline) -> PASS/-
+strings/conv-cap/runes-var-esc-100	NEW id (not in baseline) -> PASS/-
+strings/conv-cap/runes-var-esc-33	NEW id (not in baseline) -> PASS/-
+strings/conv-cap/runes-var-esc-5	NEW id (not in baseline) -> PASS/membership
+strings/conv-cap/runes-var-nomut-100	NEW id (not in baseline) -> PASS/-
+strings/conv-cap/runes-var-nomut-33	NEW id (not in baseline) -> PASS/-
+strings/conv-cap/runes-var-nomut-5	NEW id (not in baseline) -> PASS/membership
+
+
+## bug-index cross-check
+FAIL (1): BUG-118 case 'strings/conv-cap/runes-var-nomut-5' not found in baselines/native-full.tsv
+FAIL (1): BUG-118 case 'strings/conv-cap/runes-var-esc-5' not found in baselines/native-full.tsv
+FAIL (1): BUG-118 case 'strings/conv-cap/runes-var-nomut-33' not found in baselines/native-full.tsv
+FAIL (1): BUG-118 case 'strings/conv-cap/runes-var-esc-33' not found in baselines/native-full.tsv
+FAIL (1): BUG-118 case 'strings/conv-cap/runes-var-nomut-100' not found in baselines/native-full.tsv
+FAIL (1): BUG-118 case 'strings/conv-cap/runes-var-esc-100' not found in baselines/native-full.tsv
+
+## certificate provenance
+certification-controls scratch: /home/dev/projects/golean/.claude/worktrees/conv-cap/.tmp/certification-controls-8qfyblbw
+Certification control PASS: equivalent checkout and linked executable
+Certification control PASS: docs-only commit retains input identity
+Fresh certification: unchanged set; seconds=0.064; candidate=/home/dev/projects/golean/.claude/worktrees/conv-cap/.tmp/certification-controls-8qfyblbw/membership-enum/certification-candidate.json
+Certification control PASS: membership missing sidecar after fresh unchanged-set run -> missing certification provenance
+Certification control PASS: membership actual shell consumer accepts fresh unchanged set
+
+## summary
+══ scripts/ci summary ══
+  ok   Tests/library ownership (no exceptions; executed builds checked at exit)
+  note build parallelism: cap 48G -> LEAN_NUM_THREADS=6 (cap/8G, floor 2; 32 cores on this box)
+  ok   oracle toolchain (go1.26.5 = pin)
+  ok   escape-hatch preflight
+  ok   meta-layer escape hatches (allowlist empty since the repo split)
+  ok   escape-hatch addendum (no decide +native / native-config spellings)
+  FAIL bug-index cross-check
+  ok   feature-coverage (no dead tags)
+  ok   spec-anchor citations resolve at the pin
+  ok   stdlib admission register = frontend tables
+  ok   lane-validation fixtures (manifest gates reject bad shapes)
+  ok   evidence-on-main size gate
+  ok   AGENTS.md alias of CLAUDE.md
+  ok   imported-goose verbatim (above-marker bytes = pinned upstream)
+  ok   engine-isolation (core ↛ EnumDedup)
+  ok   memory-module raw call-site inventory (emit/peek discipline)
+  ok   core build (warning-free)
+  FAIL certificate provenance
+  ok   core totality audit (every GoLean/ module; required core theorems; poison controls)
+  ok   admission checker proofs and post-import audit
+  ok   declaration boundary
+  ok   wire boundary (byte-level controls through the real CLI)
+  ok   package-correct method identity
+  ok   unseq scheduler (Stage B)
+  ok   unseq wire (Stage C)
+  ok   semantic equations (scripts/check-equations)
+  ok   pool spec freeze + discharge (scripts/check-pool-spec)
+  ok   frontend pins (realized init-order deviation + twin wire = pinned bytes)
+  ok   import-goose fixtures (importer + verbatim guard reject bad shapes)
+  ok   frontend unit tests
+  ok   lowering-diagnostic tables
+  ok   coverage-harness unit tests
+  ok   eval tests (298 ok)
+  ok   differential run completed (exit 1; failing-set judged by baseline diff)
+  ok   lane-validation fixtures incl. harness half (F4/F6/B3-B5/G5/T1-T8/D1-D6)
+  ok   negative run completed (exit 0; set judged by baseline diff)
+  ok   Tests/FloatVectors.lean = fresh hardware-oracle regeneration (byte-exact)
+  ok   inittask-std.tsv = fresh gc-derived regeneration (header at pin; byte-exact modulo date line)
+  note negative baseline diff matched (394 case(s)) but the record was made on a DIRTY tree (git_dirty=true) — certifies that worktree state, not a commit
+  FAIL baseline diff (DRIFT — see above)
+  note reconciler: 11 finding(s), 6 HIGH — report-only (details: tools/reconcile-records)
+  ok   executed library coverage (all declared libraries; all Tests modules)
+
+RESULT: FAIL
+Failed CI receipts retained: /home/dev/projects/golean/.claude/worktrees/conv-cap/.tmp/ci-libraries-f08n44r_
+CI coverage timing: close: seconds=0.027
+CI total wall seconds: 1557
+EXIT=1

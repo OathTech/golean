@@ -1,0 +1,139 @@
+5c5
+<   consumptions checked: 27754
+---
+>   consumptions checked: 36205
+10c10
+<     ERROR arrays/materialization-budget/over-budget (baseline: FAIL/lean-observation): /home/dev/projects/golean/.claude/worktrees/conv-cap/.tmp/ct-before/wire/arrays__materialization-budget__over-budget.json: native lowering: array type of 209715
+---
+>     ERROR arrays/materialization-budget/over-budget (baseline: FAIL/lean-observation): /home/dev/projects/golean/.claude/worktrees/conv-cap/.tmp/ct-after/wire/arrays__materialization-budget__over-budget.json: native lowering: array type of 2097152
+12c12
+<   consumptions per site (all streams): l1Sched=9792, appendSpill=5184, postOp=4657, unseqNext=3371, backEdge=2403, mapIter=1307, l5ExitWindow=332, intn=216, repanicCollapse=156, tryLock=101, unseqPanic=96, nilValueMethodText=90, l2Entry=24, l4Waiter=22, l2Arrival=3
+---
+>   consumptions per site (all streams): l1Sched=9792, convCap=8415, appendSpill=5218, postOp=4657, unseqNext=3373, backEdge=2403, mapIter=1307, l5ExitWindow=332, intn=216, repanicCollapse=156, tryLock=101, unseqPanic=96, nilValueMethodText=90, l2Entry=24, l4Waiter=22, l2Arrival=3
+16,20c16,20
+<     all consumptions:      0: 2974, 1-8: 437, 9-10: 5, 11-32: 30, 33-128: 9, >128: 3
+<     bound>=2 consumptions: 0: 2974, 1-8: 437, 9-10: 5, 11-32: 30, 33-128: 9, >128: 3
+<     rows with >=1 adversarial stream exhausted (any consumption past the prefix): 43
+<     rows with a bound>=2 consumption PAST the prefix on >=1 adversarial stream (invisible order-sensitivity): 43
+<       of which data-latitude sites only (appendSpill / mapIter / intn / convCap / tryLock …: capacity, map-order, draw, conversion-cap latitude; no scheduling site): 27
+---
+>     all consumptions:      0: 2925, 1-8: 470, 9-10: 6, 11-32: 32, 33-128: 21, >128: 4
+>     bound>=2 consumptions: 0: 2925, 1-8: 470, 9-10: 6, 11-32: 32, 33-128: 21, >128: 4
+>     rows with >=1 adversarial stream exhausted (any consumption past the prefix): 58
+>     rows with a bound>=2 consumption PAST the prefix on >=1 adversarial stream (invisible order-sensitivity): 58
+>       of which data-latitude sites only (appendSpill / mapIter / intn / convCap / tryLock …: capacity, map-order, draw, conversion-cap latitude; no scheduling site): 42
+27,28c27,28
+<       fmt/fprint-writers/fprintf-buffer-shape: worst stream [5,5,5,5,5,5,5,5] consumed=10 wide=10 exhaustedAt=8 wideAfterExhaustion=2; all streams: [5,5,5,5,5,5,5,5] 10/10/8/2
+<       fmt/fprintf-builder/describe-shape: worst stream [5,5,5,5,5,5,5,5] consumed=9 wide=9 exhaustedAt=8 wideAfterExhaustion=1; all streams: [5,5,5,5,5,5,5,5] 9/9/8/1
+---
+>       fmt/fprint-writers/fprintf-buffer-shape: worst stream [5,5,5,5,5,5,5,5] consumed=12 wide=12 exhaustedAt=8 wideAfterExhaustion=4; all streams: [9,8,7,6,5,4,3,2,1,0] 12/12/10/2; [1,3,5,7,9,2,4,6,8,0] 12/12/10/2; [5,5,5,5,5,5,5,5] 12/12/8/4
+>       fmt/fprintf-builder/describe-shape: worst stream [5,5,5,5,5,5,5,5] consumed=14 wide=14 exhaustedAt=8 wideAfterExhaustion=6; all streams: [9,8,7,6,5,4,3,2,1,0] 14/14/10/4; [1,3,5,7,9,2,4,6,8,0] 14/14/10/4; [5,5,5,5,5,5,5,5] 14/14/8/6
+53,62c53,73
+<       stdlib-source/builder-fuzz/seed-0: worst stream [5,5,5,5,5,5,5,5] consumed=19 wide=19 exhaustedAt=8 wideAfterExhaustion=11; all streams: [9,8,7,6,5,4,3,2,1,0] 18/18/10/8; [1,3,5,7,9,2,4,6,8,0] 19/19/10/9; [5,5,5,5,5,5,5,5] 19/19/8/11
+<       stdlib-source/builder-fuzz/seed-1: worst stream [5,5,5,5,5,5,5,5] consumed=30 wide=30 exhaustedAt=8 wideAfterExhaustion=22; all streams: [9,8,7,6,5,4,3,2,1,0] 29/29/10/19; [1,3,5,7,9,2,4,6,8,0] 31/31/10/21; [5,5,5,5,5,5,5,5] 30/30/8/22
+<       stdlib-source/builder-fuzz/seed-2: worst stream [5,5,5,5,5,5,5,5] consumed=20 wide=20 exhaustedAt=8 wideAfterExhaustion=12; all streams: [9,8,7,6,5,4,3,2,1,0] 19/19/10/9; [1,3,5,7,9,2,4,6,8,0] 19/19/10/9; [5,5,5,5,5,5,5,5] 20/20/8/12
+<       stdlib-source/builder-fuzz/seed-3: worst stream [5,5,5,5,5,5,5,5] consumed=24 wide=24 exhaustedAt=8 wideAfterExhaustion=16; all streams: [9,8,7,6,5,4,3,2,1,0] 22/22/10/12; [1,3,5,7,9,2,4,6,8,0] 25/25/10/15; [5,5,5,5,5,5,5,5] 24/24/8/16
+<       stdlib-source/builder-fuzz/seed-4: worst stream [5,5,5,5,5,5,5,5] consumed=25 wide=25 exhaustedAt=8 wideAfterExhaustion=17; all streams: [9,8,7,6,5,4,3,2,1,0] 25/25/10/15; [1,3,5,7,9,2,4,6,8,0] 25/25/10/15; [5,5,5,5,5,5,5,5] 25/25/8/17
+<       stdlib-source/builder-fuzz/seed-5: worst stream [5,5,5,5,5,5,5,5] consumed=24 wide=24 exhaustedAt=8 wideAfterExhaustion=16; all streams: [9,8,7,6,5,4,3,2,1,0] 24/24/10/14; [1,3,5,7,9,2,4,6,8,0] 24/24/10/14; [5,5,5,5,5,5,5,5] 24/24/8/16
+<       stdlib-source/builder-fuzz/seed-6: worst stream [5,5,5,5,5,5,5,5] consumed=20 wide=20 exhaustedAt=8 wideAfterExhaustion=12; all streams: [9,8,7,6,5,4,3,2,1,0] 19/19/10/9; [1,3,5,7,9,2,4,6,8,0] 19/19/10/9; [5,5,5,5,5,5,5,5] 20/20/8/12
+<       stdlib-source/builder-fuzz/seed-7: worst stream [5,5,5,5,5,5,5,5] consumed=12 wide=12 exhaustedAt=8 wideAfterExhaustion=4; all streams: [5,5,5,5,5,5,5,5] 12/12/8/4
+<       stdlib-source/builder-fuzz/seed-8: worst stream [5,5,5,5,5,5,5,5] consumed=25 wide=25 exhaustedAt=8 wideAfterExhaustion=17; all streams: [9,8,7,6,5,4,3,2,1,0] 26/26/10/16; [1,3,5,7,9,2,4,6,8,0] 26/26/10/16; [5,5,5,5,5,5,5,5] 25/25/8/17
+<       stdlib-source/builder-fuzz/seed-9: worst stream [5,5,5,5,5,5,5,5] consumed=30 wide=30 exhaustedAt=8 wideAfterExhaustion=22; all streams: [9,8,7,6,5,4,3,2,1,0] 29/29/10/19; [1,3,5,7,9,2,4,6,8,0] 31/31/10/21; [5,5,5,5,5,5,5,5] 30/30/8/22
+---
+>       stdlib-source/builder-fuzz/seed-0: worst stream [5,5,5,5,5,5,5,5] consumed=93 wide=93 exhaustedAt=8 wideAfterExhaustion=85; all streams: [9,8,7,6,5,4,3,2,1,0] 92/92/10/82; [1,3,5,7,9,2,4,6,8,0] 93/93/10/83; [5,5,5,5,5,5,5,5] 93/93/8/85
+>       stdlib-source/builder-fuzz/seed-1: worst stream [5,5,5,5,5,5,5,5] consumed=109 wide=109 exhaustedAt=8 wideAfterExhaustion=101; all streams: [9,8,7,6,5,4,3,2,1,0] 109/109/10/99; [1,3,5,7,9,2,4,6,8,0] 109/109/10/99; [5,5,5,5,5,5,5,5] 109/109/8/101
+>       stdlib-source/builder-fuzz/seed-2: worst stream [5,5,5,5,5,5,5,5] consumed=104 wide=104 exhaustedAt=8 wideAfterExhaustion=96; all streams: [9,8,7,6,5,4,3,2,1,0] 103/103/10/93; [1,3,5,7,9,2,4,6,8,0] 104/104/10/94; [5,5,5,5,5,5,5,5] 104/104/8/96
+>       stdlib-source/builder-fuzz/seed-3: worst stream [5,5,5,5,5,5,5,5] consumed=108 wide=108 exhaustedAt=8 wideAfterExhaustion=100; all streams: [9,8,7,6,5,4,3,2,1,0] 107/107/10/97; [1,3,5,7,9,2,4,6,8,0] 108/108/10/98; [5,5,5,5,5,5,5,5] 108/108/8/100
+>       stdlib-source/builder-fuzz/seed-4: worst stream [5,5,5,5,5,5,5,5] consumed=106 wide=106 exhaustedAt=8 wideAfterExhaustion=98; all streams: [9,8,7,6,5,4,3,2,1,0] 106/106/10/96; [1,3,5,7,9,2,4,6,8,0] 106/106/10/96; [5,5,5,5,5,5,5,5] 106/106/8/98
+>       stdlib-source/builder-fuzz/seed-5: worst stream [5,5,5,5,5,5,5,5] consumed=105 wide=105 exhaustedAt=8 wideAfterExhaustion=97; all streams: [9,8,7,6,5,4,3,2,1,0] 105/105/10/95; [1,3,5,7,9,2,4,6,8,0] 105/105/10/95; [5,5,5,5,5,5,5,5] 105/105/8/97
+>       stdlib-source/builder-fuzz/seed-6: worst stream [5,5,5,5,5,5,5,5] consumed=98 wide=98 exhaustedAt=8 wideAfterExhaustion=90; all streams: [9,8,7,6,5,4,3,2,1,0] 98/98/10/88; [1,3,5,7,9,2,4,6,8,0] 98/98/10/88; [5,5,5,5,5,5,5,5] 98/98/8/90
+>       stdlib-source/builder-fuzz/seed-7: worst stream [5,5,5,5,5,5,5,5] consumed=89 wide=89 exhaustedAt=8 wideAfterExhaustion=81; all streams: [9,8,7,6,5,4,3,2,1,0] 89/89/10/79; [1,3,5,7,9,2,4,6,8,0] 89/89/10/79; [5,5,5,5,5,5,5,5] 89/89/8/81
+>       stdlib-source/builder-fuzz/seed-8: worst stream [5,5,5,5,5,5,5,5] consumed=105 wide=105 exhaustedAt=8 wideAfterExhaustion=97; all streams: [9,8,7,6,5,4,3,2,1,0] 105/105/10/95; [1,3,5,7,9,2,4,6,8,0] 106/106/10/96; [5,5,5,5,5,5,5,5] 105/105/8/97
+>       stdlib-source/builder-fuzz/seed-9: worst stream [5,5,5,5,5,5,5,5] consumed=113 wide=113 exhaustedAt=8 wideAfterExhaustion=105; all streams: [9,8,7,6,5,4,3,2,1,0] 112/112/10/102; [1,3,5,7,9,2,4,6,8,0] 112/112/10/102; [5,5,5,5,5,5,5,5] 113/113/8/105
+>       stdlib-source/builder-overlay/grow-contract: worst stream [5,5,5,5,5,5,5,5] consumed=11 wide=11 exhaustedAt=8 wideAfterExhaustion=3; all streams: [9,8,7,6,5,4,3,2,1,0] 11/11/10/1; [1,3,5,7,9,2,4,6,8,0] 11/11/10/1; [5,5,5,5,5,5,5,5] 11/11/8/3
+>       stdlib-source/builder-overlay/join-large: worst stream [5,5,5,5,5,5,5,5] consumed=200 wide=200 exhaustedAt=8 wideAfterExhaustion=192; all streams: [9,8,7,6,5,4,3,2,1,0] 200/200/10/190; [1,3,5,7,9,2,4,6,8,0] 200/200/10/190; [5,5,5,5,5,5,5,5] 200/200/8/192
+>       stdlib-source/builder-overlay/repeat-doubling-loop: worst stream [1,3,5,7,9,2,4,6,8,0] consumed=11 wide=11 exhaustedAt=10 wideAfterExhaustion=1; all streams: [1,3,5,7,9,2,4,6,8,0] 11/11/10/1
+>       stdlib-source/bytes-buffer/grow-contract: worst stream [5,5,5,5,5,5,5,5] consumed=10 wide=10 exhaustedAt=8 wideAfterExhaustion=2; all streams: [5,5,5,5,5,5,5,5] 10/10/8/2
+>       stdlib-source/slices-sortfunc/others: worst stream [5,5,5,5,5,5,5,5] consumed=16 wide=16 exhaustedAt=8 wideAfterExhaustion=8; all streams: [9,8,7,6,5,4,3,2,1,0] 16/16/10/6; [1,3,5,7,9,2,4,6,8,0] 16/16/10/6; [5,5,5,5,5,5,5,5] 16/16/8/8
+>       stdlib-source/slices-sortfunc/sort-stable-func: worst stream [5,5,5,5,5,5,5,5] consumed=31 wide=31 exhaustedAt=8 wideAfterExhaustion=23; all streams: [9,8,7,6,5,4,3,2,1,0] 31/31/10/21; [1,3,5,7,9,2,4,6,8,0] 31/31/10/21; [5,5,5,5,5,5,5,5] 31/31/8/23
+>       stdlib-source/slices-sortfunc/sortfunc-large: worst stream [5,5,5,5,5,5,5,5] consumed=41 wide=41 exhaustedAt=8 wideAfterExhaustion=33; all streams: [9,8,7,6,5,4,3,2,1,0] 41/41/10/31; [1,3,5,7,9,2,4,6,8,0] 41/41/10/31; [5,5,5,5,5,5,5,5] 41/41/8/33
+>       stdlib-source/slices-sortfunc/sortfunc-reversed-input: worst stream [5,5,5,5,5,5,5,5] consumed=31 wide=31 exhaustedAt=8 wideAfterExhaustion=23; all streams: [9,8,7,6,5,4,3,2,1,0] 31/31/10/21; [1,3,5,7,9,2,4,6,8,0] 31/31/10/21; [5,5,5,5,5,5,5,5] 31/31/8/23
+>       stdlib-source/slices-sortfunc/sortfunc-strings-by-len: worst stream [5,5,5,5,5,5,5,5] consumed=14 wide=14 exhaustedAt=8 wideAfterExhaustion=6; all streams: [9,8,7,6,5,4,3,2,1,0] 14/14/10/4; [1,3,5,7,9,2,4,6,8,0] 14/14/10/4; [5,5,5,5,5,5,5,5] 14/14/8/6
+>       stdlib-source/slices-sortfunc/sortfunc-ties-projected: worst stream [5,5,5,5,5,5,5,5] consumed=39 wide=39 exhaustedAt=8 wideAfterExhaustion=31; all streams: [9,8,7,6,5,4,3,2,1,0] 39/39/10/29; [1,3,5,7,9,2,4,6,8,0] 39/39/10/29; [5,5,5,5,5,5,5,5] 39/39/8/31
+>       stdlib-source/slices-sortfunc/sortfunc-ties-realized: worst stream [5,5,5,5,5,5,5,5] consumed=31 wide=31 exhaustedAt=8 wideAfterExhaustion=23; all streams: [9,8,7,6,5,4,3,2,1,0] 31/31/10/21; [1,3,5,7,9,2,4,6,8,0] 31/31/10/21; [5,5,5,5,5,5,5,5] 31/31/8/23
+63a75,78
+>       stdlib-source/strconv-parseuint/bitsize-saturation: worst stream [5,5,5,5,5,5,5,5] consumed=9 wide=9 exhaustedAt=8 wideAfterExhaustion=1; all streams: [5,5,5,5,5,5,5,5] 9/9/8/1
+>       stdlib-source/strconv-parseuint/error-quoting: worst stream [5,5,5,5,5,5,5,5] consumed=19 wide=19 exhaustedAt=8 wideAfterExhaustion=11; all streams: [9,8,7,6,5,4,3,2,1,0] 19/19/10/9; [1,3,5,7,9,2,4,6,8,0] 19/19/10/9; [5,5,5,5,5,5,5,5] 19/19/8/11
+>       stdlib-source/strconv-parseuint/error-texts: worst stream [5,5,5,5,5,5,5,5] consumed=17 wide=17 exhaustedAt=8 wideAfterExhaustion=9; all streams: [9,8,7,6,5,4,3,2,1,0] 17/17/10/7; [1,3,5,7,9,2,4,6,8,0] 17/17/10/7; [5,5,5,5,5,5,5,5] 17/17/8/9
+>       strconv/format-parse/parse-uint-errors: worst stream [5,5,5,5,5,5,5,5] consumed=12 wide=12 exhaustedAt=8 wideAfterExhaustion=4; all streams: [9,8,7,6,5,4,3,2,1,0] 12/12/10/2; [1,3,5,7,9,2,4,6,8,0] 12/12/10/2; [5,5,5,5,5,5,5,5] 12/12/8/4
+65c80
+<     rows whose observation VARIES across the traced streams (default, 3 adversarial, 2 random-4096): 1
+---
+>     rows whose observation VARIES across the traced streams (default, 3 adversarial, 2 random-4096): 2
+67c82,83
+<     rows with >10 bound>=2 consumptions under a random-4096 stream: 37
+---
+>       VARIES strings/byte-conversion-cap: [1,3,5,7,9,2,4,6,8,0] ok h=16021446; [5,5,5,5,5,5,5,5] ok h=15774482; [9,8,7,6,5,4,3,2,1,0] ok h=40932328; [default] ok h=40932328; [rand:1:4096] ok h=16021446; [rand:2:4096] ok h=15774482
+>     rows with >10 bound>=2 consumptions under a random-4096 stream: 52
+101c117
+<   membership builtins/e13-sibling-panic-order/bytes-conv-left-len-hoist: max consumed=2 max wide=2 distinct observations across 6 streams=2
+---
+>   membership builtins/e13-sibling-panic-order/bytes-conv-left-len-hoist: max consumed=3 max wide=3 distinct observations across 6 streams=2
+103c119
+<   membership builtins/e13-sibling-panic-order/bytes-conv-value-vs-mutating-call: max consumed=4 max wide=4 distinct observations across 6 streams=2
+---
+>   membership builtins/e13-sibling-panic-order/bytes-conv-value-vs-mutating-call: max consumed=5 max wide=5 distinct observations across 6 streams=2
+178c194
+<   membership evalorder/unseq-conv-alloc/conv-read-vs-call: max consumed=4 max wide=4 distinct observations across 6 streams=2
+---
+>   membership evalorder/unseq-conv-alloc/conv-read-vs-call: max consumed=5 max wide=5 distinct observations across 6 streams=2
+311c327
+<   membership stdlib-source/builder-cap/grow-after-write: max consumed=2 max wide=2 distinct observations across 6 streams=6
+---
+>   membership stdlib-source/builder-cap/grow-after-write: max consumed=3 max wide=3 distinct observations across 6 streams=6
+314c330
+<   membership stdlib-source/builder-cap/grow-then-write: max consumed=1 max wide=1 distinct observations across 6 streams=6
+---
+>   membership stdlib-source/builder-cap/grow-then-write: max consumed=2 max wide=2 distinct observations across 6 streams=6
+316,331c332,347
+<   membership strings/conv-cap/bytes-alias-append-esc-8: max consumed=1 max wide=1 distinct observations across 6 streams=1
+<   membership strings/conv-cap/bytes-alias-append-mut-5: max consumed=1 max wide=1 distinct observations across 6 streams=1
+<   membership strings/conv-cap/bytes-concat-esc-5: max consumed=0 max wide=0 distinct observations across 6 streams=1
+<   membership strings/conv-cap/bytes-inline-helper: max consumed=0 max wide=0 distinct observations across 6 streams=1
+<   membership strings/conv-cap/bytes-var-esc-0: max consumed=0 max wide=0 distinct observations across 6 streams=1
+<   membership strings/conv-cap/bytes-var-esc-100: max consumed=0 max wide=0 distinct observations across 6 streams=1
+<   membership strings/conv-cap/bytes-var-esc-33: max consumed=0 max wide=0 distinct observations across 6 streams=1
+<   membership strings/conv-cap/bytes-var-esc-5: max consumed=0 max wide=0 distinct observations across 6 streams=1
+<   membership strings/conv-cap/bytes-var-mut-0: max consumed=0 max wide=0 distinct observations across 6 streams=1
+<   membership strings/conv-cap/bytes-var-mut-100: max consumed=0 max wide=0 distinct observations across 6 streams=1
+<   membership strings/conv-cap/bytes-var-mut-33: max consumed=0 max wide=0 distinct observations across 6 streams=1
+<   membership strings/conv-cap/bytes-var-mut-5: max consumed=0 max wide=0 distinct observations across 6 streams=1
+<   membership strings/conv-cap/bytes-var-nomut-0: max consumed=0 max wide=0 distinct observations across 6 streams=1
+<   membership strings/conv-cap/bytes-var-nomut-100: max consumed=0 max wide=0 distinct observations across 6 streams=1
+<   membership strings/conv-cap/bytes-var-nomut-33: max consumed=0 max wide=0 distinct observations across 6 streams=1
+<   membership strings/conv-cap/bytes-var-nomut-5: max consumed=0 max wide=0 distinct observations across 6 streams=1
+---
+>   membership strings/conv-cap/bytes-alias-append-esc-8: max consumed=2 max wide=2 distinct observations across 6 streams=2
+>   membership strings/conv-cap/bytes-alias-append-mut-5: max consumed=2 max wide=2 distinct observations across 6 streams=3
+>   membership strings/conv-cap/bytes-concat-esc-5: max consumed=1 max wide=1 distinct observations across 6 streams=3
+>   membership strings/conv-cap/bytes-inline-helper: max consumed=2 max wide=2 distinct observations across 6 streams=4
+>   membership strings/conv-cap/bytes-var-esc-0: max consumed=1 max wide=1 distinct observations across 6 streams=2
+>   membership strings/conv-cap/bytes-var-esc-100: max consumed=1 max wide=1 distinct observations across 6 streams=2
+>   membership strings/conv-cap/bytes-var-esc-33: max consumed=1 max wide=1 distinct observations across 6 streams=2
+>   membership strings/conv-cap/bytes-var-esc-5: max consumed=1 max wide=1 distinct observations across 6 streams=3
+>   membership strings/conv-cap/bytes-var-mut-0: max consumed=1 max wide=1 distinct observations across 6 streams=2
+>   membership strings/conv-cap/bytes-var-mut-100: max consumed=1 max wide=1 distinct observations across 6 streams=2
+>   membership strings/conv-cap/bytes-var-mut-33: max consumed=1 max wide=1 distinct observations across 6 streams=2
+>   membership strings/conv-cap/bytes-var-mut-5: max consumed=1 max wide=1 distinct observations across 6 streams=3
+>   membership strings/conv-cap/bytes-var-nomut-0: max consumed=1 max wide=1 distinct observations across 6 streams=2
+>   membership strings/conv-cap/bytes-var-nomut-100: max consumed=1 max wide=1 distinct observations across 6 streams=2
+>   membership strings/conv-cap/bytes-var-nomut-33: max consumed=1 max wide=1 distinct observations across 6 streams=2
+>   membership strings/conv-cap/bytes-var-nomut-5: max consumed=1 max wide=1 distinct observations across 6 streams=3
+334c350
+<   membership strings/conv-cap/runes-var-esc-5: max consumed=0 max wide=0 distinct observations across 6 streams=1
+---
+>   membership strings/conv-cap/runes-var-esc-5: max consumed=1 max wide=1 distinct observations across 6 streams=2
+337c353
+<   membership strings/conv-cap/runes-var-nomut-5: max consumed=0 max wide=0 distinct observations across 6 streams=1
+---
+>   membership strings/conv-cap/runes-var-nomut-5: max consumed=1 max wide=1 distinct observations across 6 streams=2

@@ -1,0 +1,919 @@
+rows×streams: before=23275 after=23275 union=23275
+
+== stream [-]: identical=1 observation-differs=0 consumption-differs-only=0 missing=0
+
+== stream [1,3,5,7,9,2,4,6,8,0]: identical=3749 observation-differs=24 consumption-differs-only=106 missing=0
+  cons builtins/e13-sibling-panic-order/bytes-conv-left-len-hoist: before consumed=2 wide=2 perSite=unseqNext=2 obs=820955422844 | after consumed=3 wide=3 perSite=unseqNext=2;convCap=1 obs=820955422844
+  cons builtins/e13-sibling-panic-order/bytes-conv-value-vs-mutating-call: before consumed=4 wide=4 perSite=unseqNext=4 obs=127052604468 | after consumed=5 wide=5 perSite=unseqNext=4;convCap=1 obs=127052604468
+  cons bytes/buffer-model/len-reset: before consumed=0 wide=0 perSite=- obs=113659415861 | after consumed=2 wide=2 perSite=convCap=2 obs=113659415861
+  cons bytes/buffer-model/pointer-use: before consumed=0 wide=0 perSite=- obs=150698274225 | after consumed=1 wide=1 perSite=convCap=1 obs=150698274225
+  cons bytes/buffer-model/write-paths: before consumed=0 wide=0 perSite=- obs=169771533110 | after consumed=1 wide=1 perSite=convCap=1 obs=169771533110
+  cons evalorder/unseq-conv-alloc/conv-read-vs-call: before consumed=4 wide=4 perSite=unseqNext=4 obs=127052604468 | after consumed=5 wide=5 perSite=unseqNext=4;convCap=1 obs=127052604468
+  cons fmt/fprint-writers/buffer-single: before consumed=0 wide=0 perSite=- obs=527719699560 | after consumed=2 wide=2 perSite=convCap=2 obs=527719699560
+  cons fmt/fprint-writers/builder-single: before consumed=2 wide=2 perSite=appendSpill=2 obs=210066039330 | after consumed=4 wide=4 perSite=appendSpill=2;convCap=2 obs=210066039330
+  cons fmt/fprint-writers/fprintf-buffer-shape: before consumed=10 wide=10 perSite=appendSpill=10 obs=172615966080 | after consumed=12 wide=12 perSite=appendSpill=10;convCap=2 obs=172615966080
+  cons fmt/fprintf-builder/describe-shape: before consumed=8 wide=8 perSite=appendSpill=8 obs=489876745582 | after consumed=14 wide=14 perSite=appendSpill=10;convCap=4 obs=489876745582
+  cons fmt/fprintf-builder/returns: before consumed=3 wide=3 perSite=appendSpill=3 obs=160012897332 | after consumed=4 wide=4 perSite=appendSpill=3;convCap=1 obs=160012897332
+  cons imported-goose/generics/generic-conversion: before consumed=1 wide=1 perSite=unseqPanic=1 obs=315584040831 | after consumed=2 wide=2 perSite=unseqPanic=1;convCap=1 obs=315584040831
+  cons imported-goose/unittest/conversions/wrapper: before consumed=0 wide=0 perSite=- obs=451693909310 | after consumed=1 wide=1 perSite=convCap=1 obs=451693909310
+  cons init/stdlib-initializer-source-through: before consumed=1 wide=1 perSite=appendSpill=1 obs=185500065657 | after consumed=4 wide=4 perSite=appendSpill=1;convCap=3 obs=185500065657
+  cons noodler/conversions/defined-string-bytes: before consumed=0 wide=0 perSite=- obs=310146103048 | after consumed=1 wide=1 perSite=convCap=1 obs=310146103048
+  cons noodler/conversions/empty-string-nonnil: before consumed=0 wide=0 perSite=- obs=499849205389 | after consumed=2 wide=2 perSite=convCap=2 obs=499849205389
+  cons noodler/conversions/runes-invalid-utf8: before consumed=0 wide=0 perSite=- obs=370712237139 | after consumed=1 wide=1 perSite=convCap=1 obs=370712237139
+  cons noodler/conversions/runes-truncated: before consumed=0 wide=0 perSite=- obs=690707907415 | after consumed=1 wide=1 perSite=convCap=1 obs=690707907415
+  cons noodler/slices/byte-slice-sub-alias: before consumed=0 wide=0 perSite=- obs=170409167506 | after consumed=1 wide=1 perSite=convCap=1 obs=170409167506
+  cons noodler/strings/parse-uint-edges: before consumed=1 wide=1 perSite=appendSpill=1 obs=100122276560 | after consumed=8 wide=8 perSite=appendSpill=1;convCap=7 obs=100122276560
+  cons noodler/strings/substring-then-bytes: before consumed=0 wide=0 perSite=- obs=456186488021 | after consumed=1 wide=1 perSite=convCap=1 obs=456186488021
+  cons noodler/strings/trimspace-unicode: before consumed=0 wide=0 perSite=- obs=460787231712 | after consumed=1 wide=1 perSite=convCap=1 obs=460787231712
+  cons panic-recover/shim-refusal-unrecoverable/parse-recover: before consumed=2 wide=2 perSite=appendSpill=2 obs=124945590462 | after consumed=3 wide=3 perSite=appendSpill=2;convCap=1 obs=124945590462
+  cons panic-recover/shim-refusal-unrecoverable/render-recover: before consumed=1 wide=1 perSite=appendSpill=1 obs=100881286407 | after consumed=4 wide=4 perSite=appendSpill=1;convCap=3 obs=100881286407
+  cons slices/slice-elided-high-eval-once/conversion-base: before consumed=0 wide=0 perSite=- obs=159498287828 | after consumed=2 wide=2 perSite=convCap=2 obs=159498287828
+  obs  stdlib-source/builder-cap/grow-after-write: before consumed=2 wide=2 perSite=appendSpill=2 obs=113122749027 | after consumed=3 wide=3 perSite=appendSpill=2;convCap=1 obs=441397965775
+  cons stdlib-source/builder-cap/grow-then-write: before consumed=1 wide=1 perSite=appendSpill=1 obs=121227223612 | after consumed=2 wide=2 perSite=appendSpill=1;convCap=1 obs=121227223612
+  cons stdlib-source/builder-fuzz/seed-0: before consumed=19 wide=19 perSite=appendSpill=19 obs=139262740773 | after consumed=93 wide=93 perSite=appendSpill=20;convCap=73 obs=139262740773
+  cons stdlib-source/builder-fuzz/seed-1: before consumed=31 wide=31 perSite=appendSpill=31 obs=164576023782 | after consumed=109 wide=109 perSite=appendSpill=31;convCap=78 obs=164576023782
+  cons stdlib-source/builder-fuzz/seed-2: before consumed=19 wide=19 perSite=appendSpill=19 obs=481580179747 | after consumed=104 wide=104 perSite=appendSpill=21;convCap=83 obs=481580179747
+  cons stdlib-source/builder-fuzz/seed-3: before consumed=25 wide=25 perSite=appendSpill=25 obs=174641297650 | after consumed=108 wide=108 perSite=appendSpill=26;convCap=82 obs=174641297650
+  cons stdlib-source/builder-fuzz/seed-4: before consumed=25 wide=25 perSite=appendSpill=25 obs=139433505187 | after consumed=106 wide=106 perSite=appendSpill=27;convCap=79 obs=139433505187
+  cons stdlib-source/builder-fuzz/seed-5: before consumed=24 wide=24 perSite=appendSpill=24 obs=119888502479 | after consumed=105 wide=105 perSite=appendSpill=26;convCap=79 obs=119888502479
+  cons stdlib-source/builder-fuzz/seed-6: before consumed=19 wide=19 perSite=appendSpill=19 obs=808311094157 | after consumed=98 wide=98 perSite=appendSpill=21;convCap=77 obs=808311094157
+  cons stdlib-source/builder-fuzz/seed-7: before consumed=10 wide=10 perSite=appendSpill=10 obs=166317552016 | after consumed=89 wide=89 perSite=appendSpill=12;convCap=77 obs=166317552016
+  cons stdlib-source/builder-fuzz/seed-8: before consumed=26 wide=26 perSite=appendSpill=26 obs=153320731274 | after consumed=106 wide=106 perSite=appendSpill=29;convCap=77 obs=153320731274
+  cons stdlib-source/builder-fuzz/seed-9: before consumed=31 wide=31 perSite=appendSpill=31 obs=177079069775 | after consumed=112 wide=112 perSite=appendSpill=31;convCap=81 obs=177079069775
+  cons stdlib-source/builder-overlay/grow-contract: before consumed=7 wide=7 perSite=appendSpill=7 obs=113254444350 | after consumed=11 wide=11 perSite=appendSpill=7;convCap=4 obs=113254444350
+  cons stdlib-source/builder-overlay/grow-noop: before consumed=1 wide=1 perSite=appendSpill=1 obs=311305922898 | after consumed=2 wide=2 perSite=appendSpill=1;convCap=1 obs=311305922898
+  cons stdlib-source/builder-overlay/join-large: before consumed=1 wide=1 perSite=appendSpill=1 obs=735907435400 | after consumed=200 wide=200 perSite=appendSpill=1;convCap=199 obs=735907435400
+  cons stdlib-source/builder-overlay/repeat-1k: before consumed=1 wide=1 perSite=appendSpill=1 obs=177119826196 | after consumed=3 wide=3 perSite=appendSpill=1;convCap=2 obs=177119826196
+  cons stdlib-source/builder-overlay/repeat-doubling-loop: before consumed=5 wide=5 perSite=appendSpill=1;unseqNext=4 obs=143832600045 | after consumed=11 wide=11 perSite=appendSpill=1;unseqNext=7;convCap=3 obs=143832600045
+  cons stdlib-source/builder-overlay/reset-reuse: before consumed=2 wide=2 perSite=appendSpill=2 obs=281192172375 | after consumed=4 wide=4 perSite=appendSpill=2;convCap=2 obs=281192172375
+  cons stdlib-source/builder-overlay/string-after-writes: before consumed=3 wide=3 perSite=appendSpill=3 obs=720034352540 | after consumed=3 wide=3 perSite=appendSpill=2;convCap=1 obs=720034352540
+  cons stdlib-source/builder-overlay/string-stable-in-place: before consumed=1 wide=1 perSite=appendSpill=1 obs=102149183552 | after consumed=3 wide=3 perSite=appendSpill=1;convCap=2 obs=102149183552
+  cons stdlib-source/bytes-buffer/grow-contract: before consumed=4 wide=4 perSite=appendSpill=4 obs=491773624352 | after consumed=10 wide=10 perSite=appendSpill=4;convCap=6 obs=491773624352
+  cons stdlib-source/bytes-buffer/next-bytes-truncate: before consumed=0 wide=0 perSite=- obs=123709839670 | after consumed=1 wide=1 perSite=convCap=1 obs=123709839670
+  cons stdlib-source/bytes-buffer/reset-reuse: before consumed=0 wide=0 perSite=- obs=684823312130 | after consumed=2 wide=2 perSite=convCap=2 obs=684823312130
+  cons stdlib-source/bytes-buffer/truncate-out-of-range: before consumed=0 wide=0 perSite=- obs=836837516229 | after consumed=1 wide=1 perSite=convCap=1 obs=836837516229
+  cons stdlib-source/bytes-buffer/unread-byte-error: before consumed=0 wide=0 perSite=- obs=112349659492 | after consumed=1 wide=1 perSite=convCap=1 obs=112349659492
+  cons stdlib-source/bytes-buffer/write-side: before consumed=0 wide=0 perSite=- obs=164535393824 | after consumed=1 wide=1 perSite=convCap=1 obs=164535393824
+  cons stdlib-source/errors-join/empty-texts: before consumed=2 wide=2 perSite=appendSpill=2 obs=289506900474 | after consumed=4 wide=4 perSite=convCap=4 obs=289506900474
+  cons stdlib-source/errors-join/many: before consumed=4 wide=4 perSite=appendSpill=4 obs=224088994771 | after consumed=9 wide=9 perSite=appendSpill=3;convCap=6 obs=224088994771
+  cons stdlib-source/errors-join/nested: before consumed=2 wide=2 perSite=appendSpill=2 obs=867974767931 | after consumed=4 wide=4 perSite=convCap=4 obs=867974767931
+  cons stdlib-source/frontier/atoi-error-path-clone: before consumed=0 wide=0 perSite=- obs=836983566562 | after consumed=2 wide=2 perSite=convCap=2 obs=836983566562
+  cons stdlib-source/frontier/buffer-readbyte-io: before consumed=0 wide=0 perSite=- obs=154235356925 | after consumed=1 wide=1 perSite=convCap=1 obs=154235356925
+  cons stdlib-source/slices-sortfunc/others: before consumed=4 wide=4 perSite=appendSpill=4 obs=920778362695 | after consumed=16 wide=16 perSite=appendSpill=4;convCap=12 obs=920778362695
+  cons stdlib-source/slices-sortfunc/sort-stable-func: before consumed=1 wide=1 perSite=appendSpill=1 obs=505566387655 | after consumed=31 wide=31 perSite=appendSpill=1;convCap=30 obs=505566387655
+  cons stdlib-source/slices-sortfunc/sortfunc-large: before consumed=1 wide=1 perSite=appendSpill=1 obs=105804552232 | after consumed=41 wide=41 perSite=appendSpill=1;convCap=40 obs=105804552232
+  cons stdlib-source/slices-sortfunc/sortfunc-named-slice: before consumed=1 wide=1 perSite=appendSpill=1 obs=937097897779 | after consumed=6 wide=6 perSite=appendSpill=1;convCap=5 obs=937097897779
+  cons stdlib-source/slices-sortfunc/sortfunc-reversed-input: before consumed=1 wide=1 perSite=appendSpill=1 obs=542588318530 | after consumed=31 wide=31 perSite=appendSpill=1;convCap=30 obs=542588318530
+  cons stdlib-source/slices-sortfunc/sortfunc-strings-by-len: before consumed=1 wide=1 perSite=appendSpill=1 obs=180988643359 | after consumed=14 wide=14 perSite=appendSpill=1;convCap=13 obs=180988643359
+  cons stdlib-source/slices-sortfunc/sortfunc-ties-projected: before consumed=5 wide=5 perSite=appendSpill=5 obs=514649471300 | after consumed=39 wide=39 perSite=appendSpill=5;convCap=34 obs=514649471300
+  cons stdlib-source/slices-sortfunc/sortfunc-ties-realized: before consumed=1 wide=1 perSite=appendSpill=1 obs=728316055899 | after consumed=31 wide=31 perSite=appendSpill=1;convCap=30 obs=728316055899
+  cons stdlib-source/strconv-format/siblings: before consumed=4 wide=4 perSite=appendSpill=2;unseqNext=2 obs=761851411490 | after consumed=5 wide=5 perSite=appendSpill=2;unseqNext=2;convCap=1 obs=761851411490
+  cons stdlib-source/strconv-parseuint/bitsize-saturation: before consumed=1 wide=1 perSite=appendSpill=1 obs=347623622314 | after consumed=9 wide=9 perSite=appendSpill=1;convCap=8 obs=347623622314
+  cons stdlib-source/strconv-parseuint/error-quoting: before consumed=6 wide=6 perSite=appendSpill=6 obs=132976660481 | after consumed=19 wide=19 perSite=appendSpill=7;convCap=12 obs=132976660481
+  cons stdlib-source/strconv-parseuint/error-texts: before consumed=5 wide=5 perSite=appendSpill=5 obs=679960196278 | after consumed=17 wide=17 perSite=appendSpill=5;convCap=12 obs=679960196278
+  cons stdlib-source/strconv-parseuint/happy-bases: before consumed=0 wide=0 perSite=- obs=105677889813 | after consumed=4 wide=4 perSite=convCap=4 obs=105677889813
+  cons stdlib-source/strconv-parseuint/numerror-type: before consumed=0 wide=0 perSite=- obs=169679777520 | after consumed=2 wide=2 perSite=convCap=2 obs=169679777520
+  cons stdlib-source/strconv-parseuint/range-sentinel: before consumed=0 wide=0 perSite=- obs=129751557805 | after consumed=2 wide=2 perSite=convCap=2 obs=129751557805
+  cons stdlib-source/strings-trimspace/all-unicode-space: before consumed=0 wide=0 perSite=- obs=764188315522 | after consumed=1 wide=1 perSite=convCap=1 obs=764188315522
+  cons stdlib-source/strings-trimspace/ascii-table: before consumed=0 wide=0 perSite=- obs=752543774490 | after consumed=1 wide=1 perSite=convCap=1 obs=752543774490
+  cons stdlib-source/strings-trimspace/both-unicode: before consumed=0 wide=0 perSite=- obs=393564991130 | after consumed=1 wide=1 perSite=convCap=1 obs=393564991130
+  cons stdlib-source/strings-trimspace/empty-and-single: before consumed=0 wide=0 perSite=- obs=131400880108 | after consumed=3 wide=3 perSite=convCap=3 obs=131400880108
+  cons stdlib-source/strings-trimspace/inner-preserved: before consumed=0 wide=0 perSite=- obs=162569913079 | after consumed=1 wide=1 perSite=convCap=1 obs=162569913079
+  cons stdlib-source/strings-trimspace/invalid-utf8-ends: before consumed=0 wide=0 perSite=- obs=353948824922 | after consumed=1 wide=1 perSite=convCap=1 obs=353948824922
+  cons stdlib-source/strings-trimspace/left-unicode-only: before consumed=0 wide=0 perSite=- obs=377893407346 | after consumed=1 wide=1 perSite=convCap=1 obs=377893407346
+  cons stdlib-source/strings-trimspace/near-miss-ends: before consumed=0 wide=0 perSite=- obs=108175864924 | after consumed=1 wide=1 perSite=convCap=1 obs=108175864924
+  cons stdlib-source/strings-trimspace/non-space-ends: before consumed=0 wide=0 perSite=- obs=528569776513 | after consumed=1 wide=1 perSite=convCap=1 obs=528569776513
+  cons stdlib-source/strings-trimspace/right-unicode-only: before consumed=0 wide=0 perSite=- obs=377893407346 | after consumed=1 wide=1 perSite=convCap=1 obs=377893407346
+  cons strconv/format-parse/parse-uint-bitsize: before consumed=1 wide=1 perSite=appendSpill=1 obs=157813410334 | after consumed=4 wide=4 perSite=appendSpill=1;convCap=3 obs=157813410334
+  cons strconv/format-parse/parse-uint-errors: before consumed=4 wide=4 perSite=appendSpill=4 obs=176705230840 | after consumed=12 wide=12 perSite=appendSpill=4;convCap=8 obs=176705230840
+  cons strconv/format-parse/parse-uint-happy: before consumed=0 wide=0 perSite=- obs=647198188178 | after consumed=3 wide=3 perSite=convCap=3 obs=647198188178
+  cons strconv/format-parse/parse-uint-range-value: before consumed=0 wide=0 perSite=- obs=123798558689 | after consumed=8 wide=8 perSite=convCap=8 obs=123798558689
+  cons strconv/format-parse/unmodeled-member: before consumed=0 wide=0 perSite=- obs=123556465975 | after consumed=1 wide=1 perSite=convCap=1 obs=123556465975
+  cons strings/builder-model/copy-panics: before consumed=1 wide=1 perSite=appendSpill=1 obs=176578477202 | after consumed=2 wide=2 perSite=appendSpill=1;convCap=1 obs=176578477202
+  cons strings/builder-model/copy-zero-ok: before consumed=1 wide=1 perSite=appendSpill=1 obs=114603720740 | after consumed=2 wide=2 perSite=appendSpill=1;convCap=1 obs=114603720740
+  cons strings/builder-model/len-reset: before consumed=2 wide=2 perSite=appendSpill=2 obs=212550018045 | after consumed=4 wide=4 perSite=appendSpill=2;convCap=2 obs=212550018045
+  cons strings/builder-model/string-stable: before consumed=1 wide=1 perSite=appendSpill=1 obs=657272898754 | after consumed=3 wide=3 perSite=appendSpill=1;convCap=2 obs=657272898754
+  cons strings/builder-model/write-string: before consumed=2 wide=2 perSite=appendSpill=2 obs=112405755843 | after consumed=4 wide=4 perSite=appendSpill=2;convCap=2 obs=112405755843
+  obs  strings/byte-conversion-cap: before consumed=0 wide=0 perSite=- obs=409323283749 | after consumed=1 wide=1 perSite=convCap=1 obs=160214464492
+  obs  strings/conv-cap/bytes-alias-append-esc-8: before consumed=1 wide=1 perSite=appendSpill=1 obs=411891890264 | after consumed=1 wide=1 perSite=convCap=1 obs=105565315450
+  obs  strings/conv-cap/bytes-alias-append-mut-5: before consumed=1 wide=1 perSite=appendSpill=1 obs=737999994600 | after consumed=1 wide=1 perSite=convCap=1 obs=110748136031
+  obs  strings/conv-cap/bytes-concat-esc-5: before consumed=0 wide=0 perSite=- obs=522316383949 | after consumed=1 wide=1 perSite=convCap=1 obs=468048367650
+  obs  strings/conv-cap/bytes-inline-helper: before consumed=0 wide=0 perSite=- obs=109917491544 | after consumed=2 wide=2 perSite=convCap=2 obs=128452532693
+  obs  strings/conv-cap/bytes-var-esc-0: before consumed=0 wide=0 perSite=- obs=877402127713 | after consumed=1 wide=1 perSite=convCap=1 obs=974000650993
+  obs  strings/conv-cap/bytes-var-esc-100: before consumed=0 wide=0 perSite=- obs=811674857414 | after consumed=1 wide=1 perSite=convCap=1 obs=322595586560
+  obs  strings/conv-cap/bytes-var-esc-33: before consumed=0 wide=0 perSite=- obs=109345780881 | after consumed=1 wide=1 perSite=convCap=1 obs=155507361795
+  obs  strings/conv-cap/bytes-var-esc-5: before consumed=0 wide=0 perSite=- obs=522316383949 | after consumed=1 wide=1 perSite=convCap=1 obs=468048367650
+  obs  strings/conv-cap/bytes-var-mut-0: before consumed=0 wide=0 perSite=- obs=877402127713 | after consumed=1 wide=1 perSite=convCap=1 obs=974000650993
+  obs  strings/conv-cap/bytes-var-mut-100: before consumed=0 wide=0 perSite=- obs=811674857414 | after consumed=1 wide=1 perSite=convCap=1 obs=322595586560
+  obs  strings/conv-cap/bytes-var-mut-33: before consumed=0 wide=0 perSite=- obs=109345780881 | after consumed=1 wide=1 perSite=convCap=1 obs=155507361795
+  obs  strings/conv-cap/bytes-var-mut-5: before consumed=0 wide=0 perSite=- obs=522316383949 | after consumed=1 wide=1 perSite=convCap=1 obs=468048367650
+  obs  strings/conv-cap/bytes-var-nomut-0: before consumed=0 wide=0 perSite=- obs=877402127713 | after consumed=1 wide=1 perSite=convCap=1 obs=974000650993
+  obs  strings/conv-cap/bytes-var-nomut-100: before consumed=0 wide=0 perSite=- obs=811674857414 | after consumed=1 wide=1 perSite=convCap=1 obs=322595586560
+  obs  strings/conv-cap/bytes-var-nomut-33: before consumed=0 wide=0 perSite=- obs=109345780881 | after consumed=1 wide=1 perSite=convCap=1 obs=155507361795
+  obs  strings/conv-cap/bytes-var-nomut-5: before consumed=0 wide=0 perSite=- obs=522316383949 | after consumed=1 wide=1 perSite=convCap=1 obs=468048367650
+  obs  strings/conv-cap/runes-var-esc-100: before consumed=0 wide=0 perSite=- obs=811674857414 | after consumed=0 wide=0 perSite=- obs=163936810856
+  obs  strings/conv-cap/runes-var-esc-33: before consumed=0 wide=0 perSite=- obs=109345780881 | after consumed=0 wide=0 perSite=- obs=156015209035
+  obs  strings/conv-cap/runes-var-esc-5: before consumed=0 wide=0 perSite=- obs=522316383949 | after consumed=1 wide=1 perSite=convCap=1 obs=974000650993
+  obs  strings/conv-cap/runes-var-nomut-100: before consumed=0 wide=0 perSite=- obs=811674857414 | after consumed=0 wide=0 perSite=- obs=163936810856
+  obs  strings/conv-cap/runes-var-nomut-33: before consumed=0 wide=0 perSite=- obs=109345780881 | after consumed=0 wide=0 perSite=- obs=156015209035
+  obs  strings/conv-cap/runes-var-nomut-5: before consumed=0 wide=0 perSite=- obs=522316383949 | after consumed=1 wide=1 perSite=convCap=1 obs=974000650993
+  cons strings/defined-copy-invalid-utf8: before consumed=0 wide=0 perSite=- obs=157724777205 | after consumed=1 wide=1 perSite=convCap=1 obs=157724777205
+  cons strings/defined-slice-string-conversion: before consumed=0 wide=0 perSite=- obs=126019636510 | after consumed=2 wide=2 perSite=convCap=2 obs=126019636510
+  cons strings/join-conformance/basic: before consumed=1 wide=1 perSite=appendSpill=1 obs=378222946974 | after consumed=6 wide=6 perSite=appendSpill=1;convCap=5 obs=378222946974
+  cons strings/join-conformance/empty-sep: before consumed=1 wide=1 perSite=appendSpill=1 obs=134376247148 | after consumed=6 wide=6 perSite=appendSpill=1;convCap=5 obs=134376247148
+  cons strings/join-conformance/newraft-shape: before consumed=2 wide=2 perSite=appendSpill=2 obs=138692766206 | after consumed=5 wide=5 perSite=appendSpill=2;convCap=3 obs=138692766206
+  cons strings/rune-slice-conversion: before consumed=0 wide=0 perSite=- obs=139164659624 | after consumed=1 wide=1 perSite=convCap=1 obs=139164659624
+  cons strings/rune-slice-to-string-copy: before consumed=0 wide=0 perSite=- obs=749281069957 | after consumed=1 wide=1 perSite=convCap=1 obs=749281069957
+  cons strings/split-conformance/confchange-shape: before consumed=0 wide=0 perSite=- obs=157735028909 | after consumed=1 wide=1 perSite=convCap=1 obs=157735028909
+  cons strings/string-byte-conversion: before consumed=0 wide=0 perSite=- obs=540858470144 | after consumed=1 wide=1 perSite=convCap=1 obs=540858470144
+  cons strings/string-to-rune-copy: before consumed=0 wide=0 perSite=- obs=366620109142 | after consumed=2 wide=2 perSite=convCap=2 obs=366620109142
+  cons strings/trimspace-repeat/repeat-basic: before consumed=1 wide=1 perSite=appendSpill=1 obs=531609307120 | after consumed=4 wide=4 perSite=appendSpill=1;convCap=3 obs=531609307120
+  cons strings/trimspace-repeat/trim-all-space: before consumed=0 wide=0 perSite=- obs=836032542976 | after consumed=1 wide=1 perSite=convCap=1 obs=836032542976
+  cons strings/trimspace-repeat/trim-ascii: before consumed=0 wide=0 perSite=- obs=181889884245 | after consumed=1 wide=1 perSite=convCap=1 obs=181889884245
+  cons strings/trimspace-repeat/trim-empty: before consumed=0 wide=0 perSite=- obs=836032542976 | after consumed=1 wide=1 perSite=convCap=1 obs=836032542976
+  cons strings/trimspace-repeat/trim-inner-runes: before consumed=0 wide=0 perSite=- obs=364450951393 | after consumed=1 wide=1 perSite=convCap=1 obs=364450951393
+  cons strings/trimspace-repeat/trim-unicode: before consumed=0 wide=0 perSite=- obs=517690201103 | after consumed=1 wide=1 perSite=convCap=1 obs=517690201103
+
+== stream [5,5,5,5,5,5,5,5]: identical=3749 observation-differs=23 consumption-differs-only=107 missing=0
+  cons builtins/e13-sibling-panic-order/bytes-conv-left-len-hoist: before consumed=2 wide=2 perSite=unseqNext=2 obs=820955422844 | after consumed=3 wide=3 perSite=unseqNext=2;convCap=1 obs=820955422844
+  cons builtins/e13-sibling-panic-order/bytes-conv-value-vs-mutating-call: before consumed=4 wide=4 perSite=unseqNext=4 obs=127052604468 | after consumed=5 wide=5 perSite=unseqNext=4;convCap=1 obs=127052604468
+  cons bytes/buffer-model/len-reset: before consumed=0 wide=0 perSite=- obs=113659415861 | after consumed=2 wide=2 perSite=convCap=2 obs=113659415861
+  cons bytes/buffer-model/pointer-use: before consumed=0 wide=0 perSite=- obs=150698274225 | after consumed=1 wide=1 perSite=convCap=1 obs=150698274225
+  cons bytes/buffer-model/write-paths: before consumed=0 wide=0 perSite=- obs=169771533110 | after consumed=1 wide=1 perSite=convCap=1 obs=169771533110
+  cons evalorder/unseq-conv-alloc/conv-read-vs-call: before consumed=4 wide=4 perSite=unseqNext=4 obs=127052604468 | after consumed=5 wide=5 perSite=unseqNext=4;convCap=1 obs=127052604468
+  cons fmt/fprint-writers/buffer-single: before consumed=0 wide=0 perSite=- obs=527719699560 | after consumed=2 wide=2 perSite=convCap=2 obs=527719699560
+  cons fmt/fprint-writers/builder-single: before consumed=2 wide=2 perSite=appendSpill=2 obs=210066039330 | after consumed=4 wide=4 perSite=appendSpill=2;convCap=2 obs=210066039330
+  cons fmt/fprint-writers/fprintf-buffer-shape: before consumed=10 wide=10 perSite=appendSpill=10 obs=172615966080 | after consumed=12 wide=12 perSite=appendSpill=10;convCap=2 obs=172615966080
+  cons fmt/fprintf-builder/describe-shape: before consumed=9 wide=9 perSite=appendSpill=9 obs=489876745582 | after consumed=14 wide=14 perSite=appendSpill=10;convCap=4 obs=489876745582
+  cons fmt/fprintf-builder/returns: before consumed=3 wide=3 perSite=appendSpill=3 obs=160012897332 | after consumed=4 wide=4 perSite=appendSpill=3;convCap=1 obs=160012897332
+  cons imported-goose/generics/generic-conversion: before consumed=1 wide=1 perSite=unseqPanic=1 obs=315584040831 | after consumed=2 wide=2 perSite=unseqPanic=1;convCap=1 obs=315584040831
+  cons imported-goose/unittest/conversions/wrapper: before consumed=0 wide=0 perSite=- obs=451693909310 | after consumed=1 wide=1 perSite=convCap=1 obs=451693909310
+  cons init/stdlib-initializer-source-through: before consumed=1 wide=1 perSite=appendSpill=1 obs=185500065657 | after consumed=4 wide=4 perSite=appendSpill=1;convCap=3 obs=185500065657
+  cons noodler/conversions/defined-string-bytes: before consumed=0 wide=0 perSite=- obs=310146103048 | after consumed=1 wide=1 perSite=convCap=1 obs=310146103048
+  cons noodler/conversions/empty-string-nonnil: before consumed=0 wide=0 perSite=- obs=499849205389 | after consumed=2 wide=2 perSite=convCap=2 obs=499849205389
+  cons noodler/conversions/runes-invalid-utf8: before consumed=0 wide=0 perSite=- obs=370712237139 | after consumed=1 wide=1 perSite=convCap=1 obs=370712237139
+  cons noodler/conversions/runes-truncated: before consumed=0 wide=0 perSite=- obs=690707907415 | after consumed=1 wide=1 perSite=convCap=1 obs=690707907415
+  cons noodler/slices/byte-slice-sub-alias: before consumed=0 wide=0 perSite=- obs=170409167506 | after consumed=1 wide=1 perSite=convCap=1 obs=170409167506
+  cons noodler/strings/parse-uint-edges: before consumed=1 wide=1 perSite=appendSpill=1 obs=100122276560 | after consumed=8 wide=8 perSite=appendSpill=1;convCap=7 obs=100122276560
+  cons noodler/strings/substring-then-bytes: before consumed=0 wide=0 perSite=- obs=456186488021 | after consumed=1 wide=1 perSite=convCap=1 obs=456186488021
+  cons noodler/strings/trimspace-unicode: before consumed=0 wide=0 perSite=- obs=460787231712 | after consumed=1 wide=1 perSite=convCap=1 obs=460787231712
+  cons panic-recover/shim-refusal-unrecoverable/parse-recover: before consumed=2 wide=2 perSite=appendSpill=2 obs=124945590462 | after consumed=3 wide=3 perSite=appendSpill=2;convCap=1 obs=124945590462
+  cons panic-recover/shim-refusal-unrecoverable/render-recover: before consumed=1 wide=1 perSite=appendSpill=1 obs=100881286407 | after consumed=4 wide=4 perSite=appendSpill=1;convCap=3 obs=100881286407
+  cons slices/slice-elided-high-eval-once/conversion-base: before consumed=0 wide=0 perSite=- obs=159498287828 | after consumed=2 wide=2 perSite=convCap=2 obs=159498287828
+  cons stdlib-source/builder-cap/grow-after-write: before consumed=2 wide=2 perSite=appendSpill=2 obs=116178309996 | after consumed=3 wide=3 perSite=appendSpill=2;convCap=1 obs=116178309996
+  cons stdlib-source/builder-cap/grow-then-write: before consumed=1 wide=1 perSite=appendSpill=1 obs=479222138655 | after consumed=2 wide=2 perSite=appendSpill=1;convCap=1 obs=479222138655
+  cons stdlib-source/builder-fuzz/seed-0: before consumed=19 wide=19 perSite=appendSpill=19 obs=139262740773 | after consumed=93 wide=93 perSite=appendSpill=20;convCap=73 obs=139262740773
+  cons stdlib-source/builder-fuzz/seed-1: before consumed=30 wide=30 perSite=appendSpill=30 obs=164576023782 | after consumed=109 wide=109 perSite=appendSpill=31;convCap=78 obs=164576023782
+  cons stdlib-source/builder-fuzz/seed-2: before consumed=20 wide=20 perSite=appendSpill=20 obs=481580179747 | after consumed=104 wide=104 perSite=appendSpill=21;convCap=83 obs=481580179747
+  cons stdlib-source/builder-fuzz/seed-3: before consumed=24 wide=24 perSite=appendSpill=24 obs=174641297650 | after consumed=108 wide=108 perSite=appendSpill=26;convCap=82 obs=174641297650
+  cons stdlib-source/builder-fuzz/seed-4: before consumed=25 wide=25 perSite=appendSpill=25 obs=139433505187 | after consumed=106 wide=106 perSite=appendSpill=27;convCap=79 obs=139433505187
+  cons stdlib-source/builder-fuzz/seed-5: before consumed=24 wide=24 perSite=appendSpill=24 obs=119888502479 | after consumed=105 wide=105 perSite=appendSpill=26;convCap=79 obs=119888502479
+  cons stdlib-source/builder-fuzz/seed-6: before consumed=20 wide=20 perSite=appendSpill=20 obs=808311094157 | after consumed=98 wide=98 perSite=appendSpill=21;convCap=77 obs=808311094157
+  cons stdlib-source/builder-fuzz/seed-7: before consumed=12 wide=12 perSite=appendSpill=12 obs=166317552016 | after consumed=89 wide=89 perSite=appendSpill=12;convCap=77 obs=166317552016
+  cons stdlib-source/builder-fuzz/seed-8: before consumed=25 wide=25 perSite=appendSpill=25 obs=153320731274 | after consumed=105 wide=105 perSite=appendSpill=28;convCap=77 obs=153320731274
+  cons stdlib-source/builder-fuzz/seed-9: before consumed=30 wide=30 perSite=appendSpill=30 obs=177079069775 | after consumed=113 wide=113 perSite=appendSpill=32;convCap=81 obs=177079069775
+  cons stdlib-source/builder-overlay/grow-contract: before consumed=7 wide=7 perSite=appendSpill=7 obs=113254444350 | after consumed=11 wide=11 perSite=appendSpill=7;convCap=4 obs=113254444350
+  cons stdlib-source/builder-overlay/grow-noop: before consumed=1 wide=1 perSite=appendSpill=1 obs=311305922898 | after consumed=2 wide=2 perSite=appendSpill=1;convCap=1 obs=311305922898
+  cons stdlib-source/builder-overlay/join-large: before consumed=1 wide=1 perSite=appendSpill=1 obs=735907435400 | after consumed=200 wide=200 perSite=appendSpill=1;convCap=199 obs=735907435400
+  cons stdlib-source/builder-overlay/repeat-1k: before consumed=1 wide=1 perSite=appendSpill=1 obs=177119826196 | after consumed=3 wide=3 perSite=appendSpill=1;convCap=2 obs=177119826196
+  cons stdlib-source/builder-overlay/repeat-doubling-loop: before consumed=4 wide=4 perSite=appendSpill=1;unseqNext=3 obs=143832600045 | after consumed=7 wide=7 perSite=appendSpill=1;unseqNext=3;convCap=3 obs=143832600045
+  cons stdlib-source/builder-overlay/reset-reuse: before consumed=2 wide=2 perSite=appendSpill=2 obs=281192172375 | after consumed=4 wide=4 perSite=appendSpill=2;convCap=2 obs=281192172375
+  cons stdlib-source/builder-overlay/string-after-writes: before consumed=2 wide=2 perSite=appendSpill=2 obs=720034352540 | after consumed=3 wide=3 perSite=appendSpill=2;convCap=1 obs=720034352540
+  cons stdlib-source/builder-overlay/string-stable-in-place: before consumed=1 wide=1 perSite=appendSpill=1 obs=102149183552 | after consumed=3 wide=3 perSite=appendSpill=1;convCap=2 obs=102149183552
+  cons stdlib-source/bytes-buffer/grow-contract: before consumed=4 wide=4 perSite=appendSpill=4 obs=491773624352 | after consumed=10 wide=10 perSite=appendSpill=4;convCap=6 obs=491773624352
+  cons stdlib-source/bytes-buffer/next-bytes-truncate: before consumed=0 wide=0 perSite=- obs=123709839670 | after consumed=1 wide=1 perSite=convCap=1 obs=123709839670
+  cons stdlib-source/bytes-buffer/reset-reuse: before consumed=0 wide=0 perSite=- obs=684823312130 | after consumed=2 wide=2 perSite=convCap=2 obs=684823312130
+  cons stdlib-source/bytes-buffer/truncate-out-of-range: before consumed=0 wide=0 perSite=- obs=836837516229 | after consumed=1 wide=1 perSite=convCap=1 obs=836837516229
+  cons stdlib-source/bytes-buffer/unread-byte-error: before consumed=0 wide=0 perSite=- obs=112349659492 | after consumed=1 wide=1 perSite=convCap=1 obs=112349659492
+  cons stdlib-source/bytes-buffer/write-side: before consumed=0 wide=0 perSite=- obs=164535393824 | after consumed=1 wide=1 perSite=convCap=1 obs=164535393824
+  cons stdlib-source/errors-join/empty-texts: before consumed=2 wide=2 perSite=appendSpill=2 obs=289506900474 | after consumed=4 wide=4 perSite=convCap=4 obs=289506900474
+  cons stdlib-source/errors-join/many: before consumed=4 wide=4 perSite=appendSpill=4 obs=224088994771 | after consumed=6 wide=6 perSite=convCap=6 obs=224088994771
+  cons stdlib-source/errors-join/nested: before consumed=2 wide=2 perSite=appendSpill=2 obs=867974767931 | after consumed=4 wide=4 perSite=convCap=4 obs=867974767931
+  cons stdlib-source/frontier/atoi-error-path-clone: before consumed=0 wide=0 perSite=- obs=836983566562 | after consumed=2 wide=2 perSite=convCap=2 obs=836983566562
+  cons stdlib-source/frontier/buffer-readbyte-io: before consumed=0 wide=0 perSite=- obs=154235356925 | after consumed=1 wide=1 perSite=convCap=1 obs=154235356925
+  cons stdlib-source/slices-sortfunc/others: before consumed=4 wide=4 perSite=appendSpill=4 obs=920778362695 | after consumed=16 wide=16 perSite=appendSpill=4;convCap=12 obs=920778362695
+  cons stdlib-source/slices-sortfunc/sort-stable-func: before consumed=1 wide=1 perSite=appendSpill=1 obs=505566387655 | after consumed=31 wide=31 perSite=appendSpill=1;convCap=30 obs=505566387655
+  cons stdlib-source/slices-sortfunc/sortfunc-large: before consumed=1 wide=1 perSite=appendSpill=1 obs=105804552232 | after consumed=41 wide=41 perSite=appendSpill=1;convCap=40 obs=105804552232
+  cons stdlib-source/slices-sortfunc/sortfunc-named-slice: before consumed=1 wide=1 perSite=appendSpill=1 obs=937097897779 | after consumed=6 wide=6 perSite=appendSpill=1;convCap=5 obs=937097897779
+  cons stdlib-source/slices-sortfunc/sortfunc-reversed-input: before consumed=1 wide=1 perSite=appendSpill=1 obs=542588318530 | after consumed=31 wide=31 perSite=appendSpill=1;convCap=30 obs=542588318530
+  cons stdlib-source/slices-sortfunc/sortfunc-strings-by-len: before consumed=1 wide=1 perSite=appendSpill=1 obs=180988643359 | after consumed=14 wide=14 perSite=appendSpill=1;convCap=13 obs=180988643359
+  cons stdlib-source/slices-sortfunc/sortfunc-ties-projected: before consumed=5 wide=5 perSite=appendSpill=5 obs=514649471300 | after consumed=39 wide=39 perSite=appendSpill=5;convCap=34 obs=514649471300
+  cons stdlib-source/slices-sortfunc/sortfunc-ties-realized: before consumed=1 wide=1 perSite=appendSpill=1 obs=728316055899 | after consumed=31 wide=31 perSite=appendSpill=1;convCap=30 obs=728316055899
+  cons stdlib-source/strconv-format/siblings: before consumed=3 wide=3 perSite=appendSpill=1;unseqNext=2 obs=761851411490 | after consumed=4 wide=4 perSite=appendSpill=1;unseqNext=2;convCap=1 obs=761851411490
+  cons stdlib-source/strconv-parseuint/bitsize-saturation: before consumed=1 wide=1 perSite=appendSpill=1 obs=347623622314 | after consumed=9 wide=9 perSite=appendSpill=1;convCap=8 obs=347623622314
+  cons stdlib-source/strconv-parseuint/error-quoting: before consumed=6 wide=6 perSite=appendSpill=6 obs=132976660481 | after consumed=19 wide=19 perSite=appendSpill=7;convCap=12 obs=132976660481
+  cons stdlib-source/strconv-parseuint/error-texts: before consumed=5 wide=5 perSite=appendSpill=5 obs=679960196278 | after consumed=17 wide=17 perSite=appendSpill=5;convCap=12 obs=679960196278
+  cons stdlib-source/strconv-parseuint/happy-bases: before consumed=0 wide=0 perSite=- obs=105677889813 | after consumed=4 wide=4 perSite=convCap=4 obs=105677889813
+  cons stdlib-source/strconv-parseuint/numerror-type: before consumed=0 wide=0 perSite=- obs=169679777520 | after consumed=2 wide=2 perSite=convCap=2 obs=169679777520
+  cons stdlib-source/strconv-parseuint/range-sentinel: before consumed=0 wide=0 perSite=- obs=129751557805 | after consumed=2 wide=2 perSite=convCap=2 obs=129751557805
+  cons stdlib-source/strings-trimspace/all-unicode-space: before consumed=0 wide=0 perSite=- obs=764188315522 | after consumed=1 wide=1 perSite=convCap=1 obs=764188315522
+  cons stdlib-source/strings-trimspace/ascii-table: before consumed=0 wide=0 perSite=- obs=752543774490 | after consumed=1 wide=1 perSite=convCap=1 obs=752543774490
+  cons stdlib-source/strings-trimspace/both-unicode: before consumed=0 wide=0 perSite=- obs=393564991130 | after consumed=1 wide=1 perSite=convCap=1 obs=393564991130
+  cons stdlib-source/strings-trimspace/empty-and-single: before consumed=0 wide=0 perSite=- obs=131400880108 | after consumed=3 wide=3 perSite=convCap=3 obs=131400880108
+  cons stdlib-source/strings-trimspace/inner-preserved: before consumed=0 wide=0 perSite=- obs=162569913079 | after consumed=1 wide=1 perSite=convCap=1 obs=162569913079
+  cons stdlib-source/strings-trimspace/invalid-utf8-ends: before consumed=0 wide=0 perSite=- obs=353948824922 | after consumed=1 wide=1 perSite=convCap=1 obs=353948824922
+  cons stdlib-source/strings-trimspace/left-unicode-only: before consumed=0 wide=0 perSite=- obs=377893407346 | after consumed=1 wide=1 perSite=convCap=1 obs=377893407346
+  cons stdlib-source/strings-trimspace/near-miss-ends: before consumed=0 wide=0 perSite=- obs=108175864924 | after consumed=1 wide=1 perSite=convCap=1 obs=108175864924
+  cons stdlib-source/strings-trimspace/non-space-ends: before consumed=0 wide=0 perSite=- obs=528569776513 | after consumed=1 wide=1 perSite=convCap=1 obs=528569776513
+  cons stdlib-source/strings-trimspace/right-unicode-only: before consumed=0 wide=0 perSite=- obs=377893407346 | after consumed=1 wide=1 perSite=convCap=1 obs=377893407346
+  cons strconv/format-parse/parse-uint-bitsize: before consumed=1 wide=1 perSite=appendSpill=1 obs=157813410334 | after consumed=4 wide=4 perSite=appendSpill=1;convCap=3 obs=157813410334
+  cons strconv/format-parse/parse-uint-errors: before consumed=4 wide=4 perSite=appendSpill=4 obs=176705230840 | after consumed=12 wide=12 perSite=appendSpill=4;convCap=8 obs=176705230840
+  cons strconv/format-parse/parse-uint-happy: before consumed=0 wide=0 perSite=- obs=647198188178 | after consumed=3 wide=3 perSite=convCap=3 obs=647198188178
+  cons strconv/format-parse/parse-uint-range-value: before consumed=0 wide=0 perSite=- obs=123798558689 | after consumed=8 wide=8 perSite=convCap=8 obs=123798558689
+  cons strconv/format-parse/unmodeled-member: before consumed=0 wide=0 perSite=- obs=123556465975 | after consumed=1 wide=1 perSite=convCap=1 obs=123556465975
+  cons strings/builder-model/copy-panics: before consumed=1 wide=1 perSite=appendSpill=1 obs=176578477202 | after consumed=2 wide=2 perSite=appendSpill=1;convCap=1 obs=176578477202
+  cons strings/builder-model/copy-zero-ok: before consumed=1 wide=1 perSite=appendSpill=1 obs=114603720740 | after consumed=2 wide=2 perSite=appendSpill=1;convCap=1 obs=114603720740
+  cons strings/builder-model/len-reset: before consumed=2 wide=2 perSite=appendSpill=2 obs=212550018045 | after consumed=4 wide=4 perSite=appendSpill=2;convCap=2 obs=212550018045
+  cons strings/builder-model/string-stable: before consumed=1 wide=1 perSite=appendSpill=1 obs=657272898754 | after consumed=3 wide=3 perSite=appendSpill=1;convCap=2 obs=657272898754
+  cons strings/builder-model/write-string: before consumed=1 wide=1 perSite=appendSpill=1 obs=112405755843 | after consumed=3 wide=3 perSite=appendSpill=1;convCap=2 obs=112405755843
+  obs  strings/byte-conversion-cap: before consumed=0 wide=0 perSite=- obs=409323283749 | after consumed=1 wide=1 perSite=convCap=1 obs=157744828774
+  obs  strings/conv-cap/bytes-alias-append-esc-8: before consumed=1 wide=1 perSite=appendSpill=1 obs=411891890264 | after consumed=1 wide=1 perSite=convCap=1 obs=105565315450
+  obs  strings/conv-cap/bytes-alias-append-mut-5: before consumed=1 wide=1 perSite=appendSpill=1 obs=737999994600 | after consumed=1 wide=1 perSite=convCap=1 obs=105565315450
+  obs  strings/conv-cap/bytes-concat-esc-5: before consumed=0 wide=0 perSite=- obs=522316383949 | after consumed=1 wide=1 perSite=convCap=1 obs=974000650993
+  obs  strings/conv-cap/bytes-inline-helper: before consumed=0 wide=0 perSite=- obs=109917491544 | after consumed=2 wide=2 perSite=convCap=2 obs=132390546864
+  obs  strings/conv-cap/bytes-var-esc-0: before consumed=0 wide=0 perSite=- obs=877402127713 | after consumed=1 wide=1 perSite=convCap=1 obs=974000650993
+  obs  strings/conv-cap/bytes-var-esc-100: before consumed=0 wide=0 perSite=- obs=811674857414 | after consumed=1 wide=1 perSite=convCap=1 obs=322595586560
+  obs  strings/conv-cap/bytes-var-esc-33: before consumed=0 wide=0 perSite=- obs=109345780881 | after consumed=1 wide=1 perSite=convCap=1 obs=155507361795
+  obs  strings/conv-cap/bytes-var-esc-5: before consumed=0 wide=0 perSite=- obs=522316383949 | after consumed=1 wide=1 perSite=convCap=1 obs=974000650993
+  obs  strings/conv-cap/bytes-var-mut-0: before consumed=0 wide=0 perSite=- obs=877402127713 | after consumed=1 wide=1 perSite=convCap=1 obs=974000650993
+  obs  strings/conv-cap/bytes-var-mut-100: before consumed=0 wide=0 perSite=- obs=811674857414 | after consumed=1 wide=1 perSite=convCap=1 obs=322595586560
+  obs  strings/conv-cap/bytes-var-mut-33: before consumed=0 wide=0 perSite=- obs=109345780881 | after consumed=1 wide=1 perSite=convCap=1 obs=155507361795
+  obs  strings/conv-cap/bytes-var-mut-5: before consumed=0 wide=0 perSite=- obs=522316383949 | after consumed=1 wide=1 perSite=convCap=1 obs=974000650993
+  obs  strings/conv-cap/bytes-var-nomut-0: before consumed=0 wide=0 perSite=- obs=877402127713 | after consumed=1 wide=1 perSite=convCap=1 obs=974000650993
+  obs  strings/conv-cap/bytes-var-nomut-100: before consumed=0 wide=0 perSite=- obs=811674857414 | after consumed=1 wide=1 perSite=convCap=1 obs=322595586560
+  obs  strings/conv-cap/bytes-var-nomut-33: before consumed=0 wide=0 perSite=- obs=109345780881 | after consumed=1 wide=1 perSite=convCap=1 obs=155507361795
+  obs  strings/conv-cap/bytes-var-nomut-5: before consumed=0 wide=0 perSite=- obs=522316383949 | after consumed=1 wide=1 perSite=convCap=1 obs=974000650993
+  obs  strings/conv-cap/runes-var-esc-100: before consumed=0 wide=0 perSite=- obs=811674857414 | after consumed=0 wide=0 perSite=- obs=163936810856
+  obs  strings/conv-cap/runes-var-esc-33: before consumed=0 wide=0 perSite=- obs=109345780881 | after consumed=0 wide=0 perSite=- obs=156015209035
+  obs  strings/conv-cap/runes-var-esc-5: before consumed=0 wide=0 perSite=- obs=522316383949 | after consumed=1 wide=1 perSite=convCap=1 obs=974000650993
+  obs  strings/conv-cap/runes-var-nomut-100: before consumed=0 wide=0 perSite=- obs=811674857414 | after consumed=0 wide=0 perSite=- obs=163936810856
+  obs  strings/conv-cap/runes-var-nomut-33: before consumed=0 wide=0 perSite=- obs=109345780881 | after consumed=0 wide=0 perSite=- obs=156015209035
+  obs  strings/conv-cap/runes-var-nomut-5: before consumed=0 wide=0 perSite=- obs=522316383949 | after consumed=1 wide=1 perSite=convCap=1 obs=974000650993
+  cons strings/defined-copy-invalid-utf8: before consumed=0 wide=0 perSite=- obs=157724777205 | after consumed=1 wide=1 perSite=convCap=1 obs=157724777205
+  cons strings/defined-slice-string-conversion: before consumed=0 wide=0 perSite=- obs=126019636510 | after consumed=2 wide=2 perSite=convCap=2 obs=126019636510
+  cons strings/join-conformance/basic: before consumed=1 wide=1 perSite=appendSpill=1 obs=378222946974 | after consumed=6 wide=6 perSite=appendSpill=1;convCap=5 obs=378222946974
+  cons strings/join-conformance/empty-sep: before consumed=1 wide=1 perSite=appendSpill=1 obs=134376247148 | after consumed=6 wide=6 perSite=appendSpill=1;convCap=5 obs=134376247148
+  cons strings/join-conformance/newraft-shape: before consumed=2 wide=2 perSite=appendSpill=2 obs=138692766206 | after consumed=5 wide=5 perSite=appendSpill=2;convCap=3 obs=138692766206
+  cons strings/rune-slice-conversion: before consumed=0 wide=0 perSite=- obs=139164659624 | after consumed=1 wide=1 perSite=convCap=1 obs=139164659624
+  cons strings/rune-slice-to-string-copy: before consumed=0 wide=0 perSite=- obs=749281069957 | after consumed=1 wide=1 perSite=convCap=1 obs=749281069957
+  cons strings/split-conformance/confchange-shape: before consumed=0 wide=0 perSite=- obs=157735028909 | after consumed=1 wide=1 perSite=convCap=1 obs=157735028909
+  cons strings/string-byte-conversion: before consumed=0 wide=0 perSite=- obs=540858470144 | after consumed=1 wide=1 perSite=convCap=1 obs=540858470144
+  cons strings/string-to-rune-copy: before consumed=0 wide=0 perSite=- obs=366620109142 | after consumed=2 wide=2 perSite=convCap=2 obs=366620109142
+  cons strings/trimspace-repeat/repeat-basic: before consumed=1 wide=1 perSite=appendSpill=1 obs=531609307120 | after consumed=4 wide=4 perSite=appendSpill=1;convCap=3 obs=531609307120
+  cons strings/trimspace-repeat/trim-all-space: before consumed=0 wide=0 perSite=- obs=836032542976 | after consumed=1 wide=1 perSite=convCap=1 obs=836032542976
+  cons strings/trimspace-repeat/trim-ascii: before consumed=0 wide=0 perSite=- obs=181889884245 | after consumed=1 wide=1 perSite=convCap=1 obs=181889884245
+  cons strings/trimspace-repeat/trim-empty: before consumed=0 wide=0 perSite=- obs=836032542976 | after consumed=1 wide=1 perSite=convCap=1 obs=836032542976
+  cons strings/trimspace-repeat/trim-inner-runes: before consumed=0 wide=0 perSite=- obs=364450951393 | after consumed=1 wide=1 perSite=convCap=1 obs=364450951393
+  cons strings/trimspace-repeat/trim-unicode: before consumed=0 wide=0 perSite=- obs=517690201103 | after consumed=1 wide=1 perSite=convCap=1 obs=517690201103
+
+== stream [9,8,7,6,5,4,3,2,1,0]: identical=3749 observation-differs=19 consumption-differs-only=111 missing=0
+  obs  builtins/e13-sibling-panic-order/bytes-conv-left-len-hoist: before consumed=2 wide=2 perSite=unseqNext=2 obs=137107696575 | after consumed=3 wide=3 perSite=unseqNext=2;convCap=1 obs=820955422844
+  cons builtins/e13-sibling-panic-order/bytes-conv-value-vs-mutating-call: before consumed=2 wide=2 perSite=unseqNext=2 obs=127052604468 | after consumed=3 wide=3 perSite=unseqNext=2;convCap=1 obs=127052604468
+  cons bytes/buffer-model/len-reset: before consumed=0 wide=0 perSite=- obs=113659415861 | after consumed=2 wide=2 perSite=convCap=2 obs=113659415861
+  cons bytes/buffer-model/pointer-use: before consumed=0 wide=0 perSite=- obs=150698274225 | after consumed=1 wide=1 perSite=convCap=1 obs=150698274225
+  cons bytes/buffer-model/write-paths: before consumed=0 wide=0 perSite=- obs=169771533110 | after consumed=1 wide=1 perSite=convCap=1 obs=169771533110
+  cons evalorder/unseq-conv-alloc/conv-read-vs-call: before consumed=2 wide=2 perSite=unseqNext=2 obs=127052604468 | after consumed=3 wide=3 perSite=unseqNext=2;convCap=1 obs=127052604468
+  cons fmt/fprint-writers/buffer-single: before consumed=0 wide=0 perSite=- obs=527719699560 | after consumed=2 wide=2 perSite=convCap=2 obs=527719699560
+  cons fmt/fprint-writers/builder-single: before consumed=1 wide=1 perSite=appendSpill=1 obs=210066039330 | after consumed=3 wide=3 perSite=appendSpill=1;convCap=2 obs=210066039330
+  cons fmt/fprint-writers/fprintf-buffer-shape: before consumed=10 wide=10 perSite=appendSpill=10 obs=172615966080 | after consumed=12 wide=12 perSite=appendSpill=10;convCap=2 obs=172615966080
+  cons fmt/fprintf-builder/describe-shape: before consumed=9 wide=9 perSite=appendSpill=9 obs=489876745582 | after consumed=14 wide=14 perSite=appendSpill=10;convCap=4 obs=489876745582
+  cons fmt/fprintf-builder/returns: before consumed=3 wide=3 perSite=appendSpill=3 obs=160012897332 | after consumed=4 wide=4 perSite=appendSpill=3;convCap=1 obs=160012897332
+  cons imported-goose/generics/generic-conversion: before consumed=1 wide=1 perSite=unseqPanic=1 obs=315584040831 | after consumed=2 wide=2 perSite=unseqPanic=1;convCap=1 obs=315584040831
+  cons imported-goose/unittest/conversions/wrapper: before consumed=0 wide=0 perSite=- obs=451693909310 | after consumed=1 wide=1 perSite=convCap=1 obs=451693909310
+  cons init/stdlib-initializer-source-through: before consumed=1 wide=1 perSite=appendSpill=1 obs=185500065657 | after consumed=4 wide=4 perSite=appendSpill=1;convCap=3 obs=185500065657
+  cons noodler/conversions/defined-string-bytes: before consumed=0 wide=0 perSite=- obs=310146103048 | after consumed=1 wide=1 perSite=convCap=1 obs=310146103048
+  cons noodler/conversions/empty-string-nonnil: before consumed=0 wide=0 perSite=- obs=499849205389 | after consumed=2 wide=2 perSite=convCap=2 obs=499849205389
+  cons noodler/conversions/runes-invalid-utf8: before consumed=0 wide=0 perSite=- obs=370712237139 | after consumed=1 wide=1 perSite=convCap=1 obs=370712237139
+  cons noodler/conversions/runes-truncated: before consumed=0 wide=0 perSite=- obs=690707907415 | after consumed=1 wide=1 perSite=convCap=1 obs=690707907415
+  cons noodler/slices/byte-slice-sub-alias: before consumed=0 wide=0 perSite=- obs=170409167506 | after consumed=1 wide=1 perSite=convCap=1 obs=170409167506
+  cons noodler/strings/parse-uint-edges: before consumed=1 wide=1 perSite=appendSpill=1 obs=100122276560 | after consumed=8 wide=8 perSite=appendSpill=1;convCap=7 obs=100122276560
+  cons noodler/strings/substring-then-bytes: before consumed=0 wide=0 perSite=- obs=456186488021 | after consumed=1 wide=1 perSite=convCap=1 obs=456186488021
+  cons noodler/strings/trimspace-unicode: before consumed=0 wide=0 perSite=- obs=460787231712 | after consumed=1 wide=1 perSite=convCap=1 obs=460787231712
+  cons panic-recover/shim-refusal-unrecoverable/parse-recover: before consumed=2 wide=2 perSite=appendSpill=2 obs=124945590462 | after consumed=3 wide=3 perSite=appendSpill=2;convCap=1 obs=124945590462
+  cons panic-recover/shim-refusal-unrecoverable/render-recover: before consumed=1 wide=1 perSite=appendSpill=1 obs=100881286407 | after consumed=4 wide=4 perSite=appendSpill=1;convCap=3 obs=100881286407
+  cons slices/slice-elided-high-eval-once/conversion-base: before consumed=0 wide=0 perSite=- obs=159498287828 | after consumed=2 wide=2 perSite=convCap=2 obs=159498287828
+  obs  stdlib-source/builder-cap/grow-after-write: before consumed=2 wide=2 perSite=appendSpill=2 obs=157799719990 | after consumed=3 wide=3 perSite=appendSpill=2;convCap=1 obs=590045742004
+  cons stdlib-source/builder-cap/grow-then-write: before consumed=1 wide=1 perSite=appendSpill=1 obs=133383155426 | after consumed=2 wide=2 perSite=appendSpill=1;convCap=1 obs=133383155426
+  cons stdlib-source/builder-fuzz/seed-0: before consumed=18 wide=18 perSite=appendSpill=18 obs=139262740773 | after consumed=92 wide=92 perSite=appendSpill=19;convCap=73 obs=139262740773
+  cons stdlib-source/builder-fuzz/seed-1: before consumed=29 wide=29 perSite=appendSpill=29 obs=164576023782 | after consumed=109 wide=109 perSite=appendSpill=31;convCap=78 obs=164576023782
+  cons stdlib-source/builder-fuzz/seed-2: before consumed=19 wide=19 perSite=appendSpill=19 obs=481580179747 | after consumed=103 wide=103 perSite=appendSpill=20;convCap=83 obs=481580179747
+  cons stdlib-source/builder-fuzz/seed-3: before consumed=22 wide=22 perSite=appendSpill=22 obs=174641297650 | after consumed=107 wide=107 perSite=appendSpill=25;convCap=82 obs=174641297650
+  cons stdlib-source/builder-fuzz/seed-4: before consumed=25 wide=25 perSite=appendSpill=25 obs=139433505187 | after consumed=106 wide=106 perSite=appendSpill=27;convCap=79 obs=139433505187
+  cons stdlib-source/builder-fuzz/seed-5: before consumed=24 wide=24 perSite=appendSpill=24 obs=119888502479 | after consumed=105 wide=105 perSite=appendSpill=26;convCap=79 obs=119888502479
+  cons stdlib-source/builder-fuzz/seed-6: before consumed=19 wide=19 perSite=appendSpill=19 obs=808311094157 | after consumed=98 wide=98 perSite=appendSpill=21;convCap=77 obs=808311094157
+  cons stdlib-source/builder-fuzz/seed-7: before consumed=10 wide=10 perSite=appendSpill=10 obs=166317552016 | after consumed=89 wide=89 perSite=appendSpill=12;convCap=77 obs=166317552016
+  cons stdlib-source/builder-fuzz/seed-8: before consumed=26 wide=26 perSite=appendSpill=26 obs=153320731274 | after consumed=105 wide=105 perSite=appendSpill=28;convCap=77 obs=153320731274
+  cons stdlib-source/builder-fuzz/seed-9: before consumed=29 wide=29 perSite=appendSpill=29 obs=177079069775 | after consumed=112 wide=112 perSite=appendSpill=31;convCap=81 obs=177079069775
+  cons stdlib-source/builder-overlay/grow-contract: before consumed=7 wide=7 perSite=appendSpill=7 obs=113254444350 | after consumed=11 wide=11 perSite=appendSpill=7;convCap=4 obs=113254444350
+  cons stdlib-source/builder-overlay/grow-noop: before consumed=1 wide=1 perSite=appendSpill=1 obs=311305922898 | after consumed=2 wide=2 perSite=appendSpill=1;convCap=1 obs=311305922898
+  cons stdlib-source/builder-overlay/join-large: before consumed=1 wide=1 perSite=appendSpill=1 obs=735907435400 | after consumed=200 wide=200 perSite=appendSpill=1;convCap=199 obs=735907435400
+  cons stdlib-source/builder-overlay/repeat-1k: before consumed=1 wide=1 perSite=appendSpill=1 obs=177119826196 | after consumed=3 wide=3 perSite=appendSpill=1;convCap=2 obs=177119826196
+  cons stdlib-source/builder-overlay/repeat-doubling-loop: before consumed=4 wide=4 perSite=appendSpill=1;unseqNext=3 obs=143832600045 | after consumed=8 wide=8 perSite=appendSpill=1;unseqNext=4;convCap=3 obs=143832600045
+  cons stdlib-source/builder-overlay/reset-reuse: before consumed=2 wide=2 perSite=appendSpill=2 obs=281192172375 | after consumed=4 wide=4 perSite=appendSpill=2;convCap=2 obs=281192172375
+  cons stdlib-source/builder-overlay/string-after-writes: before consumed=2 wide=2 perSite=appendSpill=2 obs=720034352540 | after consumed=3 wide=3 perSite=appendSpill=2;convCap=1 obs=720034352540
+  cons stdlib-source/builder-overlay/string-stable-in-place: before consumed=1 wide=1 perSite=appendSpill=1 obs=102149183552 | after consumed=3 wide=3 perSite=appendSpill=1;convCap=2 obs=102149183552
+  cons stdlib-source/bytes-buffer/grow-contract: before consumed=4 wide=4 perSite=appendSpill=4 obs=491773624352 | after consumed=10 wide=10 perSite=appendSpill=4;convCap=6 obs=491773624352
+  cons stdlib-source/bytes-buffer/next-bytes-truncate: before consumed=0 wide=0 perSite=- obs=123709839670 | after consumed=1 wide=1 perSite=convCap=1 obs=123709839670
+  cons stdlib-source/bytes-buffer/reset-reuse: before consumed=0 wide=0 perSite=- obs=684823312130 | after consumed=2 wide=2 perSite=convCap=2 obs=684823312130
+  cons stdlib-source/bytes-buffer/truncate-out-of-range: before consumed=0 wide=0 perSite=- obs=836837516229 | after consumed=1 wide=1 perSite=convCap=1 obs=836837516229
+  cons stdlib-source/bytes-buffer/unread-byte-error: before consumed=0 wide=0 perSite=- obs=112349659492 | after consumed=1 wide=1 perSite=convCap=1 obs=112349659492
+  cons stdlib-source/bytes-buffer/write-side: before consumed=0 wide=0 perSite=- obs=164535393824 | after consumed=1 wide=1 perSite=convCap=1 obs=164535393824
+  cons stdlib-source/errors-join/empty-texts: before consumed=2 wide=2 perSite=appendSpill=2 obs=289506900474 | after consumed=4 wide=4 perSite=convCap=4 obs=289506900474
+  cons stdlib-source/errors-join/many: before consumed=2 wide=2 perSite=appendSpill=2 obs=224088994771 | after consumed=7 wide=7 perSite=appendSpill=1;convCap=6 obs=224088994771
+  cons stdlib-source/errors-join/nested: before consumed=2 wide=2 perSite=appendSpill=2 obs=867974767931 | after consumed=6 wide=6 perSite=appendSpill=2;convCap=4 obs=867974767931
+  cons stdlib-source/frontier/atoi-error-path-clone: before consumed=0 wide=0 perSite=- obs=836983566562 | after consumed=2 wide=2 perSite=convCap=2 obs=836983566562
+  cons stdlib-source/frontier/buffer-readbyte-io: before consumed=0 wide=0 perSite=- obs=154235356925 | after consumed=1 wide=1 perSite=convCap=1 obs=154235356925
+  cons stdlib-source/slices-sortfunc/others: before consumed=4 wide=4 perSite=appendSpill=4 obs=920778362695 | after consumed=16 wide=16 perSite=appendSpill=4;convCap=12 obs=920778362695
+  cons stdlib-source/slices-sortfunc/sort-stable-func: before consumed=1 wide=1 perSite=appendSpill=1 obs=505566387655 | after consumed=31 wide=31 perSite=appendSpill=1;convCap=30 obs=505566387655
+  cons stdlib-source/slices-sortfunc/sortfunc-large: before consumed=1 wide=1 perSite=appendSpill=1 obs=105804552232 | after consumed=41 wide=41 perSite=appendSpill=1;convCap=40 obs=105804552232
+  cons stdlib-source/slices-sortfunc/sortfunc-named-slice: before consumed=1 wide=1 perSite=appendSpill=1 obs=937097897779 | after consumed=6 wide=6 perSite=appendSpill=1;convCap=5 obs=937097897779
+  cons stdlib-source/slices-sortfunc/sortfunc-reversed-input: before consumed=1 wide=1 perSite=appendSpill=1 obs=542588318530 | after consumed=31 wide=31 perSite=appendSpill=1;convCap=30 obs=542588318530
+  cons stdlib-source/slices-sortfunc/sortfunc-strings-by-len: before consumed=1 wide=1 perSite=appendSpill=1 obs=180988643359 | after consumed=14 wide=14 perSite=appendSpill=1;convCap=13 obs=180988643359
+  cons stdlib-source/slices-sortfunc/sortfunc-ties-projected: before consumed=5 wide=5 perSite=appendSpill=5 obs=514649471300 | after consumed=39 wide=39 perSite=appendSpill=5;convCap=34 obs=514649471300
+  cons stdlib-source/slices-sortfunc/sortfunc-ties-realized: before consumed=1 wide=1 perSite=appendSpill=1 obs=728316055899 | after consumed=31 wide=31 perSite=appendSpill=1;convCap=30 obs=728316055899
+  cons stdlib-source/strconv-format/siblings: before consumed=3 wide=3 perSite=appendSpill=1;unseqNext=2 obs=761851411490 | after consumed=4 wide=4 perSite=appendSpill=1;unseqNext=2;convCap=1 obs=761851411490
+  cons stdlib-source/strconv-parseuint/bitsize-saturation: before consumed=1 wide=1 perSite=appendSpill=1 obs=347623622314 | after consumed=9 wide=9 perSite=appendSpill=1;convCap=8 obs=347623622314
+  cons stdlib-source/strconv-parseuint/error-quoting: before consumed=6 wide=6 perSite=appendSpill=6 obs=132976660481 | after consumed=19 wide=19 perSite=appendSpill=7;convCap=12 obs=132976660481
+  cons stdlib-source/strconv-parseuint/error-texts: before consumed=5 wide=5 perSite=appendSpill=5 obs=679960196278 | after consumed=17 wide=17 perSite=appendSpill=5;convCap=12 obs=679960196278
+  cons stdlib-source/strconv-parseuint/happy-bases: before consumed=0 wide=0 perSite=- obs=105677889813 | after consumed=4 wide=4 perSite=convCap=4 obs=105677889813
+  cons stdlib-source/strconv-parseuint/numerror-type: before consumed=0 wide=0 perSite=- obs=169679777520 | after consumed=2 wide=2 perSite=convCap=2 obs=169679777520
+  cons stdlib-source/strconv-parseuint/range-sentinel: before consumed=0 wide=0 perSite=- obs=129751557805 | after consumed=2 wide=2 perSite=convCap=2 obs=129751557805
+  cons stdlib-source/strings-trimspace/all-unicode-space: before consumed=0 wide=0 perSite=- obs=764188315522 | after consumed=1 wide=1 perSite=convCap=1 obs=764188315522
+  cons stdlib-source/strings-trimspace/ascii-table: before consumed=0 wide=0 perSite=- obs=752543774490 | after consumed=1 wide=1 perSite=convCap=1 obs=752543774490
+  cons stdlib-source/strings-trimspace/both-unicode: before consumed=0 wide=0 perSite=- obs=393564991130 | after consumed=1 wide=1 perSite=convCap=1 obs=393564991130
+  cons stdlib-source/strings-trimspace/empty-and-single: before consumed=0 wide=0 perSite=- obs=131400880108 | after consumed=3 wide=3 perSite=convCap=3 obs=131400880108
+  cons stdlib-source/strings-trimspace/inner-preserved: before consumed=0 wide=0 perSite=- obs=162569913079 | after consumed=1 wide=1 perSite=convCap=1 obs=162569913079
+  cons stdlib-source/strings-trimspace/invalid-utf8-ends: before consumed=0 wide=0 perSite=- obs=353948824922 | after consumed=1 wide=1 perSite=convCap=1 obs=353948824922
+  cons stdlib-source/strings-trimspace/left-unicode-only: before consumed=0 wide=0 perSite=- obs=377893407346 | after consumed=1 wide=1 perSite=convCap=1 obs=377893407346
+  cons stdlib-source/strings-trimspace/near-miss-ends: before consumed=0 wide=0 perSite=- obs=108175864924 | after consumed=1 wide=1 perSite=convCap=1 obs=108175864924
+  cons stdlib-source/strings-trimspace/non-space-ends: before consumed=0 wide=0 perSite=- obs=528569776513 | after consumed=1 wide=1 perSite=convCap=1 obs=528569776513
+  cons stdlib-source/strings-trimspace/right-unicode-only: before consumed=0 wide=0 perSite=- obs=377893407346 | after consumed=1 wide=1 perSite=convCap=1 obs=377893407346
+  cons strconv/format-parse/parse-uint-bitsize: before consumed=1 wide=1 perSite=appendSpill=1 obs=157813410334 | after consumed=4 wide=4 perSite=appendSpill=1;convCap=3 obs=157813410334
+  cons strconv/format-parse/parse-uint-errors: before consumed=4 wide=4 perSite=appendSpill=4 obs=176705230840 | after consumed=12 wide=12 perSite=appendSpill=4;convCap=8 obs=176705230840
+  cons strconv/format-parse/parse-uint-happy: before consumed=0 wide=0 perSite=- obs=647198188178 | after consumed=3 wide=3 perSite=convCap=3 obs=647198188178
+  cons strconv/format-parse/parse-uint-range-value: before consumed=0 wide=0 perSite=- obs=123798558689 | after consumed=8 wide=8 perSite=convCap=8 obs=123798558689
+  cons strconv/format-parse/unmodeled-member: before consumed=0 wide=0 perSite=- obs=123556465975 | after consumed=1 wide=1 perSite=convCap=1 obs=123556465975
+  cons strings/builder-model/copy-panics: before consumed=1 wide=1 perSite=appendSpill=1 obs=176578477202 | after consumed=2 wide=2 perSite=appendSpill=1;convCap=1 obs=176578477202
+  cons strings/builder-model/copy-zero-ok: before consumed=1 wide=1 perSite=appendSpill=1 obs=114603720740 | after consumed=2 wide=2 perSite=appendSpill=1;convCap=1 obs=114603720740
+  cons strings/builder-model/len-reset: before consumed=2 wide=2 perSite=appendSpill=2 obs=212550018045 | after consumed=4 wide=4 perSite=appendSpill=2;convCap=2 obs=212550018045
+  cons strings/builder-model/string-stable: before consumed=1 wide=1 perSite=appendSpill=1 obs=657272898754 | after consumed=3 wide=3 perSite=appendSpill=1;convCap=2 obs=657272898754
+  cons strings/builder-model/write-string: before consumed=1 wide=1 perSite=appendSpill=1 obs=112405755843 | after consumed=3 wide=3 perSite=appendSpill=1;convCap=2 obs=112405755843
+  cons strings/byte-conversion-cap: before consumed=0 wide=0 perSite=- obs=409323283749 | after consumed=1 wide=1 perSite=convCap=1 obs=409323283749
+  obs  strings/conv-cap/bytes-alias-append-esc-8: before consumed=1 wide=1 perSite=appendSpill=1 obs=411891890264 | after consumed=1 wide=1 perSite=convCap=1 obs=105565315450
+  cons strings/conv-cap/bytes-alias-append-mut-5: before consumed=1 wide=1 perSite=appendSpill=1 obs=737999994600 | after consumed=2 wide=2 perSite=appendSpill=1;convCap=1 obs=737999994600
+  cons strings/conv-cap/bytes-concat-esc-5: before consumed=0 wide=0 perSite=- obs=522316383949 | after consumed=1 wide=1 perSite=convCap=1 obs=522316383949
+  obs  strings/conv-cap/bytes-inline-helper: before consumed=0 wide=0 perSite=- obs=109917491544 | after consumed=2 wide=2 perSite=convCap=2 obs=133391701334
+  obs  strings/conv-cap/bytes-var-esc-0: before consumed=0 wide=0 perSite=- obs=877402127713 | after consumed=1 wide=1 perSite=convCap=1 obs=974000650993
+  obs  strings/conv-cap/bytes-var-esc-100: before consumed=0 wide=0 perSite=- obs=811674857414 | after consumed=1 wide=1 perSite=convCap=1 obs=322595586560
+  obs  strings/conv-cap/bytes-var-esc-33: before consumed=0 wide=0 perSite=- obs=109345780881 | after consumed=1 wide=1 perSite=convCap=1 obs=155507361795
+  cons strings/conv-cap/bytes-var-esc-5: before consumed=0 wide=0 perSite=- obs=522316383949 | after consumed=1 wide=1 perSite=convCap=1 obs=522316383949
+  obs  strings/conv-cap/bytes-var-mut-0: before consumed=0 wide=0 perSite=- obs=877402127713 | after consumed=1 wide=1 perSite=convCap=1 obs=974000650993
+  obs  strings/conv-cap/bytes-var-mut-100: before consumed=0 wide=0 perSite=- obs=811674857414 | after consumed=1 wide=1 perSite=convCap=1 obs=322595586560
+  obs  strings/conv-cap/bytes-var-mut-33: before consumed=0 wide=0 perSite=- obs=109345780881 | after consumed=1 wide=1 perSite=convCap=1 obs=155507361795
+  cons strings/conv-cap/bytes-var-mut-5: before consumed=0 wide=0 perSite=- obs=522316383949 | after consumed=1 wide=1 perSite=convCap=1 obs=522316383949
+  obs  strings/conv-cap/bytes-var-nomut-0: before consumed=0 wide=0 perSite=- obs=877402127713 | after consumed=1 wide=1 perSite=convCap=1 obs=974000650993
+  obs  strings/conv-cap/bytes-var-nomut-100: before consumed=0 wide=0 perSite=- obs=811674857414 | after consumed=1 wide=1 perSite=convCap=1 obs=322595586560
+  obs  strings/conv-cap/bytes-var-nomut-33: before consumed=0 wide=0 perSite=- obs=109345780881 | after consumed=1 wide=1 perSite=convCap=1 obs=155507361795
+  cons strings/conv-cap/bytes-var-nomut-5: before consumed=0 wide=0 perSite=- obs=522316383949 | after consumed=1 wide=1 perSite=convCap=1 obs=522316383949
+  obs  strings/conv-cap/runes-var-esc-100: before consumed=0 wide=0 perSite=- obs=811674857414 | after consumed=0 wide=0 perSite=- obs=163936810856
+  obs  strings/conv-cap/runes-var-esc-33: before consumed=0 wide=0 perSite=- obs=109345780881 | after consumed=0 wide=0 perSite=- obs=156015209035
+  obs  strings/conv-cap/runes-var-esc-5: before consumed=0 wide=0 perSite=- obs=522316383949 | after consumed=1 wide=1 perSite=convCap=1 obs=974000650993
+  obs  strings/conv-cap/runes-var-nomut-100: before consumed=0 wide=0 perSite=- obs=811674857414 | after consumed=0 wide=0 perSite=- obs=163936810856
+  obs  strings/conv-cap/runes-var-nomut-33: before consumed=0 wide=0 perSite=- obs=109345780881 | after consumed=0 wide=0 perSite=- obs=156015209035
+  obs  strings/conv-cap/runes-var-nomut-5: before consumed=0 wide=0 perSite=- obs=522316383949 | after consumed=1 wide=1 perSite=convCap=1 obs=974000650993
+  cons strings/defined-copy-invalid-utf8: before consumed=0 wide=0 perSite=- obs=157724777205 | after consumed=1 wide=1 perSite=convCap=1 obs=157724777205
+  cons strings/defined-slice-string-conversion: before consumed=0 wide=0 perSite=- obs=126019636510 | after consumed=2 wide=2 perSite=convCap=2 obs=126019636510
+  cons strings/join-conformance/basic: before consumed=1 wide=1 perSite=appendSpill=1 obs=378222946974 | after consumed=6 wide=6 perSite=appendSpill=1;convCap=5 obs=378222946974
+  cons strings/join-conformance/empty-sep: before consumed=1 wide=1 perSite=appendSpill=1 obs=134376247148 | after consumed=6 wide=6 perSite=appendSpill=1;convCap=5 obs=134376247148
+  cons strings/join-conformance/newraft-shape: before consumed=2 wide=2 perSite=appendSpill=2 obs=138692766206 | after consumed=5 wide=5 perSite=appendSpill=2;convCap=3 obs=138692766206
+  cons strings/rune-slice-conversion: before consumed=0 wide=0 perSite=- obs=139164659624 | after consumed=1 wide=1 perSite=convCap=1 obs=139164659624
+  cons strings/rune-slice-to-string-copy: before consumed=0 wide=0 perSite=- obs=749281069957 | after consumed=1 wide=1 perSite=convCap=1 obs=749281069957
+  cons strings/split-conformance/confchange-shape: before consumed=0 wide=0 perSite=- obs=157735028909 | after consumed=1 wide=1 perSite=convCap=1 obs=157735028909
+  cons strings/string-byte-conversion: before consumed=0 wide=0 perSite=- obs=540858470144 | after consumed=1 wide=1 perSite=convCap=1 obs=540858470144
+  cons strings/string-to-rune-copy: before consumed=0 wide=0 perSite=- obs=366620109142 | after consumed=2 wide=2 perSite=convCap=2 obs=366620109142
+  cons strings/trimspace-repeat/repeat-basic: before consumed=1 wide=1 perSite=appendSpill=1 obs=531609307120 | after consumed=4 wide=4 perSite=appendSpill=1;convCap=3 obs=531609307120
+  cons strings/trimspace-repeat/trim-all-space: before consumed=0 wide=0 perSite=- obs=836032542976 | after consumed=1 wide=1 perSite=convCap=1 obs=836032542976
+  cons strings/trimspace-repeat/trim-ascii: before consumed=0 wide=0 perSite=- obs=181889884245 | after consumed=1 wide=1 perSite=convCap=1 obs=181889884245
+  cons strings/trimspace-repeat/trim-empty: before consumed=0 wide=0 perSite=- obs=836032542976 | after consumed=1 wide=1 perSite=convCap=1 obs=836032542976
+  cons strings/trimspace-repeat/trim-inner-runes: before consumed=0 wide=0 perSite=- obs=364450951393 | after consumed=1 wide=1 perSite=convCap=1 obs=364450951393
+  cons strings/trimspace-repeat/trim-unicode: before consumed=0 wide=0 perSite=- obs=517690201103 | after consumed=1 wide=1 perSite=convCap=1 obs=517690201103
+
+== stream [default]: identical=3750 observation-differs=6 consumption-differs-only=123 missing=0
+  cons builtins/e13-sibling-panic-order/bytes-conv-value-vs-mutating-call: before consumed=1 wide=1 perSite=unseqNext=1 obs=822909518614 | after consumed=2 wide=2 perSite=unseqNext=1;convCap=1 obs=822909518614
+  cons bytes/buffer-model/len-reset: before consumed=0 wide=0 perSite=- obs=113659415861 | after consumed=2 wide=2 perSite=convCap=2 obs=113659415861
+  cons bytes/buffer-model/pointer-use: before consumed=0 wide=0 perSite=- obs=150698274225 | after consumed=1 wide=1 perSite=convCap=1 obs=150698274225
+  cons bytes/buffer-model/write-paths: before consumed=0 wide=0 perSite=- obs=169771533110 | after consumed=1 wide=1 perSite=convCap=1 obs=169771533110
+  cons evalorder/unseq-conv-alloc/conv-read-vs-call: before consumed=1 wide=1 perSite=unseqNext=1 obs=822909518614 | after consumed=2 wide=2 perSite=unseqNext=1;convCap=1 obs=822909518614
+  cons fmt/fprint-writers/buffer-single: before consumed=0 wide=0 perSite=- obs=527719699560 | after consumed=2 wide=2 perSite=convCap=2 obs=527719699560
+  cons fmt/fprint-writers/builder-single: before consumed=2 wide=2 perSite=appendSpill=2 obs=210066039330 | after consumed=4 wide=4 perSite=appendSpill=2;convCap=2 obs=210066039330
+  cons fmt/fprint-writers/fprintf-buffer-shape: before consumed=10 wide=10 perSite=appendSpill=10 obs=172615966080 | after consumed=12 wide=12 perSite=appendSpill=10;convCap=2 obs=172615966080
+  cons fmt/fprintf-builder/describe-shape: before consumed=10 wide=10 perSite=appendSpill=10 obs=489876745582 | after consumed=14 wide=14 perSite=appendSpill=10;convCap=4 obs=489876745582
+  cons fmt/fprintf-builder/returns: before consumed=3 wide=3 perSite=appendSpill=3 obs=160012897332 | after consumed=4 wide=4 perSite=appendSpill=3;convCap=1 obs=160012897332
+  cons imported-goose/generics/generic-conversion: before consumed=1 wide=1 perSite=unseqPanic=1 obs=315584040831 | after consumed=2 wide=2 perSite=unseqPanic=1;convCap=1 obs=315584040831
+  cons imported-goose/unittest/conversions/wrapper: before consumed=0 wide=0 perSite=- obs=451693909310 | after consumed=1 wide=1 perSite=convCap=1 obs=451693909310
+  cons init/stdlib-initializer-source-through: before consumed=1 wide=1 perSite=appendSpill=1 obs=185500065657 | after consumed=4 wide=4 perSite=appendSpill=1;convCap=3 obs=185500065657
+  cons noodler/conversions/defined-string-bytes: before consumed=0 wide=0 perSite=- obs=310146103048 | after consumed=1 wide=1 perSite=convCap=1 obs=310146103048
+  cons noodler/conversions/empty-string-nonnil: before consumed=0 wide=0 perSite=- obs=499849205389 | after consumed=2 wide=2 perSite=convCap=2 obs=499849205389
+  cons noodler/conversions/runes-invalid-utf8: before consumed=0 wide=0 perSite=- obs=370712237139 | after consumed=1 wide=1 perSite=convCap=1 obs=370712237139
+  cons noodler/conversions/runes-truncated: before consumed=0 wide=0 perSite=- obs=690707907415 | after consumed=1 wide=1 perSite=convCap=1 obs=690707907415
+  cons noodler/slices/byte-slice-sub-alias: before consumed=0 wide=0 perSite=- obs=170409167506 | after consumed=1 wide=1 perSite=convCap=1 obs=170409167506
+  cons noodler/strings/parse-uint-edges: before consumed=1 wide=1 perSite=appendSpill=1 obs=100122276560 | after consumed=8 wide=8 perSite=appendSpill=1;convCap=7 obs=100122276560
+  cons noodler/strings/substring-then-bytes: before consumed=0 wide=0 perSite=- obs=456186488021 | after consumed=1 wide=1 perSite=convCap=1 obs=456186488021
+  cons noodler/strings/trimspace-unicode: before consumed=0 wide=0 perSite=- obs=460787231712 | after consumed=1 wide=1 perSite=convCap=1 obs=460787231712
+  cons panic-recover/shim-refusal-unrecoverable/parse-recover: before consumed=2 wide=2 perSite=appendSpill=2 obs=124945590462 | after consumed=3 wide=3 perSite=appendSpill=2;convCap=1 obs=124945590462
+  cons panic-recover/shim-refusal-unrecoverable/render-recover: before consumed=1 wide=1 perSite=appendSpill=1 obs=100881286407 | after consumed=4 wide=4 perSite=appendSpill=1;convCap=3 obs=100881286407
+  cons slices/slice-elided-high-eval-once/conversion-base: before consumed=0 wide=0 perSite=- obs=159498287828 | after consumed=2 wide=2 perSite=convCap=2 obs=159498287828
+  cons stdlib-source/builder-cap/grow-after-write: before consumed=2 wide=2 perSite=appendSpill=2 obs=156397819596 | after consumed=3 wide=3 perSite=appendSpill=2;convCap=1 obs=156397819596
+  cons stdlib-source/builder-cap/grow-then-write: before consumed=1 wide=1 perSite=appendSpill=1 obs=540210093494 | after consumed=2 wide=2 perSite=appendSpill=1;convCap=1 obs=540210093494
+  cons stdlib-source/builder-fuzz/seed-0: before consumed=21 wide=21 perSite=appendSpill=21 obs=139262740773 | after consumed=94 wide=94 perSite=appendSpill=21;convCap=73 obs=139262740773
+  cons stdlib-source/builder-fuzz/seed-1: before consumed=32 wide=32 perSite=appendSpill=32 obs=164576023782 | after consumed=110 wide=110 perSite=appendSpill=32;convCap=78 obs=164576023782
+  cons stdlib-source/builder-fuzz/seed-2: before consumed=21 wide=21 perSite=appendSpill=21 obs=481580179747 | after consumed=104 wide=104 perSite=appendSpill=21;convCap=83 obs=481580179747
+  cons stdlib-source/builder-fuzz/seed-3: before consumed=27 wide=27 perSite=appendSpill=27 obs=174641297650 | after consumed=109 wide=109 perSite=appendSpill=27;convCap=82 obs=174641297650
+  cons stdlib-source/builder-fuzz/seed-4: before consumed=28 wide=28 perSite=appendSpill=28 obs=139433505187 | after consumed=107 wide=107 perSite=appendSpill=28;convCap=79 obs=139433505187
+  cons stdlib-source/builder-fuzz/seed-5: before consumed=26 wide=26 perSite=appendSpill=26 obs=119888502479 | after consumed=105 wide=105 perSite=appendSpill=26;convCap=79 obs=119888502479
+  cons stdlib-source/builder-fuzz/seed-6: before consumed=23 wide=23 perSite=appendSpill=23 obs=808311094157 | after consumed=100 wide=100 perSite=appendSpill=23;convCap=77 obs=808311094157
+  cons stdlib-source/builder-fuzz/seed-7: before consumed=12 wide=12 perSite=appendSpill=12 obs=166317552016 | after consumed=89 wide=89 perSite=appendSpill=12;convCap=77 obs=166317552016
+  cons stdlib-source/builder-fuzz/seed-8: before consumed=30 wide=30 perSite=appendSpill=30 obs=153320731274 | after consumed=107 wide=107 perSite=appendSpill=30;convCap=77 obs=153320731274
+  cons stdlib-source/builder-fuzz/seed-9: before consumed=32 wide=32 perSite=appendSpill=32 obs=177079069775 | after consumed=113 wide=113 perSite=appendSpill=32;convCap=81 obs=177079069775
+  cons stdlib-source/builder-overlay/grow-contract: before consumed=7 wide=7 perSite=appendSpill=7 obs=113254444350 | after consumed=11 wide=11 perSite=appendSpill=7;convCap=4 obs=113254444350
+  cons stdlib-source/builder-overlay/grow-noop: before consumed=1 wide=1 perSite=appendSpill=1 obs=311305922898 | after consumed=2 wide=2 perSite=appendSpill=1;convCap=1 obs=311305922898
+  cons stdlib-source/builder-overlay/join-large: before consumed=1 wide=1 perSite=appendSpill=1 obs=735907435400 | after consumed=200 wide=200 perSite=appendSpill=1;convCap=199 obs=735907435400
+  cons stdlib-source/builder-overlay/repeat-1k: before consumed=1 wide=1 perSite=appendSpill=1 obs=177119826196 | after consumed=3 wide=3 perSite=appendSpill=1;convCap=2 obs=177119826196
+  cons stdlib-source/builder-overlay/repeat-doubling-loop: before consumed=8 wide=8 perSite=appendSpill=1;unseqNext=7 obs=143832600045 | after consumed=11 wide=11 perSite=appendSpill=1;unseqNext=7;convCap=3 obs=143832600045
+  cons stdlib-source/builder-overlay/reset-reuse: before consumed=2 wide=2 perSite=appendSpill=2 obs=281192172375 | after consumed=4 wide=4 perSite=appendSpill=2;convCap=2 obs=281192172375
+  cons stdlib-source/builder-overlay/string-after-writes: before consumed=3 wide=3 perSite=appendSpill=3 obs=720034352540 | after consumed=4 wide=4 perSite=appendSpill=3;convCap=1 obs=720034352540
+  cons stdlib-source/builder-overlay/string-stable-in-place: before consumed=1 wide=1 perSite=appendSpill=1 obs=102149183552 | after consumed=3 wide=3 perSite=appendSpill=1;convCap=2 obs=102149183552
+  cons stdlib-source/bytes-buffer/grow-contract: before consumed=4 wide=4 perSite=appendSpill=4 obs=491773624352 | after consumed=10 wide=10 perSite=appendSpill=4;convCap=6 obs=491773624352
+  cons stdlib-source/bytes-buffer/next-bytes-truncate: before consumed=0 wide=0 perSite=- obs=123709839670 | after consumed=1 wide=1 perSite=convCap=1 obs=123709839670
+  cons stdlib-source/bytes-buffer/reset-reuse: before consumed=0 wide=0 perSite=- obs=684823312130 | after consumed=2 wide=2 perSite=convCap=2 obs=684823312130
+  cons stdlib-source/bytes-buffer/truncate-out-of-range: before consumed=0 wide=0 perSite=- obs=836837516229 | after consumed=1 wide=1 perSite=convCap=1 obs=836837516229
+  cons stdlib-source/bytes-buffer/unread-byte-error: before consumed=0 wide=0 perSite=- obs=112349659492 | after consumed=1 wide=1 perSite=convCap=1 obs=112349659492
+  cons stdlib-source/bytes-buffer/write-side: before consumed=0 wide=0 perSite=- obs=164535393824 | after consumed=1 wide=1 perSite=convCap=1 obs=164535393824
+  cons stdlib-source/errors-join/empty-texts: before consumed=2 wide=2 perSite=appendSpill=2 obs=289506900474 | after consumed=6 wide=6 perSite=appendSpill=2;convCap=4 obs=289506900474
+  cons stdlib-source/errors-join/many: before consumed=4 wide=4 perSite=appendSpill=4 obs=224088994771 | after consumed=10 wide=10 perSite=appendSpill=4;convCap=6 obs=224088994771
+  cons stdlib-source/errors-join/nested: before consumed=3 wide=3 perSite=appendSpill=3 obs=867974767931 | after consumed=7 wide=7 perSite=appendSpill=3;convCap=4 obs=867974767931
+  cons stdlib-source/frontier/atoi-error-path-clone: before consumed=0 wide=0 perSite=- obs=836983566562 | after consumed=2 wide=2 perSite=convCap=2 obs=836983566562
+  cons stdlib-source/frontier/buffer-readbyte-io: before consumed=0 wide=0 perSite=- obs=154235356925 | after consumed=1 wide=1 perSite=convCap=1 obs=154235356925
+  cons stdlib-source/slices-sortfunc/others: before consumed=4 wide=4 perSite=appendSpill=4 obs=920778362695 | after consumed=16 wide=16 perSite=appendSpill=4;convCap=12 obs=920778362695
+  cons stdlib-source/slices-sortfunc/sort-stable-func: before consumed=1 wide=1 perSite=appendSpill=1 obs=505566387655 | after consumed=31 wide=31 perSite=appendSpill=1;convCap=30 obs=505566387655
+  cons stdlib-source/slices-sortfunc/sortfunc-large: before consumed=1 wide=1 perSite=appendSpill=1 obs=105804552232 | after consumed=41 wide=41 perSite=appendSpill=1;convCap=40 obs=105804552232
+  cons stdlib-source/slices-sortfunc/sortfunc-named-slice: before consumed=1 wide=1 perSite=appendSpill=1 obs=937097897779 | after consumed=6 wide=6 perSite=appendSpill=1;convCap=5 obs=937097897779
+  cons stdlib-source/slices-sortfunc/sortfunc-reversed-input: before consumed=1 wide=1 perSite=appendSpill=1 obs=542588318530 | after consumed=31 wide=31 perSite=appendSpill=1;convCap=30 obs=542588318530
+  cons stdlib-source/slices-sortfunc/sortfunc-strings-by-len: before consumed=1 wide=1 perSite=appendSpill=1 obs=180988643359 | after consumed=14 wide=14 perSite=appendSpill=1;convCap=13 obs=180988643359
+  cons stdlib-source/slices-sortfunc/sortfunc-ties-projected: before consumed=5 wide=5 perSite=appendSpill=5 obs=514649471300 | after consumed=39 wide=39 perSite=appendSpill=5;convCap=34 obs=514649471300
+  cons stdlib-source/slices-sortfunc/sortfunc-ties-realized: before consumed=1 wide=1 perSite=appendSpill=1 obs=728316055899 | after consumed=31 wide=31 perSite=appendSpill=1;convCap=30 obs=728316055899
+  cons stdlib-source/strconv-format/siblings: before consumed=4 wide=4 perSite=appendSpill=2;unseqNext=2 obs=761851411490 | after consumed=5 wide=5 perSite=appendSpill=2;unseqNext=2;convCap=1 obs=761851411490
+  cons stdlib-source/strconv-parseuint/bitsize-saturation: before consumed=1 wide=1 perSite=appendSpill=1 obs=347623622314 | after consumed=9 wide=9 perSite=appendSpill=1;convCap=8 obs=347623622314
+  cons stdlib-source/strconv-parseuint/error-quoting: before consumed=7 wide=7 perSite=appendSpill=7 obs=132976660481 | after consumed=19 wide=19 perSite=appendSpill=7;convCap=12 obs=132976660481
+  cons stdlib-source/strconv-parseuint/error-texts: before consumed=5 wide=5 perSite=appendSpill=5 obs=679960196278 | after consumed=17 wide=17 perSite=appendSpill=5;convCap=12 obs=679960196278
+  cons stdlib-source/strconv-parseuint/happy-bases: before consumed=0 wide=0 perSite=- obs=105677889813 | after consumed=4 wide=4 perSite=convCap=4 obs=105677889813
+  cons stdlib-source/strconv-parseuint/numerror-type: before consumed=0 wide=0 perSite=- obs=169679777520 | after consumed=2 wide=2 perSite=convCap=2 obs=169679777520
+  cons stdlib-source/strconv-parseuint/range-sentinel: before consumed=0 wide=0 perSite=- obs=129751557805 | after consumed=2 wide=2 perSite=convCap=2 obs=129751557805
+  cons stdlib-source/strings-trimspace/all-unicode-space: before consumed=0 wide=0 perSite=- obs=764188315522 | after consumed=1 wide=1 perSite=convCap=1 obs=764188315522
+  cons stdlib-source/strings-trimspace/ascii-table: before consumed=0 wide=0 perSite=- obs=752543774490 | after consumed=1 wide=1 perSite=convCap=1 obs=752543774490
+  cons stdlib-source/strings-trimspace/both-unicode: before consumed=0 wide=0 perSite=- obs=393564991130 | after consumed=1 wide=1 perSite=convCap=1 obs=393564991130
+  cons stdlib-source/strings-trimspace/empty-and-single: before consumed=0 wide=0 perSite=- obs=131400880108 | after consumed=3 wide=3 perSite=convCap=3 obs=131400880108
+  cons stdlib-source/strings-trimspace/inner-preserved: before consumed=0 wide=0 perSite=- obs=162569913079 | after consumed=1 wide=1 perSite=convCap=1 obs=162569913079
+  cons stdlib-source/strings-trimspace/invalid-utf8-ends: before consumed=0 wide=0 perSite=- obs=353948824922 | after consumed=1 wide=1 perSite=convCap=1 obs=353948824922
+  cons stdlib-source/strings-trimspace/left-unicode-only: before consumed=0 wide=0 perSite=- obs=377893407346 | after consumed=1 wide=1 perSite=convCap=1 obs=377893407346
+  cons stdlib-source/strings-trimspace/near-miss-ends: before consumed=0 wide=0 perSite=- obs=108175864924 | after consumed=1 wide=1 perSite=convCap=1 obs=108175864924
+  cons stdlib-source/strings-trimspace/non-space-ends: before consumed=0 wide=0 perSite=- obs=528569776513 | after consumed=1 wide=1 perSite=convCap=1 obs=528569776513
+  cons stdlib-source/strings-trimspace/right-unicode-only: before consumed=0 wide=0 perSite=- obs=377893407346 | after consumed=1 wide=1 perSite=convCap=1 obs=377893407346
+  cons strconv/format-parse/parse-uint-bitsize: before consumed=1 wide=1 perSite=appendSpill=1 obs=157813410334 | after consumed=4 wide=4 perSite=appendSpill=1;convCap=3 obs=157813410334
+  cons strconv/format-parse/parse-uint-errors: before consumed=4 wide=4 perSite=appendSpill=4 obs=176705230840 | after consumed=12 wide=12 perSite=appendSpill=4;convCap=8 obs=176705230840
+  cons strconv/format-parse/parse-uint-happy: before consumed=0 wide=0 perSite=- obs=647198188178 | after consumed=3 wide=3 perSite=convCap=3 obs=647198188178
+  cons strconv/format-parse/parse-uint-range-value: before consumed=0 wide=0 perSite=- obs=123798558689 | after consumed=8 wide=8 perSite=convCap=8 obs=123798558689
+  cons strconv/format-parse/unmodeled-member: before consumed=0 wide=0 perSite=- obs=123556465975 | after consumed=1 wide=1 perSite=convCap=1 obs=123556465975
+  cons strings/builder-model/copy-panics: before consumed=1 wide=1 perSite=appendSpill=1 obs=176578477202 | after consumed=2 wide=2 perSite=appendSpill=1;convCap=1 obs=176578477202
+  cons strings/builder-model/copy-zero-ok: before consumed=1 wide=1 perSite=appendSpill=1 obs=114603720740 | after consumed=2 wide=2 perSite=appendSpill=1;convCap=1 obs=114603720740
+  cons strings/builder-model/len-reset: before consumed=2 wide=2 perSite=appendSpill=2 obs=212550018045 | after consumed=4 wide=4 perSite=appendSpill=2;convCap=2 obs=212550018045
+  cons strings/builder-model/string-stable: before consumed=1 wide=1 perSite=appendSpill=1 obs=657272898754 | after consumed=3 wide=3 perSite=appendSpill=1;convCap=2 obs=657272898754
+  cons strings/builder-model/write-string: before consumed=2 wide=2 perSite=appendSpill=2 obs=112405755843 | after consumed=4 wide=4 perSite=appendSpill=2;convCap=2 obs=112405755843
+  cons strings/byte-conversion-cap: before consumed=0 wide=0 perSite=- obs=409323283749 | after consumed=1 wide=1 perSite=convCap=1 obs=409323283749
+  cons strings/conv-cap/bytes-alias-append-esc-8: before consumed=1 wide=1 perSite=appendSpill=1 obs=411891890264 | after consumed=2 wide=2 perSite=appendSpill=1;convCap=1 obs=411891890264
+  cons strings/conv-cap/bytes-alias-append-mut-5: before consumed=1 wide=1 perSite=appendSpill=1 obs=737999994600 | after consumed=2 wide=2 perSite=appendSpill=1;convCap=1 obs=737999994600
+  cons strings/conv-cap/bytes-concat-esc-5: before consumed=0 wide=0 perSite=- obs=522316383949 | after consumed=1 wide=1 perSite=convCap=1 obs=522316383949
+  cons strings/conv-cap/bytes-inline-helper: before consumed=0 wide=0 perSite=- obs=109917491544 | after consumed=2 wide=2 perSite=convCap=2 obs=109917491544
+  cons strings/conv-cap/bytes-var-esc-0: before consumed=0 wide=0 perSite=- obs=877402127713 | after consumed=1 wide=1 perSite=convCap=1 obs=877402127713
+  cons strings/conv-cap/bytes-var-esc-100: before consumed=0 wide=0 perSite=- obs=811674857414 | after consumed=1 wide=1 perSite=convCap=1 obs=811674857414
+  cons strings/conv-cap/bytes-var-esc-33: before consumed=0 wide=0 perSite=- obs=109345780881 | after consumed=1 wide=1 perSite=convCap=1 obs=109345780881
+  cons strings/conv-cap/bytes-var-esc-5: before consumed=0 wide=0 perSite=- obs=522316383949 | after consumed=1 wide=1 perSite=convCap=1 obs=522316383949
+  cons strings/conv-cap/bytes-var-mut-0: before consumed=0 wide=0 perSite=- obs=877402127713 | after consumed=1 wide=1 perSite=convCap=1 obs=877402127713
+  cons strings/conv-cap/bytes-var-mut-100: before consumed=0 wide=0 perSite=- obs=811674857414 | after consumed=1 wide=1 perSite=convCap=1 obs=811674857414
+  cons strings/conv-cap/bytes-var-mut-33: before consumed=0 wide=0 perSite=- obs=109345780881 | after consumed=1 wide=1 perSite=convCap=1 obs=109345780881
+  cons strings/conv-cap/bytes-var-mut-5: before consumed=0 wide=0 perSite=- obs=522316383949 | after consumed=1 wide=1 perSite=convCap=1 obs=522316383949
+  cons strings/conv-cap/bytes-var-nomut-0: before consumed=0 wide=0 perSite=- obs=877402127713 | after consumed=1 wide=1 perSite=convCap=1 obs=877402127713
+  cons strings/conv-cap/bytes-var-nomut-100: before consumed=0 wide=0 perSite=- obs=811674857414 | after consumed=1 wide=1 perSite=convCap=1 obs=811674857414
+  cons strings/conv-cap/bytes-var-nomut-33: before consumed=0 wide=0 perSite=- obs=109345780881 | after consumed=1 wide=1 perSite=convCap=1 obs=109345780881
+  cons strings/conv-cap/bytes-var-nomut-5: before consumed=0 wide=0 perSite=- obs=522316383949 | after consumed=1 wide=1 perSite=convCap=1 obs=522316383949
+  obs  strings/conv-cap/runes-var-esc-100: before consumed=0 wide=0 perSite=- obs=811674857414 | after consumed=0 wide=0 perSite=- obs=163936810856
+  obs  strings/conv-cap/runes-var-esc-33: before consumed=0 wide=0 perSite=- obs=109345780881 | after consumed=0 wide=0 perSite=- obs=156015209035
+  obs  strings/conv-cap/runes-var-esc-5: before consumed=0 wide=0 perSite=- obs=522316383949 | after consumed=1 wide=1 perSite=convCap=1 obs=129245747878
+  obs  strings/conv-cap/runes-var-nomut-100: before consumed=0 wide=0 perSite=- obs=811674857414 | after consumed=0 wide=0 perSite=- obs=163936810856
+  obs  strings/conv-cap/runes-var-nomut-33: before consumed=0 wide=0 perSite=- obs=109345780881 | after consumed=0 wide=0 perSite=- obs=156015209035
+  obs  strings/conv-cap/runes-var-nomut-5: before consumed=0 wide=0 perSite=- obs=522316383949 | after consumed=1 wide=1 perSite=convCap=1 obs=129245747878
+  cons strings/defined-copy-invalid-utf8: before consumed=0 wide=0 perSite=- obs=157724777205 | after consumed=1 wide=1 perSite=convCap=1 obs=157724777205
+  cons strings/defined-slice-string-conversion: before consumed=0 wide=0 perSite=- obs=126019636510 | after consumed=2 wide=2 perSite=convCap=2 obs=126019636510
+  cons strings/join-conformance/basic: before consumed=1 wide=1 perSite=appendSpill=1 obs=378222946974 | after consumed=6 wide=6 perSite=appendSpill=1;convCap=5 obs=378222946974
+  cons strings/join-conformance/empty-sep: before consumed=1 wide=1 perSite=appendSpill=1 obs=134376247148 | after consumed=6 wide=6 perSite=appendSpill=1;convCap=5 obs=134376247148
+  cons strings/join-conformance/newraft-shape: before consumed=2 wide=2 perSite=appendSpill=2 obs=138692766206 | after consumed=5 wide=5 perSite=appendSpill=2;convCap=3 obs=138692766206
+  cons strings/rune-slice-conversion: before consumed=0 wide=0 perSite=- obs=139164659624 | after consumed=1 wide=1 perSite=convCap=1 obs=139164659624
+  cons strings/rune-slice-to-string-copy: before consumed=0 wide=0 perSite=- obs=749281069957 | after consumed=1 wide=1 perSite=convCap=1 obs=749281069957
+  cons strings/split-conformance/confchange-shape: before consumed=0 wide=0 perSite=- obs=157735028909 | after consumed=1 wide=1 perSite=convCap=1 obs=157735028909
+  cons strings/string-byte-conversion: before consumed=0 wide=0 perSite=- obs=540858470144 | after consumed=1 wide=1 perSite=convCap=1 obs=540858470144
+  cons strings/string-to-rune-copy: before consumed=0 wide=0 perSite=- obs=366620109142 | after consumed=2 wide=2 perSite=convCap=2 obs=366620109142
+  cons strings/trimspace-repeat/repeat-basic: before consumed=1 wide=1 perSite=appendSpill=1 obs=531609307120 | after consumed=4 wide=4 perSite=appendSpill=1;convCap=3 obs=531609307120
+  cons strings/trimspace-repeat/trim-all-space: before consumed=0 wide=0 perSite=- obs=836032542976 | after consumed=1 wide=1 perSite=convCap=1 obs=836032542976
+  cons strings/trimspace-repeat/trim-ascii: before consumed=0 wide=0 perSite=- obs=181889884245 | after consumed=1 wide=1 perSite=convCap=1 obs=181889884245
+  cons strings/trimspace-repeat/trim-empty: before consumed=0 wide=0 perSite=- obs=836032542976 | after consumed=1 wide=1 perSite=convCap=1 obs=836032542976
+  cons strings/trimspace-repeat/trim-inner-runes: before consumed=0 wide=0 perSite=- obs=364450951393 | after consumed=1 wide=1 perSite=convCap=1 obs=364450951393
+  cons strings/trimspace-repeat/trim-unicode: before consumed=0 wide=0 perSite=- obs=517690201103 | after consumed=1 wide=1 perSite=convCap=1 obs=517690201103
+
+== stream [rand:1:4096]: identical=3750 observation-differs=14 consumption-differs-only=115 missing=0
+  cons builtins/e13-sibling-panic-order/bytes-conv-value-vs-mutating-call: before consumed=1 wide=1 perSite=unseqNext=1 obs=822909518614 | after consumed=2 wide=2 perSite=unseqNext=1;convCap=1 obs=822909518614
+  cons bytes/buffer-model/len-reset: before consumed=0 wide=0 perSite=- obs=113659415861 | after consumed=2 wide=2 perSite=convCap=2 obs=113659415861
+  cons bytes/buffer-model/pointer-use: before consumed=0 wide=0 perSite=- obs=150698274225 | after consumed=1 wide=1 perSite=convCap=1 obs=150698274225
+  cons bytes/buffer-model/write-paths: before consumed=0 wide=0 perSite=- obs=169771533110 | after consumed=1 wide=1 perSite=convCap=1 obs=169771533110
+  cons evalorder/unseq-conv-alloc/conv-read-vs-call: before consumed=1 wide=1 perSite=unseqNext=1 obs=822909518614 | after consumed=2 wide=2 perSite=unseqNext=1;convCap=1 obs=822909518614
+  cons fmt/fprint-writers/buffer-single: before consumed=0 wide=0 perSite=- obs=527719699560 | after consumed=2 wide=2 perSite=convCap=2 obs=527719699560
+  cons fmt/fprint-writers/builder-single: before consumed=1 wide=1 perSite=appendSpill=1 obs=210066039330 | after consumed=3 wide=3 perSite=appendSpill=1;convCap=2 obs=210066039330
+  cons fmt/fprint-writers/fprintf-buffer-shape: before consumed=10 wide=10 perSite=appendSpill=10 obs=172615966080 | after consumed=12 wide=12 perSite=appendSpill=10;convCap=2 obs=172615966080
+  cons fmt/fprintf-builder/describe-shape: before consumed=7 wide=7 perSite=appendSpill=7 obs=489876745582 | after consumed=11 wide=11 perSite=appendSpill=7;convCap=4 obs=489876745582
+  cons fmt/fprintf-builder/returns: before consumed=3 wide=3 perSite=appendSpill=3 obs=160012897332 | after consumed=4 wide=4 perSite=appendSpill=3;convCap=1 obs=160012897332
+  cons imported-goose/generics/generic-conversion: before consumed=1 wide=1 perSite=unseqPanic=1 obs=315584040831 | after consumed=2 wide=2 perSite=unseqPanic=1;convCap=1 obs=315584040831
+  cons imported-goose/unittest/conversions/wrapper: before consumed=0 wide=0 perSite=- obs=451693909310 | after consumed=1 wide=1 perSite=convCap=1 obs=451693909310
+  cons init/stdlib-initializer-source-through: before consumed=1 wide=1 perSite=appendSpill=1 obs=185500065657 | after consumed=4 wide=4 perSite=appendSpill=1;convCap=3 obs=185500065657
+  cons noodler/conversions/defined-string-bytes: before consumed=0 wide=0 perSite=- obs=310146103048 | after consumed=1 wide=1 perSite=convCap=1 obs=310146103048
+  cons noodler/conversions/empty-string-nonnil: before consumed=0 wide=0 perSite=- obs=499849205389 | after consumed=2 wide=2 perSite=convCap=2 obs=499849205389
+  cons noodler/conversions/runes-invalid-utf8: before consumed=0 wide=0 perSite=- obs=370712237139 | after consumed=1 wide=1 perSite=convCap=1 obs=370712237139
+  cons noodler/conversions/runes-truncated: before consumed=0 wide=0 perSite=- obs=690707907415 | after consumed=1 wide=1 perSite=convCap=1 obs=690707907415
+  cons noodler/slices/byte-slice-sub-alias: before consumed=0 wide=0 perSite=- obs=170409167506 | after consumed=1 wide=1 perSite=convCap=1 obs=170409167506
+  cons noodler/strings/parse-uint-edges: before consumed=1 wide=1 perSite=appendSpill=1 obs=100122276560 | after consumed=8 wide=8 perSite=appendSpill=1;convCap=7 obs=100122276560
+  cons noodler/strings/substring-then-bytes: before consumed=0 wide=0 perSite=- obs=456186488021 | after consumed=1 wide=1 perSite=convCap=1 obs=456186488021
+  cons noodler/strings/trimspace-unicode: before consumed=0 wide=0 perSite=- obs=460787231712 | after consumed=1 wide=1 perSite=convCap=1 obs=460787231712
+  cons panic-recover/shim-refusal-unrecoverable/parse-recover: before consumed=2 wide=2 perSite=appendSpill=2 obs=124945590462 | after consumed=3 wide=3 perSite=appendSpill=2;convCap=1 obs=124945590462
+  cons panic-recover/shim-refusal-unrecoverable/render-recover: before consumed=1 wide=1 perSite=appendSpill=1 obs=100881286407 | after consumed=4 wide=4 perSite=appendSpill=1;convCap=3 obs=100881286407
+  cons slices/slice-elided-high-eval-once/conversion-base: before consumed=0 wide=0 perSite=- obs=159498287828 | after consumed=2 wide=2 perSite=convCap=2 obs=159498287828
+  obs  stdlib-source/builder-cap/grow-after-write: before consumed=1 wide=1 perSite=appendSpill=1 obs=158634092613 | after consumed=2 wide=2 perSite=appendSpill=1;convCap=1 obs=128487806311
+  cons stdlib-source/builder-cap/grow-then-write: before consumed=1 wide=1 perSite=appendSpill=1 obs=686421051400 | after consumed=2 wide=2 perSite=appendSpill=1;convCap=1 obs=686421051400
+  cons stdlib-source/builder-fuzz/seed-0: before consumed=12 wide=12 perSite=appendSpill=12 obs=139262740773 | after consumed=84 wide=84 perSite=appendSpill=11;convCap=73 obs=139262740773
+  cons stdlib-source/builder-fuzz/seed-1: before consumed=21 wide=21 perSite=appendSpill=21 obs=164576023782 | after consumed=101 wide=101 perSite=appendSpill=23;convCap=78 obs=164576023782
+  cons stdlib-source/builder-fuzz/seed-2: before consumed=12 wide=12 perSite=appendSpill=12 obs=481580179747 | after consumed=97 wide=97 perSite=appendSpill=14;convCap=83 obs=481580179747
+  cons stdlib-source/builder-fuzz/seed-3: before consumed=19 wide=19 perSite=appendSpill=19 obs=174641297650 | after consumed=99 wide=99 perSite=appendSpill=17;convCap=82 obs=174641297650
+  cons stdlib-source/builder-fuzz/seed-4: before consumed=18 wide=18 perSite=appendSpill=18 obs=139433505187 | after consumed=99 wide=99 perSite=appendSpill=20;convCap=79 obs=139433505187
+  cons stdlib-source/builder-fuzz/seed-5: before consumed=17 wide=17 perSite=appendSpill=17 obs=119888502479 | after consumed=98 wide=98 perSite=appendSpill=19;convCap=79 obs=119888502479
+  cons stdlib-source/builder-fuzz/seed-6: before consumed=12 wide=12 perSite=appendSpill=12 obs=808311094157 | after consumed=91 wide=91 perSite=appendSpill=14;convCap=77 obs=808311094157
+  cons stdlib-source/builder-fuzz/seed-7: before consumed=7 wide=7 perSite=appendSpill=7 obs=166317552016 | after consumed=85 wide=85 perSite=appendSpill=8;convCap=77 obs=166317552016
+  cons stdlib-source/builder-fuzz/seed-8: before consumed=22 wide=22 perSite=appendSpill=22 obs=153320731274 | after consumed=95 wide=95 perSite=appendSpill=18;convCap=77 obs=153320731274
+  cons stdlib-source/builder-fuzz/seed-9: before consumed=20 wide=20 perSite=appendSpill=20 obs=177079069775 | after consumed=101 wide=101 perSite=appendSpill=20;convCap=81 obs=177079069775
+  cons stdlib-source/builder-overlay/grow-contract: before consumed=6 wide=6 perSite=appendSpill=6 obs=113254444350 | after consumed=10 wide=10 perSite=appendSpill=6;convCap=4 obs=113254444350
+  cons stdlib-source/builder-overlay/grow-noop: before consumed=1 wide=1 perSite=appendSpill=1 obs=311305922898 | after consumed=2 wide=2 perSite=appendSpill=1;convCap=1 obs=311305922898
+  cons stdlib-source/builder-overlay/join-large: before consumed=1 wide=1 perSite=appendSpill=1 obs=735907435400 | after consumed=200 wide=200 perSite=appendSpill=1;convCap=199 obs=735907435400
+  cons stdlib-source/builder-overlay/repeat-1k: before consumed=1 wide=1 perSite=appendSpill=1 obs=177119826196 | after consumed=3 wide=3 perSite=appendSpill=1;convCap=2 obs=177119826196
+  cons stdlib-source/builder-overlay/repeat-doubling-loop: before consumed=8 wide=8 perSite=appendSpill=1;unseqNext=7 obs=143832600045 | after consumed=7 wide=7 perSite=appendSpill=1;unseqNext=3;convCap=3 obs=143832600045
+  cons stdlib-source/builder-overlay/reset-reuse: before consumed=2 wide=2 perSite=appendSpill=2 obs=281192172375 | after consumed=4 wide=4 perSite=appendSpill=2;convCap=2 obs=281192172375
+  cons stdlib-source/builder-overlay/string-after-writes: before consumed=2 wide=2 perSite=appendSpill=2 obs=720034352540 | after consumed=3 wide=3 perSite=appendSpill=2;convCap=1 obs=720034352540
+  cons stdlib-source/builder-overlay/string-stable-in-place: before consumed=1 wide=1 perSite=appendSpill=1 obs=102149183552 | after consumed=3 wide=3 perSite=appendSpill=1;convCap=2 obs=102149183552
+  cons stdlib-source/bytes-buffer/grow-contract: before consumed=4 wide=4 perSite=appendSpill=4 obs=491773624352 | after consumed=10 wide=10 perSite=appendSpill=4;convCap=6 obs=491773624352
+  cons stdlib-source/bytes-buffer/next-bytes-truncate: before consumed=0 wide=0 perSite=- obs=123709839670 | after consumed=1 wide=1 perSite=convCap=1 obs=123709839670
+  cons stdlib-source/bytes-buffer/reset-reuse: before consumed=0 wide=0 perSite=- obs=684823312130 | after consumed=2 wide=2 perSite=convCap=2 obs=684823312130
+  cons stdlib-source/bytes-buffer/truncate-out-of-range: before consumed=0 wide=0 perSite=- obs=836837516229 | after consumed=1 wide=1 perSite=convCap=1 obs=836837516229
+  cons stdlib-source/bytes-buffer/unread-byte-error: before consumed=0 wide=0 perSite=- obs=112349659492 | after consumed=1 wide=1 perSite=convCap=1 obs=112349659492
+  cons stdlib-source/bytes-buffer/write-side: before consumed=0 wide=0 perSite=- obs=164535393824 | after consumed=1 wide=1 perSite=convCap=1 obs=164535393824
+  cons stdlib-source/errors-join/empty-texts: before consumed=2 wide=2 perSite=appendSpill=2 obs=289506900474 | after consumed=6 wide=6 perSite=appendSpill=2;convCap=4 obs=289506900474
+  cons stdlib-source/errors-join/many: before consumed=3 wide=3 perSite=appendSpill=3 obs=224088994771 | after consumed=7 wide=7 perSite=appendSpill=1;convCap=6 obs=224088994771
+  cons stdlib-source/errors-join/nested: before consumed=2 wide=2 perSite=appendSpill=2 obs=867974767931 | after consumed=4 wide=4 perSite=convCap=4 obs=867974767931
+  cons stdlib-source/frontier/atoi-error-path-clone: before consumed=0 wide=0 perSite=- obs=836983566562 | after consumed=2 wide=2 perSite=convCap=2 obs=836983566562
+  cons stdlib-source/frontier/buffer-readbyte-io: before consumed=0 wide=0 perSite=- obs=154235356925 | after consumed=1 wide=1 perSite=convCap=1 obs=154235356925
+  cons stdlib-source/slices-sortfunc/others: before consumed=4 wide=4 perSite=appendSpill=4 obs=920778362695 | after consumed=16 wide=16 perSite=appendSpill=4;convCap=12 obs=920778362695
+  cons stdlib-source/slices-sortfunc/sort-stable-func: before consumed=1 wide=1 perSite=appendSpill=1 obs=505566387655 | after consumed=31 wide=31 perSite=appendSpill=1;convCap=30 obs=505566387655
+  cons stdlib-source/slices-sortfunc/sortfunc-large: before consumed=1 wide=1 perSite=appendSpill=1 obs=105804552232 | after consumed=41 wide=41 perSite=appendSpill=1;convCap=40 obs=105804552232
+  cons stdlib-source/slices-sortfunc/sortfunc-named-slice: before consumed=1 wide=1 perSite=appendSpill=1 obs=937097897779 | after consumed=6 wide=6 perSite=appendSpill=1;convCap=5 obs=937097897779
+  cons stdlib-source/slices-sortfunc/sortfunc-reversed-input: before consumed=1 wide=1 perSite=appendSpill=1 obs=542588318530 | after consumed=31 wide=31 perSite=appendSpill=1;convCap=30 obs=542588318530
+  cons stdlib-source/slices-sortfunc/sortfunc-strings-by-len: before consumed=1 wide=1 perSite=appendSpill=1 obs=180988643359 | after consumed=14 wide=14 perSite=appendSpill=1;convCap=13 obs=180988643359
+  cons stdlib-source/slices-sortfunc/sortfunc-ties-projected: before consumed=5 wide=5 perSite=appendSpill=5 obs=514649471300 | after consumed=39 wide=39 perSite=appendSpill=5;convCap=34 obs=514649471300
+  cons stdlib-source/slices-sortfunc/sortfunc-ties-realized: before consumed=1 wide=1 perSite=appendSpill=1 obs=728316055899 | after consumed=31 wide=31 perSite=appendSpill=1;convCap=30 obs=728316055899
+  cons stdlib-source/strconv-format/siblings: before consumed=3 wide=3 perSite=appendSpill=1;unseqNext=2 obs=761851411490 | after consumed=4 wide=4 perSite=appendSpill=1;unseqNext=2;convCap=1 obs=761851411490
+  cons stdlib-source/strconv-parseuint/bitsize-saturation: before consumed=1 wide=1 perSite=appendSpill=1 obs=347623622314 | after consumed=9 wide=9 perSite=appendSpill=1;convCap=8 obs=347623622314
+  cons stdlib-source/strconv-parseuint/error-quoting: before consumed=6 wide=6 perSite=appendSpill=6 obs=132976660481 | after consumed=18 wide=18 perSite=appendSpill=6;convCap=12 obs=132976660481
+  cons stdlib-source/strconv-parseuint/error-texts: before consumed=5 wide=5 perSite=appendSpill=5 obs=679960196278 | after consumed=17 wide=17 perSite=appendSpill=5;convCap=12 obs=679960196278
+  cons stdlib-source/strconv-parseuint/happy-bases: before consumed=0 wide=0 perSite=- obs=105677889813 | after consumed=4 wide=4 perSite=convCap=4 obs=105677889813
+  cons stdlib-source/strconv-parseuint/numerror-type: before consumed=0 wide=0 perSite=- obs=169679777520 | after consumed=2 wide=2 perSite=convCap=2 obs=169679777520
+  cons stdlib-source/strconv-parseuint/range-sentinel: before consumed=0 wide=0 perSite=- obs=129751557805 | after consumed=2 wide=2 perSite=convCap=2 obs=129751557805
+  cons stdlib-source/strings-trimspace/all-unicode-space: before consumed=0 wide=0 perSite=- obs=764188315522 | after consumed=1 wide=1 perSite=convCap=1 obs=764188315522
+  cons stdlib-source/strings-trimspace/ascii-table: before consumed=0 wide=0 perSite=- obs=752543774490 | after consumed=1 wide=1 perSite=convCap=1 obs=752543774490
+  cons stdlib-source/strings-trimspace/both-unicode: before consumed=0 wide=0 perSite=- obs=393564991130 | after consumed=1 wide=1 perSite=convCap=1 obs=393564991130
+  cons stdlib-source/strings-trimspace/empty-and-single: before consumed=0 wide=0 perSite=- obs=131400880108 | after consumed=3 wide=3 perSite=convCap=3 obs=131400880108
+  cons stdlib-source/strings-trimspace/inner-preserved: before consumed=0 wide=0 perSite=- obs=162569913079 | after consumed=1 wide=1 perSite=convCap=1 obs=162569913079
+  cons stdlib-source/strings-trimspace/invalid-utf8-ends: before consumed=0 wide=0 perSite=- obs=353948824922 | after consumed=1 wide=1 perSite=convCap=1 obs=353948824922
+  cons stdlib-source/strings-trimspace/left-unicode-only: before consumed=0 wide=0 perSite=- obs=377893407346 | after consumed=1 wide=1 perSite=convCap=1 obs=377893407346
+  cons stdlib-source/strings-trimspace/near-miss-ends: before consumed=0 wide=0 perSite=- obs=108175864924 | after consumed=1 wide=1 perSite=convCap=1 obs=108175864924
+  cons stdlib-source/strings-trimspace/non-space-ends: before consumed=0 wide=0 perSite=- obs=528569776513 | after consumed=1 wide=1 perSite=convCap=1 obs=528569776513
+  cons stdlib-source/strings-trimspace/right-unicode-only: before consumed=0 wide=0 perSite=- obs=377893407346 | after consumed=1 wide=1 perSite=convCap=1 obs=377893407346
+  cons strconv/format-parse/parse-uint-bitsize: before consumed=1 wide=1 perSite=appendSpill=1 obs=157813410334 | after consumed=4 wide=4 perSite=appendSpill=1;convCap=3 obs=157813410334
+  cons strconv/format-parse/parse-uint-errors: before consumed=4 wide=4 perSite=appendSpill=4 obs=176705230840 | after consumed=12 wide=12 perSite=appendSpill=4;convCap=8 obs=176705230840
+  cons strconv/format-parse/parse-uint-happy: before consumed=0 wide=0 perSite=- obs=647198188178 | after consumed=3 wide=3 perSite=convCap=3 obs=647198188178
+  cons strconv/format-parse/parse-uint-range-value: before consumed=0 wide=0 perSite=- obs=123798558689 | after consumed=8 wide=8 perSite=convCap=8 obs=123798558689
+  cons strconv/format-parse/unmodeled-member: before consumed=0 wide=0 perSite=- obs=123556465975 | after consumed=1 wide=1 perSite=convCap=1 obs=123556465975
+  cons strings/builder-model/copy-panics: before consumed=1 wide=1 perSite=appendSpill=1 obs=176578477202 | after consumed=2 wide=2 perSite=appendSpill=1;convCap=1 obs=176578477202
+  cons strings/builder-model/copy-zero-ok: before consumed=1 wide=1 perSite=appendSpill=1 obs=114603720740 | after consumed=2 wide=2 perSite=appendSpill=1;convCap=1 obs=114603720740
+  cons strings/builder-model/len-reset: before consumed=2 wide=2 perSite=appendSpill=2 obs=212550018045 | after consumed=4 wide=4 perSite=appendSpill=2;convCap=2 obs=212550018045
+  cons strings/builder-model/string-stable: before consumed=1 wide=1 perSite=appendSpill=1 obs=657272898754 | after consumed=3 wide=3 perSite=appendSpill=1;convCap=2 obs=657272898754
+  cons strings/builder-model/write-string: before consumed=1 wide=1 perSite=appendSpill=1 obs=112405755843 | after consumed=3 wide=3 perSite=appendSpill=1;convCap=2 obs=112405755843
+  obs  strings/byte-conversion-cap: before consumed=0 wide=0 perSite=- obs=409323283749 | after consumed=1 wide=1 perSite=convCap=1 obs=160214464492
+  cons strings/conv-cap/bytes-alias-append-esc-8: before consumed=1 wide=1 perSite=appendSpill=1 obs=411891890264 | after consumed=2 wide=2 perSite=appendSpill=1;convCap=1 obs=411891890264
+  obs  strings/conv-cap/bytes-alias-append-mut-5: before consumed=1 wide=1 perSite=appendSpill=1 obs=737999994600 | after consumed=1 wide=1 perSite=convCap=1 obs=110748136031
+  obs  strings/conv-cap/bytes-concat-esc-5: before consumed=0 wide=0 perSite=- obs=522316383949 | after consumed=1 wide=1 perSite=convCap=1 obs=468048367650
+  obs  strings/conv-cap/bytes-inline-helper: before consumed=0 wide=0 perSite=- obs=109917491544 | after consumed=2 wide=2 perSite=convCap=2 obs=128452532693
+  cons strings/conv-cap/bytes-var-esc-0: before consumed=0 wide=0 perSite=- obs=877402127713 | after consumed=1 wide=1 perSite=convCap=1 obs=877402127713
+  cons strings/conv-cap/bytes-var-esc-100: before consumed=0 wide=0 perSite=- obs=811674857414 | after consumed=1 wide=1 perSite=convCap=1 obs=811674857414
+  cons strings/conv-cap/bytes-var-esc-33: before consumed=0 wide=0 perSite=- obs=109345780881 | after consumed=1 wide=1 perSite=convCap=1 obs=109345780881
+  obs  strings/conv-cap/bytes-var-esc-5: before consumed=0 wide=0 perSite=- obs=522316383949 | after consumed=1 wide=1 perSite=convCap=1 obs=468048367650
+  cons strings/conv-cap/bytes-var-mut-0: before consumed=0 wide=0 perSite=- obs=877402127713 | after consumed=1 wide=1 perSite=convCap=1 obs=877402127713
+  cons strings/conv-cap/bytes-var-mut-100: before consumed=0 wide=0 perSite=- obs=811674857414 | after consumed=1 wide=1 perSite=convCap=1 obs=811674857414
+  cons strings/conv-cap/bytes-var-mut-33: before consumed=0 wide=0 perSite=- obs=109345780881 | after consumed=1 wide=1 perSite=convCap=1 obs=109345780881
+  obs  strings/conv-cap/bytes-var-mut-5: before consumed=0 wide=0 perSite=- obs=522316383949 | after consumed=1 wide=1 perSite=convCap=1 obs=468048367650
+  cons strings/conv-cap/bytes-var-nomut-0: before consumed=0 wide=0 perSite=- obs=877402127713 | after consumed=1 wide=1 perSite=convCap=1 obs=877402127713
+  cons strings/conv-cap/bytes-var-nomut-100: before consumed=0 wide=0 perSite=- obs=811674857414 | after consumed=1 wide=1 perSite=convCap=1 obs=811674857414
+  cons strings/conv-cap/bytes-var-nomut-33: before consumed=0 wide=0 perSite=- obs=109345780881 | after consumed=1 wide=1 perSite=convCap=1 obs=109345780881
+  obs  strings/conv-cap/bytes-var-nomut-5: before consumed=0 wide=0 perSite=- obs=522316383949 | after consumed=1 wide=1 perSite=convCap=1 obs=468048367650
+  obs  strings/conv-cap/runes-var-esc-100: before consumed=0 wide=0 perSite=- obs=811674857414 | after consumed=0 wide=0 perSite=- obs=163936810856
+  obs  strings/conv-cap/runes-var-esc-33: before consumed=0 wide=0 perSite=- obs=109345780881 | after consumed=0 wide=0 perSite=- obs=156015209035
+  obs  strings/conv-cap/runes-var-esc-5: before consumed=0 wide=0 perSite=- obs=522316383949 | after consumed=1 wide=1 perSite=convCap=1 obs=129245747878
+  obs  strings/conv-cap/runes-var-nomut-100: before consumed=0 wide=0 perSite=- obs=811674857414 | after consumed=0 wide=0 perSite=- obs=163936810856
+  obs  strings/conv-cap/runes-var-nomut-33: before consumed=0 wide=0 perSite=- obs=109345780881 | after consumed=0 wide=0 perSite=- obs=156015209035
+  obs  strings/conv-cap/runes-var-nomut-5: before consumed=0 wide=0 perSite=- obs=522316383949 | after consumed=1 wide=1 perSite=convCap=1 obs=129245747878
+  cons strings/defined-copy-invalid-utf8: before consumed=0 wide=0 perSite=- obs=157724777205 | after consumed=1 wide=1 perSite=convCap=1 obs=157724777205
+  cons strings/defined-slice-string-conversion: before consumed=0 wide=0 perSite=- obs=126019636510 | after consumed=2 wide=2 perSite=convCap=2 obs=126019636510
+  cons strings/join-conformance/basic: before consumed=1 wide=1 perSite=appendSpill=1 obs=378222946974 | after consumed=6 wide=6 perSite=appendSpill=1;convCap=5 obs=378222946974
+  cons strings/join-conformance/empty-sep: before consumed=1 wide=1 perSite=appendSpill=1 obs=134376247148 | after consumed=6 wide=6 perSite=appendSpill=1;convCap=5 obs=134376247148
+  cons strings/join-conformance/newraft-shape: before consumed=2 wide=2 perSite=appendSpill=2 obs=138692766206 | after consumed=5 wide=5 perSite=appendSpill=2;convCap=3 obs=138692766206
+  cons strings/rune-slice-conversion: before consumed=0 wide=0 perSite=- obs=139164659624 | after consumed=1 wide=1 perSite=convCap=1 obs=139164659624
+  cons strings/rune-slice-to-string-copy: before consumed=0 wide=0 perSite=- obs=749281069957 | after consumed=1 wide=1 perSite=convCap=1 obs=749281069957
+  cons strings/split-conformance/confchange-shape: before consumed=0 wide=0 perSite=- obs=157735028909 | after consumed=1 wide=1 perSite=convCap=1 obs=157735028909
+  cons strings/string-byte-conversion: before consumed=0 wide=0 perSite=- obs=540858470144 | after consumed=1 wide=1 perSite=convCap=1 obs=540858470144
+  cons strings/string-to-rune-copy: before consumed=0 wide=0 perSite=- obs=366620109142 | after consumed=2 wide=2 perSite=convCap=2 obs=366620109142
+  cons strings/trimspace-repeat/repeat-basic: before consumed=1 wide=1 perSite=appendSpill=1 obs=531609307120 | after consumed=4 wide=4 perSite=appendSpill=1;convCap=3 obs=531609307120
+  cons strings/trimspace-repeat/trim-all-space: before consumed=0 wide=0 perSite=- obs=836032542976 | after consumed=1 wide=1 perSite=convCap=1 obs=836032542976
+  cons strings/trimspace-repeat/trim-ascii: before consumed=0 wide=0 perSite=- obs=181889884245 | after consumed=1 wide=1 perSite=convCap=1 obs=181889884245
+  cons strings/trimspace-repeat/trim-empty: before consumed=0 wide=0 perSite=- obs=836032542976 | after consumed=1 wide=1 perSite=convCap=1 obs=836032542976
+  cons strings/trimspace-repeat/trim-inner-runes: before consumed=0 wide=0 perSite=- obs=364450951393 | after consumed=1 wide=1 perSite=convCap=1 obs=364450951393
+  cons strings/trimspace-repeat/trim-unicode: before consumed=0 wide=0 perSite=- obs=517690201103 | after consumed=1 wide=1 perSite=convCap=1 obs=517690201103
+
+== stream [rand:2:4096]: identical=3750 observation-differs=14 consumption-differs-only=115 missing=0
+  cons builtins/e13-sibling-panic-order/bytes-conv-value-vs-mutating-call: before consumed=1 wide=1 perSite=unseqNext=1 obs=822909518614 | after consumed=2 wide=2 perSite=unseqNext=1;convCap=1 obs=822909518614
+  cons bytes/buffer-model/len-reset: before consumed=0 wide=0 perSite=- obs=113659415861 | after consumed=2 wide=2 perSite=convCap=2 obs=113659415861
+  cons bytes/buffer-model/pointer-use: before consumed=0 wide=0 perSite=- obs=150698274225 | after consumed=1 wide=1 perSite=convCap=1 obs=150698274225
+  cons bytes/buffer-model/write-paths: before consumed=0 wide=0 perSite=- obs=169771533110 | after consumed=1 wide=1 perSite=convCap=1 obs=169771533110
+  cons evalorder/unseq-conv-alloc/conv-read-vs-call: before consumed=1 wide=1 perSite=unseqNext=1 obs=822909518614 | after consumed=2 wide=2 perSite=unseqNext=1;convCap=1 obs=822909518614
+  cons fmt/fprint-writers/buffer-single: before consumed=0 wide=0 perSite=- obs=527719699560 | after consumed=2 wide=2 perSite=convCap=2 obs=527719699560
+  cons fmt/fprint-writers/builder-single: before consumed=1 wide=1 perSite=appendSpill=1 obs=210066039330 | after consumed=3 wide=3 perSite=appendSpill=1;convCap=2 obs=210066039330
+  cons fmt/fprint-writers/fprintf-buffer-shape: before consumed=10 wide=10 perSite=appendSpill=10 obs=172615966080 | after consumed=12 wide=12 perSite=appendSpill=10;convCap=2 obs=172615966080
+  cons fmt/fprintf-builder/describe-shape: before consumed=7 wide=7 perSite=appendSpill=7 obs=489876745582 | after consumed=11 wide=11 perSite=appendSpill=7;convCap=4 obs=489876745582
+  cons fmt/fprintf-builder/returns: before consumed=3 wide=3 perSite=appendSpill=3 obs=160012897332 | after consumed=4 wide=4 perSite=appendSpill=3;convCap=1 obs=160012897332
+  cons imported-goose/generics/generic-conversion: before consumed=1 wide=1 perSite=unseqPanic=1 obs=315584040831 | after consumed=2 wide=2 perSite=unseqPanic=1;convCap=1 obs=315584040831
+  cons imported-goose/unittest/conversions/wrapper: before consumed=0 wide=0 perSite=- obs=451693909310 | after consumed=1 wide=1 perSite=convCap=1 obs=451693909310
+  cons init/stdlib-initializer-source-through: before consumed=1 wide=1 perSite=appendSpill=1 obs=185500065657 | after consumed=4 wide=4 perSite=appendSpill=1;convCap=3 obs=185500065657
+  cons noodler/conversions/defined-string-bytes: before consumed=0 wide=0 perSite=- obs=310146103048 | after consumed=1 wide=1 perSite=convCap=1 obs=310146103048
+  cons noodler/conversions/empty-string-nonnil: before consumed=0 wide=0 perSite=- obs=499849205389 | after consumed=2 wide=2 perSite=convCap=2 obs=499849205389
+  cons noodler/conversions/runes-invalid-utf8: before consumed=0 wide=0 perSite=- obs=370712237139 | after consumed=1 wide=1 perSite=convCap=1 obs=370712237139
+  cons noodler/conversions/runes-truncated: before consumed=0 wide=0 perSite=- obs=690707907415 | after consumed=1 wide=1 perSite=convCap=1 obs=690707907415
+  cons noodler/slices/byte-slice-sub-alias: before consumed=0 wide=0 perSite=- obs=170409167506 | after consumed=1 wide=1 perSite=convCap=1 obs=170409167506
+  cons noodler/strings/parse-uint-edges: before consumed=1 wide=1 perSite=appendSpill=1 obs=100122276560 | after consumed=8 wide=8 perSite=appendSpill=1;convCap=7 obs=100122276560
+  cons noodler/strings/substring-then-bytes: before consumed=0 wide=0 perSite=- obs=456186488021 | after consumed=1 wide=1 perSite=convCap=1 obs=456186488021
+  cons noodler/strings/trimspace-unicode: before consumed=0 wide=0 perSite=- obs=460787231712 | after consumed=1 wide=1 perSite=convCap=1 obs=460787231712
+  cons panic-recover/shim-refusal-unrecoverable/parse-recover: before consumed=2 wide=2 perSite=appendSpill=2 obs=124945590462 | after consumed=3 wide=3 perSite=appendSpill=2;convCap=1 obs=124945590462
+  cons panic-recover/shim-refusal-unrecoverable/render-recover: before consumed=1 wide=1 perSite=appendSpill=1 obs=100881286407 | after consumed=4 wide=4 perSite=appendSpill=1;convCap=3 obs=100881286407
+  cons slices/slice-elided-high-eval-once/conversion-base: before consumed=0 wide=0 perSite=- obs=159498287828 | after consumed=2 wide=2 perSite=convCap=2 obs=159498287828
+  obs  stdlib-source/builder-cap/grow-after-write: before consumed=1 wide=1 perSite=appendSpill=1 obs=156589912842 | after consumed=3 wide=3 perSite=appendSpill=2;convCap=1 obs=162635572241
+  cons stdlib-source/builder-cap/grow-then-write: before consumed=1 wide=1 perSite=appendSpill=1 obs=646177707540 | after consumed=2 wide=2 perSite=appendSpill=1;convCap=1 obs=646177707540
+  cons stdlib-source/builder-fuzz/seed-0: before consumed=15 wide=15 perSite=appendSpill=15 obs=139262740773 | after consumed=87 wide=87 perSite=appendSpill=14;convCap=73 obs=139262740773
+  cons stdlib-source/builder-fuzz/seed-1: before consumed=21 wide=21 perSite=appendSpill=21 obs=164576023782 | after consumed=99 wide=99 perSite=appendSpill=21;convCap=78 obs=164576023782
+  cons stdlib-source/builder-fuzz/seed-2: before consumed=14 wide=14 perSite=appendSpill=14 obs=481580179747 | after consumed=95 wide=95 perSite=appendSpill=12;convCap=83 obs=481580179747
+  cons stdlib-source/builder-fuzz/seed-3: before consumed=18 wide=18 perSite=appendSpill=18 obs=174641297650 | after consumed=99 wide=99 perSite=appendSpill=17;convCap=82 obs=174641297650
+  cons stdlib-source/builder-fuzz/seed-4: before consumed=17 wide=17 perSite=appendSpill=17 obs=139433505187 | after consumed=96 wide=96 perSite=appendSpill=17;convCap=79 obs=139433505187
+  cons stdlib-source/builder-fuzz/seed-5: before consumed=16 wide=16 perSite=appendSpill=16 obs=119888502479 | after consumed=97 wide=97 perSite=appendSpill=18;convCap=79 obs=119888502479
+  cons stdlib-source/builder-fuzz/seed-6: before consumed=13 wide=13 perSite=appendSpill=13 obs=808311094157 | after consumed=93 wide=93 perSite=appendSpill=16;convCap=77 obs=808311094157
+  cons stdlib-source/builder-fuzz/seed-7: before consumed=7 wide=7 perSite=appendSpill=7 obs=166317552016 | after consumed=84 wide=84 perSite=appendSpill=7;convCap=77 obs=166317552016
+  cons stdlib-source/builder-fuzz/seed-8: before consumed=19 wide=19 perSite=appendSpill=19 obs=153320731274 | after consumed=98 wide=98 perSite=appendSpill=21;convCap=77 obs=153320731274
+  cons stdlib-source/builder-fuzz/seed-9: before consumed=19 wide=19 perSite=appendSpill=19 obs=177079069775 | after consumed=103 wide=103 perSite=appendSpill=22;convCap=81 obs=177079069775
+  cons stdlib-source/builder-overlay/grow-contract: before consumed=7 wide=7 perSite=appendSpill=7 obs=113254444350 | after consumed=10 wide=10 perSite=appendSpill=6;convCap=4 obs=113254444350
+  cons stdlib-source/builder-overlay/grow-noop: before consumed=1 wide=1 perSite=appendSpill=1 obs=311305922898 | after consumed=2 wide=2 perSite=appendSpill=1;convCap=1 obs=311305922898
+  cons stdlib-source/builder-overlay/join-large: before consumed=1 wide=1 perSite=appendSpill=1 obs=735907435400 | after consumed=200 wide=200 perSite=appendSpill=1;convCap=199 obs=735907435400
+  cons stdlib-source/builder-overlay/repeat-1k: before consumed=1 wide=1 perSite=appendSpill=1 obs=177119826196 | after consumed=3 wide=3 perSite=appendSpill=1;convCap=2 obs=177119826196
+  cons stdlib-source/builder-overlay/repeat-doubling-loop: before consumed=6 wide=6 perSite=appendSpill=1;unseqNext=5 obs=143832600045 | after consumed=11 wide=11 perSite=appendSpill=1;unseqNext=7;convCap=3 obs=143832600045
+  cons stdlib-source/builder-overlay/reset-reuse: before consumed=2 wide=2 perSite=appendSpill=2 obs=281192172375 | after consumed=4 wide=4 perSite=appendSpill=2;convCap=2 obs=281192172375
+  cons stdlib-source/builder-overlay/string-after-writes: before consumed=2 wide=2 perSite=appendSpill=2 obs=720034352540 | after consumed=2 wide=2 perSite=appendSpill=1;convCap=1 obs=720034352540
+  cons stdlib-source/builder-overlay/string-stable-in-place: before consumed=1 wide=1 perSite=appendSpill=1 obs=102149183552 | after consumed=3 wide=3 perSite=appendSpill=1;convCap=2 obs=102149183552
+  cons stdlib-source/bytes-buffer/grow-contract: before consumed=4 wide=4 perSite=appendSpill=4 obs=491773624352 | after consumed=10 wide=10 perSite=appendSpill=4;convCap=6 obs=491773624352
+  cons stdlib-source/bytes-buffer/next-bytes-truncate: before consumed=0 wide=0 perSite=- obs=123709839670 | after consumed=1 wide=1 perSite=convCap=1 obs=123709839670
+  cons stdlib-source/bytes-buffer/reset-reuse: before consumed=0 wide=0 perSite=- obs=684823312130 | after consumed=2 wide=2 perSite=convCap=2 obs=684823312130
+  cons stdlib-source/bytes-buffer/truncate-out-of-range: before consumed=0 wide=0 perSite=- obs=836837516229 | after consumed=1 wide=1 perSite=convCap=1 obs=836837516229
+  cons stdlib-source/bytes-buffer/unread-byte-error: before consumed=0 wide=0 perSite=- obs=112349659492 | after consumed=1 wide=1 perSite=convCap=1 obs=112349659492
+  cons stdlib-source/bytes-buffer/write-side: before consumed=0 wide=0 perSite=- obs=164535393824 | after consumed=1 wide=1 perSite=convCap=1 obs=164535393824
+  cons stdlib-source/errors-join/empty-texts: before consumed=2 wide=2 perSite=appendSpill=2 obs=289506900474 | after consumed=6 wide=6 perSite=appendSpill=2;convCap=4 obs=289506900474
+  cons stdlib-source/errors-join/many: before consumed=3 wide=3 perSite=appendSpill=3 obs=224088994771 | after consumed=8 wide=8 perSite=appendSpill=2;convCap=6 obs=224088994771
+  cons stdlib-source/errors-join/nested: before consumed=2 wide=2 perSite=appendSpill=2 obs=867974767931 | after consumed=4 wide=4 perSite=convCap=4 obs=867974767931
+  cons stdlib-source/frontier/atoi-error-path-clone: before consumed=0 wide=0 perSite=- obs=836983566562 | after consumed=2 wide=2 perSite=convCap=2 obs=836983566562
+  cons stdlib-source/frontier/buffer-readbyte-io: before consumed=0 wide=0 perSite=- obs=154235356925 | after consumed=1 wide=1 perSite=convCap=1 obs=154235356925
+  cons stdlib-source/slices-sortfunc/others: before consumed=4 wide=4 perSite=appendSpill=4 obs=920778362695 | after consumed=16 wide=16 perSite=appendSpill=4;convCap=12 obs=920778362695
+  cons stdlib-source/slices-sortfunc/sort-stable-func: before consumed=1 wide=1 perSite=appendSpill=1 obs=505566387655 | after consumed=31 wide=31 perSite=appendSpill=1;convCap=30 obs=505566387655
+  cons stdlib-source/slices-sortfunc/sortfunc-large: before consumed=1 wide=1 perSite=appendSpill=1 obs=105804552232 | after consumed=41 wide=41 perSite=appendSpill=1;convCap=40 obs=105804552232
+  cons stdlib-source/slices-sortfunc/sortfunc-named-slice: before consumed=1 wide=1 perSite=appendSpill=1 obs=937097897779 | after consumed=6 wide=6 perSite=appendSpill=1;convCap=5 obs=937097897779
+  cons stdlib-source/slices-sortfunc/sortfunc-reversed-input: before consumed=1 wide=1 perSite=appendSpill=1 obs=542588318530 | after consumed=31 wide=31 perSite=appendSpill=1;convCap=30 obs=542588318530
+  cons stdlib-source/slices-sortfunc/sortfunc-strings-by-len: before consumed=1 wide=1 perSite=appendSpill=1 obs=180988643359 | after consumed=14 wide=14 perSite=appendSpill=1;convCap=13 obs=180988643359
+  cons stdlib-source/slices-sortfunc/sortfunc-ties-projected: before consumed=5 wide=5 perSite=appendSpill=5 obs=514649471300 | after consumed=39 wide=39 perSite=appendSpill=5;convCap=34 obs=514649471300
+  cons stdlib-source/slices-sortfunc/sortfunc-ties-realized: before consumed=1 wide=1 perSite=appendSpill=1 obs=728316055899 | after consumed=31 wide=31 perSite=appendSpill=1;convCap=30 obs=728316055899
+  cons stdlib-source/strconv-format/siblings: before consumed=3 wide=3 perSite=appendSpill=1;unseqNext=2 obs=761851411490 | after consumed=4 wide=4 perSite=appendSpill=1;unseqNext=2;convCap=1 obs=761851411490
+  cons stdlib-source/strconv-parseuint/bitsize-saturation: before consumed=1 wide=1 perSite=appendSpill=1 obs=347623622314 | after consumed=9 wide=9 perSite=appendSpill=1;convCap=8 obs=347623622314
+  cons stdlib-source/strconv-parseuint/error-quoting: before consumed=6 wide=6 perSite=appendSpill=6 obs=132976660481 | after consumed=18 wide=18 perSite=appendSpill=6;convCap=12 obs=132976660481
+  cons stdlib-source/strconv-parseuint/error-texts: before consumed=5 wide=5 perSite=appendSpill=5 obs=679960196278 | after consumed=17 wide=17 perSite=appendSpill=5;convCap=12 obs=679960196278
+  cons stdlib-source/strconv-parseuint/happy-bases: before consumed=0 wide=0 perSite=- obs=105677889813 | after consumed=4 wide=4 perSite=convCap=4 obs=105677889813
+  cons stdlib-source/strconv-parseuint/numerror-type: before consumed=0 wide=0 perSite=- obs=169679777520 | after consumed=2 wide=2 perSite=convCap=2 obs=169679777520
+  cons stdlib-source/strconv-parseuint/range-sentinel: before consumed=0 wide=0 perSite=- obs=129751557805 | after consumed=2 wide=2 perSite=convCap=2 obs=129751557805
+  cons stdlib-source/strings-trimspace/all-unicode-space: before consumed=0 wide=0 perSite=- obs=764188315522 | after consumed=1 wide=1 perSite=convCap=1 obs=764188315522
+  cons stdlib-source/strings-trimspace/ascii-table: before consumed=0 wide=0 perSite=- obs=752543774490 | after consumed=1 wide=1 perSite=convCap=1 obs=752543774490
+  cons stdlib-source/strings-trimspace/both-unicode: before consumed=0 wide=0 perSite=- obs=393564991130 | after consumed=1 wide=1 perSite=convCap=1 obs=393564991130
+  cons stdlib-source/strings-trimspace/empty-and-single: before consumed=0 wide=0 perSite=- obs=131400880108 | after consumed=3 wide=3 perSite=convCap=3 obs=131400880108
+  cons stdlib-source/strings-trimspace/inner-preserved: before consumed=0 wide=0 perSite=- obs=162569913079 | after consumed=1 wide=1 perSite=convCap=1 obs=162569913079
+  cons stdlib-source/strings-trimspace/invalid-utf8-ends: before consumed=0 wide=0 perSite=- obs=353948824922 | after consumed=1 wide=1 perSite=convCap=1 obs=353948824922
+  cons stdlib-source/strings-trimspace/left-unicode-only: before consumed=0 wide=0 perSite=- obs=377893407346 | after consumed=1 wide=1 perSite=convCap=1 obs=377893407346
+  cons stdlib-source/strings-trimspace/near-miss-ends: before consumed=0 wide=0 perSite=- obs=108175864924 | after consumed=1 wide=1 perSite=convCap=1 obs=108175864924
+  cons stdlib-source/strings-trimspace/non-space-ends: before consumed=0 wide=0 perSite=- obs=528569776513 | after consumed=1 wide=1 perSite=convCap=1 obs=528569776513
+  cons stdlib-source/strings-trimspace/right-unicode-only: before consumed=0 wide=0 perSite=- obs=377893407346 | after consumed=1 wide=1 perSite=convCap=1 obs=377893407346
+  cons strconv/format-parse/parse-uint-bitsize: before consumed=1 wide=1 perSite=appendSpill=1 obs=157813410334 | after consumed=4 wide=4 perSite=appendSpill=1;convCap=3 obs=157813410334
+  cons strconv/format-parse/parse-uint-errors: before consumed=4 wide=4 perSite=appendSpill=4 obs=176705230840 | after consumed=12 wide=12 perSite=appendSpill=4;convCap=8 obs=176705230840
+  cons strconv/format-parse/parse-uint-happy: before consumed=0 wide=0 perSite=- obs=647198188178 | after consumed=3 wide=3 perSite=convCap=3 obs=647198188178
+  cons strconv/format-parse/parse-uint-range-value: before consumed=0 wide=0 perSite=- obs=123798558689 | after consumed=8 wide=8 perSite=convCap=8 obs=123798558689
+  cons strconv/format-parse/unmodeled-member: before consumed=0 wide=0 perSite=- obs=123556465975 | after consumed=1 wide=1 perSite=convCap=1 obs=123556465975
+  cons strings/builder-model/copy-panics: before consumed=1 wide=1 perSite=appendSpill=1 obs=176578477202 | after consumed=2 wide=2 perSite=appendSpill=1;convCap=1 obs=176578477202
+  cons strings/builder-model/copy-zero-ok: before consumed=1 wide=1 perSite=appendSpill=1 obs=114603720740 | after consumed=2 wide=2 perSite=appendSpill=1;convCap=1 obs=114603720740
+  cons strings/builder-model/len-reset: before consumed=2 wide=2 perSite=appendSpill=2 obs=212550018045 | after consumed=4 wide=4 perSite=appendSpill=2;convCap=2 obs=212550018045
+  cons strings/builder-model/string-stable: before consumed=1 wide=1 perSite=appendSpill=1 obs=657272898754 | after consumed=3 wide=3 perSite=appendSpill=1;convCap=2 obs=657272898754
+  cons strings/builder-model/write-string: before consumed=1 wide=1 perSite=appendSpill=1 obs=112405755843 | after consumed=3 wide=3 perSite=appendSpill=1;convCap=2 obs=112405755843
+  obs  strings/byte-conversion-cap: before consumed=0 wide=0 perSite=- obs=409323283749 | after consumed=1 wide=1 perSite=convCap=1 obs=157744828774
+  cons strings/conv-cap/bytes-alias-append-esc-8: before consumed=1 wide=1 perSite=appendSpill=1 obs=411891890264 | after consumed=2 wide=2 perSite=appendSpill=1;convCap=1 obs=411891890264
+  obs  strings/conv-cap/bytes-alias-append-mut-5: before consumed=1 wide=1 perSite=appendSpill=1 obs=737999994600 | after consumed=1 wide=1 perSite=convCap=1 obs=105565315450
+  obs  strings/conv-cap/bytes-concat-esc-5: before consumed=0 wide=0 perSite=- obs=522316383949 | after consumed=1 wide=1 perSite=convCap=1 obs=974000650993
+  obs  strings/conv-cap/bytes-inline-helper: before consumed=0 wide=0 perSite=- obs=109917491544 | after consumed=2 wide=2 perSite=convCap=2 obs=132390546864
+  cons strings/conv-cap/bytes-var-esc-0: before consumed=0 wide=0 perSite=- obs=877402127713 | after consumed=1 wide=1 perSite=convCap=1 obs=877402127713
+  cons strings/conv-cap/bytes-var-esc-100: before consumed=0 wide=0 perSite=- obs=811674857414 | after consumed=1 wide=1 perSite=convCap=1 obs=811674857414
+  cons strings/conv-cap/bytes-var-esc-33: before consumed=0 wide=0 perSite=- obs=109345780881 | after consumed=1 wide=1 perSite=convCap=1 obs=109345780881
+  obs  strings/conv-cap/bytes-var-esc-5: before consumed=0 wide=0 perSite=- obs=522316383949 | after consumed=1 wide=1 perSite=convCap=1 obs=974000650993
+  cons strings/conv-cap/bytes-var-mut-0: before consumed=0 wide=0 perSite=- obs=877402127713 | after consumed=1 wide=1 perSite=convCap=1 obs=877402127713
+  cons strings/conv-cap/bytes-var-mut-100: before consumed=0 wide=0 perSite=- obs=811674857414 | after consumed=1 wide=1 perSite=convCap=1 obs=811674857414
+  cons strings/conv-cap/bytes-var-mut-33: before consumed=0 wide=0 perSite=- obs=109345780881 | after consumed=1 wide=1 perSite=convCap=1 obs=109345780881
+  obs  strings/conv-cap/bytes-var-mut-5: before consumed=0 wide=0 perSite=- obs=522316383949 | after consumed=1 wide=1 perSite=convCap=1 obs=974000650993
+  cons strings/conv-cap/bytes-var-nomut-0: before consumed=0 wide=0 perSite=- obs=877402127713 | after consumed=1 wide=1 perSite=convCap=1 obs=877402127713
+  cons strings/conv-cap/bytes-var-nomut-100: before consumed=0 wide=0 perSite=- obs=811674857414 | after consumed=1 wide=1 perSite=convCap=1 obs=811674857414
+  cons strings/conv-cap/bytes-var-nomut-33: before consumed=0 wide=0 perSite=- obs=109345780881 | after consumed=1 wide=1 perSite=convCap=1 obs=109345780881
+  obs  strings/conv-cap/bytes-var-nomut-5: before consumed=0 wide=0 perSite=- obs=522316383949 | after consumed=1 wide=1 perSite=convCap=1 obs=974000650993
+  obs  strings/conv-cap/runes-var-esc-100: before consumed=0 wide=0 perSite=- obs=811674857414 | after consumed=0 wide=0 perSite=- obs=163936810856
+  obs  strings/conv-cap/runes-var-esc-33: before consumed=0 wide=0 perSite=- obs=109345780881 | after consumed=0 wide=0 perSite=- obs=156015209035
+  obs  strings/conv-cap/runes-var-esc-5: before consumed=0 wide=0 perSite=- obs=522316383949 | after consumed=1 wide=1 perSite=convCap=1 obs=129245747878
+  obs  strings/conv-cap/runes-var-nomut-100: before consumed=0 wide=0 perSite=- obs=811674857414 | after consumed=0 wide=0 perSite=- obs=163936810856
+  obs  strings/conv-cap/runes-var-nomut-33: before consumed=0 wide=0 perSite=- obs=109345780881 | after consumed=0 wide=0 perSite=- obs=156015209035
+  obs  strings/conv-cap/runes-var-nomut-5: before consumed=0 wide=0 perSite=- obs=522316383949 | after consumed=1 wide=1 perSite=convCap=1 obs=129245747878
+  cons strings/defined-copy-invalid-utf8: before consumed=0 wide=0 perSite=- obs=157724777205 | after consumed=1 wide=1 perSite=convCap=1 obs=157724777205
+  cons strings/defined-slice-string-conversion: before consumed=0 wide=0 perSite=- obs=126019636510 | after consumed=2 wide=2 perSite=convCap=2 obs=126019636510
+  cons strings/join-conformance/basic: before consumed=1 wide=1 perSite=appendSpill=1 obs=378222946974 | after consumed=6 wide=6 perSite=appendSpill=1;convCap=5 obs=378222946974
+  cons strings/join-conformance/empty-sep: before consumed=1 wide=1 perSite=appendSpill=1 obs=134376247148 | after consumed=6 wide=6 perSite=appendSpill=1;convCap=5 obs=134376247148
+  cons strings/join-conformance/newraft-shape: before consumed=2 wide=2 perSite=appendSpill=2 obs=138692766206 | after consumed=5 wide=5 perSite=appendSpill=2;convCap=3 obs=138692766206
+  cons strings/rune-slice-conversion: before consumed=0 wide=0 perSite=- obs=139164659624 | after consumed=1 wide=1 perSite=convCap=1 obs=139164659624
+  cons strings/rune-slice-to-string-copy: before consumed=0 wide=0 perSite=- obs=749281069957 | after consumed=1 wide=1 perSite=convCap=1 obs=749281069957
+  cons strings/split-conformance/confchange-shape: before consumed=0 wide=0 perSite=- obs=157735028909 | after consumed=1 wide=1 perSite=convCap=1 obs=157735028909
+  cons strings/string-byte-conversion: before consumed=0 wide=0 perSite=- obs=540858470144 | after consumed=1 wide=1 perSite=convCap=1 obs=540858470144
+  cons strings/string-to-rune-copy: before consumed=0 wide=0 perSite=- obs=366620109142 | after consumed=2 wide=2 perSite=convCap=2 obs=366620109142
+  cons strings/trimspace-repeat/repeat-basic: before consumed=1 wide=1 perSite=appendSpill=1 obs=531609307120 | after consumed=4 wide=4 perSite=appendSpill=1;convCap=3 obs=531609307120
+  cons strings/trimspace-repeat/trim-all-space: before consumed=0 wide=0 perSite=- obs=836032542976 | after consumed=1 wide=1 perSite=convCap=1 obs=836032542976
+  cons strings/trimspace-repeat/trim-ascii: before consumed=0 wide=0 perSite=- obs=181889884245 | after consumed=1 wide=1 perSite=convCap=1 obs=181889884245
+  cons strings/trimspace-repeat/trim-empty: before consumed=0 wide=0 perSite=- obs=836032542976 | after consumed=1 wide=1 perSite=convCap=1 obs=836032542976
+  cons strings/trimspace-repeat/trim-inner-runes: before consumed=0 wide=0 perSite=- obs=364450951393 | after consumed=1 wide=1 perSite=convCap=1 obs=364450951393
+  cons strings/trimspace-repeat/trim-unicode: before consumed=0 wide=0 perSite=- obs=517690201103 | after consumed=1 wide=1 perSite=convCap=1 obs=517690201103
+
+rows with a convCap consult (bound ≥ 2) under the default stream: 125
+   builtins/e13-sibling-panic-order/bytes-conv-value-vs-mutating-call unseqNext=1;convCap=1
+   bytes/buffer-model/len-reset convCap=2
+   bytes/buffer-model/pointer-use convCap=1
+   bytes/buffer-model/write-paths convCap=1
+   evalorder/unseq-conv-alloc/conv-read-vs-call unseqNext=1;convCap=1
+   fmt/fprint-writers/buffer-single convCap=2
+   fmt/fprint-writers/builder-single appendSpill=2;convCap=2
+   fmt/fprint-writers/fprintf-buffer-shape appendSpill=10;convCap=2
+   fmt/fprintf-builder/describe-shape appendSpill=10;convCap=4
+   fmt/fprintf-builder/returns appendSpill=3;convCap=1
+   imported-goose/generics/generic-conversion unseqPanic=1;convCap=1
+   imported-goose/unittest/conversions/wrapper convCap=1
+   init/stdlib-initializer-source-through appendSpill=1;convCap=3
+   noodler/conversions/defined-string-bytes convCap=1
+   noodler/conversions/empty-string-nonnil convCap=2
+   noodler/conversions/runes-invalid-utf8 convCap=1
+   noodler/conversions/runes-truncated convCap=1
+   noodler/slices/byte-slice-sub-alias convCap=1
+   noodler/strings/parse-uint-edges appendSpill=1;convCap=7
+   noodler/strings/substring-then-bytes convCap=1
+   noodler/strings/trimspace-unicode convCap=1
+   panic-recover/shim-refusal-unrecoverable/parse-recover appendSpill=2;convCap=1
+   panic-recover/shim-refusal-unrecoverable/render-recover appendSpill=1;convCap=3
+   slices/slice-elided-high-eval-once/conversion-base convCap=2
+   stdlib-source/builder-cap/grow-after-write appendSpill=2;convCap=1
+   stdlib-source/builder-cap/grow-then-write appendSpill=1;convCap=1
+   stdlib-source/builder-fuzz/seed-0 appendSpill=21;convCap=73
+   stdlib-source/builder-fuzz/seed-1 appendSpill=32;convCap=78
+   stdlib-source/builder-fuzz/seed-2 appendSpill=21;convCap=83
+   stdlib-source/builder-fuzz/seed-3 appendSpill=27;convCap=82
+   stdlib-source/builder-fuzz/seed-4 appendSpill=28;convCap=79
+   stdlib-source/builder-fuzz/seed-5 appendSpill=26;convCap=79
+   stdlib-source/builder-fuzz/seed-6 appendSpill=23;convCap=77
+   stdlib-source/builder-fuzz/seed-7 appendSpill=12;convCap=77
+   stdlib-source/builder-fuzz/seed-8 appendSpill=30;convCap=77
+   stdlib-source/builder-fuzz/seed-9 appendSpill=32;convCap=81
+   stdlib-source/builder-overlay/grow-contract appendSpill=7;convCap=4
+   stdlib-source/builder-overlay/grow-noop appendSpill=1;convCap=1
+   stdlib-source/builder-overlay/join-large appendSpill=1;convCap=199
+   stdlib-source/builder-overlay/repeat-1k appendSpill=1;convCap=2
+   stdlib-source/builder-overlay/repeat-doubling-loop appendSpill=1;unseqNext=7;convCap=3
+   stdlib-source/builder-overlay/reset-reuse appendSpill=2;convCap=2
+   stdlib-source/builder-overlay/string-after-writes appendSpill=3;convCap=1
+   stdlib-source/builder-overlay/string-stable-in-place appendSpill=1;convCap=2
+   stdlib-source/bytes-buffer/grow-contract appendSpill=4;convCap=6
+   stdlib-source/bytes-buffer/next-bytes-truncate convCap=1
+   stdlib-source/bytes-buffer/reset-reuse convCap=2
+   stdlib-source/bytes-buffer/truncate-out-of-range convCap=1
+   stdlib-source/bytes-buffer/unread-byte-error convCap=1
+   stdlib-source/bytes-buffer/write-side convCap=1
+   stdlib-source/errors-join/empty-texts appendSpill=2;convCap=4
+   stdlib-source/errors-join/many appendSpill=4;convCap=6
+   stdlib-source/errors-join/nested appendSpill=3;convCap=4
+   stdlib-source/frontier/atoi-error-path-clone convCap=2
+   stdlib-source/frontier/buffer-readbyte-io convCap=1
+   stdlib-source/slices-sortfunc/others appendSpill=4;convCap=12
+   stdlib-source/slices-sortfunc/sort-stable-func appendSpill=1;convCap=30
+   stdlib-source/slices-sortfunc/sortfunc-large appendSpill=1;convCap=40
+   stdlib-source/slices-sortfunc/sortfunc-named-slice appendSpill=1;convCap=5
+   stdlib-source/slices-sortfunc/sortfunc-reversed-input appendSpill=1;convCap=30
+   stdlib-source/slices-sortfunc/sortfunc-strings-by-len appendSpill=1;convCap=13
+   stdlib-source/slices-sortfunc/sortfunc-ties-projected appendSpill=5;convCap=34
+   stdlib-source/slices-sortfunc/sortfunc-ties-realized appendSpill=1;convCap=30
+   stdlib-source/strconv-format/siblings appendSpill=2;unseqNext=2;convCap=1
+   stdlib-source/strconv-parseuint/bitsize-saturation appendSpill=1;convCap=8
+   stdlib-source/strconv-parseuint/error-quoting appendSpill=7;convCap=12
+   stdlib-source/strconv-parseuint/error-texts appendSpill=5;convCap=12
+   stdlib-source/strconv-parseuint/happy-bases convCap=4
+   stdlib-source/strconv-parseuint/numerror-type convCap=2
+   stdlib-source/strconv-parseuint/range-sentinel convCap=2
+   stdlib-source/strings-trimspace/all-unicode-space convCap=1
+   stdlib-source/strings-trimspace/ascii-table convCap=1
+   stdlib-source/strings-trimspace/both-unicode convCap=1
+   stdlib-source/strings-trimspace/empty-and-single convCap=3
+   stdlib-source/strings-trimspace/inner-preserved convCap=1
+   stdlib-source/strings-trimspace/invalid-utf8-ends convCap=1
+   stdlib-source/strings-trimspace/left-unicode-only convCap=1
+   stdlib-source/strings-trimspace/near-miss-ends convCap=1
+   stdlib-source/strings-trimspace/non-space-ends convCap=1
+   stdlib-source/strings-trimspace/right-unicode-only convCap=1
+   strconv/format-parse/parse-uint-bitsize appendSpill=1;convCap=3
+   strconv/format-parse/parse-uint-errors appendSpill=4;convCap=8
+   strconv/format-parse/parse-uint-happy convCap=3
+   strconv/format-parse/parse-uint-range-value convCap=8
+   strconv/format-parse/unmodeled-member convCap=1
+   strings/builder-model/copy-panics appendSpill=1;convCap=1
+   strings/builder-model/copy-zero-ok appendSpill=1;convCap=1
+   strings/builder-model/len-reset appendSpill=2;convCap=2
+   strings/builder-model/string-stable appendSpill=1;convCap=2
+   strings/builder-model/write-string appendSpill=2;convCap=2
+   strings/byte-conversion-cap convCap=1
+   strings/conv-cap/bytes-alias-append-esc-8 appendSpill=1;convCap=1
+   strings/conv-cap/bytes-alias-append-mut-5 appendSpill=1;convCap=1
+   strings/conv-cap/bytes-concat-esc-5 convCap=1
+   strings/conv-cap/bytes-inline-helper convCap=2
+   strings/conv-cap/bytes-var-esc-0 convCap=1
+   strings/conv-cap/bytes-var-esc-100 convCap=1
+   strings/conv-cap/bytes-var-esc-33 convCap=1
+   strings/conv-cap/bytes-var-esc-5 convCap=1
+   strings/conv-cap/bytes-var-mut-0 convCap=1
+   strings/conv-cap/bytes-var-mut-100 convCap=1
+   strings/conv-cap/bytes-var-mut-33 convCap=1
+   strings/conv-cap/bytes-var-mut-5 convCap=1
+   strings/conv-cap/bytes-var-nomut-0 convCap=1
+   strings/conv-cap/bytes-var-nomut-100 convCap=1
+   strings/conv-cap/bytes-var-nomut-33 convCap=1
+   strings/conv-cap/bytes-var-nomut-5 convCap=1
+   strings/conv-cap/runes-var-esc-5 convCap=1
+   strings/conv-cap/runes-var-nomut-5 convCap=1
+   strings/defined-copy-invalid-utf8 convCap=1
+   strings/defined-slice-string-conversion convCap=2
+   strings/join-conformance/basic appendSpill=1;convCap=5
+   strings/join-conformance/empty-sep appendSpill=1;convCap=5
+   strings/join-conformance/newraft-shape appendSpill=2;convCap=3
+   strings/rune-slice-conversion convCap=1
+   strings/rune-slice-to-string-copy convCap=1
+   strings/split-conformance/confchange-shape convCap=1
+   strings/string-byte-conversion convCap=1
+   strings/string-to-rune-copy convCap=2
+   strings/trimspace-repeat/repeat-basic appendSpill=1;convCap=3
+   strings/trimspace-repeat/trim-all-space convCap=1
+   strings/trimspace-repeat/trim-ascii convCap=1
+   strings/trimspace-repeat/trim-empty convCap=1
+   strings/trimspace-repeat/trim-inner-runes convCap=1
+   strings/trimspace-repeat/trim-unicode convCap=1
