@@ -1944,3 +1944,13 @@ IDENTICAL to the tracked record; inputs differ only in `build/files` `GoLean/CLI
 `scripts/test-gen-inittask-table`, `tools/typed_audit.py`; the receipt moved (source `3d311a35` → `a02e84da`,
 213.18 s). INSTALLED as `baselines/certified/imported-goose__channel__google-search.certified.json` — a provenance
 refresh, not a re-pin; the certified set is unchanged. Tail: `docs/evidence/2026-10-07_train-r73/r73-ci-slow.tail.txt`.
+
+**Green run at the 5a records commit `156aad06`** ([AGENT] train worker, 2026-10-07). `GOLEAN_MEM_MAX=48G
+scripts/capped scripts/ci --diff` (start load 6.1/14.4/23.7) EXIT=0, 973 s, `RESULT: PASS`: baseline diff FULL
+3890/3890 (3650 / 240, no regression), certificate provenance ok, package-correct method identity ok (125 s), wire
+boundary ok, core totality audit ok, semantic equations ok, pool spec freeze + discharge ok (LANDED=M5: all 48
+discharged, 0 owed), frontend pins ok, inittask generator fail-closed self-test ok, inittask-std.tsv re-derivation ok,
+negative baseline no regression — first time, no re-run needed. Round 73 closed: `native-json-run --arg-bool` and the
+entry-argument check (the gc-verified request), the layout lemmas (BridgeSet rows 573–579, RE-PIN 16) and the (f3)
+scratch cleanup are on main; the two gate budgets are raised (360 s per audit subprocess, `LEAN_TIMEOUT_SECONDS`
+default 60 s); BUG-119 and BUG-120 open.
