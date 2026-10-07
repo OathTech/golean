@@ -1791,3 +1791,10 @@ regression; the reconciler's one HIGH is the stale certificate itself (report-on
 the receipt moved (source `10270c5a` — a lane commit, not on main — → `0642b3e3`, 194.834 s). INSTALLED as
 `baselines/certified/imported-goose__channel__google-search.certified.json` — a provenance refresh, not a re-pin; the
 certified set is unchanged. Tail: `docs/evidence/2026-10-07_train-r71/r71-ci-slow.tail.txt`.
+
+**Green re-run at the records commit `5c842d1f`** ([AGENT] train worker, 2026-10-07): `ci --diff` EXIT=0, 1156 s, `RESULT: PASS`,
+baseline diff FULL 3890/3890 (3650 / 240, no regression), certificate provenance ok, core totality audit ok, semantic
+equations ok, pool spec freeze + discharge ok (LANDED=M5: all 48 discharged, 0 owed), frontend pins ok, lowering-diagnostic
+tables ok, inittask-std.tsv re-derivation ok, negative baseline no regression. Round 71 closed: FR-37 is closed on main
+(dot-imported stdlib variables refuse by name); BUG-117 (the inittask generator's fail-open) is open with its fix queued
+per item (4), batched with the gc-verified (a1) field-offsets lane; items (2)–(3) are queued lanes untouched by this train.
