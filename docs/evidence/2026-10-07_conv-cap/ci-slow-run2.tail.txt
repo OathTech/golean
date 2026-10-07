@@ -1,0 +1,119 @@
+# scripts/ci --slow run 2 at 47c3972e (lane lane/conv-cap-1007 rebased on main c605aa4c = train r72's close; option (i) applied;
+# GOLEAN_MEM_MAX=48G; box lock held 21:07:18Z–21:32Z; start load 4.9, end load 17.54, 36.45, 34.99).
+# CI total wall seconds: 1484 — vs train r72's close 1487 s (−0.2%), vs r71's 1301 s (+14.1%); the ruled reference is r72's
+# (the coordinator: «use its time if available»). RESULT: FAIL on exactly the re-pin trio — bug-index cross-check (BUG-118's six Cases
+# rows absent from the baseline until this re-pin), certificate provenance (STALE; fresh certification of
+# imported-goose/channel/google-search: UNCHANGED SET — claim and observations_sha256 identical; the candidate installed as the
+# record, a provenance refresh), and the baseline diff DRIFT = exactly 26 NEW ids (all PASS) + strings/byte-conversion-cap PASS/- → PASS/membership
+# (the re-lane) + the google-search echo. The 20 flips of run 1 are GONE (option (i)). Every other step ok.
+
+## differential baseline diff
+── differential baseline diff (scripts/coverage-baseline-diff)
+DRIFT vs baselines/native-full.tsv (3916 case(s) run):
+imported-goose/channel/google-search	baseline[PASS/membership] -> now[FAIL/membership]
+strings/byte-conversion-cap	baseline[PASS/-] -> now[PASS/membership]
+strings/conv-cap/bytes-alias-append-esc-8	NEW id (not in baseline) -> PASS/membership
+strings/conv-cap/bytes-alias-append-mut-5	NEW id (not in baseline) -> PASS/membership
+strings/conv-cap/bytes-concat-esc-5	NEW id (not in baseline) -> PASS/membership
+strings/conv-cap/bytes-const-lit	NEW id (not in baseline) -> PASS/-
+strings/conv-cap/bytes-inline-helper	NEW id (not in baseline) -> PASS/membership
+strings/conv-cap/bytes-lit	NEW id (not in baseline) -> PASS/-
+strings/conv-cap/bytes-named-lit	NEW id (not in baseline) -> PASS/-
+strings/conv-cap/bytes-var-esc-0	NEW id (not in baseline) -> PASS/membership
+strings/conv-cap/bytes-var-esc-100	NEW id (not in baseline) -> PASS/membership
+strings/conv-cap/bytes-var-esc-33	NEW id (not in baseline) -> PASS/membership
+strings/conv-cap/bytes-var-esc-5	NEW id (not in baseline) -> PASS/membership
+strings/conv-cap/bytes-var-mut-0	NEW id (not in baseline) -> PASS/membership
+strings/conv-cap/bytes-var-mut-100	NEW id (not in baseline) -> PASS/membership
+strings/conv-cap/bytes-var-mut-33	NEW id (not in baseline) -> PASS/membership
+strings/conv-cap/bytes-var-mut-5	NEW id (not in baseline) -> PASS/membership
+strings/conv-cap/bytes-var-nomut-0	NEW id (not in baseline) -> PASS/membership
+strings/conv-cap/bytes-var-nomut-100	NEW id (not in baseline) -> PASS/membership
+strings/conv-cap/bytes-var-nomut-33	NEW id (not in baseline) -> PASS/membership
+strings/conv-cap/bytes-var-nomut-5	NEW id (not in baseline) -> PASS/membership
+strings/conv-cap/runes-lit	NEW id (not in baseline) -> PASS/-
+strings/conv-cap/runes-var-esc-100	NEW id (not in baseline) -> PASS/-
+strings/conv-cap/runes-var-esc-33	NEW id (not in baseline) -> PASS/-
+strings/conv-cap/runes-var-esc-5	NEW id (not in baseline) -> PASS/membership
+strings/conv-cap/runes-var-nomut-100	NEW id (not in baseline) -> PASS/-
+strings/conv-cap/runes-var-nomut-33	NEW id (not in baseline) -> PASS/-
+strings/conv-cap/runes-var-nomut-5	NEW id (not in baseline) -> PASS/membership
+
+
+## certification
+certification-controls scratch: /home/dev/projects/golean/.claude/worktrees/conv-cap/.tmp/certification-controls-xo42g34m
+Certification control PASS: equivalent checkout and linked executable
+Certification control PASS: docs-only commit retains input identity
+Fresh certification: unchanged set; seconds=0.064; candidate=/home/dev/projects/golean/.claude/worktrees/conv-cap/.tmp/certification-controls-xo42g34m/membership-enum/certification-candidate.json
+Certification control PASS: membership missing sidecar after fresh unchanged-set run -> missing certification provenance
+Certification control PASS: membership actual shell consumer accepts fresh unchanged set
+Fresh certification: unchanged set; seconds=0.032; candidate=/home/dev/projects/golean/.claude/worktrees/conv-cap/.tmp/certification-controls-xo42g34m/confluent-enum/certification-candidate.json
+Certification control PASS: confluent missing sidecar after fresh unchanged-set run -> missing certification provenance
+Certification control PASS: confluent actual shell consumer accepts fresh unchanged set
+Certification control PASS: schema -> unknown certification schema
+Certification control PASS: missing receipt -> certification receipt: expected fields
+Certification control PASS: failed receipt -> no successful enumeration
+Certification control PASS: Boolean exit -> no successful enumeration
+Certification control PASS: bad receipt command -> command differs
+Certification control PASS: nonfinite wall -> non-finite wall
+Certification control PASS: entry -> STALE certification claim
+Certification control PASS: argument -> STALE certification claim
+Certification control PASS: params -> STALE certification claim
+Certification control PASS: wire -> STALE certification claim
+Certification control PASS: lane -> STALE certification claim
+Certification control PASS: status -> STALE certification claim
+Certification control PASS: observation policy -> STALE certification claim
+Certification control PASS: toolchain distribution
+
+## summary
+══ scripts/ci summary ══
+  ok   Tests/library ownership (no exceptions; executed builds checked at exit)
+  note build parallelism: cap 48G -> LEAN_NUM_THREADS=6 (cap/8G, floor 2; 32 cores on this box)
+  ok   oracle toolchain (go1.26.5 = pin)
+  ok   escape-hatch preflight
+  ok   meta-layer escape hatches (allowlist empty since the repo split)
+  ok   escape-hatch addendum (no decide +native / native-config spellings)
+  FAIL bug-index cross-check
+  ok   feature-coverage (no dead tags)
+  ok   spec-anchor citations resolve at the pin
+  ok   stdlib admission register = frontend tables
+  ok   lane-validation fixtures (manifest gates reject bad shapes)
+  ok   evidence-on-main size gate
+  ok   AGENTS.md alias of CLAUDE.md
+  ok   inittask generator fail-closed self-test
+  ok   imported-goose verbatim (above-marker bytes = pinned upstream)
+  ok   engine-isolation (core ↛ EnumDedup)
+  ok   memory-module raw call-site inventory (emit/peek discipline)
+  ok   core build (warning-free)
+  FAIL certificate provenance
+  ok   core totality audit (every GoLean/ module; required core theorems; poison controls)
+  ok   admission checker proofs and post-import audit
+  ok   declaration boundary
+  ok   wire boundary (byte-level controls through the real CLI)
+  ok   package-correct method identity
+  ok   unseq scheduler (Stage B)
+  ok   unseq wire (Stage C)
+  ok   semantic equations (scripts/check-equations)
+  ok   pool spec freeze + discharge (scripts/check-pool-spec)
+  ok   frontend pins (realized init-order deviation + twin wire = pinned bytes)
+  ok   import-goose fixtures (importer + verbatim guard reject bad shapes)
+  ok   frontend unit tests
+  ok   lowering-diagnostic tables
+  ok   coverage-harness unit tests
+  ok   eval tests (298 ok)
+  ok   differential run completed (exit 1; failing-set judged by baseline diff)
+  ok   lane-validation fixtures incl. harness half (F4/F6/B3-B5/G5/T1-T8/D1-D6)
+  ok   negative run completed (exit 0; set judged by baseline diff)
+  ok   Tests/FloatVectors.lean = fresh hardware-oracle regeneration (byte-exact)
+  ok   inittask-std.tsv = fresh gc-derived regeneration (header at pin; byte-exact modulo date line)
+  note negative baseline diff matched (394 case(s)) but the record was made on a DIRTY tree (git_dirty=true) — certifies that worktree state, not a commit
+  FAIL baseline diff (DRIFT — see above)
+  note reconciler: 11 finding(s), 6 HIGH — report-only (details: tools/reconcile-records)
+  ok   executed library coverage (all declared libraries; all Tests modules)
+
+RESULT: FAIL
+Failed CI receipts retained: /home/dev/projects/golean/.claude/worktrees/conv-cap/.tmp/ci-libraries-bvndcdap
+CI coverage timing: close: seconds=0.016
+CI total wall seconds: 1484
+EXIT=1
+wall=1485

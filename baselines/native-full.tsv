@@ -1,5 +1,26 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 3890 (3650 PASS / 240 FAIL)
+# cases: 3916 (3676 PASS / 240 FAIL)
+# re-pinned: 2026-10-07 [AGENT], lane/conv-cap-1007 (rebased on main c605aa4c, train r72) — R3 / b6: the capacity of []byte(s) /
+#   []rune(s) is ChoiceSite.convCap, drawn at the strict apply over EXACTLY gc go1.26.5's measured member set per (kind, literal
+#   operand?, length) — convCapMembers, Ops.lean ([USER] Mike 2026-10-07 «yeah agree, build now», relayed; design
+#   docs/2026-10-07_conv-cap-design.md D1–D8; the standing rule «semantic widenings must match real Go»). WHY: BUG-118 — the
+#   pre-widening rune singleton cap = len was observed ∉ modeled on almost every non-literal rune conversion (gc: the 32-rune
+#   conversion buffer at n ≤ 32, roundupsize(4n)/4 above or escaping); the byte singleton was gc's zero-copy member and keeps every
+#   byte row's default-tape observation. BORN ROWS: +26 strings/conv-cap/* (4 literal controls strict PASS; 22 latitude rows born
+#   red-first on main's semantics — docs/evidence/2026-10-07_conv-cap/red-first-latest.tsv —, PASS now: 18 membership rows witnessing
+#   every member, 4 strict rune rows at n ∈ {33, 100} whose envelope is a singleton). ONE STAGE MOVE: strings/byte-conversion-cap
+#   PASS/- → PASS/membership (re-laned: its operand s is a VARIABLE, the envelope {5, 8, 32}; the default-tape observation 5 unchanged).
+#   NO PASS→non-PASS flip in this pin — but the lane's first full run (0fdcbd29, docs/evidence/2026-10-07_conv-cap/ci-slow-run1.tail.txt)
+#   showed 20 PASS→FAIL flips on pre-existing rows, none an observation change: the source-through strings.TrimSpace `range []byte(s)`
+#   (gc's zero-copy range temp, capacity unobservable) draws a bound-3 convCap on every call, exhausting the strict lane's 8–10-entry
+#   fixed streams (13 stdlib-source rows), refuting three membership rows' width=2 pins and one row's work budget — a named design
+#   gate, RULED [USER] Mike 2026-10-07 «Agree» (relayed): option (i), row metadata only (depth=w on the 13, width=3 ×3, work=400000
+#   ×1; docs/evidence/2026-10-07_conv-cap/option-i-row-metadata.tsv), conditional on the gate cost: this run 1484 s vs train r72's
+#   1487 s (−0.2%; r71's 1301 s +14% — r72 is the ruled reference). PASS→FAIL→PASS on those 17 rows with their observations
+#   identical throughout (the D4 certificate docs/evidence/2026-10-07_conv-cap/choice-trace-compare.txt: the default stream's only
+#   observation changes are the six BUG-118 rune rows). The certified row imported-goose/channel/google-search re-certified: unchanged
+#   set (provenance refresh, the 5a pair). Measured by scripts/ci --slow at 47c3972e (docs/evidence/2026-10-07_conv-cap/ci-slow-run2.tail.txt).
+#   3890 + 26 = 3916; 3650 + 26 = 3676 PASS; 240 FAIL.
 # re-pinned: 2026-10-07 [AGENT], lane/fr37-dot-var-1007 — FR-37 closed ([USER] Mike 2026-10-07 «We can run the FR-37 fix in a subagent
 #   right? Worth getting it done», relayed). WHY: a DOT-imported package-level VARIABLE of a non-source stdlib package (import . "os";
 #   len(Args)) now refuses BY NAME at the frontend (tools/nativefrontend/dotimport.go dotImportedStdlibVar / refuseDotImportedVar —
@@ -1928,6 +1949,18 @@
 #   embedding/promoted-stub-dispatch package's wire; its other four rows are unmoved (diff-one: 3 PASS / 2 FAIL as pinned).
 #   Measured by scripts/diff-one at the tree and on the archive build; the full gate line is in the handoff §6.
 #   3790 + 1 = 3791; 3553 + 1 = 3554; 237 FAIL unchanged. No PASS -> non-PASS flip.
+# reason: channels/select-select/beside-loop — stage alternation ([USER] ruling (a) 2026-09-03;
+#   members re-stated at the strict-lane depth guard, round-8a merge train 2026-09-03 [AGENT]):
+#   gc samples 5 or 90 (the subject's "5 or 90 in gc"); the machine's default stream
+#   commits 5. scripts/diff-coverage runs the strict-lane differential check BEFORE
+#   the oracle-invariance re-run and returns early, so the red's stage is
+#   oracle-schedule-dependent: gc=90 -> Lean=5 != Go=90 -> FAIL/differential;
+#   gc=5 -> equality holds, then a variant-stream run hits the `unsupported`
+#   refusal, which the strict-lane depth guard (membership-depth memo P1 item 4,
+#   lane strict-routing) reports as a REFUSAL at lean-observation — no longer as
+#   "varies with iteration order" (nondet) -> FAIL/lean-observation. Result FAIL
+#   either way; the row stays the F10 over-broad-trigger marker
+#   (baselines/untriaged-ids, disposition coverage).
 result	id	stage
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
@@ -2412,18 +2445,6 @@ PASS	channels/select-recv-edge/dep-index-target	-
 PASS	channels/select-recv-edge/fallback-call-index	-
 PASS	channels/select-recv-edge/field-second-target-stores-first	-
 PASS	channels/select-recv-edge/nil-index-base-second	-
-# reason: channels/select-select/beside-loop — stage alternation ([USER] ruling (a) 2026-09-03;
-#   members re-stated at the strict-lane depth guard, round-8a merge train 2026-09-03 [AGENT]):
-#   gc samples 5 or 90 (the subject's "5 or 90 in gc"); the machine's default stream
-#   commits 5. scripts/diff-coverage runs the strict-lane differential check BEFORE
-#   the oracle-invariance re-run and returns early, so the red's stage is
-#   oracle-schedule-dependent: gc=90 -> Lean=5 != Go=90 -> FAIL/differential;
-#   gc=5 -> equality holds, then a variant-stream run hits the `unsupported`
-#   refusal, which the strict-lane depth guard (membership-depth memo P1 item 4,
-#   lane strict-routing) reports as a REFUSAL at lean-observation — no longer as
-#   "varies with iteration order" (nondet) -> FAIL/lean-observation. Result FAIL
-#   either way; the row stays the F10 over-broad-trigger marker
-#   (baselines/untriaged-ids, disposition coverage).
 FAIL	channels/select-select/beside-loop	lean-observation|differential
 FAIL	channels/select-select/core	lean-observation
 PASS	channels/send-closed-panic	-
@@ -5573,7 +5594,7 @@ PASS	strings/builder-model/string-stable	-
 PASS	strings/builder-model/write-bytes	-
 PASS	strings/builder-model/write-string	-
 PASS	strings/builder-model/zero	-
-PASS	strings/byte-conversion-cap	-
+PASS	strings/byte-conversion-cap	membership
 PASS	strings/byte-slice-to-string-copy	-
 PASS	strings/concat-eval-order	-
 PASS	strings/defined-copy-invalid-utf8	-
@@ -5831,3 +5852,29 @@ PASS	variadic/variadic-interface-dispatch	-
 PASS	variadic/variadic-method	-
 PASS	variadic/variadic-method-expression	-
 PASS	variadic/variadic-method-value-copy	-
+PASS	strings/conv-cap/bytes-lit	-
+PASS	strings/conv-cap/bytes-const-lit	-
+PASS	strings/conv-cap/bytes-named-lit	-
+PASS	strings/conv-cap/runes-lit	-
+PASS	strings/conv-cap/bytes-var-nomut-0	membership
+PASS	strings/conv-cap/bytes-var-mut-0	membership
+PASS	strings/conv-cap/bytes-var-esc-0	membership
+PASS	strings/conv-cap/bytes-var-nomut-5	membership
+PASS	strings/conv-cap/bytes-var-mut-5	membership
+PASS	strings/conv-cap/bytes-var-esc-5	membership
+PASS	strings/conv-cap/bytes-var-nomut-33	membership
+PASS	strings/conv-cap/bytes-var-mut-33	membership
+PASS	strings/conv-cap/bytes-var-esc-33	membership
+PASS	strings/conv-cap/bytes-var-nomut-100	membership
+PASS	strings/conv-cap/bytes-var-mut-100	membership
+PASS	strings/conv-cap/bytes-var-esc-100	membership
+PASS	strings/conv-cap/bytes-concat-esc-5	membership
+PASS	strings/conv-cap/runes-var-nomut-5	membership
+PASS	strings/conv-cap/runes-var-esc-5	membership
+PASS	strings/conv-cap/runes-var-nomut-33	-
+PASS	strings/conv-cap/runes-var-esc-33	-
+PASS	strings/conv-cap/runes-var-nomut-100	-
+PASS	strings/conv-cap/runes-var-esc-100	-
+PASS	strings/conv-cap/bytes-inline-helper	membership
+PASS	strings/conv-cap/bytes-alias-append-mut-5	membership
+PASS	strings/conv-cap/bytes-alias-append-esc-8	membership
