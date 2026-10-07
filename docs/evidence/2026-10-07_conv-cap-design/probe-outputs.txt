@@ -1,0 +1,29 @@
+## go run probe_inline.go (default)
+inline nomut 5 5
+inline mut 5 32
+inline mut 100 112
+## go run -gcflags=-l probe_inline.go
+inline nomut 5 8
+inline mut 5 8
+inline mut 100 112
+## go build -gcflags=-m probe_inline.go (default), conversion lines
+probe_inline.go:14:11: inlining call to conv
+probe_inline.go:16:12: inlining call to conv
+probe_inline.go:20:12: inlining call to conv
+probe_inline.go:10:11: s does not escape
+probe_inline.go:10:44: ([]byte)(s) escapes to heap
+probe_inline.go:14:11: ([]byte)(s) does not escape
+probe_inline.go:14:11: zero-copy string->[]byte conversion
+probe_inline.go:16:12: ([]byte)(s) does not escape
+probe_inline.go:20:12: ([]byte)(s) does not escape
+## go run probe_literal.go: lit cst cat vr rl rv nest
+5 5 5 5 5 32 10
+## wire operands (tools/nativefrontend, golean-native-v3) for probe_literal.go
+lit bytes-from-string x.expr = string bytes=[104, 101, 108, 108, 111]
+cst bytes-from-string x.expr = string bytes=[104, 101, 108, 108, 111]
+cat bytes-from-string x.expr = string bytes=[104, 101, 108, 108, 111]
+vr bytes-from-string x.expr = ident name=s
+rl runes-from-string x.expr = string bytes=[104, 195, 169, 108, 108, 111]
+rv runes-from-string x.expr = ident name=s
+nest bytes-from-string x.expr = string bytes=[104, 101, 108, 108, 111]
+nest bytes-from-string x.expr = string bytes=[104, 101, 108, 108, 111]

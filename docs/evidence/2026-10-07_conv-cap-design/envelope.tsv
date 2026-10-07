@@ -1,0 +1,141 @@
+kind	operand	n	measured_members	model_members	model_check	spec_floor	zero_copy_only	per_regime
+bytes	lit	0	[0]	[0]	ok	ok	[]	lit/esc=0;lit/mut=0;lit/nomut=0
+bytes	lit	1	[1]	[1]	ok	ok	[]	lit/esc=1;lit/mut=1;lit/nomut=1
+bytes	lit	2	[2]	[2]	ok	ok	[]	lit/esc=2;lit/mut=2;lit/nomut=2
+bytes	lit	3	[3]	[3]	ok	ok	[]	lit/esc=3;lit/mut=3;lit/nomut=3
+bytes	lit	5	[5]	[5]	ok	ok	[]	lit/esc=5;lit/mut=5;lit/nomut=5
+bytes	lit	6	[6]	[6]	ok	ok	[]	lit/esc=6;lit/mut=6;lit/nomut=6
+bytes	lit	7	[7]	[7]	ok	ok	[]	lit/esc=7;lit/mut=7;lit/nomut=7
+bytes	lit	8	[8]	[8]	ok	ok	[]	lit/esc=8;lit/mut=8;lit/nomut=8
+bytes	lit	9	[9]	[9]	ok	ok	[]	lit/esc=9;lit/mut=9;lit/nomut=9
+bytes	lit	15	[15]	[15]	ok	ok	[]	lit/esc=15;lit/mut=15;lit/nomut=15
+bytes	lit	16	[16]	[16]	ok	ok	[]	lit/esc=16;lit/mut=16;lit/nomut=16
+bytes	lit	17	[17]	[17]	ok	ok	[]	lit/esc=17;lit/mut=17;lit/nomut=17
+bytes	lit	24	[24]	[24]	ok	ok	[]	lit/esc=24;lit/mut=24;lit/nomut=24
+bytes	lit	25	[25]	[25]	ok	ok	[]	lit/esc=25;lit/mut=25;lit/nomut=25
+bytes	lit	31	[31]	[31]	ok	ok	[]	lit/esc=31;lit/mut=31;lit/nomut=31
+bytes	lit	32	[32]	[32]	ok	ok	[]	lit/esc=32;lit/mut=32;lit/nomut=32
+bytes	lit	33	[33]	[33]	ok	ok	[]	lit/esc=33;lit/mut=33;lit/nomut=33
+bytes	lit	45	[45]	[45]	ok	ok	[]	lit/esc=45;lit/mut=45;lit/nomut=45
+bytes	lit	47	[47]	[47]	ok	ok	[]	lit/esc=47;lit/mut=47;lit/nomut=47
+bytes	lit	48	[48]	[48]	ok	ok	[]	lit/esc=48;lit/mut=48;lit/nomut=48
+bytes	lit	49	[49]	[49]	ok	ok	[]	lit/esc=49;lit/mut=49;lit/nomut=49
+bytes	lit	63	[63]	[63]	ok	ok	[]	lit/esc=63;lit/mut=63;lit/nomut=63
+bytes	lit	64	[64]	[64]	ok	ok	[]	lit/esc=64;lit/mut=64;lit/nomut=64
+bytes	lit	65	[65]	[65]	ok	ok	[]	lit/esc=65;lit/mut=65;lit/nomut=65
+bytes	lit	100	[100]	[100]	ok	ok	[]	lit/esc=100;lit/mut=100;lit/nomut=100
+bytes	lit	112	[112]	[112]	ok	ok	[]	lit/esc=112;lit/mut=112;lit/nomut=112
+bytes	lit	113	[113]	[113]	ok	ok	[]	lit/esc=113;lit/mut=113;lit/nomut=113
+bytes	lit	1016	[1016]	[1016]	ok	ok	[]	lit/esc=1016;lit/mut=1016;lit/nomut=1016
+bytes	lit	1017	[1017]	[1017]	ok	ok	[]	lit/esc=1017;lit/mut=1017;lit/nomut=1017
+bytes	lit	1024	[1024]	[1024]	ok	ok	[]	lit/esc=1024;lit/mut=1024;lit/nomut=1024
+bytes	lit	1025	[1025]	[1025]	ok	ok	[]	lit/esc=1025;lit/mut=1025;lit/nomut=1025
+bytes	lit	65536	[65536]	[65536]	ok	ok	[]	lit/esc=65536;lit/mut=65536;lit/nomut=65536
+bytes	lit	65537	[65537]	[65537]	ok	ok	[]	lit/esc=65537;lit/mut=65537;lit/nomut=65537
+bytes	nonlit	0	[0, 32]	[0, 32]	ok	ok	[]	concat/esc=0;concat/mut=32;concat/nomut=0;var/esc=0;var/mut=32;var/nomut=0
+bytes	nonlit	1	[1, 8, 32]	[1, 8, 32]	ok	ok	[1]	concat/esc=8;concat/mut=32;concat/nomut=1;var/esc=8;var/mut=32;var/nomut=1
+bytes	nonlit	2	[2, 8, 32]	[2, 8, 32]	ok	ok	[2]	concat/esc=8;concat/mut=32;concat/nomut=2;var/esc=8;var/mut=32;var/nomut=2
+bytes	nonlit	3	[3, 8, 32]	[3, 8, 32]	ok	ok	[3]	concat/esc=8;concat/mut=32;concat/nomut=3;var/esc=8;var/mut=32;var/nomut=3
+bytes	nonlit	5	[5, 8, 32]	[5, 8, 32]	ok	ok	[5]	concat/esc=8;concat/mut=32;concat/nomut=5;var/esc=8;var/mut=32;var/nomut=5
+bytes	nonlit	6	[6, 8, 32]	[6, 8, 32]	ok	ok	[6]	concat/esc=8;concat/mut=32;concat/nomut=6;var/esc=8;var/mut=32;var/nomut=6
+bytes	nonlit	7	[7, 8, 32]	[7, 8, 32]	ok	ok	[7]	concat/esc=8;concat/mut=32;concat/nomut=7;var/esc=8;var/mut=32;var/nomut=7
+bytes	nonlit	8	[8, 32]	[8, 32]	ok	ok	[]	concat/esc=8;concat/mut=32;concat/nomut=8;var/esc=8;var/mut=32;var/nomut=8
+bytes	nonlit	9	[9, 16, 32]	[9, 16, 32]	ok	ok	[9]	concat/esc=16;concat/mut=32;concat/nomut=9;var/esc=16;var/mut=32;var/nomut=9
+bytes	nonlit	15	[15, 16, 32]	[15, 16, 32]	ok	ok	[15]	concat/esc=16;concat/mut=32;concat/nomut=15;var/esc=16;var/mut=32;var/nomut=15
+bytes	nonlit	16	[16, 32]	[16, 32]	ok	ok	[]	concat/esc=16;concat/mut=32;concat/nomut=16;var/esc=16;var/mut=32;var/nomut=16
+bytes	nonlit	17	[17, 24, 32]	[17, 24, 32]	ok	ok	[17]	concat/esc=24;concat/mut=32;concat/nomut=17;var/esc=24;var/mut=32;var/nomut=17
+bytes	nonlit	24	[24, 32]	[24, 32]	ok	ok	[]	concat/esc=24;concat/mut=32;concat/nomut=24;var/esc=24;var/mut=32;var/nomut=24
+bytes	nonlit	25	[25, 32]	[25, 32]	ok	ok	[25]	concat/esc=32;concat/mut=32;concat/nomut=25;var/esc=32;var/mut=32;var/nomut=25
+bytes	nonlit	31	[31, 32]	[31, 32]	ok	ok	[31]	concat/esc=32;concat/mut=32;concat/nomut=31;var/esc=32;var/mut=32;var/nomut=31
+bytes	nonlit	32	[32]	[32]	ok	ok	[]	concat/esc=32;concat/mut=32;concat/nomut=32;var/esc=32;var/mut=32;var/nomut=32
+bytes	nonlit	33	[33, 48]	[33, 48]	ok	ok	[33]	concat/esc=48;concat/mut=48;concat/nomut=33;var/esc=48;var/mut=48;var/nomut=33
+bytes	nonlit	45	[45, 48]	[45, 48]	ok	ok	[45]	concat/esc=48;concat/mut=48;concat/nomut=45;var/esc=48;var/mut=48;var/nomut=45
+bytes	nonlit	47	[47, 48]	[47, 48]	ok	ok	[47]	concat/esc=48;concat/mut=48;concat/nomut=47;var/esc=48;var/mut=48;var/nomut=47
+bytes	nonlit	48	[48]	[48]	ok	ok	[]	concat/esc=48;concat/mut=48;concat/nomut=48;var/esc=48;var/mut=48;var/nomut=48
+bytes	nonlit	49	[49, 64]	[49, 64]	ok	ok	[49]	concat/esc=64;concat/mut=64;concat/nomut=49;var/esc=64;var/mut=64;var/nomut=49
+bytes	nonlit	63	[63, 64]	[63, 64]	ok	ok	[63]	concat/esc=64;concat/mut=64;concat/nomut=63;var/esc=64;var/mut=64;var/nomut=63
+bytes	nonlit	64	[64]	[64]	ok	ok	[]	concat/esc=64;concat/mut=64;concat/nomut=64;var/esc=64;var/mut=64;var/nomut=64
+bytes	nonlit	65	[65, 80]	[65, 80]	ok	ok	[65]	concat/esc=80;concat/mut=80;concat/nomut=65;var/esc=80;var/mut=80;var/nomut=65
+bytes	nonlit	100	[100, 112]	[100, 112]	ok	ok	[100]	concat/esc=112;concat/mut=112;concat/nomut=100;var/esc=112;var/mut=112;var/nomut=100
+bytes	nonlit	112	[112]	[112]	ok	ok	[]	concat/esc=112;concat/mut=112;concat/nomut=112;var/esc=112;var/mut=112;var/nomut=112
+bytes	nonlit	113	[113, 128]	[113, 128]	ok	ok	[113]	concat/esc=128;concat/mut=128;concat/nomut=113;var/esc=128;var/mut=128;var/nomut=113
+bytes	nonlit	1016	[1016, 1024]	[1016, 1024]	ok	ok	[1016]	concat/esc=1024;concat/mut=1024;concat/nomut=1016;var/esc=1024;var/mut=1024;var/nomut=1016
+bytes	nonlit	1017	[1017, 1024]	[1017, 1024]	ok	ok	[1017]	concat/esc=1024;concat/mut=1024;concat/nomut=1017;var/esc=1024;var/mut=1024;var/nomut=1017
+bytes	nonlit	1024	[1024]	[1024]	ok	ok	[]	concat/esc=1024;concat/mut=1024;concat/nomut=1024;var/esc=1024;var/mut=1024;var/nomut=1024
+bytes	nonlit	1025	[1025, 1152]	[1025, 1152]	ok	ok	[1025]	concat/esc=1152;concat/mut=1152;concat/nomut=1025;var/esc=1152;var/mut=1152;var/nomut=1025
+bytes	nonlit	32760	[32760, 32768]	[32760, 32768]	ok	ok	[32760]	concat/esc=32768;concat/mut=32768;concat/nomut=32760;var/esc=32768;var/mut=32768;var/nomut=32760
+bytes	nonlit	32761	[32761, 32768]	[32761, 32768]	ok	ok	[32761]	concat/esc=32768;concat/mut=32768;concat/nomut=32761;var/esc=32768;var/mut=32768;var/nomut=32761
+bytes	nonlit	32768	[32768]	[32768]	ok	ok	[]	concat/esc=32768;concat/mut=32768;concat/nomut=32768;var/esc=32768;var/mut=32768;var/nomut=32768
+bytes	nonlit	32769	[32769, 40960]	[32769, 40960]	ok	ok	[32769]	concat/esc=40960;concat/mut=40960;concat/nomut=32769;var/esc=40960;var/mut=40960;var/nomut=32769
+bytes	nonlit	40000	[40000, 40960]	[40000, 40960]	ok	ok	[40000]	concat/esc=40960;concat/mut=40960;concat/nomut=40000;var/esc=40960;var/mut=40960;var/nomut=40000
+bytes	nonlit	100000	[100000, 106496]	[100000, 106496]	ok	ok	[100000]	concat/esc=106496;concat/mut=106496;concat/nomut=100000;var/esc=106496;var/mut=106496;var/nomut=100000
+runes	lit	0	[0]	[0]	ok	ok	[]	lit/esc=0;lit/nomut=0
+runes	lit	1	[1]	[1]	ok	ok	[]	lit/esc=1;lit/nomut=1
+runes	lit	2	[2]	[2]	ok	ok	[]	lit/esc=2;lit/nomut=2
+runes	lit	3	[3]	[3]	ok	ok	[]	lit/esc=3;lit/nomut=3
+runes	lit	5	[5]	[5]	ok	ok	[]	lit/esc=5;lit/nomut=5
+runes	lit	6	[6]	[6]	ok	ok	[]	lit/esc=6;lit/nomut=6
+runes	lit	7	[7]	[7]	ok	ok	[]	lit/esc=7;lit/nomut=7
+runes	lit	8	[8]	[8]	ok	ok	[]	lit/esc=8;lit/nomut=8
+runes	lit	9	[9]	[9]	ok	ok	[]	lit/esc=9;lit/nomut=9
+runes	lit	15	[15]	[15]	ok	ok	[]	lit/esc=15;lit/nomut=15
+runes	lit	16	[16]	[16]	ok	ok	[]	lit/esc=16;lit/nomut=16
+runes	lit	17	[17]	[17]	ok	ok	[]	lit/esc=17;lit/nomut=17
+runes	lit	24	[24]	[24]	ok	ok	[]	lit/esc=24;lit/nomut=24
+runes	lit	25	[25]	[25]	ok	ok	[]	lit/esc=25;lit/nomut=25
+runes	lit	31	[31]	[31]	ok	ok	[]	lit/esc=31;lit/nomut=31
+runes	lit	32	[32]	[32]	ok	ok	[]	lit/esc=32;lit/nomut=32
+runes	lit	33	[33]	[33]	ok	ok	[]	lit/esc=33;lit/nomut=33
+runes	lit	45	[45]	[45]	ok	ok	[]	lit/esc=45;lit/nomut=45
+runes	lit	47	[47]	[47]	ok	ok	[]	lit/esc=47;lit/nomut=47
+runes	lit	48	[48]	[48]	ok	ok	[]	lit/esc=48;lit/nomut=48
+runes	lit	49	[49]	[49]	ok	ok	[]	lit/esc=49;lit/nomut=49
+runes	lit	63	[63]	[63]	ok	ok	[]	lit/esc=63;lit/nomut=63
+runes	lit	64	[64]	[64]	ok	ok	[]	lit/esc=64;lit/nomut=64
+runes	lit	65	[65]	[65]	ok	ok	[]	lit/esc=65;lit/nomut=65
+runes	lit	100	[100]	[100]	ok	ok	[]	lit/esc=100;lit/nomut=100
+runes	lit	112	[112]	[112]	ok	ok	[]	lit/esc=112;lit/nomut=112
+runes	lit	113	[113]	[113]	ok	ok	[]	lit/esc=113;lit/nomut=113
+runes	lit	1016	[1016]	[1016]	ok	ok	[]	lit/esc=1016;lit/nomut=1016
+runes	lit	1017	[1017]	[1017]	ok	ok	[]	lit/esc=1017;lit/nomut=1017
+runes	lit	1024	[1024]	[1024]	ok	ok	[]	lit/esc=1024;lit/nomut=1024
+runes	lit	1025	[1025]	[1025]	ok	ok	[]	lit/esc=1025;lit/nomut=1025
+runes	lit	65536	[65536]	[65536]	ok	ok	[]	lit/esc=65536;lit/nomut=65536
+runes	lit	65537	[65537]	[65537]	ok	ok	[]	lit/esc=65537;lit/nomut=65537
+runes	nonlit	0	[0, 32]	[0, 32]	ok	ok	[]	ascii/nomut=32;var/esc=0;var/mut=32;var/nomut=32
+runes	nonlit	1	[2, 32]	[2, 32]	ok	ok	[]	ascii/nomut=32;var/esc=2;var/mut=32;var/nomut=32
+runes	nonlit	2	[2, 32]	[2, 32]	ok	ok	[]	ascii/nomut=32;var/esc=2;var/mut=32;var/nomut=32
+runes	nonlit	3	[4, 32]	[4, 32]	ok	ok	[]	ascii/nomut=32;var/esc=4;var/mut=32;var/nomut=32
+runes	nonlit	5	[6, 32]	[6, 32]	ok	ok	[]	ascii/nomut=32;var/esc=6;var/mut=32;var/nomut=32
+runes	nonlit	6	[6, 32]	[6, 32]	ok	ok	[]	ascii/nomut=32;var/esc=6;var/mut=32;var/nomut=32
+runes	nonlit	7	[8, 32]	[8, 32]	ok	ok	[]	ascii/nomut=32;var/esc=8;var/mut=32;var/nomut=32
+runes	nonlit	8	[8, 32]	[8, 32]	ok	ok	[]	ascii/nomut=32;var/esc=8;var/mut=32;var/nomut=32
+runes	nonlit	9	[12, 32]	[12, 32]	ok	ok	[]	ascii/nomut=32;var/esc=12;var/mut=32;var/nomut=32
+runes	nonlit	15	[16, 32]	[16, 32]	ok	ok	[]	ascii/nomut=32;var/esc=16;var/mut=32;var/nomut=32
+runes	nonlit	16	[16, 32]	[16, 32]	ok	ok	[]	ascii/nomut=32;var/esc=16;var/mut=32;var/nomut=32
+runes	nonlit	17	[20, 32]	[20, 32]	ok	ok	[]	ascii/nomut=32;var/esc=20;var/mut=32;var/nomut=32
+runes	nonlit	24	[24, 32]	[24, 32]	ok	ok	[]	ascii/nomut=32;var/esc=24;var/mut=32;var/nomut=32
+runes	nonlit	25	[28, 32]	[28, 32]	ok	ok	[]	ascii/nomut=32;var/esc=28;var/mut=32;var/nomut=32
+runes	nonlit	31	[32]	[32]	ok	ok	[]	ascii/nomut=32;var/esc=32;var/mut=32;var/nomut=32
+runes	nonlit	32	[32]	[32]	ok	ok	[]	ascii/nomut=32;var/esc=32;var/mut=32;var/nomut=32
+runes	nonlit	33	[36]	[36]	ok	ok	[]	ascii/nomut=36;var/esc=36;var/mut=36;var/nomut=36
+runes	nonlit	45	[48]	[48]	ok	ok	[]	ascii/nomut=48;var/esc=48;var/mut=48;var/nomut=48
+runes	nonlit	47	[48]	[48]	ok	ok	[]	ascii/nomut=48;var/esc=48;var/mut=48;var/nomut=48
+runes	nonlit	48	[48]	[48]	ok	ok	[]	ascii/nomut=48;var/esc=48;var/mut=48;var/nomut=48
+runes	nonlit	49	[52]	[52]	ok	ok	[]	ascii/nomut=52;var/esc=52;var/mut=52;var/nomut=52
+runes	nonlit	63	[64]	[64]	ok	ok	[]	ascii/nomut=64;var/esc=64;var/mut=64;var/nomut=64
+runes	nonlit	64	[64]	[64]	ok	ok	[]	ascii/nomut=64;var/esc=64;var/mut=64;var/nomut=64
+runes	nonlit	65	[72]	[72]	ok	ok	[]	ascii/nomut=72;var/esc=72;var/mut=72;var/nomut=72
+runes	nonlit	100	[104]	[104]	ok	ok	[]	ascii/nomut=104;var/esc=104;var/mut=104;var/nomut=104
+runes	nonlit	112	[112]	[112]	ok	ok	[]	ascii/nomut=112;var/esc=112;var/mut=112;var/nomut=112
+runes	nonlit	113	[120]	[120]	ok	ok	[]	ascii/nomut=120;var/esc=120;var/mut=120;var/nomut=120
+runes	nonlit	1016	[1024]	[1024]	ok	ok	[]	ascii/nomut=1024;var/esc=1024;var/mut=1024;var/nomut=1024
+runes	nonlit	1017	[1024]	[1024]	ok	ok	[]	ascii/nomut=1024;var/esc=1024;var/mut=1024;var/nomut=1024
+runes	nonlit	1024	[1024]	[1024]	ok	ok	[]	ascii/nomut=1024;var/esc=1024;var/mut=1024;var/nomut=1024
+runes	nonlit	1025	[1216]	[1216]	ok	ok	[]	ascii/nomut=1216;var/esc=1216;var/mut=1216;var/nomut=1216
+runes	nonlit	32760	[32768]	[32768]	ok	ok	[]	ascii/nomut=32768;var/esc=32768;var/mut=32768;var/nomut=32768
+runes	nonlit	32761	[32768]	[32768]	ok	ok	[]	ascii/nomut=32768;var/esc=32768;var/mut=32768;var/nomut=32768
+runes	nonlit	32768	[32768]	[32768]	ok	ok	[]	ascii/nomut=32768;var/esc=32768;var/mut=32768;var/nomut=32768
+runes	nonlit	32769	[34816]	[34816]	ok	ok	[]	ascii/nomut=34816;var/esc=34816;var/mut=34816;var/nomut=34816
+runes	nonlit	40000	[40960]	[40960]	ok	ok	[]	ascii/nomut=40960;var/esc=40960;var/mut=40960;var/nomut=40960
+runes	nonlit	100000	[100352]	[100352]	ok	ok	[]	ascii/nomut=100352;var/esc=100352;var/mut=100352;var/nomut=100352
