@@ -1839,3 +1839,26 @@ table's top (the `sync`-sizes platform caveat kept).
 
 Train: `train/r72` = the lane's 3 commits cherry-picked onto main `5c5d225e` (the lane's merge-base), 0 conflicts; tree
 identical to the lane tip `4ea281da`.
+
+**Merge train r72 — the 5a record** ([AGENT] train worker, 2026-10-07). Pre-merge main `5c5d225e` →
+`refs/snapshots/r72/main`; train tip `3d311a35` fast-forwarded; primary build `scripts/build-certified` EXIT=0 (771 s,
+a real rebuild — `Ops.lean` and `BridgeSet.lean` moved; binary `efe52c0c…` → `32a01814…`). `release-check --base
+refs/snapshots/r72/main` EXIT=2 — «STALE certification: changed dependency build/files/GoLean/GoCore/BridgeSet.lean»
+(expected). First `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --slow` EXIT=1, 2512 s: red on the 5a pair AND on
+`package-correct method identity` (with its echo `executed library coverage`) — `tools/typed_audit.py`'s 180 s
+per-compile budget for the decoder-private poison copy of `GoLean/NativeToIR.lean` was exceeded under shared-box load
+(1-min load ~50–60 on 32 cores, other projects' Lean builds); the step REFUSED, failing closed as designed. The train
+STOPPED per its brief; an isolated diagnostic re-run of `scripts/check-method-identity` at the same tip passed (201 s).
+Coordinator ruling ([AGENT], 2026-10-07): the load-timeout reading must be shown by a fresh full gate run, not
+assumed; the 180 s budget is NOT changed (loosening a gate is a [USER] decision). Re-run (started at 1-min load 37.45)
+`ci --slow` EXIT=1, 1487 s, `RESULT: FAIL` on EXACTLY the 5a pair: `certificate provenance` STALE and its echo
+`imported-goose/channel/google-search` PASS → FAIL (membership; 3890 = 3649 / 241 at the run); `package-correct method
+identity` ok (150 s); every other step ok, incl. the new `inittask generator fail-closed self-test` (10 passed),
+inittask-std.tsv re-derivation, pool spec at LANDED=M5 (48 discharged, 0 owed), semantic equations, core totality
+audit, core build warning-free, frontend pins, negative baseline no regression; the reconciler's one HIGH is the stale
+certificate itself (report-only). Candidate: `schema`, `claim` and `observations_sha256` IDENTICAL to the tracked
+record; inputs differ only in `build/files` `GoLean/GoCore/{BridgeSet,Ops}.lean` and `files` `scripts/ci`,
+`scripts/gen-inittask-table`, `scripts/test-gen-inittask-table`; the receipt moved (source `0642b3e3` → `3d311a35`,
+202.416 s). INSTALLED as `baselines/certified/imported-goose__channel__google-search.certified.json` — a provenance
+refresh, not a re-pin; the certified set is unchanged. Tail: `docs/evidence/2026-10-07_train-r72/r72-ci-slow.tail.txt`
+(the re-run); the lesson is recorded in `docs/operational-lessons.md` («The method-identity audit's 180 s budget …»).

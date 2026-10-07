@@ -514,3 +514,16 @@ side-by-side read diagnosed it.
 Lane tooling ([AGENT] fix, records-only audit round); the eval-test F5
 pins still compare `.ok` members only — a refusal-path eval pin is
 noted in TODO.md, not claimed.
+
+## The method-identity audit's 180 s budget has thin headroom under shared-box load (2026-10-07)
+
+`tools/typed_audit.py`'s 180 s per-compile budget for the method-identity
+poison copy has thin headroom under shared-box load. Measured 162 s
+(lane), 195 s (r71), 201 s (isolated, load ~50), and >180 s under load
+~50–60 in r72's first `ci --slow`, which failed closed (the step
+refused by name, «audit subprocess timeout», and `executed library
+coverage` echoed the failed receipt); the fresh re-run, started at
+1-min load ~37, measured 150 s and passed. A budget change is a [USER]
+decision; until then, re-run under lower load (check `uptime` first).
+Train r72 ([AGENT] train worker; the re-run-not-retune ruling [AGENT]
+coordinator, 2026-10-07).
