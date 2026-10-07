@@ -50,6 +50,7 @@ usage: scripts/gen-inittask-table [-o <out.tsv>]
 
 import concurrent.futures
 import datetime
+import json
 import os
 import subprocess
 import sys
@@ -97,7 +98,9 @@ def inittask_symbols(export_file):
     """(defined, undefined) inittask symbol names in a compiled archive."""
     r = go("go", "tool", "nm", export_file)
     if r.returncode != 0:
-        return None, None
+        # FAIL CLOSED (FR-37 lane audit, 2026-10-07): an archive that nm
+        # cannot read is a broken run, never an "unknown" package.
+        return r
     defined, undefined = set(), set()
     for line in r.stdout.splitlines():
         fields = line.split()
@@ -107,20 +110,45 @@ def inittask_symbols(export_file):
     return defined, undefined
 
 
-def row_for(path, export_file):
+# The `go list` errors that legitimately mean "no buildable non-test Go
+# files here" (cmd/go's NoGoError and its build-constraints variant). Any
+# OTHER package error — a compile failure, a transient I/O or cache fault —
+# is a broken run and kills the generator by name (FR-37 lane audit,
+# 2026-10-07: the generator used to never read `.Error`, so every build
+# failure became a silent `?` row). Under go1.26.5 the `std` pattern
+# reports the six test-only directories with NO error at all (GoFiles and
+# CgoFiles empty); these classes are accepted too so a toolchain that does
+# raise NoGoError for them regenerates the same rows.
+NO_GO_FILES_ERRORS = ("no non-test Go files", "build constraints exclude all Go files")
+
+
+def row_for(pkg):
+    path, export_file = pkg["path"], pkg["export"]
     prefix = path_to_prefix(path)
+    if pkg["error"] is not None:
+        if pkg["buildable"] or not any(c in pkg["error"] for c in NO_GO_FILES_ERRORS):
+            die("go list reports an error for %s: %s" % (path, pkg["error"][:400]))
+    if pkg["deps_errors"]:
+        die("go list reports dependency errors for %s: %s" % (path, pkg["deps_errors"][:400]))
     if not export_file:
         # No archive => no compiled object to read. `unsafe` is the
         # compiler's built-in package and provably never bears an
         # inittask (MakeTask's `pkg.Lookup(".inittask")` finds nothing
-        # for it), so it is recorded as a non-node. Everything else
-        # with no archive is a directory with no buildable non-test Go
-        # files: it cannot be imported, and is recorded UNKNOWN so an
-        # import of it refuses instead of guessing.
-        return (prefix, "0" if path == "unsafe" else "?", "", path)
-    defined, undefined = inittask_symbols(export_file)
-    if defined is None:
-        return (prefix, "?", "", path)
+        # for it), so it is recorded as a non-node. A directory with no
+        # buildable non-test Go files (GoFiles and CgoFiles both empty)
+        # cannot be imported, and is recorded UNKNOWN so an import of it
+        # refuses instead of guessing. ANY other package without an
+        # archive is unexplained: refuse.
+        if path == "unsafe":
+            return (prefix, "0", "", path)
+        if not pkg["buildable"]:
+            return (prefix, "?", "", path)
+        die("%s has buildable Go files but no export archive (and no error)" % path)
+    syms = inittask_symbols(export_file)
+    if isinstance(syms, subprocess.CompletedProcess):
+        die("go tool nm failed (exit %d) for %s (%s): %s"
+            % (syms.returncode, path, export_file, syms.stderr.strip()[:400]))
+    defined, undefined = syms
     node = (prefix + SUFFIX) in defined
     extra = defined - {prefix + SUFFIX}
     if extra:
@@ -147,22 +175,49 @@ if not gover.startswith("go version "):
 gover = gover[len("go version "):]
 sys.stderr.write("gen-inittask-table: %s\n" % gover)
 
-# One `go list` for the whole standard library: import path + the path
-# of the compiled archive. -e keeps packages that fail to build (test-
-# only directories, and `unsafe`, which has no archive at all) in the
-# list with an empty Export field instead of aborting the run.
-listed = go("go", "list", "-export", "-e", "-f", "{{.ImportPath}}\t{{.Export}}", "std")
+# One `go list` for the whole standard library: import path, the path of
+# the compiled archive, the non-test source files and the package's own
+# and its dependencies' errors, as JSON (an error text may hold any byte).
+# -e keeps packages without an archive (test-only directories, and
+# `unsafe`, which has none at all) in the list instead of aborting the
+# run; `row_for` then refuses every error outside NO_GO_FILES_ERRORS.
+listed = go("go", "list", "-export", "-e",
+            "-json=ImportPath,Export,GoFiles,CgoFiles,Error,DepsErrors", "std")
 if listed.returncode != 0:
     die("go list std failed: %s" % listed.stderr.strip()[:400])
 
-pkgs = []
-for line in listed.stdout.splitlines():
-    path, _, export_file = line.partition("\t")
-    if path:
-        pkgs.append((path, export_file))
+
+def parse_listing(text):
+    decoder, pos, out = json.JSONDecoder(), 0, []
+    while True:
+        while pos < len(text) and text[pos].isspace():
+            pos += 1
+        if pos == len(text):
+            return out
+        try:
+            obj, pos = decoder.raw_decode(text, pos)
+        except json.JSONDecodeError as e:
+            die("cannot parse go list output: %s" % e)
+        path = obj.get("ImportPath")
+        if not path:
+            die("go list entry without an ImportPath: %r" % obj)
+        err = obj.get("Error")
+        deps_errors = obj.get("DepsErrors") or []
+        out.append({
+            "path": path,
+            "export": obj.get("Export", ""),
+            "buildable": bool(obj.get("GoFiles") or obj.get("CgoFiles")),
+            "error": None if err is None else str(err.get("Err", err)),
+            "deps_errors": "; ".join(str(d.get("Err", d)) for d in deps_errors),
+        })
+
+
+pkgs = parse_listing(listed.stdout)
+if not pkgs:
+    die("go list std listed no packages")
 
 with concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count() or 8) as pool:
-    rows = sorted(pool.map(lambda pe: row_for(*pe), pkgs))
+    rows = sorted(pool.map(row_for, pkgs))
 
 # Every dep named by a row must itself be a row: a dangling edge would
 # make the walk silently skip a node.

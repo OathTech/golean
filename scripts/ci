@@ -413,6 +413,23 @@ else
   bad "AGENTS.md alias SELF-TEST (the checker itself is broken — see above)"
 fi
 
+# 1c3d. The stdlib inittask generator's fail-closed self-test (FR-37 lane
+# audit, 2026-10-07; lane lane/field-offsets-inittask-1007, [USER] Mike
+# 2026-10-07 «1-4 approved as proposed», relayed): scripts/gen-inittask-table
+# must die by name on a failing `go tool nm`, a `go list` package or
+# dependency error outside the no-Go-files class, and an unexplained missing
+# archive — never write a silent `?` row. Runs against a fake `go` under
+# .tmp/ (no toolchain, no cache); the table itself is pinned by its tracked
+# file (regenerate on a Go pin move).
+step "inittask generator fail-closed self-test (scripts/test-gen-inittask-table)"
+if gitest="$(./scripts/test-gen-inittask-table 2>&1)"; then
+  echo "$gitest" | tail -1 | sed 's/^/  /'
+  ok "inittask generator fail-closed self-test"
+else
+  echo "$gitest"
+  bad "inittask generator fail-closed self-test (see above)"
+fi
+
 # 1c4. Imported-goose verbatim staleness (goose-parity phase-A checkpoint,
 # 2026-08-08; check-golden mold — re-verify the LANDED artifact against
 # its source): every imported-goose main.go's above-marker region must be

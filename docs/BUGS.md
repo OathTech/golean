@@ -7735,11 +7735,11 @@ its own edge enumeration of the two phases (BUG-025/BUG-052's assignment spine).
 in the E5 handoff §2 (item 2), not this entry's to take. Fix criterion: every Cases row PASS (the five A3
 rows strict against gc; `map-target-nil-legacy-refusal` PASS strict: `wit 1` · panic).
 
-## BUG-117 — `scripts/gen-inittask-table` is FAIL-OPEN: a build or `nm` failure for a std package is recorded as the silent `?`/unknown row instead of dying [apparatus; derived oracle artifact `tools/nativefrontend/inittask-std.tsv` (the gate's inittask re-derivation, `scripts/ci`); trusted surface #2; found by the FR-37 lane's gate run 1 and its adversarial audit (apparatus finding), 2026-10-07]
+## BUG-117 — `scripts/gen-inittask-table` is FAIL-OPEN: a build or `nm` failure for a std package is recorded as the silent `?`/unknown row instead of dying [apparatus; derived oracle artifact `tools/nativefrontend/inittask-std.tsv` (the gate's inittask re-derivation, `scripts/ci`); trusted surface #2; found by the FR-37 lane's gate run 1 and its adversarial audit (apparatus finding), 2026-10-07; FIXED 2026-10-07, lane `lane/field-offsets-inittask-1007`]
 
-- Status: open ([AGENT] train worker r71, 2026-10-07, at the coordinator's brief; «every detected gap is rowed» —
-  [USER] Mike 2026-09-03, relayed; the fix is queued and APPROVED: [USER] Mike 2026-10-07 «1-4 approved as
-  proposed», item 4, relayed — batched with the gc-verified (a1) field-offsets lane)
+- Status: fixed ([AGENT] build worker, lane `lane/field-offsets-inittask-1007`, 2026-10-07, under [USER] Mike
+  2026-10-07 «1-4 approved as proposed», item 4, relayed; rowed open by the [AGENT] train worker r71 the same day —
+  «every detected gap is rowed», [USER] Mike 2026-09-03, relayed. The fix lands with the lane's merge.)
 - Pinned-by: none (a transient tool failure under gate load, not a row state: seen ONCE — the FR-37 lane's gate run 1,
   `ci --slow` at `10270c5a`, the `crypto/hmac` row read `unknown`; NOT reproduced in 3+4 re-runs (four hand
   re-derivations at the same tree byte-identical; gate run 2 ok) — `docs/evidence/2026-10-07_fr37/ci-slow-run1.tail.txt`)
@@ -7764,3 +7764,20 @@ lane): die on `nm` non-zero, naming the package and `nm`'s stderr; add `{{if .Er
 `go list` format and die unless the error is of the known no-Go-files / build-constraints class (the legitimate
 no-archive directories the `?` arm documents). Fix criterion: a forced `nm` failure and a forced build error both
 make the script exit non-zero naming the package; the tracked table re-derives byte-identical.
+
+FIX (2026-10-07, lane `lane/field-offsets-inittask-1007`): `inittask_symbols` returns the failed run and `row_for`
+dies on it, naming the package, the archive and `nm`'s stderr. The `go list` step now reads JSON
+(`-json=ImportPath,Export,GoFiles,CgoFiles,Error,DepsErrors` — an error text may hold any byte, which a tab-separated
+`-f` format would split) and `row_for` dies on (i) any package `Error` unless it is of the no-Go-files class («no
+non-test Go files» / «build constraints exclude all Go files») on a package with no `GoFiles`/`CgoFiles`, (ii) any
+`DepsErrors`, (iii) an empty `Export` on a package that HAS Go files and reported no error (the transient
+`crypto/hmac` shape) — `unsafe` stays the documented `0`. A finding the plan did not anticipate: under go1.26.5 the
+six tracked `?` rows (`crypto/internal/fips140test`, `embed/internal/embedtest`, `internal/copyright`,
+`internal/coverage/test`, `internal/runtime/wasitest`, `net/internal/cgotest`) carry NO `go list` error at all — they
+are test-only directories (`GoFiles` = `CgoFiles` = 0) — so the `?` arm keys on "no non-test source files", and the
+no-Go-files error class is accepted only on that same condition. Fix criterion met: the regenerated table is
+byte-identical to the tracked one modulo the `# generated:` date line (the line `scripts/ci`'s re-derivation also
+excludes); `scripts/test-gen-inittask-table` (new, a fake `go` under `.tmp/`; wired into `scripts/ci`) forces an `nm`
+failure, a package error, a no-Go-files error on a buildable package, a dependency error, a missing archive, a failed
+`go list` and a malformed listing — each exits 1 naming its cause — plus two positive controls. Evidence
+`docs/evidence/2026-10-07_field-offsets/inittask-regen.txt`.

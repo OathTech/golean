@@ -1,0 +1,18 @@
+# scripts/gen-inittask-table fail-closed fix: regeneration check. [AGENT] build worker, 2026-10-07.
+# command: scripts/gen-inittask-table -o .tmp/inittask-regen.tsv   (toolchain: go version go1.26.5 linux/amd64)
+# stderr:
+gen-inittask-table: go1.26.5 linux/amd64
+gen-inittask-table: wrote .tmp/inittask-regen.tsv (362 rows, 293 nodes, 6 unknown, 1 escaped)
+# diff tools/nativefrontend/inittask-std.tsv .tmp/inittask-regen.tsv  (only the generation-date header line differs; every row byte-identical):
+5c5
+< # generated: 2026-08-18
+---
+> # generated: 2026-10-07
+# the six ? rows, each a test-only directory reported by go list with NO error and GoFiles=CgoFiles=0 (go list -e -f, go1.26.5):
+crypto/internal/fips140test GoFiles=0 CgoFiles=0 TestGoFiles=17 XTestGoFiles=0 Error=<nil>
+embed/internal/embedtest GoFiles=0 CgoFiles=0 TestGoFiles=1 XTestGoFiles=1 Error=<nil>
+internal/copyright GoFiles=0 CgoFiles=0 TestGoFiles=1 XTestGoFiles=0 Error=<nil>
+internal/coverage/test GoFiles=0 CgoFiles=0 TestGoFiles=2 XTestGoFiles=0 Error=<nil>
+internal/runtime/wasitest GoFiles=0 CgoFiles=0 TestGoFiles=0 XTestGoFiles=3 Error=<nil>
+net/internal/cgotest GoFiles=0 CgoFiles=0 TestGoFiles=1 XTestGoFiles=0 Error=<nil>
+# self-test: test-gen-inittask-table: 10 passed, 0 failed
