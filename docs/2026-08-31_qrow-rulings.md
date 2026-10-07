@@ -1776,3 +1776,18 @@ top.
 
 Train: `train/r71` = the lane's 4 commits cherry-picked onto main `9fb77e91` (the lane's merge-base), 0 conflicts; tree
 identical to the lane tip `07659c43`.
+
+**Merge train r71 — the 5a record** ([AGENT] train worker, 2026-10-07). Pre-merge main `9fb77e91` →
+`refs/snapshots/r71/main`; train tip `0642b3e3` fast-forwarded; primary build `scripts/build-certified` EXIT=0 (6 s,
+binary `efe52c0c…`, unchanged). `release-check --base refs/snapshots/r71/main` EXIT=2 — «STALE certification: changed
+dependency files/tools/nativefrontend/dotimport.go» (expected: the records commit's comment nit moved a certified
+frontend input after the lane's refresh). `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --slow` EXIT=1, 1301 s,
+`RESULT: FAIL` on EXACTLY the 5a pair: `certificate provenance` STALE and its echo `imported-goose/channel/google-search`
+PASS → FAIL (membership; 3890 = 3649 / 241 at the run). Every other step ok: inittask-std.tsv re-derivation ok (no
+BUG-117 flake this run); pool spec freeze + discharge ok at LANDED=M5 (48 discharged, 0 owed); semantic equations ok;
+core totality audit ok; frontend pins ok; frontend unit tests ok; lowering-diagnostic tables ok; negative baseline no
+regression; the reconciler's one HIGH is the stale certificate itself (report-only). Candidate: `schema`, `claim` and
+`observations_sha256` IDENTICAL to the tracked record; `inputs.files` differs only in `tools/nativefrontend/dotimport.go`;
+the receipt moved (source `10270c5a` — a lane commit, not on main — → `0642b3e3`, 194.834 s). INSTALLED as
+`baselines/certified/imported-goose__channel__google-search.certified.json` — a provenance refresh, not a re-pin; the
+certified set is unchanged. Tail: `docs/evidence/2026-10-07_train-r71/r71-ci-slow.tail.txt`.

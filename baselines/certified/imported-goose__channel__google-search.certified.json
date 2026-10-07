@@ -222,7 +222,7 @@
       "tools/nativefrontend/declaration_isolation_test.go": "e575f0ddf4b496057ac6831191313c1bf8fee12f269080322849feff501b6bb0",
       "tools/nativefrontend/declaration_test.go": "c0723b0d71c6bb10e3a3e03aafcfc40604c33df7f5cc176e7dd0f5608161dd89",
       "tools/nativefrontend/determinism_test.go": "6275314cb538b992aa95ef69a81d5b03bf7656ac7fac311588f0565b1771e35c",
-      "tools/nativefrontend/dotimport.go": "ab7aff2f3748b8a708d6e8652551701192a54f4badf3b936402de4718f5c699a",
+      "tools/nativefrontend/dotimport.go": "453a6d257eff817f7f8d4ec89df8028afbc4de764b391590db084fdb733c3ecd",
       "tools/nativefrontend/e13guard_test.go": "cae82a2076fca179d0a5af5179b8046c347798824685d4ab5ac427359ce8951e",
       "tools/nativefrontend/effectisolation_test.go": "5d653d1512c7c165a82474473d08407300dc46b7343bdbbe85d77f5a8b092c47",
       "tools/nativefrontend/embedding_test.go": "8a49ed8d48ea7f46ec540dd8d40c44f4e75ab31a951ec06f62747c6251e91f7f",
@@ -340,12 +340,12 @@
       "--engine",
       "dedup"
     ],
-    "finished_utc": "2026-10-07T02:35:22.093252+00:00",
+    "finished_utc": "2026-10-07T06:18:10.103000+00:00",
     "git_dirty": false,
-    "source_commit": "10270c5a7f570e577305c5f6229fd858ad3b57f1",
-    "started_utc": "2026-10-07T02:32:32.397470+00:00",
+    "source_commit": "0642b3e3533ff3d4ff23c8d83e4f01818b324f71",
+    "started_utc": "2026-10-07T06:14:50.445357+00:00",
     "stats_sha256": "80614849ba8583af41ce62fc0a0cefdc7a5b6f22fbb482784a125e8bd19f3283",
-    "wall_seconds": 165.154
+    "wall_seconds": 194.834
   },
   "schema": "golean-certification-v1"
 }
