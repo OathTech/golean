@@ -1,0 +1,27 @@
+result	id	features	stage	detail
+PASS	strings/conv-cap/bytes-lit	strings,bytes,conversions,cap	-	wide=0 exhausted=none depth=fixed
+PASS	strings/conv-cap/bytes-const-lit	strings,bytes,conversions,cap,constants	-	wide=0 exhausted=none depth=fixed
+PASS	strings/conv-cap/bytes-named-lit	strings,bytes,conversions,cap	-	wide=0 exhausted=none depth=fixed
+PASS	strings/conv-cap/runes-lit	strings,runes,conversions,cap	-	wide=0 exhausted=none depth=fixed
+FAIL	strings/conv-cap/bytes-var-nomut-0	strings,bytes,conversions,cap,nondet	membership	enumerated observation set is a singleton (1 member) — the case belongs in the strict or confluent lane
+FAIL	strings/conv-cap/bytes-var-mut-0	strings,bytes,conversions,cap,nondet	membership	enumerated observation set is a singleton (1 member) — the case belongs in the strict or confluent lane
+FAIL	strings/conv-cap/bytes-var-esc-0	strings,bytes,conversions,cap,escapes,nondet	membership	enumerated observation set is a singleton (1 member) — the case belongs in the strict or confluent lane
+FAIL	strings/conv-cap/bytes-var-nomut-5	strings,bytes,conversions,cap,nondet	membership	enumerated observation set is a singleton (1 member) — the case belongs in the strict or confluent lane
+FAIL	strings/conv-cap/bytes-var-mut-5	strings,bytes,conversions,cap,nondet	membership	enumerated observation set is a singleton (1 member) — the case belongs in the strict or confluent lane
+FAIL	strings/conv-cap/bytes-var-esc-5	strings,bytes,conversions,cap,escapes,nondet	membership	enumerated observation set is a singleton (1 member) — the case belongs in the strict or confluent lane
+FAIL	strings/conv-cap/bytes-var-nomut-33	strings,bytes,conversions,cap,nondet	membership	enumerated observation set is a singleton (1 member) — the case belongs in the strict or confluent lane
+FAIL	strings/conv-cap/bytes-var-mut-33	strings,bytes,conversions,cap,nondet	membership	enumerated observation set is a singleton (1 member) — the case belongs in the strict or confluent lane
+FAIL	strings/conv-cap/bytes-var-esc-33	strings,bytes,conversions,cap,escapes,nondet	membership	enumerated observation set is a singleton (1 member) — the case belongs in the strict or confluent lane
+FAIL	strings/conv-cap/bytes-var-nomut-100	strings,bytes,conversions,cap,nondet	membership	enumerated observation set is a singleton (1 member) — the case belongs in the strict or confluent lane
+FAIL	strings/conv-cap/bytes-var-mut-100	strings,bytes,conversions,cap,nondet	membership	enumerated observation set is a singleton (1 member) — the case belongs in the strict or confluent lane
+FAIL	strings/conv-cap/bytes-var-esc-100	strings,bytes,conversions,cap,escapes,nondet	membership	enumerated observation set is a singleton (1 member) — the case belongs in the strict or confluent lane
+FAIL	strings/conv-cap/bytes-concat-esc-5	strings,bytes,conversions,cap,escapes,nondet	membership	enumerated observation set is a singleton (1 member) — the case belongs in the strict or confluent lane
+FAIL	strings/conv-cap/runes-var-nomut-5	strings,runes,conversions,cap,nondet	membership	enumerated observation set is a singleton (1 member) — the case belongs in the strict or confluent lane
+FAIL	strings/conv-cap/runes-var-esc-5	strings,runes,conversions,cap,escapes,nondet	membership	enumerated observation set is a singleton (1 member) — the case belongs in the strict or confluent lane
+FAIL	strings/conv-cap/runes-var-nomut-33	strings,runes,conversions,cap,nondet	membership	enumerated observation set is a singleton (1 member) — the case belongs in the strict or confluent lane
+FAIL	strings/conv-cap/runes-var-esc-33	strings,runes,conversions,cap,escapes,nondet	membership	enumerated observation set is a singleton (1 member) — the case belongs in the strict or confluent lane
+FAIL	strings/conv-cap/runes-var-nomut-100	strings,runes,conversions,cap,nondet	membership	enumerated observation set is a singleton (1 member) — the case belongs in the strict or confluent lane
+FAIL	strings/conv-cap/runes-var-esc-100	strings,runes,conversions,cap,escapes,nondet	membership	enumerated observation set is a singleton (1 member) — the case belongs in the strict or confluent lane
+FAIL	strings/conv-cap/bytes-inline-helper	strings,bytes,conversions,cap,calls,nondet	membership	enumerated observation set is a singleton (1 member) — the case belongs in the strict or confluent lane
+FAIL	strings/conv-cap/bytes-alias-append-mut-5	strings,bytes,conversions,cap,append,aliasing,nondet	membership	enumerated observation set is a singleton (1 member) — the case belongs in the strict or confluent lane
+FAIL	strings/conv-cap/bytes-alias-append-esc-8	strings,bytes,conversions,cap,append,aliasing,escapes,nondet	membership	enumerated observation set is a singleton (1 member) — the case belongs in the strict or confluent lane

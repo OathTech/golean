@@ -1,0 +1,86 @@
+== strings/conv-cap/runes-var-nomut-5
+modeled (coverage-observations, main's machine):
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":5}]}
+observed (go run, first 4 draws, plain/race alternating):
+plain	{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":32}]}
+race	{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":32}]}
+plain	{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":32}]}
+race	{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":32}]}
+stats: coverage-observations: observations=1 steps=370 probes=0 sites=0 leaves=1 maxdepth=0 width=2
+== strings/conv-cap/runes-var-esc-5
+modeled (coverage-observations, main's machine):
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":5}]}
+observed (go run, first 4 draws, plain/race alternating):
+plain	{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":6}]}
+race	{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":6}]}
+plain	{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":6}]}
+race	{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":6}]}
+stats: coverage-observations: observations=1 steps=381 probes=0 sites=0 leaves=1 maxdepth=0 width=2
+== strings/conv-cap/runes-var-nomut-33
+modeled (coverage-observations, main's machine):
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":33}]}
+observed (go run, first 4 draws, plain/race alternating):
+plain	{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":36}]}
+race	{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":36}]}
+stats: coverage-observations: observations=1 steps=1742 probes=0 sites=0 leaves=1 maxdepth=0 width=2
+== strings/conv-cap/runes-var-nomut-100
+modeled (coverage-observations, main's machine):
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":100}]}
+observed (go run, first 4 draws, plain/race alternating):
+plain	{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":104}]}
+race	{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":104}]}
+stats: coverage-observations: observations=1 steps=5025 probes=0 sites=0 leaves=1 maxdepth=0 width=2
+== strings/conv-cap/bytes-var-mut-5
+modeled (coverage-observations, main's machine):
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":5}]}
+observed (go run, first 4 draws, plain/race alternating):
+plain	{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":32}]}
+race	{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":32}]}
+plain	{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":32}]}
+race	{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":32}]}
+stats: coverage-observations: observations=1 steps=383 probes=0 sites=0 leaves=1 maxdepth=0 width=3
+== strings/conv-cap/bytes-var-esc-5
+modeled (coverage-observations, main's machine):
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":5}]}
+observed (go run, first 4 draws, plain/race alternating):
+plain	{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":8}]}
+race	{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":8}]}
+plain	{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":8}]}
+race	{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":8}]}
+stats: coverage-observations: observations=1 steps=381 probes=0 sites=0 leaves=1 maxdepth=0 width=3
+== strings/conv-cap/bytes-var-nomut-5
+modeled (coverage-observations, main's machine):
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":5}]}
+observed (go run, first 4 draws, plain/race alternating):
+plain	{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":5}]}
+race	{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":5}]}
+plain	{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":5}]}
+race	{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":5}]}
+stats: coverage-observations: observations=1 steps=370 probes=0 sites=0 leaves=1 maxdepth=0 width=3
+== strings/conv-cap/bytes-inline-helper
+modeled (coverage-observations, main's machine):
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":5},{"kind":"int","tag":"int","value":5}]}
+observed (go run, first 4 draws, plain/race alternating):
+plain	{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":5},{"kind":"int","tag":"int","value":32}]}
+race	{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":5},{"kind":"int","tag":"int","value":32}]}
+plain	{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":5},{"kind":"int","tag":"int","value":32}]}
+race	{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":5},{"kind":"int","tag":"int","value":32}]}
+stats: coverage-observations: observations=1 steps=457 probes=0 sites=0 leaves=1 maxdepth=0 width=3
+== strings/conv-cap/bytes-alias-append-mut-5
+modeled (coverage-observations, main's machine):
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":5},{"kind":"int","tag":"int","value":97}]}
+observed (go run, first 4 draws, plain/race alternating):
+plain	{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":32},{"kind":"int","tag":"int","value":121}]}
+race	{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":32},{"kind":"int","tag":"int","value":121}]}
+plain	{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":32},{"kind":"int","tag":"int","value":121}]}
+race	{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":32},{"kind":"int","tag":"int","value":121}]}
+stats: coverage-observations: observations=1 steps=2408 probes=3 sites=1 leaves=27 maxdepth=1 width=27
+== strings/conv-cap/bytes-alias-append-esc-8
+modeled (coverage-observations, main's machine):
+{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":8},{"kind":"int","tag":"int","value":97}]}
+observed (go run, first 4 draws, plain/race alternating):
+plain	{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":8},{"kind":"int","tag":"int","value":97}]}
+race	{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":8},{"kind":"int","tag":"int","value":97}]}
+plain	{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":8},{"kind":"int","tag":"int","value":97}]}
+race	{"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":8},{"kind":"int","tag":"int","value":97}]}
+stats: coverage-observations: observations=1 steps=2341 probes=3 sites=1 leaves=24 maxdepth=1 width=24
