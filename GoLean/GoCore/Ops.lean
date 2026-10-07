@@ -802,6 +802,336 @@ theorem tyStructLayout_fields {p : Platform} {types : TypeEnv} {i : TypeIdx} {id
     rw [hsz]
     exact tySizeAlignAt_succ p types _ j r hj
 
+/-! #### Entry-point non-overlap and alignment divisibility (r72 audit follow-ups (f1)/(f2), 2026-10-07)
+
+[USER] Mike 2026-10-07 «Agree», relayed. (f1) `tyStructLayout_disjoint`:
+`structLayoutWith_disjoint` at the entry point, against `tySizeAlign` of each
+field type. (f2) «alignment ∣ size» holds on EVERY platform
+(`structLayoutWith_size_dvd`, `tyStructLayout_size_dvd`: the total is rounded
+up to the struct's alignment, the zero-size-final-field byte included; the
+empty struct is `(0, 1)`). «field alignment ∣ struct alignment» is FALSE on an
+arbitrary `Platform`: the struct's alignment is the MAX of its fields', and a
+max divides only along a divisibility chain — a platform with `intBits = 48`
+aligns `int` at 6, so `struct{a int32; b int}` aligns at 6 and `int32`'s 4
+does not divide it (control below). The true statement takes the premise
+`Platform.PowTwoAligns` (every alignment the oracle can produce is a power of
+two), which gc's platform satisfies (`gcAmd64_powTwoAligns`); the
+`structLayoutWith` form takes the same premise of its field oracle. The
+unconditional half is `structLayoutWith_align_ge` (each field's alignment is
+at most the struct's). -/
+
+/-- Powers of two are closed under `max`. -/
+theorem isPowerOfTwo_max {a b : Nat} (ha : a.isPowerOfTwo) (hb : b.isPowerOfTwo) :
+    (max a b).isPowerOfTwo := by
+  rcases Nat.le_total a b with h | h
+  · rw [Nat.max_eq_right h]; exact hb
+  · rw [Nat.max_eq_left h]; exact ha
+
+/-- Between powers of two, `≤` is `∣`. -/
+theorem isPowerOfTwo_dvd_of_le {a b : Nat} (ha : a.isPowerOfTwo) (hb : b.isPowerOfTwo)
+    (h : a ≤ b) : a ∣ b := by
+  obtain ⟨m, rfl⟩ := ha
+  obtain ⟨n, rfl⟩ := hb
+  exact Nat.pow_dvd_pow 2 ((Nat.pow_le_pow_iff_right (by decide)).mp h)
+
+/-- The platform premise of the alignment-divisibility facts: `int`/`uint`'s
+alignment (`intBits / 8`) and `maxAlign` are powers of two; every other
+alignment the size oracle produces is a constant power of two. -/
+def Platform.PowTwoAligns (p : Platform) : Prop :=
+  (p.intBits / 8).isPowerOfTwo ∧ p.maxAlign.isPowerOfTwo
+
+/-- gc's platform satisfies it (`int` at 8, `maxAlign` 8). -/
+theorem gcAmd64_powTwoAligns : gcAmd64.PowTwoAligns := ⟨⟨3, rfl⟩, ⟨3, rfl⟩⟩
+
+/-- The struct alignment is the running max: at least the seed `maxAlign`, and
+every field has an oracle answer whose alignment is at most the struct's.
+Unconditional (any oracle, any platform). -/
+theorem structLayoutWith_align_ge {fieldSize : Ty → Except Stop (Nat × Nat)} :
+    ∀ {fields : List FieldDef} {offset maxAlign lastOffset lastSize : Nat}
+      {offsets : List Nat} {size align : Nat},
+      structLayoutWith fieldSize fields offset maxAlign lastOffset lastSize
+        = .ok (offsets, size, align) →
+      maxAlign ≤ align ∧
+      ∀ fd ∈ fields, ∃ sz al, fieldSize fd.typ = .ok (sz, al) ∧ al ≤ align
+  | [], offset, maxAlign, lastOffset, lastSize, offsets, size, align, h => by
+      simp only [structLayoutWith, pure, Except.pure, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨-, -, rfl⟩ := h
+      exact ⟨Nat.le_refl _, fun fd hfd => by simp at hfd⟩
+  | field :: rest, offset, maxAlign, lastOffset, lastSize, offsets, size, align, h => by
+      obtain ⟨sz₀, al₀, offs, hf₀, rfl, hr⟩ := structLayoutWith_cons_ok.mp h
+      obtain ⟨hm, hrest⟩ := structLayoutWith_align_ge hr
+      refine ⟨Nat.le_trans (Nat.le_max_left _ _) hm, fun fd hfd => ?_⟩
+      rcases List.mem_cons.mp hfd with rfl | hmem
+      · exact ⟨sz₀, al₀, hf₀, Nat.le_trans (Nat.le_max_right _ _) hm⟩
+      · exact hrest fd hmem
+
+/-- «alignment ∣ size», loop form: from a positive seed alignment, the struct's
+alignment is positive and divides its size (the final rounding). -/
+theorem structLayoutWith_size_dvd {fieldSize : Ty → Except Stop (Nat × Nat)} :
+    ∀ {fields : List FieldDef} {offset maxAlign lastOffset lastSize : Nat}
+      {offsets : List Nat} {size align : Nat},
+      0 < maxAlign →
+      structLayoutWith fieldSize fields offset maxAlign lastOffset lastSize
+        = .ok (offsets, size, align) →
+      0 < align ∧ align ∣ size
+  | [], offset, maxAlign, lastOffset, lastSize, offsets, size, align, hpos, h => by
+      simp only [structLayoutWith, pure, Except.pure, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨-, rfl, rfl⟩ := h
+      exact ⟨hpos, alignUpTo_dvd (Nat.pos_iff_ne_zero.mp hpos)⟩
+  | field :: rest, offset, maxAlign, lastOffset, lastSize, offsets, size, align, hpos, h => by
+      obtain ⟨sz₀, al₀, offs, hf₀, rfl, hr⟩ := structLayoutWith_cons_ok.mp h
+      exact structLayoutWith_size_dvd (Nat.lt_of_lt_of_le hpos (Nat.le_max_left _ _)) hr
+
+/-- Under a power-of-two field oracle and seed, the struct's alignment is a
+power of two. -/
+theorem structLayoutWith_align_pow2 {fieldSize : Ty → Except Stop (Nat × Nat)}
+    (hpow : ∀ t sz al, fieldSize t = .ok (sz, al) → al.isPowerOfTwo) :
+    ∀ {fields : List FieldDef} {offset maxAlign lastOffset lastSize : Nat}
+      {offsets : List Nat} {size align : Nat},
+      maxAlign.isPowerOfTwo →
+      structLayoutWith fieldSize fields offset maxAlign lastOffset lastSize
+        = .ok (offsets, size, align) →
+      align.isPowerOfTwo
+  | [], offset, maxAlign, lastOffset, lastSize, offsets, size, align, hm, h => by
+      simp only [structLayoutWith, pure, Except.pure, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨-, -, rfl⟩ := h
+      exact hm
+  | field :: rest, offset, maxAlign, lastOffset, lastSize, offsets, size, align, hm, h => by
+      obtain ⟨sz₀, al₀, offs, hf₀, rfl, hr⟩ := structLayoutWith_cons_ok.mp h
+      exact structLayoutWith_align_pow2 hpow (isPowerOfTwo_max hm (hpow _ _ _ hf₀)) hr
+
+/-- «field alignment ∣ struct alignment», loop form, under a power-of-two field
+oracle and seed (FALSE without that premise; section note). -/
+theorem structLayoutWith_align_dvd {fieldSize : Ty → Except Stop (Nat × Nat)}
+    (hpow : ∀ t sz al, fieldSize t = .ok (sz, al) → al.isPowerOfTwo)
+    {fields : List FieldDef} {offset maxAlign lastOffset lastSize : Nat}
+    {offsets : List Nat} {size align : Nat}
+    (hm : maxAlign.isPowerOfTwo)
+    (h : structLayoutWith fieldSize fields offset maxAlign lastOffset lastSize
+      = .ok (offsets, size, align))
+    {fd : FieldDef} {sz al : Nat} (hfd : fd ∈ fields) (hf : fieldSize fd.typ = .ok (sz, al)) :
+    al ∣ align := by
+  obtain ⟨sz', al', hf', hle⟩ := (structLayoutWith_align_ge h).2 fd hfd
+  rw [hf] at hf'; cases hf'
+  exact isPowerOfTwo_dvd_of_le (hpow _ _ _ hf) (structLayoutWith_align_pow2 hpow hm h) hle
+
+/-- A successful `structSizeAlignWith` is a layout's projection. -/
+theorem structSizeAlignWith_ok_layout {fieldSize : Ty → Except Stop (Nat × Nat)}
+    {fields : List FieldDef} {offset maxAlign lastOffset lastSize size align : Nat}
+    (h : structSizeAlignWith fieldSize fields offset maxAlign lastOffset lastSize
+      = .ok (size, align)) :
+    ∃ offsets, structLayoutWith fieldSize fields offset maxAlign lastOffset lastSize
+      = .ok (offsets, size, align) := by
+  rw [← structLayoutWith_sizeAlign] at h
+  cases hl : structLayoutWith fieldSize fields offset maxAlign lastOffset lastSize with
+  | error e => rw [hl] at h; cases h
+  | ok r =>
+      rw [hl] at h
+      obtain ⟨o, s, a⟩ := r
+      cases h
+      exact ⟨o, rfl⟩
+
+/-- Every alignment the type layer answers is a power of two, given the
+platform premise and a power-of-two index layer. -/
+theorem tySizeAlignTy_align_pow2 {p : Platform} (hp : p.PowTwoAligns)
+    {f : TypeIdx → Except Stop (Nat × Nat)}
+    (hf : ∀ i sz al, f i = .ok (sz, al) → al.isPowerOfTwo) :
+    ∀ (ty : Ty) (sz al : Nat), tySizeAlignTy p f ty = .ok (sz, al) → al.isPowerOfTwo := by
+  intro ty
+  induction ty using Ty.arrayInduction with
+  | array n e ih =>
+      intro sz al h
+      simp only [tySizeAlignTy] at h
+      cases he : tySizeAlignTy p f e with
+      | error _ => rw [he] at h; cases h
+      | ok r =>
+          obtain ⟨s', a'⟩ := r
+          rw [he] at h
+          simp only [bind, Except.bind, pure, Except.pure, Except.ok.injEq, Prod.mk.injEq] at h
+          obtain ⟨-, rfl⟩ := h
+          exact ih s' a' he
+  | leaf t hne =>
+      intro sz al h
+      cases t with
+      | array n e => exact absurd rfl (hne n e)
+      | defined i => exact hf i sz al h
+      | bool => cases h; exact ⟨0, rfl⟩
+      | int kind =>
+          simp only [tySizeAlignTy] at h
+          cases hb : kind.bitsAt p with
+          | none => rw [hb] at h; simp [unsupported, throw, throwThe, MonadExceptOf.throw] at h
+          | some bits =>
+              rw [hb] at h
+              simp only [pure, Except.pure, Except.ok.injEq, Prod.mk.injEq] at h
+              obtain ⟨-, rfl⟩ := h
+              cases kind <;> simp only [IntKind.bitsAt, Option.some.injEq, reduceCtorEq] at hb <;>
+                subst hb <;>
+                (first
+                  | exact hp.1 | exact ⟨0, by decide⟩ | exact ⟨1, by decide⟩
+                  | exact ⟨2, by decide⟩ | exact ⟨3, by decide⟩)
+      | float kind =>
+          cases kind <;>
+            simp only [tySizeAlignTy, FloatKind.bits, pure, Except.pure, Except.ok.injEq,
+              Prod.mk.injEq] at h <;>
+            (obtain ⟨-, rfl⟩ := h; first | exact ⟨2, by decide⟩ | exact ⟨3, by decide⟩)
+      | sync k =>
+          cases k <;>
+            simp only [tySizeAlignTy, pure, Except.pure, Except.ok.injEq, Prod.mk.injEq] at h <;>
+            (obtain ⟨-, rfl⟩ := h; first | exact ⟨2, by decide⟩ | exact ⟨3, by decide⟩)
+      | unsupported feature =>
+          simp [tySizeAlignTy, unsupported, throw, throwThe, MonadExceptOf.throw] at h
+      | _ =>
+          simp only [tySizeAlignTy, pure, Except.pure, Except.ok.injEq, Prod.mk.injEq] at h
+          obtain ⟨-, rfl⟩ := h
+          exact hp.2
+
+/-- Every alignment the index layer answers is a power of two (any bound). -/
+theorem tySizeAlignAt_align_pow2 {p : Platform} (hp : p.PowTwoAligns) (types : TypeEnv) :
+    ∀ (bound : Nat) (i : TypeIdx) (sz al : Nat),
+      tySizeAlignAt p types bound i = .ok (sz, al) → al.isPowerOfTwo := by
+  intro bound
+  induction bound with
+  | zero =>
+      intro i sz al h
+      simp [tySizeAlignAt, typeIndexExhausted, unsupported, throw, throwThe, MonadExceptOf.throw] at h
+  | succ b ih =>
+      intro i sz al h
+      have hty := tySizeAlignTy_align_pow2 hp ih
+      rw [tySizeAlignAt.eq_2] at h
+      cases hi : types[i]? with
+      | none => simp [hi, unsupported, throw, throwThe, MonadExceptOf.throw] at h
+      | some e =>
+          obtain ⟨id, d⟩ := e
+          cases d with
+          | struct fields =>
+              simp only [hi] at h
+              split at h
+              · simp only [pure, Except.pure, Except.ok.injEq, Prod.mk.injEq] at h
+                obtain ⟨-, rfl⟩ := h
+                exact ⟨0, rfl⟩
+              · obtain ⟨offs, hl⟩ := structSizeAlignWith_ok_layout h
+                exact structLayoutWith_align_pow2 hty ⟨0, rfl⟩ hl
+          | defined u => simp only [hi] at h; exact hty _ _ _ h
+          | interfaceDef _ =>
+              simp only [hi, pure, Except.pure, Except.ok.injEq, Prod.mk.injEq] at h
+              obtain ⟨-, rfl⟩ := h
+              exact hp.2
+          | opaqueDecl _ => simp [hi, unsupported, throw, throwThe, MonadExceptOf.throw] at h
+
+/-- Every alignment `tySizeAlign` answers is a power of two, on a platform
+satisfying the premise (gc's: `gcAmd64_powTwoAligns`). -/
+theorem tySizeAlign_align_pow2 {p : Platform} (hp : p.PowTwoAligns) {types : TypeEnv}
+    {ty : Ty} {sz al : Nat} (h : tySizeAlign p types ty = .ok (sz, al)) : al.isPowerOfTwo :=
+  tySizeAlignTy_align_pow2 hp (tySizeAlignAt_align_pow2 hp types _) ty sz al h
+
+/-- The entry point's successes, inverted: a struct entry, either empty
+(`([], 0, 1)`) or the loop's layout with the field oracle one bound below
+the table size. -/
+theorem tyStructLayout_ok_struct {p : Platform} {types : TypeEnv} {ty : Ty}
+    {offsets : List Nat} {size align : Nat}
+    (h : tyStructLayout p types ty = .ok (offsets, size, align)) :
+    ∃ i id fields, ty = .defined i ∧ types[i]? = some (id, .struct fields) ∧
+      0 < types.size ∧
+      ((fields.isEmpty = true ∧ offsets = [] ∧ size = 0 ∧ align = 1) ∨
+        structLayoutWith (tySizeAlignTy p (tySizeAlignAt p types (types.size - 1)))
+          fields.toList 0 1 0 0 = .ok (offsets, size, align)) := by
+  cases ty with
+  | defined i =>
+      simp only [tyStructLayout] at h
+      cases hi : types[i]? with
+      | none =>
+          cases hb : types.size with
+          | zero => rw [hb] at h; cases h
+          | succ b =>
+              rw [hb] at h
+              simp [tyStructLayoutAt, hi, unsupported, throw, throwThe, MonadExceptOf.throw] at h
+      | some e =>
+          obtain ⟨id, d⟩ := e
+          have hpos : 0 < types.size := by
+            obtain ⟨hlt, -⟩ := Array.getElem?_eq_some_iff.mp hi; omega
+          have hsz : types.size = (types.size - 1) + 1 := by omega
+          rw [hsz] at h
+          cases d with
+          | struct fields =>
+              simp only [tyStructLayoutAt, hi] at h
+              refine ⟨i, id, fields, rfl, hi, hpos, ?_⟩
+              split at h
+              · rename_i he
+                simp only [pure, Except.pure, Except.ok.injEq, Prod.mk.injEq] at h
+                obtain ⟨rfl, rfl, rfl⟩ := h
+                exact Or.inl ⟨he, rfl, rfl, rfl⟩
+              · exact Or.inr h
+          | _ => simp [tyStructLayoutAt, hi, unsupported, throw, throwThe, MonadExceptOf.throw] at h
+  | _ => simp [tyStructLayout, unsupported, throw, throwThe, MonadExceptOf.throw] at h
+
+/-- The layout's field oracle (one bound below the table size) agrees with
+`tySizeAlign` on every success. -/
+theorem tySizeAlign_of_pred {p : Platform} {types : TypeEnv} {ty : Ty} {r : Nat × Nat}
+    (hpos : 0 < types.size)
+    (h : tySizeAlignTy p (tySizeAlignAt p types (types.size - 1)) ty = .ok r) :
+    tySizeAlign p types ty = .ok r := by
+  unfold tySizeAlign
+  refine tySizeAlignTy_mono (fun j r' hj => ?_) _ _ h
+  have := tySizeAlignAt_succ p types _ j r' hj
+  rwa [Nat.sub_add_cancel hpos] at this
+
+/-- «alignment ∣ size» at the entry point, on EVERY platform: a struct type's
+alignment is positive and divides its size (zero-size final field and the
+empty struct `(0, 1)` included). -/
+theorem tyStructLayout_size_dvd {p : Platform} {types : TypeEnv} {ty : Ty}
+    {offsets : List Nat} {size align : Nat}
+    (h : tyStructLayout p types ty = .ok (offsets, size, align)) :
+    0 < align ∧ align ∣ size := by
+  obtain ⟨_, _, _, _, _, _, hcase⟩ := tyStructLayout_ok_struct h
+  rcases hcase with ⟨-, -, rfl, rfl⟩ | hl
+  · exact ⟨by decide, Nat.dvd_zero _⟩
+  · exact structLayoutWith_size_dvd (by decide) hl
+
+/-- «field alignment ∣ struct alignment» at the entry point, on a platform
+satisfying `Platform.PowTwoAligns` (gc's does: `gcAmd64_powTwoAligns`; FALSE
+without it, section note): each field type's `tySizeAlign` alignment divides
+the struct's. -/
+theorem tyStructLayout_align_dvd {p : Platform} (hp : p.PowTwoAligns) {types : TypeEnv}
+    {i : TypeIdx} {id : TypeId} {fields : Array FieldDef} {offsets : List Nat} {size align : Nat}
+    (hi : types[i]? = some (id, .struct fields))
+    (h : tyStructLayout p types (.defined i) = .ok (offsets, size, align))
+    {fd : FieldDef} {sz al : Nat} (hfd : fd ∈ fields)
+    (hf : tySizeAlign p types fd.typ = .ok (sz, al)) :
+    al ∣ align := by
+  obtain ⟨i', id', fields', hty, hi', hpos, hcase⟩ := tyStructLayout_ok_struct h
+  cases hty
+  rw [hi] at hi'; cases hi'
+  rcases hcase with ⟨he, -, -, -⟩ | hl
+  · have he' : fields.size = 0 := by simpa using he
+    have := Array.size_pos_of_mem hfd
+    omega
+  · obtain ⟨sz', al', hf', hle⟩ := (structLayoutWith_align_ge hl).2 fd (by simpa using hfd)
+    rw [tySizeAlign_of_pred hpos hf'] at hf; cases hf
+    have hpow : align.isPowerOfTwo := tySizeAlign_align_pow2 hp (tyStructLayout_ok_sizeAlign h)
+    exact isPowerOfTwo_dvd_of_le (tySizeAlign_align_pow2 hp (tySizeAlign_of_pred hpos hf')) hpow hle
+
+/-- NON-OVERLAP at the entry point (r72 audit (f1)): in a struct type's
+layout, field `j` (its type's `tySizeAlign` size `sz`, offset `off`) ends at
+or before the offset `off'` of every later field `k`. -/
+theorem tyStructLayout_disjoint {p : Platform} {types : TypeEnv} {i : TypeIdx} {id : TypeId}
+    {fields : Array FieldDef} {offsets : List Nat} {size align : Nat}
+    (hi : types[i]? = some (id, .struct fields))
+    (h : tyStructLayout p types (.defined i) = .ok (offsets, size, align)) :
+    ∀ (j k : Nat) (fd : FieldDef) (off off' sz al : Nat), j < k →
+      fields[j]? = some fd → tySizeAlign p types fd.typ = .ok (sz, al) →
+      offsets[j]? = some off → offsets[k]? = some off' → off + sz ≤ off' := by
+  intro j k fd off off' sz al hjk hj hf ho ho'
+  obtain ⟨i', id', fields', hty, hi', hpos, hcase⟩ := tyStructLayout_ok_struct h
+  cases hty
+  rw [hi] at hi'; cases hi'
+  rcases hcase with ⟨-, rfl, -, -⟩ | hl
+  · simp at ho
+  · have hj' : fields.toList[j]? = some fd := by simpa using hj
+    obtain ⟨-, -, hfa⟩ := structLayoutWith_fields (Nat.zero_le _) hl
+    obtain ⟨_, sz', al', _, hf', _, _, _⟩ := hfa j fd hj'
+    rw [tySizeAlign_of_pred hpos hf'] at hf; cases hf
+    exact structLayoutWith_disjoint hl j k fd off off' sz al hjk hj' hf' ho ho'
+
 /-! #### Controls (gc cross-check: `docs/evidence/2026-10-07_field-offsets/`) -/
 
 /-- `struct{a int8; b int64; c int16}` at index 0; `struct{a int64; z struct{}}`
@@ -825,6 +1155,37 @@ example : tyStructLayout gcAmd64 layoutControlTypes .bool
     = .error (.refusal (.unsupported "struct-layout computation: not a struct type")) := rfl
 example : tyStructLayout gcAmd64 layoutControlTypes (.defined 7)
     = .error (.refusal (.unsupported "struct-layout computation: unknown type index 7")) := rfl
+
+/-- Alignment controls (r72 audit (f2)), the nested struct cross-checked
+against gc's `unsafe.Alignof`/`Offsetof`/`Sizeof` under go1.26.5:
+`type Inner struct{a uint8; b int64; c int16}` (index 0) and
+`type Outer struct{x bool; in Inner; y int32; z [0]int16}` (index 1) — gc
+answers Alignof 1/8/4/2 for the four fields, Alignof(Outer) 8, offsets
+0/8/32/36, Sizeof 40 (the zero-size final field takes one byte: 37 → 40). -/
+private def nestedControlTypes : TypeEnv := #[
+  (⟨"Inner"⟩, .struct #[⟨"a", .int .uint8, false⟩, ⟨"b", .int .int64, false⟩,
+    ⟨"c", .int .int16, false⟩]),
+  (⟨"Outer"⟩, .struct #[⟨"x", .bool, false⟩, ⟨"in", .defined 0, false⟩,
+    ⟨"y", .int .int32, false⟩, ⟨"z", .array 0 (.int .int16), false⟩])]
+
+example : tyStructLayout gcAmd64 nestedControlTypes (.defined 1) = .ok ([0, 8, 32, 36], 40, 8) := rfl
+example : [Ty.bool, .defined 0, .int .int32, .array 0 (.int .int16)].map
+    (tySizeAlign gcAmd64 nestedControlTypes) = [.ok (1, 1), .ok (24, 8), .ok (4, 4), .ok (0, 2)] := rfl
+example : 8 ∣ 40 :=
+  (tyStructLayout_size_dvd (p := gcAmd64) (types := nestedControlTypes) (ty := .defined 1)
+    (offsets := [0, 8, 32, 36]) rfl).2
+example : tyStructLayout gcAmd64 layoutControlTypes (.defined 1) = .ok ([], 0, 1) ∧ 1 ∣ 0 :=
+  ⟨rfl, Nat.dvd_zero _⟩
+
+/-- The premise is load-bearing: on a platform with a 48-bit `int` (so
+`int` aligns at 6), `struct{a int32; b int}` aligns at 6, which `int32`'s 4
+does not divide — «field alignment ∣ struct alignment» fails while
+«alignment ∣ size» (6 ∣ 12) still holds. -/
+private def wideIntPlatform : Platform := { gcAmd64 with intBits := 48 }
+private def wideIntControlTypes : TypeEnv :=
+  #[(⟨"C"⟩, .struct #[⟨"a", .int .int32, false⟩, ⟨"b", .int .int, false⟩])]
+example : tyStructLayout wideIntPlatform wideIntControlTypes (.defined 0) = .ok ([0, 6], 12, 6) := rfl
+example : ¬ (4 ∣ 6) ∧ 6 ∣ 12 := by decide
 
 /-- Go's TWO-index slice-expression bounds check, with the runtime's exact
 messages and check ORDER (oracle-pinned 2026-07-25, arc

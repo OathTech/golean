@@ -211,6 +211,19 @@ struct size); row 569 `structLayoutWith_disjoint` (non-overlap in field order); 
 `tyStructLayoutAt_sizeAlign` (the struct arm of `tySizeAlignAt` is the layout's projection); row 571
 `tyStructLayout_ok_sizeAlign` (the entry point's size/alignment are `tySizeAlign`'s); row 572
 `tyStructLayout_fields` (the entry point's per-field facts against `tySizeAlign` of each field's type).
+
+RE-PIN 16 — the r72 audit's layout follow-ups (f1)/(f2) ([AGENT worker, lane `lane/argbool-layout-1007`],
+2026-10-07; [USER] Mike 2026-10-07 «Agree», relayed): rows 1–572 BYTE-IDENTICAL; rows 573–579 ADDED
+(`Ops.lean`, pure addition): row 573 `tyStructLayout_disjoint` (non-overlap at the entry point, against
+`tySizeAlign` of each field's type; (f1)); row 574 `structLayoutWith_align_ge` (the struct alignment is at
+least the seed and every field's oracle alignment — unconditional); row 575 `structLayoutWith_align_dvd`
+(field alignment ∣ struct alignment, under a power-of-two field oracle and seed); row 576
+`structLayoutWith_size_dvd` (from a positive seed, the struct alignment is positive and divides the size);
+row 577 `tyStructLayout_size_dvd` (alignment ∣ size at the entry point, EVERY platform — zero-size final
+field and `struct{}` = `(0, 1)` included); row 578 `tyStructLayout_align_dvd` (field alignment ∣ struct
+alignment at the entry point, under `Platform.PowTwoAligns`); row 579 `gcAmd64_powTwoAligns` (gc's platform
+satisfies it). «field alignment ∣ struct alignment» is FALSE without the power-of-two premise (a 48-bit-`int`
+platform: `struct{a int32; b int}` aligns at 6; the `Ops.lean` control), hence the premise in rows 575/578.
 -/
 
 namespace GoLean.GoCore.BridgeSet
@@ -4233,5 +4246,73 @@ example :
       ∃ off sz al, offsets[k]? = some off ∧ tySizeAlign p types fd.typ = .ok (sz, al) ∧
         (al ≠ 0 → al ∣ off) ∧ off + sz ≤ size :=
   @GoLean.GoCore.tyStructLayout_fields
+
+-- ---- RE-PIN 16 (layout follow-ups (f1)/(f2) of the r72 audit, 2026-10-07): rows 573–579
+-- (`Ops.lean`). Additions to rows 1–572. ----
+
+-- 573. `Ops.lean` — `tyStructLayout_disjoint`
+example :
+  ∀ {p : Platform} {types : TypeEnv} {i : TypeIdx} {id : TypeId} {fields : Array FieldDef}
+    {offsets : List Nat} {size align : Nat},
+    types[i]? = some (id, .struct fields) →
+    tyStructLayout p types (.defined i) = .ok (offsets, size, align) →
+    ∀ (j k : Nat) (fd : FieldDef) (off off' sz al : Nat), j < k →
+      fields[j]? = some fd → tySizeAlign p types fd.typ = .ok (sz, al) →
+      offsets[j]? = some off → offsets[k]? = some off' → off + sz ≤ off' :=
+  @GoLean.GoCore.tyStructLayout_disjoint
+
+-- 574. `Ops.lean` — `structLayoutWith_align_ge`
+example :
+  ∀ {fieldSize : Ty → Except Stop (Nat × Nat)} {fields : List FieldDef}
+    {offset maxAlign lastOffset lastSize : Nat} {offsets : List Nat} {size align : Nat},
+    structLayoutWith fieldSize fields offset maxAlign lastOffset lastSize
+      = .ok (offsets, size, align) →
+    maxAlign ≤ align ∧
+    ∀ fd ∈ fields, ∃ sz al, fieldSize fd.typ = .ok (sz, al) ∧ al ≤ align :=
+  @GoLean.GoCore.structLayoutWith_align_ge
+
+-- 575. `Ops.lean` — `structLayoutWith_align_dvd`
+example :
+  ∀ {fieldSize : Ty → Except Stop (Nat × Nat)},
+    (∀ t sz al, fieldSize t = .ok (sz, al) → al.isPowerOfTwo) →
+    ∀ {fields : List FieldDef} {offset maxAlign lastOffset lastSize : Nat}
+      {offsets : List Nat} {size align : Nat},
+      maxAlign.isPowerOfTwo →
+      structLayoutWith fieldSize fields offset maxAlign lastOffset lastSize
+        = .ok (offsets, size, align) →
+      ∀ {fd : FieldDef} {sz al : Nat}, fd ∈ fields → fieldSize fd.typ = .ok (sz, al) →
+        al ∣ align :=
+  @GoLean.GoCore.structLayoutWith_align_dvd
+
+-- 576. `Ops.lean` — `structLayoutWith_size_dvd`
+example :
+  ∀ {fieldSize : Ty → Except Stop (Nat × Nat)} {fields : List FieldDef}
+    {offset maxAlign lastOffset lastSize : Nat} {offsets : List Nat} {size align : Nat},
+    0 < maxAlign →
+    structLayoutWith fieldSize fields offset maxAlign lastOffset lastSize
+      = .ok (offsets, size, align) →
+    0 < align ∧ align ∣ size :=
+  @GoLean.GoCore.structLayoutWith_size_dvd
+
+-- 577. `Ops.lean` — `tyStructLayout_size_dvd`
+example :
+  ∀ {p : Platform} {types : TypeEnv} {ty : Ty} {offsets : List Nat} {size align : Nat},
+    tyStructLayout p types ty = .ok (offsets, size, align) →
+    0 < align ∧ align ∣ size :=
+  @GoLean.GoCore.tyStructLayout_size_dvd
+
+-- 578. `Ops.lean` — `tyStructLayout_align_dvd`
+example :
+  ∀ {p : Platform}, p.PowTwoAligns →
+    ∀ {types : TypeEnv} {i : TypeIdx} {id : TypeId} {fields : Array FieldDef}
+      {offsets : List Nat} {size align : Nat},
+      types[i]? = some (id, .struct fields) →
+      tyStructLayout p types (.defined i) = .ok (offsets, size, align) →
+      ∀ {fd : FieldDef} {sz al : Nat}, fd ∈ fields →
+        tySizeAlign p types fd.typ = .ok (sz, al) → al ∣ align :=
+  @GoLean.GoCore.tyStructLayout_align_dvd
+
+-- 579. `Ops.lean` — `gcAmd64_powTwoAligns`
+example : gcAmd64.PowTwoAligns := GoLean.GoCore.gcAmd64_powTwoAligns
 
 end GoLean.GoCore.BridgeSet

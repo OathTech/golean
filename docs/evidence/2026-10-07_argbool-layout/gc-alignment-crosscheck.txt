@@ -1,0 +1,17 @@
+# gc cross-check of GoLean's alignment controls (GoLean/GoCore/Ops.lean, after the field-offset controls: nestedControlTypes).
+# [AGENT] build worker, lane lane/argbool-layout-1007, 2026-10-07 (r72 audit follow-up (f2)).
+# Probe: alignof-probe.go.txt (save as main.go). Command, from a scratch dir under .tmp/:
+#   GOCACHE=<scratch> GO111MODULE=off go run main.go
+# toolchain: go version go1.26.5 linux/amd64
+## gc output:
+Alignof fields 1 8 4 2
+Alignof Outer 8 Sizeof Outer 40
+Offsetof 0 8 32 36
+Inner Alignof 8 Sizeof 24
+struct{} Alignof 1 Sizeof 0
+## GoLean controls (each an 'example ... := rfl' on gcAmd64):
+Outer = struct{x bool; in Inner; y int32; z [0]int16}, Inner = struct{a uint8; b int64; c int16}
+  tyStructLayout (.defined 1) = .ok ([0, 8, 32, 36], 40, 8)
+  tySizeAlign of the field types = (1,1) (24,8) (4,4) (0,2)  -> field alignments 1 8 4 2, each divides 8; 8 divides 40
+  struct{} = .ok ([], 0, 1)  -> 1 divides 0
+## verdict: alignments, offsets and size agree with gc; the zero-size final field takes one byte (37 -> 40).

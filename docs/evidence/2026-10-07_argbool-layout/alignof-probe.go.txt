@@ -1,0 +1,28 @@
+package main
+
+import (
+	"fmt"
+	"unsafe"
+)
+
+type Inner struct {
+	a uint8
+	b int64
+	c int16
+}
+type Outer struct {
+	x  bool
+	in Inner
+	y  int32
+	z  [0]int16
+}
+
+func main() {
+	var o Outer
+	fmt.Println("Alignof fields", unsafe.Alignof(o.x), unsafe.Alignof(o.in), unsafe.Alignof(o.y), unsafe.Alignof(o.z))
+	fmt.Println("Alignof Outer", unsafe.Alignof(o), "Sizeof Outer", unsafe.Sizeof(o))
+	fmt.Println("Offsetof", unsafe.Offsetof(o.x), unsafe.Offsetof(o.in), unsafe.Offsetof(o.y), unsafe.Offsetof(o.z))
+	fmt.Println("Inner Alignof", unsafe.Alignof(o.in), "Sizeof", unsafe.Sizeof(o.in))
+	var e struct{}
+	fmt.Println("struct{} Alignof", unsafe.Alignof(e), "Sizeof", unsafe.Sizeof(e))
+}

@@ -29,6 +29,10 @@
 # entry whose record is missing (the dispatch refuses at run time: no wrapper stands in) — each refused by name
 # through the real CLI; fixture Tests/wire-boundary-promotion/main.go).
 #
+# Plus the ENTRY-ARGUMENT controls (`--arg-int`/`--arg-bool`, 2026-10-07; the section at the end; fixture
+# Tests/wire-boundary-argbool/main.go): mixed positional calls answer, mistyped/out-of-range/wrong-arity/malformed
+# arguments refuse by name.
+#
 # Fixture: Tests/wire-boundary/main.go (the review's discard-call probe).
 # Fail closed: a missing binary, a failed emit, a control that runs where
 # it must refuse, a refusal that does not name its cause, or a positive
@@ -553,4 +557,52 @@ expect_refusal ri-bad-callee          'unsupported rand-intn callee' 'IntZ'
 expect_refusal ri-result-not-int      'rand-intn result type is not int'
 expect_refusal ri-absent-resultTypes  'resultTypes'
 expect_refusal ri-two-targets         'rand-intn assigned to 2 targets'
-echo 'Wire boundary gate: PASS (11 byte-level controls + 56 unseq-node controls + 13 promotion-record controls + 16 B6 numeric-locals controls + 5 rand-intn controls through the real CLI)'
+# ENTRY ARGUMENTS (`--arg-bool`, 2026-10-07; [USER] Mike «Agree», relayed — gc-verified's request): `--arg-int` and
+# `--arg-bool` interleave and bind the entry's parameters POSITIONALLY, each checked against its parameter's type at
+# the CLI (`entryArgValues`, GoLean/CLI.lean) before any step. Fixture Tests/wire-boundary-argbool/main.go
+# (`pick(n int, b bool, f Flag, s Small)`, Flag/Small declared over bool/uint8). Two mixed positive calls (both bool
+# orders, so a swapped binding cannot pass), then refusals by name: --arg-bool at an int parameter, --arg-int at a
+# bool parameter and at a DECLARED-bool parameter (once a later `stuck`, or nothing), an out-of-range --arg-int at a
+# declared uint8 (once a silent wrap), an arity mismatch (exit 1, JSON refusal), and a malformed bool literal (a
+# parse-time usage refusal, exit 2 — `--arg-int`'s malformed-literal exit code).
+GOCACHE="$ROOT/artifacts/go-build-cache" GO111MODULE=off \
+  go run ./tools/nativefrontend --dir Tests/wire-boundary-argbool --out "$gate_scratch/ab.json"
+run_pick() { "$GOLEAN" native-json-run --input "$gate_scratch/ab.json" --function pick "$@" 2>&1; }
+expect_pick() {  # name expected-value args...
+  local name="$1" want="$2" out rc=0; shift 2
+  out="$(run_pick "$@")" || rc=$?
+  if [[ $rc -ne 0 || "$out" != *'"status":"ok"'* || "$out" != *"\"value\":$want}"* ]]; then
+    echo "check-wire-boundary: FAIL [$name] — expected pick($*) to answer $want (exit $rc): $out" >&2; exit 1
+  fi
+  echo "ok [$name] pick $* answers $want"
+}
+expect_pick_refusal() {  # name exit-code args... -- cause-fragment...
+  local name="$1" want_rc="$2" out rc=0 cause; shift 2
+  local args=()
+  while [[ "$1" != -- ]]; do args+=("$1"); shift; done; shift
+  out="$(run_pick "${args[@]}")" || rc=$?
+  if [[ $rc -ne $want_rc ]]; then
+    echo "check-wire-boundary: FAIL [$name] — exit $rc, expected the refusal code $want_rc: $out" >&2; exit 1
+  fi
+  for cause in "$@"; do
+    if [[ "$out" != *"$cause"* ]]; then
+      echo "check-wire-boundary: FAIL [$name] — refused, but the refusal does not name '$cause': $out" >&2; exit 1
+    fi
+  done
+  echo "ok [$name] refused (exit $rc), naming: $*"
+}
+expect_pick arg-mixed-tf   103  --arg-int 1 --arg-bool true --arg-bool false --arg-int 2
+expect_pick arg-mixed-ft   1003 --arg-int 1 --arg-bool false --arg-bool true --arg-int 2
+expect_pick_refusal arg-bool-at-int    1 --arg-bool true --arg-bool true --arg-bool false --arg-int 2 -- \
+  '--arg-bool (argument 1)' 'parameter n' 'has type int'
+expect_pick_refusal arg-int-at-bool    1 --arg-int 1 --arg-int 1 --arg-bool false --arg-int 2 -- \
+  '--arg-int (argument 2)' 'parameter b' 'has type bool'
+expect_pick_refusal arg-int-at-flag    1 --arg-int 1 --arg-bool true --arg-int 0 --arg-int 2 -- \
+  '--arg-int (argument 3)' 'parameter f' 'has type Flag'
+expect_pick_refusal arg-int-range      1 --arg-int 1 --arg-bool true --arg-bool false --arg-int 256 -- \
+  '--arg-int (argument 4)' '256 is out of range' 'parameter s' 'Small (uint8)'
+expect_pick_refusal arg-arity          1 --arg-int 1 --arg-bool true --arg-bool false -- \
+  'takes 4 parameter(s), got 3'
+expect_pick_refusal arg-bool-malformed 2 --arg-int 1 --arg-bool yes --arg-bool false --arg-int 2 -- \
+  '--arg-bool: not a bool literal' 'yes'
+echo 'Wire boundary gate: PASS (11 byte-level controls + 56 unseq-node controls + 13 promotion-record controls + 16 B6 numeric-locals controls + 5 rand-intn controls + 8 entry-argument controls through the real CLI)'

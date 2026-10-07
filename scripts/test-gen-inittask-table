@@ -6,7 +6,8 @@
 # `go list -json` listings and canned `go tool nm` output, so no toolchain or
 # build cache is touched. Every case asserts the exit code AND that the verdict
 # names its cause; the positive controls assert the rows. The scratch dir is
-# left in place for inspection (no rm).
+# DELETED on success and KEPT on failure, its path printed for inspection
+# (r72 audit follow-up (f3), 2026-10-07; [USER] Mike «Agree», relayed).
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 GEN="$ROOT/scripts/gen-inittask-table"
@@ -91,5 +92,14 @@ expect 1 list-fail "go list std failed" "$(listing listfail "$A_OK")" FAKE_LIST_
 # 9. malformed listing dies
 expect 1 bad-json "cannot parse go list output" "$(listing badjson '{"ImportPath":')"
 
-echo "test-gen-inittask-table: $pass passed, $fail failed (scratch: ${SCRATCH#"$ROOT"/})"
-[[ "$fail" = 0 ]]
+if [[ "$fail" = 0 && "$pass" -gt 0 ]]; then
+  # Delete only the mktemp dir this run created, and only if it still sits under .tmp/.
+  case "$SCRATCH" in
+    "$ROOT"/.tmp/gen-inittask-test.*) rm -rf -- "${SCRATCH:?}" ;;
+    *) echo "test-gen-inittask-table: scratch path $SCRATCH is not this run's .tmp dir; not removed" >&2; exit 2 ;;
+  esac
+  echo "test-gen-inittask-table: $pass passed, $fail failed (scratch removed)"
+  exit 0
+fi
+echo "test-gen-inittask-table: $pass passed, $fail failed (scratch KEPT for inspection: ${SCRATCH#"$ROOT"/})"
+exit 1
