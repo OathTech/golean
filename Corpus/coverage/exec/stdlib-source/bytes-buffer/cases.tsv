@@ -1,9 +1,14 @@
-# id	subject	args	expected_status	expected_reason	features
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
 # bytes.Buffer through the REAL body (slice 2; shadow model RETIRED) + other pure bytes members.
 write-side	bufWriteSide	-	ok	-	stdlib,bytes,methods,runes,unicode
 next-bytes-truncate	bufNextBytesTruncate	-	ok	-	stdlib,bytes,methods,slicing
 unread-byte-error	bufUnreadByteError	-	ok	-	stdlib,bytes,methods,interfaces
-grow-contract	bufGrowContract	-	ok	-	stdlib,bytes,methods,cap,loops
+# depth=N rows (R3 / b6, 2026-10-07): the source-through `strings.TrimSpace` these subjects execute converts its
+# operand (`for lo, c := range []byte(s)`, strings.go:1093 — gc's zero-copy range temp, capacity unobservable), and
+# every call now draws a bound-3 `convCap` consult (ChoiceSite.convCap), so the three 8–10-entry fixed streams are
+# exhausted before the row's wide consumptions end; N = the default-stream wide count, the smallest depth whose three
+# seeded streams cover them. Observations unchanged (the strict lane's depth guard, not a variance).
+grow-contract	bufGrowContract	-	ok	-	stdlib,bytes,methods,cap,loops	strict	-	depth=10
 grow-negative	bufGrowNegative	-	panic	bytes.Buffer.Grow: negative count	stdlib,bytes,methods,panic
 truncate-out-of-range	bufTruncateOutOfRange	-	panic	bytes.Buffer: truncation out of range	stdlib,bytes,methods,panic
 reset-reuse	bufResetReuse	-	ok	-	stdlib,bytes,methods,cap

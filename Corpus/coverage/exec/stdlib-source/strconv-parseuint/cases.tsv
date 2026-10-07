@@ -1,8 +1,13 @@
-# id	subject	args	expected_status	expected_reason	features
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
 # strconv.ParseUint: retained shim, REAL *strconv.NumError error value (stdlib-source-1, 2026-09-03).
 numerror-type	parseUintNumErrorType	-	ok	-	stdlib,strings,ints,type_assertions,interfaces
 range-sentinel	parseUintRangeSentinel	-	ok	-	stdlib,strings,ints,range,type_assertions
-error-texts	parseUintErrorTexts	-	ok	-	stdlib,strings,ints,loops,concat
-error-quoting	parseUintErrorQuoting	-	ok	-	stdlib,strings,ints,unicode,invalid_utf8
+# depth=N rows (R3 / b6, 2026-10-07): the source-through `strings.TrimSpace` these subjects execute converts its
+# operand (`for lo, c := range []byte(s)`, strings.go:1093 — gc's zero-copy range temp, capacity unobservable), and
+# every call now draws a bound-3 `convCap` consult (ChoiceSite.convCap), so the three 8–10-entry fixed streams are
+# exhausted before the row's wide consumptions end; N = the default-stream wide count, the smallest depth whose three
+# seeded streams cover them. Observations unchanged (the strict lane's depth guard, not a variance).
+error-texts	parseUintErrorTexts	-	ok	-	stdlib,strings,ints,loops,concat	strict	-	depth=17
+error-quoting	parseUintErrorQuoting	-	ok	-	stdlib,strings,ints,unicode,invalid_utf8	strict	-	depth=19
 happy-bases	parseUintHappyBases	-	ok	-	stdlib,strings,ints,multi_result
-bitsize-saturation	parseUintBitSizeSaturation	-	ok	-	stdlib,strings,ints,widths
+bitsize-saturation	parseUintBitSizeSaturation	-	ok	-	stdlib,strings,ints,widths	strict	-	depth=9

@@ -1,0 +1,21 @@
+# Option (i) — row metadata only, semantics as ratified ([USER] Mike 2026-10-07 «Agree», relayed; conditional on the gate-cost measurement in timing.tsv).
+# Every row's OBSERVATIONS are unchanged (the default-stream observation is identical before/after — choice-trace-compare.txt); the flips were the strict lane's depth guard and the enumerator's fail-closed width/work guards. Each value is the smallest that passes (depth = the default-stream wide count w, on the first try for all 13; width 2 → 3 = the new bound; work = the smallest round number above the measured 354088 steps).
+id	before (main)	after (lane tip)	why
+stdlib-source/builder-overlay/grow-contract	strict, params -	strict, depth=11	default-stream wide count w=11: 1 wide pick past the 10-entry fixed stream [9,8,…]
+stdlib-source/builder-overlay/join-large	strict, params -	strict, depth=200	w=200 (199 convCap@3 from TrimSpace's range temp + 1 appendSpill): 190 past the fixed stream
+stdlib-source/builder-overlay/repeat-doubling-loop	strict, params -	strict, depth=11	w=11: 1 past the fixed stream [1,3,5,…]
+stdlib-source/bytes-buffer/grow-contract	strict, params -	strict, depth=10	w=10: 2 past the 8-entry fixed stream [5,5,…]
+stdlib-source/slices-sortfunc/others	strict, params -	strict, depth=16	w=16: 6 past the fixed stream
+stdlib-source/slices-sortfunc/sort-stable-func	strict, params -	strict, depth=31	w=31: 21 past
+stdlib-source/slices-sortfunc/sortfunc-large	strict, params -	strict, depth=41	w=41 (40 convCap@3 + 1 appendSpill@321): 31 past
+stdlib-source/slices-sortfunc/sortfunc-reversed-input	strict, params -	strict, depth=31	w=31: 21 past
+stdlib-source/slices-sortfunc/sortfunc-strings-by-len	strict, params -	strict, depth=14	w=14: 4 past
+stdlib-source/slices-sortfunc/sortfunc-ties-projected	strict, params -	strict, depth=39	w=39: 29 past
+stdlib-source/slices-sortfunc/sortfunc-ties-realized	strict, params -	strict, depth=31	w=31: 21 past
+stdlib-source/strconv-parseuint/bitsize-saturation	strict, params -	strict, depth=9	w=9: 1 past the 8-entry fixed stream
+stdlib-source/strconv-parseuint/error-quoting	strict, params -	strict, depth=19	w=19: 9 past
+stdlib-source/strconv-parseuint/error-texts	strict, params -	strict, depth=17	w=17 (12 convCap@3 + 5 appendSpill): 7 past
+stdlib-source/builder-cap/grow-after-write	membership, width=85,sites=8,cap=160,members=112 (work default 200000)	membership, …,work=400000	the Builder's source-through []byte(s) adds one convCap@3 beside two appendSpill consults (bounds 31, 28): 354088 steps (was >199884 with subtrees unexplored); the smallest round budget above
+builtins/e13-sibling-panic-order/bytes-conv-left-len-hoist	membership, width=2,sites=8,members=2	membership, width=3,sites=8,members=2	the fixture's non-literal []byte(s) draws convCap at bound 3; the width pin was refuted mechanically
+builtins/e13-sibling-panic-order/bytes-conv-value-vs-mutating-call	membership, width=2,sites=8,members=2	membership, width=3,sites=8,members=2	same
+evalorder/unseq-conv-alloc/conv-read-vs-call	membership, width=2,sites=8,members=2	membership, width=3,sites=8,members=2	same

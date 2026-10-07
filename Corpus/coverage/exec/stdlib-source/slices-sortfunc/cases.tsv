@@ -1,10 +1,15 @@
-# id	subject	args	expected_status	expected_reason	features
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
 # slices through the REAL source-through package (slice 2): pdqsortCmpFunc stenciled per element type; the other pure members.
-sortfunc-large	sortFuncLarge	-	ok	-	stdlib,sort,slices,generics,closures,loops
-sortfunc-reversed-input	sortFuncReversedInput	-	ok	-	stdlib,sort,slices,generics,closures
+# depth=N rows (R3 / b6, 2026-10-07): the source-through `strings.TrimSpace` these subjects execute converts its
+# operand (`for lo, c := range []byte(s)`, strings.go:1093 — gc's zero-copy range temp, capacity unobservable), and
+# every call now draws a bound-3 `convCap` consult (ChoiceSite.convCap), so the three 8–10-entry fixed streams are
+# exhausted before the row's wide consumptions end; N = the default-stream wide count, the smallest depth whose three
+# seeded streams cover them. Observations unchanged (the strict lane's depth guard, not a variance).
+sortfunc-large	sortFuncLarge	-	ok	-	stdlib,sort,slices,generics,closures,loops	strict	-	depth=41
+sortfunc-reversed-input	sortFuncReversedInput	-	ok	-	stdlib,sort,slices,generics,closures	strict	-	depth=31
 sortfunc-named-slice	sortFuncNamedSlice	-	ok	-	stdlib,sort,slices,generics,defined_type
-sortfunc-strings-by-len	sortFuncStringsByLen	-	ok	-	stdlib,sort,slices,generics,strings,len
-sortfunc-ties-projected	sortFuncTiesProjected	-	ok	-	stdlib,sort,slices,generics,structs,closures
-sortfunc-ties-realized	sortFuncTiesRealized	-	ok	-	stdlib,sort,slices,generics,structs
-sort-stable-func	sortStableFunc	-	ok	-	stdlib,sort,slices,generics,structs
-others	slicesOthers	-	ok	-	stdlib,slices,generics,comma_ok,max,min
+sortfunc-strings-by-len	sortFuncStringsByLen	-	ok	-	stdlib,sort,slices,generics,strings,len	strict	-	depth=14
+sortfunc-ties-projected	sortFuncTiesProjected	-	ok	-	stdlib,sort,slices,generics,structs,closures	strict	-	depth=39
+sortfunc-ties-realized	sortFuncTiesRealized	-	ok	-	stdlib,sort,slices,generics,structs	strict	-	depth=31
+sort-stable-func	sortStableFunc	-	ok	-	stdlib,sort,slices,generics,structs	strict	-	depth=31
+others	slicesOthers	-	ok	-	stdlib,slices,generics,comma_ok,max,min	strict	-	depth=16
