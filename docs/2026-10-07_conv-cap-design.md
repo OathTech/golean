@@ -161,3 +161,15 @@ unused downstream); 3 equations gain a hypothesis (13 downstream uses); no wire,
 decoder-signature change. Acceptance: `ci --diff` green, no existing row moved, the D5 rows born PASS; `ci --slow` red
 only on the 5a pair; the choice trace vs `main` identical on the default stream and the shifted adversarial streams
 listed with their deltas; core audit green; elaboration inside G-C3's 1.5× rule (`decide` over the tables `#eval`-checked first).
+
+## 6. Ratification (2026-10-07)
+
+[USER] Mike, 2026-10-07, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «yeah agree, build now».
+D1–D8 RATIFIED as recommended: option (B), a new `ChoiceSite.convCap` (D1); the envelope EXACTLY §1's measured member
+sets, `gcRoundupSize` as pinned gc data (D2); the literal bit on the `StrictOp` head from `Expr.stringLit` (D3); the
+default tape bytes slot 0 = n, runes slot 0 = R(4n)/4 (D4); the membership rows of D5 born red-first; BridgeSet rows
+335–337 re-pinned with the one hypothesis `op.convKind? = none`, the new rows in the intn D7 shape (D6); the dedup
+engine refuses the site (D7); D8 = BUILD NOW behind the frozen offer `20d3946d`, shipped to the logic side with the
+next re-pin batch. Standing rule restated at the ratification ([USER] 2026-10-07): a widening admits only what the
+spec permits AND gc go1.26.5 realizes. The build is lane `lane/conv-cap-1007` (this note lands with it); any deviation
+the code forces from D1–D8 is a named design gate — STOP and report, never self-adjudicate.
