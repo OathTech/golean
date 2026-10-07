@@ -4335,7 +4335,7 @@ example : gcAmd64.PowTwoAligns := GoLean.GoCore.gcAmd64_powTwoAligns
 
 -- ---- RE-PIN 16 (R3 / b6, the `convCap` pick site, 2026-10-07): rows 573–583 ----
 
--- 579. `Machine.lean` — the conversion apply EQUATION (design D6): at a conversion head on a string operand the
+-- 573. `Machine.lean` — the conversion apply EQUATION (design D6): at a conversion head on a string operand the
 -- funnel draws the tape's `convCap` pick at the member count and applies at it (`convCapApplyAt`); the record is
 -- `PickRecord.ofPick` — `[]` at a one-member list (the no-pop instance: every literal conversion, every length
 -- whose members coincide), the one labelled pick otherwise
@@ -4350,7 +4350,7 @@ example : ∀ {ctx : ProgramCtx} {s : Store} {leafOf : Loc → Loc} {op : Strict
               (Choices.consumeAt .convCap (convCapWidth kind literal value) ch).1) :=
   @GoLean.GoCore.Machine.applyStrictOpPick_conv
 
--- 580. `MachineSound.lean` — the conversion's STEP RULE, derived from `strictApply` (the logic team's «one step
+-- 574. `MachineSound.lean` — the conversion's STEP RULE, derived from `strictApply` (the logic team's «one step
 -- rule», the intn D7 shape): for every slot `i` below the member count the singleton tape `[i]` takes the step
 -- allocating the backing at member `i`, with the label `⟨tr, PickRecord.ofPick .convCap w i, []⟩` — the relation
 -- admits every member of the envelope
@@ -4363,7 +4363,7 @@ example : ∀ {ctx : ProgramCtx} {σ : Store} {op : StrictOp} {kind : ConvKind} 
       ⟨tr, PickRecord.ofPick .convCap (convCapWidth kind literal value) i, []⟩ :=
   @GoLean.GoCore.Machine.Step_convCap_draw
 
--- 581. `MachineSound.lean` — the pick-lifted plan at a POPPING conversion: the funnel is a function of the
+-- 575. `MachineSound.lean` — the pick-lifted plan at a POPPING conversion: the funnel is a function of the
 -- `convCap` pick alone beside the site's pop and its record, and never panics
 example : ∀ {ctx : ProgramCtx} {s : Store} {leafOf : Loc → Loc} {op : StrictOp} {vs : List GoValue}
     {kind : ConvKind} {literal : Bool} {value : GoString},
@@ -4379,7 +4379,7 @@ example : ∀ {ctx : ProgramCtx} {s : Store} {leafOf : Loc → Loc} {op : Strict
       ∧ (∀ pick, NoPanic (g pick)) :=
   @GoLean.GoCore.Machine.applyStrictOpPick_draw
 
--- 582. `Equations.lean` — `retV_strictK_conv`: the conversion arm's `stepFn` equation
+-- 576. `Equations.lean` — `retV_strictK_conv`: the conversion arm's `stepFn` equation
 example : ∀ {ctx : ProgramCtx} {s s' : Store} {v out : GoValue} {op : StrictOp} {done : List GoValue}
     {kind : ConvKind} {literal : Bool} {value : GoString} {tr : AccessTrace}
     (env : LocalEnv) (k' : Cont) (ch : Choices)
@@ -4392,7 +4392,7 @@ example : ∀ {ctx : ProgramCtx} {s s' : Store} {v out : GoValue} {op : StrictOp
             (Choices.consumeAt .convCap (convCapWidth kind literal value) ch).1, []⟩) :=
   @GoLean.GoCore.Equations.retV_strictK_conv
 
--- 583. `Equations.lean` — `retV_strictK_conv_nopop`: the no-pop instance (a one-member list)
+-- 577. `Equations.lean` — `retV_strictK_conv_nopop`: the no-pop instance (a one-member list)
 example : ∀ {ctx : ProgramCtx} {s s' : Store} {v out : GoValue} {op : StrictOp} {done : List GoValue}
     {kind : ConvKind} {literal : Bool} {value : GoString} {tr : AccessTrace}
     (env : LocalEnv) (k' : Cont) (ch : Choices)

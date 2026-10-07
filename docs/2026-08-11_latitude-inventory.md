@@ -2332,7 +2332,7 @@ instance of R2.
   float. The proofs: `convCapMembers_ge` / `convCapAt_ge` (the spec floor at
   every member and slot), `Step_convCap_draw` (every member realized by the
   singleton tape), `applyStrictOpPick_conv` (the apply equation), BridgeSet
-  rows 567–577.
+  rows 573–583 (RE-PIN 16).
 - HISTORY: (b-n) PINNED singleton cap = len with the transfer caveat from
   the arc-final audit F8 (2026-08-06) and the rune arm (2026-08-19, triage
   L1); the re-envelope obligation discharged 2026-10-07 by the gc-verified
