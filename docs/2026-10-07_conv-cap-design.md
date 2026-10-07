@@ -173,3 +173,25 @@ engine refuses the site (D7); D8 = BUILD NOW behind the frozen offer `20d3946d`,
 next re-pin batch. Standing rule restated at the ratification ([USER] 2026-10-07): a widening admits only what the
 spec permits AND gc go1.26.5 realizes. The build is lane `lane/conv-cap-1007` (this note lands with it); any deviation
 the code forces from D1–D8 is a named design gate — STOP and report, never self-adjudicate.
+
+## 7. The build's design-gate finding and its ruling (2026-10-07)
+
+The build (lane `lane/conv-cap-1007`) found D4's «no row flips» CONTRADICTED by the full differential at its tip
+`0fdcbd29`: 20 pre-existing rows PASS→FAIL — none an observation change (the default-tape observation of every
+pre-existing row is identical; `docs/evidence/2026-10-07_conv-cap/choice-trace-compare.txt`), all consequences of the
+new consult position on rows D4's SOURCE count missed: the source-through stdlib code they execute —
+`strings.TrimSpace`'s `for lo, c := range []byte(s)` (strings.go:1093, gc's zero-copy range TEMP, capacity
+unobservable) and `bytes.NewBufferString` — draws a bound-3 `convCap` on every call. 13 strict `stdlib-source/*`
+rows failed the strict lane's depth guard (streams exhausted), 3 membership rows refuted `width=2` at the new bound,
+1 exceeded its `work` budget; `imported-goose/channel/google-search` is the standing 5a pair (fresh certification:
+unchanged set). STOPPED at the gate as the brief requires; the evidence README poses options (i) row metadata only,
+(ii) a bound-1 consult where the capacity is unobservable (the range-temp shape — a frontend/decoder mark D3 excluded,
+or a machine-side recognition of the range desugar), (iii) both.
+
+**RULED** [USER] Mike 2026-10-07, verbatim, relayed by the [AGENT] coordinator — cite as relayed: «Agree» — to the
+coordinator's recommendation: option (i), semantics exactly as ratified, row metadata only (depth for the 13 strict
+rows, `width=3` ×3, `work` ×1, then a re-pin with a written reason), CONDITIONAL on measured gate cost: if the full
+`ci --slow` wall time grows by more than ~10% vs `main`'s latest close (r71: 1301 s; r72's time if available), STOP
+and report instead — option (ii) then becomes a new design. Applied: `option-i-row-metadata.tsv` (every value the
+smallest that passes: depth = the default-stream wide count, on the first try for all 13; width 2 → 3; work 400000
+over 354088 measured steps); the timing measurement is `timing.tsv` in the same evidence directory.
