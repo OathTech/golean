@@ -7781,3 +7781,47 @@ excludes); `scripts/test-gen-inittask-table` (new, a fake `go` under `.tmp/`; wi
 failure, a package error, a no-Go-files error on a buildable package, a dependency error, a missing archive, a failed
 `go list` and a malformed listing — each exits 1 naming its cause — plus two positive controls. Evidence
 `docs/evidence/2026-10-07_field-offsets/inittask-regen.txt`.
+
+## BUG-119 — `golean coverage-observations --arg-int` is UNCHECKED against the entry parameters: an out-of-range literal wraps SILENTLY at its parameter's kind, and an `--arg-int` at a `bool`/`string`/interface parameter reaches the machine unchecked — `native-json-run` refuses both by name since train r73 [CLI; tool interface; PREDATES lane `lane/argbool-layout-1007` (the lane left `coverage-observations` unchanged by design); found by the lane's Opus adversarial audit (note), 2026-10-07]
+
+- Status: open
+- Pinned-by: none (a CLI-interface gap; no corpus row passes an out-of-range or ill-typed `--arg-int` to
+  `coverage-observations`)
+- Discovered: 2026-10-07, the argbool-layout lane's Opus adversarial audit (a note, not a blocking finding), as relayed
+  by the [AGENT] coordinator; rowed by the [AGENT] train worker r73 — «every detected gap is rowed», [USER] Mike
+  2026-09-03, relayed.
+
+WHAT: train r73 added `entryArgValues` (`GoLean/CLI.lean`), which type- and range-checks every entry argument against
+its parameter BEFORE any step and refuses by name (`status:error`). Only `native-json-run` calls it.
+`coverage-observations` parses `--arg-int` (`parseEnumArgs`) and hands `cfg.args.map GoValue.int` straight to
+`enumSetup`, so `--arg-int 300` at a `uint8` parameter is silently the value 44, and an `--arg-int` at a non-integer
+parameter is unchecked — the two drivers disagree on the same command line. Fail-open in the tool interface; not a
+wrong answer on any tracked row.
+
+WHERE: `GoLean/CLI.lean` — `parseEnumArgs`' `--arg-int` arm and the `enumSetup program functionName (cfg.args.map
+GoValue.int)` call site.
+
+FIX PLAN (queued, [AGENT]; PENDING [USER] scheduling): route `coverage-observations`' arguments through
+`entryArgValues` (the same refusals, by name, `status:error`); add the out-of-range and ill-typed controls to
+`scripts/check-wire-boundary` for that subcommand. Fix criterion: the two subcommands refuse the same command lines
+with the same causes.
+
+## BUG-120 — a MISSING `--input` file makes `golean native-json-run` die with an UNCAUGHT IO exception instead of a named refusal [CLI; tool interface; PREDATES lane `lane/argbool-layout-1007`; found by the lane's Opus adversarial audit (note), 2026-10-07]
+
+- Status: open
+- Pinned-by: none (no corpus row runs a missing wire; the harness always writes the wire before running)
+- Discovered: 2026-10-07, the argbool-layout lane's Opus adversarial audit (a note, not a blocking finding), as relayed
+  by the [AGENT] coordinator; rowed by the [AGENT] train worker r73 — «every detected gap is rowed», [USER] Mike
+  2026-09-03, relayed.
+
+WHAT: `native-json-run` reads the wire with `IO.FS.readBinFile input` outside any `try`; a missing or unreadable file
+raises an IO error that escapes `main` as the runtime's uncaught-exception message, not the CLI's `cliErrorJson`
+refusal (`status:error` naming the file and the cause) that every other input failure (JSON parse, decode, entry
+arguments) produces. It still fails (non-zero exit), so not a wrong answer — but the refusal is not in the CLI's own
+named shape. The same unguarded read pattern may exist in other subcommands; the fix round should check them.
+
+WHERE: `GoLean/CLI.lean`, the `native-json-run` handler (`let bytes ← IO.FS.readBinFile input`).
+
+FIX PLAN (queued, [AGENT]; PENDING [USER] scheduling): catch the read's IO error and emit `cliErrorJson
+s!"{input}: cannot read input: {err}"` (exit 1); a missing-file control in `scripts/check-wire-boundary`. Fix
+criterion: a missing `--input` prints a `status:error` JSON naming the path.

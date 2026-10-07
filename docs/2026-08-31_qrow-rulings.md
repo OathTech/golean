@@ -1876,3 +1876,54 @@ discharge ok (LANDED=M5: all 48 discharged, 0 owed), frontend pins ok, inittask 
 inittask-std.tsv re-derivation ok, negative baseline no regression. Both timeouts' headroom is recorded in
 `docs/operational-lessons.md`. Round 72 closed: the gc-verified (a1) exported struct field offsets are on main
 (BridgeSet rows 567–572, RE-PIN 15) and BUG-117 is fixed; follow-ups (f1)–(f3) queued.
+
+### Train r73 — `--arg-bool` (gc-verified), layout lemmas, gate budget raises — RULED (2026-10-07)
+
+[USER] Mike, 2026-10-07, verbatim, relayed by the [AGENT] coordinator — cite as relayed:
+- «Agree» — the lane's authority: `golean native-json-run --arg-bool` (the gc-verified project's request, session
+  gc-verified-e8), the r72 audit's follow-ups (f1)–(f3) batched with it.
+- «Agree 1 / 2» — (1) the merge sign-off for `lane/argbool-layout-1007` @ `0a9db639`, with the audit's one-sentence
+  changelog fix made by this train; (2) raise two gate time budgets that fail closed under shared-box load.
+
+The lane (3 commits): `native-json-run --arg-bool <true|false>`, positional with `--arg-int`; the new CLI check
+`entryArgValues` (`GoLean/CLI.lean`) refuses by name, `status:error`, a bool at a non-bool parameter, an int at a
+non-integer parameter, an out-of-range int literal, an arity mismatch and an unknown entry function; a
+`.unsupported` (frontend-quarantined) parameter is deferred to the machine's `unsupported` refusal; 10 entry-argument
+controls in `scripts/check-wire-boundary`. Layout lemmas (r72 follow-ups (f1)/(f2)) pinned as BridgeSet rows 573–579
+(RE-PIN 16; rows 1–572 byte-identical), `tyStructLayout_align_dvd` under the new premise `Platform.PowTwoAligns`; gc
+`unsafe.Alignof`/`Offsetof`/`Sizeof` cross-check under go1.26.5 (`docs/evidence/2026-10-07_argbool-layout/`). (f3): the
+inittask self-test removes its scratch on success. Lane gate (`ci --diff` at `dd4c7ccd`): FAIL on the expected 5a pair
+plus `package-correct method identity` timed out under box load (~34); `scripts/check-method-identity` alone: PASS
+(`docs/evidence/2026-10-07_argbool-layout/ci-diff.tail.txt`).
+
+**Tool-interface change for consumers who script the CLI** ([AGENT] classification): `--arg-int` is TIGHTENED on
+`native-json-run` — an `--arg-int` at a `bool`/`string`/interface parameter (before: unchecked, a later `stuck` if
+anything) and an out-of-range literal (before: a silent wrap at the kind) now refuse at the CLI; an unknown entry
+function and an arity mismatch move from the machine's `status:stuck` to the CLI's `status:error`.
+`coverage-observations` and `choice-trace` are unchanged.
+
+Audit (as relayed by the [AGENT] coordinator): one Opus adversarial audit, **NEEDS-FIX** — one changelog sentence:
+the draft row did not say that an unknown entry function and an arity mismatch change status (`stuck` → `error`).
+FIXED in this train's records commit: the r73 row of `docs/changelog/20d3946d-WINDOW.md` now reads «; an unknown entry
+function and an arity mismatch now refuse at the CLI as `status:error` (previously the machine's `status:stuck`
+«GoCore function not found» / «expected N argument(s), got M»)». The audit's two notes, both PREDATING the lane, are
+rowed open in `docs/BUGS.md` ([AGENT], «every detected gap is rowed»): **BUG-119** (`coverage-observations` still
+takes `--arg-int` unchecked, so an out-of-range value wraps silently; `native-json-run` now refuses it) and
+**BUG-120** (a missing `--input` file makes `native-json-run` throw an uncaught exception instead of a named
+refusal). [AGENT] numbering: BUG-118 is reserved by the unmerged lane `lane/conv-cap-1007` (its fixed `cap([]rune(s))`
+entry), so these two take 119 and 120.
+
+**Gate budget raises** (item (2); gate apparatus, trusted surface #2; its own commit, not records-only): the
+per-subprocess audit budget in `tools/typed_audit.py` (`run_logged`; it governs the method-identity poison compile and
+is shared with the core audit and the method-identity dispatch) 180 → 360 s; `scripts/diff-coverage`'s
+`LEAN_TIMEOUT_SECONDS` default 30 → 60 s (only the default; the derived `LEAN_TRACE_TIMEOUT_SECONDS` = 8× moves
+240 → 480 s; the test overrides `LEAN_TIMEOUT_SECONDS=1` are unchanged). Reason: both failed closed under shared-box
+load (1-min load 34–60) in train r72 and in the argbool lane's gate; measured alone, method identity 150–201 s and
+`noodler/budget/map-20k` 4.7–9.6 s, so the new budgets still catch hangs. Recorded in `docs/operational-lessons.md`
+(both 2026-10-07 entries).
+
+The post-offer changelog's drafted argbool/layout row is filled as round r73 at the table's top, with a second r73 row
+for the budget raises.
+
+Train: `train/r73` = the lane's 3 commits cherry-picked onto main `c605aa4c` (the lane's merge-base), 0 conflicts; tree
+identical to the lane tip `0a9db639`; then the gate-budget commit and this records commit.
