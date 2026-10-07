@@ -1862,3 +1862,17 @@ record; inputs differ only in `build/files` `GoLean/GoCore/{BridgeSet,Ops}.lean`
 202.416 s). INSTALLED as `baselines/certified/imported-goose__channel__google-search.certified.json` — a provenance
 refresh, not a re-pin; the certified set is unchanged. Tail: `docs/evidence/2026-10-07_train-r72/r72-ci-slow.tail.txt`
 (the re-run); the lesson is recorded in `docs/operational-lessons.md` («The method-identity audit's 180 s budget …»).
+
+**Green re-run at the 5a records commit `3527ba4a`** ([AGENT] train worker, 2026-10-07). The first `ci --diff` (EXIT=1,
+1364 s, start load 17/34/43) was red on ONE row only: `noodler/budget/map-20k` PASS → FAIL/nondet («oracle-invariance
+re-run under stream [5,5,5,5,5,5,5,5] TIMED OUT after 30s (LEAN_TIMEOUT_SECONDS) — invariance NOT certified») — failing
+closed; every other step ok, certificate provenance ok. The train STOPPED; diagnostically (not a gate verdict) the same
+binary on the same wire ran alone in 4.7 s (default) and 9.6 s (`--choices 5,5,5,5,5,5,5,5`), and the row was PASS in
+both `ci --slow` runs on this binary. Coordinator ruling ([AGENT], 2026-10-07): the same load-timeout reading, to be
+shown by a fresh load-gated full gate run; no budget change (a [USER] decision). Re-run (start load 30/40/46):
+`ci --diff` EXIT=0, 1086 s, `RESULT: PASS`, baseline diff FULL 3890/3890 (3650 / 240, no regression), certificate
+provenance ok, package-correct method identity ok, core totality audit ok, semantic equations ok, pool spec freeze +
+discharge ok (LANDED=M5: all 48 discharged, 0 owed), frontend pins ok, inittask generator fail-closed self-test ok,
+inittask-std.tsv re-derivation ok, negative baseline no regression. Both timeouts' headroom is recorded in
+`docs/operational-lessons.md`. Round 72 closed: the gc-verified (a1) exported struct field offsets are on main
+(BridgeSet rows 567–572, RE-PIN 15) and BUG-117 is fixed; follow-ups (f1)–(f3) queued.

@@ -527,3 +527,13 @@ coverage` echoed the failed receipt); the fresh re-run, started at
 decision; until then, re-run under lower load (check `uptime` first).
 Train r72 ([AGENT] train worker; the re-run-not-retune ruling [AGENT]
 coordinator, 2026-10-07).
+
+The same holds for the per-run `LEAN_TIMEOUT_SECONDS`: the 30 s
+`LEAN_TIMEOUT_SECONDS` on heavy budget rows (e.g.
+`noodler/budget/map-20k`'s oracle-invariance re-runs: 4.7 s / 9.6 s
+alone) has thin headroom under shared-box load. r72's first `ci --diff`
+at load 17/34/43 timed out on it, failing closed (PASS → FAIL/nondet,
+«a killed run is not an observed variance»); the fresh re-run (start
+load 30/40/46) passed. A budget change is a [USER] decision. Train r72
+([AGENT] train worker; the re-run ruling [AGENT] coordinator,
+2026-10-07).
