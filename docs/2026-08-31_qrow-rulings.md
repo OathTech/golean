@@ -2081,3 +2081,21 @@ PASS→non-PASS. Changelog rows r75 (two: a tool-interface change; a frontend wi
 Train: `train/r75` = (a)'s 2 commits then (b)'s 3 commits cherry-picked onto main `6a90ba8d` (one conflict, the
 changelog's two draft rows — both kept; BUGS.md, the certified record and the baseline merged clean), and this
 records commit (+ CLI message tidy).
+
+**Merge train r75 — the 5a record** ([AGENT] train worker, 2026-10-08). Pre-merge main `6a90ba8d` →
+`refs/snapshots/r75/main`; train tip `8b53af43` fast-forwarded; primary build `scripts/build-certified` EXIT=0, 581 s
+(binary `c274c37f…` → `5f093779…`). `release-check --base refs/snapshots/r75/main` EXIT=2 — «STALE certification:
+changed dependency build/files/GoLean/CLI.lean» (expected). `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --slow`
+(start load 44.8/25.6/16.5) EXIT=1, 1442 s, `RESULT: FAIL` on EXACTLY the 5a pair: `certificate provenance` STALE and
+its echo `imported-goose/channel/google-search` PASS → FAIL (membership; 3936 = 3704 / 232 at the run); every other
+step ok, incl. wire boundary (with the lanes' 12 enumerator entry-argument + 5 missing-input controls), package-correct
+method identity, pool spec at LANDED=M5 (48 discharged, 0 owed), semantic equations, core totality audit, core build
+warning-free, frontend pins (twin wire = pinned bytes), inittask self-test and re-derivation, negative baseline no
+regression (394), eval tests 298 ok; no PASS→non-PASS beyond the 5a echo. Candidate: `schema`, `claim` and
+`observations_sha256` IDENTICAL to the tracked record; `inputs` differ only in `build/files` `GoLean/CLI.lean`,
+`GoLean/ChoiceTrace.lean` (lane (a)), `GoLean/GoCore/Syntax.lean`, `GoLean/NativeToIR.lean` (this train's comment
+edits) and `files` `scripts/check-wire-boundary` (lane (a)'s controls); the receipt moved (source `7d61a5f6`, dirty →
+`8b53af43`, clean; 193.47 s). INSTALLED as `baselines/certified/imported-goose__channel__google-search.certified.json`
+— a provenance refresh, not a re-pin; the certified set is unchanged. With it installed, `release-check` EXIT=1,
+«Recertification required since pre-merge tip: inputs: changed dependency build/files/GoLean/CLI.lean» — the
+protocol's trigger for this very run, recorded. Tail: `docs/evidence/2026-10-08_train-r75/r75-ci-slow.tail.txt`.

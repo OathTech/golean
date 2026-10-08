@@ -31,8 +31,8 @@
     "build": {
       "files": {
         "GoLean.lean": "a575cd3386fcc1b9c84599b953783866c1d740bd33ef7ecd3c7fad214ab5f37f",
-        "GoLean/CLI.lean": "12cd87c279d5e86e180f0b9646e1ccbd1d471419509e7fd7acb0f72a9b5d0fe7",
-        "GoLean/ChoiceTrace.lean": "6a9b6718f976ff73f6ca385daf5f616338e0042a55e5a30c3e9bf9ff20edda1c",
+        "GoLean/CLI.lean": "0fd7242ee34ed492e4f277705f457effde32296250c6fd3386062cdf8948f719",
+        "GoLean/ChoiceTrace.lean": "f638d2fa30a2a680bb6496e6e36c26f5b050236810559140e687f283efdb177b",
         "GoLean/DeclarationUnicode.lean": "7b567b3fa61a7f94c3bafe302b18f6cf7eaaea47266b12b9429550cce92fddc5",
         "GoLean/EnumDedup.lean": "cb86b3b2883ac5f20505a69f9beab24a62c4db16820df1f295857e84ce8d6b98",
         "GoLean/GoCore.lean": "ad70b05753d7ed2e356e01de4b9e34abcdc5178bad5076ca3e70a23fed228992",
@@ -85,14 +85,14 @@
         "GoLean/GoCore/StepFn.lean": "7bf28729c4f11f6a4cfa0f66c80d0d977b9f578165f2206b2fb068e7e00fb3d2",
         "GoLean/GoCore/Store.lean": "5913f8b36160d2e7576eda8ca443cc92f8015b25fb3a6b52367215715f42ff74",
         "GoLean/GoCore/StringPanic.lean": "0fd88bfabcd39de2436fc498f10c3bff3cf6d0fc50b85d0ae829df8351ebdbe4",
-        "GoLean/GoCore/Syntax.lean": "50ea1ad6c6c8177ea1020a26f64d29a99bc1befa2987892418cda8021eb5fe16",
+        "GoLean/GoCore/Syntax.lean": "9810575e90d5ce0abcf938611fc4b9587b946e70b5685e4fa30d5f29bbe6eaa5",
         "GoLean/GoCore/SyntaxEqb.lean": "30b6ff414da86d35e3a99d676724aa5c8bfada8561f028337fa2e9a601191071",
         "GoLean/GoCore/Trace.lean": "d69199f6c198926f3095197e1131ec405921b3375f9c0f01c701e799bf70e617",
         "GoLean/GoCore/Unseq.lean": "c12150bef5cc26c90866dd18744e4ed4c4243dcc8115cecd3625c0e3831ec079",
         "GoLean/GoCore/UnseqSound.lean": "05d0b61381dd9b12d939376d5427a948cd9b2f3866dfe07579513cd8a6e84377",
         "GoLean/GoCore/Value.lean": "257dfc7dca51ed978aad9a7672fe40c0f3fcfee1d7fec07aad8de5ee9d9b9b80",
         "GoLean/NativeDeclaration.lean": "6d184c492b3613b7572c8c1433daff7c2fb0366e5a64ea075dc73e288e300858",
-        "GoLean/NativeToIR.lean": "ae60a851318605dd7be65148e7be85bd7cdebfda0b37829b6c82461504dcf0be",
+        "GoLean/NativeToIR.lean": "a4e0a99ad1f464f493005d6b20da630abbb52226a55d343f573ca93716e3df2a",
         "GoLean/StrictJson.lean": "6b6531a7a92762066b37c717e7aadd75db55dfe36e7605430cfa7eea0902511f",
         "GoLean/StrictJsonParse.lean": "4be47cd13ffddb2edaa10c1799383c9b94d2ba15a79ed12eb7e491be53f0e85c",
         "Main.lean": "56597882b7149e0d9944f4bef2e81a064a85011dfdd2c17584a9d98971d9e0c3",
@@ -136,7 +136,7 @@
       "scripts/check-stdlib-register": "5fe5b97546ae8e06b9af19ca66d4093cca376b6aafb76b558dcc86cf51211cbe",
       "scripts/check-unseq-scheduler": "d70368d1014137cf6dcbedf6b475a069aa3a0190449a86f2ac3d380703d57231",
       "scripts/check-unseq-wire": "5bf04a15d2293266e056bace9f03a547d5af6dea6483737b6fb53403405398f2",
-      "scripts/check-wire-boundary": "18427ed49432766bbb120b7e594b730306d408a1f530aee90e3d187245d869c4",
+      "scripts/check-wire-boundary": "aad79d5294da38ba29f70b3da4e0412e8326f344297e13a81efe451a6e6b4ef7",
       "scripts/choice-trace-corpus": "688b85b3f844577eb83375e86a35277a89cfeffffa550088e4b50907360b1f42",
       "scripts/choice-trace-summarize": "46561488888eabefd42b1cfadb8779ca86e580a022c6288b14a6c2c91cafe40a",
       "scripts/ci": "284a1c7c74e343bd72a8e3a47fed259da09619fa13900bb52a209559f21f3f49",
@@ -318,7 +318,7 @@
   },
   "observations_sha256": "e40ba07d11827b48aa8c9246bd84d6c21849159983d46c47b793b5759cfbbfd8",
   "receipt": {
-    "binary_sha256": "c274c37f2b7e5291362f3d120febfd0310452abf392d4c7a2ddbbae68266c788",
+    "binary_sha256": "5f093779b832e4c694710ce1d3564420a2feb372131986d0013009cedd289681",
     "captured_exit": 0,
     "certifier": "tools/certification.py",
     "command": [
@@ -341,12 +341,12 @@
       "--engine",
       "dedup"
     ],
-    "finished_utc": "2026-10-08T06:25:44.344572+00:00",
-    "git_dirty": true,
-    "source_commit": "7d61a5f6ac0799d9d59ad11027b9f407bea72708",
-    "started_utc": "2026-10-08T06:21:29.184104+00:00",
+    "finished_utc": "2026-10-08T16:55:32.162634+00:00",
+    "git_dirty": false,
+    "source_commit": "8b53af433bce806915a10b8be55c8a66b0f38daf",
+    "started_utc": "2026-10-08T16:52:12.774627+00:00",
     "stats_sha256": "80614849ba8583af41ce62fc0a0cefdc7a5b6f22fbb482784a125e8bd19f3283",
-    "wall_seconds": 247.831
+    "wall_seconds": 193.467
   },
   "schema": "golean-certification-v1"
 }
