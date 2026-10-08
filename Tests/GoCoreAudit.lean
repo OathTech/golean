@@ -73,7 +73,7 @@ def exports : List Name := [
     -- funnel shapes, the two-way consult characterization, the two `stepFn` arm lemmas, the funnel's
     -- outcome-class congruence and its well-formedness, the envelope's lemmas (the spec floor at every
     -- member and slot, the default-tape slots, the literal singleton, gc's roundupsize floor), and the
-    -- three conversion equations; BridgeSet rows 573–583
+    -- three conversion equations; BridgeSet rows 580–590
     ``GoLean.GoCore.Machine.applyStrictOpPick_conv, ``GoLean.GoCore.Machine.Step_convCap_draw,
     ``GoLean.GoCore.Machine.applyStrictOpPick_draw,
     ``GoLean.GoCore.Machine.applyStrictOpPick_of_strictConsult?_none,
