@@ -31,7 +31,8 @@
 #
 # Plus the ENTRY-ARGUMENT controls (`--arg-int`/`--arg-bool`, 2026-10-07; the section at the end; fixture
 # Tests/wire-boundary-argbool/main.go): mixed positional calls answer, mistyped/out-of-range/wrong-arity/malformed
-# arguments refuse by name.
+# arguments refuse by name. Since BUG-119 (2026-10-08) the same refusals on `coverage-observations` and
+# `choice-trace`; since BUG-120 a missing input file refuses by name on every file-reading subcommand.
 #
 # Fixture: Tests/wire-boundary/main.go (the review's discard-call probe).
 # Fail closed: a missing binary, a failed emit, a control that runs where
@@ -616,4 +617,72 @@ for qarg in '--arg-int 1' '--arg-bool true'; do
   fi
   echo "ok [arg-quarantined $qarg] deferred to the machine: unsupported, naming the quarantine"
 done
-echo 'Wire boundary gate: PASS (11 byte-level controls + 56 unseq-node controls + 13 promotion-record controls + 16 B6 numeric-locals controls + 5 rand-intn controls + 10 entry-argument controls through the real CLI)'
+# BUG-119 (2026-10-08): the ENUMERATOR subcommands (`coverage-observations`, `choice-trace`) pass their entry
+# arguments through the same `entryArgValues` check as `native-json-run` — the same command lines refuse with the
+# same causes (exit 1; their refusals print on stderr, their stdout is the observation set / trace table) — and take
+# `--arg-bool` in the same positional order (the mixed call answers 103 on both). Before the fix an out-of-range
+# `--arg-int` wrapped silently (256 at a uint8 parameter was 0) and an `--arg-int` at a bool parameter reached the
+# machine unchecked.
+run_enum() {  # subcommand args... (the enumerator's cheapest bound: one pick per site)
+  local sub="$1"; shift
+  case "$sub" in
+    coverage-observations) "$GOLEAN" coverage-observations --input "$gate_scratch/ab.json" --function pick --max-width 1 "$@" 2>&1 ;;
+    choice-trace) "$GOLEAN" choice-trace --input "$gate_scratch/ab.json" --function pick "$@" 2>&1 ;;
+  esac
+}
+for sub in coverage-observations choice-trace; do
+  out="$(run_enum "$sub" --arg-int 1 --arg-bool true --arg-bool false --arg-int 2)" || {
+    echo "check-wire-boundary: FAIL [$sub arg-mixed] — the mixed positional call did not run (exit $?): $out" >&2; exit 1; }
+  if [[ "$sub" == coverage-observations && "$out" != *'"value":103}'* ]] \
+     || [[ "$sub" == choice-trace && "$out" != *$'\tdefault\tok\t'* ]]; then
+    echo "check-wire-boundary: FAIL [$sub arg-mixed] — expected pick(1, true, false, 2) to answer (103 / an ok trace): $out" >&2; exit 1
+  fi
+  echo "ok [$sub arg-mixed] pick --arg-int 1 --arg-bool true --arg-bool false --arg-int 2 answers"
+  for control in \
+      'arg-int-range|--arg-int 1 --arg-bool true --arg-bool false --arg-int 256|--arg-int (argument 4)|256 is out of range|parameter s|Small (uint8)' \
+      'arg-int-at-bool|--arg-int 1 --arg-int 1 --arg-bool false --arg-int 2|--arg-int (argument 2)|parameter b|has type bool' \
+      'arg-int-at-flag|--arg-int 1 --arg-bool true --arg-int 0 --arg-int 2|--arg-int (argument 3)|parameter f|has type Flag' \
+      'arg-bool-at-int|--arg-bool true --arg-bool true --arg-bool false --arg-int 2|--arg-bool (argument 1)|parameter n|has type int' \
+      'arg-arity|--arg-int 1 --arg-bool true --arg-bool false|takes 4 parameter(s), got 3'; do
+    IFS='|' read -r -a parts <<< "$control"
+    name="${parts[0]}"; read -r -a cargs <<< "${parts[1]}"
+    rc=0; out="$(run_enum "$sub" "${cargs[@]}")" || rc=$?
+    if [[ $rc -ne 1 ]]; then
+      echo "check-wire-boundary: FAIL [$sub $name] — exit $rc, expected the refusal code 1: $out" >&2; exit 1
+    fi
+    for cause in "${parts[@]:2}"; do
+      if [[ "$out" != *"$cause"* ]]; then
+        echo "check-wire-boundary: FAIL [$sub $name] — refused, but the refusal does not name '$cause': $out" >&2; exit 1
+      fi
+    done
+    echo "ok [$sub $name] refused (exit 1), naming: ${parts[*]:2}"
+  done
+done
+# BUG-120 (2026-10-08): a MISSING input file is a named refusal on every subcommand that reads one — never an
+# uncaught IO exception. native-json-run: a status:error JSON naming the path; the enumerators: their stderr line;
+# choice-trace --batch: its manifest. Each must exit 1 and name the path and the cause.
+missing="$gate_scratch/no-such-wire.json"
+[[ ! -e "$missing" ]] || { echo "check-wire-boundary: FAIL [missing-input] — $missing exists" >&2; exit 1; }
+for sub in native-json-run coverage-observations choice-trace; do
+  rc=0; out="$("$GOLEAN" "$sub" --input "$missing" --function probe 2>&1)" || rc=$?
+  if [[ $rc -ne 1 || "$out" != *"$missing: cannot read input"* || "$out" == *'uncaught'* ]]; then
+    echo "check-wire-boundary: FAIL [$sub missing-input] — expected exit 1 and a refusal naming the path (exit $rc): $out" >&2; exit 1
+  fi
+  if [[ "$sub" == native-json-run && "$out" != *'"status":"error"'* ]]; then
+    echo "check-wire-boundary: FAIL [$sub missing-input] — the refusal is not a status:error JSON: $out" >&2; exit 1
+  fi
+  echo "ok [$sub missing-input] refused (exit 1), naming the path"
+done
+rc=0; out="$("$GOLEAN" choice-trace --batch "$gate_scratch/no-such-manifest.tsv" --out "$gate_scratch/batch-out.tsv" 2>&1)" || rc=$?
+if [[ $rc -ne 1 || "$out" != *"no-such-manifest.tsv: cannot read input"* || -e "$gate_scratch/batch-out.tsv" ]]; then
+  echo "check-wire-boundary: FAIL [choice-trace missing-manifest] — expected exit 1, a refusal naming the manifest, and no results file (exit $rc): $out" >&2; exit 1
+fi
+echo "ok [choice-trace missing-manifest] refused (exit 1), naming the path"
+# A batch case whose wire is missing is that case's named ERROR line, the batch continuing.
+printf 'missing-wire\t%s\tprobe\t-\tdefault\n' "$missing" > "$gate_scratch/batch.tsv"
+rc=0; out="$("$GOLEAN" choice-trace --batch "$gate_scratch/batch.tsv" --out "$gate_scratch/batch-out.tsv" 2>&1)" || rc=$?
+if [[ $rc -ne 0 ]] || ! grep -q $'^missing-wire\t-\tERROR\t.*cannot read input' "$gate_scratch/batch-out.tsv"; then
+  echo "check-wire-boundary: FAIL [choice-trace batch missing-wire] — expected the case's ERROR line naming the cause (exit $rc): $out $(cat "$gate_scratch/batch-out.tsv" 2>/dev/null)" >&2; exit 1
+fi
+echo "ok [choice-trace batch missing-wire] the case's ERROR line names the cause"
+echo 'Wire boundary gate: PASS (11 byte-level controls + 56 unseq-node controls + 13 promotion-record controls + 16 B6 numeric-locals controls + 5 rand-intn controls + 10 entry-argument controls + 12 enumerator entry-argument controls + 5 missing-input controls through the real CLI)'

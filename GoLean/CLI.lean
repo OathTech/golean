@@ -110,6 +110,31 @@ def entryArgValues (program : GoCore.Program) (name : String) (args : Array Entr
         throw s!"{arg.flag} (argument {pos + 1}): parameter {pname} of entry function {name} has type {shown}, which {arg.flag} cannot supply"
   return out
 
+/-- The OS error's text on ONE line (Lean's `IO.Error` rendering appends
+`\n  file: <path>`; a refusal line must stay a line). -/
+private def oneLine (text : String) : String :=
+  " ".intercalate ((text.splitOn "\n").map String.trimAscii |>.map toString)
+
+/-- Read a subcommand's input file (a wire, a manifest) as bytes, CATCHING
+the OS error: a missing or unreadable `--input` is a refusal that names
+the path and the OS cause (BUG-120, 2026-10-08), never an IO exception
+escaping `main` as the runtime's uncaught-exception message. Each
+subcommand renders the `.error` in its own refusal channel
+(`native-json-run`: a `status:error` JSON on stdout; `coverage-observations`
+and `choice-trace`: their stderr line, exit 1). -/
+def readInputBytes (input : FilePath) : IO (Except String ByteArray) := do
+  try
+    return .ok (← IO.FS.readBinFile input)
+  catch err =>
+    return .error s!"{input}: cannot read input: {oneLine (toString err)}"
+
+/-- The text twin of `readInputBytes` (a TSV manifest; BUG-120). -/
+def readInputText (input : FilePath) : IO (Except String String) := do
+  try
+    return .ok (← IO.FS.readFile input)
+  catch err =>
+    return .error s!"{input}: cannot read input: {oneLine (toString err)}"
+
 structure RunArgs where
   input : Option FilePath := none
   functionName : Option String := none
@@ -133,7 +158,7 @@ private def usage : String :=
   "  golean native-json-run --input <file> --function <name> [--arg-int <n> | --arg-bool <true|false> ...] [--fuel <n>] [--choices <n,n,...>]\n" ++
   "      (entry arguments bind the parameters positionally, in command-line order; each is checked against its parameter type)\n" ++
   "  golean observation-eq --left <json> --right <json>\n" ++
-  "  golean coverage-observations --input <file> --function <name> [--arg-int <n> ...] [--fuel <n>] [--engine dedup]\n" ++
+  "  golean coverage-observations --input <file> --function <name> [--arg-int <n> | --arg-bool <true|false> ...] [--fuel <n>] [--engine dedup]\n" ++
   "      [--max-width <B>] [--max-sites <D>] [--cap <N>] [--work-cap <W>] [--expect-status <ok|panic|ok,panic|race>]
       [--allow-nonterm-iters <per-branch-loop-re-entries>] [--backedge <full|k>]\n"
 
@@ -573,7 +598,12 @@ private def runNativeJsonRun (args : List String) : IO UInt32 := do
           -- strict parser (GoLean/StrictJsonParse.lean): duplicate object
           -- keys, unpaired surrogate escapes and invalid UTF-8 refuse HERE,
           -- before any schema validator sees a (collapsed) object.
-          let bytes ← IO.FS.readBinFile input
+          -- BUG-120: a missing/unreadable wire refuses by name.
+          match ← readInputBytes input with
+          | .error err =>
+              IO.println (cliErrorJson err).compress
+              return 1
+          | .ok bytes =>
           match GoLean.StrictJson.parseBytes bytes GoLean.StrictJson.wireNestingDepth with
           | .error err =>
               IO.println (cliErrorJson s!"{input}: JSON parse error: {err}").compress
@@ -793,7 +823,12 @@ singleton (lane d's every-path-refuses claim admits no value members). -/
 structure EnumArgs where
   input : Option FilePath := none
   functionName : Option String := none
-  args : Array Int := #[]
+  /-- The entry arguments in command-line order (`--arg-int` and
+  `--arg-bool` interleaved), checked against the entry's parameters by
+  `entryArgValues` before setup — the same check and refusals as
+  `native-json-run` (BUG-119, 2026-10-08; before it an out-of-range
+  `--arg-int` wrapped silently and a mistyped one reached the machine). -/
+  args : Array EntryArg := #[]
   fuel : Nat := 10000000
   /-- `B`: the mechanically-checked CAP on every consumption site's
   COMPUTED bound (slice 4 — the engine explores `[0, bound)` per site;
@@ -855,7 +890,9 @@ private def parseEnumArgs : List String → EnumArgs → Except String EnumArgs
   | "--function" :: name :: rest, cfg =>
       parseEnumArgs rest { cfg with functionName := some name }
   | "--arg-int" :: value :: rest, cfg => do
-      parseEnumArgs rest { cfg with args := cfg.args.push (← parseJsonInt "--arg-int" value) }
+      parseEnumArgs rest { cfg with args := cfg.args.push (.int (← parseJsonInt "--arg-int" value)) }
+  | "--arg-bool" :: value :: rest, cfg => do
+      parseEnumArgs rest { cfg with args := cfg.args.push (.bool (← parseBoolLiteral value)) }
   | "--fuel" :: value :: rest, cfg => do
       parseEnumArgs rest { cfg with fuel := (← parseJsonNat "--fuel" value) }
   | "--max-width" :: value :: rest, cfg => do
@@ -1773,8 +1810,13 @@ private def runCoverageObservations (args : List String) : IO UInt32 := do
             IO.eprintln "coverage-observations: --max-width must be >= 1 (an empty pick alphabet explores nothing)"
             return 2
           let input := absoluteFrom cwd input
-          -- BUG-110: strict byte parse (see runNativeJsonRun).
-          let bytes ← IO.FS.readBinFile input
+          -- BUG-110: strict byte parse (see runNativeJsonRun). BUG-120: a
+          -- missing/unreadable wire refuses by name.
+          match ← readInputBytes input with
+          | .error err =>
+              IO.eprintln s!"coverage-observations: {err}"
+              return 1
+          | .ok bytes =>
           match GoLean.StrictJson.parseBytes bytes GoLean.StrictJson.wireNestingDepth with
           | .error err =>
               IO.eprintln s!"coverage-observations: {input}: JSON parse error: {err}"
@@ -1785,7 +1827,15 @@ private def runCoverageObservations (args : List String) : IO UInt32 := do
                   IO.eprintln s!"coverage-observations: {input}: {err}"
                   return 1
               | .ok program =>
-                  match enumSetup program functionName (cfg.args.map GoValue.int) with
+                  -- BUG-119: the entry arguments pass `native-json-run`'s
+                  -- check (`entryArgValues`) before setup — the same
+                  -- command lines refuse with the same causes.
+                  match entryArgValues program functionName cfg.args with
+                  | .error err =>
+                      IO.eprintln s!"coverage-observations: {input}: {err}"
+                      return 1
+                  | .ok entryArgs =>
+                  match enumSetup program functionName entryArgs with
                   | .error err =>
                       IO.eprintln s!"coverage-observations: setup failed: {renderStop err}"
                       return 1

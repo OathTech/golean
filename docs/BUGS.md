@@ -7820,11 +7820,12 @@ and 100 vs 104 — the witness file records the pre-change membership-shape run:
 singleton `n` was a gc member for every byte conversion — but the membership lane's singleton guard made them red
 there too).
 
-## BUG-119 — `golean coverage-observations --arg-int` is UNCHECKED against the entry parameters: an out-of-range literal wraps SILENTLY at its parameter's kind, and an `--arg-int` at a `bool`/`string`/interface parameter reaches the machine unchecked — `native-json-run` refuses both by name since train r73 [CLI; tool interface; PREDATES lane `lane/argbool-layout-1007` (the lane left `coverage-observations` unchanged by design); found by the lane's Opus adversarial audit (note), 2026-10-07]
+## BUG-119 — `golean coverage-observations --arg-int` is UNCHECKED against the entry parameters: an out-of-range literal wraps SILENTLY at its parameter's kind, and an `--arg-int` at a `bool`/`string`/interface parameter reaches the machine unchecked — `native-json-run` refuses both by name since train r73 [CLI; tool interface; PREDATES lane `lane/argbool-layout-1007` (the lane left `coverage-observations` unchanged by design); found by the lane's Opus adversarial audit (note), 2026-10-07; FIXED 2026-10-08, lane `fix/bug119-120-1008`]
 
-- Status: open
+- Status: fixed ([AGENT] fix worker, lane `fix/bug119-120-1008`, 2026-10-08, under [USER] Mike 2026-10-08 «While
+  things are calm, can we fix some bugs?», relayed by the [AGENT] coordinator. The fix lands with the lane's merge.)
 - Pinned-by: none (a CLI-interface gap; no corpus row passes an out-of-range or ill-typed `--arg-int` to
-  `coverage-observations`)
+  `coverage-observations`; the fix's controls are in `scripts/check-wire-boundary`)
 - Discovered: 2026-10-07, the argbool-layout lane's Opus adversarial audit (a note, not a blocking finding), as relayed
   by the [AGENT] coordinator; rowed by the [AGENT] train worker r73 — «every detected gap is rowed», [USER] Mike
   2026-09-03, relayed.
@@ -7844,10 +7845,35 @@ FIX PLAN (queued, [AGENT]; PENDING [USER] scheduling): route `coverage-observati
 `scripts/check-wire-boundary` for that subcommand. Fix criterion: the two subcommands refuse the same command lines
 with the same causes.
 
-## BUG-120 — a MISSING `--input` file makes `golean native-json-run` die with an UNCAUGHT IO exception instead of a named refusal [CLI; tool interface; PREDATES lane `lane/argbool-layout-1007`; found by the lane's Opus adversarial audit (note), 2026-10-07]
+FIX (2026-10-08, lane `fix/bug119-120-1008`): `coverage-observations` AND `choice-trace` (the same unchecked
+`--arg-int` → `enumSetup` path, in `GoLean/ChoiceTrace.lean`: single-case mode and `--batch`) now pass their entry
+arguments through `entryArgValues` BEFORE `enumSetup` — the same refusals with the same texts (the flag, argument
+position, parameter name and type; out-of-range literal; arity; unknown entry function), exit 1. The refusal CHANNEL
+is each subcommand's own ([AGENT] decision): `native-json-run` prints a `status:error` JSON on stdout;
+`coverage-observations` and `choice-trace` print their `<subcommand>: <wire>: <cause>` line on STDERR, as every other
+refusal of theirs does — their stdout is the observation set / the trace table, which the harness reads line by line
+(a `status:error` JSON there would be one more «member» line to a consumer that ignored the exit code); `--batch`
+records a case's refusal as its named `ERROR` line, as for any other case failure. Both enumerators also gain
+`--arg-bool <true|false>` (parity: the same literal parser `parseBoolLiteral`, positional interleaving with
+`--arg-int`); the apparatus does not emit it (the manifest's args column is ints, and `tools/certification.py`'s flag
+whitelist refuses it by name — fail closed, left unchanged: [AGENT], no apparatus change in a CLI fix).
+`choice-trace`'s real-engine cross-check runs `runProgramPoolOutM` on the checked values (was
+`runProgramPoolOutIntsM` on the raw ints — the same function after `map GoValue.int`). Zero movement: every one of
+the 493 manifest rows with an `--arg-int` (491 strict, 2 membership) was run through `native-json-run`,
+`choice-trace` (two streams) and `coverage-observations` (the row's own params; strict rows under
+`detector-soundness`'s `--strict-enum` default) with main's binary (`6a90ba8d`, provenance-identical) and the lane's:
+stdout, stderr and exit code byte-identical on all 493 × 3 (one row, `noodler/budget/loop-100k`, timed out at 180 s
+under both binaries; re-run at `--work-cap 1000`, byte-identical, past the argument check) —
+`docs/evidence/2026-10-08_bug119-120/`. Controls: 12 enumerator entry-argument controls in
+`scripts/check-wire-boundary` (per subcommand: the mixed `--arg-int`/`--arg-bool` call answers; out-of-range,
+int-at-bool, int-at-declared-bool, bool-at-int and arity refuse by name, exit 1).
 
-- Status: open
-- Pinned-by: none (no corpus row runs a missing wire; the harness always writes the wire before running)
+## BUG-120 — a MISSING `--input` file makes `golean native-json-run` die with an UNCAUGHT IO exception instead of a named refusal [CLI; tool interface; PREDATES lane `lane/argbool-layout-1007`; found by the lane's Opus adversarial audit (note), 2026-10-07; FIXED 2026-10-08, lane `fix/bug119-120-1008`]
+
+- Status: fixed ([AGENT] fix worker, lane `fix/bug119-120-1008`, 2026-10-08, under [USER] Mike 2026-10-08 «While
+  things are calm, can we fix some bugs?», relayed by the [AGENT] coordinator. The fix lands with the lane's merge.)
+- Pinned-by: none (no corpus row runs a missing wire; the harness always writes the wire before running; the fix's
+  controls are in `scripts/check-wire-boundary`)
 - Discovered: 2026-10-07, the argbool-layout lane's Opus adversarial audit (a note, not a blocking finding), as relayed
   by the [AGENT] coordinator; rowed by the [AGENT] train worker r73 — «every detected gap is rowed», [USER] Mike
   2026-09-03, relayed.
@@ -7863,6 +7889,16 @@ WHERE: `GoLean/CLI.lean`, the `native-json-run` handler (`let bytes ← IO.FS.re
 FIX PLAN (queued, [AGENT]; PENDING [USER] scheduling): catch the read's IO error and emit `cliErrorJson
 s!"{input}: cannot read input: {err}"` (exit 1); a missing-file control in `scripts/check-wire-boundary`. Fix
 criterion: a missing `--input` prints a `status:error` JSON naming the path.
+
+FIX (2026-10-08, lane `fix/bug119-120-1008`): the check the entry asked for found the same unguarded read in EVERY
+file-reading subcommand — `native-json-run`, `coverage-observations`, and `choice-trace` (its wire, its `--batch`
+manifest and the prior results file it resumes from); `observation-eq` reads no file. All now read through
+`readInputBytes` / `readInputText` (`GoLean/CLI.lean`), which catch the OS error and refuse naming the path and the
+cause on one line (`<path>: cannot read input: <OS error>`), exit 1: `native-json-run` as a `status:error` JSON,
+the enumerators on their stderr line, a `--batch` case with a missing wire as that case's named `ERROR` line (the
+batch continuing, as for any case failure), a missing `--batch` manifest before any results file is created.
+Before: `uncaught exception: no such file or directory …` from the runtime, exit 1, on all three (reproduced on
+main's binary). Controls: 5 missing-input controls in `scripts/check-wire-boundary`.
 
 ## BUG-121 — zero-copy ALIASING of `[]byte(s)` is observable through element-address identity: two conversions of one string share their backing under gc (`&b[0] == &c[0]` is TRUE), the machine always allocates fresh (FALSE) [semantic core; allocation identity; PREDATES lane `lane/conv-cap-1007` — `main` fresh-allocates too; found by the lane's Fable adversarial audit, 2026-10-07]
 

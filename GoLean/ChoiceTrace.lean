@@ -955,7 +955,7 @@ def StreamReport.tsvLine (id : String) (r : StreamReport) : String :=
 /-- Trace one stream and run the driver-agreement cross-checks:
 `CLI.enumRunProgram`'s status/leftover meter and the real engine's
 observation. -/
-def traceStream (program : Program) (functionName : String) (args : Array Int)
+def traceStream (program : Program) (functionName : String) (args : Array GoValue)
     (ep : CLI.EnumProgram) (fuel : Nat) (spec : String) :
     Except String (StreamReport × RunOutcome) := do
   let stream ← parseStream spec
@@ -973,7 +973,7 @@ def traceStream (program : Program) (functionName : String) (args : Array Int)
         (some (if leftover.isEmpty then (none : Option Nat) else some (stream.length - leftover.length)) : Option (Option Nat)))
     | .error (e, out) => (e.status, (CLI.observationOfRunOut program.typeDefs.nameOf? (.error (e, out))).compress, none)
   let realObs := (CLI.observationOfRunOut program.typeDefs.nameOf?
-    (runProgramPoolOutIntsM fuel program functionName args stream)).compress
+    (runProgramPoolOutM fuel program functionName args stream)).compress
   let mut agree : List String := []
   if enumStatus != out.status then
     agree := agree ++ [s!"status: tracer {out.status} vs enumerator {enumStatus}"]
@@ -1010,7 +1010,11 @@ structure CaseSpec where
 
 def loadProgram (wire : String) : IO (Except String Program) := do
   -- BUG-110: the same strict byte parse as the CLI's production entries.
-  let bytes ← IO.FS.readBinFile wire
+  -- BUG-120: a missing/unreadable wire is a named refusal, not an
+  -- escaping IO exception.
+  match ← CLI.readInputBytes wire with
+  | .error err => return .error err
+  | .ok bytes =>
   match GoLean.StrictJson.parseBytes bytes GoLean.StrictJson.wireNestingDepth with
   | .error err => return .error s!"{wire}: JSON parse error: {err}"
   | .ok json =>
@@ -1027,13 +1031,17 @@ def runCase (spec : CaseSpec) (fuel : Nat) : IO (List String × List String) := 
   match ← loadProgram spec.wire with
   | .error e => return ([errLine e], [])
   | .ok program =>
-    match CLI.enumSetup program spec.functionName (spec.args.map GoValue.int) with
+    -- BUG-119: the manifest's ints pass the CLI's entry-argument check.
+    match CLI.entryArgValues program spec.functionName (spec.args.map .int) with
+    | .error e => return ([errLine s!"{spec.wire}: {e}"], [])
+    | .ok entryArgs =>
+    match CLI.enumSetup program spec.functionName entryArgs with
     | .error e => return ([errLine s!"setup failed: {e.status}: {e.message}"], [])
     | .ok ep =>
         let mut lines : List String := []
         let mut dump : List String := []
         for st in spec.streams do
-          match traceStream program spec.functionName spec.args ep fuel st with
+          match traceStream program spec.functionName entryArgs ep fuel st with
           | .error e => lines := lines ++ [errLine s!"stream {st}: {e}"]
           | .ok (r, out) =>
               lines := lines ++ [r.tsvLine spec.id]
@@ -1057,8 +1065,11 @@ def parseCaseLine (line : String) : Except String CaseSpec :=
 goes (partial results survive an interrupted run); the header is written
 when the file is created. -/
 def runBatch (manifestPath outPath : String) (dumpPath : Option String) (fuel : Nat)
-    (skip take : Nat) : IO Nat := do
-  let contents ← IO.FS.readFile manifestPath
+    (skip take : Nat) : IO (Except String Nat) := do
+  -- BUG-120: an unreadable manifest / prior results file refuses by name.
+  let contents ← match ← CLI.readInputText manifestPath with
+    | .error err => return .error err
+    | .ok c => pure c
   let lines := (contents.splitOn "\n").filter (fun l => l != "" && !l.startsWith "#")
   let lines := (lines.drop skip).take take
   let exists_ ← System.FilePath.pathExists outPath
@@ -1067,7 +1078,9 @@ def runBatch (manifestPath outPath : String) (dumpPath : Option String) (fuel : 
   -- case's lines are appended in one write, so presence = complete).
   let done : List String ←
     if exists_ then do
-      let prior ← IO.FS.readFile outPath
+      let prior ← match ← CLI.readInputText outPath with
+        | .error err => return .error err
+        | .ok c => pure c
       pure ((prior.splitOn "\n").filterMap fun l =>
         match l.splitOn "\t" with
         | id :: _ => if id == "id" || id == "" then none else some id
@@ -1092,13 +1105,13 @@ def runBatch (manifestPath outPath : String) (dumpPath : Option String) (fuel : 
         if let some dp := dumpPath then
           IO.FS.withFile dp .append fun h => for l in dump do h.putStrLn l
     n := n + 1
-  return n
+  return .ok n
 
 /-! ## CLI -/
 
 private def usage : String :=
   "usage:\n" ++
-  "  golean choice-trace --input <wire.json> --function <name> [--arg-int <n> ...] [--fuel <n>]\n" ++
+  "  golean choice-trace --input <wire.json> --function <name> [--arg-int <n> | --arg-bool <true|false> ...] [--fuel <n>]\n" ++
   "      [--stream <spec>]...      spec: default | n,n,... | rand:<seed>:<len>   (default: the empty stream)\n" ++
   "      [--trace]                 also print every consumption (idx phase site bound streamValue pick violations)\n" ++
   "  golean choice-trace --batch <manifest.tsv> --out <results.tsv> [--dump <consumptions.tsv>] [--fuel <n>] [--skip <k>] [--take <n>]\n" ++
@@ -1108,7 +1121,9 @@ private def usage : String :=
 structure Args where
   input : Option String := none
   functionName : Option String := none
-  args : Array Int := #[]
+  /-- Entry arguments in command-line order, checked by
+  `CLI.entryArgValues` (BUG-119). -/
+  args : Array CLI.EntryArg := #[]
   fuel : Nat := 10000000
   streams : List String := []
   trace : Bool := false
@@ -1127,8 +1142,10 @@ private def parseArgs : List String → Args → Except String Args
   | "--function" :: f :: rest, a => parseArgs rest { a with functionName := some f }
   | "--arg-int" :: v :: rest, a =>
       match v.toInt? with
-      | some i => parseArgs rest { a with args := a.args.push i }
+      | some i => parseArgs rest { a with args := a.args.push (.int i) }
       | none => .error s!"--arg-int: not an integer: {v}"
+  | "--arg-bool" :: v :: rest, a => do
+      parseArgs rest { a with args := a.args.push (.bool (← CLI.parseBoolLiteral v)) }
   | "--fuel" :: v :: rest, a =>
       match v.toNat? with
       | some n => parseArgs rest { a with fuel := n }
@@ -1164,9 +1181,13 @@ def main (argv : List String) : IO UInt32 := do
             IO.eprintln s!"--batch needs --out <results.tsv>\n{usage}"
             return 2
         | some out =>
-            let n ← runBatch manifest out a.dump a.fuel a.skip a.take
-            IO.eprintln s!"choice-trace: {n} case(s) traced into {out}"
-            return 0
+            match ← runBatch manifest out a.dump a.fuel a.skip a.take with
+            | .error e =>
+                IO.eprintln s!"choice-trace: {e}"
+                return 1
+            | .ok n =>
+                IO.eprintln s!"choice-trace: {n} case(s) traced into {out}"
+                return 0
     | none =>
       match a.input, a.functionName with
       | some input, some fn =>
@@ -1175,7 +1196,13 @@ def main (argv : List String) : IO UInt32 := do
               IO.eprintln s!"choice-trace: {e}"
               return 1
           | .ok program =>
-            match CLI.enumSetup program fn (a.args.map GoValue.int) with
+            -- BUG-119: `native-json-run`'s entry-argument check, by name.
+            match CLI.entryArgValues program fn a.args with
+            | .error e =>
+                IO.eprintln s!"choice-trace: {input}: {e}"
+                return 1
+            | .ok entryArgs =>
+            match CLI.enumSetup program fn entryArgs with
             | .error e =>
                 IO.eprintln s!"choice-trace: setup failed: {e.status}: {e.message}"
                 return 1
@@ -1184,7 +1211,7 @@ def main (argv : List String) : IO UInt32 := do
                 let mut rc : UInt32 := 0
                 IO.println tsvHeader
                 for st in streams do
-                  match traceStream program fn a.args ep a.fuel st with
+                  match traceStream program fn entryArgs ep a.fuel st with
                   | .error e =>
                       IO.eprintln s!"choice-trace: stream [{st}]: {e}"
                       rc := 1

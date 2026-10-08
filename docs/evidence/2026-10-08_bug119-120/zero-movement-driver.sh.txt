@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# zero-movement check for one manifest row: main's vs the lane's binary
+set -u
+ROOT="$(pwd -P)"   # run from the lane worktree root
+line="$1"
+IFS=$'\t' read -r id go_dir fn arg_ints status features reason lane why params <<< "$line"
+d="$ROOT/.tmp/zm/out/${id//\//__}"; mkdir -p "$d"
+fe=()
+[[ "$id" == "init/hidden-dep-order" ]] && fe+=(--allow-hidden-dep-init-order)
+if ! (cd "$ROOT" && "$ROOT/.tmp/nf" ${fe[@]+"${fe[@]}"} --dir "$go_dir" --out "$d/wire.json" > "$d/fe.txt" 2>&1); then
+  echo -e "$id\tFRONTEND-REFUSED"; exit 0
+fi
+ints=(); IFS=',' read -r -a vs <<< "$arg_ints"; for v in "${vs[@]}"; do ints+=(--arg-int "$v"); done
+# enumeration params: membership rows their own; others detector-soundness's --strict-enum default
+width=4 sites=32 cap=512 work=4000000 backedge=1 engine="" iters="" statuses="$status"
+if [[ "$lane" != "strict" ]]; then
+  width="" sites=8 cap=64 work=200000 backedge=""
+  IFS=',' read -r -a kvs <<< "$params"
+  for kv in "${kvs[@]}"; do k="${kv%%=*}"; v="${kv#*=}"
+    case "$k" in width) width=$v;; sites) sites=$v;; cap) cap=$v;; work) work=$v;; backedge) backedge=$v;; engine) engine=$v;; iters) iters=$v;; statuses) statuses=$v;; esac
+  done
+fi
+enum=(coverage-observations --input "$d/wire.json" --function "$fn" --max-width "$width" --max-sites "$sites" --cap "$cap" --work-cap "$work" --expect-status "${statuses//+/,}" "${ints[@]}")
+[[ -n "$backedge" ]] && enum+=(--backedge "$backedge")
+[[ -n "$engine" ]] && enum+=(--engine "$engine")
+[[ -n "$iters" ]] && enum+=(--allow-nonterm-iters "$iters")
+verdict=""
+for which in main lane; do
+  if [[ $which == main ]]; then B="$ROOT/.tmp/golean-main"; else B="$ROOT/.lake/build/bin/golean"; fi
+  timeout 60 "$B" native-json-run --input "$d/wire.json" --function "$fn" "${ints[@]}" > "$d/$which.run.out" 2> "$d/$which.run.err"; echo $? > "$d/$which.run.rc"
+  timeout 120 "$B" choice-trace --input "$d/wire.json" --function "$fn" "${ints[@]}" --stream default --stream 1,0,1 > "$d/$which.trace.out" 2> "$d/$which.trace.err"; echo $? > "$d/$which.trace.rc"
+  timeout 180 "$B" "${enum[@]}" > "$d/$which.enum.out" 2> "$d/$which.enum.err"; echo $? > "$d/$which.enum.rc"
+done
+for k in run trace enum; do
+  for f in out err rc; do
+    cmp -s "$d/main.$k.$f" "$d/lane.$k.$f" || verdict="$verdict DIFF:$k.$f"
+  done
+  verdict="$verdict $k=rc$(cat "$d/lane.$k.rc")"
+done
+echo -e "$id\t$lane\t${verdict# }"
