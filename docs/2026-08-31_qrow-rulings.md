@@ -2009,3 +2009,21 @@ golean-logic's next batch).
 Train: `train/r74` = the lane's 11 commits cherry-picked onto main `a2c83b82` (conflicts: BridgeSet's RE-PIN block and
 rows, BUGS.md order, the changelog row order, the certified record — HEAD's, provenance only — all mechanical), the
 renumbering commit, and this records commit.
+
+**Merge train r74 — the 5a record** ([AGENT] train worker, 2026-10-08). Pre-merge main `a2c83b82` →
+`refs/snapshots/r74/main`; train tip `4f6ee2c9` fast-forwarded; primary build `scripts/build-certified` EXIT=0
+(binary `b6074d6c…` → `c274c37f…`). `release-check --base refs/snapshots/r74/main` EXIT=2 — «STALE certification:
+changed dependency build/files/GoLean/CLI.lean» (expected). `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --slow`
+(start load 13.9/16.9/22.5) EXIT=1, 1588 s, `RESULT: FAIL` on EXACTLY the 5a pair: `certificate provenance` STALE and
+its echo `imported-goose/channel/google-search` PASS → FAIL (membership; 3917 = 3676 / 241 at the run); every other
+step ok, incl. package-correct method identity, wire boundary, pool spec at LANDED=M5 (48 discharged, 0 owed), semantic
+equations, core totality audit, core build warning-free, frontend pins, inittask self-test and re-derivation, negative
+baseline no regression (394), re-pin guard (0 PASS→non-PASS); the reconciler's one HIGH is the stale certificate
+itself (report-only). The ruled condition's figure for comparison: 1588 s vs train r73's 1536 s (+3.4%; end load
+17.6/39.4/36.9). Candidate: `schema`, `claim` and `observations_sha256` IDENTICAL to the tracked record; inputs
+differ only in `build/files` (the lane's semantic sources: `GoLean/CLI.lean`, `ChoiceTrace.lean`, `EnumDedup.lean`,
+`GoCore/{BridgeSet, EnumDedupCheck, EnumDedupSound, Equations, Machine, MachineEqb, MachineSound, Multi, MultiStreams,
+Ops, PrefixFacts, State, StateWf, StepErrors, StepFn}.lean`) and `files` `scripts/choice-trace-summarize`,
+`scripts/mem-callsites.tsv`; the receipt moved (source `a02e84da` → `4f6ee2c9`, 182.12 s). INSTALLED as
+`baselines/certified/imported-goose__channel__google-search.certified.json` — a provenance refresh, not a re-pin; the
+certified set is unchanged. Tail: `docs/evidence/2026-10-08_train-r74/r74-ci-slow.tail.txt`.
