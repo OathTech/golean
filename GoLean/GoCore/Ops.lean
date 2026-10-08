@@ -4232,8 +4232,9 @@ gc realizes):
 * a LITERAL (or constant-folded) operand → `{n}` for both kinds (`walk/convert.go:296`:
   a `[n]byte`; `typecheck/expr.go` `stringtoruneslit`);
 * bytes, non-literal → `{n} ∪ {R(n)} ∪ {32 | n ≤ 32}`: the zero-copy member `n` (the
-  result never written and non-escaping — the slice ALIASES the string, unobservable by
-  construction since nothing writes), the 32-byte conversion buffer (`tmpBuf`, a written
+  result never written and non-escaping — the slice ALIASES the string, unobservable through
+  writes since nothing writes; element-address identity is a separate, unmodelled axis —
+  BUG-121), the 32-byte conversion buffer (`tmpBuf`, a written
   non-escaping result with `n ≤ 32`), and `R(n) = gcRoundupSize n` (escaping, or
   `n > 32`);
 * runes, non-literal → `{R(4n)/4} ∪ {32 | n ≤ 32}`: the 32-rune buffer for EVERY `n ≤ 32`

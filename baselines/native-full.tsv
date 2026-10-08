@@ -1,5 +1,9 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 3916 (3676 PASS / 240 FAIL)
+# cases: 3917 (3677 PASS / 240 FAIL)
+# re-pinned: 2026-10-08 [AGENT], train r74 (landing lane/conv-cap-1007; [USER] Mike 2026-10-08 «merge it», relayed) — ONE row BORN
+#   PASS, the control strings/conv-cap/bytes-named-operand-lit (`[]byte(MyS("hello"))`, a NAMED OPERAND type: the frontend emits the
+#   literal operand, cap = 5 under gc default/-l/-race and on the machine; the lane's Fable adversarial audit, item 5). Nothing else
+#   moved: 3916 + 1 = 3917; 3676 + 1 = 3677 PASS; 240 FAIL; no PASS→non-PASS. Measured by the train's scripts/ci --slow at the merged tip.
 # re-pinned: 2026-10-07 [AGENT], lane/conv-cap-1007 (rebased on main c605aa4c, train r72) — R3 / b6: the capacity of []byte(s) /
 #   []rune(s) is ChoiceSite.convCap, drawn at the strict apply over EXACTLY gc go1.26.5's measured member set per (kind, literal
 #   operand?, length) — convCapMembers, Ops.lean ([USER] Mike 2026-10-07 «yeah agree, build now», relayed; design
@@ -5855,6 +5859,7 @@ PASS	variadic/variadic-method-value-copy	-
 PASS	strings/conv-cap/bytes-lit	-
 PASS	strings/conv-cap/bytes-const-lit	-
 PASS	strings/conv-cap/bytes-named-lit	-
+PASS	strings/conv-cap/bytes-named-operand-lit	-
 PASS	strings/conv-cap/runes-lit	-
 PASS	strings/conv-cap/bytes-var-nomut-0	membership
 PASS	strings/conv-cap/bytes-var-mut-0	membership

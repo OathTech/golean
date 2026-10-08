@@ -120,6 +120,7 @@ between sweeps (the reconciler's C12 checks row COUNT, not lines).
 | Abort-line `[recovered, repanicked]` collapse (`repanicCollapse`, BUG-004 item 1 / R10a, landing chunk L3 2026-09-07) | Machine.lean `abortConsult` (the envelope statement is `repanicEqualNext`/`renderPanicHead`'s docstring), drawn by StepFn.lean's `.panicking _ .stop` arm and Multi.lean's `stepThread` tombstone arm (recorded in the abort `StepEvent`); projection arms in `seqConsumption` and `poolConsumption` | `repanicCollapseWidth` — 2 exactly at an abort whose head is recovered with an EQUAL successor payload, 1 at every other abort | only at THE ABORT of a recovered value re-panicked with an equal payload (a bound-1 consult pops nothing — every other abort consumes exactly as before) | slot 0 = COLLAPSE, the first line ends ` [recovered, repanicked]` (gc's line for `panic(r)`; the member the corpus pinned); slot 1 = ` [recovered]`, the two-line form's first line (gc's for a re-boxed equal value; every go ≤ 1.24's only form) |
 | The `[0, n)` draw (`intn`, window unit 5b, lane core/intn-pick-0930 2026-09-30; [USER] Mike, item 2 of «The raft-proofs team's subject-delta note (2026-09-30) — RULED», relayed — a GENERAL native `Intn`-style pick site; design `docs/2026-09-30_intn-pick-design.md`, decisions D1–D8 RATIFIED [USER] Mike 2026-10-01 at train r58 — «agree, land it, ratify all including the harness fix», relayed; PENDING at the lane's tip) | Machine.lean `applyStmtOp.plan`'s `.randIntn` arm (the envelope statement is `Stmt.randIntn`'s docstring, Syntax.lean; projection arm `stmtConsult?`/`intnBound?` in `seqConsumption`); reached from `math/rand.Intn` / `math/rand/v2.IntN` through the frontend's `rand-intn` primitive and the decoder's guard expansion (`GoLean/NativeToIR.lean` `expandRandIntn`) | `n` EXACTLY (the bound operand's value, `n ≥ 1`) — a consult only at `n ≥ 2` | at every `randIntn` apply with `n ≥ 2` (`n = 1` is a bound-1 consult and pops nothing; `n ≤ 0` never reaches the apply for a decoded program — the lowering's guard raises the callee's own `panic(string)` ahead of it, and a forged bound is `stuck` there); a DATA pick over a value, not a scheduling pick | slot `v` = the value `v` (the empty/exhausted tape draws 0, the least member; the singleton tape `[v]` realizes every member — `Choices.consumeAt_fst_singleton`) |
 | The `unseq` scheduler's pick (`unseqNext`, evaluation-order model v2.1 Stage B, lane core/unseq-scheduler-b-0916 2026-09-16; the mechanism RULED [USER] 2026-09-16 relayed) | StepFn.lean `stepUnseqNext`, the `.next (.unseqK … .pick _)` arm (the envelope statement is `Stmt.unseq`'s docstring, Syntax.lean; projection arm in `seqConsumption`, Machine.lean; the ONE `ready` computation is `UnseqGraph.ready`, Unseq.lean) | the number of READY occurrences, exactly — a consult only at ≥ 2 (a singleton ready set is a bound-1 consult and pops nothing) | at every pick position of a sweep frame with ≥ 2 ready occurrences (an ordinary sweep whose occurrences are forced by their edges never touches the stream); the legacy `unseqPanic` probe coexists until Stage E | slot 0 = the lowest canonical rank among the ready (the all-zero tape realizes the canonical order — today's ANF emission order); slot j = the j-th ready occurrence in declaration order |
+| The `[]byte(s)` / `[]rune(s)` capacity (`convCap`, latitude R3 / gc-verified b6, lane lane/conv-cap-1007 2026-10-07; design `docs/2026-10-07_conv-cap-design.md` D1–D8 RATIFIED [USER] Mike 2026-10-07 «yeah agree, build now», relayed; row added at train r74 — the lane added the constructor without this mirror row, reconciler C12) | Machine.lean `applyStrictOpPick` → `convCapApply` (the stream-holding funnel of the two conversion heads; the envelope statement is `convCapMembers`, Ops.lean; projection arm `strictConsult?` in `seqConsumption`) | `convCapWidth kind literal value` = the member count of `convCapMembers` — 1 to 3 (literal → 1; bytes non-literal `{n} ∪ {R(n)} ∪ {32 ∣ n ≤ 32}`; runes non-literal `{R(4n)/4} ∪ {32 ∣ n ≤ 32}`) | at every conversion apply with ≥ 2 members (a literal operand, or a length whose members coincide, is a bound-1 consult and pops nothing) | slot 0 = bytes: `n` (gc's zero-copy member, the pre-widening singleton); runes: `R(4n)/4` (the size-class member) |
 
 The race detector consumes NOTHING and replays nothing (stage B, Q2:
 `raceUpdate` folds the step's emitted `StepEvent` — the old
@@ -2292,8 +2293,8 @@ instance of R2.
   they match real Go», relayed; design `docs/2026-10-07_conv-cap-design.md`
   D2): gc realizes FOUR regimes decided by its typechecker, escape analysis
   and inlining — literal → n; non-literal never written and non-escaping →
-  n (zero-copy, the slice ALIASES the string — unobservable since nothing
-  writes); written non-escaping n ≤ 32 → the 32-element conversion buffer
+  n (zero-copy, the slice ALIASES the string — unobservable through writes; element-address identity is a separate, unmodelled axis — BUG-121;
+  gc takes zero-copy only when nothing writes); written non-escaping n ≤ 32 → the 32-element conversion buffer
   (runes: for every n ≤ 32); escaping or n > 32 → roundupsize — measured
   over 140 rows with 0 mismatches
   (`docs/evidence/2026-10-07_conv-cap-design/envelope.tsv`). The literal /
@@ -2302,7 +2303,10 @@ instance of R2.
   typechecker makes — `StrictOp.bytesFromString/runesFromString (literal :
   Bool)`, set by `strictPlan`); escape and mutation status are OPTIMIZER
   decisions, so the envelope is the union over the regimes — latitude on the
-  tape. Default tape: bytes slot 0 = n (gc's zero-copy member and the
+  tape. KNOWN OVER-ADMISSION (train r74, the audit's item 2): a non-literal
+  `[]byte(s)` that is written to (appends count as writes) never gets cap n
+  under gc when n is not a size class, yet the per-(kind, literal, n) union
+  admits n there — a per-program over-admission, like R2's. Default tape: bytes slot 0 = n (gc's zero-copy member and the
   pre-widening singleton: no byte row's observation moved), runes slot 0 =
   R(4n)/4.
 - CORRECTIONS of the pre-widening record (design note §1): (i) the
@@ -3022,6 +3026,27 @@ R-rows here at admission (register rule). Evidence for the slice-1 census: `docs
   output-order latitude at the fold. Until then, concurrent-print
   claims transfer only at registry granularity.
 
+### R19. Allocation identity of string→[]byte conversion results (zero-copy sharing) — (b) PINNED never-shared, unmodelled; gc probed NON-single-valued — BUG-121 (added 2026-10-08, train r74)
+
+- WHERE: spec#Conversions_to_and_from_a_string_type gives a `[]byte(s)`
+  result no freshness guarantee; the observable is plain pointer
+  equality of elements (`&b[0] == &c[0]`), in-language.
+- MACHINE: every conversion allocates a fresh backing (`convCapApplyAt`,
+  `Machine.lean`), so two conversions never share — the deterministic
+  NEVER-SHARED point. The capacity axis (R3, `convCap`) does not touch
+  identity: the zero-copy member's aliasing is unobservable through
+  writes; element-address identity is a separate, unmodelled axis.
+- EVIDENCE gc IS non-single-valued: under zero-copy (a non-literal operand,
+  result never written, non-escaping) two conversions of one string share
+  its bytes, and two `[]byte("hello")` literal conversions share too —
+  `&b[0] == &c[0]` is TRUE under gc go1.26.5 (default, `-gcflags=-l`,
+  `-race`) and FALSE on the machine: observed ∉ modeled, BUG-121 (the
+  program inline there; `docs/evidence/2026-10-08_train-r74/bug121-repro.txt`).
+  A written or escaping result is fresh under gc too.
+- RE-ENVELOPE: a future [USER] decision under the standing rule «semantic
+  widenings must match real Go» (BUG-121's fix plan); until then the
+  machine's fresh point is a known-≠-oracle deterministic point (§10).
+
 ## 4. Forced points — the compact list (class (c))
 
 For completeness, the main spec-mandated points the machine implements
@@ -3426,15 +3451,15 @@ had LEFT the class — C2/C3 inside the (b) list and E9 inside the
 mention, so the mentions moved out. Keep it that way: put prose in the
 history block, never in a membership line.
 
-- (a) ENVELOPED: 13 sites / 15 entries — C1, C2, C3, C4, C5, C6, C8, C12, E6
+- (a) ENVELOPED: 14 sites / 16 entries — C1, C2, C3, C4, C5, C6, C8, C12, E6
   (via E13's `unseqPanic`, zero sites of its own — the retired len/cap
   refusal row, kept as the history of what stood in for the latitude), E9,
-  E13, R2, R9a (`nilValueMethodText`), R10a (`repanicCollapse`), R18 (via
+  E13, R2, R3 (`convCap`), R9a (`nilValueMethodText`), R10a (`repanicCollapse`), R18 (via
   L1, zero new sites; its statement-granularity obligation is live).
-- (b) PINNED: **17 entries** — concurrency: C9; sequential order: E2,
+- (b) PINNED: **18 entries** — concurrency: C9; sequential order: E2,
   E3, E4, E7, E10, E11, E12; representation/runtime: R1, R8,
-  R9, R10, R11, R12, R15, R16, R17.
-- (b-n) NARROWED with recorded caveat: 7 — C7, E8, R3, R4, R5, R7, R13.
+  R9, R10, R11, R12, R15, R16, R17, R19.
+- (b-n) NARROWED with recorded caveat: 6 — C7, E8, R4, R5, R7, R13.
 - (c) FORCED: the §4 list (machine follows; BUG-005's mandated
   point — removed-before-reached never produced — CLOSED 2026-08-19
   by the (L) surgery's delete-prune); rows carrying the tag: E1, E5
@@ -3446,11 +3471,11 @@ history block, never in a membership line.
   narrowed — back since the fix round; the previous "9 → 8" was not
   derivable from the list, audit R12).
 - Known-≠-oracle deterministic points (the honesty-critical list):
-  E3, E5, E7, R3(escaping path). (BUG-104 LEFT this list 2026-09-21 at
+  E3, E5, E7, R19. (BUG-104 LEFT this list 2026-09-21 at
   Stage E family E3: its last three rows — the receive spellings and the
   method spelling — are membership sets with gc's draw inside; the entry is
   FIXED.) THREE CLASSES inside one list, stated per row: E3,
-  E7, R3 are (b)/(b-n) PINS with gc on another conforming member
+  E7, R19 are (b)/(b-n) PINS with gc on another conforming member
   (re-envelope debts, §7); **E5 is a (c) FORCED row on which gc
   DEVIATES** (L-016, [USER] ruling 2026-09-02) — it stays listed because
   the oracle disagrees with the machine there, but the disagreement is
@@ -3474,6 +3499,13 @@ history block, never in a membership line.
 ### 10.1 Movement and history (NOT membership)
 
 Nothing in this block is a class member by virtue of being named here.
+
+- **Train r74 (2026-10-08, [AGENT] train worker; lane `lane/conv-cap-1007`, R3 / b6, landed with its Fable
+  adversarial audit's records items):** R3 LEFT (b-n) for (a) — re-enveloped 2026-10-07 by the new site `convCap`
+  ((a) 13 sites / 15 entries → 14 / 16; (b-n) 7 → 6; the lane re-tagged R3's heading but not these lists, and the
+  reconciler's C10 flagged the drift); R3(escaping path) LEFT the known-≠-oracle list (gc's escaping point is a
+  member of the envelope); R19 JOINED (b) (17 → 18) and the known-≠-oracle list — allocation identity of
+  `[]byte(s)` results, gc shares where the machine allocates fresh, BUG-121 (the audit's item 1, pre-existing).
 
 - **Stage E5 AUDIT FIX ROUND (2026-09-22, [AGENT] lane `core/unseq-stage-e5-0922`; audit
   `docs/2026-09-22_unseq-stage-e5-audit.md`, dispositions the [AGENT] coordinator's; design

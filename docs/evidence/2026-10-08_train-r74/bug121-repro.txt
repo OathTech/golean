@@ -1,0 +1,13 @@
+# BUG-121 repro — [AGENT] train worker r74, 2026-10-08. Program (package main; the BUGS.md entry's three functions
+# plus `func main() { identVar(); identLit() }`), gc go1.26.5 linux/amd64 (/usr/local/go, GOTOOLCHAIN=local):
+go run .                -> true / true
+go run -gcflags=-l .    -> true / true
+go run -race .          -> true / true
+# Machine: tools/nativefrontend --dir <program> (GO111MODULE=off), then the primary checkout's golean binary
+# (main a2c83b82's semantics; built by train r73's scripts/build-certified):
+golean native-json-run --function identVar -> {"output":"false\n","schema":"golean-observation-v1","status":"ok","values":[]}
+golean native-json-run --function identLit -> {"output":"false\n","schema":"golean-observation-v1","status":"ok","values":[]}
+# Same wire, the train/r74 binary (the lane's convCap semantics, before merge): identical — the lane does not change identity.
+golean native-json-run --function identVar -> "output":"false\n", status ok
+golean native-json-run --function identLit -> "output":"false\n", status ok
+# Item 5 control (train r74): scripts/diff-one strings/conv-cap/bytes-named-operand-lit strings/conv-cap/bytes-named-lit -> 2/2 PASS

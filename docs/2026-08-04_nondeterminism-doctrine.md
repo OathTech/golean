@@ -121,7 +121,16 @@ exhaustiveness; the list below is a READER'S MIRROR of that datatype
   (`n = 1` pops nothing; `n ≤ 0` never reaches the apply — the lowering's
   guard raises the callee's own `panic(string)` ahead of it), slot `v` = the
   value `v`; a DATA pick, the envelope statement at `Stmt.randIntn`,
-  `Syntax.lean`).
+  `Syntax.lean`);
+- the `[]byte(s)` / `[]rune(s)` capacity (`convCap`, latitude inventory R3 /
+  the gc-verified project's b6, lane lane/conv-cap-1007 2026-10-07 — design
+  `docs/2026-10-07_conv-cap-design.md` D1–D8 RATIFIED [USER] Mike 2026-10-07
+  «yeah agree, build now», relayed; mirrored here at train r74 —
+  `applyStrictOpPick`'s conversion arm, `Machine.lean`; width = the member
+  count of `convCapMembers` (`Ops.lean`; EXACTLY gc go1.26.5's measured
+  member set per kind, literal operand? and length), a consult only at ≥ 2;
+  slot 0 = bytes `n` (the zero-copy member), runes `roundupsize(4n)/4`; a
+  DATA pick).
 
 **Mirror re-synced 2026-09-07** ([AGENT] landing worker, chunk L3): the
 `tryLock` and `unseqPanic` entries were missing from this list — their

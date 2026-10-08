@@ -1954,3 +1954,58 @@ negative baseline no regression — first time, no re-run needed. Round 73 close
 entry-argument check (the gc-verified request), the layout lemmas (BridgeSet rows 573–579, RE-PIN 16) and the (f3)
 scratch cleanup are on main; the two gate budgets are raised (360 s per audit subprocess, `LEAN_TIMEOUT_SECONDS`
 default 60 s); BUG-119 and BUG-120 open.
+
+### Train r74 — `[]byte(s)`/`[]rune(s)` capacity widening (R3, gc-verified b6) — RULED (2026-10-08)
+
+[USER] Mike, verbatim, relayed by the [AGENT] coordinator — cite as relayed:
+- 2026-10-07, the standing rule: «the semantic widenings should only be allowed if they match real Go» — a widening
+  admits only what the spec permits AND gc go1.26.5 realizes.
+- 2026-10-07, «yeah agree, build now» — the design `docs/2026-10-07_conv-cap-design.md`, D1–D8 ratified as
+  recommended: a new `ChoiceSite.convCap` (D1); the envelope EXACTLY the measured member sets, `gcRoundupSize` as
+  pinned gc data (D2); the literal bit on the `StrictOp` head from `Expr.stringLit` (D3); default tape bytes slot 0 = n,
+  runes slot 0 = roundupsize(4n)/4 (D4); the membership rows born red-first (D5); BridgeSet rows 335–337 re-pinned with
+  `op.convKind? = none` (D6); the dedup engine refuses the site (D7); build now behind the frozen offer `20d3946d`,
+  shipped with the next re-pin batch (D8).
+- 2026-10-07, «Agree» — the coordinator's recommendation on the build's DESIGN GATE: D4's «no pre-existing row moves»
+  was contradicted (20 PASS→FAIL flips, none an observation change — `strings.TrimSpace`'s `range []byte(s)` range
+  temp now draws a bound-3 `convCap` on every call, outrunning the strict rows' depth guard and three membership
+  widths); option (i), ROW METADATA ONLY (17 rows: 13 strict `depth=`, three e13 widths 2 → 3, one work cap), the
+  semantics as ratified, CONDITIONAL on the measured gate cost ≤ ~10% vs main's latest close. Measured: `ci --slow`
+  1484 s vs train r72's close 1487 s, **−0.2%** (`docs/evidence/2026-10-07_conv-cap/timing.tsv`).
+- 2026-10-08, «merge it» — the merge sign-off for `lane/conv-cap-1007` @ `e241987c`.
+
+Audit (as relayed by the [AGENT] coordinator): one Fable adversarial audit, **MERGE-CLEAN**, with five minor records
+items, all made in this train's records commit ([AGENT] train worker):
+1. **Pre-existing wrong answer, rowed open as BUG-121** (not introduced by the lane; `main` fresh-allocates too):
+   zero-copy aliasing is observable through element-address identity — `s := mkA(5); b := []byte(s); c := []byte(s);
+   &b[0] == &c[0]` is TRUE under gc (default, `-l`, `-race`; also for two `[]byte("hello")` literals) and FALSE on the
+   machine; the spec permits it, gc realizes it, so observed ∉ modeled (reproduced at this train,
+   `docs/evidence/2026-10-08_train-r74/bug121-repro.txt`). New latitude-inventory row R19 (allocation identity of
+   string→[]byte conversion results, (b) PINNED never-shared, unmodelled). The four «unobservable» over-claims
+   (`Ops.lean` `convCapMembers` docstring — comment only; inventory R3; design note §1 table and the `Machine.lean` plan)
+   now read «unobservable through writes; element-address identity is a separate, unmodelled axis — BUG-121». A
+   widening fix is a future [USER] decision under the standing rule.
+2. Inventory R3 and the design note's «mutation status is an OPTIMIZER decision»: a non-literal `[]byte(s)` that is
+   written to (appends count) never gets cap n under gc when n is not a size class, yet the per-(kind, literal, n)
+   union admits n — a known per-program over-admission, like R2's.
+3. The rune-length list (BUG-118, design §1) is scoped «for n ≤ 32:», plus «(and every n > 32 with 4n a size class)».
+4. Evidence README: TWO pre-existing rows shift picks on the adversarial streams, not one —
+   `builtins/e13-sibling-panic-order/bytes-conv-left-len-hoist` and `stdlib-source/builder-cap/grow-after-write`.
+5. `bytes-named-lit` tests a named TARGET type (`B("hello")`); a strict row's `why` must stay `-` (the manifest
+   refuses one), so the clarification is the subject's comment. The operand-shape control `[]byte(MyS("hello"))` was
+   trivial (the frontend emits the literal operand; gc 5 under default/`-l`/`-race`) and is BORN PASS as
+   `strings/conv-cap/bytes-named-operand-lit` (baseline 3916 → 3917, a one-row re-pin with its reason).
+
+Records beyond the five items ([AGENT] train worker, the reconciler's findings the lane introduced, records only): the
+inventory's choice-site census table and the nondeterminism doctrine's mirror gain the `convCap` entry (C12 HIGH ×2);
+the language-coverage ledger §8 tally moves to 3917 (C4 HIGH); inventory §10's class lists follow R3's re-tag (a) and
+add R19 (C10).
+
+Outcome: BUG-118 FIXED (the rune singleton cap = len was observed ∉ modeled); BUG-121 OPENED. BridgeSet: the lane's
+RE-PIN 16 is renumbered RE-PIN 17 (r73's layout follow-ups hold RE-PIN 16 and rows 573–579): rows 335–337 re-pinned,
+rows 580–590 added, rows 1–334 and 338–579 byte-identical. Changelog row r74 (a semantics change; a re-pin item for
+golean-logic's next batch).
+
+Train: `train/r74` = the lane's 11 commits cherry-picked onto main `a2c83b82` (conflicts: BridgeSet's RE-PIN block and
+rows, BUGS.md order, the changelog row order, the certified record — HEAD's, provenance only — all mechanical), the
+renumbering commit, and this records commit.

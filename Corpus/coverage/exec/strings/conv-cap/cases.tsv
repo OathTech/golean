@@ -2,6 +2,7 @@
 bytes-lit	bytesLit	-	ok	-	strings,bytes,conversions,cap
 bytes-const-lit	bytesConstLit	-	ok	-	strings,bytes,conversions,cap,constants
 bytes-named-lit	bytesNamedLit	-	ok	-	strings,bytes,conversions,cap
+bytes-named-operand-lit	bytesNamedOperandLit	-	ok	-	strings,bytes,conversions,cap,constants
 runes-lit	runesLit	-	ok	-	strings,runes,conversions,cap
 bytes-var-nomut-0	bytesVarNomut0	-	ok	-	strings,bytes,conversions,cap,nondet	membership	R3 / b6 (docs/2026-10-07_conv-cap-design.md §1; ChoiceSite.convCap): cap([]byte(s)) for a NON-LITERAL s of length 0, the result only read — gc realizes the zero-copy member 0 (cap = len; the slice aliases the string); the envelope is {0, 32} = len ∪ roundupsize(len) ∪ the 32-byte conversion buffer (n ≤ 32): one convCap consult at bound 2	width=3,members=2,sites=8
 bytes-var-mut-0	bytesVarMut0	-	ok	-	strings,bytes,conversions,cap,nondet	membership	R3 / b6 (docs/2026-10-07_conv-cap-design.md §1; ChoiceSite.convCap): cap([]byte(s)) for a NON-LITERAL s of length 0, one element written, non-escaping — gc realizes 32 (the 32-byte conversion buffer); the envelope is {0, 32}: one convCap consult at bound 2	width=3,members=2,sites=8

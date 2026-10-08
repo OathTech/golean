@@ -18,7 +18,7 @@ by the typechecker, escape analysis and inlining — none of them visible as a s
 | Operand / regime | bytes `[]byte(s)` | runes `[]rune(s)` | where (gc) |
 |---|---|---|---|
 | literal (or folded constant) operand, any regime | **n** | **n** | `walk/convert.go:296` (`[n]byte`, stack or `new`); `typecheck/expr.go:380` `stringtoruneslit` (a `[]rune{…}` literal) |
-| non-literal, result never mutated, non-escaping | **n** (zero-copy: the slice ALIASES the string) | — | `escape/escape.go:365` `OSTR2BYTESTMP`, gated on `base.Debug.ZeroCopy = 1` (the default, `base/flag.go:190`); no rune twin |
+| non-literal, result never mutated, non-escaping | **n** (zero-copy: the slice ALIASES the string — unobservable through writes; element-address identity is a separate, unmodelled axis — BUG-121) | — | `escape/escape.go:365` `OSTR2BYTESTMP`, gated on `base.Debug.ZeroCopy = 1` (the default, `base/flag.go:190`); no rune twin |
 | non-literal, mutated, non-escaping, n ≤ 32 | **32** (`tmpBuf`) | **32** (`[32]rune` buffer; for n ≤ 32 whether mutated or not) | `walk/convert.go:330–335, 354–359`; `runtime/string.go` `stringtoslicebyte`/`stringtoslicerune` |
 | non-literal, escaping, or non-escaping with n > 32 | **R(n)** | **R(4n)/4** | `rawbyteslice`/`rawruneslice` → `roundupsize(size, noscan)` (`runtime/msize.go`), the size-class table `internal/runtime/gc/sizeclasses.go` (68 classes ≤ 32768 B) then 8 KiB page rounding |
 
@@ -30,7 +30,7 @@ class and length:
 - `bytes, literal, n` = `{n}`; `runes, literal, n` = `{n}`.
 - `bytes, non-literal, n` = `{n} ∪ {R(n)} ∪ {32 | n ≤ 32}` — 1 to 3 members.
 - `runes, non-literal, n` = `{R(4n)/4} ∪ {32 | n ≤ 32}` — 1 or 2 members; **len is NOT a member** unless 4n is a
-  size class (n ∈ {0, 2, 4, 6, 8, 12, 16, 20, 24, 28, 32}).
+  size class (for n ≤ 32: n ∈ {0, 2, 4, 6, 8, 12, 16, 20, 24, 28, 32} (and every n > 32 with 4n a size class)).
 
 Corrections to the inventory's R3 record (`docs/2026-08-11_latitude-inventory.md` ~2260–2285) and the arms' comments
 (`Machine.lean` ~421–435, ~688–714): (i) «cap = len when the backing does not escape» is true only on the never-mutated
@@ -41,7 +41,10 @@ point». The machine's singleton cap = len is a gc member for every byte convers
 almost every non-literal rune conversion — today's rune arm is an observed-∉-modeled wrong answer on `cap`, and on
 the aliasing it implies (`append` on a cap-32 slice is in place; on a cap-5 one it spills).
 
-Escape/mutation status is an OPTIMIZER decision, not a program property: `probe_inline.go` has ONE source line
+Escape/mutation status is an OPTIMIZER decision, not a program property — for ESCAPE (inlining moves it); a WRITE
+(appends count as writes) is a program property: a non-literal `[]byte(s)` that is written to never gets cap n under
+gc when n is not a size class, and the per-(kind, literal, n) union admits n there anyway — a known per-program
+over-admission, like R2's (train r74, the audit's item 2): `probe_inline.go` has ONE source line
 (`return []byte(s)` in an inlinable helper) realizing 5, 32 (default build) and 8 (`-gcflags=-l`); gc's own `-m`
 output names the regimes. So the envelope is the UNION over the regimes — latitude on the tape, exactly as the inventory
 frames it. The literal/non-literal split IS a program property: the native frontend emits a literal operand as the
@@ -92,7 +95,7 @@ at the strict-apply arm through a stream-holding funnel (the `enterFramePick` id
 - `Machine.lean`: `applyStrictOpPick (s) (leafOf) (op) (vs) (ch) : Except Stop ((GoValue × Store × AccessTrace) ×
   Choices × List PickRecord)` — conversion heads with a string operand: `consumeAtE .convCap members.length ch`, then
   the fresh backing of `members[pick]` cells (the padded `buildAppendBackingValue` shape, zeroed tail — gc's `memclr`
-  and the zeroed buffers agree; zero-copy's aliasing is unobservable by construction: gc takes it only when nothing
+  and the zeroed buffers agree; zero-copy's aliasing is unobservable through writes; element-address identity is a separate, unmodelled axis — BUG-121 (train r74, the audit's item 1: gc takes zero-copy only when nothing
   writes); every other head: `(applyStrictOp …, ch, [])`. `applyStrictOp`'s two conversion arms become the `.internal`
   refusal «dispatches through applyStrictOpPick» (the `applyStmtOpCore`/`appendSlice` precedent) — one definition of
   the conversion, not two. `strictConsult? op vs : Option (ChoiceSite × Nat)`; `seqConsumption`'s `.strict` arm

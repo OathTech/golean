@@ -51,8 +51,16 @@ func bytesConstLit() int { b := []byte(k); return cap(b) }
 
 type B []byte
 
-// A literal under a named slice type: still the literal operand (D3's control row).
+// A NAMED TARGET type: the literal converted to a named slice type `B` (not a named operand type) —
+// still the literal operand, cap = n (D3's control row; the operand-shape twin is bytesNamedOperandLit).
 func bytesNamedLit() int { b := B("hello"); return cap(b) }
+
+type MyS string
+
+// A NAMED OPERAND type: `MyS("hello")` is a constant of a named string type, which the frontend emits as
+// the literal operand (`Expr.stringLit`, type main.MyS) — cap = n under gc (default, -l, -race: 5) and on
+// the machine (the literal singleton {n}). Born at train r74, the lane audit's item 5.
+func bytesNamedOperandLit() int { b := []byte(MyS("hello")); return cap(b) }
 
 func runesLit() int { r := []rune("héllo"); return cap(r) }
 

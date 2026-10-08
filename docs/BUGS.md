@@ -7804,7 +7804,7 @@ n ≤ 32 runes converts into the 32-rune stack buffer whether or not the result 
 zero-copy regime), an escaping result or n > 32 allocates `roundupsize(4n)` bytes — so `cap` is 32 for n ≤ 32
 non-escaping, `roundupsize(4n)/4` otherwise (6 for n = 5 escaping, 36 for n = 33, 104 for n = 100); the length is
 realized only for a LITERAL operand (`stringtoruneslit`) or when 4n is itself a size class
-(n ∈ {0, 2, 4, 6, 8, 12, 16, 20, 24, 28, 32}). Every non-literal rune conversion whose cap is observed (directly, or
+(for n ≤ 32: n ∈ {0, 2, 4, 6, 8, 12, 16, 20, 24, 28, 32} (and every n > 32 with 4n a size class)). Every non-literal rune conversion whose cap is observed (directly, or
 through an `append`'s aliasing) was therefore a wrong answer on `main`.
 
 FIX (this lane, design D1–D4): the two conversion heads draw `ChoiceSite.convCap` at the strict apply over
@@ -7863,3 +7863,41 @@ WHERE: `GoLean/CLI.lean`, the `native-json-run` handler (`let bytes ← IO.FS.re
 FIX PLAN (queued, [AGENT]; PENDING [USER] scheduling): catch the read's IO error and emit `cliErrorJson
 s!"{input}: cannot read input: {err}"` (exit 1); a missing-file control in `scripts/check-wire-boundary`. Fix
 criterion: a missing `--input` prints a `status:error` JSON naming the path.
+
+## BUG-121 — zero-copy ALIASING of `[]byte(s)` is observable through element-address identity: two conversions of one string share their backing under gc (`&b[0] == &c[0]` is TRUE), the machine always allocates fresh (FALSE) [semantic core; allocation identity; PREDATES lane `lane/conv-cap-1007` — `main` fresh-allocates too; found by the lane's Fable adversarial audit, 2026-10-07]
+
+- Status: open
+- Pinned-by: none (no corpus row compares element addresses of two conversion results; the program is inlined below)
+- Discovered: 2026-10-07, the conv-cap lane's Fable adversarial audit (verdict MERGE-CLEAN; this its item 1, a
+  pre-existing wrong answer, not introduced by the lane), as relayed by the [AGENT] coordinator; rowed by the [AGENT]
+  train worker r74 — «every detected gap is rowed», [USER] Mike 2026-09-03, relayed.
+
+WHAT: spec §Conversions to and from a string type gives a `[]byte(s)` result no freshness guarantee, and gc realizes
+sharing: under the zero-copy regime (`escape/escape.go` `OSTR2BYTESTMP`, a non-literal operand whose result is never
+written and does not escape) the slice ALIASES the string's bytes, so two such conversions of the SAME string share one
+backing; two `[]byte("hello")` literal conversions also compare equal under gc (that mechanism not separately
+diagnosed). Element-address
+identity observes it, in-language (no `unsafe`):
+
+```go
+func mkA(n int) string { s := ""; for i := 0; i < n; i++ { s += "a" }; return s }
+func identVar() { s := mkA(5); b := []byte(s); c := []byte(s); println(&b[0] == &c[0]) }
+func identLit() { b := []byte("hello"); c := []byte("hello"); println(&b[0] == &c[0]) }
+```
+
+gc go1.26.5 prints `true` for both, under the default build, `-gcflags=-l` and `-race`; the machine (`golean
+native-json-run` on the frontend's wire, main's binary as built by train r73) prints `false` for both — observed ∉
+modeled (`docs/evidence/2026-10-08_train-r74/bug121-repro.txt`; the auditor's own probe was the scratch
+`.tmp/audit-cc/ident.json`, pruned at train r74's close). The capacity axis (R3, `ChoiceSite.convCap`) does NOT
+cover this: the zero-copy member's aliasing is unobservable through WRITES (gc takes zero-copy only when nothing
+writes), but element-address identity is a separate, unmodelled axis — the four «unobservable» claims (R3 in the latitude inventory, the
+conv-cap design note twice, the `convCapMembers` docstring in `Ops.lean`) were corrected to say so at train r74, and the
+inventory rows the axis as R19.
+
+WHERE: `GoLean/GoCore/Machine.lean` `convCapApplyAt` (every conversion allocates a fresh backing); the latitude
+inventory R19.
+
+FIX PLAN (NOT scheduled; a widening is a future [USER] decision under the standing rule «semantic widenings must match
+real Go», [USER] Mike 2026-10-07, relayed): model the shared-backing member (an identity choice at the zero-copy
+regime, read-only by construction), or keep the fresh-allocation pin and record the deviation as an R15-style
+version-tracked red row. Fix criterion: a corpus row over the program above PASSES with gc's `true` in the modeled set.
