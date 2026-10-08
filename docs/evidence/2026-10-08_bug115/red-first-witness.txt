@@ -1,0 +1,76 @@
+# Red-first witness — maps/multi-target on main 6a90ba8d vs the lane (frontend export; lane fix/bug115-map-multiassign-1008, 2026-10-08)
+# main's frontend = GO111MODULE=off go build ./tools/nativefrontend at /home/dev/projects/golean (6a90ba8d); the lane's = the same at the lane tree.
+# Listed: every declaration the export marks 'unsupported' (the per-declaration quarantine), per binary.
+main: unsupported declarations = 14
+  rhsCallEffect -> map element as assignment target outside a single assignment
+  nilMapVsRhsPanic -> map element as assignment target outside a single assignment
+  nilMapSecondTarget -> map element as assignment target outside a single assignment
+  mapAndSliceSwap -> map element as assignment target outside a single assignment
+  nilMapThenSliceOob -> map element as assignment target outside a single assignment
+  sliceOobThenNilMap -> map element as assignment target outside a single assignment
+  keyPanicBeforeNilStore -> map element as assignment target outside a single assignment
+  multiValueCall -> map element as assignment target outside a single assignment
+  targetCallOrder -> map element as assignment target outside a single assignment
+  commaOkAssertMapTarget -> map element as assignment target outside a single assignment
+  commaOkLookupMapTarget -> map element as assignment target outside a single assignment
+  interfaceElemTuple -> map element as assignment target outside a single assignment
+  selectRecvMapTarget -> map element as assignment target outside a single assignment
+  selectRecvMapIfaceElem -> map element as assignment target outside a single assignment
+new: unsupported declarations = 0
+
+# The 5 parenthesized spellings (parenTupleTarget, parenSingleTarget, parenCompound, parenIncDec) EXPORTED on main as an index-addr on the MAP VALUE
+# (the quarantine's own hazard, missed through the parentheses) — main's wire for parenTupleTarget's assignment:
+   {"expr": {"base": {"expr": "ident", "local": 0, "name": "m", "type": {"key": {"int": "int", "kind": "int"}, "kind": "map", "value": {"int": "int", "kind": "int"}}}, "expr": "index-addr", "index": {"expr": "int", "type": {"int": "int", "kind": "int"}, "value": "1"}}, "target": "addr"}
+
+# gc go1.26.5 oracle per subject (one process each; stderr's goroutine trace trimmed) — the expected_status/expected_reason of cases.tsv:
+== rhsCallEffect
+wit 9
+result 79
+== rhsCallPanics
+len 0
+panic: boom
+== nilMapVsRhsPanic
+panic: boom
+== nilMapSecondTarget
+wit 1
+panic: assignment to entry in nil map
+== mapAndSliceSwap
+result 32
+== nilMapThenSliceOob
+panic: assignment to entry in nil map
+== sliceOobThenNilMap
+panic: runtime error: index out of range [9] with length 1
+== keyPanicBeforeNilStore
+panic: runtime error: index out of range [9] with length 1
+== multiValueCall
+result 15
+== targetCallOrder
+wit 1
+wit 2
+result 23
+== commaOkAssertMapTarget
+result 51
+== commaOkLookupMapTarget
+result 71
+== interfaceElemTuple
+result 56
+== selectRecvMapTarget
+wit 1
+result 7
+== selectRecvMapIfaceElem
+result 7
+== parenTupleTarget
+result 42
+== parenSingleTarget
+result 4
+== parenCompound
+result 5
+== parenIncDec
+result 2
+
+# What the machine did with main's wire for the parenthesized spellings (golean native-json-run on main's export; the lane's binary —
+# the decoder and machine are unchanged by the lane): a machine-side `stuck`, the quarantine's own hazard ("would die as a runtime
+# stuck instead of a boundary refusal", audit 2026-07-26) reached through the parentheses:
+#   parenTupleTarget: {"message":"expected array or slice base for index address, got GoLean.GoValue.map { base := some (GoLean.Loc.base { id := 4 }) }","status":"stuck"}
+#   parenCompound:    {"message":"expected array or slice base for index address, got GoLean.GoValue.map { base := some (GoLean.Loc.base { id := 3 }) }","status":"stuck"}
+# The lane's wire for parenTupleTarget: {"status":"ok","values":[{"kind":"int","tag":"int","value":42}]} (gc: 42).

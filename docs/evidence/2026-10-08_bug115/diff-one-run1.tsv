@@ -1,0 +1,43 @@
+# scripts/diff-one at the lane tree (fix + rows), golean built from the lane (lake build golean, EXIT=0), oracle go1.26.5 — 2026-10-08
+# 36 ids: the 19 born maps/multi-target rows, BUG-115's six Cases rows, the noodler lane's three F6 re-hits, and 8 in-package controls
+result	id	features	stage	detail
+PASS	evalorder/unseq-multi/swap-control	multi_assign,evaluation_order	-	wide=0 exhausted=none depth=fixed
+PASS	evalorder/unseq-multi/comma-ok-map-control	maps,multi_assign,evaluation_order	-	wide=0 exhausted=none depth=fixed
+PASS	evalorder/unseq-multi/map-target-key-vs-writer	maps,multi_assign,closures,calls,evaluation_order,nondet	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/evalorder/unseq-multi/map-target-key-vs-writer)
+PASS	evalorder/unseq-multi/comma-ok-map-target-vs-delete	maps,slices,multi_assign,closures,calls,evaluation_order,nondet	membership	enumerated=2 exhibited=1 draws=32 (K=32; pin members=2 NOT reached — 1 distinct drawn) unexhibited=1 (members in artifacts/coverage/membership/evalorder/unseq-multi/comma-ok-map-target-vs-delete)
+PASS	evalorder/unseq-multi/map-target-nil-legacy-refusal	maps,multi_assign,nil,calls,print,evaluation_order	-	wide=0 exhausted=none depth=fixed
+PASS	imported-goose/semantics/multiple-assign/assign-two	imported_goose,multi_assign	-	wide=0 exhausted=none depth=fixed
+PASS	imported-goose/semantics/multiple-assign/assign-three	imported_goose,multi_assign	-	wide=0 exhausted=none depth=fixed
+PASS	imported-goose/semantics/multiple-assign/multiple-assign-to-map	imported_goose,multi_assign	-	wide=0 exhausted=none depth=fixed
+PASS	maps/multi-target/rhs-call-effect	maps,multi_assign,calls,print,evaluation_order	-	wide=0 exhausted=none depth=fixed
+PASS	maps/multi-target/rhs-call-panics	maps,multi_assign,calls,panic,defer,print,evaluation_order	-	wide=1 exhausted=none depth=fixed
+PASS	maps/multi-target/nil-map-vs-rhs-panic	maps,multi_assign,calls,panic,nil,evaluation_order	-	wide=0 exhausted=none depth=fixed
+PASS	maps/multi-target/nil-map-second-target	maps,multi_assign,calls,nil,print,evaluation_order	-	wide=0 exhausted=none depth=fixed
+PASS	maps/multi-target/map-and-slice-swap	maps,slices,multi_assign,indexing,evaluation_order	-	wide=0 exhausted=none depth=fixed
+PASS	maps/multi-target/nil-map-then-slice-oob	maps,slices,multi_assign,nil,indexing,evaluation_order	-	wide=0 exhausted=none depth=fixed
+PASS	maps/multi-target/slice-oob-then-nil-map	maps,slices,multi_assign,nil,indexing,evaluation_order	-	wide=0 exhausted=none depth=fixed
+PASS	maps/multi-target/key-panic-before-nil-store	maps,slices,multi_assign,nil,indexing,evaluation_order	-	wide=0 exhausted=none depth=fixed
+PASS	maps/multi-target/multi-value-call	maps,multi_assign,calls,multi_result,evaluation_order	-	wide=0 exhausted=none depth=fixed
+PASS	maps/multi-target/target-call-order	maps,multi_assign,calls,print,evaluation_order	-	wide=0 exhausted=none depth=fixed
+PASS	maps/multi-target/comma-ok-assert-map-target	maps,multi_assign,interfaces,type_assertions,comma_ok	-	wide=0 exhausted=none depth=fixed
+PASS	maps/multi-target/comma-ok-lookup-map-target	maps,multi_assign,indexing,comma_ok	-	wide=0 exhausted=none depth=fixed
+PASS	maps/multi-target/interface-elem-tuple	maps,multi_assign,interfaces,type_assertions	-	wide=0 exhausted=none depth=fixed
+PASS	maps/multi-target/select-recv-map-target	maps,channels,select,calls,print,evaluation_order	-	wide=0 exhausted=none depth=fixed
+PASS	maps/multi-target/select-recv-map-iface-elem	maps,channels,select,interfaces,type_assertions	-	wide=0 exhausted=none depth=fixed
+PASS	maps/multi-target/paren-tuple-target	maps,multi_assign,indexing,assignment	-	wide=0 exhausted=none depth=fixed
+PASS	maps/multi-target/paren-single-target	maps,indexing,assignment	-	wide=0 exhausted=none depth=fixed
+PASS	maps/multi-target/paren-compound	maps,indexing,assignment	-	wide=0 exhausted=none depth=fixed
+PASS	maps/multi-target/paren-incdec	maps,indexing,assignment	-	wide=0 exhausted=none depth=fixed
+PASS	maps/tuple-assign-key-eval	maps,multi_assign,evaluation_order,indexing	-	wide=0 exhausted=none depth=fixed
+PASS	maps/tuple-map-expr-targets	maps,multi_assign,evaluation_order,calls,indexing	-	wide=0 exhausted=none depth=fixed
+PASS	maps/tuple-rhs-before-target-write	maps,multi_assign,evaluation_order,indexing	-	wide=0 exhausted=none depth=fixed
+PASS	maps/tuple-swap-values	maps,multi_assign,evaluation_order,indexing	-	wide=0 exhausted=none depth=fixed
+PASS	noodler/maps/nil-inner-map-write	maps,nil,nested,panic	-	wide=0 exhausted=none depth=fixed
+PASS	noodler/maps/nil-map-incdec	maps,nil,panic	-	wide=0 exhausted=none depth=fixed
+PASS	noodler/maps/swap-with-missing	maps,multi_assign,zero_values	-	wide=0 exhausted=none depth=fixed
+PASS	noodler/maps/tuple-two-map-targets	maps,multi_assign	-	wide=0 exhausted=none depth=fixed
+PASS	noodler/maps/tuple-map-and-var	maps,multi_assign	-	wide=0 exhausted=none depth=fixed
+
+results: artifacts/coverage/latest.tsv
+metadata: artifacts/coverage/latest.meta.tsv
+EXIT=0

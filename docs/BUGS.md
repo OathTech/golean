@@ -7687,13 +7687,15 @@ path; gc realizes the lexical order on every general-form probe the audit ran EX
 `[7]`, the machine `[9]` on both sides — the inventory's E3 «(b) PINNED, known ≠ gc»). Taking the general form
 is POSED in the E6a handoff §2 item 1, not this entry's to take.
 
-## BUG-115 — the LEGACY multi-target emitter QUARANTINES a map element as an assignment target (`m[k], y = 7, f()`, `m[0], m[1] = m[1], m[0]`: `emit.go` `unsup("map element as assignment target outside a single assignment")`) — legal Go refused by name where gc runs it; since Stage E5 E5b the SAME source shape RUNS on the `unseq` graph path whenever the ratified observability trigger admits the sweep, so the refusal is TRIGGER-DEPENDENT [frontend lowering; coverage gap, not a wrong answer; the triage table's F6 → mini-slice A3 ((a)-queued) is the plan of record; found by the Stage E5 adversarial audit, F3, 2026-09-22]
+## BUG-115 — the LEGACY multi-target emitter QUARANTINES a map element as an assignment target (`m[k], y = 7, f()`, `m[0], m[1] = m[1], m[0]`: `emit.go` `unsup("map element as assignment target outside a single assignment")`) — legal Go refused by name where gc runs it; since Stage E5 E5b the SAME source shape RUNS on the `unseq` graph path whenever the ratified observability trigger admits the sweep, so the refusal is TRIGGER-DEPENDENT [frontend lowering; coverage gap, not a wrong answer; the triage table's F6 → mini-slice A3 ((a)-queued) was the plan of record; found by the Stage E5 adversarial audit, F3, 2026-09-22; FIXED 2026-10-08, lane `fix/bug115-map-multiassign-1008` — the `=` statement's map-element target lowers to the machine's own map-element PLAN on both paths]
 
-- Status: open ([AGENT] worker, Stage E5 audit fix round 2026-09-22, lane `core/unseq-stage-e5-0922`; the
+- Status: fixed ([AGENT] fix worker, lane `fix/bug115-map-multiassign-1008`, 2026-10-08, under [USER] Mike
+  2026-10-08 «While things are calm, can we fix some bugs?», relayed by the [AGENT] coordinator; rowed open by
+  the [AGENT] worker at the Stage E5 audit fix round 2026-09-22, lane `core/unseq-stage-e5-0922`, the
   disposition the [AGENT] coordinator's, disclosed at the merge ask: «every detected gap is rowed» — [USER]
   Mike 2026-09-03, relayed)
 - Pinned-by: differential
-- Cases: evalorder/unseq-multi/map-target-nil-legacy-refusal, imported-goose/semantics/multiple-assign/multiple-assign-to-map, maps/tuple-assign-key-eval, maps/tuple-map-expr-targets, maps/tuple-rhs-before-target-write, maps/tuple-swap-values
+- Cases: evalorder/unseq-multi/map-target-nil-legacy-refusal, imported-goose/semantics/multiple-assign/multiple-assign-to-map, maps/tuple-assign-key-eval, maps/tuple-map-expr-targets, maps/tuple-rhs-before-target-write, maps/tuple-swap-values, noodler/maps/swap-with-missing, noodler/maps/tuple-map-and-var, noodler/maps/tuple-two-map-targets, maps/multi-target/rhs-call-effect, maps/multi-target/rhs-call-panics, maps/multi-target/nil-map-vs-rhs-panic, maps/multi-target/nil-map-second-target, maps/multi-target/map-and-slice-swap, maps/multi-target/nil-map-then-slice-oob, maps/multi-target/slice-oob-then-nil-map, maps/multi-target/key-panic-before-nil-store, maps/multi-target/multi-value-call, maps/multi-target/target-call-order, maps/multi-target/comma-ok-assert-map-target, maps/multi-target/comma-ok-lookup-map-target, maps/multi-target/interface-elem-tuple, maps/multi-target/select-recv-map-target, maps/multi-target/select-recv-map-iface-elem, maps/multi-target/paren-tuple-target, maps/multi-target/paren-single-target, maps/multi-target/paren-compound, maps/multi-target/paren-incdec
 - Discovered: 2026-07-26 (the pre-merge adversarial audit that installed the quarantine: a map element is
   not addressable, and the generic multi-target path took ADDRESSES — an `index-addr` on a map would have
   died as a runtime stuck instead of a boundary refusal); ROWED as the triage table's F6 / mini-slice A3
@@ -7727,13 +7729,64 @@ WHERE: `tools/nativefrontend/emit.go` (the legacy multi-target lowering's map-el
 NOT the `unseq` lowering (`unseq_lower.go` `mapTarget` / `prepareTarget`), which handles the shape.
 Effect direction: the machine REFUSES where gc runs — fail-closed, a red the differential shows.
 
-FIX PLAN (mini-slice A3, the triage table §3.2 — unchanged by this entry): in the legacy path's generic
+FIX PLAN AS QUEUED (mini-slice A3, the triage table §3.2, 2026-08-19): in the legacy path's generic
 multi-target arm, hoist the map BASE and KEY temps in target order alongside the RHS hoists and emit the
 existing `map-assign` store nodes in target order (no address; the E2 frozen-plan machinery is the model);
 its own edge enumeration of the two phases (BUG-025/BUG-052's assignment spine). Alternatively, widen the
 `unseq` grammar's TRIGGER so the call-free forms lower as graphs too — a change to ratified item 2, POSED
 in the E5 handoff §2 (item 2), not this entry's to take. Fix criterion: every Cases row PASS (the five A3
 rows strict against gc; `map-target-nil-legacy-refusal` PASS strict: `wit 1` · panic).
+
+THE FIX TAKEN (2026-10-08, lane `fix/bug115-map-multiassign-1008`, [AGENT] — the mechanism differs from the
+queued sketch, same criterion): `tools/nativefrontend/emit.go` `emitAssignTargetPhase1` — the `=` statement's
+PHASE-1 target emitter — gains a map-element arm BEFORE the address-taking fallthrough: the target lowers to
+the machine's map-element PLAN `{"target": "map", base, index, keyType, valueType}` (`emitMapTargetWirePhase1`,
+the convergence round's BUG-030 delivery target, the very node E5b's graph path emits) → `Assignee.mapElem`.
+No hoisted temps and no `map-assign` statements: the assignment SPINE (`targetPlan` has carried `.mapElem`
+since E2 — `[b, k]` its phase-1 operands, `storeTarget.plan`'s `.mapElem` arm the phase-2 store through
+`mapAssignValue`) already realizes spec#Assignment_statements' two phases for EVERY sibling target kind —
+`tgtOpK`: each target's operands evaluate in lexical position (a sibling slice/field/deref target's own
+bounds/nil check stays DEFERRED to its store), then the right-hand values (`rhsK`), then the stores left to
+right — and every statement that consumes `emitAssignTargetPhase1`'s targets enters through that spine
+(`assign`/`assignMany`, the `call`/`callValue` statements, the comma-ok `mapLookup`/`typeAssert`, the
+receive delivery). The hoisted-temps sketch would have had to re-enumerate those phases per sibling kind
+(a frozen operand with a deferred check is exactly what the spine's plan IS; a hoisted ADDRESS would have
+moved a sibling slice target's bounds check into phase 1 — `m[k], s[9] = 1, 2` on a nil map must panic
+«assignment to entry in nil map», not «index out of range»). What the lowering now realizes, pinned by the
+born rows `maps/multi-target/*` (19, all strict, all PASS against go1.26.5; red-first on `main 6a90ba8d`,
+`docs/evidence/2026-10-08_bug115/red-first-witness.txt`): a phase-1 operand panic beats ANY phase-2 store
+(`key-panic-before-nil-store`: `m[1], m2[a[9]] = 1, 2`, m nil → «index out of range [9] with length 1»); a
+right-hand call's panic beats the nil-map store (`nil-map-vs-rhs-panic`); the stores are left to right across
+a map and a slice sibling (`nil-map-then-slice-oob` → nil map; `slice-oob-then-nil-map` → index out of
+range); the nil-map store panics after every phase-1 call (`nil-map-second-target`: `wit 1` · panic, the
+`map-target-nil-legacy-refusal` shape with the targets swapped); a call inside the target's key precedes the
+right-hand call (`target-call-order`: `wit 1` · `wit 2`); the multi-value call (`multi-value-call` and the
+goose row), the comma-ok assertion and lookup with a map-element value target, an interface-valued map's
+element (the per-pair boxing at the element type, `interface-elem-tuple`), and the `select` receive clause's
+map-element target in its temp-fallback write-back (`select-recv-map-target`, `select-recv-map-iface-elem`).
+The operand-vs-call axis is UNCHANGED: on the legacy path the right-hand calls hoist (A-normal form) and the
+target operands evaluate at the statement — gc's call-first member, the same realization every sibling
+addressed target has had since BUG-025/BUG-052 (the inventory's E3/E4 pin stands; the trigger-admitted
+shape `evalorder/unseq-multi/map-target-key-vs-writer` is untouched: planned targets never reach this
+emitter). FOUND beside it (pre-existing on `main`, not this entry's shape): the PARENTHESIZED spellings
+`(m[k]), y = …`, `(m[k]) = v`, `(m[k]) += v`, `(m[k])++` bypassed the quarantine and the three map arms
+(`*ast.IndexExpr` type switches without `ast.Unparen`) and lowered an `index-addr` on the MAP VALUE — the
+quarantine's own hazard, a machine-side `stuck` instead of a boundary refusal; the four sites and the guard
+now unwrap (`paren-tuple-target`, `paren-single-target`, `paren-compound`, `paren-incdec` PASS). The
+quarantine text stays in `emitLValuePhase1` for the address-taking callers (`emitLValue`, the compound
+read-write target whose map arm did not match) — `tools/lowerdiag/causes.tsv` `statement-shape` keeps the
+pattern, its description updated. Wire change ONLY for programs with the shape: a whole-corpus export
+comparison of main's frontend against the lane's (`.tmp/wire-spotcheck.sh`, 1386 executable packages) is
+byte-identical on 1353, fails on both for 25 (flag-dependent exports), and differs on exactly the 8 packages
+holding a map-element target outside the single-assignment fast path (`evalorder/unseq-multi`,
+`imported-goose/semantics/multiple-assign`, `maps/{tuple-assign-key-eval,tuple-map-expr-targets,
+tuple-rhs-before-target-write,tuple-swap-values,multi-target}`, `noodler/maps`); the raft subject's twin wire
+is byte-identical (`scripts/check-frontend-pins`). The nine pre-existing reds flip FAIL/frontend-export → PASS
+(the six Cases rows plus the noodler lane's three triage-F6 re-hits `noodler/maps/{swap-with-missing,
+tuple-map-and-var,tuple-two-map-targets}`, added to the Cases line); no PASS→non-PASS. No semantic-core, decoder
+or wire-schema change (the plan node and its decoder arm pre-date the fix; the decoder comment that called
+the arm «consumed only by the channel-receive delivery plan» described BUG-030's era — the spine consumed it
+everywhere since E2).
 
 ## BUG-117 — `scripts/gen-inittask-table` is FAIL-OPEN: a build or `nm` failure for a std package is recorded as the silent `?`/unknown row instead of dying [apparatus; derived oracle artifact `tools/nativefrontend/inittask-std.tsv` (the gate's inittask re-derivation, `scripts/ci`); trusted surface #2; found by the FR-37 lane's gate run 1 and its adversarial audit (apparatus finding), 2026-10-07; FIXED 2026-10-07, lane `lane/field-offsets-inittask-1007`]
 

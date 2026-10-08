@@ -855,7 +855,9 @@ gc's early store a deviation, L-016, 2026-09-02).
   (9,5,9)}, gc (9,5,9)); posed for ratification at the merge ask (RATIFIED [USER] 2026-09-22, the Stage E5 landing). The spec's own example
   `spec-examples-stmt/eval-order-calls` keeps its forced trace as one graph. The (b) pin stands
   outside the widened grammar. AUDIT FIX ROUND F3 (2026-09-22): a MAP-ELEMENT target in a multi-target
-  assignment — quarantined by name on the LEGACY path (triage F6 / mini-slice A3, BUG-115) — rides the
+  assignment — quarantined by name on the LEGACY path (triage F6 / mini-slice A3, BUG-115) until
+  2026-10-08 (FIXED, lane `fix/bug115-map-multiassign-1008`: the legacy `=` emitter lowers the same
+  `mapElem` plan; the row below is unchanged) — rides the
   graph path when the trigger admits the sweep: the VALUE axis is (a) ENVELOPED on the born
   `evalorder/unseq-multi/map-target-key-vs-writer` ({709, 79} — the frozen key read before / after the
   writing call; gc 79, 20/20) and `comma-ok-map-target-vs-delete` ({11, 0} — the comma-ok lookup before
@@ -1046,7 +1048,9 @@ gc's early store a deviation, L-016, 2026-09-02).
   AUDIT FIX ROUND F3 (2026-09-22): the same trigger decides whether a MAP-ELEMENT target runs (the
   graph path — `evalorder/unseq-multi/map-target-key-vs-writer`) or refuses by name (the legacy
   quarantine, triage F6 / A3 — `map-target-nil-legacy-refusal`, BUG-115); the boundary is rowed
-  from both sides.
+  from both sides. BUG-115 FIXED 2026-10-08 (lane `fix/bug115-map-multiassign-1008`): the legacy
+  path lowers the same `mapElem` plan — the trigger still decides graph vs legacy, but both RUN the
+  shape (`map-target-nil-legacy-refusal` PASS strict: `wit 1` · panic).
 - WHERE: spec#Order_of_evaluation (only calls/receives/binary-logical
   are ordered — target-vs-target operand order is open). Machine:
   left-to-right inter-target walk (the tgtOpK spine; the rule-site

@@ -1,0 +1,27 @@
+# id	subject	args	expected_status	expected_reason	features
+# maps/multi-target — BUG-115 / triage F6 / mini-slice A3 (lane fix/bug115-map-multiassign-1008, 2026-10-08): a map
+# element as an assignment target outside the single-assignment fast path lowers to the machine's map-element PLAN
+# (`Assignee.mapElem`; spec#Assignment_statements' two phases: the map and key VALUES are phase-1 operands, the store is
+# phase 2, left to right, through `mapAssignValue`). All strict; constant target operands keep every sweep on the LEGACY
+# path (the trigger-admitted shape is evalorder/unseq-multi/map-target-key-vs-writer). Born red-first on main 6a90ba8d
+# (frontend-export, «map element as assignment target outside a single assignment» — the parenthesized spellings instead
+# lowered an index-addr on the map value), PASS against go1.26.5 at the fix.
+rhs-call-effect	rhsCallEffect	-	ok	-	maps,multi_assign,calls,print,evaluation_order
+rhs-call-panics	rhsCallPanics	-	panic	boom	maps,multi_assign,calls,panic,defer,print,evaluation_order
+nil-map-vs-rhs-panic	nilMapVsRhsPanic	-	panic	boom	maps,multi_assign,calls,panic,nil,evaluation_order
+nil-map-second-target	nilMapSecondTarget	-	panic	assignment to entry in nil map	maps,multi_assign,calls,nil,print,evaluation_order
+map-and-slice-swap	mapAndSliceSwap	-	ok	-	maps,slices,multi_assign,indexing,evaluation_order
+nil-map-then-slice-oob	nilMapThenSliceOob	-	panic	assignment to entry in nil map	maps,slices,multi_assign,nil,indexing,evaluation_order
+slice-oob-then-nil-map	sliceOobThenNilMap	-	panic	index out of range [9] with length 1	maps,slices,multi_assign,nil,indexing,evaluation_order
+key-panic-before-nil-store	keyPanicBeforeNilStore	-	panic	index out of range [9] with length 1	maps,slices,multi_assign,nil,indexing,evaluation_order
+multi-value-call	multiValueCall	-	ok	-	maps,multi_assign,calls,multi_result,evaluation_order
+target-call-order	targetCallOrder	-	ok	-	maps,multi_assign,calls,print,evaluation_order
+comma-ok-assert-map-target	commaOkAssertMapTarget	-	ok	-	maps,multi_assign,interfaces,type_assertions,comma_ok
+comma-ok-lookup-map-target	commaOkLookupMapTarget	-	ok	-	maps,multi_assign,indexing,comma_ok
+interface-elem-tuple	interfaceElemTuple	-	ok	-	maps,multi_assign,interfaces,type_assertions
+select-recv-map-target	selectRecvMapTarget	-	ok	-	maps,channels,select,calls,print,evaluation_order
+select-recv-map-iface-elem	selectRecvMapIfaceElem	-	ok	-	maps,channels,select,interfaces,type_assertions
+paren-tuple-target	parenTupleTarget	-	ok	-	maps,multi_assign,indexing,assignment
+paren-single-target	parenSingleTarget	-	ok	-	maps,indexing,assignment
+paren-compound	parenCompound	-	ok	-	maps,indexing,assignment
+paren-incdec	parenIncDec	-	ok	-	maps,indexing,assignment

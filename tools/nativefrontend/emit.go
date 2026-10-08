@@ -3493,7 +3493,7 @@ func (e *emitter) emitAssign(st *ast.AssignStmt) (any, error) {
 		}
 		// Map element compound assign `m[k] op= v`: maps are not
 		// addressable, so this is a read-then-store (emitMapCompound).
-		if ix, ok := st.Lhs[0].(*ast.IndexExpr); ok {
+		if ix, ok := ast.Unparen(st.Lhs[0]).(*ast.IndexExpr); ok {
 			if mt, ok := e.goTypeOf(ix.X).Underlying().(*types.Map); ok {
 				return e.emitMapCompound(ix, mt, op, st.Rhs[0])
 			}
@@ -3569,7 +3569,7 @@ func (e *emitter) emitAssign(st *ast.AssignStmt) (any, error) {
 	// Map element assignment `m[k] = v` is a map store, not an addressed
 	// index (maps are not addressable).
 	if !define && len(st.Lhs) == 1 && len(st.Rhs) == 1 {
-		if ix, ok := st.Lhs[0].(*ast.IndexExpr); ok {
+		if ix, ok := ast.Unparen(st.Lhs[0]).(*ast.IndexExpr); ok {
 			if m, ok := e.goTypeOf(ix.X).Underlying().(*types.Map); ok {
 				// The map-element TARGET's base and key are PHASE-1
 				// operands (spec#Assignment_statements) and pass through the probe
@@ -3850,6 +3850,34 @@ func (e *emitter) emitAssignTargetPhase1(l ast.Expr, define bool) (any, error) {
 					pkgName.Imported().Path(), sel.Sel.Name)
 			}
 			return map[string]any{"target": "addr", "expr": ga}, nil
+		}
+	}
+	// A MAP-ELEMENT target (BUG-115 / triage F6, mini-slice A3, 2026-10-08):
+	// a map element is not addressable (spec#Address_operators), so no
+	// address is taken — the target is the machine's map-element PLAN,
+	// `{"target": "map"}` → `Assignee.mapElem` (the convergence round's
+	// BUG-030 delivery target, E2's frozen plan): the map VALUE and the
+	// key VALUE are this target's phase-1 operands, evaluated by the
+	// assignment spine in lexical position among the targets (the
+	// `tgtOpK` phase split — spec#Assignment_statements' first phase),
+	// and the store is phase 2, left to right, through `mapAssignValue`
+	// — the very store a single `m[k] = v` performs (`map-assign`), so a
+	// nil map or an unhashable dynamic key panics AT THE STORE, after
+	// every phase-1 operand and right-hand side (gc: `wit 1` then
+	// «assignment to entry in nil map» on `m[1], y = 1, wit(1)`). The
+	// same plan the `unseq` graph path has emitted for this target since
+	// Stage E5 E5b (`unseq_lower.go` `mapTarget`), so the shape no longer
+	// lowers or refuses by which path the observability trigger picks.
+	// The map VALUE must not need interface boxing at the store (the
+	// machine stores the delivered value raw): every caller boxes the
+	// right-hand value per pair at the target's element type
+	// (`wrapInterfaceConversion` in emitAssign's generic path) or refuses
+	// a multi-value call's component by name (FR-7). The remaining
+	// address-taking callers (`emitLValue`, the read-write target) keep
+	// the quarantine in emitLValuePhase1.
+	if ix, ok := ast.Unparen(l).(*ast.IndexExpr); ok {
+		if m, isMap := e.applySubst(e.goTypeOf(ix.X)).Underlying().(*types.Map); isMap {
+			return e.emitMapTargetWirePhase1(ix, m)
 		}
 	}
 	// Non-ident lvalue (field, index, deref): emit as an addressed location
@@ -4878,7 +4906,7 @@ func (e *emitter) emitIncDec(st *ast.IncDecStmt) (any, error) {
 	// m[k]++ is a map read-modify-write, not an addressed location (maps are
 	// not addressable) — same desugar as m[k] op= 1 (pre-merge audit
 	// 2026-07-25: the op= path existed, the IncDec path did not).
-	if ix, ok := st.X.(*ast.IndexExpr); ok {
+	if ix, ok := ast.Unparen(st.X).(*ast.IndexExpr); ok {
 		if mt, ok := e.goTypeOf(ix.X).Underlying().(*types.Map); ok {
 			return e.emitMapCompound(ix, mt, op, nil)
 		}
@@ -7508,12 +7536,18 @@ func (e *emitter) emitLValuePhase1(x ast.Expr) (any, error) {
 		return map[string]any{"target": "var",
 			"id": e.localRename(e.info.Uses[id], id.Name), "local": e.localID(e.info.Uses[id], "local", e.localRename(e.info.Uses[id], id.Name))}, nil
 	}
-	// A map element is not addressable — outside the dedicated
-	// single-assign fast path (mapAssign) it has no address to take, and
+	// A map element is not addressable — it has no address to take, and
 	// emitting index-addr would die as a runtime stuck instead of a
-	// boundary refusal (audit 2026-07-26).
-	if ix, ok := x.(*ast.IndexExpr); ok {
-		if _, isMap := e.goTypeOf(ix.X).Underlying().(*types.Map); isMap {
+	// boundary refusal (audit 2026-07-26). The `=` statement's targets
+	// never reach this guard: the single-target fast path is `map-assign`
+	// and every other target position lowers the machine's map-element
+	// PLAN in emitAssignTargetPhase1 (BUG-115 / mini-slice A3, 2026-10-08).
+	// What reaches it is an ADDRESS-taking caller (the read-write target
+	// of a compound form whose map arm did not match, `emitLValue`), which
+	// refuses by name here. (Parenthesized spellings unwrap: `(m[k])` is
+	// the same non-addressable element.)
+	if ix, ok := ast.Unparen(x).(*ast.IndexExpr); ok {
+		if _, isMap := e.applySubst(e.goTypeOf(ix.X)).Underlying().(*types.Map); isMap {
 			return nil, unsup("map element as assignment target outside a single assignment")
 		}
 	}
