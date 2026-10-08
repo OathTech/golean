@@ -2099,3 +2099,13 @@ edits) and `files` `scripts/check-wire-boundary` (lane (a)'s controls); the rece
 — a provenance refresh, not a re-pin; the certified set is unchanged. With it installed, `release-check` EXIT=1,
 «Recertification required since pre-merge tip: inputs: changed dependency build/files/GoLean/CLI.lean» — the
 protocol's trigger for this very run, recorded. Tail: `docs/evidence/2026-10-08_train-r75/r75-ci-slow.tail.txt`.
+
+**Green run at the 5a records commit `6ed398af`** ([AGENT] train worker, 2026-10-08). `GOLEAN_MEM_MAX=48G
+scripts/capped scripts/ci --diff` (start load 6.3/11.6/18.7) EXIT=0, 990 s, `RESULT: PASS`: baseline diff FULL
+3936/3936 (3705 / 231, no regression), certificate provenance ok, package-correct method identity ok, wire boundary ok,
+core totality audit ok, semantic equations ok, pool spec freeze + discharge ok (LANDED=M5: all 48 discharged, 0 owed),
+frontend pins ok, inittask generator fail-closed self-test ok, inittask-std.tsv re-derivation ok, negative baseline no
+regression (394), eval tests 298 ok; the reconciler 0 HIGH (the 3 standing MEDIUM) — first run, no re-run needed.
+Round 75 closed: BUG-115 fixed (map elements as multi-target and parenthesized assignment targets lower to the
+`mapElem` plan; 19 born rows, 9 FAIL→PASS), BUG-119 and BUG-120 fixed (enumerator entry-argument checks + `--arg-bool`;
+named refusals for unreadable input files, the path named once), BUG-122 open.
