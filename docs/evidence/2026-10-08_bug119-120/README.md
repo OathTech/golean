@@ -35,3 +35,10 @@ build-identity` at `6a90ba8d`. Lane binary: the lane's source tree (CLI.lean / C
 `go1.26.5 linux/amd64` (the oracle pin; only the frontend runs). Lean `v4.32.2`. Host: the shared linux/amd64 box
 (32 cores), load average ~10 during the run, 8 rows in parallel — the timeout row is load-sensitive, the
 byte-identity is not.
+
+**Gate** (`ci-diff.tail.txt`): `GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --diff` at `933742ef`, first run, 1644 s,
+RESULT: FAIL on exactly the expected step-5a pair — `certificate provenance` STALE (`GoLean/CLI.lean` is a certified
+build input) and the one tier=slow row `imported-goose/channel/google-search` read against its now-stale cached record
+(PASS → FAIL, cause `STALE certification: changed dependency build/files/GoLean/CLI.lean`); 3917 = 3676/241. Every
+other step ok (wire boundary incl. the 17 new controls, core build warning-free, negative 394 no regression). The
+landing train owns step 5a (re-certification at the merged tip).
