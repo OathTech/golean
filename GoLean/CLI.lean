@@ -110,10 +110,13 @@ def entryArgValues (program : GoCore.Program) (name : String) (args : Array Entr
         throw s!"{arg.flag} (argument {pos + 1}): parameter {pname} of entry function {name} has type {shown}, which {arg.flag} cannot supply"
   return out
 
-/-- The OS error's text on ONE line (Lean's `IO.Error` rendering appends
-`\n  file: <path>`; a refusal line must stay a line). -/
+/-- The OS error's text on ONE line, WITHOUT the path: Lean's `IO.Error`
+rendering appends `\n  file: <path>`, and the refusal already leads with
+the path, so that line is dropped (the path is named exactly once — train
+r75 message tidy) and the rest joined (a refusal line must stay a line). -/
 private def oneLine (text : String) : String :=
-  " ".intercalate ((text.splitOn "\n").map String.trimAscii |>.map toString)
+  let lines := (text.splitOn "\n").map (fun l => toString l.trimAscii)
+  " ".intercalate (lines.filter (fun l => !l.startsWith "file: "))
 
 /-- Read a subcommand's input file (a wire, a manifest) as bytes, CATCHING
 the OS error: a missing or unreadable `--input` is a refusal that names

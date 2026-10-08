@@ -7951,7 +7951,8 @@ cause on one line (`<path>: cannot read input: <OS error>`), exit 1: `native-jso
 the enumerators on their stderr line, a `--batch` case with a missing wire as that case's named `ERROR` line (the
 batch continuing, as for any case failure), a missing `--batch` manifest before any results file is created.
 Before: `uncaught exception: no such file or directory …` from the runtime, exit 1, on all three (reproduced on
-main's binary). Controls: 5 missing-input controls in `scripts/check-wire-boundary`.
+main's binary). Controls: 5 missing-input controls in `scripts/check-wire-boundary`. Train r75 tidy: the refusal names the path
+ONCE (`oneLine` drops Lean's own `file: <path>` line). Out of scope, open: the batch loop's WRITES — BUG-122.
 
 ## BUG-121 — zero-copy ALIASING of `[]byte(s)` is observable through element-address identity: two conversions of one string share their backing under gc (`&b[0] == &c[0]` is TRUE), the machine always allocates fresh (FALSE) [semantic core; allocation identity; PREDATES lane `lane/conv-cap-1007` — `main` fresh-allocates too; found by the lane's Fable adversarial audit, 2026-10-07]
 
@@ -7990,3 +7991,27 @@ FIX PLAN (NOT scheduled; a widening is a future [USER] decision under the standi
 real Go», [USER] Mike 2026-10-07, relayed): model the shared-backing member (an identity choice at the zero-copy
 regime, read-only by construction), or keep the fresh-allocation pin and record the deviation as an R15-style
 version-tracked red row. Fix criterion: a corpus row over the program above PASSES with gc's `true` in the modeled set.
+
+## BUG-122 — a failed WRITE of `golean choice-trace --batch`'s results file or its `--dump` file escapes as the runtime's UNCAUGHT IO exception instead of the subcommand's named refusal [CLI; tool interface; PREDATES lane `fix/bug119-120-1008` (outside BUG-120's read-side scope); found by the lane's Opus adversarial audit (informational note), 2026-10-08]
+
+- Status: open
+- Pinned-by: none (no corpus row runs `choice-trace --batch` against an unwritable output; the repro is in
+  `docs/evidence/2026-10-08_train-r75/repros.txt`, item 2)
+- Discovered: 2026-10-08, the bug119-120 lane's Opus adversarial audit (verdict MERGE-CLEAN; an informational note,
+  not a blocking finding), as relayed by the [AGENT] coordinator; rowed by the [AGENT] train worker r75 — «every
+  detected gap is rowed», [USER] Mike 2026-09-03, relayed.
+
+WHAT: BUG-120's fix made every input READ refuse by name; the batch loop's WRITES are still unguarded — the results
+header (`IO.FS.writeFile outPath`), the `--dump` header (`IO.FS.writeFile dp`) and the per-case appends
+(`IO.FS.withFile outPath .append`, `IO.FS.withFile dp .append`). An unwritable path (a missing directory, a
+permission failure, a full disk) raises an IO error that escapes `main` as `uncaught exception: <OS error>` with Lean's
+`file: <path>` line, exit 1 (reproduced for the two headers at train r75). It FAILS CLOSED (non-zero exit, no false
+result), and Lean's rendering happens to carry the path — but the refusal is not in the subcommand's own
+`choice-trace: <path>: <cause>` shape, and a per-case append failure mid-batch is not attributed to its case.
+
+WHERE: `GoLean/ChoiceTrace.lean` `runBatch` (the header writes and the batch loop's appends, ~1089–1106).
+
+FIX PLAN (NOT scheduled; [AGENT]): route the writes through a catching helper beside `CLI.readInputBytes` /
+`readInputText` that refuses `<path>: cannot write output: <OS error>` (exit 1, the path named once), and a control in
+`scripts/check-wire-boundary` (`--out` / `--dump` under a missing directory). Fix criterion: both repro commands print
+the subcommand's named refusal, exit 1, no `uncaught exception`.

@@ -350,9 +350,13 @@ inductive Assignee where
   are not addressable, so a map-element assignment target cannot be an
   address expression — it carries the base and key expressions and the
   map's key/value types (the `mapAssign` normalization discipline).
-  Only the channel-receive delivery path consumes it (`targetPlan`);
-  every other assignee position resolves through `assigneeExpr`, which
-  is `none` here — those statements fail closed, exactly as before this
+  Every PLANNED assignment target consumes it (`targetPlan` /
+  `targetsPlan`: the single and multi-target `=` spine and the
+  channel-receive delivery — since BUG-115, train r75, the frontend
+  emits it for multi-target and parenthesized map targets too, not only
+  for receive delivery); the one-shot statements that resolve their
+  target through `assigneeExpr` (`stmtPlan`: `new`/`make`/`append`/…
+  results) get `none` here and fail closed, exactly as before this
   constructor existed. -/
   | mapElem (base index : Expr) (keyTy valueTy : Ty)
   | unsupported (feature : String)

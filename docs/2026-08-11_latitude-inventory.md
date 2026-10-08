@@ -1027,6 +1027,12 @@ gc's early store a deviation, L-016, 2026-09-02).
 
 ### E3. Inter-target phase-1 operand order — (b) PINNED to OUR point, **known ≠ gc** (open envelope)
 
+- TRAIN r75 (2026-10-08, [AGENT], the BUG-115 lane's Fable adversarial audit, note): the `mapElem`
+  target plan now lowered on the legacy path (BUG-115 FIXED) is a MEMBER of this known-≠-gc
+  inter-target operand-order class — its key operands are phase-1 target operands like any other:
+  `m[a[9]], m2[b[9]] = 1, 2` (len(a) = 1, len(b) = 2) panics «index out of range [9] with length 2»
+  under gc and «… with length 1» on the machine (the first target's operand, our left-to-right
+  point). No new entry; the same POSED re-envelope covers it.
 - STAGE E6a (2026-09-24, [AGENT], lane `core/unseq-stage-e6a-0924`; design
   `docs/2026-09-24_unseq-stage-e6-design.md` §E6a): the trigger refinement LANDED in its EVENT-MEDIATED form
   (a failing occurrence vs an E1 participant's window holding another failing occurrence) — this entry's rows
@@ -1082,6 +1088,8 @@ gc's early store a deviation, L-016, 2026-09-02).
 
 ### E4. Targets-vs-RHS unordered panic order — same class as E3 — (b) PINNED to OUR point
 
+- TRAIN r75 (2026-10-08, [AGENT]): as E3 — a `mapElem` target's key operands (BUG-115 FIXED) are
+  phase-1 target operands, ordered before the right-hand reads on the machine; a member of this class.
 - STAGE E6a (2026-09-24, [AGENT]): as E3 — the event-mediated refinement landed; the general form that
   would re-envelope this entry is POSED (E6a handoff §2), not taken; the entry stays (b) PINNED.
 - STAGE E5, FAMILY E5b (2026-09-22, [AGENT]): as E3 — the graph shape (targets as phase-1

@@ -2036,3 +2036,48 @@ owed), frontend pins ok, inittask generator fail-closed self-test ok, inittask-s
 baseline no regression (394), eval tests 298 ok; the reconciler 0 HIGH — first time, no re-run needed. Round 74
 closed: `ChoiceSite.convCap` (R3 / gc-verified b6) is on main — BUG-118 fixed, BUG-121 open, BridgeSet RE-PIN 17
 (rows 335–337 re-pinned, rows 580–590 added), the control row `strings/conv-cap/bytes-named-operand-lit` born.
+
+### Train r75 — BUG-115, BUG-119, BUG-120 fixed — RULED (2026-10-08)
+
+[USER] Mike, verbatim, relayed by the [AGENT] coordinator — cite as relayed:
+- 2026-10-08, «While things are calm, can we fix some bugs?» — the authority for both fix lanes
+  (`fix/bug119-120-1008`, `fix/bug115-map-multiassign-1008`), each off main `6a90ba8d`.
+- 2026-10-08, «merge it» — the merge sign-off for BOTH branches: `fix/bug119-120-1008` @ `9e9eba25` and
+  `fix/bug115-map-multiassign-1008` @ `57f84e0e`.
+
+Audits (as relayed by the [AGENT] coordinator):
+- (a) `fix/bug119-120-1008` — one Opus adversarial audit, **MERGE-CLEAN**, two notes, both handled in this train's
+  records commit ([AGENT] train worker): (1) cosmetic — the missing-file refusal named the path TWICE
+  (`<path>: cannot read input: no such file or directory (error code: …) file: <path>`, Lean's `IO.Error` rendering
+  appending its own `file:` line): `GoLean/CLI.lean` `oneLine` now drops that line, so the refusal names the path
+  exactly once (`scripts/check-wire-boundary`'s five missing-input controls pin only the `<path>: cannot read input`
+  prefix — unchanged, re-checked against the rebuilt binary); (2) informational — a failed WRITE of `choice-trace
+  --batch`'s results file or its `--dump` file (`GoLean/ChoiceTrace.lean`'s batch loop, the `IO.FS.writeFile` /
+  `withFile … .append` calls) escapes as the runtime's uncaught exception: still exit non-zero (fail closed), but not as
+  the subcommand's own named refusal (re-checked at this train: Lean's rendering does carry the path on its `file:`
+  line — `docs/evidence/2026-10-08_train-r75/repros.txt` item 2) — rowed OPEN as **BUG-122** (precedent: BUG-119/120/121, audit notes rowed as their own entries,
+  «every detected gap is rowed», [USER] Mike 2026-09-03, relayed).
+- (b) `fix/bug115-map-multiassign-1008` — one Fable adversarial audit, **MERGE-CLEAN**, two notes, both
+  comment/records only, handled in this train's records commit: (1) the `.mapElem` assignee comments
+  (`GoLean/GoCore/Syntax.lean`, `GoLean/NativeToIR.lean`) still said «consumed only by the channel-receive delivery
+  path»; it is now consumed by every PLANNED assignment target (`targetPlan`/`targetsPlan`: single and multi-target
+  `=`, receive delivery), the one-shot `stmtPlan` targets still failing closed — reworded; (2) the newly lowered
+  `mapElem` plan is a member of latitude E3/E4's known-≠-gc inter-target operand-order class —
+  `m[a[9]], m2[b[9]] = 1, 2` (len(a) = 1, len(b) = 2): gc «index out of range [9] with length 2», the machine «… with
+  length 1» (both re-probed at this train, `docs/evidence/2026-10-08_train-r75/repros.txt` item 1) — one line each in inventory E3 and E4; no new deviation
+  class, the same POSED re-envelope.
+
+Outcome: BUG-115 FIXED (map elements as multi-target assignment targets, and the parenthesized map-target spellings,
+lower to the machine's existing `mapElem` plan; wire change only for programs with that shape); BUG-119 and BUG-120
+FIXED (enumerator entry-argument checks and `--arg-bool` on `coverage-observations`/`choice-trace`; named refusals for
+unreadable input files); BUG-122 OPENED. Baseline 3917 (3677/240) → **3936 (3705/231)**: 19 born
+`maps/multi-target/*` PASS, and 9 pre-existing reds flip FAIL/frontend-export → PASS, all on BUG-115's Cases line —
+`evalorder/unseq-multi/map-target-nil-legacy-refusal`,
+`imported-goose/semantics/multiple-assign/multiple-assign-to-map`, `maps/tuple-assign-key-eval`,
+`maps/tuple-map-expr-targets`, `maps/tuple-rhs-before-target-write`, `maps/tuple-swap-values`,
+`noodler/maps/swap-with-missing`, `noodler/maps/tuple-map-and-var`, `noodler/maps/tuple-two-map-targets`; no
+PASS→non-PASS. Changelog rows r75 (two: a tool-interface change; a frontend wire change for the shape only).
+
+Train: `train/r75` = (a)'s 2 commits then (b)'s 3 commits cherry-picked onto main `6a90ba8d` (one conflict, the
+changelog's two draft rows — both kept; BUGS.md, the certified record and the baseline merged clean), and this
+records commit (+ CLI message tidy).

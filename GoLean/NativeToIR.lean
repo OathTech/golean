@@ -966,9 +966,11 @@ private def decodeTarget (path : String) (json : Json) : LowerM Target := do
       let e ← decodeExpr s!"{path}.expr" (← StrictJson.field path obj "expr")
       pure { assignee := .addr e, declare := none }
   | "map" =>
-      -- A map-element delivery target (convergence round, BUG-030):
-      -- consumed only by the channel-receive delivery plan; every other
-      -- assignee position fails closed on it (`assigneeExpr` is `none`).
+      -- A map-element assignment target (convergence round, BUG-030;
+      -- widened by BUG-115, train r75): consumed by every planned
+      -- assignment target (`targetPlan`/`targetsPlan` — single and
+      -- multi-target `=`, channel-receive delivery); the one-shot
+      -- `stmtPlan` targets fail closed on it (`assigneeExpr` is `none`).
       let b ← decodeExpr s!"{path}.base" (← StrictJson.field path obj "base")
       let i ← decodeExpr s!"{path}.index" (← StrictJson.field path obj "index")
       let kt ← decodeTy s!"{path}.keyType" (← StrictJson.field path obj "keyType")
