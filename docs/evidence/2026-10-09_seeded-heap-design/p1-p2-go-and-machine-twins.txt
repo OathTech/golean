@@ -1,0 +1,22 @@
+# P1 — go run (go1.26.5) of prologue-main.go + gc-verified's p0b/subject.go (copied read-only), 2026-10-09
+addNaive aliased: 12 19
+addNaive distinct: 12 12 5 7
+sum2 cyclic: 5 2 3
+swap2 aliased: 42
+
+# P2 — the same package lowered by tools/nativefrontend and run by golean native-json-run (train-r75 binary @ 8b53af43)
+seedAddNaiveAlias: {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":12},{"kind":"int","tag":"int","value":19}]}
+
+seedAddNaiveDistinct: {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":12},{"kind":"int","tag":"int","value":12},{"kind":"int","tag":"int","value":5},{"kind":"int","tag":"int","value":7}]}
+
+seedSum2: {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":5},{"kind":"int","tag":"int","value":2},{"kind":"int","tag":"int","value":3}]}
+
+seedSwap2Alias: {"output":"","schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":42}]}
+
+
+# wire facts: top-level keys + the named-type keys + inc/sum2/addNaive parameter types
+['buildContext', 'fileOrder', 'funcs', 'methodSets', 'methods', 'package', 'promotions', 'schema', 'types']
+['main.cell', 'main.Node']
+inc [{"id": "p", "local": 0, "type": {"elem": {"int": "int", "kind": "int"}, "kind": "pointer"}}]
+sum2 [{"id": "n", "local": 0, "type": {"elem": {"kind": "named", "name": "main.Node"}, "kind": "pointer"}}]
+addNaive [{"id": "out", "local": 0, "type": {"elem": {"elem": {"int": "int", "kind": "int"}, "kind": "array", "len": 2}, "kind": "pointer"}}, {"id": "a", "local": 1, "type": {"elem": {"elem": {"int": "int", "kind": "int"}, "kind": "array", "len": 2}, "kind": "pointer"}}]
