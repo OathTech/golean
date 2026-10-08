@@ -2027,3 +2027,12 @@ Ops, PrefixFacts, State, StateWf, StepErrors, StepFn}.lean`) and `files` `script
 `scripts/mem-callsites.tsv`; the receipt moved (source `a02e84da` → `4f6ee2c9`, 182.12 s). INSTALLED as
 `baselines/certified/imported-goose__channel__google-search.certified.json` — a provenance refresh, not a re-pin; the
 certified set is unchanged. Tail: `docs/evidence/2026-10-08_train-r74/r74-ci-slow.tail.txt`.
+
+**Green run at the 5a records commit `bd9b0909`** ([AGENT] train worker, 2026-10-08). `GOLEAN_MEM_MAX=48G
+scripts/capped scripts/ci --diff` (start load 30.8/37.1/36.9) EXIT=0, 1283 s, `RESULT: PASS`: baseline diff FULL
+3917/3917 (3677 / 240, no regression), certificate provenance ok, package-correct method identity ok, wire boundary
+ok, core totality audit ok, semantic equations ok, pool spec freeze + discharge ok (LANDED=M5: all 48 discharged, 0
+owed), frontend pins ok, inittask generator fail-closed self-test ok, inittask-std.tsv re-derivation ok, negative
+baseline no regression (394), eval tests 298 ok; the reconciler 0 HIGH — first time, no re-run needed. Round 74
+closed: `ChoiceSite.convCap` (R3 / gc-verified b6) is on main — BUG-118 fixed, BUG-121 open, BridgeSet RE-PIN 17
+(rows 335–337 re-pinned, rows 580–590 added), the control row `strings/conv-cap/bytes-named-operand-lit` born.
