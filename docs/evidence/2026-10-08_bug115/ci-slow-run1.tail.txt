@@ -1,0 +1,120 @@
+# scripts/ci --slow, gate run 1 at the lane tip 7d61a5f6 (GOLEAN_MEM_MAX=48G scripts/capped scripts/ci --slow, under the box lock; 2026-10-08 06:02–06:35Z; CI total wall seconds: 1950)
+# EXPECTED RED before the re-pin: the baseline drift (19 new ids + 9 FAIL→PASS flips), the bug-index cross-check (BUG-115 marked fixed while its Cases rows were still FAIL / absent in the pre-pin baseline), and the certificate provenance pair (STALE on the frontend inputs; imported-goose/channel/google-search FAIL/membership at the run — fresh certification: UNCHANGED SET, a provenance refresh). Every other step ok. ANSI colour escapes stripped; the per-row bug-index lines (28) elided to the first three.
+
+
+── escape-hatch addendum (decide +native / config-syntax native spellings — A-TRIP F4)
+  none found
+
+── fidelity-bug index cross-check (scripts/check-bugs.sh)
+FAIL (3): BUG-115 is marked fixed but case 'evalorder/unseq-multi/map-target-nil-legacy-refusal' is still FAIL/frontend-export in baseline
+FAIL (3): BUG-115 is marked fixed but case 'imported-goose/semantics/multiple-assign/multiple-assign-to-map' is still FAIL/frontend-export in baseline
+FAIL (3): BUG-115 is marked fixed but case 'maps/tuple-assign-key-eval' is still FAIL/frontend-export in baseline
+   [... 25 more FAIL (1)/(3) bug-index lines for BUG-115's Cases rows ...]
+
+certification-controls PASS; scratch removed (98641862 owned bytes; dependencies symlinked)
+Certification controls: 68 PASS; wall_seconds=83.202
+certification: STALE certification: changed dependency files/tools/lowerdiag/causes.tsv
+Certificate provenance wall seconds: 99
+
+── core totality audit (every GoLean/ module post-import: classical trio only, required core theorems, compiled poison controls)
+
+
+── differential baseline diff (scripts/coverage-baseline-diff)
+DRIFT vs baselines/native-full.tsv (3936 case(s) run):
+evalorder/unseq-multi/map-target-nil-legacy-refusal	baseline[FAIL/frontend-export] -> now[PASS/-]
+imported-goose/channel/google-search	baseline[PASS/membership] -> now[FAIL/membership]
+imported-goose/semantics/multiple-assign/multiple-assign-to-map	baseline[FAIL/frontend-export] -> now[PASS/-]
+maps/multi-target/comma-ok-assert-map-target	NEW id (not in baseline) -> PASS/-
+maps/multi-target/comma-ok-lookup-map-target	NEW id (not in baseline) -> PASS/-
+maps/multi-target/interface-elem-tuple	NEW id (not in baseline) -> PASS/-
+maps/multi-target/key-panic-before-nil-store	NEW id (not in baseline) -> PASS/-
+maps/multi-target/map-and-slice-swap	NEW id (not in baseline) -> PASS/-
+maps/multi-target/multi-value-call	NEW id (not in baseline) -> PASS/-
+maps/multi-target/nil-map-second-target	NEW id (not in baseline) -> PASS/-
+maps/multi-target/nil-map-then-slice-oob	NEW id (not in baseline) -> PASS/-
+maps/multi-target/nil-map-vs-rhs-panic	NEW id (not in baseline) -> PASS/-
+maps/multi-target/paren-compound	NEW id (not in baseline) -> PASS/-
+maps/multi-target/paren-incdec	NEW id (not in baseline) -> PASS/-
+maps/multi-target/paren-single-target	NEW id (not in baseline) -> PASS/-
+maps/multi-target/paren-tuple-target	NEW id (not in baseline) -> PASS/-
+maps/multi-target/rhs-call-effect	NEW id (not in baseline) -> PASS/-
+maps/multi-target/rhs-call-panics	NEW id (not in baseline) -> PASS/-
+maps/multi-target/select-recv-map-iface-elem	NEW id (not in baseline) -> PASS/-
+maps/multi-target/select-recv-map-target	NEW id (not in baseline) -> PASS/-
+maps/multi-target/slice-oob-then-nil-map	NEW id (not in baseline) -> PASS/-
+maps/multi-target/target-call-order	NEW id (not in baseline) -> PASS/-
+maps/tuple-assign-key-eval	baseline[FAIL/frontend-export] -> now[PASS/-]
+maps/tuple-map-expr-targets	baseline[FAIL/frontend-export] -> now[PASS/-]
+maps/tuple-rhs-before-target-write	baseline[FAIL/frontend-export] -> now[PASS/-]
+maps/tuple-swap-values	baseline[FAIL/frontend-export] -> now[PASS/-]
+noodler/maps/swap-with-missing	baseline[FAIL/frontend-export] -> now[PASS/-]
+noodler/maps/tuple-map-and-var	baseline[FAIL/frontend-export] -> now[PASS/-]
+noodler/maps/tuple-two-map-targets	baseline[FAIL/frontend-export] -> now[PASS/-]
+
+── cross-ledger reconciliation (tools/reconcile-records — REPORT-ONLY, informs, never fails the gate)
+  [01] C2  HIGH    scripts/check-bugs.sh FAILS at this tip (the gate's own BUGS<->baseline invariant)
+  [02] C3  HIGH    19 BUGS.md case id(s) absent from the baseline
+  [03] C3  HIGH    19 corpus manifest id(s) absent from the tracked baseline (unrecorded cases)
+  [04] C4  HIGH    §8's bucket total 231 != §8's own claimed FAIL count 240
+  [05] C4  HIGH    §8's red buckets account for 231 reds; the baseline at this tip has 240 — 9 red(s) are NOT on a named row at the current tip (the §8 invariant 'zero unmapped' does not hold as written)
+  [06] C9  HIGH    certificate provenance: STALE certification: changed dependency files/tools/lowerdiag/causes.tsv
+  [07] C13  MEDIUM  79 doc site(s) across 10 file(s) name a patch-level Go version other than the pin (go1.25.13/go1.26.5 per docs/spec-sources.md). Some are legitimately historical; a toolchain/oracle claim off the pin is not, because the pin's whole job is that the spec text and the thing that produced the numbers moved together.
+  [08] C5  MEDIUM  9 frontier-table case citation(s) do not resolve against the baseline
+  [09] C5  MEDIUM  1 frontier row(s) claim a red count that is not mechanically re-derivable from their citations. Some of this is citation SHORTHAND (a prose family like 'F3 family 7', an ellipsis inside a glob, or a '+ adjacency' the count deliberately excludes) rather than drift — each needs a read, which is exactly why the count should not be re-derived from prose.
+
+── executed library coverage (all named build receipts from this CI invocation)
+CI coverage timing: verify: seconds=0.024
+Executed library coverage: PASS; 10 libraries, 20 Tests modules, 9 named steps; timings: /home/dev/projects/golean/.claude/worktrees/bug115/artifacts/ci-library-timings/d9e7a95d76ce4210b0d0e14d17b09e87.json
+
+══ scripts/ci summary ══
+  ok   Tests/library ownership (no exceptions; executed builds checked at exit)
+  note build parallelism: cap 48G -> LEAN_NUM_THREADS=6 (cap/8G, floor 2; 32 cores on this box)
+  ok   oracle toolchain (go1.26.5 = pin)
+  ok   escape-hatch preflight
+  ok   meta-layer escape hatches (allowlist empty since the repo split)
+  ok   escape-hatch addendum (no decide +native / native-config spellings)
+  FAIL bug-index cross-check
+  ok   feature-coverage (no dead tags)
+  ok   spec-anchor citations resolve at the pin
+  ok   stdlib admission register = frontend tables
+  ok   lane-validation fixtures (manifest gates reject bad shapes)
+  ok   evidence-on-main size gate
+  ok   AGENTS.md alias of CLAUDE.md
+  ok   inittask generator fail-closed self-test
+  ok   imported-goose verbatim (above-marker bytes = pinned upstream)
+  ok   engine-isolation (core ↛ EnumDedup)
+  ok   memory-module raw call-site inventory (emit/peek discipline)
+  ok   core build (warning-free)
+  FAIL certificate provenance
+  ok   core totality audit (every GoLean/ module; required core theorems; poison controls)
+  ok   admission checker proofs and post-import audit
+  ok   declaration boundary
+  ok   wire boundary (byte-level controls through the real CLI)
+  ok   package-correct method identity
+  ok   unseq scheduler (Stage B)
+  ok   unseq wire (Stage C)
+  ok   semantic equations (scripts/check-equations)
+  ok   pool spec freeze + discharge (scripts/check-pool-spec)
+  ok   frontend pins (realized init-order deviation + twin wire = pinned bytes)
+  ok   import-goose fixtures (importer + verbatim guard reject bad shapes)
+  ok   frontend unit tests
+  ok   lowering-diagnostic tables
+  ok   coverage-harness unit tests
+  ok   eval tests (298 ok)
+  ok   differential run completed (exit 1; failing-set judged by baseline diff)
+  ok   lane-validation fixtures incl. harness half (F4/F6/B3-B5/G5/T1-T8/D1-D6)
+  ok   negative run completed (exit 0; set judged by baseline diff)
+  ok   Tests/FloatVectors.lean = fresh hardware-oracle regeneration (byte-exact)
+  ok   inittask-std.tsv = fresh gc-derived regeneration (header at pin; byte-exact modulo date line)
+  note negative baseline diff matched (394 case(s)) but the record was made on a DIRTY tree (git_dirty=true) — certifies that worktree state, not a commit
+  FAIL baseline diff (DRIFT — see above)
+  note reconciler: 9 finding(s), 6 HIGH — report-only (details: tools/reconcile-records)
+  ok   executed library coverage (all declared libraries; all Tests modules)
+
+RESULT: FAIL
+Failed CI receipts retained: /home/dev/projects/golean/.claude/worktrees/bug115/.tmp/ci-libraries-uh1i4xgh
+CI coverage timing: close: seconds=0.026
+CI total wall seconds: 1950
+with-lock: command EXIT=1
+with-lock: released 2026-10-08T06:34:53Z
+EXIT=1

@@ -1,5 +1,27 @@
 # GoLean native-frontend full-corpus differential baseline
-# cases: 3917 (3677 PASS / 240 FAIL)
+# cases: 3936 (3705 PASS / 231 FAIL)
+# re-pinned: 2026-10-08 [AGENT], lane fix/bug115-map-multiassign-1008 (off main 6a90ba8d) — BUG-115 / triage F6 / mini-slice A3 FIXED
+#   ([USER] Mike 2026-10-08 «While things are calm, can we fix some bugs?», relayed by the [AGENT] coordinator). WHY: the LEGACY
+#   multi-target emitter quarantined a map element as an `=` target by name («map element as assignment target outside a single
+#   assignment») where gc runs it; since Stage E5 E5b the unseq GRAPH path ran the same shape as the machine's map-element PLAN, so
+#   the refusal was trigger-dependent. The fix (tools/nativefrontend/emit.go emitAssignTargetPhase1): the `=` statement's map-element
+#   target lowers to that same plan ({"target": "map"} → Assignee.mapElem, BUG-030's delivery node) on the legacy path — the assignment
+#   spine realizes spec#Assignment_statements' two phases (operands in lexical position, sibling checks deferred to their stores, stores
+#   left to right, the nil-map panic at the store); the three map arms (single assign, compound, incdec) and the quarantine guard unwrap
+#   parentheses (the `(m[k])` spellings lowered an index-addr on the MAP VALUE on main — a machine `stuck`). No core, decoder or
+#   wire-schema change; wire change only for programs with the shape (whole-corpus export comparison: 1386 packages, 8 differ = exactly
+#   those with the shape; the raft subject's twin wire byte-identical). BORN ROWS: +19 maps/multi-target/* (all strict, all PASS;
+#   red-first on main 6a90ba8d — 14 refused by name, the 4 parenthesized spellings stuck: docs/evidence/2026-10-08_bug115/
+#   red-first-witness.txt). FLIPS 9, FAIL/frontend-export → PASS/-, all on BUG-115's Cases line: evalorder/unseq-multi/
+#   map-target-nil-legacy-refusal (`wit 1` · «assignment to entry in nil map», strict), imported-goose/semantics/multiple-assign/
+#   multiple-assign-to-map, maps/{tuple-assign-key-eval,tuple-map-expr-targets,tuple-rhs-before-target-write,tuple-swap-values}, and the
+#   noodler lane's three triage-F6 re-hits noodler/maps/{swap-with-missing,tuple-map-and-var,tuple-two-map-targets}. NO PASS→non-PASS
+#   flip; no lane move; no removal. The certified row imported-goose/channel/google-search re-certified at the lane's run 1 (7d61a5f6):
+#   unchanged set (STALE on the frontend inputs emit.go + lowerdiag causes.tsv — a provenance refresh, the standing 5a pair; the receipt
+#   notes a dirty tree: the then-untracked docs/evidence/2026-10-08_bug115/README.md only); its PASS/membership row kept — the run's
+#   FAIL/membership on it is the stale record, re-verified green by run 2. Measured by scripts/ci --slow at 7d61a5f6
+#   (docs/evidence/2026-10-08_bug115/ci-slow-run1.tail.txt: 3936 = 3704 / 232 at the run, the one extra FAIL the stale certified row).
+#   3917 + 19 = 3936; 3677 + 19 + 9 = 3705 PASS; 240 − 9 = 231 FAIL.
 # re-pinned: 2026-10-08 [AGENT], train r74 (landing lane/conv-cap-1007; [USER] Mike 2026-10-08 «merge it», relayed) — ONE row BORN
 #   PASS, the control strings/conv-cap/bytes-named-operand-lit (`[]byte(MyS("hello"))`, a NAMED OPERAND type: the frontend emits the
 #   literal operand, cap = 5 under gc default/-l/-race and on the machine; the lane's Fable adversarial audit, item 5). Nothing else
@@ -2688,7 +2710,7 @@ PASS	evalorder/unseq-multi/swap-control	-
 PASS	evalorder/unseq-multi/comma-ok-map-control	-
 PASS	evalorder/unseq-multi/map-target-key-vs-writer	membership
 PASS	evalorder/unseq-multi/comma-ok-map-target-vs-delete	membership
-FAIL	evalorder/unseq-multi/map-target-nil-legacy-refusal	frontend-export
+PASS	evalorder/unseq-multi/map-target-nil-legacy-refusal	-
 PASS	evalorder/unseq-maplit/map-lit-entry-vs-call	membership
 PASS	evalorder/unseq-maplit/map-lit-key-vs-call	membership
 PASS	evalorder/unseq-maplit/map-lit-const-control	-
@@ -3464,7 +3486,7 @@ PASS	imported-goose/semantics/maps/iterate-map	-
 PASS	imported-goose/semantics/maps/map-size	-
 PASS	imported-goose/semantics/multiple-assign/assign-three	-
 PASS	imported-goose/semantics/multiple-assign/assign-two	-
-FAIL	imported-goose/semantics/multiple-assign/multiple-assign-to-map	frontend-export
+PASS	imported-goose/semantics/multiple-assign/multiple-assign-to-map	-
 PASS	imported-goose/semantics/multiple-return/anonymous-binding	-
 PASS	imported-goose/semantics/multiple-return/return-four	-
 PASS	imported-goose/semantics/multiple-return/return-three	-
@@ -3896,6 +3918,25 @@ PASS	maps/map-literal-nan-keys	-
 PASS	maps/map-nil-assign	-
 PASS	maps/map-nil-eq	-
 PASS	maps/map-value-inner-write	-
+PASS	maps/multi-target/comma-ok-assert-map-target	-
+PASS	maps/multi-target/comma-ok-lookup-map-target	-
+PASS	maps/multi-target/interface-elem-tuple	-
+PASS	maps/multi-target/key-panic-before-nil-store	-
+PASS	maps/multi-target/map-and-slice-swap	-
+PASS	maps/multi-target/multi-value-call	-
+PASS	maps/multi-target/nil-map-second-target	-
+PASS	maps/multi-target/nil-map-then-slice-oob	-
+PASS	maps/multi-target/nil-map-vs-rhs-panic	-
+PASS	maps/multi-target/paren-compound	-
+PASS	maps/multi-target/paren-incdec	-
+PASS	maps/multi-target/paren-single-target	-
+PASS	maps/multi-target/paren-tuple-target	-
+PASS	maps/multi-target/rhs-call-effect	-
+PASS	maps/multi-target/rhs-call-panics	-
+PASS	maps/multi-target/select-recv-map-iface-elem	-
+PASS	maps/multi-target/select-recv-map-target	-
+PASS	maps/multi-target/slice-oob-then-nil-map	-
+PASS	maps/multi-target/target-call-order	-
 PASS	maps/named-nil-flows/arg	-
 PASS	maps/named-nil-flows/composite	-
 PASS	maps/named-nil-flows/literal-elem	-
@@ -3930,10 +3971,10 @@ PASS	maps/struct-key-interface-field-unhashable/access-empty	-
 PASS	maps/struct-key-interface-field-unhashable/access-nonempty	-
 PASS	maps/struct-key-interface-field-unhashable/assign	-
 PASS	maps/struct-key-interface-field-unhashable/delete-nonempty	-
-FAIL	maps/tuple-assign-key-eval	frontend-export
-FAIL	maps/tuple-map-expr-targets	frontend-export
-FAIL	maps/tuple-rhs-before-target-write	frontend-export
-FAIL	maps/tuple-swap-values	frontend-export
+PASS	maps/tuple-assign-key-eval	-
+PASS	maps/tuple-map-expr-targets	-
+PASS	maps/tuple-rhs-before-target-write	-
+PASS	maps/tuple-swap-values	-
 PASS	maps/update-during-range	-
 PASS	methods/alias-promoted-method-expression/direct	-
 PASS	methods/alias-promoted-method-expression/promoted	-
@@ -4499,9 +4540,9 @@ PASS	noodler/maps/single-entry-range	-
 PASS	noodler/maps/slice-compound-call-mutates	membership
 PASS	noodler/maps/string-key-from-bytes	-
 PASS	noodler/maps/struct-key-nan	-
-FAIL	noodler/maps/swap-with-missing	frontend-export
-FAIL	noodler/maps/tuple-map-and-var	frontend-export
-FAIL	noodler/maps/tuple-two-map-targets	frontend-export
+PASS	noodler/maps/swap-with-missing	-
+PASS	noodler/maps/tuple-map-and-var	-
+PASS	noodler/maps/tuple-two-map-targets	-
 PASS	noodler/maps/zero-size-keys	-
 PASS	noodler/membership/delete-other-key-during-range	confluent
 PASS	noodler/membership/insert-then-delete-during-range	membership

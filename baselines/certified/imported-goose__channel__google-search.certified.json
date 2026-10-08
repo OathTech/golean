@@ -199,7 +199,7 @@
       "tools/floatvectors/main.go": "2bef884be10a31f3de25f1218e8fc68a07bc3b2a060857747c6934834a34da38",
       "tools/godocanchors/main.go": "f185b941317b218553231dbd913b28bbd386ba955d7f0d448ff7bbc1ecd8aad9",
       "tools/lowerdiag/causes.go": "5203ad7b9d9a5cdc5a005323d7b51212f494317cf6819a433ed2c46b8c7e5d57",
-      "tools/lowerdiag/causes.tsv": "f2ebe131501437cfe07b6ab386c07e1c1a953c56815aea3666e0b4279d3a60f3",
+      "tools/lowerdiag/causes.tsv": "a468d02788ef7a062c0eb029cec2de25daa485b16e43bdf55226d0f3ad2f5679",
       "tools/lowerdiag/library-refusals.tsv": "7b0bcb638b6518d8970b24bb09bd4315bf0f76669dccddd95e5ffedfcb504990",
       "tools/lowerdiag/lowerdiag_test.go": "4017d85f561632ca95691377ff0d75ed8d2b9edf44a02e6f3518c6469544b56a",
       "tools/lowerdiag/machine-surface.tsv": "4fc1397b53d86ff57318d41df9d9b0683bfc1d13ec6492ebcf3a6b0ab4cceea2",
@@ -227,7 +227,7 @@
       "tools/nativefrontend/e13guard_test.go": "cae82a2076fca179d0a5af5179b8046c347798824685d4ab5ac427359ce8951e",
       "tools/nativefrontend/effectisolation_test.go": "5d653d1512c7c165a82474473d08407300dc46b7343bdbbe85d77f5a8b092c47",
       "tools/nativefrontend/embedding_test.go": "8a49ed8d48ea7f46ec540dd8d40c44f4e75ab31a951ec06f62747c6251e91f7f",
-      "tools/nativefrontend/emit.go": "e21cf85504fb1a3255d3a289d3b0746ae6baa3c9d9df0935811a5ee5672f3c77",
+      "tools/nativefrontend/emit.go": "5889db88439d305ce13d250ea7be46ee5b20cc73271374c9cc6b3301faf8701f",
       "tools/nativefrontend/emit_test.go": "07cd0a3bd9b100102745c9005bc31fa6b72d112b44765aa7ec25f33bdef572a7",
       "tools/nativefrontend/fileselect.go": "a432391e7c35f6ddae6917214ff1aa80965c62eb36f0d1c84ff2b2efee3947f1",
       "tools/nativefrontend/fileselect_test.go": "45e1016482be0ece4f834c2fdf0cf4b969348cbae12980e3042f498680d02ea6",
@@ -341,12 +341,12 @@
       "--engine",
       "dedup"
     ],
-    "finished_utc": "2026-10-08T02:23:53.940341+00:00",
-    "git_dirty": false,
-    "source_commit": "4f6ee2c993a7f89bbe529a0a7b1c66aee525638d",
-    "started_utc": "2026-10-08T02:20:44.320726+00:00",
+    "finished_utc": "2026-10-08T06:25:44.344572+00:00",
+    "git_dirty": true,
+    "source_commit": "7d61a5f6ac0799d9d59ad11027b9f407bea72708",
+    "started_utc": "2026-10-08T06:21:29.184104+00:00",
     "stats_sha256": "80614849ba8583af41ce62fc0a0cefdc7a5b6f22fbb482784a125e8bd19f3283",
-    "wall_seconds": 182.123
+    "wall_seconds": 247.831
   },
   "schema": "golean-certification-v1"
 }
