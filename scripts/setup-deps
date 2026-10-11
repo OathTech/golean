@@ -89,17 +89,21 @@ refuse_if_populated() { # $1 = dest, $2 = label
 # meaning any rev accepted); go/covmap/go101/spectec/esmeta/gofrontend/
 # tinygo/proposal = docs/spec-sources.md (the spec-and-community truth
 # campaign's pin index — go's SHA is tag go1.26.5, the language-version
-# pin; covmap is internal, --from only); grossmith = community-truth
-# correspondence materials, --from only.
+# pin; covmap = OathTech/covmap, public since the 2026-10-11 box move
+# — it was "--from only" while it had no public home); grossmith =
+# community-truth correspondence materials, OathTech/grossmith, public
+# likewise ([USER] Mike 2026-10-11: «both of these are publicly
+# available», after a fresh clone on milner-oath failed closed on the
+# "-" URL rows).
 # cedar-go / cedar-access-control-for-k8s = verification-target census
 # checkouts (docs/2026-09-03_cedar-go-coverage-census.md; opt-in, read-only
 # subjects of scripts/cedar-census — never lowered from deps/ in place).
 PINS=$(cat <<'TABLE'
 goose            3be88bbb4982f58e5813b6f0344302d5582c8e8a  https://github.com/goose-lang/goose.git      default
 raft             -                                         https://github.com/etcd-io/raft.git          default
-grossmith        -                                         -                                            named
+grossmith        -                                         https://github.com/OathTech/grossmith.git    named
 go               c19862e5f8415b4f24b189d065ed739517c548ba  https://github.com/golang/go.git             default
-covmap           2978393a4aed26b9562f5cd040e74507b2a53812  -                                            named
+covmap           2978393a4aed26b9562f5cd040e74507b2a53812  https://github.com/OathTech/covmap.git       named
 go101            c13b00435002a00f574430b61eb65ec5a268acfe  https://github.com/go101/go101.git           named
 spectec          acc6e834ff403c82554d081237f327346190ad96  https://github.com/Wasm-DSL/spectec.git      named
 esmeta           7d237fd1680f473e674320cc97932702d950fa98  https://github.com/es-meta/esmeta.git        named
