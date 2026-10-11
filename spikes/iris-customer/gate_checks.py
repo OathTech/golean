@@ -4,13 +4,16 @@ import json
 import os
 from pathlib import Path
 import re
-import shutil
 import subprocess
 import sys
 import tempfile
 
 SPIKE = Path(__file__).resolve().parent
 ROOT = SPIKE.parents[1]
+sys.path.insert(0, str(ROOT) + "/tools")
+from storage import go_cache
+sys.path.insert(0, str(ROOT / "tools"))
+from audit_scratch import active_run, managed_audit
 MODULES = ["Heap","Ghost","Lifting","Rules","Adequacy","Program","Admission","Allocation","Call","Unwind","Return","Examples","Readout","Driver","SharedProgram","SharedHelpers","SharedRecovery","SharedDrain","Shared","SharedReadout","SharedDriver","OwnershipTests","Audit"]
 CORE_MODULES = ["RecoveryCallLayout","RecoverySingleton","RecoveryPool","RecoveryChoices"]
 SOURCES = [SPIKE / "GoLeanIris" / f"{name}.lean" for name in MODULES] + [SPIKE / "GoLeanIris.lean"]
@@ -49,7 +52,9 @@ def preflight():
         if forbidden(path.read_text()):
             raise SystemExit(f"Iris customer: forbidden proof escape in {path}")
     dependencies(required=False)
-    paths = sorted([ROOT / "Tests/InterfaceContract.lean", ROOT / "Tests/RecoveryTypingFixture.lean",
+    paths = sorted([ROOT / "tools/audit_scratch.py", ROOT / "tools/storage.py", ROOT / "scripts/go-cache",
+                    ROOT / "tools/storage_watch.py", ROOT / "scripts/storage-run", ROOT / "tools/storage_processes.py",
+                    ROOT / "Tests/InterfaceContract.lean", ROOT / "Tests/RecoveryTypingFixture.lean",
                     ROOT / "Tests/recovery-typing-fixture/main.go", ROOT / "Tests/recovery-typing-fixture/manifest.tsv",
                     ROOT / "tools/check-recovery-fixture-controls.py", ROOT / "GoLean.lean", *ROOT.glob("GoLean/**/*.lean"),
                     ROOT / "lakefile.toml", ROOT / "lean-toolchain",
@@ -72,12 +77,11 @@ def preflight():
     print("Validation mode: incremental Lake build plus fresh spike-module elaboration", flush=True)
 
 
+@managed_audit(ROOT, "iris-customer-audit")
 def audit():
     # Called through capped `lake env python3`, so child Lean processes inherit
     # the pinned toolchain, package search paths, and verified memory cap.
-    scratch_root = ROOT / ".tmp"
-    scratch_root.mkdir(exist_ok=True)
-    scratch = Path(tempfile.mkdtemp(prefix="iris-customer-audit-", dir=scratch_root))
+    scratch = active_run().path
     harness_text = "\n".join(
         f"import {'.'.join(path.relative_to(SPIKE).with_suffix('').parts)}" for path in SOURCES
     ) + "\n#eval GoLeanIrisAudit.run\n"
@@ -91,7 +95,7 @@ def audit():
         args = [str(ROOT / "scripts/capped"), "lean", f"--root={fixture or scratch}"]
         if output is not None:
             args += ["-o", str(output)]
-        result = subprocess.run(args + [str(path)], cwd=SPIKE, env=env,
+        result = active_run().run(args + [str(path)], cwd=SPIKE, env=env,
                                 text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                 timeout=120)
         print(result.stdout, end="", flush=True)
@@ -103,7 +107,7 @@ def audit():
 
     # Compile real replacement modules in isolated search paths. A bad axiom
     # compiles in Lean; the post-import audit must reject it even when unused.
-    # No live source or build output is edited. Leave scratch for inspection.
+    # No live source or build output is edited. Retain compact evidence before releasing compiled copies.
     mutations = [(name + "_private", ROOT, "GoLean/GoCore/" + name + ".lean",
                   "private axiom irisCoreHole : False", "irisCoreHole") for name in CORE_MODULES]
     mutations += [(name + "_private", SPIKE, "GoLeanIris/" + name + ".lean",
@@ -117,33 +121,34 @@ def audit():
     for label, source_root, target, declaration, marker in mutations:
         if not forbidden(declaration):
             raise SystemExit(f"Iris customer: lexical negative test escaped: {label}")
-        fixture = scratch / label
-        # Lean resolves the first matching package root, rather than falling
-        # through per missing child module. Copy the complete compiled tree;
-        # only the selected module and aggregate are overwritten below.
-        shutil.copytree(SPIKE / ".lake/build/lib/lean/GoLeanIris", fixture / "GoLeanIris")
-        if source_root == ROOT:
-            shutil.copytree(ROOT / ".lake/build/lib/lean/GoLean", fixture / "GoLean")
-        source = fixture / target
-        source.parent.mkdir(parents=True, exist_ok=True)
-        source.write_text((source_root / target).read_text() + "\n" + declaration + "\n")
-        result = lean(source, fixture=fixture, output=source.with_suffix(".olean"))
-        (fixture / "compile.log").write_text(result.stdout)
-        if result.returncode:
-            raise SystemExit(f"Iris customer: {label} fixture failed to compile; not an audit rejection")
-        if target != "GoLeanIris.lean":
-            aggregate = fixture / "GoLeanIris.lean"
-            aggregate.write_text((SPIKE / "GoLeanIris.lean").read_text())
-            if lean(aggregate, fixture=fixture, output=aggregate.with_suffix(".olean")).returncode:
-                raise SystemExit(f"Iris customer: {label} aggregate failed to compile")
-        external = fixture / "AuditAll.lean"
-        external.write_text(harness_text)
-        result = lean(external, fixture=fixture)
-        (fixture / "audit.log").write_text(result.stdout)
-        if result.returncode != 1 or "forbidden axiom" not in result.stdout or marker not in result.stdout:
-            raise SystemExit(f"Iris customer: expected named audit rejection for {label}")
-        print(f"Iris customer negative regression: {label} rejected (exit 1, {marker})", flush=True)
-    print(f"Iris customer audit scratch retained: {scratch}", flush=True)
+        with active_run().fixture(label) as fixture:
+            # Lean resolves the first matching package root, rather than falling
+            # through per missing child module. Copy the complete compiled tree;
+            # only the selected module and aggregate are overwritten below.
+            active_run().copy_package(SPIKE / ".lake/build/lib/lean/GoLeanIris", fixture / "GoLeanIris")
+            if source_root == ROOT:
+                active_run().copy_package(ROOT / ".lake/build/lib/lean/GoLean", fixture / "GoLean")
+            source = fixture / target
+            source.parent.mkdir(parents=True, exist_ok=True)
+            source.write_text((source_root / target).read_text() + "\n" + declaration + "\n")
+            result = lean(source, fixture=fixture, output=source.with_suffix(".olean"))
+            (fixture / "compile.log").write_text(result.stdout)
+            if result.returncode:
+                raise SystemExit(f"Iris customer: {label} fixture failed to compile; not an audit rejection")
+            if target != "GoLeanIris.lean":
+                aggregate = fixture / "GoLeanIris.lean"
+                aggregate.write_text((SPIKE / "GoLeanIris.lean").read_text())
+                if lean(aggregate, fixture=fixture, output=aggregate.with_suffix(".olean")).returncode:
+                    raise SystemExit(f"Iris customer: {label} aggregate failed to compile")
+            external = fixture / "AuditAll.lean"
+            external.write_text(harness_text)
+            result = lean(external, fixture=fixture)
+            (fixture / "audit.log").write_text(result.stdout)
+            if result.returncode != 1 or "forbidden axiom" not in result.stdout or marker not in result.stdout:
+                raise SystemExit(f"Iris customer: expected named audit rejection for {label}")
+            print(f"Iris customer negative regression: {label} rejected (exit 1, {marker})", flush=True)
+            active_run().confirm(marker)
+    print(f"Iris customer audit scratch (released after evidence): {scratch}", flush=True)
 
 
 
@@ -156,7 +161,7 @@ def artifact():
     shared_wire = scratch / "shared.json"
     env = os.environ.copy()
     env["GO111MODULE"] = "off"
-    env["GOCACHE"] = str(ROOT / "artifacts/go-build-cache")
+    env["GOCACHE"] = go_cache(ROOT)
     commands = [
         (["go", "run", "./tools/nativefrontend", "--dir",
           str(SPIKE / "fixtures/recovery"), "--out", str(wire)], ROOT),
@@ -169,7 +174,7 @@ def artifact():
         subprocess.run(args, cwd=cwd, env=env, check=True, timeout=120)
     for path in [wire, shared_wire]:
         print("Fresh native wire SHA256:", path.name, hashlib.sha256(path.read_bytes()).hexdigest(), flush=True)
-    print(f"Iris customer artifact scratch retained: {scratch}", flush=True)
+    print(f"Iris customer artifact scratch (released after evidence): {scratch}", flush=True)
 
 
 if __name__ == "__main__":

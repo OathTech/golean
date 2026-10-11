@@ -78,7 +78,7 @@ if ! "$GOLEAN_BIN" choice-trace --help >/dev/null 2>&1; then
   exit 2
 fi
 command -v go >/dev/null || { echo "choice-trace-corpus: go not on PATH" >&2; exit 2; }
-GO_BUILD_CACHE="$ROOT/artifacts/go-build-cache"
+GO_BUILD_CACHE="$("$ROOT/scripts/go-cache")" || exit 2
 # --out must be writable before any work starts (the run is minutes long;
 # a late "permission denied" on results-*.tsv would waste it and leave a
 # half-written artifact dir). Fail up front, naming the directory.

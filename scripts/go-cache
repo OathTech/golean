@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Shared resolver; stdout is solely the absolute path. No implicit eviction.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+exec python3 "$ROOT/tools/storage.py" "${1:-go-cache}"

@@ -19,13 +19,14 @@ from string_member import check_actual_member, require, sha, Refusal
 from string_member_runner import Run
 
 ROOT = Path(__file__).resolve().parents[1]
+from storage import go_cache
 
 
 def main():
     scratch = Path(tempfile.mkdtemp(prefix="string-member-fixtures-", dir=ROOT/".tmp"))
     helper = scratch/"coverageharness"
     env = os.environ.copy()
-    env.update(GO111MODULE="off", GOCACHE=str(ROOT/"artifacts/go-build-cache"))
+    env.update(GO111MODULE="off", GOCACHE=go_cache(ROOT))
     subprocess.run(["go", "build", "-o", str(helper), "./tools/coverageharness"], cwd=ROOT, env=env, check=True, timeout=180)
     run = Run(scratch/"runs", ROOT/".lake/build/bin/golean", helper, 60, 60)
     source = "Corpus/coverage/exec/panic-recover/string-members"

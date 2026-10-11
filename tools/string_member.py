@@ -23,6 +23,8 @@ ROLES = (
 )
 ABORT_ROLES = {"equal-repanic", "unequal-repanic", "multiple-repanic", "rethrow", "computed-equal"}
 APPARATUS_FILES = (
+    "tools/storage.py", "tools/audit_scratch.py", "scripts/go-cache",
+    "tools/storage_watch.py", "scripts/storage-run", "tools/storage_processes.py",
     "Main.lean",
     "GoLean.lean",
     "tools/nativefrontend/inittask-std.tsv",

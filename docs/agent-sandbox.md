@@ -35,17 +35,23 @@ approval. Those commands are destructive even when the target is under
 `/private/tmp`. Prefer unique scratch directories and leave them for OS temp
 cleanup, or ask for approval before deleting them.
 
-For direct Go probes, use the current worktree's artifact cache, matching
+For direct Go probes, use the shared project cache resolver, matching
 `scripts/diff-coverage`, instead of the user-level cache. Run these commands
 from the worktree root:
 
 ```sh
-GOCACHE="$PWD/artifacts/go-build-cache" go run ./path/to/package
-GO111MODULE=off GOCACHE="$PWD/artifacts/go-build-cache" go run ./path/to/package
+GOLEAN_TASK_CACHE="$(scripts/go-cache)" || exit
+GOCACHE="$GOLEAN_TASK_CACHE" go run ./path/to/package
+GO111MODULE=off GOCACHE="$GOLEAN_TASK_CACHE" go run ./path/to/package
 ```
 
-The differential runner already does this for normal coverage runs by setting
-`GOCACHE` internally. This note is only for ad hoc probes outside
+The resolver honors `GOLEAN_SHARED_GOCACHE`, then `GOCACHE`, then defaults to
+the primary checkout's `artifacts/go-build-cache` using Git's common directory.
+Standalone clones use their own artifact cache. Settings must be absolute;
+inaccessible paths fail visibly. All participating worktrees must have the
+shared location granted by their outer sandbox. Do not share mutable Lean
+build directories, evidence or observations. The differential runner already
+uses the resolver. This note is also for ad hoc probes outside
 `scripts/coverage`, `scripts/diff-coverage`, and `scripts/diff-one`.
 
 ### Linux/nono cache-path denial (2026-09-05)
@@ -58,7 +64,7 @@ confirmed `path_not_granted`. The differential harness's worktree-local
 `artifacts/go-build-cache` was permitted and its runs succeeded. The [USER]
 authorized documenting this correction so other agents use that cache.
 
-Use the worktree-local cache above and the session's permitted `$TMPDIR`.
+Use the resolved project cache above and the session's permitted `$TMPDIR`.
 Do not create `/private` or change filesystem permissions to repair this
 policy denial. If another path is required, diagnose it with
 `nono why --path <path> --op write`. Either pre-create the required directory

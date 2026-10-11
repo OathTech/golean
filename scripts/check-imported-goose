@@ -25,6 +25,8 @@
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+GOCACHE="$("$ROOT/scripts/go-cache")" || exit 2
+export GOCACHE
 cd "$ROOT"
 
 PINNED_REV="3be88bbb4982f58e5813b6f0344302d5582c8e8a"
@@ -41,7 +43,7 @@ PINNED_REV="3be88bbb4982f58e5813b6f0344302d5582c8e8a"
 command -v go >/dev/null 2>&1 || { echo "check-imported-goose: FAIL — go not found (the import vet is go/parser-based)" >&2; exit 2; }
 LSIMPORTS="$(mktemp "${TMPDIR:-/tmp}/golean-lsimports.XXXXXX")"
 trap 'rm -f "$LSIMPORTS"' EXIT
-if ! buildmsg="$(GO111MODULE=off GOCACHE="${GOCACHE:-$PWD/artifacts/go-build-cache}" \
+if ! buildmsg="$(GO111MODULE=off GOCACHE="$GOCACHE" \
     go build -o "$LSIMPORTS" "$PWD/tools/lsimports/main.go" 2>&1)"; then
   echo "check-imported-goose: FAIL — cannot build tools/lsimports (the import vet): $buildmsg" >&2
   exit 2
@@ -81,7 +83,7 @@ fi
 strip_trailing_blanks() { sed -e :a -e '/^[[:space:]]*$/{$d;N;ba' -e '}'; }
 
 TMP="$(mktemp -d "${TMPDIR:-/tmp}/check-imported-goose.XXXXXX")"
-trap 'rm -rf "$TMP"' EXIT
+trap 'rm -rf "$TMP"; rm -f "$LSIMPORTS"' EXIT
 
 while IFS= read -r main_go; do
   case_dir="${main_go%/main.go}"

@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import sys
 from pathlib import Path
 import signal
 import subprocess
@@ -17,6 +18,7 @@ from string_member import (
 )
 
 ROOT = Path(__file__).resolve().parents[1]
+from storage import go_cache
 FUEL = 10_000_000
 # Keep the existing strict lane's three fixed adversarial tapes exactly.
 # The typed theorem is generic in the stream; these are also concrete
@@ -34,7 +36,7 @@ class Run:
         self.records = {}
         self.env = os.environ.copy()
         self.env.update(GO111MODULE="off", GOFLAGS="", GODEBUG="panicnil=0", GOTRACEBACK="system",
-                        GOCACHE=str(ROOT / "artifacts/go-build-cache"))
+                        GOCACHE=go_cache(ROOT))
         self.binary_hashes = {"golean": sha(self.golean), "harness": sha(self.harness)}
 
     def execute(self, label, command, timeout, cwd=ROOT, env=None):
@@ -51,6 +53,7 @@ class Run:
                 proc.wait()
                 code = 124
         record = {"label": label, "command": list(map(str, command)), "cwd": str(cwd),
+                  "go_cache": (env or self.env).get("GOCACHE"),
                   "exit": code, "stdout": str(stdout.relative_to(self.directory)),
                   "stderr": str(stderr.relative_to(self.directory)),
                   "stdout_sha256": sha(stdout), "stderr_sha256": sha(stderr)}

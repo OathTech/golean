@@ -144,6 +144,8 @@ class StringMemberContracts(unittest.TestCase):
         # list, so removing an entry from APPARATUS_FILES cannot remove
         # its negative control as well.
         required_sources = ("Main.lean", "GoLean.lean",
+                            "tools/storage.py", "tools/audit_scratch.py", "scripts/go-cache",
+                            "tools/storage_watch.py", "scripts/storage-run", "tools/storage_processes.py",
                             "tools/nativefrontend/inittask-std.tsv",
                             "tools/nativefrontend/stdlib-substitutions.tsv",
                             "tools/nativefrontend/stdlib-overlay.tsv",

@@ -7,7 +7,7 @@ cd "$ROOT"
 BASE="Corpus/challenges/semantic-edges"
 CASES="$BASE/cases"
 FULL="$BASE/full"
-GO_BUILD_CACHE="$ROOT/artifacts/go-build-cache"
+GO_BUILD_CACHE="$("$ROOT/scripts/go-cache")" || exit 2
 
 if [[ ! -d "$CASES" ]]; then
   echo "challenge cases not found: $CASES" >&2

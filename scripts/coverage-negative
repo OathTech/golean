@@ -2,13 +2,17 @@
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+if ! "$ROOT/scripts/storage-run" inside; then
+  exec "$ROOT/scripts/storage-run" -- bash "$0" "$@"
+fi
+"$ROOT/scripts/go-cache" check-cache >/dev/null || exit 2
 cd "$ROOT"
 
 MANIFEST="${1:-}"
 OUT="${GOLEAN_COVERAGE_ARTIFACTS:-artifacts/coverage}"
 RESULTS_TSV="${GOLEAN_NEGATIVE_RESULTS:-$OUT/negative-latest.tsv}"
 META_TSV="${GOLEAN_NEGATIVE_META:-$OUT/negative-latest.meta.tsv}"
-GO_BUILD_CACHE="$ROOT/artifacts/go-build-cache"
+GO_BUILD_CACHE="$("$ROOT/scripts/go-cache")" || exit 2
 GO_TIMEOUT_SECONDS="${GO_TIMEOUT_SECONDS:-30}"
 BUILD_OUT="$(mktemp -d "${TMPDIR:-/tmp}/golean-negative-build.XXXXXX")"
 

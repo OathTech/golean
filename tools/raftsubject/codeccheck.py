@@ -44,6 +44,8 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(os.path.dirname(HERE))
+sys.path.insert(0, str(REPO) + "/tools")
+from storage import go_cache
 
 BATTERY = r'''package main
 
@@ -485,7 +487,7 @@ def main():
         shutil.copytree(os.path.join(prog, pkg), os.path.join(gopath, "src", pkg))
 
     env = dict(os.environ)
-    env["GOCACHE"] = os.path.join(REPO, "artifacts", "go-build-cache")
+    env["GOCACHE"] = go_cache(REPO)
     env["GO111MODULE"] = "off"
     env["GOPATH"] = gopath
     r = subprocess.run(["go", "run", "main.go"], cwd=prog, env=env,

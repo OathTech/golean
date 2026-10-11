@@ -69,6 +69,7 @@
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+"$ROOT/scripts/go-cache" check-cache >/dev/null || exit 2
 cd "$ROOT" || exit 2
 
 # ---------------------------------------------------------------------
@@ -128,9 +129,14 @@ mkdir -p "$OUT" || exit 2
 OUT_ABS="$(realpath -e -- "$OUT")" || { echo "grossmith-run: cannot canonicalise $OUT after mkdir" >&2; exit 2; }
 check_root "$OUT_ABS" " (symlink-resolved)"
 OUT="$OUT_ABS"
+export GOLEAN_STORAGE_EXTRA_PATHS="$(python3 -c 'import json,sys; print(json.dumps([sys.argv[1]]))' "$OUT")"
+if ! "$ROOT/scripts/storage-run" inside; then
+  exec "$ROOT/scripts/storage-run" -- bash "$0" "$@"
+fi
 export TMPDIR="$OUT/tmp"
 mkdir -p "$TMPDIR" "$OUT/bin"
-export GOCACHE="$OUT/go-build-cache"
+GOCACHE="$("$ROOT/scripts/go-cache")" || exit 2
+export GOCACHE
 export GOFLAGS="-mod=mod" GOTOOLCHAIN=local GOENV=off GOWORK=off
 
 # ---------------------------------------------------------------------

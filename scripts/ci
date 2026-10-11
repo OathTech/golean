@@ -34,6 +34,12 @@
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+if ! "$ROOT/scripts/storage-run" inside; then
+  exec "$ROOT/scripts/storage-run" -- bash "$0" "$@"
+fi
+"$ROOT/scripts/go-cache" check-cache >/dev/null || exit 2
+GOCACHE="$("$ROOT/scripts/go-cache")" || exit 2
+export GOCACHE
 cd "$ROOT"
 
 # 0. MEMORY CAP — re-exec ourselves inside our own cgroup before doing any
@@ -551,6 +557,13 @@ else
   bad "positive declaration identities and decoder (see above)"
 fi
 
+step "exact byte-array append refinement and source-bound reference"
+if bash scripts/check-byte-array-store; then
+  ok "exact byte-array append refinement and source-bound reference"
+else
+  bad "exact byte-array append refinement and source-bound reference"
+fi
+
 step "explicit string-member apparatus and compiling negative controls"
 if smout="$(python3 scripts/check-string-members.py 2>&1)"; then
   echo "$smout" | tail -1
@@ -561,7 +574,7 @@ else
 fi
 
 step "frontend unit tests (go test ./tools/nativefrontend)"
-if ftout="$(GO111MODULE=off GOCACHE="$PWD/artifacts/go-build-cache" go test ./tools/nativefrontend 2>&1)"; then
+if ftout="$(GO111MODULE=off GOCACHE="$GOCACHE" go test ./tools/nativefrontend 2>&1)"; then
   echo "$ftout" | tail -2
   ok "frontend unit tests"
 else
@@ -577,7 +590,7 @@ fi
 #     STALE the moment its FR row lands. Guard-strengthening only: nothing
 #     here reads the diagnostic's output.)
 step "lowering-diagnostic tables (go test ./tools/lowerdiag — causes.tsv vs ledger, surface tables vs frontend, calibration)"
-if ldout="$(GO111MODULE=off GOCACHE="$PWD/artifacts/go-build-cache" go test ./tools/lowerdiag 2>&1)"; then
+if ldout="$(GO111MODULE=off GOCACHE="$GOCACHE" go test ./tools/lowerdiag 2>&1)"; then
   echo "$ldout" | tail -2
   ok "lowering-diagnostic tables"
 else
@@ -659,7 +672,7 @@ if [ "$RUN_DIFF" -eq 1 ]; then
   DERIVE_TMP="$(mktemp -d "${TMPDIR:-/tmp}/golean-derived-guard.XXXXXX")"
   # (a) Float vectors — regeneration command from the generator's own
   # header: GOCACHE=... GO111MODULE=off go run ./tools/floatvectors.
-  if GOCACHE="$PWD/artifacts/go-build-cache" GO111MODULE=off \
+  if GOCACHE="$GOCACHE" GO111MODULE=off \
        go run ./tools/floatvectors > "$DERIVE_TMP/floatvectors.lean" 2>"$DERIVE_TMP/fv.err"; then
     if cmp -s "$DERIVE_TMP/floatvectors.lean" Tests/FloatVectors.lean; then
       ok "Tests/FloatVectors.lean = fresh hardware-oracle regeneration (byte-exact)"

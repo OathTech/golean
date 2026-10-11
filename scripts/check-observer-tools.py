@@ -6,16 +6,19 @@ Fake oracle output is apparatus evidence only, never Go conformance evidence.
 import hashlib
 import json
 import os
+import sys
 from pathlib import Path
 import re
 import subprocess
 import tempfile
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT) + "/tools")
+from storage import go_cache
 
 
 def main():
-    env = dict(os.environ, GO111MODULE="off", GOCACHE=str(ROOT / "artifacts/go-build-cache"))
+    env = dict(os.environ, GO111MODULE="off", GOCACHE=go_cache(ROOT))
     scratch = Path(tempfile.mkdtemp(prefix="observer-tools-", dir=env.get("TMPDIR")))
     print(f"Diagnostic observer scratch: {scratch}", flush=True)
     harness = scratch / "coverageharness"

@@ -66,7 +66,7 @@ if [[ ! -x "$GOLEAN_BIN" ]]; then
   echo "membership-sampling: golean binary not executable: $GOLEAN_BIN" >&2; exit 2
 fi
 command -v go >/dev/null || { echo "membership-sampling: go not on PATH" >&2; exit 2; }
-GO_BUILD_CACHE="$ROOT/artifacts/go-build-cache"
+GO_BUILD_CACHE="$("$ROOT/scripts/go-cache")" || exit 2
 # The harness binary, built once (stdlib slice 3): harness generation + the
 # fd-2 split (--split-stderr) that yields the `output` observation field.
 mkdir -p "$ROOT/artifacts/membership-sampling-bin"

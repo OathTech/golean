@@ -7,6 +7,7 @@ Scratch and every compiled mutant are retained for audit.
 import hashlib
 import json
 import os
+import sys
 from pathlib import Path
 import re
 import shutil
@@ -14,7 +15,9 @@ import subprocess
 import tempfile
 
 ROOT = Path(__file__).resolve().parent.parent
-ENV = dict(os.environ, GO111MODULE="off", GOCACHE=str(ROOT / "artifacts/go-build-cache"))
+sys.path.insert(0, str(ROOT) + "/tools")
+from storage import go_cache
+ENV = dict(os.environ, GO111MODULE="off", GOCACHE=go_cache(ROOT))
 
 
 def run(args, *, cwd=ROOT, env=ENV):

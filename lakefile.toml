@@ -5,6 +5,10 @@ defaultTargets = ["golean"]
 [[lean_lib]]
 name = "GoLean"
 
+[[lean_lib]]
+name = "ByteAppendTests"
+globs = ["Tests.ByteAppendRuntime", "Tests.ByteAppendAudit"]
+
 [[lean_exe]]
 name = "golean"
 root = "Main"

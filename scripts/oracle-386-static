@@ -76,7 +76,7 @@ OUT_ABS="$(realpath -m -- "$OUT")"
 if [[ "$OUT_ABS" == "$JUDGED_ABS" || "$OUT_ABS" == "$JUDGED_ABS"/* ]]; then
   refuse_judged "$OUT" "$OUT_ABS"
 fi
-GO_BUILD_CACHE="$ROOT/artifacts/go-build-cache"
+GO_BUILD_CACHE="$("$ROOT/scripts/go-cache")" || exit 2
 GO_TIMEOUT_SECONDS="${GO_TIMEOUT_SECONDS:-60}"
 JOBS="${GOLEAN_386_JOBS:-$(nproc 2>/dev/null || echo 4)}"
 

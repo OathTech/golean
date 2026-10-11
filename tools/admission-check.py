@@ -8,12 +8,14 @@ import hashlib
 import os
 from pathlib import Path
 import re
-import shutil
 import subprocess
 import sys
 import tempfile
 
+from audit_scratch import active_run, managed_audit
+
 ROOT = Path(__file__).resolve().parents[1]
+from storage import go_cache
 MODULES = ["GoLean.GoCore.AdmissionIndices", "GoLean.GoCore.AdmissionPolicy",
            "GoLean.GoCore.Admission", "Tests.GoCoreAdmissionFixture",
            "Tests.GoCoreAdmission", "Tests.GoCoreAdmissionAudit"]
@@ -21,7 +23,7 @@ SOURCES = [m.replace(".", "/") + ".lean" for m in MODULES]
 
 
 def run(args, env=None, cwd=ROOT, expect=0):
-    result = subprocess.run(args, cwd=cwd, env=env, text=True,
+    result = (active_run().run if sys.argv[1] == "audit" else subprocess.run)(args, cwd=cwd, env=env, text=True,
                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                             timeout=180)
     print(result.stdout, end="", flush=True)
@@ -34,7 +36,7 @@ def scratch(label):
     parent = ROOT / ".tmp"
     parent.mkdir(exist_ok=True)
     path = Path(tempfile.mkdtemp(prefix=f"admission-{label}-", dir=parent))
-    print(f"Admission scratch retained: {path}", flush=True)
+    print(f"Admission scratch (released after evidence): {path}", flush=True)
     return path
 
 
@@ -54,8 +56,9 @@ def preflight():
     print("Admission inventory: six complete modules", flush=True)
 
 
+@managed_audit(ROOT, "admission-audit")
 def audit():
-    directory = scratch("audit")
+    directory = active_run().path
     harness = directory / "AuditAll.lean"
     harness.write_text("import Tests.GoCoreAdmissionAudit\n#eval GoLeanAdmissionAudit.run\n")
     log = run([str(ROOT / "scripts/capped"), "lean", str(harness)])
@@ -69,26 +72,27 @@ def audit():
          "\nprivate theorem admissionTrailingHole : False := by sorry\n"),
     ]
     for label, module, marker, poison in mutations:
-        fixture = directory / label
-        # Lean chooses a package root before resolving its child modules.
-        # Copy that root's complete compiled tree; partial overlays fail to
-        # import siblings. Copies are independent, never writable symlinks.
-        package = module.split(".")[0]
-        shutil.copytree(ROOT / ".lake/build/lib/lean" / package, fixture / package)
-        source = fixture / (module.replace(".", "/") + ".lean")
-        source.parent.mkdir(parents=True, exist_ok=True)
-        source.write_text((ROOT / (module.replace(".", "/") + ".lean")).read_text() + poison)
-        env = os.environ.copy()
-        env["LEAN_PATH"] = str(fixture) + os.pathsep + env.get("LEAN_PATH", "")
-        compiled = run([str(ROOT / "scripts/capped"), "lean", "-o",
-                        str(source.with_suffix(".olean")), str(source)], env=env, cwd=fixture)
-        (fixture / "compile.log").write_text(compiled)
-        rejected = run([str(ROOT / "scripts/capped"), "lean", str(harness)],
-                       env=env, expect=1)
-        (fixture / "audit.log").write_text(rejected)
-        if "forbidden axiom" not in rejected or marker not in rejected:
-            raise SystemExit(f"Admission gate: poison {label} did not fail for {marker}")
-        print(f"Admission negative audit: {label} compiled then rejected ({marker})", flush=True)
+        with active_run().fixture(label) as fixture:
+            # Lean chooses a package root before resolving its child modules.
+            # Copy that root's complete compiled tree; partial overlays fail to
+            # import siblings. Copies are independent, never writable symlinks.
+            package = module.split(".")[0]
+            active_run().copy_package(ROOT / ".lake/build/lib/lean" / package, fixture / package)
+            source = fixture / (module.replace(".", "/") + ".lean")
+            source.parent.mkdir(parents=True, exist_ok=True)
+            source.write_text((ROOT / (module.replace(".", "/") + ".lean")).read_text() + poison)
+            env = os.environ.copy()
+            env["LEAN_PATH"] = str(fixture) + os.pathsep + env.get("LEAN_PATH", "")
+            compiled = run([str(ROOT / "scripts/capped"), "lean", "-o",
+                            str(source.with_suffix(".olean")), str(source)], env=env, cwd=fixture)
+            (fixture / "compile.log").write_text(compiled)
+            rejected = run([str(ROOT / "scripts/capped"), "lean", str(harness)],
+                           env=env, expect=1)
+            (fixture / "audit.log").write_text(rejected)
+            if "forbidden axiom" not in rejected or marker not in rejected:
+                raise SystemExit(f"Admission gate: poison {label} did not fail for {marker}")
+            print(f"Admission negative audit: {label} compiled then rejected ({marker})", flush=True)
+            active_run().confirm(marker)
 
 
 def elaborate():
@@ -102,7 +106,7 @@ def artifact():
     wire = directory / "native.json"
     env = os.environ.copy()
     env["GO111MODULE"] = "off"
-    env["GOCACHE"] = str(ROOT / "artifacts/go-build-cache")
+    env["GOCACHE"] = go_cache(ROOT)
     run(["go", "run", "./tools/nativefrontend", "--dir",
          str(ROOT / "Tests/admission-fixture"), "--out", str(wire)], env=env)
     run([str(ROOT / "scripts/capped"), "lean", "--run",

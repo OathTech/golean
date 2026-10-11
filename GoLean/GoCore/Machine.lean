@@ -1,4 +1,5 @@
 import GoLean.GoCore.Ops
+import GoLean.GoCore.ByteArrayStore
 import GoLean.GoCore.PanicText
 
 /-!
@@ -1339,15 +1340,7 @@ def applyStmtOp (s : ExecState) (choices : Choices) (op : StmtOp) (_nt : Nat)
           let newLen := slice.len + elemValues.size
           let tloc ← valueAsLoc tv
           if newLen <= slice.cap then
-            let mut current := s
-            let mut i := 0
-            for value in elemValues do
-              match slice.base with
-              | some base =>
-                  current ← storeLoc current
-                    (.index base (Int.ofNat (slice.offset + slice.len + i))) value
-                  i := i + 1
-              | none => stuck s!"cannot append {elemValues.size} element(s) into nil slice in place"
+            let current ← ByteArrayStore.appendValuesFast s slice elemValues
             return ((← storeLoc current tloc (.slice { slice with len := newLen })), choices)
           else
             -- gc's `growslice` refusals (runtime/slice.go:191–252; R16

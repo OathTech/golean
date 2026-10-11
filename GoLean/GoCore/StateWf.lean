@@ -4090,6 +4090,8 @@ theorem applyStmtOp_wf {σ : ExecState} {ch : Choices} {op : StmtOp} {nt : Nat}
     StmtOpPres σ σ' := by
   have hheap := hw.heap_le
   rw [applyStmtOp.eq_def] at h
+  simp only [ByteArrayStore.appendValuesFast_eq, ByteArrayStore.appendValuesOriginal,
+    bind_assoc, pure_bind] at h
   split at h
   · -- appendSlice
     rename_i elem

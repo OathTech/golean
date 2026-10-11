@@ -2,6 +2,10 @@
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+if ! "$ROOT/scripts/storage-run" inside; then
+  exec "$ROOT/scripts/storage-run" -- bash "$0" "$@"
+fi
+"$ROOT/scripts/go-cache" check-cache >/dev/null || exit 2
 cd "$ROOT"
 
 MANIFEST="${1:-}"
@@ -9,7 +13,7 @@ OUT="${GOLEAN_COVERAGE_ARTIFACTS:-artifacts/coverage}"
 RESULTS_TSV="${GOLEAN_COVERAGE_RESULTS:-$OUT/latest.tsv}"
 META_TSV="${GOLEAN_COVERAGE_META:-$OUT/latest.meta.tsv}"
 FRONTEND="${GOLEAN_FRONTEND:-native}"
-GO_BUILD_CACHE="$ROOT/artifacts/go-build-cache"
+GO_BUILD_CACHE="$("$ROOT/scripts/go-cache")" || exit 2
 LAKE_BUILD_TIMEOUT_SECONDS="${LAKE_BUILD_TIMEOUT_SECONDS:-120}"
 GO_TIMEOUT_SECONDS="${GO_TIMEOUT_SECONDS:-30}"
 LEAN_TIMEOUT_SECONDS="${LEAN_TIMEOUT_SECONDS:-30}"

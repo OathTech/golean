@@ -30,6 +30,8 @@
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+GOCACHE="$("$ROOT/scripts/go-cache")" || exit 2
+export GOCACHE
 cd "$ROOT"
 
 PINNED_REV="3be88bbb4982f58e5813b6f0344302d5582c8e8a"
@@ -131,7 +133,7 @@ fi
 # tools/lsimports/main.go for the trust argument).
 LSIMPORTS="$(mktemp "${TMPDIR:-/tmp}/golean-lsimports.XXXXXX")"
 trap 'rm -f "$LSIMPORTS"' EXIT
-if ! buildmsg="$(GO111MODULE=off GOCACHE="${GOCACHE:-$ROOT/artifacts/go-build-cache}" \
+if ! buildmsg="$(GO111MODULE=off GOCACHE="$GOCACHE" \
     go build -o "$LSIMPORTS" "$ROOT/tools/lsimports/main.go" 2>&1)"; then
   die "cannot build tools/lsimports (the import vet): $buildmsg"
 fi
@@ -246,7 +248,7 @@ out="$TMP/main.go"
 } > "$out"
 
 # 6. Self-containment: the assembled file must compile stand-alone.
-export GOCACHE="${GOCACHE:-$ROOT/artifacts/go-build-cache}"
+export GOCACHE="$GOCACHE"
 if ! buildout="$(cd "$TMP" && GO111MODULE=off go build -o /dev/null . 2>&1)"; then
   die "self-containment check failed — assembled file does not compile \
 (missing sibling helpers? add --also): $buildout"

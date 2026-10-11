@@ -650,8 +650,10 @@ EOF
       FR="$TMP/fakeroot"
       mkdir -p "$FR/scripts" "$FR/.lake/build/bin" "$FR/artifacts"
       ln -s "$ROOT/scripts/diff-coverage" "$FR/scripts/diff-coverage"
+      ln -s "$ROOT/scripts/go-cache" "$FR/scripts/go-cache"
+      ln -s "$ROOT/scripts/storage-run" "$FR/scripts/storage-run"
       for _d in tools Corpus baselines; do ln -s "$ROOT/$_d" "$FR/$_d"; done
-      ln -s "$ROOT/artifacts/go-build-cache" "$FR/artifacts/go-build-cache"
+      ln -s "$("$ROOT/scripts/go-cache")" "$FR/artifacts/go-build-cache"
       cat > "$FR/.lake/build/bin/golean" <<'EOF'
 #!/bin/bash
 # fake golean (test-lane-validation T1-T8): delegate to the real binary,

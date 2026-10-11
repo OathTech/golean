@@ -105,17 +105,47 @@ lane `HANDOFF.md` + design-note pattern it describes.
 - See `docs/agent-sandbox.md` before using temp files in agent sessions.
 - Use unique scratch directories under the session's permitted `$TMPDIR`
   (or `/private/tmp` on macOS when that path is granted).
-- For direct Go probes outside the coverage scripts, use the current
-  worktree's cache, matching `scripts/diff-coverage`. From the worktree root:
-  `GOCACHE="$PWD/artifacts/go-build-cache" go run ./path/to/package`
+- For direct Go probes outside the coverage scripts, use the common resolver,
+  matching `scripts/diff-coverage`. From the worktree root:
+  `GOLEAN_TASK_CACHE="$(scripts/go-cache)" && GOCACHE="$GOLEAN_TASK_CACHE" go run ./path/to/package`
   (add `GO111MODULE=off` for standalone probes outside a Go module).
 - **Linux under nono:** do not hard-code `/private/tmp/go-build`; that was
   macOS-specific guidance. It can fail with `mkdir /private: permission
   denied` because the outer OS sandbox has not granted that path. Use the
-  worktree-local cache above and unique scratch directories under the
+  resolved project cache above and unique scratch directories under the
   session's permitted `$TMPDIR`. If a different path is actually needed,
   diagnose it with `nono why --path <path> --op write`; granting it requires
   restarting with a narrow `nono run --allow <path>` grant or a reviewed
   derived profile. Codex approval cannot enlarge the outer nono sandbox.
 - Do not run `rm`, `rm -r`, or `rm -rf` without explicit approval, even under
   `/private/tmp`. Leave scratch dirs for OS cleanup unless deletion is approved.
+- [USER], 2026-09-06: the storage-maintenance charter authorizes the narrow
+  lifecycle in `tools/audit_scratch.py`: release only a run's own generated
+  fixture copies after sealing compact evidence. Preservation/cleanup failures
+  fail the gate. This is not authority to delete arbitrary scratch, other
+  agents' files or unretired repositories/pinned evidence. Retired lanes
+  follow the separate user-approved policy below.
+  See `docs/2026-09-06_storage-maintenance-charter.md` and `scripts/go-cache`.
+- The typed-consumer sprint is user-paused. Read
+  `docs/2026-09-06_typed-sprint-pause-state.md` before any resumption. Old
+  worktrees must receive the reviewed storage changes before repeated gates;
+  tooling changes require fresh apparatus source bindings and validation.
+
+## Retired Worktrees
+
+[USER], follow-up to the 2026-09-06 storage maintenance: retired worktrees
+(merged to main) are disposable. **Do not create or retain whole-worktree
+archives.** After a lane is merged and finished, remove its checkout together
+with its ignored caches, build outputs, scratch, experiment artifacts and
+copied dependencies. Keep any required lasting result in the main repository
+before completing the merge; Git already retains the merged source history.
+
+This is standing approval for routine retirement of finished, merged lanes.
+Check main ancestry, absence of uncommitted work, inactivity and references
+from continuing work before removal. An ancestor HEAD with new dirty work is
+not a finished lane. Preserve active/paused/unmerged work and resolve a real
+live dependency before retiring its target. Keep branch/ref history; a compact
+retirement record is sufficient, with no backup of disposable payloads.
+Also release shared scratch/evidence owned solely by that retired lane once
+its jobs are finished; the common Go cache keeps its separate budget.
+The original semantics sprint stays paused until the user resumes it.

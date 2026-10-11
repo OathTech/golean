@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT"
+[[ $# = 0 ]] || { echo 'check-byte-array-store: expected no arguments' >&2; exit 2; }
+sha256sum GoLean/GoCore/ByteArrayStore.lean GoLean/GoCore/Machine.lean \
+  GoLean/GoCore/StateWf.lean Tests/ByteAppendRuntime.lean Tests/ByteAppendAudit.lean \
+  tools/byte-array-store-audit.py
+scripts/capped lake build ByteAppendTests
+for module in GoLean/GoCore/ByteArrayStore Tests/ByteAppendRuntime Tests/ByteAppendAudit; do
+  scripts/capped lake env lean "$module.lean"
+done
+scripts/capped lake env python3 tools/byte-array-store-audit.py
+printf 'Byte array store gate: PASS\n'

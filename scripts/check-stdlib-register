@@ -16,12 +16,14 @@
 # Fail closed: missing register, missing markers, dump failure -> exit 1.
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+GOCACHE="$("$ROOT/scripts/go-cache")" || exit 2
+export GOCACHE
 cd "$ROOT"
 REG="docs/stdlib-admission-register.md"
 [ -f "$REG" ] || { echo "check-stdlib-register: FAIL — no register at $REG" >&2; exit 1; }
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/check-stdlib-register.XXXXXX")"
 trap 'rm -rf "$WORK"' EXIT
-if ! GO111MODULE=off GOCACHE="${GOCACHE:-$ROOT/artifacts/go-build-cache}" go run ./tools/nativefrontend --stdlib-register > "$WORK/code.tsv" 2>"$WORK/err"; then
+if ! GO111MODULE=off GOCACHE="$GOCACHE" go run ./tools/nativefrontend --stdlib-register > "$WORK/code.tsv" 2>"$WORK/err"; then
   cat "$WORK/err" >&2
   echo "check-stdlib-register: FAIL — the frontend could not render its admission tables (a cap exceeded, or a malformed table; see above)" >&2
   exit 1
@@ -46,7 +48,7 @@ fi
 # assertion — the table is the single source for what the emitter applies
 # AND for the register's rows, so a row that does not verify here is a
 # register claiming text the frontend cannot lower).
-if ! GO111MODULE=off GOCACHE="${GOCACHE:-$ROOT/artifacts/go-build-cache}" go run ./tools/nativefrontend --stdlib-overlay-check > "$WORK/overlay.tsv" 2>"$WORK/err"; then
+if ! GO111MODULE=off GOCACHE="$GOCACHE" go run ./tools/nativefrontend --stdlib-overlay-check > "$WORK/overlay.tsv" 2>"$WORK/err"; then
   cat "$WORK/err" >&2
   echo "check-stdlib-register: FAIL — an overlay row does not verify against the pinned GOROOT source (see above; the site's bytes moved, or the file is not selected/pinned)" >&2
   exit 1

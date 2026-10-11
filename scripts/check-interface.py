@@ -1,12 +1,13 @@
 """Post-import audit and compiled mutation checks; run via check-interface."""
 import hashlib
 import os
+import sys
 from pathlib import Path
-import shutil
 import subprocess
-import tempfile
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "tools"))
+from audit_scratch import active_run, managed_audit
 MODULES = ["GoLean/GoCore/Machine", "GoLean/GoCore/Trace", "GoLean/GoCore/PoolTrace",
            "GoLean/GoCore/PanicText", "GoLean/GoCore/StringPanic", "Tests/StringPanicMembers",
            "GoLean/GoCore/ProgramTrace", "GoLean/Interface",
@@ -49,8 +50,11 @@ HARNESS = "\n".join(f"import {m.replace('/', '.')}" for m in MODULES)
 HARNESS += "\n#eval InterfaceAudit.run\n"
 
 
+@managed_audit(ROOT, "interface-audit")
 def main():
-    paths = sorted([*ROOT.glob("GoLean/**/*.lean"), ROOT / "GoLean.lean",
+    paths = sorted([ROOT / "tools/audit_scratch.py", ROOT / "tools/storage.py", ROOT / "scripts/go-cache",
+                    ROOT / "tools/storage_watch.py", ROOT / "scripts/storage-run", ROOT / "tools/storage_processes.py",
+                    *ROOT.glob("GoLean/**/*.lean"), ROOT / "GoLean.lean",
                     ROOT / "Tests/PanicRendering.lean",
                     ROOT / "Tests/StringPanicMembers.lean",
                     ROOT / "Tests/InterfaceContract.lean", ROOT / "Tests/InterfaceAudit.lean",
@@ -70,9 +74,7 @@ def main():
         digest.update(str(path.relative_to(ROOT)).encode() + b"\0")
         digest.update(hashlib.sha256(path.read_bytes()).digest())
     print("Semantic interface source fingerprint:", digest.hexdigest(), flush=True)
-    scratch_root = ROOT / ".tmp"
-    scratch_root.mkdir(exist_ok=True)
-    scratch = Path(tempfile.mkdtemp(prefix="interface-audit-", dir=scratch_root))
+    scratch = active_run().path
 
     def lean(path, fixture=None, output=None):
         env = os.environ.copy()
@@ -81,7 +83,7 @@ def main():
         args = [str(ROOT / "scripts/capped"), "lean", f"--root={fixture or scratch}"]
         if output is not None:
             args += ["-o", str(output)]
-        result = subprocess.run(args + [str(path)], cwd=ROOT, env=env, text=True,
+        result = active_run().run(args + [str(path)], cwd=ROOT, env=env, text=True,
                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=120)
         print(result.stdout, end="", flush=True)
         return result
@@ -149,20 +151,21 @@ def main():
         ("runtime_test_trailing", "Tests/BooleanRuntime.lean",
          "private theorem booleanRuntimeTestHole : False := by sorry", "sorryAx"),
     ]:
-        fixture = scratch / label
-        for tree in ["GoLean", "Tests"]:
-            shutil.copytree(ROOT / ".lake/build/lib/lean" / tree, fixture / tree)
-        source = fixture / target
-        source.write_text((ROOT / target).read_text() + "\n" + declaration + "\n")
-        if lean(source, fixture, source.with_suffix(".olean")).returncode:
-            raise SystemExit(f"Semantic interface: {label} failed to compile; not audit rejection")
-        external = fixture / "AuditAll.lean"
-        external.write_text(HARNESS)
-        result = lean(external, fixture)
-        if result.returncode != 1 or "forbidden axiom" not in result.stdout or marker not in result.stdout:
-            raise SystemExit(f"Semantic interface: expected named audit rejection for {label}")
-        print(f"Semantic interface negative: {label} rejected (exit 1, {marker})", flush=True)
-    print(f"Semantic interface: PASS; scratch retained at {scratch}", flush=True)
+        with active_run().fixture(label) as fixture:
+            for tree in ["GoLean", "Tests"]:
+                active_run().copy_package(ROOT / ".lake/build/lib/lean" / tree, fixture / tree)
+            source = fixture / target
+            source.write_text((ROOT / target).read_text() + "\n" + declaration + "\n")
+            if lean(source, fixture, source.with_suffix(".olean")).returncode:
+                raise SystemExit(f"Semantic interface: {label} failed to compile; not audit rejection")
+            external = fixture / "AuditAll.lean"
+            external.write_text(HARNESS)
+            result = lean(external, fixture)
+            if result.returncode != 1 or "forbidden axiom" not in result.stdout or marker not in result.stdout:
+                raise SystemExit(f"Semantic interface: expected named audit rejection for {label}")
+            print(f"Semantic interface negative: {label} rejected (exit 1, {marker})", flush=True)
+            active_run().confirm(marker)
+    print(f"Semantic interface: PASS; scratch (released after evidence) at {scratch}", flush=True)
 
 
 if __name__ == "__main__":

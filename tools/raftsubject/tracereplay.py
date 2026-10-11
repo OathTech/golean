@@ -64,6 +64,8 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(os.path.dirname(HERE))
+sys.path.insert(0, str(REPO) + "/tools")
+from storage import go_cache
 TESTDATA = os.path.join(REPO, "deps", "raft", "testdata")
 SUBJECT_PKGS = ["quorum", "raftpb", "tracker", "proto", "confchange", "raft"]
 
@@ -323,7 +325,7 @@ def run_one(name, blocks, prefix, args, report, rec=None, resumed=None):
         shutil.copytree(os.path.join(prog, pkg), os.path.join(gopath, "src", pkg))
 
     env = dict(os.environ)
-    env["GOCACHE"] = os.path.join(REPO, "artifacts", "go-build-cache")
+    env["GOCACHE"] = go_cache(REPO)
     env["GO111MODULE"] = "off"
     env["GOPATH"] = gopath
     if "go-side" in resumed:

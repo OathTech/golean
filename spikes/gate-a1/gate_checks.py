@@ -4,13 +4,13 @@ import json
 import os
 from pathlib import Path
 import re
-import shutil
 import subprocess
 import sys
-import tempfile
 
 SPIKE = Path(__file__).resolve().parent
 ROOT = SPIKE.parents[1]
+sys.path.insert(0, str(ROOT / "tools"))
+from audit_scratch import active_run, managed_audit
 MODULES = ["Trace", "Counterexamples", "PoolTrace", "ProgramTrace", "Language",
            "Examples", "Audit", "Probes"]
 SOURCES = [SPIKE / "GateA1" / f"{name}.lean" for name in MODULES] + [SPIKE / "GateA1.lean"]
@@ -49,7 +49,9 @@ def preflight():
         if forbidden(path.read_text()):
             raise SystemExit(f"Gate A1: forbidden proof escape in {path}")
     dependencies(required=False)
-    paths = sorted([ROOT / "GoLean.lean", ROOT / "Tests/InterfaceContract.lean", *ROOT.glob("GoLean/**/*.lean"), ROOT / "lakefile.toml", ROOT / "lean-toolchain",
+    paths = sorted([ROOT / "tools/audit_scratch.py", ROOT / "tools/storage.py", ROOT / "scripts/go-cache",
+                    ROOT / "tools/storage_watch.py", ROOT / "scripts/storage-run", ROOT / "tools/storage_processes.py",
+                    ROOT / "GoLean.lean", ROOT / "Tests/InterfaceContract.lean", *ROOT.glob("GoLean/**/*.lean"), ROOT / "lakefile.toml", ROOT / "lean-toolchain",
                     *SOURCES, SPIKE / "lakefile.toml", SPIKE / "lake-manifest.json",
                     SPIKE / "lean-toolchain", SPIKE / "check", Path(__file__).resolve()])
     digest = hashlib.sha256()
@@ -62,12 +64,11 @@ def preflight():
     print("Validation mode: incremental Lake build plus fresh spike-module elaboration", flush=True)
 
 
+@managed_audit(ROOT, "gate-a1-audit")
 def audit():
     # Called through capped `lake env python3`, so child Lean processes inherit
     # the pinned toolchain, package search paths, and verified memory cap.
-    scratch_root = ROOT / ".tmp"
-    scratch_root.mkdir(exist_ok=True)
-    scratch = Path(tempfile.mkdtemp(prefix="gate-a1-audit-", dir=scratch_root))
+    scratch = active_run().path
     harness_text = "\n".join(
         f"import {'.'.join(path.relative_to(SPIKE).with_suffix('').parts)}" for path in SOURCES
     ) + "\n#eval GateA1Audit.run\n"
@@ -81,7 +82,7 @@ def audit():
         args = [str(ROOT / "scripts/capped"), "lean", f"--root={fixture or scratch}"]
         if output is not None:
             args += ["-o", str(output)]
-        result = subprocess.run(args + [str(path)], cwd=SPIKE, env=env,
+        result = active_run().run(args + [str(path)], cwd=SPIKE, env=env,
                                 text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                 timeout=120)
         print(result.stdout, end="", flush=True)
@@ -93,7 +94,7 @@ def audit():
 
     # Compile real replacement modules in isolated search paths. A bad axiom
     # compiles in Lean; the post-import audit must reject it even when unused.
-    # No live source or build output is edited. Leave scratch for inspection.
+    # No live source or build output is edited. Retain compact evidence before releasing compiled copies.
     for label, target, declaration in [
         ("trailing_private", "GateA1/Audit.lean", "private axiom a1TrailingHole : False"),
         ("aggregate_private", "GateA1.lean", "private axiom a1RootHole : False"),
@@ -101,31 +102,32 @@ def audit():
     ]:
         if not forbidden(declaration):
             raise SystemExit(f"Gate A1: lexical negative test escaped: {label}")
-        fixture = scratch / label
-        # Lean resolves the first matching package root, rather than falling
-        # through per missing child module. Copy the complete compiled tree;
-        # only the selected module and aggregate are overwritten below.
-        shutil.copytree(SPIKE / ".lake/build/lib/lean/GateA1", fixture / "GateA1")
-        source = fixture / target
-        source.parent.mkdir(parents=True, exist_ok=True)
-        source.write_text((SPIKE / target).read_text() + "\n" + declaration + "\n")
-        result = lean(source, fixture=fixture, output=source.with_suffix(".olean"))
-        if result.returncode:
-            raise SystemExit(f"Gate A1: {label} fixture failed to compile; not an audit rejection")
-        if target != "GateA1.lean":
-            aggregate = fixture / "GateA1.lean"
-            aggregate.write_text((SPIKE / "GateA1.lean").read_text())
-            if lean(aggregate, fixture=fixture, output=aggregate.with_suffix(".olean")).returncode:
-                raise SystemExit(f"Gate A1: {label} aggregate failed to compile")
-        external = fixture / "AuditAll.lean"
-        external.write_text(harness_text)
-        result = lean(external, fixture=fixture)
-        marker = {"trailing_private": "a1TrailingHole", "aggregate_private": "a1RootHole",
-                  "trailing_sorry": "sorryAx"}[label]
-        if result.returncode != 1 or "forbidden axiom" not in result.stdout or marker not in result.stdout:
-            raise SystemExit(f"Gate A1: expected named audit rejection for {label}")
-        print(f"Gate A1 negative regression: {label} rejected (exit 1, {marker})", flush=True)
-    print(f"Gate A1 audit scratch retained: {scratch}", flush=True)
+        with active_run().fixture(label) as fixture:
+            # Lean resolves the first matching package root, rather than falling
+            # through per missing child module. Copy the complete compiled tree;
+            # only the selected module and aggregate are overwritten below.
+            active_run().copy_package(SPIKE / ".lake/build/lib/lean/GateA1", fixture / "GateA1")
+            source = fixture / target
+            source.parent.mkdir(parents=True, exist_ok=True)
+            source.write_text((SPIKE / target).read_text() + "\n" + declaration + "\n")
+            result = lean(source, fixture=fixture, output=source.with_suffix(".olean"))
+            if result.returncode:
+                raise SystemExit(f"Gate A1: {label} fixture failed to compile; not an audit rejection")
+            if target != "GateA1.lean":
+                aggregate = fixture / "GateA1.lean"
+                aggregate.write_text((SPIKE / "GateA1.lean").read_text())
+                if lean(aggregate, fixture=fixture, output=aggregate.with_suffix(".olean")).returncode:
+                    raise SystemExit(f"Gate A1: {label} aggregate failed to compile")
+            external = fixture / "AuditAll.lean"
+            external.write_text(harness_text)
+            result = lean(external, fixture=fixture)
+            marker = {"trailing_private": "a1TrailingHole", "aggregate_private": "a1RootHole",
+                      "trailing_sorry": "sorryAx"}[label]
+            if result.returncode != 1 or "forbidden axiom" not in result.stdout or marker not in result.stdout:
+                raise SystemExit(f"Gate A1: expected named audit rejection for {label}")
+            print(f"Gate A1 negative regression: {label} rejected (exit 1, {marker})", flush=True)
+            active_run().confirm(marker)
+    print(f"Gate A1 audit scratch (released after evidence): {scratch}", flush=True)
 
 
 if __name__ == "__main__":

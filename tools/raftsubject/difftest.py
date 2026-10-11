@@ -48,6 +48,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import derive  # noqa: E402
 
 REPO = derive.REPO
+sys.path.insert(0, str(REPO) + "/tools")
+from storage import go_cache
 
 
 def gen_conv(msgs, enums):
@@ -790,7 +792,7 @@ def main():
         f.write(MAIN_GO)
 
     env = dict(os.environ)
-    env["GOCACHE"] = os.path.join(REPO, "artifacts", "go-build-cache")
+    env["GOCACHE"] = go_cache(REPO)
     env["GOFLAGS"] = "-mod=mod"
     print("difftest: running go run in %s" % out)
     r = subprocess.run(["go", "run", "."], cwd=out, env=env)

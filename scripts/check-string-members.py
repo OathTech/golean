@@ -15,9 +15,11 @@ import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT) + "/tools")
+from storage import go_cache
 SCRATCH = Path(tempfile.mkdtemp(prefix="string-member-gate-", dir=ROOT/".tmp"))
 ENV = os.environ.copy()
-ENV.update(GO111MODULE="off", GOCACHE=str(ROOT/"artifacts/go-build-cache"))
+ENV.update(GO111MODULE="off", GOCACHE=go_cache(ROOT))
 
 
 def run(label, command, cwd=ROOT, env=ENV, wanted=0):

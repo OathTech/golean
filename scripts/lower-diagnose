@@ -87,7 +87,7 @@ if [[ "$go_live" != "$go_pin" ]]; then
   fi
 fi
 
-GO_BUILD_CACHE="$OUT/go-build-cache"; mkdir -p "$GO_BUILD_CACHE"
+GO_BUILD_CACHE="$("$ROOT/scripts/go-cache")" || exit 2; mkdir -p "$GO_BUILD_CACHE"
 env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go build -o "$OUT/lowerdiag" ./tools/lowerdiag || die "tools/lowerdiag does not build"
 
 # Slug: the target's path relative to the repo when inside it, else its
