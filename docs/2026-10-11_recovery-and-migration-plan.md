@@ -420,7 +420,15 @@ practices that exist NOWHERE in the repo** and that a fresh session would
 get wrong. The golean-logic memory (8 files) concerns that repo; its
 `single-user-across-projects` is the mirror of draft 3 and adds its caveat.
 
-**Proposed `CLAUDE.md` additions — D3 PENDING [USER] on the remainder.**
+**D3 CLOSED — nothing migrates.** [USER] Mike 2026-10-11, verbatim:
+«D3, these are all minor, you can drop them». The remainder below is
+DROPPED: no `CLAUDE.md` addition from the old memory, the
+`architecture-rules.md` `rm` wording stays as it is (the global file's
+removal rule governs), and the drafts are kept here only as the record of
+what was reviewed and declined. The old memory directory stays outside
+the repo and is not copied to milner-oath.
+
+**The drafts as reviewed (declined) — D3 history.**
 [USER] 2026-10-11: «D3: Some of these have now landed in the global
 claude.md. What's left?» Against the global file as of today: its
 «Practices that apply everywhere» now carry never-kill-by-pattern (the
@@ -642,10 +650,8 @@ primary checkout as a plain clone until the box itself is retired.
   2026-10-11). Open: the project default figure (64 G measured, via
   `scripts/env.sh`, recommended) and the go-ahead for the alignment lane
   (shim + `scripts/ci` accepting `CAPPED_STATE` + the charter wording).
-- **D3** §5: after the global file's additions, what is left is draft 1's
-  delegation half, draft 2's project specifics, and drafts 3–6; and which
-  side of the `rm` contradiction (architecture-rules vs the 2026-09-28
-  prune ruling) gives way.
+- **D3** RULED («these are all minor, you can drop them»): no charter
+  additions from the old memory; the `rm` wording stays. Closed.
 - **D4** RULED («agreed»): the primary's `.tmp` pruned 2026-10-11 (9.3 GB
   freed, §6); worktrees, `artifacts/` and `deps/` at phase D.
 - **D5** §4.6: admission scratch retention (last run only, or prune at train
