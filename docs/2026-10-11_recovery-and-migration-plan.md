@@ -122,8 +122,59 @@ keeps only the lane's history.
 
 **Everything else** (51 contained, 27 landed-by-patch, 33 parked-era or
 safety copies, the 409 snapshot refs, the stash refs) travels by the bundle
-in §7 and is NOT proposed for GitHub. The 27 landed-by-patch branches are
-deletable after the migration's verification (D1). The full table follows.
+in §7. The 27 landed-by-patch branches are deletable after the migration's
+verification (D1). The full table follows, then the D1 ruling that revises
+the table's PUSH column.
+
+**D1 RULED** ([USER] Mike 2026-10-11, verbatim: «D1: why not land the
+records branches? Otherwise, yes. We should push live working branches and
+branches containing meaningful features we might use»). Applied:
+
+- *Landed instead of pushed* — six of the eight records/design branches are
+  docs-only and merge onto `main` with zero conflicts (checked by
+  `git merge-tree --write-tree`; their `docs/evidence/` files are all under
+  6 KB, within the evidence-size caps). They are cherry-picked, in date
+  order and with `-x` provenance, onto the landing branch
+  **`land/records-1011`** (worktree `.claude/worktrees/land-records-1011`,
+  7 commits, 17 files, 0 outside `docs/`), together with this plan:
+  `plan/method-identity-increment`, `plan/certificate-provenance`,
+  `design/eval-order-model-0915`, `docs/reasoning-archaeology-0916`,
+  `records/stray-panic-investigation-0927`, `design/seeded-heap-1009`.
+  Landing the seeded-heap NOTE does not discharge its HARD STOP; the gate
+  stays [USER] PENDING. The branch is an ordinary records train: records
+  checks here, the fast gate at the merged tip, the audit ask, sign-off.
+- *Already landed in substance, so neither pushed nor landed* —
+  `records/raft-deltas-0930`: its docs are byte-identical on `main` and its
+  code landed as `07694b27` (same subject, rebased); `prep/observer-terminal-harness`:
+  every `tools/coverageharness/` file it adds is byte-identical on `main`
+  (landed by `land/observer-terminal`); only its 2026-09-07 prep evidence
+  dir is not on `main`, by its own «Prep (NOT landed)». Both: bundle only.
+- *Pushed as live working / feature branches* (reasoning-side work that
+  exists on no origin ref; golean-logic and raft-proofs may use it):
+  `campaign-arc4d` (17 commits, 19 proof files under `proofs/GoLeanProofs`,
+  +16 k lines, 2026-08-26), `campaign-ce` (4 commits: CE1 canonical-
+  equivalence proofs), `campaign-wave-a` (3 commits: FamTrace/RoundFam
+  proofs; its uncommitted tail is `refs/snapshots/2026-10-11-recovery/wip-campaign-wave-a`),
+  `design-pass` (136 commits of Iris-corpus plan revisions and arc-2
+  probes, +447 k lines, mostly docs). `wp-design`'s two docs are on
+  `park/reasoning-2026-08-31` (origin) already; `w3-init` is the killed
+  CallSpec track (`archive/callspec-era`, origin); `spec-parity-s1..s6`
+  carry only the F15 fix's 2 commits beyond the merged `spec-parity` —
+  bundle only.
+- *Not pushed: the 19 typed-era lane branches* (`typed-byte-*`,
+  `typed-b7-*`, `typed-context-store`, `typed-i1-envelope`, …,
+  `storage-maintenance-*`). Their features are on `main`'s history and on
+  the parking tag; what is unique to each lane is its review evidence
+  (150 k–1 M lines per branch). Bundle only; any one of them can be pushed
+  on request by name.
+
+**The push set after D1** (from outside the sandbox, in this order): `main`;
+tags `logic-offer/2026-10-03`, `typed-profiles/last-main-2026-09-16`;
+`typed-consumer-sprint`, `typed-uintptr-identity`; `campaign-arc4d`,
+`campaign-ce`, `campaign-wave-a`, `design-pass`; and, after its landing,
+`main` again (carrying the six records branches and this plan). The six
+records branches and the two superseded ones are deleted after the landing
+is verified on milner-oath, with the 27 landed-by-patch ones.
 
 | Branch | Last commit | Ahead of main | Not on main (patch-equivalent) | Contained in | Disposition |
 |---|---|---|---|---|---|
@@ -318,8 +369,10 @@ prescribe an invocation that silently swaps caps. The one open figure: the
 project default stays 64 G (measured) unless the [USER] prefers the box's
 32 G with per-job raises.
 
-**4.2 Worktree hygiene — PENDING [USER] (D1, D4).** 77 worktrees exist; the
-global rule says remove your own when done. The charter's merge protocol
+**4.2 Worktree hygiene — D4 agreed.** 77 worktrees exist; the global
+rule says remove your own when done (and, since 2026-10-11, the global file
+also carries the crash rule: snapshot every dirty worktree to a ref before
+touching anything — §2 did exactly that). The charter's merge protocol
 («one writer per worktree») never says when a worktree ends. Proposal: the
 train's close step prunes the landed lane's worktree AND its gitignored run
 output, keeping the branch (§5 draft 2 gives the exact rule the [USER]
@@ -367,9 +420,19 @@ practices that exist NOWHERE in the repo** and that a fresh session would
 get wrong. The golean-logic memory (8 files) concerns that repo; its
 `single-user-across-projects` is the mirror of draft 3 and adds its caveat.
 
-**Proposed `CLAUDE.md` additions — PENDING [USER] (D3); verbatim drafts,
-placement named; each is a [USER] ruling the memory recorded, re-cited as
-relayed:**
+**Proposed `CLAUDE.md` additions — D3 PENDING [USER] on the remainder.**
+[USER] 2026-10-11: «D3: Some of these have now landed in the global
+claude.md. What's left?» Against the global file as of today: its
+«Practices that apply everywhere» now carry never-kill-by-pattern (the
+second half of draft 1) and the crash-snapshot rule; its box section
+carries the worktree/`.tmp`/`.lake` removal rule (the principle of draft 2)
+and the no-memory-files rule. **Left for this charter**: draft 1's FIRST
+half (coordinator dispatches, workers implement; the Fable/Opus split),
+draft 2's project specifics only (the protected primary paths, the
+`git check-ignore` test, the `${w:?}` guard, never in the same command as a
+gate run — and the `architecture-rules.md` `rm` contradiction), and drafts
+3, 4, 5, 6 in full. Verbatim drafts, placement named; each is a [USER]
+ruling the memory recorded, re-cited as relayed:**
 
 1. *Working practices* — «The coordinator dispatches and verifies; workers
    implement. Inline coordinator work only for glue (commits, snapshots,
@@ -430,7 +493,17 @@ records absolute paths; purge files naming `/.claude/worktrees/`
 The memory directory itself stays where it is (`~/.claude/projects.old`,
 outside the repo); it is not copied to the new box by this plan.
 
-## 6. Disk hygiene before the move — PENDING [USER] sign-off (D4); every line is a deletion
+## 6. Disk hygiene before the move — D4 agreed ([USER] 2026-10-11 «D4: agreed»): `.tmp` now, the rest at phase D
+
+**Executed 2026-10-11 ([AGENT]):** the primary's `.tmp/` scratch families
+removed — 21 × `admission-audit-*` (7,794 MB), 382 × `golean-lsimports.*`
+(1,132 MB, orphaned `mktemp` files of killed import runs), 20 + 20 + 21
+self-test scratch dirs, 5 `ci-libraries-*`, 10 `go-build*`, three train
+scratch entries, and one stray copy of golean-logic's globals-init design
+note (byte-identical to `design/globals-init-1005:docs/2026-10-05_globals-init-design.md`
+in that repo). `.tmp/` went 9,573 → 274 MB (the live session dir only).
+Log: `artifacts/disk-prune-2026-10-11.log`. Nothing under worktrees,
+`artifacts/` or `deps/` was touched (phase D).
 
 | What | Size | Regenerable? | Proposal |
 |---|---|---|---|
@@ -441,7 +514,15 @@ outside the repo); it is not copied to the new box by this plan.
 | `deps/verdi-raft`, `deps/opam-coq818`, `deps/lean4export`, `deps/BRiCk`, `deps/aeneas`, `deps/iris-lean`, `deps/brick-wp`, cedar checkouts | ≈ 4.6 G | reasoning-era / opt-in; raft-proofs' tools still read `verdi-raft` and `opam-coq818` by explicit path (ARCHIVE.md) | do not carry for golean; the [USER] decides for raft-proofs (D9) |
 | the 77 worktrees | 32 G | from the branches/refs | remove here only after §7 phase C verifies the ref manifest on the new box |
 
-## 7. The migration plan
+## 7. The migration plan — target: `milner-oath`
+
+[USER] 2026-10-11: «D7: I'll manage that. We're moving Go projects to
+milner-oath». So the new box is the existing `milner-oath` (same
+`capped` affordance, per the ruling in §4.1); golean, golean-logic and
+raft-proofs' Go-side work move there; the sibling repos' passes are the
+[USER]'s. The sandbox can write only under the repo (`--allow-cwd`), so the
+bundle and manifests are written under the gitignored `artifacts/` and
+copied from there.
 
 **Phase A — on this box, before anything is copied.**
 
@@ -470,18 +551,20 @@ git fetch origin && git status -sb                     # expect: ## main...origi
 
 ```
 cd /home/dev/projects/golean
-git for-each-ref --format='%(objectname) %(refname)' > /home/dev/golean-refs-2026-10-11.txt   # 764 refs at this lane's commit; recount at bundle time
-git worktree list --porcelain > /home/dev/golean-worktrees-2026-10-11.txt
-git bundle create /home/dev/golean-all-2026-10-11.bundle --all                               # ≈ 0.4 G (pack 380 MiB + loose)
-git bundle verify /home/dev/golean-all-2026-10-11.bundle
-sha256sum /home/dev/golean-*-2026-10-11.* > /home/dev/golean-migration-2026-10-11.sha256
+mkdir -p artifacts/migration-2026-10-11 && cd artifacts/migration-2026-10-11
+git for-each-ref --format='%(objectname) %(refname)' > golean-refs.txt            # recount at bundle time (766 at this commit)
+git worktree list --porcelain > golean-worktrees.txt
+git bundle create golean-all.bundle --all                                           # ≈ 0.4 G (pack 380 MiB + loose)
+git bundle verify golean-all.bundle
+sha256sum golean-* > SHA256SUMS
 ```
   `--all` carries `refs/heads/*`, `refs/tags/*`, `refs/snapshots/*`,
   `refs/archive/*` and the §2 refs; it does NOT carry reflogs (hence §2)
-  nor the working trees (hence the `wip-*` refs). The bundle lands under
-  `/home/dev` (not under the repo's `.tmp`, which backups skip).
+  nor the working trees (hence the `wip-*` refs). `artifacts/` is
+  gitignored and is not in the backup-skip list; copy the directory out
+  the same day.
 
-- A4 ([USER] decides, D7) the same treatment for `~/projects/golean-logic`
+- A4 ([USER] runs it, D7 ruled) the same treatment for `~/projects/golean-logic`
   (its `develop` and the review/consolidation branches are local-only) and
   `~/projects/raft-proofs` (which copy is canonical: here or
   `milner-oath`). Each gets its own refs manifest and bundle; neither is in
@@ -495,7 +578,7 @@ private `OathTech` remotes; `scripts/setup-deps --from <copied deps/>`
 accepts a local copy). `deps/comparator` has no remote at all (its origin is
 its own path) and is reasoning-era: carry only if raft-proofs needs it.
 
-**Phase C — on the new box (provisioning is the [USER]'s: it is global
+**Phase C — on `milner-oath` (provisioning is the [USER]'s: it is global
 state there).** Needed before the gate can run: the box-wide `capped` with
 the nono cgroup grant (`oath-devbox`); Lean `v4.32.2` via elan (the ONLY
 toolchain the repo pins; this box has 14 installed, none of the others is
@@ -506,11 +589,11 @@ needed); Go `go1.26.5` at `/usr/local/go` exactly (the oracle pin,
 
 ```
 git clone git@github.com:OathTech/golean.git ~/projects/golean && cd ~/projects/golean
-git fetch /path/golean-all-2026-10-11.bundle \
+git fetch /path/golean-all.bundle \
     'refs/heads/*:refs/heads/*' 'refs/tags/*:refs/tags/*' \
     'refs/snapshots/*:refs/snapshots/*' 'refs/archive/*:refs/archive/*'
 git for-each-ref --format='%(objectname) %(refname)' | grep -v ' refs/remotes/' | sort \
-    | diff - <(grep -v ' refs/remotes/\| refs/stash' /path/golean-refs-2026-10-11.txt | sort)   # expect: empty
+    | diff - <(grep -v ' refs/remotes/\| refs/stash' /path/golean-refs.txt | sort)                # expect: empty
 git checkout main && git status -sb                                                           # ## main...origin/main
 scripts/setup-deps --from /path/copied-deps                                                   # goose, go, raft; then --only covmap,grossmith
 capped lake build                                                                             # the box-wide capped ([USER] 2026-10-11); project default per §4.1
@@ -550,23 +633,28 @@ primary checkout as a plain clone until the box itself is retired.
 
 ## 9. Decisions this plan needs ([USER]; numbered for the reply)
 
-- **D1** The push set of §3 as listed (10 refs + this lane), with everything
-  else bundle-only; and whether the 27 landed-by-patch branches are deleted
-  after phase C.
+- **D1** RULED 2026-10-11 (land the records branches; push live working
+  and meaningful-feature branches). Applied in §3: `land/records-1011`
+  prepared; the push set is `main`, the two tags, the two archive
+  branches, the three `campaign-*` branches and `design-pass`. Open only:
+  the merge sign-off for `land/records-1011`.
 - **D2** §4.1: the direction is RULED (box-wide `capped`, [USER]
   2026-10-11). Open: the project default figure (64 G measured, via
   `scripts/env.sh`, recommended) and the go-ahead for the alignment lane
   (shim + `scripts/ci` accepting `CAPPED_STATE` + the charter wording).
-- **D3** §5: which of the six `CLAUDE.md` drafts land, and which side of the
-  `rm` contradiction (architecture-rules vs the 2026-09-28 prune ruling)
-  gives way.
-- **D4** §6: the deletions, now or at phase D.
+- **D3** §5: after the global file's additions, what is left is draft 1's
+  delegation half, draft 2's project specifics, and drafts 3–6; and which
+  side of the `rm` contradiction (architecture-rules vs the 2026-09-28
+  prune ruling) gives way.
+- **D4** RULED («agreed»): the primary's `.tmp` pruned 2026-10-11 (9.3 GB
+  freed, §6); worktrees, `artifacts/` and `deps/` at phase D.
 - **D5** §4.6: admission scratch retention (last run only, or prune at train
   close).
 - **D6** The seeded-heap HARD STOP stays open; it travels by push (D1) and is
   not re-posed here.
-- **D7** golean-logic and raft-proofs: who runs their migration passes, and
-  which raft-proofs copy is canonical.
+- **D7** RULED («I'll manage that. We're moving Go projects to
+  milner-oath»): the [USER] runs the sibling passes; the target box is
+  `milner-oath`.
 - **D8** The global box note (`~/.claude/CLAUDE.md`) after the move — the
   [USER]'s file.
 - **D9** Which reasoning-era `deps/` checkouts (if any) are carried for
