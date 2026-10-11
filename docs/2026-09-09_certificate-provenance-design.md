@@ -166,7 +166,19 @@ records-only record commit; a stray untracked file under `scripts/` or
 Python upgrade invalidates every certificate; merge trains will conflict in
 `baselines/certified/*.json` often. Re-pin fatigue CANNOT absorb a real
 semantic change: a changed observation set refuses to mint a candidate
-(`:576`). Follow-up, rowed as lane `fix/certificate-apparatus-tier`: a
+(`:576`). **Amendment 2026-10-11 ([USER] Mike, verbatim: «Why do we need to
+couple on this exact python version? The repo is supposed to be rebuildable
+by people with a reasonable setup»; «Can you fix this so that anyone who
+downloads the repo gets a reasonable experience?»; «We're actually trying to
+build software people will use»): the Python version is no longer an input.
+Inputs schema v2 drops it; the receipt records it (provenance, not a
+staleness trigger); `python_floor()` refuses below 3.11 by name. The trigger
+was milner-oath's fresh clone (Python 3.14.4 against this box's 3.12.3): same
+sources, same Lean and Go pins, every certificate STALE. The toolchain and
+oracle versions stay bound — they compile and judge the semantics; the
+interpreter only runs standard-library apparatus. The remaining apparatus-tier
+consequences (any script edit re-certifies) stand as described.** Follow-up,
+rowed as lane `fix/certificate-apparatus-tier`: a
 two-tier manifest (semantic-critical vs. apparatus, the apparatus tier
 cleared by a cheap re-attestation) or narrowing the apparatus tier to the
 enumeration path. The same lane carries: R2b — `release_check` (`:657`)

@@ -181,6 +181,7 @@ func pick() int {
             ('Boolean exit', ['receipt', 'captured_exit'], False, 'no successful enumeration'),
             ('bad receipt command', ['receipt', 'command'], [], 'command differs'),
             ('nonfinite wall', ['receipt', 'wall_seconds'], float('inf'), 'non-finite wall'),
+            ('receipt python', ['receipt', 'python'], 3, 'python version must be a version string'),
             ('entry', ['claim', 'argv'], claim['argv'] + ['--function', 'other'], 'STALE certification claim'),
             ('argument', ['claim', 'argv'], claim['argv'] + ['--arg-int', '1'], 'STALE certification claim'),
             ('params', ['claim', 'params'], 'width=5', 'STALE certification claim'),

@@ -601,7 +601,10 @@ python3 tools/certification.py release-check --base <origin/main at the push>
   Expectations to treat as findings, not failures to fix: the certificate
   provenance step compares compiled inputs, so a different machine with the
   same toolchain should pass; if it goes STALE the cause must be named
-  (toolchain byte-identity, Go build cache) before any re-certification. A
+  before any re-certification. (It did: Python 3.14.4 vs 3.12.3 — the
+  record bound the interpreter; [USER] 2026-10-11 ruled that out, the
+  version now lives in the receipt only; `docs/2026-09-09_certificate-provenance-design.md`,
+  amendment 2026-10-11.) A
   differential count other than 3936 = 3705/231 is a STOP (the oracle pin
   or the environment drifted). No worktree is recreated; a lane makes its
   own from its branch.

@@ -23,7 +23,7 @@ import time
 import tomllib
 
 BUILD_SCHEMA = 'golean-build-inputs-v1'
-INPUT_SCHEMA = 'golean-certification-inputs-v1'
+INPUT_SCHEMA = 'golean-certification-inputs-v2'   # v2 (2026-10-11): the Python version left the inputs for the receipt
 CERT_SCHEMA = 'golean-certification-v1'
 CLAIM_SCHEMA = 'golean-enumeration-claim-v1'
 BUILD_FILES = ('Main.lean', 'GoLean.lean', 'lean-toolchain', 'lakefile.toml',
@@ -238,6 +238,13 @@ def build_inputs(root):
     return {'schema': BUILD_SCHEMA, 'files': files, 'toolchain': toolchain(root)}
 
 
+def python_floor():
+    """A reasonable setup is any Python from 3.11 (tomllib); older is refused by name."""
+    if sys.version_info < (3, 11):
+        raise SystemExit(f"certification: python {platform.python_version()} is below the 3.11 floor "
+                         "(tomllib); install a current Python 3 — the version is not otherwise bound")
+
+
 def inputs(root):
     build = build_inputs(root)
     files = inventory(root, ['scripts', 'tools', *APPARATUS_FILES])
@@ -246,8 +253,15 @@ def inputs(root):
     oracle = run_output(root, ['go', 'version'])
     pin = (root / 'baselines/go-oracle-pin').read_text().strip()
     require(oracle.split()[2] == pin, f'Go toolchain differs from oracle pin {pin}: {oracle}')
-    return {'schema': INPUT_SCHEMA, 'build': build, 'files': files,
-            'oracle': oracle, 'python': platform.python_version()}
+    # The interpreter is NOT an input ([USER] Mike 2026-10-11: «Why do we need
+    # to couple on this exact python version? The repo is supposed to be
+    # rebuildable by people with a reasonable setup»): the apparatus is
+    # standard-library Python, the certified claim is about the binary's
+    # observations, and binding the patch version made every certificate
+    # STALE on any other machine (milner-oath, 3.14.4 vs 3.12.3). It is
+    # recorded in the RECEIPT (provenance) and floored at 3.11 (tomllib) by
+    # python_floor() — a named refusal, never a silent downgrade.
+    return {'schema': INPUT_SCHEMA, 'build': build, 'files': files, 'oracle': oracle}
 
 
 def executable(root):
@@ -459,13 +473,17 @@ def validate_provenance(record, saved, current, claim):
                           'argv', 'observation_schema'], 'certification claim')
     require(saved['claim']['schema'] == CLAIM_SCHEMA, 'unknown certification claim schema')
     require(saved['claim'] == claim, 'STALE certification claim: ' + difference(saved['claim'], claim))
-    keys(saved['inputs'], ['schema', 'build', 'files', 'oracle', 'python'], 'certification inputs')
-    require(saved['inputs']['schema'] == INPUT_SCHEMA, 'unknown certification input schema')
+    require(saved['inputs'].get('schema') == INPUT_SCHEMA,
+            f"certification inputs schema {saved['inputs'].get('schema')!r} is not the current {INPUT_SCHEMA!r}: "
+            "the input inventory changed; re-certify (a fresh --slow run mints the candidate)")
+    keys(saved['inputs'], ['schema', 'build', 'files', 'oracle'], 'certification inputs')
     require(saved['inputs'] == current, 'STALE certification: ' + difference(saved['inputs'], current))
     keys(saved['receipt'], ['source_commit', 'git_dirty', 'started_utc', 'finished_utc',
                             'wall_seconds', 'captured_exit', 'binary_sha256', 'stats_sha256',
-                            'command', 'certifier'], 'certification receipt')
+                            'command', 'certifier', 'python'], 'certification receipt')
     receipt = saved['receipt']
+    require(type(receipt['python']) is str and re.fullmatch(r'\d+\.\d+\.\d+[0-9a-z+.-]*', receipt['python']),
+            'certification receipt python version must be a version string')
     require(type(receipt['captured_exit']) is int and receipt['captured_exit'] == 0,
             'certification receipt has no successful enumeration')
     require(receipt['certifier'] == 'tools/certification.py', 'unknown certification receipt producer')
@@ -589,7 +607,8 @@ def enumerate_record(root, record, output, claim, wire, argv, timeout):
                                 'wall_seconds': round(elapsed, 3), 'captured_exit': exit_code,
                                 'binary_sha256': binary_sha,
                                 'stats_sha256': file_sha(output / 'enum-stats.txt'),
-                                'command': ['golean', *claim['argv']], 'certifier': 'tools/certification.py'}}
+                                'command': ['golean', *claim['argv']], 'certifier': 'tools/certification.py',
+                                'python': platform.python_version()}}
     validate_provenance(record, fresh_record, before, claim)
     atomic_json(candidate, fresh_record)
     print(f'Fresh certification: unchanged set; seconds={elapsed:.3f}; candidate={candidate}')
@@ -704,6 +723,7 @@ def main():
         cmd.add_argument('argv', nargs=argparse.REMAINDER)
     args = parser.parse_args()
     root = args.root.resolve()
+    python_floor()
     try:
         if args.command == 'build-identity':
             print(canonical(build_inputs(root)))

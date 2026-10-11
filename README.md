@@ -8,6 +8,32 @@ historical unless they say otherwise.
 
 This is the project repo for the Go-to-Lean tool.
 
+## Getting started on a fresh clone
+
+A reasonable setup is enough; nothing is bound to a particular machine.
+
+- **Lean** via [elan](https://github.com/leanprover/elan): `lean-toolchain` pins the
+  version (currently `v4.32.2`); elan installs it on first use.
+- **Go `go1.26.5` exactly** — the differential oracle (`baselines/go-oracle-pin`); any
+  other patch level is a red gate by design, never a silent drift.
+- **Python 3.11 or newer** (standard library only), `git`, `jq`.
+- **A memory cap**: `capped` if your box has the Oath wrapper, else `scripts/capped`
+  (the same mechanism; needs cgroup v2 delegation or `systemd-run --user`). An
+  uncapped Lean build has taken a machine down before; the gate refuses to run
+  uncapped unless you opt out by name (`CAPPED_MEM_MAX=none`).
+
+```
+scripts/setup-deps                 # goose, go, raft reference checkouts at the pinned revs (gitignored deps/)
+capped -m 64G -- lake build        # the cold build needs ~64 G; later builds run at the default cap
+capped scripts/ci --diff           # the gate plus the differential corpus; records the baselines it then checks
+```
+
+The first `scripts/ci` without `--diff` reports two «NO recorded run» failures: it
+has not seen the corpus yet. That is the fail-closed design, not an error in your
+setup; `--diff` records the runs. Everything the gate checks is pinned in the
+repository (sources, scripts, the toolchain and oracle versions), so a clone on
+another machine with the same pins is fresh, not stale.
+
 The [2026-09-11 whole-project review](docs/2026-09-11_project-review.md)
 assesses executable coverage, semantic fidelity, relational and Iris customer
 readiness, experiments, and validation at `bf721a4c`. It includes fresh
