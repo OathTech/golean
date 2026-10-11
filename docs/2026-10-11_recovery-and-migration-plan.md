@@ -405,8 +405,14 @@ too. After the move the global note's box list is the [USER]'s to update
 `docs/2026-08-31_qrow-rulings.md`, histories in commit messages; `CLAUDE.md`
 holds standing rules only. No change.
 
-**4.6 Scratch retention is by design and unbounded — PENDING [USER]
-(D5).** `tools/admission-check.py` keeps its 370 M scratch per run
+**4.6 Scratch retention is by design and unbounded — D5 RULED ([USER]
+Mike 2026-10-11: «D5: keep the last run only»).** Implementation: on a
+PASSING run `tools/admission-check.py` replaces a single
+`.tmp/admission-audit-last/` with the run's scratch (and prints that
+path); a FAILING run's scratch is retained under its own name, as now, so
+the fail-closed evidence is never overwritten by a later green run. One
+small gate-tooling change, foldable into the `fix/capped-alignment` lane.
+Original finding: `tools/admission-check.py` keeps its 370 M scratch per run
 («Scratch is worktree-local and retained») and nothing prunes it: 21 runs =
 7.8 G of the 9.4 G `.tmp/`. The other scratch families
 (`golean-lsimports.*` 382 files, `check-*-test.*`, `declaration-fixture.*`)
@@ -646,8 +652,9 @@ primary checkout as a plain clone until the box itself is retired.
   hundred local-only branches (audit/, proof/, mirror/, review/, docs/,
   land/, snapshot/). The global box note says this project lives on
   `milner-oath`; the copy here was moved from golean's `deps/` on
-  2026-09-27 (ARCHIVE.md). Which copy is canonical is the [USER]'s to say
-  (D7).
+  2026-09-27 (ARCHIVE.md). [USER] 2026-10-11 (D9): raft-proofs is already
+  migrated to milner-oath — the copy here is NOT canonical and is not part
+  of this move; its reasoning-era `deps/` here are not carried.
 
 ## 9. Decisions this plan needs ([USER]; numbered for the reply)
 
@@ -665,17 +672,18 @@ primary checkout as a plain clone until the box itself is retired.
   additions from the old memory; the `rm` wording stays. Closed.
 - **D4** RULED («agreed»): the primary's `.tmp` pruned 2026-10-11 (9.3 GB
   freed, §6); worktrees, `artifacts/` and `deps/` at phase D.
-- **D5** §4.6: admission scratch retention (last run only, or prune at train
-  close).
+- **D5** RULED («keep the last run only»): §4.6 says how; lands with the
+  `fix/capped-alignment` lane.
 - **D6** The seeded-heap HARD STOP stays open; it travels by push (D1) and is
   not re-posed here.
 - **D7** RULED («I'll manage that. We're moving Go projects to
   milner-oath»): the [USER] runs the sibling passes; the target box is
   `milner-oath`.
-- **D8** The global box note (`~/.claude/CLAUDE.md`) after the move — the
-  [USER]'s file.
-- **D9** Which reasoning-era `deps/` checkouts (if any) are carried for
-  raft-proofs.
+- **D8** RULED («nothing to do, I'm editing it»): the [USER] edits the
+  global box note; no action here.
+- **D9** RULED («no, I've already migrated raft-proofs»): no reasoning-era
+  `deps/` checkout is carried; `deps/` on milner-oath is the gate's default
+  set plus `covmap`/`grossmith` only.
 
 ## 10. This lane's gate record
 
