@@ -344,14 +344,24 @@ certified. The box's cap is silently replaced by the project's. Nothing is
 uncapped, but the box default is not honoured and no one is told. There is
 no `scripts/env.sh` here (cerberus-sl has the reference shape).
 
-Implementation under the ruling (one lane, `fix/capped-alignment`, fast
-gate + audit ask; gate tooling, not the trusted surface): keep 64 G as the
-project default — it is MEASURED
-(`docs/operational-lessons.md`: «cold worktree full builds need 64G+») — but
-express it the box's way and make the two wrappers agree:
-1. add `scripts/env.sh` exporting `CAPPED_MEM_MAX=${CAPPED_MEM_MAX:-64G}`
-   (shell-scoped, with the written reason), and keep the box-wide build
-   lock (two 64 G builds over-commit 125 G — the crash class);
+**D2 RULED on the figure too** ([USER] Mike 2026-10-11, verbatim: «D2:
+conform to the box default, of course raising it is allowed during
+execution when needed»). So: NO project default — the box's
+`$CAPPED_MEM_MAX` (32 G) governs, no `scripts/env.sh` override; a job that
+needs more is raised per invocation (`capped -m 64G -- <cmd>`) with the
+reason stated where it is run. The one known case is the measured one
+(`docs/operational-lessons.md`: «cold worktree full builds need 64G+»), so
+a cold full build or a cold `scripts/ci` in a fresh worktree is invoked as
+`capped -m 64G -- scripts/ci …`; a warm primary build stays at the box
+default. The box-wide build lock stays (two raised builds over-commit
+125 G — the crash class).
+
+Implementation (one lane, `fix/capped-alignment`, fast gate + audit ask;
+gate tooling, not the trusted surface):
+1. no `scripts/env.sh` default; `scripts/ci` scales `LEAN_NUM_THREADS`
+   from the box's `CAPPED_MEM_MAX` (32 G → 4 threads at the 8 G/thread
+   budget; a `-m 64G` raise → 8) and NAMES the cold-build case in its
+   output when the cap is the box default and no `.lake` is present;
 2. make `scripts/capped` a shim: if `/usr/local/bin/capped` exists, map
    `GOLEAN_MEM_MAX` → `CAPPED_MEM_MAX` when only the former is set, treat
    `CAPPED_STATE=verified` as already-capped (never re-wrap under the box
@@ -361,13 +371,13 @@ express it the box's way and make the two wrappers agree:
    `GOLEAN_CAPPED=verified`, and derive the thread scaling from whichever
    limit variable is set;
 4. `CLAUDE.md` «The gates» and `docs/operational-lessons.md` §Memory: say
-   `capped` (box tool) with the project default from `scripts/env.sh`, the
-   shim for callers that still say `scripts/capped`.
+   `capped` (box tool), box default, `-m 64G` for the named cold-build
+   case; the shim for callers that still say `scripts/capped`.
 The `CLAUDE.md` wording and the tooling land TOGETHER: a charter that says
 `capped` while `scripts/ci` still re-wraps through `scripts/capped` would
-prescribe an invocation that silently swaps caps. The one open figure: the
-project default stays 64 G (measured) unless the [USER] prefers the box's
-32 G with per-job raises.
+prescribe an invocation that silently swaps caps. Until that lane lands,
+`capped scripts/ci` runs at the project wrapper's 64 G (§4.1 above), which
+is now a known deviation from the ruling, not a default.
 
 **4.2 Worktree hygiene — D4 agreed.** 77 worktrees exist; the global
 rule says remove your own when done (and, since 2026-10-11, the global file
@@ -604,7 +614,7 @@ git for-each-ref --format='%(objectname) %(refname)' | grep -v ' refs/remotes/' 
     | diff - <(grep -v ' refs/remotes/\| refs/stash' /path/golean-refs.txt | sort)                # expect: empty
 git checkout main && git status -sb                                                           # ## main...origin/main
 scripts/setup-deps --from /path/copied-deps                                                   # goose, go, raft; then --only covmap,grossmith
-capped lake build                                                                             # the box-wide capped ([USER] 2026-10-11); project default per §4.1
+capped -m 64G -- lake build                                                                   # box-wide capped; -m 64G is the named cold-build raise ([USER] D2)
 capped scripts/ci                                                                             # fast gate
 capped scripts/ci --diff                                                                      # expect PASS 3936/3936 (3705/231) as at r75
 python3 tools/certification.py release-check --base 4e3aeb3d                                  # expect: inputs unchanged → not STALE
@@ -646,10 +656,11 @@ primary checkout as a plain clone until the box itself is retired.
   prepared; the push set is `main`, the two tags, the two archive
   branches, the three `campaign-*` branches and `design-pass`. Open only:
   the merge sign-off for `land/records-1011`.
-- **D2** §4.1: the direction is RULED (box-wide `capped`, [USER]
-  2026-10-11). Open: the project default figure (64 G measured, via
-  `scripts/env.sh`, recommended) and the go-ahead for the alignment lane
-  (shim + `scripts/ci` accepting `CAPPED_STATE` + the charter wording).
+- **D2** RULED in full ([USER] 2026-10-11: box-wide `capped`; «conform to
+  the box default, of course raising it is allowed during execution when
+  needed»). Open only: the go-ahead for the `fix/capped-alignment` lane
+  (shim, `scripts/ci` accepting `CAPPED_STATE` and scaling from the box
+  cap, the charter wording).
 - **D3** RULED («these are all minor, you can drop them»): no charter
   additions from the old memory; the `rm` wording stays. Closed.
 - **D4** RULED («agreed»): the primary's `.tmp` pruned 2026-10-11 (9.3 GB
