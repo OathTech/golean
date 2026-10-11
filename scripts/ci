@@ -36,6 +36,13 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$ROOT"
 
+# The gate is never interactive: no git call here or in any sub-script may
+# page or open an editor, whatever the terminal or the operator's pager is.
+# (2026-10-11: `git grep` in scripts/check-equations paged on milner-oath's
+# tty and surfaced as "the gate opens an editor"; redirected runs never saw
+# it.) Exported, so every sub-script inherits the rule.
+export GIT_PAGER=cat PAGER=cat GIT_EDITOR=:
+
 # 0. MEMORY CAP — re-exec ourselves inside our own cgroup before doing any
 #    work. An uncapped Lean elaboration reached 60 GB and killed the session
 #    (twice) on 2026-08-09; the gate is exactly the thing that must not be

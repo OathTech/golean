@@ -34,7 +34,7 @@ grep -q 'enrollment complete' "$gate_scratch/client.log" || {
   echo "check-equations: FAIL — the client's enrollment check did not report completion" >&2; exit 1; }
 
 # (c) the NO-UNFOLD guard over the tracked client
-if git grep -n -E "$GUARD" -- "$CLIENT"; then
+if git --no-pager grep -n -E "$GUARD" -- "$CLIENT"; then
   echo "check-equations: FAIL — $CLIENT re-unfolds stepFn (or spells cbv/decide): see the lines above" >&2
   exit 1
 fi
