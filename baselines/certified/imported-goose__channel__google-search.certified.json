@@ -115,7 +115,7 @@
     "files": {
       "baselines/go-oracle-pin": "d7fc93cf6a8cc56b2bac2e3887baf871a14e0d8aaedb91c625f9a8d5f0f9fb74",
       "scripts/build-certified": "c9e01ba9ea4254fc72c059b1741a042cbaad9861bbd6fe703fe36377442fec7f",
-      "scripts/capped": "e269b85501b68e1eb2e41530d102d4fa71c65bf896cea76bcf0ca71d7921910a",
+      "scripts/capped": "abd874d393905b4cbe96678ffdb5483e8ad988d09be48ec7988bb56e33d5a669",
       "scripts/cedar-census": "33259adf36ae63f70808686c74842cff9ca909a036f27134c8dd7b1fef6d495e",
       "scripts/check-admission": "fe7f7fb86624d051dd9b7bfd29003089dc1feb16f8129b0f72394765e9493c01",
       "scripts/check-agents-alias": "72f37ba3b520b146494ad024876f57ff0dba29286a3a8393644e2b4657e4d34a",
@@ -139,7 +139,7 @@
       "scripts/check-wire-boundary": "aad79d5294da38ba29f70b3da4e0412e8326f344297e13a81efe451a6e6b4ef7",
       "scripts/choice-trace-corpus": "688b85b3f844577eb83375e86a35277a89cfeffffa550088e4b50907360b1f42",
       "scripts/choice-trace-summarize": "46561488888eabefd42b1cfadb8779ca86e580a022c6288b14a6c2c91cafe40a",
-      "scripts/ci": "284a1c7c74e343bd72a8e3a47fed259da09619fa13900bb52a209559f21f3f49",
+      "scripts/ci": "1d62f41710a1259df6357da41e0ae2d0b936806ab445a07b8aedabf2c8fd9eff",
       "scripts/ci-libraries.json": "237d1b95877e5ae5d6c54a8c8b70c8a4168931683a2f728388884b2988bfb0e9",
       "scripts/coverage": "cce5231de7ee527c4398df030b4a721d53c2696585e21fff495ef3d06dca8121",
       "scripts/coverage-baseline-diff": "222df888409ad9439d6de60d0257bad6bab5a30cb0b99916e5299b7f6d60ac6f",
@@ -154,7 +154,7 @@
       "scripts/extract-spec-sections": "252f2c8185457bacd3730d1ede88bba6ebdbbe329756067f9dfdffd03eed7a74",
       "scripts/gen-inittask-table": "0816d15582139b9f604bfb190768ef597e132a6c18a267fa410d206375c5eabd",
       "scripts/gotest-triage": "0d0c357b4a44eefddc5e7ed2a043e4277bda6cf323d44d1bfab53a3df0c4018a",
-      "scripts/grossmith-run": "d05a5a4500d2474659e7f8f5af41b5ea1fe1751715a4fbc4631dacd963957300",
+      "scripts/grossmith-run": "735f320f18e453dd18f304c2f06b5dfb1a1e35ccfa9d72b89d615d7543e4662f",
       "scripts/import-goose": "8d3352a6ebf813fe84c7b219167a71871b8337e64f310f32df9830ad73e9e54c",
       "scripts/lean-scan.sh": "9310d587a6afe19a9b6c042b0776d8c7861508aaeb488054014d8a35653f6c17",
       "scripts/lower-diagnose": "89fdc58da16866b1d52dc1e56a3642d9f57ca89354fbaf595bdfe00ea4f563d8",
@@ -172,7 +172,7 @@
       "scripts/test-import-goose": "99d6517dfb31d93b12375a318f37e8ce49d7224a1c15a0d6b983f75b75d45bd0",
       "scripts/test-lane-validation": "9c25d27540a5bc6a0c6de66d5f5addefffde5a038edf49ffe6368c4804ce2b40",
       "scripts/typed-gate-scratch.sh": "00b99b356f38adf52d51151405a661f21251587550a38076e5dd46718c7a8694",
-      "tools/admission-check.py": "c9d0fdd66d020abe44e50f54715715d5685173c957912c29890e19196c450b21",
+      "tools/admission-check.py": "9270c69e7e88a7d2295f07889262a8716ea9a1a00836447d479b35cda4bc7ecd",
       "tools/cedarcensus/main.go": "7a3008bef691db5acfa5537251b1be3ba5caba4cda179014d2f2bf058dbce730",
       "tools/certification.py": "8a0a0094cff572399bfcc95983ed49409d033bd2e1fdd5939a108563d2309ba2",
       "tools/check-admission-artifact.lean": "a5bd3b837928d7617af5e0d56c8de6318d4412c83d65a6fd0d9965e775d27aca",
@@ -341,12 +341,12 @@
       "--engine",
       "dedup"
     ],
-    "finished_utc": "2026-10-08T16:55:32.162634+00:00",
+    "finished_utc": "2026-10-11T15:49:24.026522+00:00",
     "git_dirty": false,
-    "source_commit": "8b53af433bce806915a10b8be55c8a66b0f38daf",
-    "started_utc": "2026-10-08T16:52:12.774627+00:00",
+    "source_commit": "890d1933f7af4745609140e5bcfaef8ef3515b9b",
+    "started_utc": "2026-10-11T15:46:52.193251+00:00",
     "stats_sha256": "80614849ba8583af41ce62fc0a0cefdc7a5b6f22fbb482784a125e8bd19f3283",
-    "wall_seconds": 193.467
+    "wall_seconds": 148.735
   },
   "schema": "golean-certification-v1"
 }

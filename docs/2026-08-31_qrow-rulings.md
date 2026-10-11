@@ -2100,6 +2100,27 @@ edits) and `files` `scripts/check-wire-boundary` (lane (a)'s controls); the rece
 «Recertification required since pre-merge tip: inputs: changed dependency build/files/GoLean/CLI.lean» — the
 protocol's trigger for this very run, recorded. Tail: `docs/evidence/2026-10-08_train-r75/r75-ci-slow.tail.txt`.
 
+**The box-wide `capped`, D2 and D5 — RULED (2026-10-11)** ([USER] Mike, verbatim, relayed by the [AGENT]
+recovery worker; the full ruling set D1–D9 with quotes is `docs/2026-10-11_recovery-and-migration-plan.md` §9):
+«Note the global capped script is the correct one to use, here and on the new box (which has the same
+affordance)»; «D2: conform to the box default, of course raising it is allowed during execution when needed»;
+«D5: keep the last run only». Landed by train capped-1011: `scripts/capped` a shim onto `/usr/local/bin/capped`,
+`scripts/ci` accepting either token and scaling threads from the effective cap, admission scratch kept as the last
+passing run. Also that day: «D3, these are all minor, you can drop them» (no charter additions from the old
+auto-memory); «we're not going to packrat everything. If it's important we push it. If it isn't, we throw it out»
+(the migration to milner-oath is push-and-clone; nothing is bundled or copied box to box).
+
+**Merge train capped-1011 — the 5a record** ([AGENT] recovery worker, 2026-10-11). Pre-merge main `6a5a4083` →
+`refs/snapshots/capped-1011/main`; lane tip `890d1933` fast-forwarded; `capped scripts/build-certified` EXIT=0
+(binary unchanged, `5f093779…`); `release-check` EXIT=2 «STALE certification: changed dependency
+files/scripts/capped» (expected). `capped scripts/ci --slow` at the box default (32 G, threads 4) EXIT=1, 1035 s,
+`RESULT: FAIL` on EXACTLY the 5a pair (`certificate provenance` STALE; `imported-goose/channel/google-search`
+PASS → FAIL membership; 3936 run, no other drift; negative 394 no regression). Candidate: `schema`, `claim`,
+`observations_sha256` IDENTICAL; `inputs` differ only in `files` `scripts/capped`, `scripts/ci`,
+`scripts/grossmith-run`, `tools/admission-check.py` (the lane's edits); receipt `8b53af43` → `890d1933`, 148.7 s.
+INSTALLED; `check-records` PASS; `release-check` EXIT=1 «Recertification required since pre-merge tip» — the
+trigger for this run, recorded. Tail: `docs/evidence/2026-10-11_train-capped-1011/ci-slow.tail.txt`.
+
 **Green run at the 5a records commit `6ed398af`** ([AGENT] train worker, 2026-10-08). `GOLEAN_MEM_MAX=48G
 scripts/capped scripts/ci --diff` (start load 6.3/11.6/18.7) EXIT=0, 990 s, `RESULT: PASS`: baseline diff FULL
 3936/3936 (3705 / 231, no regression), certificate provenance ok, package-correct method identity ok, wire boundary ok,
