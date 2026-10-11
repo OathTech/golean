@@ -31,8 +31,9 @@ refs, reversible).
   10 need a push, 3 are on `origin` already, 51 are contained in a pushed or
   archive-designated branch, 27 are «landed by patch» (every commit has an
   equivalent on `main`), 33 are safety copies or parked-era work. 409
-  `refs/snapshots/*`, 1 `refs/archive/*`, 8 stash entries: carried by a
-  bundle (§7), not by GitHub.
+  `refs/snapshots/*`, 1 `refs/archive/*`, 8 stash entries: left with this
+  box. [USER] 2026-10-11: the repo is free-standing — what matters is
+  pushed, a new box clones; no bundle (§7).
 - **77 worktrees** under `.claude/worktrees/` (32 G). 14 carry uncommitted
   changes — ALL from the parked typed-profiles sprint (2026-09-06) or the
   parked reasoning campaign (2026-08-26); none is current-era work. Two
@@ -71,14 +72,15 @@ remedy is the migration itself.
 ## 2. Recovery actions taken ([AGENT], local-only, reversible)
 
 Twenty-three refs under `refs/snapshots/2026-10-11-recovery/` were created
-so that no uncommitted or unreachable state can be lost by a bundle, a
-worktree removal or a clone. **No working tree was modified**; every dirty
+so that no uncommitted or unreachable state can be lost by a worktree
+removal or a clone while the push set is being confirmed on `origin`; they
+stay with this box (§7). **No working tree was modified**; every dirty
 worktree is exactly as dirty as before (verified by `git status --porcelain`
 counts). Log: the commit message of this lane and the list below.
 
 | Ref (under `refs/snapshots/2026-10-11-recovery/`) | Points at | What it preserves |
 |---|---|---|
-| `stash-0` … `stash-7` | `d8d6c19c`, `16ec37c3`, `63593b8b`, `0e1a9caf`, `43fab305`, `7582978c`, `620a0cca`, `6b4787b6` | the 8 stash entries (all 2026-09-06, typed sprint WIP «before reviewed integration»). Only `stash@{0}` is a ref; `stash@{1..7}` live in the reflog, which neither `git bundle` nor `git push` carries |
+| `stash-0` … `stash-7` | `d8d6c19c`, `16ec37c3`, `63593b8b`, `0e1a9caf`, `43fab305`, `7582978c`, `620a0cca`, `6b4787b6` | the 8 stash entries (all 2026-09-06, typed sprint WIP «before reviewed integration»). Only `stash@{0}` is a ref; `stash@{1..7}` live in the reflog, which `git push` does not carry |
 | `wt-method-promotion-ref` | `74f5bada` | detached worktree `method-promotion-ref` (G-P S0 born pins, 2026-09-28; its patch is on `main`, the commit was reachable from nothing) |
 | `wt-typed-i1-json-review-string` | `8051028b` | detached worktree `typed-i1-json-review-string` (77 commits over main, 2026-09-06, reachable from nothing) |
 | `wip-<worktree>` (13) | new commits, each `-p <worktree HEAD>` | the uncommitted state (tracked + untracked, excluding `.tmp/ artifacts/ deps/ .lake/`) of `campaign-wave-a` (13 files), `typed-abort-observation-review` (6), `typed-b7-customer-review` (177), `typed-b7-kernel-review` (239), `typed-b7-original-review` (134), `typed-byte-runtime` (162), `typed-byte-runtime-review` (19), `typed-consumer-sprint` (361 — the staged `uintptr` merge, ARCHIVE.md «NOT part of this archive»), `typed-context-store` (391), `typed-i1-envelope` (111), `typed-i1-json-review-string` (9), `typed-r1-production-review` (45), `typed-shared-customer-review` (26). `channel-logic` skipped: its only untracked entry is `.tmp/` |
@@ -121,9 +123,9 @@ keeps only the lane's history.
 `archive/callspec-era`, `archive/fixed-trajectory-era`, which are merged).
 
 **Everything else** (51 contained, 27 landed-by-patch, 33 parked-era or
-safety copies, the 409 snapshot refs, the stash refs) travels by the bundle
-in §7. The 27 landed-by-patch branches are deletable after the migration's
-verification (D1). The full table follows, then the D1 ruling that revises
+safety copies, the 409 snapshot refs, the stash refs) is NOT migrated: it
+stays with this box until the box is retired (§7). The 27 landed-by-patch
+branches are deletable after the landing is verified (D1). The full table follows, then the D1 ruling that revises
 the table's PUSH column.
 
 **D1 RULED** ([USER] Mike 2026-10-11, verbatim: «D1: why not land the
@@ -148,7 +150,7 @@ branches containing meaningful features we might use»). Applied:
   code landed as `07694b27` (same subject, rebased); `prep/observer-terminal-harness`:
   every `tools/coverageharness/` file it adds is byte-identical on `main`
   (landed by `land/observer-terminal`); only its 2026-09-07 prep evidence
-  dir is not on `main`, by its own «Prep (NOT landed)». Both: bundle only.
+  dir is not on `main`, by its own «Prep (NOT landed)». Both: left here.
 - *Pushed as live working / feature branches* (reasoning-side work that
   exists on no origin ref; golean-logic and raft-proofs may use it):
   `campaign-arc4d` (17 commits, 19 proof files under `proofs/GoLeanProofs`,
@@ -160,12 +162,12 @@ branches containing meaningful features we might use»). Applied:
   `park/reasoning-2026-08-31` (origin) already; `w3-init` is the killed
   CallSpec track (`archive/callspec-era`, origin); `spec-parity-s1..s6`
   carry only the F15 fix's 2 commits beyond the merged `spec-parity` —
-  bundle only.
+  left here.
 - *Not pushed: the 19 typed-era lane branches* (`typed-byte-*`,
   `typed-b7-*`, `typed-context-store`, `typed-i1-envelope`, …,
   `storage-maintenance-*`). Their features are on `main`'s history and on
   the parking tag; what is unique to each lane is its review evidence
-  (150 k–1 M lines per branch). Bundle only; any one of them can be pushed
+  (150 k–1 M lines per branch). Left here; any one of them can be pushed
   on request by name.
 
 **The push set after D1** (from outside the sandbox, in this order): `main`;
@@ -178,130 +180,130 @@ is verified on milner-oath, with the 27 landed-by-patch ones.
 
 | Branch | Last commit | Ahead of main | Not on main (patch-equivalent) | Contained in | Disposition |
 |---|---|---|---|---|---|
-| `campaign-arc4d` | 2026-08-26 | 17 | 17 | — | bundle only (reasoning era, pre-split) |
-| `campaign-ce` | 2026-08-26 | 4 | 4 | — | bundle only (reasoning era, pre-split) |
-| `campaign-wave-a` | 2026-08-26 | 3 | 3 | — | bundle only (reasoning era, pre-split) |
+| `campaign-arc4d` | 2026-08-26 | 17 | 17 | — | PUSH (D1: live reasoning-side working branch) |
+| `campaign-ce` | 2026-08-26 | 4 | 4 | — | PUSH (D1: live reasoning-side working branch) |
+| `campaign-wave-a` | 2026-08-26 | 3 | 3 | — | PUSH (D1: live reasoning-side working branch) |
 | `channel-logic` | 2026-08-11 | 34 | 34 | origin/channel-logic | ON ORIGIN already |
-| `channel-logic-s1` | 2026-08-11 | 20 | 20 | origin/channel-logic | CARRIED by origin/channel-logic (bundle only) |
-| `channel-logic-s2` | 2026-08-11 | 26 | 26 | origin/channel-logic | CARRIED by origin/channel-logic (bundle only) |
-| `channel-logic-s3` | 2026-08-11 | 33 | 33 | origin/channel-logic | CARRIED by origin/channel-logic (bundle only) |
+| `channel-logic-s1` | 2026-08-11 | 20 | 20 | origin/channel-logic | CARRIED by origin/channel-logic (no push needed) |
+| `channel-logic-s2` | 2026-08-11 | 26 | 26 | origin/channel-logic | CARRIED by origin/channel-logic (no push needed) |
+| `channel-logic-s3` | 2026-08-11 | 33 | 33 | origin/channel-logic | CARRIED by origin/channel-logic (no push needed) |
 | `channel-logic-s4` | 2026-08-11 | 40 | 40 | origin/channel-logic-s4 | ON ORIGIN already |
-| `core/stray-panic-refusal-0927` | 2026-09-27 | 2 | 0 | — | LANDED by patch (bundle only; deletable after migration) |
-| `core/unseq-stage-e6a-0924` | 2026-09-24 | 8 | 0 | — | LANDED by patch (bundle only; deletable after migration) |
-| `design-pass` | 2026-08-28 | 163 | 136 | — | bundle only (reasoning era, pre-split) |
+| `core/stray-panic-refusal-0927` | 2026-09-27 | 2 | 0 | — | LANDED by patch (not migrated; deletable after the landing is verified) |
+| `core/unseq-stage-e6a-0924` | 2026-09-24 | 8 | 0 | — | LANDED by patch (not migrated; deletable after the landing is verified) |
+| `design-pass` | 2026-08-28 | 163 | 136 | — | PUSH (D1: live reasoning-side working branch) |
 | `design/eval-order-model-0915` | 2026-09-15 | 1 | 1 | — | PUSH (unlanded, current era) |
 | `design/seeded-heap-1009` | 2026-10-08 | 1 | 1 | — | PUSH (open HARD STOP, [USER] gate pending) |
-| `docs/bug004-item4-design-0930` | 2026-09-30 | 2 | 0 | — | LANDED by patch (bundle only; deletable after migration) |
-| `docs/gc3-design-0929` | 2026-09-29 | 1 | 0 | — | LANDED by patch (bundle only; deletable after migration) |
-| `docs/gc4-design-1001` | 2026-10-01 | 1 | 0 | — | LANDED by patch (bundle only; deletable after migration) |
-| `docs/gp-design-0928` | 2026-09-28 | 1 | 0 | — | LANDED by patch (bundle only; deletable after migration) |
-| `docs/logic-reply-0928` | 2026-09-28 | 2 | 0 | — | LANDED by patch (bundle only; deletable after migration) |
-| `docs/logic-team-note-0927` | 2026-09-27 | 1 | 0 | — | LANDED by patch (bundle only; deletable after migration) |
+| `docs/bug004-item4-design-0930` | 2026-09-30 | 2 | 0 | — | LANDED by patch (not migrated; deletable after the landing is verified) |
+| `docs/gc3-design-0929` | 2026-09-29 | 1 | 0 | — | LANDED by patch (not migrated; deletable after the landing is verified) |
+| `docs/gc4-design-1001` | 2026-10-01 | 1 | 0 | — | LANDED by patch (not migrated; deletable after the landing is verified) |
+| `docs/gp-design-0928` | 2026-09-28 | 1 | 0 | — | LANDED by patch (not migrated; deletable after the landing is verified) |
+| `docs/logic-reply-0928` | 2026-09-28 | 2 | 0 | — | LANDED by patch (not migrated; deletable after the landing is verified) |
+| `docs/logic-team-note-0927` | 2026-09-27 | 1 | 0 | — | LANDED by patch (not migrated; deletable after the landing is verified) |
 | `docs/reasoning-archaeology-0916` | 2026-09-16 | 2 | 2 | — | PUSH (unlanded, current era) |
 | `plan/certificate-provenance` | 2026-09-09 | 1 | 1 | — | PUSH (unlanded, current era) |
 | `plan/method-identity-increment` | 2026-09-08 | 1 | 1 | — | PUSH (unlanded, current era) |
 | `prep/observer-terminal-harness` | 2026-09-07 | 1 | 1 | — | PUSH (unlanded, current era) |
 | `raft-proof-campaign` | 2026-08-29 | 206 | 179 | origin/raft-proof-campaign | ON ORIGIN already |
-| `records/bug114-capture-0921` | 2026-09-21 | 1 | 0 | — | LANDED by patch (bundle only; deletable after migration) |
+| `records/bug114-capture-0921` | 2026-09-21 | 1 | 0 | — | LANDED by patch (not migrated; deletable after the landing is verified) |
 | `records/raft-deltas-0930` | 2026-09-30 | 1 | 1 | — | PUSH (unlanded, current era) |
 | `records/stray-panic-investigation-0927` | 2026-09-27 | 1 | 1 | — | PUSH (unlanded, current era) |
-| `records/window-corpus-cl-1003` | 2026-10-03 | 1 | 0 | — | LANDED by patch (bundle only; deletable after migration) |
-| `review/block-allocation-1001` | 2026-10-02 | 1 | 0 | — | LANDED by patch (bundle only; deletable after migration) |
-| `review/continuations-0929` | 2026-09-30 | 1 | 0 | — | LANDED by patch (bundle only; deletable after migration) |
-| `review/intn-pick-0930` | 2026-10-01 | 1 | 0 | — | LANDED by patch (bundle only; deletable after migration) |
-| `review/method-promotion-0928` | 2026-09-29 | 2 | 0 | — | LANDED by patch (bundle only; deletable after migration) |
-| `review/numeric-locals-0930` | 2026-09-30 | 2 | 0 | — | LANDED by patch (bundle only; deletable after migration) |
-| `review/packet-a-contract-0927` | 2026-09-27 | 12 | 0 | — | LANDED by patch (bundle only; deletable after migration) |
-| `review/packet-b-bridges-0928` | 2026-09-28 | 5 | 0 | — | LANDED by patch (bundle only; deletable after migration) |
-| `review/packet-d-equations-1003` | 2026-10-03 | 2 | 0 | — | LANDED by patch (bundle only; deletable after migration) |
-| `review/panic-preprint-1003` | 2026-10-03 | 1 | 0 | — | LANDED by patch (bundle only; deletable after migration) |
-| `review/step-label-0928` | 2026-09-28 | 3 | 0 | — | LANDED by patch (bundle only; deletable after migration) |
-| `review/stray-panic-refusal-0927` | 2026-09-27 | 3 | 0 | — | LANDED by patch (bundle only; deletable after migration) |
-| `review/unseq-stage-e6a-0924` | 2026-09-24 | 11 | 0 | — | LANDED by patch (bundle only; deletable after migration) |
-| `review/window-1003` | 2026-10-03 | 1 | 0 | — | LANDED by patch (bundle only; deletable after migration) |
-| `snapshot/a3-admission-before-integration` | 2026-09-05 | 1 | 1 | — | bundle only (safety copy) |
-| `snapshot/bug103-before-a2-integration-20260905` | 2026-09-05 | 2 | 1 | — | bundle only (safety copy) |
-| `snapshot/f8-before-r29-records` | 2026-09-09 | 1 | 0 | — | LANDED by patch (bundle only; deletable after migration) |
-| `snapshot/interface-before-bug103-rebase-20260905` | 2026-09-05 | 1 | 0 | — | LANDED by patch (bundle only; deletable after migration) |
-| `snapshot/typed-boolean-before-helper-20260906` | 2026-09-06 | 3 | 3 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (bundle only) |
-| `snapshot/typed-boolean-before-recovery-20260906` | 2026-09-06 | 12 | 10 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (bundle only) |
-| `snapshot/typed-i1-before-positive-reviews-20260906` | 2026-09-06 | 33 | 29 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (bundle only) |
-| `snapshot/typed-recovery-runtime-before-static-e8a665e9` | 2026-09-06 | 28 | 23 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (bundle only) |
-| `snapshot/typed-recovery-setup-before-helpers` | 2026-09-06 | 30 | 24 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (bundle only) |
-| `snapshot/typed-sprint-before-abort-observer-20260906` | 2026-09-06 | 62 | 51 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (bundle only) |
-| `snapshot/typed-sprint-before-boolean` | 2026-09-06 | 7 | 6 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (bundle only) |
-| `snapshot/typed-sprint-before-bridge-reviews` | 2026-09-06 | 19 | 15 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (bundle only) |
-| `snapshot/typed-sprint-before-design-review` | 2026-09-05 | 3 | 3 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (bundle only) |
-| `snapshot/typed-sprint-before-helper-review` | 2026-09-06 | 9 | 7 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (bundle only) |
-| `snapshot/typed-sprint-before-i1-json-20260906` | 2026-09-06 | 85 | 68 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (bundle only) |
-| `snapshot/typed-sprint-before-i1-positive-20260906` | 2026-09-06 | 64 | 52 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (bundle only) |
-| `snapshot/typed-sprint-before-initialization-review` | 2026-09-06 | 12 | 10 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (bundle only) |
-| `snapshot/typed-sprint-before-o2-terminal-20260906` | 2026-09-06 | 88 | 70 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (bundle only) |
-| `snapshot/typed-sprint-before-observer-20260906` | 2026-09-06 | 56 | 46 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (bundle only) |
-| `snapshot/typed-sprint-before-observer-and-i1-reviews` | 2026-09-06 | 25 | 21 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (bundle only) |
-| `snapshot/typed-sprint-before-preflight-seal` | 2026-09-06 | 11 | 9 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (bundle only) |
-| `snapshot/typed-sprint-before-public-promotion-review` | 2026-09-06 | 23 | 19 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (bundle only) |
-| `snapshot/typed-sprint-before-r1-20260906` | 2026-09-06 | 76 | 62 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (bundle only) |
-| `snapshot/typed-sprint-before-recovery-control` | 2026-09-06 | 52 | 43 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (bundle only) |
-| `snapshot/typed-sprint-before-recovery-entry` | 2026-09-06 | 44 | 36 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (bundle only) |
-| `snapshot/typed-sprint-before-recovery-static` | 2026-09-06 | 29 | 25 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (bundle only) |
-| `snapshot/typed-sprint-before-recovery-storage` | 2026-09-06 | 38 | 33 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (bundle only) |
-| `snapshot/typed-sprint-before-renderer` | 2026-09-06 | 17 | 14 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (bundle only) |
-| `snapshot/typed-sprint-before-runtime` | 2026-09-06 | 14 | 12 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (bundle only) |
-| `snapshot/typed-sprint-before-shared-20260906` | 2026-09-06 | 73 | 60 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (bundle only) |
-| `snapshot/typed-sprint-before-uintptr-20260906` | 2026-09-06 | 96 | 75 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (bundle only) |
-| `snapshot/typed-string-members-before-observer-414a2abe` | 2026-09-06 | 48 | 39 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (bundle only) |
-| `snapshot/typed-string-members-before-r1-apparatus-review` | 2026-09-06 | 66 | 52 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (bundle only) |
-| `snapshot/typed-string-members-before-r1-model-review` | 2026-09-06 | 67 | 53 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (bundle only) |
-| `snapshot/typed-uintptr-before-disposition-20260906` | 2026-09-06 | 62 | 51 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (bundle only) |
-| `snapshots/typed-terminal-before-o2-review-20260906-0920` | 2026-09-06 | 80 | 64 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (bundle only) |
-| `snapshots/typed-terminal-pre-accepted-renderer-20260906` | 2026-09-06 | 68 | 55 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (bundle only) |
-| `snapshots/typed-terminal-pre-observer-20260906` | 2026-09-06 | 34 | 28 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (bundle only) |
-| `snapshots/typed-terminal-pre-shared-20260906` | 2026-09-06 | 65 | 53 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (bundle only) |
-| `spec-parity-s1` | 2026-08-09 | 14 | 2 | — | bundle only (reasoning era, pre-split) |
-| `spec-parity-s2` | 2026-08-10 | 26 | 2 | — | bundle only (reasoning era, pre-split) |
-| `spec-parity-s3` | 2026-08-10 | 33 | 2 | — | bundle only (reasoning era, pre-split) |
-| `spec-parity-s4` | 2026-08-10 | 39 | 2 | — | bundle only (reasoning era, pre-split) |
-| `spec-parity-s5` | 2026-08-10 | 45 | 2 | — | bundle only (reasoning era, pre-split) |
-| `spec-parity-s6` | 2026-08-10 | 62 | 2 | — | bundle only (reasoning era, pre-split) |
-| `storage-maintenance-20260906` | 2026-09-06 | 100 | 79 | — | bundle only (typed-profiles era, parked 2026-09-16) |
-| `storage-maintenance-main-20260906` | 2026-09-06 | 3 | 3 | — | bundle only (typed-profiles era, parked 2026-09-16) |
-| `typed-abort-observation-review` | 2026-09-06 | 57 | 47 | — | bundle only (typed-profiles era, parked 2026-09-16) |
-| `typed-b7-customer-review` | 2026-09-06 | 79 | 64 | — | bundle only (typed-profiles era, parked 2026-09-16) |
-| `typed-b7-kernel-review` | 2026-09-06 | 78 | 63 | — | bundle only (typed-profiles era, parked 2026-09-16) |
-| `typed-b7-original-review` | 2026-09-06 | 58 | 48 | — | bundle only (typed-profiles era, parked 2026-09-16) |
-| `typed-boolean` | 2026-09-06 | 12 | 10 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (bundle only) |
-| `typed-byte-runtime` | 2026-09-06 | 88 | 71 | — | bundle only (typed-profiles era, parked 2026-09-16) |
-| `typed-byte-runtime-review` | 2026-09-06 | 86 | 69 | — | bundle only (typed-profiles era, parked 2026-09-16) |
-| `typed-byte-store-consume-review` | 2026-09-06 | 81 | 67 | — | bundle only (typed-profiles era, parked 2026-09-16) |
-| `typed-byte-store-exec` | 2026-09-06 | 80 | 66 | — | bundle only (typed-profiles era, parked 2026-09-16) |
-| `typed-byte-store-proof` | 2026-09-06 | 78 | 64 | — | bundle only (typed-profiles era, parked 2026-09-16) |
-| `typed-byte-store-review` | 2026-09-06 | 79 | 65 | — | bundle only (typed-profiles era, parked 2026-09-16) |
-| `typed-consumer-charter` | 2026-09-05 | 2 | 2 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (bundle only) |
+| `records/window-corpus-cl-1003` | 2026-10-03 | 1 | 0 | — | LANDED by patch (not migrated; deletable after the landing is verified) |
+| `review/block-allocation-1001` | 2026-10-02 | 1 | 0 | — | LANDED by patch (not migrated; deletable after the landing is verified) |
+| `review/continuations-0929` | 2026-09-30 | 1 | 0 | — | LANDED by patch (not migrated; deletable after the landing is verified) |
+| `review/intn-pick-0930` | 2026-10-01 | 1 | 0 | — | LANDED by patch (not migrated; deletable after the landing is verified) |
+| `review/method-promotion-0928` | 2026-09-29 | 2 | 0 | — | LANDED by patch (not migrated; deletable after the landing is verified) |
+| `review/numeric-locals-0930` | 2026-09-30 | 2 | 0 | — | LANDED by patch (not migrated; deletable after the landing is verified) |
+| `review/packet-a-contract-0927` | 2026-09-27 | 12 | 0 | — | LANDED by patch (not migrated; deletable after the landing is verified) |
+| `review/packet-b-bridges-0928` | 2026-09-28 | 5 | 0 | — | LANDED by patch (not migrated; deletable after the landing is verified) |
+| `review/packet-d-equations-1003` | 2026-10-03 | 2 | 0 | — | LANDED by patch (not migrated; deletable after the landing is verified) |
+| `review/panic-preprint-1003` | 2026-10-03 | 1 | 0 | — | LANDED by patch (not migrated; deletable after the landing is verified) |
+| `review/step-label-0928` | 2026-09-28 | 3 | 0 | — | LANDED by patch (not migrated; deletable after the landing is verified) |
+| `review/stray-panic-refusal-0927` | 2026-09-27 | 3 | 0 | — | LANDED by patch (not migrated; deletable after the landing is verified) |
+| `review/unseq-stage-e6a-0924` | 2026-09-24 | 11 | 0 | — | LANDED by patch (not migrated; deletable after the landing is verified) |
+| `review/window-1003` | 2026-10-03 | 1 | 0 | — | LANDED by patch (not migrated; deletable after the landing is verified) |
+| `snapshot/a3-admission-before-integration` | 2026-09-05 | 1 | 1 | — | not migrated (safety copy, left with this box) |
+| `snapshot/bug103-before-a2-integration-20260905` | 2026-09-05 | 2 | 1 | — | not migrated (safety copy, left with this box) |
+| `snapshot/f8-before-r29-records` | 2026-09-09 | 1 | 0 | — | LANDED by patch (not migrated; deletable after the landing is verified) |
+| `snapshot/interface-before-bug103-rebase-20260905` | 2026-09-05 | 1 | 0 | — | LANDED by patch (not migrated; deletable after the landing is verified) |
+| `snapshot/typed-boolean-before-helper-20260906` | 2026-09-06 | 3 | 3 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (no push needed) |
+| `snapshot/typed-boolean-before-recovery-20260906` | 2026-09-06 | 12 | 10 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (no push needed) |
+| `snapshot/typed-i1-before-positive-reviews-20260906` | 2026-09-06 | 33 | 29 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (no push needed) |
+| `snapshot/typed-recovery-runtime-before-static-e8a665e9` | 2026-09-06 | 28 | 23 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (no push needed) |
+| `snapshot/typed-recovery-setup-before-helpers` | 2026-09-06 | 30 | 24 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (no push needed) |
+| `snapshot/typed-sprint-before-abort-observer-20260906` | 2026-09-06 | 62 | 51 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (no push needed) |
+| `snapshot/typed-sprint-before-boolean` | 2026-09-06 | 7 | 6 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (no push needed) |
+| `snapshot/typed-sprint-before-bridge-reviews` | 2026-09-06 | 19 | 15 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (no push needed) |
+| `snapshot/typed-sprint-before-design-review` | 2026-09-05 | 3 | 3 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (no push needed) |
+| `snapshot/typed-sprint-before-helper-review` | 2026-09-06 | 9 | 7 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (no push needed) |
+| `snapshot/typed-sprint-before-i1-json-20260906` | 2026-09-06 | 85 | 68 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (no push needed) |
+| `snapshot/typed-sprint-before-i1-positive-20260906` | 2026-09-06 | 64 | 52 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (no push needed) |
+| `snapshot/typed-sprint-before-initialization-review` | 2026-09-06 | 12 | 10 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (no push needed) |
+| `snapshot/typed-sprint-before-o2-terminal-20260906` | 2026-09-06 | 88 | 70 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (no push needed) |
+| `snapshot/typed-sprint-before-observer-20260906` | 2026-09-06 | 56 | 46 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (no push needed) |
+| `snapshot/typed-sprint-before-observer-and-i1-reviews` | 2026-09-06 | 25 | 21 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (no push needed) |
+| `snapshot/typed-sprint-before-preflight-seal` | 2026-09-06 | 11 | 9 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (no push needed) |
+| `snapshot/typed-sprint-before-public-promotion-review` | 2026-09-06 | 23 | 19 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (no push needed) |
+| `snapshot/typed-sprint-before-r1-20260906` | 2026-09-06 | 76 | 62 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (no push needed) |
+| `snapshot/typed-sprint-before-recovery-control` | 2026-09-06 | 52 | 43 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (no push needed) |
+| `snapshot/typed-sprint-before-recovery-entry` | 2026-09-06 | 44 | 36 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (no push needed) |
+| `snapshot/typed-sprint-before-recovery-static` | 2026-09-06 | 29 | 25 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (no push needed) |
+| `snapshot/typed-sprint-before-recovery-storage` | 2026-09-06 | 38 | 33 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (no push needed) |
+| `snapshot/typed-sprint-before-renderer` | 2026-09-06 | 17 | 14 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (no push needed) |
+| `snapshot/typed-sprint-before-runtime` | 2026-09-06 | 14 | 12 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (no push needed) |
+| `snapshot/typed-sprint-before-shared-20260906` | 2026-09-06 | 73 | 60 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (no push needed) |
+| `snapshot/typed-sprint-before-uintptr-20260906` | 2026-09-06 | 96 | 75 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (no push needed) |
+| `snapshot/typed-string-members-before-observer-414a2abe` | 2026-09-06 | 48 | 39 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (no push needed) |
+| `snapshot/typed-string-members-before-r1-apparatus-review` | 2026-09-06 | 66 | 52 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (no push needed) |
+| `snapshot/typed-string-members-before-r1-model-review` | 2026-09-06 | 67 | 53 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (no push needed) |
+| `snapshot/typed-uintptr-before-disposition-20260906` | 2026-09-06 | 62 | 51 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (no push needed) |
+| `snapshots/typed-terminal-before-o2-review-20260906-0920` | 2026-09-06 | 80 | 64 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (no push needed) |
+| `snapshots/typed-terminal-pre-accepted-renderer-20260906` | 2026-09-06 | 68 | 55 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (no push needed) |
+| `snapshots/typed-terminal-pre-observer-20260906` | 2026-09-06 | 34 | 28 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (no push needed) |
+| `snapshots/typed-terminal-pre-shared-20260906` | 2026-09-06 | 65 | 53 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (no push needed) |
+| `spec-parity-s1` | 2026-08-09 | 14 | 2 | — | not migrated (reasoning era, pre-split; left with this box) |
+| `spec-parity-s2` | 2026-08-10 | 26 | 2 | — | not migrated (reasoning era, pre-split; left with this box) |
+| `spec-parity-s3` | 2026-08-10 | 33 | 2 | — | not migrated (reasoning era, pre-split; left with this box) |
+| `spec-parity-s4` | 2026-08-10 | 39 | 2 | — | not migrated (reasoning era, pre-split; left with this box) |
+| `spec-parity-s5` | 2026-08-10 | 45 | 2 | — | not migrated (reasoning era, pre-split; left with this box) |
+| `spec-parity-s6` | 2026-08-10 | 62 | 2 | — | not migrated (reasoning era, pre-split; left with this box) |
+| `storage-maintenance-20260906` | 2026-09-06 | 100 | 79 | — | not migrated (typed-profiles era lane, parked 2026-09-16; left with this box) |
+| `storage-maintenance-main-20260906` | 2026-09-06 | 3 | 3 | — | not migrated (typed-profiles era lane, parked 2026-09-16; left with this box) |
+| `typed-abort-observation-review` | 2026-09-06 | 57 | 47 | — | not migrated (typed-profiles era lane, parked 2026-09-16; left with this box) |
+| `typed-b7-customer-review` | 2026-09-06 | 79 | 64 | — | not migrated (typed-profiles era lane, parked 2026-09-16; left with this box) |
+| `typed-b7-kernel-review` | 2026-09-06 | 78 | 63 | — | not migrated (typed-profiles era lane, parked 2026-09-16; left with this box) |
+| `typed-b7-original-review` | 2026-09-06 | 58 | 48 | — | not migrated (typed-profiles era lane, parked 2026-09-16; left with this box) |
+| `typed-boolean` | 2026-09-06 | 12 | 10 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (no push needed) |
+| `typed-byte-runtime` | 2026-09-06 | 88 | 71 | — | not migrated (typed-profiles era lane, parked 2026-09-16; left with this box) |
+| `typed-byte-runtime-review` | 2026-09-06 | 86 | 69 | — | not migrated (typed-profiles era lane, parked 2026-09-16; left with this box) |
+| `typed-byte-store-consume-review` | 2026-09-06 | 81 | 67 | — | not migrated (typed-profiles era lane, parked 2026-09-16; left with this box) |
+| `typed-byte-store-exec` | 2026-09-06 | 80 | 66 | — | not migrated (typed-profiles era lane, parked 2026-09-16; left with this box) |
+| `typed-byte-store-proof` | 2026-09-06 | 78 | 64 | — | not migrated (typed-profiles era lane, parked 2026-09-16; left with this box) |
+| `typed-byte-store-review` | 2026-09-06 | 79 | 65 | — | not migrated (typed-profiles era lane, parked 2026-09-16; left with this box) |
+| `typed-consumer-charter` | 2026-09-05 | 2 | 2 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (no push needed) |
 | `typed-consumer-sprint` | 2026-09-06 | 96 | 75 | typed-consumer-sprint | PUSH (the ARCHIVE.md-designated sprint archive, retained unmodified) |
-| `typed-context-store` | 2026-09-06 | 80 | 65 | — | bundle only (typed-profiles era, parked 2026-09-16) |
-| `typed-contract-review` | 2026-09-06 | 5 | 5 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (bundle only) |
-| `typed-i1-declarations` | 2026-09-06 | 36 | 32 | — | bundle only (typed-profiles era, parked 2026-09-16) |
-| `typed-i1-envelope` | 2026-09-06 | 86 | 72 | — | bundle only (typed-profiles era, parked 2026-09-16) |
-| `typed-i1-envelope-review` | 2026-09-06 | 78 | 64 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (bundle only) |
-| `typed-i1-json` | 2026-09-06 | 78 | 64 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (bundle only) |
-| `typed-observer-classification` | 2026-09-06 | 10 | 9 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (bundle only) |
-| `typed-observer-controls` | 2026-09-06 | 11 | 10 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (bundle only) |
-| `typed-panic-rendering` | 2026-09-06 | 8 | 7 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (bundle only) |
-| `typed-preflight` | 2026-09-06 | 26 | 26 | — | bundle only (typed-profiles era, parked 2026-09-16) |
-| `typed-r1-production-review` | 2026-09-06 | 69 | 55 | — | bundle only (typed-profiles era, parked 2026-09-16) |
-| `typed-recovery` | 2026-09-06 | 15 | 13 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (bundle only) |
-| `typed-recovery-runtime` | 2026-09-06 | 33 | 27 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (bundle only) |
-| `typed-recovery-setup` | 2026-09-06 | 34 | 28 | — | bundle only (typed-profiles era, parked 2026-09-16) |
-| `typed-recovery-terminal` | 2026-09-06 | 81 | 65 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (bundle only) |
-| `typed-shared-customer` | 2026-09-06 | 36 | 30 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (bundle only) |
-| `typed-shared-customer-review` | 2026-09-06 | 35 | 29 | — | bundle only (typed-profiles era, parked 2026-09-16) |
-| `typed-string-members` | 2026-09-06 | 72 | 58 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (bundle only) |
+| `typed-context-store` | 2026-09-06 | 80 | 65 | — | not migrated (typed-profiles era lane, parked 2026-09-16; left with this box) |
+| `typed-contract-review` | 2026-09-06 | 5 | 5 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (no push needed) |
+| `typed-i1-declarations` | 2026-09-06 | 36 | 32 | — | not migrated (typed-profiles era lane, parked 2026-09-16; left with this box) |
+| `typed-i1-envelope` | 2026-09-06 | 86 | 72 | — | not migrated (typed-profiles era lane, parked 2026-09-16; left with this box) |
+| `typed-i1-envelope-review` | 2026-09-06 | 78 | 64 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (no push needed) |
+| `typed-i1-json` | 2026-09-06 | 78 | 64 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (no push needed) |
+| `typed-observer-classification` | 2026-09-06 | 10 | 9 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (no push needed) |
+| `typed-observer-controls` | 2026-09-06 | 11 | 10 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (no push needed) |
+| `typed-panic-rendering` | 2026-09-06 | 8 | 7 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (no push needed) |
+| `typed-preflight` | 2026-09-06 | 26 | 26 | — | not migrated (typed-profiles era lane, parked 2026-09-16; left with this box) |
+| `typed-r1-production-review` | 2026-09-06 | 69 | 55 | — | not migrated (typed-profiles era lane, parked 2026-09-16; left with this box) |
+| `typed-recovery` | 2026-09-06 | 15 | 13 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (no push needed) |
+| `typed-recovery-runtime` | 2026-09-06 | 33 | 27 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (no push needed) |
+| `typed-recovery-setup` | 2026-09-06 | 34 | 28 | — | not migrated (typed-profiles era lane, parked 2026-09-16; left with this box) |
+| `typed-recovery-terminal` | 2026-09-06 | 81 | 65 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (no push needed) |
+| `typed-shared-customer` | 2026-09-06 | 36 | 30 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (no push needed) |
+| `typed-shared-customer-review` | 2026-09-06 | 35 | 29 | — | not migrated (typed-profiles era lane, parked 2026-09-16; left with this box) |
+| `typed-string-members` | 2026-09-06 | 72 | 58 | typed-consumer-sprint | CARRIED by typed-consumer-sprint (no push needed) |
 | `typed-uintptr-identity` | 2026-09-06 | 64 | 53 | typed-uintptr-identity | PUSH (ARCHIVE.md: the HELD L5 `uintptr` source) |
-| `w3-init` | 2026-08-27 | 1 | 1 | — | bundle only (reasoning era, pre-split) |
-| `w3-m` | 2026-08-27 | 2 | 0 | — | LANDED by patch (bundle only; deletable after migration) |
-| `window/packet-a-contract-0927` | 2026-09-27 | 10 | 0 | — | LANDED by patch (bundle only; deletable after migration) |
-| `wp-design` | 2026-08-18 | 6 | 2 | — | bundle only (reasoning era, pre-split) |
+| `w3-init` | 2026-08-27 | 1 | 1 | — | not migrated (reasoning era, pre-split; left with this box) |
+| `w3-m` | 2026-08-27 | 2 | 0 | — | LANDED by patch (not migrated; deletable after the landing is verified) |
+| `window/packet-a-contract-0927` | 2026-09-27 | 10 | 0 | — | LANDED by patch (not migrated; deletable after the landing is verified) |
+| `wp-design` | 2026-08-18 | 6 | 2 | — | not migrated (reasoning era, pre-split; left with this box) |
 
 ## 4. The global policy (`~/.claude/CLAUDE.md`) against this charter — divergences and proposed revisions
 
@@ -536,108 +538,78 @@ Log: `artifacts/disk-prune-2026-10-11.log`. Nothing under worktrees,
 | `artifacts/go-build-cache` | 11 G | yes (Go rebuilds it) | delete AFTER the new box's first green `ci --diff` |
 | `artifacts/coverage`, `artifacts/train-r*` | 0.7 G | run outputs; the evidence tails are under `docs/evidence/` | keep until the new box's gate is green, then delete |
 | `deps/verdi-raft`, `deps/opam-coq818`, `deps/lean4export`, `deps/BRiCk`, `deps/aeneas`, `deps/iris-lean`, `deps/brick-wp`, cedar checkouts | ≈ 4.6 G | reasoning-era / opt-in; raft-proofs' tools still read `verdi-raft` and `opam-coq818` by explicit path (ARCHIVE.md) | do not carry for golean; the [USER] decides for raft-proofs (D9) |
-| the 77 worktrees | 32 G | from the branches/refs | remove here only after §7 phase C verifies the ref manifest on the new box |
+| the 77 worktrees | 32 G | from the branches/refs | removed with the box after the push set is confirmed on `origin` (§7 phase C) |
 
-## 7. The migration plan — target: `milner-oath`
+## 7. The migration plan — target: `milner-oath`, by push and clone only
 
 [USER] 2026-10-11: «D7: I'll manage that. We're moving Go projects to
-milner-oath». So the new box is the existing `milner-oath` (same
-`capped` affordance, per the ruling in §4.1); golean, golean-logic and
-raft-proofs' Go-side work move there; the sibling repos' passes are the
-[USER]'s. The sandbox can write only under the repo (`--allow-cwd`), so the
-bundle and manifests are written under the gitignored `artifacts/` and
-copied from there.
+milner-oath» and, on the bundle this plan first proposed: «I'm not doing
+this, the repo is supposed to be free-standing, why would we do this?» and,
+verbatim: «Yes, we're not going to packrat everything. If it's important
+we push it. If it isn't, we throw it out». So the move is the ordinary one: everything that matters is on `origin`,
+milner-oath clones it, nothing is copied box to box. The 409 snapshot refs,
+the stash entries, the §2 recovery refs, the 77 worktrees, the parked-era
+lanes not in the push set, and the gitignored `deps/`, `artifacts/` and
+`.lake/` are left with this box and retired with it. The bundle idea is
+withdrawn (it was an [AGENT] way of carrying local-only refs without
+putting 300 branches on GitHub; under the free-standing rule that is the
+wrong trade).
 
-**Phase A — on this box, before anything is copied.**
+**Phase A — this box.**
 
-- A1 ([AGENT], done) the recovery refs of §2.
-- A2 ([USER], outside the sandbox; sign-off at the point of each push) the
-  product refs of §3. The exact commands, in order, each checked against
-  `git ls-remote origin` first — a non-fast-forward on `main` means
-  someone pushed from elsewhere and is a STOP:
+- A1 ([AGENT], done) the recovery refs of §2 — a local safety net only.
+- A2 ([AGENT], approved) `land/records-1011` fast-forwarded onto `main`,
+  the fast gate at the merged tip; then the `fix/capped-alignment` lane
+  (§4.1, §4.6) built, gated, audit-asked and, on sign-off, landed.
+- A3 ([USER], outside the sandbox; «I'll do this when we're ready») the
+  push set of §3, each push checked against `git ls-remote origin` first —
+  a non-fast-forward on `main` means someone pushed from elsewhere and is a
+  STOP:
 
 ```
 cd /home/dev/projects/golean
 git ls-remote origin main refs/tags/logic-offer/2026-10-03 refs/tags/typed-profiles/last-main-2026-09-16
-git push origin main                                   # expect fast-forward 6a90ba8d..4e3aeb3d
+git push origin main                                   # fast-forward from 6a90ba8d
 git push origin logic-offer/2026-10-03 typed-profiles/last-main-2026-09-16
 git push origin typed-consumer-sprint typed-uintptr-identity
-git push origin design/seeded-heap-1009 docs/reasoning-archaeology-0916 \
-    records/raft-deltas-0930 records/stray-panic-investigation-0927 \
-    design/eval-order-model-0915 plan/certificate-provenance \
-    plan/method-identity-increment prep/observer-terminal-harness
-git push origin docs/recovery-migration-1011           # or land it first (step 5 of the protocol)
-git fetch origin && git status -sb                     # expect: ## main...origin/main (no ahead/behind)
+git push origin campaign-arc4d campaign-ce campaign-wave-a design-pass
+git fetch origin && git status -sb                     # expect: ## main...origin/main
 ```
+  `campaign-wave-a`'s uncommitted tail (`wip-campaign-wave-a`, §2) is not
+  pushed unless the [USER] wants it as a commit on that branch.
+- A4 ([USER]) golean-logic's own pass (its `develop` and review branches
+  are local-only, §8).
 
-- A3 ([AGENT] may run; no network needed) the full bundle and the manifests
-  the new box is checked against:
-
-```
-cd /home/dev/projects/golean
-mkdir -p artifacts/migration-2026-10-11 && cd artifacts/migration-2026-10-11
-git for-each-ref --format='%(objectname) %(refname)' > golean-refs.txt            # recount at bundle time (766 at this commit)
-git worktree list --porcelain > golean-worktrees.txt
-git bundle create golean-all.bundle --all                                           # ≈ 0.4 G (pack 380 MiB + loose)
-git bundle verify golean-all.bundle
-sha256sum golean-* > SHA256SUMS
-```
-  `--all` carries `refs/heads/*`, `refs/tags/*`, `refs/snapshots/*`,
-  `refs/archive/*` and the §2 refs; it does NOT carry reflogs (hence §2)
-  nor the working trees (hence the `wip-*` refs). `artifacts/` is
-  gitignored and is not in the backup-skip list; copy the directory out
-  the same day.
-
-- A4 ([USER] runs it, D7 ruled) the same treatment for `~/projects/golean-logic`
-  (its `develop` and the review/consolidation branches are local-only) and
-  `~/projects/raft-proofs` (which copy is canonical: here or
-  `milner-oath`). Each gets its own refs manifest and bundle; neither is in
-  this lane's scope.
-
-**Phase B — transfer ([USER]; the sandbox has no route out).** Copy over
-Tailscale: the bundle(s), the manifests and checksums, and — to avoid
-re-cloning 646 M + 5 G — a tarball of `deps/goose`, `deps/go`, `deps/raft`
-(the gate's default set) plus `deps/covmap` and `deps/grossmith` (named,
-private `OathTech` remotes; `scripts/setup-deps --from <copied deps/>`
-accepts a local copy). `deps/comparator` has no remote at all (its origin is
-its own path) and is reasoning-era: carry only if raft-proofs needs it.
-
-**Phase C — on `milner-oath` (provisioning is the [USER]'s: it is global
-state there).** Needed before the gate can run: the box-wide `capped` with
-the nono cgroup grant (`oath-devbox`); Lean `v4.32.2` via elan (the ONLY
-toolchain the repo pins; this box has 14 installed, none of the others is
-needed); Go `go1.26.5` at `/usr/local/go` exactly (the oracle pin,
-`baselines/go-oracle-pin`; drift is a red gate); `python3` ≥ 3.11
-(`tomllib`; the tools use the standard library only); `git`, `jq`,
-`sha256sum`. Then, as `dev`:
+**Phase B — on milner-oath ([USER] provisions; agent work after the
+clone).** Needed: the box-wide `capped` (there already); Lean `v4.32.2`
+via elan; Go `go1.26.5` at `/usr/local/go` exactly (`baselines/go-oracle-pin`;
+drift is a red gate); `python3` ≥ 3.11; `git`, `jq`, `sha256sum`;
+credentials for the private `OathTech/covmap` and `OathTech/grossmith`
+(`scripts/setup-deps` names them; the gate's default set `goose`, `go`,
+`raft` is public). Then:
 
 ```
 git clone git@github.com:OathTech/golean.git ~/projects/golean && cd ~/projects/golean
-git fetch /path/golean-all.bundle \
-    'refs/heads/*:refs/heads/*' 'refs/tags/*:refs/tags/*' \
-    'refs/snapshots/*:refs/snapshots/*' 'refs/archive/*:refs/archive/*'
-git for-each-ref --format='%(objectname) %(refname)' | grep -v ' refs/remotes/' | sort \
-    | diff - <(grep -v ' refs/remotes/\| refs/stash' /path/golean-refs.txt | sort)                # expect: empty
-git checkout main && git status -sb                                                           # ## main...origin/main
-scripts/setup-deps --from /path/copied-deps                                                   # goose, go, raft; then --only covmap,grossmith
-capped -m 64G -- lake build                                                                   # box-wide capped; -m 64G is the named cold-build raise ([USER] D2)
-capped scripts/ci                                                                             # fast gate
-capped scripts/ci --diff                                                                      # expect PASS 3936/3936 (3705/231) as at r75
-python3 tools/certification.py release-check --base 4e3aeb3d                                  # expect: inputs unchanged → not STALE
+git fetch origin --tags && git branch -r | wc -l                   # the push set, nothing else
+scripts/setup-deps                                                 # goose, go, raft at the pinned revs
+scripts/setup-deps --only covmap,grossmith                         # named, private
+capped -m 64G -- lake build                                        # cold build: the named raise (D2)
+capped scripts/ci                                                  # fast gate (warm now: box default)
+capped scripts/ci --diff                                           # expect PASS 3936/3936 (3705/231) as at r75
+python3 tools/certification.py release-check --base <origin/main at the push>
 ```
   Expectations to treat as findings, not failures to fix: the certificate
   provenance step compares compiled inputs, so a different machine with the
   same toolchain should pass; if it goes STALE the cause must be named
   (toolchain byte-identity, Go build cache) before any re-certification. A
   differential count other than 3936 = 3705/231 is a STOP (the oracle pin
-  or the environment drifted). Do not recreate the 77 worktrees; the §2
-  `wip-*` refs restore any dirty state on demand (`git worktree add
-  <dir> <ref>`).
+  or the environment drifted). No worktree is recreated; a lane makes its
+  own from its branch.
 
-**Phase D — decommission here ([USER] sign-off, D4).** Only after phase C
-matches: remove the worktrees (`git worktree remove --force` per lane; the
-branches stay), `.tmp/`, `artifacts/`, the lane `.lake` dirs; keep the
-primary checkout as a plain clone until the box itself is retired.
+**Phase C — retire here ([USER] sign-off, D4 phase D).** After phase B is
+green: the worktrees, `artifacts/`, `deps/`, `.lake/` and the primary
+checkout itself go with the box. Nothing on it is needed once `origin`
+holds the push set.
 
 ## 8. Sibling repositories on this box (findings only; outside this lane's scope)
 
