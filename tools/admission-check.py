@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 """Admission inventory, post-import audit controls, and native artifact link.
 
-Lean invocations run under scripts/capped. Scratch is worktree-local and
-retained. No gate accepts a poison fixture that failed to compile.
+Lean invocations run under scripts/capped (the shim onto the box-wide
+`capped`). Scratch is worktree-local under .tmp/: a PASSING run keeps only
+its own result as .tmp/admission-<label>-last (the previous last run is
+replaced); a FAILING run's scratch is retained under its random name and is
+never overwritten by a later green run ([USER] 2026-10-11, D5: «keep the
+last run only»). No gate accepts a poison fixture that failed to compile.
 """
 import hashlib
 import os
@@ -34,8 +38,20 @@ def scratch(label):
     parent = ROOT / ".tmp"
     parent.mkdir(exist_ok=True)
     path = Path(tempfile.mkdtemp(prefix=f"admission-{label}-", dir=parent))
-    print(f"Admission scratch retained: {path}", flush=True)
+    print(f"Admission scratch: {path} (retained if this run fails; a passing run "
+          f"keeps it as {parent / f'admission-{label}-last'})", flush=True)
     return path
+
+
+def keep_last(directory, label):
+    """A passing run keeps exactly one scratch dir per label: its own."""
+    last = ROOT / ".tmp" / f"admission-{label}-last"
+    if last.is_symlink() or last.is_file():
+        last.unlink()
+    elif last.is_dir():
+        shutil.rmtree(last)
+    directory.rename(last)
+    print(f"Admission scratch kept as the last passing run: {last}", flush=True)
 
 
 def preflight():
@@ -89,6 +105,7 @@ def audit():
         if "forbidden axiom" not in rejected or marker not in rejected:
             raise SystemExit(f"Admission gate: poison {label} did not fail for {marker}")
         print(f"Admission negative audit: {label} compiled then rejected ({marker})", flush=True)
+    keep_last(directory, "audit")
 
 
 def elaborate():
@@ -108,6 +125,7 @@ def artifact():
     run([str(ROOT / "scripts/capped"), "lean", "--run",
          "tools/check-admission-artifact.lean", str(wire)])
     print("Admission fresh native wire SHA256:", hashlib.sha256(wire.read_bytes()).hexdigest())
+    keep_last(directory, "artifact")
 
 
 if __name__ == "__main__":

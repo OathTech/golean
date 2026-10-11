@@ -311,7 +311,7 @@ record_params() { # <prefix> <argv...>: verbatim provenance beside the batch(es)
     echo "  golean:          $(git -C "$ROOT" rev-parse HEAD)$( [[ -n "$(git -C "$ROOT" status --porcelain)" ]] && echo '-dirty' )"
     echo "  grossmith:       $(git -C "$GROSSMITH" rev-parse HEAD) ($GROSSMITH)"
     echo "  go:              $("$GO_BIN" version) at $GO_BIN"
-    echo "  memory cap:      GOLEAN_MEM_MAX=${GOLEAN_MEM_MAX:-64G (default)} GOLEAN_CAPPED=${GOLEAN_CAPPED:-}"
+    echo "  memory cap:      CAPPED_MEM_MAX=${CAPPED_MEM_MAX:-${GOLEAN_MEM_MAX:-32G (box default)}} CAPPED_STATE=${CAPPED_STATE:-${GOLEAN_CAPPED:-}}"
     echo "  load at start:   $(uptime | sed 's/.*load average/load average/')  nproc=$(nproc)"
     echo "  cwd for gengo:   $ROOT"
     echo "  TMPDIR/GOCACHE:  $TMPDIR / $GOCACHE"
@@ -385,7 +385,7 @@ leg_guard() {
 campaign() {
   # Self-wrap in the memory cap (scripts/ci's discipline): only the
   # proven token skips the wrap; `none` is the loud opt-out.
-  case "${GOLEAN_CAPPED:-}" in
+  case "${CAPPED_STATE:-${GOLEAN_CAPPED:-}}" in
     verified|none) ;;
     *) exec "$ROOT/scripts/capped" "$ROOT/scripts/grossmith-run" campaign "$@" ;;
   esac

@@ -162,7 +162,10 @@ Everything else is untrusted tooling.
 ## The gates
 
 - `scripts/ci` before any commit that touches runtime code —
-  always via `scripts/capped` (cgroup-capped; never bare lake/lean;
+  always under the box-wide `capped` (`capped scripts/ci`; never bare
+  lake/lean; the box default cap, raised per job only when the job
+  needs it — a COLD full build is the measured case, `capped -m 64G --
+  scripts/ci`; `scripts/capped` is a shim onto the box tool;
   see `docs/operational-lessons.md`). Runtime changes add the
   differential (`--diff`); baseline re-pins only with a full run
   and a written reason (PASS→non-PASS flips must be on a BUGS.md

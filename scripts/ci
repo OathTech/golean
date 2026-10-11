@@ -48,7 +48,12 @@ cd "$ROOT"
 #    unrelated shell — gets wrapped, and bounces off the readback with exit 3.
 #    Trusting the bare variable here meant the readback never protected THIS
 #    script, the one CLAUDE.md tells everyone to run (delta-review D2).
-case "${GOLEAN_CAPPED:-}" in
+#    Since 2026-10-11 ([USER]: the box-wide `capped` is the one to use) the
+#    wrap goes through scripts/capped as a SHIM onto /usr/local/bin/capped,
+#    whose token is CAPPED_STATE; the fallback wrapper (no box tool) still
+#    speaks GOLEAN_CAPPED and mirrors it into CAPPED_STATE. Either name,
+#    same two values, same rule.
+case "${CAPPED_STATE:-${GOLEAN_CAPPED:-}}" in
   verified|none) ;;
   *) exec "$ROOT/scripts/capped" "$ROOT/scripts/ci" "$@" ;;
 esac
@@ -144,7 +149,10 @@ step "build parallelism (LEAN_NUM_THREADS scaled to the memory cap)"
 if [ -n "${LEAN_NUM_THREADS:-}" ]; then
   PAR_NOTE="LEAN_NUM_THREADS=$LEAN_NUM_THREADS (set by the caller — honoured as-is)"
 else
-  _mem="${GOLEAN_MEM_MAX:-64G}"
+  # The effective limit: the box tool exports CAPPED_MEM_MAX inside the cap
+  # (so a `capped -m 64G` raise is seen here); the legacy name second; the
+  # box default last ([USER] 2026-10-11, D2: conform to the box default).
+  _mem="${CAPPED_MEM_MAX:-${GOLEAN_MEM_MAX:-32G}}"
   # Bytes-per-thread budget: 8G. Chosen from the measured per-thread peaks of
   # the heavy example modules; floor 2 so a small cap still builds in parallel.
   #
@@ -179,6 +187,14 @@ else
     _jobs=$(( _gb / 8 )); [ "$_jobs" -lt 2 ] && _jobs=2
     export LEAN_NUM_THREADS="$_jobs"
     PAR_NOTE="cap $_mem -> LEAN_NUM_THREADS=$_jobs (cap/8G, floor 2; $(nproc) cores on this box)"
+    # The one measured case for a raise ([USER] 2026-10-11, D2): a COLD full
+    # build needs 64G+ (docs/operational-lessons.md, «Concurrency OOM»). Under
+    # the box default with no build tree present, say so BEFORE the build —
+    # a cgroup kill mid-run prints only a KILLED banner. A note, not a
+    # refusal: raising is the caller's deliberate act.
+    if [ "$_gb" -lt 64 ] && [ ! -d "$ROOT/.lake/build" ]; then
+      PAR_NOTE="$PAR_NOTE; COLD build tree under a ${_mem} cap — measured need 64G+: capped -m 64G -- scripts/ci"
+    fi
   fi
 fi
 echo "  $PAR_NOTE"

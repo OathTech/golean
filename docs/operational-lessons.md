@@ -6,7 +6,27 @@ measured remedies. Add entries incident-first: what happened, what
 was measured, the remedy. (Agent-guidance style: incident-derived
 lines only — the BRiCk lesson.)
 
-## Memory: every lake/lean invocation goes through scripts/capped
+## Memory: every lake/lean invocation goes through `capped`
+
+**Since 2026-10-11 the cap is the box-wide `capped`** (`/usr/local/bin/capped`,
+installed by oath-devbox on every Oath box; [USER] Mike, verbatim, relayed:
+«the global capped script is the correct one to use, here and on the new
+box (which has the same affordance)»; «D2: conform to the box default, of
+course raising it is allowed during execution when needed»). `scripts/capped`
+is now a shim onto it (legacy `GOLEAN_MEM_MAX`/`GOLEAN_CAPPED` translated to
+`CAPPED_MEM_MAX`/`CAPPED_STATE`; the original wrapper body is the fallback
+where the box tool is absent, e.g. GitHub runners), `scripts/ci` accepts
+either token and scales `LEAN_NUM_THREADS` from the effective cap, and the
+default is the box's 32 G — not the project's former 64 G. The one measured
+reason to raise: a COLD full build / cold `scripts/ci` in a fresh worktree
+needs 64G+ («Concurrency OOM», below) — `capped -m 64G -- scripts/ci`, said
+where it is run; `scripts/ci` prints that note itself when it sees a cold
+tree under a small cap. The box-wide build lock (below) stays. Why this
+mattered: before the shim, `capped scripts/ci` re-wrapped itself through
+the project wrapper into a SIBLING cgroup at 64 G and so silently escaped
+the 32 G cap the box tool had certified — nothing was uncapped, but the box
+default was not honoured and no one was told. The history below is kept as
+written (the mechanism is the same; the box tool was ported from it).
 
 A `by decide +kernel` on a FALSE proposition reached 60 GB in ~2 min
 and killed the session twice (the OOM killer's badness score picks
@@ -119,8 +139,9 @@ self-reports the wrong version — identify with `go version -m`).
 A runner VM that dies uploads no logs and saves no cache —
 "disposable, let it die" is the wrong frame. CI wraps gate steps in
 SYSTEM-scope cgroup caps and PROVES the cap via readback
-(`GOLEAN_CAPPED=1` + size; `scripts/ci` refuses if the kernel
-disagrees).
+(`GOLEAN_CAPPED=1` + size — translated to `CAPPED_STATE`/`CAPPED_MEM_MAX`
+by the shim where the box tool exists, read directly by the fallback
+wrapper on runners; `scripts/ci` refuses if the kernel disagrees).
 
 ## Diagnosing async results
 

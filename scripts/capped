@@ -1,52 +1,50 @@
 #!/usr/bin/env bash
-# Run a command inside its OWN cgroup with a hard memory cap, so a runaway
-# build dies alone instead of taking the machine (and the caller) with it.
+# scripts/capped — a SHIM onto the box-wide `capped` (/usr/local/bin/capped).
 #
-#   scripts/capped lake build
-#   scripts/capped lake env lean SomeFile.lean
-#   GOLEAN_MEM_MAX=96G scripts/capped lake build     # deliberate heavy run
+# [USER] Mike, 2026-10-11 (verbatim, relayed): «the global capped script is
+# the correct one to use, here and on the new box (which has the same
+# affordance)» and «D2: conform to the box default, of course raising it is
+# allowed during execution when needed». So, where the box tool exists, this
+# script only translates the legacy environment and hands over:
 #
-# WHY THIS EXISTS (2026-08-09): `example : sumRoundTripOk := by decide +kernel`
-# in compat/gobra reached 60 GB of RSS in ~2 minutes and killed the session
-# twice — the OOM killer picks by badness score, and the terminal multiplexer
-# and the agent are perfectly good candidates. Deleting that one line made the
-# same file elaborate in 1.0 s. The cap turns "the box dies" into "the build
-# fails", which is the outcome every gate in this repo is built around.
+#   GOLEAN_MEM_MAX  -> CAPPED_MEM_MAX   (only when the latter is unset)
+#   GOLEAN_CAPPED   -> CAPPED_STATE     (only when the latter is unset; the
+#                                        token values mean the same thing)
+#   then: exec /usr/local/bin/capped "$@"   (-m SIZE / -- pass through)
 #
-# THE CAP IS A BLAST RADIUS, NOT A BUDGET. Default 64G on a 125G machine: use
-# the heavy machine when a job needs it, but never let one job take the box.
-# Raise it deliberately with GOLEAN_MEM_MAX for a job you have reason to
-# believe needs more.
+# The limit is the BOX DEFAULT ($CAPPED_MEM_MAX, else 32G). Raise it per job
+# when the job needs it — `capped -m 64G -- <cmd>` — and say why where you run
+# it. The one measured case: a COLD full build / cold `scripts/ci` in a fresh
+# worktree needs 64G+ (docs/operational-lessons.md, «Concurrency OOM»); a warm
+# primary build does not. The box-wide build lock (artifacts/build-lock.d)
+# stays: two raised builds over-commit a 125G box.
 #
-# TWO MECHANISMS THAT DO NOT WORK — measured, do not "simplify" to either:
-#   * `lean -M <mb>` is not enforced during KERNEL reduction. Audit-reproduced:
-#     under `-M 4096`, lean's own VmRSS was 4953 MiB at t=10s and still
-#     climbing, with no memory diagnostic ever emitted. It checks at elaborator
-#     allocation points; `decide +kernel` is not one.
-#   * `prlimit --as=<n>` kills Lean above a threshold ("failed to create
-#     thread") — Lean reserves large address space per thread, so an
-#     address-space limit is not a memory limit here. (--as=8G happened to run;
-#     --as=2G died immediately. Threshold effect, not a usable knob.)
-#     RSS via cgroup is the only honest knob.
-# MemorySwapMax=0 is deliberate: with swap available the runaway thrashes
-# ~19 GB of it first, which hangs the box in a slower, more confusing way.
+# Where the box tool is ABSENT (GitHub runners, a bare container) the body
+# below — the original per-project wrapper, 2026-08-09..09-01, the ancestor
+# of the box tool — runs unchanged except for its default (32G, the box
+# default, since 2026-10-11). Its token is GOLEAN_CAPPED; its verified path
+# exports CAPPED_STATE=verified too, so every reader can check one name.
+# Nothing here ever runs uncapped silently: an absent cap is an error, the
+# opt-out (`CAPPED_MEM_MAX=none` / `GOLEAN_MEM_MAX=none`) warns every time.
 #
-# TWO PLACEMENT MECHANISMS, ONE READBACK (2026-09-01, [USER]-directed port of
-# the cerberus-lean capped, mainline bbdbacaff). `systemd-run --user --scope`
-# needs the user manager's D-Bus socket, which the nono sandbox does not
-# grant (its profile history tried bus grants and rolled them back). The cap
-# itself needs no systemd: under cgroup v2 delegation (user@.service,
-# Delegate=yes) this process's PARENT cgroup (app.slice) is writable by us
-# and already has the memory controller enabled for children — so we create
-# a SIBLING child cgroup there (the same shape systemd-run would create),
-# write memory.max/memory.swap.max, migrate this wrapper in (children
-# inherit), and re-enter. Sibling-not-child: cgroup v2's no-internal-
-# processes rule forbids enabling controllers under a cgroup that already
-# has processes (our own scope does). Needs only a cgroupfs path grant
-# (nono: /sys/fs/cgroup/user.slice/user-$UID.slice/user@$UID.service/
-# app.slice). If any step is refused we fall through to systemd-run.
-# EITHER WAY the re-entered script's readback below is what certifies the
-# cap — placement mechanism never bypasses verification.
+# Design notes of the fallback body (measured; do not "simplify"): `lean -M`
+# is not enforced during kernel reduction; `prlimit --as` kills Lean
+# spuriously; RSS via cgroup is the only honest knob; swap off on purpose;
+# cgroup-direct sibling placement under app.slice (no D-Bus), systemd-run
+# as the fallback, a kernel readback certifies the cap either way.
+set -uo pipefail
+
+if [ -x /usr/local/bin/capped ]; then
+  if [ -z "${CAPPED_MEM_MAX:-}" ] && [ -n "${GOLEAN_MEM_MAX:-}" ]; then
+    export CAPPED_MEM_MAX="$GOLEAN_MEM_MAX"
+  fi
+  if [ -z "${CAPPED_STATE:-}" ] && [ -n "${GOLEAN_CAPPED:-}" ]; then
+    export CAPPED_STATE="$GOLEAN_CAPPED"
+  fi
+  exec /usr/local/bin/capped "$@"
+fi
+
+# ---- fallback: the box tool is absent ---------------------------------------
 set -uo pipefail
 
 # systemd suffix semantics: K/M/G/T are binary (1024^n). "max"/"infinity"
@@ -80,7 +78,7 @@ kill_banner() {
   fi
 }
 
-MEM="${GOLEAN_MEM_MAX:-64G}"
+MEM="${GOLEAN_MEM_MAX:-${CAPPED_MEM_MAX:-32G}}"
 
 if [ "$#" -eq 0 ]; then
   echo "usage: scripts/capped <command> [args...]" >&2
@@ -115,7 +113,7 @@ if [ "${GOLEAN_CAPPED:-}" = "none" ]; then
   echo "scripts/capped: WARNING — running UNCAPPED (inherited GOLEAN_CAPPED=none): $*" >&2
   exec "$@"
 fi
-if [ "${GOLEAN_CAPPED:-}" = "verified" ]; then
+if [ "${GOLEAN_CAPPED:-}" = "verified" ] || [ "${CAPPED_STATE:-}" = "verified" ]; then
   exec "$@"
 fi
 if [ -n "${GOLEAN_CAPPED:-}" ]; then
@@ -142,7 +140,7 @@ EOF
   fi
   # Hand the verified token down, so a self-wrapping caller (scripts/ci) can
   # tell "a cap was PROVEN here" from "someone set a variable".
-  exec env GOLEAN_CAPPED=verified "$@"
+  exec env GOLEAN_CAPPED=verified CAPPED_STATE=verified "$@"
 fi
 
 # Explicit, visible opt-out. Fail-closed doctrine: an unavailable cap is an
@@ -150,7 +148,7 @@ fi
 # than no cap, because it is believed.
 if [ "$MEM" = "none" ]; then
   echo "scripts/capped: WARNING — GOLEAN_MEM_MAX=none, running UNCAPPED: $*" >&2
-  exec env GOLEAN_CAPPED=none "$@"
+  exec env GOLEAN_CAPPED=none CAPPED_STATE=none "$@"
 fi
 
 # --- Placement 1: cgroup-direct (bus-free) -----------------------------------
@@ -161,7 +159,7 @@ fi
 cgroup_direct() {
   local mem_bytes self orig parent cg rc=0
   mem_bytes="$(mem_to_bytes "$MEM")" || {
-    echo "scripts/capped: cannot parse GOLEAN_MEM_MAX='$MEM' (want e.g. 64G / 8192M / a plain byte count; 'none' for an explicit uncapped run)" >&2
+    echo "scripts/capped: cannot parse GOLEAN_MEM_MAX='$MEM' (want e.g. 32G / 8192M / a plain byte count; 'none' for an explicit uncapped run)" >&2
     exit 2
   }
   self="$(awk -F: '/^0::/{print substr($0, index($0,":")+2); exit}' /proc/self/cgroup 2>/dev/null)"
