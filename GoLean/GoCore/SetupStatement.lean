@@ -1,4 +1,5 @@
 import GoLean.GoCore.StepFn
+import GoLean.GoCore.Seed
 import GoLean.GoCore.StateWf
 import GoLean.GoCore.ExecutionStatement
 
@@ -330,5 +331,201 @@ example : runInitConfig ⟨initControl⟩ 4 {} printPosition []
 example : execStmtLoop ⟨initControl⟩ 4 {} printPosition [] = .ok ({}, []) := rfl
 
 end Controls
+
+/-! ## The SEEDED entry — S1–S6 (slice A of the seeded-heap design, 2026-10-12)
+
+`docs/2026-10-09_seeded-heap-design.md` §4, [USER] Mike 2026-10-12 (GO; D4: no runtime `StateWf`
+re-assert — S5 is the check). Names are the owed BridgeSet rows (RE-PIN 17). ADDITIVE: every earlier
+statement is unchanged. `b := s₁.heap.size` is the post-init allocator bound, `n := seed.size`; the
+seed's slot `k` is `.base ⟨b + k⟩ = entrySlot s₁ k`. -/
+
+/-- **S1, the seeded setup equation** (G-R1's sibling, the same premise shape, NO `StateWf` premise —
+D4): under the ten premises, the seeded entry IS the entry configuration over the store after
+binding, with the seed slots and the tape the init phase left. -/
+def runProgramSetupSeeded_init_stmt : Prop :=
+  ∀ {fuel : Nat} {program : Program} {name : String} {seed : Array SeedCell} {args : Array SeedArg}
+    {choices : Choices} {func : Func} {s₀ s₁ : Store} {choices₁ : Choices} {sS : Store}
+    {slots : Array Loc} {vals : Array GoValue} {env frameEnv : LocalEnv} {s₂ s₃ : Store}
+    {resultLocs : List Loc},
+    findFunctionIn? program.funcs ⟨name⟩ = some func → func.args.size = args.size →
+    program.typeDefs.hasReservedPrefix = true →
+    seedGlobals ⟨program⟩ {} program.globals = .ok s₀ →
+    runPkgInitM ⟨program⟩ fuel s₀ choices = .ok (s₁, choices₁) →
+    seedCells ⟨program⟩ s₁ seed = .ok (sS, slots) →
+    resolveSeedArgs program.typeDefs s₁.heap.size seed func.args args = .ok vals →
+    bindParams ⟨program⟩ [] sS func.args.toList vals.toList = .ok (env, s₂) →
+    allocDecls ⟨program⟩ env s₂ func.results.toList = .ok (frameEnv, s₃) →
+    pinResultLocs frameEnv func.results.toList = .ok resultLocs →
+    runProgramSetupSeededM fuel program name seed args choices
+      = .ok (⟨program⟩, .exec func.body frameEnv (.frame [] [] [] [] .stop func.id), s₃, resultLocs,
+          slots, choices₁)
+
+/-- **S2, seed cell `k` at its slot**: the slot list names `.base ⟨b + k⟩`, the cell's value resolves
+and normalizes at its declared type, and the seeded store holds that normal value there. -/
+def seedCells_cell_stmt : Prop :=
+  ∀ {ctx : ProgramCtx} {s₁ : Store} {seed : Array SeedCell} {sS : Store} {locs : Array Loc},
+    seedCells ctx s₁ seed = .ok (sS, locs) → ∀ (k : Nat) (hk : k < seed.size),
+      locs[k]? = some (.base ⟨s₁.heap.size + k⟩) ∧
+      ∃ v w, resolveSeedValue ctx.types s₁.heap.size seed seed[k].typ seed[k].value = .ok v
+        ∧ normalizeValueForTy ctx seed[k].typ v = .ok w
+        ∧ Heap.lookup sS.heap (.base ⟨s₁.heap.size + k⟩) = some (.value seed[k].typ w)
+
+/-- **S2, the frame below `b`**: seeding touches no cell of the post-init store. -/
+def seedCells_frame_stmt : Prop :=
+  ∀ {ctx : ProgramCtx} {s₁ : Store} {seed : Array SeedCell} {sS : Store} {locs : Array Loc},
+    seedCells ctx s₁ seed = .ok (sS, locs) → ∀ j, j < s₁.heap.size → sS.heap[j]? = s₁.heap[j]?
+
+/-- **S2, the slot list**: the seed's slots are `b, b + 1, …, b + n − 1`, in order. -/
+def seedCells_locs_stmt : Prop :=
+  ∀ {ctx : ProgramCtx} {s₁ : Store} {seed : Array SeedCell} {sS : Store} {locs : Array Loc},
+    seedCells ctx s₁ seed = .ok (sS, locs) →
+    locs = ((List.range seed.size).map (fun k => Loc.base ⟨s₁.heap.size + k⟩)).toArray
+
+/-- **S3, the heap size**: exactly `n` cells are added. The entry layout is then G-R3 at the
+pre-bind store `sS` (`setup_lookup_arg_from` and its siblings apply verbatim with `s₁ := sS`). -/
+def seedCells_heap_size_stmt : Prop :=
+  ∀ {ctx : ProgramCtx} {s₁ : Store} {seed : Array SeedCell} {sS : Store} {locs : Array Loc},
+    seedCells ctx s₁ seed = .ok (sS, locs) → sS.heap.size = s₁.heap.size + seed.size
+
+/-- **S4, empty-seed erasure** — ONE `Except` equation, errors included: the seeded entry with no
+cells and scalar arguments IS `runProgramSetupM` (with an empty slot list). What ties the seeded
+entry to G-R1 and `runProgramSetup_noInit`. -/
+def runProgramSetupSeeded_empty_stmt : Prop :=
+  ∀ (fuel : Nat) (program : Program) (name : String) (args : Array GoValue) (choices : Choices),
+    runProgramSetupSeededM fuel program name #[] (args.map SeedArg.scalar) choices
+      = (fun (pctx, c, s, locs, ch) => (pctx, c, s, locs, (#[] : Array Loc), ch)) <$>
+          runProgramSetupM fuel program name args choices
+
+/-- **S5, `seed_wf`**: seeding preserves state well-formedness (phase 1 allocates zero values,
+phase 2 stores values whose every location the resolver bounded by `b + n`). -/
+def seedCells_wf_stmt : Prop :=
+  ∀ {ctx : ProgramCtx} {s₁ : Store} {seed : Array SeedCell} {sS : Store} {locs : Array Loc},
+    StateWf ctx s₁ → seedCells ctx s₁ seed = .ok (sS, locs) → StateWf ctx sS
+
+/-- **S5, the bound store**: from a well-formed post-init store, through seeding, argument
+resolution, parameter binding and result allocation, the entry store is well-formed. The one
+premise beyond the design's: every SCALAR argument is loc-free ([AGENT] refinement, D5 — scalars
+pass the core unchecked; the CLI's `entryArgValues` produces only ints and bools, which are). -/
+def runProgramSetupSeeded_wf_stmt : Prop :=
+  ∀ {ctx : ProgramCtx} {s₁ sS : Store} {seed : Array SeedCell} {slots : Array Loc}
+    {params : Array Param} {args : Array SeedArg} {vals : Array GoValue} {env frameEnv : LocalEnv}
+    {s₂ s₃ : Store} {results : List Param},
+    StateWf ctx s₁ → (∀ v, SeedArg.scalar v ∈ args → GoValue.locSup v = 0) →
+    seedCells ctx s₁ seed = .ok (sS, slots) →
+    resolveSeedArgs ctx.types s₁.heap.size seed params args = .ok vals →
+    bindParams ctx [] sS params.toList vals.toList = .ok (env, s₂) →
+    allocDecls ctx env s₂ results = .ok (frameEnv, s₃) →
+    StateWf ctx s₃
+
+/-- **S6, the seeded run**: the definition, unfolded (the `runProgramM` shape): the seeded setup,
+the run, the results, the final seed cells. -/
+def runProgramSeededM_eq_stmt : Prop :=
+  ∀ (fuel : Nat) (program : Program) (name : String) (seed : Array SeedCell) (args : Array SeedArg)
+    (choices : Choices),
+    runProgramSeededM fuel program name seed args choices
+      = (runProgramSetupSeededM fuel program name seed args choices >>=
+          fun (pctx, c₀, s₃, resultLocs, slots, choices₁) =>
+            runConfig pctx fuel s₃ c₀ choices₁ >>= fun (sF, _) =>
+              loadMany pctx sF resultLocs >>= fun values =>
+                loadMany pctx sF slots.toList >>= fun finals =>
+                  pure { readout := { values := values.toArray }, seedFinal := finals.toArray })
+
+/-- **S6, erasure of the run**: with no cells and scalar arguments the seeded run IS `runProgramM`
+with an empty final seed. -/
+def runProgramSeededM_empty_stmt : Prop :=
+  ∀ (fuel : Nat) (program : Program) (name : String) (args : Array GoValue) (choices : Choices),
+    runProgramSeededM fuel program name #[] (args.map SeedArg.scalar) choices
+      = (fun r : Readout => ({ readout := r, seedFinal := #[] } : SeededReadout)) <$>
+          runProgramM fuel program name args choices
+
+/-! ## Controls for the seeded entry (`#eval` first — the probe's results are what the `rfl`s pin) -/
+
+section SeededControls
+
+/-- A context with no program text and the bare reserved type table. -/
+def seedCtx0 : ProgramCtx := ⟨{ funcs := #[] }⟩
+
+/-- `type Node struct { next *Node }` at table index 2 (after the two reserved entries). -/
+def seedNodeTypes : TypeEnv := TypeEnv.reserved.push (⟨"main.Node"⟩, .struct #[⟨"next", .pointer (.defined 2), false⟩])
+
+def seedCtxNode : ProgramCtx := ⟨{ funcs := #[], typeDefs := seedNodeTypes }⟩
+
+/-- An `int` cell holding 41 and a `*int` cell pointing at it. -/
+def seedA : Array SeedCell := #[⟨.int .int, .int 41⟩, ⟨.pointer (.int .int), .ref 0 []⟩]
+
+/-- From the empty store: cell 0 at base 0, the pointer resolved to it. -/
+example : seedCells seedCtx0 {} seedA
+    = .ok ({ heap := #[.value (.int .int) (.int 41 .int),
+                        .value (.pointer (.int .int)) (.addr (.base ⟨0⟩))] },
+           #[.base ⟨0⟩, .base ⟨1⟩]) := rfl
+
+/-- From a one-cell store (`b = 1`): the same seed lands at bases 1 and 2 and the pointer resolves
+seed-RELATIVE, to base 1 — the cell below is untouched. -/
+example : seedCells seedCtx0 { heap := #[.value .bool (.bool true)] } seedA
+    = .ok ({ heap := #[.value .bool (.bool true),
+                        .value (.int .int) (.int 41 .int),
+                        .value (.pointer (.int .int)) (.addr (.base ⟨1⟩))] },
+           #[.base ⟨1⟩, .base ⟨2⟩]) := rfl
+
+/-- A path into an array cell: `&c0[1]`. -/
+example : seedCells seedCtx0 {} #[⟨.array 2 (.int .int), .array [.int 5, .int 7]⟩,
+                                   ⟨.pointer (.int .int), .ref 0 [.index 1]⟩]
+    = .ok ({ heap := #[.value (.array 2 (.int .int)) (.array #[.int 5 .int, .int 7 .int]),
+                        .value (.pointer (.int .int)) (.addr (.index (.base ⟨0⟩) 1))] },
+           #[.base ⟨0⟩, .base ⟨1⟩]) := rfl
+
+/-- A CYCLE between two struct cells, and a pointer to a field (`&c0.next`): the very locations the
+machine's own `&c.f` evaluates to. -/
+example : seedCells seedCtxNode {} #[⟨.defined 2, .struct [("next", .ref 1 [])]⟩,
+                                      ⟨.defined 2, .struct [("next", .ref 0 [])]⟩,
+                                      ⟨.pointer (.pointer (.defined 2)), .ref 0 [.field "next"]⟩]
+    = .ok ({ heap := #[.value (.defined 2) (.struct ⟨"main.Node"⟩ #[("next", .addr (.base ⟨1⟩))]),
+                        .value (.defined 2) (.struct ⟨"main.Node"⟩ #[("next", .addr (.base ⟨0⟩))]),
+                        .value (.pointer (.pointer (.defined 2)))
+                          (.addr (.field (.base ⟨0⟩) ⟨"main.Node"⟩ "next"))] },
+           #[.base ⟨0⟩, .base ⟨1⟩, .base ⟨2⟩]) := rfl
+
+/-- The refusal catalogue (design §3), each BY NAME, each naming its cell. -/
+example : seedCells seedCtx0 {} #[⟨.int .int, .ref 5 []⟩]
+    = .error (.stuck "cell 0: ref at type int: not in golean-seed-v1 (a pointer type expected)") := rfl
+example : seedCells seedCtx0 {} #[⟨.pointer (.int .int), .ref 5 []⟩]
+    = .error (.stuck "cell 0: ref to cell 5 out of range (1 cells)") := rfl
+example : seedCells seedCtx0 {} #[⟨.int .int8, .int 300⟩]
+    = .error (.stuck "cell 0: int 300 out of range for int8") := rfl
+example : seedCells seedCtx0 {} #[⟨.array 2 (.int .int), .array [.int 5]⟩]
+    = .error (.stuck "cell 0: expected array(2), got 1 element(s)") := rfl
+example : seedCells seedCtxNode {} #[⟨.defined 2, .struct []⟩]
+    = .error (.stuck "cell 0: struct main.Node: missing field next") := rfl
+example : seedCells seedCtxNode {} #[⟨.defined 2, .struct [("next", .nil), ("next", .nil)]⟩]
+    = .error (.stuck "cell 0: struct main.Node: duplicate field next") := rfl
+example : seedCells seedCtxNode {} #[⟨.defined 2, .struct [("nxt", .nil)]⟩]
+    = .error (.stuck "cell 0: struct main.Node: unknown field nxt") := rfl
+example : seedCells seedCtx0 {} #[⟨.string, .int 1⟩]
+    = .error (.stuck "cell 0: int at type string: not in golean-seed-v1 (an integer type expected)") := rfl
+
+/-- Arguments: a reference at a pointer parameter, a scalar passed through unchecked. -/
+example : resolveSeedArgs seedCtx0.types 0 seedA
+    #[{ id := 0, typ := .pointer (.int .int) }, { id := 1, typ := .int .int }]
+    #[.ref 0 [], .scalar (.int 3 .int)]
+    = .ok #[.addr (.base ⟨0⟩), .int 3 .int] := rfl
+example : resolveSeedArgs seedCtx0.types 0 seedA #[{ id := 0, typ := .int .int }] #[.nil]
+    = .error (.stuck "argument 0: nil at non-pointer type int (v1: nil only at pointer types)") := rfl
+
+/-- The seed-relative readout: inside the seed with its path; outside; a negative index. -/
+example : seedRelative? 3 2 (.field (.base ⟨4⟩) ⟨"main.Node"⟩ "next") = some (1, [.field "next"]) := rfl
+example : seedRelative? 3 2 (.base ⟨5⟩) = none := rfl
+example : seedRelative? 3 2 (.index (.base ⟨3⟩) (-1)) = none := rfl
+
+set_option maxRecDepth 8192 in
+/-- S4/S6 at the control program: the empty seed with no arguments IS the ordinary run, with an empty
+final seed (the instance of `runProgramSeededM_empty_stmt` by evaluation). -/
+example : runProgramSeededM 12 initControl "F" #[] #[]
+    = .ok { readout := { values := #[.int 7 .int] }, seedFinal := #[] } := rfl
+
+/-- The arity refusal is the ordinary entry's, byte for byte (the shared prefix S4 relies on). -/
+example : runProgramSetupSeededM 12 initControl "F" #[] #[.nil]
+    = .error (.stuck "expected 0 argument(s), got 1") := rfl
+
+end SeededControls
 
 end GoLean.GoCore.SetupStatement

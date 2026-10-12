@@ -149,6 +149,19 @@ def exports : List Name := [
     ``GoLean.GoCore.SetupSound.runInitConfig_fuelOut_iff,
     ``GoLean.GoCore.SetupSound.runPkgInitM_some,
     ``GoLean.GoCore.SetupSound.runPkgInitM_ok_iff,
+    -- The seeded-heap entry, slice A (2026-10-12, gc-verified a2): S1–S6 of `SetupStatement.lean`
+    -- proved in `SetupSound.lean`, the pool erasure in `SeedPool.lean`; BridgeSet rows 591–601.
+    ``GoLean.GoCore.SetupSound.runProgramSetupSeeded_init,
+    ``GoLean.GoCore.SetupSound.seedCells_cell,
+    ``GoLean.GoCore.SetupSound.seedCells_frame,
+    ``GoLean.GoCore.SetupSound.seedCells_locs,
+    ``GoLean.GoCore.SetupSound.seedCells_heap_size,
+    ``GoLean.GoCore.SetupSound.runProgramSetupSeeded_empty,
+    ``GoLean.GoCore.SetupSound.seedCells_wf,
+    ``GoLean.GoCore.SetupSound.runProgramSetupSeeded_wf,
+    ``GoLean.GoCore.SetupSound.runProgramSeededM_eq,
+    ``GoLean.GoCore.SetupSound.runProgramSeededM_empty,
+    ``GoLean.GoCore.Machine.runProgramPoolSeeded_empty,
 
     -- Pool grind M1: the nine frozen statements, BridgeSet rows 503–511.
     ``GoLean.GoCore.PoolSound.raceUpdate_error,

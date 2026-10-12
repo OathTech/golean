@@ -8,6 +8,7 @@ import GoLean.GoCore.Equations
 import GoLean.GoCore.PoolProjection
 import GoLean.GoCore.PoolSound
 import GoLean.GoCore.SetupSound
+import GoLean.GoCore.SeedPool
 
 /-!
 # The stable bridge set — pinned statements (window charter row 0)
@@ -67,6 +68,21 @@ argument order, so no row was re-pinned. Rows 90–107 ADDED: the shape (`Cont =
 walks as list laws — `Cont.rebuild` (cons/nil), `pushDefer` («map at the first call frame» and its
 converse, plus the per-head cases), `seqCont`, `panicPassthrough`, `recoverResult` over `[]` and a
 glue head, frame exit at `.next` and at an empty frame, and the sup's cons law.
+
+RE-PIN 17 — the SEEDED-HEAP ENTRY, slice A (gc-verified's a2; [AGENT worker, lane
+`core/seeded-heap-a-1012`], 2026-10-12; [USER] Mike 2026-10-12 «Agree on the two strategic questions,
+let's do it» — GO and D4 (no runtime `StateWf` re-assert); gc-verified CONFIRMED the six deviations and
+the v1 value set the same day, relayed; design `docs/2026-10-09_seeded-heap-design.md` §4): rows 1–590
+BYTE-IDENTICAL; rows 591–601 ADDED — the ten `_stmt`s of `SetupStatement.lean` proved in
+`SetupSound.lean`, written out, and the pool erasure of `SeedPool.lean`: S1 `runProgramSetupSeeded_init`
+(G-R1's sibling over the seeded entry, no `StateWf` premise); S2 `seedCells_cell` (cell `k` at
+`.base ⟨b + k⟩`, its value resolved then normalized at the declared type), `seedCells_frame` (the cells
+below `b` untouched), `seedCells_locs` (the slot list); S3 `seedCells_heap_size`; S4
+`runProgramSetupSeeded_empty` (the empty seed with scalar arguments IS `runProgramSetupM`, one `Except`
+equation); S5 `seedCells_wf` (seeding preserves `StateWf`) and `runProgramSetupSeeded_wf` (the bound
+store, under loc-free scalar arguments — the [AGENT] refinement of D5); S6 `runProgramSeededM_eq` (the
+seeded run, unfolded), `runProgramSeededM_empty` and `runProgramPoolSeeded_empty` (the two drivers'
+erasures). G-R1–G-R4 and rows 397, 399–402 are UNCHANGED — the seeded entry is ADDITIVE.
 
 The set is RE-PINNED per window row; every change to this file is a changelog line
 (`docs/changelog/61958f2e-WINDOW.md`), so the file's diff between two pins IS the
@@ -4432,5 +4448,116 @@ example : ∀ (n : Nat), convCapAt .runes false n 0 = gcRoundupSize (4 * n) / 4 
 -- 590. `Ops.lean` — a literal operand has the one member `n` (a bound-1 consult, no pop)
 example : ∀ (kind : ConvKind) (n : Nat), convCapMembers kind true n = [n] :=
   @GoLean.GoCore.convCapMembers_literal
+
+-- 591. `SetupSound.lean` — `runProgramSetupSeeded_init_stmt`, written out (S1: the seeded setup equation —
+-- G-R1's sibling: seeding, init, the seed cells, the resolved arguments and the entry bind as one rewrite)
+example :
+  ∀ {fuel : Nat} {program : Program} {name : String} {seed : Array SeedCell} {args : Array SeedArg}
+    {choices : Choices} {func : Func} {s₀ s₁ : Store} {choices₁ : Choices} {sS : Store}
+    {slots : Array Loc} {vals : Array GoValue} {env frameEnv : LocalEnv} {s₂ s₃ : Store}
+    {resultLocs : List Loc},
+    findFunctionIn? program.funcs ⟨name⟩ = some func → func.args.size = args.size →
+    program.typeDefs.hasReservedPrefix = true →
+    seedGlobals ⟨program⟩ {} program.globals = .ok s₀ →
+    runPkgInitM ⟨program⟩ fuel s₀ choices = .ok (s₁, choices₁) →
+    seedCells ⟨program⟩ s₁ seed = .ok (sS, slots) →
+    resolveSeedArgs program.typeDefs s₁.heap.size seed func.args args = .ok vals →
+    bindParams ⟨program⟩ [] sS func.args.toList vals.toList = .ok (env, s₂) →
+    allocDecls ⟨program⟩ env s₂ func.results.toList = .ok (frameEnv, s₃) →
+    pinResultLocs frameEnv func.results.toList = .ok resultLocs →
+    runProgramSetupSeededM fuel program name seed args choices
+      = .ok (⟨program⟩, .exec func.body frameEnv (.frame [] [] [] [] .stop func.id), s₃, resultLocs,
+          slots, choices₁) :=
+  @GoLean.GoCore.SetupSound.runProgramSetupSeeded_init
+
+-- 592. `SetupSound.lean` — `seedCells_cell_stmt`, written out (S2: seed cell `k` at `.base ⟨b + k⟩`, its
+-- value resolved and normalized at the declared type)
+example :
+  ∀ {ctx : ProgramCtx} {s₁ : Store} {seed : Array SeedCell} {sS : Store} {locs : Array Loc},
+    seedCells ctx s₁ seed = .ok (sS, locs) → ∀ (k : Nat) (hk : k < seed.size),
+      locs[k]? = some (.base ⟨s₁.heap.size + k⟩) ∧
+      ∃ v w, resolveSeedValue ctx.types s₁.heap.size seed seed[k].typ seed[k].value = .ok v
+        ∧ normalizeValueForTy ctx seed[k].typ v = .ok w
+        ∧ Heap.lookup sS.heap (.base ⟨s₁.heap.size + k⟩) = some (.value seed[k].typ w) :=
+  @GoLean.GoCore.SetupSound.seedCells_cell
+
+-- 593. `SetupSound.lean` — `seedCells_frame_stmt`, written out (S2: the cells below `b` are untouched)
+example :
+  ∀ {ctx : ProgramCtx} {s₁ : Store} {seed : Array SeedCell} {sS : Store} {locs : Array Loc},
+    seedCells ctx s₁ seed = .ok (sS, locs) → ∀ j, j < s₁.heap.size → sS.heap[j]? = s₁.heap[j]? :=
+  @GoLean.GoCore.SetupSound.seedCells_frame
+
+-- 594. `SetupSound.lean` — `seedCells_locs_stmt`, written out (S2: the slot list is `b, …, b + n − 1`)
+example :
+  ∀ {ctx : ProgramCtx} {s₁ : Store} {seed : Array SeedCell} {sS : Store} {locs : Array Loc},
+    seedCells ctx s₁ seed = .ok (sS, locs) →
+    locs = ((List.range seed.size).map (fun k => Loc.base ⟨s₁.heap.size + k⟩)).toArray :=
+  @GoLean.GoCore.SetupSound.seedCells_locs
+
+-- 595. `SetupSound.lean` — `seedCells_heap_size_stmt`, written out (S3: exactly `n` cells added — G-R3
+-- then applies verbatim at the pre-bind store `sS`)
+example :
+  ∀ {ctx : ProgramCtx} {s₁ : Store} {seed : Array SeedCell} {sS : Store} {locs : Array Loc},
+    seedCells ctx s₁ seed = .ok (sS, locs) → sS.heap.size = s₁.heap.size + seed.size :=
+  @GoLean.GoCore.SetupSound.seedCells_heap_size
+
+-- 596. `SetupSound.lean` — `runProgramSetupSeeded_empty_stmt`, written out (S4: empty-seed erasure — the
+-- seeded entry with no cells and scalar arguments IS `runProgramSetupM`, errors included)
+example :
+  ∀ (fuel : Nat) (program : Program) (name : String) (args : Array GoValue) (choices : Choices),
+    runProgramSetupSeededM fuel program name #[] (args.map SeedArg.scalar) choices
+      = (fun (pctx, c, s, locs, ch) => (pctx, c, s, locs, (#[] : Array Loc), ch)) <$>
+          runProgramSetupM fuel program name args choices :=
+  @GoLean.GoCore.SetupSound.runProgramSetupSeeded_empty
+
+-- 597. `SetupSound.lean` — `seedCells_wf_stmt`, written out (S5: seeding preserves well-formedness)
+example :
+  ∀ {ctx : ProgramCtx} {s₁ : Store} {seed : Array SeedCell} {sS : Store} {locs : Array Loc},
+    StateWf ctx s₁ → seedCells ctx s₁ seed = .ok (sS, locs) → StateWf ctx sS :=
+  @GoLean.GoCore.SetupSound.seedCells_wf
+
+-- 598. `SetupSound.lean` — `runProgramSetupSeeded_wf_stmt`, written out (S5: the bound store is
+-- well-formed from a well-formed post-init store, under loc-free scalar arguments)
+example :
+  ∀ {ctx : ProgramCtx} {s₁ sS : Store} {seed : Array SeedCell} {slots : Array Loc}
+    {params : Array Param} {args : Array SeedArg} {vals : Array GoValue} {env frameEnv : LocalEnv}
+    {s₂ s₃ : Store} {results : List Param},
+    StateWf ctx s₁ → (∀ v, SeedArg.scalar v ∈ args → GoValue.locSup v = 0) →
+    seedCells ctx s₁ seed = .ok (sS, slots) →
+    resolveSeedArgs ctx.types s₁.heap.size seed params args = .ok vals →
+    bindParams ctx [] sS params.toList vals.toList = .ok (env, s₂) →
+    allocDecls ctx env s₂ results = .ok (frameEnv, s₃) →
+    StateWf ctx s₃ :=
+  @GoLean.GoCore.SetupSound.runProgramSetupSeeded_wf
+
+-- 599. `SetupSound.lean` — `runProgramSeededM_eq_stmt`, written out (S6: the seeded run, unfolded)
+example :
+  ∀ (fuel : Nat) (program : Program) (name : String) (seed : Array SeedCell) (args : Array SeedArg)
+    (choices : Choices),
+    runProgramSeededM fuel program name seed args choices
+      = (runProgramSetupSeededM fuel program name seed args choices >>=
+          fun (pctx, c₀, s₃, resultLocs, slots, choices₁) =>
+            runConfig pctx fuel s₃ c₀ choices₁ >>= fun (sF, _) =>
+              loadMany pctx sF resultLocs >>= fun values =>
+                loadMany pctx sF slots.toList >>= fun finals =>
+                  pure { readout := { values := values.toArray }, seedFinal := finals.toArray }) :=
+  @GoLean.GoCore.SetupSound.runProgramSeededM_eq
+
+-- 600. `SetupSound.lean` — `runProgramSeededM_empty_stmt`, written out (S6: erasure of the sequential run)
+example :
+  ∀ (fuel : Nat) (program : Program) (name : String) (args : Array GoValue) (choices : Choices),
+    runProgramSeededM fuel program name #[] (args.map SeedArg.scalar) choices
+      = (fun r : Readout => ({ readout := r, seedFinal := #[] } : SeededReadout)) <$>
+          runProgramM fuel program name args choices :=
+  @GoLean.GoCore.SetupSound.runProgramSeededM_empty
+
+-- 601. `SeedPool.lean` — `runProgramPoolSeeded_empty_stmt`, written out (S6: erasure of the pool run,
+-- output included)
+example :
+  ∀ (fuel : Nat) (program : Program) (name : String) (args : Array GoValue) (choices : Choices),
+    runProgramPoolSeededOutM fuel program name #[] (args.map SeedArg.scalar) choices
+      = (fun r : Readout => ({ readout := r, seedFinal := #[] } : SeededReadout)) <$>
+          runProgramPoolOutM fuel program name args choices :=
+  @GoLean.GoCore.Machine.runProgramPoolSeeded_empty
 
 end GoLean.GoCore.BridgeSet

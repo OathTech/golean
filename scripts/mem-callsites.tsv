@@ -86,3 +86,9 @@ GoLean/GoCore/Store.lean	chanPayload?	Heap.lookup	1	THE PEEK ITSELF — the chan
 GoLean/GoCore/Store.lean	mapPayload?	Heap.lookup	1	THE PEEK ITSELF — the map-payload reader's cell lookup (module primitive)
 GoLean/GoCore/Store.lean	storeChanPayload	updateCell	1	THE RAW WRITER ITSELF — the channel-payload writer's cell update (module primitive)
 GoLean/GoCore/Store.lean	storeMapPayload	updateCell	1	THE RAW WRITER ITSELF — the map-payload writer's cell update (module primitive)
+GoLean/GoCore/Seed.lean	seedAllocFrom	alloc	1	FRESH ALLOCATION — the seed cells' zero values at the seeded entry (design §2 phase 1; setup, before any step)
+GoLean/GoCore/Seed.lean	seedStoreFrom	storeLoc	1	FRESH ALLOCATION — the seed cells' values, the creating write of each cell's content before the entry binds (phase 2 of the two-phase allocation; no goroutine exists yet, the malloc convention)
+GoLean/GoCore/Seed.lean	runProgramSeededM	loadMany	2	DRIVER READOUT — result cells and the final seed cells after termination
+GoLean/GoCore/SeedPool.lean	runProgramPoolSeededOutM	loadMany	2	DRIVER READOUT — result cells and the final seed cells after main's exit on the pool
+GoLean/GoCore/SetupStatement.lean	runProgramSeededM_eq_stmt	loadMany	2	NO EXECUTION — the seeded run's definition statement (S6), a Prop
+GoLean/GoCore/SetupStatement.lean	seedCells_cell_stmt	Heap.lookup	1	NO EXECUTION — the pointwise seeding statement's cell reader (S2), a Prop

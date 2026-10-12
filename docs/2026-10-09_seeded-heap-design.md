@@ -237,3 +237,19 @@ need. Downstream on their side when slice A lands: a GoLean re-pin (a pins rulin
 `SeededSetup` instance on their `mem0/statement-draft`, closing that draft's Q2 (source-side
 inhabitation). **Slice A starts** (lane `core/seeded-heap-a-1012`).
 
+**Slice A landed on the lane (2026-10-12, [AGENT worker, lane `core/seeded-heap-a-1012`]).** Delivered as
+designed with three engineering choices inside D1/D5: (i) the recursive positions of `SeedValue` are
+`List`s (kernel-reducible structural recursion; the JSON shape is the CLI's); (ii) the pool twin lives in
+`SeedPool.lean` (it needs `Multi`; `Seed.lean` stays light), its erasure theorem beside it; (iii) the
+type-admission check of §3 is the resolver's own refusal at the leaf (an int at `string`, a struct
+missing its string field) — the same refusal, no second walk. One statement refined: S5's
+`runProgramSetupSeeded_wf` carries the premise «every scalar argument is loc-free» (D5 passes scalars
+unchecked; the CLI's are ints and bools). Also: the resolver RANGE-CHECKS ints at their kind (the
+normalizer would wrap); refusal texts render types through `Ty.dynamicName`; `seedLocs` is the `List`
+form so the controls pin by `rfl`. Controls (`#eval` first): the P3 shapes over a hand table (a cycle
+between two `Node` cells, `&c0.next`, `&c0[1]`, seed-relative resolution over a non-empty store), the
+refusal catalogue by name, the S4/S6 instance on the G-R control program. **Slice B (CLI + observation)
+starts from here**: the seed-file decoder maps the §1 grammar onto `SeedCell`/`SeedValue` (type spellings
+resolved to `Ty` through `TypeEnv.lookupName?`), `EntryArg` gains `.ref`/`.nil` → `SeedArg`, the flags of
+§6 call `runProgramPoolSeededOutM`, `goValueJson` gains the seed mode over `seedRelative?` (§5).
+
