@@ -39,8 +39,16 @@ import (
 
 type shape struct {
 	key  string
-	text string // the spec's source text
+	text string // the spec's source text (an init shape: the whole func, renamed)
 	base bool
+	init bool // an init-body shape: a function declaration, not a var spec
+}
+
+// isInitShape: `func init<Key>()` — no receiver, no parameters, no
+// results, a body.
+func isInitShape(fd *ast.FuncDecl) bool {
+	return fd.Recv == nil && strings.HasPrefix(fd.Name.Name, "init") && fd.Name.Name != "init" &&
+		fd.Type.Params.NumFields() == 0 && (fd.Type.Results == nil || fd.Type.Results.NumFields() == 0) && fd.Body != nil
 }
 
 func main() {
@@ -78,13 +86,24 @@ func record(shapesPath, otherPath string) (string, error) {
 		return "", err
 	}
 	// The preamble: every top-level declaration that is not the var
-	// block(s), as written. Imports are re-derived per package.
+	// block(s) and not an INIT SHAPE (a `func init<Key>()` with no
+	// parameters: built renamed to `init`, alone), as written. Imports
+	// are re-derived per package.
 	var preamble []string
 	var shapes []shape
 	blanks := 0
 	for _, d := range f.Decls {
 		gd, isGen := d.(*ast.GenDecl)
 		if isGen && gd.Tok == token.IMPORT {
+			continue
+		}
+		if fd, ok := d.(*ast.FuncDecl); ok && isInitShape(fd) {
+			text := string(src[fset.Position(fd.Pos()).Offset:fset.Position(fd.End()).Offset])
+			shapes = append(shapes, shape{
+				key:  fd.Name.Name,
+				text: strings.Replace(text, "func "+fd.Name.Name+"(", "func init(", 1),
+				init: true,
+			})
 			continue
 		}
 		if !isGen || gd.Tok != token.VAR {
@@ -186,16 +205,21 @@ func verdict(tmp, importPath string, preamble []string, bases, extra []shape) (s
 	b.WriteString("package shapes\n\n")
 	body := strings.Join(preamble, "\n\n") + "\n"
 	var specs []string
+	var inits []string
 	for _, sh := range append(append([]shape{}, bases...), extra...) {
+		if sh.init {
+			inits = append(inits, sh.text)
+			continue
+		}
 		specs = append(specs, sh.text)
 	}
-	varBlock := "var (\n\t" + strings.Join(specs, "\n\t") + "\n)\n"
+	varBlock := "var (\n\t" + strings.Join(specs, "\n\t") + "\n)\n" + strings.Join(inits, "\n\n")
 	for _, imp := range []string{"errors", "other", "unsafe"} {
 		if strings.Contains(varBlock, imp+".") {
 			fmt.Fprintf(&b, "import %q\n", imp)
 		}
 	}
-	b.WriteString("\n" + body + "\n" + varBlock)
+	b.WriteString("\n" + body + "\n" + varBlock + "\n")
 	dir := filepath.Join(tmp, "src", importPath)
 	if err := writeFile(filepath.Join(dir, "shapes.go"), []byte(b.String())); err != nil {
 		return "", err

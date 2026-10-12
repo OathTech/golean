@@ -126,6 +126,13 @@ func TestBug061InitializerClassifier(t *testing.T) {
 		"CallClo": "staticAssignInlinedCall refuses a body whose return closes over a parameter (hasClosure); the body test sees a single return",
 		"SlAny":   "an interface-typed element implicitly converted to another interface type is an OCONVIFACE of an interface value (work); the composite-literal rule classifies the element expression, not the implicit conversion",
 		"_4":      "a blank method value: OMETHVALUE is an effect for the discard rule (isSideEffect's default) that mayHaveSideEffects does not claim, so the blank falls to MAYBE-STATIC",
+		// Third fix round.
+		"initIfGAndFalse": "the COARSE static-if rule in an init body: the shaped body is empty here, but gc keeps `_ = cond` for `g() && false` — MAYBE-STATIC, the conservative slot of initBodyWork",
+		"CallFGF":         "the COARSE rule applied to `for`: the writer keeps an always-false loop whose rewritten condition is not a literal (`g() && false`), the reader drops only a constant; here the loop is dropped",
+		"CallPOT":         "`(g() || false) || true`: the right side decides, the parenthesised left stays non-literal in the written condition, so gc keeps `_ = cond` — the COARSE rule drops it",
+		"CallGFE":         "`if g() && false {…} else {…}`: the COARSE rule, as CallGF, with an else branch",
+		"SlCh":            "a composite-literal element that is a zero-value package variable: staticcopy fails on rn.Defn == nil; the same-package copy rule does not look at the source's own initializer (as CopyInl)",
+		"_16":             "a called closure literal in a blank initializer: the call is classified MAYBE-STATIC on the inliner's account without examining the closure's body, which here calls a multi-statement function",
 	}
 
 	dir := writeDir(t, map[string]string{
@@ -148,8 +155,45 @@ func TestBug061InitializerClassifier(t *testing.T) {
 	}
 	seen := map[string]bool{}
 	blanks := 0
+	judge := func(key, text string, kind initializerKind) {
+		seen[key] = true
+		verdict, recorded := oracle[key]
+		if !recorded {
+			t.Errorf("%s: not in the recorded oracle — run scripts/test-staticinit-oracle --record", key)
+			return
+		}
+		switch verdict {
+		case "none":
+			if kind == initWork {
+				t.Errorf("SOUNDNESS %s (%s): gc folds it, the classifier says WORK — a silent wrong order (BUG-061's class)", key, text)
+			}
+		case "work":
+			if kind != initWork {
+				if why, ok := conservative[key]; ok {
+					t.Logf("conservative %s (%s): %v where gc has work — %s", key, text, kind, why)
+				} else {
+					t.Errorf("PRECISION %s (%s): gc has work, the classifier says %v (list it as conservative with its reason if intended)", key, text, kind)
+				}
+			}
+		default:
+			t.Errorf("%s: unrecognized oracle verdict %q", key, verdict)
+		}
+	}
 	for _, f := range u.files {
 		for _, d := range f.Decls {
+			// An INIT SHAPE (`func init<Key>()`): judged as an init body.
+			if fd, ok := d.(*ast.FuncDecl); ok && fd.Recv == nil && strings.HasPrefix(fd.Name.Name, "init") && fd.Name.Name != "init" && fd.Type.Params.NumFields() == 0 {
+				certain, maybe := l.initBodyWork(u, fd)
+				kind := initConstant
+				switch {
+				case certain:
+					kind = initWork
+				case maybe:
+					kind = initMaybeStatic
+				}
+				judge(fd.Name.Name, "func init() "+exprSourceText(fset, &ast.FuncLit{Type: fd.Type, Body: fd.Body}), kind)
+				continue
+			}
 			gd, ok := d.(*ast.GenDecl)
 			if !ok || gd.Tok != token.VAR {
 				continue
@@ -168,6 +212,11 @@ func TestBug061InitializerClassifier(t *testing.T) {
 				key := strings.Join(names, ",")
 				var kind initializerKind
 				var text string
+				if len(vs.Values) == 0 {
+					// A zero-value declaration: no initializer, no work.
+					judge(key, "var "+key+" "+exprSourceText(fset, vs.Type), initConstant)
+					continue
+				}
 				if len(vs.Names) != len(vs.Values) {
 					kind = initWork // the tuple rule (sourceInitWork): certain work
 					text = key + " = " + exprSourceText(fset, vs.Values[0])
@@ -175,28 +224,7 @@ func TestBug061InitializerClassifier(t *testing.T) {
 					kind = l.initializerKind(u, vs.Values[0], vs.Names[0].Name == "_")
 					text = "var " + vs.Names[0].Name + " = " + exprSourceText(fset, vs.Values[0])
 				}
-				seen[key] = true
-				verdict, recorded := oracle[key]
-				if !recorded {
-					t.Errorf("%s: not in the recorded oracle — run scripts/test-staticinit-oracle --record", key)
-					continue
-				}
-				switch verdict {
-				case "none":
-					if kind == initWork {
-						t.Errorf("SOUNDNESS %s (%s): gc folds it, the classifier says WORK — a silent wrong order (BUG-061's class)", key, text)
-					}
-				case "work":
-					if kind != initWork {
-						if why, ok := conservative[key]; ok {
-							t.Logf("conservative %s (%s): %v where gc has work — %s", key, text, kind, why)
-						} else {
-							t.Errorf("PRECISION %s (%s): gc has work, the classifier says %v (list it as conservative with its reason if intended)", key, text, kind)
-						}
-					}
-				default:
-					t.Errorf("%s: unrecognized oracle verdict %q", key, verdict)
-				}
+				judge(key, text, kind)
 			}
 		}
 	}
@@ -243,11 +271,27 @@ func readTestdataFile(t *testing.T, name string) string {
 }
 
 // readStaticinitOracle reads the recorded gc verdicts: key -> none|work.
+// The record's toolchain must be the ORACLE PIN (baselines/go-oracle-pin):
+// a pin move with a stale table would silently widen the WORK side's
+// exposure to a newer gc's folds, so it fails here by name until the
+// table is re-recorded (scripts/test-staticinit-oracle --record).
 func readStaticinitOracle(t *testing.T) map[string]string {
 	t.Helper()
+	pinBytes, err := os.ReadFile(filepath.Join("..", "..", "baselines", "go-oracle-pin"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	pin := strings.TrimSpace(strings.SplitN(string(pinBytes), "\n", 2)[0])
 	out := map[string]string{}
+	recordedVersion := ""
 	for _, line := range strings.Split(readTestdataFile(t, "staticinit-oracle.tsv"), "\n") {
-		if line == "" || strings.HasPrefix(line, "#") || line == "key\tverdict" {
+		if strings.HasPrefix(line, "#") {
+			if i := strings.Index(line, "go version "); i >= 0 {
+				recordedVersion = strings.Fields(line[i+len("go version "):])[0]
+			}
+			continue
+		}
+		if line == "" || line == "key\tverdict" {
 			continue
 		}
 		cols := strings.Split(line, "\t")
@@ -258,6 +302,9 @@ func readStaticinitOracle(t *testing.T) map[string]string {
 	}
 	if len(out) == 0 {
 		t.Fatal("staticinit-oracle.tsv: no rows — run scripts/test-staticinit-oracle --record")
+	}
+	if recordedVersion != pin {
+		t.Fatalf("staticinit-oracle.tsv was recorded with %q but the oracle pin is %q: the table is STALE across a pin move — re-record it with scripts/test-staticinit-oracle --record (BUG-061's WORK side rests on the recorded gc verdicts)", recordedVersion, pin)
 	}
 	return out
 }

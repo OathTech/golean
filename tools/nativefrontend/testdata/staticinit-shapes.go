@@ -155,17 +155,74 @@ func noInline() int { return 1 }
 
 func mkClosure(x int) func() int { return func() int { return x } }
 
+func id[T any](x T) T { return x }
+
+func forGAndFalse() int {
+	for g() && false {
+	}
+	return 1
+}
+func condParenOrTrue() int {
+	if (g() || false) || true {
+		return 1
+	}
+	return 2
+}
+func condGAndFalseElse() int {
+	if g() && false {
+		return 1
+	} else {
+		return 2
+	}
+}
+
+// INIT SHAPES: a function named init<Key> with no parameters is an init
+// body shape — the oracle builds it renamed to `init`, the unit test judges
+// it with initBodyWork; neither includes it in any other package.
+func initEmpty()     {}
+func initConstDecl() { const c = 1 }
+func initTypeDecl()  { type t int }
+func initEmptyBlock() {
+	{
+	}
+}
+func initIfFalse() {
+	if false {
+		g()
+	}
+}
+func initForFalse() {
+	for false {
+		g()
+	}
+}
+func initBlank()   { _ = 1 }
+func initVarDecl() { var x int; _ = x }
+func initCall()    { g() }
+func initIfGAndFalse() {
+	if g() && false {
+	}
+}
+func initReturn()          { return }
+func initDeadAfterReturn() { return; g() }
+func initIfTrueCall() {
+	if true {
+		g()
+	}
+}
+
 var (
-	C       = 5               // base
-	Str     = "s"             // base
-	Arr     = [3]int{1, 2, 3} // base
-	Sl      = []string{"a"}   // base
-	St      = T{x: 1}         // base
-	PtrG    = &T{}            // base
-	Bytes   = []byte("abc")   // base
-	IG    I = T{}             // base
-	FVar    = one             // base
-	InlV    = one()           // base
+	C              = 5               // base
+	Str            = "s"             // base
+	Arr            = [3]int{1, 2, 3} // base
+	Sl             = []string{"a"}   // base
+	St             = T{x: 1}         // base
+	PtrG           = &T{}            // base
+	Bytes          = []byte("abc")   // base
+	IG    I        = T{}             // base
+	FVar           = one             // base
+	InlV           = one()           // base
+	Ch    chan int                   // base
 
 	Nest = []T{{x: 1}, {x: 2}}
 	M    = map[int]int{1: 2}
@@ -248,6 +305,10 @@ var (
 	CallNoI = noInline()
 	CopyInl = InlV
 	CallClo = mkClosure(1)
+	CallFGF = forGAndFalse()
+	CallPOT = condParenOrTrue()
+	CallGFE = condGAndFalseElse()
+	SlCh    = []<-chan int{Ch}
 
 	_   = Arr[0]
 	_   = two()
@@ -262,6 +323,11 @@ var (
 	_   = make([]int, 0)
 	_   = (*T)(PtrG) == nil
 	_   = len([]*T{PtrG})
+	_   = id[int] == nil
+	_   = len([]func(int) int{id[int]})
+	_   = func() int { return two() }()
+	_   = func() {}
+	_   = []func(){func() {}}
 
 	A2, B2 = pair()
 )

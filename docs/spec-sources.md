@@ -18,7 +18,16 @@ oracle toolchain, and the corpus must agree on this (campaign doc §4.4):
 
 Re-pin both together, deliberately, with the reason — never one side
 alone. The Go 1.22 loop-variable change is the standing reminder that
-language version is semantics, not packaging. (Third leg, recorded as
+language version is semantics, not packaging. Derived oracle tables move
+with the pin in the same change: `tools/nativefrontend/inittask-std.tsv`
+(`scripts/gen-inittask-table`) and the BUG-061 staticinit table
+`tools/nativefrontend/testdata/staticinit-oracle.tsv` — re-recorded by
+`scripts/test-staticinit-oracle --record` at EVERY pin move, because a
+newer gc's staticinit may fold a shape the frontend's classifier calls
+work (a silent wrong order the guard would miss); the record names its
+toolchain and the frontend unit tests refuse a record made with any
+other ([AGENT] 2026-10-12, lane `fix/bug061-refuse-1012`, third fix
+round, relayed review). (Third leg, recorded as
 NOT YET EXISTING per the pre-landing audit: the corpus has no
 `go.mod`, so "the corpus's `go` directive must agree" has no object
 today — the agreement preflight gains that leg when P3/P4 give the

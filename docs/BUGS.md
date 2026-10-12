@@ -106,6 +106,27 @@ conservative; `make` of a chan/map with a zero or absent size is
 effect-free; type positions are skipped. Table 101 shapes, 8
 conservative entries with reasons, 0 soundness misses; corpus impact
 still the witness alone, twin byte-identical.
+THIRD FIX ROUND (same day; the third pass over `b23ea5cb`, 175 probe
+shapes): the `init` arm had not been touched — `func init()` with any
+statement was certain, but gc skips an init whose body is empty AFTER
+the reader (`{ const c = 1 }`, `{ type t int }`, `{ {} }`, `{ if false
+{…} }`, `{ for false {…} }` all fold). `initBodyWork` now shapes the
+body with the same `liveStmts`; the safe direction is the OPPOSITE of
+the single-return arm's: non-empty after the coarse rule ⇒ certain
+(dropping only empties further), emptied ⇒ a MAYBE-STATIC site, only a
+syntactically empty body is no work. A generic instantiation in value
+position (`id[int]`) is no longer an effect. Table 124 shapes (an
+`init<Key>` form for init bodies), 14 conservative entries with
+reasons, 0 soundness misses; corpus impact unchanged.
+RESIDUAL RISK, stated: the WORK side of the classifier rests on a
+reading of go1.26.5's `staticinit` and `noder` plus the recorded
+124-shape table and the reviews' probe sets; a gc shape nobody thought
+of could still be WORK-where-gc-folds, and an ORACLE PIN MOVE (a new
+staticinit fold in a later Go) silently widens that exposure until the
+table is re-recorded — so the record names its toolchain, the frontend
+unit tests and `scripts/test-staticinit-oracle` refuse a record made
+with any other, and `docs/spec-sources.md` lists the table among the
+derived oracle artifacts re-recorded at every pin move.
 
 gc schedules a PRUNED set of packages: `MakeTask`
 (`cmd/compile/internal/pkginit/init.go`) emits a `..inittask` record

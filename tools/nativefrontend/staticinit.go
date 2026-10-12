@@ -96,14 +96,23 @@ package main
 // condition where the writer rewrites it, so `if false && g()` was
 // WORK; every `make` was an effect, so `var _ = make(chan int)` was
 // WORK; type positions were walked, so `(*T)(p)` was a dereference —
-// three more). THE TEST'S STANDARD IS gc's OWN VERDICT, RECORDED: testdata/staticinit-shapes.go
+// three more; the third review: the init arm judged the SOURCE body
+// where gc skips an init whose body is empty after the reader, so
+// `func init() { const c = 1 }` was certain work — initBodyWork). THE
+// TEST'S STANDARD IS gc's OWN VERDICT, RECORDED: testdata/staticinit-shapes.go
 // is the shape table, scripts/test-staticinit-oracle (tools/
 // staticinitoracle) builds each shape with the pinned toolchain and
 // reads its ..inittask record, testdata/staticinit-oracle.tsv is the
 // record, and staticinit_test.go asserts that no `none` shape is WORK
 // (soundness) and every `work` shape is WORK unless listed conservative
-// with a reason (precision). The enumeration is exact for the
-// classification it is given.
+// with a reason (precision). RESIDUAL RISK: the WORK side rests on
+// that reading plus the recorded table and the reviews' probe sets; a
+// shape nobody thought of could still be WORK where gc folds, and an
+// oracle PIN MOVE (a new fold in a later Go) widens that exposure until
+// the table is re-recorded — the record names its toolchain and the
+// tests refuse any other (docs/spec-sources.md lists the table among
+// the derived artifacts moved with the pin). The enumeration is exact
+// for the classification it is given.
 
 import (
 	"fmt"
@@ -185,11 +194,18 @@ func (l *loader) sourceInitWork(u *sourcePkg) (certain bool, maybe []initSite) {
 		for _, decl := range f.Decls {
 			switch d := decl.(type) {
 			case *ast.FuncDecl:
-				// gc drops an init function whose body is empty
-				// (pkginit/init.go MakeTask: "Skip init functions with
-				// empty bodies"); any statement at all is work.
-				if d.Recv == nil && d.Name.Name == "init" && d.Body != nil && len(d.Body.List) > 0 {
-					certain = true
+				if d.Recv == nil && d.Name.Name == "init" {
+					certainInit, maybeInit := l.initBodyWork(u, d)
+					if certainInit {
+						certain = true
+					}
+					if maybeInit {
+						maybe = append(maybe, initSite{
+							pkg:  u.path,
+							text: "func init() {…}",
+							pos:  l.fset.Position(d.Pos()),
+						})
+					}
 				}
 			case *ast.GenDecl:
 				if d.Tok != token.VAR {
@@ -230,6 +246,30 @@ func (l *loader) sourceInitWork(u *sourcePkg) (certain bool, maybe []initSite) {
 		}
 	}
 	return certain, maybe
+}
+
+// initBodyWork judges an init function as pkginit.MakeTask does — "Skip
+// init functions with empty bodies" — on the body AS THE READER SHAPED
+// IT (pkginit/init.go:111-114 tests the shaped body: `{ const c = 1 }`,
+// `{ {} }`, `{ if false { … } }`, `{ for false { … } }` are all empty
+// there and gc emits no record; the third fix round's BLOCKER). The
+// safe direction is the OPPOSITE of the single-return arm's: liveStmts
+// drops only what gc drops, plus the coarse `_ = cond`, so a body that
+// is non-empty after it is non-empty under gc — CERTAIN; a body empty
+// after shaping but not in the source is MAYBE (gc may keep a `_ = cond`
+// the coarse rule dropped: `init() { if g() && false {} }` is work);
+// only a syntactically empty body is no work under both.
+func (l *loader) initBodyWork(u *sourcePkg, d *ast.FuncDecl) (certain, maybe bool) {
+	if d.Body == nil || len(d.Body.List) == 0 {
+		return false, false
+	}
+	if u.info == nil {
+		return false, true // cannot shape it: the conservative slot
+	}
+	if len(l.liveStmts(u.info, d.Body.List)) > 0 {
+		return true, false
+	}
+	return false, true
 }
 
 // initializerKind classifies one initializer expression of package u.
@@ -620,7 +660,18 @@ func (l *loader) mayHaveSideEffects(u *sourcePkg, e ast.Expr) bool {
 					return false
 				}
 			}
-		case *ast.IndexExpr, *ast.SliceExpr, *ast.StarExpr, *ast.TypeAssertExpr:
+		case *ast.IndexExpr:
+			// A generic function instantiation in value position (`id[int]`)
+			// is an ONAME of the instantiated function, no effect (third
+			// fix round, the review's HIGH); an element read is OINDEX.
+			if tv, ok := u.info.Types[x]; ok {
+				if _, isSig := tv.Type.Underlying().(*types.Signature); isSig {
+					return true
+				}
+			}
+			found = true
+			return false
+		case *ast.SliceExpr, *ast.StarExpr, *ast.TypeAssertExpr:
 			found = true
 			return false
 		case *ast.SelectorExpr:

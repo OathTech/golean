@@ -3,6 +3,19 @@
 # Recorded by scripts/test-staticinit-oracle (tools/staticinitoracle, bases + one spec per package, GOPATH mode)
 # with go version go1.26.5 linux/amd64. Re-record with `scripts/test-staticinit-oracle --record` when the shapes change.
 key	verdict
+initEmpty	none
+initConstDecl	none
+initTypeDecl	none
+initEmptyBlock	none
+initIfFalse	none
+initForFalse	none
+initBlank	work
+initVarDecl	work
+initCall	work
+initIfGAndFalse	work
+initReturn	work
+initDeadAfterReturn	work
+initIfTrueCall	work
 C	none
 Str	none
 Arr	none
@@ -13,6 +26,7 @@ Bytes	none
 IG	none
 FVar	none
 InlV	none
+Ch	none
 Nest	none
 M	work
 PM	work
@@ -90,6 +104,10 @@ CallBN	work
 CallNoI	work
 CopyInl	work
 CallClo	work
+CallFGF	work
+CallPOT	work
+CallGFE	work
+SlCh	work
 _1	work
 _2	work
 _3	none
@@ -103,4 +121,9 @@ _10	work
 _11	work
 _12	none
 _13	none
+_14	none
+_15	none
+_16	work
+_17	none
+_18	none
 A2,B2	work

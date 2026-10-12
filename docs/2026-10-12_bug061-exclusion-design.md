@@ -98,6 +98,36 @@ Two parts, both in `staticinit.go`, the emitted schedule unchanged:
    a parameter), `SlAny` (an interface element implicitly converted), `_4`
    (a blank method value). The oracle reads the compile ARCHIVE, where a
    deps-only record survives (the linker drops it from a binary).
+
+   **Third fix round** (the third pass, 175 probe shapes; the var-initializer
+   side sound). The `init` arm: gc tests the body AS THE READER SHAPED IT
+   (`pkginit/init.go:111-114`), so `{ const c = 1 }`, `{ type t int }`,
+   `{ {} }`, `{ if false {…} }`, `{ for false {…} }` are empty and fold — the
+   arm said certain. `initBodyWork` shapes the body with `liveStmts`; the safe
+   direction is the opposite of the single-return arm's: non-empty after the
+   coarse rule ⇒ certain (the coarse rule only drops statements, so non-empty
+   here is non-empty under gc), emptied ⇒ a MAYBE-STATIC site (`init() { if
+   g() && false {} }` is work under gc), syntactically empty ⇒ no work. A
+   generic instantiation in value position (`id[int]`, an `*ast.IndexExpr` of
+   function type) is an ONAME, no effect. The table has an `init<Key>` form
+   (a parameterless function the oracle builds renamed to `init`, alone with
+   the bases) and is 124 shapes; the conservative list is 14: the eight above
+   plus `initIfGAndFalse` (the coarse rule in an init body), `CallFGF` (the
+   coarse rule applied to `for`: the writer keeps an always-false loop whose
+   rewritten condition is not a literal), `CallPOT` (`(g() || false) || true`),
+   `CallGFE` (`if g() && false {…} else {…}`), `SlCh` (a zero-value package
+   variable as a literal element: staticcopy fails on `rn.Defn == nil`), `_16`
+   (a called closure literal whose body calls a multi-statement function).
+
+   **Residual risk, stated.** The WORK side rests on a reading of go1.26.5's
+   `staticinit`/`noder` plus the recorded table and the reviews' probe sets: a
+   gc shape nobody thought of could still be WORK-where-gc-folds, and an
+   ORACLE PIN MOVE — a new staticinit fold in a later Go — silently widens
+   that exposure until the table is re-recorded. Hence the record names its
+   toolchain, the frontend unit tests and `scripts/test-staticinit-oracle`
+   refuse a record made with any other, and `docs/spec-sources.md` (the pin
+   index) lists the table among the derived artifacts re-recorded at every
+   pin move.
 2. **Enumerate** every pruning of the uncertain packages (cap 12 → 4096 walks;
    beyond it refuse by name), recompute the node set and the two-pass walk,
    and REFUSE iff some pruning orders the packages WITH work differently from
@@ -132,8 +162,8 @@ the fix round's tip (the same 28 roots + the twin: the witness alone refuses,
 the twin wire byte-identical). Unit tests (`staticinit_test.go`): the witness
 refuses with the named text; init-body, map-literal, multi-statement-call,
 arithmetic, constant and empty controls lower; an uncertain package imported
-only by main or a node through its imports lowers; the 101-shape table against
-the recorded gc verdicts (§2; 8 conservative, 0 soundness misses); the node
+only by main or a node through its imports lowers; the 124-shape table against
+the recorded gc verdicts (§2; 14 conservative, 0 soundness misses); the node
 fact unchanged.
 
 ## 4. Still owed

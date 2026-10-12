@@ -33,6 +33,14 @@ if [ "${1:-}" = "--record" ]; then
   exit 0
 fi
 [ -f "$TSV" ] || { echo "test-staticinit-oracle: FAIL — no recorded table at $TSV (run with --record)" >&2; exit 1; }
+# A pin move cannot pass with a stale table: the record names its toolchain,
+# and it must be the live (= pinned, scripts/ci checks that) `go version`.
+recorded="$(grep -o 'go version go[^ ]*' "$TSV" | head -1 | awk '{print $3}')"
+live="$(go version | awk '{print $3}')"
+if [ -z "$recorded" ] || [ "$recorded" != "$live" ]; then
+  echo "test-staticinit-oracle: FAIL — the recorded table was made with '${recorded:-<none>}' but the live toolchain is '$live': STALE across a pin move; re-record with --record (the BUG-061 WORK side rests on these verdicts)" >&2
+  exit 1
+fi
 if diff -u "$TSV" "$tmp/fresh.tsv"; then
   echo "test-staticinit-oracle: ok — recorded verdicts = fresh gc verdicts ($(grep -vc '^#\|^key' "$TSV") shapes)"
 else
