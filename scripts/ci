@@ -1,61 +1,40 @@
 #!/usr/bin/env bash
-# The always-run gate. One command an agent runs before claiming work done; CI
-# runs the same. Each step is a standing guardrail (see
-# docs/2026-07-19_pipeline-error-resistance.md). Runs ALL steps even if one
-# fails, then reports a summary and exits non-zero on any failure.
+# The gate, in two tiers (gate cull 2026-10-12, docs/2026-10-12_gate-cull-plan.md;
+# the standing rule is CLAUDE.md «The gates»). Runs EVERY step even if one
+# fails, then prints a summary and exits non-zero on any GATE failure.
 #
-#   scripts/ci          fast gate: escape-hatch preflight, core build, eval
-#                       tests, and a baseline diff of the LAST recorded
-#                       differential run.
-#   scripts/ci --diff   also re-runs the full native differential corpus first
-#                       (slow: `go run` per case), then diffs it. Do this when
-#                       you touched runtime code (frontend / interpreter / Ops).
-#                       Every row runs fresh: there is no cached tier and no
-#                       --slow (gate cull 2026-10-12).
+#   scripts/ci          the fast tier — before any commit touching runtime code:
+#                       oracle pin, escape-hatch scan, lake build of every
+#                       target (warning-free), core totality audit, the Go and
+#                       Lean unit tests, the lowering pins, and the baseline
+#                       diff of the LAST recorded corpus runs.
+#   scripts/ci --diff   the merge gate — the fast tier plus a FRESH run of the
+#                       differential corpus (`go run` per case, every row, no
+#                       cached tier) and the negative corpus, judged against
+#                       the tracked baselines. Run it when you touched runtime
+#                       code; a merge to main needs it green.
 #
-# NOTE: the differential is the FOUNDATION of the trust chain. `scripts/ci`
-# (no flag) only checks that the LAST recorded run still matches the baseline;
-# it does not re-run Go. For runtime changes, use --diff (or run
-# scripts/diff-one <ids> for a focused slice) so the baseline reflects reality.
+# Speedbumps (the document-vs-code consistency checks) run in both tiers under
+# their own heading, REPORT-ONLY: a red one never fails the gate; it is read at
+# the merge ask and fixed or waived there, by name. Self-tests of checkers
+# (scripts/test-*) are not run here: run the one for a script you change.
 #
-# REPO SPLIT (2026-08-31, [USER]-directed): this gate covers the SEMANTICS
-# product only — the executable GoCore interpreter, the native frontend, the
-# Go fixture corpus, and the differential apparatus. The reasoning layer
-# (proofs/, compat/, the Audit/Challenge/Solution + comparator-judge
-# apparatus, the A-TRIP veneer gates, check-golden and the R2 pin guards)
-# left main with its package; it is preserved whole on branch
-# park/reasoning-2026-08-31 and its gate steps went with it — see
-# docs/2026-08-31_repo-split-plan.md for the step-by-step inventory (every
-# removed step is accounted for there; none was silently dropped).
+# Fail-closed rules kept from the old gate: an unknown flag refuses; a step that
+# cannot run is RED, never skipped; no recorded corpus run is a FAIL (unless
+# GOLEAN_ALLOW_NO_DIFF=1 says this environment never records one); a partial
+# run is reported as partial and never as a full certification.
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$ROOT"
 
-# The gate is never interactive: no git call here or in any sub-script may
-# page or open an editor, whatever the terminal or the operator's pager is.
-# (2026-10-11: `git grep` in scripts/check-equations paged on milner-oath's
-# tty and surfaced as "the gate opens an editor"; redirected runs never saw
-# it.) Exported, so every sub-script inherits the rule.
+# Never interactive: no git call here or in a sub-script may page or open an
+# editor (2026-10-11: `git grep` paged on a tty and looked like an editor).
 export GIT_PAGER=cat PAGER=cat GIT_EDITOR=:
 
-# 0. MEMORY CAP — re-exec ourselves inside our own cgroup before doing any
-#    work. An uncapped Lean elaboration reached 60 GB and killed the session
-#    (twice) on 2026-08-09; the gate is exactly the thing that must not be
-#    able to take the machine down. Self-wrapping rather than documenting is
-#    deliberate: a rule you can forget is not a gate. See scripts/capped for
-#    the cap size, the opt-out, and the two mechanisms that DON'T work.
-#    Only two token values may skip the wrap: `verified` (scripts/capped read
-#    the cgroup's memory.max back and PROVED a cap) and `none` (a deliberate,
-#    warned opt-out). Anything else — notably a stale `=1` inherited from an
-#    unrelated shell — gets wrapped, and bounces off the readback with exit 3.
-#    Trusting the bare variable here meant the readback never protected THIS
-#    script, the one CLAUDE.md tells everyone to run (delta-review D2).
-#    Since 2026-10-11 ([USER]: the box-wide `capped` is the one to use) the
-#    wrap goes through scripts/capped as a SHIM onto /usr/local/bin/capped,
-#    whose token is CAPPED_STATE; the fallback wrapper (no box tool) still
-#    speaks GOLEAN_CAPPED and mirrors it into CAPPED_STATE. Either name,
-#    same two values, same rule.
+# MEMORY CAP: re-exec inside a proven cgroup before any work (an uncapped Lean
+# elaboration took the box down twice, 2026-08-09). Only `verified` (the
+# wrapper read the cap back) and `none` (a deliberate, warned opt-out) skip it.
 case "${CAPPED_STATE:-${GOLEAN_CAPPED:-}}" in
   verified|none) ;;
   *) exec "$ROOT/scripts/capped" "$ROOT/scripts/ci" "$@" ;;
@@ -67,36 +46,20 @@ for arg in "$@"; do
     --diff) RUN_DIFF=1 ;;
     --slow) echo "scripts/ci: --slow is RETIRED (gate cull 2026-10-12): no cached rows; --diff enumerates every row fresh" >&2
             exit 2 ;;
-    # FAIL CLOSED ON TYPOS (2026-08-09). This loop used to ignore anything it
-    # didn't recognise, so `scripts/ci --dif` ran the FAST gate and printed
-    # RESULT: PASS — the operator believes the differential ran when it never
-    # did, which is the exact "gate quietly failed open" class this repo
-    # treats as worse than a red. Cost us a wasted run the day it was found.
-    # NOTE the ordering: the memory-cap re-exec above runs FIRST, so a typo
-    # creates and tears down a scope (~ms) before landing here — and on a host
-    # with no systemd user bus this guard is unreachable, the operator getting
-    # the wrapper's error instead (pre-merge audit F7; the original commit
-    # message's "before any work" was imprecise).
-    *) echo "scripts/ci: unknown argument '$arg' (expected --diff)" >&2
-       echo "  Refusing to run: a mistyped flag must never silently downgrade" >&2
-       echo "  the gate to a weaker one that still reports PASS." >&2
-       exit 2 ;;
+    # A mistyped flag must never silently downgrade the gate to a weaker one
+    # that still prints PASS (2026-08-09: `--dif` ran the fast tier green).
+    *) echo "scripts/ci: unknown argument '$arg' (expected --diff)" >&2; exit 2 ;;
   esac
 done
 
-# Lean import matcher + comment stripper: canonical definitions extracted to
-# scripts/lean-scan.sh (comparator-judge pre-merge audit, 2026-08-02 — the
-# judge wrapper had re-implemented the matcher with the retired fail-open
-# '^import ' anchor; one sourced copy ends that drift class). History of the
-# hardening: tolerant anchor 2026-08-01 audit response; comment-stripping at
-# closure walks, delta-audit 2026-08-01.
-. "$ROOT/scripts/lean-scan.sh"
+# Scratch goes under the repo's own .tmp (the sandbox convention,
+# docs/agent-sandbox.md); never a shared /tmp.
+export TMPDIR="${TMPDIR:-$ROOT/.tmp}"
+mkdir -p "$TMPDIR"
+GOCACHE_DIR="$ROOT/artifacts/go-build-cache"
 
-fail=0
-declare -a RESULTS
-step() { printf '\n\033[1m── %s\033[0m\n' "$1"; }
-ok()   { RESULTS+=("  ok   $1"); }
-bad()  { RESULTS+=("  FAIL $1"); fail=1; }
+# Lean import matcher + comment stripper (IMPORT_RE, strip_lean_comments).
+. "$ROOT/scripts/lean-scan.sh"
 
 CI_STARTED_SECONDS=$SECONDS
 finish_ci() {
@@ -107,1138 +70,343 @@ finish_ci() {
 }
 trap finish_ci EXIT
 
-# 0b. BUILD PARALLELISM, SCALED TO THE MEMORY CAP (examples phase-2 slice 0,
-#     lever 1, 2026-08-14). Lean's task-scheduler pool size (LEAN_NUM_THREADS)
-#     bounds BOTH the number of `lean` workers Lake runs concurrently AND the
-#     within-file parallel elaboration of declarations — and peak memory is a
-#     SUM OF PER-THREAD PEAKS. On this 32-core box an unbounded build therefore
-#     multiplies the heaviest module's peak by the number of live threads, which
-#     is how the full proofs build OOM-died inside a 48G cap while completing at
-#     64G (charter measurement, docs/2026-08-14_examples-phase2-arc-charter.md —
-#     the measurement record is on branch park/reasoning-2026-08-31; the 8G/thread
-#     constant below derives from it).
-#     Lake 5.0 has no -j/--jobs flag; this env var is the only knob.
-#
-#     THIS IS A PERFORMANCE KNOB, NOT A CORRECTNESS GATE: it changes how fast
-#     and in what memory the SAME build runs, never what is checked. So an
-#     unparseable cap falls back to the toolchain default with a visible note
-#     rather than failing the gate — and if that default then breaches the cap,
-#     the build dies loudly at the cgroup, which is the outcome we already have.
-#     An explicit LEAN_NUM_THREADS from the caller is always honoured.
-step "build parallelism (LEAN_NUM_THREADS scaled to the memory cap)"
+fail=0
+bumps_red=0
+declare -a RESULTS BUMPS
+step()     { printf '\n\033[1m── %s\033[0m\n' "$1"; }
+ok()       { RESULTS+=("  ok   $1"); }
+bad()      { RESULTS+=("  FAIL $1"); fail=1; }
+note()     { RESULTS+=("  note $1"); }
+bump_ok()  { BUMPS+=("  ok   $1"); }
+bump_red() { BUMPS+=("  RED  $1"); bumps_red=$((bumps_red + 1)); }
+# run_gate <label> <cmd...>: a blocking step. run_bump <label> <cmd...>: a
+# speedbump, same shape, never sets fail. Both print the command's tail.
+run_gate() {
+  local label=$1 out rc=0; shift
+  out="$("$@" 2>&1)" || rc=$?
+  if [ "$rc" -eq 0 ]; then printf '%s\n' "$out" | tail -2 | sed 's/^/  /'; ok "$label"
+  else printf '%s\n' "$out" | tail -25 | sed 's/^/  /'; bad "$label (exit $rc — see above)"; fi
+}
+run_bump() {
+  local label=$1 out rc=0; shift
+  out="$("$@" 2>&1)" || rc=$?
+  if [ "$rc" -eq 0 ]; then printf '%s\n' "$out" | tail -1 | sed 's/^/  /'; bump_ok "$label"
+  else printf '%s\n' "$out" | tail -15 | sed 's/^/  /'; bump_red "$label (exit $rc — see above)"; fi
+}
+
+if [ "$RUN_DIFF" -eq 1 ]; then MODE="--diff (merge gate)"; else MODE="fast tier"; fi
+echo "scripts/ci mode: $MODE"
+
+# ── Build parallelism, scaled to the memory cap (a performance knob, not a
+# check): Lean's thread pool bounds the concurrent `lean` workers AND the
+# per-file elaboration; peak memory is a sum of per-thread peaks, 8G/thread
+# measured. A cold full build needs the 64G raise (capped -m 64G -- scripts/ci).
+step "build parallelism (LEAN_NUM_THREADS from the memory cap)"
 if [ -n "${LEAN_NUM_THREADS:-}" ]; then
   PAR_NOTE="LEAN_NUM_THREADS=$LEAN_NUM_THREADS (set by the caller — honoured as-is)"
 else
-  # The effective limit: the box tool exports CAPPED_MEM_MAX inside the cap
-  # (so a `capped -m 64G` raise is seen here); the legacy name second; the
-  # box default last ([USER] 2026-10-11, D2: conform to the box default).
   _mem="${CAPPED_MEM_MAX:-${GOLEAN_MEM_MAX:-32G}}"
-  # Bytes-per-thread budget: 8G. Chosen from the measured per-thread peaks of
-  # the heavy example modules; floor 2 so a small cap still builds in parallel.
-  #
-  # THE DIGIT GUARD RUNS BEFORE ANY ARITHMETIC (pre-merge audit finding,
-  # 2026-08-15). The earlier form matched the `*M` suffix first and then
-  # evaluated `$(( ${_mem%[Mm]} / 1024 ))`, so a malformed value like `abcM`
-  # reached `$(( … ))` unvalidated — bash evaluates the text as an arithmetic
-  # EXPRESSION (a bare name, or a syntax error printed raw to stderr), which
-  # both bypassed the documented fallback and showed the operator a shell
-  # diagnostic instead of the note. So: strip at most one size suffix, require
-  # what remains to be a non-empty run of digits, and only then compute.
   _gb=""
   case "$_mem" in
-    none)  _num="" ; _unit="" ;;
-    *[Gg]) _num="${_mem%[Gg]}" ; _unit=G ;;
-    *[Mm]) _num="${_mem%[Mm]}" ; _unit=M ;;
-    *)     _num="$_mem"        ; _unit=B ;;   # bare bytes
+    none)  _num=""; _unit="" ;;
+    *[Gg]) _num="${_mem%[Gg]}"; _unit=G ;;
+    *[Mm]) _num="${_mem%[Mm]}"; _unit=M ;;
+    *)     _num="$_mem"; _unit=B ;;
   esac
-  case "$_num" in
-    ''|*[!0-9]*) _num="" ;;  # "", "64.5G", "abcM", "infinity" — not an integer
-  esac
+  case "$_num" in ''|*[!0-9]*) _num="" ;; esac
   if [ -n "$_num" ]; then
-    case "$_unit" in
-      G) _gb="$_num" ;;
-      M) _gb=$(( _num / 1024 )) ;;
-      B) _gb=$(( _num / 1073741824 )) ;;
-    esac
+    case "$_unit" in G) _gb="$_num" ;; M) _gb=$(( _num / 1024 )) ;; B) _gb=$(( _num / 1073741824 )) ;; esac
   fi
   if [ -z "$_gb" ]; then
-    PAR_NOTE="LEAN_NUM_THREADS unset (cap '$_mem' is not an integer GiB size — toolchain default, $(nproc) cores)"
+    PAR_NOTE="LEAN_NUM_THREADS unset (cap '$_mem' is not an integer size — toolchain default, $(nproc) cores)"
   else
     _jobs=$(( _gb / 8 )); [ "$_jobs" -lt 2 ] && _jobs=2
     export LEAN_NUM_THREADS="$_jobs"
-    PAR_NOTE="cap $_mem -> LEAN_NUM_THREADS=$_jobs (cap/8G, floor 2; $(nproc) cores on this box)"
-    # The one measured case for a raise ([USER] 2026-10-11, D2): a COLD full
-    # build needs 64G+ (docs/operational-lessons.md, «Concurrency OOM»). Under
-    # the box default with no build tree present, say so BEFORE the build —
-    # a cgroup kill mid-run prints only a KILLED banner. A note, not a
-    # refusal: raising is the caller's deliberate act.
+    PAR_NOTE="cap $_mem -> LEAN_NUM_THREADS=$_jobs (cap/8G, floor 2; $(nproc) cores)"
     if [ "$_gb" -lt 64 ] && [ ! -d "$ROOT/.lake/build" ]; then
       PAR_NOTE="$PAR_NOTE; COLD build tree under a ${_mem} cap — measured need 64G+: capped -m 64G -- scripts/ci"
     fi
   fi
 fi
 echo "  $PAR_NOTE"
-RESULTS+=("  note build parallelism: $PAR_NOTE")
+note "build parallelism: $PAR_NOTE"
 
-# 0c. Oracle toolchain pin (launch audit D10-F4): the box's live go
-# must match baselines/go-oracle-pin — drift here silently moves the
-# oracle under every differential, probe, and re-pin (incident
-# precedent: the '1.26.x' CI float, 2026-08-21). Absent go is a note
-# (the fast gate itself does not run the oracle); mismatch is a FAIL
-# unless GOLEAN_ALLOW_GO_DRIFT=1 says so loudly.
+# ── GATE: the oracle pin. Drift here moves the oracle under every differential.
 step "oracle toolchain pin (baselines/go-oracle-pin)"
 if [ -f baselines/go-oracle-pin ]; then
   go_pin="$(head -1 baselines/go-oracle-pin | tr -d '[:space:]')"
   if command -v go >/dev/null 2>&1; then
     go_live="$(go version | awk '{print $3}')"
-    if [ "$go_live" = "$go_pin" ]; then
-      ok "oracle toolchain ($go_live = pin)"
-    elif [ "${GOLEAN_ALLOW_GO_DRIFT:-0}" = 1 ]; then
-      RESULTS+=("  note oracle toolchain DRIFTED ($go_live != pin $go_pin) — GOLEAN_ALLOW_GO_DRIFT=1")
-    else
-      bad "oracle toolchain $go_live != pinned $go_pin (baselines/go-oracle-pin; GOLEAN_ALLOW_GO_DRIFT=1 to override loudly)"
-    fi
+    if [ "$go_live" = "$go_pin" ]; then ok "oracle toolchain ($go_live = pin)"
+    elif [ "${GOLEAN_ALLOW_GO_DRIFT:-0}" = 1 ]; then note "oracle toolchain DRIFTED ($go_live != pin $go_pin) — GOLEAN_ALLOW_GO_DRIFT=1"
+    else bad "oracle toolchain $go_live != pinned $go_pin (baselines/go-oracle-pin; GOLEAN_ALLOW_GO_DRIFT=1 to override loudly)"; fi
   else
-    RESULTS+=("  note go not on PATH — oracle pin unverified here (differential runs verify it themselves)")
+    bad "go is not on PATH — the oracle pin is unverifiable and the gate's go tests cannot run"
   fi
 else
   bad "baselines/go-oracle-pin missing — the oracle pin is unverifiable"
 fi
 
-# 1. Escape-hatch preflight (cheap, no build). GoCore is proof-facing code —
-#    the charter's totality rule (no sorry/native_decide/axiom in the semantic
-#    core) binds it regardless of where the proofs live.
-#    SCOPE NARROWED AT THE REPO SPLIT (2026-08-31): GoLean/ only — proofs/
-#    left with its package (the in-build Audit gate, formerly the
-#    authoritative sweep behind this preflight, went with it; for the
-#    semantics core this text scan is now the standing check, and the
-#    charter's ban is the rule it polices).
-step "escape-hatch preflight (sorry / admit / native_decide / axiom in the semantic core)"
-# Match the tokens as CODE, then drop prose: line-comments (`--`), docstring
-# lines, and backtick-quoted mentions (`sorry`/`native_decide`/…).
-# Depth-proof file list via find (no globstar dependence); .lake excluded. Any
-# NEW .lean file under GoLean/ (plus the root GoLean.lean/Main.lean —
-# split audit A8) is scanned automatically. Line
-# comments are STRIPPED before matching (tamper audit F1: a trailing `-- WIP`
-# comment previously exempted the whole line, hiding real code); the token set
-# includes sorryAx/ofReduceBool (the axioms behind sorry/native_decide, which
-# dodge the surface-syntax tokens). Docstring prose is tolerated only via
-# backticked mentions.
-# The scan root must exist — an absent dir made the scan vacuously
-# green (launch audit D6-F2, probed).
-[ -d GoLean ] || bad "escape-hatch preflight: GoLean/ missing — scan would be vacuous"
-# Complete inline block comments are STRIPPED (like `--` comments)
-# before matching, so `sorry /- TODO -/` is caught; only a line with
-# an UNTERMINATED `/-` is still excluded (the token may sit inside a
-# multiline comment). Launch audit D6-F2 closed the `/-` sibling of
-# the earlier `--` tamper hole.
+# ── GATE: the escape-hatch scan over GoLean/ (the charter: the semantic core is
+# total). Text scans on code with comments stripped; the machine check is the
+# core totality audit below. One step, four scans.
+step "escape-hatch scan (sorry/admit/native_decide/axiom; unsafe/opaque/implemented_by; decide +native; partial in GoLean/GoCore/; core imports no EnumDedup)"
+scan_bad=0
+[ -d GoLean ] || { bad "escape-hatch scan: GoLean/ missing — the scan would be vacuous"; scan_bad=1; }
 hatch="$(find GoLean GoLean.lean Main.lean -name '*.lean' -not -path '*/.lake/*' -print0 2>/dev/null \
          | xargs -0 grep -nE 'sorry|admit|native_decide|ofReduceBool|^[[:space:]]*axiom ' 2>/dev/null \
          | sed -E 's/--.*$//; s@/-([^-]|-+[^/-])*-+/@@g' \
          | grep -E 'sorry|\badmit\b|native_decide|ofReduceBool|^[^:]*:[0-9]*:[[:space:]]*axiom ' \
          | grep -vE '/-|`(sorry|sorryAx|admit|native_decide|ofReduceBool|axiom)`|no sorry|without .*sorry|axioms:' \
          || true)"
-if [ -n "$hatch" ]; then
-  echo "$hatch"
-  bad "escape-hatch preflight — review the lines above (charter: the semantic core is total)"
-else
-  echo "  none found"
-  ok "escape-hatch preflight"
-fi
-
-# 1a2. META-LAYER escape hatches (examples phase-2 pre-merge audit, 2026-08-15).
-#      `unsafe`, `opaque` and `@[implemented_by]` let a declaration's COMPILED
-#      behaviour diverge from its logical content — the same class as
-#      native_decide, and invisible to `#print axioms` because the divergence
-#      is in the evaluator, not the proof term. The scan is DECLARATION-ANCHORED
-#      rather than token-based: all three words appear in prose throughout the
-#      docstrings (block comments are not stripped by the pipeline above), so
-#      matching bare tokens would be noise. Speedbump standard: any NEW hit
-#      fails loud and is either removed or added here with a reason.
-step "meta-layer escape hatches (unsafe / opaque / @[implemented_by] outside the allowlist)"
-# THE ALLOWLIST — EMPTY since the repo split (2026-08-31): the sole entry
-# (proofs/GoLeanProofs/EntryEq.lean, the `derive_entry_eq` macro's
-# compiler-evaluation plumbing) left with the proofs package. GoLean/ has
-# no allowlisted meta-layer hatches; any NEW hit fails loud and is either
-# removed or allowlisted here with a reason.
-META_HATCH_ALLOW=''
-# Widened + comment-stripped (launch audit D6-F4, probed): the old
-# line-anchored patterns missed `@[simp, implemented_by …]`, split-line
-# `unsafe`⏎`def`, and `opaque` with the signature on the next line —
-# and had no downstream cover (#print axioms is blind to
-# implemented_by). strip_lean_comments preserves line numbers, so the
-# scan now runs on code, not prose, and the patterns can be loose.
+if [ -n "$hatch" ]; then echo "$hatch"; bad "escape-hatch scan: sorry/admit/native_decide/axiom in the semantic core (lines above)"; scan_bad=1; fi
 meta_hatch=""
-while IFS= read -r -d '' mh_f; do
-  [ "$mh_f" = "$META_HATCH_ALLOW" ] && continue
-  mh_hits="$(strip_lean_comments < "$mh_f" | grep -nE \
-      '(^|[[:space:]])unsafe([[:space:]]+(def|abbrev|instance|structure|inductive|theorem|example)\b|[[:space:]]*$)|(^|[[:space:]])opaque([[:space:]]+[A-Za-z_]|[[:space:]]*$)|@\[[^]]*implemented_by' \
-      || true)"
-  if [ -n "$mh_hits" ]; then
-    meta_hatch="${meta_hatch}$(printf '%s\n' "$mh_hits" | sed "s|^|${mh_f}:|")"$'\n'
-  fi
-done < <(find GoLean GoLean.lean Main.lean -name '*.lean' -not -path '*/.lake/*' -print0 2>/dev/null)
-meta_hatch="${meta_hatch%$'\n'}"
-if [ -n "$meta_hatch" ]; then
-  echo "$meta_hatch"
-  bad "meta-layer escape hatches outside the allowlist — remove them, or allowlist with a reason"
-else
-  echo "  none found"
-  ok "meta-layer escape hatches (allowlist empty since the repo split)"
-fi
-
-# 1a3. ESCAPE-HATCH ADDENDUM — native decision config/flag spellings
-# (origin: A-TRIP fix round F4, 2026-08-28; scope narrowed to GoLean/ at
-# the repo split, 2026-08-31). Step 1's token set predates this unit and
-# is NOT modified; this ADDS the spellings it cannot see: `decide +native`
-# and `decide (config := … native := true …)` reach the same ofReduceBool
-# axiom as `native_decide` without the surface token. Scope: same file
-# set and comment-stripping as the meta-hatch scan; single-line grep
-# (a line-broken config object evades it — recorded limit; the in-build
-# Audit axiom sweep that backstopped this left with the proofs package).
-step "escape-hatch addendum (decide +native / config-syntax native spellings — A-TRIP F4)"
 nat_hatch=""
-while IFS= read -r -d '' nh_f; do
-  nh_hits="$(strip_lean_comments < "$nh_f" | grep -nE 'decide[[:space:]]*\+[[:space:]]*native|decide[[:space:]]*\([[:space:]]*config[[:space:]]*:=[^)]*native[[:space:]]*:=[[:space:]]*true' || true)"
-  if [ -n "$nh_hits" ]; then
-    nat_hatch="${nat_hatch}$(printf '%s\n' "$nh_hits" | sed "s|^|${nh_f}:|")"$'\n'
-  fi
+part_hatch=""
+while IFS= read -r -d '' f; do
+  code="$(strip_lean_comments < "$f")"
+  hits="$(printf '%s\n' "$code" | grep -nE \
+      '(^|[[:space:]])unsafe([[:space:]]+(def|abbrev|instance|structure|inductive|theorem|example)\b|[[:space:]]*$)|(^|[[:space:]])opaque([[:space:]]+[A-Za-z_]|[[:space:]]*$)|@\[[^]]*implemented_by' || true)"
+  [ -n "$hits" ] && meta_hatch="${meta_hatch}$(printf '%s\n' "$hits" | sed "s|^|${f}:|")"$'\n'
+  hits="$(printf '%s\n' "$code" | grep -nE 'decide[[:space:]]*\+[[:space:]]*native|decide[[:space:]]*\([[:space:]]*config[[:space:]]*:=[^)]*native[[:space:]]*:=[[:space:]]*true' || true)"
+  [ -n "$hits" ] && nat_hatch="${nat_hatch}$(printf '%s\n' "$hits" | sed "s|^|${f}:|")"$'\n'
+  case "$f" in GoLean/GoCore/*)
+    hits="$(printf '%s\n' "$code" | grep -nE '(^|[[:space:]])partial[[:space:]]+(def|theorem|instance|abbrev)\b' || true)"
+    [ -n "$hits" ] && part_hatch="${part_hatch}$(printf '%s\n' "$hits" | sed "s|^|${f}:|")"$'\n' ;;
+  esac
 done < <(find GoLean GoLean.lean Main.lean -name '*.lean' -not -path '*/.lake/*' -print0 2>/dev/null)
-nat_hatch="${nat_hatch%$'\n'}"
-if [ -n "$nat_hatch" ]; then
-  echo "$nat_hatch"
-  bad "escape-hatch addendum (a native-decision spelling outside the token scan — same class as native_decide)"
+if [ -n "$meta_hatch" ]; then printf '%s' "$meta_hatch"; bad "escape-hatch scan: unsafe/opaque/implemented_by in GoLean/ (the compiled behaviour may diverge from the logical content)"; scan_bad=1; fi
+if [ -n "$nat_hatch" ]; then printf '%s' "$nat_hatch"; bad "escape-hatch scan: a native-decision spelling (same class as native_decide)"; scan_bad=1; fi
+if [ -n "$part_hatch" ]; then printf '%s' "$part_hatch"; bad "escape-hatch scan: partial declaration in GoLean/GoCore/ (the semantic core uses structural/well-founded recursion)"; scan_bad=1; fi
+if [ -f GoLean/EnumDedup.lean ]; then
+  eng_hits="$( { find GoLean/GoCore -name '*.lean' -not -path '*/.lake/*'; echo GoLean/GoCore.lean; } \
+               | xargs grep -nE "${IMPORT_RE}GoLean\.EnumDedup([^A-Za-z].*)?\$" 2>/dev/null || true)"
+  if [ -n "$eng_hits" ]; then echo "$eng_hits"; bad "escape-hatch scan: the semantic core imports the untrusted dedup engine (CLI-only by design)"; scan_bad=1; fi
 else
-  echo "  none found"
-  ok "escape-hatch addendum (no decide +native / native-config spellings)"
+  bad "escape-hatch scan: GoLean/EnumDedup.lean missing (deleted or renamed without re-pointing this clause?)"; scan_bad=1
 fi
+[ "$scan_bad" -eq 0 ] && { echo "  clean"; ok "escape-hatch scan (clean)"; }
 
+# ── SPEEDBUMPS: document-vs-code consistency, static, seconds. Report-only.
+step "speedbumps (report-only — a RED is read at the merge ask and fixed or waived by name)"
+run_bump "bugs index = baseline (scripts/check-bugs.sh)" ./scripts/check-bugs.sh
+run_bump "feature tags, no dead tag (scripts/check-coverage)" ./scripts/check-coverage
+run_bump "spec anchors resolve at the pin (scripts/check-spec-anchors)" ./scripts/check-spec-anchors
+run_bump "stdlib admission register = frontend tables (scripts/check-stdlib-register)" ./scripts/check-stdlib-register
+run_bump "evidence-on-main size caps (scripts/check-evidence-size)" ./scripts/check-evidence-size
+run_bump "AGENTS.md is the alias of CLAUDE.md (scripts/check-agents-alias)" ./scripts/check-agents-alias
+run_bump "imported-goose verbatim at the pin (scripts/check-imported-goose)" ./scripts/check-imported-goose
+run_bump "memory-module raw call sites = inventory (scripts/check-mem-callsites)" bash scripts/check-mem-callsites
+run_bump "pool spec freeze + staged discharge (scripts/check-pool-spec)" python3 scripts/check-pool-spec
 
-# 1b. Bug-index cross-check (static, no build): BUGS.md <-> baseline.
-step "fidelity-bug index cross-check (scripts/check-bugs.sh)"
-if bugout="$(./scripts/check-bugs.sh 2>&1)"; then echo "$bugout" | sed 's/^/  /'; ok "bug-index cross-check"; else echo "$bugout"; bad "bug-index cross-check"; fi
-
-# 1c. Feature-coverage cross-check: every canonical tag exercised (no dead tags);
-#     all-failing tags surfaced. Manifest generation, no Lean build.
-step "feature-coverage cross-check (scripts/check-coverage)"
-if covout="$(./scripts/check-coverage 2>&1)"; then echo "$covout" | tail -2 | sed 's/^/  /'; ok "feature-coverage (no dead tags)"; else echo "$covout"; bad "feature-coverage (dead tag — see above)"; fi
-
-# 1c2b. Spec-anchor citations resolve against the PINNED Go spec/memory
-#     model (spec-truth campaign mechanism 4.1, landed at P2). Checks
-#     resolution only (anchor exists at the pin); content-level drift is
-#     the covmap layer's job. Fails closed without deps/go or on rev
-#     drift — deps/go is default-tier in scripts/setup-deps, and the CI
-#     workflow clones it pinned (like deps/goose for the verbatim gate).
-step "spec-anchor citations (scripts/check-spec-anchors)"
-if anchout="$(./scripts/check-spec-anchors 2>&1)"; then echo "$anchout" | sed 's/^/  /'; ok "spec-anchor citations resolve at the pin"; else echo "$anchout" | sed 's/^/  /'; bad "spec-anchor citations (see above)"; fi
-
-# 1f. Stdlib admission register (stdlib source-through slice 1, 2026-09-03;
-# memo §2.2, G8 ruled): the register's machine block must equal the
-# frontend's own admission tables (source-through packages, substitution
-# rows, overlay/primitive entries under their caps, retained shims,
-# shadow types). A table widened in code without the register — or the
-# reverse — fails here; the caps refuse inside the dump itself.
-step "stdlib admission register (scripts/check-stdlib-register)"
-if regout="$(./scripts/check-stdlib-register 2>&1)"; then echo "$regout" | sed 's/^/  /'; ok "stdlib admission register = frontend tables"; else echo "$regout" | sed 's/^/  /'; bad "stdlib admission register (see above)"; fi
-
-# 1c2. Membership-lane gate self-test (delta-review T2, 2026-08-05): the
-# lane's shell gates (manifest lane validation incl. the explicit-width
-# requirement) exercised against the recorded bad-shape fixtures, PLUS —
-# hoisted into the fast gate at the channels-arc final audit (F19,
-# 2026-08-07) — the G1-G4 gate-integrity no-publish fixtures (go on PATH
-# required, no real build: G1/G2 shadow `lake`, G3/G4 die pre-build;
-# ~2s). The golean-binary-dependent half (harness param re-validation,
-# frontend guard, B3-B5) runs under --diff below.
-step "membership-lane gate self-test (scripts/test-lane-validation; incl. G1-G4 no-publish)"
-if laneout="$(./scripts/test-lane-validation 2>&1)"; then
-  echo "$laneout" | tail -1 | sed 's/^/  /'
-  ok "lane-validation fixtures (manifest gates reject bad shapes)"
-else
-  echo "$laneout"
-  bad "lane-validation fixtures (a lane gate went quiet — see above)"
-fi
-
-# 1c3b. Evidence-on-main size gate (landing chunk L2, 2026-09-07). [USER]
-# ruling (Mike 2026-09-07, relayed): «The evidence blob should not land, and
-# generally we should not dump big evidence bundles on main (they can't be
-# easily hosted on GH for one)». Caps ([AGENT]-proposed, defined ONCE at the
-# top of scripts/check-evidence-size): file 256 KiB, top-level evidence dir
-# 4 MiB, no archive extensions, no blob byte-identical to a tracked file
-# outside docs/evidence/. Pre-existing offenders are frozen in
-# docs/evidence/SIZE-ALLOWLIST.tsv (shrink-only). The checker's SELF-TEST
-# runs first against a scratch repo under .tmp/ so a broken checker is a
-# red, never a quiet pass; then the tracked index is judged.
-step "evidence-on-main size gate (scripts/check-evidence-size; self-test first)"
-if evtest="$(./scripts/test-check-evidence-size 2>&1)"; then
-  echo "$evtest" | tail -1 | sed 's/^/  /'
-  if evout="$(./scripts/check-evidence-size 2>&1)"; then
-    echo "$evout" | tail -1 | sed 's/^/  /'
-    ok "evidence-on-main size gate"
-  else
-    echo "$evout"
-    bad "evidence-on-main size gate (offender(s) outside docs/evidence/SIZE-ALLOWLIST.tsv — see above; bulky evidence goes to an archive branch, docs/architecture-rules.md)"
-  fi
-else
-  echo "$evtest"
-  bad "evidence-on-main size gate SELF-TEST (the checker itself is broken — see above)"
-fi
-
-# 1c3c. AGENTS.md alias gate. [USER] direction (Mike, 2026-09-07, relayed by
-# the [AGENT] coordinator): «can you make AGENTS.md a git-tracked alias for
-# CLAUDE.md (add a note in CLAUDE.md to this effect) - this is so other
-# agents can find our working instructions». AGENTS.md must be a git-tracked
-# symlink whose target is exactly CLAUDE.md — or, if the copy shape is ever
-# adopted for raw-URL readers (docs/architecture-rules.md, "Alias caveat"),
-# a regular file byte-identical to CLAUDE.md — in the WORKING TREE and the
-# INDEX; the checker names the shape it found. The architecture rules that
-# AGENTS.md used to hold are docs/architecture-rules.md. The checker's
-# SELF-TEST runs first against scratch repos under .tmp/ so a broken checker
-# is a red, never a quiet pass.
-step "AGENTS.md alias of CLAUDE.md (scripts/check-agents-alias; self-test first)"
-if altest="$(./scripts/test-check-agents-alias 2>&1)"; then
-  echo "$altest" | tail -1 | sed 's/^/  /'
-  if alout="$(./scripts/check-agents-alias 2>&1)"; then
-    echo "$alout" | tail -1 | sed 's/^/  /'
-    ok "AGENTS.md alias of CLAUDE.md"
-  else
-    echo "$alout"
-    bad "AGENTS.md alias of CLAUDE.md (see above; the symlink shape is restored by: ln -sf CLAUDE.md AGENTS.md && git add AGENTS.md)"
-  fi
-else
-  echo "$altest"
-  bad "AGENTS.md alias SELF-TEST (the checker itself is broken — see above)"
-fi
-
-# 1c3d. The stdlib inittask generator's fail-closed self-test (FR-37 lane
-# audit, 2026-10-07; lane lane/field-offsets-inittask-1007, [USER] Mike
-# 2026-10-07 «1-4 approved as proposed», relayed): scripts/gen-inittask-table
-# must die by name on a failing `go tool nm`, a `go list` package or
-# dependency error outside the no-Go-files class, and an unexplained missing
-# archive — never write a silent `?` row. Runs against a fake `go` under
-# .tmp/ (no toolchain, no cache); the table itself is pinned by its tracked
-# file (regenerate on a Go pin move).
-step "inittask generator fail-closed self-test (scripts/test-gen-inittask-table)"
-if gitest="$(./scripts/test-gen-inittask-table 2>&1)"; then
-  echo "$gitest" | tail -1 | sed 's/^/  /'
-  ok "inittask generator fail-closed self-test"
-else
-  echo "$gitest"
-  bad "inittask generator fail-closed self-test (see above)"
-fi
-
-# 1c4. Imported-goose verbatim staleness (goose-parity phase-A checkpoint,
-# 2026-08-08; check-golden mold — re-verify the LANDED artifact against
-# its source): every imported-goose main.go's above-marker region must be
-# byte-identical (modulo trailing blanks) to the upstream goose sources
-# its provenance header names, at the pinned rev. Fails closed on a
-# missing/wrong-rev deps/goose checkout — the charter's verbatim-import
-# invariant must never pass unverified.
-step "imported-goose verbatim staleness (scripts/check-imported-goose)"
-if ./scripts/check-imported-goose; then
-  ok "imported-goose verbatim (above-marker bytes = pinned upstream)"
-else
-  bad "imported-goose verbatim DRIFTED (a landed imported body no longer matches goose @ pin)"
-fi
-
-# 1d. Engine-isolation lint (POR slice 2026-08-21,
-# docs/2026-08-21_w32-por-design.md §7; the surviving semantics-side clause
-# of the pre-split import-direction lint — the proof-layer clauses left with
-# the proofs package at the repo split, 2026-08-31): the dedup ENGINE
-# (GoLean/EnumDedup.lean) is untrusted and deletable — the semantic core
-# (GoLean/GoCore/**) must never import it (only the CLI may). This is the
-# module's deletion test, mechanized; fail closed if the engine file
-# vanishes without this clause moving.
-# SCOPE, honest (audit fix 2026-08-21, finding B-F2): the scan is
-# DIRECT-import only — a `GoLean/*.lean` intermediary that imported the
-# engine and was itself imported by a scanned file would be missed.
-# Recorded, not fixed: the aggregator is the realistic vector and it IS
-# scanned (GoLean/GoCore.lean listed explicitly — a file, not inside the
-# GoLean/GoCore/ directory the find walks).
-step "engine-isolation lint (semantic core imports no EnumDedup — CLI-only by design)"
-dir_bad=0
-if [ ! -f GoLean/EnumDedup.lean ]; then
-  echo "  dedup engine file MISSING: GoLean/EnumDedup.lean (deleted/renamed without re-pointing this clause?)" >&2
-  dir_bad=1
-else
-  eng_files=$(find GoLean/GoCore -name '*.lean' -not -path '*/.lake/*'; echo GoLean/GoCore.lean)
-  while IFS= read -r ef; do
-    hits=$(grep -nE "${IMPORT_RE}GoLean\.EnumDedup([^A-Za-z].*)?\$" "$ef"); rc=$?
-    if [ "$rc" -ge 2 ]; then
-      echo "  engine-isolation scan ERRORED on $ef (rc=$rc) — failing closed" >&2
-      dir_bad=1
-    elif [ "$rc" -eq 0 ]; then
-      echo "  $ef imports the untrusted dedup engine (GoLean.EnumDedup — CLI-only by design):" >&2
-      echo "$hits" | sed 's/^/    /' >&2
-      dir_bad=1
-    fi
-  done <<EOF_ENGFILES
-$eng_files
-EOF_ENGFILES
-fi
-if [ "$dir_bad" = 0 ]; then
-  ok "engine-isolation (core ↛ EnumDedup)"
-else
-  bad "engine-isolation violated (the semantic core must not import the dedup engine)"
-fi
-
-# The memory module's emit/peek discipline, mechanically (C1 audit fix round F7,
-# 2026-09-18): after the footprint table's deletion the ONLY thing that said
-# «every user-memory access goes through an emitting `Mem.*` operation» was a
-# docstring. scripts/check-mem-callsites scans GoLean/**/*.lean (comments
-# stripped) for every mention of a RAW memory operation (`loadLoc`, `storeLoc`,
-# the payload readers/writers, `syncCell`/`chanCell`, `loadMany`/`storeMany`,
-# `Store.updateCell`/`alloc`/`allocCell`, `Heap.lookup`) inside an executable
-# declaration and compares (file, declaration, op, count) EXACTLY with the
-# tracked inventory scripts/mem-callsites.tsv, whose fifth column is the reason
-# the site is not a data access. A new raw site, a changed count, a stale row
-# or a malformed inventory FAILS by name. Static, no build; an ADDED check.
-step "memory-module raw call sites (scripts/check-mem-callsites vs scripts/mem-callsites.tsv)"
-if bash scripts/check-mem-callsites; then
-  ok "memory-module raw call-site inventory (emit/peek discipline)"
-else
-  bad "memory-module raw call-site inventory (scripts/check-mem-callsites)"
-fi
-
-
-
-# 2. Core build (the frontend / interpreter / relation).
-step "core build (lake build; must be WARNING-free — GoLean/ module warnings
-# replay into the runner's stdout and corrupt the JSON observation channel,
-# the recorded ops failure mode that produced mass phantom drift 2026-07-23)"
-core_out="$(scripts/capped lake build 2>&1)"
-core_rc=$?
-echo "$core_out" | tail -3
-# Root modules included in the warning watch (split audit A8, 2026-08-31):
-# GoLean.lean/Main.lean warnings replay into the runner channel the same way.
+# ── GATE: the build of every target. Warning-free, because a GoLean/ warning
+# replays into the runner's stdout and corrupts the JSON observation channel
+# (the 2026-07-23 phantom-drift incident).
+step "lake build (every library and executable; warning-free)"
+core_out="$(scripts/capped lake build 2>&1)"; core_rc=$?
+echo "$core_out" | tail -3 | sed 's/^/  /'
 core_warns="$(echo "$core_out" | grep -E '^warning: (GoLean/|GoLean\.lean|Main\.lean)' || true)"
-if [ $core_rc -ne 0 ]; then
-  bad "core build"
-elif [ -n "$core_warns" ]; then
-  echo "$core_warns" | head -10
-  bad "core build has GoLean/ warnings (they corrupt the runner JSON channel)"
-else
-  ok "core build (warning-free)"
-fi
+if [ "$core_rc" -ne 0 ]; then bad "lake build (exit $core_rc)"
+elif [ -n "$core_warns" ]; then echo "$core_warns" | head -10; bad "lake build has GoLean/ warnings (they corrupt the runner JSON channel)"
+else ok "lake build (every target, warning-free)"; fi
 
-# Every Tests/ module is named by a lakefile.toml glob, so the default build
-# above built it (gate cull 2026-10-12, D2: this one set check replaces the
-# executed-build receipt registry). Lake skips an unowned module silently.
-step "every Tests/*.lean is owned by a lakefile library (so the default build built it)"
+# Every Tests/ module must be named by a lakefile.toml glob, or the build above
+# skipped it silently (D2: this set check replaces the receipt registry).
+step "every Tests/*.lean is owned by a lakefile library"
 tests_unowned=""
 for tf in Tests/*.lean; do
   tm="Tests.$(basename "$tf" .lean)"
   grep -q "\"$tm\"" lakefile.toml || tests_unowned="$tests_unowned $tm"
 done
-if [ -z "$tests_unowned" ]; then
-  ok "Tests/ library ownership (every module named by a lakefile glob)"
-else
-  echo "  not in any lakefile.toml glob:$tests_unowned" >&2
-  bad "Tests/ library ownership (unowned module(s):$tests_unowned — add to a lakefile.toml glob)"
-fi
+if [ -z "$tests_unowned" ]; then ok "Tests/ library ownership (every module named by a lakefile glob)"
+else echo "  not in any lakefile.toml glob:$tests_unowned" >&2; bad "Tests/ library ownership (unowned:$tests_unowned — add to a lakefile.toml glob)"; fi
 
-# The core totality audit (2026-09-16, docs/2026-09-16_typed-profiles-parked.md
-# §3): re-homed from the parked `semantic interface` step when the typed-profile
-# family was parked. The charter's «no sorry, no native_decide, no axioms
-# anywhere in GoLean/» is MACHINE-checked here, not only text-scanned (steps
-# 1/1a2/1a3): the harness imports every module under GoLean/ found on disk and
-# audits every declaration of every local module for the classical trio only;
-# the required core theorems (trace/run bridges, the abort observer, the string
-# panic members, the contract regressions) must exist; the abort-text helpers
-# stay constructive; compiled poisons are rejected by name.
-step "core totality audit (every GoLean/ module post-import: classical trio only, required core theorems, compiled poison controls)"
-if bash scripts/check-core-audit; then
-  ok "core totality audit (every GoLean/ module; required core theorems; poison controls)"
-else
-  bad "core totality audit (scripts/check-core-audit)"
-fi
+# ── GATE: the machine check of totality — a harness imports every GoLean/
+# module and audits every declaration (classical trio only; required core
+# theorems present; abort-text helpers constructive).
+step "core totality audit (scripts/check-core-audit)"
+run_gate "core totality audit (every GoLean/ module; required core theorems)" bash scripts/check-core-audit
 
-# I1/L1b: fresh Go declarations through the strict byte decoder, an enforced
-# fixture pin, malformed-input controls and compiling dependency-audit poisons.
-step "declaration boundary (Go identity, strict JSON, fixture pin, dependency audit)"
-if bash scripts/check-declarations; then
-  ok "declaration boundary"
-else
-  bad "declaration boundary (scripts/check-declarations)"
-fi
+# ── GATE: the Go-side unit tests — the lowering's own tests and the lowering
+# tables, then the oracle observer (-count=1: its inertness test execs the
+# pinned `go run`, which the test cache cannot key).
+step "go tests (tools/nativefrontend, tools/lowerdiag, tools/coverageharness)"
+run_gate "frontend + lowering-table unit tests (go test ./tools/nativefrontend ./tools/lowerdiag)" \
+  env GO111MODULE=off GOCACHE="$GOCACHE_DIR" go test ./tools/nativefrontend ./tools/lowerdiag
+run_gate "coverage-harness unit tests (go test -count=1 ./tools/coverageharness)" \
+  env GO111MODULE=off GOCACHE="$GOCACHE_DIR" go test -count=1 ./tools/coverageharness
 
-# BUG-110 (whole-project review 2026-09-11 F3 = the 2026-09-05 gate audit's
-# F9; lane fix/review-boundary-0911): the production wire decoder's
-# BYTE-input controls through the REAL CLI binary — a forged leading
-# duplicate `schema`, a duplicate key deep in a call node, an absent or
-# mis-sized `resultTypes` vector, a missing `buildContext`, unpaired
-# surrogate escapes and a raw invalid UTF-8 byte must all refuse naming
-# their cause; a valid surrogate pair and the untouched wire must run.
-# Fixture: Tests/wire-boundary/main.go (the review's discard-call probe),
-# lowered fresh by the frontend each run. A test on an already-parsed Json
-# value would not count: the defect was upstream of every validator.
-step "wire boundary (production byte decoder through the real CLI: scripts/check-wire-boundary)"
-if bash scripts/check-wire-boundary; then
-  ok "wire boundary (byte-level controls through the real CLI)"
-else
-  bad "wire boundary (scripts/check-wire-boundary)"
-fi
-
-step "package-correct method identity (fresh wire, strict decoder, audit controls)"
-if bash scripts/check-method-identity; then
-  ok "package-correct method identity"
-else
-  bad "package-correct method identity"
-fi
-
-# The `unseq` scheduler (evaluation-order model v2.1 Stage B, 2026-09-16):
-# every reference witness as a hand-built graph, enumerated over ALL tapes by
-# the existing enumerator/driver path and compared EXACTLY with the reference
-# sets; malformed graphs refused by name; replay tapes; singleton picks
-# consume nothing; the mechanism theorem's step lemmas under the post-import
-# axiom audit.
-step "unseq scheduler (Stage B): reference sets over all tapes, named refusals, replay, theorem audit"
-if bash scripts/check-unseq-scheduler; then
-  ok "unseq scheduler (Stage B)"
-else
-  bad "unseq scheduler (Stage B) (scripts/check-unseq-scheduler)"
-fi
-
-# The `unseq` WIRE (evaluation-order model v2.1 Stage C, 2026-09-19): hand-built
-# wires — the real frontend's envelope around a hand-written `unseq` node — read
-# from their BYTES, decoded by NativeToIR's `unseq` arm and enumerated over ALL
-# tapes by the corpus's enumerator path, compared EXACTLY with the v2.1 spike's
-# reference sets (check (b) «machine equals reference over the wire»); every
-# one-edit mutant refused BY NAME, both in-process and through the real CLI; the
-# fixtures byte-identical to their generator's output.
-step "unseq wire (Stage C): exact reference sets over hand-built wires, decoder mutants by name, fixture re-derivation"
-if bash scripts/check-unseq-wire; then
-  ok "unseq wire (Stage C)"
-else
-  bad "unseq wire (Stage C) (scripts/check-unseq-wire)"
-fi
-
-# The semantic EQUATIONS (window packet D, 2026-10-03; charter row 7's second and third checks):
-# the per-arm `stepFn` equation lemmas (GoLean/GoCore/Equations.lean, the `stepFn_eqns` rewrite
-# set) build; the toy client (Tests/EquationClient.lean) proves its facts by the equation set
-# alone, pins every equation theorem (exhaustive enrollment, checked in-file) and never unfolds
-# `stepFn` (the no-unfold guard); two fail-closed self-tests (an unfolding mutant trips the guard,
-# a pin-deleted mutant fails the enrollment check by name).
-step "semantic equations (packet D): equation lemmas, the toy client, exhaustive enrollment, no-unfold guard, self-tests"
-if bash scripts/check-equations; then
-  ok "semantic equations (scripts/check-equations)"
-else
-  bad "semantic equations (scripts/check-equations)"
-fi
-
-# The pool/registry half (spec packet 2026-10-04; grind brief §§4, 7–8; wired at the M1 landing
-# train as the brief commits, [AGENT] tooling worker 2026-10-05): the FROZEN surface
-# (PoolStep.lean, PoolStatement.lean, every `_stmt` body vs docs/specs/pool-relation/FROZEN.sha256),
-# the milestone map covering exactly the frozen statements (docs/specs/pool-relation/MILESTONES),
-# and the STAGED discharge: every statement of milestones <= docs/specs/pool-relation/LANDED proved
-# as `theorem <name> : <name>_stmt` in GoLean/GoCore/PoolSound.lean (later ones may land early).
-# Self-tests (frozen-surface mutants, map mutants, staged-discharge controls) run first. Pure
-# Python: no build; the Lean side is the default build + the core audit above.
-step "pool spec freeze + discharge (scripts/check-pool-spec)"
-if poolout="$(python3 scripts/check-pool-spec 2>&1)"; then
-  echo "$poolout" | sed -e '/^note \[owed\]/d' -e 's/^/  /'
-  ok "pool spec freeze + discharge (scripts/check-pool-spec)"
-else
-  echo "$poolout" | sed 's/^/  /'
-  bad "pool spec freeze + discharge (scripts/check-pool-spec)"
-fi
-
-# The typed-profile family's nine steps (semantic interface; typed contract ×7;
-# typed recovery terminal classification) were REMOVED 2026-09-16 with the family
-# they gated (docs/2026-09-16_typed-profiles-parked.md §1 accounts for every step;
-# the one core-guarding check among them — the post-import axiom audit — is the
-# core totality audit step above). Preserved: tag typed-profiles/last-main-2026-09-16.
-
-# 2b. Frontend pins (restored at the split audit, findings A1/A2 + B1/B8
-# — docs/2026-08-31_repo-split-plan.md fix round): the two SEMANTICS
-# pins that lived inside the parked check-golden. (1) the
-# hidden-dep-order deviation-observation pin — the differential row is
-# permanently red ("≠ gc"), so ONLY this pin catches a drift to a third
-# realized init order; (2) the raft twin-wire pin — the only gate
-# exercising the frontend over the real raftsubject/ packages. Ordered
-# after the core build (both need the golean binary; their internal
-# lake build is then a no-op). Fail closed, byte-exact, re-pin only
-# deliberately with a written reason.
-step "frontend pins (scripts/check-frontend-pins — deviation observation + raft twin wire)"
-if ./scripts/check-frontend-pins; then
-  ok "frontend pins (realized init-order deviation + twin wire = pinned bytes)"
-else
-  bad "frontend pins DRIFTED or broken (see above — re-pin deliberately with the reason)"
-fi
-
-
-
-
-
-
-
-
-# 3a1. Import-pipeline gate self-test (goose-parity phase-A checkpoint,
-# 2026-08-08): scripts/import-goose's reject-shape fixtures (rev drift,
-# imports, func main, build tags, package mismatch, non-self-containment,
-# zero-oracle fail-closed, dest collision) plus the standing verbatim
-# guard's own tamper/wrong-rev/missing-checkout fixtures — the same
-# gated-mold treatment as its declared mold, test-lane-validation.
-# Needs go on PATH (self-containment fixture) and the core build above.
-# (The R2 pin-guard fixture half was removed at the repo split — its
-# subject, check-imported-pins, left with the proofs package.)
-step "import-goose gate self-test (scripts/test-import-goose)"
-if igout="$(./scripts/test-import-goose 2>&1)"; then
-  echo "$igout" | tail -1 | sed 's/^/  /'
-  ok "import-goose fixtures (importer + verbatim guard reject bad shapes)"
-else
-  echo "$igout"
-  bad "import-goose fixtures (an import gate went quiet — see above)"
-fi
-
-
-
-# 3b. Frontend unit tests (generics slice, 2026-08-05): the monomorphization
-#     identity layer (mono.go — mangled-key renderings pinned against the
-#     reflect probes, registry collision/cap refusals) is exercised by
-#     `go test`, not by the differential, so it gets its own step.
-step "frontend unit tests (go test ./tools/nativefrontend)"
-if ftout="$(GO111MODULE=off GOCACHE="$PWD/artifacts/go-build-cache" go test ./tools/nativefrontend 2>&1)"; then
-  echo "$ftout" | tail -2
-  ok "frontend unit tests"
-else
-  echo "$ftout" | tail -20
-  bad "frontend unit tests"
-fi
-
-# 3b. Lowering-diagnostic unit tests (lane tooling, report-only — but the
-#     causes table's ledger check is what keeps tools/lowerdiag/causes.tsv
-#     from drifting from docs/language-coverage-ledger.md's FR/Q rows, and
-#     the machine-surface / library-refusal tables from drifting from the
-#     frontend's own tables and the baseline; a `pending:<branch>` row goes
-#     STALE the moment its FR row lands. Guard-strengthening only: nothing
-#     here reads the diagnostic's output.)
-step "lowering-diagnostic tables (go test ./tools/lowerdiag — causes.tsv vs ledger, surface tables vs frontend, calibration)"
-if ldout="$(GO111MODULE=off GOCACHE="$PWD/artifacts/go-build-cache" go test ./tools/lowerdiag 2>&1)"; then
-  echo "$ldout" | tail -2
-  ok "lowering-diagnostic tables"
-else
-  echo "$ldout" | tail -20
-  bad "lowering-diagnostic tables (causes.tsv / machine-surface.tsv / library-refusals.tsv drifted, or the static pass disagrees with a wire)"
-fi
-
-# 3c. Coverage-harness unit tests (landing chunk L4 `land/observer-terminal`,
-#     2026-09-07 [AGENT]): the oracle observer — the same-run crash channel,
-#     the pinned terminal classifier, the runtime chain-shape pin, byte-exact
-#     transport, and the crash hook's inertness on the observation (landing
-#     review A-R9) — is exercised by `go test`, not by the differential (which
-#     consumes its verdicts), so it gets its own step. -count=1: the inertness
-#     test execs the pinned `go run`, whose effects the test cache cannot key.
-#     Additive: this block can only add a red.
-step "coverage-harness unit tests (go test ./tools/coverageharness — crash channel, terminal classifier, byte transport, hook inertness)"
-if chout="$(GO111MODULE=off GOCACHE="$PWD/artifacts/go-build-cache" go test -count=1 ./tools/coverageharness 2>&1)"; then
-  echo "$chout" | tail -2
-  ok "coverage-harness unit tests"
-else
-  echo "$chout" | tail -20
-  bad "coverage-harness unit tests (the oracle observer's own tests failed — see above)"
-fi
-
-# 4. Interpreter unit tests.
+# ── GATE: the interpreter's unit tests. A gutted exe exiting 0 with no output
+# is a degenerate run, not a pass.
 step "interpreter eval tests (gocore-eval-tests)"
 evout="$(scripts/capped lake exe gocore-eval-tests 2>&1)"; evrc=$?
 evok="$(printf '%s\n' "$evout" | grep -c '^ok:')"
 evbad="$(printf '%s\n' "$evout" | grep -icE '^(not ok|fail)')"
 echo "  ok:$evok  fail:$evbad  exit:$evrc"
-# House non-empty assertion (launch audit D6-F3): a gutted test exe
-# exiting 0 with no output must not print "ok (0 ok)".
-if [ "$evrc" -eq 0 ] && [ "$evbad" -eq 0 ] && [ "$evok" -gt 0 ]; then ok "eval tests ($evok ok)"; else bad "eval tests (exit $evrc, $evbad bad, $evok ok — zero ok is a degenerate run)"; fi
+if [ "$evrc" -eq 0 ] && [ "$evbad" -eq 0 ] && [ "$evok" -gt 0 ]; then ok "eval tests ($evok ok)"
+else printf '%s\n' "$evout" | grep -iE '^(not ok|fail)' | head -10; bad "eval tests (exit $evrc, $evbad bad, $evok ok — zero ok is a degenerate run)"; fi
 
-# 5. Differential baseline diff (the ratchet: PASS<->FAIL flips / stage changes).
-# HONEST SCOPE: a partial run (diff-one / focused slice) can only certify the
-# cases it ran. Only a full-corpus run earns "no regression"; a partial one is
-# reported as partial and NEVER as a full certification — and if the recorded
-# run predates HEAD, that staleness is surfaced too.
+# ── GATE: the lowering and decoder boundary, and the relational product's
+# equation API — each its own script, each fail-closed.
+step "unseq wire, Stage C (scripts/check-unseq-wire)"
+run_gate "unseq wire (wires from bytes vs reference sets; decoder mutants refused by name)" bash scripts/check-unseq-wire
+step "wire boundary (scripts/check-wire-boundary)"
+run_gate "wire boundary (byte-level controls through the real CLI)" bash scripts/check-wire-boundary
+step "method identity (scripts/check-method-identity)"
+run_gate "package-correct method identity (fresh wire, strict decoder)" bash scripts/check-method-identity
+step "frontend pins (scripts/check-frontend-pins)"
+run_gate "frontend pins (init-order deviation observation + raft twin wire, byte-exact)" ./scripts/check-frontend-pins
+step "declaration boundary (scripts/check-declarations)"
+run_gate "declaration boundary (Go identity, strict JSON, Unicode table = oracle, fixture pin)" bash scripts/check-declarations
+step "semantic equations (scripts/check-equations)"
+run_gate "semantic equations (client PASS, exhaustive enrollment, no-unfold guard, import whitelist)" bash scripts/check-equations
+
+# ── --diff: the fresh corpus runs. Exit 1 from a runner = some cases FAIL
+# (judged by the baseline step below); >= 2 = the run itself broke.
 if [ "$RUN_DIFF" -eq 1 ]; then
-  step "re-run full native differential corpus (--diff: every row fresh, no cached tier)"
-  # Exit semantics of diff-coverage: 1 = some cases FAIL (expected — the corpus
-  # deliberately outruns the tool; whether the failing SET is acceptable is the
-  # baseline diff's job below), >=2 = the run itself broke (no cases, bad
-  # manifest, missing oracle — and, since the grossmith-findings §2 fix,
-  # the no-publish paths: lake build failure/timeout, missing golean
-  # binary; those also remove latest.tsv/meta up front, so a dead run
-  # leaves nothing for the baseline diff below to judge as fresh).
-  # Judge run-completion here, regression below.
-  ./scripts/diff-smoke 2>&1 | tail -3; drc=${PIPESTATUS[0]}
+  step "differential corpus, fresh run of every row (scripts/diff-coverage)"
+  ./scripts/diff-smoke 2>&1 | tail -3 | sed 's/^/  /'; drc=${PIPESTATUS[0]}
   case "$drc" in
-    0|1) ok "differential run completed (exit $drc; failing-set judged by baseline diff)" ;;
+    0|1) ok "differential run completed (exit $drc; the failing set is judged by the baseline diff)" ;;
     *)   bad "differential run BROKE (exit $drc — not a case failure; see output)" ;;
   esac
-fi
-if [ "$RUN_DIFF" -eq 1 ]; then
-  step "membership-lane gate self-test, go-dependent half (--with-go: F4 param re-validation, F6 frontend guard, B3-B5 slice-4 lane gates, G5 fan-out-never-ran no-publish, T1-T4 timeouts name their cause, T5-T8 exit 2/137/143 name did-not-decide, D1-D6 the strict-lane depth guard; G1-G4 run in the fast half since audit F19)"
-  if laneout="$(./scripts/test-lane-validation --with-go 2>&1)"; then
-    echo "$laneout" | grep -E "F4|F6|B[0-9]|G[0-9]|T[0-9]-|\(D[0-9]\)|^test-lane" | sed 's/^/  /'
-    ok "lane-validation fixtures incl. harness half (F4/F6/B3-B5/G5/T1-T8/D1-D6)"
-  else
-    echo "$laneout"
-    bad "lane-validation fixtures, harness half (a lane gate went quiet — see above)"
-  fi
-fi
-# 5n. Negative corpus (structure audit P1-1): 309 compile-rejection guardrails,
-# previously attached to nothing. Fresh run under --diff (cheap: go build per
-# case); static diff of the last recorded run always.
-if [ "$RUN_DIFF" -eq 1 ]; then
-  step "re-run negative corpus (--diff)"
-  ./scripts/coverage-negative 2>&1 | tail -2; nrc=${PIPESTATUS[0]}
+  step "negative corpus, fresh run (scripts/coverage-negative)"
+  ./scripts/coverage-negative 2>&1 | tail -2 | sed 's/^/  /'; nrc=${PIPESTATUS[0]}
   case "$nrc" in
-    0|1) ok "negative run completed (exit $nrc; set judged by baseline diff)" ;;
+    0|1) ok "negative run completed (exit $nrc; judged by the baseline diff)" ;;
     *)   bad "negative run BROKE (exit $nrc)" ;;
   esac
-fi
-# 5d. Derived-oracle-artifact re-derivation guards (--diff tier;
-# fidelity work program 2026-08-31, item 5 / assessment D-6, in the
-# check-imported-goose / check-frontend-pins mold). Two tracked files
-# are GENERATED from the oracle and consumed as bytes by other gates
-# (Tests/FloatVectors.lean by the eval tests; inittask-std.tsv via
-# go:embed by the frontend): a silent value edit, or a table left
-# stale across a pin move, previously passed every gate. Both
-# regenerate deterministically in seconds at the pin (probed
-# byte-identical, lane-D §2). Deliberate regeneration remains exactly
-# that — rerun the recorded command and commit with the reason.
-if [ "$RUN_DIFF" -eq 1 ]; then
-  step "derived oracle artifacts re-derived (Tests/FloatVectors.lean + tools/nativefrontend/inittask-std.tsv)"
-  DERIVE_TMP="$(mktemp -d "${TMPDIR:-/tmp}/golean-derived-guard.XXXXXX")"
-  # (a) Float vectors — regeneration command from the generator's own
-  # header: GOCACHE=... GO111MODULE=off go run ./tools/floatvectors.
-  if GOCACHE="$PWD/artifacts/go-build-cache" GO111MODULE=off \
-       go run ./tools/floatvectors > "$DERIVE_TMP/floatvectors.lean" 2>"$DERIVE_TMP/fv.err"; then
-    if cmp -s "$DERIVE_TMP/floatvectors.lean" Tests/FloatVectors.lean; then
-      ok "Tests/FloatVectors.lean = fresh hardware-oracle regeneration (byte-exact)"
-    else
-      cmp "$DERIVE_TMP/floatvectors.lean" Tests/FloatVectors.lean 2>&1 | head -3
-      bad "Tests/FloatVectors.lean DIFFERS from a fresh tools/floatvectors run — tracked oracle vectors are edited or stale (regenerate deliberately with the generator's command, or find the edit)"
-    fi
-  else
-    tail -5 "$DERIVE_TMP/fv.err" 2>/dev/null
-    bad "FloatVectors regeneration FAILED (fail closed — the guard cannot run; see above)"
-  fi
-  # (b) The stdlib inittask table — regeneration command from its own
-  # header: scripts/gen-inittask-table (python3 + go). Compared modulo
-  # the '# generated:' date line only. Header toolchain line must equal
-  # the oracle pin (nothing checked this before — the header says
-  # "regenerate when the Go pin moves").
+  step "unseq scheduler, Stage B (scripts/check-unseq-scheduler — enumerates whole tape spaces)"
+  run_gate "unseq scheduler (reference sets over all tapes, named refusals, replay)" bash scripts/check-unseq-scheduler
+
+  # Speedbump: two tracked files are GENERATED from the oracle and consumed as
+  # bytes (Tests/FloatVectors.lean by the eval tests; inittask-std.tsv by the
+  # frontend). Regenerate and compare; a difference is an edit or a stale pin.
+  step "derived oracle artifacts regenerate byte-identical (speedbump)"
+  derive_tmp="$(mktemp -d "${TMPDIR%/}/golean-derived-guard.XXXXXX")"
+  if GOCACHE="$GOCACHE_DIR" GO111MODULE=off go run ./tools/floatvectors > "$derive_tmp/fv.lean" 2>"$derive_tmp/fv.err"; then
+    if cmp -s "$derive_tmp/fv.lean" Tests/FloatVectors.lean; then bump_ok "Tests/FloatVectors.lean = fresh regeneration (byte-exact)"
+    else cmp "$derive_tmp/fv.lean" Tests/FloatVectors.lean 2>&1 | head -3 | sed 's/^/  /'; bump_red "Tests/FloatVectors.lean DIFFERS from a fresh tools/floatvectors run (edited or stale — regenerate deliberately)"; fi
+  else tail -5 "$derive_tmp/fv.err" | sed 's/^/  /'; bump_red "FloatVectors regeneration FAILED (the check could not run)"; fi
   it_pin="$(head -1 baselines/go-oracle-pin 2>/dev/null | tr -d '[:space:]')"
   it_hdr="$(grep -m1 '^# toolchain:' tools/nativefrontend/inittask-std.tsv 2>/dev/null | awk '{print $3}')"
   if [ -z "$it_hdr" ] || [ -z "$it_pin" ] || [ "$it_hdr" != "$it_pin" ]; then
-    bad "inittask-std.tsv header toolchain [${it_hdr:-missing}] != oracle pin [${it_pin:-missing}] — the table was not regenerated for this pin"
-  elif ! command -v python3 >/dev/null 2>&1; then
-    bad "inittask re-derivation guard cannot run (python3 missing) — a gate that cannot run FAILS rather than skips"
-  elif scripts/gen-inittask-table -o "$DERIVE_TMP/inittask.tsv" >"$DERIVE_TMP/it.out" 2>&1; then
-    grep -v '^# generated:' "$DERIVE_TMP/inittask.tsv" > "$DERIVE_TMP/inittask.fresh"
-    grep -v '^# generated:' tools/nativefrontend/inittask-std.tsv > "$DERIVE_TMP/inittask.tracked"
-    if cmp -s "$DERIVE_TMP/inittask.fresh" "$DERIVE_TMP/inittask.tracked"; then
-      ok "inittask-std.tsv = fresh gc-derived regeneration (header at pin; byte-exact modulo date line)"
-    else
-      diff "$DERIVE_TMP/inittask.fresh" "$DERIVE_TMP/inittask.tracked" 2>&1 | head -5
-      bad "tools/nativefrontend/inittask-std.tsv DIFFERS from a fresh scripts/gen-inittask-table run — the realized init schedule drifted from gc's (regenerate deliberately, or find the edit)"
-    fi
-  else
-    tail -5 "$DERIVE_TMP/it.out" 2>/dev/null
-    bad "inittask-std.tsv regeneration FAILED (fail closed — the guard cannot run; see above)"
-  fi
-  rm -rf "$DERIVE_TMP"
-fi
-step "negative baseline diff"
-if [ -f artifacts/coverage/negative-latest.tsv ]; then
-  # ATTRIBUTION, mirroring the exec branch below (fidelity work program
-  # 2026-08-31, item 1 / assessment D-5): before judging the cached
-  # negative record, require its published meta and — for a run claiming
-  # full scope — a manifest_sha256 matching the manifest regenerated
-  # from the CURRENT negative corpus (ids, dirs, expected substrings,
-  # tags). Same drift-field reads as the exec branch (item 2).
-  neg_meta_ok=1
-  neg_dirty=""
-  neg_metafile=artifacts/coverage/negative-latest.meta.tsv
-  neg_ran="$(awk -F'\t' '!/^#/ && $1!="result" && NF>=2' artifacts/coverage/negative-latest.tsv | wc -l | tr -d ' ')"
-  neg_runcommit=""
-  if [ ! -f "$neg_metafile" ]; then
-    bad "negative baseline diff (negative-latest.tsv has NO published meta — refusing to judge unattributable results; re-run scripts/coverage-negative)"
-    neg_meta_ok=0
-  else
-    neg_runcommit="$(awk -F'\t' '$1=="git_commit"{print $2}' "$neg_metafile")"
-    # Prefer the recorded ACTUAL live-vs-pin drift bit (go_drift_actual,
-    # true/false — audit T3-6) over the legacy go_drift field, which
-    # recorded the GOLEAN_ALLOW_GO_DRIFT FLAG (whether the escape was
-    # open), not whether the toolchain actually drifted. Fallback keeps
-    # pre-T3-6 records judgeable; the not-drifted values across both
-    # generations are "false" and "0".
-    neg_drift="$(awk -F'\t' '$1=="go_drift_actual"{print $2}' "$neg_metafile")"
-    [ -z "$neg_drift" ] && neg_drift="$(awk -F'\t' '$1=="go_drift"{print $2}' "$neg_metafile")"
-    neg_tool="$(awk -F'\t' '$1=="go_toolchain"{print $2}' "$neg_metafile")"
-    neg_dirty="$(awk -F'\t' '$1=="git_dirty"{print $2}' "$neg_metafile")"
-    if [ -z "$neg_drift" ]; then
-      # Mirror of the exec branch's absent-field note (audit T3-3: the
-      # exec branch called this case out, this branch silently fell
-      # through as if not-drifted).
-      RESULTS+=("  note negative meta records no go_drift field (pre-provenance record) — oracle-of-record status unverifiable; re-run scripts/coverage-negative")
-    elif [ "$neg_drift" != 0 ] && [ "$neg_drift" != false ]; then
-      if [ "${GOLEAN_ALLOW_GO_DRIFT:-0}" = 1 ]; then
-        RESULTS+=("  note negative record was made under a DRIFTED toolchain (${neg_tool:-unknown}; drift=$neg_drift) — GOLEAN_ALLOW_GO_DRIFT=1, judged anyway, NOT the oracle of record")
-      else
-        bad "negative baseline diff (recorded run used a DRIFTED toolchain ${neg_tool:-unknown}, drift=$neg_drift — not the oracle of record; re-run scripts/coverage-negative at the pin, or GOLEAN_ALLOW_GO_DRIFT=1 to judge it loudly)"
-        neg_meta_ok=0
-      fi
-    fi
-    neg_meta_sha="$(awk -F'\t' '$1=="manifest_sha256"{print $2}' "$neg_metafile")"
-    neg_cur_sha="$(./scripts/coverage-negative-manifest 2>/dev/null | shasum -a 256 | awk '{print $1}')"
-    neg_total="$(./scripts/coverage-negative-manifest 2>/dev/null | wc -l | tr -d ' ')"
-    if [ "$neg_total" -eq 0 ]; then
-      # Audit T3-4: a failed manifest regeneration used to skip the sha
-      # comparison SILENTLY (neg_total=0 falsified the gate below), so
-      # the one check tying cached results to the current corpus never
-      # ran. A gate that cannot run FAILS.
-      bad "negative baseline diff (negative manifest could not be regenerated — attribution unverifiable; run scripts/coverage-negative-manifest by hand for the cause)"
-      neg_meta_ok=0
-    elif [ "$neg_ran" -ge "$neg_total" ]; then
-      if [ -z "$neg_meta_sha" ] || [ -z "$neg_cur_sha" ] || [ "$neg_meta_sha" != "$neg_cur_sha" ]; then
-        bad "negative baseline diff (published meta manifest_sha256 [${neg_meta_sha:-missing}] does not match the current negative-corpus manifest — stale/foreign results; re-run scripts/coverage-negative)"
-        neg_meta_ok=0
-      fi
-    fi
-  fi
-  neg_stale=""
-  neg_head="$(git rev-parse HEAD 2>/dev/null)"
-  [ -n "$neg_runcommit" ] && [ "$neg_runcommit" != "unknown" ] && [ "$neg_runcommit" != "$neg_head" ] && neg_stale=" [recorded at ${neg_runcommit:0:7}, HEAD is ${neg_head:0:7} — stale]"
-  if [ "$neg_meta_ok" -eq 0 ]; then
-    :
-  elif ./scripts/coverage-baseline-diff --full --baseline baselines/negative-full.tsv        artifacts/coverage/negative-latest.tsv; then
-    if [ "$neg_dirty" = "true" ]; then
-      # Same demotion as the exec branch: a dirty-tree record certifies
-      # that worktree state, not a commit — a note, never a silent ok.
-      RESULTS+=("  note negative baseline diff matched ($neg_ran case(s)) but the record was made on a DIRTY tree (git_dirty=true) — certifies that worktree state, not a commit$neg_stale")
-    else
-      ok "negative baseline diff (no regression)$neg_stale"
-    fi
-  else
-    bad "negative baseline diff (DRIFT — see above)"
-  fi
-else
-  # Same fail-open as the differential branch below, same fix (audit F4).
-  if [ -n "${GOLEAN_ALLOW_NO_DIFF:-}" ]; then
-    echo "  no artifacts/coverage/negative-latest.tsv — GOLEAN_ALLOW_NO_DIFF set, allowed"
-    RESULTS+=("  note negative baseline diff NOT RUN (no record; explicitly allowed here)")
-  else
-    echo "  no artifacts/coverage/negative-latest.tsv" >&2
-    bad "negative baseline diff (NO recorded negative run — run scripts/coverage-negative, or set GOLEAN_ALLOW_NO_DIFF=1 for an environment that never records one)"
-  fi
+    bump_red "inittask-std.tsv header toolchain [${it_hdr:-missing}] != oracle pin [${it_pin:-missing}] — not regenerated for this pin"
+  elif scripts/gen-inittask-table -o "$derive_tmp/it.tsv" > "$derive_tmp/it.out" 2>&1; then
+    grep -v '^# generated:' "$derive_tmp/it.tsv" > "$derive_tmp/it.fresh"
+    grep -v '^# generated:' tools/nativefrontend/inittask-std.tsv > "$derive_tmp/it.tracked"
+    if cmp -s "$derive_tmp/it.fresh" "$derive_tmp/it.tracked"; then bump_ok "inittask-std.tsv = fresh regeneration (header at pin; byte-exact modulo the date line)"
+    else diff "$derive_tmp/it.fresh" "$derive_tmp/it.tracked" 2>&1 | head -5 | sed 's/^/  /'; bump_red "tools/nativefrontend/inittask-std.tsv DIFFERS from a fresh scripts/gen-inittask-table run"; fi
+  else tail -5 "$derive_tmp/it.out" | sed 's/^/  /'; bump_red "inittask-std.tsv regeneration FAILED (the check could not run)"; fi
+  rm -rf "$derive_tmp"
 fi
 
-step "differential baseline diff (scripts/coverage-baseline-diff)"
-if [ -f artifacts/coverage/latest.tsv ]; then
-  ran="$(awk -F'\t' '!/^#/ && $1!="result" && NF>=2' artifacts/coverage/latest.tsv | wc -l | tr -d ' ')"
-  total="$(./scripts/coverage-manifest 2>/dev/null | wc -l | tr -d ' ')"
-  runcommit="$(awk -F'\t' '$1=="git_commit"{print $2}' artifacts/coverage/latest.meta.tsv 2>/dev/null)"
-  head="$(git rev-parse HEAD 2>/dev/null)"
-  stale=""
-  [ -n "$runcommit" ] && [ "$runcommit" != "unknown" ] && [ "$runcommit" != "$head" ] && stale=" [recorded at ${runcommit:0:7}, HEAD is ${head:0:7} — stale]"
-  # Gate integrity (grossmith findings §2,
-  # docs/2026-08-07_grossmith-findings.md): before judging latest.tsv,
-  # verify it is ATTRIBUTABLE — a published meta exists and, for a run
-  # claiming full-corpus scope, its recorded manifest_sha256 matches the
-  # manifest regenerated from the CURRENT corpus. A no-publish failure
-  # inside diff-coverage used to leave the previous run's file here to
-  # be judged as if fresh; diff-coverage now removes its outputs up
-  # front, and this closes the remaining consumer-side hole (results
-  # without meta, or a CASE-SET/EXPECTATION change since the recorded
-  # full run — manifest-content swaps of ids/status/args/lane the
-  # `ran >= total` count check cannot see; corpus SOURCE bytes are not
-  # in the manifest, so an edited main.go is only re-validated by a
-  # fresh --diff run — the general limit of judging cached results,
-  # maint-check note). Partial
-  # runs are exempt from the sha comparison (their manifest was
-  # filtered) — they are already reported as partial, never certified.
-  meta_ok=1
-  rec_dirty=""
-  metafile=artifacts/coverage/latest.meta.tsv
-  if [ ! -f "$metafile" ]; then
-    bad "baseline diff (latest.tsv has NO published meta — refusing to judge unattributable results; re-run scripts/ci --diff)"
-    meta_ok=0
-  else
-    # THE META'S OWN DRIFT FIELDS, READ (fidelity work program
-    # 2026-08-31, item 2 / assessment D-4): go_drift and git_dirty were
-    # added to the meta (delta-review DR1 MEDIUM-3) precisely so a
-    # drift-probe or dirty-tree run "must not be indistinguishable from
-    # an oracle-of-record run in the artifact a re-pin consumes" — and
-    # then nothing read them. A go_drift record is judged only under the
-    # same loud GOLEAN_ALLOW_GO_DRIFT=1 escape that produced it; a
-    # git_dirty record demotes the FULL certification line to a note
-    # (the partial-run pattern). HEAD staleness stays a note (below).
-    # go_drift_actual preferred over the legacy flag field — see the
-    # negative branch's comment (audit T3-6).
-    rec_drift="$(awk -F'\t' '$1=="go_drift_actual"{print $2}' "$metafile")"
-    [ -z "$rec_drift" ] && rec_drift="$(awk -F'\t' '$1=="go_drift"{print $2}' "$metafile")"
-    rec_tool="$(awk -F'\t' '$1=="go_toolchain"{print $2}' "$metafile")"
-    rec_dirty="$(awk -F'\t' '$1=="git_dirty"{print $2}' "$metafile")"
-    if [ -z "$rec_drift" ]; then
-      RESULTS+=("  note baseline-diff meta records no go_drift field (pre-provenance record) — oracle-of-record status unverifiable; re-run scripts/ci --diff")
-    elif [ "$rec_drift" != 0 ] && [ "$rec_drift" != false ]; then
-      if [ "${GOLEAN_ALLOW_GO_DRIFT:-0}" = 1 ]; then
-        RESULTS+=("  note recorded differential ran under a DRIFTED toolchain (${rec_tool:-unknown}; drift=$rec_drift) — GOLEAN_ALLOW_GO_DRIFT=1, judged anyway, NOT the oracle of record")
-      else
-        bad "baseline diff (recorded run used a DRIFTED toolchain ${rec_tool:-unknown}, drift=$rec_drift — not the oracle of record; re-run scripts/ci --diff at the pin, or GOLEAN_ALLOW_GO_DRIFT=1 to judge it loudly)"
-        meta_ok=0
-      fi
-    fi
-    if [ "$ran" -ge "$total" ] && [ "$total" -gt 0 ]; then
-      meta_sha="$(awk -F'\t' '$1=="manifest_sha256"{print $2}' "$metafile")"
-      cur_sha="$(./scripts/coverage-manifest 2>/dev/null | shasum -a 256 | awk '{print $1}')"
-      if [ -z "$meta_sha" ] || [ -z "$cur_sha" ] || [ "$meta_sha" != "$cur_sha" ]; then
-        bad "baseline diff (published meta manifest_sha256 [${meta_sha:-missing}] does not match the current corpus manifest — stale/foreign results; re-run scripts/ci --diff)"
-        meta_ok=0
-      fi
-    fi
+# ── GATE: the baselines. judge_record judges a recorded corpus run against its
+# tracked baseline, after checking the record is ATTRIBUTABLE: a meta file, the
+# oracle of record (no toolchain drift), and for a full run a manifest sha equal
+# to the manifest regenerated from the CURRENT corpus. A partial run is a note
+# in the fast tier and a FAIL under --diff. No record is a FAIL.
+judge_record() {  # <kind> <latest.tsv> <meta.tsv> <baseline> <manifest-cmd> <demand-full 0|1>
+  local kind=$1 latest=$2 meta=$3 baseline=$4 manifest_cmd=$5 demand_full=$6
+  local ran total runcommit head stale="" drift tool dirty meta_sha cur_sha rc=0
+  if [ ! -f "$latest" ]; then
+    if [ -n "${GOLEAN_ALLOW_NO_DIFF:-}" ]; then note "$kind baseline diff NOT RUN (no record; GOLEAN_ALLOW_NO_DIFF set — this environment never records one)"
+    else echo "  no $latest" >&2; bad "$kind baseline diff (NO recorded run — nothing has checked the corpus; run scripts/ci --diff, or GOLEAN_ALLOW_NO_DIFF=1 where none is ever recorded)"; fi
+    return
   fi
-  if [ "$meta_ok" -eq 0 ]; then
-    :
-  elif [ "$ran" -ge "$total" ] && [ "$total" -gt 0 ]; then
-    # Exit code captured, not truth-tested (audit fix 6): 0 = no drift,
-    # 1 = drift, >= 2 = REFUSED / could not judge — a refusal is not a
-    # drift verdict and must be named as what it is.
-    cbd_rc=0; ./scripts/coverage-baseline-diff --full || cbd_rc=$?
-    if [ "$cbd_rc" -ge 2 ]; then
-      bad "baseline diff (REFUSED / could not judge, exit $cbd_rc — see above; NOT a drift verdict)"
-    elif [ "$cbd_rc" -eq 0 ]; then
-      if [ "$rec_dirty" = "true" ]; then
-        # The partial-run pattern (D-4): matched, but a dirty-tree record
-        # certifies the worktree state it ran in, not a commit — say so
-        # in the summary instead of an unqualified FULL ok.
-        RESULTS+=("  note baseline diff FULL ($ran/$total, no regression) but recorded on a DIRTY tree (git_dirty=true) — certifies that worktree state, not a commit$stale")
-      else
-        ok "baseline diff FULL ($ran/$total, no regression)$stale"
-      fi
-    else
-      bad "baseline diff (DRIFT — see above)"
-    fi
-  else
-    if [ "$RUN_DIFF" -eq 1 ]; then
-      bad "baseline diff (--diff demanded a full run but results are PARTIAL: $ran/$total)"
-    else
-      cbd_rc=0; ./scripts/coverage-baseline-diff || cbd_rc=$?
-      if [ "$cbd_rc" -ge 2 ]; then
-        bad "baseline diff (REFUSED / could not judge, exit $cbd_rc — see above; NOT a drift verdict)"
-      elif [ "$cbd_rc" -eq 0 ]; then
-        dirty_note=""
-        [ "$rec_dirty" = "true" ] && dirty_note=" [recorded on a DIRTY tree]"
-        RESULTS+=("  note baseline diff PARTIAL ($ran/$total run, no drift among them — NOT a full certification; use --diff)$stale$dirty_note")
-      else
-        bad "baseline diff (DRIFT among the $ran cases run — see above)"
-      fi
-    fi
+  [ -f "$meta" ] || { bad "$kind baseline diff ($latest has NO meta — unattributable results; re-run scripts/ci --diff)"; return; }
+  ran="$(awk -F'\t' '!/^#/ && $1!="result" && NF>=2' "$latest" | wc -l | tr -d ' ')"
+  total="$($manifest_cmd 2>/dev/null | wc -l | tr -d ' ')"
+  [ "$total" -gt 0 ] || { bad "$kind baseline diff (the manifest could not be regenerated — attribution unverifiable; run $manifest_cmd by hand)"; return; }
+  runcommit="$(awk -F'\t' '$1=="git_commit"{print $2}' "$meta")"; head="$(git rev-parse HEAD 2>/dev/null)"
+  [ -n "$runcommit" ] && [ "$runcommit" != unknown ] && [ "$runcommit" != "$head" ] && stale=" [recorded at ${runcommit:0:7}, HEAD is ${head:0:7} — stale]"
+  drift="$(awk -F'\t' '$1=="go_drift_actual"{print $2}' "$meta")"; [ -z "$drift" ] && drift="$(awk -F'\t' '$1=="go_drift"{print $2}' "$meta")"
+  tool="$(awk -F'\t' '$1=="go_toolchain"{print $2}' "$meta")"; dirty="$(awk -F'\t' '$1=="git_dirty"{print $2}' "$meta")"
+  if [ -z "$drift" ]; then note "$kind record has no go_drift field (pre-provenance record) — oracle-of-record status unverifiable; re-run scripts/ci --diff"
+  elif [ "$drift" != 0 ] && [ "$drift" != false ]; then
+    if [ "${GOLEAN_ALLOW_GO_DRIFT:-0}" = 1 ]; then note "$kind record was made under a DRIFTED toolchain (${tool:-unknown}) — judged anyway, NOT the oracle of record"
+    else bad "$kind baseline diff (recorded run used a DRIFTED toolchain ${tool:-unknown} — not the oracle of record; re-run at the pin)"; return; fi
   fi
-else
-  # NO RECORD AT ALL IS A FAILURE, NOT A SKIP (pre-merge audit F4, 2026-08-09).
-  # This branch used to append to RESULTS directly — bypassing bad(), the only
-  # thing that sets fail=1 — so "nothing has ever checked the corpus" exited
-  # PASS, while a meta-less or sha-mismatched record (above) is a FAIL.
-  # Deleting the evidence scored better than corrupting it. And it is trivially
-  # reachable: scripts/diff-coverage removes these outputs unconditionally up
-  # front, so ANY killed --diff parks the repo here — which is exactly where a
-  # cgroup kill from the new memory cap lands you.
-  if [ -n "${GOLEAN_ALLOW_NO_DIFF:-}" ]; then
-    echo "  no artifacts/coverage/latest.tsv — GOLEAN_ALLOW_NO_DIFF set, allowed"
-    RESULTS+=("  note differential baseline diff NOT RUN (no record; explicitly allowed here)")
+  if [ "$ran" -ge "$total" ]; then
+    meta_sha="$(awk -F'\t' '$1=="manifest_sha256"{print $2}' "$meta")"
+    cur_sha="$($manifest_cmd 2>/dev/null | shasum -a 256 | awk '{print $1}')"
+    if [ -z "$meta_sha" ] || [ -z "$cur_sha" ] || [ "$meta_sha" != "$cur_sha" ]; then
+      bad "$kind baseline diff (meta manifest_sha256 [${meta_sha:-missing}] != the current corpus manifest — stale/foreign results; re-run scripts/ci --diff)"; return
+    fi
+    ./scripts/coverage-baseline-diff --full --baseline "$baseline" "$latest" || rc=$?
+    if [ "$rc" -ge 2 ]; then bad "$kind baseline diff (REFUSED / could not judge, exit $rc — NOT a drift verdict)"
+    elif [ "$rc" -eq 1 ]; then bad "$kind baseline diff (DRIFT vs $baseline — see above)"
+    elif [ "$dirty" = true ]; then note "$kind baseline diff FULL ($ran/$total, no regression) but recorded on a DIRTY tree — certifies that worktree state, not a commit$stale"
+    else ok "$kind baseline diff FULL ($ran/$total, no regression)$stale"; fi
+  elif [ "$demand_full" -eq 1 ]; then
+    bad "$kind baseline diff (--diff demanded a full run but the record is PARTIAL: $ran/$total)"
   else
-    echo "  no artifacts/coverage/latest.tsv" >&2
-    bad "baseline diff (NO recorded differential run — nothing has checked the corpus; run scripts/ci --diff, or set GOLEAN_ALLOW_NO_DIFF=1 for an environment that never records one)"
+    ./scripts/coverage-baseline-diff --baseline "$baseline" "$latest" || rc=$?
+    if [ "$rc" -ge 2 ]; then bad "$kind baseline diff (REFUSED / could not judge, exit $rc — NOT a drift verdict)"
+    elif [ "$rc" -eq 1 ]; then bad "$kind baseline diff (DRIFT among the $ran cases run — see above)"
+    else note "$kind baseline diff PARTIAL ($ran/$total run, no drift among them — NOT a full certification; use --diff)$stale${dirty:+ [git_dirty=$dirty]}"; fi
   fi
-fi
+}
+step "baselines: the recorded negative run vs baselines/negative-full.tsv"
+judge_record negative artifacts/coverage/negative-latest.tsv artifacts/coverage/negative-latest.meta.tsv baselines/negative-full.tsv ./scripts/coverage-negative-manifest "$RUN_DIFF"
+step "baselines: the recorded differential run vs baselines/native-full.tsv"
+judge_record differential artifacts/coverage/latest.tsv artifacts/coverage/latest.meta.tsv baselines/native-full.tsv ./scripts/coverage-manifest "$RUN_DIFF"
 
-for GUARD_BASE in baselines/native-full.tsv baselines/negative-full.tsv; do
-# 5b. Baseline re-pin guards — BOTH tracked baselines (exec + negative).
-# A re-pin that flips any case PASS -> non-PASS must
-# list each such case on a `- Cases:` line in docs/BUGS.md — regressions cannot
-# be laundered into the baseline silently. Two modes (tamper audit F3a: the
-# worktree-only mode was inert on any clean checkout, i.e. in CI):
-#   dirty tree  -> compare worktree baseline vs HEAD   (pre-commit, local)
-#   clean tree  -> compare HEAD baseline vs HEAD~1     (post-commit + CI; audits
-#                  the tip commit — multi-commit pushes are covered pre-commit)
-# Mode detection by EXACT git exit code (0 = same, 1 = differs, >=2 = error):
-# treating an error as "differs" made the guard misfire on GitHub's shallow
-# clones (HEAD~1 absent -> git error -> guard activated -> fail-closed on a
-# baseline that never changed). A shallow clone without HEAD~1 cannot verify
-# the tip commit at all, so it FAILS CLOSED with instructions (never a silent
-# skip — a laundered tip re-pin must not pass a shallow CI). Our workflow
-# fetches depth 2; any checkout that can't provide HEAD~1 must be fixed, not
-# waved through.
-git diff --quiet HEAD -- $GUARD_BASE 2>/dev/null; wt_rc=$?
-PIN_MODE=""
-if [ "$wt_rc" -eq 1 ]; then
-  PIN_MODE="worktree-vs-HEAD"; PIN_OLD="HEAD"; PIN_NEW_FILE="$GUARD_BASE"
-elif [ "$wt_rc" -ge 2 ]; then
-  step "baseline re-pin guard"
-  bad "re-pin guard (git diff errored rc=$wt_rc determining worktree state — refusing to certify)"
-elif git rev-parse --verify -q HEAD~1 >/dev/null 2>&1; then
-  git diff --quiet HEAD~1 HEAD -- $GUARD_BASE 2>/dev/null; c_rc=$?
-  if [ "$c_rc" -eq 1 ]; then
-    PIN_MODE="HEAD-vs-HEAD~1"; PIN_OLD="HEAD~1"; PIN_NEW_FILE=""
-  elif [ "$c_rc" -ge 2 ]; then
-    step "baseline re-pin guard"
-    bad "re-pin guard (git diff errored rc=$c_rc comparing HEAD~1 — refusing to certify)"
-  fi
-else
-  step "baseline re-pin guard"
-  bad "re-pin guard (shallow clone: HEAD~1 unavailable, tip commit UNVERIFIABLE — fetch with depth >= 2)"
-fi
-if [ -n "$PIN_MODE" ]; then
-  step "baseline re-pin guard ($PIN_MODE; flips must be on a BUGS.md Cases: line)"
-  # No process substitution (sandbox may deny /dev/fd): old version on stdin,
-  # new version read inside awk. FAIL CLOSED on any unreadable input.
-  # An INITIAL pin (file absent in the old rev) has no PASS→non-PASS flips by
-  # definition: treat it as nothing-to-launder. Fail closed only on OTHER read
-  # errors. (Found live: adding baselines/negative-full.tsv tripped the guard
-  # on the very next commit because HEAD~1 predated the file.)
-  if ! git cat-file -e "$PIN_OLD":"$GUARD_BASE" 2>/dev/null; then
-    ok "re-pin guard ($GUARD_BASE: initial pin at $PIN_OLD — no prior baseline, nothing to launder)"
-  elif oldbase="$(git show "$PIN_OLD":$GUARD_BASE 2>/dev/null)"; then
-    if [ -n "$PIN_NEW_FILE" ]; then newbase="$(cat "$PIN_NEW_FILE")"; else newbase="$(git show HEAD:$GUARD_BASE 2>/dev/null)"; fi
-    if [ -z "$newbase" ]; then
-      bad "re-pin guard (could not read the new baseline — refusing to certify)"
-    else
-    # Both versions on stdin with section markers (BSD awk rejects multiline -v
-    # values — and that error initially made this guard fail OPEN; hence the
-    # explicit exit-status check below).
-    flips="$(printf '===OLD===\n%s\n===NEW===\n%s\n' "$oldbase" "$newbase" | awk -F'\t' '
-      /^===OLD===$/ { sec = 1; next }
-      /^===NEW===$/ { sec = 2; next }
-      /^#/ { next }
-      sec == 1 && $1 == "PASS" && NF >= 2 { oldpass[$2] = 1 }
-      sec == 2 && $1 == "PASS" && NF >= 2 { nowpass[$2] = 1 }
-      END { for (id in oldpass) if (!(id in nowpass)) print id }
-    ')" ; awk_rc=$?
-    if [ "$awk_rc" -ne 0 ]; then
-      bad "re-pin guard (internal comparison error rc=$awk_rc — refusing to certify)"
-    else
-    flips="$(printf '%s\n' "$flips" | LC_ALL=C sort | grep -v '^$' || true)"
-    pin_bad=0
-    while read -r id; do
-      [ -z "$id" ] && continue
-      # Whole-token match on a `- Cases:` line only (tamper audit F3b: an
-      # unanchored substring grep was satisfied by prose mentions and by any
-      # LONGER id containing this one).
-      if ! awk -v id="$id" '
-            /^- Cases:/ { line = substr($0, 9); n = split(line, a, /[, ]+/)
-                          for (i = 1; i <= n; i++) if (a[i] == id) found = 1 }
-            END { exit !found }' docs/BUGS.md; then
-        echo "  PASS→non-PASS flip not listed on any BUGS.md Cases: line: $id"; pin_bad=1
-      fi
-    done <<< "$flips"
-    nfl="$(printf '%s' "$flips" | grep -c . || true)"
-    if [ "$pin_bad" -ne 0 ]; then
-      bad "re-pin guard (regressions baked into baseline unexplained — add them to a BUGS.md Cases: line)"
-    else
-      ok "re-pin guard ($nfl PASS→non-PASS flip(s), all listed in BUGS.md Cases)"
-    fi
-    # THE OTHER DIRECTION, REPORT-ONLY (fidelity work program
-    # 2026-08-31, item 3 / assessment B12): the guard above covers
-    # PASS→non-PASS only, so a baseline edit flipping rows FAIL→PASS,
-    # deleting rows, or shrinking the case count landed with no trace —
-    # and push/PR CI runs no differential to catch a green-washed row
-    # live. This NEVER blocks (a legitimate fix flips FAIL→PASS every
-    # time; gates are speedbumps): it prints the rows and puts a note in
-    # the summary, so a silent green-washing edit is at least visible.
-    rev="$(printf '===OLD===\n%s\n===NEW===\n%s\n' "$oldbase" "$newbase" | awk -F'\t' '
-      /^===OLD===$/ { sec = 1; next }
-      /^===NEW===$/ { sec = 2; next }
-      /^#/ { next }
-      $1 == "result" { next }
-      sec == 1 && NF >= 2 { oldres[$2] = $1; nold++ }
-      sec == 2 && NF >= 2 { newres[$2] = $1; nnew++ }
-      END {
-        for (id in oldres) {
-          if (!(id in newres)) print "DELETED\t" id "\t(was " oldres[id] ")"
-          else if (oldres[id] != "PASS" && newres[id] == "PASS") print "GREENED\t" id "\t" oldres[id] " -> PASS"
-        }
-        print "COUNT\t" nold+0 "\t" nnew+0
-      }')"; rev_rc=$?
-    if [ "$rev_rc" -ne 0 ]; then
-      # Fail-noisy, still report-only (audit T3-8): the old `|| rev=""`
-      # absorbed an awk failure into "nothing to report" — the exact
-      # silent-skip shape the forward guard's own awk check refuses.
-      rev=""
-      RESULTS+=("  note re-pin $GUARD_BASE: reverse-direction scan FAILED (awk rc=$rev_rc) — FAIL→PASS/deletion/count visibility UNAVAILABLE this run; report-only, but do not read its silence as clean")
-    fi
-    rev_rows="$(printf '%s\n' "$rev" | grep -E '^(DELETED|GREENED)' | LC_ALL=C sort || true)"
-    rev_old="$(printf '%s\n' "$rev" | awk -F'\t' '$1=="COUNT"{print $2}')"
-    rev_new="$(printf '%s\n' "$rev" | awk -F'\t' '$1=="COUNT"{print $3}')"
-    rev_notes=""
-    if [ -n "$rev_rows" ]; then
-      printf '%s\n' "$rev_rows" | sed 's/^/  re-pin note: /'
-      ng="$(printf '%s\n' "$rev_rows" | grep -c '^GREENED' || true)"
-      nd="$(printf '%s\n' "$rev_rows" | grep -c '^DELETED' || true)"
-      rev_notes="$ng non-PASS→PASS flip(s), $nd deleted row(s)"
-    fi
-    if [ -n "$rev_old" ] && [ -n "$rev_new" ] && [ "$rev_new" -lt "$rev_old" ]; then
-      rev_notes="${rev_notes:+$rev_notes; }case count DECREASED $rev_old → $rev_new"
-    fi
-    if [ -n "$rev_notes" ]; then
-      RESULTS+=("  note re-pin $GUARD_BASE: $rev_notes — report-only; verify the re-pin's written reason covers them")
-    fi
-    # STAGE-ALTERNATION SURVIVAL (audit fix 4, guard-stage-alt round 1;
-    # blocking): neither guard above reads column 3, so a re-pin
-    # regenerated from latest.tsv would silently drop an alternation
-    # row's `|` set and its `# reason:` block, putting the exact-match
-    # flake back. Every alternation row of the OLD baseline must still be
-    # an alternation in the NEW one, unless a NEW header comment names
-    # its removal (`# alternation removed: <id> — <why>`).
-    if [ -n "$PIN_NEW_FILE" ]; then surv_new="$PIN_NEW_FILE"; else surv_new="git:HEAD:$GUARD_BASE"; fi
-    surv_rc=0; surv_out="$(./scripts/check-alternation-survival "git:$PIN_OLD:$GUARD_BASE" "$surv_new" 2>&1)" || surv_rc=$?
-    if [ "$surv_rc" -eq 0 ]; then
-      [ -n "$surv_out" ] && printf '%s\n' "$surv_out" | sed 's/^/  /'
-    else
-      printf '%s\n' "$surv_out" | sed 's/^/  /'
-      bad "re-pin guard ($GUARD_BASE: stage alternation(s) of $PIN_OLD dropped without a named removal, or the check could not run — exit $surv_rc)"
-    fi
-    fi
-    fi
-  else
-    bad "re-pin guard (could not read $PIN_OLD baseline — refusing to certify the re-pin)"
-  fi
-fi
+# ── GATE: the re-pin guard. A re-pin that flips a case PASS -> non-PASS must
+# list it on a `- Cases:` line in docs/BUGS.md; a stage alternation of the old
+# baseline must survive unless the new one names its removal. Dirty tree:
+# worktree vs HEAD; clean tree: HEAD vs HEAD~1 (a shallow clone fails closed).
+repin_guard() {  # <baseline file>
+  local base=$1 wt_rc c_rc mode old newfile oldbase newbase flips awk_rc id nfl pin_bad=0 surv_new surv_rc=0 surv_out
+  git diff --quiet HEAD -- "$base" 2>/dev/null; wt_rc=$?
+  if [ "$wt_rc" -eq 1 ]; then mode="worktree-vs-HEAD"; old=HEAD; newfile="$base"
+  elif [ "$wt_rc" -ge 2 ]; then bad "re-pin guard ($base: git diff errored rc=$wt_rc — refusing to certify)"; return
+  elif git rev-parse --verify -q HEAD~1 >/dev/null 2>&1; then
+    git diff --quiet HEAD~1 HEAD -- "$base" 2>/dev/null; c_rc=$?
+    if [ "$c_rc" -eq 1 ]; then mode="HEAD-vs-HEAD~1"; old=HEAD~1; newfile=""
+    elif [ "$c_rc" -ge 2 ]; then bad "re-pin guard ($base: git diff errored rc=$c_rc comparing HEAD~1 — refusing to certify)"; return
+    else ok "re-pin guard ($base unchanged at the tip)"; return; fi
+  else bad "re-pin guard ($base: shallow clone, HEAD~1 unavailable — the tip is UNVERIFIABLE; fetch with depth >= 2)"; return; fi
+  echo "  $base: $mode"
+  if ! git cat-file -e "$old:$base" 2>/dev/null; then ok "re-pin guard ($base: initial pin at $old — no prior baseline, nothing to launder)"; return; fi
+  oldbase="$(git show "$old:$base" 2>/dev/null)" || { bad "re-pin guard (could not read $old:$base — refusing to certify)"; return; }
+  if [ -n "$newfile" ]; then newbase="$(cat "$newfile")"; else newbase="$(git show "HEAD:$base" 2>/dev/null)"; fi
+  [ -n "$newbase" ] || { bad "re-pin guard (could not read the new $base — refusing to certify)"; return; }
+  flips="$(printf '===OLD===\n%s\n===NEW===\n%s\n' "$oldbase" "$newbase" | awk -F'\t' '
+    /^===OLD===$/ { sec = 1; next }
+    /^===NEW===$/ { sec = 2; next }
+    /^#/ { next }
+    sec == 1 && $1 == "PASS" && NF >= 2 { oldpass[$2] = 1 }
+    sec == 2 && $1 == "PASS" && NF >= 2 { nowpass[$2] = 1 }
+    END { for (id in oldpass) if (!(id in nowpass)) print id }')"; awk_rc=$?
+  [ "$awk_rc" -eq 0 ] || { bad "re-pin guard ($base: internal comparison error rc=$awk_rc — refusing to certify)"; return; }
+  flips="$(printf '%s\n' "$flips" | LC_ALL=C sort | grep -v '^$' || true)"
+  while read -r id; do
+    [ -z "$id" ] && continue
+    awk -v id="$id" '
+      /^- Cases:/ { line = substr($0, 9); n = split(line, a, /[, ]+/); for (i = 1; i <= n; i++) if (a[i] == id) found = 1 }
+      END { exit !found }' docs/BUGS.md || { echo "  PASS→non-PASS flip not on any BUGS.md Cases: line: $id"; pin_bad=1; }
+  done <<< "$flips"
+  nfl="$(printf '%s' "$flips" | grep -c . || true)"
+  if [ "$pin_bad" -ne 0 ]; then bad "re-pin guard ($base: regressions baked into the baseline unexplained — add them to a BUGS.md Cases: line)"
+  else ok "re-pin guard ($base: $nfl PASS→non-PASS flip(s), all on BUGS.md Cases lines)"; fi
+  if [ -n "$newfile" ]; then surv_new="$newfile"; else surv_new="git:HEAD:$base"; fi
+  surv_out="$(./scripts/check-alternation-survival "git:$old:$base" "$surv_new" 2>&1)" || surv_rc=$?
+  if [ "$surv_rc" -eq 0 ]; then [ -n "$surv_out" ] && printf '%s\n' "$surv_out" | sed 's/^/  /'
+  else printf '%s\n' "$surv_out" | sed 's/^/  /'; bad "re-pin guard ($base: a stage alternation of $old dropped without a named removal, or the check could not run — exit $surv_rc)"; fi
+}
+step "baseline re-pin guard (PASS→non-PASS flips must be on a BUGS.md Cases: line; alternations survive)"
+repin_guard baselines/native-full.tsv
+repin_guard baselines/negative-full.tsv
 
-done
-
-# 6. Cross-ledger reconciliation — REPORT-ONLY (fidelity work program
-# 2026-08-31, item 7 / assessment p2 claim 6). tools/reconcile-records
-# covers the invariants that live only in prose (ledger arithmetic,
-# cross-references, decay dates) and is BY DESIGN an audit instrument,
-# not a gate: its findings are dossier material, and this step NEVER
-# sets fail. The defect it fixes was invisibility — a HIGH finding had
-# been emitted to nobody for 9+ days because nothing ran the tool —
-# not leniency. Headline lines only here; run the tool by hand for
-# details. A reconciler that cannot run is itself a visible note
-# (never a silent skip), but still not a FAIL: the gate's own
-# invariants are the steps above, not this report.
-step "cross-ledger reconciliation (tools/reconcile-records — REPORT-ONLY, informs, never fails the gate)"
-if [ -x tools/reconcile-records ]; then
-  recon_out="$(./tools/reconcile-records 2>&1)"; recon_rc=$?
-  if [ "$recon_rc" -eq 0 ]; then
-    recon_heads="$(printf '%s\n' "$recon_out" | grep -E '^\[[0-9]+\]' || true)"
-    if [ -n "$recon_heads" ]; then
-      printf '%s\n' "$recon_heads" | sed 's/^/  /'
-      recon_n="$(printf '%s\n' "$recon_heads" | wc -l | tr -d ' ')"
-      recon_hi="$(printf '%s\n' "$recon_heads" | grep -c ' HIGH ' || true)"
-      RESULTS+=("  note reconciler: $recon_n finding(s), $recon_hi HIGH — report-only (details: tools/reconcile-records)")
-    else
-      echo "  no discrepancies found"
-      RESULTS+=("  note reconciler: no discrepancies")
-    fi
-  else
-    printf '%s\n' "$recon_out" | tail -5 | sed 's/^/  /'
-    RESULTS+=("  note reconciler COULD NOT RUN (exit $recon_rc) — report-only step, findings unavailable this run")
-  fi
-else
-  echo "  tools/reconcile-records missing or not executable"
-  RESULTS+=("  note reconciler ABSENT (tools/reconcile-records missing) — report-only step, findings unavailable")
-fi
-
-# Summary
-printf '\n\033[1m══ scripts/ci summary ══\033[0m\n'
+# ── Summary. Gate lines decide RESULT; speedbumps are listed, never decide.
+printf '\n\033[1m══ scripts/ci summary (%s) ══\033[0m\n' "$MODE"
 printf '%s\n' "${RESULTS[@]}"
+printf '\n\033[1m── speedbumps (report-only) ──\033[0m\n'
+printf '%s\n' "${BUMPS[@]}"
+if [ "$bumps_red" -gt 0 ]; then
+  printf '\nSPEEDBUMPS: %s RED — not a gate failure; read at the merge ask, fix or waive by name\n' "$bumps_red"
+fi
 if [ "$fail" -ne 0 ]; then
   printf '\n\033[1mRESULT: FAIL\033[0m\n'; exit 1
 fi
